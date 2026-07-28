@@ -33,6 +33,9 @@ GF.WORLD_OBJECTS = [];
 GF.WORLD_OBJECTS.push(snap("barn",   {type:"barn"},   540, 150, T*3));                                                    // 3 celdas
 GF.WORLD_OBJECTS.push(snap("market", {type:"market"}, 470, 505, T*2));                                                    // 2 celdas
 GF.WORLD_OBJECTS.push(snap("store",  {type:"store"},  650, 480, T*2));                                                    // 2 celdas
+// quinta.docx: 5 árboles y 4 piedras en total — agregados AL FINAL para no romper layouts guardados
+[[695,115],[915,300]].forEach(t => GF.WORLD_OBJECTS.push(snap("tree", {type:"tree"}, t[0], t[1], T*2)));
+[[705,420],[830,480]].forEach(r => GF.WORLD_OBJECTS.push(snap("node_stone", {type:"rock"}, r[0], r[1], T)));
 
 // lotes 4x3, cada uno 1 celda, alineados a la grilla (col 2, fila 3)
 GF.PLOTS = [];

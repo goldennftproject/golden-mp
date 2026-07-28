@@ -483,7 +483,11 @@ class FarmScene extends Phaser.Scene {
         else if (o.type === "ore") { this.setObjTex(o, o.baseKey, o.rw || o.w); o.sprite.setAlpha(1); }
         if (o.timer) o.timer.setVisible(false);
       } else if (o.readyAt && o.timer) {
-        o.timer.setText(Math.ceil((o.readyAt - t) / 1000) + "s").setVisible(true);
+        // cuarta.docx: el timer del recurso solo aparece con el cursor encima (al clickear ya sale el aviso)
+        const p = this.input.activePointer;
+        const over = o.sprite.visible && Phaser.Geom.Rectangle.Contains(o.sprite.getBounds(), p.worldX, p.worldY);
+        if (over) o.timer.setText(Math.ceil((o.readyAt - t) / 1000) + "s").setVisible(true);
+        else o.timer.setVisible(false);
       }
     }
     // lotes: pasar de "creciendo" a "listo"
