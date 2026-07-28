@@ -210,9 +210,9 @@
   button.active{filter:brightness(1.22)}
   button:disabled{filter:grayscale(.75) brightness(.72);cursor:default}
   button:hover:not(:disabled){filter:brightness(1.12)}
-  .pill{background:url("assets/ui/badge_wood.png") center/100% 100% no-repeat;border:none;border-radius:0;padding:7px 15px;image-rendering:pixelated;color:#ffeecb;text-shadow:0 1px 0 rgba(40,20,5,.85)}
-  .pill .k{color:#ffd98a}
-  .pill b{color:#fff7e6}
+  .pill{background:url("assets/ui/badge_wood.png") center/100% 100% no-repeat;border:none;border-radius:0;padding:7px 15px;image-rendering:pixelated;color:#4a2e10;text-shadow:0 1px 0 rgba(255,240,200,.35)}
+  .pill .k{color:#6b4a20}
+  .pill b{color:#2e1c06}
 
   /* cofre diario */
   .dyrow{display:flex;gap:6px;justify-content:center;margin:10px 0;flex-wrap:wrap}
@@ -253,7 +253,7 @@
   .swi.center{width:40px;height:40px;pointer-events:none;filter:brightness(.9)}
 
   /* barra flotante del modo edición */
-  #editbar{position:fixed;left:50%;bottom:72px;transform:translateX(-50%);z-index:7;display:none;gap:8px}
+  #editbar{position:fixed;left:50%;bottom:122px;transform:translateX(-50%);z-index:7;display:none;gap:8px}
   #editbar.show{display:flex}
 </style>
 </head>
@@ -267,7 +267,7 @@
       <div class="pill"><span class="k">Granja</span><b id="s-level">1</b><span class="k">/10</span></div>
       <div class="pill"><span class="k">Prestigio</span><b id="s-prestige">0</b></div>
       <div class="pill"><span class="coin silver"></span><b id="s-plata">0</b></div>
-      <div class="pill"><span class="coin gold"></span><b id="s-golden">20</b></div>
+      <div class="pill" title="Esencia $Golden — se usa para pescar"><span>✨</span><b id="s-golden">20</b></div>
       <div class="pill"><span class="k">Semana</span><b id="s-week">1</b></div>
       <button class="btnpill" id="menu-btn">☰ Menú</button>
     </div>
