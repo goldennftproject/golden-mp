@@ -12,6 +12,8 @@ const G = {
   picks: { owned: { stone: true }, dur: { stone: 50 }, eq: "stone" },
   tools: { axe: 60, rod: 40 },   // durabilidad de hacha y caña
   invRows: 0,                    // filas extra de inventario compradas
+  slots: [],                     // inventario por casillas: [{kind,key}|null]
+  hotbar: [null, null, null, null, null, null, null, null, null, null],  // 10 accesos directos
   fish: { comun: 0, raro: 0, epico: 0, legendario: 0 },
   plots: [],   // estado de las parcelas: [{state, readyAt, cropKey}] — lo llena la FarmScene
   buffs: [], secPerGameHour: 1, gameHours: 0,
@@ -145,7 +147,41 @@ function invStacks() {
   }
   return st;
 }
-function tryAddRes(key, amt) { const b = G.res[key]; G.res[key]=b+amt; if (invStacks().length > invSlots()) { G.res[key]=b; return false; } if (isOpen("ov-inv")) refreshInv(); return true; }
+function tryAddRes(key, amt) {
+  const b = G.res[key] || 0; G.res[key] = b + amt;
+  if (canonicalStacks().length > invSlots()) { G.res[key] = b; return false; }
+  syncSlots();
+  if (isOpen("ov-inv")) refreshInv();
+  if (typeof refreshHotbar === "function") refreshHotbar();
+  return true;
+}
+
+// --- casillas: todo es ítem (recursos/semillas apilan 99; herramientas/picos 1 c/u con durabilidad) ---
+const ITEM_RES_ORDER = SELLABLE.slice();
+function descKey(d) { return d ? d.kind + ":" + d.key : ""; }
+function canonicalStacks() {
+  const list = [];
+  ["hoe", "axe", "rod"].forEach(k => list.push({ kind: "tool", key: k }));
+  PICK_ORDER.forEach(id => { if (G.picks.owned[id]) list.push({ kind: "pick", key: id }); });
+  ITEM_RES_ORDER.forEach(r => { let n = Math.floor(G.res[r] || 0); while (n > 0) { list.push({ kind: "res", key: r }); n -= 99; } });
+  CROP_ORDER.forEach(s => { let n = Math.floor(G.seeds[s] || 0); while (n > 0) { list.push({ kind: "seed", key: s }); n -= 99; } });
+  return list;
+}
+// reconcilia G.slots con lo que hay realmente, preservando el orden que armó el jugador
+function syncSlots() {
+  const cap = invSlots();
+  if (!Array.isArray(G.slots)) G.slots = [];
+  while (G.slots.length < cap) G.slots.push(null);
+  if (G.slots.length > cap) { const extra = G.slots.splice(cap); extra.filter(Boolean).forEach(d => { const i = G.slots.indexOf(null); if (i >= 0) G.slots[i] = d; }); }
+  const want = {}; canonicalStacks().forEach(d => { const k = descKey(d); want[k] = (want[k] || 0) + 1; });
+  const have = {}; G.slots.forEach(d => { if (d) { const k = descKey(d); have[k] = (have[k] || 0) + 1; } });
+  for (const k in have) { let surplus = have[k] - (want[k] || 0); for (let i = G.slots.length - 1; i >= 0 && surplus > 0; i--) { if (G.slots[i] && descKey(G.slots[i]) === k) { G.slots[i] = null; surplus--; } } }
+  for (const k in want) {
+    let cur = 0; G.slots.forEach(d => { if (d && descKey(d) === k) cur++; });
+    const ix = k.indexOf(":"), kind = k.slice(0, ix), key = k.slice(ix + 1);
+    for (let j = cur; j < want[k]; j++) { const i = G.slots.indexOf(null); if (i < 0) break; G.slots[i] = { kind, key }; }
+  }
+}
 
 // --- mercado ---
 const PRICE = { madera:3, piedra:6, bronce:12, oro:30, diamante:80, netherita:200,

@@ -51,6 +51,23 @@
   .slot img{width:74%;height:74%;object-fit:contain;image-rendering:pixelated}
   .slot .em{font-size:22px;line-height:1}
   .slot .cnt{position:absolute;right:2px;bottom:1px;font-size:11px;font-weight:800;color:#3a2e10;background:rgba(255,255,255,.82);border-radius:5px;padding:0 3px}
+  .slot[draggable=true]{cursor:grab}
+  .slot.sel{outline:2px solid #e2b23a;outline-offset:-2px}
+  .slot.eq{box-shadow:inset 0 0 0 2px #6aa9e0}
+  .durb{position:absolute;left:3px;right:3px;bottom:2px;height:3px;background:rgba(0,0,0,.25);border-radius:2px;overflow:hidden}
+  .durb i{display:block;height:100%}
+  #hotbar{position:fixed;left:50%;bottom:10px;transform:translateX(-50%);z-index:6;display:flex;gap:5px;background:rgba(20,28,15,.85);border:1px solid #3c4d31;border-radius:12px;padding:6px}
+  .hcell{position:relative;width:46px;height:46px;background:#26331f;border:2px solid #3c4d31;border-radius:8px;display:flex;align-items:center;justify-content:center;cursor:pointer}
+  .hcell.filled{background:#efe3c6;border-color:#c9b070}
+  .hcell.filled[draggable=true]{cursor:grab}
+  .hcell.sel{outline:2px solid #e2b23a;outline-offset:-2px}
+  .hcell.eq{box-shadow:inset 0 0 0 2px #6aa9e0}
+  .hcell.ghost{opacity:.4}
+  .hcell img{width:72%;height:72%;object-fit:contain;image-rendering:pixelated}
+  .hcell .em{font-size:22px;line-height:1}
+  .hcell .cnt{position:absolute;right:2px;bottom:1px;font-size:10px;font-weight:800;color:#3a2e10;background:rgba(255,255,255,.85);border-radius:5px;padding:0 3px}
+  .hcell .hk{position:absolute;left:3px;top:1px;font-size:9px;font-weight:800;color:#8aa06f}
+  .hcell.filled .hk{color:#9a7a1e}
   .invexp{margin-top:10px}
   .invexp .exmax{font-size:12px;color:var(--muted);font-weight:700}
   .seedhead{margin-top:12px}
@@ -244,9 +261,8 @@
     <h3>Inventario</h3>
     <div class="sub" id="inv-cap">Bolsa: 0/30 espacios · máx 99 por recurso</div>
     <div class="slots" id="inv-slots"></div>
+    <div class="sub" id="inv-selseed"></div>
     <div class="invexp" id="inv-expand"></div>
-    <div class="sub seedhead">🌱 Semillas — clic para elegir cuál plantar</div>
-    <div class="seedbag" id="inv-seeds"></div>
   </div></div>
 
   <div class="ov" id="ov-skills"><div class="card" style="width:min(500px,94%)">
@@ -323,6 +339,7 @@
       </div>
     </div>
   </div>
+  <div id="hotbar"></div>
   <div id="saveind"><span class="sdot"></span><span class="stxt"></span></div>
 
   <!-- pantalla de carga (mientras chequea la cuenta) -->

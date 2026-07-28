@@ -23,7 +23,7 @@ async function initSave() {
 function snapshot() {
   return { plata: G.plata, golden: G.golden, level: G.level, prestige: G.prestige, week: G.week,
     res: G.res, picks: G.picks, skills: G.skills, fish: G.fish, plots: G.plots, seeds: G.seeds, selSeed: G.selSeed,
-    tools: G.tools, invRows: G.invRows };
+    tools: G.tools, invRows: G.invRows, slots: G.slots, hotbar: G.hotbar };
 }
 // "huella" del estado guardable (incluye el apodo); si no cambia, no hay nada que guardar
 function snapKey() { return JSON.stringify({ n: (window.NICK || "Granjero"), d: snapshot() }); }
@@ -39,6 +39,8 @@ function hydrate(d) {
   if (d.selSeed && CROP_DEF[d.selSeed]) G.selSeed = d.selSeed;
   if (d.tools) G.tools = Object.assign({}, G.tools, d.tools);
   if (typeof d.invRows === "number") G.invRows = Math.max(0, Math.min(INV_MAX_ROWS, d.invRows));
+  if (Array.isArray(d.slots)) G.slots = d.slots;
+  if (Array.isArray(d.hotbar)) G.hotbar = d.hotbar.slice(0, 10);
   if (d.picks && d.picks.owned && d.picks.dur) G.picks = d.picks;
 }
 

@@ -19,11 +19,53 @@ function closeOv(id) { const e = $(id); if (e) e.classList.remove("show"); }
 function closeAllOv() { document.querySelectorAll(".ov.show").forEach(e => e.classList.remove("show")); }
 
 /* ---- HUD ---- */
-function refreshHud() { setTxt("s-level", G.level); setTxt("s-prestige", G.prestige); setTxt("s-plata", fmt(G.plata)); setTxt("s-golden", fmt(G.golden)); setTxt("s-week", G.week); }
+function refreshHud() { setTxt("s-level", G.level); setTxt("s-prestige", G.prestige); setTxt("s-plata", fmt(G.plata)); setTxt("s-golden", fmt(G.golden)); setTxt("s-week", G.week); if (typeof refreshHotbar === "function") refreshHotbar(); }
 
-/* ---- inventario ---- */
-function invSlotHtml(s) { const im = s.sprite ? `<img src="${GF.spr(s.sprite)}">` : `<span class="em">${s.em}</span>`; const c = (s.count != null) ? `<span class="cnt">${fmt(s.count)}</span>` : ""; return `<div class="slot filled" title="${s.nm}">${im}${c}</div>`; }
-function refreshInv() { const st = invStacks(); const N = invSlots(); let html = ""; for (let i = 0; i < N; i++) html += st[i] ? invSlotHtml(st[i]) : '<div class="slot"></div>'; $("inv-slots").innerHTML = html; const cap = $("inv-cap"); if (cap) cap.textContent = `Bolsa: ${Math.min(st.length, N)}/${N} espacios · máx 99 por recurso`; renderInvExpand(); renderSeedBag(); }
+/* ---- inventario por casillas (todo es ítem; arrastrar para reordenar) ---- */
+let dndActive = false;   // no re-renderizar mientras se arrastra
+function durColor(pct) { return pct > 50 ? "#8fd06a" : pct > 20 ? "#e0c76a" : "#e0705a"; }
+function itemView(d) {
+  if (!d) return null;
+  if (d.kind === "tool") {
+    const M = { hoe: { s: "hoe", l: "Azada", dur: null }, axe: { s: "axe", l: "Hacha", dur: Math.round(toolDur("axe") / TOOL_DEF.axe.max * 100) }, rod: { s: "fishing_rod", l: "Caña", dur: Math.round(toolDur("rod") / TOOL_DEF.rod.max * 100) } };
+    const m = M[d.key] || M.hoe; return { sprite: m.s, emoji: "🔧", label: m.l, dur: m.dur };
+  }
+  if (d.kind === "pick") { const pd = PICK_DEF[d.key]; return { sprite: pd.sprite, emoji: "⛏️", label: pd.label, dur: Math.round((G.picks.dur[d.key] || 0) / pd.dur * 100) }; }
+  if (d.kind === "res") return { sprite: null, emoji: RES_EMOJI[d.key], label: RES_LABEL[d.key], dur: null };
+  if (d.kind === "seed") { const cd = CROP_DEF[d.key]; return { sprite: null, emoji: cd.emoji, label: cd.label + " (semilla)", dur: null }; }
+  return { sprite: null, emoji: "?", label: "", dur: null };
+}
+function itemIcon(v) { return v.sprite ? `<img src="${GF.spr(v.sprite)}">` : `<span class="em">${v.emoji}</span>`; }
+function durBar(v) { return (v.dur != null && v.dur < 100) ? `<span class="durb"><i style="width:${Math.max(0, v.dur)}%;background:${durColor(v.dur)}"></i></span>` : ""; }
+function invCellHtml(d, i, rem, zone) {
+  if (!d) return `<div class="slot" data-slot="${i}" data-zone="${zone}"></div>`;
+  let cnt = "";
+  if (d.kind === "res" || d.kind === "seed") { const k = d.kind + ":" + d.key; const n = Math.min(99, rem[k] || 0); rem[k] = (rem[k] || 0) - n; cnt = `<span class="cnt">${fmt(n)}</span>`; }
+  const v = itemView(d);
+  const sel = (d.kind === "seed" && G.selSeed === d.key) ? " sel" : "";
+  const eq = (d.kind === "pick" && G.picks.eq === d.key) ? " eq" : "";
+  return `<div class="slot filled${sel}${eq}" draggable="true" data-slot="${i}" data-zone="${zone}" title="${v.label}">${itemIcon(v)}${cnt}${durBar(v)}</div>`;
+}
+function refreshInv() {
+  syncSlots();
+  const cap = invSlots(), rem = {};
+  ITEM_RES_ORDER.forEach(r => rem["res:" + r] = Math.floor(G.res[r] || 0));
+  CROP_ORDER.forEach(s => rem["seed:" + s] = Math.floor(G.seeds[s] || 0));
+  let html = "";
+  for (let i = 0; i < cap; i++) html += invCellHtml(G.slots[i], i, rem, "inv");
+  $("inv-slots").innerHTML = html;
+  const used = canonicalStacks().length, cap2 = $("inv-cap"); if (cap2) cap2.textContent = `Bolsa: ${used}/${cap} · recursos y semillas apilan hasta 99`;
+  const ss = $("inv-selseed"); if (ss && CROP_DEF[G.selSeed]) ss.textContent = "🌱 Plantando: " + CROP_DEF[G.selSeed].emoji + " " + CROP_DEF[G.selSeed].label + " · clic una semilla para cambiar";
+  renderInvExpand();
+  bindZoneDnD($("inv-slots"), "inv");
+  $("inv-slots").querySelectorAll("[data-slot]").forEach(c => c.addEventListener("click", () => invCellClick(+c.dataset.slot)));
+  refreshHotbar();
+}
+function invCellClick(i) {
+  const d = G.slots[i]; if (!d) return;
+  if (d.kind === "seed") { if (!cropUnlocked(d.key)) { toast("Necesitás Cultivo nivel " + CROP_DEF[d.key].lvl); return; } selectSeed(d.key); toast("🌱 Plantando: " + CROP_DEF[d.key].label); }
+  else if (d.kind === "pick") { if (G.picks.owned[d.key]) equipPick(d.key); }
+}
 
 // botón para ampliar la bolsa (+6): primera fila con minerales, siguientes con plata
 function renderInvExpand() {
@@ -36,15 +78,58 @@ function renderInvExpand() {
   const b = $("inv-expbtn"); if (b) b.onclick = expandInv;
 }
 
-// semillas en la bolsa: clic para elegir cuál plantar
-function renderSeedBag() {
-  const box = $("inv-seeds"); if (!box) return;
-  box.innerHTML = CROP_ORDER.map(k => {
-    const cd = CROP_DEF[k], n = G.seeds[k] || 0, unlocked = cropUnlocked(k), sel = G.selSeed === k;
-    const title = `${cd.label} · crece en ${cd.grow}s · Cultivo nivel ${cd.lvl}`;
-    return `<button class="seed${sel ? " sel" : ""}${unlocked ? "" : " locked"}" data-seed="${k}" title="${title}" ${unlocked ? "" : "disabled"}><span class="se">${cd.emoji}</span><span class="sc">${fmt(n)}</span></button>`;
-  }).join("");
-  box.querySelectorAll("[data-seed]").forEach(b => b.onclick = () => { selectSeed(b.dataset.seed); toast("🌱 Semilla: " + CROP_DEF[b.dataset.seed].label); });
+/* ---- barra de accesos directos (hotbar de 10 huecos) ---- */
+function hotItemExists(d) {
+  if (!d) return false;
+  if (d.kind === "pick") return !!G.picks.owned[d.key];
+  if (d.kind === "res") return (G.res[d.key] || 0) > 0;
+  if (d.kind === "seed") return (G.seeds[d.key] || 0) > 0;
+  return true;   // herramientas siempre están
+}
+function hotCellHtml(d, i) {
+  const num = `<span class="hk">${i + 1}</span>`;
+  if (!d) return `<div class="hcell" data-slot="${i}" data-zone="hot">${num}</div>`;
+  const v = itemView(d);
+  let cnt = ""; if (d.kind === "res") cnt = `<span class="cnt">${fmt(G.res[d.key] || 0)}</span>`; if (d.kind === "seed") cnt = `<span class="cnt">${fmt(G.seeds[d.key] || 0)}</span>`;
+  const sel = (d.kind === "seed" && G.selSeed === d.key) ? " sel" : "";
+  const eq = (d.kind === "pick" && G.picks.eq === d.key) ? " eq" : "";
+  const ghost = hotItemExists(d) ? "" : " ghost";
+  return `<div class="hcell filled${sel}${eq}${ghost}" draggable="true" data-slot="${i}" data-zone="hot" title="${v.label}">${num}${itemIcon(v)}${cnt}${durBar(v)}</div>`;
+}
+function refreshHotbar() {
+  if (dndActive) return;
+  const box = $("hotbar"); if (!box) return;
+  syncSlots();
+  if (!Array.isArray(G.hotbar)) G.hotbar = [];
+  while (G.hotbar.length < 10) G.hotbar.push(null);
+  let html = ""; for (let i = 0; i < 10; i++) html += hotCellHtml(G.hotbar[i], i);
+  box.innerHTML = html;
+  bindZoneDnD(box, "hot");
+  box.querySelectorAll("[data-slot]").forEach(c => c.addEventListener("click", () => hotbarUse(+c.dataset.slot)));
+}
+function hotbarUse(i) {
+  const d = G.hotbar[i]; if (!d) return;
+  if (d.kind === "seed") { if (!cropUnlocked(d.key)) { toast("Necesitás Cultivo nivel " + CROP_DEF[d.key].lvl); return; } selectSeed(d.key); toast("🌱 Plantando: " + CROP_DEF[d.key].label); }
+  else if (d.kind === "pick") { if (G.picks.owned[d.key]) equipPick(d.key); }
+}
+
+/* ---- drag & drop de casillas (bolsa ↔ hotbar) ---- */
+function bindZoneDnD(container, zone) {
+  if (!container) return;
+  container.querySelectorAll("[data-slot]").forEach(cell => {
+    cell.addEventListener("dragstart", e => { dndActive = true; e.dataTransfer.setData("text/plain", zone + ":" + cell.dataset.slot); e.dataTransfer.effectAllowed = "move"; });
+    cell.addEventListener("dragend", () => { dndActive = false; });
+    cell.addEventListener("dragover", e => { e.preventDefault(); e.dataTransfer.dropEffect = "move"; });
+    cell.addEventListener("drop", e => { e.preventDefault(); dndActive = false; dndDrop(e.dataTransfer.getData("text/plain"), zone, +cell.dataset.slot); });
+  });
+}
+function dndDrop(src, tz, ti) {
+  if (!src) return; const ci = src.indexOf(":"), sz = src.slice(0, ci), si = +src.slice(ci + 1);
+  if (sz === "inv" && tz === "inv") { const a = G.slots[si]; G.slots[si] = G.slots[ti]; G.slots[ti] = a; }
+  else if (sz === "inv" && tz === "hot") { const d = G.slots[si]; if (d) G.hotbar[ti] = { kind: d.kind, key: d.key }; }
+  else if (sz === "hot" && tz === "hot") { const a = G.hotbar[si]; G.hotbar[si] = G.hotbar[ti]; G.hotbar[ti] = a; }
+  else if (sz === "hot" && tz === "inv") { G.hotbar[si] = null; }
+  if (isOpen("ov-inv")) refreshInv(); else refreshHotbar();
 }
 
 /* ---- skills ---- */
