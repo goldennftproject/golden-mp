@@ -22,7 +22,9 @@ defineTypes(WorldState, {
 class WorldRoom extends Room {
   onCreate(options) {
     this.maxClients = 50;
-    this.setState(new WorldState());
+    const state = new WorldState();
+    state.players = new MapSchema();   // <-- inicializar el mapa de jugadores
+    this.setState(state);
 
     // El cliente manda su posición; el server la refleja a todos.
     this.onMessage("move", (client, data) => {

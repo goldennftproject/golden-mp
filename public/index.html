@@ -47,7 +47,14 @@
 
   <!-- Phaser y Colyseus desde CDN (tu navegador tiene internet; el sandbox de la nube no) -->
   <script src="https://cdn.jsdelivr.net/npm/phaser@3.80.1/dist/phaser.min.js"></script>
-  <script src="https://unpkg.com/colyseus.js@0.15.26/dist/colyseus.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/colyseus.js@0.15/dist/colyseus.js"></script>
+  <script>
+    // Aviso claro si la librería del cliente no cargó (evita el confuso "No se pudo conectar")
+    if (typeof Colyseus === "undefined") {
+      var s = document.getElementById("status");
+      if (s) s.textContent = "🔴 No cargó colyseus.js (CDN). Revisá tu conexión y recargá.";
+    }
+  </script>
   <script src="game.js"></script>
 </body>
 </html>
