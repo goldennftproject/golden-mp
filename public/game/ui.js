@@ -31,7 +31,7 @@ function itemView(d) {
     const m = M[d.key] || M.hoe; return { sprite: m.s, emoji: "🔧", label: m.l, dur: m.dur };
   }
   if (d.kind === "pick") { const pd = PICK_DEF[d.key]; return { sprite: pd.sprite, emoji: "⛏️", label: pd.label, dur: Math.round((G.picks.dur[d.key] || 0) / pd.dur * 100) }; }
-  if (d.kind === "res") return { sprite: null, emoji: RES_EMOJI[d.key], label: RES_LABEL[d.key], dur: null };
+  if (d.kind === "res") return { sprite: CROP_DEF[d.key] ? "crop_" + d.key : null, emoji: RES_EMOJI[d.key], label: RES_LABEL[d.key], dur: null };
   if (d.kind === "seed") { const cd = CROP_DEF[d.key]; return { sprite: "seed_" + d.key, emoji: cd.emoji, label: cd.label + " (semilla)", dur: null }; }
   return { sprite: null, emoji: "?", label: "", dur: null };
 }
@@ -206,7 +206,7 @@ function refreshTools() {
 function refreshMarket() {
   const cur = marketCur;
   $("mkt-list").innerHTML = SELLABLE.map(res => { const owned = G.res[res] || 0; const u = marketUnit(res); const uStr = cur === "plata" ? `${u} de plata c/u` : `${u.toFixed(1)} $Golden c/u`;
-    return `<div class="mkt-row"><span class="mimg">${RES_EMOJI[res]}</span><div class="minfo"><div class="mnm">${RES_LABEL[res]}</div><div class="mds">Tenés ${fmt(owned)} · ${uStr}</div></div><input id="mq-${res}" type="number" min="0" max="${owned}" value="${owned > 0 ? owned : 0}"><button class="vbtn" id="vb-${res}">Vender</button></div>`; }).join("");
+    return `<div class="mkt-row"><span class="mimg">${itemIcon({ sprite: CROP_DEF[res] ? "crop_" + res : null, emoji: RES_EMOJI[res] })}</span><div class="minfo"><div class="mnm">${RES_LABEL[res]}</div><div class="mds">Tenés ${fmt(owned)} · ${uStr}</div></div><input id="mq-${res}" type="number" min="0" max="${owned}" value="${owned > 0 ? owned : 0}"><button class="vbtn" id="vb-${res}">Vender</button></div>`; }).join("");
   SELLABLE.forEach(res => { const btn = $("vb-" + res); if (btn) btn.onclick = () => sellItem(res); });
   document.querySelectorAll(".curbtn").forEach(b => b.classList.toggle("active", b.dataset.cur === cur));
   refreshSeedShop();

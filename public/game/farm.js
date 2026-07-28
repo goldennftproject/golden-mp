@@ -232,7 +232,7 @@ class FarmScene extends Phaser.Scene {
       const ck = G.selSeed, cd = CROP_DEF[ck];
       if (cd && (G.seeds[ck] || 0) > 0) {
         G.seeds[ck]--; o.cropKey = ck; o.state = "growing"; o.readyAt = nowMs() + cd.grow * 1000 * cdMult();
-        o.spr.setVisible(true); o.emo.setVisible(false);
+        this.showGrowing(o);
         this.syncPlots(); addXp("farming", 5); log(`🌱 Plantaste ${cd.label}.`, "good"); toast("🌱 " + cd.label);
         if (isOpen("ov-inv")) refreshInv();
       }
@@ -249,10 +249,30 @@ class FarmScene extends Phaser.Scene {
 
   setObjTex(o, key, targetW) { o.sprite.setTexture(key); o.sprite.setScale(targetW / o.sprite.width); }
 
+  // brote mientras crece
+  showGrowing(pl) {
+    pl.spr.setTexture("sprout").setVisible(true);
+    pl.spr.setScale((GF.TILE * 0.75) / pl.spr.width);
+    pl.emo.setVisible(false);
+  }
+  // cultivo (conjunto) cuando está listo; si falta el sprite, cae al emoji
+  showReadyCrop(pl) {
+    const key = "cropg_" + pl.cropKey;
+    if (pl.cropKey && this.textures.exists(key)) {
+      pl.spr.setTexture(key).setVisible(true);
+      pl.spr.setScale((GF.TILE * 0.95) / pl.spr.width);
+      pl.emo.setVisible(false);
+    } else {
+      pl.spr.setVisible(false);
+      const cd = CROP_DEF[pl.cropKey];
+      pl.emo.setText(cd ? cd.emoji : "🌾").setVisible(true);
+    }
+    pl.timer.setVisible(false);
+  }
   // pinta la parcela según su estado (para restaurar tras un refresh)
   applyPlotVisual(pl) {
-    if (pl.state === "growing") { pl.spr.setVisible(true); pl.emo.setVisible(false); }
-    else if (pl.state === "ready") { pl.spr.setVisible(false); const cd = CROP_DEF[pl.cropKey]; pl.emo.setText(cd ? cd.emoji : "🌾").setVisible(true); pl.timer.setVisible(false); }
+    if (pl.state === "growing") this.showGrowing(pl);
+    else if (pl.state === "ready") this.showReadyCrop(pl);
     else { pl.spr.setVisible(false); pl.emo.setVisible(false); pl.timer.setVisible(false); }
   }
 
@@ -274,7 +294,7 @@ class FarmScene extends Phaser.Scene {
     // lotes: pasar de "creciendo" a "listo"
     for (const pl of this.plots) {
       if (pl.state !== "growing") continue;
-      if (t >= pl.readyAt) { pl.state = "ready"; pl.readyAt = 0; pl.spr.setVisible(false); const cd = CROP_DEF[pl.cropKey]; pl.emo.setText(cd ? cd.emoji : "🌾").setVisible(true); pl.timer.setVisible(false); this.syncPlots(); }
+      if (t >= pl.readyAt) { pl.state = "ready"; pl.readyAt = 0; this.showReadyCrop(pl); this.syncPlots(); }
       else { pl.timer.setText(Math.max(0, Math.ceil((pl.readyAt - t) / 1000)) + "s").setVisible(true); }
     }
     // amenazas (jabalíes)
