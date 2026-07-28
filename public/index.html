@@ -92,6 +92,9 @@
   .lbtabs{display:flex;gap:8px;margin:2px 0 12px}
   .lbtab{padding:6px 12px;border-radius:8px;border:1px solid var(--line);background:#fff;color:var(--ink);font-size:12.5px;font-weight:700;cursor:pointer}
   .lbtab.active{background:linear-gradient(#f6d878,#e9b93f);border-color:var(--gold-deep)}
+  .shoptabs{display:flex;gap:8px;margin:2px 0 12px}
+  .shoptab{flex:1;padding:7px 10px;border-radius:8px;border:1px solid var(--line);background:#fff;color:var(--ink);font-size:12.5px;font-weight:700;cursor:pointer}
+  .shoptab.active{background:linear-gradient(#f6d878,#e9b93f);border-color:var(--gold-deep)}
   .lblist{display:flex;flex-direction:column;gap:5px;max-height:52vh;overflow:auto}
   .lbrow{display:flex;align-items:center;gap:10px;background:#faf3e2;border:1px solid var(--line);border-radius:9px;padding:7px 11px;font-size:13px}
   .lbrow .rk{width:26px;font-weight:800;color:var(--muted);text-align:center;flex:0 0 auto}
@@ -209,14 +212,20 @@
   <div class="ov" id="ov-market"><div class="card" style="width:min(520px,94%)">
     <button class="close" data-close="ov-market">×</button>
     <h3>🏪 Tienda</h3>
-    <div class="shophead">🌱 Comprar semillas</div>
-    <div class="mkt-list" id="seed-shop"></div>
-    <div class="shophead">💰 Vender recursos</div>
-    <div class="mkt-cur">Cobrar en:
-      <button class="curbtn active" data-cur="plata"><span class="coin silver"></span> Plata</button>
-      <button class="curbtn" data-cur="golden"><span class="coin gold"></span> $Golden</button>
+    <div class="shoptabs">
+      <button class="shoptab active" data-shop="buy">🌱 Comprar semillas</button>
+      <button class="shoptab" data-shop="sell">💰 Vender recursos</button>
     </div>
-    <div class="mkt-list" id="mkt-list"></div>
+    <div class="shoppane" id="shop-buy">
+      <div class="mkt-list" id="seed-shop"></div>
+    </div>
+    <div class="shoppane" id="shop-sell" style="display:none">
+      <div class="mkt-cur">Cobrar en:
+        <button class="curbtn active" data-cur="plata"><span class="coin silver"></span> Plata</button>
+        <button class="curbtn" data-cur="golden"><span class="coin gold"></span> $Golden</button>
+      </div>
+      <div class="mkt-list" id="mkt-list"></div>
+    </div>
   </div></div>
 
   <div class="ov" id="ov-forge"><div class="card" style="width:min(580px,94%)">

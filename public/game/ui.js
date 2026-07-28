@@ -235,6 +235,12 @@ function initUI() {
   const pr = $("prestige"); if (pr) pr.onclick = prestige;
   document.querySelectorAll(".curbtn").forEach(b => b.onclick = () => { marketCur = b.dataset.cur; refreshMarket(); });
   document.querySelectorAll(".lbtab").forEach(b => b.onclick = () => { lbTab = b.dataset.lb; refreshLb(); });
+  document.querySelectorAll(".shoptab").forEach(b => b.onclick = () => {
+    document.querySelectorAll(".shoptab").forEach(x => x.classList.toggle("active", x === b));
+    const s = b.dataset.shop;
+    $("shop-buy").style.display = s === "buy" ? "" : "none";
+    $("shop-sell").style.display = s === "sell" ? "" : "none";
+  });
   const ce = $("cfg-edit"); if (ce) ce.onclick = () => toast("La edición de la granja llega en otra fase.");
   const cr = $("cfg-reset"); if (cr) cr.onclick = () => toast("Próximamente.");
   const lm = $("logmin"); if (lm) lm.onclick = () => $("logpanel").classList.toggle("collapsed");
