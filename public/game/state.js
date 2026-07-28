@@ -157,7 +157,7 @@ function tryAddRes(key, amt) {
 }
 
 // --- casillas: todo es ítem (recursos/semillas apilan 99; herramientas/picos 1 c/u con durabilidad) ---
-const ITEM_RES_ORDER = SELLABLE.slice();
+const ITEM_RES_ORDER = ["papa","zanahoria","cebolla","calabacin","repollo","calabaza","brocoli","madera","piedra","bronce","oro","diamante","netherita"];
 function descKey(d) { return d ? d.kind + ":" + d.key : ""; }
 function canonicalStacks() {
   const list = [];
