@@ -24,7 +24,14 @@ const VERSION = process.env.RENDER_GIT_COMMIT || "dev";
 app.get("/version", (req, res) => { res.set("Cache-Control", "no-store"); res.json({ v: VERSION }); });
 
 // Sirve el cliente estático (public/) — sirve para el deploy "todo en uno" en Render.
-app.use(express.static(path.join(__dirname, "..", "public")));
+// no-cache en js/html/css: el navegador revalida con ETag en cada carga, así después
+// de un deploy siempre baja el código nuevo (nunca reusa un .js viejo cacheado).
+app.use(express.static(path.join(__dirname, "..", "public"), {
+  etag: true,
+  setHeaders: (res, filePath) => {
+    if (/\.(js|html|css)$/.test(filePath)) res.setHeader("Cache-Control", "no-cache");
+  },
+}));
 
 const httpServer = http.createServer(app);
 const gameServer = new Server({ server: httpServer });
