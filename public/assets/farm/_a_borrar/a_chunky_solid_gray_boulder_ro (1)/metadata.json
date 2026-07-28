@@ -1,0 +1,37 @@
+{
+  "group_id": "9b861077-f515-4ab3-8f30-168ddd62eb2a",
+  "objects": [
+    {
+      "id": "7c4170e8-2785-44fa-9ef1-f93c0ea05cf1",
+      "name": null,
+      "prompt": "a chunky solid gray boulder rock, smooth rounded natural stone with no crystals or gems at all, cozy cartoon farming game mining node, clean dark outline",
+      "size": {
+        "width": 40,
+        "height": 40
+      },
+      "directions": 1,
+      "view": "low top-down",
+      "rotations": {
+        "unknown": "rotations/unknown.png"
+      },
+      "animations": {}
+    },
+    {
+      "id": "ad580375-2e3c-4eac-8971-283486edbedb",
+      "name": "turn it into a mined",
+      "prompt": "a chunky solid gray boulder rock, smooth rounded natural stone with no crystals or gems at all, cozy cartoon farming game mining node, clean dark outline",
+      "size": {
+        "width": 40,
+        "height": 40
+      },
+      "directions": 1,
+      "view": "low top-down",
+      "rotations": {
+        "unknown": "rotations/unknown.png"
+      },
+      "animations": {}
+    }
+  ],
+  "export_version": "1.0",
+  "export_date": "2026-07-28T19:14:12.650468"
+}

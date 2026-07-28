@@ -152,9 +152,10 @@ class FarmScene extends Phaser.Scene {
       if (o.state === "ready") { const cd = CROP_DEF[o.cropKey]; return "🌾 Cosechar " + (cd ? cd.label : ""); }
       return "🌱 Creciendo…";
     }
-    if (o.type === "tree") return cd ? "🪵 Talado (crece)" : "🪓 Talar madera";
-    if (o.type === "rock") return cd ? "🪨 Picada (regenera)" : "⛏️ Picar piedra";
-    if (o.type === "ore") { const od = ORE_DEF[o.ore]; if (!od) return "⛏️ Minar"; if (cd) return od.emoji + " En enfriamiento"; return "⛏️ Minar " + od.label; }
+    const secs = cd ? Math.ceil((o.readyAt - nowMs()) / 1000) : 0;
+    if (o.type === "tree") return cd ? "🪵 Vuelve en " + secs + "s" : "🪓 Talar madera";
+    if (o.type === "rock") return cd ? "🪨 Vuelve en " + secs + "s" : "⛏️ Picar piedra";
+    if (o.type === "ore") { const od = ORE_DEF[o.ore]; if (!od) return "⛏️ Minar"; if (cd) return od.emoji + " Vuelve en " + secs + "s"; return "⛏️ Minar " + od.label; }
     if (o.type === "barn") return "🏡 Granja";
     if (o.type === "market") return "🏪 Mercado";
     if (o.type === "store") return "🛠️ Herrería";
@@ -224,7 +225,8 @@ class FarmScene extends Phaser.Scene {
       if (tryAddRes(o.ore, gr)) {
         G.picks.dur[pk] = Math.max(0, (G.picks.dur[pk] || 0) - 1);
         addXp("mining", 5 + od.tier * 3);
-        o.readyAt = nowMs() + oreCdSec(od.tier) * 1000 * cdMult(); o.sprite.setAlpha(0.4);
+        o.readyAt = nowMs() + oreCdSec(od.tier) * 1000 * cdMult();
+        if (this.textures.exists(o.baseKey + "_mined")) this.setObjTex(o, o.baseKey + "_mined", o.rw || GF.TILE); else o.sprite.setAlpha(0.4);
         log(`${od.emoji} +${gr} ${od.label}. ⛏️ ${G.picks.dur[pk]}/${pd.dur}`, "good"); toast("+" + gr + " " + od.emoji); refreshHud();
         if (G.picks.dur[pk] <= 0) { log(`🛠️ ¡${pd.label} se rompió! Reparalo en la Herrería.`, "bad"); toast("🛠️ ¡Pico roto!"); }
       } else toast("🎒 Inventario lleno");
@@ -288,7 +290,7 @@ class FarmScene extends Phaser.Scene {
       if (o.readyAt && t >= o.readyAt) {
         o.readyAt = 0;
         if (o.type === "tree" || o.type === "rock") this.setObjTex(o, o.baseKey, o.rw || o.w);
-        else if (o.type === "ore") o.sprite.setAlpha(1);
+        else if (o.type === "ore") { this.setObjTex(o, o.baseKey, o.rw || o.w); o.sprite.setAlpha(1); }
       }
     }
     // lotes: pasar de "creciendo" a "listo"

@@ -17,6 +17,9 @@ class BootScene extends Phaser.Scene {
       .forEach(k => this.load.image(k, P + k + ".png"));
     // sprites de cultivo (conjunto) para la parcela lista
     if (typeof CROP_ORDER !== "undefined") CROP_ORDER.forEach(k => this.load.image("cropg_" + k, P + "cropg_" + k + ".png"));
+    // versiones picadas de los nodos (se muestran mientras están en enfriamiento)
+    ["node_stone_mined","node_bronze_mined","node_gold_mined","node_diamond_mined","node_netherite_mined"]
+      .forEach(k => this.load.image(k, P + k + ".png"));
 
     // barra de carga simple
     const w = this.scale.width, h = this.scale.height;
