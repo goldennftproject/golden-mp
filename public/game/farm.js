@@ -170,6 +170,8 @@ class FarmScene extends Phaser.Scene {
     if (o.type === "store") return openOv("ov-forge");
     if (o.type === "boar") { o.sprite.destroy(); const i = this.threats.indexOf(o); if (i >= 0) this.threats.splice(i, 1); addXp("sword", 4); log("🥍 Espantaste al jabalí.", "good"); toast("🥍 ¡Espantado!"); return; }
     if (o.type === "plot") {
+      const at = activeTool();
+      if (at !== "hoe" && at !== "seed") { toast("🪝 Equipá la azada o una semilla para la parcela"); return; }
       if (o.state === "dry") {
         const ck = G.selSeed, cd = CROP_DEF[ck];
         if (!cd) { toast("Elegí una semilla en la bolsa (I)"); return; }
@@ -180,17 +182,24 @@ class FarmScene extends Phaser.Scene {
       if (o.state === "ready") return this.startAction("harvest", o);
       toast("🌱 Todavía está creciendo"); return;
     }
-    if (o.type === "fish") { if (toolDur("rod") <= 0) { toast("🎣 Caña rota — reparala en la Herrería"); return; } if (G.golden < FISH_COST) { toast("Necesitás 5 ✨ para pescar"); return; } return this.startAction("fish", o); }
+    if (o.type === "fish") { if (activeTool() !== "rod") { toast("🎣 Equipá la caña para pescar"); return; } if (toolDur("rod") <= 0) { toast("🎣 Caña rota — reparala en la Herrería"); return; } if (G.golden < FISH_COST) { toast("Necesitás 5 ✨ para pescar"); return; } return this.startAction("fish", o); }
     if (nowMs() < o.readyAt) { toast(this.promptText(o)); return; }
     if (o.type === "ore") {
+      if (activeTool() !== "pick") { toast("⛏️ Equipá el pico para minar el mineral"); return; }
       const pk = equippedPick();
       if (!pk) { toast("⛏️ Sin pico equipado"); return; }
       const pd = PICK_DEF[pk], od = ORE_DEF[o.ore];
       if (od.tier > pd.mineTier) { toast("⛏️ Tu " + pd.label + " no puede con " + od.label); log("Necesitás un pico mejor para " + od.label + " (Herrería).", "bad"); return; }
       if ((G.picks.dur[pk] || 0) <= 0) { toast("🛠️ Pico roto — reparalo en la Herrería"); return; }
       this.startAction("mine", o);
-    } else if (o.type === "tree") { if (toolDur("axe") <= 0) { toast("🪓 Hacha rota — reparala en la Herrería"); return; } this.startAction("chop", o); }
-    else if (o.type === "rock") this.startAction("mine", o);
+    } else if (o.type === "tree") {
+      if (activeTool() !== "axe") { toast("🪓 Equipá el hacha (accesos directos) para talar"); return; }
+      if (toolDur("axe") <= 0) { toast("🪓 Hacha rota — reparala en la Herrería"); return; }
+      this.startAction("chop", o);
+    } else if (o.type === "rock") {
+      if (activeTool() !== "pick") { toast("⛏️ Equipá el pico para picar la piedra"); return; }
+      this.startAction("mine", o);
+    }
   }
 
   startAction(kind, o) {

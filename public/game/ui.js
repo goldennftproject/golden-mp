@@ -87,30 +87,40 @@ function hotItemExists(d) {
   return true;   // herramientas siempre están
 }
 function hotCellHtml(d, i) {
-  const num = `<span class="hk">${i + 1}</span>`;
-  if (!d) return `<div class="hcell" data-slot="${i}" data-zone="hot">${num}</div>`;
+  const num = `<span class="hk">${i === 9 ? 0 : i + 1}</span>`;
+  const on = (G.hotSel === i) ? " on" : "";
+  if (!d) return `<div class="hcell${on}" data-slot="${i}" data-zone="hot">${num}</div>`;
   const v = itemView(d);
   let cnt = ""; if (d.kind === "res") cnt = `<span class="cnt">${fmt(G.res[d.key] || 0)}</span>`; if (d.kind === "seed") cnt = `<span class="cnt">${fmt(G.seeds[d.key] || 0)}</span>`;
   const sel = (d.kind === "seed" && G.selSeed === d.key) ? " sel" : "";
   const eq = (d.kind === "pick" && G.picks.eq === d.key) ? " eq" : "";
   const ghost = hotItemExists(d) ? "" : " ghost";
-  return `<div class="hcell filled${sel}${eq}${ghost}" draggable="true" data-slot="${i}" data-zone="hot" title="${v.label}">${num}${itemIcon(v)}${cnt}${durBar(v)}</div>`;
+  return `<div class="hcell filled${on}${sel}${eq}${ghost}" draggable="true" data-slot="${i}" data-zone="hot" title="${v.label}">${num}${itemIcon(v)}${cnt}${durBar(v)}</div>`;
 }
 function refreshHotbar() {
   if (dndActive) return;
   const box = $("hotbar"); if (!box) return;
+  ensureHotbarDefaults();
   syncSlots();
   if (!Array.isArray(G.hotbar)) G.hotbar = [];
   while (G.hotbar.length < 10) G.hotbar.push(null);
   let html = ""; for (let i = 0; i < 10; i++) html += hotCellHtml(G.hotbar[i], i);
   box.innerHTML = html;
   bindZoneDnD(box, "hot");
-  box.querySelectorAll("[data-slot]").forEach(c => c.addEventListener("click", () => hotbarUse(+c.dataset.slot)));
+  box.querySelectorAll("[data-slot]").forEach(c => c.addEventListener("click", () => hotSelect(+c.dataset.slot)));
 }
-function hotbarUse(i) {
-  const d = G.hotbar[i]; if (!d) return;
-  if (d.kind === "seed") { if (!cropUnlocked(d.key)) { toast("Necesitás Cultivo nivel " + CROP_DEF[d.key].lvl); return; } selectSeed(d.key); toast("🌱 Plantando: " + CROP_DEF[d.key].label); }
-  else if (d.kind === "pick") { if (G.picks.owned[d.key]) equipPick(d.key); }
+// seleccionar hueco de la hotbar (= herramienta "en mano"); equipa pico / elige semilla si corresponde
+function hotSelect(i) {
+  if (i < 0 || i > 9) return;
+  G.hotSel = i;
+  const d = G.hotbar[i];
+  if (d) {
+    if (d.kind === "pick" && G.picks.owned[d.key]) equipPick(d.key);
+    else if (d.kind === "seed" && cropUnlocked(d.key)) selectSeed(d.key);
+  }
+  const v = d ? itemView(d) : null;
+  toast(v ? "✋ " + v.label : "Hueco " + (i === 9 ? 0 : i + 1) + " vacío");
+  refreshHotbar();
 }
 
 /* ---- drag & drop de casillas (bolsa ↔ hotbar) ---- */
@@ -404,6 +414,8 @@ function initUI() {
     if (e.target && (e.target.tagName === "INPUT" || e.target.tagName === "TEXTAREA")) return;
     const key = e.key.toLowerCase();
     if (key === "escape") { closeAllOv(); return; }
+    if (key >= "1" && key <= "9") { hotSelect(+key - 1); e.preventDefault(); return; }
+    if (key === "0") { hotSelect(9); e.preventDefault(); return; }
     if (KEYS[key]) { const id = KEYS[key]; if (isOpen(id)) closeOv(id); else { closeAllOv(); openOv(id); } e.preventDefault(); }
   });
 

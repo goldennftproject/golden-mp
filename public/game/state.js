@@ -14,6 +14,8 @@ const G = {
   invRows: 0,                    // filas extra de inventario compradas
   slots: [],                     // inventario por casillas: [{kind,key}|null]
   hotbar: [null, null, null, null, null, null, null, null, null, null],  // 10 accesos directos
+  hotSel: 0,                     // hueco de la hotbar seleccionado (herramienta "en mano")
+  hbInit: false,                 // si ya se cargaron los accesos directos por defecto
   fish: { comun: 0, raro: 0, epico: 0, legendario: 0 },
   plots: [],   // estado de las parcelas: [{state, readyAt, cropKey}] — lo llena la FarmScene
   buffs: [], secPerGameHour: 1, gameHours: 0,
@@ -181,6 +183,29 @@ function syncSlots() {
     const ix = k.indexOf(":"), kind = k.slice(0, ix), key = k.slice(ix + 1);
     for (let j = cur; j < want[k]; j++) { const i = G.slots.indexOf(null); if (i < 0) break; G.slots[i] = { kind, key }; }
   }
+}
+// herramienta "en mano" según el hueco seleccionado de la hotbar
+function activeTool() {
+  const d = G.hotbar[G.hotSel];
+  if (!d) return null;
+  if (d.kind === "tool") return d.key;   // "hoe" | "axe" | "rod"
+  if (d.kind === "pick") return "pick";
+  if (d.kind === "seed") return "seed";
+  return null;                            // recurso u otro
+}
+// la primera vez, precarga la hotbar con las herramientas básicas
+function ensureHotbarDefaults() {
+  if (G.hbInit) return;
+  if (!Array.isArray(G.hotbar)) G.hotbar = [];
+  while (G.hotbar.length < 10) G.hotbar.push(null);
+  if (!G.hotbar.some(Boolean)) {
+    G.hotbar[0] = { kind: "tool", key: "hoe" };
+    G.hotbar[1] = { kind: "tool", key: "axe" };
+    G.hotbar[2] = { kind: "pick", key: (G.picks && G.picks.eq) || "stone" };
+    G.hotbar[3] = { kind: "tool", key: "rod" };
+    G.hotbar[4] = { kind: "seed", key: G.selSeed || "papa" };
+  }
+  G.hbInit = true;
 }
 
 // --- mercado ---
