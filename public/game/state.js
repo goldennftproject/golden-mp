@@ -19,6 +19,7 @@ const G = {
   layout: {},                    // posiciones editadas de objetos de la granja: {index:{cx,by}}
   fish: { comun: 0, raro: 0, epico: 0, legendario: 0 },
   plots: [],   // estado de las parcelas: [{state, readyAt, cropKey}] — lo llena la FarmScene
+  plotsOwned: 6,   // parcelas desbloqueadas (las demás se compran con plata)
   daily: { day: 0, last: "" },   // cofre diario: día de racha reclamado (1..7) y fecha del último reclamo
   buffs: [], secPerGameHour: 1, gameHours: 0,
   skills: { fishing: 0, farming: 0, cooking: 0, range: 0, sword: 0, mining: 0, crafting: 0 },
@@ -247,6 +248,9 @@ function goFishing() {
   else { G.golden += 15; tryAddRes("oro", 1); log("🐋 ¡Legendario! +15 ✨ y +1 Oro.", "gold"); toast("🐋 ¡LEGENDARIO!"); }
   refreshHud(); if (typeof syncSlots === "function") syncSlots(); if (isOpen("ov-inv")) refreshInv();
 }
+
+// --- parcelas bloqueadas: costo de desbloquear la siguiente (200, 400, 800, ... plata) ---
+function plotUnlockCost() { return 200 * Math.pow(2, Math.max(0, (G.plotsOwned || 6) - 6)); }
 
 // --- cofre diario de login (racha de 7 días · anti-inflación: 80% insumos / 20% plata) ---
 const DAILY_REWARDS = [

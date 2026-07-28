@@ -23,7 +23,12 @@ class FarmScene extends Phaser.Scene {
       g.fillStyle(0x2f5f8c, 1).fillEllipse(pcx, pcy, pw, ph);
       g.fillStyle(0x66a9dc, 1).fillEllipse(pcx, pcy - 6, pw - 26, ph - 26);
     }
-    GF.PLOTS.forEach(pl => { const x = pl.col * T, y = pl.row * T; g.fillStyle(0x8a5a33, 1); g.fillRoundedRect(x + 3, y + 3, T - 6, T - 6, 6); g.fillStyle(0x724829, 1); g.fillRoundedRect(x + 6, y + 6, T - 12, T - 12, 5); });
+    this.plotGrounds = [];
+    if (this.textures.exists("plot")) {   // sprite de parcela de PixelLab; si falta, cae al dibujo
+      GF.PLOTS.forEach(pl => this.plotGrounds.push(this.add.image((pl.col + 0.5) * T, (pl.row + 0.5) * T, "plot").setDisplaySize(T - 2, T - 2).setDepth(-998)));
+    } else {
+      GF.PLOTS.forEach(pl => { const x = pl.col * T, y = pl.row * T; g.fillStyle(0x8a5a33, 1); g.fillRoundedRect(x + 3, y + 3, T - 6, T - 6, 6); g.fillStyle(0x724829, 1); g.fillRoundedRect(x + 6, y + 6, T - 12, T - 12, 5); });
+    }
 
     // pececitos nadando en la laguna
     this.pondFish = [];
@@ -75,7 +80,13 @@ class FarmScene extends Phaser.Scene {
       spr.setScale((T * 0.75) / spr.width);
       const emo = this.add.text(cx, cy + 8, "", { fontSize: Math.round(T * 0.72) + "px" }).setOrigin(0.5, 0.95).setDepth(cy).setVisible(false);
       const timer = this.add.text(cx, cy - T * 0.55, "", { fontFamily: "system-ui", fontSize: "11px", fontStyle: "bold", color: "#fff", stroke: "#20301a", strokeThickness: 3 }).setOrigin(0.5, 1).setDepth(cy + 1).setVisible(false);
-      const obj = { type: "plot", i, cx, by: cy, state: "dry", readyAt: 0, cropKey: null, spr, emo, timer };
+      const obj = { type: "plot", i, cx, by: cy, state: "dry", readyAt: 0, cropKey: null, spr, emo, timer, ground: this.plotGrounds[i] || null };
+      const owned = Math.max(6, Math.min(GF.PLOTS.length, G.plotsOwned || 6));
+      if (i >= owned) {   // parcela bloqueada: se compra con plata
+        obj.state = "locked";
+        if (obj.ground) { if (this.textures.exists("plot_blocked")) obj.ground.setTexture("plot_blocked").setDisplaySize(T - 2, T - 2); else obj.ground.setAlpha(0.45); }
+        return obj;
+      }
       const sv = savedPlots[i];   // restaura lo plantado antes del refresh (ignora estados viejos como "wet")
       if (sv && (sv.state === "growing" || sv.state === "ready")) { obj.state = sv.state; obj.readyAt = sv.readyAt || 0; obj.cropKey = sv.cropKey || null; this.applyPlotVisual(obj); }
       return obj;
@@ -229,6 +240,7 @@ class FarmScene extends Phaser.Scene {
     const cd = nowMs() < o.readyAt;
     if (o.type === "boar") return "🥍 Espantar jabalí";
     if (o.type === "plot") {
+      if (o.state === "locked") return "🔒 Desbloquear parcela (" + plotUnlockCost() + " 🪙)";
       if (o.state === "dry") { const cd = CROP_DEF[G.selSeed]; return "🌱 Plantar " + (cd ? cd.label : "cultivo"); }
       if (o.state === "ready") { const cd = CROP_DEF[o.cropKey]; return "🌾 Cosechar " + (cd ? cd.label : ""); }
       return "🌱 Creciendo…";
@@ -252,6 +264,21 @@ class FarmScene extends Phaser.Scene {
     if (o.type === "store") return openOv("ov-forge");
     if (o.type === "boar") { o.sprite.destroy(); const i = this.threats.indexOf(o); if (i >= 0) this.threats.splice(i, 1); log("🥍 Espantaste al jabalí.", "good"); toast("🥍 ¡Espantado!"); return; }   // XP de espada llega con el combate (necesita espada equipada)
     if (o.type === "plot") {
+      if (o.state === "locked") {   // desbloquear con plata (doble clic para confirmar)
+        const cost = plotUnlockCost();
+        if (this.unlockPend === o && nowMs() < this.unlockPendUntil) {
+          if (G.plata < cost) { toast("Te falta plata (" + cost + " 🪙)"); return; }
+          G.plata -= cost; G.plotsOwned = (G.plotsOwned || 6) + 1; o.state = "dry"; this.unlockPend = null;
+          if (o.ground && this.textures.exists("plot")) { o.ground.setTexture("plot").setDisplaySize(GF.TILE - 2, GF.TILE - 2); o.ground.setAlpha(1); }
+          addXp("farming", 5); this.syncPlots();
+          log("🔓 Desbloqueaste una parcela por " + cost + " 🪙.", "good"); toast("🔓 ¡Parcela desbloqueada!");
+          refreshHud(); if (typeof saveFarm === "function") saveFarm(true);
+        } else {
+          this.unlockPend = o; this.unlockPendUntil = nowMs() + 6000;
+          toast("🔒 Desbloquear esta parcela: " + cost + " 🪙 — interactuá de nuevo para confirmar");
+        }
+        return;
+      }
       // la azada/semilla se usan solas desde la bolsa (la hotbar sigue sirviendo para ELEGIR semilla)
       if (o.state === "dry") {
         const ck = G.selSeed, cd = CROP_DEF[ck];

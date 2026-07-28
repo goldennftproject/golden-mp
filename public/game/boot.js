@@ -14,7 +14,7 @@ class BootScene extends Phaser.Scene {
     // mundo
     ["tree","tree_stump","rock","rock_mined","node_stone","node_bronze","node_gold",
      "node_diamond","node_netherite","barn","market","store","wheat","sprout","duck","fishing_rod","boar",
-     "pond","plot"]
+     "pond","plot","plot_blocked"]
       .forEach(k => this.load.image(k, P + k + ".png"));
     // sprites de cultivo (conjunto) para la parcela lista
     if (typeof CROP_ORDER !== "undefined") CROP_ORDER.forEach(k => this.load.image("cropg_" + k, P + "cropg_" + k + ".png"));
