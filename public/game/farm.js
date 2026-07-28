@@ -45,10 +45,18 @@ class FarmScene extends Phaser.Scene {
       }).setOrigin(0.5, 1).setDepth(o.by + 2);
     });
 
-    // punto de pesca (junto al estanque)
+    // punto de pesca: un flotador en el agua (sin caña en el piso), con leve movimiento
     { const fx = (GF.FISH.col + 0.5) * T, fy = (GF.FISH.row + 0.5) * T;
-      const s = this.add.image(fx, fy, "fishing_rod").setOrigin(0.5, 1); s.setScale((T * 0.9) / s.width); s.setDepth(fy);
+      const s = this.add.circle(fx, fy - 4, 5, 0xff5a5a).setStrokeStyle(2, 0xffffff).setDepth(fy);
+      this.tweens.add({ targets: s, y: fy - 9, duration: 900, yoyo: true, repeat: -1, ease: "Sine.easeInOut" });
       this.objs.push({ type: "fish", cx: fx, by: fy, sprite: s, readyAt: 0 }); }
+
+    // timers de enfriamiento flotantes sobre árboles/rocas/nodos
+    this.objs.forEach(o => {
+      if (o.type === "tree" || o.type === "rock" || o.type === "ore") {
+        o.timer = this.add.text(o.cx, o.by - (o.rw || T) - 2, "", { fontFamily: "system-ui", fontSize: "11px", fontStyle: "bold", color: "#fff", stroke: "#20301a", strokeThickness: 3 }).setOrigin(0.5, 1).setDepth(o.by + 3).setVisible(false);
+      }
+    });
 
     // parcelas (ciclo arcade: seco → plantar semilla elegida → creciendo (con timer) → listo → cosechar)
     const savedPlots = Array.isArray(G.plots) ? G.plots : [];
@@ -291,6 +299,9 @@ class FarmScene extends Phaser.Scene {
         o.readyAt = 0;
         if (o.type === "tree" || o.type === "rock") this.setObjTex(o, o.baseKey, o.rw || o.w);
         else if (o.type === "ore") { this.setObjTex(o, o.baseKey, o.rw || o.w); o.sprite.setAlpha(1); }
+        if (o.timer) o.timer.setVisible(false);
+      } else if (o.readyAt && o.timer) {
+        o.timer.setText(Math.ceil((o.readyAt - t) / 1000) + "s").setVisible(true);
       }
     }
     // lotes: pasar de "creciendo" a "listo"

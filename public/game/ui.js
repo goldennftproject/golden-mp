@@ -5,7 +5,7 @@ function setTxt(id, v) { const e = $(id); if (e) e.textContent = v; }
 /* ---- toast / log ---- */
 let toastT = null;
 function toast(m) { const t = $("toast"); if (!t) return; t.textContent = m; t.classList.add("show"); clearTimeout(toastT); toastT = setTimeout(() => t.classList.remove("show"), 1400); }
-function log(m, k = "") { const b = $("log"); if (!b) return; const d = document.createElement("div"); d.className = "l" + (k ? " " + k : ""); d.textContent = m; b.prepend(d); while (b.children.length > 30) b.removeChild(b.lastChild); }
+function log(m, k = "") { const b = $("log"); if (!b) return; const d = document.createElement("div"); d.className = "l" + (k ? " " + k : ""); d.textContent = m; b.appendChild(d); while (b.children.length > 30) b.removeChild(b.firstChild); b.scrollTop = b.scrollHeight; }
 
 /* ---- overlays ---- */
 function isOpen(id) { const e = $(id); return !!(e && e.classList.contains("show")); }
@@ -27,10 +27,11 @@ function durColor(pct) { return pct > 50 ? "#8fd06a" : pct > 20 ? "#e0c76a" : "#
 function itemView(d) {
   if (!d) return null;
   if (d.kind === "tool") {
-    const M = { hoe: { s: "hoe", l: "Azada", dur: null }, axe: { s: "axe", l: "Hacha", dur: Math.round(toolDur("axe") / TOOL_DEF.axe.max * 100) }, rod: { s: "fishing_rod", l: "Caña", dur: Math.round(toolDur("rod") / TOOL_DEF.rod.max * 100) } };
-    const m = M[d.key] || M.hoe; return { sprite: m.s, emoji: "🔧", label: m.l, dur: m.dur };
+    if (d.key === "axe") return { sprite: "axe", emoji: "🔧", label: "Hacha · durabilidad " + toolDur("axe") + "/" + TOOL_DEF.axe.max, dur: Math.round(toolDur("axe") / TOOL_DEF.axe.max * 100) };
+    if (d.key === "rod") return { sprite: "fishing_rod", emoji: "🔧", label: "Caña · durabilidad " + toolDur("rod") + "/" + TOOL_DEF.rod.max, dur: Math.round(toolDur("rod") / TOOL_DEF.rod.max * 100) };
+    return { sprite: "hoe", emoji: "🔧", label: "Azada", dur: null };
   }
-  if (d.kind === "pick") { const pd = PICK_DEF[d.key]; return { sprite: pd.sprite, emoji: "⛏️", label: pd.label, dur: Math.round((G.picks.dur[d.key] || 0) / pd.dur * 100) }; }
+  if (d.kind === "pick") { const pd = PICK_DEF[d.key]; return { sprite: pd.sprite, emoji: "⛏️", label: pd.label + " · durabilidad " + (G.picks.dur[d.key] || 0) + "/" + pd.dur, dur: Math.round((G.picks.dur[d.key] || 0) / pd.dur * 100) }; }
   if (d.kind === "res") return { sprite: CROP_DEF[d.key] ? "crop_" + d.key : null, emoji: RES_EMOJI[d.key], label: RES_LABEL[d.key], dur: null };
   if (d.kind === "seed") { const cd = CROP_DEF[d.key]; return { sprite: "seed_" + d.key, emoji: cd.emoji, label: cd.label + " (semilla)", dur: null }; }
   return { sprite: null, emoji: "?", label: "", dur: null };
@@ -217,12 +218,12 @@ function refreshSeedShop() {
   const box = $("seed-shop"); if (!box) return;
   box.innerHTML = CROP_ORDER.map(k => {
     const cd = CROP_DEF[k], unlocked = cropUnlocked(k), aff = G.plata >= cd.seedCost;
-    const btn = unlocked
-      ? `<button class="green sm" data-buy="${k}" ${aff ? "" : "disabled"}>Comprar · 🪙${cd.seedCost}</button>`
+    const controls = unlocked
+      ? `<input id="sq-${k}" type="number" min="1" value="1"><button class="green sm" data-buy="${k}" ${aff ? "" : "disabled"}>Comprar · 🪙${cd.seedCost} c/u</button>`
       : `<button class="ghost sm" disabled>🔒 Cultivo nv ${cd.lvl}</button>`;
-    return `<div class="mkt-row"><span class="mimg">${itemIcon({ sprite: "seed_" + k, emoji: cd.emoji })}</span><div class="minfo"><div class="mnm">${cd.label} <span class="seedlv">nv ${cd.lvl}</span></div><div class="mds">Semilla · crece en ${cd.grow}s · tenés ${fmt(G.seeds[k] || 0)}</div></div>${btn}</div>`;
+    return `<div class="mkt-row"><span class="mimg">${itemIcon({ sprite: "seed_" + k, emoji: cd.emoji })}</span><div class="minfo"><div class="mnm">${cd.label} <span class="seedlv">nv ${cd.lvl}</span></div><div class="mds">Semilla · crece en ${cd.grow}s · tenés ${fmt(G.seeds[k] || 0)}</div></div>${controls}</div>`;
   }).join("");
-  box.querySelectorAll("[data-buy]").forEach(b => b.onclick = () => buySeed(b.dataset.buy));
+  box.querySelectorAll("[data-buy]").forEach(b => b.onclick = () => { const inp = $("sq-" + b.dataset.buy); buySeed(b.dataset.buy, inp ? +inp.value : 1); });
 }
 
 /* ---- granja (nivel) ---- */

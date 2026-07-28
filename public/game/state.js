@@ -51,12 +51,14 @@ const CROP_DEF = {
 function farmLevel() { return skillInfo(G.skills.farming).lvl; }
 function cropUnlocked(k) { const cd = CROP_DEF[k]; return !!cd && farmLevel() >= cd.lvl; }
 function selectSeed(k) { if (!CROP_DEF[k]) return; G.selSeed = k; if (isOpen("ov-inv")) refreshInv(); }
-function buySeed(k) {
+function buySeed(k, qty) {
   const cd = CROP_DEF[k]; if (!cd) return;
   if (!cropUnlocked(k)) { toast("Necesitás Cultivo nivel " + cd.lvl); return; }
-  if (G.plata < cd.seedCost) { toast("Te falta plata"); return; }
-  G.plata -= cd.seedCost; G.seeds[k] = (G.seeds[k] || 0) + 1;
-  log(`🛒 Compraste 1 semilla de ${cd.label}.`); toast("🌱 +1 " + cd.label);
+  qty = Math.max(1, Math.floor(qty || 1));
+  const cost = cd.seedCost * qty;
+  if (G.plata < cost) { toast("Te falta plata"); return; }
+  G.plata -= cost; G.seeds[k] = (G.seeds[k] || 0) + qty;
+  log(`🛒 Compraste ${qty} semilla(s) de ${cd.label} por ${cost} 🪙.`); toast("🌱 +" + qty + " " + cd.label);
   refreshHud(); if (typeof refreshSeedShop === "function") refreshSeedShop(); if (isOpen("ov-inv")) refreshInv();
 }
 
@@ -118,7 +120,7 @@ function useTool(id) { const d = toolDur(id); if (d <= 0) return false; G.tools[
 function repairTool(id) { const td = TOOL_DEF[id]; if (!td) return; if (toolDur(id) >= td.max) { toast("Ya está al 100%"); return; } if (!canAfford(td.repair)) { toast("Te faltan materiales para reparar"); return; } payCost(td.repair); G.tools[id] = td.max; log("🔧 Reparaste " + td.label + " (100%).", "good"); toast("🔧 Reparado"); refreshForge(); if (isOpen("ov-equip")) refreshEquip(); if (isOpen("ov-inv")) refreshInv(); }
 
 // --- inventario (base + filas extra) ---
-const INV_BASE = 18, INV_MAX_ROWS = 5;   // 18 base, hasta +5 filas de 6 = 48
+const INV_BASE = 30, INV_MAX_ROWS = 5;   // 30 base (5 filas de 6), hasta +5 filas más
 function invSlots() { return INV_BASE + (G.invRows || 0) * 6; }
 function nextInvCost() {
   const r = G.invRows || 0;
