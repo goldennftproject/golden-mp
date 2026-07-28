@@ -24,6 +24,8 @@ function enterGame() {
   if (typeof refreshHud === "function") refreshHud();
   document.getElementById("gate").style.display = "none";
   startGame();
+  // cofre diario: si hay recompensa por reclamar, se abre solo al entrar
+  setTimeout(() => { try { if (dailyState().claimable) openOv("ov-daily"); } catch (e) {} }, 1800);
 }
 
 // al cargar: si ya tenés cuenta + granja guardada, entrás directo (sin pedir apodo otra vez)

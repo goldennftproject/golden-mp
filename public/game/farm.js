@@ -62,7 +62,7 @@ class FarmScene extends Phaser.Scene {
     // timers de enfriamiento flotantes sobre árboles/rocas/nodos
     this.objs.forEach(o => {
       if (o.type === "tree" || o.type === "rock" || o.type === "ore") {
-        o.timer = this.add.text(o.cx, o.by - (o.rw || T) - 2, "", { fontFamily: "system-ui", fontSize: "11px", fontStyle: "bold", color: "#fff", stroke: "#20301a", strokeThickness: 3 }).setOrigin(0.5, 1).setDepth(o.by + 3).setVisible(false);
+        o.timer = this.add.text(o.cx, o.by - T * 0.85, "", { fontFamily: "system-ui", fontSize: "11px", fontStyle: "bold", color: "#fff", stroke: "#20301a", strokeThickness: 3 }).setOrigin(0.5, 1).setDepth(o.by + 3).setVisible(false);
       }
     });
     this.rebuildCollisions();
@@ -74,7 +74,7 @@ class FarmScene extends Phaser.Scene {
       const spr = this.add.image(cx, cy + 6, "sprout").setOrigin(0.5, 0.95).setDepth(cy).setVisible(false);
       spr.setScale((T * 0.75) / spr.width);
       const emo = this.add.text(cx, cy + 8, "", { fontSize: Math.round(T * 0.72) + "px" }).setOrigin(0.5, 0.95).setDepth(cy).setVisible(false);
-      const timer = this.add.text(cx, cy + T * 0.52, "", { fontFamily: "system-ui", fontSize: "11px", fontStyle: "bold", color: "#fff", stroke: "#20301a", strokeThickness: 3 }).setOrigin(0.5, 0).setDepth(cy + 1).setVisible(false);
+      const timer = this.add.text(cx, cy - T * 0.55, "", { fontFamily: "system-ui", fontSize: "11px", fontStyle: "bold", color: "#fff", stroke: "#20301a", strokeThickness: 3 }).setOrigin(0.5, 1).setDepth(cy + 1).setVisible(false);
       const obj = { type: "plot", i, cx, by: cy, state: "dry", readyAt: 0, cropKey: null, spr, emo, timer };
       const sv = savedPlots[i];   // restaura lo plantado antes del refresh (ignora estados viejos como "wet")
       if (sv && (sv.state === "growing" || sv.state === "ready")) { obj.state = sv.state; obj.readyAt = sv.readyAt || 0; obj.cropKey = sv.cropKey || null; this.applyPlotVisual(obj); }
@@ -94,8 +94,22 @@ class FarmScene extends Phaser.Scene {
     hero.play("idle");
     this.hero = hero; this.facing = "east"; this.moveTarget = null; this.action = null; this.pendingObj = null;
 
+    // clic derecho sobre una parcela seca: rueda de sembrado rápido
+    this.input.mouse.disableContextMenu();
+
     // clic: si pegás a un objeto, caminá hacia él e interactuá; si no, movete al punto
     this.input.on("pointerdown", (pt) => {
+      if (pt.rightButtonDown()) {
+        if (GF.uiOpen || GF.editMode) return;
+        const wx = pt.worldX, wy = pt.worldY;
+        for (const pl of this.plots) {
+          if (Math.abs(wx - pl.cx) < T / 2 && Math.abs(wy - pl.by) < T / 2) {
+            if (pl.state === "dry" && typeof showSeedWheel === "function") showSeedWheel(pt.event.clientX, pt.event.clientY, pl);
+            return;
+          }
+        }
+        return;
+      }
       if (GF.editMode) {   // modo edición: agarrar el objeto bajo el cursor
         const wx = pt.worldX, wy = pt.worldY; let hit = null, bd = 1e9;
         for (const o of this.objs) { if (o.type === "fish") continue; const b = o.sprite.getBounds(); if (Phaser.Geom.Rectangle.Contains(b, wx, wy)) { const d = Math.hypot(o.cx - wx, o.by - wy); if (d < bd) { bd = d; hit = o; } } }
@@ -124,22 +138,34 @@ class FarmScene extends Phaser.Scene {
       else if (this.nearPond() && this.pondDist(wx, wy) < 1.05) { this.pendingObj = null; this.moveTarget = null; this.tryFish(wx, wy); }
       else { this.pendingObj = null; this.moveTarget = { x: wx, y: wy }; }
     });
-    // arrastre en modo edición
-    this.input.on("pointermove", (pt) => { if (GF.editMode && this.dragObj) this.dragObj.sprite.setPosition(pt.worldX, pt.worldY).setDepth(99999); });
+    // arrastre en modo edición: mueve el sprite y resalta la celda destino (verde libre / rojo ocupada)
+    this.input.on("pointermove", (pt) => {
+      if (!GF.editMode || !this.dragObj) return;
+      const o = this.dragObj;
+      o.sprite.setPosition(pt.worldX, pt.worldY).setDepth(99999);
+      const wCells = Math.max(1, Math.round(o.w / T));
+      const leftCol = Phaser.Math.Clamp(Math.round((pt.worldX - wCells * T / 2) / T), 0, GF.COLS - wCells);
+      const baseRow = Phaser.Math.Clamp(Math.round(pt.worldY / T), 1, GF.ROWS);
+      const blocked = this.placeBlocked(o, leftCol, baseRow, wCells);
+      if (!this.editHl) this.editHl = this.add.rectangle(0, 0, T, T, 0x7ec95a, 0.35).setOrigin(0, 1).setDepth(99998);
+      this.editHl.setPosition(leftCol * T, baseRow * T).setSize(wCells * T, T)
+        .setFillStyle(blocked ? 0xd9534f : 0x7ec95a, 0.4).setVisible(true);
+    });
     this.input.on("pointerup", (pt) => {
+      if (this.editHl) this.editHl.setVisible(false);
       if (!GF.editMode || !this.dragObj) return;
       const o = this.dragObj, wCells = Math.max(1, Math.round(o.w / T));
       const leftCol = Phaser.Math.Clamp(Math.round((pt.worldX - wCells * T / 2) / T), 0, GF.COLS - wCells);
       const baseRow = Phaser.Math.Clamp(Math.round(pt.worldY / T), 1, GF.ROWS);
       if (this.placeBlocked(o, leftCol, baseRow, wCells)) {   // ocupado: devolver a su lugar
         o.sprite.setPosition(o.origCx, o.origBy).setDepth(o.origBy);
-        if (o.timer) o.timer.setPosition(o.origCx, o.origBy - (o.rw || T) - 2);
+        if (o.timer) o.timer.setPosition(o.origCx, o.origBy - T * 0.85);
         toast("🚫 Ahí ya hay algo — elegí otra celda");
         this.dragObj = null; return;
       }
       o.cx = leftCol * T + wCells * T / 2; o.by = baseRow * T;
       o.sprite.setPosition(o.cx, o.by).setDepth(o.by);
-      if (o.timer) o.timer.setPosition(o.cx, o.by - (o.rw || T) - 2);
+      if (o.timer) o.timer.setPosition(o.cx, o.by - T * 0.85);
       if (!G.layout) G.layout = {}; G.layout[o.i] = { cx: o.cx, by: o.by };
       this.rebuildCollisions();
       if (typeof saveFarm === "function") saveFarm(true);

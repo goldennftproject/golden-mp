@@ -210,7 +210,51 @@
   button.active{filter:brightness(1.22)}
   button:disabled{filter:grayscale(.75) brightness(.72);cursor:default}
   button:hover:not(:disabled){filter:brightness(1.12)}
-  .pill{background:url("assets/ui/badge_wood.png") center/100% 100% no-repeat;border:none;border-radius:0;padding:7px 15px;image-rendering:pixelated}
+  .pill{background:url("assets/ui/badge_wood.png") center/100% 100% no-repeat;border:none;border-radius:0;padding:7px 15px;image-rendering:pixelated;color:#ffeecb;text-shadow:0 1px 0 rgba(40,20,5,.85)}
+  .pill .k{color:#ffd98a}
+  .pill b{color:#fff7e6}
+
+  /* cofre diario */
+  .dyrow{display:flex;gap:6px;justify-content:center;margin:10px 0;flex-wrap:wrap}
+  .dylock{width:56px;text-align:center;padding:7px 2px 5px;background:#3a2b1c url("assets/ui/slot_wood.png") center/100% 100% no-repeat;image-rendering:pixelated}
+  .dylock .ic{font-size:17px}
+  .dylock .dl{font-size:9px;color:#e8d3a8;font-weight:700}
+  .dylock.fut{filter:grayscale(.5) brightness(.75)}
+  .dylock.done{opacity:.85}
+  .dylock.now{box-shadow:0 0 0 2px #f6d878, 0 0 14px rgba(246,216,120,.8);transform:scale(1.08)}
+  .dycenter{display:flex;align-items:center;justify-content:center;gap:16px;margin:10px 0}
+  #dy-chest{width:92px;image-rendering:pixelated}
+  .dyreward{font-weight:800;font-size:14px;max-width:240px;color:#5a3c14}
+  .dynote{text-align:center;font-size:11px;color:#8a6a3a;margin-top:10px}
+  .dyreward .bad{color:#b8452f;display:block;font-size:12px}
+
+  /* equipo con slots */
+  .eqlayout{display:flex;gap:12px;justify-content:center;margin:10px 0}
+  .eqcol{display:flex;flex-direction:column;gap:8px;justify-content:center}
+  .eqslot{width:62px;height:62px;background:#3a2b1c url("assets/ui/slot_wood.png") center/100% 100% no-repeat;display:flex;flex-direction:column;align-items:center;justify-content:center;image-rendering:pixelated}
+  .eqslot span{font-size:21px;line-height:1.1}
+  .eqslot i{font-style:normal;font-size:9px;color:#e0c896;font-weight:700}
+  .eqslot.ghost{filter:grayscale(.45);opacity:.8}
+  .eqh{margin:10px 0 6px;color:#7a4d1f;font-size:14px}
+  .eqtoolrow{display:flex;gap:10px;justify-content:center}
+  .eqtool{width:62px;height:62px;background:#3a2b1c url("assets/ui/slot_wood.png") center/100% 100% no-repeat;display:flex;align-items:center;justify-content:center;position:relative;image-rendering:pixelated}
+  .eqtool img{width:68%;height:68%;object-fit:contain;image-rendering:pixelated}
+  .eqtool .db{position:absolute;left:9px;right:9px;bottom:7px;height:4px;background:rgba(0,0,0,.45);border-radius:2px}
+  .eqtool .db i{display:block;height:100%;border-radius:2px}
+
+  /* rueda de sembrado rápido */
+  #seedwheel{position:fixed;inset:0;z-index:60;display:none}
+  #seedwheel.show{display:block}
+  #seedwheel .swc{position:absolute}
+  .swi{position:absolute;width:48px;height:48px;transform:translate(-50%,-50%);background:#3a2b1c url("assets/ui/slot_wood.png") center/100% 100% no-repeat;display:flex;flex-direction:column;align-items:center;justify-content:center;cursor:pointer;image-rendering:pixelated}
+  .swi:hover{filter:brightness(1.25);z-index:2}
+  .swi span{font-size:18px;line-height:1.05}
+  .swi b{font-size:9px;color:#ffe8b0}
+  .swi.center{width:40px;height:40px;pointer-events:none;filter:brightness(.9)}
+
+  /* barra flotante del modo edición */
+  #editbar{position:fixed;left:50%;bottom:72px;transform:translateX(-50%);z-index:7;display:none;gap:8px}
+  #editbar.show{display:flex}
 </style>
 </head>
 <body>
@@ -292,8 +336,40 @@
   <div class="ov" id="ov-equip"><div class="card" style="width:min(520px,94%)">
     <button class="close" data-close="ov-equip">×</button>
     <h3>Equipo</h3>
-    <div class="sub">Herramientas equipadas y su estado.</div>
-    <div class="eqgrid" id="eq-grid"></div>
+    <div class="sub">Slots de armadura y armas (llegan con la fase de combate) · herramientas abajo.</div>
+    <div class="eqlayout">
+      <div class="eqcol">
+        <div class="eqslot ghost"><span>📿</span><i>Collar</i></div>
+        <div class="eqslot ghost"><span>🧤</span><i>Guantes</i></div>
+        <div class="eqslot ghost"><span>💍</span><i>Anillo</i></div>
+      </div>
+      <div class="eqcol">
+        <div class="eqslot ghost"><span>⛑️</span><i>Casco</i></div>
+        <div class="eqslot ghost"><span>🥋</span><i>Armadura</i></div>
+        <div class="eqslot ghost"><span>👖</span><i>Piernas</i></div>
+        <div class="eqslot ghost"><span>🥾</span><i>Botas</i></div>
+      </div>
+      <div class="eqcol">
+        <div class="eqslot ghost"><span>⚔️</span><i>Arma</i></div>
+        <div class="eqslot ghost"><span>🛡️</span><i>Escudo</i></div>
+        <div class="eqslot ghost"><span>🏹</span><i>Munición</i></div>
+      </div>
+    </div>
+    <h4 class="eqh">🧰 Herramientas</h4>
+    <div class="eqtoolrow" id="eq-grid"></div>
+  </div></div>
+
+  <div class="ov" id="ov-daily"><div class="card" style="width:min(560px,94%)">
+    <button class="close" data-close="ov-daily">×</button>
+    <h3>🎁 Cofre diario</h3>
+    <div class="sub" id="dy-banner">Día 1 de 7</div>
+    <div class="dyrow" id="dy-locks"></div>
+    <div class="dycenter">
+      <img id="dy-chest" src="assets/ui/chest_daily.png" onerror="this.style.display='none'">
+      <div id="dy-reward" class="dyreward"></div>
+    </div>
+    <div class="row" style="justify-content:center"><button class="gold" id="dy-claim">Reclamar 🎁</button></div>
+    <div class="dynote">🛡️ Anti-inflación · Solo 1 al día · Si faltás un día, volvés al Día 1</div>
   </div></div>
 
   <div class="ov" id="ov-lb"><div class="card" style="width:min(500px,94%)">
@@ -328,12 +404,22 @@
       <button class="gmi" data-panel="ov-inv"><span class="ic">🎒</span> Inventario <b class="key">I</b></button>
       <button class="gmi" data-panel="ov-skills"><span class="ic">📊</span> Skills <b class="key">X</b></button>
       <button class="gmi" data-panel="ov-equip"><span class="ic">🛡️</span> Equipo <b class="key">P</b></button>
+      <button class="gmi" data-panel="ov-daily"><span class="ic">🎁</span> Cofre diario <b class="key">G</b></button>
       <button class="gmi" data-panel="ov-market"><span class="ic">🏪</span> Mercado <b class="key">O</b></button>
       <button class="gmi" data-panel="ov-forge"><span class="ic">🛠️</span> Herrería <b class="key">K</b></button>
       <button class="gmi" data-panel="ov-barn"><span class="ic">🏡</span> Granja <b class="key">B</b></button>
       <button class="gmi" data-panel="ov-lb"><span class="ic">🏆</span> Leaderboard <b class="key">L</b></button>
       <button class="gmi" data-panel="ov-config"><span class="ic">⚙️</span> Configuración <b class="key">C</b></button>
     </div>
+  </div>
+
+  <!-- rueda de sembrado rápido (clic derecho sobre una parcela seca) -->
+  <div id="seedwheel"><div class="swc"></div></div>
+
+  <!-- barra flotante del modo edición -->
+  <div id="editbar">
+    <button class="green sm" id="edit-done">✓ Terminar edición</button>
+    <button class="ghost sm" id="edit-reset">↺ Restaurar</button>
   </div>
 
   <!-- registro / chat -->

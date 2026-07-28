@@ -19,6 +19,7 @@ const G = {
   layout: {},                    // posiciones editadas de objetos de la granja: {index:{cx,by}}
   fish: { comun: 0, raro: 0, epico: 0, legendario: 0 },
   plots: [],   // estado de las parcelas: [{state, readyAt, cropKey}] — lo llena la FarmScene
+  daily: { day: 0, last: "" },   // cofre diario: día de racha reclamado (1..7) y fecha del último reclamo
   buffs: [], secPerGameHour: 1, gameHours: 0,
   skills: { fishing: 0, farming: 0, cooking: 0, range: 0, sword: 0, mining: 0, crafting: 0 },
 };
@@ -245,4 +246,38 @@ function goFishing() {
   else if (rar === "epico") { addBuff("cd", "Cooldowns -25%", 0.75, 90); log("🐡 Pez épico: cooldowns -25% (90s).", "good"); toast("🐡 ¡Cooldowns -25%!"); }
   else { G.golden += 15; tryAddRes("oro", 1); log("🐋 ¡Legendario! +15 ✨ y +1 Oro.", "gold"); toast("🐋 ¡LEGENDARIO!"); }
   refreshHud(); if (typeof syncSlots === "function") syncSlots(); if (isOpen("ov-inv")) refreshInv();
+}
+
+// --- cofre diario de login (racha de 7 días · anti-inflación: 80% insumos / 20% plata) ---
+const DAILY_REWARDS = [
+  { seeds: { papa: 2 },      res: { madera: 5 },   label: "×2 Semilla Papa · ×5 Madera" },
+  { seeds: { zanahoria: 3 }, res: { piedra: 10 },  label: "×3 Semilla Zanahoria · ×10 Piedra" },
+  { seeds: { cebolla: 2 },   res: { piedra: 10 },  label: "×2 Semilla Cebolla · ×10 Piedra" },
+  { seeds: { calabacin: 2 }, plata: 20,            label: "×2 Semilla Calabacín · 20 Plata" },
+  { seeds: { repollo: 2 },   res: { bronce: 5 },   label: "×2 Semilla Repollo · ×5 Bronce" },
+  { res: { oro: 1 },         plata: 30,            label: "×1 Oro · 30 Plata" },
+  { seeds: { calabaza: 2 },  plata: 50, buff: true, label: "×2 Semilla Calabaza · 50 Plata · 🌿 Abono (+15% cosecha 10 min)" },
+];
+function dayStamp(off) { const d = new Date(Date.now() + (off || 0) * 86400000); return d.getFullYear() + "-" + String(d.getMonth() + 1).padStart(2, "0") + "-" + String(d.getDate()).padStart(2, "0"); }
+// estado del cofre: ¿se puede reclamar hoy? ¿qué día de la racha toca? ¿se perdió la racha?
+function dailyState() {
+  const dd = G.daily || (G.daily = { day: 0, last: "" });
+  if (dd.last === dayStamp(0)) return { claimable: false, day: dd.day, lost: false };
+  const keeps = dd.last === dayStamp(-1) && dd.day >= 1 && dd.day < 7;   // ayer reclamó y no terminó la semana
+  return { claimable: true, day: keeps ? dd.day + 1 : 1, lost: !!dd.last && !keeps && dd.day > 0 };
+}
+function claimDaily() {
+  const st = dailyState();
+  if (!st.claimable) { toast("🎁 Ya reclamaste hoy — volvé mañana"); return; }
+  const r = DAILY_REWARDS[st.day - 1];
+  if (r.seeds) for (const k in r.seeds) G.seeds[k] = (G.seeds[k] || 0) + r.seeds[k];
+  if (r.res) for (const k in r.res) G.res[k] = (G.res[k] || 0) + r.res[k];
+  if (r.plata) G.plata += r.plata;
+  if (r.buff) addBuff("yield", "🌿 Abono +15%", 1.15, 600);
+  G.daily = { day: st.day, last: dayStamp(0) };
+  log("🎁 Cofre diario " + st.day + "/7: " + r.label, "gold");
+  toast("🎁 ¡Reclamado! Día " + st.day + "/7");
+  refreshHud(); if (typeof syncSlots === "function") syncSlots(); if (isOpen("ov-inv")) refreshInv();
+  if (typeof refreshDaily === "function") refreshDaily();
+  if (typeof saveFarm === "function") saveFarm(true);
 }

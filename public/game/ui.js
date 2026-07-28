@@ -12,7 +12,7 @@ function isOpen(id) { const e = $(id); return !!(e && e.classList.contains("show
 function anyOvOpen() { return !!document.querySelector(".ov.show"); }
 const OV_REFRESH = { "ov-inv": () => refreshInv(), "ov-skills": () => refreshSkills(), "ov-equip": () => refreshEquip(),
   "ov-forge": () => refreshForge(), "ov-market": () => refreshMarket(), "ov-barn": () => refreshBarn(),
-  "ov-config": () => refreshConfig(), "ov-lb": () => refreshLb() };
+  "ov-config": () => refreshConfig(), "ov-lb": () => refreshLb(), "ov-daily": () => refreshDaily() };
 // los overlays NO bloquean el juego: podés seguir moviéndote/interactuando con la ventana abierta
 function openOv(id) { const e = $(id); if (!e) return; e.classList.add("show"); if (OV_REFRESH[id]) OV_REFRESH[id](); }
 function closeOv(id) { const e = $(id); if (e) e.classList.remove("show"); }
@@ -158,18 +158,70 @@ function refreshSkills() {
     return `<div class="skrow"><span class="ic">${ic}</span><div class="body"><div class="nm"><span>${nm}</span><span class="lv">Nv. ${inf.lvl}</span></div><div class="skbar"><i style="width:${pct}%"></i></div><div class="xp">${fmt(inf.into)}/${fmt(inf.need)} XP${soon}</div></div></div>`; }).join("");
 }
 
-/* ---- equipo ---- */
-function eqCard(sprite, em, nm, st, cls) { const im = sprite ? `<img src="${GF.spr(sprite)}">` : `<span>${em}</span>`; return `<div class="eqcard"><div class="ic">${im}</div><div><div class="nm">${nm}</div><div class="st ${cls || ""}">${st}</div></div></div>`; }
+/* ---- equipo (slots estilo RPG; armadura/armas llegan con el combate) ---- */
 function refreshEquip() {
-  let html = "";
-  html += eqCard("hoe", "🪝", "Azada", "Lista · para plantar y cosechar", "ok");
-  { const ax = toolDur("axe"); html += eqCard("axe", "🪓", "Hacha", ax > 0 ? ax + "/" + TOOL_DEF.axe.max + " durab · para talar" : "Rota · reparala en la Herrería", ax > 0 ? "ok" : "busy"); }
-  { const eq = G.picks.eq, pd = eq ? PICK_DEF[eq] : null, dur = pd ? (G.picks.dur[eq] || 0) : 0;
-    html += eqCard(pd ? pd.sprite : "pick_stone", "⛏️", pd ? pd.label : "Sin pico",
-      pd ? dur + "/" + pd.dur + " durab · mina hasta " + ORE_DEF[ORE_ORDER[pd.mineTier]].label : "Crafteá uno en la Herrería", dur > 0 ? "ok" : "busy"); }
-  { const rd = toolDur("rod"); html += eqCard("fishing_rod", "🎣", "Caña", rd > 0 ? rd + "/" + TOOL_DEF.rod.max + " durab · para pescar" : "Rota · reparala en la Herrería", rd > 0 ? "ok" : "busy"); }
-  $("eq-grid").innerHTML = html;
+  const box = $("eq-grid"); if (!box) return;
+  const eq = G.picks.eq, pd = eq ? PICK_DEF[eq] : null;
+  const cells = [
+    { sprite: "hoe", nm: "Azada", dur: 1, max: 1, st: "∞ no se gasta" },
+    { sprite: "axe", nm: "Hacha", dur: toolDur("axe"), max: TOOL_DEF.axe.max },
+    { sprite: pd ? pd.sprite : "pick_stone", nm: pd ? pd.label : "Sin pico", dur: pd ? (G.picks.dur[eq] || 0) : 0, max: pd ? pd.dur : 1 },
+    { sprite: "fishing_rod", nm: "Caña", dur: toolDur("rod"), max: TOOL_DEF.rod.max },
+  ];
+  box.innerHTML = cells.map(c => {
+    const pct = Math.max(0, Math.min(100, Math.round(c.dur / c.max * 100)));
+    const col = pct > 50 ? "#7ec95a" : (pct > 20 ? "#e2b23a" : "#d9534f");
+    return `<div class="eqtool" title="${c.nm} · ${c.st || c.dur + "/" + c.max}"><img src="${GF.spr(c.sprite)}"><div class="db"><i style="width:${pct}%;background:${col}"></i></div></div>`;
+  }).join("");
 }
+
+/* ---- cofre diario ---- */
+function refreshDaily() {
+  const box = $("dy-locks"); if (!box || typeof dailyState !== "function") return;
+  const st = dailyState();
+  const claimed = (G.daily && G.daily.day) || 0;
+  const base = st.claimable ? st.day - 1 : claimed;   // días ya cobrados de esta racha
+  $("dy-banner").innerHTML = st.claimable
+    ? "Día <b>" + st.day + "</b> de 7 — reclamá tu recompensa de hoy."
+    : "Día <b>" + (claimed || 1) + "</b> de 7 reclamado ✔ — volvé mañana.";
+  box.innerHTML = DAILY_REWARDS.map((r, i) => {
+    const d = i + 1;
+    let cls = "fut", ic = "🔒";
+    if (d <= base) { cls = "done"; ic = "✅"; }
+    else if (st.claimable && d === st.day) { cls = "now"; ic = "🎁"; }
+    return `<div class="dylock ${cls}" title="${r.label}"><div class="ic">${ic}</div><div class="dl">Día ${d}</div></div>`;
+  }).join("");
+  const idx = (st.claimable ? st.day : Math.max(1, claimed)) - 1;
+  $("dy-reward").innerHTML = (st.lost ? '<span class="bad">😢 Perdiste la racha — volvés al Día 1.</span>' : "")
+    + (st.claimable ? "Hoy: " : "Reclamado: ") + DAILY_REWARDS[idx].label;
+  const b = $("dy-claim");
+  if (b) { b.disabled = !st.claimable; b.textContent = st.claimable ? "Reclamar 🎁" : "Vuelve mañana"; }
+}
+
+/* ---- sembrado rápido: rueda de semillas (clic derecho en parcela seca) ---- */
+function showSeedWheel(px, py, plot) {
+  const w = $("seedwheel"); if (!w) return;
+  const opts = CROP_ORDER.filter(k => cropUnlocked(k) && (G.seeds[k] || 0) > 0);
+  if (!opts.length) { toast("🌱 No tenés semillas — comprá en la Tienda"); return; }
+  const c = w.querySelector(".swc");
+  c.style.left = px + "px"; c.style.top = py + "px";
+  const R = 62;
+  c.innerHTML = opts.map((k, i) => {
+    const a = -Math.PI / 2 + i * 2 * Math.PI / opts.length;
+    const x = Math.round(Math.cos(a) * R), y = Math.round(Math.sin(a) * R);
+    const cd = CROP_DEF[k];
+    return `<div class="swi" data-k="${k}" title="${cd.label} · crece en ${cd.grow}s" style="left:${x}px;top:${y}px"><span>${cd.emoji}</span><b>×${G.seeds[k]}</b></div>`;
+  }).join("") + '<div class="swi center" style="left:0;top:0"><span>🌱</span></div>';
+  w.classList.add("show");
+  c.querySelectorAll(".swi[data-k]").forEach(el => el.onclick = (ev) => {
+    ev.stopPropagation();
+    G.selSeed = el.dataset.k; hideSeedWheel();
+    if (window.FARM && plot) { FARM.pendingObj = plot; FARM.moveTarget = { x: plot.cx, y: plot.by + 18 }; }
+    if (isOpen("ov-inv")) refreshInv();
+    if (typeof refreshHotbar === "function") refreshHotbar();
+  });
+}
+function hideSeedWheel() { const w = $("seedwheel"); if (w) w.classList.remove("show"); }
 
 /* ---- herrería ---- */
 function refreshForge() {
@@ -398,8 +450,21 @@ function initUI() {
     $("shop-buy").style.display = s === "buy" ? "" : "none";
     $("shop-sell").style.display = s === "sell" ? "" : "none";
   });
-  const ce = $("cfg-edit"); if (ce) ce.onclick = () => { GF.editMode = !GF.editMode; ce.textContent = GF.editMode ? "✓ Terminar edición" : "Modo edición"; toast(GF.editMode ? "✏️ Arrastrá los objetos a otra celda" : "📌 Edición terminada"); };
-  const cr = $("cfg-reset"); if (cr) cr.onclick = () => { G.layout = {}; if (typeof saveFarm === "function") saveFarm(true); if (window.FARM && window.FARM.scene) window.FARM.scene.restart(); toast("↺ Granja restaurada"); };
+  // modo edición: cierra las ventanas y deja solo dos botoncitos flotantes sobre la hotbar
+  window.setEditMode = (on) => {
+    GF.editMode = on;
+    const ce2 = $("cfg-edit"); if (ce2) ce2.textContent = on ? "✓ Terminar edición" : "Modo edición";
+    const eb = $("editbar"); if (eb) eb.classList.toggle("show", on);
+    if (on) { closeAllOv(); toast("✏️ Arrastrá los objetos a otra celda"); }
+    else toast("📌 Edición terminada");
+  };
+  const doFarmReset = () => { G.layout = {}; if (typeof saveFarm === "function") saveFarm(true); if (window.FARM && window.FARM.scene) window.FARM.scene.restart(); toast("↺ Granja restaurada"); };
+  const ce = $("cfg-edit"); if (ce) ce.onclick = () => setEditMode(!GF.editMode);
+  const cr = $("cfg-reset"); if (cr) cr.onclick = doFarmReset;
+  const ed = $("edit-done"); if (ed) ed.onclick = () => setEditMode(false);
+  const er = $("edit-reset"); if (er) er.onclick = doFarmReset;
+  const dc = $("dy-claim"); if (dc) dc.onclick = () => claimDaily();
+  const sw = $("seedwheel"); if (sw) sw.onclick = hideSeedWheel;
   const lm = $("logmin"); if (lm) lm.onclick = () => $("logpanel").classList.toggle("collapsed");
   initPanelDrag();
   document.querySelectorAll(".ltab").forEach(b => b.onclick = () => {
@@ -418,11 +483,11 @@ function initUI() {
   }
   if (cs) cs.onclick = doSendChat;
 
-  const KEYS = { i: "ov-inv", x: "ov-skills", p: "ov-equip", l: "ov-lb", c: "ov-config", o: "ov-market", k: "ov-forge", b: "ov-barn" };
+  const KEYS = { i: "ov-inv", x: "ov-skills", p: "ov-equip", l: "ov-lb", c: "ov-config", o: "ov-market", k: "ov-forge", b: "ov-barn", g: "ov-daily" };
   window.addEventListener("keydown", (e) => {
     if (e.target && (e.target.tagName === "INPUT" || e.target.tagName === "TEXTAREA")) return;
     const key = e.key.toLowerCase();
-    if (key === "escape") { closeAllOv(); return; }
+    if (key === "escape") { closeAllOv(); if (typeof hideSeedWheel === "function") hideSeedWheel(); return; }
     if (key >= "1" && key <= "9") { hotSelect(+key - 1); e.preventDefault(); return; }
     if (key === "0") { hotSelect(9); e.preventDefault(); return; }
     if (KEYS[key]) { const id = KEYS[key]; if (isOpen(id)) closeOv(id); else { closeAllOv(); openOv(id); } e.preventDefault(); }
