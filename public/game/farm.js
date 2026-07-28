@@ -16,13 +16,12 @@ class FarmScene extends Phaser.Scene {
     const g = this.add.graphics().setDepth(-1000);
     g.fillStyle(0x6ba043, 1).fillRect(0, 0, W, H);
     const p = GF.POND, pcx = (p.col + p.cols / 2) * T, pcy = (p.row + p.rows / 2) * T, pw = p.cols * T, ph = p.rows * T;
-    g.fillStyle(0x4f6b34, 1).fillEllipse(pcx, pcy, pw + 16, ph + 14);          // orilla de pasto más oscura
-    g.fillStyle(0xc7b07a, 1).fillEllipse(pcx, pcy, pw + 6, ph + 5);            // borde de arena
-    g.fillStyle(0x2f5f8c, 1).fillEllipse(pcx, pcy, pw, ph);                    // agua profunda
-    g.fillStyle(0x3f86c4, 1).fillEllipse(pcx, pcy - 4, pw - 20, ph - 18);      // agua media
-    g.fillStyle(0x66a9dc, 1).fillEllipse(pcx, pcy - 7, pw - 44, ph - 34);      // agua clara
-    g.fillStyle(0xbfe0f4, 0.7).fillEllipse(pcx - pw * 0.16, pcy - ph * 0.2, pw * 0.34, ph * 0.2);   // brillo grande
-    g.fillStyle(0xbfe0f4, 0.55).fillEllipse(pcx + pw * 0.18, pcy + ph * 0.06, pw * 0.14, ph * 0.09); // brillo chico
+    if (this.textures.exists("pond")) {
+      this.add.image(pcx, pcy, "pond").setDisplaySize(pw + 10, ph + 10).setDepth(-999);
+    } else {   // fallback: laguna dibujada
+      g.fillStyle(0x2f5f8c, 1).fillEllipse(pcx, pcy, pw, ph);
+      g.fillStyle(0x66a9dc, 1).fillEllipse(pcx, pcy - 6, pw - 26, ph - 26);
+    }
     GF.PLOTS.forEach(pl => { const x = pl.col * T, y = pl.row * T; g.fillStyle(0x8a5a33, 1); g.fillRoundedRect(x + 3, y + 3, T - 6, T - 6, 6); g.fillStyle(0x724829, 1); g.fillRoundedRect(x + 6, y + 6, T - 12, T - 12, 5); });
     g.lineStyle(1, 0x18300f, 0.13);
     for (let x = 0; x <= W; x += T) { g.beginPath(); g.moveTo(x, 0); g.lineTo(x, H); g.strokePath(); }
@@ -49,11 +48,7 @@ class FarmScene extends Phaser.Scene {
       }).setOrigin(0.5, 1).setDepth(o.by + 2);
     });
 
-    // punto de pesca: un flotador en el agua (sin caña en el piso), con leve movimiento
-    { const fx = (GF.FISH.col + 0.5) * T, fy = (GF.FISH.row + 0.5) * T;
-      const s = this.add.circle(fx, fy - 4, 5, 0xff5a5a).setStrokeStyle(2, 0xffffff).setDepth(fy);
-      this.tweens.add({ targets: s, y: fy - 9, duration: 900, yoyo: true, repeat: -1, ease: "Sine.easeInOut" });
-      this.objs.push({ type: "fish", cx: fx, by: fy, sprite: s, readyAt: 0 }); }
+    // (la pesca ya no usa un objeto en el piso; se pesca al acercarse al borde de la laguna)
 
     // timers de enfriamiento flotantes sobre árboles/rocas/nodos
     this.objs.forEach(o => {
@@ -106,6 +101,7 @@ class FarmScene extends Phaser.Scene {
       }
       if (!hit) { for (const pl of this.plots) { if (Math.abs(wx - pl.cx) < T / 2 && Math.abs(wy - pl.by) < T / 2) { hit = pl; break; } } }
       if (hit) { this.pendingObj = hit; this.moveTarget = { x: hit.cx, y: hit.by + 18 }; }
+      else if (this.nearPond() && this.pondDist(wx, wy) < 1.05) { this.pendingObj = null; this.moveTarget = null; this.tryFish(); }
       else { this.pendingObj = null; this.moveTarget = { x: wx, y: wy }; }
     });
     // arrastre en modo edición
@@ -196,7 +192,7 @@ class FarmScene extends Phaser.Scene {
     return "";
   }
 
-  doInteract() { if (GF.uiOpen || this.action) return; const o = this.nearestInteract(); if (o) this.interactWith(o); }
+  doInteract() { if (GF.uiOpen || this.action || GF.editMode) return; const o = this.nearestInteract(); if (o) this.interactWith(o); else if (this.nearPond()) this.tryFish(); }
 
   interactWith(o) {
     if (o.type === "barn") return openOv("ov-barn");
@@ -283,6 +279,23 @@ class FarmScene extends Phaser.Scene {
   }
 
   setObjTex(o, key, targetW) { o.sprite.setTexture(key); o.sprite.setScale(targetW / o.sprite.width); }
+
+  // distancia normalizada a la laguna (0 centro, 1 borde, >1 afuera)
+  pondDist(x, y) {
+    const p = GF.POND, T = GF.TILE;
+    const ex = (p.col + p.cols / 2) * T, ey = (p.row + p.rows / 2) * T, rx = p.cols * T / 2, ry = p.rows * T / 2;
+    const dx = (x - ex) / rx, dy = (y - ey) / ry;
+    return Math.sqrt(dx * dx + dy * dy);
+  }
+  nearPond() { const d = this.pondDist(this.hero.x, this.hero.y); return d > 0.85 && d < 1.5; }
+  tryFish() {
+    if (this.action) return;
+    if (activeTool() !== "rod") { toast("🎣 Equipá la caña para pescar"); return; }
+    if (toolDur("rod") <= 0) { toast("🎣 Caña rota — reparala en la Herrería"); return; }
+    if (G.golden < FISH_COST) { toast("Necesitás 5 ✨ para pescar"); return; }
+    const p = GF.POND, T = GF.TILE;
+    this.startAction("fish", { cx: (p.col + p.cols / 2) * T });
+  }
 
   // recalcula las colisiones a partir de las posiciones actuales de los objetos (tras editar)
   rebuildCollisions() {
@@ -409,9 +422,10 @@ class FarmScene extends Phaser.Scene {
 
   updatePrompt() {
     const el = $("prompt"); if (!el) return;
-    if (GF.uiOpen || this.action) { el.classList.remove("show"); return; }
+    if (GF.uiOpen || this.action || GF.editMode) { el.classList.remove("show"); return; }
     const o = this.nearestInteract();
     if (o) { el.textContent = this.promptText(o) + "  ·  [E]"; el.classList.add("show"); }
+    else if (this.nearPond()) { el.textContent = "🎣 Pescar (5 ✨) · [E]"; el.classList.add("show"); }
     else el.classList.remove("show");
   }
 }
