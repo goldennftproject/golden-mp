@@ -263,12 +263,14 @@
 
   <script>window.GOLDEN_SERVER = "";</script>
   <script src="https://cdn.jsdelivr.net/npm/phaser@3.80.1/dist/phaser.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
   <script type="module">
     try { const mod = await import("https://esm.sh/colyseus.js@0.15"); window.Colyseus = mod; window.__colyseusReady = true; window.dispatchEvent(new Event("colyseus-ready")); }
     catch (e) { console.error("colyseus.js no cargó:", e); }
   </script>
   <script src="game/config.js"></script>
   <script src="game/state.js"></script>
+  <script src="game/save.js"></script>
   <script src="game/ui.js"></script>
   <script src="game/boot.js"></script>
   <script src="game/farm.js"></script>

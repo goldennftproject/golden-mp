@@ -14,9 +14,14 @@ function startGame() {
   });
 }
 
-document.getElementById("enter").addEventListener("click", () => {
-  const v = document.getElementById("nick").value.trim();
-  window.NICK = v || "Granjero";
+document.getElementById("enter").addEventListener("click", async () => {
+  const btn = document.getElementById("enter");
+  window.NICK = document.getElementById("nick").value.trim();   // puede quedar vacío
+  btn.disabled = true; btn.textContent = "Cargando…";
+  try { await window.SAVE_READY; await loadFarm(); } catch (e) { console.warn(e); }
+  if (!window.NICK) window.NICK = "Granjero";
+  if (typeof startAutosave === "function") startAutosave();
+  if (typeof refreshHud === "function") refreshHud();
   document.getElementById("gate").style.display = "none";
   startGame();
 });

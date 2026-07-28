@@ -1,0 +1,67 @@
+/* Golden Farm · persistencia por cuenta (login anónimo de Supabase) */
+const SB_URL = "https://eusxpsmqczmczgyhndtd.supabase.co";
+const SB_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImV1c3hwc21xY3ptY3pneWhuZHRkIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODUxNzU2OTMsImV4cCI6MjEwMDc1MTY5M30.ko-XxFFjf_YnBsnBvrSCOsMLTQ285G51r-UPLYZIDJ8";
+
+let sb = null, UID = null, saveTimer = null;
+
+async function initSave() {
+  try {
+    if (!window.supabase || !window.supabase.createClient) return false;
+    sb = window.supabase.createClient(SB_URL, SB_KEY);
+    let { data: { session } } = await sb.auth.getSession();
+    if (!session) {
+      const { data, error } = await sb.auth.signInAnonymously();
+      if (error) { console.warn("Login anónimo falló (¿está habilitado en Supabase?):", error.message); return false; }
+      session = data.session;
+    }
+    UID = session.user.id;
+    return true;
+  } catch (e) { console.warn("initSave error:", e); return false; }
+}
+
+// campos de progreso que guardamos (no world/cooldowns/buffs, que son de la sesión)
+function snapshot() {
+  return { plata: G.plata, golden: G.golden, level: G.level, prestige: G.prestige, week: G.week,
+    res: G.res, picks: G.picks, skills: G.skills, fish: G.fish };
+}
+function hydrate(d) {
+  if (!d) return;
+  ["plata", "golden", "level", "prestige", "week"].forEach(k => { if (typeof d[k] === "number") G[k] = d[k]; });
+  if (d.res) G.res = Object.assign({}, G.res, d.res);
+  if (d.skills) G.skills = Object.assign({}, G.skills, d.skills);
+  if (d.fish) G.fish = Object.assign({}, G.fish, d.fish);
+  if (d.picks && d.picks.owned && d.picks.dur) G.picks = d.picks;
+}
+
+async function loadFarm() {
+  if (!sb || !UID) return false;
+  try {
+    const { data, error } = await sb.from("farms").select("data,name").eq("user_id", UID).maybeSingle();
+    if (error) { console.warn("loadFarm:", error.message); return false; }
+    if (data) {
+      if (data.data) hydrate(data.data);
+      if (data.name && !window.NICK) window.NICK = data.name;  // si no tipeaste apodo, usá el guardado
+      return true;
+    }
+    // primera vez: crear la fila
+    await saveFarm();
+    return false;
+  } catch (e) { console.warn("loadFarm error:", e); return false; }
+}
+
+async function saveFarm() {
+  if (!sb || !UID) return;
+  try {
+    await sb.from("farms").upsert({ user_id: UID, name: (window.NICK || "Granjero"), data: snapshot(), updated_at: new Date().toISOString() }, { onConflict: "user_id" });
+  } catch (e) { /* silencioso */ }
+}
+
+function startAutosave() {
+  if (saveTimer) return;
+  saveTimer = setInterval(() => { saveFarm(); }, 20000);
+  document.addEventListener("visibilitychange", () => { if (document.visibilityState === "hidden") saveFarm(); });
+  window.addEventListener("beforeunload", () => { saveFarm(); });
+}
+
+// arranca la sesión en segundo plano; main.js espera esta promesa
+window.SAVE_READY = initSave();
