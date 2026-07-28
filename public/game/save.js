@@ -67,6 +67,19 @@ async function saveFarm(force) {
   } catch (e) { /* silencioso: no actualizamos lastSavedKey, reintenta en el próximo ciclo */ }
 }
 
+// ---- ranking real (lee la vista pública "leaderboard") ----
+async function fetchLeaderboard() {
+  if (!sb) return null;
+  try {
+    const { data, error } = await sb
+      .from("leaderboard")
+      .select("user_id,name,plata,skills,level,prestige")
+      .limit(200);
+    if (error) { console.warn("leaderboard:", error.message); return null; }
+    return data || [];
+  } catch (e) { console.warn("leaderboard err:", e); return null; }
+}
+
 // ---- chat global (Supabase Realtime broadcast) ----
 let chatChannel = null;
 function initChat(onMsg) {

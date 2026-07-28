@@ -120,9 +120,9 @@
   .loghead{width:100%;text-align:left;background:#2f3d26;border:none;color:#a9bd94;font-weight:800;font-size:12px;letter-spacing:1px;text-transform:uppercase;padding:8px 12px;cursor:pointer;display:flex;justify-content:space-between;align-items:center;border-radius:0}
   .logpanel .arrow{transition:transform .2s;font-size:11px}
   .logpanel.collapsed .arrow{transform:rotate(180deg)}
-  .logbody{max-height:150px;overflow:auto;padding:8px 10px}
+  .logbody{max-height:150px;overflow:hidden;padding:8px 10px}
   .logpanel.collapsed .logbody{max-height:0;padding:0 10px;overflow:hidden}
-  #log{display:flex;flex-direction:column;gap:4px;font-size:12.5px}
+  #log{display:flex;flex-direction:column;gap:4px;font-size:12.5px;max-height:134px;overflow:auto}
   #log .l{padding:4px 8px;border-radius:7px;background:#2f3d26;border:1px solid #3c4d31}
   #log .l.good{background:#2c3d22;border-color:#456b2c;color:#cfe6b6}
   #log .l.bad{background:#3d2620;border-color:#6b3a2c;color:#f0c6b6}
@@ -133,10 +133,16 @@
   .ltab{background:none;border:none;color:#a9bd94;font-weight:800;font-size:11px;letter-spacing:1px;text-transform:uppercase;padding:8px 12px;cursor:pointer}
   .ltab.active{color:#ffe08a;background:rgba(255,224,138,.08)}
   .logmin{background:none;border:none;color:#a9bd94;font-size:12px;padding:6px 12px;cursor:pointer}
-  #chat-msgs{max-height:120px;overflow:auto;display:flex;flex-direction:column;gap:3px;font-size:12.5px;margin-bottom:6px}
+  .logbtns{display:flex;align-items:center}
+  .logmove{background:none;border:none;color:#a9bd94;font-size:14px;line-height:1;padding:6px 8px;cursor:pointer;border-radius:6px}
+  .logmove.active{color:#ffe08a;background:rgba(255,224,138,.15)}
+  .logpanel.moving{outline:2px dashed #e2b23a;outline-offset:-2px}
+  .logpanel.moving .loghead,.logpanel.moving .logbody{cursor:move}
+  #chatpane{display:flex;flex-direction:column;max-height:134px}
+  #chat-msgs{flex:1 1 auto;min-height:0;overflow:auto;display:flex;flex-direction:column;gap:3px;font-size:12.5px;margin-bottom:6px}
   #chat-msgs .cm{color:#e7eddc;line-height:1.35}
   #chat-msgs .cm b{color:#ffe08a}
-  .chatbar{display:flex;gap:6px}
+  .chatbar{display:flex;gap:6px;flex:0 0 auto}
   .chatbar input{flex:1;min-width:0;padding:6px 8px;border-radius:7px;border:1px solid #4a5a3a;background:#1a2413;color:#fff;font-family:inherit;font-size:13px}
   .chatbar button{padding:6px 10px;font-size:13px}
   /* indicador de guardado */
@@ -276,7 +282,10 @@
         <button class="ltab active" data-tab="log">Registro</button>
         <button class="ltab" data-tab="chat">Chat</button>
       </div>
-      <button class="logmin" id="logmin">▾</button>
+      <div class="logbtns">
+        <button class="logmove" id="logmove" title="Mover panel">✥</button>
+        <button class="logmin" id="logmin">▾</button>
+      </div>
     </div>
     <div class="logbody">
       <div id="log" class="pane"></div>

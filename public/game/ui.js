@@ -91,19 +91,51 @@ function refreshConfig() {
   const l = $("cfg-login"); if (l) l.style.display = "none"; const o = $("cfg-logout"); if (o) o.style.display = "none";
 }
 
-/* ---- leaderboard (datos locales de ejemplo por ahora) ---- */
-const LB_PLATA = [["Pixelmancer",9120],["DoñaRosa",7430],["ElTuco",6110],["KoiMaster",5280],["LunaVerde",4650],["Milena",3890],["NightOwl",3120],["Faröe",2480],["Tobías",1760],["ElGranjero",990]];
-const LB_EXP = [["KoiMaster",6.8],["Pixelmancer",6.2],["Golden",5.9],["LunaVerde",5.1],["DoñaRosa",4.7],["Milena",4.0],["Sol",3.4],["NightOwl",2.9],["Faröe",2.2],["Tobías",1.5]];
+/* ---- leaderboard (datos reales desde Supabase) ---- */
 let lbTab = "plata";
-function lbRowHtml(r, i, col) { const rank = i + 1; const cls = (r.me ? "me " : "") + (rank <= 3 ? "top" + rank : ""); const val = col === "plata" ? `<span class="coin silver"></span>${fmt(r.v)}` : `⭐ ${(+r.v).toFixed(1)}`; return `<div class="lbrow ${cls}"><span class="rk">${rank}</span><span class="nm">${(r.n || "—")}</span><span class="val">${val}</span></div>`; }
-function refreshLb() {
+let lbData = null, lbFetchedAt = 0, lbLoading = false;
+
+function lbRowHtml(r, i, col) { const rank = i + 1; const cls = (r.me ? "me " : "") + (rank <= 3 ? "top" + rank : ""); const val = col === "plata" ? `<span class="coin silver"></span>${fmt(r.v)}` : `⭐ ${(+r.v).toFixed(1)}`; return `<div class="lbrow ${cls}"><span class="rk">${rank}</span><span class="nm">${escapeHtml(r.n || "—")}</span><span class="val">${val}</span></div>`; }
+
+// nivel de skill promedio a partir del objeto skills guardado de otro jugador
+function avgSkillFromObj(sk) {
+  if (!sk || typeof sk !== "object") return 1;
+  let s = 0, n = 0;
+  for (const k in sk) { s += skillInfo(Number(sk[k]) || 0).lvl; n++; }
+  return n ? +(s / n).toFixed(2) : 1;
+}
+
+async function refreshLb() {
   document.querySelectorAll(".lbtab").forEach(b => b.classList.toggle("active", b.dataset.lb === lbTab));
-  const col = lbTab;
-  const base = (col === "plata" ? LB_PLATA : LB_EXP).map(([n, v]) => ({ n, v, me: false }));
-  base.push({ n: (window.NICK || "Vos"), v: col === "plata" ? Math.floor(G.plata) : +avgSkillLevel().toFixed(1), me: true });
-  base.sort((a, b) => b.v - a.v);
-  $("lb-list").innerHTML = base.slice(0, 20).map((r, i) => lbRowHtml(r, i, col)).join("");
-  const note = $("lb-note"); if (note) note.textContent = "Ranking local de ejemplo. El ranking online real se conecta en otra fase.";
+  const note = $("lb-note");
+  const stale = !lbData || (Date.now() - lbFetchedAt > 15000);
+  if (stale && !lbLoading && typeof fetchLeaderboard === "function") {
+    lbLoading = true;
+    if (!lbData && note) note.textContent = "Cargando ranking…";
+    const d = await fetchLeaderboard();
+    lbLoading = false;
+    if (d) { lbData = d; lbFetchedAt = Date.now(); }
+    else if (!lbData) { if (note) note.textContent = "No se pudo cargar el ranking online."; $("lb-list").innerHTML = ""; return; }
+  }
+  renderLb();
+}
+
+function renderLb() {
+  const col = lbTab, note = $("lb-note");
+  const meId = (typeof UID === "string") ? UID : null;
+  const rows = (Array.isArray(lbData) ? lbData : []).map(p => {
+    const isMe = meId && p.user_id === meId;
+    let plata = Math.floor(Number(p.plata) || 0);
+    let exp = avgSkillFromObj(p.skills);
+    if (isMe) { plata = Math.floor(G.plata); exp = +avgSkillLevel().toFixed(2); }   // mis datos, en vivo
+    return { n: p.name || "—", plata, exp, me: !!isMe };
+  });
+  // si todavía no estoy guardado en la tabla, me agrego con mis valores actuales
+  if (meId && !rows.some(r => r.me)) rows.push({ n: window.NICK || "Vos", plata: Math.floor(G.plata), exp: +avgSkillLevel().toFixed(2), me: true });
+  const val = r => (col === "plata" ? r.plata : r.exp);
+  rows.sort((a, b) => val(b) - val(a));
+  $("lb-list").innerHTML = rows.slice(0, 20).map((r, i) => lbRowHtml({ n: r.n, v: val(r), me: r.me }, i, col)).join("");
+  if (note) note.textContent = rows.length ? `Ranking online · ${rows.length} granjero${rows.length === 1 ? "" : "s"}` : "Todavía no hay jugadores en el ranking.";
 }
 
 /* ---- indicador de guardado ---- */
@@ -119,6 +151,50 @@ function renderChatMsg(m) {
   box.appendChild(d); while (box.children.length > 60) box.removeChild(box.firstChild); box.scrollTop = box.scrollHeight;
 }
 function doSendChat() { const ci = $("chat-in"); if (!ci) return; const t = ci.value.trim(); if (!t) return; if (typeof sendChat === "function") sendChat(t); ci.value = ""; }
+
+/* ---- panel registro/chat: mover posición (botón ✥) ---- */
+function initPanelDrag() {
+  const panel = $("logpanel"), btn = $("logmove");
+  if (!panel || !btn) return;
+  let moving = false, drag = null;
+
+  function applyPos(left, top) {
+    const w = panel.offsetWidth, h = panel.offsetHeight;
+    left = Math.max(4, Math.min(left, window.innerWidth - w - 4));
+    top = Math.max(4, Math.min(top, window.innerHeight - h - 4));
+    panel.style.left = left + "px"; panel.style.top = top + "px"; panel.style.bottom = "auto";
+  }
+  // restaurar posición guardada (por dispositivo)
+  try { const s = JSON.parse(localStorage.getItem("gf_logpos") || "null"); if (s && typeof s.left === "number") applyPos(s.left, s.top); } catch (e) {}
+  // si cambia el tamaño de la ventana, re-encajar dentro de la pantalla
+  window.addEventListener("resize", () => { if (panel.style.top && panel.style.top !== "auto") applyPos(parseFloat(panel.style.left) || 0, parseFloat(panel.style.top) || 0); });
+
+  btn.onclick = (e) => {
+    e.stopPropagation();
+    moving = !moving;
+    panel.classList.toggle("moving", moving);
+    btn.classList.toggle("active", moving);
+    btn.title = moving ? "Fijar posición" : "Mover panel";
+    toast(moving ? "✥ Arrastrá el panel para moverlo" : "📌 Posición fijada");
+  };
+
+  panel.addEventListener("pointerdown", (e) => {
+    if (!moving) return;
+    if (e.target.closest(".logmove, .logmin")) return;   // los botones siguen funcionando
+    e.preventDefault();
+    const r = panel.getBoundingClientRect();
+    drag = { dx: e.clientX - r.left, dy: e.clientY - r.top };
+    try { panel.setPointerCapture(e.pointerId); } catch (er) {}
+  });
+  panel.addEventListener("pointermove", (e) => { if (drag) applyPos(e.clientX - drag.dx, e.clientY - drag.dy); });
+  const end = () => {
+    if (!drag) return; drag = null;
+    const r = panel.getBoundingClientRect();
+    try { localStorage.setItem("gf_logpos", JSON.stringify({ left: r.left, top: r.top })); } catch (e) {}
+  };
+  panel.addEventListener("pointerup", end);
+  panel.addEventListener("pointercancel", end);
+}
 
 /* ---- init ---- */
 function initUI() {
@@ -137,6 +213,7 @@ function initUI() {
   const ce = $("cfg-edit"); if (ce) ce.onclick = () => toast("La edición de la granja llega en otra fase.");
   const cr = $("cfg-reset"); if (cr) cr.onclick = () => toast("Próximamente.");
   const lm = $("logmin"); if (lm) lm.onclick = () => $("logpanel").classList.toggle("collapsed");
+  initPanelDrag();
   document.querySelectorAll(".ltab").forEach(b => b.onclick = () => {
     $("logpanel").classList.remove("collapsed");
     document.querySelectorAll(".ltab").forEach(x => x.classList.toggle("active", x === b));
