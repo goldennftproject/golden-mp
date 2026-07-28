@@ -1,0 +1,157 @@
+{
+  "group_id": "6a9b3588-ad2a-42b2-b44c-57f662e67635",
+  "objects": [
+    {
+      "id": "af0e1837-07d6-4a20-a13e-35abe2507d1e",
+      "name": null,
+      "prompt": "chunky gray rock with bright cyan and white diamond crystals embedded, cozy cartoon farming game mining node, clean dark outline",
+      "size": {
+        "width": 40,
+        "height": 40
+      },
+      "directions": 1,
+      "view": "low top-down",
+      "rotations": {
+        "unknown": "rotations/unknown.png"
+      },
+      "animations": {}
+    },
+    {
+      "id": "02cfe453-98c9-4fb6-905c-278d7ed29440",
+      "name": "replace the cyan dia",
+      "prompt": "chunky gray rock with bright cyan and white diamond crystals embedded, cozy cartoon farming game mining node, clean dark outline",
+      "size": {
+        "width": 40,
+        "height": 40
+      },
+      "directions": 1,
+      "view": "low top-down",
+      "rotations": {
+        "unknown": "rotations/unknown.png"
+      },
+      "animations": {}
+    },
+    {
+      "id": "3f86522f-288f-4dbd-84c1-4072e91a6f2a",
+      "name": "replace the cyan dia",
+      "prompt": "chunky gray rock with bright cyan and white diamond crystals embedded, cozy cartoon farming game mining node, clean dark outline",
+      "size": {
+        "width": 40,
+        "height": 40
+      },
+      "directions": 1,
+      "view": "low top-down",
+      "rotations": {
+        "unknown": "rotations/unknown.png"
+      },
+      "animations": {}
+    },
+    {
+      "id": "a7b9fd08-31ff-46c2-b9df-15b5280f7375",
+      "name": "replace the cyan dia",
+      "prompt": "chunky gray rock with bright cyan and white diamond crystals embedded, cozy cartoon farming game mining node, clean dark outline",
+      "size": {
+        "width": 40,
+        "height": 40
+      },
+      "directions": 1,
+      "view": "low top-down",
+      "rotations": {
+        "unknown": "rotations/unknown.png"
+      },
+      "animations": {}
+    },
+    {
+      "id": "6f99510b-1784-4724-b0be-aca725087926",
+      "name": "replace the cyan dia",
+      "prompt": "chunky gray rock with bright cyan and white diamond crystals embedded, cozy cartoon farming game mining node, clean dark outline",
+      "size": {
+        "width": 40,
+        "height": 40
+      },
+      "directions": 1,
+      "view": "low top-down",
+      "rotations": {
+        "unknown": "rotations/unknown.png"
+      },
+      "animations": {}
+    },
+    {
+      "id": "8875edd8-4ff7-4261-aa92-d2706a697c51",
+      "name": "remove the diamond c",
+      "prompt": "chunky gray rock with bright cyan and white diamond crystals embedded, cozy cartoon farming game mining node, clean dark outline",
+      "size": {
+        "width": 40,
+        "height": 40
+      },
+      "directions": 1,
+      "view": "low top-down",
+      "rotations": {
+        "unknown": "rotations/unknown.png"
+      },
+      "animations": {}
+    },
+    {
+      "id": "4b123db1-7821-4c7a-8571-52c04e8bdc5d",
+      "name": "remove the diamond c",
+      "prompt": "chunky gray rock with bright cyan and white diamond crystals embedded, cozy cartoon farming game mining node, clean dark outline",
+      "size": {
+        "width": 40,
+        "height": 40
+      },
+      "directions": 1,
+      "view": "low top-down",
+      "rotations": {
+        "unknown": "rotations/unknown.png"
+      },
+      "animations": {}
+    },
+    {
+      "id": "0f137182-af81-485b-8fb1-bb150205de83",
+      "name": "remove the diamond c",
+      "prompt": "chunky gray rock with bright cyan and white diamond crystals embedded, cozy cartoon farming game mining node, clean dark outline",
+      "size": {
+        "width": 40,
+        "height": 40
+      },
+      "directions": 1,
+      "view": "low top-down",
+      "rotations": {
+        "unknown": "rotations/unknown.png"
+      },
+      "animations": {}
+    },
+    {
+      "id": "f17353cc-85da-457d-a361-14593a46e43b",
+      "name": "replace the bronze o",
+      "prompt": "chunky gray rock with bright cyan and white diamond crystals embedded, cozy cartoon farming game mining node, clean dark outline",
+      "size": {
+        "width": 40,
+        "height": 40
+      },
+      "directions": 1,
+      "view": "low top-down",
+      "rotations": {
+        "unknown": "rotations/unknown.png"
+      },
+      "animations": {}
+    },
+    {
+      "id": "0c669542-b789-49dc-828c-161581450ea9",
+      "name": "remove all the ore a",
+      "prompt": "chunky gray rock with bright cyan and white diamond crystals embedded, cozy cartoon farming game mining node, clean dark outline",
+      "size": {
+        "width": 40,
+        "height": 40
+      },
+      "directions": 1,
+      "view": "low top-down",
+      "rotations": {
+        "unknown": "rotations/unknown.png"
+      },
+      "animations": {}
+    }
+  ],
+  "export_version": "1.0",
+  "export_date": "2026-07-28T18:58:01.102709"
+}
