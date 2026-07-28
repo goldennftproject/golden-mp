@@ -130,8 +130,7 @@ function invSlots() { return INV_BASE + (G.invRows || 0) * 6; }
 function nextInvCost() {
   const r = G.invRows || 0;
   if (r >= INV_MAX_ROWS) return null;
-  if (r === 0) return { type: "res", cost: { piedra: 20, bronce: 10 } };   // primera fila: minerales
-  return { type: "plata", cost: 100 * Math.pow(2, r - 1) };                 // siguientes: plata (100,200,400,800)
+  return { type: "plata", cost: 1000 * Math.pow(2, r) };   // 1000, 2000, 4000, 8000, 16000 (sumidero anti-inflación)
 }
 function expandInv() {
   const nc = nextInvCost();
