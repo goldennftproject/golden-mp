@@ -2,7 +2,7 @@
 const SB_URL = "https://eusxpsmqczmczgyhndtd.supabase.co";
 const SB_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImV1c3hwc21xY3ptY3pneWhuZHRkIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODUxNzU2OTMsImV4cCI6MjEwMDc1MTY5M30.ko-XxFFjf_YnBsnBvrSCOsMLTQ285G51r-UPLYZIDJ8";
 
-let sb = null, UID = null, saveTimer = null;
+let sb = null, UID = null, saveTimer = null, lastSavedKey = null;
 
 async function initSave() {
   try {
@@ -24,6 +24,9 @@ function snapshot() {
   return { plata: G.plata, golden: G.golden, level: G.level, prestige: G.prestige, week: G.week,
     res: G.res, picks: G.picks, skills: G.skills, fish: G.fish };
 }
+// "huella" del estado guardable (incluye el apodo); si no cambia, no hay nada que guardar
+function snapKey() { return JSON.stringify({ n: (window.NICK || "Granjero"), d: snapshot() }); }
+
 function hydrate(d) {
   if (!d) return;
   ["plata", "golden", "level", "prestige", "week"].forEach(k => { if (typeof d[k] === "number") G[k] = d[k]; });
@@ -41,6 +44,7 @@ async function loadFarm() {
     if (data) {
       if (data.data) hydrate(data.data);
       if (data.name && !window.NICK) window.NICK = data.name;  // si no tipeaste apodo, usá el guardado
+      lastSavedKey = snapKey();   // referencia: lo que acabás de cargar ya está guardado
       return true;
     }
     // primera vez: crear la fila
@@ -49,13 +53,17 @@ async function loadFarm() {
   } catch (e) { console.warn("loadFarm error:", e); return false; }
 }
 
-async function saveFarm() {
+// force=true guarda siempre; sin force, solo si el progreso cambió desde el último guardado
+async function saveFarm(force) {
   if (!sb || !UID) return;
+  const key = snapKey();
+  if (!force && key === lastSavedKey) return;   // nada que guardar: ni siquiera muestra el indicador
   if (typeof showSaving === "function") showSaving();
   try {
     await sb.from("farms").upsert({ user_id: UID, name: (window.NICK || "Granjero"), data: snapshot(), updated_at: new Date().toISOString() }, { onConflict: "user_id" });
+    lastSavedKey = key;   // recién ahora quedó persistido
     if (typeof showSaved === "function") showSaved();
-  } catch (e) { /* silencioso */ }
+  } catch (e) { /* silencioso: no actualizamos lastSavedKey, reintenta en el próximo ciclo */ }
 }
 
 // ---- chat global (Supabase Realtime broadcast) ----

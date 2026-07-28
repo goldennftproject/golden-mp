@@ -19,6 +19,10 @@ app.use((req, res, next) => {
   next();
 });
 
+// Versión del deploy: en Render cambia el commit en cada deploy (no en reinicios).
+const VERSION = process.env.RENDER_GIT_COMMIT || "dev";
+app.get("/version", (req, res) => { res.set("Cache-Control", "no-store"); res.json({ v: VERSION }); });
+
 // Sirve el cliente estático (public/) — sirve para el deploy "todo en uno" en Render.
 app.use(express.static(path.join(__dirname, "..", "public")));
 
