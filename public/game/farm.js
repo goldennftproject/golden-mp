@@ -50,16 +50,17 @@ class FarmScene extends Phaser.Scene {
       const s = this.add.image(fx, fy, "fishing_rod").setOrigin(0.5, 1); s.setScale((T * 0.9) / s.width); s.setDepth(fy);
       this.objs.push({ type: "fish", cx: fx, by: fy, sprite: s, readyAt: 0 }); }
 
-    // lotes interactuables (ciclo: seco → regar → mojado → plantar → creciendo → listo → cosechar → seco)
+    // parcelas (ciclo arcade: seco → plantar semilla elegida → creciendo (con timer) → listo → cosechar)
     const savedPlots = Array.isArray(G.plots) ? G.plots : [];
     this.plots = GF.PLOTS.map((pl, i) => {
       const cx = (pl.col + 0.5) * T, cy = (pl.row + 0.5) * T;
-      const wet = this.add.rectangle(cx, cy, T - 6, T - 6, 0x4a2f18, 0.5).setDepth(-999).setVisible(false);
-      const crop = this.add.image(cx, cy + 6, "sprout").setOrigin(0.5, 0.95).setDepth(cy).setVisible(false);
-      crop.setScale((T * 0.75) / crop.width);
-      const obj = { type: "plot", i, cx, by: cy, state: "dry", readyAt: 0, crop, wet };
-      const sv = savedPlots[i];   // restaura lo que había plantado/regado antes del refresh
-      if (sv && sv.state) { obj.state = sv.state; obj.readyAt = sv.readyAt || 0; this.applyPlotVisual(obj); }
+      const spr = this.add.image(cx, cy + 6, "sprout").setOrigin(0.5, 0.95).setDepth(cy).setVisible(false);
+      spr.setScale((T * 0.75) / spr.width);
+      const emo = this.add.text(cx, cy + 8, "", { fontSize: Math.round(T * 0.72) + "px" }).setOrigin(0.5, 0.95).setDepth(cy).setVisible(false);
+      const timer = this.add.text(cx, cy - T * 0.42, "", { fontFamily: "system-ui", fontSize: "11px", fontStyle: "bold", color: "#fff", stroke: "#20301a", strokeThickness: 3 }).setOrigin(0.5, 1).setDepth(cy + 1).setVisible(false);
+      const obj = { type: "plot", i, cx, by: cy, state: "dry", readyAt: 0, cropKey: null, spr, emo, timer };
+      const sv = savedPlots[i];   // restaura lo plantado antes del refresh (ignora estados viejos como "wet")
+      if (sv && (sv.state === "growing" || sv.state === "ready")) { obj.state = sv.state; obj.readyAt = sv.readyAt || 0; obj.cropKey = sv.cropKey || null; this.applyPlotVisual(obj); }
       return obj;
     });
     this.syncPlots();
@@ -146,7 +147,11 @@ class FarmScene extends Phaser.Scene {
   promptText(o) {
     const cd = nowMs() < o.readyAt;
     if (o.type === "boar") return "🥍 Espantar jabalí";
-    if (o.type === "plot") return o.state === "dry" ? "💧 Regar" : o.state === "wet" ? "🌱 Plantar trigo" : o.state === "ready" ? "🌾 Cosechar" : "🌱 Creciendo…";
+    if (o.type === "plot") {
+      if (o.state === "dry") { const cd = CROP_DEF[G.selSeed]; return "🌱 Plantar " + (cd ? cd.label : "cultivo"); }
+      if (o.state === "ready") { const cd = CROP_DEF[o.cropKey]; return "🌾 Cosechar " + (cd ? cd.label : ""); }
+      return "🌱 Creciendo…";
+    }
     if (o.type === "tree") return cd ? "🪵 Talado (crece)" : "🪓 Talar madera";
     if (o.type === "rock") return cd ? "🪨 Picada (regenera)" : "⛏️ Picar piedra";
     if (o.type === "ore") { const od = ORE_DEF[o.ore]; if (!od) return "⛏️ Minar"; if (cd) return od.emoji + " En enfriamiento"; return "⛏️ Minar " + od.label; }
@@ -164,7 +169,17 @@ class FarmScene extends Phaser.Scene {
     if (o.type === "market") return openOv("ov-market");
     if (o.type === "store") return openOv("ov-forge");
     if (o.type === "boar") { o.sprite.destroy(); const i = this.threats.indexOf(o); if (i >= 0) this.threats.splice(i, 1); addXp("sword", 4); log("🥍 Espantaste al jabalí.", "good"); toast("🥍 ¡Espantado!"); return; }
-    if (o.type === "plot") { if (o.state === "dry") return this.startAction("water", o); if (o.state === "wet") return this.startAction("plant", o); if (o.state === "ready") return this.startAction("harvest", o); toast("🌱 Todavía está creciendo"); return; }
+    if (o.type === "plot") {
+      if (o.state === "dry") {
+        const ck = G.selSeed, cd = CROP_DEF[ck];
+        if (!cd) { toast("Elegí una semilla en la bolsa (I)"); return; }
+        if (!cropUnlocked(ck)) { toast("Necesitás Cultivo nivel " + cd.lvl + " para " + cd.label); return; }
+        if ((G.seeds[ck] || 0) <= 0) { toast("Sin semillas de " + cd.label + " — comprá en la Tienda"); return; }
+        return this.startAction("plant", o);
+      }
+      if (o.state === "ready") return this.startAction("harvest", o);
+      toast("🌱 Todavía está creciendo"); return;
+    }
     if (o.type === "fish") { if (G.golden < FISH_COST) { toast("Necesitás 5 ✨ para pescar"); return; } return this.startAction("fish", o); }
     if (nowMs() < o.readyAt) { toast(this.promptText(o)); return; }
     if (o.type === "ore") {
@@ -204,14 +219,18 @@ class FarmScene extends Phaser.Scene {
         log(`${od.emoji} +${gr} ${od.label}. ⛏️ ${G.picks.dur[pk]}/${pd.dur}`, "good"); toast("+" + gr + " " + od.emoji); refreshHud();
         if (G.picks.dur[pk] <= 0) { log(`🛠️ ¡${pd.label} se rompió! Reparalo en la Herrería.`, "bad"); toast("🛠️ ¡Pico roto!"); }
       } else toast("🎒 Inventario lleno");
-    } else if (a.kind === "water") {
-      o.state = "wet"; o.wet.setVisible(true); this.syncPlots(); addXp("farming", 3); log("💧 Regaste la tierra."); toast("💧 Regado");
     } else if (a.kind === "plant") {
-      o.state = "growing"; o.readyAt = nowMs() + 8000 * cdMult(); o.crop.setVisible(true).setTexture("sprout"); o.crop.setScale((GF.TILE * 0.75) / o.crop.width);
-      this.syncPlots(); addXp("farming", 5); log("🌱 Plantaste trigo.", "good"); toast("🌱 Plantado");
+      const ck = G.selSeed, cd = CROP_DEF[ck];
+      if (cd && (G.seeds[ck] || 0) > 0) {
+        G.seeds[ck]--; o.cropKey = ck; o.state = "growing"; o.readyAt = nowMs() + cd.grow * 1000 * cdMult();
+        o.spr.setVisible(true); o.emo.setVisible(false);
+        this.syncPlots(); addXp("farming", 5); log(`🌱 Plantaste ${cd.label}.`, "good"); toast("🌱 " + cd.label);
+        if (isOpen("ov-inv")) refreshInv();
+      }
     } else if (a.kind === "harvest") {
-      const gr = Math.max(1, Math.round(3 * yieldMult()));
-      if (tryAddRes("trigo", gr)) { o.state = "dry"; o.readyAt = 0; o.crop.setVisible(false); o.wet.setVisible(false); this.syncPlots(); addXp("farming", 10); log(`🌾 +${gr} Trigo.`, "good"); toast("+" + gr + " 🌾"); refreshHud(); }
+      const ck = o.cropKey || "papa", cd = CROP_DEF[ck] || CROP_DEF.papa;
+      const gr = Math.max(1, Math.round(cd.yield * yieldMult()));
+      if (tryAddRes(ck, gr)) { o.state = "dry"; o.cropKey = null; o.readyAt = 0; o.spr.setVisible(false); o.emo.setVisible(false); o.timer.setVisible(false); this.syncPlots(); addXp("farming", 10); log(`${cd.emoji} +${gr} ${cd.label}.`, "good"); toast("+" + gr + " " + cd.emoji); refreshHud(); }
       else toast("🎒 Inventario lleno");
     } else if (a.kind === "fish") {
       goFishing();
@@ -223,15 +242,13 @@ class FarmScene extends Phaser.Scene {
 
   // pinta la parcela según su estado (para restaurar tras un refresh)
   applyPlotVisual(pl) {
-    const T = GF.TILE;
-    pl.wet.setVisible(pl.state !== "dry");
-    if (pl.state === "growing") { pl.crop.setVisible(true).setTexture("sprout"); pl.crop.setScale((T * 0.75) / pl.crop.width); }
-    else if (pl.state === "ready") { pl.crop.setVisible(true).setTexture("wheat"); pl.crop.setScale((T * 0.9) / pl.crop.width); }
-    else pl.crop.setVisible(false);
+    if (pl.state === "growing") { pl.spr.setVisible(true); pl.emo.setVisible(false); }
+    else if (pl.state === "ready") { pl.spr.setVisible(false); const cd = CROP_DEF[pl.cropKey]; pl.emo.setText(cd ? cd.emoji : "🌾").setVisible(true); pl.timer.setVisible(false); }
+    else { pl.spr.setVisible(false); pl.emo.setVisible(false); pl.timer.setVisible(false); }
   }
 
   // vuelca el estado de las parcelas a G.plots para que el autoguardado lo persista
-  syncPlots() { if (this.plots) G.plots = this.plots.map(pl => ({ state: pl.state, readyAt: pl.readyAt })); }
+  syncPlots() { if (this.plots) G.plots = this.plots.map(pl => ({ state: pl.state, readyAt: pl.readyAt, cropKey: pl.cropKey })); }
 
   update(time, deltaMs) {
     const dt = deltaMs / 1000, k = this.keys, hero = this.hero;
@@ -247,7 +264,9 @@ class FarmScene extends Phaser.Scene {
     }
     // lotes: pasar de "creciendo" a "listo"
     for (const pl of this.plots) {
-      if (pl.state === "growing" && t >= pl.readyAt) { pl.state = "ready"; pl.readyAt = 0; pl.crop.setTexture("wheat"); pl.crop.setScale((GF.TILE * 0.9) / pl.crop.width); this.syncPlots(); }
+      if (pl.state !== "growing") continue;
+      if (t >= pl.readyAt) { pl.state = "ready"; pl.readyAt = 0; pl.spr.setVisible(false); const cd = CROP_DEF[pl.cropKey]; pl.emo.setText(cd ? cd.emoji : "🌾").setVisible(true); pl.timer.setVisible(false); this.syncPlots(); }
+      else { pl.timer.setText(Math.max(0, Math.ceil((pl.readyAt - t) / 1000)) + "s").setVisible(true); }
     }
     // amenazas (jabalíes)
     if (t >= this.nextThreatAt && this.threats.length === 0) { this.nextThreatAt = t + 60000; this.spawnThreat(); }
@@ -257,7 +276,7 @@ class FarmScene extends Phaser.Scene {
       if (d > 2) { const sp = Math.min(70 * dt, d); b.cx += dx / d * sp; b.by += dy / d * sp; }
       b.sprite.setPosition(b.cx, b.by).setDepth(b.by).setScale((dx < 0 ? -1 : 1) * b.baseScale, b.baseScale);
       if (t >= b.damageAt) {
-        if (b.tgt.state === "growing" || b.tgt.state === "ready") { b.tgt.state = "dry"; b.tgt.readyAt = 0; b.tgt.crop.setVisible(false); b.tgt.wet.setVisible(false); this.syncPlots(); log("🐗 Un jabalí arruinó un cultivo.", "bad"); toast("🐗 Cultivo arruinado"); }
+        if (b.tgt.state === "growing" || b.tgt.state === "ready") { b.tgt.state = "dry"; b.tgt.cropKey = null; b.tgt.readyAt = 0; b.tgt.spr.setVisible(false); b.tgt.emo.setVisible(false); b.tgt.timer.setVisible(false); this.syncPlots(); log("🐗 Un jabalí arruinó un cultivo.", "bad"); toast("🐗 Cultivo arruinado"); }
         b.sprite.destroy(); this.threats.splice(i, 1);
       }
     }

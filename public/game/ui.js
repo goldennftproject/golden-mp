@@ -22,7 +22,18 @@ function refreshHud() { setTxt("s-level", G.level); setTxt("s-prestige", G.prest
 
 /* ---- inventario ---- */
 function invSlotHtml(s) { const im = s.sprite ? `<img src="${GF.spr(s.sprite)}">` : `<span class="em">${s.em}</span>`; const c = (s.count != null) ? `<span class="cnt">${fmt(s.count)}</span>` : ""; return `<div class="slot filled" title="${s.nm}">${im}${c}</div>`; }
-function refreshInv() { const st = invStacks(); let html = ""; for (let i = 0; i < INV_SLOTS; i++) html += st[i] ? invSlotHtml(st[i]) : '<div class="slot"></div>'; $("inv-slots").innerHTML = html; const cap = $("inv-cap"); if (cap) cap.textContent = `Bolsa: ${Math.min(st.length, INV_SLOTS)}/${INV_SLOTS} espacios · máx 99 por recurso`; }
+function refreshInv() { const st = invStacks(); let html = ""; for (let i = 0; i < INV_SLOTS; i++) html += st[i] ? invSlotHtml(st[i]) : '<div class="slot"></div>'; $("inv-slots").innerHTML = html; const cap = $("inv-cap"); if (cap) cap.textContent = `Bolsa: ${Math.min(st.length, INV_SLOTS)}/${INV_SLOTS} espacios · máx 99 por recurso`; renderSeedBag(); }
+
+// semillas en la bolsa: clic para elegir cuál plantar
+function renderSeedBag() {
+  const box = $("inv-seeds"); if (!box) return;
+  box.innerHTML = CROP_ORDER.map(k => {
+    const cd = CROP_DEF[k], n = G.seeds[k] || 0, unlocked = cropUnlocked(k), sel = G.selSeed === k;
+    const title = `${cd.label} · crece en ${cd.grow}s · Cultivo nivel ${cd.lvl}`;
+    return `<button class="seed${sel ? " sel" : ""}${unlocked ? "" : " locked"}" data-seed="${k}" title="${title}" ${unlocked ? "" : "disabled"}><span class="se">${cd.emoji}</span><span class="sc">${fmt(n)}</span></button>`;
+  }).join("");
+  box.querySelectorAll("[data-seed]").forEach(b => b.onclick = () => { selectSeed(b.dataset.seed); toast("🌱 Semilla: " + CROP_DEF[b.dataset.seed].label); });
+}
 
 /* ---- skills ---- */
 function refreshSkills() {
@@ -35,7 +46,7 @@ function refreshSkills() {
 function eqCard(sprite, em, nm, st, cls) { const im = sprite ? `<img src="${GF.spr(sprite)}">` : `<span>${em}</span>`; return `<div class="eqcard"><div class="ic">${im}</div><div><div class="nm">${nm}</div><div class="st ${cls || ""}">${st}</div></div></div>`; }
 function refreshEquip() {
   let html = "";
-  html += eqCard("hoe", "🪝", "Azada", "Lista · para regar/plantar", "ok");
+  html += eqCard("hoe", "🪝", "Azada", "Lista · para plantar y cosechar", "ok");
   html += eqCard("axe", "🪓", "Hacha", "Lista · para talar", "ok");
   { const eq = G.picks.eq, pd = eq ? PICK_DEF[eq] : null, dur = pd ? (G.picks.dur[eq] || 0) : 0;
     html += eqCard(pd ? pd.sprite : "pick_stone", "⛏️", pd ? pd.label : "Sin pico",
@@ -64,13 +75,27 @@ function refreshForge() {
   $("forge-list").querySelectorAll("[data-repair]").forEach(b => b.onclick = () => repairPick(b.dataset.repair));
 }
 
-/* ---- mercado ---- */
+/* ---- mercado / tienda ---- */
 function refreshMarket() {
   const cur = marketCur;
-  $("mkt-list").innerHTML = SELLABLE.map(res => { const owned = G.res[res]; const u = marketUnit(res); const uStr = cur === "plata" ? `${u} de plata c/u` : `${u.toFixed(1)} $Golden c/u`;
+  $("mkt-list").innerHTML = SELLABLE.map(res => { const owned = G.res[res] || 0; const u = marketUnit(res); const uStr = cur === "plata" ? `${u} de plata c/u` : `${u.toFixed(1)} $Golden c/u`;
     return `<div class="mkt-row"><span class="mimg">${RES_EMOJI[res]}</span><div class="minfo"><div class="mnm">${RES_LABEL[res]}</div><div class="mds">Tenés ${fmt(owned)} · ${uStr}</div></div><input id="mq-${res}" type="number" min="0" max="${owned}" value="${owned > 0 ? owned : 0}"><button class="vbtn" id="vb-${res}">Vender</button></div>`; }).join("");
   SELLABLE.forEach(res => { const btn = $("vb-" + res); if (btn) btn.onclick = () => sellItem(res); });
   document.querySelectorAll(".curbtn").forEach(b => b.classList.toggle("active", b.dataset.cur === cur));
+  refreshSeedShop();
+}
+
+// tienda de semillas: comprar con plata, bloqueadas por nivel de Cultivo
+function refreshSeedShop() {
+  const box = $("seed-shop"); if (!box) return;
+  box.innerHTML = CROP_ORDER.map(k => {
+    const cd = CROP_DEF[k], unlocked = cropUnlocked(k), aff = G.plata >= cd.seedCost;
+    const btn = unlocked
+      ? `<button class="green sm" data-buy="${k}" ${aff ? "" : "disabled"}>Comprar · 🪙${cd.seedCost}</button>`
+      : `<button class="ghost sm" disabled>🔒 Cultivo nv ${cd.lvl}</button>`;
+    return `<div class="mkt-row"><span class="mimg">${cd.emoji}</span><div class="minfo"><div class="mnm">${cd.label} <span class="seedlv">nv ${cd.lvl}</span></div><div class="mds">Semilla · crece en ${cd.grow}s · tenés ${fmt(G.seeds[k] || 0)}</div></div>${btn}</div>`;
+  }).join("");
+  box.querySelectorAll("[data-buy]").forEach(b => b.onclick = () => buySeed(b.dataset.buy));
 }
 
 /* ---- granja (nivel) ---- */

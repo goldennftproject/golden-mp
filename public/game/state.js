@@ -5,10 +5,13 @@ GF.spr = (k) => "assets/farm/" + k + ".png";
 // --- estado principal (con algunos recursos de arranque para probar los menús) ---
 const G = {
   plata: 0, golden: 20, level: 1, prestige: 0, week: 1,
-  res: { trigo: 12, madera: 30, piedra: 30, bronce: 25, oro: 15, diamante: 5, netherita: 0 },
+  res: { madera: 30, piedra: 30, bronce: 25, oro: 15, diamante: 5, netherita: 0,
+    papa: 0, zanahoria: 0, cebolla: 0, calabacin: 0, repollo: 0, calabaza: 0, brocoli: 0 },
+  seeds: { papa: 10, zanahoria: 5, cebolla: 2, calabacin: 1, repollo: 0, calabaza: 0, brocoli: 0 },  // starter pack
+  selSeed: "papa",   // semilla elegida para plantar
   picks: { owned: { stone: true }, dur: { stone: 50 }, eq: "stone" },
   fish: { comun: 0, raro: 0, epico: 0, legendario: 0 },
-  plots: [],   // estado de las parcelas: [{state, readyAt}] — lo llena la FarmScene
+  plots: [],   // estado de las parcelas: [{state, readyAt, cropKey}] — lo llena la FarmScene
   buffs: [], secPerGameHour: 1, gameHours: 0,
   skills: { fishing: 0, farming: 0, cooking: 0, range: 0, sword: 0, mining: 0, crafting: 0 },
 };
@@ -23,8 +26,33 @@ function addBuff(type, label, mult, durSec) { G.buffs.push({ type, label, mult, 
 function hToMs(h) { return h * G.secPerGameHour * 1000 * cdMult(); }
 
 // --- recursos ---
-const RES_EMOJI = { trigo:"🌾", madera:"🪵", piedra:"🪨", bronce:"🟫", oro:"🟡", diamante:"💎", netherita:"🔶" };
-const RES_LABEL = { trigo:"Trigo", madera:"Madera", piedra:"Piedra", bronce:"Bronce", oro:"Oro", diamante:"Diamante", netherita:"Netherita" };
+const RES_EMOJI = { madera:"🪵", piedra:"🪨", bronce:"🟫", oro:"🟡", diamante:"💎", netherita:"🔶",
+  papa:"🥔", zanahoria:"🥕", cebolla:"🧅", calabacin:"🥒", repollo:"🥬", calabaza:"🎃", brocoli:"🥦" };
+const RES_LABEL = { madera:"Madera", piedra:"Piedra", bronce:"Bronce", oro:"Oro", diamante:"Diamante", netherita:"Netherita",
+  papa:"Papa", zanahoria:"Zanahoria", cebolla:"Cebolla", calabacin:"Calabacín", repollo:"Repollo", calabaza:"Calabaza", brocoli:"Brócoli" };
+
+// --- cultivos (semillas compradas en la Tienda; se desbloquean por nivel de Cultivo) ---
+const CROP_ORDER = ["papa","zanahoria","cebolla","calabacin","repollo","calabaza","brocoli"];
+const CROP_DEF = {
+  papa:      { label:"Papa",      emoji:"🥔", lvl:1,  seedCost:1,   grow:6,  yield:2, price:3 },
+  zanahoria: { label:"Zanahoria", emoji:"🥕", lvl:2,  seedCost:4,   grow:8,  yield:2, price:5 },
+  cebolla:   { label:"Cebolla",   emoji:"🧅", lvl:3,  seedCost:8,   grow:10, yield:2, price:8 },
+  calabacin: { label:"Calabacín", emoji:"🥒", lvl:5,  seedCost:16,  grow:12, yield:2, price:14 },
+  repollo:   { label:"Repollo",   emoji:"🥬", lvl:7,  seedCost:30,  grow:15, yield:2, price:24 },
+  calabaza:  { label:"Calabaza",  emoji:"🎃", lvl:10, seedCost:60,  grow:18, yield:1, price:45 },
+  brocoli:   { label:"Brócoli",   emoji:"🥦", lvl:13, seedCost:120, grow:22, yield:1, price:70 },
+};
+function farmLevel() { return skillInfo(G.skills.farming).lvl; }
+function cropUnlocked(k) { const cd = CROP_DEF[k]; return !!cd && farmLevel() >= cd.lvl; }
+function selectSeed(k) { if (!CROP_DEF[k]) return; G.selSeed = k; if (isOpen("ov-inv")) refreshInv(); }
+function buySeed(k) {
+  const cd = CROP_DEF[k]; if (!cd) return;
+  if (!cropUnlocked(k)) { toast("Necesitás Cultivo nivel " + cd.lvl); return; }
+  if (G.plata < cd.seedCost) { toast("Te falta plata"); return; }
+  G.plata -= cd.seedCost; G.seeds[k] = (G.seeds[k] || 0) + 1;
+  log(`🛒 Compraste 1 semilla de ${cd.label}.`); toast("🌱 +1 " + cd.label);
+  refreshHud(); if (typeof refreshSeedShop === "function") refreshSeedShop(); if (isOpen("ov-inv")) refreshInv();
+}
 
 // --- skills ---
 const SKILL_DEFS = [["farming","🌾","Cultivo"],["fishing","🎣","Pesca"],["mining","⛏️","Minería"],
@@ -42,12 +70,12 @@ function addXp(sk, amt) {
 }
 
 // --- niveles de granja ---
-const LEVELS = { 2:{trigo:20,madera:10}, 3:{trigo:40,madera:20,piedra:5}, 4:{trigo:70,madera:35,piedra:12},
-  5:{trigo:110,madera:55,piedra:22}, 6:{trigo:160,madera:80,piedra:36}, 7:{trigo:230,madera:115,piedra:55},
-  8:{trigo:300,oro:3}, 9:{trigo:380,oro:6}, 10:{trigo:480,oro:10} };
+const LEVELS = { 2:{papa:20,madera:10}, 3:{papa:35,madera:20,piedra:5}, 4:{zanahoria:35,madera:35,piedra:12},
+  5:{zanahoria:60,madera:55,piedra:22}, 6:{cebolla:60,madera:80,piedra:36}, 7:{cebolla:100,madera:115,piedra:55},
+  8:{calabaza:30,oro:3}, 9:{calabaza:60,oro:6}, 10:{brocoli:50,oro:10} };
 function canLevel() { if (G.level >= 10) return false; const n = LEVELS[G.level+1]; for (const k in n) if ((G.res[k]||0) < n[k]) return false; return true; }
 function levelUp() { if (!canLevel()) { toast("Te faltan recursos"); return; } const n = LEVELS[G.level+1]; for (const k in n) G.res[k]-=n[k]; G.level++; log(`⭐ ¡Granja nivel ${G.level}! Yield +${((yieldMult()-1)*100).toFixed(1)}%.`, "gold"); toast("¡Nivel " + G.level + "!"); refreshBarn(); refreshHud(); }
-function prestige() { if (G.level < 10) { toast("Llegá a nivel 10"); return; } G.prestige++; G.level=1; G.res={trigo:0,madera:0,piedra:0,bronce:0,oro:0,diamante:0,netherita:0}; log(`♻️ Reinicio. Prestigio ${G.prestige}.`, "gold"); toast("Prestigio " + G.prestige + "!"); refreshBarn(); refreshHud(); }
+function prestige() { if (G.level < 10) { toast("Llegá a nivel 10"); return; } G.prestige++; G.level=1; for (const k in G.res) G.res[k]=0; log(`♻️ Reinicio. Prestigio ${G.prestige}.`, "gold"); toast("Prestigio " + G.prestige + "!"); refreshBarn(); refreshHud(); }
 
 // --- minerales y picos ---
 const ORE_ORDER = ["piedra","bronce","oro","diamante","netherita"];
@@ -84,8 +112,8 @@ function invStacks() {
     if (eqp) st.push({ sprite:PICK_DEF[eqp].sprite, em:"⛏️", nm:PICK_DEF[eqp].label+" ("+(G.picks.dur[eqp]||0)+"/"+PICK_DEF[eqp].dur+")" });
     else st.push({ sprite:"pick_stone", em:"⛏️", nm:"Sin pico" }); }
   st.push({ sprite:"fishing_rod", em:"🎣", nm:"Caña" });
-  for (const r of ["trigo","madera","piedra","bronce","oro","diamante","netherita"]) {
-    let n = Math.floor(G.res[r]);
+  for (const r of ["papa","zanahoria","cebolla","calabacin","repollo","calabaza","brocoli","madera","piedra","bronce","oro","diamante","netherita"]) {
+    let n = Math.floor(G.res[r] || 0);
     while (n > 0) { const c = Math.min(99, n); st.push({ em:RES_EMOJI[r], nm:RES_LABEL[r], count:c }); n -= 99; }
   }
   return st;
@@ -93,8 +121,9 @@ function invStacks() {
 function tryAddRes(key, amt) { const b = G.res[key]; G.res[key]=b+amt; if (invStacks().length > INV_SLOTS) { G.res[key]=b; return false; } if (isOpen("ov-inv")) refreshInv(); return true; }
 
 // --- mercado ---
-const PRICE = { trigo:2, madera:3, piedra:6, bronce:12, oro:30, diamante:80, netherita:200 };
-const SELLABLE = ["trigo","madera","piedra","bronce","oro","diamante","netherita"];
+const PRICE = { madera:3, piedra:6, bronce:12, oro:30, diamante:80, netherita:200,
+  papa:3, zanahoria:5, cebolla:8, calabacin:14, repollo:24, calabaza:45, brocoli:70 };
+const SELLABLE = ["papa","zanahoria","cebolla","calabacin","repollo","calabaza","brocoli","madera","piedra","bronce","oro","diamante","netherita"];
 let marketCur = "plata";
 function marketUnit(res) { return marketCur === "plata" ? PRICE[res] : PRICE[res]/10; }
 function sellItem(res) {

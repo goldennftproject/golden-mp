@@ -51,6 +51,15 @@
   .slot img{width:74%;height:74%;object-fit:contain;image-rendering:pixelated}
   .slot .em{font-size:22px;line-height:1}
   .slot .cnt{position:absolute;right:2px;bottom:1px;font-size:11px;font-weight:800;color:#3a2e10;background:rgba(255,255,255,.82);border-radius:5px;padding:0 3px}
+  .seedhead{margin-top:12px}
+  .seedbag{display:flex;gap:7px;flex-wrap:wrap;margin-top:6px}
+  .seed{position:relative;width:46px;height:46px;background:#efe3c6;border:2px solid #d3c298;border-radius:9px;cursor:pointer;display:flex;align-items:center;justify-content:center;padding:0}
+  .seed .se{font-size:22px;line-height:1}
+  .seed .sc{position:absolute;right:2px;bottom:1px;font-size:10px;font-weight:800;color:#3a2e10;background:rgba(255,255,255,.85);border-radius:5px;padding:0 3px}
+  .seed.sel{border-color:#e2b23a;box-shadow:0 0 0 2px rgba(226,178,58,.5)}
+  .seed.locked{opacity:.45;cursor:not-allowed}
+  .shophead{font-weight:800;font-size:13px;color:var(--ink);margin:12px 0 6px}
+  .seedlv{font-size:11px;font-weight:700;color:#8a6d1e;background:#f3e6bf;border-radius:5px;padding:0 5px;margin-left:4px}
   .mkt-cur{display:flex;align-items:center;gap:8px;font-size:13px;color:var(--muted);margin:4px 0 12px;flex-wrap:wrap}
   .curbtn{padding:6px 10px;border-radius:8px;border:1px solid var(--line);background:#fff;color:var(--ink);font-size:12px;font-weight:700;display:flex;align-items:center;gap:5px;cursor:pointer}
   .curbtn.active{background:linear-gradient(#f6d878,#e9b93f);border-color:var(--gold-deep)}
@@ -199,7 +208,10 @@
 
   <div class="ov" id="ov-market"><div class="card" style="width:min(520px,94%)">
     <button class="close" data-close="ov-market">×</button>
-    <h3>Mercado</h3>
+    <h3>🏪 Tienda</h3>
+    <div class="shophead">🌱 Comprar semillas</div>
+    <div class="mkt-list" id="seed-shop"></div>
+    <div class="shophead">💰 Vender recursos</div>
     <div class="mkt-cur">Cobrar en:
       <button class="curbtn active" data-cur="plata"><span class="coin silver"></span> Plata</button>
       <button class="curbtn" data-cur="golden"><span class="coin gold"></span> $Golden</button>
@@ -219,6 +231,8 @@
     <h3>Inventario</h3>
     <div class="sub" id="inv-cap">Bolsa: 0/30 espacios · máx 99 por recurso</div>
     <div class="slots" id="inv-slots"></div>
+    <div class="sub seedhead">🌱 Semillas — clic para elegir cuál plantar</div>
+    <div class="seedbag" id="inv-seeds"></div>
   </div></div>
 
   <div class="ov" id="ov-skills"><div class="card" style="width:min(500px,94%)">
