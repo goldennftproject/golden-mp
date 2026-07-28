@@ -15,8 +15,10 @@ function startGame() {
 }
 
 let entered = false;
+function hideEl(id) { const e = document.getElementById(id); if (e) e.style.display = "none"; }
 function enterGame() {
   if (entered) return; entered = true;
+  hideEl("loading");
   if (typeof initChat === "function") initChat(renderChatMsg);
   if (typeof startAutosave === "function") startAutosave();
   if (typeof refreshHud === "function") refreshHud();
@@ -28,8 +30,9 @@ function enterGame() {
 (async function boot() {
   let returning = false;
   try { await window.SAVE_READY; returning = await loadFarm(); } catch (e) { console.warn(e); }
+  hideEl("loading");
   if (returning && window.NICK) enterGame();
-  // si no, el portón queda visible para que el jugador nuevo elija apodo
+  else document.getElementById("gate").style.display = "flex";   // jugador nuevo: recién ahora se ve el apodo
 })();
 
 // jugador nuevo: elige apodo y entra
