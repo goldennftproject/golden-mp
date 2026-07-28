@@ -1,0 +1,15 @@
+{
+  "name": "golden-mp",
+  "version": "0.1.0",
+  "description": "Golden Farm - POC de zona compartida multijugador (Phaser + Colyseus)",
+  "type": "commonjs",
+  "scripts": {
+    "start": "node src/index.js",
+    "dev": "node src/index.js"
+  },
+  "dependencies": {
+    "@colyseus/schema": "^2.0.0",
+    "colyseus": "^0.15.17",
+    "express": "^4.19.2"
+  }
+}
