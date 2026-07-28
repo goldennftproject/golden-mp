@@ -3,63 +3,276 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Golden Farm · Zona compartida</title>
+<title>Golden Farm</title>
 <style>
-  html,body{margin:0;height:100%;background:#5f8f43;font-family:system-ui,sans-serif;overflow:hidden}
+  :root{--panel:#fffaf0;--ink:#2e2a1f;--muted:#8a7f66;--gold:#e2b23a;--gold-deep:#b9860b;--green:#5a8a3c;--red:#c0503a;--line:#e2d6b8;}
+  *{box-sizing:border-box}
+  html,body{margin:0;padding:0;height:100%;overflow:hidden;background:#243318;color:#f4ecd9;font-family:"Segoe UI",system-ui,sans-serif;-webkit-font-smoothing:antialiased}
   #game{position:fixed;inset:0}
   #game canvas{display:block}
-  #hud{position:fixed;top:10px;left:10px;z-index:5;background:rgba(20,28,15,.72);color:#f2ead5;
-       padding:8px 12px;border-radius:10px;font-size:13px;line-height:1.5;pointer-events:none}
-  #hud b{color:#ffd76a}
-  #gate{position:fixed;inset:0;z-index:10;display:flex;align-items:center;justify-content:center;background:#243318}
-  #gate .card{background:#0f150b;color:#f2ead5;border:1px solid #3c4d31;border-radius:16px;padding:26px 28px;width:min(420px,92%);text-align:center}
-  #gate h1{color:#e2b23a;margin:0 0 6px}
+
+  /* HUD superior */
+  .hudbar{position:fixed;left:0;top:0;right:0;z-index:6;display:flex;align-items:center;justify-content:space-between;gap:10px;padding:8px 12px;pointer-events:none}
+  .hudbar>*{pointer-events:auto}
+  .brand h1{margin:0;font-size:20px;letter-spacing:2px;color:var(--gold);font-weight:800}
+  .hud{display:flex;gap:7px;flex-wrap:wrap;align-items:center}
+  .pill{background:rgba(38,51,31,.92);border:1px solid #3c4d31;border-radius:999px;padding:5px 11px;font-size:13px;font-weight:700;display:flex;align-items:center;gap:5px;white-space:nowrap;color:#f2ead5}
+  .pill .k{color:#a9bd94;font-weight:600;font-size:12px}
+  .coin{display:inline-block;width:14px;height:14px;border-radius:50%;flex:0 0 auto}
+  .coin.silver{background:radial-gradient(circle at 35% 30%,#f2f4f6,#b9bec6 65%,#8a9098);box-shadow:inset 0 0 0 1px #7c828a}
+  .coin.gold{background:radial-gradient(circle at 35% 30%,#ffe9a0,#e6b53c 65%,#b9860b);box-shadow:inset 0 0 0 1px #a97f11}
+  .btnpill{font-family:inherit;font-size:12px;padding:6px 11px;border-radius:8px;border:1px solid #3c4d31;background:rgba(38,51,31,.92);color:#f2ead5;cursor:pointer;font-weight:700}
+
+  #toast{position:fixed;left:50%;top:60px;transform:translateX(-50%);z-index:200;background:rgba(20,25,15,.92);color:#fff;padding:8px 16px;border-radius:10px;font-size:14px;font-weight:600;opacity:0;transition:opacity .2s;pointer-events:none;border:1px solid #4a5340}
+  #toast.show{opacity:1}
+  #prompt{position:fixed;left:50%;bottom:12px;transform:translateX(-50%);z-index:5;background:rgba(20,25,15,.82);color:#ffe9a8;padding:6px 14px;border-radius:9px;font-size:13px;font-weight:600;opacity:0;transition:opacity .15s;pointer-events:none;border:1px solid #6a5a2a}
+  #prompt.show{opacity:1}
+
+  .ov{position:fixed;inset:0;z-index:10;display:none;align-items:center;justify-content:center;background:rgba(10,14,8,.55)}
+  .ov.show{display:flex}
+  .card{background:var(--panel);color:var(--ink);border-radius:16px;padding:18px 20px;width:min(440px,92%);box-shadow:0 20px 50px rgba(0,0,0,.4);border:1px solid var(--line);position:relative}
+  .card h3{margin:0 0 4px;font-size:18px;color:var(--gold-deep)}
+  .card .sub{font-size:12px;color:var(--muted);margin-bottom:12px}
+  .row{display:flex;gap:8px;flex-wrap:wrap;margin-top:10px}
+  button{font-family:inherit;font-size:14px;font-weight:700;cursor:pointer;border:1px solid var(--gold-deep);border-radius:10px;padding:9px 14px;color:#3a2e10;background:linear-gradient(#f6d878,#e9b93f)}
+  button:hover{filter:brightness(1.05)} button:active{transform:translateY(1px)} button:disabled{opacity:.5;cursor:not-allowed;filter:grayscale(.4)}
+  button.ghost{background:#fff;border-color:var(--line);color:var(--ink)}
+  button.green{background:linear-gradient(#8fc46a,#6aa544);border-color:#3f6b28;color:#173208}
+  button.gold{background:linear-gradient(#f6d878,#e9b93f)}
+  button.sm{padding:6px 10px;font-size:13px}
+  .close{position:absolute;top:10px;right:12px;background:none;border:none;font-size:20px;color:var(--muted);cursor:pointer}
+  .cost{font-size:13px;color:var(--muted);margin-top:6px}
+  .cost .miss{color:var(--red);font-weight:700} .cost b{color:var(--ink)}
+  .lvlbar{height:12px;background:#eee4cc;border-radius:8px;overflow:hidden;border:1px solid var(--line);margin-top:10px}
+  .lvlbar>i{display:block;height:100%;background:linear-gradient(90deg,var(--gold),var(--gold-deep));width:0%}
+  .slots{display:grid;grid-template-columns:repeat(6,1fr);gap:6px;margin-top:8px;max-height:340px;overflow:auto}
+  .slot{aspect-ratio:1;background:#efe3c6;border:2px solid #d3c298;border-radius:8px;position:relative;display:flex;align-items:center;justify-content:center}
+  .slot.filled{border-color:#c9b070}
+  .slot img{width:74%;height:74%;object-fit:contain;image-rendering:pixelated}
+  .slot .em{font-size:22px;line-height:1}
+  .slot .cnt{position:absolute;right:2px;bottom:1px;font-size:11px;font-weight:800;color:#3a2e10;background:rgba(255,255,255,.82);border-radius:5px;padding:0 3px}
+  .mkt-cur{display:flex;align-items:center;gap:8px;font-size:13px;color:var(--muted);margin:4px 0 12px;flex-wrap:wrap}
+  .curbtn{padding:6px 10px;border-radius:8px;border:1px solid var(--line);background:#fff;color:var(--ink);font-size:12px;font-weight:700;display:flex;align-items:center;gap:5px;cursor:pointer}
+  .curbtn.active{background:linear-gradient(#f6d878,#e9b93f);border-color:var(--gold-deep)}
+  .mkt-list{display:flex;flex-direction:column;gap:8px;max-height:360px;overflow:auto}
+  .mkt-row{display:flex;align-items:center;gap:10px;background:#faf3e2;border:1px solid var(--line);border-radius:10px;padding:8px 10px}
+  .mkt-row .mimg{width:34px;height:34px;display:flex;align-items:center;justify-content:center;font-size:22px;flex:0 0 auto}
+  .mkt-row .minfo{flex:1;min-width:0}
+  .mkt-row .mnm{font-weight:700;font-size:13px}
+  .mkt-row .mds{font-size:11px;color:var(--muted)}
+  .mkt-row input{width:56px;padding:5px;border-radius:7px;border:1px solid var(--line);font-family:inherit;text-align:center;font-size:13px}
+  .mkt-row .vbtn{padding:6px 12px;font-size:13px;flex:0 0 auto}
+  .skgrid{display:flex;flex-direction:column;gap:8px;max-height:60vh;overflow:auto}
+  .skrow{display:flex;align-items:center;gap:11px;background:#faf3e2;border:1px solid var(--line);border-radius:10px;padding:8px 11px}
+  .skrow .ic{font-size:22px;width:26px;text-align:center;flex:0 0 auto}
+  .skrow .body{flex:1;min-width:0}
+  .skrow .nm{font-weight:700;font-size:13px;display:flex;justify-content:space-between}
+  .skrow .nm .lv{color:var(--gold-deep)}
+  .skbar{height:9px;background:#eee4cc;border:1px solid var(--line);border-radius:6px;overflow:hidden;margin-top:5px}
+  .skbar>i{display:block;height:100%;background:linear-gradient(90deg,var(--green),#3f6b28)}
+  .skrow .xp{font-size:10.5px;color:var(--muted);margin-top:3px}
+  .avgpill{font-size:12px;color:var(--muted);margin-bottom:10px}.avgpill b{color:var(--ink)}
+  .eqgrid{display:grid;grid-template-columns:repeat(2,1fr);gap:9px}
+  @media(max-width:520px){.eqgrid{grid-template-columns:1fr}}
+  .eqcard{display:flex;align-items:center;gap:10px;background:#faf3e2;border:1px solid var(--line);border-radius:11px;padding:10px}
+  .eqcard .ic{width:44px;height:44px;flex:0 0 auto;background:#efe3c6;border:2px solid #d3c298;border-radius:9px;display:flex;align-items:center;justify-content:center;font-size:24px}
+  .eqcard .ic img{width:78%;height:78%;object-fit:contain;image-rendering:pixelated}
+  .eqcard .nm{font-weight:700;font-size:13px}
+  .eqcard .st{font-size:11px;color:var(--muted);margin-top:2px}
+  .eqcard .st.busy{color:var(--red);font-weight:700}.eqcard .st.ok{color:var(--green);font-weight:700}
+  .lbtabs{display:flex;gap:8px;margin:2px 0 12px}
+  .lbtab{padding:6px 12px;border-radius:8px;border:1px solid var(--line);background:#fff;color:var(--ink);font-size:12.5px;font-weight:700;cursor:pointer}
+  .lbtab.active{background:linear-gradient(#f6d878,#e9b93f);border-color:var(--gold-deep)}
+  .lblist{display:flex;flex-direction:column;gap:5px;max-height:52vh;overflow:auto}
+  .lbrow{display:flex;align-items:center;gap:10px;background:#faf3e2;border:1px solid var(--line);border-radius:9px;padding:7px 11px;font-size:13px}
+  .lbrow .rk{width:26px;font-weight:800;color:var(--muted);text-align:center;flex:0 0 auto}
+  .lbrow .nm{flex:1;font-weight:700}
+  .lbrow .val{font-weight:800;display:flex;align-items:center;gap:5px}
+  .lbrow.me{background:linear-gradient(#fff3cf,#ffe9a8);border-color:var(--gold-deep)}
+  .lbrow.top1 .rk{color:#e0a91b}.lbrow.top2 .rk{color:#9aa0a8}.lbrow.top3 .rk{color:#b9773c}
+  .lbnote{font-size:11.5px;color:var(--muted);margin-top:12px;padding-top:10px;border-top:1px solid var(--line)}
+  .cfgsec{background:#faf3e2;border:1px solid var(--line);border-radius:11px;padding:12px 13px;margin-top:10px}
+  .cfgsec h4{margin:0 0 4px;font-size:13px;color:var(--gold-deep)}
+  .cfgsec p{margin:0 0 8px;font-size:12px;color:var(--muted);line-height:1.5}
+  .forge-list{display:flex;flex-direction:column;gap:8px;margin-top:10px;max-height:60vh;overflow:auto}
+  .forge-row{display:flex;align-items:center;gap:10px;background:#faf3e2;border:1px solid var(--line);border-radius:11px;padding:9px 10px}
+  .forge-row.eq{border-color:var(--gold);box-shadow:0 0 0 1px var(--gold) inset}
+  .forge-row .fic{width:46px;height:46px;flex:0 0 auto;background:#efe3c6;border:2px solid #d3c298;border-radius:9px;display:flex;align-items:center;justify-content:center;font-size:22px}
+  .forge-row .fic img{width:82%;height:82%;object-fit:contain;image-rendering:pixelated}
+  .forge-row .finfo{flex:1;min-width:0}
+  .forge-row .fnm{font-weight:800;font-size:13px}
+  .forge-row .fnm .tag{font-size:10px;color:var(--green);border:1px solid var(--green);border-radius:6px;padding:0 5px;margin-left:6px}
+  .forge-row .fds{font-size:11px;color:var(--muted);margin-top:2px}
+  .forge-row .fbtns{display:flex;flex-direction:column;gap:5px;flex:0 0 auto}
+  .durbar{height:7px;background:#e6dcc2;border-radius:5px;overflow:hidden;border:1px solid var(--line);margin-top:4px;width:160px;max-width:42vw}
+  .durbar>i{display:block;height:100%;background:linear-gradient(90deg,#8fc46a,#5a9a3a)}
+  /* menú plegable */
+  .gmenu{position:fixed;right:10px;top:52px;z-index:7;display:flex;flex-direction:column;align-items:flex-end;gap:7px}
+  .gmtoggle{width:44px;height:44px;border-radius:12px;border:1px solid #7a5f16;background:linear-gradient(#f6d878,#e9b93f);color:#3a2e10;font-size:20px;font-weight:800;cursor:pointer;box-shadow:0 6px 16px rgba(0,0,0,.35);padding:0}
+  .gmitems{display:flex;flex-direction:column;gap:6px;transition:opacity .15s,transform .15s;transform-origin:top right}
+  .gmenu.collapsed .gmitems{opacity:0;transform:scale(.9);pointer-events:none;height:0;overflow:hidden}
+  .gmi{display:flex;align-items:center;gap:8px;width:190px;text-align:left;background:rgba(38,51,31,.94);border:1px solid #3c4d31;color:#f2ead5;font-weight:700;font-size:13px;border-radius:10px;padding:8px 10px;cursor:pointer}
+  .gmi:hover{filter:brightness(1.15)}
+  .gmi span.ic{font-size:17px;width:20px;text-align:center}
+  .gmi b.key{margin-left:auto;font-size:11px;background:#161f12;border:1px solid #4a5a3a;color:#cbbf9f;border-radius:6px;padding:1px 6px}
+  /* registro */
+  .logpanel{position:fixed;left:10px;bottom:10px;z-index:5;width:min(340px,58%);background:rgba(38,51,31,.92);border:1px solid #3c4d31;border-radius:12px;overflow:hidden}
+  .loghead{width:100%;text-align:left;background:#2f3d26;border:none;color:#a9bd94;font-weight:800;font-size:12px;letter-spacing:1px;text-transform:uppercase;padding:8px 12px;cursor:pointer;display:flex;justify-content:space-between;align-items:center;border-radius:0}
+  .logpanel .arrow{transition:transform .2s;font-size:11px}
+  .logpanel.collapsed .arrow{transform:rotate(180deg)}
+  .logbody{max-height:150px;overflow:auto;padding:8px 10px}
+  .logpanel.collapsed .logbody{max-height:0;padding:0 10px;overflow:hidden}
+  #log{display:flex;flex-direction:column;gap:4px;font-size:12.5px}
+  #log .l{padding:4px 8px;border-radius:7px;background:#2f3d26;border:1px solid #3c4d31}
+  #log .l.good{background:#2c3d22;border-color:#456b2c;color:#cfe6b6}
+  #log .l.bad{background:#3d2620;border-color:#6b3a2c;color:#f0c6b6}
+  #log .l.gold{background:#3a3016;border-color:#7a5f16;color:#f4d675}
+  /* gate de apodo */
+  #gate{position:fixed;inset:0;z-index:100;display:flex;align-items:center;justify-content:center;background:#243318}
+  #gate .gcard{background:#0f150b;color:#f2ead5;border:1px solid #3c4d31;border-radius:16px;padding:26px 28px;width:min(420px,92%);text-align:center}
+  #gate h1{color:#e2b23a;margin:0 0 6px;letter-spacing:1px}
   #gate p{color:#cbbf9f;font-size:14px;margin:0 0 16px}
   #gate input{width:100%;box-sizing:border-box;padding:11px;border-radius:9px;border:1px solid #4a5c3a;background:#1a2413;color:#fff;font-size:15px;text-align:center;margin-bottom:12px}
-  #gate button{width:100%;padding:12px;border:none;border-radius:10px;font-weight:800;font-size:15px;
-       background:linear-gradient(#f6d878,#e9b93f);color:#3a2e10;cursor:pointer}
-  #status{position:fixed;bottom:10px;left:10px;z-index:5;background:rgba(20,28,15,.72);color:#a9d18b;padding:6px 10px;border-radius:8px;font-size:12px}
+  #gate .enter{width:100%;padding:12px;border:none;border-radius:10px;font-weight:800;font-size:15px;background:linear-gradient(#f6d878,#e9b93f);color:#3a2e10;cursor:pointer}
 </style>
 </head>
 <body>
   <div id="game"></div>
-  <div id="hud">
-    <b>Zona compartida · Golden Farm</b><br>
-    Moverte: <b>WASD</b> o flechas · diagonal permitida<br>
-    Abrí esta URL en <b>otra pestaña</b> para verte moviéndote en vivo.
-  </div>
-  <div id="status">Conectando…</div>
 
-  <div id="gate">
-    <div class="card">
-      <h1>Golden Farm</h1>
-      <p>Elegí un apodo para entrar a la zona compartida.</p>
-      <input id="nick" maxlength="14" placeholder="Tu apodo" autocomplete="off">
-      <button id="enter">Entrar a la plaza</button>
+  <!-- HUD -->
+  <div class="hudbar">
+    <div class="brand"><h1>GOLDEN FARM</h1></div>
+    <div class="hud">
+      <div class="pill"><span class="k">Granja</span><b id="s-level">1</b><span class="k">/10</span></div>
+      <div class="pill"><span class="k">Prestigio</span><b id="s-prestige">0</b></div>
+      <div class="pill"><span class="coin silver"></span><b id="s-plata">0</b></div>
+      <div class="pill"><span class="coin gold"></span><b id="s-golden">20</b></div>
+      <div class="pill"><span class="k">Semana</span><b id="s-week">1</b></div>
+      <button class="btnpill" id="menu-btn">☰ Menú</button>
     </div>
   </div>
 
-  <!-- CONFIG: URL del servidor Colyseus.
-       - Deploy TODO-EN-UNO en Render: dejalo en "" (el mismo server sirve esta página).
-       - Cliente en Vercel + server en Render: poné acá la URL wss:// de tu server en Render.
-         Ej: window.GOLDEN_SERVER = "wss://golden-mp-xxxx.onrender.com"; -->
-  <script>window.GOLDEN_SERVER = "";</script>
+  <div id="toast"></div>
+  <div id="prompt"></div>
 
-  <!-- Phaser y Colyseus desde CDN (tu navegador tiene internet; el sandbox de la nube no) -->
+  <!-- overlays -->
+  <div class="ov" id="ov-barn"><div class="card">
+    <button class="close" data-close="ov-barn">×</button>
+    <h3>🏡 Granja</h3>
+    <div class="sub" id="barn-yield">Yield actual +0%</div>
+    <div class="lvlbar"><i id="lvlbar"></i></div>
+    <div class="cost" id="lvlcost"></div>
+    <div class="row"><button class="green" id="levelup">Subir de nivel</button><button class="gold" id="prestige" style="display:none">♻️ Reiniciar granja</button></div>
+    <div class="cost" id="toolinfo" style="display:none"></div>
+    <div class="row"><button class="ghost sm" id="buytool" style="display:none"></button></div>
+  </div></div>
+
+  <div class="ov" id="ov-market"><div class="card" style="width:min(520px,94%)">
+    <button class="close" data-close="ov-market">×</button>
+    <h3>Mercado</h3>
+    <div class="mkt-cur">Cobrar en:
+      <button class="curbtn active" data-cur="plata"><span class="coin silver"></span> Plata</button>
+      <button class="curbtn" data-cur="golden"><span class="coin gold"></span> $Golden</button>
+    </div>
+    <div class="mkt-list" id="mkt-list"></div>
+  </div></div>
+
+  <div class="ov" id="ov-forge"><div class="card" style="width:min(580px,94%)">
+    <button class="close" data-close="ov-forge">×</button>
+    <h3>🛠️ Herrería · Picos</h3>
+    <div class="sub">Cada pico mina hasta su nivel. Cada golpe gasta 1 de durabilidad; reparar cuesta 30% del material.</div>
+    <div class="forge-list" id="forge-list"></div>
+  </div></div>
+
+  <div class="ov" id="ov-inv"><div class="card" style="width:min(540px,94%)">
+    <button class="close" data-close="ov-inv">×</button>
+    <h3>Inventario</h3>
+    <div class="sub" id="inv-cap">Bolsa: 0/30 espacios · máx 99 por recurso</div>
+    <div class="slots" id="inv-slots"></div>
+  </div></div>
+
+  <div class="ov" id="ov-skills"><div class="card" style="width:min(500px,94%)">
+    <button class="close" data-close="ov-skills">×</button>
+    <h3>Skills</h3>
+    <div class="avgpill" id="sk-avg">Nivel medio: <b>1</b></div>
+    <div class="skgrid" id="sk-grid"></div>
+  </div></div>
+
+  <div class="ov" id="ov-equip"><div class="card" style="width:min(520px,94%)">
+    <button class="close" data-close="ov-equip">×</button>
+    <h3>Equipo</h3>
+    <div class="sub">Herramientas equipadas y su estado.</div>
+    <div class="eqgrid" id="eq-grid"></div>
+  </div></div>
+
+  <div class="ov" id="ov-lb"><div class="card" style="width:min(500px,94%)">
+    <button class="close" data-close="ov-lb">×</button>
+    <h3>Leaderboard</h3>
+    <div class="lbtabs">
+      <button class="lbtab active" data-lb="plata"><span class="coin silver"></span> Plata</button>
+      <button class="lbtab" data-lb="exp">⭐ Experiencia</button>
+    </div>
+    <div class="lblist" id="lb-list"></div>
+    <div class="lbnote" id="lb-note"></div>
+  </div></div>
+
+  <div class="ov" id="ov-config"><div class="card" style="width:min(480px,94%)">
+    <button class="close" data-close="ov-config">×</button>
+    <h3>Configuración</h3>
+    <div class="cfgsec">
+      <h4>👤 Cuenta</h4>
+      <p id="cfg-auth-status">—</p>
+      <div class="row"><button class="green" id="cfg-login" style="display:none">Conectar</button><button class="ghost sm" id="cfg-logout" style="display:none">Cerrar sesión</button></div>
+    </div>
+    <div class="cfgsec">
+      <h4>✏️ Editar granja</h4>
+      <p>Colocar y mover objetos por celda llega en otra fase.</p>
+      <div class="row"><button class="green" id="cfg-edit">Modo edición</button><button class="ghost sm" id="cfg-reset">Restaurar</button></div>
+    </div>
+  </div></div>
+
+  <!-- menú -->
+  <div class="gmenu collapsed" id="gmenu">
+    <div class="gmitems">
+      <button class="gmi" data-panel="ov-inv"><span class="ic">🎒</span> Inventario <b class="key">I</b></button>
+      <button class="gmi" data-panel="ov-skills"><span class="ic">📊</span> Skills <b class="key">X</b></button>
+      <button class="gmi" data-panel="ov-equip"><span class="ic">🛡️</span> Equipo <b class="key">P</b></button>
+      <button class="gmi" data-panel="ov-market"><span class="ic">🏪</span> Mercado <b class="key">O</b></button>
+      <button class="gmi" data-panel="ov-forge"><span class="ic">🛠️</span> Herrería <b class="key">K</b></button>
+      <button class="gmi" data-panel="ov-barn"><span class="ic">🏡</span> Granja <b class="key">B</b></button>
+      <button class="gmi" data-panel="ov-lb"><span class="ic">🏆</span> Leaderboard <b class="key">L</b></button>
+      <button class="gmi" data-panel="ov-config"><span class="ic">⚙️</span> Configuración <b class="key">C</b></button>
+    </div>
+  </div>
+
+  <!-- registro -->
+  <div class="logpanel collapsed" id="logpanel">
+    <button class="loghead" id="loghead">Registro <span class="arrow">▾</span></button>
+    <div class="logbody"><div id="log"></div></div>
+  </div>
+
+  <!-- gate de apodo -->
+  <div id="gate">
+    <div class="gcard">
+      <h1>GOLDEN FARM</h1>
+      <p>Elegí un apodo para entrar a tu granja.</p>
+      <input id="nick" maxlength="14" placeholder="Tu apodo" autocomplete="off">
+      <button class="enter" id="enter">Entrar</button>
+    </div>
+  </div>
+
+  <script>window.GOLDEN_SERVER = "";</script>
   <script src="https://cdn.jsdelivr.net/npm/phaser@3.80.1/dist/phaser.min.js"></script>
-  <!-- colyseus.js empaquetado para navegador vía esm.sh (incluye polyfill de Buffer) -->
   <script type="module">
-    try {
-      const mod = await import("https://esm.sh/colyseus.js@0.15");
-      window.Colyseus = mod;
-      window.__colyseusReady = true;
-      window.dispatchEvent(new Event("colyseus-ready"));
-    } catch (e) {
-      console.error("colyseus.js no cargó:", e);
-      const s = document.getElementById("status");
-      if (s) s.textContent = "🔴 No cargó la librería de red (colyseus.js). Recargá la página.";
-    }
+    try { const mod = await import("https://esm.sh/colyseus.js@0.15"); window.Colyseus = mod; window.__colyseusReady = true; window.dispatchEvent(new Event("colyseus-ready")); }
+    catch (e) { console.error("colyseus.js no cargó:", e); }
   </script>
-  <script src="game.js"></script>
+  <script src="game/config.js"></script>
+  <script src="game/state.js"></script>
+  <script src="game/ui.js"></script>
+  <script src="game/boot.js"></script>
+  <script src="game/farm.js"></script>
+  <script src="game/plaza.js"></script>
+  <script src="game/main.js"></script>
 </body>
 </html>
