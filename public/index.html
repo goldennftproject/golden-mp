@@ -466,15 +466,33 @@
     try { const mod = await import("https://esm.sh/colyseus.js@0.15"); window.Colyseus = mod; window.__colyseusReady = true; window.dispatchEvent(new Event("colyseus-ready")); }
     catch (e) { console.error("colyseus.js no cargó:", e); }
   </script>
-  <script src="game/config.js"></script>
-  <script src="game/state.js"></script>
-  <script src="game/save.js"></script>
-  <script src="game/ui.js"></script>
-  <script src="game/boot.js"></script>
-  <script src="game/farm.js"></script>
-  <script src="game/forest.js"></script>
-  <script src="game/plaza.js"></script>
-  <script src="game/main.js"></script>
-  <script src="game/update.js"></script>
+  <script>
+  /* Cargador con reintentos: el server free de Render a veces corta conexiones.
+     Carga los scripts del juego EN FILA (uno por vez) y reintenta cada uno hasta 8 veces. */
+  (function () {
+    const files = ["game/config.js","game/state.js","game/save.js","game/ui.js","game/boot.js",
+                   "game/farm.js","game/forest.js","game/plaza.js","game/main.js","game/update.js"];
+    let i = 0;
+    function next(retry) {
+      if (i >= files.length) return;
+      const f = files[i];
+      const s = document.createElement("script");
+      s.src = f + (retry ? "?r=" + retry : "");
+      s.onload = function () { i++; next(0); };
+      s.onerror = function () {
+        s.remove();
+        const r = (retry || 0) + 1;
+        if (r > 8) {
+          const el = document.getElementById("loading");
+          if (el) el.innerHTML += "<div style='color:#ffd24a;font-size:13px;margin-top:8px'>El servidor está despertando… <a href='' style='color:#8fc46a'>recargá la página</a></div>";
+          return;
+        }
+        setTimeout(function () { next(r); }, 250 * r);   // espera creciente entre reintentos
+      };
+      document.body.appendChild(s);
+    }
+    next(0);
+  })();
+  </script>
 </body>
 </html>
