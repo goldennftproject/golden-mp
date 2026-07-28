@@ -10,6 +10,8 @@ const G = {
   seeds: { papa: 10, zanahoria: 5, cebolla: 2, calabacin: 1, repollo: 0, calabaza: 0, brocoli: 0 },  // starter pack
   selSeed: "papa",   // semilla elegida para plantar
   picks: { owned: { stone: true }, dur: { stone: 50 }, eq: "stone" },
+  tools: { axe: 60, rod: 40 },   // durabilidad de hacha y caña
+  invRows: 0,                    // filas extra de inventario compradas
   fish: { comun: 0, raro: 0, epico: 0, legendario: 0 },
   plots: [],   // estado de las parcelas: [{state, readyAt, cropKey}] — lo llena la FarmScene
   buffs: [], secPerGameHour: 1, gameHours: 0,
@@ -102,23 +104,48 @@ function repairCostOf(id) { const pd=PICK_DEF[id]; const c={}; for (const k in p
 function repairPick(id) { const pd=PICK_DEF[id]; if (!G.picks.owned[id]) return; if ((G.picks.dur[id]||0)>=pd.dur){ toast("Ya está al 100%"); return; } const c=repairCostOf(id); if (!canAfford(c)){ toast("Te faltan materiales para reparar"); return; } payCost(c); G.picks.dur[id]=pd.dur; log("🔧 Reparaste "+pd.label+" (100%).","good"); toast("🔧 Reparado"); refreshForge(); }
 function equipPick(id) { if (!G.picks.owned[id]){ toast("No lo tenés"); return; } G.picks.eq=id; log("⛏️ Equipaste "+PICK_DEF[id].label+".");  toast("Equipado"); refreshForge(); refreshInv(); }
 
-// --- inventario ---
-const INV_SLOTS = 30;
+// --- herramientas (hacha + caña con durabilidad; el pico se maneja aparte) ---
+const TOOL_DEF = {
+  axe: { label:"Hacha", emoji:"🪓", sprite:"axe",         max:60, repair:{madera:6} },
+  rod: { label:"Caña",  emoji:"🎣", sprite:"fishing_rod", max:40, repair:{madera:4} },
+};
+function toolDur(id) { return (G.tools && G.tools[id] != null) ? G.tools[id] : (TOOL_DEF[id] ? TOOL_DEF[id].max : 0); }
+function useTool(id) { const d = toolDur(id); if (d <= 0) return false; G.tools[id] = d - 1; return true; }
+function repairTool(id) { const td = TOOL_DEF[id]; if (!td) return; if (toolDur(id) >= td.max) { toast("Ya está al 100%"); return; } if (!canAfford(td.repair)) { toast("Te faltan materiales para reparar"); return; } payCost(td.repair); G.tools[id] = td.max; log("🔧 Reparaste " + td.label + " (100%).", "good"); toast("🔧 Reparado"); refreshForge(); if (isOpen("ov-equip")) refreshEquip(); if (isOpen("ov-inv")) refreshInv(); }
+
+// --- inventario (base + filas extra) ---
+const INV_BASE = 18, INV_MAX_ROWS = 5;   // 18 base, hasta +5 filas de 6 = 48
+function invSlots() { return INV_BASE + (G.invRows || 0) * 6; }
+function nextInvCost() {
+  const r = G.invRows || 0;
+  if (r >= INV_MAX_ROWS) return null;
+  if (r === 0) return { type: "res", cost: { piedra: 20, bronce: 10 } };   // primera fila: minerales
+  return { type: "plata", cost: 100 * Math.pow(2, r - 1) };                 // siguientes: plata (100,200,400,800)
+}
+function expandInv() {
+  const nc = nextInvCost();
+  if (!nc) { toast("Bolsa al máximo"); return; }
+  if (nc.type === "res") { if (!canAfford(nc.cost)) { toast("Te faltan minerales"); return; } payCost(nc.cost); }
+  else { if (G.plata < nc.cost) { toast("Te falta plata"); return; } G.plata -= nc.cost; }
+  G.invRows = (G.invRows || 0) + 1;
+  log("🎒 Ampliaste la bolsa (+6 espacios).", "good"); toast("🎒 +6 espacios");
+  refreshInv(); refreshHud();
+}
 function invStacks() {
   const st = [];
   st.push({ sprite:"hoe", em:"🪝", nm:"Azada" });
-  st.push({ sprite:"axe", em:"🪓", nm:"Hacha" });
+  st.push({ sprite:"axe", em:"🪓", nm:"Hacha ("+toolDur("axe")+"/"+TOOL_DEF.axe.max+")" });
   { const eqp = equippedPick();
     if (eqp) st.push({ sprite:PICK_DEF[eqp].sprite, em:"⛏️", nm:PICK_DEF[eqp].label+" ("+(G.picks.dur[eqp]||0)+"/"+PICK_DEF[eqp].dur+")" });
     else st.push({ sprite:"pick_stone", em:"⛏️", nm:"Sin pico" }); }
-  st.push({ sprite:"fishing_rod", em:"🎣", nm:"Caña" });
+  st.push({ sprite:"fishing_rod", em:"🎣", nm:"Caña ("+toolDur("rod")+"/"+TOOL_DEF.rod.max+")" });
   for (const r of ["papa","zanahoria","cebolla","calabacin","repollo","calabaza","brocoli","madera","piedra","bronce","oro","diamante","netherita"]) {
     let n = Math.floor(G.res[r] || 0);
     while (n > 0) { const c = Math.min(99, n); st.push({ em:RES_EMOJI[r], nm:RES_LABEL[r], count:c }); n -= 99; }
   }
   return st;
 }
-function tryAddRes(key, amt) { const b = G.res[key]; G.res[key]=b+amt; if (invStacks().length > INV_SLOTS) { G.res[key]=b; return false; } if (isOpen("ov-inv")) refreshInv(); return true; }
+function tryAddRes(key, amt) { const b = G.res[key]; G.res[key]=b+amt; if (invStacks().length > invSlots()) { G.res[key]=b; return false; } if (isOpen("ov-inv")) refreshInv(); return true; }
 
 // --- mercado ---
 const PRICE = { madera:3, piedra:6, bronce:12, oro:30, diamante:80, netherita:200,
@@ -138,8 +165,10 @@ function sellItem(res) {
 // --- pesca ---
 const FISH_COST = 5;
 function goFishing() {
+  if (toolDur("rod") <= 0) { toast("🎣 Caña rota — reparala en la Herrería"); return; }
   if (G.golden < FISH_COST) { toast("Necesitás 5 ✨ para pescar"); return; }
-  G.golden -= FISH_COST;
+  G.golden -= FISH_COST; useTool("rod");
+  if (toolDur("rod") <= 0) { log("🎣 ¡La caña se rompió! Reparala en la Herrería.", "bad"); toast("🎣 ¡Caña rota!"); }
   const r = Math.random();
   let rar; if (r < 0.60) rar = "comun"; else if (r < 0.85) rar = "raro"; else if (r < 0.97) rar = "epico"; else rar = "legendario";
   G.fish[rar]++; addXp("fishing", 8); addXp("cooking", 3);

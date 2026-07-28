@@ -22,7 +22,18 @@ function refreshHud() { setTxt("s-level", G.level); setTxt("s-prestige", G.prest
 
 /* ---- inventario ---- */
 function invSlotHtml(s) { const im = s.sprite ? `<img src="${GF.spr(s.sprite)}">` : `<span class="em">${s.em}</span>`; const c = (s.count != null) ? `<span class="cnt">${fmt(s.count)}</span>` : ""; return `<div class="slot filled" title="${s.nm}">${im}${c}</div>`; }
-function refreshInv() { const st = invStacks(); let html = ""; for (let i = 0; i < INV_SLOTS; i++) html += st[i] ? invSlotHtml(st[i]) : '<div class="slot"></div>'; $("inv-slots").innerHTML = html; const cap = $("inv-cap"); if (cap) cap.textContent = `Bolsa: ${Math.min(st.length, INV_SLOTS)}/${INV_SLOTS} espacios · máx 99 por recurso`; renderSeedBag(); }
+function refreshInv() { const st = invStacks(); const N = invSlots(); let html = ""; for (let i = 0; i < N; i++) html += st[i] ? invSlotHtml(st[i]) : '<div class="slot"></div>'; $("inv-slots").innerHTML = html; const cap = $("inv-cap"); if (cap) cap.textContent = `Bolsa: ${Math.min(st.length, N)}/${N} espacios · máx 99 por recurso`; renderInvExpand(); renderSeedBag(); }
+
+// botón para ampliar la bolsa (+6): primera fila con minerales, siguientes con plata
+function renderInvExpand() {
+  const el = $("inv-expand"); if (!el) return;
+  const nc = nextInvCost();
+  if (!nc) { el.innerHTML = '<span class="exmax">Bolsa al máximo (' + invSlots() + ')</span>'; return; }
+  const label = nc.type === "res" ? Object.keys(nc.cost).map(k => RES_EMOJI[k] + nc.cost[k]).join(" ") : "🪙 " + fmt(nc.cost);
+  const aff = nc.type === "res" ? canAfford(nc.cost) : G.plata >= nc.cost;
+  el.innerHTML = '<button class="green sm" id="inv-expbtn" ' + (aff ? "" : "disabled") + '>Ampliar +6 · ' + label + "</button>";
+  const b = $("inv-expbtn"); if (b) b.onclick = expandInv;
+}
 
 // semillas en la bolsa: clic para elegir cuál plantar
 function renderSeedBag() {
@@ -47,11 +58,11 @@ function eqCard(sprite, em, nm, st, cls) { const im = sprite ? `<img src="${GF.s
 function refreshEquip() {
   let html = "";
   html += eqCard("hoe", "🪝", "Azada", "Lista · para plantar y cosechar", "ok");
-  html += eqCard("axe", "🪓", "Hacha", "Lista · para talar", "ok");
+  { const ax = toolDur("axe"); html += eqCard("axe", "🪓", "Hacha", ax > 0 ? ax + "/" + TOOL_DEF.axe.max + " durab · para talar" : "Rota · reparala en la Herrería", ax > 0 ? "ok" : "busy"); }
   { const eq = G.picks.eq, pd = eq ? PICK_DEF[eq] : null, dur = pd ? (G.picks.dur[eq] || 0) : 0;
     html += eqCard(pd ? pd.sprite : "pick_stone", "⛏️", pd ? pd.label : "Sin pico",
       pd ? dur + "/" + pd.dur + " durab · mina hasta " + ORE_DEF[ORE_ORDER[pd.mineTier]].label : "Crafteá uno en la Herrería", dur > 0 ? "ok" : "busy"); }
-  html += eqCard("fishing_rod", "🎣", "Caña", "Lista · para pescar", "ok");
+  { const rd = toolDur("rod"); html += eqCard("fishing_rod", "🎣", "Caña", rd > 0 ? rd + "/" + TOOL_DEF.rod.max + " durab · para pescar" : "Rota · reparala en la Herrería", rd > 0 ? "ok" : "busy"); }
   $("eq-grid").innerHTML = html;
 }
 
@@ -73,6 +84,21 @@ function refreshForge() {
   $("forge-list").querySelectorAll("[data-craft]").forEach(b => b.onclick = () => craftPick(b.dataset.craft));
   $("forge-list").querySelectorAll("[data-equip]").forEach(b => b.onclick = () => equipPick(b.dataset.equip));
   $("forge-list").querySelectorAll("[data-repair]").forEach(b => b.onclick = () => repairPick(b.dataset.repair));
+  refreshTools();
+}
+
+// herrería · reparación de hacha y caña
+function refreshTools() {
+  const box = $("forge-tools"); if (!box) return;
+  box.innerHTML = ["axe", "rod"].map(id => {
+    const td = TOOL_DEF[id], dur = toolDur(id), pct = Math.round(dur / td.max * 100);
+    const rstr = Object.keys(td.repair).map(k => RES_EMOJI[k] + td.repair[k]).join(" ");
+    const btn = dur < td.max
+      ? '<button class="gold sm" ' + (canAfford(td.repair) ? "" : "disabled") + ' data-rtool="' + id + '" title="Reparar: ' + rstr + '">Reparar</button>'
+      : '<button class="ghost sm" disabled>100%</button>';
+    return '<div class="forge-row"><div class="fic"><img src="' + GF.spr(td.sprite) + '"></div><div class="finfo"><div class="fnm">' + td.label + '</div><div class="durbar"><i style="width:' + pct + '%"></i></div><div class="fds">' + dur + "/" + td.max + " · reparar: " + rstr + '</div></div><div class="fbtns">' + btn + "</div></div>";
+  }).join("");
+  box.querySelectorAll("[data-rtool]").forEach(b => b.onclick = () => repairTool(b.dataset.rtool));
 }
 
 /* ---- mercado / tienda ---- */

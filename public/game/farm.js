@@ -180,7 +180,7 @@ class FarmScene extends Phaser.Scene {
       if (o.state === "ready") return this.startAction("harvest", o);
       toast("🌱 Todavía está creciendo"); return;
     }
-    if (o.type === "fish") { if (G.golden < FISH_COST) { toast("Necesitás 5 ✨ para pescar"); return; } return this.startAction("fish", o); }
+    if (o.type === "fish") { if (toolDur("rod") <= 0) { toast("🎣 Caña rota — reparala en la Herrería"); return; } if (G.golden < FISH_COST) { toast("Necesitás 5 ✨ para pescar"); return; } return this.startAction("fish", o); }
     if (nowMs() < o.readyAt) { toast(this.promptText(o)); return; }
     if (o.type === "ore") {
       const pk = equippedPick();
@@ -189,7 +189,7 @@ class FarmScene extends Phaser.Scene {
       if (od.tier > pd.mineTier) { toast("⛏️ Tu " + pd.label + " no puede con " + od.label); log("Necesitás un pico mejor para " + od.label + " (Herrería).", "bad"); return; }
       if ((G.picks.dur[pk] || 0) <= 0) { toast("🛠️ Pico roto — reparalo en la Herrería"); return; }
       this.startAction("mine", o);
-    } else if (o.type === "tree") this.startAction("chop", o);
+    } else if (o.type === "tree") { if (toolDur("axe") <= 0) { toast("🪓 Hacha rota — reparala en la Herrería"); return; } this.startAction("chop", o); }
     else if (o.type === "rock") this.startAction("mine", o);
   }
 
@@ -203,7 +203,7 @@ class FarmScene extends Phaser.Scene {
     const a = this.action, o = a.o;
     if (a.kind === "chop") {
       const gr = Math.max(1, Math.round(3 * yieldMult()));
-      if (tryAddRes("madera", gr)) { addXp("crafting", 4); o.readyAt = nowMs() + CD.tree * 1000 * cdMult(); this.setObjTex(o, "tree_stump", GF.TILE); log(`🪵 +${gr} Madera.`, "good"); toast("+" + gr + " 🪵"); refreshHud(); }
+      if (tryAddRes("madera", gr)) { useTool("axe"); addXp("crafting", 4); o.readyAt = nowMs() + CD.tree * 1000 * cdMult(); this.setObjTex(o, "tree_stump", GF.TILE); log(`🪵 +${gr} Madera. 🪓 ${toolDur("axe")}/${TOOL_DEF.axe.max}`, "good"); toast("+" + gr + " 🪵"); refreshHud(); if (toolDur("axe") <= 0) { log("🪓 ¡El hacha se rompió! Reparala en la Herrería.", "bad"); toast("🪓 ¡Hacha rota!"); } }
       else toast("🎒 Inventario lleno");
     } else if (a.kind === "mine" && o.type === "rock") {
       const gr = Math.max(1, Math.round(2 * yieldMult()));

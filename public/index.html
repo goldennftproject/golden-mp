@@ -51,6 +51,8 @@
   .slot img{width:74%;height:74%;object-fit:contain;image-rendering:pixelated}
   .slot .em{font-size:22px;line-height:1}
   .slot .cnt{position:absolute;right:2px;bottom:1px;font-size:11px;font-weight:800;color:#3a2e10;background:rgba(255,255,255,.82);border-radius:5px;padding:0 3px}
+  .invexp{margin-top:10px}
+  .invexp .exmax{font-size:12px;color:var(--muted);font-weight:700}
   .seedhead{margin-top:12px}
   .seedbag{display:flex;gap:7px;flex-wrap:wrap;margin-top:6px}
   .seed{position:relative;width:46px;height:46px;background:#efe3c6;border:2px solid #d3c298;border-radius:9px;cursor:pointer;display:flex;align-items:center;justify-content:center;padding:0}
@@ -230,9 +232,11 @@
 
   <div class="ov" id="ov-forge"><div class="card" style="width:min(580px,94%)">
     <button class="close" data-close="ov-forge">×</button>
-    <h3>🛠️ Herrería · Picos</h3>
-    <div class="sub">Cada pico mina hasta su nivel. Cada golpe gasta 1 de durabilidad; reparar cuesta 30% del material.</div>
+    <h3>🛠️ Herrería</h3>
+    <div class="sub">Cada pico mina hasta su nivel. Cada uso gasta 1 de durabilidad; reparar cuesta 30% del material.</div>
     <div class="forge-list" id="forge-list"></div>
+    <div class="sub" style="margin-top:12px">🪓 Herramientas — durabilidad y reparación</div>
+    <div class="forge-list" id="forge-tools"></div>
   </div></div>
 
   <div class="ov" id="ov-inv"><div class="card" style="width:min(540px,94%)">
@@ -240,6 +244,7 @@
     <h3>Inventario</h3>
     <div class="sub" id="inv-cap">Bolsa: 0/30 espacios · máx 99 por recurso</div>
     <div class="slots" id="inv-slots"></div>
+    <div class="invexp" id="inv-expand"></div>
     <div class="sub seedhead">🌱 Semillas — clic para elegir cuál plantar</div>
     <div class="seedbag" id="inv-seeds"></div>
   </div></div>
