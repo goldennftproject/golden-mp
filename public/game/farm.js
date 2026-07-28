@@ -217,7 +217,7 @@ class FarmScene extends Phaser.Scene {
       else toast("🎒 Inventario lleno");
     } else if (a.kind === "mine" && o.type === "rock") {
       const gr = Math.max(1, Math.round(2 * yieldMult()));
-      if (tryAddRes("piedra", gr)) { addXp("mining", 5); o.readyAt = nowMs() + CD.rock * 1000 * cdMult(); this.setObjTex(o, "rock_mined", o.rw || GF.TILE); log(`🪨 +${gr} Piedra.`, "good"); toast("+" + gr + " 🪨"); refreshHud(); }
+      if (tryAddRes("piedra", gr)) { addXp("mining", 5); o.readyAt = nowMs() + CD.rock * 1000 * cdMult(); this.setObjTex(o, "node_stone_mined", o.rw || GF.TILE); log(`🪨 +${gr} Piedra.`, "good"); toast("+" + gr + " 🪨"); refreshHud(); }
       else toast("🎒 Inventario lleno");
     } else if (a.kind === "mine" && o.type === "ore") {
       const pk = equippedPick(), pd = PICK_DEF[pk], od = ORE_DEF[o.ore];
