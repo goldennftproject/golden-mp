@@ -30,6 +30,7 @@ app.use(express.static(path.join(__dirname, "..", "public"), {
   etag: true,
   setHeaders: (res, filePath) => {
     if (/\.(js|html|css)$/.test(filePath)) res.setHeader("Cache-Control", "no-cache");
+    else if (/\.(png|jpg|gif|webp)$/.test(filePath)) res.setHeader("Cache-Control", "public, max-age=86400");   // imágenes: 1 día de caché (alivia al server free)
   },
 }));
 

@@ -6,6 +6,7 @@ function startGame() {
     pixelArt: true,
     render: { antialias: false, roundPixels: true },
     backgroundColor: "#243318",
+    loader: { maxParallelDownloads: 6, maxRetries: 4 },   // suave con el server free de Render (evita REFUSED_STREAM)
     scale: {
       mode: Phaser.Scale.RESIZE,          // el canvas llena la ventana (sin bandas)
       autoCenter: Phaser.Scale.NO_CENTER,
