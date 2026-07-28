@@ -25,7 +25,7 @@ class FarmScene extends Phaser.Scene {
     }
     this.plotGrounds = [];
     if (this.textures.exists("plot")) {   // sprite de parcela de PixelLab; si falta, cae al dibujo
-      GF.PLOTS.forEach(pl => this.plotGrounds.push(this.add.image((pl.col + 0.5) * T, (pl.row + 0.5) * T, "plot").setDisplaySize(T - 2, T - 2).setDepth(-998)));
+      GF.PLOTS.forEach(pl => this.plotGrounds.push(this.add.image((pl.col + 0.5) * T, (pl.row + 0.5) * T, "plot").setDisplaySize(T - 7, T - 7).setDepth(-998)));
     } else {
       GF.PLOTS.forEach(pl => { const x = pl.col * T, y = pl.row * T; g.fillStyle(0x8a5a33, 1); g.fillRoundedRect(x + 3, y + 3, T - 6, T - 6, 6); g.fillStyle(0x724829, 1); g.fillRoundedRect(x + 6, y + 6, T - 12, T - 12, 5); });
     }
@@ -55,6 +55,12 @@ class FarmScene extends Phaser.Scene {
     // (los rótulos flotantes se quitaron: los edificios nuevos se distinguen solos
     //  y el aviso de interacción ya los nombra al acercarse)
 
+    // portal al Bosque (Fase D): esquina inferior derecha
+    const px = GF.WORLD_W - 34, py = GF.WORLD_H - 46;
+    this.add.text(px, py, "🌲", { fontSize: "26px" }).setOrigin(0.5, 1).setDepth(py);
+    this.add.text(px, py + 14, "Bosque", { fontFamily: "system-ui", fontSize: "11px", fontStyle: "bold", color: "#ffe08a", stroke: "#20301a", strokeThickness: 3 }).setOrigin(0.5, 0.5).setDepth(py);
+    this.portal = { type: "portal", cx: px, by: py };
+
     // (la pesca ya no usa un objeto en el piso; se pesca al acercarse al borde de la laguna)
 
     // timers de enfriamiento flotantes sobre árboles/rocas/nodos
@@ -77,7 +83,7 @@ class FarmScene extends Phaser.Scene {
       const owned = Math.max(6, Math.min(GF.PLOTS.length, G.plotsOwned || 6));
       if (i >= owned) {   // parcela bloqueada: se compra con plata
         obj.state = "locked";
-        if (obj.ground) { if (this.textures.exists("plot_blocked")) obj.ground.setTexture("plot_blocked").setDisplaySize(T - 2, T - 2); else obj.ground.setAlpha(0.45); }
+        if (obj.ground) { if (this.textures.exists("plot_blocked")) obj.ground.setTexture("plot_blocked").setDisplaySize(T - 7, T - 7); else obj.ground.setAlpha(0.45); }
         return obj;
       }
       const sv = savedPlots[i];   // restaura lo plantado antes del refresh (ignora estados viejos como "wet")
@@ -221,8 +227,9 @@ class FarmScene extends Phaser.Scene {
   // ---- interacción ----
   nearestInteract() {
     let best = null, bd = 1e9;
-    for (const o of this.objs.concat(this.plots).concat(this.threats)) {
-      const rad = (o.type === "barn" || o.type === "market" || o.type === "store") ? 72 : (o.type === "plot" ? 42 : (o.type === "boar" ? 55 : 58));
+    const all = this.objs.concat(this.plots).concat(this.threats); if (this.portal) all.push(this.portal);
+    for (const o of all) {
+      const rad = (o.type === "barn" || o.type === "market" || o.type === "store") ? 72 : (o.type === "plot" ? 42 : (o.type === "boar" ? 55 : (o.type === "portal" ? 50 : 58)));
       const d = Math.hypot(o.cx - this.hero.x, o.by - this.hero.y);
       if (d < rad && d < bd) { bd = d; best = o; }
     }
@@ -238,6 +245,7 @@ class FarmScene extends Phaser.Scene {
       if (o.state === "ready") { const cd = CROP_DEF[o.cropKey]; return "🌾 Cosechar " + (cd ? cd.label : ""); }
       return "🌱 Creciendo…";
     }
+    if (o.type === "portal") return "🌲 Entrar al Bosque" + (G.swordOwned ? "" : " (sin espada: a puño limpio)");
     const secs = cd ? Math.ceil((o.readyAt - nowMs()) / 1000) : 0;
     if (o.type === "tree") return cd ? "🪵 Vuelve en " + secs + "s" : "🪓 Talar madera";
     if (o.type === "rock") return cd ? "🪨 Vuelve en " + secs + "s" : "⛏️ Picar piedra";
@@ -252,6 +260,7 @@ class FarmScene extends Phaser.Scene {
   doInteract() { if (GF.uiOpen || this.action || GF.editMode) return; const o = this.nearestInteract(); if (o) this.interactWith(o); else if (this.nearPond()) this.tryFish(); }
 
   interactWith(o) {
+    if (o.type === "portal") { if (typeof saveFarm === "function") saveFarm(); return this.scene.start("forest"); }
     if (o.type === "barn") return openOv("ov-barn");
     if (o.type === "market") return openOv("ov-market");
     if (o.type === "store") return openOv("ov-forge");
@@ -262,7 +271,7 @@ class FarmScene extends Phaser.Scene {
         if (this.unlockPend === o && nowMs() < this.unlockPendUntil) {
           if (G.plata < cost) { toast("Te falta plata (" + cost + " 🪙)"); return; }
           G.plata -= cost; G.plotsOwned = (G.plotsOwned || 6) + 1; o.state = "dry"; this.unlockPend = null;
-          if (o.ground && this.textures.exists("plot")) { o.ground.setTexture("plot").setDisplaySize(GF.TILE - 2, GF.TILE - 2); o.ground.setAlpha(1); }
+          if (o.ground && this.textures.exists("plot")) { o.ground.setTexture("plot").setDisplaySize(GF.TILE - 7, GF.TILE - 7); o.ground.setAlpha(1); }
           addXp("farming", 5); this.syncPlots();
           log("🔓 Desbloqueaste una parcela por " + cost + " 🪙.", "good"); toast("🔓 ¡Parcela desbloqueada!");
           refreshHud(); if (typeof saveFarm === "function") saveFarm(true);

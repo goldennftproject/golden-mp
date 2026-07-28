@@ -5,7 +5,8 @@ GF.spr = (k) => "assets/farm/" + k + ".png";
 // --- estado principal (con algunos recursos de arranque para probar los menús) ---
 const G = {
   plata: 0, golden: 20, level: 1, prestige: 0, week: 1,
-  res: { madera: 30, piedra: 30, bronce: 25, oro: 15, diamante: 5, netherita: 0,
+  hp: 100, hpMax: 100, swordOwned: false,   // combate (Fase D)
+  res: { madera: 30, piedra: 30, bronce: 25, oro: 15, diamante: 5, netherita: 0, carne: 0,
     papa: 0, zanahoria: 0, cebolla: 0, calabacin: 0, repollo: 0, calabaza: 0, brocoli: 0 },
   seeds: { papa: 10, zanahoria: 5, cebolla: 2, calabacin: 1, repollo: 0, calabaza: 0, brocoli: 0 },  // starter pack
   selSeed: "papa",   // semilla elegida para plantar
@@ -36,9 +37,9 @@ function addBuff(type, label, mult, durSec) { G.buffs.push({ type, label, mult, 
 function hToMs(h) { return h * G.secPerGameHour * 1000 * cdMult(); }
 
 // --- recursos ---
-const RES_EMOJI = { madera:"🪵", piedra:"🪨", bronce:"🟫", oro:"🟡", diamante:"💎", netherita:"🔶",
+const RES_EMOJI = { madera:"🪵", piedra:"🪨", bronce:"🟫", oro:"🟡", diamante:"💎", netherita:"🔶", carne:"🥩",
   papa:"🥔", zanahoria:"🥕", cebolla:"🧅", calabacin:"🥒", repollo:"🥬", calabaza:"🎃", brocoli:"🥦" };
-const RES_LABEL = { madera:"Madera", piedra:"Piedra", bronce:"Bronce", oro:"Oro", diamante:"Diamante", netherita:"Netherita",
+const RES_LABEL = { madera:"Madera", piedra:"Piedra", bronce:"Bronce", oro:"Oro", diamante:"Diamante", netherita:"Netherita", carne:"Carne",
   papa:"Papa", zanahoria:"Zanahoria", cebolla:"Cebolla", calabacin:"Calabacín", repollo:"Repollo", calabaza:"Calabaza", brocoli:"Brócoli" };
 
 // --- cultivos (semillas compradas en la Tienda; se desbloquean por nivel de Cultivo) ---
@@ -130,9 +131,42 @@ function equipPick(id) { if (!G.picks.owned[id]){ toast("No lo tenés"); return;
 
 // --- herramientas (hacha + caña con durabilidad; el pico se maneja aparte) ---
 const TOOL_DEF = {
-  axe: { label:"Hacha", emoji:"🪓", sprite:"axe",         max:60, repair:{madera:6} },
-  rod: { label:"Caña",  emoji:"🎣", sprite:"fishing_rod", max:40, repair:{madera:4} },
+  axe:   { label:"Hacha",            emoji:"🪓", sprite:"axe",         max:60, repair:{madera:6} },
+  rod:   { label:"Caña",             emoji:"🎣", sprite:"fishing_rod", max:40, repair:{madera:4} },
+  sword: { label:"Espada de Hierro", emoji:"⚔️", sprite:"sword",       max:80, repair:{bronce:2} },
 };
+// --- espada (se craftea en la Herrería; sin espada peleás a puño limpio) ---
+const SWORD_COST = { bronce: 8, madera: 5 };
+function craftSword() {
+  if (G.swordOwned) { toast("Ya tenés la espada"); return; }
+  if (!canAfford(SWORD_COST)) { toast("Te faltan materiales"); return; }
+  payCost(SWORD_COST); G.swordOwned = true; G.tools.sword = TOOL_DEF.sword.max;
+  addXp("crafting", 14);
+  log("⚔️ Crafteaste la Espada de Hierro.", "gold"); toast("⚔️ ¡Espada de Hierro!");
+  refreshForge(); if (typeof syncSlots === "function") syncSlots(); if (isOpen("ov-inv")) refreshInv();
+}
+// daño del jugador: puños (débil) o espada (escala con la skill Espada)
+function swordDmg() {
+  const lvl = skillInfo(G.skills.sword).lvl;
+  if (G.swordOwned && toolDur("sword") > 0) return 8 + Math.floor(lvl / 2);
+  return 3 + Math.floor(lvl / 4);
+}
+
+// --- bestiario (Fase D) — 6 tiers, de común a legendario ---
+const MONSTER_ORDER = ["rata", "larva", "orco", "lancero", "guerrero", "troll"];
+const MONSTER_DEF = {
+  rata:     { label:"Rata",           emoji:"🐀", hp:15,  dmg:2,  xp:6,  spd:55, loot:{ carne:[1,1], plata:[2,6] } },
+  larva:    { label:"Larva Venenosa", emoji:"🐛", hp:25,  dmg:4,  xp:10, spd:35, loot:{ carne:[1,2], plata:[4,10] } },
+  orco:     { label:"Orco",           emoji:"👹", hp:45,  dmg:7,  xp:16, spd:60, loot:{ carne:[1,2], plata:[8,16], bronce:[0,2] } },
+  lancero:  { label:"Orco Lancero",   emoji:"🔱", hp:70,  dmg:10, xp:24, spd:70, loot:{ carne:[2,3], plata:[12,24], bronce:[1,3] } },
+  guerrero: { label:"Orco Guerrero",  emoji:"👺", hp:110, dmg:14, xp:36, spd:65, loot:{ carne:[2,4], plata:[20,40], oro:[0,2] } },
+  troll:    { label:"Troll",          emoji:"🧌", hp:180, dmg:20, xp:60, spd:45, loot:{ carne:[3,5], plata:[40,80], oro:[1,3], diamante:[0,1] } },
+};
+function rollLoot(def) {
+  const out = {};
+  for (const k in def.loot) { const [a, b] = def.loot[k]; const n = a + Math.floor(Math.random() * (b - a + 1)); if (n > 0) out[k] = n; }
+  return out;
+}
 function toolDur(id) { return (G.tools && G.tools[id] != null) ? G.tools[id] : (TOOL_DEF[id] ? TOOL_DEF[id].max : 0); }
 function useTool(id) { const d = toolDur(id); if (d <= 0) return false; G.tools[id] = d - 1; return true; }
 function repairTool(id) { const td = TOOL_DEF[id]; if (!td) return; if (toolDur(id) >= td.max) { toast("Ya está al 100%"); return; } if (!canAfford(td.repair)) { toast("Te faltan materiales para reparar"); return; } payCost(td.repair); G.tools[id] = td.max; log("🔧 Reparaste " + td.label + " (100%).", "good"); toast("🔧 Reparado"); refreshForge(); if (isOpen("ov-equip")) refreshEquip(); if (isOpen("ov-inv")) refreshInv(); }
@@ -178,11 +212,12 @@ function tryAddRes(key, amt) {
 }
 
 // --- casillas: todo es ítem (recursos/semillas apilan 99; herramientas/picos 1 c/u con durabilidad) ---
-const ITEM_RES_ORDER = ["papa","zanahoria","cebolla","calabacin","repollo","calabaza","brocoli","madera","piedra","bronce","oro","diamante","netherita"];
+const ITEM_RES_ORDER = ["papa","zanahoria","cebolla","calabacin","repollo","calabaza","brocoli","madera","piedra","bronce","oro","diamante","netherita","carne"];
 function descKey(d) { return d ? d.kind + ":" + d.key : ""; }
 function canonicalStacks() {
   const list = [];
   ["hoe", "axe", "rod"].forEach(k => list.push({ kind: "tool", key: k }));
+  if (G.swordOwned) list.push({ kind: "tool", key: "sword" });
   PICK_ORDER.forEach(id => { if (G.picks.owned[id]) list.push({ kind: "pick", key: id }); });
   ITEM_RES_ORDER.forEach(r => { let n = Math.floor(G.res[r] || 0); while (n > 0) { list.push({ kind: "res", key: r }); n -= 99; } });
   CROP_ORDER.forEach(s => { let n = Math.floor(G.seeds[s] || 0); while (n > 0) { list.push({ kind: "seed", key: s }); n -= 99; } });
@@ -229,9 +264,9 @@ function ensureHotbarDefaults() {
 }
 
 // --- mercado ---
-const PRICE = { madera:3, piedra:6, bronce:12, oro:30, diamante:80, netherita:200,
+const PRICE = { madera:3, piedra:6, bronce:12, oro:30, diamante:80, netherita:200, carne:8,
   papa:3, zanahoria:5, cebolla:8, calabacin:14, repollo:24, calabaza:45, brocoli:70 };
-const SELLABLE = ["papa","zanahoria","cebolla","calabacin","repollo","calabaza","brocoli","madera","piedra","bronce","oro","diamante","netherita"];
+const SELLABLE = ["papa","zanahoria","cebolla","calabacin","repollo","calabaza","brocoli","madera","piedra","bronce","oro","diamante","netherita","carne"];
 let marketCur = "plata";
 function marketUnit(res) { return marketCur === "plata" ? PRICE[res] : PRICE[res]/10; }
 function sellItem(res) {

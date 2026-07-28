@@ -19,7 +19,7 @@ function closeOv(id) { const e = $(id); if (e) e.classList.remove("show"); }
 function closeAllOv() { document.querySelectorAll(".ov.show").forEach(e => e.classList.remove("show")); }
 
 /* ---- HUD ---- */
-function refreshHud() { setTxt("s-level", G.level); setTxt("s-prestige", G.prestige); setTxt("s-plata", fmt(G.plata)); setTxt("s-golden", fmt(G.golden)); setTxt("s-week", G.week); if (typeof refreshHotbar === "function") refreshHotbar(); }
+function refreshHud() { setTxt("s-level", G.level); setTxt("s-prestige", G.prestige); setTxt("s-plata", fmt(G.plata)); setTxt("s-golden", fmt(G.golden)); setTxt("s-week", G.week); setTxt("s-hp", Math.ceil(G.hp) + "/" + G.hpMax); if (typeof refreshHotbar === "function") refreshHotbar(); }
 
 /* ---- inventario por casillas (todo es ítem; arrastrar para reordenar) ---- */
 let dndActive = false;   // no re-renderizar mientras se arrastra
@@ -246,18 +246,25 @@ function refreshForge() {
   refreshTools();
 }
 
-// herrería · reparación de hacha y caña
+// herrería · reparación de hacha, caña y espada (la espada primero se craftea)
 function refreshTools() {
   const box = $("forge-tools"); if (!box) return;
-  box.innerHTML = ["axe", "rod"].map(id => {
+  const ids = ["axe", "rod"].concat(G.swordOwned ? ["sword"] : []);
+  let html = ids.map(id => {
     const td = TOOL_DEF[id], dur = toolDur(id), pct = Math.round(dur / td.max * 100);
     const rstr = Object.keys(td.repair).map(k => RES_EMOJI[k] + td.repair[k]).join(" ");
     const btn = dur < td.max
       ? '<button class="gold sm" ' + (canAfford(td.repair) ? "" : "disabled") + ' data-rtool="' + id + '" title="Reparar: ' + rstr + '">Reparar</button>'
       : '<button class="ghost sm" disabled>100%</button>';
-    return '<div class="forge-row"><div class="fic"><img src="' + GF.spr(td.sprite) + '"></div><div class="finfo"><div class="fnm">' + td.label + '</div><div class="durbar"><i style="width:' + pct + '%"></i></div><div class="fds">' + dur + "/" + td.max + " · reparar: " + rstr + '</div></div><div class="fbtns">' + btn + "</div></div>";
+    return '<div class="forge-row"><div class="fic"><img src="' + GF.spr(td.sprite) + '" onerror="this.outerHTML=\'' + td.emoji + '\'"></div><div class="finfo"><div class="fnm">' + td.label + '</div><div class="durbar"><i style="width:' + pct + '%"></i></div><div class="fds">' + dur + "/" + td.max + " · reparar: " + rstr + '</div></div><div class="fbtns">' + btn + "</div></div>";
   }).join("");
+  if (!G.swordOwned) {
+    const cstr = Object.keys(SWORD_COST).map(k => RES_EMOJI[k] + " " + SWORD_COST[k]).join(" · ");
+    html += '<div class="forge-row"><div class="fic">⚔️</div><div class="finfo"><div class="fnm">Espada de Hierro</div><div class="fds">Para pelear en el Bosque · daño según skill Espada</div><div class="fds">Costo: ' + cstr + '</div></div><div class="fbtns"><button class="green sm" ' + (canAfford(SWORD_COST) ? "" : "disabled") + ' id="forge-sword">Craftear</button></div></div>';
+  }
+  box.innerHTML = html;
   box.querySelectorAll("[data-rtool]").forEach(b => b.onclick = () => repairTool(b.dataset.rtool));
+  const fs = $("forge-sword"); if (fs) fs.onclick = () => craftSword();
 }
 
 /* ---- mercado / tienda ---- */

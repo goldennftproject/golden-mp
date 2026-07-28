@@ -10,7 +10,7 @@ function startGame() {
       mode: Phaser.Scale.RESIZE,          // el canvas llena la ventana (sin bandas)
       autoCenter: Phaser.Scale.NO_CENTER,
     },
-    scene: [BootScene, FarmScene, PlazaScene],
+    scene: [BootScene, FarmScene, PlazaScene, ForestScene],
   });
 }
 
