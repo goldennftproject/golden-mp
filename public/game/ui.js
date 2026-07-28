@@ -193,7 +193,9 @@ function refreshDaily() {
   }).join("");
   const idx = (st.claimable ? st.day : Math.max(1, claimed)) - 1;
   $("dy-reward").innerHTML = (st.lost ? '<span class="bad">😢 Perdiste la racha — volvés al Día 1.</span>' : "")
-    + (st.claimable ? "Hoy: " : "Reclamado: ") + DAILY_REWARDS[idx].label;
+    + (st.claimable ? "Hoy: " : "Reclamado: ") + DAILY_REWARDS[idx].label
+    + (st.lost ? '<br><button class="ghost sm" id="dy-recover">Recuperar racha · ' + STREAK_RECOVER_COST + ' ✨</button>' : "");
+  const rec = $("dy-recover"); if (rec) rec.onclick = () => recoverStreak();
   const b = $("dy-claim");
   if (b) { b.disabled = !st.claimable; b.textContent = st.claimable ? "Reclamar 🎁" : "Vuelve mañana"; }
 }

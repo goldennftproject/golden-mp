@@ -52,15 +52,8 @@ class FarmScene extends Phaser.Scene {
       return { i, type: o.type, ore: o.ore, cx, by, w: o.w, rw, baseKey: o.key, sprite: s, readyAt: 0 };
     });
 
-    // rótulos flotantes sobre los edificios
-    const BLD = { barn: "🏡 Granja", market: "🏪 Tienda", store: "🛠️ Herrería" };
-    this.objs.forEach(o => {
-      const nm = BLD[o.type]; if (!nm) return;
-      this.add.text(o.cx, o.by - o.w * 0.9, nm, {
-        fontFamily: "system-ui", fontSize: "12px", fontStyle: "bold", color: "#f4ecd6",
-        stroke: "#20301a", strokeThickness: 4, backgroundColor: "rgba(20,28,15,0.5)", padding: { x: 5, y: 2 },
-      }).setOrigin(0.5, 1).setDepth(o.by + 2);
-    });
+    // (los rótulos flotantes se quitaron: los edificios nuevos se distinguen solos
+    //  y el aviso de interacción ya los nombra al acercarse)
 
     // (la pesca ya no usa un objeto en el piso; se pesca al acercarse al borde de la laguna)
 

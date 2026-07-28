@@ -21,6 +21,7 @@ const G = {
   plots: [],   // estado de las parcelas: [{state, readyAt, cropKey}] — lo llena la FarmScene
   plotsOwned: 6,   // parcelas desbloqueadas (las demás se compran con plata)
   daily: { day: 0, last: "" },   // cofre diario: día de racha reclamado (1..7) y fecha del último reclamo
+  seedBuys: { date: "", count: 0 },   // cupo diario de semillas (compras + cofre)
   buffs: [], secPerGameHour: 1, gameHours: 0,
   skills: { fishing: 0, farming: 0, cooking: 0, range: 0, sword: 0, mining: 0, crafting: 0 },
 };
@@ -58,14 +59,24 @@ const FISH_DEF = { comun: { label: "Pez común", emoji: "🐟" }, raro: { label:
 function farmLevel() { return skillInfo(G.skills.farming).lvl; }
 function cropUnlocked(k) { const cd = CROP_DEF[k]; return !!cd && farmLevel() >= cd.lvl; }
 function selectSeed(k) { if (!CROP_DEF[k]) return; G.selSeed = k; if (isOpen("ov-inv")) refreshInv(); }
+// cupo diario de semillas (anti-inflación): compras + las del cofre suman al mismo límite
+const SEED_DAILY_MAX = 30;
+function seedBuysToday() {
+  const sb = G.seedBuys || (G.seedBuys = { date: "", count: 0 });
+  if (sb.date !== dayStamp(0)) { sb.date = dayStamp(0); sb.count = 0; }
+  return sb;
+}
 function buySeed(k, qty) {
   const cd = CROP_DEF[k]; if (!cd) return;
   if (!cropUnlocked(k)) { toast("Necesitás Cultivo nivel " + cd.lvl); return; }
   qty = Math.max(1, Math.floor(qty || 1));
+  const sb = seedBuysToday(), left = SEED_DAILY_MAX - sb.count;
+  if (left <= 0) { toast("🌱 Límite diario de semillas alcanzado (30) — volvé mañana"); return; }
+  if (qty > left) { qty = left; toast("🌱 Cupo diario: solo podés comprar " + left + " más hoy"); }
   const cost = cd.seedCost * qty;
   if (G.plata < cost) { toast("Te falta plata"); return; }
-  G.plata -= cost; G.seeds[k] = (G.seeds[k] || 0) + qty;
-  log(`🛒 Compraste ${qty} semilla(s) de ${cd.label} por ${cost} 🪙.`); toast("🌱 +" + qty + " " + cd.label);
+  G.plata -= cost; G.seeds[k] = (G.seeds[k] || 0) + qty; sb.count += qty;
+  log(`🛒 Compraste ${qty} semilla(s) de ${cd.label} por ${cost} 🪙. (cupo: ${sb.count}/${SEED_DAILY_MAX})`); toast("🌱 +" + qty + " " + cd.label);
   refreshHud(); if (typeof refreshSeedShop === "function") refreshSeedShop(); if (isOpen("ov-inv")) refreshInv();
 }
 
@@ -268,13 +279,27 @@ function dailyState() {
   const dd = G.daily || (G.daily = { day: 0, last: "" });
   if (dd.last === dayStamp(0)) return { claimable: false, day: dd.day, lost: false };
   const keeps = dd.last === dayStamp(-1) && dd.day >= 1 && dd.day < 7;   // ayer reclamó y no terminó la semana
-  return { claimable: true, day: keeps ? dd.day + 1 : 1, lost: !!dd.last && !keeps && dd.day > 0 };
+  // "racha perdida" solo si había racha a medias (completar los 7 días reinicia sin penalidad)
+  const lost = !!dd.last && !keeps && dd.day > 0 && dd.day < 7;
+  return { claimable: true, day: keeps ? dd.day + 1 : 1, lost };
+}
+// recuperar la racha perdida pagando esencia (cuenta como si hubieras reclamado ayer)
+const STREAK_RECOVER_COST = 50;
+function recoverStreak() {
+  const st = dailyState();
+  if (!st.lost) { toast("No hay racha para recuperar"); return; }
+  if (G.golden < STREAK_RECOVER_COST) { toast("Necesitás " + STREAK_RECOVER_COST + " ✨ para recuperar la racha"); return; }
+  G.golden -= STREAK_RECOVER_COST;
+  G.daily.last = dayStamp(-1);
+  log("✨ Recuperaste la racha del cofre por " + STREAK_RECOVER_COST + " ✨.", "gold"); toast("✨ ¡Racha recuperada!");
+  refreshHud(); if (typeof refreshDaily === "function") refreshDaily();
+  if (typeof saveFarm === "function") saveFarm(true);
 }
 function claimDaily() {
   const st = dailyState();
   if (!st.claimable) { toast("🎁 Ya reclamaste hoy — volvé mañana"); return; }
   const r = DAILY_REWARDS[st.day - 1];
-  if (r.seeds) for (const k in r.seeds) G.seeds[k] = (G.seeds[k] || 0) + r.seeds[k];
+  if (r.seeds) { const sb = seedBuysToday(); for (const k in r.seeds) { G.seeds[k] = (G.seeds[k] || 0) + r.seeds[k]; sb.count += r.seeds[k]; } }
   if (r.res) for (const k in r.res) G.res[k] = (G.res[k] || 0) + r.res[k];
   if (r.plata) G.plata += r.plata;
   if (r.buff) addBuff("yield", "🌿 Abono +15%", 1.15, 600);
