@@ -34,6 +34,7 @@ function itemView(d) {
   if (d.kind === "pick") { const pd = PICK_DEF[d.key]; return { sprite: pd.sprite, emoji: "⛏️", label: pd.label + " · durabilidad " + (G.picks.dur[d.key] || 0) + "/" + pd.dur, dur: Math.round((G.picks.dur[d.key] || 0) / pd.dur * 100) }; }
   if (d.kind === "res") return { sprite: CROP_DEF[d.key] ? "crop_" + d.key : null, emoji: RES_EMOJI[d.key], label: RES_LABEL[d.key], dur: null };
   if (d.kind === "seed") { const cd = CROP_DEF[d.key]; return { sprite: "seed_" + d.key, emoji: cd.emoji, label: cd.label + " (semilla)", dur: null }; }
+  if (d.kind === "fish") { const f = FISH_DEF[d.key]; return { sprite: null, emoji: f ? f.emoji : "🐟", label: f ? f.label : "Pez", dur: null }; }
   return { sprite: null, emoji: "?", label: "", dur: null };
 }
 // si el sprite existe lo muestra; si falla la carga, cae al emoji (sin romper)
@@ -46,7 +47,7 @@ function durBar(v) { return (v.dur != null && v.dur < 100) ? `<span class="durb"
 function invCellHtml(d, i, rem, zone) {
   if (!d) return `<div class="slot" data-slot="${i}" data-zone="${zone}"></div>`;
   let cnt = "";
-  if (d.kind === "res" || d.kind === "seed") { const k = d.kind + ":" + d.key; const n = Math.min(99, rem[k] || 0); rem[k] = (rem[k] || 0) - n; cnt = `<span class="cnt">${fmt(n)}</span>`; }
+  if (d.kind === "res" || d.kind === "seed" || d.kind === "fish") { const k = d.kind + ":" + d.key; const n = Math.min(99, rem[k] || 0); rem[k] = (rem[k] || 0) - n; cnt = `<span class="cnt">${fmt(n)}</span>`; }
   const v = itemView(d);
   const sel = (d.kind === "seed" && G.selSeed === d.key) ? " sel" : "";
   const eq = (d.kind === "pick" && G.picks.eq === d.key) ? " eq" : "";
@@ -57,6 +58,7 @@ function refreshInv() {
   const cap = invSlots(), rem = {};
   ITEM_RES_ORDER.forEach(r => rem["res:" + r] = Math.floor(G.res[r] || 0));
   CROP_ORDER.forEach(s => rem["seed:" + s] = Math.floor(G.seeds[s] || 0));
+  FISH_ORDER.forEach(f => rem["fish:" + f] = Math.floor((G.fish && G.fish[f]) || 0));
   let html = "";
   for (let i = 0; i < cap; i++) html += invCellHtml(G.slots[i], i, rem, "inv");
   $("inv-slots").innerHTML = html;
@@ -90,6 +92,7 @@ function hotItemExists(d) {
   if (d.kind === "pick") return !!G.picks.owned[d.key];
   if (d.kind === "res") return (G.res[d.key] || 0) > 0;
   if (d.kind === "seed") return (G.seeds[d.key] || 0) > 0;
+  if (d.kind === "fish") return ((G.fish && G.fish[d.key]) || 0) > 0;
   return true;   // herramientas siempre están
 }
 function hotCellHtml(d, i) {
@@ -97,7 +100,7 @@ function hotCellHtml(d, i) {
   const on = (G.hotSel === i) ? " on" : "";
   if (!d) return `<div class="hcell${on}" data-slot="${i}" data-zone="hot">${num}</div>`;
   const v = itemView(d);
-  let cnt = ""; if (d.kind === "res") cnt = `<span class="cnt">${fmt(G.res[d.key] || 0)}</span>`; if (d.kind === "seed") cnt = `<span class="cnt">${fmt(G.seeds[d.key] || 0)}</span>`;
+  let cnt = ""; if (d.kind === "res") cnt = `<span class="cnt">${fmt(G.res[d.key] || 0)}</span>`; if (d.kind === "seed") cnt = `<span class="cnt">${fmt(G.seeds[d.key] || 0)}</span>`; if (d.kind === "fish") cnt = `<span class="cnt">${fmt((G.fish && G.fish[d.key]) || 0)}</span>`;
   const sel = (d.kind === "seed" && G.selSeed === d.key) ? " sel" : "";
   const eq = (d.kind === "pick" && G.picks.eq === d.key) ? " eq" : "";
   const ghost = hotItemExists(d) ? "" : " ghost";
@@ -395,8 +398,8 @@ function initUI() {
     $("shop-buy").style.display = s === "buy" ? "" : "none";
     $("shop-sell").style.display = s === "sell" ? "" : "none";
   });
-  const ce = $("cfg-edit"); if (ce) ce.onclick = () => toast("La edición de la granja llega en otra fase.");
-  const cr = $("cfg-reset"); if (cr) cr.onclick = () => toast("Próximamente.");
+  const ce = $("cfg-edit"); if (ce) ce.onclick = () => { GF.editMode = !GF.editMode; ce.textContent = GF.editMode ? "✓ Terminar edición" : "Modo edición"; toast(GF.editMode ? "✏️ Arrastrá los objetos a otra celda" : "📌 Edición terminada"); };
+  const cr = $("cfg-reset"); if (cr) cr.onclick = () => { G.layout = {}; if (typeof saveFarm === "function") saveFarm(true); if (window.FARM && window.FARM.scene) window.FARM.scene.restart(); toast("↺ Granja restaurada"); };
   const lm = $("logmin"); if (lm) lm.onclick = () => $("logpanel").classList.toggle("collapsed");
   initPanelDrag();
   document.querySelectorAll(".ltab").forEach(b => b.onclick = () => {

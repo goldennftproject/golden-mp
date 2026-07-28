@@ -8,6 +8,8 @@ class FarmScene extends Phaser.Scene {
 
   create() {
     const W = GF.WORLD_W, H = GF.WORLD_H, T = GF.TILE;
+    window.FARM = this;   // para restaurar la granja desde la config
+    this.dragObj = null;
     this.cameras.main.setBackgroundColor("#6ba043");
 
     // fondo + estanque + lotes-tierra + grilla
@@ -28,11 +30,13 @@ class FarmScene extends Phaser.Scene {
     g.lineStyle(4, 0x3c4d31, 0.9).strokeRect(0, 0, W, H);
 
     // objetos del mundo (con estado para interacción)
-    this.objs = GF.WORLD_OBJECTS.map(o => {
-      const s = this.add.image(o.cx, o.by, o.key).setOrigin(0.5, 1);
+    this.objs = GF.WORLD_OBJECTS.map((o, i) => {
+      const lp = (G.layout && G.layout[i]) || null;                            // posición editada por el jugador
+      const cx = lp ? lp.cx : o.cx, by = lp ? lp.by : o.by;
+      const s = this.add.image(cx, by, o.key).setOrigin(0.5, 1);
       const rw = (o.type === "ore" || o.type === "rock") ? o.w * 0.84 : o.w;   // nodos algo más chicos, dentro de la celda
-      s.setScale(rw / s.width); s.setDepth(o.by);
-      return { type: o.type, ore: o.ore, cx: o.cx, by: o.by, w: o.w, rw, baseKey: o.key, sprite: s, readyAt: 0 };
+      s.setScale(rw / s.width); s.setDepth(by);
+      return { i, type: o.type, ore: o.ore, cx, by, w: o.w, rw, baseKey: o.key, sprite: s, readyAt: 0 };
     });
 
     // rótulos flotantes sobre los edificios
@@ -57,6 +61,7 @@ class FarmScene extends Phaser.Scene {
         o.timer = this.add.text(o.cx, o.by - (o.rw || T) - 2, "", { fontFamily: "system-ui", fontSize: "11px", fontStyle: "bold", color: "#fff", stroke: "#20301a", strokeThickness: 3 }).setOrigin(0.5, 1).setDepth(o.by + 3).setVisible(false);
       }
     });
+    this.rebuildCollisions();
 
     // parcelas (ciclo arcade: seco → plantar semilla elegida → creciendo (con timer) → listo → cosechar)
     const savedPlots = Array.isArray(G.plots) ? G.plots : [];
@@ -87,6 +92,11 @@ class FarmScene extends Phaser.Scene {
 
     // clic: si pegás a un objeto, caminá hacia él e interactuá; si no, movete al punto
     this.input.on("pointerdown", (pt) => {
+      if (GF.editMode) {   // modo edición: agarrar el objeto bajo el cursor
+        const wx = pt.worldX, wy = pt.worldY; let hit = null, bd = 1e9;
+        for (const o of this.objs) { if (o.type === "fish") continue; const b = o.sprite.getBounds(); if (Phaser.Geom.Rectangle.Contains(b, wx, wy)) { const d = Math.hypot(o.cx - wx, o.by - wy); if (d < bd) { bd = d; hit = o; } } }
+        this.dragObj = hit; return;
+      }
       if (GF.uiOpen || this.action) return;
       const wx = pt.worldX, wy = pt.worldY;
       let hit = null, bd = 1e9;
@@ -97,6 +107,21 @@ class FarmScene extends Phaser.Scene {
       if (!hit) { for (const pl of this.plots) { if (Math.abs(wx - pl.cx) < T / 2 && Math.abs(wy - pl.by) < T / 2) { hit = pl; break; } } }
       if (hit) { this.pendingObj = hit; this.moveTarget = { x: hit.cx, y: hit.by + 18 }; }
       else { this.pendingObj = null; this.moveTarget = { x: wx, y: wy }; }
+    });
+    // arrastre en modo edición
+    this.input.on("pointermove", (pt) => { if (GF.editMode && this.dragObj) this.dragObj.sprite.setPosition(pt.worldX, pt.worldY).setDepth(99999); });
+    this.input.on("pointerup", (pt) => {
+      if (!GF.editMode || !this.dragObj) return;
+      const o = this.dragObj, wCells = Math.max(1, Math.round(o.w / T));
+      const leftCol = Phaser.Math.Clamp(Math.round((pt.worldX - wCells * T / 2) / T), 0, GF.COLS - wCells);
+      const baseRow = Phaser.Math.Clamp(Math.round(pt.worldY / T), 1, GF.ROWS);
+      o.cx = leftCol * T + wCells * T / 2; o.by = baseRow * T;
+      o.sprite.setPosition(o.cx, o.by).setDepth(o.by);
+      if (o.timer) o.timer.setPosition(o.cx, o.by - (o.rw || T) - 2);
+      if (!G.layout) G.layout = {}; G.layout[o.i] = { cx: o.cx, by: o.by };
+      this.rebuildCollisions();
+      if (typeof saveFarm === "function") saveFarm(true);
+      this.dragObj = null;
     });
 
     this.cameras.main.setBounds(0, 0, W, H);
@@ -177,7 +202,7 @@ class FarmScene extends Phaser.Scene {
     if (o.type === "barn") return openOv("ov-barn");
     if (o.type === "market") return openOv("ov-market");
     if (o.type === "store") return openOv("ov-forge");
-    if (o.type === "boar") { o.sprite.destroy(); const i = this.threats.indexOf(o); if (i >= 0) this.threats.splice(i, 1); addXp("sword", 4); log("🥍 Espantaste al jabalí.", "good"); toast("🥍 ¡Espantado!"); return; }
+    if (o.type === "boar") { o.sprite.destroy(); const i = this.threats.indexOf(o); if (i >= 0) this.threats.splice(i, 1); log("🥍 Espantaste al jabalí.", "good"); toast("🥍 ¡Espantado!"); return; }   // XP de espada llega con el combate (necesita espada equipada)
     if (o.type === "plot") {
       const at = activeTool();
       if (at !== "hoe" && at !== "seed") { toast("🪝 Equipá la azada o una semilla para la parcela"); return; }
@@ -258,6 +283,12 @@ class FarmScene extends Phaser.Scene {
   }
 
   setObjTex(o, key, targetW) { o.sprite.setTexture(key); o.sprite.setScale(targetW / o.sprite.width); }
+
+  // recalcula las colisiones a partir de las posiciones actuales de los objetos (tras editar)
+  rebuildCollisions() {
+    const T = GF.TILE;
+    GF.COLLISIONS = this.objs.filter(o => o.type !== "fish").map(o => ({ cx: o.cx, cy: o.by - T * 0.5, rx: o.w * 0.44, ry: T * 0.5 }));
+  }
 
   // brote mientras crece
   showGrowing(pl) {
@@ -340,7 +371,7 @@ class FarmScene extends Phaser.Scene {
 
     // movimiento
     let vx = 0, vy = 0;
-    if (GF.uiOpen) { this.moveTarget = null; }
+    if (GF.uiOpen || GF.editMode) { this.moveTarget = null; this.pendingObj = null; }
     else {
       if (k.left.isDown || k.aleft.isDown) vx = -1; else if (k.right.isDown || k.aright.isDown) vx = 1;
       if (k.up.isDown || k.aup.isDown) vy = -1; else if (k.down.isDown || k.adown.isDown) vy = 1;

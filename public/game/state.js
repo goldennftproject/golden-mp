@@ -16,6 +16,7 @@ const G = {
   hotbar: [null, null, null, null, null, null, null, null, null, null],  // 10 accesos directos
   hotSel: 0,                     // hueco de la hotbar seleccionado (herramienta "en mano")
   hbInit: false,                 // si ya se cargaron los accesos directos por defecto
+  layout: {},                    // posiciones editadas de objetos de la granja: {index:{cx,by}}
   fish: { comun: 0, raro: 0, epico: 0, legendario: 0 },
   plots: [],   // estado de las parcelas: [{state, readyAt, cropKey}] — lo llena la FarmScene
   buffs: [], secPerGameHour: 1, gameHours: 0,
@@ -48,6 +49,10 @@ const CROP_DEF = {
   calabaza:  { label:"Calabaza",  emoji:"🎃", lvl:10, seedCost:60,  grow:18, yield:1, price:45 },
   brocoli:   { label:"Brócoli",   emoji:"🥦", lvl:13, seedCost:120, grow:22, yield:1, price:70 },
 };
+// --- peces (ítems del inventario) ---
+const FISH_ORDER = ["comun", "raro", "epico", "legendario"];
+const FISH_DEF = { comun: { label: "Pez común", emoji: "🐟" }, raro: { label: "Pez raro", emoji: "🐠" }, epico: { label: "Pez épico", emoji: "🐡" }, legendario: { label: "Pez legendario", emoji: "🐋" } };
+
 function farmLevel() { return skillInfo(G.skills.farming).lvl; }
 function cropUnlocked(k) { const cd = CROP_DEF[k]; return !!cd && farmLevel() >= cd.lvl; }
 function selectSeed(k) { if (!CROP_DEF[k]) return; G.selSeed = k; if (isOpen("ov-inv")) refreshInv(); }
@@ -169,6 +174,7 @@ function canonicalStacks() {
   PICK_ORDER.forEach(id => { if (G.picks.owned[id]) list.push({ kind: "pick", key: id }); });
   ITEM_RES_ORDER.forEach(r => { let n = Math.floor(G.res[r] || 0); while (n > 0) { list.push({ kind: "res", key: r }); n -= 99; } });
   CROP_ORDER.forEach(s => { let n = Math.floor(G.seeds[s] || 0); while (n > 0) { list.push({ kind: "seed", key: s }); n -= 99; } });
+  FISH_ORDER.forEach(f => { let n = Math.floor((G.fish && G.fish[f]) || 0); while (n > 0) { list.push({ kind: "fish", key: f }); n -= 99; } });
   return list;
 }
 // reconcilia G.slots con lo que hay realmente, preservando el orden que armó el jugador
@@ -239,5 +245,5 @@ function goFishing() {
   else if (rar === "raro") { addBuff("yield", "Yield +10%", 1.10, 90); log("🐠 Pez raro: buff Yield +10% (90s).", "good"); toast("🐠 ¡Buff de yield!"); }
   else if (rar === "epico") { addBuff("cd", "Cooldowns -25%", 0.75, 90); log("🐡 Pez épico: cooldowns -25% (90s).", "good"); toast("🐡 ¡Cooldowns -25%!"); }
   else { G.golden += 15; tryAddRes("oro", 1); log("🐋 ¡Legendario! +15 ✨ y +1 Oro.", "gold"); toast("🐋 ¡LEGENDARIO!"); }
-  refreshHud();
+  refreshHud(); if (typeof syncSlots === "function") syncSlots(); if (isOpen("ov-inv")) refreshInv();
 }

@@ -7,6 +7,7 @@ GF.WORLD_W = GF.COLS * GF.TILE;             // 966
 GF.WORLD_H = GF.ROWS * GF.TILE;             // 630
 GF.SPEED = 175;
 GF.ZOOM = 1.35;
+GF.editMode = false;   // modo edición de la granja (arrastrar objetos)
 
 const T = GF.TILE;
 GF.SIZE = { hero: Math.round(T * 1.4), wheat: 38, sprout: 34 };
