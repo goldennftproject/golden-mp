@@ -136,6 +136,18 @@ async function connect(scene) {
   // si no, mismo origen (deploy todo-en-uno en Render, o local).
   const endpoint = (window.GOLDEN_SERVER && window.GOLDEN_SERVER.trim())
     || ((location.protocol === "https:" ? "wss://" : "ws://") + location.host);
+  // Esperar a que colyseus.js (módulo esm.sh) termine de cargar
+  if (typeof Colyseus === "undefined" && !window.__colyseusReady) {
+    statusEl.textContent = "Cargando librería de red…";
+    await new Promise((res) => {
+      window.addEventListener("colyseus-ready", res, { once: true });
+      setTimeout(res, 9000);
+    });
+  }
+  if (typeof Colyseus === "undefined" || !Colyseus.Client) {
+    statusEl.textContent = "🔴 No cargó colyseus.js. Recargá la página (Ctrl+F5).";
+    return;
+  }
   const client = new Colyseus.Client(endpoint);
   try {
     room = await client.joinOrCreate("world", { name: nick });
