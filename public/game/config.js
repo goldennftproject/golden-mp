@@ -26,7 +26,7 @@ function snap(key, meta, x, y, sizePx) {
 GF.WORLD_OBJECTS = [];
 [[770,150],[865,250],[730,330]].forEach(t => GF.WORLD_OBJECTS.push(snap("tree", {type:"tree"}, t[0], t[1], T*2)));       // 2 celdas
 [[865,390],[775,455]].forEach(r => GF.WORLD_OBJECTS.push(snap("rock", {type:"rock"}, r[0], r[1], T)));                    // 1 celda
-[["piedra","node_stone",700,500],["bronce","node_bronze",770,545],["oro","node_gold",850,555],
+[["piedra","rock",700,500],["bronce","node_bronze",770,545],["oro","node_gold",850,555],
  ["diamante","node_diamond",905,500],["netherita","node_netherite",915,430]]
   .forEach(o => GF.WORLD_OBJECTS.push(snap(o[1], {type:"ore", ore:o[0]}, o[2], o[3], T)));                                // 1 celda
 GF.WORLD_OBJECTS.push(snap("barn",   {type:"barn"},   540, 150, T*3));                                                    // 3 celdas

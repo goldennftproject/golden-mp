@@ -1,6 +1,6 @@
 /* FarmScene: la granja privada. Fase 1 (mundo) + Fase 3 (interacciones). */
 const CD = { tree: 8, rock: 10 };            // cooldown en segundos
-const ACT_DUR = { chop: 1.2, mine: 1.2, plant: 1.0, harvest: 1.0, water: 1.0, fish: 1.5 };
+const ACT_DUR = { chop: 1.2, mine: 1.2, plant: 0.6, harvest: 0.6, water: 0.6, fish: 1.5 };
 function oreCdSec(tier) { return 10 + tier * 4; }
 
 class FarmScene extends Phaser.Scene {
@@ -14,8 +14,13 @@ class FarmScene extends Phaser.Scene {
     const g = this.add.graphics().setDepth(-1000);
     g.fillStyle(0x6ba043, 1).fillRect(0, 0, W, H);
     const p = GF.POND, pcx = (p.col + p.cols / 2) * T, pcy = (p.row + p.rows / 2) * T, pw = p.cols * T, ph = p.rows * T;
-    g.fillStyle(0x3f79b0, 1).fillEllipse(pcx, pcy, pw, ph);
-    g.fillStyle(0x5b93c4, 1).fillEllipse(pcx, pcy - 6, pw - 26, ph - 26);
+    g.fillStyle(0x4f6b34, 1).fillEllipse(pcx, pcy, pw + 16, ph + 14);          // orilla de pasto más oscura
+    g.fillStyle(0xc7b07a, 1).fillEllipse(pcx, pcy, pw + 6, ph + 5);            // borde de arena
+    g.fillStyle(0x2f5f8c, 1).fillEllipse(pcx, pcy, pw, ph);                    // agua profunda
+    g.fillStyle(0x3f86c4, 1).fillEllipse(pcx, pcy - 4, pw - 20, ph - 18);      // agua media
+    g.fillStyle(0x66a9dc, 1).fillEllipse(pcx, pcy - 7, pw - 44, ph - 34);      // agua clara
+    g.fillStyle(0xbfe0f4, 0.7).fillEllipse(pcx - pw * 0.16, pcy - ph * 0.2, pw * 0.34, ph * 0.2);   // brillo grande
+    g.fillStyle(0xbfe0f4, 0.55).fillEllipse(pcx + pw * 0.18, pcy + ph * 0.06, pw * 0.14, ph * 0.09); // brillo chico
     GF.PLOTS.forEach(pl => { const x = pl.col * T, y = pl.row * T; g.fillStyle(0x8a5a33, 1); g.fillRoundedRect(x + 3, y + 3, T - 6, T - 6, 6); g.fillStyle(0x724829, 1); g.fillRoundedRect(x + 6, y + 6, T - 12, T - 12, 5); });
     g.lineStyle(1, 0x18300f, 0.13);
     for (let x = 0; x <= W; x += T) { g.beginPath(); g.moveTo(x, 0); g.lineTo(x, H); g.strokePath(); }
@@ -25,8 +30,19 @@ class FarmScene extends Phaser.Scene {
     // objetos del mundo (con estado para interacción)
     this.objs = GF.WORLD_OBJECTS.map(o => {
       const s = this.add.image(o.cx, o.by, o.key).setOrigin(0.5, 1);
-      s.setScale(o.w / s.width); s.setDepth(o.by);
-      return { type: o.type, ore: o.ore, cx: o.cx, by: o.by, w: o.w, baseKey: o.key, sprite: s, readyAt: 0 };
+      const rw = (o.type === "ore" || o.type === "rock") ? o.w * 0.84 : o.w;   // nodos algo más chicos, dentro de la celda
+      s.setScale(rw / s.width); s.setDepth(o.by);
+      return { type: o.type, ore: o.ore, cx: o.cx, by: o.by, w: o.w, rw, baseKey: o.key, sprite: s, readyAt: 0 };
+    });
+
+    // rótulos flotantes sobre los edificios
+    const BLD = { barn: "🏡 Granja", market: "🏪 Tienda", store: "🛠️ Herrería" };
+    this.objs.forEach(o => {
+      const nm = BLD[o.type]; if (!nm) return;
+      this.add.text(o.cx, o.by - o.w * 0.9, nm, {
+        fontFamily: "system-ui", fontSize: "12px", fontStyle: "bold", color: "#f4ecd6",
+        stroke: "#20301a", strokeThickness: 4, backgroundColor: "rgba(20,28,15,0.5)", padding: { x: 5, y: 2 },
+      }).setOrigin(0.5, 1).setDepth(o.by + 2);
     });
 
     // punto de pesca (junto al estanque)
@@ -76,9 +92,15 @@ class FarmScene extends Phaser.Scene {
 
     this.cameras.main.setBounds(0, 0, W, H);
     this.cameras.main.startFollow(hero, true, 0.15, 0.15);
+    this.zoomUser = 1;
     this.fitCamera();
     this.scale.on("resize", this.fitCamera, this);
     this.events.once("shutdown", () => this.scale.off("resize", this.fitCamera, this));
+    // rueda del mouse: acercar/alejar la cámara de la granja
+    this.input.on("wheel", (ptr, over, dx, dy) => {
+      this.zoomUser = Phaser.Math.Clamp(this.zoomUser * (dy > 0 ? 0.9 : 1.1), 0.4, 2.4);
+      this.fitCamera();
+    });
 
     this.keys = this.input.keyboard.addKeys({
       up:"W", down:"S", left:"A", right:"D",
@@ -92,7 +114,9 @@ class FarmScene extends Phaser.Scene {
 
   fitCamera() {
     const cw = this.scale.width, ch = this.scale.height;
-    this.cameras.main.setZoom(Math.max(GF.ZOOM, cw / GF.WORLD_W, ch / GF.WORLD_H));
+    const fill = Math.max(GF.ZOOM, cw / GF.WORLD_W, ch / GF.WORLD_H);
+    const seeAll = Math.min(cw / GF.WORLD_W, ch / GF.WORLD_H);   // alejar hasta ver todo el mundo
+    this.cameras.main.setZoom(Phaser.Math.Clamp(fill * (this.zoomUser || 1), seeAll * 0.9, fill * 2.4));
   }
 
   spawnThreat() {
@@ -168,7 +192,7 @@ class FarmScene extends Phaser.Scene {
       else toast("🎒 Inventario lleno");
     } else if (a.kind === "mine" && o.type === "rock") {
       const gr = Math.max(1, Math.round(2 * yieldMult()));
-      if (tryAddRes("piedra", gr)) { addXp("mining", 5); o.readyAt = nowMs() + CD.rock * 1000 * cdMult(); this.setObjTex(o, "rock_mined", GF.TILE); log(`🪨 +${gr} Piedra.`, "good"); toast("+" + gr + " 🪨"); refreshHud(); }
+      if (tryAddRes("piedra", gr)) { addXp("mining", 5); o.readyAt = nowMs() + CD.rock * 1000 * cdMult(); this.setObjTex(o, "rock_mined", o.rw || GF.TILE); log(`🪨 +${gr} Piedra.`, "good"); toast("+" + gr + " 🪨"); refreshHud(); }
       else toast("🎒 Inventario lleno");
     } else if (a.kind === "mine" && o.type === "ore") {
       const pk = equippedPick(), pd = PICK_DEF[pk], od = ORE_DEF[o.ore];
@@ -183,7 +207,7 @@ class FarmScene extends Phaser.Scene {
     } else if (a.kind === "water") {
       o.state = "wet"; o.wet.setVisible(true); this.syncPlots(); addXp("farming", 3); log("💧 Regaste la tierra."); toast("💧 Regado");
     } else if (a.kind === "plant") {
-      o.state = "growing"; o.readyAt = nowMs() + 12000 * cdMult(); o.crop.setVisible(true).setTexture("sprout"); o.crop.setScale((GF.TILE * 0.75) / o.crop.width);
+      o.state = "growing"; o.readyAt = nowMs() + 8000 * cdMult(); o.crop.setVisible(true).setTexture("sprout"); o.crop.setScale((GF.TILE * 0.75) / o.crop.width);
       this.syncPlots(); addXp("farming", 5); log("🌱 Plantaste trigo.", "good"); toast("🌱 Plantado");
     } else if (a.kind === "harvest") {
       const gr = Math.max(1, Math.round(3 * yieldMult()));
@@ -217,7 +241,7 @@ class FarmScene extends Phaser.Scene {
     for (const o of this.objs) {
       if (o.readyAt && t >= o.readyAt) {
         o.readyAt = 0;
-        if (o.type === "tree" || o.type === "rock") this.setObjTex(o, o.baseKey, o.w);
+        if (o.type === "tree" || o.type === "rock") this.setObjTex(o, o.baseKey, o.rw || o.w);
         else if (o.type === "ore") o.sprite.setAlpha(1);
       }
     }
