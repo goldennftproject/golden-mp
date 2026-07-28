@@ -106,6 +106,20 @@ function refreshLb() {
   const note = $("lb-note"); if (note) note.textContent = "Ranking local de ejemplo. El ranking online real se conecta en otra fase.";
 }
 
+/* ---- indicador de guardado ---- */
+function showSaving() { const el = $("saveind"); if (!el) return; el.className = "show saving"; el.querySelector(".sdot").textContent = "⟳"; el.querySelector(".stxt").textContent = "Guardando…"; clearTimeout(el._t); }
+function showSaved() { const el = $("saveind"); if (!el) return; el.className = "show"; el.querySelector(".sdot").textContent = "✓"; el.querySelector(".stxt").textContent = "Guardado"; clearTimeout(el._t); el._t = setTimeout(() => el.classList.remove("show"), 1600); }
+
+/* ---- chat ---- */
+function escapeHtml(s) { return String(s).replace(/[&<>"]/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c])); }
+function renderChatMsg(m) {
+  const box = $("chat-msgs"); if (!box || !m) return;
+  const d = document.createElement("div"); d.className = "cm";
+  d.innerHTML = "<b>" + escapeHtml(m.name || "?") + ":</b> " + escapeHtml(m.text || "");
+  box.appendChild(d); while (box.children.length > 60) box.removeChild(box.firstChild); box.scrollTop = box.scrollHeight;
+}
+function doSendChat() { const ci = $("chat-in"); if (!ci) return; const t = ci.value.trim(); if (!t) return; if (typeof sendChat === "function") sendChat(t); ci.value = ""; }
+
 /* ---- init ---- */
 function initUI() {
   GF.uiOpen = false;
@@ -122,7 +136,22 @@ function initUI() {
   document.querySelectorAll(".lbtab").forEach(b => b.onclick = () => { lbTab = b.dataset.lb; refreshLb(); });
   const ce = $("cfg-edit"); if (ce) ce.onclick = () => toast("La edición de la granja llega en otra fase.");
   const cr = $("cfg-reset"); if (cr) cr.onclick = () => toast("Próximamente.");
-  const lh = $("loghead"); if (lh) lh.onclick = () => $("logpanel").classList.toggle("collapsed");
+  const lm = $("logmin"); if (lm) lm.onclick = () => $("logpanel").classList.toggle("collapsed");
+  document.querySelectorAll(".ltab").forEach(b => b.onclick = () => {
+    $("logpanel").classList.remove("collapsed");
+    document.querySelectorAll(".ltab").forEach(x => x.classList.toggle("active", x === b));
+    const tab = b.dataset.tab;
+    $("log").style.display = tab === "log" ? "" : "none";
+    $("chatpane").style.display = tab === "chat" ? "" : "none";
+    if (tab === "chat") { const ci = $("chat-in"); if (ci) ci.focus(); }
+  });
+  const ci = $("chat-in"), cs = $("chat-send");
+  if (ci) {
+    ci.addEventListener("focus", () => { GF.typing = true; GF.uiOpen = true; });
+    ci.addEventListener("blur", () => { GF.typing = false; GF.uiOpen = anyOvOpen(); });
+    ci.addEventListener("keydown", e => { if (e.key === "Enter") { e.preventDefault(); doSendChat(); } });
+  }
+  if (cs) cs.onclick = doSendChat;
 
   const KEYS = { i: "ov-inv", x: "ov-skills", p: "ov-equip", l: "ov-lb", c: "ov-config", o: "ov-market", k: "ov-forge", b: "ov-barn" };
   window.addEventListener("keydown", (e) => {

@@ -20,7 +20,7 @@ class PlazaScene extends Phaser.Scene {
     this.keys = this.input.keyboard.addKeys({
       up:"W", down:"S", left:"A", right:"D",
       aup:"UP", adown:"DOWN", aleft:"LEFT", aright:"RIGHT", farm:"M",
-    });
+    }, false);   // enableCapture=false: no bloquea el tipeo en el chat
 
     this.add.text(10, 10,
       "PLAZA (compartida) · te ves con otros jugadores en vivo\nApretá  M  para volver a tu GRANJA",

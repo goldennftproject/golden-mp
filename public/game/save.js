@@ -51,9 +51,24 @@ async function loadFarm() {
 
 async function saveFarm() {
   if (!sb || !UID) return;
+  if (typeof showSaving === "function") showSaving();
   try {
     await sb.from("farms").upsert({ user_id: UID, name: (window.NICK || "Granjero"), data: snapshot(), updated_at: new Date().toISOString() }, { onConflict: "user_id" });
+    if (typeof showSaved === "function") showSaved();
   } catch (e) { /* silencioso */ }
+}
+
+// ---- chat global (Supabase Realtime broadcast) ----
+let chatChannel = null;
+function initChat(onMsg) {
+  if (!sb || chatChannel) return;
+  chatChannel = sb.channel("global-chat", { config: { broadcast: { self: true } } });
+  chatChannel.on("broadcast", { event: "msg" }, ({ payload }) => { try { onMsg(payload); } catch (e) {} });
+  chatChannel.subscribe();
+}
+function sendChat(text) {
+  if (!chatChannel || !text) return;
+  chatChannel.send({ type: "broadcast", event: "msg", payload: { name: (window.NICK || "Granjero"), text: String(text).slice(0, 140), t: Date.now() } });
 }
 
 function startAutosave() {

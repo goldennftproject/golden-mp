@@ -79,7 +79,7 @@ class FarmScene extends Phaser.Scene {
       up:"W", down:"S", left:"A", right:"D",
       aup:"UP", adown:"DOWN", aleft:"LEFT", aright:"RIGHT",
       plaza:"M", act:"E", act2:"SPACE",
-    });
+    }, false);   // enableCapture=false: no bloquea el tipeo en el chat
     this.keys.plaza.on("down", () => { if (!GF.uiOpen && !this.action) this.scene.start("plaza"); });
     this.keys.act.on("down", () => this.doInteract());
     this.keys.act2.on("down", () => this.doInteract());

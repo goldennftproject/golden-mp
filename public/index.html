@@ -127,6 +127,24 @@
   #log .l.good{background:#2c3d22;border-color:#456b2c;color:#cfe6b6}
   #log .l.bad{background:#3d2620;border-color:#6b3a2c;color:#f0c6b6}
   #log .l.gold{background:#3a3016;border-color:#7a5f16;color:#f4d675}
+  /* tabs registro/chat + chat */
+  .loghead{display:flex;align-items:center;justify-content:space-between;background:#2f3d26}
+  .ltabs{display:flex}
+  .ltab{background:none;border:none;color:#a9bd94;font-weight:800;font-size:11px;letter-spacing:1px;text-transform:uppercase;padding:8px 12px;cursor:pointer}
+  .ltab.active{color:#ffe08a;background:rgba(255,224,138,.08)}
+  .logmin{background:none;border:none;color:#a9bd94;font-size:12px;padding:6px 12px;cursor:pointer}
+  #chat-msgs{max-height:120px;overflow:auto;display:flex;flex-direction:column;gap:3px;font-size:12.5px;margin-bottom:6px}
+  #chat-msgs .cm{color:#e7eddc;line-height:1.35}
+  #chat-msgs .cm b{color:#ffe08a}
+  .chatbar{display:flex;gap:6px}
+  .chatbar input{flex:1;min-width:0;padding:6px 8px;border-radius:7px;border:1px solid #4a5a3a;background:#1a2413;color:#fff;font-family:inherit;font-size:13px}
+  .chatbar button{padding:6px 10px;font-size:13px}
+  /* indicador de guardado */
+  #saveind{position:fixed;right:12px;bottom:12px;z-index:8;display:none;align-items:center;gap:7px;background:rgba(20,28,15,.92);border:1px solid #3c4d31;color:#cfe6b6;padding:6px 12px;border-radius:999px;font-size:12px;font-weight:700}
+  #saveind.show{display:flex}
+  #saveind .sdot{font-size:14px;line-height:1;display:inline-block;color:#8fd06a}
+  #saveind.saving .sdot{color:#e0c76a;animation:spin .7s linear infinite}
+  @keyframes spin{to{transform:rotate(360deg)}}
   /* gate de apodo */
   #gate{position:fixed;inset:0;z-index:100;display:flex;align-items:center;justify-content:center;background:#243318}
   #gate .gcard{background:#0f150b;color:#f2ead5;border:1px solid #3c4d31;border-radius:16px;padding:26px 28px;width:min(420px,92%);text-align:center}
@@ -245,11 +263,24 @@
     </div>
   </div>
 
-  <!-- registro -->
+  <!-- registro / chat -->
   <div class="logpanel collapsed" id="logpanel">
-    <button class="loghead" id="loghead">Registro <span class="arrow">▾</span></button>
-    <div class="logbody"><div id="log"></div></div>
+    <div class="loghead">
+      <div class="ltabs">
+        <button class="ltab active" data-tab="log">Registro</button>
+        <button class="ltab" data-tab="chat">Chat</button>
+      </div>
+      <button class="logmin" id="logmin">▾</button>
+    </div>
+    <div class="logbody">
+      <div id="log" class="pane"></div>
+      <div id="chatpane" class="pane" style="display:none">
+        <div id="chat-msgs"></div>
+        <div class="chatbar"><input id="chat-in" maxlength="140" placeholder="Escribí y Enter…" autocomplete="off"><button id="chat-send">▶</button></div>
+      </div>
+    </div>
   </div>
+  <div id="saveind"><span class="sdot"></span><span class="stxt"></span></div>
 
   <!-- gate de apodo -->
   <div id="gate">

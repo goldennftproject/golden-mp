@@ -18,7 +18,7 @@ document.getElementById("enter").addEventListener("click", async () => {
   const btn = document.getElementById("enter");
   window.NICK = document.getElementById("nick").value.trim();   // puede quedar vacío
   btn.disabled = true; btn.textContent = "Cargando…";
-  try { await window.SAVE_READY; await loadFarm(); } catch (e) { console.warn(e); }
+  try { await window.SAVE_READY; await loadFarm(); if (typeof initChat === "function") initChat(renderChatMsg); } catch (e) { console.warn(e); }
   if (!window.NICK) window.NICK = "Granjero";
   if (typeof startAutosave === "function") startAutosave();
   if (typeof refreshHud === "function") refreshHud();
