@@ -32,10 +32,15 @@ function itemView(d) {
   }
   if (d.kind === "pick") { const pd = PICK_DEF[d.key]; return { sprite: pd.sprite, emoji: "⛏️", label: pd.label, dur: Math.round((G.picks.dur[d.key] || 0) / pd.dur * 100) }; }
   if (d.kind === "res") return { sprite: null, emoji: RES_EMOJI[d.key], label: RES_LABEL[d.key], dur: null };
-  if (d.kind === "seed") { const cd = CROP_DEF[d.key]; return { sprite: null, emoji: cd.emoji, label: cd.label + " (semilla)", dur: null }; }
+  if (d.kind === "seed") { const cd = CROP_DEF[d.key]; return { sprite: "seed_" + d.key, emoji: cd.emoji, label: cd.label + " (semilla)", dur: null }; }
   return { sprite: null, emoji: "?", label: "", dur: null };
 }
-function itemIcon(v) { return v.sprite ? `<img src="${GF.spr(v.sprite)}">` : `<span class="em">${v.emoji}</span>`; }
+// si el sprite existe lo muestra; si falla la carga, cae al emoji (sin romper)
+function itemIcon(v) {
+  if (v.sprite && v.emoji) return `<img src="${GF.spr(v.sprite)}" onerror="this.outerHTML='<span class=&quot;em&quot;>${v.emoji}</span>'">`;
+  if (v.sprite) return `<img src="${GF.spr(v.sprite)}">`;
+  return `<span class="em">${v.emoji}</span>`;
+}
 function durBar(v) { return (v.dur != null && v.dur < 100) ? `<span class="durb"><i style="width:${Math.max(0, v.dur)}%;background:${durColor(v.dur)}"></i></span>` : ""; }
 function invCellHtml(d, i, rem, zone) {
   if (!d) return `<div class="slot" data-slot="${i}" data-zone="${zone}"></div>`;
@@ -215,7 +220,7 @@ function refreshSeedShop() {
     const btn = unlocked
       ? `<button class="green sm" data-buy="${k}" ${aff ? "" : "disabled"}>Comprar · 🪙${cd.seedCost}</button>`
       : `<button class="ghost sm" disabled>🔒 Cultivo nv ${cd.lvl}</button>`;
-    return `<div class="mkt-row"><span class="mimg">${cd.emoji}</span><div class="minfo"><div class="mnm">${cd.label} <span class="seedlv">nv ${cd.lvl}</span></div><div class="mds">Semilla · crece en ${cd.grow}s · tenés ${fmt(G.seeds[k] || 0)}</div></div>${btn}</div>`;
+    return `<div class="mkt-row"><span class="mimg">${itemIcon({ sprite: "seed_" + k, emoji: cd.emoji })}</span><div class="minfo"><div class="mnm">${cd.label} <span class="seedlv">nv ${cd.lvl}</span></div><div class="mds">Semilla · crece en ${cd.grow}s · tenés ${fmt(G.seeds[k] || 0)}</div></div>${btn}</div>`;
   }).join("");
   box.querySelectorAll("[data-buy]").forEach(b => b.onclick = () => buySeed(b.dataset.buy));
 }
