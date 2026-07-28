@@ -14,16 +14,30 @@ function startGame() {
   });
 }
 
-document.getElementById("enter").addEventListener("click", async () => {
-  const btn = document.getElementById("enter");
-  window.NICK = document.getElementById("nick").value.trim();   // puede quedar vacío
-  btn.disabled = true; btn.textContent = "Cargando…";
-  try { await window.SAVE_READY; await loadFarm(); if (typeof initChat === "function") initChat(renderChatMsg); } catch (e) { console.warn(e); }
-  if (!window.NICK) window.NICK = "Granjero";
+let entered = false;
+function enterGame() {
+  if (entered) return; entered = true;
+  if (typeof initChat === "function") initChat(renderChatMsg);
   if (typeof startAutosave === "function") startAutosave();
   if (typeof refreshHud === "function") refreshHud();
   document.getElementById("gate").style.display = "none";
   startGame();
+}
+
+// al cargar: si ya tenés cuenta + granja guardada, entrás directo (sin pedir apodo otra vez)
+(async function boot() {
+  let returning = false;
+  try { await window.SAVE_READY; returning = await loadFarm(); } catch (e) { console.warn(e); }
+  if (returning && window.NICK) enterGame();
+  // si no, el portón queda visible para que el jugador nuevo elija apodo
+})();
+
+// jugador nuevo: elige apodo y entra
+document.getElementById("enter").addEventListener("click", async () => {
+  window.NICK = document.getElementById("nick").value.trim() || "Granjero";
+  try { await window.SAVE_READY; } catch (e) {}
+  if (typeof saveFarm === "function") saveFarm();   // persiste el apodo enseguida
+  enterGame();
 });
 document.getElementById("nick").addEventListener("keydown", (e) => {
   if (e.key === "Enter") document.getElementById("enter").click();
