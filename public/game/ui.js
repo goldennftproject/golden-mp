@@ -13,9 +13,10 @@ function anyOvOpen() { return !!document.querySelector(".ov.show"); }
 const OV_REFRESH = { "ov-inv": () => refreshInv(), "ov-skills": () => refreshSkills(), "ov-equip": () => refreshEquip(),
   "ov-forge": () => refreshForge(), "ov-market": () => refreshMarket(), "ov-barn": () => refreshBarn(),
   "ov-config": () => refreshConfig(), "ov-lb": () => refreshLb() };
-function openOv(id) { const e = $(id); if (!e) return; e.classList.add("show"); GF.uiOpen = true; if (OV_REFRESH[id]) OV_REFRESH[id](); }
-function closeOv(id) { const e = $(id); if (e) e.classList.remove("show"); GF.uiOpen = anyOvOpen(); }
-function closeAllOv() { document.querySelectorAll(".ov.show").forEach(e => e.classList.remove("show")); GF.uiOpen = false; }
+// los overlays NO bloquean el juego: podés seguir moviéndote/interactuando con la ventana abierta
+function openOv(id) { const e = $(id); if (!e) return; e.classList.add("show"); if (OV_REFRESH[id]) OV_REFRESH[id](); }
+function closeOv(id) { const e = $(id); if (e) e.classList.remove("show"); }
+function closeAllOv() { document.querySelectorAll(".ov.show").forEach(e => e.classList.remove("show")); }
 
 /* ---- HUD ---- */
 function refreshHud() { setTxt("s-level", G.level); setTxt("s-prestige", G.prestige); setTxt("s-plata", fmt(G.plata)); setTxt("s-golden", fmt(G.golden)); setTxt("s-week", G.week); }
@@ -247,6 +248,32 @@ function initPanelDrag() {
   panel.addEventListener("pointercancel", end);
 }
 
+/* ---- arrastrar las ventanas (overlays) por su título ---- */
+function initOverlayDrag() {
+  document.querySelectorAll(".ov .card").forEach(card => {
+    const handle = card.querySelector("h3"); if (!handle) return;
+    let drag = null;
+    handle.addEventListener("pointerdown", (e) => {
+      if (e.target.closest("button")) return;
+      e.preventDefault();
+      const r = card.getBoundingClientRect();
+      card.style.left = r.left + "px"; card.style.top = r.top + "px"; card.style.transform = "none";
+      drag = { dx: e.clientX - r.left, dy: e.clientY - r.top };
+      try { handle.setPointerCapture(e.pointerId); } catch (er) {}
+    });
+    handle.addEventListener("pointermove", (e) => {
+      if (!drag) return;
+      const w = card.offsetWidth, h = card.offsetHeight;
+      const left = Math.max(4, Math.min(e.clientX - drag.dx, window.innerWidth - w - 4));
+      const top = Math.max(4, Math.min(e.clientY - drag.dy, window.innerHeight - h - 4));
+      card.style.left = left + "px"; card.style.top = top + "px";
+    });
+    const end = () => { drag = null; };
+    handle.addEventListener("pointerup", end);
+    handle.addEventListener("pointercancel", end);
+  });
+}
+
 /* ---- init ---- */
 function initUI() {
   GF.uiOpen = false;
@@ -256,7 +283,7 @@ function initUI() {
   const mb = $("menu-btn"); if (mb) mb.onclick = toggleMenu;
   document.querySelectorAll(".gmi").forEach(b => b.onclick = () => { closeAllOv(); openOv(b.dataset.panel); gmenu.classList.add("collapsed"); });
   document.querySelectorAll("[data-close]").forEach(b => b.onclick = () => closeOv(b.dataset.close));
-  document.querySelectorAll(".ov").forEach(ov => ov.addEventListener("mousedown", e => { if (e.target === ov) closeOv(ov.id); }));
+  initOverlayDrag();
   const lu = $("levelup"); if (lu) lu.onclick = levelUp;
   const pr = $("prestige"); if (pr) pr.onclick = prestige;
   document.querySelectorAll(".curbtn").forEach(b => b.onclick = () => { marketCur = b.dataset.cur; refreshMarket(); });
@@ -282,7 +309,7 @@ function initUI() {
   const ci = $("chat-in"), cs = $("chat-send");
   if (ci) {
     ci.addEventListener("focus", () => { GF.typing = true; GF.uiOpen = true; });
-    ci.addEventListener("blur", () => { GF.typing = false; GF.uiOpen = anyOvOpen(); });
+    ci.addEventListener("blur", () => { GF.typing = false; GF.uiOpen = false; });
     ci.addEventListener("keydown", e => { if (e.key === "Enter") { e.preventDefault(); doSendChat(); } });
   }
   if (cs) cs.onclick = doSendChat;

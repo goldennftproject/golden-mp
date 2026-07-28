@@ -28,10 +28,10 @@
   #prompt{position:fixed;left:50%;bottom:12px;transform:translateX(-50%);z-index:5;background:rgba(20,25,15,.82);color:#ffe9a8;padding:6px 14px;border-radius:9px;font-size:13px;font-weight:600;opacity:0;transition:opacity .15s;pointer-events:none;border:1px solid #6a5a2a}
   #prompt.show{opacity:1}
 
-  .ov{position:fixed;inset:0;z-index:10;display:none;align-items:center;justify-content:center;background:rgba(10,14,8,.55)}
-  .ov.show{display:flex}
-  .card{background:var(--panel);color:var(--ink);border-radius:16px;padding:18px 20px;width:min(440px,92%);box-shadow:0 20px 50px rgba(0,0,0,.4);border:1px solid var(--line);position:relative}
-  .card h3{margin:0 0 4px;font-size:18px;color:var(--gold-deep)}
+  .ov{position:fixed;inset:0;z-index:10;display:none;pointer-events:none}
+  .ov.show{display:block}
+  .card{background:var(--panel);color:var(--ink);border-radius:16px;padding:18px 20px;width:min(440px,92%);box-shadow:0 20px 50px rgba(0,0,0,.4);border:1px solid var(--line);position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);pointer-events:auto}
+  .card h3{margin:0 0 4px;font-size:18px;color:var(--gold-deep);cursor:move;user-select:none}
   .card .sub{font-size:12px;color:var(--muted);margin-bottom:12px}
   .row{display:flex;gap:8px;flex-wrap:wrap;margin-top:10px}
   button{font-family:inherit;font-size:14px;font-weight:700;cursor:pointer;border:1px solid var(--gold-deep);border-radius:10px;padding:9px 14px;color:#3a2e10;background:linear-gradient(#f6d878,#e9b93f)}
