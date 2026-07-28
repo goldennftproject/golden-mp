@@ -22,7 +22,7 @@ async function initSave() {
 // campos de progreso que guardamos (no world/cooldowns/buffs, que son de la sesión)
 function snapshot() {
   return { plata: G.plata, golden: G.golden, level: G.level, prestige: G.prestige, week: G.week,
-    res: G.res, picks: G.picks, skills: G.skills, fish: G.fish };
+    res: G.res, picks: G.picks, skills: G.skills, fish: G.fish, plots: G.plots };
 }
 // "huella" del estado guardable (incluye el apodo); si no cambia, no hay nada que guardar
 function snapKey() { return JSON.stringify({ n: (window.NICK || "Granjero"), d: snapshot() }); }
@@ -33,6 +33,7 @@ function hydrate(d) {
   if (d.res) G.res = Object.assign({}, G.res, d.res);
   if (d.skills) G.skills = Object.assign({}, G.skills, d.skills);
   if (d.fish) G.fish = Object.assign({}, G.fish, d.fish);
+  if (Array.isArray(d.plots)) G.plots = d.plots;
   if (d.picks && d.picks.owned && d.picks.dur) G.picks = d.picks;
 }
 

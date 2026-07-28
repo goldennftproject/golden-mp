@@ -8,6 +8,7 @@ const G = {
   res: { trigo: 12, madera: 30, piedra: 30, bronce: 25, oro: 15, diamante: 5, netherita: 0 },
   picks: { owned: { stone: true }, dur: { stone: 50 }, eq: "stone" },
   fish: { comun: 0, raro: 0, epico: 0, legendario: 0 },
+  plots: [],   // estado de las parcelas: [{state, readyAt}] — lo llena la FarmScene
   buffs: [], secPerGameHour: 1, gameHours: 0,
   skills: { fishing: 0, farming: 0, cooking: 0, range: 0, sword: 0, mining: 0, crafting: 0 },
 };
