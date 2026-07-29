@@ -40,10 +40,11 @@ class FarmScene extends Phaser.Scene {
 
     // pececitos nadando en la laguna (sprites cozy; si faltan, emoji)
     this.pondFish = [];
+    const FISH_SIZES = [[15, 11], [20, 15], [12, 9]];   // cada pez de un tamaño distinto
     ["fish_comun", "fish_raro", "fish_comun"].forEach((fk, fi) => {
-      const p0 = this.pondPoint();
+      const p0 = this.pondPoint(), sz = FISH_SIZES[fi];
       const s = this.textures.exists(fk)
-        ? this.add.image(p0.x, p0.y, fk).setDisplaySize(17, 13).setOrigin(0.5).setDepth(-990).setAlpha(0.9)
+        ? this.add.image(p0.x, p0.y, fk).setDisplaySize(sz[0], sz[1]).setOrigin(0.5).setDepth(-990).setAlpha(0.9)
         : this.add.text(p0.x, p0.y, fi === 1 ? "🐠" : "🐟", { fontSize: "13px" }).setOrigin(0.5).setDepth(-990).setAlpha(0.85);
       this.pondFish.push({ s, tgt: this.pondPoint(), sp: 10 + Math.random() * 12 });
     });
@@ -598,7 +599,7 @@ class FarmScene extends Phaser.Scene {
     pl.half = false; this.setPlotGlow(pl, "off");
     pl.spr.clearTint().setAlpha(1);
     pl.spr.setTexture("sprout").setVisible(true);
-    pl.spr.setScale((GF.TILE * 0.75) / pl.spr.width);
+    pl.spr.setScale((GF.TILE * 0.56) / pl.spr.width);
     pl.emo.setVisible(false);
   }
   // cultivo (conjunto) cuando está listo; si falta el sprite, cae al emoji
@@ -606,7 +607,7 @@ class FarmScene extends Phaser.Scene {
     const key = "cropg_" + pl.cropKey;
     if (pl.cropKey && this.textures.exists(key)) {
       pl.spr.setTexture(key).setVisible(true);
-      pl.spr.setScale((GF.TILE * 0.95) / pl.spr.width);
+      pl.spr.setScale((GF.TILE * 0.71) / pl.spr.width);
       pl.emo.setVisible(false);
     } else {
       pl.spr.setVisible(false);
@@ -632,7 +633,7 @@ class FarmScene extends Phaser.Scene {
     this.setPlotGlow(pl, "off");
     if (this.textures.exists("withered")) {   // sprite cozy del cultivo marchito
       pl.spr.setTexture("withered").clearTint().setAlpha(1).setVisible(true);
-      pl.spr.setScale((GF.TILE * 0.85) / pl.spr.width);
+      pl.spr.setScale((GF.TILE * 0.64) / pl.spr.width);
       pl.emo.setVisible(false);
     } else if (pl.spr.visible) { pl.spr.setTint(0x7a6f52).setAlpha(0.75); }
     else { pl.emo.setText("🥀").setVisible(true); }
@@ -675,7 +676,7 @@ class FarmScene extends Phaser.Scene {
           pl.half = true;
           const mk = "cropm_" + pl.cropKey;
           if (pl.cropKey && this.textures.exists(mk)) pl.spr.setTexture(mk);
-          pl.spr.setScale((GF.TILE * 0.92) / pl.spr.width);
+          pl.spr.setScale((GF.TILE * 0.69) / pl.spr.width);
           this.setPlotGlow(pl, "half");
         }
       }
@@ -684,7 +685,7 @@ class FarmScene extends Phaser.Scene {
     if (this.pondFish) for (const f of this.pondFish) {
       const dx = f.tgt.x - f.s.x, dy = f.tgt.y - f.s.y, d = Math.hypot(dx, dy);
       if (d < 3) { f.tgt = this.pondPoint(); f.sp = 10 + Math.random() * 12; }
-      else { const sp = Math.min(f.sp * dt, d); f.s.x += dx / d * sp; f.s.y += dy / d * sp; if (f.s.setFlipX) f.s.setFlipX(dx < 0); else f.s.setScale(dx < 0 ? -1 : 1, 1); }
+      else { const sp = Math.min(f.sp * dt, d); f.s.x += dx / d * sp; f.s.y += dy / d * sp; if (f.s.setFlipX) f.s.setFlipX(dx > 0); else f.s.setScale(dx < 0 ? -1 : 1, 1); }   // el arte mira a la izquierda
     }
     // amenazas (jabalíes)
     if (t >= this.nextThreatAt && this.threats.length === 0) { this.nextThreatAt = t + 60000; this.spawnThreat(); }

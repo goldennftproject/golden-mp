@@ -1,0 +1,5 @@
+node_modules/
+npm-debug.log*
+
+# archivo de assets sin uso (no se deploya)
+_archivo_sin_uso/
