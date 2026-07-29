@@ -22,6 +22,7 @@ class BootScene extends Phaser.Scene {
     L.push(["barn", P + "barn.png?v=2"]);
     L.push(["market", P + "market.png?v=2"]);
     L.push(["store", P + "store.png?v=2"]);
+    ["fence_top","fence_bottom","fence_left","fence_right","fence_corner"].forEach(k => L.push([k, P + k + ".png"]));
     if (typeof CROP_ORDER !== "undefined") CROP_ORDER.forEach(k => L.push(["cropg_" + k, P + "cropg_" + k + ".png"]));
     return L;
   }

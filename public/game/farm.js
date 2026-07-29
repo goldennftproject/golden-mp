@@ -49,6 +49,24 @@ class FarmScene extends Phaser.Scene {
     for (let y = 0; y <= H; y += T) { g.beginPath(); g.moveTo(0, y); g.lineTo(W, y); g.strokePath(); }
     g.lineStyle(4, 0x3c4d31, 0.9).strokeRect(0, 0, W, H);
 
+    // cerca de madera del diseñador alrededor de la granja (si están las piezas)
+    if (this.textures.exists("fence_top")) {
+      const FH = T * 1.35, p2 = GF.POND;
+      const pondCell = (c, r) => c >= p2.col && c < p2.col + p2.cols && r >= p2.row && r < p2.row + p2.rows;
+      for (let c = 1; c < GF.COLS - 1; c++) {
+        if (!pondCell(c, 0)) this.add.image(c * T + T / 2, FH * 0.72, "fence_top").setDisplaySize(T, FH).setOrigin(0.5, 1).setDepth(FH * 0.72 - T);
+        if (!pondCell(c, GF.ROWS - 1)) this.add.image(c * T + T / 2, H + 4, "fence_bottom").setDisplaySize(T, FH).setOrigin(0.5, 1).setDepth(H + 4);
+      }
+      for (let r = 1; r < GF.ROWS - 1; r++) {
+        if (!pondCell(0, r)) this.add.image(T * 0.32, r * T + T, "fence_left").setDisplaySize(T * 0.85, FH).setOrigin(0.5, 1).setDepth(r * T + T);
+        if (!pondCell(GF.COLS - 1, r)) this.add.image(W - T * 0.32, r * T + T, "fence_right").setDisplaySize(T * 0.85, FH).setOrigin(0.5, 1).setDepth(r * T + T);
+      }
+      this.add.image(T * 0.55, FH * 0.75, "fence_corner").setDisplaySize(T * 1.05, FH).setOrigin(0.5, 1).setDepth(FH * 0.75 - T);
+      const ctr = this.add.image(W - T * 0.55, FH * 0.75, "fence_corner").setDisplaySize(T * 1.05, FH).setOrigin(0.5, 1).setDepth(FH * 0.75 - T); ctr.flipX = true;
+      const cbl = this.add.image(T * 0.55, H + 4, "fence_corner").setDisplaySize(T * 1.05, FH).setOrigin(0.5, 1).setDepth(H + 4); if (pondCell(0, GF.ROWS - 1)) cbl.setVisible(false);
+      const cbr = this.add.image(W - T * 0.55, H + 4, "fence_corner").setDisplaySize(T * 1.05, FH).setOrigin(0.5, 1).setDepth(H + 4); cbr.flipX = true;
+    }
+
     // objetos del mundo (con estado para interacción)
     this.objs = GF.WORLD_OBJECTS.map((o, i) => {
       const lp = (G.layout && G.layout[i]) || null;                            // posición editada por el jugador
