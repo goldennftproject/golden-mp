@@ -425,7 +425,7 @@ class FarmScene extends Phaser.Scene {
     } else if (a.kind === "harvest") {
       const ck = o.cropKey || "papa", cd = CROP_DEF[ck] || CROP_DEF.papa;
       const gr = Math.max(1, Math.round(cd.yield * yieldMult()));
-      if (tryAddRes(ck, gr)) { o.state = "dry"; o.cropKey = null; o.readyAt = 0; this.setPlotGlow(o, "off"); o.spr.setVisible(false); o.emo.setVisible(false); o.timer.setVisible(false); this.syncPlots(); addXp("farming", 10); log(`${cd.emoji} +${gr} ${cd.label}.`, "good"); toast("+" + gr + " " + cd.emoji); refreshHud(); }
+      if (tryAddRes(ck, gr)) { o.state = "dry"; o.cropKey = null; o.readyAt = 0; this.setPlotGlow(o, "off"); this.coinBurst(o.cx, o.by); o.spr.setVisible(false); o.emo.setVisible(false); o.timer.setVisible(false); this.syncPlots(); addXp("farming", 10); log(`${cd.emoji} +${gr} ${cd.label}.`, "good"); toast("+" + gr + " " + cd.emoji); refreshHud(); }
       else toast("🎒 Inventario lleno");
     } else if (a.kind === "fish") {
       goFishing();
@@ -522,16 +522,42 @@ class FarmScene extends Phaser.Scene {
     GF.COLLISIONS = this.objs.filter(o => o.type !== "fish").map(o => ({ cx: o.cx, cy: o.by - T * 0.5, rx: o.w * 0.44, ry: T * 0.5 }));
   }
 
-  // brillo/efecto del cultivo: "half" (media cosecha) o "ready" (listo); cualquier otro valor lo apaga
+  // brillo/efecto del cultivo: "half" (media cosecha) o "ready" (aura legendaria); cualquier otro valor lo apaga
   setPlotGlow(pl, mode) {
     if (pl.glowTw) { pl.glowTw.stop(); pl.glowTw = null; }
     if (pl.glowTxt) { pl.glowTxt.destroy(); pl.glowTxt = null; }
+    if (pl.glowAura) { pl.glowAura.destroy(); pl.glowAura = null; }
+    if (pl.glowSp) { pl.glowSp.forEach(s => s.destroy()); pl.glowSp = null; }
     pl.spr.setAlpha(1);
     if (mode === "half") {
       pl.glowTw = this.tweens.add({ targets: pl.spr, alpha: { from: 1, to: 0.72 }, yoyo: true, repeat: -1, duration: 700 });
     } else if (mode === "ready") {
-      pl.glowTxt = this.add.text(pl.cx + GF.TILE * 0.3, pl.by - GF.TILE * 0.55, "✨", { fontSize: "13px" }).setOrigin(0.5).setDepth(pl.by + 2);
-      pl.glowTw = this.tweens.add({ targets: pl.glowTxt, alpha: { from: 1, to: 0.25 }, scale: { from: 1, to: 1.3 }, yoyo: true, repeat: -1, duration: 550 });
+      const T = GF.TILE;
+      // aura dorada pulsante detrás del cultivo ("tócame ya")
+      pl.glowAura = this.add.circle(pl.cx, pl.by - 4, T * 0.52, 0xffd76a, 0.28).setDepth(pl.by - 1);
+      this.tweens.add({ targets: pl.glowAura, scale: { from: 0.9, to: 1.18 }, alpha: { from: 0.32, to: 0.12 }, yoyo: true, repeat: -1, duration: 650 });
+      // chispas alrededor, con destellos alternados
+      pl.glowSp = [];
+      [[-0.38, -0.6], [0.36, -0.35], [0, -0.85]].forEach(([ox, oy], i) => {
+        const s = this.add.text(pl.cx + ox * T, pl.by + oy * T, i === 2 ? "✨" : "✦", { fontSize: i === 2 ? "12px" : "9px", color: "#ffe9a8" }).setOrigin(0.5).setDepth(pl.by + 2);
+        this.tweens.add({ targets: s, alpha: { from: 1, to: 0.1 }, scale: { from: 1, to: 1.35 }, yoyo: true, repeat: -1, duration: 420 + i * 160, delay: i * 180 });
+        pl.glowSp.push(s);
+      });
+      pl.glowTw = this.tweens.add({ targets: pl.spr, scale: { from: pl.spr.scale, to: pl.spr.scale * 1.06 }, yoyo: true, repeat: -1, duration: 650 });
+    }
+  }
+
+  // al cosechar: el brillo explota y caen monedas (feedback del diseñador)
+  coinBurst(x, y) {
+    const flash = this.add.circle(x, y - 8, 6, 0xffe9a8, 0.85).setDepth(99998);
+    this.tweens.add({ targets: flash, scale: 4, alpha: 0, duration: 350, onComplete: () => flash.destroy() });
+    for (let i = 0; i < 5; i++) {
+      const c = this.add.text(x, y - 12, "🪙", { fontSize: "12px" }).setOrigin(0.5).setDepth(99999);
+      this.tweens.add({
+        targets: c, x: x + (Math.random() - 0.5) * 52, y: y - 26 - Math.random() * 26,
+        alpha: { from: 1, to: 0 }, duration: 520 + Math.random() * 240, delay: i * 40,
+        onComplete: () => c.destroy(),
+      });
     }
   }
 
