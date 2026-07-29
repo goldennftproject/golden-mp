@@ -62,11 +62,13 @@ class FarmScene extends Phaser.Scene {
         if (!pondCell(0, r)) this.add.image(7, r * T + T, "fence_left").setDisplaySize(T * 0.22, T).setOrigin(0.5, 1).setDepth(2);
         if (!pondCell(GF.COLS - 1, r)) this.add.image(W - 7, r * T + T, "fence_right").setDisplaySize(T * 0.22, T).setOrigin(0.5, 1).setDepth(2);
       }
-      const corner = (x, y, flip, hide) => { const c2 = this.add.image(x, y, "fence_corner").setDisplaySize(T * 0.7, T * 1.05).setOrigin(0.5, 1).setDepth(y > H / 2 ? y : 3); c2.flipX = !!flip; if (hide) c2.setVisible(false); };
-      corner(9, T * 0.66, false, false);
-      corner(W - 9, T * 0.66, true, false);
-      corner(9, H + 6, false, pondCell(0, GF.ROWS - 1));
-      corner(W - 9, H + 6, true, false);
+      // esquina en L (combina travesaños horizontales + tira vertical); las 4 salen espejando
+      const cw = T * 1.08, chh = T * 1.12;
+      const mk = (x, y, ox, oy, fx, fy, hide) => { const c2 = this.add.image(x, y, "fence_corner").setDisplaySize(cw, chh).setOrigin(ox, oy).setDepth(y > H / 2 ? H + 6 : 3); c2.flipX = fx; c2.flipY = fy; if (hide) c2.setVisible(false); };
+      mk(0, 0, 0, 0, false, false, false);                          // superior izquierda (la generada)
+      mk(W, 0, 1, 0, true, false, false);                           // superior derecha
+      mk(0, H + 6, 0, 1, false, true, pondCell(0, GF.ROWS - 1));    // inferior izquierda (se oculta si la laguna toca)
+      mk(W, H + 6, 1, 1, true, true, false);                        // inferior derecha
     }
 
     // objetos del mundo (con estado para interacción)
