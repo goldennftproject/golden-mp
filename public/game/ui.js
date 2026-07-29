@@ -29,7 +29,8 @@ function itemView(d) {
   if (d.kind === "tool") {
     if (d.key === "axe") return { sprite: "axe", emoji: "🔧", label: "Hacha · durabilidad " + toolDur("axe") + "/" + TOOL_DEF.axe.max, dur: Math.round(toolDur("axe") / TOOL_DEF.axe.max * 100) };
     if (d.key === "rod") return { sprite: "fishing_rod", emoji: "🔧", label: "Caña · durabilidad " + toolDur("rod") + "/" + TOOL_DEF.rod.max, dur: Math.round(toolDur("rod") / TOOL_DEF.rod.max * 100) };
-    return { sprite: "hoe", emoji: "🔧", label: "Azada", dur: null };
+    if (d.key === "sword") return { sprite: "sword", emoji: "⚔️", label: "Espada de Hierro · durabilidad " + toolDur("sword") + "/" + TOOL_DEF.sword.max, dur: Math.round(toolDur("sword") / TOOL_DEF.sword.max * 100) };
+    return { sprite: "hoe", emoji: "🪝", label: "Azada", dur: null };
   }
   if (d.kind === "pick") { const pd = PICK_DEF[d.key]; return { sprite: pd.sprite, emoji: "⛏️", label: pd.label + " · durabilidad " + (G.picks.dur[d.key] || 0) + "/" + pd.dur, dur: Math.round((G.picks.dur[d.key] || 0) / pd.dur * 100) }; }
   if (d.kind === "res") return { sprite: CROP_DEF[d.key] ? "crop_" + d.key : null, emoji: RES_EMOJI[d.key], label: RES_LABEL[d.key], dur: null };
@@ -168,10 +169,11 @@ function refreshEquip() {
     { sprite: pd ? pd.sprite : "pick_stone", nm: pd ? pd.label : "Sin pico", dur: pd ? (G.picks.dur[eq] || 0) : 0, max: pd ? pd.dur : 1 },
     { sprite: "fishing_rod", nm: "Caña", dur: toolDur("rod"), max: TOOL_DEF.rod.max },
   ];
+  if (G.swordOwned) cells.push({ sprite: "sword", nm: "Espada de Hierro", dur: toolDur("sword"), max: TOOL_DEF.sword.max });
   box.innerHTML = cells.map(c => {
     const pct = Math.max(0, Math.min(100, Math.round(c.dur / c.max * 100)));
     const col = pct > 50 ? "#7ec95a" : (pct > 20 ? "#e2b23a" : "#d9534f");
-    return `<div class="eqtool" title="${c.nm} · ${c.st || c.dur + "/" + c.max}"><img src="${GF.spr(c.sprite)}"><div class="db"><i style="width:${pct}%;background:${col}"></i></div></div>`;
+    return `<div class="eqtool" title="${c.nm} · ${c.st || c.dur + "/" + c.max}"><img src="${GF.spr(c.sprite)}" onerror="this.outerHTML='⚔️'"><div class="db"><i style="width:${pct}%;background:${col}"></i></div></div>`;
   }).join("");
 }
 

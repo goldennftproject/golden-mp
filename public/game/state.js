@@ -138,7 +138,7 @@ const TOOL_DEF = {
   sword: { label:"Espada de Hierro", emoji:"⚔️", sprite:"sword",       max:80, repair:{bronce:2} },
 };
 // --- espada (se craftea en la Herrería; sin espada peleás a puño limpio) ---
-const SWORD_COST = { bronce: 8, madera: 5 };
+const SWORD_COST = { bronce: 12 };   // 100% metal (feedback del diseñador: nada de madera)
 function craftSword() {
   if (G.swordOwned) { toast("Ya tenés la espada"); return; }
   if (!canAfford(SWORD_COST)) { toast("Te faltan materiales"); return; }

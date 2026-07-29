@@ -12,10 +12,16 @@ class BootScene extends Phaser.Scene {
       for (let i = 0; i < 7; i++) L.push(["act_" + a + "_" + i, P + "act_" + a + "_" + i + ".png"]);
     });
     ["tree","tree_stump","rock","rock_mined","node_stone","node_bronze","node_gold",
-     "node_diamond","node_netherite","barn","market","store","wheat","sprout","duck","fishing_rod","boar",
-     "pond","plot","plot_blocked",
+     "node_diamond","node_netherite","wheat","sprout","duck","fishing_rod","boar",
+     "pond",
      "node_stone_mined","node_bronze_mined","node_gold_mined","node_diamond_mined","node_netherite_mined"]
       .forEach(k => L.push([k, P + k + ".png"]));
+    // versionados: el arte cambió y el caché de 1 día serviría el viejo
+    L.push(["plot", P + "plot.png?v=2"]);
+    L.push(["plot_blocked", P + "plot_blocked.png?v=2"]);
+    L.push(["barn", P + "barn.png?v=2"]);
+    L.push(["market", P + "market.png?v=2"]);
+    L.push(["store", P + "store.png?v=2"]);
     if (typeof CROP_ORDER !== "undefined") CROP_ORDER.forEach(k => L.push(["cropg_" + k, P + "cropg_" + k + ".png"]));
     return L;
   }
@@ -49,7 +55,7 @@ class BootScene extends Phaser.Scene {
     if (this.msg) this.msg.setText("Completando descarga… (" + missing.length + " restantes)");
     // espera breve creciente para dejar respirar al server, después repide solo lo faltante
     this.time.delayedCall(400 + this.tries * 500, () => {
-      missing.forEach(([k, f]) => this.load.image(k, f + "?r=" + this.tries));
+      missing.forEach(([k, f]) => this.load.image(k, f + (f.includes("?") ? "&r=" : "?r=") + this.tries));
       this.load.once("complete", () => this.ensureAll());
       this.load.start();
     });
