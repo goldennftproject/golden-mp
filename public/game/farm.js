@@ -425,7 +425,7 @@ class FarmScene extends Phaser.Scene {
     const a = this.action, o = a.o;
     if (a.kind === "chop") {
       const gr = Math.max(1, Math.round(3 * yieldMult()));
-      if (tryAddRes("madera", gr)) { useTool("axe"); addXp("crafting", 4); o.readyAt = nowMs() + CD.tree * 1000 * cdMult(); this.setObjTex(o, "tree_stump", GF.TILE); log(`🪵 +${gr} Madera. 🪓 ${toolDur("axe")}/${TOOL_DEF.axe.max}`, "good"); toast("+" + gr + " 🪵"); refreshHud(); if (toolDur("axe") <= 0) { log("🪓 ¡El hacha se rompió! Reparala en la Herrería.", "bad"); toast("🪓 ¡Hacha rota!"); } }
+      if (tryAddRes("madera", gr)) { useTool("axe"); addXp("crafting", 4); o.readyAt = nowMs() + CD.tree * 1000 * cdMult(); this.setObjTex(o, "tree_stump", GF.TILE * 0.6); log(`🪵 +${gr} Madera. 🪓 ${toolDur("axe")}/${TOOL_DEF.axe.max}`, "good"); toast("+" + gr + " 🪵"); refreshHud(); if (toolDur("axe") <= 0) { log("🪓 ¡El hacha se rompió! Reparala en la Herrería.", "bad"); toast("🪓 ¡Hacha rota!"); } }
       else toast("🎒 Inventario lleno");
     } else if (a.kind === "mine" && o.type === "rock") {
       const gr = Math.max(1, Math.round(2 * yieldMult()));
@@ -599,7 +599,7 @@ class FarmScene extends Phaser.Scene {
     pl.half = false; this.setPlotGlow(pl, "off");
     pl.spr.clearTint().setAlpha(1);
     pl.spr.setTexture("sprout").setVisible(true);
-    pl.spr.setScale((GF.TILE * 0.56) / pl.spr.width);
+    pl.spr.setScale((GF.TILE * 0.73) / pl.spr.width);   // ~20px visibles, centrado en la tierra
     pl.emo.setVisible(false);
   }
   // cultivo (conjunto) cuando está listo; si falta el sprite, cae al emoji
@@ -607,7 +607,7 @@ class FarmScene extends Phaser.Scene {
     const key = "cropg_" + pl.cropKey;
     if (pl.cropKey && this.textures.exists(key)) {
       pl.spr.setTexture(key).setVisible(true);
-      pl.spr.setScale((GF.TILE * 0.71) / pl.spr.width);
+      pl.spr.setScale((GF.TILE * 1.02) / pl.spr.width);   // ~27px visibles
       pl.emo.setVisible(false);
     } else {
       pl.spr.setVisible(false);
@@ -633,7 +633,7 @@ class FarmScene extends Phaser.Scene {
     this.setPlotGlow(pl, "off");
     if (this.textures.exists("withered")) {   // sprite cozy del cultivo marchito
       pl.spr.setTexture("withered").clearTint().setAlpha(1).setVisible(true);
-      pl.spr.setScale((GF.TILE * 0.64) / pl.spr.width);
+      pl.spr.setScale((GF.TILE * 0.59) / pl.spr.width);   // ~24px visibles
       pl.emo.setVisible(false);
     } else if (pl.spr.visible) { pl.spr.setTint(0x7a6f52).setAlpha(0.75); }
     else { pl.emo.setText("🥀").setVisible(true); }
@@ -676,7 +676,7 @@ class FarmScene extends Phaser.Scene {
           pl.half = true;
           const mk = "cropm_" + pl.cropKey;
           if (pl.cropKey && this.textures.exists(mk)) pl.spr.setTexture(mk);
-          pl.spr.setScale((GF.TILE * 0.69) / pl.spr.width);
+          pl.spr.setScale((GF.TILE * 0.96) / pl.spr.width);   // ~25px visibles
           this.setPlotGlow(pl, "half");
         }
       }
