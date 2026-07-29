@@ -136,7 +136,7 @@ class FarmScene extends Phaser.Scene {
       const owned = Math.max(6, Math.min(GF.PLOTS.length, G.plotsOwned || 6));
       if (i >= owned) {   // parcela bloqueada: se compra con plata
         obj.state = "locked";
-        if (obj.ground) { if (this.textures.exists("plot_blocked")) obj.ground.setTexture("plot_blocked").setDisplaySize(T, T); else obj.ground.setAlpha(0.45); }
+        if (obj.ground) { if (this.textures.exists("plot_blocked")) obj.ground.setTexture("plot_blocked").setDisplaySize(T, T).setTint(0x8f8f8f).setAlpha(0.8); else obj.ground.setAlpha(0.45); }   // apagado: se nota que no se puede usar
         return obj;
       }
       const sv = savedPlots[i];   // restaura lo plantado antes del refresh (ignora estados viejos como "wet")
@@ -391,7 +391,7 @@ class FarmScene extends Phaser.Scene {
         if (this.unlockPend === o && nowMs() < this.unlockPendUntil) {
           if (G.plata < cost) { toast("Te falta plata (" + cost + " 🪙)"); return; }
           G.plata -= cost; G.plotsOwned = (G.plotsOwned || 6) + 1; o.state = "dry"; this.unlockPend = null;
-          if (o.ground && this.textures.exists("plot")) { o.ground.setTexture("plot").setDisplaySize(GF.TILE, GF.TILE); o.ground.setAlpha(1); }
+          if (o.ground && this.textures.exists("plot")) { o.ground.setTexture("plot").setDisplaySize(GF.TILE, GF.TILE).clearTint(); o.ground.setAlpha(1); }
           addXp("farming", 5); this.syncPlots();
           log("🔓 Desbloqueaste una parcela por " + cost + " 🪙.", "good"); toast("🔓 ¡Parcela desbloqueada!");
           refreshHud(); if (typeof saveFarm === "function") saveFarm(true);
