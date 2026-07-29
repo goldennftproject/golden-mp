@@ -11,7 +11,7 @@ class BootScene extends Phaser.Scene {
     ["chop","mine","fish","water","plant","harvest"].forEach(a => {
       for (let i = 0; i < 7; i++) L.push(["act_" + a + "_" + i, P + "act_" + a + "_" + i + ".png"]);
     });
-    ["tree_stump","rock","rock_mined","wheat","sprout","duck","fishing_rod","boar",
+    ["tree_stump","rock","rock_mined","wheat","sprout","duck","boar",
      "node_stone_mined","node_bronze_mined","node_gold_mined","node_diamond_mined","node_netherite_mined"]
       .forEach(k => L.push([k, P + k + ".png"]));
     ["tree","pond","node_stone","node_bronze","node_gold","node_diamond","node_netherite"]
@@ -23,6 +23,7 @@ class BootScene extends Phaser.Scene {
     L.push(["market", P + "market.png?v=3"]);
     L.push(["store", P + "store.png?v=3"]);
     ["fence_top","fence_bottom","fence_left","fence_right"].forEach(k => L.push([k, P + k + ".png?v=2"]));
+    L.push(["fishing_rod", P + "fishing_rod.png?v=2"]);   // caña cozy nueva
     L.push(["fence_corner", P + "fence_corner.png?v=3"]);
     if (typeof CROP_ORDER !== "undefined") CROP_ORDER.forEach(k => L.push(["cropg_" + k, P + "cropg_" + k + ".png"]));
     return L;
@@ -31,8 +32,8 @@ class BootScene extends Phaser.Scene {
   preload() {
     // ATLAS: todos los sprites del mundo en 2 archivos (mucho más liviano para el server free).
     // Si el atlas no llega, ensureAll() baja los archivos sueltos como respaldo.
-    this.load.image("__atlas", "assets/atlas.png?v=4");
-    this.load.json("__atlasmap", "assets/atlas.json?v=4");
+    this.load.image("__atlas", "assets/atlas.png?v=5");
+    this.load.json("__atlasmap", "assets/atlas.json?v=5");
 
     // barra de carga simple
     const w = this.scale.width, h = this.scale.height;
