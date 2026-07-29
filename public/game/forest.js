@@ -192,7 +192,17 @@ class ForestScene extends Phaser.Scene {
       this.action.t += dt;
       const sign = this.facing === "west" ? -1 : 1;
       hero.setScale(sign * this.actScale, this.actScale);
-      if (hero.anims.currentAnim?.key !== "act_chop") hero.play("act_chop");
+      // el golpe muestra el ARMA equipada (espada o arco), no el hacha (detalles 29/7)
+      if (hero.anims.currentAnim?.key !== "idle") hero.play("idle");
+      if (!this.action.fx) {
+        const wkey = this.action.kind === "shoot" ? "bow" : "sword";
+        if (this.textures.exists(wkey)) {
+          const fx = this.add.image(hero.x + sign * 18, hero.y - 26, wkey).setDisplaySize(26, 26).setOrigin(0.5, 0.85).setDepth(hero.y + 1);
+          this.action.fx = fx;
+          if (this.action.kind === "shoot") { fx.setFlipX(sign < 0); this.time.delayedCall(this.action.dur * 1000, () => fx.destroy()); }
+          else { fx.setAngle(sign * -70); this.tweens.add({ targets: fx, angle: sign * 75, duration: Math.min(280, this.action.dur * 1000), onComplete: () => fx.destroy() }); }
+        } else this.action.fx = true;
+      }
       if (this.action.t >= this.action.dur) {
         const a = this.action; this.action = null;
         if (a.kind === "shoot") { if (a.m && !a.m.dead) this.shootArrow(a.m); }

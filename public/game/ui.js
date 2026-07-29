@@ -19,7 +19,7 @@ function closeOv(id) { const e = $(id); if (e) e.classList.remove("show"); }
 function closeAllOv() { document.querySelectorAll(".ov.show").forEach(e => e.classList.remove("show")); }
 
 /* ---- HUD ---- */
-function refreshHud() { setTxt("s-level", G.level); setTxt("s-prestige", G.prestige); setTxt("s-plata", fmt(G.plata)); setTxt("s-golden", fmt(G.golden)); setTxt("s-week", G.week); setTxt("s-hp", Math.ceil(G.hp) + "/" + G.hpMax); if (typeof refreshHotbar === "function") refreshHotbar(); }
+function refreshHud() { setTxt("s-level", G.level); setTxt("s-prestige", G.prestige); setTxt("s-plata", fmt(G.plata)); setTxt("s-golden", fmt(G.golden)); setTxt("s-week", G.week); setTxt("s-hp", Math.ceil(G.hp) + "/" + G.hpMax); if (typeof checkCooking === "function") checkCooking(); if (typeof refreshHotbar === "function") refreshHotbar(); }
 
 /* ---- inventario por casillas (todo es ítem; arrastrar para reordenar) ---- */
 let dndActive = false;   // no re-renderizar mientras se arrastra
@@ -33,16 +33,18 @@ function itemView(d) {
     if (d.key === "bow") return { sprite: "bow", emoji: "🏹", label: "Arco · durabilidad " + toolDur("bow") + "/" + TOOL_DEF.bow.max, dur: Math.round(toolDur("bow") / TOOL_DEF.bow.max * 100) };
     return { sprite: "hoe", emoji: "🪝", label: "Azada", dur: null };
   }
-  if (d.kind === "pick") { const pd = PICK_DEF[d.key]; return { sprite: pd.sprite, emoji: "⛏️", label: pd.label + " · durabilidad " + (G.picks.dur[d.key] || 0) + "/" + pd.dur, dur: Math.round((G.picks.dur[d.key] || 0) / pd.dur * 100) }; }
+  if (d.kind === "pick") { const pd = PICK_DEF[d.key]; const glow = d.key === "diamond" ? "glow-cyan" : (d.key === "netherite" ? "glow-fire" : ""); return { sprite: pd.sprite, emoji: "⛏️", glow, label: pd.label + " · durabilidad " + (G.picks.dur[d.key] || 0) + "/" + pd.dur, dur: Math.round((G.picks.dur[d.key] || 0) / pd.dur * 100) }; }
   if (d.kind === "res") return { sprite: resSprite(d.key), emoji: RES_EMOJI[d.key], label: RES_LABEL[d.key], dur: null };
   if (d.kind === "seed") { const cd = CROP_DEF[d.key]; return { sprite: "seed_" + d.key, emoji: cd.emoji, label: cd.label + " (semilla)", dur: null }; }
-  if (d.kind === "fish") { const f = FISH_DEF[d.key]; return { sprite: f ? f.sprite : null, emoji: f ? f.emoji : "🐟", label: f ? f.label : "Pez", dur: null }; }
+  if (d.kind === "fish") { const f = FISH_DEF[d.key]; const glow = { raro: "glow-blue", epico: "glow-purple", legendario: "glow-gold" }[d.key] || ""; return { sprite: f ? f.sprite : null, emoji: f ? f.emoji : "🐟", glow, label: f ? f.label : "Pez", dur: null }; }
+  if (d.kind === "dish") { const r = RECIPE_DEF[d.key]; return { sprite: r ? r.sprite : null, emoji: r ? r.emoji : "🍲", label: r ? r.label + " · clic para comer (" + r.desc + ")" : "Plato", dur: null }; }
   return { sprite: null, emoji: "?", label: "", dur: null };
 }
 // si el sprite existe lo muestra; si falla la carga, cae al emoji (sin romper)
 function itemIcon(v) {
-  if (v.sprite && v.emoji) return `<img src="${GF.spr(v.sprite)}" onerror="this.outerHTML='<span class=&quot;em&quot;>${v.emoji}</span>'">`;
-  if (v.sprite) return `<img src="${GF.spr(v.sprite)}">`;
+  const cls = v.glow ? ` class="${v.glow}"` : "";
+  if (v.sprite && v.emoji) return `<img${cls} src="${GF.spr(v.sprite)}" onerror="this.outerHTML='<span class=&quot;em&quot;>${v.emoji}</span>'">`;
+  if (v.sprite) return `<img${cls} src="${GF.spr(v.sprite)}">`;
   return `<span class="em">${v.emoji}</span>`;
 }
 function durBar(v) { return (v.dur != null && v.dur < 100) ? `<span class="durb"><i style="width:${Math.max(0, v.dur)}%;background:${durColor(v.dur)}"></i></span>` : ""; }
@@ -53,18 +55,26 @@ function coinIc(cur) { return `<img class="ric" src="${GF.spr(cur === "esencia" 
 function invCellHtml(d, i, rem, zone) {
   if (!d) return `<div class="slot" data-slot="${i}" data-zone="${zone}"></div>`;
   let cnt = "";
-  if (d.kind === "res" || d.kind === "seed" || d.kind === "fish") { const k = d.kind + ":" + d.key; const n = Math.min(99, rem[k] || 0); rem[k] = (rem[k] || 0) - n; cnt = `<span class="cnt">${fmt(n)}</span>`; }
+  if (d.kind === "res" || d.kind === "seed" || d.kind === "fish" || d.kind === "dish") { const k = d.kind + ":" + d.key; const n = Math.min(99, rem[k] || 0); rem[k] = (rem[k] || 0) - n; cnt = `<span class="cnt">${fmt(n)}</span>`; }
   const v = itemView(d);
   const sel = (d.kind === "seed" && G.selSeed === d.key) ? " sel" : "";
   const eq = (d.kind === "pick" && G.picks.eq === d.key) ? " eq" : "";
   return `<div class="slot filled${sel}${eq}" draggable="true" data-slot="${i}" data-zone="${zone}" title="${v.label}">${itemIcon(v)}${cnt}${durBar(v)}</div>`;
 }
+function bindTrash() {
+  const tr = $("inv-trash"); if (!tr || tr._bound) return; tr._bound = true;
+  tr.addEventListener("dragover", e => { e.preventDefault(); e.dataTransfer.dropEffect = "move"; tr.classList.add("hot"); });
+  tr.addEventListener("dragleave", () => tr.classList.remove("hot"));
+  tr.addEventListener("drop", e => { e.preventDefault(); tr.classList.remove("hot"); dndActive = false; dndDrop(e.dataTransfer.getData("text/plain"), "trash", 0); });
+}
 function refreshInv() {
   syncSlots();
+  bindTrash();
   const cap = invSlots(), rem = {};
   ITEM_RES_ORDER.forEach(r => rem["res:" + r] = Math.floor(G.res[r] || 0));
   CROP_ORDER.forEach(s => rem["seed:" + s] = Math.floor(G.seeds[s] || 0));
   FISH_ORDER.forEach(f => rem["fish:" + f] = Math.floor((G.fish && G.fish[f]) || 0));
+  RECIPE_ORDER.forEach(d => rem["dish:" + d] = Math.floor((G.dishes && G.dishes[d]) || 0));
   let html = "";
   for (let i = 0; i < cap; i++) html += invCellHtml(G.slots[i], i, rem, "inv");
   $("inv-slots").innerHTML = html;
@@ -79,6 +89,7 @@ function invCellClick(i) {
   const d = G.slots[i]; if (!d) return;
   if (d.kind === "seed") { if (!cropUnlocked(d.key)) { toast("Necesitás Cultivo nivel " + CROP_DEF[d.key].lvl); return; } selectSeed(d.key); toast("🌱 Plantando: " + CROP_DEF[d.key].label); }
   else if (d.kind === "pick") { if (G.picks.owned[d.key]) equipPick(d.key); }
+  else if (d.kind === "dish") eatDish(d.key);
 }
 
 // botón para ampliar la bolsa (+6): primera fila con minerales, siguientes con plata
@@ -99,6 +110,7 @@ function hotItemExists(d) {
   if (d.kind === "res") return (G.res[d.key] || 0) > 0;
   if (d.kind === "seed") return (G.seeds[d.key] || 0) > 0;
   if (d.kind === "fish") return ((G.fish && G.fish[d.key]) || 0) > 0;
+  if (d.kind === "dish") return ((G.dishes && G.dishes[d.key]) || 0) > 0;
   return true;   // herramientas siempre están
 }
 function hotCellHtml(d, i) {
@@ -106,7 +118,7 @@ function hotCellHtml(d, i) {
   const on = (G.hotSel === i) ? " on" : "";
   if (!d) return `<div class="hcell${on}" data-slot="${i}" data-zone="hot">${num}</div>`;
   const v = itemView(d);
-  let cnt = ""; if (d.kind === "res") cnt = `<span class="cnt">${fmt(G.res[d.key] || 0)}</span>`; if (d.kind === "seed") cnt = `<span class="cnt">${fmt(G.seeds[d.key] || 0)}</span>`; if (d.kind === "fish") cnt = `<span class="cnt">${fmt((G.fish && G.fish[d.key]) || 0)}</span>`;
+  let cnt = ""; if (d.kind === "res") cnt = `<span class="cnt">${fmt(G.res[d.key] || 0)}</span>`; if (d.kind === "seed") cnt = `<span class="cnt">${fmt(G.seeds[d.key] || 0)}</span>`; if (d.kind === "fish") cnt = `<span class="cnt">${fmt((G.fish && G.fish[d.key]) || 0)}</span>`; if (d.kind === "dish") cnt = `<span class="cnt">${fmt((G.dishes && G.dishes[d.key]) || 0)}</span>`;
   const sel = (d.kind === "seed" && G.selSeed === d.key) ? " sel" : "";
   const eq = (d.kind === "pick" && G.picks.eq === d.key) ? " eq" : "";
   const ghost = hotItemExists(d) ? "" : " ghost";
@@ -122,7 +134,11 @@ function refreshHotbar() {
   let html = ""; for (let i = 0; i < 10; i++) html += hotCellHtml(G.hotbar[i], i);
   box.innerHTML = html;
   bindZoneDnD(box, "hot");
-  box.querySelectorAll("[data-slot]").forEach(c => c.addEventListener("click", () => hotSelect(+c.dataset.slot)));
+  box.querySelectorAll("[data-slot]").forEach(c => {
+    c.addEventListener("click", () => hotSelect(+c.dataset.slot));
+    // clic derecho: quitar el objeto de la barra (detalless.docx)
+    c.addEventListener("contextmenu", (e) => { e.preventDefault(); const i = +c.dataset.slot; if (G.hotbar[i]) { G.hotbar[i] = null; toast("🗑️ Quitado de la barra"); refreshHotbar(); } });
+  });
 }
 // seleccionar hueco de la hotbar (= herramienta "en mano"); equipa pico / elige semilla si corresponde
 function hotSelect(i) {
@@ -132,6 +148,7 @@ function hotSelect(i) {
   if (d) {
     if (d.kind === "pick" && G.picks.owned[d.key]) equipPick(d.key);
     else if (d.kind === "seed" && cropUnlocked(d.key)) selectSeed(d.key);
+    else if (d.kind === "dish") eatDish(d.key);
   }
   const v = d ? itemView(d) : null;
   toast(v ? "✋ " + v.label : "Hueco " + (i === 9 ? 0 : i + 1) + " vacío");
@@ -154,7 +171,20 @@ function dndDrop(src, tz, ti) {
   else if (sz === "inv" && tz === "hot") { const d = G.slots[si]; if (d) G.hotbar[ti] = { kind: d.kind, key: d.key }; }
   else if (sz === "hot" && tz === "hot") { const a = G.hotbar[si]; G.hotbar[si] = G.hotbar[ti]; G.hotbar[ti] = a; }
   else if (sz === "hot" && tz === "inv") { G.hotbar[si] = null; }
+  else if (tz === "trash") {   // tirar a la basura (detalless.docx)
+    if (sz === "hot") { G.hotbar[si] = null; toast("🗑️ Quitado de la barra"); }
+    else { const d = G.slots[si]; if (d) trashStack(d); }
+  }
   if (isOpen("ov-inv")) refreshInv(); else refreshHotbar();
+}
+// tirar una pila de recursos/semillas/pescados (las herramientas no se tiran)
+function trashStack(d) {
+  if (d.kind === "res")  { const n = Math.min(99, Math.floor(G.res[d.key] || 0));  if (n <= 0) return; G.res[d.key] -= n;  toast("🗑️ Tiraste " + n + " " + RES_LABEL[d.key]); }
+  else if (d.kind === "seed") { const n = Math.min(99, Math.floor(G.seeds[d.key] || 0)); if (n <= 0) return; G.seeds[d.key] -= n; toast("🗑️ Tiraste " + n + " semillas"); }
+  else if (d.kind === "fish") { const n = Math.min(99, Math.floor((G.fish && G.fish[d.key]) || 0)); if (n <= 0) return; G.fish[d.key] -= n; toast("🗑️ Tiraste " + n + " peces"); }
+  else if (d.kind === "dish") { const n = Math.min(99, Math.floor((G.dishes && G.dishes[d.key]) || 0)); if (n <= 0) return; G.dishes[d.key] -= n; toast("🗑️ Tiraste " + n + " platos"); }
+  else { toast("Eso no se puede tirar"); return; }
+  syncSlots(); if (typeof saveFarm === "function") saveFarm();
 }
 
 /* ---- skills ---- */
@@ -300,13 +330,20 @@ function refreshTools() { refreshForge(); }   // compatibilidad con llamadas vie
 /* ---- cocina (en la Granja) ---- */
 function refreshCooking() {
   const box = $("cook-list"); if (!box) return;
-  box.innerHTML = RECIPE_ORDER.map(id => {
+  let head = "";
+  if (G.cooking) {   // barra de cocción en curso
+    const r = RECIPE_DEF[G.cooking.id];
+    const left = Math.max(0, G.cooking.endAt - nowMs());
+    const pct = Math.round((1 - left / (G.cooking.total || 1)) * 100);
+    head = '<div class="forge-row"><div class="fic">🍳</div><div class="finfo"><div class="fnm">Cocinando ' + (r ? r.label : "") + '…</div><div class="durbar"><i style="width:' + pct + '%"></i></div><div class="fds">' + Math.ceil(left / 1000) + 's restantes</div></div></div>';
+  }
+  box.innerHTML = head + RECIPE_ORDER.map(id => {
     const r = RECIPE_DEF[id];
     const parts = [];
     if (r.fish) for (const k in r.fish) parts.push(fishIc(k) + " ×" + r.fish[k]);
     if (r.res) for (const k in r.res) parts.push(resIc(k) + " ×" + r.res[k]);
     const fic = r.sprite ? '<img src="' + GF.spr(r.sprite) + '" onerror="this.outerHTML=\'' + r.emoji + '\'">' : r.emoji;
-    return '<div class="forge-row"><div class="fic">' + fic + '</div><div class="finfo"><div class="fnm">' + r.label + '</div><div class="fds">' + r.desc + '</div><div class="fds">Ingredientes: ' + parts.join(" · ") + '</div></div><div class="fbtns"><button class="green sm" ' + (canCook(id) ? "" : "disabled") + ' data-cook="' + id + '">Cocinar</button></div></div>';
+    return '<div class="forge-row"><div class="fic">' + fic + '</div><div class="finfo"><div class="fnm">' + r.label + '</div><div class="fds">' + r.desc + '</div><div class="fds">Ingredientes: ' + parts.join(" · ") + '</div></div><div class="fbtns"><button class="green sm" ' + ((canCook(id) && !G.cooking) ? "" : "disabled") + ' data-cook="' + id + '">Cocinar</button></div></div>';
   }).join("");
   box.querySelectorAll("[data-cook]").forEach(b => b.onclick = () => cook(b.dataset.cook));
 }
@@ -324,7 +361,8 @@ function refreshMarket() {
 // tienda de semillas: comprar con plata, bloqueadas por nivel de Cultivo
 function refreshSeedShop() {
   const box = $("seed-shop"); if (!box) return;
-  box.innerHTML = CROP_ORDER.map(k => {
+  const sb = seedBuysToday();
+  box.innerHTML = '<div class="shophead">🌱 Cupo diario: ' + sb.count + '/' + SEED_DAILY_MAX + ' semillas</div>' + CROP_ORDER.map(k => {
     const cd = CROP_DEF[k], unlocked = cropUnlocked(k), aff = G.plata >= cd.seedCost;
     const controls = unlocked
       ? `<input id="sq-${k}" type="number" min="1" value="1"><button class="green sm" data-buy="${k}" ${aff ? "" : "disabled"}>Comprar · ${coinIc("plata")}${cd.seedCost} c/u</button>`
@@ -483,6 +521,33 @@ function initOverlayDrag() {
   });
 }
 
+/* ---- hotbar: mover posición (botón ✥, detalles 29/7) ---- */
+function initHotbarDrag() {
+  const wrap = $("hotwrap"), btn = $("hotmove");
+  if (!wrap || !btn) return;
+  let moving = false, drag = null;
+  function applyPos(left, top) {
+    const w = wrap.offsetWidth, h = wrap.offsetHeight;
+    left = Math.max(4, Math.min(left, window.innerWidth - w - 4));
+    top = Math.max(4, Math.min(top, window.innerHeight - h - 4));
+    wrap.style.left = left + "px"; wrap.style.top = top + "px"; wrap.style.bottom = "auto"; wrap.style.transform = "none";
+  }
+  try { const s = JSON.parse(localStorage.getItem("gf_hotpos") || "null"); if (s && typeof s.left === "number") applyPos(s.left, s.top); } catch (e) {}
+  window.addEventListener("resize", () => { if (wrap.style.top && wrap.style.top !== "auto") applyPos(parseFloat(wrap.style.left) || 0, parseFloat(wrap.style.top) || 0); });
+  btn.onclick = (e) => { e.stopPropagation(); moving = !moving; wrap.classList.toggle("moving", moving); btn.classList.toggle("active", moving); toast(moving ? "✥ Arrastrá la barra para moverla" : "📌 Barra fijada"); };
+  wrap.addEventListener("pointerdown", (e) => {
+    if (!moving || e.target.closest("#hotmove")) return;
+    e.preventDefault(); e.stopPropagation();
+    const r = wrap.getBoundingClientRect();
+    drag = { dx: e.clientX - r.left, dy: e.clientY - r.top };
+    try { wrap.setPointerCapture(e.pointerId); } catch (er) {}
+  });
+  wrap.addEventListener("pointermove", (e) => { if (drag) applyPos(e.clientX - drag.dx, e.clientY - drag.dy); });
+  const end = () => { if (!drag) return; drag = null; const r = wrap.getBoundingClientRect(); try { localStorage.setItem("gf_hotpos", JSON.stringify({ left: r.left, top: r.top })); } catch (e) {} };
+  wrap.addEventListener("pointerup", end);
+  wrap.addEventListener("pointercancel", end);
+}
+
 /* ---- init ---- */
 function initUI() {
   GF.uiOpen = false;
@@ -490,7 +555,8 @@ function initUI() {
   const toggleMenu = () => gmenu.classList.toggle("collapsed");
   const gt = $("gmtoggle"); if (gt) gt.onclick = toggleMenu;
   const mb = $("menu-btn"); if (mb) mb.onclick = toggleMenu;
-  document.querySelectorAll(".gmi").forEach(b => b.onclick = () => { closeAllOv(); openOv(b.dataset.panel); gmenu.classList.add("collapsed"); });
+  // multiventana: abrir un panel ya no cierra los demás (detalles 29/7)
+  document.querySelectorAll(".gmi").forEach(b => b.onclick = () => { openOv(b.dataset.panel); gmenu.classList.add("collapsed"); });
   document.querySelectorAll("[data-close]").forEach(b => b.onclick = () => closeOv(b.dataset.close));
   initOverlayDrag();
   const lu = $("levelup"); if (lu) lu.onclick = levelUp;
@@ -503,12 +569,14 @@ function initUI() {
     $("shop-buy").style.display = s === "buy" ? "" : "none";
     $("shop-sell").style.display = s === "sell" ? "" : "none";
   });
-  // clic fuera de una ventana abierta → se cierra (el clic igual llega al juego)
+  // clic fuera de una ventana abierta → se cierra (menos la bolsa: multitarea al minar/talar, detalles 29/7)
   document.addEventListener("pointerdown", (e) => {
     if (!anyOvOpen()) return;
-    if (e.target.closest(".card, #gmenu, #hotbar, .hudbar, #logpanel, #editbar, #seedwheel")) return;
-    closeAllOv();
+    if (e.target.closest(".card, #gmenu, #hotwrap, .hudbar, #logpanel, #editbar, #seedwheel")) return;
+    document.querySelectorAll(".ov.show").forEach(o => { if (o.id !== "ov-inv") o.classList.remove("show"); });
   });
+  // clic derecho en el juego sin menú del navegador (siembra rápida, detalles 29/7)
+  const gameEl = $("game"); if (gameEl) gameEl.addEventListener("contextmenu", e => e.preventDefault());
   // pestañas de la Herrería: Picos / Herramientas
   document.querySelectorAll(".forgetab").forEach(b => b.onclick = () => {
     document.querySelectorAll(".forgetab").forEach(x => x.classList.toggle("active", x === b));
@@ -521,6 +589,7 @@ function initUI() {
     GF.editMode = on;
     const ce2 = $("cfg-edit"); if (ce2) ce2.textContent = on ? "✓ Terminar edición" : "Modo edición";
     const eb = $("editbar"); if (eb) eb.classList.toggle("show", on);
+    if (window.FARM && FARM.gridG) FARM.gridG.setVisible(on);   // el cuadriculado solo se ve editando
     if (on) { closeAllOv(); toast("✏️ Arrastrá los objetos a otra celda"); }
     else toast("📌 Edición terminada");
   };
@@ -533,6 +602,7 @@ function initUI() {
   const sw = $("seedwheel"); if (sw) sw.onclick = hideSeedWheel;
   const lm = $("logmin"); if (lm) lm.onclick = () => $("logpanel").classList.toggle("collapsed");
   initPanelDrag();
+  initHotbarDrag();
   document.querySelectorAll(".ltab").forEach(b => b.onclick = () => {
     $("logpanel").classList.remove("collapsed");
     document.querySelectorAll(".ltab").forEach(x => x.classList.toggle("active", x === b));
@@ -554,9 +624,10 @@ function initUI() {
     if (e.target && (e.target.tagName === "INPUT" || e.target.tagName === "TEXTAREA")) return;
     const key = e.key.toLowerCase();
     if (key === "escape") { closeAllOv(); if (typeof hideSeedWheel === "function") hideSeedWheel(); return; }
+    if (key === "m") { toggleMenu(); e.preventDefault(); return; }   // M: desplegar/plegar el menú (detalles 29/7)
     if (key >= "1" && key <= "9") { hotSelect(+key - 1); e.preventDefault(); return; }
     if (key === "0") { hotSelect(9); e.preventDefault(); return; }
-    if (KEYS[key]) { const id = KEYS[key]; if (isOpen(id)) closeOv(id); else { closeAllOv(); openOv(id); } e.preventDefault(); }
+    if (KEYS[key]) { const id = KEYS[key]; if (isOpen(id)) closeOv(id); else openOv(id); e.preventDefault(); }
   });
 
   refreshHud();

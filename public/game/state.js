@@ -26,6 +26,8 @@ const G = {
   plotsOwned: 6,   // parcelas desbloqueadas (las demás se compran con plata)
   daily: { day: 0, last: "" },   // cofre diario: día de racha reclamado (1..7) y fecha del último reclamo
   seedBuys: { date: "", count: 0 },   // cupo diario de semillas (compras + cofre)
+  dishes: {},      // platos cocinados (van a la bolsa; clic para comer)
+  cooking: null,   // { id, endAt, total } — barra de enfriamiento al cocinar
   buffs: [], secPerGameHour: 1, gameHours: 0,
   skills: { fishing: 0, farming: 0, cooking: 0, range: 0, sword: 0, mining: 0, crafting: 0 },
 };
@@ -224,17 +226,42 @@ function canCook(id) {
   if (r.fish) for (const k in r.fish) if ((G.fish[k] || 0) < r.fish[k]) return false;
   return true;
 }
+const COOK_MS = 8000;   // tiempo de cocción (barra de enfriamiento, detalless.docx)
 function cook(id) {
   const r = RECIPE_DEF[id]; if (!r) return;
+  if (G.cooking) { toast("🍳 Ya hay algo en el fuego…"); return; }
   if (!canCook(id)) { toast("Te faltan ingredientes"); return; }
   if (r.res) for (const k in r.res) G.res[k] -= r.res[k];
   if (r.fish) for (const k in r.fish) G.fish[k] -= r.fish[k];
-  G.hp = Math.min(G.hpMax, G.hp + r.heal);
-  if (r.buff) addBuff(r.buff.type, r.buff.label, r.buff.mult, r.buff.dur);
-  addXp("cooking", r.xp);
-  log(r.emoji + " Cocinaste " + r.label + ". " + r.desc, "gold"); toast(r.emoji + " ¡" + r.label + "!");
+  G.cooking = { id, endAt: nowMs() + COOK_MS, total: COOK_MS };
+  log("🍳 Cocinando " + r.label + "…"); toast("🍳 Cocinando…");
   refreshHud(); if (typeof syncSlots === "function") syncSlots(); if (isOpen("ov-inv")) refreshInv();
   if (typeof refreshCooking === "function" && isOpen("ov-barn")) refreshCooking();
+}
+// se llama cada segundo desde el HUD: cuando termina la cocción, el plato va a la bolsa
+function checkCooking() {
+  if (!G.cooking) return;
+  if (nowMs() < G.cooking.endAt) { if (typeof refreshCooking === "function" && isOpen("ov-barn")) refreshCooking(); return; }
+  const r = RECIPE_DEF[G.cooking.id];
+  if (r) {
+    G.dishes = G.dishes || {};
+    G.dishes[G.cooking.id] = (G.dishes[G.cooking.id] || 0) + 1;
+    addXp("cooking", r.xp);
+    log(r.emoji + " ¡" + r.label + " listo! Lo tenés en la bolsa.", "gold"); toast(r.emoji + " ¡Listo! Está en tu bolsa");
+  }
+  G.cooking = null;
+  if (typeof syncSlots === "function") syncSlots(); if (isOpen("ov-inv")) refreshInv();
+  if (typeof refreshCooking === "function" && isOpen("ov-barn")) refreshCooking();
+  if (typeof saveFarm === "function") saveFarm();
+}
+// comer un plato de la bolsa (clic sobre el ítem)
+function eatDish(id) {
+  const r = RECIPE_DEF[id]; if (!r || !G.dishes || (G.dishes[id] || 0) <= 0) return;
+  G.dishes[id]--;
+  G.hp = Math.min(G.hpMax, G.hp + r.heal);
+  if (r.buff) addBuff(r.buff.type, r.buff.label, r.buff.mult, r.buff.dur);
+  log(r.emoji + " Comiste " + r.label + ". " + r.desc, "gold"); toast(r.emoji + " ¡Ñam!");
+  refreshHud(); if (typeof syncSlots === "function") syncSlots(); if (isOpen("ov-inv")) refreshInv();
 }
 
 // --- bestiario (Fase D) — 6 tiers, de común a legendario ---
@@ -308,6 +335,7 @@ function canonicalStacks() {
   ITEM_RES_ORDER.forEach(r => { let n = Math.floor(G.res[r] || 0); while (n > 0) { list.push({ kind: "res", key: r }); n -= 99; } });
   CROP_ORDER.forEach(s => { let n = Math.floor(G.seeds[s] || 0); while (n > 0) { list.push({ kind: "seed", key: s }); n -= 99; } });
   FISH_ORDER.forEach(f => { let n = Math.floor((G.fish && G.fish[f]) || 0); while (n > 0) { list.push({ kind: "fish", key: f }); n -= 99; } });
+  RECIPE_ORDER.forEach(d => { let n = Math.floor((G.dishes && G.dishes[d]) || 0); while (n > 0) { list.push({ kind: "dish", key: d }); n -= 99; } });
   return list;
 }
 // reconcilia G.slots con lo que hay realmente, preservando el orden que armó el jugador

@@ -71,9 +71,11 @@ class FarmScene extends Phaser.Scene {
         : this.add.text(p0.x, p0.y, fi === 1 ? "🐠" : "🐟", { fontSize: "13px" }).setOrigin(0.5).setDepth(-990).setAlpha(0.85);
       this.pondFish.push({ s, tgt: this.pondPoint(), sp: 10 + Math.random() * 12 });
     });
-    g.lineStyle(1, 0x18300f, 0.13);
-    for (let x = 0; x <= W; x += T) { g.beginPath(); g.moveTo(x, 0); g.lineTo(x, H); g.strokePath(); }
-    for (let y = 0; y <= H; y += T) { g.beginPath(); g.moveTo(0, y); g.lineTo(W, y); g.strokePath(); }
+    // cuadriculado: solo visible en modo edición (detalles 29/7)
+    this.gridG = this.add.graphics().setDepth(-999.4).setVisible(!!GF.editMode);
+    this.gridG.lineStyle(1, 0x18300f, 0.25);
+    for (let x = 0; x <= W; x += T) { this.gridG.beginPath(); this.gridG.moveTo(x, 0); this.gridG.lineTo(x, H); this.gridG.strokePath(); }
+    for (let y = 0; y <= H; y += T) { this.gridG.beginPath(); this.gridG.moveTo(0, y); this.gridG.lineTo(W, y); this.gridG.strokePath(); }
     g.lineStyle(4, 0x3c4d31, 0.9).strokeRect(0, 0, W, H);
 
     // cerca de madera cozy alrededor de la granja (horizontal de frente, vertical de canto)
@@ -100,7 +102,12 @@ class FarmScene extends Phaser.Scene {
       const s = this.add.image(cx, by, o.key).setOrigin(0.5, 1);
       const rw = (o.type === "ore" || o.type === "rock") ? o.w * 0.84 : o.w;   // nodos algo más chicos, dentro de la celda
       s.setScale(rw / s.width); s.setDepth(by);
-      return { i, type: o.type, ore: o.ore, cx, by, w: o.w, rw, baseKey: o.key, sprite: s, readyAt: 0 };
+      // sombra bajo árboles y edificios (detalles 29/7)
+      let shadow = null;
+      if (o.type === "tree" || o.type === "barn" || o.type === "market" || o.type === "store") {
+        shadow = this.add.ellipse(cx, by - 3, rw * 0.82, T * 0.3, 0x1c2a12, 0.22).setDepth(by - 0.5);
+      }
+      return { i, type: o.type, ore: o.ore, cx, by, w: o.w, rw, baseKey: o.key, sprite: s, shadow, readyAt: 0 };
     });
 
     // (los rótulos flotantes se quitaron: los edificios nuevos se distinguen solos
@@ -216,6 +223,7 @@ class FarmScene extends Phaser.Scene {
       if (this.dragObj) {
         const o = this.dragObj;
         o.sprite.setPosition(pt.worldX, pt.worldY).setDepth(99999);
+        if (o.shadow) o.shadow.setPosition(pt.worldX, pt.worldY - 3);
         const wCells = Math.max(1, Math.round(o.w / T));
         const leftCol = Phaser.Math.Clamp(Math.round((pt.worldX - wCells * T / 2) / T), 0, GF.COLS - wCells);
         const baseRow = Phaser.Math.Clamp(Math.round(pt.worldY / T), 1, GF.ROWS);
@@ -288,18 +296,31 @@ class FarmScene extends Phaser.Scene {
       const baseRow = Phaser.Math.Clamp(Math.round(pt.worldY / T), 1, GF.ROWS);
       if (this.placeBlocked(o, leftCol, baseRow, wCells)) {   // ocupado: devolver a su lugar
         o.sprite.setPosition(o.origCx, o.origBy).setDepth(o.origBy);
+        if (o.shadow) o.shadow.setPosition(o.origCx, o.origBy - 3).setDepth(o.origBy - 0.5);
         if (o.timer) o.timer.setPosition(o.origCx, o.origBy - T * 0.85);
         toast("🚫 Ahí ya hay algo — elegí otra celda");
         this.dragObj = null; return;
       }
       o.cx = leftCol * T + wCells * T / 2; o.by = baseRow * T;
       o.sprite.setPosition(o.cx, o.by).setDepth(o.by);
+      if (o.shadow) o.shadow.setPosition(o.cx, o.by - 3).setDepth(o.by - 0.5);
       if (o.timer) o.timer.setPosition(o.cx, o.by - T * 0.85);
       if (!G.layout) G.layout = {}; G.layout[o.i] = { cx: o.cx, by: o.by };
       this.rebuildCollisions();
       if (typeof saveFarm === "function") saveFarm(true);
       this.dragObj = null;
     });
+
+    // humo de la chimenea de la herrería (detalles 29/7)
+    const storeObj = this.objs.find(o => o.type === "store");
+    if (storeObj) {
+      this.time.addEvent({ delay: 900, loop: true, callback: () => {
+        const sp = storeObj.sprite; if (!sp || !sp.visible) return;
+        const px = storeObj.cx + storeObj.rw * 0.26, py = storeObj.by - sp.displayHeight * 0.94;
+        const c = this.add.circle(px, py, 2.5 + Math.random() * 2, 0xe4dccb, 0.45).setDepth(storeObj.by + 1);
+        this.tweens.add({ targets: c, y: py - 24 - Math.random() * 12, x: px + (Math.random() * 12 - 5), scale: 2.4, alpha: 0, duration: 2400, onComplete: () => c.destroy() });
+      }});
+    }
 
     this.cameras.main.setBounds(0, 0, W, H);
     this.cameras.main.startFollow(hero, true, 0.15, 0.15);
@@ -316,9 +337,9 @@ class FarmScene extends Phaser.Scene {
     this.keys = this.input.keyboard.addKeys({
       up:"W", down:"S", left:"A", right:"D",
       aup:"UP", adown:"DOWN", aleft:"LEFT", aright:"RIGHT",
-      plaza:"M", act:"E", act2:"SPACE",
+      act:"E", act2:"SPACE",
     }, false);   // enableCapture=false: no bloquea el tipeo en el chat
-    this.keys.plaza.on("down", () => { if (!GF.uiOpen && !this.action) this.scene.start("plaza"); });
+    // (la M ya no teletransporta a la plaza — ahora abre/cierra el menú, detalles 29/7)
     this.keys.act.on("down", () => this.doInteract());
     this.keys.act2.on("down", () => this.doInteract());
   }
