@@ -311,16 +311,40 @@ class FarmScene extends Phaser.Scene {
       this.dragObj = null;
     });
 
-    // humo de la chimenea de la herrería (detalles 29/7)
-    const storeObj = this.objs.find(o => o.type === "store");
-    if (storeObj) {
-      this.time.addEvent({ delay: 900, loop: true, callback: () => {
-        const sp = storeObj.sprite; if (!sp || !sp.visible) return;
-        const px = storeObj.cx + storeObj.rw * 0.26, py = storeObj.by - sp.displayHeight * 0.94;
-        const c = this.add.circle(px, py, 2.5 + Math.random() * 2, 0xe4dccb, 0.45).setDepth(storeObj.by + 1);
-        this.tweens.add({ targets: c, y: py - 24 - Math.random() * 12, x: px + (Math.random() * 12 - 5), scale: 2.4, alpha: 0, duration: 2400, onComplete: () => c.destroy() });
-      }});
+    // bocanadas de humo IRREGULARES (blobs procedurales, no círculos)
+    if (!this.textures.exists("puff0")) {
+      for (let p = 0; p < 3; p++) {
+        const gg = this.make.graphics({ add: false });
+        gg.fillStyle(0xffffff, 1);
+        gg.fillCircle(8, 8, 5);
+        gg.fillCircle(11 + p, 6, 3.4);
+        gg.fillCircle(5 - p, 9, 3);
+        gg.fillCircle(9 - p * 2, 12, 2.6);
+        gg.fillCircle(12, 10 + p, 2.2);
+        gg.generateTexture("puff" + p, 18, 18);
+        gg.destroy();
+      }
     }
+    // el humo nace un poco POR ENCIMA de la boca de la chimenea, no encima del ladrillo
+    const smokeFrom = (obj, dx, tint, cond) => {
+      this.time.addEvent({ delay: 850, loop: true, callback: () => {
+        if (!cond()) return;
+        const sp = obj.sprite; if (!sp || !sp.visible) return;
+        const px = obj.cx + obj.rw * dx + (Math.random() * 6 - 3);
+        const py = obj.by - sp.displayHeight - 4;
+        const s = this.add.image(px, py, "puff" + ((Math.random() * 3) | 0))
+          .setTint(tint).setAlpha(0.55)
+          .setScale(0.6 + Math.random() * 0.5).setAngle(Math.random() * 360)
+          .setDepth(obj.by + 1);
+        this.tweens.add({ targets: s, y: py - 26 - Math.random() * 14, x: px + (Math.random() * 16 - 7),
+          scale: s.scale * 2.2, angle: s.angle + (Math.random() * 70 - 35), alpha: 0,
+          duration: 2300 + Math.random() * 700, onComplete: () => s.destroy() });
+      }});
+    };
+    const storeObj = this.objs.find(o => o.type === "store");
+    if (storeObj) smokeFrom(storeObj, 0.26, 0xd8d2c4, () => true);                       // herrería: siempre
+    const cocinaObj = this.objs.find(o => o.type === "cocina");
+    if (cocinaObj) smokeFrom(cocinaObj, 0.10, 0xefe9db, () => !!G.cooking);              // cocina: solo cocinando
 
     this.cameras.main.setBounds(0, 0, W, H);
     this.cameras.main.startFollow(hero, true, 0.15, 0.15);
