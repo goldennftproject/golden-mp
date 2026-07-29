@@ -494,11 +494,24 @@ function initUI() {
   const pr = $("prestige"); if (pr) pr.onclick = prestige;
   document.querySelectorAll(".curbtn").forEach(b => b.onclick = () => { marketCur = b.dataset.cur; refreshMarket(); });
   document.querySelectorAll(".lbtab").forEach(b => b.onclick = () => { lbTab = b.dataset.lb; refreshLb(); });
-  document.querySelectorAll(".shoptab").forEach(b => b.onclick = () => {
-    document.querySelectorAll(".shoptab").forEach(x => x.classList.toggle("active", x === b));
+  document.querySelectorAll(".shoptab:not(.forgetab)").forEach(b => b.onclick = () => {
+    document.querySelectorAll(".shoptab:not(.forgetab)").forEach(x => x.classList.toggle("active", x === b));
     const s = b.dataset.shop;
     $("shop-buy").style.display = s === "buy" ? "" : "none";
     $("shop-sell").style.display = s === "sell" ? "" : "none";
+  });
+  // clic fuera de una ventana abierta → se cierra (el clic igual llega al juego)
+  document.addEventListener("pointerdown", (e) => {
+    if (!anyOvOpen()) return;
+    if (e.target.closest(".card, #gmenu, #hotbar, .hudbar, #logpanel, #editbar, #seedwheel")) return;
+    closeAllOv();
+  });
+  // pestañas de la Herrería: Picos / Herramientas
+  document.querySelectorAll(".forgetab").forEach(b => b.onclick = () => {
+    document.querySelectorAll(".forgetab").forEach(x => x.classList.toggle("active", x === b));
+    const s = b.dataset.forge;
+    $("forge-pane-picks").style.display = s === "picks" ? "" : "none";
+    $("forge-pane-tools").style.display = s === "tools" ? "" : "none";
   });
   // modo edición: cierra las ventanas y deja solo dos botoncitos flotantes sobre la hotbar
   window.setEditMode = (on) => {

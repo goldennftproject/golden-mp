@@ -131,7 +131,7 @@
   .cfgsec{background:#faf3e2;border:1px solid var(--line);border-radius:11px;padding:12px 13px;margin-top:10px}
   .cfgsec h4{margin:0 0 4px;font-size:13px;color:var(--gold-deep)}
   .cfgsec p{margin:0 0 8px;font-size:12px;color:var(--muted);line-height:1.5}
-  .forge-list{display:flex;flex-direction:column;gap:8px;margin-top:10px;max-height:60vh;overflow:auto}
+  .forge-list{display:flex;flex-direction:column;gap:8px;margin-top:10px;max-height:52vh;overflow:auto}
   .forge-row{display:flex;align-items:center;gap:10px;background:#faf3e2;border:1px solid var(--line);border-radius:11px;padding:9px 10px}
   .forge-row.eq{border-color:var(--gold);box-shadow:0 0 0 1px var(--gold) inset}
   .forge-row .fic{width:46px;height:46px;flex:0 0 auto;background:#efe3c6;border:2px solid #d3c298;border-radius:9px;display:flex;align-items:center;justify-content:center;font-size:22px}
@@ -319,10 +319,18 @@
   <div class="ov" id="ov-forge"><div class="card" style="width:min(580px,94%)">
     <button class="close" data-close="ov-forge">×</button>
     <h3>🛠️ Herrería</h3>
-    <div class="sub">Cada pico mina hasta su nivel. Cada uso gasta 1 de durabilidad; reparar cuesta 30% del material.</div>
-    <div class="forge-list" id="forge-list"></div>
-    <div class="sub" style="margin-top:12px">🪓 Herramientas — durabilidad y reparación</div>
-    <div class="forge-list" id="forge-tools"></div>
+    <div class="shoptabs">
+      <button class="shoptab forgetab active" data-forge="picks">⛏️ Picos</button>
+      <button class="shoptab forgetab" data-forge="tools">🔧 Herramientas</button>
+    </div>
+    <div id="forge-pane-picks">
+      <div class="sub">Cada pico mina hasta su nivel. Cada uso gasta 1 de durabilidad; reparar cuesta 30% del material.</div>
+      <div class="forge-list" id="forge-list"></div>
+    </div>
+    <div id="forge-pane-tools" style="display:none">
+      <div class="sub">Durabilidad, reparación y crafteo de herramientas y armas.</div>
+      <div class="forge-list" id="forge-tools"></div>
+    </div>
   </div></div>
 
   <div class="ov" id="ov-inv"><div class="card" style="width:min(540px,94%)">

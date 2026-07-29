@@ -16,8 +16,9 @@ class BootScene extends Phaser.Scene {
     // arte cozy nuevo (v2 rompe el caché del arte viejo)
     ["tree_stump","node_stone_mined"].forEach(k => L.push([k, P + k + ".png?v=2"]));
     // v4: restos correctos con fragmentos + brote/plantas recentrados en la tierra
-    ["sprout","node_bronze_mined","node_gold_mined","node_diamond_mined","node_netherite_mined"]
+    ["sprout","node_bronze_mined","node_gold_mined","node_diamond_mined"]
       .forEach(k => L.push([k, P + k + ".png?v=4"]));
+    L.push(["node_netherite_mined", P + "node_netherite_mined.png?v=5"]);   // restos con esquirlas negras
     L.push(["withered", P + "withered.png?v=2"]);      // cultivo marchito cozy
     // etapas intermedias (la verdura asomando al 50% del crecimiento)
     if (typeof CROP_ORDER !== "undefined") CROP_ORDER.forEach(k => L.push(["cropm_" + k, P + "cropm_" + k + ".png?v=3"]));
@@ -25,7 +26,7 @@ class BootScene extends Phaser.Scene {
       .forEach(k => L.push([k, P + k + ".png?v=2"]));   // arte cozy nuevo
     // versionados: el arte cambió y el caché de 1 día serviría el viejo
     L.push(["plot", P + "plot.png?v=4"]);   // tierra suelta que combina con los montículos
-    L.push(["plot_blocked", P + "plot_blocked.png?v=2"]);
+    L.push(["plot_blocked", P + "plot_blocked.png?v=3"]);   // sin trabajar: ramas, piedras y yuyos
     L.push(["barn", P + "barn.png?v=3"]);
     L.push(["market", P + "market.png?v=3"]);
     L.push(["store", P + "store.png?v=3"]);
@@ -39,8 +40,8 @@ class BootScene extends Phaser.Scene {
   preload() {
     // ATLAS: todos los sprites del mundo en 2 archivos (mucho más liviano para el server free).
     // Si el atlas no llega, ensureAll() baja los archivos sueltos como respaldo.
-    this.load.image("__atlas", "assets/atlas.png?v=10");
-    this.load.json("__atlasmap", "assets/atlas.json?v=10");
+    this.load.image("__atlas", "assets/atlas.png?v=11");
+    this.load.json("__atlasmap", "assets/atlas.json?v=11");
 
     // barra de carga simple
     const w = this.scale.width, h = this.scale.height;
