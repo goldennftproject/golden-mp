@@ -44,6 +44,9 @@ const RES_EMOJI = { madera:"🪵", piedra:"🪨", bronce:"🟫", oro:"🟡", dia
   papa:"🥔", zanahoria:"🥕", cebolla:"🧅", calabacin:"🥒", repollo:"🥬", calabaza:"🎃", brocoli:"🥦" };
 const RES_LABEL = { madera:"Madera", piedra:"Piedra", bronce:"Bronce", oro:"Oro", diamante:"Diamante", netherita:"Netherita", carne:"Carne", flecha:"Flecha",
   papa:"Papa", zanahoria:"Zanahoria", cebolla:"Cebolla", calabacin:"Calabacín", repollo:"Repollo", calabaza:"Calabaza", brocoli:"Brócoli" };
+// íconos cozy de recursos (los cultivos usan crop_<key>)
+const RES_SPRITE = { madera:"res_madera", piedra:"res_piedra", bronce:"res_bronce", oro:"res_oro", diamante:"res_diamante", netherita:"res_netherita", carne:"res_carne", flecha:"res_flecha" };
+function resSprite(k) { return CROP_DEF[k] ? "crop_" + k : (RES_SPRITE[k] || null); }
 
 // --- cultivos (semillas compradas en la Tienda; se desbloquean por nivel de Cultivo) ---
 const CROP_ORDER = ["papa","zanahoria","cebolla","calabacin","repollo","calabaza","brocoli"];
@@ -58,7 +61,7 @@ const CROP_DEF = {
 };
 // --- peces (ítems del inventario) ---
 const FISH_ORDER = ["comun", "raro", "epico", "legendario"];
-const FISH_DEF = { comun: { label: "Pez común", emoji: "🐟" }, raro: { label: "Pez raro", emoji: "🐠" }, epico: { label: "Pez épico", emoji: "🐡" }, legendario: { label: "Pez legendario", emoji: "🐋" } };
+const FISH_DEF = { comun: { label: "Pez común", emoji: "🐟", sprite: "fish_comun" }, raro: { label: "Pez raro", emoji: "🐠", sprite: "fish_raro" }, epico: { label: "Pez épico", emoji: "🐡", sprite: "fish_epico" }, legendario: { label: "Pez legendario", emoji: "🐋", sprite: "fish_legendario" } };
 
 function farmLevel() { return skillInfo(G.skills.farming).lvl; }
 function cropUnlocked(k) { const cd = CROP_DEF[k]; return !!cd && farmLevel() >= cd.lvl; }
@@ -179,13 +182,13 @@ function canShoot() { return G.bowOwned && toolDur("bow") > 0 && (G.res.flecha |
 
 // --- armaduras (dropean de los monstruos del Bosque; reducen el daño recibido) ---
 const GEAR_DEF = {
-  botas_cuero:    { slot:"botas",    label:"Botas de Cuero",    emoji:"🥾", def:1 },
-  casco_cuero:    { slot:"casco",    label:"Casco de Cuero",    emoji:"🪖", def:1 },
-  pechera_cuero:  { slot:"armadura", label:"Pechera de Cuero",  emoji:"🥋", def:2 },
-  escudo_madera:  { slot:"escudo",   label:"Escudo de Madera",  emoji:"🛡️", def:1 },
-  casco_hierro:   { slot:"casco",    label:"Casco de Hierro",   emoji:"⛑️", def:2 },
-  escudo_hierro:  { slot:"escudo",   label:"Escudo de Hierro",  emoji:"🛡️", def:2 },
-  pechera_hierro: { slot:"armadura", label:"Pechera de Hierro", emoji:"🛡️", def:3 },
+  botas_cuero:    { slot:"botas",    label:"Botas de Cuero",    emoji:"🥾", def:1, sprite:"gear_botas_cuero" },
+  casco_cuero:    { slot:"casco",    label:"Casco de Cuero",    emoji:"🪖", def:1, sprite:"gear_casco_cuero" },
+  pechera_cuero:  { slot:"armadura", label:"Pechera de Cuero",  emoji:"🥋", def:2, sprite:"gear_pechera_cuero" },
+  escudo_madera:  { slot:"escudo",   label:"Escudo de Madera",  emoji:"🛡️", def:1, sprite:"gear_escudo_madera" },
+  casco_hierro:   { slot:"casco",    label:"Casco de Hierro",   emoji:"⛑️", def:2, sprite:"gear_casco_hierro" },
+  escudo_hierro:  { slot:"escudo",   label:"Escudo de Hierro",  emoji:"🛡️", def:2, sprite:"gear_escudo_hierro" },
+  pechera_hierro: { slot:"armadura", label:"Pechera de Hierro", emoji:"🛡️", def:3, sprite:"gear_pechera_hierro" },
 };
 function gearDefTotal() { let d = 0; for (const s in G.gear) { const g = G.gear[s]; if (g && GEAR_DEF[g]) d += GEAR_DEF[g].def; } return d; }
 // al lootear una pieza: se equipa si mejora el slot; si no, se vende sola
@@ -205,13 +208,13 @@ function gainGear(key) {
 // --- cocina (en la Granja: platos que curan y dan buffs; usa carne/pescado) ---
 const RECIPE_ORDER = ["pescado_asado", "estofado", "banquete"];
 const RECIPE_DEF = {
-  pescado_asado: { label:"Pescado asado", emoji:"🐟", fish:{comun:1}, res:{madera:1},
+  pescado_asado: { label:"Pescado asado", emoji:"🐟", sprite:"dish_pescado_asado", fish:{comun:1}, res:{madera:1},
     heal:30, buff:{type:"yield",label:"🍳 Cosecha +10%",mult:1.10,dur:90}, xp:8,
     desc:"Cura 30 ❤ · Cosecha +10% (90s)" },
-  estofado: { label:"Estofado de carne", emoji:"🍲", res:{carne:2, papa:1},
+  estofado: { label:"Estofado de carne", emoji:"🍲", sprite:"dish_estofado", res:{carne:2, papa:1},
     heal:60, buff:{type:"cd",label:"🍲 Enfriamientos -15%",mult:0.85,dur:90}, xp:12,
     desc:"Cura 60 ❤ · Enfriamientos -15% (90s)" },
-  banquete: { label:"Banquete del granjero", emoji:"🍗", fish:{raro:1}, res:{carne:2, calabaza:1},
+  banquete: { label:"Banquete del granjero", emoji:"🍗", sprite:"dish_banquete", fish:{raro:1}, res:{carne:2, calabaza:1},
     heal:9999, buff:{type:"yield",label:"🍗 Cosecha +20%",mult:1.20,dur:180}, xp:25,
     desc:"Cura TODA la vida · Cosecha +20% (3 min)" },
 };
@@ -280,7 +283,7 @@ function invStacks() {
   st.push({ sprite:"fishing_rod", em:"🎣", nm:"Caña ("+toolDur("rod")+"/"+TOOL_DEF.rod.max+")" });
   for (const r of ["papa","zanahoria","cebolla","calabacin","repollo","calabaza","brocoli","madera","piedra","bronce","oro","diamante","netherita"]) {
     let n = Math.floor(G.res[r] || 0);
-    while (n > 0) { const c = Math.min(99, n); st.push({ em:RES_EMOJI[r], nm:RES_LABEL[r], count:c }); n -= 99; }
+    while (n > 0) { const c = Math.min(99, n); st.push({ sprite:resSprite(r), em:RES_EMOJI[r], nm:RES_LABEL[r], count:c }); n -= 99; }
   }
   return st;
 }

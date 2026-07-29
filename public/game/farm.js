@@ -628,7 +628,11 @@ class FarmScene extends Phaser.Scene {
   setWithered(pl) {
     pl.state = "withered"; pl.witherAt = 0; pl.readyAt = 0;
     this.setPlotGlow(pl, "off");
-    if (pl.spr.visible) { pl.spr.setTint(0x7a6f52).setAlpha(0.75); }
+    if (this.textures.exists("withered")) {   // sprite cozy del cultivo marchito
+      pl.spr.setTexture("withered").clearTint().setAlpha(1).setVisible(true);
+      pl.spr.setScale((GF.TILE * 0.85) / pl.spr.width);
+      pl.emo.setVisible(false);
+    } else if (pl.spr.visible) { pl.spr.setTint(0x7a6f52).setAlpha(0.75); }
     else { pl.emo.setText("🥀").setVisible(true); }
     pl.timer.setVisible(false);
   }

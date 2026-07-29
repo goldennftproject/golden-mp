@@ -11,9 +11,11 @@ class BootScene extends Phaser.Scene {
     ["chop","mine","fish","water","plant","harvest"].forEach(a => {
       for (let i = 0; i < 7; i++) L.push(["act_" + a + "_" + i, P + "act_" + a + "_" + i + ".png"]);
     });
-    ["tree_stump","rock","rock_mined","wheat","sprout","duck","boar",
-     "node_stone_mined","node_bronze_mined","node_gold_mined","node_diamond_mined","node_netherite_mined"]
-      .forEach(k => L.push([k, P + k + ".png"]));
+    ["rock","rock_mined","wheat","duck","boar"].forEach(k => L.push([k, P + k + ".png"]));
+    // arte cozy nuevo (v2 rompe el caché del arte viejo)
+    ["tree_stump","sprout","node_stone_mined","node_bronze_mined","node_gold_mined","node_diamond_mined","node_netherite_mined"]
+      .forEach(k => L.push([k, P + k + ".png?v=2"]));
+    L.push(["withered", P + "withered.png"]);   // cultivo marchito cozy
     ["tree","pond","node_stone","node_bronze","node_gold","node_diamond","node_netherite"]
       .forEach(k => L.push([k, P + k + ".png?v=2"]));   // arte cozy nuevo
     // versionados: el arte cambió y el caché de 1 día serviría el viejo
@@ -32,8 +34,8 @@ class BootScene extends Phaser.Scene {
   preload() {
     // ATLAS: todos los sprites del mundo en 2 archivos (mucho más liviano para el server free).
     // Si el atlas no llega, ensureAll() baja los archivos sueltos como respaldo.
-    this.load.image("__atlas", "assets/atlas.png?v=5");
-    this.load.json("__atlasmap", "assets/atlas.json?v=5");
+    this.load.image("__atlas", "assets/atlas.png?v=6");
+    this.load.json("__atlasmap", "assets/atlas.json?v=6");
 
     // barra de carga simple
     const w = this.scale.width, h = this.scale.height;

@@ -34,9 +34,9 @@ function itemView(d) {
     return { sprite: "hoe", emoji: "🪝", label: "Azada", dur: null };
   }
   if (d.kind === "pick") { const pd = PICK_DEF[d.key]; return { sprite: pd.sprite, emoji: "⛏️", label: pd.label + " · durabilidad " + (G.picks.dur[d.key] || 0) + "/" + pd.dur, dur: Math.round((G.picks.dur[d.key] || 0) / pd.dur * 100) }; }
-  if (d.kind === "res") return { sprite: CROP_DEF[d.key] ? "crop_" + d.key : null, emoji: RES_EMOJI[d.key], label: RES_LABEL[d.key], dur: null };
+  if (d.kind === "res") return { sprite: resSprite(d.key), emoji: RES_EMOJI[d.key], label: RES_LABEL[d.key], dur: null };
   if (d.kind === "seed") { const cd = CROP_DEF[d.key]; return { sprite: "seed_" + d.key, emoji: cd.emoji, label: cd.label + " (semilla)", dur: null }; }
-  if (d.kind === "fish") { const f = FISH_DEF[d.key]; return { sprite: null, emoji: f ? f.emoji : "🐟", label: f ? f.label : "Pez", dur: null }; }
+  if (d.kind === "fish") { const f = FISH_DEF[d.key]; return { sprite: f ? f.sprite : null, emoji: f ? f.emoji : "🐟", label: f ? f.label : "Pez", dur: null }; }
   return { sprite: null, emoji: "?", label: "", dur: null };
 }
 // si el sprite existe lo muestra; si falla la carga, cae al emoji (sin romper)
@@ -46,6 +46,10 @@ function itemIcon(v) {
   return `<span class="em">${v.emoji}</span>`;
 }
 function durBar(v) { return (v.dur != null && v.dur < 100) ? `<span class="durb"><i style="width:${Math.max(0, v.dur)}%;background:${durColor(v.dur)}"></i></span>` : ""; }
+// ícono chico de recurso en línea de texto (costos, requisitos); cae al emoji si falla
+function resIc(k) { const s = resSprite(k); return s ? `<img class="ric" src="${GF.spr(s)}" onerror="this.outerHTML='${RES_EMOJI[k] || "?"}'">` : (RES_EMOJI[k] || "?"); }
+function fishIc(k) { const f = FISH_DEF[k]; return f && f.sprite ? `<img class="ric" src="${GF.spr(f.sprite)}" onerror="this.outerHTML='${f.emoji}'">` : (f ? f.emoji : "🐟"); }
+function coinIc(cur) { return `<img class="ric" src="${GF.spr(cur === "esencia" ? "coin_esencia" : "coin_plata")}" onerror="this.outerHTML='${cur === "esencia" ? "✨" : "🪙"}'">`; }
 function invCellHtml(d, i, rem, zone) {
   if (!d) return `<div class="slot" data-slot="${i}" data-zone="${zone}"></div>`;
   let cnt = "";
@@ -82,7 +86,7 @@ function renderInvExpand() {
   const el = $("inv-expand"); if (!el) return;
   const nc = nextInvCost();
   if (!nc) { el.innerHTML = '<span class="exmax">Bolsa al máximo (' + invSlots() + ')</span>'; return; }
-  const label = nc.type === "res" ? Object.keys(nc.cost).map(k => RES_EMOJI[k] + nc.cost[k]).join(" ") : "🪙 " + fmt(nc.cost);
+  const label = nc.type === "res" ? Object.keys(nc.cost).map(k => resIc(k) + nc.cost[k]).join(" ") : coinIc("plata") + " " + fmt(nc.cost);
   const aff = nc.type === "res" ? canAfford(nc.cost) : G.plata >= nc.cost;
   el.innerHTML = '<button class="green sm" id="inv-expbtn" ' + (aff ? "" : "disabled") + '>Ampliar +6 · ' + label + "</button>";
   const b = $("inv-expbtn"); if (b) b.onclick = expandInv;
@@ -176,16 +180,17 @@ function refreshEquip() {
     const col = pct > 50 ? "#7ec95a" : (pct > 20 ? "#e2b23a" : "#d9534f");
     return `<div class="eqtool" title="${c.nm} · ${c.st || c.dur + "/" + c.max}"><img src="${GF.spr(c.sprite)}" onerror="this.outerHTML='⚔️'"><div class="db"><i style="width:${pct}%;background:${col}"></i></div></div>`;
   }).join("");
-  // slots de combate: armaduras equipadas, arma y munición
+  // slots de combate: armaduras equipadas, arma y munición (con sprite cozy y caída a emoji)
   const fill = (id, on, em, nm) => { const el = $(id); if (!el) return; el.classList.toggle("ghost", !on); el.innerHTML = "<span>" + em + "</span><i>" + nm + "</i>"; };
-  const gearSlot = (id, slot, fallbackEm, fallbackNm) => { const g = G.gear && G.gear[slot]; const gd = g && GEAR_DEF[g]; fill(id, !!gd, gd ? gd.emoji : fallbackEm, gd ? gd.label + " +" + gd.def : fallbackNm); };
+  const spIc = (sprite, em) => `<img class="eqimg" src="${GF.spr(sprite)}" onerror="this.outerHTML='${em}'">`;
+  const gearSlot = (id, slot, fallbackEm, fallbackNm) => { const g = G.gear && G.gear[slot]; const gd = g && GEAR_DEF[g]; fill(id, !!gd, gd ? spIc(gd.sprite, gd.emoji) : fallbackEm, gd ? gd.label + " +" + gd.def : fallbackNm); };
   gearSlot("eq-casco", "casco", "⛑️", "Casco");
   gearSlot("eq-armadura", "armadura", "🥋", "Armadura");
   gearSlot("eq-botas", "botas", "🥾", "Botas");
   gearSlot("eq-escudo", "escudo", "🛡️", "Escudo");
-  fill("eq-arma", G.swordOwned, "⚔️", G.swordOwned ? "Espada de Hierro" : "Arma");
+  fill("eq-arma", G.swordOwned, G.swordOwned ? spIc("sword", "⚔️") : "⚔️", G.swordOwned ? "Espada de Hierro" : "Arma");
   const fl = (G.res && G.res.flecha) || 0;
-  fill("eq-municion", fl > 0, "➳", fl > 0 ? fl + " flechas" : "Munición");
+  fill("eq-municion", fl > 0, fl > 0 ? spIc("res_flecha", "➳") : "➳", fl > 0 ? fl + " flechas" : "Munición");
   const ed = $("eq-def"); if (ed) ed.textContent = "Defensa total: " + gearDefTotal() + (G.bowOwned ? " · 🏹 Arco equipado" : "");
 }
 
@@ -202,13 +207,13 @@ function refreshDaily() {
     const d = i + 1;
     let cls = "fut", ic = "🔒";
     if (d <= base) { cls = "done"; ic = "✅"; }
-    else if (st.claimable && d === st.day) { cls = "now"; ic = "🎁"; }
+    else if (st.claimable && d === st.day) { cls = "now"; ic = `<img class="dyimg" src="${GF.spr("chest_daily")}" onerror="this.outerHTML='🎁'">`; }
     return `<div class="dylock ${cls}" title="${r.label}"><div class="ic">${ic}</div><div class="dl">Día ${d}</div></div>`;
   }).join("");
   const idx = (st.claimable ? st.day : Math.max(1, claimed)) - 1;
   $("dy-reward").innerHTML = (st.lost ? '<span class="bad">😢 Perdiste la racha — volvés al Día 1.</span>' : "")
     + (st.claimable ? "Hoy: " : "Reclamado: ") + DAILY_REWARDS[idx].label
-    + (st.lost ? '<br><button class="ghost sm" id="dy-recover">Recuperar racha · ' + STREAK_RECOVER_COST + ' ✨</button>' : "");
+    + (st.lost ? '<br><button class="ghost sm" id="dy-recover">Recuperar racha · ' + STREAK_RECOVER_COST + ' ' + coinIc("esencia") + '</button>' : "");
   const rec = $("dy-recover"); if (rec) rec.onclick = () => recoverStreak();
   const b = $("dy-claim");
   if (b) { b.disabled = !st.claimable; b.textContent = st.claimable ? "Reclamar 🎁" : "Vuelve mañana"; }
@@ -244,13 +249,13 @@ function refreshForge() {
   const eq = G.picks.eq;
   $("forge-list").innerHTML = PICK_ORDER.map(id => {
     const pd = PICK_DEF[id]; const owned = !!G.picks.owned[id]; const dur = G.picks.dur[id] || 0;
-    const mineEmo = ORE_ORDER.filter(o => ORE_DEF[o].tier <= pd.mineTier).map(o => ORE_DEF[o].emoji).join("");
-    const costStr = Object.keys(pd.cost).map(k => RES_EMOJI[k] + " " + pd.cost[k]).join(" · ");
+    const mineEmo = ORE_ORDER.filter(o => ORE_DEF[o].tier <= pd.mineTier).map(o => resIc(o)).join("");
+    const costStr = Object.keys(pd.cost).map(k => resIc(k) + " " + pd.cost[k]).join(" · ");
     const durPct = owned ? Math.round(dur / pd.dur * 100) : 0;
     let btns = "";
     if (!owned) { const aff = canAfford(pd.cost); btns = '<button class="green sm" ' + (aff ? "" : "disabled") + ' data-craft="' + id + '">Craftear</button>'; }
     else { const isEq = eq === id; btns = '<button class="ghost sm" ' + (isEq ? "disabled" : "") + ' data-equip="' + id + '">' + (isEq ? "Equipado" : "Equipar") + "</button>";
-      if (dur < pd.dur) { const rc = repairCostOf(id); const raff = canAfford(rc); const rstr = Object.keys(rc).map(k => RES_EMOJI[k] + rc[k]).join(" "); btns += '<button class="gold sm" ' + (raff ? "" : "disabled") + ' data-repair="' + id + '" title="Reparar: ' + rstr + '">Reparar</button>'; } }
+      if (dur < pd.dur) { const rc = repairCostOf(id); const raff = canAfford(rc); const rstr = Object.keys(rc).map(k => (RES_EMOJI[k] || "") + rc[k]).join(" "); btns += '<button class="gold sm" ' + (raff ? "" : "disabled") + ' data-repair="' + id + '" title="Reparar: ' + rstr + '">Reparar</button>'; } }
     const img = '<img src="' + GF.spr(pd.sprite) + '">';
     return '<div class="forge-row ' + (eq === id ? "eq" : "") + '"><div class="fic">' + img + '</div><div class="finfo"><div class="fnm">' + pd.label + (eq === id ? ' <span class="tag">equipado</span>' : "") + '</div><div class="fds">Mina: ' + mineEmo + " · " + pd.dur + " usos" + (pd.fast ? " · ⚡ rápido (gasta doble)" : "") + "</div>" + (owned ? '<div class="durbar"><i style="width:' + durPct + '%"></i></div><div class="fds">' + dur + "/" + pd.dur + "</div>" : '<div class="fds">Costo: ' + costStr + "</div>") + "</div><div class=\"fbtns\">" + btns + "</div></div>";
   }).join("");
@@ -266,22 +271,22 @@ function refreshTools() {
   const ids = ["axe", "rod"].concat(G.swordOwned ? ["sword"] : []).concat(G.bowOwned ? ["bow"] : []);
   let html = ids.map(id => {
     const td = TOOL_DEF[id], dur = toolDur(id), pct = Math.round(dur / td.max * 100);
-    const rstr = Object.keys(td.repair).map(k => RES_EMOJI[k] + td.repair[k]).join(" ");
+    const rstr = Object.keys(td.repair).map(k => resIc(k) + td.repair[k]).join(" ");
     const btn = dur < td.max
       ? '<button class="gold sm" ' + (canAfford(td.repair) ? "" : "disabled") + ' data-rtool="' + id + '" title="Reparar: ' + rstr + '">Reparar</button>'
       : '<button class="ghost sm" disabled>100%</button>';
     return '<div class="forge-row"><div class="fic"><img src="' + GF.spr(td.sprite) + '" onerror="this.outerHTML=\'' + td.emoji + '\'"></div><div class="finfo"><div class="fnm">' + td.label + '</div><div class="durbar"><i style="width:' + pct + '%"></i></div><div class="fds">' + dur + "/" + td.max + " · reparar: " + rstr + '</div></div><div class="fbtns">' + btn + "</div></div>";
   }).join("");
   if (!G.swordOwned) {
-    const cstr = Object.keys(SWORD_COST).map(k => RES_EMOJI[k] + " " + SWORD_COST[k]).join(" · ");
-    html += '<div class="forge-row"><div class="fic">⚔️</div><div class="finfo"><div class="fnm">Espada de Hierro</div><div class="fds">Para pelear en el Bosque · daño según skill Espada</div><div class="fds">Costo: ' + cstr + '</div></div><div class="fbtns"><button class="green sm" ' + (canAfford(SWORD_COST) ? "" : "disabled") + ' id="forge-sword">Craftear</button></div></div>';
+    const cstr = Object.keys(SWORD_COST).map(k => resIc(k) + " " + SWORD_COST[k]).join(" · ");
+    html += '<div class="forge-row"><div class="fic"><img src="' + GF.spr("sword") + '" onerror="this.outerHTML=\'⚔️\'"></div><div class="finfo"><div class="fnm">Espada de Hierro</div><div class="fds">Para pelear en el Bosque · daño según skill Espada</div><div class="fds">Costo: ' + cstr + '</div></div><div class="fbtns"><button class="green sm" ' + (canAfford(SWORD_COST) ? "" : "disabled") + ' id="forge-sword">Craftear</button></div></div>';
   }
   if (!G.bowOwned) {
-    const bstr = Object.keys(BOW_COST).map(k => RES_EMOJI[k] + " " + BOW_COST[k]).join(" · ");
-    html += '<div class="forge-row"><div class="fic">🏹</div><div class="finfo"><div class="fnm">Arco</div><div class="fds">Ataque a distancia · daño según skill Arco · consume flechas</div><div class="fds">Costo: ' + bstr + '</div></div><div class="fbtns"><button class="green sm" ' + (canAfford(BOW_COST) ? "" : "disabled") + ' id="forge-bow">Craftear</button></div></div>';
+    const bstr = Object.keys(BOW_COST).map(k => resIc(k) + " " + BOW_COST[k]).join(" · ");
+    html += '<div class="forge-row"><div class="fic"><img src="' + GF.spr("bow") + '" onerror="this.outerHTML=\'🏹\'"></div><div class="finfo"><div class="fnm">Arco</div><div class="fds">Ataque a distancia · daño según skill Arco · consume flechas</div><div class="fds">Costo: ' + bstr + '</div></div><div class="fbtns"><button class="green sm" ' + (canAfford(BOW_COST) ? "" : "disabled") + ' id="forge-bow">Craftear</button></div></div>';
   }
-  const astr = Object.keys(ARROW_COST).map(k => RES_EMOJI[k] + " " + ARROW_COST[k]).join(" · ");
-  html += '<div class="forge-row"><div class="fic">➳</div><div class="finfo"><div class="fnm">Flechas ×10</div><div class="fds">Tenés ' + fmt(G.res.flecha || 0) + ' · Costo: ' + astr + '</div></div><div class="fbtns"><button class="green sm" ' + (canAfford(ARROW_COST) ? "" : "disabled") + ' id="forge-arrows">Craftear</button></div></div>';
+  const astr = Object.keys(ARROW_COST).map(k => resIc(k) + " " + ARROW_COST[k]).join(" · ");
+  html += '<div class="forge-row"><div class="fic"><img src="' + GF.spr("res_flecha") + '" onerror="this.outerHTML=\'➳\'"></div><div class="finfo"><div class="fnm">Flechas ×10</div><div class="fds">Tenés ' + fmt(G.res.flecha || 0) + ' · Costo: ' + astr + '</div></div><div class="fbtns"><button class="green sm" ' + (canAfford(ARROW_COST) ? "" : "disabled") + ' id="forge-arrows">Craftear</button></div></div>';
   box.innerHTML = html;
   box.querySelectorAll("[data-rtool]").forEach(b => b.onclick = () => repairTool(b.dataset.rtool));
   const fs = $("forge-sword"); if (fs) fs.onclick = () => craftSword();
@@ -295,9 +300,10 @@ function refreshCooking() {
   box.innerHTML = RECIPE_ORDER.map(id => {
     const r = RECIPE_DEF[id];
     const parts = [];
-    if (r.fish) for (const k in r.fish) parts.push(FISH_DEF[k].emoji + " ×" + r.fish[k]);
-    if (r.res) for (const k in r.res) parts.push(RES_EMOJI[k] + " ×" + r.res[k]);
-    return '<div class="forge-row"><div class="fic">' + r.emoji + '</div><div class="finfo"><div class="fnm">' + r.label + '</div><div class="fds">' + r.desc + '</div><div class="fds">Ingredientes: ' + parts.join(" · ") + '</div></div><div class="fbtns"><button class="green sm" ' + (canCook(id) ? "" : "disabled") + ' data-cook="' + id + '">Cocinar</button></div></div>';
+    if (r.fish) for (const k in r.fish) parts.push(fishIc(k) + " ×" + r.fish[k]);
+    if (r.res) for (const k in r.res) parts.push(resIc(k) + " ×" + r.res[k]);
+    const fic = r.sprite ? '<img src="' + GF.spr(r.sprite) + '" onerror="this.outerHTML=\'' + r.emoji + '\'">' : r.emoji;
+    return '<div class="forge-row"><div class="fic">' + fic + '</div><div class="finfo"><div class="fnm">' + r.label + '</div><div class="fds">' + r.desc + '</div><div class="fds">Ingredientes: ' + parts.join(" · ") + '</div></div><div class="fbtns"><button class="green sm" ' + (canCook(id) ? "" : "disabled") + ' data-cook="' + id + '">Cocinar</button></div></div>';
   }).join("");
   box.querySelectorAll("[data-cook]").forEach(b => b.onclick = () => cook(b.dataset.cook));
 }
@@ -306,7 +312,7 @@ function refreshCooking() {
 function refreshMarket() {
   const cur = marketCur;
   $("mkt-list").innerHTML = SELLABLE.map(res => { const owned = G.res[res] || 0; const u = marketUnit(res); const uStr = cur === "plata" ? `${u} de plata c/u` : `${u.toFixed(1)} $Golden c/u`;
-    return `<div class="mkt-row"><span class="mimg">${itemIcon({ sprite: CROP_DEF[res] ? "crop_" + res : null, emoji: RES_EMOJI[res] })}</span><div class="minfo"><div class="mnm">${RES_LABEL[res]}</div><div class="mds">Tenés ${fmt(owned)} · ${uStr}</div></div><input id="mq-${res}" type="number" min="0" max="${owned}" value="${owned > 0 ? owned : 0}"><button class="vbtn" id="vb-${res}">Vender</button></div>`; }).join("");
+    return `<div class="mkt-row"><span class="mimg">${itemIcon({ sprite: resSprite(res), emoji: RES_EMOJI[res] })}</span><div class="minfo"><div class="mnm">${RES_LABEL[res]}</div><div class="mds">Tenés ${fmt(owned)} · ${uStr}</div></div><input id="mq-${res}" type="number" min="0" max="${owned}" value="${owned > 0 ? owned : 0}"><button class="vbtn" id="vb-${res}">Vender</button></div>`; }).join("");
   SELLABLE.forEach(res => { const btn = $("vb-" + res); if (btn) btn.onclick = () => sellItem(res); });
   document.querySelectorAll(".curbtn").forEach(b => b.classList.toggle("active", b.dataset.cur === cur));
   refreshSeedShop();
@@ -318,7 +324,7 @@ function refreshSeedShop() {
   box.innerHTML = CROP_ORDER.map(k => {
     const cd = CROP_DEF[k], unlocked = cropUnlocked(k), aff = G.plata >= cd.seedCost;
     const controls = unlocked
-      ? `<input id="sq-${k}" type="number" min="1" value="1"><button class="green sm" data-buy="${k}" ${aff ? "" : "disabled"}>Comprar · 🪙${cd.seedCost} c/u</button>`
+      ? `<input id="sq-${k}" type="number" min="1" value="1"><button class="green sm" data-buy="${k}" ${aff ? "" : "disabled"}>Comprar · ${coinIc("plata")}${cd.seedCost} c/u</button>`
       : `<button class="ghost sm" disabled>🔒 Cultivo nv ${cd.lvl}</button>`;
     return `<div class="mkt-row"><span class="mimg">${itemIcon({ sprite: "seed_" + k, emoji: cd.emoji })}</span><div class="minfo"><div class="mnm">${cd.label} <span class="seedlv">nv ${cd.lvl}</span></div><div class="mds">Semilla · crece en ${cd.grow}s · tenés ${fmt(G.seeds[k] || 0)}</div></div>${controls}</div>`;
   }).join("");
@@ -331,7 +337,7 @@ function refreshBarn() {
   const bar = $("lvlbar"), cost = $("lvlcost"), lb = $("levelup"), pb = $("prestige");
   if (G.level >= 10) { bar.style.width = "100%"; cost.innerHTML = "<b>Nivel máximo.</b> Reiniciá la granja para yield permanente."; lb.style.display = "none"; pb.style.display = "inline-block"; }
   else { const n = LEVELS[G.level + 1]; lb.style.display = "inline-block"; pb.style.display = "none"; lb.textContent = "Subir a nivel " + (G.level + 1); lb.disabled = !canLevel();
-    let parts = [], prog = []; for (const k in n) { const h = G.res[k] || 0, miss = h < n[k]; parts.push(`<span class="${miss ? "miss" : ""}">${RES_EMOJI[k]} ${fmt(h)}/${n[k]}</span>`); prog.push(Math.min(1, h / n[k])); }
+    let parts = [], prog = []; for (const k in n) { const h = G.res[k] || 0, miss = h < n[k]; parts.push(`<span class="${miss ? "miss" : ""}">${resIc(k)} ${fmt(h)}/${n[k]}</span>`); prog.push(Math.min(1, h / n[k])); }
     bar.style.width = (prog.reduce((a, b) => a + b, 0) / prog.length * 100) + "%";
     cost.innerHTML = "Requiere: " + parts.join(" · ") + (G.level + 1 >= 8 ? '<br><span class="cost">Niveles 8-10 piden Oro (PvP a futuro).</span>' : ""); }
   const ti = $("toolinfo"); if (ti) ti.style.display = "none"; const bt = $("buytool"); if (bt) bt.style.display = "none";
@@ -347,7 +353,7 @@ function refreshConfig() {
 let lbTab = "plata";
 let lbData = null, lbFetchedAt = 0, lbLoading = false;
 
-function lbRowHtml(r, i, col) { const rank = i + 1; const cls = (r.me ? "me " : "") + (rank <= 3 ? "top" + rank : ""); const val = col === "plata" ? `<span class="coin silver"></span>${fmt(r.v)}` : `⭐ ${(+r.v).toFixed(1)}`; return `<div class="lbrow ${cls}"><span class="rk">${rank}</span><span class="nm">${escapeHtml(r.n || "—")}</span><span class="val">${val}</span></div>`; }
+function lbRowHtml(r, i, col) { const rank = i + 1; const cls = (r.me ? "me " : "") + (rank <= 3 ? "top" + rank : ""); const val = col === "plata" ? `${coinIc("plata")}${fmt(r.v)}` : `⭐ ${(+r.v).toFixed(1)}`; return `<div class="lbrow ${cls}"><span class="rk">${rank}</span><span class="nm">${escapeHtml(r.n || "—")}</span><span class="val">${val}</span></div>`; }
 
 // nivel de skill promedio a partir del objeto skills guardado de otro jugador
 function avgSkillFromObj(sk) {
