@@ -11,7 +11,7 @@ function log(m, k = "") { const b = $("log"); if (!b) return; const d = document
 function isOpen(id) { const e = $(id); return !!(e && e.classList.contains("show")); }
 function anyOvOpen() { return !!document.querySelector(".ov.show"); }
 const OV_REFRESH = { "ov-inv": () => refreshInv(), "ov-skills": () => refreshSkills(), "ov-equip": () => refreshEquip(),
-  "ov-forge": () => refreshForge(), "ov-market": () => refreshMarket(), "ov-barn": () => refreshBarn(),
+  "ov-forge": () => refreshForge(), "ov-market": () => refreshMarket(), "ov-barn": () => { refreshBarn(); refreshCooking(); },
   "ov-config": () => refreshConfig(), "ov-lb": () => refreshLb(), "ov-daily": () => refreshDaily() };
 // los overlays NO bloquean el juego: podés seguir moviéndote/interactuando con la ventana abierta
 function openOv(id) { const e = $(id); if (!e) return; e.classList.add("show"); if (OV_REFRESH[id]) OV_REFRESH[id](); }
@@ -30,6 +30,7 @@ function itemView(d) {
     if (d.key === "axe") return { sprite: "axe", emoji: "🔧", label: "Hacha · durabilidad " + toolDur("axe") + "/" + TOOL_DEF.axe.max, dur: Math.round(toolDur("axe") / TOOL_DEF.axe.max * 100) };
     if (d.key === "rod") return { sprite: "fishing_rod", emoji: "🔧", label: "Caña · durabilidad " + toolDur("rod") + "/" + TOOL_DEF.rod.max, dur: Math.round(toolDur("rod") / TOOL_DEF.rod.max * 100) };
     if (d.key === "sword") return { sprite: "sword", emoji: "⚔️", label: "Espada de Hierro · durabilidad " + toolDur("sword") + "/" + TOOL_DEF.sword.max, dur: Math.round(toolDur("sword") / TOOL_DEF.sword.max * 100) };
+    if (d.key === "bow") return { sprite: "bow", emoji: "🏹", label: "Arco · durabilidad " + toolDur("bow") + "/" + TOOL_DEF.bow.max, dur: Math.round(toolDur("bow") / TOOL_DEF.bow.max * 100) };
     return { sprite: "hoe", emoji: "🪝", label: "Azada", dur: null };
   }
   if (d.kind === "pick") { const pd = PICK_DEF[d.key]; return { sprite: pd.sprite, emoji: "⛏️", label: pd.label + " · durabilidad " + (G.picks.dur[d.key] || 0) + "/" + pd.dur, dur: Math.round((G.picks.dur[d.key] || 0) / pd.dur * 100) }; }
@@ -175,6 +176,17 @@ function refreshEquip() {
     const col = pct > 50 ? "#7ec95a" : (pct > 20 ? "#e2b23a" : "#d9534f");
     return `<div class="eqtool" title="${c.nm} · ${c.st || c.dur + "/" + c.max}"><img src="${GF.spr(c.sprite)}" onerror="this.outerHTML='⚔️'"><div class="db"><i style="width:${pct}%;background:${col}"></i></div></div>`;
   }).join("");
+  // slots de combate: armaduras equipadas, arma y munición
+  const fill = (id, on, em, nm) => { const el = $(id); if (!el) return; el.classList.toggle("ghost", !on); el.innerHTML = "<span>" + em + "</span><i>" + nm + "</i>"; };
+  const gearSlot = (id, slot, fallbackEm, fallbackNm) => { const g = G.gear && G.gear[slot]; const gd = g && GEAR_DEF[g]; fill(id, !!gd, gd ? gd.emoji : fallbackEm, gd ? gd.label + " +" + gd.def : fallbackNm); };
+  gearSlot("eq-casco", "casco", "⛑️", "Casco");
+  gearSlot("eq-armadura", "armadura", "🥋", "Armadura");
+  gearSlot("eq-botas", "botas", "🥾", "Botas");
+  gearSlot("eq-escudo", "escudo", "🛡️", "Escudo");
+  fill("eq-arma", G.swordOwned, "⚔️", G.swordOwned ? "Espada de Hierro" : "Arma");
+  const fl = (G.res && G.res.flecha) || 0;
+  fill("eq-municion", fl > 0, "➳", fl > 0 ? fl + " flechas" : "Munición");
+  const ed = $("eq-def"); if (ed) ed.textContent = "Defensa total: " + gearDefTotal() + (G.bowOwned ? " · 🏹 Arco equipado" : "");
 }
 
 /* ---- cofre diario ---- */
@@ -251,7 +263,7 @@ function refreshForge() {
 // herrería · reparación de hacha, caña y espada (la espada primero se craftea)
 function refreshTools() {
   const box = $("forge-tools"); if (!box) return;
-  const ids = ["axe", "rod"].concat(G.swordOwned ? ["sword"] : []);
+  const ids = ["axe", "rod"].concat(G.swordOwned ? ["sword"] : []).concat(G.bowOwned ? ["bow"] : []);
   let html = ids.map(id => {
     const td = TOOL_DEF[id], dur = toolDur(id), pct = Math.round(dur / td.max * 100);
     const rstr = Object.keys(td.repair).map(k => RES_EMOJI[k] + td.repair[k]).join(" ");
@@ -264,9 +276,30 @@ function refreshTools() {
     const cstr = Object.keys(SWORD_COST).map(k => RES_EMOJI[k] + " " + SWORD_COST[k]).join(" · ");
     html += '<div class="forge-row"><div class="fic">⚔️</div><div class="finfo"><div class="fnm">Espada de Hierro</div><div class="fds">Para pelear en el Bosque · daño según skill Espada</div><div class="fds">Costo: ' + cstr + '</div></div><div class="fbtns"><button class="green sm" ' + (canAfford(SWORD_COST) ? "" : "disabled") + ' id="forge-sword">Craftear</button></div></div>';
   }
+  if (!G.bowOwned) {
+    const bstr = Object.keys(BOW_COST).map(k => RES_EMOJI[k] + " " + BOW_COST[k]).join(" · ");
+    html += '<div class="forge-row"><div class="fic">🏹</div><div class="finfo"><div class="fnm">Arco</div><div class="fds">Ataque a distancia · daño según skill Arco · consume flechas</div><div class="fds">Costo: ' + bstr + '</div></div><div class="fbtns"><button class="green sm" ' + (canAfford(BOW_COST) ? "" : "disabled") + ' id="forge-bow">Craftear</button></div></div>';
+  }
+  const astr = Object.keys(ARROW_COST).map(k => RES_EMOJI[k] + " " + ARROW_COST[k]).join(" · ");
+  html += '<div class="forge-row"><div class="fic">➳</div><div class="finfo"><div class="fnm">Flechas ×10</div><div class="fds">Tenés ' + fmt(G.res.flecha || 0) + ' · Costo: ' + astr + '</div></div><div class="fbtns"><button class="green sm" ' + (canAfford(ARROW_COST) ? "" : "disabled") + ' id="forge-arrows">Craftear</button></div></div>';
   box.innerHTML = html;
   box.querySelectorAll("[data-rtool]").forEach(b => b.onclick = () => repairTool(b.dataset.rtool));
   const fs = $("forge-sword"); if (fs) fs.onclick = () => craftSword();
+  const fb = $("forge-bow"); if (fb) fb.onclick = () => craftBow();
+  const fa = $("forge-arrows"); if (fa) fa.onclick = () => craftArrows();
+}
+
+/* ---- cocina (en la Granja) ---- */
+function refreshCooking() {
+  const box = $("cook-list"); if (!box) return;
+  box.innerHTML = RECIPE_ORDER.map(id => {
+    const r = RECIPE_DEF[id];
+    const parts = [];
+    if (r.fish) for (const k in r.fish) parts.push(FISH_DEF[k].emoji + " ×" + r.fish[k]);
+    if (r.res) for (const k in r.res) parts.push(RES_EMOJI[k] + " ×" + r.res[k]);
+    return '<div class="forge-row"><div class="fic">' + r.emoji + '</div><div class="finfo"><div class="fnm">' + r.label + '</div><div class="fds">' + r.desc + '</div><div class="fds">Ingredientes: ' + parts.join(" · ") + '</div></div><div class="fbtns"><button class="green sm" ' + (canCook(id) ? "" : "disabled") + ' data-cook="' + id + '">Cocinar</button></div></div>';
+  }).join("");
+  box.querySelectorAll("[data-cook]").forEach(b => b.onclick = () => cook(b.dataset.cook));
 }
 
 /* ---- mercado / tienda ---- */

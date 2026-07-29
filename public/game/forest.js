@@ -103,26 +103,49 @@ class ForestScene extends Phaser.Scene {
 
   tryAttack() {
     if (this.action) return;
-    const m = this.nearestMonster(56);
-    if (!m) return;
-    this.facing = (m.cx < this.hero.x) ? "west" : "east";
-    this.moveTarget = null;
-    this.action = { kind: "attack", m, t: 0, dur: 0.45 };
+    const near = this.nearestMonster(56);
+    if (near) {   // cuerpo a cuerpo
+      this.facing = (near.cx < this.hero.x) ? "west" : "east";
+      this.moveTarget = null;
+      this.action = { kind: "attack", m: near, t: 0, dur: 0.45 };
+      return;
+    }
+    if (canShoot()) {   // a distancia con el arco
+      const far = this.nearestMonster(190);
+      if (far) { this.facing = (far.cx < this.hero.x) ? "west" : "east"; this.moveTarget = null; this.action = { kind: "shoot", m: far, t: 0, dur: 0.35 }; }
+    }
   }
 
-  hitMonster(m) {
-    const dmg = swordDmg();
+  // disparo: proyectil ➳ que viaja hasta el monstruo y pega al llegar
+  shootArrow(m) {
+    if (!canShoot()) { toast("➳ Sin flechas — crafteá en la Herrería"); return; }
+    G.res.flecha--; useTool("bow");
+    if (toolDur("bow") <= 0) { log("🏹 ¡El arco se rompió! Reparalo en la Herrería.", "bad"); toast("🏹 ¡Arco roto!"); }
+    if (typeof syncSlots === "function") syncSlots(); if (isOpen("ov-inv")) refreshInv();
+    const a = this.add.text(this.hero.x, this.hero.y - 22, "➳", { fontSize: "16px", color: "#e8d3a8" }).setOrigin(0.5).setDepth(99999);
+    a.setScale(m.cx < this.hero.x ? -1 : 1, 1);
+    const d = Math.hypot(m.cx - this.hero.x, m.by - this.hero.y);
+    this.tweens.add({
+      targets: a, x: m.cx, y: m.by - m.spr.height * 0.5, duration: Math.max(120, d * 1.6),
+      onComplete: () => { a.destroy(); if (!m.dead) this.hitMonster(m, bowDmg(), "range"); },
+    });
+  }
+
+  hitMonster(m, dmg, skill) {
+    if (dmg == null) { dmg = swordDmg(); skill = "sword"; }
+    if (skill === "sword" && G.swordOwned && toolDur("sword") > 0) { useTool("sword"); if (toolDur("sword") <= 0) { log("⚔️ ¡La espada se rompió! Reparala en la Herrería.", "bad"); toast("⚔️ ¡Espada rota!"); } }
     m.hp -= dmg;
-    if (G.swordOwned && toolDur("sword") > 0) { useTool("sword"); if (toolDur("sword") <= 0) { log("⚔️ ¡La espada se rompió! Reparala en la Herrería.", "bad"); toast("⚔️ ¡Espada rota!"); } }
     // texto de daño flotante
-    const t = this.add.text(m.cx, m.by - m.spr.height, "-" + dmg, { fontFamily: "system-ui", fontSize: "13px", fontStyle: "bold", color: "#ffd24a", stroke: "#20301a", strokeThickness: 3 }).setOrigin(0.5, 1).setDepth(99999);
+    const t = this.add.text(m.cx, m.by - m.spr.height, "-" + dmg, { fontFamily: "system-ui", fontSize: "13px", fontStyle: "bold", color: skill === "range" ? "#a8d8ff" : "#ffd24a", stroke: "#20301a", strokeThickness: 3 }).setOrigin(0.5, 1).setDepth(99999);
     this.tweens.add({ targets: t, y: t.y - 18, alpha: 0, duration: 550, onComplete: () => t.destroy() });
-    if (m.hp <= 0) this.killMonster(m); else { this.drawBar(m); m.tgt = "hero"; }
+    if (m.hp <= 0) this.killMonster(m, skill || "sword"); else { this.drawBar(m); m.tgt = "hero"; }
   }
 
-  killMonster(m) {
+  killMonster(m, skill) {
     m.dead = true; m.bar.clear();
-    addXp("sword", m.def.xp);
+    addXp(skill || "sword", m.def.xp);
+    // armaduras: chance de drop (se autoequipan si mejoran)
+    if (m.def.gearLoot) for (const [gk, ch] of m.def.gearLoot) { if (Math.random() < ch) gainGear(gk); }
     const loot = rollLoot(m.def);
     const parts = [];
     for (const k in loot) {
@@ -142,6 +165,7 @@ class ForestScene extends Phaser.Scene {
   }
 
   hurtHero(dmg) {
+    dmg = Math.max(1, dmg - gearDefTotal());   // las armaduras absorben daño
     G.hp = Math.max(0, G.hp - dmg);
     this.hurtFx = 0.18;
     refreshHud();
@@ -163,15 +187,16 @@ class ForestScene extends Phaser.Scene {
     // tinte de daño
     if (this.hurtFx > 0) { this.hurtFx -= dt; hero.setTint(0xff6b5a); } else hero.clearTint();
 
-    // acción de ataque
+    // acción de ataque (cuerpo a cuerpo o disparo)
     if (this.action) {
       this.action.t += dt;
       const sign = this.facing === "west" ? -1 : 1;
       hero.setScale(sign * this.actScale, this.actScale);
       if (hero.anims.currentAnim?.key !== "act_chop") hero.play("act_chop");
       if (this.action.t >= this.action.dur) {
-        const m = this.action.m; this.action = null;
-        if (m && !m.dead && Math.hypot(m.cx - hero.x, m.by - hero.y) < 62) this.hitMonster(m);
+        const a = this.action; this.action = null;
+        if (a.kind === "shoot") { if (a.m && !a.m.dead) this.shootArrow(a.m); }
+        else if (a.m && !a.m.dead && Math.hypot(a.m.cx - hero.x, a.m.by - hero.y) < 62) this.hitMonster(a.m);
       }
       hero.setDepth(hero.y); this.updateMonsters(dt, t); this.updatePrompt(); return;
     }
@@ -196,10 +221,11 @@ class ForestScene extends Phaser.Scene {
     // salir por la izquierda
     if (hero.x < 40) { if (typeof saveFarm === "function") saveFarm(); this.scene.start("farm"); return; }
 
-    // perseguir el objetivo clickeado y atacar al llegar
+    // perseguir el objetivo clickeado: con arco dispara de lejos, si no ataca al llegar
     if (this.target && !this.target.dead) {
       const d = Math.hypot(this.target.cx - hero.x, this.target.by - hero.y);
       if (d < 52) { this.moveTarget = null; const m = this.target; this.target = null; this.facing = (m.cx < hero.x) ? "west" : "east"; this.action = { kind: "attack", m, t: 0, dur: 0.45 }; }
+      else if (d < 190 && canShoot()) { this.moveTarget = null; const m = this.target; this.target = null; this.facing = (m.cx < hero.x) ? "west" : "east"; this.action = { kind: "shoot", m, t: 0, dur: 0.35 }; }
     }
 
     const sign = this.facing === "west" ? -1 : 1;
@@ -239,7 +265,9 @@ class ForestScene extends Phaser.Scene {
     const el = $("prompt"); if (!el) return;
     if (GF.uiOpen || this.action) { el.classList.remove("show"); return; }
     const m = this.nearestMonster(60);
+    const far = !m && canShoot() ? this.nearestMonster(190) : null;
     if (m) { el.textContent = "⚔️ Atacar " + m.def.label + " (" + Math.ceil(m.hp) + " ❤) · [E]"; el.classList.add("show"); }
+    else if (far) { el.textContent = "🏹 Disparar a " + far.def.label + " (➳ " + (G.res.flecha || 0) + ") · [E]"; el.classList.add("show"); }
     else if (this.hero.x < 90) { el.textContent = "⬅️ Volver a la granja"; el.classList.add("show"); }
     else el.classList.remove("show");
   }

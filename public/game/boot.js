@@ -28,7 +28,10 @@ class BootScene extends Phaser.Scene {
   }
 
   preload() {
-    this.assetList().forEach(([k, f]) => this.load.image(k, f));
+    // ATLAS: todos los sprites del mundo en 2 archivos (mucho más liviano para el server free).
+    // Si el atlas no llega, ensureAll() baja los archivos sueltos como respaldo.
+    this.load.image("__atlas", "assets/atlas.png?v=1");
+    this.load.json("__atlasmap", "assets/atlas.json?v=1");
 
     // barra de carga simple
     const w = this.scale.width, h = this.scale.height;
@@ -39,8 +42,21 @@ class BootScene extends Phaser.Scene {
   }
 
   create() {
+    // desempaquetar el atlas en texturas individuales (mismas claves de siempre)
+    const map = this.cache.json.get("__atlasmap");
+    if (map && map.frames && this.textures.exists("__atlas")) {
+      const src = this.textures.get("__atlas").getSourceImage();
+      for (const key in map.frames) {
+        if (this.textures.exists(key)) continue;
+        const fr = map.frames[key];
+        const cv = document.createElement("canvas");
+        cv.width = fr.w; cv.height = fr.h;
+        cv.getContext("2d").drawImage(src, fr.x, fr.y, fr.w, fr.h, 0, 0, fr.w, fr.h);
+        this.textures.addCanvas(key, cv);
+      }
+    }
     this.tries = 0;
-    this.ensureAll();
+    this.ensureAll();   // lo que falte (o todo, si el atlas no llegó) se baja suelto con reintentos
   }
 
   // repide lo que falte (hasta 6 pasadas) antes de arrancar la granja

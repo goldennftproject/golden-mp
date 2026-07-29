@@ -25,7 +25,7 @@ function snapshot() {
     res: G.res, picks: G.picks, skills: G.skills, fish: G.fish, plots: G.plots, seeds: G.seeds, selSeed: G.selSeed,
     tools: G.tools, invRows: G.invRows, slots: G.slots, hotbar: G.hotbar, hotSel: G.hotSel, hbInit: G.hbInit, layout: G.layout,
     daily: G.daily, plotsOwned: G.plotsOwned, seedBuys: G.seedBuys,
-    hp: G.hp, hpMax: G.hpMax, swordOwned: G.swordOwned,
+    hp: G.hp, hpMax: G.hpMax, swordOwned: G.swordOwned, bowOwned: G.bowOwned, gear: G.gear,
     layoutPlots: G.layoutPlots, layoutPond: G.layoutPond };
 }
 // "huella" del estado guardable (incluye el apodo); si no cambia, no hay nada que guardar
@@ -53,26 +53,34 @@ function hydrate(d) {
   if (typeof d.hpMax === "number") G.hpMax = d.hpMax;
   if (typeof d.hp === "number") G.hp = Math.max(1, Math.min(G.hpMax, d.hp));
   if (typeof d.swordOwned === "boolean") G.swordOwned = d.swordOwned;
+  if (typeof d.bowOwned === "boolean") G.bowOwned = d.bowOwned;
+  if (d.gear && typeof d.gear === "object") G.gear = Object.assign({ casco: null, armadura: null, botas: null, escudo: null }, d.gear);
   if (d.layoutPlots && typeof d.layoutPlots === "object") G.layoutPlots = d.layoutPlots;
   if (d.layoutPond && typeof d.layoutPond === "object") G.layoutPond = { col: d.layoutPond.col, row: d.layoutPond.row };
   if (d.picks && d.picks.owned && d.picks.dur) G.picks = d.picks;
 }
 
+const sleepMs = (ms) => new Promise(r => setTimeout(r, ms));
+
 async function loadFarm() {
   if (!sb || !UID) return false;
-  try {
-    const { data, error } = await sb.from("farms").select("data,name").eq("user_id", UID).maybeSingle();
-    if (error) { console.warn("loadFarm:", error.message); return false; }
-    if (data) {
-      if (data.data) hydrate(data.data);
-      if (data.name && !window.NICK) window.NICK = data.name;  // si no tipeaste apodo, usá el guardado
-      lastSavedKey = snapKey();   // referencia: lo que acabás de cargar ya está guardado
-      return true;
-    }
-    // primera vez: crear la fila
-    await saveFarm();
-    return false;
-  } catch (e) { console.warn("loadFarm error:", e); return false; }
+  // hasta 3 intentos con espera creciente: la red del jugador puede parpadear justo al entrar
+  for (let intento = 0; intento < 3; intento++) {
+    try {
+      const { data, error } = await sb.from("farms").select("data,name").eq("user_id", UID).maybeSingle();
+      if (error) { console.warn("loadFarm:", error.message); await sleepMs(1200 * (intento + 1)); continue; }
+      if (data) {
+        if (data.data) hydrate(data.data);
+        if (data.name && !window.NICK) window.NICK = data.name;  // si no tipeaste apodo, usá el guardado
+        lastSavedKey = snapKey();   // referencia: lo que acabás de cargar ya está guardado
+        return true;
+      }
+      // primera vez: crear la fila
+      await saveFarm();
+      return false;
+    } catch (e) { console.warn("loadFarm error:", e); await sleepMs(1200 * (intento + 1)); }
+  }
+  return false;
 }
 
 // force=true guarda siempre; sin force, solo si el progreso cambió desde el último guardado
@@ -81,11 +89,16 @@ async function saveFarm(force) {
   const key = snapKey();
   if (!force && key === lastSavedKey) return;   // nada que guardar: ni siquiera muestra el indicador
   if (typeof showSaving === "function") showSaving();
-  try {
-    await sb.from("farms").upsert({ user_id: UID, name: (window.NICK || "Granjero"), data: snapshot(), updated_at: new Date().toISOString() }, { onConflict: "user_id" });
-    lastSavedKey = key;   // recién ahora quedó persistido
-    if (typeof showSaved === "function") showSaved();
-  } catch (e) { /* silencioso: no actualizamos lastSavedKey, reintenta en el próximo ciclo */ }
+  // hasta 2 intentos inmediatos; si fallan, lastSavedKey no se actualiza y el autosave reintenta al próximo ciclo
+  for (let intento = 0; intento < 2; intento++) {
+    try {
+      const { error } = await sb.from("farms").upsert({ user_id: UID, name: (window.NICK || "Granjero"), data: snapshot(), updated_at: new Date().toISOString() }, { onConflict: "user_id" });
+      if (error) throw error;
+      lastSavedKey = key;   // recién ahora quedó persistido
+      if (typeof showSaved === "function") showSaved();
+      return;
+    } catch (e) { if (intento === 0) await sleepMs(1500); else console.warn("saveFarm sin conexión (reintenta solo):", e && e.message); }
+  }
 }
 
 // ---- ranking real (lee la vista pública "leaderboard") ----

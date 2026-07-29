@@ -288,6 +288,9 @@
     <div class="row"><button class="green" id="levelup">Subir de nivel</button><button class="gold" id="prestige" style="display:none">♻️ Reiniciar granja</button></div>
     <div class="cost" id="toolinfo" style="display:none"></div>
     <div class="row"><button class="ghost sm" id="buytool" style="display:none"></button></div>
+    <h4 class="eqh">🍳 Cocina</h4>
+    <div class="sub">Los platos curan vida y dan buffs. Suben la skill Cocina.</div>
+    <div id="cook-list"></div>
   </div></div>
 
   <div class="ov" id="ov-market"><div class="card" style="width:min(520px,94%)">
@@ -338,6 +341,7 @@
     <button class="close" data-close="ov-equip">×</button>
     <h3>Equipo</h3>
     <div class="sub">Slots de armadura y armas (llegan con la fase de combate) · herramientas abajo.</div>
+    <div class="sub" id="eq-def">Defensa total: 0</div>
     <div class="eqlayout">
       <div class="eqcol">
         <div class="eqslot ghost"><span>📿</span><i>Collar</i></div>
@@ -345,15 +349,15 @@
         <div class="eqslot ghost"><span>💍</span><i>Anillo</i></div>
       </div>
       <div class="eqcol">
-        <div class="eqslot ghost"><span>⛑️</span><i>Casco</i></div>
-        <div class="eqslot ghost"><span>🥋</span><i>Armadura</i></div>
+        <div class="eqslot ghost" id="eq-casco"><span>⛑️</span><i>Casco</i></div>
+        <div class="eqslot ghost" id="eq-armadura"><span>🥋</span><i>Armadura</i></div>
         <div class="eqslot ghost"><span>👖</span><i>Piernas</i></div>
-        <div class="eqslot ghost"><span>🥾</span><i>Botas</i></div>
+        <div class="eqslot ghost" id="eq-botas"><span>🥾</span><i>Botas</i></div>
       </div>
       <div class="eqcol">
-        <div class="eqslot ghost"><span>⚔️</span><i>Arma</i></div>
-        <div class="eqslot ghost"><span>🛡️</span><i>Escudo</i></div>
-        <div class="eqslot ghost"><span>🏹</span><i>Munición</i></div>
+        <div class="eqslot ghost" id="eq-arma"><span>⚔️</span><i>Arma</i></div>
+        <div class="eqslot ghost" id="eq-escudo"><span>🛡️</span><i>Escudo</i></div>
+        <div class="eqslot ghost" id="eq-municion"><span>➳</span><i>Munición</i></div>
       </div>
     </div>
     <h4 class="eqh">🧰 Herramientas</h4>

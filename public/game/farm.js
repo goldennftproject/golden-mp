@@ -1,5 +1,6 @@
 /* FarmScene: la granja privada. Fase 1 (mundo) + Fase 3 (interacciones). */
 const CD = { tree: 8, rock: 10 };            // cooldown en segundos
+const WITHER_MS = 120000;                    // 2 min listo sin cosechar → se marchita (valor de testeo)
 const ACT_DUR = { chop: 1.2, mine: 1.2, plant: 0.6, harvest: 0.6, water: 0.6, fish: 1.5 };
 function oreCdSec(tier) { return 10 + tier * 4; }
 
@@ -114,7 +115,12 @@ class FarmScene extends Phaser.Scene {
         return obj;
       }
       const sv = savedPlots[i];   // restaura lo plantado antes del refresh (ignora estados viejos como "wet")
-      if (sv && (sv.state === "growing" || sv.state === "ready")) { obj.state = sv.state; obj.readyAt = sv.readyAt || 0; obj.cropKey = sv.cropKey || null; this.applyPlotVisual(obj); }
+      if (sv && (sv.state === "growing" || sv.state === "ready")) {
+        obj.state = sv.state; obj.readyAt = sv.readyAt || 0; obj.cropKey = sv.cropKey || null;
+        obj.witherAt = sv.witherAt || 0;
+        this.applyPlotVisual(obj);
+        if (obj.state === "ready" && obj.witherAt && nowMs() >= obj.witherAt) this.setWithered(obj);
+      } else if (sv && sv.state === "withered") { obj.state = "withered"; obj.cropKey = sv.cropKey || null; this.applyPlotVisual(obj); this.setWithered(obj); }
       return obj;
     });
     this.syncPlots();
@@ -329,6 +335,7 @@ class FarmScene extends Phaser.Scene {
     if (o.type === "boar") return "🥍 Espantar jabalí";
     if (o.type === "plot") {
       if (o.state === "locked") return "🔒 Desbloquear parcela (" + plotUnlockCost() + " 🪙)";
+      if (o.state === "withered") return "🥀 Limpiar cultivo marchito";
       if (o.state === "dry") { const cd = CROP_DEF[G.selSeed]; return "🌱 Plantar " + (cd ? cd.label : "cultivo"); }
       if (o.state === "ready") { const cd = CROP_DEF[o.cropKey]; return "🌾 Cosechar " + (cd ? cd.label : ""); }
       return "🌱 Creciendo…";
@@ -367,6 +374,12 @@ class FarmScene extends Phaser.Scene {
           this.unlockPend = o; this.unlockPendUntil = nowMs() + 6000;
           toast("🔒 Desbloquear esta parcela: " + cost + " 🪙 — interactuá de nuevo para confirmar");
         }
+        return;
+      }
+      if (o.state === "withered") {   // limpiar el cultivo perdido: la parcela vuelve a estar libre
+        o.state = "dry"; o.cropKey = null; o.witherAt = 0;
+        o.spr.clearTint().setAlpha(1).setVisible(false); o.emo.setVisible(false); o.timer.setVisible(false);
+        this.syncPlots(); log("🥀 Limpiaste el cultivo marchito.", "info"); toast("🧹 Parcela limpia");
         return;
       }
       // la azada/semilla se usan solas desde la bolsa (la hotbar sigue sirviendo para ELEGIR semilla)
@@ -434,7 +447,7 @@ class FarmScene extends Phaser.Scene {
     } else if (a.kind === "plant") {
       const ck = G.selSeed, cd = CROP_DEF[ck];
       if (cd && (G.seeds[ck] || 0) > 0) {
-        G.seeds[ck]--; o.cropKey = ck; o.state = "growing"; o.readyAt = nowMs() + cd.grow * 1000 * cdMult();
+        G.seeds[ck]--; o.cropKey = ck; o.state = "growing"; o.witherAt = 0; o.readyAt = nowMs() + cd.grow * 1000 * cdMult();
         o.growTotal = o.readyAt - nowMs();
         this.showGrowing(o);
         this.syncPlots(); addXp("farming", 5); log(`🌱 Plantaste ${cd.label}.`, "good"); toast("🌱 " + cd.label);
@@ -443,7 +456,7 @@ class FarmScene extends Phaser.Scene {
     } else if (a.kind === "harvest") {
       const ck = o.cropKey || "papa", cd = CROP_DEF[ck] || CROP_DEF.papa;
       const gr = Math.max(1, Math.round(cd.yield * yieldMult()));
-      if (tryAddRes(ck, gr)) { o.state = "dry"; o.cropKey = null; o.readyAt = 0; this.setPlotGlow(o, "off"); this.coinBurst(o.cx, o.by); o.spr.setVisible(false); o.emo.setVisible(false); o.timer.setVisible(false); this.syncPlots(); addXp("farming", 10); log(`${cd.emoji} +${gr} ${cd.label}.`, "good"); toast("+" + gr + " " + cd.emoji); refreshHud(); }
+      if (tryAddRes(ck, gr)) { o.state = "dry"; o.cropKey = null; o.readyAt = 0; o.witherAt = 0; this.setPlotGlow(o, "off"); this.coinBurst(o.cx, o.by); o.spr.setVisible(false); o.emo.setVisible(false); o.timer.setVisible(false); this.syncPlots(); addXp("farming", 10); log(`${cd.emoji} +${gr} ${cd.label}.`, "good"); toast("+" + gr + " " + cd.emoji); refreshHud(); }
       else toast("🎒 Inventario lleno");
     } else if (a.kind === "fish") {
       goFishing();
@@ -582,6 +595,7 @@ class FarmScene extends Phaser.Scene {
   // brote mientras crece
   showGrowing(pl) {
     pl.half = false; this.setPlotGlow(pl, "off");
+    pl.spr.clearTint().setAlpha(1);
     pl.spr.setTexture("sprout").setVisible(true);
     pl.spr.setScale((GF.TILE * 0.75) / pl.spr.width);
     pl.emo.setVisible(false);
@@ -609,7 +623,16 @@ class FarmScene extends Phaser.Scene {
   }
 
   // vuelca el estado de las parcelas a G.plots para que el autoguardado lo persista
-  syncPlots() { if (this.plots) G.plots = this.plots.map(pl => ({ state: pl.state, readyAt: pl.readyAt, cropKey: pl.cropKey })); }
+  syncPlots() { if (this.plots) G.plots = this.plots.map(pl => ({ state: pl.state, readyAt: pl.readyAt, cropKey: pl.cropKey, witherAt: pl.witherAt || 0 })); }
+
+  // el cultivo listo que nadie cosechó se marchita (se pierde)
+  setWithered(pl) {
+    pl.state = "withered"; pl.witherAt = 0; pl.readyAt = 0;
+    this.setPlotGlow(pl, "off");
+    if (pl.spr.visible) { pl.spr.setTint(0x7a6f52).setAlpha(0.75); }
+    else { pl.emo.setText("🥀").setVisible(true); }
+    pl.timer.setVisible(false);
+  }
 
   update(time, deltaMs) {
     const dt = deltaMs / 1000, k = this.keys, hero = this.hero;
@@ -632,8 +655,14 @@ class FarmScene extends Phaser.Scene {
     }
     // lotes: pasar de "creciendo" a "listo"
     for (const pl of this.plots) {
+      // listo sin cosechar: cuenta regresiva al marchitado
+      if (pl.state === "ready" && pl.witherAt) {
+        const left = pl.witherAt - t;
+        if (left <= 0) { this.setWithered(pl); this.syncPlots(); log("🥀 Un cultivo se marchitó sin cosechar.", "bad"); toast("🥀 Cultivo marchito"); continue; }
+        if (left < 30000) pl.timer.setText("🥀 " + Math.ceil(left / 1000) + "s").setVisible(true);
+      }
       if (pl.state !== "growing") continue;
-      if (t >= pl.readyAt) { pl.state = "ready"; pl.readyAt = 0; this.showReadyCrop(pl); this.syncPlots(); }
+      if (t >= pl.readyAt) { pl.state = "ready"; pl.readyAt = 0; pl.witherAt = t + WITHER_MS; this.showReadyCrop(pl); this.syncPlots(); }
       else {
         pl.timer.setText(Math.max(0, Math.ceil((pl.readyAt - t) / 1000)) + "s").setVisible(true);
         // a media cosecha: el brote crece y titila suave
