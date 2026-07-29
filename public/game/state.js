@@ -51,13 +51,13 @@ function resSprite(k) { return CROP_DEF[k] ? "crop_" + k : (RES_SPRITE[k] || nul
 // --- cultivos (semillas compradas en la Tienda; se desbloquean por nivel de Cultivo) ---
 const CROP_ORDER = ["papa","zanahoria","cebolla","calabacin","repollo","calabaza","brocoli"];
 const CROP_DEF = {
-  papa:      { label:"Papa",      emoji:"🥔", lvl:1,  seedCost:1,   grow:6,  yield:2, price:3 },
-  zanahoria: { label:"Zanahoria", emoji:"🥕", lvl:2,  seedCost:4,   grow:8,  yield:2, price:5 },
-  cebolla:   { label:"Cebolla",   emoji:"🧅", lvl:3,  seedCost:8,   grow:10, yield:2, price:8 },
-  calabacin: { label:"Calabacín", emoji:"🥒", lvl:5,  seedCost:16,  grow:12, yield:2, price:14 },
-  repollo:   { label:"Repollo",   emoji:"🥬", lvl:7,  seedCost:30,  grow:15, yield:2, price:24 },
-  calabaza:  { label:"Calabaza",  emoji:"🎃", lvl:10, seedCost:60,  grow:18, yield:1, price:45 },
-  brocoli:   { label:"Brócoli",   emoji:"🥦", lvl:13, seedCost:120, grow:22, yield:1, price:70 },
+  papa:      { label:"Papa",      emoji:"🥔", lvl:1,  seedCost:1,   grow:16, yield:2, price:3 },
+  zanahoria: { label:"Zanahoria", emoji:"🥕", lvl:2,  seedCost:4,   grow:18, yield:2, price:5 },
+  cebolla:   { label:"Cebolla",   emoji:"🧅", lvl:3,  seedCost:8,   grow:20, yield:2, price:8 },
+  calabacin: { label:"Calabacín", emoji:"🥒", lvl:5,  seedCost:16,  grow:22, yield:2, price:14 },
+  repollo:   { label:"Repollo",   emoji:"🥬", lvl:7,  seedCost:30,  grow:25, yield:2, price:24 },
+  calabaza:  { label:"Calabaza",  emoji:"🎃", lvl:10, seedCost:60,  grow:28, yield:1, price:45 },
+  brocoli:   { label:"Brócoli",   emoji:"🥦", lvl:13, seedCost:120, grow:32, yield:1, price:70 },
 };
 // --- peces (ítems del inventario) ---
 const FISH_ORDER = ["comun", "raro", "epico", "legendario"];

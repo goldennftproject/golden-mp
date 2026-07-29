@@ -668,9 +668,11 @@ class FarmScene extends Phaser.Scene {
       if (t >= pl.readyAt) { pl.state = "ready"; pl.readyAt = 0; pl.witherAt = t + WITHER_MS; this.showReadyCrop(pl); this.syncPlots(); }
       else {
         pl.timer.setText(Math.max(0, Math.ceil((pl.readyAt - t) / 1000)) + "s").setVisible(true);
-        // a media cosecha: el brote crece y titila suave
+        // a media cosecha: la planta intermedia (se asoma la verdura) o el brote más grande
         if (!pl.half && pl.growTotal && (pl.readyAt - t) <= pl.growTotal / 2) {
           pl.half = true;
+          const mk = "cropm_" + pl.cropKey;
+          if (pl.cropKey && this.textures.exists(mk)) pl.spr.setTexture(mk);
           pl.spr.setScale((GF.TILE * 0.92) / pl.spr.width);
           this.setPlotGlow(pl, "half");
         }

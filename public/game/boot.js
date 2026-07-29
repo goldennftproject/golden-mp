@@ -13,9 +13,12 @@ class BootScene extends Phaser.Scene {
     });
     ["rock","rock_mined","wheat","duck","boar"].forEach(k => L.push([k, P + k + ".png"]));
     // arte cozy nuevo (v2 rompe el caché del arte viejo)
-    ["tree_stump","sprout","node_stone_mined","node_bronze_mined","node_gold_mined","node_diamond_mined","node_netherite_mined"]
-      .forEach(k => L.push([k, P + k + ".png?v=2"]));
-    L.push(["withered", P + "withered.png"]);   // cultivo marchito cozy
+    ["tree_stump","node_stone_mined"].forEach(k => L.push([k, P + k + ".png?v=2"]));
+    // v3: restos con fragmentos del mineral + brote derecho (supervisión del 30/7)
+    ["sprout","node_bronze_mined","node_gold_mined","node_diamond_mined","node_netherite_mined"]
+      .forEach(k => L.push([k, P + k + ".png?v=3"]));
+    L.push(["withered", P + "withered.png"]);      // cultivo marchito cozy
+    L.push(["cropm_calabaza", P + "cropm_calabaza.png"]);   // etapa intermedia (calabaza asomando)
     ["tree","pond","node_stone","node_bronze","node_gold","node_diamond","node_netherite"]
       .forEach(k => L.push([k, P + k + ".png?v=2"]));   // arte cozy nuevo
     // versionados: el arte cambió y el caché de 1 día serviría el viejo
@@ -27,15 +30,15 @@ class BootScene extends Phaser.Scene {
     ["fence_top","fence_bottom","fence_left","fence_right"].forEach(k => L.push([k, P + k + ".png?v=2"]));
     L.push(["fishing_rod", P + "fishing_rod.png?v=2"]);   // caña cozy nueva
     L.push(["fence_corner", P + "fence_corner.png?v=3"]);
-    if (typeof CROP_ORDER !== "undefined") CROP_ORDER.forEach(k => L.push(["cropg_" + k, P + "cropg_" + k + ".png"]));
+    if (typeof CROP_ORDER !== "undefined") CROP_ORDER.forEach(k => L.push(["cropg_" + k, P + "cropg_" + k + ".png" + (k === "calabaza" ? "?v=2" : "")]));
     return L;
   }
 
   preload() {
     // ATLAS: todos los sprites del mundo en 2 archivos (mucho más liviano para el server free).
     // Si el atlas no llega, ensureAll() baja los archivos sueltos como respaldo.
-    this.load.image("__atlas", "assets/atlas.png?v=6");
-    this.load.json("__atlasmap", "assets/atlas.json?v=6");
+    this.load.image("__atlas", "assets/atlas.png?v=7");
+    this.load.json("__atlasmap", "assets/atlas.json?v=7");
 
     // barra de carga simple
     const w = this.scale.width, h = this.scale.height;
