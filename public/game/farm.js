@@ -55,11 +55,13 @@ class FarmScene extends Phaser.Scene {
     // (los rótulos flotantes se quitaron: los edificios nuevos se distinguen solos
     //  y el aviso de interacción ya los nombra al acercarse)
 
-    // portal al Bosque (Fase D): esquina inferior derecha
-    const px = GF.WORLD_W - 34, py = GF.WORLD_H - 46;
-    this.add.text(px, py, "🌲", { fontSize: "26px" }).setOrigin(0.5, 1).setDepth(py);
-    this.add.text(px, py + 14, "Bosque", { fontFamily: "system-ui", fontSize: "11px", fontStyle: "bold", color: "#ffe08a", stroke: "#20301a", strokeThickness: 3 }).setOrigin(0.5, 0.5).setDepth(py);
-    this.portal = { type: "portal", cx: px, by: py };
+    // portal al Bosque (Fase D) — desactivado para la prueba sin bestiario
+    if (window.ForestScene !== undefined || typeof ForestScene !== "undefined") {
+      const px = GF.WORLD_W - 34, py = GF.WORLD_H - 46;
+      this.add.text(px, py, "🌲", { fontSize: "26px" }).setOrigin(0.5, 1).setDepth(py);
+      this.add.text(px, py + 14, "Bosque", { fontFamily: "system-ui", fontSize: "11px", fontStyle: "bold", color: "#ffe08a", stroke: "#20301a", strokeThickness: 3 }).setOrigin(0.5, 0.5).setDepth(py);
+      this.portal = { type: "portal", cx: px, by: py };
+    }
 
     // (la pesca ya no usa un objeto en el piso; se pesca al acercarse al borde de la laguna)
 
@@ -134,6 +136,7 @@ class FarmScene extends Phaser.Scene {
         if (Phaser.Geom.Rectangle.Contains(b, wx, wy)) { const d = Math.hypot(o.cx - wx, o.by - wy); if (d < bd) { bd = d; hit = o; } }
       }
       if (!hit) { for (const pl of this.plots) { if (Math.abs(wx - pl.cx) < T / 2 && Math.abs(wy - pl.by) < T / 2) { hit = pl; break; } } }
+      if (!hit && this.portal && Math.abs(wx - this.portal.cx) < 26 && Math.abs(wy - (this.portal.by - 14)) < 30) hit = this.portal;   // clic en el portal 🌲: caminar y teletransportarse
       if (this.action) {   // acción en curso: encolar el próximo objetivo (hasta 7) sin esperar la animación
         if (hit && (hit.type === "plot" || hit.type === "tree" || hit.type === "rock" || hit.type === "ore")) {
           if (!this.queue.includes(hit) && this.queue.length < 7) { this.queue.push(hit); this.markQueued(hit); toast("📋 En cola (" + this.queue.length + ")"); }
@@ -245,7 +248,7 @@ class FarmScene extends Phaser.Scene {
       if (o.state === "ready") { const cd = CROP_DEF[o.cropKey]; return "🌾 Cosechar " + (cd ? cd.label : ""); }
       return "🌱 Creciendo…";
     }
-    if (o.type === "portal") return "🌲 Entrar al Bosque" + (G.swordOwned ? "" : " (sin espada: a puño limpio)");
+    if (o.type === "portal") return "🌲 Teletransportarte al Bosque" + (G.swordOwned ? "" : " ⚠️ sin espada");
     const secs = cd ? Math.ceil((o.readyAt - nowMs()) / 1000) : 0;
     if (o.type === "tree") return cd ? "🪵 Vuelve en " + secs + "s" : "🪓 Talar madera";
     if (o.type === "rock") return cd ? "🪨 Vuelve en " + secs + "s" : "⛏️ Picar piedra";
