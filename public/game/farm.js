@@ -23,7 +23,30 @@ class FarmScene extends Phaser.Scene {
 
     // fondo + estanque + lotes-tierra + grilla
     const g = this.add.graphics().setDepth(-1000);
-    g.fillStyle(0x6ba043, 1).fillRect(0, 0, W, H);
+    // césped en damero: dos verdes casi iguales alternados por celda (estilo Stardew)
+    for (let r = 0; r < GF.ROWS; r++) for (let c = 0; c < GF.COLS; c++) {
+      g.fillStyle((r + c) % 2 === 0 ? 0x4c6e34 : 0x466730, 1);
+      g.fillRect(c * T, r * T, T, T);
+    }
+    // detalles del césped: matitas, florcitas y piedritas (semilla fija: no cambian entre recargas)
+    let dseed = 20260730;
+    const drnd = () => { dseed = (dseed * 1664525 + 1013904223) >>> 0; return dseed / 4294967296; };
+    const deco = this.add.graphics().setDepth(-999.5);
+    for (let i = 0; i < 210; i++) {
+      const dx = 8 + drnd() * (W - 16), dy = 8 + drnd() * (H - 16), t = drnd();
+      if (t < 0.72) {          // matita de pasto
+        const col = drnd() < 0.6 ? 0x3a5c2a : 0x608442;
+        deco.lineStyle(1, col, 1);
+        for (let b = 0; b < 3; b++) { deco.beginPath(); deco.moveTo(dx + b * 2, dy + 3); deco.lineTo(dx + b * 2 + (drnd() * 3 - 1.5), dy - 2 - drnd() * 3); deco.strokePath(); }
+      } else if (t < 0.92) {   // florcita
+        const cols = [0xf0ebc8, 0xebbe5a, 0xdca0be];
+        deco.fillStyle(cols[(drnd() * 3) | 0], 1).fillCircle(dx, dy, 2);
+        deco.fillStyle(0x967832, 1).fillCircle(dx, dy, 0.8);
+      } else {                 // piedrita
+        deco.fillStyle(0x8c8778, 1).fillEllipse(dx, dy, 6, 4);
+        deco.lineStyle(1, 0x5a564a, 1).strokeEllipse(dx, dy, 6, 4);
+      }
+    }
     const p = GF.POND, pcx = (p.col + p.cols / 2) * T, pcy = (p.row + p.rows / 2) * T, pw = p.cols * T, ph = p.rows * T;
     if (this.textures.exists("pond")) {
       this.pondImg = this.add.image(pcx, pcy, "pond").setDisplaySize(pw + 10, ph + 10).setDepth(-999);
