@@ -54,21 +54,17 @@ class FarmScene extends Phaser.Scene {
     if (this.textures.exists("fence_top")) {
       const FH = T * 0.55, p2 = GF.POND;   // alto del tramo horizontal (de frente)
       const pondCell = (c, r) => c >= p2.col && c < p2.col + p2.cols && r >= p2.row && r < p2.row + p2.rows;
-      for (let c = 1; c < GF.COLS - 1; c++) {
+      // horizontales de punta a punta (incluyen las celdas de esquina)
+      for (let c = 0; c < GF.COLS; c++) {
         if (!pondCell(c, 0)) this.add.image(c * T + T / 2, T * 0.58, "fence_top").setDisplaySize(T, FH).setOrigin(0.5, 1).setDepth(2);
         if (!pondCell(c, GF.ROWS - 1)) this.add.image(c * T + T / 2, H + 6, "fence_bottom").setDisplaySize(T, FH).setOrigin(0.5, 1).setDepth(H + 6);
       }
-      for (let r = 1; r < GF.ROWS - 1; r++) {   // tira finita vista desde arriba
-        if (!pondCell(0, r)) this.add.image(7, r * T + T, "fence_left").setDisplaySize(T * 0.22, T).setOrigin(0.5, 1).setDepth(2);
-        if (!pondCell(GF.COLS - 1, r)) this.add.image(W - 7, r * T + T, "fence_right").setDisplaySize(T * 0.22, T).setOrigin(0.5, 1).setDepth(2);
+      // verticales de arriba a abajo: al cruzarse con las horizontales en las esquinas, la unión
+      // es perfecta por construcción (son las mismas piezas, sin sprite de esquina aparte)
+      for (let r = 0; r < GF.ROWS; r++) {
+        if (!pondCell(0, r)) this.add.image(7, r * T + T, "fence_left").setDisplaySize(T * 0.22, T).setOrigin(0.5, 1).setDepth(3);
+        if (!pondCell(GF.COLS - 1, r)) this.add.image(W - 7, r * T + T, "fence_right").setDisplaySize(T * 0.22, T).setOrigin(0.5, 1).setDepth(3);
       }
-      // esquina en L (combina travesaños horizontales + tira vertical); las 4 salen espejando
-      const cw = T * 1.08, chh = T * 1.12;
-      const mk = (x, y, ox, oy, fx, fy, hide) => { const c2 = this.add.image(x, y, "fence_corner").setDisplaySize(cw, chh).setOrigin(ox, oy).setDepth(y > H / 2 ? H + 6 : 3); c2.flipX = fx; c2.flipY = fy; if (hide) c2.setVisible(false); };
-      mk(0, 0, 0, 0, false, false, false);                          // superior izquierda (la generada)
-      mk(W, 0, 1, 0, true, false, false);                           // superior derecha
-      mk(0, H + 6, 0, 1, false, true, pondCell(0, GF.ROWS - 1));    // inferior izquierda (se oculta si la laguna toca)
-      mk(W, H + 6, 1, 1, true, true, false);                        // inferior derecha
     }
 
     // objetos del mundo (con estado para interacción)
