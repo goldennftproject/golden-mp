@@ -244,55 +244,58 @@ function showSeedWheel(px, py, plot) {
 }
 function hideSeedWheel() { const w = $("seedwheel"); if (w) w.classList.remove("show"); }
 
-/* ---- herrería ---- */
+/* ---- herrería: pestaña Craftear (picos sin tener + armas + flechas) y pestaña Reparar (todo lo tuyo) ---- */
 function refreshForge() {
   const eq = G.picks.eq;
-  $("forge-list").innerHTML = PICK_ORDER.map(id => {
+  let craft = "", repair = "";
+  // picos
+  PICK_ORDER.forEach(id => {
     const pd = PICK_DEF[id]; const owned = !!G.picks.owned[id]; const dur = G.picks.dur[id] || 0;
     const mineEmo = ORE_ORDER.filter(o => ORE_DEF[o].tier <= pd.mineTier).map(o => resIc(o)).join("");
-    const costStr = Object.keys(pd.cost).map(k => resIc(k) + " " + pd.cost[k]).join(" · ");
-    const durPct = owned ? Math.round(dur / pd.dur * 100) : 0;
-    let btns = "";
-    if (!owned) { const aff = canAfford(pd.cost); btns = '<button class="green sm" ' + (aff ? "" : "disabled") + ' data-craft="' + id + '">Craftear</button>'; }
-    else { const isEq = eq === id; btns = '<button class="ghost sm" ' + (isEq ? "disabled" : "") + ' data-equip="' + id + '">' + (isEq ? "Equipado" : "Equipar") + "</button>";
-      if (dur < pd.dur) { const rc = repairCostOf(id); const raff = canAfford(rc); const rstr = Object.keys(rc).map(k => (RES_EMOJI[k] || "") + rc[k]).join(" "); btns += '<button class="gold sm" ' + (raff ? "" : "disabled") + ' data-repair="' + id + '" title="Reparar: ' + rstr + '">Reparar</button>'; } }
     const img = '<img src="' + GF.spr(pd.sprite) + '">';
-    return '<div class="forge-row ' + (eq === id ? "eq" : "") + '"><div class="fic">' + img + '</div><div class="finfo"><div class="fnm">' + pd.label + (eq === id ? ' <span class="tag">equipado</span>' : "") + '</div><div class="fds">Mina: ' + mineEmo + " · " + pd.dur + " usos" + (pd.fast ? " · ⚡ rápido (gasta doble)" : "") + "</div>" + (owned ? '<div class="durbar"><i style="width:' + durPct + '%"></i></div><div class="fds">' + dur + "/" + pd.dur + "</div>" : '<div class="fds">Costo: ' + costStr + "</div>") + "</div><div class=\"fbtns\">" + btns + "</div></div>";
-  }).join("");
-  $("forge-list").querySelectorAll("[data-craft]").forEach(b => b.onclick = () => craftPick(b.dataset.craft));
-  $("forge-list").querySelectorAll("[data-equip]").forEach(b => b.onclick = () => equipPick(b.dataset.equip));
-  $("forge-list").querySelectorAll("[data-repair]").forEach(b => b.onclick = () => repairPick(b.dataset.repair));
-  refreshTools();
-}
-
-// herrería · reparación de hacha, caña y espada (la espada primero se craftea)
-function refreshTools() {
-  const box = $("forge-tools"); if (!box) return;
-  const ids = ["axe", "rod"].concat(G.swordOwned ? ["sword"] : []).concat(G.bowOwned ? ["bow"] : []);
-  let html = ids.map(id => {
+    if (!owned) {
+      const costStr = Object.keys(pd.cost).map(k => resIc(k) + " " + pd.cost[k]).join(" · ");
+      craft += '<div class="forge-row"><div class="fic">' + img + '</div><div class="finfo"><div class="fnm">' + pd.label + '</div><div class="fds">Mina: ' + mineEmo + " · " + pd.dur + " usos" + (pd.fast ? " · ⚡ rápido (gasta doble)" : "") + '</div><div class="fds">Costo: ' + costStr + '</div></div><div class="fbtns"><button class="green sm" ' + (canAfford(pd.cost) ? "" : "disabled") + ' data-craft="' + id + '">Craftear</button></div></div>';
+    } else {
+      const isEq = eq === id, durPct = Math.round(dur / pd.dur * 100);
+      let btns = '<button class="ghost sm" ' + (isEq ? "disabled" : "") + ' data-equip="' + id + '">' + (isEq ? "Equipado" : "Equipar") + "</button>";
+      if (dur < pd.dur) { const rc = repairCostOf(id); const rstr = Object.keys(rc).map(k => (RES_EMOJI[k] || "") + rc[k]).join(" "); btns += '<button class="gold sm" ' + (canAfford(rc) ? "" : "disabled") + ' data-repair="' + id + '" title="Reparar: ' + rstr + '">Reparar</button>'; }
+      repair += '<div class="forge-row ' + (isEq ? "eq" : "") + '"><div class="fic">' + img + '</div><div class="finfo"><div class="fnm">' + pd.label + (isEq ? ' <span class="tag">equipado</span>' : "") + '</div><div class="fds">Mina: ' + mineEmo + '</div><div class="durbar"><i style="width:' + durPct + '%"></i></div><div class="fds">' + dur + "/" + pd.dur + '</div></div><div class="fbtns">' + btns + "</div></div>";
+    }
+  });
+  // herramientas y armas que ya tenés → Reparar
+  ["axe", "rod"].concat(G.swordOwned ? ["sword"] : []).concat(G.bowOwned ? ["bow"] : []).forEach(id => {
     const td = TOOL_DEF[id], dur = toolDur(id), pct = Math.round(dur / td.max * 100);
     const rstr = Object.keys(td.repair).map(k => resIc(k) + td.repair[k]).join(" ");
     const btn = dur < td.max
       ? '<button class="gold sm" ' + (canAfford(td.repair) ? "" : "disabled") + ' data-rtool="' + id + '" title="Reparar: ' + rstr + '">Reparar</button>'
       : '<button class="ghost sm" disabled>100%</button>';
-    return '<div class="forge-row"><div class="fic"><img src="' + GF.spr(td.sprite) + '" onerror="this.outerHTML=\'' + td.emoji + '\'"></div><div class="finfo"><div class="fnm">' + td.label + '</div><div class="durbar"><i style="width:' + pct + '%"></i></div><div class="fds">' + dur + "/" + td.max + " · reparar: " + rstr + '</div></div><div class="fbtns">' + btn + "</div></div>";
-  }).join("");
+    repair += '<div class="forge-row"><div class="fic"><img src="' + GF.spr(td.sprite) + '" onerror="this.outerHTML=\'' + td.emoji + '\'"></div><div class="finfo"><div class="fnm">' + td.label + '</div><div class="durbar"><i style="width:' + pct + '%"></i></div><div class="fds">' + dur + "/" + td.max + " · reparar: " + rstr + '</div></div><div class="fbtns">' + btn + "</div></div>";
+  });
+  // armas por craftear + flechas → Craftear
   if (!G.swordOwned) {
     const cstr = Object.keys(SWORD_COST).map(k => resIc(k) + " " + SWORD_COST[k]).join(" · ");
-    html += '<div class="forge-row"><div class="fic"><img src="' + GF.spr("sword") + '" onerror="this.outerHTML=\'⚔️\'"></div><div class="finfo"><div class="fnm">Espada de Hierro</div><div class="fds">Para pelear en el Bosque · daño según skill Espada</div><div class="fds">Costo: ' + cstr + '</div></div><div class="fbtns"><button class="green sm" ' + (canAfford(SWORD_COST) ? "" : "disabled") + ' id="forge-sword">Craftear</button></div></div>';
+    craft += '<div class="forge-row"><div class="fic"><img src="' + GF.spr("sword") + '" onerror="this.outerHTML=\'⚔️\'"></div><div class="finfo"><div class="fnm">Espada de Hierro</div><div class="fds">Para pelear en el Bosque · daño según skill Espada</div><div class="fds">Costo: ' + cstr + '</div></div><div class="fbtns"><button class="green sm" ' + (canAfford(SWORD_COST) ? "" : "disabled") + ' id="forge-sword">Craftear</button></div></div>';
   }
   if (!G.bowOwned) {
     const bstr = Object.keys(BOW_COST).map(k => resIc(k) + " " + BOW_COST[k]).join(" · ");
-    html += '<div class="forge-row"><div class="fic"><img src="' + GF.spr("bow") + '" onerror="this.outerHTML=\'🏹\'"></div><div class="finfo"><div class="fnm">Arco</div><div class="fds">Ataque a distancia · daño según skill Arco · consume flechas</div><div class="fds">Costo: ' + bstr + '</div></div><div class="fbtns"><button class="green sm" ' + (canAfford(BOW_COST) ? "" : "disabled") + ' id="forge-bow">Craftear</button></div></div>';
+    craft += '<div class="forge-row"><div class="fic"><img src="' + GF.spr("bow") + '" onerror="this.outerHTML=\'🏹\'"></div><div class="finfo"><div class="fnm">Arco</div><div class="fds">Ataque a distancia · daño según skill Arco · consume flechas</div><div class="fds">Costo: ' + bstr + '</div></div><div class="fbtns"><button class="green sm" ' + (canAfford(BOW_COST) ? "" : "disabled") + ' id="forge-bow">Craftear</button></div></div>';
   }
   const astr = Object.keys(ARROW_COST).map(k => resIc(k) + " " + ARROW_COST[k]).join(" · ");
-  html += '<div class="forge-row"><div class="fic"><img src="' + GF.spr("res_flecha") + '" onerror="this.outerHTML=\'➳\'"></div><div class="finfo"><div class="fnm">Flechas ×10</div><div class="fds">Tenés ' + fmt(G.res.flecha || 0) + ' · Costo: ' + astr + '</div></div><div class="fbtns"><button class="green sm" ' + (canAfford(ARROW_COST) ? "" : "disabled") + ' id="forge-arrows">Craftear</button></div></div>';
-  box.innerHTML = html;
-  box.querySelectorAll("[data-rtool]").forEach(b => b.onclick = () => repairTool(b.dataset.rtool));
+  craft += '<div class="forge-row"><div class="fic"><img src="' + GF.spr("res_flecha") + '" onerror="this.outerHTML=\'➳\'"></div><div class="finfo"><div class="fnm">Flechas ×10</div><div class="fds">Tenés ' + fmt(G.res.flecha || 0) + ' · Costo: ' + astr + '</div></div><div class="fbtns"><button class="green sm" ' + (canAfford(ARROW_COST) ? "" : "disabled") + ' id="forge-arrows">Craftear</button></div></div>';
+
+  $("forge-craft").innerHTML = craft || '<div class="sub">Nada por craftear — ya tenés todo. 💪</div>';
+  $("forge-repair").innerHTML = repair;
+  const card = $("ov-forge");
+  card.querySelectorAll("[data-craft]").forEach(b => b.onclick = () => craftPick(b.dataset.craft));
+  card.querySelectorAll("[data-equip]").forEach(b => b.onclick = () => equipPick(b.dataset.equip));
+  card.querySelectorAll("[data-repair]").forEach(b => b.onclick = () => repairPick(b.dataset.repair));
+  card.querySelectorAll("[data-rtool]").forEach(b => b.onclick = () => repairTool(b.dataset.rtool));
   const fs = $("forge-sword"); if (fs) fs.onclick = () => craftSword();
   const fb = $("forge-bow"); if (fb) fb.onclick = () => craftBow();
   const fa = $("forge-arrows"); if (fa) fa.onclick = () => craftArrows();
 }
+function refreshTools() { refreshForge(); }   // compatibilidad con llamadas viejas
 
 /* ---- cocina (en la Granja) ---- */
 function refreshCooking() {
@@ -510,8 +513,8 @@ function initUI() {
   document.querySelectorAll(".forgetab").forEach(b => b.onclick = () => {
     document.querySelectorAll(".forgetab").forEach(x => x.classList.toggle("active", x === b));
     const s = b.dataset.forge;
-    $("forge-pane-picks").style.display = s === "picks" ? "" : "none";
-    $("forge-pane-tools").style.display = s === "tools" ? "" : "none";
+    $("forge-pane-craft").style.display = s === "craft" ? "" : "none";
+    $("forge-pane-repair").style.display = s === "repair" ? "" : "none";
   });
   // modo edición: cierra las ventanas y deja solo dos botoncitos flotantes sobre la hotbar
   window.setEditMode = (on) => {

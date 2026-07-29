@@ -56,7 +56,8 @@ GF.COLLISIONS = GF.WORLD_OBJECTS.map(o => ({
 
 GF.blockedAt = function(x, y, pad){
   pad = pad || 0;
-  if (x < 12 || y < 12 || x > GF.WORLD_W - 12 || y > GF.WORLD_H - 12) return true;
+  // la cerca del borde es sólida: no se puede pisar ni traspasar
+  if (x < 18 || y < T * 0.72 || x > GF.WORLD_W - 18 || y > GF.WORLD_H - 16) return true;
   const p = GF.POND, px = p.col*T, py = p.row*T, pw = p.cols*T, ph = p.rows*T;
   const ex = px + pw/2, ey = py + ph/2;
   const dxp = (x-ex)/(pw/2 + pad), dyp = (y-ey)/(ph/2 + pad);
