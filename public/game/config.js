@@ -31,7 +31,7 @@ GF.WORLD_OBJECTS = [];
  ["diamante","node_diamond",905,500],["netherita","node_netherite",915,430]]
   .forEach(o => GF.WORLD_OBJECTS.push(snap(o[1], {type:"ore", ore:o[0]}, o[2], o[3], T)));                                // 1 celda
 GF.WORLD_OBJECTS.push(snap("barn",   {type:"barn"},   540, 150, T*4));                                                    // 4 celdas (edificios grandes)
-GF.WORLD_OBJECTS.push(snap("market", {type:"market"}, 470, 505, T*3));                                                    // 3 celdas
+GF.WORLD_OBJECTS.push(snap("market", {type:"market"}, 470, 505, T*2));                                                    // 2 celdas (más chico que la herrería)
 GF.WORLD_OBJECTS.push(snap("store",  {type:"store"},  650, 480, T*3));                                                    // 3 celdas
 // quinta.docx: 5 árboles y 4 piedras en total — agregados AL FINAL para no romper layouts guardados
 [[695,115],[915,300]].forEach(t => GF.WORLD_OBJECTS.push(snap("tree", {type:"tree"}, t[0], t[1], T*2)));
