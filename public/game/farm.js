@@ -50,22 +50,23 @@ class FarmScene extends Phaser.Scene {
     for (let y = 0; y <= H; y += T) { g.beginPath(); g.moveTo(0, y); g.lineTo(W, y); g.strokePath(); }
     g.lineStyle(4, 0x3c4d31, 0.9).strokeRect(0, 0, W, H);
 
-    // cerca de madera del diseñador alrededor de la granja (si están las piezas)
+    // cerca de madera cozy alrededor de la granja (horizontal de frente, vertical de canto)
     if (this.textures.exists("fence_top")) {
-      const FH = T * 1.35, p2 = GF.POND;
+      const FH = T * 0.55, p2 = GF.POND;   // alto del tramo horizontal (de frente)
       const pondCell = (c, r) => c >= p2.col && c < p2.col + p2.cols && r >= p2.row && r < p2.row + p2.rows;
       for (let c = 1; c < GF.COLS - 1; c++) {
-        if (!pondCell(c, 0)) this.add.image(c * T + T / 2, FH * 0.72, "fence_top").setDisplaySize(T, FH).setOrigin(0.5, 1).setDepth(FH * 0.72 - T);
-        if (!pondCell(c, GF.ROWS - 1)) this.add.image(c * T + T / 2, H + 4, "fence_bottom").setDisplaySize(T, FH).setOrigin(0.5, 1).setDepth(H + 4);
+        if (!pondCell(c, 0)) this.add.image(c * T + T / 2, T * 0.58, "fence_top").setDisplaySize(T, FH).setOrigin(0.5, 1).setDepth(2);
+        if (!pondCell(c, GF.ROWS - 1)) this.add.image(c * T + T / 2, H + 6, "fence_bottom").setDisplaySize(T, FH).setOrigin(0.5, 1).setDepth(H + 6);
       }
-      for (let r = 1; r < GF.ROWS - 1; r++) {
-        if (!pondCell(0, r)) this.add.image(T * 0.32, r * T + T, "fence_left").setDisplaySize(T * 0.85, FH).setOrigin(0.5, 1).setDepth(r * T + T);
-        if (!pondCell(GF.COLS - 1, r)) this.add.image(W - T * 0.32, r * T + T, "fence_right").setDisplaySize(T * 0.85, FH).setOrigin(0.5, 1).setDepth(r * T + T);
+      for (let r = 1; r < GF.ROWS - 1; r++) {   // tira finita vista desde arriba
+        if (!pondCell(0, r)) this.add.image(7, r * T + T, "fence_left").setDisplaySize(T * 0.22, T).setOrigin(0.5, 1).setDepth(2);
+        if (!pondCell(GF.COLS - 1, r)) this.add.image(W - 7, r * T + T, "fence_right").setDisplaySize(T * 0.22, T).setOrigin(0.5, 1).setDepth(2);
       }
-      this.add.image(T * 0.55, FH * 0.75, "fence_corner").setDisplaySize(T * 1.05, FH).setOrigin(0.5, 1).setDepth(FH * 0.75 - T);
-      const ctr = this.add.image(W - T * 0.55, FH * 0.75, "fence_corner").setDisplaySize(T * 1.05, FH).setOrigin(0.5, 1).setDepth(FH * 0.75 - T); ctr.flipX = true;
-      const cbl = this.add.image(T * 0.55, H + 4, "fence_corner").setDisplaySize(T * 1.05, FH).setOrigin(0.5, 1).setDepth(H + 4); if (pondCell(0, GF.ROWS - 1)) cbl.setVisible(false);
-      const cbr = this.add.image(W - T * 0.55, H + 4, "fence_corner").setDisplaySize(T * 1.05, FH).setOrigin(0.5, 1).setDepth(H + 4); cbr.flipX = true;
+      const corner = (x, y, flip, hide) => { const c2 = this.add.image(x, y, "fence_corner").setDisplaySize(T * 0.7, T * 1.05).setOrigin(0.5, 1).setDepth(y > H / 2 ? y : 3); c2.flipX = !!flip; if (hide) c2.setVisible(false); };
+      corner(9, T * 0.66, false, false);
+      corner(W - 9, T * 0.66, true, false);
+      corner(9, H + 6, false, pondCell(0, GF.ROWS - 1));
+      corner(W - 9, H + 6, true, false);
     }
 
     // objetos del mundo (con estado para interacción)

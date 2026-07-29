@@ -19,10 +19,10 @@ class BootScene extends Phaser.Scene {
     // versionados: el arte cambió y el caché de 1 día serviría el viejo
     L.push(["plot", P + "plot.png?v=2"]);
     L.push(["plot_blocked", P + "plot_blocked.png?v=2"]);
-    L.push(["barn", P + "barn.png?v=2"]);
-    L.push(["market", P + "market.png?v=2"]);
-    L.push(["store", P + "store.png?v=2"]);
-    ["fence_top","fence_bottom","fence_left","fence_right","fence_corner"].forEach(k => L.push([k, P + k + ".png"]));
+    L.push(["barn", P + "barn.png?v=3"]);
+    L.push(["market", P + "market.png?v=3"]);
+    L.push(["store", P + "store.png?v=3"]);
+    ["fence_top","fence_bottom","fence_left","fence_right","fence_corner"].forEach(k => L.push([k, P + k + ".png?v=2"]));
     if (typeof CROP_ORDER !== "undefined") CROP_ORDER.forEach(k => L.push(["cropg_" + k, P + "cropg_" + k + ".png"]));
     return L;
   }
@@ -30,8 +30,8 @@ class BootScene extends Phaser.Scene {
   preload() {
     // ATLAS: todos los sprites del mundo en 2 archivos (mucho más liviano para el server free).
     // Si el atlas no llega, ensureAll() baja los archivos sueltos como respaldo.
-    this.load.image("__atlas", "assets/atlas.png?v=1");
-    this.load.json("__atlasmap", "assets/atlas.json?v=1");
+    this.load.image("__atlas", "assets/atlas.png?v=2");
+    this.load.json("__atlasmap", "assets/atlas.json?v=2");
 
     // barra de carga simple
     const w = this.scale.width, h = this.scale.height;
