@@ -210,17 +210,18 @@ function refreshEquip() {
     const col = pct > 50 ? "#7ec95a" : (pct > 20 ? "#e2b23a" : "#d9534f");
     return `<div class="eqtool" title="${c.nm} · ${c.st || c.dur + "/" + c.max}"><img src="${GF.spr(c.sprite)}" onerror="this.outerHTML='⚔️'"><div class="db"><i style="width:${pct}%;background:${col}"></i></div></div>`;
   }).join("");
-  // slots de combate: armaduras equipadas, arma y munición (con sprite cozy y caída a emoji)
-  const fill = (id, on, em, nm) => { const el = $(id); if (!el) return; el.classList.toggle("ghost", !on); el.innerHTML = "<span>" + em + "</span><i>" + nm + "</i>"; };
+  // slots de combate: sin títulos — silueta del objeto cuando está vacío, sprite real cuando está equipado
+  const SIL = { "eq-casco": "sil_casco", "eq-armadura": "sil_armadura", "eq-botas": "sil_botas", "eq-escudo": "sil_escudo", "eq-arma": "sil_arma", "eq-municion": "sil_municion" };
+  const fill = (id, on, html, tip) => { const el = $(id); if (!el) return; el.classList.toggle("ghost", !on); el.title = tip || ""; el.innerHTML = on ? html : `<img class="eqsil" src="${GF.spr(SIL[id])}" onerror="this.remove()">`; };
   const spIc = (sprite, em) => `<img class="eqimg" src="${GF.spr(sprite)}" onerror="this.outerHTML='${em}'">`;
-  const gearSlot = (id, slot, fallbackEm, fallbackNm) => { const g = G.gear && G.gear[slot]; const gd = g && GEAR_DEF[g]; fill(id, !!gd, gd ? spIc(gd.sprite, gd.emoji) : fallbackEm, gd ? gd.label + " +" + gd.def : fallbackNm); };
-  gearSlot("eq-casco", "casco", "⛑️", "Casco");
-  gearSlot("eq-armadura", "armadura", "🥋", "Armadura");
-  gearSlot("eq-botas", "botas", "🥾", "Botas");
-  gearSlot("eq-escudo", "escudo", "🛡️", "Escudo");
-  fill("eq-arma", G.swordOwned, G.swordOwned ? spIc("sword", "⚔️") : "⚔️", G.swordOwned ? "Espada de Hierro" : "Arma");
+  const gearSlot = (id, slot, nm) => { const g = G.gear && G.gear[slot]; const gd = g && GEAR_DEF[g]; fill(id, !!gd, gd ? spIc(gd.sprite, gd.emoji) : "", gd ? gd.label + " · defensa +" + gd.def : nm); };
+  gearSlot("eq-casco", "casco", "Casco");
+  gearSlot("eq-armadura", "armadura", "Armadura");
+  gearSlot("eq-botas", "botas", "Botas");
+  gearSlot("eq-escudo", "escudo", "Escudo");
+  fill("eq-arma", G.swordOwned, spIc("sword", "⚔️"), G.swordOwned ? "Espada de Hierro" : "Arma");
   const fl = (G.res && G.res.flecha) || 0;
-  fill("eq-municion", fl > 0, fl > 0 ? spIc("res_flecha", "➳") : "➳", fl > 0 ? fl + " flechas" : "Munición");
+  fill("eq-municion", fl > 0, spIc("res_flecha", "➳") + '<b class="eqcnt">' + fmt(fl) + "</b>", fl > 0 ? fl + " flechas" : "Munición");
   const ed = $("eq-def"); if (ed) ed.textContent = "Defensa total: " + gearDefTotal() + (G.bowOwned ? " · 🏹 Arco equipado" : "");
 }
 

@@ -248,10 +248,13 @@
   /* equipo con slots */
   .eqlayout{display:flex;gap:12px;justify-content:center;margin:10px 0}
   .eqcol{display:flex;flex-direction:column;gap:8px;justify-content:center}
-  .eqslot{width:62px;height:62px;background:#3a2b1c url("assets/ui/slot_wood.png") center/100% 100% no-repeat;display:flex;flex-direction:column;align-items:center;justify-content:center;image-rendering:pixelated}
+  .eqslot{width:62px;height:62px;background:#3a2b1c url("assets/ui/slot_wood.png") center/100% 100% no-repeat;display:flex;flex-direction:column;align-items:center;justify-content:center;image-rendering:pixelated;position:relative}
   .eqslot span{font-size:21px;line-height:1.1}
-  .eqslot i{font-style:normal;font-size:9px;color:#e0c896;font-weight:700}
-  .eqslot.ghost{filter:grayscale(.45);opacity:.8}
+  .eqslot span.sil{filter:grayscale(1) brightness(.55);opacity:.55}
+  .eqslot.ghost{opacity:.9}
+  .eqslot .eqsil{width:62%;height:62%;object-fit:contain;image-rendering:pixelated;opacity:.85}
+  .eqslot .eqimg{width:70%;height:70%;object-fit:contain;image-rendering:pixelated}
+  .eqslot .eqcnt{position:absolute;right:5px;bottom:4px;font-size:10px;font-weight:800;color:#ffe9a8;background:rgba(30,22,12,.75);border-radius:5px;padding:0 4px}
   .eqh{margin:10px 0 6px;color:#7a4d1f;font-size:14px}
   .eqtoolrow{display:flex;gap:10px;justify-content:center}
   .eqtool{width:62px;height:62px;background:#3a2b1c url("assets/ui/slot_wood.png") center/100% 100% no-repeat;display:flex;align-items:center;justify-content:center;position:relative;image-rendering:pixelated}
@@ -369,20 +372,20 @@
     <div class="sub" id="eq-def">Defensa total: 0</div>
     <div class="eqlayout">
       <div class="eqcol">
-        <div class="eqslot ghost"><span>📿</span><i>Collar</i></div>
-        <div class="eqslot ghost"><span>🧤</span><i>Guantes</i></div>
-        <div class="eqslot ghost"><span>💍</span><i>Anillo</i></div>
+        <div class="eqslot ghost" title="Collar (próximamente)"><span class="sil">📿</span></div>
+        <div class="eqslot ghost" title="Guantes (próximamente)"><span class="sil">🧤</span></div>
+        <div class="eqslot ghost" title="Anillo (próximamente)"><span class="sil">💍</span></div>
       </div>
       <div class="eqcol">
-        <div class="eqslot ghost" id="eq-casco"><span>⛑️</span><i>Casco</i></div>
-        <div class="eqslot ghost" id="eq-armadura"><span>🥋</span><i>Armadura</i></div>
-        <div class="eqslot ghost"><span>👖</span><i>Piernas</i></div>
-        <div class="eqslot ghost" id="eq-botas"><span>🥾</span><i>Botas</i></div>
+        <div class="eqslot ghost" id="eq-casco" title="Casco"></div>
+        <div class="eqslot ghost" id="eq-armadura" title="Armadura"></div>
+        <div class="eqslot ghost" title="Piernas (próximamente)"><span class="sil">👖</span></div>
+        <div class="eqslot ghost" id="eq-botas" title="Botas"></div>
       </div>
       <div class="eqcol">
-        <div class="eqslot ghost" id="eq-arma"><span>⚔️</span><i>Arma</i></div>
-        <div class="eqslot ghost" id="eq-escudo"><span>🛡️</span><i>Escudo</i></div>
-        <div class="eqslot ghost" id="eq-municion"><span>➳</span><i>Munición</i></div>
+        <div class="eqslot ghost" id="eq-arma" title="Arma"></div>
+        <div class="eqslot ghost" id="eq-escudo" title="Escudo"></div>
+        <div class="eqslot ghost" id="eq-municion" title="Munición"></div>
       </div>
     </div>
     <h4 class="eqh">🧰 Herramientas</h4>
