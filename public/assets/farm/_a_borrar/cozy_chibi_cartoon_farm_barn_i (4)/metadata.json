@@ -1,0 +1,442 @@
+{
+  "group_id": "f747c514-99a4-40de-b616-948b83504037",
+  "objects": [
+    {
+      "id": "729dd86e-7caf-4a18-ac72-97998180316e",
+      "name": null,
+      "prompt": "cozy chibi cartoon farm barn in pixel art, chunky rounded storybook proportions, warm honey-brown wooden planks, big rounded hay-loft roof, open double barn door showing golden hay bales inside, small round window, warm saturated cozy colors, soft thick outlines, detailed shading, cute hand-drawn storybook mood, building only, no ground base, no smoke, no loose props, transparent background",
+      "size": {
+        "width": 128,
+        "height": 128
+      },
+      "directions": 1,
+      "view": "low top-down",
+      "rotations": {
+        "unknown": "rotations/unknown.png"
+      },
+      "animations": {}
+    },
+    {
+      "id": "b99aba42-3bdc-409b-a3fa-8df540516489",
+      "name": "CHANGE THE SHAPE com",
+      "prompt": "cozy chibi cartoon farm barn in pixel art, chunky rounded storybook proportions, warm honey-brown wooden planks, big rounded hay-loft roof, open double barn door showing golden hay bales inside, small round window, warm saturated cozy colors, soft thick outlines, detailed shading, cute hand-drawn storybook mood, building only, no ground base, no smoke, no loose props, transparent background",
+      "size": {
+        "width": 128,
+        "height": 128
+      },
+      "directions": 1,
+      "view": "low top-down",
+      "rotations": {
+        "unknown": "rotations/unknown.png"
+      },
+      "animations": {}
+    },
+    {
+      "id": "782c15d5-69de-4f26-87cb-9ef8fa37c422",
+      "name": "keep the building EX",
+      "prompt": "cozy chibi cartoon farm barn in pixel art, chunky rounded storybook proportions, warm honey-brown wooden planks, big rounded hay-loft roof, open double barn door showing golden hay bales inside, small round window, warm saturated cozy colors, soft thick outlines, detailed shading, cute hand-drawn storybook mood, building only, no ground base, no smoke, no loose props, transparent background",
+      "size": {
+        "width": 128,
+        "height": 128
+      },
+      "directions": 1,
+      "view": "low top-down",
+      "rotations": {
+        "unknown": "rotations/unknown.png"
+      },
+      "animations": {}
+    },
+    {
+      "id": "47bff317-4b18-4051-826e-da54d87fe002",
+      "name": "CHANGE THE SHAPE com",
+      "prompt": "cozy chibi cartoon farm barn in pixel art, chunky rounded storybook proportions, warm honey-brown wooden planks, big rounded hay-loft roof, open double barn door showing golden hay bales inside, small round window, warm saturated cozy colors, soft thick outlines, detailed shading, cute hand-drawn storybook mood, building only, no ground base, no smoke, no loose props, transparent background",
+      "size": {
+        "width": 128,
+        "height": 128
+      },
+      "directions": 1,
+      "view": "low top-down",
+      "rotations": {
+        "unknown": "rotations/unknown.png"
+      },
+      "animations": {}
+    },
+    {
+      "id": "079ce008-1bff-4d6d-9645-37966c101d30",
+      "name": "the same fence but r",
+      "prompt": "cozy chibi cartoon farm barn in pixel art, chunky rounded storybook proportions, warm honey-brown wooden planks, big rounded hay-loft roof, open double barn door showing golden hay bales inside, small round window, warm saturated cozy colors, soft thick outlines, detailed shading, cute hand-drawn storybook mood, building only, no ground base, no smoke, no loose props, transparent background",
+      "size": {
+        "width": 128,
+        "height": 128
+      },
+      "directions": 1,
+      "view": "low top-down",
+      "rotations": {
+        "unknown": "rotations/unknown.png"
+      },
+      "animations": {}
+    },
+    {
+      "id": "348a9c33-1216-4d9f-8086-561720a29b26",
+      "name": "CHANGE THE SHAPE com",
+      "prompt": "cozy chibi cartoon farm barn in pixel art, chunky rounded storybook proportions, warm honey-brown wooden planks, big rounded hay-loft roof, open double barn door showing golden hay bales inside, small round window, warm saturated cozy colors, soft thick outlines, detailed shading, cute hand-drawn storybook mood, building only, no ground base, no smoke, no loose props, transparent background",
+      "size": {
+        "width": 128,
+        "height": 128
+      },
+      "directions": 1,
+      "view": "low top-down",
+      "rotations": {
+        "unknown": "rotations/unknown.png"
+      },
+      "animations": {}
+    },
+    {
+      "id": "7eb28b1b-5528-4ec0-8cb7-9be6e1fed08e",
+      "name": "CHANGE into the CORN",
+      "prompt": "cozy chibi cartoon farm barn in pixel art, chunky rounded storybook proportions, warm honey-brown wooden planks, big rounded hay-loft roof, open double barn door showing golden hay bales inside, small round window, warm saturated cozy colors, soft thick outlines, detailed shading, cute hand-drawn storybook mood, building only, no ground base, no smoke, no loose props, transparent background",
+      "size": {
+        "width": 128,
+        "height": 128
+      },
+      "directions": 1,
+      "view": "low top-down",
+      "rotations": {
+        "unknown": "rotations/unknown.png"
+      },
+      "animations": {}
+    },
+    {
+      "id": "faedac8f-76ed-479b-b935-82c5c8e73a70",
+      "name": "keep the same tilled",
+      "prompt": "cozy chibi cartoon farm barn in pixel art, chunky rounded storybook proportions, warm honey-brown wooden planks, big rounded hay-loft roof, open double barn door showing golden hay bales inside, small round window, warm saturated cozy colors, soft thick outlines, detailed shading, cute hand-drawn storybook mood, building only, no ground base, no smoke, no loose props, transparent background",
+      "size": {
+        "width": 128,
+        "height": 128
+      },
+      "directions": 1,
+      "view": "low top-down",
+      "rotations": {
+        "unknown": "rotations/unknown.png"
+      },
+      "animations": {}
+    },
+    {
+      "id": "7d075d9e-7496-4448-84cc-39abc00d6ed4",
+      "name": "CHANGE THE SHAPE com",
+      "prompt": "cozy chibi cartoon farm barn in pixel art, chunky rounded storybook proportions, warm honey-brown wooden planks, big rounded hay-loft roof, open double barn door showing golden hay bales inside, small round window, warm saturated cozy colors, soft thick outlines, detailed shading, cute hand-drawn storybook mood, building only, no ground base, no smoke, no loose props, transparent background",
+      "size": {
+        "width": 128,
+        "height": 128
+      },
+      "directions": 1,
+      "view": "low top-down",
+      "rotations": {
+        "unknown": "rotations/unknown.png"
+      },
+      "animations": {}
+    },
+    {
+      "id": "81d0f68f-a0de-4688-af79-0a65b7fd7fb6",
+      "name": "keep the bag EXACTLY",
+      "prompt": "cozy chibi cartoon farm barn in pixel art, chunky rounded storybook proportions, warm honey-brown wooden planks, big rounded hay-loft roof, open double barn door showing golden hay bales inside, small round window, warm saturated cozy colors, soft thick outlines, detailed shading, cute hand-drawn storybook mood, building only, no ground base, no smoke, no loose props, transparent background",
+      "size": {
+        "width": 128,
+        "height": 128
+      },
+      "directions": 1,
+      "view": "low top-down",
+      "rotations": {
+        "unknown": "rotations/unknown.png"
+      },
+      "animations": {}
+    },
+    {
+      "id": "ad34fee6-b204-4691-926d-044c27959e65",
+      "name": "keep the bag EXACTLY",
+      "prompt": "cozy chibi cartoon farm barn in pixel art, chunky rounded storybook proportions, warm honey-brown wooden planks, big rounded hay-loft roof, open double barn door showing golden hay bales inside, small round window, warm saturated cozy colors, soft thick outlines, detailed shading, cute hand-drawn storybook mood, building only, no ground base, no smoke, no loose props, transparent background",
+      "size": {
+        "width": 128,
+        "height": 128
+      },
+      "directions": 1,
+      "view": "low top-down",
+      "rotations": {
+        "unknown": "rotations/unknown.png"
+      },
+      "animations": {}
+    },
+    {
+      "id": "48350f70-5e23-4a1c-b7dd-17c2c6724f81",
+      "name": "keep the bag EXACTLY",
+      "prompt": "cozy chibi cartoon farm barn in pixel art, chunky rounded storybook proportions, warm honey-brown wooden planks, big rounded hay-loft roof, open double barn door showing golden hay bales inside, small round window, warm saturated cozy colors, soft thick outlines, detailed shading, cute hand-drawn storybook mood, building only, no ground base, no smoke, no loose props, transparent background",
+      "size": {
+        "width": 128,
+        "height": 128
+      },
+      "directions": 1,
+      "view": "low top-down",
+      "rotations": {
+        "unknown": "rotations/unknown.png"
+      },
+      "animations": {}
+    },
+    {
+      "id": "4ec770fd-1260-485f-9df6-cee02c4e9bd9",
+      "name": "keep the bag EXACTLY",
+      "prompt": "cozy chibi cartoon farm barn in pixel art, chunky rounded storybook proportions, warm honey-brown wooden planks, big rounded hay-loft roof, open double barn door showing golden hay bales inside, small round window, warm saturated cozy colors, soft thick outlines, detailed shading, cute hand-drawn storybook mood, building only, no ground base, no smoke, no loose props, transparent background",
+      "size": {
+        "width": 128,
+        "height": 128
+      },
+      "directions": 1,
+      "view": "low top-down",
+      "rotations": {
+        "unknown": "rotations/unknown.png"
+      },
+      "animations": {}
+    },
+    {
+      "id": "db9d9362-c4a8-46dc-bb40-fdd87aa82603",
+      "name": "keep the bag EXACTLY",
+      "prompt": "cozy chibi cartoon farm barn in pixel art, chunky rounded storybook proportions, warm honey-brown wooden planks, big rounded hay-loft roof, open double barn door showing golden hay bales inside, small round window, warm saturated cozy colors, soft thick outlines, detailed shading, cute hand-drawn storybook mood, building only, no ground base, no smoke, no loose props, transparent background",
+      "size": {
+        "width": 128,
+        "height": 128
+      },
+      "directions": 1,
+      "view": "low top-down",
+      "rotations": {
+        "unknown": "rotations/unknown.png"
+      },
+      "animations": {}
+    },
+    {
+      "id": "339706e3-188e-47aa-859a-1a79f8791004",
+      "name": "keep the bag EXACTLY",
+      "prompt": "cozy chibi cartoon farm barn in pixel art, chunky rounded storybook proportions, warm honey-brown wooden planks, big rounded hay-loft roof, open double barn door showing golden hay bales inside, small round window, warm saturated cozy colors, soft thick outlines, detailed shading, cute hand-drawn storybook mood, building only, no ground base, no smoke, no loose props, transparent background",
+      "size": {
+        "width": 128,
+        "height": 128
+      },
+      "directions": 1,
+      "view": "low top-down",
+      "rotations": {
+        "unknown": "rotations/unknown.png"
+      },
+      "animations": {}
+    },
+    {
+      "id": "b4f582f9-76b8-4933-bdf3-e33a2e1e6191",
+      "name": "REMOVE the bag compl",
+      "prompt": "cozy chibi cartoon farm barn in pixel art, chunky rounded storybook proportions, warm honey-brown wooden planks, big rounded hay-loft roof, open double barn door showing golden hay bales inside, small round window, warm saturated cozy colors, soft thick outlines, detailed shading, cute hand-drawn storybook mood, building only, no ground base, no smoke, no loose props, transparent background",
+      "size": {
+        "width": 128,
+        "height": 128
+      },
+      "directions": 1,
+      "view": "low top-down",
+      "rotations": {
+        "unknown": "rotations/unknown.png"
+      },
+      "animations": {}
+    },
+    {
+      "id": "4fca4206-d254-43cb-a462-581d2aad1bd2",
+      "name": "transform into a sin",
+      "prompt": "cozy chibi cartoon farm barn in pixel art, chunky rounded storybook proportions, warm honey-brown wooden planks, big rounded hay-loft roof, open double barn door showing golden hay bales inside, small round window, warm saturated cozy colors, soft thick outlines, detailed shading, cute hand-drawn storybook mood, building only, no ground base, no smoke, no loose props, transparent background",
+      "size": {
+        "width": 128,
+        "height": 128
+      },
+      "directions": 1,
+      "view": "low top-down",
+      "rotations": {
+        "unknown": "rotations/unknown.png"
+      },
+      "animations": {}
+    },
+    {
+      "id": "3bacade6-476a-4936-8714-859f674e3c43",
+      "name": "transform into a sin",
+      "prompt": "cozy chibi cartoon farm barn in pixel art, chunky rounded storybook proportions, warm honey-brown wooden planks, big rounded hay-loft roof, open double barn door showing golden hay bales inside, small round window, warm saturated cozy colors, soft thick outlines, detailed shading, cute hand-drawn storybook mood, building only, no ground base, no smoke, no loose props, transparent background",
+      "size": {
+        "width": 128,
+        "height": 128
+      },
+      "directions": 1,
+      "view": "low top-down",
+      "rotations": {
+        "unknown": "rotations/unknown.png"
+      },
+      "animations": {}
+    },
+    {
+      "id": "a0745f6e-d3fd-4394-874e-22c55b8e7494",
+      "name": "transform into a sin",
+      "prompt": "cozy chibi cartoon farm barn in pixel art, chunky rounded storybook proportions, warm honey-brown wooden planks, big rounded hay-loft roof, open double barn door showing golden hay bales inside, small round window, warm saturated cozy colors, soft thick outlines, detailed shading, cute hand-drawn storybook mood, building only, no ground base, no smoke, no loose props, transparent background",
+      "size": {
+        "width": 128,
+        "height": 128
+      },
+      "directions": 1,
+      "view": "low top-down",
+      "rotations": {
+        "unknown": "rotations/unknown.png"
+      },
+      "animations": {}
+    },
+    {
+      "id": "9f30aab3-a9a0-4bb7-97f0-52b85602db12",
+      "name": "transform into a sin",
+      "prompt": "cozy chibi cartoon farm barn in pixel art, chunky rounded storybook proportions, warm honey-brown wooden planks, big rounded hay-loft roof, open double barn door showing golden hay bales inside, small round window, warm saturated cozy colors, soft thick outlines, detailed shading, cute hand-drawn storybook mood, building only, no ground base, no smoke, no loose props, transparent background",
+      "size": {
+        "width": 128,
+        "height": 128
+      },
+      "directions": 1,
+      "view": "low top-down",
+      "rotations": {
+        "unknown": "rotations/unknown.png"
+      },
+      "animations": {}
+    },
+    {
+      "id": "f51a7d66-8063-4971-9f3f-cfb9c3c232cd",
+      "name": "transform into a sin",
+      "prompt": "cozy chibi cartoon farm barn in pixel art, chunky rounded storybook proportions, warm honey-brown wooden planks, big rounded hay-loft roof, open double barn door showing golden hay bales inside, small round window, warm saturated cozy colors, soft thick outlines, detailed shading, cute hand-drawn storybook mood, building only, no ground base, no smoke, no loose props, transparent background",
+      "size": {
+        "width": 128,
+        "height": 128
+      },
+      "directions": 1,
+      "view": "low top-down",
+      "rotations": {
+        "unknown": "rotations/unknown.png"
+      },
+      "animations": {}
+    },
+    {
+      "id": "dd1a2f67-2f09-4246-aa7a-0c5ba98b9943",
+      "name": "transform into a sin",
+      "prompt": "cozy chibi cartoon farm barn in pixel art, chunky rounded storybook proportions, warm honey-brown wooden planks, big rounded hay-loft roof, open double barn door showing golden hay bales inside, small round window, warm saturated cozy colors, soft thick outlines, detailed shading, cute hand-drawn storybook mood, building only, no ground base, no smoke, no loose props, transparent background",
+      "size": {
+        "width": 128,
+        "height": 128
+      },
+      "directions": 1,
+      "view": "low top-down",
+      "rotations": {
+        "unknown": "rotations/unknown.png"
+      },
+      "animations": {}
+    },
+    {
+      "id": "f385c442-5cfc-42c4-a1ec-2da15abb87e7",
+      "name": "CHANGE THE SHAPE com",
+      "prompt": "cozy chibi cartoon farm barn in pixel art, chunky rounded storybook proportions, warm honey-brown wooden planks, big rounded hay-loft roof, open double barn door showing golden hay bales inside, small round window, warm saturated cozy colors, soft thick outlines, detailed shading, cute hand-drawn storybook mood, building only, no ground base, no smoke, no loose props, transparent background",
+      "size": {
+        "width": 128,
+        "height": 128
+      },
+      "directions": 1,
+      "view": "low top-down",
+      "rotations": {
+        "unknown": "rotations/unknown.png"
+      },
+      "animations": {}
+    },
+    {
+      "id": "2a3cbaf4-2b0b-4648-8abc-1964f104bc6b",
+      "name": "CHANGE THE SHAPE com",
+      "prompt": "cozy chibi cartoon farm barn in pixel art, chunky rounded storybook proportions, warm honey-brown wooden planks, big rounded hay-loft roof, open double barn door showing golden hay bales inside, small round window, warm saturated cozy colors, soft thick outlines, detailed shading, cute hand-drawn storybook mood, building only, no ground base, no smoke, no loose props, transparent background",
+      "size": {
+        "width": 128,
+        "height": 128
+      },
+      "directions": 1,
+      "view": "low top-down",
+      "rotations": {
+        "unknown": "rotations/unknown.png"
+      },
+      "animations": {}
+    },
+    {
+      "id": "f177cfce-47ec-4f83-8596-68d8a82aa06a",
+      "name": "CHANGE THE SHAPE com",
+      "prompt": "cozy chibi cartoon farm barn in pixel art, chunky rounded storybook proportions, warm honey-brown wooden planks, big rounded hay-loft roof, open double barn door showing golden hay bales inside, small round window, warm saturated cozy colors, soft thick outlines, detailed shading, cute hand-drawn storybook mood, building only, no ground base, no smoke, no loose props, transparent background",
+      "size": {
+        "width": 128,
+        "height": 128
+      },
+      "directions": 1,
+      "view": "low top-down",
+      "rotations": {
+        "unknown": "rotations/unknown.png"
+      },
+      "animations": {}
+    },
+    {
+      "id": "cbb60b2e-885a-4fae-a3dc-9131b6a1b698",
+      "name": "same boulder but as",
+      "prompt": "cozy chibi cartoon farm barn in pixel art, chunky rounded storybook proportions, warm honey-brown wooden planks, big rounded hay-loft roof, open double barn door showing golden hay bales inside, small round window, warm saturated cozy colors, soft thick outlines, detailed shading, cute hand-drawn storybook mood, building only, no ground base, no smoke, no loose props, transparent background",
+      "size": {
+        "width": 128,
+        "height": 128
+      },
+      "directions": 1,
+      "view": "low top-down",
+      "rotations": {
+        "unknown": "rotations/unknown.png"
+      },
+      "animations": {}
+    },
+    {
+      "id": "50725081-f467-4308-ba2d-6272012a6aa6",
+      "name": "same boulder but as",
+      "prompt": "cozy chibi cartoon farm barn in pixel art, chunky rounded storybook proportions, warm honey-brown wooden planks, big rounded hay-loft roof, open double barn door showing golden hay bales inside, small round window, warm saturated cozy colors, soft thick outlines, detailed shading, cute hand-drawn storybook mood, building only, no ground base, no smoke, no loose props, transparent background",
+      "size": {
+        "width": 128,
+        "height": 128
+      },
+      "directions": 1,
+      "view": "low top-down",
+      "rotations": {
+        "unknown": "rotations/unknown.png"
+      },
+      "animations": {}
+    },
+    {
+      "id": "264bef64-8dbe-4f6d-b8cc-87f19af19848",
+      "name": "same boulder but as",
+      "prompt": "cozy chibi cartoon farm barn in pixel art, chunky rounded storybook proportions, warm honey-brown wooden planks, big rounded hay-loft roof, open double barn door showing golden hay bales inside, small round window, warm saturated cozy colors, soft thick outlines, detailed shading, cute hand-drawn storybook mood, building only, no ground base, no smoke, no loose props, transparent background",
+      "size": {
+        "width": 128,
+        "height": 128
+      },
+      "directions": 1,
+      "view": "low top-down",
+      "rotations": {
+        "unknown": "rotations/unknown.png"
+      },
+      "animations": {}
+    },
+    {
+      "id": "f9853d5f-03bb-4d3d-bbfc-b37fbc6df499",
+      "name": "same boulder but as",
+      "prompt": "cozy chibi cartoon farm barn in pixel art, chunky rounded storybook proportions, warm honey-brown wooden planks, big rounded hay-loft roof, open double barn door showing golden hay bales inside, small round window, warm saturated cozy colors, soft thick outlines, detailed shading, cute hand-drawn storybook mood, building only, no ground base, no smoke, no loose props, transparent background",
+      "size": {
+        "width": 128,
+        "height": 128
+      },
+      "directions": 1,
+      "view": "low top-down",
+      "rotations": {
+        "unknown": "rotations/unknown.png"
+      },
+      "animations": {}
+    }
+  ],
+  "export_version": "1.0",
+  "export_date": "2026-07-29T16:33:04.194312"
+}
