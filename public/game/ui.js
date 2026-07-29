@@ -69,7 +69,7 @@ function refreshInv() {
   for (let i = 0; i < cap; i++) html += invCellHtml(G.slots[i], i, rem, "inv");
   $("inv-slots").innerHTML = html;
   const used = canonicalStacks().length, cap2 = $("inv-cap"); if (cap2) cap2.textContent = `Bolsa: ${used}/${cap} · recursos y semillas apilan hasta 99`;
-  const ss = $("inv-selseed"); if (ss && CROP_DEF[G.selSeed]) ss.textContent = "🌱 Plantando: " + CROP_DEF[G.selSeed].emoji + " " + CROP_DEF[G.selSeed].label + " · clic una semilla para cambiar";
+  const ss = $("inv-selseed"); if (ss && CROP_DEF[G.selSeed]) ss.innerHTML = `🌱 Plantando: <img class="ric" src="${GF.spr("seed_" + G.selSeed)}" onerror="this.outerHTML='${CROP_DEF[G.selSeed].emoji}'"> ` + CROP_DEF[G.selSeed].label + " · clic una semilla para cambiar";
   renderInvExpand();
   bindZoneDnD($("inv-slots"), "inv");
   $("inv-slots").querySelectorAll("[data-slot]").forEach(c => c.addEventListener("click", () => invCellClick(+c.dataset.slot)));
@@ -231,7 +231,7 @@ function showSeedWheel(px, py, plot) {
     const a = -Math.PI / 2 + i * 2 * Math.PI / opts.length;
     const x = Math.round(Math.cos(a) * R), y = Math.round(Math.sin(a) * R);
     const cd = CROP_DEF[k];
-    return `<div class="swi" data-k="${k}" title="${cd.label} · crece en ${cd.grow}s" style="left:${x}px;top:${y}px"><span>${cd.emoji}</span><b>×${G.seeds[k]}</b></div>`;
+    return `<div class="swi" data-k="${k}" title="${cd.label} · crece en ${cd.grow}s" style="left:${x}px;top:${y}px"><img class="swimg" src="${GF.spr("seed_" + k)}" onerror="this.outerHTML='<span>${cd.emoji}</span>'"><b>×${G.seeds[k]}</b></div>`;
   }).join("") + '<div class="swi center" style="left:0;top:0"><span>🌱</span></div>';
   w.classList.add("show");
   c.querySelectorAll(".swi[data-k]").forEach(el => el.onclick = (ev) => {

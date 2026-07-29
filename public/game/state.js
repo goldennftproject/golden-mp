@@ -1,6 +1,6 @@
 /* Golden Farm · estado del juego + economía (sin DOM ni canvas) */
 window.GF = window.GF || {};
-GF.spr = (k) => "assets/farm/" + k + ".png?a=3";   // ?a=N rompe el caché de los íconos cuando cambia el arte
+GF.spr = (k) => "assets/farm/" + k + ".png?a=4";   // ?a=N rompe el caché de los íconos cuando cambia el arte
 
 // --- estado principal (con algunos recursos de arranque para probar los menús) ---
 const G = {

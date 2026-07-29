@@ -38,11 +38,13 @@ class FarmScene extends Phaser.Scene {
       GF.PLOTS.forEach(pl => { const x = pl.col * T, y = pl.row * T; g.fillStyle(0x8a5a33, 1); g.fillRoundedRect(x + 3, y + 3, T - 6, T - 6, 6); g.fillStyle(0x724829, 1); g.fillRoundedRect(x + 6, y + 6, T - 12, T - 12, 5); });
     }
 
-    // pececitos nadando en la laguna
+    // pececitos nadando en la laguna (sprites cozy; si faltan, emoji)
     this.pondFish = [];
-    ["🐟", "🐠", "🐟"].forEach(em => {
+    ["fish_comun", "fish_raro", "fish_comun"].forEach((fk, fi) => {
       const p0 = this.pondPoint();
-      const s = this.add.text(p0.x, p0.y, em, { fontSize: "13px" }).setOrigin(0.5).setDepth(-990).setAlpha(0.85);
+      const s = this.textures.exists(fk)
+        ? this.add.image(p0.x, p0.y, fk).setDisplaySize(17, 13).setOrigin(0.5).setDepth(-990).setAlpha(0.9)
+        : this.add.text(p0.x, p0.y, fi === 1 ? "🐠" : "🐟", { fontSize: "13px" }).setOrigin(0.5).setDepth(-990).setAlpha(0.85);
       this.pondFish.push({ s, tgt: this.pondPoint(), sp: 10 + Math.random() * 12 });
     });
     g.lineStyle(1, 0x18300f, 0.13);
@@ -682,7 +684,7 @@ class FarmScene extends Phaser.Scene {
     if (this.pondFish) for (const f of this.pondFish) {
       const dx = f.tgt.x - f.s.x, dy = f.tgt.y - f.s.y, d = Math.hypot(dx, dy);
       if (d < 3) { f.tgt = this.pondPoint(); f.sp = 10 + Math.random() * 12; }
-      else { const sp = Math.min(f.sp * dt, d); f.s.x += dx / d * sp; f.s.y += dy / d * sp; f.s.setScale(dx < 0 ? -1 : 1, 1); }
+      else { const sp = Math.min(f.sp * dt, d); f.s.x += dx / d * sp; f.s.y += dy / d * sp; if (f.s.setFlipX) f.s.setFlipX(dx < 0); else f.s.setScale(dx < 0 ? -1 : 1, 1); }
     }
     // amenazas (jabalíes)
     if (t >= this.nextThreatAt && this.threats.length === 0) { this.nextThreatAt = t + 60000; this.spawnThreat(); }
