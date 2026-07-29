@@ -104,7 +104,7 @@ class FarmScene extends Phaser.Scene {
       s.setScale(rw / s.width); s.setDepth(by);
       // sombra bajo árboles y edificios (detalles 29/7)
       let shadow = null;
-      if (o.type === "tree" || o.type === "barn" || o.type === "market" || o.type === "store") {
+      if (o.type === "tree" || o.type === "barn" || o.type === "market" || o.type === "store" || o.type === "cocina") {
         shadow = this.add.ellipse(cx, by - 3, rw * 0.82, T * 0.3, 0x1c2a12, 0.22).setDepth(by - 0.5);
       }
       return { i, type: o.type, ore: o.ore, cx, by, w: o.w, rw, baseKey: o.key, sprite: s, shadow, readyAt: 0 };
@@ -369,7 +369,7 @@ class FarmScene extends Phaser.Scene {
     let best = null, bd = 1e9;
     const all = this.objs.concat(this.plots).concat(this.threats); if (this.portal) all.push(this.portal);
     for (const o of all) {
-      const rad = (o.type === "barn" || o.type === "market" || o.type === "store") ? 72 : (o.type === "plot" ? 42 : (o.type === "boar" ? 55 : (o.type === "portal" ? 50 : 58)));
+      const rad = (o.type === "barn" || o.type === "market" || o.type === "store" || o.type === "cocina") ? 72 : (o.type === "plot" ? 42 : (o.type === "boar" ? 55 : (o.type === "portal" ? 50 : 58)));
       const d = Math.hypot(o.cx - this.hero.x, o.by - this.hero.y);
       if (d < rad && d < bd) { bd = d; best = o; }
     }
@@ -394,6 +394,7 @@ class FarmScene extends Phaser.Scene {
     if (o.type === "barn") return "🏡 Granja";
     if (o.type === "market") return "🏪 Mercado";
     if (o.type === "store") return "🛠️ Herrería";
+    if (o.type === "cocina") return "🍳 Cocina";
     if (o.type === "fish") return "🎣 Pescar (" + FISH_COST + " ✨ · tenés " + G.golden + ")";
     return "";
   }
@@ -405,6 +406,7 @@ class FarmScene extends Phaser.Scene {
     if (o.type === "barn") return openOv("ov-barn");
     if (o.type === "market") return openOv("ov-market");
     if (o.type === "store") return openOv("ov-forge");
+    if (o.type === "cocina") return openOv("ov-cocina");
     if (o.type === "boar") { o.sprite.destroy(); const i = this.threats.indexOf(o); if (i >= 0) this.threats.splice(i, 1); log("🥍 Espantaste al jabalí.", "good"); toast("🥍 ¡Espantado!"); return; }   // XP de espada llega con el combate (necesita espada equipada)
     if (o.type === "plot") {
       if (o.state === "locked") {   // desbloquear con plata (doble clic para confirmar)
@@ -782,7 +784,7 @@ class FarmScene extends Phaser.Scene {
     // clic-para-interactuar: al llegar cerca del objeto pedido, actuar
     if (this.pendingObj) {
       const po = this.pendingObj;
-      const rad = (po.type === "barn" || po.type === "market" || po.type === "store") ? 72 : 58;
+      const rad = (po.type === "barn" || po.type === "market" || po.type === "store" || po.type === "cocina") ? 72 : 58;
       const d = Math.hypot(po.cx - hero.x, po.by - hero.y);
       if (d < rad) { this.moveTarget = null; this.pendingObj = null; this.interactWith(po); if (this.action) { hero.setDepth(hero.y); return; } }
       else if (!this.moveTarget) this.pendingObj = null;

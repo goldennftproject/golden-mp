@@ -14,6 +14,7 @@ class BootScene extends Phaser.Scene {
     L.push(["boar", P + "boar.png"]);
     ["fish_comun","fish_raro"].forEach(k => L.push([k, P + k + ".png"]));   // pececitos de la laguna
     ["sword","bow"].forEach(k => L.push([k, P + k + ".png"]));   // arma visible al atacar en el Bosque
+    L.push(["cocina", P + "cocina.png"]);   // edificio de Cocina (detalles 29/7)
     // arte cozy nuevo (v2 rompe el caché del arte viejo)
     ["tree_stump","node_stone_mined"].forEach(k => L.push([k, P + k + ".png?v=2"]));
     // v4: restos correctos con fragmentos + brote/plantas recentrados en la tierra
@@ -41,8 +42,8 @@ class BootScene extends Phaser.Scene {
   preload() {
     // ATLAS: todos los sprites del mundo en 2 archivos (mucho más liviano para el server free).
     // Si el atlas no llega, ensureAll() baja los archivos sueltos como respaldo.
-    this.load.image("__atlas", "assets/atlas.png?v=12");
-    this.load.json("__atlasmap", "assets/atlas.json?v=12");
+    this.load.image("__atlas", "assets/atlas.png?v=13");
+    this.load.json("__atlasmap", "assets/atlas.json?v=13");
 
     // barra de carga simple
     const w = this.scale.width, h = this.scale.height;

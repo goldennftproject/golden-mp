@@ -236,12 +236,12 @@ function cook(id) {
   G.cooking = { id, endAt: nowMs() + COOK_MS, total: COOK_MS };
   log("🍳 Cocinando " + r.label + "…"); toast("🍳 Cocinando…");
   refreshHud(); if (typeof syncSlots === "function") syncSlots(); if (isOpen("ov-inv")) refreshInv();
-  if (typeof refreshCooking === "function" && isOpen("ov-barn")) refreshCooking();
+  if (typeof refreshCooking === "function" && isOpen("ov-cocina")) refreshCooking();
 }
 // se llama cada segundo desde el HUD: cuando termina la cocción, el plato va a la bolsa
 function checkCooking() {
   if (!G.cooking) return;
-  if (nowMs() < G.cooking.endAt) { if (typeof refreshCooking === "function" && isOpen("ov-barn")) refreshCooking(); return; }
+  if (nowMs() < G.cooking.endAt) { if (typeof refreshCooking === "function" && isOpen("ov-cocina")) refreshCooking(); return; }
   const r = RECIPE_DEF[G.cooking.id];
   if (r) {
     G.dishes = G.dishes || {};
@@ -251,7 +251,7 @@ function checkCooking() {
   }
   G.cooking = null;
   if (typeof syncSlots === "function") syncSlots(); if (isOpen("ov-inv")) refreshInv();
-  if (typeof refreshCooking === "function" && isOpen("ov-barn")) refreshCooking();
+  if (typeof refreshCooking === "function" && isOpen("ov-cocina")) refreshCooking();
   if (typeof saveFarm === "function") saveFarm();
 }
 // comer un plato de la bolsa (clic sobre el ítem)
