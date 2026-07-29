@@ -13,13 +13,20 @@ class FarmScene extends Phaser.Scene {
     this.queue = [];      // cola de acciones: clickeá varios objetivos y se hacen en orden
     this.cameras.main.setBackgroundColor("#6ba043");
 
+    this.dragPlot = null; this.dragPond = false;
+    // posiciones editadas de laguna y parcelas: primero base, después lo guardado
+    if (GF.PLOTS_BASE) GF.PLOTS.forEach((b, i) => { b.col = GF.PLOTS_BASE[i].col; b.row = GF.PLOTS_BASE[i].row; });
+    if (GF.POND_BASE) { GF.POND.col = GF.POND_BASE.col; GF.POND.row = GF.POND_BASE.row; }
+    if (G.layoutPond && typeof G.layoutPond.col === "number") { GF.POND.col = G.layoutPond.col; GF.POND.row = G.layoutPond.row; }
+    if (G.layoutPlots) for (const k in G.layoutPlots) { const b = GF.PLOTS[k]; if (b) { b.col = G.layoutPlots[k].col; b.row = G.layoutPlots[k].row; } }
+
     // fondo + estanque + lotes-tierra + grilla
     const g = this.add.graphics().setDepth(-1000);
     g.fillStyle(0x6ba043, 1).fillRect(0, 0, W, H);
     const p = GF.POND, pcx = (p.col + p.cols / 2) * T, pcy = (p.row + p.rows / 2) * T, pw = p.cols * T, ph = p.rows * T;
     if (this.textures.exists("pond")) {
-      this.add.image(pcx, pcy, "pond").setDisplaySize(pw + 10, ph + 10).setDepth(-999);
-    } else {   // fallback: laguna dibujada
+      this.pondImg = this.add.image(pcx, pcy, "pond").setDisplaySize(pw + 10, ph + 10).setDepth(-999);
+    } else {   // fallback: laguna dibujada (no movible sin sprite)
       g.fillStyle(0x2f5f8c, 1).fillEllipse(pcx, pcy, pw, ph);
       g.fillStyle(0x66a9dc, 1).fillEllipse(pcx, pcy - 6, pw - 26, ph - 26);
     }
@@ -122,11 +129,13 @@ class FarmScene extends Phaser.Scene {
         }
         return;
       }
-      if (GF.editMode) {   // modo edición: agarrar el objeto bajo el cursor
+      if (GF.editMode) {   // modo edición: agarrar objeto, parcela o laguna bajo el cursor
         const wx = pt.worldX, wy = pt.worldY; let hit = null, bd = 1e9;
         for (const o of this.objs) { if (o.type === "fish") continue; const b = o.sprite.getBounds(); if (Phaser.Geom.Rectangle.Contains(b, wx, wy)) { const d = Math.hypot(o.cx - wx, o.by - wy); if (d < bd) { bd = d; hit = o; } } }
-        if (hit) { hit.origCx = hit.cx; hit.origBy = hit.by; }   // por si hay que devolverlo
-        this.dragObj = hit; return;
+        if (hit) { hit.origCx = hit.cx; hit.origBy = hit.by; this.dragObj = hit; return; }
+        for (const pl of this.plots) { if (Math.abs(wx - pl.cx) < T / 2 && Math.abs(wy - pl.by) < T / 2) { this.dragPlot = pl; return; } }
+        if (this.pondImg && this.pondDist(wx, wy) < 1) { this.dragPond = true; return; }
+        return;
       }
       if (GF.uiOpen) return;
       const wx = pt.worldX, wy = pt.worldY;
@@ -153,20 +162,78 @@ class FarmScene extends Phaser.Scene {
     });
     // arrastre en modo edición: mueve el sprite y resalta la celda destino (verde libre / rojo ocupada)
     this.input.on("pointermove", (pt) => {
-      if (!GF.editMode || !this.dragObj) return;
-      const o = this.dragObj;
-      o.sprite.setPosition(pt.worldX, pt.worldY).setDepth(99999);
-      const wCells = Math.max(1, Math.round(o.w / T));
-      const leftCol = Phaser.Math.Clamp(Math.round((pt.worldX - wCells * T / 2) / T), 0, GF.COLS - wCells);
-      const baseRow = Phaser.Math.Clamp(Math.round(pt.worldY / T), 1, GF.ROWS);
-      const blocked = this.placeBlocked(o, leftCol, baseRow, wCells);
+      if (!GF.editMode) return;
       if (!this.editHl) this.editHl = this.add.rectangle(0, 0, T, T, 0x7ec95a, 0.35).setOrigin(0, 1).setDepth(99998);
-      this.editHl.setPosition(leftCol * T, baseRow * T).setSize(wCells * T, T)
-        .setFillStyle(blocked ? 0xd9534f : 0x7ec95a, 0.4).setVisible(true);
+      if (this.dragObj) {
+        const o = this.dragObj;
+        o.sprite.setPosition(pt.worldX, pt.worldY).setDepth(99999);
+        const wCells = Math.max(1, Math.round(o.w / T));
+        const leftCol = Phaser.Math.Clamp(Math.round((pt.worldX - wCells * T / 2) / T), 0, GF.COLS - wCells);
+        const baseRow = Phaser.Math.Clamp(Math.round(pt.worldY / T), 1, GF.ROWS);
+        const blocked = this.placeBlocked(o, leftCol, baseRow, wCells);
+        this.editHl.setPosition(leftCol * T, baseRow * T).setSize(wCells * T, T)
+          .setFillStyle(blocked ? 0xd9534f : 0x7ec95a, 0.4).setVisible(true);
+      } else if (this.dragPlot) {
+        const pl = this.dragPlot;
+        if (pl.ground) pl.ground.setPosition(pt.worldX, pt.worldY).setDepth(99999);
+        const col = Phaser.Math.Clamp(Math.floor(pt.worldX / T), 0, GF.COLS - 1);
+        const row = Phaser.Math.Clamp(Math.floor(pt.worldY / T), 0, GF.ROWS - 1);
+        const blocked = this.plotSpotBlocked(pl, col, row);
+        this.editHl.setPosition(col * T, (row + 1) * T).setSize(T, T)
+          .setFillStyle(blocked ? 0xd9534f : 0x7ec95a, 0.4).setVisible(true);
+      } else if (this.dragPond) {
+        const p2 = GF.POND;
+        this.pondImg.setPosition(pt.worldX, pt.worldY);
+        const col = Phaser.Math.Clamp(Math.round(pt.worldX / T - p2.cols / 2), 0, GF.COLS - p2.cols);
+        const row = Phaser.Math.Clamp(Math.round(pt.worldY / T - p2.rows / 2), 0, GF.ROWS - p2.rows);
+        const blocked = this.pondSpotBlocked(col, row);
+        this.editHl.setPosition(col * T, (row + p2.rows) * T).setSize(p2.cols * T, p2.rows * T)
+          .setFillStyle(blocked ? 0xd9534f : 0x7ec95a, 0.3).setVisible(true);
+      }
     });
     this.input.on("pointerup", (pt) => {
       if (this.editHl) this.editHl.setVisible(false);
-      if (!GF.editMode || !this.dragObj) return;
+      if (!GF.editMode) { this.dragObj = this.dragPlot = null; this.dragPond = false; return; }
+      // soltar una PARCELA
+      if (this.dragPlot) {
+        const pl = this.dragPlot; this.dragPlot = null;
+        const col = Phaser.Math.Clamp(Math.floor(pt.worldX / T), 0, GF.COLS - 1);
+        const row = Phaser.Math.Clamp(Math.floor(pt.worldY / T), 0, GF.ROWS - 1);
+        if (this.plotSpotBlocked(pl, col, row)) {
+          if (pl.ground) pl.ground.setPosition(pl.cx, pl.by).setDepth(-998);
+          toast("🚫 Ahí ya hay algo — elegí otra celda"); return;
+        }
+        GF.PLOTS[pl.i].col = col; GF.PLOTS[pl.i].row = row;
+        pl.cx = (col + 0.5) * T; pl.by = (row + 0.5) * T;
+        if (pl.ground) pl.ground.setPosition(pl.cx, pl.by).setDepth(-998);
+        pl.spr.setPosition(pl.cx, pl.by + 6).setDepth(pl.by);
+        pl.emo.setPosition(pl.cx, pl.by + 8).setDepth(pl.by);
+        pl.timer.setPosition(pl.cx, pl.by - T * 0.55).setDepth(pl.by + 1);
+        if (pl.glowTxt) pl.glowTxt.setPosition(pl.cx + T * 0.3, pl.by - T * 0.55);
+        if (!G.layoutPlots) G.layoutPlots = {};
+        G.layoutPlots[pl.i] = { col, row };
+        if (typeof saveFarm === "function") saveFarm(true);
+        return;
+      }
+      // soltar la LAGUNA
+      if (this.dragPond) {
+        this.dragPond = false;
+        const p2 = GF.POND;
+        const col = Phaser.Math.Clamp(Math.round(pt.worldX / T - p2.cols / 2), 0, GF.COLS - p2.cols);
+        const row = Phaser.Math.Clamp(Math.round(pt.worldY / T - p2.rows / 2), 0, GF.ROWS - p2.rows);
+        const pcx0 = (p2.col + p2.cols / 2) * T, pcy0 = (p2.row + p2.rows / 2) * T;
+        if (this.pondSpotBlocked(col, row)) {
+          this.pondImg.setPosition(pcx0, pcy0);
+          toast("🚫 La laguna no entra ahí"); return;
+        }
+        p2.col = col; p2.row = row;
+        this.pondImg.setPosition((col + p2.cols / 2) * T, (row + p2.rows / 2) * T);
+        this.pondFish.forEach(f => { const np = this.pondPoint(); f.s.setPosition(np.x, np.y); f.tgt = this.pondPoint(); });
+        G.layoutPond = { col, row };
+        if (typeof saveFarm === "function") saveFarm(true);
+        return;
+      }
+      if (!this.dragObj) return;
       const o = this.dragObj, wCells = Math.max(1, Math.round(o.w / T));
       const leftCol = Phaser.Math.Clamp(Math.round((pt.worldX - wCells * T / 2) / T), 0, GF.COLS - wCells);
       const baseRow = Phaser.Math.Clamp(Math.round(pt.worldY / T), 1, GF.ROWS);
@@ -406,6 +473,32 @@ class FarmScene extends Phaser.Scene {
     }
     const d = this.add.text(x, y - 4, "💦", { fontSize: "14px" }).setOrigin(0.5, 1).setDepth(-989);
     this.tweens.add({ targets: d, y: y - 16, alpha: { from: 1, to: 0 }, duration: 700, onComplete: () => d.destroy() });
+  }
+
+  // ¿la celda destino de una PARCELA pisa un objeto, otra parcela o la laguna?
+  plotSpotBlocked(pl, col, row) {
+    const T = GF.TILE;
+    for (const q of this.objs) {
+      const qw = Math.max(1, Math.round(q.w / T));
+      const qc = Math.round((q.cx - qw * T / 2) / T), qr = Math.round(q.by / T);
+      if (row === qr - 1 && col >= qc && col < qc + qw) return true;
+    }
+    for (let j = 0; j < GF.PLOTS.length; j++) { if (j !== pl.i && GF.PLOTS[j].col === col && GF.PLOTS[j].row === row) return true; }
+    const p = GF.POND;
+    if (col >= p.col && col < p.col + p.cols && row >= p.row && row < p.row + p.rows) return true;
+    return false;
+  }
+
+  // ¿el rectángulo destino de la LAGUNA pisa objetos o parcelas?
+  pondSpotBlocked(col, row) {
+    const T = GF.TILE, p = GF.POND;
+    for (const q of this.objs) {
+      const qw = Math.max(1, Math.round(q.w / T));
+      const qc = Math.round((q.cx - qw * T / 2) / T), qr = Math.round(q.by / T);
+      if (qr - 1 >= row && qr - 1 < row + p.rows && col < qc + qw && qc < col + p.cols) return true;
+    }
+    for (const b of GF.PLOTS) { if (b.col >= col && b.col < col + p.cols && b.row >= row && b.row < row + p.rows) return true; }
+    return false;
   }
 
   // ¿la celda destino pisa otro objeto, una parcela o la laguna? (modo edición)

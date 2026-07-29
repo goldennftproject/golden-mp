@@ -43,6 +43,9 @@ GF.PLOTS = [];
 
 // estanque: rectángulo de celdas (col 0-5, fila 10-13)
 GF.POND = { col:0, row:10, cols:6, rows:4 };
+// copias base (para "Restaurar" después de mover parcelas/laguna en edición)
+GF.PLOTS_BASE = GF.PLOTS.map(p => ({ col: p.col, row: p.row }));
+GF.POND_BASE = { col: GF.POND.col, row: GF.POND.row };
 GF.FISH = { col:7, row:11 };
 
 // colisiones derivadas del footprint (celdas de la base)

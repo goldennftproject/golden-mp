@@ -18,6 +18,8 @@ const G = {
   hotSel: 0,                     // hueco de la hotbar seleccionado (herramienta "en mano")
   hbInit: false,                 // si ya se cargaron los accesos directos por defecto
   layout: {},                    // posiciones editadas de objetos de la granja: {index:{cx,by}}
+  layoutPlots: {},               // parcelas movidas: {index:{col,row}}
+  layoutPond: null,              // laguna movida: {col,row}
   fish: { comun: 0, raro: 0, epico: 0, legendario: 0 },
   plots: [],   // estado de las parcelas: [{state, readyAt, cropKey}] — lo llena la FarmScene
   plotsOwned: 6,   // parcelas desbloqueadas (las demás se compran con plata)
