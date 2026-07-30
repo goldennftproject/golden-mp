@@ -57,7 +57,7 @@
   .cost .miss{color:var(--red);font-weight:700} .cost b{color:var(--ink)}
   .lvlbar{height:12px;background:#eee4cc;border-radius:8px;overflow:hidden;border:1px solid var(--line);margin-top:10px}
   .lvlbar>i{display:block;height:100%;background:linear-gradient(90deg,var(--gold),var(--gold-deep));width:0%}
-  .slots{display:grid;grid-template-columns:repeat(6,1fr);gap:6px;margin-top:8px;max-height:340px;overflow:auto}
+  .slots{display:grid;grid-template-columns:repeat(5,1fr);gap:6px;margin-top:8px;max-height:340px;overflow:auto}
   .slot{aspect-ratio:1;background:#efe3c6;border:2px solid #d3c298;border-radius:8px;position:relative;display:flex;align-items:center;justify-content:center}
   .slot.filled{border-color:#c9b070}
   .slot img{width:90%;height:90%;object-fit:contain;image-rendering:pixelated}
@@ -117,7 +117,8 @@
   .mkt-row .vbtn{padding:6px 12px;font-size:13px;flex:0 0 auto}
   .skgrid{display:flex;flex-direction:column;gap:8px;max-height:60vh;overflow:auto}
   .skrow{display:flex;align-items:center;gap:11px;background:#faf3e2;border:1px solid var(--line);border-radius:10px;padding:8px 11px}
-  .skrow .ic{font-size:22px;width:26px;text-align:center;flex:0 0 auto}
+  .skrow .ic{font-size:22px;width:32px;text-align:center;flex:0 0 auto}
+  .skrow .ic .skic{width:30px;height:30px;object-fit:contain;image-rendering:pixelated;vertical-align:middle}
   .skrow .body{flex:1;min-width:0}
   .skrow .nm{font-weight:700;font-size:13px;display:flex;justify-content:space-between}
   .skrow .nm .lv{color:var(--gold-deep)}
@@ -278,6 +279,21 @@
   /* inventario −20% (detalles jueves) */
   #ov-inv .card{font-size:12px}
   #ov-inv .slots{gap:5px;max-height:272px}
+  /* registro/chat, toasts y prompt con la misma madera */
+  .logpanel{border:10px solid transparent;border-image:url("assets/ui/panel_wood.png?a=4") 23 round;background:#a8622e url("assets/ui/wood_bg.png?a=5") repeat;background-size:220px auto;background-clip:border-box;border-radius:10px;image-rendering:pixelated}
+  .loghead{background:rgba(58,40,16,.55);color:#fff;text-shadow:0 1px 0 rgba(0,0,0,.5)}
+  .ltab{color:#f0e0b8}
+  .ltab.active{color:#ffe08a;background:rgba(58,40,16,.6)}
+  .logmin{color:#f0e0b8}
+  #log .l{background:#f2e5c4;border:2px solid #d9c290;color:#241d10}
+  #log .l.good{background:#e6ecc6;border-color:#9fbf72;color:#2f4a1c}
+  #log .l.bad{background:#f2d3c4;border-color:#d08a6a;color:#5a2517}
+  #log .l.gold{background:#f4e6b5;border-color:#d4ab4a;color:#6a4a10}
+  #chat-msgs .cm{color:#fff;text-shadow:0 1px 0 rgba(0,0,0,.4)}
+  #chat-msgs .cm b{color:#ffe08a}
+  .chatbar input{background:#f2e5c4;border:2px solid #d9c290;color:#241d10}
+  #toast{background:#b5793f url("assets/ui/badge_bg.png?a=1") repeat;background-size:132px auto;background-clip:border-box;border:9px solid transparent;border-image:url("assets/ui/badge_wood.png") 26 round;border-radius:0;color:#fff;text-shadow:0 1px 0 rgba(0,0,0,.55);image-rendering:pixelated}
+  #prompt{background:#b5793f url("assets/ui/badge_bg.png?a=1") repeat;background-size:132px auto;background-clip:border-box;border:8px solid transparent;border-image:url("assets/ui/badge_wood.png") 26 round;border-radius:0;color:#fff;text-shadow:0 1px 0 rgba(0,0,0,.5);image-rendering:pixelated}
   /* barra de scroll de madera */
   ::-webkit-scrollbar{width:10px;height:10px}
   ::-webkit-scrollbar-track{background:rgba(138,102,50,.16);border-radius:6px}
@@ -495,6 +511,10 @@
       <div class="row"><button class="green" id="cfg-login" style="display:none">Conectar</button><button class="ghost sm" id="cfg-logout" style="display:none">Cerrar sesión</button></div>
     </div>
     <div class="cfgsec">
+      <h4>🔊 Sonido</h4>
+      <div class="row"><button class="ghost sm" id="cfg-sound">🔊 Sonidos: Sí</button></div>
+    </div>
+    <div class="cfgsec">
       <h4>✏️ Editar granja</h4>
       <p>Colocar y mover objetos por celda llega en otra fase.</p>
       <div class="row"><button class="green" id="cfg-edit">Modo edición</button><button class="ghost sm" id="cfg-reset">Restaurar</button></div>
@@ -578,7 +598,7 @@
   /* Cargador con reintentos: el server free de Render a veces corta conexiones.
      Carga los scripts del juego EN FILA (uno por vez) y reintenta cada uno hasta 8 veces. */
   (function () {
-    const files = ["game/config.js","game/state.js","game/save.js","game/ui.js","game/boot.js",
+    const files = ["game/config.js","game/audio.js","game/state.js","game/save.js","game/ui.js","game/boot.js",
                    "game/farm.js","game/forest.js","game/plaza.js","game/main.js","game/update.js"];
     let i = 0;
     function next(retry) {

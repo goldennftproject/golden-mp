@@ -8,12 +8,22 @@ class ForestScene extends Phaser.Scene {
     this.W = 32 * T; this.H = GF.WORLD_H;   // bosque más ancho que la granja
     GF.uiOpen = false;
 
-    // piso oscuro del bosque
+    // piso del bosque: damero de verdes OSCUROS (como la granja pero sombrío) + decoraciones
     const g = this.add.graphics().setDepth(-1000);
-    g.fillStyle(0x3f6b2e, 1).fillRect(0, 0, this.W, this.H);
-    g.lineStyle(1, 0x18300f, 0.10);
-    for (let x = 0; x <= this.W; x += T) { g.beginPath(); g.moveTo(x, 0); g.lineTo(x, this.H); g.strokePath(); }
-    for (let y = 0; y <= this.H; y += T) { g.beginPath(); g.moveTo(0, y); g.lineTo(this.W, y); g.strokePath(); }
+    const cols = Math.ceil(this.W / T), rows = Math.ceil(this.H / T);
+    for (let cy = 0; cy < rows; cy++) for (let cx = 0; cx < cols; cx++) {
+      g.fillStyle((cx + cy) % 2 === 0 ? 0x2f4a20 : 0x2a431c, 1);
+      g.fillRect(cx * T, cy * T, T, T);
+    }
+    // matas y piedritas deterministas (LCG) para que no se vea plano
+    let seed = 20260731;
+    const rnd = () => { seed = (seed * 1664525 + 1013904223) >>> 0; return seed / 4294967296; };
+    for (let i = 0; i < 260; i++) {
+      const x = rnd() * this.W, y = rnd() * this.H, t = rnd();
+      if (t < 0.5) { g.fillStyle(0x223a16, 0.8); g.fillRect(x, y, 2, 4); g.fillRect(x + 3, y + 1, 2, 3); }        // mata oscura
+      else if (t < 0.8) { g.fillStyle(0x3a5527, 0.7); g.fillRect(x, y, 3, 2); }                                   // hierba
+      else { g.fillStyle(0x4a4438, 0.6); g.fillRect(x, y, 3, 3); }                                                // piedrita
+    }
     g.lineStyle(4, 0x22331a, 0.95).strokeRect(0, 0, this.W, this.H);
 
     // árboles decorativos (más densos a la derecha)
@@ -132,6 +142,7 @@ class ForestScene extends Phaser.Scene {
   }
 
   hitMonster(m, dmg, skill) {
+    if (window.sfx) sfx("hit");
     if (dmg == null) { dmg = swordDmg(); skill = "sword"; }
     if (skill === "sword" && G.gear.arma === "sword" && toolDur("sword") > 0) { useTool("sword"); if (toolDur("sword") <= 0) { log("⚔️ ¡La espada se rompió! Reparala en la Herrería.", "bad"); toast("⚔️ ¡Espada rota!"); } }
     m.hp -= dmg;

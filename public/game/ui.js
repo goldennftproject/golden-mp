@@ -16,7 +16,7 @@ const OV_REFRESH = { "ov-inv": () => refreshInv(), "ov-skills": () => refreshSki
   "ov-cofre": () => refreshChest(),
   "ov-config": () => refreshConfig(), "ov-lb": () => refreshLb(), "ov-daily": () => refreshDaily() };
 // los overlays NO bloquean el juego: podés seguir moviéndote/interactuando con la ventana abierta
-function openOv(id) { const e = $(id); if (!e) return; e.classList.add("show"); if (OV_REFRESH[id]) OV_REFRESH[id](); }
+function openOv(id) { const e = $(id); if (!e) return; e.classList.add("show"); if (window.sfx) sfx("click"); if (OV_REFRESH[id]) OV_REFRESH[id](); }
 function closeOv(id) { const e = $(id); if (e) e.classList.remove("show"); }
 function closeAllOv() { document.querySelectorAll(".ov.show").forEach(e => e.classList.remove("show")); }
 
@@ -35,7 +35,7 @@ function itemView(d) {
     if (d.key === "bow") return { sprite: "bow", emoji: "🏹", label: "Arco · durabilidad " + toolDur("bow") + "/" + TOOL_DEF.bow.max, dur: Math.round(toolDur("bow") / TOOL_DEF.bow.max * 100) };
     return { sprite: "hoe", emoji: "🪝", label: "Azada", dur: null };
   }
-  if (d.kind === "pick") { const pd = PICK_DEF[d.key]; const glow = d.key === "diamond" ? "glow-cyan" : (d.key === "netherite" ? "glow-fire" : ""); return { sprite: pd.sprite, emoji: "⛏️", glow, label: pd.label + " · durabilidad " + (G.picks.dur[d.key] || 0) + "/" + pd.dur, dur: Math.round((G.picks.dur[d.key] || 0) / pd.dur * 100) }; }
+  if (d.kind === "pick") { const pd = PICK_DEF[d.key]; const glow = d.key === "diamond" ? "glow-cyan" : (d.key === "netherite" ? "glow-fire" : (d.key === "gold" ? "glow-gold" : "")); return { sprite: pd.sprite, emoji: "⛏️", glow, label: pd.label + " · durabilidad " + (G.picks.dur[d.key] || 0) + "/" + pd.dur, dur: Math.round((G.picks.dur[d.key] || 0) / pd.dur * 100) }; }
   if (d.kind === "res") return { sprite: resSprite(d.key), emoji: RES_EMOJI[d.key], label: RES_LABEL[d.key], dur: null };
   if (d.kind === "seed") { const cd = CROP_DEF[d.key]; return { sprite: "seed_" + d.key, emoji: cd.emoji, label: cd.label + " (semilla)", dur: null }; }
   if (d.kind === "fish") { const f = FISH_DEF[d.key]; const glow = { raro: "glow-blue", epico: "glow-purple", legendario: "glow-gold" }[d.key] || ""; return { sprite: f ? f.sprite : null, emoji: f ? f.emoji : "🐟", glow, label: f ? f.label : "Pez", dur: null }; }
@@ -104,7 +104,7 @@ function renderInvExpand() {
   if (!nc) { el.innerHTML = '<span class="exmax">Bolsa al máximo (' + invSlots() + ')</span>'; return; }
   const label = nc.type === "res" ? Object.keys(nc.cost).map(k => resIc(k) + nc.cost[k]).join(" ") : coinIc("plata") + " " + fmt(nc.cost);
   const aff = nc.type === "res" ? canAfford(nc.cost) : G.plata >= nc.cost;
-  el.innerHTML = '<button class="green sm" id="inv-expbtn" ' + (aff ? "" : "disabled") + '>Ampliar +6 · ' + label + "</button>";
+  el.innerHTML = '<button class="green sm" id="inv-expbtn" ' + (aff ? "" : "disabled") + '>Ampliar +5 · ' + label + "</button>";
   const b = $("inv-expbtn"); if (b) b.onclick = expandInv;
 }
 
@@ -205,6 +205,7 @@ function trashInfo(d) {
 }
 // tirar una pila de recursos/semillas/pescados (las herramientas no se tiran)
 function trashStack(d) {
+  if (window.sfx) sfx("trash");
   if (d.kind === "res")  { const n = Math.min(99, Math.floor(G.res[d.key] || 0));  if (n <= 0) return; G.res[d.key] -= n;  toast("🗑️ Tiraste " + n + " " + RES_LABEL[d.key]); }
   else if (d.kind === "seed") { const n = Math.min(99, Math.floor(G.seeds[d.key] || 0)); if (n <= 0) return; G.seeds[d.key] -= n; toast("🗑️ Tiraste " + n + " semillas"); }
   else if (d.kind === "fish") { const n = Math.min(99, Math.floor((G.fish && G.fish[d.key]) || 0)); if (n <= 0) return; G.fish[d.key] -= n; toast("🗑️ Tiraste " + n + " peces"); }
@@ -217,7 +218,7 @@ function trashStack(d) {
 function refreshSkills() {
   $("sk-avg").innerHTML = "Nivel medio: <b>" + avgSkillLevel().toFixed(1) + "</b>";
   $("sk-grid").innerHTML = SKILL_DEFS.map(([k, ic, nm]) => { const inf = skillInfo(G.skills[k]); const pct = Math.round(inf.into / inf.need * 100); const soon = (k === "range" && G.skills[k] === 0) ? " · próximamente" : "";
-    return `<div class="skrow"><span class="ic">${ic}</span><div class="body"><div class="nm"><span>${nm}</span><span class="lv">Nv. ${inf.lvl}</span></div><div class="skbar"><i style="width:${pct}%"></i></div><div class="xp">${fmt(inf.into)}/${fmt(inf.need)} XP${soon}</div></div></div>`; }).join("");
+    return `<div class="skrow"><span class="ic"><img class="skic" src="${GF.spr("sk_" + k)}" onerror="this.outerHTML='${ic}'"></span><div class="body"><div class="nm"><span>${nm}</span><span class="lv">Nv. ${inf.lvl}</span></div><div class="skbar"><i style="width:${pct}%"></i></div><div class="xp">${fmt(inf.into)}/${fmt(inf.need)} XP${soon}</div></div></div>`; }).join("");
 }
 
 /* ---- equipo (slots estilo RPG; armadura/armas llegan con el combate) ---- */
@@ -569,7 +570,7 @@ function initHotbarDrag() {
 
 /* ---- arrastre universal: mantener clic izquierdo sobre una zona libre mueve la interfaz ---- */
 const DRAG_EXCLUDE = "button, input, textarea, select, a, [draggable=true], .hcell, .swi, #log, #chatpane, .slots, .forge-list, .mkt-list, .lblist, .curbtn, .shoptab, .lbtab, .ltab, .eqslot";
-function makeHoldDrag(el, saveKey) {
+function makeHoldDrag(el, saveKey, anchorBottom) {
   if (!el || el._holdDrag) return; el._holdDrag = true;
   let drag = null, started = false;
   el.addEventListener("pointerdown", (e) => {
@@ -596,7 +597,12 @@ function makeHoldDrag(el, saveKey) {
     drag = null;
     if (started) {
       el.classList.remove("uidrag");
-      if (saveKey) { const r = el.getBoundingClientRect(); try { localStorage.setItem(saveKey, JSON.stringify({ left: r.left, top: r.top })); } catch (er) {} }
+      const r = el.getBoundingClientRect();
+      if (anchorBottom) {   // panel de registro/chat: anclado por ABAJO para que al abrirse crezca hacia arriba
+        el.style.bottom = Math.max(4, window.innerHeight - r.bottom) + "px"; el.style.top = "auto";
+        if (saveKey) { try { localStorage.setItem(saveKey, JSON.stringify({ left: r.left, bottom: Math.max(4, window.innerHeight - r.bottom) })); } catch (er) {} }
+      }
+      else if (saveKey) { try { localStorage.setItem(saveKey, JSON.stringify({ left: r.left, top: r.top })); } catch (er) {} }
     }
     started = false;
   };
@@ -605,14 +611,20 @@ function makeHoldDrag(el, saveKey) {
   // restaurar posición guardada (por dispositivo) y re-encajar si cambia el tamaño de la ventana
   const clamp = () => { if (!el.style.top || el.style.top === "auto") return; const w = el.offsetWidth, h = el.offsetHeight; el.style.left = Math.max(4, Math.min(parseFloat(el.style.left) || 0, window.innerWidth - w - 4)) + "px"; el.style.top = Math.max(4, Math.min(parseFloat(el.style.top) || 0, window.innerHeight - h - 4)) + "px"; };
   if (saveKey) {
-    try { const s = JSON.parse(localStorage.getItem(saveKey) || "null"); if (s && typeof s.left === "number") { el.style.left = s.left + "px"; el.style.top = s.top + "px"; el.style.right = "auto"; el.style.bottom = "auto"; el.style.transform = "none"; clamp(); } } catch (e) {}
+    try { const s = JSON.parse(localStorage.getItem(saveKey) || "null");
+      if (s && typeof s.left === "number") {
+        el.style.left = s.left + "px"; el.style.right = "auto"; el.style.transform = "none";
+        if (typeof s.bottom === "number") { el.style.bottom = s.bottom + "px"; el.style.top = "auto"; }
+        else if (anchorBottom && typeof s.top === "number") { el.style.bottom = Math.max(4, window.innerHeight - s.top - el.offsetHeight) + "px"; el.style.top = "auto"; }   // migra posiciones viejas guardadas por arriba
+        else { el.style.top = s.top + "px"; el.style.bottom = "auto"; clamp(); }
+      } } catch (e) {}
     window.addEventListener("resize", clamp);
   }
 }
 function initUniversalDrag() {
   document.querySelectorAll(".ov .card").forEach(c => makeHoldDrag(c));          // todas las ventanas
   makeHoldDrag($("hotwrap"), "gf_hotpos");                                       // barra de acceso rápido
-  makeHoldDrag($("logpanel"), "gf_logpos");                                      // registro/chat
+  makeHoldDrag($("logpanel"), "gf_logpos", true);                                // registro/chat (anclado por abajo: se abre hacia ARRIBA)
 }
 
 /* ---- init ---- */
@@ -662,6 +674,10 @@ function initUI() {
   };
   const doFarmReset = () => { G.layout = {}; G.layoutPlots = {}; G.layoutPond = null; if (typeof saveFarm === "function") saveFarm(true); if (window.FARM && window.FARM.scene) window.FARM.scene.restart(); toast("↺ Granja restaurada"); };
   const ce = $("cfg-edit"); if (ce) ce.onclick = () => setEditMode(!GF.editMode);
+  // sonidos on/off (Configuración)
+  const sndBtn = $("cfg-sound");
+  const sndLabel = () => { if (sndBtn) sndBtn.textContent = (window.sfxIsOn && sfxIsOn()) ? "🔊 Sonidos: Sí" : "🔇 Sonidos: No"; };
+  if (sndBtn) { sndLabel(); sndBtn.onclick = () => { if (window.sfxOn) sfxOn(!(window.sfxIsOn && sfxIsOn())); sndLabel(); if (window.sfx) sfx("click"); }; }
   const cr = $("cfg-reset"); if (cr) cr.onclick = doFarmReset;
   const ed = $("edit-done"); if (ed) ed.onclick = () => setEditMode(false);
   const er = $("edit-reset"); if (er) er.onclick = doFarmReset;

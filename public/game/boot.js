@@ -26,7 +26,10 @@ class BootScene extends Phaser.Scene {
     L.push(["withered", P + "withered.png?v=2"]);      // cultivo marchito cozy
     // etapas intermedias (la verdura asomando al 50% del crecimiento)
     if (typeof CROP_ORDER !== "undefined") CROP_ORDER.forEach(k => L.push(["cropm_" + k, P + "cropm_" + k + ".png?v=3"]));
-    ["tree","pond"].forEach(k => L.push([k, P + k + ".png?v=2"]));   // arte cozy nuevo
+    L.push(["tree", P + "tree.png?v=3"]);   // v3: árbol con efecto de plantado (detalles jueves)
+    L.push(["pond", P + "pond.png?v=2"]);
+    L.push(["portal", P + "portal.png"]);   // portal al Bosque
+    for (let i = 0; i < 9; i++) L.push(["flame_" + i, P + "flame_" + i + ".png"]);   // fuego de la herrería
     // v3: nodos plantados en la tierra + estados dañados (intermedio del cooldown)
     ["node_stone","node_bronze","node_gold","node_diamond","node_netherite"]
       .forEach(k => { L.push([k, P + k + ".png?v=3"]); L.push([k + "_half", P + k + "_half.png"]); });
@@ -46,8 +49,8 @@ class BootScene extends Phaser.Scene {
   preload() {
     // ATLAS: todos los sprites del mundo en 2 archivos (mucho más liviano para el server free).
     // Si el atlas no llega, ensureAll() baja los archivos sueltos como respaldo.
-    this.load.image("__atlas", "assets/atlas.png?v=15");
-    this.load.json("__atlasmap", "assets/atlas.json?v=15");
+    this.load.image("__atlas", "assets/atlas.png?v=16");
+    this.load.json("__atlasmap", "assets/atlas.json?v=16");
 
     // barra de carga simple
     const w = this.scale.width, h = this.scale.height;
@@ -104,5 +107,7 @@ class BootScene extends Phaser.Scene {
       const ks = [0,1,2,3,4,5,6].map(i => "act_" + a + "_" + i);
       if (has(ks)) this.anims.create({ key: "act_" + a, frames: ks.map(k => ({ key: k })), frameRate: 10, repeat: -1 });
     });
+    const fk = [0,1,2,3,4,5,6,7,8].map(i => "flame_" + i);
+    if (has(fk)) this.anims.create({ key: "flame", frames: fk.map(k => ({ key: k })), frameRate: 10, repeat: -1 });
   }
 }

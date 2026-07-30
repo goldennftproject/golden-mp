@@ -118,12 +118,19 @@ class FarmScene extends Phaser.Scene {
     // (los rótulos flotantes se quitaron: los edificios nuevos se distinguen solos
     //  y el aviso de interacción ya los nombra al acercarse)
 
-    // portal al Bosque (Fase D) — desactivado para la prueba sin bestiario
+    // portal al Bosque — ahora con su sprite cozy (arco de piedra con vórtice)
     if (window.ForestScene !== undefined || typeof ForestScene !== "undefined") {
-      const px = GF.WORLD_W - 34, py = GF.WORLD_H - 46;
-      this.add.text(px, py, "🌲", { fontSize: "26px" }).setOrigin(0.5, 1).setDepth(py);
-      this.add.text(px, py + 14, "Bosque", { fontFamily: "system-ui", fontSize: "11px", fontStyle: "bold", color: "#ffe08a", stroke: "#20301a", strokeThickness: 3 }).setOrigin(0.5, 0.5).setDepth(py);
-      this.portal = { type: "portal", cx: px, by: py };
+      const px = GF.WORLD_W - 40, py = GF.WORLD_H - 40;
+      let pspr = null;
+      if (this.textures.exists("portal")) {
+        pspr = this.add.image(px, py, "portal").setOrigin(0.5, 1).setDepth(py);
+        pspr.setScale((T * 1.4) / pspr.width);
+        this.tweens.add({ targets: pspr, scaleY: pspr.scaleY * 1.02, duration: 1400, yoyo: true, repeat: -1, ease: "Sine.easeInOut" });   // latido sutil del vórtice
+      } else {
+        this.add.text(px, py, "🌲", { fontSize: "26px" }).setOrigin(0.5, 1).setDepth(py);
+      }
+      this.add.text(px, py + 12, "Bosque", { fontFamily: "system-ui", fontSize: "11px", fontStyle: "bold", color: "#ffe08a", stroke: "#20301a", strokeThickness: 3 }).setOrigin(0.5, 0.5).setDepth(py);
+      this.portal = { type: "portal", cx: px, by: py, sprite: pspr, w: T * 1.4 };
     }
 
     // (la pesca ya no usa un objeto en el piso; se pesca al acercarse al borde de la laguna)
@@ -303,6 +310,7 @@ class FarmScene extends Phaser.Scene {
         o.sprite.setPosition(o.origCx, o.origBy).setDepth(o.origBy);
         if (o.shadow) o.shadow.setPosition(o.origCx, o.origBy - 3).setDepth(o.origBy - 0.5);
         if (o.timer) o.timer.setPosition(o.origCx, o.origBy - T * 0.85);
+        if (o.flameFx) o.flameFx.setPosition(o.origCx - o.rw * 0.13, o.origBy - o.sprite.displayHeight * 0.30).setDepth(o.origBy + 1);
         toast("🚫 Ahí ya hay algo — elegí otra celda");
         this.dragObj = null; return;
       }
@@ -310,6 +318,7 @@ class FarmScene extends Phaser.Scene {
       o.sprite.setPosition(o.cx, o.by).setDepth(o.by);
       if (o.shadow) o.shadow.setPosition(o.cx, o.by - 3).setDepth(o.by - 0.5);
       if (o.timer) o.timer.setPosition(o.cx, o.by - T * 0.85);
+      if (o.flameFx) o.flameFx.setPosition(o.cx - o.rw * 0.13, o.by - o.sprite.displayHeight * 0.30).setDepth(o.by + 1);
       if (o.type === "cofre") { const c = G.chests && G.chests[o.chestIdx]; if (c) { c.col = leftCol; c.row = baseRow - 1; } }
       else { if (!G.layout) G.layout = {}; G.layout[o.i] = { cx: o.cx, by: o.by }; }
       this.rebuildCollisions();
@@ -349,6 +358,14 @@ class FarmScene extends Phaser.Scene {
     };
     const storeObj = this.objs.find(o => o.type === "store");
     if (storeObj) smokeFrom(storeObj, 0.26, 0xd8d2c4, () => true);                       // herrería: siempre
+    // fuego animado en la boca de la fragua (experimental — detalles jueves)
+    if (storeObj && this.textures.exists("flame_0")) {
+      const fx = storeObj.cx - storeObj.rw * 0.13, fy = storeObj.by - storeObj.sprite.displayHeight * 0.30;
+      const fl = this.add.sprite(fx, fy, "flame_0").setOrigin(0.5, 1).setDepth(storeObj.by + 1);
+      fl.setDisplaySize(11, 13);
+      if (this.anims.exists("flame")) fl.play("flame");
+      storeObj.flameFx = fl;   // por si se arrastra el edificio en edición
+    }
     const cocinaObj = this.objs.find(o => o.type === "cocina");
     if (cocinaObj) smokeFrom(cocinaObj, 0.20, 0xefe9db, () => true);                     // cocina: humo SIEMPRE (detalles jueves)
     if (cocinaObj) smokeFrom(cocinaObj, 0.20, 0xffffff, () => !!G.cooking);              // …y el doble de bocanadas mientras se cocina
@@ -522,6 +539,7 @@ class FarmScene extends Phaser.Scene {
       g.generateTexture("bobber", 9, 10); g.destroy();
     }
     if (this.bobber) { this.bobber.destroy(); this.bobber = null; }
+    if (window.sfx) sfx("cast");
     const b = this.add.image(this.hero.x, this.hero.y - 26, "bobber").setDepth(-988).setScale(1.6);
     this.bobber = b;
     this.tweens.add({ targets: b, x, y, duration: 420, ease: "Quad.easeIn", onComplete: () => {
@@ -535,6 +553,7 @@ class FarmScene extends Phaser.Scene {
 
   finishAction() {
     const a = this.action, o = a.o;
+    if (window.sfx) sfx({ chop: "chop", mine: "mine", plant: "plant", harvest: "harvest", fish: "splash", water: "splash" }[a.kind] || "click");
     if (a.kind === "chop") {
       const gr = Math.max(1, Math.round(3 * yieldMult() * chestBonus()));
       if (tryAddRes("madera", gr)) { useTool("axe"); addXp("crafting", 4); o.readyAt = nowMs() + CD.tree * 1000 * cdMult(); this.setObjTex(o, "tree_stump", GF.TILE * 0.48); log(`🪵 +${gr} Madera. 🪓 ${toolDur("axe")}/${TOOL_DEF.axe.max}`, "good"); toast("+" + gr + " 🪵"); refreshHud(); if (toolDur("axe") <= 0) { log("🪓 ¡El hacha se rompió! Reparala en la Herrería.", "bad"); toast("🪓 ¡Hacha rota!"); } }

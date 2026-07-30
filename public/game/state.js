@@ -1,6 +1,6 @@
 /* Golden Farm · estado del juego + economía (sin DOM ni canvas) */
 window.GF = window.GF || {};
-GF.spr = (k) => "assets/farm/" + k + ".png?a=4";   // ?a=N rompe el caché de los íconos cuando cambia el arte
+GF.spr = (k) => "assets/farm/" + k + ".png?a=5";   // ?a=N rompe el caché de los íconos cuando cambia el arte (a=5: porciones de mineral + skills)
 
 // --- estado principal (con algunos recursos de arranque para probar los menús) ---
 const G = {
@@ -102,7 +102,7 @@ function addXp(sk, amt) {
   const before = skillInfo(G.skills[sk]).lvl;
   G.skills[sk] += amt;
   const after = skillInfo(G.skills[sk]).lvl;
-  if (after > before) { log(`📈 ${SKILL_NAME[sk]} subió a nivel ${after}.`, "good"); toast("📈 " + SKILL_NAME[sk] + " nivel " + after); }
+  if (after > before) { log(`📈 ${SKILL_NAME[sk]} subió a nivel ${after}.`, "good"); toast("📈 " + SKILL_NAME[sk] + " nivel " + after); if (window.sfx) sfx("level"); }
   if (isOpen("ov-skills")) refreshSkills();
 }
 
@@ -262,6 +262,7 @@ function checkCooking() {
 function eatDish(id) {
   const r = RECIPE_DEF[id]; if (!r || !G.dishes || (G.dishes[id] || 0) <= 0) return;
   G.dishes[id]--;
+  if (window.sfx) sfx("eat");
   G.hp = Math.min(G.hpMax, G.hp + r.heal);
   if (r.buff) addBuff(r.buff.type, r.buff.label, r.buff.mult, r.buff.dur);
   log(r.emoji + " Comiste " + r.label + ". " + r.desc, "gold"); toast(r.emoji + " ¡Ñam!");
@@ -345,8 +346,8 @@ function useTool(id) { const d = toolDur(id); if (d <= 0) return false; G.tools[
 function repairTool(id) { const td = TOOL_DEF[id]; if (!td) return; if (toolDur(id) >= td.max) { toast("Ya está al 100%"); return; } if (!canAfford(td.repair)) { toast("Te faltan materiales para reparar"); return; } payCost(td.repair); G.tools[id] = td.max; log("🔧 Reparaste " + td.label + " (100%).", "good"); toast("🔧 Reparado"); refreshForge(); if (isOpen("ov-equip")) refreshEquip(); if (isOpen("ov-inv")) refreshInv(); }
 
 // --- inventario (base + filas extra) ---
-const INV_BASE = 30, INV_MAX_ROWS = 5;   // 30 base (5 filas de 6), hasta +5 filas más
-function invSlots() { return INV_BASE + (G.invRows || 0) * 6; }
+const INV_BASE = 20, INV_MAX_ROWS = 5;   // 20 base (4 filas de 5), hasta +5 filas más
+function invSlots() { return INV_BASE + (G.invRows || 0) * 5; }
 function nextInvCost() {
   const r = G.invRows || 0;
   if (r >= INV_MAX_ROWS) return null;
@@ -358,7 +359,7 @@ function expandInv() {
   if (nc.type === "res") { if (!canAfford(nc.cost)) { toast("Te faltan minerales"); return; } payCost(nc.cost); }
   else { if (G.plata < nc.cost) { toast("Te falta plata"); return; } G.plata -= nc.cost; }
   G.invRows = (G.invRows || 0) + 1;
-  log("🎒 Ampliaste la bolsa (+6 espacios).", "good"); toast("🎒 +6 espacios");
+  log("🎒 Ampliaste la bolsa (+5 espacios).", "good"); toast("🎒 +5 espacios");
   refreshInv(); refreshHud();
 }
 function invStacks() {
@@ -451,6 +452,7 @@ function sellItem(res) {
   if (q <= 0) { toast("Poné una cantidad"); return; }
   if (marketCur === "plata") { const t=q*PRICE[res]; G.plata+=t; G.res[res]-=q; log(`🪙 Vendiste ${q} ${RES_LABEL[res]} por ${t} de plata.`); toast("+"+t+" plata"); }
   else { const g=Math.floor(q*PRICE[res]/10); if (g<1){ toast("Muy poca cantidad para $Golden"); return; } G.res[res]-=q; G.golden+=g; log(`✨ Vendiste ${q} ${RES_LABEL[res]} por ${g} $Golden.`,"gold"); toast("+"+g+" $Golden"); }
+  if (window.sfx) sfx("coin");
   refreshMarket(); refreshHud();
 }
 
