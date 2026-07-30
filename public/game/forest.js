@@ -54,6 +54,9 @@ class ForestScene extends Phaser.Scene {
     this.actScale = GF.SIZE.hero / 47;
     hero.setScale(this.idleScale); hero.play("idle");
     this.hero = hero; this.facing = "east"; this.moveTarget = null; this.action = null; this.hurtFx = 0;
+    // igual que en la granja: al reiniciar la escena hay que soltar lo cacheado
+    this.tgGlow = null; this.tgGlowTw = null; this.tgTxt = null; this.destMk = null;
+    this._nav = null; this.holdLast = null; this.holdPend = null; this.pathStuck = 0; this.leaving = false;
     this.target = null; this.nextAuto = 0; this.path = null; this.hold = null;
     // el botín tirado sobrevive mientras dure la sesión: si volvés al Bosque, sigue ahí
     GF.forestDrops = GF.forestDrops || [];
@@ -327,11 +330,13 @@ class ForestScene extends Phaser.Scene {
       toast("💀 Te llevaron de vuelta a la granja");
       G.hp = Math.ceil(G.hpMax / 2);
       if (typeof saveFarm === "function") saveFarm(true);
+      this.leaving = true;
       this.scene.start("farm");
     }
   }
 
   update(time, deltaMs) {
+    if (this.leaving || !this.hero) return;   // cambiando de escena: no tocar nada más
     const dt = deltaMs / 1000, k = this.keys, hero = this.hero, t = nowMs();
 
     // regeneración lenta de vida
@@ -415,6 +420,7 @@ class ForestScene extends Phaser.Scene {
       const left = (GF.forestDrops || []).length;
       if (left) { log("🎒 Dejaste " + left + " objeto(s) en el suelo del Bosque — siguen ahí si volvés.", "bad"); toast("🎒 Dejaste " + left + " objeto(s) en el suelo"); }
       if (typeof saveFarm === "function") saveFarm();
+      this.leaving = true;
       this.scene.start("farm"); return;
     }
 

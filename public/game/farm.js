@@ -10,7 +10,17 @@ class FarmScene extends Phaser.Scene {
   create() {
     const W = GF.WORLD_W, H = GF.WORLD_H, T = GF.TILE;
     window.FARM = this;   // para restaurar la granja desde la config
-    this.dragObj = null;
+    // Phaser REUTILIZA la instancia al reiniciar la escena: hay que soltar todo lo cacheado,
+    // porque apunta a objetos ya destruidos (y usarlos rompía el juego al volver del Bosque).
+    this.hoverFx = null; this.nearFx = null;
+    this.destMk = null; this.destTw = null;
+    this.dummyObj = null; this.dummyTimer = null;
+    this.editHl = null; this._nav = null; this.storeObj = null;
+    this.bobber = null; this.bobberTween = null;
+    this.hold = null; this.path = null; this.holdLast = null; this.holdPend = null;
+    this.pathStuck = 0; this.lastDD = null; this.noProg = 0;
+    this.unlockPend = null; this.leaving = false;
+    this.dragObj = null; this.dragPlot = null; this.dragPond = false;
     this.queue = [];      // cola de acciones: clickeá varios objetivos y se hacen en orden
     this.cameras.main.setBackgroundColor("#6ba043");
 
@@ -465,7 +475,7 @@ class FarmScene extends Phaser.Scene {
   doInteract() { if (GF.uiOpen || this.action || GF.editMode) return; const o = this.nearestInteract(); if (o) this.interactWith(o); else if (this.nearPond()) this.tryFish(); }
 
   interactWith(o) {
-    if (o.type === "portal") { if (typeof saveFarm === "function") saveFarm(); return this.scene.start("forest"); }
+    if (o.type === "portal") { if (typeof saveFarm === "function") saveFarm(); this.leaving = true; return this.scene.start("forest"); }
     if (o.type === "barn") return openOv("ov-barn");
     if (o.type === "market") return openOv("ov-market");
     if (o.type === "store") return openOv("ov-forge");
@@ -985,6 +995,7 @@ class FarmScene extends Phaser.Scene {
   }
 
   update(time, deltaMs) {
+    if (this.leaving || !this.hero) return;   // cambiando de escena: no tocar nada más
     const dt = deltaMs / 1000, k = this.keys, hero = this.hero;
 
     // restaurar objetos que salieron de cooldown
