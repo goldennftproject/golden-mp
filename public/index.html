@@ -260,6 +260,17 @@
   .forge-row,.mkt-row{background:#f2e5c4;border:2px solid #d9c290;border-radius:10px}
   .skrow{background:#f2e5c4;border:2px solid #d9c290;border-radius:10px}
   .lbrow{background:#f2e5c4}
+  /* pestañas estilo barra superior (badge_wood): Comprar/Vender, Craftear/Reparar, monedas, leaderboard */
+  .shoptab,.lbtab,.curbtn{background:url("assets/ui/badge_wood.png") center/100% 100% no-repeat;border:none;border-radius:0;image-rendering:pixelated;color:#fff !important;font-weight:800;text-shadow:0 1px 0 rgba(0,0,0,.55);filter:brightness(.62) saturate(.8)}
+  .shoptab{padding:10px 12px;font-size:13px}
+  .lbtab,.curbtn{padding:8px 14px}
+  .shoptab.active,.lbtab.active,.curbtn.active,
+  .shoptab.active:hover,.lbtab.active:hover,.curbtn.active:hover{background:url("assets/ui/badge_wood.png") center/100% 100% no-repeat;border:none;filter:drop-shadow(0 0 5px rgba(255,214,110,.75))}
+  .shoptab:hover:not(.active),.lbtab:hover:not(.active),.curbtn:hover:not(.active){filter:brightness(.82) saturate(.9)}
+  /* placa interior (badge_wood en 9-slice) que agrupa las listas de cada pestaña */
+  .shoppane,#forge-pane-craft,#forge-pane-repair,.lblist{border:14px solid transparent;border-image:url("assets/ui/badge_wood.png") 26 fill round;image-rendering:pixelated;padding:6px;border-radius:0}
+  .shoppane .mkt-list,.forge-list{max-height:46vh}
+  .mkt-cur{color:#fff;font-weight:700}
   /* barra de scroll de madera */
   ::-webkit-scrollbar{width:10px;height:10px}
   ::-webkit-scrollbar-track{background:rgba(138,102,50,.16);border-radius:6px}
@@ -336,7 +347,7 @@
   <!-- overlays -->
   <div class="ov" id="ov-barn"><div class="card">
     <button class="close" data-close="ov-barn">×</button>
-    <h3>🏡 Granja</h3>
+    <h3>Granja</h3>
     <div class="sub" id="barn-yield">Yield actual +0%</div>
     <div class="lvlbar"><i id="lvlbar"></i></div>
     <div class="cost" id="lvlcost"></div>
@@ -348,7 +359,7 @@
   <!-- Cofre depósito: 10 espacios de guardado (detalles 29/7) -->
   <div class="ov" id="ov-cofre"><div class="card" style="width:min(500px,94%)">
     <button class="close" data-close="ov-cofre">×</button>
-    <h3>📦 Cofre depósito</h3>
+    <h3>Cofre depósito</h3>
     <div class="sub" id="cofre-info"></div>
     <div class="shophead">En el cofre — clic para sacar</div>
     <div class="slots" id="cofre-slots" style="grid-template-columns:repeat(5,1fr);max-height:none"></div>
@@ -359,17 +370,17 @@
   <!-- Cocina: edificio propio con las recetas (detalles 29/7) -->
   <div class="ov" id="ov-cocina"><div class="card" style="width:min(500px,94%)">
     <button class="close" data-close="ov-cocina">×</button>
-    <h3>🍳 Cocina</h3>
+    <h3>Cocina</h3>
     <div class="sub">Los platos curan vida y dan buffs. Cocinar tarda unos segundos y el plato va a tu bolsa. Sube la skill Cocina.</div>
     <div id="cook-list"></div>
   </div></div>
 
   <div class="ov" id="ov-market"><div class="card" style="width:min(520px,94%)">
     <button class="close" data-close="ov-market">×</button>
-    <h3>🏪 Tienda</h3>
+    <h3>Tienda</h3>
     <div class="shoptabs">
-      <button class="shoptab active" data-shop="buy">🌱 Comprar</button>
-      <button class="shoptab" data-shop="sell">💰 Vender</button>
+      <button class="shoptab active" data-shop="buy">Comprar</button>
+      <button class="shoptab" data-shop="sell">Vender</button>
     </div>
     <div class="shoppane" id="shop-buy">
       <div class="mkt-list" id="seed-shop"></div>
@@ -385,10 +396,10 @@
 
   <div class="ov" id="ov-forge"><div class="card" style="width:min(580px,94%)">
     <button class="close" data-close="ov-forge">×</button>
-    <h3>🛠️ Herrería</h3>
+    <h3>Herrería</h3>
     <div class="shoptabs">
-      <button class="shoptab forgetab active" data-forge="craft">🔨 Craftear</button>
-      <button class="shoptab forgetab" data-forge="repair">🔧 Reparar</button>
+      <button class="shoptab forgetab active" data-forge="craft">Craftear</button>
+      <button class="shoptab forgetab" data-forge="repair">Reparar</button>
     </div>
     <div id="forge-pane-craft">
       <div class="sub">Picos, armas y flechas por craftear. Cada pico mina hasta su nivel.</div>
@@ -445,7 +456,7 @@
 
   <div class="ov" id="ov-daily"><div class="card" style="width:min(560px,94%)">
     <button class="close" data-close="ov-daily">×</button>
-    <h3>🎁 Cofre diario</h3>
+    <h3>Cofre diario</h3>
     <div class="sub" id="dy-banner">Día 1 de 7</div>
     <div class="dyrow" id="dy-locks"></div>
     <div class="dycenter">
@@ -461,7 +472,7 @@
     <h3>Leaderboard</h3>
     <div class="lbtabs">
       <button class="lbtab active" data-lb="plata"><img class="ric" src="assets/farm/coin_plata.png?a=4"> Plata</button>
-      <button class="lbtab" data-lb="exp">⭐ Experiencia</button>
+      <button class="lbtab" data-lb="exp">Experiencia</button>
     </div>
     <div class="lblist" id="lb-list"></div>
     <div class="lbnote" id="lb-note"></div>
