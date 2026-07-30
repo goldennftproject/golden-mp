@@ -34,6 +34,9 @@
     harvest() { tone(520, "triangle", 0.005, 0.1, 0.22, 800); },                                      // cosechar
     coin()    { tone(988, "square", 0.002, 0.09, 0.13); setTimeout(() => tone(1319, "square", 0.002, 0.12, 0.13), 60); },
     click()   { tone(700, "square", 0.001, 0.035, 0.1, 500); },                                       // abrir ventana
+    shop()    { tone(1047, "triangle", 0.004, 0.16, 0.13); setTimeout(() => tone(1568, "triangle", 0.004, 0.22, 0.11), 90); noise(0.05, 0.1, 300, 900); },   // campanilla de tienda
+    forge()   { noise(0.09, 0.3, 200, 700); setTimeout(() => tone(330, "triangle", 0.004, 0.18, 0.12, 240), 60); },                                          // fragua: golpe grave
+    door()    { noise(0.16, 0.16, 120, 520); setTimeout(() => tone(220, "sine", 0.01, 0.14, 0.1, 160), 90); },                                               // puerta de madera
     eat()     { tone(260, "sine", 0.012, 0.12, 0.18, 170); },                                         // comer plato
     level()   { [523, 659, 784, 1047].forEach((f, i) => setTimeout(() => tone(f, "triangle", 0.005, 0.16, 0.18), i * 90)); },
     hit()     { noise(0.07, 0.35, 150, 600); },                                                       // golpe

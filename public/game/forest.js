@@ -54,15 +54,19 @@ class ForestScene extends Phaser.Scene {
     this.actScale = GF.SIZE.hero / 47;
     hero.setScale(this.idleScale); hero.play("idle");
     this.hero = hero; this.facing = "east"; this.moveTarget = null; this.action = null; this.hurtFx = 0;
+    this.target = null; this.nextAuto = 0; this.ground = [];
+    this.input.mouse.disableContextMenu();
 
-    // clic: atacar monstruo cercano o moverse
+    // clic izquierdo: ir hacia el monstruo (y fijarlo) o moverse · clic DERECHO: atacar (detalles 338)
     this.input.on("pointerdown", (pt) => {
-      if (GF.uiOpen || this.action) return;
+      if (GF.uiOpen) return;
       const wx = pt.worldX, wy = pt.worldY;
       let hit = null, bd = 1e9;
       for (const m of this.monsters) { if (m.dead) continue; const b = m.spr.getBounds(); if (Phaser.Geom.Rectangle.Contains(b, wx, wy)) { const d = Math.hypot(m.cx - wx, m.by - wy); if (d < bd) { bd = d; hit = m; } } }
-      if (hit) { this.target = hit; this.moveTarget = { x: hit.cx, y: hit.by + 14 }; }
-      else { this.target = null; this.moveTarget = { x: wx, y: wy }; }
+      if (pt.rightButtonDown()) { if (hit) this.setTarget(hit); return; }   // atacar sin moverse
+      if (this.action) return;
+      if (hit) { this.setTarget(hit); this.moveTarget = { x: hit.cx, y: hit.by + 14 }; }
+      else { this.clearTarget(); this.moveTarget = { x: wx, y: wy }; this.tryPickup(wx, wy, 20); }
     });
 
     this.cameras.main.setBounds(0, 0, this.W, this.H);
@@ -105,24 +109,81 @@ class ForestScene extends Phaser.Scene {
     m.bar.fillStyle(m.hp / m.def.hp > 0.4 ? 0x7ec95a : 0xd9534f, 1).fillRect(x, y, w * (m.hp / m.def.hp), 3);
   }
 
+  /* ---- objetivo fijado: recuadro rojo + nombre y vida encima (detalles 338) ---- */
+  setTarget(m) {
+    this.target = m; this.nextAuto = 0;   // golpea en el próximo tick
+    if (!this.tgBox) {
+      this.tgBox = this.add.rectangle(0, 0, 10, 10).setStrokeStyle(2, 0xff4b3a, 0.95).setDepth(99990).setVisible(false);
+      this.tgTxt = this.add.text(0, 0, "", { fontFamily: "system-ui", fontSize: "11px", fontStyle: "bold", color: "#ffd9d2", stroke: "#2a1410", strokeThickness: 4 }).setOrigin(0.5, 1).setDepth(99991).setVisible(false);
+    }
+    this.updateTargetFx();
+  }
+  clearTarget() { this.target = null; if (this.tgBox) this.tgBox.setVisible(false); if (this.tgTxt) this.tgTxt.setVisible(false); }
+  updateTargetFx() {
+    const m = this.target;
+    if (!m || m.dead || !this.tgBox) { if (this.tgBox) { this.tgBox.setVisible(false); this.tgTxt.setVisible(false); } return; }
+    const b = m.spr.getBounds();
+    this.tgBox.setPosition(b.centerX, b.centerY).setSize(b.width + 8, b.height + 8).setVisible(true);
+    this.tgTxt.setPosition(m.cx, b.top - 7).setText(m.def.label + "  " + Math.max(0, Math.ceil(m.hp)) + "/" + m.def.hp).setVisible(true);
+  }
+
+  /* ---- loot en el piso: se recoge pisándolo o con un clic (detalles 338) ---- */
+  dropLoot(m, loot) {
+    const keys = Object.keys(loot);
+    keys.forEach((k, i) => {
+      const ang = (i / Math.max(1, keys.length)) * Math.PI * 2 + Math.random();
+      const gx = Phaser.Math.Clamp(m.cx + Math.cos(ang) * (10 + Math.random() * 14), 20, this.W - 20);
+      const gy = Phaser.Math.Clamp(m.by + Math.sin(ang) * (7 + Math.random() * 10), 30, this.H - 20);
+      const sk = k === "plata" ? "coin_plata" : (typeof resSprite === "function" ? resSprite(k) : null);
+      let s;
+      if (sk && this.textures.exists(sk)) { s = this.add.image(gx, gy, sk).setOrigin(0.5, 1); s.setScale(17 / s.width); }
+      else s = this.add.text(gx, gy, k === "plata" ? "🪙" : (RES_EMOJI[k] || "❔"), { fontSize: "15px" }).setOrigin(0.5, 1);
+      s.setDepth(gy).setAlpha(0);
+      this.tweens.add({ targets: s, alpha: 1, duration: 220 });
+      this.tweens.add({ targets: s, y: gy - 3, yoyo: true, repeat: -1, duration: 760, ease: "Sine.easeInOut" });
+      this.ground.push({ x: gx, y: gy, k, n: loot[k], spr: s });
+    });
+  }
+  tryPickup(x, y, rad) {
+    if (!this.ground || !this.ground.length) return;
+    for (let i = this.ground.length - 1; i >= 0; i--) {
+      const g = this.ground[i];
+      if (Math.hypot(g.x - x, g.y - y) > rad) continue;
+      let ok = false;
+      if (g.k === "plata") { G.plata += g.n; ok = true; }
+      else ok = tryAddRes(g.k, g.n);
+      if (!ok) { toast("🎒 Bolsa llena"); continue; }
+      if (window.sfx) sfx("coin");
+      toast("+" + g.n + " " + (g.k === "plata" ? "🪙" : (RES_EMOJI[g.k] || "")));
+      const s = g.spr; this.tweens.killTweensOf(s);
+      this.tweens.add({ targets: s, y: s.y - 16, alpha: 0, duration: 260, onComplete: () => s.destroy() });
+      this.ground.splice(i, 1);
+      refreshHud(); if (typeof syncSlots === "function") syncSlots(); if (isOpen("ov-inv")) refreshInv();
+    }
+  }
+
   nearestMonster(rad) {
     let best = null, bd = 1e9;
     for (const m of this.monsters) { if (m.dead) continue; const d = Math.hypot(m.cx - this.hero.x, m.by - this.hero.y); if (d < rad && d < bd) { bd = d; best = m; } }
     return best;
   }
 
+  // E / espacio: fija el monstruo más cercano (el auto-ataque hace el resto)
   tryAttack() {
-    if (this.action) return;
-    const near = this.nearestMonster(56);
-    if (near) {   // cuerpo a cuerpo
-      this.facing = (near.cx < this.hero.x) ? "west" : "east";
-      this.moveTarget = null;
-      this.action = { kind: "attack", m: near, t: 0, dur: 0.45 };
-      return;
-    }
-    if (canShoot()) {   // a distancia con el arco
-      const far = this.nearestMonster(190);
-      if (far) { this.facing = (far.cx < this.hero.x) ? "west" : "east"; this.moveTarget = null; this.action = { kind: "shoot", m: far, t: 0, dur: 0.35 }; }
+    const near = this.nearestMonster(MELEE_RANGE) || (canShoot() ? this.nearestMonster(BOW_RANGE) : null);
+    if (near) this.setTarget(near);
+  }
+  // auto-ataque: un golpe cada 2s mientras el objetivo esté vivo y a distancia (detalles 338)
+  autoAttack(t) {
+    const m = this.target;
+    if (!m || m.dead || this.action || t < this.nextAuto) return;
+    const d = Math.hypot(m.cx - this.hero.x, m.by - this.hero.y);
+    if (d <= MELEE_RANGE) {
+      this.facing = (m.cx < this.hero.x) ? "west" : "east";
+      this.action = { kind: "attack", m, t: 0, dur: 0.45 }; this.nextAuto = t + ATTACK_MS;
+    } else if (canShoot() && d <= BOW_RANGE) {
+      this.facing = (m.cx < this.hero.x) ? "west" : "east";
+      this.action = { kind: "shoot", m, t: 0, dur: 0.35 }; this.nextAuto = t + ATTACK_MS;
     }
   }
 
@@ -146,10 +207,20 @@ class ForestScene extends Phaser.Scene {
     if (dmg == null) { dmg = swordDmg(); skill = "sword"; }
     if (skill === "sword" && G.gear.arma === "sword" && toolDur("sword") > 0) { useTool("sword"); if (toolDur("sword") <= 0) { log("⚔️ ¡La espada se rompió! Reparala en la Herrería.", "bad"); toast("⚔️ ¡Espada rota!"); } }
     m.hp -= dmg;
+    // chispa de golpe (detalles 338)
+    const hy = m.by - m.spr.height * 0.5;
+    const flash = this.add.circle(m.cx, hy, 7, 0xffffff, 0.7).setDepth(99998);
+    this.tweens.add({ targets: flash, scale: 2.2, alpha: 0, duration: 190, onComplete: () => flash.destroy() });
+    for (let i = 0; i < 6; i++) {
+      const a = Math.random() * Math.PI * 2, len = 12 + Math.random() * 12;
+      const sp = this.add.rectangle(m.cx, hy, 2, 2, i % 2 ? 0xfff3cf : 0xffc23a).setDepth(99999);
+      this.tweens.add({ targets: sp, x: m.cx + Math.cos(a) * len, y: hy + Math.sin(a) * len, alpha: 0, duration: 240 + Math.random() * 120, onComplete: () => sp.destroy() });
+    }
+    m.spr.setScale(1.18); this.tweens.add({ targets: m.spr, scale: 1, duration: 160 });
     // texto de daño flotante
     const t = this.add.text(m.cx, m.by - m.spr.height, "-" + dmg, { fontFamily: "system-ui", fontSize: "13px", fontStyle: "bold", color: skill === "range" ? "#a8d8ff" : "#ffd24a", stroke: "#20301a", strokeThickness: 3 }).setOrigin(0.5, 1).setDepth(99999);
     this.tweens.add({ targets: t, y: t.y - 18, alpha: 0, duration: 550, onComplete: () => t.destroy() });
-    if (m.hp <= 0) this.killMonster(m, skill || "sword"); else { this.drawBar(m); m.tgt = "hero"; }
+    if (m.hp <= 0) this.killMonster(m, skill || "sword"); else { this.drawBar(m); m.tgt = "hero"; this.updateTargetFx(); }
   }
 
   killMonster(m, skill) {
@@ -157,15 +228,13 @@ class ForestScene extends Phaser.Scene {
     addXp(skill || "sword", m.def.xp);
     // armaduras: chance de drop (se autoequipan si mejoran)
     if (m.def.gearLoot) for (const [gk, ch] of m.def.gearLoot) { if (Math.random() < ch) gainGear(gk); }
+    if (this.target === m) this.clearTarget();
     const loot = rollLoot(m.def);
-    const parts = [];
-    for (const k in loot) {
-      if (k === "plata") { G.plata += loot[k]; parts.push("+" + loot[k] + " 🪙"); }
-      else if (tryAddRes(k, loot[k])) parts.push("+" + loot[k] + " " + RES_EMOJI[k]);
-    }
-    log("⚔️ Venciste a " + m.def.label + ". " + parts.join(" · "), "gold");
-    toast("⚔️ " + m.def.label + " ✔ " + parts.join(" "));
-    refreshHud(); if (typeof syncSlots === "function") syncSlots(); if (isOpen("ov-inv")) refreshInv();
+    const parts = Object.keys(loot).map(k => "+" + loot[k] + " " + (k === "plata" ? "🪙" : (RES_EMOJI[k] || "")));
+    this.dropLoot(m, loot);   // el botín cae al piso, no a la bolsa (detalles 338)
+    log("⚔️ Venciste a " + m.def.label + (parts.length ? ". Soltó: " + parts.join(" · ") : ". No soltó nada."), "gold");
+    toast("⚔️ " + m.def.label + " ✔" + (parts.length ? " " + parts.join(" ") : ""));
+    refreshHud();
     this.tweens.add({ targets: m.spr, alpha: 0, y: m.by - 12, duration: 400, onComplete: () => m.spr.setVisible(false) });
     // reaparece en su zona tras 25-40s
     this.time.delayedCall(25000 + Math.random() * 15000, () => {
@@ -198,6 +267,12 @@ class ForestScene extends Phaser.Scene {
     // tinte de daño
     if (this.hurtFx > 0) { this.hurtFx -= dt; hero.setTint(0xff6b5a); } else hero.clearTint();
 
+    // objetivo fijado: recuadro + nombre/vida, y auto-ataque cada 2s
+    if (this.target && this.target.dead) this.clearTarget();
+    this.updateTargetFx();
+    this.autoAttack(t);
+    this.tryPickup(hero.x, hero.y, 24);   // recoger el loot del piso al pasar por encima
+
     // acción de ataque (cuerpo a cuerpo o disparo)
     if (this.action) {
       this.action.t += dt;
@@ -217,7 +292,7 @@ class ForestScene extends Phaser.Scene {
       if (this.action.t >= this.action.dur) {
         const a = this.action; this.action = null;
         if (a.kind === "shoot") { if (a.m && !a.m.dead) this.shootArrow(a.m); }
-        else if (a.m && !a.m.dead && Math.hypot(a.m.cx - hero.x, a.m.by - hero.y) < 62) this.hitMonster(a.m);
+        else if (a.m && !a.m.dead && Math.hypot(a.m.cx - hero.x, a.m.by - hero.y) <= MELEE_RANGE + 8) this.hitMonster(a.m);
       }
       hero.setDepth(hero.y); this.updateMonsters(dt, t); this.updatePrompt(); return;
     }

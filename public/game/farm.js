@@ -237,7 +237,7 @@ class FarmScene extends Phaser.Scene {
         if (!this.hold.active && Math.hypot(pt.x - this.hold.sx, pt.y - this.hold.sy) < 16) return;   // clic corto ≠ arrastre
         if (!this.hold.active) {
           if (this.action) return;   // con una acción en curso el arrastre no manda (no borra la cola)
-          this.hold.active = true; this.pendingObj = null; this.queue.length = 0;
+          this.hold.active = true; this.pendingObj = null; this.clearQueue();
         }
         this.holdSeek(pt.worldX, pt.worldY);
         return;
@@ -634,10 +634,17 @@ class FarmScene extends Phaser.Scene {
   }
 
   // marca visual breve sobre un objetivo encolado
+  // punto fijo sobre lo encolado, para saber de un vistazo qué pusiste y qué no (detalles 338)
   markQueued(o) {
-    const m = this.add.text(o.cx, o.by - 30, "📋", { fontSize: "13px" }).setOrigin(0.5, 1).setDepth(99998);
-    this.tweens.add({ targets: m, y: o.by - 42, alpha: { from: 1, to: 0 }, duration: 900, onComplete: () => m.destroy() });
+    if (o.qDot) return;
+    const y = o.by - (o.type === "plot" ? GF.TILE * 0.62 : GF.TILE * 0.95);
+    const d = this.add.circle(o.cx, y, 4, 0xffd24a, 1).setStrokeStyle(2, 0x5a3c14, 0.9).setDepth(99998);
+    this.tweens.add({ targets: d, scale: { from: 0.5, to: 1 }, duration: 180 });
+    this.tweens.add({ targets: d, alpha: { from: 1, to: 0.55 }, yoyo: true, repeat: -1, duration: 620 });
+    o.qDot = d;
   }
+  unmarkQueued(o) { if (o && o.qDot) { this.tweens.killTweensOf(o.qDot); o.qDot.destroy(); o.qDot = null; } }
+  clearQueue() { if (this.queue) { this.queue.forEach(o => this.unmarkQueued(o)); this.queue.length = 0; } }
 
   // efecto de pesca: ondas expandiéndose + gotita en el punto clickeado del lago
   splashAt(x, y) {
@@ -1047,6 +1054,17 @@ class FarmScene extends Phaser.Scene {
       const hp = this.holdPend; this.holdPend = null; this.holdSeek(hp.x, hp.y);
     }
     if (!this.moveTarget && this.destMk && this.destMk.visible) this.hideDest();   // llegó: fuera el marcador
+
+    // timer del dummy: cuánto falta para poder entrenar otra vez (detalles 338)
+    if (!this.dummyObj) this.dummyObj = this.objs.find(o => o.type === "dummy") || null;
+    if (this.dummyObj) {
+      const left = (G.dummyUsedAt || 0) + DUMMY_CD_MS - t;
+      if (!this.dummyTimer) this.dummyTimer = this.add.text(this.dummyObj.cx, this.dummyObj.by - T * 1.15, "",
+        { fontFamily: "system-ui", fontSize: "11px", fontStyle: "bold", color: "#fff", stroke: "#20301a", strokeThickness: 3 }).setOrigin(0.5, 1).setDepth(this.dummyObj.by + 3);
+      this.dummyTimer.setPosition(this.dummyObj.cx, this.dummyObj.by - T * 1.15);
+      if (left > 0) this.dummyTimer.setText("🎯 " + fmtDur(left)).setVisible(true);
+      else this.dummyTimer.setText("🎯 listo").setVisible(true);
+    }
     if (G.forgeLitUntil && t >= G.forgeLitUntil) { G.forgeLitUntil = 0; this.updateForge(); }   // se apaga sola al terminar
 
     // lotes: pasar de "creciendo" a "listo"
@@ -1123,7 +1141,7 @@ class FarmScene extends Phaser.Scene {
 
     // movimiento
     let vx = 0, vy = 0;
-    if (GF.uiOpen || GF.editMode) { this.moveTarget = null; this.path = null; this.pendingObj = null; this.queue.length = 0; }
+    if (GF.uiOpen || GF.editMode) { this.moveTarget = null; this.path = null; this.pendingObj = null; this.clearQueue(); }
     else {
       if (k.left.isDown || k.aleft.isDown) vx = -1; else if (k.right.isDown || k.aright.isDown) vx = 1;
       if (k.up.isDown || k.aup.isDown) vy = -1; else if (k.down.isDown || k.adown.isDown) vy = 1;
@@ -1180,6 +1198,7 @@ class FarmScene extends Phaser.Scene {
     // cola: al quedar libre, ir al siguiente objetivo clickeado
     if (!this.action && !this.pendingObj && !this.moveTarget && this.queue.length) {
       const nxt = this.queue.shift();
+      this.unmarkQueued(nxt);   // deja de estar en cola: fuera el punto
       this.pendingObj = nxt; this.goTo(nxt.cx, nxt.by + 18);
     }
 

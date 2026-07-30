@@ -332,16 +332,25 @@ function fmtDur(ms) { const m = Math.ceil(ms / 60000); if (m >= 60) { const h = 
 // --- bestiario (Fase D) — 6 tiers, de común a legendario ---
 const MONSTER_ORDER = ["rata", "larva", "orco", "lancero", "guerrero", "troll"];
 const MONSTER_DEF = {
-  rata:     { label:"Rata",           emoji:"🐀", hp:15,  dmg:2,  xp:6,  spd:55, loot:{ carne:[1,1], plata:[2,6] } },
-  larva:    { label:"Larva Venenosa", emoji:"🐛", hp:25,  dmg:4,  xp:10, spd:35, loot:{ carne:[1,2], plata:[4,10], flecha:[0,3] }, gearLoot:[["botas_cuero",0.08]] },
-  orco:     { label:"Orco",           emoji:"👹", hp:45,  dmg:7,  xp:16, spd:60, loot:{ carne:[1,2], plata:[8,16], bronce:[0,2] }, gearLoot:[["casco_cuero",0.10],["escudo_madera",0.08]] },
-  lancero:  { label:"Orco Lancero",   emoji:"🔱", hp:70,  dmg:10, xp:24, spd:70, loot:{ carne:[2,3], plata:[12,24], bronce:[1,3], flecha:[2,6] }, gearLoot:[["pechera_cuero",0.10]] },
-  guerrero: { label:"Orco Guerrero",  emoji:"👺", hp:110, dmg:14, xp:36, spd:65, loot:{ carne:[2,4], plata:[20,40], oro:[0,2] }, gearLoot:[["casco_hierro",0.10],["escudo_hierro",0.06]] },
-  troll:    { label:"Troll",          emoji:"🧌", hp:180, dmg:20, xp:60, spd:45, loot:{ carne:[3,5], plata:[40,80], oro:[1,3], diamante:[0,1] }, gearLoot:[["pechera_hierro",0.15]] },
+  rata:     { label:"Rata",           emoji:"🐀", hp:15,  dmg:2,  xp:6,  spd:55, loot:{ carne:[1,1,0.55], plata:[2,6,0.85] } },
+  larva:    { label:"Larva Venenosa", emoji:"🐛", hp:25,  dmg:4,  xp:10, spd:35, loot:{ carne:[1,2,0.50], plata:[4,10,0.80], flecha:[1,3,0.35] }, gearLoot:[["botas_cuero",0.08]] },
+  orco:     { label:"Orco",           emoji:"👹", hp:45,  dmg:7,  xp:16, spd:60, loot:{ carne:[1,2,0.55], plata:[8,16,0.85], bronce:[1,2,0.35] }, gearLoot:[["casco_cuero",0.10],["escudo_madera",0.08]] },
+  lancero:  { label:"Orco Lancero",   emoji:"🔱", hp:70,  dmg:10, xp:24, spd:70, loot:{ carne:[2,3,0.60], plata:[12,24,0.90], bronce:[1,3,0.40], flecha:[2,6,0.45] }, gearLoot:[["pechera_cuero",0.10]] },
+  guerrero: { label:"Orco Guerrero",  emoji:"👺", hp:110, dmg:14, xp:36, spd:65, loot:{ carne:[2,4,0.60], plata:[20,40,0.90], oro:[1,2,0.30] }, gearLoot:[["casco_hierro",0.10],["escudo_hierro",0.06]] },
+  troll:    { label:"Troll",          emoji:"🧌", hp:180, dmg:20, xp:60, spd:45, loot:{ carne:[3,5,0.65], plata:[40,80,0.95], oro:[1,3,0.45], diamante:[1,1,0.12] }, gearLoot:[["pechera_hierro",0.15]] },
 };
+// combate (detalles 338): auto-ataque cada 2s, alcance del arco 4 celdas
+const ATTACK_MS = 2000;
+const MELEE_RANGE = GF.TILE * 1.35;
+const BOW_RANGE = GF.TILE * 4;
 function rollLoot(def) {
   const out = {};
-  for (const k in def.loot) { const [a, b] = def.loot[k]; const n = a + Math.floor(Math.random() * (b - a + 1)); if (n > 0) out[k] = n; }
+  for (const k in def.loot) {
+    const e = def.loot[k], a = e[0], b = e[1], chance = (e.length > 2 ? e[2] : 1);
+    if (Math.random() >= chance) continue;   // no siempre cae lo mismo (detalles 338)
+    const n = a + Math.floor(Math.random() * (b - a + 1));
+    if (n > 0) out[k] = n;
+  }
   return out;
 }
 function toolDur(id) { return (G.tools && G.tools[id] != null) ? G.tools[id] : (TOOL_DEF[id] ? TOOL_DEF[id].max : 0); }
