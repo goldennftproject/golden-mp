@@ -52,11 +52,27 @@ GF.PLOTS_BASE = GF.PLOTS.map(p => ({ col: p.col, row: p.row }));
 GF.POND_BASE = { col: GF.POND.col, row: GF.POND.row };
 GF.FISH = { col:7, row:11 };
 
-// colisiones derivadas del footprint (celdas de la base)
-GF.COLLISIONS = GF.WORLD_OBJECTS.map(o => ({
-  cx: o.cx, cy: o.by - T*0.5,
-  rx: o.wCells * T * 0.44, ry: T*0.5,
-}));
+// --- footprint SÓLIDO por tipo de objeto ---
+// Solo estorba lo que de verdad pisa el suelo: el TRONCO del árbol (no la copa), la BASE del
+// edificio (no el tejado). Así se puede pasar entre dos árboles y caminar por detrás de las casas.
+//   hw = mitad del ancho, como fracción del ancho dibujado · dep = profundidad, en celdas
+GF.SOLID = {
+  tree:   { hw: 0.17, dep: 0.32 },   // solo el tronco
+  rock:   { hw: 0.40, dep: 0.34 },
+  ore:    { hw: 0.40, dep: 0.34 },
+  barn:   { hw: 0.46, dep: 0.58 },   // base completa del edificio
+  market: { hw: 0.46, dep: 0.58 },
+  store:  { hw: 0.46, dep: 0.58 },
+  cocina: { hw: 0.46, dep: 0.58 },
+  dummy:  { hw: 0.24, dep: 0.26 },
+  cofre:  { hw: 0.34, dep: 0.30 },
+};
+GF.solidRect = function (o) {
+  const d = GF.SOLID[o.type] || { hw: 0.40, dep: 0.36 };
+  const w = o.rw || o.w || T;
+  return { cx: o.cx, by: o.by, hw: w * d.hw, dep: T * d.dep };
+};
+GF.COLLISIONS = GF.WORLD_OBJECTS.map(o => GF.solidRect(o));
 
 GF.blockedAt = function(x, y, pad){
   pad = pad || 0;
@@ -66,9 +82,10 @@ GF.blockedAt = function(x, y, pad){
   const ex = px + pw/2, ey = py + ph/2;
   const dxp = (x-ex)/(pw/2 + pad), dyp = (y-ey)/(ph/2 + pad);
   if (dxp*dxp + dyp*dyp < 1) return true;
+  // rectángulos (no elipses): el borde es predecible y no se cuela por las esquinas
   for (const c of GF.COLLISIONS){
-    const dx = (x-c.cx)/(c.rx+pad), dy = (y-c.cy)/(c.ry+pad);
-    if (dx*dx + dy*dy < 1) return true;
+    if (x > c.cx - c.hw - pad && x < c.cx + c.hw + pad &&
+        y > c.by - c.dep - pad && y < c.by + pad) return true;
   }
   return false;
 };
