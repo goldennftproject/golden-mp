@@ -23,6 +23,18 @@ app.use((req, res, next) => {
 const VERSION = process.env.RENDER_GIT_COMMIT || "dev";
 app.get("/version", (req, res) => { res.set("Cache-Control", "no-store"); res.json({ v: VERSION }); });
 
+// Canal de avisos en vivo (SSE): cada ventana del juego queda suscripta.
+// Al deployar, el server viejo muere → el navegador se reconecta solo al nuevo →
+// recibe la versión nueva AL INSTANTE y la ventana se actualiza. Push exacto, sin sondeos.
+app.get("/events", (req, res) => {
+  res.set({ "Content-Type": "text/event-stream", "Cache-Control": "no-store", "Connection": "keep-alive", "X-Accel-Buffering": "no" });
+  res.flushHeaders();
+  res.write("retry: 3000\n\n");                              // si se corta, reintentar a los 3s
+  res.write(`data: ${JSON.stringify({ v: VERSION })}\n\n`);  // versión actual, apenas conecta
+  const ka = setInterval(() => { try { res.write(":ka\n\n"); } catch (e) {} }, 25000);   // latido anti-timeout
+  req.on("close", () => clearInterval(ka));
+});
+
 // Sirve el cliente estático (public/) — sirve para el deploy "todo en uno" en Render.
 // no-cache en js/html/css: el navegador revalida con ETag en cada carga, así después
 // de un deploy siempre baja el código nuevo (nunca reusa un .js viejo cacheado).
