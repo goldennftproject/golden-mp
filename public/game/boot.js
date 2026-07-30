@@ -18,9 +18,9 @@ class BootScene extends Phaser.Scene {
     // arte cozy nuevo (v2 rompe el caché del arte viejo)
     L.push(["tree_stump", P + "tree_stump.png?v=2"]);
     L.push(["sprout", P + "sprout.png?v=4"]);
-    // v6: restos sobre su parche de tierra (consistentes con los nodos plantados)
+    // v7: restos correctos sobre su parche de tierra (los v6 venían de una copia vieja)
     ["node_stone_mined","node_bronze_mined","node_gold_mined","node_diamond_mined","node_netherite_mined"]
-      .forEach(k => L.push([k, P + k + ".png?v=6"]));
+      .forEach(k => L.push([k, P + k + ".png?v=7"]));
     L.push(["dummy", P + "dummy.png"]);   // muñeco de práctica de espada
     L.push(["cofre", P + "cofre.png"]);   // cofre depósito
     L.push(["withered", P + "withered.png?v=2"]);      // cultivo marchito cozy
@@ -46,8 +46,8 @@ class BootScene extends Phaser.Scene {
   preload() {
     // ATLAS: todos los sprites del mundo en 2 archivos (mucho más liviano para el server free).
     // Si el atlas no llega, ensureAll() baja los archivos sueltos como respaldo.
-    this.load.image("__atlas", "assets/atlas.png?v=14");
-    this.load.json("__atlasmap", "assets/atlas.json?v=14");
+    this.load.image("__atlas", "assets/atlas.png?v=15");
+    this.load.json("__atlasmap", "assets/atlas.json?v=15");
 
     // barra de carga simple
     const w = this.scale.width, h = this.scale.height;

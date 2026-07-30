@@ -733,15 +733,20 @@ class FarmScene extends Phaser.Scene {
     // lotes: pasar de "creciendo" a "listo"
     for (const pl of this.plots) {
       // listo sin cosechar: cuenta regresiva al marchitado
+      // el contador del cultivo solo aparece con el cursor encima (igual que árboles y nodos)
+      const pp = this.input.activePointer;
+      const plOver = Math.abs(pp.worldX - pl.cx) < T * 0.55 && Math.abs(pp.worldY - (pl.by - T * 0.2)) < T * 0.75;
       if (pl.state === "ready" && pl.witherAt) {
         const left = pl.witherAt - t;
         if (left <= 0) { this.setWithered(pl); this.syncPlots(); log("🥀 Un cultivo se marchitó sin cosechar.", "bad"); toast("🥀 Cultivo marchito"); continue; }
-        if (left < 30000) pl.timer.setText("🥀 " + Math.ceil(left / 1000) + "s").setVisible(true);
+        if (left < 30000 && plOver) pl.timer.setText("🥀 " + Math.ceil(left / 1000) + "s").setVisible(true);
+        else pl.timer.setVisible(false);
       }
       if (pl.state !== "growing") continue;
       if (t >= pl.readyAt) { pl.state = "ready"; pl.readyAt = 0; pl.witherAt = t + WITHER_MS; this.showReadyCrop(pl); this.syncPlots(); }
       else {
-        pl.timer.setText(Math.max(0, Math.ceil((pl.readyAt - t) / 1000)) + "s").setVisible(true);
+        if (plOver) pl.timer.setText(Math.max(0, Math.ceil((pl.readyAt - t) / 1000)) + "s").setVisible(true);
+        else pl.timer.setVisible(false);
         // a media cosecha: la planta intermedia (se asoma la verdura) o el brote más grande
         if (!pl.half && pl.growTotal && (pl.readyAt - t) <= pl.growTotal / 2) {
           pl.half = true;
