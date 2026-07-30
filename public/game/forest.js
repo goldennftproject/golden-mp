@@ -469,6 +469,7 @@ class ForestScene extends Phaser.Scene {
     const hero = this.hero;
     for (const m of this.monsters) {
       if (m.dead) continue;
+      const px0 = m.cx;   // para saber hacia dónde se movió este frame
       const dHero = Math.hypot(hero.x - m.cx, hero.y - m.by);
       const aggro = m.hp < m.def.hp || dHero < 110;   // te vio o lo golpeaste
       let moved = false;
@@ -483,14 +484,19 @@ class ForestScene extends Phaser.Scene {
       }
       // ataque al héroe
       if (dHero < 40 && t > m.nextHit) {
-        m.nextHit = t + 1200; this.hurtHero(m.def.dmg);
+        m.nextHit = t + 1200; m.face = hero.x < m.cx ? -1 : 1;   // al golpear, de cara al granjero
+        this.hurtHero(m.def.dmg);
         if (m.def.sprite) { this.playMob(m, "atk", true); m.atkUntil = t + 600; }
         if (this.leaving) return;
       }
       m.spr.setPosition(m.cx, m.by).setDepth(m.by);
-      const flip = hero.x < m.cx;   // el arte mira al sureste: se espeja para el suroeste
+      // MISMA lógica que el granjero: mira según hacia dónde CAMINA, no según dónde estés vos.
+      // El arte va al sureste; si se mueve hacia la izquierda (o arriba/abajo-izquierda) se espeja.
+      const mdx = m.cx - px0;
+      if (Math.abs(mdx) > 0.05) m.face = mdx < 0 ? -1 : 1;
+      if (!m.face) m.face = 1;
       const bs = m.baseScale || 1;
-      m.spr.setScale((flip ? -1 : 1) * bs, bs);
+      m.spr.setScale(m.face * bs, bs);
       if (m.def.sprite && t > (m.atkUntil || 0)) this.playMob(m, moved ? "walk" : "idle");
       this.drawBar(m);
     }
