@@ -62,9 +62,6 @@
   .durb{position:absolute;left:3px;right:3px;bottom:2px;height:3px;background:rgba(0,0,0,.25);border-radius:2px;overflow:hidden}
   .durb i{display:block;height:100%}
   #hotwrap{position:fixed;left:50%;bottom:10px;transform:translateX(-50%);z-index:6;display:flex;align-items:center;gap:4px}
-  #hotwrap.moving{outline:2px dashed #e2b23a;outline-offset:4px;border-radius:12px;cursor:move}
-  #hotmove{background:rgba(20,28,15,.85);border:1px solid #3c4d31;border-radius:8px;color:#a9bd94;font-size:13px;padding:4px 6px;cursor:pointer}
-  #hotmove.active{background:#e2b23a;color:#3a2e10}
   #hotbar{display:flex;gap:5px;background:rgba(20,28,15,.85);border:1px solid #3c4d31;border-radius:12px;padding:6px}
   .hcell{position:relative;width:46px;height:46px;background:#26331f;border:2px solid #3c4d31;border-radius:8px;display:flex;align-items:center;justify-content:center;cursor:pointer}
   .hcell.filled{background:#efe3c6;border-color:#c9b070}
@@ -185,8 +182,6 @@
   .ltab.active{color:#ffe08a;background:rgba(255,224,138,.08)}
   .logmin{background:none;border:none;color:#a9bd94;font-size:12px;padding:6px 12px;cursor:pointer}
   .logbtns{display:flex;align-items:center}
-  .logmove{background:none;border:none;color:#a9bd94;font-size:14px;line-height:1;padding:6px 8px;cursor:pointer;border-radius:6px}
-  .logmove.active{color:#ffe08a;background:rgba(255,224,138,.15)}
   .logpanel.moving{outline:2px dashed #e2b23a;outline-offset:-2px}
   .logpanel.moving .loghead,.logpanel.moving .logbody{cursor:move}
   #chatpane{display:flex;flex-direction:column;max-height:134px}
@@ -480,7 +475,6 @@
         <button class="ltab" data-tab="chat">Chat</button>
       </div>
       <div class="logbtns">
-        <button class="logmove" id="logmove" title="Mover panel">✥</button>
         <button class="logmin" id="logmin">▾</button>
       </div>
     </div>
@@ -492,7 +486,7 @@
       </div>
     </div>
   </div>
-  <div id="hotwrap"><button id="hotmove" title="Mover la barra">✥</button><div id="hotbar"></div></div>
+  <div id="hotwrap"><div id="hotbar"></div></div>
   <div id="saveind"><span class="sdot"></span><span class="stxt"></span></div>
 
   <!-- pantalla de carga (mientras chequea la cuenta) -->

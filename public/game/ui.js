@@ -486,48 +486,8 @@ function renderChatMsg(m) {
 }
 function doSendChat() { const ci = $("chat-in"); if (!ci) return; const t = ci.value.trim(); if (!t) return; if (typeof sendChat === "function") sendChat(t); ci.value = ""; }
 
-/* ---- panel registro/chat: mover posición (botón ✥) ---- */
+/* ---- (los botones ✥ se quitaron: ahora todo se mueve manteniendo clic — arrastre universal) ---- */
 function initPanelDrag() {
-  const panel = $("logpanel"), btn = $("logmove");
-  if (!panel || !btn) return;
-  let moving = false, drag = null;
-
-  function applyPos(left, top) {
-    const w = panel.offsetWidth, h = panel.offsetHeight;
-    left = Math.max(4, Math.min(left, window.innerWidth - w - 4));
-    top = Math.max(4, Math.min(top, window.innerHeight - h - 4));
-    panel.style.left = left + "px"; panel.style.top = top + "px"; panel.style.bottom = "auto";
-  }
-  // restaurar posición guardada (por dispositivo)
-  try { const s = JSON.parse(localStorage.getItem("gf_logpos") || "null"); if (s && typeof s.left === "number") applyPos(s.left, s.top); } catch (e) {}
-  // si cambia el tamaño de la ventana, re-encajar dentro de la pantalla
-  window.addEventListener("resize", () => { if (panel.style.top && panel.style.top !== "auto") applyPos(parseFloat(panel.style.left) || 0, parseFloat(panel.style.top) || 0); });
-
-  btn.onclick = (e) => {
-    e.stopPropagation();
-    moving = !moving;
-    panel.classList.toggle("moving", moving);
-    btn.classList.toggle("active", moving);
-    btn.title = moving ? "Fijar posición" : "Mover panel";
-    toast(moving ? "✥ Arrastrá el panel para moverlo" : "📌 Posición fijada");
-  };
-
-  panel.addEventListener("pointerdown", (e) => {
-    if (!moving) return;
-    if (e.target.closest(".logmove, .logmin")) return;   // los botones siguen funcionando
-    e.preventDefault();
-    const r = panel.getBoundingClientRect();
-    drag = { dx: e.clientX - r.left, dy: e.clientY - r.top };
-    try { panel.setPointerCapture(e.pointerId); } catch (er) {}
-  });
-  panel.addEventListener("pointermove", (e) => { if (drag) applyPos(e.clientX - drag.dx, e.clientY - drag.dy); });
-  const end = () => {
-    if (!drag) return; drag = null;
-    const r = panel.getBoundingClientRect();
-    try { localStorage.setItem("gf_logpos", JSON.stringify({ left: r.left, top: r.top })); } catch (e) {}
-  };
-  panel.addEventListener("pointerup", end);
-  panel.addEventListener("pointercancel", end);
 }
 
 /* ---- arrastrar las ventanas (overlays) por su título ---- */
@@ -556,31 +516,7 @@ function initOverlayDrag() {
   });
 }
 
-/* ---- hotbar: mover posición (botón ✥, detalles 29/7) ---- */
 function initHotbarDrag() {
-  const wrap = $("hotwrap"), btn = $("hotmove");
-  if (!wrap || !btn) return;
-  let moving = false, drag = null;
-  function applyPos(left, top) {
-    const w = wrap.offsetWidth, h = wrap.offsetHeight;
-    left = Math.max(4, Math.min(left, window.innerWidth - w - 4));
-    top = Math.max(4, Math.min(top, window.innerHeight - h - 4));
-    wrap.style.left = left + "px"; wrap.style.top = top + "px"; wrap.style.bottom = "auto"; wrap.style.transform = "none";
-  }
-  try { const s = JSON.parse(localStorage.getItem("gf_hotpos") || "null"); if (s && typeof s.left === "number") applyPos(s.left, s.top); } catch (e) {}
-  window.addEventListener("resize", () => { if (wrap.style.top && wrap.style.top !== "auto") applyPos(parseFloat(wrap.style.left) || 0, parseFloat(wrap.style.top) || 0); });
-  btn.onclick = (e) => { e.stopPropagation(); moving = !moving; wrap.classList.toggle("moving", moving); btn.classList.toggle("active", moving); toast(moving ? "✥ Arrastrá la barra para moverla" : "📌 Barra fijada"); };
-  wrap.addEventListener("pointerdown", (e) => {
-    if (!moving || e.target.closest("#hotmove")) return;
-    e.preventDefault(); e.stopPropagation();
-    const r = wrap.getBoundingClientRect();
-    drag = { dx: e.clientX - r.left, dy: e.clientY - r.top };
-    try { wrap.setPointerCapture(e.pointerId); } catch (er) {}
-  });
-  wrap.addEventListener("pointermove", (e) => { if (drag) applyPos(e.clientX - drag.dx, e.clientY - drag.dy); });
-  const end = () => { if (!drag) return; drag = null; const r = wrap.getBoundingClientRect(); try { localStorage.setItem("gf_hotpos", JSON.stringify({ left: r.left, top: r.top })); } catch (e) {} };
-  wrap.addEventListener("pointerup", end);
-  wrap.addEventListener("pointercancel", end);
 }
 
 /* ---- arrastre universal: mantener clic izquierdo sobre una zona libre mueve la interfaz ---- */
@@ -618,6 +554,12 @@ function makeHoldDrag(el, saveKey) {
   };
   el.addEventListener("pointerup", end);
   el.addEventListener("pointercancel", end);
+  // restaurar posición guardada (por dispositivo) y re-encajar si cambia el tamaño de la ventana
+  const clamp = () => { if (!el.style.top || el.style.top === "auto") return; const w = el.offsetWidth, h = el.offsetHeight; el.style.left = Math.max(4, Math.min(parseFloat(el.style.left) || 0, window.innerWidth - w - 4)) + "px"; el.style.top = Math.max(4, Math.min(parseFloat(el.style.top) || 0, window.innerHeight - h - 4)) + "px"; };
+  if (saveKey) {
+    try { const s = JSON.parse(localStorage.getItem(saveKey) || "null"); if (s && typeof s.left === "number") { el.style.left = s.left + "px"; el.style.top = s.top + "px"; el.style.right = "auto"; el.style.bottom = "auto"; el.style.transform = "none"; clamp(); } } catch (e) {}
+    window.addEventListener("resize", clamp);
+  }
 }
 function initUniversalDrag() {
   document.querySelectorAll(".ov .card").forEach(c => makeHoldDrag(c));          // todas las ventanas
@@ -678,8 +620,6 @@ function initUI() {
   const dc = $("dy-claim"); if (dc) dc.onclick = () => claimDaily();
   const sw = $("seedwheel"); if (sw) sw.onclick = hideSeedWheel;
   const lm = $("logmin"); if (lm) lm.onclick = () => $("logpanel").classList.toggle("collapsed");
-  initPanelDrag();
-  initHotbarDrag();
   initUniversalDrag();   // mantener clic sobre cualquier interfaz la mueve (detalles 29/7)
   document.querySelectorAll(".ltab").forEach(b => b.onclick = () => {
     $("logpanel").classList.remove("collapsed");
