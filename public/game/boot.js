@@ -16,6 +16,10 @@ class BootScene extends Phaser.Scene {
     for (let i = 0; i < 3; i++) L.push(["orc_idle_" + i, P + "orc_idle_" + i + ".png"]);
     for (let i = 0; i < 6; i++) L.push(["orc_walk_" + i, P + "orc_walk_" + i + ".png"]);
     for (let i = 0; i < 6; i++) L.push(["orc_atk_" + i, P + "orc_atk_" + i + ".png"]);
+    // troll del Bosque: mismo método que el orco (mira al sureste, se espeja por código). Idle de 4 frames.
+    for (let i = 0; i < 4; i++) L.push(["troll_idle_" + i, P + "troll_idle_" + i + ".png"]);
+    for (let i = 0; i < 6; i++) L.push(["troll_walk_" + i, P + "troll_walk_" + i + ".png"]);
+    for (let i = 0; i < 6; i++) L.push(["troll_atk_" + i, P + "troll_atk_" + i + ".png"]);
     ["fish_comun","fish_raro"].forEach(k => L.push([k, P + k + ".png"]));   // pececitos de la laguna
     ["sword","bow"].forEach(k => L.push([k, P + k + ".png"]));   // arma visible al atacar en el Bosque
     L.push(["cocina", P + "cocina.png"]);   // edificio de Cocina (detalles 29/7)
@@ -111,11 +115,14 @@ class BootScene extends Phaser.Scene {
       const ks = [0,1,2,3,4,5,6].map(i => "act_" + a + "_" + i);
       if (has(ks)) this.anims.create({ key: "act_" + a, frames: ks.map(k => ({ key: k })), frameRate: 10, repeat: -1 });
     });
-    // animaciones del orco
-    const orc = [["idle", 3, 5, -1], ["walk", 6, 9, -1], ["atk", 6, 11, 0]];
-    orc.forEach(([nm, n, fps, rep]) => {
-      const ks = Array.from({ length: n }, (_, i) => "orc_" + nm + "_" + i);
-      if (has(ks)) this.anims.create({ key: "orc_" + nm, frames: ks.map(k => ({ key: k })), frameRate: fps, repeat: rep });
+    // animaciones del orco y del troll (troll con idle de 4 frames)
+    const mobs = { orc: [["idle", 3, 5, -1], ["walk", 6, 9, -1], ["atk", 6, 11, 0]],
+                   troll: [["idle", 4, 4, -1], ["walk", 6, 8, -1], ["atk", 6, 10, 0]] };
+    Object.entries(mobs).forEach(([pre, defs]) => {
+      defs.forEach(([nm, n, fps, rep]) => {
+        const ks = Array.from({ length: n }, (_, i) => pre + "_" + nm + "_" + i);
+        if (has(ks)) this.anims.create({ key: pre + "_" + nm, frames: ks.map(k => ({ key: k })), frameRate: fps, repeat: rep });
+      });
     });
   }
 }
