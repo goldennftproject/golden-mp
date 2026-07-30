@@ -25,9 +25,14 @@ class BootScene extends Phaser.Scene {
     for (let i = 0; i < 6; i++) L.push(["rata_walk_" + i, P + "rata_walk_" + i + ".png"]);
     for (let i = 0; i < 7; i++) L.push(["rata_atk_" + i, P + "rata_atk_" + i + ".png"]);
     // larva venenosa del Bosque: quieto/caminar/atacar 8f (custom, mira al sureste). Se espeja por código.
-    for (let i = 0; i < 8; i++) L.push(["larva_idle_" + i, P + "larva_idle_" + i + ".png"]);
-    for (let i = 0; i < 8; i++) L.push(["larva_walk_" + i, P + "larva_walk_" + i + ".png"]);
-    for (let i = 0; i < 8; i++) L.push(["larva_atk_" + i, P + "larva_atk_" + i + ".png"]);
+    // ?v=2: los frames se voltearon horizontalmente (miraban al revés); rompe el caché del navegador.
+    for (let i = 0; i < 8; i++) L.push(["larva_idle_" + i, P + "larva_idle_" + i + ".png?v=2"]);
+    for (let i = 0; i < 8; i++) L.push(["larva_walk_" + i, P + "larva_walk_" + i + ".png?v=2"]);
+    for (let i = 0; i < 8; i++) L.push(["larva_atk_" + i, P + "larva_atk_" + i + ".png?v=2"]);
+    // orco lancero del Bosque (variante del orco con lanza+túnica): quieto 4f, caminar 7f, atacar 7f. Se espeja por código.
+    for (let i = 0; i < 4; i++) L.push(["lancero_idle_" + i, P + "lancero_idle_" + i + ".png"]);
+    for (let i = 0; i < 7; i++) L.push(["lancero_walk_" + i, P + "lancero_walk_" + i + ".png"]);
+    for (let i = 0; i < 7; i++) L.push(["lancero_atk_" + i, P + "lancero_atk_" + i + ".png"]);
     ["fish_comun","fish_raro"].forEach(k => L.push([k, P + k + ".png"]));   // pececitos de la laguna
     ["sword","bow"].forEach(k => L.push([k, P + k + ".png"]));   // arma visible al atacar en el Bosque
     L.push(["cocina", P + "cocina.png"]);   // edificio de Cocina (detalles 29/7)
@@ -127,7 +132,8 @@ class BootScene extends Phaser.Scene {
     const mobs = { orc: [["idle", 3, 5, -1], ["walk", 6, 9, -1], ["atk", 6, 11, 0]],
                    troll: [["idle", 4, 4, -1], ["walk", 6, 8, -1], ["atk", 6, 10, 0]],
                    rata: [["idle", 8, 6, -1], ["walk", 6, 11, -1], ["atk", 7, 12, 0]],
-                   larva: [["idle", 8, 5, -1], ["walk", 8, 8, -1], ["atk", 8, 10, 0]] };
+                   larva: [["idle", 8, 5, -1], ["walk", 8, 8, -1], ["atk", 8, 10, 0]],
+                   lancero: [["idle", 4, 5, -1], ["walk", 7, 9, -1], ["atk", 7, 11, 0]] };
     Object.entries(mobs).forEach(([pre, defs]) => {
       defs.forEach(([nm, n, fps, rep]) => {
         const ks = Array.from({ length: n }, (_, i) => pre + "_" + nm + "_" + i);
