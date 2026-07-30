@@ -6,7 +6,7 @@ GF.spr = (k) => "assets/farm/" + k + ".png?a=4";   // ?a=N rompe el caché de lo
 const G = {
   plata: 0, golden: 20, level: 1, prestige: 0, week: 1,
   hp: 100, hpMax: 100, swordOwned: false, bowOwned: false,   // combate (Fase D)
-  gear: { casco: null, armadura: null, botas: null, escudo: null },   // armaduras equipadas (dropean en el Bosque)
+  gear: { casco: null, armadura: null, botas: null, escudo: null, arma: null, municion: false },   // equipo (armas se equipan en el panel de Equipo — detalles jueves)
   res: { madera: 30, piedra: 30, bronce: 25, oro: 15, diamante: 5, netherita: 0, carne: 0, flecha: 0,
     papa: 0, zanahoria: 0, cebolla: 0, calabacin: 0, repollo: 0, calabaza: 0, brocoli: 0 },
   seeds: { papa: 10, zanahoria: 5, cebolla: 2, calabacin: 1, repollo: 0, calabaza: 0, brocoli: 0 },  // starter pack
@@ -152,6 +152,7 @@ function craftSword() {
   if (G.swordOwned) { toast("Ya tenés la espada"); return; }
   if (!canAfford(SWORD_COST)) { toast("Te faltan materiales"); return; }
   payCost(SWORD_COST); G.swordOwned = true; G.tools.sword = TOOL_DEF.sword.max;
+  if (!G.gear.arma) G.gear.arma = "sword";   // si el slot de arma está libre, se equipa sola
   addXp("crafting", 14);
   log("⚔️ Crafteaste la Espada de Hierro.", "gold"); toast("⚔️ ¡Espada de Hierro!");
   refreshForge(); if (typeof syncSlots === "function") syncSlots(); if (isOpen("ov-inv")) refreshInv();
@@ -159,7 +160,7 @@ function craftSword() {
 // daño del jugador: puños (débil) o espada (escala con la skill Espada)
 function swordDmg() {
   const lvl = skillInfo(G.skills.sword).lvl;
-  if (G.swordOwned && toolDur("sword") > 0) return 8 + Math.floor(lvl / 2);
+  if (G.gear.arma === "sword" && toolDur("sword") > 0) return 8 + Math.floor(lvl / 2);   // solo si está EQUIPADA
   return 3 + Math.floor(lvl / 4);
 }
 
@@ -170,19 +171,20 @@ function craftBow() {
   if (G.bowOwned) { toast("Ya tenés el arco"); return; }
   if (!canAfford(BOW_COST)) { toast("Te faltan materiales"); return; }
   payCost(BOW_COST); G.bowOwned = true; G.tools.bow = TOOL_DEF.bow.max;
+  if (!G.gear.arma) G.gear.arma = "bow";   // si el slot de arma está libre, se equipa solo
   addXp("crafting", 12);
   log("🏹 Crafteaste el Arco.", "gold"); toast("🏹 ¡Arco!");
   refreshForge(); if (typeof syncSlots === "function") syncSlots(); if (isOpen("ov-inv")) refreshInv();
 }
 function craftArrows() {
   if (!canAfford(ARROW_COST)) { toast("Te faltan materiales"); return; }
-  payCost(ARROW_COST); G.res.flecha = (G.res.flecha || 0) + 10;
+  payCost(ARROW_COST); G.res.flecha = (G.res.flecha || 0) + 10;   // van a la bolsa, NO se autoequipan (detalles jueves)
   addXp("crafting", 3);
-  log("➳ Crafteaste 10 flechas.", "good"); toast("➳ +10 flechas");
+  log("➳ Crafteaste 10 flechas — están en tu bolsa; equipalas en el panel de Equipo.", "good"); toast("➳ +10 flechas en la bolsa");
   refreshForge(); if (typeof syncSlots === "function") syncSlots(); if (isOpen("ov-inv")) refreshInv();
 }
 function bowDmg() { return 6 + Math.floor(skillInfo(G.skills.range).lvl / 2); }
-function canShoot() { return G.bowOwned && toolDur("bow") > 0 && (G.res.flecha || 0) > 0; }
+function canShoot() { return G.gear.arma === "bow" && toolDur("bow") > 0 && G.gear.municion && (G.res.flecha || 0) > 0; }   // arco Y flechas equipados
 
 // --- armaduras (dropean de los monstruos del Bosque; reducen el daño recibido) ---
 const GEAR_DEF = {
@@ -271,19 +273,20 @@ const CHEST_COST = { madera: 20, piedra: 10 };
 const CHEST_PLATA = 200;
 const CHEST_MAX = 50;
 const CHEST_SLOTS = 10;
-function chestBonus() { return 1 + 0.01 * ((G.chests && G.chests.length) || 0); }
+function chestBonus() { return 1 + 0.01 * ((G.chests || []).filter(c => c.col != null).length); }   // el bonus lo dan los cofres COLOCADOS
+function chestsInBag() { return (G.chests || []).filter(c => c.col == null).length; }
 function craftChest() {
   G.chests = G.chests || [];
   if (G.chests.length >= CHEST_MAX) { toast("📦 Máximo de cofres (" + CHEST_MAX + ")"); return; }
   if (!canAfford(CHEST_COST)) { toast("Te faltan materiales"); return; }
   if (G.plata < CHEST_PLATA) { toast("Te falta plata (" + CHEST_PLATA + " 🪙)"); return; }
   payCost(CHEST_COST); G.plata -= CHEST_PLATA;
-  G.chests.push({ col: null, row: null, items: Array(CHEST_SLOTS).fill(null) });
+  G.chests.push({ col: null, row: null, items: Array(CHEST_SLOTS).fill(null) });   // queda EN LA BOLSA hasta que lo coloques
   addXp("crafting", 8);
-  log("📦 Crafteaste un cofre depósito. Bonus de materiales: +" + G.chests.length + "%.", "gold");
-  toast("📦 ¡Cofre " + G.chests.length + "/" + CHEST_MAX + "!");
-  if (window.FARM && FARM.spawnChest) FARM.spawnChest(G.chests.length - 1);
+  log("📦 Crafteaste un cofre depósito — está en tu bolsa. Colocalo con un clic desde la bolsa.", "gold");
+  toast("📦 Cofre en la bolsa (" + G.chests.length + "/" + CHEST_MAX + ")");
   refreshForge(); refreshHud();
+  if (typeof syncSlots === "function") syncSlots(); if (isOpen("ov-inv")) refreshInv();
   if (typeof saveFarm === "function") saveFarm(true);
 }
 // guardar una pila de la bolsa en el cofre (apila hasta 99 por espacio)
@@ -394,6 +397,7 @@ function canonicalStacks() {
   CROP_ORDER.forEach(s => { let n = Math.floor(G.seeds[s] || 0); while (n > 0) { list.push({ kind: "seed", key: s }); n -= 99; } });
   FISH_ORDER.forEach(f => { let n = Math.floor((G.fish && G.fish[f]) || 0); while (n > 0) { list.push({ kind: "fish", key: f }); n -= 99; } });
   RECIPE_ORDER.forEach(d => { let n = Math.floor((G.dishes && G.dishes[d]) || 0); while (n > 0) { list.push({ kind: "dish", key: d }); n -= 99; } });
+  { let n = chestsInBag(); while (n > 0) { list.push({ kind: "chest", key: "cofre" }); n -= 99; } }   // cofres sin colocar
   return list;
 }
 // reconcilia G.slots con lo que hay realmente, preservando el orden que armó el jugador

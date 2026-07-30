@@ -107,7 +107,8 @@
   .mkt-list{display:flex;flex-direction:column;gap:8px;max-height:360px;overflow:auto}
   .mkt-row{display:flex;align-items:center;gap:10px;background:#faf3e2;border:1px solid var(--line);border-radius:10px;padding:8px 10px}
   #shop-buy .mkt-row{background:#fdf9ee}   /* pestaña Comprar más clara (detalles 29/7) */
-  .mkt-row .mimg{width:44px;height:44px;display:flex;align-items:center;justify-content:center;font-size:24px;flex:0 0 auto}
+  .mkt-row .mimg{width:44px;height:44px;display:flex;align-items:center;justify-content:center;font-size:24px;flex:0 0 auto;background:#efe3c6;border:2px solid #d3c298;border-radius:9px}
+  .mkt-row .mimg img{width:82%;height:82%;object-fit:contain;image-rendering:pixelated}
   .mkt-row .mimg img{width:42px;height:42px;object-fit:contain;image-rendering:pixelated}
   .mkt-row .minfo{flex:1;min-width:0}
   .mkt-row .mnm{font-weight:700;font-size:13px}
@@ -274,6 +275,9 @@
   .shoppane,#forge-pane-craft,#forge-pane-repair,.lblist{border:14px solid transparent;border-image:url("assets/ui/badge_wood.png") 26 round;background:#b5793f url("assets/ui/badge_bg.png?a=1") repeat;background-size:132px auto;background-clip:padding-box;image-rendering:pixelated;padding:6px;border-radius:0}
   .shoppane .mkt-list,.forge-list{max-height:46vh}
   .mkt-cur{color:#fff;font-weight:700}
+  /* inventario −20% (detalles jueves) */
+  #ov-inv .card{font-size:12px}
+  #ov-inv .slots{gap:5px;max-height:272px}
   /* barra de scroll de madera */
   ::-webkit-scrollbar{width:10px;height:10px}
   ::-webkit-scrollbar-track{background:rgba(138,102,50,.16);border-radius:6px}
@@ -368,6 +372,7 @@
     <div class="slots" id="cofre-slots" style="grid-template-columns:repeat(5,1fr);max-height:none"></div>
     <div class="shophead">Tu bolsa — clic para guardar</div>
     <div class="slots" id="cofre-inv" style="max-height:190px"></div>
+    <div class="row" style="justify-content:center;margin-top:10px"><button class="ghost sm" id="cofre-pickup">Recoger cofre</button></div>
   </div></div>
 
   <!-- Cocina: edificio propio con las recetas (detalles 29/7) -->
@@ -414,7 +419,7 @@
     </div>
   </div></div>
 
-  <div class="ov" id="ov-inv"><div class="card" style="width:min(540px,94%)">
+  <div class="ov" id="ov-inv"><div class="card" style="width:min(432px,94%)">
     <button class="close" data-close="ov-inv">×</button>
     <h3>Inventario</h3>
     <div class="sub" id="inv-cap">Bolsa: 0/30 espacios · máx 99 por recurso</div>
@@ -494,6 +499,13 @@
       <p>Colocar y mover objetos por celda llega en otra fase.</p>
       <div class="row"><button class="green" id="cfg-edit">Modo edición</button><button class="ghost sm" id="cfg-reset">Restaurar</button></div>
     </div>
+  </div></div>
+
+  <!-- confirmación al tirar a la papelera (último en el DOM: queda por encima del inventario) -->
+  <div class="ov" id="ov-confirm"><div class="card" style="width:min(330px,90%)">
+    <h3>Tirar a la papelera</h3>
+    <div class="sub" id="cf-msg" style="margin-bottom:14px"></div>
+    <div class="row" style="justify-content:center;gap:10px"><button class="red" id="cf-yes">Tirar</button><button class="ghost sm" id="cf-no">Cancelar</button></div>
   </div></div>
 
   <!-- menú -->

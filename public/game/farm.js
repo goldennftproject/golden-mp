@@ -100,7 +100,10 @@ class FarmScene extends Phaser.Scene {
       const lp = (G.layout && G.layout[i]) || null;                            // posición editada por el jugador
       const cx = lp ? lp.cx : o.cx, by = lp ? lp.by : o.by;
       const s = this.add.image(cx, by, o.key).setOrigin(0.5, 1);
-      const rw = (o.type === "ore" || o.type === "rock") ? o.w * 0.84 : (o.type === "dummy" ? o.w * 1.25 : o.w);   // nodos algo más chicos; dummy +25%
+      const rw = (o.type === "ore" || o.type === "rock") ? o.w * 0.67       // minerales −20% (detalles jueves; antes 0.84)
+        : (o.type === "tree") ? o.w * 0.8                                   // árboles −20%
+        : (o.type === "market" || o.type === "store") ? o.w * 0.8           // tiendas −20%
+        : (o.type === "dummy" ? o.w * 1.25 : o.w);                          // dummy +25%
       s.setScale(rw / s.width); s.setDepth(by);
       // sombra bajo árboles y edificios (detalles 29/7)
       let shadow = null;
@@ -347,10 +350,11 @@ class FarmScene extends Phaser.Scene {
     const storeObj = this.objs.find(o => o.type === "store");
     if (storeObj) smokeFrom(storeObj, 0.26, 0xd8d2c4, () => true);                       // herrería: siempre
     const cocinaObj = this.objs.find(o => o.type === "cocina");
-    if (cocinaObj) smokeFrom(cocinaObj, 0.20, 0xefe9db, () => !!G.cooking);              // cocina: solo cocinando (chimenea al 20% a la derecha del centro)
+    if (cocinaObj) smokeFrom(cocinaObj, 0.20, 0xefe9db, () => true);                     // cocina: humo SIEMPRE (detalles jueves)
+    if (cocinaObj) smokeFrom(cocinaObj, 0.20, 0xffffff, () => !!G.cooking);              // …y el doble de bocanadas mientras se cocina
 
-    // cofres depósito colocados por el jugador
-    (G.chests = G.chests || []).forEach((c, idx) => this.spawnChest(idx));
+    // cofres depósito colocados por el jugador (los que están en la bolsa NO se colocan solos)
+    (G.chests = G.chests || []).forEach((c, idx) => { if (c.col != null) this.spawnChest(idx); });
 
     this.cameras.main.setBounds(0, 0, W, H);
     this.cameras.main.startFollow(hero, true, 0.15, 0.15);
@@ -502,14 +506,38 @@ class FarmScene extends Phaser.Scene {
   startAction(kind, o) {
     this.moveTarget = null;
     this.facing = (o.cx < this.hero.x) ? "west" : "east";
-    this.action = { kind, o, t: 0, dur: ACT_DUR[kind] || 1.2 };
+    // pescar lleva 15–20s ININTERRUMPIDOS (detalles jueves); moverse cancela la pesca
+    const dur = kind === "fish" ? 15 + Math.random() * 5 : (ACT_DUR[kind] || 1.2);
+    this.action = { kind, o, t: 0, dur };
+    if (kind === "fish") this.castBobber(o.bx != null ? o.bx : o.cx, o.by2 != null ? o.by2 : (GF.POND.row + GF.POND.rows / 2) * GF.TILE);
   }
+
+  // lanza la caña: el corcho vuela desde el granjero hasta el agua y flota ahí mientras dura la pesca
+  castBobber(x, y) {
+    if (!this.textures.exists("bobber")) {
+      const g = this.make.graphics({ add: false });
+      g.fillStyle(0xd8452e, 1); g.fillCircle(4, 3, 3.4);       // corcho rojo arriba
+      g.fillStyle(0xf5efe0, 1); g.fillCircle(4, 6, 3.2);       // blanco abajo
+      g.fillStyle(0x2b2b2b, 1); g.fillRect(3, 0, 2, 2);        // puntita
+      g.generateTexture("bobber", 9, 10); g.destroy();
+    }
+    if (this.bobber) { this.bobber.destroy(); this.bobber = null; }
+    const b = this.add.image(this.hero.x, this.hero.y - 26, "bobber").setDepth(-988).setScale(1.6);
+    this.bobber = b;
+    this.tweens.add({ targets: b, x, y, duration: 420, ease: "Quad.easeIn", onComplete: () => {
+      if (!this.bobber) return;
+      this.splashAt(x, y);
+      this.bobberTween = this.tweens.add({ targets: b, y: y + 2.5, duration: 700, yoyo: true, repeat: -1, ease: "Sine.easeInOut" });
+    }});
+  }
+  clearBobber() { if (this.bobberTween) { this.bobberTween.stop(); this.bobberTween = null; } if (this.bobber) { this.bobber.destroy(); this.bobber = null; } }
+  cancelFishing() { this.clearBobber(); this.action = null; toast("🎣 Pesca interrumpida"); }
 
   finishAction() {
     const a = this.action, o = a.o;
     if (a.kind === "chop") {
       const gr = Math.max(1, Math.round(3 * yieldMult() * chestBonus()));
-      if (tryAddRes("madera", gr)) { useTool("axe"); addXp("crafting", 4); o.readyAt = nowMs() + CD.tree * 1000 * cdMult(); this.setObjTex(o, "tree_stump", GF.TILE * 0.6); log(`🪵 +${gr} Madera. 🪓 ${toolDur("axe")}/${TOOL_DEF.axe.max}`, "good"); toast("+" + gr + " 🪵"); refreshHud(); if (toolDur("axe") <= 0) { log("🪓 ¡El hacha se rompió! Reparala en la Herrería.", "bad"); toast("🪓 ¡Hacha rota!"); } }
+      if (tryAddRes("madera", gr)) { useTool("axe"); addXp("crafting", 4); o.readyAt = nowMs() + CD.tree * 1000 * cdMult(); this.setObjTex(o, "tree_stump", GF.TILE * 0.48); log(`🪵 +${gr} Madera. 🪓 ${toolDur("axe")}/${TOOL_DEF.axe.max}`, "good"); toast("+" + gr + " 🪵"); refreshHud(); if (toolDur("axe") <= 0) { log("🪓 ¡El hacha se rompió! Reparala en la Herrería.", "bad"); toast("🪓 ¡Hacha rota!"); } }
       else toast("🎒 Inventario lleno");
     } else if (a.kind === "mine" && o.type === "rock") {
       const gr = Math.max(1, Math.round(2 * yieldMult() * chestBonus()));
@@ -545,6 +573,7 @@ class FarmScene extends Phaser.Scene {
       if (tryAddRes(ck, gr)) { o.state = "dry"; o.cropKey = null; o.readyAt = 0; o.witherAt = 0; this.setPlotGlow(o, "off"); this.coinBurst(o.cx, o.by); o.spr.setVisible(false); o.emo.setVisible(false); o.timer.setVisible(false); this.syncPlots(); addXp("farming", 10); log(`${cd.emoji} +${gr} ${cd.label}.`, "good"); toast("+" + gr + " " + cd.emoji); refreshHud(); }
       else toast("🎒 Inventario lleno");
     } else if (a.kind === "fish") {
+      this.clearBobber();
       goFishing();
     }
     this.action = null;
@@ -575,8 +604,8 @@ class FarmScene extends Phaser.Scene {
     if (toolDur("rod") <= 0) { toast("🎣 Caña rota — reparala en la Herrería"); return; }
     if (G.golden < FISH_COST) { toast("Necesitás " + FISH_COST + " ✨ para pescar (tenés " + G.golden + ")"); return; }
     const p = GF.POND, T = GF.TILE;
-    this.splashAt(clickX != null ? clickX : (p.col + p.cols / 2) * T, clickY != null ? clickY : (p.row + p.rows / 2) * T);
-    this.startAction("fish", { cx: (p.col + p.cols / 2) * T });
+    const bx = clickX != null ? clickX : (p.col + p.cols / 2) * T, by2 = clickY != null ? clickY : (p.row + p.rows / 2) * T;
+    this.startAction("fish", { cx: (p.col + p.cols / 2) * T, bx, by2 });
   }
 
   // marca visual breve sobre un objetivo encolado
@@ -639,6 +668,7 @@ class FarmScene extends Phaser.Scene {
   // entrenar con el dummy: 3 espadazos, XP de Espada y cooldown de 4 horas
   trainDummy(o) {
     if (!G.swordOwned) { toast("🎯 Necesitás la Espada de Hierro — crafteala en la Herrería"); return; }
+    if (G.gear.arma !== "sword") { toast("🎯 Equipá la espada en el panel de Equipo"); return; }
     if (toolDur("sword") <= 0) { toast("⚔️ Espada rota — reparala en la Herrería"); return; }
     const left = (G.dummyUsedAt || 0) + DUMMY_CD_MS - nowMs();
     if (left > 0) { toast("🎯 El dummy descansa — vuelve en " + fmtDur(left)); return; }
@@ -687,6 +717,30 @@ class FarmScene extends Phaser.Scene {
     s.setScale((T * 0.95) / s.width); s.setDepth(by);
     this.objs.push({ chestIdx: idx, type: "cofre", cx, by, w: T, rw: T * 0.95, baseKey: "cofre", sprite: s, readyAt: 0 });
     this.rebuildCollisions();
+  }
+
+  // colocar en la granja un cofre que está en la bolsa (clic en la bolsa — detalles jueves)
+  placeChestFromBag() {
+    const idx = (G.chests || []).findIndex(c => c && c.col == null);
+    if (idx < 0) { toast("No tenés cofres en la bolsa"); return; }
+    this.spawnChest(idx);
+    toast("📦 Cofre colocado — arrastralo en modo edición para moverlo");
+    if (typeof syncSlots === "function") syncSlots(); if (isOpen("ov-inv")) refreshInv();
+    if (typeof saveFarm === "function") saveFarm(true);
+  }
+
+  // recoger un cofre COLOCADO y devolverlo a la bolsa (debe estar vacío)
+  pickupChest(idx) {
+    const c = (G.chests || [])[idx]; if (!c || c.col == null) return;
+    if (!c.items.every(s => !s)) { toast("📦 Vaciá el cofre antes de recogerlo"); return; }
+    const oi = this.objs.findIndex(o => o.type === "cofre" && o.chestIdx === idx);
+    if (oi >= 0) { const o = this.objs[oi]; if (o.sprite) o.sprite.destroy(); if (o.timer) o.timer.destroy(); this.objs.splice(oi, 1); }
+    c.col = null; c.row = null;
+    this.rebuildCollisions();
+    closeOv("ov-cofre");
+    toast("📦 Cofre guardado en tu bolsa");
+    if (typeof syncSlots === "function") syncSlots(); if (isOpen("ov-inv")) refreshInv();
+    if (typeof saveFarm === "function") saveFarm(true);
   }
 
   // brillo de interacción: hover del cursor + cercanía del granjero (capa aditiva sobre el sprite)
@@ -880,6 +934,11 @@ class FarmScene extends Phaser.Scene {
 
     // acción en curso: bloquea movimiento
     if (this.action) {
+      // la pesca se interrumpe si el jugador intenta moverse (teclas)
+      if (this.action.kind === "fish" && (k.left.isDown || k.right.isDown || k.up.isDown || k.down.isDown || k.aleft.isDown || k.aright.isDown || k.aup.isDown || k.adown.isDown)) {
+        this.cancelFishing();
+      }
+      if (!this.action) { hero.setDepth(hero.y); this.updatePrompt(); return; }
       this.action.t += dt;
       // al picar/talar: a mitad de la acción el nodo pasa al estado dañado (entero → dañado → restos)
       const ao = this.action.o;

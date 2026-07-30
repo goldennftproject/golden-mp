@@ -55,7 +55,11 @@ function hydrate(d) {
   if (typeof d.hp === "number") G.hp = Math.max(1, Math.min(G.hpMax, d.hp));
   if (typeof d.swordOwned === "boolean") G.swordOwned = d.swordOwned;
   if (typeof d.bowOwned === "boolean") G.bowOwned = d.bowOwned;
-  if (d.gear && typeof d.gear === "object") G.gear = Object.assign({ casco: null, armadura: null, botas: null, escudo: null }, d.gear);
+  if (d.gear && typeof d.gear === "object") G.gear = Object.assign({ casco: null, armadura: null, botas: null, escudo: null, arma: null, municion: false }, d.gear);
+  // migración (detalles jueves): partidas viejas sin slot de arma/munición conservan su comportamiento
+  const og = d.gear || {};
+  if (!("arma" in og)) G.gear.arma = d.swordOwned ? "sword" : (d.bowOwned ? "bow" : null);
+  if (!("municion" in og)) G.gear.municion = ((d.res && d.res.flecha) || 0) > 0;
   if (d.dishes && typeof d.dishes === "object") G.dishes = Object.assign({}, d.dishes);
   if (d.cooking && typeof d.cooking === "object" && d.cooking.endAt) G.cooking = d.cooking;
   if (Array.isArray(d.chests)) G.chests = d.chests.slice(0, 50).map(c => ({ col: (typeof c.col === "number" ? c.col : null), row: (typeof c.row === "number" ? c.row : null), items: (Array.isArray(c.items) ? c.items.slice(0, 10) : Array(10).fill(null)) }));

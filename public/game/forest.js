@@ -133,7 +133,7 @@ class ForestScene extends Phaser.Scene {
 
   hitMonster(m, dmg, skill) {
     if (dmg == null) { dmg = swordDmg(); skill = "sword"; }
-    if (skill === "sword" && G.swordOwned && toolDur("sword") > 0) { useTool("sword"); if (toolDur("sword") <= 0) { log("⚔️ ¡La espada se rompió! Reparala en la Herrería.", "bad"); toast("⚔️ ¡Espada rota!"); } }
+    if (skill === "sword" && G.gear.arma === "sword" && toolDur("sword") > 0) { useTool("sword"); if (toolDur("sword") <= 0) { log("⚔️ ¡La espada se rompió! Reparala en la Herrería.", "bad"); toast("⚔️ ¡Espada rota!"); } }
     m.hp -= dmg;
     // texto de daño flotante
     const t = this.add.text(m.cx, m.by - m.spr.height, "-" + dmg, { fontFamily: "system-ui", fontSize: "13px", fontStyle: "bold", color: skill === "range" ? "#a8d8ff" : "#ffd24a", stroke: "#20301a", strokeThickness: 3 }).setOrigin(0.5, 1).setDepth(99999);
@@ -195,8 +195,8 @@ class ForestScene extends Phaser.Scene {
       // el golpe muestra el ARMA equipada (espada o arco), no el hacha (detalles 29/7)
       if (hero.anims.currentAnim?.key !== "idle") hero.play("idle");
       if (!this.action.fx) {
-        const wkey = this.action.kind === "shoot" ? "bow" : "sword";
-        if (this.textures.exists(wkey)) {
+        const wkey = this.action.kind === "shoot" ? "bow" : (G.gear.arma === "sword" ? "sword" : null);   // sin espada equipada pelea a puños (sin fx)
+        if (wkey && this.textures.exists(wkey)) {
           const fx = this.add.image(hero.x + sign * 18, hero.y - 26, wkey).setDisplaySize(26, 26).setOrigin(0.5, 0.85).setDepth(hero.y + 1);
           this.action.fx = fx;
           if (this.action.kind === "shoot") { fx.setFlipX(sign < 0); this.time.delayedCall(this.action.dur * 1000, () => fx.destroy()); }

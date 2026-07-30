@@ -40,6 +40,7 @@ function itemView(d) {
   if (d.kind === "seed") { const cd = CROP_DEF[d.key]; return { sprite: "seed_" + d.key, emoji: cd.emoji, label: cd.label + " (semilla)", dur: null }; }
   if (d.kind === "fish") { const f = FISH_DEF[d.key]; const glow = { raro: "glow-blue", epico: "glow-purple", legendario: "glow-gold" }[d.key] || ""; return { sprite: f ? f.sprite : null, emoji: f ? f.emoji : "🐟", glow, label: f ? f.label : "Pez", dur: null }; }
   if (d.kind === "dish") { const r = RECIPE_DEF[d.key]; return { sprite: r ? r.sprite : null, emoji: r ? r.emoji : "🍲", label: r ? r.label + " · clic para comer (" + r.desc + ")" : "Plato", dur: null }; }
+  if (d.kind === "chest") return { sprite: "cofre", emoji: "📦", label: "Cofre depósito · clic para colocarlo en la granja", dur: null };
   return { sprite: null, emoji: "?", label: "", dur: null };
 }
 // si el sprite existe lo muestra; si falla la carga, cae al emoji (sin romper)
@@ -57,7 +58,7 @@ function coinIc(cur) { return `<img class="ric" src="${GF.spr(cur === "esencia" 
 function invCellHtml(d, i, rem, zone) {
   if (!d) return `<div class="slot" data-slot="${i}" data-zone="${zone}"></div>`;
   let cnt = "";
-  if (d.kind === "res" || d.kind === "seed" || d.kind === "fish" || d.kind === "dish") { const k = d.kind + ":" + d.key; const n = Math.min(99, rem[k] || 0); rem[k] = (rem[k] || 0) - n; cnt = `<span class="cnt">${fmt(n)}</span>`; }
+  if (d.kind === "res" || d.kind === "seed" || d.kind === "fish" || d.kind === "dish" || d.kind === "chest") { const k = d.kind + ":" + d.key; const n = Math.min(99, rem[k] || 0); rem[k] = (rem[k] || 0) - n; cnt = `<span class="cnt">${fmt(n)}</span>`; }
   const v = itemView(d);
   const sel = (d.kind === "seed" && G.selSeed === d.key) ? " sel" : "";
   const eq = (d.kind === "pick" && G.picks.eq === d.key) ? " eq" : "";
@@ -77,6 +78,7 @@ function refreshInv() {
   CROP_ORDER.forEach(s => rem["seed:" + s] = Math.floor(G.seeds[s] || 0));
   FISH_ORDER.forEach(f => rem["fish:" + f] = Math.floor((G.fish && G.fish[f]) || 0));
   RECIPE_ORDER.forEach(d => rem["dish:" + d] = Math.floor((G.dishes && G.dishes[d]) || 0));
+  rem["chest:cofre"] = (typeof chestsInBag === "function") ? chestsInBag() : 0;
   let html = "";
   for (let i = 0; i < cap; i++) html += invCellHtml(G.slots[i], i, rem, "inv");
   $("inv-slots").innerHTML = html;
@@ -92,6 +94,7 @@ function invCellClick(i) {
   if (d.kind === "seed") { if (!cropUnlocked(d.key)) { toast("Necesitás Cultivo nivel " + CROP_DEF[d.key].lvl); return; } selectSeed(d.key); toast("🌱 Plantando: " + CROP_DEF[d.key].label); }
   else if (d.kind === "pick") { if (G.picks.owned[d.key]) equipPick(d.key); }
   else if (d.kind === "dish") eatDish(d.key);
+  else if (d.kind === "chest") { if (window.FARM && FARM.placeChestFromBag) FARM.placeChestFromBag(); }
 }
 
 // botón para ampliar la bolsa (+6): primera fila con minerales, siguientes con plata
@@ -173,11 +176,32 @@ function dndDrop(src, tz, ti) {
   else if (sz === "inv" && tz === "hot") { const d = G.slots[si]; if (d) G.hotbar[ti] = { kind: d.kind, key: d.key }; }
   else if (sz === "hot" && tz === "hot") { const a = G.hotbar[si]; G.hotbar[si] = G.hotbar[ti]; G.hotbar[ti] = a; }
   else if (sz === "hot" && tz === "inv") { G.hotbar[si] = null; }
-  else if (tz === "trash") {   // tirar a la basura (detalless.docx)
+  else if (tz === "trash") {   // tirar a la basura (detalless.docx) — con confirmación (30/7)
     if (sz === "hot") { G.hotbar[si] = null; toast("🗑️ Quitado de la barra"); }
-    else { const d = G.slots[si]; if (d) trashStack(d); }
+    else { const d = G.slots[si]; if (d) {
+      const inf = trashInfo(d);
+      if (!inf) toast("Eso no se puede tirar");
+      else if (inf.n > 0) askConfirm("¿Seguro que quieres tirar " + inf.n + " × " + inf.lbl + "? No se puede recuperar.", () => { trashStack(d); if (isOpen("ov-inv")) refreshInv(); else refreshHotbar(); });
+    } }
   }
   if (isOpen("ov-inv")) refreshInv(); else refreshHotbar();
+}
+// cartel de confirmación (se usa antes de tirar a la papelera)
+function askConfirm(msg, onYes) {
+  const ov = $("ov-confirm"); if (!ov) { onYes(); return; }
+  const m = $("cf-msg"); if (m) m.textContent = msg;
+  ov.classList.add("show");
+  const yes = $("cf-yes"), no = $("cf-no");
+  if (yes) yes.onclick = () => { ov.classList.remove("show"); onYes(); };
+  if (no) no.onclick = () => ov.classList.remove("show");
+}
+// qué se tiraría de una pila (cantidad + nombre) — null si no se puede tirar
+function trashInfo(d) {
+  if (d.kind === "res")  return { n: Math.min(99, Math.floor(G.res[d.key] || 0)), lbl: RES_LABEL[d.key] || d.key };
+  if (d.kind === "seed") return { n: Math.min(99, Math.floor(G.seeds[d.key] || 0)), lbl: "semillas de " + (CROP_DEF[d.key] ? CROP_DEF[d.key].label : d.key) };
+  if (d.kind === "fish") return { n: Math.min(99, Math.floor((G.fish && G.fish[d.key]) || 0)), lbl: (FISH_DEF[d.key] ? FISH_DEF[d.key].label : "peces") };
+  if (d.kind === "dish") return { n: Math.min(99, Math.floor((G.dishes && G.dishes[d.key]) || 0)), lbl: (RECIPE_DEF[d.key] ? RECIPE_DEF[d.key].label : "platos") };
+  return null;
 }
 // tirar una pila de recursos/semillas/pescados (las herramientas no se tiran)
 function trashStack(d) {
@@ -221,10 +245,31 @@ function refreshEquip() {
   gearSlot("eq-armadura", "armadura", "Armadura");
   gearSlot("eq-botas", "botas", "Botas");
   gearSlot("eq-escudo", "escudo", "Escudo");
-  fill("eq-arma", G.swordOwned, spIc("sword", "⚔️"), G.swordOwned ? "Espada de Hierro" : "Arma");
+  // arma: se EQUIPA/CAMBIA con clic en el slot (detalles jueves) — espada ↔ arco ↔ nada
+  const arma = G.gear.arma;
+  fill("eq-arma", !!arma, arma === "bow" ? spIc("bow", "🏹") : spIc("sword", "⚔️"),
+    arma ? (arma === "bow" ? "Arco equipado" : "Espada de Hierro equipada") + " · clic para cambiar" : "Arma · clic para equipar");
+  const armaEl = $("eq-arma");
+  if (armaEl) armaEl.onclick = () => {
+    const opts = [null]; if (G.swordOwned) opts.push("sword"); if (G.bowOwned) opts.push("bow");
+    if (opts.length === 1) { toast("No tenés armas — crafteálas en la Herrería"); return; }
+    G.gear.arma = opts[(opts.indexOf(G.gear.arma) + 1) % opts.length];
+    toast(G.gear.arma === "sword" ? "⚔️ Espada equipada" : (G.gear.arma === "bow" ? "🏹 Arco equipado" : "Arma desequipada"));
+    refreshEquip(); if (typeof syncSlots === "function") syncSlots(); if (typeof saveFarm === "function") saveFarm();
+  };
+  // munición: las flechas se equipan a mano con clic (ya no se autoequipan al craftear)
   const fl = (G.res && G.res.flecha) || 0;
-  fill("eq-municion", fl > 0, spIc("res_flecha", "➳") + '<b class="eqcnt">' + fmt(fl) + "</b>", fl > 0 ? fl + " flechas" : "Munición");
-  const ed = $("eq-def"); if (ed) ed.textContent = "Defensa total: " + gearDefTotal() + (G.bowOwned ? " · 🏹 Arco equipado" : "");
+  const munOn = !!G.gear.municion && fl > 0;
+  fill("eq-municion", munOn, spIc("res_flecha", "➳") + '<b class="eqcnt">' + fmt(fl) + "</b>",
+    munOn ? fl + " flechas equipadas · clic para desequipar" : (fl > 0 ? "Munición · clic para equipar tus " + fl + " flechas" : "Munición (crafteá flechas en la Herrería)"));
+  const munEl = $("eq-municion");
+  if (munEl) munEl.onclick = () => {
+    if (fl <= 0) { toast("No tenés flechas — crafteálas en la Herrería"); return; }
+    G.gear.municion = !G.gear.municion;
+    toast(G.gear.municion ? "➳ Flechas equipadas" : "➳ Flechas desequipadas");
+    refreshEquip(); if (typeof saveFarm === "function") saveFarm();
+  };
+  const ed = $("eq-def"); if (ed) ed.textContent = "Defensa total: " + gearDefTotal();
 }
 
 /* ---- cofre diario ---- */
@@ -360,6 +405,9 @@ function refreshChest() {
     return `<div class="slot filled" data-dp="${i}" title="${v.label} — clic para guardar">${itemIcon(v)}<span class="cnt">${fmt(s.n)}</span></div>`;
   }).join("") || '<div class="sub">No tenés nada para guardar.</div>';
   inv.querySelectorAll("[data-dp]").forEach(el => el.onclick = () => { const s = stacks[+el.dataset.dp]; chestDeposit(ci, s.kind, s.key); });
+  // recoger el cofre y guardarlo en la bolsa (detalles jueves) — solo si está vacío
+  const pu = $("cofre-pickup");
+  if (pu) { const empty = ch.items.every(s => !s); pu.disabled = !empty; pu.title = empty ? "" : "Vaciá el cofre para poder recogerlo"; pu.onclick = () => { if (window.FARM && FARM.pickupChest) FARM.pickupChest(ci); }; }
 }
 
 /* ---- cocina (en la Granja) ---- */
@@ -520,7 +568,7 @@ function initHotbarDrag() {
 }
 
 /* ---- arrastre universal: mantener clic izquierdo sobre una zona libre mueve la interfaz ---- */
-const DRAG_EXCLUDE = "button, input, textarea, select, a, [draggable=true], .hcell, .swi, #log, #chatpane, .slots, .forge-list, .mkt-list, .lblist, .curbtn, .shoptab, .lbtab, .ltab";
+const DRAG_EXCLUDE = "button, input, textarea, select, a, [draggable=true], .hcell, .swi, #log, #chatpane, .slots, .forge-list, .mkt-list, .lblist, .curbtn, .shoptab, .lbtab, .ltab, .eqslot";
 function makeHoldDrag(el, saveKey) {
   if (!el || el._holdDrag) return; el._holdDrag = true;
   let drag = null, started = false;
