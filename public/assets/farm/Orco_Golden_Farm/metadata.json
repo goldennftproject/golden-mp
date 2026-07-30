@@ -1,0 +1,123 @@
+{
+  "group_id": "bd5ce023-d91d-402b-84a7-378406404294",
+  "states": [
+    {
+      "character": {
+        "id": "22c3ccce-2579-460c-bd32-fcf6688d5ec5",
+        "name": "Idle",
+        "prompt": "cozy chibi cartoon orc for a storybook farm RPG: chunky rounded proportions with a big head, mossy green skin, two small lower tusks, grumpy but cute expression, simple brown leather vest and belt, holding a short wooden club, warm saturated cozy palette, soft thick outlines, detailed shading, cute hand-drawn storybook mood, transparent background",
+        "size": {
+          "width": 124,
+          "height": 124
+        },
+        "template_id": "mannequin",
+        "directions": 8,
+        "view": "low top-down",
+        "created_at": "2026-07-30T14:32:06.125120+00:00"
+      },
+      "folder": "Idle",
+      "frames": {
+        "rotations": {
+          "south": "Idle/rotations/south.png",
+          "south-east": "Idle/rotations/south-east.png",
+          "east": "Idle/rotations/east.png",
+          "north-east": "Idle/rotations/north-east.png",
+          "north": "Idle/rotations/north.png",
+          "north-west": "Idle/rotations/north-west.png",
+          "west": "Idle/rotations/west.png",
+          "south-west": "Idle/rotations/south-west.png"
+        },
+        "animations": {
+          "caminar": {
+            "south-east": [
+              "Idle/animations/caminar/south-east/frame_000.png",
+              "Idle/animations/caminar/south-east/frame_001.png",
+              "Idle/animations/caminar/south-east/frame_002.png",
+              "Idle/animations/caminar/south-east/frame_003.png",
+              "Idle/animations/caminar/south-east/frame_004.png",
+              "Idle/animations/caminar/south-east/frame_005.png"
+            ]
+          },
+          "atacar": {
+            "south-east": [
+              "Idle/animations/atacar/south-east/frame_000.png",
+              "Idle/animations/atacar/south-east/frame_001.png",
+              "Idle/animations/atacar/south-east/frame_002.png",
+              "Idle/animations/atacar/south-east/frame_003.png",
+              "Idle/animations/atacar/south-east/frame_004.png",
+              "Idle/animations/atacar/south-east/frame_005.png"
+            ]
+          },
+          "quieto": {
+            "south-east": [
+              "Idle/animations/quieto/south-east/frame_000.png",
+              "Idle/animations/quieto/south-east/frame_001.png",
+              "Idle/animations/quieto/south-east/frame_002.png",
+              "Idle/animations/quieto/south-east/frame_003.png"
+            ]
+          }
+        }
+      }
+    },
+    {
+      "character": {
+        "id": "1d874c96-4512-4f88-9ea3-1b87ccd88c94",
+        "name": "keep the same orc EX",
+        "prompt": "cozy chibi cartoon orc for a storybook farm RPG: chunky rounded proportions with a big head, mossy green skin, two small lower tusks, grumpy but cute expression, simple brown leather vest and belt, holding a short wooden club, warm saturated cozy palette, soft thick outlines, detailed shading, cute hand-drawn storybook mood, transparent background",
+        "size": {
+          "width": 124,
+          "height": 124
+        },
+        "template_id": "mannequin",
+        "directions": 8,
+        "view": "low top-down",
+        "created_at": "2026-07-30T14:52:07.579199+00:00"
+      },
+      "folder": "keep_the_same_orc_EX",
+      "frames": {
+        "rotations": {
+          "south": "keep_the_same_orc_EX/rotations/south.png",
+          "south-east": "keep_the_same_orc_EX/rotations/south-east.png",
+          "east": "keep_the_same_orc_EX/rotations/east.png",
+          "north-east": "keep_the_same_orc_EX/rotations/north-east.png",
+          "north": "keep_the_same_orc_EX/rotations/north.png",
+          "north-west": "keep_the_same_orc_EX/rotations/north-west.png",
+          "west": "keep_the_same_orc_EX/rotations/west.png",
+          "south-west": "keep_the_same_orc_EX/rotations/south-west.png"
+        },
+        "animations": {
+          "quieto": {
+            "south-east": [
+              "keep_the_same_orc_EX/animations/quieto/south-east/frame_000.png",
+              "keep_the_same_orc_EX/animations/quieto/south-east/frame_001.png",
+              "keep_the_same_orc_EX/animations/quieto/south-east/frame_002.png",
+              "keep_the_same_orc_EX/animations/quieto/south-east/frame_003.png"
+            ]
+          },
+          "atacar": {
+            "south-east": [
+              "keep_the_same_orc_EX/animations/atacar/south-east/frame_000.png",
+              "keep_the_same_orc_EX/animations/atacar/south-east/frame_001.png",
+              "keep_the_same_orc_EX/animations/atacar/south-east/frame_002.png",
+              "keep_the_same_orc_EX/animations/atacar/south-east/frame_003.png",
+              "keep_the_same_orc_EX/animations/atacar/south-east/frame_004.png",
+              "keep_the_same_orc_EX/animations/atacar/south-east/frame_005.png"
+            ]
+          },
+          "caminar": {
+            "south-east": [
+              "keep_the_same_orc_EX/animations/caminar/south-east/frame_000.png",
+              "keep_the_same_orc_EX/animations/caminar/south-east/frame_001.png",
+              "keep_the_same_orc_EX/animations/caminar/south-east/frame_002.png",
+              "keep_the_same_orc_EX/animations/caminar/south-east/frame_003.png",
+              "keep_the_same_orc_EX/animations/caminar/south-east/frame_004.png",
+              "keep_the_same_orc_EX/animations/caminar/south-east/frame_005.png"
+            ]
+          }
+        }
+      }
+    }
+  ],
+  "export_version": "3.1",
+  "export_date": "2026-07-30T15:04:26.524492"
+}
