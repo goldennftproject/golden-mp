@@ -238,6 +238,7 @@ function cook(id) {
   const r = RECIPE_DEF[id]; if (!r) return;
   if (G.cooking) { toast("🍳 Ya hay algo en el fuego…"); return; }
   if (!canCook(id)) { toast("Te faltan ingredientes"); return; }
+  if (!roomForDish(id)) { bagFull("cocinar " + r.label); return; }
   if (r.res) for (const k in r.res) G.res[k] -= r.res[k];
   if (r.fish) for (const k in r.fish) G.fish[k] -= r.fish[k];
   G.cooking = { id, endAt: nowMs() + COOK_MS, total: COOK_MS };
@@ -358,7 +359,7 @@ function useTool(id) { const d = toolDur(id); if (d <= 0) return false; G.tools[
 function repairTool(id) { const td = TOOL_DEF[id]; if (!td) return; if (toolDur(id) >= td.max) { toast("Ya está al 100%"); return; } if (!canAfford(td.repair)) { toast("Te faltan materiales para reparar"); return; } payCost(td.repair); G.tools[id] = td.max; log("🔧 Reparaste " + td.label + " (100%).", "good"); toast("🔧 Reparado"); forgeWork(); refreshForge(); if (isOpen("ov-equip")) refreshEquip(); if (isOpen("ov-inv")) refreshInv(); }
 
 // --- inventario (base + filas extra) ---
-const INV_BASE = 20, INV_MAX_ROWS = 5;   // 20 base (4 filas de 5), hasta +5 filas más
+const INV_BASE = 30, INV_MAX_ROWS = 6;   // 30 base (6 filas de 5), hasta +6 filas más (hay ~40 pilas posibles)
 function invSlots() { return INV_BASE + (G.invRows || 0) * 5; }
 function nextInvCost() {
   const r = G.invRows || 0;
@@ -374,6 +375,33 @@ function expandInv() {
   log("🎒 Ampliaste la bolsa (+5 espacios).", "good"); toast("🎒 +5 espacios");
   refreshInv(); refreshHud();
 }
+/* ¿hay sitio en la bolsa para lo que va a soltar la acción?
+   Se comprueba ANTES de empezar (si no, gastás la animación para nada). */
+function roomForRes(key, n) {
+  const before = G.res[key] || 0;
+  G.res[key] = before + (n || 1);
+  const ok = canonicalStacks().length <= invSlots();
+  G.res[key] = before;
+  return ok;
+}
+function roomForFish() {   // la rareza es al azar: tiene que entrar CUALQUIERA de las cuatro
+  return FISH_ORDER.every(f => {
+    const before = (G.fish && G.fish[f]) || 0;
+    G.fish[f] = before + 1;
+    const ok = canonicalStacks().length <= invSlots();
+    G.fish[f] = before;
+    return ok;
+  });
+}
+function roomForDish(id) {
+  const before = (G.dishes && G.dishes[id]) || 0;
+  G.dishes[id] = before + 1;
+  const ok = canonicalStacks().length <= invSlots();
+  if (before) G.dishes[id] = before; else delete G.dishes[id];
+  return ok;
+}
+function bagFull(what) { toast("🎒 Bolsa llena — no podés " + what); log("🎒 No tenés espacio en la bolsa: liberá un hueco para " + what + ".", "bad"); }
+
 function invStacks() {
   const st = [];
   st.push({ sprite:"hoe", em:"🪝", nm:"Azada" });
