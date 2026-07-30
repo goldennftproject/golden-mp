@@ -817,84 +817,14 @@ class FarmScene extends Phaser.Scene {
   rebuildCollisions() {
     const T = GF.TILE;
     GF.COLLISIONS = this.objs.filter(o => o.type !== "fish").map(o => GF.solidRect(o));
-    this.nav = null;   // la rejilla de pathfinding se rearma sola en el próximo clic
+    this.navOf().invalidate();   // la rejilla de pathfinding se rearma sola en el próximo clic
   }
 
-  /* ---- pathfinding A* sobre una rejilla de media celda (21px) ----
-     Antes el granjero caminaba en línea recta y se clavaba contra las paredes; ahora calcula
-     una ruta que rodea los obstáculos y la sigue por waypoints. */
-  buildNavGrid() {
-    const S = GF.TILE / 2;
-    this.navS = S; this.navW = Math.ceil(GF.WORLD_W / S); this.navH = Math.ceil(GF.WORLD_H / S);
-    const g = new Uint8Array(this.navW * this.navH);
-    for (let j = 0; j < this.navH; j++) for (let i = 0; i < this.navW; i++)
-      g[j * this.navW + i] = GF.blockedAt(i * S + S / 2, j * S + S / 2, 8) ? 0 : 1;
-    this.nav = g;
-  }
-  navFree(i, j) { return i >= 0 && j >= 0 && i < this.navW && j < this.navH && this.nav[j * this.navW + i] === 1; }
-  navPt(i, j) { return { x: i * this.navS + this.navS / 2, y: j * this.navS + this.navS / 2 }; }
-  // nodo libre más cercano a un punto (para destinos sobre un edificio o arranques en un rincón)
-  navNearestFree(x, y) {
-    const i0 = Math.floor(x / this.navS), j0 = Math.floor(y / this.navS);
-    if (this.navFree(i0, j0)) return { i: i0, j: j0 };
-    for (let r = 1; r <= 8; r++) {
-      let bd = 1e9, bi = -1, bj = -1;
-      for (let dj = -r; dj <= r; dj++) for (let di = -r; di <= r; di++) {
-        if (Math.max(Math.abs(di), Math.abs(dj)) !== r || !this.navFree(i0 + di, j0 + dj)) continue;
-        const p = this.navPt(i0 + di, j0 + dj), d = Math.hypot(p.x - x, p.y - y);
-        if (d < bd) { bd = d; bi = i0 + di; bj = j0 + dj; }
-      }
-      if (bi >= 0) return { i: bi, j: bj };
-    }
-    return null;
-  }
-  // ¿se puede ir en línea recta? (así las rutas cortas no salen escalonadas)
-  lineFree(x0, y0, x1, y1) {
-    const n = Math.max(2, Math.ceil(Math.hypot(x1 - x0, y1 - y0) / 7));
-    for (let k = 1; k <= n; k++) { const t = k / n; if (GF.blockedAt(x0 + (x1 - x0) * t, y0 + (y1 - y0) * t, 6)) return false; }
-    return true;
-  }
-  findPath(sx, sy, tx, ty) {
-    if (!this.nav) this.buildNavGrid();
-    if (this.lineFree(sx, sy, tx, ty)) return [{ x: tx, y: ty }];
-    const W = this.navW, N = W * this.navH;
-    const a0 = this.navNearestFree(sx, sy), b0 = this.navNearestFree(tx, ty);   // arranque y destino sobre nodos libres
-    if (!a0 || !b0) return null;
-    const si = a0.i, sj = a0.j, ti = b0.i, tj = b0.j;
-    const tgtFree = !GF.blockedAt(tx, ty, 6);   // si el destino es sólido (edificio, laguna), se llega al borde
-    const start = sj * W + si, end = tj * W + ti;
-    const gsc = new Float32Array(N).fill(Infinity), fsc = new Float32Array(N).fill(Infinity), prev = new Int32Array(N).fill(-1);
-    const open = [start], inOpen = new Uint8Array(N), done = new Uint8Array(N);
-    const hx = (n) => { const i = n % W, j = (n - i) / W; return Math.hypot(i - ti, j - tj); };
-    gsc[start] = 0; fsc[start] = hx(start); inOpen[start] = 1;
-    const DIRS = [[1,0,1],[-1,0,1],[0,1,1],[0,-1,1],[1,1,1.414],[1,-1,1.414],[-1,1,1.414],[-1,-1,1.414]];
-    while (open.length) {
-      let bi2 = 0; for (let a = 1; a < open.length; a++) if (fsc[open[a]] < fsc[open[bi2]]) bi2 = a;
-      const cur = open.splice(bi2, 1)[0]; inOpen[cur] = 0; done[cur] = 1;
-      if (cur === end) break;
-      const ci = cur % W, cj = (cur - ci) / W;
-      for (const [di, dj, w] of DIRS) {
-        const ni = ci + di, nj = cj + dj;
-        if (!this.navFree(ni, nj)) continue;
-        if (di && dj && (!this.navFree(ci + di, cj) || !this.navFree(ci, cj + dj))) continue;   // no cortar esquinas
-        const nn = nj * W + ni; if (done[nn]) continue;
-        const ng = gsc[cur] + w;
-        if (ng < gsc[nn]) { gsc[nn] = ng; fsc[nn] = ng + hx(nn); prev[nn] = cur; if (!inOpen[nn]) { open.push(nn); inOpen[nn] = 1; } }
-      }
-    }
-    if (prev[end] < 0 && end !== start) return null;
-    const nodes = []; for (let n = end; n >= 0; n = prev[n]) { nodes.unshift(n); if (n === start) break; }
-    // suavizado: saltarse waypoints mientras haya línea recta libre
-    const pts = nodes.map(n => this.navPt(n % W, (n - n % W) / W));
-    if (tgtFree) pts.push({ x: tx, y: ty });
-    const out = []; let cx2 = sx, cy2 = sy, idx = 0;
-    while (idx < pts.length) {
-      let far = idx;
-      for (let a = pts.length - 1; a >= idx; a--) if (this.lineFree(cx2, cy2, pts[a].x, pts[a].y)) { far = a; break; }
-      out.push(pts[far]); cx2 = pts[far].x; cy2 = pts[far].y; idx = far + 1;
-    }
-    return out.length ? out : null;
-  }
+  // pathfinding A* (módulo compartido con el Bosque — nav.js)
+  navOf() { if (!this._nav) this._nav = new GF.Nav((x, y, p) => GF.blockedAt(x, y, p), GF.WORLD_W, GF.WORLD_H); return this._nav; }
+  lineFree(x0, y0, x1, y1) { return this.navOf().lineFree(x0, y0, x1, y1); }
+  findPath(sx, sy, tx, ty) { return this.navOf().find(sx, sy, tx, ty); }
+
   // caminar hacia un punto rodeando obstáculos
   goTo(x, y, silent) {
     const p = this.findPath(this.hero.x, this.hero.y, x, y);
@@ -1181,7 +1111,7 @@ class FarmScene extends Phaser.Scene {
       else if (this.moveTarget) {
         this.pathStuck = (this.pathStuck || 0) + 1;
         const dest = (this.path && this.path.length) ? this.path[this.path.length - 1] : this.moveTarget;
-        this.nav = null;   // la rejilla puede haber cambiado
+        this.navOf().invalidate();   // la rejilla puede haber cambiado
         if (this.pathStuck > 2 || !this.goTo(dest.x, dest.y)) { this.moveTarget = null; this.path = null; this.pendingObj = null; this.pathStuck = 0; }
       }
       if (vx < 0) this.facing = "west"; else if (vx > 0) this.facing = "east";

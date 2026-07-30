@@ -598,7 +598,7 @@
   /* Cargador con reintentos: el server free de Render a veces corta conexiones.
      Carga los scripts del juego EN FILA (uno por vez) y reintenta cada uno hasta 8 veces. */
   (function () {
-    const files = ["game/config.js","game/audio.js","game/state.js","game/save.js","game/ui.js","game/boot.js",
+    const files = ["game/config.js","game/nav.js","game/audio.js","game/state.js","game/save.js","game/ui.js","game/boot.js",
                    "game/farm.js","game/forest.js","game/plaza.js","game/main.js","game/update.js"];
     let i = 0;
     function next(retry) {

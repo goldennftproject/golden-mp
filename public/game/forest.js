@@ -33,7 +33,7 @@ class ForestScene extends Phaser.Scene {
       if (x < 150 && y > this.H / 2 - 80 && y < this.H / 2 + 80) continue;   // entrada despejada
       const s = this.add.image(x, y, "tree").setOrigin(0.5, 1);
       s.setScale((T * 2) / s.width).setDepth(y).setAlpha(0.96);
-      this.treeCols.push({ cx: x, cy: y - T * 0.5, rx: T * 0.8, ry: T * 0.5 });
+      this.treeCols.push({ cx: x, by: y, hw: T * 2 * 0.17, dep: T * 0.32 });   // solo el tronco estorba
     }
 
     // salida (izquierda): volver a la granja
@@ -54,7 +54,10 @@ class ForestScene extends Phaser.Scene {
     this.actScale = GF.SIZE.hero / 47;
     hero.setScale(this.idleScale); hero.play("idle");
     this.hero = hero; this.facing = "east"; this.moveTarget = null; this.action = null; this.hurtFx = 0;
-    this.target = null; this.nextAuto = 0; this.ground = [];
+    this.target = null; this.nextAuto = 0; this.path = null; this.hold = null;
+    // el botín tirado sobrevive mientras dure la sesión: si volvés al Bosque, sigue ahí
+    GF.forestDrops = GF.forestDrops || [];
+    GF.forestDrops.forEach(g => { g.spr = this.dropSprite(g); });
     this.input.mouse.disableContextMenu();
 
     // clic izquierdo: ir hacia el monstruo (y fijarlo) o moverse · clic DERECHO: atacar (detalles 338)
@@ -65,8 +68,20 @@ class ForestScene extends Phaser.Scene {
       for (const m of this.monsters) { if (m.dead) continue; const b = m.spr.getBounds(); if (Phaser.Geom.Rectangle.Contains(b, wx, wy)) { const d = Math.hypot(m.cx - wx, m.by - wy); if (d < bd) { bd = d; hit = m; } } }
       if (pt.rightButtonDown()) { if (hit) this.setTarget(hit); return; }   // atacar sin moverse
       if (this.action) return;
-      if (hit) { this.setTarget(hit); this.moveTarget = { x: hit.cx, y: hit.by + 14 }; }
-      else { this.clearTarget(); this.moveTarget = { x: wx, y: wy }; this.tryPickup(wx, wy, 20); }
+      this.hold = { sx: pt.x, sy: pt.y, active: false };
+      if (hit) { this.setTarget(hit); this.goTo(hit.cx, hit.by + 14); }
+      else { this.clearTarget(); this.goTo(wx, wy); this.tryPickup(wx, wy, 20); }
+    });
+    // clic sostenido: el granjero sigue el cursor (igual que en la granja)
+    this.input.on("pointermove", (pt) => {
+      if (GF.uiOpen || !this.hold || !pt.isDown || pt.rightButtonDown()) return;
+      if (!this.hold.active && Math.hypot(pt.x - this.hold.sx, pt.y - this.hold.sy) < 16) return;
+      if (!this.hold.active) { if (this.action) return; this.hold.active = true; }
+      this.holdSeek(pt.worldX, pt.worldY);
+    });
+    this.input.on("pointerup", () => {
+      if (this.hold && this.hold.active && this.holdPend) { const p = this.holdPend; this.holdPend = null; this.holdSeek(p.x, p.y); }
+      this.hold = null;
     });
 
     this.cameras.main.setBounds(0, 0, this.W, this.H);
@@ -82,10 +97,38 @@ class ForestScene extends Phaser.Scene {
     refreshHud();
   }
 
+  // pathfinding A* (módulo compartido con la Granja — nav.js)
+  navOf() { if (!this._nav) this._nav = new GF.Nav((x, y, p) => this.blockedAt(x, y, p), this.W, this.H); return this._nav; }
+  goTo(x, y, silent) {
+    const p = this.navOf().find(this.hero.x, this.hero.y, x, y);
+    if (!p) { this.path = null; this.moveTarget = null; if (!silent) toast("🚫 No hay camino hasta ahí"); return false; }
+    this.path = p.slice(); this.moveTarget = this.path.shift();
+    return true;
+  }
+  holdSeek(wx, wy) {
+    if (this.action) return;
+    const t = nowMs();
+    if (this.holdLast && Math.hypot(wx - this.holdLast.x, wy - this.holdLast.y) < 10 && t - (this.holdAt || 0) < 130) { this.holdPend = { x: wx, y: wy }; return; }
+    this.holdLast = { x: wx, y: wy }; this.holdAt = t; this.holdPend = null;
+    if (this.navOf().lineFree(this.hero.x, this.hero.y, wx, wy)) { this.path = null; this.moveTarget = { x: wx, y: wy }; }
+    else this.goTo(wx, wy, true);
+    this.showDest(wx, wy);
+  }
+  showDest(x, y) {
+    if (!this.destMk) {
+      this.destMk = this.add.circle(x, y, 5, 0xffe9a8, 0.5).setStrokeStyle(2, 0xfff3cf, 0.95).setDepth(99997);
+      this.tweens.add({ targets: this.destMk, scale: { from: 0.7, to: 1.25 }, alpha: { from: 1, to: 0.45 }, yoyo: true, repeat: -1, duration: 480 });
+    }
+    this.destMk.setPosition(x, y).setVisible(true);
+  }
+  hideDest() { if (this.destMk) this.destMk.setVisible(false); }
+
   blockedAt(x, y, pad) {
     pad = pad || 0;
     if (x < 12 || y < 12 || x > this.W - 12 || y > this.H - 12) return true;
-    for (const c of this.treeCols) { const dx = (x - c.cx) / (c.rx + pad), dy = (y - c.cy) / (c.ry + pad); if (dx * dx + dy * dy < 1) return true; }
+    for (const c of this.treeCols) {
+      if (x > c.cx - c.hw - pad && x < c.cx + c.hw + pad && y > c.by - c.dep - pad && y < c.by + pad) return true;
+    }
     return false;
   }
 
@@ -128,36 +171,47 @@ class ForestScene extends Phaser.Scene {
   }
 
   /* ---- loot en el piso: se recoge pisándolo o con un clic (detalles 338) ---- */
-  dropLoot(m, loot) {
-    const keys = Object.keys(loot);
-    keys.forEach((k, i) => {
-      const ang = (i / Math.max(1, keys.length)) * Math.PI * 2 + Math.random();
-      const gx = Phaser.Math.Clamp(m.cx + Math.cos(ang) * (10 + Math.random() * 14), 20, this.W - 20);
-      const gy = Phaser.Math.Clamp(m.by + Math.sin(ang) * (7 + Math.random() * 10), 30, this.H - 20);
-      const sk = k === "plata" ? "coin_plata" : (typeof resSprite === "function" ? resSprite(k) : null);
-      let s;
-      if (sk && this.textures.exists(sk)) { s = this.add.image(gx, gy, sk).setOrigin(0.5, 1); s.setScale(17 / s.width); }
-      else s = this.add.text(gx, gy, k === "plata" ? "🪙" : (RES_EMOJI[k] || "❔"), { fontSize: "15px" }).setOrigin(0.5, 1);
-      s.setDepth(gy).setAlpha(0);
-      this.tweens.add({ targets: s, alpha: 1, duration: 220 });
-      this.tweens.add({ targets: s, y: gy - 3, yoyo: true, repeat: -1, duration: 760, ease: "Sine.easeInOut" });
-      this.ground.push({ x: gx, y: gy, k, n: loot[k], spr: s });
+  dropSprite(g) {
+    const sk = g.kind === "gear" ? (GEAR_DEF[g.k] && GEAR_DEF[g.k].sprite)
+      : (g.k === "plata" ? "coin_plata" : (typeof resSprite === "function" ? resSprite(g.k) : null));
+    const emo = g.kind === "gear" ? ((GEAR_DEF[g.k] && GEAR_DEF[g.k].emoji) || "🛡️") : (g.k === "plata" ? "🪙" : (RES_EMOJI[g.k] || "❔"));
+    let s;
+    if (sk && this.textures.exists(sk)) { s = this.add.image(g.x, g.y, sk).setOrigin(0.5, 1); s.setScale(19 / s.width); }
+    else s = this.add.text(g.x, g.y, emo, { fontSize: "15px" }).setOrigin(0.5, 1);
+    s.setDepth(g.y).setAlpha(0);
+    this.tweens.add({ targets: s, alpha: 1, duration: 220 });
+    this.tweens.add({ targets: s, y: g.y - 3, yoyo: true, repeat: -1, duration: 760, ease: "Sine.easeInOut" });
+    if (g.kind === "gear") s.setTint ? s.setTint(0xfff0c0) : null;   // las armaduras destacan
+    return s;
+  }
+  dropLoot(m, entries) {
+    entries.forEach((e, i) => {
+      const ang = (i / Math.max(1, entries.length)) * Math.PI * 2 + Math.random();
+      const g = {
+        x: Phaser.Math.Clamp(m.cx + Math.cos(ang) * (10 + Math.random() * 14), 20, this.W - 20),
+        y: Phaser.Math.Clamp(m.by + Math.sin(ang) * (7 + Math.random() * 10), 30, this.H - 20),
+        k: e.k, n: e.n, kind: e.kind || "res",
+      };
+      g.spr = this.dropSprite(g);
+      GF.forestDrops.push(g);
     });
   }
   tryPickup(x, y, rad) {
-    if (!this.ground || !this.ground.length) return;
-    for (let i = this.ground.length - 1; i >= 0; i--) {
-      const g = this.ground[i];
+    const gd = GF.forestDrops;
+    if (!gd || !gd.length) return;
+    for (let i = gd.length - 1; i >= 0; i--) {
+      const g = gd[i];
       if (Math.hypot(g.x - x, g.y - y) > rad) continue;
-      let ok = false;
-      if (g.k === "plata") { G.plata += g.n; ok = true; }
-      else ok = tryAddRes(g.k, g.n);
+      let ok = false, label = "";
+      if (g.kind === "gear") { gainGear(g.k); ok = true; label = (GEAR_DEF[g.k] && GEAR_DEF[g.k].label) || "equipo"; }
+      else if (g.k === "plata") { G.plata += g.n; ok = true; label = g.n + " 🪙"; }
+      else { ok = tryAddRes(g.k, g.n); label = g.n + " " + (RES_EMOJI[g.k] || ""); }
       if (!ok) { toast("🎒 Bolsa llena"); continue; }
       if (window.sfx) sfx("coin");
-      toast("+" + g.n + " " + (g.k === "plata" ? "🪙" : (RES_EMOJI[g.k] || "")));
-      const s = g.spr; this.tweens.killTweensOf(s);
-      this.tweens.add({ targets: s, y: s.y - 16, alpha: 0, duration: 260, onComplete: () => s.destroy() });
-      this.ground.splice(i, 1);
+      if (g.kind !== "gear") toast("+" + label);
+      const s = g.spr;
+      if (s) { this.tweens.killTweensOf(s); this.tweens.add({ targets: s, y: s.y - 16, alpha: 0, duration: 260, onComplete: () => s.destroy() }); }
+      gd.splice(i, 1);
       refreshHud(); if (typeof syncSlots === "function") syncSlots(); if (isOpen("ov-inv")) refreshInv();
     }
   }
@@ -227,11 +281,13 @@ class ForestScene extends Phaser.Scene {
     m.dead = true; m.bar.clear();
     addXp(skill || "sword", m.def.xp);
     // armaduras: chance de drop (se autoequipan si mejoran)
-    if (m.def.gearLoot) for (const [gk, ch] of m.def.gearLoot) { if (Math.random() < ch) gainGear(gk); }
+    const drops = [];
+    if (m.def.gearLoot) for (const [gk, ch] of m.def.gearLoot) { if (Math.random() < ch) drops.push({ k: gk, n: 1, kind: "gear" }); }
     if (this.target === m) this.clearTarget();
     const loot = rollLoot(m.def);
-    const parts = Object.keys(loot).map(k => "+" + loot[k] + " " + (k === "plata" ? "🪙" : (RES_EMOJI[k] || "")));
-    this.dropLoot(m, loot);   // el botín cae al piso, no a la bolsa (detalles 338)
+    Object.keys(loot).forEach(k => drops.push({ k, n: loot[k], kind: "res" }));
+    const parts = drops.map(d => d.kind === "gear" ? "🛡️ " + ((GEAR_DEF[d.k] && GEAR_DEF[d.k].label) || d.k) : "+" + d.n + " " + (d.k === "plata" ? "🪙" : (RES_EMOJI[d.k] || "")));
+    this.dropLoot(m, drops);   // todo el botín cae al piso, armaduras incluidas (detalles 338)
     log("⚔️ Venciste a " + m.def.label + (parts.length ? ". Soltó: " + parts.join(" · ") : ". No soltó nada."), "gold");
     toast("⚔️ " + m.def.label + " ✔" + (parts.length ? " " + parts.join(" ") : ""));
     refreshHud();
@@ -272,6 +328,8 @@ class ForestScene extends Phaser.Scene {
     this.updateTargetFx();
     this.autoAttack(t);
     this.tryPickup(hero.x, hero.y, 24);   // recoger el loot del piso al pasar por encima
+    if (this.hold && this.hold.active && this.holdPend && t - (this.holdAt || 0) > 130) { const hp = this.holdPend; this.holdPend = null; this.holdSeek(hp.x, hp.y); }
+    if (!this.moveTarget && this.destMk && this.destMk.visible) this.hideDest();
 
     // acción de ataque (cuerpo a cuerpo o disparo)
     if (this.action) {
@@ -302,20 +360,46 @@ class ForestScene extends Phaser.Scene {
     if (!GF.uiOpen) {
       if (k.left.isDown || k.aleft.isDown) vx = -1; else if (k.right.isDown || k.aright.isDown) vx = 1;
       if (k.up.isDown || k.aup.isDown) vy = -1; else if (k.down.isDown || k.adown.isDown) vy = 1;
-      if (vx || vy) this.moveTarget = null;
-      else if (this.moveTarget) { const dx = this.moveTarget.x - hero.x, dy = this.moveTarget.y - hero.y, d = Math.hypot(dx, dy); if (d < 4) this.moveTarget = null; else { vx = dx / d; vy = dy / d; } }
+      if (vx || vy) { this.moveTarget = null; this.path = null; }
+      else if (this.moveTarget) {
+        const dx = this.moveTarget.x - hero.x, dy = this.moveTarget.y - hero.y, d = Math.hypot(dx, dy);
+        if (d < 5) {
+          this.moveTarget = (this.path && this.path.length) ? this.path.shift() : null;
+          if (this.moveTarget) { const dx2 = this.moveTarget.x - hero.x, dy2 = this.moveTarget.y - hero.y, d2 = Math.hypot(dx2, dy2) || 1; vx = dx2 / d2; vy = dy2 / d2; }
+        } else { vx = dx / d; vy = dy / d; }
+      }
     }
     const moving = !!(vx || vy);
     if (moving) {
       const m = Math.hypot(vx, vy); vx /= m; vy /= m;
       const step = GF.SPEED * dt, nx = hero.x + vx * step, ny = hero.y + vy * step;
-      if (!this.blockedAt(nx, ny, 6)) { hero.x = nx; hero.y = ny; }
-      else { if (vx && !this.blockedAt(nx, hero.y, 6)) hero.x = nx; if (vy && !this.blockedAt(hero.x, ny, 6)) hero.y = ny; }
+      let moved = false;
+      if (!this.blockedAt(nx, ny, 6)) { hero.x = nx; hero.y = ny; moved = true; }
+      else { if (vx && !this.blockedAt(nx, hero.y, 6)) { hero.x = nx; moved = true; } if (vy && !this.blockedAt(hero.x, ny, 6)) { hero.y = ny; moved = true; } }
+      if (!moved) {
+        const base = Math.atan2(vy, vx);
+        for (const off of [0.5, -0.5, 1.0, -1.0, 1.571, -1.571, 2.1, -2.1]) {
+          const a = base + off, sx = hero.x + Math.cos(a) * step, sy = hero.y + Math.sin(a) * step;
+          if (!this.blockedAt(sx, sy, 6)) { hero.x = sx; hero.y = sy; moved = true; break; }
+        }
+      }
+      if (moved) this.pathStuck = 0;
+      else if (this.moveTarget) {
+        this.pathStuck = (this.pathStuck || 0) + 1;
+        const dest = (this.path && this.path.length) ? this.path[this.path.length - 1] : this.moveTarget;
+        this.navOf().invalidate();
+        if (this.pathStuck > 2 || !this.goTo(dest.x, dest.y, true)) { this.moveTarget = null; this.path = null; this.pathStuck = 0; }
+      }
       if (vx < 0) this.facing = "west"; else if (vx > 0) this.facing = "east";
     }
 
     // salir por la izquierda
-    if (hero.x < 40) { if (typeof saveFarm === "function") saveFarm(); this.scene.start("farm"); return; }
+    if (hero.x < 40) {
+      const left = (GF.forestDrops || []).length;
+      if (left) { log("🎒 Dejaste " + left + " objeto(s) en el suelo del Bosque — siguen ahí si volvés.", "bad"); toast("🎒 Dejaste " + left + " objeto(s) en el suelo"); }
+      if (typeof saveFarm === "function") saveFarm();
+      this.scene.start("farm"); return;
+    }
 
     // perseguir el objetivo clickeado: con arco dispara de lejos, si no ataca al llegar
     if (this.target && !this.target.dead) {
