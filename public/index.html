@@ -8,6 +8,11 @@
   :root{--panel:#fffaf0;--ink:#2e2a1f;--muted:#8a7f66;--gold:#e2b23a;--gold-deep:#b9860b;--green:#5a8a3c;--red:#c0503a;--line:#e2d6b8;}
   *{box-sizing:border-box}
   html,body{margin:0;padding:0;height:100%;overflow:hidden;background:#243318;color:#f4ecd9;font-family:"Segoe UI",system-ui,sans-serif;-webkit-font-smoothing:antialiased}
+  /* nada de seleccionar texto en la interfaz (el cursor no cambia a I sobre las letras) */
+  body{user-select:none;-webkit-user-select:none;cursor:default}
+  body *{cursor:inherit}
+  button,.gmi,.slot[draggable=true],.hcell,.swi,.curbtn,.shoptab,.lbtab,.ltab,.close,a{cursor:pointer}
+  input,textarea{user-select:text;-webkit-user-select:text;cursor:text}
   #game{position:fixed;inset:0}
   #game canvas{display:block}
 
@@ -35,7 +40,8 @@
 
   .ov{position:fixed;inset:0;z-index:10;display:none;pointer-events:none}
   .ov.show{display:block}
-  .card{background:var(--panel);color:var(--ink);border-radius:16px;padding:18px 20px;width:min(440px,92%);box-shadow:0 20px 50px rgba(0,0,0,.4);border:1px solid var(--line);position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);pointer-events:auto}
+  .card{background:#f6edd8;background-clip:padding-box;color:var(--ink);padding:14px 16px;width:min(440px,92%);box-shadow:0 20px 50px rgba(0,0,0,.45);position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);pointer-events:auto;
+    border:22px solid transparent;border-image:url("assets/farm/gf_panel_cozy.png?a=4") 48 round;image-rendering:pixelated}
   .card h3{margin:0 0 4px;font-size:18px;color:var(--gold-deep);cursor:move;user-select:none}
   .card .sub{font-size:12px;color:var(--muted);margin-bottom:12px}
   .row{display:flex;gap:8px;flex-wrap:wrap;margin-top:10px}
@@ -45,7 +51,7 @@
   button.green{background:linear-gradient(#8fc46a,#6aa544);border-color:#3f6b28;color:#173208}
   button.gold{background:linear-gradient(#f6d878,#e9b93f)}
   button.sm{padding:6px 10px;font-size:13px}
-  .close{position:absolute;top:10px;right:12px;background:none;border:none;font-size:20px;color:var(--muted);cursor:pointer}
+  .close{position:absolute;top:-8px;right:-6px;background:none;border:none;font-size:20px;color:#5a3f1d;font-weight:800;cursor:pointer;text-shadow:0 1px 0 rgba(255,235,190,.6)}
   .cost{font-size:13px;color:var(--muted);margin-top:6px}
   .cost .miss{color:var(--red);font-weight:700} .cost b{color:var(--ink)}
   .lvlbar{height:12px;background:#eee4cc;border-radius:8px;overflow:hidden;border:1px solid var(--line);margin-top:10px}
