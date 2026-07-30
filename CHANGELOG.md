@@ -144,12 +144,18 @@ Registro cronológico de todo lo hecho desde el inicio del proyecto (27 de julio
 - Ventanas tipo Tienda: **pestañas Comprar/Vender con el diseño de las píldoras de la barra superior** (badge_wood), y el contenido agrupado dentro de una **tabla interior** con marco de placa.
 - Refinado tras feedback: fondo de la tabla interior **continuo** (tile seamless del interior de la placa, `badge_bg.png`), pestañas **pegadas al borde superior** de la tabla (borde inferior cortado, se funden con la placa) y botones en **9-slice** para que no se deformen. Aplicado también a Herrería, Leaderboard y botones de moneda.
 
+### Granjero definitivo integrado (30/7)
+- **Granjero Golden definitivo** (PixelLab, 120px, estilo cozy chibi) reemplaza al granjero anterior en Granja, Bosque y Plaza.
+- Animaciones nuevas: quieto (4f), caminar (6f), talar/picar/plantar/cosechar (9f), **pescar con tirón de caña** (9f, venía mirando al suroeste y se espejó a sureste como el resto), **espadazo horizontal con estela de velocidad** (8f) y **disparo de arco** (8f, arco y flecha ya en mano — sin aparecer de la nada). Regar mantiene el arte anterior.
+- Frames recortados por animación con caja común (alineación estable); claves `hero_*` para no chocar con el atlas viejo.
+- Bosque: el ataque cuerpo a cuerpo reproduce el espadazo y el disparo la animación del arco (el arma dibujada queda como respaldo a puños). El dummy de práctica también usa el espadazo.
+
 ---
 
 ## Pendientes conocidos
 - Vestir con madera: panel de registro/chat, toasts y prompts.
 - Generaciones supervisadas restantes: portal al bosque, 7 íconos de skills, retoque de lingotes bronce/oro, fuego animado de la herrería (experimental).
 - En espera del diseñador: lombrices (pesca), cerca premium, tabla de stats del bestiario, tiempos de cultivo reales.
-- Bloque grande diferido: granjero definitivo + animaciones, 6 monstruos del bosque, jabalí.
+- Bloque grande diferido: jabalí (granjero definitivo ✔ integrado 30/7; 6 monstruos del bosque ✔).
 - Código: bolsa a 20 espacios (falta confirmar layout), fondo del Bosque en damero oscuro.
 - Pilares futuros: login por email multi-dispositivo, PvP/endgame de netherita, referidos, token $Golden, audio.

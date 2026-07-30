@@ -39,7 +39,7 @@ class PlazaScene extends Phaser.Scene {
   }
 
   makeFarmer(x, y, name, mine) {
-    const s = this.add.sprite(x, y, "idle_0").setOrigin(0.5, 0.92);
+    const s = this.add.sprite(x, y, "hero_idle_0").setOrigin(0.5, 0.92);
     s.setScale(GF.SIZE.hero / s.height);
     s.baseScaleX = Math.abs(s.scaleX);
     s.play("idle");

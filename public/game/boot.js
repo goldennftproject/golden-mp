@@ -6,11 +6,15 @@ class BootScene extends Phaser.Scene {
   // lista completa [clave, archivo] de todo lo que el juego necesita
   assetList() {
     const P = "assets/farm/", L = [];
-    for (let i = 0; i < 4; i++) L.push(["walk_" + i, P + "walk_se_" + i + ".png"]);
-    for (let i = 0; i < 4; i++) L.push(["idle_" + i, P + "breathe_se_" + i + ".png"]);
-    ["chop","mine","fish","water","plant","harvest"].forEach(a => {
-      for (let i = 0; i < 7; i++) L.push(["act_" + a + "_" + i, P + "act_" + a + "_" + i + ".png"]);
+    // granjero definitivo (PixelLab 30/7): mira al sureste, se espeja por código. Pescar venía al suroeste y se espejó a sureste.
+    for (let i = 0; i < 4; i++) L.push(["hero_idle_" + i, P + "hero_idle_" + i + ".png"]);
+    for (let i = 0; i < 6; i++) L.push(["hero_walk_" + i, P + "hero_walk_" + i + ".png"]);
+    ["chop","mine","fish","plant","harvest"].forEach(a => {
+      for (let i = 0; i < 9; i++) L.push(["hero_" + a + "_" + i, P + "hero_" + a + "_" + i + ".png"]);
     });
+    for (let i = 0; i < 8; i++) L.push(["hero_sword_" + i, P + "hero_sword_" + i + ".png"]);   // espadazo horizontal con estela
+    for (let i = 0; i < 8; i++) L.push(["hero_bow_" + i, P + "hero_bow_" + i + ".png"]);       // disparo de arco (arco ya en mano)
+    for (let i = 0; i < 7; i++) L.push(["act_water_" + i, P + "act_water_" + i + ".png"]);     // regar sigue con el arte anterior
     L.push(["boar", P + "boar.png"]);
     // orco del Bosque: sprite animado (mira al sureste, se espeja para el otro lado)
     for (let i = 0; i < 3; i++) L.push(["orc_idle_" + i, P + "orc_idle_" + i + ".png"]);
@@ -33,6 +37,10 @@ class BootScene extends Phaser.Scene {
     for (let i = 0; i < 4; i++) L.push(["lancero_idle_" + i, P + "lancero_idle_" + i + ".png"]);
     for (let i = 0; i < 7; i++) L.push(["lancero_walk_" + i, P + "lancero_walk_" + i + ".png"]);
     for (let i = 0; i < 7; i++) L.push(["lancero_atk_" + i, P + "lancero_atk_" + i + ".png"]);
+    // orco guerrero del Bosque (variante blindada con espada): quieto 4f, caminar 7f, atacar 9f. Se espeja por código.
+    for (let i = 0; i < 4; i++) L.push(["guerrero_idle_" + i, P + "guerrero_idle_" + i + ".png"]);
+    for (let i = 0; i < 7; i++) L.push(["guerrero_walk_" + i, P + "guerrero_walk_" + i + ".png"]);
+    for (let i = 0; i < 9; i++) L.push(["guerrero_atk_" + i, P + "guerrero_atk_" + i + ".png"]);
     ["fish_comun","fish_raro"].forEach(k => L.push([k, P + k + ".png"]));   // pececitos de la laguna
     ["sword","bow"].forEach(k => L.push([k, P + k + ".png"]));   // arma visible al atacar en el Bosque
     L.push(["cocina", P + "cocina.png"]);   // edificio de Cocina (detalles 29/7)
@@ -120,20 +128,30 @@ class BootScene extends Phaser.Scene {
 
   buildAnims() {
     const has = ks => ks.every(k => this.textures.exists(k));
-    if (has(["walk_0","walk_1","walk_2","walk_3"]))
-      this.anims.create({ key: "walk", frames: [0,1,2,3].map(i => ({ key: "walk_" + i })), frameRate: 9, repeat: -1 });
-    if (has(["idle_0","idle_1","idle_2","idle_3"]))
-      this.anims.create({ key: "idle", frames: [0,1,2,3].map(i => ({ key: "idle_" + i })), frameRate: 4, repeat: -1 });
-    ["chop","mine","fish","water","plant","harvest"].forEach(a => {
-      const ks = [0,1,2,3,4,5,6].map(i => "act_" + a + "_" + i);
+    if (has([0,1,2,3,4,5].map(i => "hero_walk_" + i)))
+      this.anims.create({ key: "walk", frames: [0,1,2,3,4,5].map(i => ({ key: "hero_walk_" + i })), frameRate: 10, repeat: -1 });
+    if (has(["hero_idle_0","hero_idle_1","hero_idle_2","hero_idle_3"]))
+      this.anims.create({ key: "idle", frames: [0,1,2,3].map(i => ({ key: "hero_idle_" + i })), frameRate: 4, repeat: -1 });
+    // acciones del granjero definitivo (9 frames cada una)
+    ["chop","mine","fish","plant","harvest"].forEach(a => {
+      const ks = [0,1,2,3,4,5,6,7,8].map(i => "hero_" + a + "_" + i);
       if (has(ks)) this.anims.create({ key: "act_" + a, frames: ks.map(k => ({ key: k })), frameRate: 10, repeat: -1 });
     });
+    // regar mantiene el arte anterior (7 frames)
+    { const ks = [0,1,2,3,4,5,6].map(i => "act_water_" + i);
+      if (has(ks)) this.anims.create({ key: "act_water", frames: ks.map(k => ({ key: k })), frameRate: 10, repeat: -1 }); }
+    // combate: espadazo y arco (una pasada por golpe)
+    { const ks = [0,1,2,3,4,5,6,7].map(i => "hero_sword_" + i);
+      if (has(ks)) this.anims.create({ key: "act_sword", frames: ks.map(k => ({ key: k })), frameRate: 18, repeat: 0 }); }
+    { const ks = [0,1,2,3,4,5,6,7].map(i => "hero_bow_" + i);
+      if (has(ks)) this.anims.create({ key: "act_bow", frames: ks.map(k => ({ key: k })), frameRate: 24, repeat: 0 }); }   // 8f/24fps ≈ 0.33s: entra en el disparo de 0.35s
     // animaciones del orco y del troll (troll con idle de 4 frames)
     const mobs = { orc: [["idle", 3, 5, -1], ["walk", 6, 9, -1], ["atk", 6, 11, 0]],
                    troll: [["idle", 4, 4, -1], ["walk", 6, 8, -1], ["atk", 6, 10, 0]],
                    rata: [["idle", 8, 6, -1], ["walk", 6, 11, -1], ["atk", 7, 12, 0]],
                    larva: [["idle", 8, 5, -1], ["walk", 8, 8, -1], ["atk", 8, 10, 0]],
-                   lancero: [["idle", 4, 5, -1], ["walk", 7, 9, -1], ["atk", 7, 11, 0]] };
+                   lancero: [["idle", 4, 5, -1], ["walk", 7, 9, -1], ["atk", 7, 11, 0]],
+                   guerrero: [["idle", 4, 5, -1], ["walk", 7, 9, -1], ["atk", 9, 12, 0]] };
     Object.entries(mobs).forEach(([pre, defs]) => {
       defs.forEach(([nm, n, fps, rep]) => {
         const ks = Array.from({ length: n }, (_, i) => pre + "_" + nm + "_" + i);

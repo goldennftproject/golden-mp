@@ -184,9 +184,10 @@ class FarmScene extends Phaser.Scene {
     this.nextThreatAt = nowMs() + 45000;
 
     // personaje
-    const hero = this.add.sprite(470, 320, "idle_0").setOrigin(0.5, 1);
+    const hero = this.add.sprite(470, 320, "hero_idle_0").setOrigin(0.5, 1);
     this.idleScale = GF.SIZE.hero / hero.height;
-    this.actScale = GF.SIZE.hero / 47;
+    // el granjero definitivo comparte escala de cuerpo entre quieto y acciones (mismo lienzo PixelLab)
+    this.actScale = this.idleScale;
     hero.setScale(this.idleScale);
     hero.play("idle");
     this.hero = hero; this.facing = "east"; this.moveTarget = null; this.path = null; this.action = null; this.pendingObj = null;
@@ -736,7 +737,11 @@ class FarmScene extends Phaser.Scene {
     const sign = this.hero.x <= o.cx ? 1 : -1;
     const swing = () => {
       hits++;
-      if (this.textures.exists("sword")) {
+      // espadazo del granjero definitivo (con estela); respaldo: la espada dibujada como antes
+      if (this.anims.exists("act_sword")) {
+        this.hero.setScale(sign * this.actScale, this.actScale);
+        this.hero.play("act_sword");
+      } else if (this.textures.exists("sword")) {
         const fx = this.add.image(o.cx - sign * 20, o.by - 30, "sword").setDisplaySize(24, 24).setOrigin(0.5, 0.85).setDepth(o.by + 1).setAngle(-65 * sign);
         this.tweens.add({ targets: fx, angle: 70 * sign, duration: 190, onComplete: () => fx.destroy() });
       }
@@ -1171,7 +1176,11 @@ class FarmScene extends Phaser.Scene {
     const sign = this.facing === "west" ? -1 : 1;
     hero.setScale(sign * this.idleScale, this.idleScale);
     if (moving) { if (hero.anims.currentAnim?.key !== "walk") hero.play("walk"); }
-    else { if (hero.anims.currentAnim?.key !== "idle") hero.play("idle"); }
+    else {
+      const cur = hero.anims.currentAnim?.key;
+      // dejar terminar el espadazo del dummy (una pasada) antes de volver a quieto
+      if (cur !== "idle" && !(cur === "act_sword" && hero.anims.isPlaying)) hero.play("idle");
+    }
     hero.setDepth(hero.y);
 
     this.updatePrompt();

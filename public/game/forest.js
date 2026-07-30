@@ -49,9 +49,9 @@ class ForestScene extends Phaser.Scene {
     zones.forEach(([key, x0, x1, n]) => { for (let i = 0; i < n; i++) this.spawnMonster(key, x0, x1); });
 
     // héroe
-    const hero = this.add.sprite(90, this.H / 2, "idle_0").setOrigin(0.5, 1);
+    const hero = this.add.sprite(90, this.H / 2, "hero_idle_0").setOrigin(0.5, 1);
     this.idleScale = GF.SIZE.hero / hero.height;
-    this.actScale = GF.SIZE.hero / 47;
+    this.actScale = this.idleScale;   // granjero definitivo: misma escala de cuerpo en quieto y acciones
     hero.setScale(this.idleScale); hero.play("idle");
     this.hero = hero; this.facing = "east"; this.moveTarget = null; this.action = null; this.hurtFx = 0;
     // igual que en la granja: al reiniciar la escena hay que soltar lo cacheado
@@ -382,16 +382,21 @@ class ForestScene extends Phaser.Scene {
       this.action.t += dt;
       const sign = this.facing === "west" ? -1 : 1;
       hero.setScale(sign * this.actScale, this.actScale);
-      // el golpe muestra el ARMA equipada (espada o arco), no el hacha (detalles 29/7)
-      if (hero.anims.currentAnim?.key !== "idle") hero.play("idle");
+      // el golpe usa la ANIMACIÓN del arma equipada: espadazo con estela o disparo de arco (PixelLab 30/7)
       if (!this.action.fx) {
-        const wkey = this.action.kind === "shoot" ? "bow" : (G.gear.arma === "sword" ? "sword" : null);   // sin espada equipada pelea a puños (sin fx)
-        if (wkey && this.textures.exists(wkey)) {
-          const fx = this.add.image(hero.x + sign * 18, hero.y - 26, wkey).setDisplaySize(26, 26).setOrigin(0.5, 0.85).setDepth(hero.y + 1);
-          this.action.fx = fx;
-          if (this.action.kind === "shoot") { fx.setFlipX(sign < 0); this.time.delayedCall(this.action.dur * 1000, () => fx.destroy()); }
-          else { fx.setAngle(sign * -70); this.tweens.add({ targets: fx, angle: sign * 75, duration: Math.min(280, this.action.dur * 1000), onComplete: () => fx.destroy() }); }
-        } else this.action.fx = true;
+        const akey = this.action.kind === "shoot" ? "act_bow" : (G.gear.arma === "sword" ? "act_sword" : null);
+        if (akey && this.anims.exists(akey)) { hero.play(akey); this.action.fx = true; }
+        else {
+          // respaldo (a puños o sin animación): el arma dibujada a mano como antes
+          if (hero.anims.currentAnim?.key !== "idle") hero.play("idle");
+          const wkey = this.action.kind === "shoot" ? "bow" : (G.gear.arma === "sword" ? "sword" : null);
+          if (wkey && this.textures.exists(wkey)) {
+            const fx = this.add.image(hero.x + sign * 18, hero.y - 26, wkey).setDisplaySize(26, 26).setOrigin(0.5, 0.85).setDepth(hero.y + 1);
+            this.action.fx = fx;
+            if (this.action.kind === "shoot") { fx.setFlipX(sign < 0); this.time.delayedCall(this.action.dur * 1000, () => fx.destroy()); }
+            else { fx.setAngle(sign * -70); this.tweens.add({ targets: fx, angle: sign * 75, duration: Math.min(280, this.action.dur * 1000), onComplete: () => fx.destroy() }); }
+          } else this.action.fx = true;
+        }
       }
       if (this.action.t >= this.action.dur) {
         const a = this.action; this.action = null;
