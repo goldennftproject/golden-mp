@@ -40,7 +40,7 @@
 
   .ov{position:fixed;inset:0;z-index:10;display:none;pointer-events:none}
   .ov.show{display:block}
-  .card{background:#f8efdb;background-clip:padding-box;border-radius:20px;color:var(--ink);padding:14px 16px;width:min(440px,92%);box-shadow:0 20px 50px rgba(0,0,0,.45);position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);pointer-events:auto;
+  .card{background:#7a5127 url("assets/ui/wood_bg.png?a=4") repeat;background-size:215px auto;background-clip:padding-box;border-radius:26px;color:#f2e6c4;padding:14px 16px;width:min(440px,92%);box-shadow:0 20px 50px rgba(0,0,0,.45);position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);pointer-events:auto;
     border:18px solid transparent;border-image:url("assets/ui/panel_wood.png?a=4") 30 round;image-rendering:pixelated}
   .card h3{margin:0 0 4px;font-size:18px;color:var(--gold-deep);cursor:move;user-select:none}
   .card .sub{font-size:12px;color:var(--muted);margin-bottom:12px}
@@ -237,9 +237,18 @@
   .gmi{background:url("assets/ui/btn_wood.png") center/100% 100% no-repeat;border:none;border-radius:0;color:#2e1c06;text-shadow:0 1px 0 rgba(255,240,200,.35);image-rendering:pixelated}
   .gmi:hover{filter:brightness(1.12)}
   .gmi b.key{background:rgba(58,40,16,.85);border:1px solid #7a5a2c;color:#f2e2b8}
-  /* títulos de ventana como placa de madera */
-  .card h3{background:url("assets/ui/badge_wood.png") center/100% 100% no-repeat;image-rendering:pixelated;color:#f7ecd2 !important;text-shadow:0 1px 0 rgba(0,0,0,.5);display:block;width:fit-content;margin:-4px auto 10px;padding:8px 26px;font-size:17px}
-  .card .sub{color:#8a7a56;text-align:center}
+  /* títulos y textos sobre la madera: crema con sombra, sin placas */
+  .card h3{background:none;color:#ffe9ac !important;text-shadow:0 2px 0 rgba(40,22,6,.55);display:block;text-align:center;margin:-2px 0 8px;padding:2px 0;font-size:18px}
+  .card .sub{color:#eedeb2;text-align:center}
+  .cost{color:#eedeb2}
+  .cost b{color:#fff3cf}
+  .cost .miss{color:#ff9d8a}
+  .shophead,.eqh{color:#ffe9ac}
+  #inv-cap,#inv-selseed,#cofre-info{color:#eedeb2}
+  #inv-trash{border-color:#caa25c;color:#f2dfae}
+  .invexp .exmax{color:#e2cf9e}
+  /* el contenido de filas y listas mantiene tinta oscura sobre pergamino */
+  .forge-row,.mkt-row,.skrow,.lbrow{color:var(--ink)}
   /* filas y listas en pergamino cálido, nada de blanco pelado */
   .forge-row,.mkt-row{background:#f2e5c4;border:2px solid #d9c290;border-radius:10px}
   .skrow{background:#f2e5c4;border:2px solid #d9c290;border-radius:10px}
