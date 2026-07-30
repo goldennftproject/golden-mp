@@ -139,18 +139,35 @@ class ForestScene extends Phaser.Scene {
     const def = MONSTER_DEF[key];
     const cx = this.W * (x0 + Math.random() * (x1 - x0));
     const by = 70 + Math.random() * (this.H - 120);
-    const spr = this.add.text(cx, by, def.emoji, { fontSize: Math.round(20 + def.hp / 12) + "px" }).setOrigin(0.5, 1).setDepth(by);
+    let spr, baseScale = 1;
+    if (def.sprite && this.textures.exists(def.sprite + "_idle_0")) {   // sprite real con animaciones
+      spr = this.add.sprite(cx, by, def.sprite + "_idle_0").setOrigin(0.5, 1).setDepth(by);
+      baseScale = (def.size || 52) / spr.height;
+      spr.setScale(baseScale);
+      if (this.anims.exists(def.sprite + "_idle")) spr.play(def.sprite + "_idle");
+    } else {
+      spr = this.add.text(cx, by, def.emoji, { fontSize: Math.round(20 + def.hp / 12) + "px" }).setOrigin(0.5, 1).setDepth(by);
+    }
     const bar = this.add.graphics().setDepth(by + 1);
-    const m = { key, def, cx, by, hp: def.hp, spr, bar, dead: false, home: { x: cx, y: by }, tgt: null, nextHit: 0, wanderAt: 0 };
+    const m = { key, def, cx, by, hp: def.hp, spr, bar, baseScale, anim: "idle", dead: false, home: { x: cx, y: by }, tgt: null, nextHit: 0, wanderAt: 0 };
     this.drawBar(m);
     this.monsters.push(m);
     return m;
   }
 
+  // cambia la animación del monstruo solo cuando hace falta (evita reiniciarla cada frame)
+  playMob(m, kind, force) {
+    if (!m.def.sprite || !m.spr.play) return;
+    if (!force && m.anim === kind) return;
+    const key = m.def.sprite + "_" + kind;
+    if (!this.anims.exists(key)) return;
+    m.anim = kind; m.spr.play(key, !force);
+  }
+
   drawBar(m) {
     m.bar.clear();
     if (m.dead || m.hp >= m.def.hp) return;
-    const w = 30, x = m.cx - w / 2, y = m.by - m.spr.height - 8;
+    const w = 30, x = m.cx - w / 2, y = m.by - (m.spr.displayHeight || m.spr.height) - 8;
     m.bar.fillStyle(0x000000, 0.55).fillRect(x - 1, y - 1, w + 2, 5);
     m.bar.fillStyle(m.hp / m.def.hp > 0.4 ? 0x7ec95a : 0xd9534f, 1).fillRect(x, y, w * (m.hp / m.def.hp), 3);
   }
@@ -171,7 +188,7 @@ class ForestScene extends Phaser.Scene {
     const s = m.spr;
     let g;
     if (typeof s.text === "string") g = this.add.text(s.x, s.y, s.text, { fontSize: s.style.fontSize }).setOrigin(s.originX, s.originY);
-    else g = this.add.image(s.x, s.y, s.texture.key).setOrigin(s.originX, s.originY).setDisplaySize(s.displayWidth, s.displayHeight);
+    else { g = this.add.image(s.x, s.y, s.texture.key, s.frame.name).setOrigin(s.originX, s.originY); g.setScale(s.scaleX, s.scaleY); }
     g.setBlendMode(Phaser.BlendModes.ADD).setAlpha(0.4).setDepth(s.depth + 0.5);
     this.tgGlow = g;
     this.tgGlowTw = this.tweens.add({ targets: g, alpha: { from: 0.46, to: 0.18 }, yoyo: true, repeat: -1, duration: 620 });
@@ -186,7 +203,10 @@ class ForestScene extends Phaser.Scene {
     const m = this.target;
     if (!m || m.dead) { if (this.tgGlow || this.tgTxt) this.clearTarget(); return; }
     const s = m.spr, b = s.getBounds();
-    if (this.tgGlow) this.tgGlow.setPosition(s.x, s.y).setScale(s.scaleX, s.scaleY).setDepth(s.depth + 0.5);
+    if (this.tgGlow) {
+      this.tgGlow.setPosition(s.x, s.y).setScale(s.scaleX, s.scaleY).setDepth(s.depth + 0.5);
+      if (this.tgGlow.setFrame && s.frame && s.texture) { try { this.tgGlow.setTexture(s.texture.key, s.frame.name); } catch (e) {} }   // sigue el frame animado
+    }
     if (this.tgTxt) this.tgTxt.setPosition(m.cx, b.top - 7).setText(m.def.label + "  " + Math.max(0, Math.ceil(m.hp)) + "/" + m.def.hp).setVisible(true);
   }
 
@@ -271,7 +291,7 @@ class ForestScene extends Phaser.Scene {
     a.setScale(m.cx < this.hero.x ? -1 : 1, 1);
     const d = Math.hypot(m.cx - this.hero.x, m.by - this.hero.y);
     this.tweens.add({
-      targets: a, x: m.cx, y: m.by - m.spr.height * 0.5, duration: Math.max(120, d * 1.6),
+      targets: a, x: m.cx, y: m.by - (m.spr.displayHeight || m.spr.height) * 0.5, duration: Math.max(120, d * 1.6),
       onComplete: () => { a.destroy(); if (!m.dead) this.hitMonster(m, bowDmg(), "range"); },
     });
   }
@@ -282,7 +302,7 @@ class ForestScene extends Phaser.Scene {
     if (skill === "sword" && G.gear.arma === "sword" && toolDur("sword") > 0) { useTool("sword"); if (toolDur("sword") <= 0) { log("⚔️ ¡La espada se rompió! Reparala en la Herrería.", "bad"); toast("⚔️ ¡Espada rota!"); } }
     m.hp -= dmg;
     // chispa de golpe (detalles 338)
-    const hy = m.by - m.spr.height * 0.5;
+    const hy = m.by - (m.spr.displayHeight || m.spr.height) * 0.5;
     const flash = this.add.circle(m.cx, hy, 7, 0xffffff, 0.7).setDepth(99998);
     this.tweens.add({ targets: flash, scale: 2.2, alpha: 0, duration: 190, onComplete: () => flash.destroy() });
     for (let i = 0; i < 6; i++) {
@@ -290,9 +310,11 @@ class ForestScene extends Phaser.Scene {
       const sp = this.add.rectangle(m.cx, hy, 2, 2, i % 2 ? 0xfff3cf : 0xffc23a).setDepth(99999);
       this.tweens.add({ targets: sp, x: m.cx + Math.cos(a) * len, y: hy + Math.sin(a) * len, alpha: 0, duration: 240 + Math.random() * 120, onComplete: () => sp.destroy() });
     }
-    m.spr.setScale(1.18); this.tweens.add({ targets: m.spr, scale: 1, duration: 160 });
+    const bs = m.baseScale || 1, sgn = m.spr.scaleX < 0 ? -1 : 1;
+    m.spr.setScale(sgn * bs * 1.18, bs * 1.18);
+    this.tweens.add({ targets: m.spr, scaleX: sgn * bs, scaleY: bs, duration: 160 });
     // texto de daño flotante
-    const t = this.add.text(m.cx, m.by - m.spr.height, "-" + dmg, { fontFamily: "system-ui", fontSize: "13px", fontStyle: "bold", color: skill === "range" ? "#a8d8ff" : "#ffd24a", stroke: "#20301a", strokeThickness: 3 }).setOrigin(0.5, 1).setDepth(99999);
+    const t = this.add.text(m.cx, m.by - (m.spr.displayHeight || m.spr.height), "-" + dmg, { fontFamily: "system-ui", fontSize: "13px", fontStyle: "bold", color: skill === "range" ? "#a8d8ff" : "#ffd24a", stroke: "#20301a", strokeThickness: 3 }).setOrigin(0.5, 1).setDepth(99999);
     this.tweens.add({ targets: t, y: t.y - 18, alpha: 0, duration: 550, onComplete: () => t.destroy() });
     if (m.hp <= 0) this.killMonster(m, skill || "sword"); else { this.drawBar(m); m.tgt = "hero"; this.updateTargetFx(); }
   }
@@ -317,6 +339,8 @@ class ForestScene extends Phaser.Scene {
       if (!this.scene || !this.scene.isActive()) return;
       m.hp = m.def.hp; m.dead = false; m.cx = m.home.x; m.by = m.home.y;
       m.spr.setPosition(m.cx, m.by).setAlpha(1).setVisible(true).setDepth(m.by); m.tgt = null;
+      if (m.baseScale) m.spr.setScale(m.baseScale);
+      if (m.def.sprite) { m.anim = null; m.atkUntil = 0; this.playMob(m, "idle"); }
     });
   }
 
@@ -447,19 +471,27 @@ class ForestScene extends Phaser.Scene {
       if (m.dead) continue;
       const dHero = Math.hypot(hero.x - m.cx, hero.y - m.by);
       const aggro = m.hp < m.def.hp || dHero < 110;   // te vio o lo golpeaste
+      let moved = false;
       if (aggro && dHero > 34) {
         const dx = hero.x - m.cx, dy = hero.y - m.by, d = Math.hypot(dx, dy) || 1;
         const sp = m.def.spd * dt;
-        m.cx += dx / d * sp; m.by += dy / d * sp;
+        m.cx += dx / d * sp; m.by += dy / d * sp; moved = true;
       } else if (!aggro) {
         // deambular cerca de casa
         if (t > (m.wanderAt || 0)) { m.wanderAt = t + 2500 + Math.random() * 3000; m.wtgt = { x: m.home.x + (Math.random() - 0.5) * 120, y: m.home.y + (Math.random() - 0.5) * 90 }; }
-        if (m.wtgt) { const dx = m.wtgt.x - m.cx, dy = m.wtgt.y - m.by, d = Math.hypot(dx, dy); if (d > 3) { const sp = m.def.spd * 0.35 * dt; m.cx += dx / d * sp; m.by += dy / d * sp; } }
+        if (m.wtgt) { const dx = m.wtgt.x - m.cx, dy = m.wtgt.y - m.by, d = Math.hypot(dx, dy); if (d > 3) { const sp = m.def.spd * 0.35 * dt; m.cx += dx / d * sp; m.by += dy / d * sp; moved = true; } }
       }
       // ataque al héroe
-      if (dHero < 40 && t > m.nextHit) { m.nextHit = t + 1200; this.hurtHero(m.def.dmg); }
+      if (dHero < 40 && t > m.nextHit) {
+        m.nextHit = t + 1200; this.hurtHero(m.def.dmg);
+        if (m.def.sprite) { this.playMob(m, "atk", true); m.atkUntil = t + 600; }
+        if (this.leaving) return;
+      }
       m.spr.setPosition(m.cx, m.by).setDepth(m.by);
-      m.spr.setScale((hero.x < m.cx ? -1 : 1), 1);
+      const flip = hero.x < m.cx;   // el arte mira al sureste: se espeja para el suroeste
+      const bs = m.baseScale || 1;
+      m.spr.setScale((flip ? -1 : 1) * bs, bs);
+      if (m.def.sprite && t > (m.atkUntil || 0)) this.playMob(m, moved ? "walk" : "idle");
       this.drawBar(m);
     }
   }

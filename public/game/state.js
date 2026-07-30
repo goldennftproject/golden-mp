@@ -335,7 +335,7 @@ const MONSTER_ORDER = ["rata", "larva", "orco", "lancero", "guerrero", "troll"];
 const MONSTER_DEF = {
   rata:     { label:"Rata",           emoji:"🐀", hp:15,  dmg:2,  xp:6,  spd:55, loot:{ carne:[1,1,0.55], plata:[2,6,0.85] } },
   larva:    { label:"Larva Venenosa", emoji:"🐛", hp:25,  dmg:4,  xp:10, spd:35, loot:{ carne:[1,2,0.50], plata:[4,10,0.80], flecha:[1,3,0.35] }, gearLoot:[["botas_cuero",0.08]] },
-  orco:     { label:"Orco",           emoji:"👹", hp:45,  dmg:7,  xp:16, spd:60, loot:{ carne:[1,2,0.55], plata:[8,16,0.85], bronce:[1,2,0.35] }, gearLoot:[["casco_cuero",0.10],["escudo_madera",0.08]] },
+  orco:     { label:"Orco",           emoji:"👹", sprite:"orc", size:52, hp:45,  dmg:7,  xp:16, spd:60, loot:{ carne:[1,2,0.55], plata:[8,16,0.85], bronce:[1,2,0.35] }, gearLoot:[["casco_cuero",0.10],["escudo_madera",0.08]] },
   lancero:  { label:"Orco Lancero",   emoji:"🔱", hp:70,  dmg:10, xp:24, spd:70, loot:{ carne:[2,3,0.60], plata:[12,24,0.90], bronce:[1,3,0.40], flecha:[2,6,0.45] }, gearLoot:[["pechera_cuero",0.10]] },
   guerrero: { label:"Orco Guerrero",  emoji:"👺", hp:110, dmg:14, xp:36, spd:65, loot:{ carne:[2,4,0.60], plata:[20,40,0.90], oro:[1,2,0.30] }, gearLoot:[["casco_hierro",0.10],["escudo_hierro",0.06]] },
   troll:    { label:"Troll",          emoji:"🧌", hp:180, dmg:20, xp:60, spd:45, loot:{ carne:[3,5,0.65], plata:[40,80,0.95], oro:[1,3,0.45], diamante:[1,1,0.12] }, gearLoot:[["pechera_hierro",0.15]] },

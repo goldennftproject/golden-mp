@@ -12,6 +12,10 @@ class BootScene extends Phaser.Scene {
       for (let i = 0; i < 7; i++) L.push(["act_" + a + "_" + i, P + "act_" + a + "_" + i + ".png"]);
     });
     L.push(["boar", P + "boar.png"]);
+    // orco del Bosque: sprite animado (mira al sureste, se espeja para el otro lado)
+    for (let i = 0; i < 3; i++) L.push(["orc_idle_" + i, P + "orc_idle_" + i + ".png"]);
+    for (let i = 0; i < 6; i++) L.push(["orc_walk_" + i, P + "orc_walk_" + i + ".png"]);
+    for (let i = 0; i < 6; i++) L.push(["orc_atk_" + i, P + "orc_atk_" + i + ".png"]);
     ["fish_comun","fish_raro"].forEach(k => L.push([k, P + k + ".png"]));   // pececitos de la laguna
     ["sword","bow"].forEach(k => L.push([k, P + k + ".png"]));   // arma visible al atacar en el Bosque
     L.push(["cocina", P + "cocina.png"]);   // edificio de Cocina (detalles 29/7)
@@ -49,8 +53,8 @@ class BootScene extends Phaser.Scene {
   preload() {
     // ATLAS: todos los sprites del mundo en 2 archivos (mucho más liviano para el server free).
     // Si el atlas no llega, ensureAll() baja los archivos sueltos como respaldo.
-    this.load.image("__atlas", "assets/atlas.png?v=17");
-    this.load.json("__atlasmap", "assets/atlas.json?v=17");
+    this.load.image("__atlas", "assets/atlas.png?v=18");
+    this.load.json("__atlasmap", "assets/atlas.json?v=18");
 
     // barra de carga simple
     const w = this.scale.width, h = this.scale.height;
@@ -106,6 +110,12 @@ class BootScene extends Phaser.Scene {
     ["chop","mine","fish","water","plant","harvest"].forEach(a => {
       const ks = [0,1,2,3,4,5,6].map(i => "act_" + a + "_" + i);
       if (has(ks)) this.anims.create({ key: "act_" + a, frames: ks.map(k => ({ key: k })), frameRate: 10, repeat: -1 });
+    });
+    // animaciones del orco
+    const orc = [["idle", 3, 5, -1], ["walk", 6, 9, -1], ["atk", 6, 11, 0]];
+    orc.forEach(([nm, n, fps, rep]) => {
+      const ks = Array.from({ length: n }, (_, i) => "orc_" + nm + "_" + i);
+      if (has(ks)) this.anims.create({ key: "orc_" + nm, frames: ks.map(k => ({ key: k })), frameRate: fps, repeat: rep });
     });
   }
 }
