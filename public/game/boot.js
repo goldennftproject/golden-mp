@@ -24,6 +24,10 @@ class BootScene extends Phaser.Scene {
     for (let i = 0; i < 8; i++) L.push(["rata_idle_" + i, P + "rata_idle_" + i + ".png"]);
     for (let i = 0; i < 6; i++) L.push(["rata_walk_" + i, P + "rata_walk_" + i + ".png"]);
     for (let i = 0; i < 7; i++) L.push(["rata_atk_" + i, P + "rata_atk_" + i + ".png"]);
+    // larva venenosa del Bosque: quieto/caminar/atacar 8f (custom, mira al sureste). Se espeja por código.
+    for (let i = 0; i < 8; i++) L.push(["larva_idle_" + i, P + "larva_idle_" + i + ".png"]);
+    for (let i = 0; i < 8; i++) L.push(["larva_walk_" + i, P + "larva_walk_" + i + ".png"]);
+    for (let i = 0; i < 8; i++) L.push(["larva_atk_" + i, P + "larva_atk_" + i + ".png"]);
     ["fish_comun","fish_raro"].forEach(k => L.push([k, P + k + ".png"]));   // pececitos de la laguna
     ["sword","bow"].forEach(k => L.push([k, P + k + ".png"]));   // arma visible al atacar en el Bosque
     L.push(["cocina", P + "cocina.png"]);   // edificio de Cocina (detalles 29/7)
@@ -122,7 +126,8 @@ class BootScene extends Phaser.Scene {
     // animaciones del orco y del troll (troll con idle de 4 frames)
     const mobs = { orc: [["idle", 3, 5, -1], ["walk", 6, 9, -1], ["atk", 6, 11, 0]],
                    troll: [["idle", 4, 4, -1], ["walk", 6, 8, -1], ["atk", 6, 10, 0]],
-                   rata: [["idle", 8, 6, -1], ["walk", 6, 11, -1], ["atk", 7, 12, 0]] };
+                   rata: [["idle", 8, 6, -1], ["walk", 6, 11, -1], ["atk", 7, 12, 0]],
+                   larva: [["idle", 8, 5, -1], ["walk", 8, 8, -1], ["atk", 8, 10, 0]] };
     Object.entries(mobs).forEach(([pre, defs]) => {
       defs.forEach(([nm, n, fps, rep]) => {
         const ks = Array.from({ length: n }, (_, i) => pre + "_" + nm + "_" + i);
