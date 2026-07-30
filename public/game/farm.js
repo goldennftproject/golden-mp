@@ -1029,7 +1029,7 @@ class FarmScene extends Phaser.Scene {
       if (!this.dummyTimer) this.dummyTimer = this.add.text(this.dummyObj.cx, this.dummyObj.by - T * 1.15, "",
         { fontFamily: "system-ui", fontSize: "11px", fontStyle: "bold", color: "#fff", stroke: "#20301a", strokeThickness: 3 }).setOrigin(0.5, 1).setDepth(this.dummyObj.by + 3);
       this.dummyTimer.setPosition(this.dummyObj.cx, this.topY(this.dummyObj));
-      if (this.timerOn(this.dummyObj)) this.dummyTimer.setText(left > 0 ? "🎯 " + fmtDur(left) : "🎯 listo").setVisible(true);
+      if (this.timerOn(this.dummyObj)) this.dummyTimer.setText(left > 0 ? fmtDur(left) : "Listo").setVisible(true);
       else this.dummyTimer.setVisible(false);
     }
     if (G.forgeLitUntil && t >= G.forgeLitUntil) { G.forgeLitUntil = 0; this.updateForge(); }   // se apaga sola al terminar
