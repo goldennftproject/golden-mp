@@ -347,7 +347,7 @@ class FarmScene extends Phaser.Scene {
     const storeObj = this.objs.find(o => o.type === "store");
     if (storeObj) smokeFrom(storeObj, 0.26, 0xd8d2c4, () => true);                       // herrería: siempre
     const cocinaObj = this.objs.find(o => o.type === "cocina");
-    if (cocinaObj) smokeFrom(cocinaObj, 0.10, 0xefe9db, () => !!G.cooking);              // cocina: solo cocinando
+    if (cocinaObj) smokeFrom(cocinaObj, 0.20, 0xefe9db, () => !!G.cooking);              // cocina: solo cocinando (chimenea al 20% a la derecha del centro)
 
     // cofres depósito colocados por el jugador
     (G.chests = G.chests || []).forEach((c, idx) => this.spawnChest(idx));
@@ -708,12 +708,14 @@ class FarmScene extends Phaser.Scene {
       if (o.sprite && o.sprite.visible && Phaser.Geom.Rectangle.Contains(o.sprite.getBounds(), p.worldX, p.worldY)) { hov = o.sprite; break; }
     }
     if (!hov) for (const pl of this.plots) {
+      if (pl.state === "locked") continue;   // los plots bloqueados no se iluminan
       if (pl.ground && Math.abs(p.worldX - pl.cx) < T / 2 && Math.abs(p.worldY - pl.by) < T / 2) { hov = pl.ground; break; }
     }
     apply(this.hoverFx, hov);
     // cercanía: lo que el granjero puede interactuar ya mismo (mismo brillo, más suave)
     const near = this.nearestInteract();
-    const ns = near ? (near.sprite || near.ground) : null;
+    const nearOk = near && !(near.type === "plot" && near.state === "locked");
+    const ns = nearOk ? (near.sprite || near.ground) : null;
     apply(this.nearFx, (ns && ns !== hov) ? ns : null);
   }
 
