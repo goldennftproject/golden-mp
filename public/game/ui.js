@@ -13,6 +13,7 @@ function anyOvOpen() { return !!document.querySelector(".ov.show"); }
 const OV_REFRESH = { "ov-inv": () => refreshInv(), "ov-skills": () => refreshSkills(), "ov-equip": () => refreshEquip(),
   "ov-forge": () => refreshForge(), "ov-market": () => refreshMarket(), "ov-barn": () => refreshBarn(),
   "ov-cocina": () => refreshCooking(),
+  "ov-cofre": () => refreshChest(),
   "ov-config": () => refreshConfig(), "ov-lb": () => refreshLb(), "ov-daily": () => refreshDaily() };
 // los overlays NO bloquean el juego: podés seguir moviéndote/interactuando con la ventana abierta
 function openOv(id) { const e = $(id); if (!e) return; e.classList.add("show"); if (OV_REFRESH[id]) OV_REFRESH[id](); }
@@ -315,6 +316,12 @@ function refreshForge() {
   }
   const astr = Object.keys(ARROW_COST).map(k => resIc(k) + " " + ARROW_COST[k]).join(" · ");
   craft += '<div class="forge-row"><div class="fic"><img src="' + GF.spr("res_flecha") + '" onerror="this.outerHTML=\'➳\'"></div><div class="finfo"><div class="fnm">Flechas ×10</div><div class="fds">Tenés ' + fmt(G.res.flecha || 0) + ' · Costo: ' + astr + '</div></div><div class="fbtns"><button class="green sm" ' + (canAfford(ARROW_COST) ? "" : "disabled") + ' id="forge-arrows">Craftear</button></div></div>';
+  // cofre depósito: 10 espacios + 1% de materiales por cofre
+  G.chests = G.chests || [];
+  const chn = G.chests.length, chFull = chn >= CHEST_MAX;
+  const chstr = Object.keys(CHEST_COST).map(k => resIc(k) + " " + CHEST_COST[k]).join(" · ") + " · " + coinIc("plata") + " " + CHEST_PLATA;
+  const chOk = !chFull && canAfford(CHEST_COST) && G.plata >= CHEST_PLATA;
+  craft += '<div class="forge-row"><div class="fic"><img src="' + GF.spr("cofre") + '" onerror="this.outerHTML=\'📦\'"></div><div class="finfo"><div class="fnm">Cofre depósito (' + chn + "/" + CHEST_MAX + ')</div><div class="fds">10 espacios de guardado en tu granja · +1% de materiales por cofre (tenés +' + chn + '%)</div><div class="fds">Costo: ' + chstr + '</div></div><div class="fbtns"><button class="green sm" ' + (chOk ? "" : "disabled") + ' id="forge-chest">' + (chFull ? "Máximo" : "Craftear") + "</button></div></div>";
 
   $("forge-craft").innerHTML = craft || '<div class="sub">Nada por craftear — ya tenés todo. 💪</div>';
   $("forge-repair").innerHTML = repair;
@@ -326,8 +333,34 @@ function refreshForge() {
   const fs = $("forge-sword"); if (fs) fs.onclick = () => craftSword();
   const fb = $("forge-bow"); if (fb) fb.onclick = () => craftBow();
   const fa = $("forge-arrows"); if (fa) fa.onclick = () => craftArrows();
+  const fc = $("forge-chest"); if (fc) fc.onclick = () => craftChest();
 }
 function refreshTools() { refreshForge(); }   // compatibilidad con llamadas viejas
+
+/* ---- cofre depósito: guardar/sacar pilas (detalles 29/7) ---- */
+function refreshChest() {
+  const ci = (typeof window.chestOpen === "number") ? window.chestOpen : 0;
+  const ch = (G.chests || [])[ci];
+  const box = $("cofre-slots"), inv = $("cofre-inv"), info = $("cofre-info");
+  if (!ch || !box) return;
+  if (info) info.textContent = "Cofre " + (ci + 1) + " de " + G.chests.length + " · bonus total de materiales: +" + G.chests.length + "% · hasta 99 por espacio";
+  box.innerHTML = ch.items.map((s, i) => {
+    if (!s) return '<div class="slot"></div>';
+    const v = itemView({ kind: s.kind, key: s.key });
+    return `<div class="slot filled" data-wd="${i}" title="${v.label} — clic para sacar">${itemIcon(v)}<span class="cnt">${s.n}</span></div>`;
+  }).join("");
+  box.querySelectorAll("[data-wd]").forEach(el => el.onclick = () => chestWithdraw(ci, +el.dataset.wd));
+  const stacks = [];
+  ITEM_RES_ORDER.forEach(k => { const n = Math.floor(G.res[k] || 0); if (n > 0) stacks.push({ kind: "res", key: k, n }); });
+  CROP_ORDER.forEach(k => { const n = Math.floor(G.seeds[k] || 0); if (n > 0) stacks.push({ kind: "seed", key: k, n }); });
+  FISH_ORDER.forEach(k => { const n = Math.floor((G.fish && G.fish[k]) || 0); if (n > 0) stacks.push({ kind: "fish", key: k, n }); });
+  RECIPE_ORDER.forEach(k => { const n = Math.floor((G.dishes && G.dishes[k]) || 0); if (n > 0) stacks.push({ kind: "dish", key: k, n }); });
+  inv.innerHTML = stacks.map((s, i) => {
+    const v = itemView({ kind: s.kind, key: s.key });
+    return `<div class="slot filled" data-dp="${i}" title="${v.label} — clic para guardar">${itemIcon(v)}<span class="cnt">${fmt(s.n)}</span></div>`;
+  }).join("") || '<div class="sub">No tenés nada para guardar.</div>';
+  inv.querySelectorAll("[data-dp]").forEach(el => el.onclick = () => { const s = stacks[+el.dataset.dp]; chestDeposit(ci, s.kind, s.key); });
+}
 
 /* ---- cocina (en la Granja) ---- */
 function refreshCooking() {

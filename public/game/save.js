@@ -26,7 +26,7 @@ function snapshot() {
     tools: G.tools, invRows: G.invRows, slots: G.slots, hotbar: G.hotbar, hotSel: G.hotSel, hbInit: G.hbInit, layout: G.layout,
     daily: G.daily, plotsOwned: G.plotsOwned, seedBuys: G.seedBuys,
     hp: G.hp, hpMax: G.hpMax, swordOwned: G.swordOwned, bowOwned: G.bowOwned, gear: G.gear,
-    dishes: G.dishes, cooking: G.cooking,
+    dishes: G.dishes, cooking: G.cooking, chests: G.chests,
     layoutPlots: G.layoutPlots, layoutPond: G.layoutPond };
 }
 // "huella" del estado guardable (incluye el apodo); si no cambia, no hay nada que guardar
@@ -58,6 +58,7 @@ function hydrate(d) {
   if (d.gear && typeof d.gear === "object") G.gear = Object.assign({ casco: null, armadura: null, botas: null, escudo: null }, d.gear);
   if (d.dishes && typeof d.dishes === "object") G.dishes = Object.assign({}, d.dishes);
   if (d.cooking && typeof d.cooking === "object" && d.cooking.endAt) G.cooking = d.cooking;
+  if (Array.isArray(d.chests)) G.chests = d.chests.slice(0, 50).map(c => ({ col: (typeof c.col === "number" ? c.col : null), row: (typeof c.row === "number" ? c.row : null), items: (Array.isArray(c.items) ? c.items.slice(0, 10) : Array(10).fill(null)) }));
   if (d.layoutPlots && typeof d.layoutPlots === "object") G.layoutPlots = d.layoutPlots;
   if (d.layoutPond && typeof d.layoutPond === "object") G.layoutPond = { col: d.layoutPond.col, row: d.layoutPond.row };
   if (d.picks && d.picks.owned && d.picks.dur) G.picks = d.picks;

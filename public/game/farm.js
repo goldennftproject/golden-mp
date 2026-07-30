@@ -305,7 +305,8 @@ class FarmScene extends Phaser.Scene {
       o.sprite.setPosition(o.cx, o.by).setDepth(o.by);
       if (o.shadow) o.shadow.setPosition(o.cx, o.by - 3).setDepth(o.by - 0.5);
       if (o.timer) o.timer.setPosition(o.cx, o.by - T * 0.85);
-      if (!G.layout) G.layout = {}; G.layout[o.i] = { cx: o.cx, by: o.by };
+      if (o.type === "cofre") { const c = G.chests && G.chests[o.chestIdx]; if (c) { c.col = leftCol; c.row = baseRow - 1; } }
+      else { if (!G.layout) G.layout = {}; G.layout[o.i] = { cx: o.cx, by: o.by }; }
       this.rebuildCollisions();
       if (typeof saveFarm === "function") saveFarm(true);
       this.dragObj = null;
@@ -345,6 +346,9 @@ class FarmScene extends Phaser.Scene {
     if (storeObj) smokeFrom(storeObj, 0.26, 0xd8d2c4, () => true);                       // herrería: siempre
     const cocinaObj = this.objs.find(o => o.type === "cocina");
     if (cocinaObj) smokeFrom(cocinaObj, 0.10, 0xefe9db, () => !!G.cooking);              // cocina: solo cocinando
+
+    // cofres depósito colocados por el jugador
+    (G.chests = G.chests || []).forEach((c, idx) => this.spawnChest(idx));
 
     this.cameras.main.setBounds(0, 0, W, H);
     this.cameras.main.startFollow(hero, true, 0.15, 0.15);
@@ -419,6 +423,7 @@ class FarmScene extends Phaser.Scene {
     if (o.type === "market") return "🏪 Mercado";
     if (o.type === "store") return "🛠️ Herrería";
     if (o.type === "cocina") return "🍳 Cocina";
+    if (o.type === "cofre") return "📦 Cofre depósito";
     if (o.type === "fish") return "🎣 Pescar (" + FISH_COST + " ✨ · tenés " + G.golden + ")";
     return "";
   }
@@ -431,6 +436,7 @@ class FarmScene extends Phaser.Scene {
     if (o.type === "market") return openOv("ov-market");
     if (o.type === "store") return openOv("ov-forge");
     if (o.type === "cocina") return openOv("ov-cocina");
+    if (o.type === "cofre") { window.chestOpen = o.chestIdx; return openOv("ov-cofre"); }
     if (o.type === "boar") { o.sprite.destroy(); const i = this.threats.indexOf(o); if (i >= 0) this.threats.splice(i, 1); log("🥍 Espantaste al jabalí.", "good"); toast("🥍 ¡Espantado!"); return; }   // XP de espada llega con el combate (necesita espada equipada)
     if (o.type === "plot") {
       if (o.state === "locked") {   // desbloquear con plata (doble clic para confirmar)
@@ -494,11 +500,11 @@ class FarmScene extends Phaser.Scene {
   finishAction() {
     const a = this.action, o = a.o;
     if (a.kind === "chop") {
-      const gr = Math.max(1, Math.round(3 * yieldMult()));
+      const gr = Math.max(1, Math.round(3 * yieldMult() * chestBonus()));
       if (tryAddRes("madera", gr)) { useTool("axe"); addXp("crafting", 4); o.readyAt = nowMs() + CD.tree * 1000 * cdMult(); this.setObjTex(o, "tree_stump", GF.TILE * 0.6); log(`🪵 +${gr} Madera. 🪓 ${toolDur("axe")}/${TOOL_DEF.axe.max}`, "good"); toast("+" + gr + " 🪵"); refreshHud(); if (toolDur("axe") <= 0) { log("🪓 ¡El hacha se rompió! Reparala en la Herrería.", "bad"); toast("🪓 ¡Hacha rota!"); } }
       else toast("🎒 Inventario lleno");
     } else if (a.kind === "mine" && o.type === "rock") {
-      const gr = Math.max(1, Math.round(2 * yieldMult()));
+      const gr = Math.max(1, Math.round(2 * yieldMult() * chestBonus()));
       if (tryAddRes("piedra", gr)) {
         const pk = equippedPick();   // picar piedra también gasta el pico (bug reportado)
         if (pk) { G.picks.dur[pk] = Math.max(0, (G.picks.dur[pk] || 0) - 1); if (G.picks.dur[pk] <= 0) { log(`🛠️ ¡${PICK_DEF[pk].label} se rompió! Reparalo en la Herrería.`, "bad"); toast("🛠️ ¡Pico roto!"); } }
@@ -507,7 +513,7 @@ class FarmScene extends Phaser.Scene {
       else toast("🎒 Inventario lleno");
     } else if (a.kind === "mine" && o.type === "ore") {
       const pk = equippedPick(), pd = PICK_DEF[pk], od = ORE_DEF[o.ore];
-      let gr = Math.max(1, Math.round(od.yield * yieldMult())); if (pd.fast) gr *= 2;
+      let gr = Math.max(1, Math.round(od.yield * yieldMult() * chestBonus())); if (pd.fast) gr *= 2;
       if (tryAddRes(o.ore, gr)) {
         G.picks.dur[pk] = Math.max(0, (G.picks.dur[pk] || 0) - 1);
         addXp("mining", 5 + od.tier * 3);
@@ -617,6 +623,31 @@ class FarmScene extends Phaser.Scene {
     const p = GF.POND;
     if (baseRow > p.row && baseRow <= p.row + p.rows && leftCol < p.col + p.cols && p.col < leftCol + wCells) return true;
     return false;
+  }
+
+  // crea (o ubica por primera vez) un cofre depósito en la granja
+  spawnChest(idx) {
+    const c = G.chests[idx]; if (!c) return;
+    const T = GF.TILE;
+    if (c.col == null) {   // primera vez: buscar una celda libre cerca del granjero
+      const hc = Math.floor((this.hero ? this.hero.x : GF.WORLD_W / 2) / T);
+      const hr = Math.floor((this.hero ? this.hero.y : GF.WORLD_H / 2) / T);
+      outer: for (let r = 1; r < 9; r++) for (let dy = -r; dy <= r; dy++) for (let dx = -r; dx <= r; dx++) {
+        if (Math.max(Math.abs(dx), Math.abs(dy)) !== r) continue;
+        const col = hc + dx, row = hr + dy;
+        if (col < 1 || row < 2 || col >= GF.COLS - 1 || row >= GF.ROWS - 2) continue;
+        const cx = (col + 0.5) * T, cy = (row + 0.6) * T;
+        if (GF.blockedAt(cx, cy, 8)) continue;
+        if (GF.PLOTS.some(p => p.col === col && p.row === row)) continue;
+        c.col = col; c.row = row; break outer;
+      }
+      if (c.col == null) { c.col = 3; c.row = 8; }
+    }
+    const cx = (c.col + 0.5) * T, by = (c.row + 1) * T;
+    const s = this.add.image(cx, by, "cofre").setOrigin(0.5, 1);
+    s.setScale((T * 0.95) / s.width); s.setDepth(by);
+    this.objs.push({ chestIdx: idx, type: "cofre", cx, by, w: T, rw: T * 0.95, baseKey: "cofre", sprite: s, readyAt: 0 });
+    this.rebuildCollisions();
   }
 
   // recalcula las colisiones a partir de las posiciones actuales de los objetos (tras editar)

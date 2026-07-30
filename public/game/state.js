@@ -28,6 +28,7 @@ const G = {
   seedBuys: { date: "", count: 0 },   // cupo diario de semillas (compras + cofre)
   dishes: {},      // platos cocinados (van a la bolsa; clic para comer)
   cooking: null,   // { id, endAt, total } — barra de enfriamiento al cocinar
+  chests: [],      // cofres depósito: [{col,row,items:[{kind,key,n}|null × 10]}] — +1% materiales c/u
   buffs: [], secPerGameHour: 1, gameHours: 0,
   skills: { fishing: 0, farming: 0, cooking: 0, range: 0, sword: 0, mining: 0, crafting: 0 },
 };
@@ -262,6 +263,57 @@ function eatDish(id) {
   if (r.buff) addBuff(r.buff.type, r.buff.label, r.buff.mult, r.buff.dur);
   log(r.emoji + " Comiste " + r.label + ". " + r.desc, "gold"); toast(r.emoji + " ¡Ñam!");
   refreshHud(); if (typeof syncSlots === "function") syncSlots(); if (isOpen("ov-inv")) refreshInv();
+}
+
+// --- cofres depósito (detalles 29/7): 10 espacios, +1% de materiales por cofre, máx 50 ---
+const CHEST_COST = { madera: 20, piedra: 10 };
+const CHEST_PLATA = 200;
+const CHEST_MAX = 50;
+const CHEST_SLOTS = 10;
+function chestBonus() { return 1 + 0.01 * ((G.chests && G.chests.length) || 0); }
+function craftChest() {
+  G.chests = G.chests || [];
+  if (G.chests.length >= CHEST_MAX) { toast("📦 Máximo de cofres (" + CHEST_MAX + ")"); return; }
+  if (!canAfford(CHEST_COST)) { toast("Te faltan materiales"); return; }
+  if (G.plata < CHEST_PLATA) { toast("Te falta plata (" + CHEST_PLATA + " 🪙)"); return; }
+  payCost(CHEST_COST); G.plata -= CHEST_PLATA;
+  G.chests.push({ col: null, row: null, items: Array(CHEST_SLOTS).fill(null) });
+  addXp("crafting", 8);
+  log("📦 Crafteaste un cofre depósito. Bonus de materiales: +" + G.chests.length + "%.", "gold");
+  toast("📦 ¡Cofre " + G.chests.length + "/" + CHEST_MAX + "!");
+  if (window.FARM && FARM.spawnChest) FARM.spawnChest(G.chests.length - 1);
+  refreshForge(); refreshHud();
+  if (typeof saveFarm === "function") saveFarm(true);
+}
+// guardar una pila de la bolsa en el cofre (apila hasta 99 por espacio)
+function chestDeposit(ci, kind, key) {
+  const ch = G.chests && G.chests[ci]; if (!ch) return;
+  const stores = { res: G.res, seed: G.seeds, fish: G.fish, dish: G.dishes };
+  const st = stores[kind]; if (!st) { toast("Eso no se puede guardar"); return; }
+  const avail = Math.floor(st[key] || 0); if (avail <= 0) return;
+  let slot = ch.items.find(s => s && s.kind === kind && s.key === key && s.n < 99);
+  if (!slot) { const i = ch.items.indexOf(null); if (i < 0) { toast("📦 Cofre lleno"); return; } slot = ch.items[i] = { kind, key, n: 0 }; }
+  const n = Math.min(avail, 99 - slot.n);
+  slot.n += n; st[key] -= n;
+  if (typeof syncSlots === "function") syncSlots();
+  if (typeof refreshChest === "function") refreshChest();
+  if (isOpen("ov-inv")) refreshInv();
+  if (typeof saveFarm === "function") saveFarm();
+}
+// sacar un espacio del cofre de vuelta a la bolsa
+function chestWithdraw(ci, si) {
+  const ch = G.chests && G.chests[ci]; if (!ch) return;
+  const s = ch.items[si]; if (!s) return;
+  const stores = { res: G.res, seed: G.seeds, fish: G.fish, dish: G.dishes };
+  const st = stores[s.kind]; if (!st) return;
+  const before = st[s.key] || 0;
+  st[s.key] = before + s.n;
+  if (canonicalStacks().length > invSlots()) { st[s.key] = before; toast("🎒 Bolsa llena"); return; }
+  ch.items[si] = null;
+  if (typeof syncSlots === "function") syncSlots();
+  if (typeof refreshChest === "function") refreshChest();
+  if (isOpen("ov-inv")) refreshInv();
+  if (typeof saveFarm === "function") saveFarm();
 }
 
 // --- bestiario (Fase D) — 6 tiers, de común a legendario ---
