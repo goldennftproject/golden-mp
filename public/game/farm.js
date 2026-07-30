@@ -207,6 +207,7 @@ class FarmScene extends Phaser.Scene {
       }
       if (GF.uiOpen) return;
       const wx = pt.worldX, wy = pt.worldY;
+      this.hold = { sx: pt.x, sy: pt.y, active: false };   // por si esto se convierte en un arrastre
       let hit = null, bd = 1e9;
       for (const o of this.objs.concat(this.threats)) {
         if (this.hitsSprite(o.sprite, wx, wy)) { const d = Math.hypot(o.cx - wx, o.by - wy); if (d < bd) { bd = d; hit = o; } }
@@ -229,7 +230,18 @@ class FarmScene extends Phaser.Scene {
     });
     // arrastre en modo edición: mueve el sprite y resalta la celda destino (verde libre / rojo ocupada)
     this.input.on("pointermove", (pt) => {
-      if (!GF.editMode) return;
+      if (!GF.editMode) {
+        // CLIC SOSTENIDO: si mantenés apretado y movés el cursor, el granjero te sigue
+        // (rodeando árboles y edificios) hasta el punto que estés señalando
+        if (!this.hold || GF.uiOpen || !pt.isDown || pt.rightButtonDown()) return;
+        if (!this.hold.active && Math.hypot(pt.x - this.hold.sx, pt.y - this.hold.sy) < 16) return;   // clic corto ≠ arrastre
+        if (!this.hold.active) {
+          if (this.action) return;   // con una acción en curso el arrastre no manda (no borra la cola)
+          this.hold.active = true; this.pendingObj = null; this.queue.length = 0;
+        }
+        this.holdSeek(pt.worldX, pt.worldY);
+        return;
+      }
       if (!this.editHl) this.editHl = this.add.rectangle(0, 0, T, T, 0x7ec95a, 0.35).setOrigin(0, 1).setDepth(99998);
       if (this.dragObj) {
         const o = this.dragObj;
@@ -261,6 +273,8 @@ class FarmScene extends Phaser.Scene {
     });
     this.input.on("pointerup", (pt) => {
       if (this.editHl) this.editHl.setVisible(false);
+      // al soltar el clic sostenido, el granjero sigue caminando hasta el último punto señalado
+      if (this.hold) { if (this.hold.active && this.holdPend) { const p = this.holdPend; this.holdPend = null; this.holdSeek(p.x, p.y); } this.hold = null; }
       if (!GF.editMode) { this.dragObj = this.dragPlot = null; this.dragPond = false; return; }
       // soltar una PARCELA
       if (this.dragPlot) {
@@ -875,12 +889,36 @@ class FarmScene extends Phaser.Scene {
     return out.length ? out : null;
   }
   // caminar hacia un punto rodeando obstáculos
-  goTo(x, y) {
+  goTo(x, y, silent) {
     const p = this.findPath(this.hero.x, this.hero.y, x, y);
-    if (!p) { this.path = null; this.moveTarget = null; toast("🚫 No hay camino hasta ahí"); return false; }
+    if (!p) { this.path = null; this.moveTarget = null; if (!silent) toast("🚫 No hay camino hasta ahí"); return false; }
     this.path = p.slice(); this.moveTarget = this.path.shift();
+    this.lastDD = null; this.noProg = 0;   // destino nuevo: reinicia el control de progreso
     return true;
   }
+
+  // destino del clic sostenido; con freno para no recalcular la ruta en cada píxel del arrastre
+  holdSeek(wx, wy) {
+    if (this.action) return;
+    const t = nowMs();
+    if (this.holdLast && Math.hypot(wx - this.holdLast.x, wy - this.holdLast.y) < 10 && t - (this.holdAt || 0) < 130) {
+      this.holdPend = { x: wx, y: wy }; return;   // pendiente: se aplica en cuanto pase el freno
+    }
+    this.holdLast = { x: wx, y: wy }; this.holdAt = t; this.holdPend = null;
+    if (this.lineFree(this.hero.x, this.hero.y, wx, wy)) { this.path = null; this.moveTarget = { x: wx, y: wy }; this.lastDD = null; this.noProg = 0; }   // camino libre: derecho, sin A*
+    else this.goTo(wx, wy, true);
+    this.showDest(wx, wy);
+  }
+
+  // marcador del punto de destino mientras arrastrás
+  showDest(x, y) {
+    if (!this.destMk) {
+      this.destMk = this.add.circle(x, y, 5, 0xffe9a8, 0.5).setStrokeStyle(2, 0xfff3cf, 0.95).setDepth(99997);
+      this.destTw = this.tweens.add({ targets: this.destMk, scale: { from: 0.7, to: 1.25 }, alpha: { from: 1, to: 0.45 }, yoyo: true, repeat: -1, duration: 480 });
+    }
+    this.destMk.setPosition(x, y).setVisible(true);
+  }
+  hideDest() { if (this.destMk) this.destMk.setVisible(false); }
 
   // ¿el clic cae sobre un píxel OPACO del sprite? Evita seleccionar un árbol clickeando
   // el hueco transparente que rodea la copa (el rectángulo del sprite es mucho más grande).
@@ -1004,6 +1042,11 @@ class FarmScene extends Phaser.Scene {
       }
     }
     this.updateHoverFx();   // brillo sobre lo interactuable (hover + cercanía)
+    // clic sostenido: aplicar el destino que quedó pendiente por el freno del recálculo
+    if (this.hold && this.hold.active && this.holdPend && t - (this.holdAt || 0) > 130) {
+      const hp = this.holdPend; this.holdPend = null; this.holdSeek(hp.x, hp.y);
+    }
+    if (!this.moveTarget && this.destMk && this.destMk.visible) this.hideDest();   // llegó: fuera el marcador
     if (G.forgeLitUntil && t >= G.forgeLitUntil) { G.forgeLitUntil = 0; this.updateForge(); }   // se apaga sola al terminar
 
     // lotes: pasar de "creciendo" a "listo"
