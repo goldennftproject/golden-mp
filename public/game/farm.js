@@ -642,10 +642,18 @@ class FarmScene extends Phaser.Scene {
   }
 
   // marca visual breve sobre un objetivo encolado
-  // punto fijo sobre lo encolado, para saber de un vistazo qué pusiste y qué no (detalles 338)
+  // borde de ARRIBA del sprite en coordenadas del mundo (el arte tiene alturas muy distintas)
+  topY(o, gap) {
+    gap = gap || 7;
+    const s = (o.sprite && o.sprite.visible) ? o.sprite : ((o.spr && o.spr.visible) ? o.spr : null);
+    if (s) { const b = s.getBounds(); if (b.height) return b.top - gap; }
+    return o.by - GF.TILE * 0.75 - gap;
+  }
+
+  // punto fijo ARRIBA de lo encolado, para saber de un vistazo qué pusiste y qué no (detalles 338)
   markQueued(o) {
     if (o.qDot) return;
-    const y = o.by - (o.type === "plot" ? GF.TILE * 0.62 : GF.TILE * 0.95);
+    const y = this.topY(o);
     const d = this.add.circle(o.cx, y, 4, 0xffd24a, 1).setStrokeStyle(2, 0x5a3c14, 0.9).setDepth(99998);
     this.tweens.add({ targets: d, scale: { from: 0.5, to: 1 }, duration: 180 });
     this.tweens.add({ targets: d, alpha: { from: 1, to: 0.55 }, yoyo: true, repeat: -1, duration: 620 });
@@ -992,7 +1000,7 @@ class FarmScene extends Phaser.Scene {
         // cuarta.docx: el timer del recurso solo aparece con el cursor encima (al clickear ya sale el aviso)
         const p = this.input.activePointer;
         const over = this.timerOn(o);
-        if (over) o.timer.setText(Math.ceil((o.readyAt - t) / 1000) + "s").setVisible(true);
+        if (over) o.timer.setText(Math.ceil((o.readyAt - t) / 1000) + "s").setPosition(o.cx, this.topY(o)).setVisible(true);
         else o.timer.setVisible(false);
       }
     }
@@ -1009,7 +1017,7 @@ class FarmScene extends Phaser.Scene {
       const left = (G.dummyUsedAt || 0) + DUMMY_CD_MS - t;
       if (!this.dummyTimer) this.dummyTimer = this.add.text(this.dummyObj.cx, this.dummyObj.by - T * 1.15, "",
         { fontFamily: "system-ui", fontSize: "11px", fontStyle: "bold", color: "#fff", stroke: "#20301a", strokeThickness: 3 }).setOrigin(0.5, 1).setDepth(this.dummyObj.by + 3);
-      this.dummyTimer.setPosition(this.dummyObj.cx, this.dummyObj.by - T * 1.15);
+      this.dummyTimer.setPosition(this.dummyObj.cx, this.topY(this.dummyObj));
       if (this.timerOn(this.dummyObj)) this.dummyTimer.setText(left > 0 ? "🎯 " + fmtDur(left) : "🎯 listo").setVisible(true);
       else this.dummyTimer.setVisible(false);
     }
@@ -1023,13 +1031,13 @@ class FarmScene extends Phaser.Scene {
       if (pl.state === "ready" && pl.witherAt) {
         const left = pl.witherAt - t;
         if (left <= 0) { this.setWithered(pl); this.syncPlots(); log("🥀 Un cultivo se marchitó sin cosechar.", "bad"); toast("🥀 Cultivo marchito"); continue; }
-        if (left < 30000 && plOver) pl.timer.setText("🥀 " + Math.ceil(left / 1000) + "s").setVisible(true);
+        if (left < 30000 && plOver) pl.timer.setText("🥀 " + Math.ceil(left / 1000) + "s").setPosition(pl.cx, this.topY(pl)).setVisible(true);
         else pl.timer.setVisible(false);
       }
       if (pl.state !== "growing") continue;
       if (t >= pl.readyAt) { pl.state = "ready"; pl.readyAt = 0; pl.witherAt = t + WITHER_MS; this.showReadyCrop(pl); this.syncPlots(); }
       else {
-        if (plOver) pl.timer.setText(Math.max(0, Math.ceil((pl.readyAt - t) / 1000)) + "s").setVisible(true);
+        if (plOver) pl.timer.setText(Math.max(0, Math.ceil((pl.readyAt - t) / 1000)) + "s").setPosition(pl.cx, this.topY(pl)).setVisible(true);
         else pl.timer.setVisible(false);
         // a media cosecha: la planta intermedia (se asoma la verdura) o el brote más grande
         if (!pl.half && pl.growTotal && (pl.readyAt - t) <= pl.growTotal / 2) {

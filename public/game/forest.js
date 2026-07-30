@@ -152,22 +152,39 @@ class ForestScene extends Phaser.Scene {
     m.bar.fillStyle(m.hp / m.def.hp > 0.4 ? 0x7ec95a : 0xd9534f, 1).fillRect(x, y, w * (m.hp / m.def.hp), 3);
   }
 
-  /* ---- objetivo fijado: recuadro rojo + nombre y vida encima (detalles 338) ---- */
+  /* ---- objetivo fijado: el monstruo se ACLARA (igual que los recursos de la granja)
+         + nombre y vida encima (detalles 338) ---- */
   setTarget(m) {
     this.target = m; this.nextAuto = 0;   // golpea en el próximo tick
-    if (!this.tgBox) {
-      this.tgBox = this.add.rectangle(0, 0, 10, 10).setStrokeStyle(2, 0xff4b3a, 0.95).setDepth(99990).setVisible(false);
-      this.tgTxt = this.add.text(0, 0, "", { fontFamily: "system-ui", fontSize: "11px", fontStyle: "bold", color: "#ffd9d2", stroke: "#2a1410", strokeThickness: 4 }).setOrigin(0.5, 1).setDepth(99991).setVisible(false);
-    }
+    if (!this.tgTxt) this.tgTxt = this.add.text(0, 0, "", { fontFamily: "system-ui", fontSize: "11px", fontStyle: "bold", color: "#ffe9c8", stroke: "#241408", strokeThickness: 4 }).setOrigin(0.5, 1).setDepth(99991).setVisible(false);
+    this.makeGlow(m);
     this.updateTargetFx();
   }
-  clearTarget() { this.target = null; if (this.tgBox) this.tgBox.setVisible(false); if (this.tgTxt) this.tgTxt.setVisible(false); }
+  // capa aditiva calcada del monstruo: lo aclara sin taparlo (mismo recurso que updateHoverFx en la granja)
+  makeGlow(m) {
+    if (this.tgGlowTw) { this.tgGlowTw.stop(); this.tgGlowTw = null; }
+    if (this.tgGlow) { this.tgGlow.destroy(); this.tgGlow = null; }
+    if (!m || m.dead || !m.spr) return;
+    const s = m.spr;
+    let g;
+    if (typeof s.text === "string") g = this.add.text(s.x, s.y, s.text, { fontSize: s.style.fontSize }).setOrigin(s.originX, s.originY);
+    else g = this.add.image(s.x, s.y, s.texture.key).setOrigin(s.originX, s.originY).setDisplaySize(s.displayWidth, s.displayHeight);
+    g.setBlendMode(Phaser.BlendModes.ADD).setAlpha(0.4).setDepth(s.depth + 0.5);
+    this.tgGlow = g;
+    this.tgGlowTw = this.tweens.add({ targets: g, alpha: { from: 0.46, to: 0.18 }, yoyo: true, repeat: -1, duration: 620 });
+  }
+  clearTarget() {
+    this.target = null;
+    if (this.tgGlowTw) { this.tgGlowTw.stop(); this.tgGlowTw = null; }
+    if (this.tgGlow) { this.tgGlow.destroy(); this.tgGlow = null; }
+    if (this.tgTxt) this.tgTxt.setVisible(false);
+  }
   updateTargetFx() {
     const m = this.target;
-    if (!m || m.dead || !this.tgBox) { if (this.tgBox) { this.tgBox.setVisible(false); this.tgTxt.setVisible(false); } return; }
-    const b = m.spr.getBounds();
-    this.tgBox.setPosition(b.centerX, b.centerY).setSize(b.width + 8, b.height + 8).setVisible(true);
-    this.tgTxt.setPosition(m.cx, b.top - 7).setText(m.def.label + "  " + Math.max(0, Math.ceil(m.hp)) + "/" + m.def.hp).setVisible(true);
+    if (!m || m.dead) { if (this.tgGlow || this.tgTxt) this.clearTarget(); return; }
+    const s = m.spr, b = s.getBounds();
+    if (this.tgGlow) this.tgGlow.setPosition(s.x, s.y).setScale(s.scaleX, s.scaleY).setDepth(s.depth + 0.5);
+    if (this.tgTxt) this.tgTxt.setPosition(m.cx, b.top - 7).setText(m.def.label + "  " + Math.max(0, Math.ceil(m.hp)) + "/" + m.def.hp).setVisible(true);
   }
 
   /* ---- loot en el piso: se recoge pisándolo o con un clic (detalles 338) ---- */
