@@ -689,6 +689,34 @@ class FarmScene extends Phaser.Scene {
     this.rebuildCollisions();
   }
 
+  // brillo de interacción: hover del cursor + cercanía del granjero (capa aditiva sobre el sprite)
+  updateHoverFx() {
+    if (!this.hoverFx) {
+      this.hoverFx = this.add.image(0, 0, "sprout").setVisible(false).setBlendMode(Phaser.BlendModes.ADD).setAlpha(0.28);
+      this.nearFx = this.add.image(0, 0, "sprout").setVisible(false).setBlendMode(Phaser.BlendModes.ADD).setAlpha(0.16);
+    }
+    const apply = (fx, s) => {
+      if (!s || !s.visible || !s.texture || !s.texture.key || s.texture.key.startsWith("__")) { fx.setVisible(false); return; }
+      fx.setTexture(s.texture.key); fx.setOrigin(s.originX, s.originY);
+      fx.setPosition(s.x, s.y); fx.setDisplaySize(s.displayWidth, s.displayHeight);
+      fx.setFlipX(!!s.flipX); fx.setDepth(s.depth + 0.5); fx.setVisible(true);
+    };
+    if (GF.editMode || GF.uiOpen) { this.hoverFx.setVisible(false); this.nearFx.setVisible(false); return; }
+    const T = GF.TILE, p = this.input.activePointer;
+    let hov = null;
+    for (const o of this.objs) {
+      if (o.sprite && o.sprite.visible && Phaser.Geom.Rectangle.Contains(o.sprite.getBounds(), p.worldX, p.worldY)) { hov = o.sprite; break; }
+    }
+    if (!hov) for (const pl of this.plots) {
+      if (pl.ground && Math.abs(p.worldX - pl.cx) < T / 2 && Math.abs(p.worldY - pl.by) < T / 2) { hov = pl.ground; break; }
+    }
+    apply(this.hoverFx, hov);
+    // cercanía: lo que el granjero puede interactuar ya mismo (mismo brillo, más suave)
+    const near = this.nearestInteract();
+    const ns = near ? (near.sprite || near.ground) : null;
+    apply(this.nearFx, (ns && ns !== hov) ? ns : null);
+  }
+
   // recalcula las colisiones a partir de las posiciones actuales de los objetos (tras editar)
   rebuildCollisions() {
     const T = GF.TILE;
@@ -800,6 +828,8 @@ class FarmScene extends Phaser.Scene {
         else o.timer.setVisible(false);
       }
     }
+    this.updateHoverFx();   // brillo sobre lo interactuable (hover + cercanía)
+
     // lotes: pasar de "creciendo" a "listo"
     for (const pl of this.plots) {
       // listo sin cosechar: cuenta regresiva al marchitado
