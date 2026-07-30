@@ -623,9 +623,21 @@ function makeHoldDrag(el, saveKey, anchorBottom) {
     window.addEventListener("resize", clamp);
   }
 }
+// el aviso de interacción va SIEMPRE por encima de la barra de acceso rápido,
+// aunque la barra se haya movido de sitio
+function placePrompt() {
+  const p = $("prompt"), hb = $("hotwrap");
+  if (!p) return;
+  if (!hb) { p.style.bottom = "12px"; return; }
+  const r = hb.getBoundingClientRect();
+  if (!r.height || r.top < window.innerHeight * 0.5) { p.style.bottom = "12px"; return; }   // barra arriba: el aviso abajo
+  p.style.bottom = Math.round(Math.min(window.innerHeight * 0.55, window.innerHeight - r.top + 10)) + "px";
+}
 function initUniversalDrag() {
   document.querySelectorAll(".ov .card").forEach(c => makeHoldDrag(c));          // todas las ventanas
   makeHoldDrag($("hotwrap"), "gf_hotpos");                                       // barra de acceso rápido
+  placePrompt(); window.addEventListener("resize", placePrompt);
+  const hw = $("hotwrap"); if (hw) { hw.addEventListener("pointerup", () => setTimeout(placePrompt, 30)); }
   makeHoldDrag($("logpanel"), "gf_logpos", true);                                // registro/chat (anclado por abajo: se abre hacia ARRIBA)
 }
 
