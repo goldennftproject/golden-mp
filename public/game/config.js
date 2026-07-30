@@ -38,6 +38,8 @@ GF.WORLD_OBJECTS.push(snap("store",  {type:"store"},  650, 480, T*3));          
 [[705,420],[830,480]].forEach(r => GF.WORLD_OBJECTS.push(snap("node_stone", {type:"rock"}, r[0], r[1], T)));
 // edificio de Cocina (detalles 29/7) — también al FINAL para preservar layouts guardados
 GF.WORLD_OBJECTS.push(snap("cocina", {type:"cocina"}, 390, 296, T*3));                                                     // 3 celdas
+// dummy de práctica de espada (detalless.docx) — entrenar sube Espada, cooldown 4h
+GF.WORLD_OBJECTS.push(snap("dummy", {type:"dummy"}, 585, 350, T));                                                         // 1 celda
 
 // lotes 4x3, cada uno 1 celda, alineados a la grilla (col 2, fila 3)
 GF.PLOTS = [];

@@ -424,6 +424,11 @@ class FarmScene extends Phaser.Scene {
     if (o.type === "store") return "🛠️ Herrería";
     if (o.type === "cocina") return "🍳 Cocina";
     if (o.type === "cofre") return "📦 Cofre depósito";
+    if (o.type === "dummy") {
+      if (!G.swordOwned) return "🎯 Dummy de práctica — necesitás una espada";
+      const dleft = (G.dummyUsedAt || 0) + DUMMY_CD_MS - nowMs();
+      return dleft > 0 ? "🎯 El dummy descansa — vuelve en " + fmtDur(dleft) : "🎯 Entrenar espada (+" + DUMMY_XP + " XP)";
+    }
     if (o.type === "fish") return "🎣 Pescar (" + FISH_COST + " ✨ · tenés " + G.golden + ")";
     return "";
   }
@@ -437,6 +442,7 @@ class FarmScene extends Phaser.Scene {
     if (o.type === "store") return openOv("ov-forge");
     if (o.type === "cocina") return openOv("ov-cocina");
     if (o.type === "cofre") { window.chestOpen = o.chestIdx; return openOv("ov-cofre"); }
+    if (o.type === "dummy") return this.trainDummy(o);
     if (o.type === "boar") { o.sprite.destroy(); const i = this.threats.indexOf(o); if (i >= 0) this.threats.splice(i, 1); log("🥍 Espantaste al jabalí.", "good"); toast("🥍 ¡Espantado!"); return; }   // XP de espada llega con el combate (necesita espada equipada)
     if (o.type === "plot") {
       if (o.state === "locked") {   // desbloquear con plata (doble clic para confirmar)
@@ -623,6 +629,34 @@ class FarmScene extends Phaser.Scene {
     const p = GF.POND;
     if (baseRow > p.row && baseRow <= p.row + p.rows && leftCol < p.col + p.cols && p.col < leftCol + wCells) return true;
     return false;
+  }
+
+  // entrenar con el dummy: 3 espadazos, XP de Espada y cooldown de 4 horas
+  trainDummy(o) {
+    if (!G.swordOwned) { toast("🎯 Necesitás la Espada de Hierro — crafteala en la Herrería"); return; }
+    if (toolDur("sword") <= 0) { toast("⚔️ Espada rota — reparala en la Herrería"); return; }
+    const left = (G.dummyUsedAt || 0) + DUMMY_CD_MS - nowMs();
+    if (left > 0) { toast("🎯 El dummy descansa — vuelve en " + fmtDur(left)); return; }
+    G.dummyUsedAt = nowMs();
+    useTool("sword"); useTool("sword");   // entrenar gasta 2 de durabilidad
+    let hits = 0;
+    const sign = this.hero.x <= o.cx ? 1 : -1;
+    const swing = () => {
+      hits++;
+      if (this.textures.exists("sword")) {
+        const fx = this.add.image(o.cx - sign * 20, o.by - 30, "sword").setDisplaySize(24, 24).setOrigin(0.5, 0.85).setDepth(o.by + 1).setAngle(-65 * sign);
+        this.tweens.add({ targets: fx, angle: 70 * sign, duration: 190, onComplete: () => fx.destroy() });
+      }
+      this.tweens.add({ targets: o.sprite, angle: 7 * sign, duration: 90, yoyo: true, onComplete: () => o.sprite.setAngle(0) });
+      if (hits < 3) this.time.delayedCall(280, swing);
+      else {
+        addXp("sword", DUMMY_XP);
+        log("🎯 Entrenaste con el dummy: +" + DUMMY_XP + " XP de Espada. Vuelve en 4h. ⚔️ " + toolDur("sword") + "/" + TOOL_DEF.sword.max, "gold");
+        toast("🎯 +" + DUMMY_XP + " XP de Espada");
+        refreshHud(); if (typeof saveFarm === "function") saveFarm();
+      }
+    };
+    swing();
   }
 
   // crea (o ubica por primera vez) un cofre depósito en la granja

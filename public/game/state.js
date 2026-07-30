@@ -29,6 +29,7 @@ const G = {
   dishes: {},      // platos cocinados (van a la bolsa; clic para comer)
   cooking: null,   // { id, endAt, total } — barra de enfriamiento al cocinar
   chests: [],      // cofres depósito: [{col,row,items:[{kind,key,n}|null × 10]}] — +1% materiales c/u
+  dummyUsedAt: 0,  // último entrenamiento con el dummy (cooldown 4h)
   buffs: [], secPerGameHour: 1, gameHours: 0,
   skills: { fishing: 0, farming: 0, cooking: 0, range: 0, sword: 0, mining: 0, crafting: 0 },
 };
@@ -315,6 +316,11 @@ function chestWithdraw(ci, si) {
   if (isOpen("ov-inv")) refreshInv();
   if (typeof saveFarm === "function") saveFarm();
 }
+
+// --- dummy de práctica (detalless.docx): entrenar espada, cooldown 4 horas ---
+const DUMMY_CD_MS = 4 * 3600 * 1000;
+const DUMMY_XP = 30;
+function fmtDur(ms) { const m = Math.ceil(ms / 60000); if (m >= 60) { const h = Math.floor(m / 60); return h + "h " + (m % 60) + "m"; } return m + "m"; }
 
 // --- bestiario (Fase D) — 6 tiers, de común a legendario ---
 const MONSTER_ORDER = ["rata", "larva", "orco", "lancero", "guerrero", "troll"];
