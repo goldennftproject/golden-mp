@@ -310,7 +310,6 @@ class FarmScene extends Phaser.Scene {
         o.sprite.setPosition(o.origCx, o.origBy).setDepth(o.origBy);
         if (o.shadow) o.shadow.setPosition(o.origCx, o.origBy - 3).setDepth(o.origBy - 0.5);
         if (o.timer) o.timer.setPosition(o.origCx, o.origBy - T * 0.85);
-        if (o.flameFx) o.flameFx.setPosition(o.origCx - o.rw * 0.13, o.origBy - o.sprite.displayHeight * 0.30).setDepth(o.origBy + 1);
         toast("🚫 Ahí ya hay algo — elegí otra celda");
         this.dragObj = null; return;
       }
@@ -318,7 +317,6 @@ class FarmScene extends Phaser.Scene {
       o.sprite.setPosition(o.cx, o.by).setDepth(o.by);
       if (o.shadow) o.shadow.setPosition(o.cx, o.by - 3).setDepth(o.by - 0.5);
       if (o.timer) o.timer.setPosition(o.cx, o.by - T * 0.85);
-      if (o.flameFx) o.flameFx.setPosition(o.cx - o.rw * 0.13, o.by - o.sprite.displayHeight * 0.30).setDepth(o.by + 1);
       if (o.type === "cofre") { const c = G.chests && G.chests[o.chestIdx]; if (c) { c.col = leftCol; c.row = baseRow - 1; } }
       else { if (!G.layout) G.layout = {}; G.layout[o.i] = { cx: o.cx, by: o.by }; }
       this.rebuildCollisions();
@@ -358,14 +356,9 @@ class FarmScene extends Phaser.Scene {
     };
     const storeObj = this.objs.find(o => o.type === "store");
     if (storeObj) smokeFrom(storeObj, 0.26, 0xd8d2c4, () => true);                       // herrería: siempre
-    // fuego animado en la boca de la fragua (experimental — detalles jueves)
-    if (storeObj && this.textures.exists("flame_0")) {
-      const fx = storeObj.cx - storeObj.rw * 0.13, fy = storeObj.by - storeObj.sprite.displayHeight * 0.30;
-      const fl = this.add.sprite(fx, fy, "flame_0").setOrigin(0.5, 1).setDepth(storeObj.by + 1);
-      fl.setDisplaySize(11, 13);
-      if (this.anims.exists("flame")) fl.play("flame");
-      storeObj.flameFx = fl;   // por si se arrastra el edificio en edición
-    }
+    // fragua: media por defecto, encendida mientras se trabaja en la Herrería (detalles jueves)
+    this.storeObj = storeObj;
+    this.updateForge();
     const cocinaObj = this.objs.find(o => o.type === "cocina");
     if (cocinaObj) smokeFrom(cocinaObj, 0.20, 0xefe9db, () => true);                     // cocina: humo SIEMPRE (detalles jueves)
     if (cocinaObj) smokeFrom(cocinaObj, 0.20, 0xffffff, () => !!G.cooking);              // …y el doble de bocanadas mientras se cocina
@@ -713,6 +706,14 @@ class FarmScene extends Phaser.Scene {
     swing();
   }
 
+  // fragua encendida mientras se craftea/repara; si no, a medio fuego (detalles jueves)
+  updateForge() {
+    const o = this.storeObj; if (!o || !o.sprite) return;
+    const lit = (G.forgeLitUntil || 0) > nowMs();
+    const key = lit && this.textures.exists("store_lit") ? "store_lit" : "store";
+    if (o.sprite.texture.key !== key && this.textures.exists(key)) this.setObjTex(o, key, o.rw || o.w);
+  }
+
   // crea (o ubica por primera vez) un cofre depósito en la granja
   spawnChest(idx) {
     const c = G.chests[idx]; if (!c) return;
@@ -904,6 +905,7 @@ class FarmScene extends Phaser.Scene {
       }
     }
     this.updateHoverFx();   // brillo sobre lo interactuable (hover + cercanía)
+    if (G.forgeLitUntil && t >= G.forgeLitUntil) { G.forgeLitUntil = 0; this.updateForge(); }   // se apaga sola al terminar
 
     // lotes: pasar de "creciendo" a "listo"
     for (const pl of this.plots) {

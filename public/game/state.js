@@ -134,9 +134,12 @@ const PICK_DEF = {
 function equippedPick() { return (G.picks.eq && G.picks.owned[G.picks.eq]) ? G.picks.eq : null; }
 function canAfford(c) { for (const k in c) if ((G.res[k]||0) < c[k]) return false; return true; }
 function payCost(c) { for (const k in c) G.res[k]-=c[k]; }
-function craftPick(id) { const pd=PICK_DEF[id]; if (G.picks.owned[id]) { equipPick(id); return; } if (!canAfford(pd.cost)) { toast("Te faltan materiales"); return; } payCost(pd.cost); G.picks.owned[id]=true; G.picks.dur[id]=pd.dur; G.picks.eq=id; addXp("crafting",10+pd.tier*4); log("🛠️ Crafteaste "+pd.label+" y lo equipaste.","gold"); toast("🛠️ "+pd.label); refreshForge(); refreshInv(); }
+// la fragua se enciende un rato cada vez que trabajás en la Herrería (detalles jueves)
+const FORGE_LIT_MS = 8000;
+function forgeWork() { G.forgeLitUntil = nowMs() + FORGE_LIT_MS; if (window.FARM && FARM.updateForge) FARM.updateForge(); if (window.sfx) sfx("mine"); }
+function craftPick(id) { const pd=PICK_DEF[id]; if (G.picks.owned[id]) { equipPick(id); return; } if (!canAfford(pd.cost)) { toast("Te faltan materiales"); return; } payCost(pd.cost); G.picks.owned[id]=true; G.picks.dur[id]=pd.dur; G.picks.eq=id; addXp("crafting",10+pd.tier*4); log("🛠️ Crafteaste "+pd.label+" y lo equipaste.","gold"); toast("🛠️ "+pd.label); forgeWork(); refreshForge(); refreshInv(); }
 function repairCostOf(id) { const pd=PICK_DEF[id]; const c={}; for (const k in pd.cost) c[k]=Math.max(1,Math.ceil(pd.cost[k]*0.3)); return c; }
-function repairPick(id) { const pd=PICK_DEF[id]; if (!G.picks.owned[id]) return; if ((G.picks.dur[id]||0)>=pd.dur){ toast("Ya está al 100%"); return; } const c=repairCostOf(id); if (!canAfford(c)){ toast("Te faltan materiales para reparar"); return; } payCost(c); G.picks.dur[id]=pd.dur; log("🔧 Reparaste "+pd.label+" (100%).","good"); toast("🔧 Reparado"); refreshForge(); }
+function repairPick(id) { const pd=PICK_DEF[id]; if (!G.picks.owned[id]) return; if ((G.picks.dur[id]||0)>=pd.dur){ toast("Ya está al 100%"); return; } const c=repairCostOf(id); if (!canAfford(c)){ toast("Te faltan materiales para reparar"); return; } payCost(c); G.picks.dur[id]=pd.dur; log("🔧 Reparaste "+pd.label+" (100%).","good"); toast("🔧 Reparado"); forgeWork(); refreshForge(); }
 function equipPick(id) { if (!G.picks.owned[id]){ toast("No lo tenés"); return; } G.picks.eq=id; log("⛏️ Equipaste "+PICK_DEF[id].label+".");  toast("Equipado"); refreshForge(); refreshInv(); }
 
 // --- herramientas (hacha + caña con durabilidad; el pico se maneja aparte) ---
@@ -154,7 +157,7 @@ function craftSword() {
   payCost(SWORD_COST); G.swordOwned = true; G.tools.sword = TOOL_DEF.sword.max;
   if (!G.gear.arma) G.gear.arma = "sword";   // si el slot de arma está libre, se equipa sola
   addXp("crafting", 14);
-  log("⚔️ Crafteaste la Espada de Hierro.", "gold"); toast("⚔️ ¡Espada de Hierro!");
+  log("⚔️ Crafteaste la Espada de Hierro.", "gold"); toast("⚔️ ¡Espada de Hierro!"); forgeWork();
   refreshForge(); if (typeof syncSlots === "function") syncSlots(); if (isOpen("ov-inv")) refreshInv();
 }
 // daño del jugador: puños (débil) o espada (escala con la skill Espada)
@@ -173,14 +176,14 @@ function craftBow() {
   payCost(BOW_COST); G.bowOwned = true; G.tools.bow = TOOL_DEF.bow.max;
   if (!G.gear.arma) G.gear.arma = "bow";   // si el slot de arma está libre, se equipa solo
   addXp("crafting", 12);
-  log("🏹 Crafteaste el Arco.", "gold"); toast("🏹 ¡Arco!");
+  log("🏹 Crafteaste el Arco.", "gold"); toast("🏹 ¡Arco!"); forgeWork();
   refreshForge(); if (typeof syncSlots === "function") syncSlots(); if (isOpen("ov-inv")) refreshInv();
 }
 function craftArrows() {
   if (!canAfford(ARROW_COST)) { toast("Te faltan materiales"); return; }
   payCost(ARROW_COST); G.res.flecha = (G.res.flecha || 0) + 10;   // van a la bolsa, NO se autoequipan (detalles jueves)
   addXp("crafting", 3);
-  log("➳ Crafteaste 10 flechas — están en tu bolsa; equipalas en el panel de Equipo.", "good"); toast("➳ +10 flechas en la bolsa");
+  log("➳ Crafteaste 10 flechas — están en tu bolsa; equipalas en el panel de Equipo.", "good"); toast("➳ +10 flechas en la bolsa"); forgeWork();
   refreshForge(); if (typeof syncSlots === "function") syncSlots(); if (isOpen("ov-inv")) refreshInv();
 }
 function bowDmg() { return 6 + Math.floor(skillInfo(G.skills.range).lvl / 2); }
@@ -285,7 +288,7 @@ function craftChest() {
   G.chests.push({ col: null, row: null, items: Array(CHEST_SLOTS).fill(null) });   // queda EN LA BOLSA hasta que lo coloques
   addXp("crafting", 8);
   log("📦 Crafteaste un cofre depósito — está en tu bolsa. Colocalo con un clic desde la bolsa.", "gold");
-  toast("📦 Cofre en la bolsa (" + G.chests.length + "/" + CHEST_MAX + ")");
+  toast("📦 Cofre en la bolsa (" + G.chests.length + "/" + CHEST_MAX + ")"); forgeWork();
   refreshForge(); refreshHud();
   if (typeof syncSlots === "function") syncSlots(); if (isOpen("ov-inv")) refreshInv();
   if (typeof saveFarm === "function") saveFarm(true);
@@ -343,7 +346,7 @@ function rollLoot(def) {
 }
 function toolDur(id) { return (G.tools && G.tools[id] != null) ? G.tools[id] : (TOOL_DEF[id] ? TOOL_DEF[id].max : 0); }
 function useTool(id) { const d = toolDur(id); if (d <= 0) return false; G.tools[id] = d - 1; return true; }
-function repairTool(id) { const td = TOOL_DEF[id]; if (!td) return; if (toolDur(id) >= td.max) { toast("Ya está al 100%"); return; } if (!canAfford(td.repair)) { toast("Te faltan materiales para reparar"); return; } payCost(td.repair); G.tools[id] = td.max; log("🔧 Reparaste " + td.label + " (100%).", "good"); toast("🔧 Reparado"); refreshForge(); if (isOpen("ov-equip")) refreshEquip(); if (isOpen("ov-inv")) refreshInv(); }
+function repairTool(id) { const td = TOOL_DEF[id]; if (!td) return; if (toolDur(id) >= td.max) { toast("Ya está al 100%"); return; } if (!canAfford(td.repair)) { toast("Te faltan materiales para reparar"); return; } payCost(td.repair); G.tools[id] = td.max; log("🔧 Reparaste " + td.label + " (100%).", "good"); toast("🔧 Reparado"); forgeWork(); refreshForge(); if (isOpen("ov-equip")) refreshEquip(); if (isOpen("ov-inv")) refreshInv(); }
 
 // --- inventario (base + filas extra) ---
 const INV_BASE = 20, INV_MAX_ROWS = 5;   // 20 base (4 filas de 5), hasta +5 filas más
