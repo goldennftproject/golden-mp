@@ -100,7 +100,7 @@ class FarmScene extends Phaser.Scene {
       const lp = (G.layout && G.layout[i]) || null;                            // posición editada por el jugador
       const cx = lp ? lp.cx : o.cx, by = lp ? lp.by : o.by;
       const s = this.add.image(cx, by, o.key).setOrigin(0.5, 1);
-      const rw = (o.type === "ore" || o.type === "rock") ? o.w * 0.84 : o.w;   // nodos algo más chicos, dentro de la celda
+      const rw = (o.type === "ore" || o.type === "rock") ? o.w * 0.84 : (o.type === "dummy" ? o.w * 1.25 : o.w);   // nodos algo más chicos; dummy +25%
       s.setScale(rw / s.width); s.setDepth(by);
       // sombra bajo árboles y edificios (detalles 29/7)
       let shadow = null;
