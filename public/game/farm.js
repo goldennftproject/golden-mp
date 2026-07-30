@@ -106,6 +106,8 @@ class FarmScene extends Phaser.Scene {
       let shadow = null;
       if (o.type === "tree" || o.type === "barn" || o.type === "market" || o.type === "store" || o.type === "cocina") {
         shadow = this.add.ellipse(cx, by - 3, rw * 0.82, T * 0.3, 0x1c2a12, 0.22).setDepth(by - 0.5);
+      } else if (o.type === "dummy") {   // sombra chiquita bajo el dummy
+        shadow = this.add.ellipse(cx, by - 2, rw * 0.55, T * 0.2, 0x1c2a12, 0.2).setDepth(by - 0.5);
       }
       return { i, type: o.type, ore: o.ore, cx, by, w: o.w, rw, baseKey: o.key, sprite: s, shadow, readyAt: 0 };
     });
@@ -548,7 +550,10 @@ class FarmScene extends Phaser.Scene {
     this.action = null;
   }
 
-  setObjTex(o, key, targetW) { o.sprite.setTexture(key); o.sprite.setScale(targetW / o.sprite.width); }
+  setObjTex(o, key, targetW) {
+    o.sprite.setTexture(key); o.sprite.setScale(targetW / o.sprite.width);
+    if (o.shadow) o.shadow.setScale(targetW / (o.rw || o.w));   // la sombra acompaña (tocón chico → sombra chica)
+  }
 
   // distancia normalizada a la laguna (0 centro, 1 borde, >1 afuera)
   pondDist(x, y) {
