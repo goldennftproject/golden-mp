@@ -260,15 +260,18 @@
   .forge-row,.mkt-row{background:#f2e5c4;border:2px solid #d9c290;border-radius:10px}
   .skrow{background:#f2e5c4;border:2px solid #d9c290;border-radius:10px}
   .lbrow{background:#f2e5c4}
-  /* pestañas estilo barra superior (badge_wood): Comprar/Vender, Craftear/Reparar, monedas, leaderboard */
-  .shoptab,.lbtab,.curbtn{background:url("assets/ui/badge_wood.png") center/100% 100% no-repeat;border:none;border-radius:0;image-rendering:pixelated;color:#fff !important;font-weight:800;text-shadow:0 1px 0 rgba(0,0,0,.55);filter:brightness(.62) saturate(.8)}
-  .shoptab{padding:10px 12px;font-size:13px}
-  .lbtab,.curbtn{padding:8px 14px}
+  /* pestañas estilo barra superior (badge_wood en 9-slice): Comprar/Vender, Craftear/Reparar, monedas, leaderboard */
+  .shoptab,.lbtab,.curbtn{border:9px solid transparent;border-image:url("assets/ui/badge_wood.png") 26 round;background:#b5793f url("assets/ui/badge_bg.png?a=1") repeat;background-size:132px auto;background-clip:padding-box;border-radius:0;image-rendering:pixelated;color:#fff !important;font-weight:800;text-shadow:0 1px 0 rgba(0,0,0,.55);filter:brightness(.62) saturate(.8)}
+  .shoptab{padding:3px 8px 5px;font-size:13px;border-bottom-width:0;margin-bottom:-6px;position:relative;z-index:2}
+  .lbtab{padding:2px 8px 4px;border-bottom-width:0;margin-bottom:-6px;position:relative;z-index:2}
+  .curbtn{padding:1px 7px}
   .shoptab.active,.lbtab.active,.curbtn.active,
-  .shoptab.active:hover,.lbtab.active:hover,.curbtn.active:hover{background:url("assets/ui/badge_wood.png") center/100% 100% no-repeat;border:none;filter:drop-shadow(0 0 5px rgba(255,214,110,.75))}
+  .shoptab.active:hover,.lbtab.active:hover,.curbtn.active:hover{background:#b5793f url("assets/ui/badge_bg.png?a=1") repeat;background-size:132px auto;background-clip:padding-box;border-image:url("assets/ui/badge_wood.png") 26 round;filter:none}
   .shoptab:hover:not(.active),.lbtab:hover:not(.active),.curbtn:hover:not(.active){filter:brightness(.82) saturate(.9)}
-  /* placa interior (badge_wood en 9-slice) que agrupa las listas de cada pestaña */
-  .shoppane,#forge-pane-craft,#forge-pane-repair,.lblist{border:14px solid transparent;border-image:url("assets/ui/badge_wood.png") 26 fill round;image-rendering:pixelated;padding:6px;border-radius:0}
+  .shoptabs{margin:2px 0 0}
+  .lbtabs{margin:2px 0 0}
+  /* placa interior (tabla 2): marco badge_wood en 9-slice + fondo continuo del interior de la placa */
+  .shoppane,#forge-pane-craft,#forge-pane-repair,.lblist{border:14px solid transparent;border-image:url("assets/ui/badge_wood.png") 26 round;background:#b5793f url("assets/ui/badge_bg.png?a=1") repeat;background-size:132px auto;background-clip:padding-box;image-rendering:pixelated;padding:6px;border-radius:0}
   .shoppane .mkt-list,.forge-list{max-height:46vh}
   .mkt-cur{color:#fff;font-weight:700}
   /* barra de scroll de madera */
