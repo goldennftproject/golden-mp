@@ -583,6 +583,48 @@ function initHotbarDrag() {
   wrap.addEventListener("pointercancel", end);
 }
 
+/* ---- arrastre universal: mantener clic izquierdo sobre una zona libre mueve la interfaz ---- */
+const DRAG_EXCLUDE = "button, input, textarea, select, a, [draggable=true], .hcell, .swi, #log, #chatpane, .slots, .forge-list, .mkt-list, .lblist, .curbtn, .shoptab, .lbtab, .ltab";
+function makeHoldDrag(el, saveKey) {
+  if (!el || el._holdDrag) return; el._holdDrag = true;
+  let drag = null, started = false;
+  el.addEventListener("pointerdown", (e) => {
+    if (e.button !== 0) return;
+    if (e.target.closest(DRAG_EXCLUDE)) return;
+    const r = el.getBoundingClientRect();
+    drag = { dx: e.clientX - r.left, dy: e.clientY - r.top, sx: e.clientX, sy: e.clientY };
+    started = false;
+    try { el.setPointerCapture(e.pointerId); } catch (er) {}
+  });
+  el.addEventListener("pointermove", (e) => {
+    if (!drag) return;
+    if (!started && Math.hypot(e.clientX - drag.sx, e.clientY - drag.sy) < 5) return;
+    if (!started) { started = true; el.classList.add("uidrag"); }
+    const w = el.offsetWidth, h = el.offsetHeight;
+    const left = Math.max(4, Math.min(e.clientX - drag.dx, window.innerWidth - w - 4));
+    const top = Math.max(4, Math.min(e.clientY - drag.dy, window.innerHeight - h - 4));
+    el.style.left = left + "px"; el.style.top = top + "px";
+    el.style.right = "auto"; el.style.bottom = "auto"; el.style.transform = "none";
+    e.preventDefault();
+  });
+  const end = () => {
+    if (!drag) return;
+    drag = null;
+    if (started) {
+      el.classList.remove("uidrag");
+      if (saveKey) { const r = el.getBoundingClientRect(); try { localStorage.setItem(saveKey, JSON.stringify({ left: r.left, top: r.top })); } catch (er) {} }
+    }
+    started = false;
+  };
+  el.addEventListener("pointerup", end);
+  el.addEventListener("pointercancel", end);
+}
+function initUniversalDrag() {
+  document.querySelectorAll(".ov .card").forEach(c => makeHoldDrag(c));          // todas las ventanas
+  makeHoldDrag($("hotwrap"), "gf_hotpos");                                       // barra de acceso rápido
+  makeHoldDrag($("logpanel"), "gf_logpos");                                      // registro/chat
+}
+
 /* ---- init ---- */
 function initUI() {
   GF.uiOpen = false;
@@ -593,7 +635,7 @@ function initUI() {
   // multiventana: abrir un panel ya no cierra los demás (detalles 29/7)
   document.querySelectorAll(".gmi").forEach(b => b.onclick = () => { openOv(b.dataset.panel); gmenu.classList.add("collapsed"); });
   document.querySelectorAll("[data-close]").forEach(b => b.onclick = () => closeOv(b.dataset.close));
-  initOverlayDrag();
+  // initOverlayDrag() reemplazado por initUniversalDrag(): ahora toda la ventana es agarrable, no solo el título
   const lu = $("levelup"); if (lu) lu.onclick = levelUp;
   const pr = $("prestige"); if (pr) pr.onclick = prestige;
   document.querySelectorAll(".curbtn").forEach(b => b.onclick = () => { marketCur = b.dataset.cur; refreshMarket(); });
@@ -638,6 +680,7 @@ function initUI() {
   const lm = $("logmin"); if (lm) lm.onclick = () => $("logpanel").classList.toggle("collapsed");
   initPanelDrag();
   initHotbarDrag();
+  initUniversalDrag();   // mantener clic sobre cualquier interfaz la mueve (detalles 29/7)
   document.querySelectorAll(".ltab").forEach(b => b.onclick = () => {
     $("logpanel").classList.remove("collapsed");
     document.querySelectorAll(".ltab").forEach(x => x.classList.toggle("active", x === b));
