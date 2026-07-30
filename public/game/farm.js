@@ -1,8 +1,8 @@
 /* FarmScene: la granja privada. Fase 1 (mundo) + Fase 3 (interacciones). */
-const CD = { tree: 8, rock: 10 };            // cooldown en segundos
+const CD = { tree: 14, rock: 20 };           // cooldown en segundos (+ largo para ver la transición restos→dañada→entera)
 const WITHER_MS = 120000;                    // 2 min listo sin cosechar → se marchita (valor de testeo)
 const ACT_DUR = { chop: 1.2, mine: 1.2, plant: 0.6, harvest: 0.6, water: 0.6, fish: 1.5 };
-function oreCdSec(tier) { return 10 + tier * 4; }
+function oreCdSec(tier) { return 20 + tier * 6; }   // 20/26/32/38/44s — se nota el estado dañado a la mitad
 
 class FarmScene extends Phaser.Scene {
   constructor() { super("farm"); }
@@ -502,7 +502,7 @@ class FarmScene extends Phaser.Scene {
       if (tryAddRes("piedra", gr)) {
         const pk = equippedPick();   // picar piedra también gasta el pico (bug reportado)
         if (pk) { G.picks.dur[pk] = Math.max(0, (G.picks.dur[pk] || 0) - 1); if (G.picks.dur[pk] <= 0) { log(`🛠️ ¡${PICK_DEF[pk].label} se rompió! Reparalo en la Herrería.`, "bad"); toast("🛠️ ¡Pico roto!"); } }
-        addXp("mining", 5); o.readyAt = nowMs() + CD.rock * 1000 * cdMult(); this.setObjTex(o, "node_stone_mined", o.rw || GF.TILE); log(`🪨 +${gr} Piedra.` + (pk ? ` ⛏️ ${G.picks.dur[pk]}/${PICK_DEF[pk].dur}` : ""), "good"); toast("+" + gr + " 🪨"); refreshHud();
+        addXp("mining", 5); o.readyAt = nowMs() + CD.rock * 1000 * cdMult(); o.halfAt = (nowMs() + o.readyAt) / 2; this.setObjTex(o, "node_stone_mined", o.rw || GF.TILE); log(`🪨 +${gr} Piedra.` + (pk ? ` ⛏️ ${G.picks.dur[pk]}/${PICK_DEF[pk].dur}` : ""), "good"); toast("+" + gr + " 🪨"); refreshHud();
       }
       else toast("🎒 Inventario lleno");
     } else if (a.kind === "mine" && o.type === "ore") {
@@ -512,6 +512,7 @@ class FarmScene extends Phaser.Scene {
         G.picks.dur[pk] = Math.max(0, (G.picks.dur[pk] || 0) - 1);
         addXp("mining", 5 + od.tier * 3);
         o.readyAt = nowMs() + oreCdSec(od.tier) * 1000 * cdMult();
+        o.halfAt = (nowMs() + o.readyAt) / 2;   // a mitad del cooldown pasa al estado dañado
         if (this.textures.exists(o.baseKey + "_mined")) this.setObjTex(o, o.baseKey + "_mined", o.rw || GF.TILE); else o.sprite.setAlpha(0.4);
         log(`${od.emoji} +${gr} ${od.label}. ⛏️ ${G.picks.dur[pk]}/${pd.dur}`, "good"); toast("+" + gr + " " + od.emoji); refreshHud();
         if (G.picks.dur[pk] <= 0) { log(`🛠️ ¡${pd.label} se rompió! Reparalo en la Herrería.`, "bad"); toast("🛠️ ¡Pico roto!"); }
@@ -716,8 +717,16 @@ class FarmScene extends Phaser.Scene {
     // restaurar objetos que salieron de cooldown
     const t = nowMs();
     for (const o of this.objs) {
+      // transición del cooldown: restos → roca dañada (mitad) → entera
+      if (o.readyAt && o.halfAt && t >= o.halfAt) {
+        o.halfAt = 0;
+        if ((o.type === "rock" || o.type === "ore") && this.textures.exists(o.baseKey + "_half")) {
+          this.setObjTex(o, o.baseKey + "_half", o.rw || o.w);
+          if (o.type === "ore") o.sprite.setAlpha(1);
+        }
+      }
       if (o.readyAt && t >= o.readyAt) {
-        o.readyAt = 0;
+        o.readyAt = 0; o.halfAt = 0;
         if (o.type === "tree" || o.type === "rock") this.setObjTex(o, o.baseKey, o.rw || o.w);
         else if (o.type === "ore") { this.setObjTex(o, o.baseKey, o.rw || o.w); o.sprite.setAlpha(1); }
         if (o.timer) o.timer.setVisible(false);

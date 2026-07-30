@@ -43,8 +43,8 @@ GF.WORLD_OBJECTS.push(snap("cocina", {type:"cocina"}, 390, 296, T*3));          
 GF.PLOTS = [];
 (function(){ const c0=2, r0=3; for(let r=0;r<3;r++) for(let c=0;c<4;c++) GF.PLOTS.push({ col:c0+c, row:r0+r }); })();
 
-// estanque: rectángulo de celdas (más chico: 4x3)
-GF.POND = { col:0, row:11, cols:4, rows:3 };
+// estanque: rectángulo de celdas (4x3) — separado del borde para no cortar la cerca
+GF.POND = { col:1, row:10, cols:4, rows:3 };
 // copias base (para "Restaurar" después de mover parcelas/laguna en edición)
 GF.PLOTS_BASE = GF.PLOTS.map(p => ({ col: p.col, row: p.row }));
 GF.POND_BASE = { col: GF.POND.col, row: GF.POND.row };
