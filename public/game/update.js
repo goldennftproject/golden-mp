@@ -12,7 +12,9 @@
       const es = new EventSource("/events");
       es.onmessage = (ev) => {
         try {
-          const { v } = JSON.parse(ev.data);
+          const { v, online } = JSON.parse(ev.data);
+          // contador de jugadores en línea del HUD (una ventana abierta = un jugador)
+          if (typeof online === "number") { const el = document.getElementById("s-online"); if (el) el.textContent = online; }
           if (!v) return;
           if (current === null) { current = v; return; }   // versión con la que cargaste
           if (v !== current) { current = v; showUpdate(); } // ¡deploy nuevo, avisado por el server!

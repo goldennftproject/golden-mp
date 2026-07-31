@@ -7,13 +7,13 @@ class BootScene extends Phaser.Scene {
   assetList() {
     const P = "assets/farm/", L = [];
     // granjero definitivo (PixelLab 30/7): mira al sureste, se espeja por código. Pescar venía al suroeste y se espejó a sureste.
-    for (let i = 0; i < 4; i++) L.push(["hero_idle_" + i, P + "hero_idle_" + i + ".png"]);
-    for (let i = 0; i < 6; i++) L.push(["hero_walk_" + i, P + "hero_walk_" + i + ".png"]);
+    for (let i = 0; i < 4; i++) L.push(["hero_idle_" + i, P + "hero_idle_" + i + ".png?v=2"]);
+    for (let i = 0; i < 6; i++) L.push(["hero_walk_" + i, P + "hero_walk_" + i + ".png?v=2"]);
     ["chop","mine","fish","plant","harvest"].forEach(a => {
-      for (let i = 0; i < 9; i++) L.push(["hero_" + a + "_" + i, P + "hero_" + a + "_" + i + ".png"]);
+      for (let i = 0; i < 9; i++) L.push(["hero_" + a + "_" + i, P + "hero_" + a + "_" + i + ".png?v=2"]);
     });
-    for (let i = 0; i < 8; i++) L.push(["hero_sword_" + i, P + "hero_sword_" + i + ".png"]);   // espadazo horizontal con estela
-    for (let i = 0; i < 8; i++) L.push(["hero_bow_" + i, P + "hero_bow_" + i + ".png"]);       // disparo de arco (arco ya en mano)
+    for (let i = 0; i < 8; i++) L.push(["hero_sword_" + i, P + "hero_sword_" + i + ".png?v=2"]);   // espadazo horizontal con estela
+    for (let i = 0; i < 8; i++) L.push(["hero_bow_" + i, P + "hero_bow_" + i + ".png?v=2"]);       // disparo de arco (arco ya en mano)
     for (let i = 0; i < 7; i++) L.push(["act_water_" + i, P + "act_water_" + i + ".png"]);     // regar sigue con el arte anterior
     L.push(["boar", P + "boar.png"]);
     // orco del Bosque: sprite animado (mira al sureste, se espeja para el otro lado)

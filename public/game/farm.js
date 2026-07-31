@@ -592,7 +592,7 @@ class FarmScene extends Phaser.Scene {
     if (!this.bobber) return;
     if (!this.fishLine) this.fishLine = this.add.graphics().setDepth(-987);
     const k = this.actScale;
-    const tx = this.hero.x + sign * (98 - 119 / 2) * k, ty = this.hero.y - (86 - 8) * k;
+    const tx = this.hero.x + sign * (99 - 119 / 2) * k, ty = this.hero.y - (63 - 8) * k;
     const bx = this.bobber.x, by = this.bobber.y - 3;
     const g = this.fishLine; g.clear();
     g.lineStyle(1, 0xf2ead5, 0.75); g.beginPath(); g.moveTo(tx, ty);
