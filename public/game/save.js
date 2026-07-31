@@ -26,7 +26,7 @@ function snapshot() {
     tools: G.tools, toolsLost: G.toolsLost, sflStock: true, invRows: G.invRows, slots: G.slots, hotbar: G.hotbar, hotSel: G.hotSel, hbInit: G.hbInit, layout: G.layout,
     daily: G.daily, plotsOwned: G.plotsOwned, seedBuys: G.seedBuys, built: G.built,
     hp: G.hp, hpMax: G.hpMax, swordOwned: G.swordOwned, bowOwned: G.bowOwned, swordWoodOwned: G.swordWoodOwned, gear: G.gear,
-    armasUnlocked: G.armasUnlocked, treesOwned: G.treesOwned, rocksOwned: G.rocksOwned,
+    armasUnlocked: G.armasUnlocked, treesOpen: G.treesOpen, rocksOpen: G.rocksOpen,
     dishes: G.dishes, cooking: G.cooking, chests: G.chests, dummyUsedAt: G.dummyUsedAt,
     layoutPlots: G.layoutPlots, layoutPond: G.layoutPond };
 }
@@ -63,8 +63,10 @@ function hydrate(d) {
   if (typeof d.bowOwned === "boolean") G.bowOwned = d.bowOwned;
   G.swordWoodOwned = d.swordWoodOwned === true;
   G.armasUnlocked = d.armasUnlocked === true;   // viernes (2): la pestaña Armas se paga (también para veteranos)
-  G.treesOwned = Math.max(1, Math.min(6, (typeof d.treesOwned === "number" ? d.treesOwned : 1)));   // viernes (2): todos al sistema nuevo
-  G.rocksOwned = Math.max(1, Math.min(6, (typeof d.rocksOwned === "number" ? d.rocksOwned : 1)));
+  // viernes (2): sets de árboles/piedras abiertos; compat con el guardado por contador de la primera versión
+  G.treesOpen = Array.isArray(d.treesOpen) ? d.treesOpen.filter(n => typeof n === "number") : (typeof d.treesOwned === "number" ? Array.from({length: Math.max(1, Math.min(6, d.treesOwned))}, (_, i) => i) : [0]);
+  G.rocksOpen = Array.isArray(d.rocksOpen) ? d.rocksOpen.filter(n => typeof n === "number") : (typeof d.rocksOwned === "number" ? Array.from({length: Math.max(1, Math.min(6, d.rocksOwned))}, (_, i) => i) : [0]);
+  if (!G.treesOpen.length) G.treesOpen = [0]; if (!G.rocksOpen.length) G.rocksOpen = [0];
   if (d.gear && typeof d.gear === "object") G.gear = Object.assign({ casco: null, armadura: null, botas: null, escudo: null, arma: null, municion: false }, d.gear);
   // migración (detalles jueves): partidas viejas sin slot de arma/munición conservan su comportamiento
   const og = d.gear || {};

@@ -1,6 +1,6 @@
 /* FarmScene: la granja privada. Fase 1 (mundo) + Fase 3 (interacciones). */
 const CD = { tree: 14, rock: 20 };           // cooldown en segundos (+ largo para ver la transición restos→dañada→entera)
-const WITHER_MS = 120000;                    // 2 min listo sin cosechar → se marchita (valor de testeo)
+function witherMs(ck) { const cd = CROP_DEF[ck]; return cd ? cd.grow * 1000 * 0.5 : 120000; }   // marchitado proporcional: mitad del tiempo de cultivo
 const ACT_DUR = { chop: 2.7, mine: 2.4, plant: 0.6, harvest: 0.6, water: 0.6, fish: 1.5 };   // talar = 3 golpes (3 vueltas de la animación, detalles viernes); picar largo: entero→dañado→restos
 function oreCdSec(tier) { return 20 + tier * 6; }   // 20/26/32/38/44s — se nota el estado dañado a la mitad
 
@@ -146,8 +146,8 @@ class FarmScene extends Phaser.Scene {
       let lockIdx = -1;
       if (o.type === "tree") lockIdx = __treeN++;
       if (o.type === "rock") lockIdx = __rockN++;
-      const locked = (o.type === "tree" && lockIdx >= Math.max(1, G.treesOwned || 1)) ||
-                     (o.type === "rock" && lockIdx >= Math.max(1, G.rocksOwned || 1));
+      const locked = (o.type === "tree" && !(G.treesOpen || [0]).includes(lockIdx)) ||
+                     (o.type === "rock" && !(G.rocksOpen || [0]).includes(lockIdx));
       if (locked) s.setAlpha(0.5).setTint(0x555555);
       const rw = (o.type === "ore" || o.type === "rock") ? o.w * 0.67       // minerales −20% (detalles jueves; antes 0.84)
         : (o.type === "tree") ? o.w * 0.8                                   // árboles −20%
@@ -538,15 +538,14 @@ class FarmScene extends Phaser.Scene {
       }, { title: "Construir " + b.label, yes: "Construir", yesClass: "green", no: "Cancelar", noClass: "red" });
       return;
     }
-    if ((o.type === "tree" || o.type === "rock") && o.locked) {   // viernes (2): desbloqueo progresivo
+    if ((o.type === "tree" || o.type === "rock") && o.locked) {   // viernes (2): se desbloquea CUALQUIERA (pedido Discord); el costo sube por cantidad
       const isTree = o.type === "tree";
-      const next = isTree ? Math.max(1, G.treesOwned || 1) : Math.max(1, G.rocksOwned || 1);
-      if (o.lockIdx !== next) { toast(isTree ? "Primero desbloqueá el árbol anterior" : "Primero desbloqueá la piedra anterior"); return; }
       const cost = isTree ? treeUnlockCost() : rockUnlockCost(), res = isTree ? "madera" : "piedra";
       askConfirm("Cuesta " + cost + " de " + RES_LABEL[res] + ". ¿Desbloquear?", () => {
         if ((G.res[res] || 0) < cost) { toast("Te falta " + RES_LABEL[res] + " (" + cost + ")"); return; }
         G.res[res] -= cost;
-        if (isTree) G.treesOwned = next + 1; else G.rocksOwned = next + 1;
+        if (isTree) { G.treesOpen = G.treesOpen || [0]; G.treesOpen.push(o.lockIdx); }
+        else { G.rocksOpen = G.rocksOpen || [0]; G.rocksOpen.push(o.lockIdx); }
         o.locked = false; if (o.sprite) { o.sprite.setAlpha(1); o.sprite.clearTint(); }
         addXp("crafting", 5); if (typeof syncSlots === "function") syncSlots();
         log("Desbloqueaste " + (isTree ? "un árbol" : "una piedra") + " por " + cost + " de " + RES_LABEL[res] + ".", "good"); toast("¡" + (isTree ? "Árbol" : "Piedra") + " desbloqueado!");
@@ -1246,7 +1245,7 @@ class FarmScene extends Phaser.Scene {
         else pl.timer.setVisible(false);
       }
       if (pl.state !== "growing") continue;
-      if (t >= pl.readyAt) { pl.state = "ready"; pl.readyAt = 0; pl.witherAt = t + WITHER_MS; this.showReadyCrop(pl); this.syncPlots(); }
+      if (t >= pl.readyAt) { pl.state = "ready"; pl.readyAt = 0; pl.witherAt = t + witherMs(pl.cropKey); this.showReadyCrop(pl); this.syncPlots(); }
       else {
         if (plOver) pl.timer.setText(Math.max(0, Math.ceil((pl.readyAt - t) / 1000)) + "s").setPosition(pl.cx, this.topY(pl)).setVisible(true);
         else pl.timer.setVisible(false);

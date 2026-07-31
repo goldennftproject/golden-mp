@@ -7,7 +7,7 @@ const G = {
   plata: 0, golden: 20, level: 1, prestige: 0, week: 1,
   hp: 100, hpMax: 100, swordOwned: false, bowOwned: false, swordWoodOwned: false,   // combate (Fase D)
   armasUnlocked: false,          // viernes (2): la pestana Armas de la Herreria se paga (20 madera + 20 piedra + 1000 plata)
-  treesOwned: 1, rocksOwned: 1,  // viernes (2): 1 arbol y 1 piedra activos; el resto difuminado y se desbloquea
+  treesOpen: [0], rocksOpen: [0],  // viernes (2): índices de árboles/piedras desbloqueados (cualquiera, sin orden — pedido Discord)
   gear: { casco: null, armadura: null, botas: null, escudo: null, arma: null, municion: false },   // equipo (armas se equipan en el panel de Equipo — detalles jueves)
   res: { madera: 0, piedra: 0, bronce: 0, hierro: 0, oro: 0, diamante: 0, netherita: 0, carne: 0, flecha: 0, lombriz: 0,
     tablon: 0, barra_piedra: 0, barra_bronce: 0, barra_hierro: 0, barra_oro: 0,
@@ -61,15 +61,19 @@ function resSprite(k) { return CROP_DEF[k] ? "crop_" + k : (RES_SPRITE[k] || nul
 
 // --- cultivos (semillas compradas en la Tienda; se desbloquean por nivel de Cultivo) ---
 const CROP_ORDER = ["papa","zanahoria","cebolla","calabacin","repollo","calabaza","brocoli"];
+// TABLA DE PRECIOS del diseñador (31/7): Ganancia = Tiempo × Riesgo × Nivel. Papa base: compra 1 / venta 3 / 1h.
+// growH = horas reales de la tabla. En TESTEO corre comprimido: 1h → 1min (GROW_SCALE). Para pasar a real: GROW_SCALE = 1.
+const GROW_SCALE = 1 / 60;
 const CROP_DEF = {
-  papa:      { label:"Papa",      emoji:"🥔", lvl:1,  seedCost:1,   grow:16, yield:2, price:3 },
-  zanahoria: { label:"Zanahoria", emoji:"🥕", lvl:2,  seedCost:4,   grow:18, yield:2, price:5 },
-  cebolla:   { label:"Cebolla",   emoji:"🧅", lvl:3,  seedCost:8,   grow:20, yield:2, price:8 },
-  calabacin: { label:"Calabacín", emoji:"🥒", lvl:5,  seedCost:16,  grow:22, yield:2, price:14 },
-  repollo:   { label:"Repollo",   emoji:"🥬", lvl:7,  seedCost:30,  grow:25, yield:2, price:24 },
-  calabaza:  { label:"Calabaza",  emoji:"🎃", lvl:10, seedCost:60,  grow:28, yield:1, price:45 },
-  brocoli:   { label:"Brócoli",   emoji:"🥦", lvl:13, seedCost:120, grow:32, yield:1, price:70 },
+  papa:      { label:"Papa",      emoji:"🥔", lvl:1, seedCost:1,  growH:1,  yield:1, price:3 },
+  zanahoria: { label:"Zanahoria", emoji:"🥕", lvl:2, seedCost:3,  growH:2,  yield:1, price:8 },
+  cebolla:   { label:"Cebolla",   emoji:"🧅", lvl:3, seedCost:6,  growH:4,  yield:1, price:16 },
+  calabacin: { label:"Calabacín", emoji:"🥒", lvl:4, seedCost:12, growH:8,  yield:1, price:32 },
+  repollo:   { label:"Repollo",   emoji:"🥬", lvl:5, seedCost:20, growH:12, yield:1, price:50 },
+  calabaza:  { label:"Calabaza",  emoji:"🎃", lvl:6, seedCost:40, growH:24, yield:1, price:100 },
+  brocoli:   { label:"Brócoli",   emoji:"🥦", lvl:7, seedCost:90, growH:48, yield:1, price:210 },
 };
+for (const k in CROP_DEF) CROP_DEF[k].grow = Math.round(CROP_DEF[k].growH * 3600 * GROW_SCALE);   // en segundos, como siempre
 // --- peces (ítems del inventario) ---
 const FISH_ORDER = ["comun", "raro", "epico", "legendario"];
 const FISH_DEF = { comun: { label: "Pez común", emoji: "🐟", sprite: "fish_comun" }, raro: { label: "Pez raro", emoji: "🐠", sprite: "fish_raro" }, epico: { label: "Pez épico", emoji: "🐡", sprite: "fish_epico" }, legendario: { label: "Pez legendario", emoji: "🐋", sprite: "fish_legendario" } };
@@ -295,10 +299,10 @@ function unlockArmas() {
   log("Desbloqueaste la pestaña Armas de la Herrería.", "gold"); toast("¡Armas desbloqueadas!");
   refreshForge(); refreshHud(); if (typeof saveFarm === "function") saveFarm();
 }
-// viernes (2): desbloqueo progresivo de árboles y piedras (3/9/27/81/100)
+// viernes (2): desbloqueo progresivo de árboles y piedras (3/9/27/81/100) — se paga por CANTIDAD ya abierta, el orden es libre
 const NODE_UNLOCK_COSTS = [3, 9, 27, 81, 100];
-function treeUnlockCost() { return NODE_UNLOCK_COSTS[Math.min(NODE_UNLOCK_COSTS.length - 1, Math.max(0, (G.treesOwned || 1) - 1))]; }
-function rockUnlockCost() { return NODE_UNLOCK_COSTS[Math.min(NODE_UNLOCK_COSTS.length - 1, Math.max(0, (G.rocksOwned || 1) - 1))]; }
+function treeUnlockCost() { return NODE_UNLOCK_COSTS[Math.min(NODE_UNLOCK_COSTS.length - 1, Math.max(0, (G.treesOpen || [0]).length - 1))]; }
+function rockUnlockCost() { return NODE_UNLOCK_COSTS[Math.min(NODE_UNLOCK_COSTS.length - 1, Math.max(0, (G.rocksOpen || [0]).length - 1))]; }
 function canShoot() { return G.gear.arma === "bow" && toolDur("bow") > 0 && G.gear.municion && (G.res.flecha || 0) > 0; }   // arco Y flechas equipados
 
 // --- armaduras (dropean de los monstruos del Bosque; reducen el daño recibido) ---
