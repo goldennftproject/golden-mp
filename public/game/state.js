@@ -1,6 +1,6 @@
 /* Golden Farm · estado del juego + economía (sin DOM ni canvas) */
 window.GF = window.GF || {};
-GF.spr = (k) => "assets/farm/" + k + ".png?a=6";   // ?a=N rompe el caché de los íconos cuando cambia el arte (a=6: set de hierro + tablones + bloques PixelLab)
+GF.spr = (k) => "assets/farm/" + k + ".png?a=7";   // ?a=N rompe el caché de los íconos (a=7: lombriz oficial PixelLab)
 
 // --- estado principal (con algunos recursos de arranque para probar los menús) ---
 const G = {

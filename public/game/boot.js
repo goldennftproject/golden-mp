@@ -62,6 +62,7 @@ class BootScene extends Phaser.Scene {
     L.push(["tree_cut1", P + "tree_cut1.png"]);
     L.push(["tree_cut2", P + "tree_cut2.png"]);
     L.push(["tree_stump_leaves", P + "tree_stump_leaves.png"]);
+    L.push(["tree_half", P + "tree_half.png"]);   // mitad del enfriamiento: árbol pelado con pocas ramas (PixelLab 31/7)
     L.push(["pond", P + "pond.png?v=2"]);
     L.push(["portal", P + "portal.png"]);   // portal al Bosque (frame quieto de respaldo)
     for (let i = 0; i < 8; i++) L.push(["portal_" + i, P + "portal_" + i + ".png?v=2"]);   // espiral girando 360° · v2: gira TODO el vórtice, no solo el círculo central

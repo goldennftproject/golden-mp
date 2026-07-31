@@ -1079,9 +1079,10 @@ class FarmScene extends Phaser.Scene {
         else if (o.type === "ore") { this.setObjTex(o, o.baseKey, o.rw || o.w); o.sprite.setAlpha(1); }
         if (o.timer) o.timer.setVisible(false);
       } else if (o.readyAt && o.type === "tree" && o.halfAt && t >= o.halfAt) {
-        // mitad del enfriamiento: del tocón brota el árbol a medio crecer (detalles viernes)
+        // mitad del enfriamiento: el árbol pelado con pocas ramas (PixelLab 31/7; respaldo: sprout)
         o.halfAt = 0;
-        if (this.textures.exists("sprout")) this.setObjTex(o, "sprout", (o.rw || o.w) * 0.6);
+        if (this.textures.exists("tree_half")) this.setObjTex(o, "tree_half", o.rw || o.w);
+        else if (this.textures.exists("sprout")) this.setObjTex(o, "sprout", (o.rw || o.w) * 0.6);
       } else if (o.readyAt && o.timer) {
         // cuarta.docx: el timer del recurso solo aparece con el cursor encima (al clickear ya sale el aviso)
         const p = this.input.activePointer;
