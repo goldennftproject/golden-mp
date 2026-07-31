@@ -37,7 +37,7 @@ class ForestScene extends Phaser.Scene {
     }
 
     // salida (izquierda): volver a la granja
-    this.add.text(26, this.H / 2, "⬅️", { fontSize: "26px" }).setOrigin(0.5).setDepth(5);
+    this.add.text(26, this.H / 2, "", { fontSize: "26px" }).setOrigin(0.5).setDepth(5);
     this.add.text(26, this.H / 2 + 26, "Granja", { fontFamily: "system-ui", fontSize: "11px", fontStyle: "bold", color: "#ffe08a", stroke: "#20301a", strokeThickness: 3 }).setOrigin(0.5).setDepth(5);
 
     // monstruos: tier según profundidad (x)
@@ -95,8 +95,8 @@ class ForestScene extends Phaser.Scene {
     this.keys = this.input.keyboard.addKeys({ up:"W", down:"S", left:"A", right:"D", aup:"UP", adown:"DOWN", aleft:"LEFT", aright:"RIGHT", act:"E", act2:"SPACE" }, false);
     this.keys.act.on("down", () => this.tryAttack());
     this.keys.act2.on("down", () => this.tryAttack());
-    toast("🌑 La Zona Negra — cuanto más profundo, más peligro");
-    log("🌑 Entraste a la Zona Negra. Los monstruos fuertes viven a la derecha.", "info");
+    toast("La Zona Negra — cuanto más profundo, más peligro");
+    log("Entraste a la Zona Negra. Los monstruos fuertes viven a la derecha.", "info");
     refreshHud();
   }
 
@@ -104,7 +104,7 @@ class ForestScene extends Phaser.Scene {
   navOf() { if (!this._nav) this._nav = new GF.Nav((x, y, p) => this.blockedAt(x, y, p), this.W, this.H); return this._nav; }
   goTo(x, y, silent) {
     const p = this.navOf().find(this.hero.x, this.hero.y, x, y);
-    if (!p) { this.path = null; this.moveTarget = null; if (!silent) toast("🚫 No hay camino hasta ahí"); return false; }
+    if (!p) { this.path = null; this.moveTarget = null; if (!silent) toast("No hay camino hasta ahí"); return false; }
     this.path = p.slice(); this.moveTarget = this.path.shift();
     return true;
   }
@@ -214,7 +214,7 @@ class ForestScene extends Phaser.Scene {
   dropSprite(g) {
     const sk = g.kind === "gear" ? (GEAR_DEF[g.k] && GEAR_DEF[g.k].sprite)
       : (g.k === "plata" ? "coin_plata" : (typeof resSprite === "function" ? resSprite(g.k) : null));
-    const emo = g.kind === "gear" ? ((GEAR_DEF[g.k] && GEAR_DEF[g.k].emoji) || "🛡️") : (g.k === "plata" ? "🪙" : (RES_EMOJI[g.k] || "❔"));
+    const emo = g.kind === "gear" ? ((GEAR_DEF[g.k] && GEAR_DEF[g.k].emoji) || "") : (g.k === "plata" ? "" : (RES_EMOJI[g.k] || ""));
     let s;
     if (sk && this.textures.exists(sk)) { s = this.add.image(g.x, g.y, sk).setOrigin(0.5, 1); s.setScale(19 / s.width); }
     else s = this.add.text(g.x, g.y, emo, { fontSize: "15px" }).setOrigin(0.5, 1);
@@ -244,9 +244,9 @@ class ForestScene extends Phaser.Scene {
       if (Math.hypot(g.x - x, g.y - y) > rad) continue;
       let ok = false, label = "";
       if (g.kind === "gear") { gainGear(g.k); ok = true; label = (GEAR_DEF[g.k] && GEAR_DEF[g.k].label) || "equipo"; }
-      else if (g.k === "plata") { G.plata += g.n; ok = true; label = g.n + " 🪙"; }
+      else if (g.k === "plata") { G.plata += g.n; ok = true; label = g.n + " "; }
       else { ok = tryAddRes(g.k, g.n); label = g.n + " " + (RES_EMOJI[g.k] || ""); }
-      if (!ok) { toast("🎒 Bolsa llena"); continue; }
+      if (!ok) { toast("Bolsa llena"); continue; }
       if (window.sfx) sfx("coin");
       if (g.kind !== "gear") toast("+" + label);
       const s = g.spr;
@@ -281,13 +281,13 @@ class ForestScene extends Phaser.Scene {
     }
   }
 
-  // disparo: proyectil ➳ que viaja hasta el monstruo y pega al llegar
+  // disparo: proyectil que viaja hasta el monstruo y pega al llegar
   shootArrow(m) {
-    if (!canShoot()) { toast("➳ Sin flechas — crafteá en la Herrería"); return; }
+    if (!canShoot()) { toast("Sin flechas — crafteá en la Herrería"); return; }
     G.res.flecha--; useTool("bow");
-    if (toolDur("bow") <= 0) { log("🏹 ¡El arco se rompió! Reparalo en la Herrería.", "bad"); toast("🏹 ¡Arco roto!"); }
+    if (toolDur("bow") <= 0) { log("¡El arco se rompió! Reparalo en la Herrería.", "bad"); toast("¡Arco roto!"); }
     if (typeof syncSlots === "function") syncSlots(); if (isOpen("ov-inv")) refreshInv();
-    const a = this.add.text(this.hero.x, this.hero.y - 22, "➳", { fontSize: "16px", color: "#e8d3a8" }).setOrigin(0.5).setDepth(99999);
+    const a = this.add.text(this.hero.x, this.hero.y - 22, "", { fontSize: "16px", color: "#e8d3a8" }).setOrigin(0.5).setDepth(99999);
     a.setScale(m.cx < this.hero.x ? -1 : 1, 1);
     const d = Math.hypot(m.cx - this.hero.x, m.by - this.hero.y);
     this.tweens.add({
@@ -299,7 +299,7 @@ class ForestScene extends Phaser.Scene {
   hitMonster(m, dmg, skill) {
     if (window.sfx) sfx("hit");
     if (dmg == null) { dmg = swordDmg(); skill = "sword"; }
-    if (skill === "sword" && G.gear.arma === "sword" && toolDur("sword") > 0) { useTool("sword"); if (toolDur("sword") <= 0) { log("⚔️ ¡La espada se rompió! Reparala en la Herrería.", "bad"); toast("⚔️ ¡Espada rota!"); } }
+    if (skill === "sword" && G.gear.arma === "sword" && toolDur("sword") > 0) { useTool("sword"); if (toolDur("sword") <= 0) { log("¡La espada se rompió! Reparala en la Herrería.", "bad"); toast("¡Espada rota!"); } }
     m.hp -= dmg;
     // chispa de golpe (detalles 338)
     const hy = m.by - (m.spr.displayHeight || m.spr.height) * 0.5;
@@ -328,10 +328,10 @@ class ForestScene extends Phaser.Scene {
     if (this.target === m) this.clearTarget();
     const loot = rollLoot(m.def);
     Object.keys(loot).forEach(k => drops.push({ k, n: loot[k], kind: "res" }));
-    const parts = drops.map(d => d.kind === "gear" ? "🛡️ " + ((GEAR_DEF[d.k] && GEAR_DEF[d.k].label) || d.k) : "+" + d.n + " " + (d.k === "plata" ? "🪙" : (RES_EMOJI[d.k] || "")));
+    const parts = drops.map(d => d.kind === "gear" ? "" + ((GEAR_DEF[d.k] && GEAR_DEF[d.k].label) || d.k) : "+" + d.n + " " + (d.k === "plata" ? "" : (RES_EMOJI[d.k] || "")));
     this.dropLoot(m, drops);   // todo el botín cae al piso, armaduras incluidas (detalles 338)
-    log("⚔️ Venciste a " + m.def.label + (parts.length ? ". Soltó: " + parts.join(" · ") : ". No soltó nada."), "gold");
-    toast("⚔️ " + m.def.label + " ✔" + (parts.length ? " " + parts.join(" ") : ""));
+    log("Venciste a " + m.def.label + (parts.length ? ". Soltó: " + parts.join(" · ") : ". No soltó nada."), "gold");
+    toast("" + m.def.label + " " + (parts.length ? " " + parts.join(" ") : ""));
     refreshHud();
     this.tweens.add({ targets: m.spr, alpha: 0, y: m.by - 12, duration: 400, onComplete: () => m.spr.setVisible(false) });
     // reaparece en su zona tras 25-40s
@@ -350,8 +350,8 @@ class ForestScene extends Phaser.Scene {
     this.hurtFx = 0.18;
     refreshHud();
     if (G.hp <= 0) {
-      log("💀 Te derrotaron en la Zona Negra. Despertás en la granja.", "bad");
-      toast("💀 Te llevaron de vuelta a la granja");
+      log("Te derrotaron en la Zona Negra. Despertás en la granja.", "bad");
+      toast("Te llevaron de vuelta a la granja");
       G.hp = Math.ceil(G.hpMax / 2);
       if (typeof saveFarm === "function") saveFarm(true);
       this.leaving = true;
@@ -447,7 +447,7 @@ class ForestScene extends Phaser.Scene {
     // salir por la izquierda
     if (hero.x < 40) {
       const left = (GF.forestDrops || []).length;
-      if (left) { log("🎒 Dejaste " + left + " objeto(s) en el suelo de la Zona Negra — siguen ahí si volvés.", "bad"); toast("🎒 Dejaste " + left + " objeto(s) en el suelo"); }
+      if (left) { log("Dejaste " + left + " objeto(s) en el suelo de la Zona Negra — siguen ahí si volvés.", "bad"); toast("Dejaste " + left + " objeto(s) en el suelo"); }
       if (typeof saveFarm === "function") saveFarm();
       this.leaving = true;
       this.scene.start("farm"); return;
@@ -512,9 +512,9 @@ class ForestScene extends Phaser.Scene {
     if (GF.uiOpen || this.action) { el.classList.remove("show"); return; }
     const m = this.nearestMonster(60);
     const far = !m && canShoot() ? this.nearestMonster(190) : null;
-    if (m) { el.textContent = "⚔️ Atacar " + m.def.label + " (" + Math.ceil(m.hp) + " ❤) · [E]"; el.classList.add("show"); }
-    else if (far) { el.textContent = "🏹 Disparar a " + far.def.label + " (➳ " + (G.res.flecha || 0) + ") · [E]"; el.classList.add("show"); }
-    else if (this.hero.x < 90) { el.textContent = "⬅️ Volver a la granja"; el.classList.add("show"); }
+    if (m) { el.textContent = "Atacar " + m.def.label + " (" + Math.ceil(m.hp) + " ) · [E]"; el.classList.add("show"); }
+    else if (far) { el.textContent = "Disparar a " + far.def.label + " (" + (G.res.flecha || 0) + ") · [E]"; el.classList.add("show"); }
+    else if (this.hero.x < 90) { el.textContent = "Volver a la granja"; el.classList.add("show"); }
     else el.classList.remove("show");
   }
 }

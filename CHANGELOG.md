@@ -157,5 +157,5 @@ Registro cronológico de todo lo hecho desde el inicio del proyecto (27 de julio
 - Generaciones supervisadas restantes: portal al bosque, 7 íconos de skills, retoque de lingotes bronce/oro, fuego animado de la herrería (experimental).
 - En espera del diseñador: lombrices (pesca), cerca premium, tabla de stats del bestiario, tiempos de cultivo reales.
 - Bloque grande diferido: jabalí (granjero definitivo ✔ integrado 30/7; 6 monstruos del bosque ✔).
-- Código: bolsa a 20 espacios (falta confirmar layout), fondo del Bosque en damero oscuro.
+- Código: fondo de la Zona Negra en damero oscuro. (Bolsa a 20 ✔ 30/7: base 20 en 4 filas de 5, ampliable a 50; lo que exceda queda contado y reaparece al liberar espacio.)
 - Pilares futuros: login por email multi-dispositivo, PvP/endgame de netherita, referidos, token $Golden, audio.

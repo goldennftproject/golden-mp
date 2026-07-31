@@ -78,7 +78,7 @@ class FarmScene extends Phaser.Scene {
       const p0 = this.pondPoint(), sz = FISH_SIZES[fi];
       const s = this.textures.exists(fk)
         ? this.add.image(p0.x, p0.y, fk).setDisplaySize(sz[0], sz[1]).setOrigin(0.5).setDepth(-990).setAlpha(0.9)
-        : this.add.text(p0.x, p0.y, fi === 1 ? "🐠" : "🐟", { fontSize: "13px" }).setOrigin(0.5).setDepth(-990).setAlpha(0.85);
+        : this.add.text(p0.x, p0.y, fi === 1 ? "" : "", { fontSize: "13px" }).setOrigin(0.5).setDepth(-990).setAlpha(0.85);
       this.pondFish.push({ s, tgt: this.pondPoint(), sp: 10 + Math.random() * 12 });
     });
     // cuadriculado: solo visible en modo edición (detalles 29/7)
@@ -142,7 +142,7 @@ class FarmScene extends Phaser.Scene {
         if (this.anims.exists("portal_spin")) pspr.play("portal_spin");
         this.tweens.add({ targets: pspr, scaleY: pspr.scaleY * 1.02, duration: 1400, yoyo: true, repeat: -1, ease: "Sine.easeInOut" });   // latido sutil del vórtice
       } else {
-        this.add.text(px, py, "🌲", { fontSize: "26px" }).setOrigin(0.5, 1).setDepth(py);
+        this.add.text(px, py, "", { fontSize: "26px" }).setOrigin(0.5, 1).setDepth(py);
       }
       this.add.text(px, py + 12, "Zona Negra", { fontFamily: "system-ui", fontSize: "11px", fontStyle: "bold", color: "#ffe08a", stroke: "#20301a", strokeThickness: 3 }).setOrigin(0.5, 0.5).setDepth(py);
       this.portal = { type: "portal", cx: px, by: py, sprite: pspr, w: T * 1.4 };
@@ -229,16 +229,16 @@ class FarmScene extends Phaser.Scene {
         if (this.hitsSprite(o.sprite, wx, wy)) { const d = Math.hypot(o.cx - wx, o.by - wy); if (d < bd) { bd = d; hit = o; } }
       }
       if (!hit) { for (const pl of this.plots) { if (Math.abs(wx - pl.cx) < T / 2 && Math.abs(wy - pl.by) < T / 2) { hit = pl; break; } } }
-      if (!hit && this.portal && Math.abs(wx - this.portal.cx) < 26 && Math.abs(wy - (this.portal.by - 14)) < 30) hit = this.portal;   // clic en el portal 🌲: caminar y teletransportarse
+      if (!hit && this.portal && Math.abs(wx - this.portal.cx) < 26 && Math.abs(wy - (this.portal.by - 14)) < 30) hit = this.portal;   // clic en el portal : caminar y teletransportarse
       if (this.action) {   // acción en curso: encolar el próximo objetivo (hasta 7) sin esperar la animación
         if (hit && (hit.type === "plot" || hit.type === "tree" || hit.type === "rock" || hit.type === "ore")) {
-          if (!this.queue.includes(hit) && this.queue.length < 7) { this.queue.push(hit); this.markQueued(hit); toast("📋 En cola (" + this.queue.length + ")"); }
+          if (!this.queue.includes(hit) && this.queue.length < 7) { this.queue.push(hit); this.markQueued(hit); toast("En cola (" + this.queue.length + ")"); }
         }
         return;
       }
       if (hit) {
         if (this.pendingObj && this.pendingObj !== hit && (hit.type === "plot" || hit.type === "tree" || hit.type === "rock" || hit.type === "ore")) {
-          if (!this.queue.includes(hit) && this.queue.length < 7) { this.queue.push(hit); this.markQueued(hit); toast("📋 En cola (" + this.queue.length + ")"); }
+          if (!this.queue.includes(hit) && this.queue.length < 7) { this.queue.push(hit); this.markQueued(hit); toast("En cola (" + this.queue.length + ")"); }
         } else { this.pendingObj = hit; this.goTo(hit.cx, hit.by + 18); }
       }
       else if (this.nearPond() && this.pondDist(wx, wy) < 1.05) { this.pendingObj = null; this.moveTarget = null; this.tryFish(wx, wy); }
@@ -299,7 +299,7 @@ class FarmScene extends Phaser.Scene {
         const row = Phaser.Math.Clamp(Math.floor(pt.worldY / T), 0, GF.ROWS - 1);
         if (this.plotSpotBlocked(pl, col, row)) {
           if (pl.ground) pl.ground.setPosition(pl.cx, pl.by).setDepth(-998);
-          toast("🚫 Ahí ya hay algo — elegí otra celda"); return;
+          toast("Ahí ya hay algo — elegí otra celda"); return;
         }
         GF.PLOTS[pl.i].col = col; GF.PLOTS[pl.i].row = row;
         pl.cx = (col + 0.5) * T; pl.by = (row + 0.5) * T;
@@ -322,7 +322,7 @@ class FarmScene extends Phaser.Scene {
         const pcx0 = (p2.col + p2.cols / 2) * T, pcy0 = (p2.row + p2.rows / 2) * T;
         if (this.pondSpotBlocked(col, row)) {
           this.pondImg.setPosition(pcx0, pcy0);
-          toast("🚫 La laguna no entra ahí"); return;
+          toast("La laguna no entra ahí"); return;
         }
         p2.col = col; p2.row = row;
         this.pondImg.setPosition((col + p2.cols / 2) * T, (row + p2.rows / 2) * T);
@@ -339,7 +339,7 @@ class FarmScene extends Phaser.Scene {
         o.sprite.setPosition(o.origCx, o.origBy).setDepth(o.origBy);
         if (o.shadow) o.shadow.setPosition(o.origCx, o.origBy - 3).setDepth(o.origBy - 0.5);
         if (o.timer) o.timer.setPosition(o.origCx, o.origBy - T * 0.85);
-        toast("🚫 Ahí ya hay algo — elegí otra celda");
+        toast("Ahí ya hay algo — elegí otra celda");
         this.dragObj = null; return;
       }
       o.cx = leftCol * T + wCells * T / 2; o.by = baseRow * T;
@@ -433,8 +433,8 @@ class FarmScene extends Phaser.Scene {
     s.setScale(baseScale).setDepth(40);
     this.threats.push({ type: "boar", sprite: s, cx: 24, by: 40, baseScale, tgt, damageAt: nowMs() + 15000 });
     G.week++; refreshHud();
-    log("🐗 ¡Un jabalí apareció! Espantalo (clic/E) antes de que arruine un cultivo.", "bad");
-    toast("🐗 ¡Jabalí! Espantalo");
+    log("¡Un jabalí apareció! Espantalo (clic/E) antes de que arruine un cultivo.", "bad");
+    toast("¡Jabalí! Espantalo");
   }
 
   // ---- interacción ----
@@ -451,30 +451,30 @@ class FarmScene extends Phaser.Scene {
 
   promptText(o) {
     const cd = nowMs() < o.readyAt;
-    if (o.type === "boar") return "🥍 Espantar jabalí";
+    if (o.type === "boar") return "Espantar jabalí";
     if (o.type === "plot") {
-      if (o.state === "locked") return "🔒 Desbloquear parcela (" + plotUnlockCost() + " 🪙)";
-      if (o.state === "withered") return "🥀 Limpiar cultivo marchito";
-      if (o.state === "dry") { const cd = CROP_DEF[G.selSeed]; return "🌱 Plantar " + (cd ? cd.label : "cultivo"); }
-      if (o.state === "ready") { const cd = CROP_DEF[o.cropKey]; return "🌾 Cosechar " + (cd ? cd.label : ""); }
-      return "🌱 Creciendo…";
+      if (o.state === "locked") return "Desbloquear parcela (" + plotUnlockCost() + " )";
+      if (o.state === "withered") return "Limpiar cultivo marchito";
+      if (o.state === "dry") { const cd = CROP_DEF[G.selSeed]; return "Plantar " + (cd ? cd.label : "cultivo"); }
+      if (o.state === "ready") { const cd = CROP_DEF[o.cropKey]; return "Cosechar " + (cd ? cd.label : ""); }
+      return "Creciendo…";
     }
-    if (o.type === "portal") return "🌑 Teletransportarte a la Zona Negra" + (G.swordOwned ? "" : " ⚠️ sin espada");
+    if (o.type === "portal") return "Teletransportarte a la Zona Negra" + (G.swordOwned ? "" : " sin espada");
     const secs = cd ? Math.ceil((o.readyAt - nowMs()) / 1000) : 0;
-    if (o.type === "tree") return cd ? "🪵 Vuelve en " + secs + "s" : "🪓 Talar madera";
-    if (o.type === "rock") return cd ? "🪨 Vuelve en " + secs + "s" : "⛏️ Picar piedra";
-    if (o.type === "ore") { const od = ORE_DEF[o.ore]; if (!od) return "⛏️ Minar"; if (cd) return od.emoji + " Vuelve en " + secs + "s"; return "⛏️ Minar " + od.label; }
-    if (o.type === "barn") return "🏡 Granja";
-    if (o.type === "market") return "🏪 Mercado";
-    if (o.type === "store") return "🛠️ Herrería";
-    if (o.type === "cocina") return "🍳 Cocina";
-    if (o.type === "cofre") return "📦 Cofre depósito";
+    if (o.type === "tree") return cd ? "Vuelve en " + secs + "s" : "Talar madera";
+    if (o.type === "rock") return cd ? "Vuelve en " + secs + "s" : "Picar piedra";
+    if (o.type === "ore") { const od = ORE_DEF[o.ore]; if (!od) return "Minar"; if (cd) return od.emoji + " Vuelve en " + secs + "s"; return "Minar " + od.label; }
+    if (o.type === "barn") return "Granja";
+    if (o.type === "market") return "Mercado";
+    if (o.type === "store") return "Herrería";
+    if (o.type === "cocina") return "Cocina";
+    if (o.type === "cofre") return "Cofre depósito";
     if (o.type === "dummy") {
-      if (!G.swordOwned) return "🎯 Dummy de práctica — necesitás una espada";
+      if (!G.swordOwned) return "Dummy de práctica — necesitás una espada";
       const dleft = (G.dummyUsedAt || 0) + DUMMY_CD_MS - nowMs();
-      return dleft > 0 ? "🎯 El dummy descansa — vuelve en " + fmtDur(dleft) : "🎯 Entrenar espada (+" + DUMMY_XP + " XP)";
+      return dleft > 0 ? "El dummy descansa — vuelve en " + fmtDur(dleft) : "Entrenar espada (+" + DUMMY_XP + " XP)";
     }
-    if (o.type === "fish") return "🎣 Pescar (" + FISH_COST + " ✨ · tenés " + G.golden + ")";
+    if (o.type === "fish") return "Pescar (" + FISH_COST + " · tenés " + G.golden + ")";
     return "";
   }
 
@@ -488,27 +488,27 @@ class FarmScene extends Phaser.Scene {
     if (o.type === "cocina") return openOv("ov-cocina");
     if (o.type === "cofre") { window.chestOpen = o.chestIdx; return openOv("ov-cofre"); }
     if (o.type === "dummy") return this.trainDummy(o);
-    if (o.type === "boar") { o.sprite.destroy(); const i = this.threats.indexOf(o); if (i >= 0) this.threats.splice(i, 1); log("🥍 Espantaste al jabalí.", "good"); toast("🥍 ¡Espantado!"); return; }   // XP de espada llega con el combate (necesita espada equipada)
+    if (o.type === "boar") { o.sprite.destroy(); const i = this.threats.indexOf(o); if (i >= 0) this.threats.splice(i, 1); log("Espantaste al jabalí.", "good"); toast("¡Espantado!"); return; }   // XP de espada llega con el combate (necesita espada equipada)
     if (o.type === "plot") {
       if (o.state === "locked") {   // desbloquear con plata (doble clic para confirmar)
         const cost = plotUnlockCost();
         if (this.unlockPend === o && nowMs() < this.unlockPendUntil) {
-          if (G.plata < cost) { toast("Te falta plata (" + cost + " 🪙)"); return; }
+          if (G.plata < cost) { toast("Te falta plata (" + cost + " )"); return; }
           G.plata -= cost; G.plotsOwned = (G.plotsOwned || 6) + 1; o.state = "dry"; this.unlockPend = null;
           if (o.ground && this.textures.exists("plot")) { o.ground.setTexture("plot").setDisplaySize(GF.TILE, GF.TILE).clearTint(); o.ground.setAlpha(1); }
           addXp("farming", 5); this.syncPlots();
-          log("🔓 Desbloqueaste una parcela por " + cost + " 🪙.", "good"); toast("🔓 ¡Parcela desbloqueada!");
+          log("Desbloqueaste una parcela por " + cost + " plata.", "good"); toast("¡Parcela desbloqueada!");
           refreshHud(); if (typeof saveFarm === "function") saveFarm(true);
         } else {
           this.unlockPend = o; this.unlockPendUntil = nowMs() + 6000;
-          toast("🔒 Desbloquear esta parcela: " + cost + " 🪙 — interactuá de nuevo para confirmar");
+          toast("Desbloquear esta parcela: " + cost + " — interactuá de nuevo para confirmar");
         }
         return;
       }
       if (o.state === "withered") {   // limpiar el cultivo perdido: la parcela vuelve a estar libre
         o.state = "dry"; o.cropKey = null; o.witherAt = 0;
         o.spr.clearTint().setAlpha(1).setVisible(false); o.emo.setVisible(false); o.timer.setVisible(false);
-        this.syncPlots(); log("🥀 Limpiaste el cultivo marchito.", "info"); toast("🧹 Parcela limpia");
+        this.syncPlots(); log("Limpiaste el cultivo marchito.", "info"); toast("Parcela limpia");
         return;
       }
       // la azada/semilla se usan solas desde la bolsa (la hotbar sigue sirviendo para ELEGIR semilla)
@@ -519,7 +519,7 @@ class FarmScene extends Phaser.Scene {
           const hb = G.hotbar && G.hotbar[G.hotSel];
           if (hb && hb.kind === "seed" && cropUnlocked(hb.key) && (G.seeds[hb.key] || 0) > 0) ck = hb.key;
           else { const alt = CROP_ORDER.find(k => cropUnlocked(k) && (G.seeds[k] || 0) > 0); if (alt) ck = alt; }
-          if (ck !== G.selSeed && CROP_DEF[ck]) { G.selSeed = ck; toast("🌱 Plantando: " + CROP_DEF[ck].label); if (typeof refreshHotbar === "function") refreshHotbar(); }
+          if (ck !== G.selSeed && CROP_DEF[ck]) { G.selSeed = ck; toast("Plantando: " + CROP_DEF[ck].label); if (typeof refreshHotbar === "function") refreshHotbar(); }
         }
         const cd = CROP_DEF[ck];
         if (!cd) { toast("Elegí una semilla en la bolsa (I)"); return; }
@@ -532,26 +532,26 @@ class FarmScene extends Phaser.Scene {
         if (!roomForRes(ck)) { bagFull("cosechar " + ((CROP_DEF[ck] || {}).label || ck)); return; }
         return this.startAction("harvest", o);
       }
-      toast("🌱 Todavía está creciendo"); return;
+      toast("Todavía está creciendo"); return;
     }
-    if (o.type === "fish") { if (toolDur("rod") <= 0) { toast("🎣 Caña rota — reparala en la Herrería"); return; } if (G.golden < FISH_COST) { toast("Necesitás 5 ✨ para pescar"); return; } if (!roomForFish()) { bagFull("pescar"); return; } return this.startAction("fish", o); }
+    if (o.type === "fish") { if (toolDur("rod") <= 0) { toast("Caña rota — reparala en la Herrería"); return; } if (G.golden < FISH_COST) { toast("Necesitás 5 para pescar"); return; } if (!roomForFish()) { bagFull("pescar"); return; } return this.startAction("fish", o); }
     if (nowMs() < o.readyAt) { toast(this.promptText(o)); return; }
     if (o.type === "ore") {
       const pk = equippedPick();   // el pico sale solo de la bolsa (el equipado define el tier)
-      if (!pk) { toast("⛏️ Necesitás un pico — craftealo en la Herrería"); return; }
+      if (!pk) { toast("Necesitás un pico — craftealo en la Herrería"); return; }
       const pd = PICK_DEF[pk], od = ORE_DEF[o.ore];
-      if (od.tier > pd.mineTier) { toast("⛏️ Tu " + pd.label + " no puede con " + od.label); log("Necesitás un pico mejor para " + od.label + " (Herrería).", "bad"); return; }
-      if ((G.picks.dur[pk] || 0) <= 0) { toast("🛠️ Pico roto — reparalo en la Herrería"); return; }
+      if (od.tier > pd.mineTier) { toast("Tu " + pd.label + " no puede con " + od.label); log("Necesitás un pico mejor para " + od.label + " (Herrería).", "bad"); return; }
+      if ((G.picks.dur[pk] || 0) <= 0) { toast("Pico roto — reparalo en la Herrería"); return; }
       if (!roomForRes(o.ore)) { bagFull("picar " + od.label); return; }
       this.startAction("mine", o);
     } else if (o.type === "tree") {
-      if (toolDur("axe") <= 0) { toast("🪓 Hacha rota — reparala en la Herrería"); return; }
+      if (toolDur("axe") <= 0) { toast("Hacha rota — reparala en la Herrería"); return; }
       if (!roomForRes("madera")) { bagFull("talar"); return; }
       this.startAction("chop", o);
     } else if (o.type === "rock") {
       const pk = equippedPick();
-      if (!pk) { toast("⛏️ Necesitás un pico — craftealo en la Herrería"); return; }
-      if ((G.picks.dur[pk] || 0) <= 0) { toast("🛠️ Pico roto — reparalo en la Herrería"); return; }
+      if (!pk) { toast("Necesitás un pico — craftealo en la Herrería"); return; }
+      if ((G.picks.dur[pk] || 0) <= 0) { toast("Pico roto — reparalo en la Herrería"); return; }
       if (!roomForRes("piedra")) { bagFull("picar piedra"); return; }
       this.startAction("mine", o);
     }
@@ -586,7 +586,7 @@ class FarmScene extends Phaser.Scene {
     }});
   }
   clearBobber() { if (this.bobberTween) { this.bobberTween.stop(); this.bobberTween = null; } if (this.bobber) { this.bobber.destroy(); this.bobber = null; } }
-  cancelFishing() { this.clearBobber(); this.action = null; toast("🎣 Pesca interrumpida"); }
+  cancelFishing() { this.clearBobber(); this.action = null; toast("Pesca interrumpida"); }
 
   finishAction() {
     const a = this.action, o = a.o;
@@ -598,20 +598,20 @@ class FarmScene extends Phaser.Scene {
         // tocón nuevo con base de tierra y hojas caídas (encuadre del árbol, va a tamaño completo); respaldo: tocón viejo chico
         if (this.textures.exists("tree_stump_leaves")) this.setObjTex(o, "tree_stump_leaves", o.rw || o.w);
         else this.setObjTex(o, "tree_stump", (o.rw || o.w) * 0.42);
-        log(`🪵 +${gr} Madera. 🪓 ${toolDur("axe")}/${TOOL_DEF.axe.max}`, "good"); toast("+" + gr + " 🪵"); refreshHud();
-        if (toolDur("axe") <= 0) { log("🪓 ¡El hacha se rompió! Reparala en la Herrería.", "bad"); toast("🪓 ¡Hacha rota!"); }
+        log(`+${gr} Madera. ${toolDur("axe")}/${TOOL_DEF.axe.max}`, "good"); toast("+" + gr + " "); refreshHud();
+        if (toolDur("axe") <= 0) { log("¡El hacha se rompió! Reparala en la Herrería.", "bad"); toast("¡Hacha rota!"); }
       } else {
         this.setObjTex(o, o.baseKey, o.rw || o.w);   // bolsa llena: el árbol vuelve entero (deshace los cortes intermedios)
-        toast("🎒 Bolsa llena — no podés talar"); log("🎒 Bolsa llena: liberá espacio para seguir talando.", "bad");
+        toast("Bolsa llena — no podés talar"); log("Bolsa llena: liberá espacio para seguir talando.", "bad");
       }
     } else if (a.kind === "mine" && o.type === "rock") {
       const gr = Math.max(1, Math.round(2 * yieldMult() * chestBonus()));
       if (tryAddRes("piedra", gr)) {
         const pk = equippedPick();   // picar piedra también gasta el pico (bug reportado)
-        if (pk) { G.picks.dur[pk] = Math.max(0, (G.picks.dur[pk] || 0) - 1); if (G.picks.dur[pk] <= 0) { log(`🛠️ ¡${PICK_DEF[pk].label} se rompió! Reparalo en la Herrería.`, "bad"); toast("🛠️ ¡Pico roto!"); } }
-        addXp("mining", 5); o.readyAt = nowMs() + CD.rock * 1000 * cdMult(); this.setObjTex(o, "node_stone_mined", o.rw || GF.TILE); log(`🪨 +${gr} Piedra.` + (pk ? ` ⛏️ ${G.picks.dur[pk]}/${PICK_DEF[pk].dur}` : ""), "good"); toast("+" + gr + " 🪨"); refreshHud();
+        if (pk) { G.picks.dur[pk] = Math.max(0, (G.picks.dur[pk] || 0) - 1); if (G.picks.dur[pk] <= 0) { log(`¡${PICK_DEF[pk].label} se rompió! Reparalo en la Herrería.`, "bad"); toast("¡Pico roto!"); } }
+        addXp("mining", 5); o.readyAt = nowMs() + CD.rock * 1000 * cdMult(); this.setObjTex(o, "node_stone_mined", o.rw || GF.TILE); log(`+${gr} Piedra.` + (pk ? ` ${G.picks.dur[pk]}/${PICK_DEF[pk].dur}` : ""), "good"); toast("+" + gr + " "); refreshHud();
       }
-      else { toast("🎒 Bolsa llena — no podés picar"); log("🎒 Bolsa llena: liberá espacio para seguir picando.", "bad"); }
+      else { toast("Bolsa llena — no podés picar"); log("Bolsa llena: liberá espacio para seguir picando.", "bad"); }
     } else if (a.kind === "mine" && o.type === "ore") {
       const pk = equippedPick(), pd = PICK_DEF[pk], od = ORE_DEF[o.ore];
       let gr = Math.max(1, Math.round(od.yield * yieldMult() * chestBonus())); if (pd.fast) gr *= 2;
@@ -620,23 +620,23 @@ class FarmScene extends Phaser.Scene {
         addXp("mining", 5 + od.tier * 3);
         o.readyAt = nowMs() + oreCdSec(od.tier) * 1000 * cdMult();
         if (this.textures.exists(o.baseKey + "_mined")) this.setObjTex(o, o.baseKey + "_mined", o.rw || GF.TILE); else o.sprite.setAlpha(0.4);
-        log(`${od.emoji} +${gr} ${od.label}. ⛏️ ${G.picks.dur[pk]}/${pd.dur}`, "good"); toast("+" + gr + " " + od.emoji); refreshHud();
-        if (G.picks.dur[pk] <= 0) { log(`🛠️ ¡${pd.label} se rompió! Reparalo en la Herrería.`, "bad"); toast("🛠️ ¡Pico roto!"); }
-      } else { toast("🎒 Bolsa llena — no podés picar"); log("🎒 Bolsa llena: liberá espacio para seguir picando.", "bad"); }
+        log(`${od.emoji} +${gr} ${od.label}. ${G.picks.dur[pk]}/${pd.dur}`, "good"); toast("+" + gr + " " + od.emoji); refreshHud();
+        if (G.picks.dur[pk] <= 0) { log(`¡${pd.label} se rompió! Reparalo en la Herrería.`, "bad"); toast("¡Pico roto!"); }
+      } else { toast("Bolsa llena — no podés picar"); log("Bolsa llena: liberá espacio para seguir picando.", "bad"); }
     } else if (a.kind === "plant") {
       const ck = G.selSeed, cd = CROP_DEF[ck];
       if (cd && (G.seeds[ck] || 0) > 0) {
         G.seeds[ck]--; o.cropKey = ck; o.state = "growing"; o.witherAt = 0; o.readyAt = nowMs() + cd.grow * 1000 * cdMult();
         o.growTotal = o.readyAt - nowMs();
         this.showGrowing(o);
-        this.syncPlots(); addXp("farming", 5); log(`🌱 Plantaste ${cd.label}.`, "good"); toast("🌱 " + cd.label);
+        this.syncPlots(); addXp("farming", 5); log(`Plantaste ${cd.label}.`, "good"); toast("" + cd.label);
         if (isOpen("ov-inv")) refreshInv();
       }
     } else if (a.kind === "harvest") {
       const ck = o.cropKey || "papa", cd = CROP_DEF[ck] || CROP_DEF.papa;
       const gr = Math.max(1, Math.round(cd.yield * yieldMult()));
       if (tryAddRes(ck, gr)) { o.state = "dry"; o.cropKey = null; o.readyAt = 0; o.witherAt = 0; this.setPlotGlow(o, "off"); this.coinBurst(o.cx, o.by); o.spr.setVisible(false); o.emo.setVisible(false); o.timer.setVisible(false); this.syncPlots(); addXp("farming", 10); log(`${cd.emoji} +${gr} ${cd.label}.`, "good"); toast("+" + gr + " " + cd.emoji); refreshHud(); }
-      else { toast("🎒 Bolsa llena — no podés cosechar"); log("🎒 Bolsa llena: liberá espacio para cosechar.", "bad"); }
+      else { toast("Bolsa llena — no podés cosechar"); log("Bolsa llena: liberá espacio para cosechar.", "bad"); }
     } else if (a.kind === "fish") {
       this.clearBobber();
       goFishing();
@@ -666,8 +666,8 @@ class FarmScene extends Phaser.Scene {
   }
   tryFish(clickX, clickY) {
     if (this.action) return;
-    if (toolDur("rod") <= 0) { toast("🎣 Caña rota — reparala en la Herrería"); return; }
-    if (G.golden < FISH_COST) { toast("Necesitás " + FISH_COST + " ✨ para pescar (tenés " + G.golden + ")"); return; }
+    if (toolDur("rod") <= 0) { toast("Caña rota — reparala en la Herrería"); return; }
+    if (G.golden < FISH_COST) { toast("Necesitás " + FISH_COST + " para pescar (tenés " + G.golden + ")"); return; }
     if (!roomForFish()) { bagFull("pescar"); return; }
     const p = GF.POND, T = GF.TILE;
     const bx = clickX != null ? clickX : (p.col + p.cols / 2) * T, by2 = clickY != null ? clickY : (p.row + p.rows / 2) * T;
@@ -701,7 +701,7 @@ class FarmScene extends Phaser.Scene {
       const c = this.add.circle(x, y, 4, 0xbfe6ff, 0).setStrokeStyle(2, 0xdff2ff, 0.9).setDepth(-990);
       this.tweens.add({ targets: c, radius: 14 + i * 8, alpha: { from: 0.9, to: 0 }, delay: i * 140, duration: 600, onComplete: () => c.destroy() });
     }
-    const d = this.add.text(x, y - 4, "💦", { fontSize: "14px" }).setOrigin(0.5, 1).setDepth(-989);
+    const d = this.add.text(x, y - 4, "", { fontSize: "14px" }).setOrigin(0.5, 1).setDepth(-989);
     this.tweens.add({ targets: d, y: y - 16, alpha: { from: 1, to: 0 }, duration: 700, onComplete: () => d.destroy() });
   }
 
@@ -748,11 +748,11 @@ class FarmScene extends Phaser.Scene {
 
   // entrenar con el dummy: 3 espadazos, XP de Espada y cooldown de 4 horas
   trainDummy(o) {
-    if (!G.swordOwned) { toast("🎯 Necesitás la Espada de Hierro — crafteala en la Herrería"); return; }
-    if (G.gear.arma !== "sword") { toast("🎯 Equipá la espada en el panel de Equipo"); return; }
-    if (toolDur("sword") <= 0) { toast("⚔️ Espada rota — reparala en la Herrería"); return; }
+    if (!G.swordOwned) { toast("Necesitás la Espada de Hierro — crafteala en la Herrería"); return; }
+    if (G.gear.arma !== "sword") { toast("Equipá la espada en el panel de Equipo"); return; }
+    if (toolDur("sword") <= 0) { toast("Espada rota — reparala en la Herrería"); return; }
     const left = (G.dummyUsedAt || 0) + DUMMY_CD_MS - nowMs();
-    if (left > 0) { toast("🎯 El dummy descansa — vuelve en " + fmtDur(left)); return; }
+    if (left > 0) { toast("El dummy descansa — vuelve en " + fmtDur(left)); return; }
     G.dummyUsedAt = nowMs();
     useTool("sword"); useTool("sword");   // entrenar gasta 2 de durabilidad
     let hits = 0;
@@ -771,8 +771,8 @@ class FarmScene extends Phaser.Scene {
       if (hits < 3) this.time.delayedCall(280, swing);
       else {
         addXp("sword", DUMMY_XP);
-        log("🎯 Entrenaste con el dummy: +" + DUMMY_XP + " XP de Espada. Vuelve en 4h. ⚔️ " + toolDur("sword") + "/" + TOOL_DEF.sword.max, "gold");
-        toast("🎯 +" + DUMMY_XP + " XP de Espada");
+        log("Entrenaste con el dummy: +" + DUMMY_XP + " XP de Espada. Vuelve en 4h. " + toolDur("sword") + "/" + TOOL_DEF.sword.max, "gold");
+        toast("+" + DUMMY_XP + " XP de Espada");
         refreshHud(); if (typeof saveFarm === "function") saveFarm();
       }
     };
@@ -834,7 +834,7 @@ class FarmScene extends Phaser.Scene {
     const idx = (G.chests || []).findIndex(c => c && c.col == null);
     if (idx < 0) { toast("No tenés cofres en la bolsa"); return; }
     this.spawnChest(idx);
-    toast("📦 Cofre colocado — arrastralo en modo edición para moverlo");
+    toast("Cofre colocado — arrastralo en modo edición para moverlo");
     if (typeof syncSlots === "function") syncSlots(); if (isOpen("ov-inv")) refreshInv();
     if (typeof saveFarm === "function") saveFarm(true);
   }
@@ -842,13 +842,13 @@ class FarmScene extends Phaser.Scene {
   // recoger un cofre COLOCADO y devolverlo a la bolsa (debe estar vacío)
   pickupChest(idx) {
     const c = (G.chests || [])[idx]; if (!c || c.col == null) return;
-    if (!c.items.every(s => !s)) { toast("📦 Vaciá el cofre antes de recogerlo"); return; }
+    if (!c.items.every(s => !s)) { toast("Vaciá el cofre antes de recogerlo"); return; }
     const oi = this.objs.findIndex(o => o.type === "cofre" && o.chestIdx === idx);
     if (oi >= 0) { const o = this.objs[oi]; if (o.sprite) o.sprite.destroy(); if (o.timer) o.timer.destroy(); this.objs.splice(oi, 1); }
     c.col = null; c.row = null;
     this.rebuildCollisions();
     closeOv("ov-cofre");
-    toast("📦 Cofre guardado en tu bolsa");
+    toast("Cofre guardado en tu bolsa");
     if (typeof syncSlots === "function") syncSlots(); if (isOpen("ov-inv")) refreshInv();
     if (typeof saveFarm === "function") saveFarm(true);
   }
@@ -898,7 +898,7 @@ class FarmScene extends Phaser.Scene {
   // caminar hacia un punto rodeando obstáculos
   goTo(x, y, silent) {
     const p = this.findPath(this.hero.x, this.hero.y, x, y);
-    if (!p) { this.path = null; this.moveTarget = null; if (!silent) toast("🚫 No hay camino hasta ahí"); return false; }
+    if (!p) { this.path = null; this.moveTarget = null; if (!silent) toast("No hay camino hasta ahí"); return false; }
     this.path = p.slice(); this.moveTarget = this.path.shift();
     this.lastDD = null; this.noProg = 0;   // destino nuevo: reinicia el control de progreso
     return true;
@@ -970,7 +970,7 @@ class FarmScene extends Phaser.Scene {
       // chispas alrededor, con destellos alternados
       pl.glowSp = [];
       [[-0.38, -0.6], [0.36, -0.35], [0, -0.85]].forEach(([ox, oy], i) => {
-        const s = this.add.text(pl.cx + ox * T, pl.by + oy * T, i === 2 ? "✨" : "✦", { fontSize: i === 2 ? "12px" : "9px", color: "#ffe9a8" }).setOrigin(0.5).setDepth(pl.by + 2);
+        const s = this.add.text(pl.cx + ox * T, pl.by + oy * T, i === 2 ? "" : "", { fontSize: i === 2 ? "12px" : "9px", color: "#ffe9a8" }).setOrigin(0.5).setDepth(pl.by + 2);
         this.tweens.add({ targets: s, alpha: { from: 1, to: 0.1 }, scale: { from: 1, to: 1.35 }, yoyo: true, repeat: -1, duration: 420 + i * 160, delay: i * 180 });
         pl.glowSp.push(s);
       });
@@ -983,7 +983,7 @@ class FarmScene extends Phaser.Scene {
     const flash = this.add.circle(x, y - 8, 6, 0xffe9a8, 0.85).setDepth(99998);
     this.tweens.add({ targets: flash, scale: 4, alpha: 0, duration: 350, onComplete: () => flash.destroy() });
     for (let i = 0; i < 5; i++) {
-      const c = this.add.text(x, y - 12, "🪙", { fontSize: "12px" }).setOrigin(0.5).setDepth(99999);
+      const c = this.add.text(x, y - 12, "", { fontSize: "12px" }).setOrigin(0.5).setDepth(99999);
       this.tweens.add({
         targets: c, x: x + (Math.random() - 0.5) * 52, y: y - 26 - Math.random() * 26,
         alpha: { from: 1, to: 0 }, duration: 520 + Math.random() * 240, delay: i * 40,
@@ -1010,7 +1010,7 @@ class FarmScene extends Phaser.Scene {
     } else {
       pl.spr.setVisible(false);
       const cd = CROP_DEF[pl.cropKey];
-      pl.emo.setText(cd ? cd.emoji : "🌾").setVisible(true);
+      pl.emo.setText(cd ? cd.emoji : "").setVisible(true);
     }
     pl.timer.setVisible(false);
     this.setPlotGlow(pl, "ready");
@@ -1034,7 +1034,7 @@ class FarmScene extends Phaser.Scene {
       pl.spr.setScale((GF.TILE * 0.59) / pl.spr.width);   // ~24px visibles
       pl.emo.setVisible(false);
     } else if (pl.spr.visible) { pl.spr.setTint(0x7a6f52).setAlpha(0.75); }
-    else { pl.emo.setText("🥀").setVisible(true); }
+    else { pl.emo.setText("").setVisible(true); }
     pl.timer.setVisible(false);
   }
 
@@ -1093,8 +1093,8 @@ class FarmScene extends Phaser.Scene {
       const plOver = this.timerOn(pl);
       if (pl.state === "ready" && pl.witherAt) {
         const left = pl.witherAt - t;
-        if (left <= 0) { this.setWithered(pl); this.syncPlots(); log("🥀 Un cultivo se marchitó sin cosechar.", "bad"); toast("🥀 Cultivo marchito"); continue; }
-        if (left < 30000 && plOver) pl.timer.setText("🥀 " + Math.ceil(left / 1000) + "s").setPosition(pl.cx, this.topY(pl)).setVisible(true);
+        if (left <= 0) { this.setWithered(pl); this.syncPlots(); log("Un cultivo se marchitó sin cosechar.", "bad"); toast("Cultivo marchito"); continue; }
+        if (left < 30000 && plOver) pl.timer.setText("" + Math.ceil(left / 1000) + "s").setPosition(pl.cx, this.topY(pl)).setVisible(true);
         else pl.timer.setVisible(false);
       }
       if (pl.state !== "growing") continue;
@@ -1126,7 +1126,7 @@ class FarmScene extends Phaser.Scene {
       if (d > 2) { const sp = Math.min(70 * dt, d); b.cx += dx / d * sp; b.by += dy / d * sp; }
       b.sprite.setPosition(b.cx, b.by).setDepth(b.by).setScale((dx < 0 ? -1 : 1) * b.baseScale, b.baseScale);
       if (t >= b.damageAt) {
-        if (b.tgt.state === "growing" || b.tgt.state === "ready") { b.tgt.state = "dry"; b.tgt.cropKey = null; b.tgt.readyAt = 0; this.setPlotGlow(b.tgt, "off"); b.tgt.spr.setVisible(false); b.tgt.emo.setVisible(false); b.tgt.timer.setVisible(false); this.syncPlots(); log("🐗 Un jabalí arruinó un cultivo.", "bad"); toast("🐗 Cultivo arruinado"); }
+        if (b.tgt.state === "growing" || b.tgt.state === "ready") { b.tgt.state = "dry"; b.tgt.cropKey = null; b.tgt.readyAt = 0; this.setPlotGlow(b.tgt, "off"); b.tgt.spr.setVisible(false); b.tgt.emo.setVisible(false); b.tgt.timer.setVisible(false); this.syncPlots(); log("Un jabalí arruinó un cultivo.", "bad"); toast("Cultivo arruinado"); }
         b.sprite.destroy(); this.threats.splice(i, 1);
       }
     }
@@ -1243,7 +1243,7 @@ class FarmScene extends Phaser.Scene {
     if (GF.uiOpen || this.action || GF.editMode) { el.classList.remove("show"); return; }
     const o = this.nearestInteract();
     if (o) { el.textContent = this.promptText(o) + "  ·  [E]"; el.classList.add("show"); }
-    else if (this.nearPond()) { el.textContent = "🎣 Pescar (" + FISH_COST + " ✨ · tenés " + G.golden + ") · [E]"; el.classList.add("show"); }
+    else if (this.nearPond()) { el.textContent = "Pescar (" + FISH_COST + " · tenés " + G.golden + ") · [E]"; el.classList.add("show"); }
     else el.classList.remove("show");
   }
 }

@@ -44,8 +44,8 @@ function addBuff(type, label, mult, durSec) { G.buffs.push({ type, label, mult, 
 function hToMs(h) { return h * G.secPerGameHour * 1000 * cdMult(); }
 
 // --- recursos ---
-const RES_EMOJI = { madera:"🪵", piedra:"🪨", bronce:"🟫", oro:"🟡", diamante:"💎", netherita:"🔶", carne:"🥩", flecha:"➳",
-  papa:"🥔", zanahoria:"🥕", cebolla:"🧅", calabacin:"🥒", repollo:"🥬", calabaza:"🎃", brocoli:"🥦" };
+const RES_EMOJI = { madera:"", piedra:"", bronce:"", oro:"", diamante:"", netherita:"", carne:"", flecha:"",
+  papa:"", zanahoria:"", cebolla:"", calabacin:"", repollo:"", calabaza:"", brocoli:"" };
 const RES_LABEL = { madera:"Madera", piedra:"Piedra", bronce:"Bronce", oro:"Oro", diamante:"Diamante", netherita:"Netherita", carne:"Carne", flecha:"Flecha",
   papa:"Papa", zanahoria:"Zanahoria", cebolla:"Cebolla", calabacin:"Calabacín", repollo:"Repollo", calabaza:"Calabaza", brocoli:"Brócoli" };
 // íconos cozy de recursos (los cultivos usan crop_<key>)
@@ -82,18 +82,18 @@ function buySeed(k, qty) {
   if (!cropUnlocked(k)) { toast("Necesitás Cultivo nivel " + cd.lvl); return; }
   qty = Math.max(1, Math.floor(qty || 1));
   const sb = seedBuysToday(), left = SEED_DAILY_MAX - sb.count;
-  if (left <= 0) { toast("🌱 Límite diario de semillas alcanzado (30) — volvé mañana"); return; }
-  if (qty > left) { qty = left; toast("🌱 Cupo diario: solo podés comprar " + left + " más hoy"); }
+  if (left <= 0) { toast("Límite diario de semillas alcanzado (30) — volvé mañana"); return; }
+  if (qty > left) { qty = left; toast("Cupo diario: solo podés comprar " + left + " más hoy"); }
   const cost = cd.seedCost * qty;
   if (G.plata < cost) { toast("Te falta plata"); return; }
   G.plata -= cost; G.seeds[k] = (G.seeds[k] || 0) + qty; sb.count += qty;
-  log(`🛒 Compraste ${qty} semilla(s) de ${cd.label} por ${cost} 🪙. (cupo: ${sb.count}/${SEED_DAILY_MAX})`); toast("🌱 +" + qty + " " + cd.label);
+  log(`Compraste ${qty} semilla(s) de ${cd.label} por ${cost} plata. (cupo: ${sb.count}/${SEED_DAILY_MAX})`); toast("+" + qty + " " + cd.label);
   refreshHud(); if (typeof refreshSeedShop === "function") refreshSeedShop(); if (isOpen("ov-inv")) refreshInv();
 }
 
 // --- skills ---
-const SKILL_DEFS = [["farming","🌾","Cultivo"],["fishing","🎣","Pesca"],["mining","⛏️","Minería"],
-  ["sword","⚔️","Espada"],["range","🏹","Arco"],["cooking","🍳","Cocina"],["crafting","🔨","Artesanía"]];
+const SKILL_DEFS = [["farming","","Cultivo"],["fishing","","Pesca"],["mining","","Minería"],
+  ["sword","","Espada"],["range","","Arco"],["cooking","","Cocina"],["crafting","","Artesanía"]];
 const SKILL_NAME = {}; SKILL_DEFS.forEach(([k,,nm]) => SKILL_NAME[k] = nm);
 function skillInfo(xp) { let lvl=1, need=50, acc=0; while (xp >= acc+need && lvl<99){ acc+=need; lvl++; need=Math.round(need*1.35);} return { lvl, into: xp-acc, need }; }
 function avgSkillLevel() { let s=0,n=0; for (const k in G.skills){ s+=skillInfo(G.skills[k]).lvl; n++; } return n ? s/n : 1; }
@@ -102,7 +102,7 @@ function addXp(sk, amt) {
   const before = skillInfo(G.skills[sk]).lvl;
   G.skills[sk] += amt;
   const after = skillInfo(G.skills[sk]).lvl;
-  if (after > before) { log(`📈 ${SKILL_NAME[sk]} subió a nivel ${after}.`, "good"); toast("📈 " + SKILL_NAME[sk] + " nivel " + after); if (window.sfx) sfx("level"); }
+  if (after > before) { log(`${SKILL_NAME[sk]} subió a nivel ${after}.`, "good"); toast("" + SKILL_NAME[sk] + " nivel " + after); if (window.sfx) sfx("level"); }
   if (isOpen("ov-skills")) refreshSkills();
 }
 
@@ -111,8 +111,8 @@ const LEVELS = { 2:{papa:20,madera:10}, 3:{papa:35,madera:20,piedra:5}, 4:{zanah
   5:{zanahoria:60,madera:55,piedra:22}, 6:{cebolla:60,madera:80,piedra:36}, 7:{cebolla:100,madera:115,piedra:55},
   8:{calabaza:30,oro:3}, 9:{calabaza:60,oro:6}, 10:{brocoli:50,oro:10} };
 function canLevel() { if (G.level >= 10) return false; const n = LEVELS[G.level+1]; for (const k in n) if ((G.res[k]||0) < n[k]) return false; return true; }
-function levelUp() { if (!canLevel()) { toast("Te faltan recursos"); return; } const n = LEVELS[G.level+1]; for (const k in n) G.res[k]-=n[k]; G.level++; log(`⭐ ¡Granja nivel ${G.level}! Yield +${((yieldMult()-1)*100).toFixed(1)}%.`, "gold"); toast("¡Nivel " + G.level + "!"); refreshBarn(); refreshHud(); }
-function prestige() { if (G.level < 10) { toast("Llegá a nivel 10"); return; } G.prestige++; G.level=1; for (const k in G.res) G.res[k]=0; log(`♻️ Reinicio. Prestigio ${G.prestige}.`, "gold"); toast("Prestigio " + G.prestige + "!"); refreshBarn(); refreshHud(); }
+function levelUp() { if (!canLevel()) { toast("Te faltan recursos"); return; } const n = LEVELS[G.level+1]; for (const k in n) G.res[k]-=n[k]; G.level++; log(`¡Granja nivel ${G.level}! Yield +${((yieldMult()-1)*100).toFixed(1)}%.`, "gold"); toast("¡Nivel " + G.level + "!"); refreshBarn(); refreshHud(); }
+function prestige() { if (G.level < 10) { toast("Llegá a nivel 10"); return; } G.prestige++; G.level=1; for (const k in G.res) G.res[k]=0; log(`Reinicio. Prestigio ${G.prestige}.`, "gold"); toast("Prestigio " + G.prestige + "!"); refreshBarn(); refreshHud(); }
 
 // --- minerales y picos ---
 const ORE_ORDER = ["piedra","bronce","oro","diamante","netherita"];
@@ -137,10 +137,10 @@ function payCost(c) { for (const k in c) G.res[k]-=c[k]; }
 // la fragua se enciende un rato cada vez que trabajás en la Herrería (detalles jueves)
 const FORGE_LIT_MS = 8000;
 function forgeWork() { G.forgeLitUntil = nowMs() + FORGE_LIT_MS; if (window.FARM && FARM.updateForge) FARM.updateForge(); if (window.sfx) sfx("mine"); }
-function craftPick(id) { const pd=PICK_DEF[id]; if (G.picks.owned[id]) { equipPick(id); return; } if (!canAfford(pd.cost)) { toast("Te faltan materiales"); return; } payCost(pd.cost); G.picks.owned[id]=true; G.picks.dur[id]=pd.dur; G.picks.eq=id; addXp("crafting",10+pd.tier*4); log("🛠️ Crafteaste "+pd.label+" y lo equipaste.","gold"); toast("🛠️ "+pd.label); forgeWork(); refreshForge(); refreshInv(); }
+function craftPick(id) { const pd=PICK_DEF[id]; if (G.picks.owned[id]) { equipPick(id); return; } if (!canAfford(pd.cost)) { toast("Te faltan materiales"); return; } payCost(pd.cost); G.picks.owned[id]=true; G.picks.dur[id]=pd.dur; G.picks.eq=id; addXp("crafting",10+pd.tier*4); log("Crafteaste "+pd.label+" y lo equipaste.","gold"); toast(""+pd.label); forgeWork(); refreshForge(); refreshInv(); }
 function repairCostOf(id) { const pd=PICK_DEF[id]; const c={}; for (const k in pd.cost) c[k]=Math.max(1,Math.ceil(pd.cost[k]*0.3)); return c; }
-function repairPick(id) { const pd=PICK_DEF[id]; if (!G.picks.owned[id]) return; if ((G.picks.dur[id]||0)>=pd.dur){ toast("Ya está al 100%"); return; } const c=repairCostOf(id); if (!canAfford(c)){ toast("Te faltan materiales para reparar"); return; } payCost(c); G.picks.dur[id]=pd.dur; log("🔧 Reparaste "+pd.label+" (100%).","good"); toast("🔧 Reparado"); forgeWork(); refreshForge(); }
-function equipPick(id) { if (!G.picks.owned[id]){ toast("No lo tenés"); return; } G.picks.eq=id; log("⛏️ Equipaste "+PICK_DEF[id].label+".");  toast("Equipado"); refreshForge(); refreshInv(); }
+function repairPick(id) { const pd=PICK_DEF[id]; if (!G.picks.owned[id]) return; if ((G.picks.dur[id]||0)>=pd.dur){ toast("Ya está al 100%"); return; } const c=repairCostOf(id); if (!canAfford(c)){ toast("Te faltan materiales para reparar"); return; } payCost(c); G.picks.dur[id]=pd.dur; log("Reparaste "+pd.label+" (100%).","good"); toast("Reparado"); forgeWork(); refreshForge(); }
+function equipPick(id) { if (!G.picks.owned[id]){ toast("No lo tenés"); return; } G.picks.eq=id; log("Equipaste "+PICK_DEF[id].label+".");  toast("Equipado"); refreshForge(); refreshInv(); }
 
 // --- herramientas (hacha + caña con durabilidad; el pico se maneja aparte) ---
 const TOOL_DEF = {
@@ -157,7 +157,7 @@ function craftSword() {
   payCost(SWORD_COST); G.swordOwned = true; G.tools.sword = TOOL_DEF.sword.max;
   if (!G.gear.arma) G.gear.arma = "sword";   // si el slot de arma está libre, se equipa sola
   addXp("crafting", 14);
-  log("⚔️ Crafteaste la Espada de Hierro.", "gold"); toast("⚔️ ¡Espada de Hierro!"); forgeWork();
+  log("Crafteaste la Espada de Hierro.", "gold"); toast("¡Espada de Hierro!"); forgeWork();
   refreshForge(); if (typeof syncSlots === "function") syncSlots(); if (isOpen("ov-inv")) refreshInv();
 }
 // daño del jugador: puños (débil) o espada (escala con la skill Espada)
@@ -176,14 +176,14 @@ function craftBow() {
   payCost(BOW_COST); G.bowOwned = true; G.tools.bow = TOOL_DEF.bow.max;
   if (!G.gear.arma) G.gear.arma = "bow";   // si el slot de arma está libre, se equipa solo
   addXp("crafting", 12);
-  log("🏹 Crafteaste el Arco.", "gold"); toast("🏹 ¡Arco!"); forgeWork();
+  log("Crafteaste el Arco.", "gold"); toast("¡Arco!"); forgeWork();
   refreshForge(); if (typeof syncSlots === "function") syncSlots(); if (isOpen("ov-inv")) refreshInv();
 }
 function craftArrows() {
   if (!canAfford(ARROW_COST)) { toast("Te faltan materiales"); return; }
   payCost(ARROW_COST); G.res.flecha = (G.res.flecha || 0) + 10;   // van a la bolsa, NO se autoequipan (detalles jueves)
   addXp("crafting", 3);
-  log("➳ Crafteaste 10 flechas — están en tu bolsa; equipalas en el panel de Equipo.", "good"); toast("➳ +10 flechas en la bolsa"); forgeWork();
+  log("Crafteaste 10 flechas — están en tu bolsa; equipalas en el panel de Equipo.", "good"); toast("+10 flechas en la bolsa"); forgeWork();
   refreshForge(); if (typeof syncSlots === "function") syncSlots(); if (isOpen("ov-inv")) refreshInv();
 }
 function bowDmg() { return 6 + Math.floor(skillInfo(G.skills.range).lvl / 2); }
@@ -206,10 +206,10 @@ function gainGear(key) {
   const cur = G.gear[gd.slot];
   if (!cur || GEAR_DEF[cur].def < gd.def) {
     G.gear[gd.slot] = key;
-    log("🛡️ Equipaste " + gd.label + " (defensa +" + gd.def + ").", "gold"); toast("🛡️ " + gd.label + " equipado");
+    log("Equipaste " + gd.label + " (defensa +" + gd.def + ").", "gold"); toast("" + gd.label + " equipado");
   } else {
     const v = 5 + gd.def * 5; G.plata += v;
-    log("🛡️ " + gd.label + " repetido — vendido por " + v + " 🪙.", "good"); toast("+" + v + " 🪙 (" + gd.label + ")");
+    log(gd.label + " repetido — vendido por " + v + " plata.", "good"); toast("+" + v + " (" + gd.label + ")");
   }
   if (isOpen("ov-equip")) refreshEquip(); refreshHud();
 }
@@ -218,13 +218,13 @@ function gainGear(key) {
 const RECIPE_ORDER = ["pescado_asado", "estofado", "banquete"];
 const RECIPE_DEF = {
   pescado_asado: { label:"Pescado asado", emoji:"🐟", sprite:"dish_pescado_asado", fish:{comun:1}, res:{madera:1},
-    heal:30, buff:{type:"yield",label:"🍳 Cosecha +10%",mult:1.10,dur:90}, xp:8,
-    desc:"Cura 30 ❤ · Cosecha +10% (90s)" },
+    heal:30, buff:{type:"yield",label:"Cosecha +10%",mult:1.10,dur:90}, xp:8,
+    desc:"Cura 30 · Cosecha +10% (90s)" },
   estofado: { label:"Estofado de carne", emoji:"🍲", sprite:"dish_estofado", res:{carne:2, papa:1},
-    heal:60, buff:{type:"cd",label:"🍲 Enfriamientos -15%",mult:0.85,dur:90}, xp:12,
-    desc:"Cura 60 ❤ · Enfriamientos -15% (90s)" },
+    heal:60, buff:{type:"cd",label:"Enfriamientos -15%",mult:0.85,dur:90}, xp:12,
+    desc:"Cura 60 · Enfriamientos -15% (90s)" },
   banquete: { label:"Banquete del granjero", emoji:"🍗", sprite:"dish_banquete", fish:{raro:1}, res:{carne:2, calabaza:1},
-    heal:9999, buff:{type:"yield",label:"🍗 Cosecha +20%",mult:1.20,dur:180}, xp:25,
+    heal:9999, buff:{type:"yield",label:"Cosecha +20%",mult:1.20,dur:180}, xp:25,
     desc:"Cura TODA la vida · Cosecha +20% (3 min)" },
 };
 function canCook(id) {
@@ -236,13 +236,13 @@ function canCook(id) {
 const COOK_MS = 8000;   // tiempo de cocción (barra de enfriamiento, detalless.docx)
 function cook(id) {
   const r = RECIPE_DEF[id]; if (!r) return;
-  if (G.cooking) { toast("🍳 Ya hay algo en el fuego…"); return; }
+  if (G.cooking) { toast("Ya hay algo en el fuego…"); return; }
   if (!canCook(id)) { toast("Te faltan ingredientes"); return; }
   if (!roomForDish(id)) { bagFull("cocinar " + r.label); return; }
   if (r.res) for (const k in r.res) G.res[k] -= r.res[k];
   if (r.fish) for (const k in r.fish) G.fish[k] -= r.fish[k];
   G.cooking = { id, endAt: nowMs() + COOK_MS, total: COOK_MS };
-  log("🍳 Cocinando " + r.label + "…"); toast("🍳 Cocinando…");
+  log("Cocinando " + r.label + "…"); toast("Cocinando…");
   refreshHud(); if (typeof syncSlots === "function") syncSlots(); if (isOpen("ov-inv")) refreshInv();
   if (typeof refreshCooking === "function" && isOpen("ov-cocina")) refreshCooking();
 }
@@ -282,14 +282,14 @@ function chestBonus() { return 1 + 0.01 * ((G.chests || []).filter(c => c.col !=
 function chestsInBag() { return (G.chests || []).filter(c => c.col == null).length; }
 function craftChest() {
   G.chests = G.chests || [];
-  if (G.chests.length >= CHEST_MAX) { toast("📦 Máximo de cofres (" + CHEST_MAX + ")"); return; }
+  if (G.chests.length >= CHEST_MAX) { toast("Máximo de cofres (" + CHEST_MAX + ")"); return; }
   if (!canAfford(CHEST_COST)) { toast("Te faltan materiales"); return; }
-  if (G.plata < CHEST_PLATA) { toast("Te falta plata (" + CHEST_PLATA + " 🪙)"); return; }
+  if (G.plata < CHEST_PLATA) { toast("Te falta plata (" + CHEST_PLATA + " )"); return; }
   payCost(CHEST_COST); G.plata -= CHEST_PLATA;
   G.chests.push({ col: null, row: null, items: Array(CHEST_SLOTS).fill(null) });   // queda EN LA BOLSA hasta que lo coloques
   addXp("crafting", 8);
-  log("📦 Crafteaste un cofre depósito — está en tu bolsa. Colocalo con un clic desde la bolsa.", "gold");
-  toast("📦 Cofre en la bolsa (" + G.chests.length + "/" + CHEST_MAX + ")"); forgeWork();
+  log("Crafteaste un cofre depósito — está en tu bolsa. Colocalo con un clic desde la bolsa.", "gold");
+  toast("Cofre en la bolsa (" + G.chests.length + "/" + CHEST_MAX + ")"); forgeWork();
   refreshForge(); refreshHud();
   if (typeof syncSlots === "function") syncSlots(); if (isOpen("ov-inv")) refreshInv();
   if (typeof saveFarm === "function") saveFarm(true);
@@ -301,7 +301,7 @@ function chestDeposit(ci, kind, key) {
   const st = stores[kind]; if (!st) { toast("Eso no se puede guardar"); return; }
   const avail = Math.floor(st[key] || 0); if (avail <= 0) return;
   let slot = ch.items.find(s => s && s.kind === kind && s.key === key && s.n < 99);
-  if (!slot) { const i = ch.items.indexOf(null); if (i < 0) { toast("📦 Cofre lleno"); return; } slot = ch.items[i] = { kind, key, n: 0 }; }
+  if (!slot) { const i = ch.items.indexOf(null); if (i < 0) { toast("Cofre lleno"); return; } slot = ch.items[i] = { kind, key, n: 0 }; }
   const n = Math.min(avail, 99 - slot.n);
   slot.n += n; st[key] -= n;
   if (typeof syncSlots === "function") syncSlots();
@@ -317,7 +317,7 @@ function chestWithdraw(ci, si) {
   const st = stores[s.kind]; if (!st) return;
   const before = st[s.key] || 0;
   st[s.key] = before + s.n;
-  if (canonicalStacks().length > invSlots()) { st[s.key] = before; toast("🎒 Bolsa llena"); return; }
+  if (canonicalStacks().length > invSlots()) { st[s.key] = before; toast("Bolsa llena"); return; }
   ch.items[si] = null;
   if (typeof syncSlots === "function") syncSlots();
   if (typeof refreshChest === "function") refreshChest();
@@ -356,10 +356,10 @@ function rollLoot(def) {
 }
 function toolDur(id) { return (G.tools && G.tools[id] != null) ? G.tools[id] : (TOOL_DEF[id] ? TOOL_DEF[id].max : 0); }
 function useTool(id) { const d = toolDur(id); if (d <= 0) return false; G.tools[id] = d - 1; return true; }
-function repairTool(id) { const td = TOOL_DEF[id]; if (!td) return; if (toolDur(id) >= td.max) { toast("Ya está al 100%"); return; } if (!canAfford(td.repair)) { toast("Te faltan materiales para reparar"); return; } payCost(td.repair); G.tools[id] = td.max; log("🔧 Reparaste " + td.label + " (100%).", "good"); toast("🔧 Reparado"); forgeWork(); refreshForge(); if (isOpen("ov-equip")) refreshEquip(); if (isOpen("ov-inv")) refreshInv(); }
+function repairTool(id) { const td = TOOL_DEF[id]; if (!td) return; if (toolDur(id) >= td.max) { toast("Ya está al 100%"); return; } if (!canAfford(td.repair)) { toast("Te faltan materiales para reparar"); return; } payCost(td.repair); G.tools[id] = td.max; log("Reparaste " + td.label + " (100%).", "good"); toast("Reparado"); forgeWork(); refreshForge(); if (isOpen("ov-equip")) refreshEquip(); if (isOpen("ov-inv")) refreshInv(); }
 
 // --- inventario (base + filas extra) ---
-const INV_BASE = 30, INV_MAX_ROWS = 6;   // 30 base (6 filas de 5), hasta +6 filas más (hay ~40 pilas posibles)
+const INV_BASE = 20, INV_MAX_ROWS = 6;   // 20 base (4 filas de 5, pedido del diseñador 30/7), ampliable +5 por fila hasta 50
 function invSlots() { return INV_BASE + (G.invRows || 0) * 5; }
 function nextInvCost() {
   const r = G.invRows || 0;
@@ -372,7 +372,7 @@ function expandInv() {
   if (nc.type === "res") { if (!canAfford(nc.cost)) { toast("Te faltan minerales"); return; } payCost(nc.cost); }
   else { if (G.plata < nc.cost) { toast("Te falta plata"); return; } G.plata -= nc.cost; }
   G.invRows = (G.invRows || 0) + 1;
-  log("🎒 Ampliaste la bolsa (+5 espacios).", "good"); toast("🎒 +5 espacios");
+  log("Ampliaste la bolsa (+5 espacios).", "good"); toast("+5 espacios");
   refreshInv(); refreshHud();
 }
 /* ¿hay sitio en la bolsa para lo que va a soltar la acción?
@@ -400,16 +400,16 @@ function roomForDish(id) {
   if (before) G.dishes[id] = before; else delete G.dishes[id];
   return ok;
 }
-function bagFull(what) { toast("🎒 Bolsa llena — no podés " + what); log("🎒 No tenés espacio en la bolsa: liberá un hueco para " + what + ".", "bad"); }
+function bagFull(what) { toast("Bolsa llena — no podés " + what); log("No tenés espacio en la bolsa: liberá un hueco para " + what + ".", "bad"); }
 
 function invStacks() {
   const st = [];
-  st.push({ sprite:"hoe", em:"🪝", nm:"Azada" });
-  st.push({ sprite:"axe", em:"🪓", nm:"Hacha ("+toolDur("axe")+"/"+TOOL_DEF.axe.max+")" });
+  st.push({ sprite:"hoe", em:"", nm:"Azada" });
+  st.push({ sprite:"axe", em:"", nm:"Hacha ("+toolDur("axe")+"/"+TOOL_DEF.axe.max+")" });
   { const eqp = equippedPick();
-    if (eqp) st.push({ sprite:PICK_DEF[eqp].sprite, em:"⛏️", nm:PICK_DEF[eqp].label+" ("+(G.picks.dur[eqp]||0)+"/"+PICK_DEF[eqp].dur+")" });
-    else st.push({ sprite:"pick_stone", em:"⛏️", nm:"Sin pico" }); }
-  st.push({ sprite:"fishing_rod", em:"🎣", nm:"Caña ("+toolDur("rod")+"/"+TOOL_DEF.rod.max+")" });
+    if (eqp) st.push({ sprite:PICK_DEF[eqp].sprite, em:"", nm:PICK_DEF[eqp].label+" ("+(G.picks.dur[eqp]||0)+"/"+PICK_DEF[eqp].dur+")" });
+    else st.push({ sprite:"pick_stone", em:"", nm:"Sin pico" }); }
+  st.push({ sprite:"fishing_rod", em:"", nm:"Caña ("+toolDur("rod")+"/"+TOOL_DEF.rod.max+")" });
   for (const r of ["papa","zanahoria","cebolla","calabacin","repollo","calabaza","brocoli","madera","piedra","bronce","oro","diamante","netherita"]) {
     let n = Math.floor(G.res[r] || 0);
     while (n > 0) { const c = Math.min(99, n); st.push({ sprite:resSprite(r), em:RES_EMOJI[r], nm:RES_LABEL[r], count:c }); n -= 99; }
@@ -490,8 +490,8 @@ function sellItem(res) {
   const inp = $("mq-"+res); let q = Math.floor(parseFloat(inp && inp.value) || 0);
   q = Math.max(0, Math.min(q, G.res[res]));
   if (q <= 0) { toast("Poné una cantidad"); return; }
-  if (marketCur === "plata") { const t=q*PRICE[res]; G.plata+=t; G.res[res]-=q; log(`🪙 Vendiste ${q} ${RES_LABEL[res]} por ${t} de plata.`); toast("+"+t+" plata"); }
-  else { const g=Math.floor(q*PRICE[res]/10); if (g<1){ toast("Muy poca cantidad para $Golden"); return; } G.res[res]-=q; G.golden+=g; log(`✨ Vendiste ${q} ${RES_LABEL[res]} por ${g} $Golden.`,"gold"); toast("+"+g+" $Golden"); }
+  if (marketCur === "plata") { const t=q*PRICE[res]; G.plata+=t; G.res[res]-=q; log(`Vendiste ${q} ${RES_LABEL[res]} por ${t} de plata.`); toast("+"+t+" plata"); }
+  else { const g=Math.floor(q*PRICE[res]/10); if (g<1){ toast("Muy poca cantidad para $Golden"); return; } G.res[res]-=q; G.golden+=g; log(`Vendiste ${q} ${RES_LABEL[res]} por ${g} $Golden.`,"gold"); toast("+"+g+" $Golden"); }
   if (window.sfx) sfx("coin");
   refreshMarket(); refreshHud();
 }
@@ -499,17 +499,17 @@ function sellItem(res) {
 // --- pesca ---
 const FISH_COST = 5;
 function goFishing() {
-  if (toolDur("rod") <= 0) { toast("🎣 Caña rota — reparala en la Herrería"); return; }
-  if (G.golden < FISH_COST) { toast("Necesitás 5 ✨ para pescar"); return; }
+  if (toolDur("rod") <= 0) { toast("Caña rota — reparala en la Herrería"); return; }
+  if (G.golden < FISH_COST) { toast("Necesitás 5 para pescar"); return; }
   G.golden -= FISH_COST; useTool("rod");
-  if (toolDur("rod") <= 0) { log("🎣 ¡La caña se rompió! Reparala en la Herrería.", "bad"); toast("🎣 ¡Caña rota!"); }
+  if (toolDur("rod") <= 0) { log("¡La caña se rompió! Reparala en la Herrería.", "bad"); toast("¡Caña rota!"); }
   const r = Math.random();
   let rar; if (r < 0.60) rar = "comun"; else if (r < 0.85) rar = "raro"; else if (r < 0.97) rar = "epico"; else rar = "legendario";
   G.fish[rar]++; addXp("fishing", 8); addXp("cooking", 3);
-  if (rar === "comun") { const p = 8 + Math.floor(Math.random() * 8); G.plata += p; log(`🐟 Pez común: +${p} plata.`); toast("🐟 +" + p + " 🪙"); }
-  else if (rar === "raro") { addBuff("yield", "Yield +10%", 1.10, 90); log("🐠 Pez raro: buff Yield +10% (90s).", "good"); toast("🐠 ¡Buff de yield!"); }
-  else if (rar === "epico") { addBuff("cd", "Cooldowns -25%", 0.75, 90); log("🐡 Pez épico: cooldowns -25% (90s).", "good"); toast("🐡 ¡Cooldowns -25%!"); }
-  else { G.golden += 15; tryAddRes("oro", 1); log("🐋 ¡Legendario! +15 ✨ y +1 Oro.", "gold"); toast("🐋 ¡LEGENDARIO!"); }
+  if (rar === "comun") { const p = 8 + Math.floor(Math.random() * 8); G.plata += p; log(`Pez común: +${p} plata.`); toast("+" + p + " "); }
+  else if (rar === "raro") { addBuff("yield", "Yield +10%", 1.10, 90); log("Pez raro: buff Yield +10% (90s).", "good"); toast("¡Buff de yield!"); }
+  else if (rar === "epico") { addBuff("cd", "Cooldowns -25%", 0.75, 90); log("Pez épico: cooldowns -25% (90s).", "good"); toast("¡Cooldowns -25%!"); }
+  else { G.golden += 15; tryAddRes("oro", 1); log("¡Legendario! +15 y +1 Oro.", "gold"); toast("¡LEGENDARIO!"); }
   refreshHud(); if (typeof syncSlots === "function") syncSlots(); if (isOpen("ov-inv")) refreshInv();
 }
 
@@ -524,7 +524,7 @@ const DAILY_REWARDS = [
   { seeds: { calabacin: 2 }, plata: 20,            label: "×2 Semilla Calabacín · 20 Plata" },
   { seeds: { repollo: 2 },   res: { bronce: 5 },   label: "×2 Semilla Repollo · ×5 Bronce" },
   { res: { oro: 1 },         plata: 30,            label: "×1 Oro · 30 Plata" },
-  { seeds: { calabaza: 2 },  plata: 50, buff: true, label: "×2 Semilla Calabaza · 50 Plata · 🌿 Abono (+15% cosecha 10 min)" },
+  { seeds: { calabaza: 2 },  plata: 50, buff: true, label: "×2 Semilla Calabaza · 50 Plata · Abono (+15% cosecha 10 min)" },
 ];
 function dayStamp(off) { const d = new Date(Date.now() + (off || 0) * 86400000); return d.getFullYear() + "-" + String(d.getMonth() + 1).padStart(2, "0") + "-" + String(d.getDate()).padStart(2, "0"); }
 // estado del cofre: ¿se puede reclamar hoy? ¿qué día de la racha toca? ¿se perdió la racha?
@@ -541,24 +541,24 @@ const STREAK_RECOVER_COST = 50;
 function recoverStreak() {
   const st = dailyState();
   if (!st.lost) { toast("No hay racha para recuperar"); return; }
-  if (G.golden < STREAK_RECOVER_COST) { toast("Necesitás " + STREAK_RECOVER_COST + " ✨ para recuperar la racha"); return; }
+  if (G.golden < STREAK_RECOVER_COST) { toast("Necesitás " + STREAK_RECOVER_COST + " para recuperar la racha"); return; }
   G.golden -= STREAK_RECOVER_COST;
   G.daily.last = dayStamp(-1);
-  log("✨ Recuperaste la racha del cofre por " + STREAK_RECOVER_COST + " ✨.", "gold"); toast("✨ ¡Racha recuperada!");
+  log("Recuperaste la racha del cofre por " + STREAK_RECOVER_COST + " esencia.", "gold"); toast("¡Racha recuperada!");
   refreshHud(); if (typeof refreshDaily === "function") refreshDaily();
   if (typeof saveFarm === "function") saveFarm(true);
 }
 function claimDaily() {
   const st = dailyState();
-  if (!st.claimable) { toast("🎁 Ya reclamaste hoy — volvé mañana"); return; }
+  if (!st.claimable) { toast("Ya reclamaste hoy — volvé mañana"); return; }
   const r = DAILY_REWARDS[st.day - 1];
   if (r.seeds) { const sb = seedBuysToday(); for (const k in r.seeds) { G.seeds[k] = (G.seeds[k] || 0) + r.seeds[k]; sb.count += r.seeds[k]; } }
   if (r.res) for (const k in r.res) G.res[k] = (G.res[k] || 0) + r.res[k];
   if (r.plata) G.plata += r.plata;
-  if (r.buff) addBuff("yield", "🌿 Abono +15%", 1.15, 600);
+  if (r.buff) addBuff("yield", "Abono +15%", 1.15, 600);
   G.daily = { day: st.day, last: dayStamp(0) };
-  log("🎁 Cofre diario " + st.day + "/7: " + r.label, "gold");
-  toast("🎁 ¡Reclamado! Día " + st.day + "/7");
+  log("Cofre diario " + st.day + "/7: " + r.label, "gold");
+  toast("¡Reclamado! Día " + st.day + "/7");
   refreshHud(); if (typeof syncSlots === "function") syncSlots(); if (isOpen("ov-inv")) refreshInv();
   if (typeof refreshDaily === "function") refreshDaily();
   if (typeof saveFarm === "function") saveFarm(true);

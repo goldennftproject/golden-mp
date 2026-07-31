@@ -85,7 +85,7 @@ function refreshInv() {
   for (let i = 0; i < cap; i++) html += invCellHtml(G.slots[i], i, rem, "inv");
   $("inv-slots").innerHTML = html;
   const used = canonicalStacks().length, cap2 = $("inv-cap"); if (cap2) cap2.textContent = `Bolsa: ${used}/${cap} · recursos y semillas apilan hasta 99`;
-  const ss = $("inv-selseed"); if (ss && CROP_DEF[G.selSeed]) ss.innerHTML = `🌱 Plantando: <img class="ric" src="${GF.spr("seed_" + G.selSeed)}" onerror="this.outerHTML='${CROP_DEF[G.selSeed].emoji}'"> ` + CROP_DEF[G.selSeed].label + " · clic una semilla para cambiar";
+  const ss = $("inv-selseed"); if (ss && CROP_DEF[G.selSeed]) ss.innerHTML = `Plantando: <img class="ric" src="${GF.spr("seed_" + G.selSeed)}" onerror="this.outerHTML='${CROP_DEF[G.selSeed].emoji}'"> ` + CROP_DEF[G.selSeed].label + " · clic una semilla para cambiar";
   renderInvExpand();
   bindZoneDnD($("inv-slots"), "inv");
   $("inv-slots").querySelectorAll("[data-slot]").forEach(c => c.addEventListener("click", () => invCellClick(+c.dataset.slot)));
@@ -93,7 +93,7 @@ function refreshInv() {
 }
 function invCellClick(i) {
   const d = G.slots[i]; if (!d) return;
-  if (d.kind === "seed") { if (!cropUnlocked(d.key)) { toast("Necesitás Cultivo nivel " + CROP_DEF[d.key].lvl); return; } selectSeed(d.key); toast("🌱 Plantando: " + CROP_DEF[d.key].label); }
+  if (d.kind === "seed") { if (!cropUnlocked(d.key)) { toast("Necesitás Cultivo nivel " + CROP_DEF[d.key].lvl); return; } selectSeed(d.key); toast("Plantando: " + CROP_DEF[d.key].label); }
   else if (d.kind === "pick") { if (G.picks.owned[d.key]) equipPick(d.key); }
   else if (d.kind === "dish") eatDish(d.key);
   else if (d.kind === "chest") { if (window.FARM && FARM.placeChestFromBag) FARM.placeChestFromBag(); }
@@ -144,7 +144,7 @@ function refreshHotbar() {
   box.querySelectorAll("[data-slot]").forEach(c => {
     c.addEventListener("click", () => hotSelect(+c.dataset.slot));
     // clic derecho: quitar el objeto de la barra (detalless.docx)
-    c.addEventListener("contextmenu", (e) => { e.preventDefault(); const i = +c.dataset.slot; if (G.hotbar[i]) { G.hotbar[i] = null; toast("🗑️ Quitado de la barra"); refreshHotbar(); } });
+    c.addEventListener("contextmenu", (e) => { e.preventDefault(); const i = +c.dataset.slot; if (G.hotbar[i]) { G.hotbar[i] = null; toast("Quitado de la barra"); refreshHotbar(); } });
   });
 }
 // seleccionar hueco de la hotbar (= herramienta "en mano"); equipa pico / elige semilla si corresponde
@@ -158,7 +158,7 @@ function hotSelect(i) {
     else if (d.kind === "dish") eatDish(d.key);
   }
   const v = d ? itemView(d) : null;
-  toast(v ? "✋ " + v.label : "Hueco " + (i === 9 ? 0 : i + 1) + " vacío");
+  toast(v ? "" + v.label : "Hueco " + (i === 9 ? 0 : i + 1) + " vacío");
   refreshHotbar();
 }
 
@@ -179,7 +179,7 @@ function dndDrop(src, tz, ti) {
   else if (sz === "hot" && tz === "hot") { const a = G.hotbar[si]; G.hotbar[si] = G.hotbar[ti]; G.hotbar[ti] = a; }
   else if (sz === "hot" && tz === "inv") { G.hotbar[si] = null; }
   else if (tz === "trash") {   // tirar a la basura (detalless.docx) — con confirmación (30/7)
-    if (sz === "hot") { G.hotbar[si] = null; toast("🗑️ Quitado de la barra"); }
+    if (sz === "hot") { G.hotbar[si] = null; toast("Quitado de la barra"); }
     else { const d = G.slots[si]; if (d) {
       const inf = trashInfo(d);
       if (!inf) toast("Eso no se puede tirar");
@@ -208,10 +208,10 @@ function trashInfo(d) {
 // tirar una pila de recursos/semillas/pescados (las herramientas no se tiran)
 function trashStack(d) {
   if (window.sfx) sfx("trash");
-  if (d.kind === "res")  { const n = Math.min(99, Math.floor(G.res[d.key] || 0));  if (n <= 0) return; G.res[d.key] -= n;  toast("🗑️ Tiraste " + n + " " + RES_LABEL[d.key]); }
-  else if (d.kind === "seed") { const n = Math.min(99, Math.floor(G.seeds[d.key] || 0)); if (n <= 0) return; G.seeds[d.key] -= n; toast("🗑️ Tiraste " + n + " semillas"); }
-  else if (d.kind === "fish") { const n = Math.min(99, Math.floor((G.fish && G.fish[d.key]) || 0)); if (n <= 0) return; G.fish[d.key] -= n; toast("🗑️ Tiraste " + n + " peces"); }
-  else if (d.kind === "dish") { const n = Math.min(99, Math.floor((G.dishes && G.dishes[d.key]) || 0)); if (n <= 0) return; G.dishes[d.key] -= n; toast("🗑️ Tiraste " + n + " platos"); }
+  if (d.kind === "res")  { const n = Math.min(99, Math.floor(G.res[d.key] || 0));  if (n <= 0) return; G.res[d.key] -= n;  toast("Tiraste " + n + " " + RES_LABEL[d.key]); }
+  else if (d.kind === "seed") { const n = Math.min(99, Math.floor(G.seeds[d.key] || 0)); if (n <= 0) return; G.seeds[d.key] -= n; toast("Tiraste " + n + " semillas"); }
+  else if (d.kind === "fish") { const n = Math.min(99, Math.floor((G.fish && G.fish[d.key]) || 0)); if (n <= 0) return; G.fish[d.key] -= n; toast("Tiraste " + n + " peces"); }
+  else if (d.kind === "dish") { const n = Math.min(99, Math.floor((G.dishes && G.dishes[d.key]) || 0)); if (n <= 0) return; G.dishes[d.key] -= n; toast("Tiraste " + n + " platos"); }
   else { toast("Eso no se puede tirar"); return; }
   syncSlots(); if (typeof saveFarm === "function") saveFarm();
 }
@@ -250,26 +250,26 @@ function refreshEquip() {
   gearSlot("eq-escudo", "escudo", "Escudo");
   // arma: se EQUIPA/CAMBIA con clic en el slot (detalles jueves) — espada ↔ arco ↔ nada
   const arma = G.gear.arma;
-  fill("eq-arma", !!arma, arma === "bow" ? spIc("bow", "🏹") : spIc("sword", "⚔️"),
+  fill("eq-arma", !!arma, arma === "bow" ? spIc("bow", "") : spIc("sword", ""),
     arma ? (arma === "bow" ? "Arco equipado" : "Espada de Hierro equipada") + " · clic para cambiar" : "Arma · clic para equipar");
   const armaEl = $("eq-arma");
   if (armaEl) armaEl.onclick = () => {
     const opts = [null]; if (G.swordOwned) opts.push("sword"); if (G.bowOwned) opts.push("bow");
     if (opts.length === 1) { toast("No tenés armas — crafteálas en la Herrería"); return; }
     G.gear.arma = opts[(opts.indexOf(G.gear.arma) + 1) % opts.length];
-    toast(G.gear.arma === "sword" ? "⚔️ Espada equipada" : (G.gear.arma === "bow" ? "🏹 Arco equipado" : "Arma desequipada"));
+    toast(G.gear.arma === "sword" ? "Espada equipada" : (G.gear.arma === "bow" ? "Arco equipado" : "Arma desequipada"));
     refreshEquip(); if (typeof syncSlots === "function") syncSlots(); if (typeof saveFarm === "function") saveFarm();
   };
   // munición: las flechas se equipan a mano con clic (ya no se autoequipan al craftear)
   const fl = (G.res && G.res.flecha) || 0;
   const munOn = !!G.gear.municion && fl > 0;
-  fill("eq-municion", munOn, spIc("res_flecha", "➳") + '<b class="eqcnt">' + fmt(fl) + "</b>",
+  fill("eq-municion", munOn, spIc("res_flecha", "") + '<b class="eqcnt">' + fmt(fl) + "</b>",
     munOn ? fl + " flechas equipadas · clic para desequipar" : (fl > 0 ? "Munición · clic para equipar tus " + fl + " flechas" : "Munición (crafteá flechas en la Herrería)"));
   const munEl = $("eq-municion");
   if (munEl) munEl.onclick = () => {
     if (fl <= 0) { toast("No tenés flechas — crafteálas en la Herrería"); return; }
     G.gear.municion = !G.gear.municion;
-    toast(G.gear.municion ? "➳ Flechas equipadas" : "➳ Flechas desequipadas");
+    toast(G.gear.municion ? "Flechas equipadas" : "Flechas desequipadas");
     refreshEquip(); if (typeof saveFarm === "function") saveFarm();
   };
   const ed = $("eq-def"); if (ed) ed.textContent = "Defensa total: " + gearDefTotal();
@@ -283,28 +283,28 @@ function refreshDaily() {
   const base = st.claimable ? st.day - 1 : claimed;   // días ya cobrados de esta racha
   $("dy-banner").innerHTML = st.claimable
     ? "Día <b>" + st.day + "</b> de 7 — reclamá tu recompensa de hoy."
-    : "Día <b>" + (claimed || 1) + "</b> de 7 reclamado ✔ — volvé mañana.";
+    : "Día <b>" + (claimed || 1) + "</b> de 7 reclamado — volvé mañana.";
   box.innerHTML = DAILY_REWARDS.map((r, i) => {
     const d = i + 1;
-    let cls = "fut", ic = "🔒";
-    if (d <= base) { cls = "done"; ic = "✅"; }
+    let cls = "fut", ic = "";
+    if (d <= base) { cls = "done"; ic = ""; }
     else if (st.claimable && d === st.day) { cls = "now"; ic = `<img class="dyimg" src="${GF.spr("chest_daily")}" onerror="this.outerHTML='🎁'">`; }
     return `<div class="dylock ${cls}" title="${r.label}"><div class="ic">${ic}</div><div class="dl">Día ${d}</div></div>`;
   }).join("");
   const idx = (st.claimable ? st.day : Math.max(1, claimed)) - 1;
-  $("dy-reward").innerHTML = (st.lost ? '<span class="bad">😢 Perdiste la racha — volvés al Día 1.</span>' : "")
+  $("dy-reward").innerHTML = (st.lost ? '<span class="bad">Perdiste la racha — volvés al Día 1.</span>' : "")
     + (st.claimable ? "Hoy: " : "Reclamado: ") + DAILY_REWARDS[idx].label
     + (st.lost ? '<br><button class="ghost sm" id="dy-recover">Recuperar racha · ' + STREAK_RECOVER_COST + ' ' + coinIc("esencia") + '</button>' : "");
   const rec = $("dy-recover"); if (rec) rec.onclick = () => recoverStreak();
   const b = $("dy-claim");
-  if (b) { b.disabled = !st.claimable; b.textContent = st.claimable ? "Reclamar 🎁" : "Vuelve mañana"; }
+  if (b) { b.disabled = !st.claimable; b.textContent = st.claimable ? "Reclamar " : "Vuelve mañana"; }
 }
 
 /* ---- sembrado rápido: rueda de semillas (clic derecho en parcela seca) ---- */
 function showSeedWheel(px, py, plot) {
   const w = $("seedwheel"); if (!w) return;
   const opts = CROP_ORDER.filter(k => cropUnlocked(k) && (G.seeds[k] || 0) > 0);
-  if (!opts.length) { toast("🌱 No tenés semillas — comprá en la Tienda"); return; }
+  if (!opts.length) { toast("No tenés semillas — comprá en la Tienda"); return; }
   const c = w.querySelector(".swc");
   c.style.left = px + "px"; c.style.top = py + "px";
   const R = 62;
@@ -313,7 +313,7 @@ function showSeedWheel(px, py, plot) {
     const x = Math.round(Math.cos(a) * R), y = Math.round(Math.sin(a) * R);
     const cd = CROP_DEF[k];
     return `<div class="swi" data-k="${k}" title="${cd.label} · crece en ${cd.grow}s" style="left:${x}px;top:${y}px"><img class="swimg" src="${GF.spr("seed_" + k)}" onerror="this.outerHTML='<span>${cd.emoji}</span>'"><b>×${G.seeds[k]}</b></div>`;
-  }).join("") + '<div class="swi center" style="left:0;top:0"><span>🌱</span></div>';
+  }).join("") + '<div class="swi center" style="left:0;top:0"><span></span></div>';
   w.classList.add("show");
   c.querySelectorAll(".swi[data-k]").forEach(el => el.onclick = (ev) => {
     ev.stopPropagation();
@@ -336,7 +336,7 @@ function refreshForge() {
     const img = '<img src="' + GF.spr(pd.sprite) + '">';
     if (!owned) {
       const costStr = Object.keys(pd.cost).map(k => resIc(k) + " " + pd.cost[k]).join(" · ");
-      craft += '<div class="forge-row"><div class="fic">' + img + '</div><div class="finfo"><div class="fnm">' + pd.label + '</div><div class="fds">Mina: ' + mineEmo + " · " + pd.dur + " usos" + (pd.fast ? " · ⚡ rápido (gasta doble)" : "") + '</div><div class="fds">Costo: ' + costStr + '</div></div><div class="fbtns"><button class="green sm" ' + (canAfford(pd.cost) ? "" : "disabled") + ' data-craft="' + id + '">Craftear</button></div></div>';
+      craft += '<div class="forge-row"><div class="fic">' + img + '</div><div class="finfo"><div class="fnm">' + pd.label + '</div><div class="fds">Mina: ' + mineEmo + " · " + pd.dur + " usos" + (pd.fast ? " · rápido (gasta doble)" : "") + '</div><div class="fds">Costo: ' + costStr + '</div></div><div class="fbtns"><button class="green sm" ' + (canAfford(pd.cost) ? "" : "disabled") + ' data-craft="' + id + '">Craftear</button></div></div>';
     } else {
       const isEq = eq === id, durPct = Math.round(dur / pd.dur * 100);
       let btns = '<button class="ghost sm" ' + (isEq ? "disabled" : "") + ' data-equip="' + id + '">' + (isEq ? "Equipado" : "Equipar") + "</button>";
@@ -371,7 +371,7 @@ function refreshForge() {
   const chOk = !chFull && canAfford(CHEST_COST) && G.plata >= CHEST_PLATA;
   craft += '<div class="forge-row"><div class="fic"><img src="' + GF.spr("cofre") + '" onerror="this.outerHTML=\'📦\'"></div><div class="finfo"><div class="fnm">Cofre depósito (' + chn + "/" + CHEST_MAX + ')</div><div class="fds">10 espacios de guardado en tu granja · +1% de materiales por cofre (tenés +' + chn + '%)</div><div class="fds">Costo: ' + chstr + '</div></div><div class="fbtns"><button class="green sm" ' + (chOk ? "" : "disabled") + ' id="forge-chest">' + (chFull ? "Máximo" : "Craftear") + "</button></div></div>";
 
-  $("forge-craft").innerHTML = craft || '<div class="sub">Nada por craftear — ya tenés todo. 💪</div>';
+  $("forge-craft").innerHTML = craft || '<div class="sub">Nada por craftear — ya tenés todo. </div>';
   $("forge-repair").innerHTML = repair;
   const card = $("ov-forge");
   card.querySelectorAll("[data-craft]").forEach(b => b.onclick = () => craftPick(b.dataset.craft));
@@ -421,7 +421,7 @@ function refreshCooking() {
     const r = RECIPE_DEF[G.cooking.id];
     const left = Math.max(0, G.cooking.endAt - nowMs());
     const pct = Math.round((1 - left / (G.cooking.total || 1)) * 100);
-    head = '<div class="forge-row"><div class="fic">🍳</div><div class="finfo"><div class="fnm">Cocinando ' + (r ? r.label : "") + '…</div><div class="durbar"><i style="width:' + pct + '%"></i></div><div class="fds">' + Math.ceil(left / 1000) + 's restantes</div></div></div>';
+    head = '<div class="forge-row"><div class="fic"></div><div class="finfo"><div class="fnm">Cocinando ' + (r ? r.label : "") + '…</div><div class="durbar"><i style="width:' + pct + '%"></i></div><div class="fds">' + Math.ceil(left / 1000) + 's restantes</div></div></div>';
   }
   box.innerHTML = head + RECIPE_ORDER.map(id => {
     const r = RECIPE_DEF[id];
@@ -448,11 +448,11 @@ function refreshMarket() {
 function refreshSeedShop() {
   const box = $("seed-shop"); if (!box) return;
   const sb = seedBuysToday();
-  box.innerHTML = '<div class="shophead">🌱 Cupo diario: ' + sb.count + '/' + SEED_DAILY_MAX + ' semillas</div>' + CROP_ORDER.map(k => {
+  box.innerHTML = '<div class="shophead">Cupo diario: ' + sb.count + '/' + SEED_DAILY_MAX + ' semillas</div>' + CROP_ORDER.map(k => {
     const cd = CROP_DEF[k], unlocked = cropUnlocked(k), aff = G.plata >= cd.seedCost;
     const controls = unlocked
       ? `<input id="sq-${k}" type="number" min="1" value="1"><button class="green sm" data-buy="${k}" ${aff ? "" : "disabled"}>Comprar · ${coinIc("plata")}${cd.seedCost} c/u</button>`
-      : `<button class="ghost sm" disabled>🔒 Cultivo nv ${cd.lvl}</button>`;
+      : `<button class="ghost sm" disabled>Cultivo nv ${cd.lvl}</button>`;
     return `<div class="mkt-row"><span class="mimg">${itemIcon({ sprite: "seed_" + k, emoji: cd.emoji })}</span><div class="minfo"><div class="mnm">${cd.label} <span class="seedlv">nv ${cd.lvl}</span></div><div class="mds">Semilla · crece en ${cd.grow}s · tenés ${fmt(G.seeds[k] || 0)}</div></div>${controls}</div>`;
   }).join("");
   box.querySelectorAll("[data-buy]").forEach(b => b.onclick = () => { const inp = $("sq-" + b.dataset.buy); buySeed(b.dataset.buy, inp ? +inp.value : 1); });
@@ -480,7 +480,7 @@ function refreshConfig() {
 let lbTab = "plata";
 let lbData = null, lbFetchedAt = 0, lbLoading = false;
 
-function lbRowHtml(r, i, col) { const rank = i + 1; const cls = (r.me ? "me " : "") + (rank <= 3 ? "top" + rank : ""); const val = col === "plata" ? `${coinIc("plata")}${fmt(r.v)}` : `⭐ ${(+r.v).toFixed(1)}`; return `<div class="lbrow ${cls}"><span class="rk">${rank}</span><span class="nm">${escapeHtml(r.n || "—")}</span><span class="val">${val}</span></div>`; }
+function lbRowHtml(r, i, col) { const rank = i + 1; const cls = (r.me ? "me " : "") + (rank <= 3 ? "top" + rank : ""); const val = col === "plata" ? `${coinIc("plata")}${fmt(r.v)}` : `${(+r.v).toFixed(1)}`; return `<div class="lbrow ${cls}"><span class="rk">${rank}</span><span class="nm">${escapeHtml(r.n || "—")}</span><span class="val">${val}</span></div>`; }
 
 // nivel de skill promedio a partir del objeto skills guardado de otro jugador
 function avgSkillFromObj(sk) {
@@ -525,7 +525,7 @@ function renderLb() {
 
 /* ---- indicador de guardado ---- */
 function showSaving() { const el = $("saveind"); if (!el) return; el.className = "show saving"; el.querySelector(".sdot").textContent = "⟳"; el.querySelector(".stxt").textContent = "Guardando…"; clearTimeout(el._t); }
-function showSaved() { const el = $("saveind"); if (!el) return; el.className = "show"; el.querySelector(".sdot").textContent = "✓"; el.querySelector(".stxt").textContent = "Guardado"; clearTimeout(el._t); el._t = setTimeout(() => el.classList.remove("show"), 1600); }
+function showSaved() { const el = $("saveind"); if (!el) return; el.className = "show"; el.querySelector(".sdot").textContent = ""; el.querySelector(".stxt").textContent = "Guardado"; clearTimeout(el._t); el._t = setTimeout(() => el.classList.remove("show"), 1600); }
 
 /* ---- chat ---- */
 function escapeHtml(s) { return String(s).replace(/[&<>"]/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c])); }
@@ -537,7 +537,7 @@ function renderChatMsg(m) {
 }
 function doSendChat() { const ci = $("chat-in"); if (!ci) return; const t = ci.value.trim(); if (!t) return; if (typeof sendChat === "function") sendChat(t); ci.value = ""; }
 
-/* ---- (los botones ✥ se quitaron: ahora todo se mueve manteniendo clic — arrastre universal) ---- */
+/* ---- (los botones se quitaron: ahora todo se mueve manteniendo clic — arrastre universal) ---- */
 function initPanelDrag() {
 }
 
@@ -664,6 +664,9 @@ function initUI() {
   });
   // clic fuera de una ventana abierta → se cierra (menos la bolsa: multitarea al minar/talar, detalles 29/7)
   document.addEventListener("pointerdown", (e) => {
+    // el menú se pliega solo al clickear fuera de él (volver a jugar)
+    const gm = $("gmenu");
+    if (gm && !gm.classList.contains("collapsed") && !e.target.closest("#gmenu, #menu-btn")) gm.classList.add("collapsed");
     if (!anyOvOpen()) return;
     if (e.target.closest(".card, #gmenu, #hotwrap, .hudbar, #logpanel, #editbar, #seedwheel")) return;
     document.querySelectorAll(".ov.show").forEach(o => { if (o.id !== "ov-inv") o.classList.remove("show"); });
@@ -680,17 +683,17 @@ function initUI() {
   // modo edición: cierra las ventanas y deja solo dos botoncitos flotantes sobre la hotbar
   window.setEditMode = (on) => {
     GF.editMode = on;
-    const ce2 = $("cfg-edit"); if (ce2) ce2.textContent = on ? "✓ Terminar edición" : "Modo edición";
+    const ce2 = $("cfg-edit"); if (ce2) ce2.textContent = on ? "Terminar edición" : "Modo edición";
     const eb = $("editbar"); if (eb) eb.classList.toggle("show", on);
     if (window.FARM && FARM.gridG) FARM.gridG.setVisible(on);   // el cuadriculado solo se ve editando
-    if (on) { closeAllOv(); toast("✏️ Arrastrá los objetos a otra celda"); }
-    else toast("📌 Edición terminada");
+    if (on) { closeAllOv(); toast("Arrastrá los objetos a otra celda"); }
+    else toast("Edición terminada");
   };
   const doFarmReset = () => { G.layout = {}; G.layoutPlots = {}; G.layoutPond = null; if (typeof saveFarm === "function") saveFarm(true); if (window.FARM && window.FARM.scene) window.FARM.scene.restart(); toast("↺ Granja restaurada"); };
   const ce = $("cfg-edit"); if (ce) ce.onclick = () => setEditMode(!GF.editMode);
   // sonidos on/off (Configuración)
   const sndBtn = $("cfg-sound");
-  const sndLabel = () => { if (sndBtn) sndBtn.textContent = (window.sfxIsOn && sfxIsOn()) ? "🔊 Sonidos: Sí" : "🔇 Sonidos: No"; };
+  const sndLabel = () => { if (sndBtn) sndBtn.textContent = (window.sfxIsOn && sfxIsOn()) ? "Sonidos: Sí" : "Sonidos: No"; };
   if (sndBtn) { sndLabel(); sndBtn.onclick = () => { if (window.sfxOn) sfxOn(!(window.sfxIsOn && sfxIsOn())); sndLabel(); if (window.sfx) sfx("click"); }; }
   const cr = $("cfg-reset"); if (cr) cr.onclick = doFarmReset;
   const ed = $("edit-done"); if (ed) ed.onclick = () => setEditMode(false);

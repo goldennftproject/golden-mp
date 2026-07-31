@@ -66,12 +66,12 @@ class PlazaScene extends Phaser.Scene {
     if (typeof Colyseus === "undefined" && !window.__colyseusReady) {
       await new Promise(res => { window.addEventListener("colyseus-ready", res, { once:true }); setTimeout(res, 9000); });
     }
-    if (typeof Colyseus === "undefined" || !Colyseus.Client) { this.statusText.setText("🔴 No cargó colyseus.js"); return; }
+    if (typeof Colyseus === "undefined" || !Colyseus.Client) { this.statusText.setText("No cargó colyseus.js"); return; }
     try {
       const client = new Colyseus.Client(endpoint);
       this.room = await client.joinOrCreate("world", { name: nick });
       this.myId = this.room.sessionId;
-      this.statusText.setText("🟢 En la plaza");
+      this.statusText.setText("En la plaza");
       const initMe = () => {
         const p = this.room.state.players.get(this.myId);
         if (p && !this.me) {
@@ -86,10 +86,10 @@ class PlazaScene extends Phaser.Scene {
       };
       initMe();
       const iv = setInterval(() => { if (!this.scene.isActive()) { clearInterval(iv); return; } initMe(); if (this.me) clearInterval(iv); }, 80);
-      this.room.onLeave(() => this.statusText.setText("🔴 Desconectado"));
+      this.room.onLeave(() => this.statusText.setText("Desconectado"));
     } catch (e) {
       console.error(e);
-      this.statusText.setText("🔴 No se pudo conectar a la plaza");
+      this.statusText.setText("No se pudo conectar a la plaza");
     }
   }
 
