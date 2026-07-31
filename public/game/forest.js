@@ -383,7 +383,10 @@ class ForestScene extends Phaser.Scene {
       hero.setScale(sign * this.actScale, this.actScale);
       // el golpe usa la ANIMACIÓN del arma equipada: espadazo con estela o disparo de arco (PixelLab 30/7)
       if (!this.action.fx) {
-        const akey = this.action.kind === "shoot" ? "act_bow" : (G.gear.arma === "sword" ? "act_sword" : null);
+        // si está caminando al momento del golpe, usa el espadazo CAMINANDO (piernas en marcha, 31/7)
+        const movingNow = !!(this.moveTarget || k.left.isDown || k.right.isDown || k.up.isDown || k.down.isDown || k.aleft.isDown || k.aright.isDown || k.aup.isDown || k.adown.isDown);
+        const swordKey = (movingNow && this.anims.exists("act_sword_walk")) ? "act_sword_walk" : "act_sword";
+        const akey = this.action.kind === "shoot" ? "act_bow" : (G.gear.arma === "sword" ? swordKey : null);
         if (akey && this.anims.exists(akey)) { hero.play(akey); this.action.fx = true; }
         else {
           // respaldo (a puños o sin animación): el arma dibujada a mano como antes

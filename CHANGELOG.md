@@ -164,6 +164,6 @@ Registro cronológico de todo lo hecho desde el inicio del proyecto (27 de julio
 - Vestir con madera: panel de registro/chat, toasts y prompts.
 - Generaciones supervisadas restantes: portal al bosque, 7 íconos de skills, retoque de lingotes bronce/oro, fuego animado de la herrería (experimental).
 - En espera del diseñador: cerca premium, tabla de stats del bestiario, tiempos de cultivo reales, (Crafteo de materiales ✔ 31/7: Tablón 3 madera · Barra de piedra 3 piedra · Barra de bronce 3 bronce · Barra de HIERRO 3 hierro · Barra de oro 3 oro. Se agregó el HIERRO como recurso nuevo: nodo minable propio en la granja —derivado del de bronce recoloreado a acero—, tier 1 (se mina con pico de bronce), vendible a 15 de plata.) (Lombrices ✔ 31/7: se venden en la Tienda a 3 de plata, 1 por lanzamiento.)
-- Bloque grande diferido: jabalí (granjero definitivo ✔ integrado 30/7; 6 monstruos del bosque ✔).
+- Bloque grande diferido: ✔ COMPLETO — jabalí animado 31/7 (frames derivados del sprite original: camina hasta el cultivo y embiste mientras lo arruina), granjero definitivo ✔, 6 monstruos ✔.
 - Código: fondo de la Zona Negra en damero oscuro. (Bolsa a 20 ✔ 30/7: base 20 en 4 filas de 5, ampliable a 50; lo que exceda queda contado y reaparece al liberar espacio.)
 - Pilares futuros: login por email multi-dispositivo, PvP/endgame de netherita, referidos, token $Golden, audio.

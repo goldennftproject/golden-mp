@@ -431,6 +431,7 @@ class FarmScene extends Phaser.Scene {
     const s = this.add.sprite(24, 40, "boar").setOrigin(0.5, 1);
     const baseScale = (GF.TILE * 1.25) / s.width;
     s.setScale(baseScale).setDepth(40);
+    if (this.anims.exists("boar_walk")) s.play("boar_walk");   // llega trotando (frames del sprite original, 31/7)
     this.threats.push({ type: "boar", sprite: s, cx: 24, by: 40, baseScale, tgt, damageAt: nowMs() + 15000 });
     G.week++; refreshHud();
     log("¡Un jabalí apareció! Espantalo (clic/E) antes de que arruine un cultivo.", "bad");
@@ -1155,7 +1156,12 @@ class FarmScene extends Phaser.Scene {
     for (let i = this.threats.length - 1; i >= 0; i--) {
       const b = this.threats[i];
       const dx = b.tgt.cx - b.cx, dy = b.tgt.by - b.by, d = Math.hypot(dx, dy);
-      if (d > 2) { const sp = Math.min(70 * dt, d); b.cx += dx / d * sp; b.by += dy / d * sp; }
+      if (d > 2) {
+        const sp = Math.min(70 * dt, d); b.cx += dx / d * sp; b.by += dy / d * sp;
+        if (this.anims.exists("boar_walk") && b.sprite.anims.currentAnim?.key !== "boar_walk") b.sprite.play("boar_walk");
+      } else if (this.anims.exists("boar_atk") && b.sprite.anims.currentAnim?.key !== "boar_atk") {
+        b.sprite.play("boar_atk");   // llegó al cultivo: embiste y hociquea hasta arruinarlo
+      }
       b.sprite.setPosition(b.cx, b.by).setDepth(b.by).setScale((dx < 0 ? -1 : 1) * b.baseScale, b.baseScale);
       if (t >= b.damageAt) {
         if (b.tgt.state === "growing" || b.tgt.state === "ready") { b.tgt.state = "dry"; b.tgt.cropKey = null; b.tgt.readyAt = 0; this.setPlotGlow(b.tgt, "off"); b.tgt.spr.setVisible(false); b.tgt.emo.setVisible(false); b.tgt.timer.setVisible(false); this.syncPlots(); log("Un jabalí arruinó un cultivo.", "bad"); toast("Cultivo arruinado"); }

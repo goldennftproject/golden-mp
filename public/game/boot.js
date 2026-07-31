@@ -13,9 +13,14 @@ class BootScene extends Phaser.Scene {
       for (let i = 0; i < 9; i++) L.push(["hero_" + a + "_" + i, P + "hero_" + a + "_" + i + ".png?v=2"]);
     });
     for (let i = 0; i < 8; i++) L.push(["hero_sword_" + i, P + "hero_sword_" + i + ".png?v=2"]);   // espadazo horizontal con estela
+    for (let i = 0; i < 8; i++) L.push(["hero_sword_walk_" + i, P + "hero_sword_walk_" + i + ".png"]);   // espadazo CAMINANDO (31/7): piernas en marcha + tajo
     for (let i = 0; i < 8; i++) L.push(["hero_bow_" + i, P + "hero_bow_" + i + ".png?v=2"]);       // disparo de arco (arco ya en mano)
     for (let i = 0; i < 7; i++) L.push(["act_water_" + i, P + "act_water_" + i + ".png"]);     // regar sigue con el arte anterior
     L.push(["boar", P + "boar.png"]);
+    // jabalí animado (31/7): frames derivados del sprite original (quieto 5f, caminar 7f, embestida 9f)
+    for (let i = 0; i < 5; i++) L.push(["boar_idle_" + i, P + "boar_idle_" + i + ".png"]);
+    for (let i = 0; i < 7; i++) L.push(["boar_walk_" + i, P + "boar_walk_" + i + ".png"]);
+    for (let i = 0; i < 9; i++) L.push(["boar_atk_" + i, P + "boar_atk_" + i + ".png"]);
     // orco del Bosque: sprite animado (mira al sureste, se espeja para el otro lado)
     for (let i = 0; i < 3; i++) L.push(["orc_idle_" + i, P + "orc_idle_" + i + ".png"]);
     for (let i = 0; i < 6; i++) L.push(["orc_walk_" + i, P + "orc_walk_" + i + ".png"]);
@@ -159,8 +164,17 @@ class BootScene extends Phaser.Scene {
     // combate: espadazo y arco (una pasada por golpe)
     { const ks = [0,1,2,3,4,5,6,7].map(i => "hero_sword_" + i);
       if (has(ks)) this.anims.create({ key: "act_sword", frames: ks.map(k => ({ key: k })), frameRate: 18, repeat: 0 }); }
+    { const ks = [0,1,2,3,4,5,6,7].map(i => "hero_sword_walk_" + i);
+      if (has(ks)) this.anims.create({ key: "act_sword_walk", frames: ks.map(k => ({ key: k })), frameRate: 18, repeat: 0 }); }   // atacar en movimiento
     { const ks = [0,1,2,3,4,5,6,7].map(i => "hero_bow_" + i);
       if (has(ks)) this.anims.create({ key: "act_bow", frames: ks.map(k => ({ key: k })), frameRate: 24, repeat: 0 }); }   // 8f/24fps ≈ 0.33s: entra en el disparo de 0.35s
+    // jabalí de la granja: caminar en loop, embestida en loop mientras rompe el cultivo
+    { const ks = [0,1,2,3,4].map(i => "boar_idle_" + i);
+      if (has(ks)) this.anims.create({ key: "boar_idle", frames: ks.map(k => ({ key: k })), frameRate: 5, repeat: -1 }); }
+    { const ks = [0,1,2,3,4,5,6].map(i => "boar_walk_" + i);
+      if (has(ks)) this.anims.create({ key: "boar_walk", frames: ks.map(k => ({ key: k })), frameRate: 10, repeat: -1 }); }
+    { const ks = [0,1,2,3,4,5,6,7,8].map(i => "boar_atk_" + i);
+      if (has(ks)) this.anims.create({ key: "boar_atk", frames: ks.map(k => ({ key: k })), frameRate: 10, repeat: -1 }); }
     // animaciones del orco y del troll (troll con idle de 4 frames)
     const mobs = { orc: [["idle", 3, 5, -1], ["walk", 6, 9, -1], ["atk", 6, 11, 0]],
                    troll: [["idle", 4, 4, -1], ["walk", 6, 8, -1], ["atk", 6, 10, 0]],
