@@ -51,13 +51,19 @@ class BootScene extends Phaser.Scene {
     ["node_stone_mined","node_bronze_mined","node_gold_mined","node_diamond_mined","node_netherite_mined"]
       .forEach(k => L.push([k, P + k + ".png?v=7"]));
     L.push(["dummy", P + "dummy.png"]);   // muñeco de práctica de espada
+    L.push(["dummy_broken", P + "dummy_broken.png"]);   // dummy desgastado con cortes: se muestra durante el cooldown
     L.push(["cofre", P + "cofre.png"]);   // cofre depósito
     L.push(["withered", P + "withered.png?v=2"]);      // cultivo marchito cozy
     // etapas intermedias (la verdura asomando al 50% del crecimiento)
     if (typeof CROP_ORDER !== "undefined") CROP_ORDER.forEach(k => L.push(["cropm_" + k, P + "cropm_" + k + ".png?v=3"]));
     L.push(["tree", P + "tree.png?v=3"]);   // v3: árbol con efecto de plantado (detalles jueves)
+    // progresión de talado (PixelLab 30/7): corte leve → corte profundo → tocón con tierra y hojas
+    L.push(["tree_cut1", P + "tree_cut1.png"]);
+    L.push(["tree_cut2", P + "tree_cut2.png"]);
+    L.push(["tree_stump_leaves", P + "tree_stump_leaves.png"]);
     L.push(["pond", P + "pond.png?v=2"]);
-    L.push(["portal", P + "portal.png"]);   // portal al Bosque
+    L.push(["portal", P + "portal.png"]);   // portal al Bosque (frame quieto de respaldo)
+    for (let i = 0; i < 8; i++) L.push(["portal_" + i, P + "portal_" + i + ".png"]);   // espiral girando 360° (8 pasos de 45°)
     // v3: nodos plantados en la tierra + estados dañados (intermedio del cooldown)
     ["node_stone","node_bronze","node_gold","node_diamond","node_netherite"]
       .forEach(k => { L.push([k, P + k + ".png?v=3"]); L.push([k + "_half", P + k + "_half.png"]); });
@@ -140,6 +146,9 @@ class BootScene extends Phaser.Scene {
     // regar mantiene el arte anterior (7 frames)
     { const ks = [0,1,2,3,4,5,6].map(i => "act_water_" + i);
       if (has(ks)) this.anims.create({ key: "act_water", frames: ks.map(k => ({ key: k })), frameRate: 10, repeat: -1 }); }
+    // portal: el espiral gira 360° en loop (el arco de piedra queda quieto)
+    { const ks = [0,1,2,3,4,5,6,7].map(i => "portal_" + i);
+      if (has(ks)) this.anims.create({ key: "portal_spin", frames: ks.map(k => ({ key: k })), frameRate: 9, repeat: -1 }); }
     // combate: espadazo y arco (una pasada por golpe)
     { const ks = [0,1,2,3,4,5,6,7].map(i => "hero_sword_" + i);
       if (has(ks)) this.anims.create({ key: "act_sword", frames: ks.map(k => ({ key: k })), frameRate: 18, repeat: 0 }); }

@@ -109,7 +109,9 @@ class FarmScene extends Phaser.Scene {
     this.objs = GF.WORLD_OBJECTS.map((o, i) => {
       const lp = (G.layout && G.layout[i]) || null;                            // posición editada por el jugador
       const cx = lp ? lp.cx : o.cx, by = lp ? lp.by : o.by;
-      const s = this.add.image(cx, by, o.key).setOrigin(0.5, 1);
+      // el portal es sprite para poder animar el espiral girando; el resto sigue como imagen
+      const s = (o.key === "portal" ? this.add.sprite(cx, by, o.key) : this.add.image(cx, by, o.key)).setOrigin(0.5, 1);
+      if (o.key === "portal" && this.anims.exists("portal_spin")) s.play("portal_spin");
       const rw = (o.type === "ore" || o.type === "rock") ? o.w * 0.67       // minerales −20% (detalles jueves; antes 0.84)
         : (o.type === "tree") ? o.w * 0.8                                   // árboles −20%
         : (o.type === "market" || o.type === "store") ? o.w * 0.8           // tiendas −20%
@@ -580,8 +582,17 @@ class FarmScene extends Phaser.Scene {
     if (window.sfx) sfx({ chop: "chop", mine: "mine", plant: "plant", harvest: "harvest", fish: "splash", water: "splash" }[a.kind] || "click");
     if (a.kind === "chop") {
       const gr = Math.max(1, Math.round(3 * yieldMult() * chestBonus()));
-      if (tryAddRes("madera", gr)) { useTool("axe"); addXp("crafting", 4); o.readyAt = nowMs() + CD.tree * 1000 * cdMult(); this.setObjTex(o, "tree_stump", (o.rw || o.w) * 0.42); log(`🪵 +${gr} Madera. 🪓 ${toolDur("axe")}/${TOOL_DEF.axe.max}`, "good"); toast("+" + gr + " 🪵"); refreshHud(); if (toolDur("axe") <= 0) { log("🪓 ¡El hacha se rompió! Reparala en la Herrería.", "bad"); toast("🪓 ¡Hacha rota!"); } }
-      else { toast("🎒 Bolsa llena — no podés talar"); log("🎒 Bolsa llena: liberá espacio para seguir talando.", "bad"); }
+      if (tryAddRes("madera", gr)) {
+        useTool("axe"); addXp("crafting", 4); o.readyAt = nowMs() + CD.tree * 1000 * cdMult();
+        // tocón nuevo con base de tierra y hojas caídas (encuadre del árbol, va a tamaño completo); respaldo: tocón viejo chico
+        if (this.textures.exists("tree_stump_leaves")) this.setObjTex(o, "tree_stump_leaves", o.rw || o.w);
+        else this.setObjTex(o, "tree_stump", (o.rw || o.w) * 0.42);
+        log(`🪵 +${gr} Madera. 🪓 ${toolDur("axe")}/${TOOL_DEF.axe.max}`, "good"); toast("+" + gr + " 🪵"); refreshHud();
+        if (toolDur("axe") <= 0) { log("🪓 ¡El hacha se rompió! Reparala en la Herrería.", "bad"); toast("🪓 ¡Hacha rota!"); }
+      } else {
+        this.setObjTex(o, o.baseKey, o.rw || o.w);   // bolsa llena: el árbol vuelve entero (deshace los cortes intermedios)
+        toast("🎒 Bolsa llena — no podés talar"); log("🎒 Bolsa llena: liberá espacio para seguir talando.", "bad");
+      }
     } else if (a.kind === "mine" && o.type === "rock") {
       const gr = Math.max(1, Math.round(2 * yieldMult() * chestBonus()));
       if (tryAddRes("piedra", gr)) {
@@ -1036,6 +1047,14 @@ class FarmScene extends Phaser.Scene {
       this.dummyTimer.setPosition(this.dummyObj.cx, this.topY(this.dummyObj));
       if (this.timerOn(this.dummyObj)) this.dummyTimer.setText(left > 0 ? fmtDur(left) : "Listo").setVisible(true);
       else this.dummyTimer.setVisible(false);
+      // dummy desgastado mientras descansa: cortes y paja afuera; al estar listo vuelve el sano
+      const broken = left > 0;
+      if (broken !== this.dummyBroken && this.textures.exists("dummy_broken")) {
+        this.dummyBroken = broken;
+        const s = this.dummyObj.sprite;
+        s.setTexture(broken ? "dummy_broken" : this.dummyObj.baseKey);
+        s.setScale(this.dummyObj.rw / s.width);   // reajustar por si el lienzo difiere
+      }
     }
     if (G.forgeLitUntil && t >= G.forgeLitUntil) { G.forgeLitUntil = 0; this.updateForge(); }   // se apaga sola al terminar
 
@@ -1097,6 +1116,11 @@ class FarmScene extends Phaser.Scene {
       if (!this.action.halfDone && ao && (ao.type === "rock" || ao.type === "ore") && this.action.t >= this.action.dur / 2) {
         this.action.halfDone = true;
         if (this.textures.exists(ao.baseKey + "_half")) this.setObjTex(ao, ao.baseKey + "_half", ao.rw || ao.w);
+      }
+      // talar: el árbol pasa por dos cortes intermedios (tajo leve → tajo profundo con hojas caídas)
+      if (ao && ao.type === "tree") {
+        if (!this.action.cut1Done && this.action.t >= this.action.dur / 3 && this.textures.exists("tree_cut1")) { this.action.cut1Done = true; this.setObjTex(ao, "tree_cut1", ao.rw || ao.w); }
+        if (!this.action.cut2Done && this.action.t >= this.action.dur * 2 / 3 && this.textures.exists("tree_cut2")) { this.action.cut2Done = true; this.setObjTex(ao, "tree_cut2", ao.rw || ao.w); }
       }
       if (this.action.t >= this.action.dur) this.finishAction();
       const sign = this.facing === "west" ? -1 : 1;
