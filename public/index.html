@@ -251,7 +251,9 @@
   .invexp .exmax{color:#e2cf9e}
   /* ESTÁNDAR de tipografía: blanco sobre madera/botones, negro sobre pergamino claro */
   button{color:#fff !important;text-shadow:0 1px 0 rgba(0,0,0,.55)}
-  button.ghost{color:#fff !important}
+  /* ESTÁNDAR: botón CLARO → letra oscura (nunca blanca). Ghost pasa a pergamino como las filas */
+  button.ghost{background:#f2e5c4;border:2px solid #d9c290;color:#241d10 !important;text-shadow:none}
+  #updbanner button,#gate .enter{color:#3a2e10 !important;text-shadow:none}
   .card h3{color:#fff !important}
   .card .sub,.cost,#inv-cap,#inv-selseed,#cofre-info,.shophead,.eqh,.invexp .exmax{color:#fff}
   .cost b{color:#fff}
@@ -365,7 +367,7 @@
 
   <div id="toast"></div>
   <div id="prompt"></div>
-  <div id="updbanner">🔄 Nueva versión disponible · actualizando en <b class="updc">15</b>s <button id="updnow">Actualizar ahora</button></div>
+  <div id="updbanner">🔄 Nueva versión disponible · actualizando en <b class="updc">5</b>s <button id="updnow">Actualizar ahora</button></div>
 
   <!-- overlays -->
   <div class="ov" id="ov-barn"><div class="card">
