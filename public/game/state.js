@@ -12,8 +12,9 @@ const G = {
     papa: 0, zanahoria: 0, cebolla: 0, calabacin: 0, repollo: 0, calabaza: 0, brocoli: 0 },
   seeds: { papa: 10, zanahoria: 5, cebolla: 2, calabacin: 1, repollo: 0, calabaza: 0, brocoli: 0 },  // starter pack
   selSeed: "papa",   // semilla elegida para plantar
-  picks: { owned: { stone: true }, dur: { stone: 50 }, eq: "stone" },
-  tools: { axe: 60, rod: 40 },   // durabilidad de hacha y caña
+  picks: { owned: { stone: true }, dur: { stone: 1 }, eq: "stone" },
+  tools: { axe: 1, rod: 1 },   // SFL puro: herramientas de 1 uso
+  toolsLost: {},                 // herramientas tiradas a la papelera (31/7: el diseñador pidió que se puedan tirar)
   invRows: 0,                    // filas extra de inventario compradas
   slots: [],                     // inventario por casillas: [{kind,key}|null]
   hotbar: [null, null, null, null, null, null, null, null, null, null],  // 10 accesos directos
@@ -31,6 +32,7 @@ const G = {
   cooking: null,   // { id, endAt, total } — barra de enfriamiento al cocinar
   chests: [],      // cofres depósito: [{col,row,items:[{kind,key,n}|null × 10]}] — +1% materiales c/u
   dummyUsedAt: 0,  // último entrenamiento con el dummy (cooldown 4h)
+  built: { store: false, horno: false, cocina: false },   // detalles viernes (1): los edificios se CONSTRUYEN con recetas (arrancan en sombra)
   buffs: [], secPerGameHour: 1, gameHours: 0,
   skills: { fishing: 0, farming: 0, cooking: 0, range: 0, sword: 0, mining: 0, crafting: 0 },
 };
@@ -94,6 +96,14 @@ function buySeed(k, qty) {
   refreshHud(); if (typeof refreshSeedShop === "function") refreshSeedShop(); if (isOpen("ov-inv")) refreshInv();
 }
 
+// --- construcción de edificios (detalles viernes 1): recetas para levantar cada edificio ---
+const BUILD_DEF = {
+  store:  { label: "Herrería",        cost: { madera: 15, piedra: 10 } },
+  horno:  { label: "Horno de Piedra", cost: { piedra: 12, madera: 8, papa: 5 } },
+  cocina: { label: "Cocina",          cost: { piedra: 10, madera: 10, papa: 5, oro: 3 } },
+};
+function buildCostStr(key) { const b = BUILD_DEF[key]; return Object.keys(b.cost).map(k => (b.cost[k]) + " " + (RES_LABEL[k] || k)).join(" + "); }
+
 // --- materiales intermedios (detalles213: "tablones / stone bar / iron bar / iron gold" mapeados a nuestros recursos) ---
 const MAT_ORDER = ["tablon","barra_piedra","barra_bronce","barra_hierro","barra_oro"];
 const MAT_DEF = {
@@ -113,8 +123,9 @@ function craftMat(id) {
   if (!roomForRes(id, 1)) { bagFull("craftear " + md.label); return; }
   payCost(md.cost); G.res[id] = (G.res[id] || 0) + 1;
   G.matCd[id] = nowMs() + MAT_CD_MS;
-  addXp("crafting", 3); log("Crafteaste 1 " + md.label + ".", "good"); toast("+1 " + md.label);
-  forgeWork(); refreshForge(); if (isOpen("ov-inv")) refreshInv(); refreshHud();
+  addXp("crafting", 3); log("Fundiste 1 " + md.label + " en el Horno.", "good"); toast("+1 " + md.label);
+  if (typeof refreshHorno === "function" && isOpen("ov-horno")) refreshHorno();
+  if (isOpen("ov-inv")) refreshInv(); refreshHud();
 }
 
 // --- lombrices (detalles213): carnada de pesca, se compran en la Tienda ---
@@ -164,11 +175,12 @@ const ORE_DEF = {
 };
 const PICK_ORDER = ["stone","bronze","gold","diamond","netherite"];
 const PICK_DEF = {
-  stone:    { tier:0, label:"Pico de Piedra",    mineTier:1, dur:50,   cost:{piedra:10,madera:5},    sprite:"pick_stone" },
-  bronze:   { tier:1, label:"Pico de Bronce",    mineTier:2, dur:150,  cost:{bronce:20,madera:10},   sprite:"pick_bronze" },
-  gold:     { tier:2, label:"Pico de Oro",       mineTier:3, dur:80,   cost:{oro:15,bronce:10},      sprite:"pick_gold", fast:true },
-  diamond:  { tier:3, label:"Pico de Diamante",  mineTier:4, dur:500,  cost:{diamante:10,oro:20},    sprite:"pick_diamond" },
-  netherite:{ tier:4, label:"Pico de Netherita", mineTier:4, dur:2000, cost:{netherita:5,diamante:10},sprite:"pick_netherite" },
+  // modelo SFL puro (31/7): 1 uso por pico, costos baratos (material del tier anterior + madera + monedas)
+  stone:    { tier:0, label:"Pico de Piedra",    mineTier:1, dur:1, cost:{madera:1},            plata:10, sprite:"pick_stone" },
+  bronze:   { tier:1, label:"Pico de Bronce",    mineTier:2, dur:1, cost:{madera:1,piedra:1},   plata:15, sprite:"pick_bronze" },
+  gold:     { tier:2, label:"Pico de Oro",       mineTier:3, dur:1, cost:{madera:1,bronce:1},   plata:25, sprite:"pick_gold", fast:true },
+  diamond:  { tier:3, label:"Pico de Diamante",  mineTier:4, dur:1, cost:{madera:1,oro:1},      plata:40, sprite:"pick_diamond" },
+  netherite:{ tier:4, label:"Pico de Netherita", mineTier:4, dur:1, cost:{madera:1,diamante:1}, plata:80, sprite:"pick_netherite" },
 };
 function equippedPick() { return (G.picks.eq && G.picks.owned[G.picks.eq]) ? G.picks.eq : null; }
 function canAfford(c) { for (const k in c) if ((G.res[k]||0) < c[k]) return false; return true; }
@@ -176,15 +188,36 @@ function payCost(c) { for (const k in c) G.res[k]-=c[k]; }
 // la fragua se enciende un rato cada vez que trabajás en la Herrería (detalles jueves)
 const FORGE_LIT_MS = 8000;
 function forgeWork() { G.forgeLitUntil = nowMs() + FORGE_LIT_MS; if (window.FARM && FARM.updateForge) FARM.updateForge(); if (window.sfx) sfx("mine"); }
-function craftPick(id) { const pd=PICK_DEF[id]; if (G.picks.owned[id]) { equipPick(id); return; } if (!canAfford(pd.cost)) { toast("Te faltan materiales"); return; } payCost(pd.cost); G.picks.owned[id]=true; G.picks.dur[id]=pd.dur; G.picks.eq=id; addXp("crafting",10+pd.tier*4); log("Crafteaste "+pd.label+" y lo equipaste.","gold"); toast(""+pd.label); forgeWork(); refreshForge(); refreshInv(); }
+// picos APILABLES: G.picks.dur[id] es la CANTIDAD (1 uso cada uno); craftear suma al stock
+function pickCount(id) { return G.picks.owned[id] ? Math.max(0, Math.floor(G.picks.dur[id] || 0)) : 0; }
+function craftPick(id) {
+  const pd = PICK_DEF[id];
+  if (pickCount(id) >= 99) { toast("Máximo 99 " + pd.label); return; }
+  if (!canAfford(pd.cost)) { toast("Te faltan materiales"); return; }
+  if (pd.plata && G.plata < pd.plata) { toast("Te falta plata"); return; }
+  payCost(pd.cost); if (pd.plata) G.plata -= pd.plata;
+  const first = !G.picks.owned[id];
+  G.picks.owned[id] = true; G.picks.dur[id] = pickCount(id) + 1;
+  if (first || !G.picks.eq) G.picks.eq = id;
+  addXp("crafting", 10 + pd.tier * 4);
+  log("Crafteaste " + pd.label + " (tenés " + G.picks.dur[id] + ").", "gold"); toast("+1 " + pd.label);
+  forgeWork(); refreshForge(); refreshInv(); refreshHud(); syncSlots(); if (typeof refreshHotbar === "function") refreshHotbar();
+}
+// modelo SFL (31/7): los picos NO se reparan — se rompen y se craftean de nuevo
+function destroyPick(id) {
+  delete G.picks.owned[id]; delete G.picks.dur[id];
+  if (G.picks.eq === id) G.picks.eq = PICK_ORDER.find(p => G.picks.owned[p]) || null;
+  G.hotbar = G.hotbar.map(h => (h && h.kind === "pick" && h.key === id) ? null : h);
+  syncSlots(); if (typeof refreshHotbar === "function") refreshHotbar();
+}
 function repairCostOf(id) { const pd=PICK_DEF[id]; const c={}; for (const k in pd.cost) c[k]=Math.max(1,Math.ceil(pd.cost[k]*0.3)); return c; }
 function repairPick(id) { const pd=PICK_DEF[id]; if (!G.picks.owned[id]) return; if ((G.picks.dur[id]||0)>=pd.dur){ toast("Ya está al 100%"); return; } const c=repairCostOf(id); if (!canAfford(c)){ toast("Te faltan materiales para reparar"); return; } payCost(c); G.picks.dur[id]=pd.dur; log("Reparaste "+pd.label+" (100%).","good"); toast("Reparado"); forgeWork(); refreshForge(); }
 function equipPick(id) { if (!G.picks.owned[id]){ toast("No lo tenés"); return; } G.picks.eq=id; log("Equipaste "+PICK_DEF[id].label+".");  toast("Equipado"); refreshForge(); refreshInv(); }
 
 // --- herramientas (hacha + caña con durabilidad; el pico se maneja aparte) ---
 const TOOL_DEF = {
-  axe:   { label:"Hacha",            emoji:"🪓", sprite:"axe",         max:60, repair:{madera:6} },
-  rod:   { label:"Caña",             emoji:"🎣", sprite:"fishing_rod", max:40, repair:{madera:4} },
+  axe:   { label:"Hacha",            emoji:"🪓", sprite:"axe",         max:1, repair:{madera:6} },   // SFL puro: 1 uso = 1 talada
+  rod:   { label:"Caña",             emoji:"🎣", sprite:"fishing_rod", max:1, repair:{madera:4} },   // SFL puro: 1 uso = 1 pesca
   sword: { label:"Espada de Hierro", emoji:"⚔️", sprite:"sword",       max:80, repair:{bronce:2} },
   bow:   { label:"Arco",             emoji:"🏹", sprite:"bow",         max:60, repair:{madera:5} },
 };
@@ -393,9 +426,36 @@ function rollLoot(def) {
   }
   return out;
 }
-function toolDur(id) { return (G.tools && G.tools[id] != null) ? G.tools[id] : (TOOL_DEF[id] ? TOOL_DEF[id].max : 0); }
-function useTool(id) { const d = toolDur(id); if (d <= 0) return false; G.tools[id] = d - 1; return true; }
-function repairTool(id) { const td = TOOL_DEF[id]; if (!td) return; if (toolDur(id) >= td.max) { toast("Ya está al 100%"); return; } if (!canAfford(td.repair)) { toast("Te faltan materiales para reparar"); return; } payCost(td.repair); G.tools[id] = td.max; log("Reparaste " + td.label + " (100%).", "good"); toast("Reparado"); forgeWork(); refreshForge(); if (isOpen("ov-equip")) refreshEquip(); if (isOpen("ov-inv")) refreshInv(); }
+// modelo SFL APILABLE (31/7): G.tools[axe/rod] es la CANTIDAD de herramientas (1 uso cada una).
+// Craftear suma al stock; usar consume 1. La espada y el arco conservan durabilidad + reparación.
+function toolCount(id) { return Math.max(0, Math.floor((G.tools && G.tools[id]) || 0)); }
+function toolLost(id) { return toolCount(id) <= 0; }
+function toolDur(id) {
+  if (id === "axe" || id === "rod") return toolCount(id);   // apilables: el chequeo es tener stock
+  return (G.tools && G.tools[id] != null) ? G.tools[id] : (TOOL_DEF[id] ? TOOL_DEF[id].max : 0);
+}
+function useTool(id) {
+  const d = toolDur(id); if (d <= 0) return false;
+  G.tools[id] = d - 1;
+  if ((id === "axe" || id === "rod") && G.tools[id] <= 0) {
+    G.hotbar = G.hotbar.map(h => (h && h.kind === "tool" && h.key === id) ? null : h);
+    syncSlots(); if (typeof refreshHotbar === "function") refreshHotbar();
+  }
+  return true;
+}
+// craftear herramientas consumibles — costos estilo SFL, apilan hasta 99
+const TOOL_CRAFT = { axe: { cost:{}, plata:5 }, rod: { cost:{ madera:1 }, plata:5 } };   // SFL: hacha solo monedas; caña madera + monedas
+function craftTool(id) {
+  const tc = TOOL_CRAFT[id], td = TOOL_DEF[id]; if (!tc || !td) return;
+  if (toolCount(id) >= 99) { toast("Máximo 99 " + td.label); return; }
+  if (!canAfford(tc.cost)) { toast("Te faltan materiales"); return; }
+  if (G.plata < tc.plata) { toast("Te falta plata"); return; }
+  payCost(tc.cost); G.plata -= tc.plata;
+  G.tools[id] = toolCount(id) + 1;
+  addXp("crafting", 5); log("Crafteaste " + td.label + " (tenés " + G.tools[id] + ").", "good"); toast("+1 " + td.label);
+  forgeWork(); refreshForge(); if (isOpen("ov-inv")) refreshInv(); refreshHud(); syncSlots(); if (typeof refreshHotbar === "function") refreshHotbar();
+}
+function repairTool(id) { const td = TOOL_DEF[id]; if (!td) return; if (toolLost(id)) { toast("No tenés esa herramienta — la tiraste"); return; } if (toolDur(id) >= td.max) { toast("Ya está al 100%"); return; } if (!canAfford(td.repair)) { toast("Te faltan materiales para reparar"); return; } payCost(td.repair); G.tools[id] = td.max; log("Reparaste " + td.label + " (100%).", "good"); toast("Reparado"); forgeWork(); refreshForge(); if (isOpen("ov-equip")) refreshEquip(); if (isOpen("ov-inv")) refreshInv(); }
 
 // --- inventario (base + filas extra) ---
 const INV_BASE = 20, INV_MAX_ROWS = 6;   // 20 base (4 filas de 5, pedido del diseñador 30/7), ampliable +5 por fila hasta 50
@@ -469,10 +529,11 @@ const ITEM_RES_ORDER = ["papa","zanahoria","cebolla","calabacin","repollo","cala
 function descKey(d) { return d ? d.kind + ":" + d.key : ""; }
 function canonicalStacks() {
   const list = [];
-  ["hoe", "axe", "rod"].forEach(k => list.push({ kind: "tool", key: k }));
+  list.push({ kind: "tool", key: "hoe" });   // la azada es eterna
+  ["axe", "rod"].forEach(k => { let n = toolCount(k); while (n > 0) { list.push({ kind: "tool", key: k }); n -= 99; } });   // apilables ×99
   if (G.swordOwned) list.push({ kind: "tool", key: "sword" });
   if (G.bowOwned) list.push({ kind: "tool", key: "bow" });
-  PICK_ORDER.forEach(id => { if (G.picks.owned[id]) list.push({ kind: "pick", key: id }); });
+  PICK_ORDER.forEach(id => { let n = pickCount(id); while (n > 0) { list.push({ kind: "pick", key: id }); n -= 99; } });   // picos apilables ×99
   ITEM_RES_ORDER.forEach(r => { let n = Math.floor(G.res[r] || 0); while (n > 0) { list.push({ kind: "res", key: r }); n -= 99; } });
   CROP_ORDER.forEach(s => { let n = Math.floor(G.seeds[s] || 0); while (n > 0) { list.push({ kind: "seed", key: s }); n -= 99; } });
   FISH_ORDER.forEach(f => { let n = Math.floor((G.fish && G.fish[f]) || 0); while (n > 0) { list.push({ kind: "fish", key: f }); n -= 99; } });
@@ -522,7 +583,8 @@ function ensureHotbarDefaults() {
 // --- mercado ---
 const PRICE = { madera:3, piedra:6, bronce:12, hierro:15, oro:30, diamante:80, netherita:200, carne:8, flecha:2,
   papa:3, zanahoria:5, cebolla:8, calabacin:14, repollo:24, calabaza:45, brocoli:70 };
-const SELLABLE = ["papa","zanahoria","cebolla","calabacin","repollo","calabaza","brocoli","madera","piedra","bronce","hierro","oro","diamante","netherita","carne","flecha"];
+// detalles viernes (1): los minerales, madera y flechas NO se venden — solo cultivos y lo farmeado en la Zona Negra (carne)
+const SELLABLE = ["papa","zanahoria","cebolla","calabacin","repollo","calabaza","brocoli","carne"];
 let marketCur = "plata";
 function marketUnit(res) { return marketCur === "plata" ? PRICE[res] : PRICE[res]/10; }
 function sellItem(res) {
@@ -538,10 +600,10 @@ function sellItem(res) {
 // --- pesca ---
 const FISH_COST = 5;
 function goFishing() {
-  if (toolDur("rod") <= 0) { toast("Caña rota — reparala en la Herrería"); return; }
+  if (toolDur("rod") <= 0) { toast("No tenés caña — craftéala en la Herrería"); return; }
   if ((G.res.lombriz || 0) < 1) { toast("Necesitás lombrices — compralas en la Tienda"); return; }
   G.res.lombriz -= 1; useTool("rod");   // detalles viernes: pescar cuesta SOLO 1 lombriz (sin esencia)
-  if (toolDur("rod") <= 0) { log("¡La caña se rompió! Reparala en la Herrería.", "bad"); toast("¡Caña rota!"); }
+  if (toolDur("rod") <= 0) { log("¡La caña se rompió en pedazos! Crafteá otra en la Herrería.", "bad"); toast("¡Caña rota!"); }
   const r = Math.random();
   let rar; if (r < 0.60) rar = "comun"; else if (r < 0.85) rar = "raro"; else if (r < 0.97) rar = "epico"; else rar = "legendario";
   G.fish[rar]++; addXp("fishing", 8); addXp("cooking", 3);

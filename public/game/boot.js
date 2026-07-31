@@ -49,6 +49,7 @@ class BootScene extends Phaser.Scene {
     ["fish_comun","fish_raro"].forEach(k => L.push([k, P + k + ".png"]));   // pececitos de la laguna
     ["sword","bow"].forEach(k => L.push([k, P + k + ".png"]));   // arma visible al atacar en el Bosque
     L.push(["cocina", P + "cocina.png"]);   // edificio de Cocina (detalles 29/7)
+    L.push(["horno", P + "horno.png"]);     // Horno de Piedra (detalles viernes 1): fundición de barras
     // arte cozy nuevo (v2 rompe el caché del arte viejo)
     L.push(["tree_stump", P + "tree_stump.png?v=2"]);
     L.push(["sprout", P + "sprout.png?v=4"]);

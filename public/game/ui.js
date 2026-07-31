@@ -31,13 +31,13 @@ function durColor(pct) { return pct > 50 ? "#8fd06a" : pct > 20 ? "#e0c76a" : "#
 function itemView(d) {
   if (!d) return null;
   if (d.kind === "tool") {
-    if (d.key === "axe") return { sprite: "axe", emoji: "🔧", label: "Hacha · durabilidad " + toolDur("axe") + "/" + TOOL_DEF.axe.max, dur: Math.round(toolDur("axe") / TOOL_DEF.axe.max * 100) };
-    if (d.key === "rod") return { sprite: "fishing_rod", emoji: "🔧", label: "Caña · durabilidad " + toolDur("rod") + "/" + TOOL_DEF.rod.max, dur: Math.round(toolDur("rod") / TOOL_DEF.rod.max * 100) };
+    if (d.key === "axe") return { sprite: "axe", emoji: "🔧", label: "Hacha · 1 uso cada una · tenés " + toolCount("axe"), dur: null };
+    if (d.key === "rod") return { sprite: "fishing_rod", emoji: "🔧", label: "Caña · 1 uso cada una · tenés " + toolCount("rod"), dur: null };
     if (d.key === "sword") return { sprite: "sword", emoji: "⚔️", label: "Espada de Hierro · durabilidad " + toolDur("sword") + "/" + TOOL_DEF.sword.max, dur: Math.round(toolDur("sword") / TOOL_DEF.sword.max * 100) };
     if (d.key === "bow") return { sprite: "bow", emoji: "🏹", label: "Arco · durabilidad " + toolDur("bow") + "/" + TOOL_DEF.bow.max, dur: Math.round(toolDur("bow") / TOOL_DEF.bow.max * 100) };
     return { sprite: "hoe", emoji: "🪝", label: "Azada", dur: null };
   }
-  if (d.kind === "pick") { const pd = PICK_DEF[d.key]; const glow = d.key === "diamond" ? "glow-cyan" : (d.key === "netherite" ? "glow-fire" : (d.key === "gold" ? "glow-gold" : "")); return { sprite: pd.sprite, emoji: "⛏️", glow, label: pd.label + " · durabilidad " + (G.picks.dur[d.key] || 0) + "/" + pd.dur, dur: Math.round((G.picks.dur[d.key] || 0) / pd.dur * 100) }; }
+  if (d.kind === "pick") { const pd = PICK_DEF[d.key]; const glow = d.key === "diamond" ? "glow-cyan" : (d.key === "netherite" ? "glow-fire" : (d.key === "gold" ? "glow-gold" : "")); return { sprite: pd.sprite, emoji: "⛏️", glow, label: pd.label + " · 1 uso cada uno · tenés " + pickCount(d.key), dur: null }; }
   if (d.kind === "res") return { sprite: resSprite(d.key), emoji: RES_EMOJI[d.key], label: RES_LABEL[d.key], dur: null };
   if (d.kind === "seed") { const cd = CROP_DEF[d.key]; return { sprite: "seed_" + d.key, emoji: cd.emoji, label: cd.label + " (semilla)", dur: null }; }
   if (d.kind === "fish") { const f = FISH_DEF[d.key]; const glow = { raro: "glow-blue", epico: "glow-purple", legendario: "glow-gold" }[d.key] || ""; return { sprite: f ? f.sprite : null, emoji: f ? f.emoji : "🐟", glow, label: f ? f.label : "Pez", dur: null }; }
@@ -60,7 +60,7 @@ function coinIc(cur) { return `<img class="ric" src="${GF.spr(cur === "esencia" 
 function invCellHtml(d, i, rem, zone) {
   if (!d) return `<div class="slot" data-slot="${i}" data-zone="${zone}"></div>`;
   let cnt = "";
-  if (d.kind === "res" || d.kind === "seed" || d.kind === "fish" || d.kind === "dish" || d.kind === "chest") { const k = d.kind + ":" + d.key; const n = Math.min(99, rem[k] || 0); rem[k] = (rem[k] || 0) - n; cnt = `<span class="cnt">${fmt(n)}</span>`; }
+  if (d.kind === "res" || d.kind === "seed" || d.kind === "fish" || d.kind === "dish" || d.kind === "chest" || (d.kind === "tool" && (d.key === "axe" || d.key === "rod")) || d.kind === "pick") { const k = d.kind + ":" + d.key; const n = Math.min(99, rem[k] || 0); rem[k] = (rem[k] || 0) - n; cnt = `<span class="cnt">${fmt(n)}</span>`; }
   const v = itemView(d);
   const sel = (d.kind === "seed" && G.selSeed === d.key) ? " sel" : "";
   const eq = (d.kind === "pick" && G.picks.eq === d.key) ? " eq" : "";
@@ -81,6 +81,8 @@ function refreshInv() {
   FISH_ORDER.forEach(f => rem["fish:" + f] = Math.floor((G.fish && G.fish[f]) || 0));
   RECIPE_ORDER.forEach(d => rem["dish:" + d] = Math.floor((G.dishes && G.dishes[d]) || 0));
   rem["chest:cofre"] = (typeof chestsInBag === "function") ? chestsInBag() : 0;
+  rem["tool:axe"] = toolCount("axe"); rem["tool:rod"] = toolCount("rod");   // herramientas apilables
+  PICK_ORDER.forEach(id => rem["pick:" + id] = pickCount(id));
   let html = "";
   for (let i = 0; i < cap; i++) html += invCellHtml(G.slots[i], i, rem, "inv");
   $("inv-slots").innerHTML = html;
@@ -113,6 +115,7 @@ function renderInvExpand() {
 /* ---- barra de accesos directos (hotbar de 10 huecos) ---- */
 function hotItemExists(d) {
   if (!d) return false;
+  if (d.kind === "tool") { if (d.key === "sword") return G.swordOwned; if (d.key === "bow") return G.bowOwned; return !toolLost(d.key); }
   if (d.kind === "pick") return !!G.picks.owned[d.key];
   if (d.kind === "res") return (G.res[d.key] || 0) > 0;
   if (d.kind === "seed") return (G.seeds[d.key] || 0) > 0;
@@ -206,6 +209,12 @@ function trashInfo(d) {
   if (d.kind === "seed") return { n: Math.min(99, Math.floor(G.seeds[d.key] || 0)), lbl: "semillas de " + (CROP_DEF[d.key] ? CROP_DEF[d.key].label : d.key) };
   if (d.kind === "fish") return { n: Math.min(99, Math.floor((G.fish && G.fish[d.key]) || 0)), lbl: (FISH_DEF[d.key] ? FISH_DEF[d.key].label : "peces") };
   if (d.kind === "dish") return { n: Math.min(99, Math.floor((G.dishes && G.dishes[d.key]) || 0)), lbl: (RECIPE_DEF[d.key] ? RECIPE_DEF[d.key].label : "platos") };
+  // herramientas y picos SÍ se tiran (pedido del diseñador 31/7); apilables: se tira la pila
+  if (d.kind === "tool") {
+    if (d.key === "axe" || d.key === "rod") return { n: Math.min(99, toolCount(d.key)), lbl: TOOL_DEF[d.key].label };
+    return { n: 1, lbl: d.key === "hoe" ? "Azada" : (TOOL_DEF[d.key] ? TOOL_DEF[d.key].label : "la herramienta") };
+  }
+  if (d.kind === "pick") return { n: Math.min(99, pickCount(d.key)), lbl: PICK_DEF[d.key] ? PICK_DEF[d.key].label : "el pico" };
   return null;
 }
 // tirar una pila de recursos/semillas/pescados (las herramientas no se tiran)
@@ -215,6 +224,21 @@ function trashStack(d) {
   else if (d.kind === "seed") { const n = Math.min(99, Math.floor(G.seeds[d.key] || 0)); if (n <= 0) return; G.seeds[d.key] -= n; toast("Tiraste " + n + " semillas"); }
   else if (d.kind === "fish") { const n = Math.min(99, Math.floor((G.fish && G.fish[d.key]) || 0)); if (n <= 0) return; G.fish[d.key] -= n; toast("Tiraste " + n + " peces"); }
   else if (d.kind === "dish") { const n = Math.min(99, Math.floor((G.dishes && G.dishes[d.key]) || 0)); if (n <= 0) return; G.dishes[d.key] -= n; toast("Tiraste " + n + " platos"); }
+  else if (d.kind === "tool") {   // herramientas y armas (pedido del diseñador 31/7)
+    if (d.key === "sword") { G.swordOwned = false; delete G.tools.sword; if (G.gear.arma === "sword") G.gear.arma = null; }
+    else if (d.key === "bow") { G.bowOwned = false; delete G.tools.bow; if (G.gear.arma === "bow") G.gear.arma = null; }
+    else if (d.key === "axe" || d.key === "rod") { const n = Math.min(99, toolCount(d.key)); G.tools[d.key] = toolCount(d.key) - n; }   // tira la pila (hasta 99)
+    G.hotbar = G.hotbar.map(h => (h && h.kind === "tool" && h.key === d.key && toolDur(d.key) <= 0) ? null : h);
+    toast("Tiraste " + (d.key === "hoe" ? "la Azada" : (TOOL_DEF[d.key] ? TOOL_DEF[d.key].label : "la herramienta")));
+    if (isOpen("ov-equip")) refreshEquip(); if (isOpen("ov-forge")) refreshForge();
+  }
+  else if (d.kind === "pick") {
+    const n = Math.min(99, pickCount(d.key));
+    G.picks.dur[d.key] = pickCount(d.key) - n;
+    if (G.picks.dur[d.key] <= 0) { delete G.picks.owned[d.key]; delete G.picks.dur[d.key]; if (G.picks.eq === d.key) G.picks.eq = PICK_ORDER.find(id => G.picks.owned[id]) || null; G.hotbar = G.hotbar.map(h => (h && h.kind === "pick" && h.key === d.key) ? null : h); }
+    toast("Tiraste " + n + " × " + (PICK_DEF[d.key] ? PICK_DEF[d.key].label : "pico"));
+    if (isOpen("ov-forge")) refreshForge();
+  }
   else { toast("Eso no se puede tirar"); return; }
   syncSlots(); if (typeof saveFarm === "function") saveFarm();
 }
@@ -332,23 +356,27 @@ function hideSeedWheel() { const w = $("seedwheel"); if (w) w.classList.remove("
 function refreshForge() {
   const eq = G.picks.eq;
   let craft = "", repair = "";
-  // picos
+  // picos APILABLES (31/7): cada uno es 1 uso; craftear suma al stock
   PICK_ORDER.forEach(id => {
-    const pd = PICK_DEF[id]; const owned = !!G.picks.owned[id]; const dur = G.picks.dur[id] || 0;
+    const pd = PICK_DEF[id], n = pickCount(id), isEq = eq === id && n > 0;
     const mineEmo = ORE_ORDER.filter(o => ORE_DEF[o].tier <= pd.mineTier).map(o => resIc(o)).join("");
     const img = '<img src="' + GF.spr(pd.sprite) + '">';
-    if (!owned) {
-      const costStr = Object.keys(pd.cost).map(k => resIc(k) + " " + pd.cost[k]).join(" · ");
-      craft += '<div class="forge-row"><div class="fic">' + img + '</div><div class="finfo"><div class="fnm">' + pd.label + '</div><div class="fds">Mina: ' + mineEmo + " · " + pd.dur + " usos" + (pd.fast ? " · rápido (gasta doble)" : "") + '</div><div class="fds">Costo: ' + costStr + '</div></div><div class="fbtns"><button class="green sm" ' + (canAfford(pd.cost) ? "" : "disabled") + ' data-craft="' + id + '">Craftear</button></div></div>';
-    } else {
-      const isEq = eq === id, durPct = Math.round(dur / pd.dur * 100);
-      let btns = '<button class="ghost sm" ' + (isEq ? "disabled" : "") + ' data-equip="' + id + '">' + (isEq ? "Equipado" : "Equipar") + "</button>";
-      if (dur < pd.dur) { const rc = repairCostOf(id); const rstr = Object.keys(rc).map(k => (RES_EMOJI[k] || "") + rc[k]).join(" "); btns += '<button class="gold sm" ' + (canAfford(rc) ? "" : "disabled") + ' data-repair="' + id + '" title="Reparar: ' + rstr + '">Reparar</button>'; }
-      repair += '<div class="forge-row ' + (isEq ? "eq" : "") + '"><div class="fic">' + img + '</div><div class="finfo"><div class="fnm">' + pd.label + (isEq ? ' <span class="tag">equipado</span>' : "") + '</div><div class="fds">Mina: ' + mineEmo + '</div><div class="durbar"><i style="width:' + durPct + '%"></i></div><div class="fds">' + dur + "/" + pd.dur + '</div></div><div class="fbtns">' + btns + "</div></div>";
-    }
+    const costStr = Object.keys(pd.cost).map(k => resIc(k) + " " + pd.cost[k]).join(" · ") + (pd.plata ? " · " + coinIc("plata") + " " + pd.plata : "");
+    const afford = canAfford(pd.cost) && (!pd.plata || G.plata >= pd.plata);
+    let btns = '<button class="green sm" ' + (afford ? "" : "disabled") + ' data-craft="' + id + '">Craftear</button>';
+    if (n > 0 && !isEq) btns += '<button class="ghost sm" data-equip="' + id + '">Equipar</button>';
+    craft += '<div class="forge-row ' + (isEq ? "eq" : "") + '"><div class="fic">' + img + '</div><div class="finfo"><div class="fnm">' + pd.label + (isEq ? ' <span class="tag">equipado</span>' : "") + '</div><div class="fds">Mina: ' + mineEmo + ' · 1 uso c/u · tenés ' + n + '</div><div class="fds">Costo: ' + costStr + '</div></div><div class="fbtns">' + btns + "</div></div>";
   });
-  // herramientas y armas que ya tenés → Reparar
-  ["axe", "rod"].concat(G.swordOwned ? ["sword"] : []).concat(G.bowOwned ? ["bow"] : []).forEach(id => {
+  // herramientas consumibles (modelo SFL 31/7): hacha y caña se craftean baratas y se rompen (sin reparación)
+  craft += '<div class="shophead">Herramientas</div>';
+  ["axe", "rod"].forEach(id => {
+    const td = TOOL_DEF[id], tc = TOOL_CRAFT[id], n = toolCount(id);
+    const cs = (Object.keys(tc.cost).map(k => resIc(k) + " " + tc.cost[k]).join(" · ") + " · ").replace(/^ · $/, "") + coinIc("plata") + " " + tc.plata;
+    const btn = '<button class="green sm" ' + (canAfford(tc.cost) && G.plata >= tc.plata ? "" : "disabled") + ' data-ctool="' + id + '">Craftear</button>';
+    craft += '<div class="forge-row"><div class="fic"><img src="' + GF.spr(td.sprite) + '"></div><div class="finfo"><div class="fnm">' + td.label + '</div><div class="fds">1 uso c/u · tenés ' + n + '</div><div class="fds">Costo: ' + cs + '</div></div><div class="fbtns">' + btn + '</div></div>';
+  });
+  // solo las ARMAS se reparan → Reparar
+  [].concat(G.swordOwned ? ["sword"] : []).concat(G.bowOwned ? ["bow"] : []).forEach(id => {
     const td = TOOL_DEF[id], dur = toolDur(id), pct = Math.round(dur / td.max * 100);
     const rstr = Object.keys(td.repair).map(k => resIc(k) + td.repair[k]).join(" ");
     const btn = dur < td.max
@@ -375,19 +403,6 @@ function refreshForge() {
   const chOk = !chFull && canAfford(CHEST_COST) && G.plata >= CHEST_PLATA;
   craft += '<div class="forge-row"><div class="fic"><img src="' + GF.spr("cofre") + '" onerror="this.outerHTML=\'📦\'"></div><div class="finfo"><div class="fnm">Cofre depósito (' + chn + "/" + CHEST_MAX + ')</div><div class="fds">10 espacios de guardado en tu granja · +1% de materiales por cofre (tenés +' + chn + '%)</div><div class="fds">Costo: ' + chstr + '</div></div><div class="fbtns"><button class="green sm" ' + (chOk ? "" : "disabled") + ' id="forge-chest">' + (chFull ? "Máximo" : "Craftear") + "</button></div></div>";
 
-  // materiales intermedios (detalles213): tablones y barras — con enfriamiento (detalles viernes)
-  craft += '<div class="shophead">Materiales</div>';
-  let anyCooling = false;
-  MAT_ORDER.forEach(id => {
-    const md = MAT_DEF[id], cs = Object.keys(md.cost).map(k => resIc(k) + " " + md.cost[k]).join(" · ");
-    const left = matCdLeft(id); if (left > 0) anyCooling = true;
-    const btn = left > 0
-      ? '<button class="green sm" disabled>' + Math.ceil(left / 1000) + 's</button>'
-      : '<button class="green sm" ' + (canAfford(md.cost) ? "" : "disabled") + ' data-mat="' + id + '">Craftear</button>';
-    craft += '<div class="forge-row"><div class="fic"><img src="' + GF.spr(md.sprite) + '"></div><div class="finfo"><div class="fnm">' + md.label + '</div><div class="fds">Tenés ' + fmt(G.res[id] || 0) + ' · Costo: ' + cs + '</div></div><div class="fbtns">' + btn + '</div></div>';
-  });
-  // mientras haya un material enfriándose, refrescar el contador cada segundo
-  if (anyCooling && !window._forgeCdTick) { window._forgeCdTick = setTimeout(() => { window._forgeCdTick = null; if (isOpen("ov-forge")) refreshForge(); }, 1000); }
   $("forge-craft").innerHTML = craft || '<div class="sub">Nada por craftear — ya tenés todo. </div>';
   $("forge-armas").innerHTML = armas || '<div class="sub">Ya tenés todas las armas. Las flechas se siguen crafteando acá.</div>';
   $("forge-repair").innerHTML = repair;
@@ -397,12 +412,30 @@ function refreshForge() {
   card.querySelectorAll("[data-mat]").forEach(b => b.onclick = () => craftMat(b.dataset.mat));
   card.querySelectorAll("[data-repair]").forEach(b => b.onclick = () => repairPick(b.dataset.repair));
   card.querySelectorAll("[data-rtool]").forEach(b => b.onclick = () => repairTool(b.dataset.rtool));
+  card.querySelectorAll("[data-ctool]").forEach(b => b.onclick = () => craftTool(b.dataset.ctool));
   const fs = $("forge-sword"); if (fs) fs.onclick = () => craftSword();
   const fb = $("forge-bow"); if (fb) fb.onclick = () => craftBow();
   const fa = $("forge-arrows"); if (fa) fa.onclick = () => craftArrows();
   const fc = $("forge-chest"); if (fc) fc.onclick = () => craftChest();
 }
 function refreshTools() { refreshForge(); }   // compatibilidad con llamadas viejas
+
+/* ---- Horno de Piedra (detalles viernes 1): acá se funden TODOS los lingotes/barras ---- */
+function refreshHorno() {
+  const box = $("horno-mats"); if (!box) return;
+  let html = "", anyCooling = false;
+  MAT_ORDER.forEach(id => {
+    const md = MAT_DEF[id], cs = Object.keys(md.cost).map(k => resIc(k) + " " + md.cost[k]).join(" · ");
+    const left = matCdLeft(id); if (left > 0) anyCooling = true;
+    const btn = left > 0
+      ? '<button class="green sm" disabled>' + Math.ceil(left / 1000) + 's</button>'
+      : '<button class="green sm" ' + (canAfford(md.cost) ? "" : "disabled") + ' data-mat="' + id + '">Fundir</button>';
+    html += '<div class="forge-row"><div class="fic"><img src="' + GF.spr(md.sprite) + '"></div><div class="finfo"><div class="fnm">' + md.label + '</div><div class="fds">Tenés ' + fmt(G.res[id] || 0) + ' · Costo: ' + cs + '</div></div><div class="fbtns">' + btn + '</div></div>';
+  });
+  if (anyCooling && !window._hornoCdTick) { window._hornoCdTick = setTimeout(() => { window._hornoCdTick = null; if (isOpen("ov-horno")) refreshHorno(); }, 1000); }
+  box.innerHTML = html;
+  box.querySelectorAll("[data-mat]").forEach(b => b.onclick = () => craftMat(b.dataset.mat));
+}
 
 /* ---- cofre depósito: guardar/sacar pilas (detalles 29/7) ---- */
 function refreshChest() {

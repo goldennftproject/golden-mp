@@ -23,8 +23,8 @@ async function initSave() {
 function snapshot() {
   return { plata: G.plata, golden: G.golden, level: G.level, prestige: G.prestige, week: G.week,
     res: G.res, picks: G.picks, skills: G.skills, fish: G.fish, plots: G.plots, seeds: G.seeds, selSeed: G.selSeed,
-    tools: G.tools, invRows: G.invRows, slots: G.slots, hotbar: G.hotbar, hotSel: G.hotSel, hbInit: G.hbInit, layout: G.layout,
-    daily: G.daily, plotsOwned: G.plotsOwned, seedBuys: G.seedBuys,
+    tools: G.tools, toolsLost: G.toolsLost, sflStock: true, invRows: G.invRows, slots: G.slots, hotbar: G.hotbar, hotSel: G.hotSel, hbInit: G.hbInit, layout: G.layout,
+    daily: G.daily, plotsOwned: G.plotsOwned, seedBuys: G.seedBuys, built: G.built,
     hp: G.hp, hpMax: G.hpMax, swordOwned: G.swordOwned, bowOwned: G.bowOwned, gear: G.gear,
     dishes: G.dishes, cooking: G.cooking, chests: G.chests, dummyUsedAt: G.dummyUsedAt,
     layoutPlots: G.layoutPlots, layoutPond: G.layoutPond };
@@ -42,6 +42,10 @@ function hydrate(d) {
   if (d.seeds) G.seeds = Object.assign({}, G.seeds, d.seeds);
   if (d.selSeed && CROP_DEF[d.selSeed]) G.selSeed = d.selSeed;
   if (d.tools) G.tools = Object.assign({}, G.tools, d.tools);
+  if (d.toolsLost) G.toolsLost = d.toolsLost;   // legado (pre-apilables)
+  // edificios construibles (viernes 1): las partidas viejas ya los tienen construidos
+  if (d.built) G.built = Object.assign({ store: false, horno: false, cocina: false }, d.built);
+  else G.built = { store: true, horno: true, cocina: true };
   if (typeof d.invRows === "number") G.invRows = Math.max(0, Math.min(INV_MAX_ROWS, d.invRows));
   if (Array.isArray(d.slots)) G.slots = d.slots;
   if (Array.isArray(d.hotbar)) G.hotbar = d.hotbar.slice(0, 10);
@@ -67,6 +71,12 @@ function hydrate(d) {
   if (d.layoutPlots && typeof d.layoutPlots === "object") G.layoutPlots = d.layoutPlots;
   if (d.layoutPond && typeof d.layoutPond === "object") G.layoutPond = { col: d.layoutPond.col, row: d.layoutPond.row };
   if (d.picks && d.picks.owned && d.picks.dur) G.picks = d.picks;
+  // migración ÚNICA al modelo apilable (31/7): la durabilidad vieja pasa a ser "1 herramienta"
+  if (!d.sflStock) {
+    for (const k of ["axe", "rod"]) if ((G.tools[k] || 0) > 0) G.tools[k] = 1;
+    for (const k in G.picks.dur) if ((G.picks.dur[k] || 0) > 0) G.picks.dur[k] = 1;
+    if (d.toolsLost) for (const k in d.toolsLost) if (d.toolsLost[k]) G.tools[k] = 0;
+  }
 }
 
 const sleepMs = (ms) => new Promise(r => setTimeout(r, ms));

@@ -42,6 +42,8 @@ GF.WORLD_OBJECTS.push(snap("cocina", {type:"cocina"}, 390, 296, T*3));          
 GF.WORLD_OBJECTS.push(snap("dummy", {type:"dummy"}, 585, 350, T));                                                         // 1 celda (se dibuja +25%)
 // nodo de HIERRO (detalles213) — al FINAL para preservar layouts guardados; se mina con el pico de bronce
 GF.WORLD_OBJECTS.push(snap("node_iron", {type:"ore", ore:"hierro"}, 930, 555, T));
+// HORNO DE PIEDRA (detalles viernes 1): acá se funden todos los lingotes/barras
+GF.WORLD_OBJECTS.push(snap("horno", {type:"horno"}, 320, 470, T*2));
 
 // lotes 4x3, cada uno 1 celda, alineados a la grilla (col 2, fila 3)
 GF.PLOTS = [];

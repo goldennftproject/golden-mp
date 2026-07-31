@@ -59,7 +59,7 @@
   .lvlbar>i{display:block;height:100%;background:linear-gradient(90deg,var(--gold),var(--gold-deep));width:0%}
   .slots{display:grid;grid-template-columns:repeat(5,1fr);gap:6px;margin-top:8px;max-height:340px;overflow:auto}
   .slot{aspect-ratio:1;background:#efe3c6;border:2px solid #d3c298;border-radius:8px;position:relative;display:flex;align-items:center;justify-content:center}
-  .slot.filled{border-color:#c9b070}
+  .slot.filled{border-color:#c9b070;background:#fff}   /* detalles viernes (1): fondo blanco para los objetos (testeo visual) */
   .slot img{width:90%;height:90%;object-fit:contain;image-rendering:pixelated}
   .slot .em{font-size:22px;line-height:1}
   .slot .cnt{position:absolute;right:2px;bottom:1px;font-size:11px;font-weight:800;color:#3a2e10;background:rgba(255,255,255,.82);border-radius:5px;padding:0 3px}
@@ -71,7 +71,7 @@
   #hotwrap{position:fixed;left:50%;bottom:10px;transform:translateX(-50%);z-index:6;display:flex;align-items:center;gap:4px}
   #hotbar{display:flex;gap:5px;background:rgba(20,28,15,.85);border:1px solid #3c4d31;border-radius:12px;padding:6px}
   .hcell{position:relative;width:46px;height:46px;background:#26331f;border:2px solid #3c4d31;border-radius:8px;display:flex;align-items:center;justify-content:center;cursor:pointer}
-  .hcell.filled{background:#efe3c6;border-color:#c9b070}
+  .hcell.filled{background:#fff;border-color:#c9b070}   /* fondo blanco también en la hotbar */
   .hcell.filled[draggable=true]{cursor:grab}
   .hcell.sel{outline:2px solid #e2b23a;outline-offset:-2px}
   .hcell.eq{box-shadow:inset 0 0 0 2px #6aa9e0}
@@ -453,7 +453,7 @@
       <div class="forge-list" id="forge-armas"></div>
     </div>
     <div id="forge-pane-repair" style="display:none">
-      <div class="sub">Durabilidad de tus picos y herramientas. Reparar cuesta parte del material.</div>
+      <div class="sub">Solo las armas se reparan. Herramientas y picos se rompen y se craftean de nuevo.</div>
       <div class="forge-list" id="forge-repair"></div>
     </div>
   </div></div>
@@ -542,6 +542,14 @@
       <p>Colocar y mover objetos por celda llega en otra fase.</p>
       <div class="row"><button class="green" id="cfg-edit">Modo edición</button><button class="ghost sm" id="cfg-reset">Restaurar</button></div>
     </div>
+  </div></div>
+
+  <!-- Horno de Piedra (detalles viernes 1): fundición de lingotes/barras -->
+  <div class="ov" id="ov-horno"><div class="card" style="width:min(460px,94%)">
+    <button class="close" data-close="ov-horno">×</button>
+    <h3>Horno de Piedra</h3>
+    <div class="sub">Acá se funden todos los lingotes y barras. Cada fundición tiene un enfriamiento.</div>
+    <div class="forge-list" id="horno-mats"></div>
   </div></div>
 
   <!-- confirmación al tirar a la papelera (último en el DOM: queda por encima del inventario) -->

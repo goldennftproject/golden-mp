@@ -263,7 +263,7 @@ class ForestScene extends Phaser.Scene {
   // E / espacio: fija el monstruo más cercano (el auto-ataque hace el resto)
   tryAttack() {
     const near = this.nearestMonster(MELEE_RANGE) || (canShoot() ? this.nearestMonster(BOW_RANGE) : null);
-    if (near) this.setTarget(near);
+    if (near) { this.setTarget(near); this.autoOn = true; }   // E/espacio ataca, como el clic derecho
   }
   // auto-ataque: un golpe cada 2s mientras el objetivo esté vivo y a distancia (detalles 338)
   autoAttack(t) {
@@ -362,8 +362,7 @@ class ForestScene extends Phaser.Scene {
     if (this.leaving || !this.hero) return;   // cambiando de escena: no tocar nada más
     const dt = deltaMs / 1000, k = this.keys, hero = this.hero, t = nowMs();
 
-    // regeneración lenta de vida
-    if (G.hp < G.hpMax) { G.hp = Math.min(G.hpMax, G.hp + 0.8 * dt); if (Math.random() < 0.02) refreshHud(); }
+    // detalles viernes (1): la vida SOLO se regenera con comida (sin regeneración pasiva)
 
     // tinte de daño
     if (this.hurtFx > 0) { this.hurtFx -= dt; hero.setTint(0xff6b5a); } else hero.clearTint();
@@ -455,12 +454,7 @@ class ForestScene extends Phaser.Scene {
       this.scene.start("farm"); return;
     }
 
-    // perseguir el objetivo clickeado: con arco dispara de lejos, si no ataca al llegar (solo si no hay golpe en curso)
-    if (!this.action && this.target && !this.target.dead && !this.autoOn) {
-      const d = Math.hypot(this.target.cx - hero.x, this.target.by - hero.y);
-      if (d < 52) { this.moveTarget = null; const m = this.target; this.target = null; this.facing = (m.cx < hero.x) ? "west" : "east"; this.action = { kind: "attack", m, t: 0, dur: 0.45 }; }
-      else if (d < 190 && canShoot()) { this.moveTarget = null; const m = this.target; this.target = null; this.facing = (m.cx < hero.x) ? "west" : "east"; this.action = { kind: "shoot", m, t: 0, dur: 0.35 }; }
-    }
+    // detalles viernes (1): el clic izquierdo SOLO acerca y fija — el ataque es únicamente con clic derecho (auto cada 2s)
 
     const sign = this.facing === "west" ? -1 : 1;
     if (!this.action) {   // durante un golpe manda la animación de ataque (se combina con el desplazamiento)
@@ -493,7 +487,7 @@ class ForestScene extends Phaser.Scene {
       }
       // ataque al héroe
       if (dHero < 40 && t > m.nextHit) {
-        m.nextHit = t + 1200; m.face = hero.x < m.cx ? -1 : 1;   // al golpear, de cara al granjero
+        m.nextHit = t + 2000; m.face = hero.x < m.cx ? -1 : 1;   // detalles viernes (1): los mobs atacan cada 2 segundos
         this.hurtHero(m.def.dmg);
         if (m.def.sprite) { this.playMob(m, "atk", true); m.atkUntil = t + 600; }
         if (this.leaving) return;
