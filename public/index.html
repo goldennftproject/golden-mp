@@ -273,14 +273,14 @@
   /* pestañas con EL MISMO marco que la tabla interna (badge_wood a 14px, como .shoppane):
      el borde recorre costado→arriba→costado de cada pestaña y empalma con el marco de la placa */
   .shoptab,.lbtab{border-width:14px 14px 0;padding:0 2px 4px}
-  .shoptab{font-size:13px;margin-bottom:-6px;position:relative;z-index:2}
+  .shoptab{font-size:13px;margin-bottom:0;position:relative;z-index:2}   /* la inactiva apoya sobre el marco, sin pisarlo */
   /* las pestañas NO son botones: fuera el filo verde del estándar (también en la X de cerrar) */
   button.shoptab,button.lbtab,button.curbtn,button.ltab,.close{box-shadow:none !important}
   /* pestaña activa fundida con la placa: baja 14px (el grosor del marco) y su interior conecta con el de la tabla */
   .shoptabs,.lbtabs{align-items:flex-end}
   .shoptab.active{margin-bottom:-14px;padding-bottom:18px}
   .lbtab.active{margin-bottom:-14px;padding-bottom:17px}
-  .lbtab{margin-bottom:-6px;position:relative;z-index:2}
+  .lbtab{margin-bottom:0;position:relative;z-index:2}
   .curbtn{padding:1px 7px}
   .shoptab.active,.lbtab.active,.curbtn.active,
   .shoptab.active:hover,.lbtab.active:hover,.curbtn.active:hover{background:#b5793f url("assets/ui/badge_bg.png?a=1") repeat;background-size:132px auto;background-clip:padding-box;border-image:url("assets/ui/badge_wood.png") 26 round;filter:none}
