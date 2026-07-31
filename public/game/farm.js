@@ -499,7 +499,7 @@ class FarmScene extends Phaser.Scene {
           addXp("farming", 5); this.syncPlots();
           log("Desbloqueaste una parcela por " + cost + " plata.", "good"); toast("¡Parcela desbloqueada!");
           refreshHud(); if (typeof saveFarm === "function") saveFarm(true);
-        }, { yes: "Aceptar", yesClass: "green", no: "Cancelar", noClass: "red" });
+        }, { title: "Desbloquear parcela", yes: "Aceptar", yesClass: "green", no: "Cancelar", noClass: "red" });
         return;
       }
       if (o.state === "withered") {   // limpiar el cultivo perdido: la parcela vuelve a estar libre

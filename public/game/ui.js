@@ -189,10 +189,11 @@ function dndDrop(src, tz, ti) {
   if (isOpen("ov-inv")) refreshInv(); else refreshHotbar();
 }
 // cartel de confirmación (papelera, desbloqueo de parcelas, etc.)
-// opts: { yes, no, yesClass, noClass } — por defecto el estilo de la papelera
+// opts: { title, yes, no, yesClass, noClass } — por defecto el estilo de la papelera
 function askConfirm(msg, onYes, opts) {
   opts = opts || {};
   const ov = $("ov-confirm"); if (!ov) { onYes(); return; }
+  const tt = $("cf-title"); if (tt) tt.textContent = opts.title || "Tirar a la papelera";
   const m = $("cf-msg"); if (m) m.textContent = msg;
   ov.classList.add("show");
   const yes = $("cf-yes"), no = $("cf-no");
