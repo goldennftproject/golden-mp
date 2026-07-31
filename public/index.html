@@ -235,8 +235,10 @@
   button:hover:not(:disabled){filter:brightness(1.12)}
   /* pills del HUD en 9-SLICE: el marco no se estira aunque la pill sea ancha o angosta */
   .pill{background:none;border:8px solid transparent;border-image:url("assets/ui/badge_wood.png") 26 fill round;border-radius:0;padding:0 7px;image-rendering:pixelated;color:#4a2e10;text-shadow:0 1px 0 rgba(255,240,200,.35)}
-  .pill .k{color:#2e1c06;font-weight:800;font-size:12.5px}   /* etiquetas en negro y negrita, como los números */
-  .pill b{color:#2e1c06}
+  /* estándar sobre madera: letra blanca con sombra; etiquetas en ámbar claro (el 9-slice dejó el centro más oscuro) */
+  .pill{color:#fff;text-shadow:0 1px 0 rgba(0,0,0,.5)}
+  .pill .k{color:#ffe9ac;font-weight:800;font-size:12.5px}
+  .pill b{color:#fff}
   /* botón Menú y panel del menú con la misma madera */
   .btnpill{background:none;border:8px solid transparent;border-image:url("assets/ui/btn_wood.png") 16 fill stretch;border-radius:0;color:#fff;font-weight:800;text-shadow:0 1px 0 rgba(0,0,0,.55);image-rendering:pixelated;padding:1px 7px;box-shadow:inset 0 0 0 2px rgba(120,205,90,.55)}
   .gmi{background:none;border:8px solid transparent;border-image:url("assets/ui/btn_wood.png") 16 fill stretch;border-radius:0;color:#2e1c06;text-shadow:0 1px 0 rgba(255,240,200,.35);image-rendering:pixelated}
