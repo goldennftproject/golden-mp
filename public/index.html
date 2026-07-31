@@ -386,6 +386,10 @@
   /* barra flotante del modo edición */
   #editbar{position:fixed;left:50%;bottom:122px;transform:translateX(-50%);z-index:7;display:none;gap:8px}
   #editbar.show{display:flex}
+
+  /* 31/7: tipografia estandar del juego = blanco con contorno oscuro (como los contadores del mundo).
+     Se aplica a las pills del HUD (Granja/Prestigio/Jugadores en linea), titulos de ventanas y aviso de interaccion. */
+  .pill,.pill .k,.pill b,.card h3,#prompt{color:#fff;text-shadow:-1px 0 #241505,1px 0 #241505,0 -1px #241505,0 1px #241505,-1px -1px #241505,1px -1px #241505,-1px 1px #241505,1px 1px #241505}
 </style>
 </head>
 <body>
