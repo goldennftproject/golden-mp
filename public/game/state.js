@@ -209,6 +209,16 @@ function destroyPick(id) {
   if (G.picks.eq === id) G.picks.eq = PICK_ORDER.find(p => G.picks.owned[p]) || null;
   G.hotbar = G.hotbar.map(h => (h && h.kind === "pick" && h.key === id) ? null : h);
   syncSlots(); if (typeof refreshHotbar === "function") refreshHotbar();
+  uiRefreshAfterBreak();   // ídem hacha/caña: refresco inmediato de los paneles abiertos
+}
+// re-renderiza los paneles que muestran herramientas, si están abiertos (la rotura puede pasar con UI visible)
+function uiRefreshAfterBreak() {
+  try {
+    if (typeof isOpen !== "function") return;
+    if (isOpen("ov-inv") && typeof refreshInv === "function") refreshInv();
+    if (isOpen("ov-equip") && typeof refreshEquip === "function") refreshEquip();
+    if (isOpen("ov-forge") && typeof refreshForge === "function") refreshForge();
+  } catch (e) {}
 }
 function repairCostOf(id) { const pd=PICK_DEF[id]; const c={}; for (const k in pd.cost) c[k]=Math.max(1,Math.ceil(pd.cost[k]*0.3)); return c; }
 function repairPick(id) { const pd=PICK_DEF[id]; if (!G.picks.owned[id]) return; if ((G.picks.dur[id]||0)>=pd.dur){ toast("Ya está al 100%"); return; } const c=repairCostOf(id); if (!canAfford(c)){ toast("Te faltan materiales para reparar"); return; } payCost(c); G.picks.dur[id]=pd.dur; log("Reparaste "+pd.label+" (100%).","good"); toast("Reparado"); forgeWork(); refreshForge(); }
@@ -440,6 +450,7 @@ function useTool(id) {
   if ((id === "axe" || id === "rod") && G.tools[id] <= 0) {
     G.hotbar = G.hotbar.map(h => (h && h.kind === "tool" && h.key === id) ? null : h);
     syncSlots(); if (typeof refreshHotbar === "function") refreshHotbar();
+    uiRefreshAfterBreak();   // 31/7: que el ícono desaparezca AL INSTANTE también en bolsa/equipo/herrería abiertas
   }
   return true;
 }
