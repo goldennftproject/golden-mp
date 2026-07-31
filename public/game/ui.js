@@ -690,7 +690,7 @@ function placePrompt() {
   if (!hb) { p.style.bottom = "12px"; return; }
   const r = hb.getBoundingClientRect();
   if (!r.height || r.top < window.innerHeight * 0.5) { p.style.bottom = "12px"; return; }   // barra arriba: el aviso abajo
-  p.style.bottom = Math.round(Math.min(window.innerHeight * 0.55, window.innerHeight - r.top + 64)) + "px";   // 31/7: bien despegado de la barra (antes +10 y el cartel la tocaba)
+  p.style.bottom = Math.round(Math.min(window.innerHeight * 0.55, window.innerHeight - r.top + 34)) + "px";   // 31/7: despegado de la barra pero cerquita (64 quedaba muy arriba)
 }
 function initUniversalDrag() {
   document.querySelectorAll(".ov .card").forEach(c => makeHoldDrag(c));          // todas las ventanas

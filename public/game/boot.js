@@ -73,7 +73,7 @@ class BootScene extends Phaser.Scene {
     L.push(["tree_half", P + "tree_half.png"]);   // mitad del enfriamiento: árbol pelado con pocas ramas (PixelLab 31/7)
     L.push(["pond", P + "pond.png?v=2"]);
     L.push(["portal", P + "portal.png"]);   // portal al Bosque (frame quieto de respaldo)
-    for (let i = 0; i < 8; i++) L.push(["portal_" + i, P + "portal_" + i + ".png?v=4"]);   // v4: negro TODO el interior (antes quedaba el anillo verde del borde)
+    for (let i = 0; i < 8; i++) L.push(["portal_" + i, P + "portal_" + i + ".png?v=5"]);   // v5: gira TODA la boca (rotación elíptica), negro completo
     // v3: nodos plantados en la tierra + estados dañados (intermedio del cooldown)
     ["node_stone","node_bronze","node_gold","node_diamond","node_netherite"]
       .forEach(k => { L.push([k, P + k + ".png?v=3"]); L.push([k + "_half", P + k + "_half.png"]); });
