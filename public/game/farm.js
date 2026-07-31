@@ -119,7 +119,8 @@ class FarmScene extends Phaser.Scene {
       s.setScale(rw / s.width); s.setDepth(by);
       // sombra bajo árboles y edificios (detalles 29/7)
       let shadow = null;
-      if (o.type === "tree" || o.type === "barn" || o.type === "market" || o.type === "store" || o.type === "cocina") {
+      // los árboles NO llevan sombra: su sprite ya trae la base de tierra dibujada y la elipse quedaba abajo de la tierra
+      if (o.type === "barn" || o.type === "market" || o.type === "store" || o.type === "cocina") {
         shadow = this.add.ellipse(cx, by - 3, rw * 0.82, T * 0.3, 0x1c2a12, 0.22).setDepth(by - 0.5);
       } else if (o.type === "dummy") {   // sombra chiquita bajo el dummy
         shadow = this.add.ellipse(cx, by - 2, rw * 0.55, T * 0.2, 0x1c2a12, 0.2).setDepth(by - 0.5);
