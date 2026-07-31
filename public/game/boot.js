@@ -63,7 +63,7 @@ class BootScene extends Phaser.Scene {
     L.push(["tree_stump_leaves", P + "tree_stump_leaves.png"]);
     L.push(["pond", P + "pond.png?v=2"]);
     L.push(["portal", P + "portal.png"]);   // portal al Bosque (frame quieto de respaldo)
-    for (let i = 0; i < 8; i++) L.push(["portal_" + i, P + "portal_" + i + ".png"]);   // espiral girando 360° (8 pasos de 45°)
+    for (let i = 0; i < 8; i++) L.push(["portal_" + i, P + "portal_" + i + ".png?v=2"]);   // espiral girando 360° · v2: gira TODO el vórtice, no solo el círculo central
     // v3: nodos plantados en la tierra + estados dañados (intermedio del cooldown)
     ["node_stone","node_bronze","node_gold","node_diamond","node_netherite"]
       .forEach(k => { L.push([k, P + k + ".png?v=3"]); L.push([k + "_half", P + k + "_half.png"]); });

@@ -441,7 +441,7 @@ class FarmScene extends Phaser.Scene {
     let best = null, bd = 1e9;
     const all = this.objs.concat(this.plots).concat(this.threats); if (this.portal) all.push(this.portal);
     for (const o of all) {
-      const rad = (o.type === "barn" || o.type === "market" || o.type === "store" || o.type === "cocina") ? 72 : (o.type === "plot" ? 42 : (o.type === "boar" ? 55 : (o.type === "portal" ? 50 : 58)));
+      const rad = (o.type === "barn" || o.type === "market" || o.type === "store" || o.type === "cocina") ? 72 : (o.type === "plot" ? 26 : (o.type === "boar" ? 55 : (o.type === "portal" ? 50 : 58)));   // plot 26: hay que estar encima de la tierra para plantar/cosechar
       const d = Math.hypot(o.cx - this.hero.x, o.by - this.hero.y);
       if (d < rad && d < bd) { bd = d; best = o; }
     }
@@ -1187,7 +1187,7 @@ class FarmScene extends Phaser.Scene {
     // clic-para-interactuar: al llegar cerca del objeto pedido, actuar
     if (this.pendingObj) {
       const po = this.pendingObj;
-      const rad = (po.type === "barn" || po.type === "market" || po.type === "store" || po.type === "cocina") ? 72 : 58;
+      const rad = (po.type === "barn" || po.type === "market" || po.type === "store" || po.type === "cocina") ? 72 : (po.type === "plot" ? 26 : 58);   // al caminar hacia un plot, llegar bien encima antes de actuar
       const d = Math.hypot(po.cx - hero.x, po.by - hero.y);
       if (d < rad) { this.moveTarget = null; this.pendingObj = null; this.interactWith(po); if (this.action) { hero.setDepth(hero.y); return; } }
       else if (!this.moveTarget) this.pendingObj = null;
