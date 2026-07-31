@@ -224,9 +224,11 @@
   .slot{background:#3a2b1c url("assets/ui/slot_wood.png") center/100% 100% no-repeat;border:none;image-rendering:pixelated}
   .hcell{background:#3a2b1c url("assets/ui/slot_wood.png") center/100% 100% no-repeat;border:2px solid transparent;image-rendering:pixelated}
   #hotbar{border:10px solid transparent;border-image:url("assets/ui/panel_wood.png") 23 stretch;background:rgba(30,22,12,.92);border-radius:4px}
-  /* ESTÁNDAR 30/7: TODOS los botones (no pestañas) iguales al de Modo edición: madera + filo verde + letra blanca */
-  button{border:none;background:url("assets/ui/btn_wood.png") center/100% 100% no-repeat;color:#f7ecd2;text-shadow:0 1px 0 rgba(0,0,0,.5);image-rendering:pixelated;box-shadow:inset 0 0 0 2px rgba(120,205,90,.55)}
-  button.green,button.gold,button.red,button.ghost{background:url("assets/ui/btn_wood.png") center/100% 100% no-repeat;border:none;box-shadow:inset 0 0 0 2px rgba(120,205,90,.55)}
+  /* ESTÁNDAR 30/7: TODOS los botones (no pestañas) iguales al de Modo edición: madera + filo verde + letra blanca.
+     31/7: la madera va en 9-SLICE (border-image) — los bordes/esquinas no se estiran aunque el botón sea ancho */
+  button{border:8px solid transparent;border-image:url("assets/ui/btn_wood.png") 16 fill stretch;background:none;padding:2px 8px;color:#f7ecd2;text-shadow:0 1px 0 rgba(0,0,0,.5);image-rendering:pixelated;box-shadow:inset 0 0 0 2px rgba(120,205,90,.55)}
+  button.sm{padding:0 5px}
+  button.green,button.gold,button.red,button.ghost{background:none;border:8px solid transparent;border-image:url("assets/ui/btn_wood.png") 16 fill stretch;box-shadow:inset 0 0 0 2px rgba(120,205,90,.55)}
   button.red{box-shadow:inset 0 0 0 2px rgba(225,95,70,.7)}   /* cancelar/peligro: filo rojo (detalles viernes) */
   button.active{filter:brightness(1.22)}
   button:disabled{filter:grayscale(.75) brightness(.72);cursor:default}
@@ -235,8 +237,8 @@
   .pill .k{color:#2e1c06;font-weight:800;font-size:12.5px}   /* etiquetas en negro y negrita, como los números */
   .pill b{color:#2e1c06}
   /* botón Menú y panel del menú con la misma madera */
-  .btnpill{background:url("assets/ui/btn_wood.png") center/100% 100% no-repeat;border:none;border-radius:0;color:#fff;font-weight:800;text-shadow:0 1px 0 rgba(0,0,0,.55);image-rendering:pixelated;padding:8px 14px;box-shadow:inset 0 0 0 2px rgba(120,205,90,.55)}
-  .gmi{background:url("assets/ui/btn_wood.png") center/100% 100% no-repeat;border:none;border-radius:0;color:#2e1c06;text-shadow:0 1px 0 rgba(255,240,200,.35);image-rendering:pixelated}
+  .btnpill{background:none;border:8px solid transparent;border-image:url("assets/ui/btn_wood.png") 16 fill stretch;border-radius:0;color:#fff;font-weight:800;text-shadow:0 1px 0 rgba(0,0,0,.55);image-rendering:pixelated;padding:1px 7px;box-shadow:inset 0 0 0 2px rgba(120,205,90,.55)}
+  .gmi{background:none;border:8px solid transparent;border-image:url("assets/ui/btn_wood.png") 16 fill stretch;border-radius:0;color:#2e1c06;text-shadow:0 1px 0 rgba(255,240,200,.35);image-rendering:pixelated}
   .gmi:hover{filter:brightness(1.12)}
   .gmi b.key{background:rgba(58,40,16,.85);border:1px solid #7a5a2c;color:#f2e2b8}
   /* títulos y textos sobre la madera: crema con sombra, sin placas */
@@ -253,7 +255,7 @@
   button{color:#fff !important;text-shadow:0 1px 0 rgba(0,0,0,.55)}
   /* estándar 30/7: ghost, banner de versión y Entrar también van en madera con filo verde y letra blanca */
   button.ghost{color:#fff !important}
-  #updbanner button,#gate .enter{background:url("assets/ui/btn_wood.png") center/100% 100% no-repeat;border:none;box-shadow:inset 0 0 0 2px rgba(120,205,90,.55);color:#fff !important;text-shadow:0 1px 0 rgba(0,0,0,.55);image-rendering:pixelated}
+  #updbanner button,#gate .enter{background:none;border:8px solid transparent;border-image:url("assets/ui/btn_wood.png") 16 fill stretch;box-shadow:inset 0 0 0 2px rgba(120,205,90,.55);color:#fff !important;text-shadow:0 1px 0 rgba(0,0,0,.55);image-rendering:pixelated}
   .card h3{color:#fff !important}
   /* estándar 30/7 (Configuración de referencia): secciones en pergamino con encabezado ámbar y texto oscuro legible */
   .card .sub,.cost,#inv-cap,#inv-selseed,#cofre-info,.invexp .exmax{background:#faf3e2;border:1px solid var(--line);border-radius:10px;padding:7px 11px;color:#8a7f66;text-shadow:none;text-align:left}
