@@ -87,6 +87,7 @@ class BootScene extends Phaser.Scene {
     L.push(["fishing_rod", P + "fishing_rod.png?v=2"]);   // caña cozy nueva
     L.push(["fence_corner", P + "fence_corner.png?v=3"]);
     if (typeof CROP_ORDER !== "undefined") CROP_ORDER.forEach(k => L.push(["cropg_" + k, P + "cropg_" + k + ".png?v=4"]));   // plantas completas cozy
+    L.push(["badge_wood", "assets/ui/badge_wood.png"]);   // placa de madera 9-slice: carteles flotantes del mundo con el mismo formato que la barra
     return L;
   }
 

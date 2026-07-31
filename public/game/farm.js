@@ -1147,11 +1147,23 @@ class FarmScene extends Phaser.Scene {
     if (!this.dummyObj) this.dummyObj = this.objs.find(o => o.type === "dummy") || null;
     if (this.dummyObj) {
       const left = (G.dummyUsedAt || 0) + DUMMY_CD_MS - t;
-      if (!this.dummyTimer) this.dummyTimer = this.add.text(this.dummyObj.cx, this.dummyObj.by - T * 1.15, "",
-        { fontFamily: "system-ui", fontSize: "11px", fontStyle: "bold", color: "#fff", stroke: "#20301a", strokeThickness: 3 }).setOrigin(0.5, 1).setDepth(this.dummyObj.by + 3);
+      if (!this.dummyTimer) {
+        // 31/7: cartel con el formato de la barra (placa badge_wood 9-slice + letra blanca con sombra)
+        if (this.textures.exists("badge_wood"))
+          this.dummyTimerBg = this.add.nineslice(0, 0, "badge_wood", 0, 60, 64, 26, 26, 26, 26)
+            .setScale(0.34).setOrigin(0.5, 1).setDepth(this.dummyObj.by + 2).setVisible(false);
+        this.dummyTimer = this.add.text(this.dummyObj.cx, this.dummyObj.by - T * 1.15, "",
+          { fontFamily: "system-ui", fontSize: "11px", fontStyle: "bold", color: "#fff", stroke: "#241505", strokeThickness: 2 }).setOrigin(0.5, 1).setDepth(this.dummyObj.by + 3);
+      }
       this.dummyTimer.setPosition(this.dummyObj.cx, this.topY(this.dummyObj));
-      if (this.timerOn(this.dummyObj)) this.dummyTimer.setText(left > 0 ? fmtDur(left) : "Listo").setVisible(true);
+      const dOn = this.timerOn(this.dummyObj);
+      if (dOn) this.dummyTimer.setText(left > 0 ? fmtDur(left) : "Listo").setVisible(true);
       else this.dummyTimer.setVisible(false);
+      if (this.dummyTimerBg) {
+        this.dummyTimerBg.setVisible(dOn);
+        if (dOn) this.dummyTimerBg.setSize(Math.max(60, (this.dummyTimer.width + 12) / 0.34), 64)
+          .setPosition(this.dummyTimer.x, this.dummyTimer.y + 4.5);
+      }
       // dummy desgastado mientras descansa: cortes y paja afuera; al estar listo vuelve el sano
       const broken = left > 0;
       if (broken !== this.dummyBroken && this.textures.exists("dummy_broken")) {
