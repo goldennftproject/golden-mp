@@ -135,8 +135,10 @@ class FarmScene extends Phaser.Scene {
       const px = GF.WORLD_W - 40, py = GF.WORLD_H - 40;
       let pspr = null;
       if (this.textures.exists("portal")) {
-        pspr = this.add.image(px, py, "portal").setOrigin(0.5, 1).setDepth(py);
+        // sprite (no imagen) para que el espiral gire 360° en loop; el latido sutil se mantiene
+        pspr = this.add.sprite(px, py, "portal").setOrigin(0.5, 1).setDepth(py);
         pspr.setScale((T * 1.4) / pspr.width);
+        if (this.anims.exists("portal_spin")) pspr.play("portal_spin");
         this.tweens.add({ targets: pspr, scaleY: pspr.scaleY * 1.02, duration: 1400, yoyo: true, repeat: -1, ease: "Sine.easeInOut" });   // latido sutil del vórtice
       } else {
         this.add.text(px, py, "🌲", { fontSize: "26px" }).setOrigin(0.5, 1).setDepth(py);
