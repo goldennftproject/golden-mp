@@ -5,12 +5,14 @@ GF.spr = (k) => "assets/farm/" + k + ".png?a=7";   // ?a=N rompe el caché de lo
 // --- estado principal (con algunos recursos de arranque para probar los menús) ---
 const G = {
   plata: 0, golden: 20, level: 1, prestige: 0, week: 1,
-  hp: 100, hpMax: 100, swordOwned: false, bowOwned: false,   // combate (Fase D)
+  hp: 100, hpMax: 100, swordOwned: false, bowOwned: false, swordWoodOwned: false,   // combate (Fase D)
+  armasUnlocked: false,          // viernes (2): la pestana Armas de la Herreria se paga (20 madera + 20 piedra + 1000 plata)
+  treesOwned: 1, rocksOwned: 1,  // viernes (2): 1 arbol y 1 piedra activos; el resto difuminado y se desbloquea
   gear: { casco: null, armadura: null, botas: null, escudo: null, arma: null, municion: false },   // equipo (armas se equipan en el panel de Equipo — detalles jueves)
-  res: { madera: 30, piedra: 30, bronce: 25, hierro: 0, oro: 15, diamante: 5, netherita: 0, carne: 0, flecha: 0, lombriz: 0,
+  res: { madera: 0, piedra: 0, bronce: 0, hierro: 0, oro: 0, diamante: 0, netherita: 0, carne: 0, flecha: 0, lombriz: 0,
     tablon: 0, barra_piedra: 0, barra_bronce: 0, barra_hierro: 0, barra_oro: 0,
     papa: 0, zanahoria: 0, cebolla: 0, calabacin: 0, repollo: 0, calabaza: 0, brocoli: 0 },
-  seeds: { papa: 10, zanahoria: 5, cebolla: 2, calabacin: 1, repollo: 0, calabaza: 0, brocoli: 0 },  // starter pack
+  seeds: { papa: 3, zanahoria: 0, cebolla: 0, calabacin: 0, repollo: 0, calabaza: 0, brocoli: 0 },  // viernes (2): la bolsa nace con SOLO 3 semillas de papa
   selSeed: "papa",   // semilla elegida para plantar
   picks: { owned: { stone: true }, dur: { stone: 1 }, eq: "stone" },
   tools: { axe: 1, rod: 1 },   // SFL puro: herramientas de 1 uso
@@ -25,14 +27,14 @@ const G = {
   layoutPond: null,              // laguna movida: {col,row}
   fish: { comun: 0, raro: 0, epico: 0, legendario: 0 },
   plots: [],   // estado de las parcelas: [{state, readyAt, cropKey}] — lo llena la FarmScene
-  plotsOwned: 6,   // parcelas desbloqueadas (las demás se compran con plata)
+  plotsOwned: 2,   // viernes (2): se nace con 2 parcelas; el resto se desbloquea
   daily: { day: 0, last: "" },   // cofre diario: día de racha reclamado (1..7) y fecha del último reclamo
   seedBuys: { date: "", count: 0 },   // cupo diario de semillas (compras + cofre)
   dishes: {},      // platos cocinados (van a la bolsa; clic para comer)
   cooking: null,   // { id, endAt, total } — barra de enfriamiento al cocinar
   chests: [],      // cofres depósito: [{col,row,items:[{kind,key,n}|null × 10]}] — +1% materiales c/u
   dummyUsedAt: 0,  // último entrenamiento con el dummy (cooldown 4h)
-  built: { store: false, horno: false, cocina: false },   // detalles viernes (1): los edificios se CONSTRUYEN con recetas (arrancan en sombra)
+  built: { store: true, horno: false, cocina: false },   // viernes (2): la Herreria es el unico edificio gratis; horno y cocina se construyen
   buffs: [], secPerGameHour: 1, gameHours: 0,
   skills: { fishing: 0, farming: 0, cooking: 0, range: 0, sword: 0, mining: 0, crafting: 0 },
 };
@@ -98,9 +100,9 @@ function buySeed(k, qty) {
 
 // --- construcción de edificios (detalles viernes 1): recetas para levantar cada edificio ---
 const BUILD_DEF = {
-  store:  { label: "Herrería",        cost: { madera: 15, piedra: 10 } },
-  horno:  { label: "Horno de Piedra", cost: { piedra: 12, madera: 8, papa: 5 } },
-  cocina: { label: "Cocina",          cost: { piedra: 10, madera: 10, papa: 5, oro: 3 } },
+  store:  { label: "Herrería",        cost: {} },   // viernes (2): la Herrería es gratis (ya construida)
+  horno:  { label: "Horno de Piedra", cost: { madera: 100, piedra: 100 } },
+  cocina: { label: "Cocina",          cost: { madera: 100, papa: 10, zanahoria: 10, cebolla: 10, calabacin: 10, repollo: 10 } },
 };
 function buildCostStr(key) { const b = BUILD_DEF[key]; return Object.keys(b.cost).map(k => (b.cost[k]) + " " + (RES_LABEL[k] || k)).join(" + "); }
 
@@ -166,21 +168,23 @@ function prestige() { if (G.level < 10) { toast("Llegá a nivel 10"); return; } 
 // --- minerales y picos ---
 const ORE_ORDER = ["piedra","bronce","oro","diamante","netherita"];
 const ORE_DEF = {
-  piedra:   { tier:0, label:"Piedra",    emoji:"🪨", sprite:"node_stone",     cd:60,  yield:2, price:6 },
-  bronce:   { tier:1, label:"Bronce",    emoji:"🟫", sprite:"node_bronze",    cd:75,  yield:2, price:12 },
-  hierro:   { tier:1, label:"Hierro",    emoji:"⛓️", sprite:"node_iron",      cd:80,  yield:2, price:15 },   // detalles213: se mina con el pico de bronce
-  oro:      { tier:2, label:"Oro",       emoji:"🟡", sprite:"node_gold",      cd:90,  yield:1, price:30 },
-  diamante: { tier:3, label:"Diamante",  emoji:"💎", sprite:"node_diamond",   cd:110, yield:1, price:80 },
-  netherita:{ tier:4, label:"Netherita", emoji:"🔶", sprite:"node_netherite", cd:150, yield:1, price:200 },
+  piedra:   { tier:0, label:"Piedra",    emoji:"🪨", sprite:"node_stone",     cd:60,  yield:1, price:6 },
+  bronce:   { tier:1, label:"Bronce",    emoji:"🟫", sprite:"node_bronze",    cd:75,  yield:1, price:12 },
+  hierro:   { tier:2, label:"Hierro",    emoji:"⛓️", sprite:"node_iron",      cd:80,  yield:1, price:15 },   // viernes (2): lo mina el Pico de Hierro
+  oro:      { tier:3, label:"Oro",       emoji:"🟡", sprite:"node_gold",      cd:90,  yield:1, price:30 },
+  diamante: { tier:4, label:"Diamante",  emoji:"💎", sprite:"node_diamond",   cd:110, yield:1, price:80 },
+  netherita:{ tier:5, label:"Netherita", emoji:"🔶", sprite:"node_netherite", cd:150, yield:1, price:200 },
 };
-const PICK_ORDER = ["stone","bronze","gold","diamond","netherite"];
+const PICK_ORDER = ["stone","bronze","iron","gold","diamond","netherite"];
 const PICK_DEF = {
   // modelo SFL puro (31/7): 1 uso por pico, costos baratos (material del tier anterior + madera + monedas)
-  stone:    { tier:0, label:"Pico de Piedra",    mineTier:1, dur:1, cost:{madera:1},            plata:10, sprite:"pick_stone" },
-  bronze:   { tier:1, label:"Pico de Bronce",    mineTier:2, dur:1, cost:{madera:1,piedra:1},   plata:15, sprite:"pick_bronze" },
-  gold:     { tier:2, label:"Pico de Oro",       mineTier:3, dur:1, cost:{madera:1,bronce:1},   plata:25, sprite:"pick_gold", fast:true },
-  diamond:  { tier:3, label:"Pico de Diamante",  mineTier:4, dur:1, cost:{madera:1,oro:1},      plata:40, sprite:"pick_diamond" },
-  netherite:{ tier:4, label:"Pico de Netherita", mineTier:4, dur:1, cost:{madera:1,diamante:1}, plata:80, sprite:"pick_netherite" },
+  // costos "detalles viernes (2)"; el Pico de Bronce no figura en el doc y se interpola
+  stone:    { tier:0, label:"Pico de Piedra",    mineTier:0, dur:1, cost:{madera:3},            plata:10,  sprite:"pick_stone" },
+  bronze:   { tier:1, label:"Pico de Bronce",    mineTier:1, dur:1, cost:{madera:4,piedra:5},   plata:10,  sprite:"pick_bronze" },   // confirmado por el diseñador (Discord 31/7)
+  iron:     { tier:2, label:"Pico de Hierro",    mineTier:2, dur:1, cost:{madera:3,piedra:5},   plata:10,  sprite:"pick_iron" },
+  gold:     { tier:3, label:"Pico de Oro",       mineTier:3, dur:1, cost:{madera:3,bronce:5},   plata:35,  sprite:"pick_gold" },
+  diamond:  { tier:4, label:"Pico de Diamante",  mineTier:4, dur:1, cost:{oro:3,madera:3},      plata:45,  sprite:"pick_diamond" },
+  netherite:{ tier:5, label:"Pico de Netherita", mineTier:5, dur:1, cost:{diamante:1,madera:5}, plata:100, sprite:"pick_netherite" },
 };
 function equippedPick() { return (G.picks.eq && G.picks.owned[G.picks.eq]) ? G.picks.eq : null; }
 function canAfford(c) { for (const k in c) if ((G.res[k]||0) < c[k]) return false; return true; }
@@ -229,10 +233,21 @@ const TOOL_DEF = {
   axe:   { label:"Hacha",            emoji:"🪓", sprite:"axe",         max:1, repair:{madera:6} },   // SFL puro: 1 uso = 1 talada
   rod:   { label:"Caña",             emoji:"🎣", sprite:"fishing_rod", max:1, repair:{madera:4} },   // SFL puro: 1 uso = 1 pesca
   sword: { label:"Espada de Hierro", emoji:"⚔️", sprite:"sword",       max:80, repair:{bronce:2} },
+  sword_wood: { label:"Espada de Madera", emoji:"🗡️", sprite:"sword_wood", max:40, repair:{madera:2} },   // viernes (2): arma inicial
   bow:   { label:"Arco",             emoji:"🏹", sprite:"bow",         max:60, repair:{madera:5} },
 };
-// --- espada (se craftea en la Herrería; sin espada peleás a puño limpio) ---
+// --- espadas (se craftean en la Herrería; viernes 2: SIN arma equipada no se ataca) ---
 const SWORD_COST = { bronce: 12 };   // 100% metal (feedback del diseñador: nada de madera)
+const SWORD_WOOD_COST = { madera: 5 };
+function craftSwordWood() {
+  if (G.swordWoodOwned) { toast("Ya tenés la Espada de Madera"); return; }
+  if (!canAfford(SWORD_WOOD_COST)) { toast("Te faltan materiales"); return; }
+  payCost(SWORD_WOOD_COST); G.swordWoodOwned = true; G.tools.sword_wood = TOOL_DEF.sword_wood.max;
+  if (!G.gear.arma) G.gear.arma = "sword_wood";
+  addXp("crafting", 8);
+  log("Crafteaste la Espada de Madera.", "gold"); toast("¡Espada de Madera!"); forgeWork();
+  refreshForge(); if (typeof syncSlots === "function") syncSlots(); if (isOpen("ov-inv")) refreshInv();
+}
 function craftSword() {
   if (G.swordOwned) { toast("Ya tenés la espada"); return; }
   if (!canAfford(SWORD_COST)) { toast("Te faltan materiales"); return; }
@@ -242,11 +257,12 @@ function craftSword() {
   log("Crafteaste la Espada de Hierro.", "gold"); toast("¡Espada de Hierro!"); forgeWork();
   refreshForge(); if (typeof syncSlots === "function") syncSlots(); if (isOpen("ov-inv")) refreshInv();
 }
-// daño del jugador: puños (débil) o espada (escala con la skill Espada)
+// daño del jugador — viernes (2): SOLO con arma equipada (sin arma no hay ataque, devuelve 0)
 function swordDmg() {
   const lvl = skillInfo(G.skills.sword).lvl;
-  if (G.gear.arma === "sword" && toolDur("sword") > 0) return 8 + Math.floor(lvl / 2);   // solo si está EQUIPADA
-  return 3 + Math.floor(lvl / 4);
+  if (G.gear.arma === "sword" && toolDur("sword") > 0) return 8 + Math.floor(lvl / 2);        // solo si está EQUIPADA
+  if (G.gear.arma === "sword_wood" && toolDur("sword_wood") > 0) return 4 + Math.floor(lvl / 2);
+  return 0;
 }
 
 // --- arco y flechas (combate a distancia; usa la skill Arco) ---
@@ -269,6 +285,20 @@ function craftArrows() {
   refreshForge(); if (typeof syncSlots === "function") syncSlots(); if (isOpen("ov-inv")) refreshInv();
 }
 function bowDmg() { return 6 + Math.floor(skillInfo(G.skills.range).lvl / 2); }
+// viernes (2): la pestaña Armas de la Herrería se desbloquea pagando
+const ARMAS_UNLOCK_COST = { madera: 20, piedra: 20 }, ARMAS_UNLOCK_PLATA = 1000;
+function unlockArmas() {
+  if (G.armasUnlocked) return;
+  if (!canAfford(ARMAS_UNLOCK_COST)) { toast("Te faltan materiales"); return; }
+  if (G.plata < ARMAS_UNLOCK_PLATA) { toast("Te falta plata"); return; }
+  payCost(ARMAS_UNLOCK_COST); G.plata -= ARMAS_UNLOCK_PLATA; G.armasUnlocked = true;
+  log("Desbloqueaste la pestaña Armas de la Herrería.", "gold"); toast("¡Armas desbloqueadas!");
+  refreshForge(); refreshHud(); if (typeof saveFarm === "function") saveFarm();
+}
+// viernes (2): desbloqueo progresivo de árboles y piedras (3/9/27/81/100)
+const NODE_UNLOCK_COSTS = [3, 9, 27, 81, 100];
+function treeUnlockCost() { return NODE_UNLOCK_COSTS[Math.min(NODE_UNLOCK_COSTS.length - 1, Math.max(0, (G.treesOwned || 1) - 1))]; }
+function rockUnlockCost() { return NODE_UNLOCK_COSTS[Math.min(NODE_UNLOCK_COSTS.length - 1, Math.max(0, (G.rocksOwned || 1) - 1))]; }
 function canShoot() { return G.gear.arma === "bow" && toolDur("bow") > 0 && G.gear.municion && (G.res.flecha || 0) > 0; }   // arco Y flechas equipados
 
 // --- armaduras (dropean de los monstruos del Bosque; reducen el daño recibido) ---
@@ -455,7 +485,7 @@ function useTool(id) {
   return true;
 }
 // craftear herramientas consumibles — costos estilo SFL, apilan hasta 99
-const TOOL_CRAFT = { axe: { cost:{}, plata:5 }, rod: { cost:{ madera:1 }, plata:5 } };   // SFL: hacha solo monedas; caña madera + monedas
+const TOOL_CRAFT = { axe: { cost:{}, plata:10 }, rod: { cost:{ madera:3, piedra:1, oro:15 }, plata:0 } };   // viernes (2): hacha 10 plata; caña 3 madera + 1 piedra + 15 ORO (recurso)
 function craftTool(id) {
   const tc = TOOL_CRAFT[id], td = TOOL_DEF[id]; if (!tc || !td) return;
   if (toolCount(id) >= 99) { toast("Máximo 99 " + td.label); return; }
@@ -543,6 +573,7 @@ function canonicalStacks() {
   list.push({ kind: "tool", key: "hoe" });   // la azada es eterna
   ["axe", "rod"].forEach(k => { let n = toolCount(k); while (n > 0) { list.push({ kind: "tool", key: k }); n -= 99; } });   // apilables ×99
   if (G.swordOwned) list.push({ kind: "tool", key: "sword" });
+  if (G.swordWoodOwned) list.push({ kind: "tool", key: "sword_wood" });
   if (G.bowOwned) list.push({ kind: "tool", key: "bow" });
   PICK_ORDER.forEach(id => { let n = pickCount(id); while (n > 0) { list.push({ kind: "pick", key: id }); n -= 99; } });   // picos apilables ×99
   ITEM_RES_ORDER.forEach(r => { let n = Math.floor(G.res[r] || 0); while (n > 0) { list.push({ kind: "res", key: r }); n -= 99; } });
@@ -595,7 +626,7 @@ function ensureHotbarDefaults() {
 const PRICE = { madera:3, piedra:6, bronce:12, hierro:15, oro:30, diamante:80, netherita:200, carne:8, flecha:2,
   papa:3, zanahoria:5, cebolla:8, calabacin:14, repollo:24, calabaza:45, brocoli:70 };
 // detalles viernes (1): los minerales, madera y flechas NO se venden — solo cultivos y lo farmeado en la Zona Negra (carne)
-const SELLABLE = ["papa","zanahoria","cebolla","calabacin","repollo","calabaza","brocoli","carne"];
+const SELLABLE = ["papa","zanahoria","cebolla","calabacin","repollo","calabaza","brocoli"];   // viernes (2): la carne no se vende
 let marketCur = "plata";
 function marketUnit(res) { return marketCur === "plata" ? PRICE[res] : PRICE[res]/10; }
 function sellItem(res) {

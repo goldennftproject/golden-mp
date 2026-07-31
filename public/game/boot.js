@@ -48,6 +48,8 @@ class BootScene extends Phaser.Scene {
     for (let i = 0; i < 9; i++) L.push(["guerrero_atk_" + i, P + "guerrero_atk_" + i + ".png"]);
     ["fish_comun","fish_raro"].forEach(k => L.push([k, P + k + ".png"]));   // pececitos de la laguna
     ["sword","bow"].forEach(k => L.push([k, P + k + ".png"]));   // arma visible al atacar en el Bosque
+    L.push(["sword_wood", P + "sword_wood.png"]);   // viernes (2): espada de madera (derivada de la de hierro)
+    L.push(["pick_iron", P + "pick_iron.png"]);     // viernes (2): pico de hierro (derivado del de piedra)
     L.push(["cocina", P + "cocina.png"]);   // edificio de Cocina (detalles 29/7)
     L.push(["horno", P + "horno.png?v=2"]);     // Horno de Piedra (detalles viernes 1): fundición de barras
     // arte cozy nuevo (v2 rompe el caché del arte viejo)
@@ -71,7 +73,7 @@ class BootScene extends Phaser.Scene {
     L.push(["tree_half", P + "tree_half.png"]);   // mitad del enfriamiento: árbol pelado con pocas ramas (PixelLab 31/7)
     L.push(["pond", P + "pond.png?v=2"]);
     L.push(["portal", P + "portal.png"]);   // portal al Bosque (frame quieto de respaldo)
-    for (let i = 0; i < 8; i++) L.push(["portal_" + i, P + "portal_" + i + ".png?v=2"]);   // espiral girando 360° · v2: gira TODO el vórtice, no solo el círculo central
+    for (let i = 0; i < 8; i++) L.push(["portal_" + i, P + "portal_" + i + ".png?v=3"]);   // v3: vórtice NEGRO (viernes 2)
     // v3: nodos plantados en la tierra + estados dañados (intermedio del cooldown)
     ["node_stone","node_bronze","node_gold","node_diamond","node_netherite"]
       .forEach(k => { L.push([k, P + k + ".png?v=3"]); L.push([k + "_half", P + k + "_half.png"]); });

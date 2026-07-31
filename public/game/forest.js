@@ -69,7 +69,7 @@ class ForestScene extends Phaser.Scene {
       const wx = pt.worldX, wy = pt.worldY;
       let hit = null, bd = 1e9;
       for (const m of this.monsters) { if (m.dead) continue; const b = m.spr.getBounds(); if (Phaser.Geom.Rectangle.Contains(b, wx, wy)) { const d = Math.hypot(m.cx - wx, m.by - wy); if (d < bd) { bd = d; hit = m; } } }
-      if (pt.rightButtonDown()) { if (hit) { this.setTarget(hit); this.autoOn = true; } return; }   // clic DERECHO: fijar y AUTO-atacar (detalles viernes)
+      if (pt.rightButtonDown()) { if (hit) { if (!this.hasWeapon()) { toast("Necesitás un arma equipada para atacar"); return; } this.setTarget(hit); this.autoOn = true; } return; }   // clic DERECHO: fijar y AUTO-atacar (detalles viernes)
       if (this.action) return;
       this.hold = { sx: pt.x, sy: pt.y, active: false };
       if (hit) { this.setTarget(hit); this.autoOn = false; this.goTo(hit.cx, hit.by + 14); }   // clic izquierdo: acercarse y fijar (sin auto-ataque)
@@ -261,7 +261,9 @@ class ForestScene extends Phaser.Scene {
   }
 
   // E / espacio: fija el monstruo más cercano (el auto-ataque hace el resto)
+  hasWeapon() { return swordDmg() > 0 || canShoot(); }   // viernes (2): solo se ataca CON arma equipada
   tryAttack() {
+    if (!this.hasWeapon()) { toast("Necesitás un arma equipada para atacar"); return; }
     const near = this.nearestMonster(MELEE_RANGE) || (canShoot() ? this.nearestMonster(BOW_RANGE) : null);
     if (near) { this.setTarget(near); this.autoOn = true; }   // E/espacio ataca, como el clic derecho
   }
@@ -271,7 +273,7 @@ class ForestScene extends Phaser.Scene {
     const m = this.target;
     if (!m || m.dead || this.action || t < this.nextAuto) return;
     const d = Math.hypot(m.cx - this.hero.x, m.by - this.hero.y);
-    if (d <= MELEE_RANGE) {
+    if (d <= MELEE_RANGE && swordDmg() > 0) {   // viernes (2): melee SOLO con espada equipada (sin puños)
       this.facing = (m.cx < this.hero.x) ? "west" : "east";
       this.action = { kind: "attack", m, t: 0, dur: 0.45 }; this.nextAuto = t + ATTACK_MS;
     } else if (canShoot() && d <= BOW_RANGE) {
@@ -298,7 +300,8 @@ class ForestScene extends Phaser.Scene {
   hitMonster(m, dmg, skill) {
     if (window.sfx) sfx("hit");
     if (dmg == null) { dmg = swordDmg(); skill = "sword"; }
-    if (skill === "sword" && G.gear.arma === "sword" && toolDur("sword") > 0) { useTool("sword"); if (toolDur("sword") <= 0) { log("¡La espada se rompió! Reparala en la Herrería.", "bad"); toast("¡Espada rota!"); } }
+    const swId = (G.gear.arma === "sword_wood") ? "sword_wood" : (G.gear.arma === "sword" ? "sword" : null);
+    if (skill === "sword" && swId && toolDur(swId) > 0) { useTool(swId); if (toolDur(swId) <= 0) { log("¡" + TOOL_DEF[swId].label + " rota! Reparala en la Herrería.", "bad"); toast("¡Espada rota!"); } }
     m.hp -= dmg;
     // chispa de golpe (detalles 338)
     const hy = m.by - (m.spr.displayHeight || m.spr.height) * 0.5;
@@ -385,12 +388,12 @@ class ForestScene extends Phaser.Scene {
         // si está caminando al momento del golpe, usa el espadazo CAMINANDO (piernas en marcha, 31/7)
         const movingNow = !!(this.moveTarget || k.left.isDown || k.right.isDown || k.up.isDown || k.down.isDown || k.aleft.isDown || k.aright.isDown || k.aup.isDown || k.adown.isDown);
         const swordKey = (movingNow && this.anims.exists("act_sword_walk")) ? "act_sword_walk" : "act_sword";
-        const akey = this.action.kind === "shoot" ? "act_bow" : (G.gear.arma === "sword" ? swordKey : null);
+        const akey = this.action.kind === "shoot" ? "act_bow" : ((G.gear.arma === "sword" || G.gear.arma === "sword_wood") ? swordKey : null);
         if (akey && this.anims.exists(akey)) { hero.play(akey); this.action.fx = true; }
         else {
           // respaldo (a puños o sin animación): el arma dibujada a mano como antes
           if (hero.anims.currentAnim?.key !== "idle") hero.play("idle");
-          const wkey = this.action.kind === "shoot" ? "bow" : (G.gear.arma === "sword" ? "sword" : null);
+          const wkey = this.action.kind === "shoot" ? "bow" : (G.gear.arma === "sword" ? "sword" : (G.gear.arma === "sword_wood" ? "sword_wood" : null));
           if (wkey && this.textures.exists(wkey)) {
             const fx = this.add.image(hero.x + sign * 18, hero.y - 26, wkey).setDisplaySize(26, 26).setOrigin(0.5, 0.85).setDepth(hero.y + 1);
             this.action.fx = fx;
@@ -476,9 +479,14 @@ class ForestScene extends Phaser.Scene {
       const dHero = Math.hypot(hero.x - m.cx, hero.y - m.by);
       const aggro = m.hp < m.def.hp || dHero < 110;   // te vio o lo golpeaste
       let moved = false;
-      if (aggro && dHero > 34) {
+      if (aggro && dHero > 36) {
         const dx = hero.x - m.cx, dy = hero.y - m.by, d = Math.hypot(dx, dy) || 1;
-        const sp = m.def.spd * dt;
+        const sp = Math.min(m.def.spd * dt, d - 36);   // viernes (2): frena al borde de tu celda, nunca la pisa
+        m.cx += dx / d * sp; m.by += dy / d * sp; moved = true;
+      } else if (aggro && dHero < 28) {
+        // quedó encima (spawn/empuje): se corre hacia atrás hasta dejar tu celda
+        const dx = m.cx - hero.x, dy = m.by - hero.y, d = Math.hypot(dx, dy) || 1;
+        const sp = m.def.spd * 0.8 * dt;
         m.cx += dx / d * sp; m.by += dy / d * sp; moved = true;
       } else if (!aggro) {
         // deambular cerca de casa

@@ -71,6 +71,32 @@ class FarmScene extends Phaser.Scene {
       GF.PLOTS.forEach(pl => { const x = pl.col * T, y = pl.row * T; g.fillStyle(0x8a5a33, 1); g.fillRoundedRect(x + 3, y + 3, T - 6, T - 6, 6); g.fillStyle(0x724829, 1); g.fillRoundedRect(x + 6, y + 6, T - 12, T - 12, 5); });
     }
 
+    // viernes (2): movimiento del agua — ondas elípticas que se expanden y destellos que titilan
+    this.pondWaves = [];
+    {
+      const pd = GF.POND;
+      const rx = () => (pd.col + 0.55 + Math.random() * (pd.cols - 1.1)) * T;
+      const ry = () => (pd.row + 0.55 + Math.random() * (pd.rows - 1.1)) * T;
+      for (let i = 0; i < 3; i++) {   // ondas: anillos que nacen, crecen y se disuelven
+        const ring = this.add.ellipse(rx(), ry(), 10, 5).setStrokeStyle(1.5, 0xbfe3f2, 0.5).setFillStyle().setDepth(-997).setAlpha(0);
+        const loop = () => {
+          ring.setPosition(rx(), ry()).setScale(0.4).setAlpha(0.55);
+          this.tweens.add({ targets: ring, scaleX: 2.6, scaleY: 2.6, alpha: 0, duration: 2600 + Math.random() * 900, ease: "Sine.easeOut", onComplete: loop });
+        };
+        this.time.delayedCall(i * 1100, loop);
+        this.pondWaves.push(ring);
+      }
+      for (let i = 0; i < 4; i++) {   // destellos: chispitas de sol sobre el agua
+        const sp = this.add.ellipse(rx(), ry(), 3.5, 1.6, 0xeaf7ff, 0.8).setDepth(-997).setAlpha(0);
+        const tw = () => {
+          sp.setPosition(rx(), ry());
+          this.tweens.add({ targets: sp, alpha: { from: 0, to: 0.75 }, duration: 500 + Math.random() * 400, yoyo: true, hold: 300, ease: "Sine.easeInOut", onComplete: () => this.time.delayedCall(400 + Math.random() * 1200, tw) });
+        };
+        this.time.delayedCall(300 + i * 700, tw);
+        this.pondWaves.push(sp);
+      }
+    }
+
     // pececitos nadando en la laguna (sprites cozy; si faltan, emoji)
     this.pondFish = [];
     const FISH_SIZES = [[15, 11], [20, 15], [12, 9]];   // cada pez de un tamaño distinto
@@ -106,6 +132,7 @@ class FarmScene extends Phaser.Scene {
     }
 
     // objetos del mundo (con estado para interacción)
+    let __treeN = 0, __rockN = 0;   // viernes (2): orden de desbloqueo de árboles y piedras
     this.objs = GF.WORLD_OBJECTS.map((o, i) => {
       const lp = (G.layout && G.layout[i]) || null;                            // posición editada por el jugador
       const cx = lp ? lp.cx : o.cx, by = lp ? lp.by : o.by;
@@ -115,6 +142,13 @@ class FarmScene extends Phaser.Scene {
       if (o.key === "portal" && this.anims.exists("portal_spin")) s.play("portal_spin");
       // edificios sin construir (viernes 1): en sombra/difuminados hasta pagar la receta
       if (typeof BUILD_DEF !== "undefined" && BUILD_DEF[o.type] && !(G.built && G.built[o.type])) s.setAlpha(0.5).setTint(0x555555);
+      // viernes (2): árboles y piedras bloqueados (1 activo + resto difuminado, se desbloquean en orden)
+      let lockIdx = -1;
+      if (o.type === "tree") lockIdx = __treeN++;
+      if (o.type === "rock") lockIdx = __rockN++;
+      const locked = (o.type === "tree" && lockIdx >= Math.max(1, G.treesOwned || 1)) ||
+                     (o.type === "rock" && lockIdx >= Math.max(1, G.rocksOwned || 1));
+      if (locked) s.setAlpha(0.5).setTint(0x555555);
       const rw = (o.type === "ore" || o.type === "rock") ? o.w * 0.67       // minerales −20% (detalles jueves; antes 0.84)
         : (o.type === "tree") ? o.w * 0.8                                   // árboles −20%
         : (o.type === "market" || o.type === "store") ? o.w * 0.8           // tiendas −20%
@@ -128,7 +162,7 @@ class FarmScene extends Phaser.Scene {
       } else if (o.type === "dummy") {   // sombra chiquita bajo el dummy
         shadow = this.add.ellipse(cx, by - 2, rw * 0.55, T * 0.2, 0x1c2a12, 0.2).setDepth(by - 0.5);
       }
-      return { i, type: o.type, ore: o.ore, cx, by, w: o.w, rw, baseKey: o.key, sprite: s, shadow, readyAt: 0 };
+      return { i, type: o.type, ore: o.ore, cx, by, w: o.w, rw, baseKey: o.key, sprite: s, shadow, readyAt: 0, lockIdx, locked };
     });
 
     // (los rótulos flotantes se quitaron: los edificios nuevos se distinguen solos
@@ -170,7 +204,7 @@ class FarmScene extends Phaser.Scene {
       const emo = this.add.text(cx, cy + 8, "", { fontSize: Math.round(T * 0.72) + "px" }).setOrigin(0.5, 0.95).setDepth(cy).setVisible(false);
       const timer = this.add.text(cx, cy - T * 0.55, "", { fontFamily: "system-ui", fontSize: "11px", fontStyle: "bold", color: "#fff", stroke: "#20301a", strokeThickness: 3 }).setOrigin(0.5, 1).setDepth(cy + 1).setVisible(false);
       const obj = { type: "plot", i, cx, by: cy, state: "dry", readyAt: 0, cropKey: null, spr, emo, timer, ground: this.plotGrounds[i] || null };
-      const owned = Math.max(6, Math.min(GF.PLOTS.length, G.plotsOwned || 6));
+      const owned = Math.max(2, Math.min(GF.PLOTS.length, G.plotsOwned || 2));   // viernes (2): se nace con 2 parcelas
       if (i >= owned) {   // parcela bloqueada: se compra con plata
         obj.state = "locked";
         if (obj.ground) { if (this.textures.exists("plot_blocked")) obj.ground.setTexture("plot_blocked").setDisplaySize(T, T).setTint(0x8f8f8f).setAlpha(0.8); else obj.ground.setAlpha(0.45); }   // apagado: se nota que no se puede usar
@@ -391,6 +425,7 @@ class FarmScene extends Phaser.Scene {
     // fragua: media por defecto, encendida mientras se trabaja en la Herrería (detalles jueves)
     this.storeObj = storeObj;
     this.updateForge();
+    this.startHornoSmoke();   // humo del Horno de Piedra si ya está construido (viernes 2)
     const cocinaObj = this.objs.find(o => o.type === "cocina");
     if (cocinaObj) smokeFrom(cocinaObj, 0.20, 0xefe9db, () => true);                     // cocina: humo SIEMPRE (detalles jueves)
     if (cocinaObj) smokeFrom(cocinaObj, 0.20, 0xffffff, () => !!G.cooking);              // …y el doble de bocanadas mientras se cocina
@@ -463,10 +498,10 @@ class FarmScene extends Phaser.Scene {
       if (o.state === "ready") { const cd = CROP_DEF[o.cropKey]; return "Cosechar " + (cd ? cd.label : ""); }
       return "Creciendo…";
     }
-    if (o.type === "portal") return "Teletransportarte a la Zona Negra" + (G.swordOwned ? "" : " sin espada");
+    if (o.type === "portal") return "Teletransportarte a la Zona Negra" + ((G.swordOwned || G.swordWoodOwned) ? "" : " sin espada");
     const secs = cd ? Math.ceil((o.readyAt - nowMs()) / 1000) : 0;
-    if (o.type === "tree") return cd ? "Vuelve en " + secs + "s" : "Talar madera";
-    if (o.type === "rock") return cd ? "Vuelve en " + secs + "s" : "Picar piedra";
+    if (o.type === "tree") { if (o.locked) return "Desbloquear árbol (" + treeUnlockCost() + " madera)"; return cd ? "Vuelve en " + secs + "s" : "Talar madera"; }
+    if (o.type === "rock") { if (o.locked) return "Desbloquear piedra (" + rockUnlockCost() + " piedra)"; return cd ? "Vuelve en " + secs + "s" : "Picar piedra"; }
     if (o.type === "ore") { const od = ORE_DEF[o.ore]; if (!od) return "Minar"; if (cd) return od.emoji + " Vuelve en " + secs + "s"; return "Minar " + od.label; }
     if (o.type === "barn") return "Granja";
     if (o.type === "market") return "Mercado";
@@ -497,9 +532,26 @@ class FarmScene extends Phaser.Scene {
         if (!canAfford(b.cost)) { toast("Te faltan materiales para construir"); return; }
         payCost(b.cost); G.built[o.type] = true;
         if (o.sprite) { o.sprite.setAlpha(1); o.sprite.clearTint(); }
+        if (o.type === "horno") this.startHornoSmoke();   // arranca el humo (viernes 2)
         addXp("crafting", 20); log("¡Construiste " + b.label + "!", "gold"); toast("¡" + b.label + " construida!");
         refreshHud(); if (typeof saveFarm === "function") saveFarm(true);
       }, { title: "Construir " + b.label, yes: "Construir", yesClass: "green", no: "Cancelar", noClass: "red" });
+      return;
+    }
+    if ((o.type === "tree" || o.type === "rock") && o.locked) {   // viernes (2): desbloqueo progresivo
+      const isTree = o.type === "tree";
+      const next = isTree ? Math.max(1, G.treesOwned || 1) : Math.max(1, G.rocksOwned || 1);
+      if (o.lockIdx !== next) { toast(isTree ? "Primero desbloqueá el árbol anterior" : "Primero desbloqueá la piedra anterior"); return; }
+      const cost = isTree ? treeUnlockCost() : rockUnlockCost(), res = isTree ? "madera" : "piedra";
+      askConfirm("Cuesta " + cost + " de " + RES_LABEL[res] + ". ¿Desbloquear?", () => {
+        if ((G.res[res] || 0) < cost) { toast("Te falta " + RES_LABEL[res] + " (" + cost + ")"); return; }
+        G.res[res] -= cost;
+        if (isTree) G.treesOwned = next + 1; else G.rocksOwned = next + 1;
+        o.locked = false; if (o.sprite) { o.sprite.setAlpha(1); o.sprite.clearTint(); }
+        addXp("crafting", 5); if (typeof syncSlots === "function") syncSlots();
+        log("Desbloqueaste " + (isTree ? "un árbol" : "una piedra") + " por " + cost + " de " + RES_LABEL[res] + ".", "good"); toast("¡" + (isTree ? "Árbol" : "Piedra") + " desbloqueado!");
+        refreshHud(); if (isOpen("ov-inv")) refreshInv(); if (typeof saveFarm === "function") saveFarm(true);
+      }, { title: isTree ? "Desbloquear árbol" : "Desbloquear piedra", yes: "Desbloquear", yesClass: "green", no: "Cancelar", noClass: "red" });
       return;
     }
     if (o.type === "store") return openOv("ov-forge");
@@ -513,7 +565,7 @@ class FarmScene extends Phaser.Scene {
         const cost = plotUnlockCost();
         askConfirm("¿Gastar " + cost + " de plata para desbloquear esta parcela?", () => {
           if (G.plata < cost) { toast("Te falta plata (" + cost + ")"); return; }
-          G.plata -= cost; G.plotsOwned = (G.plotsOwned || 6) + 1; o.state = "dry";
+          G.plata -= cost; G.plotsOwned = (G.plotsOwned || 2) + 1; o.state = "dry";
           if (o.ground && this.textures.exists("plot")) { o.ground.setTexture("plot").setDisplaySize(GF.TILE, GF.TILE).clearTint(); o.ground.setAlpha(1); }
           addXp("farming", 5); this.syncPlots();
           log("Desbloqueaste una parcela por " + cost + " plata.", "good"); toast("¡Parcela desbloqueada!");
@@ -663,7 +715,7 @@ class FarmScene extends Phaser.Scene {
     const a = this.action, o = a.o;
     if (window.sfx) sfx({ chop: "chop", mine: "mine", plant: "plant", harvest: "harvest", fish: "splash", water: "splash" }[a.kind] || "click");
     if (a.kind === "chop") {
-      const gr = Math.max(1, Math.round(3 * yieldMult() * chestBonus()));
+      const gr = 1;   // viernes (2): todos los recursos dan 1
       if (tryAddRes("madera", gr)) {
         useTool("axe"); addXp("crafting", 4); o.readyAt = nowMs() + CD.tree * 1000 * cdMult();
         o.halfAt = nowMs() + (o.readyAt - nowMs()) / 2;   // detalles viernes: a mitad del enfriamiento asoma el árbol a medio crecer
@@ -677,7 +729,7 @@ class FarmScene extends Phaser.Scene {
         toast("Bolsa llena — no podés talar"); log("Bolsa llena: liberá espacio para seguir talando.", "bad");
       }
     } else if (a.kind === "mine" && o.type === "rock") {
-      const gr = Math.max(1, Math.round(2 * yieldMult() * chestBonus()));
+      const gr = 1;   // viernes (2): todos los recursos dan 1
       if (tryAddRes("piedra", gr)) {
         const pk = equippedPick();   // picar piedra también gasta el pico (bug reportado)
         if (pk) { G.picks.dur[pk] = Math.max(0, (G.picks.dur[pk] || 0) - 1); if (G.picks.dur[pk] <= 0) { log(`¡${PICK_DEF[pk].label} se rompió en pedazos! Crafteá otro en la Herrería.`, "bad"); toast("¡Pico destruido!"); destroyPick(pk); } }
@@ -686,7 +738,7 @@ class FarmScene extends Phaser.Scene {
       else { toast("Bolsa llena — no podés picar"); log("Bolsa llena: liberá espacio para seguir picando.", "bad"); }
     } else if (a.kind === "mine" && o.type === "ore") {
       const pk = equippedPick(), pd = PICK_DEF[pk], od = ORE_DEF[o.ore];
-      let gr = Math.max(1, Math.round(od.yield * yieldMult() * chestBonus())); if (pd.fast) gr *= 2;
+      const gr = 1;   // viernes (2): todos los recursos dan 1
       if (tryAddRes(o.ore, gr)) {
         G.picks.dur[pk] = Math.max(0, (G.picks.dur[pk] || 0) - 1);
         addXp("mining", 5 + od.tier * 3);
@@ -822,11 +874,12 @@ class FarmScene extends Phaser.Scene {
   trainDummy(o) {
     if (!G.swordOwned) { toast("Necesitás la Espada de Hierro — crafteala en la Herrería"); return; }
     if (G.gear.arma !== "sword") { toast("Equipá la espada en el panel de Equipo"); return; }
-    if (toolDur("sword") <= 0) { toast("Espada rota — reparala en la Herrería"); return; }
+    const dsw = (G.gear.arma === "sword_wood") ? "sword_wood" : "sword";   // viernes (2): la de madera también entrena
+    if (toolDur(dsw) <= 0) { toast("Necesitás una espada equipada y sana"); return; }
     const left = (G.dummyUsedAt || 0) + DUMMY_CD_MS - nowMs();
     if (left > 0) { toast("El dummy descansa — vuelve en " + fmtDur(left)); return; }
     G.dummyUsedAt = nowMs();
-    useTool("sword"); useTool("sword");   // entrenar gasta 2 de durabilidad
+    useTool(dsw); useTool(dsw);   // entrenar gasta 2 de durabilidad
     let hits = 0;
     const sign = this.hero.x <= o.cx ? 1 : -1;
     const swing = () => {
@@ -843,7 +896,7 @@ class FarmScene extends Phaser.Scene {
       if (hits < 3) this.time.delayedCall(280, swing);
       else {
         addXp("sword", DUMMY_XP);
-        log("Entrenaste con el dummy: +" + DUMMY_XP + " XP de Espada. Vuelve en 4h. " + toolDur("sword") + "/" + TOOL_DEF.sword.max, "gold");
+        log("Entrenaste con el dummy: +" + DUMMY_XP + " XP de Espada. Vuelve en 4h. " + toolDur(dsw) + "/" + TOOL_DEF[dsw].max, "gold");
         toast("+" + DUMMY_XP + " XP de Espada");
         refreshHud(); if (typeof saveFarm === "function") saveFarm();
       }
@@ -874,6 +927,24 @@ class FarmScene extends Phaser.Scene {
       this.forgeGlow.forEach(g => { this.tweens.killTweensOf(g); g.destroy(); });
       this.forgeGlow = null;
     }
+  }
+
+  // viernes (2): humo del Horno de Piedra por código (el sprite se dejó limpio a propósito)
+  startHornoSmoke() {
+    if (this.hornoSmokeEv) return;
+    const o = this.objs && this.objs.find(x => x.type === "horno");
+    if (!o || !o.sprite || !(G.built && G.built.horno)) return;
+    const k = (o.rw || o.w) / 90;                                  // escala (textura de 90px)
+    const sx = () => o.cx - 26 * k + (Math.random() - 0.5) * 4;    // boca de la chimenea (lado izquierdo del techo)
+    const sy = () => o.by - (o.sprite.displayHeight || 60) + 6 * k;
+    this.hornoSmokeEv = this.time.addEvent({ delay: 750, loop: true, callback: () => {
+      if (!(G.built && G.built.horno)) return;
+      const g = 150 + Math.floor(Math.random() * 40);
+      const puff = this.add.ellipse(sx(), sy(), 5 + Math.random() * 3, 4 + Math.random() * 2, (g << 16) | (g << 8) | g, 0.5)
+        .setDepth(o.by + 2).setAlpha(0);
+      this.tweens.add({ targets: puff, alpha: { from: 0.45, to: 0 }, y: puff.y - 26 - Math.random() * 10, x: puff.x + 6 + Math.random() * 8,
+        scaleX: 2.2, scaleY: 2.2, duration: 2400 + Math.random() * 600, ease: "Sine.easeOut", onComplete: () => puff.destroy() });
+    } });
   }
 
   // crea (o ubica por primera vez) un cofre depósito en la granja

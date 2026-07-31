@@ -25,7 +25,8 @@ function snapshot() {
     res: G.res, picks: G.picks, skills: G.skills, fish: G.fish, plots: G.plots, seeds: G.seeds, selSeed: G.selSeed,
     tools: G.tools, toolsLost: G.toolsLost, sflStock: true, invRows: G.invRows, slots: G.slots, hotbar: G.hotbar, hotSel: G.hotSel, hbInit: G.hbInit, layout: G.layout,
     daily: G.daily, plotsOwned: G.plotsOwned, seedBuys: G.seedBuys, built: G.built,
-    hp: G.hp, hpMax: G.hpMax, swordOwned: G.swordOwned, bowOwned: G.bowOwned, gear: G.gear,
+    hp: G.hp, hpMax: G.hpMax, swordOwned: G.swordOwned, bowOwned: G.bowOwned, swordWoodOwned: G.swordWoodOwned, gear: G.gear,
+    armasUnlocked: G.armasUnlocked, treesOwned: G.treesOwned, rocksOwned: G.rocksOwned,
     dishes: G.dishes, cooking: G.cooking, chests: G.chests, dummyUsedAt: G.dummyUsedAt,
     layoutPlots: G.layoutPlots, layoutPond: G.layoutPond };
 }
@@ -44,8 +45,9 @@ function hydrate(d) {
   if (d.tools) G.tools = Object.assign({}, G.tools, d.tools);
   if (d.toolsLost) G.toolsLost = d.toolsLost;   // legado (pre-apilables)
   // edificios construibles (viernes 1): las partidas viejas ya los tienen construidos
-  if (d.built) G.built = Object.assign({ store: false, horno: false, cocina: false }, d.built);
+  if (d.built) G.built = Object.assign({ store: true, horno: false, cocina: false }, d.built);
   else G.built = { store: true, horno: true, cocina: true };
+  G.built.store = true;   // viernes (2): la Herrería es gratis, siempre está
   if (typeof d.invRows === "number") G.invRows = Math.max(0, Math.min(INV_MAX_ROWS, d.invRows));
   if (Array.isArray(d.slots)) G.slots = d.slots;
   if (Array.isArray(d.hotbar)) G.hotbar = d.hotbar.slice(0, 10);
@@ -53,12 +55,16 @@ function hydrate(d) {
   if (typeof d.hbInit === "boolean") G.hbInit = d.hbInit;
   if (d.layout && typeof d.layout === "object") G.layout = d.layout;
   if (d.daily && typeof d.daily === "object") G.daily = { day: d.daily.day || 0, last: d.daily.last || "" };
-  if (typeof d.plotsOwned === "number") G.plotsOwned = Math.max(6, Math.min(12, d.plotsOwned));
+  if (typeof d.plotsOwned === "number") G.plotsOwned = Math.max(2, Math.min(12, d.plotsOwned));   // viernes (2): se arranca con 2
   if (d.seedBuys && typeof d.seedBuys === "object") G.seedBuys = { date: d.seedBuys.date || "", count: d.seedBuys.count || 0 };
   if (typeof d.hpMax === "number") G.hpMax = d.hpMax;
   if (typeof d.hp === "number") G.hp = Math.max(1, Math.min(G.hpMax, d.hp));
   if (typeof d.swordOwned === "boolean") G.swordOwned = d.swordOwned;
   if (typeof d.bowOwned === "boolean") G.bowOwned = d.bowOwned;
+  G.swordWoodOwned = d.swordWoodOwned === true;
+  G.armasUnlocked = d.armasUnlocked === true;   // viernes (2): la pestaña Armas se paga (también para veteranos)
+  G.treesOwned = Math.max(1, Math.min(6, (typeof d.treesOwned === "number" ? d.treesOwned : 1)));   // viernes (2): todos al sistema nuevo
+  G.rocksOwned = Math.max(1, Math.min(6, (typeof d.rocksOwned === "number" ? d.rocksOwned : 1)));
   if (d.gear && typeof d.gear === "object") G.gear = Object.assign({ casco: null, armadura: null, botas: null, escudo: null, arma: null, municion: false }, d.gear);
   // migración (detalles jueves): partidas viejas sin slot de arma/munición conservan su comportamiento
   const og = d.gear || {};

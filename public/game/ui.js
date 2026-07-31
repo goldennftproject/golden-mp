@@ -34,6 +34,7 @@ function itemView(d) {
     if (d.key === "axe") return { sprite: "axe", emoji: "🔧", label: "Hacha · 1 uso cada una · tenés " + toolCount("axe"), dur: null };
     if (d.key === "rod") return { sprite: "fishing_rod", emoji: "🔧", label: "Caña · 1 uso cada una · tenés " + toolCount("rod"), dur: null };
     if (d.key === "sword") return { sprite: "sword", emoji: "⚔️", label: "Espada de Hierro · durabilidad " + toolDur("sword") + "/" + TOOL_DEF.sword.max, dur: Math.round(toolDur("sword") / TOOL_DEF.sword.max * 100) };
+    if (d.key === "sword_wood") return { sprite: "sword_wood", emoji: "🗡️", label: "Espada de Madera · durabilidad " + toolDur("sword_wood") + "/" + TOOL_DEF.sword_wood.max, dur: Math.round(toolDur("sword_wood") / TOOL_DEF.sword_wood.max * 100) };
     if (d.key === "bow") return { sprite: "bow", emoji: "🏹", label: "Arco · durabilidad " + toolDur("bow") + "/" + TOOL_DEF.bow.max, dur: Math.round(toolDur("bow") / TOOL_DEF.bow.max * 100) };
     return { sprite: "hoe", emoji: "🪝", label: "Azada", dur: null };
   }
@@ -227,6 +228,7 @@ function trashStack(d) {
   else if (d.kind === "dish") { const n = Math.min(99, Math.floor((G.dishes && G.dishes[d.key]) || 0)); if (n <= 0) return; G.dishes[d.key] -= n; toast("Tiraste " + n + " platos"); }
   else if (d.kind === "tool") {   // herramientas y armas (pedido del diseñador 31/7)
     if (d.key === "sword") { G.swordOwned = false; delete G.tools.sword; if (G.gear.arma === "sword") G.gear.arma = null; }
+    else if (d.key === "sword_wood") { G.swordWoodOwned = false; delete G.tools.sword_wood; if (G.gear.arma === "sword_wood") G.gear.arma = null; }
     else if (d.key === "bow") { G.bowOwned = false; delete G.tools.bow; if (G.gear.arma === "bow") G.gear.arma = null; }
     else if (d.key === "axe" || d.key === "rod") { const n = Math.min(99, toolCount(d.key)); G.tools[d.key] = toolCount(d.key) - n; }   // tira la pila (hasta 99)
     G.hotbar = G.hotbar.map(h => (h && h.kind === "tool" && h.key === d.key && toolDur(d.key) <= 0) ? null : h);
@@ -253,20 +255,8 @@ function refreshSkills() {
 
 /* ---- equipo (slots estilo RPG; armadura/armas llegan con el combate) ---- */
 function refreshEquip() {
-  const box = $("eq-grid"); if (!box) return;
-  const eq = G.picks.eq, pd = eq ? PICK_DEF[eq] : null;
-  const cells = [
-    { sprite: "hoe", nm: "Azada", dur: 1, max: 1, st: "∞ no se gasta" },
-    { sprite: "axe", nm: "Hacha", dur: toolDur("axe"), max: TOOL_DEF.axe.max },
-    { sprite: pd ? pd.sprite : "pick_stone", nm: pd ? pd.label : "Sin pico", dur: pd ? (G.picks.dur[eq] || 0) : 0, max: pd ? pd.dur : 1 },
-    { sprite: "fishing_rod", nm: "Caña", dur: toolDur("rod"), max: TOOL_DEF.rod.max },
-  ];
-  if (G.swordOwned) cells.push({ sprite: "sword", nm: "Espada de Hierro", dur: toolDur("sword"), max: TOOL_DEF.sword.max });
-  box.innerHTML = cells.map(c => {
-    const pct = Math.max(0, Math.min(100, Math.round(c.dur / c.max * 100)));
-    const col = pct > 50 ? "#7ec95a" : (pct > 20 ? "#e2b23a" : "#d9534f");
-    return `<div class="eqtool" title="${c.nm} · ${c.st || c.dur + "/" + c.max}"><img src="${GF.spr(c.sprite)}" onerror="this.outerHTML='⚔️'"><div class="db"><i style="width:${pct}%;background:${col}"></i></div></div>`;
-  }).join("");
+  const box = $("eq-grid");
+  if (box) box.innerHTML = "";   // viernes (2): fuera el cinturón de herramientas del panel de Equipo
   // slots de combate: sin títulos — silueta del objeto cuando está vacío, sprite real cuando está equipado
   const SIL = { "eq-casco": "sil_casco", "eq-armadura": "sil_armadura", "eq-botas": "sil_botas", "eq-escudo": "sil_escudo", "eq-arma": "sil_arma", "eq-municion": "sil_municion" };
   const fill = (id, on, html, tip) => { const el = $(id); if (!el) return; el.classList.toggle("ghost", !on); el.title = tip || ""; el.innerHTML = on ? html : `<img class="eqsil" src="${GF.spr(SIL[id])}" onerror="this.remove()">`; };
@@ -278,14 +268,14 @@ function refreshEquip() {
   gearSlot("eq-escudo", "escudo", "Escudo");
   // arma: se EQUIPA/CAMBIA con clic en el slot (detalles jueves) — espada ↔ arco ↔ nada
   const arma = G.gear.arma;
-  fill("eq-arma", !!arma, arma === "bow" ? spIc("bow", "") : spIc("sword", ""),
-    arma ? (arma === "bow" ? "Arco equipado" : "Espada de Hierro equipada") + " · clic para cambiar" : "Arma · clic para equipar");
+  fill("eq-arma", !!arma, arma === "bow" ? spIc("bow", "") : (arma === "sword_wood" ? spIc("sword_wood", "") : spIc("sword", "")),
+    arma ? (arma === "bow" ? "Arco equipado" : (arma === "sword_wood" ? "Espada de Madera equipada" : "Espada de Hierro equipada")) + " · clic para cambiar" : "Arma · clic para equipar");
   const armaEl = $("eq-arma");
   if (armaEl) armaEl.onclick = () => {
-    const opts = [null]; if (G.swordOwned) opts.push("sword"); if (G.bowOwned) opts.push("bow");
+    const opts = [null]; if (G.swordWoodOwned) opts.push("sword_wood"); if (G.swordOwned) opts.push("sword"); if (G.bowOwned) opts.push("bow");
     if (opts.length === 1) { toast("No tenés armas — crafteálas en la Herrería"); return; }
     G.gear.arma = opts[(opts.indexOf(G.gear.arma) + 1) % opts.length];
-    toast(G.gear.arma === "sword" ? "Espada equipada" : (G.gear.arma === "bow" ? "Arco equipado" : "Arma desequipada"));
+    toast(G.gear.arma === "sword" ? "Espada equipada" : (G.gear.arma === "sword_wood" ? "Espada de Madera equipada" : (G.gear.arma === "bow" ? "Arco equipado" : "Arma desequipada")));
     refreshEquip(); if (typeof syncSlots === "function") syncSlots(); if (typeof saveFarm === "function") saveFarm();
   };
   // munición: las flechas se equipan a mano con clic (ya no se autoequipan al craftear)
@@ -372,12 +362,12 @@ function refreshForge() {
   craft += '<div class="shophead">Herramientas</div>';
   ["axe", "rod"].forEach(id => {
     const td = TOOL_DEF[id], tc = TOOL_CRAFT[id], n = toolCount(id);
-    const cs = (Object.keys(tc.cost).map(k => resIc(k) + " " + tc.cost[k]).join(" · ") + " · ").replace(/^ · $/, "") + coinIc("plata") + " " + tc.plata;
+    const cs = Object.keys(tc.cost).map(k => resIc(k) + " " + tc.cost[k]).join(" · ") + (tc.plata ? (Object.keys(tc.cost).length ? " · " : "") + coinIc("plata") + " " + tc.plata : "");
     const btn = '<button class="green sm" ' + (canAfford(tc.cost) && G.plata >= tc.plata ? "" : "disabled") + ' data-ctool="' + id + '">Craftear</button>';
     craft += '<div class="forge-row"><div class="fic"><img src="' + GF.spr(td.sprite) + '"></div><div class="finfo"><div class="fnm">' + td.label + '</div><div class="fds">1 uso c/u · tenés ' + n + '</div><div class="fds">Costo: ' + cs + '</div></div><div class="fbtns">' + btn + '</div></div>';
   });
   // solo las ARMAS se reparan → Reparar
-  [].concat(G.swordOwned ? ["sword"] : []).concat(G.bowOwned ? ["bow"] : []).forEach(id => {
+  [].concat(G.swordWoodOwned ? ["sword_wood"] : []).concat(G.swordOwned ? ["sword"] : []).concat(G.bowOwned ? ["bow"] : []).forEach(id => {
     const td = TOOL_DEF[id], dur = toolDur(id), pct = Math.round(dur / td.max * 100);
     const rstr = Object.keys(td.repair).map(k => resIc(k) + td.repair[k]).join(" ");
     const btn = dur < td.max
@@ -387,16 +377,27 @@ function refreshForge() {
   });
   // armas y flechas → pestaña ARMAS (detalles viernes: no se mezclan con las herramientas)
   let armas = "";
-  if (!G.swordOwned) {
+  if (!G.armasUnlocked) {   // viernes (2): la pestaña Armas se desbloquea pagando
+    const ustr = Object.keys(ARMAS_UNLOCK_COST).map(k => resIc(k) + " " + ARMAS_UNLOCK_COST[k]).join(" · ") + " · " + coinIc("plata") + " " + ARMAS_UNLOCK_PLATA;
+    const uok = canAfford(ARMAS_UNLOCK_COST) && G.plata >= ARMAS_UNLOCK_PLATA;
+    armas = '<div class="forge-row"><div class="fic"><img src="' + GF.spr("sword") + '" onerror="this.outerHTML=\'⚔️\'"></div><div class="finfo"><div class="fnm">Sección de Armas cerrada</div><div class="fds">Habilitá la forja de armas pagando una única vez.</div><div class="fds">Costo: ' + ustr + '</div></div><div class="fbtns"><button class="green sm" ' + (uok ? "" : "disabled") + ' id="forge-unlock-armas">Desbloquear</button></div></div>';
+    $("forge-armas").innerHTML = armas;
+    const fu = $("forge-unlock-armas"); if (fu) fu.onclick = () => unlockArmas();
+  }
+  if (G.armasUnlocked && !G.swordWoodOwned) {
+    const wstr = Object.keys(SWORD_WOOD_COST).map(k => resIc(k) + " " + SWORD_WOOD_COST[k]).join(" · ");
+    armas += '<div class="forge-row"><div class="fic"><img src="' + GF.spr("sword_wood") + '" onerror="this.outerHTML=\'🗡️\'"></div><div class="finfo"><div class="fnm">Espada de Madera</div><div class="fds">Arma inicial · daño bajo, barata de mantener</div><div class="fds">Costo: ' + wstr + '</div></div><div class="fbtns"><button class="green sm" ' + (canAfford(SWORD_WOOD_COST) ? "" : "disabled") + ' id="forge-sword-wood">Craftear</button></div></div>';
+  }
+  if (G.armasUnlocked && !G.swordOwned) {
     const cstr = Object.keys(SWORD_COST).map(k => resIc(k) + " " + SWORD_COST[k]).join(" · ");
     armas += '<div class="forge-row"><div class="fic"><img src="' + GF.spr("sword") + '" onerror="this.outerHTML=\'⚔️\'"></div><div class="finfo"><div class="fnm">Espada de Hierro</div><div class="fds">Para pelear en la Zona Negra · daño según skill Espada</div><div class="fds">Costo: ' + cstr + '</div></div><div class="fbtns"><button class="green sm" ' + (canAfford(SWORD_COST) ? "" : "disabled") + ' id="forge-sword">Craftear</button></div></div>';
   }
-  if (!G.bowOwned) {
+  if (G.armasUnlocked && !G.bowOwned) {
     const bstr = Object.keys(BOW_COST).map(k => resIc(k) + " " + BOW_COST[k]).join(" · ");
     armas += '<div class="forge-row"><div class="fic"><img src="' + GF.spr("bow") + '" onerror="this.outerHTML=\'🏹\'"></div><div class="finfo"><div class="fnm">Arco</div><div class="fds">Ataque a distancia · daño según skill Arco · consume flechas</div><div class="fds">Costo: ' + bstr + '</div></div><div class="fbtns"><button class="green sm" ' + (canAfford(BOW_COST) ? "" : "disabled") + ' id="forge-bow">Craftear</button></div></div>';
   }
-  const astr = Object.keys(ARROW_COST).map(k => resIc(k) + " " + ARROW_COST[k]).join(" · ");
-  armas += '<div class="forge-row"><div class="fic"><img src="' + GF.spr("res_flecha") + '" onerror="this.outerHTML=\'➳\'"></div><div class="finfo"><div class="fnm">Flechas ×10</div><div class="fds">Tenés ' + fmt(G.res.flecha || 0) + ' · Costo: ' + astr + '</div></div><div class="fbtns"><button class="green sm" ' + (canAfford(ARROW_COST) ? "" : "disabled") + ' id="forge-arrows">Craftear</button></div></div>';
+  const astr = G.armasUnlocked ? Object.keys(ARROW_COST).map(k => resIc(k) + " " + ARROW_COST[k]).join(" · ") : "";
+  if (G.armasUnlocked) armas += '<div class="forge-row"><div class="fic"><img src="' + GF.spr("res_flecha") + '" onerror="this.outerHTML=\'➳\'"></div><div class="finfo"><div class="fnm">Flechas ×10</div><div class="fds">Tenés ' + fmt(G.res.flecha || 0) + ' · Costo: ' + astr + '</div></div><div class="fbtns"><button class="green sm" ' + (canAfford(ARROW_COST) ? "" : "disabled") + ' id="forge-arrows">Craftear</button></div></div>';
   // cofre depósito: 10 espacios + 1% de materiales por cofre
   G.chests = G.chests || [];
   const chn = G.chests.length, chFull = chn >= CHEST_MAX;
@@ -405,7 +406,7 @@ function refreshForge() {
   craft += '<div class="forge-row"><div class="fic"><img src="' + GF.spr("cofre") + '" onerror="this.outerHTML=\'📦\'"></div><div class="finfo"><div class="fnm">Cofre depósito (' + chn + "/" + CHEST_MAX + ')</div><div class="fds">10 espacios de guardado en tu granja · +1% de materiales por cofre (tenés +' + chn + '%)</div><div class="fds">Costo: ' + chstr + '</div></div><div class="fbtns"><button class="green sm" ' + (chOk ? "" : "disabled") + ' id="forge-chest">' + (chFull ? "Máximo" : "Craftear") + "</button></div></div>";
 
   $("forge-craft").innerHTML = craft || '<div class="sub">Nada por craftear — ya tenés todo. </div>';
-  $("forge-armas").innerHTML = armas || '<div class="sub">Ya tenés todas las armas. Las flechas se siguen crafteando acá.</div>';
+  if (G.armasUnlocked) $("forge-armas").innerHTML = armas || '<div class="sub">Ya tenés todas las armas. Las flechas se siguen crafteando acá.</div>';
   $("forge-repair").innerHTML = repair;
   const card = $("ov-forge");
   card.querySelectorAll("[data-craft]").forEach(b => b.onclick = () => craftPick(b.dataset.craft));
@@ -415,6 +416,7 @@ function refreshForge() {
   card.querySelectorAll("[data-rtool]").forEach(b => b.onclick = () => repairTool(b.dataset.rtool));
   card.querySelectorAll("[data-ctool]").forEach(b => b.onclick = () => craftTool(b.dataset.ctool));
   const fs = $("forge-sword"); if (fs) fs.onclick = () => craftSword();
+  const fw = $("forge-sword-wood"); if (fw) fw.onclick = () => craftSwordWood();
   const fb = $("forge-bow"); if (fb) fb.onclick = () => craftBow();
   const fa = $("forge-arrows"); if (fa) fa.onclick = () => craftArrows();
   const fc = $("forge-chest"); if (fc) fc.onclick = () => craftChest();

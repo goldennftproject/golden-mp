@@ -44,6 +44,10 @@ GF.WORLD_OBJECTS.push(snap("dummy", {type:"dummy"}, 585, 350, T));              
 GF.WORLD_OBJECTS.push(snap("node_iron", {type:"ore", ore:"hierro"}, 930, 555, T));
 // HORNO DE PIEDRA (detalles viernes 1): acá se funden todos los lingotes/barras
 GF.WORLD_OBJECTS.push(snap("horno", {type:"horno"}, 320, 470, T*2));
+// viernes (2): 6 árboles y 6 piedras en total (1 activo + 5 por desbloquear) — al FINAL para preservar layouts
+GF.WORLD_OBJECTS.push(snap("tree", {type:"tree"}, 950, 205, T*2));
+GF.WORLD_OBJECTS.push(snap("node_stone", {type:"rock"}, 900, 470, T));
+GF.WORLD_OBJECTS.push(snap("node_stone", {type:"rock"}, 745, 515, T));
 
 // lotes 4x3, cada uno 1 celda, alineados a la grilla (col 2, fila 3)
 GF.PLOTS = [];
