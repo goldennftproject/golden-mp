@@ -16,7 +16,7 @@ class FarmScene extends Phaser.Scene {
     this.destMk = null; this.destTw = null;
     this.dummyObj = null; this.dummyTimer = null;
     this.editHl = null; this._nav = null; this.storeObj = null; this.forgeGlow = null;
-    this.bobber = null; this.bobberTween = null;
+    this.bobber = null; this.bobberTween = null; this.fishLine = null;
     this.hold = null; this.path = null; this.holdLast = null; this.holdPend = null;
     this.pathStuck = 0; this.lastDD = null; this.noProg = 0;
     this.unlockPend = null; this.leaving = false;
@@ -585,7 +585,22 @@ class FarmScene extends Phaser.Scene {
       this.bobberTween = this.tweens.add({ targets: b, y: y + 2.5, duration: 700, yoyo: true, repeat: -1, ease: "Sine.easeInOut" });
     }});
   }
-  clearBobber() { if (this.bobberTween) { this.bobberTween.stop(); this.bobberTween = null; } if (this.bobber) { this.bobber.destroy(); this.bobber = null; } }
+  clearBobber() { if (this.bobberTween) { this.bobberTween.stop(); this.bobberTween = null; } if (this.bobber) { this.bobber.destroy(); this.bobber = null; } this.clearFishLine(); }
+
+  // hilo de pesca: de la punta de la caña (pixel 98,8 del frame hero_fish_3, lienzo 119x86) hasta la boya, con panza
+  drawFishLine(sign) {
+    if (!this.bobber) return;
+    if (!this.fishLine) this.fishLine = this.add.graphics().setDepth(-987);
+    const k = this.actScale;
+    const tx = this.hero.x + sign * (98 - 119 / 2) * k, ty = this.hero.y - (86 - 8) * k;
+    const bx = this.bobber.x, by = this.bobber.y - 3;
+    const g = this.fishLine; g.clear();
+    g.lineStyle(1, 0xf2ead5, 0.75); g.beginPath(); g.moveTo(tx, ty);
+    const mx = (tx + bx) / 2, my = Math.max(ty, by) + 7;   // panza del hilo
+    for (let i = 1; i <= 12; i++) { const t = i / 12, u = 1 - t; g.lineTo(u * u * tx + 2 * u * t * mx + t * t * bx, u * u * ty + 2 * u * t * my + t * t * by); }
+    g.strokePath();
+  }
+  clearFishLine() { if (this.fishLine) { this.fishLine.destroy(); this.fishLine = null; } }
   cancelFishing() { this.clearBobber(); this.action = null; toast("Pesca interrumpida"); }
 
   finishAction() {
@@ -1154,8 +1169,17 @@ class FarmScene extends Phaser.Scene {
       const sign = this.facing === "west" ? -1 : 1;
       if (this.action) {
         hero.setScale(sign * this.actScale, this.actScale);
-        const key = "act_" + this.action.kind;
-        if (hero.anims.currentAnim?.key !== key) hero.play(key);
+        if (this.action.kind === "fish" && this.anims.exists("fish_cast")) {
+          // pesca en 3 fases con el tirón de caña: lanzar (revertido) → esperar (caña adelante) → picar (tirón)
+          const a = this.action, cur = hero.anims.currentAnim?.key;
+          if (!a.phase) { a.phase = "cast"; hero.play("fish_cast"); }
+          else if (a.phase === "cast" && (cur !== "fish_cast" || !hero.anims.isPlaying)) { a.phase = "wait"; hero.anims.stop(); hero.setTexture("hero_fish_3"); }
+          else if (a.phase === "wait" && a.t >= a.dur - 0.55) { a.phase = "yank"; this.clearFishLine(); hero.play("fish_yank"); }
+          if (a.phase === "wait") this.drawFishLine(sign); else if (a.phase !== "yank") this.clearFishLine();
+        } else {
+          const key = "act_" + this.action.kind;
+          if (hero.anims.currentAnim?.key !== key) hero.play(key);
+        }
       }
       hero.setDepth(hero.y);
       this.updatePrompt();

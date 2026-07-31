@@ -143,6 +143,10 @@ class BootScene extends Phaser.Scene {
       const ks = [0,1,2,3,4,5,6,7,8].map(i => "hero_" + a + "_" + i);
       if (has(ks)) this.anims.create({ key: "act_" + a, frames: ks.map(k => ({ key: k })), frameRate: 10, repeat: -1 });
     });
+    // pesca con el tirón (30/7): lanzar = tirón revertido (8→3), esperar = quieto en el 3, picar = tirón (3→8) una vez
+    { const cast = [8,7,6,5,4,3].map(i => "hero_fish_" + i), yank = [3,4,5,6,7,8].map(i => "hero_fish_" + i);
+      if (has(cast)) this.anims.create({ key: "fish_cast", frames: cast.map(k => ({ key: k })), frameRate: 12, repeat: 0 });
+      if (has(yank)) this.anims.create({ key: "fish_yank", frames: yank.map(k => ({ key: k })), frameRate: 12, repeat: 0 }); }
     // regar mantiene el arte anterior (7 frames)
     { const ks = [0,1,2,3,4,5,6].map(i => "act_water_" + i);
       if (has(ks)) this.anims.create({ key: "act_water", frames: ks.map(k => ({ key: k })), frameRate: 10, repeat: -1 }); }
