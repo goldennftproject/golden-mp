@@ -15,7 +15,7 @@ class FarmScene extends Phaser.Scene {
     this.hoverFx = null; this.nearFx = null;
     this.destMk = null; this.destTw = null;
     this.dummyObj = null; this.dummyTimer = null;
-    this.editHl = null; this._nav = null; this.storeObj = null;
+    this.editHl = null; this._nav = null; this.storeObj = null; this.forgeGlow = null;
     this.bobber = null; this.bobberTween = null;
     this.hold = null; this.path = null; this.holdLast = null; this.holdPend = null;
     this.pathStuck = 0; this.lastDD = null; this.noProg = 0;
@@ -777,6 +777,23 @@ class FarmScene extends Phaser.Scene {
     const lit = (G.forgeLitUntil || 0) > nowMs();
     const key = lit && this.textures.exists("store_lit") ? "store_lit" : "store";
     if (o.sprite.texture.key !== key && this.textures.exists(key)) this.setObjTex(o, key, o.rw || o.w);
+    // fuego "vivo" por código: resplandor rojizo que aparece y palpita sobre la boca del horno
+    const k = (o.rw || o.w) / 104;                       // escala del edificio (textura de 104px)
+    const fx = o.cx - 17 * k, fy = o.by - 25 * k;        // boca del horno dentro de la herrería
+    if (lit && !this.forgeGlow) {
+      // núcleo intenso en el horno + halo suave que baña el frente del edificio (blend aditivo)
+      const core = this.add.ellipse(fx, fy, 14 * k, 12 * k, 0xff7a2a, 0.5).setDepth(o.by + 1).setBlendMode(Phaser.BlendModes.ADD).setAlpha(0);
+      const halo = this.add.ellipse(fx, fy - 2 * k, 46 * k, 34 * k, 0xff4a18, 0.22).setDepth(o.by + 0.9).setBlendMode(Phaser.BlendModes.ADD).setAlpha(0);
+      this.forgeGlow = [core, halo];
+      // va apareciendo (fade in) y después palpita como brasa, cada uno a su ritmo
+      this.tweens.add({ targets: core, alpha: 0.55, duration: 700, onComplete: () =>
+        this.tweens.add({ targets: core, alpha: { from: 0.55, to: 0.3 }, scaleX: { from: 1, to: 0.86 }, scaleY: { from: 1, to: 0.86 }, yoyo: true, repeat: -1, duration: 460, ease: "Sine.easeInOut" }) });
+      this.tweens.add({ targets: halo, alpha: 0.3, duration: 900, onComplete: () =>
+        this.tweens.add({ targets: halo, alpha: { from: 0.3, to: 0.14 }, scaleX: { from: 1, to: 1.12 }, scaleY: { from: 1, to: 1.12 }, yoyo: true, repeat: -1, duration: 780, ease: "Sine.easeInOut" }) });
+    } else if (!lit && this.forgeGlow) {
+      this.forgeGlow.forEach(g => { this.tweens.killTweensOf(g); g.destroy(); });
+      this.forgeGlow = null;
+    }
   }
 
   // crea (o ubica por primera vez) un cofre depósito en la granja
