@@ -284,12 +284,19 @@
   button.shoptab,button.lbtab,button.curbtn,button.ltab,.close{box-shadow:none !important}
   /* pestaña activa fundida con la placa: baja 14px (el grosor del marco) y su interior conecta con el de la tabla */
   .shoptabs,.lbtabs{align-items:flex-end}
-  /* 31/7: la activa baja hasta ADENTRO del panel (28-12 de margen de fila = 16px: cruza los 14px de marco + 2 de interior)
-     y el clip-path corta sus bordes laterales justo donde empieza el marco -> unión en T, sin cruce de maderas.
-     Debajo de ese punto solo sigue el relleno central, que tapa el marco y funde pestaña con panel. */
-  .shoptab.active{margin-bottom:-28px;padding-bottom:32px}
-  .lbtab.active{margin-bottom:-28px;padding-bottom:31px}
-  .shoptab.active,.lbtab.active{clip-path:polygon(0 0,100% 0,100% calc(100% - 16px),calc(100% - 14px) calc(100% - 16px),calc(100% - 14px) 100%,14px 100%,14px calc(100% - 16px),0 calc(100% - 16px))}
+  /* 31/7 v2: esquina CERRADA, sin cruces de madera.
+     - La pestaña activa termina EXACTO en el borde superior del panel (margen -12 anula el
+       margen 12 de la fila): sus maderas laterales mueren justo donde nace la banda horizontal.
+     - El ::after abre la "boca": tapa la banda del marco solo ENTRE las dos maderas laterales
+       y funde el interior de la pestaña con el del panel.
+     - En las pestañas pegadas a la esquina del panel (primera a la izq., última a la der. en
+       filas flex:1), el ::before prolonga la madera lateral a través de la banda: un solo
+       borde vertical continuo que empalma con el marco lateral del panel. */
+  .shoptab.active{margin-bottom:-12px;padding-bottom:16px}
+  .lbtab.active{margin-bottom:-12px;padding-bottom:15px}
+  .shoptab.active::after,.lbtab.active::after{content:"";position:absolute;left:0;right:0;top:100%;height:19px;background:#b5793f url("assets/ui/badge_bg.png?a=1") repeat;background-size:132px auto;image-rendering:pixelated;pointer-events:none}
+  .shoptab.active:first-child::before,.lbtab.active:first-child::before{content:"";position:absolute;left:-14px;width:14px;top:100%;height:14px;background:url("assets/ui/badge_wood.png") no-repeat;background-size:100px auto;background-position:0 -27px;image-rendering:pixelated;pointer-events:none}
+  .shoptab.active:last-child::before{content:"";position:absolute;left:auto;right:-14px;width:14px;top:100%;height:14px;background:url("assets/ui/badge_wood.png") no-repeat;background-size:100px auto;background-position:-86px -27px;image-rendering:pixelated;pointer-events:none}
   .lbtab{margin-bottom:0;position:relative;z-index:2}
   .curbtn{padding:1px 7px}
   .shoptab.active,.lbtab.active,.curbtn.active,
