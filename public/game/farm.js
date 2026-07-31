@@ -779,7 +779,7 @@ class FarmScene extends Phaser.Scene {
     if (o.sprite.texture.key !== key && this.textures.exists(key)) this.setObjTex(o, key, o.rw || o.w);
     // fuego "vivo" por código: resplandor rojizo que aparece y palpita sobre la boca del horno
     const k = (o.rw || o.w) / 104;                       // escala del edificio (textura de 104px)
-    const fx = o.cx - 17 * k, fy = o.by - 25 * k;        // boca del horno dentro de la herrería
+    const fx = o.cx - 13 * k, fy = o.by - 25 * k;        // boca del horno dentro de la herrería (ajustado un pelín a la derecha)
     if (lit && !this.forgeGlow) {
       // núcleo intenso en el horno + halo suave que baña el frente del edificio (blend aditivo)
       const core = this.add.ellipse(fx, fy, 14 * k, 12 * k, 0xff7a2a, 0.5).setDepth(o.by + 1).setBlendMode(Phaser.BlendModes.ADD).setAlpha(0);
