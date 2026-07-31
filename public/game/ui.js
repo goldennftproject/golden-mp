@@ -454,8 +454,12 @@ function refreshSeedShop() {
       ? `<input id="sq-${k}" type="number" min="1" value="1"><button class="green sm" data-buy="${k}" ${aff ? "" : "disabled"}>Comprar · ${coinIc("plata")}${cd.seedCost} c/u</button>`
       : `<button class="ghost sm" disabled>Cultivo nv ${cd.lvl}</button>`;
     return `<div class="mkt-row"><span class="mimg">${itemIcon({ sprite: "seed_" + k, emoji: cd.emoji })}</span><div class="minfo"><div class="mnm">${cd.label} <span class="seedlv">nv ${cd.lvl}</span></div><div class="mds">Semilla · crece en ${cd.grow}s · tenés ${fmt(G.seeds[k] || 0)}</div></div>${controls}</div>`;
-  }).join("");
+  }).join("")
+  // carnada (detalles213): lombrices para pescar — fuera del cupo diario de semillas
+  + '<div class="shophead">Carnada</div>'
+  + `<div class="mkt-row"><span class="mimg">${itemIcon({ sprite: "res_lombriz", emoji: "" })}</span><div class="minfo"><div class="mnm">Lombriz</div><div class="mds">Carnada de pesca · 1 por lanzamiento · tenés ${fmt(G.res.lombriz || 0)}</div></div><input id="sq-lombriz" type="number" min="1" value="10"><button class="green sm" id="buy-lombriz" ${G.plata >= WORM_PRICE ? "" : "disabled"}>Comprar · ${coinIc("plata")}${WORM_PRICE} c/u</button></div>`;
   box.querySelectorAll("[data-buy]").forEach(b => b.onclick = () => { const inp = $("sq-" + b.dataset.buy); buySeed(b.dataset.buy, inp ? +inp.value : 1); });
+  const wb = $("buy-lombriz"); if (wb) wb.onclick = () => { const inp = $("sq-lombriz"); buyWorm(inp ? +inp.value : 1); };
 }
 
 /* ---- granja (nivel) ---- */
@@ -672,7 +676,8 @@ function initUI() {
     document.querySelectorAll(".ov.show").forEach(o => { if (o.id !== "ov-inv") o.classList.remove("show"); });
   });
   // clic derecho en el juego sin menú del navegador (siembra rápida, detalles 29/7)
-  const gameEl = $("game"); if (gameEl) gameEl.addEventListener("contextmenu", e => e.preventDefault());
+  // clic derecho: NUNCA el menú del navegador, en ninguna parte del juego (solo se permite en campos de texto)
+  document.addEventListener("contextmenu", e => { if (!e.target.closest("input,textarea")) e.preventDefault(); });
   // pestañas de la Herrería: Picos / Herramientas
   document.querySelectorAll(".forgetab").forEach(b => b.onclick = () => {
     document.querySelectorAll(".forgetab").forEach(x => x.classList.toggle("active", x === b));

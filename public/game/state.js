@@ -7,7 +7,7 @@ const G = {
   plata: 0, golden: 20, level: 1, prestige: 0, week: 1,
   hp: 100, hpMax: 100, swordOwned: false, bowOwned: false,   // combate (Fase D)
   gear: { casco: null, armadura: null, botas: null, escudo: null, arma: null, municion: false },   // equipo (armas se equipan en el panel de Equipo — detalles jueves)
-  res: { madera: 30, piedra: 30, bronce: 25, oro: 15, diamante: 5, netherita: 0, carne: 0, flecha: 0,
+  res: { madera: 30, piedra: 30, bronce: 25, oro: 15, diamante: 5, netherita: 0, carne: 0, flecha: 0, lombriz: 0,
     papa: 0, zanahoria: 0, cebolla: 0, calabacin: 0, repollo: 0, calabaza: 0, brocoli: 0 },
   seeds: { papa: 10, zanahoria: 5, cebolla: 2, calabacin: 1, repollo: 0, calabaza: 0, brocoli: 0 },  // starter pack
   selSeed: "papa",   // semilla elegida para plantar
@@ -44,12 +44,12 @@ function addBuff(type, label, mult, durSec) { G.buffs.push({ type, label, mult, 
 function hToMs(h) { return h * G.secPerGameHour * 1000 * cdMult(); }
 
 // --- recursos ---
-const RES_EMOJI = { madera:"", piedra:"", bronce:"", oro:"", diamante:"", netherita:"", carne:"", flecha:"",
+const RES_EMOJI = { madera:"", piedra:"", bronce:"", oro:"", diamante:"", netherita:"", carne:"", flecha:"", lombriz:"",
   papa:"", zanahoria:"", cebolla:"", calabacin:"", repollo:"", calabaza:"", brocoli:"" };
-const RES_LABEL = { madera:"Madera", piedra:"Piedra", bronce:"Bronce", oro:"Oro", diamante:"Diamante", netherita:"Netherita", carne:"Carne", flecha:"Flecha",
+const RES_LABEL = { madera:"Madera", piedra:"Piedra", bronce:"Bronce", oro:"Oro", diamante:"Diamante", netherita:"Netherita", carne:"Carne", flecha:"Flecha", lombriz:"Lombriz",
   papa:"Papa", zanahoria:"Zanahoria", cebolla:"Cebolla", calabacin:"Calabacín", repollo:"Repollo", calabaza:"Calabaza", brocoli:"Brócoli" };
 // íconos cozy de recursos (los cultivos usan crop_<key>)
-const RES_SPRITE = { madera:"res_madera", piedra:"res_piedra", bronce:"res_bronce", oro:"res_oro", diamante:"res_diamante", netherita:"res_netherita", carne:"res_carne", flecha:"res_flecha" };
+const RES_SPRITE = { madera:"res_madera", piedra:"res_piedra", bronce:"res_bronce", oro:"res_oro", diamante:"res_diamante", netherita:"res_netherita", carne:"res_carne", flecha:"res_flecha", lombriz:"res_lombriz" };
 function resSprite(k) { return CROP_DEF[k] ? "crop_" + k : (RES_SPRITE[k] || null); }
 
 // --- cultivos (semillas compradas en la Tienda; se desbloquean por nivel de Cultivo) ---
@@ -88,6 +88,18 @@ function buySeed(k, qty) {
   if (G.plata < cost) { toast("Te falta plata"); return; }
   G.plata -= cost; G.seeds[k] = (G.seeds[k] || 0) + qty; sb.count += qty;
   log(`Compraste ${qty} semilla(s) de ${cd.label} por ${cost} plata. (cupo: ${sb.count}/${SEED_DAILY_MAX})`); toast("+" + qty + " " + cd.label);
+  refreshHud(); if (typeof refreshSeedShop === "function") refreshSeedShop(); if (isOpen("ov-inv")) refreshInv();
+}
+
+// --- lombrices (detalles213): carnada de pesca, se compran en la Tienda ---
+const WORM_PRICE = 3;
+function buyWorm(qty) {
+  qty = Math.max(1, Math.floor(qty || 1));
+  const cost = WORM_PRICE * qty;
+  if (G.plata < cost) { toast("Te falta plata"); return; }
+  if (!roomForRes("lombriz", qty)) { bagFull("comprar lombrices"); return; }
+  G.plata -= cost; G.res.lombriz = (G.res.lombriz || 0) + qty;
+  log("Compraste " + qty + " lombriz(ces) por " + cost + " plata.", "good"); toast("+" + qty + " Lombriz");
   refreshHud(); if (typeof refreshSeedShop === "function") refreshSeedShop(); if (isOpen("ov-inv")) refreshInv();
 }
 
@@ -426,7 +438,7 @@ function tryAddRes(key, amt) {
 }
 
 // --- casillas: todo es ítem (recursos/semillas apilan 99; herramientas/picos 1 c/u con durabilidad) ---
-const ITEM_RES_ORDER = ["papa","zanahoria","cebolla","calabacin","repollo","calabaza","brocoli","madera","piedra","bronce","oro","diamante","netherita","carne","flecha"];
+const ITEM_RES_ORDER = ["papa","zanahoria","cebolla","calabacin","repollo","calabaza","brocoli","madera","piedra","bronce","oro","diamante","netherita","carne","flecha","lombriz"];
 function descKey(d) { return d ? d.kind + ":" + d.key : ""; }
 function canonicalStacks() {
   const list = [];
@@ -501,7 +513,8 @@ const FISH_COST = 5;
 function goFishing() {
   if (toolDur("rod") <= 0) { toast("Caña rota — reparala en la Herrería"); return; }
   if (G.golden < FISH_COST) { toast("Necesitás 5 para pescar"); return; }
-  G.golden -= FISH_COST; useTool("rod");
+  if ((G.res.lombriz || 0) < 1) { toast("Necesitás lombrices — compralas en la Tienda"); return; }
+  G.golden -= FISH_COST; G.res.lombriz -= 1; useTool("rod");   // cada lanzamiento gasta 1 lombriz (detalles213)
   if (toolDur("rod") <= 0) { log("¡La caña se rompió! Reparala en la Herrería.", "bad"); toast("¡Caña rota!"); }
   const r = Math.random();
   let rar; if (r < 0.60) rar = "comun"; else if (r < 0.85) rar = "raro"; else if (r < 0.97) rar = "epico"; else rar = "legendario";

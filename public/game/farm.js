@@ -474,7 +474,7 @@ class FarmScene extends Phaser.Scene {
       const dleft = (G.dummyUsedAt || 0) + DUMMY_CD_MS - nowMs();
       return dleft > 0 ? "El dummy descansa — vuelve en " + fmtDur(dleft) : "Entrenar espada (+" + DUMMY_XP + " XP)";
     }
-    if (o.type === "fish") return "Pescar (" + FISH_COST + " · tenés " + G.golden + ")";
+    if (o.type === "fish") return "Pescar (" + FISH_COST + " esencia + 1 lombriz · tenés " + fmt(G.res.lombriz || 0) + ")";
     return "";
   }
 
@@ -534,7 +534,7 @@ class FarmScene extends Phaser.Scene {
       }
       toast("Todavía está creciendo"); return;
     }
-    if (o.type === "fish") { if (toolDur("rod") <= 0) { toast("Caña rota — reparala en la Herrería"); return; } if (G.golden < FISH_COST) { toast("Necesitás 5 para pescar"); return; } if (!roomForFish()) { bagFull("pescar"); return; } return this.startAction("fish", o); }
+    if (o.type === "fish") { if (toolDur("rod") <= 0) { toast("Caña rota — reparala en la Herrería"); return; } if (G.golden < FISH_COST) { toast("Necesitás 5 para pescar"); return; } if ((G.res.lombriz || 0) < 1) { toast("Necesitás lombrices — compralas en la Tienda"); return; } if (!roomForFish()) { bagFull("pescar"); return; } return this.startAction("fish", o); }
     if (nowMs() < o.readyAt) { toast(this.promptText(o)); return; }
     if (o.type === "ore") {
       const pk = equippedPick();   // el pico sale solo de la bolsa (el equipado define el tier)
@@ -683,6 +683,7 @@ class FarmScene extends Phaser.Scene {
     if (this.action) return;
     if (toolDur("rod") <= 0) { toast("Caña rota — reparala en la Herrería"); return; }
     if (G.golden < FISH_COST) { toast("Necesitás " + FISH_COST + " para pescar (tenés " + G.golden + ")"); return; }
+    if ((G.res.lombriz || 0) < 1) { toast("Necesitás lombrices — compralas en la Tienda"); return; }
     if (!roomForFish()) { bagFull("pescar"); return; }
     const p = GF.POND, T = GF.TILE;
     const bx = clickX != null ? clickX : (p.col + p.cols / 2) * T, by2 = clickY != null ? clickY : (p.row + p.rows / 2) * T;
@@ -1070,7 +1071,7 @@ class FarmScene extends Phaser.Scene {
         // cuarta.docx: el timer del recurso solo aparece con el cursor encima (al clickear ya sale el aviso)
         const p = this.input.activePointer;
         const over = this.timerOn(o);
-        if (over) o.timer.setText(Math.ceil((o.readyAt - t) / 1000) + "s").setPosition(o.cx, this.topY(o)).setVisible(true);
+        if (over) o.timer.setText(Math.ceil((o.readyAt - t) / 1000) + "s").setPosition(o.cx, this.topY(o, (o.type === "ore" || o.type === "rock") ? -6 : 7)).setVisible(true);   // detalles213: el timer del mineral pegado al nodo (antes flotaba alto y se mezclaba)
         else o.timer.setVisible(false);
       }
     }
@@ -1267,7 +1268,7 @@ class FarmScene extends Phaser.Scene {
     if (GF.uiOpen || this.action || GF.editMode) { el.classList.remove("show"); return; }
     const o = this.nearestInteract();
     if (o) { el.textContent = this.promptText(o) + "  ·  [E]"; el.classList.add("show"); }
-    else if (this.nearPond()) { el.textContent = "Pescar (" + FISH_COST + " · tenés " + G.golden + ") · [E]"; el.classList.add("show"); }
+    else if (this.nearPond()) { el.textContent = "Pescar (" + FISH_COST + " esencia + 1 lombriz · tenés " + fmt(G.res.lombriz || 0) + ") · [E]"; el.classList.add("show"); }
     else el.classList.remove("show");
   }
 }

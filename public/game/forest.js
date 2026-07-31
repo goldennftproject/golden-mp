@@ -180,18 +180,16 @@ class ForestScene extends Phaser.Scene {
     this.makeGlow(m);
     this.updateTargetFx();
   }
-  // capa aditiva calcada del monstruo: lo aclara sin taparlo (mismo recurso que updateHoverFx en la granja)
+  // recuadro ROJO alrededor del mob fijado (detalles213: reemplaza al brillo aditivo)
   makeGlow(m) {
     if (this.tgGlowTw) { this.tgGlowTw.stop(); this.tgGlowTw = null; }
     if (this.tgGlow) { this.tgGlow.destroy(); this.tgGlow = null; }
     if (!m || m.dead || !m.spr) return;
-    const s = m.spr;
-    let g;
-    if (typeof s.text === "string") g = this.add.text(s.x, s.y, s.text, { fontSize: s.style.fontSize }).setOrigin(s.originX, s.originY);
-    else { g = this.add.image(s.x, s.y, s.texture.key, s.frame.name).setOrigin(s.originX, s.originY); g.setScale(s.scaleX, s.scaleY); }
-    g.setBlendMode(Phaser.BlendModes.ADD).setAlpha(0.4).setDepth(s.depth + 0.5);
+    const b = m.spr.getBounds();
+    const g = this.add.rectangle(b.centerX, b.centerY, b.width + 6, b.height + 6)
+      .setStrokeStyle(2, 0xe23a2a, 0.95).setFillStyle(0, 0).setDepth(99990);
     this.tgGlow = g;
-    this.tgGlowTw = this.tweens.add({ targets: g, alpha: { from: 0.46, to: 0.18 }, yoyo: true, repeat: -1, duration: 620 });
+    this.tgGlowTw = this.tweens.add({ targets: g, alpha: { from: 1, to: 0.55 }, yoyo: true, repeat: -1, duration: 520 });
   }
   clearTarget() {
     this.target = null;
@@ -204,8 +202,8 @@ class ForestScene extends Phaser.Scene {
     if (!m || m.dead) { if (this.tgGlow || this.tgTxt) this.clearTarget(); return; }
     const s = m.spr, b = s.getBounds();
     if (this.tgGlow) {
-      this.tgGlow.setPosition(s.x, s.y).setScale(s.scaleX, s.scaleY).setDepth(s.depth + 0.5);
-      if (this.tgGlow.setFrame && s.frame && s.texture) { try { this.tgGlow.setTexture(s.texture.key, s.frame.name); } catch (e) {} }   // sigue el frame animado
+      // el recuadro rojo acompaña al mob (posición y tamaño del sprite animado)
+      this.tgGlow.setPosition(b.centerX, b.centerY).setSize(b.width + 6, b.height + 6);
     }
     if (this.tgTxt) this.tgTxt.setPosition(m.cx, b.top - 7).setText(m.def.label + "  " + Math.max(0, Math.ceil(m.hp)) + "/" + m.def.hp).setVisible(true);
   }
