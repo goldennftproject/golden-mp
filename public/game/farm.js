@@ -513,7 +513,15 @@ class FarmScene extends Phaser.Scene {
       }
       // la azada/semilla se usan solas desde la bolsa (la hotbar sigue sirviendo para ELEGIR semilla)
       if (o.state === "dry") {
-        const ck = G.selSeed, cd = CROP_DEF[ck];
+        let ck = G.selSeed;
+        // si la semilla elegida no tiene stock, detectar sola la de la hotbar o la primera disponible
+        if (!CROP_DEF[ck] || (G.seeds[ck] || 0) <= 0) {
+          const hb = G.hotbar && G.hotbar[G.hotSel];
+          if (hb && hb.kind === "seed" && cropUnlocked(hb.key) && (G.seeds[hb.key] || 0) > 0) ck = hb.key;
+          else { const alt = CROP_ORDER.find(k => cropUnlocked(k) && (G.seeds[k] || 0) > 0); if (alt) ck = alt; }
+          if (ck !== G.selSeed && CROP_DEF[ck]) { G.selSeed = ck; toast("🌱 Plantando: " + CROP_DEF[ck].label); if (typeof refreshHotbar === "function") refreshHotbar(); }
+        }
+        const cd = CROP_DEF[ck];
         if (!cd) { toast("Elegí una semilla en la bolsa (I)"); return; }
         if (!cropUnlocked(ck)) { toast("Necesitás Cultivo nivel " + cd.lvl + " para " + cd.label); return; }
         if ((G.seeds[ck] || 0) <= 0) { toast("Sin semillas de " + cd.label + " — comprá en la Tienda"); return; }
