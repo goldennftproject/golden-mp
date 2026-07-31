@@ -188,14 +188,16 @@ function dndDrop(src, tz, ti) {
   }
   if (isOpen("ov-inv")) refreshInv(); else refreshHotbar();
 }
-// cartel de confirmación (se usa antes de tirar a la papelera)
-function askConfirm(msg, onYes) {
+// cartel de confirmación (papelera, desbloqueo de parcelas, etc.)
+// opts: { yes, no, yesClass, noClass } — por defecto el estilo de la papelera
+function askConfirm(msg, onYes, opts) {
+  opts = opts || {};
   const ov = $("ov-confirm"); if (!ov) { onYes(); return; }
   const m = $("cf-msg"); if (m) m.textContent = msg;
   ov.classList.add("show");
   const yes = $("cf-yes"), no = $("cf-no");
-  if (yes) yes.onclick = () => { ov.classList.remove("show"); onYes(); };
-  if (no) no.onclick = () => ov.classList.remove("show");
+  if (yes) { yes.textContent = opts.yes || "Tirar"; yes.className = opts.yesClass || "red"; yes.onclick = () => { ov.classList.remove("show"); onYes(); }; }
+  if (no) { no.textContent = opts.no || "Cancelar"; no.className = (opts.noClass || "ghost") + " sm"; no.onclick = () => ov.classList.remove("show"); }
 }
 // qué se tiraría de una pila (cantidad + nombre) — null si no se puede tirar
 function trashInfo(d) {
@@ -353,17 +355,18 @@ function refreshForge() {
       : '<button class="ghost sm" disabled>100%</button>';
     repair += '<div class="forge-row"><div class="fic"><img src="' + GF.spr(td.sprite) + '" onerror="this.outerHTML=\'' + td.emoji + '\'"></div><div class="finfo"><div class="fnm">' + td.label + '</div><div class="durbar"><i style="width:' + pct + '%"></i></div><div class="fds">' + dur + "/" + td.max + " · reparar: " + rstr + '</div></div><div class="fbtns">' + btn + "</div></div>";
   });
-  // armas por craftear + flechas → Craftear
+  // armas y flechas → pestaña ARMAS (detalles viernes: no se mezclan con las herramientas)
+  let armas = "";
   if (!G.swordOwned) {
     const cstr = Object.keys(SWORD_COST).map(k => resIc(k) + " " + SWORD_COST[k]).join(" · ");
-    craft += '<div class="forge-row"><div class="fic"><img src="' + GF.spr("sword") + '" onerror="this.outerHTML=\'⚔️\'"></div><div class="finfo"><div class="fnm">Espada de Hierro</div><div class="fds">Para pelear en la Zona Negra · daño según skill Espada</div><div class="fds">Costo: ' + cstr + '</div></div><div class="fbtns"><button class="green sm" ' + (canAfford(SWORD_COST) ? "" : "disabled") + ' id="forge-sword">Craftear</button></div></div>';
+    armas += '<div class="forge-row"><div class="fic"><img src="' + GF.spr("sword") + '" onerror="this.outerHTML=\'⚔️\'"></div><div class="finfo"><div class="fnm">Espada de Hierro</div><div class="fds">Para pelear en la Zona Negra · daño según skill Espada</div><div class="fds">Costo: ' + cstr + '</div></div><div class="fbtns"><button class="green sm" ' + (canAfford(SWORD_COST) ? "" : "disabled") + ' id="forge-sword">Craftear</button></div></div>';
   }
   if (!G.bowOwned) {
     const bstr = Object.keys(BOW_COST).map(k => resIc(k) + " " + BOW_COST[k]).join(" · ");
-    craft += '<div class="forge-row"><div class="fic"><img src="' + GF.spr("bow") + '" onerror="this.outerHTML=\'🏹\'"></div><div class="finfo"><div class="fnm">Arco</div><div class="fds">Ataque a distancia · daño según skill Arco · consume flechas</div><div class="fds">Costo: ' + bstr + '</div></div><div class="fbtns"><button class="green sm" ' + (canAfford(BOW_COST) ? "" : "disabled") + ' id="forge-bow">Craftear</button></div></div>';
+    armas += '<div class="forge-row"><div class="fic"><img src="' + GF.spr("bow") + '" onerror="this.outerHTML=\'🏹\'"></div><div class="finfo"><div class="fnm">Arco</div><div class="fds">Ataque a distancia · daño según skill Arco · consume flechas</div><div class="fds">Costo: ' + bstr + '</div></div><div class="fbtns"><button class="green sm" ' + (canAfford(BOW_COST) ? "" : "disabled") + ' id="forge-bow">Craftear</button></div></div>';
   }
   const astr = Object.keys(ARROW_COST).map(k => resIc(k) + " " + ARROW_COST[k]).join(" · ");
-  craft += '<div class="forge-row"><div class="fic"><img src="' + GF.spr("res_flecha") + '" onerror="this.outerHTML=\'➳\'"></div><div class="finfo"><div class="fnm">Flechas ×10</div><div class="fds">Tenés ' + fmt(G.res.flecha || 0) + ' · Costo: ' + astr + '</div></div><div class="fbtns"><button class="green sm" ' + (canAfford(ARROW_COST) ? "" : "disabled") + ' id="forge-arrows">Craftear</button></div></div>';
+  armas += '<div class="forge-row"><div class="fic"><img src="' + GF.spr("res_flecha") + '" onerror="this.outerHTML=\'➳\'"></div><div class="finfo"><div class="fnm">Flechas ×10</div><div class="fds">Tenés ' + fmt(G.res.flecha || 0) + ' · Costo: ' + astr + '</div></div><div class="fbtns"><button class="green sm" ' + (canAfford(ARROW_COST) ? "" : "disabled") + ' id="forge-arrows">Craftear</button></div></div>';
   // cofre depósito: 10 espacios + 1% de materiales por cofre
   G.chests = G.chests || [];
   const chn = G.chests.length, chFull = chn >= CHEST_MAX;
@@ -371,13 +374,21 @@ function refreshForge() {
   const chOk = !chFull && canAfford(CHEST_COST) && G.plata >= CHEST_PLATA;
   craft += '<div class="forge-row"><div class="fic"><img src="' + GF.spr("cofre") + '" onerror="this.outerHTML=\'📦\'"></div><div class="finfo"><div class="fnm">Cofre depósito (' + chn + "/" + CHEST_MAX + ')</div><div class="fds">10 espacios de guardado en tu granja · +1% de materiales por cofre (tenés +' + chn + '%)</div><div class="fds">Costo: ' + chstr + '</div></div><div class="fbtns"><button class="green sm" ' + (chOk ? "" : "disabled") + ' id="forge-chest">' + (chFull ? "Máximo" : "Craftear") + "</button></div></div>";
 
-  // materiales intermedios (detalles213): tablones y barras
+  // materiales intermedios (detalles213): tablones y barras — con enfriamiento (detalles viernes)
   craft += '<div class="shophead">Materiales</div>';
+  let anyCooling = false;
   MAT_ORDER.forEach(id => {
     const md = MAT_DEF[id], cs = Object.keys(md.cost).map(k => resIc(k) + " " + md.cost[k]).join(" · ");
-    craft += '<div class="forge-row"><div class="fic"><img src="' + GF.spr(md.sprite) + '"></div><div class="finfo"><div class="fnm">' + md.label + '</div><div class="fds">Tenés ' + fmt(G.res[id] || 0) + ' · Costo: ' + cs + '</div></div><div class="fbtns"><button class="green sm" ' + (canAfford(md.cost) ? "" : "disabled") + ' data-mat="' + id + '">Craftear</button></div></div>';
+    const left = matCdLeft(id); if (left > 0) anyCooling = true;
+    const btn = left > 0
+      ? '<button class="green sm" disabled>' + Math.ceil(left / 1000) + 's</button>'
+      : '<button class="green sm" ' + (canAfford(md.cost) ? "" : "disabled") + ' data-mat="' + id + '">Craftear</button>';
+    craft += '<div class="forge-row"><div class="fic"><img src="' + GF.spr(md.sprite) + '"></div><div class="finfo"><div class="fnm">' + md.label + '</div><div class="fds">Tenés ' + fmt(G.res[id] || 0) + ' · Costo: ' + cs + '</div></div><div class="fbtns">' + btn + '</div></div>';
   });
+  // mientras haya un material enfriándose, refrescar el contador cada segundo
+  if (anyCooling && !window._forgeCdTick) { window._forgeCdTick = setTimeout(() => { window._forgeCdTick = null; if (isOpen("ov-forge")) refreshForge(); }, 1000); }
   $("forge-craft").innerHTML = craft || '<div class="sub">Nada por craftear — ya tenés todo. </div>';
+  $("forge-armas").innerHTML = armas || '<div class="sub">Ya tenés todas las armas. Las flechas se siguen crafteando acá.</div>';
   $("forge-repair").innerHTML = repair;
   const card = $("ov-forge");
   card.querySelectorAll("[data-craft]").forEach(b => b.onclick = () => craftPick(b.dataset.craft));
@@ -690,6 +701,7 @@ function initUI() {
     document.querySelectorAll(".forgetab").forEach(x => x.classList.toggle("active", x === b));
     const s = b.dataset.forge;
     $("forge-pane-craft").style.display = s === "craft" ? "" : "none";
+    const pa = $("forge-pane-armas"); if (pa) pa.style.display = s === "armas" ? "" : "none";
     $("forge-pane-repair").style.display = s === "repair" ? "" : "none";
   });
   // modo edición: cierra las ventanas y deja solo dos botoncitos flotantes sobre la hotbar

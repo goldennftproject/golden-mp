@@ -103,11 +103,16 @@ const MAT_DEF = {
   barra_hierro: { label:"Barra de hierro",  sprite:"res_barra_hierro", cost:{ hierro:3 } },
   barra_oro:    { label:"Barra de oro",     sprite:"res_barra_oro",    cost:{ oro:3 } },
 };
+const MAT_CD_MS = 6000;   // detalles viernes: craftear barras tiene enfriamiento
+function matCdLeft(id) { G.matCd = G.matCd || {}; return Math.max(0, (G.matCd[id] || 0) - nowMs()); }
 function craftMat(id) {
   const md = MAT_DEF[id]; if (!md) return;
+  const left = matCdLeft(id);
+  if (left > 0) { toast(md.label + " en enfriamiento (" + Math.ceil(left / 1000) + "s)"); return; }
   if (!canAfford(md.cost)) { toast("Te faltan materiales"); return; }
   if (!roomForRes(id, 1)) { bagFull("craftear " + md.label); return; }
   payCost(md.cost); G.res[id] = (G.res[id] || 0) + 1;
+  G.matCd[id] = nowMs() + MAT_CD_MS;
   addXp("crafting", 3); log("Crafteaste 1 " + md.label + ".", "good"); toast("+1 " + md.label);
   forgeWork(); refreshForge(); if (isOpen("ov-inv")) refreshInv(); refreshHud();
 }
@@ -254,10 +259,10 @@ const RECIPE_DEF = {
   pescado_asado: { label:"Pescado asado", emoji:"🐟", sprite:"dish_pescado_asado", fish:{comun:1}, res:{madera:1},
     heal:30, buff:{type:"yield",label:"Cosecha +10%",mult:1.10,dur:90}, xp:8,
     desc:"Cura 30 · Cosecha +10% (90s)" },
-  estofado: { label:"Estofado de carne", emoji:"🍲", sprite:"dish_estofado", res:{carne:2, papa:1},
+  estofado: { label:"Estofado de carne", emoji:"🍲", sprite:"dish_estofado", res:{carne:2, papa:1, madera:1},
     heal:60, buff:{type:"cd",label:"Enfriamientos -15%",mult:0.85,dur:90}, xp:12,
     desc:"Cura 60 · Enfriamientos -15% (90s)" },
-  banquete: { label:"Banquete del granjero", emoji:"🍗", sprite:"dish_banquete", fish:{raro:1}, res:{carne:2, calabaza:1},
+  banquete: { label:"Banquete del granjero", emoji:"🍗", sprite:"dish_banquete", fish:{raro:1}, res:{carne:2, calabaza:1, madera:1},
     heal:9999, buff:{type:"yield",label:"Cosecha +20%",mult:1.20,dur:180}, xp:25,
     desc:"Cura TODA la vida · Cosecha +20% (3 min)" },
 };
@@ -534,9 +539,8 @@ function sellItem(res) {
 const FISH_COST = 5;
 function goFishing() {
   if (toolDur("rod") <= 0) { toast("Caña rota — reparala en la Herrería"); return; }
-  if (G.golden < FISH_COST) { toast("Necesitás 5 para pescar"); return; }
   if ((G.res.lombriz || 0) < 1) { toast("Necesitás lombrices — compralas en la Tienda"); return; }
-  G.golden -= FISH_COST; G.res.lombriz -= 1; useTool("rod");   // cada lanzamiento gasta 1 lombriz (detalles213)
+  G.res.lombriz -= 1; useTool("rod");   // detalles viernes: pescar cuesta SOLO 1 lombriz (sin esencia)
   if (toolDur("rod") <= 0) { log("¡La caña se rompió! Reparala en la Herrería.", "bad"); toast("¡Caña rota!"); }
   const r = Math.random();
   let rar; if (r < 0.60) rar = "comun"; else if (r < 0.85) rar = "raro"; else if (r < 0.97) rar = "epico"; else rar = "legendario";

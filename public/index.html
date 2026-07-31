@@ -227,6 +227,7 @@
   /* ESTÁNDAR 30/7: TODOS los botones (no pestañas) iguales al de Modo edición: madera + filo verde + letra blanca */
   button{border:none;background:url("assets/ui/btn_wood.png") center/100% 100% no-repeat;color:#f7ecd2;text-shadow:0 1px 0 rgba(0,0,0,.5);image-rendering:pixelated;box-shadow:inset 0 0 0 2px rgba(120,205,90,.55)}
   button.green,button.gold,button.red,button.ghost{background:url("assets/ui/btn_wood.png") center/100% 100% no-repeat;border:none;box-shadow:inset 0 0 0 2px rgba(120,205,90,.55)}
+  button.red{box-shadow:inset 0 0 0 2px rgba(225,95,70,.7)}   /* cancelar/peligro: filo rojo (detalles viernes) */
   button.active{filter:brightness(1.22)}
   button:disabled{filter:grayscale(.75) brightness(.72);cursor:default}
   button:hover:not(:disabled){filter:brightness(1.12)}
@@ -288,7 +289,7 @@
   .shoptabs{margin:2px 0 0}
   .lbtabs{margin:2px 0 0}
   /* placa interior (tabla 2): marco badge_wood en 9-slice + fondo continuo del interior de la placa */
-  .shoppane,#forge-pane-craft,#forge-pane-repair,.lblist{border:14px solid transparent;border-image:url("assets/ui/badge_wood.png") 26 round;background:#b5793f url("assets/ui/badge_bg.png?a=1") repeat;background-size:132px auto;background-clip:padding-box;image-rendering:pixelated;padding:6px;border-radius:0}
+  .shoppane,#forge-pane-craft,#forge-pane-armas,#forge-pane-repair,.lblist{border:14px solid transparent;border-image:url("assets/ui/badge_wood.png") 26 round;background:#b5793f url("assets/ui/badge_bg.png?a=1") repeat;background-size:132px auto;background-clip:padding-box;image-rendering:pixelated;padding:6px;border-radius:0}
   .shoppane .mkt-list,.forge-list{max-height:46vh}
   .mkt-cur{color:#fff;font-weight:700}
   /* inventario −20% (detalles jueves) */
@@ -440,11 +441,16 @@
     <h3>Herrería</h3>
     <div class="shoptabs">
       <button class="shoptab forgetab active" data-forge="craft">Craftear</button>
+      <button class="shoptab forgetab" data-forge="armas">Armas</button>
       <button class="shoptab forgetab" data-forge="repair">Reparar</button>
     </div>
     <div id="forge-pane-craft">
-      <div class="sub">Picos, armas y flechas por craftear. Cada pico mina hasta su nivel.</div>
+      <div class="sub">Picos, materiales y cofres por craftear. Cada pico mina hasta su nivel.</div>
       <div class="forge-list" id="forge-craft"></div>
+    </div>
+    <div id="forge-pane-armas" style="display:none">
+      <div class="sub">Espada, arco y flechas. El daño escala con la skill de cada arma.</div>
+      <div class="forge-list" id="forge-armas"></div>
     </div>
     <div id="forge-pane-repair" style="display:none">
       <div class="sub">Durabilidad de tus picos y herramientas. Reparar cuesta parte del material.</div>

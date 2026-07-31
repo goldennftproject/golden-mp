@@ -1,7 +1,7 @@
 /* FarmScene: la granja privada. Fase 1 (mundo) + Fase 3 (interacciones). */
 const CD = { tree: 14, rock: 20 };           // cooldown en segundos (+ largo para ver la transición restos→dañada→entera)
 const WITHER_MS = 120000;                    // 2 min listo sin cosechar → se marchita (valor de testeo)
-const ACT_DUR = { chop: 2.0, mine: 2.4, plant: 0.6, harvest: 0.6, water: 0.6, fish: 1.5 };   // picar/talar más largo: se ve la transición entero→dañado→restos
+const ACT_DUR = { chop: 2.7, mine: 2.4, plant: 0.6, harvest: 0.6, water: 0.6, fish: 1.5 };   // talar = 3 golpes (3 vueltas de la animación, detalles viernes); picar largo: entero→dañado→restos
 function oreCdSec(tier) { return 20 + tier * 6; }   // 20/26/32/38/44s — se nota el estado dañado a la mitad
 
 class FarmScene extends Phaser.Scene {
@@ -474,7 +474,7 @@ class FarmScene extends Phaser.Scene {
       const dleft = (G.dummyUsedAt || 0) + DUMMY_CD_MS - nowMs();
       return dleft > 0 ? "El dummy descansa — vuelve en " + fmtDur(dleft) : "Entrenar espada (+" + DUMMY_XP + " XP)";
     }
-    if (o.type === "fish") return "Pescar (" + FISH_COST + " esencia + 1 lombriz · tenés " + fmt(G.res.lombriz || 0) + ")";
+    if (o.type === "fish") return "Pescar (1 lombriz · tenés " + fmt(G.res.lombriz || 0) + ")";
     return "";
   }
 
@@ -490,19 +490,16 @@ class FarmScene extends Phaser.Scene {
     if (o.type === "dummy") return this.trainDummy(o);
     if (o.type === "boar") { o.sprite.destroy(); const i = this.threats.indexOf(o); if (i >= 0) this.threats.splice(i, 1); log("Espantaste al jabalí.", "good"); toast("¡Espantado!"); return; }   // XP de espada llega con el combate (necesita espada equipada)
     if (o.type === "plot") {
-      if (o.state === "locked") {   // desbloquear con plata (doble clic para confirmar)
+      if (o.state === "locked") {   // desbloquear con plata: recuadro de confirmación (detalles viernes)
         const cost = plotUnlockCost();
-        if (this.unlockPend === o && nowMs() < this.unlockPendUntil) {
-          if (G.plata < cost) { toast("Te falta plata (" + cost + " )"); return; }
-          G.plata -= cost; G.plotsOwned = (G.plotsOwned || 6) + 1; o.state = "dry"; this.unlockPend = null;
+        askConfirm("¿Gastar " + cost + " de plata para desbloquear esta parcela?", () => {
+          if (G.plata < cost) { toast("Te falta plata (" + cost + ")"); return; }
+          G.plata -= cost; G.plotsOwned = (G.plotsOwned || 6) + 1; o.state = "dry";
           if (o.ground && this.textures.exists("plot")) { o.ground.setTexture("plot").setDisplaySize(GF.TILE, GF.TILE).clearTint(); o.ground.setAlpha(1); }
           addXp("farming", 5); this.syncPlots();
           log("Desbloqueaste una parcela por " + cost + " plata.", "good"); toast("¡Parcela desbloqueada!");
           refreshHud(); if (typeof saveFarm === "function") saveFarm(true);
-        } else {
-          this.unlockPend = o; this.unlockPendUntil = nowMs() + 6000;
-          toast("Desbloquear esta parcela: " + cost + " — interactuá de nuevo para confirmar");
-        }
+        }, { yes: "Aceptar", yesClass: "green", no: "Cancelar", noClass: "red" });
         return;
       }
       if (o.state === "withered") {   // limpiar el cultivo perdido: la parcela vuelve a estar libre
@@ -534,7 +531,7 @@ class FarmScene extends Phaser.Scene {
       }
       toast("Todavía está creciendo"); return;
     }
-    if (o.type === "fish") { if (toolDur("rod") <= 0) { toast("Caña rota — reparala en la Herrería"); return; } if (G.golden < FISH_COST) { toast("Necesitás 5 para pescar"); return; } if ((G.res.lombriz || 0) < 1) { toast("Necesitás lombrices — compralas en la Tienda"); return; } if (!roomForFish()) { bagFull("pescar"); return; } return this.startAction("fish", o); }
+    if (o.type === "fish") { if (toolDur("rod") <= 0) { toast("Caña rota — reparala en la Herrería"); return; } if ((G.res.lombriz || 0) < 1) { toast("Necesitás lombrices — compralas en la Tienda"); return; } if (!roomForFish()) { bagFull("pescar"); return; } return this.startAction("fish", o); }
     if (nowMs() < o.readyAt) { toast(this.promptText(o)); return; }
     if (o.type === "ore") {
       const pk = equippedPick();   // el pico sale solo de la bolsa (el equipado define el tier)
@@ -585,7 +582,7 @@ class FarmScene extends Phaser.Scene {
       this.bobberTween = this.tweens.add({ targets: b, y: y + 2.5, duration: 700, yoyo: true, repeat: -1, ease: "Sine.easeInOut" });
     }});
   }
-  clearBobber() { if (this.bobberTween) { this.bobberTween.stop(); this.bobberTween = null; } if (this.bobber) { this.bobber.destroy(); this.bobber = null; } this.clearFishLine(); }
+  clearBobber() { if (this.bobberTween) { this.bobberTween.stop(); this.bobberTween = null; } if (this.bobber) { this.bobber.destroy(); this.bobber = null; } this.clearFishLine(); this.clearFishBar(); }
 
   // hilo de pesca: de la punta de la caña (pixel 98,8 del frame hero_fish_3, lienzo 119x86) hasta la boya, con panza
   drawFishLine(sign) {
@@ -601,6 +598,20 @@ class FarmScene extends Phaser.Scene {
     g.strokePath();
   }
   clearFishLine() { if (this.fishLine) { this.fishLine.destroy(); this.fishLine = null; } }
+
+  // barra de enfriamiento de la pesca (detalles viernes): progreso sobre el granjero mientras pesca
+  drawFishBar(a) {
+    if (!this.fishBar) {
+      const bg = this.add.rectangle(0, 0, 40, 7, 0x20301a, 0.85).setStrokeStyle(1, 0x8fc46a, 0.9).setDepth(99995);
+      const fg = this.add.rectangle(0, 0, 36, 3, 0x8fc46a, 1).setOrigin(0, 0.5).setDepth(99996);
+      this.fishBar = { bg, fg };
+    }
+    const x = this.hero.x, y = this.hero.y - GF.SIZE.hero - 12;
+    this.fishBar.bg.setPosition(x, y);
+    this.fishBar.fg.setPosition(x - 18, y);
+    this.fishBar.fg.width = Math.max(1, 36 * Math.min(1, a.t / a.dur));
+  }
+  clearFishBar() { if (this.fishBar) { this.fishBar.bg.destroy(); this.fishBar.fg.destroy(); this.fishBar = null; } }
   cancelFishing() { this.clearBobber(); this.action = null; toast("Pesca interrumpida"); }
 
   finishAction() {
@@ -610,6 +621,7 @@ class FarmScene extends Phaser.Scene {
       const gr = Math.max(1, Math.round(3 * yieldMult() * chestBonus()));
       if (tryAddRes("madera", gr)) {
         useTool("axe"); addXp("crafting", 4); o.readyAt = nowMs() + CD.tree * 1000 * cdMult();
+        o.halfAt = nowMs() + (o.readyAt - nowMs()) / 2;   // detalles viernes: a mitad del enfriamiento asoma el árbol a medio crecer
         // tocón nuevo con base de tierra y hojas caídas (encuadre del árbol, va a tamaño completo); respaldo: tocón viejo chico
         if (this.textures.exists("tree_stump_leaves")) this.setObjTex(o, "tree_stump_leaves", (o.rw || o.w) * 0.85);   // −15%: el tocón venía más grueso que el tronco del árbol
         else this.setObjTex(o, "tree_stump", (o.rw || o.w) * 0.42);
@@ -682,7 +694,6 @@ class FarmScene extends Phaser.Scene {
   tryFish(clickX, clickY) {
     if (this.action) return;
     if (toolDur("rod") <= 0) { toast("Caña rota — reparala en la Herrería"); return; }
-    if (G.golden < FISH_COST) { toast("Necesitás " + FISH_COST + " para pescar (tenés " + G.golden + ")"); return; }
     if ((G.res.lombriz || 0) < 1) { toast("Necesitás lombrices — compralas en la Tienda"); return; }
     if (!roomForFish()) { bagFull("pescar"); return; }
     const p = GF.POND, T = GF.TILE;
@@ -1063,10 +1074,14 @@ class FarmScene extends Phaser.Scene {
     for (const o of this.objs) {
       // regeneración directa: de los restos vuelve al nodo entero (sin pasar por el dañado)
       if (o.readyAt && t >= o.readyAt) {
-        o.readyAt = 0;
+        o.readyAt = 0; o.halfAt = 0;
         if (o.type === "tree" || o.type === "rock") this.setObjTex(o, o.baseKey, o.rw || o.w);
         else if (o.type === "ore") { this.setObjTex(o, o.baseKey, o.rw || o.w); o.sprite.setAlpha(1); }
         if (o.timer) o.timer.setVisible(false);
+      } else if (o.readyAt && o.type === "tree" && o.halfAt && t >= o.halfAt) {
+        // mitad del enfriamiento: del tocón brota el árbol a medio crecer (detalles viernes)
+        o.halfAt = 0;
+        if (this.textures.exists("sprout")) this.setObjTex(o, "sprout", (o.rw || o.w) * 0.6);
       } else if (o.readyAt && o.timer) {
         // cuarta.docx: el timer del recurso solo aparece con el cursor encima (al clickear ya sale el aviso)
         const p = this.input.activePointer;
@@ -1177,6 +1192,7 @@ class FarmScene extends Phaser.Scene {
           else if (a.phase === "cast" && (cur !== "fish_cast" || !hero.anims.isPlaying)) { a.phase = "wait"; hero.anims.stop(); hero.setTexture("hero_fish_3"); }
           else if (a.phase === "wait" && a.t >= a.dur - 0.55) { a.phase = "yank"; this.clearFishLine(); hero.play("fish_yank"); }
           if (a.phase === "wait") this.drawFishLine(sign); else if (a.phase !== "yank") this.clearFishLine();
+          this.drawFishBar(a);   // barra de enfriamiento de la pesca
         } else {
           const key = "act_" + this.action.kind;
           if (hero.anims.currentAnim?.key !== key) hero.play(key);
@@ -1268,7 +1284,7 @@ class FarmScene extends Phaser.Scene {
     if (GF.uiOpen || this.action || GF.editMode) { el.classList.remove("show"); return; }
     const o = this.nearestInteract();
     if (o) { el.textContent = this.promptText(o) + "  ·  [E]"; el.classList.add("show"); }
-    else if (this.nearPond()) { el.textContent = "Pescar (" + FISH_COST + " esencia + 1 lombriz · tenés " + fmt(G.res.lombriz || 0) + ") · [E]"; el.classList.add("show"); }
+    else if (this.nearPond()) { el.textContent = "Pescar (1 lombriz · tenés " + fmt(G.res.lombriz || 0) + ") · [E]"; el.classList.add("show"); }
     else el.classList.remove("show");
   }
 }

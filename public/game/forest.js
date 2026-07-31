@@ -57,7 +57,7 @@ class ForestScene extends Phaser.Scene {
     // igual que en la granja: al reiniciar la escena hay que soltar lo cacheado
     this.tgGlow = null; this.tgGlowTw = null; this.tgTxt = null; this.destMk = null;
     this._nav = null; this.holdLast = null; this.holdPend = null; this.pathStuck = 0; this.leaving = false;
-    this.target = null; this.nextAuto = 0; this.path = null; this.hold = null;
+    this.target = null; this.nextAuto = 0; this.path = null; this.hold = null; this.autoOn = false;
     // el botín tirado sobrevive mientras dure la sesión: si volvés al Bosque, sigue ahí
     GF.forestDrops = GF.forestDrops || [];
     GF.forestDrops.forEach(g => { g.spr = this.dropSprite(g); });
@@ -69,10 +69,10 @@ class ForestScene extends Phaser.Scene {
       const wx = pt.worldX, wy = pt.worldY;
       let hit = null, bd = 1e9;
       for (const m of this.monsters) { if (m.dead) continue; const b = m.spr.getBounds(); if (Phaser.Geom.Rectangle.Contains(b, wx, wy)) { const d = Math.hypot(m.cx - wx, m.by - wy); if (d < bd) { bd = d; hit = m; } } }
-      if (pt.rightButtonDown()) { if (hit) this.setTarget(hit); return; }   // atacar sin moverse
+      if (pt.rightButtonDown()) { if (hit) { this.setTarget(hit); this.autoOn = true; } return; }   // clic DERECHO: fijar y AUTO-atacar (detalles viernes)
       if (this.action) return;
       this.hold = { sx: pt.x, sy: pt.y, active: false };
-      if (hit) { this.setTarget(hit); this.goTo(hit.cx, hit.by + 14); }
+      if (hit) { this.setTarget(hit); this.autoOn = false; this.goTo(hit.cx, hit.by + 14); }   // clic izquierdo: acercarse y fijar (sin auto-ataque)
       else { this.clearTarget(); this.goTo(wx, wy); this.tryPickup(wx, wy, 20); }
     });
     // clic sostenido: el granjero sigue el cursor (igual que en la granja)
@@ -192,7 +192,7 @@ class ForestScene extends Phaser.Scene {
     this.tgGlowTw = this.tweens.add({ targets: g, alpha: { from: 1, to: 0.55 }, yoyo: true, repeat: -1, duration: 520 });
   }
   clearTarget() {
-    this.target = null;
+    this.target = null; this.autoOn = false;
     if (this.tgGlowTw) { this.tgGlowTw.stop(); this.tgGlowTw = null; }
     if (this.tgGlow) { this.tgGlow.destroy(); this.tgGlow = null; }
     if (this.tgTxt) this.tgTxt.setVisible(false);
@@ -267,6 +267,7 @@ class ForestScene extends Phaser.Scene {
   }
   // auto-ataque: un golpe cada 2s mientras el objetivo esté vivo y a distancia (detalles 338)
   autoAttack(t) {
+    if (!this.autoOn) return;   // detalles viernes: el auto-ataque es SOLO con clic derecho
     const m = this.target;
     if (!m || m.dead || this.action || t < this.nextAuto) return;
     const d = Math.hypot(m.cx - this.hero.x, m.by - this.hero.y);
@@ -401,7 +402,7 @@ class ForestScene extends Phaser.Scene {
         if (a.kind === "shoot") { if (a.m && !a.m.dead) this.shootArrow(a.m); }
         else if (a.m && !a.m.dead && Math.hypot(a.m.cx - hero.x, a.m.by - hero.y) <= MELEE_RANGE + 8) this.hitMonster(a.m);
       }
-      hero.setDepth(hero.y); this.updateMonsters(dt, t); this.updatePrompt(); return;
+      // detalles viernes: el ataque NO bloquea el movimiento — se puede caminar mientras (sigue abajo)
     }
 
     // movimiento
@@ -451,17 +452,19 @@ class ForestScene extends Phaser.Scene {
       this.scene.start("farm"); return;
     }
 
-    // perseguir el objetivo clickeado: con arco dispara de lejos, si no ataca al llegar
-    if (this.target && !this.target.dead) {
+    // perseguir el objetivo clickeado: con arco dispara de lejos, si no ataca al llegar (solo si no hay golpe en curso)
+    if (!this.action && this.target && !this.target.dead && !this.autoOn) {
       const d = Math.hypot(this.target.cx - hero.x, this.target.by - hero.y);
       if (d < 52) { this.moveTarget = null; const m = this.target; this.target = null; this.facing = (m.cx < hero.x) ? "west" : "east"; this.action = { kind: "attack", m, t: 0, dur: 0.45 }; }
       else if (d < 190 && canShoot()) { this.moveTarget = null; const m = this.target; this.target = null; this.facing = (m.cx < hero.x) ? "west" : "east"; this.action = { kind: "shoot", m, t: 0, dur: 0.35 }; }
     }
 
     const sign = this.facing === "west" ? -1 : 1;
-    hero.setScale(sign * this.idleScale, this.idleScale);
-    if (moving) { if (hero.anims.currentAnim?.key !== "walk") hero.play("walk"); }
-    else { if (hero.anims.currentAnim?.key !== "idle") hero.play("idle"); }
+    if (!this.action) {   // durante un golpe manda la animación de ataque (se combina con el desplazamiento)
+      hero.setScale(sign * this.idleScale, this.idleScale);
+      if (moving) { if (hero.anims.currentAnim?.key !== "walk") hero.play("walk"); }
+      else { if (hero.anims.currentAnim?.key !== "idle") hero.play("idle"); }
+    }
     hero.setDepth(hero.y);
 
     this.updateMonsters(dt, t);
