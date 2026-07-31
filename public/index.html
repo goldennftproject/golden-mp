@@ -284,8 +284,12 @@
   button.shoptab,button.lbtab,button.curbtn,button.ltab,.close{box-shadow:none !important}
   /* pestaña activa fundida con la placa: baja 14px (el grosor del marco) y su interior conecta con el de la tabla */
   .shoptabs,.lbtabs{align-items:flex-end}
-  .shoptab.active{margin-bottom:-18px;padding-bottom:22px}
-  .lbtab.active{margin-bottom:-18px;padding-bottom:21px}
+  /* 31/7: la activa baja hasta ADENTRO del panel (28-12 de margen de fila = 16px: cruza los 14px de marco + 2 de interior)
+     y el clip-path corta sus bordes laterales justo donde empieza el marco -> unión en T, sin cruce de maderas.
+     Debajo de ese punto solo sigue el relleno central, que tapa el marco y funde pestaña con panel. */
+  .shoptab.active{margin-bottom:-28px;padding-bottom:32px}
+  .lbtab.active{margin-bottom:-28px;padding-bottom:31px}
+  .shoptab.active,.lbtab.active{clip-path:polygon(0 0,100% 0,100% calc(100% - 16px),calc(100% - 14px) calc(100% - 16px),calc(100% - 14px) 100%,14px 100%,14px calc(100% - 16px),0 calc(100% - 16px))}
   .lbtab{margin-bottom:0;position:relative;z-index:2}
   .curbtn{padding:1px 7px}
   .shoptab.active,.lbtab.active,.curbtn.active,
