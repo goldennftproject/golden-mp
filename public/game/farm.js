@@ -611,7 +611,7 @@ class FarmScene extends Phaser.Scene {
       if (tryAddRes("madera", gr)) {
         useTool("axe"); addXp("crafting", 4); o.readyAt = nowMs() + CD.tree * 1000 * cdMult();
         // tocón nuevo con base de tierra y hojas caídas (encuadre del árbol, va a tamaño completo); respaldo: tocón viejo chico
-        if (this.textures.exists("tree_stump_leaves")) this.setObjTex(o, "tree_stump_leaves", o.rw || o.w);
+        if (this.textures.exists("tree_stump_leaves")) this.setObjTex(o, "tree_stump_leaves", (o.rw || o.w) * 0.85);   // −15%: el tocón venía más grueso que el tronco del árbol
         else this.setObjTex(o, "tree_stump", (o.rw || o.w) * 0.42);
         log(`+${gr} Madera. ${toolDur("axe")}/${TOOL_DEF.axe.max}`, "good"); toast("+" + gr + " "); refreshHud();
         if (toolDur("axe") <= 0) { log("¡El hacha se rompió! Reparala en la Herrería.", "bad"); toast("¡Hacha rota!"); }

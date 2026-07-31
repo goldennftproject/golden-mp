@@ -1,6 +1,6 @@
 /* Golden Farm · estado del juego + economía (sin DOM ni canvas) */
 window.GF = window.GF || {};
-GF.spr = (k) => "assets/farm/" + k + ".png?a=5";   // ?a=N rompe el caché de los íconos cuando cambia el arte (a=5: porciones de mineral + skills)
+GF.spr = (k) => "assets/farm/" + k + ".png?a=6";   // ?a=N rompe el caché de los íconos cuando cambia el arte (a=6: set de hierro + tablones + bloques PixelLab)
 
 // --- estado principal (con algunos recursos de arranque para probar los menús) ---
 const G = {
@@ -48,7 +48,7 @@ function hToMs(h) { return h * G.secPerGameHour * 1000 * cdMult(); }
 const RES_EMOJI = { madera:"", piedra:"", bronce:"", oro:"", diamante:"", netherita:"", carne:"", flecha:"", lombriz:"",
   papa:"", zanahoria:"", cebolla:"", calabacin:"", repollo:"", calabaza:"", brocoli:"" };
 const RES_LABEL = { madera:"Madera", piedra:"Piedra", bronce:"Bronce", hierro:"Hierro", oro:"Oro", diamante:"Diamante", netherita:"Netherita", carne:"Carne", flecha:"Flecha", lombriz:"Lombriz",
-  tablon:"Tablón de madera", barra_piedra:"Barra de piedra", barra_bronce:"Barra de bronce", barra_hierro:"Barra de hierro", barra_oro:"Barra de oro",
+  tablon:"Tablón de madera", barra_piedra:"Bloques de piedra", barra_bronce:"Barra de bronce", barra_hierro:"Barra de hierro", barra_oro:"Barra de oro",
   papa:"Papa", zanahoria:"Zanahoria", cebolla:"Cebolla", calabacin:"Calabacín", repollo:"Repollo", calabaza:"Calabaza", brocoli:"Brócoli" };
 // íconos cozy de recursos (los cultivos usan crop_<key>)
 const RES_SPRITE = { madera:"res_madera", piedra:"res_piedra", bronce:"res_bronce", hierro:"res_hierro", oro:"res_oro", diamante:"res_diamante", netherita:"res_netherita", carne:"res_carne", flecha:"res_flecha", lombriz:"res_lombriz",
@@ -98,7 +98,7 @@ function buySeed(k, qty) {
 const MAT_ORDER = ["tablon","barra_piedra","barra_bronce","barra_hierro","barra_oro"];
 const MAT_DEF = {
   tablon:       { label:"Tablón de madera", sprite:"res_tablon",       cost:{ madera:3 } },
-  barra_piedra: { label:"Barra de piedra",  sprite:"res_barra_piedra", cost:{ piedra:3 } },
+  barra_piedra: { label:"Bloques de piedra",  sprite:"res_barra_piedra", cost:{ piedra:3 } },
   barra_bronce: { label:"Barra de bronce",  sprite:"res_barra_bronce", cost:{ bronce:3 } },
   barra_hierro: { label:"Barra de hierro",  sprite:"res_barra_hierro", cost:{ hierro:3 } },
   barra_oro:    { label:"Barra de oro",     sprite:"res_barra_oro",    cost:{ oro:3 } },
