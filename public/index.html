@@ -292,8 +292,11 @@
      - En las pestañas pegadas a la esquina del panel (primera a la izq., última a la der. en
        filas flex:1), el ::before prolonga la madera lateral a través de la banda: un solo
        borde vertical continuo que empalma con el marco lateral del panel. */
-  .shoptab.active{margin-bottom:-12px;padding-bottom:16px}
-  .lbtab.active{margin-bottom:-12px;padding-bottom:15px}
+  /* OJO: .shoptabs/.lbtabs tienen margen inferior 0 (linea ~305): la fila apoya DIRECTO sobre el panel.
+     La activa NO baja nada: su borde dorado vertical muere exactamente donde corre el dorado horizontal
+     de la banda (esquina cerrada). La fusion interior la hacen ::after y ::before desde el borde. */
+  .shoptab.active{margin-bottom:0;padding-bottom:4px}
+  .lbtab.active{margin-bottom:0;padding-bottom:4px}
   .shoptab.active::after,.lbtab.active::after{content:"";position:absolute;left:0;right:0;top:100%;height:19px;background:#b5793f url("assets/ui/badge_bg.png?a=1") repeat;background-size:132px auto;image-rendering:pixelated;pointer-events:none}
   .shoptab.active:first-child::before,.lbtab.active:first-child::before{content:"";position:absolute;left:-14px;width:14px;top:100%;height:14px;background:url("assets/ui/badge_wood.png") no-repeat;background-size:100px auto;background-position:0 -27px;image-rendering:pixelated;pointer-events:none}
   .shoptab.active:last-child::before{content:"";position:absolute;left:auto;right:-14px;width:14px;top:100%;height:14px;background:url("assets/ui/badge_wood.png") no-repeat;background-size:100px auto;background-position:-86px -27px;image-rendering:pixelated;pointer-events:none}
