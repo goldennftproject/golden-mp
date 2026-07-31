@@ -233,7 +233,8 @@
   button.active{filter:brightness(1.22)}
   button:disabled{filter:grayscale(.75) brightness(.72);cursor:default}
   button:hover:not(:disabled){filter:brightness(1.12)}
-  .pill{background:url("assets/ui/badge_wood.png") center/100% 100% no-repeat;border:none;border-radius:0;padding:7px 15px;image-rendering:pixelated;color:#4a2e10;text-shadow:0 1px 0 rgba(255,240,200,.35)}
+  /* pills del HUD en 9-SLICE: el marco no se estira aunque la pill sea ancha o angosta */
+  .pill{background:none;border:8px solid transparent;border-image:url("assets/ui/badge_wood.png") 26 fill round;border-radius:0;padding:0 7px;image-rendering:pixelated;color:#4a2e10;text-shadow:0 1px 0 rgba(255,240,200,.35)}
   .pill .k{color:#2e1c06;font-weight:800;font-size:12.5px}   /* etiquetas en negro y negrita, como los números */
   .pill b{color:#2e1c06}
   /* botón Menú y panel del menú con la misma madera */

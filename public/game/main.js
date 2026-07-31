@@ -3,8 +3,9 @@ function startGame() {
   new Phaser.Game({
     type: Phaser.AUTO,
     parent: "game",
-    pixelArt: true,
-    render: { antialias: false, roundPixels: true },
+    // 31/7: suavizado activado — casi todos los sprites se muestran REDUCIDOS y con nearest quedaban serruchados
+    pixelArt: false,
+    render: { antialias: true, roundPixels: true },
     backgroundColor: "#243318",
     loader: { maxParallelDownloads: 6, maxRetries: 4 },   // suave con el server free de Render (evita REFUSED_STREAM)
     scale: {
