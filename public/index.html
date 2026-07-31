@@ -297,9 +297,14 @@
      de la banda (esquina cerrada). La fusion interior la hacen ::after y ::before desde el borde. */
   .shoptab.active{margin-bottom:0;padding-bottom:4px}
   .lbtab.active{margin-bottom:0;padding-bottom:4px}
-  .shoptab.active::after,.lbtab.active::after{content:"";position:absolute;left:0;right:0;top:100%;height:19px;background:#b5793f url("assets/ui/badge_bg.png?a=1") repeat;background-size:132px auto;image-rendering:pixelated;pointer-events:none}
-  .shoptab.active:first-child::before,.lbtab.active:first-child::before{content:"";position:absolute;left:-14px;width:14px;top:100%;height:14px;background:url("assets/ui/badge_wood.png") no-repeat;background-size:100px auto;background-position:0 -27px;image-rendering:pixelated;pointer-events:none}
-  .shoptab.active:last-child::before{content:"";position:absolute;left:auto;right:-14px;width:14px;top:100%;height:14px;background:url("assets/ui/badge_wood.png") no-repeat;background-size:100px auto;background-position:-86px -27px;image-rendering:pixelated;pointer-events:none}
+  /* 31/7 v3: ESQUINEROS. El ::after cubre todo el ancho de la pestaña sobre la banda del marco:
+     relleno al centro (boca abierta) y en cada extremo una pieza de esquina (tabjoin) donde el
+     dorado vertical DOBLA y sale como dorado horizontal de la banda — nada pasa de largo.
+     En las pestañas pegadas a la esquina del panel, la madera sigue derecha (tabweld) y
+     empalma con el marco lateral. */
+  .shoptab.active::after,.lbtab.active::after{content:"";position:absolute;left:-14px;right:-14px;top:100%;height:19px;background:url("assets/ui/tabjoin_l.png") left top/14px 19px no-repeat,url("assets/ui/tabjoin_r.png") right top/14px 19px no-repeat,url("assets/ui/badge_bg.png?a=1") left top/132px auto repeat;image-rendering:pixelated;pointer-events:none}
+  .shoptab.active:first-child::after,.lbtab.active:first-child::after{background:url("assets/ui/tabweld_l.png") left top/14px 19px no-repeat,url("assets/ui/tabjoin_r.png") right top/14px 19px no-repeat,url("assets/ui/badge_bg.png?a=1") left top/132px auto repeat}
+  .shoptab.active:last-child::after{background:url("assets/ui/tabjoin_l.png") left top/14px 19px no-repeat,url("assets/ui/tabweld_r.png") right top/14px 19px no-repeat,url("assets/ui/badge_bg.png?a=1") left top/132px auto repeat}
   .lbtab{margin-bottom:0;position:relative;z-index:2}
   .curbtn{padding:1px 7px}
   .shoptab.active,.lbtab.active,.curbtn.active,
