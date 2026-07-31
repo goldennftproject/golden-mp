@@ -271,6 +271,12 @@
   /* pestañas estilo barra superior (badge_wood en 9-slice): Comprar/Vender, Craftear/Reparar, monedas, leaderboard */
   .shoptab,.lbtab,.curbtn{border:9px solid transparent;border-image:url("assets/ui/badge_wood.png") 26 round;background:#b5793f url("assets/ui/badge_bg.png?a=1") repeat;background-size:132px auto;background-clip:padding-box;border-radius:0;image-rendering:pixelated;color:#fff !important;font-weight:800;text-shadow:0 1px 0 rgba(0,0,0,.55);filter:brightness(.62) saturate(.8)}
   .shoptab{padding:3px 8px 5px;font-size:13px;border-bottom-width:0;margin-bottom:-6px;position:relative;z-index:2}
+  /* las pestañas NO son botones: fuera el filo verde del estándar (también en la X de cerrar) */
+  button.shoptab,button.lbtab,button.curbtn,button.ltab,.close{box-shadow:none !important}
+  /* pestaña activa fundida con la placa: su fondo baja hasta el interior y tapa el marco justo debajo */
+  .shoptabs,.lbtabs{align-items:flex-end}
+  .shoptab.active{margin-bottom:-14px;padding-bottom:13px}
+  .lbtab.active{margin-bottom:-14px;padding-bottom:12px}
   .lbtab{padding:2px 8px 4px;border-bottom-width:0;margin-bottom:-6px;position:relative;z-index:2}
   .curbtn{padding:1px 7px}
   .shoptab.active,.lbtab.active,.curbtn.active,
