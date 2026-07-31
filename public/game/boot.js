@@ -50,6 +50,7 @@ class BootScene extends Phaser.Scene {
     // v7: restos correctos sobre su parche de tierra (los v6 venían de una copia vieja)
     ["node_stone_mined","node_bronze_mined","node_gold_mined","node_diamond_mined","node_netherite_mined"]
       .forEach(k => L.push([k, P + k + ".png?v=7"]));
+    L.push(["node_iron_mined", P + "node_iron_mined.png"]);   // hierro (detalles213): derivado del bronce recoloreado
     L.push(["dummy", P + "dummy.png"]);   // muñeco de práctica de espada
     L.push(["dummy_broken", P + "dummy_broken.png"]);   // dummy desgastado con cortes: se muestra durante el cooldown
     L.push(["cofre", P + "cofre.png"]);   // cofre depósito
@@ -67,6 +68,7 @@ class BootScene extends Phaser.Scene {
     // v3: nodos plantados en la tierra + estados dañados (intermedio del cooldown)
     ["node_stone","node_bronze","node_gold","node_diamond","node_netherite"]
       .forEach(k => { L.push([k, P + k + ".png?v=3"]); L.push([k + "_half", P + k + "_half.png"]); });
+    L.push(["node_iron", P + "node_iron.png"]); L.push(["node_iron_half", P + "node_iron_half.png"]);
     // versionados: el arte cambió y el caché de 1 día serviría el viejo
     L.push(["plot", P + "plot.png?v=4"]);   // tierra suelta que combina con los montículos
     L.push(["plot_blocked", P + "plot_blocked.png?v=3"]);   // sin trabajar: ramas, piedras y yuyos

@@ -7,7 +7,8 @@ const G = {
   plata: 0, golden: 20, level: 1, prestige: 0, week: 1,
   hp: 100, hpMax: 100, swordOwned: false, bowOwned: false,   // combate (Fase D)
   gear: { casco: null, armadura: null, botas: null, escudo: null, arma: null, municion: false },   // equipo (armas se equipan en el panel de Equipo — detalles jueves)
-  res: { madera: 30, piedra: 30, bronce: 25, oro: 15, diamante: 5, netherita: 0, carne: 0, flecha: 0, lombriz: 0,
+  res: { madera: 30, piedra: 30, bronce: 25, hierro: 0, oro: 15, diamante: 5, netherita: 0, carne: 0, flecha: 0, lombriz: 0,
+    tablon: 0, barra_piedra: 0, barra_bronce: 0, barra_hierro: 0, barra_oro: 0,
     papa: 0, zanahoria: 0, cebolla: 0, calabacin: 0, repollo: 0, calabaza: 0, brocoli: 0 },
   seeds: { papa: 10, zanahoria: 5, cebolla: 2, calabacin: 1, repollo: 0, calabaza: 0, brocoli: 0 },  // starter pack
   selSeed: "papa",   // semilla elegida para plantar
@@ -46,10 +47,12 @@ function hToMs(h) { return h * G.secPerGameHour * 1000 * cdMult(); }
 // --- recursos ---
 const RES_EMOJI = { madera:"", piedra:"", bronce:"", oro:"", diamante:"", netherita:"", carne:"", flecha:"", lombriz:"",
   papa:"", zanahoria:"", cebolla:"", calabacin:"", repollo:"", calabaza:"", brocoli:"" };
-const RES_LABEL = { madera:"Madera", piedra:"Piedra", bronce:"Bronce", oro:"Oro", diamante:"Diamante", netherita:"Netherita", carne:"Carne", flecha:"Flecha", lombriz:"Lombriz",
+const RES_LABEL = { madera:"Madera", piedra:"Piedra", bronce:"Bronce", hierro:"Hierro", oro:"Oro", diamante:"Diamante", netherita:"Netherita", carne:"Carne", flecha:"Flecha", lombriz:"Lombriz",
+  tablon:"Tablón de madera", barra_piedra:"Barra de piedra", barra_bronce:"Barra de bronce", barra_hierro:"Barra de hierro", barra_oro:"Barra de oro",
   papa:"Papa", zanahoria:"Zanahoria", cebolla:"Cebolla", calabacin:"Calabacín", repollo:"Repollo", calabaza:"Calabaza", brocoli:"Brócoli" };
 // íconos cozy de recursos (los cultivos usan crop_<key>)
-const RES_SPRITE = { madera:"res_madera", piedra:"res_piedra", bronce:"res_bronce", oro:"res_oro", diamante:"res_diamante", netherita:"res_netherita", carne:"res_carne", flecha:"res_flecha", lombriz:"res_lombriz" };
+const RES_SPRITE = { madera:"res_madera", piedra:"res_piedra", bronce:"res_bronce", hierro:"res_hierro", oro:"res_oro", diamante:"res_diamante", netherita:"res_netherita", carne:"res_carne", flecha:"res_flecha", lombriz:"res_lombriz",
+  tablon:"res_tablon", barra_piedra:"res_barra_piedra", barra_bronce:"res_barra_bronce", barra_hierro:"res_barra_hierro", barra_oro:"res_barra_oro" };
 function resSprite(k) { return CROP_DEF[k] ? "crop_" + k : (RES_SPRITE[k] || null); }
 
 // --- cultivos (semillas compradas en la Tienda; se desbloquean por nivel de Cultivo) ---
@@ -89,6 +92,24 @@ function buySeed(k, qty) {
   G.plata -= cost; G.seeds[k] = (G.seeds[k] || 0) + qty; sb.count += qty;
   log(`Compraste ${qty} semilla(s) de ${cd.label} por ${cost} plata. (cupo: ${sb.count}/${SEED_DAILY_MAX})`); toast("+" + qty + " " + cd.label);
   refreshHud(); if (typeof refreshSeedShop === "function") refreshSeedShop(); if (isOpen("ov-inv")) refreshInv();
+}
+
+// --- materiales intermedios (detalles213: "tablones / stone bar / iron bar / iron gold" mapeados a nuestros recursos) ---
+const MAT_ORDER = ["tablon","barra_piedra","barra_bronce","barra_hierro","barra_oro"];
+const MAT_DEF = {
+  tablon:       { label:"Tablón de madera", sprite:"res_tablon",       cost:{ madera:3 } },
+  barra_piedra: { label:"Barra de piedra",  sprite:"res_barra_piedra", cost:{ piedra:3 } },
+  barra_bronce: { label:"Barra de bronce",  sprite:"res_barra_bronce", cost:{ bronce:3 } },
+  barra_hierro: { label:"Barra de hierro",  sprite:"res_barra_hierro", cost:{ hierro:3 } },
+  barra_oro:    { label:"Barra de oro",     sprite:"res_barra_oro",    cost:{ oro:3 } },
+};
+function craftMat(id) {
+  const md = MAT_DEF[id]; if (!md) return;
+  if (!canAfford(md.cost)) { toast("Te faltan materiales"); return; }
+  if (!roomForRes(id, 1)) { bagFull("craftear " + md.label); return; }
+  payCost(md.cost); G.res[id] = (G.res[id] || 0) + 1;
+  addXp("crafting", 3); log("Crafteaste 1 " + md.label + ".", "good"); toast("+1 " + md.label);
+  forgeWork(); refreshForge(); if (isOpen("ov-inv")) refreshInv(); refreshHud();
 }
 
 // --- lombrices (detalles213): carnada de pesca, se compran en la Tienda ---
@@ -131,6 +152,7 @@ const ORE_ORDER = ["piedra","bronce","oro","diamante","netherita"];
 const ORE_DEF = {
   piedra:   { tier:0, label:"Piedra",    emoji:"🪨", sprite:"node_stone",     cd:60,  yield:2, price:6 },
   bronce:   { tier:1, label:"Bronce",    emoji:"🟫", sprite:"node_bronze",    cd:75,  yield:2, price:12 },
+  hierro:   { tier:1, label:"Hierro",    emoji:"⛓️", sprite:"node_iron",      cd:80,  yield:2, price:15 },   // detalles213: se mina con el pico de bronce
   oro:      { tier:2, label:"Oro",       emoji:"🟡", sprite:"node_gold",      cd:90,  yield:1, price:30 },
   diamante: { tier:3, label:"Diamante",  emoji:"💎", sprite:"node_diamond",   cd:110, yield:1, price:80 },
   netherita:{ tier:4, label:"Netherita", emoji:"🔶", sprite:"node_netherite", cd:150, yield:1, price:200 },
@@ -438,7 +460,7 @@ function tryAddRes(key, amt) {
 }
 
 // --- casillas: todo es ítem (recursos/semillas apilan 99; herramientas/picos 1 c/u con durabilidad) ---
-const ITEM_RES_ORDER = ["papa","zanahoria","cebolla","calabacin","repollo","calabaza","brocoli","madera","piedra","bronce","oro","diamante","netherita","carne","flecha","lombriz"];
+const ITEM_RES_ORDER = ["papa","zanahoria","cebolla","calabacin","repollo","calabaza","brocoli","madera","piedra","bronce","hierro","oro","diamante","netherita","carne","flecha","lombriz","tablon","barra_piedra","barra_bronce","barra_hierro","barra_oro"];
 function descKey(d) { return d ? d.kind + ":" + d.key : ""; }
 function canonicalStacks() {
   const list = [];
@@ -493,9 +515,9 @@ function ensureHotbarDefaults() {
 }
 
 // --- mercado ---
-const PRICE = { madera:3, piedra:6, bronce:12, oro:30, diamante:80, netherita:200, carne:8, flecha:2,
+const PRICE = { madera:3, piedra:6, bronce:12, hierro:15, oro:30, diamante:80, netherita:200, carne:8, flecha:2,
   papa:3, zanahoria:5, cebolla:8, calabacin:14, repollo:24, calabaza:45, brocoli:70 };
-const SELLABLE = ["papa","zanahoria","cebolla","calabacin","repollo","calabaza","brocoli","madera","piedra","bronce","oro","diamante","netherita","carne","flecha"];
+const SELLABLE = ["papa","zanahoria","cebolla","calabacin","repollo","calabaza","brocoli","madera","piedra","bronce","hierro","oro","diamante","netherita","carne","flecha"];
 let marketCur = "plata";
 function marketUnit(res) { return marketCur === "plata" ? PRICE[res] : PRICE[res]/10; }
 function sellItem(res) {
