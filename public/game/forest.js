@@ -95,8 +95,8 @@ class ForestScene extends Phaser.Scene {
     this.keys = this.input.keyboard.addKeys({ up:"W", down:"S", left:"A", right:"D", aup:"UP", adown:"DOWN", aleft:"LEFT", aright:"RIGHT", act:"E", act2:"SPACE" }, false);
     this.keys.act.on("down", () => this.tryAttack());
     this.keys.act2.on("down", () => this.tryAttack());
-    toast("🌲 El Bosque — cuanto más profundo, más peligro");
-    log("🌲 Entraste al Bosque. Los monstruos fuertes viven a la derecha.", "info");
+    toast("🌑 La Zona Negra — cuanto más profundo, más peligro");
+    log("🌑 Entraste a la Zona Negra. Los monstruos fuertes viven a la derecha.", "info");
     refreshHud();
   }
 
@@ -350,7 +350,7 @@ class ForestScene extends Phaser.Scene {
     this.hurtFx = 0.18;
     refreshHud();
     if (G.hp <= 0) {
-      log("💀 Te derrotaron en el Bosque. Despertás en la granja.", "bad");
+      log("💀 Te derrotaron en la Zona Negra. Despertás en la granja.", "bad");
       toast("💀 Te llevaron de vuelta a la granja");
       G.hp = Math.ceil(G.hpMax / 2);
       if (typeof saveFarm === "function") saveFarm(true);
@@ -447,7 +447,7 @@ class ForestScene extends Phaser.Scene {
     // salir por la izquierda
     if (hero.x < 40) {
       const left = (GF.forestDrops || []).length;
-      if (left) { log("🎒 Dejaste " + left + " objeto(s) en el suelo del Bosque — siguen ahí si volvés.", "bad"); toast("🎒 Dejaste " + left + " objeto(s) en el suelo"); }
+      if (left) { log("🎒 Dejaste " + left + " objeto(s) en el suelo de la Zona Negra — siguen ahí si volvés.", "bad"); toast("🎒 Dejaste " + left + " objeto(s) en el suelo"); }
       if (typeof saveFarm === "function") saveFarm();
       this.leaving = true;
       this.scene.start("farm"); return;

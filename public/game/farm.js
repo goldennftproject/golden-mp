@@ -144,7 +144,7 @@ class FarmScene extends Phaser.Scene {
       } else {
         this.add.text(px, py, "🌲", { fontSize: "26px" }).setOrigin(0.5, 1).setDepth(py);
       }
-      this.add.text(px, py + 12, "Bosque", { fontFamily: "system-ui", fontSize: "11px", fontStyle: "bold", color: "#ffe08a", stroke: "#20301a", strokeThickness: 3 }).setOrigin(0.5, 0.5).setDepth(py);
+      this.add.text(px, py + 12, "Zona Negra", { fontFamily: "system-ui", fontSize: "11px", fontStyle: "bold", color: "#ffe08a", stroke: "#20301a", strokeThickness: 3 }).setOrigin(0.5, 0.5).setDepth(py);
       this.portal = { type: "portal", cx: px, by: py, sprite: pspr, w: T * 1.4 };
     }
 
@@ -459,7 +459,7 @@ class FarmScene extends Phaser.Scene {
       if (o.state === "ready") { const cd = CROP_DEF[o.cropKey]; return "🌾 Cosechar " + (cd ? cd.label : ""); }
       return "🌱 Creciendo…";
     }
-    if (o.type === "portal") return "🌲 Teletransportarte al Bosque" + (G.swordOwned ? "" : " ⚠️ sin espada");
+    if (o.type === "portal") return "🌑 Teletransportarte a la Zona Negra" + (G.swordOwned ? "" : " ⚠️ sin espada");
     const secs = cd ? Math.ceil((o.readyAt - nowMs()) / 1000) : 0;
     if (o.type === "tree") return cd ? "🪵 Vuelve en " + secs + "s" : "🪓 Talar madera";
     if (o.type === "rock") return cd ? "🪨 Vuelve en " + secs + "s" : "⛏️ Picar piedra";

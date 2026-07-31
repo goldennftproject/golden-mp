@@ -356,7 +356,7 @@ function refreshForge() {
   // armas por craftear + flechas → Craftear
   if (!G.swordOwned) {
     const cstr = Object.keys(SWORD_COST).map(k => resIc(k) + " " + SWORD_COST[k]).join(" · ");
-    craft += '<div class="forge-row"><div class="fic"><img src="' + GF.spr("sword") + '" onerror="this.outerHTML=\'⚔️\'"></div><div class="finfo"><div class="fnm">Espada de Hierro</div><div class="fds">Para pelear en el Bosque · daño según skill Espada</div><div class="fds">Costo: ' + cstr + '</div></div><div class="fbtns"><button class="green sm" ' + (canAfford(SWORD_COST) ? "" : "disabled") + ' id="forge-sword">Craftear</button></div></div>';
+    craft += '<div class="forge-row"><div class="fic"><img src="' + GF.spr("sword") + '" onerror="this.outerHTML=\'⚔️\'"></div><div class="finfo"><div class="fnm">Espada de Hierro</div><div class="fds">Para pelear en la Zona Negra · daño según skill Espada</div><div class="fds">Costo: ' + cstr + '</div></div><div class="fbtns"><button class="green sm" ' + (canAfford(SWORD_COST) ? "" : "disabled") + ' id="forge-sword">Craftear</button></div></div>';
   }
   if (!G.bowOwned) {
     const bstr = Object.keys(BOW_COST).map(k => resIc(k) + " " + BOW_COST[k]).join(" · ");
