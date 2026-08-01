@@ -1,0 +1,156 @@
+{
+  "group_id": "e455cf69-dec2-46a3-b1a4-52316501127d",
+  "states": [
+    {
+      "character": {
+        "id": "bfd58d0c-b6c2-4228-9a74-049eb18fbaaf",
+        "name": "Idle",
+        "prompt": "a cheerful cozy farmer boy, chibi proportions with a big friendly head, straw sun hat, blue denim overalls over a warm cream shirt, rolled sleeves, brown work boots, rosy cheeks and a kind smile, empty hands with no tools, cozy chibi cartoon storybook style, warm cozy palette, thick soft rounded outlines, soft cel shading",
+        "size": {
+          "width": 120,
+          "height": 120
+        },
+        "template_id": "mannequin",
+        "directions": 8,
+        "view": "low top-down",
+        "created_at": "2026-07-30T20:49:13.386105+00:00"
+      },
+      "folder": "Idle",
+      "frames": {
+        "rotations": {
+          "south": "Idle/rotations/south.png",
+          "south-east": "Idle/rotations/south-east.png",
+          "east": "Idle/rotations/east.png",
+          "north-east": "Idle/rotations/north-east.png",
+          "north": "Idle/rotations/north.png",
+          "north-west": "Idle/rotations/north-west.png",
+          "west": "Idle/rotations/west.png",
+          "south-west": "Idle/rotations/south-west.png"
+        },
+        "animations": {
+          "talar_v2": {
+            "south-east": [
+              "Idle/animations/talar_v2/south-east/frame_000.png",
+              "Idle/animations/talar_v2/south-east/frame_001.png",
+              "Idle/animations/talar_v2/south-east/frame_002.png",
+              "Idle/animations/talar_v2/south-east/frame_003.png",
+              "Idle/animations/talar_v2/south-east/frame_004.png",
+              "Idle/animations/talar_v2/south-east/frame_005.png",
+              "Idle/animations/talar_v2/south-east/frame_006.png",
+              "Idle/animations/talar_v2/south-east/frame_007.png",
+              "Idle/animations/talar_v2/south-east/frame_008.png"
+            ]
+          },
+          "Fisherman_firmly_holding_a_fishing_rod_with_both_h": {
+            "south-west": [
+              "Idle/animations/Fisherman_firmly_holding_a_fishing_rod_with_both_h/south-west/frame_000.png",
+              "Idle/animations/Fisherman_firmly_holding_a_fishing_rod_with_both_h/south-west/frame_001.png",
+              "Idle/animations/Fisherman_firmly_holding_a_fishing_rod_with_both_h/south-west/frame_002.png",
+              "Idle/animations/Fisherman_firmly_holding_a_fishing_rod_with_both_h/south-west/frame_003.png",
+              "Idle/animations/Fisherman_firmly_holding_a_fishing_rod_with_both_h/south-west/frame_004.png",
+              "Idle/animations/Fisherman_firmly_holding_a_fishing_rod_with_both_h/south-west/frame_005.png",
+              "Idle/animations/Fisherman_firmly_holding_a_fishing_rod_with_both_h/south-west/frame_006.png",
+              "Idle/animations/Fisherman_firmly_holding_a_fishing_rod_with_both_h/south-west/frame_007.png",
+              "Idle/animations/Fisherman_firmly_holding_a_fishing_rod_with_both_h/south-west/frame_008.png"
+            ]
+          },
+          "Farmer_who_is_ALREADY_holding_a_metal_sword_in_his": {
+            "south-east": [
+              "Idle/animations/Farmer_who_is_ALREADY_holding_a_metal_sword_in_his/south-east/frame_000.png",
+              "Idle/animations/Farmer_who_is_ALREADY_holding_a_metal_sword_in_his/south-east/frame_001.png",
+              "Idle/animations/Farmer_who_is_ALREADY_holding_a_metal_sword_in_his/south-east/frame_002.png",
+              "Idle/animations/Farmer_who_is_ALREADY_holding_a_metal_sword_in_his/south-east/frame_003.png",
+              "Idle/animations/Farmer_who_is_ALREADY_holding_a_metal_sword_in_his/south-east/frame_004.png",
+              "Idle/animations/Farmer_who_is_ALREADY_holding_a_metal_sword_in_his/south-east/frame_005.png",
+              "Idle/animations/Farmer_who_is_ALREADY_holding_a_metal_sword_in_his/south-east/frame_006.png",
+              "Idle/animations/Farmer_who_is_ALREADY_holding_a_metal_sword_in_his/south-east/frame_007.png"
+            ]
+          },
+          "caminar": {
+            "south-east": [
+              "Idle/animations/caminar/south-east/frame_000.png",
+              "Idle/animations/caminar/south-east/frame_001.png",
+              "Idle/animations/caminar/south-east/frame_002.png",
+              "Idle/animations/caminar/south-east/frame_003.png",
+              "Idle/animations/caminar/south-east/frame_004.png",
+              "Idle/animations/caminar/south-east/frame_005.png"
+            ]
+          },
+          "picar2": {
+            "south-east": [
+              "Idle/animations/picar2/south-east/frame_000.png",
+              "Idle/animations/picar2/south-east/frame_001.png",
+              "Idle/animations/picar2/south-east/frame_002.png",
+              "Idle/animations/picar2/south-east/frame_003.png",
+              "Idle/animations/picar2/south-east/frame_004.png",
+              "Idle/animations/picar2/south-east/frame_005.png",
+              "Idle/animations/picar2/south-east/frame_006.png",
+              "Idle/animations/picar2/south-east/frame_007.png",
+              "Idle/animations/picar2/south-east/frame_008.png"
+            ]
+          },
+          "Farmer_archer_who_is_ALREADY_holding_a_wooden_bow": {
+            "south-east": [
+              "Idle/animations/Farmer_archer_who_is_ALREADY_holding_a_wooden_bow/south-east/frame_000.png",
+              "Idle/animations/Farmer_archer_who_is_ALREADY_holding_a_wooden_bow/south-east/frame_001.png",
+              "Idle/animations/Farmer_archer_who_is_ALREADY_holding_a_wooden_bow/south-east/frame_002.png",
+              "Idle/animations/Farmer_archer_who_is_ALREADY_holding_a_wooden_bow/south-east/frame_003.png",
+              "Idle/animations/Farmer_archer_who_is_ALREADY_holding_a_wooden_bow/south-east/frame_004.png",
+              "Idle/animations/Farmer_archer_who_is_ALREADY_holding_a_wooden_bow/south-east/frame_005.png",
+              "Idle/animations/Farmer_archer_who_is_ALREADY_holding_a_wooden_bow/south-east/frame_006.png",
+              "Idle/animations/Farmer_archer_who_is_ALREADY_holding_a_wooden_bow/south-east/frame_007.png"
+            ]
+          },
+          "plantar": {
+            "south-east": [
+              "Idle/animations/plantar/south-east/frame_000.png",
+              "Idle/animations/plantar/south-east/frame_001.png",
+              "Idle/animations/plantar/south-east/frame_002.png",
+              "Idle/animations/plantar/south-east/frame_003.png",
+              "Idle/animations/plantar/south-east/frame_004.png",
+              "Idle/animations/plantar/south-east/frame_005.png",
+              "Idle/animations/plantar/south-east/frame_006.png",
+              "Idle/animations/plantar/south-east/frame_007.png",
+              "Idle/animations/plantar/south-east/frame_008.png"
+            ]
+          },
+          "espadazo_caminando": {
+            "south-east": [
+              "Idle/animations/espadazo_caminando/south-east/frame_000.png",
+              "Idle/animations/espadazo_caminando/south-east/frame_001.png",
+              "Idle/animations/espadazo_caminando/south-east/frame_002.png",
+              "Idle/animations/espadazo_caminando/south-east/frame_003.png",
+              "Idle/animations/espadazo_caminando/south-east/frame_004.png",
+              "Idle/animations/espadazo_caminando/south-east/frame_005.png",
+              "Idle/animations/espadazo_caminando/south-east/frame_006.png",
+              "Idle/animations/espadazo_caminando/south-east/frame_007.png"
+            ]
+          },
+          "quieto": {
+            "south-east": [
+              "Idle/animations/quieto/south-east/frame_000.png",
+              "Idle/animations/quieto/south-east/frame_001.png",
+              "Idle/animations/quieto/south-east/frame_002.png",
+              "Idle/animations/quieto/south-east/frame_003.png"
+            ]
+          },
+          "cosechar": {
+            "south-east": [
+              "Idle/animations/cosechar/south-east/frame_000.png",
+              "Idle/animations/cosechar/south-east/frame_001.png",
+              "Idle/animations/cosechar/south-east/frame_002.png",
+              "Idle/animations/cosechar/south-east/frame_003.png",
+              "Idle/animations/cosechar/south-east/frame_004.png",
+              "Idle/animations/cosechar/south-east/frame_005.png",
+              "Idle/animations/cosechar/south-east/frame_006.png",
+              "Idle/animations/cosechar/south-east/frame_007.png",
+              "Idle/animations/cosechar/south-east/frame_008.png"
+            ]
+          }
+        }
+      }
+    }
+  ],
+  "export_version": "3.1",
+  "export_date": "2026-08-01T18:17:12.999540"
+}

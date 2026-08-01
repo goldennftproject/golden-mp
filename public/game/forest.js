@@ -72,8 +72,20 @@ class ForestScene extends Phaser.Scene {
       if (pt.rightButtonDown()) { if (hit) { if (!this.hasWeapon()) { toast("Necesitás un arma equipada para atacar"); return; } this.setTarget(hit); this.autoOn = true; } return; }   // clic DERECHO: fijar y AUTO-atacar (detalles viernes)
       if (this.action) return;
       this.hold = { sx: pt.x, sy: pt.y, active: false };
-      if (hit) { this.setTarget(hit); this.autoOn = false; this.goTo(hit.cx, hit.by + 14); }   // clic izquierdo: acercarse y fijar (sin auto-ataque)
-      else { this.clearTarget(); this.goTo(wx, wy); this.tryPickup(wx, wy, 20); }
+      // clic izquierdo (Discord 1/8): si cliqueás un bicho que tenés CERCA, un espadazo suelto —
+      // sin fijarlo, sin recuadro rojo y sin auto-ataque — y se puede seguir caminando mientras
+      // (animación caminar+espadazo). Si está lejos o no hay arma, el clic solo camina.
+      if (hit) {
+        const now = this.time.now;
+        const d = Math.hypot(hit.cx - this.hero.x, hit.by - this.hero.y);
+        if (d <= MELEE_RANGE && swordDmg() > 0 && !this.action && now >= this.nextAuto) {
+          this.facing = (hit.cx < this.hero.x) ? "west" : "east";
+          this.action = { kind: "attack", m: hit, t: 0, dur: 0.45 };
+          this.nextAuto = now + ATTACK_MS;   // misma cadencia que el auto-ataque (sin spam de clics)
+          return;                            // no toca el destino actual: sigue caminando si venía caminando
+        }
+      }
+      this.clearTarget(); this.goTo(wx, wy); this.tryPickup(wx, wy, 20);
     });
     // clic sostenido: el granjero sigue el cursor (igual que en la granja)
     this.input.on("pointermove", (pt) => {
