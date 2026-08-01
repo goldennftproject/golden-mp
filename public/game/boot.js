@@ -50,6 +50,8 @@ class BootScene extends Phaser.Scene {
     ["sword","bow"].forEach(k => L.push([k, P + k + ".png"]));   // arma visible al atacar en el Bosque
     L.push(["sword_wood", P + "sword_wood.png"]);   // viernes (2): espada de madera (derivada de la de hierro)
     L.push(["pick_iron", P + "pick_iron.png"]);     // viernes (2): pico de hierro (derivado del de piedra)
+    ["grass_a","grass_b","grass_c"].forEach(k => L.push([k, P + k + ".png"]));   // suelo nuevo sin damero (31/7)
+    ["deco_flor_blanca","deco_flor_amarilla","deco_pasto","deco_piedras"].forEach(k => L.push([k, P + k + ".png"]));   // decoración del pasto (PixelLab)
     L.push(["cocina", P + "cocina.png"]);   // edificio de Cocina (detalles 29/7)
     L.push(["horno", P + "horno.png?v=2"]);     // Horno de Piedra (detalles viernes 1): fundición de barras
     // arte cozy nuevo (v2 rompe el caché del arte viejo)

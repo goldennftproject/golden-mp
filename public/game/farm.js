@@ -33,17 +33,38 @@ class FarmScene extends Phaser.Scene {
 
     // fondo + estanque + lotes-tierra + grilla
     const g = this.add.graphics().setDepth(-1000);
-    // césped en damero: dos verdes casi iguales alternados por celda (estilo Stardew)
-    for (let r = 0; r < GF.ROWS; r++) for (let c = 0; c < GF.COLS; c++) {
-      g.fillStyle((r + c) % 2 === 0 ? 0x4c6e34 : 0x466730, 1);
-      g.fillRect(c * T, r * T, T, T);
+    // SUELO NUEVO (31/7): tiles de pasto seamless con variantes esparcidas — chau damero
+    if (this.textures.exists("grass_a")) {
+      const rt = this.add.renderTexture(0, 0, GF.COLS * T, GF.ROWS * T).setOrigin(0).setDepth(-1000);
+      let gseed = 20260731;
+      const grnd = () => { gseed = (gseed * 1664525 + 1013904223) >>> 0; return gseed / 4294967296; };
+      const hasB = this.textures.exists("grass_b"), hasC = this.textures.exists("grass_c");
+      for (let r = 0; r < GF.ROWS; r++) for (let c = 0; c < GF.COLS; c++) {
+        const x = grnd();
+        const key = (x < 0.55 || (!hasB && !hasC)) ? "grass_a" : (x < 0.90 && hasB ? "grass_b" : (hasC ? "grass_c" : "grass_a"));
+        rt.draw(key, c * T, r * T);
+      }
+    } else {   // respaldo: el damero de siempre
+      for (let r = 0; r < GF.ROWS; r++) for (let c = 0; c < GF.COLS; c++) {
+        g.fillStyle((r + c) % 2 === 0 ? 0x4c6e34 : 0x466730, 1);
+        g.fillRect(c * T, r * T, T, T);
+      }
     }
-    // detalles del césped: matitas, florcitas y piedritas (semilla fija: no cambian entre recargas)
+    // detalles del césped (semilla fija): sprites de PixelLab; si faltan, el dibujo por código de antes
     let dseed = 20260730;
     const drnd = () => { dseed = (dseed * 1664525 + 1013904223) >>> 0; return dseed / 4294967296; };
     const deco = this.add.graphics().setDepth(-999.5);
-    for (let i = 0; i < 210; i++) {
+    const DKEYS = ["deco_pasto", "deco_flor_blanca", "deco_flor_amarilla", "deco_piedras"];
+    const hasDecos = DKEYS.every(k => this.textures.exists(k));
+    for (let i = 0; i < (hasDecos ? 110 : 210); i++) {
       const dx = 8 + drnd() * (W - 16), dy = 8 + drnd() * (H - 16), t = drnd();
+      if (hasDecos) {
+        // pasto pesa doble; tamaños chicos y variados para que respiren
+        const key = t < 0.45 ? "deco_pasto" : (t < 0.67 ? "deco_flor_blanca" : (t < 0.89 ? "deco_flor_amarilla" : "deco_piedras"));
+        const sz = key === "deco_pasto" ? 15 + drnd() * 6 : (key === "deco_piedras" ? 11 + drnd() * 4 : 13 + drnd() * 4);
+        this.add.image(dx, dy, key).setDisplaySize(sz, sz).setDepth(-999.5).setFlipX(drnd() < 0.5);
+        continue;
+      }
       if (t < 0.72) {          // matita de pasto
         const col = drnd() < 0.6 ? 0x3a5c2a : 0x608442;
         deco.lineStyle(1, col, 1);
