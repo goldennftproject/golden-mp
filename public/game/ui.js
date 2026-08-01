@@ -36,7 +36,7 @@ function itemView(d) {
     if (d.key === "sword") return { sprite: "sword", emoji: "⚔️", label: "Espada de Hierro · durabilidad " + toolDur("sword") + "/" + TOOL_DEF.sword.max, dur: Math.round(toolDur("sword") / TOOL_DEF.sword.max * 100) };
     if (d.key === "sword_wood") return { sprite: "sword_wood", emoji: "🗡️", label: "Espada de Madera · durabilidad " + toolDur("sword_wood") + "/" + TOOL_DEF.sword_wood.max, dur: Math.round(toolDur("sword_wood") / TOOL_DEF.sword_wood.max * 100) };
     if (d.key === "bow") return { sprite: "bow", emoji: "🏹", label: "Arco · durabilidad " + toolDur("bow") + "/" + TOOL_DEF.bow.max, dur: Math.round(toolDur("bow") / TOOL_DEF.bow.max * 100) };
-    return { sprite: "hoe", emoji: "🪝", label: "Azada", dur: null };
+    return null;   // la azada se retiró del juego (31/7)
   }
   if (d.kind === "pick") { const pd = PICK_DEF[d.key]; const glow = d.key === "diamond" ? "glow-cyan" : (d.key === "netherite" ? "glow-fire" : (d.key === "gold" ? "glow-gold" : "")); return { sprite: pd.sprite, emoji: "⛏️", glow, label: pd.label + " · 1 uso cada uno · tenés " + pickCount(d.key), dur: null }; }
   if (d.kind === "res") return { sprite: resSprite(d.key), emoji: RES_EMOJI[d.key], label: RES_LABEL[d.key], dur: null };
@@ -214,7 +214,7 @@ function trashInfo(d) {
   // herramientas y picos SÍ se tiran (pedido del diseñador 31/7); apilables: se tira la pila
   if (d.kind === "tool") {
     if (d.key === "axe" || d.key === "rod") return { n: Math.min(99, toolCount(d.key)), lbl: TOOL_DEF[d.key].label };
-    return { n: 1, lbl: d.key === "hoe" ? "Azada" : (TOOL_DEF[d.key] ? TOOL_DEF[d.key].label : "la herramienta") };
+    return { n: 1, lbl: TOOL_DEF[d.key] ? TOOL_DEF[d.key].label : "la herramienta" };
   }
   if (d.kind === "pick") return { n: Math.min(99, pickCount(d.key)), lbl: PICK_DEF[d.key] ? PICK_DEF[d.key].label : "el pico" };
   return null;
@@ -232,7 +232,7 @@ function trashStack(d) {
     else if (d.key === "bow") { G.bowOwned = false; delete G.tools.bow; if (G.gear.arma === "bow") G.gear.arma = null; }
     else if (d.key === "axe" || d.key === "rod") { const n = Math.min(99, toolCount(d.key)); G.tools[d.key] = toolCount(d.key) - n; }   // tira la pila (hasta 99)
     G.hotbar = G.hotbar.map(h => (h && h.kind === "tool" && h.key === d.key && toolDur(d.key) <= 0) ? null : h);
-    toast("Tiraste " + (d.key === "hoe" ? "la Azada" : (TOOL_DEF[d.key] ? TOOL_DEF[d.key].label : "la herramienta")));
+    toast("Tiraste " + (TOOL_DEF[d.key] ? TOOL_DEF[d.key].label : "la herramienta"));
     if (isOpen("ov-equip")) refreshEquip(); if (isOpen("ov-forge")) refreshForge();
   }
   else if (d.kind === "pick") {

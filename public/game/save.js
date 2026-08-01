@@ -51,6 +51,9 @@ function hydrate(d) {
   if (typeof d.invRows === "number") G.invRows = Math.max(0, Math.min(INV_MAX_ROWS, d.invRows));
   if (Array.isArray(d.slots)) G.slots = d.slots;
   if (Array.isArray(d.hotbar)) G.hotbar = d.hotbar.slice(0, 10);
+  // la azada se retiró del juego (pedido del diseñador 31/7): se limpia de hotbar y bolsa guardadas
+  G.hotbar = (G.hotbar || []).map(h => (h && h.kind === "tool" && h.key === "hoe") ? null : h);
+  if (Array.isArray(G.slots)) G.slots = G.slots.map(sl => (sl && sl.kind === "tool" && sl.key === "hoe") ? null : sl);
   if (typeof d.hotSel === "number") G.hotSel = Math.max(0, Math.min(9, d.hotSel));
   if (typeof d.hbInit === "boolean") G.hbInit = d.hbInit;
   if (d.layout && typeof d.layout === "object") G.layout = d.layout;

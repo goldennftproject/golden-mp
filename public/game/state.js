@@ -548,7 +548,6 @@ function bagFull(what) { toast("Bolsa llena — no podés " + what); log("No ten
 
 function invStacks() {
   const st = [];
-  st.push({ sprite:"hoe", em:"", nm:"Azada" });
   st.push({ sprite:"axe", em:"", nm:"Hacha ("+toolDur("axe")+"/"+TOOL_DEF.axe.max+")" });
   { const eqp = equippedPick();
     if (eqp) st.push({ sprite:PICK_DEF[eqp].sprite, em:"", nm:PICK_DEF[eqp].label+" ("+(G.picks.dur[eqp]||0)+"/"+PICK_DEF[eqp].dur+")" });
@@ -574,7 +573,6 @@ const ITEM_RES_ORDER = ["papa","zanahoria","cebolla","calabacin","repollo","cala
 function descKey(d) { return d ? d.kind + ":" + d.key : ""; }
 function canonicalStacks() {
   const list = [];
-  list.push({ kind: "tool", key: "hoe" });   // la azada es eterna
   ["axe", "rod"].forEach(k => { let n = toolCount(k); while (n > 0) { list.push({ kind: "tool", key: k }); n -= 99; } });   // apilables ×99
   if (G.swordOwned) list.push({ kind: "tool", key: "sword" });
   if (G.swordWoodOwned) list.push({ kind: "tool", key: "sword_wood" });
@@ -606,7 +604,7 @@ function syncSlots() {
 function activeTool() {
   const d = G.hotbar[G.hotSel];
   if (!d) return null;
-  if (d.kind === "tool") return d.key;   // "hoe" | "axe" | "rod"
+  if (d.kind === "tool") return d.key;   // "axe" | "rod"
   if (d.kind === "pick") return "pick";
   if (d.kind === "seed") return "seed";
   return null;                            // recurso u otro
@@ -617,11 +615,10 @@ function ensureHotbarDefaults() {
   if (!Array.isArray(G.hotbar)) G.hotbar = [];
   while (G.hotbar.length < 10) G.hotbar.push(null);
   if (!G.hotbar.some(Boolean)) {
-    G.hotbar[0] = { kind: "tool", key: "hoe" };
-    G.hotbar[1] = { kind: "tool", key: "axe" };
-    G.hotbar[2] = { kind: "pick", key: (G.picks && G.picks.eq) || "stone" };
-    G.hotbar[3] = { kind: "tool", key: "rod" };
-    G.hotbar[4] = { kind: "seed", key: G.selSeed || "papa" };
+    G.hotbar[0] = { kind: "tool", key: "axe" };
+    G.hotbar[1] = { kind: "pick", key: (G.picks && G.picks.eq) || "stone" };
+    G.hotbar[2] = { kind: "tool", key: "rod" };
+    G.hotbar[3] = { kind: "seed", key: G.selSeed || "papa" };
   }
   G.hbInit = true;
 }
