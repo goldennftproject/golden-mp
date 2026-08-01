@@ -76,9 +76,10 @@ class ForestScene extends Phaser.Scene {
       // sin fijarlo, sin recuadro rojo y sin auto-ataque — y se puede seguir caminando mientras
       // (animación caminar+espadazo). Si está lejos o no hay arma, el clic solo camina.
       if (hit) {
+        if (swordDmg() <= 0) { toast("Necesitás un arma equipada para atacar"); return; }   // mismo aviso que el clic derecho (1/8)
         const now = this.time.now;
         const d = Math.hypot(hit.cx - this.hero.x, hit.by - this.hero.y);
-        if (d <= MELEE_RANGE && swordDmg() > 0 && !this.action && now >= this.nextAuto) {
+        if (d <= MELEE_RANGE && !this.action && now >= this.nextAuto) {
           this.facing = (hit.cx < this.hero.x) ? "west" : "east";
           this.action = { kind: "attack", m: hit, t: 0, dur: 0.45 };
           this.nextAuto = now + ATTACK_MS;   // misma cadencia que el auto-ataque (sin spam de clics)
