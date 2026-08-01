@@ -175,12 +175,39 @@ Registro cronológico de todo lo hecho desde el inicio del proyecto (27 de julio
 - **HORNO DE PIEDRA** (edificio nuevo, PixelLab): ahí se funden TODOS los lingotes/barras (se movieron de la Herrería), con su enfriamiento. Ubicado entre la laguna y el mercado.
 - **EDIFICIOS EN CONSTRUCCIÓN**: en partidas nuevas la Herrería, el Horno y la Cocina arrancan en sombra (difuminados). Clic → receta de construcción con confirmación: Herrería = 15 madera + 10 piedra · Horno = 12 piedra + 8 madera + 5 papas · Cocina = 10 piedra + 10 madera + 5 papas + 3 oro. Las partidas existentes los conservan construidos.
 
+### Pulido de UI (31/7, tarde)
+- **Aviso de interacción** ("Mercado · [E]"): reposicionado por JS siempre 34px por encima de la hotbar (esté donde esté), y con el mismo formato que las píldoras del HUD (13px, peso 700).
+- **Tipografía estándar del juego**: blanco con contorno oscuro de 1px en pills del HUD, títulos de ventanas y aviso de interacción (como los contadores del mundo). El "Listo" del dummy volvió a texto simple.
+- **Pestañas fundidas, versión final**: la activa termina exacto en el borde del panel y unas piezas nuevas de esquinero (`tabjoin_l/r`, fabricadas píxel a píxel) hacen que el dorado vertical DOBLE y salga como dorado horizontal — un solo borde continuo, sin cruces. En las pestañas pegadas a la esquina del panel, la madera sigue derecha y empalma con el marco (`tabweld_l/r`).
+- **Leyendas (tooltips)** en todos los iconitos chicos de recursos/monedas/peces (costos, "Mina:", recetas).
+- **Herramienta rota desaparece al instante** también en bolsa/equipo/herrería abiertas (antes quedaba el ícono fantasma hasta reabrir).
+
+### detalles viernes (2) — 31/7
+- **Costos nuevos**: Hacha 10 plata · Caña 3 madera + 1 piedra + 15 ORO (recurso, literal del doc) · Picos: Piedra 3 madera+10p, Bronce 4 madera+5 piedra+10p (confirmado por Discord), HIERRO (nuevo) 3 madera+5 piedra+10p, Oro 3 madera+5 bronce+35p, Diamante 3 oro+3 madera+45p, Netherita 1 diamante+5 madera+100p. Cada pico mina solo hasta su tier (hierro pasó a tier 2).
+- **Pico de Hierro**: tier nuevo con sprite derivado del de piedra (cabeza plateada fría).
+- **Espada de Madera**: 5 madera · daño 4+skill/2 · durabilidad 40 · repara con 2 madera. Sprite derivado de la de hierro (hoja de madera). Entrena en el dummy y gasta durabilidad al pegar.
+- **Sin arma equipada NO se ataca** (puños eliminados); el arco sigue exigiendo flechas equipadas.
+- **Pestaña Armas de la Herrería BLOQUEADA** hasta pagar una vez 20 madera + 20 piedra + 1000 plata.
+- **Todos los recursos dan 1** (talar, picar piedra y minerales).
+- **Inicio nuevo**: bolsa con SOLO 3 semillas de papa, 2 parcelas, y la Herrería como único edificio construido (gratis). Horno = 100 madera + 100 piedra · Cocina = 100 madera + 10 de cada verdura.
+- **Árboles y piedras con desbloqueo**: 6 y 6, nace 1 de cada activo y el resto difuminado. Costos 3/9/27/81/100 (madera p/ árboles, piedra p/ piedras). Tras pedido del diseñador: se desbloquea CUALQUIERA, sin orden (el precio depende de cuántos ya abriste). Guardado por lista con migración.
+- **Combate**: el mob frena al borde de tu celda (no la pisa) y si queda encima retrocede.
+- **La carne ya no se vende** (fuera de la tienda). **El cinturón de herramientas** salió del panel de Equipo. **La azada se retiró del juego** (sin uso hasta que exista arar) con limpieza automática de partidas guardadas.
+- **Portal NEGRO girando**: vórtice recoloreado a negro por inundación desde el centro (las enredaderas del arco intactas) y los 8 frames regenerados con rotación elíptica de TODA la boca — nada queda estático ni se derrama sobre las piedras.
+- **Agua del lago con movimiento**: ondas elípticas que se expanden y destellos que titilan (por código).
+- **Humo del Horno de Piedra** por código (volutas grises desde la chimenea, solo construido).
+
+### Tabla de precios del diseñador (31/7, noche)
+- Cultivos según la tabla oficial (Ganancia = Tiempo × Riesgo × Nivel): niveles 1-7 · compra 1/3/6/12/20/40/90 · venta 3/8/16/32/50/100/210 · rinde 1.
+- Tiempos **a escala de testeo**: 1h de la tabla = 1 min de juego (`GROW_SCALE = 1/60`; para lanzar en real, ponerlo en 1). Marchitado proporcional: mitad del tiempo de cultivo.
+
+### Suelo nuevo de la granja (31/7, noche)
+- **Chau damero**: 3 tiles de pasto seamless de 42px (procedurales, paleta exacta del juego) mezclados con semilla fija en una RenderTexture. Primera versión salió con "reja" negra por tiles de 32px en celdas de 42 — corregido.
+- **Decoración PixelLab**: margaritas, flores amarillas, mata de pasto y piedritas (~110 esparcidas con semilla fija, tamaños variados, espejado aleatorio). Con respaldo procedural si falta el arte.
+
 ---
 
 ## Pendientes conocidos
-- Vestir con madera: panel de registro/chat, toasts y prompts.
-- Generaciones supervisadas restantes: portal al bosque, 7 íconos de skills, retoque de lingotes bronce/oro, fuego animado de la herrería (experimental).
-- En espera del diseñador: cerca premium, tabla de stats del bestiario, tiempos de cultivo reales, (Crafteo de materiales ✔ 31/7: Tablón 3 madera · Barra de piedra 3 piedra · Barra de bronce 3 bronce · Barra de HIERRO 3 hierro · Barra de oro 3 oro. Se agregó el HIERRO como recurso nuevo: nodo minable propio en la granja —derivado del de bronce recoloreado a acero—, tier 1 (se mina con pico de bronce), vendible a 15 de plata.) (Lombrices ✔ 31/7: se venden en la Tienda a 3 de plata, 1 por lanzamiento.)
-- Bloque grande diferido: ✔ COMPLETO — jabalí animado 31/7 (frames derivados del sprite original: camina hasta el cultivo y embiste mientras lo arruina), granjero definitivo ✔, 6 monstruos ✔.
-- Código: fondo de la Zona Negra en damero oscuro. (Bolsa a 20 ✔ 30/7: base 20 en 4 filas de 5, ampliable a 50; lo que exceda queda contado y reaparece al liberar espacio.)
-- Pilares futuros: login por email multi-dispositivo, PvP/endgame de netherita, referidos, token $Golden, audio.
+- En espera del diseñador: **tabla de daño de las armas** (para los tiers completos de espadas), usos de tablones/barras, cerca premium, tabla de stats del bestiario.
+- Opcional ofrecido: íconos oficiales PixelLab para Espada de Madera y Pico de Hierro (hoy derivados), replicar el suelo nuevo en plaza y Zona Negra, kick por AFK en la plaza.
+- Pilares futuros: login por email multi-dispositivo, PvP/endgame de netherita, referidos, token $Golden, audio, granja distinta por nivel (quinta.docx).
