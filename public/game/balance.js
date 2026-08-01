@@ -1,7 +1,7 @@
 /* Golden Farm · Panel de balanceo (31/7)
    Módulo compartido entre el JUEGO y balance.html:
-   - Define el ESQUEMA de variables editables (categorías + etiquetas en español), leyendo
-     los objetos reales del juego (siempre sincronizado con el código).
+   - Define el ESQUEMA de variables editables (categorías + etiquetas + UNIDAD en español),
+     leyendo los objetos reales del juego (siempre sincronizado con el código).
    - Guarda/carga los ajustes ("overrides") en Supabase (tabla `balance`, fila id=1).
    - El juego los aplica al arrancar (main.js espera BAL_READY antes de crear Phaser). */
 
@@ -11,98 +11,104 @@ var BAL = (function () {
   const HDRS = { apikey: KEY, Authorization: "Bearer " + KEY, "Content-Type": "application/json" };
 
   const RES_NAME = k => (typeof RES_LABEL !== "undefined" && RES_LABEL[k]) || (typeof CROP_DEF !== "undefined" && CROP_DEF[k] && CROP_DEF[k].label) || k;
+  // unidades típicas (texto que se muestra al lado del recuadro)
+  const U = {
+    plata: "plata · entero", horas: "horas · decimal (0.5 = 30 min)", seg: "segundos · entero",
+    cant: "unidades · entero", xp: "XP · entero", vida: "puntos de vida · entero",
+    danio: "puntos de daño · entero", usos: "usos (durabilidad) · entero", nivel: "nivel · entero",
+    factor: "factor · decimal", vel: "velocidad (px/seg) · entero",
+  };
 
-  /* ---- esquema: cada entrada = { id, cat, label, get, set, paso } ----
-     El id es estable (se guarda en la base); get/set tocan el objeto real del juego. */
+  /* ---- esquema: cada entrada = { id, cat, label, uni, get, set, paso } ---- */
   function schema() {
     const E = [];
-    const add = (cat, id, label, get, set, paso) => E.push({ cat, id, label, get, set, paso: paso || 1 });
-    const obj = (cat, base, o, campo, label, paso) => add(cat, base + "." + campo, label, () => o[campo], v => { o[campo] = v; }, paso);
-    const costos = (cat, base, o, label) => { for (const k in o) add(cat, base + "." + k, label + " — " + RES_NAME(k), () => o[k], v => { o[k] = v; }); };
+    const add = (cat, id, label, uni, get, set, paso, tipo) => E.push({ cat, id, label, uni, get, set, paso: paso || 1, tipo: tipo || null });
+    const obj = (cat, base, o, campo, label, uni, paso) => add(cat, base + "." + campo, label, uni, () => o[campo], v => { o[campo] = v; }, paso);
+    const costos = (cat, base, o, label) => { for (const k in o) add(cat, base + "." + k, label + " — " + RES_NAME(k), RES_NAME(k) + " · entero", () => o[k], v => { o[k] = v; }); };
 
     // CULTIVOS (tabla del diseñador)
     CROP_ORDER.forEach(k => {
       const c = CROP_DEF[k], cat = "Cultivos — " + c.label;
-      obj(cat, "crop." + k, c, "growH", "Horas de crecimiento (tiempo real de la tabla)", 0.5);
-      obj(cat, "crop." + k, c, "seedCost", "Compra de la semilla (plata)");
-      obj(cat, "crop." + k, c, "price", "Venta de la cosecha (plata)");
-      obj(cat, "crop." + k, c, "yield", "Unidades por cosecha");
-      obj(cat, "crop." + k, c, "lvl", "Nivel de Cultivo requerido");
+      add(cat, "crop." + k + ".growH", "Tiempo de crecimiento (tiempo real de la tabla)", "", () => c.growH * 3600, v => { c.growH = v / 3600; }, 1, "tiempo");
+      obj(cat, "crop." + k, c, "seedCost", "Compra de la semilla", U.plata);
+      obj(cat, "crop." + k, c, "price", "Venta de la cosecha (por unidad)", U.plata);
+      obj(cat, "crop." + k, c, "yield", "Unidades por cosecha", U.cant);
+      obj(cat, "crop." + k, c, "lvl", "Nivel de Cultivo requerido", U.nivel);
     });
-    add("Cultivos — General", "growScale", "Escala de tiempo (1 = horas reales · 0.01667 = testeo, 1h→1min)",
-      () => GROW_SCALE, v => { GROW_SCALE = v; }, 0.001);
-    add("Cultivos — General", "seedDailyMax", "Cupo diario de semillas", () => SEED_DAILY_MAX, v => { SEED_DAILY_MAX = v; });
-    add("Cultivos — General", "plotUnlockBase", "Costo base de desbloquear parcela (se duplica a partir de la 7ª)",
+    add("Cultivos — General", "growScale", "Velocidad de testeo: cuánto dura en el juego 1 hora de la tabla", "minutos · 60 = tiempo real · 1 = testeo rápido",
+      () => GROW_SCALE * 60, v => { GROW_SCALE = v / 60; }, 0.5);
+    add("Cultivos — General", "seedDailyMax", "Cupo diario de compra de semillas", "semillas por día · entero", () => SEED_DAILY_MAX, v => { SEED_DAILY_MAX = v; });
+    add("Cultivos — General", "plotUnlockBase", "Desbloquear parcela: costo base (se duplica a partir de la 7ª)", U.plata,
       () => PLOT_UNLOCK_BASE, v => { PLOT_UNLOCK_BASE = v; });
 
-    // HERRAMIENTAS (SFL: 1 uso)
+    // HERRAMIENTAS (SFL: 1 uso cada una)
     ["axe", "rod"].forEach(id => {
       const t = TOOL_CRAFT[id], nom = TOOL_DEF[id].label, cat = "Herramientas";
       costos(cat, "tool." + id + ".cost", t.cost, nom + " · costo");
-      add(cat, "tool." + id + ".plata", nom + " · costo — Plata", () => t.plata, v => { t.plata = v; });
+      add(cat, "tool." + id + ".plata", nom + " · costo — Plata", U.plata, () => t.plata, v => { t.plata = v; });
     });
-    add("Herramientas", "wormPrice", "Precio de la lombriz (Tienda)", () => WORM_PRICE, v => { WORM_PRICE = v; });
+    add("Herramientas", "wormPrice", "Lombriz · precio en la Tienda", U.plata, () => WORM_PRICE, v => { WORM_PRICE = v; });
 
     // PICOS
     PICK_ORDER.forEach(id => {
       const p = PICK_DEF[id], cat = "Picos — " + p.label;
       costos(cat, "pick." + id + ".cost", p.cost, "Costo");
-      add(cat, "pick." + id + ".plata", "Costo — Plata", () => p.plata, v => { p.plata = v; });
-      obj(cat, "pick." + id, p, "mineTier", "Tier máximo que mina (0 piedra ·1 bronce ·2 hierro ·3 oro ·4 diamante ·5 netherita)");
+      add(cat, "pick." + id + ".plata", "Costo — Plata", U.plata, () => p.plata, v => { p.plata = v; });
+      obj(cat, "pick." + id, p, "mineTier", "Tier máximo que mina", "tier · entero 0-5 (0 piedra · 1 bronce · 2 hierro · 3 oro · 4 diamante · 5 netherita)");
     });
 
     // ARMAS Y COMBATE
     { const cat = "Armas y combate";
       costos(cat, "swordWood.cost", SWORD_WOOD_COST, "Espada de Madera · costo");
-      add(cat, "dmg.swordWood", "Espada de Madera · daño base", () => DMG_SWORD_WOOD_BASE, v => { DMG_SWORD_WOOD_BASE = v; });
-      add(cat, "dur.swordWood", "Espada de Madera · durabilidad", () => TOOL_DEF.sword_wood.max, v => { TOOL_DEF.sword_wood.max = v; });
+      add(cat, "dmg.swordWood", "Espada de Madera · daño base (+ mitad del nivel de skill)", U.danio, () => DMG_SWORD_WOOD_BASE, v => { DMG_SWORD_WOOD_BASE = v; });
+      add(cat, "dur.swordWood", "Espada de Madera · durabilidad", U.usos, () => TOOL_DEF.sword_wood.max, v => { TOOL_DEF.sword_wood.max = v; });
       costos(cat, "swordWood.repair", TOOL_DEF.sword_wood.repair, "Espada de Madera · reparación");
       costos(cat, "sword.cost", SWORD_COST, "Espada de Hierro · costo");
-      add(cat, "dmg.sword", "Espada de Hierro · daño base", () => DMG_SWORD_BASE, v => { DMG_SWORD_BASE = v; });
-      add(cat, "dur.sword", "Espada de Hierro · durabilidad", () => TOOL_DEF.sword.max, v => { TOOL_DEF.sword.max = v; });
+      add(cat, "dmg.sword", "Espada de Hierro · daño base (+ mitad del nivel de skill)", U.danio, () => DMG_SWORD_BASE, v => { DMG_SWORD_BASE = v; });
+      add(cat, "dur.sword", "Espada de Hierro · durabilidad", U.usos, () => TOOL_DEF.sword.max, v => { TOOL_DEF.sword.max = v; });
       costos(cat, "sword.repair", TOOL_DEF.sword.repair, "Espada de Hierro · reparación");
       costos(cat, "bow.cost", BOW_COST, "Arco · costo");
-      add(cat, "dmg.bow", "Arco · daño base", () => DMG_BOW_BASE, v => { DMG_BOW_BASE = v; });
-      add(cat, "dur.bow", "Arco · durabilidad", () => TOOL_DEF.bow.max, v => { TOOL_DEF.bow.max = v; });
+      add(cat, "dmg.bow", "Arco · daño base (+ mitad del nivel de skill)", U.danio, () => DMG_BOW_BASE, v => { DMG_BOW_BASE = v; });
+      add(cat, "dur.bow", "Arco · durabilidad", U.usos, () => TOOL_DEF.bow.max, v => { TOOL_DEF.bow.max = v; });
       costos(cat, "bow.repair", TOOL_DEF.bow.repair, "Arco · reparación");
       costos(cat, "arrows.cost", ARROW_COST, "Flechas ×10 · costo");
       costos(cat, "armasUnlock.cost", ARMAS_UNLOCK_COST, "Desbloquear pestaña Armas");
-      add(cat, "armasUnlock.plata", "Desbloquear pestaña Armas — Plata", () => ARMAS_UNLOCK_PLATA, v => { ARMAS_UNLOCK_PLATA = v; });
-      add(cat, "dummy.cdHoras", "Dummy · enfriamiento (horas)", () => DUMMY_CD_MS / 3600000, v => { DUMMY_CD_MS = v * 3600000; }, 0.5);
-      add(cat, "dummy.xp", "Dummy · XP de Espada por uso", () => DUMMY_XP, v => { DUMMY_XP = v; });
+      add(cat, "armasUnlock.plata", "Desbloquear pestaña Armas — Plata", U.plata, () => ARMAS_UNLOCK_PLATA, v => { ARMAS_UNLOCK_PLATA = v; });
+      add(cat, "dummy.cd", "Dummy de práctica · enfriamiento entre usos", "", () => DUMMY_CD_MS / 1000, v => { DUMMY_CD_MS = v * 1000; }, 1, "tiempo");
+      add(cat, "dummy.xp", "Dummy de práctica · XP de Espada por uso", U.xp, () => DUMMY_XP, v => { DUMMY_XP = v; });
     }
 
     // MONSTRUOS
     MONSTER_ORDER.forEach(k => {
       const m = MONSTER_DEF[k], cat = "Monstruos — " + m.label;
-      obj(cat, "mob." + k, m, "hp", "Vida");
-      obj(cat, "mob." + k, m, "dmg", "Daño por golpe (cada 2s)");
-      obj(cat, "mob." + k, m, "xp", "XP que da al morir");
-      obj(cat, "mob." + k, m, "spd", "Velocidad");
+      obj(cat, "mob." + k, m, "hp", "Vida", U.vida);
+      obj(cat, "mob." + k, m, "dmg", "Daño por golpe (pega cada 2 segundos)", U.danio);
+      obj(cat, "mob." + k, m, "xp", "XP que da al morir", U.xp);
+      obj(cat, "mob." + k, m, "spd", "Velocidad de movimiento", U.vel);
     });
 
     // MINERALES Y RECURSOS
     ORE_ORDER.forEach(k => {
-      const o = ORE_DEF[k], cat = "Minerales";
-      obj(cat, "ore." + k, o, "cd", o.label + " · enfriamiento del nodo (s)");
+      const o = ORE_DEF[k];
+      add("Minerales", "ore." + k + ".cd", o.label + " · enfriamiento del nodo", "", () => o.cd, v => { o.cd = v; }, 1, "tiempo");
     });
-    add("Minerales", "cd.tree", "Árbol · enfriamiento (s)", () => CD.tree, v => { CD.tree = v; });
-    add("Minerales", "cd.rock", "Piedra · enfriamiento (s)", () => CD.rock, v => { CD.rock = v; });
+    add("Minerales", "cd.tree", "Árbol · enfriamiento tras talar", "", () => CD.tree, v => { CD.tree = v; }, 1, "tiempo");
+    add("Minerales", "cd.rock", "Piedra · enfriamiento tras picar", "", () => CD.rock, v => { CD.rock = v; }, 1, "tiempo");
 
-    // MATERIALES (HORNO)
+    // MATERIALES (HORNO DE PIEDRA)
     MAT_ORDER.forEach(id => {
       const m = MAT_DEF[id];
       costos("Materiales (Horno de Piedra)", "mat." + id + ".cost", m.cost, m.label + " · costo");
     });
-    add("Materiales (Horno de Piedra)", "matCdSeg", "Enfriamiento al fundir (s)", () => MAT_CD_MS / 1000, v => { MAT_CD_MS = v * 1000; });
+    add("Materiales (Horno de Piedra)", "matCdSeg", "Enfriamiento al fundir cada barra", "", () => MAT_CD_MS / 1000, v => { MAT_CD_MS = v * 1000; }, 1, "tiempo");
 
     // COCINA
     for (const id in RECIPE_DEF) {
       const r = RECIPE_DEF[id], cat = "Cocina — " + r.label;
       if (r.res) costos(cat, "recipe." + id + ".res", r.res, "Ingredientes");
       if (r.fish) costos(cat, "recipe." + id + ".fish", r.fish, "Peces");
-      obj(cat, "recipe." + id, r, "heal", "Vida que cura");
-      obj(cat, "recipe." + id, r, "xp", "XP de Cocina");
+      obj(cat, "recipe." + id, r, "heal", "Vida que cura al comerlo", U.vida);
+      obj(cat, "recipe." + id, r, "xp", "XP de Cocina al cocinarlo", U.xp);
     }
 
     // EDIFICIOS
@@ -110,7 +116,8 @@ var BAL = (function () {
 
     // DESBLOQUEOS DE ÁRBOLES/PIEDRAS
     NODE_UNLOCK_COSTS.forEach((c, i) => add("Desbloqueos", "nodeUnlock." + i,
-      (i + 2) + "º árbol o piedra (madera/piedra)", () => NODE_UNLOCK_COSTS[i], v => { NODE_UNLOCK_COSTS[i] = v; }));
+      (i + 2) + "º árbol o piedra", "madera (árboles) o piedra (piedras) · entero",
+      () => NODE_UNLOCK_COSTS[i], v => { NODE_UNLOCK_COSTS[i] = v; }));
 
     return E;
   }

@@ -20,10 +20,13 @@
   summary .n{font-weight:600;font-size:12px;color:#8a6d1e}
   table{width:100%;border-collapse:collapse}
   td{padding:7px 14px;border-top:1px solid #eee0be;font-size:13.5px;color:#2e2a1f}
-  td.lbl{width:62%}
-  td.def{width:14%;color:#8a7f66;font-size:12.5px;white-space:nowrap}
-  td.val{width:24%}
+  td.lbl{width:48%}
+  td.def{width:12%;color:#8a7f66;font-size:12.5px;white-space:nowrap}
+  td.val{width:40%}
+  .uni{font-size:11.5px;color:#8a6d1e;margin-left:7px}
   input[type=number]{width:110px;padding:5px 8px;border:1px solid #d9c290;border-radius:7px;font-size:14px;font-family:inherit;background:#fff;color:#2e2a1f}
+  .tiempo input[type=number]{width:58px}
+  .tiempo .tl{font-size:11.5px;color:#8a6d1e;margin:0 8px 0 3px}
   input.mod{border-color:#b9860b;background:#fdf3d7;font-weight:700}
   .botones{position:fixed;left:0;right:0;bottom:0;background:rgba(20,25,15,.95);border-top:1px solid #3c4d31;padding:10px 16px;display:flex;gap:10px;justify-content:center;align-items:center;z-index:5}
   button{font-family:inherit;font-size:14px;font-weight:800;cursor:pointer;border-radius:10px;padding:10px 22px;border:1px solid #3f6b28;background:linear-gradient(#8fc46a,#6aa544);color:#173208}
@@ -77,26 +80,55 @@
   const porCat = {};
   entradas.forEach(e => { if (!porCat[e.cat]) { porCat[e.cat] = []; cats.push(e.cat); } porCat[e.cat].push(e); });
 
-  const inputs = {};
+  const porId = {}; entradas.forEach(e => porId[e.id] = e);
   const fmt = v => (v == null ? "" : (Math.round(v * 1000) / 1000));
+  // tiempos en formato humano: "2 d 3 h", "30 min", "1 min 30 s"
+  const fmtDur = seg => {
+    seg = Math.round(seg); const partes = [];
+    const d = Math.floor(seg / 86400), h = Math.floor(seg % 86400 / 3600), m = Math.floor(seg % 3600 / 60), sx = seg % 60;
+    if (d) partes.push(d + " d"); if (h) partes.push(h + " h"); if (m) partes.push(m + " min"); if (sx || !partes.length) partes.push(sx + " s");
+    return partes.join(" ");
+  };
+  const desc = seg => ({ h: Math.floor(seg / 3600), m: Math.floor(seg % 3600 / 60), s: Math.round(seg % 60) });
   const box = $("cats");
   cats.forEach(cat => {
     const det = document.createElement("details");
     const filas = porCat[cat].map(e => {
       const v = (guardados[e.id] != null) ? guardados[e.id] : defecto[e.id];
+      if (e.tipo === "tiempo") {
+        const t = desc(v);
+        const inp = (parte, val, lbl) => `<input type="number" min="0" step="1" data-id="${e.id}" data-parte="${parte}" value="${val}"><span class="tl">${lbl}</span>`;
+        return `<tr><td class="lbl">${e.label}</td><td class="def">def: ${fmtDur(defecto[e.id])}</td>
+          <td class="val tiempo">${inp("h", t.h, "horas")}${inp("m", t.m, "min")}${inp("s", t.s, "seg")}</td></tr>`;
+      }
       return `<tr><td class="lbl">${e.label}</td><td class="def">def: ${fmt(defecto[e.id])}</td>
-        <td class="val"><input type="number" step="${e.paso}" id="in-${e.id.replace(/[^a-zA-Z0-9_-]/g,"_")}" data-id="${e.id}" value="${fmt(v)}"></td></tr>`;
+        <td class="val"><input type="number" step="${e.paso}" data-id="${e.id}" value="${fmt(v)}"><span class="uni">${e.uni || ""}</span></td></tr>`;
     }).join("");
     det.innerHTML = `<summary>${cat} <span class="n">· ${porCat[cat].length} variables</span></summary><table>${filas}</table>`;
     box.appendChild(det);
   });
 
+  // valor actual de una entrada leyendo su(s) input(s)
+  function leer(id) {
+    const e = porId[id];
+    if (e.tipo === "tiempo") {
+      let tot = 0, ok = false;
+      document.querySelectorAll(`input[data-id="${CSS.escape(id)}"]`).forEach(inp => {
+        const v = parseFloat(inp.value) || 0; ok = true;
+        tot += v * (inp.dataset.parte === "h" ? 3600 : inp.dataset.parte === "m" ? 60 : 1);
+      });
+      return ok ? tot : NaN;
+    }
+    const inp = document.querySelector(`input[data-id="${CSS.escape(id)}"]`);
+    return parseFloat(inp.value);
+  }
+
   function refrescar() {
     let n = 0;
-    document.querySelectorAll("input[data-id]").forEach(inp => {
-      const id = inp.dataset.id, v = parseFloat(inp.value);
-      const cambiado = isFinite(v) && Math.abs(v - defecto[id]) > 1e-9;
-      inp.classList.toggle("mod", cambiado);
+    entradas.forEach(e => {
+      const v = leer(e.id);
+      const cambiado = isFinite(v) && Math.abs(v - defecto[e.id]) > 1e-9;
+      document.querySelectorAll(`input[data-id="${CSS.escape(e.id)}"]`).forEach(inp => inp.classList.toggle("mod", cambiado));
       if (cambiado) n++;
     });
     $("chip-cambios").textContent = n + (n === 1 ? " cambio" : " cambios");
@@ -108,9 +140,9 @@
 
   $("btn-guardar").onclick = async () => {
     const data = {};
-    document.querySelectorAll("input[data-id]").forEach(inp => {
-      const id = inp.dataset.id, v = parseFloat(inp.value);
-      if (isFinite(v) && Math.abs(v - defecto[id]) > 1e-9) data[id] = v;   // solo lo que difiere del código
+    entradas.forEach(e => {
+      const v = leer(e.id);
+      if (isFinite(v) && Math.abs(v - defecto[e.id]) > 1e-9) data[e.id] = v;   // solo lo que difiere del código
     });
     $("btn-guardar").disabled = true;
     try {
@@ -128,7 +160,15 @@
     if (!confirm("¿Borrar TODOS los ajustes y volver a los valores por defecto del código?")) return;
     try {
       await BAL.saveOverrides({});
-      document.querySelectorAll("input[data-id]").forEach(inp => { inp.value = fmt(defecto[inp.dataset.id]); });
+      entradas.forEach(e => {
+        if (e.tipo === "tiempo") {
+          const t = desc(defecto[e.id]);
+          document.querySelectorAll(`input[data-id="${CSS.escape(e.id)}"]`).forEach(inp => { inp.value = t[inp.dataset.parte === "m" ? "m" : inp.dataset.parte === "h" ? "h" : "s"]; });
+        } else {
+          const inp = document.querySelector(`input[data-id="${CSS.escape(e.id)}"]`);
+          if (inp) inp.value = fmt(defecto[e.id]);
+        }
+      });
       refrescar();
       $("estado").className = "estado ok";
       $("estado").textContent = "Todo restaurado a los valores por defecto.";
