@@ -1,5 +1,5 @@
 /* FarmScene: la granja privada. Fase 1 (mundo) + Fase 3 (interacciones). */
-const CD = { tree: 14, rock: 20 };           // cooldown en segundos (+ largo para ver la transición restos→dañada→entera)
+// CD (enfriamiento árbol/piedra) ahora vive en state.js para el panel de balanceo
 function witherMs(ck) { const cd = CROP_DEF[ck]; return cd ? cd.grow * 1000 * 0.5 : 120000; }   // marchitado proporcional: mitad del tiempo de cultivo
 const ACT_DUR = { chop: 2.7, mine: 2.4, plant: 0.6, harvest: 0.6, water: 0.6, fish: 1.5 };   // talar = 3 golpes (3 vueltas de la animación, detalles viernes); picar largo: entero→dañado→restos
 function oreCdSec(tier) { return 20 + tier * 6; }   // 20/26/32/38/44s — se nota el estado dañado a la mitad

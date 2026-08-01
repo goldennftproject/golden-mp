@@ -33,6 +33,7 @@ function enterGame() {
 // al cargar: si ya tenés cuenta + granja guardada, entrás directo (sin pedir apodo otra vez)
 (async function boot() {
   let returning = false;
+  try { await window.BAL_READY; } catch (e) {}   // ajustes del panel de balanceo (balance.html) antes de crear nada
   try { await window.SAVE_READY; returning = await loadFarm(); } catch (e) { console.warn(e); }
   hideEl("loading");
   if (returning && window.NICK) enterGame();

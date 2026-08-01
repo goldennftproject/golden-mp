@@ -63,7 +63,7 @@ function resSprite(k) { return CROP_DEF[k] ? "crop_" + k : (RES_SPRITE[k] || nul
 const CROP_ORDER = ["papa","zanahoria","cebolla","calabacin","repollo","calabaza","brocoli"];
 // TABLA DE PRECIOS del diseñador (31/7): Ganancia = Tiempo × Riesgo × Nivel. Papa base: compra 1 / venta 3 / 1h.
 // growH = horas reales de la tabla. En TESTEO corre comprimido: 1h → 1min (GROW_SCALE). Para pasar a real: GROW_SCALE = 1.
-const GROW_SCALE = 1 / 60;
+var GROW_SCALE = 1 / 60;
 const CROP_DEF = {
   papa:      { label:"Papa",      emoji:"🥔", lvl:1, seedCost:1,  growH:1,  yield:1, price:3 },
   zanahoria: { label:"Zanahoria", emoji:"🥕", lvl:2, seedCost:3,  growH:2,  yield:1, price:8 },
@@ -73,7 +73,8 @@ const CROP_DEF = {
   calabaza:  { label:"Calabaza",  emoji:"🎃", lvl:6, seedCost:40, growH:24, yield:1, price:100 },
   brocoli:   { label:"Brócoli",   emoji:"🥦", lvl:7, seedCost:90, growH:48, yield:1, price:210 },
 };
-for (const k in CROP_DEF) CROP_DEF[k].grow = Math.round(CROP_DEF[k].growH * 3600 * GROW_SCALE);   // en segundos, como siempre
+function recomputeCropGrow() { for (const k in CROP_DEF) CROP_DEF[k].grow = Math.round(CROP_DEF[k].growH * 3600 * GROW_SCALE); }
+recomputeCropGrow();   // en segundos, como siempre
 // --- peces (ítems del inventario) ---
 const FISH_ORDER = ["comun", "raro", "epico", "legendario"];
 const FISH_DEF = { comun: { label: "Pez común", emoji: "🐟", sprite: "fish_comun" }, raro: { label: "Pez raro", emoji: "🐠", sprite: "fish_raro" }, epico: { label: "Pez épico", emoji: "🐡", sprite: "fish_epico" }, legendario: { label: "Pez legendario", emoji: "🐋", sprite: "fish_legendario" } };
@@ -82,7 +83,8 @@ function farmLevel() { return skillInfo(G.skills.farming).lvl; }
 function cropUnlocked(k) { const cd = CROP_DEF[k]; return !!cd && farmLevel() >= cd.lvl; }
 function selectSeed(k) { if (!CROP_DEF[k]) return; G.selSeed = k; if (isOpen("ov-inv")) refreshInv(); }
 // cupo diario de semillas (anti-inflación): compras + las del cofre suman al mismo límite
-const SEED_DAILY_MAX = 30;
+var SEED_DAILY_MAX = 30;
+var CD = { tree: 14, rock: 20 };   // enfriamiento (s) de árbol y piedra — editable en balance.html
 function seedBuysToday() {
   const sb = G.seedBuys || (G.seedBuys = { date: "", count: 0 });
   if (sb.date !== dayStamp(0)) { sb.date = dayStamp(0); sb.count = 0; }
@@ -119,7 +121,7 @@ const MAT_DEF = {
   barra_hierro: { label:"Barra de hierro",  sprite:"res_barra_hierro", cost:{ hierro:3 } },
   barra_oro:    { label:"Barra de oro",     sprite:"res_barra_oro",    cost:{ oro:3 } },
 };
-const MAT_CD_MS = 6000;   // detalles viernes: craftear barras tiene enfriamiento
+var MAT_CD_MS = 6000;   // detalles viernes: craftear barras tiene enfriamiento
 function matCdLeft(id) { G.matCd = G.matCd || {}; return Math.max(0, (G.matCd[id] || 0) - nowMs()); }
 function craftMat(id) {
   const md = MAT_DEF[id]; if (!md) return;
@@ -135,7 +137,7 @@ function craftMat(id) {
 }
 
 // --- lombrices (detalles213): carnada de pesca, se compran en la Tienda ---
-const WORM_PRICE = 3;
+var WORM_PRICE = 3;
 function buyWorm(qty) {
   qty = Math.max(1, Math.floor(qty || 1));
   const cost = WORM_PRICE * qty;
@@ -262,10 +264,11 @@ function craftSword() {
   refreshForge(); if (typeof syncSlots === "function") syncSlots(); if (isOpen("ov-inv")) refreshInv();
 }
 // daño del jugador — viernes (2): SOLO con arma equipada (sin arma no hay ataque, devuelve 0)
+var DMG_SWORD_BASE = 8, DMG_SWORD_WOOD_BASE = 4, DMG_BOW_BASE = 6;   // bases editables desde balance.html
 function swordDmg() {
   const lvl = skillInfo(G.skills.sword).lvl;
-  if (G.gear.arma === "sword" && toolDur("sword") > 0) return 8 + Math.floor(lvl / 2);        // solo si está EQUIPADA
-  if (G.gear.arma === "sword_wood" && toolDur("sword_wood") > 0) return 4 + Math.floor(lvl / 2);
+  if (G.gear.arma === "sword" && toolDur("sword") > 0) return DMG_SWORD_BASE + Math.floor(lvl / 2);        // solo si está EQUIPADA
+  if (G.gear.arma === "sword_wood" && toolDur("sword_wood") > 0) return DMG_SWORD_WOOD_BASE + Math.floor(lvl / 2);
   return 0;
 }
 
@@ -288,9 +291,9 @@ function craftArrows() {
   log("Crafteaste 10 flechas — están en tu bolsa; equipalas en el panel de Equipo.", "good"); toast("+10 flechas en la bolsa"); forgeWork();
   refreshForge(); if (typeof syncSlots === "function") syncSlots(); if (isOpen("ov-inv")) refreshInv();
 }
-function bowDmg() { return 6 + Math.floor(skillInfo(G.skills.range).lvl / 2); }
+function bowDmg() { return DMG_BOW_BASE + Math.floor(skillInfo(G.skills.range).lvl / 2); }
 // viernes (2): la pestaña Armas de la Herrería se desbloquea pagando
-const ARMAS_UNLOCK_COST = { madera: 20, piedra: 20 }, ARMAS_UNLOCK_PLATA = 1000;
+const ARMAS_UNLOCK_COST = { madera: 20, piedra: 20 }; var ARMAS_UNLOCK_PLATA = 1000;
 function unlockArmas() {
   if (G.armasUnlocked) return;
   if (!canAfford(ARMAS_UNLOCK_COST)) { toast("Te faltan materiales"); return; }
@@ -442,8 +445,8 @@ function chestWithdraw(ci, si) {
 }
 
 // --- dummy de práctica (detalless.docx): entrenar espada, cooldown 4 horas ---
-const DUMMY_CD_MS = 4 * 3600 * 1000;
-const DUMMY_XP = 30;
+var DUMMY_CD_MS = 4 * 3600 * 1000;
+var DUMMY_XP = 30;
 function fmtDur(ms) { const m = Math.ceil(ms / 60000); if (m >= 60) { const h = Math.floor(m / 60); return h + "h " + (m % 60) + "m"; } return m + "m"; }
 
 // --- bestiario (Fase D) — 6 tiers, de común a legendario ---
@@ -658,7 +661,8 @@ function goFishing() {
 }
 
 // --- parcelas bloqueadas: costo de desbloquear la siguiente (200, 400, 800, ... plata) ---
-function plotUnlockCost() { return 200 * Math.pow(2, Math.max(0, (G.plotsOwned || 6) - 6)); }
+var PLOT_UNLOCK_BASE = 200;
+function plotUnlockCost() { return PLOT_UNLOCK_BASE * Math.pow(2, Math.max(0, (G.plotsOwned || 6) - 6)); }
 
 // --- cofre diario de login (racha de 7 días · anti-inflación: 80% insumos / 20% plata) ---
 const DAILY_REWARDS = [
