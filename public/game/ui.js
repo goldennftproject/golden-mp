@@ -330,7 +330,7 @@ function showSeedWheel(px, py, plot) {
     const a = -Math.PI / 2 + i * 2 * Math.PI / opts.length;
     const x = Math.round(Math.cos(a) * R), y = Math.round(Math.sin(a) * R);
     const cd = CROP_DEF[k];
-    return `<div class="swi" data-k="${k}" title="${cd.label} · crece en ${cd.grow}s" style="left:${x}px;top:${y}px"><img class="swimg" src="${GF.spr("seed_" + k)}" onerror="this.outerHTML='<span>${cd.emoji}</span>'"><b>×${G.seeds[k]}</b></div>`;
+    return `<div class="swi" data-k="${k}" title="${cd.label} · crece en ${fmtSecs(cd.grow)}" style="left:${x}px;top:${y}px"><img class="swimg" src="${GF.spr("seed_" + k)}" onerror="this.outerHTML='<span>${cd.emoji}</span>'"><b>×${G.seeds[k]}</b></div>`;
   }).join("") + '<div class="swi center" style="left:0;top:0"><span></span></div>';
   w.classList.add("show");
   c.querySelectorAll(".swi[data-k]").forEach(el => el.onclick = (ev) => {
@@ -508,7 +508,7 @@ function refreshSeedShop() {
     const controls = unlocked
       ? `<input id="sq-${k}" type="number" min="1" value="1"><button class="green sm" data-buy="${k}" ${aff ? "" : "disabled"}>Comprar · ${coinIc("plata")}${cd.seedCost} c/u</button>`
       : `<button class="ghost sm" disabled>Cultivo nv ${cd.lvl}</button>`;
-    return `<div class="mkt-row"><span class="mimg">${itemIcon({ sprite: "seed_" + k, emoji: cd.emoji })}</span><div class="minfo"><div class="mnm">${cd.label} <span class="seedlv">nv ${cd.lvl}</span></div><div class="mds">Semilla · crece en ${cd.grow}s · tenés ${fmt(G.seeds[k] || 0)}</div></div>${controls}</div>`;
+    return `<div class="mkt-row"><span class="mimg">${itemIcon({ sprite: "seed_" + k, emoji: cd.emoji })}</span><div class="minfo"><div class="mnm">${cd.label} <span class="seedlv">nv ${cd.lvl}</span></div><div class="mds">Semilla · crece en ${fmtSecs(cd.grow)} · tenés ${fmt(G.seeds[k] || 0)}</div></div>${controls}</div>`;
   }).join("")
   // carnada (detalles213): lombrices para pescar — fuera del cupo diario de semillas
   + '<div class="shophead">Carnada</div>'

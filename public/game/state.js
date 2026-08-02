@@ -448,6 +448,15 @@ function chestWithdraw(ci, si) {
 var DUMMY_CD_MS = 4 * 3600 * 1000;
 var DUMMY_XP = 30;
 function fmtDur(ms) { const m = Math.ceil(ms / 60000); if (m >= 60) { const h = Math.floor(m / 60); return h + "h " + (m % 60) + "m"; } return m + "m"; }
+// 2/8: duración en formato humano desde SEGUNDOS ("9 min", "1 h 30 min", "45 s") — para la Tienda y tooltips
+function fmtSecs(seg) {
+  seg = Math.round(seg);
+  if (seg < 60) return seg + " s";
+  const d = Math.floor(seg / 86400), h = Math.floor(seg % 86400 / 3600), m = Math.floor(seg % 3600 / 60), sx = seg % 60;
+  const p = [];
+  if (d) p.push(d + " d"); if (h) p.push(h + " h"); if (m) p.push(m + " min"); if (sx && !d && !h) p.push(sx + " s");
+  return p.join(" ");
+}
 
 // --- bestiario (Fase D) — 6 tiers, de común a legendario ---
 const MONSTER_ORDER = ["rata", "larva", "orco", "lancero", "guerrero", "troll"];
