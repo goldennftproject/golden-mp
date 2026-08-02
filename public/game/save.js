@@ -26,7 +26,7 @@ function snapshot() {
     tools: G.tools, toolsLost: G.toolsLost, sflStock: true, invRows: G.invRows, slots: G.slots, hotbar: G.hotbar, hotSel: G.hotSel, hbInit: G.hbInit, layout: G.layout,
     daily: G.daily, plotsOwned: G.plotsOwned, seedBuys: G.seedBuys, built: G.built,
     hp: G.hp, hpMax: G.hpMax, swordOwned: G.swordOwned, bowOwned: G.bowOwned, swordWoodOwned: G.swordWoodOwned, gear: G.gear,
-    armasUnlocked: G.armasUnlocked, treesOpen: G.treesOpen, rocksOpen: G.rocksOpen, firstCropDone: G.firstCropDone,
+    armasUnlocked: G.armasUnlocked, treesOpen: G.treesOpen, rocksOpen: G.rocksOpen, firstCropDone: G.firstCropDone, weapons: G.weapons,
     dishes: G.dishes, cooking: G.cooking, chests: G.chests, dummyUsedAt: G.dummyUsedAt,
     layoutPlots: G.layoutPlots, layoutPond: G.layoutPond };
 }
@@ -65,6 +65,20 @@ function hydrate(d) {
   if (typeof d.swordOwned === "boolean") G.swordOwned = d.swordOwned;
   if (typeof d.bowOwned === "boolean") G.bowOwned = d.bowOwned;
   G.swordWoodOwned = d.swordWoodOwned === true;
+  // ARMAS NUEVAS (doc 2/8) + migración de las viejas: madera→espada_madera, "de Hierro"(bronce)→espada_bronce, arco→arco_madera
+  G.weapons = (d.weapons && typeof d.weapons === "object") ? d.weapons : {};
+  if (!d.weapons) {
+    if (d.swordWoodOwned) G.weapons.espada_madera = { dur: 40 };
+    if (d.swordOwned) G.weapons.espada_bronce = { dur: 60 };
+    if (d.bowOwned) G.weapons.arco_madera = { dur: 40 };
+  }
+  const mapArma = { sword_wood: "espada_madera", sword: "espada_bronce", bow: "arco_madera" };
+  if (G.gear && mapArma[G.gear.arma]) G.gear.arma = mapArma[G.gear.arma];
+  if (G.gear && G.gear.arma && !(typeof ARM_DEF !== "undefined" && ARM_DEF[G.gear.arma] && G.weapons[G.gear.arma])) G.gear.arma = null;
+  // limpiar armas viejas de hotbar/slots guardados
+  const armaVieja = h => h && h.kind === "tool" && (h.key === "sword" || h.key === "sword_wood" || h.key === "bow");
+  G.hotbar = (G.hotbar || []).map(h => armaVieja(h) ? null : h);
+  if (Array.isArray(G.slots)) G.slots = G.slots.map(sl => armaVieja(sl) ? null : sl);
   G.firstCropDone = d.firstCropDone !== false;   // veteranos: true por defecto (solo el jugador nuevo tiene la 1ª tanda rápida)
   G.armasUnlocked = d.armasUnlocked === true;   // viernes (2): la pestaña Armas se paga (también para veteranos)
   // viernes (2): sets de árboles/piedras abiertos; compat con el guardado por contador de la primera versión

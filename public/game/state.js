@@ -8,7 +8,9 @@ const G = {
   hp: 100, hpMax: 100, swordOwned: false, bowOwned: false, swordWoodOwned: false, firstCropDone: false,   // combate (Fase D)
   armasUnlocked: false,          // viernes (2): la pestana Armas de la Herreria se paga (20 madera + 20 piedra + 1000 plata)
   treesOpen: [0], rocksOpen: [0],  // viernes (2): índices de árboles/piedras desbloqueados (cualquiera, sin orden — pedido Discord)
-  gear: { casco: null, armadura: null, botas: null, escudo: null, arma: null, municion: false },   // equipo (armas se equipan en el panel de Equipo — detalles jueves)
+  gear: { casco: null, armadura: null, botas: null, escudo: null, arma: null, municion: false },
+  weapons: {},                   // doc 2/8: armas nuevas — id ("espada_madera") -> { dur }
+  armCd: {},                     // enfriamiento de crafteo por arma   // equipo (armas se equipan en el panel de Equipo — detalles jueves)
   res: { madera: 0, piedra: 0, bronce: 0, hierro: 0, oro: 0, diamante: 0, netherita: 0, carne: 0, flecha: 0, lombriz: 0,
     tablon: 0, barra_piedra: 0, barra_bronce: 0, barra_hierro: 0, barra_oro: 0,
     papa: 0, zanahoria: 0, cebolla: 0, calabacin: 0, repollo: 0, calabaza: 0, brocoli: 0 },
@@ -36,7 +38,7 @@ const G = {
   dummyUsedAt: 0,  // último entrenamiento con el dummy (cooldown 4h)
   built: { store: true, horno: false, cocina: false },   // viernes (2): la Herreria es el unico edificio gratis; horno y cocina se construyen
   buffs: [], secPerGameHour: 1, gameHours: 0,
-  skills: { fishing: 0, farming: 0, cooking: 0, range: 0, sword: 0, mining: 0, crafting: 0 },
+  skills: { fishing: 0, farming: 0, cooking: 0, range: 0, sword: 0, hacha: 0, mazo: 0, mining: 0, crafting: 0 },   // doc 2/8: cada arma es su propia skill (espada=sword, arco=range)
 };
 window.G = G;
 
@@ -150,7 +152,7 @@ function buyWorm(qty) {
 
 // --- skills ---
 const SKILL_DEFS = [["farming","","Cultivo"],["fishing","","Pesca"],["mining","","Minería"],
-  ["sword","","Espada"],["range","","Arco"],["cooking","","Cocina"],["crafting","","Artesanía"]];
+  ["sword","","Espada"],["hacha","","Hacha (combate)"],["mazo","","Mazo"],["range","","Arco"],["cooking","","Cocina"],["crafting","","Artesanía"]];
 const SKILL_NAME = {}; SKILL_DEFS.forEach(([k,,nm]) => SKILL_NAME[k] = nm);
 var XP_BASE = 100, XP_EXP = 2.7;   // doc maestro 2/8: curva 1-150 anclada (nivel 40 = 360 h); editables en balance.html
 function skillNeed(lvl) { return Math.round(XP_BASE * Math.pow(lvl, XP_EXP)); }
@@ -263,7 +265,83 @@ const TOOL_DEF = {
   sword_wood: { label:"Espada de Madera", emoji:"🗡️", sprite:"sword_wood", max:40, repair:{madera:2} },   // viernes (2): arma inicial
   bow:   { label:"Arco",             emoji:"🏹", sprite:"bow",         max:60, repair:{madera:5} },
 };
-// --- espadas (se craftean en la Herrería; viernes 2: SIN arma equipada no se ataca) ---
+/* === ARMAS DOC MAESTRO 2/8: 4 tipos × 5 rarezas, daño aleatorio + buff por tipo ===
+   Espada=Crítico (daño ×2) · Hacha=Perforación (ignora % def) · Mazo=Aturdir (el mob pierde su próximo golpe) · Arco=Sangrado (daño/s 3s, a distancia) */
+const ARM_TIPOS = ["espada", "hacha", "mazo", "arco"];
+const ARM_RAREZAS = ["madera", "piedra", "bronce", "oro", "diamante"];
+const ARM_TIPO_DEF = {
+  espada: { label: "Espada", buff: "crit",   buffLabel: "Crítico",     skill: "sword", sprite: "sword", primQ: 5, secQ: 3, repQ: 2, plata: [10, 25, 60, 140, 320] },
+  hacha:  { label: "Hacha",  buff: "pierce", buffLabel: "Perforación", skill: "hacha", sprite: "axe",   primQ: 6, secQ: 3, repQ: 3, plata: [10, 30, 70, 170, 385] },
+  mazo:   { label: "Mazo",   buff: "stun",   buffLabel: "Aturdir",     skill: "mazo",  sprite: "pick_stone", primQ: 8, secQ: 4, repQ: 4, plata: [15, 40, 90, 210, 480] },
+  arco:   { label: "Arco",   buff: "bleed",  buffLabel: "Sangrado",    skill: "range", sprite: "bow",   primQ: 4, secQ: 2, repQ: 2, plata: [10, 20, 50, 110, 255] },
+};
+const ARM_MINMAX = {   // daño aleatorio min-max por tipo y rareza (tablas 15-18 del compendio)
+  espada: [[3,5],[4,8],[7,11],[10,18],[16,26]],
+  hacha:  [[4,6],[5,9],[8,12],[12,20],[18,30]],
+  mazo:   [[4,6],[6,10],[9,15],[14,22],[20,34]],
+  arco:   [[2,4],[3,5],[5,9],[8,12],[12,20]],
+};
+const ARM_BUFFVAL = { espada: [3,5,8,12,18], hacha: [20,30,40,55,70], mazo: [8,12,16,22,30], arco: [1,2,3,4,6] };
+const ARM_DUR = [40, 60, 90, 130, 190];
+const ARM_CDS = [3, 5, 8, 12, 18];   // enfriamiento de crafteo (s)
+const ARM_MAT = { madera: "madera", piedra: "piedra", bronce: "barra_bronce", oro: "barra_oro", diamante: "diamante" };
+const ARM_RAR_LABEL = { madera: "de Madera", piedra: "de Piedra", bronce: "de Bronce", oro: "de Oro", diamante: "de Diamante" };
+const ARM_DEF = {};
+ARM_TIPOS.forEach(tipo => ARM_RAREZAS.forEach((rar, i) => {
+  const td = ARM_TIPO_DEF[tipo], cost = {};
+  cost[ARM_MAT[rar]] = td.primQ;
+  if (i > 0) cost[ARM_MAT[ARM_RAREZAS[i - 1]]] = (cost[ARM_MAT[ARM_RAREZAS[i - 1]]] || 0) + td.secQ;
+  const repair = {}; repair[ARM_MAT[rar]] = td.repQ;
+  ARM_DEF[tipo + "_" + rar] = { tipo, rareza: rar, ri: i, label: td.label + " " + ARM_RAR_LABEL[rar],
+    min: ARM_MINMAX[tipo][i][0], max: ARM_MINMAX[tipo][i][1], buffVal: ARM_BUFFVAL[tipo][i],
+    dur: ARM_DUR[i], cost, plata: td.plata[i], cd: ARM_CDS[i], repair };
+}));
+const ARM_ORDER = [];
+ARM_TIPOS.forEach(t => ARM_RAREZAS.forEach(r => ARM_ORDER.push(t + "_" + r)));
+
+function armaEq() { const id = G.gear.arma; return (id && ARM_DEF[id] && G.weapons[id] && G.weapons[id].dur > 0) ? id : null; }
+function armSkillKey(tipo) { return ARM_TIPO_DEF[tipo].skill; }
+function armCdLeft(id) { return Math.max(0, ((G.armCd && G.armCd[id]) || 0) - nowMs()); }
+function craftWeapon(id) {
+  const w = ARM_DEF[id]; if (!w) return;
+  if (!G.armasUnlocked) { toast("Desbloqueá la sección de Armas primero"); return; }
+  if (G.weapons[id]) { toast("Ya tenés " + w.label); return; }
+  if (armCdLeft(id) > 0) { toast("La forja se enfría — " + fmtSecs(Math.ceil(armCdLeft(id) / 1000))); return; }
+  if (!canAfford(w.cost)) { toast("Te faltan materiales"); return; }
+  if (G.plata < w.plata) { toast("Te falta plata"); return; }
+  payCost(w.cost); G.plata -= w.plata;
+  G.weapons[id] = { dur: w.dur };
+  G.armCd = G.armCd || {}; G.armCd[id] = nowMs() + w.cd * 1000;
+  if (!G.gear.arma) G.gear.arma = id;
+  addXp("crafting", 10 + w.ri * 4);
+  log("Forjaste " + w.label + ".", "gold"); toast("¡" + w.label + "!"); forgeWork();
+  refreshForge(); if (typeof syncSlots === "function") syncSlots(); if (isOpen("ov-inv")) refreshInv(); refreshHud();
+}
+function repairWeapon(id) {
+  const w = ARM_DEF[id]; if (!w || !G.weapons[id]) return;
+  if (G.weapons[id].dur >= w.dur) { toast("Ya está al 100%"); return; }
+  if (!canAfford(w.repair)) { toast("Te faltan materiales para reparar"); return; }
+  payCost(w.repair); G.weapons[id].dur = w.dur;
+  log("Reparaste " + w.label + " (100%).", "good"); toast("Reparada"); forgeWork(); refreshForge();
+  if (isOpen("ov-equip")) refreshEquip(); if (isOpen("ov-inv")) refreshInv();
+}
+function useWeapon(id) { if (G.weapons[id] && G.weapons[id].dur > 0) G.weapons[id].dur--; return G.weapons[id] ? G.weapons[id].dur : 0; }
+// la tirada de un golpe (doc: Daño = máx(1; Ataque − Def efectiva); Ataque = tirada aleatoria + nivel de la skill del arma / 2)
+function rollWeaponHit(defensa) {
+  const id = armaEq(); if (!id) return null;
+  const w = ARM_DEF[id], lvl = skillInfo(G.skills[armSkillKey(w.tipo)] || 0).lvl;
+  let atk = w.min + Math.floor(Math.random() * (w.max - w.min + 1)) + Math.floor(lvl / 2);
+  let defEf = defensa || 0;
+  const out = { id, tipo: w.tipo, crit: false, stun: false, bleed: 0 };
+  if (w.tipo === "hacha") defEf = defEf * (1 - w.buffVal / 100);
+  if (w.tipo === "espada" && Math.random() * 100 < w.buffVal) { atk *= 2; out.crit = true; }
+  if (w.tipo === "mazo" && Math.random() * 100 < w.buffVal) out.stun = true;
+  if (w.tipo === "arco") out.bleed = w.buffVal;
+  out.dmg = Math.max(1, Math.round(atk - defEf));
+  return out;
+}
+
+// --- LEGADO (espada/arco viejos): queda para migración de guardados; ya no se craftea ---
 const SWORD_COST = { bronce: 12 };   // 100% metal (feedback del diseñador: nada de madera)
 const SWORD_WOOD_COST = { madera: 5 };
 function craftSwordWood() {
@@ -285,12 +363,10 @@ function craftSword() {
   refreshForge(); if (typeof syncSlots === "function") syncSlots(); if (isOpen("ov-inv")) refreshInv();
 }
 // daño del jugador — viernes (2): SOLO con arma equipada (sin arma no hay ataque, devuelve 0)
-var DMG_SWORD_BASE = 8, DMG_SWORD_WOOD_BASE = 4, DMG_BOW_BASE = 6;   // bases editables desde balance.html
-function swordDmg() {
-  const lvl = skillInfo(G.skills.sword).lvl;
-  if (G.gear.arma === "sword" && toolDur("sword") > 0) return DMG_SWORD_BASE + Math.floor(lvl / 2);        // solo si está EQUIPADA
-  if (G.gear.arma === "sword_wood" && toolDur("sword_wood") > 0) return DMG_SWORD_WOOD_BASE + Math.floor(lvl / 2);
-  return 0;
+function swordDmg() {   // legado: >0 si hay un arma CUERPO A CUERPO equipada y sana (el daño real sale de rollWeaponHit)
+  const id = armaEq(); if (!id) return 0;
+  const w = ARM_DEF[id]; if (w.tipo === "arco") return 0;
+  return Math.round((w.min + w.max) / 2) + Math.floor(skillInfo(G.skills[armSkillKey(w.tipo)] || 0).lvl / 2);
 }
 
 // --- arco y flechas (combate a distancia; usa la skill Arco) ---
@@ -312,7 +388,7 @@ function craftArrows() {
   log("Crafteaste 10 flechas — están en tu bolsa; equipalas en el panel de Equipo.", "good"); toast("+10 flechas en la bolsa"); forgeWork();
   refreshForge(); if (typeof syncSlots === "function") syncSlots(); if (isOpen("ov-inv")) refreshInv();
 }
-function bowDmg() { return DMG_BOW_BASE + Math.floor(skillInfo(G.skills.range).lvl / 2); }
+function bowDmg() { const id = armaEq(); if (!id || ARM_DEF[id].tipo !== "arco") return 0; const r = rollWeaponHit(0); return r ? r.dmg : 0; }
 // viernes (2): la pestaña Armas de la Herrería se desbloquea pagando
 const ARMAS_UNLOCK_COST = { madera: 20, piedra: 20 }; var ARMAS_UNLOCK_PLATA = 1000;
 function unlockArmas() {
@@ -327,7 +403,7 @@ function unlockArmas() {
 const NODE_UNLOCK_COSTS = [3, 9, 27, 81, 100];
 function treeUnlockCost() { return NODE_UNLOCK_COSTS[Math.min(NODE_UNLOCK_COSTS.length - 1, Math.max(0, (G.treesOpen || [0]).length - 1))]; }
 function rockUnlockCost() { return NODE_UNLOCK_COSTS[Math.min(NODE_UNLOCK_COSTS.length - 1, Math.max(0, (G.rocksOpen || [0]).length - 1))]; }
-function canShoot() { return G.gear.arma === "bow" && toolDur("bow") > 0 && G.gear.municion && (G.res.flecha || 0) > 0; }   // arco Y flechas equipados
+function canShoot() { const id = armaEq(); return !!(id && ARM_DEF[id].tipo === "arco" && G.gear.municion && (G.res.flecha || 0) > 0); }   // arco nuevo + flechas equipadas
 
 // --- armaduras (dropean de los monstruos del Bosque; reducen el daño recibido) ---
 const GEAR_DEF = {
@@ -482,12 +558,12 @@ function fmtSecs(seg) {
 // --- bestiario (Fase D) — 6 tiers, de común a legendario ---
 const MONSTER_ORDER = ["rata", "larva", "orco", "lancero", "guerrero", "troll"];
 const MONSTER_DEF = {
-  rata:     { label:"Rata",           emoji:"🐀", sprite:"rata", size:30, hp:15,  dmg:2,  xp:6,  spd:55, loot:{ carne:[1,1,0.55], plata:[2,6,0.85] } },
-  larva:    { label:"Larva Venenosa", emoji:"🐛", sprite:"larva", size:38, hp:25,  dmg:4,  xp:10, spd:35, loot:{ carne:[1,2,0.50], plata:[4,10,0.80], flecha:[1,3,0.35] }, gearLoot:[["botas_cuero",0.08]] },
-  orco:     { label:"Orco",           emoji:"👹", sprite:"orc", size:52, hp:45,  dmg:7,  xp:16, spd:60, loot:{ carne:[1,2,0.55], plata:[8,16,0.85], bronce:[1,2,0.35] }, gearLoot:[["casco_cuero",0.10],["escudo_madera",0.08]] },
-  lancero:  { label:"Orco Lancero",   emoji:"🔱", sprite:"lancero", size:58, hp:70,  dmg:10, xp:24, spd:70, loot:{ carne:[2,3,0.60], plata:[12,24,0.90], bronce:[1,3,0.40], flecha:[2,6,0.45] }, gearLoot:[["pechera_cuero",0.10]] },
-  guerrero: { label:"Orco Guerrero",  emoji:"👺", sprite:"guerrero", size:70, hp:110, dmg:14, xp:36, spd:65, loot:{ carne:[2,4,0.60], plata:[20,40,0.90], oro:[1,2,0.30] }, gearLoot:[["casco_hierro",0.10],["escudo_hierro",0.06]] },
-  troll:    { label:"Troll",          emoji:"🧌", sprite:"troll", size:74, hp:180, dmg:20, xp:60, spd:45, loot:{ carne:[3,5,0.65], plata:[40,80,0.95], oro:[1,3,0.45], diamante:[1,1,0.12] }, gearLoot:[["pechera_hierro",0.15]] },
+  rata:     { label:"Rata",           emoji:"🐀", sprite:"rata", size:30, hp:12,  def:0,  dmg:2,  xp:100,  spd:55, loot:{ carne:[1,1,0.55], plata:[3,3,1] } },
+  larva:    { label:"Larva Venenosa", emoji:"🐛", sprite:"larva", size:38, hp:22,  def:1,  dmg:3,  xp:180,  spd:35, loot:{ carne:[1,2,0.50], plata:[5,5,1], flecha:[1,3,0.35] }, gearLoot:[["botas_cuero",0.08]] },
+  orco:     { label:"Orco",           emoji:"👹", sprite:"orc", size:52, hp:60,  def:4,  dmg:8,  xp:500,  spd:60, loot:{ carne:[1,2,0.55], plata:[14,14,1], bronce:[1,2,0.35] }, gearLoot:[["casco_cuero",0.10],["escudo_madera",0.08]] },
+  lancero:  { label:"Orco Lancero",   emoji:"🔱", sprite:"lancero", size:58, hp:90,  def:6,  dmg:10, xp:800,  spd:70, loot:{ carne:[2,3,0.60], plata:[20,20,1], bronce:[1,3,0.40], flecha:[2,6,0.45] }, gearLoot:[["pechera_cuero",0.10]] },
+  guerrero: { label:"Orco Guerrero",  emoji:"👺", sprite:"guerrero", size:70, hp:115, def:8,  dmg:12, xp:1100, spd:65, loot:{ carne:[2,4,0.60], plata:[30,30,1], oro:[1,2,0.30] }, gearLoot:[["casco_hierro",0.10],["escudo_hierro",0.06]] },
+  troll:    { label:"Trol",           emoji:"🧌", sprite:"troll", size:74, hp:140, def:10, dmg:14, xp:1400, spd:45, loot:{ carne:[3,5,0.65], plata:[40,40,1], oro:[1,3,0.45], diamante:[1,1,0.12] }, gearLoot:[["pechera_hierro",0.15]] },
 };
 // combate (detalles 338): auto-ataque cada 2s, alcance del arco 4 celdas
 const ATTACK_MS = 2000;
@@ -616,9 +692,7 @@ function descKey(d) { return d ? d.kind + ":" + d.key : ""; }
 function canonicalStacks() {
   const list = [];
   ["axe", "rod"].forEach(k => { let n = toolCount(k); while (n > 0) { list.push({ kind: "tool", key: k }); n -= 99; } });   // apilables ×99
-  if (G.swordOwned) list.push({ kind: "tool", key: "sword" });
-  if (G.swordWoodOwned) list.push({ kind: "tool", key: "sword_wood" });
-  if (G.bowOwned) list.push({ kind: "tool", key: "bow" });
+  for (const id of ARM_ORDER) if (G.weapons && G.weapons[id]) list.push({ kind: "arm", key: id });   // doc 2/8: armas nuevas
   PICK_ORDER.forEach(id => { let n = pickCount(id); while (n > 0) { list.push({ kind: "pick", key: id }); n -= 99; } });   // picos apilables ×99
   ITEM_RES_ORDER.forEach(r => { let n = Math.floor(G.res[r] || 0); while (n > 0) { list.push({ kind: "res", key: r }); n -= 99; } });
   CROP_ORDER.forEach(s => { let n = Math.floor(G.seeds[s] || 0); while (n > 0) { list.push({ kind: "seed", key: s }); n -= 99; } });

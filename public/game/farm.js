@@ -522,7 +522,7 @@ class FarmScene extends Phaser.Scene {
       if (o.state === "ready") { const cd = CROP_DEF[o.cropKey]; return "Cosechar " + (cd ? cd.label : ""); }
       return "Creciendo…";
     }
-    if (o.type === "portal") return "Teletransportarte a la Zona Negra" + ((G.swordOwned || G.swordWoodOwned) ? "" : " sin espada");
+    if (o.type === "portal") return "Teletransportarte a la Zona Negra" + (Object.keys(G.weapons || {}).length ? "" : " sin arma");
     const secs = cd ? Math.ceil((o.readyAt - nowMs()) / 1000) : 0;
     if (o.type === "tree") { if (o.locked) return "Desbloquear árbol (" + treeUnlockCost() + " madera)"; return cd ? "Vuelve en " + fmtSecs(secs) : "Talar madera"; }
     if (o.type === "rock") { if (o.locked) return "Desbloquear piedra (" + rockUnlockCost() + " piedra)"; return cd ? "Vuelve en " + fmtSecs(secs) : "Picar piedra"; }
@@ -535,7 +535,7 @@ class FarmScene extends Phaser.Scene {
     if (o.type === "horno") return "Horno de Piedra";
     if (o.type === "cofre") return "Cofre depósito";
     if (o.type === "dummy") {
-      if (!G.swordOwned) return "Dummy de práctica — necesitás una espada";
+      { const aid = armaEq(); if (!aid || ARM_DEF[aid].tipo === "arco") return "Dummy de práctica — equipá un arma cuerpo a cuerpo"; }
       const dleft = (G.dummyUsedAt || 0) + DUMMY_CD_MS - nowMs();
       return dleft > 0 ? "El dummy descansa — vuelve en " + fmtDur(dleft) : "Entrenar espada (+" + DUMMY_XP + " XP)";
     }
@@ -896,14 +896,12 @@ class FarmScene extends Phaser.Scene {
 
   // entrenar con el dummy: 3 espadazos, XP de Espada y cooldown de 4 horas
   trainDummy(o) {
-    if (!G.swordOwned) { toast("Necesitás la Espada de Hierro — crafteala en la Herrería"); return; }
-    if (G.gear.arma !== "sword") { toast("Equipá la espada en el panel de Equipo"); return; }
-    const dsw = (G.gear.arma === "sword_wood") ? "sword_wood" : "sword";   // viernes (2): la de madera también entrena
-    if (toolDur(dsw) <= 0) { toast("Necesitás una espada equipada y sana"); return; }
+    const aid = armaEq();
+    if (!aid || ARM_DEF[aid].tipo === "arco") { toast("Equipá un arma cuerpo a cuerpo (espada, hacha o mazo)"); return; }
     const left = (G.dummyUsedAt || 0) + DUMMY_CD_MS - nowMs();
     if (left > 0) { toast("El dummy descansa — vuelve en " + fmtDur(left)); return; }
     G.dummyUsedAt = nowMs();
-    useTool(dsw); useTool(dsw);   // entrenar gasta 2 de durabilidad
+    useWeapon(aid); useWeapon(aid);   // entrenar gasta 2 de durabilidad del arma
     let hits = 0;
     const sign = this.hero.x <= o.cx ? 1 : -1;
     const swing = () => {
@@ -919,9 +917,10 @@ class FarmScene extends Phaser.Scene {
       this.tweens.add({ targets: o.sprite, angle: 7 * sign, duration: 90, yoyo: true, onComplete: () => o.sprite.setAngle(0) });
       if (hits < 3) this.time.delayedCall(280, swing);
       else {
-        addXp("sword", DUMMY_XP);
-        log("Entrenaste con el dummy: +" + DUMMY_XP + " XP de Espada. Vuelve en 4h. " + toolDur(dsw) + "/" + TOOL_DEF[dsw].max, "gold");
-        toast("+" + DUMMY_XP + " XP de Espada");
+        const sk = armSkillKey(ARM_DEF[aid].tipo);
+        addXp(sk, DUMMY_XP);
+        log("Entrenaste con el dummy: +" + DUMMY_XP + " XP de " + SKILL_NAME[sk] + ". Vuelve en 4h. " + G.weapons[aid].dur + "/" + ARM_DEF[aid].dur, "gold");
+        toast("+" + DUMMY_XP + " XP de " + SKILL_NAME[sk]);
         refreshHud(); if (typeof saveFarm === "function") saveFarm();
       }
     };

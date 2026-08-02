@@ -298,23 +298,35 @@ class ForestScene extends Phaser.Scene {
   // disparo: proyectil que viaja hasta el monstruo y pega al llegar
   shootArrow(m) {
     if (!canShoot()) { toast("Sin flechas — crafteá en la Herrería"); return; }
-    G.res.flecha--; useTool("bow");
-    if (toolDur("bow") <= 0) { log("¡El arco se rompió! Reparalo en la Herrería.", "bad"); toast("¡Arco roto!"); }
+    const aid = armaEq();
+    G.res.flecha--;
+    if (aid) { useWeapon(aid); if (G.weapons[aid].dur <= 0) { log("¡" + ARM_DEF[aid].label + " roto! Reparalo en la Herrería.", "bad"); toast("¡Arco roto!"); } }
     if (typeof syncSlots === "function") syncSlots(); if (isOpen("ov-inv")) refreshInv();
     const a = this.add.text(this.hero.x, this.hero.y - 22, "", { fontSize: "16px", color: "#e8d3a8" }).setOrigin(0.5).setDepth(99999);
     a.setScale(m.cx < this.hero.x ? -1 : 1, 1);
     const d = Math.hypot(m.cx - this.hero.x, m.by - this.hero.y);
     this.tweens.add({
       targets: a, x: m.cx, y: m.by - (m.spr.displayHeight || m.spr.height) * 0.5, duration: Math.max(120, d * 1.6),
-      onComplete: () => { a.destroy(); if (!m.dead) this.hitMonster(m, bowDmg(), "range"); },
+      onComplete: () => { a.destroy(); if (!m.dead) this.hitMonster(m); },
     });
   }
 
   hitMonster(m, dmg, skill) {
     if (window.sfx) sfx("hit");
-    if (dmg == null) { dmg = swordDmg(); skill = "sword"; }
-    const swId = (G.gear.arma === "sword_wood") ? "sword_wood" : (G.gear.arma === "sword" ? "sword" : null);
-    if (skill === "sword" && swId && toolDur(swId) > 0) { useTool(swId); if (toolDur(swId) <= 0) { log("¡" + TOOL_DEF[swId].label + " rota! Reparala en la Herrería.", "bad"); toast("¡Espada rota!"); } }
+    let crit = false;
+    if (dmg == null) {   // doc 2/8: Daño = máx(1; tirada del arma + nivel/2 − defensa efectiva) + buff del tipo
+      const roll = rollWeaponHit(m.def.def || 0);
+      if (!roll) return;
+      dmg = roll.dmg; crit = roll.crit;
+      skill = armSkillKey(ARM_DEF[roll.id].tipo);
+      if (roll.stun) { m.stunUntil = this.time.now + 2100; this.floatTxt(m, "Aturdido", "#ffd24a"); }   // pierde su próximo golpe
+      if (roll.bleed) m.bleed = { dps: roll.bleed, until: this.time.now + 3000, next: this.time.now + 1000 };   // sangrado 3 s
+      if (ARM_DEF[roll.id].tipo !== "arco") {   // el arco gasta en shootArrow
+        useWeapon(roll.id);
+        if (G.weapons[roll.id].dur <= 0) { log("¡" + ARM_DEF[roll.id].label + " rota! Reparala en la Herrería.", "bad"); toast("¡Arma rota!"); }
+      }
+    }
+    if (crit) this.floatTxt(m, "¡CRÍTICO!", "#ff9a3a");
     m.hp -= dmg;
     // chispa de golpe (detalles 338)
     const hy = m.by - (m.spr.displayHeight || m.spr.height) * 0.5;
@@ -332,6 +344,12 @@ class ForestScene extends Phaser.Scene {
     const t = this.add.text(m.cx, m.by - (m.spr.displayHeight || m.spr.height), "-" + dmg, { fontFamily: "system-ui", fontSize: "13px", fontStyle: "bold", color: skill === "range" ? "#a8d8ff" : "#ffd24a", stroke: "#20301a", strokeThickness: 3 }).setOrigin(0.5, 1).setDepth(99999);
     this.tweens.add({ targets: t, y: t.y - 18, alpha: 0, duration: 550, onComplete: () => t.destroy() });
     if (m.hp <= 0) this.killMonster(m, skill || "sword"); else { this.drawBar(m); m.tgt = "hero"; this.updateTargetFx(); }
+  }
+
+  floatTxt(m, txt, color) {
+    const t = this.add.text(m.cx, m.by - (m.spr.displayHeight || m.spr.height) - 6, txt,
+      { fontFamily: "system-ui", fontSize: "11px", fontStyle: "bold", color, stroke: "#20301a", strokeThickness: 3 }).setOrigin(0.5, 1).setDepth(99999);
+    this.tweens.add({ targets: t, y: t.y - 14, alpha: 0, duration: 800, onComplete: () => t.destroy() });
   }
 
   killMonster(m, skill) {
@@ -401,12 +419,12 @@ class ForestScene extends Phaser.Scene {
         // si está caminando al momento del golpe, usa el espadazo CAMINANDO (piernas en marcha, 31/7)
         const movingNow = !!(this.moveTarget || k.left.isDown || k.right.isDown || k.up.isDown || k.down.isDown || k.aleft.isDown || k.aright.isDown || k.aup.isDown || k.adown.isDown);
         const swordKey = (movingNow && this.anims.exists("act_sword_walk")) ? "act_sword_walk" : "act_sword";
-        const akey = this.action.kind === "shoot" ? "act_bow" : ((G.gear.arma === "sword" || G.gear.arma === "sword_wood") ? swordKey : null);
+        const aid0 = armaEq(); const akey = this.action.kind === "shoot" ? "act_bow" : ((aid0 && ARM_DEF[aid0].tipo !== "arco") ? swordKey : null);   // espada/hacha/mazo usan el espadazo
         if (akey && this.anims.exists(akey)) { hero.play(akey); this.action.fx = true; }
         else {
           // respaldo (a puños o sin animación): el arma dibujada a mano como antes
           if (hero.anims.currentAnim?.key !== "idle") hero.play("idle");
-          const wkey = this.action.kind === "shoot" ? "bow" : (G.gear.arma === "sword" ? "sword" : (G.gear.arma === "sword_wood" ? "sword_wood" : null));
+          const wkey = this.action.kind === "shoot" ? "bow" : (aid0 ? ARM_TIPO_DEF[ARM_DEF[aid0].tipo].sprite : null);
           if (wkey && this.textures.exists(wkey)) {
             const fx = this.add.image(hero.x + sign * 18, hero.y - 26, wkey).setDisplaySize(26, 26).setOrigin(0.5, 0.85).setDepth(hero.y + 1);
             this.action.fx = fx;
@@ -506,8 +524,13 @@ class ForestScene extends Phaser.Scene {
         if (t > (m.wanderAt || 0)) { m.wanderAt = t + 2500 + Math.random() * 3000; m.wtgt = { x: m.home.x + (Math.random() - 0.5) * 120, y: m.home.y + (Math.random() - 0.5) * 90 }; }
         if (m.wtgt) { const dx = m.wtgt.x - m.cx, dy = m.wtgt.y - m.by, d = Math.hypot(dx, dy); if (d > 3) { const sp = m.def.spd * 0.35 * dt; m.cx += dx / d * sp; m.by += dy / d * sp; moved = true; } }
       }
-      // ataque al héroe
-      if (dHero < 40 && t > m.nextHit) {
+      // sangrado del arco (doc 2/8): tic por segundo mientras dure
+      if (m.bleed && t < m.bleed.until) {
+        if (t >= m.bleed.next) { m.bleed.next = t + 1000; m.hp -= m.bleed.dps; this.floatTxt(m, "-" + m.bleed.dps, "#e05a5a"); this.drawBar(m); if (m.hp <= 0) { this.killMonster(m, "range"); continue; } }
+      } else if (m.bleed) m.bleed = null;
+      // ataque al héroe (aturdido por el mazo = pierde el golpe)
+      if (m.stunUntil && t < m.stunUntil) { /* aturdido */ }
+      else if (dHero < 40 && t > m.nextHit) {
         m.nextHit = t + 2000; m.face = hero.x < m.cx ? -1 : 1;   // detalles viernes (1): los mobs atacan cada 2 segundos
         this.hurtHero(m.def.dmg);
         if (m.def.sprite) { this.playMob(m, "atk", true); m.atkUntil = t + 600; }

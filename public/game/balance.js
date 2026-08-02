@@ -58,20 +58,16 @@ var BAL = (function () {
       obj(cat, "pick." + id, p, "mineTier", "Tier máximo que mina", "tier · entero 0-5 (0 piedra · 1 bronce · 2 hierro · 3 oro · 4 diamante · 5 netherita)");
     });
 
-    // ARMAS Y COMBATE
+    // ARMAS (doc maestro 2/8): 4 tipos × 5 rarezas
+    ARM_ORDER.forEach(id => {
+      const w = ARM_DEF[id], cat = "Armas — " + ARM_TIPO_DEF[w.tipo].label;
+      obj(cat, "arm." + id, w, "min", w.label + " · daño mínimo", U.danio);
+      obj(cat, "arm." + id, w, "max", w.label + " · daño máximo", U.danio);
+      obj(cat, "arm." + id, w, "buffVal", w.label + " · " + ARM_TIPO_DEF[w.tipo].buffLabel, w.tipo === "arco" ? "daño por segundo · entero" : "% · entero");
+      obj(cat, "arm." + id, w, "dur", w.label + " · durabilidad", U.usos);
+      obj(cat, "arm." + id, w, "plata", w.label + " · costo — Plata", U.plata);
+    });
     { const cat = "Armas y combate";
-      costos(cat, "swordWood.cost", SWORD_WOOD_COST, "Espada de Madera · costo");
-      add(cat, "dmg.swordWood", "Espada de Madera · daño base (+ mitad del nivel de skill)", U.danio, () => DMG_SWORD_WOOD_BASE, v => { DMG_SWORD_WOOD_BASE = v; });
-      add(cat, "dur.swordWood", "Espada de Madera · durabilidad", U.usos, () => TOOL_DEF.sword_wood.max, v => { TOOL_DEF.sword_wood.max = v; });
-      costos(cat, "swordWood.repair", TOOL_DEF.sword_wood.repair, "Espada de Madera · reparación");
-      costos(cat, "sword.cost", SWORD_COST, "Espada de Hierro · costo");
-      add(cat, "dmg.sword", "Espada de Hierro · daño base (+ mitad del nivel de skill)", U.danio, () => DMG_SWORD_BASE, v => { DMG_SWORD_BASE = v; });
-      add(cat, "dur.sword", "Espada de Hierro · durabilidad", U.usos, () => TOOL_DEF.sword.max, v => { TOOL_DEF.sword.max = v; });
-      costos(cat, "sword.repair", TOOL_DEF.sword.repair, "Espada de Hierro · reparación");
-      costos(cat, "bow.cost", BOW_COST, "Arco · costo");
-      add(cat, "dmg.bow", "Arco · daño base (+ mitad del nivel de skill)", U.danio, () => DMG_BOW_BASE, v => { DMG_BOW_BASE = v; });
-      add(cat, "dur.bow", "Arco · durabilidad", U.usos, () => TOOL_DEF.bow.max, v => { TOOL_DEF.bow.max = v; });
-      costos(cat, "bow.repair", TOOL_DEF.bow.repair, "Arco · reparación");
       costos(cat, "arrows.cost", ARROW_COST, "Flechas ×10 · costo");
       costos(cat, "armasUnlock.cost", ARMAS_UNLOCK_COST, "Desbloquear pestaña Armas");
       add(cat, "armasUnlock.plata", "Desbloquear pestaña Armas — Plata", U.plata, () => ARMAS_UNLOCK_PLATA, v => { ARMAS_UNLOCK_PLATA = v; });
@@ -83,6 +79,7 @@ var BAL = (function () {
     MONSTER_ORDER.forEach(k => {
       const m = MONSTER_DEF[k], cat = "Monstruos — " + m.label;
       obj(cat, "mob." + k, m, "hp", "Vida", U.vida);
+      obj(cat, "mob." + k, m, "def", "Defensa (resta al daño recibido)", "puntos de defensa · entero");
       obj(cat, "mob." + k, m, "dmg", "Daño por golpe (pega cada 2 segundos)", U.danio);
       obj(cat, "mob." + k, m, "xp", "XP que da al morir", U.xp);
       obj(cat, "mob." + k, m, "spd", "Velocidad de movimiento", U.vel);
