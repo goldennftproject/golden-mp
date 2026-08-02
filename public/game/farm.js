@@ -234,10 +234,13 @@ class FarmScene extends Phaser.Scene {
       const sv = savedPlots[i];   // restaura lo plantado antes del refresh (ignora estados viejos como "wet")
       if (sv && (sv.state === "growing" || sv.state === "ready")) {
         obj.state = sv.state; obj.readyAt = sv.readyAt || 0; obj.cropKey = sv.cropKey || null;
-        obj.witherAt = sv.witherAt || 0;
+        obj.witherAt = 0;   // 2/8: sin marchitado
         this.applyPlotVisual(obj);
-        if (obj.state === "ready" && obj.witherAt && nowMs() >= obj.witherAt) this.setWithered(obj);
-      } else if (sv && sv.state === "withered") { obj.state = "withered"; obj.cropKey = sv.cropKey || null; this.applyPlotVisual(obj); this.setWithered(obj); }
+      } else if (sv && sv.state === "withered") {
+        // 2/8: los cultivos que quedaron marchitos de antes se recuperan como LISTOS si se sabe qué eran; si no, parcela libre
+        if (sv.cropKey) { obj.state = "ready"; obj.cropKey = sv.cropKey; obj.witherAt = 0; this.applyPlotVisual(obj); }
+        else { obj.state = "dry"; obj.cropKey = null; this.applyPlotVisual(obj); }
+      }
       return obj;
     });
     this.syncPlots();
@@ -1259,14 +1262,10 @@ class FarmScene extends Phaser.Scene {
       // listo sin cosechar: cuenta regresiva al marchitado
       // el contador del cultivo solo aparece con el cursor encima (igual que árboles y nodos)
       const plOver = this.timerOn(pl);
-      if (pl.state === "ready" && pl.witherAt) {
-        const left = pl.witherAt - t;
-        if (left <= 0) { this.setWithered(pl); this.syncPlots(); log("Un cultivo se marchitó sin cosechar.", "bad"); toast("Cultivo marchito"); continue; }
-        if (left < 30000 && plOver) pl.timer.setText("" + Math.ceil(left / 1000) + "s").setPosition(pl.cx, this.topY(pl)).setVisible(true);
-        else pl.timer.setVisible(false);
-      }
+      // 2/8: MARCHITADO DESACTIVADO (pedido del diseñador) — el cultivo listo ya no se pudre
+      if (pl.state === "ready" && pl.witherAt) { pl.witherAt = 0; this.syncPlots(); }
       if (pl.state !== "growing") continue;
-      if (t >= pl.readyAt) { pl.state = "ready"; pl.readyAt = 0; pl.witherAt = t + witherMs(pl.cropKey); this.showReadyCrop(pl); this.syncPlots(); }
+      if (t >= pl.readyAt) { pl.state = "ready"; pl.readyAt = 0; pl.witherAt = 0; this.showReadyCrop(pl); this.syncPlots(); }   // 2/8: sin marchitado — la cosecha espera
       else {
         if (plOver) pl.timer.setText(Math.max(0, Math.ceil((pl.readyAt - t) / 1000)) + "s").setPosition(pl.cx, this.topY(pl)).setVisible(true);
         else pl.timer.setVisible(false);
@@ -1287,7 +1286,8 @@ class FarmScene extends Phaser.Scene {
       else { const sp = Math.min(f.sp * dt, d); f.s.x += dx / d * sp; f.s.y += dy / d * sp; if (f.s.setFlipX) f.s.setFlipX(dx > 0); else f.s.setScale(dx < 0 ? -1 : 1, 1); }   // el arte mira a la izquierda
     }
     // amenazas (jabalíes)
-    if (t >= this.nextThreatAt && this.threats.length === 0) { this.nextThreatAt = t + 60000; this.spawnThreat(); }
+    // JABALÍ DESACTIVADO (2/8, pedido del diseñador). Para reactivarlo, descomentar:
+    // if (t >= this.nextThreatAt && this.threats.length === 0) { this.nextThreatAt = t + 60000; this.spawnThreat(); }
     for (let i = this.threats.length - 1; i >= 0; i--) {
       const b = this.threats[i];
       const dx = b.tgt.cx - b.cx, dy = b.tgt.by - b.by, d = Math.hypot(dx, dy);
