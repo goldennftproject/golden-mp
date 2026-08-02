@@ -653,7 +653,8 @@ class FarmScene extends Phaser.Scene {
     this.moveTarget = null;
     this.facing = (o.cx < this.hero.x) ? "west" : "east";
     // pescar lleva 15–20s ININTERRUMPIDOS (detalles jueves); moverse cancela la pesca
-    const dur = kind === "fish" ? 15 + Math.random() * 5 : (ACT_DUR[kind] || 1.2);
+    let dur = kind === "fish" ? 15 + Math.random() * 5 : (ACT_DUR[kind] || 1.2);
+    if (kind === "plant" || kind === "harvest") dur *= farmSpeedMult();   // buff "+% vel. de farmeo" de la comida
     this.action = { kind, o, t: 0, dur };
     if (kind === "fish") this.castBobber(o.bx != null ? o.bx : o.cx, o.by2 != null ? o.by2 : (GF.POND.row + GF.POND.rows / 2) * GF.TILE);
   }
@@ -1363,7 +1364,7 @@ class FarmScene extends Phaser.Scene {
     const moving = !!(vx || vy);
     if (moving) {
       const m = Math.hypot(vx, vy); vx /= m; vy /= m;
-      const step = GF.SPEED * dt, nx = hero.x + vx * step, ny = hero.y + vy * step;
+      const step = GF.SPEED * speedMult() * dt, nx = hero.x + vx * step, ny = hero.y + vy * step;
       let moved = false;
       if (!GF.blockedAt(nx, ny, 6)) { hero.x = nx; hero.y = ny; moved = true; }
       else { if (vx && !GF.blockedAt(nx, hero.y, 6)) { hero.x = nx; moved = true; } if (vy && !GF.blockedAt(hero.x, ny, 6)) { hero.y = ny; moved = true; } }

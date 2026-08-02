@@ -354,7 +354,7 @@ class ForestScene extends Phaser.Scene {
 
   killMonster(m, skill) {
     m.dead = true; m.bar.clear();
-    addXp(skill || "sword", m.def.xp);
+    addXp(skill || "sword", Math.round(m.def.xp * combatXpMult()));
     addCombatXp(m.def.xp);                                   // barra de Combate global (doc maestro)
     this.floatTxt(m, "+" + m.def.xp + " XP", "#ffd75e");     // feedback por kill hacia la barra
     // armaduras: chance de drop (se autoequipan si mejoran)
@@ -380,7 +380,7 @@ class ForestScene extends Phaser.Scene {
   }
 
   hurtHero(dmg) {
-    dmg = Math.max(1, dmg - gearDefTotal());   // las armaduras absorben daño
+    dmg = Math.max(1, Math.round((dmg - gearDefTotal()) * dmgTakenMult()));   // armaduras absorben + buff de defensa de la comida
     G.hp = Math.max(0, G.hp - dmg);
     this.hurtFx = 0.18;
     refreshHud();
@@ -460,7 +460,7 @@ class ForestScene extends Phaser.Scene {
     const moving = !!(vx || vy);
     if (moving) {
       const m = Math.hypot(vx, vy); vx /= m; vy /= m;
-      const step = GF.SPEED * dt, nx = hero.x + vx * step, ny = hero.y + vy * step;
+      const step = GF.SPEED * speedMult() * dt, nx = hero.x + vx * step, ny = hero.y + vy * step;
       let moved = false;
       if (!this.blockedAt(nx, ny, 6)) { hero.x = nx; hero.y = ny; moved = true; }
       else { if (vx && !this.blockedAt(nx, hero.y, 6)) { hero.x = nx; moved = true; } if (vy && !this.blockedAt(hero.x, ny, 6)) { hero.y = ny; moved = true; } }

@@ -102,13 +102,19 @@ var BAL = (function () {
     });
     add("Materiales (Horno de Piedra)", "matCdSeg", "Enfriamiento al fundir cada barra", "", () => MAT_CD_MS / 1000, v => { MAT_CD_MS = v * 1000; }, 1, "tiempo");
 
-    // COCINA
+    // COCINA (doc maestro 2/8: 14 recetas + clásicas, niveles y maestría)
+    add("Cocina — General", "dishBuffDur", "Duración de los buffs de comida", "", () => DISH_BUFF_DUR, v => { DISH_BUFF_DUR = v; }, 1, "tiempo");
     for (const id in RECIPE_DEF) {
       const r = RECIPE_DEF[id], cat = "Cocina — " + r.label;
       if (r.res) costos(cat, "recipe." + id + ".res", r.res, "Ingredientes");
       if (r.fish) costos(cat, "recipe." + id + ".fish", r.fish, "Peces");
       obj(cat, "recipe." + id, r, "heal", "Vida que cura al comerlo", U.vida);
       obj(cat, "recipe." + id, r, "xp", "XP de Cocina al cocinarlo", U.xp);
+      if (r.lvl) obj(cat, "recipe." + id, r, "lvl", "Nivel de Cocina requerido", U.nivel);
+      if (r.cookS != null) add(cat, "recipe." + id + ".cookS", "Tiempo de cocción", "", () => r.cookS, v => { r.cookS = v; }, 1, "tiempo");
+      if (r.plata != null) obj(cat, "recipe." + id, r, "plata", "Venta base", U.plata);
+      if (r.buff && r.buff.val != null) add(cat, "recipe." + id + ".buffVal", "Buff: " + dishBuffLabel(r.buff, 1), r.buff.type === "regen" ? "HP por segundo · entero" : (r.buff.type === "hpmax" ? U.vida : "% · entero"), () => r.buff.val, v => { r.buff.val = v; });
+      if (r.goldenP != null) obj(cat, "recipe." + id, r, "goldenP", "Venta en $Golden (Cocina Nv 8+)", "$Golden · entero");
     }
 
     // EDIFICIOS

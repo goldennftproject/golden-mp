@@ -54,7 +54,7 @@ function itemView(d) {
   if (d.kind === "res") return { sprite: resSprite(d.key), emoji: RES_EMOJI[d.key], label: RES_LABEL[d.key], dur: null };
   if (d.kind === "seed") { const cd = CROP_DEF[d.key]; return { sprite: "seed_" + d.key, emoji: cd.emoji, label: cd.label + " (semilla)", dur: null }; }
   if (d.kind === "fish") { const f = FISH_DEF[d.key]; const glow = { raro: "glow-blue", epico: "glow-purple", legendario: "glow-gold" }[d.key] || ""; return { sprite: f ? f.sprite : null, emoji: f ? f.emoji : "🐟", glow, label: f ? f.label : "Pez", dur: null }; }
-  if (d.kind === "dish") { const r = RECIPE_DEF[d.key]; return { sprite: r ? r.sprite : null, emoji: r ? r.emoji : "🍲", label: r ? r.label + " · clic para comer (" + r.desc + ")" : "Plato", dur: null }; }
+  if (d.kind === "dish") { const r = RECIPE_DEF[d.key]; return { sprite: r ? r.sprite : null, emoji: r ? r.emoji : "🍲", label: r ? r.label + " · clic para comer (" + dishDesc(r) + ")" : "Plato", dur: null }; }
   if (d.kind === "chest") return { sprite: "cofre", emoji: "📦", label: "Cofre depósito · clic para colocarlo en la granja", dur: null };
   return { sprite: null, emoji: "?", label: "", dur: null };
 }
@@ -268,7 +268,11 @@ function trashStack(d) {
 /* ---- skills ---- */
 function refreshSkills() {
   $("sk-avg").innerHTML = "Nivel medio: <b>" + avgSkillLevel().toFixed(1) + "</b>";
-  $("sk-grid").innerHTML = SKILL_DEFS.map(([k, ic, nm]) => { const inf = skillInfo(G.skills[k]); const pct = Math.round(inf.into / inf.need * 100); const soon = (k === "range" && G.skills[k] === 0) ? " · próximamente" : "";
+  $("sk-grid").innerHTML = SKILL_DEFS.map(([k, ic, nm]) => {
+    let inf;
+    if (k === "cooking") { const l = cookLevel(), xp = G.skills.cooking || 0, nx = COOK_LVLS[l + 1]; inf = { lvl: l, into: xp - COOK_LVLS[l], need: nx != null ? nx - COOK_LVLS[l] : (xp - COOK_LVLS[l] || 1) }; }
+    else inf = skillInfo(G.skills[k]);
+    const pct = Math.round(inf.into / inf.need * 100); const soon = (k === "range" && G.skills[k] === 0) ? " · próximamente" : "";
     return `<div class="skrow"><span class="ic"><img class="skic" src="${GF.spr("sk_" + k)}" onerror="this.outerHTML='${ic}'"></span><div class="body"><div class="nm"><span>${nm}</span><span class="lv">Nv. ${inf.lvl}</span></div><div class="skbar"><i style="width:${pct}%"></i></div><div class="xp">${fmt(inf.into)}/${fmt(inf.need)} XP${soon}</div></div></div>`; }).join("");
 }
 
@@ -504,22 +508,35 @@ function refreshChest() {
 /* ---- cocina (en la Granja) ---- */
 function refreshCooking() {
   const box = $("cook-list"); if (!box) return;
-  let head = "";
+  const lvl = cookLevel(), xp = G.skills.cooking || 0;
+  const nxt = COOK_LVLS[lvl + 1];
+  let head = '<div class="forge-row"><div class="finfo"><div class="fnm">Cocina nivel ' + lvl + (lvl >= 10 ? ' — Cocina maestra' : '') + '</div>' +
+    (nxt != null ? '<div class="durbar"><i style="width:' + Math.round((xp - COOK_LVLS[lvl]) / (nxt - COOK_LVLS[lvl]) * 100) + '%"></i></div><div class="fds">' + fmt(xp) + '/' + fmt(nxt) + ' XP para el nivel ' + (lvl + 1) + '</div>' : '') +
+    (lvl > 1 ? '<div class="fds">Maestría: buffs y precios de venta +' + Math.round((cookPot(1) - 1) * 100) + '% en las recetas de nivel 1 (2% por nivel sobre la receta, tope +50%)</div>' : '') +
+    '</div></div>';
   if (G.cooking) {   // barra de cocción en curso
     const r = RECIPE_DEF[G.cooking.id];
     const left = Math.max(0, G.cooking.endAt - nowMs());
     const pct = Math.round((1 - left / (G.cooking.total || 1)) * 100);
-    head = '<div class="forge-row"><div class="fic"></div><div class="finfo"><div class="fnm">Cocinando ' + (r ? r.label : "") + '…</div><div class="durbar"><i style="width:' + pct + '%"></i></div><div class="fds">' + fmtSecs(Math.ceil(left / 1000)) + ' restantes</div></div></div>';
+    head += '<div class="forge-row"><div class="fic"></div><div class="finfo"><div class="fnm">Cocinando ' + (r ? r.label : "") + '…</div><div class="durbar"><i style="width:' + pct + '%"></i></div><div class="fds">' + fmtSecs(Math.ceil(left / 1000)) + ' restantes</div></div></div>';
   }
   box.innerHTML = head + RECIPE_ORDER.map(id => {
     const r = RECIPE_DEF[id];
+    const locked = r.lvl && lvl < r.lvl;
     const parts = [];
     if (r.fish) for (const k in r.fish) parts.push(fishIc(k) + " ×" + r.fish[k]);
     if (r.res) for (const k in r.res) parts.push(resIc(k) + " ×" + r.res[k]);
     const fic = r.sprite ? '<img src="' + GF.spr(r.sprite) + '" onerror="this.outerHTML=\'' + r.emoji + '\'">' : r.emoji;
-    return '<div class="forge-row"><div class="fic">' + fic + '</div><div class="finfo"><div class="fnm">' + r.label + '</div><div class="fds">' + r.desc + '</div><div class="fds">Ingredientes: ' + parts.join(" · ") + '</div></div><div class="fbtns"><button class="green sm" ' + ((canCook(id) && !G.cooking) ? "" : "disabled") + ' data-cook="' + id + '">Cocinar</button></div></div>';
+    const own = Math.floor((G.dishes && G.dishes[id]) || 0);
+    const vPlata = Math.round((r.plata || 0) * cookPot(r.lvl));
+    let btns = '<button class="green sm" ' + ((!locked && canCook(id) && !G.cooking) ? "" : "disabled") + ' data-cook="' + id + '">' + (locked ? "Nivel " + r.lvl : "Cocinar") + '</button>';
+    if (own > 0 && r.plata) btns += '<button class="sm" data-selld="' + id + '">Vender (' + own + ') · ' + vPlata + ' plata</button>';
+    if (own > 0 && r.goldenP && lvl >= 8) btns += '<button class="sm" data-sellg="' + id + '">Vender · ' + r.goldenP + ' $G</button>';
+    return '<div class="forge-row' + (locked ? ' locked' : '') + '"><div class="fic">' + fic + '</div><div class="finfo"><div class="fnm">' + r.label + (locked ? ' · se desbloquea a nivel ' + r.lvl : '') + '</div><div class="fds">' + dishDesc(r) + ' · cocción ' + fmtSecs(r.cookS || 8) + ' · +' + r.xp + ' XP</div><div class="fds">Ingredientes: ' + parts.join(" · ") + (r.plata ? ' · Venta: ' + vPlata + ' plata' + (r.goldenP ? ' o ' + r.goldenP + ' $Golden (Nv 8)' : '') : '') + '</div></div><div class="fbtns">' + btns + '</div></div>';
   }).join("");
   box.querySelectorAll("[data-cook]").forEach(b => b.onclick = () => cook(b.dataset.cook));
+  box.querySelectorAll("[data-selld]").forEach(b => b.onclick = () => sellDish(b.dataset.selld, false));
+  box.querySelectorAll("[data-sellg]").forEach(b => b.onclick = () => sellDish(b.dataset.sellg, true));
 }
 
 /* ---- mercado / tienda ---- */
@@ -827,6 +844,6 @@ function initUI() {
   });
 
   refreshHud();
-  setInterval(refreshHud, 1000);
+  setInterval(() => { if (typeof buffTick === "function") buffTick(); refreshHud(); }, 1000);
 }
 initUI();

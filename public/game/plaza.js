@@ -109,7 +109,7 @@ class PlazaScene extends Phaser.Scene {
     const moving = !!(vx || vy);
     if (vx && vy) { vx *= 0.7071; vy *= 0.7071; }
     if (moving) {
-      const step = GF.SPEED * dt;
+      const step = GF.SPEED * speedMult() * dt;
       this.me.x = Phaser.Math.Clamp(this.me.x + vx * step, 16, this.pW - 16);
       this.me.y = Phaser.Math.Clamp(this.me.y + vy * step, 24, this.pH - 8);
       if (vx < 0) this.me.dir = "west"; else if (vx > 0) this.me.dir = "east";

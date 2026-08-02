@@ -49,12 +49,34 @@ function nowMs() { return Date.now(); }
 function cdMult() { const t = Date.now(); let m = 1; for (const b of G.buffs) if (b.type === "cd" && b.until > t) m *= b.mult; return m; }
 function yieldMult() { const t = Date.now(); let m = 1 + 0.015 * (G.level - 1) + G.prestige * 0.015; for (const b of G.buffs) if (b.type === "yield" && b.until > t) m *= b.mult; return m; }
 function addBuff(type, label, mult, durSec) { G.buffs.push({ type, label, mult, until: Date.now() + durSec * 1000 }); }
+// buffs de comida (doc maestro 2/8): suma de valores activos por tipo
+function buffTotal(type) { const t = Date.now(); let s = 0; for (const b of G.buffs) if (b.type === type && b.until > t) s += b.mult; return s; }
+function dmgMult() { return 1 + (buffTotal("dmg") + buffTotal("feast")) / 100; }
+function dmgTakenMult() { return Math.max(0.2, 1 - (buffTotal("def") + buffTotal("feast")) / 100); }
+function speedMult() { return 1 + (buffTotal("speed") + buffTotal("feast")) / 100; }
+function farmSpeedMult() { return Math.max(0.4, 1 - buffTotal("farm") / 100); }   // acorta las acciones de cultivo
+function luckMult() { return 1 + buffTotal("luck") / 100; }
+function combatXpMult() { return 1 + buffTotal("combatxp") / 100; }
+function buffTick() {   // 1 vez por segundo desde el HUD: regeneración y vida máxima temporal
+  const t = Date.now(); let dirty = false;
+  for (const b of G.buffs) {
+    if (b.type === "regen" && b.until > t && G.hp < G.hpMax) { G.hp = Math.min(G.hpMax, G.hp + b.mult); dirty = true; }
+    if (b.type === "hpmax") {
+      if (b.until > t && !b.on) { b.on = true; G.hpMax += b.mult; G.hp = Math.min(G.hpMax, G.hp + b.mult); dirty = true; }
+      if (b.until <= t && b.on) { b.on = false; G.hpMax -= b.mult; G.hp = Math.min(G.hp, G.hpMax); dirty = true; }
+    }
+  }
+  G.buffs = G.buffs.filter(b => b.until > t || b.on);
+  if (dirty) { const el = document.getElementById("s-hp"); if (el) el.textContent = Math.ceil(G.hp) + "/" + G.hpMax; }
+}
 function hToMs(h) { return h * G.secPerGameHour * 1000 * cdMult(); }
 
 // --- recursos ---
 const RES_EMOJI = { madera:"", piedra:"", bronce:"", oro:"", diamante:"", netherita:"", carne:"", flecha:"", lombriz:"",
+  trigo:"🌾", maiz:"🌽", girasol:"🌻",
   papa:"", zanahoria:"", cebolla:"", calabacin:"", repollo:"", calabaza:"", brocoli:"" };
 const RES_LABEL = { madera:"Madera", piedra:"Piedra", bronce:"Bronce", hierro:"Hierro", oro:"Oro", diamante:"Diamante", netherita:"Netherita", carne:"Carne", flecha:"Flecha", lombriz:"Lombriz",
+  trigo:"Trigo", maiz:"Maíz", girasol:"Girasol",
   tablon:"Tablón de madera", barra_piedra:"Bloques de piedra", barra_bronce:"Barra de bronce", barra_hierro:"Barra de hierro", barra_oro:"Barra de oro",
   papa:"Papa", zanahoria:"Zanahoria", cebolla:"Cebolla", calabacin:"Calabacín", repollo:"Repollo", calabaza:"Calabaza", brocoli:"Brócoli" };
 // íconos cozy de recursos (los cultivos usan crop_<key>)
@@ -164,10 +186,11 @@ var COMBAT_HP5 = 20, COMBAT_HP10 = 40;   // vida máxima extra en los hitos (edi
 function combatInfo() { return skillInfo(G.combatXp || 0); }
 function combatHpBonus(lvl) { return (lvl >= 5 ? COMBAT_HP5 : 0) + (lvl >= 10 ? COMBAT_HP10 : 0); }
 function applyCombatHp() {   // vida máxima = 100 + hitos de Combate (nivel 5 y 10)
-  const want = 100 + combatHpBonus(combatInfo().lvl);
+  const want = 100 + combatHpBonus(combatInfo().lvl) + G.buffs.reduce((s, b) => s + (b.type === "hpmax" && b.on ? b.mult : 0), 0);
   if (G.hpMax !== want) { const dif = want - G.hpMax; G.hpMax = want; if (dif > 0) G.hp = Math.min(G.hpMax, G.hp + dif); G.hp = Math.min(G.hpMax, G.hp); }
 }
 function addCombatXp(xp) {
+  xp = Math.round(xp * combatXpMult());   // Guiso Campestre: +% XP de combate
   const before = combatInfo().lvl;
   G.combatXp = (G.combatXp || 0) + xp;
   const after = combatInfo().lvl;
@@ -184,11 +207,25 @@ function addCombatXp(xp) {
 function avgSkillLevel() { let s=0,n=0; for (const k in G.skills){ s+=skillInfo(G.skills[k]).lvl; n++; } return n ? s/n : 1; }
 function addXp(sk, amt) {
   if (!(sk in G.skills)) return;
+  if (sk === "cooking") return addCookXp(amt);   // la cocina tiene SU tabla 1-10 (doc maestro 2/8)
   const before = skillInfo(G.skills[sk]).lvl;
   G.skills[sk] += amt;
   const after = skillInfo(G.skills[sk]).lvl;
   if (after > before) { log(`${SKILL_NAME[sk]} subió a nivel ${after}.`, "good"); toast("" + SKILL_NAME[sk] + " nivel " + after); if (window.sfx) sfx("level"); }
   if (sk === "farming") recalcFarmLevel();   // doc maestro 2/8: el nivel de granja vive de la XP de farmeo
+  if (isOpen("ov-skills")) refreshSkills();
+}
+function addCookXp(amt) {
+  amt = Math.round(amt * (1 + buffTotal("cookxp") / 100));   // Pan de Trigo: +% XP de cocina
+  const before = cookLevel();
+  G.skills.cooking = (G.skills.cooking || 0) + amt;
+  const after = cookLevel();
+  if (after > before) {
+    const rec = RECIPE_ORDER.filter(id => RECIPE_DEF[id].lvl === after && !RECIPE_DEF[id].desc).map(id => RECIPE_DEF[id].label);
+    log("Cocina subió a nivel " + after + (rec.length ? ". Nueva receta: " + rec.join(" · ") : "") + (after === 8 ? ". ¡Ya podés vender platos por $Golden!" : "") + ".", "good");
+    toast("Cocina nivel " + after); if (window.sfx) sfx("level");
+    if (window.onCookLevelUp) window.onCookLevelUp(after);   // celebración (Fase 5)
+  }
   if (isOpen("ov-skills")) refreshSkills();
 }
 
@@ -361,7 +398,7 @@ function rollWeaponHit(defensa) {
   if (w.tipo === "espada" && Math.random() * 100 < w.buffVal) { atk *= 2; out.crit = true; }
   if (w.tipo === "mazo" && Math.random() * 100 < w.buffVal) out.stun = true;
   if (w.tipo === "arco") out.bleed = w.buffVal;
-  out.dmg = Math.max(1, Math.round(atk - defEf));
+  out.dmg = Math.max(1, Math.round((atk - defEf) * dmgMult()));   // buff de daño de la comida
   return out;
 }
 
@@ -455,20 +492,65 @@ function gainGear(key) {
 }
 
 // --- cocina (en la Granja: platos que curan y dan buffs; usa carne/pescado) ---
-const RECIPE_ORDER = ["pescado_asado", "estofado", "banquete"];
+// --- COCINA (doc maestro 2/8): 14 recetas de cultivos + las 3 clásicas de pescado/carne ---
+// buff nuevo: { type, val } — val en % (o HP/s en regen, vida plana en hpmax); duración = DISH_BUFF_DUR
+var DISH_BUFF_DUR = 300;   // 5 min (editable en el panel)
+const RECIPE_ORDER = [
+  "papa_asada", "pure_papa", "sopa_zanahoria", "ensalada_repollo", "calabacin_salteado",
+  "pan_trigo", "salteado_brocoli", "crema_calabaza", "tortilla_maiz", "aceite_girasol",
+  "guiso_campestre", "pan_maiz_trigo", "estofado_cosecha", "banquete_bosque",
+  "pescado_asado", "estofado", "banquete"];
 const RECIPE_DEF = {
-  pescado_asado: { label:"Pescado asado", emoji:"🐟", sprite:"dish_pescado_asado", fish:{comun:1}, res:{madera:1},
-    heal:30, buff:{type:"yield",label:"Cosecha +10%",mult:1.10,dur:90}, xp:8,
+  papa_asada:         { label:"Papa Asada",             emoji:"🥔", res:{papa:1},                                        lvl:1,  heal:10, buff:{type:"farm",    val:5},  cookS:6,  xp:8,  plata:5 },
+  pure_papa:          { label:"Puré de Papa",           emoji:"🥣", res:{papa:2, cebolla:1},                             lvl:2,  heal:13, buff:{type:"regen",   val:2},  cookS:8,  xp:10, plata:12 },
+  sopa_zanahoria:     { label:"Sopa de Zanahoria",      emoji:"🍜", res:{zanahoria:2, cebolla:1},                        lvl:2,  heal:15, buff:{type:"speed",   val:8},  cookS:8,  xp:10, plata:14 },
+  ensalada_repollo:   { label:"Ensalada de Repollo",    emoji:"🥗", res:{repollo:2, zanahoria:1},                        lvl:3,  heal:17, buff:{type:"def",     val:6},  cookS:10, xp:14, plata:18 },
+  calabacin_salteado: { label:"Calabacín Salteado",     emoji:"🥒", res:{calabacin:2, cebolla:1},                        lvl:3,  heal:18, buff:{type:"dmg",     val:6},  cookS:10, xp:14, plata:20 },
+  pan_trigo:          { label:"Pan de Trigo",           emoji:"🍞", res:{trigo:3},                                       lvl:4,  heal:20, buff:{type:"cookxp",  val:10}, cookS:12, xp:18, plata:22 },
+  salteado_brocoli:   { label:"Salteado de Brócoli",    emoji:"🥦", res:{brocoli:2, calabacin:1},                        lvl:5,  heal:23, buff:{type:"farm",    val:10}, cookS:12, xp:22, plata:28 },
+  crema_calabaza:     { label:"Crema de Calabaza",      emoji:"🎃", res:{calabaza:2, cebolla:1},                         lvl:5,  heal:25, buff:{type:"def",     val:10}, cookS:14, xp:24, plata:32 },
+  tortilla_maiz:      { label:"Tortilla de Maíz",       emoji:"🌽", res:{maiz:2, cebolla:1},                             lvl:6,  heal:27, buff:{type:"dmg",     val:10}, cookS:14, xp:28, plata:38 },
+  aceite_girasol:     { label:"Aceite de Girasol",      emoji:"🌻", res:{girasol:3},                                     lvl:6,  heal:18, buff:{type:"luck",    val:10}, cookS:14, xp:26, plata:40 },
+  guiso_campestre:    { label:"Guiso Campestre",        emoji:"🍲", res:{papa:1, zanahoria:1, repollo:1, cebolla:1},     lvl:7,  heal:31, buff:{type:"combatxp",val:12}, cookS:16, xp:34, plata:55 },
+  pan_maiz_trigo:     { label:"Pan de Maíz y Trigo",    emoji:"🥖", res:{trigo:2, maiz:2},                               lvl:8,  heal:34, buff:{type:"hpmax",   val:20}, cookS:16, xp:42, plata:80,  goldenP:1 },
+  estofado_cosecha:   { label:"Estofado de la Cosecha", emoji:"🥘", res:{calabaza:2, maiz:1, papa:1, zanahoria:1},       lvl:9,  heal:37, buff:{type:"dmg",     val:15}, cookS:18, xp:52, plata:110, goldenP:2 },
+  banquete_bosque:    { label:"Banquete del Bosque",    emoji:"🍱", res:{papa:1, zanahoria:1, repollo:1, brocoli:1, calabaza:1}, lvl:10, heal:40, buff:{type:"feast", val:20}, cookS:20, xp:70, plata:180, goldenP:4 },
+  // clásicas (siguen dándole uso al pescado y la carne)
+  pescado_asado: { label:"Pescado asado", emoji:"🐟", sprite:"dish_pescado_asado", fish:{comun:1}, res:{madera:1}, lvl:1,
+    heal:30, buff:{type:"yield",label:"Cosecha +10%",mult:1.10,dur:90}, cookS:8, xp:8, plata:15,
     desc:"Cura 30 · Cosecha +10% (1 min 30 s)" },
-  estofado: { label:"Estofado de carne", emoji:"🍲", sprite:"dish_estofado", res:{carne:2, papa:1, madera:1},
-    heal:60, buff:{type:"cd",label:"Enfriamientos -15%",mult:0.85,dur:90}, xp:12,
+  estofado: { label:"Estofado de carne", emoji:"🍲", sprite:"dish_estofado", res:{carne:2, papa:1, madera:1}, lvl:3,
+    heal:60, buff:{type:"cd",label:"Enfriamientos -15%",mult:0.85,dur:90}, cookS:10, xp:12, plata:30,
     desc:"Cura 60 · Enfriamientos -15% (1 min 30 s)" },
-  banquete: { label:"Banquete del granjero", emoji:"🍗", sprite:"dish_banquete", fish:{raro:1}, res:{carne:2, calabaza:1, madera:1},
-    heal:9999, buff:{type:"yield",label:"Cosecha +20%",mult:1.20,dur:180}, xp:25,
+  banquete: { label:"Banquete del granjero", emoji:"🍗", sprite:"dish_banquete", fish:{raro:1}, res:{carne:2, calabaza:1, madera:1}, lvl:6,
+    heal:9999, buff:{type:"yield",label:"Cosecha +20%",mult:1.20,dur:180}, cookS:14, xp:25, plata:60,
     desc:"Cura TODA la vida · Cosecha +20% (3 min)" },
 };
+// niveles de cocina 1-10 (tabla del doc, XP ACUMULADA por nivel) + maestría
+var COOK_LVLS = [0, 0, 30, 80, 160, 300, 520, 850, 1300, 1900, 2700];
+function cookLevelFromXp(xp) { let l = 1; for (let i = 2; i < COOK_LVLS.length; i++) if (xp >= COOK_LVLS[i]) l = i; return Math.min(10, l); }
+function cookLevel() { return cookLevelFromXp(G.skills.cooking || 0); }
+function cookPot(rlvl) { return Math.min(1.5, 1 + 0.02 * Math.max(0, cookLevel() - (rlvl || 1))); }   // Potencia = 1 + 2% por nivel sobre la receta, tope +50%
+function dishBuffLabel(b, pot) {
+  const v = Math.round((b.val || 0) * (pot || 1));
+  switch (b.type) {
+    case "farm": return "+" + v + "% vel. de farmeo";
+    case "regen": return "regenera +" + v + " HP/s";
+    case "speed": return "+" + v + "% vel. de movimiento";
+    case "def": return "+" + v + "% defensa";
+    case "dmg": return "+" + v + "% daño";
+    case "cookxp": return "+" + v + "% XP de cocina";
+    case "luck": return "+" + v + "% suerte en drops";
+    case "combatxp": return "+" + v + "% XP de combate";
+    case "hpmax": return "+" + v + " de vida máxima";
+    case "feast": return "+" + v + "% daño, defensa y velocidad";
+  }
+  return b.label || "";
+}
+function dishDesc(r) { return r.desc || ("Cura " + r.heal + " HP · " + dishBuffLabel(r.buff, 1) + " (" + fmtSecs(DISH_BUFF_DUR) + ")"); }
 function canCook(id) {
   const r = RECIPE_DEF[id]; if (!r) return false;
+  if (r.lvl && cookLevel() < r.lvl) return false;   // receta bloqueada por nivel de cocina
   if (r.res) for (const k in r.res) if ((G.res[k] || 0) < r.res[k]) return false;
   if (r.fish) for (const k in r.fish) if ((G.fish[k] || 0) < r.fish[k]) return false;
   return true;
@@ -481,7 +563,8 @@ function cook(id) {
   if (!roomForDish(id)) { bagFull("cocinar " + r.label); return; }
   if (r.res) for (const k in r.res) G.res[k] -= r.res[k];
   if (r.fish) for (const k in r.fish) G.fish[k] -= r.fish[k];
-  G.cooking = { id, endAt: nowMs() + COOK_MS, total: COOK_MS };
+  const ms = (r.cookS ? r.cookS * 1000 : COOK_MS);   // cocción por receta (doc: 6-20 s)
+  G.cooking = { id, endAt: nowMs() + ms, total: ms };
   log("Cocinando " + r.label + "…"); toast("Cocinando…");
   refreshHud(); if (typeof syncSlots === "function") syncSlots(); if (isOpen("ov-inv")) refreshInv();
   if (typeof refreshCooking === "function" && isOpen("ov-cocina")) refreshCooking();
@@ -508,9 +591,24 @@ function eatDish(id) {
   G.dishes[id]--;
   if (window.sfx) sfx("eat");
   G.hp = Math.min(G.hpMax, G.hp + r.heal);
-  if (r.buff) addBuff(r.buff.type, r.buff.label, r.buff.mult, r.buff.dur);
-  log(r.emoji + " Comiste " + r.label + ". " + r.desc, "gold"); toast(r.emoji + " ¡Ñam!");
+  if (r.buff && r.buff.val != null) {   // recetas del doc: el buff escala con la maestría del cocinero
+    const pot = cookPot(r.lvl), v = r.buff.type === "hpmax" ? Math.round(r.buff.val * pot) : Math.round(r.buff.val * pot * 10) / 10;   // vida máx. en enteros
+    addBuff(r.buff.type, dishBuffLabel(r.buff, pot), v, DISH_BUFF_DUR);
+    if (r.buff.type === "hpmax") buffTick();   // la vida extra entra ya mismo
+  } else if (r.buff) addBuff(r.buff.type, r.buff.label, r.buff.mult, r.buff.dur);
+  log(r.emoji + " Comiste " + r.label + ". " + dishDesc(r), "gold"); toast(r.emoji + " ¡Ñam!");
   refreshHud(); if (typeof syncSlots === "function") syncSlots(); if (isOpen("ov-inv")) refreshInv();
+}
+
+// vender platos en la Cocina (doc: la maestría sube el precio; nivel 8+ desbloquea venta en $Golden)
+function sellDish(id, gold) {
+  const r = RECIPE_DEF[id]; if (!r || !G.dishes || (G.dishes[id] || 0) <= 0) return;
+  if (gold && !(r.goldenP && cookLevel() >= 8)) { toast("La venta en $Golden se desbloquea con Cocina nivel 8"); return; }
+  G.dishes[id]--;
+  if (gold) { G.golden += r.goldenP; log("Vendiste " + r.label + " por " + r.goldenP + " $Golden.", "gold"); toast("+" + r.goldenP + " $Golden"); }
+  else { const v = Math.round((r.plata || 0) * cookPot(r.lvl)); G.plata += v; log("Vendiste " + r.label + " por " + v + " de plata.", "gold"); toast("+" + v + " de plata"); }
+  refreshHud(); if (typeof syncSlots === "function") syncSlots(); if (isOpen("ov-inv")) refreshInv();
+  if (typeof refreshCooking === "function" && isOpen("ov-cocina")) refreshCooking();
 }
 
 // --- cofres depósito (detalles 29/7): 10 espacios, +1% de materiales por cofre, máx 50 ---
@@ -597,7 +695,7 @@ function rollLoot(def) {
   const out = {};
   for (const k in def.loot) {
     const e = def.loot[k], a = e[0], b = e[1], chance = (e.length > 2 ? e[2] : 1);
-    if (Math.random() >= chance) continue;   // no siempre cae lo mismo (detalles 338)
+    if (Math.random() >= Math.min(1, chance * luckMult())) continue;   // suerte de la comida mejora los drops (detalles 338)
     const n = a + Math.floor(Math.random() * (b - a + 1));
     if (n > 0) out[k] = n;
   }
