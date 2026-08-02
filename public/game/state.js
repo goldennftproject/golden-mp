@@ -5,7 +5,7 @@ GF.spr = (k) => "assets/farm/" + k + ".png?a=7";   // ?a=N rompe el caché de lo
 // --- estado principal (con algunos recursos de arranque para probar los menús) ---
 const G = {
   plata: 0, golden: 20, level: 1, prestige: 0, week: 1,
-  hp: 100, hpMax: 100, swordOwned: false, bowOwned: false, swordWoodOwned: false,   // combate (Fase D)
+  hp: 100, hpMax: 100, swordOwned: false, bowOwned: false, swordWoodOwned: false, firstCropDone: false,   // combate (Fase D)
   armasUnlocked: false,          // viernes (2): la pestana Armas de la Herreria se paga (20 madera + 20 piedra + 1000 plata)
   treesOpen: [0], rocksOpen: [0],  // viernes (2): índices de árboles/piedras desbloqueados (cualquiera, sin orden — pedido Discord)
   gear: { casco: null, armadura: null, botas: null, escudo: null, arma: null, municion: false },   // equipo (armas se equipan en el panel de Equipo — detalles jueves)
@@ -14,8 +14,8 @@ const G = {
     papa: 0, zanahoria: 0, cebolla: 0, calabacin: 0, repollo: 0, calabaza: 0, brocoli: 0 },
   seeds: { papa: 3, zanahoria: 0, cebolla: 0, calabacin: 0, repollo: 0, calabaza: 0, brocoli: 0 },  // viernes (2): la bolsa nace con SOLO 3 semillas de papa
   selSeed: "papa",   // semilla elegida para plantar
-  picks: { owned: { stone: true }, dur: { stone: 1 }, eq: "stone" },
-  tools: { axe: 1, rod: 1 },   // SFL puro: herramientas de 1 uso
+  picks: { owned: { stone: true }, dur: { stone: 15 }, eq: "stone" },   // doc 2/8: set de arranque con usos generosos
+  tools: { axe: 15, rod: 15 },   // doc 2/8: 15 usos de arranque; después se craftean de a 1 uso
   toolsLost: {},                 // herramientas tiradas a la papelera (31/7: el diseñador pidió que se puedan tirar)
   invRows: 0,                    // filas extra de inventario compradas
   slots: [],                     // inventario por casillas: [{kind,key}|null]
@@ -65,13 +65,13 @@ const CROP_ORDER = ["papa","zanahoria","cebolla","calabacin","repollo","calabaza
 // growH = horas reales de la tabla. En TESTEO corre comprimido: 1h → 1min (GROW_SCALE). Para pasar a real: GROW_SCALE = 1.
 var GROW_SCALE = 1;   // 2/8: FUERA la compresión de testeo — el tiempo que se pone en balance.html es el tiempo real del juego
 const CROP_DEF = {
-  papa:      { label:"Papa",      emoji:"🥔", lvl:1, seedCost:1,  growH:1,  yield:1, price:3 },
-  zanahoria: { label:"Zanahoria", emoji:"🥕", lvl:2, seedCost:3,  growH:2,  yield:1, price:8 },
-  cebolla:   { label:"Cebolla",   emoji:"🧅", lvl:3, seedCost:6,  growH:4,  yield:1, price:16 },
-  calabacin: { label:"Calabacín", emoji:"🥒", lvl:4, seedCost:12, growH:8,  yield:1, price:32 },
-  repollo:   { label:"Repollo",   emoji:"🥬", lvl:5, seedCost:20, growH:12, yield:1, price:50 },
-  calabaza:  { label:"Calabaza",  emoji:"🎃", lvl:6, seedCost:40, growH:24, yield:1, price:100 },
-  brocoli:   { label:"Brócoli",   emoji:"🥦", lvl:7, seedCost:90, growH:48, yield:1, price:210 },
+  papa:      { label:"Papa",      emoji:"🥔", lvl:1, seedCost:1,  growH:1,  yield:1, price:3, xp:2 },
+  zanahoria: { label:"Zanahoria", emoji:"🥕", lvl:2, seedCost:3,  growH:2,  yield:1, price:8, xp:3 },
+  cebolla:   { label:"Cebolla",   emoji:"🧅", lvl:3, seedCost:6,  growH:4,  yield:1, price:16, xp:7 },
+  calabacin: { label:"Calabacín", emoji:"🥒", lvl:4, seedCost:12, growH:8,  yield:1, price:32, xp:10 },
+  repollo:   { label:"Repollo",   emoji:"🥬", lvl:5, seedCost:20, growH:12, yield:1, price:50, xp:20 },
+  calabaza:  { label:"Calabaza",  emoji:"🎃", lvl:6, seedCost:40, growH:24, yield:1, price:100, xp:40 },
+  brocoli:   { label:"Brócoli",   emoji:"🥦", lvl:7, seedCost:90, growH:48, yield:1, price:210, xp:80 },
 };
 function recomputeCropGrow() { for (const k in CROP_DEF) CROP_DEF[k].grow = Math.round(CROP_DEF[k].growH * 3600 * GROW_SCALE); }
 recomputeCropGrow();   // en segundos, como siempre
@@ -107,8 +107,8 @@ function buySeed(k, qty) {
 // --- construcción de edificios (detalles viernes 1): recetas para levantar cada edificio ---
 const BUILD_DEF = {
   store:  { label: "Herrería",        cost: {} },   // viernes (2): la Herrería es gratis (ya construida)
-  horno:  { label: "Horno de Piedra", cost: { madera: 100, piedra: 100 } },
-  cocina: { label: "Cocina",          cost: { madera: 100, papa: 10, zanahoria: 10, cebolla: 10, calabacin: 10, repollo: 10 } },
+  horno:  { label: "Horno de Piedra", cost: { madera: 10, piedra: 8 },  lvl: 3 },   // doc 2/8: costo early + granja nv 3
+  cocina: { label: "Cocina",          cost: { madera: 20, piedra: 15 }, lvl: 5 },   // doc 2/8: costo early + granja nv 5
 };
 function buildCostStr(key) { const b = BUILD_DEF[key]; return Object.keys(b.cost).map(k => (b.cost[k]) + " " + (RES_LABEL[k] || k)).join(" + "); }
 
@@ -152,7 +152,9 @@ function buyWorm(qty) {
 const SKILL_DEFS = [["farming","","Cultivo"],["fishing","","Pesca"],["mining","","Minería"],
   ["sword","","Espada"],["range","","Arco"],["cooking","","Cocina"],["crafting","","Artesanía"]];
 const SKILL_NAME = {}; SKILL_DEFS.forEach(([k,,nm]) => SKILL_NAME[k] = nm);
-function skillInfo(xp) { let lvl=1, need=50, acc=0; while (xp >= acc+need && lvl<99){ acc+=need; lvl++; need=Math.round(need*1.35);} return { lvl, into: xp-acc, need }; }
+var XP_BASE = 100, XP_EXP = 2.7;   // doc maestro 2/8: curva 1-150 anclada (nivel 40 = 360 h); editables en balance.html
+function skillNeed(lvl) { return Math.round(XP_BASE * Math.pow(lvl, XP_EXP)); }
+function skillInfo(xp) { let lvl = 1, acc = 0, need = skillNeed(1); while (xp >= acc + need && lvl < 150) { acc += need; lvl++; need = skillNeed(lvl); } return { lvl, into: xp - acc, need }; }
 function avgSkillLevel() { let s=0,n=0; for (const k in G.skills){ s+=skillInfo(G.skills[k]).lvl; n++; } return n ? s/n : 1; }
 function addXp(sk, amt) {
   if (!(sk in G.skills)) return;
@@ -160,15 +162,34 @@ function addXp(sk, amt) {
   G.skills[sk] += amt;
   const after = skillInfo(G.skills[sk]).lvl;
   if (after > before) { log(`${SKILL_NAME[sk]} subió a nivel ${after}.`, "good"); toast("" + SKILL_NAME[sk] + " nivel " + after); if (window.sfx) sfx("level"); }
+  if (sk === "farming") recalcFarmLevel();   // doc maestro 2/8: el nivel de granja vive de la XP de farmeo
   if (isOpen("ov-skills")) refreshSkills();
 }
 
 // --- niveles de granja ---
-const LEVELS = { 2:{papa:20,madera:10}, 3:{papa:35,madera:20,piedra:5}, 4:{zanahoria:35,madera:35,piedra:12},
-  5:{zanahoria:60,madera:55,piedra:22}, 6:{cebolla:60,madera:80,piedra:36}, 7:{cebolla:100,madera:115,piedra:55},
-  8:{calabaza:30,oro:3}, 9:{calabaza:60,oro:6}, 10:{brocoli:50,oro:10} };
-function canLevel() { if (G.level >= 10) return false; const n = LEVELS[G.level+1]; for (const k in n) if ((G.res[k]||0) < n[k]) return false; return true; }
-function levelUp() { if (!canLevel()) { toast("Te faltan recursos"); return; } const n = LEVELS[G.level+1]; for (const k in n) G.res[k]-=n[k]; G.level++; log(`¡Granja nivel ${G.level}! Yield +${((yieldMult()-1)*100).toFixed(1)}%.`, "gold"); toast("¡Nivel " + G.level + "!"); refreshBarn(); refreshHud(); }
+// DOC MAESTRO 2/8: el nivel de granja sube SOLO con XP de Farmeo (curva front-loaded 1-10) y regala desbloqueos
+var FARM_XP_LVLS = [0, 0, 10, 35, 90, 220, 500, 1100, 2400, 5200, 11000];   // índice = nivel, valor = XP de farmeo acumulada
+const FARM_UNLOCK = { 2: "3ª parcela GRATIS", 3: "Horno básico disponible", 4: "4ª parcela GRATIS", 5: "Cocina disponible", 6: "5ª parcela GRATIS", 7: "6ª parcela GRATIS", 8: "Portal de netherita (a futuro)", 9: "Mejoras de endgame", 10: "Maestría de granja" };
+function farmLevelFromXp(xp) { let l = 1; for (let i = 2; i < FARM_XP_LVLS.length; i++) if (xp >= FARM_XP_LVLS[i]) l = i; return Math.min(10, l); }
+function recalcFarmLevel() {
+  const nuevo = farmLevelFromXp(G.skills.farming || 0);
+  while (G.level < nuevo) {
+    G.level++;
+    const gift = FARM_UNLOCK[G.level] || "";
+    if (G.level === 2) G.plotsOwned = Math.max(G.plotsOwned || 2, 3);
+    if (G.level === 4) G.plotsOwned = Math.max(G.plotsOwned, 4);
+    if (G.level === 6) G.plotsOwned = Math.max(G.plotsOwned, 5);
+    if (G.level === 7) G.plotsOwned = Math.max(G.plotsOwned, 6);
+    log(`¡GRANJA NIVEL ${G.level}!` + (gift ? " Desbloqueaste: " + gift + "." : ""), "gold");
+    toast("¡Granja nivel " + G.level + "!" + (gift ? " " + gift : ""));
+    if (window.sfx) sfx("level");
+    if (typeof window.onFarmLevelUp === "function") window.onFarmLevelUp(G.level, gift);   // celebración (Fase 5)
+  }
+  if (typeof refreshBarn === "function" && isOpen("ov-barn")) refreshBarn();
+  refreshHud();
+}
+function canLevel() { return false; }   // legado: ya no se sube pagando recursos
+function levelUp() { toast("El nivel sube cosechando (XP de Farmeo)"); }
 function prestige() { if (G.level < 10) { toast("Llegá a nivel 10"); return; } G.prestige++; G.level=1; for (const k in G.res) G.res[k]=0; log(`Reinicio. Prestigio ${G.prestige}.`, "gold"); toast("Prestigio " + G.prestige + "!"); refreshBarn(); refreshHud(); }
 
 // --- minerales y picos ---
@@ -502,8 +523,17 @@ function useTool(id) {
 }
 // craftear herramientas consumibles — costos estilo SFL, apilan hasta 99
 const TOOL_CRAFT = { axe: { cost:{}, plata:10 }, rod: { cost:{ madera:3, piedra:1, oro:15 }, plata:0 } };   // viernes (2): hacha 10 plata; caña 3 madera + 1 piedra + 15 ORO (recurso)
-function craftTool(id) {
+function craftTool(id, lote) {
+  lote = Math.max(1, lote || 1);
   const tc = TOOL_CRAFT[id], td = TOOL_DEF[id]; if (!tc || !td) return;
+  if (lote > 1) {   // doc 2/8: crafteo en lote — la fricción es económica, no de clicks
+    let hechas = 0;
+    while (hechas < lote && toolCount(id) < 99 && canAfford(tc.cost) && G.plata >= tc.plata) { payCost(tc.cost); G.plata -= tc.plata; G.tools[id] = toolCount(id) + 1; hechas++; }
+    if (!hechas) { toast("Te faltan materiales o plata"); return; }
+    addXp("crafting", 5 * hechas); log("Crafteaste " + hechas + " × " + td.label + " (tenés " + G.tools[id] + ").", "good"); toast("+" + hechas + " " + td.label);
+    forgeWork(); refreshForge(); if (isOpen("ov-inv")) refreshInv(); refreshHud(); syncSlots(); if (typeof refreshHotbar === "function") refreshHotbar();
+    return;
+  }
   if (toolCount(id) >= 99) { toast("Máximo 99 " + td.label); return; }
   if (!canAfford(tc.cost)) { toast("Te faltan materiales"); return; }
   if (G.plata < tc.plata) { toast("Te falta plata"); return; }

@@ -26,7 +26,7 @@ function snapshot() {
     tools: G.tools, toolsLost: G.toolsLost, sflStock: true, invRows: G.invRows, slots: G.slots, hotbar: G.hotbar, hotSel: G.hotSel, hbInit: G.hbInit, layout: G.layout,
     daily: G.daily, plotsOwned: G.plotsOwned, seedBuys: G.seedBuys, built: G.built,
     hp: G.hp, hpMax: G.hpMax, swordOwned: G.swordOwned, bowOwned: G.bowOwned, swordWoodOwned: G.swordWoodOwned, gear: G.gear,
-    armasUnlocked: G.armasUnlocked, treesOpen: G.treesOpen, rocksOpen: G.rocksOpen,
+    armasUnlocked: G.armasUnlocked, treesOpen: G.treesOpen, rocksOpen: G.rocksOpen, firstCropDone: G.firstCropDone,
     dishes: G.dishes, cooking: G.cooking, chests: G.chests, dummyUsedAt: G.dummyUsedAt,
     layoutPlots: G.layoutPlots, layoutPond: G.layoutPond };
 }
@@ -65,6 +65,7 @@ function hydrate(d) {
   if (typeof d.swordOwned === "boolean") G.swordOwned = d.swordOwned;
   if (typeof d.bowOwned === "boolean") G.bowOwned = d.bowOwned;
   G.swordWoodOwned = d.swordWoodOwned === true;
+  G.firstCropDone = d.firstCropDone !== false;   // veteranos: true por defecto (solo el jugador nuevo tiene la 1ª tanda rápida)
   G.armasUnlocked = d.armasUnlocked === true;   // viernes (2): la pestaña Armas se paga (también para veteranos)
   // viernes (2): sets de árboles/piedras abiertos; compat con el guardado por contador de la primera versión
   G.treesOpen = Array.isArray(d.treesOpen) ? d.treesOpen.filter(n => typeof n === "number") : (typeof d.treesOwned === "number" ? Array.from({length: Math.max(1, Math.min(6, d.treesOwned))}, (_, i) => i) : [0]);

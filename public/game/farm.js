@@ -552,6 +552,7 @@ class FarmScene extends Phaser.Scene {
     // edificios por construir (viernes 1): clic → receta de construcción con confirmación
     if (typeof BUILD_DEF !== "undefined" && BUILD_DEF[o.type] && !(G.built && G.built[o.type])) {
       const b = BUILD_DEF[o.type];
+      if (b.lvl && G.level < b.lvl) { toast(b.label + " se desbloquea a granja nivel " + b.lvl); return; }   // doc 2/8
       askConfirm("Construir " + b.label + " cuesta: " + buildCostStr(o.type) + ". ¿Construir?", () => {
         if (!canAfford(b.cost)) { toast("Te faltan materiales para construir"); return; }
         payCost(b.cost); G.built[o.type] = true;
@@ -773,7 +774,7 @@ class FarmScene extends Phaser.Scene {
     } else if (a.kind === "plant") {
       const ck = G.selSeed, cd = CROP_DEF[ck];
       if (cd && (G.seeds[ck] || 0) > 0) {
-        G.seeds[ck]--; o.cropKey = ck; o.state = "growing"; o.witherAt = 0; o.readyAt = nowMs() + cd.grow * 1000 * cdMult();
+        G.seeds[ck]--; o.cropKey = ck; o.state = "growing"; o.witherAt = 0; o.readyAt = nowMs() + (G.firstCropDone ? cd.grow * 1000 * cdMult() : 45000);   // doc 2/8: la 1ª tanda crece en 45 s
         o.growTotal = o.readyAt - nowMs();
         this.showGrowing(o);
         this.syncPlots(); addXp("farming", 5); log(`Plantaste ${cd.label}.`, "good"); toast("" + cd.label);
@@ -782,7 +783,7 @@ class FarmScene extends Phaser.Scene {
     } else if (a.kind === "harvest") {
       const ck = o.cropKey || "papa", cd = CROP_DEF[ck] || CROP_DEF.papa;
       const gr = Math.max(1, Math.round(cd.yield * yieldMult()));
-      if (tryAddRes(ck, gr)) { o.state = "dry"; o.cropKey = null; o.readyAt = 0; o.witherAt = 0; this.setPlotGlow(o, "off"); this.coinBurst(o.cx, o.by); o.spr.setVisible(false); o.emo.setVisible(false); o.timer.setVisible(false); this.syncPlots(); addXp("farming", 10); log(`${cd.emoji} +${gr} ${cd.label}.`, "good"); toast("+" + gr + " " + cd.emoji); refreshHud(); }
+      if (tryAddRes(ck, gr)) { o.state = "dry"; o.cropKey = null; o.readyAt = 0; o.witherAt = 0; this.setPlotGlow(o, "off"); this.coinBurst(o.cx, o.by); o.spr.setVisible(false); o.emo.setVisible(false); o.timer.setVisible(false); this.syncPlots(); addXp("farming", (cd && cd.xp) || 2); if (!G.firstCropDone) G.firstCropDone = true; log(`${cd.emoji} +${gr} ${cd.label}.`, "good"); toast("+" + gr + " " + cd.emoji); refreshHud(); }
       else { toast("Bolsa llena — no podés cosechar"); log("Bolsa llena: liberá espacio para cosechar.", "bad"); }
     } else if (a.kind === "fish") {
       this.clearBobber();

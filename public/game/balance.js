@@ -34,7 +34,10 @@ var BAL = (function () {
       obj(cat, "crop." + k, c, "price", "Venta de la cosecha (por unidad)", U.plata);
       obj(cat, "crop." + k, c, "yield", "Unidades por cosecha", U.cant);
       obj(cat, "crop." + k, c, "lvl", "Nivel de Cultivo requerido", U.nivel);
+      obj(cat, "crop." + k, c, "xp", "XP de Farmeo por cosecha", U.xp);
     });
+    add("Skills — Curva 1-150", "xpBase", "Base de la curva (puntos = Base × Nivel ^ Exponente)", "puntos · entero", () => XP_BASE, v => { XP_BASE = v; });
+    add("Skills — Curva 1-150", "xpExp", "Exponente de la curva (2.7 = nivel 40 en 360 h)", "exponente · decimal", () => XP_EXP, v => { XP_EXP = v; }, 0.1);
     add("Cultivos — General", "seedDailyMax", "Cupo diario de compra de semillas", "semillas por día · entero", () => SEED_DAILY_MAX, v => { SEED_DAILY_MAX = v; });
     add("Cultivos — General", "plotUnlockBase", "Desbloquear parcela: costo base (se duplica a partir de la 7ª)", U.plata,
       () => PLOT_UNLOCK_BASE, v => { PLOT_UNLOCK_BASE = v; });

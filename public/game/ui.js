@@ -363,7 +363,9 @@ function refreshForge() {
   ["axe", "rod"].forEach(id => {
     const td = TOOL_DEF[id], tc = TOOL_CRAFT[id], n = toolCount(id);
     const cs = Object.keys(tc.cost).map(k => resIc(k) + " " + tc.cost[k]).join(" · ") + (tc.plata ? (Object.keys(tc.cost).length ? " · " : "") + coinIc("plata") + " " + tc.plata : "");
-    const btn = '<button class="green sm" ' + (canAfford(tc.cost) && G.plata >= tc.plata ? "" : "disabled") + ' data-ctool="' + id + '">Craftear</button>';
+    const ok = canAfford(tc.cost) && G.plata >= tc.plata;
+    const btn = '<button class="green sm" ' + (ok ? "" : "disabled") + ' data-ctool="' + id + '">Craftear</button>'
+      + '<button class="green sm" ' + (ok ? "" : "disabled") + ' data-ctool5="' + id + '" title="Craftear 5 de una (doc 2/8: crafteo en lote)">×5</button>';
     craft += '<div class="forge-row"><div class="fic"><img src="' + GF.spr(td.sprite) + '"></div><div class="finfo"><div class="fnm">' + td.label + '</div><div class="fds">1 uso c/u · tenés ' + n + '</div><div class="fds">Costo: ' + cs + '</div></div><div class="fbtns">' + btn + '</div></div>';
   });
   // solo las ARMAS se reparan → Reparar
@@ -415,6 +417,7 @@ function refreshForge() {
   card.querySelectorAll("[data-repair]").forEach(b => b.onclick = () => repairPick(b.dataset.repair));
   card.querySelectorAll("[data-rtool]").forEach(b => b.onclick = () => repairTool(b.dataset.rtool));
   card.querySelectorAll("[data-ctool]").forEach(b => b.onclick = () => craftTool(b.dataset.ctool));
+  card.querySelectorAll("[data-ctool5]").forEach(b => b.onclick = () => craftTool(b.dataset.ctool5, 5));
   const fs = $("forge-sword"); if (fs) fs.onclick = () => craftSword();
   const fw = $("forge-sword-wood"); if (fw) fw.onclick = () => craftSwordWood();
   const fb = $("forge-bow"); if (fb) fb.onclick = () => craftBow();
@@ -522,10 +525,13 @@ function refreshBarn() {
   $("barn-yield").textContent = "Yield actual +" + ((yieldMult() - 1) * 100).toFixed(1) + "%";
   const bar = $("lvlbar"), cost = $("lvlcost"), lb = $("levelup"), pb = $("prestige");
   if (G.level >= 10) { bar.style.width = "100%"; cost.innerHTML = "<b>Nivel máximo.</b> Reiniciá la granja para yield permanente."; lb.style.display = "none"; pb.style.display = "inline-block"; }
-  else { const n = LEVELS[G.level + 1]; lb.style.display = "inline-block"; pb.style.display = "none"; lb.textContent = "Subir a nivel " + (G.level + 1); lb.disabled = !canLevel();
-    let parts = [], prog = []; for (const k in n) { const h = G.res[k] || 0, miss = h < n[k]; parts.push(`<span class="${miss ? "miss" : ""}">${resIc(k)} ${fmt(h)}/${n[k]}</span>`); prog.push(Math.min(1, h / n[k])); }
-    bar.style.width = (prog.reduce((a, b) => a + b, 0) / prog.length * 100) + "%";
-    cost.innerHTML = "Requiere: " + parts.join(" · ") + (G.level + 1 >= 8 ? '<br><span class="cost">Niveles 8-10 piden Oro (PvP a futuro).</span>' : ""); }
+  else {   // doc maestro 2/8: el nivel de granja sube con XP de Farmeo (nada de pagar recursos)
+    const need = FARM_XP_LVLS[G.level + 1] || 1, xp = (G.skills && G.skills.farming) || 0;
+    lb.style.display = "none"; pb.style.display = "none";
+    bar.style.width = Math.min(100, Math.round(xp / need * 100)) + "%";
+    cost.innerHTML = "El nivel sube cosechando: <b>" + fmt(xp) + " / " + fmt(need) + " XP de Farmeo</b>."
+      + (FARM_UNLOCK[G.level + 1] ? "<br>Próximo desbloqueo: <b>" + FARM_UNLOCK[G.level + 1] + "</b>" : "");
+  }
   const ti = $("toolinfo"); if (ti) ti.style.display = "none"; const bt = $("buytool"); if (bt) bt.style.display = "none";
 }
 
