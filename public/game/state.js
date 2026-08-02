@@ -12,6 +12,7 @@ const G = {
   weapons: {},                   // doc 2/8: armas nuevas — id ("espada_madera") -> { dur }
   combatXp: 0,                   // doc 2/8: barra de Combate GLOBAL — suma la XP de todos los kills
   states: [],                    // doc 2/8: estados/debuffs del bestiario sobre el jugador (no se guardan)
+  tuto: { step: 0, n: 0, done: false },   // doc 2/8: tutorial guiado de micro-objetivos
   armCd: {},                     // enfriamiento de crafteo por arma   // equipo (armas se equipan en el panel de Equipo — detalles jueves)
   res: { madera: 0, piedra: 0, bronce: 0, hierro: 0, oro: 0, diamante: 0, netherita: 0, carne: 0, flecha: 0, lombriz: 0,
     tablon: 0, barra_piedra: 0, barra_bronce: 0, barra_hierro: 0, barra_oro: 0,
@@ -154,6 +155,7 @@ function buySeed(k, qty) {
   const sb = seedBuysToday(), left = SEED_DAILY_MAX - sb.count;
   if (left <= 0) { toast("Límite diario de semillas alcanzado (30) — volvé mañana"); return; }
   if (qty > left) { qty = left; toast("Cupo diario: solo podés comprar " + left + " más hoy"); }
+  if (typeof tutoEvent === "function") tutoEvent("buyseed");
   const cost = cd.seedCost * qty;
   if (G.plata < cost) { toast("Te falta plata"); return; }
   G.plata -= cost; G.seeds[k] = (G.seeds[k] || 0) + qty; sb.count += qty;
@@ -337,6 +339,7 @@ function craftPick(id) {
   G.picks.owned[id] = true; G.picks.dur[id] = pickCount(id) + 1;
   if (first || !G.picks.eq) G.picks.eq = id;
   addXp("crafting", 10 + pd.tier * 4);
+  if (typeof tutoEvent === "function") tutoEvent("crafttool");
   log("Crafteaste " + pd.label + " (tenés " + G.picks.dur[id] + ").", "gold"); toast("+1 " + pd.label);
   forgeWork(); refreshForge(); refreshInv(); refreshHud(); syncSlots(); if (typeof refreshHotbar === "function") refreshHotbar();
 }
@@ -369,6 +372,44 @@ const TOOL_DEF = {
   sword_wood: { label:"Espada de Madera", emoji:"🗡️", sprite:"sword_wood", max:40, repair:{madera:2} },   // viernes (2): arma inicial
   bow:   { label:"Arco",             emoji:"🏹", sprite:"bow",         max:60, repair:{madera:5} },
 };
+
+// ================= TUTORIAL GUIADO (doc maestro 2/8 §3.2): micro-objetivos de los primeros minutos =================
+// Cadena de metas cortas, cada una con tilde + sonido + celebración al final. "El cambio de mayor impacto del doc".
+const TUTO_STEPS = [
+  { id: "plant",     n: 3, txt: "Plantá tus 3 papas",                     target: "plot" },
+  { id: "harvest",   n: 3, txt: "Cosechá tus papas",                      target: "plot" },
+  { id: "sell",      n: 1, txt: "Vendé la cosecha en el Mercado",         target: "market" },
+  { id: "buyseed",   n: 1, txt: "Comprá más semillas en el Mercado",      target: "market" },
+  { id: "plant2",    n: 1, txt: "Replantá una semilla",                   target: "plot" },
+  { id: "gather",    n: 1, txt: "Talá un árbol o picá una piedra",        target: "tree" },
+  { id: "crafttool", n: 1, txt: "Crafteá una herramienta en la Herrería", target: "store" },
+  { id: "build",     n: 1, txt: "Construí el Horno de Piedra",            target: "horno" },
+];
+var TUTO_REWARD_PLATA = 100;   // gran recompensa del cierre (editable)
+function tutoActivo() { return G.tuto && !G.tuto.done ? TUTO_STEPS[G.tuto.step] : null; }
+function tutoEvent(tipo) {
+  const st = tutoActivo(); if (!st) return;
+  const acepta = st.id === tipo || (st.id === "plant2" && tipo === "plant");
+  if (!acepta) return;
+  G.tuto.n = (G.tuto.n || 0) + 1;
+  if (G.tuto.n < st.n) { if (typeof tutoRefresh === "function") tutoRefresh(); return; }
+  // paso cumplido: tilde + sonido + avance automático (doc)
+  if (typeof tutoCheck === "function") tutoCheck(st.txt);
+  if (window.sfx) sfx("level");
+  G.tuto.step++; G.tuto.n = 0;
+  if (G.tuto.step >= TUTO_STEPS.length) {
+    G.tuto.done = true;
+    G.plata += TUTO_REWARD_PLATA;
+    log("¡Tutorial completo! Recompensa: " + TUTO_REWARD_PLATA + " de plata. La granja es toda tuya.", "gold");
+    if (window.celebrate) celebrate({ title: "¡GRANJA LISTA!", sub: "Tutorial completo", big: true, reward: "+" + TUTO_REWARD_PLATA + " de plata" });
+    refreshHud();
+  } else {
+    log("Nuevo objetivo: " + TUTO_STEPS[G.tuto.step].txt + ".", "good");
+  }
+  if (typeof tutoRefresh === "function") tutoRefresh();
+  if (window.farmScene && window.farmScene.updateTutoArrow) try { window.farmScene.updateTutoArrow(); } catch (e) {}
+  if (typeof saveFarm === "function") saveFarm();
+}
 
 // ================= PASE DE BATALLA (doc maestro 2/8): 30 niveles Free/VIP, estrellas por misiones =================
 var PASS_STARS_LVL = 40;      // estrellas por nivel (diarias completas ≈ 35/día → 30 niveles en ~5 semanas)
@@ -1054,6 +1095,7 @@ function craftTool(id, lote) {
     while (hechas < lote && toolCount(id) < 99 && canAfford(tc.cost) && G.plata >= tc.plata) { payCost(tc.cost); G.plata -= tc.plata; G.tools[id] = toolCount(id) + 1; hechas++; }
     if (!hechas) { toast("Te faltan materiales o plata"); return; }
     addXp("crafting", 5 * hechas); log("Crafteaste " + hechas + " × " + td.label + " (tenés " + G.tools[id] + ").", "good"); toast("+" + hechas + " " + td.label);
+  if (typeof tutoEvent === "function") tutoEvent("crafttool");
     forgeWork(); refreshForge(); if (isOpen("ov-inv")) refreshInv(); refreshHud(); syncSlots(); if (typeof refreshHotbar === "function") refreshHotbar();
     return;
   }
@@ -1202,6 +1244,7 @@ function sellItem(res) {
   if (marketCur === "plata") { const t=q*priceOf(res); G.plata+=t; G.res[res]-=q; log(`Vendiste ${q} ${RES_LABEL[res]} por ${t} de plata.`); toast("+"+t+" plata"); }
   else { const g=Math.floor(q*priceOf(res)/10); if (g<1){ toast("Muy poca cantidad para $Golden"); return; } G.res[res]-=q; G.golden+=g; log(`Vendiste ${q} ${RES_LABEL[res]} por ${g} $Golden.`,"gold"); toast("+"+g+" $Golden"); }
   if (window.sfx) sfx("coin");
+  if (CROP_DEF[res] && typeof tutoEvent === "function") tutoEvent("sell");   // tutorial: vender la cosecha
   refreshMarket(); refreshHud();
 }
 

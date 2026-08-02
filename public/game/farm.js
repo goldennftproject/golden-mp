@@ -215,6 +215,8 @@ class FarmScene extends Phaser.Scene {
       }
     });
     this.rebuildCollisions();
+    window.farmScene = this;   // para refrescar la flecha del tutorial desde la UI
+    this.time.delayedCall(400, () => this.updateTutoArrow());   // flecha del tutorial guiado
 
     // parcelas (ciclo arcade: seco → plantar semilla elegida → creciendo (con timer) → listo → cosechar)
     const savedPlots = Array.isArray(G.plots) ? G.plots : [];
@@ -559,7 +561,7 @@ class FarmScene extends Phaser.Scene {
         if (b.golden && G.golden < b.golden) { toast("Te falta $Golden (" + b.golden + ")"); return; }
         payCost(b.cost); if (b.golden) G.golden -= b.golden; G.built[o.type] = true;
         if (o.sprite) { o.sprite.setAlpha(1); o.sprite.clearTint(); }
-        if (o.type === "horno") this.startHornoSmoke();   // arranca el humo (viernes 2)
+        if (o.type === "horno") { this.startHornoSmoke(); if (typeof tutoEvent === "function") tutoEvent("build"); }   // arranca el humo (viernes 2)
         addXp("crafting", 20); log("¡Construiste " + b.label + "!", "gold"); toast("¡" + b.label + " construida!");
         refreshHud(); if (typeof saveFarm === "function") saveFarm(true);
       }, { title: "Construir " + b.label, yes: "Construir", yesClass: "green", no: "Cancelar", noClass: "red" });
@@ -751,6 +753,7 @@ class FarmScene extends Phaser.Scene {
         if (this.textures.exists("tree_stump_leaves")) this.setObjTex(o, "tree_stump_leaves", (o.rw || o.w) * 0.85);   // −15%: el tocón venía más grueso que el tronco del árbol
         else this.setObjTex(o, "tree_stump", (o.rw || o.w) * 0.42);
         log(`+${gr} Madera. ${toolDur("axe")}/${TOOL_DEF.axe.max}`, "good"); toast("+" + gr + " "); refreshHud();
+        if (typeof tutoEvent === "function") tutoEvent("gather");
         if (toolDur("axe") <= 0) { log("¡El hacha se rompió en pedazos! Crafteá otra en la Herrería.", "bad"); toast("¡Hacha rota!"); }
       } else {
         this.setObjTex(o, o.baseKey, o.rw || o.w);   // bolsa llena: el árbol vuelve entero (deshace los cortes intermedios)
@@ -762,6 +765,7 @@ class FarmScene extends Phaser.Scene {
         const pk = equippedPick();   // picar piedra también gasta el pico (bug reportado)
         if (pk) { G.picks.dur[pk] = Math.max(0, (G.picks.dur[pk] || 0) - 1); if (G.picks.dur[pk] <= 0) { log(`¡${PICK_DEF[pk].label} se rompió en pedazos! Crafteá otro en la Herrería.`, "bad"); toast("¡Pico destruido!"); destroyPick(pk); } }
         addXp("mining", 5); o.readyAt = nowMs() + CD.rock * 1000 * cdMult(); this.setObjTex(o, "node_stone_mined", o.rw || GF.TILE); log(`+${gr} Piedra.` + (pk ? ` ${G.picks.dur[pk]}/${PICK_DEF[pk].dur}` : ""), "good"); toast("+" + gr + " "); refreshHud();
+        if (typeof tutoEvent === "function") tutoEvent("gather");
       }
       else { toast("Bolsa llena — no podés picar"); log("Bolsa llena: liberá espacio para seguir picando.", "bad"); }
     } else if (a.kind === "mine" && o.type === "ore") {
@@ -782,18 +786,34 @@ class FarmScene extends Phaser.Scene {
         o.growTotal = o.readyAt - nowMs();
         this.showGrowing(o);
         this.syncPlots(); addXp("farming", 5); log(`Plantaste ${cd.label}.`, "good"); toast("" + cd.label);
+        if (typeof tutoEvent === "function") tutoEvent("plant");
         if (isOpen("ov-inv")) refreshInv();
       }
     } else if (a.kind === "harvest") {
       const ck = o.cropKey || "papa", cd = CROP_DEF[ck] || CROP_DEF.papa;
       const gr = Math.max(1, Math.round(cd.yield * yieldMult()));
-      if (tryAddRes(ck, gr)) { o.state = "dry"; o.cropKey = null; o.readyAt = 0; o.witherAt = 0; this.setPlotGlow(o, "off"); this.coinBurst(o.cx, o.by); o.spr.setVisible(false); o.emo.setVisible(false); o.timer.setVisible(false); this.syncPlots(); addXp("farming", (cd && cd.xp) || 2); if (!G.firstCropDone) G.firstCropDone = true; log(`${cd.emoji} +${gr} ${cd.label}.`, "good"); toast("+" + gr + " " + cd.emoji); refreshHud(); }
+      if (tryAddRes(ck, gr)) { o.state = "dry"; o.cropKey = null; o.readyAt = 0; o.witherAt = 0; this.setPlotGlow(o, "off"); this.coinBurst(o.cx, o.by); o.spr.setVisible(false); o.emo.setVisible(false); o.timer.setVisible(false); this.syncPlots(); addXp("farming", (cd && cd.xp) || 2); if (!G.firstCropDone) G.firstCropDone = true; if (typeof tutoEvent === "function") tutoEvent("harvest"); log(`${cd.emoji} +${gr} ${cd.label}.`, "good"); toast("+" + gr + " " + cd.emoji); refreshHud(); }
       else { toast("Bolsa llena — no podés cosechar"); log("Bolsa llena: liberá espacio para cosechar.", "bad"); }
     } else if (a.kind === "fish") {
       this.clearBobber();
       goFishing();
     }
     this.action = null;
+  }
+
+  // flecha del tutorial: triángulo dorado que rebota sobre el objetivo del paso actual
+  updateTutoArrow() {
+    if (this.tutoArrow) { this.tutoArrow.destroy(); this.tutoArrow = null; if (this.tutoTw) { this.tutoTw.stop(); this.tutoTw = null; } }
+    const st = (typeof tutoActivo === "function") ? tutoActivo() : null;
+    if (!st) return;
+    let x = null, y = null;
+    if (st.target === "plot") { const pl = (this.plots || []).find(o => o.state !== "locked"); if (pl) { x = pl.cx; y = pl.by - GF.TILE * 0.9; } }
+    else if (st.target === "tree") { const o = (this.objs || []).find(o => (o.type === "tree" || o.type === "rock") && !o.locked); if (o) { x = o.cx; y = o.by - (o.sprite ? o.sprite.displayHeight : 60) - 10; } }
+    else { const o = (this.objs || []).find(o => o.type === st.target); if (o) { x = o.cx; y = o.by - (o.sprite ? o.sprite.displayHeight : 60) - 10; } }
+    if (x == null) return;
+    const tri = this.add.triangle(x, y, 0, 0, 16, 0, 8, 12, 0xffd75e).setStrokeStyle(2, 0x241505, 1).setDepth(99990);
+    this.tutoArrow = tri;
+    this.tutoTw = this.tweens.add({ targets: tri, y: y - 10, duration: 420, yoyo: true, repeat: -1, ease: "Sine.easeInOut" });
   }
 
   setObjTex(o, key, targetW) {

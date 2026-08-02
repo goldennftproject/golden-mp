@@ -125,6 +125,13 @@
   @keyframes cshine{to{transform:translateX(130%)}}
   @keyframes cflash{from{opacity:1}to{opacity:0}}
   @keyframes cpart{0%{transform:translate(0,0);opacity:1}60%{transform:translate(var(--dx),var(--dy));opacity:1}100%{transform:translate(var(--dx),calc(var(--dy) + var(--fall)));opacity:0}}
+  /* tutorial guiado (doc maestro 2/8): cartel con la meta actual */
+  #tuto{position:fixed;left:50%;transform:translateX(-50%);top:54px;z-index:7;display:flex;align-items:center;gap:8px;background:none;border:8px solid transparent;border-image:url("assets/ui/badge_wood.png") 26 fill round;image-rendering:pixelated;padding:1px 10px;font-size:13px;font-weight:700;color:#fff;text-shadow:-1px 0 #241505,1px 0 #241505,0 -1px #241505,0 1px #241505;pointer-events:none}
+  #tuto.hidden{display:none}
+  #tuto .k{color:#ffe9ac;font-weight:800;font-size:12px}
+  #tuto b{color:#fff}
+  #tuto .check{color:#8fd14f;font-size:16px;animation:tcheck .5s cubic-bezier(.34,1.56,.64,1)}
+  @keyframes tcheck{0%{transform:scale(0)}70%{transform:scale(1.5)}100%{transform:scale(1)}}
   .shophead{font-weight:800;font-size:13px;color:var(--ink);margin:12px 0 6px}
   .seedlv{font-size:11px;font-weight:700;color:#8a6d1e;background:#f3e6bf;border-radius:5px;padding:0 5px;margin-left:4px}
   .mkt-cur{display:flex;align-items:center;gap:8px;font-size:13px;color:var(--muted);margin:4px 0 12px;flex-wrap:wrap}
@@ -425,6 +432,7 @@
 
   <!-- HUD -->
   <div id="celeb" class="hidden"></div>
+  <div id="tuto" class="hidden"><span class="k">Objetivo</span><b id="tuto-txt"></b><span id="tuto-n"></span></div>
   <div class="hudbar">
     <div class="brand" style="display:flex;align-items:center;gap:12px"><h1>GOLDEN FARM</h1>
       <div class="pill" title="Ventanas del juego conectadas ahora"><span class="k">Jugadores en línea</span><b id="s-online">1</b></div>

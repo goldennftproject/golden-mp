@@ -580,6 +580,23 @@ function refreshCooking() {
 
 
 
+/* ---- Tutorial guiado (doc maestro 2/8): cartel de objetivo + tilde animado ---- */
+function tutoRefresh() {
+  const el = document.getElementById("tuto"); if (!el) return;
+  const st = (typeof tutoActivo === "function") ? tutoActivo() : null;
+  if (!st) { el.classList.add("hidden"); return; }
+  el.classList.remove("hidden");
+  document.getElementById("tuto-txt").textContent = st.txt;
+  document.getElementById("tuto-n").textContent = st.n > 1 ? " " + Math.min(G.tuto.n || 0, st.n) + "/" + st.n : "";
+}
+function tutoCheck(txt) {   // tilde animado sobre el cartel al cumplir un paso
+  const el = document.getElementById("tuto"); if (!el) return;
+  const c = document.createElement("span"); c.className = "check"; c.textContent = "✓";
+  el.appendChild(c); setTimeout(() => c.remove(), 900);
+  toast("Objetivo cumplido: " + txt);
+}
+window.tutoRefresh = tutoRefresh; window.tutoCheck = tutoCheck;
+
 /* ---- Pase de Batalla (doc maestro 2/8): 30 niveles Free/VIP, estrellas por misiones ---- */
 function refreshPass() {
   const box = $("pass-list"); if (!box) return;
@@ -998,6 +1015,7 @@ function initUI() {
   });
 
   refreshHud();
+  tutoRefresh();   // cartel del tutorial guiado (si está activo)
   setInterval(() => { if (typeof buffTick === "function") buffTick(); refreshHud(); }, 1000);
 }
 initUI();

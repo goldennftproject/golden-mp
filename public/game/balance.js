@@ -117,6 +117,9 @@ var BAL = (function () {
       if (r.goldenP != null) obj(cat, "recipe." + id, r, "goldenP", "Venta en $Golden (Cocina Nv 8+)", "$Golden · entero");
     }
 
+    // TUTORIAL
+    add("Tutorial guiado", "tuto.reward", "Recompensa final del tutorial", U.plata, () => TUTO_REWARD_PLATA, v => { TUTO_REWARD_PLATA = v; });
+
     // PASE DE BATALLA
     { const cat = "Pase de Batalla";
       add(cat, "pass.starsLvl", "Estrellas por nivel del pase", "estrellas · entero", () => PASS_STARS_LVL, v => { PASS_STARS_LVL = v; });
