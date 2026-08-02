@@ -107,6 +107,24 @@
   .seed.sel{border-color:#e2b23a;box-shadow:0 0 0 2px rgba(226,178,58,.5)}
   .seed.locked{opacity:.45;cursor:not-allowed}
   .forge-row.locked{opacity:.55}
+  /* celebración de subida de nivel (doc maestro 2/8): cartel pop + halo + partículas + shine */
+  #celeb{position:fixed;inset:0;z-index:40;pointer-events:none;display:flex;align-items:center;justify-content:center}
+  #celeb.hidden{display:none}
+  #celeb .halo{position:absolute;width:430px;height:430px;border-radius:50%;background:radial-gradient(circle,rgba(255,215,94,.55),rgba(255,215,94,0) 65%);mix-blend-mode:screen}
+  #celeb .flash{position:fixed;inset:0;background:radial-gradient(circle,rgba(255,240,190,.8),rgba(255,215,94,.2));animation:cflash .55s ease-out forwards}
+  #celeb .card{position:relative;text-align:center;padding:16px 40px;overflow:hidden}
+  #celeb .card .t{font-size:42px;font-weight:900;letter-spacing:2px;color:#fff;text-shadow:-2px 0 #241505,2px 0 #241505,0 -2px #241505,0 2px #241505,-2px -2px #241505,2px -2px #241505,-2px 2px #241505,2px 2px #241505,0 0 18px rgba(255,215,94,.9)}
+  #celeb .card .s{font-size:19px;font-weight:800;color:#ffe9ac;text-shadow:-1px 0 #241505,1px 0 #241505,0 -1px #241505,0 1px #241505;margin-top:2px}
+  #celeb .card .r{font-size:14px;font-weight:700;color:#c9f0a8;text-shadow:-1px 0 #241505,1px 0 #241505,0 -1px #241505,0 1px #241505;margin-top:6px}
+  #celeb .shine{position:absolute;inset:0;background:linear-gradient(115deg,transparent 30%,rgba(255,255,255,.4) 50%,transparent 70%);transform:translateX(-130%);animation:cshine .8s .35s ease forwards}
+  #celeb .burst{position:absolute;left:50%;top:50%}
+  #celeb .burst i{position:absolute;background:#ffd75e;box-shadow:0 0 6px rgba(255,215,94,.9);image-rendering:pixelated;animation:cpart both ease-out}
+  @keyframes cpop{0%{transform:scale(0)}70%{transform:scale(1.15)}100%{transform:scale(1)}}
+  @keyframes cvanish{to{transform:translateY(-34px);opacity:0}}
+  @keyframes chalo{0%{transform:scale(.55);opacity:0}15%{opacity:1}38%{transform:scale(1.06)}58%{transform:scale(.92)}78%{transform:scale(1.03)}100%{transform:scale(1);opacity:0}}
+  @keyframes cshine{to{transform:translateX(130%)}}
+  @keyframes cflash{from{opacity:1}to{opacity:0}}
+  @keyframes cpart{0%{transform:translate(0,0);opacity:1}60%{transform:translate(var(--dx),var(--dy));opacity:1}100%{transform:translate(var(--dx),calc(var(--dy) + var(--fall)));opacity:0}}
   .shophead{font-weight:800;font-size:13px;color:var(--ink);margin:12px 0 6px}
   .seedlv{font-size:11px;font-weight:700;color:#8a6d1e;background:#f3e6bf;border-radius:5px;padding:0 5px;margin-left:4px}
   .mkt-cur{display:flex;align-items:center;gap:8px;font-size:13px;color:var(--muted);margin:4px 0 12px;flex-wrap:wrap}
@@ -406,6 +424,7 @@
   <div id="game"></div>
 
   <!-- HUD -->
+  <div id="celeb" class="hidden"></div>
   <div class="hudbar">
     <div class="brand" style="display:flex;align-items:center;gap:12px"><h1>GOLDEN FARM</h1>
       <div class="pill" title="Ventanas del juego conectadas ahora"><span class="k">Jugadores en línea</span><b id="s-online">1</b></div>

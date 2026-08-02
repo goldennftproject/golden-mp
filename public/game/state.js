@@ -197,9 +197,11 @@ function addCombatXp(xp) {
   if (after > before) {
     applyCombatHp();
     const salto = after - before;   // un Trol puede subir varios niveles: UN solo cartel (doc)
-    toast("¡Combate nivel " + after + "!" + (salto > 1 ? " (+" + salto + ")" : ""));
-    log("Tu nivel de Combate subió a " + after + "." + (combatHpBonus(after) > combatHpBonus(before) ? " Vida máxima: " + (100 + combatHpBonus(after)) + "." : ""), "good");
-    if (window.sfx) sfx("level");
+    const hito = after === 5 || after % 10 === 0;
+    const vida = combatHpBonus(after) > combatHpBonus(before) ? "+" + (combatHpBonus(after) - combatHpBonus(before)) + " de vida máxima" : "";
+    log("Tu nivel de Combate subió a " + after + "." + (vida ? " " + vida + "." : ""), "good");
+    if (window.celebrate) celebrate({ title: "¡NIVEL " + after + "!" + (salto > 1 ? " (+" + salto + ")" : ""), sub: "Combate", big: hito, reward: vida });
+    else { toast("¡Combate nivel " + after + "!"); if (window.sfx) sfx("level"); }
     if (window.onCombatLevelUp) window.onCombatLevelUp(after, salto);   // gancho para la celebración (Fase 5)
   }
   refreshHud();
@@ -211,7 +213,11 @@ function addXp(sk, amt) {
   const before = skillInfo(G.skills[sk]).lvl;
   G.skills[sk] += amt;
   const after = skillInfo(G.skills[sk]).lvl;
-  if (after > before) { log(`${SKILL_NAME[sk]} subió a nivel ${after}.`, "good"); toast("" + SKILL_NAME[sk] + " nivel " + after); if (window.sfx) sfx("level"); }
+  if (after > before) {
+    log(`${SKILL_NAME[sk]} subió a nivel ${after}.`, "good");
+    if (window.celebrate) celebrate({ title: "¡NIVEL " + after + "!" + (after - before > 1 ? " (+" + (after - before) + ")" : ""), sub: SKILL_NAME[sk] });
+    else { toast("" + SKILL_NAME[sk] + " nivel " + after); if (window.sfx) sfx("level"); }
+  }
   if (sk === "farming") recalcFarmLevel();   // doc maestro 2/8: el nivel de granja vive de la XP de farmeo
   if (isOpen("ov-skills")) refreshSkills();
 }
@@ -223,7 +229,9 @@ function addCookXp(amt) {
   if (after > before) {
     const rec = RECIPE_ORDER.filter(id => RECIPE_DEF[id].lvl === after && !RECIPE_DEF[id].desc).map(id => RECIPE_DEF[id].label);
     log("Cocina subió a nivel " + after + (rec.length ? ". Nueva receta: " + rec.join(" · ") : "") + (after === 8 ? ". ¡Ya podés vender platos por $Golden!" : "") + ".", "good");
-    toast("Cocina nivel " + after); if (window.sfx) sfx("level");
+    if (window.celebrate) celebrate({ title: "¡NIVEL " + after + "!", sub: "Cocina" + (after >= 10 ? " maestra" : ""), big: after >= 10,
+      reward: (rec.length ? "Nueva receta: " + rec.join(" · ") : "") + (after === 8 ? (rec.length ? " · " : "") + "Venta en $Golden" : "") });
+    else { toast("Cocina nivel " + after); if (window.sfx) sfx("level"); }
     if (window.onCookLevelUp) window.onCookLevelUp(after);   // celebración (Fase 5)
   }
   if (isOpen("ov-skills")) refreshSkills();
@@ -244,8 +252,8 @@ function recalcFarmLevel() {
     if (G.level === 6) G.plotsOwned = Math.max(G.plotsOwned, 5);
     if (G.level === 7) G.plotsOwned = Math.max(G.plotsOwned, 6);
     log(`¡GRANJA NIVEL ${G.level}!` + (gift ? " Desbloqueaste: " + gift + "." : ""), "gold");
-    toast("¡Granja nivel " + G.level + "!" + (gift ? " " + gift : ""));
-    if (window.sfx) sfx("level");
+    if (window.celebrate) celebrate({ title: "¡NIVEL " + G.level + "!", sub: "Granja", big: true, reward: gift || "" });
+    else { toast("¡Granja nivel " + G.level + "!" + (gift ? " " + gift : "")); if (window.sfx) sfx("level"); }
     if (typeof window.onFarmLevelUp === "function") window.onFarmLevelUp(G.level, gift);   // celebración (Fase 5)
   }
   if (typeof refreshBarn === "function" && isOpen("ov-barn")) refreshBarn();

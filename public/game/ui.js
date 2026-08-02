@@ -23,6 +23,42 @@ function closeOv(id) { const e = $(id); if (e) e.classList.remove("show"); }
 function closeAllOv() { document.querySelectorAll(".ov.show").forEach(e => e.classList.remove("show")); }
 
 /* ---- HUD ---- */
+/* --- celebración de subida de nivel (doc maestro 2/8): cartel + glow + partículas, con COLA --- */
+const CELEB_Q = [];
+let celebBusy = false;
+function celebrate(ev) { CELEB_Q.push(ev); if (!celebBusy) nextCeleb(); }
+function nextCeleb() {
+  const ev = CELEB_Q.shift();
+  if (!ev) { celebBusy = false; return; }
+  celebBusy = true;
+  const box = document.getElementById("celeb");
+  if (!box) { toast(ev.title + (ev.sub ? " · " + ev.sub : "")); celebBusy = false; return; }
+  const dur = ev.big ? 2600 : 1900;   // grande = fogonazo + confeti + más tiempo
+  box.className = "";
+  box.innerHTML = (ev.big ? '<div class="flash"></div>' : '') +
+    '<div class="halo" style="animation:chalo ' + dur + 'ms ease-out forwards"></div>' +
+    '<div class="card" style="animation:cpop .25s cubic-bezier(.34,1.56,.64,1), cvanish .45s ease-in ' + (dur - 450) + 'ms forwards">' +
+    '<div class="shine"></div><div class="t">' + ev.title + '</div>' +
+    (ev.sub ? '<div class="s">' + ev.sub + '</div>' : '') +
+    (ev.reward ? '<div class="r">' + ev.reward + '</div>' : '') + '</div><div class="burst"></div>';
+  const burst = box.querySelector(".burst"), n = ev.big ? 48 : 26;
+  for (let i = 0; i < n; i++) {
+    const p = document.createElement("i");
+    const a = Math.random() * Math.PI * 2, r = 60 + Math.random() * (ev.big ? 260 : 150);
+    p.style.setProperty("--dx", Math.cos(a) * r + "px");
+    p.style.setProperty("--dy", (Math.sin(a) * r * 0.7 - 30) + "px");
+    p.style.setProperty("--fall", (40 + Math.random() * 90) + "px");
+    p.style.animationDelay = (Math.random() * 0.15) + "s";
+    p.style.animationDuration = (0.9 + Math.random() * 0.8) + "s";
+    const sz = Math.random() < 0.5 ? 3 : 5; p.style.width = p.style.height = sz + "px";
+    if (ev.big && Math.random() < 0.4) p.style.background = ["#8fd14f", "#6cc4ff", "#ff8f8f", "#d9a7ff"][Math.floor(Math.random() * 4)];   // confeti
+    burst.appendChild(p);
+  }
+  if (window.sfx) { sfx("level"); if (ev.big) setTimeout(() => sfx("level"), 350); }   // fanfarria más larga en las grandes
+  setTimeout(() => { box.className = "hidden"; box.innerHTML = ""; setTimeout(nextCeleb, 250); }, dur);
+}
+window.celebrate = celebrate;
+
 function refreshHud() { setTxt("s-level", G.level); setTxt("s-prestige", G.prestige); setTxt("s-plata", fmt(G.plata)); setTxt("s-golden", fmt(G.golden)); setTxt("s-week", G.week); setTxt("s-hp", Math.ceil(G.hp) + "/" + G.hpMax); refreshCombatBar(); if (typeof checkCooking === "function") checkCooking(); if (typeof refreshHotbar === "function") refreshHotbar(); }
 function refreshCombatBar() {   // doc maestro 2/8: insignia de nivel + relleno dorado + "XP actual / necesaria"
   const el = document.getElementById("c-lvl"); if (!el || typeof combatInfo !== "function") return;
