@@ -252,6 +252,7 @@ function addXp(sk, amt) {
     else { toast("" + SKILL_NAME[sk] + " nivel " + after); if (window.sfx) sfx("level"); }
   }
   if (sk === "farming") recalcFarmLevel();   // doc maestro 2/8: el nivel de granja vive de la XP de farmeo
+  if (typeof passEvent === "function") passEvent(sk);   // misiones del Pase de Batalla
   if (isOpen("ov-skills")) refreshSkills();
 }
 function addCookXp(amt) {
@@ -259,6 +260,7 @@ function addCookXp(amt) {
   const before = cookLevel();
   G.skills.cooking = (G.skills.cooking || 0) + amt;
   const after = cookLevel();
+  if (typeof passEvent === "function") passEvent("cooking");   // misión "cociná" del Pase
   if (after > before) {
     const rec = RECIPE_ORDER.filter(id => RECIPE_DEF[id].lvl === after && !RECIPE_DEF[id].desc).map(id => RECIPE_DEF[id].label);
     log("Cocina subió a nivel " + after + (rec.length ? ". Nueva receta: " + rec.join(" · ") : "") + (after === 8 ? ". ¡Ya podés vender platos por $Golden!" : "") + ".", "good");
@@ -367,6 +369,136 @@ const TOOL_DEF = {
   sword_wood: { label:"Espada de Madera", emoji:"🗡️", sprite:"sword_wood", max:40, repair:{madera:2} },   // viernes (2): arma inicial
   bow:   { label:"Arco",             emoji:"🏹", sprite:"bow",         max:60, repair:{madera:5} },
 };
+
+// ================= PASE DE BATALLA (doc maestro 2/8): 30 niveles Free/VIP, estrellas por misiones =================
+var PASS_STARS_LVL = 40;      // estrellas por nivel (diarias completas ≈ 35/día → 30 niveles en ~5 semanas)
+var PASS_VIP_PRICE = 250;     // $Golden (doc: ~250 o 4,99 USD)
+var PASS_LVL_GOLD = 15;       // comprar 1 nivel suelto con $Golden (para quien va tarde)
+var PASS_STAR_DAILY = 10, PASS_STAR_BONUS = 5, PASS_STAR_WEEKLY = 40;
+var PASS_VIP_BOOST = 1.2;     // perk VIP: +20% de estrellas (conveniencia, no poder)
+const PASS_FREE = [   // índice = nivel-1 (tabla del doc)
+  { plata:100 }, { seed:["papa",5] }, { res:["madera",20] }, { plata:150 }, { seed:["zanahoria",5] },
+  { res:["piedra",25] }, { dish:["pan_trigo",3] }, { plata:200 }, { seed:["cebolla",5] }, { pick:"bronze" },
+  { plata:250 }, { res:["madera",30] }, { seed:["repollo",5] }, { plata:250 }, { ficha:1 },
+  { res:["piedra",30] }, { seed:["calabacin",5] }, { plata:300 }, { dish:["estofado",1] }, { pick:"gold" },
+  { plata:300 }, { res:["madera",40] }, { seed:["brocoli",5] }, { plata:350 }, { ficha:1 },
+  { res:["piedra",40] }, { seed:["maiz",5] }, { plata:400 }, { dish:["banquete",1] }, { plata:500, cos:"Título de Cosecha" },
+];
+const PASS_VIP = [
+  { plata:250, cos:"Marco Brote" }, { plata:300 }, { golden:10 }, { cos:"Skin de Hacha Dorada" }, { plata:400, cos:"Emote Saludo" },
+  { plata:350 }, { golden:15 }, { cos:"Decoración: Farol Dorado" }, { plata:400 }, { cos:"Skin de Granjero Cosechador Ámbar" },
+  { plata:500 }, { golden:20 }, { cos:"Título Labrador" }, { plata:500 }, { golden:30, cos:"Estatua de Trigo" },
+  { plata:500 }, { cos:"Skin de Caña Reluciente" }, { golden:25 }, { plata:550 }, { cos:"Mascota Pollito Dorado" },
+  { plata:600 }, { golden:25 }, { cos:"Color de nombre Oro" }, { plata:600 }, { golden:40, cos:"Skin de Espada Filo Solar" },
+  { plata:650 }, { golden:30 }, { cos:"Decoración: Fuente Dorada" }, { plata:700 }, { golden:50, cos:"Skin LEGENDARIA Monarca Dorado + Aura" },
+];
+const PASS_HITOS = { 1:"★", 5:"★", 10:"★★", 15:"★", 20:"★★", 25:"★", 30:"★★" };
+const PASS_MISIONES = {   // una por pilar del juego (doc)
+  cosechar: { label: "Cosechá # cultivos",        goals: [6, 10, 15] },
+  minar:    { label: "Miná, talá o pescá # veces", goals: [8, 12, 18] },
+  cocinar:  { label: "Cociná # platos",           goals: [2, 3, 5] },
+  combatir: { label: "Pelea: # acciones de combate", goals: [5, 8, 12] },
+  craftear: { label: "Crafteá # objetos",         goals: [2, 3, 5] },
+};
+const PASS_PILAR = { farming:"cosechar", mining:"minar", fishing:"minar", cooking:"cocinar", sword:"combatir", hacha:"combatir", mazo:"combatir", range:"combatir", crafting:"craftear" };
+function passInit() {
+  G.pass = G.pass || {};
+  const p = G.pass;
+  p.stars = p.stars || 0; p.vip = !!p.vip; p.claimF = p.claimF || {}; p.claimV = p.claimV || {}; p.cosmetics = p.cosmetics || [];
+  const hoy = new Date().toISOString().slice(0, 10);
+  if (!p.daily || p.daily.date !== hoy) {   // 3 misiones diarias, una por pilar (rotan con la fecha)
+    const pilares = Object.keys(PASS_MISIONES);
+    const seed = Number(hoy.replace(/-/g, ""));
+    const elegidos = [0, 1, 2].map(i => pilares[(seed + i * 7 + Math.floor(seed / 100) * i) % pilares.length]).filter((v, i, a) => a.indexOf(v) === i);
+    while (elegidos.length < 3) { const px = pilares[(seed + elegidos.length * 3) % pilares.length]; if (!elegidos.includes(px)) elegidos.push(px); }
+    p.daily = { date: hoy, bonus: false, mis: elegidos.map((k, i) => ({ k, goal: PASS_MISIONES[k].goals[i % 3], n: 0, ok: false })) };
+  }
+  const semana = (d => { const x = new Date(d); x.setHours(0, 0, 0, 0); x.setDate(x.getDate() + 3 - (x.getDay() + 6) % 7); const w1 = new Date(x.getFullYear(), 0, 4); return x.getFullYear() + "-" + Math.round(((x - w1) / 86400000 + (w1.getDay() + 6) % 7 - 3) / 7 + 1); })(new Date());
+  if (!p.weekly || p.weekly.week !== semana) {
+    p.weekly = { week: semana, mis: [ { k: "cosechar", goal: 60, n: 0, ok: false }, { k: "combatir", goal: 40, n: 0, ok: false } ] };
+  }
+  return p;
+}
+function passLvl() { return Math.min(30, Math.floor(((G.pass && G.pass.stars) || 0) / PASS_STARS_LVL)); }
+function passAddStars(n) {
+  const p = passInit();
+  const antes = passLvl();
+  p.stars += Math.round(n * (p.vip ? PASS_VIP_BOOST : 1));
+  const ahora = passLvl();
+  if (ahora > antes) {
+    log("¡Pase de Batalla nivel " + ahora + "! Reclamá tu recompensa en el Pase.", "gold");
+    if (window.celebrate) celebrate({ title: "¡NIVEL " + ahora + "!", sub: "Pase de Batalla", big: !!PASS_HITOS[ahora], reward: "Recompensa lista para reclamar" });
+  }
+  if (typeof refreshPass === "function" && isOpen("ov-pass")) refreshPass();
+}
+function passEvent(sk) {   // se dispara con cada acción que da XP: alimenta las misiones
+  const pilar = PASS_PILAR[sk]; if (!pilar) return;
+  const p = passInit(); let dirty = false;
+  [...p.daily.mis, ...p.weekly.mis].forEach(m => {
+    if (m.k !== pilar || m.ok) return;
+    m.n++; dirty = true;
+    if (m.n >= m.goal) {
+      m.ok = true;
+      const stars = p.weekly.mis.includes(m) ? PASS_STAR_WEEKLY : PASS_STAR_DAILY;
+      toast("Misión cumplida: +" + stars + " estrellas"); log("Misión del Pase cumplida (+" + stars + " estrellas).", "good");
+      passAddStars(stars);
+      if (!p.daily.bonus && p.daily.mis.every(x => x.ok)) { p.daily.bonus = true; toast("¡Las 3 diarias! +" + PASS_STAR_BONUS + " estrellas"); passAddStars(PASS_STAR_BONUS); }
+    }
+  });
+  if (dirty && typeof refreshPass === "function" && isOpen("ov-pass")) refreshPass();
+}
+function passRewardStr(r) {
+  const parts = [];
+  if (r.plata) parts.push(r.plata + " plata");
+  if (r.golden) parts.push(r.golden + " $Golden");
+  if (r.res) parts.push(r.res[1] + " " + (RES_LABEL[r.res[0]] || r.res[0]));
+  if (r.seed) parts.push(r.seed[1] + " semillas de " + (CROP_DEF[r.seed[0]] ? CROP_DEF[r.seed[0]].label : r.seed[0]));
+  if (r.dish) parts.push(r.dish[1] + "× " + (RECIPE_DEF[r.dish[0]] ? RECIPE_DEF[r.dish[0]].label : r.dish[0]));
+  if (r.pick) parts.push("1 " + PICK_DEF[r.pick].label);
+  if (r.ficha) parts.push("Ficha de parcela (parcela GRATIS)");
+  if (r.cos) parts.push(r.cos);
+  return parts.join(" + ");
+}
+function passClaim(nv, vipTrack) {
+  const p = passInit();
+  if (nv > passLvl()) { toast("Todavía no llegaste al nivel " + nv); return; }
+  if (vipTrack && !p.vip) { toast("Ese carril es del Pase VIP"); return; }
+  const store = vipTrack ? p.claimV : p.claimF;
+  if (store[nv]) { toast("Ya reclamaste ese nivel"); return; }
+  const r = (vipTrack ? PASS_VIP : PASS_FREE)[nv - 1]; if (!r) return;
+  store[nv] = true;
+  if (r.plata) G.plata += r.plata;
+  if (r.golden) G.golden += r.golden;
+  if (r.res) G.res[r.res[0]] = (G.res[r.res[0]] || 0) + r.res[1];
+  if (r.seed) G.seeds[r.seed[0]] = (G.seeds[r.seed[0]] || 0) + r.seed[1];
+  if (r.dish) { G.dishes = G.dishes || {}; G.dishes[r.dish[0]] = (G.dishes[r.dish[0]] || 0) + r.dish[1]; }
+  if (r.pick) { G.picks.owned[r.pick] = true; G.picks.dur[r.pick] = (G.picks.dur[r.pick] || 0) + 1; }
+  if (r.ficha) { G.plotsOwned = Math.min(12, (G.plotsOwned || 2) + 1); if (window.farmScene && window.farmScene.syncPlots) try { window.farmScene.syncPlots(); } catch (e) {} }
+  if (r.cos) { p.cosmetics.push(r.cos); }
+  log("Pase nivel " + nv + (vipTrack ? " (VIP)" : "") + ": recibiste " + passRewardStr(r) + ".", "gold");
+  toast("¡" + passRewardStr(r) + "!");
+  refreshHud(); if (typeof syncSlots === "function") syncSlots(); if (isOpen("ov-inv")) refreshInv();
+  if (typeof refreshPass === "function" && isOpen("ov-pass")) refreshPass();
+  if (typeof saveFarm === "function") saveFarm(true);
+}
+function passBuyVip() {
+  const p = passInit();
+  if (p.vip) { toast("Ya tenés el Pase VIP"); return; }
+  if (G.golden < PASS_VIP_PRICE) { toast("Te falta $Golden (" + PASS_VIP_PRICE + ")"); return; }
+  G.golden -= PASS_VIP_PRICE; p.vip = true;
+  log("¡Pase VIP activado! Carril dorado desbloqueado + " + Math.round((PASS_VIP_BOOST - 1) * 100) + "% de estrellas.", "gold");
+  if (window.celebrate) celebrate({ title: "¡PASE VIP!", sub: "Pase de Batalla", big: true, reward: "Carril dorado + " + Math.round((PASS_VIP_BOOST - 1) * 100) + "% de estrellas" });
+  refreshHud(); if (typeof refreshPass === "function" && isOpen("ov-pass")) refreshPass();
+  if (typeof saveFarm === "function") saveFarm(true);
+}
+function passBuyLevel() {
+  const p = passInit();
+  if (passLvl() >= 30) { toast("El Pase ya está al máximo"); return; }
+  if (G.golden < PASS_LVL_GOLD) { toast("Te falta $Golden (" + PASS_LVL_GOLD + ")"); return; }
+  G.golden -= PASS_LVL_GOLD;
+  passAddStars(PASS_STARS_LVL / (p.vip ? PASS_VIP_BOOST : 1));   // compensa el boost para dar exactamente 1 nivel
+  refreshHud(); if (typeof saveFarm === "function") saveFarm(true);
+}
 
 // ================= ALTAR DE RUNAS (doc maestro 2/8, estilo Silkroad) =================
 // Eje 1: mejora del arma +1..+15 (lotería con % claro). Eje 2: runas de atributo en sockets.

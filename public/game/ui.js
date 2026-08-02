@@ -14,6 +14,7 @@ const OV_REFRESH = { "ov-inv": () => refreshInv(), "ov-skills": () => refreshSki
   "ov-forge": () => refreshForge(), "ov-market": () => refreshMarket(), "ov-barn": () => refreshBarn(),
   "ov-cocina": () => refreshCooking(),
   "ov-altar": () => refreshAltar(),
+  "ov-pass": () => refreshPass(),
   "ov-cofre": () => refreshChest(),
   "ov-config": () => refreshConfig(), "ov-lb": () => refreshLb(), "ov-daily": () => refreshDaily() };
 // los overlays NO bloquean el juego: podés seguir moviéndote/interactuando con la ventana abierta
@@ -577,6 +578,51 @@ function refreshCooking() {
   box.querySelectorAll("[data-sellg]").forEach(b => b.onclick = () => sellDish(b.dataset.sellg, true));
 }
 
+
+
+/* ---- Pase de Batalla (doc maestro 2/8): 30 niveles Free/VIP, estrellas por misiones ---- */
+function refreshPass() {
+  const box = $("pass-list"); if (!box) return;
+  const p = passInit(), lvl = passLvl();
+  const into = p.stars - lvl * PASS_STARS_LVL, need = PASS_STARS_LVL;
+  let h = '<div class="forge-row"><div class="finfo">' +
+    '<div class="fnm">Nivel ' + lvl + ' / 30 · ' + fmt(p.stars) + ' estrellas' + (p.vip ? ' · <b style="color:#ffe08a">VIP activo</b> (+' + Math.round((PASS_VIP_BOOST - 1) * 100) + '% estrellas)' : '') + '</div>' +
+    (lvl < 30 ? '<div class="durbar"><i style="width:' + Math.round(into / need * 100) + '%"></i></div><div class="fds">' + into + '/' + need + ' estrellas para el nivel ' + (lvl + 1) + '</div>' : '<div class="fds">¡Pase completo!</div>') +
+    '<div class="fds">Se sube JUGANDO: misiones diarias y semanales dan estrellas. La temporada dura 4-6 semanas.</div></div>' +
+    '<div class="fbtns">' + (p.vip ? '' : '<button class="green sm" id="pass-vip">Pase VIP · ' + PASS_VIP_PRICE + ' $G</button>') +
+    (lvl < 30 ? '<button class="sm" id="pass-buylvl">+1 nivel · ' + PASS_LVL_GOLD + ' $G</button>' : '') + '</div></div>';
+  // misiones
+  h += '<div class="fnm" style="margin-top:8px">Misiones de HOY (' + PASS_STAR_DAILY + ' estrellas c/u · las 3 = +' + PASS_STAR_BONUS + ')</div>';
+  p.daily.mis.forEach(m => {
+    const md = PASS_MISIONES[m.k];
+    h += '<div class="forge-row' + (m.ok ? ' eq' : '') + '"><div class="finfo"><div class="fnm">' + md.label.replace("#", m.goal) + (m.ok ? " — CUMPLIDA" : "") + '</div><div class="durbar"><i style="width:' + Math.min(100, Math.round(m.n / m.goal * 100)) + '%"></i></div><div class="fds">' + Math.min(m.n, m.goal) + '/' + m.goal + '</div></div></div>';
+  });
+  h += '<div class="fnm" style="margin-top:8px">Misiones de la SEMANA (' + PASS_STAR_WEEKLY + ' estrellas c/u)</div>';
+  p.weekly.mis.forEach(m => {
+    const md = PASS_MISIONES[m.k];
+    h += '<div class="forge-row' + (m.ok ? ' eq' : '') + '"><div class="finfo"><div class="fnm">' + md.label.replace("#", m.goal) + (m.ok ? " — CUMPLIDA" : "") + '</div><div class="durbar"><i style="width:' + Math.min(100, Math.round(m.n / m.goal * 100)) + '%"></i></div><div class="fds">' + Math.min(m.n, m.goal) + '/' + m.goal + '</div></div></div>';
+  });
+  // cosméticos ganados
+  if (p.cosmetics.length) h += '<div class="fds" style="margin-top:6px">Tus cosméticos: ' + p.cosmetics.join(" · ") + '</div>';
+  // los 30 niveles
+  h += '<div class="fnm" style="margin-top:8px">Recompensas (Free / VIP)</div>';
+  for (let nv = 1; nv <= 30; nv++) {
+    const rf = PASS_FREE[nv - 1], rv = PASS_VIP[nv - 1];
+    const alc = nv <= lvl, hito = PASS_HITOS[nv] || "";
+    const bf = p.claimF[nv] ? '<button class="ghost sm" disabled>Reclamado</button>' : (alc ? '<button class="green sm" data-pfree="' + nv + '">Reclamar</button>' : '');
+    const bv = p.claimV[nv] ? '<button class="ghost sm" disabled>Reclamado</button>' : (alc && p.vip ? '<button class="green sm" data-pvip="' + nv + '">Reclamar VIP</button>' : '');
+    h += '<div class="forge-row' + (alc ? '' : ' locked') + '"><div class="finfo">' +
+      '<div class="fnm">Nivel ' + nv + (hito ? ' <span style="color:#ffe08a">' + hito + '</span>' : '') + '</div>' +
+      '<div class="fds">FREE: ' + passRewardStr(rf) + '</div>' +
+      '<div class="fds" style="color:#ffe9ac">VIP: ' + passRewardStr(rv) + (p.vip ? '' : ' (requiere Pase VIP)') + '</div>' +
+      '</div><div class="fbtns">' + bf + bv + '</div></div>';
+  }
+  box.innerHTML = h;
+  const pv = $("pass-vip"); if (pv) pv.onclick = () => passBuyVip();
+  const pl = $("pass-buylvl"); if (pl) pl.onclick = () => passBuyLevel();
+  box.querySelectorAll("[data-pfree]").forEach(b => b.onclick = () => passClaim(Number(b.dataset.pfree), false));
+  box.querySelectorAll("[data-pvip]").forEach(b => b.onclick = () => passClaim(Number(b.dataset.pvip), true));
+}
 
 /* ---- Altar de Runas (doc maestro 2/8) ---- */
 function refreshAltar() {

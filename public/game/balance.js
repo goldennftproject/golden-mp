@@ -117,6 +117,17 @@ var BAL = (function () {
       if (r.goldenP != null) obj(cat, "recipe." + id, r, "goldenP", "Venta en $Golden (Cocina Nv 8+)", "$Golden · entero");
     }
 
+    // PASE DE BATALLA
+    { const cat = "Pase de Batalla";
+      add(cat, "pass.starsLvl", "Estrellas por nivel del pase", "estrellas · entero", () => PASS_STARS_LVL, v => { PASS_STARS_LVL = v; });
+      add(cat, "pass.vipPrice", "Precio del Pase VIP", "$Golden · entero", () => PASS_VIP_PRICE, v => { PASS_VIP_PRICE = v; });
+      add(cat, "pass.lvlGold", "Comprar 1 nivel suelto", "$Golden · entero", () => PASS_LVL_GOLD, v => { PASS_LVL_GOLD = v; });
+      add(cat, "pass.starDaily", "Estrellas por misión diaria", "estrellas · entero", () => PASS_STAR_DAILY, v => { PASS_STAR_DAILY = v; });
+      add(cat, "pass.starBonus", "Bono por las 3 diarias", "estrellas · entero", () => PASS_STAR_BONUS, v => { PASS_STAR_BONUS = v; });
+      add(cat, "pass.starWeekly", "Estrellas por misión semanal", "estrellas · entero", () => PASS_STAR_WEEKLY, v => { PASS_STAR_WEEKLY = v; });
+      add(cat, "pass.vipBoost", "Boost de estrellas del VIP (1.2 = +20%)", U.factor, () => PASS_VIP_BOOST, v => { PASS_VIP_BOOST = v; }, 0.1);
+    }
+
     // ALTAR DE RUNAS
     { const cat = "Altar de Runas";
       add(cat, "altar.break", "Rotura al fallar +11..+15 sin protección", "% · entero", () => ALTAR_BREAK, v => { ALTAR_BREAK = v; });
