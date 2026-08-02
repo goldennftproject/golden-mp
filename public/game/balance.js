@@ -117,8 +117,23 @@ var BAL = (function () {
       if (r.goldenP != null) obj(cat, "recipe." + id, r, "goldenP", "Venta en $Golden (Cocina Nv 8+)", "$Golden · entero");
     }
 
+    // ALTAR DE RUNAS
+    { const cat = "Altar de Runas";
+      add(cat, "altar.break", "Rotura al fallar +11..+15 sin protección", "% · entero", () => ALTAR_BREAK, v => { ALTAR_BREAK = v; });
+      for (let n = 1; n <= 15; n++) {
+        add(cat, "upg." + n + ".ex", "+" + n + " · éxito base", "% · entero", () => UPG[n].ex, v => { UPG[n].ex = v; });
+        add(cat, "upg." + n + ".plata", "+" + n + " · costo en plata", U.plata, () => UPG[n].plata, v => { UPG[n].plata = v; });
+        add(cat, "upg." + n + ".rp", "+" + n + " · Runas de Poder", U.cant, () => UPG[n].rp, v => { UPG[n].rp = v; });
+      }
+      costos(cat, "altarCraft.runa_poder", ALTAR_CRAFT.runa_poder.cost, "Runa de Poder · costo");
+      costos(cat, "altarCraft.polvo", ALTAR_CRAFT.polvo_suerte.cost, "Polvo de Suerte · costo");
+      costos(cat, "altarCraft.prot", ALTAR_CRAFT.runa_proteccion.cost, "Runa de Protección · costo");
+      costos(cat, "runaCraft", RUNA_CRAFT.cost, "Runa de atributo I · costo");
+      add(cat, "runaCraft.plata", "Runa de atributo I · plata", U.plata, () => RUNA_CRAFT.plata, v => { RUNA_CRAFT.plata = v; });
+    }
+
     // EDIFICIOS
-    ["horno", "cocina"].forEach(k => costos("Edificios", "build." + k + ".cost", BUILD_DEF[k].cost, BUILD_DEF[k].label + " · construcción"));
+    ["horno", "cocina", "altar"].forEach(k => costos("Edificios", "build." + k + ".cost", BUILD_DEF[k].cost, BUILD_DEF[k].label + " · construcción"));
 
     // DESBLOQUEOS DE ÁRBOLES/PIEDRAS
     NODE_UNLOCK_COSTS.forEach((c, i) => add("Desbloqueos", "nodeUnlock." + i,

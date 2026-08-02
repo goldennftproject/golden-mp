@@ -178,7 +178,7 @@ class FarmScene extends Phaser.Scene {
       // sombra bajo árboles y edificios (detalles 29/7)
       let shadow = null;
       // los árboles NO llevan sombra: su sprite ya trae la base de tierra dibujada y la elipse quedaba abajo de la tierra
-      if (o.type === "barn" || o.type === "market" || o.type === "store" || o.type === "cocina" || o.type === "horno") {
+      if (o.type === "barn" || o.type === "market" || o.type === "store" || o.type === "cocina" || o.type === "horno" || o.type === "altar") {
         shadow = this.add.ellipse(cx, by - 3, rw * 0.82, T * 0.3, 0x1c2a12, 0.22).setDepth(by - 0.5);
       } else if (o.type === "dummy") {   // sombra chiquita bajo el dummy
         shadow = this.add.ellipse(cx, by - 2, rw * 0.55, T * 0.2, 0x1c2a12, 0.2).setDepth(by - 0.5);
@@ -505,7 +505,7 @@ class FarmScene extends Phaser.Scene {
     let best = null, bd = 1e9;
     const all = this.objs.concat(this.plots).concat(this.threats); if (this.portal) all.push(this.portal);
     for (const o of all) {
-      const rad = (o.type === "barn" || o.type === "market" || o.type === "store" || o.type === "cocina" || o.type === "horno") ? 72 : (o.type === "plot" ? 26 : (o.type === "boar" ? 55 : (o.type === "portal" ? 50 : 58)));   // plot 26: hay que estar encima de la tierra para plantar/cosechar
+      const rad = (o.type === "barn" || o.type === "market" || o.type === "store" || o.type === "cocina" || o.type === "horno" || o.type === "altar") ? 72 : (o.type === "plot" ? 26 : (o.type === "boar" ? 55 : (o.type === "portal" ? 50 : 58)));   // plot 26: hay que estar encima de la tierra para plantar/cosechar
       const d = Math.hypot(o.cx - this.hero.x, o.by - this.hero.y);
       if (d < rad && d < bd) { bd = d; best = o; }
     }
@@ -533,6 +533,7 @@ class FarmScene extends Phaser.Scene {
     if (o.type === "store") return "Herrería";
     if (o.type === "cocina") return "Cocina";
     if (o.type === "horno") return "Horno de Piedra";
+    if (o.type === "altar") return "Altar de Runas";
     if (o.type === "cofre") return "Cofre depósito";
     if (o.type === "dummy") {
       { const aid = armaEq(); if (!aid || ARM_DEF[aid].tipo === "arco") return "Dummy de práctica — equipá un arma cuerpo a cuerpo"; }
@@ -555,7 +556,8 @@ class FarmScene extends Phaser.Scene {
       if (b.lvl && G.level < b.lvl) { toast(b.label + " se desbloquea a granja nivel " + b.lvl); return; }   // doc 2/8
       askConfirm("Construir " + b.label + " cuesta: " + buildCostStr(o.type) + ". ¿Construir?", () => {
         if (!canAfford(b.cost)) { toast("Te faltan materiales para construir"); return; }
-        payCost(b.cost); G.built[o.type] = true;
+        if (b.golden && G.golden < b.golden) { toast("Te falta $Golden (" + b.golden + ")"); return; }
+        payCost(b.cost); if (b.golden) G.golden -= b.golden; G.built[o.type] = true;
         if (o.sprite) { o.sprite.setAlpha(1); o.sprite.clearTint(); }
         if (o.type === "horno") this.startHornoSmoke();   // arranca el humo (viernes 2)
         addXp("crafting", 20); log("¡Construiste " + b.label + "!", "gold"); toast("¡" + b.label + " construida!");
@@ -581,6 +583,7 @@ class FarmScene extends Phaser.Scene {
     if (o.type === "store") return openOv("ov-forge");
     if (o.type === "cocina") return openOv("ov-cocina");
     if (o.type === "horno") { if (typeof refreshHorno === "function") refreshHorno(); return openOv("ov-horno"); }
+    if (o.type === "altar") { if (typeof refreshAltar === "function") refreshAltar(); return openOv("ov-altar"); }
     if (o.type === "cofre") { window.chestOpen = o.chestIdx; return openOv("ov-cofre"); }
     if (o.type === "dummy") return this.trainDummy(o);
     if (o.type === "boar") { o.sprite.destroy(); const i = this.threats.indexOf(o); if (i >= 0) this.threats.splice(i, 1); log("Espantaste al jabalí.", "good"); toast("¡Espantado!"); return; }   // XP de espada llega con el combate (necesita espada equipada)

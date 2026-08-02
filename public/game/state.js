@@ -38,7 +38,7 @@ const G = {
   cooking: null,   // { id, endAt, total } — barra de enfriamiento al cocinar
   chests: [],      // cofres depósito: [{col,row,items:[{kind,key,n}|null × 10]}] — +1% materiales c/u
   dummyUsedAt: 0,  // último entrenamiento con el dummy (cooldown 4h)
-  built: { store: true, horno: false, cocina: false },   // viernes (2): la Herreria es el unico edificio gratis; horno y cocina se construyen
+  built: { store: true, horno: false, cocina: false, altar: false },   // viernes (2): la Herreria es el unico edificio gratis; el resto se construye
   buffs: [], secPerGameHour: 1, gameHours: 0,
   skills: { fishing: 0, farming: 0, cooking: 0, range: 0, sword: 0, hacha: 0, mazo: 0, mining: 0, crafting: 0 },   // doc 2/8: cada arma es su propia skill (espada=sword, arco=range)
 };
@@ -56,7 +56,7 @@ function dmgMult() { return 1 + (buffTotal("dmg") + buffTotal("feast")) / 100; }
 function dmgTakenMult() { return Math.max(0.2, 1 - (buffTotal("def") + buffTotal("feast")) / 100); }
 function speedMult() { return 1 + (buffTotal("speed") + buffTotal("feast")) / 100; }
 function farmSpeedMult() { return Math.max(0.4, 1 - buffTotal("farm") / 100); }   // acorta las acciones de cultivo
-function luckMult() { return 1 + buffTotal("luck") / 100; }
+function luckMult() { return 1 + buffTotal("luck") / 100 + (typeof eqRunaVal === "function" && typeof armaEq === "function" ? eqRunaVal("fortuna") / 100 : 0); }
 function combatXpMult() { return 1 + buffTotal("combatxp") / 100; }
 /* --- ESTADOS sobre el jugador (bestiario doc 2/8): sangrado/veneno/quemadura (daño por s),
        maldiciones de Flaqueza (-daño) y Fragilidad (-defensa), ralentización. Tope: 2 maldiciones,
@@ -166,8 +166,9 @@ const BUILD_DEF = {
   store:  { label: "Herrería",        cost: {} },   // viernes (2): la Herrería es gratis (ya construida)
   horno:  { label: "Horno de Piedra", cost: { madera: 10, piedra: 8 },  lvl: 3 },   // doc 2/8: costo early + granja nv 3
   cocina: { label: "Cocina",          cost: { madera: 20, piedra: 15 }, lvl: 5 },   // doc 2/8: costo early + granja nv 5
+  altar:  { label: "Altar de Runas",  cost: { piedra: 60, madera: 40, oro: 20 }, golden: 30 },   // doc 2/8: mejora +1..+15 y runas
 };
-function buildCostStr(key) { const b = BUILD_DEF[key]; return Object.keys(b.cost).map(k => (b.cost[k]) + " " + (RES_LABEL[k] || k)).join(" + "); }
+function buildCostStr(key) { const b = BUILD_DEF[key]; return Object.keys(b.cost).map(k => (b.cost[k]) + " " + (RES_LABEL[k] || k)).join(" + ") + (b.golden ? " + " + b.golden + " $Golden" : ""); }
 
 // --- materiales intermedios (detalles213: "tablones / stone bar / iron bar / iron gold" mapeados a nuestros recursos) ---
 const MAT_ORDER = ["tablon","barra_piedra","barra_bronce","barra_hierro","barra_oro"];
@@ -218,7 +219,7 @@ var COMBAT_HP5 = 20, COMBAT_HP10 = 40;   // vida máxima extra en los hitos (edi
 function combatInfo() { return skillInfo(G.combatXp || 0); }
 function combatHpBonus(lvl) { return (lvl >= 5 ? COMBAT_HP5 : 0) + (lvl >= 10 ? COMBAT_HP10 : 0); }
 function applyCombatHp() {   // vida máxima = 100 + hitos de Combate (nivel 5 y 10)
-  const want = 100 + combatHpBonus(combatInfo().lvl) + G.buffs.reduce((s, b) => s + (b.type === "hpmax" && b.on ? b.mult : 0), 0);
+  const want = 100 + combatHpBonus(combatInfo().lvl) + G.buffs.reduce((s, b) => s + (b.type === "hpmax" && b.on ? b.mult : 0), 0) + (typeof eqRunaVal === "function" && typeof armaEq === "function" ? eqRunaVal("guardiana") : 0);
   if (G.hpMax !== want) { const dif = want - G.hpMax; G.hpMax = want; if (dif > 0) G.hp = Math.min(G.hpMax, G.hp + dif); G.hp = Math.min(G.hpMax, G.hp); }
 }
 function addCombatXp(xp) {
@@ -366,6 +367,139 @@ const TOOL_DEF = {
   sword_wood: { label:"Espada de Madera", emoji:"🗡️", sprite:"sword_wood", max:40, repair:{madera:2} },   // viernes (2): arma inicial
   bow:   { label:"Arco",             emoji:"🏹", sprite:"bow",         max:60, repair:{madera:5} },
 };
+
+// ================= ALTAR DE RUNAS (doc maestro 2/8, estilo Silkroad) =================
+// Eje 1: mejora del arma +1..+15 (lotería con % claro). Eje 2: runas de atributo en sockets.
+var ALTAR_BREAK = 30;   // % de ROTURA al fallar +11..+15 SIN Runa de Protección (editable)
+var UPG = [null,   // índice = nivel al que se intenta subir
+  { ex:100, exP:100, dmg:8,   rp:1,  plata:10 },   { ex:100, exP:100, dmg:16,  rp:1,  plata:25 },
+  { ex:95,  exP:100, dmg:25,  rp:1,  plata:50 },   { ex:90,  exP:100, dmg:34,  rp:2,  plata:90 },
+  { ex:85,  exP:95,  dmg:44,  rp:2,  plata:150 },  { ex:75,  exP:85,  dmg:54,  rp:2,  plata:250 },
+  { ex:65,  exP:75,  dmg:66,  rp:3,  plata:400 },  { ex:55,  exP:65,  dmg:78,  rp:3,  plata:600 },
+  { ex:45,  exP:55,  dmg:92,  rp:4,  plata:900 },  { ex:38,  exP:48,  dmg:107, rp:4,  plata:1300 },
+  { ex:30,  exP:40,  dmg:124, rp:5,  plata:1900 }, { ex:22,  exP:32,  dmg:143, rp:6,  plata:2700 },
+  { ex:15,  exP:25,  dmg:164, rp:7,  plata:3800 }, { ex:9,   exP:19,  dmg:188, rp:8,  plata:5200 },
+  { ex:5,   exP:15,  dmg:215, rp:10, plata:8000 },
+];
+function upgDmg(plus) { return plus > 0 && UPG[plus] ? UPG[plus].dmg : 0; }
+function socketsOpen(plus) { return plus >= 12 ? 3 : plus >= 7 ? 2 : plus >= 3 ? 1 : 0; }   // ranuras: +3 / +7 / +12
+const RUNA_ORDER = ["furia", "vamp", "perfo", "veloz", "sangrante", "guardiana", "fortuna", "dorada"];
+const RUNA_TIPOS = {
+  furia:     { label:"Runa de Furia",       buff:"Prob. de crítico",          vals:[3,5,8,12,18],     uni:"%" },
+  vamp:      { label:"Runa Vampírica",      buff:"Robo de vida",              vals:[2,3,5,7,10],      uni:"%" },
+  perfo:     { label:"Runa de Perforación", buff:"Ignora defensa",            vals:[8,14,20,28,40],   uni:"%" },
+  veloz:     { label:"Runa Veloz",          buff:"Vel. de ataque",            vals:[4,7,10,14,20],    uni:"%" },
+  sangrante: { label:"Runa Sangrante",      buff:"Sangrado al golpear (3 s)", vals:[1,2,3,4,6],       uni:"/s" },
+  guardiana: { label:"Runa Guardiana",      buff:"Vida máxima",               vals:[15,30,50,80,120], uni:"" },
+  fortuna:   { label:"Runa de Fortuna",     buff:"Suerte en drops",           vals:[5,8,12,18,25],    uni:"%" },
+  dorada:    { label:"Runa Dorada",         buff:"$Golden por kill",          vals:[3,5,8,12,18],     uni:"%" },
+};
+const RUNA_ROMAN = ["", "I", "II", "III", "IV", "V"];
+function runaKey(t, r) { return "runa_" + t + "_" + r; }
+function runaVal(t, r) { return RUNA_TIPOS[t].vals[r - 1] || 0; }
+function runaLabel(t, r) { return RUNA_TIPOS[t].label + " " + RUNA_ROMAN[r]; }
+RUNA_ORDER.forEach(t => { for (let r = 1; r <= 5; r++) { RES_LABEL[runaKey(t, r)] = runaLabel(t, r); RES_EMOJI[runaKey(t, r)] = "🔹"; } });
+RES_LABEL.esencia_runica = "Esencia rúnica";      RES_EMOJI.esencia_runica = "🔮";
+RES_LABEL.runa_poder = "Runa de Poder";           RES_EMOJI.runa_poder = "💠";
+RES_LABEL.polvo_suerte = "Polvo de Suerte";       RES_EMOJI.polvo_suerte = "✨";
+RES_LABEL.runa_proteccion = "Runa de Protección"; RES_EMOJI.runa_proteccion = "🛡️";
+const ALTAR_CRAFT = {   // crafteo de materiales en el Altar
+  runa_poder:      { cost:{ esencia_runica:3, piedra:5 }, plata:20 },
+  polvo_suerte:    { cost:{ esencia_runica:2 },           plata:30 },
+  runa_proteccion: { cost:{ esencia_runica:5, oro:3 },    golden:5 },
+};
+var RUNA_CRAFT = { cost:{ esencia_runica:4, bronce:2 }, plata:50 };   // runa de atributo (rareza I)
+const FUSE_GOLD = [0, 0, 2, 8, 25];   // $Golden para fusionar 3 runas → rareza II/III/IV/V
+function armPlus(id) { return (G.weapons[id] && G.weapons[id].plus) || 0; }
+function armSockets(id) { const w = G.weapons[id]; if (!w) return {}; w.sockets = w.sockets || {}; return w.sockets; }
+function eqRunaVal(tipo) {   // valor total de un tipo de runa en el arma EQUIPADA
+  const id = armaEq(); if (!id) return 0;
+  const sk = armSockets(id); let v = 0;
+  for (const s in sk) if (sk[s] && sk[s].t === tipo) v += runaVal(sk[s].t, sk[s].r);
+  return v;
+}
+function altarRefresh() { if (typeof refreshAltar === "function" && isOpen("ov-altar")) refreshAltar(); refreshHud(); if (isOpen("ov-inv")) refreshInv(); if (typeof syncSlots === "function") syncSlots(); }
+function upgradeWeapon(id, usarPolvo, usarProt) {
+  const w = G.weapons[id]; if (!w || !ARM_DEF[id]) return;
+  const next = (w.plus || 0) + 1;
+  if (next > 15) { toast("Ya está en +15: el tope de tope"); return; }
+  const u = UPG[next];
+  const need = { runa_poder: u.rp };
+  if (usarPolvo) need.polvo_suerte = 1;
+  if (usarProt) need.runa_proteccion = 1;
+  for (const k in need) if ((G.res[k] || 0) < need[k]) { toast("Te falta " + RES_LABEL[k] + " (" + need[k] + ")"); return; }
+  if (G.plata < u.plata) { toast("Te falta plata (" + u.plata + ")"); return; }
+  for (const k in need) G.res[k] -= need[k];
+  G.plata -= u.plata;
+  const chance = usarPolvo ? u.exP : u.ex;
+  if (Math.random() * 100 < chance) {
+    w.plus = next;
+    const abre = socketsOpen(next) > socketsOpen(next - 1) ? " ¡Se abrió una ranura de runa!" : "";
+    log("¡" + ARM_DEF[id].label + " subió a +" + next + "! Daño acumulado +" + u.dmg + "%." + abre, "gold");
+    if (window.celebrate && (next >= 10 || abre)) celebrate({ title: "¡+" + next + "!", sub: ARM_DEF[id].label, big: next >= 10, reward: "+" + u.dmg + "% de daño" + abre });
+    else toast("¡+" + next + "! (" + chance + "% de éxito)");
+    if (window.sfx) sfx("level");
+  } else {
+    if (next >= 11 && !usarProt && Math.random() * 100 < ALTAR_BREAK) {   // rotura: solo sin protección (el jugador ELIGE el riesgo)
+      delete G.weapons[id];
+      if (G.gear.arma === id) G.gear.arma = null;
+      log("El intento a +" + next + " falló y " + ARM_DEF[id].label + " se ROMPIÓ. (Sin Runa de Protección)", "bad");
+      toast("¡El arma se rompió!");
+      applyCombatHp(); altarRefresh(); if (typeof saveFarm === "function") saveFarm(true);
+      return;
+    }
+    if (next >= 6) { w.plus = Math.max(0, (w.plus || 0) - 1); log("Falló el intento a +" + next + " (" + chance + "%): el arma baja a +" + w.plus + ".", "bad"); toast("Falló: baja a +" + w.plus); }
+    else { log("Falló el intento a +" + next + " (" + chance + "%). Solo se perdieron los materiales.", "bad"); toast("Falló el intento"); }
+  }
+  altarRefresh(); if (typeof saveFarm === "function") saveFarm(true);
+}
+function craftAltarItem(id) {
+  const c = ALTAR_CRAFT[id]; if (!c) return;
+  if (!canAfford(c.cost)) { toast("Te faltan materiales"); return; }
+  if (c.plata && G.plata < c.plata) { toast("Te falta plata (" + c.plata + ")"); return; }
+  if (c.golden && G.golden < c.golden) { toast("Te falta $Golden (" + c.golden + ")"); return; }
+  payCost(c.cost); if (c.plata) G.plata -= c.plata; if (c.golden) G.golden -= c.golden;
+  G.res[id] = (G.res[id] || 0) + 1;
+  addXp("crafting", 6); log("Crafteaste 1 " + RES_LABEL[id] + ".", "good"); toast("+1 " + RES_LABEL[id]);
+  altarRefresh();
+}
+function craftRunaI(tipo) {
+  if (!RUNA_TIPOS[tipo]) return;
+  if (!canAfford(RUNA_CRAFT.cost)) { toast("Te faltan materiales"); return; }
+  if (G.plata < RUNA_CRAFT.plata) { toast("Te falta plata (" + RUNA_CRAFT.plata + ")"); return; }
+  payCost(RUNA_CRAFT.cost); G.plata -= RUNA_CRAFT.plata;
+  const k = runaKey(tipo, 1); G.res[k] = (G.res[k] || 0) + 1;
+  addXp("crafting", 8); log("Crafteaste 1 " + runaLabel(tipo, 1) + ".", "good"); toast("+1 " + runaLabel(tipo, 1));
+  altarRefresh();
+}
+function fuseRuna(tipo, r) {   // 3 runas de rareza r → 1 de rareza r+1 (muy Silkroad)
+  if (r >= 5) return;
+  const k = runaKey(tipo, r), gold = FUSE_GOLD[r];
+  if ((G.res[k] || 0) < 3) { toast("Necesitás 3 " + runaLabel(tipo, r)); return; }
+  if (gold && G.golden < gold) { toast("Te falta $Golden (" + gold + ")"); return; }
+  G.res[k] -= 3; if (gold) G.golden -= gold;
+  const k2 = runaKey(tipo, r + 1); G.res[k2] = (G.res[k2] || 0) + 1;
+  addXp("crafting", 10); log("Fusionaste 3 " + runaLabel(tipo, r) + " en 1 " + runaLabel(tipo, r + 1) + ".", "gold"); toast("¡" + runaLabel(tipo, r + 1) + "!");
+  altarRefresh();
+}
+function socketRuna(id, slot, tipo, r) {   // socketear DESTRUYE la runa anterior de esa ranura (doc)
+  const w = G.weapons[id]; if (!w) return;
+  if (slot > socketsOpen(w.plus || 0)) { toast("Esa ranura se abre a +" + (slot === 1 ? 3 : slot === 2 ? 7 : 12)); return; }
+  const sk = armSockets(id);
+  if (tipo === null) { sk[slot] = null; log("Vaciaste la ranura " + slot + " (la runa se destruyó).", "bad"); }
+  else {
+    const k = runaKey(tipo, r);
+    if ((G.res[k] || 0) < 1) { toast("No tenés " + runaLabel(tipo, r)); return; }
+    G.res[k] -= 1;
+    if (sk[slot]) log("La " + runaLabel(sk[slot].t, sk[slot].r) + " anterior se destruyó al socketear encima.", "bad");
+    sk[slot] = { t: tipo, r };
+    log("Socketeaste " + runaLabel(tipo, r) + " (" + RUNA_TIPOS[tipo].buff + " +" + runaVal(tipo, r) + RUNA_TIPOS[tipo].uni + ").", "gold");
+    toast("Runa socketeada");
+  }
+  applyCombatHp();   // la Guardiana suma vida máxima
+  altarRefresh(); if (typeof saveFarm === "function") saveFarm(true);
+}
+
 /* === ARMAS DOC MAESTRO 2/8: 4 tipos × 5 rarezas, daño aleatorio + buff por tipo ===
    Espada=Crítico (daño ×2) · Hacha=Perforación (ignora % def) · Mazo=Aturdir (el mob pierde su próximo golpe) · Arco=Sangrado (daño/s 3s, a distancia) */
 const ARM_TIPOS = ["espada", "hacha", "mazo", "arco"];
@@ -432,12 +566,16 @@ function rollWeaponHit(defensa) {
   const id = armaEq(); if (!id) return null;
   const w = ARM_DEF[id], lvl = skillInfo(G.skills[armSkillKey(w.tipo)] || 0).lvl;
   let atk = w.min + Math.floor(Math.random() * (w.max - w.min + 1)) + Math.floor(lvl / 2);
+  atk *= 1 + upgDmg(armPlus(id)) / 100;                       // Altar: mejora +1..+15 (daño acumulado)
   let defEf = defensa || 0;
-  const out = { id, tipo: w.tipo, crit: false, stun: false, bleed: 0 };
+  const out = { id, tipo: w.tipo, crit: false, stun: false, bleed: 0, vamp: eqRunaVal("vamp") };
   if (w.tipo === "hacha") defEf = defEf * (1 - w.buffVal / 100);
-  if (w.tipo === "espada" && Math.random() * 100 < w.buffVal) { atk *= 2; out.crit = true; }
+  defEf = defEf * (1 - eqRunaVal("perfo") / 100);             // Runa de Perforación
+  const critCh = (w.tipo === "espada" ? w.buffVal : 0) + eqRunaVal("furia");   // Runa de Furia: crítico en cualquier arma
+  if (critCh && Math.random() * 100 < critCh) { atk *= 2; out.crit = true; }
   if (w.tipo === "mazo" && Math.random() * 100 < w.buffVal) out.stun = true;
   if (w.tipo === "arco") out.bleed = w.buffVal;
+  out.bleed = Math.max(out.bleed, eqRunaVal("sangrante"));    // Runa Sangrante: sangrado en cualquier arma
   out.dmg = Math.max(1, Math.round((atk - defEf) * dmgMult() * playerDmgOutMult()));   // buff de comida y maldición de Flaqueza
   return out;
 }

@@ -292,10 +292,10 @@ class ForestScene extends Phaser.Scene {
     const d = Math.hypot(m.cx - this.hero.x, m.by - this.hero.y);
     if (d <= MELEE_RANGE && swordDmg() > 0) {   // viernes (2): melee SOLO con espada equipada (sin puños)
       this.facing = (m.cx < this.hero.x) ? "west" : "east";
-      this.action = { kind: "attack", m, t: 0, dur: 0.45 }; this.nextAuto = t + ATTACK_MS;
+      this.action = { kind: "attack", m, t: 0, dur: 0.45 }; this.nextAuto = t + ATTACK_MS / (1 + eqRunaVal("veloz") / 100);   // Runa Veloz
     } else if (canShoot() && d <= BOW_RANGE) {
       this.facing = (m.cx < this.hero.x) ? "west" : "east";
-      this.action = { kind: "shoot", m, t: 0, dur: 0.35 }; this.nextAuto = t + ATTACK_MS;
+      this.action = { kind: "shoot", m, t: 0, dur: 0.35 }; this.nextAuto = t + ATTACK_MS / (1 + eqRunaVal("veloz") / 100);
     }
   }
 
@@ -321,12 +321,12 @@ class ForestScene extends Phaser.Scene {
     const tn = this.time.now;
     if ((m.phaseUntil && tn < m.phaseUntil) || (m.blinkUntil && tn < m.blinkUntil)) { this.floatTxt(m, "Intangible", "#bfa8ff"); return; }   // Fase espectral / Parpadeo
     if (window.sfx) sfx("hit");
-    let crit = false;
+    let crit = false, vamp = 0;
     if (dmg == null) {   // doc 2/8: Daño = máx(1; tirada del arma + nivel/2 − defensa efectiva) + buff del tipo
       const roll = rollWeaponHit(this.mobDef(m));
       if (!roll) return;
       if (m.def.evade && ARM_DEF[roll.id].tipo !== "arco" && Math.random() < m.def.evade) { this.floatTxt(m, "Esquivó", "#a8d8ff"); return; }   // Vuelo evasivo (solo cuerpo a cuerpo)
-      dmg = roll.dmg; crit = roll.crit;
+      dmg = roll.dmg; crit = roll.crit; vamp = roll.vamp || 0;
       skill = armSkillKey(ARM_DEF[roll.id].tipo);
       if (roll.stun) { m.stunUntil = this.time.now + 2100; this.floatTxt(m, "Aturdido", "#ffd24a"); }   // pierde su próximo golpe
       if (roll.bleed) m.bleed = { dps: roll.bleed, until: this.time.now + 3000, next: this.time.now + 1000 };   // sangrado 3 s
@@ -337,6 +337,7 @@ class ForestScene extends Phaser.Scene {
     }
     if (crit) this.floatTxt(m, "¡CRÍTICO!", "#ff9a3a");
     m.hp -= dmg;
+    if (vamp > 0 && G.hp < G.hpMax) { G.hp = Math.min(G.hpMax, G.hp + Math.max(1, Math.round(dmg * vamp / 100))); refreshHud(); }   // Runa Vampírica
     // chispa de golpe (detalles 338)
     const hy = m.by - (m.spr.displayHeight || m.spr.height) * 0.5;
     const flash = this.add.circle(m.cx, hy, 7, 0xffffff, 0.7).setDepth(99998);
@@ -490,6 +491,8 @@ class ForestScene extends Phaser.Scene {
     if (this.target === m) this.clearTarget();
     const loot = rollLoot(m.def);
     Object.keys(loot).forEach(k => drops.push({ k, n: loot[k], kind: "res" }));
+    if ((m.def.lvl || 0) >= 8 && Math.random() < 0.30) drops.push({ k: "esencia_runica", n: 1, kind: "res" });   // Altar: drop de mobs Nv 8+
+    { const dg = eqRunaVal("dorada"); if (dg && Math.random() * 100 < dg) { G.golden += 1; this.floatTxt(m, "+1 $Golden", "#ffe08a"); } }   // Runa Dorada
     const parts = drops.map(d => d.kind === "gear" ? "" + ((GEAR_DEF[d.k] && GEAR_DEF[d.k].label) || d.k) : "+" + d.n + " " + (d.k === "plata" ? "" : (RES_EMOJI[d.k] || "")));
     this.dropLoot(m, drops);   // todo el botín cae al piso, armaduras incluidas (detalles 338)
     log("Venciste a " + m.def.label + (parts.length ? ". Soltó: " + parts.join(" · ") : ". No soltó nada."), "gold");

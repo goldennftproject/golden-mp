@@ -49,6 +49,9 @@ GF.WORLD_OBJECTS.push(snap("tree", {type:"tree"}, 950, 205, T*2));
 GF.WORLD_OBJECTS.push(snap("node_stone", {type:"rock"}, 900, 470, T));
 GF.WORLD_OBJECTS.push(snap("node_stone", {type:"rock"}, 745, 515, T));
 
+// ALTAR DE RUNAS (doc maestro 2/8) — al FINAL para preservar layouts guardados
+GF.WORLD_OBJECTS.push(snap("altar", {type:"altar"}, 330, 165, T*2));
+
 // lotes 4x3, cada uno 1 celda, alineados a la grilla (col 2, fila 3)
 GF.PLOTS = [];
 (function(){ const c0=2, r0=3; for(let r=0;r<3;r++) for(let c=0;c<4;c++) GF.PLOTS.push({ col:c0+c, row:r0+r }); })();
@@ -72,6 +75,7 @@ GF.SOLID = {
   market: { hw: 0.46, dep: 0.58 },
   store:  { hw: 0.46, dep: 0.58 },
   cocina: { hw: 0.46, dep: 0.58 },
+  altar:  { hw: 0.42, dep: 0.5 },
   dummy:  { hw: 0.24, dep: 0.26 },
   cofre:  { hw: 0.34, dep: 0.30 },
 };

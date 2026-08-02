@@ -13,11 +13,12 @@ function anyOvOpen() { return !!document.querySelector(".ov.show"); }
 const OV_REFRESH = { "ov-inv": () => refreshInv(), "ov-skills": () => refreshSkills(), "ov-equip": () => refreshEquip(),
   "ov-forge": () => refreshForge(), "ov-market": () => refreshMarket(), "ov-barn": () => refreshBarn(),
   "ov-cocina": () => refreshCooking(),
+  "ov-altar": () => refreshAltar(),
   "ov-cofre": () => refreshChest(),
   "ov-config": () => refreshConfig(), "ov-lb": () => refreshLb(), "ov-daily": () => refreshDaily() };
 // los overlays NO bloquean el juego: podés seguir moviéndote/interactuando con la ventana abierta
 // sonido propio de cada edificio al abrir su ventana (pedido del diseñador)
-const OV_SFX = { "ov-market": "shop", "ov-forge": "forge", "ov-barn": "door", "ov-cocina": "door", "ov-cofre": "door", "ov-daily": "coin" };
+const OV_SFX = { "ov-market": "shop", "ov-forge": "forge", "ov-barn": "door", "ov-cocina": "door", "ov-cofre": "door", "ov-daily": "coin", "ov-altar": "forge" };
 function openOv(id) { const e = $(id); if (!e) return; e.classList.add("show"); if (window.sfx) sfx(OV_SFX[id] || "click"); if (OV_REFRESH[id]) OV_REFRESH[id](); }
 function closeOv(id) { const e = $(id); if (e) e.classList.remove("show"); }
 function closeAllOv() { document.querySelectorAll(".ov.show").forEach(e => e.classList.remove("show")); }
@@ -456,6 +457,7 @@ function refreshForge() {
         const id = tipo + "_" + rar, w = ARM_DEF[id], own = G.weapons && G.weapons[id];
         const cs = Object.keys(w.cost).map(k => resIc(k) + " " + w.cost[k]).join(" · ") + " · " + coinIc("plata") + " " + w.plata;
         const eqNow = G.gear.arma === id;
+        const plusTag = (typeof armPlus === "function" && armPlus(id)) ? " +" + armPlus(id) : "";
         let btns = "";
         if (own) {
           btns = eqNow ? '<button class="ghost sm" disabled>Equipada</button>' : '<button class="ghost sm" data-eqarm="' + id + '">Equipar</button>';
@@ -464,7 +466,7 @@ function refreshForge() {
           btns = cdL > 0 ? '<button class="green sm" disabled>' + fmtSecs(Math.ceil(cdL / 1000)) + '</button>'
             : '<button class="green sm" ' + (canAfford(w.cost) && G.plata >= w.plata ? "" : "disabled") + ' data-carm="' + id + '">Forjar</button>';
         }
-        armas += '<div class="forge-row ' + (eqNow ? "eq" : "") + '"><div class="fic"><img src="' + GF.spr(td.sprite) + '"></div><div class="finfo"><div class="fnm">' + w.label + (own ? ' <span class="tag">' + G.weapons[id].dur + '/' + w.dur + '</span>' : '') + '</div><div class="fds">Daño ' + w.min + '–' + w.max + ' · ' + td.buffLabel + ' ' + w.buffVal + (tipo === "arco" ? "/s" : "%") + ' ' + BUFF_DESC[tipo] + '</div><div class="fds">' + (own ? 'Reparación en la pestaña Reparar' : 'Costo: ' + cs) + '</div></div><div class="fbtns">' + btns + '</div></div>';
+        armas += '<div class="forge-row ' + (eqNow ? "eq" : "") + '"><div class="fic"><img src="' + GF.spr(td.sprite) + '"></div><div class="finfo"><div class="fnm">' + w.label + plusTag + (own ? ' <span class="tag">' + G.weapons[id].dur + '/' + w.dur + '</span>' : '') + '</div><div class="fds">Daño ' + w.min + '–' + w.max + ' · ' + td.buffLabel + ' ' + w.buffVal + (tipo === "arco" ? "/s" : "%") + ' ' + BUFF_DESC[tipo] + '</div><div class="fds">' + (own ? 'Reparación en la pestaña Reparar' : 'Costo: ' + cs) + '</div></div><div class="fbtns">' + btns + '</div></div>';
       });
     });
   }
@@ -490,7 +492,7 @@ function refreshForge() {
   card.querySelectorAll("[data-ctool5]").forEach(b => b.onclick = () => craftTool(b.dataset.ctool5, 5));
   card.querySelectorAll("[data-carm]").forEach(b => b.onclick = () => craftWeapon(b.dataset.carm));
   card.querySelectorAll("[data-rarm]").forEach(b => b.onclick = () => repairWeapon(b.dataset.rarm));
-  card.querySelectorAll("[data-eqarm]").forEach(b => b.onclick = () => { G.gear.arma = b.dataset.eqarm; toast(ARM_DEF[b.dataset.eqarm].label + " equipada"); refreshForge(); if (typeof syncSlots === "function") syncSlots(); if (typeof saveFarm === "function") saveFarm(); });
+  card.querySelectorAll("[data-eqarm]").forEach(b => b.onclick = () => { G.gear.arma = b.dataset.eqarm; toast(ARM_DEF[b.dataset.eqarm].label + " equipada"); if (typeof applyCombatHp === "function") applyCombatHp(); refreshHud(); refreshForge(); if (typeof syncSlots === "function") syncSlots(); if (typeof saveFarm === "function") saveFarm(); });
   const fa = $("forge-arrows"); if (fa) fa.onclick = () => craftArrows();
   const fc = $("forge-chest"); if (fc) fc.onclick = () => craftChest();
 }
@@ -573,6 +575,76 @@ function refreshCooking() {
   box.querySelectorAll("[data-cook]").forEach(b => b.onclick = () => cook(b.dataset.cook));
   box.querySelectorAll("[data-selld]").forEach(b => b.onclick = () => sellDish(b.dataset.selld, false));
   box.querySelectorAll("[data-sellg]").forEach(b => b.onclick = () => sellDish(b.dataset.sellg, true));
+}
+
+
+/* ---- Altar de Runas (doc maestro 2/8) ---- */
+function refreshAltar() {
+  const box = $("altar-list"); if (!box) return;
+  const owned = Object.keys(G.weapons || {});
+  let h = "";
+  // ---- Eje 1: MEJORA +1..+15 ----
+  h += '<div class="fnm" style="margin-top:2px">Mejorar arma (+1 a +15)</div>';
+  h += '<div class="fds">Cada intento gasta Runas de Poder + plata. Polvo de Suerte: +10 pts de éxito. De +6 a +10 fallar baja −1; de +11 a +15 fallar puede ROMPER el arma salvo que uses Runa de Protección.</div>';
+  h += '<div class="fds">Tenés: ' + (G.res.runa_poder || 0) + ' Runa de Poder · ' + (G.res.polvo_suerte || 0) + ' Polvo de Suerte · ' + (G.res.runa_proteccion || 0) + ' Runa de Protección · ' + (G.res.esencia_runica || 0) + ' Esencia rúnica</div>';
+  if (!owned.length) h += '<div class="fds">No tenés armas: forjá una en la Herrería.</div>';
+  owned.forEach(id => {
+    const w = ARM_DEF[id]; if (!w) return;
+    const plus = armPlus(id), next = plus + 1;
+    if (next > 15) { h += '<div class="forge-row"><div class="finfo"><div class="fnm">' + w.label + ' +15</div><div class="fds">Tope de tope: +215% de daño. Aura de leyenda.</div></div></div>'; return; }
+    const u = UPG[next];
+    h += '<div class="forge-row"><div class="finfo"><div class="fnm">' + w.label + (plus ? " +" + plus : "") + ' → +' + next + '</div>' +
+      '<div class="fds">Éxito: <b>' + u.ex + '%</b> (con polvo ' + u.exP + '%) · +' + u.dmg + '% daño acum. · Cuesta ' + u.rp + ' Runa de Poder + ' + u.plata + ' plata' + (next >= 6 ? (next >= 11 ? ' · al fallar: −1 y RIESGO DE ROTURA' : ' · al fallar: baja −1') : ' · al fallar solo perdés materiales') + '</div>' +
+      '<div class="fds"><label><input type="checkbox" data-polvo="' + id + '"> usar Polvo de Suerte</label> &nbsp; <label><input type="checkbox" data-prot="' + id + '"' + (next >= 11 ? ' checked' : '') + '> usar Runa de Protección</label></div>' +
+      '<div class="fds">Ranuras de runa: ' + [1, 2, 3].map(sl => { const abre = sl === 1 ? 3 : sl === 2 ? 7 : 12; const sk = armSockets(id)[sl]; return sl <= socketsOpen(plus) ? (sk ? runaLabel(sk.t, sk.r) : "vacía") : "cerrada (+" + abre + ")"; }).join(" · ") + '</div>' +
+      '</div><div class="fbtns"><button class="green sm" data-upg="' + id + '">Mejorar</button></div></div>';
+  });
+  // ---- Sockets del arma equipada ----
+  const eq = armaEq();
+  if (eq && socketsOpen(armPlus(eq)) > 0) {
+    h += '<div class="fnm" style="margin-top:10px">Runas de ' + ARM_DEF[eq].label + (armPlus(eq) ? " +" + armPlus(eq) : "") + ' (equipada)</div>';
+    h += '<div class="fds">Socketear una runa sobre otra DESTRUYE la anterior.</div>';
+    for (let sl = 1; sl <= 3; sl++) {
+      const open = sl <= socketsOpen(armPlus(eq));
+      const cur = armSockets(eq)[sl];
+      if (!open) { h += '<div class="fds">Ranura ' + sl + ': cerrada (se abre a +' + (sl === 1 ? 3 : sl === 2 ? 7 : 12) + ')</div>'; continue; }
+      let opts = '<option value="">' + (cur ? runaLabel(cur.t, cur.r) + ' (puesta)' : '(vacía)') + '</option>';
+      RUNA_ORDER.forEach(t => { for (let r = 1; r <= 5; r++) { const n = G.res[runaKey(t, r)] || 0; if (n > 0) opts += '<option value="' + t + ':' + r + '">' + runaLabel(t, r) + ' — ' + RUNA_TIPOS[t].buff + ' +' + runaVal(t, r) + RUNA_TIPOS[t].uni + ' (×' + n + ')</option>'; } });
+      h += '<div class="forge-row"><div class="finfo"><div class="fds">Ranura ' + sl + ': <select data-socket="' + sl + '">' + opts + '</select></div></div></div>';
+    }
+  }
+  // ---- Eje 2: crafteo de materiales ----
+  h += '<div class="fnm" style="margin-top:10px">Craftear materiales</div>';
+  for (const id in ALTAR_CRAFT) {
+    const c = ALTAR_CRAFT[id];
+    const costo = Object.keys(c.cost).map(k => c.cost[k] + " " + (RES_LABEL[k] || k)).join(" + ") + (c.plata ? " + " + c.plata + " plata" : "") + (c.golden ? " + " + c.golden + " $Golden" : "");
+    h += '<div class="forge-row"><div class="finfo"><div class="fnm">' + RES_LABEL[id] + ' <span class="fds">(tenés ' + (G.res[id] || 0) + ')</span></div><div class="fds">' + costo + '</div></div><div class="fbtns"><button class="green sm" data-caltar="' + id + '">Craftear</button></div></div>';
+  }
+  // runas de atributo I
+  h += '<div class="fnm" style="margin-top:10px">Craftear runas de atributo (rareza I)</div>';
+  h += '<div class="fds">Cuestan ' + Object.keys(RUNA_CRAFT.cost).map(k => RUNA_CRAFT.cost[k] + " " + (RES_LABEL[k] || k)).join(" + ") + ' + ' + RUNA_CRAFT.plata + ' plata.</div>';
+  RUNA_ORDER.forEach(t => {
+    h += '<div class="forge-row"><div class="finfo"><div class="fnm">' + RUNA_TIPOS[t].label + ' I <span class="fds">(tenés ' + (G.res[runaKey(t, 1)] || 0) + ')</span></div><div class="fds">' + RUNA_TIPOS[t].buff + ': +' + RUNA_TIPOS[t].vals[0] + RUNA_TIPOS[t].uni + ' → +' + RUNA_TIPOS[t].vals[4] + RUNA_TIPOS[t].uni + ' en rareza V</div></div><div class="fbtns"><button class="green sm" data-cruna="' + t + '">Craftear I</button></div></div>';
+  });
+  // ---- Fusión ----
+  let fus = "";
+  RUNA_ORDER.forEach(t => { for (let r = 1; r <= 4; r++) { const n = G.res[runaKey(t, r)] || 0; if (n >= 3) fus += '<div class="forge-row"><div class="finfo"><div class="fnm">3× ' + runaLabel(t, r) + ' → 1× ' + runaLabel(t, r + 1) + '</div><div class="fds">' + (FUSE_GOLD[r] ? "Cuesta " + FUSE_GOLD[r] + " $Golden" : "Gratis") + ' · tenés ' + n + '</div></div><div class="fbtns"><button class="green sm" data-fuse="' + t + ':' + r + '">Fusionar</button></div></div>'; } });
+  if (fus) h += '<div class="fnm" style="margin-top:10px">Fusionar runas (3 iguales → 1 de rareza superior)</div>' + fus;
+  box.innerHTML = h;
+  box.querySelectorAll("[data-upg]").forEach(b => b.onclick = () => {
+    const id = b.dataset.upg;
+    const polvo = box.querySelector('[data-polvo="' + id + '"]');
+    const prot = box.querySelector('[data-prot="' + id + '"]');
+    upgradeWeapon(id, polvo && polvo.checked, prot && prot.checked);
+  });
+  box.querySelectorAll("[data-caltar]").forEach(b => b.onclick = () => craftAltarItem(b.dataset.caltar));
+  box.querySelectorAll("[data-cruna]").forEach(b => b.onclick = () => craftRunaI(b.dataset.cruna));
+  box.querySelectorAll("[data-fuse]").forEach(b => b.onclick = () => { const [t, r] = b.dataset.fuse.split(":"); fuseRuna(t, Number(r)); });
+  box.querySelectorAll("[data-socket]").forEach(sel => sel.onchange = () => {
+    if (!sel.value) return;
+    const [t, r] = sel.value.split(":");
+    socketRuna(armaEq(), Number(sel.dataset.socket), t, Number(r));
+  });
 }
 
 /* ---- mercado / tienda ---- */
