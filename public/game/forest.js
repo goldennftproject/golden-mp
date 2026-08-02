@@ -355,6 +355,8 @@ class ForestScene extends Phaser.Scene {
   killMonster(m, skill) {
     m.dead = true; m.bar.clear();
     addXp(skill || "sword", m.def.xp);
+    addCombatXp(m.def.xp);                                   // barra de Combate global (doc maestro)
+    this.floatTxt(m, "+" + m.def.xp + " XP", "#ffd75e");     // feedback por kill hacia la barra
     // armaduras: chance de drop (se autoequipan si mejoran)
     const drops = [];
     if (m.def.gearLoot) for (const [gk, ch] of m.def.gearLoot) { if (Math.random() < ch) drops.push({ k: gk, n: 1, kind: "gear" }); }
@@ -546,6 +548,12 @@ class ForestScene extends Phaser.Scene {
       m.spr.setScale(m.face * bs, bs);
       if (m.def.sprite && t > (m.atkUntil || 0)) this.playMob(m, moved ? "walk" : "idle");
       this.drawBar(m);
+    }
+    // barra de Combate "viva": pulso del relleno mientras algún mob te está peleando (doc)
+    if (t > (this._cbarAt || 0)) {
+      this._cbarAt = t + 400;
+      const cb = document.getElementById("cbar");
+      if (cb) cb.classList.toggle("fight", this.monsters.some(mm => !mm.dead && mm.tgt === "hero"));
     }
   }
 

@@ -23,7 +23,14 @@ function closeOv(id) { const e = $(id); if (e) e.classList.remove("show"); }
 function closeAllOv() { document.querySelectorAll(".ov.show").forEach(e => e.classList.remove("show")); }
 
 /* ---- HUD ---- */
-function refreshHud() { setTxt("s-level", G.level); setTxt("s-prestige", G.prestige); setTxt("s-plata", fmt(G.plata)); setTxt("s-golden", fmt(G.golden)); setTxt("s-week", G.week); setTxt("s-hp", Math.ceil(G.hp) + "/" + G.hpMax); if (typeof checkCooking === "function") checkCooking(); if (typeof refreshHotbar === "function") refreshHotbar(); }
+function refreshHud() { setTxt("s-level", G.level); setTxt("s-prestige", G.prestige); setTxt("s-plata", fmt(G.plata)); setTxt("s-golden", fmt(G.golden)); setTxt("s-week", G.week); setTxt("s-hp", Math.ceil(G.hp) + "/" + G.hpMax); refreshCombatBar(); if (typeof checkCooking === "function") checkCooking(); if (typeof refreshHotbar === "function") refreshHotbar(); }
+function refreshCombatBar() {   // doc maestro 2/8: insignia de nivel + relleno dorado + "XP actual / necesaria"
+  const el = document.getElementById("c-lvl"); if (!el || typeof combatInfo !== "function") return;
+  const ci = combatInfo();
+  el.textContent = ci.lvl;
+  setTxt("c-xp", fmt(ci.into) + "/" + fmt(ci.need));
+  const f = document.getElementById("c-fill"); if (f) f.style.width = Math.min(100, ci.into / ci.need * 100).toFixed(1) + "%";
+}
 
 /* ---- inventario por casillas (todo es ítem; arrastrar para reordenar) ---- */
 let dndActive = false;   // no re-renderizar mientras se arrastra

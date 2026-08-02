@@ -72,7 +72,9 @@ var BAL = (function () {
       costos(cat, "armasUnlock.cost", ARMAS_UNLOCK_COST, "Desbloquear pestaña Armas");
       add(cat, "armasUnlock.plata", "Desbloquear pestaña Armas — Plata", U.plata, () => ARMAS_UNLOCK_PLATA, v => { ARMAS_UNLOCK_PLATA = v; });
       add(cat, "dummy.cd", "Dummy de práctica · enfriamiento entre usos", "", () => DUMMY_CD_MS / 1000, v => { DUMMY_CD_MS = v * 1000; }, 1, "tiempo");
-      add(cat, "dummy.xp", "Dummy de práctica · XP de Espada por uso", U.xp, () => DUMMY_XP, v => { DUMMY_XP = v; });
+      add(cat, "dummy.xp", "Dummy de práctica · XP por uso (a la skill del arma equipada)", U.xp, () => DUMMY_XP, v => { DUMMY_XP = v; });
+      add(cat, "combat.hp5", "Nivel de Combate 5 · vida máxima extra", U.vida, () => COMBAT_HP5, v => { COMBAT_HP5 = v; });
+      add(cat, "combat.hp10", "Nivel de Combate 10 · vida máxima extra", U.vida, () => COMBAT_HP10, v => { COMBAT_HP10 = v; });
     }
 
     // MONSTRUOS

@@ -10,6 +10,7 @@ const G = {
   treesOpen: [0], rocksOpen: [0],  // viernes (2): índices de árboles/piedras desbloqueados (cualquiera, sin orden — pedido Discord)
   gear: { casco: null, armadura: null, botas: null, escudo: null, arma: null, municion: false },
   weapons: {},                   // doc 2/8: armas nuevas — id ("espada_madera") -> { dur }
+  combatXp: 0,                   // doc 2/8: barra de Combate GLOBAL — suma la XP de todos los kills
   armCd: {},                     // enfriamiento de crafteo por arma   // equipo (armas se equipan en el panel de Equipo — detalles jueves)
   res: { madera: 0, piedra: 0, bronce: 0, hierro: 0, oro: 0, diamante: 0, netherita: 0, carne: 0, flecha: 0, lombriz: 0,
     tablon: 0, barra_piedra: 0, barra_bronce: 0, barra_hierro: 0, barra_oro: 0,
@@ -157,6 +158,29 @@ const SKILL_NAME = {}; SKILL_DEFS.forEach(([k,,nm]) => SKILL_NAME[k] = nm);
 var XP_BASE = 100, XP_EXP = 2.7;   // doc maestro 2/8: curva 1-150 anclada (nivel 40 = 360 h); editables en balance.html
 function skillNeed(lvl) { return Math.round(XP_BASE * Math.pow(lvl, XP_EXP)); }
 function skillInfo(xp) { let lvl = 1, acc = 0, need = skillNeed(1); while (xp >= acc + need && lvl < 150) { acc += need; lvl++; need = skillNeed(lvl); } return { lvl, into: xp - acc, need }; }
+// --- Barra de Combate GLOBAL (doc maestro 2/8): un solo nivel que suma la XP de TODOS los kills.
+//     Convive con las skills por arma (esas siguen dando el +Nivel/2 al daño). Misma curva 1-150.
+var COMBAT_HP5 = 20, COMBAT_HP10 = 40;   // vida máxima extra en los hitos (editables en el panel)
+function combatInfo() { return skillInfo(G.combatXp || 0); }
+function combatHpBonus(lvl) { return (lvl >= 5 ? COMBAT_HP5 : 0) + (lvl >= 10 ? COMBAT_HP10 : 0); }
+function applyCombatHp() {   // vida máxima = 100 + hitos de Combate (nivel 5 y 10)
+  const want = 100 + combatHpBonus(combatInfo().lvl);
+  if (G.hpMax !== want) { const dif = want - G.hpMax; G.hpMax = want; if (dif > 0) G.hp = Math.min(G.hpMax, G.hp + dif); G.hp = Math.min(G.hpMax, G.hp); }
+}
+function addCombatXp(xp) {
+  const before = combatInfo().lvl;
+  G.combatXp = (G.combatXp || 0) + xp;
+  const after = combatInfo().lvl;
+  if (after > before) {
+    applyCombatHp();
+    const salto = after - before;   // un Trol puede subir varios niveles: UN solo cartel (doc)
+    toast("¡Combate nivel " + after + "!" + (salto > 1 ? " (+" + salto + ")" : ""));
+    log("Tu nivel de Combate subió a " + after + "." + (combatHpBonus(after) > combatHpBonus(before) ? " Vida máxima: " + (100 + combatHpBonus(after)) + "." : ""), "good");
+    if (window.sfx) sfx("level");
+    if (window.onCombatLevelUp) window.onCombatLevelUp(after, salto);   // gancho para la celebración (Fase 5)
+  }
+  refreshHud();
+}
 function avgSkillLevel() { let s=0,n=0; for (const k in G.skills){ s+=skillInfo(G.skills[k]).lvl; n++; } return n ? s/n : 1; }
 function addXp(sk, amt) {
   if (!(sk in G.skills)) return;

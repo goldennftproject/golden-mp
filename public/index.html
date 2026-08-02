@@ -23,6 +23,13 @@
   .hud{display:flex;gap:7px;flex-wrap:wrap;align-items:center}
   .pill{background:rgba(38,51,31,.92);border:1px solid #3c4d31;border-radius:999px;padding:5px 11px;font-size:13px;font-weight:700;display:flex;align-items:center;gap:5px;white-space:nowrap;color:#f2ead5;cursor:default}
   .pill .k{color:#a9bd94;font-weight:600;font-size:12px}
+  /* barra de Combate global (doc maestro 2/8): insignia + relleno dorado + XP */
+  .cpill{gap:6px}
+  .cpill #c-lvl{min-width:14px;text-align:center}
+  .cbarw{width:78px;height:9px;background:rgba(0,0,0,.5);border:1px solid #241505;overflow:hidden;display:inline-block;image-rendering:pixelated}
+  .cfill{display:block;height:100%;width:0%;background:linear-gradient(180deg,#ffe08a,#e0a63c 55%,#b97c17);transition:width .35s ease}
+  #cbar.fight .cfill{animation:cpulse 1s infinite}
+  @keyframes cpulse{0%,100%{filter:brightness(1)}50%{filter:brightness(1.4)}}
   .coin{display:inline-block;width:14px;height:14px;border-radius:50%;flex:0 0 auto}
   .coin.silver{background:radial-gradient(circle at 35% 30%,#f2f4f6,#b9bec6 65%,#8a9098);box-shadow:inset 0 0 0 1px #7c828a}
   .coin.gold{background:radial-gradient(circle at 35% 30%,#ffe9a0,#e6b53c 65%,#b9860b);box-shadow:inset 0 0 0 1px #a97f11}
@@ -408,6 +415,7 @@
       <div class="pill" title="Plata — la moneda del juego"><img class="ric" src="assets/farm/coin_plata.png?a=4" onerror="this.outerHTML='<span class=&quot;coin silver&quot;></span>'"><b id="s-plata">0</b></div>
       <div class="pill" title="Esencia $Golden — se usa para pescar"><img class="ric" src="assets/farm/coin_esencia.png?a=4" onerror="this.outerHTML='✨'"><b id="s-golden">20</b></div>
       <div class="pill" title="Vida — cuidado en la Zona Negra"><span></span><b id="s-hp">100/100</b></div>
+      <div class="pill cpill" id="cbar" title="Nivel de Combate — suma la XP de todos los kills, sin importar el arma"><b id="c-lvl">1</b><span class="k">Combate</span><span class="cbarw"><span class="cfill" id="c-fill"></span></span><span class="k" id="c-xp">0/100</span></div>
       <div class="pill"><span class="k">Semana</span><b id="s-week">1</b></div>
       <button class="btnpill" id="menu-btn">☰ Menú</button>
     </div>

@@ -25,7 +25,7 @@ function snapshot() {
     res: G.res, picks: G.picks, skills: G.skills, fish: G.fish, plots: G.plots, seeds: G.seeds, selSeed: G.selSeed,
     tools: G.tools, toolsLost: G.toolsLost, sflStock: true, invRows: G.invRows, slots: G.slots, hotbar: G.hotbar, hotSel: G.hotSel, hbInit: G.hbInit, layout: G.layout,
     daily: G.daily, plotsOwned: G.plotsOwned, seedBuys: G.seedBuys, built: G.built,
-    hp: G.hp, hpMax: G.hpMax, swordOwned: G.swordOwned, bowOwned: G.bowOwned, swordWoodOwned: G.swordWoodOwned, gear: G.gear,
+    hp: G.hp, hpMax: G.hpMax, combatXp: G.combatXp, swordOwned: G.swordOwned, bowOwned: G.bowOwned, swordWoodOwned: G.swordWoodOwned, gear: G.gear,
     armasUnlocked: G.armasUnlocked, treesOpen: G.treesOpen, rocksOpen: G.rocksOpen, firstCropDone: G.firstCropDone, weapons: G.weapons,
     dishes: G.dishes, cooking: G.cooking, chests: G.chests, dummyUsedAt: G.dummyUsedAt,
     layoutPlots: G.layoutPlots, layoutPond: G.layoutPond };
@@ -61,6 +61,8 @@ function hydrate(d) {
   if (typeof d.plotsOwned === "number") G.plotsOwned = Math.max(2, Math.min(12, d.plotsOwned));   // viernes (2): se arranca con 2
   if (d.seedBuys && typeof d.seedBuys === "object") G.seedBuys = { date: d.seedBuys.date || "", count: d.seedBuys.count || 0 };
   if (typeof d.hpMax === "number") G.hpMax = d.hpMax;
+  G.combatXp = (typeof d.combatXp === "number") ? d.combatXp : 0;
+  if (typeof applyCombatHp === "function") applyCombatHp();   // vida máxima = 100 + hitos de Combate
   if (typeof d.hp === "number") G.hp = Math.max(1, Math.min(G.hpMax, d.hp));
   if (typeof d.swordOwned === "boolean") G.swordOwned = d.swordOwned;
   if (typeof d.bowOwned === "boolean") G.bowOwned = d.bowOwned;
