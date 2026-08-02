@@ -431,7 +431,7 @@ function refreshHorno() {
     const md = MAT_DEF[id], cs = Object.keys(md.cost).map(k => resIc(k) + " " + md.cost[k]).join(" · ");
     const left = matCdLeft(id); if (left > 0) anyCooling = true;
     const btn = left > 0
-      ? '<button class="green sm" disabled>' + Math.ceil(left / 1000) + 's</button>'
+      ? '<button class="green sm" disabled>' + fmtSecs(Math.ceil(left / 1000)) + '</button>'
       : '<button class="green sm" ' + (canAfford(md.cost) ? "" : "disabled") + ' data-mat="' + id + '">Fundir</button>';
     html += '<div class="forge-row"><div class="fic"><img src="' + GF.spr(md.sprite) + '"></div><div class="finfo"><div class="fnm">' + md.label + '</div><div class="fds">Tenés ' + fmt(G.res[id] || 0) + ' · Costo: ' + cs + '</div></div><div class="fbtns">' + btn + '</div></div>';
   });
@@ -476,7 +476,7 @@ function refreshCooking() {
     const r = RECIPE_DEF[G.cooking.id];
     const left = Math.max(0, G.cooking.endAt - nowMs());
     const pct = Math.round((1 - left / (G.cooking.total || 1)) * 100);
-    head = '<div class="forge-row"><div class="fic"></div><div class="finfo"><div class="fnm">Cocinando ' + (r ? r.label : "") + '…</div><div class="durbar"><i style="width:' + pct + '%"></i></div><div class="fds">' + Math.ceil(left / 1000) + 's restantes</div></div></div>';
+    head = '<div class="forge-row"><div class="fic"></div><div class="finfo"><div class="fnm">Cocinando ' + (r ? r.label : "") + '…</div><div class="durbar"><i style="width:' + pct + '%"></i></div><div class="fds">' + fmtSecs(Math.ceil(left / 1000)) + ' restantes</div></div></div>';
   }
   box.innerHTML = head + RECIPE_ORDER.map(id => {
     const r = RECIPE_DEF[id];

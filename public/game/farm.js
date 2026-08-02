@@ -524,9 +524,9 @@ class FarmScene extends Phaser.Scene {
     }
     if (o.type === "portal") return "Teletransportarte a la Zona Negra" + ((G.swordOwned || G.swordWoodOwned) ? "" : " sin espada");
     const secs = cd ? Math.ceil((o.readyAt - nowMs()) / 1000) : 0;
-    if (o.type === "tree") { if (o.locked) return "Desbloquear árbol (" + treeUnlockCost() + " madera)"; return cd ? "Vuelve en " + secs + "s" : "Talar madera"; }
-    if (o.type === "rock") { if (o.locked) return "Desbloquear piedra (" + rockUnlockCost() + " piedra)"; return cd ? "Vuelve en " + secs + "s" : "Picar piedra"; }
-    if (o.type === "ore") { const od = ORE_DEF[o.ore]; if (!od) return "Minar"; if (cd) return od.emoji + " Vuelve en " + secs + "s"; return "Minar " + od.label; }
+    if (o.type === "tree") { if (o.locked) return "Desbloquear árbol (" + treeUnlockCost() + " madera)"; return cd ? "Vuelve en " + fmtSecs(secs) : "Talar madera"; }
+    if (o.type === "rock") { if (o.locked) return "Desbloquear piedra (" + rockUnlockCost() + " piedra)"; return cd ? "Vuelve en " + fmtSecs(secs) : "Picar piedra"; }
+    if (o.type === "ore") { const od = ORE_DEF[o.ore]; if (!od) return "Minar"; if (cd) return od.emoji + " Vuelve en " + fmtSecs(secs); return "Minar " + od.label; }
     if (o.type === "barn") return "Granja";
     if (o.type === "market") return "Mercado";
     if (typeof BUILD_DEF !== "undefined" && BUILD_DEF[o.type] && !(G.built && G.built[o.type])) return "Construir " + BUILD_DEF[o.type].label + " (" + buildCostStr(o.type) + ")";
@@ -1226,7 +1226,7 @@ class FarmScene extends Phaser.Scene {
         // cuarta.docx: el timer del recurso solo aparece con el cursor encima (al clickear ya sale el aviso)
         const p = this.input.activePointer;
         const over = this.timerOn(o);
-        if (over) o.timer.setText(Math.ceil((o.readyAt - t) / 1000) + "s").setPosition(o.cx, this.topY(o, (o.type === "ore" || o.type === "rock") ? -6 : 7)).setVisible(true);   // detalles213: el timer del mineral pegado al nodo (antes flotaba alto y se mezclaba)
+        if (over) o.timer.setText(fmtSecs(Math.ceil((o.readyAt - t) / 1000))).setPosition(o.cx, this.topY(o, (o.type === "ore" || o.type === "rock") ? -6 : 7)).setVisible(true);   // detalles213: el timer del mineral pegado al nodo (antes flotaba alto y se mezclaba)
         else o.timer.setVisible(false);
       }
     }
@@ -1267,7 +1267,7 @@ class FarmScene extends Phaser.Scene {
       if (pl.state !== "growing") continue;
       if (t >= pl.readyAt) { pl.state = "ready"; pl.readyAt = 0; pl.witherAt = 0; this.showReadyCrop(pl); this.syncPlots(); }   // 2/8: sin marchitado — la cosecha espera
       else {
-        if (plOver) pl.timer.setText(Math.max(0, Math.ceil((pl.readyAt - t) / 1000)) + "s").setPosition(pl.cx, this.topY(pl)).setVisible(true);
+        if (plOver) pl.timer.setText(fmtSecs(Math.max(0, Math.ceil((pl.readyAt - t) / 1000)))).setPosition(pl.cx, this.topY(pl)).setVisible(true);
         else pl.timer.setVisible(false);
         // a media cosecha: la planta intermedia (se asoma la verdura) o el brote más grande
         if (!pl.half && pl.growTotal && (pl.readyAt - t) <= pl.growTotal / 2) {

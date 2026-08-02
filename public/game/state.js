@@ -338,10 +338,10 @@ const RECIPE_ORDER = ["pescado_asado", "estofado", "banquete"];
 const RECIPE_DEF = {
   pescado_asado: { label:"Pescado asado", emoji:"🐟", sprite:"dish_pescado_asado", fish:{comun:1}, res:{madera:1},
     heal:30, buff:{type:"yield",label:"Cosecha +10%",mult:1.10,dur:90}, xp:8,
-    desc:"Cura 30 · Cosecha +10% (90s)" },
+    desc:"Cura 30 · Cosecha +10% (1 min 30 s)" },
   estofado: { label:"Estofado de carne", emoji:"🍲", sprite:"dish_estofado", res:{carne:2, papa:1, madera:1},
     heal:60, buff:{type:"cd",label:"Enfriamientos -15%",mult:0.85,dur:90}, xp:12,
-    desc:"Cura 60 · Enfriamientos -15% (90s)" },
+    desc:"Cura 60 · Enfriamientos -15% (1 min 30 s)" },
   banquete: { label:"Banquete del granjero", emoji:"🍗", sprite:"dish_banquete", fish:{raro:1}, res:{carne:2, calabaza:1, madera:1},
     heal:9999, buff:{type:"yield",label:"Cosecha +20%",mult:1.20,dur:180}, xp:25,
     desc:"Cura TODA la vida · Cosecha +20% (3 min)" },
@@ -447,7 +447,7 @@ function chestWithdraw(ci, si) {
 // --- dummy de práctica (detalless.docx): entrenar espada, cooldown 4 horas ---
 var DUMMY_CD_MS = 4 * 3600 * 1000;
 var DUMMY_XP = 30;
-function fmtDur(ms) { const m = Math.ceil(ms / 60000); if (m >= 60) { const h = Math.floor(m / 60); return h + "h " + (m % 60) + "m"; } return m + "m"; }
+function fmtDur(ms) { return fmtSecs(ms / 1000); }   // 2/8: formato de tiempo ESTÁNDAR en todo el juego (delega en fmtSecs)
 // 2/8: duración en formato humano desde SEGUNDOS ("9 min", "1 h 30 min", "45 s") — para la Tienda y tooltips
 function fmtSecs(seg) {
   seg = Math.round(seg);
