@@ -73,10 +73,8 @@ function hToMs(h) { return h * G.secPerGameHour * 1000 * cdMult(); }
 
 // --- recursos ---
 const RES_EMOJI = { madera:"", piedra:"", bronce:"", oro:"", diamante:"", netherita:"", carne:"", flecha:"", lombriz:"",
-  trigo:"🌾", maiz:"🌽", girasol:"🌻",
   papa:"", zanahoria:"", cebolla:"", calabacin:"", repollo:"", calabaza:"", brocoli:"" };
 const RES_LABEL = { madera:"Madera", piedra:"Piedra", bronce:"Bronce", hierro:"Hierro", oro:"Oro", diamante:"Diamante", netherita:"Netherita", carne:"Carne", flecha:"Flecha", lombriz:"Lombriz",
-  trigo:"Trigo", maiz:"Maíz", girasol:"Girasol",
   tablon:"Tablón de madera", barra_piedra:"Bloques de piedra", barra_bronce:"Barra de bronce", barra_hierro:"Barra de hierro", barra_oro:"Barra de oro",
   papa:"Papa", zanahoria:"Zanahoria", cebolla:"Cebolla", calabacin:"Calabacín", repollo:"Repollo", calabaza:"Calabaza", brocoli:"Brócoli" };
 // íconos cozy de recursos (los cultivos usan crop_<key>)
@@ -85,18 +83,23 @@ const RES_SPRITE = { madera:"res_madera", piedra:"res_piedra", bronce:"res_bronc
 function resSprite(k) { return CROP_DEF[k] ? "crop_" + k : (RES_SPRITE[k] || null); }
 
 // --- cultivos (semillas compradas en la Tienda; se desbloquean por nivel de Cultivo) ---
-const CROP_ORDER = ["papa","zanahoria","cebolla","calabacin","repollo","calabaza","brocoli"];
+const CROP_ORDER = ["papa","zanahoria","cebolla","calabacin","repollo","calabaza","brocoli","girasol","trigo","maiz"];
 // TABLA DE PRECIOS del diseñador (31/7): Ganancia = Tiempo × Riesgo × Nivel. Papa base: compra 1 / venta 3 / 1h.
 // growH = horas reales de la tabla. En TESTEO corre comprimido: 1h → 1min (GROW_SCALE). Para pasar a real: GROW_SCALE = 1.
 var GROW_SCALE = 1;   // 2/8: FUERA la compresión de testeo — el tiempo que se pone en balance.html es el tiempo real del juego
+// Tabla del doc "Sistema de farmeo con 10 cultivos" (v5, margen tope 12%, ganancia pareja ~6 plata/h):
+// escalera de tiempos 9 min → 24 h, XP por cosecha = minutos de crecimiento, cultivo N pide granja nivel N.
 const CROP_DEF = {
-  papa:      { label:"Papa",      emoji:"🥔", lvl:1, seedCost:1,  growH:1,  yield:1, price:3, xp:2 },
-  zanahoria: { label:"Zanahoria", emoji:"🥕", lvl:2, seedCost:3,  growH:2,  yield:1, price:8, xp:3 },
-  cebolla:   { label:"Cebolla",   emoji:"🧅", lvl:3, seedCost:6,  growH:4,  yield:1, price:16, xp:7 },
-  calabacin: { label:"Calabacín", emoji:"🥒", lvl:4, seedCost:12, growH:8,  yield:1, price:32, xp:10 },
-  repollo:   { label:"Repollo",   emoji:"🥬", lvl:5, seedCost:20, growH:12, yield:1, price:50, xp:20 },
-  calabaza:  { label:"Calabaza",  emoji:"🎃", lvl:6, seedCost:40, growH:24, yield:1, price:100, xp:40 },
-  brocoli:   { label:"Brócoli",   emoji:"🥦", lvl:7, seedCost:90, growH:48, yield:1, price:210, xp:80 },
+  papa:      { label:"Papa",      emoji:"🥔", lvl:1,  seedCost:20,   growH:0.15, yield:1, price:21,   xp:9 },
+  zanahoria: { label:"Zanahoria", emoji:"🥕", lvl:2,  seedCost:40,   growH:0.25, yield:1, price:42,   xp:15 },
+  cebolla:   { label:"Cebolla",   emoji:"🧅", lvl:3,  seedCost:60,   growH:0.5,  yield:1, price:63,   xp:30 },
+  calabacin: { label:"Calabacín", emoji:"🥒", lvl:4,  seedCost:80,   growH:0.75, yield:1, price:85,   xp:45 },
+  repollo:   { label:"Repollo",   emoji:"🥬", lvl:5,  seedCost:120,  growH:1.5,  yield:1, price:129,  xp:90 },
+  calabaza:  { label:"Calabaza",  emoji:"🎃", lvl:6,  seedCost:200,  growH:3,    yield:1, price:218,  xp:180 },
+  brocoli:   { label:"Brócoli",   emoji:"🥦", lvl:7,  seedCost:300,  growH:6,    yield:1, price:336,  xp:360 },
+  girasol:   { label:"Girasol",   emoji:"🌻", lvl:8,  seedCost:500,  growH:10,   yield:1, price:560,  xp:600 },
+  trigo:     { label:"Trigo",     emoji:"🌾", lvl:9,  seedCost:800,  growH:16,   yield:1, price:896,  xp:960 },
+  maiz:      { label:"Maíz",      emoji:"🌽", lvl:10, seedCost:1200, growH:24,   yield:1, price:1344, xp:1440 },
 };
 function recomputeCropGrow() { for (const k in CROP_DEF) CROP_DEF[k].grow = Math.round(CROP_DEF[k].growH * 3600 * GROW_SCALE); }
 recomputeCropGrow();   // en segundos, como siempre
