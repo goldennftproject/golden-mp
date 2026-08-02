@@ -11,6 +11,7 @@ const G = {
   gear: { casco: null, armadura: null, botas: null, escudo: null, arma: null, municion: false },
   weapons: {},                   // doc 2/8: armas nuevas — id ("espada_madera") -> { dur }
   combatXp: 0,                   // doc 2/8: barra de Combate GLOBAL — suma la XP de todos los kills
+  states: [],                    // doc 2/8: estados/debuffs del bestiario sobre el jugador (no se guardan)
   armCd: {},                     // enfriamiento de crafteo por arma   // equipo (armas se equipan en el panel de Equipo — detalles jueves)
   res: { madera: 0, piedra: 0, bronce: 0, hierro: 0, oro: 0, diamante: 0, netherita: 0, carne: 0, flecha: 0, lombriz: 0,
     tablon: 0, barra_piedra: 0, barra_bronce: 0, barra_hierro: 0, barra_oro: 0,
@@ -57,6 +58,34 @@ function speedMult() { return 1 + (buffTotal("speed") + buffTotal("feast")) / 10
 function farmSpeedMult() { return Math.max(0.4, 1 - buffTotal("farm") / 100); }   // acorta las acciones de cultivo
 function luckMult() { return 1 + buffTotal("luck") / 100; }
 function combatXpMult() { return 1 + buffTotal("combatxp") / 100; }
+/* --- ESTADOS sobre el jugador (bestiario doc 2/8): sangrado/veneno/quemadura (daño por s),
+       maldiciones de Flaqueza (-daño) y Fragilidad (-defensa), ralentización. Tope: 2 maldiciones,
+       veneno acumulable x3, el resto se renueva. Viven solo en la sesión (no se guardan). --- */
+function addPlayerState(type, val, durS, label) {
+  const t = Date.now();
+  G.states = (G.states || []).filter(s => s.until > t);
+  if (type === "veneno") {
+    if (G.states.filter(s => s.type === "veneno").length >= 3) return false;   // acumulable hasta x3
+  } else {
+    const prev = G.states.find(s => s.type === type);
+    if (prev) { prev.until = t + durS * 1000; prev.val = Math.max(prev.val, val); return true; }   // se renueva
+    if ((type === "flaqueza" || type === "fragilidad") &&
+        G.states.filter(s => s.type === "flaqueza" || s.type === "fragilidad").length >= 2) return false;   // tope maldiciones
+  }
+  G.states.push({ type, val, until: t + durS * 1000, next: t + 1000, label: label || type });
+  log("Sufrís " + (label || type) + ".", "bad");
+  return true;
+}
+function stateTotal(type) { const t = Date.now(); let s = 0; for (const st of (G.states || [])) if (st.type === type && st.until > t) s += st.val; return s; }
+function playerDmgOutMult() { return Math.max(0.2, 1 - stateTotal("flaqueza") / 100); }   // Maldición de Flaqueza
+function playerDefLossMult() { return Math.min(0.9, stateTotal("fragilidad") / 100); }    // Maldición de Fragilidad
+function playerSlowMult() { return Math.max(0.4, 1 - stateTotal("ralen") / 100); }        // Ralentización
+function cleanseStates(tipos) {
+  const antes = (G.states || []).length;
+  G.states = (G.states || []).filter(s => !tipos.includes(s.type));
+  return antes - G.states.length;
+}
+
 function buffTick() {   // 1 vez por segundo desde el HUD: regeneración y vida máxima temporal
   const t = Date.now(); let dirty = false;
   for (const b of G.buffs) {
@@ -409,7 +438,7 @@ function rollWeaponHit(defensa) {
   if (w.tipo === "espada" && Math.random() * 100 < w.buffVal) { atk *= 2; out.crit = true; }
   if (w.tipo === "mazo" && Math.random() * 100 < w.buffVal) out.stun = true;
   if (w.tipo === "arco") out.bleed = w.buffVal;
-  out.dmg = Math.max(1, Math.round((atk - defEf) * dmgMult()));   // buff de daño de la comida
+  out.dmg = Math.max(1, Math.round((atk - defEf) * dmgMult() * playerDmgOutMult()));   // buff de comida y maldición de Flaqueza
   return out;
 }
 
@@ -607,6 +636,8 @@ function eatDish(id) {
     addBuff(r.buff.type, dishBuffLabel(r.buff, pot), v, DISH_BUFF_DUR);
     if (r.buff.type === "hpmax") buffTick();   // la vida extra entra ya mismo
   } else if (r.buff) addBuff(r.buff.type, r.buff.label, r.buff.mult, r.buff.dur);
+  if (id === "guiso_campestre" || id === "estofado_cosecha") { if (cleanseStates(["sangrado", "veneno", "quemadura"])) { log("El guiso limpió tus heridas (sangrado/veneno/quemadura).", "good"); toast("Heridas limpiadas"); } }
+  if (id === "pan_trigo" || id === "pan_maiz_trigo") { if (cleanseStates(["flaqueza", "fragilidad"])) { log("El pan disipó las maldiciones.", "good"); toast("Maldiciones disipadas"); } }
   log(r.emoji + " Comiste " + r.label + ". " + dishDesc(r), "gold"); toast(r.emoji + " ¡Ñam!");
   refreshHud(); if (typeof syncSlots === "function") syncSlots(); if (isOpen("ov-inv")) refreshInv();
 }
@@ -689,14 +720,27 @@ function fmtSecs(seg) {
 }
 
 // --- bestiario (Fase D) — 6 tiers, de común a legendario ---
-const MONSTER_ORDER = ["rata", "larva", "orco", "lancero", "guerrero", "troll"];
+const MONSTER_ORDER = ["rata", "murcielago", "larva", "baba", "babita", "arana", "goblin", "orco", "lancero", "guerrero", "esqueleto", "golem", "hombre_lobo", "troll", "ogro", "espectro", "demonio", "dragon"];
 const MONSTER_DEF = {
-  rata:     { label:"Rata",           emoji:"🐀", sprite:"rata", size:30, hp:12,  def:0,  dmg:2,  xp:100,  spd:55, loot:{ carne:[1,1,0.55], plata:[3,3,1] } },
-  larva:    { label:"Larva Venenosa", emoji:"🐛", sprite:"larva", size:38, hp:22,  def:1,  dmg:3,  xp:180,  spd:35, loot:{ carne:[1,2,0.50], plata:[5,5,1], flecha:[1,3,0.35] }, gearLoot:[["botas_cuero",0.08]] },
-  orco:     { label:"Orco",           emoji:"👹", sprite:"orc", size:52, hp:60,  def:4,  dmg:8,  xp:500,  spd:60, loot:{ carne:[1,2,0.55], plata:[14,14,1], bronce:[1,2,0.35] }, gearLoot:[["casco_cuero",0.10],["escudo_madera",0.08]] },
-  lancero:  { label:"Orco Lancero",   emoji:"🔱", sprite:"lancero", size:58, hp:90,  def:6,  dmg:10, xp:800,  spd:70, loot:{ carne:[2,3,0.60], plata:[20,20,1], bronce:[1,3,0.40], flecha:[2,6,0.45] }, gearLoot:[["pechera_cuero",0.10]] },
-  guerrero: { label:"Orco Guerrero",  emoji:"👺", sprite:"guerrero", size:70, hp:115, def:8,  dmg:12, xp:1100, spd:65, loot:{ carne:[2,4,0.60], plata:[30,30,1], oro:[1,2,0.30] }, gearLoot:[["casco_hierro",0.10],["escudo_hierro",0.06]] },
-  troll:    { label:"Trol",           emoji:"🧌", sprite:"troll", size:74, hp:140, def:10, dmg:14, xp:1400, spd:45, loot:{ carne:[3,5,0.65], plata:[40,40,1], oro:[1,3,0.45], diamante:[1,1,0.12] }, gearLoot:[["pechera_hierro",0.15]] },
+  rata:     { label:"Rata",           emoji:"🐀", sprite:"rata", size:30, hp:12,  def:0,  dmg:2,  xp:100,  spd:55, lvl:1, loot:{ carne:[1,1,0.55], plata:[3,3,1] } },
+  larva:    { label:"Larva Venenosa", emoji:"🐛", sprite:"larva", size:38, hp:22,  def:1,  dmg:3,  xp:180,  spd:35, lvl:5, loot:{ carne:[1,2,0.50], plata:[5,5,1], flecha:[1,3,0.35] }, gearLoot:[["botas_cuero",0.08]] },
+  orco:     { label:"Orco",           emoji:"👹", sprite:"orc", size:52, hp:60,  def:4,  dmg:8,  xp:500,  spd:60, lvl:15, hab:"enrage", loot:{ carne:[1,2,0.55], plata:[14,14,1], bronce:[1,2,0.35] }, gearLoot:[["casco_cuero",0.10],["escudo_madera",0.08]] },
+  lancero:  { label:"Orco Lancero",   emoji:"🔱", sprite:"lancero", size:58, hp:90,  def:6,  dmg:10, xp:800,  spd:70, lvl:16, loot:{ carne:[2,3,0.60], plata:[20,20,1], bronce:[1,3,0.40], flecha:[2,6,0.45] }, gearLoot:[["pechera_cuero",0.10]] },
+  guerrero: { label:"Orco Guerrero",  emoji:"👺", sprite:"guerrero", size:70, hp:115, def:8,  dmg:12, xp:1100, spd:65, lvl:20, loot:{ carne:[2,4,0.60], plata:[30,30,1], oro:[1,2,0.30] }, gearLoot:[["casco_hierro",0.10],["escudo_hierro",0.06]] },
+  troll:    { label:"Trol",           emoji:"🧌", sprite:"troll", size:74, hp:140, def:10, dmg:14, xp:1400, spd:45, lvl:30, hab:"regen", loot:{ carne:[3,5,0.65], plata:[40,40,1], oro:[1,3,0.45], diamante:[1,1,0.12] }, gearLoot:[["pechera_hierro",0.15]] },
+  // --- Bestiario ampliado (doc maestro 2/8): 15 criaturas + jefe; hab = habilidad (Nv 8+ del doc) ---
+  murcielago: { label:"Murciélago", emoji:"🦇", size:26, hp:16, def:0, dmg:3, xp:130, spd:85, lvl:3, hab:"evade", evade:0.25, loot:{ plata:[4,4,1], carne:[1,1,0.35] } },
+  baba:       { label:"Baba", emoji:"🫧", size:36, hp:35, def:2, dmg:4, xp:250, spd:40, lvl:7, hab:"split", loot:{ plata:[7,7,1] } },
+  babita:     { label:"Babita", emoji:"🫧", size:22, hp:12, def:0, dmg:2, xp:50, spd:55, lvl:7, noRespawn:true, loot:{ plata:[2,2,1] } },
+  arana:      { label:"Araña", emoji:"🕷️", size:40, hp:45, def:2, dmg:6, xp:340, spd:75, lvl:10, hab:"web", loot:{ plata:[9,9,1], flecha:[1,3,0.3] } },
+  goblin:     { label:"Goblin", emoji:"👾", size:44, hp:52, def:3, dmg:7, xp:430, spd:70, lvl:12, hab:"bleedhit", loot:{ plata:[11,11,1], bronce:[1,1,0.25] } },
+  esqueleto:  { label:"Esqueleto Arquero", emoji:"💀", size:48, hp:55, def:3, dmg:12, xp:640, spd:60, lvl:18, hab:"curseArrow", range:150, loot:{ plata:[18,18,1], flecha:[2,6,0.5] } },
+  golem:      { label:"Golem de Piedra", emoji:"🗿", size:56, hp:120, def:13, dmg:10, xp:900, spd:35, lvl:22, hab:"golem", loot:{ plata:[24,24,1], piedra:[2,4,0.6], oro:[1,1,0.15] } },
+  hombre_lobo:{ label:"Hombre Lobo", emoji:"🐺", size:52, hp:130, def:6, dmg:16, xp:1300, spd:80, lvl:27, hab:"howl", loot:{ plata:[34,34,1], carne:[2,4,0.6] } },
+  ogro:       { label:"Ogro", emoji:"🧟", size:64, hp:190, def:12, dmg:19, xp:2000, spd:50, lvl:35, hab:"charge", loot:{ plata:[55,55,1], oro:[1,2,0.35] } },
+  espectro:   { label:"Espectro", emoji:"👻", size:50, hp:150, def:8, dmg:23, xp:2700, spd:70, lvl:40, hab:"phase", loot:{ plata:[70,70,1], diamante:[1,1,0.10] } },
+  demonio:    { label:"Demonio Menor", emoji:"😈", size:58, hp:250, def:16, dmg:27, xp:3900, spd:65, lvl:45, hab:"demon", loot:{ plata:[100,100,1], oro:[1,3,0.4], diamante:[1,1,0.15] } },
+  dragon:     { label:"Dragón de las Cavernas", emoji:"🐉", size:96, hp:900, def:28, dmg:42, xp:14000, spd:55, lvl:50, hab:"dragon", boss:true, loot:{ plata:[500,500,1], diamante:[1,3,0.8], netherita:[1,1,0.25] } },
 };
 // combate (detalles 338): auto-ataque cada 2s, alcance del arco 4 celdas
 const ATTACK_MS = 2000;

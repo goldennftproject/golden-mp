@@ -42,9 +42,13 @@ class ForestScene extends Phaser.Scene {
 
     // monstruos: tier según profundidad (x)
     this.monsters = [];
-    const zones = [
-      ["rata", 0.08, 0.30, 3], ["larva", 0.25, 0.45, 3], ["orco", 0.42, 0.62, 3],
-      ["lancero", 0.58, 0.75, 2], ["guerrero", 0.72, 0.88, 2], ["troll", 0.86, 0.97, 1],
+    const zones = [   // bestiario doc 2/8: tier I (entrada) → jefe (fondo)
+      ["rata", 0.06, 0.20, 2], ["murcielago", 0.10, 0.26, 2], ["larva", 0.18, 0.32, 2],
+      ["baba", 0.24, 0.38, 2], ["arana", 0.30, 0.44, 2],
+      ["goblin", 0.38, 0.52, 2], ["orco", 0.44, 0.58, 2], ["esqueleto", 0.50, 0.64, 2],
+      ["lancero", 0.54, 0.66, 1], ["golem", 0.58, 0.72, 1], ["guerrero", 0.64, 0.76, 1],
+      ["hombre_lobo", 0.68, 0.80, 1], ["troll", 0.74, 0.86, 1], ["ogro", 0.78, 0.88, 1],
+      ["espectro", 0.82, 0.92, 1], ["demonio", 0.87, 0.95, 1], ["dragon", 0.93, 0.985, 1],
     ];
     zones.forEach(([key, x0, x1, n]) => { for (let i = 0; i < n; i++) this.spawnMonster(key, x0, x1); });
 
@@ -311,12 +315,17 @@ class ForestScene extends Phaser.Scene {
     });
   }
 
+  mobDef(m) { return Math.round((m.def.def || 0) * (m.shellUntil && this.time.now < m.shellUntil ? 1.6 : 1)); }   // Caparazón del Golem
+
   hitMonster(m, dmg, skill) {
+    const tn = this.time.now;
+    if ((m.phaseUntil && tn < m.phaseUntil) || (m.blinkUntil && tn < m.blinkUntil)) { this.floatTxt(m, "Intangible", "#bfa8ff"); return; }   // Fase espectral / Parpadeo
     if (window.sfx) sfx("hit");
     let crit = false;
     if (dmg == null) {   // doc 2/8: Daño = máx(1; tirada del arma + nivel/2 − defensa efectiva) + buff del tipo
-      const roll = rollWeaponHit(m.def.def || 0);
+      const roll = rollWeaponHit(this.mobDef(m));
       if (!roll) return;
+      if (m.def.evade && ARM_DEF[roll.id].tipo !== "arco" && Math.random() < m.def.evade) { this.floatTxt(m, "Esquivó", "#a8d8ff"); return; }   // Vuelo evasivo (solo cuerpo a cuerpo)
       dmg = roll.dmg; crit = roll.crit;
       skill = armSkillKey(ARM_DEF[roll.id].tipo);
       if (roll.stun) { m.stunUntil = this.time.now + 2100; this.floatTxt(m, "Aturdido", "#ffd24a"); }   // pierde su próximo golpe
@@ -346,6 +355,116 @@ class ForestScene extends Phaser.Scene {
     if (m.hp <= 0) this.killMonster(m, skill || "sword"); else { this.drawBar(m); m.tgt = "hero"; this.updateTargetFx(); }
   }
 
+  // círculo de aviso en el piso (telegrafía: el jugador pierde por no reaccionar, no por azar — doc)
+  telegraph(x, y, r, ms, color) {
+    const c = this.add.circle(x, y, r, color || 0xff5544, 0.18).setStrokeStyle(2, color || 0xff5544, 0.85).setDepth(40);
+    this.tweens.add({ targets: c, alpha: 0.4, yoyo: true, repeat: Math.max(0, Math.floor(ms / 260) - 1), duration: 260 });
+    this.time.delayedCall(ms + 60, () => c.destroy());
+  }
+
+  floatHero(txt, color) {
+    const t = this.add.text(this.hero.x, this.hero.y - 58, txt, { fontFamily: "system-ui", fontSize: "12px", fontStyle: "bold", color, stroke: "#20301a", strokeThickness: 3 }).setOrigin(0.5, 1).setDepth(99999);
+    this.tweens.add({ targets: t, y: t.y - 16, alpha: 0, duration: 750, onComplete: () => t.destroy() });
+  }
+
+  applyState(type, val, durS, label) {
+    if (addPlayerState(type, val, durS, label)) { this.floatHero(label, type === "quemadura" ? "#ff8a4a" : (type === "veneno" ? "#8fd14f" : (type === "flaqueza" || type === "fragilidad" ? "#bfa8ff" : "#e05a5a"))); refreshHud(); }
+  }
+
+  // daño por segundo de sangrado/veneno/quemadura sobre el jugador
+  tickStates() {
+    if (!G.states || !G.states.length) return;
+    const now = Date.now();
+    for (const st of G.states) {
+      if (st.until < now) continue;
+      if ((st.type === "sangrado" || st.type === "veneno" || st.type === "quemadura") && now >= st.next) {
+        st.next = now + 1000;
+        G.hp = Math.max(0, G.hp - st.val);
+        this.floatHero("-" + st.val, st.type === "quemadura" ? "#ff8a4a" : (st.type === "veneno" ? "#8fd14f" : "#e05a5a"));
+        refreshHud();
+        if (G.hp <= 0) { this.hurtHero(0); return; }   // dispara la derrota estándar
+      }
+    }
+    G.states = G.states.filter(st => st.until > now);
+  }
+
+  // habilidades del bestiario (doc 2/8) — una por criatura, con telegrafía en las peligrosas
+  mobAbility(m, d, t, hero) {
+    switch (m.def.hab) {
+      case "web":   // Araña: telaraña venenosa (ralentiza + veneno acumulable)
+        if (d < 130 && t > (m.abAt || 0)) { m.abAt = t + 8000; this.applyState("ralen", 40, 3, "Telaraña"); this.applyState("veneno", 2, 4, "Veneno"); this.floatTxt(m, "Telaraña venenosa", "#8fd14f"); }
+        break;
+      case "enrage":   // Orco: bajo 40% de vida, +30% de daño (1 vez)
+        if (!m.enraged && m.hp < m.def.hp * 0.4) { m.enraged = true; m.dmgMult = 1.3; if (m.spr.setTint) m.spr.setTint(0xffb0a0); this.floatTxt(m, "¡Enfurecido!", "#ff5544"); }
+        break;
+      case "regen":   // Trol: +2% de su vida por segundo
+        if (!m.dead && m.hp < m.def.hp && t > (m.abAt || 0)) { m.abAt = t + 1000; m.hp = Math.min(m.def.hp, m.hp + m.def.hp * 0.02); this.drawBar(m); }
+        break;
+      case "howl":   // Hombre Lobo: aullido (-25% daño del jugador)
+        if (d < 170 && t > (m.abAt || 0)) { m.abAt = t + 12000; this.applyState("flaqueza", 25, 5, "Maldición de Flaqueza"); this.floatTxt(m, "Aullido aterrador", "#bfa8ff"); }
+        break;
+      case "golem":   // Golem: Caparazón (+60% def propia) y Pisotón en área
+        if (t > (m.shellAt || 0)) { m.shellAt = t + 12000; m.shellUntil = t + 5000; this.floatTxt(m, "Caparazón", "#a8d8ff"); if (m.spr.setTint) { m.spr.setTint(0xb8ccd8); this.time.delayedCall(5000, () => { if (m.spr.clearTint && !m.enraged) m.spr.clearTint(); }); } }
+        if (d < 80 && t > (m.stompAt || 0)) {
+          m.stompAt = t + 9000; this.telegraph(m.cx, m.by, 85, 500, 0xd8b04a);
+          this.time.delayedCall(500, () => { if (!m.dead && !this.leaving && Math.hypot(this.hero.x - m.cx, this.hero.y - m.by) < 85) { this.hurtHero(8); this.floatTxt(m, "Pisotón", "#d8b04a"); } });
+        }
+        break;
+      case "charge":   // Ogro: embestida telegrafiada (x2 daño + sangrado fuerte)
+        if (m.chargeAt && t >= m.chargeAt) {
+          m.chargeAt = 0; if (m.spr.clearTint) m.spr.clearTint();
+          if (d < 95) { this.hurtHero(m.def.dmg * 2); this.applyState("sangrado", 5, 4, "Sangrado"); this.floatTxt(m, "¡Embestida!", "#ff5544"); }
+        } else if (!m.chargeAt && d > 60 && d < 220 && t > (m.abAt || 0)) {
+          m.abAt = t + 10000; m.chargeAt = t + 600;
+          if (m.spr.setTint) m.spr.setTint(0xffaa66);
+          this.telegraph(hero.x, hero.y, 48, 600, 0xff5544);
+        }
+        break;
+      case "phase":   // Espectro: fase espectral (intangible 1,5 s)
+        if (d < 120 && t > (m.abAt || 0)) { m.abAt = t + 9000; m.phaseUntil = t + 1500; m.spr.setAlpha(0.35); this.time.delayedCall(1500, () => { if (!m.dead) m.spr.setAlpha(1); }); this.floatTxt(m, "Fase espectral", "#bfa8ff"); }
+        break;
+      case "demon": {   // Demonio Menor: llamarada (área + quemadura) y maldición (-def)
+        if (d < 120 && t > (m.flameAt || 0)) {
+          m.flameAt = t + 8000; this.telegraph(hero.x, hero.y, 55, 450, 0xff8a4a);
+          this.time.delayedCall(450, () => { if (!m.dead && !this.leaving && Math.hypot(this.hero.x - m.cx, this.hero.y - m.by) < 150) { this.hurtHero(20); this.applyState("quemadura", 4, 4, "Quemadura"); this.floatTxt(m, "Llamarada", "#ff8a4a"); } });
+        }
+        if (d < 200 && t > (m.curseAt || 0)) { m.curseAt = t + 12000; this.applyState("fragilidad", 20, 5, "Maldición de Fragilidad"); }
+        break;
+      }
+      case "dragon": {   // JEFE: kit por fases (doc)
+        const cdm = m.enraged ? 0.7 : 1;
+        if (!m.enraged && m.hp < m.def.hp * 0.25) { m.enraged = true; m.dmgMult = 1.25; if (m.spr.setTint) m.spr.setTint(0xff9a7a); this.floatTxt(m, "¡ENFURECIDO!", "#ff5544"); }
+        if (m.blinkUntil && t < m.blinkUntil) return;   // ausente
+        if (d < 320 && t > (m.blinkAt || 0)) {   // Parpadeo Sombrío: desaparece 1 s y cae en área
+          m.blinkAt = t + 14000 * cdm;
+          const zx = hero.x, zy = hero.y;
+          m.blinkUntil = t + 1000; m.spr.setVisible(false); m.bar.clear();
+          this.telegraph(zx, zy, 75, 1000, 0xb44aff);
+          this.time.delayedCall(1000, () => {
+            if (m.dead || this.leaving) return;
+            m.cx = zx; m.by = zy; m.spr.setPosition(zx, zy).setVisible(true).setDepth(zy);
+            if (Math.hypot(this.hero.x - zx, this.hero.y - zy) < 75) this.hurtHero(45);
+            this.floatTxt(m, "Parpadeo Sombrío", "#b44aff"); this.drawBar(m);
+          });
+          return;
+        }
+        if (d < 140 && t > (m.breathAt || 0)) {   // Aliento de Fuego
+          m.breathAt = t + 8000 * cdm; this.telegraph(hero.x, hero.y, 60, 450, 0xff8a4a);
+          this.time.delayedCall(450, () => { if (!m.dead && !this.leaving && Math.hypot(this.hero.x - m.cx, this.hero.y - m.by) < 170) { this.hurtHero(30); this.applyState("quemadura", 6, 5, "Quemadura"); this.floatTxt(m, "Aliento de Fuego", "#ff8a4a"); } });
+          return;
+        }
+        if (d < 420 && t > (m.roarAt || 0)) { m.roarAt = t + 18000 * cdm; this.applyState("flaqueza", 20, 6, "Maldición de Flaqueza"); this.floatTxt(m, "Rugido del Núcleo", "#ffd24a"); return; }
+        if (d < 70 && t > (m.tailAt || 0)) {   // Cola barredora con empuje
+          m.tailAt = t + 10000 * cdm; this.hurtHero(28);
+          const dx = this.hero.x - m.cx, dy = this.hero.y - m.by, dd = Math.hypot(dx, dy) || 1;
+          this.hero.x += dx / dd * 60; this.hero.y += dy / dd * 60;
+          this.floatTxt(m, "Cola barredora", "#ffd24a");
+        }
+        break;
+      }
+    }
+  }
+
   floatTxt(m, txt, color) {
     const t = this.add.text(m.cx, m.by - (m.spr.displayHeight || m.spr.height) - 6, txt,
       { fontFamily: "system-ui", fontSize: "11px", fontStyle: "bold", color, stroke: "#20301a", strokeThickness: 3 }).setOrigin(0.5, 1).setDepth(99999);
@@ -354,6 +473,14 @@ class ForestScene extends Phaser.Scene {
 
   killMonster(m, skill) {
     m.dead = true; m.bar.clear();
+    if (m.def.hab === "split") {   // División: al morir se parte en 2 (doc)
+      for (let i = 0; i < 2; i++) {
+        const b = this.spawnMonster("babita", 0, 0);
+        b.cx = m.cx + (i ? 26 : -26); b.by = m.by + 6; b.home = { x: b.cx, y: b.by };
+        b.spr.setPosition(b.cx, b.by).setDepth(b.by); b.tgt = "hero"; this.drawBar(b);
+      }
+      this.floatTxt(m, "¡Se divide!", "#8fd14f");
+    }
     addXp(skill || "sword", Math.round(m.def.xp * combatXpMult()));
     addCombatXp(m.def.xp);                                   // barra de Combate global (doc maestro)
     this.floatTxt(m, "+" + m.def.xp + " XP", "#ffd75e");     // feedback por kill hacia la barra
@@ -369,8 +496,9 @@ class ForestScene extends Phaser.Scene {
     toast("" + m.def.label + " " + (parts.length ? " " + parts.join(" ") : ""));
     refreshHud();
     this.tweens.add({ targets: m.spr, alpha: 0, y: m.by - 12, duration: 400, onComplete: () => m.spr.setVisible(false) });
-    // reaparece en su zona tras 25-40s
-    this.time.delayedCall(25000 + Math.random() * 15000, () => {
+    // reaparece en su zona tras 25-40s (las babitas no; el jefe tarda 3 min)
+    if (m.def.noRespawn) return;
+    this.time.delayedCall((m.def.boss ? 180000 : 25000) + Math.random() * 15000, () => {
       if (!this.scene || !this.scene.isActive()) return;
       m.hp = m.def.hp; m.dead = false; m.cx = m.home.x; m.by = m.home.y;
       m.spr.setPosition(m.cx, m.by).setAlpha(1).setVisible(true).setDepth(m.by); m.tgt = null;
@@ -380,7 +508,7 @@ class ForestScene extends Phaser.Scene {
   }
 
   hurtHero(dmg) {
-    dmg = Math.max(1, Math.round((dmg - gearDefTotal()) * dmgTakenMult()));   // armaduras absorben + buff de defensa de la comida
+    dmg = Math.max(1, Math.round((dmg - gearDefTotal() * (1 - playerDefLossMult())) * dmgTakenMult()));   // armadura (menos Fragilidad) + buff de comida
     G.hp = Math.max(0, G.hp - dmg);
     this.hurtFx = 0.18;
     refreshHud();
@@ -407,6 +535,7 @@ class ForestScene extends Phaser.Scene {
     if (this.target && this.target.dead) this.clearTarget();
     this.updateTargetFx();
     this.autoAttack(t);
+    if (t > (this._stAt || 0)) { this._stAt = t + 300; this.tickStates(); }
     this.tryPickup(hero.x, hero.y, 24);   // recoger el loot del piso al pasar por encima
     if (this.hold && this.hold.active && this.holdPend && t - (this.holdAt || 0) > 130) { const hp = this.holdPend; this.holdPend = null; this.holdSeek(hp.x, hp.y); }
     if (!this.moveTarget && this.destMk && this.destMk.visible) this.hideDest();
@@ -460,7 +589,7 @@ class ForestScene extends Phaser.Scene {
     const moving = !!(vx || vy);
     if (moving) {
       const m = Math.hypot(vx, vy); vx /= m; vy /= m;
-      const step = GF.SPEED * speedMult() * dt, nx = hero.x + vx * step, ny = hero.y + vy * step;
+      const step = GF.SPEED * speedMult() * playerSlowMult() * dt, nx = hero.x + vx * step, ny = hero.y + vy * step;
       let moved = false;
       if (!this.blockedAt(nx, ny, 6)) { hero.x = nx; hero.y = ny; moved = true; }
       else { if (vx && !this.blockedAt(nx, hero.y, 6)) { hero.x = nx; moved = true; } if (vy && !this.blockedAt(hero.x, ny, 6)) { hero.y = ny; moved = true; } }
@@ -512,9 +641,10 @@ class ForestScene extends Phaser.Scene {
       const dHero = Math.hypot(hero.x - m.cx, hero.y - m.by);
       const aggro = m.hp < m.def.hp || dHero < 110;   // te vio o lo golpeaste
       let moved = false;
-      if (aggro && dHero > 36) {
+      const stopD = m.def.range ? Math.max(36, m.def.range - 40) : 36;   // el arquero pelea a distancia
+      if (aggro && dHero > stopD) {
         const dx = hero.x - m.cx, dy = hero.y - m.by, d = Math.hypot(dx, dy) || 1;
-        const sp = Math.min(m.def.spd * dt, d - 36);   // viernes (2): frena al borde de tu celda, nunca la pisa
+        const sp = Math.min(m.def.spd * dt, d - stopD);   // viernes (2): frena al borde de tu celda, nunca la pisa
         m.cx += dx / d * sp; m.by += dy / d * sp; moved = true;
       } else if (aggro && dHero < 28) {
         // quedó encima (spawn/empuje): se corre hacia atrás hasta dejar tu celda
@@ -530,13 +660,21 @@ class ForestScene extends Phaser.Scene {
       if (m.bleed && t < m.bleed.until) {
         if (t >= m.bleed.next) { m.bleed.next = t + 1000; m.hp -= m.bleed.dps; this.floatTxt(m, "-" + m.bleed.dps, "#e05a5a"); this.drawBar(m); if (m.hp <= 0) { this.killMonster(m, "range"); continue; } }
       } else if (m.bleed) m.bleed = null;
-      // ataque al héroe (aturdido por el mazo = pierde el golpe)
+      // ataque al héroe (aturdido por el mazo = pierde el golpe) + habilidades del bestiario
       if (m.stunUntil && t < m.stunUntil) { /* aturdido */ }
-      else if (dHero < 40 && t > m.nextHit) {
-        m.nextHit = t + 2000; m.face = hero.x < m.cx ? -1 : 1;   // detalles viernes (1): los mobs atacan cada 2 segundos
-        this.hurtHero(m.def.dmg);
-        if (m.def.sprite) { this.playMob(m, "atk", true); m.atkUntil = t + 600; }
+      else {
+        this.mobAbility(m, dHero, t, hero);
         if (this.leaving) return;
+        const atkRange = (m.def.range || 40);
+        if (dHero < atkRange && t > m.nextHit && !(m.blinkUntil && t < m.blinkUntil)) {
+          m.nextHit = t + 2000; m.face = hero.x < m.cx ? -1 : 1;   // detalles viernes (1): los mobs atacan cada 2 segundos
+          this.hurtHero(Math.round(m.def.dmg * (m.dmgMult || 1)));
+          if (m.def.hab === "bleedhit" && Math.random() < 0.4) this.applyState("sangrado", 3, 3, "Sangrado");   // Corte sucio
+          if (m.def.hab === "phase") this.applyState("ralen", 30, 3, "Ralentización");                          // toque espectral
+          if (m.def.hab === "curseArrow" && t > (m.abAt || 0)) { m.abAt = t + 10000; this.applyState("fragilidad", 25, 6, "Maldición de Fragilidad"); this.floatTxt(m, "Flecha maldita", "#bfa8ff"); }
+          if (m.def.sprite) { this.playMob(m, "atk", true); m.atkUntil = t + 600; }
+          if (this.leaving) return;
+        }
       }
       m.spr.setPosition(m.cx, m.by).setDepth(m.by);
       // MISMA lógica que el granjero: mira según hacia dónde CAMINA, no según dónde estés vos.
