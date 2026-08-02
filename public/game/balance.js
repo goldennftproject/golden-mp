@@ -29,14 +29,12 @@ var BAL = (function () {
     // CULTIVOS (tabla del diseñador)
     CROP_ORDER.forEach(k => {
       const c = CROP_DEF[k], cat = "Cultivos — " + c.label;
-      add(cat, "crop." + k + ".growH", "Tiempo de crecimiento (tiempo real de la tabla)", "", () => c.growH * 3600, v => { c.growH = v / 3600; }, 1, "tiempo");
+      add(cat, "crop." + k + ".growH", "Tiempo de crecimiento (lo que se escribe acá es lo que dura en el juego)", "", () => c.growH * 3600, v => { c.growH = v / 3600; }, 1, "tiempo");
       obj(cat, "crop." + k, c, "seedCost", "Compra de la semilla", U.plata);
       obj(cat, "crop." + k, c, "price", "Venta de la cosecha (por unidad)", U.plata);
       obj(cat, "crop." + k, c, "yield", "Unidades por cosecha", U.cant);
       obj(cat, "crop." + k, c, "lvl", "Nivel de Cultivo requerido", U.nivel);
     });
-    add("Cultivos — General", "growScale", "Velocidad de testeo: cuánto dura en el juego 1 hora de la tabla", "minutos · 60 = tiempo real · 1 = testeo rápido",
-      () => GROW_SCALE * 60, v => { GROW_SCALE = v / 60; }, 0.5);
     add("Cultivos — General", "seedDailyMax", "Cupo diario de compra de semillas", "semillas por día · entero", () => SEED_DAILY_MAX, v => { SEED_DAILY_MAX = v; });
     add("Cultivos — General", "plotUnlockBase", "Desbloquear parcela: costo base (se duplica a partir de la 7ª)", U.plata,
       () => PLOT_UNLOCK_BASE, v => { PLOT_UNLOCK_BASE = v; });

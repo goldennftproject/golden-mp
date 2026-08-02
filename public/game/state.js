@@ -63,7 +63,7 @@ function resSprite(k) { return CROP_DEF[k] ? "crop_" + k : (RES_SPRITE[k] || nul
 const CROP_ORDER = ["papa","zanahoria","cebolla","calabacin","repollo","calabaza","brocoli"];
 // TABLA DE PRECIOS del diseñador (31/7): Ganancia = Tiempo × Riesgo × Nivel. Papa base: compra 1 / venta 3 / 1h.
 // growH = horas reales de la tabla. En TESTEO corre comprimido: 1h → 1min (GROW_SCALE). Para pasar a real: GROW_SCALE = 1.
-var GROW_SCALE = 1 / 60;
+var GROW_SCALE = 1;   // 2/8: FUERA la compresión de testeo — el tiempo que se pone en balance.html es el tiempo real del juego
 const CROP_DEF = {
   papa:      { label:"Papa",      emoji:"🥔", lvl:1, seedCost:1,  growH:1,  yield:1, price:3 },
   zanahoria: { label:"Zanahoria", emoji:"🥕", lvl:2, seedCost:3,  growH:2,  yield:1, price:8 },
