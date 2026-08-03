@@ -576,7 +576,7 @@ function refreshCooking() {
     if (r.res) for (const k in r.res) parts.push(resIc(k) + " ×" + r.res[k]);
     const fic = r.sprite ? '<img src="' + GF.spr(r.sprite) + '" onerror="this.outerHTML=\'' + r.emoji + '\'">' : r.emoji;
     const own = Math.floor((G.dishes && G.dishes[id]) || 0);
-    const vPlata = Math.round((r.plata || 0) * cookPot(r.lvl));
+    const vPlata = Math.round(dishPrice(r) * cookPot(r.lvl));
     let btns = '<button class="green sm" ' + ((!locked && canCook(id) && !G.cooking) ? "" : "disabled") + ' data-cook="' + id + '">' + (locked ? "Nivel " + r.lvl : "Cocinar") + '</button>';
     if (own > 0 && r.plata) btns += '<button class="sm" data-selld="' + id + '">Vender (' + own + ') · ' + vPlata + ' plata</button>';
     if (own > 0 && r.goldenP && lvl >= 8) btns += '<button class="sm" data-sellg="' + id + '">Vender · ' + r.goldenP + ' $G</button>';

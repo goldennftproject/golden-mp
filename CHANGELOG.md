@@ -344,6 +344,12 @@ Registro cronológico de todo lo hecho desde el inicio del proyecto (27 de julio
 
 ---
 
+### Cocina: se cierra la "impresora de plata" (3/8, reporte del diseñador)
+- **El problema**: la Papa Asada tenía precio FIJO de la planilla (5 plata) mientras la papa cruda valía 3 → cada papa cocinada regalaba +2 sin costo. Y al revés, con los precios del doc de farmeo (papa 21) el mismo plato se vendía a 5, o sea cocinar daba pérdida. Las dos planillas del diseñador (cultivos y cocina) estaban hechas con economías distintas.
+- **Leña en las 14 recetas** (como ya regía antes): 1 madera las simples, 2 las medias, 3 las grandes. Cocinar ahora consume un recurso limitado por los enfriamientos de los árboles.
+- **Precio de venta calculado sobre los ingredientes**: precio = valor de lo que lleva × 1,25 (+25% por cocinar), y encima la maestría del cocinero (hasta +50%). Así el margen es siempre razonable **sin importar qué precios les ponga el diseñador a los cultivos** — no se puede volver a romper.
+- Todo editable en el panel: se puede volver a los precios fijos de la planilla (`Precio de venta de los platos = 0`) y ajustar el margen del cocinero.
+
 ### Guía de objetivos ampliada a 34 pasos (3/8)
 - La cadena guiada dejó de ser solo el arranque: ahora **recorre TODO el juego** para que el jugador descubra cada sistema jugando, no leyendo.
 - **Etapa 1 (1-10)** — el loop básico: plantar, cosechar, vender, comprar semillas, replantar, juntar los materiales del Horno, construirlo y craftear el Hacha.

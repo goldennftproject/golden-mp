@@ -968,20 +968,20 @@ const RECIPE_ORDER = [
   "guiso_campestre", "pan_maiz_trigo", "estofado_cosecha", "banquete_bosque",
   "pescado_asado", "estofado", "banquete"];
 const RECIPE_DEF = {
-  papa_asada:         { label:"Papa Asada",             emoji:"🥔", sprite:"dish_papa_asada", res:{papa:1},                                        lvl:1,  heal:10, buff:{type:"farm",    val:5},  cookS:6,  xp:8,  plata:5 },
-  pure_papa:          { label:"Puré de Papa",           emoji:"🥣", sprite:"dish_pure_papa", res:{papa:2, cebolla:1},                             lvl:2,  heal:13, buff:{type:"regen",   val:2},  cookS:8,  xp:10, plata:12 },
-  sopa_zanahoria:     { label:"Sopa de Zanahoria",      emoji:"🍜", sprite:"dish_sopa_zanahoria", res:{zanahoria:2, cebolla:1},                        lvl:2,  heal:15, buff:{type:"speed",   val:8},  cookS:8,  xp:10, plata:14 },
-  ensalada_repollo:   { label:"Ensalada de Repollo",    emoji:"🥗", sprite:"dish_ensalada_repollo", res:{repollo:2, zanahoria:1},                        lvl:3,  heal:17, buff:{type:"def",     val:6},  cookS:10, xp:14, plata:18 },
-  calabacin_salteado: { label:"Calabacín Salteado",     emoji:"🥒", sprite:"dish_calabacin_salteado", res:{calabacin:2, cebolla:1},                        lvl:3,  heal:18, buff:{type:"dmg",     val:6},  cookS:10, xp:14, plata:20 },
-  pan_trigo:          { label:"Pan de Trigo",           emoji:"🍞", sprite:"dish_pan_trigo", res:{trigo:3},                                       lvl:4,  heal:20, buff:{type:"cookxp",  val:10}, cookS:12, xp:18, plata:22 },
-  salteado_brocoli:   { label:"Salteado de Brócoli",    emoji:"🥦", sprite:"dish_salteado_brocoli", res:{brocoli:2, calabacin:1},                        lvl:5,  heal:23, buff:{type:"farm",    val:10}, cookS:12, xp:22, plata:28 },
-  crema_calabaza:     { label:"Crema de Calabaza",      emoji:"🎃", sprite:"dish_crema_calabaza", res:{calabaza:2, cebolla:1},                         lvl:5,  heal:25, buff:{type:"def",     val:10}, cookS:14, xp:24, plata:32 },
-  tortilla_maiz:      { label:"Tortilla de Maíz",       emoji:"🌽", sprite:"dish_tortilla_maiz", res:{maiz:2, cebolla:1},                             lvl:6,  heal:27, buff:{type:"dmg",     val:10}, cookS:14, xp:28, plata:38 },
-  aceite_girasol:     { label:"Aceite de Girasol",      emoji:"🌻", sprite:"dish_aceite_girasol", res:{girasol:3},                                     lvl:6,  heal:18, buff:{type:"luck",    val:10}, cookS:14, xp:26, plata:40 },
-  guiso_campestre:    { label:"Guiso Campestre",        emoji:"🍲", sprite:"dish_guiso_campestre", res:{papa:1, zanahoria:1, repollo:1, cebolla:1},     lvl:7,  heal:31, buff:{type:"combatxp",val:12}, cookS:16, xp:34, plata:55 },
-  pan_maiz_trigo:     { label:"Pan de Maíz y Trigo",    emoji:"🥖", sprite:"dish_pan_maiz_trigo", res:{trigo:2, maiz:2},                               lvl:8,  heal:34, buff:{type:"hpmax",   val:20}, cookS:16, xp:42, plata:80,  goldenP:1 },
-  estofado_cosecha:   { label:"Estofado de la Cosecha", emoji:"🥘", sprite:"dish_estofado_cosecha", res:{calabaza:2, maiz:1, papa:1, zanahoria:1},       lvl:9,  heal:37, buff:{type:"dmg",     val:15}, cookS:18, xp:52, plata:110, goldenP:2 },
-  banquete_bosque:    { label:"Banquete del Bosque",    emoji:"🍱", sprite:"dish_banquete_bosque", res:{papa:1, zanahoria:1, repollo:1, brocoli:1, calabaza:1}, lvl:10, heal:40, buff:{type:"feast", val:20}, cookS:20, xp:70, plata:180, goldenP:4 },
+  papa_asada:         { label:"Papa Asada",             emoji:"🥔", sprite:"dish_papa_asada", res:{papa:1, madera:1},                                        lvl:1,  heal:10, buff:{type:"farm",    val:5},  cookS:6,  xp:8,  plata:5 },
+  pure_papa:          { label:"Puré de Papa",           emoji:"🥣", sprite:"dish_pure_papa", res:{papa:2, cebolla:1, madera:1},                             lvl:2,  heal:13, buff:{type:"regen",   val:2},  cookS:8,  xp:10, plata:12 },
+  sopa_zanahoria:     { label:"Sopa de Zanahoria",      emoji:"🍜", sprite:"dish_sopa_zanahoria", res:{zanahoria:2, cebolla:1, madera:1},                        lvl:2,  heal:15, buff:{type:"speed",   val:8},  cookS:8,  xp:10, plata:14 },
+  ensalada_repollo:   { label:"Ensalada de Repollo",    emoji:"🥗", sprite:"dish_ensalada_repollo", res:{repollo:2, zanahoria:1, madera:1},                        lvl:3,  heal:17, buff:{type:"def",     val:6},  cookS:10, xp:14, plata:18 },
+  calabacin_salteado: { label:"Calabacín Salteado",     emoji:"🥒", sprite:"dish_calabacin_salteado", res:{calabacin:2, cebolla:1, madera:1},                        lvl:3,  heal:18, buff:{type:"dmg",     val:6},  cookS:10, xp:14, plata:20 },
+  pan_trigo:          { label:"Pan de Trigo",           emoji:"🍞", sprite:"dish_pan_trigo", res:{trigo:3, madera:2},                                       lvl:4,  heal:20, buff:{type:"cookxp",  val:10}, cookS:12, xp:18, plata:22 },
+  salteado_brocoli:   { label:"Salteado de Brócoli",    emoji:"🥦", sprite:"dish_salteado_brocoli", res:{brocoli:2, calabacin:1, madera:2},                        lvl:5,  heal:23, buff:{type:"farm",    val:10}, cookS:12, xp:22, plata:28 },
+  crema_calabaza:     { label:"Crema de Calabaza",      emoji:"🎃", sprite:"dish_crema_calabaza", res:{calabaza:2, cebolla:1, madera:2},                         lvl:5,  heal:25, buff:{type:"def",     val:10}, cookS:14, xp:24, plata:32 },
+  tortilla_maiz:      { label:"Tortilla de Maíz",       emoji:"🌽", sprite:"dish_tortilla_maiz", res:{maiz:2, cebolla:1, madera:2},                             lvl:6,  heal:27, buff:{type:"dmg",     val:10}, cookS:14, xp:28, plata:38 },
+  aceite_girasol:     { label:"Aceite de Girasol",      emoji:"🌻", sprite:"dish_aceite_girasol", res:{girasol:3, madera:2},                                     lvl:6,  heal:18, buff:{type:"luck",    val:10}, cookS:14, xp:26, plata:40 },
+  guiso_campestre:    { label:"Guiso Campestre",        emoji:"🍲", sprite:"dish_guiso_campestre", res:{papa:1, zanahoria:1, repollo:1, cebolla:1, madera:3},     lvl:7,  heal:31, buff:{type:"combatxp",val:12}, cookS:16, xp:34, plata:55 },
+  pan_maiz_trigo:     { label:"Pan de Maíz y Trigo",    emoji:"🥖", sprite:"dish_pan_maiz_trigo", res:{trigo:2, maiz:2, madera:3},                               lvl:8,  heal:34, buff:{type:"hpmax",   val:20}, cookS:16, xp:42, plata:80,  goldenP:1 },
+  estofado_cosecha:   { label:"Estofado de la Cosecha", emoji:"🥘", sprite:"dish_estofado_cosecha", res:{calabaza:2, maiz:1, papa:1, zanahoria:1, madera:3},       lvl:9,  heal:37, buff:{type:"dmg",     val:15}, cookS:18, xp:52, plata:110, goldenP:2 },
+  banquete_bosque:    { label:"Banquete del Bosque",    emoji:"🍱", sprite:"dish_banquete_bosque", res:{papa:1, zanahoria:1, repollo:1, brocoli:1, calabaza:1, madera:3}, lvl:10, heal:40, buff:{type:"feast", val:20}, cookS:20, xp:70, plata:180, goldenP:4 },
   // clásicas (siguen dándole uso al pescado y la carne)
   pescado_asado: { label:"Pescado asado", emoji:"🐟", sprite:"dish_pescado_asado", fish:{comun:1}, res:{madera:1}, lvl:1,
     heal:30, buff:{type:"yield",label:"Cosecha +10%",mult:1.10,dur:90}, cookS:8, xp:8, plata:15,
@@ -998,6 +998,21 @@ var COOK_LVLS = [0, 0, 30, 80, 160, 300, 520, 850, 1300, 1900, 2700];
 function cookLevelFromXp(xp) { let l = 1; for (let i = 2; i < COOK_LVLS.length; i++) if (xp >= COOK_LVLS[i]) l = i; return Math.min(10, l); }
 function cookLevel() { return cookLevelFromXp(G.skills.cooking || 0); }
 function cookPot(rlvl) { return Math.min(1.5, 1 + 0.02 * Math.max(0, cookLevel() - (rlvl || 1))); }   // Potencia = 1 + 2% por nivel sobre la receta, tope +50%
+// ANTI "impresora de plata" (3/8): cocinar no puede valer más que sus ingredientes + un margen.
+// Con COOK_PRICE_AUTO=1 el precio sale de lo que costó el plato, así el balance no se rompe
+// aunque el diseñador cambie los precios de los cultivos. Con 0 manda la tabla del doc.
+var COOK_PRICE_AUTO = 1;     // 1 = precio calculado sobre ingredientes · 0 = precio fijo de la planilla
+var COOK_MARGEN = 1.25;      // ganancia de cocinar sobre el valor de los ingredientes (+25%)
+function dishValue(r) {      // cuánto valen los ingredientes de un plato
+  let v = 0;
+  if (r.res) for (const k in r.res) v += priceOf(k) * r.res[k];
+  if (r.fish) for (const k in r.fish) v += (FISH_PRICE && FISH_PRICE[k] ? FISH_PRICE[k] : 25) * r.fish[k];
+  return v;
+}
+function dishPrice(r) {      // precio base de venta (antes de la maestría)
+  if (!COOK_PRICE_AUTO) return r.plata || 0;
+  return Math.max(1, Math.round(dishValue(r) * COOK_MARGEN));
+}
 function dishBuffLabel(b, pot) {
   const v = Math.round((b.val || 0) * (pot || 1));
   switch (b.type) {
@@ -1077,7 +1092,7 @@ function sellDish(id, gold) {
   if (gold && !(r.goldenP && cookLevel() >= 8)) { toast("La venta en $Golden se desbloquea con Cocina nivel 8"); return; }
   G.dishes[id]--;
   if (gold) { G.golden += r.goldenP; log("Vendiste " + r.label + " por " + r.goldenP + " $Golden.", "gold"); toast("+" + r.goldenP + " $Golden"); }
-  else { const v = Math.round((r.plata || 0) * cookPot(r.lvl)); G.plata += v; log("Vendiste " + r.label + " por " + v + " de plata.", "gold"); toast("+" + v + " de plata"); }
+  else { const v = Math.round(dishPrice(r) * cookPot(r.lvl)); G.plata += v; log("Vendiste " + r.label + " por " + v + " de plata.", "gold"); toast("+" + v + " de plata"); }
   refreshHud(); if (typeof syncSlots === "function") syncSlots(); if (isOpen("ov-inv")) refreshInv();
   if (typeof refreshCooking === "function" && isOpen("ov-cocina")) refreshCooking();
 }
