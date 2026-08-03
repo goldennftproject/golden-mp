@@ -151,7 +151,7 @@ function invCellClick(i) {
   else if (d.kind === "arm") {   // clic = EQUIPAR (para tirarla, la papelera). Antes se borraba de una: bug reportado
     if (!(G.weapons && G.weapons[d.key])) return;
     if (G.gear.arma === d.key) { G.gear.arma = null; toast("Guardaste " + ((ARM_DEF[d.key] || {}).label || "el arma")); }
-    else { G.gear.arma = d.key; toast(((ARM_DEF[d.key] || {}).label || "Arma") + " equipada"); }
+    else { G.gear.arma = d.key; toast(((ARM_DEF[d.key] || {}).label || "Arma") + " equipada"); if (typeof tutoEvent === "function") tutoEvent("equiparm"); }
     if (typeof applyCombatHp === "function") applyCombatHp();
     refreshHud();
     if (isOpen("ov-equip")) refreshEquip(); if (isOpen("ov-forge")) refreshForge();
@@ -498,7 +498,7 @@ function refreshForge() {
   card.querySelectorAll("[data-ctool5]").forEach(b => b.onclick = () => craftTool(b.dataset.ctool5, 5));
   card.querySelectorAll("[data-carm]").forEach(b => b.onclick = () => craftWeapon(b.dataset.carm));
   card.querySelectorAll("[data-rarm]").forEach(b => b.onclick = () => repairWeapon(b.dataset.rarm));
-  card.querySelectorAll("[data-eqarm]").forEach(b => b.onclick = () => { G.gear.arma = b.dataset.eqarm; toast(ARM_DEF[b.dataset.eqarm].label + " equipada"); if (typeof applyCombatHp === "function") applyCombatHp(); refreshHud(); refreshForge(); if (typeof syncSlots === "function") syncSlots(); if (typeof saveFarm === "function") saveFarm(); });
+  card.querySelectorAll("[data-eqarm]").forEach(b => b.onclick = () => { G.gear.arma = b.dataset.eqarm; toast(ARM_DEF[b.dataset.eqarm].label + " equipada"); if (typeof tutoEvent === "function") tutoEvent("equiparm"); if (typeof applyCombatHp === "function") applyCombatHp(); refreshHud(); refreshForge(); if (typeof syncSlots === "function") syncSlots(); if (typeof saveFarm === "function") saveFarm(); });
   const fa = $("forge-arrows"); if (fa) fa.onclick = () => craftArrows();
   const fa5 = $("forge-arrows5"); if (fa5) fa5.onclick = () => craftLote(craftArrows, null, 5);
   const fc = $("forge-chest"); if (fc) fc.onclick = () => craftChest();

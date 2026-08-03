@@ -202,6 +202,7 @@ function craftMat(id) {
   payCost(md.cost); G.res[id] = (G.res[id] || 0) + 1;
   G.matCd[id] = nowMs() + MAT_CD_MS;
   addXp("crafting", 3); log("Fundiste 1 " + md.label + " en el Horno.", "good"); toast("+1 " + md.label);
+  if (typeof tutoEvent === "function") tutoEvent("mat");
   if (typeof refreshHorno === "function" && isOpen("ov-horno")) refreshHorno();
   if (isOpen("ov-inv")) refreshInv(); refreshHud();
 }
@@ -349,7 +350,7 @@ function craftPick(id) {
   G.picks.owned[id] = true; G.picks.dur[id] = pickCount(id) + 1;
   if (first || !G.picks.eq) G.picks.eq = id;
   addXp("crafting", 10 + pd.tier * 4);
-  if (typeof tutoEvent === "function") tutoEvent("crafttool");
+  if (typeof tutoEvent === "function") { tutoEvent("crafttool"); tutoEvent("craftpick"); }
   log("Crafteaste " + pd.label + " (tenés " + G.picks.dur[id] + ").", "gold"); toast("+1 " + pd.label);
   forgeWork(); refreshForge(); refreshInv(); refreshHud(); syncSlots(); if (typeof refreshHotbar === "function") refreshHotbar();
 }
@@ -401,11 +402,40 @@ const TUTO_STEPS = [
     txt: "Juntá # de madera talando árboles (para el Horno)",                      target: "tree" },
   { id: "stone", res: "piedra", need: () => BUILD_DEF.horno.cost.piedra || 8,
     txt: "Juntá # de piedra picando rocas (para el Horno)",                        target: "rock" },
-  { id: "build",     n: 1, txt: "Ya tenés los materiales: construí el Horno de Piedra", target: "horno" },
+  { id: "build_horno", n: 1, txt: "Ya tenés los materiales: construí el Horno de Piedra", target: "horno" },
   // — cadena del Hacha: primero la plata que cuesta, después craftearla —
   { id: "silver", res: "plata", need: () => TOOL_CRAFT.axe.plata || 10,
     txt: "Juntá # de plata vendiendo cosecha (para el Hacha)",                     target: "market", panel: "ov-market", ui: "#vb-papa" },
-  { id: "crafttool", n: 1, txt: "Crafteá un Hacha en la Herrería",                 target: "store", panel: "ov-forge", ui: "[data-ctool='axe']" },
+  { id: "crafttool", n: 1, pr: 25, txt: "Crafteá un Hacha en la Herrería",          target: "store", panel: "ov-forge", ui: "[data-ctool='axe']" },
+  // ——— ETAPA 2: los sistemas nuevos (Cocina, Armas, Zona Negra, Pesca, Altar) ———
+  { id: "woodc",  res: "madera", need: () => BUILD_DEF.cocina.cost.madera || 20,
+    txt: "Juntá # de madera (para la Cocina)",                                  target: "tree" },
+  { id: "stonec", res: "piedra", need: () => BUILD_DEF.cocina.cost.piedra || 15,
+    txt: "Juntá # de piedra (para la Cocina)",                                  target: "rock" },
+  { id: "build_cocina", n: 1, pr: 50,  txt: "Construí la Cocina (pide granja nivel " + 5 + ")", target: "cocina" },
+  { id: "cook",     n: 1, pr: 50,  txt: "Cociná tu primer plato: Papa Asada",   target: "cocina", panel: "ov-cocina", ui: "[data-cook='papa_asada']" },
+  { id: "eat",      n: 1, pr: 25,  txt: "Comé un plato desde la bolsa (te da un buff)" },
+  { id: "silverarm", res: "plata", need: () => ARMAS_UNLOCK_PLATA || 1000,
+    txt: "Juntá # de plata para abrir la forja de Armas",                       target: "market", panel: "ov-market", ui: "#vb-papa" },
+  { id: "unlockarm", n: 1,        txt: "Desbloqueá la pestaña Armas en la Herrería", target: "store", panel: "ov-forge", ui: "#forge-unlock-armas" },
+  { id: "craftarm",  n: 1, pr: 50, txt: "Forjá tu primera arma: Espada de Madera", target: "store", panel: "ov-forge", ui: "[data-carm='espada_madera']" },
+  { id: "equiparm",  n: 1,        txt: "Equipá tu arma",                        target: "store", panel: "ov-forge", ui: "[data-eqarm='espada_madera']" },
+  { id: "portal",    n: 1,        txt: "Cruzá el portal a la Zona Negra",       target: "portal" },
+  { id: "kill",      n: 1, pr: 50, txt: "Vencé tu primera criatura" },
+  { id: "kill5",     n: 5, pr: 100, txt: "Vencé 5 criaturas más" },
+  { id: "fish",      n: 1, pr: 50, txt: "Pescá un pez en la laguna (comprá lombrices en la Tienda)" },
+  { id: "build_altar", n: 1, pr: 100, txt: "Construí el Altar de Runas",        target: "altar" },
+  { id: "upgrade",   n: 1, pr: 150, txt: "Mejorá un arma a +1 en el Altar",     target: "altar", panel: "ov-altar" },
+  // ——— ETAPA 3: que el jugador descubra TODO lo que se puede hacer ———
+  { id: "mat",       n: 1, pr: 40,  txt: "Fundí una barra en el Horno de Piedra", target: "horno", panel: "ov-horno", ui: "[data-mat='barra_piedra']" },
+  { id: "craftpick", n: 1, pr: 40,  txt: "Crafteá un Pico de Bronce en la Herrería", target: "store", panel: "ov-forge", ui: "[data-craft='bronze']" },
+  { id: "mineore",   n: 1, pr: 60,  txt: "Miná un mineral con tu pico nuevo",    target: "ore" },
+  { id: "dummy",     n: 1, pr: 40,  txt: "Entrená con el dummy de práctica",     target: "dummy" },
+  { id: "unlocknode", n: 1, pr: 60, txt: "Desbloqueá otro árbol o piedra de la granja", target: "tree" },
+  { id: "chest",     n: 1, pr: 60,  txt: "Crafteá un cofre depósito y colocalo", target: "store", panel: "ov-forge", ui: "#forge-chest" },
+  { id: "invexp",    n: 1, pr: 60,  txt: "Ampliá tu bolsa desde el inventario",  panel: "ov-inv", ui: "#inv-expbtn" },
+  { id: "passclaim", n: 1, pr: 80,  txt: "Reclamá una recompensa del Pase de Batalla", panel: "ov-pass", ui: "[data-pfree]" },
+  { id: "socket",    n: 1, pr: 120, txt: "Socketeá una runa en tu arma (Altar)", target: "altar", panel: "ov-altar" },
 ];
 function tutoNeed(st) { return st ? (typeof st.need === "function" ? st.need() : (st.n || 1)) : 0; }
 function tutoTiene(st) { return !st || !st.res ? 0 : Math.floor(st.res === "plata" ? G.plata : (G.res[st.res] || 0)); }
@@ -415,7 +445,7 @@ var TUTO_REWARD_PLATA = 100;   // gran recompensa del cierre (editable)
 // después usan el tiempo normal del cultivo. 0 en el panel = sin excepción.
 var FIRST_GROW_MS = 45000;   // tope de crecimiento de las semillas de arranque
 var FIRST_GROW_N = 3;        // cuántas semillas de arranque tienen ese trato (las 3 papas del inicio)
-var TUTO_VER = 2;   // subir este número cuando cambie la CADENA de pasos (invalida progresos viejos)
+var TUTO_VER = 4;   // subir este número cuando cambie la CADENA de pasos (invalida progresos viejos)
 function tutoActivo() { return G.tuto && !G.tuto.done ? TUTO_STEPS[G.tuto.step] : null; }
 // migración: si el guardado trae una cadena vieja, los pasos ya no significan lo mismo → se recalcula
 function tutoMigrar() {
@@ -423,7 +453,6 @@ function tutoMigrar() {
   if (G.tuto.v === TUTO_VER) return;
   G.tuto.v = TUTO_VER;
   if (G.tuto.done) return;
-  if (G.built && G.built.horno) { G.tuto.done = true; return; }   // ya pasó el arranque: no lo hacemos empezar de nuevo
   G.tuto.step = 0; G.tuto.n = 0;   // vuelve al principio de la cadena nueva y salta solo lo ya hecho
   tutoAutoSkip();
 }
@@ -433,8 +462,27 @@ function tutoAutoSkip() {
     const st = tutoActivo(); if (!st) return;
     let hecho = false;
     if (st.res) hecho = tutoTiene(st) >= tutoNeed(st);
-    else if (st.id === "build") hecho = !!(G.built && G.built.horno);
-    else if (st.id === "crafttool") hecho = (G.tools && (G.tools.axe || 0) > 1) || (G.built && G.built.horno && G.plata >= 200);
+    else if (st.id === "build_horno")  hecho = !!(G.built && G.built.horno);
+    else if (st.id === "build_cocina") hecho = !!(G.built && G.built.cocina);
+    else if (st.id === "build_altar")  hecho = !!(G.built && G.built.altar);
+    else if (st.id === "crafttool") hecho = !!(G.built && G.built.horno);   // si ya construyó, el hacha quedó atrás
+    else if (st.id === "cook")      hecho = (G.skills && G.skills.cooking > 0);
+    else if (st.id === "eat")       hecho = (G.skills && G.skills.cooking > 0) && (G.buffs || []).length > 0;
+    else if (st.id === "unlockarm") hecho = !!G.armasUnlocked;
+    else if (st.id === "craftarm")  hecho = Object.keys(G.weapons || {}).length > 0;
+    else if (st.id === "equiparm")  hecho = !!(G.gear && G.gear.arma);
+    else if (st.id === "portal" || st.id === "kill" || st.id === "kill5") hecho = (G.combatXp || 0) > 0;
+    else if (st.id === "fish")      hecho = (G.skills && G.skills.fishing > 0);
+    else if (st.id === "upgrade")   hecho = Object.keys(G.weapons || {}).some(k => (G.weapons[k].plus || 0) > 0);
+    else if (st.id === "mat")       hecho = MAT_ORDER.some(k => (G.res[k] || 0) > 0);
+    else if (st.id === "craftpick") hecho = !!(G.picks && G.picks.owned && (G.picks.owned.bronze || G.picks.owned.iron || G.picks.owned.gold));
+    else if (st.id === "mineore")   hecho = ["bronce","hierro","oro","diamante","netherita"].some(k => (G.res[k] || 0) > 0);
+    else if (st.id === "dummy")     hecho = !!G.dummyUsedAt;
+    else if (st.id === "unlocknode") hecho = ((G.treesOpen || [0]).length + (G.rocksOpen || [0]).length) > 2;
+    else if (st.id === "chest")     hecho = (G.chests || []).length > 0;
+    else if (st.id === "invexp")    hecho = (G.invExtra || 0) > 0;
+    else if (st.id === "passclaim") hecho = !!(G.pass && (Object.keys(G.pass.claimF || {}).length || Object.keys(G.pass.claimV || {}).length));
+    else if (st.id === "socket")    hecho = Object.keys(G.weapons || {}).some(k => Object.keys((G.weapons[k].sockets) || {}).some(sl => G.weapons[k].sockets[sl]));
     if (!hecho) return;
     G.tuto.step++; G.tuto.n = 0;
     if (G.tuto.step >= TUTO_STEPS.length) { G.tuto.done = true; return; }
@@ -456,7 +504,8 @@ function tutoEvent(tipo) {
 }
 function tutoDone(st) {
   // paso cumplido: tilde + sonido + avance automático (doc)
-  if (typeof tutoCheck === "function") tutoCheck(tutoTxt(st));
+  if (st.pr) { G.plata += st.pr; log("Objetivo cumplido: +" + st.pr + " de plata.", "gold"); }
+  if (typeof tutoCheck === "function") tutoCheck(tutoTxt(st) + (st.pr ? " (+" + st.pr + " plata)" : ""));
   if (window.sfx) sfx("level");
   G.tuto.step++; G.tuto.n = 0;
   if (G.tuto.step >= TUTO_STEPS.length) {
@@ -579,6 +628,7 @@ function passClaim(nv, vipTrack) {
   if (r.ficha) { G.plotsOwned = Math.min(12, (G.plotsOwned || 2) + 1); if (window.farmScene && window.farmScene.syncPlots) try { window.farmScene.syncPlots(); } catch (e) {} }
   if (r.cos) { p.cosmetics.push(r.cos); }
   log("Pase nivel " + nv + (vipTrack ? " (VIP)" : "") + ": recibiste " + passRewardStr(r) + ".", "gold");
+  if (typeof tutoEvent === "function") tutoEvent("passclaim");
   toast("¡" + passRewardStr(r) + "!");
   refreshHud(); if (typeof syncSlots === "function") syncSlots(); if (isOpen("ov-inv")) refreshInv();
   if (typeof refreshPass === "function" && isOpen("ov-pass")) refreshPass();
@@ -674,6 +724,7 @@ function upgradeWeapon(id, usarPolvo, usarProt) {
     if (window.celebrate && (next >= 10 || abre)) celebrate({ title: "¡+" + next + "!", sub: ARM_DEF[id].label, big: next >= 10, reward: "+" + u.dmg + "% de daño" + abre });
     else toast("¡+" + next + "! (" + chance + "% de éxito)");
     if (window.sfx) sfx("level");
+    if (typeof tutoEvent === "function") tutoEvent("upgrade");
   } else {
     if (next >= 11 && !usarProt && Math.random() * 100 < ALTAR_BREAK) {   // rotura: solo sin protección (el jugador ELIGE el riesgo)
       delete G.weapons[id];
@@ -730,6 +781,7 @@ function socketRuna(id, slot, tipo, r) {   // socketear DESTRUYE la runa anterio
     sk[slot] = { t: tipo, r };
     log("Socketeaste " + runaLabel(tipo, r) + " (" + RUNA_TIPOS[tipo].buff + " +" + runaVal(tipo, r) + RUNA_TIPOS[tipo].uni + ").", "gold");
     toast("Runa socketeada");
+    if (typeof tutoEvent === "function") tutoEvent("socket");
   }
   applyCombatHp();   // la Guardiana suma vida máxima
   altarRefresh(); if (typeof saveFarm === "function") saveFarm(true);
@@ -785,6 +837,7 @@ function craftWeapon(id) {
   if (!G.gear.arma) G.gear.arma = id;
   addXp("crafting", 10 + w.ri * 4);
   log("Forjaste " + w.label + ".", "gold"); toast("¡" + w.label + "!"); forgeWork();
+  if (typeof tutoEvent === "function") tutoEvent("craftarm");
   refreshForge(); if (typeof syncSlots === "function") syncSlots(); if (isOpen("ov-inv")) refreshInv(); refreshHud();
 }
 function repairWeapon(id) {
@@ -871,6 +924,7 @@ function unlockArmas() {
   if (G.plata < ARMAS_UNLOCK_PLATA) { toast("Te falta plata"); return; }
   payCost(ARMAS_UNLOCK_COST); G.plata -= ARMAS_UNLOCK_PLATA; G.armasUnlocked = true;
   log("Desbloqueaste la pestaña Armas de la Herrería.", "gold"); toast("¡Armas desbloqueadas!");
+  if (typeof tutoEvent === "function") tutoEvent("unlockarm");
   refreshForge(); refreshHud(); if (typeof saveFarm === "function") saveFarm();
 }
 // viernes (2): desbloqueo progresivo de árboles y piedras (3/9/27/81/100) — se paga por CANTIDAD ya abierta, el orden es libre
@@ -992,6 +1046,7 @@ function checkCooking() {
     G.dishes[G.cooking.id] = (G.dishes[G.cooking.id] || 0) + 1;
     addXp("cooking", r.xp);
     log(r.emoji + " ¡" + r.label + " listo! Lo tenés en la bolsa.", "gold"); toast(r.emoji + " ¡Listo! Está en tu bolsa");
+    if (typeof tutoEvent === "function") tutoEvent("cook");
   }
   G.cooking = null;
   if (typeof syncSlots === "function") syncSlots(); if (isOpen("ov-inv")) refreshInv();
@@ -1012,6 +1067,7 @@ function eatDish(id) {
   if (id === "guiso_campestre" || id === "estofado_cosecha") { if (cleanseStates(["sangrado", "veneno", "quemadura"])) { log("El guiso limpió tus heridas (sangrado/veneno/quemadura).", "good"); toast("Heridas limpiadas"); } }
   if (id === "pan_trigo" || id === "pan_maiz_trigo") { if (cleanseStates(["flaqueza", "fragilidad"])) { log("El pan disipó las maldiciones.", "good"); toast("Maldiciones disipadas"); } }
   log(r.emoji + " Comiste " + r.label + ". " + dishDesc(r), "gold"); toast(r.emoji + " ¡Ñam!");
+  if (typeof tutoEvent === "function") tutoEvent("eat");
   refreshHud(); if (typeof syncSlots === "function") syncSlots(); if (isOpen("ov-inv")) refreshInv();
 }
 
@@ -1043,6 +1099,7 @@ function craftChest() {
   addXp("crafting", 8);
   log("Crafteaste un cofre depósito — está en tu bolsa. Colocalo con un clic desde la bolsa.", "gold");
   toast("Cofre en la bolsa (" + G.chests.length + "/" + CHEST_MAX + ")"); forgeWork();
+  if (typeof tutoEvent === "function") tutoEvent("chest");
   refreshForge(); refreshHud();
   if (typeof syncSlots === "function") syncSlots(); if (isOpen("ov-inv")) refreshInv();
   if (typeof saveFarm === "function") saveFarm(true);
@@ -1186,6 +1243,7 @@ function expandInv() {
   else { if (G.plata < nc.cost) { toast("Te falta plata"); return; } G.plata -= nc.cost; }
   G.invRows = (G.invRows || 0) + 1;
   log("Ampliaste la bolsa (+5 espacios).", "good"); toast("+5 espacios");
+  if (typeof tutoEvent === "function") tutoEvent("invexp");
   refreshInv(); refreshHud();
 }
 /* ¿hay sitio en la bolsa para lo que va a soltar la acción?
@@ -1320,6 +1378,7 @@ function goFishing() {
   const r = Math.random();
   let rar; if (r < 0.60) rar = "comun"; else if (r < 0.85) rar = "raro"; else if (r < 0.97) rar = "epico"; else rar = "legendario";
   G.fish[rar]++; addXp("fishing", 8); addXp("cooking", 3);
+  if (typeof tutoEvent === "function") tutoEvent("fish");
   if (rar === "comun") { const p = 8 + Math.floor(Math.random() * 8); G.plata += p; log(`Pez común: +${p} plata.`); toast("+" + p + " "); }
   else if (rar === "raro") { addBuff("yield", "Yield +10%", 1.10, 90); log("Pez raro: buff Yield +10% (90s).", "good"); toast("¡Buff de yield!"); }
   else if (rar === "epico") { addBuff("cd", "Cooldowns -25%", 0.75, 90); log("Pez épico: cooldowns -25% (90s).", "good"); toast("¡Cooldowns -25%!"); }

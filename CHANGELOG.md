@@ -344,6 +344,15 @@ Registro cronológico de todo lo hecho desde el inicio del proyecto (27 de julio
 
 ---
 
+### Guía de objetivos ampliada a 34 pasos (3/8)
+- La cadena guiada dejó de ser solo el arranque: ahora **recorre TODO el juego** para que el jugador descubra cada sistema jugando, no leyendo.
+- **Etapa 1 (1-10)** — el loop básico: plantar, cosechar, vender, comprar semillas, replantar, juntar los materiales del Horno, construirlo y craftear el Hacha.
+- **Etapa 2 (11-25)** — los sistemas nuevos: materiales y construcción de la **Cocina**, cocinar y comer un plato (buff), juntar la plata para abrir la **forja de Armas**, forjar y equipar tu primera arma, cruzar el **portal a la Zona Negra**, vencer tu primera criatura y después 5 más, **pescar**, construir el **Altar de Runas** y mejorar un arma a +1.
+- **Etapa 3 (26-34)** — lo que quedaba por descubrir: fundir una barra en el **Horno**, craftear un **Pico de Bronce** y minar un mineral, entrenar en el **dummy**, desbloquear otro árbol/piedra, craftear y colocar un **cofre depósito**, ampliar la **bolsa**, reclamar una recompensa del **Pase de Batalla** y **socketear una runa**.
+- **Cada objetivo cumplido paga plata** (25 a 150 según dificultad; 1.210 en total + 100 al terminar), así avanzar la guía también financia el arranque.
+- Los pasos siguen encadenados y con cantidades tomadas de las recetas reales; el cartel resalta el botón exacto en cada panel y la flecha apunta al edificio, nodo, mineral o portal correspondiente.
+- Los guardados con progreso saltan solos los pasos ya cumplidos (se detecta por el estado real: edificios construidos, armas forjadas, runas puestas, etc.).
+
 ### Detallitos del diseñador (3/8)
 1. **Auto-ataque sin spam**: re-clickear con el botón derecho sobre el MISMO objetivo ya no reinicia la cadencia; solo un objetivo nuevo golpea al instante.
 2. **Recetas de la Cocina deslizables**: la lista ahora scrollea como la de la Herrería.

@@ -549,7 +549,7 @@ class FarmScene extends Phaser.Scene {
   doInteract() { if (GF.uiOpen || this.action || GF.editMode) return; const o = this.nearestInteract(); if (o) this.interactWith(o); else if (this.nearPond()) this.tryFish(); }
 
   interactWith(o) {
-    if (o.type === "portal") { if (typeof saveFarm === "function") saveFarm(); this.leaving = true; return this.scene.start("forest"); }
+    if (o.type === "portal") { if (typeof tutoEvent === "function") tutoEvent("portal"); if (typeof saveFarm === "function") saveFarm(); this.leaving = true; return this.scene.start("forest"); }
     if (o.type === "barn") return openOv("ov-barn");
     if (o.type === "market") return openOv("ov-market");
     // edificios por construir (viernes 1): clic → receta de construcción con confirmación
@@ -561,7 +561,8 @@ class FarmScene extends Phaser.Scene {
         if (b.golden && G.golden < b.golden) { toast("Te falta $Golden (" + b.golden + ")"); return; }
         payCost(b.cost); if (b.golden) G.golden -= b.golden; G.built[o.type] = true;
         if (o.sprite) { o.sprite.setAlpha(1); o.sprite.clearTint(); }
-        if (o.type === "horno") { this.startHornoSmoke(); if (typeof tutoEvent === "function") tutoEvent("build"); }   // arranca el humo (viernes 2)
+        if (o.type === "horno") this.startHornoSmoke();   // arranca el humo (viernes 2)
+        if (typeof tutoEvent === "function") tutoEvent("build_" + o.type);
         addXp("crafting", 20); log("¡Construiste " + b.label + "!", "gold"); toast("¡" + b.label + " construida!");
         refreshHud(); if (typeof saveFarm === "function") saveFarm(true);
       }, { title: "Construir " + b.label, yes: "Construir", yesClass: "green", no: "Cancelar", noClass: "red" });
@@ -577,7 +578,8 @@ class FarmScene extends Phaser.Scene {
         else { G.rocksOpen = G.rocksOpen || [0]; G.rocksOpen.push(o.lockIdx); }
         o.locked = false; if (o.sprite) { o.sprite.setAlpha(1); o.sprite.clearTint(); }
         addXp("crafting", 5); if (typeof syncSlots === "function") syncSlots();
-        log("Desbloqueaste " + (isTree ? "un árbol" : "una piedra") + " por " + cost + " de " + RES_LABEL[res] + ".", "good"); toast("¡" + (isTree ? "Árbol" : "Piedra") + " desbloqueado!");
+        log("Desbloqueaste " + (isTree ? "un árbol" : "una piedra") + " por " + cost + " de " + RES_LABEL[res] + ".", "good");
+        if (typeof tutoEvent === "function") tutoEvent("unlocknode"); toast("¡" + (isTree ? "Árbol" : "Piedra") + " desbloqueado!");
         refreshHud(); if (isOpen("ov-inv")) refreshInv(); if (typeof saveFarm === "function") saveFarm(true);
       }, { title: isTree ? "Desbloquear árbol" : "Desbloquear piedra", yes: "Desbloquear", yesClass: "green", no: "Cancelar", noClass: "red" });
       return;
@@ -777,6 +779,7 @@ class FarmScene extends Phaser.Scene {
         o.readyAt = nowMs() + oreCdSec(od.tier) * 1000 * cdMult();
         if (this.textures.exists(o.baseKey + "_mined")) this.setObjTex(o, o.baseKey + "_mined", o.rw || GF.TILE); else o.sprite.setAlpha(0.4);
         log(`${od.emoji} +${gr} ${od.label}. ${G.picks.dur[pk]}/${pd.dur}`, "good"); toast("+" + gr + " " + od.emoji); refreshHud();
+        if (typeof tutoEvent === "function") { tutoEvent("gather"); tutoEvent("mineore"); }
         if (G.picks.dur[pk] <= 0) { log(`¡${pd.label} se rompió en pedazos! Crafteá otro en la Herrería.`, "bad"); toast("¡Pico destruido!"); destroyPick(pk); }
       } else { toast("Bolsa llena — no podés picar"); log("Bolsa llena: liberá espacio para seguir picando.", "bad"); }
     } else if (a.kind === "plant") {
@@ -811,6 +814,8 @@ class FarmScene extends Phaser.Scene {
     if (!st) return;
     let x = null, y = null;
     if (st.target === "plot") { const pl = (this.plots || []).find(o => o.state !== "locked"); if (pl) { x = pl.cx; y = pl.by - GF.TILE * 0.9; } }
+    else if (st.target === "ore") { const o = (this.objs || []).find(o => o.type === "ore" && !o.locked); if (o) { x = o.cx; y = o.by - (o.sprite ? o.sprite.displayHeight : 60) - 10; } }
+    else if (st.target === "portal") { const o = this.portal; if (o) { x = o.cx; y = o.by - 70; } }
     else if (st.target === "tree" || st.target === "rock") {
       const tipos = st.target === "rock" ? ["rock", "ore"] : ["tree"];
       const o = (this.objs || []).find(o => tipos.includes(o.type) && !o.locked);
@@ -932,6 +937,7 @@ class FarmScene extends Phaser.Scene {
     const left = (G.dummyUsedAt || 0) + DUMMY_CD_MS - nowMs();
     if (left > 0) { toast("El dummy descansa — vuelve en " + fmtDur(left)); return; }
     G.dummyUsedAt = nowMs();
+    if (typeof tutoEvent === "function") tutoEvent("dummy");
     useWeapon(aid); useWeapon(aid);   // entrenar gasta 2 de durabilidad del arma
     let hits = 0;
     const sign = this.hero.x <= o.cx ? 1 : -1;
