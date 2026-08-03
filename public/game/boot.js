@@ -91,12 +91,7 @@ class BootScene extends Phaser.Scene {
     L.push(["fishing_rod", P + "fishing_rod.png?v=2"]);   // caña cozy nueva
     L.push(["fence_corner", P + "fence_corner.png?v=3"]);
     L.push(["altar", P + "altar.png?v=1"]);   // Altar de Runas (doc maestro 2/8)
-    // BESTIARIO AMPLIADO (doc maestro 2/8): 11 criaturas nuevas — idle 4f, walk 6f, atk 6f (miran al sureste, se espejan por código)
-    ["murcielago","baba","arana","goblin","esqueleto","golem","hombre_lobo","ogro","espectro","demonio","dragon"].forEach(m => {
-      for (let i = 0; i < 4; i++) L.push([m + "_idle_" + i, P + m + "_idle_" + i + ".png"]);
-      for (let i = 0; i < 6; i++) L.push([m + "_walk_" + i, P + m + "_walk_" + i + ".png"]);
-      for (let i = 0; i < 6; i++) L.push([m + "_atk_" + i,  P + m + "_atk_" + i + ".png"]);
-    });
+
     if (typeof CROP_ORDER !== "undefined") CROP_ORDER.forEach(k => L.push(["cropg_" + k, P + "cropg_" + k + ".png?v=4"]));   // plantas completas cozy
     return L;
   }
@@ -138,9 +133,7 @@ class BootScene extends Phaser.Scene {
     const missing = this.assetList().filter(([k]) => !this.textures.exists(k));
     if (missing.length === 0 || this.tries >= 6) {
       if (missing.length) console.warn("Sin cargar tras reintentos:", missing.map(m => m[0]).join(", "));
-      this.buildAnims();
-      this.scene.start("farm");
-      return;
+      return this.loadOptional();   // el arte opcional (bestiario nuevo) va al final y nunca bloquea
     }
     this.tries++;
     if (this.msg) this.msg.setText("Completando descarga… (" + missing.length + " restantes)");
@@ -150,6 +143,37 @@ class BootScene extends Phaser.Scene {
       this.load.once("complete", () => this.ensureAll());
       this.load.start();
     });
+  }
+
+  // Arte opcional del bestiario nuevo. Para no pedir 176 archivos que quizá no existan,
+  // se consulta UN manifiesto (assets/farm/bestiario.json con la lista de criaturas que ya tienen arte).
+  // Sin manifiesto, el juego arranca igual y cada criatura usa su ícono provisorio.
+  loadOptional() {
+    if (this._optStarted) return;
+    this._optStarted = true;
+    const start = () => { if (this._started) return; this._started = true; this.buildAnims(); this.scene.start("farm"); };
+    this.load.on("loaderror", () => {});   // lo que no exista se ignora en silencio
+    this.load.json("__bestiario", "assets/farm/bestiario.json?v=1");
+    this.load.once("complete", () => {
+      const lista = this.cache.json.get("__bestiario");
+      const mobs = Array.isArray(lista) ? lista : (lista && Array.isArray(lista.mobs) ? lista.mobs : null);
+      if (!mobs || !mobs.length) return start();
+      const P = "assets/farm/", pend = [];
+      mobs.forEach(m => {
+        for (let i = 0; i < 4; i++) pend.push([m + "_idle_" + i, P + m + "_idle_" + i + ".png"]);
+        for (let i = 0; i < 6; i++) pend.push([m + "_walk_" + i, P + m + "_walk_" + i + ".png"]);
+        for (let i = 0; i < 6; i++) pend.push([m + "_atk_" + i,  P + m + "_atk_" + i + ".png"]);
+      });
+      const falta = pend.filter(([k]) => !this.textures.exists(k));
+      if (!falta.length) return start();
+      if (this.msg) this.msg.setText("Cargando criaturas…");
+      falta.forEach(([k, f]) => this.load.image(k, f));
+      this.load.once("complete", start);
+      this.time.delayedCall(8000, start);   // tope de espera: nunca se traba
+      this.load.start();
+    });
+    this.time.delayedCall(4000, start);     // si el manifiesto no responde, arranca igual
+    this.load.start();
   }
 
   buildAnims() {
