@@ -1001,12 +1001,13 @@ function cookPot(rlvl) { return Math.min(1.5, 1 + 0.02 * Math.max(0, cookLevel()
 // ANTI "impresora de plata" (3/8): cocinar no puede valer más que sus ingredientes + un margen.
 // Con COOK_PRICE_AUTO=1 el precio sale de lo que costó el plato, así el balance no se rompe
 // aunque el diseñador cambie los precios de los cultivos. Con 0 manda la tabla del doc.
+var FISH_VALOR = { comun: 20, raro: 60, epico: 150, legendario: 400 };   // cuánto "vale" cada pez al calcular el precio de un plato
 var COOK_PRICE_AUTO = 1;     // 1 = precio calculado sobre ingredientes · 0 = precio fijo de la planilla
 var COOK_MARGEN = 1.25;      // ganancia de cocinar sobre el valor de los ingredientes (+25%)
 function dishValue(r) {      // cuánto valen los ingredientes de un plato
   let v = 0;
   if (r.res) for (const k in r.res) v += priceOf(k) * r.res[k];
-  if (r.fish) for (const k in r.fish) v += (FISH_PRICE && FISH_PRICE[k] ? FISH_PRICE[k] : 25) * r.fish[k];
+  if (r.fish) for (const k in r.fish) v += (FISH_VALOR[k] || 25) * r.fish[k];
   return v;
 }
 function dishPrice(r) {      // precio base de venta (antes de la maestría)
