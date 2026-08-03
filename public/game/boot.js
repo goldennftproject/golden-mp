@@ -90,6 +90,13 @@ class BootScene extends Phaser.Scene {
     ["fence_top","fence_bottom","fence_left","fence_right"].forEach(k => L.push([k, P + k + ".png?v=2"]));
     L.push(["fishing_rod", P + "fishing_rod.png?v=2"]);   // caña cozy nueva
     L.push(["fence_corner", P + "fence_corner.png?v=3"]);
+    L.push(["altar", P + "altar.png?v=1"]);   // Altar de Runas (doc maestro 2/8)
+    // BESTIARIO AMPLIADO (doc maestro 2/8): 11 criaturas nuevas — idle 4f, walk 6f, atk 6f (miran al sureste, se espejan por código)
+    ["murcielago","baba","arana","goblin","esqueleto","golem","hombre_lobo","ogro","espectro","demonio","dragon"].forEach(m => {
+      for (let i = 0; i < 4; i++) L.push([m + "_idle_" + i, P + m + "_idle_" + i + ".png"]);
+      for (let i = 0; i < 6; i++) L.push([m + "_walk_" + i, P + m + "_walk_" + i + ".png"]);
+      for (let i = 0; i < 6; i++) L.push([m + "_atk_" + i,  P + m + "_atk_" + i + ".png"]);
+    });
     if (typeof CROP_ORDER !== "undefined") CROP_ORDER.forEach(k => L.push(["cropg_" + k, P + "cropg_" + k + ".png?v=4"]));   // plantas completas cozy
     return L;
   }
@@ -187,6 +194,10 @@ class BootScene extends Phaser.Scene {
                    larva: [["idle", 8, 5, -1], ["walk", 8, 8, -1], ["atk", 8, 10, 0]],
                    lancero: [["idle", 4, 5, -1], ["walk", 7, 9, -1], ["atk", 7, 11, 0]],
                    guerrero: [["idle", 4, 5, -1], ["walk", 7, 9, -1], ["atk", 9, 12, 0]] };
+    // bestiario ampliado: todas con idle 4f / walk 6f / atk 6f
+    ["murcielago","baba","arana","goblin","esqueleto","golem","hombre_lobo","ogro","espectro","demonio","dragon"].forEach(m => {
+      mobs[m] = [["idle", 4, 5, -1], ["walk", 6, 9, -1], ["atk", 6, 11, 0]];
+    });
     Object.entries(mobs).forEach(([pre, defs]) => {
       defs.forEach(([nm, n, fps, rep]) => {
         const ks = Array.from({ length: n }, (_, i) => pre + "_" + nm + "_" + i);

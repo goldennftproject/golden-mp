@@ -330,6 +330,12 @@ Registro cronológico de todo lo hecho desde el inicio del proyecto (27 de julio
 - **TIEMPO TOTAL: ~1 hora 35 minutos** para implementar TODO el contenido de los dos documentos maestros: curva de skills 1-150, progresión temprana front-loaded, sistema de combate con fórmula y 20 armas con buffs, barra de Combate global, Cocina completa (14 recetas + niveles + maestría + venta), sistema de celebración, 3 cultivos nuevos con arte, bestiario de 15 criaturas + jefe con habilidades y estados, Altar de Runas (+1..+15 y 8 runas × 5 rarezas), Pase de Batalla de 30 niveles Free/VIP con misiones, y el tutorial guiado. 10 fases deployables, cada una verificada con simulaciones y registrada acá.
 - Nota: las horas por fase son aproximadas; inicio y fin son exactos.
 
+### Arte post-fases (2/8, ~20:40)
+- **11 criaturas del bestiario como personajes PixelLab** (pipeline de la rata/larva/troll): Murciélago, Baba, Araña (regenerada en v3 para que tenga sus 8 patas), Goblin, Esqueleto Arquero, Golem, Hombre Lobo, Ogro, Espectro, Demonio Menor y el Dragón de las Cavernas (cuadrúpedo). Cada una con animaciones idle/caminar/atacar orientadas al sureste. PENDIENTE: solo la animación de ataque de la araña (se acabaron las generaciones de la suscripción de PixelLab justo ahí; queda para cuando renueve el cupo).
+- **Altar de Runas + los 14 platos de la Cocina** como estados del granero (mismo estilo del juego). El código ya referencia `altar.png` y `dish_*.png`.
+- `descargar_arte_bestiario.ps1`: baja Altar + platos directo a assets y las 11 criaturas como ZIP a `pixellab_bestiario/` para recortar e integrar después.
+- **Código ya preparado**: el cargador pide los frames de las 11 criaturas (idle 4f / caminar 6f / atacar 6f) y registra sus animaciones, y cada mob tiene su clave de sprite. En cuanto los PNG estén en `assets/farm`, las criaturas aparecen animadas sin tocar una línea más; hasta entonces el juego cae solo al ícono provisorio.
+
 ---
 
 ## Pendientes conocidos
