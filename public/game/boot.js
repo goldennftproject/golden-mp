@@ -91,6 +91,8 @@ class BootScene extends Phaser.Scene {
     L.push(["fishing_rod", P + "fishing_rod.png?v=2"]);   // caña cozy nueva
     L.push(["fence_corner", P + "fence_corner.png?v=3"]);
     L.push(["altar", P + "altar.png?v=1"]);   // Altar de Runas (doc maestro 2/8)
+    // armas por tipo y rareza (se distinguen a simple vista): 4 tipos × 5 rarezas
+    ["espada","hacha","mazo","arco"].forEach(t => ["madera","piedra","bronce","oro","diamante"].forEach(r => L.push(["arm_" + t + "_" + r, P + "arm_" + t + "_" + r + ".png?v=1"])));
 
     if (typeof CROP_ORDER !== "undefined") CROP_ORDER.forEach(k => L.push(["cropg_" + k, P + "cropg_" + k + ".png?v=4"]));   // plantas completas cozy
     return L;

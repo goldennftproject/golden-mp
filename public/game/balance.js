@@ -119,6 +119,8 @@ var BAL = (function () {
 
     // TUTORIAL
     add("Tutorial guiado", "tuto.reward", "Recompensa final del tutorial", U.plata, () => TUTO_REWARD_PLATA, v => { TUTO_REWARD_PLATA = v; });
+    add("Tutorial guiado", "tuto.firstGrow", "Semillas del starter pack: tope de crecimiento (0 = sin excepción)", "", () => FIRST_GROW_MS / 1000, v => { FIRST_GROW_MS = v * 1000; }, 1, "tiempo");
+    add("Tutorial guiado", "tuto.firstN", "Cuántas semillas de arranque crecen rápido", "semillas · entero", () => FIRST_GROW_N, v => { FIRST_GROW_N = v; });
 
     // PASE DE BATALLA
     { const cat = "Pase de Batalla";

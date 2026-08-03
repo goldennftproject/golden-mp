@@ -12,7 +12,8 @@ const G = {
   weapons: {},                   // doc 2/8: armas nuevas — id ("espada_madera") -> { dur }
   combatXp: 0,                   // doc 2/8: barra de Combate GLOBAL — suma la XP de todos los kills
   states: [],                    // doc 2/8: estados/debuffs del bestiario sobre el jugador (no se guardan)
-  tuto: { step: 0, n: 0, done: false },   // doc 2/8: tutorial guiado de micro-objetivos
+  tuto: { step: 0, n: 0, done: false, v: 2 },   // doc 2/8: tutorial guiado de micro-objetivos (v = versión de la cadena)
+  firstSeeds: 3,                 // semillas del starter pack que crecen en 45 s (se descuentan al plantarlas)
   armCd: {},                     // enfriamiento de crafteo por arma   // equipo (armas se equipan en el panel de Equipo — detalles jueves)
   res: { madera: 0, piedra: 0, bronce: 0, hierro: 0, oro: 0, diamante: 0, netherita: 0, carne: 0, flecha: 0, lombriz: 0,
     tablon: 0, barra_piedra: 0, barra_bronce: 0, barra_hierro: 0, barra_oro: 0,
@@ -183,6 +184,15 @@ const MAT_DEF = {
 };
 var MAT_CD_MS = 6000;   // detalles viernes: craftear barras tiene enfriamiento
 function matCdLeft(id) { G.matCd = G.matCd || {}; return Math.max(0, (G.matCd[id] || 0) - nowMs()); }
+// crafteo en LOTE genérico: repite la acción hasta N veces y corta si ya no se puede (doc 2/8)
+function craftLote(fn, id, n) {
+  n = Math.max(1, n || 1);
+  for (let i = 0; i < n; i++) {
+    const antes = JSON.stringify([G.res, G.plata, G.golden, G.picks && G.picks.dur, G.weapons]);
+    fn(id);
+    if (JSON.stringify([G.res, G.plata, G.golden, G.picks && G.picks.dur, G.weapons]) === antes) break;   // no cambió nada: faltan materiales o hay enfriamiento
+  }
+}
 function craftMat(id) {
   const md = MAT_DEF[id]; if (!md) return;
   const left = matCdLeft(id);
@@ -401,7 +411,35 @@ function tutoNeed(st) { return st ? (typeof st.need === "function" ? st.need() :
 function tutoTiene(st) { return !st || !st.res ? 0 : Math.floor(st.res === "plata" ? G.plata : (G.res[st.res] || 0)); }
 function tutoTxt(st) { return st ? String(st.txt).replace("#", tutoNeed(st)) : ""; }
 var TUTO_REWARD_PLATA = 100;   // gran recompensa del cierre (editable)
+// doc 2/8 §3.1: SOLO las semillas del starter pack crecen rápido (45 s). Las compradas o conseguidas
+// después usan el tiempo normal del cultivo. 0 en el panel = sin excepción.
+var FIRST_GROW_MS = 45000;   // tope de crecimiento de las semillas de arranque
+var FIRST_GROW_N = 3;        // cuántas semillas de arranque tienen ese trato (las 3 papas del inicio)
+var TUTO_VER = 2;   // subir este número cuando cambie la CADENA de pasos (invalida progresos viejos)
 function tutoActivo() { return G.tuto && !G.tuto.done ? TUTO_STEPS[G.tuto.step] : null; }
+// migración: si el guardado trae una cadena vieja, los pasos ya no significan lo mismo → se recalcula
+function tutoMigrar() {
+  if (!G.tuto) G.tuto = { step: 0, n: 0, done: false, v: TUTO_VER };
+  if (G.tuto.v === TUTO_VER) return;
+  G.tuto.v = TUTO_VER;
+  if (G.tuto.done) return;
+  if (G.built && G.built.horno) { G.tuto.done = true; return; }   // ya pasó el arranque: no lo hacemos empezar de nuevo
+  G.tuto.step = 0; G.tuto.n = 0;   // vuelve al principio de la cadena nueva y salta solo lo ya hecho
+  tutoAutoSkip();
+}
+// salta los pasos que el jugador YA cumplió (evita pedir cosas hechas o mentir con "ya tenés los materiales")
+function tutoAutoSkip() {
+  for (let i = 0; i < TUTO_STEPS.length + 2; i++) {
+    const st = tutoActivo(); if (!st) return;
+    let hecho = false;
+    if (st.res) hecho = tutoTiene(st) >= tutoNeed(st);
+    else if (st.id === "build") hecho = !!(G.built && G.built.horno);
+    else if (st.id === "crafttool") hecho = (G.tools && (G.tools.axe || 0) > 1) || (G.built && G.built.horno && G.plata >= 200);
+    if (!hecho) return;
+    G.tuto.step++; G.tuto.n = 0;
+    if (G.tuto.step >= TUTO_STEPS.length) { G.tuto.done = true; return; }
+  }
+}
 // paso de RECURSO: se cumple solo cuando tenés la cantidad que pide la receta siguiente
 function tutoCheckRes() {
   const st = tutoActivo();
@@ -724,7 +762,7 @@ ARM_TIPOS.forEach(tipo => ARM_RAREZAS.forEach((rar, i) => {
   cost[ARM_MAT[rar]] = td.primQ;
   if (i > 0) cost[ARM_MAT[ARM_RAREZAS[i - 1]]] = (cost[ARM_MAT[ARM_RAREZAS[i - 1]]] || 0) + td.secQ;
   const repair = {}; repair[ARM_MAT[rar]] = td.repQ;
-  ARM_DEF[tipo + "_" + rar] = { tipo, rareza: rar, ri: i, label: td.label + " " + ARM_RAR_LABEL[rar],
+  ARM_DEF[tipo + "_" + rar] = { tipo, rareza: rar, ri: i, sprite: "arm_" + tipo + "_" + rar, label: td.label + " " + ARM_RAR_LABEL[rar],
     min: ARM_MINMAX[tipo][i][0], max: ARM_MINMAX[tipo][i][1], buffVal: ARM_BUFFVAL[tipo][i],
     dur: ARM_DUR[i], cost, plata: td.plata[i], cd: ARM_CDS[i], repair };
 }));

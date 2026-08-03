@@ -25,7 +25,7 @@ function snapshot() {
     res: G.res, picks: G.picks, skills: G.skills, fish: G.fish, plots: G.plots, seeds: G.seeds, selSeed: G.selSeed,
     tools: G.tools, toolsLost: G.toolsLost, sflStock: true, invRows: G.invRows, slots: G.slots, hotbar: G.hotbar, hotSel: G.hotSel, hbInit: G.hbInit, layout: G.layout,
     daily: G.daily, plotsOwned: G.plotsOwned, seedBuys: G.seedBuys, built: G.built,
-    hp: G.hp, hpMax: G.hpMax, combatXp: G.combatXp, pass: G.pass, tuto: G.tuto, swordOwned: G.swordOwned, bowOwned: G.bowOwned, swordWoodOwned: G.swordWoodOwned, gear: G.gear,
+    hp: G.hp, hpMax: G.hpMax, combatXp: G.combatXp, pass: G.pass, tuto: G.tuto, firstSeeds: G.firstSeeds, swordOwned: G.swordOwned, bowOwned: G.bowOwned, swordWoodOwned: G.swordWoodOwned, gear: G.gear,
     armasUnlocked: G.armasUnlocked, treesOpen: G.treesOpen, rocksOpen: G.rocksOpen, firstCropDone: G.firstCropDone, weapons: G.weapons,
     dishes: G.dishes, cooking: G.cooking, chests: G.chests, dummyUsedAt: G.dummyUsedAt,
     layoutPlots: G.layoutPlots, layoutPond: G.layoutPond };
@@ -65,6 +65,7 @@ function hydrate(d) {
   G.pass = (d.pass && typeof d.pass === "object") ? d.pass : null;
   if (d.tuto && typeof d.tuto === "object") G.tuto = d.tuto;
   else G.tuto = { step: 0, n: 0, done: !!(d.firstCropDone || (d.level && d.level > 1) || (d.plata && d.plata > 50)) };   // veteranos: sin tutorial
+  if (typeof tutoMigrar === "function") tutoMigrar();   // cadena nueva: recalcula el paso si el guardado es viejo
   if (typeof tutoSync === "function") tutoSync(true);   // el cartel y la flecha se rehacen con el paso ya cargado
   if (typeof applyCombatHp === "function") applyCombatHp();   // vida máxima = 100 + hitos de Combate
   if (typeof d.hp === "number") G.hp = Math.max(1, Math.min(G.hpMax, d.hp));
@@ -85,7 +86,9 @@ function hydrate(d) {
   const armaVieja = h => h && h.kind === "tool" && (h.key === "sword" || h.key === "sword_wood" || h.key === "bow");
   G.hotbar = (G.hotbar || []).map(h => armaVieja(h) ? null : h);
   if (Array.isArray(G.slots)) G.slots = G.slots.map(sl => armaVieja(sl) ? null : sl);
-  G.firstCropDone = d.firstCropDone !== false;   // veteranos: true por defecto (solo el jugador nuevo tiene la 1ª tanda rápida)
+  G.firstCropDone = d.firstCropDone !== false;   // legado
+  G.firstSeeds = (typeof d.firstSeeds === "number") ? d.firstSeeds
+    : (d.firstCropDone === false ? FIRST_GROW_N : 0);   // veteranos: 0 (ya no les toca el arranque rápido)
   G.armasUnlocked = d.armasUnlocked === true;   // viernes (2): la pestaña Armas se paga (también para veteranos)
   // viernes (2): sets de árboles/piedras abiertos; compat con el guardado por contador de la primera versión
   G.treesOpen = Array.isArray(d.treesOpen) ? d.treesOpen.filter(n => typeof n === "number") : (typeof d.treesOwned === "number" ? Array.from({length: Math.max(1, Math.min(6, d.treesOwned))}, (_, i) => i) : [0]);

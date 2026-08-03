@@ -192,7 +192,9 @@ class ForestScene extends Phaser.Scene {
   /* ---- objetivo fijado: el monstruo se ACLARA (igual que los recursos de la granja)
          + nombre y vida encima (detalles 338) ---- */
   setTarget(m) {
-    this.target = m; this.nextAuto = 0;   // golpea en el próximo tick
+    const mismo = this.target === m;
+    this.target = m;
+    if (!mismo) this.nextAuto = 0;   // objetivo NUEVO: golpea ya. El mismo: respeta la cadencia (no se spamea con clic derecho)
     if (!this.tgTxt) this.tgTxt = this.add.text(0, 0, "", { fontFamily: "system-ui", fontSize: "11px", fontStyle: "bold", color: "#ffe9c8", stroke: "#241408", strokeThickness: 4 }).setOrigin(0.5, 1).setDepth(99991).setVisible(false);
     this.makeGlow(m);
     this.updateTargetFx();
@@ -356,6 +358,18 @@ class ForestScene extends Phaser.Scene {
     if (m.hp <= 0) this.killMonster(m, skill || "sword"); else { this.drawBar(m); m.tgt = "hero"; this.updateTargetFx(); }
   }
 
+  // barra de vida del jugador, encima del granjero (solo en la Zona Negra)
+  drawHeroBar() {
+    if (!this.hero) return;
+    if (!this.heroBar) this.heroBar = this.add.graphics().setDepth(99993);
+    const w = 42, h = 5, x = this.hero.x - w / 2, y = this.hero.y - (this.hero.displayHeight || 46) - 12;
+    const pct = Math.max(0, Math.min(1, G.hp / (G.hpMax || 100)));
+    this.heroBar.clear();
+    this.heroBar.fillStyle(0x241505, 0.85).fillRect(x - 1, y - 1, w + 2, h + 2);
+    this.heroBar.fillStyle(0x3b2a12, 1).fillRect(x, y, w, h);
+    this.heroBar.fillStyle(pct > 0.5 ? 0x8fd14f : (pct > 0.25 ? 0xffd24a : 0xe05a5a), 1).fillRect(x, y, w * pct, h);
+  }
+
   // círculo de aviso en el piso (telegrafía: el jugador pierde por no reaccionar, no por azar — doc)
   telegraph(x, y, r, ms, color) {
     const c = this.add.circle(x, y, r, color || 0xff5544, 0.18).setStrokeStyle(2, color || 0xff5544, 0.85).setDepth(40);
@@ -514,6 +528,8 @@ class ForestScene extends Phaser.Scene {
     dmg = Math.max(1, Math.round((dmg - gearDefTotal() * (1 - playerDefLossMult())) * dmgTakenMult()));   // armadura (menos Fragilidad) + buff de comida
     G.hp = Math.max(0, G.hp - dmg);
     this.hurtFx = 0.18;
+    if (dmg > 0) this.floatHero("-" + dmg, "#ff5544");   // el golpe del mob se ve (pedido del diseñador)
+    this.drawHeroBar();
     refreshHud();
     if (G.hp <= 0) {
       log("Te derrotaron en la Zona Negra. Despertás en la granja.", "bad");
@@ -533,6 +549,7 @@ class ForestScene extends Phaser.Scene {
 
     // tinte de daño
     if (this.hurtFx > 0) { this.hurtFx -= dt; hero.setTint(0xff6b5a); } else hero.clearTint();
+    this.drawHeroBar();   // la barra de vida sigue al granjero
 
     // objetivo fijado: recuadro + nombre/vida, y auto-ataque cada 2s
     if (this.target && this.target.dead) this.clearTarget();
@@ -558,7 +575,7 @@ class ForestScene extends Phaser.Scene {
         else {
           // respaldo (a puños o sin animación): el arma dibujada a mano como antes
           if (hero.anims.currentAnim?.key !== "idle") hero.play("idle");
-          const wkey = this.action.kind === "shoot" ? "bow" : (aid0 ? ARM_TIPO_DEF[ARM_DEF[aid0].tipo].sprite : null);
+          const wkey = aid0 ? (ARM_DEF[aid0].sprite || ARM_TIPO_DEF[ARM_DEF[aid0].tipo].sprite) : (this.action.kind === "shoot" ? "bow" : null);
           if (wkey && this.textures.exists(wkey)) {
             const fx = this.add.image(hero.x + sign * 18, hero.y - 26, wkey).setDisplaySize(26, 26).setOrigin(0.5, 0.85).setDepth(hero.y + 1);
             this.action.fx = fx;

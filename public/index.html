@@ -197,6 +197,8 @@
   .forge-row .fnm{font-weight:800;font-size:13px}
   .forge-row .fnm .tag{font-size:10px;color:var(--green);border:1px solid var(--green);border-radius:6px;padding:0 5px;margin-left:6px}
   .forge-row .fds{font-size:11px;color:var(--muted);margin-top:2px}
+  .forge-row .fds.vip{color:#8a6413;font-weight:700}   /* Pase de Batalla: carril VIP legible sobre el panel claro */
+  .forge-row .fds.free{color:#3f6b2a;font-weight:700}  /* carril gratuito */
   .forge-row .fbtns{display:flex;flex-direction:column;gap:5px;flex:0 0 auto}
   .durbar{height:7px;background:#e6dcc2;border-radius:5px;overflow:hidden;border:1px solid var(--line);margin-top:4px;width:160px;max-width:42vw}
   .durbar>i{display:block;height:100%;background:linear-gradient(90deg,#8fc46a,#5a9a3a)}
@@ -486,7 +488,7 @@
     <button class="close" data-close="ov-cocina">×</button>
     <h3>Cocina</h3>
     <div class="sub">Los platos curan vida y dan buffs. Cocinar tarda unos segundos y el plato va a tu bolsa. Sube la skill Cocina.</div>
-    <div id="cook-list"></div>
+    <div class="forge-list" id="cook-list"></div>
   </div></div>
 
   <div class="ov" id="ov-market"><div class="card" style="width:min(520px,94%)">
@@ -652,7 +654,7 @@
       <button class="gmi" data-panel="ov-equip"><span class="ic"></span> Equipo <b class="key">P</b></button>
       <button class="gmi" data-panel="ov-daily"><span class="ic"></span> Cofre diario <b class="key">G</b></button>
       <button class="gmi" data-panel="ov-pass"><span class="ic"></span> Pase de Batalla</button>
-      <button class="gmi" data-panel="ov-market"><span class="ic"></span> Mercado <b class="key">O</b></button>
+      <button class="gmi" data-panel="ov-market"><span class="ic"></span> Tienda <b class="key">O</b></button>
       <button class="gmi" data-panel="ov-forge"><span class="ic"></span> Herrería <b class="key">K</b></button>
       <button class="gmi" data-panel="ov-barn"><span class="ic"></span> Granja <b class="key">B</b></button>
       <button class="gmi" data-panel="ov-lb"><span class="ic"></span> Leaderboard <b class="key">L</b></button>

@@ -782,7 +782,10 @@ class FarmScene extends Phaser.Scene {
     } else if (a.kind === "plant") {
       const ck = G.selSeed, cd = CROP_DEF[ck];
       if (cd && (G.seeds[ck] || 0) > 0) {
-        G.seeds[ck]--; o.cropKey = ck; o.state = "growing"; o.witherAt = 0; o.readyAt = nowMs() + (G.firstCropDone ? cd.grow * 1000 * cdMult() : 45000);   // doc 2/8: la 1ª tanda crece en 45 s
+        G.seeds[ck]--; o.cropKey = ck; o.state = "growing"; o.witherAt = 0; const real = cd.grow * 1000 * cdMult();
+        const starter = (G.firstSeeds || 0) > 0 && FIRST_GROW_MS > 0;   // solo las semillas del starter pack
+        if (starter) G.firstSeeds--;
+        o.readyAt = nowMs() + (starter ? Math.min(FIRST_GROW_MS, real) : real);   // nunca más lento que el tiempo real del cultivo
         o.growTotal = o.readyAt - nowMs();
         this.showGrowing(o);
         this.syncPlots(); addXp("farming", 5); log(`Plantaste ${cd.label}.`, "good"); toast("" + cd.label);

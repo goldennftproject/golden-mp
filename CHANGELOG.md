@@ -320,6 +320,8 @@ Registro cronológico de todo lo hecho desde el inicio del proyecto (27 de julio
 #### Fase 10 COMPLETA — Tutorial guiado de micro-objetivos (2/8, 20:14)
 - **Cadena de 10 micro-objetivos ENCADENADOS**: cada paso deja al jugador con lo que pide el siguiente. Plantá 3 papas → cosechalas → vendelas (así tenés plata) → comprá semillas con esa plata → replantá → juntá la madera que pide el Horno → juntá su piedra → construí el Horno (ya con los materiales en mano) → juntá la plata que cuesta el Hacha → crafteala. Nunca se pide algo para lo que no tengas los ingredientes.
 - **Objetivos de recurso con contador en vivo** ("Juntá 10 de madera… 7/10") y las cantidades salen de las RECETAS REALES: si el diseñador cambia el costo del Horno o del Hacha en el panel de balanceo, el objetivo pide la cantidad nueva sola.
+- **Arranque rápido acotado al starter pack** (doc §3.1): las 3 semillas de papa con las que nace el jugador crecen en 45 s; de la 4ª en adelante (comprada o conseguida de otra forma) rige el tiempo normal del cultivo — 9 min en la papa. Antes el criterio era "hasta la primera cosecha", que según el orden dejaba semillas compradas creciendo rápido o starters lentas.
+- **BUG del arranque rápido arreglado**: estaba clavado en 45 s aunque el cultivo estuviera configurado más rápido en el panel (una papa puesta en 10 s tardaba 45 s la primera vez). Ahora el tope nunca alarga: si el cultivo dura menos, manda el cultivo. Tope y cantidad de semillas de arranque editables en el panel (0 = sin excepción).
 - **Cartel de objetivo** fijo arriba (estilo madera del juego) con la meta actual y el progreso (2/3), tilde verde animado + sonido al cumplir, y avance automático al siguiente paso.
 - **Flechita dorada rebotando** sobre el objetivo en el mundo (la parcela, el Mercado, el árbol, la Herrería, el Horno), como pide el doc.
 - **Cierre con celebración grande** + recompensa (100 de plata, editable en el panel).
@@ -341,6 +343,19 @@ Registro cronológico de todo lo hecho desde el inicio del proyecto (27 de julio
 - **BUG del cargador arreglado**: pedir los 176 frames inexistentes dejaba la pantalla de carga reintentando en loop ("176 restantes"). Ahora el arte pendiente es opcional, se consulta con un solo pedido y nunca bloquea el arranque.
 
 ---
+
+### Detallitos del diseñador (3/8)
+1. **Auto-ataque sin spam**: re-clickear con el botón derecho sobre el MISMO objetivo ya no reinicia la cadencia; solo un objetivo nuevo golpea al instante.
+2. **Recetas de la Cocina deslizables**: la lista ahora scrollea como la de la Herrería.
+3. **Las 20 armas se distinguen a simple vista**: sprites propios por tipo y rareza (madera, piedra, bronce, oro, diamante) derivados del arte base con paletas de material — se ven en la Herrería, el equipo, la bolsa y en la mano al pelear.
+4. **Pase de Batalla legible**: el texto del carril VIP pasó de dorado claro (ilegible sobre el panel) a dorado oscuro, y el Free a verde.
+5. **Misión del tutorial que no avanzaba**: los guardados con la cadena vieja quedaban con los pasos corridos (mostraba un objetivo y contaba otro). Se agregó versión de cadena y migración: si el guardado es viejo se recalcula el paso, y quien ya construyó el Horno queda con el tutorial completado.
+6. **Clic en un arma de la bolsa la tiraba a la basura**: ahora la EQUIPA (y al volver a clickearla, la guarda). Para tirarla sigue estando la papelera.
+7. **Zona Negra**: el daño que te hace el mob aparece flotando en rojo sobre el granjero y se agregó su barra de vida arriba de la cabeza.
+8. **Crafteo ×5 en todo**: picos, barras del Horno, flechas, materiales del Altar y runas suman el botón ×5 (ya lo tenían hacha y caña). El lote corta solo cuando se acaban los materiales.
+9. **"Ya tenés los materiales" mentiroso**: era el mismo desfasaje del punto 5; con la migración el objetivo vuelve a decir la verdad.
+10. **Misiones del Pase**: cada misión (diaria y semanal) muestra su recompensa en estrellas y avisa "CUMPLIDA (+N estrellas cobradas)". Verificado que la semanal acredita sus 40 estrellas.
+11. **Menú**: la entrada "Mercado" pasó a llamarse **Tienda**, que es la ventana que abre (con sus pestañas Comprar / Vender).
 
 ## Pendientes conocidos
 - En espera del diseñador: **tabla de daño de las armas** (para los tiers completos de espadas), usos de tablones/barras, cerca premium, tabla de stats del bestiario.

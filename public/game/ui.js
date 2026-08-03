@@ -86,7 +86,7 @@ function itemView(d) {
   if (d.kind === "arm") {
     const w = ARM_DEF[d.key], own = G.weapons && G.weapons[d.key];
     if (!w || !own) return null;
-    return { sprite: ARM_TIPO_DEF[w.tipo].sprite, emoji: "⚔️", label: w.label + " · daño " + w.min + "–" + w.max + " · durabilidad " + own.dur + "/" + w.dur, dur: Math.round(own.dur / w.dur * 100) };
+    return { sprite: w.sprite || ARM_TIPO_DEF[w.tipo].sprite, emoji: "⚔️", label: w.label + " · daño " + w.min + "–" + w.max + " · durabilidad " + own.dur + "/" + w.dur, dur: Math.round(own.dur / w.dur * 100) };
   }
   if (d.kind === "pick") { const pd = PICK_DEF[d.key]; const glow = d.key === "diamond" ? "glow-cyan" : (d.key === "netherite" ? "glow-fire" : (d.key === "gold" ? "glow-gold" : "")); return { sprite: pd.sprite, emoji: "⛏️", glow, label: pd.label + " · 1 uso cada uno · tenés " + pickCount(d.key), dur: null }; }
   if (d.kind === "res") return { sprite: resSprite(d.key), emoji: RES_EMOJI[d.key], label: RES_LABEL[d.key], dur: null };
@@ -148,11 +148,14 @@ function refreshInv() {
 function invCellClick(i) {
   const d = G.slots[i]; if (!d) return;
   if (d.kind === "seed") { if (!cropUnlocked(d.key)) { toast("Necesitás Cultivo nivel " + CROP_DEF[d.key].lvl); return; } selectSeed(d.key); toast("Plantando: " + CROP_DEF[d.key].label); }
-  else if (d.kind === "arm") {
-    if (G.weapons) delete G.weapons[d.key];
-    if (G.gear.arma === d.key) G.gear.arma = null;
-    toast("Tiraste " + ((ARM_DEF[d.key] || {}).label || "el arma"));
+  else if (d.kind === "arm") {   // clic = EQUIPAR (para tirarla, la papelera). Antes se borraba de una: bug reportado
+    if (!(G.weapons && G.weapons[d.key])) return;
+    if (G.gear.arma === d.key) { G.gear.arma = null; toast("Guardaste " + ((ARM_DEF[d.key] || {}).label || "el arma")); }
+    else { G.gear.arma = d.key; toast(((ARM_DEF[d.key] || {}).label || "Arma") + " equipada"); }
+    if (typeof applyCombatHp === "function") applyCombatHp();
+    refreshHud();
     if (isOpen("ov-equip")) refreshEquip(); if (isOpen("ov-forge")) refreshForge();
+    if (typeof saveFarm === "function") saveFarm();
   }
   else if (d.kind === "pick") { if (G.picks.owned[d.key]) equipPick(d.key); }
   else if (d.kind === "dish") eatDish(d.key);
@@ -330,7 +333,7 @@ function refreshEquip() {
   // arma: se EQUIPA/CAMBIA con clic en el slot (detalles jueves) — espada ↔ arco ↔ nada
   const arma = G.gear.arma;
   const armaDef = arma && ARM_DEF[arma];
-  fill("eq-arma", !!armaDef, armaDef ? spIc(ARM_TIPO_DEF[armaDef.tipo].sprite, "") : "",
+  fill("eq-arma", !!armaDef, armaDef ? spIc(armaDef.sprite || ARM_TIPO_DEF[armaDef.tipo].sprite, "") : "",
     armaDef ? armaDef.label + " equipada · clic para cambiar" : "Arma · clic para equipar");
   const armaEl = $("eq-arma");
   if (armaEl) armaEl.onclick = () => {
@@ -416,7 +419,8 @@ function refreshForge() {
     const img = '<img src="' + GF.spr(pd.sprite) + '">';
     const costStr = Object.keys(pd.cost).map(k => resIc(k) + " " + pd.cost[k]).join(" · ") + (pd.plata ? " · " + coinIc("plata") + " " + pd.plata : "");
     const afford = canAfford(pd.cost) && (!pd.plata || G.plata >= pd.plata);
-    let btns = '<button class="green sm" ' + (afford ? "" : "disabled") + ' data-craft="' + id + '">Craftear</button>';
+    let btns = '<button class="green sm" ' + (afford ? "" : "disabled") + ' data-craft="' + id + '">Craftear</button>'
+      + '<button class="green sm" ' + (afford ? "" : "disabled") + ' data-craft5="' + id + '" title="Craftear 5 de una">×5</button>';
     if (n > 0 && !isEq) btns += '<button class="ghost sm" data-equip="' + id + '">Equipar</button>';
     craft += '<div class="forge-row ' + (isEq ? "eq" : "") + '"><div class="fic">' + img + '</div><div class="finfo"><div class="fnm">' + pd.label + (isEq ? ' <span class="tag">equipado</span>' : "") + '</div><div class="fds">Mina: ' + mineEmo + ' · 1 uso c/u · tenés ' + n + '</div><div class="fds">Costo: ' + costStr + '</div></div><div class="fbtns">' + btns + "</div></div>";
   });
@@ -438,7 +442,7 @@ function refreshForge() {
     const btn = dur < w.dur
       ? '<button class="gold sm" ' + (canAfford(w.repair) ? "" : "disabled") + ' data-rarm="' + id + '" title="Reparar: ' + rstr + '">Reparar</button>'
       : '<button class="ghost sm" disabled>100%</button>';
-    repair += '<div class="forge-row"><div class="fic"><img src="' + GF.spr(ARM_TIPO_DEF[w.tipo].sprite) + '"></div><div class="finfo"><div class="fnm">' + w.label + '</div><div class="durbar"><i style="width:' + pct + '%"></i></div><div class="fds">' + dur + "/" + w.dur + " · reparar: " + rstr + '</div></div><div class="fbtns">' + btn + "</div></div>";
+    repair += '<div class="forge-row"><div class="fic"><img src="' + GF.spr(w.sprite || ARM_TIPO_DEF[w.tipo].sprite) + '"></div><div class="finfo"><div class="fnm">' + w.label + '</div><div class="durbar"><i style="width:' + pct + '%"></i></div><div class="fds">' + dur + "/" + w.dur + " · reparar: " + rstr + '</div></div><div class="fbtns">' + btn + "</div></div>";
   });
   // armas y flechas → pestaña ARMAS (detalles viernes: no se mezclan con las herramientas)
   let armas = "";
@@ -467,12 +471,12 @@ function refreshForge() {
           btns = cdL > 0 ? '<button class="green sm" disabled>' + fmtSecs(Math.ceil(cdL / 1000)) + '</button>'
             : '<button class="green sm" ' + (canAfford(w.cost) && G.plata >= w.plata ? "" : "disabled") + ' data-carm="' + id + '">Forjar</button>';
         }
-        armas += '<div class="forge-row ' + (eqNow ? "eq" : "") + '"><div class="fic"><img src="' + GF.spr(td.sprite) + '"></div><div class="finfo"><div class="fnm">' + w.label + plusTag + (own ? ' <span class="tag">' + G.weapons[id].dur + '/' + w.dur + '</span>' : '') + '</div><div class="fds">Daño ' + w.min + '–' + w.max + ' · ' + td.buffLabel + ' ' + w.buffVal + (tipo === "arco" ? "/s" : "%") + ' ' + BUFF_DESC[tipo] + '</div><div class="fds">' + (own ? 'Reparación en la pestaña Reparar' : 'Costo: ' + cs) + '</div></div><div class="fbtns">' + btns + '</div></div>';
+        armas += '<div class="forge-row ' + (eqNow ? "eq" : "") + '"><div class="fic"><img src="' + GF.spr(w.sprite || td.sprite) + '"></div><div class="finfo"><div class="fnm">' + w.label + plusTag + (own ? ' <span class="tag">' + G.weapons[id].dur + '/' + w.dur + '</span>' : '') + '</div><div class="fds">Daño ' + w.min + '–' + w.max + ' · ' + td.buffLabel + ' ' + w.buffVal + (tipo === "arco" ? "/s" : "%") + ' ' + BUFF_DESC[tipo] + '</div><div class="fds">' + (own ? 'Reparación en la pestaña Reparar' : 'Costo: ' + cs) + '</div></div><div class="fbtns">' + btns + '</div></div>';
       });
     });
   }
   const astr = G.armasUnlocked ? Object.keys(ARROW_COST).map(k => resIc(k) + " " + ARROW_COST[k]).join(" · ") : "";
-  if (G.armasUnlocked) armas += '<div class="forge-row"><div class="fic"><img src="' + GF.spr("res_flecha") + '" onerror="this.outerHTML=\'➳\'"></div><div class="finfo"><div class="fnm">Flechas ×10</div><div class="fds">Tenés ' + fmt(G.res.flecha || 0) + ' · Costo: ' + astr + '</div></div><div class="fbtns"><button class="green sm" ' + (canAfford(ARROW_COST) ? "" : "disabled") + ' id="forge-arrows">Craftear</button></div></div>';
+  if (G.armasUnlocked) armas += '<div class="forge-row"><div class="fic"><img src="' + GF.spr("res_flecha") + '" onerror="this.outerHTML=\'➳\'"></div><div class="finfo"><div class="fnm">Flechas ×10</div><div class="fds">Tenés ' + fmt(G.res.flecha || 0) + ' · Costo: ' + astr + '</div></div><div class="fbtns"><button class="green sm" ' + (canAfford(ARROW_COST) ? "" : "disabled") + ' id="forge-arrows">Craftear</button><button class="green sm" ' + (canAfford(ARROW_COST) ? "" : "disabled") + ' id="forge-arrows5" title="Craftear 50 flechas">×5</button></div></div>';
   // cofre depósito: 10 espacios + 1% de materiales por cofre
   G.chests = G.chests || [];
   const chn = G.chests.length, chFull = chn >= CHEST_MAX;
@@ -485,6 +489,7 @@ function refreshForge() {
   $("forge-repair").innerHTML = repair;
   const card = $("ov-forge");
   card.querySelectorAll("[data-craft]").forEach(b => b.onclick = () => craftPick(b.dataset.craft));
+  card.querySelectorAll("[data-craft5]").forEach(b => b.onclick = () => craftLote(craftPick, b.dataset.craft5, 5));
   card.querySelectorAll("[data-equip]").forEach(b => b.onclick = () => equipPick(b.dataset.equip));
   card.querySelectorAll("[data-mat]").forEach(b => b.onclick = () => craftMat(b.dataset.mat));
   card.querySelectorAll("[data-repair]").forEach(b => b.onclick = () => repairPick(b.dataset.repair));
@@ -495,6 +500,7 @@ function refreshForge() {
   card.querySelectorAll("[data-rarm]").forEach(b => b.onclick = () => repairWeapon(b.dataset.rarm));
   card.querySelectorAll("[data-eqarm]").forEach(b => b.onclick = () => { G.gear.arma = b.dataset.eqarm; toast(ARM_DEF[b.dataset.eqarm].label + " equipada"); if (typeof applyCombatHp === "function") applyCombatHp(); refreshHud(); refreshForge(); if (typeof syncSlots === "function") syncSlots(); if (typeof saveFarm === "function") saveFarm(); });
   const fa = $("forge-arrows"); if (fa) fa.onclick = () => craftArrows();
+  const fa5 = $("forge-arrows5"); if (fa5) fa5.onclick = () => craftLote(craftArrows, null, 5);
   const fc = $("forge-chest"); if (fc) fc.onclick = () => craftChest();
   if (typeof tutoHighlight === "function") tutoHighlight();
 }
@@ -509,12 +515,14 @@ function refreshHorno() {
     const left = matCdLeft(id); if (left > 0) anyCooling = true;
     const btn = left > 0
       ? '<button class="green sm" disabled>' + fmtSecs(Math.ceil(left / 1000)) + '</button>'
-      : '<button class="green sm" ' + (canAfford(md.cost) ? "" : "disabled") + ' data-mat="' + id + '">Fundir</button>';
+      : '<button class="green sm" ' + (canAfford(md.cost) ? "" : "disabled") + ' data-mat="' + id + '">Fundir</button>'
+        + '<button class="green sm" ' + (canAfford(md.cost) ? "" : "disabled") + ' data-mat5="' + id + '" title="Fundir 5 (se van encolando por el enfriamiento)">×5</button>';
     html += '<div class="forge-row"><div class="fic"><img src="' + GF.spr(md.sprite) + '"></div><div class="finfo"><div class="fnm">' + md.label + '</div><div class="fds">Tenés ' + fmt(G.res[id] || 0) + ' · Costo: ' + cs + '</div></div><div class="fbtns">' + btn + '</div></div>';
   });
   if (anyCooling && !window._hornoCdTick) { window._hornoCdTick = setTimeout(() => { window._hornoCdTick = null; if (isOpen("ov-horno")) refreshHorno(); }, 1000); }
   box.innerHTML = html;
   box.querySelectorAll("[data-mat]").forEach(b => b.onclick = () => craftMat(b.dataset.mat));
+  box.querySelectorAll("[data-mat5]").forEach(b => b.onclick = () => craftLote(craftMat, b.dataset.mat5, 5));
 }
 
 /* ---- cofre depósito: guardar/sacar pilas (detalles 29/7) ---- */
@@ -633,22 +641,23 @@ function refreshPass() {
   const p = passInit(), lvl = passLvl();
   const into = p.stars - lvl * PASS_STARS_LVL, need = PASS_STARS_LVL;
   let h = '<div class="forge-row"><div class="finfo">' +
-    '<div class="fnm">Nivel ' + lvl + ' / 30 · ' + fmt(p.stars) + ' estrellas' + (p.vip ? ' · <b style="color:#ffe08a">VIP activo</b> (+' + Math.round((PASS_VIP_BOOST - 1) * 100) + '% estrellas)' : '') + '</div>' +
+    '<div class="fnm">Nivel ' + lvl + ' / 30 · ' + fmt(p.stars) + ' estrellas' + (p.vip ? ' · <b style="color:#8a6413">VIP activo</b> (+' + Math.round((PASS_VIP_BOOST - 1) * 100) + '% estrellas)' : '') + '</div>' +
     (lvl < 30 ? '<div class="durbar"><i style="width:' + Math.round(into / need * 100) + '%"></i></div><div class="fds">' + into + '/' + need + ' estrellas para el nivel ' + (lvl + 1) + '</div>' : '<div class="fds">¡Pase completo!</div>') +
     '<div class="fds">Se sube JUGANDO: misiones diarias y semanales dan estrellas. La temporada dura 4-6 semanas.</div></div>' +
     '<div class="fbtns">' + (p.vip ? '' : '<button class="green sm" id="pass-vip">Pase VIP · ' + PASS_VIP_PRICE + ' $G</button>') +
     (lvl < 30 ? '<button class="sm" id="pass-buylvl">+1 nivel · ' + PASS_LVL_GOLD + ' $G</button>' : '') + '</div></div>';
   // misiones
   h += '<div class="fnm" style="margin-top:8px">Misiones de HOY (' + PASS_STAR_DAILY + ' estrellas c/u · las 3 = +' + PASS_STAR_BONUS + ')</div>';
-  p.daily.mis.forEach(m => {
+  const misRow = (m, stars) => {
     const md = PASS_MISIONES[m.k];
-    h += '<div class="forge-row' + (m.ok ? ' eq' : '') + '"><div class="finfo"><div class="fnm">' + md.label.replace("#", m.goal) + (m.ok ? " — CUMPLIDA" : "") + '</div><div class="durbar"><i style="width:' + Math.min(100, Math.round(m.n / m.goal * 100)) + '%"></i></div><div class="fds">' + Math.min(m.n, m.goal) + '/' + m.goal + '</div></div></div>';
-  });
+    return '<div class="forge-row' + (m.ok ? ' eq' : '') + '"><div class="finfo"><div class="fnm">' + md.label.replace("#", m.goal) +
+      (m.ok ? ' <span style="color:#3f6b2a">— CUMPLIDA (+' + stars + ' estrellas cobradas)</span>' : '') + '</div>' +
+      '<div class="durbar"><i style="width:' + Math.min(100, Math.round(m.n / m.goal * 100)) + '%"></i></div>' +
+      '<div class="fds">' + Math.min(m.n, m.goal) + '/' + m.goal + ' · recompensa: ' + stars + ' estrellas</div></div></div>';
+  };
+  p.daily.mis.forEach(m => { h += misRow(m, PASS_STAR_DAILY); });
   h += '<div class="fnm" style="margin-top:8px">Misiones de la SEMANA (' + PASS_STAR_WEEKLY + ' estrellas c/u)</div>';
-  p.weekly.mis.forEach(m => {
-    const md = PASS_MISIONES[m.k];
-    h += '<div class="forge-row' + (m.ok ? ' eq' : '') + '"><div class="finfo"><div class="fnm">' + md.label.replace("#", m.goal) + (m.ok ? " — CUMPLIDA" : "") + '</div><div class="durbar"><i style="width:' + Math.min(100, Math.round(m.n / m.goal * 100)) + '%"></i></div><div class="fds">' + Math.min(m.n, m.goal) + '/' + m.goal + '</div></div></div>';
-  });
+  p.weekly.mis.forEach(m => { h += misRow(m, PASS_STAR_WEEKLY); });
   // cosméticos ganados
   if (p.cosmetics.length) h += '<div class="fds" style="margin-top:6px">Tus cosméticos: ' + p.cosmetics.join(" · ") + '</div>';
   // los 30 niveles
@@ -660,8 +669,8 @@ function refreshPass() {
     const bv = p.claimV[nv] ? '<button class="ghost sm" disabled>Reclamado</button>' : (alc && p.vip ? '<button class="green sm" data-pvip="' + nv + '">Reclamar VIP</button>' : '');
     h += '<div class="forge-row' + (alc ? '' : ' locked') + '"><div class="finfo">' +
       '<div class="fnm">Nivel ' + nv + (hito ? ' <span style="color:#ffe08a">' + hito + '</span>' : '') + '</div>' +
-      '<div class="fds">FREE: ' + passRewardStr(rf) + '</div>' +
-      '<div class="fds" style="color:#ffe9ac">VIP: ' + passRewardStr(rv) + (p.vip ? '' : ' (requiere Pase VIP)') + '</div>' +
+      '<div class="fds free">FREE: ' + passRewardStr(rf) + '</div>' +
+      '<div class="fds vip">VIP: ' + passRewardStr(rv) + (p.vip ? '' : ' (requiere Pase VIP)') + '</div>' +
       '</div><div class="fbtns">' + bf + bv + '</div></div>';
   }
   box.innerHTML = h;
@@ -711,13 +720,13 @@ function refreshAltar() {
   for (const id in ALTAR_CRAFT) {
     const c = ALTAR_CRAFT[id];
     const costo = Object.keys(c.cost).map(k => c.cost[k] + " " + (RES_LABEL[k] || k)).join(" + ") + (c.plata ? " + " + c.plata + " plata" : "") + (c.golden ? " + " + c.golden + " $Golden" : "");
-    h += '<div class="forge-row"><div class="finfo"><div class="fnm">' + RES_LABEL[id] + ' <span class="fds">(tenés ' + (G.res[id] || 0) + ')</span></div><div class="fds">' + costo + '</div></div><div class="fbtns"><button class="green sm" data-caltar="' + id + '">Craftear</button></div></div>';
+    h += '<div class="forge-row"><div class="finfo"><div class="fnm">' + RES_LABEL[id] + ' <span class="fds">(tenés ' + (G.res[id] || 0) + ')</span></div><div class="fds">' + costo + '</div></div><div class="fbtns"><button class="green sm" data-caltar="' + id + '">Craftear</button><button class="green sm" data-caltar5="' + id + '" title="Craftear 5">×5</button></div></div>';
   }
   // runas de atributo I
   h += '<div class="fnm" style="margin-top:10px">Craftear runas de atributo (rareza I)</div>';
   h += '<div class="fds">Cuestan ' + Object.keys(RUNA_CRAFT.cost).map(k => RUNA_CRAFT.cost[k] + " " + (RES_LABEL[k] || k)).join(" + ") + ' + ' + RUNA_CRAFT.plata + ' plata.</div>';
   RUNA_ORDER.forEach(t => {
-    h += '<div class="forge-row"><div class="finfo"><div class="fnm">' + RUNA_TIPOS[t].label + ' I <span class="fds">(tenés ' + (G.res[runaKey(t, 1)] || 0) + ')</span></div><div class="fds">' + RUNA_TIPOS[t].buff + ': +' + RUNA_TIPOS[t].vals[0] + RUNA_TIPOS[t].uni + ' → +' + RUNA_TIPOS[t].vals[4] + RUNA_TIPOS[t].uni + ' en rareza V</div></div><div class="fbtns"><button class="green sm" data-cruna="' + t + '">Craftear I</button></div></div>';
+    h += '<div class="forge-row"><div class="finfo"><div class="fnm">' + RUNA_TIPOS[t].label + ' I <span class="fds">(tenés ' + (G.res[runaKey(t, 1)] || 0) + ')</span></div><div class="fds">' + RUNA_TIPOS[t].buff + ': +' + RUNA_TIPOS[t].vals[0] + RUNA_TIPOS[t].uni + ' → +' + RUNA_TIPOS[t].vals[4] + RUNA_TIPOS[t].uni + ' en rareza V</div></div><div class="fbtns"><button class="green sm" data-cruna="' + t + '">Craftear I</button><button class="green sm" data-cruna5="' + t + '" title="Craftear 5">×5</button></div></div>';
   });
   // ---- Fusión ----
   let fus = "";
@@ -731,7 +740,9 @@ function refreshAltar() {
     upgradeWeapon(id, polvo && polvo.checked, prot && prot.checked);
   });
   box.querySelectorAll("[data-caltar]").forEach(b => b.onclick = () => craftAltarItem(b.dataset.caltar));
+  box.querySelectorAll("[data-caltar5]").forEach(b => b.onclick = () => craftLote(craftAltarItem, b.dataset.caltar5, 5));
   box.querySelectorAll("[data-cruna]").forEach(b => b.onclick = () => craftRunaI(b.dataset.cruna));
+  box.querySelectorAll("[data-cruna5]").forEach(b => b.onclick = () => craftLote(craftRunaI, b.dataset.cruna5, 5));
   box.querySelectorAll("[data-fuse]").forEach(b => b.onclick = () => { const [t, r] = b.dataset.fuse.split(":"); fuseRuna(t, Number(r)); });
   box.querySelectorAll("[data-socket]").forEach(sel => sel.onchange = () => {
     if (!sel.value) return;
