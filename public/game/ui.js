@@ -562,11 +562,17 @@ function refreshCooking() {
     (nxt != null ? '<div class="durbar"><i style="width:' + Math.round((xp - COOK_LVLS[lvl]) / (nxt - COOK_LVLS[lvl]) * 100) + '%"></i></div><div class="fds">' + fmt(xp) + '/' + fmt(nxt) + ' XP para el nivel ' + (lvl + 1) + '</div>' : '') +
     (lvl > 1 ? '<div class="fds">Maestría: buffs y precios de venta +' + Math.round((cookPot(1) - 1) * 100) + '% en las recetas de nivel 1 (2% por nivel sobre la receta, tope +50%)</div>' : '') +
     '</div></div>';
-  if (G.cooking) {   // barra de cocción en curso
-    const r = RECIPE_DEF[G.cooking.id];
-    const left = Math.max(0, G.cooking.endAt - nowMs());
-    const pct = Math.round((1 - left / (G.cooking.total || 1)) * 100);
-    head += '<div class="forge-row"><div class="fic"></div><div class="finfo"><div class="fnm">Cocinando ' + (r ? r.label : "") + '…</div><div class="durbar"><i style="width:' + pct + '%"></i></div><div class="fds">' + fmtSecs(Math.ceil(left / 1000)) + ' restantes</div></div></div>';
+  { // ollas en paralelo (3/8: se cocinan varios platos a la vez)
+    const lista = cookList();
+    head += '<div class="fds" style="margin:4px 0">Ollas: ' + lista.length + '/' + COOK_SLOTS + ' en uso</div>';
+    lista.forEach(c => {
+      const r = RECIPE_DEF[c.id];
+      const left = Math.max(0, c.endAt - nowMs());
+      const pct = Math.round((1 - left / (c.total || 1)) * 100);
+      head += '<div class="forge-row"><div class="fic">' + (r && r.sprite ? '<img src="' + GF.spr(r.sprite) + '" onerror="this.outerHTML=\'' + (r.emoji || "") + '\'">' : (r ? r.emoji : "")) + '</div>' +
+        '<div class="finfo"><div class="fnm">Cocinando ' + (r ? r.label : "") + '…</div><div class="durbar"><i style="width:' + pct + '%"></i></div>' +
+        '<div class="fds">' + fmtSecs(Math.ceil(left / 1000)) + ' restantes</div></div></div>';
+    });
   }
   box.innerHTML = head + RECIPE_ORDER.map(id => {
     const r = RECIPE_DEF[id];
@@ -577,7 +583,7 @@ function refreshCooking() {
     const fic = r.sprite ? '<img src="' + GF.spr(r.sprite) + '" onerror="this.outerHTML=\'' + r.emoji + '\'">' : r.emoji;
     const own = Math.floor((G.dishes && G.dishes[id]) || 0);
     const vPlata = Math.round(dishPrice(r) * cookPot(r.lvl));
-    let btns = '<button class="green sm" ' + ((!locked && canCook(id) && !G.cooking) ? "" : "disabled") + ' data-cook="' + id + '">' + (locked ? "Nivel " + r.lvl : "Cocinar") + '</button>';
+    let btns = '<button class="green sm" ' + ((!locked && canCook(id) && cookFree() > 0) ? "" : "disabled") + ' data-cook="' + id + '">' + (locked ? "Nivel " + r.lvl : "Cocinar") + '</button>';
     if (own > 0 && r.plata) btns += '<button class="sm" data-selld="' + id + '">Vender (' + own + ') · ' + vPlata + ' plata</button>';
     if (own > 0 && r.goldenP && lvl >= 8) btns += '<button class="sm" data-sellg="' + id + '">Vender · ' + r.goldenP + ' $G</button>';
     return '<div class="forge-row' + (locked ? ' locked' : '') + '"><div class="fic">' + fic + '</div><div class="finfo"><div class="fnm">' + r.label + (locked ? ' · se desbloquea a nivel ' + r.lvl : '') + '</div><div class="fds">' + dishDesc(r) + ' · cocción ' + fmtSecs(r.cookS || 8) + ' · +' + r.xp + ' XP</div><div class="fds">Ingredientes: ' + parts.join(" · ") + (r.plata ? ' · Venta: ' + vPlata + ' plata' + (r.goldenP ? ' o ' + r.goldenP + ' $Golden (Nv 8)' : '') : '') + '</div></div><div class="fbtns">' + btns + '</div></div>';

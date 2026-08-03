@@ -454,7 +454,7 @@ class FarmScene extends Phaser.Scene {
     this.startHornoSmoke();   // humo del Horno de Piedra si ya está construido (viernes 2)
     const cocinaObj = this.objs.find(o => o.type === "cocina");
     if (cocinaObj) smokeFrom(cocinaObj, 0.20, 0xefe9db, () => true);                     // cocina: humo SIEMPRE (detalles jueves)
-    if (cocinaObj) smokeFrom(cocinaObj, 0.20, 0xffffff, () => !!G.cooking);              // …y el doble de bocanadas mientras se cocina
+    if (cocinaObj) smokeFrom(cocinaObj, 0.20, 0xffffff, () => (typeof cookList === "function" ? cookList().length > 0 : !!G.cooking));   // …y el doble de bocanadas mientras se cocina
 
     // cofres depósito colocados por el jugador (los que están en la bolsa NO se colocan solos)
     (G.chests = G.chests || []).forEach((c, idx) => { if (c.col != null) this.spawnChest(idx); });

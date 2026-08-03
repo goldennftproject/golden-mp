@@ -349,6 +349,7 @@ Registro cronológico de todo lo hecho desde el inicio del proyecto (27 de julio
 - **Leña en las 14 recetas** (como ya regía antes): 1 madera las simples, 2 las medias, 3 las grandes. Cocinar ahora consume un recurso limitado por los enfriamientos de los árboles.
 - **Precio de venta calculado sobre los ingredientes**: precio = valor de lo que lleva × 1,25 (+25% por cocinar), y encima la maestría del cocinero (hasta +50%). Así el margen es siempre razonable **sin importar qué precios les ponga el diseñador a los cultivos** — no se puede volver a romper.
 - Todo editable en el panel: se puede volver a los precios fijos de la planilla (`Precio de venta de los platos = 0`) y ajustar el margen del cocinero.
+- **Cocción en minutos y varias ollas** (decisión del diseñador, 3/8): los platos pasaron de segundos a **3 a 10 minutos** según la receta (Papa Asada 3 min … Banquete del Bosque 10 min), y la Cocina cocina **3 platos a la vez** en ollas paralelas, cada una con su barra y su tiempo restante. El botón Cocinar se bloquea solo cuando las 3 ollas están ocupadas. Cantidad de ollas y tiempo de cada receta editables en el panel; los guardados con una cocción en curso se migran solos.
 
 ### Guía de objetivos ampliada a 34 pasos (3/8)
 - La cadena guiada dejó de ser solo el arranque: ahora **recorre TODO el juego** para que el jugador descubra cada sistema jugando, no leyendo.

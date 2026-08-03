@@ -100,7 +100,10 @@ function hydrate(d) {
   if (!("arma" in og)) G.gear.arma = d.swordOwned ? "sword" : (d.bowOwned ? "bow" : null);
   if (!("municion" in og)) G.gear.municion = ((d.res && d.res.flecha) || 0) > 0;
   if (d.dishes && typeof d.dishes === "object") G.dishes = Object.assign({}, d.dishes);
-  if (d.cooking && typeof d.cooking === "object" && d.cooking.endAt) G.cooking = d.cooking;
+  // la Cocina pasó a tener varias ollas: los guardados viejos traían un solo objeto
+  if (Array.isArray(d.cooking)) G.cooking = d.cooking.filter(c => c && c.endAt);
+  else if (d.cooking && typeof d.cooking === "object" && d.cooking.endAt) G.cooking = [d.cooking];
+  else G.cooking = [];
   if (Array.isArray(d.chests)) G.chests = d.chests.slice(0, 50).map(c => ({ col: (typeof c.col === "number" ? c.col : null), row: (typeof c.row === "number" ? c.row : null), items: (Array.isArray(c.items) ? c.items.slice(0, 10) : Array(10).fill(null)) }));
   if (typeof d.dummyUsedAt === "number") G.dummyUsedAt = d.dummyUsedAt;
   if (d.layoutPlots && typeof d.layoutPlots === "object") G.layoutPlots = d.layoutPlots;

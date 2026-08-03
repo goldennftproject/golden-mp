@@ -106,6 +106,7 @@ var BAL = (function () {
     add("Cocina — General", "dishBuffDur", "Duración de los buffs de comida", "", () => DISH_BUFF_DUR, v => { DISH_BUFF_DUR = v; }, 1, "tiempo");
     add("Cocina — General", "cookPriceAuto", "Precio de venta de los platos: 1 = calculado sobre ingredientes (recomendado) · 0 = precio fijo de la planilla", "1 o 0", () => COOK_PRICE_AUTO, v => { COOK_PRICE_AUTO = v ? 1 : 0; });
     add("Cocina — General", "cookMargen", "Ganancia de cocinar sobre el valor de los ingredientes (1.25 = +25%)", U.factor, () => COOK_MARGEN, v => { COOK_MARGEN = v; }, 0.05);
+    add("Cocina — General", "cookSlots", "Ollas: cuántos platos se cocinan a la vez", "ollas · entero", () => COOK_SLOTS, v => { COOK_SLOTS = v; });
     for (const id in RECIPE_DEF) {
       const r = RECIPE_DEF[id], cat = "Cocina — " + r.label;
       if (r.res) costos(cat, "recipe." + id + ".res", r.res, "Ingredientes");
