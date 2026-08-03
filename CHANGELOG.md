@@ -318,7 +318,8 @@ Registro cronológico de todo lo hecho desde el inicio del proyecto (27 de julio
 - Progreso guardado (misiones, estrellas, reclamados) y todas las perillas (estrellas por nivel, precios, boost) editables en el panel de balanceo.
 
 #### Fase 10 COMPLETA — Tutorial guiado de micro-objetivos (2/8, 20:14)
-- **Cadena de 8 micro-objetivos** para el jugador nuevo (el cambio de mayor impacto según el doc): plantá tus 3 papas → cosechá → vendé en el Mercado → comprá semillas → replantá → talá o picá → crafteá una herramienta → construí el Horno. Cada tilde es un golpe de dopamina.
+- **Cadena de 10 micro-objetivos ENCADENADOS**: cada paso deja al jugador con lo que pide el siguiente. Plantá 3 papas → cosechalas → vendelas (así tenés plata) → comprá semillas con esa plata → replantá → juntá la madera que pide el Horno → juntá su piedra → construí el Horno (ya con los materiales en mano) → juntá la plata que cuesta el Hacha → crafteala. Nunca se pide algo para lo que no tengas los ingredientes.
+- **Objetivos de recurso con contador en vivo** ("Juntá 10 de madera… 7/10") y las cantidades salen de las RECETAS REALES: si el diseñador cambia el costo del Horno o del Hacha en el panel de balanceo, el objetivo pide la cantidad nueva sola.
 - **Cartel de objetivo** fijo arriba (estilo madera del juego) con la meta actual y el progreso (2/3), tilde verde animado + sonido al cumplir, y avance automático al siguiente paso.
 - **Flechita dorada rebotando** sobre el objetivo en el mundo (la parcela, el Mercado, el árbol, la Herrería, el Horno), como pide el doc.
 - **Cierre con celebración grande** + recompensa (100 de plata, editable en el panel).

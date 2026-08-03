@@ -808,7 +808,11 @@ class FarmScene extends Phaser.Scene {
     if (!st) return;
     let x = null, y = null;
     if (st.target === "plot") { const pl = (this.plots || []).find(o => o.state !== "locked"); if (pl) { x = pl.cx; y = pl.by - GF.TILE * 0.9; } }
-    else if (st.target === "tree") { const o = (this.objs || []).find(o => (o.type === "tree" || o.type === "rock") && !o.locked); if (o) { x = o.cx; y = o.by - (o.sprite ? o.sprite.displayHeight : 60) - 10; } }
+    else if (st.target === "tree" || st.target === "rock") {
+      const tipos = st.target === "rock" ? ["rock", "ore"] : ["tree"];
+      const o = (this.objs || []).find(o => tipos.includes(o.type) && !o.locked);
+      if (o) { x = o.cx; y = o.by - (o.sprite ? o.sprite.displayHeight : 60) - 10; }
+    }
     else { const o = (this.objs || []).find(o => o.type === st.target); if (o) { x = o.cx; y = o.by - (o.sprite ? o.sprite.displayHeight : 60) - 10; } }
     if (x == null) return;
     const tri = this.add.triangle(x, y, 0, 0, 16, 0, 8, 12, 0xffd75e).setStrokeStyle(2, 0x241505, 1).setDepth(99990);

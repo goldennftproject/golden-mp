@@ -375,27 +375,50 @@ const TOOL_DEF = {
 
 // ================= TUTORIAL GUIADO (doc maestro 2/8 §3.2): micro-objetivos de los primeros minutos =================
 // Cadena de metas cortas, cada una con tilde + sonido + celebración al final. "El cambio de mayor impacto del doc".
-// txt = meta · target = objeto del mundo al que apunta la flecha · ui = qué señalar DENTRO del panel
+// CADENA de objetivos: cada paso deja al jugador con lo que necesita el siguiente.
+//   txt   = meta ("#" se reemplaza por la cantidad real)
+//   n     = repeticiones de la acción · res = paso de RECURSO (se cumple al TENER esa cantidad)
+//   need  = cantidad exacta que pide el paso siguiente (sale de las recetas reales del juego)
+//   target= a qué apunta la flecha en el mundo · panel/ui = qué botón se resalta dentro de la ventana
 const TUTO_STEPS = [
-  { id: "plant",     n: 3, txt: "Plantá tus 3 papas en las parcelas",       target: "plot" },
-  { id: "harvest",   n: 3, txt: "Cosechá tus 3 papas",                      target: "plot" },
-  { id: "sell",      n: 1, txt: "Vendé tus papas en el Mercado",            target: "market", panel: "ov-market", ui: "#vb-papa" },
-  { id: "buyseed",   n: 1, txt: "Comprá semillas de papa en la Tienda",     target: "market", panel: "ov-market", ui: "[data-buy='papa']" },
-  { id: "plant2",    n: 1, txt: "Replantá una semilla de papa",             target: "plot" },
-  { id: "gather",    n: 1, txt: "Talá un árbol (o picá una piedra)",        target: "tree" },
-  { id: "crafttool", n: 1, txt: "Crafteá un Hacha en la Herrería",          target: "store", panel: "ov-forge", ui: "[data-ctool='axe']" },
-  { id: "build",     n: 1, txt: "Construí el Horno de Piedra",              target: "horno" },
+  { id: "plant",     n: 3, txt: "Plantá tus 3 papas en las parcelas",              target: "plot" },
+  { id: "harvest",   n: 3, txt: "Cosechá tus 3 papas",                             target: "plot" },
+  { id: "sell",      n: 1, txt: "Vendé tus papas en el Mercado (necesitás plata)", target: "market", panel: "ov-market", ui: "#vb-papa" },
+  { id: "buyseed",   n: 1, txt: "Con esa plata comprá semillas de papa",           target: "market", panel: "ov-market", ui: "[data-buy='papa']" },
+  { id: "plant2",    n: 1, txt: "Replantá una semilla de papa",                    target: "plot" },
+  // — cadena del Horno: primero los materiales de SU receta, después construirlo —
+  { id: "wood",  res: "madera", need: () => BUILD_DEF.horno.cost.madera || 10,
+    txt: "Juntá # de madera talando árboles (para el Horno)",                      target: "tree" },
+  { id: "stone", res: "piedra", need: () => BUILD_DEF.horno.cost.piedra || 8,
+    txt: "Juntá # de piedra picando rocas (para el Horno)",                        target: "rock" },
+  { id: "build",     n: 1, txt: "Ya tenés los materiales: construí el Horno de Piedra", target: "horno" },
+  // — cadena del Hacha: primero la plata que cuesta, después craftearla —
+  { id: "silver", res: "plata", need: () => TOOL_CRAFT.axe.plata || 10,
+    txt: "Juntá # de plata vendiendo cosecha (para el Hacha)",                     target: "market", panel: "ov-market", ui: "#vb-papa" },
+  { id: "crafttool", n: 1, txt: "Crafteá un Hacha en la Herrería",                 target: "store", panel: "ov-forge", ui: "[data-ctool='axe']" },
 ];
+function tutoNeed(st) { return st ? (typeof st.need === "function" ? st.need() : (st.n || 1)) : 0; }
+function tutoTiene(st) { return !st || !st.res ? 0 : Math.floor(st.res === "plata" ? G.plata : (G.res[st.res] || 0)); }
+function tutoTxt(st) { return st ? String(st.txt).replace("#", tutoNeed(st)) : ""; }
 var TUTO_REWARD_PLATA = 100;   // gran recompensa del cierre (editable)
 function tutoActivo() { return G.tuto && !G.tuto.done ? TUTO_STEPS[G.tuto.step] : null; }
+// paso de RECURSO: se cumple solo cuando tenés la cantidad que pide la receta siguiente
+function tutoCheckRes() {
+  const st = tutoActivo();
+  if (!st || !st.res) return;
+  if (tutoTiene(st) >= tutoNeed(st)) tutoDone(st);
+}
 function tutoEvent(tipo) {
-  const st = tutoActivo(); if (!st) return;
+  const st = tutoActivo(); if (!st || st.res) return;
   const acepta = st.id === tipo || (st.id === "plant2" && tipo === "plant");
   if (!acepta) return;
   G.tuto.n = (G.tuto.n || 0) + 1;
   if (G.tuto.n < st.n) { if (typeof tutoRefresh === "function") tutoRefresh(); return; }
+  tutoDone(st);
+}
+function tutoDone(st) {
   // paso cumplido: tilde + sonido + avance automático (doc)
-  if (typeof tutoCheck === "function") tutoCheck(st.txt);
+  if (typeof tutoCheck === "function") tutoCheck(tutoTxt(st));
   if (window.sfx) sfx("level");
   G.tuto.step++; G.tuto.n = 0;
   if (G.tuto.step >= TUTO_STEPS.length) {
@@ -405,7 +428,7 @@ function tutoEvent(tipo) {
     if (window.celebrate) celebrate({ title: "¡GRANJA LISTA!", sub: "Tutorial completo", big: true, reward: "+" + TUTO_REWARD_PLATA + " de plata" });
     refreshHud();
   } else {
-    log("Nuevo objetivo: " + TUTO_STEPS[G.tuto.step].txt + ".", "good");
+    log("Nuevo objetivo: " + tutoTxt(TUTO_STEPS[G.tuto.step]) + ".", "good");
   }
   if (typeof tutoRefresh === "function") tutoRefresh();
   if (window.farmScene && window.farmScene.updateTutoArrow) try { window.farmScene.updateTutoArrow(); } catch (e) {}

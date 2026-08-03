@@ -587,8 +587,10 @@ function tutoRefresh() {
   const st = (typeof tutoActivo === "function") ? tutoActivo() : null;
   if (!st) { el.classList.add("hidden"); return; }
   el.classList.remove("hidden");
-  document.getElementById("tuto-txt").textContent = st.txt;
-  document.getElementById("tuto-n").textContent = st.n > 1 ? " " + Math.min(G.tuto.n || 0, st.n) + "/" + st.n : "";
+  document.getElementById("tuto-txt").textContent = tutoTxt(st);
+  const need = tutoNeed(st);
+  document.getElementById("tuto-n").textContent = st.res ? " " + Math.min(tutoTiene(st), need) + "/" + need
+    : (st.n > 1 ? " " + Math.min(G.tuto.n || 0, st.n) + "/" + st.n : "");
   tutoHighlight();
 }
 // resalta el BOTÓN exacto del paso actual dentro del panel abierto (ej.: el Hacha en la Herrería)
@@ -607,7 +609,9 @@ window.tutoHighlight = tutoHighlight;
 // el guardado se hidrata de forma asíncrona: si el paso cambia, se redibujan cartel Y flecha juntos
 let _tutoSig = null;
 function tutoSync(force) {
-  const sig = G.tuto ? (G.tuto.step + ":" + (G.tuto.n || 0) + ":" + !!G.tuto.done) : "-";
+  if (typeof tutoCheckRes === "function") tutoCheckRes();   // pasos de "juntá X de madera/piedra/plata"
+  const st = (typeof tutoActivo === "function") ? tutoActivo() : null;
+  const sig = G.tuto ? (G.tuto.step + ":" + (st && st.res ? tutoTiene(st) : (G.tuto.n || 0)) + ":" + !!G.tuto.done) : "-";
   if (!force && sig === _tutoSig) return;
   _tutoSig = sig;
   tutoRefresh();
