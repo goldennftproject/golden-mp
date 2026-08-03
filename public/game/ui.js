@@ -496,6 +496,7 @@ function refreshForge() {
   card.querySelectorAll("[data-eqarm]").forEach(b => b.onclick = () => { G.gear.arma = b.dataset.eqarm; toast(ARM_DEF[b.dataset.eqarm].label + " equipada"); if (typeof applyCombatHp === "function") applyCombatHp(); refreshHud(); refreshForge(); if (typeof syncSlots === "function") syncSlots(); if (typeof saveFarm === "function") saveFarm(); });
   const fa = $("forge-arrows"); if (fa) fa.onclick = () => craftArrows();
   const fc = $("forge-chest"); if (fc) fc.onclick = () => craftChest();
+  if (typeof tutoHighlight === "function") tutoHighlight();
 }
 function refreshTools() { refreshForge(); }   // compatibilidad con llamadas viejas
 
@@ -588,7 +589,21 @@ function tutoRefresh() {
   el.classList.remove("hidden");
   document.getElementById("tuto-txt").textContent = st.txt;
   document.getElementById("tuto-n").textContent = st.n > 1 ? " " + Math.min(G.tuto.n || 0, st.n) + "/" + st.n : "";
+  tutoHighlight();
 }
+// resalta el BOTÓN exacto del paso actual dentro del panel abierto (ej.: el Hacha en la Herrería)
+function tutoHighlight() {
+  document.querySelectorAll(".tutohl").forEach(e => e.classList.remove("tutohl"));
+  const st = (typeof tutoActivo === "function") ? tutoActivo() : null;
+  if (!st || !st.ui || !st.panel || !isOpen(st.panel)) return;
+  const cont = document.getElementById(st.panel); if (!cont) return;
+  const el = cont.querySelector(st.ui); if (!el) return;
+  el.classList.add("tutohl");
+  const fila = el.closest(".forge-row, .mkt-row");
+  if (fila) { fila.classList.add("tutohl"); fila.scrollIntoView({ block: "nearest" }); }
+}
+window.tutoHighlight = tutoHighlight;
+
 function tutoCheck(txt) {   // tilde animado sobre el cartel al cumplir un paso
   const el = document.getElementById("tuto"); if (!el) return;
   const c = document.createElement("span"); c.className = "check"; c.textContent = "✓";
@@ -716,6 +731,7 @@ function refreshMarket() {
   $("mkt-list").innerHTML = SELLABLE.map(res => { const owned = G.res[res] || 0; const u = marketUnit(res); const uStr = cur === "plata" ? `${u} de plata c/u` : `${u.toFixed(1)} $Golden c/u`;
     return `<div class="mkt-row"><span class="mimg">${itemIcon({ sprite: resSprite(res), emoji: RES_EMOJI[res] })}</span><div class="minfo"><div class="mnm">${RES_LABEL[res]}</div><div class="mds">Tenés ${fmt(owned)} · ${uStr}</div></div><input id="mq-${res}" type="number" min="0" max="${owned}" value="${owned > 0 ? owned : 0}"><button class="vbtn" id="vb-${res}">Vender</button></div>`; }).join("");
   SELLABLE.forEach(res => { const btn = $("vb-" + res); if (btn) btn.onclick = () => sellItem(res); });
+  if (typeof tutoHighlight === "function") tutoHighlight();
   document.querySelectorAll(".curbtn").forEach(b => b.classList.toggle("active", b.dataset.cur === cur));
   refreshSeedShop();
 }
@@ -735,6 +751,7 @@ function refreshSeedShop() {
   + '<div class="shophead">Carnada</div>'
   + `<div class="mkt-row"><span class="mimg">${itemIcon({ sprite: "res_lombriz", emoji: "" })}</span><div class="minfo"><div class="mnm">Lombriz</div><div class="mds">Carnada de pesca · 1 por lanzamiento · tenés ${fmt(G.res.lombriz || 0)}</div></div><input id="sq-lombriz" type="number" min="1" value="10"><button class="green sm" id="buy-lombriz" ${G.plata >= WORM_PRICE ? "" : "disabled"}>Comprar · ${coinIc("plata")}${WORM_PRICE} c/u</button></div>`;
   box.querySelectorAll("[data-buy]").forEach(b => b.onclick = () => { const inp = $("sq-" + b.dataset.buy); buySeed(b.dataset.buy, inp ? +inp.value : 1); });
+  if (typeof tutoHighlight === "function") tutoHighlight();
   const wb = $("buy-lombriz"); if (wb) wb.onclick = () => { const inp = $("sq-lombriz"); buyWorm(inp ? +inp.value : 1); };
 }
 

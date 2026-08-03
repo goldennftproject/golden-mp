@@ -375,15 +375,16 @@ const TOOL_DEF = {
 
 // ================= TUTORIAL GUIADO (doc maestro 2/8 §3.2): micro-objetivos de los primeros minutos =================
 // Cadena de metas cortas, cada una con tilde + sonido + celebración al final. "El cambio de mayor impacto del doc".
+// txt = meta · target = objeto del mundo al que apunta la flecha · ui = qué señalar DENTRO del panel
 const TUTO_STEPS = [
-  { id: "plant",     n: 3, txt: "Plantá tus 3 papas",                     target: "plot" },
-  { id: "harvest",   n: 3, txt: "Cosechá tus papas",                      target: "plot" },
-  { id: "sell",      n: 1, txt: "Vendé la cosecha en el Mercado",         target: "market" },
-  { id: "buyseed",   n: 1, txt: "Comprá más semillas en el Mercado",      target: "market" },
-  { id: "plant2",    n: 1, txt: "Replantá una semilla",                   target: "plot" },
-  { id: "gather",    n: 1, txt: "Talá un árbol o picá una piedra",        target: "tree" },
-  { id: "crafttool", n: 1, txt: "Crafteá una herramienta en la Herrería", target: "store" },
-  { id: "build",     n: 1, txt: "Construí el Horno de Piedra",            target: "horno" },
+  { id: "plant",     n: 3, txt: "Plantá tus 3 papas en las parcelas",       target: "plot" },
+  { id: "harvest",   n: 3, txt: "Cosechá tus 3 papas",                      target: "plot" },
+  { id: "sell",      n: 1, txt: "Vendé tus papas en el Mercado",            target: "market", panel: "ov-market", ui: "#vb-papa" },
+  { id: "buyseed",   n: 1, txt: "Comprá semillas de papa en la Tienda",     target: "market", panel: "ov-market", ui: "[data-buy='papa']" },
+  { id: "plant2",    n: 1, txt: "Replantá una semilla de papa",             target: "plot" },
+  { id: "gather",    n: 1, txt: "Talá un árbol (o picá una piedra)",        target: "tree" },
+  { id: "crafttool", n: 1, txt: "Crafteá un Hacha en la Herrería",          target: "store", panel: "ov-forge", ui: "[data-ctool='axe']" },
+  { id: "build",     n: 1, txt: "Construí el Horno de Piedra",              target: "horno" },
 ];
 var TUTO_REWARD_PLATA = 100;   // gran recompensa del cierre (editable)
 function tutoActivo() { return G.tuto && !G.tuto.done ? TUTO_STEPS[G.tuto.step] : null; }
