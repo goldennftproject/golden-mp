@@ -216,7 +216,7 @@ class FarmScene extends Phaser.Scene {
     });
     this.rebuildCollisions();
     window.farmScene = this;   // para refrescar la flecha del tutorial desde la UI
-    this.time.delayedCall(400, () => this.updateTutoArrow());   // flecha del tutorial guiado
+    this.time.delayedCall(400, () => { if (typeof tutoSync === "function") tutoSync(true); else this.updateTutoArrow(); });   // cartel + flecha del tutorial
 
     // parcelas (ciclo arcade: seco → plantar semilla elegida → creciendo (con timer) → listo → cosechar)
     const savedPlots = Array.isArray(G.plots) ? G.plots : [];

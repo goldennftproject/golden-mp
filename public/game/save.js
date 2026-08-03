@@ -65,6 +65,7 @@ function hydrate(d) {
   G.pass = (d.pass && typeof d.pass === "object") ? d.pass : null;
   if (d.tuto && typeof d.tuto === "object") G.tuto = d.tuto;
   else G.tuto = { step: 0, n: 0, done: !!(d.firstCropDone || (d.level && d.level > 1) || (d.plata && d.plata > 50)) };   // veteranos: sin tutorial
+  if (typeof tutoSync === "function") tutoSync(true);   // el cartel y la flecha se rehacen con el paso ya cargado
   if (typeof applyCombatHp === "function") applyCombatHp();   // vida máxima = 100 + hitos de Combate
   if (typeof d.hp === "number") G.hp = Math.max(1, Math.min(G.hpMax, d.hp));
   if (typeof d.swordOwned === "boolean") G.swordOwned = d.swordOwned;

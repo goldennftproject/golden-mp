@@ -604,6 +604,17 @@ function tutoHighlight() {
 }
 window.tutoHighlight = tutoHighlight;
 
+// el guardado se hidrata de forma asíncrona: si el paso cambia, se redibujan cartel Y flecha juntos
+let _tutoSig = null;
+function tutoSync(force) {
+  const sig = G.tuto ? (G.tuto.step + ":" + (G.tuto.n || 0) + ":" + !!G.tuto.done) : "-";
+  if (!force && sig === _tutoSig) return;
+  _tutoSig = sig;
+  tutoRefresh();
+  if (window.farmScene && window.farmScene.updateTutoArrow) { try { window.farmScene.updateTutoArrow(); } catch (e) {} }
+}
+window.tutoSync = tutoSync;
+
 function tutoCheck(txt) {   // tilde animado sobre el cartel al cumplir un paso
   const el = document.getElementById("tuto"); if (!el) return;
   const c = document.createElement("span"); c.className = "check"; c.textContent = "✓";
@@ -1032,7 +1043,7 @@ function initUI() {
   });
 
   refreshHud();
-  tutoRefresh();   // cartel del tutorial guiado (si está activo)
-  setInterval(() => { if (typeof buffTick === "function") buffTick(); refreshHud(); }, 1000);
+  tutoSync(true);   // cartel + flecha del tutorial guiado
+  setInterval(() => { if (typeof buffTick === "function") buffTick(); tutoSync(); refreshHud(); }, 1000);
 }
 initUI();
