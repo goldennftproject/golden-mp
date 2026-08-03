@@ -333,7 +333,7 @@ Registro cronológico de todo lo hecho desde el inicio del proyecto (27 de julio
 ### Arte post-fases (2/8, ~20:40)
 - **11 criaturas del bestiario como personajes PixelLab** (pipeline de la rata/larva/troll): Murciélago, Baba, Araña (regenerada en v3 para que tenga sus 8 patas), Goblin, Esqueleto Arquero, Golem, Hombre Lobo, Ogro, Espectro, Demonio Menor y el Dragón de las Cavernas (cuadrúpedo). Cada una con animaciones idle/caminar/atacar orientadas al sureste. PENDIENTE: solo la animación de ataque de la araña (se acabaron las generaciones de la suscripción de PixelLab justo ahí; queda para cuando renueve el cupo).
 - **Altar de Runas + los 14 platos de la Cocina** como estados del granero (mismo estilo del juego). El código ya referencia `altar.png` y `dish_*.png`.
-- `descargar_arte_bestiario.ps1`: baja Altar + platos directo a assets y las 11 criaturas como ZIP a `pixellab_bestiario/` para recortar e integrar después.
+- **Altar y los 14 platos YA INTEGRADOS** al juego (recortados y con el nombre que espera el código). Las 11 criaturas las genera/baja el diseñador; el código ya las espera.
 - **Código ya preparado**: el cargador pide los frames de las 11 criaturas (idle 4f / caminar 6f / atacar 6f) y registra sus animaciones, y cada mob tiene su clave de sprite. En cuanto los PNG estén en `assets/farm`, las criaturas aparecen animadas sin tocar una línea más; hasta entonces el juego cae solo al ícono provisorio.
 
 ---
