@@ -275,6 +275,7 @@ class FarmScene extends Phaser.Scene {
     hero.play("idle");
     this.hero = hero; this.facing = "east"; this.moveTarget = null; this.path = null; this.action = null; this.pendingObj = null;
     if (GF.NO_WALK) hero.setVisible(false);   // el granjero solo se ve en la Zona Negra
+    this.updateAura();
 
     // clic derecho sobre una parcela seca: rueda de sembrado rápido
     this.input.mouse.disableContextMenu();
@@ -919,6 +920,23 @@ class FarmScene extends Phaser.Scene {
     this.action = null;
   }
 
+
+  // AURA DORADA (cosmético de nivel 30+): resplandor aditivo que late a los pies del granjero
+  updateAura() {
+    const on = (typeof cosElegido === "function") && cosElegido().aura && (typeof cosAuraDisponible !== "function" || cosAuraDisponible());
+    if (!on) { if (this.auraFx) { this.auraFx.destroy(); this.auraFx = null; } if (this.auraTw) { this.auraTw.stop(); this.auraTw = null; } return; }
+    if (this.auraFx || !this.hero) return;
+    const g = this.add.graphics();
+    g.fillStyle(0xffd75e, 0.30).fillCircle(0, 0, 26);
+    g.fillStyle(0xfff3cf, 0.22).fillCircle(0, 0, 16);
+    g.setBlendMode(Phaser.BlendModes.ADD).setDepth(this.hero.y - 1);
+    this.auraFx = g;
+    this.auraTw = this.tweens.add({ targets: g, scaleX: 1.25, scaleY: 0.7, alpha: 0.75, duration: 900, yoyo: true, repeat: -1, ease: "Sine.easeInOut" });
+  }
+  seguirAura() {
+    if (!this.auraFx || !this.hero) return;
+    this.auraFx.setPosition(this.hero.x, this.hero.y - 3).setDepth(this.hero.y - 1).setVisible(this.hero.visible);
+  }
   // flecha del tutorial: triángulo dorado que rebota sobre el objetivo del paso actual
   updateTutoArrow() {
     if (this.tutoArrow) { this.tutoArrow.destroy(); this.tutoArrow = null; if (this.tutoTw) { this.tutoTw.stop(); this.tutoTw = null; } }
@@ -1357,6 +1375,7 @@ class FarmScene extends Phaser.Scene {
     if (this.leaving || !this.hero) return;   // cambiando de escena: no tocar nada más
     const dt = deltaMs / 1000, k = this.keys, hero = this.hero;
     this.drawOlas(dt);   // olas de la isla
+    this.seguirAura();
 
     // restaurar objetos que salieron de cooldown
     const t = nowMs();

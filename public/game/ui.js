@@ -19,6 +19,7 @@ const OV_REFRESH = { "ov-inv": () => refreshInv(), "ov-skills": () => refreshSki
   "ov-ofrendas": () => refreshOfrendas(),
   "ov-incursion": () => refreshIncursion(),
   "ov-p2p": () => refreshP2P(),
+  "ov-cos": () => refreshCosmeticos(),
   "ov-pass": () => refreshPass(),
   "ov-cofre": () => refreshChest(),
   "ov-config": () => refreshConfig(), "ov-lb": () => refreshLb(), "ov-daily": () => refreshDaily() };
@@ -927,7 +928,14 @@ function refreshConfig() {
 let lbTab = "plata";
 let lbData = null, lbFetchedAt = 0, lbLoading = false;
 
-function lbRowHtml(r, i, col) { const rank = i + 1; const cls = (r.me ? "me " : "") + (rank <= 3 ? "top" + rank : ""); const val = col === "plata" ? `${coinIc("plata")}${fmt(r.v)}` : (col === "skill" ? escapeHtml(String(r.v)) : `${(+r.v).toFixed(1)}`); return `<div class="lbrow ${cls}"><span class="rk">${rank}</span><span class="nm">${escapeHtml(r.n || "—")}</span><span class="val">${val}</span></div>`; }
+function lbRowHtml(r, i, col) {
+  const rank = i + 1; const cls = (r.me ? "me " : "") + (rank <= 3 ? "top" + rank : "");
+  const val = col === "plata" ? `${coinIc("plata")}${fmt(r.v)}` : (col === "skill" ? escapeHtml(String(r.v)) : `${(+r.v).toFixed(1)}`);
+  const c = r.me ? cosElegido() : null;   // los cosméticos propios se ven en vivo
+  const nm = r.me ? escapeHtml(nombreLucido(r.n)) : escapeHtml(r.n || "—");
+  const est = r.me ? ` class="nm ${c.marco !== "ninguno" ? "marco-" + c.marco : ""}" style="color:${colorNombre()}"` : ' class="nm"';
+  return `<div class="lbrow ${cls}"><span class="rk">${rank}</span><span${est}>${nm}</span><span class="val">${val}</span></div>`;
+}
 
 // nivel de skill promedio a partir del objeto skills guardado de otro jugador
 function avgSkillFromObj(sk) {
@@ -992,7 +1000,7 @@ function escapeHtml(s) { return String(s).replace(/[&<>"]/g, c => ({ "&": "&amp;
 function renderChatMsg(m) {
   const box = $("chat-msgs"); if (!box || !m) return;
   const d = document.createElement("div"); d.className = "cm";
-  d.innerHTML = "<b>" + escapeHtml(m.name || "?") + ":</b> " + escapeHtml(m.text || "");
+  d.innerHTML = '<b' + (m.color ? ' style="color:' + escapeHtml(String(m.color)) + '"' : "") + '>' + escapeHtml(m.name || "?") + ":</b> " + escapeHtml(m.text || "");
   box.appendChild(d); while (box.children.length > 60) box.removeChild(box.firstChild); box.scrollTop = box.scrollHeight;
 }
 function doSendChat() { const ci = $("chat-in"); if (!ci) return; const t = ci.value.trim(); if (!t) return; if (typeof sendChat === "function") sendChat(t); ci.value = ""; }

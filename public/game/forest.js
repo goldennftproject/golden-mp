@@ -59,6 +59,7 @@ class ForestScene extends Phaser.Scene {
     hero.setScale(this.idleScale); hero.play("idle");
     GF.scene = "forest";   // la vida NO se regenera sola acá (solo en la granja)
     this.hero = hero; this.facing = "east"; this.moveTarget = null; this.action = null; this.hurtFx = 0;
+    this.updateAura();   // aura cosmética, si la tenés encendida
     // igual que en la granja: al reiniciar la escena hay que soltar lo cacheado
     this.tgGlow = null; this.tgGlowTw = null; this.tgTxt = null; this.destMk = null;
     this._nav = null; this.holdLast = null; this.holdPend = null; this.pathStuck = 0; this.leaving = false;
@@ -377,6 +378,23 @@ class ForestScene extends Phaser.Scene {
     if (m.hp <= 0) this.killMonster(m, skill || "sword"); else { this.drawBar(m); m.tgt = "hero"; this.updateTargetFx(); }
   }
 
+
+  // AURA DORADA (cosmético de nivel 30+): resplandor aditivo que late a los pies del granjero
+  updateAura() {
+    const on = (typeof cosElegido === "function") && cosElegido().aura && (typeof cosAuraDisponible !== "function" || cosAuraDisponible());
+    if (!on) { if (this.auraFx) { this.auraFx.destroy(); this.auraFx = null; } if (this.auraTw) { this.auraTw.stop(); this.auraTw = null; } return; }
+    if (this.auraFx || !this.hero) return;
+    const g = this.add.graphics();
+    g.fillStyle(0xffd75e, 0.30).fillCircle(0, 0, 26);
+    g.fillStyle(0xfff3cf, 0.22).fillCircle(0, 0, 16);
+    g.setBlendMode(Phaser.BlendModes.ADD).setDepth(this.hero.y - 1);
+    this.auraFx = g;
+    this.auraTw = this.tweens.add({ targets: g, scaleX: 1.25, scaleY: 0.7, alpha: 0.75, duration: 900, yoyo: true, repeat: -1, ease: "Sine.easeInOut" });
+  }
+  seguirAura() {
+    if (!this.auraFx || !this.hero) return;
+    this.auraFx.setPosition(this.hero.x, this.hero.y - 3).setDepth(this.hero.y - 1).setVisible(this.hero.visible);
+  }
   // barra de vida del jugador, encima del granjero (solo en la Zona Negra)
   drawHeroBar() {
     if (!this.hero) return;
@@ -571,6 +589,7 @@ class ForestScene extends Phaser.Scene {
     // tinte de daño
     if (this.hurtFx > 0) { this.hurtFx -= dt; hero.setTint(0xff6b5a); } else hero.clearTint();
     this.drawHeroBar();   // la barra de vida sigue al granjero
+    this.seguirAura();
 
     // objetivo fijado: recuadro + nombre/vida, y auto-ataque cada 2s
     if (this.target && this.target.dead) this.clearTarget();

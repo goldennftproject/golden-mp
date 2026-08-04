@@ -26,13 +26,13 @@ function snapshot() {
     tools: G.tools, toolsLost: G.toolsLost, sflStock: true, invRows: G.invRows, slots: G.slots, hotbar: G.hotbar, hotSel: G.hotSel, hbInit: G.hbInit, layout: G.layout,
     daily: G.daily, plotsOwned: G.plotsOwned, seedBuys: G.seedBuys, built: G.built,
     hp: G.hp, hpMax: G.hpMax, combatXp: G.combatXp, stam: G.stam, stamAcc: G.stamAcc, stamRec: G.stamRec, pass: G.pass, tuto: G.tuto, firstSeeds: G.firstSeeds,
-    stats: G.stats, statsBase: G.statsBase, chestCap: G.chestCap, edif2: G.edif2, cosmeticos: G.cosmeticos, animals: G.animals, armor: G.armor, armorEq: G.armorEq, ofrendaPts: G.ofrendaPts, ofrendaLog: G.ofrendaLog, nodoUsos: G.nodoUsos, incursion: G.incursion, incDia: G.incDia, dummyTrain: G.dummyTrain, swordOwned: G.swordOwned, bowOwned: G.bowOwned, swordWoodOwned: G.swordWoodOwned, gear: G.gear,
+    stats: G.stats, statsBase: G.statsBase, chestCap: G.chestCap, edif2: G.edif2, cosmeticos: G.cosmeticos, animals: G.animals, armor: G.armor, armorEq: G.armorEq, ofrendaPts: G.ofrendaPts, ofrendaLog: G.ofrendaLog, nodoUsos: G.nodoUsos, cosEq: G.cosEq, incursion: G.incursion, incDia: G.incDia, dummyTrain: G.dummyTrain, swordOwned: G.swordOwned, bowOwned: G.bowOwned, swordWoodOwned: G.swordWoodOwned, gear: G.gear,
     armasUnlocked: G.armasUnlocked, treesOpen: G.treesOpen, rocksOpen: G.rocksOpen, firstCropDone: G.firstCropDone, weapons: G.weapons,
     dishes: G.dishes, cooking: G.cooking, chests: G.chests, dummyUsedAt: G.dummyUsedAt,
     layoutPlots: G.layoutPlots, layoutPond: G.layoutPond };
 }
 // "huella" del estado guardable (incluye el apodo); si no cambia, no hay nada que guardar
-function snapKey() { return JSON.stringify({ n: (window.NICK || "Granjero"), d: snapshot() }); }
+function snapKey() { return JSON.stringify({ n: (typeof nombreLucido === "function" ? nombreLucido() : (window.NICK || "Granjero")), d: snapshot() }); }
 
 function hydrate(d) {
   if (!d) return;
@@ -74,6 +74,7 @@ function hydrate(d) {
   G.ofrendaPts = Number(d.ofrendaPts) || 0;
   G.ofrendaLog = Number(d.ofrendaLog) || 0;
   G.nodoUsos = (d.nodoUsos && typeof d.nodoUsos === "object") ? d.nodoUsos : {};
+  G.cosEq = (d.cosEq && typeof d.cosEq === "object") ? d.cosEq : null;
   G.incursion = (d.incursion && d.incursion.endAt) ? d.incursion : null;
   G.incDia = (d.incDia && typeof d.incDia === "object") ? d.incDia : null;
   G.dummyTrain = (d.dummyTrain && d.dummyTrain.desde) ? d.dummyTrain : null;
@@ -167,7 +168,7 @@ async function saveFarm(force) {
   // hasta 2 intentos inmediatos; si fallan, lastSavedKey no se actualiza y el autosave reintenta al próximo ciclo
   for (let intento = 0; intento < 2; intento++) {
     try {
-      const { error } = await sb.from("farms").upsert({ user_id: UID, name: (window.NICK || "Granjero"), data: snapshot(), updated_at: new Date().toISOString() }, { onConflict: "user_id" });
+      const { error } = await sb.from("farms").upsert({ user_id: UID, name: (typeof nombreLucido === "function" ? nombreLucido() : (window.NICK || "Granjero")), data: snapshot(), updated_at: new Date().toISOString() }, { onConflict: "user_id" });
       if (error) throw error;
       lastSavedKey = key;   // recién ahora quedó persistido
       if (typeof showSaved === "function") showSaved();
@@ -199,7 +200,7 @@ function initChat(onMsg) {
 }
 function sendChat(text) {
   if (!chatChannel || !text) return;
-  chatChannel.send({ type: "broadcast", event: "msg", payload: { name: (window.NICK || "Granjero"), text: String(text).slice(0, 140), t: Date.now() } });
+  chatChannel.send({ type: "broadcast", event: "msg", payload: { name: (typeof nombreLucido === "function" ? nombreLucido() : (window.NICK || "Granjero")), color: (typeof colorNombre === "function" ? colorNombre() : null), text: String(text).slice(0, 140), t: Date.now() } });
 }
 
 function startAutosave() {
@@ -236,7 +237,7 @@ async function mkMine() {
 async function mkPublish(row) {
   if (!sb || !UID) { toast("Necesitás conexión para publicar"); return null; }
   try {
-    const { data, error } = await sb.from("market").insert(Object.assign({ seller: UID, seller_name: (window.NICK || "Granjero") }, row)).select().single();
+    const { data, error } = await sb.from("market").insert(Object.assign({ seller: UID, seller_name: (typeof nombreLucido === "function" ? nombreLucido() : (window.NICK || "Granjero")) }, row)).select().single();
     if (error) { console.warn("market publish:", error.message); toast("No se pudo publicar"); return null; }
     return data;
   } catch (e) { toast("No se pudo publicar"); return null; }

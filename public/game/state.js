@@ -16,6 +16,7 @@ const G = {
   armor: {}, armorEq: null,      // Curtiduría: piezas crafteadas y set equipado
   ofrendaPts: 0, ofrendaLog: 0,  // Altar de Ofrendas: puntos acumulados y recursos quemados
   nodoUsos: {},                  // cuántas veces se recogió de cada nodo (para el arranque rápido)
+  cosEq: null,                   // cosmético lucido: título, color de nombre, marco y aura
   incursion: null, incDia: null, dummyTrain: null,   // incursiones de un clic y entrenamiento offline   // tareas de nivel 11-50, mejoras y cosméticos
   combatXp: 0,                   // doc 2/8: barra de Combate GLOBAL — suma la XP de todos los kills
   states: [],                    // doc 2/8: estados/debuffs del bestiario sobre el jugador (no se guardan)
@@ -807,6 +808,52 @@ function passBuyLevel() {
 
 
 
+
+
+// ================= COSMÉTICOS VISIBLES (los que no necesitan arte) =================
+// Título junto al nombre, color de nombre, marco de perfil y aura del granjero.
+// Se ganan en los niveles de granja, el pase y el cofre; acá se elige cuál lucir.
+const COS_TITULOS = {
+  "Granjero Experto": 15, "Maestro de Cultivos": 20, "Veterano": 25, "Leyenda Naciente": 30,
+  "Amo de la Granja": 35, "Señor de la Cosecha": 40, "Élite": 45, "Leyenda de la Granja Dorada": 50,
+  "Labrador": 0, "Madrugador": 0, "Título de Cosecha": 0,
+};
+const COS_COLORES = { oro: "#e0a63c", verde: "#5aa832", violeta: "#8a5cd6", celeste: "#3d9fd6", blanco: "#f2ead5" };
+const COS_MARCOS = { brote: "Marco Brote", hoja: "Marco de Hoja", dorado: "Marco Dorado" };
+function cosTengo(txt) { return (G.cosmeticos || []).some(c => String(c).toLowerCase().includes(String(txt).toLowerCase())); }
+// títulos disponibles: los que ganaste (por texto del cosmético) 
+function cosTitulosDisponibles() { return Object.keys(COS_TITULOS).filter(t => cosTengo(t)); }
+function cosColoresDisponibles() {
+  const out = ["blanco"];
+  if (cosTengo("Color de nombre Oro") || cosTengo("color de nombre")) out.push("oro");
+  if (cosTengo("color de nombre verde") || cosTengo("Madrugador")) out.push("verde");
+  if (G.level >= 30) out.push("violeta");
+  if (G.level >= 20) out.push("celeste");
+  return [...new Set(out)];
+}
+function cosMarcosDisponibles() {
+  const out = ["ninguno"];
+  if (cosTengo("Marco")) out.push("brote");
+  if (G.level >= 24) out.push("hoja");
+  if (G.level >= 42) out.push("dorado");
+  return out;
+}
+function cosAuraDisponible() { return cosTengo("aura") || G.level >= 30; }
+function cosElegido() { G.cosEq = G.cosEq || { titulo: "", color: "blanco", marco: "ninguno", aura: false }; return G.cosEq; }
+function cosSet(campo, valor) {
+  const c = cosElegido();
+  c[campo] = valor;
+  if (campo === "aura" && valor && window.farmScene && window.farmScene.updateAura) { try { window.farmScene.updateAura(); } catch (e) {} }
+  if (window.farmScene && window.farmScene.updateAura) { try { window.farmScene.updateAura(); } catch (e) {} }
+  if (typeof refreshCosmeticos === "function" && isOpen("ov-cos")) refreshCosmeticos();
+  if (typeof saveFarm === "function") saveFarm();
+}
+// nombre para mostrar en ranking, chat y plaza
+function nombreLucido(nick) {
+  const c = cosElegido();
+  return (c.titulo ? "[" + c.titulo + "] " : "") + (nick || window.NICK || "Granjero");
+}
+function colorNombre() { return COS_COLORES[cosElegido().color] || COS_COLORES.blanco; }
 
 // ================= MERCADO ENTRE JUGADORES (P2P) =================
 // Publicás algo tuyo con un precio; otro jugador lo compra y vos cobrás cuando volvés al mercado.

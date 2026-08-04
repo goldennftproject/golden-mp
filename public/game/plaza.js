@@ -60,7 +60,7 @@ class PlazaScene extends Phaser.Scene {
   }
 
   async connect() {
-    const nick = window.NICK || "Granjero";
+    const nick = (typeof nombreLucido === "function" ? nombreLucido() : (window.NICK || "Granjero"));
     const endpoint = (window.GOLDEN_SERVER && window.GOLDEN_SERVER.trim())
       || ((location.protocol === "https:" ? "wss://" : "ws://") + location.host);
     if (typeof Colyseus === "undefined" && !window.__colyseusReady) {

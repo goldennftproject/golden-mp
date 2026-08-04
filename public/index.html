@@ -396,6 +396,10 @@
   #dy-chest{width:92px;image-rendering:pixelated}
   .dyreward{font-weight:800;font-size:14px;max-width:260px;color:#2e2a1f;background:#f2e5c4;border:1px solid #d9c290;border-radius:9px;padding:7px 11px}
   .dynote{text-align:center;font-size:11px;color:#8a6a3a;margin-top:10px}
+  /* cosméticos: marcos y color de nombre */
+  .nm.marco-brote{padding:0 6px;border:2px solid #8fd14f;border-radius:8px}
+  .nm.marco-hoja{padding:0 6px;border:2px dashed #5aa832;border-radius:8px}
+  .nm.marco-dorado{padding:0 6px;border:2px solid #e0a63c;border-radius:8px;box-shadow:0 0 6px rgba(224,166,60,.6)}
   .dyreward .bad{color:#b8452f;display:block;font-size:12px}
 
   /* equipo con slots */
@@ -625,6 +629,13 @@
     <div class="forge-list" id="pass-list" style="max-height:64vh"></div>
   </div></div>
 
+  <div class="ov" id="ov-cos"><div class="card" style="width:min(560px,94%)">
+    <button class="close" data-close="ov-cos">×</button>
+    <h3>Cosméticos</h3>
+    <div class="sub">Lo que ganaste jugando: títulos, color de nombre, marcos y el aura. Elegí qué lucir — los demás jugadores lo ven en el ranking, el chat y la plaza.</div>
+    <div class="forge-list" id="cos-list" style="max-height:58vh"></div>
+  </div></div>
+
   <div class="ov" id="ov-p2p"><div class="card" style="width:min(680px,94%)">
     <button class="close" data-close="ov-p2p">×</button>
     <h3>Mercado de jugadores</h3>
@@ -695,6 +706,7 @@
       <button class="gmi" data-panel="ov-daily"><span class="ic"></span> Cofre diario <b class="key">G</b></button>
       <button class="gmi" data-panel="ov-pass"><span class="ic"></span> Pase de Batalla</button>
       <button class="gmi" data-panel="ov-p2p"><span class="ic"></span> Mercado de jugadores</button>
+      <button class="gmi" data-panel="ov-cos"><span class="ic"></span> Cosméticos</button>
       <button class="gmi" data-panel="ov-market"><span class="ic"></span> Tienda <b class="key">O</b></button>
       <button class="gmi" data-panel="ov-forge"><span class="ic"></span> Herrería <b class="key">K</b></button>
       <button class="gmi" data-panel="ov-barn"><span class="ic"></span> Granja <b class="key">B</b></button>

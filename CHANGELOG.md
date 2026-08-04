@@ -472,6 +472,18 @@ Los niveles de granja 17, 21 y 27 desbloqueaban "edificio nivel 2" pero no hací
 - **Altar de Runas nivel 2** (granja 27): **+5 puntos de éxito** en cada intento de mejora de arma.
 - Cada panel avisa cuando la mejora está activa, y los tres valores son editables en el panel de balanceo.
 
+### Cosméticos visibles y atlas de sprites rearmado (4/8)
+**Cosméticos que ya se lucen** (los que no necesitan arte nuevo):
+- **Ventana de Cosméticos** en el menú, con vista previa de cómo te ven los demás.
+- **Títulos** ganados en los niveles de granja (Granjero Experto, Veterano, Amo de la Granja, Leyenda de la Granja Dorada…), que aparecen delante del nombre en el ranking, el chat, la plaza y el mercado de jugadores.
+- **Color de nombre** (oro, verde, celeste, violeta) y **marcos de perfil**, que se desbloquean con los niveles y el cofre.
+- **Aura dorada** del granjero (nivel 30+): resplandor aditivo que late a sus pies, visible en la Zona Negra y en la plaza. Todo por código, sin arte.
+- Lo elegido se guarda con la partida; el resto de los cosméticos ganados se listan en la misma ventana.
+
+**Atlas de sprites rearmado**:
+- El atlas era del 30 de julio y tenía 120 sprites: todo lo agregado desde entonces (cultivos nuevos, 14 platos, 20 armas por rareza, el Altar…) se bajaba como archivos sueltos, y por eso la pantalla de carga tardaba tanto en el server gratuito.
+- Nuevo atlas con **329 sprites en un solo archivo de 386 KB** (con paleta optimizada: un tercio del peso sin diferencia visible). Pasa de decenas de pedidos al servidor a uno solo.
+
 ## Pendientes conocidos
 - En espera del diseñador: **tabla de daño de las armas** (para los tiers completos de espadas), usos de tablones/barras, cerca premium, tabla de stats del bestiario.
 - Cuando el diseñador apruebe el doc de farmeo: implementar Girasol, Trigo y Maíz (arte PixelLab + tabla de cultivos) y el sistema de XP de farmeo por niveles.
