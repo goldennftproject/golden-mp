@@ -507,3 +507,95 @@ Los niveles de granja 17, 21 y 27 desbloqueaban "edificio nivel 2" pero no hací
 - Cuando el diseñador apruebe el doc de farmeo: implementar Girasol, Trigo y Maíz (arte PixelLab + tabla de cultivos) y el sistema de XP de farmeo por niveles.
 - Opcional ofrecido: íconos oficiales PixelLab para Espada de Madera y Pico de Hierro (hoy derivados), replicar el suelo nuevo en plaza y Zona Negra, kick por AFK en la plaza.
 - Pilares futuros: login por email multi-dispositivo, PvP/endgame de netherita, referidos, token $Golden, audio, granja distinta por nivel (quinta.docx).
+
+---
+
+## Revisión completa del código en busca de bugs (4/08)
+
+Auditoría de los ~10 archivos del juego con tres barridos automáticos (declaraciones repetidas,
+panel de balanceo, ventanas/ids) más una revisión de lógica archivo por archivo. Se encontraron
+y arreglaron **31 bugs**. Los más graves:
+
+### Combate (forest.js) — el juego se rompía en serio
+- **Dos relojes distintos mezclados**: parte del código usaba `Date.now()` y parte el reloj interno de
+  Phaser. Consecuencias reales: el Espectro quedaba **intangible para siempre** tras su primera Fase
+  espectral, el Dragón lo mismo tras el primer Parpadeo (jefe imposible de matar), el Caparazón del
+  Golem quedaba activo de forma permanente, y el **aturdimiento y el sangrado no hacían absolutamente
+  nada**. Además, el espadazo del clic izquierdo dejaba de salir después del primer golpe. Todo pasado
+  a un solo reloj.
+- **Con arco equipado, el clic izquierdo sobre un bicho no hacía nada** y encima no dejaba caminar.
+- **Al volver del Bosque por segunda vez no aparecía la barra de vida** (ni el aura del cosmético):
+  quedaban cacheadas apuntando a objetos ya destruidos.
+- **Las babitas se acumulaban sin techo** (fuga de memoria): cada Baba muerta creaba 2 y nunca se
+  borraban.
+- **Los monstruos reaparecían con los buffs puestos**: el Orco y el Dragón volvían enfurecidos de forma
+  permanente y ya no podían volver a enfurecerse.
+- La estamina se cobraba antes de comprobar si el golpe podía siquiera conectar; con arco se perdían
+  la flecha y la durabilidad aunque no hubiera estamina.
+
+### Granja (farm.js)
+- **La cola de acciones no se ejecutaba nunca**: clickeabas un segundo árbol mientras talabas, decía
+  "En cola (1)"… y se descartaba solo. Ahora la cola funciona en la granja de un clic.
+- **Arrastrar la vista empezando encima de un objeto lo talaba/minaba/abría**: la acción se disparaba
+  al apretar. Ahora se resuelve al soltar, y solo si no hubo arrastre.
+- El árbol saltaba a "casi talado" en el primer golpe y después retrocedía; ahora el estado dañado
+  corresponde al golpe real.
+- Si la bolsa se llenaba en el último golpe, la roca quedaba dibujada rota con 0 golpes.
+- El brillo de interacción quedaba pegado para siempre sobre el último objeto trabajado (el granjero
+  invisible se quedaba estacionado ahí) y su contador visible sin hover.
+- Al volver del Bosque no volvía el humo del Horno.
+- Cambiar de semilla durante la animación de plantar colaba la nueva sin verificar el nivel.
+- WASD cancelaba la pesca aunque esas teclas ya no muevan nada.
+- La tecla E no llegaba al portal ni al jabalí, solo a objetos y parcelas.
+- El jabalí sumaba +1 al contador de semanas al aparecer (sin ninguna relación).
+
+### Economía y datos (state.js)
+- **Girasol, Trigo y Maíz eran invisibles**: se cosechaban pero no aparecían en la bolsa, no ocupaban
+  casilla y **no se podían vender en ningún lado** — justo los tres cultivos de mayor valor. Lo mismo
+  con fibra, pelaje, cuero, colmillo y esencia rúnica. Todos agregados a la bolsa y al mercado.
+- **La plata de las incursiones se perdía**: entraba como recurso de bolsa en vez de a la billetera.
+  El resumen decía "+40 plata" y el jugador no cobraba nada. Pasaba en toda incursión.
+- El objetivo del tutorial "comprá semillas" se cumplía apretando el botón aunque no tuvieras plata.
+- **Los niveles de granja 11-50 con tareas de solo combate/cocina quedaban trabados**: el nivel solo se
+  revisaba al ganar XP de cultivo, minería o pesca.
+- **El set de Fibra completo no hacía nada** y el de Piel solo la mitad: velocidad de ataque, evasión y
+  regeneración estaban en la tabla pero no los leía nadie. Ya funcionan los tres.
+- El bono de +1% de materiales por cofre colocado no se aplicaba al botín.
+- Los contadores diarios usaban fecha UTC y otros fecha local: en Argentina las incursiones, las
+  recargas de estamina y las misiones del pase se reseteaban a las 21:00. Todo pasado a fecha local.
+- El Prestigio no reseteaba la XP de granja: volvía de 1 a 10 en el primer cultivo, duplicando
+  cosméticos y ampliando el cofre en cada vuelta.
+- El color de nombre Oro (exclusivo VIP) se habilitaba con cualquier cosmético de color.
+- Bucle infinito latente en el sorteo de misiones diarias.
+
+### Mercado entre jugadores — agujeros de duplicación
+- **"Retirar" duplicaba ítems**: el borrado devolvía éxito aunque no borrara ninguna fila, así que el
+  doble clic devolvía el ítem a la bolsa una y otra vez, infinitas veces. Ahora el retiro es atómico.
+- **"Cobrar" pagaba varias veces la misma venta** por el mismo motivo. Ahora también es atómico.
+- **Comprar con la bolsa llena hacía perder la plata y el ítem**; retirar con la bolsa llena
+  **destruía el ítem**. Ahora existen *entregas pendientes*: nada se pierde, se reclama desde la
+  ventana del Mercado cuando hacés lugar.
+- **Comprar un arma que ya tenías pisaba la tuya** con todo su +N, durabilidad y runas. Ahora se avisa
+  y no se permite.
+- Cambiar de pestaña mientras cargaba mostraba publicaciones ajenas bajo "Mis publicaciones", con
+  botones de Retirar y Cobrar funcionando.
+- Dos compras rápidas seguidas dejaban la plata en negativo.
+
+### Guardado
+- **El arma equipada se perdía al cargar la partida**: la migración de ids corría antes de leer el
+  equipo guardado, así que quedaba en un id inválido y el jugador aparecía sin arma, sin poder atacar
+  ni mandar incursiones.
+- El enfriamiento de forja de armas se salteaba recargando la página (ahora se guarda).
+- Los edificios nuevos (Altar, Establo, Curtiduría, Ofrendas) faltaban en el objeto por defecto.
+
+### Blindaje de las ventanas
+- Todas las funciones de refresco de paneles quedaron envueltas: si una falla, se ve en la consola y
+  el jugador recibe un aviso, pero **la ventana ya no queda vacía ni se lleva puesto el resto del
+  juego** (era exactamente lo que pasó con la Cocina).
+- El Pase de Batalla y el Altar de Runas ya no revientan con datos guardados de una temporada vieja.
+- El Horno se agregó a la tabla de refresco automático.
+- Las pestañas del Mercado P2P ya no comparten selector con las de la Tienda.
+
+**Verificación**: 762 entradas del panel de balanceo funcionando, 20 ventanas OK, sin funciones
+faltantes, y 18 pruebas automáticas de comportamiento sobre los arreglos (bolsa, mercado, tutorial,
+niveles, sets de armadura, cofres, prestigio, incursiones) — todas en verde.

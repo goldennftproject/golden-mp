@@ -13,6 +13,7 @@ function anyOvOpen() { return !!document.querySelector(".ov.show"); }
 const OV_REFRESH = { "ov-inv": () => refreshInv(), "ov-skills": () => refreshSkills(), "ov-equip": () => refreshEquip(),
   "ov-forge": () => refreshForge(), "ov-market": () => refreshMarket(), "ov-barn": () => refreshBarn(),
   "ov-cocina": () => refreshCooking(),
+  "ov-horno": () => refreshHorno(),
   "ov-altar": () => refreshAltar(),
   "ov-establo": () => refreshEstablo(),
   "ov-curtiduria": () => refreshCurtiduria(),
@@ -686,7 +687,7 @@ function refreshPass() {
   // misiones
   h += '<div class="fnm" style="margin-top:8px">Misiones de HOY (' + PASS_STAR_DAILY + ' estrellas c/u · las 3 = +' + PASS_STAR_BONUS + ')</div>';
   const misRow = (m, stars) => {
-    const md = PASS_MISIONES[m.k];
+    const md = PASS_MISIONES[m.k] || { label: "Misión" };   // misión guardada de una temporada vieja: no rompe el panel entero
     return '<div class="forge-row' + (m.ok ? ' eq' : '') + '"><div class="finfo"><div class="fnm">' + md.label.replace("#", m.goal) +
       (m.ok ? ' <span style="color:#3f6b2a">— CUMPLIDA (+' + stars + ' estrellas cobradas)</span>' : '') + '</div>' +
       '<div class="durbar"><i style="width:' + Math.min(100, Math.round(m.n / m.goal * 100)) + '%"></i></div>' +
@@ -1124,8 +1125,8 @@ function initUI() {
   const pr = $("prestige"); if (pr) pr.onclick = prestige;
   document.querySelectorAll(".curbtn").forEach(b => b.onclick = () => { marketCur = b.dataset.cur; refreshMarket(); });
   document.querySelectorAll(".lbtab").forEach(b => b.onclick = () => { lbTab = b.dataset.lb; refreshLb(); });
-  document.querySelectorAll(".shoptab:not(.forgetab)").forEach(b => b.onclick = () => {
-    document.querySelectorAll(".shoptab:not(.forgetab)").forEach(x => x.classList.toggle("active", x === b));
+  document.querySelectorAll(".shoptab[data-shop]").forEach(b => b.onclick = () => {
+    document.querySelectorAll(".shoptab[data-shop]").forEach(x => x.classList.toggle("active", x === b));
     const s = b.dataset.shop;
     $("shop-buy").style.display = s === "buy" ? "" : "none";
     $("shop-sell").style.display = s === "sell" ? "" : "none";
@@ -1280,14 +1281,23 @@ async function refreshP2P() {
     b.onclick = () => { p2pTab = b.dataset.p2p; p2pCache = null; refreshP2P(); };
   });
   if (p2pLoading) return;
+  const tabPedida = p2pTab;   // la pestaña con la que arrancó ESTA carga
   if (!p2pCache) {
     p2pLoading = true; box.innerHTML = '<div class="fds">Cargando…</div>';
-    try { p2pCache = (p2pTab === "comprar") ? await mkList() : await mkMine(); }
+    try { p2pCache = (tabPedida === "comprar") ? await mkList() : await mkMine(); }
     catch (e) { p2pCache = []; }
     p2pLoading = false;
+    // si mientras cargaba el jugador cambió de pestaña, esto ya no sirve: se recarga con la nueva
+    if (p2pTab !== tabPedida) { p2pCache = null; return refreshP2P(); }
   }
   const filas = p2pCache || [];
   let h = "";
+  // entregas pendientes (compras/retiros que no entraron en la bolsa): nunca se pierden
+  if (typeof mkPendCount === "function" && mkPendCount() > 0) {
+    h += '<div class="forge-row eq"><div class="finfo"><div class="fnm">Entregas pendientes (' + mkPendCount() + ')</div>' +
+      '<div class="fds">No entraron en la bolsa. Hacé lugar y reclamalas.</div></div>' +
+      '<div class="fbtns"><button class="green sm" id="p2p-pend">Reclamar</button></div></div>';
+  }
   if (p2pTab === "vender") {
     h += '<div class="fds">Elegí qué publicar. Se descuenta de tu bolsa hasta que se venda o lo retires.</div>';
     const ops = [];
@@ -1334,6 +1344,7 @@ async function refreshP2P() {
     });
   }
   box.innerHTML = h;
+  { const pb = $("p2p-pend"); if (pb) pb.onclick = () => { mkPendCobrar(); refreshP2P(); }; }
   box.querySelectorAll("[data-pub]").forEach(b => b.onclick = async () => {
     const [kind, key, i] = b.dataset.pub.split(":");
     const q = $("p2q-" + i), pr = $("p2p-" + i);
@@ -1385,3 +1396,29 @@ function refreshCosmeticos() {
     refreshCosmeticos();
   });
 }
+
+/* ---- BLINDAJE DE PANELES ----------------------------------------------------
+   Si una función de refresco revienta a mitad de camino, la ventana quedaba VACÍA
+   y sin botones (ya nos pasó con una tabla de precios inexistente). Acá se envuelven
+   todas: el error se ve en la consola, el jugador recibe un aviso y el resto del
+   juego sigue funcionando. */
+(function blindarPaneles() {
+  const paneles = ["refreshInv","refreshSkills","refreshEquip","refreshForge","refreshMarket","refreshBarn",
+    "refreshCooking","refreshHorno","refreshAltar","refreshEstablo","refreshCurtiduria","refreshOfrendas",
+    "refreshIncursion","refreshP2P","refreshCosmeticos","refreshPass","refreshChest","refreshConfig",
+    "refreshLb","refreshDaily","refreshSeedShop","refreshHotbar","refreshStam"];
+  paneles.forEach(nombre => {
+    const f = window[nombre];
+    if (typeof f !== "function" || f.__blindado) return;
+    const g = function () {
+      try { return f.apply(this, arguments); }
+      catch (e) {
+        console.error("[panel] " + nombre + " falló:", e);
+        if (typeof toast === "function") toast("Ese panel tuvo un problema — avisale al equipo");
+        if (typeof log === "function") log("Error en " + nombre + ": " + (e && e.message ? e.message : e), "bad");
+      }
+    };
+    g.__blindado = true;
+    window[nombre] = g;
+  });
+})();

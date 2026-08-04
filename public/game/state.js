@@ -22,11 +22,12 @@ const G = {
   states: [],                    // doc 2/8: estados/debuffs del bestiario sobre el jugador (no se guardan)
   tuto: { step: 0, n: 0, done: false, v: 2 },   // doc 2/8: tutorial guiado de micro-objetivos (v = versión de la cadena)
   firstSeeds: 3,                 // semillas del starter pack que crecen en 45 s (se descuentan al plantarlas)
-  armCd: {},                     // enfriamiento de crafteo por arma   // equipo (armas se equipan en el panel de Equipo — detalles jueves)
+  armCd: {}, mkPend: [],         // enfriamiento de crafteo por arma · entregas pendientes del Mercado   // equipo (armas se equipan en el panel de Equipo — detalles jueves)
   res: { madera: 0, piedra: 0, bronce: 0, hierro: 0, oro: 0, diamante: 0, netherita: 0, carne: 0, flecha: 0, lombriz: 0,
     tablon: 0, barra_piedra: 0, barra_bronce: 0, barra_hierro: 0, barra_oro: 0,
-    papa: 0, zanahoria: 0, cebolla: 0, calabacin: 0, repollo: 0, calabaza: 0, brocoli: 0 },
-  seeds: { papa: 3, zanahoria: 0, cebolla: 0, calabacin: 0, repollo: 0, calabaza: 0, brocoli: 0 },  // viernes (2): la bolsa nace con SOLO 3 semillas de papa
+    papa: 0, zanahoria: 0, cebolla: 0, calabacin: 0, repollo: 0, calabaza: 0, brocoli: 0, girasol: 0, trigo: 0, maiz: 0,
+    fibra: 0, pelaje: 0, cuero: 0, colmillo: 0, esencia_runica: 0 },
+  seeds: { papa: 3, zanahoria: 0, cebolla: 0, calabacin: 0, repollo: 0, calabaza: 0, brocoli: 0, girasol: 0, trigo: 0, maiz: 0 },  // viernes (2): la bolsa nace con SOLO 3 semillas de papa
   selSeed: "papa",   // semilla elegida para plantar
   picks: { owned: { stone: true }, dur: { stone: 15 }, eq: "stone" },   // doc 2/8: set de arranque con usos generosos
   tools: { axe: 15, rod: 15 },   // doc 2/8: 15 usos de arranque; después se craftean de a 1 uso
@@ -104,6 +105,9 @@ function granjaRegen() {   // solo fuera de la Zona Negra
 }
 function buffTick() {   // 1 vez por segundo desde el HUD: regeneración y vida máxima temporal
   const t = Date.now(); let dirty = false;
+  // set de Piel completo: +N HP/s (el bono estaba en la tabla pero no lo leía nadie)
+  { const rg = (typeof armorBonoVal === "function") ? armorBonoVal("regen") : 0;
+    if (rg > 0 && G.hp < G.hpMax) { G.hp = Math.min(G.hpMax, G.hp + rg); dirty = true; } }
   for (const b of G.buffs) {
     if (b.type === "regen" && b.until > t && G.hp < G.hpMax) { G.hp = Math.min(G.hpMax, G.hp + b.mult); dirty = true; }
     if (b.type === "hpmax") {
@@ -121,7 +125,9 @@ const RES_EMOJI = { madera:"", piedra:"", bronce:"", oro:"", diamante:"", nether
   papa:"", zanahoria:"", cebolla:"", calabacin:"", repollo:"", calabaza:"", brocoli:"" };
 const RES_LABEL = { madera:"Madera", piedra:"Piedra", bronce:"Bronce", hierro:"Hierro", oro:"Oro", diamante:"Diamante", netherita:"Netherita", carne:"Carne", flecha:"Flecha", lombriz:"Lombriz",
   tablon:"Tablón de madera", barra_piedra:"Bloques de piedra", barra_bronce:"Barra de bronce", barra_hierro:"Barra de hierro", barra_oro:"Barra de oro",
-  papa:"Papa", zanahoria:"Zanahoria", cebolla:"Cebolla", calabacin:"Calabacín", repollo:"Repollo", calabaza:"Calabaza", brocoli:"Brócoli" };
+  papa:"Papa", zanahoria:"Zanahoria", cebolla:"Cebolla", calabacin:"Calabacín", repollo:"Repollo", calabaza:"Calabaza", brocoli:"Brócoli",
+  girasol:"Girasol", trigo:"Trigo", maiz:"Maíz",
+  fibra:"Fibra", pelaje:"Pelaje", cuero:"Cuero", colmillo:"Colmillo", esencia_runica:"Esencia rúnica" };
 // íconos cozy de recursos (los cultivos usan crop_<key>)
 const RES_SPRITE = { madera:"res_madera", piedra:"res_piedra", bronce:"res_bronce", hierro:"res_hierro", oro:"res_oro", diamante:"res_diamante", netherita:"res_netherita", carne:"res_carne", flecha:"res_flecha", lombriz:"res_lombriz",
   tablon:"res_tablon", barra_piedra:"res_barra_piedra", barra_bronce:"res_barra_bronce", barra_hierro:"res_barra_hierro", barra_oro:"res_barra_oro" };
@@ -160,6 +166,7 @@ var SEED_DAILY_BASE = 18, SEED_DAILY_POR_NIVEL = 2;   // "2das mejoras": el cupo
 function seedDailyMax() { return SEED_DAILY_BASE + SEED_DAILY_POR_NIVEL * (G.level || 1); }
 // Doc "Enfriamiento de Árboles y Minerales" (4/8): farmeo chill. Las primeras recolecciones de cada
 // nodo salen en minutos (enganche) y después el nodo pasa a su enfriamiento largo real.
+var GOLPES_TALAR = 3, GOLPES_MINAR = 3;   // clics para tumbar un árbol o romper una roca (lo usa también el panel de balanceo)
 var CD = { tree: 5400, rock: 7200 };            // 1 h 30 min el árbol · 2 h la piedra
 var CD_RAPIDO = {                                // enfriamiento corto de las primeras veces
   tree:      { seg: 180, veces: 3 },             // 3 min · las primeras 3
@@ -191,10 +198,10 @@ function buySeed(k, qty) {
   const sb = seedBuysToday(), left = seedDailyMax() - sb.count;
   if (left <= 0) { toast("Cupo diario de semillas alcanzado (" + seedDailyMax() + ") — volvé mañana"); return; }
   if (qty > left) { qty = left; toast("Cupo diario: solo podés comprar " + left + " más hoy"); }
-  if (typeof tutoEvent === "function") tutoEvent("buyseed");
   const cost = cd.seedCost * qty;
   if (G.plata < cost) { toast("Te falta plata"); return; }
   G.plata -= cost; G.seeds[k] = (G.seeds[k] || 0) + qty; sb.count += qty;
+  if (typeof tutoEvent === "function") tutoEvent("buyseed");   // el objetivo se cumple con la compra HECHA, no al apretar el botón
   log(`Compraste ${qty} semilla(s) de ${cd.label} por ${cost} plata. (cupo: ${sb.count}/${seedDailyMax()})`); toast("+" + qty + " " + cd.label);
   refreshHud(); if (typeof refreshSeedShop === "function") refreshSeedShop(); if (isOpen("ov-inv")) refreshInv();
 }
@@ -411,6 +418,9 @@ function statAdd(tipo, key, n) {
   const t = G.stats[tipo] = G.stats[tipo] || {};
   const k = key || "_";
   t[k] = (t[k] || 0) + (n || 1);
+  // las tareas de nivel 11-50 se cumplen ACÁ (matar, cocinar, talar…), así que el nivel se revisa acá:
+  // antes solo se revisaba con XP de cultivo/minería/pesca y los niveles de solo-combate quedaban trabados.
+  if (typeof recalcFarmLevel === "function") recalcFarmLevel();
   if (typeof refreshBarn === "function" && isOpen("ov-barn")) refreshBarn();
 }
 function statGet(tipo, key) { return ((G.stats && G.stats[tipo] && G.stats[tipo][key || "_"]) || 0); }
@@ -459,7 +469,17 @@ function recalcFarmLevel() {
 }
 function canLevel() { return false; }   // legado: ya no se sube pagando recursos
 function levelUp() { toast("El nivel sube cosechando (XP de Farmeo)"); }
-function prestige() { if (G.level < FARM_NIVEL_MAX) { toast("Llegá a nivel " + FARM_NIVEL_MAX); return; } G.prestige++; G.level=1; for (const k in G.res) G.res[k]=0; log(`Reinicio. Prestigio ${G.prestige}.`, "gold"); toast("Prestigio " + G.prestige + "!"); refreshBarn(); refreshHud(); }
+function prestige() {
+  if (G.level < FARM_NIVEL_MAX) { toast("Llegá a nivel " + FARM_NIVEL_MAX); return; }
+  G.prestige++; G.level = 1;
+  G.skills.farming = 0;            // si no se resetea, el próximo addXp volvía a nivel 10 de golpe
+  G.stats = {}; G.statsBase = {};  // las tareas de nivel arrancan de cero otra vez
+  for (const k in G.res) G.res[k] = 0;
+  log(`Reinicio. Prestigio ${G.prestige}.`, "gold"); toast("Prestigio " + G.prestige + "!");
+  if (typeof refreshBarn === "function") refreshBarn();
+  refreshHud();
+  if (typeof saveFarm === "function") saveFarm(true);
+}
 
 // --- minerales y picos ---
 const ORE_ORDER = ["piedra","bronce","hierro","oro","diamante","netherita"];
@@ -491,7 +511,7 @@ function forgeWork() { G.forgeLitUntil = nowMs() + FORGE_LIT_MS; if (window.FARM
 // picos APILABLES: G.picks.dur[id] es la CANTIDAD (1 uso cada uno); craftear suma al stock
 function pickCount(id) { return G.picks.owned[id] ? Math.max(0, Math.floor(G.picks.dur[id] || 0)) : 0; }
 function craftPick(id) {
-  const pd = PICK_DEF[id];
+  const pd = PICK_DEF[id]; if (!pd) return;
   if (pickCount(id) >= 99) { toast("Máximo 99 " + pd.label); return; }
   if (!canAfford(pd.cost)) { toast("Te faltan materiales"); return; }
   if (pd.plata && G.plata < pd.plata) { toast("Te falta plata"); return; }
@@ -707,12 +727,12 @@ function passInit() {
   G.pass = G.pass || {};
   const p = G.pass;
   p.stars = p.stars || 0; p.vip = !!p.vip; p.claimF = p.claimF || {}; p.claimV = p.claimV || {}; p.cosmetics = p.cosmetics || [];
-  const hoy = new Date().toISOString().slice(0, 10);
+  const hoy = dayStamp(0);   // día LOCAL (antes era UTC: los contadores se reseteaban a las 21 h en Argentina)
   if (!p.daily || p.daily.date !== hoy) {   // 3 misiones diarias, una por pilar (rotan con la fecha)
     const pilares = Object.keys(PASS_MISIONES);
     const seed = Number(hoy.replace(/-/g, ""));
     const elegidos = [0, 1, 2].map(i => pilares[(seed + i * 7 + Math.floor(seed / 100) * i) % pilares.length]).filter((v, i, a) => a.indexOf(v) === i);
-    while (elegidos.length < 3) { const px = pilares[(seed + elegidos.length * 3) % pilares.length]; if (!elegidos.includes(px)) elegidos.push(px); }
+    for (const px of pilares) { if (elegidos.length >= 3) break; if (!elegidos.includes(px)) elegidos.push(px); }   // completa sin riesgo de bucle infinito
     p.daily = { date: hoy, bonus: false, mis: elegidos.map((k, i) => ({ k, goal: PASS_MISIONES[k].goals[i % 3], n: 0, ok: false })) };
   }
   const semana = (d => { const x = new Date(d); x.setHours(0, 0, 0, 0); x.setDate(x.getDate() + 3 - (x.getDay() + 6) % 7); const w1 = new Date(x.getFullYear(), 0, 4); return x.getFullYear() + "-" + Math.round(((x - w1) / 86400000 + (w1.getDay() + 6) % 7 - 3) / 7 + 1); })(new Date());
@@ -825,7 +845,7 @@ function cosTengo(txt) { return (G.cosmeticos || []).some(c => String(c).toLower
 function cosTitulosDisponibles() { return Object.keys(COS_TITULOS).filter(t => cosTengo(t)); }
 function cosColoresDisponibles() {
   const out = ["blanco"];
-  if (cosTengo("Color de nombre Oro") || cosTengo("color de nombre")) out.push("oro");
+  if (cosTengo("color de nombre oro")) out.push("oro");     // el oro sale SOLO del pase VIP (antes cualquier "color de nombre" lo habilitaba)
   if (cosTengo("color de nombre verde") || cosTengo("Madrugador")) out.push("verde");
   if (G.level >= 30) out.push("violeta");
   if (G.level >= 20) out.push("celeste");
@@ -883,9 +903,36 @@ function mkPoner(kind, key, n, payload) {
   else if (kind === "seed") G.seeds[key] = (G.seeds[key] || 0) + n;
   else if (kind === "dish") { G.dishes = G.dishes || {}; G.dishes[key] = (G.dishes[key] || 0) + n; }
   else if (kind === "fish") { G.fish = G.fish || {}; G.fish[key] = (G.fish[key] || 0) + n; }
-  else if (kind === "arm") { G.weapons = G.weapons || {}; G.weapons[key] = payload || { dur: (ARM_DEF[key] ? ARM_DEF[key].dur : 40) }; }
+  else if (kind === "arm") {
+    G.weapons = G.weapons || {};
+    if (G.weapons[key]) return false;   // ya tenés una igual: NO se pisa (se perdían el +N, la durabilidad y las runas)
+    G.weapons[key] = payload || { dur: (ARM_DEF[key] ? ARM_DEF[key].dur : 40) };
+  }
   return true;
 }
+// PENDIENTES del mercado: si algo no entra en la bolsa (o ya tenés esa arma) NO se pierde,
+// queda guardado y se reclama desde la ventana del Mercado cuando hagas lugar.
+function mkPendAdd(kind, key, n, payload) {
+  G.mkPend = G.mkPend || [];
+  G.mkPend.push({ kind, item: key, qty: n, payload: payload || null });
+  toast("Sin lugar — quedó pendiente en el Mercado");
+  log("No entró en la bolsa: " + n + " × " + mkNombre(kind, key) + ". Hacé lugar y reclamalo desde el Mercado.", "bad");
+}
+function mkPendCount() { return (G.mkPend || []).length; }
+function mkPendCobrar() {
+  if (!G.mkPend || !G.mkPend.length) { toast("No tenés nada pendiente"); return 0; }
+  const quedan = []; let dados = 0;
+  for (const p of G.mkPend) { if (mkPoner(p.kind, p.item, p.qty, p.payload)) dados++; else quedan.push(p); }
+  G.mkPend = quedan;
+  if (dados) { log("Reclamaste " + dados + " entrega(s) pendiente(s) del Mercado.", "good"); toast("+" + dados + " entrega(s)"); }
+  else toast("Sigue sin entrar — liberá espacio en la bolsa");
+  refreshHud(); if (typeof syncSlots === "function") syncSlots(); if (isOpen("ov-inv")) refreshInv();
+  if (typeof refreshP2P === "function" && isOpen("ov-p2p")) refreshP2P();
+  if (typeof saveFarm === "function") saveFarm(true);
+  return dados;
+}
+// entrega segura: si no entra, va a pendientes (nunca se destruye)
+function mkEntregar(kind, key, n, payload) { if (!mkPoner(kind, key, n, payload)) mkPendAdd(kind, key, n, payload); }
 function mkNombre(kind, key) {
   if (kind === "arm") return (ARM_DEF[key] && ARM_DEF[key].label) || key;
   if (kind === "dish") return (RECIPE_DEF[key] && RECIPE_DEF[key].label) || key;
@@ -902,21 +949,25 @@ async function marketPublicar(kind, key, n, precio) {
   const payload = (kind === "arm" && G.weapons[key]) ? JSON.parse(JSON.stringify(G.weapons[key])) : null;
   if (!mkSacar(kind, key, n)) { toast("No se pudo publicar"); return; }
   const fila = await mkPublish({ kind, item: key, qty: n, price: precio, payload, name: mkNombre(kind, key) });
-  if (!fila) { mkPoner(kind, key, n, payload); return; }   // falló: te devolvemos lo tuyo
+  if (!fila) { mkEntregar(kind, key, n, payload); toast("No se pudo publicar — revisá tus publicaciones antes de reintentar"); return; }   // falló: te devolvemos lo tuyo
   log("Publicaste " + n + " × " + mkNombre(kind, key) + " por " + fmt(precio) + " de plata.", "gold");
   toast("Publicado");
   refreshHud(); if (isOpen("ov-inv")) refreshInv();
   if (typeof refreshP2P === "function") refreshP2P();
   if (typeof saveFarm === "function") saveFarm(true);
 }
+let mkBusy = false;   // un solo movimiento de mercado a la vez (el doble clic duplicaba/dejaba la plata en negativo)
 async function marketComprar(fila) {
-  if (!fila) return;
+  if (!fila || mkBusy) return;
   if (fila.seller === (typeof UID === "string" ? UID : "")) { toast("Eso lo publicaste vos"); return; }
   if (G.plata < fila.price) { toast("Te falta plata (" + fmt(fila.price) + ")"); return; }
-  const ok = await mkBuy(fila.id);
+  if (fila.kind === "arm" && G.weapons && G.weapons[fila.item]) { toast("Ya tenés esa arma — no se puede tener dos iguales"); return; }
+  mkBusy = true;
+  const ok = await mkBuy(fila.id).catch(() => false);
+  mkBusy = false;
   if (!ok) { toast("Se lo llevaron primero"); if (typeof refreshP2P === "function") refreshP2P(); return; }
   G.plata -= fila.price;
-  mkPoner(fila.kind, fila.item, fila.qty, fila.payload);
+  mkEntregar(fila.kind, fila.item, fila.qty, fila.payload);   // si no entra en la bolsa, queda pendiente (no se pierde)
   log("Compraste " + fila.qty + " × " + (fila.name || mkNombre(fila.kind, fila.item)) + " a " + (fila.seller_name || "otro granjero") + " por " + fmt(fila.price) + " de plata.", "gold");
   toast("¡Comprado!");
   refreshHud(); if (typeof syncSlots === "function") syncSlots(); if (isOpen("ov-inv")) refreshInv();
@@ -924,17 +975,26 @@ async function marketComprar(fila) {
   if (typeof saveFarm === "function") saveFarm(true);
 }
 async function marketCancelar(fila) {
-  const ok = await mkCancel(fila.id);
-  if (!ok) { toast("No se pudo cancelar (¿ya se vendió?)"); if (typeof refreshP2P === "function") refreshP2P(); return; }
-  mkPoner(fila.kind, fila.item, fila.qty, fila.payload);
+  if (!fila || mkBusy) return;
+  if (fila.seller !== (typeof UID === "string" ? UID : "")) { toast("Esa publicación no es tuya"); return; }
+  mkBusy = true;
+  const ok = await mkCancel(fila.id).catch(() => false);
+  mkBusy = false;
+  if (!ok) { toast("No se pudo retirar (¿ya se vendió?)"); if (typeof refreshP2P === "function") refreshP2P(); return; }
+  mkEntregar(fila.kind, fila.item, fila.qty, fila.payload);   // si no entra en la bolsa, queda pendiente (no se pierde)
   log("Retiraste tu publicación de " + (fila.name || fila.item) + ".", "good"); toast("Retirado");
   refreshHud(); if (isOpen("ov-inv")) refreshInv();
   if (typeof refreshP2P === "function") refreshP2P();
   if (typeof saveFarm === "function") saveFarm(true);
 }
 async function marketCobrar(fila) {
-  const ok = await mkCollect(fila.id);
-  if (!ok) { toast("No se pudo cobrar"); return; }
+  if (!fila || mkBusy) return;
+  if (fila.seller !== (typeof UID === "string" ? UID : "")) { toast("Esa venta no es tuya"); return; }
+  if (fila.paid) { toast("Esa venta ya la cobraste"); return; }
+  mkBusy = true;
+  const ok = await mkCollect(fila.id).catch(() => false);
+  mkBusy = false;
+  if (!ok) { toast("No se pudo cobrar"); if (typeof refreshP2P === "function") refreshP2P(); return; }
   const neto = Math.max(1, Math.round(fila.price * (1 - MARKET_FEE / 100)));
   G.plata += neto;
   log("Cobraste " + fmt(neto) + " de plata por " + (fila.name || fila.item) + " (comisión " + MARKET_FEE + "%).", "gold");
@@ -965,7 +1025,7 @@ function incPoder() {   // poder de combate del jugador con lo que tiene equipad
   return Math.round(p);
 }
 function incCupoHoy() {
-  const hoy = new Date().toISOString().slice(0, 10);
+  const hoy = dayStamp(0);   // día LOCAL (antes era UTC: los contadores se reseteaban a las 21 h en Argentina)
   if (!G.incDia || G.incDia.date !== hoy) G.incDia = { date: hoy, n: 0 };
   return G.incDia;
 }
@@ -1019,7 +1079,9 @@ function incResolver() {
     const loot = rollLoot(m);
     for (const k in loot) botin[k] = (botin[k] || 0) + loot[k];
   }
-  for (const k in botin) { if (!tryAddRes(k, botin[k])) { botin[k] = 0; } }
+  // la plata es MONEDA, no un recurso de la bolsa: si entraba por tryAddRes se perdía (bug)
+  if (botin.plata) { G.plata += botin.plata; }
+  for (const k in botin) { if (k === "plata") continue; if (!tryAddRes(k, botin[k])) { botin[k] = 0; } }
   if (kills) { addXp(armSkillKey(ARM_DEF[inc.arma].tipo), Math.round(xp)); addCombatXp(Math.round(xp)); }
   if (herido) { G.hp = Math.max(1, G.hp - herido); }
   z.mobs.forEach(() => {});
@@ -1138,11 +1200,14 @@ function armorDefensa() {
 }
 function armorBono() { const set = G.armorEq; return (set && armorSetCompleto(set)) ? ARMOR_SETS[set].bono : null; }
 function armorBonoVal(campo) { const b = armorBono(); return (b && b[campo]) || 0; }
+// set de Fibra completo: velocidad de ataque y evasión (antes el set entero no hacía nada)
+function atkSpdMult() { return 1 + ((typeof eqRunaVal === "function" ? eqRunaVal("veloz") : 0) + armorBonoVal("atkSpd")) / 100; }
+function evadeChance() { return armorBonoVal("evade") / 100; }   // 0..1
 function craftArmor(set, pieza) {
   const sd = ARMOR_SETS[set]; if (!sd) return;
   if (!(G.built && G.built.curtiduria)) { toast("Necesitás la Curtiduría"); return; }
   if (armorTiene(set, pieza)) { toast("Ya tenés esa pieza"); return; }
-  const p = sd.piezas[pieza];
+  const p = sd.piezas[pieza]; if (!p) return;
   const falta = [];
   if ((G.res[sd.mat] || 0) < p.mat) falta.push(p.mat + " " + RES_LABEL[sd.mat]);
   if (p.hierro && (G.res.hierro || 0) < p.hierro) falta.push(p.hierro + " Hierro");
@@ -1281,7 +1346,7 @@ function stamGastar(n) {   // devuelve false si no alcanza
   G.stam -= n; refreshHud(); return true;
 }
 function stamRecargasHoy() {
-  const hoy = new Date().toISOString().slice(0, 10);
+  const hoy = dayStamp(0);   // día LOCAL (antes era UTC: los contadores se reseteaban a las 21 h en Argentina)
   if (!G.stamRec || G.stamRec.date !== hoy) G.stamRec = { date: hoy, n: 0 };
   return G.stamRec;
 }
@@ -1323,8 +1388,8 @@ const RUNA_TIPOS = {
 };
 const RUNA_ROMAN = ["", "I", "II", "III", "IV", "V"];
 function runaKey(t, r) { return "runa_" + t + "_" + r; }
-function runaVal(t, r) { return RUNA_TIPOS[t].vals[r - 1] || 0; }
-function runaLabel(t, r) { return RUNA_TIPOS[t].label + " " + RUNA_ROMAN[r]; }
+function runaVal(t, r) { return (RUNA_TIPOS[t] && RUNA_TIPOS[t].vals[r - 1]) || 0; }
+function runaLabel(t, r) { return ((RUNA_TIPOS[t] && RUNA_TIPOS[t].label) || "Runa") + " " + (RUNA_ROMAN[r] || r); }   // tipo desconocido: no rompe el Altar
 RUNA_ORDER.forEach(t => { for (let r = 1; r <= 5; r++) { RES_LABEL[runaKey(t, r)] = runaLabel(t, r); RES_EMOJI[runaKey(t, r)] = "🔹"; } });
 RES_LABEL.esencia_runica = "Esencia rúnica";      RES_EMOJI.esencia_runica = "🔮";
 RES_LABEL.runa_poder = "Runa de Poder";           RES_EMOJI.runa_poder = "💠";
@@ -1860,7 +1925,8 @@ function rollLoot(def) {
   for (const k in def.loot) {
     const e = def.loot[k], a = e[0], b = e[1], chance = (e.length > 2 ? e[2] : 1);
     if (Math.random() >= Math.min(1, chance * luckMult())) continue;   // suerte de la comida mejora los drops (detalles 338)
-    const n = a + Math.floor(Math.random() * (b - a + 1));
+    let n = a + Math.floor(Math.random() * (b - a + 1));
+    n = Math.round(n * (typeof chestBonus === "function" ? chestBonus() : 1));   // +1% de materiales por cofre colocado (el bono existía pero no se aplicaba)
     if (n > 0) out[k] = n;
   }
   return out;
@@ -1959,7 +2025,7 @@ function invStacks() {
     if (eqp) st.push({ sprite:PICK_DEF[eqp].sprite, em:"", nm:PICK_DEF[eqp].label+" ("+(G.picks.dur[eqp]||0)+"/"+PICK_DEF[eqp].dur+")" });
     else st.push({ sprite:"pick_stone", em:"", nm:"Sin pico" }); }
   st.push({ sprite:"fishing_rod", em:"", nm:"Caña ("+toolDur("rod")+"/"+TOOL_DEF.rod.max+")" });
-  for (const r of ["papa","zanahoria","cebolla","calabacin","repollo","calabaza","brocoli","madera","piedra","bronce","oro","diamante","netherita"]) {
+  for (const r of ["papa","zanahoria","cebolla","calabacin","repollo","calabaza","brocoli","girasol","trigo","maiz","madera","piedra","bronce","oro","diamante","netherita"]) {
     let n = Math.floor(G.res[r] || 0);
     while (n > 0) { const c = Math.min(99, n); st.push({ sprite:resSprite(r), em:RES_EMOJI[r], nm:RES_LABEL[r], count:c }); n -= 99; }
   }
@@ -1975,7 +2041,10 @@ function tryAddRes(key, amt) {
 }
 
 // --- casillas: todo es ítem (recursos/semillas apilan 99; herramientas/picos 1 c/u con durabilidad) ---
-const ITEM_RES_ORDER = ["papa","zanahoria","cebolla","calabacin","repollo","calabaza","brocoli","madera","piedra","bronce","hierro","oro","diamante","netherita","carne","flecha","lombriz","tablon","barra_piedra","barra_bronce","barra_hierro","barra_oro"];
+const ITEM_RES_ORDER = ["papa","zanahoria","cebolla","calabacin","repollo","calabaza","brocoli","girasol","trigo","maiz",
+  "madera","piedra","bronce","hierro","oro","diamante","netherita","carne","flecha","lombriz",
+  "tablon","barra_piedra","barra_bronce","barra_hierro","barra_oro",
+  "fibra","pelaje","cuero","colmillo","esencia_runica"];   // los 3 cultivos nuevos y los materiales de Establo/Curtiduría/Altar también ocupan casilla
 function descKey(d) { return d ? d.kind + ":" + d.key : ""; }
 function canonicalStacks() {
   const list = [];
@@ -2033,7 +2102,7 @@ const PRICE = { madera:3, piedra:6, bronce:12, hierro:15, oro:30, diamante:80, n
 //      Antes el mercado usaba una copia vieja acá y los cambios del panel no se veían (bug reportado por el diseñador).
 function priceOf(res) { return CROP_DEF[res] ? CROP_DEF[res].price : (PRICE[res] || 0); }
 // detalles viernes (1): los minerales, madera y flechas NO se venden — solo cultivos y lo farmeado en la Zona Negra (carne)
-const SELLABLE = ["papa","zanahoria","cebolla","calabacin","repollo","calabaza","brocoli"];   // viernes (2): la carne no se vende
+const SELLABLE = ["papa","zanahoria","cebolla","calabacin","repollo","calabaza","brocoli","girasol","trigo","maiz"];   // viernes (2): la carne no se vende
 let marketCur = "plata";
 function marketUnit(res) { return marketCur === "plata" ? priceOf(res) : priceOf(res)/10; }
 function sellItem(res) {

@@ -2,7 +2,6 @@
 // CD (enfriamiento árbol/piedra) ahora vive en state.js para el panel de balanceo
 function witherMs(ck) { const cd = CROP_DEF[ck]; return cd ? cd.grow * 1000 * 0.5 : 120000; }   // marchitado proporcional: mitad del tiempo de cultivo
 const ACT_DUR = { chop: 0.9, mine: 0.85, plant: 0.6, harvest: 0.6, water: 0.6, fish: 1.5 };   // "detallitos (1)" punto 11: 1 golpe por clic
-var GOLPES_TALAR = 3, GOLPES_MINAR = 3;   // clics necesarios para tumbar un árbol o romper una roca (editable)
 // (los enfriamientos ahora salen de ORE_DEF[x].cd y de nodoCd(), doc 4/8)
 
 class FarmScene extends Phaser.Scene {
@@ -22,6 +21,9 @@ class FarmScene extends Phaser.Scene {
     this.pathStuck = 0; this.lastDD = null; this.noProg = 0;
     this.unlockPend = null; this.leaving = false;
     this.dragObj = null; this.dragPlot = null; this.dragPond = false;
+    this.hornoSmokeEv = null; this.dummyBroken = false;   // si no se limpian, el humo del horno no vuelve al regresar del Bosque
+    this.auraFx = null; this.auraTw = null;
+    this.clickHit = null; this.clickPond = false;
     this.queue = [];      // cola de acciones: clickeá varios objetivos y se hacen en orden
     this.cameras.main.setBackgroundColor(GF.ISLA ? "#2e7fa8" : "#6ba043");   // isla: agua alrededor
 
@@ -309,16 +311,17 @@ class FarmScene extends Phaser.Scene {
       }
       if (!hit) { for (const pl of this.plots) { if (Math.abs(wx - pl.cx) < T / 2 && Math.abs(wy - pl.by) < T / 2) { hit = pl; break; } } }
       if (!hit && this.portal && Math.abs(wx - this.portal.cx) < 26 && Math.abs(wy - (this.portal.by - 14)) < 30) hit = this.portal;   // clic en el portal : caminar y teletransportarse
-      if (this.action) {   // acción en curso: encolar el próximo objetivo (hasta 7) sin esperar la animación
+      if (this.action && !GF.NO_WALK) {   // acción en curso: encolar el próximo objetivo (hasta 7) sin esperar la animación
         if (hit && (hit.type === "plot" || hit.type === "tree" || hit.type === "rock" || hit.type === "ore")) {
           if (!this.queue.includes(hit) && this.queue.length < 7) { this.queue.push(hit); this.markQueued(hit); toast("En cola (" + this.queue.length + ")"); }
         }
         return;
       }
-      if (GF.NO_WALK) {   // granja de un clic: se actúa directo, sin caminar hasta el objeto
-        if (this.hold && this.hold.active) return;   // venía arrastrando la vista: no es un clic
-        if (hit) { this.pendingObj = null; this.interactWith(hit); }
-        else if (this.pondDist(wx, wy) < 1.05) this.tryFish(wx, wy);
+      if (GF.NO_WALK) {
+        // granja de un clic: la acción se resuelve al SOLTAR, no al apretar. Si no fuese así,
+        // arrastrar la vista empezando encima de un árbol lo talaba antes de poder mover la cámara.
+        this.clickHit = hit || null;
+        this.clickPond = (!hit && this.pondDist(wx, wy) < 1.05);
         return;
       }
       if (hit) {
@@ -387,6 +390,21 @@ class FarmScene extends Phaser.Scene {
     });
     this.input.on("pointerup", (pt) => {
       if (this.editHl) this.editHl.setVisible(false);
+      // granja de un clic: acá se resuelve la acción, solo si NO fue un arrastre de cámara
+      if (GF.NO_WALK && !GF.editMode && !GF.uiOpen && (this.clickHit || this.clickPond)) {
+        const arrastro = !!(this.hold && this.hold.active);
+        const hit = this.clickHit, pond = this.clickPond;
+        this.clickHit = null; this.clickPond = false;
+        if (!arrastro && !pt.rightButtonReleased()) {
+          if (this.action) {   // acción en curso: encolar (hasta 7) en vez de perder el clic
+            if (hit && (hit.type === "plot" || hit.type === "tree" || hit.type === "rock" || hit.type === "ore")) {
+              if (!this.queue.includes(hit) && this.queue.length < 7) { this.queue.push(hit); this.markQueued(hit); toast("En cola (" + this.queue.length + ")"); }
+            }
+          } else if (hit) { this.pendingObj = null; this.interactWith(hit); }
+          else if (pond) this.tryFish(pt.worldX, pt.worldY);
+        }
+      }
+      this.clickHit = null; this.clickPond = false;
       // al soltar el clic sostenido, el granjero sigue caminando hasta el último punto señalado
       if (this.hold) { if (!GF.CAM_PAN && this.hold.active && this.holdPend) { const p = this.holdPend; this.holdPend = null; this.holdSeek(p.x, p.y); } this.hold = null; }
       if (!GF.editMode) { this.dragObj = this.dragPlot = null; this.dragPond = false; return; }
@@ -563,7 +581,7 @@ class FarmScene extends Phaser.Scene {
     s.setScale(baseScale).setDepth(40);
     if (this.anims.exists("boar_walk")) s.play("boar_walk");   // llega trotando (frames del sprite original, 31/7)
     this.threats.push({ type: "boar", sprite: s, cx: 24, by: 40, baseScale, tgt, damageAt: nowMs() + 15000 });
-    G.week++; refreshHud();
+    refreshHud();
     log("¡Un jabalí apareció! Espantalo (clic/E) antes de que arruine un cultivo.", "bad");
     toast("¡Jabalí! Espantalo");
   }
@@ -623,6 +641,8 @@ class FarmScene extends Phaser.Scene {
       let hit = null, bd = 1e9;
       for (const q of this.objs) { if (this.hitsSprite(q.sprite, wx, wy)) { const d = Math.hypot(q.cx - wx, q.by - wy); if (d < bd) { bd = d; hit = q; } } }
       if (!hit) for (const pl of this.plots) { if (Math.abs(wx - pl.cx) < GF.TILE / 2 && Math.abs(wy - pl.by) < GF.TILE / 2) { hit = pl; break; } }
+      if (!hit) for (const q of this.threats) { if (this.hitsSprite(q.sprite, wx, wy)) { hit = q; break; } }
+      if (!hit && this.portal && Math.abs(wx - this.portal.cx) < 26 && Math.abs(wy - (this.portal.by - 14)) < 30) hit = this.portal;   // mismo alcance que el clic
       if (hit) this.interactWith(hit); else if (this.pondDist(wx, wy) < 1.05) this.tryFish(wx, wy);
       return;
     }
@@ -766,6 +786,7 @@ class FarmScene extends Phaser.Scene {
     let dur = kind === "fish" ? 15 + Math.random() * 5 : (ACT_DUR[kind] || 1.2);
     if (kind === "plant" || kind === "harvest") dur *= farmSpeedMult();   // buff "+% vel. de farmeo" de la comida
     this.action = { kind, o, t: 0, dur };
+    if (kind === "plant") this.action.seed = G.selSeed;   // queda fijada la semilla ya validada
     if (kind === "fish") this.castBobber(o.bx != null ? o.bx : o.cx, o.by2 != null ? o.by2 : (GF.POND.row + GF.POND.rows / 2) * GF.TILE);
   }
 
@@ -888,7 +909,7 @@ class FarmScene extends Phaser.Scene {
         addXp("mining", 5); statAdd("minar", "piedra", gr); nodoSumar(o); o.readyAt = nowMs() + nodoCd(o, "piedra", CD.rock) * 1000 * cdMult(); o.halfAt = nowMs() + (o.readyAt - nowMs()) / 2; this.setObjTex(o, "node_stone_mined", o.rw || GF.TILE); log(`+${gr} Piedra.` + (pk ? ` ${G.picks.dur[pk]}/${PICK_DEF[pk].dur}` : ""), "good"); toast("+" + gr + " "); refreshHud();
         if (typeof tutoEvent === "function") tutoEvent("gather");
       }
-      else { toast("Bolsa llena — no podés picar"); log("Bolsa llena: liberá espacio para seguir picando.", "bad"); }
+      else { this.setObjTex(o, o.baseKey, o.rw || o.w); toast("Bolsa llena — no podés picar"); log("Bolsa llena: liberá espacio para seguir picando.", "bad"); }   // vuelve entera: los golpes se perdieron
     } else if (a.kind === "mine" && o.type === "ore") {
       o.golpes = (o.golpes || 0) + 1;
       if (o.golpes < GOLPES_MINAR) {
@@ -908,9 +929,9 @@ class FarmScene extends Phaser.Scene {
         log(`${od.emoji} +${gr} ${od.label}. ${G.picks.dur[pk]}/${pd.dur}`, "good"); toast("+" + gr + " " + od.emoji); refreshHud();
         if (typeof tutoEvent === "function") { tutoEvent("gather"); tutoEvent("mineore"); }
         if (G.picks.dur[pk] <= 0) { log(`¡${pd.label} se rompió en pedazos! Crafteá otro en la Herrería.`, "bad"); toast("¡Pico destruido!"); destroyPick(pk); }
-      } else { toast("Bolsa llena — no podés picar"); log("Bolsa llena: liberá espacio para seguir picando.", "bad"); }
+      } else { this.setObjTex(o, o.baseKey, o.rw || o.w); toast("Bolsa llena — no podés picar"); log("Bolsa llena: liberá espacio para seguir picando.", "bad"); }
     } else if (a.kind === "plant") {
-      const ck = G.selSeed, cd = CROP_DEF[ck];
+      const ck = a.seed || G.selSeed, cd = CROP_DEF[ck];   // la semilla que se validó al hacer clic (cambiarla a mitad de la animación no la cuela)
       if (cd && (G.seeds[ck] || 0) > 0) {
         G.seeds[ck]--; o.cropKey = ck; o.state = "growing"; o.witherAt = 0; const real = cd.grow * 1000 * cdMult();
         const starter = (G.firstSeeds || 0) > 0 && FIRST_GROW_MS > 0;   // solo las semillas del starter pack
@@ -1224,6 +1245,7 @@ class FarmScene extends Phaser.Scene {
     }
     apply(this.hoverFx, hov);
     // cercanía: lo que el granjero puede interactuar ya mismo (mismo brillo, más suave)
+    if (GF.NO_WALK) { this.nearFx.setVisible(false); return; }   // el granjero queda estacionado donde trabajó: su "cercanía" no vale
     const near = this.nearestInteract();
     const nearOk = near && !(near.type === "plot" && near.state === "locked");
     const ns = nearOk ? (near.sprite || near.ground) : null;
@@ -1280,6 +1302,7 @@ class FarmScene extends Phaser.Scene {
     const p = this.input.activePointer;
     if (o.sprite && this.hitsSprite(o.sprite, p.worldX, p.worldY)) return true;
     if (o.ground && Math.abs(p.worldX - o.cx) < GF.TILE / 2 && Math.abs(p.worldY - o.by) < GF.TILE / 2) return true;
+    if (GF.NO_WALK) return false;   // sin granjero que camine, la cercanía no significa nada: solo cuenta el cursor
     const rad = (o.type === "plot") ? 52 : 66;
     return Math.hypot(o.cx - this.hero.x, o.by - this.hero.y) < rad;
   }
@@ -1530,21 +1553,25 @@ class FarmScene extends Phaser.Scene {
     // acción en curso: bloquea movimiento
     if (this.action) {
       // la pesca se interrumpe si el jugador intenta moverse (teclas)
-      if (this.action.kind === "fish" && (k.left.isDown || k.right.isDown || k.up.isDown || k.down.isDown || k.aleft.isDown || k.aright.isDown || k.aup.isDown || k.adown.isDown)) {
+      if (this.action.kind === "fish" && !GF.NO_WALK && (k.left.isDown || k.right.isDown || k.up.isDown || k.down.isDown || k.aleft.isDown || k.aright.isDown || k.aup.isDown || k.adown.isDown)) {
         this.cancelFishing();
       }
       if (!this.action) { hero.setDepth(hero.y); this.updatePrompt(); return; }
       this.action.t += dt;
       // al picar/talar: a mitad de la acción el nodo pasa al estado dañado (entero → dañado → restos)
       const ao = this.action.o;
+      // OJO: el estado dañado depende del GOLPE que se está dando, no del avance de esta animación.
+      // Si no, en el primer clic el nodo saltaba a "casi roto" y después retrocedía.
       if (!this.action.halfDone && ao && (ao.type === "rock" || ao.type === "ore") && this.action.t >= this.action.dur / 2) {
         this.action.halfDone = true;
-        if (this.textures.exists(ao.baseKey + "_half")) this.setObjTex(ao, ao.baseKey + "_half", ao.rw || ao.w);
+        if ((ao.golpes || 0) + 1 >= GOLPES_MINAR - 1 && this.textures.exists(ao.baseKey + "_half")) this.setObjTex(ao, ao.baseKey + "_half", ao.rw || ao.w);
       }
       // talar: el árbol pasa por dos cortes intermedios (tajo leve → tajo profundo con hojas caídas)
-      if (ao && ao.type === "tree") {
-        if (!this.action.cut1Done && this.action.t >= this.action.dur / 3 && this.textures.exists("tree_cut1")) { this.action.cut1Done = true; this.setObjTex(ao, "tree_cut1", ao.rw || ao.w); }
-        if (!this.action.cut2Done && this.action.t >= this.action.dur * 2 / 3 && this.textures.exists("tree_cut2")) { this.action.cut2Done = true; this.setObjTex(ao, "tree_cut2", ao.rw || ao.w); }
+      if (ao && ao.type === "tree" && !this.action.cutDone && this.action.t >= this.action.dur / 2) {
+        this.action.cutDone = true;
+        const g = (ao.golpes || 0) + 1;   // golpe que se está por completar
+        const tex = g === 1 ? "tree_cut1" : (g < GOLPES_TALAR ? "tree_cut2" : null);
+        if (tex && this.textures.exists(tex)) this.setObjTex(ao, tex, ao.rw || ao.w);
       }
       if (this.action.t >= this.action.dur) this.finishAction();
       const sign = this.facing === "west" ? -1 : 1;
@@ -1630,7 +1657,8 @@ class FarmScene extends Phaser.Scene {
     if (!this.action && !this.pendingObj && !this.moveTarget && this.queue.length) {
       const nxt = this.queue.shift();
       this.unmarkQueued(nxt);   // deja de estar en cola: fuera el punto
-      this.pendingObj = nxt; this.goTo(nxt.cx, nxt.by + 18);
+      if (GF.NO_WALK) this.interactWith(nxt);   // granja de un clic: no hay caminata, se actúa directo
+      else { this.pendingObj = nxt; this.goTo(nxt.cx, nxt.by + 18); }
     }
 
     const sign = this.facing === "west" ? -1 : 1;

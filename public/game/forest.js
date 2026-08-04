@@ -59,9 +59,12 @@ class ForestScene extends Phaser.Scene {
     hero.setScale(this.idleScale); hero.play("idle");
     GF.scene = "forest";   // la vida NO se regenera sola acá (solo en la granja)
     this.hero = hero; this.facing = "east"; this.moveTarget = null; this.action = null; this.hurtFx = 0;
-    this.updateAura();   // aura cosmética, si la tenés encendida
     // igual que en la granja: al reiniciar la escena hay que soltar lo cacheado
+    // (Phaser destruye los objetos al salir, pero la instancia de escena se reusa: si no se limpian,
+    //  la barra de vida y el aura quedan apuntando a objetos muertos y no se vuelven a dibujar)
+    this.heroBar = null; this.auraFx = null; this.auraTw = null; this._avisoStam = 0;
     this.tgGlow = null; this.tgGlowTw = null; this.tgTxt = null; this.destMk = null;
+    this.updateAura();   // aura cosmética, si la tenés encendida (después de limpiar el cacheado)
     this._nav = null; this.holdLast = null; this.holdPend = null; this.pathStuck = 0; this.leaving = false;
     this.target = null; this.nextAuto = 0; this.path = null; this.hold = null; this.autoOn = false;
     // el botín tirado sobrevive mientras dure la sesión: si volvés al Bosque, sigue ahí
@@ -81,14 +84,13 @@ class ForestScene extends Phaser.Scene {
       // clic izquierdo (Discord 1/8): si cliqueás un bicho que tenés CERCA, un espadazo suelto —
       // sin fijarlo, sin recuadro rojo y sin auto-ataque — y se puede seguir caminando mientras
       // (animación caminar+espadazo). Si está lejos o no hay arma, el clic solo camina.
-      if (hit) {
-        if (swordDmg() <= 0) { toast("Necesitás un arma equipada para atacar"); return; }   // mismo aviso que el clic derecho (1/8)
-        const now = this.time.now;
+      if (hit && swordDmg() > 0) {   // con arco (o sin arma) el clic izquierdo solo camina: el arco dispara con clic derecho
+        const now = nowMs();   // MISMO reloj que update() — mezclar time.now rompía la cadencia
         const d = Math.hypot(hit.cx - this.hero.x, hit.by - this.hero.y);
         if (d <= MELEE_RANGE && !this.action && now >= this.nextAuto) {
           this.facing = (hit.cx < this.hero.x) ? "west" : "east";
           this.action = { kind: "attack", m: hit, t: 0, dur: 0.45 };
-          this.nextAuto = now + ATTACK_MS;   // misma cadencia que el auto-ataque (sin spam de clics)
+          this.nextAuto = now + ATTACK_MS / atkSpdMult();   // misma cadencia que el auto-ataque (sin spam de clics)
           return;                            // no toca el destino actual: sigue caminando si venía caminando
         }
       }
@@ -296,16 +298,17 @@ class ForestScene extends Phaser.Scene {
     const d = Math.hypot(m.cx - this.hero.x, m.by - this.hero.y);
     if (d <= MELEE_RANGE && swordDmg() > 0) {   // viernes (2): melee SOLO con espada equipada (sin puños)
       this.facing = (m.cx < this.hero.x) ? "west" : "east";
-      this.action = { kind: "attack", m, t: 0, dur: 0.45 }; this.nextAuto = t + ATTACK_MS / (1 + eqRunaVal("veloz") / 100);   // Runa Veloz
+      this.action = { kind: "attack", m, t: 0, dur: 0.45 }; this.nextAuto = t + ATTACK_MS / atkSpdMult();   // Runa Veloz
     } else if (canShoot() && d <= BOW_RANGE) {
       this.facing = (m.cx < this.hero.x) ? "west" : "east";
-      this.action = { kind: "shoot", m, t: 0, dur: 0.35 }; this.nextAuto = t + ATTACK_MS / (1 + eqRunaVal("veloz") / 100);
+      this.action = { kind: "shoot", m, t: 0, dur: 0.35 }; this.nextAuto = t + ATTACK_MS / atkSpdMult();
     }
   }
 
   // disparo: proyectil que viaja hasta el monstruo y pega al llegar
   shootArrow(m) {
     if (!canShoot()) { toast("Sin flechas — crafteá en la Herrería"); return; }
+    if (!this.cobrarEstamina(m)) return;   // la estamina se cobra ANTES: sin ella no se gasta ni la flecha ni la durabilidad
     const aid = armaEq();
     G.res.flecha--;
     if (aid) { useWeapon(aid); if (G.weapons[aid].dur <= 0) { log("¡" + ARM_DEF[aid].label + " roto! Reparalo en la Herrería.", "bad"); toast("¡Arco roto!"); } }
@@ -319,15 +322,15 @@ class ForestScene extends Phaser.Scene {
     });
   }
 
-  mobDef(m) { return Math.round((m.def.def || 0) * (m.shellUntil && this.time.now < m.shellUntil ? 1.6 : 1)); }   // Caparazón del Golem
+  mobDef(m) { return Math.round((m.def.def || 0) * (m.shellUntil && nowMs() < m.shellUntil ? 1.6 : 1)); }   // Caparazón del Golem
 
   // la primera vez que golpeás a una criatura se paga su estamina (doc "2das mejoras")
   cobrarEstamina(m) {
     if (m.pagado) return true;
     const costo = (typeof stamCosto === "function") ? stamCosto(m.key) : 0;
     if (!stamGastar(costo)) {
-      if (!this._avisoStam || this.time.now > this._avisoStam) {
-        this._avisoStam = this.time.now + 4000;
+      if (!this._avisoStam || nowMs() > this._avisoStam) {
+        this._avisoStam = nowMs() + 4000;
         toast("Sin estamina — comé un guiso o esperá a que se recargue");
         log("Te quedaste sin estamina de combate. Se recupera sola (1 cada 3 min), comiendo guisos o con una recarga.", "bad");
       }
@@ -339,9 +342,9 @@ class ForestScene extends Phaser.Scene {
   }
 
   hitMonster(m, dmg, skill) {
-    const tn = this.time.now;
-    if (!this.cobrarEstamina(m)) return;
+    const tn = nowMs();   // MISMO reloj con el que se escriben phaseUntil/blinkUntil/stunUntil (update usa nowMs)
     if ((m.phaseUntil && tn < m.phaseUntil) || (m.blinkUntil && tn < m.blinkUntil)) { this.floatTxt(m, "Intangible", "#bfa8ff"); return; }   // Fase espectral / Parpadeo
+    if (!this.cobrarEstamina(m)) return;   // se cobra DESPUÉS de intangible: un golpe que no puede pegar no gasta estamina
     if (window.sfx) sfx("hit");
     let crit = false, vamp = 0;
     if (dmg == null) {   // doc 2/8: Daño = máx(1; tirada del arma + nivel/2 − defensa efectiva) + buff del tipo
@@ -350,8 +353,8 @@ class ForestScene extends Phaser.Scene {
       if (m.def.evade && ARM_DEF[roll.id].tipo !== "arco" && Math.random() < m.def.evade) { this.floatTxt(m, "Esquivó", "#a8d8ff"); return; }   // Vuelo evasivo (solo cuerpo a cuerpo)
       dmg = roll.dmg; crit = roll.crit; vamp = roll.vamp || 0;
       skill = armSkillKey(ARM_DEF[roll.id].tipo);
-      if (roll.stun) { m.stunUntil = this.time.now + 2100; this.floatTxt(m, "Aturdido", "#ffd24a"); }   // pierde su próximo golpe
-      if (roll.bleed) m.bleed = { dps: roll.bleed, until: this.time.now + 3000, next: this.time.now + 1000 };   // sangrado 3 s
+      if (roll.stun) { m.stunUntil = tn + 2100; this.floatTxt(m, "Aturdido", "#ffd24a"); }   // pierde su próximo golpe
+      if (roll.bleed) m.bleed = { dps: roll.bleed, until: tn + 3000, next: tn + 1000 };   // sangrado 3 s
       if (ARM_DEF[roll.id].tipo !== "arco") {   // el arco gasta en shootArrow
         useWeapon(roll.id);
         if (G.weapons[roll.id].dur <= 0) { log("¡" + ARM_DEF[roll.id].label + " rota! Reparala en la Herrería.", "bad"); toast("¡Arma rota!"); }
@@ -552,18 +555,37 @@ class ForestScene extends Phaser.Scene {
     toast("" + m.def.label + " " + (parts.length ? " " + parts.join(" ") : ""));
     refreshHud();
     this.tweens.add({ targets: m.spr, alpha: 0, y: m.by - 12, duration: 400, onComplete: () => m.spr.setVisible(false) });
-    // reaparece en su zona tras 25-40s (las babitas no; el jefe tarda 3 min)
-    if (m.def.noRespawn) return;
+    // las que no reaparecen (babitas) se sacan de la lista y se destruyen: si no, se acumulan sin techo
+    if (m.def.noRespawn) {
+      this.time.delayedCall(450, () => {
+        const i = this.monsters.indexOf(m);
+        if (i >= 0) this.monsters.splice(i, 1);
+        if (m.spr) m.spr.destroy();
+        if (m.bar) m.bar.destroy();
+      });
+      return;
+    }
+    // reaparece en su zona tras 25-40s (el jefe tarda 3 min)
     this.time.delayedCall((m.def.boss ? 180000 : 25000) + Math.random() * 15000, () => {
       if (!this.scene || !this.scene.isActive()) return;
       m.hp = m.def.hp; m.dead = false; m.pagado = false; m.cx = m.home.x; m.by = m.home.y;
       m.spr.setPosition(m.cx, m.by).setAlpha(1).setVisible(true).setDepth(m.by); m.tgt = null;
+      // reaparece LIMPIO: si no, el Orco/Dragón volvía con la furia puesta para siempre y el Espectro intangible
+      m.enraged = false; m.dmgMult = 1; m.bleed = null;
+      m.shellUntil = 0; m.phaseUntil = 0; m.blinkUntil = 0; m.stunUntil = 0;
+      m.abAt = 0; m.shellAt = 0; m.stompAt = 0; m.chargeAt = 0; m.flameAt = 0; m.curseAt = 0;
+      m.blinkAt = 0; m.breathAt = 0; m.roarAt = 0; m.tailAt = 0; m.nextHit = 0;
+      if (m.spr.clearTint) m.spr.clearTint();
+      m.spr.setAlpha(1);
       if (m.baseScale) m.spr.setScale(m.baseScale);
       if (m.def.sprite) { m.anim = null; m.atkUntil = 0; this.playMob(m, "idle"); }
+      this.drawBar(m);
     });
   }
 
   hurtHero(dmg) {
+    // set de Fibra completo: % de evasión (el golpe pasa de largo)
+    if (typeof evadeChance === "function" && Math.random() < evadeChance()) { this.floatHero("Esquivaste", "#a8d8ff"); return; }
     dmg = Math.max(1, Math.round((dmg - gearDefTotal() * (1 - playerDefLossMult())) * dmgTakenMult()));   // armadura (menos Fragilidad) + buff de comida
     G.hp = Math.max(0, G.hp - dmg);
     this.hurtFx = 0.18;

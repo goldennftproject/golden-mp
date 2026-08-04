@@ -29,6 +29,7 @@ function snapshot() {
     stats: G.stats, statsBase: G.statsBase, chestCap: G.chestCap, edif2: G.edif2, cosmeticos: G.cosmeticos, animals: G.animals, armor: G.armor, armorEq: G.armorEq, ofrendaPts: G.ofrendaPts, ofrendaLog: G.ofrendaLog, nodoUsos: G.nodoUsos, cosEq: G.cosEq, incursion: G.incursion, incDia: G.incDia, dummyTrain: G.dummyTrain, swordOwned: G.swordOwned, bowOwned: G.bowOwned, swordWoodOwned: G.swordWoodOwned, gear: G.gear,
     armasUnlocked: G.armasUnlocked, treesOpen: G.treesOpen, rocksOpen: G.rocksOpen, firstCropDone: G.firstCropDone, weapons: G.weapons,
     dishes: G.dishes, cooking: G.cooking, chests: G.chests, dummyUsedAt: G.dummyUsedAt,
+    armCd: G.armCd, mkPend: G.mkPend,
     layoutPlots: G.layoutPlots, layoutPond: G.layoutPond };
 }
 // "huella" del estado guardable (incluye el apodo); si no cambia, no hay nada que guardar
@@ -46,8 +47,9 @@ function hydrate(d) {
   if (d.tools) G.tools = Object.assign({}, G.tools, d.tools);
   if (d.toolsLost) G.toolsLost = d.toolsLost;   // legado (pre-apilables)
   // edificios construibles (viernes 1): las partidas viejas ya los tienen construidos
-  if (d.built) G.built = Object.assign({ store: true, horno: false, cocina: false }, d.built);
-  else G.built = { store: true, horno: true, cocina: true };
+  const BUILT0 = { store: true, horno: false, cocina: false, altar: false, establo: false, curtiduria: false, ofrendas: false };
+  if (d.built) G.built = Object.assign({}, BUILT0, d.built);
+  else G.built = Object.assign({}, BUILT0, { horno: true, cocina: true });
   G.built.store = true;   // viernes (2): la Herrería es gratis, siempre está
   if (typeof d.invRows === "number") G.invRows = Math.max(0, Math.min(INV_MAX_ROWS, d.invRows));
   if (Array.isArray(d.slots)) G.slots = d.slots;
@@ -98,9 +100,8 @@ function hydrate(d) {
     if (d.swordOwned) G.weapons.espada_bronce = { dur: 60 };
     if (d.bowOwned) G.weapons.arco_madera = { dur: 40 };
   }
-  const mapArma = { sword_wood: "espada_madera", sword: "espada_bronce", bow: "arco_madera" };
-  if (G.gear && mapArma[G.gear.arma]) G.gear.arma = mapArma[G.gear.arma];
-  if (G.gear && G.gear.arma && !(typeof ARM_DEF !== "undefined" && ARM_DEF[G.gear.arma] && G.weapons[G.gear.arma])) G.gear.arma = null;
+  // (la migración del ARMA EQUIPADA va más abajo, DESPUÉS de cargar d.gear — si se hace acá
+  //  opera sobre el gear por defecto y el jugador queda sin arma equipada para siempre)
   // limpiar armas viejas de hotbar/slots guardados
   const armaVieja = h => h && h.kind === "tool" && (h.key === "sword" || h.key === "sword_wood" || h.key === "bow");
   G.hotbar = (G.hotbar || []).map(h => armaVieja(h) ? null : h);
@@ -116,8 +117,12 @@ function hydrate(d) {
   if (d.gear && typeof d.gear === "object") G.gear = Object.assign({ casco: null, armadura: null, botas: null, escudo: null, arma: null, municion: false }, d.gear);
   // migración (detalles jueves): partidas viejas sin slot de arma/munición conservan su comportamiento
   const og = d.gear || {};
-  if (!("arma" in og)) G.gear.arma = d.swordOwned ? "sword" : (d.bowOwned ? "bow" : null);
+  if (!("arma" in og)) G.gear.arma = d.swordOwned ? "espada_bronce" : (d.bowOwned ? "arco_madera" : null);   // ids NUEVOS
   if (!("municion" in og)) G.gear.municion = ((d.res && d.res.flecha) || 0) > 0;
+  // migración del arma equipada + validación (acá sí, con el gear guardado ya cargado)
+  const mapArma = { sword_wood: "espada_madera", sword: "espada_bronce", bow: "arco_madera" };
+  if (mapArma[G.gear.arma]) G.gear.arma = mapArma[G.gear.arma];
+  if (G.gear.arma && !(typeof ARM_DEF !== "undefined" && ARM_DEF[G.gear.arma] && G.weapons[G.gear.arma])) G.gear.arma = null;
   if (d.dishes && typeof d.dishes === "object") G.dishes = Object.assign({}, d.dishes);
   // la Cocina pasó a tener varias ollas: los guardados viejos traían un solo objeto
   if (Array.isArray(d.cooking)) G.cooking = d.cooking.filter(c => c && c.endAt);
@@ -125,6 +130,8 @@ function hydrate(d) {
   else G.cooking = [];
   if (Array.isArray(d.chests)) G.chests = d.chests.slice(0, 50).map(c => ({ col: (typeof c.col === "number" ? c.col : null), row: (typeof c.row === "number" ? c.row : null), items: (Array.isArray(c.items) ? c.items.slice(0, 10) : Array(10).fill(null)) }));
   if (typeof d.dummyUsedAt === "number") G.dummyUsedAt = d.dummyUsedAt;
+  if (d.armCd && typeof d.armCd === "object") G.armCd = d.armCd;   // el enfriamiento de forja ya no se saltea con F5
+  G.mkPend = Array.isArray(d.mkPend) ? d.mkPend : [];               // entregas pendientes del Mercado
   if (d.layoutPlots && typeof d.layoutPlots === "object") G.layoutPlots = d.layoutPlots;
   if (d.layoutPond && typeof d.layoutPond === "object") G.layoutPond = { col: d.layoutPond.col, row: d.layoutPond.row };
   if (d.picks && d.picks.owned && d.picks.dur) G.picks = d.picks;
@@ -252,17 +259,24 @@ async function mkBuy(id) {
     return (data && data[0]) || null;   // null = alguien lo compró primero
   } catch (e) { return null; }
 }
+// retiro ATÓMICO: solo devuelve true si REALMENTE borró la fila.
+// Antes bastaba con que no hubiera error: un DELETE que no matchea nada no da error, así que
+// el doble clic (o retirar algo ya vendido) devolvía el ítem a la bolsa una y otra vez.
 async function mkCancel(id) {
   if (!sb || !UID) return false;
   try {
-    const { error } = await sb.from("market").delete().eq("id", id).eq("seller", UID).is("sold_to", null);
-    return !error;
+    const { data, error } = await sb.from("market").delete().eq("id", id).eq("seller", UID).is("sold_to", null).select();
+    if (error) { console.warn("market cancel:", error.message); return false; }
+    return !!(data && data.length === 1);
   } catch (e) { return false; }
 }
-async function mkCollect(id) {   // marca una venta como cobrada
+// cobro ATÓMICO: solo pega si la venta existe, es tuya, está vendida y NO estaba cobrada
+async function mkCollect(id) {
   if (!sb || !UID) return false;
   try {
-    const { error } = await sb.from("market").update({ paid: true }).eq("id", id).eq("seller", UID).not("sold_to", "is", null);
-    return !error;
+    const { data, error } = await sb.from("market").update({ paid: true })
+      .eq("id", id).eq("seller", UID).eq("paid", false).not("sold_to", "is", null).select();
+    if (error) { console.warn("market collect:", error.message); return false; }
+    return !!(data && data.length === 1);
   } catch (e) { return false; }
 }
