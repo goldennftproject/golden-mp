@@ -6,6 +6,11 @@ GF.COLS = 23; GF.ROWS = 15;                 // mundo en celdas enteras
 GF.WORLD_W = GF.COLS * GF.TILE;             // 966
 GF.WORLD_H = GF.ROWS * GF.TILE;             // 630
 GF.SPEED = 175;
+// "detallitos (1)" 4-5-6: la granja se juega SIN caminar (todo con clic), la cámara se desplaza
+// en vez de seguir al granjero, y la finca está sobre el mar. Cada cosa se puede apagar por separado.
+GF.NO_WALK = true;    // el granjero no aparece en la granja: se interactúa con un clic desde donde sea
+GF.CAM_PAN = true;    // cámara libre: se arrastra y la rueda desplaza (en vez de seguir al granjero)
+GF.ISLA = true;       // fondo de mar alrededor de la granja
 var ZONA_NEGRA_VEL = 0.75;   // "detallitos (1)" punto 7: el granjero camina 25% más lento en la Zona Negra
 GF.ZOOM = 1.35;
 GF.editMode = false;   // modo edición de la granja (arrastrar objetos)

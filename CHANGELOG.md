@@ -444,6 +444,12 @@ Registro cronológico de todo lo hecho desde el inicio del proyecto (27 de julio
 - **Entrenamiento offline del dummy** (detallito 9): podés dejar al granjero entrenando y al volver cobrás la XP del tiempo transcurrido (60 XP por hora, tope 8 h). Sigue existiendo el golpe directo con su recompensa y sus 4 h de descanso.
 - Duraciones, poder recomendado, rendimiento, cupo diario y los valores del entrenamiento quedaron editables en el panel.
 
+### Fase 9 — Granja de un clic, cámara tipo SFL e isla (4/8)
+Los tres cambios son estructurales y quedaron detrás de **interruptores independientes** (`GF.NO_WALK`, `GF.CAM_PAN`, `GF.ISLA`), así se pueden apagar uno por uno si al diseñador no le convence alguno.
+- **Granja sin caminar** (detallito 4): el granjero ya no aparece en la granja — todo se hace con un clic sobre la cosa que querés usar, sin esperar a que llegue. El cartel de interacción ahora describe **lo que hay bajo el cursor** y la tecla E actúa sobre eso mismo. El granjero sigue existiendo y se ve en la Zona Negra, que es donde importa moverse.
+- **Cámara tipo SFL** (detallito 5): la cámara dejó de seguir al personaje y de hacer zoom con la rueda. Ahora la granja se **arrastra con el mouse** y la rueda la **desplaza**, con el zoom fijo.
+- **La finca sobre el mar** (detallito 6): fondo de océano alrededor de la granja, con bajío más claro, orilla de arena, borde de pasto y **olas animadas** que respiran sobre la costa. Todo dibujado por código, sin arte nuevo.
+
 ## Pendientes conocidos
 - En espera del diseñador: **tabla de daño de las armas** (para los tiers completos de espadas), usos de tablones/barras, cerca premium, tabla de stats del bestiario.
 - Cuando el diseñador apruebe el doc de farmeo: implementar Girasol, Trigo y Maíz (arte PixelLab + tabla de cultivos) y el sistema de XP de farmeo por niveles.

@@ -23,7 +23,7 @@ class FarmScene extends Phaser.Scene {
     this.unlockPend = null; this.leaving = false;
     this.dragObj = null; this.dragPlot = null; this.dragPond = false;
     this.queue = [];      // cola de acciones: clickeá varios objetivos y se hacen en orden
-    this.cameras.main.setBackgroundColor("#6ba043");
+    this.cameras.main.setBackgroundColor(GF.ISLA ? "#2e7fa8" : "#6ba043");   // isla: agua alrededor
 
     this.dragPlot = null; this.dragPond = false;
     // posiciones editadas de laguna y parcelas: primero base, después lo guardado
@@ -215,6 +215,19 @@ class FarmScene extends Phaser.Scene {
         o.timer = this.add.text(o.cx, o.by - T * 0.85, "", { fontFamily: "system-ui", fontSize: "11px", fontStyle: "bold", color: "#fff", stroke: "#20301a", strokeThickness: 3 }).setOrigin(0.5, 1).setDepth(o.by + 3).setVisible(false);
       }
     });
+    // ——— ISLA SOBRE EL MAR ("detallitos (1)" punto 6): agua alrededor de la granja, orilla y olas ———
+    if (GF.ISLA) {
+      const MAR = 900;   // cuánto mar se dibuja hacia afuera
+      const g = this.add.graphics().setDepth(-1000);
+      g.fillStyle(0x2e7fa8, 1).fillRect(-MAR, -MAR, GF.WORLD_W + MAR * 2, GF.WORLD_H + MAR * 2);   // mar profundo
+      g.fillStyle(0x3fa3cc, 1).fillRoundedRect(-70, -70, GF.WORLD_W + 140, GF.WORLD_H + 140, 90);  // agua clara del bajío
+      g.fillStyle(0xe8d9a6, 1).fillRoundedRect(-34, -34, GF.WORLD_W + 68, GF.WORLD_H + 68, 60);    // arena de la orilla
+      g.fillStyle(0x7fbf5a, 1).fillRoundedRect(-8, -8, GF.WORLD_W + 16, GF.WORLD_H + 16, 34);      // borde de pasto
+      this.cameras.main.setBounds(-140, -140, GF.WORLD_W + 280, GF.WORLD_H + 280);
+      // espuma: líneas claras que van y vienen sobre la orilla
+      this.olas = this.add.graphics().setDepth(-999);
+      this.olasT = 0;
+    }
     this.rebuildCollisions();
     GF.scene = "farm";
     window.farmScene = this;   // para refrescar la flecha del tutorial desde la UI
@@ -261,6 +274,7 @@ class FarmScene extends Phaser.Scene {
     hero.setScale(this.idleScale);
     hero.play("idle");
     this.hero = hero; this.facing = "east"; this.moveTarget = null; this.path = null; this.action = null; this.pendingObj = null;
+    if (GF.NO_WALK) hero.setVisible(false);   // el granjero solo se ve en la Zona Negra
 
     // clic derecho sobre una parcela seca: rueda de sembrado rápido
     this.input.mouse.disableContextMenu();
@@ -288,7 +302,7 @@ class FarmScene extends Phaser.Scene {
       }
       if (GF.uiOpen) return;
       const wx = pt.worldX, wy = pt.worldY;
-      this.hold = { sx: pt.x, sy: pt.y, active: false };   // por si esto se convierte en un arrastre
+      this.hold = { sx: pt.x, sy: pt.y, px: pt.x, py: pt.y, active: false };   // por si esto se convierte en un arrastre
       let hit = null, bd = 1e9;
       for (const o of this.objs.concat(this.threats)) {
         if (this.hitsSprite(o.sprite, wx, wy)) { const d = Math.hypot(o.cx - wx, o.by - wy); if (d < bd) { bd = d; hit = o; } }
@@ -299,6 +313,12 @@ class FarmScene extends Phaser.Scene {
         if (hit && (hit.type === "plot" || hit.type === "tree" || hit.type === "rock" || hit.type === "ore")) {
           if (!this.queue.includes(hit) && this.queue.length < 7) { this.queue.push(hit); this.markQueued(hit); toast("En cola (" + this.queue.length + ")"); }
         }
+        return;
+      }
+      if (GF.NO_WALK) {   // granja de un clic: se actúa directo, sin caminar hasta el objeto
+        if (this.hold && this.hold.active) return;   // venía arrastrando la vista: no es un clic
+        if (hit) { this.pendingObj = null; this.interactWith(hit); }
+        else if (this.pondDist(wx, wy) < 1.05) this.tryFish(wx, wy);
         return;
       }
       if (hit) {
@@ -312,6 +332,18 @@ class FarmScene extends Phaser.Scene {
     // arrastre en modo edición: mueve el sprite y resalta la celda destino (verde libre / rojo ocupada)
     this.input.on("pointermove", (pt) => {
       if (!GF.editMode) {
+        if (GF.CAM_PAN) {   // ARRASTRAR la granja (como SFL): el mundo se mueve con el cursor
+          if (!this.hold || GF.uiOpen || !pt.isDown || pt.rightButtonDown()) return;
+          if (!this.hold.active && Math.hypot(pt.x - this.hold.sx, pt.y - this.hold.sy) < 10) return;
+          this.hold.active = true;
+          const c = this.cameras.main, z = c.zoom || 1;
+          const dx = (this.hold.px == null ? pt.x : this.hold.px) - pt.x;
+          const dy = (this.hold.py == null ? pt.y : this.hold.py) - pt.y;
+          this.hold.px = pt.x; this.hold.py = pt.y;
+          c.scrollX = Phaser.Math.Clamp(c.scrollX + dx / z, 0, Math.max(0, GF.WORLD_W - c.width / z));
+          c.scrollY = Phaser.Math.Clamp(c.scrollY + dy / z, 0, Math.max(0, GF.WORLD_H - c.height / z));
+          return;
+        }
         // CLIC SOSTENIDO: si mantenés apretado y movés el cursor, el granjero te sigue
         // (rodeando árboles y edificios) hasta el punto que estés señalando
         if (!this.hold || GF.uiOpen || !pt.isDown || pt.rightButtonDown()) return;
@@ -355,7 +387,7 @@ class FarmScene extends Phaser.Scene {
     this.input.on("pointerup", (pt) => {
       if (this.editHl) this.editHl.setVisible(false);
       // al soltar el clic sostenido, el granjero sigue caminando hasta el último punto señalado
-      if (this.hold) { if (this.hold.active && this.holdPend) { const p = this.holdPend; this.holdPend = null; this.holdSeek(p.x, p.y); } this.hold = null; }
+      if (this.hold) { if (!GF.CAM_PAN && this.hold.active && this.holdPend) { const p = this.holdPend; this.holdPend = null; this.holdSeek(p.x, p.y); } this.hold = null; }
       if (!GF.editMode) { this.dragObj = this.dragPlot = null; this.dragPond = false; return; }
       // soltar una PARCELA
       if (this.dragPlot) {
@@ -462,13 +494,19 @@ class FarmScene extends Phaser.Scene {
     (G.chests = G.chests || []).forEach((c, idx) => { if (c.col != null) this.spawnChest(idx); });
 
     this.cameras.main.setBounds(0, 0, W, H);
-    this.cameras.main.startFollow(hero, true, 0.15, 0.15);
+    if (!GF.CAM_PAN) this.cameras.main.startFollow(hero, true, 0.15, 0.15);
+    else { this.cameras.main.stopFollow(); this.cameras.main.centerOn(W / 2, H * 0.42); }
     this.zoomUser = 1;
     this.fitCamera();
     this.scale.on("resize", this.fitCamera, this);
     this.events.once("shutdown", () => this.scale.off("resize", this.fitCamera, this));
     // rueda del mouse: acercar/alejar la cámara de la granja
     this.input.on("wheel", (ptr, over, dx, dy) => {
+      if (GF.CAM_PAN) {   // SFL: la rueda DESPLAZA la granja (el zoom queda fijo)
+        const c = this.cameras.main;
+        c.scrollY = Phaser.Math.Clamp(c.scrollY + dy * 0.6, 0, Math.max(0, GF.WORLD_H - c.height / c.zoom));
+        return;
+      }
       this.zoomUser = Phaser.Math.Clamp(this.zoomUser * (dy > 0 ? 0.9 : 1.1), 0.4, 2.4);
       this.fitCamera();
     });
@@ -481,6 +519,17 @@ class FarmScene extends Phaser.Scene {
     // (la M ya no teletransporta a la plaza — ahora abre/cierra el menú, detalles 29/7)
     this.keys.act.on("down", () => this.doInteract());
     this.keys.act2.on("down", () => this.doInteract());
+  }
+
+  drawOlas(dt) {
+    if (!this.olas) return;
+    this.olasT = (this.olasT || 0) + dt;
+    const t = this.olasT, W2 = GF.WORLD_W, H2 = GF.WORLD_H, g = this.olas;
+    g.clear(); g.lineStyle(3, 0xdff3ff, 0.55);
+    for (let i = 0; i < 3; i++) {
+      const o = 16 + i * 13 + Math.sin(t * 0.9 + i) * 5;
+      g.strokeRoundedRect(-20 - o, -20 - o, W2 + 40 + o * 2, H2 + 40 + o * 2, 50 + o);
+    }
   }
 
   fitCamera() {
@@ -552,7 +601,18 @@ class FarmScene extends Phaser.Scene {
     return "";
   }
 
-  doInteract() { if (GF.uiOpen || this.action || GF.editMode) return; const o = this.nearestInteract(); if (o) this.interactWith(o); else if (this.nearPond()) this.tryFish(); }
+  doInteract() {
+    if (GF.uiOpen || this.action || GF.editMode) return;
+    if (GF.NO_WALK) {   // sin granjero: la tecla E actúa sobre lo que esté bajo el cursor
+      const pt = this.input.activePointer, wx = pt.worldX, wy = pt.worldY;
+      let hit = null, bd = 1e9;
+      for (const q of this.objs) { if (this.hitsSprite(q.sprite, wx, wy)) { const d = Math.hypot(q.cx - wx, q.by - wy); if (d < bd) { bd = d; hit = q; } } }
+      if (!hit) for (const pl of this.plots) { if (Math.abs(wx - pl.cx) < GF.TILE / 2 && Math.abs(wy - pl.by) < GF.TILE / 2) { hit = pl; break; } }
+      if (hit) this.interactWith(hit); else if (this.pondDist(wx, wy) < 1.05) this.tryFish(wx, wy);
+      return;
+    }
+    const o = this.nearestInteract(); if (o) this.interactWith(o); else if (this.nearPond()) this.tryFish();
+  }
 
   interactWith(o) {
     if (o.type === "portal") {
@@ -683,6 +743,9 @@ class FarmScene extends Phaser.Scene {
 
   startAction(kind, o) {
     this.moveTarget = null;
+    if (GF.NO_WALK && o && o.cx != null) {   // granja de un clic: el granjero (invisible) trabaja donde clickeaste
+      this.hero.setPosition(o.cx + (kind === "fish" ? 0 : 22), (o.by != null ? o.by : o.by2) + 4);
+    }
     this.facing = (o.cx < this.hero.x) ? "west" : "east";
     // pescar lleva 15–20s ININTERRUMPIDOS (detalles jueves); moverse cancela la pesca
     let dur = kind === "fish" ? 15 + Math.random() * 5 : (ACT_DUR[kind] || 1.2);
@@ -1292,6 +1355,7 @@ class FarmScene extends Phaser.Scene {
   update(time, deltaMs) {
     if (this.leaving || !this.hero) return;   // cambiando de escena: no tocar nada más
     const dt = deltaMs / 1000, k = this.keys, hero = this.hero;
+    this.drawOlas(dt);   // olas de la isla
 
     // restaurar objetos que salieron de cooldown
     const t = nowMs();
@@ -1432,6 +1496,7 @@ class FarmScene extends Phaser.Scene {
 
     // movimiento
     let vx = 0, vy = 0;
+    if (GF.NO_WALK) { this.moveTarget = null; this.path = null; this.pendingObj = null; }
     if (GF.uiOpen || GF.editMode) { this.moveTarget = null; this.path = null; this.pendingObj = null; this.clearQueue(); }
     else {
       if (k.left.isDown || k.aleft.isDown) vx = -1; else if (k.right.isDown || k.aright.isDown) vx = 1;
@@ -1509,6 +1574,17 @@ class FarmScene extends Phaser.Scene {
   updatePrompt() {
     const el = $("prompt"); if (!el) return;
     if (GF.uiOpen || this.action || GF.editMode) { el.classList.remove("show"); return; }
+    if (GF.NO_WALK) {   // granja de un clic: el cartel describe lo que hay BAJO EL CURSOR
+      const pt = this.input.activePointer, wx = pt.worldX, wy = pt.worldY;
+      let hit = null, bd = 1e9;
+      for (const q of this.objs) { if (this.hitsSprite(q.sprite, wx, wy)) { const d = Math.hypot(q.cx - wx, q.by - wy); if (d < bd) { bd = d; hit = q; } } }
+      if (!hit) for (const pl of this.plots) { if (Math.abs(wx - pl.cx) < GF.TILE / 2 && Math.abs(wy - pl.by) < GF.TILE / 2) { hit = pl; break; } }
+      if (!hit && this.portal && Math.abs(wx - this.portal.cx) < 26 && Math.abs(wy - (this.portal.by - 14)) < 30) hit = this.portal;
+      if (hit) { el.textContent = this.promptText(hit); el.classList.add("show"); }
+      else if (this.pondDist(wx, wy) < 1.05) { el.textContent = "Pescar (1 lombriz · tenés " + fmt(G.res.lombriz || 0) + ")"; el.classList.add("show"); }
+      else el.classList.remove("show");
+      return;
+    }
     const o = this.nearestInteract();
     if (o) { el.textContent = this.promptText(o) + "  ·  [E]"; el.classList.add("show"); }
     else if (this.nearPond()) { el.textContent = "Pescar (1 lombriz · tenés " + fmt(G.res.lombriz || 0) + ") · [E]"; el.classList.add("show"); }
