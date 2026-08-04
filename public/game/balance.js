@@ -143,6 +143,13 @@ var BAL = (function () {
       add(cat, "pass.vipBoost", "Boost de estrellas del VIP (1.2 = +20%)", U.factor, () => PASS_VIP_BOOST, v => { PASS_VIP_BOOST = v; }, 0.1);
     }
 
+    // ALTAR DE OFRENDAS
+    { const cat = "Altar de Ofrendas";
+      add(cat, "ofr.pozo", "Pozo fijo del airdrop (referencia)", "$Golden · entero", () => OFRENDA_POZO, v => { OFRENDA_POZO = v; });
+      OFRENDA_ORDER.forEach(k => add(cat, "ofr." + k, (RES_LABEL[k] || (CROP_DEF[k] && CROP_DEF[k].label) || k) + " · puntos por unidad", "puntos · entero", () => OFRENDA_PTS[k], v => { OFRENDA_PTS[k] = v; }));
+      costos("Edificios", "build.ofrendas.cost", BUILD_DEF.ofrendas.cost, "Altar de Ofrendas · construcción");
+    }
+
     // ARMADURAS (Curtiduría)
     ARMOR_ORDER.forEach(set => { const sd = ARMOR_SETS[set], cat = "Armaduras — " + sd.label;
       ARMOR_SLOTS.forEach(pz => { const p = sd.piezas[pz];

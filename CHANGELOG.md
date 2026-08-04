@@ -428,6 +428,13 @@ Registro cronológico de todo lo hecho desde el inicio del proyecto (27 de julio
 - **Racha gentil** (recomendación del doc para un juego cozy): si faltás un día no perdés nada, seguís donde quedaste. Se quitó el castigo y el pago de esencia para recuperar la racha.
 - Verificado que el cofre **no toca plata, $Golden, semillas ni recursos** (salvo la carnada, que es el consumible menor previsto) ni da estrellas del pase.
 
+### Fase 7 — El Altar de Ofrendas (4/8)
+- **Edificio nuevo** (80 piedra + 60 madera + 25 oro, granja nivel 10) donde se **queman** recursos para siempre a cambio de **Puntos de Ofrenda**. Ubicación verificada con el chequeo de layout: no pisa nada.
+- **Tabla de puntos del documento**: Madera y Piedra 1 · Bronce 3 · Hierro 5 · Oro 10 · Diamante 30 · **Netherita 120** · y los cultivos de 1 (Papa) a 80 (Maíz). Todo editable en el panel.
+- **Sumidero real**: lo entregado desaparece del juego (no vuelve al mercado), así que combate la inflación y le da otro destino al farmeo.
+- **Regla sana, implementada tal cual**: el pozo del airdrop es FIJO y se reparte proporcionalmente (tus puntos ÷ puntos totales). Entregar más no crea más token, solo afina el reparto. Verificado con el ejemplo del documento: 50.000 puntos sobre 8.000.000 = 0,625% = 6.250 tokens.
+- **Nada de promesas**: la ventana aclara que el airdrop es posible y discrecional, sin valor garantizado por recurso, y cada entrega pide confirmación porque es irreversible.
+
 ## Pendientes conocidos
 - En espera del diseñador: **tabla de daño de las armas** (para los tiers completos de espadas), usos de tablones/barras, cerca premium, tabla de stats del bestiario.
 - Cuando el diseñador apruebe el doc de farmeo: implementar Girasol, Trigo y Maíz (arte PixelLab + tabla de cultivos) y el sistema de XP de farmeo por niveles.

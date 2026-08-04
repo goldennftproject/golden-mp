@@ -16,6 +16,7 @@ const OV_REFRESH = { "ov-inv": () => refreshInv(), "ov-skills": () => refreshSki
   "ov-altar": () => refreshAltar(),
   "ov-establo": () => refreshEstablo(),
   "ov-curtiduria": () => refreshCurtiduria(),
+  "ov-ofrendas": () => refreshOfrendas(),
   "ov-pass": () => refreshPass(),
   "ov-cofre": () => refreshChest(),
   "ov-config": () => refreshConfig(), "ov-lb": () => refreshLb(), "ov-daily": () => refreshDaily() };

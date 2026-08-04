@@ -13,7 +13,8 @@ const G = {
   stam: null, stamAcc: 0, stamRec: null,   // estamina de la Zona Negra ("2das mejoras")
   stats: {}, statsBase: {}, chestCap: 0, edif2: {}, cosmeticos: [],
   animals: {},                   // Establo: animal → { desde, feliz, comidoAt, prodAt }
-  armor: {}, armorEq: null,      // Curtiduría: piezas crafteadas y set equipado   // tareas de nivel 11-50, mejoras y cosméticos
+  armor: {}, armorEq: null,      // Curtiduría: piezas crafteadas y set equipado
+  ofrendaPts: 0, ofrendaLog: 0,  // Altar de Ofrendas: puntos acumulados y recursos quemados   // tareas de nivel 11-50, mejoras y cosméticos
   combatXp: 0,                   // doc 2/8: barra de Combate GLOBAL — suma la XP de todos los kills
   states: [],                    // doc 2/8: estados/debuffs del bestiario sobre el jugador (no se guardan)
   tuto: { step: 0, n: 0, done: false, v: 2 },   // doc 2/8: tutorial guiado de micro-objetivos (v = versión de la cadena)
@@ -44,7 +45,7 @@ const G = {
   cooking: [],   // { id, endAt, total } — barra de enfriamiento al cocinar
   chests: [],      // cofres depósito: [{col,row,items:[{kind,key,n}|null × 10]}] — +1% materiales c/u
   dummyUsedAt: 0,  // último entrenamiento con el dummy (cooldown 4h)
-  built: { store: true, horno: false, cocina: false, altar: false, establo: false, curtiduria: false },   // viernes (2): la Herreria es el unico edificio gratis; el resto se construye
+  built: { store: true, horno: false, cocina: false, altar: false, establo: false, curtiduria: false, ofrendas: false },   // viernes (2): la Herreria es el unico edificio gratis; el resto se construye
   buffs: [], secPerGameHour: 1, gameHours: 0,
   skills: { fishing: 0, farming: 0, cooking: 0, range: 0, sword: 0, hacha: 0, mazo: 0, mining: 0, crafting: 0 },   // doc 2/8: cada arma es su propia skill (espada=sword, arco=range)
 };
@@ -183,6 +184,7 @@ const BUILD_DEF = {
   altar:  { label: "Altar de Runas",  cost: { piedra: 60, madera: 40, oro: 20 }, golden: 30 },   // doc 2/8: mejora +1..+15 y runas
   establo:    { label: "Establo",     cost: { madera: 50, piedra: 30, oro: 10 }, lvl: 6 },   // "2das mejoras": animales
   curtiduria: { label: "Curtiduría",  cost: { madera: 45, piedra: 35, oro: 15 }, lvl: 8 },   // "2das mejoras": armaduras
+  ofrendas:   { label: "Altar de Ofrendas", cost: { piedra: 80, madera: 60, oro: 25 }, lvl: 10 },   // "2das mejoras": quemar recursos por puntos
 };
 function buildCostStr(key) { const b = BUILD_DEF[key]; return Object.keys(b.cost).map(k => (b.cost[k]) + " " + (RES_LABEL[k] || k)).join(" + ") + (b.golden ? " + " + b.golden + " $Golden" : ""); }
 
@@ -771,6 +773,47 @@ function passBuyLevel() {
 
 
 
+
+
+// ================= EL ALTAR DE OFRENDAS ("2das mejoras", 4/8) =================
+// Entregás recursos → se QUEMAN (salen del juego) → ganás Puntos de Ofrenda.
+// El pozo del airdrop es FIJO y se reparte PROPORCIONAL: entregar más no crea más token,
+// solo cambia tu porción. Nunca "X recurso = Y tokens" a tasa fija (esa es la impresora que hunde el precio).
+var OFRENDA_POZO = 1000000;   // pozo fijo de $Golden reservado para el airdrop (referencia, editable)
+const OFRENDA_PTS = {
+  madera: 1, piedra: 1,
+  bronce: 3, hierro: 5, oro: 10, diamante: 30, netherita: 120,
+  papa: 1, zanahoria: 2, cebolla: 4, calabacin: 6, repollo: 10,
+  calabaza: 15, brocoli: 25, girasol: 35, trigo: 50, maiz: 80,
+};
+const OFRENDA_ORDER = ["madera","piedra","bronce","hierro","oro","diamante","netherita",
+  "papa","zanahoria","cebolla","calabacin","repollo","calabaza","brocoli","girasol","trigo","maiz"];
+function ofrendaPuntos() { return Math.floor(G.ofrendaPts || 0); }
+function ofrendaValor(k) { return OFRENDA_PTS[k] || 0; }
+function ofrendar(k, n) {
+  n = Math.max(1, Math.floor(n || 1));
+  if (!(G.built && G.built.ofrendas)) { toast("Primero construí el Altar de Ofrendas"); return; }
+  const pts = ofrendaValor(k); if (!pts) { toast("Ese recurso no se puede ofrendar"); return; }
+  const tengo = Math.floor(G.res[k] || 0);
+  if (tengo < n) { toast("No tenés " + n + " de " + (RES_LABEL[k] || k)); return; }
+  G.res[k] -= n;                      // se QUEMAN: no vuelven al juego
+  const gana = pts * n;
+  G.ofrendaPts = ofrendaPuntos() + gana;
+  G.ofrendaLog = (G.ofrendaLog || 0) + n;
+  statAdd("ofrendar", k, n);
+  log("Ofrendaste " + n + " de " + (RES_LABEL[k] || k) + " → +" + fmt(gana) + " Puntos de Ofrenda (total " + fmt(ofrendaPuntos()) + ").", "gold");
+  toast("+" + fmt(gana) + " puntos");
+  if (window.celebrate && gana >= 500) celebrate({ title: "+" + fmt(gana), sub: "Puntos de Ofrenda", reward: "Total: " + fmt(ofrendaPuntos()) });
+  refreshHud(); if (isOpen("ov-inv")) refreshInv();
+  if (typeof refreshOfrendas === "function" && isOpen("ov-ofrendas")) refreshOfrendas();
+  if (typeof saveFarm === "function") saveFarm(true);
+}
+// simulación informativa: qué porción del pozo te tocaría con los puntos totales de todos
+function ofrendaShare(totalGlobal) {
+  const t = Math.max(1, totalGlobal || 0);
+  const pct = ofrendaPuntos() / t;
+  return { pct, tokens: Math.floor(OFRENDA_POZO * pct) };
+}
 
 // ================= LA CURTIDURÍA: LAS 20 PIEZAS DE ARMADURA ("2das mejoras", 4/8) =================
 // 4 sets × 5 piezas. Se craftean con el material del animal + plata (la pesada además pide hierro).

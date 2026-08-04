@@ -55,6 +55,7 @@ GF.WORLD_OBJECTS.push(snap("altar", {type:"altar"}, 330, 165, T*2));
 // "2das mejoras": Establo (animales) y Curtiduría (armaduras), juntos para que el bucle quede en la misma zona
 GF.WORLD_OBJECTS.push(snap("establo", {type:"establo"}, 189, 378, T*3));      // hueco libre verificado (no pisa parcelas, laguna ni cerca)
 GF.WORLD_OBJECTS.push(snap("curtiduria", {type:"curtiduria"}, 315, 378, T*2));   // al lado del Establo, como pide el doc
+GF.WORLD_OBJECTS.push(snap("ofrendas", {type:"ofrendas"}, 861, 168, T*2));      // Altar de Ofrendas, en el claro del noreste
 
 // AVISO DE SUPERPOSICIÓN: al agregar un edificio nuevo, la consola avisa si pisa parcelas,
 // la laguna, la cerca u otro objeto. Evita repetir el bug del Establo sobre los cultivos (4/8).
@@ -101,6 +102,7 @@ GF.SOLID = {
   altar:  { hw: 0.42, dep: 0.5 },
   establo:    { hw: 0.46, dep: 0.58 },
   curtiduria: { hw: 0.44, dep: 0.54 },
+  ofrendas:   { hw: 0.44, dep: 0.54 },
   dummy:  { hw: 0.24, dep: 0.26 },
   cofre:  { hw: 0.34, dep: 0.30 },
 };
