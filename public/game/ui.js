@@ -14,12 +14,13 @@ const OV_REFRESH = { "ov-inv": () => refreshInv(), "ov-skills": () => refreshSki
   "ov-forge": () => refreshForge(), "ov-market": () => refreshMarket(), "ov-barn": () => refreshBarn(),
   "ov-cocina": () => refreshCooking(),
   "ov-altar": () => refreshAltar(),
+  "ov-establo": () => refreshEstablo(),
   "ov-pass": () => refreshPass(),
   "ov-cofre": () => refreshChest(),
   "ov-config": () => refreshConfig(), "ov-lb": () => refreshLb(), "ov-daily": () => refreshDaily() };
 // los overlays NO bloquean el juego: podés seguir moviéndote/interactuando con la ventana abierta
 // sonido propio de cada edificio al abrir su ventana (pedido del diseñador)
-const OV_SFX = { "ov-market": "shop", "ov-forge": "forge", "ov-barn": "door", "ov-cocina": "door", "ov-cofre": "door", "ov-daily": "coin", "ov-altar": "forge" };
+const OV_SFX = { "ov-market": "shop", "ov-forge": "forge", "ov-barn": "door", "ov-cocina": "door", "ov-cofre": "door", "ov-daily": "coin", "ov-altar": "forge", "ov-establo": "door", "ov-curtiduria": "forge" };
 function openOv(id) { const e = $(id); if (!e) return; e.classList.add("show"); if (window.sfx) sfx(OV_SFX[id] || "click"); if (OV_REFRESH[id]) OV_REFRESH[id](); }
 function closeOv(id) { const e = $(id); if (e) e.classList.remove("show"); }
 function closeAllOv() { document.querySelectorAll(".ov.show").forEach(e => e.classList.remove("show")); }
@@ -709,6 +710,46 @@ function refreshPass() {
   const pl = $("pass-buylvl"); if (pl) pl.onclick = () => passBuyLevel();
   box.querySelectorAll("[data-pfree]").forEach(b => b.onclick = () => passClaim(Number(b.dataset.pfree), false));
   box.querySelectorAll("[data-pvip]").forEach(b => b.onclick = () => passClaim(Number(b.dataset.pvip), true));
+}
+
+
+/* ---- Establo: animales, felicidad y producción ("2das mejoras") ---- */
+function refreshEstablo() {
+  const box = $("establo-list"); if (!box) return;
+  let h = "";
+  ANIMAL_ORDER.forEach(k => {
+    const d = ANIMAL_DEF[k], a = animalDe(k);
+    const come = d.come.map(c => (CROP_DEF[c] ? CROP_DEF[c].label : c)).join(" o ");
+    if (!a) {
+      h += '<div class="forge-row"><div class="fic">' + d.emoji + '</div><div class="finfo">' +
+        '<div class="fnm">' + d.label + '</div>' +
+        '<div class="fds">Come ' + come + ' · produce ' + RES_LABEL[d.mat] + ' (' + d.porCiclo + ' cada ' + fmtSecs(d.cicloH * 3600) + ')</div>' +
+        '<div class="fds">Desbloquea la armadura de ' + d.armadura + '</div></div>' +
+        '<div class="fbtns"><button class="green sm" ' + (G.golden >= d.golden ? "" : "disabled") + ' data-buyani="' + k + '">Comprar · ' + d.golden + ' $G</button></div></div>';
+      return;
+    }
+    const f = animalFelicidad(k), listo = animalListo(k);
+    const tieneComida = d.come.some(c => (G.res[c] || 0) > 0);
+    const rinde = Math.max(1, Math.round(d.porCiclo * (FELIZ_MIN_PROD + (1 - FELIZ_MIN_PROD) * f / 100)));
+    h += '<div class="forge-row' + (listo ? ' eq' : '') + '"><div class="fic">' + d.emoji + '</div><div class="finfo">' +
+      '<div class="fnm">' + d.label + ' <span class="tag">felicidad ' + f + '/100</span></div>' +
+      '<div class="durbar"><i style="width:' + f + '%"></i></div>' +
+      '<div class="fds">' + (listo ? '<b style="color:#3f6b2a">¡Listo! Da ' + rinde + ' de ' + RES_LABEL[d.mat] + '</b>' : 'Produce en ' + fmtDur(animalFalta(k)) + ' · rendiría ' + rinde + ' de ' + RES_LABEL[d.mat]) + '</div>' +
+      '<div class="fds">Alimentalo con ' + come + ' (+' + FELIZ_POR_COMIDA + ' de felicidad) · pierde ' + FELIZ_BAJA_H + '/hora si lo descuidás</div></div>' +
+      '<div class="fbtns">' +
+        '<button class="green sm" ' + (tieneComida ? "" : "disabled") + ' data-feed="' + k + '">Alimentar</button>' +
+        '<button class="green sm" ' + (listo ? "" : "disabled") + ' data-take="' + k + '">Recoger</button>' +
+      '</div></div>';
+  });
+  h += '<div class="fds" style="margin-top:6px">Materiales: ' + ANIMAL_ORDER.map(k => RES_LABEL[ANIMAL_DEF[k].mat] + " " + (G.res[ANIMAL_DEF[k].mat] || 0)).join(" · ") + '</div>';
+  box.innerHTML = h;
+  box.querySelectorAll("[data-buyani]").forEach(b => b.onclick = () => {
+    const k = b.dataset.buyani, d = ANIMAL_DEF[k];
+    askConfirm("Comprar " + d.label + " cuesta " + d.golden + " $Golden. Después hay que alimentarlo para que produzca " + RES_LABEL[d.mat] + ". ¿Comprar?",
+      () => comprarAnimal(k), { title: "Comprar " + d.label, yes: "Comprar", yesClass: "green", no: "Cancelar", noClass: "red" });
+  });
+  box.querySelectorAll("[data-feed]").forEach(b => b.onclick = () => alimentarAnimal(b.dataset.feed));
+  box.querySelectorAll("[data-take]").forEach(b => b.onclick = () => recogerAnimal(b.dataset.take));
 }
 
 /* ---- Altar de Runas (doc maestro 2/8) ---- */

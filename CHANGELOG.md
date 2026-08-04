@@ -403,6 +403,16 @@ Registro cronológico de todo lo hecho desde el inicio del proyecto (27 de julio
 - **Recompensas aplicadas**: parcelas 7ª a 12ª (niveles 12, 18, 25, 35, 45 y 50), capacidad extra de cofre (+10, +10, +15), edificios de nivel 2 (Horno 17, Cocina 21, Altar 27) y los cosméticos —títulos, decoraciones, marcos, emotes, skins y auras— que quedan registrados en la cuenta.
 - Contadores de tareas guardados con la partida y XP de cada nivel editable en el panel de balanceo. El prestigio ahora pide nivel 50.
 
+### Fase 4 — El Establo: animales y felicidad (4/8)
+- **Edificio Establo** (50 madera + 30 piedra + 10 oro, se desbloquea a granja nivel 6) y **Curtiduría** (45 madera + 35 piedra + 15 oro, nivel 8) ya colocados en la granja, con su sombra y su receta como el resto de los edificios.
+- **4 animales comprables con $Golden**: Alpaca 40 (Fibra), Conejo 40 (Pelaje), Toro 60 (Cuero) y Jabalí 100 (Colmillo). El $Golden solo abre la puerta: el material se GANA cuidándolos.
+- **Alimentar y felicidad**: cada animal come su cultivo preferido (+15 de felicidad) y pierde 1,5 por hora si lo descuidás. La felicidad manda el rendimiento: al 100% produce el ciclo completo, al 0% la mitad.
+- **Producción por ciclos**, también offline: Alpaca y Conejo 2 cada 12 h, Toro 2 cada 16 h, Jabalí 1 cada 20 h. En paralelo, los 4 sets completos salen en ~180 h, como calcula el documento.
+- **Panel del Establo** con la barra de felicidad de cada animal, cuánto falta para su próxima producción, cuánto rendiría con su felicidad actual y los botones de alimentar y recoger.
+- **Nuevo sink de cultivos**: la cosecha ahora sirve para vender, subir la granja Y alimentar animales.
+- Precios, ciclos, cantidades y la mecánica de felicidad quedaron editables en el panel de balanceo.
+- Arte de los dos edificios y de los materiales: pendiente (usan el respaldo visual hasta generarlo).
+
 ## Pendientes conocidos
 - En espera del diseñador: **tabla de daño de las armas** (para los tiers completos de espadas), usos de tablones/barras, cerca premium, tabla de stats del bestiario.
 - Cuando el diseñador apruebe el doc de farmeo: implementar Girasol, Trigo y Maíz (arte PixelLab + tabla de cultivos) y el sistema de XP de farmeo por niveles.

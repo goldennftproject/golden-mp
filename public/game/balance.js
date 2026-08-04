@@ -143,6 +143,20 @@ var BAL = (function () {
       add(cat, "pass.vipBoost", "Boost de estrellas del VIP (1.2 = +20%)", U.factor, () => PASS_VIP_BOOST, v => { PASS_VIP_BOOST = v; }, 0.1);
     }
 
+    // ESTABLO Y ANIMALES
+    { const cat = "Establo — animales";
+      add(cat, "feliz.comida", "Felicidad que da alimentarlo", "puntos · entero", () => FELIZ_POR_COMIDA, v => { FELIZ_POR_COMIDA = v; });
+      add(cat, "feliz.baja", "Felicidad que pierde por hora sin comer", "puntos por hora · decimal", () => FELIZ_BAJA_H, v => { FELIZ_BAJA_H = v; }, 0.5);
+      add(cat, "feliz.min", "Rendimiento con felicidad 0 (0.5 = la mitad)", U.factor, () => FELIZ_MIN_PROD, v => { FELIZ_MIN_PROD = v; }, 0.05);
+      ANIMAL_ORDER.forEach(k => { const d = ANIMAL_DEF[k];
+        add(cat, "ani." + k + ".golden", d.label + " · precio", "$Golden · entero", () => d.golden, v => { d.golden = v; });
+        add(cat, "ani." + k + ".ciclo", d.label + " · cada cuánto produce", "", () => d.cicloH * 3600, v => { d.cicloH = v / 3600; }, 1, "tiempo");
+        add(cat, "ani." + k + ".cant", d.label + " · cuánto produce por ciclo", U.cant, () => d.porCiclo, v => { d.porCiclo = v; });
+      });
+      costos("Edificios", "build.establo.cost", BUILD_DEF.establo.cost, "Establo · construcción");
+      costos("Edificios", "build.curtiduria.cost", BUILD_DEF.curtiduria.cost, "Curtiduría · construcción");
+    }
+
     // NIVELES DE GRANJA 1-50
     for (let n = 2; n <= FARM_NIVEL_MAX; n++) {
       add("Granja — niveles", "farmXp." + n, "Nivel " + n + " · XP de cosecha acumulada", U.xp, () => FARM_XP_LVLS[n], v => { FARM_XP_LVLS[n] = v; });

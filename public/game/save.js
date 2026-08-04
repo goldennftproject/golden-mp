@@ -26,7 +26,7 @@ function snapshot() {
     tools: G.tools, toolsLost: G.toolsLost, sflStock: true, invRows: G.invRows, slots: G.slots, hotbar: G.hotbar, hotSel: G.hotSel, hbInit: G.hbInit, layout: G.layout,
     daily: G.daily, plotsOwned: G.plotsOwned, seedBuys: G.seedBuys, built: G.built,
     hp: G.hp, hpMax: G.hpMax, combatXp: G.combatXp, stam: G.stam, stamAcc: G.stamAcc, stamRec: G.stamRec, pass: G.pass, tuto: G.tuto, firstSeeds: G.firstSeeds,
-    stats: G.stats, statsBase: G.statsBase, chestCap: G.chestCap, edif2: G.edif2, cosmeticos: G.cosmeticos, swordOwned: G.swordOwned, bowOwned: G.bowOwned, swordWoodOwned: G.swordWoodOwned, gear: G.gear,
+    stats: G.stats, statsBase: G.statsBase, chestCap: G.chestCap, edif2: G.edif2, cosmeticos: G.cosmeticos, animals: G.animals, swordOwned: G.swordOwned, bowOwned: G.bowOwned, swordWoodOwned: G.swordWoodOwned, gear: G.gear,
     armasUnlocked: G.armasUnlocked, treesOpen: G.treesOpen, rocksOpen: G.rocksOpen, firstCropDone: G.firstCropDone, weapons: G.weapons,
     dishes: G.dishes, cooking: G.cooking, chests: G.chests, dummyUsedAt: G.dummyUsedAt,
     layoutPlots: G.layoutPlots, layoutPond: G.layoutPond };
@@ -68,6 +68,7 @@ function hydrate(d) {
   G.chestCap = Number(d.chestCap) || 0;
   G.edif2 = (d.edif2 && typeof d.edif2 === "object") ? d.edif2 : {};
   G.cosmeticos = Array.isArray(d.cosmeticos) ? d.cosmeticos : [];
+  G.animals = (d.animals && typeof d.animals === "object") ? d.animals : {};
   G.stam = (typeof d.stam === "number") ? d.stam : null;   // null = arranca llena
   G.stamAcc = (typeof d.stamAcc === "number") ? d.stamAcc : 0;
   G.stamRec = (d.stamRec && typeof d.stamRec === "object") ? d.stamRec : null;

@@ -52,6 +52,9 @@ GF.WORLD_OBJECTS.push(snap("node_stone", {type:"rock"}, 745, 515, T));
 
 // ALTAR DE RUNAS (doc maestro 2/8) — al FINAL para preservar layouts guardados
 GF.WORLD_OBJECTS.push(snap("altar", {type:"altar"}, 330, 165, T*2));
+// "2das mejoras": Establo (animales) y Curtiduría (armaduras), juntos para que el bucle quede en la misma zona
+GF.WORLD_OBJECTS.push(snap("establo", {type:"establo"}, 190, 205, T*3));
+GF.WORLD_OBJECTS.push(snap("curtiduria", {type:"curtiduria"}, 190, 380, T*2));
 
 // lotes 4x3, cada uno 1 celda, alineados a la grilla (col 2, fila 3)
 GF.PLOTS = [];
@@ -77,6 +80,8 @@ GF.SOLID = {
   store:  { hw: 0.46, dep: 0.58 },
   cocina: { hw: 0.46, dep: 0.58 },
   altar:  { hw: 0.42, dep: 0.5 },
+  establo:    { hw: 0.46, dep: 0.58 },
+  curtiduria: { hw: 0.44, dep: 0.54 },
   dummy:  { hw: 0.24, dep: 0.26 },
   cofre:  { hw: 0.34, dep: 0.30 },
 };

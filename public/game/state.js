@@ -11,7 +11,8 @@ const G = {
   gear: { casco: null, armadura: null, botas: null, escudo: null, arma: null, municion: false },
   weapons: {},                   // doc 2/8: armas nuevas — id ("espada_madera") -> { dur }
   stam: null, stamAcc: 0, stamRec: null,   // estamina de la Zona Negra ("2das mejoras")
-  stats: {}, statsBase: {}, chestCap: 0, edif2: {}, cosmeticos: [],   // tareas de nivel 11-50, mejoras y cosméticos
+  stats: {}, statsBase: {}, chestCap: 0, edif2: {}, cosmeticos: [],
+  animals: {},                   // Establo: animal → { desde, feliz, comidoAt, prodAt }   // tareas de nivel 11-50, mejoras y cosméticos
   combatXp: 0,                   // doc 2/8: barra de Combate GLOBAL — suma la XP de todos los kills
   states: [],                    // doc 2/8: estados/debuffs del bestiario sobre el jugador (no se guardan)
   tuto: { step: 0, n: 0, done: false, v: 2 },   // doc 2/8: tutorial guiado de micro-objetivos (v = versión de la cadena)
@@ -42,7 +43,7 @@ const G = {
   cooking: [],   // { id, endAt, total } — barra de enfriamiento al cocinar
   chests: [],      // cofres depósito: [{col,row,items:[{kind,key,n}|null × 10]}] — +1% materiales c/u
   dummyUsedAt: 0,  // último entrenamiento con el dummy (cooldown 4h)
-  built: { store: true, horno: false, cocina: false, altar: false },   // viernes (2): la Herreria es el unico edificio gratis; el resto se construye
+  built: { store: true, horno: false, cocina: false, altar: false, establo: false, curtiduria: false },   // viernes (2): la Herreria es el unico edificio gratis; el resto se construye
   buffs: [], secPerGameHour: 1, gameHours: 0,
   skills: { fishing: 0, farming: 0, cooking: 0, range: 0, sword: 0, hacha: 0, mazo: 0, mining: 0, crafting: 0 },   // doc 2/8: cada arma es su propia skill (espada=sword, arco=range)
 };
@@ -179,6 +180,8 @@ const BUILD_DEF = {
   horno:  { label: "Horno de Piedra", cost: { madera: 10, piedra: 8 },  lvl: 3 },   // doc 2/8: costo early + granja nv 3
   cocina: { label: "Cocina",          cost: { madera: 20, piedra: 15 }, lvl: 5 },   // doc 2/8: costo early + granja nv 5
   altar:  { label: "Altar de Runas",  cost: { piedra: 60, madera: 40, oro: 20 }, golden: 30 },   // doc 2/8: mejora +1..+15 y runas
+  establo:    { label: "Establo",     cost: { madera: 50, piedra: 30, oro: 10 }, lvl: 6 },   // "2das mejoras": animales
+  curtiduria: { label: "Curtiduría",  cost: { madera: 45, piedra: 35, oro: 15 }, lvl: 8 },   // "2das mejoras": armaduras
 };
 function buildCostStr(key) { const b = BUILD_DEF[key]; return Object.keys(b.cost).map(k => (b.cost[k]) + " " + (RES_LABEL[k] || k)).join(" + ") + (b.golden ? " + " + b.golden + " $Golden" : ""); }
 
@@ -765,6 +768,79 @@ function passBuyLevel() {
   refreshHud(); if (typeof saveFarm === "function") saveFarm(true);
 }
 
+
+
+// ================= EL ESTABLO: ANIMALES Y MATERIALES ("2das mejoras", 4/8) =================
+// Comprás el animal con $Golden → lo alimentás con su cultivo preferido → sube la felicidad →
+// produce material cada cierto tiempo (más y mejor si está feliz) → con eso se craftea la armadura.
+RES_LABEL.fibra = "Fibra";       RES_EMOJI.fibra = "🧵";
+RES_LABEL.pelaje = "Pelaje";     RES_EMOJI.pelaje = "🧶";
+RES_LABEL.cuero = "Cuero";       RES_EMOJI.cuero = "🟫";
+RES_LABEL.colmillo = "Colmillo"; RES_EMOJI.colmillo = "🦷";
+const ANIMAL_ORDER = ["alpaca", "conejo", "toro", "jabali"];
+const ANIMAL_DEF = {
+  alpaca: { label:"Alpaca", emoji:"🦙", golden:40,  mat:"fibra",    come:["trigo"],              cicloH:12, porCiclo:2, armadura:"fibra" },
+  conejo: { label:"Conejo", emoji:"🐰", golden:40,  mat:"pelaje",   come:["zanahoria","repollo"], cicloH:12, porCiclo:2, armadura:"piel" },
+  toro:   { label:"Toro",   emoji:"🐂", golden:60,  mat:"cuero",    come:["trigo","maiz"],        cicloH:16, porCiclo:2, armadura:"cuero" },
+  jabali: { label:"Jabalí", emoji:"🐗", golden:100, mat:"colmillo", come:["calabaza","maiz"],     cicloH:20, porCiclo:1, armadura:"colmillo" },
+};
+var ESTABLO_COST = { madera: 50, piedra: 30, oro: 10 };   // edificio (doc)
+var FELIZ_POR_COMIDA = 15;      // cuánta felicidad da alimentarlo con su cultivo preferido
+var FELIZ_BAJA_H = 1.5;         // cuánta felicidad pierde por hora sin comer
+var FELIZ_MIN_PROD = 0.5;       // rendimiento mínimo con felicidad 0 (produce la mitad)
+function animalDe(k) { G.animals = G.animals || {}; return G.animals[k]; }
+function animalFelicidad(k) {   // la felicidad baja sola con el tiempo
+  const a = animalDe(k); if (!a) return 0;
+  const h = (nowMs() - (a.comidoAt || a.desde || nowMs())) / 3600000;
+  return Math.max(0, Math.min(100, Math.round((a.feliz || 0) - h * FELIZ_BAJA_H)));
+}
+function comprarAnimal(k) {
+  const d = ANIMAL_DEF[k]; if (!d) return;
+  if (!(G.built && G.built.establo)) { toast("Primero construí el Establo"); return; }
+  if (animalDe(k)) { toast("Ya tenés " + d.label.toLowerCase()); return; }
+  if (G.golden < d.golden) { toast("Te falta $Golden (" + d.golden + ")"); return; }
+  G.golden -= d.golden;
+  G.animals[k] = { desde: nowMs(), feliz: 50, comidoAt: nowMs(), prodAt: nowMs() };
+  log("Compraste " + d.label + " por " + d.golden + " $Golden. Alimentalo con " + d.come.map(c => CROP_DEF[c].label).join(" o ") + ".", "gold");
+  toast("¡" + d.label + " en el Establo!");
+  if (window.celebrate) celebrate({ title: "¡" + d.label.toUpperCase() + "!", sub: "Establo", reward: "Desbloquea la armadura de " + d.mat });
+  refreshHud(); if (typeof refreshEstablo === "function" && isOpen("ov-establo")) refreshEstablo();
+  if (typeof saveFarm === "function") saveFarm(true);
+}
+function alimentarAnimal(k) {
+  const d = ANIMAL_DEF[k], a = animalDe(k); if (!d || !a) return;
+  const cultivo = d.come.find(c => (G.res[c] || 0) > 0);
+  if (!cultivo) { toast("Necesitás " + d.come.map(c => CROP_DEF[c].label).join(" o ")); return; }
+  G.res[cultivo] -= 1;
+  a.feliz = Math.min(100, animalFelicidad(k) + FELIZ_POR_COMIDA);
+  a.comidoAt = nowMs();
+  statAdd("alimentar", k);
+  log("Alimentaste a " + d.label + " con 1 " + CROP_DEF[cultivo].label + ". Felicidad: " + a.feliz + "/100.", "good");
+  toast(d.emoji + " Felicidad " + a.feliz);
+  refreshHud(); if (typeof refreshEstablo === "function" && isOpen("ov-establo")) refreshEstablo();
+  if (isOpen("ov-inv")) refreshInv();
+  if (typeof saveFarm === "function") saveFarm();
+}
+function animalListo(k) {   // ¿terminó su ciclo de producción?
+  const d = ANIMAL_DEF[k], a = animalDe(k); if (!d || !a) return false;
+  return nowMs() - (a.prodAt || 0) >= d.cicloH * 3600000;
+}
+function animalFalta(k) { const d = ANIMAL_DEF[k], a = animalDe(k); return Math.max(0, d.cicloH * 3600000 - (nowMs() - (a.prodAt || 0))); }
+function recogerAnimal(k) {
+  const d = ANIMAL_DEF[k], a = animalDe(k); if (!d || !a) return;
+  if (!animalListo(k)) { toast("Todavía no produjo — faltan " + fmtDur(animalFalta(k))); return; }
+  const f = animalFelicidad(k);
+  const n = Math.max(1, Math.round(d.porCiclo * (FELIZ_MIN_PROD + (1 - FELIZ_MIN_PROD) * f / 100)));   // feliz = ciclo completo
+  if (!roomForRes(d.mat, n)) { bagFull("recoger " + RES_LABEL[d.mat]); return; }
+  G.res[d.mat] = (G.res[d.mat] || 0) + n;
+  a.prodAt = nowMs();
+  addXp("farming", 20);
+  log(d.emoji + " " + d.label + " produjo " + n + " de " + RES_LABEL[d.mat] + " (felicidad " + f + "/100).", "gold");
+  toast("+" + n + " " + RES_LABEL[d.mat]);
+  refreshHud(); if (isOpen("ov-inv")) refreshInv();
+  if (typeof refreshEstablo === "function" && isOpen("ov-establo")) refreshEstablo();
+  if (typeof saveFarm === "function") saveFarm(true);
+}
 
 // ================= ESTAMINA DE LA ZONA NEGRA ("2das mejoras", 4/8) =================
 // Barra aparte de la vida, SOLO se gasta peleando en la Zona Negra. Le pone ritmo al combate
