@@ -450,6 +450,13 @@ Los tres cambios son estructurales y quedaron detrás de **interruptores indepen
 - **Cámara tipo SFL** (detallito 5): la cámara dejó de seguir al personaje y de hacer zoom con la rueda. Ahora la granja se **arrastra con el mouse** y la rueda la **desplaza**, con el zoom fijo.
 - **La finca sobre el mar** (detallito 6): fondo de océano alrededor de la granja, con bajío más claro, orilla de arena, borde de pasto y **olas animadas** que respiran sobre la costa. Todo dibujado por código, sin arte nuevo.
 
+### Fase 10 — Mercado entre jugadores (P2P) (4/8)
+- **Pestaña nueva en el menú**: Comprar · Vender · Mis publicaciones. Se puede publicar casi todo lo que se tiene: cultivos, minerales, materiales de animales, semillas, platos, peces y **armas** (viajan con su durabilidad, su "+N" y sus runas).
+- **Cómo funciona el cobro**: al publicar, el ítem sale de tu bolsa; cuando alguien te lo compra, la plata te espera en "Mis publicaciones" y la retirás cuando volvés. Si nadie lo compró, podés retirar la publicación y recuperás el ítem.
+- **Comisión del 5% que se quema**: sumidero sano para la economía (editable en el panel, igual que el tope de 10 publicaciones activas por jugador).
+- **Compra atómica**: la reserva se hace con una actualización condicional en la base, así dos jugadores no pueden llevarse lo mismo — al que llega segundo le avisa "se lo llevaron primero".
+- **Seguridad**: se agregó `sql/market.sql` con la tabla y las reglas RLS de Supabase para que nadie pueda tocar publicaciones ajenas, publicar a nombre de otro ni cobrar ventas que no son suyas. **Hay que correr ese SQL en Supabase una vez** para que el mercado funcione.
+
 ## Pendientes conocidos
 - En espera del diseñador: **tabla de daño de las armas** (para los tiers completos de espadas), usos de tablones/barras, cerca premium, tabla de stats del bestiario.
 - Cuando el diseñador apruebe el doc de farmeo: implementar Girasol, Trigo y Maíz (arte PixelLab + tabla de cultivos) y el sistema de XP de farmeo por niveles.

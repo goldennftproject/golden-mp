@@ -18,6 +18,7 @@ const OV_REFRESH = { "ov-inv": () => refreshInv(), "ov-skills": () => refreshSki
   "ov-curtiduria": () => refreshCurtiduria(),
   "ov-ofrendas": () => refreshOfrendas(),
   "ov-incursion": () => refreshIncursion(),
+  "ov-p2p": () => refreshP2P(),
   "ov-pass": () => refreshPass(),
   "ov-cofre": () => refreshChest(),
   "ov-config": () => refreshConfig(), "ov-lb": () => refreshLb(), "ov-daily": () => refreshDaily() };

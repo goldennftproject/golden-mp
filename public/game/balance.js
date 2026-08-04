@@ -144,6 +144,9 @@ var BAL = (function () {
     }
 
     // INCURSIONES Y ENTRENAMIENTO OFFLINE
+    add("Mercado de jugadores", "mk.fee", "Comisión de venta (se quema)", "% · entero", () => MARKET_FEE, v => { MARKET_FEE = v; });
+    add("Mercado de jugadores", "mk.max", "Publicaciones activas por jugador", "publicaciones · entero", () => MARKET_MAX_PUB, v => { MARKET_MAX_PUB = v; });
+
     { const cat = "Incursiones";
       add(cat, "inc.rend", "Rendimiento vs pelear a mano (0.7 = 70%)", U.factor, () => INC_RENDIMIENTO, v => { INC_RENDIMIENTO = v; }, 0.05);
       add(cat, "inc.cupo", "Incursiones por día (0 = sin tope)", "incursiones · entero", () => INC_CUPO_DIA, v => { INC_CUPO_DIA = v; });

@@ -210,3 +210,57 @@ function startAutosave() {
 
 // arranca la sesión en segundo plano; main.js espera esta promesa
 window.SAVE_READY = initSave();
+
+// ================= MERCADO P2P ("detallitos (1)" punto 8) =================
+// Tabla `market` en Supabase. El anon-key solo permite lo justo (ver policies en sql/market.sql):
+// publicar lo tuyo, comprar publicaciones libres (update condicional = atómico) y cobrar tus ventas.
+async function mkList(filtro) {
+  if (!sb) return [];
+  try {
+    let q = sb.from("market").select("*").is("sold_to", null).order("created_at", { ascending: false }).limit(60);
+    if (filtro && filtro.kind) q = q.eq("kind", filtro.kind);
+    const { data, error } = await q;
+    if (error) { console.warn("market list:", error.message); return []; }
+    return data || [];
+  } catch (e) { console.warn("market list err:", e); return []; }
+}
+async function mkMine() {
+  if (!sb || !UID) return [];
+  try {
+    const { data, error } = await sb.from("market").select("*").eq("seller", UID).order("created_at", { ascending: false }).limit(60);
+    if (error) { console.warn("market mine:", error.message); return []; }
+    return data || [];
+  } catch (e) { return []; }
+}
+async function mkPublish(row) {
+  if (!sb || !UID) { toast("Necesitás conexión para publicar"); return null; }
+  try {
+    const { data, error } = await sb.from("market").insert(Object.assign({ seller: UID, seller_name: (window.NICK || "Granjero") }, row)).select().single();
+    if (error) { console.warn("market publish:", error.message); toast("No se pudo publicar"); return null; }
+    return data;
+  } catch (e) { toast("No se pudo publicar"); return null; }
+}
+// compra ATÓMICA: solo pega si la fila sigue libre (sold_to null)
+async function mkBuy(id) {
+  if (!sb || !UID) { toast("Necesitás conexión para comprar"); return null; }
+  try {
+    const { data, error } = await sb.from("market").update({ sold_to: UID, sold_at: new Date().toISOString() })
+      .eq("id", id).is("sold_to", null).select();
+    if (error) { console.warn("market buy:", error.message); return null; }
+    return (data && data[0]) || null;   // null = alguien lo compró primero
+  } catch (e) { return null; }
+}
+async function mkCancel(id) {
+  if (!sb || !UID) return false;
+  try {
+    const { error } = await sb.from("market").delete().eq("id", id).eq("seller", UID).is("sold_to", null);
+    return !error;
+  } catch (e) { return false; }
+}
+async function mkCollect(id) {   // marca una venta como cobrada
+  if (!sb || !UID) return false;
+  try {
+    const { error } = await sb.from("market").update({ paid: true }).eq("id", id).eq("seller", UID).not("sold_to", "is", null);
+    return !error;
+  } catch (e) { return false; }
+}

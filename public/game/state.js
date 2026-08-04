@@ -777,6 +777,96 @@ function passBuyLevel() {
 
 
 
+
+// ================= MERCADO ENTRE JUGADORES (P2P) =================
+// Publicás algo tuyo con un precio; otro jugador lo compra y vos cobrás cuando volvés al mercado.
+// Comisión que se QUEMA (sumidero sano): sale del precio que cobra el vendedor.
+var MARKET_FEE = 5;             // % de comisión
+var MARKET_MAX_PUB = 10;        // publicaciones activas por jugador
+const MARKET_KINDS = { res: "Recurso", seed: "Semilla", dish: "Plato", fish: "Pez", arm: "Arma" };
+function mkTengo(kind, key) {
+  if (kind === "res") return Math.floor(G.res[key] || 0);
+  if (kind === "seed") return Math.floor(G.seeds[key] || 0);
+  if (kind === "dish") return Math.floor((G.dishes && G.dishes[key]) || 0);
+  if (kind === "fish") return Math.floor((G.fish && G.fish[key]) || 0);
+  if (kind === "arm") return (G.weapons && G.weapons[key]) ? 1 : 0;
+  return 0;
+}
+function mkSacar(kind, key, n) {
+  if (mkTengo(kind, key) < n) return false;
+  if (kind === "res") G.res[key] -= n;
+  else if (kind === "seed") G.seeds[key] -= n;
+  else if (kind === "dish") G.dishes[key] -= n;
+  else if (kind === "fish") G.fish[key] -= n;
+  else if (kind === "arm") { if (G.gear.arma === key) G.gear.arma = null; delete G.weapons[key]; }
+  return true;
+}
+function mkPoner(kind, key, n, payload) {
+  if (kind === "res") { if (!tryAddRes(key, n)) return false; }
+  else if (kind === "seed") G.seeds[key] = (G.seeds[key] || 0) + n;
+  else if (kind === "dish") { G.dishes = G.dishes || {}; G.dishes[key] = (G.dishes[key] || 0) + n; }
+  else if (kind === "fish") { G.fish = G.fish || {}; G.fish[key] = (G.fish[key] || 0) + n; }
+  else if (kind === "arm") { G.weapons = G.weapons || {}; G.weapons[key] = payload || { dur: (ARM_DEF[key] ? ARM_DEF[key].dur : 40) }; }
+  return true;
+}
+function mkNombre(kind, key) {
+  if (kind === "arm") return (ARM_DEF[key] && ARM_DEF[key].label) || key;
+  if (kind === "dish") return (RECIPE_DEF[key] && RECIPE_DEF[key].label) || key;
+  if (kind === "fish") return (FISH_DEF[key] && FISH_DEF[key].label) || key;
+  if (kind === "seed") return "Semilla de " + ((CROP_DEF[key] && CROP_DEF[key].label) || key);
+  return (CROP_DEF[key] && CROP_DEF[key].label) || RES_LABEL[key] || key;
+}
+async function marketPublicar(kind, key, n, precio) {
+  n = Math.max(1, Math.floor(n || 1)); precio = Math.max(1, Math.floor(precio || 1));
+  if (!MARKET_KINDS[kind]) return;
+  if (mkTengo(kind, key) < n) { toast("No tenés " + n + " de eso"); return; }
+  const mias = await mkMine();
+  if (mias.filter(r => !r.sold_to).length >= MARKET_MAX_PUB) { toast("Ya tenés " + MARKET_MAX_PUB + " publicaciones activas"); return; }
+  const payload = (kind === "arm" && G.weapons[key]) ? JSON.parse(JSON.stringify(G.weapons[key])) : null;
+  if (!mkSacar(kind, key, n)) { toast("No se pudo publicar"); return; }
+  const fila = await mkPublish({ kind, item: key, qty: n, price: precio, payload, name: mkNombre(kind, key) });
+  if (!fila) { mkPoner(kind, key, n, payload); return; }   // falló: te devolvemos lo tuyo
+  log("Publicaste " + n + " × " + mkNombre(kind, key) + " por " + fmt(precio) + " de plata.", "gold");
+  toast("Publicado");
+  refreshHud(); if (isOpen("ov-inv")) refreshInv();
+  if (typeof refreshP2P === "function") refreshP2P();
+  if (typeof saveFarm === "function") saveFarm(true);
+}
+async function marketComprar(fila) {
+  if (!fila) return;
+  if (fila.seller === (typeof UID === "string" ? UID : "")) { toast("Eso lo publicaste vos"); return; }
+  if (G.plata < fila.price) { toast("Te falta plata (" + fmt(fila.price) + ")"); return; }
+  const ok = await mkBuy(fila.id);
+  if (!ok) { toast("Se lo llevaron primero"); if (typeof refreshP2P === "function") refreshP2P(); return; }
+  G.plata -= fila.price;
+  mkPoner(fila.kind, fila.item, fila.qty, fila.payload);
+  log("Compraste " + fila.qty + " × " + (fila.name || mkNombre(fila.kind, fila.item)) + " a " + (fila.seller_name || "otro granjero") + " por " + fmt(fila.price) + " de plata.", "gold");
+  toast("¡Comprado!");
+  refreshHud(); if (typeof syncSlots === "function") syncSlots(); if (isOpen("ov-inv")) refreshInv();
+  if (typeof refreshP2P === "function") refreshP2P();
+  if (typeof saveFarm === "function") saveFarm(true);
+}
+async function marketCancelar(fila) {
+  const ok = await mkCancel(fila.id);
+  if (!ok) { toast("No se pudo cancelar (¿ya se vendió?)"); if (typeof refreshP2P === "function") refreshP2P(); return; }
+  mkPoner(fila.kind, fila.item, fila.qty, fila.payload);
+  log("Retiraste tu publicación de " + (fila.name || fila.item) + ".", "good"); toast("Retirado");
+  refreshHud(); if (isOpen("ov-inv")) refreshInv();
+  if (typeof refreshP2P === "function") refreshP2P();
+  if (typeof saveFarm === "function") saveFarm(true);
+}
+async function marketCobrar(fila) {
+  const ok = await mkCollect(fila.id);
+  if (!ok) { toast("No se pudo cobrar"); return; }
+  const neto = Math.max(1, Math.round(fila.price * (1 - MARKET_FEE / 100)));
+  G.plata += neto;
+  log("Cobraste " + fmt(neto) + " de plata por " + (fila.name || fila.item) + " (comisión " + MARKET_FEE + "%).", "gold");
+  toast("+" + fmt(neto) + " de plata");
+  refreshHud();
+  if (typeof refreshP2P === "function") refreshP2P();
+  if (typeof saveFarm === "function") saveFarm(true);
+}
+
 // ================= INCURSIONES: COMBATE DE UN CLIC (doc "Combate un clic vs jugado", 3/8) =================
 // Mandás al granjero a una zona, tarda tiempo REAL (como las ollas de la Cocina) y vuelve con botín y XP.
 // Gasta durabilidad del arma y estamina. Rinde menos que pelear a mano: el que juega, gana más.
