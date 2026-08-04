@@ -217,13 +217,12 @@ class FarmScene extends Phaser.Scene {
     });
     // ——— ISLA SOBRE EL MAR ("detallitos (1)" punto 6): agua alrededor de la granja, orilla y olas ———
     if (GF.ISLA) {
-      const MAR = 900;   // cuánto mar se dibuja hacia afuera
+      const MAR = (GF.ISLA_MARGEN || 260) + 900;   // el mar tapa todo lo que la cámara pueda mostrar
       const g = this.add.graphics().setDepth(-1000);
       g.fillStyle(0x2e7fa8, 1).fillRect(-MAR, -MAR, GF.WORLD_W + MAR * 2, GF.WORLD_H + MAR * 2);   // mar profundo
       g.fillStyle(0x3fa3cc, 1).fillRoundedRect(-70, -70, GF.WORLD_W + 140, GF.WORLD_H + 140, 90);  // agua clara del bajío
       g.fillStyle(0xe8d9a6, 1).fillRoundedRect(-34, -34, GF.WORLD_W + 68, GF.WORLD_H + 68, 60);    // arena de la orilla
       g.fillStyle(0x7fbf5a, 1).fillRoundedRect(-8, -8, GF.WORLD_W + 16, GF.WORLD_H + 16, 34);      // borde de pasto
-      this.cameras.main.setBounds(-140, -140, GF.WORLD_W + 280, GF.WORLD_H + 280);
       // espuma: líneas claras que van y vienen sobre la orilla
       this.olas = this.add.graphics().setDepth(-999);
       this.olasT = 0;
@@ -341,8 +340,9 @@ class FarmScene extends Phaser.Scene {
           const dx = (this.hold.px == null ? pt.x : this.hold.px) - pt.x;
           const dy = (this.hold.py == null ? pt.y : this.hold.py) - pt.y;
           this.hold.px = pt.x; this.hold.py = pt.y;
-          c.scrollX = Phaser.Math.Clamp(c.scrollX + dx / z, 0, Math.max(0, GF.WORLD_W - c.width / z));
-          c.scrollY = Phaser.Math.Clamp(c.scrollY + dy / z, 0, Math.max(0, GF.WORLD_H - c.height / z));
+          const L = this.camLim || { x1: 0, y1: 0, x2: GF.WORLD_W, y2: GF.WORLD_H };
+          c.scrollX = Phaser.Math.Clamp(c.scrollX + dx / z, L.x1, Math.max(L.x1, L.x2 - c.width / z));
+          c.scrollY = Phaser.Math.Clamp(c.scrollY + dy / z, L.y1, Math.max(L.y1, L.y2 - c.height / z));
           return;
         }
         // CLIC SOSTENIDO: si mantenés apretado y movés el cursor, el granjero te sigue
@@ -494,7 +494,9 @@ class FarmScene extends Phaser.Scene {
     // cofres depósito colocados por el jugador (los que están en la bolsa NO se colocan solos)
     (G.chests = G.chests || []).forEach((c, idx) => { if (c.col != null) this.spawnChest(idx); });
 
-    this.cameras.main.setBounds(0, 0, W, H);
+    { const m = GF.ISLA ? (GF.ISLA_MARGEN || 260) : 0;   // con isla, la cámara puede salir sobre el mar
+      this.camLim = { x1: -m, y1: -m, x2: W + m, y2: H + m };
+      this.cameras.main.setBounds(this.camLim.x1, this.camLim.y1, this.camLim.x2 - this.camLim.x1, this.camLim.y2 - this.camLim.y1); }
     if (!GF.CAM_PAN) this.cameras.main.startFollow(hero, true, 0.15, 0.15);
     else { this.cameras.main.stopFollow(); this.cameras.main.centerOn(W / 2, H * 0.42); }
     this.zoomUser = 1;
@@ -503,9 +505,13 @@ class FarmScene extends Phaser.Scene {
     this.events.once("shutdown", () => this.scale.off("resize", this.fitCamera, this));
     // rueda del mouse: acercar/alejar la cámara de la granja
     this.input.on("wheel", (ptr, over, dx, dy) => {
-      if (GF.CAM_PAN) {   // SFL: la rueda DESPLAZA la granja (el zoom queda fijo)
-        const c = this.cameras.main;
-        c.scrollY = Phaser.Math.Clamp(c.scrollY + dy * 0.6, 0, Math.max(0, GF.WORLD_H - c.height / c.zoom));
+      if (GF.CAM_PAN && (ptr.event.ctrlKey || ptr.event.shiftKey)) {   // Ctrl/Shift + rueda = acercar o alejar
+        this.zoomUser = Phaser.Math.Clamp((this.zoomUser || 1) * (dy > 0 ? 0.92 : 1.08), 0.6, 2.2);
+        this.fitCamera(); return;
+      }
+      if (GF.CAM_PAN) {   // SFL: la rueda DESPLAZA la granja
+        const c = this.cameras.main, L = this.camLim || { y1: 0, y2: GF.WORLD_H };
+        c.scrollY = Phaser.Math.Clamp(c.scrollY + dy * 0.6, L.y1, Math.max(L.y1, L.y2 - c.height / c.zoom));
         return;
       }
       this.zoomUser = Phaser.Math.Clamp(this.zoomUser * (dy > 0 ? 0.9 : 1.1), 0.4, 2.4);
@@ -535,6 +541,14 @@ class FarmScene extends Phaser.Scene {
 
   fitCamera() {
     const cw = this.scale.width, ch = this.scale.height;
+    if (GF.CAM_PAN) {
+      // vista tipo SFL: se ve TODA la isla con su mar alrededor, y queda margen para arrastrar.
+      // (antes el zoom obligaba a que la granja llenara la pantalla y no se podía mover nada)
+      const m = GF.ISLA ? (GF.ISLA_MARGEN || 260) : 0;
+      const z = Math.max(cw / (GF.WORLD_W + m), ch / (GF.WORLD_H + m));   // que SIEMPRE quede margen para arrastrar en los dos ejes
+      this.cameras.main.setZoom(Phaser.Math.Clamp(z * (this.zoomUser || 1), 0.35, 2.2));
+      return;
+    }
     const fill = Math.max(GF.ZOOM, cw / GF.WORLD_W, ch / GF.WORLD_H);
     const seeAll = Math.min(cw / GF.WORLD_W, ch / GF.WORLD_H);   // alejar hasta ver todo el mundo
     this.cameras.main.setZoom(Phaser.Math.Clamp(fill * (this.zoomUser || 1), seeAll * 0.9, fill * 2.4));
@@ -1521,11 +1535,12 @@ class FarmScene extends Phaser.Scene {
 
     // movimiento
     let vx = 0, vy = 0;
-    if (GF.NO_WALK) { this.moveTarget = null; this.path = null; this.pendingObj = null; }
-    if (GF.uiOpen || GF.editMode) { this.moveTarget = null; this.path = null; this.pendingObj = null; this.clearQueue(); }
+    if (GF.NO_WALK || GF.uiOpen || GF.editMode) { this.moveTarget = null; this.path = null; this.pendingObj = null; if (!GF.NO_WALK) this.clearQueue(); }
     else {
-      if (k.left.isDown || k.aleft.isDown) vx = -1; else if (k.right.isDown || k.aright.isDown) vx = 1;
-      if (k.up.isDown || k.aup.isDown) vy = -1; else if (k.down.isDown || k.adown.isDown) vy = 1;
+      if (!GF.NO_WALK) {   // sin granjero en la granja, WASD/flechas no mueven nada
+        if (k.left.isDown || k.aleft.isDown) vx = -1; else if (k.right.isDown || k.aright.isDown) vx = 1;
+        if (k.up.isDown || k.aup.isDown) vy = -1; else if (k.down.isDown || k.adown.isDown) vy = 1;
+      }
       if (vx || vy) { this.moveTarget = null; this.path = null; this.pendingObj = null; }   // el teclado manda: cancela la ruta
       else if (this.moveTarget) {
         const dx = this.moveTarget.x - hero.x, dy = this.moveTarget.y - hero.y, d = Math.hypot(dx, dy);

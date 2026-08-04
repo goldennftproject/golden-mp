@@ -484,6 +484,14 @@ Los niveles de granja 17, 21 y 27 desbloqueaban "edificio nivel 2" pero no hací
 - El atlas era del 30 de julio y tenía 120 sprites: todo lo agregado desde entonces (cultivos nuevos, 14 platos, 20 armas por rareza, el Altar…) se bajaba como archivos sueltos, y por eso la pantalla de carga tardaba tanto en el server gratuito.
 - Nuevo atlas con **329 sprites en un solo archivo de 386 KB** (con paleta optimizada: un tercio del peso sin diferencia visible). Pasa de decenas de pedidos al servidor a uno solo.
 
+### Arreglo: no se podía salir del corral ni ver el mar (4/8)
+- **Los límites de la cámara se pisaban**: el bloque de la isla los ampliaba, pero unas líneas más abajo el código los volvía a fijar al tamaño exacto de la granja. Por eso el arrastre se frenaba en la cerca y el mar quedaba fuera de alcance.
+- **El zoom obligaba a que la granja llenara la pantalla**, así que no quedaba margen para desplazarse. En modo SFL ahora el zoom se calcula sobre la isla + su mar, dejando siempre margen para arrastrar en los dos ejes (probado en 1200×700, 1536×864, 1920×1080 y en pantalla de teléfono).
+- El arrastre y la rueda ahora respetan esos límites nuevos en vez de los de la granja pelada.
+- **Ctrl o Shift + rueda** acercan y alejan, por si querés ver la isla entera o trabajar de cerca. La rueda sola sigue desplazando.
+- El mar se dibuja lo suficientemente grande como para tapar todo lo que la cámara pueda mostrar, sin bordes vacíos.
+- **WASD y las flechas** ya no mueven al granjero invisible en la granja.
+
 ## Pendientes conocidos
 - En espera del diseñador: **tabla de daño de las armas** (para los tiers completos de espadas), usos de tablones/barras, cerca premium, tabla de stats del bestiario.
 - Cuando el diseñador apruebe el doc de farmeo: implementar Girasol, Trigo y Maíz (arte PixelLab + tabla de cultivos) y el sistema de XP de farmeo por niveles.

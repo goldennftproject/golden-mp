@@ -11,6 +11,7 @@ GF.SPEED = 175;
 GF.NO_WALK = true;    // el granjero no aparece en la granja: se interactúa con un clic desde donde sea
 GF.CAM_PAN = true;    // cámara libre: se arrastra y la rueda desplaza (en vez de seguir al granjero)
 GF.ISLA = true;       // fondo de mar alrededor de la granja
+GF.ISLA_MARGEN = 260;  // cuánto mar se puede recorrer más allá de la cerca
 var ZONA_NEGRA_VEL = 0.75;   // "detallitos (1)" punto 7: el granjero camina 25% más lento en la Zona Negra
 GF.ZOOM = 1.35;
 GF.editMode = false;   // modo edición de la granja (arrastrar objetos)
