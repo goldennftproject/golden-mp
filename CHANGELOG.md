@@ -497,6 +497,11 @@ Los niveles de granja 17, 21 y 27 desbloqueaban "edificio nivel 2" pero no hací
 - Ahora hay un único camino para abrir parcelas —comprada con plata o regalada— que actualiza el tablero en el acto, con **destello y chispas doradas** sobre la parcela nueva para que se note.
 - Verificado: subir del nivel 1 al 10 abre las 6 parcelas al instante, y la ficha de parcela del Pase también.
 
+### Arreglo: cuatro ventanas salían vacías (4/8, reporte del diseñador)
+- La ventana de **Incursión** aparecía con el título y nada más. La causa: al escribir el código, cuatro funciones de dibujado nunca llegaron a guardarse en el archivo (se cortaron pasos por un error anterior). Afectaba a **Incursión, Altar de Ofrendas, Mercado de jugadores y Cosméticos** — todas las ventanas nuevas del último bloque.
+- Las cuatro están escritas y funcionando.
+- Se agregó un **chequeo automático** que recorre las 19 ventanas del juego y verifica que cada una tenga su función de dibujado y su contenedor en el HTML, más que no haya funciones referenciadas que no existan. Hoy da todo OK, y lo voy a correr antes de cada entrega para que no vuelva a pasar.
+
 ## Pendientes conocidos
 - En espera del diseñador: **tabla de daño de las armas** (para los tiers completos de espadas), usos de tablones/barras, cerca premium, tabla de stats del bestiario.
 - Cuando el diseñador apruebe el doc de farmeo: implementar Girasol, Trigo y Maíz (arte PixelLab + tabla de cultivos) y el sistema de XP de farmeo por niveles.

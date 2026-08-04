@@ -1204,3 +1204,184 @@ function initUI() {
   setInterval(() => { if (typeof buffTick === "function") buffTick(); if (typeof stamTick === "function") stamTick(); if (typeof incTick === "function") incTick(); if (typeof granjaRegen === "function") granjaRegen(); tutoSync(); refreshHud(); }, 1000);
 }
 initUI();
+
+
+/* ================= VENTANAS NUEVAS ("2das mejoras") ================= */
+
+/* ---- Altar de Ofrendas: quemar recursos por puntos ---- */
+function refreshOfrendas() {
+  const box = $("ofr-list"); if (!box) return;
+  let h = '<div class="forge-row"><div class="finfo">' +
+    '<div class="fnm">Tus Puntos de Ofrenda: ' + fmt(ofrendaPuntos()) + '</div>' +
+    '<div class="fds">Recursos entregados: ' + fmt(G.ofrendaLog || 0) + ' · los puntos no se gastan ni se pierden</div>' +
+    '<div class="fds">Pozo de referencia del airdrop: ' + fmt(OFRENDA_POZO) + ' $Golden, repartido proporcionalmente. Es posible y discrecional: no hay un valor garantizado por recurso.</div>' +
+    '</div></div>';
+  OFRENDA_ORDER.forEach(k => {
+    const tengo = Math.floor(G.res[k] || 0), pts = ofrendaValor(k);
+    if (!pts) return;
+    const nombre = (CROP_DEF[k] && CROP_DEF[k].label) || RES_LABEL[k] || k;
+    h += '<div class="forge-row"><div class="fic">' + resIc(k) + '</div><div class="finfo">' +
+      '<div class="fnm">' + nombre + ' <span class="tag">' + pts + ' pts c/u</span></div>' +
+      '<div class="fds">Tenés ' + fmt(tengo) + (tengo ? ' · entregar todo daría ' + fmt(tengo * pts) + ' puntos' : '') + '</div></div>' +
+      '<div class="fbtns">' +
+        '<input id="ofq-' + k + '" type="number" min="1" max="' + Math.max(1, tengo) + '" value="' + (tengo > 0 ? Math.min(tengo, 10) : 1) + '" style="width:64px">' +
+        '<button class="green sm" ' + (tengo > 0 ? "" : "disabled") + ' data-ofr="' + k + '">Ofrendar</button>' +
+      '</div></div>';
+  });
+  box.innerHTML = h;
+  box.querySelectorAll("[data-ofr]").forEach(b => b.onclick = () => {
+    const k = b.dataset.ofr, inp = $("ofq-" + k), n = Math.max(1, Math.floor(+(inp && inp.value) || 1));
+    askConfirm("Vas a QUEMAR " + n + " de " + ((CROP_DEF[k] && CROP_DEF[k].label) || RES_LABEL[k] || k) + " para siempre a cambio de " + fmt(n * ofrendaValor(k)) + " Puntos de Ofrenda. No se puede deshacer. ¿Ofrendar?",
+      () => { ofrendar(k, n); refreshOfrendas(); }, { title: "Ofrendar", yes: "Ofrendar", yesClass: "green", no: "Cancelar", noClass: "red" });
+  });
+}
+
+/* ---- Incursiones: combate de un clic ---- */
+function refreshIncursion() {
+  const box = $("inc-list"); if (!box) return;
+  const inc = incActiva(), cupo = incCupoHoy(), poder = incPoder();
+  let h = '<div class="fds">Tu poder de combate: <b>' + poder + '</b>' + (poder ? '' : ' — necesitás un arma equipada') +
+    ' · incursiones de hoy: ' + cupo.n + '/' + (INC_CUPO_DIA || "sin tope") + '</div>';
+  if (inc) {
+    const z = INCURSIONES[inc.zona], left = incFalta(), pct = Math.round((1 - left / (inc.total || 1)) * 100);
+    h += '<div class="forge-row eq"><div class="finfo"><div class="fnm">En incursión: ' + z.label + '</div>' +
+      '<div class="durbar"><i style="width:' + pct + '%"></i></div>' +
+      '<div class="fds">Vuelve en ' + fmtSecs(Math.ceil(left / 1000)) + '</div></div></div>';
+  }
+  INC_ORDER.forEach(k => {
+    const z = INCURSIONES[k];
+    const listo = poder >= z.poderRec, flojo = poder < z.poderRec * 0.5;
+    const est = z.mobs.map(m => (MONSTER_DEF[m] ? MONSTER_DEF[m].label : m)).join(", ");
+    h += '<div class="forge-row' + (flojo ? ' locked' : '') + '"><div class="finfo">' +
+      '<div class="fnm">' + z.label + ' <span class="tag">' + fmtSecs(z.min * 60) + '</span></div>' +
+      '<div class="fds">' + est + '</div>' +
+      '<div class="fds">Poder recomendado: ' + z.poderRec +
+        (listo ? ' — <b style="color:#3f6b2a">estás listo</b>'
+               : (flojo ? ' — <b style="color:#b03a2e">te van a superar</b>'
+                        : ' — vas justo: volverías herido y con menos botín')) + '</div></div>' +
+      '<div class="fbtns"><button class="green sm" ' + (inc || !poder ? "disabled" : "") + ' data-inc="' + k + '">Salir</button></div></div>';
+  });
+  h += '<div class="fds" style="margin-top:6px">Al Dragón de las Cavernas hay que ir a pelearlo en persona: no se puede por incursión.</div>';
+  box.innerHTML = h;
+  box.querySelectorAll("[data-inc]").forEach(b => b.onclick = () => {
+    const k = b.dataset.inc, z = INCURSIONES[k];
+    askConfirm("Mandar al granjero a " + z.label + " por " + fmtSecs(z.min * 60) + ". Gasta durabilidad del arma y estamina. ¿Salir?",
+      () => { incSalir(k); refreshIncursion(); },
+      { title: "Incursión a " + z.label, yes: "Salir", yesClass: "green", no: "Cancelar", noClass: "red" });
+  });
+}
+
+/* ---- Mercado entre jugadores (P2P) ---- */
+let p2pTab = "comprar", p2pCache = null, p2pLoading = false;
+async function refreshP2P() {
+  const box = $("p2p-list"); if (!box) return;
+  document.querySelectorAll("[data-p2p]").forEach(b => {
+    b.classList.toggle("active", b.dataset.p2p === p2pTab);
+    b.onclick = () => { p2pTab = b.dataset.p2p; p2pCache = null; refreshP2P(); };
+  });
+  if (p2pLoading) return;
+  if (!p2pCache) {
+    p2pLoading = true; box.innerHTML = '<div class="fds">Cargando…</div>';
+    try { p2pCache = (p2pTab === "comprar") ? await mkList() : await mkMine(); }
+    catch (e) { p2pCache = []; }
+    p2pLoading = false;
+  }
+  const filas = p2pCache || [];
+  let h = "";
+  if (p2pTab === "vender") {
+    h += '<div class="fds">Elegí qué publicar. Se descuenta de tu bolsa hasta que se venda o lo retires.</div>';
+    const ops = [];
+    CROP_ORDER.forEach(k => { if ((G.res[k] || 0) > 0) ops.push(["res", k, G.res[k]]); });
+    ["madera","piedra","bronce","hierro","oro","diamante","netherita","fibra","pelaje","cuero","colmillo","esencia_runica"].forEach(k => { if ((G.res[k] || 0) > 0) ops.push(["res", k, G.res[k]]); });
+    CROP_ORDER.forEach(k => { if ((G.seeds[k] || 0) > 0) ops.push(["seed", k, G.seeds[k]]); });
+    RECIPE_ORDER.forEach(k => { if (((G.dishes || {})[k] || 0) > 0) ops.push(["dish", k, G.dishes[k]]); });
+    FISH_ORDER.forEach(k => { if (((G.fish || {})[k] || 0) > 0) ops.push(["fish", k, G.fish[k]]); });
+    Object.keys(G.weapons || {}).forEach(k => ops.push(["arm", k, 1]));
+    if (!ops.length) h += '<div class="fds">No tenés nada para publicar todavía.</div>';
+    ops.forEach(([kind, key, max], i) => {
+      const sug = Math.max(1, Math.round((typeof priceOf === "function" ? priceOf(key) : 10) || 10));
+      h += '<div class="forge-row"><div class="finfo"><div class="fnm">' + mkNombre(kind, key) + ' <span class="tag">' + MARKET_KINDS[kind] + '</span></div>' +
+        '<div class="fds">Tenés ' + fmt(max) + (kind === "arm" ? " · se publica con su durabilidad y sus runas" : "") + '</div></div>' +
+        '<div class="fbtns">' +
+          (kind === "arm" ? '' : '<input id="p2q-' + i + '" type="number" min="1" max="' + max + '" value="1" style="width:56px">') +
+          '<input id="p2p-' + i + '" type="number" min="1" value="' + sug + '" style="width:70px" title="Precio en plata">' +
+          '<button class="green sm" data-pub="' + kind + ':' + key + ':' + i + '">Publicar</button>' +
+        '</div></div>';
+    });
+  } else if (p2pTab === "mias") {
+    const activas = filas.filter(r => !r.sold_to), vendidas = filas.filter(r => r.sold_to && !r.paid);
+    if (vendidas.length) h += '<div class="fnm">Ventas por cobrar</div>';
+    vendidas.forEach(r => {
+      const neto = Math.max(1, Math.round(r.price * (1 - MARKET_FEE / 100)));
+      h += '<div class="forge-row eq"><div class="finfo"><div class="fnm">' + escapeHtml(r.name || r.item) + ' ×' + r.qty + ' — VENDIDO</div>' +
+        '<div class="fds">Te quedan ' + fmt(neto) + ' de plata (precio ' + fmt(r.price) + ' − ' + MARKET_FEE + '% de comisión)</div></div>' +
+        '<div class="fbtns"><button class="green sm" data-cobrar="' + r.id + '">Cobrar</button></div></div>';
+    });
+    h += '<div class="fnm" style="margin-top:8px">Publicaciones activas (' + activas.length + '/' + MARKET_MAX_PUB + ')</div>';
+    if (!activas.length) h += '<div class="fds">No tenés nada publicado.</div>';
+    activas.forEach(r => {
+      h += '<div class="forge-row"><div class="finfo"><div class="fnm">' + escapeHtml(r.name || r.item) + ' ×' + r.qty + '</div>' +
+        '<div class="fds">Precio: ' + fmt(r.price) + ' de plata</div></div>' +
+        '<div class="fbtns"><button class="sm" data-cancel="' + r.id + '">Retirar</button></div></div>';
+    });
+  } else {
+    if (!filas.length) h += '<div class="fds">No hay publicaciones ahora mismo. Volvé en un rato o publicá algo vos.</div>';
+    filas.forEach(r => {
+      const mio = r.seller === (typeof UID === "string" ? UID : "");
+      h += '<div class="forge-row"><div class="finfo"><div class="fnm">' + escapeHtml(r.name || r.item) + ' ×' + r.qty + ' <span class="tag">' + (MARKET_KINDS[r.kind] || r.kind) + '</span></div>' +
+        '<div class="fds">Vende: ' + escapeHtml(r.seller_name || "granjero") + (mio ? " (vos)" : "") + '</div></div>' +
+        '<div class="fbtns"><button class="green sm" ' + (mio || G.plata < r.price ? "disabled" : "") + ' data-buy="' + r.id + '">Comprar · ' + fmt(r.price) + '</button></div></div>';
+    });
+  }
+  box.innerHTML = h;
+  box.querySelectorAll("[data-pub]").forEach(b => b.onclick = async () => {
+    const [kind, key, i] = b.dataset.pub.split(":");
+    const q = $("p2q-" + i), pr = $("p2p-" + i);
+    await marketPublicar(kind, key, kind === "arm" ? 1 : Math.max(1, +(q && q.value) || 1), Math.max(1, +(pr && pr.value) || 1));
+    p2pCache = null; refreshP2P();
+  });
+  box.querySelectorAll("[data-buy]").forEach(b => b.onclick = async () => {
+    await marketComprar((p2pCache || []).find(r => String(r.id) === b.dataset.buy));
+    p2pCache = null; refreshP2P();
+  });
+  box.querySelectorAll("[data-cancel]").forEach(b => b.onclick = async () => {
+    await marketCancelar((p2pCache || []).find(r => String(r.id) === b.dataset.cancel));
+    p2pCache = null; refreshP2P();
+  });
+  box.querySelectorAll("[data-cobrar]").forEach(b => b.onclick = async () => {
+    await marketCobrar((p2pCache || []).find(r => String(r.id) === b.dataset.cobrar));
+    p2pCache = null; refreshP2P();
+  });
+}
+
+/* ---- Cosméticos: elegir qué lucir ---- */
+function refreshCosmeticos() {
+  const box = $("cos-list"); if (!box) return;
+  const c = cosElegido();
+  const titulos = cosTitulosDisponibles(), colores = cosColoresDisponibles(), marcos = cosMarcosDisponibles();
+  let h = '<div class="forge-row"><div class="finfo"><div class="fnm">Así te ven los demás</div>' +
+    '<div class="fds" style="font-size:15px"><span class="nm ' + (c.marco !== "ninguno" ? "marco-" + c.marco : "") + '" style="color:' + colorNombre() + ';font-weight:800">' +
+    escapeHtml(nombreLucido(window.NICK)) + '</span></div></div></div>';
+  h += '<div class="fnm" style="margin-top:8px">Título</div><div class="forge-row"><div class="finfo"><div class="fds">' +
+    ['<button class="sm ' + (!c.titulo ? "green" : "ghost") + '" data-cost="titulo:">Sin título</button>']
+      .concat(titulos.map(t => '<button class="sm ' + (c.titulo === t ? "green" : "ghost") + '" data-cost="titulo:' + t + '">' + t + '</button>')).join(" ") +
+    (titulos.length ? "" : ' <span class="fds">Todavía no ganaste ninguno — se consiguen subiendo la granja.</span>') + '</div></div></div>';
+  h += '<div class="fnm" style="margin-top:8px">Color del nombre</div><div class="forge-row"><div class="finfo"><div class="fds">' +
+    colores.map(k => '<button class="sm ' + (c.color === k ? "green" : "ghost") + '" data-cost="color:' + k + '" style="color:' + COS_COLORES[k] + '">' + k + '</button>').join(" ") + '</div></div></div>';
+  h += '<div class="fnm" style="margin-top:8px">Marco</div><div class="forge-row"><div class="finfo"><div class="fds">' +
+    marcos.map(k => '<button class="sm ' + (c.marco === k ? "green" : "ghost") + '" data-cost="marco:' + k + '">' + (k === "ninguno" ? "Sin marco" : (COS_MARCOS[k] || k)) + '</button>').join(" ") + '</div></div></div>';
+  h += '<div class="fnm" style="margin-top:8px">Aura del granjero</div><div class="forge-row"><div class="finfo"><div class="fds">' +
+    (cosAuraDisponible()
+      ? '<button class="sm ' + (c.aura ? "green" : "ghost") + '" data-cost="aura:1">Encendida</button> <button class="sm ' + (!c.aura ? "green" : "ghost") + '" data-cost="aura:0">Apagada</button> <span class="fds">Se ve en la Zona Negra y en la plaza.</span>'
+      : 'Se desbloquea con los títulos de granja nivel 30 en adelante.') + '</div></div></div>';
+  if ((G.cosmeticos || []).length) {
+    h += '<div class="fnm" style="margin-top:10px">Todo lo que ganaste (' + G.cosmeticos.length + ')</div>';
+    h += '<div class="fds">' + G.cosmeticos.map(x => escapeHtml(String(x))).join(" · ") + '</div>';
+  }
+  box.innerHTML = h;
+  box.querySelectorAll("[data-cost]").forEach(b => b.onclick = () => {
+    const [campo, val] = b.dataset.cost.split(":");
+    cosSet(campo, campo === "aura" ? val === "1" : val);
+    refreshCosmeticos();
+  });
+}
