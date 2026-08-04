@@ -220,6 +220,15 @@ const MAT_DEF = {
   barra_oro:    { label:"Barra de oro",     sprite:"res_barra_oro",    cost:{ oro:3 } },
 };
 var MAT_CD_MS = 6000;   // detalles viernes: craftear barras tiene enfriamiento
+// ---- EDIFICIOS NIVEL 2 (recompensas de granja 17 / 21 / 27) ----
+var EDIF2_HORNO = 40;    // % que se acorta el enfriamiento del Horno
+var EDIF2_COCINA = 30;   // % que se acortan las cocciones
+var EDIF2_COCINA_OLLA = 1;   // ollas extra de la Cocina
+var EDIF2_ALTAR = 5;     // puntos de éxito extra en cada intento del Altar
+function edif2(k) { return !!(G.edif2 && G.edif2[k]); }
+function hornoCdMs() { return MAT_CD_MS * (edif2("horno") ? 1 - EDIF2_HORNO / 100 : 1); }
+function cocinaFactor() { return edif2("cocina") ? 1 - EDIF2_COCINA / 100 : 1; }
+function altarBonoExito() { return edif2("altar") ? EDIF2_ALTAR : 0; }
 function matCdLeft(id) { G.matCd = G.matCd || {}; return Math.max(0, (G.matCd[id] || 0) - nowMs()); }
 // crafteo en LOTE genérico: repite la acción hasta N veces y corta si ya no se puede (doc 2/8)
 function craftLote(fn, id, n) {
@@ -237,7 +246,7 @@ function craftMat(id) {
   if (!canAfford(md.cost)) { toast("Te faltan materiales"); return; }
   if (!roomForRes(id, 1)) { bagFull("craftear " + md.label); return; }
   payCost(md.cost); G.res[id] = (G.res[id] || 0) + 1;
-  G.matCd[id] = nowMs() + MAT_CD_MS;
+  G.matCd[id] = nowMs() + hornoCdMs();
   addXp("crafting", 3); log("Fundiste 1 " + md.label + " en el Horno.", "good"); toast("+1 " + md.label);
   if (typeof tutoEvent === "function") tutoEvent("mat");
   if (typeof refreshHorno === "function" && isOpen("ov-horno")) refreshHorno();
@@ -1302,7 +1311,7 @@ function upgradeWeapon(id, usarPolvo, usarProt) {
   if (G.plata < u.plata) { toast("Te falta plata (" + u.plata + ")"); return; }
   for (const k in need) G.res[k] -= need[k];
   G.plata -= u.plata;
-  const chance = usarPolvo ? u.exP : u.ex;
+  const chance = Math.min(100, (usarPolvo ? u.exP : u.ex) + altarBonoExito());   // el Altar nivel 2 suma puntos de éxito
   if (Math.random() * 100 < chance) {
     w.plus = next;
     const abre = socketsOpen(next) > socketsOpen(next - 1) ? " ¡Se abrió una ranura de runa!" : "";
@@ -1629,15 +1638,16 @@ const COOK_MS = 180000;   // respaldo si una receta no trae tiempo propio (3 min
 // 3/8 (diseñador): los platos tardan MINUTOS y se pueden cocinar VARIOS a la vez (ollas en paralelo).
 var COOK_SLOTS = 3;       // ollas simultáneas de la Cocina (editable en el panel)
 function cookList() { if (!Array.isArray(G.cooking)) G.cooking = G.cooking ? [G.cooking] : []; return G.cooking; }
-function cookFree() { return Math.max(0, COOK_SLOTS - cookList().length); }
+function cookSlots() { return COOK_SLOTS + (edif2("cocina") ? EDIF2_COCINA_OLLA : 0); }
+function cookFree() { return Math.max(0, cookSlots() - cookList().length); }
 function cook(id) {
   const r = RECIPE_DEF[id]; if (!r) return;
-  if (cookFree() <= 0) { toast("Las " + COOK_SLOTS + " ollas están ocupadas"); return; }
+  if (cookFree() <= 0) { toast("Las " + cookSlots() + " ollas están ocupadas"); return; }
   if (!canCook(id)) { toast("Te faltan ingredientes"); return; }
   if (!roomForDish(id)) { bagFull("cocinar " + r.label); return; }
   if (r.res) for (const k in r.res) G.res[k] -= r.res[k];
   if (r.fish) for (const k in r.fish) G.fish[k] -= r.fish[k];
-  const ms = (r.cookS ? r.cookS * 1000 : COOK_MS);
+  const ms = Math.max(1000, Math.round((r.cookS ? r.cookS * 1000 : COOK_MS) * cocinaFactor()));
   cookList().push({ id, endAt: nowMs() + ms, total: ms });
   log("Cocinando " + r.label + "… (" + fmtSecs(Math.round(ms / 1000)) + ")"); toast("Cocinando " + r.label);
   refreshHud(); if (typeof syncSlots === "function") syncSlots(); if (isOpen("ov-inv")) refreshInv();

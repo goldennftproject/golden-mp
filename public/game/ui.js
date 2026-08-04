@@ -592,7 +592,7 @@ function refreshCooking() {
     '</div></div>';
   { // ollas en paralelo (3/8: se cocinan varios platos a la vez)
     const lista = cookList();
-    head += '<div class="fds" style="margin:4px 0">Ollas: ' + lista.length + '/' + COOK_SLOTS + ' en uso</div>';
+    head += '<div class="fds" style="margin:4px 0">Ollas: ' + lista.length + '/' + cookSlots() + ' en uso' + (edif2("cocina") ? ' · Cocina nivel 2: −' + EDIF2_COCINA + '% de tiempo y +' + EDIF2_COCINA_OLLA + ' olla' : '') + '</div>';
     lista.forEach(c => {
       const r = RECIPE_DEF[c.id];
       const left = Math.max(0, c.endAt - nowMs());

@@ -148,6 +148,13 @@ var BAL = (function () {
     }
 
     // INCURSIONES Y ENTRENAMIENTO OFFLINE
+    { const cat = "Edificios nivel 2";
+      add(cat, "edif2.horno", "Horno nivel 2 · cuánto acorta el enfriamiento", "% · entero", () => EDIF2_HORNO, v => { EDIF2_HORNO = v; });
+      add(cat, "edif2.cocina", "Cocina nivel 2 · cuánto acorta la cocción", "% · entero", () => EDIF2_COCINA, v => { EDIF2_COCINA = v; });
+      add(cat, "edif2.cocinaOlla", "Cocina nivel 2 · ollas extra", "ollas · entero", () => EDIF2_COCINA_OLLA, v => { EDIF2_COCINA_OLLA = v; });
+      add(cat, "edif2.altar", "Altar nivel 2 · puntos de éxito extra", "puntos · entero", () => EDIF2_ALTAR, v => { EDIF2_ALTAR = v; });
+    }
+
     add("Mercado de jugadores", "mk.fee", "Comisión de venta (se quema)", "% · entero", () => MARKET_FEE, v => { MARKET_FEE = v; });
     add("Mercado de jugadores", "mk.max", "Publicaciones activas por jugador", "publicaciones · entero", () => MARKET_MAX_PUB, v => { MARKET_MAX_PUB = v; });
 
