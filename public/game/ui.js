@@ -17,6 +17,7 @@ const OV_REFRESH = { "ov-inv": () => refreshInv(), "ov-skills": () => refreshSki
   "ov-establo": () => refreshEstablo(),
   "ov-curtiduria": () => refreshCurtiduria(),
   "ov-ofrendas": () => refreshOfrendas(),
+  "ov-incursion": () => refreshIncursion(),
   "ov-pass": () => refreshPass(),
   "ov-cofre": () => refreshChest(),
   "ov-config": () => refreshConfig(), "ov-lb": () => refreshLb(), "ov-daily": () => refreshDaily() };
@@ -288,7 +289,7 @@ function askConfirm(msg, onYes, opts) {
   ov.classList.add("show");
   const yes = $("cf-yes"), no = $("cf-no");
   if (yes) { yes.textContent = opts.yes || "Tirar"; yes.className = opts.yesClass || "red"; yes.onclick = () => { ov.classList.remove("show"); onYes(); }; }
-  if (no) { no.textContent = opts.no || "Cancelar"; no.className = (opts.noClass || "ghost") + " sm"; no.onclick = () => ov.classList.remove("show"); }
+  if (no) { no.textContent = opts.no || "Cancelar"; no.className = (opts.noClass || "ghost") + " sm"; no.onclick = () => { ov.classList.remove("show"); if (typeof opts.onNo === "function") opts.onNo(); }; }
 }
 // qué se tiraría de una pila (cantidad + nombre) — null si no se puede tirar
 function trashInfo(d) {
@@ -1191,6 +1192,6 @@ function initUI() {
 
   refreshHud();
   tutoSync(true);   // cartel + flecha del tutorial guiado
-  setInterval(() => { if (typeof buffTick === "function") buffTick(); if (typeof stamTick === "function") stamTick(); if (typeof granjaRegen === "function") granjaRegen(); tutoSync(); refreshHud(); }, 1000);
+  setInterval(() => { if (typeof buffTick === "function") buffTick(); if (typeof stamTick === "function") stamTick(); if (typeof incTick === "function") incTick(); if (typeof granjaRegen === "function") granjaRegen(); tutoSync(); refreshHud(); }, 1000);
 }
 initUI();

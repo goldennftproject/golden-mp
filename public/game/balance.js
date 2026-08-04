@@ -143,6 +143,18 @@ var BAL = (function () {
       add(cat, "pass.vipBoost", "Boost de estrellas del VIP (1.2 = +20%)", U.factor, () => PASS_VIP_BOOST, v => { PASS_VIP_BOOST = v; }, 0.1);
     }
 
+    // INCURSIONES Y ENTRENAMIENTO OFFLINE
+    { const cat = "Incursiones";
+      add(cat, "inc.rend", "Rendimiento vs pelear a mano (0.7 = 70%)", U.factor, () => INC_RENDIMIENTO, v => { INC_RENDIMIENTO = v; }, 0.05);
+      add(cat, "inc.cupo", "Incursiones por día (0 = sin tope)", "incursiones · entero", () => INC_CUPO_DIA, v => { INC_CUPO_DIA = v; });
+      INC_ORDER.forEach(k => { const z = INCURSIONES[k];
+        add(cat, "inc." + k + ".min", z.label + " · duración", "", () => z.min * 60, v => { z.min = v / 60; }, 1, "tiempo");
+        add(cat, "inc." + k + ".poder", z.label + " · poder recomendado", "poder · entero", () => z.poderRec, v => { z.poderRec = v; });
+      });
+      add(cat, "dummy.offXp", "Entrenamiento offline · XP por hora", U.xp, () => DUMMY_OFF_XP_H, v => { DUMMY_OFF_XP_H = v; });
+      add(cat, "dummy.offMax", "Entrenamiento offline · tope de horas", "horas · entero", () => DUMMY_OFF_MAX_H, v => { DUMMY_OFF_MAX_H = v; });
+    }
+
     // ALTAR DE OFRENDAS
     { const cat = "Altar de Ofrendas";
       add(cat, "ofr.pozo", "Pozo fijo del airdrop (referencia)", "$Golden · entero", () => OFRENDA_POZO, v => { OFRENDA_POZO = v; });

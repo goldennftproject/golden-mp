@@ -14,7 +14,8 @@ const G = {
   stats: {}, statsBase: {}, chestCap: 0, edif2: {}, cosmeticos: [],
   animals: {},                   // Establo: animal → { desde, feliz, comidoAt, prodAt }
   armor: {}, armorEq: null,      // Curtiduría: piezas crafteadas y set equipado
-  ofrendaPts: 0, ofrendaLog: 0,  // Altar de Ofrendas: puntos acumulados y recursos quemados   // tareas de nivel 11-50, mejoras y cosméticos
+  ofrendaPts: 0, ofrendaLog: 0,  // Altar de Ofrendas: puntos acumulados y recursos quemados
+  incursion: null, incDia: null, dummyTrain: null,   // incursiones de un clic y entrenamiento offline   // tareas de nivel 11-50, mejoras y cosméticos
   combatXp: 0,                   // doc 2/8: barra de Combate GLOBAL — suma la XP de todos los kills
   states: [],                    // doc 2/8: estados/debuffs del bestiario sobre el jugador (no se guardan)
   tuto: { step: 0, n: 0, done: false, v: 2 },   // doc 2/8: tutorial guiado de micro-objetivos (v = versión de la cadena)
@@ -774,6 +775,127 @@ function passBuyLevel() {
 
 
 
+
+
+// ================= INCURSIONES: COMBATE DE UN CLIC (doc "Combate un clic vs jugado", 3/8) =================
+// Mandás al granjero a una zona, tarda tiempo REAL (como las ollas de la Cocina) y vuelve con botín y XP.
+// Gasta durabilidad del arma y estamina. Rinde menos que pelear a mano: el que juega, gana más.
+var INC_RENDIMIENTO = 0.7;    // 70% de lo que rendiría esa misma media hora peleando
+var INC_CUPO_DIA = 3;         // incursiones por día (0 = sin tope)
+const INCURSIONES = {
+  zn1: { label:"Zona Negra I",   min:10, mobs:["rata","murcielago","larva","baba","arana"],           poderRec:8 },
+  zn2: { label:"Zona Negra II",  min:20, mobs:["goblin","orco","esqueleto","lancero","golem"],        poderRec:20 },
+  zn3: { label:"Zona Negra III", min:30, mobs:["hombre_lobo","guerrero","troll","ogro","espectro"],   poderRec:35 },
+  guarida: { label:"Guarida",    min:45, mobs:["demonio"],                                             poderRec:55 },
+};
+const INC_ORDER = ["zn1", "zn2", "zn3", "guarida"];
+function incPoder() {   // poder de combate del jugador con lo que tiene equipado
+  const id = armaEq(); if (!id) return 0;
+  const w = ARM_DEF[id], lvl = skillInfo(G.skills[armSkillKey(w.tipo)] || 0).lvl;
+  let p = (w.min + w.max) / 2 + Math.floor(lvl / 2);
+  p *= 1 + upgDmg(armPlus(id)) / 100;
+  p *= dmgMult();
+  return Math.round(p);
+}
+function incCupoHoy() {
+  const hoy = new Date().toISOString().slice(0, 10);
+  if (!G.incDia || G.incDia.date !== hoy) G.incDia = { date: hoy, n: 0 };
+  return G.incDia;
+}
+function incActiva() { return G.incursion || null; }
+function incFalta() { const i = incActiva(); return i ? Math.max(0, i.endAt - nowMs()) : 0; }
+function incSalir(zona) {
+  const z = INCURSIONES[zona]; if (!z) return;
+  if (incActiva()) { toast("Ya hay una incursión en curso"); return; }
+  const cupo = incCupoHoy();
+  if (INC_CUPO_DIA && cupo.n >= INC_CUPO_DIA) { toast("Ya hiciste las " + INC_CUPO_DIA + " incursiones de hoy"); return; }
+  const id = armaEq();
+  if (!id) { toast("Necesitás un arma equipada"); return; }
+  if ((G.weapons[id].dur || 0) <= 5) { toast("El arma está muy gastada — reparala en la Herrería"); return; }
+  const poder = incPoder();
+  if (poder <= 0) { toast("Tu arma no sirve para pelear"); return; }
+  const ms = z.min * 60000;
+  G.incursion = { zona, endAt: nowMs() + ms, total: ms, poder, arma: id };
+  cupo.n++;
+  log("Saliste de incursión a " + z.label + " (" + fmtSecs(z.min * 60) + "). Volvés con el botín.", "gold");
+  toast("Incursión: " + z.label);
+  refreshHud(); if (typeof refreshIncursion === "function" && isOpen("ov-incursion")) refreshIncursion();
+  if (typeof saveFarm === "function") saveFarm(true);
+}
+// resuelve la incursión con los stats reales del bestiario
+function incResolver() {
+  const inc = incActiva(); if (!inc || nowMs() < inc.endAt) return null;
+  const z = INCURSIONES[inc.zona];
+  const mobs = z.mobs.map(k => MONSTER_DEF[k]);
+  const vidaMedia = mobs.reduce((a, m) => a + m.hp, 0) / mobs.length;
+  const defMedia = mobs.reduce((a, m) => a + (m.def || 0), 0) / mobs.length;
+  const golpes = (z.min * 60) / (ATTACK_MS / 1000);                      // golpes posibles en el tiempo
+  const dmgReal = Math.max(1, inc.poder - defMedia);
+  let kills = Math.floor(golpes / Math.max(1, Math.ceil(vidaMedia / dmgReal)) * INC_RENDIMIENTO);
+  // riesgo: si vas flojo, volvés herido y con menos botín
+  const ratio = inc.poder / z.poderRec;
+  let herido = 0, aviso = "";
+  if (ratio < 0.5) { kills = 0; herido = Math.round(G.hpMax * 0.35); aviso = "Te superaron: volviste sin botín."; }
+  else if (ratio < 1) { kills = Math.floor(kills * ratio); herido = Math.round(G.hpMax * 0.2); aviso = "Ibas justo de poder: volviste herido y con menos botín."; }
+  // estamina y durabilidad: lo mismo que costaría pelear
+  const costoStam = z.mobs.reduce((a, k) => a + stamCosto(k), 0) / z.mobs.length * kills;
+  const stamDisp = (G.stam == null ? stamMax() : G.stam);
+  if (costoStam > stamDisp) { kills = Math.floor(kills * (stamDisp / Math.max(1, costoStam))); aviso = (aviso ? aviso + " " : "") + "Se te acabó la estamina a mitad de camino."; }
+  G.stam = Math.max(0, stamDisp - Math.round(Math.min(costoStam, stamDisp)));
+  const w = G.weapons[inc.arma];
+  if (w) w.dur = Math.max(0, w.dur - Math.min(kills, w.dur));
+  // botín y XP con las tablas del bestiario
+  const botin = {}; let xp = 0;
+  for (let i = 0; i < kills; i++) {
+    const m = mobs[Math.floor(Math.random() * mobs.length)];
+    xp += m.xp;
+    const loot = rollLoot(m);
+    for (const k in loot) botin[k] = (botin[k] || 0) + loot[k];
+  }
+  for (const k in botin) { if (!tryAddRes(k, botin[k])) { botin[k] = 0; } }
+  if (kills) { addXp(armSkillKey(ARM_DEF[inc.arma].tipo), Math.round(xp)); addCombatXp(Math.round(xp)); }
+  if (herido) { G.hp = Math.max(1, G.hp - herido); }
+  z.mobs.forEach(() => {});
+  const partes = Object.keys(botin).filter(k => botin[k] > 0).map(k => "+" + botin[k] + " " + (RES_LABEL[k] || (CROP_DEF[k] && CROP_DEF[k].label) || k));
+  G.incursion = null;
+  const resumen = "Incursión a " + z.label + ": venciste " + kills + " criatura(s)" + (partes.length ? " · " + partes.join(" · ") : " · sin botín") + (xp ? " · +" + fmt(Math.round(xp)) + " XP" : "");
+  log(resumen + (aviso ? " " + aviso : ""), kills ? "gold" : "bad");
+  toast(kills ? "¡Volviste con " + kills + " victorias!" : "Volviste sin nada");
+  if (kills && window.celebrate) celebrate({ title: "¡" + kills + " victorias!", sub: "Incursión a " + z.label, reward: partes.join(" · ") });
+  refreshHud(); if (typeof syncSlots === "function") syncSlots(); if (isOpen("ov-inv")) refreshInv();
+  if (typeof refreshIncursion === "function" && isOpen("ov-incursion")) refreshIncursion();
+  if (typeof saveFarm === "function") saveFarm(true);
+  return { kills, botin, xp, herido, aviso };
+}
+function incTick() { if (incActiva() && nowMs() >= G.incursion.endAt) incResolver(); }
+
+// ---- ENTRENAMIENTO OFFLINE DEL DUMMY ("detallitos (1)" punto 9) ----
+// Dejás al granjero entrenando y al volver se cuenta el tiempo que pasó: XP del arma equipada.
+var DUMMY_OFF_XP_H = 60;      // XP por hora de entrenamiento
+var DUMMY_OFF_MAX_H = 8;      // tope de horas que acumula
+function dummyEntrenando() { return !!(G.dummyTrain && G.dummyTrain.desde); }
+function dummyIniciar() {
+  const aid = armaEq();
+  if (!aid || ARM_DEF[aid].tipo === "arco") { toast("Equipá un arma cuerpo a cuerpo para entrenar"); return; }
+  G.dummyTrain = { desde: nowMs(), arma: aid };
+  log("Dejaste al granjero entrenando en el dummy. Al volver cobrás la XP del tiempo transcurrido (hasta " + DUMMY_OFF_MAX_H + " h).", "good");
+  toast("Entrenando…");
+  if (typeof saveFarm === "function") saveFarm(true);
+}
+function dummyCobrar() {
+  if (!dummyEntrenando()) return null;
+  const t = G.dummyTrain, horas = Math.min(DUMMY_OFF_MAX_H, (nowMs() - t.desde) / 3600000);
+  const aid = ARM_DEF[t.arma] ? t.arma : armaEq();
+  G.dummyTrain = null;
+  if (!aid || horas < 0.02) { toast("Entrenaste muy poco tiempo"); return null; }
+  const xp = Math.round(horas * DUMMY_OFF_XP_H);
+  const sk = armSkillKey(ARM_DEF[aid].tipo);
+  addXp(sk, xp);
+  log("Entrenamiento terminado: " + fmtDur(horas * 3600000) + " → +" + fmt(xp) + " XP de " + SKILL_NAME[sk] + ".", "gold");
+  toast("+" + fmt(xp) + " XP de " + SKILL_NAME[sk]);
+  if (typeof saveFarm === "function") saveFarm(true);
+  return xp;
+}
 
 // ================= EL ALTAR DE OFRENDAS ("2das mejoras", 4/8) =================
 // Entregás recursos → se QUEMAN (salen del juego) → ganás Puntos de Ofrenda.

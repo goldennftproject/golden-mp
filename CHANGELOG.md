@@ -435,6 +435,15 @@ Registro cronológico de todo lo hecho desde el inicio del proyecto (27 de julio
 - **Regla sana, implementada tal cual**: el pozo del airdrop es FIJO y se reparte proporcionalmente (tus puntos ÷ puntos totales). Entregar más no crea más token, solo afina el reparto. Verificado con el ejemplo del documento: 50.000 puntos sobre 8.000.000 = 0,625% = 6.250 tokens.
 - **Nada de promesas**: la ventana aclara que el airdrop es posible y discrecional, sin valor garantizado por recurso, y cada entrega pide confirmación porque es irreversible.
 
+### Fase 8 — Incursiones (combate de un clic) + entrenamiento offline (4/8)
+- **Las Incursiones del documento**, sin tocar el combate jugado: al usar el portal, el juego pregunta si entrás a pelear o mandás una incursión de un clic.
+- **4 zonas con duración real**: Zona Negra I (10 min), II (20 min), III (30 min) y la Guarida (45 min). Corren como las ollas de la Cocina, también con el juego cerrado. **Al Dragón hay que ir en persona**: no se puede por incursión.
+- **El resultado sale de los stats reales**: se calcula tu poder (arma + skill + mejora del Altar + buffs), cuántos golpes entran en el tiempo y la vida y defensa media de la zona; el botín usa las mismas tablas de loot del bestiario. Rinde el **70%** de lo que rendiría peleando a mano — el que juega, gana más.
+- **Riesgo por poder**: si vas por debajo del recomendado volvés herido y con menos botín; si vas muy por debajo, la incursión fracasa. La ventana avisa antes con "estás listo / vas justo / te van a superar".
+- **Cuesta lo mismo que pelear**: gasta durabilidad del arma y estamina, y si la estamina se acaba a mitad de camino, la incursión rinde proporcionalmente menos. Tope de 3 incursiones por día.
+- **Entrenamiento offline del dummy** (detallito 9): podés dejar al granjero entrenando y al volver cobrás la XP del tiempo transcurrido (60 XP por hora, tope 8 h). Sigue existiendo el golpe directo con su recompensa y sus 4 h de descanso.
+- Duraciones, poder recomendado, rendimiento, cupo diario y los valores del entrenamiento quedaron editables en el panel.
+
 ## Pendientes conocidos
 - En espera del diseñador: **tabla de daño de las armas** (para los tiers completos de espadas), usos de tablones/barras, cerca premium, tabla de stats del bestiario.
 - Cuando el diseñador apruebe el doc de farmeo: implementar Girasol, Trigo y Maíz (arte PixelLab + tabla de cultivos) y el sistema de XP de farmeo por niveles.

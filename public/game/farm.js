@@ -543,6 +543,7 @@ class FarmScene extends Phaser.Scene {
     if (o.type === "ofrendas") return "Altar de Ofrendas";
     if (o.type === "cofre") return "Cofre depósito";
     if (o.type === "dummy") {
+      if (typeof dummyEntrenando === "function" && dummyEntrenando()) return "Entrenando… clic para cobrar la XP acumulada";
       { const aid = armaEq(); if (!aid || ARM_DEF[aid].tipo === "arco") return "Dummy de práctica — equipá un arma cuerpo a cuerpo"; }
       const dleft = (G.dummyUsedAt || 0) + DUMMY_CD_MS - nowMs();
       return dleft > 0 ? "El dummy descansa — vuelve en " + fmtDur(dleft) : "Entrenar espada (+" + DUMMY_XP + " XP)";
@@ -554,7 +555,13 @@ class FarmScene extends Phaser.Scene {
   doInteract() { if (GF.uiOpen || this.action || GF.editMode) return; const o = this.nearestInteract(); if (o) this.interactWith(o); else if (this.nearPond()) this.tryFish(); }
 
   interactWith(o) {
-    if (o.type === "portal") { if (typeof tutoEvent === "function") tutoEvent("portal"); if (typeof saveFarm === "function") saveFarm(); this.leaving = true; return this.scene.start("forest"); }
+    if (o.type === "portal") {
+      const entrar = () => { if (typeof tutoEvent === "function") tutoEvent("portal"); if (typeof saveFarm === "function") saveFarm(); this.leaving = true; this.scene.start("forest"); };
+      askConfirm("¿Entrás vos a pelear a la Zona Negra o mandás una incursión de un clic?", entrar,
+        { title: "Zona Negra", yes: "Entrar a pelear", yesClass: "green", no: "Incursión (un clic)", noClass: "gold",
+          onNo: () => { if (typeof refreshIncursion === "function") refreshIncursion(); openOv("ov-incursion"); } });
+      return;
+    }
     if (o.type === "barn") return openOv("ov-barn");
     if (o.type === "market") return openOv("ov-market");
     // edificios por construir (viernes 1): clic → receta de construcción con confirmación
@@ -597,7 +604,17 @@ class FarmScene extends Phaser.Scene {
     if (o.type === "curtiduria") { if (typeof refreshCurtiduria === "function") refreshCurtiduria(); return openOv("ov-curtiduria"); }
     if (o.type === "ofrendas") { if (typeof refreshOfrendas === "function") refreshOfrendas(); return openOv("ov-ofrendas"); }
     if (o.type === "cofre") { window.chestOpen = o.chestIdx; return openOv("ov-cofre"); }
-    if (o.type === "dummy") return this.trainDummy(o);
+    if (o.type === "dummy") {
+      if (typeof dummyEntrenando === "function" && dummyEntrenando()) { dummyCobrar(); return; }   // volviste: cobrás la XP acumulada
+      const dleft = (G.dummyUsedAt || 0) + DUMMY_CD_MS - nowMs();
+      askConfirm(dleft > 0
+          ? "El dummy descansa (vuelve en " + fmtDur(dleft) + "), pero podés dejar al granjero entrenando: cobrás la XP del tiempo que pase, hasta " + DUMMY_OFF_MAX_H + " h."
+          : "¿Entrenás ahora (+" + DUMMY_XP + " XP y 4 h de descanso) o dejás al granjero entrenando mientras no estás?",
+        () => { if (dleft > 0) { toast("El dummy descansa — vuelve en " + fmtDur(dleft)); return; } this.trainDummy(o); },
+        { title: "Dummy de práctica", yes: dleft > 0 ? "Cerrar" : "Entrenar ahora", yesClass: dleft > 0 ? "ghost" : "green",
+          no: "Dejar entrenando", noClass: "gold", onNo: () => dummyIniciar() });
+      return;
+    }
     if (o.type === "boar") { o.sprite.destroy(); const i = this.threats.indexOf(o); if (i >= 0) this.threats.splice(i, 1); log("Espantaste al jabalí.", "good"); toast("¡Espantado!"); return; }   // XP de espada llega con el combate (necesita espada equipada)
     if (o.type === "plot") {
       if (o.state === "locked") {   // desbloquear con plata: recuadro de confirmación (detalles viernes)
