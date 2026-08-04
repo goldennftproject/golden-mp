@@ -1738,49 +1738,57 @@ var PLOT_UNLOCK_BASE = 200;
 function plotUnlockCost() { return PLOT_UNLOCK_BASE * Math.pow(2, Math.max(0, (G.plotsOwned || 6) - 6)); }
 
 // --- cofre diario de login (racha de 7 días · anti-inflación: 80% insumos / 20% plata) ---
+// "2das mejoras" (4/8): el cofre reparte SOLO cosas laterales — cosméticos soulbound y consumibles
+// de un uso. NUNCA plata, minerales, herramientas, semillas, XP, fichas, runas, $Golden ni estrellas del pase.
 const DAILY_REWARDS = [
-  { seeds: { papa: 2 },      res: { madera: 5 },   label: "×2 Semilla Papa · ×5 Madera" },
-  { seeds: { zanahoria: 3 }, res: { piedra: 10 },  label: "×3 Semilla Zanahoria · ×10 Piedra" },
-  { seeds: { cebolla: 2 },   res: { piedra: 10 },  label: "×2 Semilla Cebolla · ×10 Piedra" },
-  { seeds: { calabacin: 2 }, plata: 20,            label: "×2 Semilla Calabacín · 20 Plata" },
-  { seeds: { repollo: 2 },   res: { bronce: 5 },   label: "×2 Semilla Repollo · ×5 Bronce" },
-  { res: { oro: 1 },         plata: 30,            label: "×1 Oro · 30 Plata" },
-  { seeds: { calabaza: 2 },  plata: 50, buff: true, label: "×2 Semilla Calabaza · 50 Plata · Abono (+15% cosecha 10 min)" },
+  { cos: "Decoración chica de granja",             label: "Decoración chica para la granja" },
+  { buffFarm: 5, buffMin: 60,                       label: "Bendición del Granjero: +5% velocidad de farmeo por 1 hora" },
+  { dish: 2,                                        label: "2 platos ya cocinados" },
+  { cos: "Emote o marco de perfil",                 label: "Emote o marco de perfil" },
+  { carnada: 5,                                     label: "Carnada de pesca ×5" },
+  { cos: "Cosmético sorpresa (de un set)",          label: "Cosmético sorpresa" },
+  { coleccionable: true,                            label: "Coleccionable de la semana (rotativo)" },
 ];
+// el día 7 entrega un cosmético EXCLUSIVO que rota cada semana (el gancho, sin tocar el balance)
+const COLECCIONABLES = [
+  "Espantapájaros dorado (decoración)",
+  "Sombrero de paja brillante (skin)",
+  'Gallina mascota "Pinta" (compañera)',
+  "Farolito de luciérnagas (decoración animada)",
+  "Camino de pétalos (skin de suelo)",
+  'Título "Madrugador" + color de nombre verde',
+];
+function semanaISO(d) { const x = new Date(d || Date.now()); x.setHours(0,0,0,0); x.setDate(x.getDate() + 3 - ((x.getDay() + 6) % 7)); const w1 = new Date(x.getFullYear(), 0, 4); return Math.round(((x - w1) / 86400000 + ((w1.getDay() + 6) % 7) - 3) / 7 + 1); }
+function coleccionableDeLaSemana() { return COLECCIONABLES[semanaISO() % COLECCIONABLES.length]; }
+function darCosmetico(nombre) { G.cosmeticos = G.cosmeticos || []; G.cosmeticos.push(nombre + " (no vendible)"); }
+
 function dayStamp(off) { const d = new Date(Date.now() + (off || 0) * 86400000); return d.getFullYear() + "-" + String(d.getMonth() + 1).padStart(2, "0") + "-" + String(d.getDate()).padStart(2, "0"); }
 // estado del cofre: ¿se puede reclamar hoy? ¿qué día de la racha toca? ¿se perdió la racha?
 function dailyState() {
   const dd = G.daily || (G.daily = { day: 0, last: "" });
   if (dd.last === dayStamp(0)) return { claimable: false, day: dd.day, lost: false };
-  const keeps = dd.last === dayStamp(-1) && dd.day >= 1 && dd.day < 7;   // ayer reclamó y no terminó la semana
-  // "racha perdida" solo si había racha a medias (completar los 7 días reinicia sin penalidad)
-  const lost = !!dd.last && !keeps && dd.day > 0 && dd.day < 7;
-  return { claimable: true, day: keeps ? dd.day + 1 : 1, lost };
+  // racha GENTIL (doc): si faltás un día no perdés nada, seguís donde quedaste
+  const dia = (dd.day >= 7 || dd.day < 1) ? 1 : dd.day + 1;
+  return { claimable: true, day: dia, lost: false };
 }
-// recuperar la racha perdida pagando esencia (cuenta como si hubieras reclamado ayer)
-const STREAK_RECOVER_COST = 50;
-function recoverStreak() {
-  const st = dailyState();
-  if (!st.lost) { toast("No hay racha para recuperar"); return; }
-  if (G.golden < STREAK_RECOVER_COST) { toast("Necesitás " + STREAK_RECOVER_COST + " para recuperar la racha"); return; }
-  G.golden -= STREAK_RECOVER_COST;
-  G.daily.last = dayStamp(-1);
-  log("Recuperaste la racha del cofre por " + STREAK_RECOVER_COST + " esencia.", "gold"); toast("¡Racha recuperada!");
-  refreshHud(); if (typeof refreshDaily === "function") refreshDaily();
-  if (typeof saveFarm === "function") saveFarm(true);
-}
+const STREAK_RECOVER_COST = 0;   // legado: ya no hay racha que perder ni que recuperar
+function recoverStreak() { toast("El cofre ya no castiga faltar un día"); }
 function claimDaily() {
   const st = dailyState();
   if (!st.claimable) { toast("Ya reclamaste hoy — volvé mañana"); return; }
   const r = DAILY_REWARDS[st.day - 1];
-  if (r.seeds) { const sb = seedBuysToday(); for (const k in r.seeds) { G.seeds[k] = (G.seeds[k] || 0) + r.seeds[k]; sb.count += r.seeds[k]; } }
-  if (r.res) for (const k in r.res) G.res[k] = (G.res[k] || 0) + r.res[k];
-  if (r.plata) G.plata += r.plata;
-  if (r.buff) addBuff("yield", "Abono +15%", 1.15, 600);
+  let detalle = r.label;
+  if (r.cos) darCosmetico(r.cos);
+  if (r.coleccionable) { const c = coleccionableDeLaSemana(); darCosmetico(c); detalle = "Coleccionable de la semana: " + c; }
+  if (r.buffFarm) addBuff("farm", "+" + r.buffFarm + "% vel. de farmeo", r.buffFarm, (r.buffMin || 60) * 60);
+  if (r.dish) { G.dishes = G.dishes || {}; G.dishes.papa_asada = (G.dishes.papa_asada || 0) + r.dish; }
+  if (r.carnada) G.res.lombriz = (G.res.lombriz || 0) + r.carnada;
   G.daily = { day: st.day, last: dayStamp(0) };
-  log("Cofre diario " + st.day + "/7: " + r.label, "gold");
+  log("Cofre diario " + st.day + "/7: " + detalle, "gold");
   toast("¡Reclamado! Día " + st.day + "/7");
+  if (st.day === 7 && window.celebrate) celebrate({ title: "¡DÍA 7!", sub: "Cofre de recompensas", big: true, reward: detalle });
   refreshHud(); if (typeof syncSlots === "function") syncSlots(); if (isOpen("ov-inv")) refreshInv();
   if (typeof refreshDaily === "function") refreshDaily();
   if (typeof saveFarm === "function") saveFarm(true);
 }
+

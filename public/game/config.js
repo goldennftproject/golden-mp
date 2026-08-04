@@ -53,8 +53,27 @@ GF.WORLD_OBJECTS.push(snap("node_stone", {type:"rock"}, 745, 515, T));
 // ALTAR DE RUNAS (doc maestro 2/8) — al FINAL para preservar layouts guardados
 GF.WORLD_OBJECTS.push(snap("altar", {type:"altar"}, 330, 165, T*2));
 // "2das mejoras": Establo (animales) y Curtiduría (armaduras), juntos para que el bucle quede en la misma zona
-GF.WORLD_OBJECTS.push(snap("establo", {type:"establo"}, 190, 205, T*3));
-GF.WORLD_OBJECTS.push(snap("curtiduria", {type:"curtiduria"}, 190, 380, T*2));
+GF.WORLD_OBJECTS.push(snap("establo", {type:"establo"}, 189, 378, T*3));      // hueco libre verificado (no pisa parcelas, laguna ni cerca)
+GF.WORLD_OBJECTS.push(snap("curtiduria", {type:"curtiduria"}, 315, 378, T*2));   // al lado del Establo, como pide el doc
+
+// AVISO DE SUPERPOSICIÓN: al agregar un edificio nuevo, la consola avisa si pisa parcelas,
+// la laguna, la cerca u otro objeto. Evita repetir el bug del Establo sobre los cultivos (4/8).
+GF.checkLayout = function () {
+  const T2 = GF.TILE, W2 = GF.WORLD_W, H2 = GF.WORLD_H, M = T2 * 0.9, R = [];
+  GF.WORLD_OBJECTS.forEach(o => { const w = o.w, h = w * 0.9; R.push({ n: o.type, x1: o.cx - w / 2, x2: o.cx + w / 2, y1: o.by - h, y2: o.by }); });
+  GF.PLOTS.forEach(p => R.push({ n: "parcela", x1: p.col * T2, x2: (p.col + 1) * T2, y1: p.row * T2, y2: (p.row + 1) * T2 }));
+  R.push({ n: "laguna", x1: GF.POND.col * T2, x2: (GF.POND.col + GF.POND.cols) * T2, y1: GF.POND.row * T2, y2: (GF.POND.row + GF.POND.rows) * T2 });
+  const cruza = (a, b) => a.x1 < b.x2 && b.x1 < a.x2 && a.y1 < b.y2 && b.y1 < a.y2;
+  const avisos = [];
+  GF.WORLD_OBJECTS.forEach(o => {
+    const w = o.w, h = w * 0.9, r = { x1: o.cx - w / 2, x2: o.cx + w / 2, y1: o.by - h, y2: o.by };
+    const natural = o.type === "tree" || o.type === "rock" || o.type === "ore";   // el arte de árboles/rocas tiene copa transparente: no molesta contra la cerca
+    if (!natural && (r.x1 < M || r.x2 > W2 - M || r.y1 < M || r.y2 > H2 - M)) avisos.push(o.type + " se sale de la cerca");
+    R.forEach(q => { if (q.n !== o.type && (q.n === "parcela" || q.n === "laguna") && cruza(r, q)) avisos.push(o.type + " pisa " + q.n); });
+  });
+  if (avisos.length) console.warn("[layout]", [...new Set(avisos)].join(" · "));
+  return avisos;
+};
 
 // lotes 4x3, cada uno 1 celda, alineados a la grilla (col 2, fila 3)
 GF.PLOTS = [];

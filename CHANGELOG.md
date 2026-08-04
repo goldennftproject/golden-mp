@@ -411,6 +411,7 @@ Registro cronológico de todo lo hecho desde el inicio del proyecto (27 de julio
 - **Panel del Establo** con la barra de felicidad de cada animal, cuánto falta para su próxima producción, cuánto rendiría con su felicidad actual y los botones de alimentar y recoger.
 - **Nuevo sink de cultivos**: la cosecha ahora sirve para vender, subir la granja Y alimentar animales.
 - Precios, ciclos, cantidades y la mecánica de felicidad quedaron editables en el panel de balanceo.
+- **Ubicación corregida** (aviso del 4/8): el Establo había quedado encima de las parcelas de cultivo. Ahora Establo y Curtiduría están en un hueco libre verificado, juntos y sin pisar parcelas, laguna, otros edificios ni la cerca. Se agregó además un chequeo automático de layout que avisa por consola si un objeto nuevo se superpone con algo.
 - Arte de los dos edificios y de los materiales: pendiente (usan el respaldo visual hasta generarlo).
 
 ### Fase 5 — La Curtiduría y las 20 piezas de armadura (4/8)
@@ -419,6 +420,13 @@ Registro cronológico de todo lo hecho desde el inicio del proyecto (27 de julio
 - **La defensa de la armadura entra en el combate real** (se suma a la fórmula de daño recibido, junto con las piezas viejas de loot) y el set de Cuero sube la vida máxima de verdad.
 - **Panel de la Curtiduría** con los 4 sets, sus piezas, el costo de cada una, cuáles ya tenés, el bono del set y el botón para ponerte una armadura u otra.
 - Todas las recetas y defensas quedaron editables en el panel de balanceo, pieza por pieza.
+
+### Fase 6 — Cofre de login neutral de 7 días (4/8)
+- **El cofre dejó de repartir progreso**. Antes daba semillas, minerales y plata (justo lo que el documento marca como prohibido). Ahora reparte solo cosas laterales: cosméticos **soulbound** (no vendibles) y consumibles de un uso.
+- **El ciclo del doc**: día 1 decoración · día 2 Bendición del Granjero (+5% de velocidad de farmeo por 1 hora) · día 3 dos platos ya cocinados · día 4 emote o marco · día 5 carnada ×5 · día 6 cosmético sorpresa · **día 7 el coleccionable de la semana**.
+- **Coleccionable rotativo**: 6 piezas exclusivas que van cambiando semana a semana (Espantapájaros dorado, Sombrero brillante, la gallina "Pinta", Farolito de luciérnagas, Camino de pétalos, título "Madrugador"). Como cambia y no vuelve, invita a entrar los 7 días sin regalar nada de poder.
+- **Racha gentil** (recomendación del doc para un juego cozy): si faltás un día no perdés nada, seguís donde quedaste. Se quitó el castigo y el pago de esencia para recuperar la racha.
+- Verificado que el cofre **no toca plata, $Golden, semillas ni recursos** (salvo la carnada, que es el consumible menor previsto) ni da estrellas del pase.
 
 ## Pendientes conocidos
 - En espera del diseñador: **tabla de daño de las armas** (para los tiers completos de espadas), usos de tablones/barras, cerca premium, tabla de stats del bestiario.
