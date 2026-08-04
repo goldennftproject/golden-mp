@@ -451,7 +451,7 @@ function recalcFarmLevel() {
     if (window.celebrate) celebrate({ title: "¡NIVEL " + G.level + "!", sub: "Granja", big: true, reward: gift || "" });
     else { toast("¡Granja nivel " + G.level + "!" + (gift ? " " + gift : "")); if (window.sfx) sfx("level"); }
     if (typeof window.onFarmLevelUp === "function") window.onFarmLevelUp(G.level, gift);
-    if (typeof window.farmScene === "object" && window.farmScene && window.farmScene.syncPlots) { try { window.farmScene.syncPlots(); } catch (e) {} }
+    if (window.farmScene && window.farmScene.refreshPlotLocks) { try { window.farmScene.refreshPlotLocks(); } catch (e) {} }   // la parcela regalada se abre en el acto
   }
   if (typeof refreshBarn === "function" && isOpen("ov-barn")) refreshBarn();
   refreshHud();
@@ -775,7 +775,7 @@ function passClaim(nv, vipTrack) {
   if (r.seed) G.seeds[r.seed[0]] = (G.seeds[r.seed[0]] || 0) + r.seed[1];
   if (r.dish) { G.dishes = G.dishes || {}; G.dishes[r.dish[0]] = (G.dishes[r.dish[0]] || 0) + r.dish[1]; }
   if (r.pick) { G.picks.owned[r.pick] = true; G.picks.dur[r.pick] = (G.picks.dur[r.pick] || 0) + 1; }
-  if (r.ficha) { G.plotsOwned = Math.min(12, (G.plotsOwned || 2) + 1); if (window.farmScene && window.farmScene.syncPlots) try { window.farmScene.syncPlots(); } catch (e) {} }
+  if (r.ficha) { G.plotsOwned = Math.min(12, (G.plotsOwned || 2) + 1); if (window.farmScene && window.farmScene.refreshPlotLocks) { try { window.farmScene.refreshPlotLocks(); } catch (e) {} } }
   if (r.cos) { p.cosmetics.push(r.cos); }
   log("Pase nivel " + nv + (vipTrack ? " (VIP)" : "") + ": recibiste " + passRewardStr(r) + ".", "gold");
   if (typeof tutoEvent === "function") tutoEvent("passclaim");

@@ -696,9 +696,9 @@ class FarmScene extends Phaser.Scene {
         const cost = plotUnlockCost();
         askConfirm("¿Gastar " + cost + " de plata para desbloquear esta parcela?", () => {
           if (G.plata < cost) { toast("Te falta plata (" + cost + ")"); return; }
-          G.plata -= cost; G.plotsOwned = (G.plotsOwned || 2) + 1; o.state = "dry";
-          if (o.ground && this.textures.exists("plot")) { o.ground.setTexture("plot").setDisplaySize(GF.TILE, GF.TILE).clearTint(); o.ground.setAlpha(1); }
-          addXp("farming", 5); this.syncPlots();
+          G.plata -= cost; G.plotsOwned = (G.plotsOwned || 2) + 1;
+          this.refreshPlotLocks();   // un solo camino para abrir parcelas (comprada o regalada)
+          addXp("farming", 5);
           log("Desbloqueaste una parcela por " + cost + " plata.", "good"); toast("¡Parcela desbloqueada!");
           refreshHud(); if (typeof saveFarm === "function") saveFarm(true);
         }, { title: "Desbloquear parcela", yes: "Aceptar", yesClass: "green", no: "Cancelar", noClass: "red" });
@@ -1371,6 +1371,41 @@ class FarmScene extends Phaser.Scene {
 
   // vuelca el estado de las parcelas a G.plots para que el autoguardado lo persista
   syncPlots() { if (this.plots) G.plots = this.plots.map(pl => ({ state: pl.state, readyAt: pl.readyAt, cropKey: pl.cropKey, witherAt: pl.witherAt || 0 })); }
+
+  // Cuando el juego REGALA una parcela (nivel de granja, ficha del pase), hay que abrirla en el acto:
+  // antes se sumaba al guardado pero el dibujo seguía en gris hasta apretar F5 (reporte del diseñador).
+  refreshPlotLocks() {
+    if (!this.plots) return;
+    const owned = Math.max(2, Math.min(GF.PLOTS.length, G.plotsOwned || 2));
+    this.plots.forEach((pl, i) => {
+      if (i < owned && pl.state === "locked") {
+        pl.state = "dry";
+        if (pl.ground) {
+          if (this.textures.exists("plot")) pl.ground.setTexture("plot").setDisplaySize(GF.TILE, GF.TILE);
+          pl.ground.clearTint().setAlpha(1);
+        }
+        this.plotUnlockFx(pl);   // se nota que se abrió
+      } else if (i >= owned && pl.state !== "locked") {
+        pl.state = "locked";
+        if (pl.ground) {
+          if (this.textures.exists("plot_blocked")) pl.ground.setTexture("plot_blocked").setDisplaySize(GF.TILE, GF.TILE).setTint(0x8f8f8f).setAlpha(0.8);
+          else pl.ground.setAlpha(0.45);
+        }
+      }
+    });
+    this.syncPlots();
+  }
+
+  // chispas y un destello sobre la parcela recién regalada
+  plotUnlockFx(pl) {
+    const fx = this.add.circle(pl.cx, pl.by, GF.TILE * 0.55, 0xffd75e, 0.5).setDepth(99990).setBlendMode(Phaser.BlendModes.ADD);
+    this.tweens.add({ targets: fx, scale: 1.8, alpha: 0, duration: 620, onComplete: () => fx.destroy() });
+    for (let i = 0; i < 10; i++) {
+      const a = Math.random() * Math.PI * 2, r = 20 + Math.random() * 26;
+      const sp = this.add.rectangle(pl.cx, pl.by, 3, 3, i % 2 ? 0xfff3cf : 0xffd75e).setDepth(99991);
+      this.tweens.add({ targets: sp, x: pl.cx + Math.cos(a) * r, y: pl.by + Math.sin(a) * r, alpha: 0, duration: 520 + Math.random() * 260, onComplete: () => sp.destroy() });
+    }
+  }
 
   // el cultivo listo que nadie cosechó se marchita (se pierde)
   setWithered(pl) {

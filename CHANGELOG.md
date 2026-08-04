@@ -492,6 +492,11 @@ Los niveles de granja 17, 21 y 27 desbloqueaban "edificio nivel 2" pero no hací
 - El mar se dibuja lo suficientemente grande como para tapar todo lo que la cámara pueda mostrar, sin bordes vacíos.
 - **WASD y las flechas** ya no mueven al granjero invisible en la granja.
 
+### Arreglo: la parcela regalada no aparecía hasta apretar F5 (4/8, reporte del diseñador)
+- Al subir de nivel de granja (o al reclamar una ficha del Pase), la parcela se sumaba al guardado pero **el dibujo seguía en gris** hasta recargar la página.
+- Ahora hay un único camino para abrir parcelas —comprada con plata o regalada— que actualiza el tablero en el acto, con **destello y chispas doradas** sobre la parcela nueva para que se note.
+- Verificado: subir del nivel 1 al 10 abre las 6 parcelas al instante, y la ficha de parcela del Pase también.
+
 ## Pendientes conocidos
 - En espera del diseñador: **tabla de daño de las armas** (para los tiers completos de espadas), usos de tablones/barras, cerca premium, tabla de stats del bestiario.
 - Cuando el diseñador apruebe el doc de farmeo: implementar Girasol, Trigo y Maíz (arte PixelLab + tabla de cultivos) y el sistema de XP de farmeo por niveles.
