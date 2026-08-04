@@ -25,7 +25,8 @@ function snapshot() {
     res: G.res, picks: G.picks, skills: G.skills, fish: G.fish, plots: G.plots, seeds: G.seeds, selSeed: G.selSeed,
     tools: G.tools, toolsLost: G.toolsLost, sflStock: true, invRows: G.invRows, slots: G.slots, hotbar: G.hotbar, hotSel: G.hotSel, hbInit: G.hbInit, layout: G.layout,
     daily: G.daily, plotsOwned: G.plotsOwned, seedBuys: G.seedBuys, built: G.built,
-    hp: G.hp, hpMax: G.hpMax, combatXp: G.combatXp, stam: G.stam, stamAcc: G.stamAcc, stamRec: G.stamRec, pass: G.pass, tuto: G.tuto, firstSeeds: G.firstSeeds, swordOwned: G.swordOwned, bowOwned: G.bowOwned, swordWoodOwned: G.swordWoodOwned, gear: G.gear,
+    hp: G.hp, hpMax: G.hpMax, combatXp: G.combatXp, stam: G.stam, stamAcc: G.stamAcc, stamRec: G.stamRec, pass: G.pass, tuto: G.tuto, firstSeeds: G.firstSeeds,
+    stats: G.stats, statsBase: G.statsBase, chestCap: G.chestCap, edif2: G.edif2, cosmeticos: G.cosmeticos, swordOwned: G.swordOwned, bowOwned: G.bowOwned, swordWoodOwned: G.swordWoodOwned, gear: G.gear,
     armasUnlocked: G.armasUnlocked, treesOpen: G.treesOpen, rocksOpen: G.rocksOpen, firstCropDone: G.firstCropDone, weapons: G.weapons,
     dishes: G.dishes, cooking: G.cooking, chests: G.chests, dummyUsedAt: G.dummyUsedAt,
     layoutPlots: G.layoutPlots, layoutPond: G.layoutPond };
@@ -62,6 +63,11 @@ function hydrate(d) {
   if (d.seedBuys && typeof d.seedBuys === "object") G.seedBuys = { date: d.seedBuys.date || "", count: d.seedBuys.count || 0 };
   if (typeof d.hpMax === "number") G.hpMax = d.hpMax;
   G.combatXp = (typeof d.combatXp === "number") ? d.combatXp : 0;
+  G.stats = (d.stats && typeof d.stats === "object") ? d.stats : {};
+  G.statsBase = (d.statsBase && typeof d.statsBase === "object") ? d.statsBase : {};
+  G.chestCap = Number(d.chestCap) || 0;
+  G.edif2 = (d.edif2 && typeof d.edif2 === "object") ? d.edif2 : {};
+  G.cosmeticos = Array.isArray(d.cosmeticos) ? d.cosmeticos : [];
   G.stam = (typeof d.stam === "number") ? d.stam : null;   // null = arranca llena
   G.stamAcc = (typeof d.stamAcc === "number") ? d.stamAcc : 0;
   G.stamRec = (d.stamRec && typeof d.stamRec === "object") ? d.stamRec : null;

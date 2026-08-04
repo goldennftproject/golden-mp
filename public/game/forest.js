@@ -518,6 +518,7 @@ class ForestScene extends Phaser.Scene {
     addXp(skill || "sword", Math.round(m.def.xp * combatXpMult()));
     addCombatXp(m.def.xp);                                   // barra de Combate global (doc maestro)
     if (typeof tutoEvent === "function") { tutoEvent("kill"); tutoEvent("kill5"); }
+    if (typeof statAdd === "function") statAdd("matar", m.key);
     this.floatTxt(m, "+" + m.def.xp + " XP", "#ffd75e");     // feedback por kill hacia la barra
     // armaduras: chance de drop (se autoequipan si mejoran)
     const drops = [];

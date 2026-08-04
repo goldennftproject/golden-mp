@@ -445,7 +445,7 @@
       <div class="pill" title="Ventanas del juego conectadas ahora"><span class="k">Jugadores en línea</span><b id="s-online">1</b></div>
     </div>
     <div class="hud">
-      <div class="pill"><span class="k">Granja</span><b id="s-level">1</b><span class="k">/10</span></div>
+      <div class="pill"><span class="k">Granja</span><b id="s-level">1</b><span class="k">/50</span></div>
       <div class="pill"><span class="k">Prestigio</span><b id="s-prestige">0</b></div>
       <div class="pill" title="Plata — la moneda del juego"><img class="ric" src="assets/farm/coin_plata.png?a=4" onerror="this.outerHTML='<span class=&quot;coin silver&quot;></span>'"><b id="s-plata">0</b></div>
       <div class="pill" title="Esencia $Golden — se usa para pescar"><img class="ric" src="assets/farm/coin_esencia.png?a=4" onerror="this.outerHTML='✨'"><b id="s-golden">20</b></div>
@@ -462,15 +462,11 @@
   <div id="updbanner">Nueva versión disponible · actualizando en <b class="updc">5</b>s <button id="updnow">Actualizar ahora</button></div>
 
   <!-- overlays -->
-  <div class="ov" id="ov-barn"><div class="card">
+  <div class="ov" id="ov-barn"><div class="card" style="width:min(560px,94%)">
     <button class="close" data-close="ov-barn">×</button>
     <h3>Granja</h3>
-    <div class="sub" id="barn-yield">Yield actual +0%</div>
-    <div class="lvlbar"><i id="lvlbar"></i></div>
-    <div class="cost" id="lvlcost"></div>
-    <div class="row"><button class="green" id="levelup">Subir de nivel</button><button class="gold" id="prestige" style="display:none">Reiniciar granja</button></div>
-    <div class="cost" id="toolinfo" style="display:none"></div>
-    <div class="row"><button class="ghost sm" id="buytool" style="display:none"></button></div>
+    <div class="sub">Del nivel 1 al 10 subís solo cosechando. Del 11 al 50 hace falta la XP y cumplir las tareas del nivel.</div>
+    <div class="forge-list" id="barn-body" style="max-height:60vh"></div>
   </div></div>
 
   <!-- Cofre depósito: 10 espacios de guardado (detalles 29/7) -->

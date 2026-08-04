@@ -143,6 +143,11 @@ var BAL = (function () {
       add(cat, "pass.vipBoost", "Boost de estrellas del VIP (1.2 = +20%)", U.factor, () => PASS_VIP_BOOST, v => { PASS_VIP_BOOST = v; }, 0.1);
     }
 
+    // NIVELES DE GRANJA 1-50
+    for (let n = 2; n <= FARM_NIVEL_MAX; n++) {
+      add("Granja — niveles", "farmXp." + n, "Nivel " + n + " · XP de cosecha acumulada", U.xp, () => FARM_XP_LVLS[n], v => { FARM_XP_LVLS[n] = v; });
+    }
+
     // ESTAMINA DE LA ZONA NEGRA
     { const cat = "Estamina de combate";
       add(cat, "stam.base", "Estamina máxima a nivel 1 de Combate", "puntos · entero", () => STAM_BASE, v => { STAM_BASE = v; });

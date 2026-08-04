@@ -11,6 +11,7 @@ const G = {
   gear: { casco: null, armadura: null, botas: null, escudo: null, arma: null, municion: false },
   weapons: {},                   // doc 2/8: armas nuevas — id ("espada_madera") -> { dur }
   stam: null, stamAcc: 0, stamRec: null,   // estamina de la Zona Negra ("2das mejoras")
+  stats: {}, statsBase: {}, chestCap: 0, edif2: {}, cosmeticos: [],   // tareas de nivel 11-50, mejoras y cosméticos
   combatXp: 0,                   // doc 2/8: barra de Combate GLOBAL — suma la XP de todos los kills
   states: [],                    // doc 2/8: estados/debuffs del bestiario sobre el jugador (no se guardan)
   tuto: { step: 0, n: 0, done: false, v: 2 },   // doc 2/8: tutorial guiado de micro-objetivos (v = versión de la cadena)
@@ -272,7 +273,7 @@ function addXp(sk, amt) {
     if (window.celebrate) celebrate({ title: "¡NIVEL " + after + "!" + (after - before > 1 ? " (+" + (after - before) + ")" : ""), sub: SKILL_NAME[sk] });
     else { toast("" + SKILL_NAME[sk] + " nivel " + after); if (window.sfx) sfx("level"); }
   }
-  if (sk === "farming") recalcFarmLevel();   // doc maestro 2/8: el nivel de granja vive de la XP de farmeo
+  if (sk === "farming" || sk === "mining" || sk === "fishing") recalcFarmLevel();   // la XP de granja y las tareas pueden habilitar el nivel
   if (typeof passEvent === "function") passEvent(sk);   // misiones del Pase de Batalla
   if (isOpen("ov-skills")) refreshSkills();
 }
@@ -295,29 +296,132 @@ function addCookXp(amt) {
 
 // --- niveles de granja ---
 // DOC MAESTRO 2/8: el nivel de granja sube SOLO con XP de Farmeo (curva front-loaded 1-10) y regala desbloqueos
-var FARM_XP_LVLS = [0, 0, 10, 35, 90, 220, 500, 1100, 2400, 5200, 11000];   // índice = nivel, valor = XP de farmeo acumulada
-const FARM_UNLOCK = { 2: "3ª parcela GRATIS", 3: "Horno básico disponible", 4: "4ª parcela GRATIS", 5: "Cocina disponible", 6: "5ª parcela GRATIS", 7: "6ª parcela GRATIS", 8: "Portal de netherita (a futuro)", 9: "Mejoras de endgame", 10: "Maestría de granja" };
-function farmLevelFromXp(xp) { let l = 1; for (let i = 2; i < FARM_XP_LVLS.length; i++) if (xp >= FARM_XP_LVLS[i]) l = i; return Math.min(10, l); }
+// DOC "2das mejoras" (4/8): la granja llega a NIVEL 50. Del 1 al 10 se sube solo con XP de cosecha;
+// del 11 al 50 hace falta la XP Y cumplir TAREAS (plantar, talar, minar, matar, pescar, cocinar).
+var FARM_XP_LVLS = [0, 0, 10, 35, 90, 220, 500, 1100, 2400, 5200, 11000,
+  17600, 25100, 33600, 43300, 54200, 66500, 80400, 96000, 114000, 134000,
+  156000, 180000, 207000, 237000, 270000, 307000, 348000, 393000, 442000, 496000,
+  555000, 619000, 689000, 765000, 848000, 938000, 1030000, 1130000, 1240000, 1360000,
+  1490000, 1630000, 1780000, 1940000, 2110000, 2290000, 2480000, 2680000, 2890000, 3110000];
+const FARM_NIVEL_MAX = 50;
+// tareas por nivel: [tipo, clave, cantidad] · tipos: plantar/talar/minar/matar/pescar/cocinar
+const FARM_TAREAS = {
+  11: [["plantar","repollo",20],["talar",null,30]],
+  12: [["minar","bronce",25],["matar","rata",25]],
+  13: [["plantar","calabaza",25],["matar","larva",20]],
+  14: [["talar",null,40],["matar","murcielago",20]],
+  15: [["plantar","brocoli",30],["minar","hierro",30]],
+  16: [["matar","baba",30],["pescar",null,20]],
+  17: [["plantar","calabaza",35],["minar","bronce",35]],
+  18: [["matar","arana",25],["matar","goblin",25],["talar",null,50]],
+  19: [["cocinar",null,20],["minar","hierro",40]],
+  20: [["plantar","calabaza",40],["matar","orco",30],["matar","rata",20]],
+  21: [["plantar","girasol",30],["minar","oro",40]],
+  22: [["matar","lancero",30],["talar",null,60]],
+  23: [["matar","esqueleto",25],["pescar",null,30]],
+  24: [["plantar","girasol",35],["minar","oro",30]],
+  25: [["matar","golem",20],["cocinar",null,25]],
+  26: [["plantar","trigo",25],["minar","oro",45]],
+  27: [["matar","hombre_lobo",25],["talar",null,80]],
+  28: [["minar","diamante",30],["matar","guerrero",30]],
+  29: [["plantar","trigo",30],["pescar",null,40]],
+  30: [["matar","troll",30],["matar","ogro",20],["minar","diamante",35]],
+  31: [["plantar","trigo",35],["minar","diamante",40]],
+  32: [["matar","ogro",30],["talar",null,100]],
+  33: [["cocinar",null,40],["minar","diamante",45]],
+  34: [["matar","espectro",25],["plantar","trigo",30]],
+  35: [["minar","diamante",50],["matar","ogro",30]],
+  36: [["plantar","maiz",30],["matar","espectro",30]],
+  37: [["minar","netherita",20],["talar",null,120]],
+  38: [["matar","demonio",25],["cocinar",null,50]],
+  39: [["plantar","maiz",35],["minar","netherita",25]],
+  40: [["matar","demonio",30],["minar","netherita",30]],
+  41: [["plantar","maiz",40],["pescar",null,60]],
+  42: [["matar","espectro",40],["matar","demonio",20],["minar","netherita",35]],
+  43: [["minar","netherita",40],["talar",null,150]],
+  44: [["matar","dragon",1],["plantar","maiz",40]],
+  45: [["minar","netherita",45],["matar","demonio",30]],
+  46: [["plantar","maiz",50],["matar","dragon",2]],
+  47: [["minar","netherita",50],["cocinar",null,80]],
+  48: [["matar","dragon",3],["minar","netherita",55]],
+  49: [["plantar","maiz",60],["matar","demonio",50],["matar","dragon",5]],
+  50: [["matar","dragon",5],["minar","netherita",70],["plantar","maiz",80]],
+};
+// recompensas: parcela (nº), cofre (+capacidad), edificio nivel 2, y cosméticos (título/decoración/emote/marco/skin/aura)
+const FARM_UNLOCK = {
+  2: "3ª parcela GRATIS", 3: "Horno básico disponible", 4: "4ª parcela GRATIS", 5: "Cocina disponible",
+  6: "5ª parcela GRATIS", 7: "6ª parcela GRATIS", 8: "Cultivo Girasol", 9: "Cultivo Trigo", 10: "Cultivo Maíz",
+  11: "Decoración de granja", 12: "7ª parcela", 13: "+10 de capacidad de cofre", 14: "Marco de perfil",
+  15: "Título 'Granjero Experto'", 16: "Decoración", 17: "Horno nivel 2 (más rápido)", 18: "8ª parcela",
+  19: "Emote", 20: "Título 'Maestro de Cultivos' + decoración exclusiva", 21: "Cocina nivel 2 (más rápida)",
+  22: "Decoración", 23: "+10 de capacidad de cofre", 24: "Marco de perfil", 25: "9ª parcela + Título 'Veterano'",
+  26: "Decoración", 27: "Altar de Runas nivel 2", 28: "Emote", 29: "Decoración",
+  30: "Título 'Leyenda Naciente' + aura menor", 31: "Decoración", 32: "Marco de perfil", 33: "+15 de capacidad de cofre",
+  34: "Decoración", 35: "10ª parcela + Título 'Amo de la Granja'", 36: "Decoración", 37: "Skin de herramienta",
+  38: "Emote", 39: "Decoración", 40: "Título 'Señor de la Cosecha' + aura", 41: "Decoración", 42: "Marco de perfil",
+  43: "Skin de granjero", 44: "Decoración", 45: "11ª parcela + Título 'Élite'", 46: "Decoración",
+  47: "Skin de arma", 48: "Emote", 49: "Decoración",
+  50: "12ª parcela + Título 'Leyenda de la Granja Dorada' + AURA DORADA + skin de granja legendaria",
+};
+const FARM_PARCELA = { 2:3, 4:4, 6:5, 7:6, 12:7, 18:8, 25:9, 35:10, 45:11, 50:12 };   // nivel → parcelas totales
+const FARM_COFRE   = { 13:10, 23:10, 33:15 };                                          // nivel → capacidad extra de cofre
+const FARM_EDIF2   = { 17:"horno", 21:"cocina", 27:"altar" };                          // nivel → edificio que sube a nivel 2
+
+// ---- contadores de tareas (se guardan) ----
+function statAdd(tipo, key, n) {
+  G.stats = G.stats || {};
+  const t = G.stats[tipo] = G.stats[tipo] || {};
+  const k = key || "_";
+  t[k] = (t[k] || 0) + (n || 1);
+  if (typeof refreshBarn === "function" && isOpen("ov-barn")) refreshBarn();
+}
+function statGet(tipo, key) { return ((G.stats && G.stats[tipo] && G.stats[tipo][key || "_"]) || 0); }
+function statBase(tipo, key) { return ((G.statsBase && G.statsBase[tipo] && G.statsBase[tipo][key || "_"]) || 0); }
+function tareaProgreso(t) { return Math.max(0, statGet(t[0], t[1]) - statBase(t[0], t[1])); }   // cuenta desde que llegaste al nivel actual
+function tareasDelNivel(nv) { return FARM_TAREAS[nv] || []; }
+function tareasCumplidas(nv) { return tareasDelNivel(nv).every(t => tareaProgreso(t) >= t[2]); }
+function snapshotTareas() { G.statsBase = JSON.parse(JSON.stringify(G.stats || {})); }
+const TAREA_TXT = { plantar: "Plantar", talar: "Talar madera", minar: "Minar", matar: "Vencer", pescar: "Pescar", cocinar: "Cocinar platos" };
+function tareaLabel(t) {
+  const [tipo, key, n] = t;
+  if (tipo === "plantar") return "Plantar " + n + " " + ((CROP_DEF[key] && CROP_DEF[key].label) || key);
+  if (tipo === "minar")   return "Minar " + n + " de " + (RES_LABEL[key] || key);
+  if (tipo === "matar")   return "Vencer " + n + " " + ((MONSTER_DEF[key] && MONSTER_DEF[key].label) || key);
+  if (tipo === "talar")   return "Talar " + n + " de madera";
+  if (tipo === "pescar")  return "Pescar " + n + " peces";
+  if (tipo === "cocinar") return "Cocinar " + n + " platos";
+  return tipo + " " + n;
+}
+function farmLevelFromXp(xp) { let l = 1; for (let i = 2; i < FARM_XP_LVLS.length; i++) if (xp >= FARM_XP_LVLS[i]) l = i; return Math.min(FARM_NIVEL_MAX, l); }
+function farmPuedeSubir() {   // ¿se puede pasar al nivel siguiente ahora mismo?
+  const nv = G.level + 1;
+  if (nv > FARM_NIVEL_MAX) return false;
+  if ((G.skills.farming || 0) < (FARM_XP_LVLS[nv] || Infinity)) return false;
+  return tareasCumplidas(nv);   // del 11 en adelante hay tareas; del 1 al 10 la lista está vacía
+}
 function recalcFarmLevel() {
-  const nuevo = farmLevelFromXp(G.skills.farming || 0);
-  while (G.level < nuevo) {
-    G.level++;
+  let subio = false;
+  while (farmPuedeSubir()) {
+    G.level++; subio = true;
     const gift = FARM_UNLOCK[G.level] || "";
-    if (G.level === 2) G.plotsOwned = Math.max(G.plotsOwned || 2, 3);
-    if (G.level === 4) G.plotsOwned = Math.max(G.plotsOwned, 4);
-    if (G.level === 6) G.plotsOwned = Math.max(G.plotsOwned, 5);
-    if (G.level === 7) G.plotsOwned = Math.max(G.plotsOwned, 6);
+    if (FARM_PARCELA[G.level]) G.plotsOwned = Math.max(G.plotsOwned || 2, FARM_PARCELA[G.level]);
+    if (FARM_COFRE[G.level]) G.chestCap = (G.chestCap || 0) + FARM_COFRE[G.level];
+    if (FARM_EDIF2[G.level]) { G.edif2 = G.edif2 || {}; G.edif2[FARM_EDIF2[G.level]] = true; }
+    if (gift && /Título|aura|AURA|Skin|Marco|Emote|Decoración/.test(gift)) { G.cosmeticos = G.cosmeticos || []; G.cosmeticos.push("Nivel " + G.level + ": " + gift); }
+    snapshotTareas();   // las tareas del próximo nivel se cuentan desde cero
     log(`¡GRANJA NIVEL ${G.level}!` + (gift ? " Desbloqueaste: " + gift + "." : ""), "gold");
     if (window.celebrate) celebrate({ title: "¡NIVEL " + G.level + "!", sub: "Granja", big: true, reward: gift || "" });
     else { toast("¡Granja nivel " + G.level + "!" + (gift ? " " + gift : "")); if (window.sfx) sfx("level"); }
-    if (typeof window.onFarmLevelUp === "function") window.onFarmLevelUp(G.level, gift);   // celebración (Fase 5)
+    if (typeof window.onFarmLevelUp === "function") window.onFarmLevelUp(G.level, gift);
+    if (typeof window.farmScene === "object" && window.farmScene && window.farmScene.syncPlots) { try { window.farmScene.syncPlots(); } catch (e) {} }
   }
   if (typeof refreshBarn === "function" && isOpen("ov-barn")) refreshBarn();
   refreshHud();
+  if (subio && typeof saveFarm === "function") saveFarm(true);
 }
 function canLevel() { return false; }   // legado: ya no se sube pagando recursos
 function levelUp() { toast("El nivel sube cosechando (XP de Farmeo)"); }
-function prestige() { if (G.level < 10) { toast("Llegá a nivel 10"); return; } G.prestige++; G.level=1; for (const k in G.res) G.res[k]=0; log(`Reinicio. Prestigio ${G.prestige}.`, "gold"); toast("Prestigio " + G.prestige + "!"); refreshBarn(); refreshHud(); }
+function prestige() { if (G.level < FARM_NIVEL_MAX) { toast("Llegá a nivel " + FARM_NIVEL_MAX); return; } G.prestige++; G.level=1; for (const k in G.res) G.res[k]=0; log(`Reinicio. Prestigio ${G.prestige}.`, "gold"); toast("Prestigio " + G.prestige + "!"); refreshBarn(); refreshHud(); }
 
 // --- minerales y picos ---
 const ORE_ORDER = ["piedra","bronce","oro","diamante","netherita"];
@@ -1129,6 +1233,7 @@ function checkCooking() {
       addXp("cooking", r.xp);
       log(r.emoji + " ¡" + r.label + " listo! Lo tenés en la bolsa.", "gold"); toast(r.emoji + " ¡" + r.label + " listo!");
       if (typeof tutoEvent === "function") tutoEvent("cook");
+      statAdd("cocinar");
     }
     lista.splice(i, 1); listos++;
   }
@@ -1181,7 +1286,7 @@ function craftChest() {
   if (!canAfford(CHEST_COST)) { toast("Te faltan materiales"); return; }
   if (G.plata < CHEST_PLATA) { toast("Te falta plata (" + CHEST_PLATA + " )"); return; }
   payCost(CHEST_COST); G.plata -= CHEST_PLATA;
-  G.chests.push({ col: null, row: null, items: Array(CHEST_SLOTS).fill(null) });   // queda EN LA BOLSA hasta que lo coloques
+  G.chests.push({ col: null, row: null, items: Array(CHEST_SLOTS + (G.chestCap || 0)).fill(null) });   // capacidad base + la ganada por niveles de granja
   addXp("crafting", 8);
   log("Crafteaste un cofre depósito — está en tu bolsa. Colocalo con un clic desde la bolsa.", "gold");
   toast("Cofre en la bolsa (" + G.chests.length + "/" + CHEST_MAX + ")"); forgeWork();
@@ -1470,6 +1575,7 @@ function goFishing() {
   const r = Math.random();
   let rar; if (r < 0.60) rar = "comun"; else if (r < 0.85) rar = "raro"; else if (r < 0.97) rar = "epico"; else rar = "legendario";
   G.fish[rar]++; addXp("fishing", 8); addXp("cooking", 3);
+  if (typeof statAdd === "function") statAdd("pescar");
   if (typeof tutoEvent === "function") tutoEvent("fish");
   if (rar === "comun") { const p = 8 + Math.floor(Math.random() * 8); G.plata += p; log(`Pez común: +${p} plata.`); toast("+" + p + " "); }
   else if (rar === "raro") { addBuff("yield", "Yield +10%", 1.10, 90); log("Pez raro: buff Yield +10% (90s).", "good"); toast("¡Buff de yield!"); }

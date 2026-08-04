@@ -814,18 +814,34 @@ function refreshSeedShop() {
 
 /* ---- granja (nivel) ---- */
 function refreshBarn() {
-  $("barn-yield").textContent = "Yield actual +" + ((yieldMult() - 1) * 100).toFixed(1) + "%";
-  const bar = $("lvlbar"), cost = $("lvlcost"), lb = $("levelup"), pb = $("prestige");
-  if (G.level >= 10) { bar.style.width = "100%"; cost.innerHTML = "<b>Nivel máximo.</b> Reiniciá la granja para yield permanente."; lb.style.display = "none"; pb.style.display = "inline-block"; }
-  else {   // doc maestro 2/8: el nivel de granja sube con XP de Farmeo (nada de pagar recursos)
-    const need = FARM_XP_LVLS[G.level + 1] || 1, xp = (G.skills && G.skills.farming) || 0;
-    lb.style.display = "none"; pb.style.display = "none";
-    bar.style.width = Math.min(100, Math.round(xp / need * 100)) + "%";
-    cost.innerHTML = "El nivel sube cosechando: <b>" + fmt(xp) + " / " + fmt(need) + " XP de Farmeo</b>."
-      + (FARM_UNLOCK[G.level + 1] ? "<br>Próximo desbloqueo: <b>" + FARM_UNLOCK[G.level + 1] + "</b>" : "");
+  const box = $("barn-body") || $("barn-list") || document.querySelector("#ov-barn .card");
+  const nv = G.level, sig = nv + 1;
+  const xp = Math.floor(G.skills.farming || 0);
+  const need = FARM_XP_LVLS[sig];
+  let h = '<div class="fnm" style="font-size:15px">Granja nivel ' + nv + ' / ' + FARM_NIVEL_MAX + '</div>';
+  if (sig > FARM_NIVEL_MAX) h += '<div class="fds">¡Máximo alcanzado! Leyenda de la Granja Dorada.</div>';
+  else {
+    const desde = FARM_XP_LVLS[nv] || 0;
+    const pct = Math.max(0, Math.min(100, Math.round((xp - desde) / Math.max(1, need - desde) * 100)));
+    h += '<div class="durbar" style="margin:6px 0"><i style="width:' + pct + '%"></i></div>';
+    h += '<div class="fds">XP de cosecha: ' + fmt(xp) + ' / ' + fmt(need) + '</div>';
+    const tareas = tareasDelNivel(sig);
+    if (tareas.length) {
+      h += '<div class="fnm" style="margin-top:8px">Tareas para el nivel ' + sig + '</div>';
+      tareas.forEach(t => {
+        const p0 = Math.min(tareaProgreso(t), t[2]), ok = p0 >= t[2];
+        h += '<div class="forge-row' + (ok ? ' eq' : '') + '"><div class="finfo"><div class="fnm">' + tareaLabel(t) + (ok ? ' ✓' : '') + '</div>' +
+          '<div class="durbar"><i style="width:' + Math.round(p0 / t[2] * 100) + '%"></i></div>' +
+          '<div class="fds">' + p0 + '/' + t[2] + '</div></div></div>';
+      });
+    } else h += '<div class="fds">Nivel rápido: sube solo con la XP de cosecha.</div>';
+    if (FARM_UNLOCK[sig]) h += '<div class="fds" style="margin-top:6px;color:#3f6b2a"><b>Recompensa del nivel ' + sig + ':</b> ' + FARM_UNLOCK[sig] + '</div>';
   }
-  const ti = $("toolinfo"); if (ti) ti.style.display = "none"; const bt = $("buytool"); if (bt) bt.style.display = "none";
+  h += '<div class="fds" style="margin-top:8px">Parcelas: ' + (G.plotsOwned || 2) + ' · Cofres: +' + (G.chestCap || 0) + ' de capacidad</div>';
+  if ((G.cosmeticos || []).length) h += '<div class="fds">Cosméticos ganados: ' + G.cosmeticos.length + '</div>';
+  if (box) box.innerHTML = h;
 }
+
 
 /* ---- configuración ---- */
 function refreshConfig() {

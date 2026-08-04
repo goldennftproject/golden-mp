@@ -764,6 +764,7 @@ class FarmScene extends Phaser.Scene {
         // tocón nuevo con base de tierra y hojas caídas (encuadre del árbol, va a tamaño completo); respaldo: tocón viejo chico
         if (this.textures.exists("tree_stump_leaves")) this.setObjTex(o, "tree_stump_leaves", (o.rw || o.w) * 0.85);   // −15%: el tocón venía más grueso que el tronco del árbol
         else this.setObjTex(o, "tree_stump", (o.rw || o.w) * 0.42);
+        statAdd("talar", null, gr);
         log(`+${gr} Madera. ${toolDur("axe")}/${TOOL_DEF.axe.max}`, "good"); toast("+" + gr + " "); refreshHud();
         if (typeof tutoEvent === "function") tutoEvent("gather");
         if (toolDur("axe") <= 0) { log("¡El hacha se rompió en pedazos! Crafteá otra en la Herrería.", "bad"); toast("¡Hacha rota!"); }
@@ -783,7 +784,7 @@ class FarmScene extends Phaser.Scene {
       if (tryAddRes("piedra", gr)) {
         const pk = equippedPick();   // picar piedra también gasta el pico (bug reportado)
         if (pk) { G.picks.dur[pk] = Math.max(0, (G.picks.dur[pk] || 0) - 1); if (G.picks.dur[pk] <= 0) { log(`¡${PICK_DEF[pk].label} se rompió en pedazos! Crafteá otro en la Herrería.`, "bad"); toast("¡Pico destruido!"); destroyPick(pk); } }
-        addXp("mining", 5); o.readyAt = nowMs() + CD.rock * 1000 * cdMult(); this.setObjTex(o, "node_stone_mined", o.rw || GF.TILE); log(`+${gr} Piedra.` + (pk ? ` ${G.picks.dur[pk]}/${PICK_DEF[pk].dur}` : ""), "good"); toast("+" + gr + " "); refreshHud();
+        addXp("mining", 5); statAdd("minar", "piedra", gr); o.readyAt = nowMs() + CD.rock * 1000 * cdMult(); this.setObjTex(o, "node_stone_mined", o.rw || GF.TILE); log(`+${gr} Piedra.` + (pk ? ` ${G.picks.dur[pk]}/${PICK_DEF[pk].dur}` : ""), "good"); toast("+" + gr + " "); refreshHud();
         if (typeof tutoEvent === "function") tutoEvent("gather");
       }
       else { toast("Bolsa llena — no podés picar"); log("Bolsa llena: liberá espacio para seguir picando.", "bad"); }
@@ -799,7 +800,7 @@ class FarmScene extends Phaser.Scene {
       const gr = 1;   // viernes (2): todos los recursos dan 1
       if (tryAddRes(o.ore, gr)) {
         G.picks.dur[pk] = Math.max(0, (G.picks.dur[pk] || 0) - 1);
-        addXp("mining", 5 + od.tier * 3);
+        addXp("mining", 5 + od.tier * 3); statAdd("minar", o.ore, gr);
         o.readyAt = nowMs() + oreCdSec(od.tier) * 1000 * cdMult();
         if (this.textures.exists(o.baseKey + "_mined")) this.setObjTex(o, o.baseKey + "_mined", o.rw || GF.TILE); else o.sprite.setAlpha(0.4);
         log(`${od.emoji} +${gr} ${od.label}. ${G.picks.dur[pk]}/${pd.dur}`, "good"); toast("+" + gr + " " + od.emoji); refreshHud();
@@ -815,7 +816,7 @@ class FarmScene extends Phaser.Scene {
         o.readyAt = nowMs() + (starter ? Math.min(FIRST_GROW_MS, real) : real);   // nunca más lento que el tiempo real del cultivo
         o.growTotal = o.readyAt - nowMs();
         this.showGrowing(o);
-        this.syncPlots(); addXp("farming", 5); log(`Plantaste ${cd.label}.`, "good"); toast("" + cd.label);
+        this.syncPlots(); addXp("farming", 5); statAdd("plantar", ck); log(`Plantaste ${cd.label}.`, "good"); toast("" + cd.label);
         if (typeof tutoEvent === "function") tutoEvent("plant");
         if (isOpen("ov-inv")) refreshInv();
       }

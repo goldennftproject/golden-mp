@@ -395,6 +395,14 @@ Registro cronológico de todo lo hecho desde el inicio del proyecto (27 de julio
 - Sin estamina el aviso explica cómo recuperarla y el combate simplemente no avanza (no te mata ni te expulsa).
 - Todo editable en el panel: máximo, escalón por nivel, tope, ritmo de regeneración, precio y cupo de recargas, y el costo de cada una de las 18 criaturas por separado.
 
+### Fase 3 — Niveles de granja 1 a 50 (4/8)
+- **La granja llega a nivel 50** (antes 10). Del 1 al 10 se sube solo con XP de cosecha, como hasta ahora; **del 11 al 50 hace falta la XP Y cumplir las tareas del nivel**, que es lo que obliga a tocar todos los pilares del juego.
+- **40 niveles con sus tareas**, tomadas del documento: plantar cultivos concretos, talar madera, minar bronce/hierro/oro/diamante/netherita, vencer criaturas específicas (de Ratas a Dragones), pescar y cocinar. Escalan por contenido a medida que subís.
+- **Las tareas se cuentan desde que llegás al nivel**: lo que hiciste antes no arrastra, así cada nivel pide trabajo nuevo.
+- **El Granero se rehízo**: muestra el nivel actual sobre 50, la barra de XP hacia el siguiente, la lista de tareas con su progreso individual (20/30 ✓) y cuál es la recompensa del próximo nivel.
+- **Recompensas aplicadas**: parcelas 7ª a 12ª (niveles 12, 18, 25, 35, 45 y 50), capacidad extra de cofre (+10, +10, +15), edificios de nivel 2 (Horno 17, Cocina 21, Altar 27) y los cosméticos —títulos, decoraciones, marcos, emotes, skins y auras— que quedan registrados en la cuenta.
+- Contadores de tareas guardados con la partida y XP de cada nivel editable en el panel de balanceo. El prestigio ahora pide nivel 50.
+
 ## Pendientes conocidos
 - En espera del diseñador: **tabla de daño de las armas** (para los tiers completos de espadas), usos de tablones/barras, cerca premium, tabla de stats del bestiario.
 - Cuando el diseñador apruebe el doc de farmeo: implementar Girasol, Trigo y Maíz (arte PixelLab + tabla de cultivos) y el sistema de XP de farmeo por niveles.
