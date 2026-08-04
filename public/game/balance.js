@@ -97,6 +97,10 @@ var BAL = (function () {
       const o = ORE_DEF[k];
       add("Minerales", "ore." + k + ".cd", o.label + " · enfriamiento del nodo", "", () => o.cd, v => { o.cd = v; }, 1, "tiempo");
     });
+    Object.keys(CD_RAPIDO).forEach(k => {
+      add("Minerales — arranque rápido", "cdRap." + k + ".seg", k + " · enfriamiento de las primeras veces", "", () => CD_RAPIDO[k].seg, v => { CD_RAPIDO[k].seg = v; }, 1, "tiempo");
+      add("Minerales — arranque rápido", "cdRap." + k + ".veces", k + " · cuántas veces dura el arranque rápido", "veces · entero", () => CD_RAPIDO[k].veces, v => { CD_RAPIDO[k].veces = v; });
+    });
     add("Minerales", "golpesTalar", "Clics para tumbar un árbol", "golpes · entero", () => GOLPES_TALAR, v => { GOLPES_TALAR = v; });
     add("Minerales", "golpesMinar", "Clics para romper una roca o mineral", "golpes · entero", () => GOLPES_MINAR, v => { GOLPES_MINAR = v; });
     add("Minerales", "cd.tree", "Árbol · enfriamiento tras talar", "", () => CD.tree, v => { CD.tree = v; }, 1, "tiempo");

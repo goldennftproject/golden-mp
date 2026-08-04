@@ -457,6 +457,14 @@ Los tres cambios son estructurales y quedaron detrás de **interruptores indepen
 - **Compra atómica**: la reserva se hace con una actualización condicional en la base, así dos jugadores no pueden llevarse lo mismo — al que llega segundo le avisa "se lo llevaron primero".
 - **Seguridad**: se agregó `sql/market.sql` con la tabla y las reglas RLS de Supabase para que nadie pueda tocar publicaciones ajenas, publicar a nombre de otro ni cobrar ventas que no son suyas. **Hay que correr ese SQL en Supabase una vez** para que el mercado funcione.
 
+### Enfriamientos chill de árboles y minerales (4/8, doc del diseñador)
+- **Filosofía del documento aplicada**: enfriamientos LARGOS estilo Sunflower Land, pero con las primeras recolecciones de cada nodo en pocos minutos para el enganche — la misma idea de la primera papa.
+- **Arranque rápido por nodo**: Árbol 3 min (las primeras 3) · Piedra 4 min (3) · Bronce 6 min (2) · Hierro 8 min (2) · Oro y Diamante 12 min (1) · Netherita 15 min (1). Se cuenta **por nodo**, así que cada árbol o veta nueva que desbloqueás estrena su propio arranque rápido.
+- **Enfriamiento chill después**: Árbol 1 h 30 min · Piedra 2 h · Bronce 8 h · Hierro 12 h · **Oro, Diamante y Netherita 14 h**, que comparten tiempo a propósito para que la minería del endgame sea una sola expedición con propósito.
+- **Reemplaza el "netherita cada 4 h"** del changelog viejo: ahora su rareza viene del combo pico + PvP + enfriamiento.
+- **Etapa intermedia a la mitad del enfriamiento** también para rocas y minerales (antes solo el árbol): de un vistazo se ve cuánto falta.
+- Los tiempos rápidos, cuántas veces duran y los enfriamientos largos quedaron editables en el panel. Se corrigió además que el Hierro no aparecía en la lista de minerales del panel de balanceo.
+
 ## Pendientes conocidos
 - En espera del diseñador: **tabla de daño de las armas** (para los tiers completos de espadas), usos de tablones/barras, cerca premium, tabla de stats del bestiario.
 - Cuando el diseñador apruebe el doc de farmeo: implementar Girasol, Trigo y Maíz (arte PixelLab + tabla de cultivos) y el sistema de XP de farmeo por niveles.

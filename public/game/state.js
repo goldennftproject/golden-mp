@@ -15,6 +15,7 @@ const G = {
   animals: {},                   // Establo: animal → { desde, feliz, comidoAt, prodAt }
   armor: {}, armorEq: null,      // Curtiduría: piezas crafteadas y set equipado
   ofrendaPts: 0, ofrendaLog: 0,  // Altar de Ofrendas: puntos acumulados y recursos quemados
+  nodoUsos: {},                  // cuántas veces se recogió de cada nodo (para el arranque rápido)
   incursion: null, incDia: null, dummyTrain: null,   // incursiones de un clic y entrenamiento offline   // tareas de nivel 11-50, mejoras y cosméticos
   combatXp: 0,                   // doc 2/8: barra de Combate GLOBAL — suma la XP de todos los kills
   states: [],                    // doc 2/8: estados/debuffs del bestiario sobre el jugador (no se guardan)
@@ -156,7 +157,27 @@ function selectSeed(k) { if (!CROP_DEF[k]) return; G.selSeed = k; if (isOpen("ov
 // cupo diario de semillas (anti-inflación): compras + las del cofre suman al mismo límite
 var SEED_DAILY_BASE = 18, SEED_DAILY_POR_NIVEL = 2;   // "2das mejoras": el cupo escala con el nivel de granja
 function seedDailyMax() { return SEED_DAILY_BASE + SEED_DAILY_POR_NIVEL * (G.level || 1); }
-var CD = { tree: 14, rock: 20 };   // enfriamiento (s) de árbol y piedra — editable en balance.html
+// Doc "Enfriamiento de Árboles y Minerales" (4/8): farmeo chill. Las primeras recolecciones de cada
+// nodo salen en minutos (enganche) y después el nodo pasa a su enfriamiento largo real.
+var CD = { tree: 5400, rock: 7200 };            // 1 h 30 min el árbol · 2 h la piedra
+var CD_RAPIDO = {                                // enfriamiento corto de las primeras veces
+  tree:      { seg: 180, veces: 3 },             // 3 min · las primeras 3
+  piedra:    { seg: 240, veces: 3 },             // 4 min · las primeras 3
+  bronce:    { seg: 360, veces: 2 },             // 6 min · las primeras 2
+  hierro:    { seg: 480, veces: 2 },             // 8 min · las primeras 2
+  oro:       { seg: 720, veces: 1 },             // 12 min · la primera
+  diamante:  { seg: 720, veces: 1 },             // 12 min · la primera
+  netherita: { seg: 900, veces: 1 },             // 15 min · la primera
+};
+// cuántas veces se recogió YA de ese nodo (por nodo, no global)
+function nodoUsos(o) { G.nodoUsos = G.nodoUsos || {}; return G.nodoUsos[o.i] || 0; }
+function nodoSumar(o) { G.nodoUsos = G.nodoUsos || {}; G.nodoUsos[o.i] = nodoUsos(o) + 1; }
+// enfriamiento que corresponde a este nodo AHORA (en segundos)
+function nodoCd(o, clave, cdLargo) {
+  const r = CD_RAPIDO[clave];
+  if (r && nodoUsos(o) < r.veces) return r.seg;   // todavía está en su etapa de arranque rápido
+  return cdLargo;
+}
 function seedBuysToday() {
   const sb = G.seedBuys || (G.seedBuys = { date: "", count: 0 });
   if (sb.date !== dayStamp(0)) { sb.date = dayStamp(0); sb.count = 0; }
@@ -431,14 +452,14 @@ function levelUp() { toast("El nivel sube cosechando (XP de Farmeo)"); }
 function prestige() { if (G.level < FARM_NIVEL_MAX) { toast("Llegá a nivel " + FARM_NIVEL_MAX); return; } G.prestige++; G.level=1; for (const k in G.res) G.res[k]=0; log(`Reinicio. Prestigio ${G.prestige}.`, "gold"); toast("Prestigio " + G.prestige + "!"); refreshBarn(); refreshHud(); }
 
 // --- minerales y picos ---
-const ORE_ORDER = ["piedra","bronce","oro","diamante","netherita"];
+const ORE_ORDER = ["piedra","bronce","hierro","oro","diamante","netherita"];
 const ORE_DEF = {
-  piedra:   { tier:0, label:"Piedra",    emoji:"🪨", sprite:"node_stone",     cd:60,  yield:1, price:6 },
-  bronce:   { tier:1, label:"Bronce",    emoji:"🟫", sprite:"node_bronze",    cd:75,  yield:1, price:12 },
-  hierro:   { tier:2, label:"Hierro",    emoji:"⛓️", sprite:"node_iron",      cd:80,  yield:1, price:15 },   // viernes (2): lo mina el Pico de Hierro
-  oro:      { tier:3, label:"Oro",       emoji:"🟡", sprite:"node_gold",      cd:90,  yield:1, price:30 },
-  diamante: { tier:4, label:"Diamante",  emoji:"💎", sprite:"node_diamond",   cd:110, yield:1, price:80 },
-  netherita:{ tier:5, label:"Netherita", emoji:"🔶", sprite:"node_netherite", cd:150, yield:1, price:200 },
+  piedra:   { tier:0, label:"Piedra",    emoji:"🪨", sprite:"node_stone",     cd:7200,  yield:1, price:6 },
+  bronce:   { tier:1, label:"Bronce",    emoji:"🟫", sprite:"node_bronze",    cd:28800,  yield:1, price:12 },
+  hierro:   { tier:2, label:"Hierro",    emoji:"⛓️", sprite:"node_iron",      cd:43200,  yield:1, price:15 },   // viernes (2): lo mina el Pico de Hierro
+  oro:      { tier:3, label:"Oro",       emoji:"🟡", sprite:"node_gold",      cd:50400,  yield:1, price:30 },
+  diamante: { tier:4, label:"Diamante",  emoji:"💎", sprite:"node_diamond",   cd:50400, yield:1, price:80 },
+  netherita:{ tier:5, label:"Netherita", emoji:"🔶", sprite:"node_netherite", cd:50400, yield:1, price:200 },
 };
 const PICK_ORDER = ["stone","bronze","iron","gold","diamond","netherite"];
 const PICK_DEF = {

@@ -3,7 +3,7 @@
 function witherMs(ck) { const cd = CROP_DEF[ck]; return cd ? cd.grow * 1000 * 0.5 : 120000; }   // marchitado proporcional: mitad del tiempo de cultivo
 const ACT_DUR = { chop: 0.9, mine: 0.85, plant: 0.6, harvest: 0.6, water: 0.6, fish: 1.5 };   // "detallitos (1)" punto 11: 1 golpe por clic
 var GOLPES_TALAR = 3, GOLPES_MINAR = 3;   // clics necesarios para tumbar un árbol o romper una roca (editable)
-function oreCdSec(tier) { return 20 + tier * 6; }   // 20/26/32/38/44s — se nota el estado dañado a la mitad
+// (los enfriamientos ahora salen de ORE_DEF[x].cd y de nodoCd(), doc 4/8)
 
 class FarmScene extends Phaser.Scene {
   constructor() { super("farm"); }
@@ -845,8 +845,8 @@ class FarmScene extends Phaser.Scene {
       o.golpes = 0;
       const gr = 1;   // viernes (2): todos los recursos dan 1
       if (tryAddRes("madera", gr)) {
-        useTool("axe"); addXp("crafting", 4); o.readyAt = nowMs() + CD.tree * 1000 * cdMult();
-        o.halfAt = nowMs() + (o.readyAt - nowMs()) / 2;   // detalles viernes: a mitad del enfriamiento asoma el árbol a medio crecer
+        useTool("axe"); addXp("crafting", 4); nodoSumar(o); o.readyAt = nowMs() + nodoCd(o, "tree", CD.tree) * 1000 * cdMult();
+        o.halfAt = nowMs() + (o.readyAt - nowMs()) / 2;   // a mitad del enfriamiento asoma el árbol a medio crecer (doc 4/8)
         // tocón nuevo con base de tierra y hojas caídas (encuadre del árbol, va a tamaño completo); respaldo: tocón viejo chico
         if (this.textures.exists("tree_stump_leaves")) this.setObjTex(o, "tree_stump_leaves", (o.rw || o.w) * 0.85);   // −15%: el tocón venía más grueso que el tronco del árbol
         else this.setObjTex(o, "tree_stump", (o.rw || o.w) * 0.42);
@@ -870,7 +870,7 @@ class FarmScene extends Phaser.Scene {
       if (tryAddRes("piedra", gr)) {
         const pk = equippedPick();   // picar piedra también gasta el pico (bug reportado)
         if (pk) { G.picks.dur[pk] = Math.max(0, (G.picks.dur[pk] || 0) - 1); if (G.picks.dur[pk] <= 0) { log(`¡${PICK_DEF[pk].label} se rompió en pedazos! Crafteá otro en la Herrería.`, "bad"); toast("¡Pico destruido!"); destroyPick(pk); } }
-        addXp("mining", 5); statAdd("minar", "piedra", gr); o.readyAt = nowMs() + CD.rock * 1000 * cdMult(); this.setObjTex(o, "node_stone_mined", o.rw || GF.TILE); log(`+${gr} Piedra.` + (pk ? ` ${G.picks.dur[pk]}/${PICK_DEF[pk].dur}` : ""), "good"); toast("+" + gr + " "); refreshHud();
+        addXp("mining", 5); statAdd("minar", "piedra", gr); nodoSumar(o); o.readyAt = nowMs() + nodoCd(o, "piedra", CD.rock) * 1000 * cdMult(); o.halfAt = nowMs() + (o.readyAt - nowMs()) / 2; this.setObjTex(o, "node_stone_mined", o.rw || GF.TILE); log(`+${gr} Piedra.` + (pk ? ` ${G.picks.dur[pk]}/${PICK_DEF[pk].dur}` : ""), "good"); toast("+" + gr + " "); refreshHud();
         if (typeof tutoEvent === "function") tutoEvent("gather");
       }
       else { toast("Bolsa llena — no podés picar"); log("Bolsa llena: liberá espacio para seguir picando.", "bad"); }
@@ -887,7 +887,8 @@ class FarmScene extends Phaser.Scene {
       if (tryAddRes(o.ore, gr)) {
         G.picks.dur[pk] = Math.max(0, (G.picks.dur[pk] || 0) - 1);
         addXp("mining", 5 + od.tier * 3); statAdd("minar", o.ore, gr);
-        o.readyAt = nowMs() + oreCdSec(od.tier) * 1000 * cdMult();
+        nodoSumar(o); o.readyAt = nowMs() + nodoCd(o, o.ore, od.cd) * 1000 * cdMult();
+        o.halfAt = nowMs() + (o.readyAt - nowMs()) / 2;
         if (this.textures.exists(o.baseKey + "_mined")) this.setObjTex(o, o.baseKey + "_mined", o.rw || GF.TILE); else o.sprite.setAlpha(0.4);
         log(`${od.emoji} +${gr} ${od.label}. ${G.picks.dur[pk]}/${pd.dur}`, "good"); toast("+" + gr + " " + od.emoji); refreshHud();
         if (typeof tutoEvent === "function") { tutoEvent("gather"); tutoEvent("mineore"); }
@@ -1366,11 +1367,16 @@ class FarmScene extends Phaser.Scene {
         if (o.type === "tree" || o.type === "rock") this.setObjTex(o, o.baseKey, o.rw || o.w);
         else if (o.type === "ore") { this.setObjTex(o, o.baseKey, o.rw || o.w); o.sprite.setAlpha(1); }
         if (o.timer) o.timer.setVisible(false);
-      } else if (o.readyAt && o.type === "tree" && o.halfAt && t >= o.halfAt) {
-        // mitad del enfriamiento: el árbol pelado con pocas ramas (PixelLab 31/7; respaldo: sprout)
+      } else if (o.readyAt && o.halfAt && t >= o.halfAt) {
+        // MITAD del enfriamiento: se ve que va regenerando (doc 4/8)
         o.halfAt = 0;
-        if (this.textures.exists("tree_half")) this.setObjTex(o, "tree_half", o.rw || o.w);
-        else if (this.textures.exists("sprout")) this.setObjTex(o, "sprout", (o.rw || o.w) * 0.6);
+        if (o.type === "tree") {
+          if (this.textures.exists("tree_half")) this.setObjTex(o, "tree_half", o.rw || o.w);
+          else if (this.textures.exists("sprout")) this.setObjTex(o, "sprout", (o.rw || o.w) * 0.6);
+        } else if (o.type === "rock" || o.type === "ore") {
+          if (this.textures.exists(o.baseKey + "_half")) this.setObjTex(o, o.baseKey + "_half", o.rw || o.w);
+          else o.sprite.setAlpha(0.75);
+        }
       } else if (o.readyAt && o.timer) {
         // cuarta.docx: el timer del recurso solo aparece con el cursor encima (al clickear ya sale el aviso)
         const p = this.input.activePointer;
