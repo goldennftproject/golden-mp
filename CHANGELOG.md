@@ -374,6 +374,17 @@ Registro cronológico de todo lo hecho desde el inicio del proyecto (27 de julio
 10. **Misiones del Pase**: cada misión (diaria y semanal) muestra su recompensa en estrellas y avisa "CUMPLIDA (+N estrellas cobradas)". Verificado que la semanal acredita sus 40 estrellas.
 11. **Menú**: la entrada "Mercado" pasó a llamarse **Tienda**, que es la ventana que abre (con sus pestañas Comprar / Vender).
 
+## 2das mejoras — documentos del 4/8
+
+### Fase 1 — Economía y ajustes rápidos (4/8)
+- **Tabla oficial de cultivos (1-10)**: vuelve la escala del changelog (Papa 1/3 … Brócoli 90/210) y se suman los tres nuevos con el mismo criterio: Girasol 180/420, Trigo 360/840, Maíz 720/1.680. Tiempos 9 min → 24 h y XP por cosecha = minutos de crecimiento. Ganancia por hora pareja de 12-13 en los tiers bajos y creciente en los altos (15 → 40), como pide el documento. **Reemplaza la tabla del doc de farmeo v5** (papa 20/21), que el propio documento identifica como el problema.
+- **Cupo diario de semillas que escala**: 18 + 2 × nivel de granja (20 en nivel 1, 38 en el 10, 58 en el 20) en vez del 30 fijo. Base y escalón editables.
+- **Mobs más duros**: multiplicadores globales de daño (×1,3) y defensa (×1,5) sobre el bestiario, editables en el panel para seguir afinando.
+- **La vida se regenera sola en la granja** (1 por segundo, editable) y NO en la Zona Negra, donde sigue dependiendo de la comida.
+- **Granjero más lento en la Zona Negra** (75% de su velocidad normal, editable).
+- **Talar y minar en 3 clics**: cada clic es un golpe con su animación y su feedback ("¡Golpe 2/3!"); al tercero cae el recurso. El árbol muestra sus cortes intermedios y la roca su estado dañado. Cantidad de golpes editable por separado para árboles y minerales.
+- **Ranking con Top skill**: pestaña nueva que ordena por la skill más alta de cada jugador y muestra cuál es (por ejemplo "Minería 24").
+
 ## Pendientes conocidos
 - En espera del diseñador: **tabla de daño de las armas** (para los tiers completos de espadas), usos de tablones/barras, cerca premium, tabla de stats del bestiario.
 - Cuando el diseñador apruebe el doc de farmeo: implementar Girasol, Trigo y Maíz (arte PixelLab + tabla de cultivos) y el sistema de XP de farmeo por niveles.

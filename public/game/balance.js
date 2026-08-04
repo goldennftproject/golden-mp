@@ -38,7 +38,8 @@ var BAL = (function () {
     });
     add("Skills — Curva 1-150", "xpBase", "Base de la curva (puntos = Base × Nivel ^ Exponente)", "puntos · entero", () => XP_BASE, v => { XP_BASE = v; });
     add("Skills — Curva 1-150", "xpExp", "Exponente de la curva (2.7 = nivel 40 en 360 h)", "exponente · decimal", () => XP_EXP, v => { XP_EXP = v; }, 0.1);
-    add("Cultivos — General", "seedDailyMax", "Cupo diario de compra de semillas", "semillas por día · entero", () => SEED_DAILY_MAX, v => { SEED_DAILY_MAX = v; });
+    add("Cultivos — General", "seedDailyBase", "Cupo diario de semillas: base", "semillas · entero", () => SEED_DAILY_BASE, v => { SEED_DAILY_BASE = v; });
+    add("Cultivos — General", "seedDailyNivel", "Cupo diario de semillas: extra por nivel de granja", "semillas por nivel · entero", () => SEED_DAILY_POR_NIVEL, v => { SEED_DAILY_POR_NIVEL = v; });
     add("Cultivos — General", "plotUnlockBase", "Desbloquear parcela: costo base (se duplica a partir de la 7ª)", U.plata,
       () => PLOT_UNLOCK_BASE, v => { PLOT_UNLOCK_BASE = v; });
 
@@ -78,6 +79,10 @@ var BAL = (function () {
     }
 
     // MONSTRUOS
+    add("Monstruos — General", "mobDmgMult", "Multiplicador global de daño de los mobs", U.factor, () => MOB_DMG_MULT, v => { MOB_DMG_MULT = v; }, 0.1);
+    add("Monstruos — General", "mobDefMult", "Multiplicador global de defensa de los mobs", U.factor, () => MOB_DEF_MULT, v => { MOB_DEF_MULT = v; }, 0.1);
+    add("Granja", "granjaRegen", "Vida que se recupera sola en la granja (por segundo)", U.vida, () => GRANJA_REGEN, v => { GRANJA_REGEN = v; });
+    add("Granja", "zonaNegraVel", "Velocidad del granjero en la Zona Negra (1 = igual que en la granja)", U.factor, () => ZONA_NEGRA_VEL, v => { ZONA_NEGRA_VEL = v; }, 0.05);
     MONSTER_ORDER.forEach(k => {
       const m = MONSTER_DEF[k], cat = "Monstruos — " + m.label;
       obj(cat, "mob." + k, m, "hp", "Vida", U.vida);
@@ -92,6 +97,8 @@ var BAL = (function () {
       const o = ORE_DEF[k];
       add("Minerales", "ore." + k + ".cd", o.label + " · enfriamiento del nodo", "", () => o.cd, v => { o.cd = v; }, 1, "tiempo");
     });
+    add("Minerales", "golpesTalar", "Clics para tumbar un árbol", "golpes · entero", () => GOLPES_TALAR, v => { GOLPES_TALAR = v; });
+    add("Minerales", "golpesMinar", "Clics para romper una roca o mineral", "golpes · entero", () => GOLPES_MINAR, v => { GOLPES_MINAR = v; });
     add("Minerales", "cd.tree", "Árbol · enfriamiento tras talar", "", () => CD.tree, v => { CD.tree = v; }, 1, "tiempo");
     add("Minerales", "cd.rock", "Piedra · enfriamiento tras picar", "", () => CD.rock, v => { CD.rock = v; }, 1, "tiempo");
 

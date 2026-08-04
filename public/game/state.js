@@ -88,6 +88,12 @@ function cleanseStates(tipos) {
   return antes - G.states.length;
 }
 
+var GRANJA_REGEN = 1;   // "detallitos (1)" punto 3: en la granja la vida se recupera sola (puntos por segundo)
+function granjaRegen() {   // solo fuera de la Zona Negra
+  if (!GRANJA_REGEN || G.hp >= G.hpMax) return;
+  if (window.GF && GF.scene === "forest") return;
+  G.hp = Math.min(G.hpMax, G.hp + GRANJA_REGEN);
+}
 function buffTick() {   // 1 vez por segundo desde el HUD: regeneración y vida máxima temporal
   const t = Date.now(); let dirty = false;
   for (const b of G.buffs) {
@@ -118,19 +124,19 @@ const CROP_ORDER = ["papa","zanahoria","cebolla","calabacin","repollo","calabaza
 // TABLA DE PRECIOS del diseñador (31/7): Ganancia = Tiempo × Riesgo × Nivel. Papa base: compra 1 / venta 3 / 1h.
 // growH = horas reales de la tabla. En TESTEO corre comprimido: 1h → 1min (GROW_SCALE). Para pasar a real: GROW_SCALE = 1.
 var GROW_SCALE = 1;   // 2/8: FUERA la compresión de testeo — el tiempo que se pone en balance.html es el tiempo real del juego
-// Tabla del doc "Sistema de farmeo con 10 cultivos" (v5, margen tope 12%, ganancia pareja ~6 plata/h):
-// escalera de tiempos 9 min → 24 h, XP por cosecha = minutos de crecimiento, cultivo N pide granja nivel N.
+// Tabla oficial de "2das mejoras" (4/8/2026): compra/venta con ganancia que dobla por tier y
+// ratio ~2,33; tiempos de 9 min (Papa) a 24 h (Maíz). XP por cosecha = minutos de crecimiento.
 const CROP_DEF = {
-  papa:      { label:"Papa",      emoji:"🥔", lvl:1,  seedCost:20,   growH:0.15, yield:1, price:21,   xp:9 },
-  zanahoria: { label:"Zanahoria", emoji:"🥕", lvl:2,  seedCost:40,   growH:0.25, yield:1, price:42,   xp:15 },
-  cebolla:   { label:"Cebolla",   emoji:"🧅", lvl:3,  seedCost:60,   growH:0.5,  yield:1, price:63,   xp:30 },
-  calabacin: { label:"Calabacín", emoji:"🥒", lvl:4,  seedCost:80,   growH:0.75, yield:1, price:85,   xp:45 },
-  repollo:   { label:"Repollo",   emoji:"🥬", lvl:5,  seedCost:120,  growH:1.5,  yield:1, price:129,  xp:90 },
-  calabaza:  { label:"Calabaza",  emoji:"🎃", lvl:6,  seedCost:200,  growH:3,    yield:1, price:218,  xp:180 },
-  brocoli:   { label:"Brócoli",   emoji:"🥦", lvl:7,  seedCost:300,  growH:6,    yield:1, price:336,  xp:360 },
-  girasol:   { label:"Girasol",   emoji:"🌻", lvl:8,  seedCost:500,  growH:10,   yield:1, price:560,  xp:600 },
-  trigo:     { label:"Trigo",     emoji:"🌾", lvl:9,  seedCost:800,  growH:16,   yield:1, price:896,  xp:960 },
-  maiz:      { label:"Maíz",      emoji:"🌽", lvl:10, seedCost:1200, growH:24,   yield:1, price:1344, xp:1440 },
+  papa:      { label:"Papa",      emoji:"🥔", lvl:1,  seedCost:1,   growH:0.15, yield:1, price:3,    xp:9 },
+  zanahoria: { label:"Zanahoria", emoji:"🥕", lvl:2,  seedCost:3,   growH:0.4167, yield:1, price:8,    xp:25 },
+  cebolla:   { label:"Cebolla",   emoji:"🧅", lvl:3,  seedCost:6,   growH:0.8333, yield:1, price:16,   xp:50 },
+  calabacin: { label:"Calabacín", emoji:"🥒", lvl:4,  seedCost:12,  growH:1.5,  yield:1, price:32,   xp:90 },
+  repollo:   { label:"Repollo",   emoji:"🥬", lvl:5,  seedCost:20,  growH:2.5,  yield:1, price:50,   xp:150 },
+  calabaza:  { label:"Calabaza",  emoji:"🎃", lvl:6,  seedCost:40,  growH:4.5,  yield:1, price:100,  xp:270 },
+  brocoli:   { label:"Brócoli",   emoji:"🥦", lvl:7,  seedCost:90,  growH:8,    yield:1, price:210,  xp:480 },
+  girasol:   { label:"Girasol",   emoji:"🌻", lvl:8,  seedCost:180, growH:12,   yield:1, price:420,  xp:720 },
+  trigo:     { label:"Trigo",     emoji:"🌾", lvl:9,  seedCost:360, growH:18,   yield:1, price:840,  xp:1080 },
+  maiz:      { label:"Maíz",      emoji:"🌽", lvl:10, seedCost:720, growH:24,   yield:1, price:1680, xp:1440 },
 };
 function recomputeCropGrow() { for (const k in CROP_DEF) CROP_DEF[k].grow = Math.round(CROP_DEF[k].growH * 3600 * GROW_SCALE); }
 recomputeCropGrow();   // en segundos, como siempre
@@ -142,7 +148,8 @@ function farmLevel() { return skillInfo(G.skills.farming).lvl; }
 function cropUnlocked(k) { const cd = CROP_DEF[k]; return !!cd && farmLevel() >= cd.lvl; }
 function selectSeed(k) { if (!CROP_DEF[k]) return; G.selSeed = k; if (isOpen("ov-inv")) refreshInv(); }
 // cupo diario de semillas (anti-inflación): compras + las del cofre suman al mismo límite
-var SEED_DAILY_MAX = 30;
+var SEED_DAILY_BASE = 18, SEED_DAILY_POR_NIVEL = 2;   // "2das mejoras": el cupo escala con el nivel de granja
+function seedDailyMax() { return SEED_DAILY_BASE + SEED_DAILY_POR_NIVEL * (G.level || 1); }
 var CD = { tree: 14, rock: 20 };   // enfriamiento (s) de árbol y piedra — editable en balance.html
 function seedBuysToday() {
   const sb = G.seedBuys || (G.seedBuys = { date: "", count: 0 });
@@ -153,14 +160,14 @@ function buySeed(k, qty) {
   const cd = CROP_DEF[k]; if (!cd) return;
   if (!cropUnlocked(k)) { toast("Necesitás Cultivo nivel " + cd.lvl); return; }
   qty = Math.max(1, Math.floor(qty || 1));
-  const sb = seedBuysToday(), left = SEED_DAILY_MAX - sb.count;
-  if (left <= 0) { toast("Límite diario de semillas alcanzado (30) — volvé mañana"); return; }
+  const sb = seedBuysToday(), left = seedDailyMax() - sb.count;
+  if (left <= 0) { toast("Cupo diario de semillas alcanzado (" + seedDailyMax() + ") — volvé mañana"); return; }
   if (qty > left) { qty = left; toast("Cupo diario: solo podés comprar " + left + " más hoy"); }
   if (typeof tutoEvent === "function") tutoEvent("buyseed");
   const cost = cd.seedCost * qty;
   if (G.plata < cost) { toast("Te falta plata"); return; }
   G.plata -= cost; G.seeds[k] = (G.seeds[k] || 0) + qty; sb.count += qty;
-  log(`Compraste ${qty} semilla(s) de ${cd.label} por ${cost} plata. (cupo: ${sb.count}/${SEED_DAILY_MAX})`); toast("+" + qty + " " + cd.label);
+  log(`Compraste ${qty} semilla(s) de ${cd.label} por ${cost} plata. (cupo: ${sb.count}/${seedDailyMax()})`); toast("+" + qty + " " + cd.label);
   refreshHud(); if (typeof refreshSeedShop === "function") refreshSeedShop(); if (isOpen("ov-inv")) refreshInv();
 }
 
@@ -1198,6 +1205,12 @@ const MONSTER_DEF = {
   demonio:    { label:"Demonio Menor", emoji:"😈", sprite:"demonio", size:58, hp:250, def:16, dmg:27, xp:3900, spd:65, lvl:45, hab:"demon", loot:{ plata:[100,100,1], oro:[1,3,0.4], diamante:[1,1,0.15] } },
   dragon:     { label:"Dragón de las Cavernas", emoji:"🐉", sprite:"dragon", size:96, hp:900, def:28, dmg:42, xp:14000, spd:55, lvl:50, hab:"dragon", boss:true, loot:{ plata:[500,500,1], diamante:[1,3,0.8], netherita:[1,1,0.25] } },
 };
+// "detallitos (1)" punto 2: los mobs pegan y aguantan más. Multiplicadores globales editables:
+var MOB_DMG_MULT = 1.3, MOB_DEF_MULT = 1.5;
+MONSTER_ORDER.forEach(k => { const m = MONSTER_DEF[k];
+  m.dmg = Math.max(1, Math.round(m.dmg * MOB_DMG_MULT));
+  m.def = Math.round((m.def || 0) * MOB_DEF_MULT);
+});
 // combate (detalles 338): auto-ataque cada 2s, alcance del arco 4 celdas
 const ATTACK_MS = 2000;
 const MELEE_RANGE = GF.TILE * 1.35;

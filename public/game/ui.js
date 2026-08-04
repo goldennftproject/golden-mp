@@ -774,7 +774,7 @@ function refreshMarket() {
 function refreshSeedShop() {
   const box = $("seed-shop"); if (!box) return;
   const sb = seedBuysToday();
-  box.innerHTML = '<div class="shophead">Cupo diario: ' + sb.count + '/' + SEED_DAILY_MAX + ' semillas</div>' + CROP_ORDER.map(k => {
+  box.innerHTML = '<div class="shophead">Cupo diario: ' + sb.count + '/' + seedDailyMax() + ' semillas (sube con el nivel de granja)</div>' + CROP_ORDER.map(k => {
     const cd = CROP_DEF[k], unlocked = cropUnlocked(k), aff = G.plata >= cd.seedCost;
     const controls = unlocked
       ? `<input id="sq-${k}" type="number" min="1" value="1"><button class="green sm" data-buy="${k}" ${aff ? "" : "disabled"}>Comprar · ${coinIc("plata")}${cd.seedCost} c/u</button>`
@@ -814,7 +814,7 @@ function refreshConfig() {
 let lbTab = "plata";
 let lbData = null, lbFetchedAt = 0, lbLoading = false;
 
-function lbRowHtml(r, i, col) { const rank = i + 1; const cls = (r.me ? "me " : "") + (rank <= 3 ? "top" + rank : ""); const val = col === "plata" ? `${coinIc("plata")}${fmt(r.v)}` : `${(+r.v).toFixed(1)}`; return `<div class="lbrow ${cls}"><span class="rk">${rank}</span><span class="nm">${escapeHtml(r.n || "—")}</span><span class="val">${val}</span></div>`; }
+function lbRowHtml(r, i, col) { const rank = i + 1; const cls = (r.me ? "me " : "") + (rank <= 3 ? "top" + rank : ""); const val = col === "plata" ? `${coinIc("plata")}${fmt(r.v)}` : (col === "skill" ? escapeHtml(String(r.v)) : `${(+r.v).toFixed(1)}`); return `<div class="lbrow ${cls}"><span class="rk">${rank}</span><span class="nm">${escapeHtml(r.n || "—")}</span><span class="val">${val}</span></div>`; }
 
 // nivel de skill promedio a partir del objeto skills guardado de otro jugador
 function avgSkillFromObj(sk) {
@@ -839,6 +839,18 @@ async function refreshLb() {
   renderLb();
 }
 
+// "detallitos (1)" punto 1: la skill MÁS ALTA de cada jugador para el ranking
+function topSkillFromObj(sk) {
+  if (!sk || typeof sk !== "object") return null;
+  let mejor = null;
+  for (const k in sk) {
+    const lvl = (k === "cooking" && typeof cookLevelFromXp === "function") ? cookLevelFromXp(Number(sk[k]) || 0) : skillInfo(Number(sk[k]) || 0).lvl;
+    if (!mejor || lvl > mejor.lvl) mejor = { k, lvl, nombre: (typeof SKILL_NAME !== "undefined" && SKILL_NAME[k]) || k };
+  }
+  return mejor;
+}
+function topSkillMio() { return topSkillFromObj(G.skills); }
+
 function renderLb() {
   const col = lbTab, note = $("lb-note");
   const meId = (typeof UID === "string") ? UID : null;
@@ -846,14 +858,15 @@ function renderLb() {
     const isMe = meId && p.user_id === meId;
     let plata = Math.floor(Number(p.plata) || 0);
     let exp = avgSkillFromObj(p.skills);
-    if (isMe) { plata = Math.floor(G.plata); exp = +avgSkillLevel().toFixed(2); }   // mis datos, en vivo
-    return { n: p.name || "—", plata, exp, me: !!isMe };
+    let top = topSkillFromObj(p.skills);
+    if (isMe) { plata = Math.floor(G.plata); exp = +avgSkillLevel().toFixed(2); top = topSkillMio(); }   // mis datos, en vivo
+    return { n: p.name || "—", plata, exp, top, me: !!isMe };
   });
   // si todavía no estoy guardado en la tabla, me agrego con mis valores actuales
-  if (meId && !rows.some(r => r.me)) rows.push({ n: window.NICK || "Vos", plata: Math.floor(G.plata), exp: +avgSkillLevel().toFixed(2), me: true });
-  const val = r => (col === "plata" ? r.plata : r.exp);
+  if (meId && !rows.some(r => r.me)) rows.push({ n: window.NICK || "Vos", plata: Math.floor(G.plata), exp: +avgSkillLevel().toFixed(2), top: topSkillMio(), me: true });
+  const val = r => (col === "plata" ? r.plata : (col === "skill" ? (r.top ? r.top.lvl : 0) : r.exp));
   rows.sort((a, b) => val(b) - val(a));
-  $("lb-list").innerHTML = rows.slice(0, 20).map((r, i) => lbRowHtml({ n: r.n, v: val(r), me: r.me }, i, col)).join("");
+  $("lb-list").innerHTML = rows.slice(0, 20).map((r, i) => lbRowHtml({ n: r.n, v: (col === "skill" && r.top ? r.top.nombre + " " + r.top.lvl : val(r)), me: r.me }, i, col)).join("");
   if (note) note.textContent = rows.length ? `Ranking online · ${rows.length} granjero${rows.length === 1 ? "" : "s"}` : "Todavía no hay jugadores en el ranking.";
 }
 
@@ -1067,6 +1080,6 @@ function initUI() {
 
   refreshHud();
   tutoSync(true);   // cartel + flecha del tutorial guiado
-  setInterval(() => { if (typeof buffTick === "function") buffTick(); tutoSync(); refreshHud(); }, 1000);
+  setInterval(() => { if (typeof buffTick === "function") buffTick(); if (typeof granjaRegen === "function") granjaRegen(); tutoSync(); refreshHud(); }, 1000);
 }
 initUI();

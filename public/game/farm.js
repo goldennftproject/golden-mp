@@ -1,7 +1,8 @@
 /* FarmScene: la granja privada. Fase 1 (mundo) + Fase 3 (interacciones). */
 // CD (enfriamiento árbol/piedra) ahora vive en state.js para el panel de balanceo
 function witherMs(ck) { const cd = CROP_DEF[ck]; return cd ? cd.grow * 1000 * 0.5 : 120000; }   // marchitado proporcional: mitad del tiempo de cultivo
-const ACT_DUR = { chop: 2.7, mine: 2.4, plant: 0.6, harvest: 0.6, water: 0.6, fish: 1.5 };   // talar = 3 golpes (3 vueltas de la animación, detalles viernes); picar largo: entero→dañado→restos
+const ACT_DUR = { chop: 0.9, mine: 0.85, plant: 0.6, harvest: 0.6, water: 0.6, fish: 1.5 };   // "detallitos (1)" punto 11: 1 golpe por clic
+var GOLPES_TALAR = 3, GOLPES_MINAR = 3;   // clics necesarios para tumbar un árbol o romper una roca (editable)
 function oreCdSec(tier) { return 20 + tier * 6; }   // 20/26/32/38/44s — se nota el estado dañado a la mitad
 
 class FarmScene extends Phaser.Scene {
@@ -215,6 +216,7 @@ class FarmScene extends Phaser.Scene {
       }
     });
     this.rebuildCollisions();
+    GF.scene = "farm";
     window.farmScene = this;   // para refrescar la flecha del tutorial desde la UI
     this.time.delayedCall(400, () => { if (typeof tutoSync === "function") tutoSync(true); else this.updateTutoArrow(); });   // cartel + flecha del tutorial
 
@@ -747,6 +749,14 @@ class FarmScene extends Phaser.Scene {
     const a = this.action, o = a.o;
     if (window.sfx) sfx({ chop: "chop", mine: "mine", plant: "plant", harvest: "harvest", fish: "splash", water: "splash" }[a.kind] || "click");
     if (a.kind === "chop") {
+      o.golpes = (o.golpes || 0) + 1;
+      if (o.golpes < GOLPES_TALAR) {   // golpes intermedios: el árbol se va cortando
+        const tex = o.golpes === 1 ? "tree_cut1" : "tree_cut2";
+        if (this.textures.exists(tex)) this.setObjTex(o, tex, o.rw || o.w);
+        toast("¡Golpe " + o.golpes + "/" + GOLPES_TALAR + "!");
+        this.action = null; return;
+      }
+      o.golpes = 0;
       const gr = 1;   // viernes (2): todos los recursos dan 1
       if (tryAddRes("madera", gr)) {
         useTool("axe"); addXp("crafting", 4); o.readyAt = nowMs() + CD.tree * 1000 * cdMult();
@@ -762,6 +772,13 @@ class FarmScene extends Phaser.Scene {
         toast("Bolsa llena — no podés talar"); log("Bolsa llena: liberá espacio para seguir talando.", "bad");
       }
     } else if (a.kind === "mine" && o.type === "rock") {
+      o.golpes = (o.golpes || 0) + 1;
+      if (o.golpes < GOLPES_MINAR) {
+        if (this.textures.exists(o.baseKey + "_half")) this.setObjTex(o, o.baseKey + "_half", o.rw || o.w);
+        toast("¡Golpe " + o.golpes + "/" + GOLPES_MINAR + "!");
+        this.action = null; return;
+      }
+      o.golpes = 0;
       const gr = 1;   // viernes (2): todos los recursos dan 1
       if (tryAddRes("piedra", gr)) {
         const pk = equippedPick();   // picar piedra también gasta el pico (bug reportado)
@@ -771,6 +788,13 @@ class FarmScene extends Phaser.Scene {
       }
       else { toast("Bolsa llena — no podés picar"); log("Bolsa llena: liberá espacio para seguir picando.", "bad"); }
     } else if (a.kind === "mine" && o.type === "ore") {
+      o.golpes = (o.golpes || 0) + 1;
+      if (o.golpes < GOLPES_MINAR) {
+        if (this.textures.exists(o.baseKey + "_half")) this.setObjTex(o, o.baseKey + "_half", o.rw || o.w);
+        toast("¡Golpe " + o.golpes + "/" + GOLPES_MINAR + "!");
+        this.action = null; return;
+      }
+      o.golpes = 0;
       const pk = equippedPick(), pd = PICK_DEF[pk], od = ORE_DEF[o.ore];
       const gr = 1;   // viernes (2): todos los recursos dan 1
       if (tryAddRes(o.ore, gr)) {

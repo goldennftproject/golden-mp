@@ -57,6 +57,7 @@ class ForestScene extends Phaser.Scene {
     this.idleScale = GF.SIZE.hero / hero.height;
     this.actScale = this.idleScale;   // granjero definitivo: misma escala de cuerpo en quieto y acciones
     hero.setScale(this.idleScale); hero.play("idle");
+    GF.scene = "forest";   // la vida NO se regenera sola acá (solo en la granja)
     this.hero = hero; this.facing = "east"; this.moveTarget = null; this.action = null; this.hurtFx = 0;
     // igual que en la granja: al reiniciar la escena hay que soltar lo cacheado
     this.tgGlow = null; this.tgGlowTw = null; this.tgTxt = null; this.destMk = null;
@@ -610,7 +611,7 @@ class ForestScene extends Phaser.Scene {
     const moving = !!(vx || vy);
     if (moving) {
       const m = Math.hypot(vx, vy); vx /= m; vy /= m;
-      const step = GF.SPEED * speedMult() * playerSlowMult() * dt, nx = hero.x + vx * step, ny = hero.y + vy * step;
+      const step = GF.SPEED * ZONA_NEGRA_VEL * speedMult() * playerSlowMult() * dt, nx = hero.x + vx * step, ny = hero.y + vy * step;   // detallitos: más lento en la Zona Negra
       let moved = false;
       if (!this.blockedAt(nx, ny, 6)) { hero.x = nx; hero.y = ny; moved = true; }
       else { if (vx && !this.blockedAt(nx, hero.y, 6)) { hero.x = nx; moved = true; } if (vy && !this.blockedAt(hero.x, ny, 6)) { hero.y = ny; moved = true; } }

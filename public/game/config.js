@@ -6,6 +6,7 @@ GF.COLS = 23; GF.ROWS = 15;                 // mundo en celdas enteras
 GF.WORLD_W = GF.COLS * GF.TILE;             // 966
 GF.WORLD_H = GF.ROWS * GF.TILE;             // 630
 GF.SPEED = 175;
+var ZONA_NEGRA_VEL = 0.75;   // "detallitos (1)" punto 7: el granjero camina 25% más lento en la Zona Negra
 GF.ZOOM = 1.35;
 GF.editMode = false;   // modo edición de la granja (arrastrar objetos)
 
