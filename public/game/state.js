@@ -12,7 +12,8 @@ const G = {
   weapons: {},                   // doc 2/8: armas nuevas — id ("espada_madera") -> { dur }
   stam: null, stamAcc: 0, stamRec: null,   // estamina de la Zona Negra ("2das mejoras")
   stats: {}, statsBase: {}, chestCap: 0, edif2: {}, cosmeticos: [],
-  animals: {},                   // Establo: animal → { desde, feliz, comidoAt, prodAt }   // tareas de nivel 11-50, mejoras y cosméticos
+  animals: {},                   // Establo: animal → { desde, feliz, comidoAt, prodAt }
+  armor: {}, armorEq: null,      // Curtiduría: piezas crafteadas y set equipado   // tareas de nivel 11-50, mejoras y cosméticos
   combatXp: 0,                   // doc 2/8: barra de Combate GLOBAL — suma la XP de todos los kills
   states: [],                    // doc 2/8: estados/debuffs del bestiario sobre el jugador (no se guardan)
   tuto: { step: 0, n: 0, done: false, v: 2 },   // doc 2/8: tutorial guiado de micro-objetivos (v = versión de la cadena)
@@ -57,10 +58,10 @@ function yieldMult() { const t = Date.now(); let m = 1 + 0.015 * (G.level - 1) +
 function addBuff(type, label, mult, durSec) { G.buffs.push({ type, label, mult, until: Date.now() + durSec * 1000 }); }
 // buffs de comida (doc maestro 2/8): suma de valores activos por tipo
 function buffTotal(type) { const t = Date.now(); let s = 0; for (const b of G.buffs) if (b.type === type && b.until > t) s += b.mult; return s; }
-function dmgMult() { return 1 + (buffTotal("dmg") + buffTotal("feast")) / 100; }
-function dmgTakenMult() { return Math.max(0.2, 1 - (buffTotal("def") + buffTotal("feast")) / 100); }
-function speedMult() { return 1 + (buffTotal("speed") + buffTotal("feast")) / 100; }
-function farmSpeedMult() { return Math.max(0.4, 1 - buffTotal("farm") / 100); }   // acorta las acciones de cultivo
+function dmgMult() { return 1 + (buffTotal("dmg") + buffTotal("feast") + (typeof armorBonoVal === "function" ? armorBonoVal("dmgPct") : 0)) / 100; }
+function dmgTakenMult() { return Math.max(0.2, 1 - (buffTotal("def") + buffTotal("feast") + (typeof armorBonoVal === "function" ? armorBonoVal("defPct") : 0)) / 100); }
+function speedMult() { return 1 + (buffTotal("speed") + buffTotal("feast") + (typeof armorBonoVal === "function" ? armorBonoVal("spd") : 0)) / 100; }
+function farmSpeedMult() { return Math.max(0.4, 1 - (buffTotal("farm") + (typeof armorBonoVal === "function" ? armorBonoVal("farm") : 0)) / 100); }   // acorta las acciones de cultivo
 function luckMult() { return 1 + buffTotal("luck") / 100 + (typeof eqRunaVal === "function" && typeof armaEq === "function" ? eqRunaVal("fortuna") / 100 : 0); }
 function combatXpMult() { return 1 + buffTotal("combatxp") / 100; }
 /* --- ESTADOS sobre el jugador (bestiario doc 2/8): sangrado/veneno/quemadura (daño por s),
@@ -244,7 +245,7 @@ var COMBAT_HP5 = 20, COMBAT_HP10 = 40;   // vida máxima extra en los hitos (edi
 function combatInfo() { return skillInfo(G.combatXp || 0); }
 function combatHpBonus(lvl) { return (lvl >= 5 ? COMBAT_HP5 : 0) + (lvl >= 10 ? COMBAT_HP10 : 0); }
 function applyCombatHp() {   // vida máxima = 100 + hitos de Combate (nivel 5 y 10)
-  const want = 100 + combatHpBonus(combatInfo().lvl) + G.buffs.reduce((s, b) => s + (b.type === "hpmax" && b.on ? b.mult : 0), 0) + (typeof eqRunaVal === "function" && typeof armaEq === "function" ? eqRunaVal("guardiana") : 0);
+  const want = 100 + combatHpBonus(combatInfo().lvl) + G.buffs.reduce((s, b) => s + (b.type === "hpmax" && b.on ? b.mult : 0), 0) + (typeof eqRunaVal === "function" && typeof armaEq === "function" ? eqRunaVal("guardiana") : 0) + (typeof armorBonoVal === "function" ? armorBonoVal("hpmax") : 0);
   if (G.hpMax !== want) { const dif = want - G.hpMax; G.hpMax = want; if (dif > 0) G.hp = Math.min(G.hpMax, G.hp + dif); G.hp = Math.min(G.hpMax, G.hp); }
 }
 function addCombatXp(xp) {
@@ -770,6 +771,78 @@ function passBuyLevel() {
 
 
 
+
+// ================= LA CURTIDURÍA: LAS 20 PIEZAS DE ARMADURA ("2das mejoras", 4/8) =================
+// 4 sets × 5 piezas. Se craftean con el material del animal + plata (la pesada además pide hierro).
+// Piezas sueltas = defensa parcial · set completo = bono de identidad.
+const ARMOR_SLOTS = ["yelmo", "pecho", "pantalones", "botas", "guantes"];
+const ARMOR_SLOT_LABEL = { yelmo:"Yelmo", pecho:"Pecho", pantalones:"Pantalones", botas:"Botas", guantes:"Guantes" };
+const ARMOR_SETS = {
+  fibra:    { label:"Armadura de Fibra",    animal:"alpaca", mat:"fibra",    tipo:"ligera",
+    bono:{ txt:"+15% vel. ataque + 12% evasión", atkSpd:15, evade:12 },
+    piezas:{ yelmo:{mat:2,plata:30,def:3}, pecho:{mat:4,plata:60,def:5}, pantalones:{mat:3,plata:45,def:4}, botas:{mat:2,plata:25,def:2}, guantes:{mat:1,plata:20,def:1} } },
+  piel:     { label:"Armadura de Piel",     animal:"conejo", mat:"pelaje",   tipo:"vitalidad",
+    bono:{ txt:"+2 HP/s de regeneración + 12% vel. de farmeo", regen:2, farm:12 },
+    piezas:{ yelmo:{mat:2,plata:35,def:3}, pecho:{mat:5,plata:70,def:6}, pantalones:{mat:4,plata:55,def:5}, botas:{mat:2,plata:30,def:2}, guantes:{mat:2,plata:25,def:2} } },
+  cuero:    { label:"Armadura de Cuero",    animal:"toro",   mat:"cuero",    tipo:"equilibrada",
+    bono:{ txt:"+40 de vida máxima + 8% de defensa", hpmax:40, defPct:8 },
+    piezas:{ yelmo:{mat:3,plata:55,def:5}, pecho:{mat:5,plata:100,def:8}, pantalones:{mat:4,plata:80,def:6}, botas:{mat:2,plata:40,def:3}, guantes:{mat:2,plata:35,def:3} } },
+  colmillo: { label:"Armadura de Colmillo", animal:"jabali", mat:"colmillo", tipo:"pesada",
+    bono:{ txt:"+20% de defensa y +10% de daño (−5% de velocidad)", defPct:20, dmgPct:10, spd:-5 },
+    piezas:{ yelmo:{mat:2,hierro:5,plata:120,def:8}, pecho:{mat:3,hierro:8,plata:200,def:12}, pantalones:{mat:2,hierro:6,plata:150,def:9}, botas:{mat:1,hierro:4,plata:80,def:5}, guantes:{mat:1,hierro:3,plata:70,def:4} } },
+};
+const ARMOR_ORDER = ["fibra", "piel", "cuero", "colmillo"];
+function armorKey(set, pieza) { return "arm_" + set + "_" + pieza; }
+function armorTiene(set, pieza) { return !!(G.armor && G.armor[armorKey(set, pieza)]); }
+function armorPuestas(set) { return ARMOR_SLOTS.filter(pz => armorTiene(set, pz)).length; }
+function armorSetCompleto(set) { return armorPuestas(set) === ARMOR_SLOTS.length; }
+function armorEquipado(set) { return G.armorEq === set; }
+// defensa: suma de las piezas del set EQUIPADO (más las piezas viejas de loot, que siguen valiendo)
+function armorDefensa() {
+  const set = G.armorEq; if (!set || !ARMOR_SETS[set]) return 0;
+  let d = 0;
+  ARMOR_SLOTS.forEach(pz => { if (armorTiene(set, pz)) d += ARMOR_SETS[set].piezas[pz].def; });
+  return d;
+}
+function armorBono() { const set = G.armorEq; return (set && armorSetCompleto(set)) ? ARMOR_SETS[set].bono : null; }
+function armorBonoVal(campo) { const b = armorBono(); return (b && b[campo]) || 0; }
+function craftArmor(set, pieza) {
+  const sd = ARMOR_SETS[set]; if (!sd) return;
+  if (!(G.built && G.built.curtiduria)) { toast("Necesitás la Curtiduría"); return; }
+  if (armorTiene(set, pieza)) { toast("Ya tenés esa pieza"); return; }
+  const p = sd.piezas[pieza];
+  const falta = [];
+  if ((G.res[sd.mat] || 0) < p.mat) falta.push(p.mat + " " + RES_LABEL[sd.mat]);
+  if (p.hierro && (G.res.hierro || 0) < p.hierro) falta.push(p.hierro + " Hierro");
+  if (G.plata < p.plata) falta.push(p.plata + " de plata");
+  if (falta.length) { toast("Te falta: " + falta.join(" · ")); return; }
+  G.res[sd.mat] -= p.mat;
+  if (p.hierro) G.res.hierro -= p.hierro;
+  G.plata -= p.plata;
+  G.armor = G.armor || {};
+  G.armor[armorKey(set, pieza)] = true;
+  if (!G.armorEq) G.armorEq = set;
+  addXp("crafting", 12);
+  const completo = armorSetCompleto(set);
+  log("Crafteaste " + ARMOR_SLOT_LABEL[pieza] + " de " + sd.label + " (+" + p.def + " de defensa)." + (completo ? " ¡SET COMPLETO: " + sd.bono.txt + "!" : ""), "gold");
+  if (completo && window.celebrate) celebrate({ title: "¡SET COMPLETO!", sub: sd.label, big: true, reward: sd.bono.txt });
+  else toast(ARMOR_SLOT_LABEL[pieza] + " lista");
+  applyCombatHp();
+  refreshHud(); if (typeof refreshCurtiduria === "function" && isOpen("ov-curtiduria")) refreshCurtiduria();
+  if (isOpen("ov-equip")) refreshEquip();
+  if (typeof saveFarm === "function") saveFarm(true);
+}
+function equiparSet(set) {
+  if (!ARMOR_SETS[set] || !armorPuestas(set)) { toast("Todavía no tenés piezas de ese set"); return; }
+  G.armorEq = set;
+  applyCombatHp(); refreshHud();
+  log("Te pusiste la " + ARMOR_SETS[set].label + " (" + armorDefensa() + " de defensa" + (armorSetCompleto(set) ? " · " + ARMOR_SETS[set].bono.txt : "") + ").", "good");
+  toast(ARMOR_SETS[set].label);
+  if (typeof refreshCurtiduria === "function" && isOpen("ov-curtiduria")) refreshCurtiduria();
+  if (isOpen("ov-equip")) refreshEquip();
+  if (typeof saveFarm === "function") saveFarm();
+}
+
 // ================= EL ESTABLO: ANIMALES Y MATERIALES ("2das mejoras", 4/8) =================
 // Comprás el animal con $Golden → lo alimentás con su cultivo preferido → sube la felicidad →
 // produce material cada cierto tiempo (más y mejor si está feliz) → con eso se craftea la armadura.
@@ -1180,7 +1253,7 @@ const GEAR_DEF = {
   escudo_hierro:  { slot:"escudo",   label:"Escudo de Hierro",  emoji:"🛡️", def:2, sprite:"gear_escudo_hierro" },
   pechera_hierro: { slot:"armadura", label:"Pechera de Hierro", emoji:"🛡️", def:3, sprite:"gear_pechera_hierro" },
 };
-function gearDefTotal() { let d = 0; for (const s in G.gear) { const g = G.gear[s]; if (g && GEAR_DEF[g]) d += GEAR_DEF[g].def; } return d; }
+function gearDefTotal() { let d = 0; for (const s in G.gear) { const g = G.gear[s]; if (g && GEAR_DEF[g]) d += GEAR_DEF[g].def; } return d + (typeof armorDefensa === "function" ? armorDefensa() : 0); }
 // al lootear una pieza: se equipa si mejora el slot; si no, se vende sola
 function gainGear(key) {
   const gd = GEAR_DEF[key]; if (!gd) return;

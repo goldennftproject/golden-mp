@@ -15,6 +15,7 @@ const OV_REFRESH = { "ov-inv": () => refreshInv(), "ov-skills": () => refreshSki
   "ov-cocina": () => refreshCooking(),
   "ov-altar": () => refreshAltar(),
   "ov-establo": () => refreshEstablo(),
+  "ov-curtiduria": () => refreshCurtiduria(),
   "ov-pass": () => refreshPass(),
   "ov-cofre": () => refreshChest(),
   "ov-config": () => refreshConfig(), "ov-lb": () => refreshLb(), "ov-daily": () => refreshDaily() };
@@ -712,6 +713,35 @@ function refreshPass() {
   box.querySelectorAll("[data-pvip]").forEach(b => b.onclick = () => passClaim(Number(b.dataset.pvip), true));
 }
 
+
+
+/* ---- Curtiduría: las 20 piezas de armadura ("2das mejoras") ---- */
+function refreshCurtiduria() {
+  const box = $("curti-list"); if (!box) return;
+  let h = '<div class="fds">Equipada: <b>' + (G.armorEq && ARMOR_SETS[G.armorEq] ? ARMOR_SETS[G.armorEq].label + " · " + armorDefensa() + " de defensa" : "ninguna") + '</b></div>';
+  ARMOR_ORDER.forEach(set => {
+    const sd = ARMOR_SETS[set], eq = armorEquipado(set), n = armorPuestas(set), completo = armorSetCompleto(set);
+    const defTotal = ARMOR_SLOTS.reduce((a, pz) => a + sd.piezas[pz].def, 0);
+    h += '<div class="fnm" style="margin-top:10px">' + sd.label + ' <span class="fds">(' + sd.tipo + ' · ' + n + '/5 piezas · ' + defTotal + ' de defensa el set)</span></div>';
+    h += '<div class="fds">Material: ' + RES_LABEL[sd.mat] + ' (tenés ' + (G.res[sd.mat] || 0) + ') · del ' + ANIMAL_DEF[sd.animal].label + '</div>';
+    h += '<div class="fds" style="color:#8a6413">Bono del set completo: ' + sd.bono.txt + (completo ? ' <b>— ACTIVO</b>' : '') + '</div>';
+    ARMOR_SLOTS.forEach(pz => {
+      const p = sd.piezas[pz], tiene = armorTiene(set, pz);
+      const costo = p.mat + " " + RES_LABEL[sd.mat] + (p.hierro ? " · " + p.hierro + " Hierro" : "") + " · " + p.plata + " plata";
+      const puede = (G.res[sd.mat] || 0) >= p.mat && (!p.hierro || (G.res.hierro || 0) >= p.hierro) && G.plata >= p.plata && (G.built && G.built.curtiduria);
+      h += '<div class="forge-row' + (tiene ? ' eq' : '') + '"><div class="finfo">' +
+        '<div class="fnm">' + ARMOR_SLOT_LABEL[pz] + ' <span class="tag">+' + p.def + ' def</span>' + (tiene ? ' ✓' : '') + '</div>' +
+        '<div class="fds">' + (tiene ? "Ya la tenés" : "Costo: " + costo) + '</div></div>' +
+        '<div class="fbtns">' + (tiene ? '<button class="ghost sm" disabled>Lista</button>'
+          : '<button class="green sm" ' + (puede ? "" : "disabled") + ' data-carmor="' + set + ':' + pz + '">Craftear</button>') + '</div></div>';
+    });
+    if (n) h += '<div class="fbtns" style="margin-top:4px">' + (eq ? '<button class="ghost sm" disabled>Puesta</button>'
+      : '<button class="green sm" data-eqset="' + set + '">Ponerse esta armadura</button>') + '</div>';
+  });
+  box.innerHTML = h;
+  box.querySelectorAll("[data-carmor]").forEach(b => b.onclick = () => { const [s2, p2] = b.dataset.carmor.split(":"); craftArmor(s2, p2); });
+  box.querySelectorAll("[data-eqset]").forEach(b => b.onclick = () => equiparSet(b.dataset.eqset));
+}
 
 /* ---- Establo: animales, felicidad y producción ("2das mejoras") ---- */
 function refreshEstablo() {

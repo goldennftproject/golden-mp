@@ -413,6 +413,13 @@ Registro cronológico de todo lo hecho desde el inicio del proyecto (27 de julio
 - Precios, ciclos, cantidades y la mecánica de felicidad quedaron editables en el panel de balanceo.
 - Arte de los dos edificios y de los materiales: pendiente (usan el respaldo visual hasta generarlo).
 
+### Fase 5 — La Curtiduría y las 20 piezas de armadura (4/8)
+- **Las 4 armaduras completas** con las recetas exactas del documento: Fibra (15 de defensa), Piel (18), Cuero (25) y Colmillo (38, la única que pide hierro). Cada set son 5 piezas — yelmo, pecho, pantalones, botas y guantes — con su costo y su defensa individual, verificados contra la planilla.
+- **Piezas sueltas y set completo**: cada pieza suma su defensa; completar las 5 activa el bono de identidad, que ya funciona en las fórmulas del juego: Fibra +15% velocidad de ataque y evasión · Piel +2 HP/s y +12% de velocidad de farmeo · Cuero **+40 de vida máxima** y +8% de defensa · Colmillo +20% de defensa y +10% de daño con −5% de velocidad.
+- **La defensa de la armadura entra en el combate real** (se suma a la fórmula de daño recibido, junto con las piezas viejas de loot) y el set de Cuero sube la vida máxima de verdad.
+- **Panel de la Curtiduría** con los 4 sets, sus piezas, el costo de cada una, cuáles ya tenés, el bono del set y el botón para ponerte una armadura u otra.
+- Todas las recetas y defensas quedaron editables en el panel de balanceo, pieza por pieza.
+
 ## Pendientes conocidos
 - En espera del diseñador: **tabla de daño de las armas** (para los tiers completos de espadas), usos de tablones/barras, cerca premium, tabla de stats del bestiario.
 - Cuando el diseñador apruebe el doc de farmeo: implementar Girasol, Trigo y Maíz (arte PixelLab + tabla de cultivos) y el sistema de XP de farmeo por niveles.

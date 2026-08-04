@@ -143,6 +143,16 @@ var BAL = (function () {
       add(cat, "pass.vipBoost", "Boost de estrellas del VIP (1.2 = +20%)", U.factor, () => PASS_VIP_BOOST, v => { PASS_VIP_BOOST = v; }, 0.1);
     }
 
+    // ARMADURAS (Curtiduría)
+    ARMOR_ORDER.forEach(set => { const sd = ARMOR_SETS[set], cat = "Armaduras — " + sd.label;
+      ARMOR_SLOTS.forEach(pz => { const p = sd.piezas[pz];
+        add(cat, "armor." + set + "." + pz + ".def", ARMOR_SLOT_LABEL[pz] + " · defensa", "puntos · entero", () => p.def, v => { p.def = v; });
+        add(cat, "armor." + set + "." + pz + ".mat", ARMOR_SLOT_LABEL[pz] + " · " + RES_LABEL[sd.mat], U.cant, () => p.mat, v => { p.mat = v; });
+        add(cat, "armor." + set + "." + pz + ".plata", ARMOR_SLOT_LABEL[pz] + " · plata", U.plata, () => p.plata, v => { p.plata = v; });
+        if (p.hierro != null) add(cat, "armor." + set + "." + pz + ".hierro", ARMOR_SLOT_LABEL[pz] + " · hierro", U.cant, () => p.hierro, v => { p.hierro = v; });
+      });
+    });
+
     // ESTABLO Y ANIMALES
     { const cat = "Establo — animales";
       add(cat, "feliz.comida", "Felicidad que da alimentarlo", "puntos · entero", () => FELIZ_POR_COMIDA, v => { FELIZ_POR_COMIDA = v; });
