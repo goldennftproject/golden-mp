@@ -61,7 +61,30 @@ function nextCeleb() {
 }
 window.celebrate = celebrate;
 
-function refreshHud() { setTxt("s-level", G.level); setTxt("s-prestige", G.prestige); setTxt("s-plata", fmt(G.plata)); setTxt("s-golden", fmt(G.golden)); setTxt("s-week", G.week); setTxt("s-hp", Math.ceil(G.hp) + "/" + G.hpMax); refreshCombatBar(); if (typeof checkCooking === "function") checkCooking(); if (typeof refreshHotbar === "function") refreshHotbar(); }
+function refreshHud() { refreshStam(); setTxt("s-level", G.level); setTxt("s-prestige", G.prestige); setTxt("s-plata", fmt(G.plata)); setTxt("s-golden", fmt(G.golden)); setTxt("s-week", G.week); setTxt("s-hp", Math.ceil(G.hp) + "/" + G.hpMax); refreshCombatBar(); if (typeof checkCooking === "function") checkCooking(); if (typeof refreshHotbar === "function") refreshHotbar(); }
+// clic en la barra de estamina: ofrece la recarga premium (con su tope diario)
+function bindStamPill() {
+  const pill = document.getElementById("stampill"); if (!pill || pill._bound) return;
+  pill._bound = true; pill.style.cursor = "pointer";
+  pill.onclick = () => {
+    if (typeof stamRecargar !== "function") return;
+    const r = stamRecargasHoy();
+    if (G.stam >= stamMax()) { toast("La estamina ya está llena"); return; }
+    askConfirm("Recargar la estamina al máximo cuesta " + STAM_GOLDEN + " $Golden. Te quedan " +
+      (STAM_RECARGAS_DIA - r.n) + " recargas hoy. ¿Recargar?", () => stamRecargar(),
+      { title: "Recargar estamina", yes: "Recargar", yesClass: "green", no: "Cancelar", noClass: "red" });
+  };
+}
+function refreshStam() {
+  bindStamPill();
+  const pill = document.getElementById("stampill"); if (!pill || typeof stamMax !== "function") return;
+  const enZN = window.GF && GF.scene === "forest";
+  pill.style.display = enZN ? "" : "none";
+  if (!enZN) return;
+  const mx = stamMax(), v = Math.floor(G.stam == null ? mx : G.stam);
+  setTxt("s-stam", v + "/" + mx);
+  const f = document.getElementById("stam-fill"); if (f) f.style.width = Math.round(v / mx * 100) + "%";
+}
 function refreshCombatBar() {   // doc maestro 2/8: insignia de nivel + relleno dorado + "XP actual / necesaria"
   const el = document.getElementById("c-lvl"); if (!el || typeof combatInfo !== "function") return;
   const ci = combatInfo();
@@ -1080,6 +1103,6 @@ function initUI() {
 
   refreshHud();
   tutoSync(true);   // cartel + flecha del tutorial guiado
-  setInterval(() => { if (typeof buffTick === "function") buffTick(); if (typeof granjaRegen === "function") granjaRegen(); tutoSync(); refreshHud(); }, 1000);
+  setInterval(() => { if (typeof buffTick === "function") buffTick(); if (typeof stamTick === "function") stamTick(); if (typeof granjaRegen === "function") granjaRegen(); tutoSync(); refreshHud(); }, 1000);
 }
 initUI();

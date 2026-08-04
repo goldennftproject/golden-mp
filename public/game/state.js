@@ -10,6 +10,7 @@ const G = {
   treesOpen: [0], rocksOpen: [0],  // viernes (2): índices de árboles/piedras desbloqueados (cualquiera, sin orden — pedido Discord)
   gear: { casco: null, armadura: null, botas: null, escudo: null, arma: null, municion: false },
   weapons: {},                   // doc 2/8: armas nuevas — id ("espada_madera") -> { dur }
+  stam: null, stamAcc: 0, stamRec: null,   // estamina de la Zona Negra ("2das mejoras")
   combatXp: 0,                   // doc 2/8: barra de Combate GLOBAL — suma la XP de todos los kills
   states: [],                    // doc 2/8: estados/debuffs del bestiario sobre el jugador (no se guardan)
   tuto: { step: 0, n: 0, done: false, v: 2 },   // doc 2/8: tutorial guiado de micro-objetivos (v = versión de la cadena)
@@ -660,6 +661,55 @@ function passBuyLevel() {
   refreshHud(); if (typeof saveFarm === "function") saveFarm(true);
 }
 
+
+// ================= ESTAMINA DE LA ZONA NEGRA ("2das mejoras", 4/8) =================
+// Barra aparte de la vida, SOLO se gasta peleando en la Zona Negra. Le pone ritmo al combate
+// y protege la economía de drops/carne/XP. Se recupera con el tiempo, comiendo y (con tope) con $Golden.
+var STAM_BASE = 100;          // máximo a nivel 1 de Combate
+var STAM_POR_NIVEL = 2;       // +2 de máximo por nivel de Combate
+var STAM_TOPE = 250;          // tope duro del máximo
+var STAM_REGEN_SEG = 180;     // 1 punto cada 3 min → de 0 a 100 en ~5 h
+var STAM_GOLDEN = 5;          // $Golden por recarga completa
+var STAM_RECARGAS_DIA = 3;    // tope diario de recargas premium (anti pay-to-win)
+const STAM_COSTO = {          // costo por criatura (tabla del doc)
+  rata: 4, murcielago: 4, larva: 4,
+  baba: 6, babita: 3, arana: 6, goblin: 6, orco: 6, lancero: 6,
+  esqueleto: 8, golem: 8, hombre_lobo: 8, guerrero: 8,
+  troll: 10, ogro: 10,
+  espectro: 12, demonio: 12,
+  dragon: 20,
+};
+function stamMax() { return Math.min(STAM_TOPE, STAM_BASE + STAM_POR_NIVEL * (combatInfo().lvl - 1)); }
+function stamCosto(key) { return STAM_COSTO[key] || 5; }
+function stamTick() {   // 1 vez por segundo desde el HUD
+  const mx = stamMax();
+  if (G.stam == null) G.stam = mx;
+  if (G.stam >= mx) { G.stamAcc = 0; return; }
+  G.stamAcc = (G.stamAcc || 0) + 1;
+  if (G.stamAcc >= STAM_REGEN_SEG) { G.stamAcc = 0; G.stam = Math.min(mx, G.stam + 1); }
+}
+function stamAdd(n) { const mx = stamMax(); G.stam = Math.max(0, Math.min(mx, (G.stam == null ? mx : G.stam) + n)); refreshHud(); }
+function stamGastar(n) {   // devuelve false si no alcanza
+  const mx = stamMax();
+  if (G.stam == null) G.stam = mx;
+  if (G.stam < n) return false;
+  G.stam -= n; refreshHud(); return true;
+}
+function stamRecargasHoy() {
+  const hoy = new Date().toISOString().slice(0, 10);
+  if (!G.stamRec || G.stamRec.date !== hoy) G.stamRec = { date: hoy, n: 0 };
+  return G.stamRec;
+}
+function stamRecargar() {   // recarga premium con $Golden, con tope diario
+  const r = stamRecargasHoy();
+  if (r.n >= STAM_RECARGAS_DIA) { toast("Ya usaste las " + STAM_RECARGAS_DIA + " recargas de hoy"); return; }
+  if (G.golden < STAM_GOLDEN) { toast("Te falta $Golden (" + STAM_GOLDEN + ")"); return; }
+  G.golden -= STAM_GOLDEN; r.n++; G.stam = stamMax(); G.stamAcc = 0;
+  log("Recargaste la estamina por " + STAM_GOLDEN + " $Golden (" + r.n + "/" + STAM_RECARGAS_DIA + " hoy).", "gold");
+  toast("¡Estamina al máximo!");
+  refreshHud(); if (typeof saveFarm === "function") saveFarm();
+}
+
 // ================= ALTAR DE RUNAS (doc maestro 2/8, estilo Silkroad) =================
 // Eje 1: mejora del arma +1..+15 (lotería con % claro). Eje 2: runas de atributo en sockets.
 var ALTAR_BREAK = 30;   // % de ROTURA al fallar +11..+15 SIN Runa de Protección (editable)
@@ -1033,6 +1083,7 @@ function dishBuffLabel(b, pot) {
     case "luck": return "+" + v + "% suerte en drops";
     case "combatxp": return "+" + v + "% XP de combate";
     case "hpmax": return "+" + v + " de vida máxima";
+    case "stam": return "+" + v + " de estamina";
     case "feast": return "+" + v + "% daño, defensa y velocidad";
   }
   return b.label || "";
@@ -1097,6 +1148,8 @@ function eatDish(id) {
     addBuff(r.buff.type, dishBuffLabel(r.buff, pot), v, DISH_BUFF_DUR);
     if (r.buff.type === "hpmax") buffTick();   // la vida extra entra ya mismo
   } else if (r.buff) addBuff(r.buff.type, r.buff.label, r.buff.mult, r.buff.dur);
+  { const st = { guiso_campestre: 20, estofado_cosecha: 25, banquete_bosque: 40, estofado: 15, banquete: 30 }[id];
+    if (st && typeof stamAdd === "function") { stamAdd(st); toast("+" + st + " de estamina"); } }
   if (id === "guiso_campestre" || id === "estofado_cosecha") { if (cleanseStates(["sangrado", "veneno", "quemadura"])) { log("El guiso limpió tus heridas (sangrado/veneno/quemadura).", "good"); toast("Heridas limpiadas"); } }
   if (id === "pan_trigo" || id === "pan_maiz_trigo") { if (cleanseStates(["flaqueza", "fragilidad"])) { log("El pan disipó las maldiciones.", "good"); toast("Maldiciones disipadas"); } }
   log(r.emoji + " Comiste " + r.label + ". " + dishDesc(r), "gold"); toast(r.emoji + " ¡Ñam!");

@@ -143,6 +143,17 @@ var BAL = (function () {
       add(cat, "pass.vipBoost", "Boost de estrellas del VIP (1.2 = +20%)", U.factor, () => PASS_VIP_BOOST, v => { PASS_VIP_BOOST = v; }, 0.1);
     }
 
+    // ESTAMINA DE LA ZONA NEGRA
+    { const cat = "Estamina de combate";
+      add(cat, "stam.base", "Estamina máxima a nivel 1 de Combate", "puntos · entero", () => STAM_BASE, v => { STAM_BASE = v; });
+      add(cat, "stam.nivel", "Estamina extra por nivel de Combate", "puntos por nivel · entero", () => STAM_POR_NIVEL, v => { STAM_POR_NIVEL = v; });
+      add(cat, "stam.tope", "Tope de estamina máxima", "puntos · entero", () => STAM_TOPE, v => { STAM_TOPE = v; });
+      add(cat, "stam.regen", "Cada cuánto se recupera 1 punto", "", () => STAM_REGEN_SEG, v => { STAM_REGEN_SEG = v; }, 1, "tiempo");
+      add(cat, "stam.golden", "Recarga completa · costo", "$Golden · entero", () => STAM_GOLDEN, v => { STAM_GOLDEN = v; });
+      add(cat, "stam.recargas", "Recargas premium por día (tope anti pay-to-win)", "recargas · entero", () => STAM_RECARGAS_DIA, v => { STAM_RECARGAS_DIA = v; });
+      MONSTER_ORDER.forEach(k => add(cat, "stamCosto." + k, MONSTER_DEF[k].label + " · costo de estamina", "puntos · entero", () => STAM_COSTO[k], v => { STAM_COSTO[k] = v; }));
+    }
+
     // ALTAR DE RUNAS
     { const cat = "Altar de Runas";
       add(cat, "altar.break", "Rotura al fallar +11..+15 sin protección", "% · entero", () => ALTAR_BREAK, v => { ALTAR_BREAK = v; });

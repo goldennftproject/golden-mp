@@ -320,8 +320,26 @@ class ForestScene extends Phaser.Scene {
 
   mobDef(m) { return Math.round((m.def.def || 0) * (m.shellUntil && this.time.now < m.shellUntil ? 1.6 : 1)); }   // Caparazón del Golem
 
+  // la primera vez que golpeás a una criatura se paga su estamina (doc "2das mejoras")
+  cobrarEstamina(m) {
+    if (m.pagado) return true;
+    const costo = (typeof stamCosto === "function") ? stamCosto(m.key) : 0;
+    if (!stamGastar(costo)) {
+      if (!this._avisoStam || this.time.now > this._avisoStam) {
+        this._avisoStam = this.time.now + 4000;
+        toast("Sin estamina — comé un guiso o esperá a que se recargue");
+        log("Te quedaste sin estamina de combate. Se recupera sola (1 cada 3 min), comiendo guisos o con una recarga.", "bad");
+      }
+      return false;
+    }
+    m.pagado = true;
+    this.floatHero("-" + costo + " estamina", "#a8d8ff");
+    return true;
+  }
+
   hitMonster(m, dmg, skill) {
     const tn = this.time.now;
+    if (!this.cobrarEstamina(m)) return;
     if ((m.phaseUntil && tn < m.phaseUntil) || (m.blinkUntil && tn < m.blinkUntil)) { this.floatTxt(m, "Intangible", "#bfa8ff"); return; }   // Fase espectral / Parpadeo
     if (window.sfx) sfx("hit");
     let crit = false, vamp = 0;
@@ -519,7 +537,7 @@ class ForestScene extends Phaser.Scene {
     if (m.def.noRespawn) return;
     this.time.delayedCall((m.def.boss ? 180000 : 25000) + Math.random() * 15000, () => {
       if (!this.scene || !this.scene.isActive()) return;
-      m.hp = m.def.hp; m.dead = false; m.cx = m.home.x; m.by = m.home.y;
+      m.hp = m.def.hp; m.dead = false; m.pagado = false; m.cx = m.home.x; m.by = m.home.y;
       m.spr.setPosition(m.cx, m.by).setAlpha(1).setVisible(true).setDepth(m.by); m.tgt = null;
       if (m.baseScale) m.spr.setScale(m.baseScale);
       if (m.def.sprite) { m.anim = null; m.atkUntil = 0; this.playMob(m, "idle"); }

@@ -385,6 +385,16 @@ Registro cronológico de todo lo hecho desde el inicio del proyecto (27 de julio
 - **Talar y minar en 3 clics**: cada clic es un golpe con su animación y su feedback ("¡Golpe 2/3!"); al tercero cae el recurso. El árbol muestra sus cortes intermedios y la roca su estado dañado. Cantidad de golpes editable por separado para árboles y minerales.
 - **Ranking con Top skill**: pestaña nueva que ordena por la skill más alta de cada jugador y muestra cuál es (por ejemplo "Minería 24").
 
+### Fase 2 — Estamina de la Zona Negra (4/8)
+- **Barra de estamina de combate**, aparte de la vida y **solo en la Zona Negra**: la granja se sigue jugando relajada. Aparece en el HUD (celeste) al entrar al bosque y desaparece al volver.
+- **Máximo 100 a nivel 1 de Combate, +2 por nivel, tope 250** (nivel 40 = 178, tope a partir del 76).
+- **Costo por criatura** según la tabla del doc: Rata/Murciélago/Larva 4 · Baba/Araña/Goblin/Orco/Lancero 6 · Esqueleto/Golem/Lobo/Guerrero 8 · Trol/Ogro 10 · Espectro/Demonio 12 · **Dragón 20**. Con la barra llena entran 25 ratas, 10 troles o 5 dragones. Se cobra una vez por criatura, al primer golpe.
+- **Regeneración**: 1 punto cada 3 minutos (de 0 a 100 en ~5 h), también mientras estás desconectado.
+- **La comida devuelve estamina** (nuevo uso para la Cocina): Guiso Campestre +20, Estofado de la Cosecha +25, Banquete del Bosque +40, y los clásicos +15/+30.
+- **Recarga premium con tope**: clic en la barra → recarga completa por 5 $Golden, **máximo 3 por día**. Es conveniencia, no ventaja: sin el tope sería "pagá y farmeá infinito".
+- Sin estamina el aviso explica cómo recuperarla y el combate simplemente no avanza (no te mata ni te expulsa).
+- Todo editable en el panel: máximo, escalón por nivel, tope, ritmo de regeneración, precio y cupo de recargas, y el costo de cada una de las 18 criaturas por separado.
+
 ## Pendientes conocidos
 - En espera del diseñador: **tabla de daño de las armas** (para los tiers completos de espadas), usos de tablones/barras, cerca premium, tabla de stats del bestiario.
 - Cuando el diseñador apruebe el doc de farmeo: implementar Girasol, Trigo y Maíz (arte PixelLab + tabla de cultivos) y el sistema de XP de farmeo por niveles.
