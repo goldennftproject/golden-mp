@@ -395,12 +395,10 @@ class FarmScene extends Phaser.Scene {
         const arrastro = !!(this.hold && this.hold.active);
         const hit = this.clickHit, pond = this.clickPond;
         this.clickHit = null; this.clickPond = false;
-        if (!arrastro && !pt.rightButtonReleased()) {
-          if (this.action) {   // acción en curso: encolar (hasta 7) en vez de perder el clic
-            if (hit && (hit.type === "plot" || hit.type === "tree" || hit.type === "rock" || hit.type === "ore")) {
-              if (!this.queue.includes(hit) && this.queue.length < 7) { this.queue.push(hit); this.markQueued(hit); toast("En cola (" + this.queue.length + ")"); }
-            }
-          } else if (hit) { this.pendingObj = null; this.interactWith(hit); }
+        // SIN COLA (4/8): un clic = un golpe. Si hay una acción en curso, el clic simplemente no cuenta;
+        // la cola tenía sentido cuando el granjero caminaba, ahora se actúa directo sobre lo que tocás.
+        if (!arrastro && !pt.rightButtonReleased() && !this.action) {
+          if (hit) { this.pendingObj = null; this.interactWith(hit); }
           else if (pond) this.tryFish(pt.worldX, pt.worldY);
         }
       }
@@ -610,9 +608,11 @@ class FarmScene extends Phaser.Scene {
     }
     if (o.type === "portal") return "Teletransportarte a la Zona Negra" + (Object.keys(G.weapons || {}).length ? "" : " sin arma");
     const secs = cd ? Math.ceil((o.readyAt - nowMs()) / 1000) : 0;
-    if (o.type === "tree") { if (o.locked) return "Desbloquear árbol (" + treeUnlockCost() + " madera)"; return cd ? "Vuelve en " + fmtSecs(secs) : "Talar madera"; }
-    if (o.type === "rock") { if (o.locked) return "Desbloquear piedra (" + rockUnlockCost() + " piedra)"; return cd ? "Vuelve en " + fmtSecs(secs) : "Picar piedra"; }
-    if (o.type === "ore") { const od = ORE_DEF[o.ore]; if (!od) return "Minar"; if (cd) return od.emoji + " Vuelve en " + fmtSecs(secs); return "Minar " + od.label; }
+    // cuántos clics faltan: un clic = un golpe, y si parás 5 s los golpes dados se pierden
+    const gp = (tot) => " (" + ((o.golpes || 0) + 1) + "/" + tot + ")";
+    if (o.type === "tree") { if (o.locked) return "Desbloquear árbol (" + treeUnlockCost() + " madera)"; return cd ? "Vuelve en " + fmtSecs(secs) : "Talar madera" + gp(GOLPES_TALAR); }
+    if (o.type === "rock") { if (o.locked) return "Desbloquear piedra (" + rockUnlockCost() + " piedra)"; return cd ? "Vuelve en " + fmtSecs(secs) : "Picar piedra" + gp(GOLPES_MINAR); }
+    if (o.type === "ore") { const od = ORE_DEF[o.ore]; if (!od) return "Minar"; if (cd) return od.emoji + " Vuelve en " + fmtSecs(secs); return "Minar " + od.label + gp(GOLPES_MINAR); }
     if (o.type === "barn") return "Granja";
     if (o.type === "market") return "Mercado";
     if (typeof BUILD_DEF !== "undefined" && BUILD_DEF[o.type] && !(G.built && G.built[o.type])) return "Construir " + BUILD_DEF[o.type].label + " (" + buildCostStr(o.type) + ")";
@@ -872,12 +872,14 @@ class FarmScene extends Phaser.Scene {
     if (window.sfx) sfx({ chop: "chop", mine: "mine", plant: "plant", harvest: "harvest", fish: "splash", water: "splash" }[a.kind] || "click");
     if (a.kind === "chop") {
       o.golpes = (o.golpes || 0) + 1;
-      if (o.golpes < GOLPES_TALAR) {   // golpes intermedios: el árbol se va cortando
+      if (o.golpes < GOLPES_TALAR) {   // golpes intermedios: el árbol se va cortando (el hacha NO se gasta todavía)
         const tex = o.golpes === 1 ? "tree_cut1" : "tree_cut2";
         if (this.textures.exists(tex)) this.setObjTex(o, tex, o.rw || o.w);
+        o.golpesAt = nowMs();   // si no seguís, a los 5 s el árbol se recupera solo
         toast("¡Golpe " + o.golpes + "/" + GOLPES_TALAR + "!");
         this.action = null; return;
       }
+      o.golpesAt = 0;
       o.golpes = 0;
       const gr = 1;   // viernes (2): todos los recursos dan 1
       if (tryAddRes("madera", gr)) {
@@ -896,12 +898,13 @@ class FarmScene extends Phaser.Scene {
       }
     } else if (a.kind === "mine" && o.type === "rock") {
       o.golpes = (o.golpes || 0) + 1;
-      if (o.golpes < GOLPES_MINAR) {
+      if (o.golpes < GOLPES_MINAR) {   // golpes intermedios: el pico NO se gasta todavía
         if (this.textures.exists(o.baseKey + "_half")) this.setObjTex(o, o.baseKey + "_half", o.rw || o.w);
+        o.golpesAt = nowMs();   // si no seguís, a los 5 s la piedra vuelve a estar entera
         toast("¡Golpe " + o.golpes + "/" + GOLPES_MINAR + "!");
         this.action = null; return;
       }
-      o.golpes = 0;
+      o.golpes = 0; o.golpesAt = 0;
       const gr = 1;   // viernes (2): todos los recursos dan 1
       if (tryAddRes("piedra", gr)) {
         const pk = equippedPick();   // picar piedra también gasta el pico (bug reportado)
@@ -912,12 +915,13 @@ class FarmScene extends Phaser.Scene {
       else { this.setObjTex(o, o.baseKey, o.rw || o.w); toast("Bolsa llena — no podés picar"); log("Bolsa llena: liberá espacio para seguir picando.", "bad"); }   // vuelve entera: los golpes se perdieron
     } else if (a.kind === "mine" && o.type === "ore") {
       o.golpes = (o.golpes || 0) + 1;
-      if (o.golpes < GOLPES_MINAR) {
+      if (o.golpes < GOLPES_MINAR) {   // golpes intermedios: el pico NO se gasta todavía
         if (this.textures.exists(o.baseKey + "_half")) this.setObjTex(o, o.baseKey + "_half", o.rw || o.w);
+        o.golpesAt = nowMs();   // si no seguís, a los 5 s la veta vuelve a estar entera
         toast("¡Golpe " + o.golpes + "/" + GOLPES_MINAR + "!");
         this.action = null; return;
       }
-      o.golpes = 0;
+      o.golpes = 0; o.golpesAt = 0;
       const pk = equippedPick(), pd = PICK_DEF[pk], od = ORE_DEF[o.ore];
       const gr = 1;   // viernes (2): todos los recursos dan 1
       if (tryAddRes(o.ore, gr)) {
@@ -1033,6 +1037,20 @@ class FarmScene extends Phaser.Scene {
   }
 
   // punto fijo ARRIBA de lo encolado, para saber de un vistazo qué pusiste y qué no (detalles 338)
+  // Un árbol/piedra a medio golpear se RECUPERA SOLO si dejás de pegarle (doc 4/8).
+  // El hacha o el pico solo se gastan cuando el nodo cae del todo: los golpes sueltos son gratis.
+  tickGolpes() {
+    const t = nowMs();
+    for (const o of this.objs) {
+      if (!o.golpes || !o.golpesAt) continue;
+      if (t - o.golpesAt < GOLPES_RESET_MS) continue;
+      if (this.action && this.action.o === o) continue;   // le está pegando ahora mismo
+      o.golpes = 0; o.golpesAt = 0;
+      if (nowMs() < o.readyAt) continue;                  // está en enfriamiento: la textura la maneja el tick de nodos
+      this.setObjTex(o, o.baseKey, o.rw || o.w);          // vuelve a estar entero
+    }
+  }
+
   markQueued(o) {
     if (o.qDot) return;
     const y = this.topY(o);
@@ -1476,6 +1494,7 @@ class FarmScene extends Phaser.Scene {
         else o.timer.setVisible(false);
       }
     }
+    this.tickGolpes();      // los golpes sueltos se pierden a los 5 s (el nodo vuelve a estar entero)
     this.updateHoverFx();   // brillo sobre lo interactuable (hover + cercanía)
     // clic sostenido: aplicar el destino que quedó pendiente por el freno del recálculo
     if (this.hold && this.hold.active && this.holdPend && t - (this.holdAt || 0) > 130) {
@@ -1653,12 +1672,11 @@ class FarmScene extends Phaser.Scene {
       if (d < rad) { this.moveTarget = null; this.pendingObj = null; this.interactWith(po); if (this.action) { hero.setDepth(hero.y); return; } }
       else if (!this.moveTarget) this.pendingObj = null;
     }
-    // cola: al quedar libre, ir al siguiente objetivo clickeado
-    if (!this.action && !this.pendingObj && !this.moveTarget && this.queue.length) {
+    // cola: solo en el modo viejo con granjero que camina (en la granja de un clic no existe)
+    if (!GF.NO_WALK && !this.action && !this.pendingObj && !this.moveTarget && this.queue.length) {
       const nxt = this.queue.shift();
       this.unmarkQueued(nxt);   // deja de estar en cola: fuera el punto
-      if (GF.NO_WALK) this.interactWith(nxt);   // granja de un clic: no hay caminata, se actúa directo
-      else { this.pendingObj = nxt; this.goTo(nxt.cx, nxt.by + 18); }
+      this.pendingObj = nxt; this.goTo(nxt.cx, nxt.by + 18);
     }
 
     const sign = this.facing === "west" ? -1 : 1;

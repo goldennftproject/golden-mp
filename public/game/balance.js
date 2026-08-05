@@ -103,6 +103,7 @@ var BAL = (function () {
     });
     add("Minerales", "golpesTalar", "Clics para tumbar un árbol", "golpes · entero", () => GOLPES_TALAR, v => { GOLPES_TALAR = v; });
     add("Minerales", "golpesMinar", "Clics para romper una roca o mineral", "golpes · entero", () => GOLPES_MINAR, v => { GOLPES_MINAR = v; });
+    add("Minerales", "golpesReset", "Si dejás un nodo a medio golpear, en cuánto se recupera solo (la herramienta no se gasta)", "", () => GOLPES_RESET_MS / 1000, v => { GOLPES_RESET_MS = v * 1000; }, 1, "tiempo");
     add("Minerales", "cd.tree", "Árbol · enfriamiento tras talar", "", () => CD.tree, v => { CD.tree = v; }, 1, "tiempo");
     add("Minerales", "cd.rock", "Piedra · enfriamiento tras picar", "", () => CD.rock, v => { CD.rock = v; }, 1, "tiempo");
 

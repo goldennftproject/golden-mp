@@ -446,6 +446,7 @@ Registro cronológico de todo lo hecho desde el inicio del proyecto (27 de julio
 
 ### Fase 9 — Granja de un clic, cámara tipo SFL e isla (4/8)
 Los tres cambios son estructurales y quedaron detrás de **interruptores independientes** (`GF.NO_WALK`, `GF.CAM_PAN`, `GF.ISLA`), así se pueden apagar uno por uno si al diseñador no le convence alguno.
+
 - **Granja sin caminar** (detallito 4): el granjero ya no aparece en la granja — todo se hace con un clic sobre la cosa que querés usar, sin esperar a que llegue. El cartel de interacción ahora describe **lo que hay bajo el cursor** y la tecla E actúa sobre eso mismo. El granjero sigue existiendo y se ve en la Zona Negra, que es donde importa moverse.
 - **Cámara tipo SFL** (detallito 5): la cámara dejó de seguir al personaje y de hacer zoom con la rueda. Ahora la granja se **arrastra con el mouse** y la rueda la **desplaza**, con el zoom fijo.
 - **La finca sobre el mar** (detallito 6): fondo de océano alrededor de la granja, con bajío más claro, orilla de arena, borde de pasto y **olas animadas** que respiran sobre la costa. Todo dibujado por código, sin arte nuevo.
@@ -467,6 +468,7 @@ Los tres cambios son estructurales y quedaron detrás de **interruptores indepen
 
 ### Edificios nivel 2 con efecto real (4/8)
 Los niveles de granja 17, 21 y 27 desbloqueaban "edificio nivel 2" pero no hacían nada. Ahora sí:
+
 - **Horno nivel 2** (granja 17): funde las barras **40% más rápido**.
 - **Cocina nivel 2** (granja 21): las cocciones tardan **30% menos** y suma **una olla** (de 3 a 4 platos a la vez).
 - **Altar de Runas nivel 2** (granja 27): **+5 puntos de éxito** en cada intento de mejora de arma.
@@ -474,6 +476,7 @@ Los niveles de granja 17, 21 y 27 desbloqueaban "edificio nivel 2" pero no hací
 
 ### Cosméticos visibles y atlas de sprites rearmado (4/8)
 **Cosméticos que ya se lucen** (los que no necesitan arte nuevo):
+
 - **Ventana de Cosméticos** en el menú, con vista previa de cómo te ven los demás.
 - **Títulos** ganados en los niveles de granja (Granjero Experto, Veterano, Amo de la Granja, Leyenda de la Granja Dorada…), que aparecen delante del nombre en el ranking, el chat, la plaza y el mercado de jugadores.
 - **Color de nombre** (oro, verde, celeste, violeta) y **marcos de perfil**, que se desbloquean con los niveles y el cofre.
@@ -481,6 +484,7 @@ Los niveles de granja 17, 21 y 27 desbloqueaban "edificio nivel 2" pero no hací
 - Lo elegido se guarda con la partida; el resto de los cosméticos ganados se listan en la misma ventana.
 
 **Atlas de sprites rearmado**:
+
 - El atlas era del 30 de julio y tenía 120 sprites: todo lo agregado desde entonces (cultivos nuevos, 14 platos, 20 armas por rareza, el Altar…) se bajaba como archivos sueltos, y por eso la pantalla de carga tardaba tanto en el server gratuito.
 - Nuevo atlas con **329 sprites en un solo archivo de 386 KB** (con paleta optimizada: un tercio del peso sin diferencia visible). Pasa de decenas de pedidos al servidor a uno solo.
 
@@ -502,13 +506,25 @@ Los niveles de granja 17, 21 y 27 desbloqueaban "edificio nivel 2" pero no hací
 - Las cuatro están escritas y funcionando.
 - Se agregó un **chequeo automático** que recorre las 19 ventanas del juego y verifica que cada una tenga su función de dibujado y su contenedor en el HTML, más que no haya funciones referenciadas que no existan. Hoy da todo OK, y lo voy a correr antes de cada entrega para que no vuelva a pasar.
 
-## Pendientes conocidos
-- En espera del diseñador: **tabla de daño de las armas** (para los tiers completos de espadas), usos de tablones/barras, cerca premium, tabla de stats del bestiario.
-- Cuando el diseñador apruebe el doc de farmeo: implementar Girasol, Trigo y Maíz (arte PixelLab + tabla de cultivos) y el sistema de XP de farmeo por niveles.
-- Opcional ofrecido: íconos oficiales PixelLab para Espada de Madera y Pico de Hierro (hoy derivados), replicar el suelo nuevo en plaza y Zona Negra, kick por AFK en la plaza.
-- Pilares futuros: login por email multi-dispositivo, PvP/endgame de netherita, referidos, token $Golden, audio, granja distinta por nivel (quinta.docx).
-
 ---
+
+### Se elimina la cola de acciones: un clic = un golpe (4/8)
+
+La cola tenía sentido cuando el granjero caminaba: clickeabas varios nodos y él iba yendo de uno en
+uno. Sin granjero no hace falta, así que se sacó por completo.
+
+- **Un clic = un golpe.** Para tumbar un árbol hay que clickearlo las veces que haga falta (3 por
+  defecto), y cada clic lo va dejando en su siguiente estado: tajo leve → tajo profundo → cae. Igual
+  con piedras y minerales (entera → dañada → se rompe).
+- **Ya no se puede encolar nada**: si hay un golpe en curso, el clic simplemente no cuenta.
+- **Los golpes sueltos son gratis y se pierden.** Si dejás un árbol a medio talar y no volvés en
+  **5 segundos**, se recupera solo y vuelve a estar entero — y **el hacha no se descuenta**. Lo mismo
+  con piedras y vetas: picás una vez, se ve dañada, pasan 5 segundos y vuelve a estar entera sin
+  gastar el pico.
+- **La herramienta se gasta solo cuando el nodo cae del todo.** Antes de eso no se descuenta nada.
+- El cartel bajo el cursor ahora dice en qué golpe vas: "Talar madera (2/3)".
+- Los 5 segundos son editables en el panel de balanceo, junto a los golpes de tala y minería
+  (763 entradas).
 
 ## Revisión completa del código en busca de bugs (4/08)
 
@@ -523,26 +539,34 @@ y arreglaron **31 bugs**. Los más graves:
   Golem quedaba activo de forma permanente, y el **aturdimiento y el sangrado no hacían absolutamente
   nada**. Además, el espadazo del clic izquierdo dejaba de salir después del primer golpe. Todo pasado
   a un solo reloj.
+
 - **Con arco equipado, el clic izquierdo sobre un bicho no hacía nada** y encima no dejaba caminar.
 - **Al volver del Bosque por segunda vez no aparecía la barra de vida** (ni el aura del cosmético):
   quedaban cacheadas apuntando a objetos ya destruidos.
+
 - **Las babitas se acumulaban sin techo** (fuga de memoria): cada Baba muerta creaba 2 y nunca se
   borraban.
+
 - **Los monstruos reaparecían con los buffs puestos**: el Orco y el Dragón volvían enfurecidos de forma
   permanente y ya no podían volver a enfurecerse.
+
 - La estamina se cobraba antes de comprobar si el golpe podía siquiera conectar; con arco se perdían
   la flecha y la durabilidad aunque no hubiera estamina.
 
 ### Granja (farm.js)
 - **La cola de acciones no se ejecutaba nunca**: clickeabas un segundo árbol mientras talabas, decía
   "En cola (1)"… y se descartaba solo. Ahora la cola funciona en la granja de un clic.
+
 - **Arrastrar la vista empezando encima de un objeto lo talaba/minaba/abría**: la acción se disparaba
   al apretar. Ahora se resuelve al soltar, y solo si no hubo arrastre.
+
 - El árbol saltaba a "casi talado" en el primer golpe y después retrocedía; ahora el estado dañado
   corresponde al golpe real.
+
 - Si la bolsa se llenaba en el último golpe, la roca quedaba dibujada rota con 0 golpes.
 - El brillo de interacción quedaba pegado para siempre sobre el último objeto trabajado (el granjero
   invisible se quedaba estacionado ahí) y su contador visible sin hover.
+
 - Al volver del Bosque no volvía el humo del Horno.
 - Cambiar de semilla durante la animación de plantar colaba la nueva sin verificar el nivel.
 - WASD cancelaba la pesca aunque esas teclas ya no muevan nada.
@@ -553,38 +577,49 @@ y arreglaron **31 bugs**. Los más graves:
 - **Girasol, Trigo y Maíz eran invisibles**: se cosechaban pero no aparecían en la bolsa, no ocupaban
   casilla y **no se podían vender en ningún lado** — justo los tres cultivos de mayor valor. Lo mismo
   con fibra, pelaje, cuero, colmillo y esencia rúnica. Todos agregados a la bolsa y al mercado.
+
 - **La plata de las incursiones se perdía**: entraba como recurso de bolsa en vez de a la billetera.
   El resumen decía "+40 plata" y el jugador no cobraba nada. Pasaba en toda incursión.
+
 - El objetivo del tutorial "comprá semillas" se cumplía apretando el botón aunque no tuvieras plata.
 - **Los niveles de granja 11-50 con tareas de solo combate/cocina quedaban trabados**: el nivel solo se
   revisaba al ganar XP de cultivo, minería o pesca.
+
 - **El set de Fibra completo no hacía nada** y el de Piel solo la mitad: velocidad de ataque, evasión y
   regeneración estaban en la tabla pero no los leía nadie. Ya funcionan los tres.
+
 - El bono de +1% de materiales por cofre colocado no se aplicaba al botín.
 - Los contadores diarios usaban fecha UTC y otros fecha local: en Argentina las incursiones, las
   recargas de estamina y las misiones del pase se reseteaban a las 21:00. Todo pasado a fecha local.
+
 - El Prestigio no reseteaba la XP de granja: volvía de 1 a 10 en el primer cultivo, duplicando
   cosméticos y ampliando el cofre en cada vuelta.
+
 - El color de nombre Oro (exclusivo VIP) se habilitaba con cualquier cosmético de color.
 - Bucle infinito latente en el sorteo de misiones diarias.
 
 ### Mercado entre jugadores — agujeros de duplicación
 - **"Retirar" duplicaba ítems**: el borrado devolvía éxito aunque no borrara ninguna fila, así que el
   doble clic devolvía el ítem a la bolsa una y otra vez, infinitas veces. Ahora el retiro es atómico.
+
 - **"Cobrar" pagaba varias veces la misma venta** por el mismo motivo. Ahora también es atómico.
 - **Comprar con la bolsa llena hacía perder la plata y el ítem**; retirar con la bolsa llena
   **destruía el ítem**. Ahora existen *entregas pendientes*: nada se pierde, se reclama desde la
   ventana del Mercado cuando hacés lugar.
+
 - **Comprar un arma que ya tenías pisaba la tuya** con todo su +N, durabilidad y runas. Ahora se avisa
   y no se permite.
+
 - Cambiar de pestaña mientras cargaba mostraba publicaciones ajenas bajo "Mis publicaciones", con
   botones de Retirar y Cobrar funcionando.
+
 - Dos compras rápidas seguidas dejaban la plata en negativo.
 
 ### Guardado
 - **El arma equipada se perdía al cargar la partida**: la migración de ids corría antes de leer el
   equipo guardado, así que quedaba en un id inválido y el jugador aparecía sin arma, sin poder atacar
   ni mandar incursiones.
+
 - El enfriamiento de forja de armas se salteaba recargando la página (ahora se guarda).
 - Los edificios nuevos (Altar, Establo, Curtiduría, Ofrendas) faltaban en el objeto por defecto.
 
@@ -592,6 +627,7 @@ y arreglaron **31 bugs**. Los más graves:
 - Todas las funciones de refresco de paneles quedaron envueltas: si una falla, se ve en la consola y
   el jugador recibe un aviso, pero **la ventana ya no queda vacía ni se lleva puesto el resto del
   juego** (era exactamente lo que pasó con la Cocina).
+
 - El Pase de Batalla y el Altar de Runas ya no revientan con datos guardados de una temporada vieja.
 - El Horno se agregó a la tabla de refresco automático.
 - Las pestañas del Mercado P2P ya no comparten selector con las de la Tienda.
@@ -599,3 +635,28 @@ y arreglaron **31 bugs**. Los más graves:
 **Verificación**: 762 entradas del panel de balanceo funcionando, 20 ventanas OK, sin funciones
 faltantes, y 18 pruebas automáticas de comportamiento sobre los arreglos (bolsa, mercado, tutorial,
 niveles, sets de armadura, cofres, prestigio, incursiones) — todas en verde.
+
+---
+
+## Pendientes conocidos
+
+### Lo único que falta es ARTE (nada de código)
+- **11 criaturas del bestiario**: generadas en PixelLab, faltan bajar los frames e integrarlas (a la araña todavía le falta la animación de ataque).
+- **3 edificios nuevos**: Establo, Curtiduría y Altar de Ofrendas.
+- **4 animales del Establo** (alpaca, conejo, toro, jabalí) y sus materiales (fibra, pelaje, cuero, colmillo).
+- **20 piezas de armadura** de la Curtiduría.
+- **Cosméticos**: skins, decoraciones y la mascota.
+- Mientras tanto todo eso ya funciona en el juego con el ícono de respaldo: no hay nada bloqueado.
+
+### En espera del diseñador
+- Usos de tablones y barras, cerca premium, tabla de stats definitiva del bestiario.
+
+### Opcionales ofrecidos
+- Íconos oficiales PixelLab para la Espada de Madera y el Pico de Hierro (hoy derivados).
+- Replicar el suelo nuevo en la plaza y en la Zona Negra.
+- Kick por AFK en la plaza.
+- Pulido tipo Sunflower Land: cursor de mano, resaltado al pasar el cursor, vista inicial centrada en las parcelas.
+- Simulación completa de balance económico de punta a punta.
+
+### Pilares futuros
+- Login por email multi-dispositivo, PvP/endgame de netherita, referidos, token $Golden, audio, granja distinta por nivel (quinta.docx).

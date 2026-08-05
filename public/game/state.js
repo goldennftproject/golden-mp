@@ -167,6 +167,9 @@ function seedDailyMax() { return SEED_DAILY_BASE + SEED_DAILY_POR_NIVEL * (G.lev
 // Doc "Enfriamiento de Árboles y Minerales" (4/8): farmeo chill. Las primeras recolecciones de cada
 // nodo salen en minutos (enganche) y después el nodo pasa a su enfriamiento largo real.
 var GOLPES_TALAR = 3, GOLPES_MINAR = 3;   // clics para tumbar un árbol o romper una roca (lo usa también el panel de balanceo)
+// si dejás un árbol o una piedra a medio golpear y no volvés en este tiempo, se recupera sola
+// y NO se gasta la herramienta: la herramienta solo se descuenta cuando el nodo cae del todo.
+var GOLPES_RESET_MS = 5000;
 var CD = { tree: 5400, rock: 7200 };            // 1 h 30 min el árbol · 2 h la piedra
 var CD_RAPIDO = {                                // enfriamiento corto de las primeras veces
   tree:      { seg: 180, veces: 3 },             // 3 min · las primeras 3
