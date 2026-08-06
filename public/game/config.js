@@ -22,6 +22,9 @@ var VIENTO_GRADOS = 1.3;   // cuánto se inclina la copa, en grados (1-2 se ve n
 var VIENTO_SEG = 3.4;      // cuánto tarda una oscilación completa, en segundos
 var VIENTO_RAFAGA_CADA = 11;   // cada cuántos segundos pasa una ráfaga
 var VIENTO_RAFAGA_MULT = 2.3;  // cuánto se agranda la inclinación durante la ráfaga
+// Solo se dobla la COPA: el tronco y la tierra quedan quietos. Esto dice qué parte de arriba
+// del sprite es copa (0.62 = el 62% superior). El resto se dibuja aparte y no se mueve.
+var VIENTO_CORTE = 0.62;
 var VIENTO_CULTIVOS = 0.55;    // los cultivos listos se mecen a este % de lo que se mece un árbol (0 = quietos)
 
 // "POP" DE CRECIMIENTO (4/8): cuando algo termina de crecer, da un saltito con resorte hasta
@@ -34,8 +37,6 @@ var POP_INTERMEDIO = 0.55;   // fuerza del pop del paso intermedio (el retoño d
 // EFECTOS DE JUGO (4/8). Todo por código, sin arte nuevo. Cada uno se apaga por separado.
 var FX_IMPACTO = 1;        // el nodo se sacude y suelta astillas/chispas en cada golpe
 var FX_IMPACTO_GRADOS = 5; // cuánto se sacude el nodo al recibir el golpe
-var FX_LISTO = 1;          // marcador flotante sobre lo cosechable / disponible
-var FX_ANILLO = 1;         // aro de progreso alrededor del nodo en enfriamiento
 var FX_HOJAS = 1;          // hojas volando cuando pasa una ráfaga de viento
 var FX_NUBES = 3;          // cuántas nubes cruzan la granja (0 = ninguna)
 var FX_MARIPOSAS = 3;      // cuántas mariposas revolotean sobre los cultivos listos (0 = ninguna)

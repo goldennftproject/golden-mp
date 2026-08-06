@@ -520,14 +520,6 @@ Todo por código, sin arte nuevo, y cada efecto se apaga por separado desde el p
 - **Astillas de madera** (rectangulitos que giran y caen) o **esquirlas de piedra**, según el nodo.
 - Mientras un nodo se sacude, el viento no lo toca: el golpe manda.
 
-**Se entiende de un vistazo qué hacer**
-
-- **Flechita dorada** que sube y baja sobre lo que se puede tocar ya: cultivo cosechable, árbol o
-  veta fuera de enfriamiento. Sin pasar el cursor por toda la granja.
-- **Aro de progreso** alrededor del nodo que se está regenerando, en vez de solo el contador de
-  texto. Con enfriamientos de horas, "le falta un cuarto" se lee mucho mejor que "3 h 12 min".
-  Se redibuja solo cuando el porcentaje cambia de verdad, así no cuesta nada.
-
 **Ambiente**
 
 - **Nubes** que cruzan lento y proyectan una sombra suave desplazada sobre la granja.
@@ -549,7 +541,23 @@ Todo por código, sin arte nuevo, y cada efecto se apaga por separado desde el p
   la diferencia se nota; para +1 no vale la pena).
 - **El botón bloqueado se sacude** al apretarlo, en vez de no hacer nada.
 
-Verificado: 783 entradas del panel de balanceo, 20 ventanas OK, sin funciones faltantes.
+Verificado: 782 entradas del panel de balanceo, 20 ventanas OK, sin funciones faltantes.
+
+### Ajustes sobre la tanda de efectos (4/8, revisión del diseñador)
+
+- **Fuera el aro de enfriamiento** de los nodos picados o talados. Volvió a quedar solo el contador
+  de texto con el cursor encima.
+- **Fuera las flechitas de "listo"** sobre los recursos: se superponían con la flecha del tutorial,
+  que es la que tiene que llamar la atención.
+- **El viento ahora dobla SOLO la copa.** Antes giraba el sprite entero y se veía que el tronco y la
+  tierra se movían. Ahora cada árbol se dibuja en dos partes recortadas del mismo sprite —tronco
+  abajo, copa arriba— y solo gira la copa, sobre el punto donde se une al tronco. La base queda
+  totalmente quieta. Sigue sin necesitar arte nuevo.
+  - El recorte se rehace solo si cambia la imagen del árbol (tocón, retoño, tajos).
+  - Mientras el árbol da su saltito de crecimiento o está en enfriamiento, se dibuja entero.
+  - El hachazo sacude la copa; el brillo del cursor sigue mostrando el árbol completo.
+  - Dónde corta copa y tronco es editable en el panel ("Ambiente — viento" → parte que es copa,
+    0.62 por defecto = el 62% de arriba).
 
 ### "Pop" de crecimiento: lo que termina de crecer rebota como un resorte (4/8)
 

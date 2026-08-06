@@ -1003,6 +1003,7 @@ class FarmScene extends Phaser.Scene {
 
   setObjTex(o, key, targetW) {
     if (o.sprite._popTw) { o.sprite._popTw.stop(); o.sprite._popTw = null; }   // un pop a medias no debe pelear con la escala nueva
+    this.copaSacar(o);   // cambia la imagen: se rehace el recorte copa/tronco desde cero
     o.sprite.setTexture(key); o.sprite.setScale(targetW / o.sprite.width);
     if (o.shadow) o.shadow.setScale(targetW / (o.rw || o.w));   // la sombra acompaña (tocón chico → sombra chica)
   }
@@ -1057,7 +1058,7 @@ class FarmScene extends Phaser.Scene {
   // 3 clics no se sentían como 3 golpes.
   golpeFx(o, tipo) {
     if (!FX_IMPACTO || !o || !o.sprite || !o.sprite.visible) return;
-    const spr = o.sprite;
+    const spr = o.copa || o.sprite;   // si el árbol está partido en copa/tronco, se sacude la copa
     // el granjero (invisible) trabaja al costado del nodo: el golpe empuja hacia el lado opuesto
     const desde = (this.hero && this.hero.x > o.cx) ? -1 : 1;
     const g = FX_IMPACTO_GRADOS * desde;
@@ -1223,52 +1224,42 @@ class FarmScene extends Phaser.Scene {
     }
   }
 
-  // MARCADOR DE "LISTO" (4/8): una flechita dorada que sube y baja sobre lo que se puede tocar ya
-  // (cultivo cosechable, árbol o veta fuera de enfriamiento). De un vistazo se ve qué hacer, sin
-  // tener que pasar el cursor por toda la granja. Dibujada por código, sin arte.
-  marcaListo(obj, on) {
-    if (!FX_LISTO) on = false;
-    if (!on) {
-      if (obj.mkListo) { this.tweens.killTweensOf(obj.mkListo); obj.mkListo.destroy(); obj.mkListo = null; }
-      return;
-    }
-    if (obj.mkListo) return;
-    const g = this.add.graphics().setDepth(99990);
-    g.fillStyle(0x241505, 0.85).fillTriangle(-6, -8, 6, -8, 0, 3);          // contorno oscuro (estándar del juego)
-    g.fillStyle(0xffd75e, 1).fillTriangle(-4.4, -7, 4.4, -7, 0, 1.4);       // flecha dorada
-    g.setPosition(obj.cx, this.topY(obj, 12));
-    obj.mkListo = g;
-    this.tweens.add({ targets: g, y: g.y - 6, yoyo: true, repeat: -1, duration: 620, ease: "Sine.easeInOut" });
+  // COPA APARTE (4/8): el árbol se parte en dos dibujos del MISMO sprite recortado —
+  // el tronco (abajo) y la copa (arriba). Solo la copa gira, y gira sobre la unión con el tronco,
+  // así la base y la tierra quedan totalmente quietas. Antes giraba el sprite entero y se veía
+  // que el tronco se doblaba, que era lo que no convencía.
+  copaArmar(o) {
+    const spr = o.sprite, fr = spr.frame;
+    const W = fr.width, H = fr.height;
+    const f = Math.max(0.15, Math.min(0.95, VIENTO_CORTE));
+    const clave = spr.texture.key + "|" + (fr.name || "") + "|" + f.toFixed(3) + "|" + spr.scaleY.toFixed(4);
+    if (o.copa && o.copaClave === clave) return;
+    if (o.copa) o.copa.destroy();
+    const unionY = spr.y - H * Math.abs(spr.scaleY) * (1 - f);   // dónde se juntan copa y tronco
+    o.copa = this.add.image(spr.x, unionY, spr.texture.key, fr.name)
+      .setOrigin(0.5, f)                        // el pivote cae justo en la unión
+      .setScale(spr.scaleX, spr.scaleY)
+      .setDepth(spr.depth + 0.1)
+      .setAlpha(spr.alpha);
+    o.copa.setCrop(0, 0, W, H * f);             // solo la parte de arriba
+    spr.setCrop(0, H * f, W, H * (1 - f));      // el tronco: la parte de abajo
+    spr.setAngle(0);
+    o.copaClave = clave;
   }
-
-  // ANILLO DE ENFRIAMIENTO (4/8): un aro fino que se va llenando alrededor del nodo. Con
-  // enfriamientos de horas se entiende mucho mejor "le falta un cuarto" que un texto con minutos,
-  // y se ve sin pasar el cursor. Se redibuja solo cuando el porcentaje cambia de verdad.
-  anilloCd(o, pct) {
-    if (!FX_ANILLO || pct == null) {
-      if (o.anillo) { o.anillo.destroy(); o.anillo = null; o.anilloPct = null; }
-      return;
-    }
-    if (!o.anillo) o.anillo = this.add.graphics().setDepth(o.by + 2);
-    if (o.anilloPct != null && Math.abs(o.anilloPct - pct) < 0.004) return;   // sin cambio visible: no redibujar
-    o.anilloPct = pct;
-    const r = GF.TILE * 0.42, cx = o.cx, cy = o.by - 4;
-    const g = o.anillo; g.clear();
-    g.lineStyle(3, 0x241505, 0.45).strokeCircle(cx, cy, r);                                   // riel oscuro
-    g.lineStyle(3, 0x8fd14f, 0.95).beginPath();
-    g.arc(cx, cy, r, -Math.PI / 2, -Math.PI / 2 + Math.PI * 2 * pct, false);
-    g.strokePath();
+  copaSacar(o) {
+    if (!o) return;
+    if (o.copa) { o.copa.destroy(); o.copa = null; }
+    o.copaClave = null;
+    if (o.sprite && o.sprite.isCropped) o.sprite.setCrop();
   }
 
   // VIENTO (4/8): los árboles crecidos se mecen apenas, como si soplara viento.
-  // Todo por código, sin arte nuevo: el sprite tiene el origen abajo, así que girarlo un grado
-  // inclina la copa y deja el tronco quieto. Cada árbol arranca en un punto distinto de la onda
-  // (desfase sacado de su posición) para que no se muevan todos al mismo tiempo, y cada tanto
-  // pasa una ráfaga que los inclina más a todos juntos.
+  // Cada árbol arranca en un punto distinto de la onda (desfase sacado de su posición) para que
+  // no se muevan todos al mismo tiempo, y cada tanto pasa una ráfaga que los inclina más a todos.
   tickViento() {
     if (!VIENTO_ON) {
       if (this._vientoLimpio) return;                       // ya quedó todo derecho
-      this.objs.forEach(o => { if (o.type === "tree" && o.sprite) o.sprite.setAngle(0); });
+      this.objs.forEach(o => { if (o.type === "tree") { this.copaSacar(o); if (o.sprite) o.sprite.setAngle(0); } });
       this.plots.forEach(p => { if (p.spr) p.spr.setAngle(0); });
       this._vientoLimpio = true; return;
     }
@@ -1281,10 +1272,12 @@ class FarmScene extends Phaser.Scene {
     this.tickHojas(raf);   // en el pico de la ráfaga vuelan unas hojas
     for (const o of this.objs) {
       if (o.type !== "tree" || !o.sprite || !o.sprite.visible) continue;
-      if (o.sprite._golpeTw) continue;   // se está sacudiendo por un hachazo: el viento no manda
-      if (o.locked || nowMs() < (o.readyAt || 0)) { if (o.sprite.angle) o.sprite.setAngle(0); continue; }   // tocón o retoño: no se mece
+      // tocón, retoño, árbol bloqueado o en pleno saltito de crecimiento: entero y quieto
+      if (o.locked || nowMs() < (o.readyAt || 0) || o.sprite._popTw) { this.copaSacar(o); if (o.sprite.angle) o.sprite.setAngle(0); continue; }
+      this.copaArmar(o);
+      if (o.sprite._golpeTw || (o.copa && o.copa._golpeTw)) continue;   // se está sacudiendo por un hachazo: el viento no manda
       if (o.vFase == null) o.vFase = (o.cx * 0.017 + o.by * 0.029) % (Math.PI * 2);
-      o.sprite.setAngle(Math.sin(seg * w + o.vFase) * VIENTO_GRADOS * raf);
+      o.copa.setAngle(Math.sin(seg * w + o.vFase) * VIENTO_GRADOS * raf);
     }
     if (VIENTO_CULTIVOS > 0) for (const pl of this.plots) {   // los cultivos listos también se mecen, más suave
       if (!pl.spr || !pl.spr.visible || pl.state !== "ready") continue;
@@ -1507,7 +1500,8 @@ class FarmScene extends Phaser.Scene {
       if (!s || !s.visible || !s.texture || !s.texture.key || s.texture.key.startsWith("__")) { fx.setVisible(false); return; }
       fx.setTexture(s.texture.key); fx.setOrigin(s.originX, s.originY);
       fx.setPosition(s.x, s.y); fx.setDisplaySize(s.displayWidth, s.displayHeight);
-      fx.setFlipX(!!s.flipX); fx.setAngle(s.angle || 0); fx.setDepth(s.depth + 0.5); fx.setVisible(true);   // acompaña la inclinación del viento
+      fx.setFlipX(!!s.flipX); fx.setAngle(0); fx.setDepth(s.depth + 0.5); fx.setVisible(true);
+      if (fx.isCropped) fx.setCrop();   // el árbol se dibuja recortado (copa/tronco), pero el brillo va entero
     };
     if (GF.editMode || GF.uiOpen) { this.hoverFx.setVisible(false); this.nearFx.setVisible(false); return; }
     const T = GF.TILE, p = this.input.activePointer;
@@ -1763,17 +1757,6 @@ class FarmScene extends Phaser.Scene {
         if (over) o.timer.setText(fmtSecs(Math.ceil((o.readyAt - t) / 1000))).setPosition(o.cx, this.topY(o, (o.type === "ore" || o.type === "rock") ? -6 : 7)).setVisible(true);   // detalles213: el timer del mineral pegado al nodo (antes flotaba alto y se mezclaba)
         else o.timer.setVisible(false);
       }
-      // aro de progreso mientras se regenera · flechita cuando ya se puede usar
-      if (o.type === "tree" || o.type === "rock" || o.type === "ore") {
-        if (o.readyAt && t < o.readyAt) {
-          const ini = o.cdIni || (o.readyAt - 3600000);
-          this.anilloCd(o, Math.max(0, Math.min(1, (t - ini) / Math.max(1, o.readyAt - ini))));
-          this.marcaListo(o, false);
-        } else {
-          this.anilloCd(o, null);
-          this.marcaListo(o, !o.locked);
-        }
-      }
     }
     this.tickGolpes();      // los golpes sueltos se pierden a los 5 s (el nodo vuelve a estar entero)
     this.tickViento();      // los árboles crecidos y los cultivos listos se mecen con el viento
@@ -1814,7 +1797,6 @@ class FarmScene extends Phaser.Scene {
       const plOver = this.timerOn(pl);
       // 2/8: MARCHITADO DESACTIVADO (pedido del diseñador) — el cultivo listo ya no se pudre
       if (pl.state === "ready" && pl.witherAt) { pl.witherAt = 0; this.syncPlots(); }
-      this.marcaListo(pl, pl.state === "ready");   // flechita sobre lo cosechable
       if (pl.state !== "growing") continue;
       if (t >= pl.readyAt) { pl.state = "ready"; pl.readyAt = 0; pl.witherAt = 0; this.showReadyCrop(pl, true); this.syncPlots(); }   // 2/8: sin marchitado — la cosecha espera (con pop de crecimiento)
       else {

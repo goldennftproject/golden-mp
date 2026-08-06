@@ -112,8 +112,6 @@ var BAL = (function () {
     // EFECTOS DE JUGO: cada uno se puede apagar por separado si molesta
     add("Ambiente — efectos", "fx.impacto", "Sacudida y astillas al golpear un nodo (1 = sí · 0 = no)", "1 o 0", () => FX_IMPACTO, v => { FX_IMPACTO = v ? 1 : 0; });
     add("Ambiente — efectos", "fx.impactoGrados", "Cuánto se sacude el nodo al recibir el golpe", "grados", () => FX_IMPACTO_GRADOS, v => { FX_IMPACTO_GRADOS = v; }, 0.5);
-    add("Ambiente — efectos", "fx.listo", "Flechita sobre lo cosechable / disponible (1 = sí · 0 = no)", "1 o 0", () => FX_LISTO, v => { FX_LISTO = v ? 1 : 0; });
-    add("Ambiente — efectos", "fx.anillo", "Aro de progreso alrededor del nodo en enfriamiento", "1 o 0", () => FX_ANILLO, v => { FX_ANILLO = v ? 1 : 0; });
     add("Ambiente — efectos", "fx.hojas", "Hojas volando cuando pasa una ráfaga", "1 o 0", () => FX_HOJAS, v => { FX_HOJAS = v ? 1 : 0; });
     add("Ambiente — efectos", "fx.nubes", "Cuántas nubes cruzan la granja", "nubes · entero", () => FX_NUBES, v => { FX_NUBES = v; });
     add("Ambiente — efectos", "fx.mariposas", "Cuántas mariposas revolotean sobre los cultivos", "mariposas · entero", () => FX_MARIPOSAS, v => { FX_MARIPOSAS = v; });
@@ -125,6 +123,7 @@ var BAL = (function () {
     add("Ambiente — pop de crecimiento", "pop.fuerza", "Qué tan exagerado es el rebote", "0.5 discreto · 1.5 caricaturesco", () => POP_FUERZA, v => { POP_FUERZA = v; }, 0.05);
     add("Ambiente — pop de crecimiento", "pop.ms", "Cuánto tarda en quedar quieto", "milisegundos", () => POP_MS, v => { POP_MS = v; }, 20);
     add("Ambiente — pop de crecimiento", "pop.intermedio", "Fuerza del pop en los pasos intermedios (brote, retoño)", "respecto del pop final", () => POP_INTERMEDIO, v => { POP_INTERMEDIO = v; }, 0.05);
+    add("Ambiente — viento", "viento.corte", "Qué parte del árbol es copa (lo que se dobla); el resto es tronco quieto", "0 a 1", () => VIENTO_CORTE, v => { VIENTO_CORTE = v; }, 0.02);
     add("Ambiente — viento", "viento.cultivos", "Cuánto se mecen los cultivos listos respecto de un árbol", "0 a 1 (0 = quietos)", () => VIENTO_CULTIVOS, v => { VIENTO_CULTIVOS = v; }, 0.05);
     add("Minerales", "golpesReset", "Si dejás un nodo a medio golpear, en cuánto se recupera solo (la herramienta no se gasta)", "", () => GOLPES_RESET_MS / 1000, v => { GOLPES_RESET_MS = v * 1000; }, 1, "tiempo");
     add("Minerales", "cd.tree", "Árbol · enfriamiento tras talar", "", () => CD.tree, v => { CD.tree = v; }, 1, "tiempo");
