@@ -28,12 +28,14 @@ class ForestScene extends Phaser.Scene {
 
     // árboles decorativos (más densos a la derecha)
     this.treeCols = [];
+    this.vientoArb = [];   // los mismos árboles, para mecerlos con el viento (se rearma en cada create)
     for (let i = 0; i < 46; i++) {
       const x = 60 + Math.random() * (this.W - 120), y = 60 + Math.random() * (this.H - 90);
       if (x < 150 && y > this.H / 2 - 80 && y < this.H / 2 + 80) continue;   // entrada despejada
       const s = this.add.image(x, y, "tree").setOrigin(0.5, 1);
       s.setScale((T * 2) / s.width).setDepth(y).setAlpha(0.96);
       this.treeCols.push({ cx: x, by: y, hw: T * 2 * 0.17, dep: T * 0.32 });   // solo el tronco estorba
+      this.vientoArb.push({ spr: s, fase: (x * 0.017 + y * 0.029) % (Math.PI * 2) });   // se mecen con el viento
     }
 
     // salida (izquierda): volver a la granja
@@ -398,6 +400,18 @@ class ForestScene extends Phaser.Scene {
     if (!this.auraFx || !this.hero) return;
     this.auraFx.setPosition(this.hero.x, this.hero.y - 3).setDepth(this.hero.y - 1).setVisible(this.hero.visible);
   }
+  // VIENTO: mismos valores que la granja (config.js). Los árboles tienen el origen abajo,
+  // así que girarlos un grado inclina la copa y deja el tronco quieto.
+  tickViento() {
+    if (!this.vientoArb || !this.vientoArb.length) return;
+    if (!VIENTO_ON) { this.vientoArb.forEach(a => { if (a.spr.angle) a.spr.setAngle(0); }); return; }
+    const seg = this.time.now / 1000;
+    const w = Math.PI * 2 / Math.max(0.2, VIENTO_SEG);
+    const p = Math.max(1, VIENTO_RAFAGA_CADA);
+    const raf = 1 + (VIENTO_RAFAGA_MULT - 1) * Math.pow(Math.abs(Math.sin(seg * Math.PI / p)), 12);
+    for (const a of this.vientoArb) a.spr.setAngle(Math.sin(seg * w + a.fase) * VIENTO_GRADOS * raf);
+  }
+
   // barra de vida del jugador, encima del granjero (solo en la Zona Negra)
   drawHeroBar() {
     if (!this.hero) return;
@@ -612,6 +626,7 @@ class ForestScene extends Phaser.Scene {
     if (this.hurtFx > 0) { this.hurtFx -= dt; hero.setTint(0xff6b5a); } else hero.clearTint();
     this.drawHeroBar();   // la barra de vida sigue al granjero
     this.seguirAura();
+    this.tickViento();    // mismo viento que en la granja
 
     // objetivo fijado: recuadro + nombre/vida, y auto-ataque cada 2s
     if (this.target && this.target.dead) this.clearTarget();

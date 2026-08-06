@@ -13,6 +13,23 @@ GF.CAM_PAN = true;    // cámara libre: se arrastra y la rueda desplaza (en vez 
 GF.ISLA = true;       // fondo de mar alrededor de la granja
 GF.ISLA_MARGEN = 260;  // cuánto mar se puede recorrer más allá de la cerca
 var ZONA_NEGRA_VEL = 0.75;   // "detallitos (1)" punto 7: el granjero camina 25% más lento en la Zona Negra
+
+// VIENTO (4/8): los árboles crecidos y los cultivos listos se mecen apenas, como si soplara viento.
+// Es puro código —sin arte nuevo—: el sprite gira poquísimo sobre su base (origen abajo), así que
+// la copa se inclina y el tronco queda quieto. Cada planta tiene su desfase para que no vayan todos igual.
+var VIENTO_ON = 1;         // 1 = encendido · 0 = apagado
+var VIENTO_GRADOS = 1.3;   // cuánto se inclina la copa, en grados (1-2 se ve natural; más de 3 marea)
+var VIENTO_SEG = 3.4;      // cuánto tarda una oscilación completa, en segundos
+var VIENTO_RAFAGA_CADA = 11;   // cada cuántos segundos pasa una ráfaga
+var VIENTO_RAFAGA_MULT = 2.3;  // cuánto se agranda la inclinación durante la ráfaga
+var VIENTO_CULTIVOS = 0.55;    // los cultivos listos se mecen a este % de lo que se mece un árbol (0 = quietos)
+
+// "POP" DE CRECIMIENTO (4/8): cuando algo termina de crecer, da un saltito con resorte hasta
+// quedar quieto. Es puro código: se aplasta un poco y vuelve a su tamaño con rebote elástico.
+var POP_ON = 1;          // 1 = encendido · 0 = apagado
+var POP_FUERZA = 1;      // qué tan exagerado es el rebote (0.5 = discreto · 1.5 = caricaturesco)
+var POP_MS = 620;        // cuánto tarda en quedar estable, en milisegundos
+var POP_INTERMEDIO = 0.55;   // fuerza del pop del paso intermedio (el retoño del árbol) respecto del final
 GF.ZOOM = 1.35;
 GF.editMode = false;   // modo edición de la granja (arrastrar objetos)
 

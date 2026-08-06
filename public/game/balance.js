@@ -103,6 +103,18 @@ var BAL = (function () {
     });
     add("Minerales", "golpesTalar", "Clics para tumbar un árbol", "golpes · entero", () => GOLPES_TALAR, v => { GOLPES_TALAR = v; });
     add("Minerales", "golpesMinar", "Clics para romper una roca o mineral", "golpes · entero", () => GOLPES_MINAR, v => { GOLPES_MINAR = v; });
+    // VIENTO: efecto ambiental por código (sin arte). Para verlo, mirá un árbol crecido.
+    add("Ambiente — viento", "viento.on", "Viento encendido (1 = sí · 0 = no)", "1 o 0", () => VIENTO_ON, v => { VIENTO_ON = v ? 1 : 0; });
+    add("Ambiente — viento", "viento.grados", "Cuánto se inclina la copa", "grados · 1 a 2 se ve natural", () => VIENTO_GRADOS, v => { VIENTO_GRADOS = v; }, 0.1);
+    add("Ambiente — viento", "viento.seg", "Cuánto tarda una oscilación completa", "", () => VIENTO_SEG, v => { VIENTO_SEG = v; }, 0.1, "tiempo");
+    add("Ambiente — viento", "viento.rafagaCada", "Cada cuánto pasa una ráfaga", "", () => VIENTO_RAFAGA_CADA, v => { VIENTO_RAFAGA_CADA = v; }, 1, "tiempo");
+    add("Ambiente — viento", "viento.rafagaMult", "Cuánto más se inclinan durante la ráfaga", "veces", () => VIENTO_RAFAGA_MULT, v => { VIENTO_RAFAGA_MULT = v; }, 0.1);
+    // POP: el saltito de resorte al terminar de crecer
+    add("Ambiente — pop de crecimiento", "pop.on", "Pop encendido (1 = sí · 0 = no)", "1 o 0", () => POP_ON, v => { POP_ON = v ? 1 : 0; });
+    add("Ambiente — pop de crecimiento", "pop.fuerza", "Qué tan exagerado es el rebote", "0.5 discreto · 1.5 caricaturesco", () => POP_FUERZA, v => { POP_FUERZA = v; }, 0.05);
+    add("Ambiente — pop de crecimiento", "pop.ms", "Cuánto tarda en quedar quieto", "milisegundos", () => POP_MS, v => { POP_MS = v; }, 20);
+    add("Ambiente — pop de crecimiento", "pop.intermedio", "Fuerza del pop en los pasos intermedios (brote, retoño)", "respecto del pop final", () => POP_INTERMEDIO, v => { POP_INTERMEDIO = v; }, 0.05);
+    add("Ambiente — viento", "viento.cultivos", "Cuánto se mecen los cultivos listos respecto de un árbol", "0 a 1 (0 = quietos)", () => VIENTO_CULTIVOS, v => { VIENTO_CULTIVOS = v; }, 0.05);
     add("Minerales", "golpesReset", "Si dejás un nodo a medio golpear, en cuánto se recupera solo (la herramienta no se gasta)", "", () => GOLPES_RESET_MS / 1000, v => { GOLPES_RESET_MS = v * 1000; }, 1, "tiempo");
     add("Minerales", "cd.tree", "Árbol · enfriamiento tras talar", "", () => CD.tree, v => { CD.tree = v; }, 1, "tiempo");
     add("Minerales", "cd.rock", "Piedra · enfriamiento tras picar", "", () => CD.rock, v => { CD.rock = v; }, 1, "tiempo");

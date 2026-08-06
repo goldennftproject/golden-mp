@@ -508,6 +508,40 @@ Los niveles de granja 17, 21 y 27 desbloqueaban "edificio nivel 2" pero no hací
 
 ---
 
+### "Pop" de crecimiento: lo que termina de crecer rebota como un resorte (4/8)
+
+Cuando algo pasa a su etapa final, se aplasta un instante y vuelve a su tamaño con rebote elástico
+(`Elastic.easeOut`), hasta quedar quieto. Como el origen del sprite está abajo, se lee como si la
+planta saltara desde la tierra. Sin arte nuevo.
+
+- **Cultivo listo**: pop fuerte + polvillo verde. El brillo dorado de "cosechame" arranca **después**
+  del rebote, porque los dos animan la escala y si no se pelean entre sí.
+- **Árbol, roca o veta que sale del enfriamiento**: pop fuerte + polvillo (hojas verdes en el árbol,
+  polvo gris en la piedra).
+- **Pasos intermedios** con pop más chico (55%): el brote al plantar, la planta a media cosecha y el
+  retoño del árbol a mitad del enfriamiento.
+- No pasa al restaurar la partida: si entrás y el cultivo ya estaba listo, aparece quieto. El pop es
+  solo para lo que crece **mientras mirás**.
+- Un pop a medio andar se corta solo si el sprite cambia de textura, así no queda con la escala rara.
+- Editable en el panel de balanceo (categoría "Ambiente — pop de crecimiento"): encendido/apagado,
+  fuerza del rebote, cuánto tarda en quedar quieto y la fuerza de los pasos intermedios.
+
+### Viento: los árboles y los cultivos se mecen (4/8)
+
+Efecto ambiental hecho **solo con código, sin arte nuevo**. Los sprites tienen el origen abajo, así
+que girarlos un grado inclina la copa y deja el tronco quieto — se lee como viento.
+
+- **Solo los árboles crecidos se mecen.** Un tocón o un retoño en enfriamiento se queda quieto.
+- **Cada árbol arranca en un punto distinto de la onda** (el desfase sale de su posición en el mapa),
+  así que no se mueven todos al mismo tiempo.
+- **Ráfagas**: cada 11 segundos pasa una que los inclina a todos un poco más durante ~3 segundos.
+  En calma van a 1,3°; en la ráfaga llegan a ~2,9°.
+- **Los cultivos listos también se mecen**, a un 55% de lo que se mece un árbol y un poco más rápido.
+- Va en la granja **y** en la Zona Negra (46 árboles), con los mismos valores.
+- El brillo de interacción acompaña la inclinación, así no se despega del árbol.
+- Todo editable en el panel de balanceo (categoría "Ambiente — viento"): encendido/apagado, grados,
+  duración del ciclo, cada cuánto pasa una ráfaga, cuánto la agranda y cuánto se mecen los cultivos.
+
 ### Se elimina la cola de acciones: un clic = un golpe (4/8)
 
 La cola tenía sentido cuando el granjero caminaba: clickeabas varios nodos y él iba yendo de uno en

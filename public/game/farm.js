@@ -942,7 +942,7 @@ class FarmScene extends Phaser.Scene {
         if (starter) G.firstSeeds--;
         o.readyAt = nowMs() + (starter ? Math.min(FIRST_GROW_MS, real) : real);   // nunca más lento que el tiempo real del cultivo
         o.growTotal = o.readyAt - nowMs();
-        this.showGrowing(o);
+        this.showGrowing(o, true);   // recién plantado: el brote asoma con un saltito
         this.syncPlots(); addXp("farming", 5); statAdd("plantar", ck); log(`Plantaste ${cd.label}.`, "good"); toast("" + cd.label);
         if (typeof tutoEvent === "function") tutoEvent("plant");
         if (isOpen("ov-inv")) refreshInv();
@@ -998,6 +998,7 @@ class FarmScene extends Phaser.Scene {
   }
 
   setObjTex(o, key, targetW) {
+    if (o.sprite._popTw) { o.sprite._popTw.stop(); o.sprite._popTw = null; }   // un pop a medias no debe pelear con la escala nueva
     o.sprite.setTexture(key); o.sprite.setScale(targetW / o.sprite.width);
     if (o.shadow) o.shadow.setScale(targetW / (o.rw || o.w));   // la sombra acompaña (tocón chico → sombra chica)
   }
@@ -1037,6 +1038,66 @@ class FarmScene extends Phaser.Scene {
   }
 
   // punto fijo ARRIBA de lo encolado, para saber de un vistazo qué pusiste y qué no (detalles 338)
+  // "POP" DE CRECIMIENTO (4/8): el sprite se aplasta un instante y vuelve a su tamaño con rebote
+  // elástico, como un resorte, hasta quedar quieto. Los sprites tienen el origen abajo, así que
+  // el rebote se lee como si la planta saltara desde la tierra.
+  popFx(spr, fuerza, alTerminar) {
+    if (!spr || !spr.visible) { if (alTerminar) alTerminar(); return; }
+    const f = Math.max(0, (fuerza == null ? 1 : fuerza) * POP_FUERZA);
+    if (!POP_ON || f <= 0) { if (alTerminar) alTerminar(); return; }
+    if (spr._popTw) { spr._popTw.stop(); spr._popTw = null; }
+    const bx = spr.scaleX, by = spr.scaleY;
+    spr.setScale(bx * (1 + 0.28 * f), by * (1 - 0.24 * f));   // achatado y ancho: el "impulso"
+    spr._popTw = this.tweens.add({
+      targets: spr, scaleX: bx, scaleY: by,
+      duration: Math.max(120, POP_MS), ease: "Elastic.easeOut", easeParams: [1, 0.42],
+      onComplete: () => { spr._popTw = null; spr.setScale(bx, by); if (alTerminar) alTerminar(); },
+    });
+  }
+  // chispita de polvo/hojas que acompaña al pop (partículas por código, sin arte)
+  puffFx(x, y, color, n) {
+    for (let i = 0; i < (n || 6); i++) {
+      const a = -Math.PI / 2 + (Math.random() - 0.5) * 2.2, r = 12 + Math.random() * 16;
+      const p = this.add.circle(x, y, 1.5 + Math.random() * 1.5, color, 0.9).setDepth(99995);
+      this.tweens.add({
+        targets: p, x: x + Math.cos(a) * r, y: y + Math.sin(a) * r * 0.8,
+        alpha: 0, scale: 0.4, duration: 380 + Math.random() * 260,
+        onComplete: () => p.destroy(),
+      });
+    }
+  }
+
+  // VIENTO (4/8): los árboles crecidos se mecen apenas, como si soplara viento.
+  // Todo por código, sin arte nuevo: el sprite tiene el origen abajo, así que girarlo un grado
+  // inclina la copa y deja el tronco quieto. Cada árbol arranca en un punto distinto de la onda
+  // (desfase sacado de su posición) para que no se muevan todos al mismo tiempo, y cada tanto
+  // pasa una ráfaga que los inclina más a todos juntos.
+  tickViento() {
+    if (!VIENTO_ON) {
+      if (this._vientoLimpio) return;                       // ya quedó todo derecho
+      this.objs.forEach(o => { if (o.type === "tree" && o.sprite) o.sprite.setAngle(0); });
+      this.plots.forEach(p => { if (p.spr) p.spr.setAngle(0); });
+      this._vientoLimpio = true; return;
+    }
+    this._vientoLimpio = false;
+    const seg = this.time.now / 1000;
+    const w = Math.PI * 2 / Math.max(0.2, VIENTO_SEG);
+    // ráfaga: un pico angosto y suave cada VIENTO_RAFAGA_CADA segundos
+    const p = Math.max(1, VIENTO_RAFAGA_CADA);
+    const raf = 1 + (VIENTO_RAFAGA_MULT - 1) * Math.pow(Math.abs(Math.sin(seg * Math.PI / p)), 12);
+    for (const o of this.objs) {
+      if (o.type !== "tree" || !o.sprite || !o.sprite.visible) continue;
+      if (o.locked || nowMs() < (o.readyAt || 0)) { if (o.sprite.angle) o.sprite.setAngle(0); continue; }   // tocón o retoño: no se mece
+      if (o.vFase == null) o.vFase = (o.cx * 0.017 + o.by * 0.029) % (Math.PI * 2);
+      o.sprite.setAngle(Math.sin(seg * w + o.vFase) * VIENTO_GRADOS * raf);
+    }
+    if (VIENTO_CULTIVOS > 0) for (const pl of this.plots) {   // los cultivos listos también se mecen, más suave
+      if (!pl.spr || !pl.spr.visible || pl.state !== "ready") continue;
+      if (pl.vFase == null) pl.vFase = (pl.cx * 0.023 + pl.by * 0.031) % (Math.PI * 2);
+      pl.spr.setAngle(Math.sin(seg * w * 1.35 + pl.vFase) * VIENTO_GRADOS * VIENTO_CULTIVOS * raf);
+    }
+  }
+
   // Un árbol/piedra a medio golpear se RECUPERA SOLO si dejás de pegarle (doc 4/8).
   // El hacha o el pico solo se gastan cuando el nodo cae del todo: los golpes sueltos son gratis.
   tickGolpes() {
@@ -1249,7 +1310,7 @@ class FarmScene extends Phaser.Scene {
       if (!s || !s.visible || !s.texture || !s.texture.key || s.texture.key.startsWith("__")) { fx.setVisible(false); return; }
       fx.setTexture(s.texture.key); fx.setOrigin(s.originX, s.originY);
       fx.setPosition(s.x, s.y); fx.setDisplaySize(s.displayWidth, s.displayHeight);
-      fx.setFlipX(!!s.flipX); fx.setDepth(s.depth + 0.5); fx.setVisible(true);
+      fx.setFlipX(!!s.flipX); fx.setAngle(s.angle || 0); fx.setDepth(s.depth + 0.5); fx.setVisible(true);   // acompaña la inclinación del viento
     };
     if (GF.editMode || GF.uiOpen) { this.hoverFx.setVisible(false); this.nearFx.setVisible(false); return; }
     const T = GF.TILE, p = this.input.activePointer;
@@ -1343,6 +1404,7 @@ class FarmScene extends Phaser.Scene {
 
   // brillo/efecto del cultivo: "half" (media cosecha) o "ready" (aura legendaria); cualquier otro valor lo apaga
   setPlotGlow(pl, mode) {
+    if (pl.spr && pl.spr._popTw && mode === "ready") { pl.spr._popTw.stop(); pl.spr._popTw = null; }   // el pulso de escala reemplaza al pop
     if (pl.glowTw) { pl.glowTw.stop(); pl.glowTw = null; }
     if (pl.glowTxt) { pl.glowTxt.destroy(); pl.glowTxt = null; }
     if (pl.glowAura) { pl.glowAura.destroy(); pl.glowAura = null; }
@@ -1381,15 +1443,17 @@ class FarmScene extends Phaser.Scene {
   }
 
   // brote mientras crece
-  showGrowing(pl) {
+  showGrowing(pl, pop) {
     pl.half = false; this.setPlotGlow(pl, "off");
     pl.spr.clearTint().setAlpha(1);
     pl.spr.setTexture("sprout").setVisible(true);
     pl.spr.setScale((GF.TILE * 0.73) / pl.spr.width);   // ~20px visibles, centrado en la tierra
     pl.emo.setVisible(false);
+    if (pop) { this.popFx(pl.spr, POP_INTERMEDIO); this.puffFx(pl.cx, pl.by + 2, 0xb4b2a9, 5); }   // el brote asoma de la tierra
   }
   // cultivo (conjunto) cuando está listo; si falta el sprite, cae al emoji
-  showReadyCrop(pl) {
+  // `pop` = true solo cuando el cultivo TERMINA de crecer ahora mismo (no al restaurar la partida)
+  showReadyCrop(pl, pop) {
     const key = "cropg_" + pl.cropKey;
     if (pl.cropKey && this.textures.exists(key)) {
       pl.spr.setTexture(key).setVisible(true);
@@ -1401,7 +1465,12 @@ class FarmScene extends Phaser.Scene {
       pl.emo.setText(cd ? cd.emoji : "").setVisible(true);
     }
     pl.timer.setVisible(false);
-    this.setPlotGlow(pl, "ready");
+    if (pop) {
+      // primero el saltito de resorte y RECIÉN DESPUÉS el brillo, porque el brillo también
+      // anima la escala y los dos tweens se pelearían por la misma propiedad
+      this.puffFx(pl.cx, pl.by + 2, 0xc0dd97, 7);
+      this.popFx(pl.spr, 1, () => { if (pl.state === "ready") this.setPlotGlow(pl, "ready"); });
+    } else this.setPlotGlow(pl, "ready");
   }
   // pinta la parcela según su estado (para restaurar tras un refresh)
   applyPlotVisual(pl) {
@@ -1476,6 +1545,9 @@ class FarmScene extends Phaser.Scene {
         if (o.type === "tree" || o.type === "rock") this.setObjTex(o, o.baseKey, o.rw || o.w);
         else if (o.type === "ore") { this.setObjTex(o, o.baseKey, o.rw || o.w); o.sprite.setAlpha(1); }
         if (o.timer) o.timer.setVisible(false);
+        // TERMINÓ DE CRECER: saltito con resorte + polvillo (se nota que ya se puede volver a usar)
+        this.popFx(o.sprite, 1);
+        this.puffFx(o.cx, o.by - 3, o.type === "tree" ? 0x97c459 : 0xb4b2a9, o.type === "tree" ? 8 : 6);
       } else if (o.readyAt && o.halfAt && t >= o.halfAt) {
         // MITAD del enfriamiento: se ve que va regenerando (doc 4/8)
         o.halfAt = 0;
@@ -1486,6 +1558,7 @@ class FarmScene extends Phaser.Scene {
           if (this.textures.exists(o.baseKey + "_half")) this.setObjTex(o, o.baseKey + "_half", o.rw || o.w);
           else o.sprite.setAlpha(0.75);
         }
+        this.popFx(o.sprite, POP_INTERMEDIO);   // el retoño también asoma con un saltito, más chico
       } else if (o.readyAt && o.timer) {
         // cuarta.docx: el timer del recurso solo aparece con el cursor encima (al clickear ya sale el aviso)
         const p = this.input.activePointer;
@@ -1495,6 +1568,7 @@ class FarmScene extends Phaser.Scene {
       }
     }
     this.tickGolpes();      // los golpes sueltos se pierden a los 5 s (el nodo vuelve a estar entero)
+    this.tickViento();      // los árboles crecidos y los cultivos listos se mecen con el viento
     this.updateHoverFx();   // brillo sobre lo interactuable (hover + cercanía)
     // clic sostenido: aplicar el destino que quedó pendiente por el freno del recálculo
     if (this.hold && this.hold.active && this.holdPend && t - (this.holdAt || 0) > 130) {
@@ -1530,7 +1604,7 @@ class FarmScene extends Phaser.Scene {
       // 2/8: MARCHITADO DESACTIVADO (pedido del diseñador) — el cultivo listo ya no se pudre
       if (pl.state === "ready" && pl.witherAt) { pl.witherAt = 0; this.syncPlots(); }
       if (pl.state !== "growing") continue;
-      if (t >= pl.readyAt) { pl.state = "ready"; pl.readyAt = 0; pl.witherAt = 0; this.showReadyCrop(pl); this.syncPlots(); }   // 2/8: sin marchitado — la cosecha espera
+      if (t >= pl.readyAt) { pl.state = "ready"; pl.readyAt = 0; pl.witherAt = 0; this.showReadyCrop(pl, true); this.syncPlots(); }   // 2/8: sin marchitado — la cosecha espera (con pop de crecimiento)
       else {
         if (plOver) pl.timer.setText(fmtSecs(Math.max(0, Math.ceil((pl.readyAt - t) / 1000)))).setPosition(pl.cx, this.topY(pl)).setVisible(true);
         else pl.timer.setVisible(false);
@@ -1541,6 +1615,7 @@ class FarmScene extends Phaser.Scene {
           if (pl.cropKey && this.textures.exists(mk)) pl.spr.setTexture(mk);
           pl.spr.setScale((GF.TILE * 0.96) / pl.spr.width);   // ~25px visibles
           this.setPlotGlow(pl, "half");
+          this.popFx(pl.spr, POP_INTERMEDIO);   // se estiró: saltito chico (el brillo de "half" es de alpha, no pelea)
         }
       }
     }
