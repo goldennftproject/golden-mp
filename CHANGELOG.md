@@ -508,6 +508,49 @@ Los niveles de granja 17, 21 y 27 desbloqueaban "edificio nivel 2" pero no hací
 
 ---
 
+### Tanda de efectos: jugo, ambiente y UI (4/8)
+
+Todo por código, sin arte nuevo, y cada efecto se apaga por separado desde el panel de balanceo
+(categoría "Ambiente — efectos"). Hay un tope de partículas vivas a la vez para no castigar al móvil.
+
+**El golpe se siente**
+
+- El árbol o la piedra **se sacude hacia el lado contrario al hachazo** y vuelve con rebote, en cada
+  uno de los 3 golpes. Antes solo cambiaba de imagen y los clics no se sentían como golpes.
+- **Astillas de madera** (rectangulitos que giran y caen) o **esquirlas de piedra**, según el nodo.
+- Mientras un nodo se sacude, el viento no lo toca: el golpe manda.
+
+**Se entiende de un vistazo qué hacer**
+
+- **Flechita dorada** que sube y baja sobre lo que se puede tocar ya: cultivo cosechable, árbol o
+  veta fuera de enfriamiento. Sin pasar el cursor por toda la granja.
+- **Aro de progreso** alrededor del nodo que se está regenerando, en vez de solo el contador de
+  texto. Con enfriamientos de horas, "le falta un cuarto" se lee mucho mejor que "3 h 12 min".
+  Se redibuja solo cuando el porcentaje cambia de verdad, así no cuesta nada.
+
+**Ambiente**
+
+- **Nubes** que cruzan lento y proyectan una sombra suave desplazada sobre la granja.
+- **Hojas volando** en el pico de cada ráfaga de viento: salen de las copas y cruzan la pantalla.
+  Ahora la ráfaga se entiende, no solo se ve en el meneo de los árboles.
+- **Mariposas** que revolotean y se posan sobre los cultivos listos; si cosechás ese cultivo, la
+  mariposa se va sola a otro lado.
+- **El humo del Horno se inclina con el viento** (usa la misma onda que mece los árboles).
+- **Vapor de la Cocina** mientras hay ollas trabajando y **chispas violetas del Altar** cuando la
+  mejora de nivel 2 está activa: los edificios cuentan su estado sin abrir la ventana.
+
+**UI**
+
+- **Fundido a negro** al entrar y salir de la Zona Negra y de la plaza, en vez del corte seco.
+- **Las ventanas se abren con el mismo pop** que usa el crecimiento. Hay dos animaciones: una para
+  la ventana centrada y otra para la que el jugador arrastró — si no, al abrirse una ventana movida
+  saltaba de lugar.
+- **Los números de plata y $Golden cuentan hacia arriba** en vez de saltar al valor final (solo si
+  la diferencia se nota; para +1 no vale la pena).
+- **El botón bloqueado se sacude** al apretarlo, en vez de no hacer nada.
+
+Verificado: 783 entradas del panel de balanceo, 20 ventanas OK, sin funciones faltantes.
+
 ### "Pop" de crecimiento: lo que termina de crecer rebota como un resorte (4/8)
 
 Cuando algo pasa a su etapa final, se aplasta un instante y vuelve a su tamaño con rebote elástico

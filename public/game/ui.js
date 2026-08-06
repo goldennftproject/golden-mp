@@ -28,6 +28,24 @@ const OV_REFRESH = { "ov-inv": () => refreshInv(), "ov-skills": () => refreshSki
 // sonido propio de cada edificio al abrir su ventana (pedido del diseñador)
 const OV_SFX = { "ov-market": "shop", "ov-forge": "forge", "ov-barn": "door", "ov-cocina": "door", "ov-cofre": "door", "ov-daily": "coin", "ov-altar": "forge", "ov-establo": "door", "ov-curtiduria": "forge" };
 function openOv(id) { const e = $(id); if (!e) return; e.classList.add("show"); if (window.sfx) sfx(OV_SFX[id] || "click"); if (OV_REFRESH[id]) OV_REFRESH[id](); }
+
+// FUNDIDO A NEGRO al cambiar de escena (granja <-> Zona Negra <-> plaza). Antes era un corte seco.
+function irAEscena(sc, destino) {
+  const el = $("fadeblk"), ms = (typeof FX_FADE_MS === "number") ? FX_FADE_MS : 0;
+  if (!el || ms <= 0) { sc.scene.start(destino); return; }
+  el.style.transitionDuration = ms + "ms";
+  el.classList.add("on");
+  setTimeout(() => {
+    sc.scene.start(destino);
+    setTimeout(() => el.classList.remove("on"), 60);   // ya arrancó la escena nueva: se abre el telón
+  }, ms);
+}
+// SACUDIDA de un botón que no se puede apretar: explica el "no" sin sacar un cartel
+function noNo(el) {
+  if (!el) return;
+  el.classList.remove("nono"); void el.offsetWidth; el.classList.add("nono");
+  setTimeout(() => el.classList.remove("nono"), 320);
+}
 function closeOv(id) { const e = $(id); if (e) e.classList.remove("show"); }
 function closeAllOv() { document.querySelectorAll(".ov.show").forEach(e => e.classList.remove("show")); }
 
@@ -68,7 +86,25 @@ function nextCeleb() {
 }
 window.celebrate = celebrate;
 
-function refreshHud() { refreshStam(); setTxt("s-level", G.level); setTxt("s-prestige", G.prestige); setTxt("s-plata", fmt(G.plata)); setTxt("s-golden", fmt(G.golden)); setTxt("s-week", G.week); setTxt("s-hp", Math.ceil(G.hp) + "/" + G.hpMax); refreshCombatBar(); if (typeof checkCooking === "function") checkCooking(); if (typeof refreshHotbar === "function") refreshHotbar(); }
+// CONTADOR ANIMADO: los números del HUD "corren" hasta el valor nuevo en vez de saltar de golpe.
+// Solo cuando la diferencia se nota (más de 4): para +1 de madera no vale la pena.
+const _cnt = {};
+function setNum(id, valor) {
+  const el = document.getElementById(id); if (!el) return;
+  const anterior = _cnt[id] == null ? valor : _cnt[id];
+  _cnt[id] = valor;
+  if (el._tm) { clearInterval(el._tm); el._tm = null; }
+  const dif = valor - anterior;
+  if (Math.abs(dif) <= 4) { el.textContent = fmt(valor); return; }
+  const pasos = 14; let i = 0;
+  el._tm = setInterval(() => {
+    i++;
+    const k = 1 - Math.pow(1 - i / pasos, 3);   // arranca rápido y frena al final
+    el.textContent = fmt(Math.round(anterior + dif * k));
+    if (i >= pasos) { clearInterval(el._tm); el._tm = null; el.textContent = fmt(valor); }
+  }, 26);
+}
+function refreshHud() { refreshStam(); setTxt("s-level", G.level); setTxt("s-prestige", G.prestige); setNum("s-plata", G.plata); setNum("s-golden", G.golden); setTxt("s-week", G.week); setTxt("s-hp", Math.ceil(G.hp) + "/" + G.hpMax); refreshCombatBar(); if (typeof checkCooking === "function") checkCooking(); if (typeof refreshHotbar === "function") refreshHotbar(); }
 // clic en la barra de estamina: ofrece la recarga premium (con su tope diario)
 function bindStamPill() {
   const pill = document.getElementById("stampill"); if (!pill || pill._bound) return;
@@ -1020,6 +1056,7 @@ function initOverlayDrag() {
       e.preventDefault();
       const r = card.getBoundingClientRect();
       card.style.left = r.left + "px"; card.style.top = r.top + "px"; card.style.transform = "none";
+      card.classList.add("movida");   // ya no está centrada por transform: el pop de apertura usa otra animación
       drag = { dx: e.clientX - r.left, dy: e.clientY - r.top };
       try { handle.setPointerCapture(e.pointerId); } catch (er) {}
     });
@@ -1061,6 +1098,7 @@ function makeHoldDrag(el, saveKey, anchorBottom) {
     const top = Math.max(4, Math.min(e.clientY - drag.dy, window.innerHeight - h - 4));
     el.style.left = left + "px"; el.style.top = top + "px";
     el.style.right = "auto"; el.style.bottom = "auto"; el.style.transform = "none";
+    el.classList.add("movida");
     e.preventDefault();
   });
   const end = () => {
@@ -1085,6 +1123,7 @@ function makeHoldDrag(el, saveKey, anchorBottom) {
     try { const s = JSON.parse(localStorage.getItem(saveKey) || "null");
       if (s && typeof s.left === "number") {
         el.style.left = s.left + "px"; el.style.right = "auto"; el.style.transform = "none";
+        el.classList.add("movida");   // posición guardada: ya no está centrada por transform
         if (typeof s.bottom === "number") { el.style.bottom = s.bottom + "px"; el.style.top = "auto"; }
         else if (anchorBottom && typeof s.top === "number") { el.style.bottom = Math.max(4, window.innerHeight - s.top - el.offsetHeight) + "px"; el.style.top = "auto"; }   // migra posiciones viejas guardadas por arriba
         else { el.style.top = s.top + "px"; el.style.bottom = "auto"; clamp(); }
@@ -1132,6 +1171,13 @@ function initUI() {
     $("shop-sell").style.display = s === "sell" ? "" : "none";
   });
   // clic fuera de una ventana abierta → se cierra (menos la bolsa: multitarea al minar/talar, detalles 29/7)
+  // apretar un botón bloqueado: se sacude en vez de no hacer nada (el "no" se entiende sin cartel)
+  document.addEventListener("pointerdown", (e) => {
+    const cont = e.target.closest && e.target.closest(".fbtns, .forge-row");
+    if (!cont) return;
+    const b = cont.querySelector("button[disabled]");
+    if (b && cont.querySelectorAll("button").length === cont.querySelectorAll("button[disabled]").length) noNo(b);
+  }, true);
   document.addEventListener("pointerdown", (e) => {
     // el menú se pliega solo al clickear fuera de él (volver a jugar)
     const gm = $("gmenu");

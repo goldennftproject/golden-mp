@@ -41,6 +41,19 @@
   .uidrag{outline:2px dashed #e2b23a !important;outline-offset:4px;cursor:move !important;user-select:none}
   .btnpill{font-family:inherit;font-size:12px;padding:6px 11px;border-radius:8px;border:1px solid #3c4d31;background:rgba(38,51,31,.92);color:#f2ead5;cursor:pointer;font-weight:700}
 
+  /* fundido a negro entre escenas · pop al abrir ventanas · sacudida del botón deshabilitado */
+  #fadeblk{position:fixed;inset:0;background:#000;opacity:0;pointer-events:none;z-index:900;transition:opacity .26s ease}
+  #fadeblk.on{opacity:1}
+  /* la ventana centrada vive con transform:translate(-50%,-50%); la que el jugador arrastró, no.
+     Por eso hay dos animaciones: si no, al abrirse una ventana movida saltaba de lugar. */
+  @keyframes ovpop{0%{transform:translate(-50%,-50%) scale(.88);opacity:0}60%{transform:translate(-50%,-50%) scale(1.03)}100%{transform:translate(-50%,-50%) scale(1);opacity:1}}
+  @keyframes ovpopm{0%{transform:scale(.88);opacity:0}60%{transform:scale(1.03)}100%{transform:scale(1);opacity:1}}
+  .ov.show>.card{animation:ovpop .26s cubic-bezier(.2,.9,.3,1.2)}
+  .ov.show>.card.movida{animation:ovpopm .26s cubic-bezier(.2,.9,.3,1.2)}
+  @keyframes nono{0%,100%{transform:translateX(0)}20%{transform:translateX(-4px)}40%{transform:translateX(4px)}60%{transform:translateX(-3px)}80%{transform:translateX(3px)}}
+  .nono{animation:nono .3s}
+  /* el botón bloqueado deja pasar el clic al contenedor: así se puede detectar y sacudirlo */
+  .card button[disabled]{pointer-events:none}
   #toast{position:fixed;left:50%;top:60px;transform:translateX(-50%);z-index:200;background:rgba(20,25,15,.92);color:#fff;padding:8px 16px;border-radius:10px;font-size:14px;font-weight:600;opacity:0;transition:opacity .2s;pointer-events:none;border:1px solid #4a5340}
   #toast.show{opacity:1}
   #prompt{position:fixed;left:50%;bottom:156px;transform:translateX(-50%);z-index:7;background:rgba(20,25,15,.82);color:#ffe9a8;padding:1px 10px;border-radius:9px;font-size:13px;font-weight:700;opacity:0;transition:opacity .15s;pointer-events:none;border:1px solid #6a5a2a}
@@ -463,6 +476,8 @@
 
   <div id="toast"></div>
   <div id="prompt"></div>
+  <!-- fundido a negro al cambiar de escena (granja <-> Zona Negra <-> plaza) -->
+  <div id="fadeblk"></div>
   <div id="updbanner">Nueva versión disponible · actualizando en <b class="updc">5</b>s <button id="updnow">Actualizar ahora</button></div>
 
   <!-- overlays -->

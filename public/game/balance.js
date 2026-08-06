@@ -109,6 +109,17 @@ var BAL = (function () {
     add("Ambiente — viento", "viento.seg", "Cuánto tarda una oscilación completa", "", () => VIENTO_SEG, v => { VIENTO_SEG = v; }, 0.1, "tiempo");
     add("Ambiente — viento", "viento.rafagaCada", "Cada cuánto pasa una ráfaga", "", () => VIENTO_RAFAGA_CADA, v => { VIENTO_RAFAGA_CADA = v; }, 1, "tiempo");
     add("Ambiente — viento", "viento.rafagaMult", "Cuánto más se inclinan durante la ráfaga", "veces", () => VIENTO_RAFAGA_MULT, v => { VIENTO_RAFAGA_MULT = v; }, 0.1);
+    // EFECTOS DE JUGO: cada uno se puede apagar por separado si molesta
+    add("Ambiente — efectos", "fx.impacto", "Sacudida y astillas al golpear un nodo (1 = sí · 0 = no)", "1 o 0", () => FX_IMPACTO, v => { FX_IMPACTO = v ? 1 : 0; });
+    add("Ambiente — efectos", "fx.impactoGrados", "Cuánto se sacude el nodo al recibir el golpe", "grados", () => FX_IMPACTO_GRADOS, v => { FX_IMPACTO_GRADOS = v; }, 0.5);
+    add("Ambiente — efectos", "fx.listo", "Flechita sobre lo cosechable / disponible (1 = sí · 0 = no)", "1 o 0", () => FX_LISTO, v => { FX_LISTO = v ? 1 : 0; });
+    add("Ambiente — efectos", "fx.anillo", "Aro de progreso alrededor del nodo en enfriamiento", "1 o 0", () => FX_ANILLO, v => { FX_ANILLO = v ? 1 : 0; });
+    add("Ambiente — efectos", "fx.hojas", "Hojas volando cuando pasa una ráfaga", "1 o 0", () => FX_HOJAS, v => { FX_HOJAS = v ? 1 : 0; });
+    add("Ambiente — efectos", "fx.nubes", "Cuántas nubes cruzan la granja", "nubes · entero", () => FX_NUBES, v => { FX_NUBES = v; });
+    add("Ambiente — efectos", "fx.mariposas", "Cuántas mariposas revolotean sobre los cultivos", "mariposas · entero", () => FX_MARIPOSAS, v => { FX_MARIPOSAS = v; });
+    add("Ambiente — efectos", "fx.vapor", "Vapor de la Cocina y chispas del Altar mejorado", "1 o 0", () => FX_VAPOR, v => { FX_VAPOR = v ? 1 : 0; });
+    add("Ambiente — efectos", "fx.fadeMs", "Fundido a negro al cambiar de escena (0 = corte seco)", "milisegundos", () => FX_FADE_MS, v => { FX_FADE_MS = v; }, 20);
+    add("Ambiente — efectos", "fx.partMax", "Tope de partículas vivas a la vez (cuida el rendimiento)", "partículas · entero", () => FX_PART_MAX, v => { FX_PART_MAX = v; }, 5);
     // POP: el saltito de resorte al terminar de crecer
     add("Ambiente — pop de crecimiento", "pop.on", "Pop encendido (1 = sí · 0 = no)", "1 o 0", () => POP_ON, v => { POP_ON = v ? 1 : 0; });
     add("Ambiente — pop de crecimiento", "pop.fuerza", "Qué tan exagerado es el rebote", "0.5 discreto · 1.5 caricaturesco", () => POP_FUERZA, v => { POP_FUERZA = v; }, 0.05);

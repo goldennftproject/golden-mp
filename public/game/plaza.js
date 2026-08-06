@@ -32,7 +32,7 @@ class PlazaScene extends Phaser.Scene {
         backgroundColor:"rgba(20,28,15,0.7)", padding:{x:6,y:4} })
       .setScrollFactor(0).setDepth(10000);
 
-    this.keys.farm.on("down", () => { if (!GF.uiOpen) this.scene.start("farm"); });
+    this.keys.farm.on("down", () => { if (!GF.uiOpen) irAEscena(this, "farm"); });
     this.events.once("shutdown", () => { if (this.room) { try { this.room.leave(); } catch(e){} this.room = null; } });
 
     this.connect();

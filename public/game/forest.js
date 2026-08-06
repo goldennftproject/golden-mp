@@ -612,7 +612,7 @@ class ForestScene extends Phaser.Scene {
       G.hp = Math.ceil(G.hpMax / 2);
       if (typeof saveFarm === "function") saveFarm(true);
       this.leaving = true;
-      this.scene.start("farm");
+      irAEscena(this, "farm");
     }
   }
 
@@ -713,7 +713,7 @@ class ForestScene extends Phaser.Scene {
       if (left) { log("Dejaste " + left + " objeto(s) en el suelo de la Zona Negra — siguen ahí si volvés.", "bad"); toast("Dejaste " + left + " objeto(s) en el suelo"); }
       if (typeof saveFarm === "function") saveFarm();
       this.leaving = true;
-      this.scene.start("farm"); return;
+      irAEscena(this, "farm"); return;
     }
 
     // detalles viernes (1): el clic izquierdo SOLO acerca y fija — el ataque es únicamente con clic derecho (auto cada 2s)

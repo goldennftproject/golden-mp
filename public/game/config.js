@@ -30,6 +30,18 @@ var POP_ON = 1;          // 1 = encendido · 0 = apagado
 var POP_FUERZA = 1;      // qué tan exagerado es el rebote (0.5 = discreto · 1.5 = caricaturesco)
 var POP_MS = 620;        // cuánto tarda en quedar estable, en milisegundos
 var POP_INTERMEDIO = 0.55;   // fuerza del pop del paso intermedio (el retoño del árbol) respecto del final
+
+// EFECTOS DE JUGO (4/8). Todo por código, sin arte nuevo. Cada uno se apaga por separado.
+var FX_IMPACTO = 1;        // el nodo se sacude y suelta astillas/chispas en cada golpe
+var FX_IMPACTO_GRADOS = 5; // cuánto se sacude el nodo al recibir el golpe
+var FX_LISTO = 1;          // marcador flotante sobre lo cosechable / disponible
+var FX_ANILLO = 1;         // aro de progreso alrededor del nodo en enfriamiento
+var FX_HOJAS = 1;          // hojas volando cuando pasa una ráfaga de viento
+var FX_NUBES = 3;          // cuántas nubes cruzan la granja (0 = ninguna)
+var FX_MARIPOSAS = 3;      // cuántas mariposas revolotean sobre los cultivos listos (0 = ninguna)
+var FX_VAPOR = 1;          // vapor de la Cocina mientras hay ollas y chispas del Altar mejorado
+var FX_FADE_MS = 260;      // fundido a negro al cambiar de escena (0 = corte seco)
+var FX_PART_MAX = 40;      // tope de partículas vivas a la vez (cuida el rendimiento en móvil)
 GF.ZOOM = 1.35;
 GF.editMode = false;   // modo edición de la granja (arrastrar objetos)
 

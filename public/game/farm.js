@@ -24,6 +24,7 @@ class FarmScene extends Phaser.Scene {
     this.hornoSmokeEv = null; this.dummyBroken = false;   // si no se limpian, el humo del horno no vuelve al regresar del Bosque
     this.auraFx = null; this.auraTw = null;
     this.clickHit = null; this.clickPond = false;
+    this.nubes = null; this.maripos = null; this._part = 0; this._rafActiva = false; this._vaporAt = 0;   // efectos de ambiente
     this.queue = [];      // cola de acciones: clickeá varios objetivos y se hacen en orden
     this.cameras.main.setBackgroundColor(GF.ISLA ? "#2e7fa8" : "#6ba043");   // isla: agua alrededor
 
@@ -502,6 +503,8 @@ class FarmScene extends Phaser.Scene {
     // fragua: media por defecto, encendida mientras se trabaja en la Herrería (detalles jueves)
     this.storeObj = storeObj;
     this.updateForge();
+    this.crearNubes();        // nubes que cruzan y proyectan sombra
+    this.crearMariposas();    // mariposas que se posan sobre los cultivos listos
     this.startHornoSmoke();   // humo del Horno de Piedra si ya está construido (viernes 2)
     const cocinaObj = this.objs.find(o => o.type === "cocina");
     if (cocinaObj) smokeFrom(cocinaObj, 0.20, 0xefe9db, () => true);                     // cocina: humo SIEMPRE (detalles jueves)
@@ -651,7 +654,7 @@ class FarmScene extends Phaser.Scene {
 
   interactWith(o) {
     if (o.type === "portal") {
-      const entrar = () => { if (typeof tutoEvent === "function") tutoEvent("portal"); if (typeof saveFarm === "function") saveFarm(); this.leaving = true; this.scene.start("forest"); };
+      const entrar = () => { if (typeof tutoEvent === "function") tutoEvent("portal"); if (typeof saveFarm === "function") saveFarm(); this.leaving = true; irAEscena(this, "forest"); };
       askConfirm("¿Entrás vos a pelear a la Zona Negra o mandás una incursión de un clic?", entrar,
         { title: "Zona Negra", yes: "Entrar a pelear", yesClass: "green", no: "Incursión (un clic)", noClass: "gold",
           onNo: () => { if (typeof refreshIncursion === "function") refreshIncursion(); openOv("ov-incursion"); } });
@@ -870,6 +873,7 @@ class FarmScene extends Phaser.Scene {
   finishAction() {
     const a = this.action, o = a.o;
     if (window.sfx) sfx({ chop: "chop", mine: "mine", plant: "plant", harvest: "harvest", fish: "splash", water: "splash" }[a.kind] || "click");
+    if (a.kind === "chop" || a.kind === "mine") this.golpeFx(o, a.kind);   // sacudida + astillas en CADA golpe
     if (a.kind === "chop") {
       o.golpes = (o.golpes || 0) + 1;
       if (o.golpes < GOLPES_TALAR) {   // golpes intermedios: el árbol se va cortando (el hacha NO se gasta todavía)
@@ -883,7 +887,7 @@ class FarmScene extends Phaser.Scene {
       o.golpes = 0;
       const gr = 1;   // viernes (2): todos los recursos dan 1
       if (tryAddRes("madera", gr)) {
-        useTool("axe"); addXp("crafting", 4); nodoSumar(o); o.readyAt = nowMs() + nodoCd(o, "tree", CD.tree) * 1000 * cdMult();
+        useTool("axe"); addXp("crafting", 4); nodoSumar(o); o.cdIni = nowMs(); o.readyAt = nowMs() + nodoCd(o, "tree", CD.tree) * 1000 * cdMult();
         o.halfAt = nowMs() + (o.readyAt - nowMs()) / 2;   // a mitad del enfriamiento asoma el árbol a medio crecer (doc 4/8)
         // tocón nuevo con base de tierra y hojas caídas (encuadre del árbol, va a tamaño completo); respaldo: tocón viejo chico
         if (this.textures.exists("tree_stump_leaves")) this.setObjTex(o, "tree_stump_leaves", (o.rw || o.w) * 0.85);   // −15%: el tocón venía más grueso que el tronco del árbol
@@ -909,7 +913,7 @@ class FarmScene extends Phaser.Scene {
       if (tryAddRes("piedra", gr)) {
         const pk = equippedPick();   // picar piedra también gasta el pico (bug reportado)
         if (pk) { G.picks.dur[pk] = Math.max(0, (G.picks.dur[pk] || 0) - 1); if (G.picks.dur[pk] <= 0) { log(`¡${PICK_DEF[pk].label} se rompió en pedazos! Crafteá otro en la Herrería.`, "bad"); toast("¡Pico destruido!"); destroyPick(pk); } }
-        addXp("mining", 5); statAdd("minar", "piedra", gr); nodoSumar(o); o.readyAt = nowMs() + nodoCd(o, "piedra", CD.rock) * 1000 * cdMult(); o.halfAt = nowMs() + (o.readyAt - nowMs()) / 2; this.setObjTex(o, "node_stone_mined", o.rw || GF.TILE); log(`+${gr} Piedra.` + (pk ? ` ${G.picks.dur[pk]}/${PICK_DEF[pk].dur}` : ""), "good"); toast("+" + gr + " "); refreshHud();
+        addXp("mining", 5); statAdd("minar", "piedra", gr); nodoSumar(o); o.cdIni = nowMs(); o.readyAt = nowMs() + nodoCd(o, "piedra", CD.rock) * 1000 * cdMult(); o.halfAt = nowMs() + (o.readyAt - nowMs()) / 2; this.setObjTex(o, "node_stone_mined", o.rw || GF.TILE); log(`+${gr} Piedra.` + (pk ? ` ${G.picks.dur[pk]}/${PICK_DEF[pk].dur}` : ""), "good"); toast("+" + gr + " "); refreshHud();
         if (typeof tutoEvent === "function") tutoEvent("gather");
       }
       else { this.setObjTex(o, o.baseKey, o.rw || o.w); toast("Bolsa llena — no podés picar"); log("Bolsa llena: liberá espacio para seguir picando.", "bad"); }   // vuelve entera: los golpes se perdieron
@@ -927,7 +931,7 @@ class FarmScene extends Phaser.Scene {
       if (tryAddRes(o.ore, gr)) {
         G.picks.dur[pk] = Math.max(0, (G.picks.dur[pk] || 0) - 1);
         addXp("mining", 5 + od.tier * 3); statAdd("minar", o.ore, gr);
-        nodoSumar(o); o.readyAt = nowMs() + nodoCd(o, o.ore, od.cd) * 1000 * cdMult();
+        nodoSumar(o); o.cdIni = nowMs(); o.readyAt = nowMs() + nodoCd(o, o.ore, od.cd) * 1000 * cdMult();
         o.halfAt = nowMs() + (o.readyAt - nowMs()) / 2;
         if (this.textures.exists(o.baseKey + "_mined")) this.setObjTex(o, o.baseKey + "_mined", o.rw || GF.TILE); else o.sprite.setAlpha(0.4);
         log(`${od.emoji} +${gr} ${od.label}. ${G.picks.dur[pk]}/${pd.dur}`, "good"); toast("+" + gr + " " + od.emoji); refreshHud();
@@ -1037,7 +1041,53 @@ class FarmScene extends Phaser.Scene {
     return o.by - GF.TILE * 0.75 - gap;
   }
 
-  // punto fijo ARRIBA de lo encolado, para saber de un vistazo qué pusiste y qué no (detalles 338)
+  // PRESUPUESTO DE PARTÍCULAS: en el server gratis y en móvil no conviene pasarse. Cada efecto
+  // pide cuántas quiere y se le da lo que quede libre (si no queda, no dibuja nada y listo).
+  pidoPart(n) {
+    this._part = this._part || 0;
+    const libre = Math.max(0, (FX_PART_MAX || 40) - this._part);
+    const dar = Math.min(n, libre);
+    this._part += dar;
+    return dar;
+  }
+  sueltoPart(n) { this._part = Math.max(0, (this._part || 0) - n); }
+
+  // IMPACTO DEL GOLPE (4/8): el nodo se sacude hacia el lado contrario al hachazo y suelta
+  // astillas (madera) o esquirlas (piedra). Antes el árbol solo cambiaba de imagen y los
+  // 3 clics no se sentían como 3 golpes.
+  golpeFx(o, tipo) {
+    if (!FX_IMPACTO || !o || !o.sprite || !o.sprite.visible) return;
+    const spr = o.sprite;
+    // el granjero (invisible) trabaja al costado del nodo: el golpe empuja hacia el lado opuesto
+    const desde = (this.hero && this.hero.x > o.cx) ? -1 : 1;
+    const g = FX_IMPACTO_GRADOS * desde;
+    if (spr._golpeTw) spr._golpeTw.stop();
+    const base = spr.angle;
+    spr.setAngle(base + g);
+    spr._golpeTw = this.tweens.add({
+      targets: spr, angle: base, duration: 190, ease: "Back.easeOut",
+      onComplete: () => { spr._golpeTw = null; },
+    });
+    // astillas: salen del punto de impacto hacia el lado del golpe
+    const madera = tipo === "chop";
+    const n = this.pidoPart(madera ? 7 : 6);
+    const ix = o.cx - desde * 6, iy = o.by - (spr.displayHeight || GF.TILE) * (madera ? 0.42 : 0.35);
+    for (let i = 0; i < n; i++) {
+      const a = (desde < 0 ? Math.PI : 0) + (Math.random() - 0.5) * 1.6;
+      const r = 14 + Math.random() * 20;
+      const col = madera ? (i % 2 ? 0x996633 : 0xc79a5a) : (i % 2 ? 0xb4b2a9 : 0xe8e4d8);
+      const p = madera
+        ? this.add.rectangle(ix, iy, 3, 1.6, col).setAngle(Math.random() * 180).setDepth(99995)
+        : this.add.circle(ix, iy, 1.4 + Math.random(), col, 1).setDepth(99995);
+      this.tweens.add({
+        targets: p, x: ix + Math.cos(a) * r, y: iy + Math.sin(a) * r * 0.55 + 10 + Math.random() * 8,
+        angle: p.angle + (Math.random() - 0.5) * 260, alpha: 0,
+        duration: 300 + Math.random() * 220, ease: "Quad.easeIn",
+        onComplete: () => { p.destroy(); this.sueltoPart(1); },
+      });
+    }
+  }
+
   // "POP" DE CRECIMIENTO (4/8): el sprite se aplasta un instante y vuelve a su tamaño con rebote
   // elástico, como un resorte, hasta quedar quieto. Los sprites tienen el origen abajo, así que
   // el rebote se lee como si la planta saltara desde la tierra.
@@ -1056,15 +1106,158 @@ class FarmScene extends Phaser.Scene {
   }
   // chispita de polvo/hojas que acompaña al pop (partículas por código, sin arte)
   puffFx(x, y, color, n) {
-    for (let i = 0; i < (n || 6); i++) {
+    const cuantas = this.pidoPart(n || 6);
+    for (let i = 0; i < cuantas; i++) {
       const a = -Math.PI / 2 + (Math.random() - 0.5) * 2.2, r = 12 + Math.random() * 16;
       const p = this.add.circle(x, y, 1.5 + Math.random() * 1.5, color, 0.9).setDepth(99995);
       this.tweens.add({
         targets: p, x: x + Math.cos(a) * r, y: y + Math.sin(a) * r * 0.8,
         alpha: 0, scale: 0.4, duration: 380 + Math.random() * 260,
-        onComplete: () => p.destroy(),
+        onComplete: () => { p.destroy(); this.sueltoPart(1); },
       });
     }
+  }
+
+  // NUBES (4/8): pasan lento de izquierda a derecha y proyectan una sombra suave sobre la granja.
+  // Es lo que más "respira" por lo poco que cuesta: son elipses blancas y una sombra oscura debajo.
+  crearNubes() {
+    this.nubes = [];
+    const W = GF.WORLD_W, H = GF.WORLD_H, m = GF.ISLA ? (GF.ISLA_MARGEN || 260) : 0;
+    for (let i = 0; i < (FX_NUBES || 0); i++) {
+      const esc = 0.7 + Math.random() * 0.9;
+      const g = this.add.graphics().setDepth(99000).setAlpha(0.55);
+      g.fillStyle(0xffffff, 1);
+      [[0, 0, 46, 20], [-30, 5, 30, 14], [32, 6, 26, 12], [6, -9, 28, 14]].forEach(([x, y, rx, ry]) => g.fillEllipse(x, y, rx * 2, ry * 2));
+      const sh = this.add.graphics().setDepth(6).setAlpha(0.10);
+      sh.fillStyle(0x241505, 1);
+      [[0, 0, 46, 20], [-30, 5, 30, 14], [32, 6, 26, 12], [6, -9, 28, 14]].forEach(([x, y, rx, ry]) => sh.fillEllipse(x, y, rx * 2, ry * 2));
+      g.setScale(esc); sh.setScale(esc * 1.06);
+      const n = { g, sh, x: -m - 140 - Math.random() * (W + m * 2), y: -m + 40 + Math.random() * (H + m - 80), vel: 5 + Math.random() * 9 };
+      this.nubes.push(n);
+    }
+  }
+  tickNubes(dt) {
+    if (!this.nubes || !this.nubes.length) return;
+    const W = GF.WORLD_W, H = GF.WORLD_H, m = GF.ISLA ? (GF.ISLA_MARGEN || 260) : 0;
+    for (const n of this.nubes) {
+      n.x += n.vel * dt;
+      if (n.x > W + m + 160) { n.x = -m - 160; n.y = -m + 40 + Math.random() * (H + m - 80); }
+      n.g.setPosition(n.x, n.y);
+      n.sh.setPosition(n.x + 16, n.y + 26);   // la sombra cae desplazada, como si el sol pegara de arriba
+    }
+  }
+
+  // HOJAS AL VIENTO (4/8): cuando pasa una ráfaga, salen unas hojitas de las copas y cruzan
+  // la pantalla. Sirve para que la ráfaga se ENTIENDA y no solo se vea en el meneo de los árboles.
+  tickHojas(raf) {
+    if (!FX_HOJAS || !VIENTO_ON) return;
+    const fuerte = raf > 1.35;
+    if (!fuerte) { this._rafActiva = false; return; }
+    if (this._rafActiva) return;   // una sola tanda por ráfaga
+    this._rafActiva = true;
+    const arb = this.objs.filter(o => o.type === "tree" && !o.locked && o.sprite && o.sprite.visible && nowMs() >= (o.readyAt || 0));
+    if (!arb.length) return;
+    const n = this.pidoPart(Math.min(6, arb.length * 2));
+    for (let i = 0; i < n; i++) {
+      const a = arb[Math.floor(Math.random() * arb.length)];
+      const x = a.cx + (Math.random() - 0.5) * 26, y = a.by - (a.sprite.displayHeight || 60) * (0.5 + Math.random() * 0.4);
+      const h = this.add.rectangle(x, y, 4, 2.5, Math.random() < 0.5 ? 0x97c459 : 0x639922).setDepth(99994).setAngle(Math.random() * 360);
+      this.tweens.add({
+        targets: h, x: x + 90 + Math.random() * 130, y: y + 30 + Math.random() * 60,
+        angle: h.angle + 480, alpha: { from: 0.95, to: 0 },
+        duration: 2200 + Math.random() * 1400, ease: "Sine.easeInOut",
+        onComplete: () => { h.destroy(); this.sueltoPart(1); },
+      });
+    }
+  }
+
+  // MARIPOSAS (4/8): revolotean y se posan sobre los cultivos LISTOS; si cosechás, salen volando.
+  crearMariposas() {
+    this.maripos = [];
+    for (let i = 0; i < (FX_MARIPOSAS || 0); i++) {
+      const g = this.add.graphics().setDepth(99993);
+      const col = [0xffd75e, 0xf4c0d1, 0xb5d4f4][i % 3];
+      g.fillStyle(col, 1).fillEllipse(-2.6, 0, 5, 7).fillEllipse(2.6, 0, 5, 7);
+      g.fillStyle(0x241505, 0.8).fillRect(-0.6, -3, 1.2, 6);
+      g.setPosition(GF.WORLD_W * Math.random(), GF.WORLD_H * Math.random());
+      this.maripos.push({ g, tx: g.x, ty: g.y, esperaHasta: 0, posada: null, fase: Math.random() * 6.28 });
+    }
+  }
+  tickMariposas(dt, t) {
+    if (!this.maripos || !this.maripos.length) return;
+    const listos = this.plots.filter(p => p.state === "ready");
+    for (const m of this.maripos) {
+      if (m.posada && m.posada.state !== "ready") { m.posada = null; m.esperaHasta = 0; }   // la cosecharon: a volar
+      if (t >= m.esperaHasta) {
+        m.esperaHasta = t + 2600 + Math.random() * 3200;
+        if (listos.length && Math.random() < 0.75) { m.posada = listos[Math.floor(Math.random() * listos.length)]; m.tx = m.posada.cx + (Math.random() - 0.5) * 14; m.ty = m.posada.by - 16 - Math.random() * 8; }
+        else { m.posada = null; m.tx = 40 + Math.random() * (GF.WORLD_W - 80); m.ty = 40 + Math.random() * (GF.WORLD_H - 80); }
+      }
+      const dx = m.tx - m.g.x, dy = m.ty - m.g.y, d = Math.hypot(dx, dy);
+      if (d > 2) { const v = Math.min(d, 34 * dt); m.g.x += dx / d * v; m.g.y += dy / d * v; }
+      m.fase += dt * 9;
+      m.g.setScale(0.75 + Math.abs(Math.sin(m.fase)) * 0.45, 1);   // aleteo: se angosta y se ensancha
+      m.g.setDepth(m.g.y + 4);
+    }
+  }
+
+  // VAPOR DE LA COCINA y CHISPAS DEL ALTAR: los edificios cuentan su estado sin abrir la ventana.
+  tickVapor(t) {
+    if (!FX_VAPOR) return;
+    if (t < (this._vaporAt || 0)) return;
+    this._vaporAt = t + 900;
+    const ollas = (typeof cookList === "function") ? cookList().length : 0;
+    if (ollas > 0) {
+      const c = this.objs.find(o => o.type === "cocina");
+      if (c && c.sprite && this.pidoPart(1)) {
+        const p = this.add.ellipse(c.cx + (Math.random() - 0.5) * 10, c.by - (c.sprite.displayHeight || 60) * 0.75, 6, 4, 0xffffff, 0.5).setDepth(c.by + 2);
+        this.tweens.add({ targets: p, y: p.y - 30, x: p.x + 6 + Math.random() * 8, scaleX: 2.4, scaleY: 2.4, alpha: 0, duration: 1900, onComplete: () => { p.destroy(); this.sueltoPart(1); } });
+      }
+    }
+    if (G.edif2 && G.edif2.altar) {
+      const al = this.objs.find(o => o.type === "altar");
+      if (al && al.sprite && this.pidoPart(1)) {
+        const s = this.add.circle(al.cx + (Math.random() - 0.5) * 22, al.by - 8, 1.6, 0xbfa8ff, 0.9).setDepth(al.by + 2).setBlendMode(Phaser.BlendModes.ADD);
+        this.tweens.add({ targets: s, y: s.y - 34 - Math.random() * 14, alpha: 0, duration: 1500 + Math.random() * 500, onComplete: () => { s.destroy(); this.sueltoPart(1); } });
+      }
+    }
+  }
+
+  // MARCADOR DE "LISTO" (4/8): una flechita dorada que sube y baja sobre lo que se puede tocar ya
+  // (cultivo cosechable, árbol o veta fuera de enfriamiento). De un vistazo se ve qué hacer, sin
+  // tener que pasar el cursor por toda la granja. Dibujada por código, sin arte.
+  marcaListo(obj, on) {
+    if (!FX_LISTO) on = false;
+    if (!on) {
+      if (obj.mkListo) { this.tweens.killTweensOf(obj.mkListo); obj.mkListo.destroy(); obj.mkListo = null; }
+      return;
+    }
+    if (obj.mkListo) return;
+    const g = this.add.graphics().setDepth(99990);
+    g.fillStyle(0x241505, 0.85).fillTriangle(-6, -8, 6, -8, 0, 3);          // contorno oscuro (estándar del juego)
+    g.fillStyle(0xffd75e, 1).fillTriangle(-4.4, -7, 4.4, -7, 0, 1.4);       // flecha dorada
+    g.setPosition(obj.cx, this.topY(obj, 12));
+    obj.mkListo = g;
+    this.tweens.add({ targets: g, y: g.y - 6, yoyo: true, repeat: -1, duration: 620, ease: "Sine.easeInOut" });
+  }
+
+  // ANILLO DE ENFRIAMIENTO (4/8): un aro fino que se va llenando alrededor del nodo. Con
+  // enfriamientos de horas se entiende mucho mejor "le falta un cuarto" que un texto con minutos,
+  // y se ve sin pasar el cursor. Se redibuja solo cuando el porcentaje cambia de verdad.
+  anilloCd(o, pct) {
+    if (!FX_ANILLO || pct == null) {
+      if (o.anillo) { o.anillo.destroy(); o.anillo = null; o.anilloPct = null; }
+      return;
+    }
+    if (!o.anillo) o.anillo = this.add.graphics().setDepth(o.by + 2);
+    if (o.anilloPct != null && Math.abs(o.anilloPct - pct) < 0.004) return;   // sin cambio visible: no redibujar
+    o.anilloPct = pct;
+    const r = GF.TILE * 0.42, cx = o.cx, cy = o.by - 4;
+    const g = o.anillo; g.clear();
+    g.lineStyle(3, 0x241505, 0.45).strokeCircle(cx, cy, r);                                   // riel oscuro
+    g.lineStyle(3, 0x8fd14f, 0.95).beginPath();
+    g.arc(cx, cy, r, -Math.PI / 2, -Math.PI / 2 + Math.PI * 2 * pct, false);
+    g.strokePath();
   }
 
   // VIENTO (4/8): los árboles crecidos se mecen apenas, como si soplara viento.
@@ -1085,8 +1278,10 @@ class FarmScene extends Phaser.Scene {
     // ráfaga: un pico angosto y suave cada VIENTO_RAFAGA_CADA segundos
     const p = Math.max(1, VIENTO_RAFAGA_CADA);
     const raf = 1 + (VIENTO_RAFAGA_MULT - 1) * Math.pow(Math.abs(Math.sin(seg * Math.PI / p)), 12);
+    this.tickHojas(raf);   // en el pico de la ráfaga vuelan unas hojas
     for (const o of this.objs) {
       if (o.type !== "tree" || !o.sprite || !o.sprite.visible) continue;
+      if (o.sprite._golpeTw) continue;   // se está sacudiendo por un hachazo: el viento no manda
       if (o.locked || nowMs() < (o.readyAt || 0)) { if (o.sprite.angle) o.sprite.setAngle(0); continue; }   // tocón o retoño: no se mece
       if (o.vFase == null) o.vFase = (o.cx * 0.017 + o.by * 0.029) % (Math.PI * 2);
       o.sprite.setAngle(Math.sin(seg * w + o.vFase) * VIENTO_GRADOS * raf);
@@ -1246,7 +1441,9 @@ class FarmScene extends Phaser.Scene {
       const g = 150 + Math.floor(Math.random() * 40);
       const puff = this.add.ellipse(sx(), sy(), 5 + Math.random() * 3, 4 + Math.random() * 2, (g << 16) | (g << 8) | g, 0.5)
         .setDepth(o.by + 2).setAlpha(0);
-      this.tweens.add({ targets: puff, alpha: { from: 0.45, to: 0 }, y: puff.y - 26 - Math.random() * 10, x: puff.x + 6 + Math.random() * 8,
+      // el humo se INCLINA con el viento: la misma onda que mece los árboles empuja la bocanada
+      const desvio = 6 + Math.random() * 8 + (VIENTO_ON ? Math.sin(this.time.now / 1000 * Math.PI * 2 / Math.max(0.2, VIENTO_SEG)) * 14 : 0);
+      this.tweens.add({ targets: puff, alpha: { from: 0.45, to: 0 }, y: puff.y - 26 - Math.random() * 10, x: puff.x + desvio,
         scaleX: 2.2, scaleY: 2.2, duration: 2400 + Math.random() * 600, ease: "Sine.easeOut", onComplete: () => puff.destroy() });
     } });
   }
@@ -1566,9 +1763,23 @@ class FarmScene extends Phaser.Scene {
         if (over) o.timer.setText(fmtSecs(Math.ceil((o.readyAt - t) / 1000))).setPosition(o.cx, this.topY(o, (o.type === "ore" || o.type === "rock") ? -6 : 7)).setVisible(true);   // detalles213: el timer del mineral pegado al nodo (antes flotaba alto y se mezclaba)
         else o.timer.setVisible(false);
       }
+      // aro de progreso mientras se regenera · flechita cuando ya se puede usar
+      if (o.type === "tree" || o.type === "rock" || o.type === "ore") {
+        if (o.readyAt && t < o.readyAt) {
+          const ini = o.cdIni || (o.readyAt - 3600000);
+          this.anilloCd(o, Math.max(0, Math.min(1, (t - ini) / Math.max(1, o.readyAt - ini))));
+          this.marcaListo(o, false);
+        } else {
+          this.anilloCd(o, null);
+          this.marcaListo(o, !o.locked);
+        }
+      }
     }
     this.tickGolpes();      // los golpes sueltos se pierden a los 5 s (el nodo vuelve a estar entero)
     this.tickViento();      // los árboles crecidos y los cultivos listos se mecen con el viento
+    this.tickNubes(dt);     // nubes cruzando con su sombra
+    this.tickMariposas(dt, t);
+    this.tickVapor(t);      // vapor de la Cocina y chispas del Altar mejorado
     this.updateHoverFx();   // brillo sobre lo interactuable (hover + cercanía)
     // clic sostenido: aplicar el destino que quedó pendiente por el freno del recálculo
     if (this.hold && this.hold.active && this.holdPend && t - (this.holdAt || 0) > 130) {
@@ -1603,6 +1814,7 @@ class FarmScene extends Phaser.Scene {
       const plOver = this.timerOn(pl);
       // 2/8: MARCHITADO DESACTIVADO (pedido del diseñador) — el cultivo listo ya no se pudre
       if (pl.state === "ready" && pl.witherAt) { pl.witherAt = 0; this.syncPlots(); }
+      this.marcaListo(pl, pl.state === "ready");   // flechita sobre lo cosechable
       if (pl.state !== "growing") continue;
       if (t >= pl.readyAt) { pl.state = "ready"; pl.readyAt = 0; pl.witherAt = 0; this.showReadyCrop(pl, true); this.syncPlots(); }   // 2/8: sin marchitado — la cosecha espera (con pop de crecimiento)
       else {
