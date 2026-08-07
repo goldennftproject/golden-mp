@@ -29,6 +29,10 @@ var CLIC_BUFFER_MS = 260;
 var FX_DESTELLO_MS = 90;   // cuánto dura el destello blanco del nodo al recibir el golpe (SFL: ~100 ms)
 var FX_BARRA_GOLPES = 1;   // barrita de progreso bajo el nodo mientras lo estás golpeando (como SFL)
 var FX_PREMIO = 1;         // el recurso sale volando en arco con su "+N" (como el tronco de SFL)
+// Tamaño del ícono del recurso que sale volando. Venía en 18 px y no se leía; +25% = 22 px.
+// (La celda del mundo mide 42 px, así que ocupa poco más de medio tile: se ve sin tapar nada.)
+var FX_PREMIO_PX = 22;
+var FX_PREMIO_TXT = 15;    // tamaño del "+N" que lo acompaña (también +25%)
 // En qué momento de la acción "pega" la herramienta (0 = al instante del clic, 1 = al final).
 // Acá es donde el nodo se agrieta y saltan las astillas. Con el granjero invisible conviene 0.
 var ACT_IMPACTO = 0;

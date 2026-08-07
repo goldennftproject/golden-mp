@@ -98,14 +98,22 @@ class BootScene extends Phaser.Scene {
     ["espada","hacha","mazo","arco"].forEach(t => ["madera","piedra","bronce","oro","diamante"].forEach(r => L.push(["arm_" + t + "_" + r, P + "arm_" + t + "_" + r + ".png?v=1"])));
 
     if (typeof CROP_ORDER !== "undefined") CROP_ORDER.forEach(k => L.push(["cropg_" + k, P + "cropg_" + k + ".png?v=4"]));   // plantas completas cozy
+    // ICONOS de recursos, cultivos, peces y monedas: los usa el "premio" que sale volando
+    // cuando talás, picás o cosechás. Antes solo existían para la interfaz HTML y en el juego
+    // no se veían (salía el "+1" pelado). Están en el atlas, esto es solo el respaldo.
+    ["madera","piedra","bronce","hierro","oro","diamante","netherita","carne","flecha","lombriz",
+     "tablon","barra_piedra","barra_bronce","barra_hierro","barra_oro"].forEach(k => L.push(["res_" + k, P + "res_" + k + ".png"]));
+    if (typeof CROP_ORDER !== "undefined") CROP_ORDER.forEach(k => L.push(["crop_" + k, P + "crop_" + k + ".png"]));
+    ["comun","raro","epico","legendario"].forEach(k => L.push(["fish_" + k, P + "fish_" + k + ".png"]));
+    ["plata","esencia"].forEach(k => L.push(["coin_" + k, P + "coin_" + k + ".png"]));
     return L;
   }
 
   preload() {
     // ATLAS: todos los sprites del mundo en 2 archivos (mucho más liviano para el server free).
     // Si el atlas no llega, ensureAll() baja los archivos sueltos como respaldo.
-    this.load.image("__atlas", "assets/atlas.png?v=19");
-    this.load.json("__atlasmap", "assets/atlas.json?v=19");
+    this.load.image("__atlas", "assets/atlas.png?v=20");
+    this.load.json("__atlasmap", "assets/atlas.json?v=20");
 
     // No hay barra propia: la pantalla de carga es UNA sola, la del HTML, y le pasamos el avance.
     // (Antes había dos barras seguidas y el juego "aparecía" antes de estar listo.)

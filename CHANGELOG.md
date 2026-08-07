@@ -543,6 +543,34 @@ Todo por código, sin arte nuevo, y cada efecto se apaga por separado desde el p
 
 Verificado: 782 entradas del panel de balanceo, 20 ventanas OK, sin funciones faltantes.
 
+### El recurso que sale volando ahora SE VE (4/8)
+
+El diseñador señaló que en el video de Sunflower Land, al talar el cactus, salen unos **troncos**
+bien visibles, y que en nuestro juego el recurso salía muy chiquito. Revisando, era peor: **no salía
+en absoluto**.
+
+**La causa**: los iconos de recursos (`res_madera.png`, `res_piedra.png`, los cultivos, los peces,
+las monedas) existían como archivos sueltos y se usaban solo en la interfaz HTML —la bolsa, la
+tienda— pero **nunca se cargaban dentro del juego**. Así que el "premio" que sale volando dibujaba
+el texto y el icono no, porque esa textura no existía para Phaser. Se veía un "+1" pelado.
+
+**Qué se hizo**
+
+- Se escribió `tools/build-atlas.py`, el armador del atlas, que hasta ahora no estaba en el
+  repositorio (se hacía a mano cada vez). Documentado, con modo `--check` que solo informa.
+- **Atlas rehecho: 329 → 358 sprites**, sumando los 15 iconos de recursos, los 10 de cultivos, los
+  4 de peces y las 2 monedas. Pasó de 388 KB a 438 KB — 50 KB más por 29 sprites, y evita 29
+  descargas sueltas. Versión subida a `?v=20`.
+- El icono del premio ahora se dibuja a **tamaño fijo de 22 px** (era 18, +25% como pidió el
+  diseñador) y el "+N" a 15 px. Los PNG originales vienen a ~106 px, así que antes dependía del
+  tamaño del archivo; ahora es un número explícito y editable.
+- Vale para todo lo que sale de una interacción: **talar, picar, minar y cosechar**.
+
+Verificado recortando el atlas nuevo: la madera, la piedra, el oro, los cultivos y el granjero
+salen enteros y con la transparencia intacta (la paleta optimizada necesita FASTOCTREE, que es el
+único método de Pillow que no aplasta el canal alfa — con el método anterior el fondo se volvía
+negro).
+
 ### Velocidad de talado al nivel de Sunflower Land (4/8, video del diseñador)
 
 El diseñador mandó un video de Sunflower Land talando cactus. Lo medí **cuadro por cuadro** (30 fps)

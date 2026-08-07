@@ -1095,13 +1095,14 @@ class FarmScene extends Phaser.Scene {
   premioFx(x, y, spriteKey, texto) {
     if (!FX_PREMIO) return;
     const dx = 26 + Math.random() * 14, dy = -30 - Math.random() * 10;
+    const px = Math.max(6, FX_PREMIO_PX || 22);
     let ic = null;
     if (spriteKey && this.textures.exists(spriteKey)) {
       ic = this.add.image(x, y - 10, spriteKey).setDepth(99997);
-      ic.setScale(Math.min(1, 18 / Math.max(1, ic.width)));
+      ic.setDisplaySize(px, px * (ic.height / Math.max(1, ic.width)));   // tamaño fijo: los PNG vienen a ~106 px
     }
-    const t = this.add.text(x + (ic ? 16 : 0), y - 10, texto, {
-      fontFamily: "system-ui", fontSize: "12px", fontStyle: "bold",
+    const t = this.add.text(x + (ic ? px * 0.75 : 0), y - 10, texto, {
+      fontFamily: "system-ui", fontSize: Math.max(9, FX_PREMIO_TXT || 15) + "px", fontStyle: "bold",
       color: "#fff8e0", stroke: "#241505", strokeThickness: 3,
     }).setOrigin(0, 0.5).setDepth(99998);
     [ic, t].forEach((el, i) => {

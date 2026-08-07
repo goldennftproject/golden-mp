@@ -119,6 +119,8 @@ var BAL = (function () {
     add("Respuesta al clic", "destelloMs", "Cuánto dura el destello blanco del nodo al golpearlo (Sunflower Land: ~100 ms)", "milisegundos", () => FX_DESTELLO_MS, v => { FX_DESTELLO_MS = v; }, 10);
     add("Respuesta al clic", "barraGolpes", "Barrita de progreso bajo el nodo mientras lo golpeás", "1 o 0", () => FX_BARRA_GOLPES, v => { FX_BARRA_GOLPES = v ? 1 : 0; });
     add("Respuesta al clic", "premio", "El recurso sale volando en arco con su +N", "1 o 0", () => FX_PREMIO, v => { FX_PREMIO = v ? 1 : 0; });
+    add("Respuesta al clic", "premioPx", "Tamaño del recurso que sale volando (la celda del mundo mide 42)", "píxeles", () => FX_PREMIO_PX, v => { FX_PREMIO_PX = v; });
+    add("Respuesta al clic", "premioTxt", "Tamaño del \"+N\" que lo acompaña", "píxeles", () => FX_PREMIO_TXT, v => { FX_PREMIO_TXT = v; });
     add("Respuesta al clic", "clicSuelto", "Con el clic apretado sin arrastrar, a partir de acá la acción sale sola", "milisegundos", () => CLIC_SUELTO_MS, v => { CLIC_SUELTO_MS = v; }, 10);
     // EFECTOS DE JUGO: cada uno se puede apagar por separado si molesta
     add("Ambiente — efectos", "fx.impacto", "Sacudida y astillas al golpear un nodo (1 = sí · 0 = no)", "1 o 0", () => FX_IMPACTO, v => { FX_IMPACTO = v ? 1 : 0; });
