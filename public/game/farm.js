@@ -253,6 +253,7 @@ class FarmScene extends Phaser.Scene {
       if (sv && (sv.state === "growing" || sv.state === "ready")) {
         obj.state = sv.state; obj.readyAt = sv.readyAt || 0; obj.cropKey = sv.cropKey || null;
         obj.witherAt = 0;   // 2/8: sin marchitado
+        obj.growTotal = sv.growTotal || 0;
         this.applyPlotVisual(obj);
       } else if (sv && sv.state === "withered") {
         // 2/8: los cultivos que quedaron marchitos de antes se recuperan como LISTOS si se sabe qué eran; si no, parcela libre
@@ -1091,6 +1092,33 @@ class FarmScene extends Phaser.Scene {
     g.fillStyle(0x8fd14f, 1).fillRect(x, y, w * (n / total), h);
   }
 
+  // BARRITA DE CRECIMIENTO sobre la parcela (copiada de Sunflower Land, videos del diseñador).
+  // Mientras el cultivo crece se ve SIEMPRE —sin pasar el cursor— con el tiempo que falta arriba.
+  // Cuando está listo desaparece: ahí lo que habla es la planta entera. De un vistazo se sabe qué
+  // parcela cosechar y cuánto le falta a cada una de las demás.
+  barraCultivo(pl, t) {
+    const crece = FX_BARRA_CULTIVO && pl.state === "growing" && pl.readyAt > t;
+    if (!crece) {
+      if (pl.barraG) { pl.barraG.destroy(); pl.barraG = null; pl.barraPct = null; }
+      if (pl.timer) pl.timer.setVisible(false);
+      return;
+    }
+    const total = pl.growTotal || (pl.readyAt - t);
+    const pct = Math.max(0, Math.min(1, 1 - (pl.readyAt - t) / Math.max(1, total)));
+    const y = pl.by - GF.TILE * 0.42;
+    // el texto va ARRIBA de la barra (en SFL se lee "18m", "20h", "7d 13h")
+    if (pl.timer) pl.timer.setText(fmtSecs(Math.ceil((pl.readyAt - t) / 1000))).setPosition(pl.cx, y - 3).setDepth(pl.by + 3).setVisible(true);
+    if (!pl.barraG) pl.barraG = this.add.graphics().setDepth(pl.by + 2);
+    if (pl.barraPct != null && Math.abs(pl.barraPct - pct) < 0.004) return;   // sin cambio visible: no redibujar
+    pl.barraPct = pct;
+    const w = 28, h = 6, x = pl.cx - w / 2;
+    const g = pl.barraG; g.clear();
+    g.fillStyle(0x241505, 1).fillRect(x - 2, y - 2, w + 4, h + 4);   // contorno oscuro (estándar del juego)
+    g.fillStyle(0xe8e0c8, 1).fillRect(x - 1, y - 1, w + 2, h + 2);   // marco claro, como el de SFL
+    g.fillStyle(0x2a3a1c, 1).fillRect(x, y, w, h);                   // lo que falta
+    g.fillStyle(0x8fd14f, 1).fillRect(x, y, w * pct, h);             // lo crecido
+  }
+
   // PREMIO VOLANDO: el recurso sale en arco desde el nodo con su "+N", como el tronco de SFL.
   premioFx(x, y, spriteKey, texto) {
     if (!FX_PREMIO) return;
@@ -1725,13 +1753,18 @@ class FarmScene extends Phaser.Scene {
   }
   // pinta la parcela según su estado (para restaurar tras un refresh)
   applyPlotVisual(pl) {
-    if (pl.state === "growing") { this.showGrowing(pl); pl.growTotal = (CROP_DEF[pl.cropKey] ? CROP_DEF[pl.cropKey].grow * 1000 : 0); }
+    if (pl.state === "growing") {
+      this.showGrowing(pl);
+      // el guardado manda; si es una partida vieja sin el dato, se calcula con el multiplicador real
+      if (!pl.growTotal) pl.growTotal = CROP_DEF[pl.cropKey] ? CROP_DEF[pl.cropKey].grow * 1000 * (typeof cdMult === "function" ? cdMult() : 1) : 0;
+      if (pl.readyAt && pl.growTotal < pl.readyAt - nowMs()) pl.growTotal = pl.readyAt - nowMs();   // nunca menos que lo que falta
+    }
     else if (pl.state === "ready") this.showReadyCrop(pl);
     else { this.setPlotGlow(pl, "off"); pl.spr.setVisible(false); pl.emo.setVisible(false); pl.timer.setVisible(false); }
   }
 
   // vuelca el estado de las parcelas a G.plots para que el autoguardado lo persista
-  syncPlots() { if (this.plots) G.plots = this.plots.map(pl => ({ state: pl.state, readyAt: pl.readyAt, cropKey: pl.cropKey, witherAt: pl.witherAt || 0 })); }
+  syncPlots() { if (this.plots) G.plots = this.plots.map(pl => ({ state: pl.state, readyAt: pl.readyAt, cropKey: pl.cropKey, witherAt: pl.witherAt || 0, growTotal: pl.growTotal || 0 })); }   // growTotal: sin él, tras un F5 la barrita de crecimiento arrancaba desde donde no era
 
   // Cuando el juego REGALA una parcela (nivel de granja, ficha del pase), hay que abrirla en el acto:
   // antes se sumaba al guardado pero el dibujo seguía en gris hasta apretar F5 (reporte del diseñador).
@@ -1872,16 +1905,12 @@ class FarmScene extends Phaser.Scene {
 
     // lotes: pasar de "creciendo" a "listo"
     for (const pl of this.plots) {
-      // listo sin cosechar: cuenta regresiva al marchitado
-      // el contador del cultivo solo aparece con el cursor encima (igual que árboles y nodos)
-      const plOver = this.timerOn(pl);
       // 2/8: MARCHITADO DESACTIVADO (pedido del diseñador) — el cultivo listo ya no se pudre
       if (pl.state === "ready" && pl.witherAt) { pl.witherAt = 0; this.syncPlots(); }
+      this.barraCultivo(pl, t);   // barrita + tiempo restante, SIEMPRE visible mientras crece (como SFL)
       if (pl.state !== "growing") continue;
-      if (t >= pl.readyAt) { pl.state = "ready"; pl.readyAt = 0; pl.witherAt = 0; this.showReadyCrop(pl, true); this.syncPlots(); }   // 2/8: sin marchitado — la cosecha espera (con pop de crecimiento)
+      if (t >= pl.readyAt) { pl.state = "ready"; pl.readyAt = 0; pl.witherAt = 0; this.showReadyCrop(pl, true); this.syncPlots(); this.barraCultivo(pl, t); }   // 2/8: sin marchitado — la cosecha espera (con pop de crecimiento)
       else {
-        if (plOver) pl.timer.setText(fmtSecs(Math.max(0, Math.ceil((pl.readyAt - t) / 1000)))).setPosition(pl.cx, this.topY(pl)).setVisible(true);
-        else pl.timer.setVisible(false);
         // a media cosecha: la planta intermedia (se asoma la verdura) o el brote más grande
         if (!pl.half && pl.growTotal && (pl.readyAt - t) <= pl.growTotal / 2) {
           pl.half = true;

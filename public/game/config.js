@@ -28,6 +28,11 @@ var ACT_DUR = { chop: 0.08, mine: 0.08, plant: 0.30, harvest: 0.30, water: 0.4, 
 var CLIC_BUFFER_MS = 260;
 var FX_DESTELLO_MS = 90;   // cuánto dura el destello blanco del nodo al recibir el golpe (SFL: ~100 ms)
 var FX_BARRA_GOLPES = 1;   // barrita de progreso bajo el nodo mientras lo estás golpeando (como SFL)
+// Barrita de CRECIMIENTO sobre la parcela, con el tiempo que falta escrito arriba. En Sunflower
+// Land es SIEMPRE visible mientras el cultivo crece (no hace falta pasar el cursor), y desaparece
+// cuando el cultivo está listo: ahí lo que se ve es la planta entera. Así, de un vistazo, se sabe
+// qué parcela está lista y cuánto le falta a cada una de las demás.
+var FX_BARRA_CULTIVO = 1;
 var FX_PREMIO = 1;         // el recurso sale volando en arco con su "+N" (como el tronco de SFL)
 // Tamaño del ícono del recurso que sale volando. Venía en 18 px y no se leía; +25% = 22 px.
 // (La celda del mundo mide 42 px, así que ocupa poco más de medio tile: se ve sin tapar nada.)

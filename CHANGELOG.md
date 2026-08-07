@@ -543,6 +543,34 @@ Todo por código, sin arte nuevo, y cada efecto se apaga por separado desde el p
 
 Verificado: 782 entradas del panel de balanceo, 20 ventanas OK, sin funciones faltantes.
 
+### Barrita de crecimiento en las parcelas, siempre visible (4/8, videos del diseñador)
+
+Dos videos más de Sunflower Land, plantando y cosechando. Lo que muestran:
+
+- **Cultivo creciendo**: no se ve la planta, se ve un brotecito, y encima una **barrita de progreso
+  con el tiempo que falta escrito arriba** ("18m", "17m", "20h", "7d 13h"). Está **siempre a la
+  vista**, sin pasar el cursor: con un campo de 40 parcelas se sabe de un vistazo cuál va primera.
+- **Cultivo listo**: la barrita desaparece y lo que se ve es la planta entera. El contraste entre
+  "barrita" y "planta" es lo que dice qué cosechar.
+
+Nosotros teníamos el contador de la parcela **solo con el cursor encima**, igual que los árboles.
+Con dos parcelas se aguanta; con doce, no.
+
+**Qué se cambió**
+
+- Las parcelas que están creciendo muestran ahora **barrita + tiempo restante, siempre**, sobre la
+  parcela. Mismo estilo que el resto del juego: contorno oscuro, marco claro y relleno verde.
+- Al estar lista, la barrita se va sola y queda la planta con su brillo dorado.
+- Los árboles y las vetas **no** llevan barrita de enfriamiento: eso ya se había sacado a pedido del
+  diseñador y se mantiene así.
+
+**Un arreglo que salió de paso**: la barra necesita saber cuánto duraba el crecimiento total, y ese
+dato se recalculaba mal al recargar la página (no tenía en cuenta el multiplicador de velocidad ni
+el arranque rápido de las primeras semillas). Ahora se guarda con la partida. Eso también corrige un
+bug viejo: tras un F5, el cambio a "media cosecha" saltaba en el momento equivocado.
+
+Se puede apagar desde el panel ("Respuesta al clic" → barrita de crecimiento).
+
 ### El recurso que sale volando ahora SE VE (4/8)
 
 El diseñador señaló que en el video de Sunflower Land, al talar el cactus, salen unos **troncos**
