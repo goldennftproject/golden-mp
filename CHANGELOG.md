@@ -543,6 +543,42 @@ Todo por código, sin arte nuevo, y cada efecto se apaga por separado desde el p
 
 Verificado: 782 entradas del panel de balanceo, 20 ventanas OK, sin funciones faltantes.
 
+### Velocidad de talado al nivel de Sunflower Land (4/8, video del diseñador)
+
+El diseñador mandó un video de Sunflower Land talando cactus. Lo medí **cuadro por cuadro** (30 fps)
+para copiar el ritmo exacto en vez de estimarlo a ojo:
+
+| Cuadro | Qué pasa |
+|---|---|
+| 18 | clic → el cactus se pone **blanco** un instante |
+| 19 | aparece una **barrita de progreso** debajo del cactus |
+| 22 | segundo destello (+133 ms) |
+| 25 | tercer destello (+233 ms) |
+| 26-27 | destellos + hojitas verdes saltando |
+| 28 | **el cactus desaparece** (+333 ms) y el tronco sale volando en arco con su "+1.5" |
+| 30 | cartel "Recovers in 1hr 20mins" |
+
+Dos hallazgos que cambian el enfoque:
+
+1. **De clic a recurso pasan 333 ms.** Nosotros estábamos en 1,26 s (y antes de ayer, en 2,7 s).
+2. **El cactus NUNCA cambia de dibujo mientras lo talás.** No hay estados intermedios: solo late en
+   blanco cada ~117 ms. Toda la sensación de "le estoy pegando" viene del destello, no del arte.
+
+**Qué se cambió**
+
+- **Cada golpe se bloquea 0,18 s** (antes 0,42 s). Clickeando seguido, un árbol cae en **540 ms** —
+  el mismo ritmo que SFL, pero conservando los 3 golpes que pidió el diseñador.
+- **Destello blanco** en cada golpe, 90 ms, exactamente como el del video. Se aplica al tronco y a
+  la copa por separado (el árbol está partido en dos para el viento).
+- **Barrita de progreso** bajo el nodo mientras lo golpeás, igual que SFL. Aparece con el primer
+  golpe, se llena con cada uno y se va sola cuando el nodo cae o cuando se pierden los golpes.
+- **El recurso sale volando en arco con su "+N"**, como el tronco del video, en vez del cartelito de
+  aviso. Vale para madera, piedra, minerales y cosechas.
+- Se sacaron los avisos de "¡Golpe 2/3!": el destello y la barra ya lo cuentan mejor.
+
+Todo editable en el panel ("Respuesta al clic"): duración de cada acción, del destello, y si se
+quiere la barrita y el premio volando.
+
 ### Se saca el retraso al interactuar (4/8, reporte del diseñador)
 
 "Cuando le hago clic al árbol tarda unos milisegundos en reaccionar." Eran **tres causas sumadas**,

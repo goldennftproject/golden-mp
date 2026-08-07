@@ -795,7 +795,7 @@ class FarmScene extends Phaser.Scene {
     if (kind === "plant") this.action.seed = G.selSeed;   // queda fijada la semilla ya validada
     // RESPUESTA INMEDIATA: como el granjero no se ve, si el golpe no se nota AL INSTANTE el juego
     // se siente lento. Las astillas y la sacudida salen ya, en el mismo frame del clic.
-    if ((kind === "chop" || kind === "mine") && ACT_IMPACTO <= 0) { this.golpeFx(o, kind); this.action.golpeYa = true; }
+    if ((kind === "chop" || kind === "mine") && ACT_IMPACTO <= 0) { this.destelloFx(o); this.golpeFx(o, kind); this.action.golpeYa = true; }
     if (kind === "fish") this.castBobber(o.bx != null ? o.bx : o.cx, o.by2 != null ? o.by2 : (GF.POND.row + GF.POND.rows / 2) * GF.TILE);
   }
 
@@ -886,11 +886,11 @@ class FarmScene extends Phaser.Scene {
         const tex = o.golpes === 1 ? "tree_cut1" : "tree_cut2";
         if (this.textures.exists(tex)) this.setObjTex(o, tex, o.rw || o.w);
         o.golpesAt = nowMs();   // si no seguís, a los 5 s el árbol se recupera solo
-        toast("¡Golpe " + o.golpes + "/" + GOLPES_TALAR + "!");
-        this.action = null; return;
+        this.barraGolpes(o);       // barrita de progreso bajo el nodo (como Sunflower Land)
+        this.action = null; return;   // sin cartelito: el destello y la barra ya lo dicen
       }
       o.golpesAt = 0;
-      o.golpes = 0;
+      o.golpes = 0; this.barraGolpes(o);
       const gr = 1;   // viernes (2): todos los recursos dan 1
       if (tryAddRes("madera", gr)) {
         useTool("axe"); addXp("crafting", 4); nodoSumar(o); o.cdIni = nowMs(); o.readyAt = nowMs() + nodoCd(o, "tree", CD.tree) * 1000 * cdMult();
@@ -899,7 +899,8 @@ class FarmScene extends Phaser.Scene {
         if (this.textures.exists("tree_stump_leaves")) this.setObjTex(o, "tree_stump_leaves", (o.rw || o.w) * 0.85);   // −15%: el tocón venía más grueso que el tronco del árbol
         else this.setObjTex(o, "tree_stump", (o.rw || o.w) * 0.42);
         statAdd("talar", null, gr);
-        log(`+${gr} Madera. ${toolDur("axe")}/${TOOL_DEF.axe.max}`, "good"); toast("+" + gr + " "); refreshHud();
+        this.premioFx(o.cx, o.by, resSprite("madera"), "+" + gr);
+        log(`+${gr} Madera. ${toolDur("axe")}/${TOOL_DEF.axe.max}`, "good"); refreshHud();
         if (typeof tutoEvent === "function") tutoEvent("gather");
         if (toolDur("axe") <= 0) { log("¡El hacha se rompió en pedazos! Crafteá otra en la Herrería.", "bad"); toast("¡Hacha rota!"); }
       } else {
@@ -911,15 +912,15 @@ class FarmScene extends Phaser.Scene {
       if (o.golpes < GOLPES_MINAR) {   // golpes intermedios: el pico NO se gasta todavía
         if (this.textures.exists(o.baseKey + "_half")) this.setObjTex(o, o.baseKey + "_half", o.rw || o.w);
         o.golpesAt = nowMs();   // si no seguís, a los 5 s la piedra vuelve a estar entera
-        toast("¡Golpe " + o.golpes + "/" + GOLPES_MINAR + "!");
+        this.barraGolpes(o);
         this.action = null; return;
       }
-      o.golpes = 0; o.golpesAt = 0;
+      o.golpes = 0; o.golpesAt = 0; this.barraGolpes(o);
       const gr = 1;   // viernes (2): todos los recursos dan 1
       if (tryAddRes("piedra", gr)) {
         const pk = equippedPick();   // picar piedra también gasta el pico (bug reportado)
         if (pk) { G.picks.dur[pk] = Math.max(0, (G.picks.dur[pk] || 0) - 1); if (G.picks.dur[pk] <= 0) { log(`¡${PICK_DEF[pk].label} se rompió en pedazos! Crafteá otro en la Herrería.`, "bad"); toast("¡Pico destruido!"); destroyPick(pk); } }
-        addXp("mining", 5); statAdd("minar", "piedra", gr); nodoSumar(o); o.cdIni = nowMs(); o.readyAt = nowMs() + nodoCd(o, "piedra", CD.rock) * 1000 * cdMult(); o.halfAt = nowMs() + (o.readyAt - nowMs()) / 2; this.setObjTex(o, "node_stone_mined", o.rw || GF.TILE); log(`+${gr} Piedra.` + (pk ? ` ${G.picks.dur[pk]}/${PICK_DEF[pk].dur}` : ""), "good"); toast("+" + gr + " "); refreshHud();
+        addXp("mining", 5); statAdd("minar", "piedra", gr); nodoSumar(o); o.cdIni = nowMs(); o.readyAt = nowMs() + nodoCd(o, "piedra", CD.rock) * 1000 * cdMult(); o.halfAt = nowMs() + (o.readyAt - nowMs()) / 2; this.setObjTex(o, "node_stone_mined", o.rw || GF.TILE); this.premioFx(o.cx, o.by, resSprite("piedra"), "+" + gr); log(`+${gr} Piedra.` + (pk ? ` ${G.picks.dur[pk]}/${PICK_DEF[pk].dur}` : ""), "good"); refreshHud();
         if (typeof tutoEvent === "function") tutoEvent("gather");
       }
       else { this.setObjTex(o, o.baseKey, o.rw || o.w); toast("Bolsa llena — no podés picar"); log("Bolsa llena: liberá espacio para seguir picando.", "bad"); }   // vuelve entera: los golpes se perdieron
@@ -928,10 +929,10 @@ class FarmScene extends Phaser.Scene {
       if (o.golpes < GOLPES_MINAR) {   // golpes intermedios: el pico NO se gasta todavía
         if (this.textures.exists(o.baseKey + "_half")) this.setObjTex(o, o.baseKey + "_half", o.rw || o.w);
         o.golpesAt = nowMs();   // si no seguís, a los 5 s la veta vuelve a estar entera
-        toast("¡Golpe " + o.golpes + "/" + GOLPES_MINAR + "!");
+        this.barraGolpes(o);
         this.action = null; return;
       }
-      o.golpes = 0; o.golpesAt = 0;
+      o.golpes = 0; o.golpesAt = 0; this.barraGolpes(o);
       const pk = equippedPick(), pd = PICK_DEF[pk], od = ORE_DEF[o.ore];
       const gr = 1;   // viernes (2): todos los recursos dan 1
       if (tryAddRes(o.ore, gr)) {
@@ -940,7 +941,7 @@ class FarmScene extends Phaser.Scene {
         nodoSumar(o); o.cdIni = nowMs(); o.readyAt = nowMs() + nodoCd(o, o.ore, od.cd) * 1000 * cdMult();
         o.halfAt = nowMs() + (o.readyAt - nowMs()) / 2;
         if (this.textures.exists(o.baseKey + "_mined")) this.setObjTex(o, o.baseKey + "_mined", o.rw || GF.TILE); else o.sprite.setAlpha(0.4);
-        log(`${od.emoji} +${gr} ${od.label}. ${G.picks.dur[pk]}/${pd.dur}`, "good"); toast("+" + gr + " " + od.emoji); refreshHud();
+        this.premioFx(o.cx, o.by, resSprite(o.ore), "+" + gr); log(`${od.emoji} +${gr} ${od.label}. ${G.picks.dur[pk]}/${pd.dur}`, "good"); refreshHud();
         if (typeof tutoEvent === "function") { tutoEvent("gather"); tutoEvent("mineore"); }
         if (G.picks.dur[pk] <= 0) { log(`¡${pd.label} se rompió en pedazos! Crafteá otro en la Herrería.`, "bad"); toast("¡Pico destruido!"); destroyPick(pk); }
       } else { this.setObjTex(o, o.baseKey, o.rw || o.w); toast("Bolsa llena — no podés picar"); log("Bolsa llena: liberá espacio para seguir picando.", "bad"); }
@@ -960,7 +961,7 @@ class FarmScene extends Phaser.Scene {
     } else if (a.kind === "harvest") {
       const ck = o.cropKey || "papa", cd = CROP_DEF[ck] || CROP_DEF.papa;
       const gr = Math.max(1, Math.round(cd.yield * yieldMult()));
-      if (tryAddRes(ck, gr)) { o.state = "dry"; o.cropKey = null; o.readyAt = 0; o.witherAt = 0; this.setPlotGlow(o, "off"); this.coinBurst(o.cx, o.by); o.spr.setVisible(false); o.emo.setVisible(false); o.timer.setVisible(false); this.syncPlots(); addXp("farming", (cd && cd.xp) || 2); if (!G.firstCropDone) G.firstCropDone = true; if (typeof tutoEvent === "function") tutoEvent("harvest"); log(`${cd.emoji} +${gr} ${cd.label}.`, "good"); toast("+" + gr + " " + cd.emoji); refreshHud(); }
+      if (tryAddRes(ck, gr)) { o.state = "dry"; o.cropKey = null; o.readyAt = 0; o.witherAt = 0; this.setPlotGlow(o, "off"); this.coinBurst(o.cx, o.by); o.spr.setVisible(false); o.emo.setVisible(false); o.timer.setVisible(false); this.syncPlots(); addXp("farming", (cd && cd.xp) || 2); if (!G.firstCropDone) G.firstCropDone = true; if (typeof tutoEvent === "function") tutoEvent("harvest"); this.premioFx(o.cx, o.by, resSprite(ck), "+" + gr); log(`${cd.emoji} +${gr} ${cd.label}.`, "good"); refreshHud(); }
       else { toast("Bolsa llena — no podés cosechar"); log("Bolsa llena: liberá espacio para cosechar.", "bad"); }
     } else if (a.kind === "fish") {
       this.clearBobber();
@@ -1058,6 +1059,54 @@ class FarmScene extends Phaser.Scene {
     return dar;
   }
   sueltoPart(n) { this._part = Math.max(0, (this._part || 0) - n); }
+
+  // DESTELLO BLANCO (medido de Sunflower Land): al recibir el golpe el nodo se pone blanco un
+  // instante y vuelve. Es el efecto que más "pega" de todos y no cuesta nada: en SFL el cactus
+  // NUNCA cambia de dibujo mientras lo talás, solo late en blanco cada ~117 ms.
+  destelloFx(o) {
+    const ms = Math.max(30, FX_DESTELLO_MS || 90);
+    [o.sprite, o.copa].forEach(s => {
+      if (!s || !s.setTintFill) return;
+      s.setTintFill(0xffffff);
+      this.time.delayedCall(ms, () => { if (s && s.clearTint && s.active) s.clearTint(); });
+    });
+  }
+
+  // BARRITA DE PROGRESO bajo el nodo mientras lo golpeás (SFL la muestra desde el primer clic).
+  // Aparece con el primer golpe y se va sola cuando el nodo cae o cuando se pierden los golpes.
+  barraGolpes(o) {
+    if (!FX_BARRA_GOLPES) { if (o.barra) { o.barra.destroy(); o.barra = null; } return; }
+    const total = o.type === "tree" ? GOLPES_TALAR : GOLPES_MINAR;
+    const n = o.golpes || 0;
+    if (n <= 0 || n >= total) { if (o.barra) { o.barra.destroy(); o.barra = null; } return; }
+    if (!o.barra) o.barra = this.add.graphics().setDepth(o.by + 3);
+    const w = 26, h = 5, x = o.cx - w / 2, y = o.by + 4;
+    const g = o.barra; g.clear();
+    g.fillStyle(0x241505, 0.9).fillRect(x - 1.5, y - 1.5, w + 3, h + 3);
+    g.fillStyle(0x3b2a12, 1).fillRect(x, y, w, h);
+    g.fillStyle(0x8fd14f, 1).fillRect(x, y, w * (n / total), h);
+  }
+
+  // PREMIO VOLANDO: el recurso sale en arco desde el nodo con su "+N", como el tronco de SFL.
+  premioFx(x, y, spriteKey, texto) {
+    if (!FX_PREMIO) return;
+    const dx = 26 + Math.random() * 14, dy = -30 - Math.random() * 10;
+    let ic = null;
+    if (spriteKey && this.textures.exists(spriteKey)) {
+      ic = this.add.image(x, y - 10, spriteKey).setDepth(99997);
+      ic.setScale(Math.min(1, 18 / Math.max(1, ic.width)));
+    }
+    const t = this.add.text(x + (ic ? 16 : 0), y - 10, texto, {
+      fontFamily: "system-ui", fontSize: "12px", fontStyle: "bold",
+      color: "#fff8e0", stroke: "#241505", strokeThickness: 3,
+    }).setOrigin(0, 0.5).setDepth(99998);
+    [ic, t].forEach((el, i) => {
+      if (!el) return;
+      this.tweens.add({ targets: el, x: el.x + dx, duration: 900, ease: "Sine.easeOut" });
+      this.tweens.add({ targets: el, y: el.y + dy, duration: 420, ease: "Quad.easeOut", yoyo: false });
+      this.tweens.add({ targets: el, alpha: 0, delay: 520, duration: 380, onComplete: () => el.destroy() });
+    });
+  }
 
   // IMPACTO DEL GOLPE (4/8): el nodo se sacude hacia el lado contrario al hachazo y suelta
   // astillas (madera) o esquirlas (piedra). Antes el árbol solo cambiaba de imagen y los
@@ -1300,7 +1349,7 @@ class FarmScene extends Phaser.Scene {
       if (!o.golpes || !o.golpesAt) continue;
       if (t - o.golpesAt < GOLPES_RESET_MS) continue;
       if (this.action && this.action.o === o) continue;   // le está pegando ahora mismo
-      o.golpes = 0; o.golpesAt = 0;
+      o.golpes = 0; o.golpesAt = 0; this.barraGolpes(o);
       if (nowMs() < o.readyAt) continue;                  // está en enfriamiento: la textura la maneja el tick de nodos
       this.setObjTex(o, o.baseKey, o.rw || o.w);          // vuelve a estar entero
     }
@@ -1869,6 +1918,7 @@ class FarmScene extends Phaser.Scene {
       const tImpacto = this.action.dur * Math.max(0, Math.min(1, ACT_IMPACTO));
       if (!this.action.golpeYa && ao && (ao.type === "tree" || ao.type === "rock" || ao.type === "ore") && this.action.t >= tImpacto) {
         this.action.golpeYa = true;
+        this.destelloFx(ao);
         this.golpeFx(ao, this.action.kind);
       }
       if (!this.action.halfDone && ao && (ao.type === "rock" || ao.type === "ore") && this.action.t >= tImpacto) {

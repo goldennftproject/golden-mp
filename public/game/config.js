@@ -17,7 +17,13 @@ var ZONA_NEGRA_VEL = 0.75;   // "detallitos (1)" punto 7: el granjero camina 25%
 // RESPUESTA AL CLIC (4/8). Cuánto dura cada acción en la granja. En el modo de un clic el granjero
 // no se ve, así que esta duración NO es una animación: es solo el candado que separa un golpe del
 // siguiente. Cuanto más corta, más "responde" el juego. (Estaba en 0,9 s y se sentía lento.)
-var ACT_DUR = { chop: 0.42, mine: 0.40, plant: 0.45, harvest: 0.45, water: 0.5, fish: 1.5 };
+// Medido cuadro por cuadro sobre un video de Sunflower Land (30 fps): de clic a recurso pasan
+// 333 ms, con un destello blanco cada ~117 ms. Acá son 3 golpes, así que cada golpe se bloquea
+// 0,18 s: clickeando seguido, un árbol cae en ~0,55 s. El mismo ritmo, pero con los 3 golpes.
+var ACT_DUR = { chop: 0.18, mine: 0.18, plant: 0.35, harvest: 0.35, water: 0.4, fish: 1.5 };
+var FX_DESTELLO_MS = 90;   // cuánto dura el destello blanco del nodo al recibir el golpe (SFL: ~100 ms)
+var FX_BARRA_GOLPES = 1;   // barrita de progreso bajo el nodo mientras lo estás golpeando (como SFL)
+var FX_PREMIO = 1;         // el recurso sale volando en arco con su "+N" (como el tronco de SFL)
 // En qué momento de la acción "pega" la herramienta (0 = al instante del clic, 1 = al final).
 // Acá es donde el nodo se agrieta y saltan las astillas. Con el granjero invisible conviene 0.
 var ACT_IMPACTO = 0;
