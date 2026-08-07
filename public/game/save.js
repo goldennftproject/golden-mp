@@ -29,7 +29,7 @@ function snapshot() {
     stats: G.stats, statsBase: G.statsBase, chestCap: G.chestCap, edif2: G.edif2, cosmeticos: G.cosmeticos, animals: G.animals, armor: G.armor, armorEq: G.armorEq, ofrendaPts: G.ofrendaPts, ofrendaLog: G.ofrendaLog, nodoUsos: G.nodoUsos, cosEq: G.cosEq, incursion: G.incursion, incDia: G.incDia, dummyTrain: G.dummyTrain, swordOwned: G.swordOwned, bowOwned: G.bowOwned, swordWoodOwned: G.swordWoodOwned, gear: G.gear,
     armasUnlocked: G.armasUnlocked, treesOpen: G.treesOpen, rocksOpen: G.rocksOpen, firstCropDone: G.firstCropDone, weapons: G.weapons,
     dishes: G.dishes, cooking: G.cooking, chests: G.chests, dummyUsedAt: G.dummyUsedAt,
-    armCd: G.armCd, mkPend: G.mkPend,
+    armCd: G.armCd, mkPend: G.mkPend, testeoDado: G.testeoDado,
     layoutPlots: G.layoutPlots, layoutPond: G.layoutPond };
 }
 // "huella" del estado guardable (incluye el apodo); si no cambia, no hay nada que guardar
@@ -132,6 +132,7 @@ function hydrate(d) {
   if (typeof d.dummyUsedAt === "number") G.dummyUsedAt = d.dummyUsedAt;
   if (d.armCd && typeof d.armCd === "object") G.armCd = d.armCd;   // el enfriamiento de forja ya no se saltea con F5
   G.mkPend = Array.isArray(d.mkPend) ? d.mkPend : [];               // entregas pendientes del Mercado
+  G.testeoDado = d.testeoDado === true;                             // el regalo del modo testeo se da una sola vez
   if (d.layoutPlots && typeof d.layoutPlots === "object") G.layoutPlots = d.layoutPlots;
   if (d.layoutPond && typeof d.layoutPond === "object") G.layoutPond = { col: d.layoutPond.col, row: d.layoutPond.row };
   if (d.picks && d.picks.owned && d.picks.dur) G.picks = d.picks;

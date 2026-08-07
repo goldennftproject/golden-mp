@@ -69,8 +69,12 @@ function enterGame() {
   let returning = false;
   loadPaso(LOAD_ETAPAS.cuenta, "Buscando tu cuenta…");
   try { await window.BAL_READY; } catch (e) {}   // ajustes del panel de balanceo (balance.html) antes de crear nada
+  // MODO TESTEO: va DESPUÉS del panel (para pisar sus tiempos en memoria) y SOLO acá, en el juego.
+  // balance.html no lo llama nunca, así el diseñador sigue viendo y guardando los valores reales.
+  try { if (typeof aplicarTesteo === "function") aplicarTesteo(); } catch (e) { console.warn(e); }
   loadPaso(LOAD_ETAPAS.ajustes, "Aplicando ajustes…");
   try { await window.SAVE_READY; returning = await loadFarm(); } catch (e) { console.warn(e); }
+  try { if (typeof testeoRegalo === "function") testeoRegalo(); } catch (e) { console.warn(e); }   // materiales de prueba (una sola vez)
   if (returning && window.NICK) enterGame();
   else {
     hideEl("loading");                                            // jugador nuevo: primero el apodo

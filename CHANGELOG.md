@@ -543,6 +543,46 @@ Todo por código, sin arte nuevo, y cada efecto se apaga por separado desde el p
 
 Verificado: 782 entradas del panel de balanceo, 20 ventanas OK, sin funciones faltantes.
 
+### MODO TESTEO: todo el juego en segundos (4/8)
+
+Para que el diseñador pueda recorrer el juego entero sin esperar horas ni farmear, se agregó un
+interruptor único en `config.js`:
+
+```
+GF.TESTEO = 1;    // 1 = tiempos de prueba · 0 = tiempos reales del diseñador
+```
+
+**Qué comprime**
+
+| | Real | En testeo |
+|---|---|---|
+| Papa | 9 min | 9 s |
+| Maíz (el cultivo más largo) | 24 h | 40 s |
+| Árbol | 1 h 30 min | 40 s |
+| Piedra | 2 h | 40 s |
+| Veta de netherita | 14 h | 40 s |
+| Guiso Campestre (Cocina) | 8 min | 8 s |
+| Dummy de práctica | 4 h | 15 s |
+| Ciclo de la alpaca (Establo) | 12 h | 40 s |
+| Incursión Zona Negra I | 10 min | 1 min |
+| 1 punto de estamina | 3 min | 2 s |
+
+Además: sin cupo diario de semillas (999), sin tope de incursiones por día, 99 recargas de estamina
+y el Pase de Batalla a 2 estrellas por nivel para poder ver los 30 niveles.
+
+**Materiales de arranque.** La primera vez que se entra con el modo activo, la partida recibe
+500.000 de plata, 5.000 $Golden, 500 de cada material, 200 de cada cultivo, 50 semillas de cada uno,
+herramientas y picos al máximo, las 12 parcelas, todos los árboles y vetas desbloqueados y los 7
+edificios construidos. **Se da una sola vez** (queda marcado en el guardado), así que recargar no
+acumula.
+
+**Lo importante: no toca la tabla del diseñador.** Los valores reales siguen guardados en Supabase.
+El modo testeo solo cambia los números en memoria, y se aplica **únicamente en el juego** — nunca en
+`balance.html`. Así el panel de balanceo sigue mostrando y guardando los valores reales, y no hay
+forma de guardar sin querer los de prueba.
+
+**Para la versión final**: poner `GF.TESTEO = 0` y deployar. Todo vuelve solo.
+
 ### Barrita de crecimiento en las parcelas, siempre visible (4/8, videos del diseñador)
 
 Dos videos más de Sunflower Land, plantando y cosechando. Lo que muestran:

@@ -22,7 +22,7 @@ const G = {
   states: [],                    // doc 2/8: estados/debuffs del bestiario sobre el jugador (no se guardan)
   tuto: { step: 0, n: 0, done: false, v: 2 },   // doc 2/8: tutorial guiado de micro-objetivos (v = versión de la cadena)
   firstSeeds: 3,                 // semillas del starter pack que crecen en 45 s (se descuentan al plantarlas)
-  armCd: {}, mkPend: [],         // enfriamiento de crafteo por arma · entregas pendientes del Mercado   // equipo (armas se equipan en el panel de Equipo — detalles jueves)
+  armCd: {}, mkPend: [], testeoDado: false,   // enfriamiento de crafteo por arma · entregas pendientes · regalo de testeo ya dado   // equipo (armas se equipan en el panel de Equipo — detalles jueves)
   res: { madera: 0, piedra: 0, bronce: 0, hierro: 0, oro: 0, diamante: 0, netherita: 0, carne: 0, flecha: 0, lombriz: 0,
     tablon: 0, barra_piedra: 0, barra_bronce: 0, barra_hierro: 0, barra_oro: 0,
     papa: 0, zanahoria: 0, cebolla: 0, calabacin: 0, repollo: 0, calabaza: 0, brocoli: 0, girasol: 0, trigo: 0, maiz: 0,
@@ -2209,3 +2209,81 @@ function claimDaily() {
   if (typeof saveFarm === "function") saveFarm(true);
 }
 
+
+/* ================= MODO TESTEO ====================================================
+   Comprime TODAS las esperas del juego a segundos y abre los cupos diarios, para que el
+   diseñador pueda recorrer el juego entero (cultivos, cocina, animales, armaduras, pase,
+   incursiones) sin esperar horas.
+
+   Importante: esto NO pisa la tabla del diseñador. Los valores reales siguen guardados en
+   Supabase; acá solo se cambian los números EN MEMORIA, después de que el juego cargó los
+   ajustes. Se apaga con GF.TESTEO = 0 en config.js y todo vuelve a los tiempos reales.
+
+   Lo llama main.js, nunca balance.html: así el panel de balanceo sigue mostrando y guardando
+   los valores REALES, y no hay forma de guardar sin querer los de testeo.                  */
+function testSeg(seg) {
+  const v = Math.round((seg || 0) / Math.max(1, TEST_DIV));
+  return Math.max(TEST_MIN, Math.min(TEST_TOPE, v || TEST_MIN));
+}
+function aplicarTesteo() {
+  if (!(window.GF && GF.TESTEO)) return false;
+
+  // --- CULTIVOS: de 9 min / 24 h a unos segundos, respetando el orden entre ellos
+  for (const k in CROP_DEF) CROP_DEF[k].growH = testSeg(CROP_DEF[k].growH * 3600) / 3600;
+  if (typeof recomputeCropGrow === "function") recomputeCropGrow();
+  FIRST_GROW_MS = 3000;                       // las 3 semillas del arranque, casi instantáneas
+  SEED_DAILY_BASE = 999; SEED_DAILY_POR_NIVEL = 0;   // sin cupo diario de semillas
+
+  // --- ÁRBOLES, PIEDRAS Y VETAS
+  CD.tree = testSeg(CD.tree); CD.rock = testSeg(CD.rock);
+  for (const k in ORE_DEF) ORE_DEF[k].cd = testSeg(ORE_DEF[k].cd);
+  for (const k in CD_RAPIDO) CD_RAPIDO[k].seg = Math.max(2, Math.round(CD_RAPIDO[k].seg / TEST_DIV));
+
+  // --- HERRERÍA, HORNO Y ALTAR
+  MAT_CD_MS = 1000;
+  for (let i = 0; i < ARM_CDS.length; i++) ARM_CDS[i] = 1;
+  for (const id in ARM_DEF) ARM_DEF[id].cd = 1;
+  DUMMY_CD_MS = 15000;
+
+  // --- COCINA: las 14 recetas
+  for (const k in RECIPE_DEF) RECIPE_DEF[k].cookS = testSeg(RECIPE_DEF[k].cookS);
+
+  // --- ESTABLO: el ciclo de producción de cada animal
+  for (const k in ANIMAL_DEF) ANIMAL_DEF[k].cicloH = testSeg(ANIMAL_DEF[k].cicloH * 3600) / 3600;
+  FELIZ_BAJA_H = 0;   // no se ponen tristes mientras se prueba
+
+  // --- COMBATE E INCURSIONES
+  for (const k in INCURSIONES) INCURSIONES[k].min = 1;   // vuelven en 1 minuto
+  INC_CUPO_DIA = 0;                                       // sin tope diario
+  STAM_REGEN_SEG = 2;                                     // la estamina se llena sola enseguida
+  STAM_RECARGAS_DIA = 99;
+
+  // --- PASE DE BATALLA: para poder ver los 30 niveles
+  PASS_STARS_LVL = 2;
+
+  console.info("[Golden Farm] MODO TESTEO activo: todos los tiempos comprimidos. Poner GF.TESTEO = 0 para la versión final.");
+  return true;
+}
+// Materiales de arranque para probar TODO (edificios, armas, armaduras, animales, ofrendas).
+// Se da UNA sola vez por partida: si se vuelve a entrar, no se acumula.
+function testeoRegalo() {
+  if (!(window.GF && GF.TESTEO) || G.testeoDado) return false;
+  G.testeoDado = true;
+  G.plata = Math.max(G.plata || 0, 500000);
+  G.golden = Math.max(G.golden || 0, 5000);
+  ["madera","piedra","bronce","hierro","oro","diamante","netherita","carne","flecha","lombriz",
+   "tablon","barra_piedra","barra_bronce","barra_hierro","barra_oro",
+   "fibra","pelaje","cuero","colmillo","esencia_runica"].forEach(k => { G.res[k] = Math.max(G.res[k] || 0, 500); });
+  CROP_ORDER.forEach(k => { G.res[k] = Math.max(G.res[k] || 0, 200); G.seeds[k] = Math.max(G.seeds[k] || 0, 50); });
+  G.tools = G.tools || {}; G.tools.axe = Math.max(G.tools.axe || 0, 99); G.tools.rod = Math.max(G.tools.rod || 0, 99);
+  G.picks = G.picks || { owned: {}, dur: {}, eq: null };
+  PICK_ORDER.forEach(id => { G.picks.owned[id] = true; G.picks.dur[id] = Math.max(G.picks.dur[id] || 0, 99); });
+  G.picks.eq = G.picks.eq || "netherite";
+  G.armasUnlocked = true;                                   // pestaña Armas abierta
+  G.built = Object.assign({}, G.built, { store: true, horno: true, cocina: true, altar: true, establo: true, curtiduria: true, ofrendas: true });
+  G.plotsOwned = Math.max(G.plotsOwned || 2, 12);            // todas las parcelas
+  G.treesOpen = [0,1,2,3,4,5]; G.rocksOpen = [0,1,2,3,4,5];  // todos los nodos desbloqueados
+  if (typeof syncSlots === "function") syncSlots();
+  if (typeof log === "function") log("MODO TESTEO: te dimos materiales, edificios y todas las parcelas para probar el juego entero.", "gold");
+  return true;
+}
