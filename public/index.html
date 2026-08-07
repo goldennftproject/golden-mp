@@ -4,6 +4,12 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Golden Farm</title>
+<!-- El atlas es lo más pesado del juego (386 KB con 329 sprites). Se empieza a bajar YA,
+     en paralelo con el login y la carga de la partida, en vez de esperar a que Phaser arranque. -->
+<link rel="preload" as="image" href="assets/atlas.png?v=19">
+<link rel="preload" as="fetch" href="assets/atlas.json?v=19" crossorigin>
+<link rel="preconnect" href="https://cdn.jsdelivr.net" crossorigin>
+<link rel="preconnect" href="https://eusxpsmqczmczgyhndtd.supabase.co" crossorigin>
 <style>
   :root{--panel:#fffaf0;--ink:#2e2a1f;--muted:#8a7f66;--gold:#e2b23a;--gold-deep:#b9860b;--green:#5a8a3c;--red:#c0503a;--line:#e2d6b8;}
   *{box-sizing:border-box}
@@ -761,8 +767,16 @@
   <div id="hotwrap"><div id="hotbar"></div></div>
   <div id="saveind"><span class="sdot"></span><span class="stxt"></span></div>
 
-  <!-- pantalla de carga (mientras chequea la cuenta) -->
-  <div id="loading" style="position:fixed;inset:0;z-index:120;display:flex;align-items:center;justify-content:center;background:#243318;color:#e2b23a;font:800 20px/1 system-ui,sans-serif;letter-spacing:2px">GOLDEN FARM · Cargando…</div>
+  <!-- pantalla de carga ÚNICA: se queda hasta que la granja está lista de verdad.
+       Antes se iba antes de tiempo y quedaba el canvas cargando por su cuenta, con la ventana
+       del cofre diario abriéndose encima de un juego a medio armar. -->
+  <div id="loading" style="position:fixed;inset:0;z-index:120;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:18px;background:#243318;color:#e2b23a;font:800 20px/1 system-ui,sans-serif;letter-spacing:2px">
+    <div>GOLDEN FARM</div>
+    <div style="width:min(260px,60vw);height:14px;border:2px solid #8fc46a;border-radius:8px;background:#2a3a1c;overflow:hidden">
+      <i id="ldfill" style="display:block;height:100%;width:4%;background:#8fc46a;transition:width .2s"></i>
+    </div>
+    <div id="ldmsg" style="font:600 13px/1 system-ui,sans-serif;letter-spacing:.5px;color:#c9b98a">Preparando tu granja…</div>
+  </div>
 
   <!-- gate de apodo (oculto hasta saber si sos jugador nuevo) -->
   <div id="gate" style="display:none">

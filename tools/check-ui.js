@@ -8,7 +8,8 @@ const ui = fs.readFileSync(dir + "/game/ui.js", "utf8");
 const html = fs.readFileSync(dir + "/index.html", "utf8");
 const state = fs.readFileSync(dir + "/game/state.js", "utf8");
 const save = fs.readFileSync(dir + "/game/save.js", "utf8");
-const todo = ui + state + save + fs.readFileSync(dir + "/game/farm.js", "utf8") + fs.readFileSync(dir + "/game/forest.js", "utf8");
+const todo = ui + state + save + ["farm.js", "forest.js", "plaza.js", "boot.js", "main.js", "config.js"]
+  .map(f => fs.readFileSync(dir + "/game/" + f, "utf8")).join("\n");
 
 // 1) cada ventana registrada tiene su función y su div
 const refs = [...ui.matchAll(/"(ov-[a-z0-9]+)":\s*\(\)\s*=>\s*(\w+)\(/g)];

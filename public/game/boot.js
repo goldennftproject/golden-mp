@@ -107,12 +107,11 @@ class BootScene extends Phaser.Scene {
     this.load.image("__atlas", "assets/atlas.png?v=19");
     this.load.json("__atlasmap", "assets/atlas.json?v=19");
 
-    // barra de carga simple
-    const w = this.scale.width, h = this.scale.height;
-    this.add.rectangle(w/2, h/2, 240, 16, 0x2a3a1c).setStrokeStyle(2, 0x8fc46a);
-    const fill = this.add.rectangle(w/2 - 118, h/2, 4, 10, 0x8fc46a).setOrigin(0, 0.5);
-    this.msg = this.add.text(w/2, h/2 - 32, "Cargando Golden Farm…", { fontFamily:"system-ui", fontSize:"16px", color:"#ffe08a" }).setOrigin(0.5);
-    this.load.on("progress", v => { fill.width = 4 + 232 * v; });
+    // No hay barra propia: la pantalla de carga es UNA sola, la del HTML, y le pasamos el avance.
+    // (Antes había dos barras seguidas y el juego "aparecía" antes de estar listo.)
+    this.paso = (v, txt) => { if (typeof loadPaso === "function") loadPaso(0.40 + 0.50 * Math.max(0, Math.min(1, v)), txt); };
+    this.msg = { setText: (t) => this.paso(this._ult || 0, t) };
+    this.load.on("progress", v => { this._ult = v; this.paso(v, "Cargando el arte de la granja…"); });
   }
 
   create() {
@@ -130,20 +129,26 @@ class BootScene extends Phaser.Scene {
       }
     }
     this.tries = 0;
+    this.fallidos = {};   // cuántas veces falló cada archivo (para no insistir con los que NO EXISTEN)
+    this.load.on("loaderror", (file) => { if (file && file.key) this.fallidos[file.key] = (this.fallidos[file.key] || 0) + 1; });
     this.ensureAll();   // lo que falte (o todo, si el atlas no llegó) se baja suelto con reintentos
   }
 
-  // repide lo que falte (hasta 6 pasadas) antes de arrancar la granja
+  // Repide lo que falte antes de arrancar la granja.
+  // OJO: los reintentos existen porque el server gratis de Render a veces corta pedidos sueltos.
+  // Pero un archivo que directamente NO EXISTE (arte que todavía no se generó) fallaba las 6 pasadas
+  // y hacía esperar ~13 segundos EN CADA CARGA por nada. Ahora, a la segunda falla se abandona.
   ensureAll() {
-    const missing = this.assetList().filter(([k]) => !this.textures.exists(k));
-    if (missing.length === 0 || this.tries >= 6) {
-      if (missing.length) console.warn("Sin cargar tras reintentos:", missing.map(m => m[0]).join(", "));
+    const todos = this.assetList().filter(([k]) => !this.textures.exists(k));
+    const missing = todos.filter(([k]) => (this.fallidos[k] || 0) < 2);
+    if (missing.length === 0 || this.tries >= 4) {
+      if (todos.length) console.warn("Sin cargar (probablemente falta el arte):", todos.map(m => m[0]).join(", "));
       return this.loadOptional();   // el arte opcional (bestiario nuevo) va al final y nunca bloquea
     }
     this.tries++;
-    if (this.msg) this.msg.setText("Completando descarga… (" + missing.length + " restantes)");
+    if (this.msg) this.msg.setText("Completando descarga… (faltan " + missing.length + ")");
     // espera breve creciente para dejar respirar al server, después repide solo lo faltante
-    this.time.delayedCall(400 + this.tries * 500, () => {
+    this.time.delayedCall(200 + this.tries * 250, () => {
       missing.forEach(([k, f]) => this.load.image(k, f + (f.includes("?") ? "&r=" : "?r=") + this.tries));
       this.load.once("complete", () => this.ensureAll());
       this.load.start();
@@ -174,10 +179,10 @@ class BootScene extends Phaser.Scene {
       if (this.msg) this.msg.setText("Cargando criaturas…");
       falta.forEach(([k, f]) => this.load.image(k, f));
       this.load.once("complete", start);
-      this.time.delayedCall(8000, start);   // tope de espera: nunca se traba
+      this.time.delayedCall(6000, start);   // tope de espera: nunca se traba
       this.load.start();
     });
-    this.time.delayedCall(4000, start);     // si el manifiesto no responde, arranca igual
+    this.time.delayedCall(1800, start);     // si el manifiesto no responde, arranca igual (antes esperaba 4 s de más)
     this.load.start();
   }
 

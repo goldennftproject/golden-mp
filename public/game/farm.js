@@ -545,6 +545,10 @@ class FarmScene extends Phaser.Scene {
     // (la M ya no teletransporta a la plaza — ahora abre/cierra el menú, detalles 29/7)
     this.keys.act.on("down", () => this.doInteract());
     this.keys.act2.on("down", () => this.doInteract());
+
+    // La granja YA está dibujada: recién ahora se saca la pantalla de carga y se abren las
+    // ventanas que esperaban (cofre diario). Todo aparece junto, no una cosa antes que la otra.
+    if (typeof juegoListo === "function") this.time.delayedCall(60, juegoListo);
   }
 
   drawOlas(dt) {

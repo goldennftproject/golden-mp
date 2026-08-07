@@ -543,6 +543,45 @@ Todo por código, sin arte nuevo, y cada efecto se apaga por separado desde el p
 
 Verificado: 782 entradas del panel de balanceo, 20 ventanas OK, sin funciones faltantes.
 
+### Carga del juego: una sola pantalla y 12 segundos menos (4/8)
+
+El diseñador reportó que al entrar por primera vez en el día se veía **primero la ventana del cofre
+diario y después el juego**. Eran dos problemas distintos.
+
+**1. La espera de 13 segundos que nadie pidió**
+
+El cargador repite lo que no llegó, porque el server gratis de Render a veces corta pedidos sueltos.
+Pero lo hacía **6 veces con esperas crecientes**, sin distinguir entre "no llegó" y "no existe".
+Hoy faltan tres imágenes (Establo, Curtiduría y Altar de Ofrendas: el arte todavía no está hecho),
+así que **cada carga del juego perdía ~12,9 segundos reintentando tres archivos inexistentes**.
+Ahora se anota qué archivo falló de verdad y a la segunda se abandona: **1,1 segundos**.
+
+Comprobado: de los 332 sprites que pide el juego, 329 salen del atlas en un solo archivo. Los
+únicos tres sueltos son justo esos que faltan.
+
+**2. Una sola pantalla de carga, y el juego aparece entero**
+
+Antes había dos etapas: la pantalla HTML se iba en cuanto terminaba el login, y ahí el juego seguía
+cargando sus imágenes con una barra propia de Phaser. En el medio se abría el cofre diario, encima
+de una granja a medio armar.
+
+- Ahora hay **una sola pantalla de carga**, con barra y texto de qué está haciendo ("Buscando tu
+  cuenta…", "Aplicando ajustes…", "Cargando el arte…").
+- **No se va hasta que la granja está dibujada de verdad**: la escena avisa cuando terminó.
+- Las ventanas que se abren solas (hoy el cofre diario) **esperan a ese mismo momento**. Aparece
+  todo junto, con un fundido suave.
+- Red de seguridad de 25 s: si algo se trabara, la pantalla nunca queda pegada.
+
+**3. Menos espera antes de empezar a bajar**
+
+- El atlas (388 KB, lo más pesado) se empieza a bajar **desde la primera línea del HTML**, en
+  paralelo con el login, en vez de esperar a que arranque Phaser.
+- Conexión adelantada al CDN y a Supabase, para no pagar el saludo dos veces.
+- El chequeo del manifiesto del bestiario baja de 4 s a 1,8 s de tope.
+
+También se amplió el chequeo automático previo a la entrega: ahora también revisa `main.js`,
+`boot.js`, `plaza.js` y `config.js`.
+
 ### Ajustes sobre la tanda de efectos (4/8, revisión del diseñador)
 
 - **Fuera el aro de enfriamiento** de los nodos picados o talados. Volvió a quedar solo el contador
