@@ -17,10 +17,15 @@ var ZONA_NEGRA_VEL = 0.75;   // "detallitos (1)" punto 7: el granjero camina 25%
 // RESPUESTA AL CLIC (4/8). Cuánto dura cada acción en la granja. En el modo de un clic el granjero
 // no se ve, así que esta duración NO es una animación: es solo el candado que separa un golpe del
 // siguiente. Cuanto más corta, más "responde" el juego. (Estaba en 0,9 s y se sentía lento.)
-// Medido cuadro por cuadro sobre un video de Sunflower Land (30 fps): de clic a recurso pasan
-// 333 ms, con un destello blanco cada ~117 ms. Acá son 3 golpes, así que cada golpe se bloquea
-// 0,18 s: clickeando seguido, un árbol cae en ~0,55 s. El mismo ritmo, pero con los 3 golpes.
-var ACT_DUR = { chop: 0.18, mine: 0.18, plant: 0.35, harvest: 0.35, water: 0.4, fish: 1.5 };
+// Medido cuadro por cuadro sobre un video de Sunflower Land (30 fps): destellos cada ~117 ms,
+// que es cadencia de DEDO (unos 8 toques por segundo). O sea: allá se tala a CLICS, no manteniendo.
+// Por eso lo que manda acá no es la duración, sino que ningún clic se pierda: el candado es corto
+// y, si tocás más rápido que él, el toque queda guardado y sale apenas se libera.
+var ACT_DUR = { chop: 0.08, mine: 0.08, plant: 0.30, harvest: 0.30, water: 0.4, fish: 1.5 };
+// Los clics que llegan durante el candado NO se tiran: se guarda uno y sale en cuanto termina.
+// Es lo que hace que tocando rápido no se pierda ni un golpe. Solo vale para el MISMO nodo,
+// así que no es la cola vieja (aquella encolaba objetivos distintos y los marcaba con puntitos).
+var CLIC_BUFFER_MS = 260;
 var FX_DESTELLO_MS = 90;   // cuánto dura el destello blanco del nodo al recibir el golpe (SFL: ~100 ms)
 var FX_BARRA_GOLPES = 1;   // barrita de progreso bajo el nodo mientras lo estás golpeando (como SFL)
 var FX_PREMIO = 1;         // el recurso sale volando en arco con su "+N" (como el tronco de SFL)
@@ -28,7 +33,8 @@ var FX_PREMIO = 1;         // el recurso sale volando en arco con su "+N" (como 
 // Acá es donde el nodo se agrieta y saltan las astillas. Con el granjero invisible conviene 0.
 var ACT_IMPACTO = 0;
 // Si mantenés apretado sin arrastrar más de este tiempo, la acción sale igual (sin esperar a soltar).
-var CLIC_SUELTO_MS = 170;
+// Tiene que ser mayor que el umbral de arrastre para no talar cuando en realidad querías mover la vista.
+var CLIC_SUELTO_MS = 110;
 
 // VIENTO (4/8): los árboles crecidos y los cultivos listos se mecen apenas, como si soplara viento.
 // Es puro código —sin arte nuevo—: el sprite gira poquísimo sobre su base (origen abajo), así que

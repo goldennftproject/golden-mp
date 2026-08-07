@@ -579,6 +579,37 @@ Dos hallazgos que cambian el enfoque:
 Todo editable en el panel ("Respuesta al clic"): duración de cada acción, del destello, y si se
 quiere la barrita y el premio volando.
 
+**Segunda pasada: que ningún clic se pierda**
+
+Primero probé con "mantener apretado para seguir golpeando", pero el diseñador corrigió: en
+Sunflower Land se tala **a clics**, no manteniendo. Y tenía razón — mis propias mediciones lo
+confirman: los destellos están cada **117 ms**, que es cadencia de dedo humano (~8 toques por
+segundo), no un efecto continuo.
+
+Eso cambia dónde está el problema. No es la duración de la acción: es que **los clics que llegaban
+durante el candado se tiraban a la basura**. Tocabas rápido, y de cada tres toques contaba uno.
+
+- El candado bajó a **0,08 s**.
+- **El clic que llega durante el candado ya no se pierde**: se guarda uno y sale apenas se libera
+  (ventana de 260 ms). Solo para el MISMO nodo, así que no es la cola vieja — aquella encolaba
+  objetivos distintos y los marcaba con puntitos; esto es amortiguación de entrada, invisible.
+- **Se quitó del todo el "mantener apretado para seguir golpeando"**: era una mecánica que el
+  diseñador nunca pidió, y agregarla por nuestra cuenta cambiaba cómo se juega. Un clic = un golpe,
+  siempre. Lo único que quedó es que el golpe no espera a que sueltes el botón (sale a los 110 ms si
+  no estás arrastrando la vista), pero sale **una sola vez por pulsación**.
+
+| Talando a clics (3 golpes) | |
+|---|---|
+| 6 clics/s (lento) | 333 ms |
+| 8 clics/s (la cadencia del video) | **250 ms** |
+| 10 clics/s (rápido) | 200 ms |
+| 14 clics/s (machacando) | 160 ms |
+| Sunflower Land, medido | 333 ms |
+| Golden Farm antes de hoy | 2700 ms |
+
+O sea: a la misma cadencia de dedo del video, nuestro árbol cae **más rápido** que el cactus de
+Sunflower Land, y encima pasando por sus tres estados de talado.
+
 ### Se saca el retraso al interactuar (4/8, reporte del diseñador)
 
 "Cuando le hago clic al árbol tarda unos milisegundos en reaccionar." Eran **tres causas sumadas**,

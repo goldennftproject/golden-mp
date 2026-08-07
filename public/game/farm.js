@@ -22,7 +22,7 @@ class FarmScene extends Phaser.Scene {
     this.dragObj = null; this.dragPlot = null; this.dragPond = false;
     this.hornoSmokeEv = null; this.dummyBroken = false;   // si no se limpian, el humo del horno no vuelve al regresar del Bosque
     this.auraFx = null; this.auraTw = null;
-    this.clickHit = null; this.clickPond = false;
+    this.clickHit = null; this.clickPond = false; this.buffer = null;
     this.nubes = null; this.maripos = null; this._part = 0; this._rafActiva = false; this._vaporAt = 0;   // efectos de ambiente
     this.queue = [];      // cola de acciones: clickeá varios objetivos y se hacen en orden
     this.cameras.main.setBackgroundColor(GF.ISLA ? "#2e7fa8" : "#6ba043");   // isla: agua alrededor
@@ -392,13 +392,17 @@ class FarmScene extends Phaser.Scene {
       if (this.editHl) this.editHl.setVisible(false);
       // granja de un clic: acá se resuelve la acción, solo si NO fue un arrastre de cámara
       if (GF.NO_WALK && !GF.editMode && !GF.uiOpen && (this.clickHit || this.clickPond)) {
-        const arrastro = !!(this.hold && this.hold.active);
+        const arrastro = !!(this.hold && (this.hold.active || this.hold.disparo));   // ya paneó, o el golpe ya salió sin esperar a soltar
         const hit = this.clickHit, pond = this.clickPond;
         this.clickHit = null; this.clickPond = false;
-        // SIN COLA (4/8): un clic = un golpe. Si hay una acción en curso, el clic simplemente no cuenta;
-        // la cola tenía sentido cuando el granjero caminaba, ahora se actúa directo sobre lo que tocás.
-        if (!arrastro && !pt.rightButtonReleased() && !this.action) {
-          if (hit) { this.pendingObj = null; this.interactWith(hit); }
+        // SIN COLA (4/8): un clic = un golpe, y se actúa directo sobre lo que tocás.
+        // PERO el clic que cae mientras dura el candado NO se tira: se guarda y sale enseguida.
+        // Sin esto, tocando rápido (que es como se juega) se perdían golpes y se sentía trabado.
+        if (!arrastro && !pt.rightButtonReleased()) {
+          if (this.action) {
+            const n = hit && (hit.type === "tree" || hit.type === "rock" || hit.type === "ore");
+            if (n && this.action.o === hit) this.buffer = { o: hit, t: nowMs() };   // mismo nodo: se guarda
+          } else if (hit) { this.pendingObj = null; this.interactWith(hit); }
           else if (pond) this.tryFish(pt.worldX, pt.worldY);
         }
       }
@@ -1813,12 +1817,23 @@ class FarmScene extends Phaser.Scene {
         else o.timer.setVisible(false);
       }
     }
-    // Clic sostenido sin arrastrar: no hace falta esperar a que sueltes. Pasados unos milisegundos
-    // ya está claro que no es un arrastre de cámara, así que la acción sale igual.
-    if (GF.NO_WALK && !this.action && (this.clickHit || this.clickPond) && this.hold && !this.hold.active
-        && t - (this.hold.t0 || t) > CLIC_SUELTO_MS) {
+    // CLIC GUARDADO: tocaste otra vez mientras el golpe anterior todavía tenía el candado puesto.
+    // Apenas se libera, sale. Así tocando rápido no se pierde ni un golpe (que es como se tala en
+    // Sunflower Land: a clics, no manteniendo).
+    if (this.buffer && !this.action) {
+      const b = this.buffer; this.buffer = null;
+      if (t - b.t < CLIC_BUFFER_MS && !b.o.locked && t >= (b.o.readyAt || 0)) this.interactWith(b.o);
+    }
+
+    // UN CLIC = UN GOLPE, siempre. No hay "mantener apretado para seguir golpeando": eso sería una
+    // mecánica que el diseñador no pidió. Lo único que se hace acá es no obligar a SOLTAR: pasados
+    // unos milisegundos sin arrastrar ya está claro que es un clic y no un paneo, así que el golpe
+    // sale. Sale UNA sola vez por pulsación; para el siguiente golpe hay que volver a clickear.
+    if (GF.NO_WALK && !this.action && this.hold && !this.hold.active && !this.hold.disparo && !GF.uiOpen
+        && (this.clickHit || this.clickPond) && t - (this.hold.t0 || t) > CLIC_SUELTO_MS) {
       const hit = this.clickHit, pond = this.clickPond;
       this.clickHit = null; this.clickPond = false;
+      this.hold.disparo = true;   // ya actuó: al soltar no se dispara de nuevo
       if (hit) this.interactWith(hit);
       else if (pond) this.tryFish(this.input.activePointer.worldX, this.input.activePointer.worldY);
     }
