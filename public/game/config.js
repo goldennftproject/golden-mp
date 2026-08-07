@@ -33,6 +33,9 @@ var FX_BARRA_GOLPES = 1;   // barrita de progreso bajo el nodo mientras lo está
 // cuando el cultivo está listo: ahí lo que se ve es la planta entera. Así, de un vistazo, se sabe
 // qué parcela está lista y cuánto le falta a cada una de las demás.
 var FX_BARRA_CULTIVO = 1;
+// Ajuste fino de altura de la barrita de la parcela, en píxeles (negativo = más arriba).
+// Sirve por si el arte de la tierra cambia y la barra queda muy pegada o muy despegada.
+var FX_BARRA_DY = 0;
 var FX_PREMIO = 1;         // el recurso sale volando en arco con su "+N" (como el tronco de SFL)
 // Tamaño del ícono del recurso que sale volando. Venía en 18 px y no se leía; +25% = 22 px.
 // (La celda del mundo mide 42 px, así que ocupa poco más de medio tile: se ve sin tapar nada.)

@@ -571,6 +571,18 @@ bug viejo: tras un F5, el cambio a "media cosecha" saltaba en el momento equivoc
 
 Se puede apagar desde el panel ("Respuesta al clic" → barrita de crecimiento).
 
+**Ajustes tras verlo en pantalla (4/8)**
+
+- **Centrado**: la barrita se posicionaba con las coordenadas teóricas de la celda. Ahora se ancla al
+  **sprite real de la tierra** (su centro y su borde de arriba), así queda centrada aunque la parcela
+  se haya movido en el modo edición o el dibujo no llene la celda entera. Las coordenadas también se
+  redondean a píxel entero, que en pixel art se nota.
+- **Altura**: pasó de estar dentro de la parcela a quedar **por encima de la tierra**, con el tiempo
+  arriba de la barra. Queda un ajuste fino en el panel por si el arte de la tierra cambia.
+- **Un solo estilo de barrita para todo el juego**: la de golpear árboles y vetas ahora usa el mismo
+  dibujo que la de crecimiento (contorno oscuro + marco claro + relleno verde), en una sola función
+  compartida. Antes eran dos dibujos distintos y se notaba.
+
 ### El recurso que sale volando ahora SE VE (4/8)
 
 El diseñador señaló que en el video de Sunflower Land, al talar el cactus, salen unos **troncos**

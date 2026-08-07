@@ -1077,6 +1077,18 @@ class FarmScene extends Phaser.Scene {
     });
   }
 
+  // ESTILO ÚNICO DE BARRITA (4/8): contorno oscuro + marco claro + relleno verde, como las de
+  // Sunflower Land. La usan tanto el crecimiento de las parcelas como los golpes a árboles y vetas,
+  // así todas las barras del mundo se ven iguales.
+  dibujarBarra(g, cx, y, w, h, pct) {
+    const x = Math.round(cx - w / 2);
+    g.clear();
+    g.fillStyle(0x241505, 1).fillRect(x - 3, y - 3, w + 6, h + 6);   // contorno oscuro (estándar del juego)
+    g.fillStyle(0xe8e0c8, 1).fillRect(x - 1.5, y - 1.5, w + 3, h + 3);   // marco claro
+    g.fillStyle(0x2a3a1c, 1).fillRect(x, y, w, h);                       // lo que falta
+    g.fillStyle(0x8fd14f, 1).fillRect(x, y, w * Math.max(0, Math.min(1, pct)), h);   // lo hecho
+  }
+
   // BARRITA DE PROGRESO bajo el nodo mientras lo golpeás (SFL la muestra desde el primer clic).
   // Aparece con el primer golpe y se va sola cuando el nodo cae o cuando se pierden los golpes.
   barraGolpes(o) {
@@ -1085,11 +1097,7 @@ class FarmScene extends Phaser.Scene {
     const n = o.golpes || 0;
     if (n <= 0 || n >= total) { if (o.barra) { o.barra.destroy(); o.barra = null; } return; }
     if (!o.barra) o.barra = this.add.graphics().setDepth(o.by + 3);
-    const w = 26, h = 5, x = o.cx - w / 2, y = o.by + 4;
-    const g = o.barra; g.clear();
-    g.fillStyle(0x241505, 0.9).fillRect(x - 1.5, y - 1.5, w + 3, h + 3);
-    g.fillStyle(0x3b2a12, 1).fillRect(x, y, w, h);
-    g.fillStyle(0x8fd14f, 1).fillRect(x, y, w * (n / total), h);
+    this.dibujarBarra(o.barra, o.cx, o.by + 5, 28, 6, n / total);   // mismo estilo que la de crecimiento
   }
 
   // BARRITA DE CRECIMIENTO sobre la parcela (copiada de Sunflower Land, videos del diseñador).
@@ -1105,18 +1113,18 @@ class FarmScene extends Phaser.Scene {
     }
     const total = pl.growTotal || (pl.readyAt - t);
     const pct = Math.max(0, Math.min(1, 1 - (pl.readyAt - t) / Math.max(1, total)));
-    const y = pl.by - GF.TILE * 0.42;
+    // Se ancla al SPRITE REAL de la tierra, no a las coordenadas teóricas: así queda centrada
+    // aunque la parcela se haya movido en el modo edición o el dibujo no ocupe la celda entera.
+    const suelo = pl.ground;
+    const cx = Math.round(suelo ? suelo.x : pl.cx);
+    const arriba = suelo ? (suelo.y - suelo.displayHeight / 2) : (pl.by - GF.TILE / 2);
+    const y = Math.round(arriba - 7) + (FX_BARRA_DY || 0);   // ARRIBA de la tierra, no encima del cultivo
     // el texto va ARRIBA de la barra (en SFL se lee "18m", "20h", "7d 13h")
-    if (pl.timer) pl.timer.setText(fmtSecs(Math.ceil((pl.readyAt - t) / 1000))).setPosition(pl.cx, y - 3).setDepth(pl.by + 3).setVisible(true);
+    if (pl.timer) pl.timer.setText(fmtSecs(Math.ceil((pl.readyAt - t) / 1000))).setPosition(cx, y - 4).setDepth(pl.by + 3).setVisible(true);
     if (!pl.barraG) pl.barraG = this.add.graphics().setDepth(pl.by + 2);
     if (pl.barraPct != null && Math.abs(pl.barraPct - pct) < 0.004) return;   // sin cambio visible: no redibujar
     pl.barraPct = pct;
-    const w = 28, h = 6, x = pl.cx - w / 2;
-    const g = pl.barraG; g.clear();
-    g.fillStyle(0x241505, 1).fillRect(x - 2, y - 2, w + 4, h + 4);   // contorno oscuro (estándar del juego)
-    g.fillStyle(0xe8e0c8, 1).fillRect(x - 1, y - 1, w + 2, h + 2);   // marco claro, como el de SFL
-    g.fillStyle(0x2a3a1c, 1).fillRect(x, y, w, h);                   // lo que falta
-    g.fillStyle(0x8fd14f, 1).fillRect(x, y, w * pct, h);             // lo crecido
+    this.dibujarBarra(pl.barraG, cx, y, 28, 6, pct);
   }
 
   // PREMIO VOLANDO: el recurso sale en arco desde el nodo con su "+N", como el tronco de SFL.
