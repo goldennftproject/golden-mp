@@ -31,7 +31,7 @@ BOOT = os.path.join(RAIZ, "public", "game", "boot.js")
 
 # Los iconos de recursos, cultivos, peces y monedas también van al atlas: el juego los
 # usa para el "premio" que sale volando cuando talás, picás o cosechás.
-EXTRA = ["res_", "crop_", "fish_", "coin_"]
+EXTRA = ["res_", "crop_", "fish_", "coin_", "animal_"]
 
 
 def claves_pedidas():

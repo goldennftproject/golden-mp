@@ -23,6 +23,7 @@ class FarmScene extends Phaser.Scene {
     this.hornoSmokeEv = null; this.dummyBroken = false;   // si no se limpian, el humo del horno no vuelve al regresar del Bosque
     this.auraFx = null; this.auraTw = null;
     this.clickHit = null; this.clickPond = false; this.buffer = null;
+    this.corral = null; this.animales = null; this.corralCerca = null;
     this.nubes = null; this.maripos = null; this._part = 0; this._rafActiva = false; this._vaporAt = 0;   // efectos de ambiente
     this.queue = [];      // cola de acciones: clickeá varios objetivos y se hacen en orden
     this.cameras.main.setBackgroundColor(GF.ISLA ? "#2e7fa8" : "#6ba043");   // isla: agua alrededor
@@ -311,6 +312,7 @@ class FarmScene extends Phaser.Scene {
         if (this.hitsSprite(o.sprite, wx, wy)) { const d = Math.hypot(o.cx - wx, o.by - wy); if (d < bd) { bd = d; hit = o; } }
       }
       if (!hit) { for (const pl of this.plots) { if (Math.abs(wx - pl.cx) < T / 2 && Math.abs(wy - pl.by) < T / 2) { hit = pl; break; } } }
+      if (!hit) { const an = this.animalEnPunto(wx, wy); if (an) hit = { type: "animal", k: an.k, cx: an.spr.x, by: an.spr.y }; }   // animal del corral
       if (!hit && this.portal && Math.abs(wx - this.portal.cx) < 26 && Math.abs(wy - (this.portal.by - 14)) < 30) hit = this.portal;   // clic en el portal : caminar y teletransportarse
       if (this.action && !GF.NO_WALK) {   // acción en curso: encolar el próximo objetivo (hasta 7) sin esperar la animación
         if (hit && (hit.type === "plot" || hit.type === "tree" || hit.type === "rock" || hit.type === "ore")) {
@@ -507,6 +509,8 @@ class FarmScene extends Phaser.Scene {
     // fragua: media por defecto, encendida mientras se trabaja en la Herrería (detalles jueves)
     this.storeObj = storeObj;
     this.updateForge();
+    this.crearCorral();       // patio de los animales del Establo
+    this.syncAnimales();      // aparecen los que ya tenés
     this.crearNubes();        // nubes que cruzan y proyectan sombra
     this.crearMariposas();    // mariposas que se posan sobre los cultivos listos
     this.startHornoSmoke();   // humo del Horno de Piedra si ya está construido (viernes 2)
@@ -610,6 +614,11 @@ class FarmScene extends Phaser.Scene {
   promptText(o) {
     const cd = nowMs() < o.readyAt;
     if (o.type === "boar") return "Espantar jabalí";
+    if (o.type === "animal") {
+      const d = ANIMAL_DEF[o.k];
+      if (typeof animalListo === "function" && animalListo(o.k)) return "Recoger " + RES_LABEL[d.mat] + " de " + d.label;
+      return d.label + " — vuelve en " + fmtCorto(animalFalta(o.k) / 1000) + " (clic: Establo)";
+    }
     if (o.type === "plot") {
       if (o.state === "locked") return "Desbloquear parcela (" + plotUnlockCost() + " )";
       if (o.state === "withered") return "Limpiar cultivo marchito";
@@ -666,6 +675,15 @@ class FarmScene extends Phaser.Scene {
       askConfirm("¿Entrás vos a pelear a la Zona Negra o mandás una incursión de un clic?", entrar,
         { title: "Zona Negra", yes: "Entrar a pelear", yesClass: "green", no: "Incursión (un clic)", noClass: "gold",
           onNo: () => { if (typeof refreshIncursion === "function") refreshIncursion(); openOv("ov-incursion"); } });
+      return;
+    }
+    if (o.type === "animal") {   // clic sobre un animal del corral
+      if (typeof animalListo === "function" && animalListo(o.k)) {
+        const antes = G.res[ANIMAL_DEF[o.k].mat] || 0;
+        recogerAnimal(o.k);
+        const gan = (G.res[ANIMAL_DEF[o.k].mat] || 0) - antes;
+        if (gan > 0) this.premioFx(o.cx, o.by, resSprite(ANIMAL_DEF[o.k].mat), "+" + gan);
+      } else { if (typeof refreshEstablo === "function") refreshEstablo(); openOv("ov-establo"); }
       return;
     }
     if (o.type === "barn") return openOv("ov-barn");
@@ -1216,6 +1234,97 @@ class FarmScene extends Phaser.Scene {
         onComplete: () => { p.destroy(); this.sueltoPart(1); },
       });
     }
+  }
+
+  // ================= CORRAL Y ANIMALES (4/8) =================================
+  // Los animales del Establo ya no viven solo dentro de una ventana: caminan por un corral
+  // en la granja. Los sprites son PROVISORIOS (dibujados por código en
+  // tools/animales-provisorios.py); cuando llegue el arte definitivo se reemplazan los PNG
+  // y este código no cambia, porque usa las mismas claves "animal_<nombre>".
+  crearCorral() {
+    this.animales = [];
+    const C = GF.CORRAL; if (!C) return;
+    const T = GF.TILE;
+    const x1 = C.col * T, y1 = C.row * T, w = C.cols * T, h = C.rows * T;
+    this.corral = { x1, y1, x2: x1 + w, y2: y1 + h };
+    // piso: un parche de tierra pisoteada, más claro que el pasto
+    const g = this.add.graphics().setDepth(-997);
+    g.fillStyle(0xa88a52, 0.55).fillRoundedRect(x1 + 3, y1 + 3, w - 6, h - 6, 10);
+    g.fillStyle(0x8a6a3a, 0.35).fillRoundedRect(x1 + 9, y1 + 9, w - 18, h - 18, 8);
+    // cerca de madera: postes con dos travesaños, dibujada por código (sin arte nuevo)
+    const cerca = this.add.graphics().setDepth(y1 + h + 1);
+    const poste = (px, py) => {
+      cerca.fillStyle(0x241505, 1).fillRect(px - 3, py - 16, 6, 18);
+      cerca.fillStyle(0x8a5a33, 1).fillRect(px - 2, py - 15, 4, 16);
+    };
+    cerca.fillStyle(0x241505, 1);
+    [y1, y1 + h].forEach(py => { cerca.fillRect(x1, py - 11, w, 3); cerca.fillRect(x1, py - 5, w, 3); });
+    [x1, x1 + w].forEach(px => { cerca.fillRect(px - 1, y1 - 11, 3, h + 11); });
+    cerca.fillStyle(0xa8712f, 1);
+    [y1, y1 + h].forEach(py => { cerca.fillRect(x1, py - 10, w, 1); cerca.fillRect(x1, py - 4, w, 1); });
+    for (let c = 0; c <= C.cols; c++) { poste(x1 + c * T, y1); poste(x1 + c * T, y1 + h); }
+    this.corralCerca = cerca;
+  }
+  // crea o saca los animales según los que tenga el jugador (se llama al entrar y al comprar)
+  syncAnimales() {
+    if (!this.corral) return;
+    this.animales = this.animales || [];
+    ANIMAL_ORDER.forEach(k => {
+      const tiene = typeof animalDe === "function" && !!animalDe(k);
+      const ya = this.animales.find(a => a.k === k);
+      if (tiene && !ya) {
+        const key = "animal_" + k;
+        if (!this.textures.exists(key)) return;
+        const x = this.corral.x1 + 20 + Math.random() * (this.corral.x2 - this.corral.x1 - 40);
+        const y = this.corral.y1 + 22 + Math.random() * (this.corral.y2 - this.corral.y1 - 34);
+        const spr = this.add.image(x, y, key).setOrigin(0.5, 1);
+        spr.setScale((GF.TILE * 0.78) / spr.width);
+        const marca = this.add.image(x, y - 30, resSprite(ANIMAL_DEF[k].mat) || key).setDepth(99991).setVisible(false);
+        marca.setDisplaySize(16, 16);
+        this.animales.push({ k, spr, marca, tx: x, ty: y, esperaHasta: 0, bob: Math.random() * 6.28 });
+      } else if (!tiene && ya) {
+        ya.spr.destroy(); if (ya.marca) ya.marca.destroy();
+        this.animales.splice(this.animales.indexOf(ya), 1);
+      }
+    });
+  }
+  tickAnimales(dt, t) {
+    if (!this.animales || !this.animales.length || !this.corral) return;
+    const C = this.corral;
+    for (const a of this.animales) {
+      if (t >= a.esperaHasta) {   // elige un rincón nuevo del corral y camina hasta ahí
+        a.esperaHasta = t + 2000 + Math.random() * 4000;
+        a.tx = C.x1 + 20 + Math.random() * (C.x2 - C.x1 - 40);
+        a.ty = C.y1 + 22 + Math.random() * (C.y2 - C.y1 - 34);
+      }
+      const dx = a.tx - a.spr.x, dy = a.ty - a.spr.y, d = Math.hypot(dx, dy);
+      const anda = d > 3;
+      if (anda) {
+        const v = Math.min(d, 16 * dt);
+        a.spr.x += dx / d * v; a.spr.y += dy / d * v;
+        if (Math.abs(dx) > 1) a.spr.setFlipX(dx < 0);           // mira hacia donde camina
+        a.bob += dt * 7;
+        a.spr.y -= 0;                                            // el "trote" es un cabeceo de escala
+        a.spr.setScale(a.spr.scaleX < 0 ? -Math.abs(a.spr.scaleX) : Math.abs(a.spr.scaleX),
+          Math.abs(a.spr.scaleX) * (1 + Math.sin(a.bob) * 0.05));
+      }
+      a.spr.setDepth(a.spr.y);
+      // listo para cobrar: se le ve el material flotando encima
+      const listo = typeof animalListo === "function" && animalListo(a.k);
+      if (a.marca) {
+        a.marca.setVisible(listo);
+        if (listo) a.marca.setPosition(a.spr.x, a.spr.y - a.spr.displayHeight - 8 + Math.sin(t / 350) * 3).setDepth(a.spr.y + 2);
+      }
+    }
+  }
+  // clic sobre un animal: si produjo, se cobra ahí mismo; si no, abre el Establo
+  animalEnPunto(wx, wy) {
+    if (!this.animales) return null;
+    for (const a of this.animales) {
+      const b = a.spr.getBounds();
+      if (wx > b.left - 2 && wx < b.right + 2 && wy > b.top - 2 && wy < b.bottom + 2) return a;
+    }
+    return null;
   }
 
   // NUBES (4/8): pasan lento de izquierda a derecha y proyectan una sombra suave sobre la granja.
@@ -1884,6 +1993,7 @@ class FarmScene extends Phaser.Scene {
     }
     this.tickGolpes();      // los golpes sueltos se pierden a los 5 s (el nodo vuelve a estar entero)
     this.tickViento();      // los árboles crecidos y los cultivos listos se mecen con el viento
+    this.tickAnimales(dt, t);   // los animales del corral pastan y caminan
     this.tickNubes(dt);     // nubes cruzando con su sombra
     this.tickMariposas(dt, t);
     this.tickVapor(t);      // vapor de la Cocina y chispas del Altar mejorado
@@ -2096,6 +2206,7 @@ class FarmScene extends Phaser.Scene {
       let hit = null, bd = 1e9;
       for (const q of this.objs) { if (this.hitsSprite(q.sprite, wx, wy)) { const d = Math.hypot(q.cx - wx, q.by - wy); if (d < bd) { bd = d; hit = q; } } }
       if (!hit) for (const pl of this.plots) { if (Math.abs(wx - pl.cx) < GF.TILE / 2 && Math.abs(wy - pl.by) < GF.TILE / 2) { hit = pl; break; } }
+      if (!hit) { const an = this.animalEnPunto(wx, wy); if (an) hit = { type: "animal", k: an.k }; }
       if (!hit && this.portal && Math.abs(wx - this.portal.cx) < 26 && Math.abs(wy - (this.portal.by - 14)) < 30) hit = this.portal;
       if (hit) { el.textContent = this.promptText(hit); el.classList.add("show"); }
       else if (this.pondDist(wx, wy) < 1.05) { el.textContent = "Pescar (1 lombriz · tenés " + fmt(G.res.lombriz || 0) + ")"; el.classList.add("show"); }

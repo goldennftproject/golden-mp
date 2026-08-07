@@ -543,6 +543,33 @@ Todo por código, sin arte nuevo, y cada efecto se apaga por separado desde el p
 
 Verificado: 782 entradas del panel de balanceo, 20 ventanas OK, sin funciones faltantes.
 
+### Corral: los animales salen del Establo y caminan por la granja (4/8)
+
+Hasta ahora los animales vivían **solo dentro de la ventana del Establo**: se compraban, se
+alimentaban y se les cobraba el material desde una lista. No se veían en la granja porque no existe
+el arte todavía.
+
+**Se hicieron sprites provisorios sin PixelLab.** `tools/animales-provisorios.py` dibuja los cuatro
+animales con pixel art escrito a mano en el propio script (un mapa de texto, una letra por píxel),
+con la paleta cozy del juego y el contorno oscuro estándar. No son los definitivos y no pretenden
+serlo: sirven para ver y probar la mecánica ahora. Cuando llegue el arte bueno se reemplazan los PNG
+y **el código del juego no cambia**, porque usa las mismas claves `animal_<nombre>`.
+
+**El corral**
+
+- Va en un hueco **verificado libre** (columnas 5-8, filas 11-13): no pisa parcelas, ni la laguna,
+  ni ningún edificio. Queda debajo del Establo y al lado de la laguna.
+- Piso de tierra pisoteada y **cerca de madera dibujada por código** (postes con dos travesaños), en
+  la paleta del juego.
+- Solo aparecen los animales que el jugador **tiene**. Al comprar uno, aparece en el acto sin
+  recargar.
+- Caminan solos de un rincón a otro, se dan vuelta hacia donde van y cabecean al trotar.
+- Cuando terminaron su ciclo, se les ve **el material flotando encima**.
+- **Clic sobre el animal**: si produjo, se cobra ahí mismo con el premio volando; si todavía no,
+  abre el Establo. El cartel bajo el cursor dice cuál de las dos cosas va a pasar y cuánto falta.
+
+Atlas rehecho: 358 → 362 sprites, versión `?v=21`.
+
 ### MODO TESTEO: todo el juego en segundos (4/8)
 
 Para que el diseñador pueda recorrer el juego entero sin esperar horas ni farmear, se agregó un
