@@ -582,6 +582,11 @@ Se puede apagar desde el panel ("Respuesta al clic" → barrita de crecimiento).
 - **Un solo estilo de barrita para todo el juego**: la de golpear árboles y vetas ahora usa el mismo
   dibujo que la de crecimiento (contorno oscuro + marco claro + relleno verde), en una sola función
   compartida. Antes eran dos dibujos distintos y se notaba.
+- **Carteles de tiempo cortos**: el formato largo del juego ("58 min 52 s") no entra sobre una
+  parcela de 42 px y los carteles de parcelas vecinas se pisaban entre sí, quedando ilegibles. Se
+  agregó un formato corto solo para los carteles del mundo — "52s", "58m", "20h", "7d 12h" — igual
+  que Sunflower Land: una sola unidad, y dos únicamente cuando hay días. El detalle fino ya lo
+  cuenta la barrita. Los paneles y la Tienda siguen con el formato largo de siempre.
 
 ### El recurso que sale volando ahora SE VE (4/8)
 

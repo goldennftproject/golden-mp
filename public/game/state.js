@@ -1890,6 +1890,18 @@ function fmtSecs(seg) {
   return p.join(" ");
 }
 
+// Formato CORTO para los carteles del mundo ("58m", "20h", "3d 5h", "45s"). El largo de fmtSecs
+// ("58 min 52 s") no entra sobre una parcela de 42 px y los carteles de parcelas vecinas se pisaban.
+// Sunflower Land usa exactamente esto: una unidad, o dos solo cuando hay días.
+function fmtCorto(seg) {
+  seg = Math.max(0, Math.round(seg));
+  if (seg < 60) return seg + "s";
+  const d = Math.floor(seg / 86400), h = Math.floor(seg % 86400 / 3600), m = Math.floor(seg % 3600 / 60);
+  if (d) return d + "d" + (h ? " " + h + "h" : "");
+  if (h) return h + "h";   // una sola unidad: el detalle fino ya lo cuenta la barrita
+  return m + "m";
+}
+
 // --- bestiario (Fase D) — 6 tiers, de común a legendario ---
 const MONSTER_ORDER = ["rata", "murcielago", "larva", "baba", "babita", "arana", "goblin", "orco", "lancero", "guerrero", "esqueleto", "golem", "hombre_lobo", "troll", "ogro", "espectro", "demonio", "dragon"];
 const MONSTER_DEF = {

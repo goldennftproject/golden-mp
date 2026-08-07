@@ -1120,7 +1120,7 @@ class FarmScene extends Phaser.Scene {
     const arriba = suelo ? (suelo.y - suelo.displayHeight / 2) : (pl.by - GF.TILE / 2);
     const y = Math.round(arriba - 7) + (FX_BARRA_DY || 0);   // ARRIBA de la tierra, no encima del cultivo
     // el texto va ARRIBA de la barra (en SFL se lee "18m", "20h", "7d 13h")
-    if (pl.timer) pl.timer.setText(fmtSecs(Math.ceil((pl.readyAt - t) / 1000))).setPosition(cx, y - 4).setDepth(pl.by + 3).setVisible(true);
+    if (pl.timer) pl.timer.setText(fmtCorto((pl.readyAt - t) / 1000)).setPosition(cx, y - 4).setDepth(pl.by + 3).setVisible(true);
     if (!pl.barraG) pl.barraG = this.add.graphics().setDepth(pl.by + 2);
     if (pl.barraPct != null && Math.abs(pl.barraPct - pct) < 0.004) return;   // sin cambio visible: no redibujar
     pl.barraPct = pct;
@@ -1855,7 +1855,7 @@ class FarmScene extends Phaser.Scene {
         // cuarta.docx: el timer del recurso solo aparece con el cursor encima (al clickear ya sale el aviso)
         const p = this.input.activePointer;
         const over = this.timerOn(o);
-        if (over) o.timer.setText(fmtSecs(Math.ceil((o.readyAt - t) / 1000))).setPosition(o.cx, this.topY(o, (o.type === "ore" || o.type === "rock") ? -6 : 7)).setVisible(true);   // detalles213: el timer del mineral pegado al nodo (antes flotaba alto y se mezclaba)
+        if (over) o.timer.setText(fmtCorto((o.readyAt - t) / 1000)).setPosition(o.cx, this.topY(o, (o.type === "ore" || o.type === "rock") ? -6 : 7)).setVisible(true);   // detalles213: el timer del mineral pegado al nodo (antes flotaba alto y se mezclaba)
         else o.timer.setVisible(false);
       }
     }
