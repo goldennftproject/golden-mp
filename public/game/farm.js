@@ -1115,16 +1115,19 @@ class FarmScene extends Phaser.Scene {
     const pct = Math.max(0, Math.min(1, 1 - (pl.readyAt - t) / Math.max(1, total)));
     // Se ancla al SPRITE REAL de la tierra, no a las coordenadas teóricas: así queda centrada
     // aunque la parcela se haya movido en el modo edición o el dibujo no ocupe la celda entera.
+    // Va ABAJO de la planta, apoyada sobre el borde inferior de la tierra pero POR DENTRO
+    // (pedido del diseñador): así no tapa el cultivo ni se mete en la parcela de al lado.
     const suelo = pl.ground;
     const cx = Math.round(suelo ? suelo.x : pl.cx);
-    const arriba = suelo ? (suelo.y - suelo.displayHeight / 2) : (pl.by - GF.TILE / 2);
-    const y = Math.round(arriba - 7) + (FX_BARRA_DY || 0);   // ARRIBA de la tierra, no encima del cultivo
-    // el texto va ARRIBA de la barra (en SFL se lee "18m", "20h", "7d 13h")
-    if (pl.timer) pl.timer.setText(fmtCorto((pl.readyAt - t) / 1000)).setPosition(cx, y - 4).setDepth(pl.by + 3).setVisible(true);
+    const abajo = suelo ? (suelo.y + suelo.displayHeight / 2) : (pl.by + GF.TILE / 2);
+    const h = 6;
+    const y = Math.round(abajo - 4 - h) + (FX_BARRA_DY || 0);   // apoyada por dentro del borde de abajo
+    // el texto va justo ARRIBA de la barra (en SFL se lee "18m", "20h", "7d 13h")
+    if (pl.timer) pl.timer.setText(fmtCorto((pl.readyAt - t) / 1000)).setPosition(cx, y - 2).setDepth(pl.by + 3).setVisible(true);
     if (!pl.barraG) pl.barraG = this.add.graphics().setDepth(pl.by + 2);
     if (pl.barraPct != null && Math.abs(pl.barraPct - pct) < 0.004) return;   // sin cambio visible: no redibujar
     pl.barraPct = pct;
-    this.dibujarBarra(pl.barraG, cx, y, 28, 6, pct);
+    this.dibujarBarra(pl.barraG, cx, y, 28, h, pct);
   }
 
   // PREMIO VOLANDO: el recurso sale en arco desde el nodo con su "+N", como el tronco de SFL.

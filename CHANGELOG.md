@@ -577,8 +577,10 @@ Se puede apagar desde el panel ("Respuesta al clic" → barrita de crecimiento).
   **sprite real de la tierra** (su centro y su borde de arriba), así queda centrada aunque la parcela
   se haya movido en el modo edición o el dibujo no llene la celda entera. Las coordenadas también se
   redondean a píxel entero, que en pixel art se nota.
-- **Altura**: pasó de estar dentro de la parcela a quedar **por encima de la tierra**, con el tiempo
-  arriba de la barra. Queda un ajuste fino en el panel por si el arte de la tierra cambia.
+- **Altura**: la barrita y el tiempo van **abajo de la planta**, apoyados sobre el borde inferior de
+  la tierra pero por DENTRO de la celda (a 4 px del borde). Así no tapan el cultivo ni invaden la
+  parcela de al lado, que era el problema con un campo lleno de parcelas. Queda un ajuste fino en el
+  panel por si el arte de la tierra cambia.
 - **Un solo estilo de barrita para todo el juego**: la de golpear árboles y vetas ahora usa el mismo
   dibujo que la de crecimiento (contorno oscuro + marco claro + relleno verde), en una sola función
   compartida. Antes eran dos dibujos distintos y se notaba.
