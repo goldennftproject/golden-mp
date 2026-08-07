@@ -543,6 +543,36 @@ Todo por código, sin arte nuevo, y cada efecto se apaga por separado desde el p
 
 Verificado: 782 entradas del panel de balanceo, 20 ventanas OK, sin funciones faltantes.
 
+### Se saca el retraso al interactuar (4/8, reporte del diseñador)
+
+"Cuando le hago clic al árbol tarda unos milisegundos en reaccionar." Eran **tres causas sumadas**,
+y ninguna era del server: todo pasaba en el propio código.
+
+**1. El cambio de imagen esperaba a la mitad de la acción.** El árbol se agrietaba recién a los
+450 ms del clic (la mitad de los 900 ms que duraba la acción). Ahora el impacto es configurable y
+está en 0: el nodo se agrieta en el mismo frame.
+
+**2. Las astillas y la sacudida salían AL FINAL.** Estaban enganchadas al cierre de la acción, o sea
+a los 900 ms. Se movieron al momento del impacto: salen con el clic.
+
+**3. Las acciones duraban casi un segundo.** Tenía sentido cuando el granjero se veía dar el hachazo;
+sin granjero a la vista, esa duración no anima nada, solo es el candado entre un golpe y el
+siguiente. Bajó de 0,9 s a 0,42 s (talar) y de 0,85 s a 0,40 s (picar).
+
+Y una cuarta, más chica: la acción se resolvía **al soltar** el clic (para poder arrastrar la vista
+sin talar sin querer). Ahora, si mantenés apretado sin mover, a los 170 ms sale igual — no hace
+falta soltar.
+
+| | Antes | Ahora |
+|---|---|---|
+| Clic → nodo agrietado | ~530 ms | ~96 ms |
+| Clic → astillas y sacudida | ~980 ms | ~80 ms |
+| Tumbar un árbol (3 golpes) | 2,70 s | 1,26 s |
+
+Todo editable en el panel de balanceo, categoría "Respuesta al clic": la duración de cada acción,
+en qué momento pega la herramienta y el tiempo del clic sostenido. Las duraciones se mudaron a
+`config.js` para que el panel las alcance.
+
 ### Carga del juego: una sola pantalla y 12 segundos menos (4/8)
 
 El diseñador reportó que al entrar por primera vez en el día se veía **primero la ventana del cofre

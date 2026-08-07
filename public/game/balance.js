@@ -109,6 +109,13 @@ var BAL = (function () {
     add("Ambiente — viento", "viento.seg", "Cuánto tarda una oscilación completa", "", () => VIENTO_SEG, v => { VIENTO_SEG = v; }, 0.1, "tiempo");
     add("Ambiente — viento", "viento.rafagaCada", "Cada cuánto pasa una ráfaga", "", () => VIENTO_RAFAGA_CADA, v => { VIENTO_RAFAGA_CADA = v; }, 1, "tiempo");
     add("Ambiente — viento", "viento.rafagaMult", "Cuánto más se inclinan durante la ráfaga", "veces", () => VIENTO_RAFAGA_MULT, v => { VIENTO_RAFAGA_MULT = v; }, 0.1);
+    // RESPUESTA AL CLIC: cuánto tarda cada acción y cuándo "pega" la herramienta
+    Object.keys(ACT_DUR).forEach(k => {
+      const nom = { chop: "Talar", mine: "Picar", plant: "Plantar", harvest: "Cosechar", water: "Regar", fish: "Pescar" }[k] || k;
+      add("Respuesta al clic", "act." + k, nom + " · cuánto dura la acción (candado entre golpes)", "", () => ACT_DUR[k], v => { ACT_DUR[k] = v; }, 0.05, "tiempo");
+    });
+    add("Respuesta al clic", "actImpacto", "Cuándo pega la herramienta (0 = al instante del clic · 1 = al final)", "0 a 1", () => ACT_IMPACTO, v => { ACT_IMPACTO = v; }, 0.05);
+    add("Respuesta al clic", "clicSuelto", "Con el clic apretado sin arrastrar, a partir de acá la acción sale sola", "milisegundos", () => CLIC_SUELTO_MS, v => { CLIC_SUELTO_MS = v; }, 10);
     // EFECTOS DE JUGO: cada uno se puede apagar por separado si molesta
     add("Ambiente — efectos", "fx.impacto", "Sacudida y astillas al golpear un nodo (1 = sí · 0 = no)", "1 o 0", () => FX_IMPACTO, v => { FX_IMPACTO = v ? 1 : 0; });
     add("Ambiente — efectos", "fx.impactoGrados", "Cuánto se sacude el nodo al recibir el golpe", "grados", () => FX_IMPACTO_GRADOS, v => { FX_IMPACTO_GRADOS = v; }, 0.5);

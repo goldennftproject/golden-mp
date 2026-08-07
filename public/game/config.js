@@ -14,6 +14,16 @@ GF.ISLA = true;       // fondo de mar alrededor de la granja
 GF.ISLA_MARGEN = 260;  // cuánto mar se puede recorrer más allá de la cerca
 var ZONA_NEGRA_VEL = 0.75;   // "detallitos (1)" punto 7: el granjero camina 25% más lento en la Zona Negra
 
+// RESPUESTA AL CLIC (4/8). Cuánto dura cada acción en la granja. En el modo de un clic el granjero
+// no se ve, así que esta duración NO es una animación: es solo el candado que separa un golpe del
+// siguiente. Cuanto más corta, más "responde" el juego. (Estaba en 0,9 s y se sentía lento.)
+var ACT_DUR = { chop: 0.42, mine: 0.40, plant: 0.45, harvest: 0.45, water: 0.5, fish: 1.5 };
+// En qué momento de la acción "pega" la herramienta (0 = al instante del clic, 1 = al final).
+// Acá es donde el nodo se agrieta y saltan las astillas. Con el granjero invisible conviene 0.
+var ACT_IMPACTO = 0;
+// Si mantenés apretado sin arrastrar más de este tiempo, la acción sale igual (sin esperar a soltar).
+var CLIC_SUELTO_MS = 170;
+
 // VIENTO (4/8): los árboles crecidos y los cultivos listos se mecen apenas, como si soplara viento.
 // Es puro código —sin arte nuevo—: el sprite gira poquísimo sobre su base (origen abajo), así que
 // la copa se inclina y el tronco queda quieto. Cada planta tiene su desfase para que no vayan todos igual.

@@ -1,7 +1,6 @@
 /* FarmScene: la granja privada. Fase 1 (mundo) + Fase 3 (interacciones). */
 // CD (enfriamiento árbol/piedra) ahora vive en state.js para el panel de balanceo
 function witherMs(ck) { const cd = CROP_DEF[ck]; return cd ? cd.grow * 1000 * 0.5 : 120000; }   // marchitado proporcional: mitad del tiempo de cultivo
-const ACT_DUR = { chop: 0.9, mine: 0.85, plant: 0.6, harvest: 0.6, water: 0.6, fish: 1.5 };   // "detallitos (1)" punto 11: 1 golpe por clic
 // (los enfriamientos ahora salen de ORE_DEF[x].cd y de nodoCd(), doc 4/8)
 
 class FarmScene extends Phaser.Scene {
@@ -305,7 +304,7 @@ class FarmScene extends Phaser.Scene {
       }
       if (GF.uiOpen) return;
       const wx = pt.worldX, wy = pt.worldY;
-      this.hold = { sx: pt.x, sy: pt.y, px: pt.x, py: pt.y, active: false };   // por si esto se convierte en un arrastre
+      this.hold = { sx: pt.x, sy: pt.y, px: pt.x, py: pt.y, active: false, t0: nowMs() };   // por si esto se convierte en un arrastre
       let hit = null, bd = 1e9;
       for (const o of this.objs.concat(this.threats)) {
         if (this.hitsSprite(o.sprite, wx, wy)) { const d = Math.hypot(o.cx - wx, o.by - wy); if (d < bd) { bd = d; hit = o; } }
@@ -794,6 +793,9 @@ class FarmScene extends Phaser.Scene {
     if (kind === "plant" || kind === "harvest") dur *= farmSpeedMult();   // buff "+% vel. de farmeo" de la comida
     this.action = { kind, o, t: 0, dur };
     if (kind === "plant") this.action.seed = G.selSeed;   // queda fijada la semilla ya validada
+    // RESPUESTA INMEDIATA: como el granjero no se ve, si el golpe no se nota AL INSTANTE el juego
+    // se siente lento. Las astillas y la sacudida salen ya, en el mismo frame del clic.
+    if ((kind === "chop" || kind === "mine") && ACT_IMPACTO <= 0) { this.golpeFx(o, kind); this.action.golpeYa = true; }
     if (kind === "fish") this.castBobber(o.bx != null ? o.bx : o.cx, o.by2 != null ? o.by2 : (GF.POND.row + GF.POND.rows / 2) * GF.TILE);
   }
 
@@ -877,7 +879,7 @@ class FarmScene extends Phaser.Scene {
   finishAction() {
     const a = this.action, o = a.o;
     if (window.sfx) sfx({ chop: "chop", mine: "mine", plant: "plant", harvest: "harvest", fish: "splash", water: "splash" }[a.kind] || "click");
-    if (a.kind === "chop" || a.kind === "mine") this.golpeFx(o, a.kind);   // sacudida + astillas en CADA golpe
+    // (la sacudida y las astillas ya salieron en el momento del impacto, no acá al final)
     if (a.kind === "chop") {
       o.golpes = (o.golpes || 0) + 1;
       if (o.golpes < GOLPES_TALAR) {   // golpes intermedios: el árbol se va cortando (el hacha NO se gasta todavía)
@@ -1762,6 +1764,15 @@ class FarmScene extends Phaser.Scene {
         else o.timer.setVisible(false);
       }
     }
+    // Clic sostenido sin arrastrar: no hace falta esperar a que sueltes. Pasados unos milisegundos
+    // ya está claro que no es un arrastre de cámara, así que la acción sale igual.
+    if (GF.NO_WALK && !this.action && (this.clickHit || this.clickPond) && this.hold && !this.hold.active
+        && t - (this.hold.t0 || t) > CLIC_SUELTO_MS) {
+      const hit = this.clickHit, pond = this.clickPond;
+      this.clickHit = null; this.clickPond = false;
+      if (hit) this.interactWith(hit);
+      else if (pond) this.tryFish(this.input.activePointer.worldX, this.input.activePointer.worldY);
+    }
     this.tickGolpes();      // los golpes sueltos se pierden a los 5 s (el nodo vuelve a estar entero)
     this.tickViento();      // los árboles crecidos y los cultivos listos se mecen con el viento
     this.tickNubes(dt);     // nubes cruzando con su sombra
@@ -1852,14 +1863,20 @@ class FarmScene extends Phaser.Scene {
       this.action.t += dt;
       // al picar/talar: a mitad de la acción el nodo pasa al estado dañado (entero → dañado → restos)
       const ao = this.action.o;
-      // OJO: el estado dañado depende del GOLPE que se está dando, no del avance de esta animación.
+      // MOMENTO DEL IMPACTO: con ACT_IMPACTO = 0 el nodo se agrieta en el mismo frame del clic.
+      // OJO: el estado dañado depende del GOLPE que se está dando, no del avance de la animación.
       // Si no, en el primer clic el nodo saltaba a "casi roto" y después retrocedía.
-      if (!this.action.halfDone && ao && (ao.type === "rock" || ao.type === "ore") && this.action.t >= this.action.dur / 2) {
+      const tImpacto = this.action.dur * Math.max(0, Math.min(1, ACT_IMPACTO));
+      if (!this.action.golpeYa && ao && (ao.type === "tree" || ao.type === "rock" || ao.type === "ore") && this.action.t >= tImpacto) {
+        this.action.golpeYa = true;
+        this.golpeFx(ao, this.action.kind);
+      }
+      if (!this.action.halfDone && ao && (ao.type === "rock" || ao.type === "ore") && this.action.t >= tImpacto) {
         this.action.halfDone = true;
         if ((ao.golpes || 0) + 1 >= GOLPES_MINAR - 1 && this.textures.exists(ao.baseKey + "_half")) this.setObjTex(ao, ao.baseKey + "_half", ao.rw || ao.w);
       }
       // talar: el árbol pasa por dos cortes intermedios (tajo leve → tajo profundo con hojas caídas)
-      if (ao && ao.type === "tree" && !this.action.cutDone && this.action.t >= this.action.dur / 2) {
+      if (ao && ao.type === "tree" && !this.action.cutDone && this.action.t >= tImpacto) {
         this.action.cutDone = true;
         const g = (ao.golpes || 0) + 1;   // golpe que se está por completar
         const tex = g === 1 ? "tree_cut1" : (g < GOLPES_TALAR ? "tree_cut2" : null);
