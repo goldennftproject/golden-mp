@@ -21,7 +21,11 @@ var ZONA_NEGRA_VEL = 0.75;   // "detallitos (1)" punto 7: el granjero camina 25%
 // que es cadencia de DEDO (unos 8 toques por segundo). O sea: allá se tala a CLICS, no manteniendo.
 // Por eso lo que manda acá no es la duración, sino que ningún clic se pierda: el candado es corto
 // y, si tocás más rápido que él, el toque queda guardado y sale apenas se libera.
-var ACT_DUR = { chop: 0.08, mine: 0.08, plant: 0.30, harvest: 0.30, water: 0.4, fish: 1.5 };
+// OJO: cada acción tiene SU propio número. Talar y picar estaban en 0,08 s pero plantar y
+// cosechar habían quedado en 0,30 s — casi cuatro veces más lento — y encima sin el destello
+// instantáneo que sí tenían los nodos. Por eso el diseñador seguía sintiendo retraso en la
+// cosecha aunque el talado ya iba rápido. Ahora las cuatro son iguales.
+var ACT_DUR = { chop: 0.08, mine: 0.08, plant: 0.08, harvest: 0.08, water: 0.2, fish: 1.5 };
 // Los clics que llegan durante el candado NO se tiran: se guarda uno y sale en cuanto termina.
 // Es lo que hace que tocando rápido no se pierda ni un golpe. Solo vale para el MISMO nodo,
 // así que no es la cola vieja (aquella encolaba objetivos distintos y los marcaba con puntitos).

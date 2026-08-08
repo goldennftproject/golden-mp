@@ -543,6 +543,26 @@ Todo por código, sin arte nuevo, y cada efecto se apaga por separado desde el p
 
 Verificado: 782 entradas del panel de balanceo, 20 ventanas OK, sin funciones faltantes.
 
+### El retraso seguía en plantar y cosechar (4/8, reporte del diseñador)
+
+Cada acción tiene su propio número, y cuando aceleré el talado **solo bajé los de talar y picar**.
+Plantar y cosechar quedaron en 0,30 s, casi cuatro veces más lento, y encima sin el destello
+instantáneo. Por eso el diseñador seguía sintiendo retraso justo ahí.
+
+| Acción | Candado antes | Ahora | Respuesta instantánea |
+|---|---|---|---|
+| Talar | 0,08 s | 0,08 s | ya la tenía |
+| Picar | 0,08 s | 0,08 s | ya la tenía |
+| Plantar | 0,30 s | **0,08 s** | **nueva** (polvillo de tierra) |
+| Cosechar | 0,30 s | **0,08 s** | **nueva** (destello + polvillo) |
+
+- El destello blanco ahora también funciona sobre el sprite del cultivo, no solo sobre nodos.
+- El **clic guardado** se extendió a las parcelas: cosechar una fila seguida es lo más común, y los
+  clics que caían durante el candado se perdían.
+
+Cosechar 12 parcelas a 8 clics por segundo: **3,60 s → 1,50 s**. Ahora el límite es el dedo, no el
+juego.
+
 ### Corral: los animales salen del Establo y caminan por la granja (4/8)
 
 Hasta ahora los animales vivían **solo dentro de la ventana del Establo**: se compraban, se

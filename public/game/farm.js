@@ -403,8 +403,10 @@ class FarmScene extends Phaser.Scene {
         // Sin esto, tocando rápido (que es como se juega) se perdían golpes y se sentía trabado.
         if (!arrastro && !pt.rightButtonReleased()) {
           if (this.action) {
-            const n = hit && (hit.type === "tree" || hit.type === "rock" || hit.type === "ore");
-            if (n && this.action.o === hit) this.buffer = { o: hit, t: nowMs() };   // mismo nodo: se guarda
+            // el clic que cae durante el candado no se tira: se guarda UNO y sale enseguida.
+            // Vale para nodos y para parcelas (cosechar una fila seguida es lo más común).
+            const n = hit && (hit.type === "tree" || hit.type === "rock" || hit.type === "ore" || hit.type === "plot");
+            if (n) this.buffer = { o: hit, t: nowMs() };
           } else if (hit) { this.pendingObj = null; this.interactWith(hit); }
           else if (pond) this.tryFish(pt.worldX, pt.worldY);
         }
@@ -818,7 +820,13 @@ class FarmScene extends Phaser.Scene {
     if (kind === "plant") this.action.seed = G.selSeed;   // queda fijada la semilla ya validada
     // RESPUESTA INMEDIATA: como el granjero no se ve, si el golpe no se nota AL INSTANTE el juego
     // se siente lento. Las astillas y la sacudida salen ya, en el mismo frame del clic.
-    if ((kind === "chop" || kind === "mine") && ACT_IMPACTO <= 0) { this.destelloFx(o); this.golpeFx(o, kind); this.action.golpeYa = true; }
+    // RESPUESTA INMEDIATA para las CUATRO acciones. Antes solo talar y picar tenían el destello;
+    // plantar y cosechar no mostraban nada hasta terminar, y por eso se sentían lentas.
+    if (ACT_IMPACTO <= 0) {
+      if (kind === "chop" || kind === "mine") { this.destelloFx(o); this.golpeFx(o, kind); this.action.golpeYa = true; }
+      else if (kind === "harvest") { this.destelloFx(o); this.puffFx(o.cx, o.by + 2, 0xc0dd97, 5); }
+      else if (kind === "plant") { this.puffFx(o.cx, o.by + 2, 0xb4b2a9, 4); }
+    }
     if (kind === "fish") this.castBobber(o.bx != null ? o.bx : o.cx, o.by2 != null ? o.by2 : (GF.POND.row + GF.POND.rows / 2) * GF.TILE);
   }
 
@@ -1088,8 +1096,9 @@ class FarmScene extends Phaser.Scene {
   // NUNCA cambia de dibujo mientras lo talás, solo late en blanco cada ~117 ms.
   destelloFx(o) {
     const ms = Math.max(30, FX_DESTELLO_MS || 90);
-    [o.sprite, o.copa].forEach(s => {
-      if (!s || !s.setTintFill) return;
+    // sirve para nodos (sprite + copa) y para parcelas (spr del cultivo)
+    [o.sprite, o.copa, o.spr].forEach(s => {
+      if (!s || !s.setTintFill || !s.visible) return;
       s.setTintFill(0xffffff);
       this.time.delayedCall(ms, () => { if (s && s.clearTint && s.active) s.clearTint(); });
     });
@@ -1976,7 +1985,8 @@ class FarmScene extends Phaser.Scene {
     // Sunflower Land: a clics, no manteniendo).
     if (this.buffer && !this.action) {
       const b = this.buffer; this.buffer = null;
-      if (t - b.t < CLIC_BUFFER_MS && !b.o.locked && t >= (b.o.readyAt || 0)) this.interactWith(b.o);
+      const listo = b.o.type === "plot" ? b.o.state !== "locked" : (!b.o.locked && t >= (b.o.readyAt || 0));
+      if (t - b.t < CLIC_BUFFER_MS && listo) this.interactWith(b.o);
     }
 
     // UN CLIC = UN GOLPE, siempre. No hay "mantener apretado para seguir golpeando": eso sería una
