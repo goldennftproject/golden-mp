@@ -618,10 +618,24 @@ Además: sin cupo diario de semillas (999), sin tope de incursiones por día, 99
 y el Pase de Batalla a 2 estrellas por nivel para poder ver los 30 niveles.
 
 **Materiales de arranque.** La primera vez que se entra con el modo activo, la partida recibe
-500.000 de plata, 5.000 $Golden, 500 de cada material, 200 de cada cultivo, 50 semillas de cada uno,
+500.000 de plata, 5.000 $Golden, 99 de cada material y cultivo, 50 semillas de cada uno,
 herramientas y picos al máximo, las 12 parcelas, todos los árboles y vetas desbloqueados y los 7
 edificios construidos. **Se da una sola vez** (queda marcado en el guardado), así que recargar no
 acumula.
+
+**Arreglo (reporte del diseñador): la bolsa quedaba desbordada.** La primera versión daba 500 de
+cada material y 200 de cada cultivo. Como cada montón es de 99, eso son 6 y 3 casillas por cosa:
+**168 casillas en una bolsa de 50**. Lo que no entraba quedaba escondido, así que al tirar algo
+aparecía el montón de atrás y parecía que el juego "seguía dando cosas" — en realidad ya las tenía y
+no entraba nada nuevo, con lo cual no se podía probar ningún sistema que requiera recoger.
+
+- El regalo ahora da **99 de cada cosa: una casilla por recurso**.
+- La bolsa del modo testeo pasa de 50 a **150 casillas**. La ventana ya tiene scroll.
+- **Destapa-bolsa automático**: al entrar, si la partida tiene más montones de los que entran, se
+  recorta a 99 por recurso y avisa en el registro. Solo actúa si de verdad está desbordada, así que
+  arregla las partidas que ya quedaron trabadas sin tocar las que están bien.
+
+Resultado: 48 casillas ocupadas de 150, **102 libres**.
 
 **Lo importante: no toca la tabla del diseñador.** Los valores reales siguen guardados en Supabase.
 El modo testeo solo cambia los números en memoria, y se aplica **únicamente en el juego** — nunca en

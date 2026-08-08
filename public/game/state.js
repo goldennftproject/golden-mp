@@ -1990,7 +1990,8 @@ function craftTool(id, lote) {
 function repairTool(id) { const td = TOOL_DEF[id]; if (!td) return; if (toolLost(id)) { toast("No tenés esa herramienta — la tiraste"); return; } if (toolDur(id) >= td.max) { toast("Ya está al 100%"); return; } if (!canAfford(td.repair)) { toast("Te faltan materiales para reparar"); return; } payCost(td.repair); G.tools[id] = td.max; log("Reparaste " + td.label + " (100%).", "good"); toast("Reparado"); forgeWork(); refreshForge(); if (isOpen("ov-equip")) refreshEquip(); if (isOpen("ov-inv")) refreshInv(); }
 
 // --- inventario (base + filas extra) ---
-const INV_BASE = 20, INV_MAX_ROWS = 6;   // 20 base (4 filas de 5, pedido del diseñador 30/7), ampliable +5 por fila hasta 50
+var INV_BASE = 20, INV_MAX_ROWS = 6;   // 20 base (4 filas de 5, pedido del diseñador 30/7), ampliable +5 por fila hasta 50
+// (es `var` y no `const` porque el MODO TESTEO la agranda: con la bolsa llena no se puede probar nada)
 function invSlots() { return INV_BASE + (G.invRows || 0) * 5; }
 function nextInvCost() {
   const r = G.invRows || 0;
@@ -2259,6 +2260,10 @@ function aplicarTesteo() {
   STAM_REGEN_SEG = 2;                                     // la estamina se llena sola enseguida
   STAM_RECARGAS_DIA = 99;
 
+  // --- BOLSA: con la bolsa llena no se puede probar NADA (no entra lo que recogés).
+  // Se agranda muchísimo para que nunca moleste. La ventana del inventario ya tiene scroll.
+  INV_BASE = 150;
+
   // --- PASE DE BATALLA: para poder ver los 30 niveles
   PASS_STARS_LVL = 2;
 
@@ -2267,15 +2272,32 @@ function aplicarTesteo() {
 }
 // Materiales de arranque para probar TODO (edificios, armas, armaduras, animales, ofrendas).
 // Se da UNA sola vez por partida: si se vuelve a entrar, no se acumula.
+// DESTAPA-BOLSA: si la partida quedó con más stacks de los que entran (le pasó al diseñador con
+// el regalo viejo, que daba 500 de cada cosa = 6 casillas por material), lo que sobra queda
+// ESCONDIDO: tirás algo y aparece el stack de atrás, como si el juego siguiera dando cosas.
+// Esto recorta a 99 por recurso hasta que entre todo. Solo actúa si de verdad no entra.
+function testeoDestapar() {
+  if (!(window.GF && GF.TESTEO)) return false;
+  if (typeof canonicalStacks !== "function" || canonicalStacks().length <= invSlots()) return false;
+  let tocado = 0;
+  for (const k in G.res) if (G.res[k] > 99) { G.res[k] = 99; tocado++; }
+  CROP_ORDER.forEach(k => { if (G.seeds[k] > 50) { G.seeds[k] = 50; tocado++; } });
+  if (typeof syncSlots === "function") syncSlots();
+  if (tocado && typeof log === "function") log("MODO TESTEO: la bolsa estaba desbordada (" + tocado + " montones de más) y se recortó a 99 por recurso, para que puedas seguir juntando cosas.", "gold");
+  return tocado > 0;
+}
 function testeoRegalo() {
   if (!(window.GF && GF.TESTEO) || G.testeoDado) return false;
   G.testeoDado = true;
   G.plata = Math.max(G.plata || 0, 500000);
   G.golden = Math.max(G.golden || 0, 5000);
+  // 99 = UNA casilla por cosa. Antes eran 500 y 200, o sea 6 y 3 casillas de cada una: entre
+  // todo ocupaban 168 casillas en una bolsa de 50, y lo que sobraba quedaba escondido. Al tirar
+  // algo aparecía el stack de atrás y parecía que el juego "seguía dando cosas".
   ["madera","piedra","bronce","hierro","oro","diamante","netherita","carne","flecha","lombriz",
    "tablon","barra_piedra","barra_bronce","barra_hierro","barra_oro",
-   "fibra","pelaje","cuero","colmillo","esencia_runica"].forEach(k => { G.res[k] = Math.max(G.res[k] || 0, 500); });
-  CROP_ORDER.forEach(k => { G.res[k] = Math.max(G.res[k] || 0, 200); G.seeds[k] = Math.max(G.seeds[k] || 0, 50); });
+   "fibra","pelaje","cuero","colmillo","esencia_runica"].forEach(k => { G.res[k] = Math.max(G.res[k] || 0, 99); });
+  CROP_ORDER.forEach(k => { G.res[k] = Math.max(G.res[k] || 0, 99); G.seeds[k] = Math.max(G.seeds[k] || 0, 50); });
   G.tools = G.tools || {}; G.tools.axe = Math.max(G.tools.axe || 0, 99); G.tools.rod = Math.max(G.tools.rod || 0, 99);
   G.picks = G.picks || { owned: {}, dur: {}, eq: null };
   PICK_ORDER.forEach(id => { G.picks.owned[id] = true; G.picks.dur[id] = Math.max(G.picks.dur[id] || 0, 99); });

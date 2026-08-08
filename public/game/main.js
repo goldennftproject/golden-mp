@@ -74,7 +74,8 @@ function enterGame() {
   try { if (typeof aplicarTesteo === "function") aplicarTesteo(); } catch (e) { console.warn(e); }
   loadPaso(LOAD_ETAPAS.ajustes, "Aplicando ajustes…");
   try { await window.SAVE_READY; returning = await loadFarm(); } catch (e) { console.warn(e); }
-  try { if (typeof testeoRegalo === "function") testeoRegalo(); } catch (e) { console.warn(e); }   // materiales de prueba (una sola vez)
+  try { if (typeof testeoRegalo === "function") testeoRegalo(); } catch (e) { console.warn(e); }      // materiales de prueba (una sola vez)
+  try { if (typeof testeoDestapar === "function") testeoDestapar(); } catch (e) { console.warn(e); }   // si la bolsa quedó desbordada, la destapa
   if (returning && window.NICK) enterGame();
   else {
     hideEl("loading");                                            // jugador nuevo: primero el apodo
