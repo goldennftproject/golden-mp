@@ -174,7 +174,7 @@ class FarmScene extends Phaser.Scene {
       const locked = (o.type === "tree" && !(G.treesOpen || [0]).includes(lockIdx)) ||
                      (o.type === "rock" && !(G.rocksOpen || [0]).includes(lockIdx));
       if (locked) s.setAlpha(0.5).setTint(0x555555);
-      const rw = (o.type === "ore" || o.type === "rock") ? o.w * 0.67       // minerales −20% (detalles jueves; antes 0.84)
+      const rw = (o.type === "ore" || o.type === "rock") ? o.w * (typeof NODO_ESCALA === "number" ? NODO_ESCALA : 0.67)   // 9/8: 0.90 — al 0.67 las pepitas no se leían
         : (o.type === "tree") ? o.w * 0.8                                   // árboles −20%
         : (o.type === "market" || o.type === "store") ? o.w * 0.8           // tiendas −20%
         : (o.type === "dummy" ? o.w * 1.25 : o.w);                          // dummy +25%
@@ -189,6 +189,7 @@ class FarmScene extends Phaser.Scene {
       }
       return { i, type: o.type, ore: o.ore, cx, by, w: o.w, rw, baseKey: o.key, sprite: s, shadow, readyAt: 0, lockIdx, locked };
     });
+    this.objs.forEach(o => this.tintarNodo(o));   // cada veta con el color de su mineral (9/8)
 
     // (los rótulos flotantes se quitaron: los edificios nuevos se distinguen solos
     //  y el aviso de interacción ya los nombra al acercarse)
@@ -518,6 +519,7 @@ class FarmScene extends Phaser.Scene {
     this.syncAnimales();      // aparecen los que ya tenés
     this.crearNubes();        // nubes que cruzan y proyectan sombra
     this.crearMariposas();    // mariposas que se posan sobre los cultivos listos
+    this.arrancarBrilloVetas();   // chispitas sobre las vetas caras que están listas (9/8)
     this.startHornoSmoke();   // humo del Horno de Piedra si ya está construido (viernes 2)
     const cocinaObj = this.objs.find(o => o.type === "cocina");
     if (cocinaObj) smokeFrom(cocinaObj, 0.20, 0xefe9db, () => true);                     // cocina: humo SIEMPRE (detalles jueves)
@@ -534,7 +536,10 @@ class FarmScene extends Phaser.Scene {
     this.zoomUser = 1;
     this.fitCamera();
     this.scale.on("resize", this.fitCamera, this);
-    this.events.once("shutdown", () => this.scale.off("resize", this.fitCamera, this));
+    this.events.once("shutdown", () => {
+      this.scale.off("resize", this.fitCamera, this);
+      if (this.brilloEv) { this.brilloEv.remove(); this.brilloEv = null; }   // al irse a la plaza o al bosque, se apaga
+    });
     // rueda del mouse: acercar/alejar la cámara de la granja
     this.input.on("wheel", (ptr, over, dx, dy) => {
       if (GF.CAM_PAN && (ptr.event.ctrlKey || ptr.event.shiftKey)) {   // Ctrl/Shift + rueda = acercar o alejar
@@ -702,6 +707,7 @@ class FarmScene extends Phaser.Scene {
         if (b.golden && G.golden < b.golden) { toast("Te falta $Golden (" + b.golden + ")"); return; }
         payCost(b.cost); if (b.golden) G.golden -= b.golden; G.built[o.type] = true;
         if (o.sprite) { o.sprite.setAlpha(1); o.sprite.clearTint(); }
+        this.tintarNodo(o);
         if (o.type === "horno") this.startHornoSmoke();   // arranca el humo (viernes 2)
         if (typeof tutoEvent === "function") tutoEvent("build_" + o.type);
         addXp("crafting", 20); log("¡Construiste " + b.label + "!", "gold"); toast("¡" + b.label + " construida!");
@@ -718,6 +724,7 @@ class FarmScene extends Phaser.Scene {
         if (isTree) { G.treesOpen = G.treesOpen || [0]; G.treesOpen.push(o.lockIdx); }
         else { G.rocksOpen = G.rocksOpen || [0]; G.rocksOpen.push(o.lockIdx); }
         o.locked = false; if (o.sprite) { o.sprite.setAlpha(1); o.sprite.clearTint(); }
+        this.tintarNodo(o);   // desbloqueada: recupera el color de su mineral
         addXp("crafting", 5); if (typeof syncSlots === "function") syncSlots();
         log("Desbloqueaste " + (isTree ? "un árbol" : "una piedra") + " por " + cost + " de " + RES_LABEL[res] + ".", "good");
         if (typeof tutoEvent === "function") tutoEvent("unlocknode"); toast("¡" + (isTree ? "Árbol" : "Piedra") + " desbloqueado!");
@@ -1042,6 +1049,16 @@ class FarmScene extends Phaser.Scene {
     this.tutoTw = this.tweens.add({ targets: tri, y: y - 10, duration: 420, yoyo: true, repeat: -1, ease: "Sine.easeInOut" });
   }
 
+  // TINTE DE LA VETA (9/8): el color va sobre la roca ENTERA, no solo sobre las pepitas.
+  // Es lo único que se lee a 38 px. Convive con el gris de "bloqueado / sin construir",
+  // que siempre gana. Hay que llamarlo cada vez que algo hace clearTint() sobre el nodo.
+  tintarNodo(o) {
+    const s = o && o.sprite; if (!s || !s.setTint) return;
+    if (o.locked || (typeof BUILD_DEF !== "undefined" && BUILD_DEF[o.type] && !(G.built && G.built[o.type]))) { s.setTint(0x555555); return; }
+    const t = (NODO_TINTE && (o.type === "ore" || o.type === "rock") && GF.ORE_TINTE) ? GF.ORE_TINTE[o.ore || "piedra"] : null;
+    if (t && t !== 0xffffff) s.setTint(t); else s.clearTint();
+  }
+
   setObjTex(o, key, targetW) {
     if (o.sprite._popTw) { o.sprite._popTw.stop(); o.sprite._popTw = null; }   // un pop a medias no debe pelear con la escala nueva
     this.copaSacar(o);   // cambia la imagen: se rehace el recorte copa/tronco desde cero
@@ -1103,7 +1120,7 @@ class FarmScene extends Phaser.Scene {
     [o.sprite, o.copa, o.spr].forEach(s => {
       if (!s || !s.setTintFill || !s.visible) return;
       s.setTintFill(0xffffff);
-      this.time.delayedCall(ms, () => { if (s && s.clearTint && s.active) s.clearTint(); });
+      this.time.delayedCall(ms, () => { if (s && s.clearTint && s.active) { s.clearTint(); this.tintarNodo(o); } });   // y vuelve el color del mineral
     });
   }
 
@@ -1393,6 +1410,34 @@ class FarmScene extends Phaser.Scene {
   }
 
   // MARIPOSAS (4/8): revolotean y se posan sobre los cultivos LISTOS; si cosechás, salen volando.
+  // DESTELLO DE LAS VETAS CARAS (9/8): diamante y netherita sueltan una chispita de vez en
+  // cuando, con el color de su mineral. Sirve para dos cosas: se distinguen de lejos y avisa
+  // que están listas (durante el enfriamiento no brillan).
+  arrancarBrilloVetas() {
+    if (!NODO_BRILLO || this.brilloEv) return;
+    const caras = { diamante: 0xbfeeff, netherita: 0xff8a3c, oro: 0xffe08f };
+    this.brilloEv = this.time.addEvent({ delay: Math.max(400, NODO_BRILLO_CADA || 2200), loop: true, callback: () => {
+      if (!NODO_BRILLO) return;   // se puede apagar en caliente desde el panel de balanceo
+      const t = nowMs();
+      this.objs.forEach(o => {
+        if (o.type !== "ore" || o.locked) return;
+        const col = caras[o.ore]; if (!col) return;
+        if (o.readyAt && t < o.readyAt) return;                 // en enfriamiento no brilla
+        if (!o.sprite || !o.sprite.visible) return;
+        const w = o.rw || o.w, alto = o.sprite.displayHeight || w;
+        const x = o.cx + (Math.random() - 0.5) * w * 0.6;
+        const y = o.by - alto * (0.35 + Math.random() * 0.4);
+        const g = this.add.graphics().setDepth(o.by + 2).setBlendMode(Phaser.BlendModes.ADD);
+        g.fillStyle(col, 1);
+        g.fillTriangle(0, -5, 1.4, 0, -1.4, 0).fillTriangle(0, 5, 1.4, 0, -1.4, 0)     // chispa de 4 puntas
+         .fillTriangle(-5, 0, 0, 1.4, 0, -1.4).fillTriangle(5, 0, 0, 1.4, 0, -1.4);
+        g.setPosition(x, y).setScale(0.3).setAlpha(0);
+        this.tweens.add({ targets: g, alpha: { from: 0, to: 0.9 }, scale: { from: 0.3, to: 1 },
+          duration: 260, yoyo: true, hold: 90, ease: "Sine.easeOut", onComplete: () => g.destroy() });
+      });
+    } });
+  }
+
   crearMariposas() {
     this.maripos = [];
     for (let i = 0; i < (FX_MARIPOSAS || 0); i++) {

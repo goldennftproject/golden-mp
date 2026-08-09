@@ -72,6 +72,24 @@ var POP_FUERZA = 1;      // qué tan exagerado es el rebote (0.5 = discreto · 1
 var POP_MS = 620;        // cuánto tarda en quedar estable, en milisegundos
 var POP_INTERMEDIO = 0.55;   // fuerza del pop del paso intermedio (el retoño del árbol) respecto del final
 
+// MINERALES QUE SE DIFERENCIEN (9/8). El arte de las vetas está bien, pero se dibujaban
+// al 67% de la celda: las pepitas quedaban de 2 px y las seis vetas se veían como la misma
+// piedra marrón. Tres cosas, todas por código y todas apagables:
+var NODO_ESCALA = 0.90;    // qué parte de la celda ocupa la veta (antes 0.67)
+var NODO_TINTE = 1;        // 1 = teñir la roca entera del color de su mineral · 0 = sin teñir
+// El color lo tiene que cargar la MASA de la piedra, no las pepitas: la masa se lee de lejos.
+// Son tintes multiplicativos y suaves; la piedra común y la netherita no se tocan (ya se distinguen).
+GF.ORE_TINTE = {
+  piedra:    0xffffff,
+  bronce:    0xffbe86,   // parda cálida
+  hierro:    0xbccfe4,   // gris azulada
+  oro:       0xffe08f,   // arenosa dorada
+  diamante:  0xbfeeff,   // gris pálido celeste
+  netherita: 0xffffff,
+};
+var NODO_BRILLO = 1;       // destellito sobre las vetas CARAS que están listas (diamante y netherita)
+var NODO_BRILLO_CADA = 2200;   // cada cuántos ms aparece un destello, por veta
+
 // EFECTOS DE JUGO (4/8). Todo por código, sin arte nuevo. Cada uno se apaga por separado.
 var FX_IMPACTO = 1;        // el nodo se sacude y suelta astillas/chispas en cada golpe
 var FX_IMPACTO_GRADOS = 5; // cuánto se sacude el nodo al recibir el golpe

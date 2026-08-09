@@ -133,6 +133,11 @@ var BAL = (function () {
     add("Ambiente — efectos", "fx.vapor", "Vapor de la Cocina y chispas del Altar mejorado", "1 o 0", () => FX_VAPOR, v => { FX_VAPOR = v ? 1 : 0; });
     add("Ambiente — efectos", "fx.fadeMs", "Fundido a negro al cambiar de escena (0 = corte seco)", "milisegundos", () => FX_FADE_MS, v => { FX_FADE_MS = v; }, 20);
     add("Ambiente — efectos", "fx.partMax", "Tope de partículas vivas a la vez (cuida el rendimiento)", "partículas · entero", () => FX_PART_MAX, v => { FX_PART_MAX = v; }, 5);
+    // MINERALES: que se distingan entre sí de un vistazo (9/8)
+    add("Minerales — que se distingan", "nodo.escala", "Qué parte de la celda ocupa la veta (al 0.67 las pepitas no se leían)", "0 a 1", () => NODO_ESCALA, v => { NODO_ESCALA = v; }, 0.02);
+    add("Minerales — que se distingan", "nodo.tinte", "Teñir la roca entera del color de su mineral (1 = sí · 0 = no)", "1 o 0", () => NODO_TINTE, v => { NODO_TINTE = v ? 1 : 0; });
+    add("Minerales — que se distingan", "nodo.brillo", "Chispita sobre las vetas caras que están listas (1 = sí · 0 = no)", "1 o 0", () => NODO_BRILLO, v => { NODO_BRILLO = v ? 1 : 0; });
+    add("Minerales — que se distingan", "nodo.brilloCada", "Cada cuánto aparece una chispita, por veta", "milisegundos", () => NODO_BRILLO_CADA, v => { NODO_BRILLO_CADA = v; }, 100);
     // POP: el saltito de resorte al terminar de crecer
     add("Ambiente — pop de crecimiento", "pop.on", "Pop encendido (1 = sí · 0 = no)", "1 o 0", () => POP_ON, v => { POP_ON = v ? 1 : 0; });
     add("Ambiente — pop de crecimiento", "pop.fuerza", "Qué tan exagerado es el rebote", "0.5 discreto · 1.5 caricaturesco", () => POP_FUERZA, v => { POP_FUERZA = v; }, 0.05);

@@ -1192,6 +1192,25 @@ a `-1002` y el pasto volvió a aparecer. Con la textura a la vista, los tiles se
 desde el original con el tono un poco más claro, y el borde de pasto de la isla se igualó
 al del suelo para que no se note el salto. También se calmaron las matas de la laguna.
 
+### Que los minerales se distingan (9/8)
+Las seis vetas se veían como la misma piedra marrón. El arte estaba bien: el problema era el
+tamaño. Se dibujaban al **0.67 de la celda** desde un sprite de 92 px, o sea al 30%: las
+pepitas quedaban de 2 px y se volvían ruido. Tres cambios, todos por código y todos apagables
+desde el panel de balanceo (grupo "Minerales — que se distingan"):
+
+- **Escala 0.67 → 0.90.** Con eso solo, las pepitas vuelven a leerse.
+- **Tinte sobre la roca entera**, no sobre las pepitas: bronce parda cálida, hierro gris
+  azulada, oro arenosa, diamante gris celeste. La masa es lo que se lee de lejos; el detalle no.
+  Piedra común y netherita no se tocan, ya se distinguían solas.
+- **Chispita en las vetas caras** (diamante, netherita, oro) cuando están **listas**. Durante
+  el enfriamiento no brillan, así que además avisa que se pueden picar.
+
+El tinte convive con el gris de "bloqueado"; ese siempre gana. Como el destello blanco del
+golpe hace `clearTint()`, el color del mineral se vuelve a poner al terminar.
+
+Sigue pendiente el caso difícil: **piedra vs hierro** son la misma roca, una pelada y la otra
+con motas. Eso pide siluetas distintas y arte nuevo, no código.
+
 ### Verificación
 - `node --check` en los 13 JS, `tools/check-ui.js` (20 ventanas OK) y `build-atlas.py --check` sin faltantes.
 - Composición de la granja renderizada aparte para revisar alturas: ningún edificio se pisa.
