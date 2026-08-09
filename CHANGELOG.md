@@ -1169,8 +1169,20 @@ vistas isométricas) y sin las columnas de runas que se colaban del Altar.
   del arte nuevo, con los tonos de fuego levantados.
 - `tools/build-atlas.py` aprendió a incorporar claves nuevas: Establo, Curtiduría y Ofrendas
   nunca habían entrado al atlas porque no existía su PNG.
-- Atlas rearmado (365 sprites) y versiones subidas: atlas `?v=22` y cada edificio con su `?v`
+- Atlas rearmado (365 sprites) y versiones subidas: atlas `?v=23` y cada edificio con su `?v`
   nuevo, para que nadie se coma el arte viejo del caché.
+
+### Verde de la granja, menos fosforescente
+El diseñador pidió un verde acorde a los edificios y las piedras: el pasto y sobre todo la
+copa de los árboles tiraban a lima fluorescente y peleaban con la paleta cálida del arte nuevo.
+
+- Los verdes se corrieron del amarillo-lima hacia un verde real, con tope de saturación y los
+  tonos claros un poco más bajos. Marrones, grises y flores no se tocaron.
+- Afecta: los 3 tiles de pasto, las matitas de decoración, el árbol y todos sus estados
+  (a medio talar, tocón, hojas) y el brote.
+- También los colores que estaban escritos en el código: el borde de pasto de la isla
+  (`#7fbf5a` → `#83ac65`), el fondo sin isla, el damero de respaldo y el suelo de la plaza.
+- Copia de los sprites originales en `assets/farm/_backup_verde_viejo/`.
 
 ### Verificación
 - `node --check` en los 13 JS, `tools/check-ui.js` (20 ventanas OK) y `build-atlas.py --check` sin faltantes.

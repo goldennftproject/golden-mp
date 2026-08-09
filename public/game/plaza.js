@@ -8,7 +8,7 @@ class PlazaScene extends Phaser.Scene {
     this.cameras.main.setBackgroundColor("#6ea84a");
 
     const g = this.add.graphics().setDepth(-1000);
-    g.fillStyle(0x6ea84a, 1).fillRect(0, 0, W, H);
+    g.fillStyle(0x729755, 1).fillRect(0, 0, W, H);
     g.lineStyle(1, 0x18300f, 0.12);
     for (let x = 0; x <= W; x += T) { g.beginPath(); g.moveTo(x, 0); g.lineTo(x, H); g.strokePath(); }
     for (let y = 0; y <= H; y += T) { g.beginPath(); g.moveTo(0, y); g.lineTo(W, y); g.strokePath(); }

@@ -26,7 +26,7 @@ class FarmScene extends Phaser.Scene {
     this.corral = null; this.animales = null; this.corralCerca = null;
     this.nubes = null; this.maripos = null; this._part = 0; this._rafActiva = false; this._vaporAt = 0;   // efectos de ambiente
     this.queue = [];      // cola de acciones: clickeá varios objetivos y se hacen en orden
-    this.cameras.main.setBackgroundColor(GF.ISLA ? "#2e7fa8" : "#6ba043");   // isla: agua alrededor
+    this.cameras.main.setBackgroundColor(GF.ISLA ? "#2e7fa8" : "#6c904f");   // isla: agua alrededor
 
     this.dragPlot = null; this.dragPond = false;
     // posiciones editadas de laguna y parcelas: primero base, después lo guardado
@@ -50,7 +50,7 @@ class FarmScene extends Phaser.Scene {
       }
     } else {   // respaldo: el damero de siempre
       for (let r = 0; r < GF.ROWS; r++) for (let c = 0; c < GF.COLS; c++) {
-        g.fillStyle((r + c) % 2 === 0 ? 0x4c6e34 : 0x466730, 1);
+        g.fillStyle((r + c) % 2 === 0 ? 0x556e41 : 0x4f673c, 1);
         g.fillRect(c * T, r * T, T, T);
       }
     }
@@ -70,7 +70,7 @@ class FarmScene extends Phaser.Scene {
         continue;
       }
       if (t < 0.72) {          // matita de pasto
-        const col = drnd() < 0.6 ? 0x3a5c2a : 0x608442;
+        const col = drnd() < 0.6 ? 0x455c35 : 0x688451;
         deco.lineStyle(1, col, 1);
         for (let b = 0; b < 3; b++) { deco.beginPath(); deco.moveTo(dx + b * 2, dy + 3); deco.lineTo(dx + b * 2 + (drnd() * 3 - 1.5), dy - 2 - drnd() * 3); deco.strokePath(); }
       } else if (t < 0.92) {   // florcita
@@ -225,7 +225,7 @@ class FarmScene extends Phaser.Scene {
       g.fillStyle(0x2e7fa8, 1).fillRect(-MAR, -MAR, GF.WORLD_W + MAR * 2, GF.WORLD_H + MAR * 2);   // mar profundo
       g.fillStyle(0x3fa3cc, 1).fillRoundedRect(-70, -70, GF.WORLD_W + 140, GF.WORLD_H + 140, 90);  // agua clara del bajío
       g.fillStyle(0xe8d9a6, 1).fillRoundedRect(-34, -34, GF.WORLD_W + 68, GF.WORLD_H + 68, 60);    // arena de la orilla
-      g.fillStyle(0x7fbf5a, 1).fillRoundedRect(-8, -8, GF.WORLD_W + 16, GF.WORLD_H + 16, 34);      // borde de pasto
+      g.fillStyle(0x83ac65, 1).fillRoundedRect(-8, -8, GF.WORLD_W + 16, GF.WORLD_H + 16, 34);      // borde de pasto (verde calmado 9/8)
       // espuma: líneas claras que van y vienen sobre la orilla
       this.olas = this.add.graphics().setDepth(-999);
       this.olasT = 0;
