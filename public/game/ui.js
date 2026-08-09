@@ -443,7 +443,7 @@ function refreshDaily() {
   const idx = (st.claimable ? st.day : Math.max(1, claimed)) - 1;
   const esDia7 = (st.claimable ? st.day : Math.max(1, claimed)) === 7;
   $("dy-reward").innerHTML = (st.claimable ? "Hoy: " : "Reclamado: ") + DAILY_REWARDS[idx].label
-    + (esDia7 ? '<br><b style="color:#8a6413">Esta semana: ' + coleccionableDeLaSemana() + '</b>' : "")
+    + (esDia7 ? '<br><b style="color:#7a5606">Esta semana: ' + coleccionableDeLaSemana() + '</b>' : "")
     + '<br><span class="fds">Si faltás un día no perdés nada: seguís donde quedaste.</span>';
   const b = $("dy-claim");
   if (b) { b.disabled = !st.claimable; b.textContent = st.claimable ? "Reclamar " : "Vuelve mañana"; }
@@ -715,7 +715,7 @@ function refreshPass() {
   const p = passInit(), lvl = passLvl();
   const into = p.stars - lvl * PASS_STARS_LVL, need = PASS_STARS_LVL;
   let h = '<div class="forge-row"><div class="finfo">' +
-    '<div class="fnm">Nivel ' + lvl + ' / 30 · ' + fmt(p.stars) + ' estrellas' + (p.vip ? ' · <b style="color:#8a6413">VIP activo</b> (+' + Math.round((PASS_VIP_BOOST - 1) * 100) + '% estrellas)' : '') + '</div>' +
+    '<div class="fnm">Nivel ' + lvl + ' / 30 · ' + fmt(p.stars) + ' estrellas' + (p.vip ? ' · <b style="color:#7a5606">VIP activo</b> (+' + Math.round((PASS_VIP_BOOST - 1) * 100) + '% estrellas)' : '') + '</div>' +
     (lvl < 30 ? '<div class="durbar"><i style="width:' + Math.round(into / need * 100) + '%"></i></div><div class="fds">' + into + '/' + need + ' estrellas para el nivel ' + (lvl + 1) + '</div>' : '<div class="fds">¡Pase completo!</div>') +
     '<div class="fds">Se sube JUGANDO: misiones diarias y semanales dan estrellas. La temporada dura 4-6 semanas.</div></div>' +
     '<div class="fbtns">' + (p.vip ? '' : '<button class="green sm" id="pass-vip">Pase VIP · ' + PASS_VIP_PRICE + ' $G</button>') +
@@ -742,7 +742,7 @@ function refreshPass() {
     const bf = p.claimF[nv] ? '<button class="ghost sm" disabled>Reclamado</button>' : (alc ? '<button class="green sm" data-pfree="' + nv + '">Reclamar</button>' : '');
     const bv = p.claimV[nv] ? '<button class="ghost sm" disabled>Reclamado</button>' : (alc && p.vip ? '<button class="green sm" data-pvip="' + nv + '">Reclamar VIP</button>' : '');
     h += '<div class="forge-row' + (alc ? '' : ' locked') + '"><div class="finfo">' +
-      '<div class="fnm">Nivel ' + nv + (hito ? ' <span style="color:#ffe08a">' + hito + '</span>' : '') + '</div>' +
+      '<div class="fnm">Nivel ' + nv + (hito ? ' <span style="color:#7a5606">' + hito + '</span>' : '') + '</div>' +
       '<div class="fds free">FREE: ' + passRewardStr(rf) + '</div>' +
       '<div class="fds vip">VIP: ' + passRewardStr(rv) + (p.vip ? '' : ' (requiere Pase VIP)') + '</div>' +
       '</div><div class="fbtns">' + bf + bv + '</div></div>';
@@ -759,13 +759,13 @@ function refreshPass() {
 /* ---- Curtiduría: las 20 piezas de armadura ("2das mejoras") ---- */
 function refreshCurtiduria() {
   const box = $("curti-list"); if (!box) return;
-  let h = '<div class="fds">Equipada: <b>' + (G.armorEq && ARMOR_SETS[G.armorEq] ? ARMOR_SETS[G.armorEq].label + " · " + armorDefensa() + " de defensa" : "ninguna") + '</b></div>';
+  let h = '<div class="info">Equipada: <b>' + (G.armorEq && ARMOR_SETS[G.armorEq] ? ARMOR_SETS[G.armorEq].label + " · " + armorDefensa() + " de defensa" : "ninguna") + '</b></div>';
   ARMOR_ORDER.forEach(set => {
     const sd = ARMOR_SETS[set], eq = armorEquipado(set), n = armorPuestas(set), completo = armorSetCompleto(set);
     const defTotal = ARMOR_SLOTS.reduce((a, pz) => a + sd.piezas[pz].def, 0);
     h += '<div class="secc">' + sd.label + ' <span class="fds">(' + sd.tipo + ' · ' + n + '/5 piezas · ' + defTotal + ' de defensa el set)</span></div>';
-    h += '<div class="fds">Material: ' + RES_LABEL[sd.mat] + ' (tenés ' + (G.res[sd.mat] || 0) + ') · del ' + ANIMAL_DEF[sd.animal].label + '</div>';
-    h += '<div class="fds" style="color:#8a6413">Bono del set completo: ' + sd.bono.txt + (completo ? ' <b>— ACTIVO</b>' : '') + '</div>';
+    h += '<div class="info"><div>Material: <b>' + RES_LABEL[sd.mat] + '</b> (tenés ' + (G.res[sd.mat] || 0) + ') · del ' + ANIMAL_DEF[sd.animal].label + '</div>' +
+      '<div class="oro">Bono del set completo: ' + sd.bono.txt + (completo ? ' — ACTIVO' : '') + '</div></div>';
     ARMOR_SLOTS.forEach(pz => {
       const p = sd.piezas[pz], tiene = armorTiene(set, pz);
       const costo = p.mat + " " + RES_LABEL[sd.mat] + (p.hierro ? " · " + p.hierro + " Hierro" : "") + " · " + p.plata + " plata";
@@ -812,7 +812,7 @@ function refreshEstablo() {
         '<button class="green sm" ' + (listo ? "" : "disabled") + ' data-take="' + k + '">Recoger</button>' +
       '</div></div>';
   });
-  h += '<div class="fds" style="margin-top:6px">Materiales: ' + ANIMAL_ORDER.map(k => RES_LABEL[ANIMAL_DEF[k].mat] + " " + (G.res[ANIMAL_DEF[k].mat] || 0)).join(" · ") + '</div>';
+  h += '<div class="info">Materiales: ' + ANIMAL_ORDER.map(k => RES_LABEL[ANIMAL_DEF[k].mat] + " <b>" + (G.res[ANIMAL_DEF[k].mat] || 0) + "</b>").join(" · ") + '</div>';
   box.innerHTML = h;
   box.querySelectorAll("[data-buyani]").forEach(b => b.onclick = () => {
     const k = b.dataset.buyani, d = ANIMAL_DEF[k];
@@ -830,9 +830,10 @@ function refreshAltar() {
   let h = "";
   // ---- Eje 1: MEJORA +1..+15 ----
   h += '<div class="secc">Mejorar arma (+1 a +15)</div>';
-  h += '<div class="fds">Cada intento gasta Runas de Poder + plata. Polvo de Suerte: +10 pts de éxito. De +6 a +10 fallar baja −1; de +11 a +15 fallar puede ROMPER el arma salvo que uses Runa de Protección.</div>';
-  h += '<div class="fds">Tenés: ' + (G.res.runa_poder || 0) + ' Runa de Poder · ' + (G.res.polvo_suerte || 0) + ' Polvo de Suerte · ' + (G.res.runa_proteccion || 0) + ' Runa de Protección · ' + (G.res.esencia_runica || 0) + ' Esencia rúnica</div>';
-  if (!owned.length) h += '<div class="fds">No tenés armas: forjá una en la Herrería.</div>';
+  h += '<div class="info"><div>Cada intento gasta Runas de Poder + plata. Polvo de Suerte: +10 pts de éxito. De +6 a +10 fallar baja −1; de +11 a +15 fallar puede ROMPER el arma salvo que uses Runa de Protección.</div>';
+  h += '<div>Tenés: ' + (G.res.runa_poder || 0) + ' Runa de Poder · ' + (G.res.polvo_suerte || 0) + ' Polvo de Suerte · ' + (G.res.runa_proteccion || 0) + ' Runa de Protección · ' + (G.res.esencia_runica || 0) + ' Esencia rúnica</div>';
+  h += '</div>';
+  if (!owned.length) h += '<div class="info">No tenés armas: forjá una en la Herrería.</div>';
   owned.forEach(id => {
     const w = ARM_DEF[id]; if (!w) return;
     const plus = armPlus(id), next = plus + 1;
@@ -848,7 +849,7 @@ function refreshAltar() {
   const eq = armaEq();
   if (eq && socketsOpen(armPlus(eq)) > 0) {
     h += '<div class="secc">Runas de ' + ARM_DEF[eq].label + (armPlus(eq) ? " +" + armPlus(eq) : "") + ' (equipada)</div>';
-    h += '<div class="fds">Socketear una runa sobre otra DESTRUYE la anterior.</div>';
+    h += '<div class="info">Socketear una runa sobre otra DESTRUYE la anterior.</div>';
     for (let sl = 1; sl <= 3; sl++) {
       const open = sl <= socketsOpen(armPlus(eq));
       const cur = armSockets(eq)[sl];
@@ -867,7 +868,7 @@ function refreshAltar() {
   }
   // runas de atributo I
   h += '<div class="secc">Craftear runas de atributo (rareza I)</div>';
-  h += '<div class="fds">Cuestan ' + Object.keys(RUNA_CRAFT.cost).map(k => RUNA_CRAFT.cost[k] + " " + (RES_LABEL[k] || k)).join(" + ") + ' + ' + RUNA_CRAFT.plata + ' plata.</div>';
+  h += '<div class="info">Cuestan ' + Object.keys(RUNA_CRAFT.cost).map(k => RUNA_CRAFT.cost[k] + " " + (RES_LABEL[k] || k)).join(" + ") + ' + ' + RUNA_CRAFT.plata + ' plata.</div>';
   RUNA_ORDER.forEach(t => {
     h += '<div class="forge-row"><div class="finfo"><div class="fnm">' + RUNA_TIPOS[t].label + ' I <span class="fds">(tenés ' + (G.res[runaKey(t, 1)] || 0) + ')</span></div><div class="fds">' + RUNA_TIPOS[t].buff + ': +' + RUNA_TIPOS[t].vals[0] + RUNA_TIPOS[t].uni + ' → +' + RUNA_TIPOS[t].vals[4] + RUNA_TIPOS[t].uni + ' en rareza V</div></div><div class="fbtns"><button class="green sm" data-cruna="' + t + '">Craftear I</button><button class="green sm" data-cruna5="' + t + '" title="Craftear 5">×5</button></div></div>';
   });
@@ -931,12 +932,13 @@ function refreshBarn() {
   const xp = Math.floor(G.skills.farming || 0);
   const need = FARM_XP_LVLS[sig];
   let h = '<div class="secc">Granja nivel ' + nv + ' / ' + FARM_NIVEL_MAX + '</div>';
-  if (sig > FARM_NIVEL_MAX) h += '<div class="fds">¡Máximo alcanzado! Leyenda de la Granja Dorada.</div>';
+  if (sig > FARM_NIVEL_MAX) h += '<div class="info">¡Máximo alcanzado! Leyenda de la Granja Dorada.</div>';
   else {
     const desde = FARM_XP_LVLS[nv] || 0;
     const pct = Math.max(0, Math.min(100, Math.round((xp - desde) / Math.max(1, need - desde) * 100)));
-    h += '<div class="durbar" style="margin:6px 0"><i style="width:' + pct + '%"></i></div>';
-    h += '<div class="fds">XP de cosecha: ' + fmt(xp) + ' / ' + fmt(need) + '</div>';
+    h += '<div class="durbar" style="margin:6px 0"><i style="width:' + pct + '%"></i></div>@INFO@';
+    // los datos sueltos van en un recuadro claro, no escritos sobre la madera
+    let info = '<div><b>XP de cosecha:</b> ' + fmt(xp) + ' / ' + fmt(need) + '</div>';
     const tareas = tareasDelNivel(sig);
     if (tareas.length) {
       h += '<div class="secc">Tareas para el nivel ' + sig + '</div>';
@@ -946,11 +948,12 @@ function refreshBarn() {
           '<div class="durbar"><i style="width:' + Math.round(p0 / t[2] * 100) + '%"></i></div>' +
           '<div class="fds">' + p0 + '/' + t[2] + '</div></div></div>';
       });
-    } else h += '<div class="fds">Nivel rápido: sube solo con la XP de cosecha.</div>';
-    if (FARM_UNLOCK[sig]) h += '<div class="fds" style="margin-top:6px;color:#3f6b2a"><b>Recompensa del nivel ' + sig + ':</b> ' + FARM_UNLOCK[sig] + '</div>';
+    } else info += '<div>Nivel rápido: sube solo con la XP de cosecha.</div>';
+    if (FARM_UNLOCK[sig]) info += '<div class="verde">Recompensa del nivel ' + sig + ': ' + FARM_UNLOCK[sig] + '</div>';
+    h = h.replace("@INFO@", '<div class="info">' + info + '</div>');
   }
-  h += '<div class="fds" style="margin-top:8px">Parcelas: ' + (G.plotsOwned || 2) + ' · Cofres: +' + (G.chestCap || 0) + ' de capacidad</div>';
-  if ((G.cosmeticos || []).length) h += '<div class="fds">Cosméticos ganados: ' + G.cosmeticos.length + '</div>';
+  h += '<div class="info"><div>Parcelas: <b>' + (G.plotsOwned || 2) + '</b> · Cofres: <b>+' + (G.chestCap || 0) + '</b> de capacidad</div>' +
+    ((G.cosmeticos || []).length ? '<div>Cosméticos ganados: <b>' + G.cosmeticos.length + '</b></div>' : '') + '</div>';
   if (box) box.innerHTML = h;
 }
 
@@ -1287,7 +1290,7 @@ function refreshOfrendas() {
 function refreshIncursion() {
   const box = $("inc-list"); if (!box) return;
   const inc = incActiva(), cupo = incCupoHoy(), poder = incPoder();
-  let h = '<div class="fds">Tu poder de combate: <b>' + poder + '</b>' + (poder ? '' : ' — necesitás un arma equipada') +
+  let h = '<div class="info">Tu poder de combate: <b>' + poder + '</b>' + (poder ? '' : ' — necesitás un arma equipada') +
     ' · incursiones de hoy: ' + cupo.n + '/' + (INC_CUPO_DIA || "sin tope") + '</div>';
   if (inc) {
     const z = INCURSIONES[inc.zona], left = incFalta(), pct = Math.round((1 - left / (inc.total || 1)) * 100);
@@ -1308,7 +1311,7 @@ function refreshIncursion() {
                         : ' — vas justo: volverías herido y con menos botín')) + '</div></div>' +
       '<div class="fbtns"><button class="green sm" ' + (inc || !poder ? "disabled" : "") + ' data-inc="' + k + '">Salir</button></div></div>';
   });
-  h += '<div class="fds" style="margin-top:6px">Al Dragón de las Cavernas hay que ir a pelearlo en persona: no se puede por incursión.</div>';
+  h += '<div class="info">Al Dragón de las Cavernas hay que ir a pelearlo en persona: no se puede por incursión.</div>';
   box.innerHTML = h;
   box.querySelectorAll("[data-inc]").forEach(b => b.onclick = () => {
     const k = b.dataset.inc, z = INCURSIONES[k];
@@ -1433,7 +1436,7 @@ function refreshCosmeticos() {
       : 'Se desbloquea con los títulos de granja nivel 30 en adelante.') + '</div></div></div>';
   if ((G.cosmeticos || []).length) {
     h += '<div class="secc">Todo lo que ganaste (' + G.cosmeticos.length + ')</div>';
-    h += '<div class="fds">' + G.cosmeticos.map(x => escapeHtml(String(x))).join(" · ") + '</div>';
+    h += '<div class="info">' + G.cosmeticos.map(x => escapeHtml(String(x))).join(" · ") + '</div>';
   }
   box.innerHTML = h;
   box.querySelectorAll("[data-cost]").forEach(b => b.onclick = () => {

@@ -581,8 +581,35 @@ y dorado claritos, y con el aviso rojo del Cofre diario.
 **Regla que queda para todo el juego**: sobre madera, blanco con contorno oscuro; sobre crema,
 marrón oscuro. Nada de amarillos ni grises claros para texto.
 
+**6. Nada escrito directamente sobre la madera (criterio del diseñador).** Varios paneles ponían
+datos sueltos sobre el fondo de madera: el resumen del Granero, los materiales del Establo,
+"Equipada: ninguna" y el bono de set de la Curtiduría, las tres líneas de explicación del Altar de
+Runas, el poder de combate de la Incursión y los cosméticos ganados.
+
+Mi primer intento fue hacerlos legibles con blanco y contorno. El diseñador propuso lo contrario —
+**extender el recuadro claro que ya usan las filas** en vez de escribir sobre la madera — y es mejor:
+resuelve la legibilidad por diseño en lugar de por truco, y deja un solo lenguaje visual en toda la
+ventana. Se creó la clase `.info` (mismo crema, mismo borde y misma sombra que las filas) y se
+aplicó a los **13 bloques** de datos sueltos que quedaban, agrupando las líneas que van juntas en un
+solo recuadro en vez de una caja por renglón.
+
+Con eso, el texto secundario es marrón oscuro **en todos lados**, porque ya nunca cae sobre madera.
+Lo único que sigue sobre madera es lo que siempre estuvo pensado para eso: los títulos de ventana y
+los carteles de sección, que llevan su contorno oscuro.
+
+También se repasaron **todos los colores escritos a mano** que quedaban en los paneles:
+
+| | Antes | Contraste | Ahora |
+|---|---|---|---|
+| Hito ★ del Pase | dorado claro | **1,03** | dorado oscuro (5,3) |
+| "VIP activo" | dorado medio | 4,29 | dorado oscuro (5,3) |
+| Bono de set y recompensa de nivel | oscuros sobre madera | ilegibles | ahora van dentro del recuadro |
+
+Y una corrección de maquetado: en las filas, un texto largo podía meterse por debajo del botón.
+Ahora corta y sigue en la línea de abajo.
+
 **Vista previa sin deployar**: se agregó `public/vista-ventanas.html`. Se abre haciendo doble clic y
-muestra cuatro ventanas de ejemplo (Establo, Pase de Batalla, Ranking y Ajustes) con el CSS real del juego, para revisar
+muestra las ventanas de ejemplo con el CSS real del juego, para revisar
 el estilo sin tener que subir nada.
 
 Verificado: las 21 ventanas quedaron con contenedor estandarizado, el CSS cierra balanceado

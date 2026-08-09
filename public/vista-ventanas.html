@@ -498,24 +498,44 @@
   .forge-row .fds.free{color:#33591f}     /* Free: verde oscuro */
   .lbrow .rk{color:#5f5540}
   .dyreward .bad{color:#8f2f1c;text-shadow:none}
+
+  /* 6) DATOS SUELTOS: van en un RECUADRO CREMA, no escritos sobre la madera (4/8).
+        Criterio del diseñador, y es el correcto: en vez de resolver la legibilidad con
+        contornos, se extiende el mismo recuadro claro que ya usan las filas. Queda todo con
+        el mismo lenguaje y el texto se lee sin trucos. */
+  .info{background:#f2e5c4;border:2px solid #d9c290;border-radius:10px;padding:8px 11px;
+    color:#5f5540;font-size:11.5px;line-height:1.5;box-shadow:0 1px 0 rgba(0,0,0,.18)}
+  .info > div + div{margin-top:4px}
+  .info b{color:#241d10}
+  .info .oro{color:#7a5606;font-weight:700}      /* dorado oscuro: se lee sobre el crema */
+  .info .verde{color:#33591f;font-weight:700}
+  .info .rojo{color:#8f2f1c;font-weight:700}
+  /* el texto secundario es marrón oscuro en TODOS lados, porque ahora siempre va sobre crema */
+  .fds,.mds{color:#5f5540}
+  .forge-row .fds.vip{color:#7a5606;font-weight:700}
+  .forge-row .fds.free{color:#33591f;font-weight:700}
+  .secc .fds{color:#fff;font-weight:600;font-size:11.5px;
+    text-shadow:-1px 0 #241505,1px 0 #241505,0 -1px #241505,0 1px #241505,1px 1px #241505}
+  /* que un texto largo NUNCA se meta debajo del botón de la fila */
+  .forge-row .finfo,.mkt-row .minfo{overflow-wrap:anywhere}
 </style>
 <style>body{overflow:auto;padding:26px 0;background:#3c5a25}
 .titulo{text-align:center;color:#fff;font:800 15px/1.6 system-ui;margin:0 0 20px;
 text-shadow:-1px 0 #241505,1px 0 #241505,0 -1px #241505,0 1px #241505,1px 1px #241505}</style>
 </head><body>
-<p class="titulo">Vista previa · estilo unificado<br>
-<span style="font-weight:600;font-size:12.5px">Sobre madera: blanco con contorno · Sobre crema: marrón oscuro</span></p>
+<p class="titulo">Vista previa · nada escrito sobre la madera<br>
+<span style="font-weight:600;font-size:12.5px">Todos los datos van en recuadros claros, como las filas</span></p>
 <div class="ov show" style="position:static;display:block;pointer-events:auto">
-<div class="card" style="position:relative;left:auto;top:auto;transform:none;width:620px;margin:0 auto 26px">
-<h3>Establo</h3><div class="sub">Comprá animales con $Golden y alimentalos con sus cultivos preferidos.</div><div class="forge-list"><div class="secc">Tus animales</div><div class="forge-row "><div class="fic"><img src="assets/farm/animal_alpaca.png"></div>
-<div class="finfo"><div class="fnm">Alpaca <span class=tag>fibra</span></div><div class="fds">Felicidad 80/100 · produce en 40 s</div></div><div class="fbtns"><button class="green sm">Alimentar</button><button class="sm">Recoger</button></div></div><div class="forge-row eq"><div class="fic"><img src="assets/farm/animal_toro.png"></div>
-<div class="finfo"><div class="fnm">Toro <span class=tag>cuero</span></div><div class="fds">Felicidad 45/100 · listo para recoger</div></div><div class="fbtns"><button class="green sm">Recoger</button></div></div><div class="secc">Para comprar</div><div class="forge-row "><div class="fic"><img src="assets/farm/animal_conejo.png"></div>
-<div class="finfo"><div class="fnm">Conejo</div><div class="fds">40 $Golden · desbloquea la Armadura de Piel</div></div><div class="fbtns"><button class="gold sm">Comprar</button></div></div><div class="forge-row locked"><div class="fic"><img src="assets/farm/animal_jabali.png"></div>
-<div class="finfo"><div class="fnm">Jabalí</div><div class="fds">100 $Golden · desbloquea la Armadura de Colmillo</div></div><div class="fbtns"><button class="sm" disabled>Comprar</button></div></div></div></div></div><div class="ov show" style="position:static;display:block;pointer-events:auto">
 <div class="card" style="position:relative;left:auto;top:auto;transform:none;width:560px;margin:0 auto 26px">
-<h3>Pase de Batalla</h3><div class="sub">Nivel 12 / 30 · 480 estrellas</div><div class="forge-list"><div class="secc">Recompensas</div><div class="forge-row"><div class="finfo"><div class="fnm">Nivel 13</div><div class="fds free">FREE: 300 de plata</div><div class="fds vip">VIP: 20 $Golden + Skin de Espada</div></div><div class="fbtns"><button class="green sm">Reclamar</button></div></div></div></div></div><div class="ov show" style="position:static;display:block;pointer-events:auto">
-<div class="card" style="position:relative;left:auto;top:auto;transform:none;width:500px;margin:0 auto 26px">
-<h3>Ranking</h3><div class="sub">Los mejores granjeros de la semana.</div><div class="lblist"><div class="lbrow top1"><div class="rk">1</div><div class="nm">Golden</div><div class="val">nivel 34</div></div><div class="lbrow me"><div class="rk">2</div><div class="nm">Vos</div><div class="val">nivel 31</div></div><div class="lbrow"><div class="rk">3</div><div class="nm">Salchi</div><div class="val">nivel 28</div></div></div><div class="lbnote">La tabla se actualiza cada 5 minutos. Solo cuenta el nivel de granja.</div></div></div><div class="ov show" style="position:static;display:block;pointer-events:auto">
-<div class="card" style="position:relative;left:auto;top:auto;transform:none;width:480px;margin:0 auto 26px">
-<h3>Ajustes</h3><div class="cfgsec"><h4>Sonido</h4><p>Efectos del juego: talar, picar, monedas y avisos.</p><div class="row"><button class="green">Activado</button><button class="ghost">Silencio</button></div></div><div class="cfgsec"><h4>Granja</h4><p>Reacomodá los edificios y las parcelas a tu gusto. Restaurar deja todo como estaba.</p><div class="row"><button>Modo edición</button><button class="ghost">Restaurar</button></div></div></div></div>
+<h3>Granja</h3><div class="sub">Del nivel 1 al 10 subís solo cosechando. Del 11 al 50 hace falta la XP y cumplir las tareas del nivel.</div><div class="forge-list"><div class="secc">Granja nivel 5 / 50</div><div class="durbar" style="margin:6px 0"><i style="width:55%"></i></div><div class="info"><div><b>XP de cosecha:</b> 276 / 500</div><div>Nivel rápido: sube solo con la XP de cosecha.</div><div class="verde">Recompensa del nivel 6: 5ª parcela GRATIS</div></div><div class="info"><div>Parcelas: <b>12</b> · Cofres: <b>+0</b> de capacidad</div><div>Cosméticos ganados: <b>1</b></div></div></div></div></div><div class="ov show" style="position:static;display:block;pointer-events:auto">
+<div class="card" style="position:relative;left:auto;top:auto;transform:none;width:580px;margin:0 auto 26px">
+<h3>Altar de Runas</h3><div class="forge-list"><div class="secc">Mejorar arma (+1 a +15)</div><div class="info"><div>Cada intento gasta Runas de Poder + plata. Polvo de Suerte: +10 pts de éxito. De +6 a +10 fallar baja −1; de +11 a +15 fallar puede ROMPER el arma salvo que uses Runa de Protección.</div><div>Tenés: 0 Runa de Poder · 0 Polvo de Suerte · 0 Runa de Protección · 500 Esencia rúnica</div></div><div class="info">No tenés armas: forjá una en la Herrería.</div><div class="secc">Craftear materiales</div><div class="forge-row "><div class="fic"><img src="assets/farm/res_oro.png"></div>
+<div class="finfo"><div class="fnm">Runa de Poder</div><div class="fds">20 Esencia rúnica · 300 plata</div></div><div class="fbtns"><button class="green sm">Craftear</button></div></div></div></div></div><div class="ov show" style="position:static;display:block;pointer-events:auto">
+<div class="card" style="position:relative;left:auto;top:auto;transform:none;width:620px;margin:0 auto 26px">
+<h3>Curtiduría</h3><div class="forge-list"><div class="info">Equipada: <b>ninguna</b></div><div class="secc">Armadura de Fibra <span class="fds">(ligera · 0/5 piezas · 15 de defensa el set)</span></div><div class="info"><div>Material: <b>Fibra</b> (tenés 502) · del Alpaca</div><div class="oro">Bono del set completo: +15% vel. ataque + 12% evasión</div></div><div class="forge-row ">
+<div class="finfo"><div class="fnm">Yelmo <span class=tag>+3 def</span></div><div class="fds">Costo: 2 Fibra · 30 plata</div></div><div class="fbtns"><button class="green sm">Craftear</button></div></div><div class="forge-row ">
+<div class="finfo"><div class="fnm">Pecho <span class=tag>+5 def</span></div><div class="fds">Costo: 4 Fibra · 60 plata</div></div><div class="fbtns"><button class="green sm">Craftear</button></div></div></div></div></div><div class="ov show" style="position:static;display:block;pointer-events:auto">
+<div class="card" style="position:relative;left:auto;top:auto;transform:none;width:620px;margin:0 auto 26px">
+<h3>Establo</h3><div class="sub">Comprá animales con $Golden y alimentalos con sus cultivos preferidos.</div><div class="forge-list"><div class="forge-row eq"><div class="fic"><img src="assets/farm/animal_alpaca.png"></div>
+<div class="finfo"><div class="fnm">Alpaca <span class=tag>fibra</span></div><div class="fds"><b>¡Listo! Da 2 de Fibra</b> · felicidad 80/100</div><div class="fds">Alimentalo con Trigo (+15 de felicidad) · pierde 1.5/hora si lo descuidás</div></div><div class="fbtns"><button class="green sm">Recoger</button><button class="sm">Alimentar</button></div></div><div class="info">Materiales: Fibra <b>502</b> · Pelaje <b>502</b> · Cuero <b>502</b> · Colmillo <b>501</b></div></div></div></div>
 </body></html>
