@@ -20,7 +20,7 @@ class FarmScene extends Phaser.Scene {
     this.pathStuck = 0; this.lastDD = null; this.noProg = 0;
     this.unlockPend = null; this.leaving = false;
     this.dragObj = null; this.dragPlot = null; this.dragPond = false;
-    this.hornoSmokeEv = null; this.dummyBroken = false;   // si no se limpian, el humo del horno no vuelve al regresar del Bosque
+    this.dummyBroken = false;
     this.auraFx = null; this.auraTw = null;
     this.clickHit = null; this.clickPond = false; this.buffer = null;
     this.corral = null; this.animales = null; this.corralCerca = null;
@@ -495,23 +495,30 @@ class FarmScene extends Phaser.Scene {
       }
     }
     // el humo nace un poco POR ENCIMA de la boca de la chimenea, no encima del ladrillo
-    const smokeFrom = (obj, dx, tint, cond) => {
-      this.time.addEvent({ delay: 850, loop: true, callback: () => {
+    // HUMO DE LAS CHIMENEAS (9/8, reescrito). Antes cada edificio tenía su corrimiento a ojo
+    // y el arte nuevo movió las chimeneas de lugar: el humo salía del techo o del aire. Ahora
+    // sale de GF.CHIMENEA, que está medido sobre el PNG, y se inclina con el viento como los árboles.
+    const smokeFrom = (obj, tint, cond, cada) => {
+      const ch = (GF.CHIMENEA && GF.CHIMENEA[obj.type]) || { dx: 0, dy: 0.01 };
+      this.time.addEvent({ delay: cada || 850, loop: true, callback: () => {
         if (!cond()) return;
         const sp = obj.sprite; if (!sp || !sp.visible) return;
-        const px = obj.cx + obj.rw * dx + (Math.random() * 6 - 3);
-        const py = obj.by - sp.displayHeight - 4;
+        const alto = sp.displayHeight || (obj.rw || obj.w);
+        const px = obj.cx + (obj.rw || obj.w) * ch.dx + (Math.random() * 5 - 2.5);
+        const py = obj.by - alto + alto * ch.dy - 2;
         const s = this.add.image(px, py, "puff" + ((Math.random() * 3) | 0))
           .setTint(tint).setAlpha(0.55)
           .setScale(0.6 + Math.random() * 0.5).setAngle(Math.random() * 360)
           .setDepth(obj.by + 1);
-        this.tweens.add({ targets: s, y: py - 26 - Math.random() * 14, x: px + (Math.random() * 16 - 7),
+        // la misma onda que mece los árboles empuja la bocanada: el humo no sube recto
+        const viento = VIENTO_ON ? Math.sin(this.time.now / 1000 * Math.PI * 2 / Math.max(0.2, VIENTO_SEG)) * 16 : 0;
+        this.tweens.add({ targets: s, y: py - 26 - Math.random() * 14, x: px + (Math.random() * 12 - 6) + viento,
           scale: s.scale * 2.2, angle: s.angle + (Math.random() * 70 - 35), alpha: 0,
           duration: 2300 + Math.random() * 700, onComplete: () => s.destroy() });
       }});
     };
     const storeObj = this.objs.find(o => o.type === "store");
-    if (storeObj) smokeFrom(storeObj, 0.26, 0xd8d2c4, () => true);                       // herrería: siempre
+    if (storeObj) smokeFrom(storeObj, 0xd8d2c4, () => true);                             // herrería: siempre
     // fragua: media por defecto, encendida mientras se trabaja en la Herrería (detalles jueves)
     this.storeObj = storeObj;
     this.updateForge();
@@ -520,10 +527,13 @@ class FarmScene extends Phaser.Scene {
     this.crearNubes();        // nubes que cruzan y proyectan sombra
     this.crearMariposas();    // mariposas que se posan sobre los cultivos listos
     this.arrancarBrilloVetas();   // chispitas sobre las vetas caras que están listas (9/8)
-    this.startHornoSmoke();   // humo del Horno de Piedra si ya está construido (viernes 2)
     const cocinaObj = this.objs.find(o => o.type === "cocina");
-    if (cocinaObj) smokeFrom(cocinaObj, 0.20, 0xefe9db, () => true);                     // cocina: humo SIEMPRE (detalles jueves)
-    if (cocinaObj) smokeFrom(cocinaObj, 0.20, 0xffffff, () => (typeof cookList === "function" ? cookList().length > 0 : !!G.cooking));   // …y el doble de bocanadas mientras se cocina
+    if (cocinaObj) smokeFrom(cocinaObj, 0xefe9db, () => true);                           // cocina: humo SIEMPRE (detalles jueves)
+    if (cocinaObj) smokeFrom(cocinaObj, 0xffffff, () => (typeof cookList === "function" ? cookList().length > 0 : !!G.cooking));   // …y el doble de bocanadas mientras se cocina
+    // HORNO DE PIEDRA: mismo humo que los demás (antes tenía el suyo propio, hecho con
+    // elipses dibujadas, mucho más flojo y difícil de ver). Solo humea si está construido.
+    const hornoObj = this.objs.find(o => o.type === "horno");
+    if (hornoObj) smokeFrom(hornoObj, 0xcfcabb, () => !!(G.built && G.built.horno), 900);
 
     // cofres depósito colocados por el jugador (los que están en la bolsa NO se colocan solos)
     (G.chests = G.chests || []).forEach((c, idx) => { if (c.col != null) this.spawnChest(idx); });
@@ -708,7 +718,6 @@ class FarmScene extends Phaser.Scene {
         payCost(b.cost); if (b.golden) G.golden -= b.golden; G.built[o.type] = true;
         if (o.sprite) { o.sprite.setAlpha(1); o.sprite.clearTint(); }
         this.tintarNodo(o);
-        if (o.type === "horno") this.startHornoSmoke();   // arranca el humo (viernes 2)
         if (typeof tutoEvent === "function") tutoEvent("build_" + o.type);
         addXp("crafting", 20); log("¡Construiste " + b.label + "!", "gold"); toast("¡" + b.label + " construida!");
         refreshHud(); if (typeof saveFarm === "function") saveFarm(true);
@@ -1726,9 +1735,9 @@ class FarmScene extends Phaser.Scene {
     // La posición se saca del alto REAL del sprite, no de un número fijo: así el arte se puede
     // cambiar (herrería nueva del 9/8) sin que el resplandor quede flotando en cualquier lado.
     const alto = o.sprite.displayHeight || (o.rw || o.w);
-    const k = alto / 111;                                 // escala respecto de la textura actual
+    const k = alto / 99;                                  // escala respecto de la textura actual
     const fx = o.cx - 0.027 * (o.rw || o.w);              // la fragua está apenas a la izquierda del centro
-    const fy = o.by - 0.267 * alto;                       // boca del horno, medida sobre el sprite
+    const fy = o.by - 0.299 * alto;                       // boca de la fragua, medida sobre el sprite
     if (lit && !this.forgeGlow) {
       // núcleo intenso en el horno + halo suave que baña el frente del edificio (blend aditivo)
       const core = this.add.ellipse(fx, fy, 14 * k, 12 * k, 0xff7a2a, 0.5).setDepth(o.by + 1).setBlendMode(Phaser.BlendModes.ADD).setAlpha(0);
@@ -1743,28 +1752,6 @@ class FarmScene extends Phaser.Scene {
       this.forgeGlow.forEach(g => { this.tweens.killTweensOf(g); g.destroy(); });
       this.forgeGlow = null;
     }
-  }
-
-  // viernes (2): humo del Horno de Piedra por código (el sprite se dejó limpio a propósito)
-  startHornoSmoke() {
-    if (this.hornoSmokeEv) return;
-    const o = this.objs && this.objs.find(x => x.type === "horno");
-    if (!o || !o.sprite || !(G.built && G.built.horno)) return;
-    // la chimenea se ubica en proporción al sprite (arte nuevo del 9/8: chimenea centrada arriba)
-    const alto = () => o.sprite.displayHeight || 60;
-    const k = (o.rw || o.w) / 98;
-    const sx = () => o.cx + 0.004 * (o.rw || o.w) + (Math.random() - 0.5) * 4;   // boca de la chimenea, casi al centro
-    const sy = () => o.by - alto() + 0.02 * alto();
-    this.hornoSmokeEv = this.time.addEvent({ delay: 750, loop: true, callback: () => {
-      if (!(G.built && G.built.horno)) return;
-      const g = 150 + Math.floor(Math.random() * 40);
-      const puff = this.add.ellipse(sx(), sy(), 5 + Math.random() * 3, 4 + Math.random() * 2, (g << 16) | (g << 8) | g, 0.5)
-        .setDepth(o.by + 2).setAlpha(0);
-      // el humo se INCLINA con el viento: la misma onda que mece los árboles empuja la bocanada
-      const desvio = 6 + Math.random() * 8 + (VIENTO_ON ? Math.sin(this.time.now / 1000 * Math.PI * 2 / Math.max(0.2, VIENTO_SEG)) * 14 : 0);
-      this.tweens.add({ targets: puff, alpha: { from: 0.45, to: 0 }, y: puff.y - 26 - Math.random() * 10, x: puff.x + desvio,
-        scaleX: 2.2, scaleY: 2.2, duration: 2400 + Math.random() * 600, ease: "Sine.easeOut", onComplete: () => puff.destroy() });
-    } });
   }
 
   // crea (o ubica por primera vez) un cofre depósito en la granja

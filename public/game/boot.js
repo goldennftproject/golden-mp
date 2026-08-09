@@ -52,8 +52,8 @@ class BootScene extends Phaser.Scene {
     L.push(["pick_iron", P + "pick_iron.png"]);     // viernes (2): pico de hierro (derivado del de piedra)
     ["grass_a","grass_b","grass_c"].forEach(k => L.push([k, P + k + ".png?v=4"]));   // suelo nuevo sin damero · v2: tiles de 42px (la celda real)
     ["deco_flor_blanca","deco_flor_amarilla","deco_pasto","deco_piedras"].forEach(k => L.push([k, P + k + ".png?v=3"]));   // decoración del pasto (PixelLab)
-    L.push(["cocina", P + "cocina.png?v=2"]);   // edificio de Cocina (detalles 29/7)
-    L.push(["horno", P + "horno.png?v=3"]);     // Horno de Piedra (detalles viernes 1): fundición de barras
+    L.push(["cocina", P + "cocina.png?v=3"]);   // edificio de Cocina (detalles 29/7)
+    L.push(["horno", P + "horno.png?v=4"]);     // Horno de Piedra (detalles viernes 1): fundición de barras
     // arte cozy nuevo (v2 rompe el caché del arte viejo)
     L.push(["tree_stump", P + "tree_stump.png?v=3"]);
     L.push(["sprout", P + "sprout.png?v=5"]);
@@ -85,8 +85,8 @@ class BootScene extends Phaser.Scene {
     L.push(["plot_blocked", P + "plot_blocked.png?v=3"]);   // sin trabajar: ramas, piedras y yuyos
     L.push(["barn", P + "barn.png?v=4"]);
     L.push(["market", P + "market.png?v=4"]);
-    L.push(["store", P + "store.png?v=5"]);          // v4: fragua a medio fuego (estado por defecto)
-    L.push(["store_lit", P + "store_lit.png?v=2"]);      // fragua encendida (mientras crafteás/reparás)
+    L.push(["store", P + "store.png?v=6"]);          // v4: fragua a medio fuego (estado por defecto)
+    L.push(["store_lit", P + "store_lit.png?v=3"]);      // fragua encendida (mientras crafteás/reparás)
     ["fence_top","fence_bottom","fence_left","fence_right"].forEach(k => L.push([k, P + k + ".png?v=2"]));
     L.push(["fishing_rod", P + "fishing_rod.png?v=2"]);   // caña cozy nueva
     L.push(["fence_corner", P + "fence_corner.png?v=3"]);
@@ -114,8 +114,8 @@ class BootScene extends Phaser.Scene {
   preload() {
     // ATLAS: todos los sprites del mundo en 2 archivos (mucho más liviano para el server free).
     // Si el atlas no llega, ensureAll() baja los archivos sueltos como respaldo.
-    this.load.image("__atlas", "assets/atlas.png?v=24");
-    this.load.json("__atlasmap", "assets/atlas.json?v=24");
+    this.load.image("__atlas", "assets/atlas.png?v=25");
+    this.load.json("__atlasmap", "assets/atlas.json?v=25");
 
     // No hay barra propia: la pantalla de carga es UNA sola, la del HTML, y le pasamos el avance.
     // (Antes había dos barras seguidas y el juego "aparecía" antes de estar listo.)

@@ -162,6 +162,16 @@ GF.WORLD_OBJECTS.push(snap("establo", {type:"establo"}, 189, 378, T*3));      //
 GF.WORLD_OBJECTS.push(snap("curtiduria", {type:"curtiduria"}, 315, 378, T*2));   // al lado del Establo, como pide el doc
 GF.WORLD_OBJECTS.push(snap("ofrendas", {type:"ofrendas"}, 861, 168, T*2));      // Altar de Ofrendas, en el claro del noreste
 
+// CHIMENEAS (9/8). Dónde sale el humo en cada edificio, medido sobre el arte nuevo y no
+// a ojo: dx es el corrimiento respecto del CENTRO del sprite (en anchos de sprite) y dy es
+// la altura de la boca contada desde el techo (en altos de sprite). Si el arte cambia, se
+// vuelven a medir estos dos números y el humo sigue saliendo del caño.
+GF.CHIMENEA = {
+  cocina: { dx: -0.232, dy: 0.01 },   // caño de ladrillo, a la izquierda del techo
+  store:  { dx:  0.299, dy: 0.01 },   // herrería: caño de piedra, a la derecha
+  horno:  { dx:  0.005, dy: 0.01 },   // horno de piedra: caño centrado arriba de la cúpula
+};
+
 // ANIMALES SUELTOS (9/8): andan por toda la granja, no encerrados en un patio.
 // Esquivan edificios, vetas, la laguna y las parcelas (no pisan los cultivos), y eligen
 // su próximo destino cerca de donde están, así deambulan en vez de cruzar el mapa entero.

@@ -1169,7 +1169,7 @@ vistas isométricas) y sin las columnas de runas que se colaban del Altar.
   del arte nuevo, con los tonos de fuego levantados.
 - `tools/build-atlas.py` aprendió a incorporar claves nuevas: Establo, Curtiduría y Ofrendas
   nunca habían entrado al atlas porque no existía su PNG.
-- Atlas rearmado (365 sprites) y versiones subidas: atlas `?v=24` y cada edificio con su `?v`
+- Atlas rearmado (365 sprites) y versiones subidas: atlas `?v=25` y cada edificio con su `?v`
   nuevo, para que nadie se coma el arte viejo del caché.
 
 ### Verde de la granja, menos fosforescente
@@ -1229,6 +1229,23 @@ como los del Establo de cualquier juego cozy.
 - El clic sobre un animal se sigue evaluando último, después de vetas y parcelas: un animal
   parado delante de una veta no te roba el clic.
 - El corral de antes queda a un interruptor de distancia: `GF.CORRAL_ON = 1` en config.js.
+
+### Las chimeneas, en su lugar (9/8)
+El arte nuevo movió las chimeneas y el humo se quedó donde estaba: en la Cocina salía del
+techo, en la Herrería del aire al costado, y el Horno directamente no humeaba.
+
+- **Una sola función de humo** para los tres edificios. Antes la Cocina y la Herrería usaban
+  una, y el Horno tenía la suya propia hecha con elipses dibujadas, mucho más floja y difícil
+  de ver. Ahora los tres humean igual.
+- La posición sale de **`GF.CHIMENEA`**, medida sobre el PNG y no a ojo: `dx` es el corrimiento
+  respecto del centro del sprite y `dy` la altura de la boca desde el techo. Si mañana cambia
+  el arte, se vuelven a medir esos dos números y listo.
+- El humo ahora **se inclina con el viento**, igual que las copas de los árboles. Esa parte solo
+  la tenía el Horno; ahora es de los tres.
+- Se borró el humito **dibujado** de la Cocina y de la Herrería (ya se le había sacado al Horno):
+  con el humo del juego encima se veía doble. De paso los sprites quedaron más cortos.
+- La `store_lit` (fragua encendida) se rehizo desde el arte sin humo, y el resplandor de la
+  fragua se remidió sobre el sprite nuevo.
 
 ### Verificación
 - `node --check` en los 13 JS, `tools/check-ui.js` (20 ventanas OK) y `build-atlas.py --check` sin faltantes.
