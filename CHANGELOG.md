@@ -1169,7 +1169,7 @@ vistas isométricas) y sin las columnas de runas que se colaban del Altar.
   del arte nuevo, con los tonos de fuego levantados.
 - `tools/build-atlas.py` aprendió a incorporar claves nuevas: Establo, Curtiduría y Ofrendas
   nunca habían entrado al atlas porque no existía su PNG.
-- Atlas rearmado (365 sprites) y versiones subidas: atlas `?v=23` y cada edificio con su `?v`
+- Atlas rearmado (365 sprites) y versiones subidas: atlas `?v=24` y cada edificio con su `?v`
   nuevo, para que nadie se coma el arte viejo del caché.
 
 ### Verde de la granja, menos fosforescente
@@ -1183,6 +1183,14 @@ copa de los árboles tiraban a lima fluorescente y peleaban con la paleta cálid
 - También los colores que estaban escritos en el código: el borde de pasto de la isla
   (`#7fbf5a` → `#83ac65`), el fondo sin isla, el damero de respaldo y el suelo de la plaza.
 - Copia de los sprites originales en `assets/farm/_backup_verde_viejo/`.
+
+**Bug encontrado de paso: el suelo de la granja nunca mostró su textura.** El dibujo de la
+isla (mar, orilla, borde de pasto) se creaba con la misma profundidad que los tiles de pasto
+pero *después*, así que los tapaba enteros: la granja se veía como un verde plano y liso, y
+los tiles seamless de PixelLab no llegaban a verse desde que se agregó la isla. La isla pasó
+a `-1002` y el pasto volvió a aparecer. Con la textura a la vista, los tiles se rehicieron
+desde el original con el tono un poco más claro, y el borde de pasto de la isla se igualó
+al del suelo para que no se note el salto. También se calmaron las matas de la laguna.
 
 ### Verificación
 - `node --check` en los 13 JS, `tools/check-ui.js` (20 ventanas OK) y `build-atlas.py --check` sin faltantes.

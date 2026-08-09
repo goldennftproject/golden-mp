@@ -26,7 +26,7 @@ class FarmScene extends Phaser.Scene {
     this.corral = null; this.animales = null; this.corralCerca = null;
     this.nubes = null; this.maripos = null; this._part = 0; this._rafActiva = false; this._vaporAt = 0;   // efectos de ambiente
     this.queue = [];      // cola de acciones: clickeá varios objetivos y se hacen en orden
-    this.cameras.main.setBackgroundColor(GF.ISLA ? "#2e7fa8" : "#6c904f");   // isla: agua alrededor
+    this.cameras.main.setBackgroundColor(GF.ISLA ? "#2e7fa8" : "#6c8c53");   // isla: agua alrededor
 
     this.dragPlot = null; this.dragPond = false;
     // posiciones editadas de laguna y parcelas: primero base, después lo guardado
@@ -50,7 +50,7 @@ class FarmScene extends Phaser.Scene {
       }
     } else {   // respaldo: el damero de siempre
       for (let r = 0; r < GF.ROWS; r++) for (let c = 0; c < GF.COLS; c++) {
-        g.fillStyle((r + c) % 2 === 0 ? 0x556e41 : 0x4f673c, 1);
+        g.fillStyle((r + c) % 2 === 0 ? 0x6c8c53 : 0x64834c, 1);
         g.fillRect(c * T, r * T, T, T);
       }
     }
@@ -221,11 +221,14 @@ class FarmScene extends Phaser.Scene {
     // ——— ISLA SOBRE EL MAR ("detallitos (1)" punto 6): agua alrededor de la granja, orilla y olas ———
     if (GF.ISLA) {
       const MAR = (GF.ISLA_MARGEN || 260) + 900;   // el mar tapa todo lo que la cámara pueda mostrar
-      const g = this.add.graphics().setDepth(-1000);
+      // OJO con la profundidad: este dibujo va DEBAJO del pasto (-1000). Estaba en -1000
+      // igual que los tiles y, al crearse después, los tapaba: el suelo de la granja se
+      // veía como un verde plano y la textura del pasto nunca llegaba a verse (9/8).
+      const g = this.add.graphics().setDepth(-1002);
       g.fillStyle(0x2e7fa8, 1).fillRect(-MAR, -MAR, GF.WORLD_W + MAR * 2, GF.WORLD_H + MAR * 2);   // mar profundo
       g.fillStyle(0x3fa3cc, 1).fillRoundedRect(-70, -70, GF.WORLD_W + 140, GF.WORLD_H + 140, 90);  // agua clara del bajío
       g.fillStyle(0xe8d9a6, 1).fillRoundedRect(-34, -34, GF.WORLD_W + 68, GF.WORLD_H + 68, 60);    // arena de la orilla
-      g.fillStyle(0x83ac65, 1).fillRoundedRect(-8, -8, GF.WORLD_W + 16, GF.WORLD_H + 16, 34);      // borde de pasto (verde calmado 9/8)
+      g.fillStyle(0x75975a, 1).fillRoundedRect(-8, -8, GF.WORLD_W + 16, GF.WORLD_H + 16, 34);      // borde de pasto (al tono de los tiles, 9/8)
       // espuma: líneas claras que van y vienen sobre la orilla
       this.olas = this.add.graphics().setDepth(-999);
       this.olasT = 0;
