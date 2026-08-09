@@ -162,9 +162,12 @@ GF.WORLD_OBJECTS.push(snap("establo", {type:"establo"}, 189, 378, T*3));      //
 GF.WORLD_OBJECTS.push(snap("curtiduria", {type:"curtiduria"}, 315, 378, T*2));   // al lado del Establo, como pide el doc
 GF.WORLD_OBJECTS.push(snap("ofrendas", {type:"ofrendas"}, 861, 168, T*2));      // Altar de Ofrendas, en el claro del noreste
 
-// CORRAL (4/8): el patio donde caminan los animales del Establo. Hueco verificado libre:
-// no pisa parcelas (columnas 2-5, filas 3-5), ni la laguna (columnas 1-4, filas 10-12),
-// ni ningún edificio. Queda debajo del Establo y al lado de la laguna, que se lee bien.
+// ANIMALES SUELTOS (9/8): andan por toda la granja, no encerrados en un patio.
+// Esquivan edificios, vetas, la laguna y las parcelas (no pisan los cultivos), y eligen
+// su próximo destino cerca de donde están, así deambulan en vez de cruzar el mapa entero.
+GF.CORRAL_ON = 0;              // 1 = vuelve el corral cercado de antes
+GF.ANIMAL_RADIO = T * 2.6;     // qué tan lejos se van de un tirón
+// El patio de antes queda definido por si se quiere volver a encender (GF.CORRAL_ON = 1).
 GF.CORRAL = { col: 5, row: 11, cols: 4, rows: 3 };
 
 // AVISO DE SUPERPOSICIÓN: al agregar un edificio nuevo, la consola avisa si pisa parcelas,

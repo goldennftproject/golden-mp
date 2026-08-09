@@ -1284,7 +1284,7 @@ function comprarAnimal(k) {
   toast("¡" + d.label + " en el Establo!");
   if (window.celebrate) celebrate({ title: "¡" + d.label.toUpperCase() + "!", sub: "Establo", reward: "Desbloquea la armadura de " + d.mat });
   refreshHud(); if (typeof refreshEstablo === "function" && isOpen("ov-establo")) refreshEstablo();
-  if (window.farmScene && window.farmScene.syncAnimales) { try { window.farmScene.syncAnimales(); } catch (e) {} }   // aparece en el corral en el acto
+  if (window.farmScene && window.farmScene.syncAnimales) { try { window.farmScene.syncAnimales(); } catch (e) {} }   // aparece en la granja en el acto
   if (typeof saveFarm === "function") saveFarm(true);
 }
 function alimentarAnimal(k) {

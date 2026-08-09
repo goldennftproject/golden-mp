@@ -1272,8 +1272,15 @@ class FarmScene extends Phaser.Scene {
   // y este código no cambia, porque usa las mismas claves "animal_<nombre>".
   crearCorral() {
     this.animales = [];
-    const C = GF.CORRAL; if (!C) return;
     const T = GF.TILE;
+    // 9/8: los animales andan SUELTOS por la granja. No se dibuja patio ni cerca; la zona
+    // por donde pueden caminar es la granja entera y lo que esquivan se decide en puntoAnimal().
+    if (!GF.CORRAL_ON) {
+      this.corral = { x1: 26, y1: T * 1.2, x2: GF.WORLD_W - 26, y2: GF.WORLD_H - 26 };
+      this.corralCerca = null;
+      return;
+    }
+    const C = GF.CORRAL; if (!C) return;
     const x1 = C.col * T, y1 = C.row * T, w = C.cols * T, h = C.rows * T;
     this.corral = { x1, y1, x2: x1 + w, y2: y1 + h };
     // piso: un parche de tierra pisoteada, más claro que el pasto
@@ -1294,6 +1301,36 @@ class FarmScene extends Phaser.Scene {
     for (let c = 0; c <= C.cols; c++) { poste(x1 + c * T, y1); poste(x1 + c * T, y1 + h); }
     this.corralCerca = cerca;
   }
+  // ¿este punto sirve para que camine un animal? (9/8)
+  // Con el corral encendido alcanza con estar adentro. Sueltos, hay que esquivar edificios,
+  // vetas, la laguna, la cerca del borde y las parcelas: un animal parado sobre los cultivos
+  // los tapa y encima confunde, porque parece que hay algo para cosechar ahí.
+  animalPuedeEstar(x, y) {
+    const C = this.corral; if (!C) return false;
+    if (x < C.x1 || x > C.x2 || y < C.y1 || y > C.y2) return false;
+    if (!GF.CORRAL_ON) {
+      if (GF.blockedAt(x, y, 10)) return false;
+      const T = GF.TILE, col = Math.floor(x / T), row = Math.floor(y / T);
+      if (GF.PLOTS.some(p => p.col === col && p.row === row)) return false;
+    }
+    return true;
+  }
+  // un destino nuevo cerca de donde está el animal (o en cualquier lado si no se le pasa origen)
+  puntoAnimal(desdeX, desdeY) {
+    const C = this.corral; if (!C) return null;
+    const R = GF.ANIMAL_RADIO || GF.TILE * 2.6;
+    for (let i = 0; i < 30; i++) {
+      let x, y;
+      if (desdeX == null) { x = C.x1 + 20 + Math.random() * (C.x2 - C.x1 - 40); y = C.y1 + 22 + Math.random() * (C.y2 - C.y1 - 34); }
+      else { const ang = Math.random() * 6.283, dist = R * (0.35 + Math.random() * 0.65); x = desdeX + Math.cos(ang) * dist; y = desdeY + Math.sin(ang) * dist; }
+      if (!this.animalPuedeEstar(x, y)) continue;
+      // el camino es en línea recta: si el punto medio está tapado, el animal cruzaría un edificio
+      if (desdeX != null && !this.animalPuedeEstar((x + desdeX) / 2, (y + desdeY) / 2)) continue;
+      return { x, y };
+    }
+    return null;
+  }
+
   // crea o saca los animales según los que tenga el jugador (se llama al entrar y al comprar)
   syncAnimales() {
     if (!this.corral) return;
@@ -1304,8 +1341,16 @@ class FarmScene extends Phaser.Scene {
       if (tiene && !ya) {
         const key = "animal_" + k;
         if (!this.textures.exists(key)) return;
-        const x = this.corral.x1 + 20 + Math.random() * (this.corral.x2 - this.corral.x1 - 40);
-        const y = this.corral.y1 + 22 + Math.random() * (this.corral.y2 - this.corral.y1 - 34);
+        // sueltos: aparecen cerca del Establo, que es de donde salen
+        const est = this.objs && this.objs.find(o => o.type === "establo");
+        let pt = null;
+        if (!GF.CORRAL_ON && est) for (let i = 0; i < 40 && !pt; i++) {
+          const px = est.cx + (Math.random() - 0.5) * GF.TILE * 5, py = est.by + GF.TILE * (0.6 + Math.random() * 2.2);
+          if (this.animalPuedeEstar(px, py)) pt = { x: px, y: py };
+        }
+        if (!pt) pt = this.puntoAnimal();
+        if (!pt) pt = { x: (this.corral.x1 + this.corral.x2) / 2, y: (this.corral.y1 + this.corral.y2) / 2 };
+        const x = pt.x, y = pt.y;
         const spr = this.add.image(x, y, key).setOrigin(0.5, 1);
         spr.setScale((GF.TILE * 0.78) / spr.width);
         const marca = this.add.image(x, y - 30, resSprite(ANIMAL_DEF[k].mat) || key).setDepth(99991).setVisible(false);
@@ -1321,10 +1366,13 @@ class FarmScene extends Phaser.Scene {
     if (!this.animales || !this.animales.length || !this.corral) return;
     const C = this.corral;
     for (const a of this.animales) {
-      if (t >= a.esperaHasta) {   // elige un rincón nuevo del corral y camina hasta ahí
+      if (t >= a.esperaHasta) {   // elige un lugar nuevo cerca y camina hasta ahí
         a.esperaHasta = t + 2000 + Math.random() * 4000;
-        a.tx = C.x1 + 20 + Math.random() * (C.x2 - C.x1 - 40);
-        a.ty = C.y1 + 22 + Math.random() * (C.y2 - C.y1 - 34);
+        const pt = GF.CORRAL_ON
+          ? { x: C.x1 + 20 + Math.random() * (C.x2 - C.x1 - 40), y: C.y1 + 22 + Math.random() * (C.y2 - C.y1 - 34) }
+          : this.puntoAnimal(a.spr.x, a.spr.y);
+        if (pt) { a.tx = pt.x; a.ty = pt.y; }
+        else { a.esperaHasta = t + 700; }   // rincón sin salida: espera un toque y prueba de nuevo
       }
       const dx = a.tx - a.spr.x, dy = a.ty - a.spr.y, d = Math.hypot(dx, dy);
       const anda = d > 3;

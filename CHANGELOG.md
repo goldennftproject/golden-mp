@@ -1214,6 +1214,22 @@ golpe hace `clearTint()`, el color del mineral se vuelve a poner al terminar.
 Sigue pendiente el caso difícil: **piedra vs hierro** son la misma roca, una pelada y la otra
 con motas. Eso pide siluetas distintas y arte nuevo, no código.
 
+### Animales sueltos por la granja (9/8)
+Estaban encerrados en un patio cercado al lado de la laguna. Ahora andan por toda la granja,
+como los del Establo de cualquier juego cozy.
+
+- Se dejó de dibujar el parche de tierra y la cerca de madera; la zona de paseo es la granja entera.
+- **Esquivan**: edificios, vetas, árboles, la laguna, la cerca del borde y **las parcelas** — un
+  animal parado sobre los cultivos los tapa y encima confunde, porque parece que hay algo para
+  cosechar ahí.
+- Eligen su próximo destino **cerca de donde están** (2,6 celdas), no en cualquier punto del
+  mapa: así deambulan en vez de cruzar la granja de punta a punta. Si el punto medio del camino
+  está tapado, buscan otro, para no atravesar un edificio en línea recta.
+- Aparecen **junto al Establo**, que es de donde salen.
+- El clic sobre un animal se sigue evaluando último, después de vetas y parcelas: un animal
+  parado delante de una veta no te roba el clic.
+- El corral de antes queda a un interruptor de distancia: `GF.CORRAL_ON = 1` en config.js.
+
 ### Verificación
 - `node --check` en los 13 JS, `tools/check-ui.js` (20 ventanas OK) y `build-atlas.py --check` sin faltantes.
 - Composición de la granja renderizada aparte para revisar alturas: ningún edificio se pisa.
