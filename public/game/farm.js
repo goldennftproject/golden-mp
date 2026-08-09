@@ -225,11 +225,21 @@ class FarmScene extends Phaser.Scene {
       // OJO con la profundidad: este dibujo va DEBAJO del pasto (-1000). Estaba en -1000
       // igual que los tiles y, al crearse después, los tapaba: el suelo de la granja se
       // veía como un verde plano y la textura del pasto nunca llegaba a verse (9/8).
-      const g = this.add.graphics().setDepth(-1002);
+      const g = this.add.graphics().setDepth(-1003);
       g.fillStyle(0x2e7fa8, 1).fillRect(-MAR, -MAR, GF.WORLD_W + MAR * 2, GF.WORLD_H + MAR * 2);   // mar profundo
-      g.fillStyle(0x3fa3cc, 1).fillRoundedRect(-70, -70, GF.WORLD_W + 140, GF.WORLD_H + 140, 90);  // agua clara del bajío
-      g.fillStyle(0xe8d9a6, 1).fillRoundedRect(-34, -34, GF.WORLD_W + 68, GF.WORLD_H + 68, 60);    // arena de la orilla
-      g.fillStyle(0x75975a, 1).fillRoundedRect(-8, -8, GF.WORLD_W + 16, GF.WORLD_H + 16, 34);      // borde de pasto (al tono de los tiles, 9/8)
+      // COSTA (9/8): la orilla es una imagen con las transiciones terminadas (pasto → arena
+      // mojada → espuma → bajío → mar), con dithering y el contorno irregular. Antes eran tres
+      // rectángulos redondeados de color plano, uno arriba del otro, y el borde quedaba duro.
+      // La genera tools/build-isla.py; su origen es (-GF.ISLA_ORIGEN, -GF.ISLA_ORIGEN).
+      if (this.textures.exists("isla")) {
+        const o = GF.ISLA_ORIGEN || 112;
+        this.add.image(-o, -o, "isla").setOrigin(0, 0).setDepth(-1002);
+      } else {   // respaldo: si el PNG no llegó, los rectángulos de siempre
+        const r = this.add.graphics().setDepth(-1002);
+        r.fillStyle(0x3fa3cc, 1).fillRoundedRect(-70, -70, GF.WORLD_W + 140, GF.WORLD_H + 140, 90);
+        r.fillStyle(0xe8d9a6, 1).fillRoundedRect(-34, -34, GF.WORLD_W + 68, GF.WORLD_H + 68, 60);
+        r.fillStyle(0x75975a, 1).fillRoundedRect(-8, -8, GF.WORLD_W + 16, GF.WORLD_H + 16, 34);
+      }
       // espuma: líneas claras que van y vienen sobre la orilla
       this.olas = this.add.graphics().setDepth(-999);
       this.olasT = 0;
@@ -583,9 +593,9 @@ class FarmScene extends Phaser.Scene {
     if (!this.olas) return;
     this.olasT = (this.olasT || 0) + dt;
     const t = this.olasT, W2 = GF.WORLD_W, H2 = GF.WORLD_H, g = this.olas;
-    g.clear(); g.lineStyle(3, 0xdff3ff, 0.55);
-    for (let i = 0; i < 3; i++) {
-      const o = 16 + i * 13 + Math.sin(t * 0.9 + i) * 5;
+    g.clear(); g.lineStyle(2, 0xdff3ff, 0.30);
+    for (let i = 0; i < 2; i++) {
+      const o = 62 + i * 16 + Math.sin(t * 0.9 + i) * 5;
       g.strokeRoundedRect(-20 - o, -20 - o, W2 + 40 + o * 2, H2 + 40 + o * 2, 50 + o);
     }
   }

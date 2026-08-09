@@ -74,6 +74,8 @@ class BootScene extends Phaser.Scene {
     L.push(["tree_stump_leaves", P + "tree_stump_leaves.png?v=2"]);
     L.push(["tree_half", P + "tree_half.png?v=2"]);   // mitad del enfriamiento: árbol pelado con pocas ramas (PixelLab 31/7)
     L.push(["pond", P + "pond.png?v=3"]);
+    // COSTA de la isla (9/8): imagen grande y aparte, NO va al atlas (mide 1190x854)
+    L.push(["isla", P + "isla.png?v=1"]);
     L.push(["portal", P + "portal.png"]);   // portal al Bosque (frame quieto de respaldo)
     for (let i = 0; i < 8; i++) L.push(["portal_" + i, P + "portal_" + i + ".png?v=5"]);   // v5: gira TODA la boca (rotación elíptica), negro completo
     // v3: nodos plantados en la tierra + estados dañados (intermedio del cooldown)

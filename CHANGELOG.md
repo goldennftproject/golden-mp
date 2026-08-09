@@ -1247,6 +1247,27 @@ techo, en la Herrería del aire al costado, y el Horno directamente no humeaba.
 - La `store_lit` (fragua encendida) se rehizo desde el arte sin humo, y el resplandor de la
   fragua se remidió sobre el sprite nuevo.
 
+### La costa terminada (9/8)
+La orilla eran **tres rectángulos redondeados de color plano**, uno encima del otro: pasto,
+arena y agua, los tres con el borde duro y la misma curva perfecta. Se veía como un vector,
+no como pixel art.
+
+Ahora es una imagen, `assets/farm/isla.png`, que arma **`tools/build-isla.py`**:
+
+- De adentro hacia afuera: borde de pasto oscuro con **matitas colgando sobre la arena**,
+  arena seca con piedritas y conchillas, arena mojada, la **línea de espuma**, bajío claro,
+  agua media y ya el mar (que lo sigue pintando el juego por debajo).
+- Cada límite va con **dithering** de 2 px en vez de un corte limpio: es lo que lo hace leer
+  como pixel art.
+- El contorno **no es un óvalo perfecto**: se le suma ruido, así la orilla tiene entradas y
+  salientes en vez de una curva de compás.
+- El anillo de pasto de afuera de la cerca usa **el mismo tile** que el suelo del juego. Con un
+  verde plano se veía la costura: un rectángulo texturado adentro y liso alrededor.
+- Las olas animadas se corrieron mar adentro y se bajaron de opacidad: la espuma de la orilla
+  ahora la trae la imagen, y las dos cosas juntas se pisaban.
+- Pesa 83 KB y **no va al atlas** (mide 1190×854, no entra). Si el PNG no llega, el juego
+  vuelve solo a los rectángulos de antes.
+
 ### Verificación
 - `node --check` en los 13 JS, `tools/check-ui.js` (20 ventanas OK) y `build-atlas.py --check` sin faltantes.
 - Composición de la granja renderizada aparte para revisar alturas: ningún edificio se pisa.

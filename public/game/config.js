@@ -12,6 +12,10 @@ GF.NO_WALK = true;    // el granjero no aparece en la granja: se interactúa con
 GF.CAM_PAN = true;    // cámara libre: se arrastra y la rueda desplaza (en vez de seguir al granjero)
 GF.ISLA = true;       // fondo de mar alrededor de la granja
 GF.ISLA_MARGEN = 260;  // cuánto mar se puede recorrer más allá de la cerca
+// La costa (arena, espuma y bajío) es una imagen: assets/farm/isla.png, hecha con
+// tools/build-isla.py. Este número es cuánto sobra la imagen alrededor de la granja,
+// y tiene que coincidir con el MARGEN de ese script.
+GF.ISLA_ORIGEN = 112;
 var ZONA_NEGRA_VEL = 0.75;   // "detallitos (1)" punto 7: el granjero camina 25% más lento en la Zona Negra
 
 // RESPUESTA AL CLIC (4/8). Cuánto dura cada acción en la granja. En el modo de un clic el granjero
