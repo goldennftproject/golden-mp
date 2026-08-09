@@ -1416,14 +1416,21 @@ class FarmScene extends Phaser.Scene {
   arrancarBrilloVetas() {
     if (!NODO_BRILLO || this.brilloEv) return;
     const caras = { diamante: 0xbfeeff, netherita: 0xff8a3c, oro: 0xffe08f };
-    this.brilloEv = this.time.addEvent({ delay: Math.max(400, NODO_BRILLO_CADA || 2200), loop: true, callback: () => {
+    // Cada veta lleva su PROPIO reloj: si no, todas destellaban en el mismo instante y se
+    // notaba el pulso. El evento es solo un despertador que corre seguido y pregunta.
+    this.brilloEv = this.time.addEvent({ delay: 220, loop: true, callback: () => {
       if (!NODO_BRILLO) return;   // se puede apagar en caliente desde el panel de balanceo
       const t = nowMs();
+      const cada = Math.max(400, NODO_BRILLO_CADA || 2200);
       this.objs.forEach(o => {
         if (o.type !== "ore" || o.locked) return;
         const col = caras[o.ore]; if (!col) return;
         if (o.readyAt && t < o.readyAt) return;                 // en enfriamiento no brilla
         if (!o.sprite || !o.sprite.visible) return;
+        // primera vez: se reparte al azar dentro del ciclo para que no arranquen todas juntas
+        if (!o.brilloEn) { o.brilloEn = t + Math.random() * cada; return; }
+        if (t < o.brilloEn) return;
+        o.brilloEn = t + cada * (0.55 + Math.random() * 0.9);    // el próximo, entre el 55% y el 145%
         const w = o.rw || o.w, alto = o.sprite.displayHeight || w;
         const x = o.cx + (Math.random() - 0.5) * w * 0.6;
         const y = o.by - alto * (0.35 + Math.random() * 0.4);

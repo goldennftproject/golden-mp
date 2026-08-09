@@ -1203,7 +1203,10 @@ desde el panel de balanceo (grupo "Minerales — que se distingan"):
   azulada, oro arenosa, diamante gris celeste. La masa es lo que se lee de lejos; el detalle no.
   Piedra común y netherita no se tocan, ya se distinguían solas.
 - **Chispita en las vetas caras** (diamante, netherita, oro) cuando están **listas**. Durante
-  el enfriamiento no brillan, así que además avisa que se pueden picar.
+  el enfriamiento no brillan, así que además avisa que se pueden picar. Cada veta lleva su
+  propio reloj, con el primer destello repartido al azar dentro del ciclo y el siguiente entre
+  el 55% y el 145% del intervalo: la primera versión usaba un único temporizador para todas y
+  destellaban sincronizadas, que era justo lo que no se quería.
 
 El tinte convive con el gris de "bloqueado"; ese siempre gana. Como el destello blanco del
 golpe hace `clearTint()`, el color del mineral se vuelve a poner al terminar.
