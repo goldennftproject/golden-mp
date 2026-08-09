@@ -1280,23 +1280,43 @@ que proyectan sobre el suelo de 0,10 a 0,06. Las dos quedaron en el panel de bal
 ---
 
 ## Pendientes conocidos
+*(actualizado el 9/8)*
 
-### Lo único que falta es ARTE (nada de código)
-- **11 criaturas del bestiario**: generadas en PixelLab, faltan bajar los frames e integrarlas (a la araña todavía le falta la animación de ataque).
-- **4 animales del Establo** (alpaca, conejo, toro, jabalí) y sus materiales (fibra, pelaje, cuero, colmillo).
+### Antes de publicar
+- Deploy del 9/8 hecho: ya está todo en vivo.
+- **`GF.TESTEO = 1` → 0** en config.js. Es lo único que queda antes de abrirlo al público: con
+  esto en 1 los tiempos son de segundos y el juego regala materiales.
+
+### Arte pendiente
+- **11 criaturas del bestiario**: generadas en PixelLab, faltan bajar los frames e integrarlas
+  (a la araña todavía le falta la animación de ataque).
+- **4 animales del Establo** definitivos (hoy son los provisorios dibujados por código) y sus
+  materiales: fibra, pelaje, cuero, colmillo.
 - **20 piezas de armadura** de la Curtiduría.
 - **Cosméticos**: skins, decoraciones y la mascota.
-- Mientras tanto todo eso ya funciona en el juego con el ícono de respaldo: no hay nada bloqueado.
+- Íconos oficiales de la Espada de Madera y el Pico de Hierro (hoy son derivados).
+- Todo eso ya funciona en el juego con el ícono de respaldo: no hay nada bloqueado.
 
 ### En espera del diseñador
 - Usos de tablones y barras, cerca premium, tabla de stats definitiva del bestiario.
+- **Aprobación de los 12 edificios nuevos.** Si los aprueba: el **portal** hay que volver a
+  animarlo (el generado es fijo y el del juego gira con 8 cuadros).
+
+### Visual que quedó abierto
+- La **Curtiduría** se ve chica al lado del Establo: su arte es ancho y el juego escala por ancho.
+  Se arregla subiéndola de 2 a 3 celdas.
+- El **Mercado** quedó chico comparado con el resto.
+- **Árboles, piedras y parcelas** siguen siendo el set viejo: solo se les calmó el color, pero no
+  comparten el estilo de los edificios nuevos.
+- **Piedra vs hierro** siguen pareciéndose: son la misma roca, una pelada y la otra con motas.
+  El tinte ayuda pero eso pide siluetas distintas, o sea arte nuevo.
 
 ### Opcionales ofrecidos
-- Íconos oficiales PixelLab para la Espada de Madera y el Pico de Hierro (hoy derivados).
-- Replicar el suelo nuevo en la plaza y en la Zona Negra.
+- Llevar el suelo nuevo y la costa a la plaza y a la Zona Negra.
 - Kick por AFK en la plaza.
-- Pulido tipo Sunflower Land: cursor de mano, resaltado al pasar el cursor, vista inicial centrada en las parcelas.
+- Pulido tipo Sunflower Land: cursor de mano, resaltado al pasar el cursor.
 - Simulación completa de balance económico de punta a punta.
 
 ### Pilares futuros
-- Login por email multi-dispositivo, PvP/endgame de netherita, referidos, token $Golden, audio, granja distinta por nivel (quinta.docx).
+- Login por email multi-dispositivo, PvP/endgame de netherita, referidos, token $Golden, audio,
+  granja distinta por nivel (quinta.docx).
