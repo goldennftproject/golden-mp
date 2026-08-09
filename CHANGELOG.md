@@ -1147,11 +1147,41 @@ niveles, sets de armadura, cofres, prestigio, incursiones) — todas en verde.
 
 ---
 
+## Día 14 — Domingo 09/08 · Todos los edificios con el estilo del Altar
+
+### Arte nuevo (PixelLab, grupo del Altar de Runas)
+El diseñador pidió que todos los edificios compartieran el estilo del Altar. Se generaron
+como estados del mismo objeto, así heredan paleta y trazo, todos **de frente** (nada de
+vistas isométricas) y sin las columnas de runas que se colaban del Altar.
+
+- **Reemplazados en el juego**: Granero, Herrería, Mercado, Cocina, Horno de Piedra y Altar de Runas.
+- **Estrenan arte** (antes se dibujaban con el sprite de respaldo): **Establo**, **Curtiduría** y **Altar de Ofrendas**.
+- **Sin tocar**: portal, dummy y cofre — el diseñador los quiere como están.
+- La Cocina se rehízo dos veces: la primera salió de costado y se descartó.
+
+### Ajustes de código que exigió el arte nuevo
+- El resplandor de la fragua y el humo del Horno estaban clavados a medidas fijas de las
+  texturas viejas (104 px y 90 px). Ahora se calculan **en proporción al sprite**, así el
+  arte se puede cambiar sin que el fuego quede flotando al lado del edificio.
+- Al Horno se le borró el humito **dibujado**: el humo del juego lo pone el código y se
+  inclina con el viento; con los dos se veía doble.
+- `store_off.png` quedó sin uso y se eliminó. `store_lit` (fragua encendida) ahora se deriva
+  del arte nuevo, con los tonos de fuego levantados.
+- `tools/build-atlas.py` aprendió a incorporar claves nuevas: Establo, Curtiduría y Ofrendas
+  nunca habían entrado al atlas porque no existía su PNG.
+- Atlas rearmado (365 sprites) y versiones subidas: atlas `?v=22` y cada edificio con su `?v`
+  nuevo, para que nadie se coma el arte viejo del caché.
+
+### Verificación
+- `node --check` en los 13 JS, `tools/check-ui.js` (20 ventanas OK) y `build-atlas.py --check` sin faltantes.
+- Composición de la granja renderizada aparte para revisar alturas: ningún edificio se pisa.
+
+---
+
 ## Pendientes conocidos
 
 ### Lo único que falta es ARTE (nada de código)
 - **11 criaturas del bestiario**: generadas en PixelLab, faltan bajar los frames e integrarlas (a la araña todavía le falta la animación de ataque).
-- **3 edificios nuevos**: Establo, Curtiduría y Altar de Ofrendas.
 - **4 animales del Establo** (alpaca, conejo, toro, jabalí) y sus materiales (fibra, pelaje, cuero, colmillo).
 - **20 piezas de armadura** de la Curtiduría.
 - **Cosméticos**: skins, decoraciones y la mascota.

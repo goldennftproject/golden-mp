@@ -33,6 +33,9 @@ BOOT = os.path.join(RAIZ, "public", "game", "boot.js")
 # usa para el "premio" que sale volando cuando talás, picás o cosechás.
 EXTRA = ["res_", "crop_", "fish_", "coin_", "animal_"]
 
+# Edificios que antes no tenían arte y por eso nunca entraron al atlas (9/8).
+SUELTOS = ["establo", "curtiduria", "ofrendas"]
+
 
 def claves_pedidas():
     """Las claves que YA tenía el atlas anterior. Es la lista buena y probada: se conserva
@@ -52,7 +55,7 @@ def archivos():
         if not nombre.endswith(".png"):
             continue
         clave = nombre[:-4]
-        if clave in pedidos or any(clave.startswith(p) for p in EXTRA):
+        if clave in pedidos or clave in SUELTOS or any(clave.startswith(p) for p in EXTRA):
             todos[clave] = os.path.join(FARM, nombre)
     faltan = [k for k in pedidos if k not in todos]
     return todos, faltan

@@ -52,8 +52,8 @@ class BootScene extends Phaser.Scene {
     L.push(["pick_iron", P + "pick_iron.png"]);     // viernes (2): pico de hierro (derivado del de piedra)
     ["grass_a","grass_b","grass_c"].forEach(k => L.push([k, P + k + ".png?v=2"]));   // suelo nuevo sin damero · v2: tiles de 42px (la celda real)
     ["deco_flor_blanca","deco_flor_amarilla","deco_pasto","deco_piedras"].forEach(k => L.push([k, P + k + ".png"]));   // decoración del pasto (PixelLab)
-    L.push(["cocina", P + "cocina.png"]);   // edificio de Cocina (detalles 29/7)
-    L.push(["horno", P + "horno.png?v=2"]);     // Horno de Piedra (detalles viernes 1): fundición de barras
+    L.push(["cocina", P + "cocina.png?v=2"]);   // edificio de Cocina (detalles 29/7)
+    L.push(["horno", P + "horno.png?v=3"]);     // Horno de Piedra (detalles viernes 1): fundición de barras
     // arte cozy nuevo (v2 rompe el caché del arte viejo)
     L.push(["tree_stump", P + "tree_stump.png?v=2"]);
     L.push(["sprout", P + "sprout.png?v=4"]);
@@ -83,17 +83,17 @@ class BootScene extends Phaser.Scene {
     // versionados: el arte cambió y el caché de 1 día serviría el viejo
     L.push(["plot", P + "plot.png?v=4"]);   // tierra suelta que combina con los montículos
     L.push(["plot_blocked", P + "plot_blocked.png?v=3"]);   // sin trabajar: ramas, piedras y yuyos
-    L.push(["barn", P + "barn.png?v=3"]);
-    L.push(["market", P + "market.png?v=3"]);
-    L.push(["store", P + "store.png?v=4"]);          // v4: fragua a medio fuego (estado por defecto)
-    L.push(["store_lit", P + "store_lit.png"]);      // fragua encendida (mientras crafteás/reparás)
+    L.push(["barn", P + "barn.png?v=4"]);
+    L.push(["market", P + "market.png?v=4"]);
+    L.push(["store", P + "store.png?v=5"]);          // v4: fragua a medio fuego (estado por defecto)
+    L.push(["store_lit", P + "store_lit.png?v=2"]);      // fragua encendida (mientras crafteás/reparás)
     ["fence_top","fence_bottom","fence_left","fence_right"].forEach(k => L.push([k, P + k + ".png?v=2"]));
     L.push(["fishing_rod", P + "fishing_rod.png?v=2"]);   // caña cozy nueva
     L.push(["fence_corner", P + "fence_corner.png?v=3"]);
-    L.push(["altar", P + "altar.png?v=1"]);   // Altar de Runas (doc maestro 2/8)
-    L.push(["establo", P + "establo.png?v=1"]);         // "2das mejoras": animales
-    L.push(["curtiduria", P + "curtiduria.png?v=1"]);   // "2das mejoras": armaduras
-    L.push(["ofrendas", P + "ofrendas.png?v=1"]);       // "2das mejoras": Altar de Ofrendas
+    L.push(["altar", P + "altar.png?v=2"]);   // Altar de Runas (doc maestro 2/8)
+    L.push(["establo", P + "establo.png?v=2"]);         // "2das mejoras": animales
+    L.push(["curtiduria", P + "curtiduria.png?v=2"]);   // "2das mejoras": armaduras
+    L.push(["ofrendas", P + "ofrendas.png?v=2"]);       // "2das mejoras": Altar de Ofrendas
     // armas por tipo y rareza (se distinguen a simple vista): 4 tipos × 5 rarezas
     ["espada","hacha","mazo","arco"].forEach(t => ["madera","piedra","bronce","oro","diamante"].forEach(r => L.push(["arm_" + t + "_" + r, P + "arm_" + t + "_" + r + ".png?v=1"])));
 
@@ -114,8 +114,8 @@ class BootScene extends Phaser.Scene {
   preload() {
     // ATLAS: todos los sprites del mundo en 2 archivos (mucho más liviano para el server free).
     // Si el atlas no llega, ensureAll() baja los archivos sueltos como respaldo.
-    this.load.image("__atlas", "assets/atlas.png?v=21");
-    this.load.json("__atlasmap", "assets/atlas.json?v=21");
+    this.load.image("__atlas", "assets/atlas.png?v=22");
+    this.load.json("__atlasmap", "assets/atlas.json?v=22");
 
     // No hay barra propia: la pantalla de carga es UNA sola, la del HTML, y le pasamos el avance.
     // (Antes había dos barras seguidas y el juego "aparecía" antes de estar listo.)

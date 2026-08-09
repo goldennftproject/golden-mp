@@ -1619,9 +1619,13 @@ class FarmScene extends Phaser.Scene {
     const lit = (G.forgeLitUntil || 0) > nowMs();
     const key = lit && this.textures.exists("store_lit") ? "store_lit" : "store";
     if (o.sprite.texture.key !== key && this.textures.exists(key)) this.setObjTex(o, key, o.rw || o.w);
-    // fuego "vivo" por código: resplandor rojizo que aparece y palpita sobre la boca del horno
-    const k = (o.rw || o.w) / 104;                       // escala del edificio (textura de 104px)
-    const fx = o.cx - 13 * k, fy = o.by - 25 * k;        // boca del horno dentro de la herrería (ajustado un pelín a la derecha)
+    // fuego "vivo" por código: resplandor rojizo que aparece y palpita sobre la boca del horno.
+    // La posición se saca del alto REAL del sprite, no de un número fijo: así el arte se puede
+    // cambiar (herrería nueva del 9/8) sin que el resplandor quede flotando en cualquier lado.
+    const alto = o.sprite.displayHeight || (o.rw || o.w);
+    const k = alto / 111;                                 // escala respecto de la textura actual
+    const fx = o.cx - 0.027 * (o.rw || o.w);              // la fragua está apenas a la izquierda del centro
+    const fy = o.by - 0.267 * alto;                       // boca del horno, medida sobre el sprite
     if (lit && !this.forgeGlow) {
       // núcleo intenso en el horno + halo suave que baña el frente del edificio (blend aditivo)
       const core = this.add.ellipse(fx, fy, 14 * k, 12 * k, 0xff7a2a, 0.5).setDepth(o.by + 1).setBlendMode(Phaser.BlendModes.ADD).setAlpha(0);
@@ -1643,9 +1647,11 @@ class FarmScene extends Phaser.Scene {
     if (this.hornoSmokeEv) return;
     const o = this.objs && this.objs.find(x => x.type === "horno");
     if (!o || !o.sprite || !(G.built && G.built.horno)) return;
-    const k = (o.rw || o.w) / 90;                                  // escala (textura de 90px)
-    const sx = () => o.cx - 26 * k + (Math.random() - 0.5) * 4;    // boca de la chimenea (lado izquierdo del techo)
-    const sy = () => o.by - (o.sprite.displayHeight || 60) + 6 * k;
+    // la chimenea se ubica en proporción al sprite (arte nuevo del 9/8: chimenea centrada arriba)
+    const alto = () => o.sprite.displayHeight || 60;
+    const k = (o.rw || o.w) / 98;
+    const sx = () => o.cx + 0.004 * (o.rw || o.w) + (Math.random() - 0.5) * 4;   // boca de la chimenea, casi al centro
+    const sy = () => o.by - alto() + 0.02 * alto();
     this.hornoSmokeEv = this.time.addEvent({ delay: 750, loop: true, callback: () => {
       if (!(G.built && G.built.horno)) return;
       const g = 150 + Math.floor(Math.random() * 40);
