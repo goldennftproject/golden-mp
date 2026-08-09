@@ -1268,6 +1268,11 @@ Ahora es una imagen, `assets/farm/isla.png`, que arma **`tools/build-isla.py`**:
 - Pesa 83 KB y **no va al atlas** (mide 1190×854, no entra). Si el PNG no llega, el juego
   vuelve solo a los rectángulos de antes.
 
+### Nubes menos opacas (9/8)
+Estaban al 0,55 de opacidad y tapaban medio edificio al pasar. Bajaron a **0,22**, y la sombra
+que proyectan sobre el suelo de 0,10 a 0,06. Las dos quedaron en el panel de balanceo
+(`fx.nubesAlfa` y `fx.nubesSombra`) para moverlas en caliente.
+
 ### Verificación
 - `node --check` en los 13 JS, `tools/check-ui.js` (20 ventanas OK) y `build-atlas.py --check` sin faltantes.
 - Composición de la granja renderizada aparte para revisar alturas: ningún edificio se pisa.

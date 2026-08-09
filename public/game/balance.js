@@ -129,6 +129,8 @@ var BAL = (function () {
     add("Ambiente — efectos", "fx.impactoGrados", "Cuánto se sacude el nodo al recibir el golpe", "grados", () => FX_IMPACTO_GRADOS, v => { FX_IMPACTO_GRADOS = v; }, 0.5);
     add("Ambiente — efectos", "fx.hojas", "Hojas volando cuando pasa una ráfaga", "1 o 0", () => FX_HOJAS, v => { FX_HOJAS = v ? 1 : 0; });
     add("Ambiente — efectos", "fx.nubes", "Cuántas nubes cruzan la granja", "nubes · entero", () => FX_NUBES, v => { FX_NUBES = v; });
+    add("Ambiente — efectos", "fx.nubesAlfa", "Qué tan opacas son las nubes (estaban en 0.55 y tapaban)", "0 a 1", () => FX_NUBES_ALFA, v => { FX_NUBES_ALFA = v; }, 0.02);
+    add("Ambiente — efectos", "fx.nubesSombra", "Opacidad de la sombra que proyectan", "0 a 1", () => FX_NUBES_SOMBRA, v => { FX_NUBES_SOMBRA = v; }, 0.01);
     add("Ambiente — efectos", "fx.mariposas", "Cuántas mariposas revolotean sobre los cultivos", "mariposas · entero", () => FX_MARIPOSAS, v => { FX_MARIPOSAS = v; });
     add("Ambiente — efectos", "fx.vapor", "Vapor de la Cocina y chispas del Altar mejorado", "1 o 0", () => FX_VAPOR, v => { FX_VAPOR = v ? 1 : 0; });
     add("Ambiente — efectos", "fx.fadeMs", "Fundido a negro al cambiar de escena (0 = corte seco)", "milisegundos", () => FX_FADE_MS, v => { FX_FADE_MS = v; }, 20);

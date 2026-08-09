@@ -1430,10 +1430,10 @@ class FarmScene extends Phaser.Scene {
     const W = GF.WORLD_W, H = GF.WORLD_H, m = GF.ISLA ? (GF.ISLA_MARGEN || 260) : 0;
     for (let i = 0; i < (FX_NUBES || 0); i++) {
       const esc = 0.7 + Math.random() * 0.9;
-      const g = this.add.graphics().setDepth(99000).setAlpha(0.55);
+      const g = this.add.graphics().setDepth(99000).setAlpha(typeof FX_NUBES_ALFA === "number" ? FX_NUBES_ALFA : 0.22);
       g.fillStyle(0xffffff, 1);
       [[0, 0, 46, 20], [-30, 5, 30, 14], [32, 6, 26, 12], [6, -9, 28, 14]].forEach(([x, y, rx, ry]) => g.fillEllipse(x, y, rx * 2, ry * 2));
-      const sh = this.add.graphics().setDepth(6).setAlpha(0.10);
+      const sh = this.add.graphics().setDepth(6).setAlpha(typeof FX_NUBES_SOMBRA === "number" ? FX_NUBES_SOMBRA : 0.06);
       sh.fillStyle(0x241505, 1);
       [[0, 0, 46, 20], [-30, 5, 30, 14], [32, 6, 26, 12], [6, -9, 28, 14]].forEach(([x, y, rx, ry]) => sh.fillEllipse(x, y, rx * 2, ry * 2));
       g.setScale(esc); sh.setScale(esc * 1.06);

@@ -99,6 +99,8 @@ var FX_IMPACTO = 1;        // el nodo se sacude y suelta astillas/chispas en cad
 var FX_IMPACTO_GRADOS = 5; // cuánto se sacude el nodo al recibir el golpe
 var FX_HOJAS = 1;          // hojas volando cuando pasa una ráfaga de viento
 var FX_NUBES = 3;          // cuántas nubes cruzan la granja (0 = ninguna)
+var FX_NUBES_ALFA = 0.22;  // qué tan opacas (estaban en 0.55 y tapaban medio edificio)
+var FX_NUBES_SOMBRA = 0.06;// la sombra que proyectan sobre el suelo
 var FX_MARIPOSAS = 3;      // cuántas mariposas revolotean sobre los cultivos listos (0 = ninguna)
 var FX_VAPOR = 1;          // vapor de la Cocina mientras hay ollas y chispas del Altar mejorado
 var FX_FADE_MS = 260;      // fundido a negro al cambiar de escena (0 = corte seco)
