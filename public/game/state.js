@@ -450,7 +450,13 @@ function farmPuedeSubir() {   // ¿se puede pasar al nivel siguiente ahora mismo
   if ((G.skills.farming || 0) < (FARM_XP_LVLS[nv] || Infinity)) return false;
   return tareasCumplidas(nv);   // del 11 en adelante hay tareas; del 1 al 10 la lista está vacía
 }
+var _recalcFarm = false;
 function recalcFarmLevel() {
+  if (_recalcFarm) return;   // candado: subir de nivel refresca el HUD, y el HUD vuelve a llamar acá
+  _recalcFarm = true;
+  try { recalcFarmLevelInterno(); } finally { _recalcFarm = false; }
+}
+function recalcFarmLevelInterno() {
   let subio = false;
   while (farmPuedeSubir()) {
     G.level++; subio = true;
@@ -1771,27 +1777,36 @@ function cook(id) {
   if (typeof saveFarm === "function") saveFarm();
 }
 // se llama cada segundo desde el HUD: cada olla que termina deja su plato en la bolsa
+var _cocinando = false;   // candado anti-reentrada (ver abajo)
 function checkCooking() {
   const lista = cookList();
   if (!lista.length) return;
-  const t = nowMs(); let listos = 0;
-  for (let i = lista.length - 1; i >= 0; i--) {
-    if (t < lista[i].endAt) continue;
-    const r = RECIPE_DEF[lista[i].id];
-    if (r) {
+  // CANDADO: dar el plato dispara XP y estadísticas, y eso vuelve a pasar por refreshHud(), que
+  // llama de nuevo acá. Sin este candado se entraba en bucle infinito: la misma olla daba platos
+  // una y otra vez hasta reventar la pila, y la partida quedaba con miles de platos y sin cargar.
+  if (_cocinando) return;
+  _cocinando = true;
+  try {
+    const t = nowMs(); let listos = 0;
+    for (let i = lista.length - 1; i >= 0; i--) {
+      if (t < lista[i].endAt) continue;
+      const olla = lista[i];
+      lista.splice(i, 1);          // PRIMERO se saca la olla, DESPUÉS se entrega: si algo vuelve
+      listos++;                    // a entrar acá, esta olla ya no está y no se puede duplicar
+      const r = RECIPE_DEF[olla.id];
+      if (!r) continue;
       G.dishes = G.dishes || {};
-      G.dishes[lista[i].id] = (G.dishes[lista[i].id] || 0) + 1;
+      G.dishes[olla.id] = (G.dishes[olla.id] || 0) + 1;
       addXp("cooking", r.xp);
       log(r.emoji + " ¡" + r.label + " listo! Lo tenés en la bolsa.", "gold"); toast(r.emoji + " ¡" + r.label + " listo!");
       if (typeof tutoEvent === "function") tutoEvent("cook");
       statAdd("cocinar");
     }
-    lista.splice(i, 1); listos++;
-  }
-  if (!listos) { if (typeof refreshCooking === "function" && isOpen("ov-cocina")) refreshCooking(); return; }
-  if (typeof syncSlots === "function") syncSlots(); if (isOpen("ov-inv")) refreshInv();
-  if (typeof refreshCooking === "function" && isOpen("ov-cocina")) refreshCooking();
-  if (typeof saveFarm === "function") saveFarm();
+    if (!listos) { if (typeof refreshCooking === "function" && isOpen("ov-cocina")) refreshCooking(); return; }
+    if (typeof syncSlots === "function") syncSlots(); if (isOpen("ov-inv")) refreshInv();
+    if (typeof refreshCooking === "function" && isOpen("ov-cocina")) refreshCooking();
+    if (typeof saveFarm === "function") saveFarm();
+  } finally { _cocinando = false; }
 }
 // comer un plato de la bolsa (clic sobre el ítem)
 function eatDish(id) {

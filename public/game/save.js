@@ -124,8 +124,14 @@ function hydrate(d) {
   if (mapArma[G.gear.arma]) G.gear.arma = mapArma[G.gear.arma];
   if (G.gear.arma && !(typeof ARM_DEF !== "undefined" && ARM_DEF[G.gear.arma] && G.weapons[G.gear.arma])) G.gear.arma = null;
   if (d.dishes && typeof d.dishes === "object") G.dishes = Object.assign({}, d.dishes);
+  // REPARACIÓN: un bucle de la Cocina (arreglado el 4/8) dejó partidas con miles de platos, y con
+  // eso la bolsa no terminaba de armarse y el juego no cargaba. Se recorta a un tope sano.
+  for (const k in G.dishes) {
+    const n = Number(G.dishes[k]);
+    G.dishes[k] = (!isFinite(n) || n < 0) ? 0 : Math.min(999, Math.floor(n));
+  }
   // la Cocina pasó a tener varias ollas: los guardados viejos traían un solo objeto
-  if (Array.isArray(d.cooking)) G.cooking = d.cooking.filter(c => c && c.endAt);
+  if (Array.isArray(d.cooking)) G.cooking = d.cooking.filter(c => c && c.endAt).slice(0, 12);   // tope: ninguna partida tiene 12 ollas
   else if (d.cooking && typeof d.cooking === "object" && d.cooking.endAt) G.cooking = [d.cooking];
   else G.cooking = [];
   if (Array.isArray(d.chests)) G.chests = d.chests.slice(0, 50).map(c => ({ col: (typeof c.col === "number" ? c.col : null), row: (typeof c.row === "number" ? c.row : null), items: (Array.isArray(c.items) ? c.items.slice(0, 10) : Array(10).fill(null)) }));

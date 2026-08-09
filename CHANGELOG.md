@@ -543,6 +543,46 @@ Todo por código, sin arte nuevo, y cada efecto se apaga por separado desde el p
 
 Verificado: 782 entradas del panel de balanceo, 20 ventanas OK, sin funciones faltantes.
 
+### BUG GRAVE: la Cocina entraba en bucle y la partida no cargaba (4/8, reporte del diseñador)
+
+"Puse a cocinar un asado y con el modo testeo ha cocinado muchísimos, y ahora intento entrar y no
+carga, se bugeó total."
+
+**La causa, y es mía.** Hace unos días hice que `statAdd()` recalculara el nivel de granja, para
+arreglar que los niveles 11-50 con tareas de cocina o combate quedaran trabados. Sin darme cuenta
+creé un círculo:
+
+```
+checkCooking()  →  statAdd("cocinar")  →  recalcFarmLevel()  →  refreshHud()  →  checkCooking()  →  …
+```
+
+Y como la olla terminada se sacaba de la lista **después** de entregar el plato, en cada vuelta la
+misma olla volvía a entregar. Reproducido en frío: **3363 platos de Papa Asada en una sola llamada**,
+hasta que revienta la pila con `RangeError: Maximum call stack size exceeded`.
+
+Ese error explotaba dentro de `refreshHud()`, que en el arranque se llama **antes** de crear el
+juego. Resultado: el juego nunca arrancaba y quedaba la pantalla de carga puesta. Exactamente lo
+que reportó.
+
+No era del modo testeo: el modo testeo solo lo hizo visible enseguida, porque con cocciones de 8
+segundos el bucle salta al toque en vez de dentro de varios minutos.
+
+**Arreglos**
+
+1. **La olla se saca de la lista ANTES de entregar el plato.** Si algo vuelve a entrar, esa olla ya
+   no está y no puede duplicar nada.
+2. **Candado anti-reentrada en `checkCooking()`**: mientras está entregando, una segunda llamada se
+   ignora.
+3. **Candado anti-reentrada en `recalcFarmLevel()`**, que era el otro extremo del círculo. Subir de
+   nivel refresca el HUD y el HUD vuelve a llamar ahí.
+4. **Reparación de las partidas ya rotas**: al cargar, los platos se recortan a 999 por tipo y las
+   ollas a 12. La partida del diseñador vuelve a abrir sin tocar nada.
+5. **`refreshHud()` en el arranque va dentro de un try/catch**: pase lo que pase, el juego arranca.
+   Un error del HUD ya no puede dejar la pantalla de carga trabada.
+
+Verificado con las dos versiones del código: la vieja revienta a las 3362 vueltas; la nueva entrega
+**un plato, una vez, y una sola vuelta de HUD**.
+
 ### El retraso seguía en plantar y cosechar (4/8, reporte del diseñador)
 
 Cada acción tiene su propio número, y cuando aceleré el talado **solo bajé los de talar y picar**.

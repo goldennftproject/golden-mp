@@ -55,7 +55,7 @@ function enterGame() {
   if (entered) return; entered = true;
   if (typeof initChat === "function") initChat(renderChatMsg);
   if (typeof startAutosave === "function") startAutosave();
-  if (typeof refreshHud === "function") refreshHud();
+  try { if (typeof refreshHud === "function") refreshHud(); } catch (e) { console.error("HUD:", e); }   // pase lo que pase, el juego tiene que arrancar
   hideEl("gate");
   loadPaso(LOAD_ETAPAS.partida, "Cargando el arte de la granja…");
   startGame();   // la pantalla de carga SIGUE puesta hasta que FarmScene avise que está lista
