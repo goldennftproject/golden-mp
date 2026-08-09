@@ -1169,7 +1169,7 @@ vistas isométricas) y sin las columnas de runas que se colaban del Altar.
   del arte nuevo, con los tonos de fuego levantados.
 - `tools/build-atlas.py` aprendió a incorporar claves nuevas: Establo, Curtiduría y Ofrendas
   nunca habían entrado al atlas porque no existía su PNG.
-- Atlas rearmado (365 sprites) y versiones subidas: atlas `?v=25` y cada edificio con su `?v`
+- Atlas rearmado (365 sprites) y versiones subidas: atlas `?v=26` y cada edificio con su `?v`
   nuevo, para que nadie se coma el arte viejo del caché.
 
 ### Verde de la granja, menos fosforescente
@@ -1272,6 +1272,26 @@ Ahora es una imagen, `assets/farm/isla.png`, que arma **`tools/build-isla.py`**:
 Estaban al 0,55 de opacidad y tapaban medio edificio al pasar. Bajaron a **0,22**, y la sombra
 que proyectan sobre el suelo de 0,10 a 0,06. Las dos quedaron en el panel de balanceo
 (`fx.nubesAlfa` y `fx.nubesSombra`) para moverlas en caliente.
+
+### Que no sean todos el mismo techo (9/8)
+El Granero, la Cocina, el Establo y la Curtiduría salieron los cuatro del Granero, así que
+compartían el mismo tejado y de lejos parecían el mismo edificio. Se rehicieron tres con la
+**forma** del techo distinta pero el **mismo tejado rojo**: el primer intento los diferenciaba
+por material (paja, pizarra, musgo) y se descartó — la idea es que se distingan por silueta,
+no por color.
+
+- **Establo**: dos aguas empinado, frente abierto con portón y fardos.
+- **Cocina**: bajo y ancho, chimenea a la izquierda. Sin humo dibujado, así que no hubo que
+  borrárselo como a la anterior. La chimenea se movió: `GF.CHIMENEA.cocina` pasó de −0.232 a −0.314.
+- **Curtiduría**: compacta, techo de una sola pendiente. Los bastidores de cuero ahora van
+  pegados al frente en vez de sobresalir a los costados, que era lo que la hacía verse chica:
+  el juego escala por ancho, y con los bastidores afuera el edificio quedaba enano. De 122 px
+  de ancho bajó a 84.
+- **Altar de Ofrendas**: era el último con el techo fuera de paleta (dorado). Ahora rojo, con
+  la fachada tallada y el cuenco intactos.
+
+El Granero queda como el único con el tejado a dos aguas clásico. La Herrería (tejuelas de
+piedra), el Horno (cúpula) y el Mercado (toldo a rayas) ya se distinguían solos.
 
 ### Verificación
 - `node --check` en los 13 JS, `tools/check-ui.js` (20 ventanas OK) y `build-atlas.py --check` sin faltantes.

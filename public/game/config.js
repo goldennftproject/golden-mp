@@ -173,7 +173,7 @@ GF.WORLD_OBJECTS.push(snap("ofrendas", {type:"ofrendas"}, 861, 168, T*2));      
 // la altura de la boca contada desde el techo (en altos de sprite). Si el arte cambia, se
 // vuelven a medir estos dos números y el humo sigue saliendo del caño.
 GF.CHIMENEA = {
-  cocina: { dx: -0.232, dy: 0.01 },   // caño de ladrillo, a la izquierda del techo
+  cocina: { dx: -0.314, dy: 0.01 },   // caño de ladrillo, a la izquierda del techo
   store:  { dx:  0.299, dy: 0.01 },   // herrería: caño de piedra, a la derecha
   horno:  { dx:  0.005, dy: 0.01 },   // horno de piedra: caño centrado arriba de la cúpula
 };
