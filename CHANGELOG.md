@@ -1187,7 +1187,7 @@ copa de los árboles tiraban a lima fluorescente y peleaban con la paleta cálid
 **Bug encontrado de paso: el suelo de la granja nunca mostró su textura.** El dibujo de la
 isla (mar, orilla, borde de pasto) se creaba con la misma profundidad que los tiles de pasto
 pero *después*, así que los tapaba enteros: la granja se veía como un verde plano y liso, y
-los tiles seamless de PixelLab no llegaban a verse desde que se agregó la isla. La isla pasó
+los tiles seamless (procedurales, del 31/7) no llegaban a verse desde que se agregó la isla. La isla pasó
 a `-1002` y el pasto volvió a aparecer. Con la textura a la vista, los tiles se rehicieron
 desde el original con el tono un poco más claro, y el borde de pasto de la isla se igualó
 al del suelo para que no se note el salto. También se calmaron las matas de la laguna.
