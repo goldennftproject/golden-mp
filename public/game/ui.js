@@ -721,7 +721,7 @@ function refreshPass() {
     '<div class="fbtns">' + (p.vip ? '' : '<button class="green sm" id="pass-vip">Pase VIP · ' + PASS_VIP_PRICE + ' $G</button>') +
     (lvl < 30 ? '<button class="sm" id="pass-buylvl">+1 nivel · ' + PASS_LVL_GOLD + ' $G</button>' : '') + '</div></div>';
   // misiones
-  h += '<div class="fnm" style="margin-top:8px">Misiones de HOY (' + PASS_STAR_DAILY + ' estrellas c/u · las 3 = +' + PASS_STAR_BONUS + ')</div>';
+  h += '<div class="secc">Misiones de HOY (' + PASS_STAR_DAILY + ' estrellas c/u · las 3 = +' + PASS_STAR_BONUS + ')</div>';
   const misRow = (m, stars) => {
     const md = PASS_MISIONES[m.k] || { label: "Misión" };   // misión guardada de una temporada vieja: no rompe el panel entero
     return '<div class="forge-row' + (m.ok ? ' eq' : '') + '"><div class="finfo"><div class="fnm">' + md.label.replace("#", m.goal) +
@@ -730,12 +730,12 @@ function refreshPass() {
       '<div class="fds">' + Math.min(m.n, m.goal) + '/' + m.goal + ' · recompensa: ' + stars + ' estrellas</div></div></div>';
   };
   p.daily.mis.forEach(m => { h += misRow(m, PASS_STAR_DAILY); });
-  h += '<div class="fnm" style="margin-top:8px">Misiones de la SEMANA (' + PASS_STAR_WEEKLY + ' estrellas c/u)</div>';
+  h += '<div class="secc">Misiones de la SEMANA (' + PASS_STAR_WEEKLY + ' estrellas c/u)</div>';
   p.weekly.mis.forEach(m => { h += misRow(m, PASS_STAR_WEEKLY); });
   // cosméticos ganados
   if (p.cosmetics.length) h += '<div class="fds" style="margin-top:6px">Tus cosméticos: ' + p.cosmetics.join(" · ") + '</div>';
   // los 30 niveles
-  h += '<div class="fnm" style="margin-top:8px">Recompensas (Free / VIP)</div>';
+  h += '<div class="secc">Recompensas (Free / VIP)</div>';
   for (let nv = 1; nv <= 30; nv++) {
     const rf = PASS_FREE[nv - 1], rv = PASS_VIP[nv - 1];
     const alc = nv <= lvl, hito = PASS_HITOS[nv] || "";
@@ -763,7 +763,7 @@ function refreshCurtiduria() {
   ARMOR_ORDER.forEach(set => {
     const sd = ARMOR_SETS[set], eq = armorEquipado(set), n = armorPuestas(set), completo = armorSetCompleto(set);
     const defTotal = ARMOR_SLOTS.reduce((a, pz) => a + sd.piezas[pz].def, 0);
-    h += '<div class="fnm" style="margin-top:10px">' + sd.label + ' <span class="fds">(' + sd.tipo + ' · ' + n + '/5 piezas · ' + defTotal + ' de defensa el set)</span></div>';
+    h += '<div class="secc">' + sd.label + ' <span class="fds">(' + sd.tipo + ' · ' + n + '/5 piezas · ' + defTotal + ' de defensa el set)</span></div>';
     h += '<div class="fds">Material: ' + RES_LABEL[sd.mat] + ' (tenés ' + (G.res[sd.mat] || 0) + ') · del ' + ANIMAL_DEF[sd.animal].label + '</div>';
     h += '<div class="fds" style="color:#8a6413">Bono del set completo: ' + sd.bono.txt + (completo ? ' <b>— ACTIVO</b>' : '') + '</div>';
     ARMOR_SLOTS.forEach(pz => {
@@ -829,7 +829,7 @@ function refreshAltar() {
   const owned = Object.keys(G.weapons || {});
   let h = "";
   // ---- Eje 1: MEJORA +1..+15 ----
-  h += '<div class="fnm" style="margin-top:2px">Mejorar arma (+1 a +15)</div>';
+  h += '<div class="secc">Mejorar arma (+1 a +15)</div>';
   h += '<div class="fds">Cada intento gasta Runas de Poder + plata. Polvo de Suerte: +10 pts de éxito. De +6 a +10 fallar baja −1; de +11 a +15 fallar puede ROMPER el arma salvo que uses Runa de Protección.</div>';
   h += '<div class="fds">Tenés: ' + (G.res.runa_poder || 0) + ' Runa de Poder · ' + (G.res.polvo_suerte || 0) + ' Polvo de Suerte · ' + (G.res.runa_proteccion || 0) + ' Runa de Protección · ' + (G.res.esencia_runica || 0) + ' Esencia rúnica</div>';
   if (!owned.length) h += '<div class="fds">No tenés armas: forjá una en la Herrería.</div>';
@@ -847,7 +847,7 @@ function refreshAltar() {
   // ---- Sockets del arma equipada ----
   const eq = armaEq();
   if (eq && socketsOpen(armPlus(eq)) > 0) {
-    h += '<div class="fnm" style="margin-top:10px">Runas de ' + ARM_DEF[eq].label + (armPlus(eq) ? " +" + armPlus(eq) : "") + ' (equipada)</div>';
+    h += '<div class="secc">Runas de ' + ARM_DEF[eq].label + (armPlus(eq) ? " +" + armPlus(eq) : "") + ' (equipada)</div>';
     h += '<div class="fds">Socketear una runa sobre otra DESTRUYE la anterior.</div>';
     for (let sl = 1; sl <= 3; sl++) {
       const open = sl <= socketsOpen(armPlus(eq));
@@ -859,14 +859,14 @@ function refreshAltar() {
     }
   }
   // ---- Eje 2: crafteo de materiales ----
-  h += '<div class="fnm" style="margin-top:10px">Craftear materiales</div>';
+  h += '<div class="secc">Craftear materiales</div>';
   for (const id in ALTAR_CRAFT) {
     const c = ALTAR_CRAFT[id];
     const costo = Object.keys(c.cost).map(k => c.cost[k] + " " + (RES_LABEL[k] || k)).join(" + ") + (c.plata ? " + " + c.plata + " plata" : "") + (c.golden ? " + " + c.golden + " $Golden" : "");
     h += '<div class="forge-row"><div class="finfo"><div class="fnm">' + RES_LABEL[id] + ' <span class="fds">(tenés ' + (G.res[id] || 0) + ')</span></div><div class="fds">' + costo + '</div></div><div class="fbtns"><button class="green sm" data-caltar="' + id + '">Craftear</button><button class="green sm" data-caltar5="' + id + '" title="Craftear 5">×5</button></div></div>';
   }
   // runas de atributo I
-  h += '<div class="fnm" style="margin-top:10px">Craftear runas de atributo (rareza I)</div>';
+  h += '<div class="secc">Craftear runas de atributo (rareza I)</div>';
   h += '<div class="fds">Cuestan ' + Object.keys(RUNA_CRAFT.cost).map(k => RUNA_CRAFT.cost[k] + " " + (RES_LABEL[k] || k)).join(" + ") + ' + ' + RUNA_CRAFT.plata + ' plata.</div>';
   RUNA_ORDER.forEach(t => {
     h += '<div class="forge-row"><div class="finfo"><div class="fnm">' + RUNA_TIPOS[t].label + ' I <span class="fds">(tenés ' + (G.res[runaKey(t, 1)] || 0) + ')</span></div><div class="fds">' + RUNA_TIPOS[t].buff + ': +' + RUNA_TIPOS[t].vals[0] + RUNA_TIPOS[t].uni + ' → +' + RUNA_TIPOS[t].vals[4] + RUNA_TIPOS[t].uni + ' en rareza V</div></div><div class="fbtns"><button class="green sm" data-cruna="' + t + '">Craftear I</button><button class="green sm" data-cruna5="' + t + '" title="Craftear 5">×5</button></div></div>';
@@ -874,7 +874,7 @@ function refreshAltar() {
   // ---- Fusión ----
   let fus = "";
   RUNA_ORDER.forEach(t => { for (let r = 1; r <= 4; r++) { const n = G.res[runaKey(t, r)] || 0; if (n >= 3) fus += '<div class="forge-row"><div class="finfo"><div class="fnm">3× ' + runaLabel(t, r) + ' → 1× ' + runaLabel(t, r + 1) + '</div><div class="fds">' + (FUSE_GOLD[r] ? "Cuesta " + FUSE_GOLD[r] + " $Golden" : "Gratis") + ' · tenés ' + n + '</div></div><div class="fbtns"><button class="green sm" data-fuse="' + t + ':' + r + '">Fusionar</button></div></div>'; } });
-  if (fus) h += '<div class="fnm" style="margin-top:10px">Fusionar runas (3 iguales → 1 de rareza superior)</div>' + fus;
+  if (fus) h += '<div class="secc">Fusionar runas (3 iguales → 1 de rareza superior)</div>' + fus;
   box.innerHTML = h;
   box.querySelectorAll("[data-upg]").forEach(b => b.onclick = () => {
     const id = b.dataset.upg;
@@ -930,7 +930,7 @@ function refreshBarn() {
   const nv = G.level, sig = nv + 1;
   const xp = Math.floor(G.skills.farming || 0);
   const need = FARM_XP_LVLS[sig];
-  let h = '<div class="fnm" style="font-size:15px">Granja nivel ' + nv + ' / ' + FARM_NIVEL_MAX + '</div>';
+  let h = '<div class="secc">Granja nivel ' + nv + ' / ' + FARM_NIVEL_MAX + '</div>';
   if (sig > FARM_NIVEL_MAX) h += '<div class="fds">¡Máximo alcanzado! Leyenda de la Granja Dorada.</div>';
   else {
     const desde = FARM_XP_LVLS[nv] || 0;
@@ -939,7 +939,7 @@ function refreshBarn() {
     h += '<div class="fds">XP de cosecha: ' + fmt(xp) + ' / ' + fmt(need) + '</div>';
     const tareas = tareasDelNivel(sig);
     if (tareas.length) {
-      h += '<div class="fnm" style="margin-top:8px">Tareas para el nivel ' + sig + '</div>';
+      h += '<div class="secc">Tareas para el nivel ' + sig + '</div>';
       tareas.forEach(t => {
         const p0 = Math.min(tareaProgreso(t), t[2]), ok = p0 >= t[2];
         h += '<div class="forge-row' + (ok ? ' eq' : '') + '"><div class="finfo"><div class="fnm">' + tareaLabel(t) + (ok ? ' ✓' : '') + '</div>' +
@@ -1373,7 +1373,7 @@ async function refreshP2P() {
         '<div class="fds">Te quedan ' + fmt(neto) + ' de plata (precio ' + fmt(r.price) + ' − ' + MARKET_FEE + '% de comisión)</div></div>' +
         '<div class="fbtns"><button class="green sm" data-cobrar="' + r.id + '">Cobrar</button></div></div>';
     });
-    h += '<div class="fnm" style="margin-top:8px">Publicaciones activas (' + activas.length + '/' + MARKET_MAX_PUB + ')</div>';
+    h += '<div class="secc">Publicaciones activas (' + activas.length + '/' + MARKET_MAX_PUB + ')</div>';
     if (!activas.length) h += '<div class="fds">No tenés nada publicado.</div>';
     activas.forEach(r => {
       h += '<div class="forge-row"><div class="finfo"><div class="fnm">' + escapeHtml(r.name || r.item) + ' ×' + r.qty + '</div>' +
@@ -1419,20 +1419,20 @@ function refreshCosmeticos() {
   let h = '<div class="forge-row"><div class="finfo"><div class="fnm">Así te ven los demás</div>' +
     '<div class="fds" style="font-size:15px"><span class="nm ' + (c.marco !== "ninguno" ? "marco-" + c.marco : "") + '" style="color:' + colorNombre() + ';font-weight:800">' +
     escapeHtml(nombreLucido(window.NICK)) + '</span></div></div></div>';
-  h += '<div class="fnm" style="margin-top:8px">Título</div><div class="forge-row"><div class="finfo"><div class="fds">' +
+  h += '<div class="secc">Título</div><div class="forge-row"><div class="finfo"><div class="fds">' +
     ['<button class="sm ' + (!c.titulo ? "green" : "ghost") + '" data-cost="titulo:">Sin título</button>']
       .concat(titulos.map(t => '<button class="sm ' + (c.titulo === t ? "green" : "ghost") + '" data-cost="titulo:' + t + '">' + t + '</button>')).join(" ") +
     (titulos.length ? "" : ' <span class="fds">Todavía no ganaste ninguno — se consiguen subiendo la granja.</span>') + '</div></div></div>';
-  h += '<div class="fnm" style="margin-top:8px">Color del nombre</div><div class="forge-row"><div class="finfo"><div class="fds">' +
+  h += '<div class="secc">Color del nombre</div><div class="forge-row"><div class="finfo"><div class="fds">' +
     colores.map(k => '<button class="sm ' + (c.color === k ? "green" : "ghost") + '" data-cost="color:' + k + '" style="color:' + COS_COLORES[k] + '">' + k + '</button>').join(" ") + '</div></div></div>';
-  h += '<div class="fnm" style="margin-top:8px">Marco</div><div class="forge-row"><div class="finfo"><div class="fds">' +
+  h += '<div class="secc">Marco</div><div class="forge-row"><div class="finfo"><div class="fds">' +
     marcos.map(k => '<button class="sm ' + (c.marco === k ? "green" : "ghost") + '" data-cost="marco:' + k + '">' + (k === "ninguno" ? "Sin marco" : (COS_MARCOS[k] || k)) + '</button>').join(" ") + '</div></div></div>';
-  h += '<div class="fnm" style="margin-top:8px">Aura del granjero</div><div class="forge-row"><div class="finfo"><div class="fds">' +
+  h += '<div class="secc">Aura del granjero</div><div class="forge-row"><div class="finfo"><div class="fds">' +
     (cosAuraDisponible()
       ? '<button class="sm ' + (c.aura ? "green" : "ghost") + '" data-cost="aura:1">Encendida</button> <button class="sm ' + (!c.aura ? "green" : "ghost") + '" data-cost="aura:0">Apagada</button> <span class="fds">Se ve en la Zona Negra y en la plaza.</span>'
       : 'Se desbloquea con los títulos de granja nivel 30 en adelante.') + '</div></div></div>';
   if ((G.cosmeticos || []).length) {
-    h += '<div class="fnm" style="margin-top:10px">Todo lo que ganaste (' + G.cosmeticos.length + ')</div>';
+    h += '<div class="secc">Todo lo que ganaste (' + G.cosmeticos.length + ')</div>';
     h += '<div class="fds">' + G.cosmeticos.map(x => escapeHtml(String(x))).join(" · ") + '</div>';
   }
   box.innerHTML = h;

@@ -543,6 +543,51 @@ Todo por código, sin arte nuevo, y cada efecto se apaga por separado desde el p
 
 Verificado: 782 entradas del panel de balanceo, 20 ventanas OK, sin funciones faltantes.
 
+### Estandarización de TODAS las ventanas (4/8)
+
+Las ventanas viejas (Herrería, Tienda, Ranking) ya tenían el panel interior de madera y se veían
+bien. Las nuevas mostraban la lista suelta sobre la madera de la tarjeta, y por eso se veían pobres
+al lado de las otras. Se revisaron las 21 ventanas del juego y se les dio el mismo tratamiento.
+
+**1. Panel interior de madera para toda lista de contenido.** Lo tenían la Tienda, la Herrería y el
+Ranking; ahora también Granero, Cocina, Horno, Altar de Runas, Establo, Curtiduría, Altar de
+Ofrendas, Incursión, Mercado de jugadores, Pase de Batalla, Cosméticos, Habilidades, Bolsa, Cofre y
+Ajustes.
+
+**2. Un solo encabezado de sección.** Cada panel se inventaba el suyo con estilos escritos a mano
+(`margin-top:8px`, `margin-top:10px`, `font-size:15px`…). Ahora hay una clase `.secc` con el cartel
+de madera del juego, centrada, y se aplicaron **17 encabezados** que estaban sueltos. Los del Cofre
+y el Equipo, que ya tenían su propio estilo aparte, usan el mismo.
+
+**3. Texto sobre madera: blanco con contorno oscuro, sin excepciones.** Varias notas y
+descripciones usaban el gris de la interfaz clara, ilegible sobre marrón. En la primera pasada las
+puse en crema amarillento, y el diseñador señaló que sobre ese fondo tampoco se leían — tenía razón:
+el crema da 2,4 de contraste y el amarillo 3,0, ambos por debajo del mínimo de 4,5. La solución es
+la que el juego ya usaba en los títulos y en el cartel del tutorial: **blanco con contorno oscuro**,
+que sube a 17,7 contra el contorno. Se aplicó a los encabezados de sección, a los títulos de
+Ajustes, y a las notas del Ranking, el Cofre diario, Habilidades y el Mercado.
+
+**4. Recuadros de datos iguales.** La recompensa del Cofre diario usaba su propio color; ahora usa
+el mismo crema con borde que las filas del resto del juego, y todas las filas comparten la misma
+sombra suave.
+
+**5. Texto secundario sobre los recuadros crema.** El diseñador marcó que el subtítulo del Ranking y
+las descripciones de las filas también se leían lavadas. Eran el otro lado del mismo problema: el
+gris claro `#8a7f66` da **3,2 de contraste** sobre el crema de las filas, por debajo del mínimo de
+4,5. Pasaron a un marrón oscuro (**5,9 y 6,6**) que se lee bien y sigue siendo claramente secundario
+al lado del título negro de la fila. Lo mismo con las etiquetas FREE y VIP del Pase, que eran verde
+y dorado claritos, y con el aviso rojo del Cofre diario.
+
+**Regla que queda para todo el juego**: sobre madera, blanco con contorno oscuro; sobre crema,
+marrón oscuro. Nada de amarillos ni grises claros para texto.
+
+**Vista previa sin deployar**: se agregó `public/vista-ventanas.html`. Se abre haciendo doble clic y
+muestra cuatro ventanas de ejemplo (Establo, Pase de Batalla, Ranking y Ajustes) con el CSS real del juego, para revisar
+el estilo sin tener que subir nada.
+
+Verificado: las 21 ventanas quedaron con contenedor estandarizado, el CSS cierra balanceado
+(425 llaves) y los chequeos automáticos siguen en verde.
+
 ### BUG GRAVE: la Cocina entraba en bucle y la partida no cargaba (4/8, reporte del diseñador)
 
 "Puse a cocinar un asado y con el modo testeo ha cocinado muchísimos, y ahora intento entrar y no
