@@ -26,7 +26,7 @@ function snapshot() {
     tools: G.tools, toolsLost: G.toolsLost, sflStock: true, invRows: G.invRows, slots: G.slots, hotbar: G.hotbar, hotSel: G.hotSel, hbInit: G.hbInit, layout: G.layout,
     daily: G.daily, plotsOwned: G.plotsOwned, seedBuys: G.seedBuys, built: G.built,
     hp: G.hp, hpMax: G.hpMax, combatXp: G.combatXp, stam: G.stam, stamAcc: G.stamAcc, stamRec: G.stamRec, pass: G.pass, tuto: G.tuto, firstSeeds: G.firstSeeds,
-    stats: G.stats, statsBase: G.statsBase, chestCap: G.chestCap, edif2: G.edif2, cosmeticos: G.cosmeticos, animals: G.animals, armor: G.armor, armorEq: G.armorEq, ofrendaPts: G.ofrendaPts, ofrendaLog: G.ofrendaLog, nodoUsos: G.nodoUsos, cosEq: G.cosEq, incursion: G.incursion, incDia: G.incDia, zonaCdHasta: G.zonaCdHasta, zonaViaje: G.zonaViaje, dummyTrain: G.dummyTrain, swordOwned: G.swordOwned, bowOwned: G.bowOwned, swordWoodOwned: G.swordWoodOwned, gear: G.gear,
+    stats: G.stats, statsBase: G.statsBase, chestCap: G.chestCap, edif2: G.edif2, cosmeticos: G.cosmeticos, animals: G.animals, armor: G.armor, armorEq: G.armorEq, ofrendaPts: G.ofrendaPts, ofrendaLog: G.ofrendaLog, nodoUsos: G.nodoUsos, cosEq: G.cosEq, incursion: G.incursion, incDia: G.incDia, zonaCdHasta: G.zonaCdHasta, zonaViaje: G.zonaViaje, decos: G.decos, decoBolsa: G.decoBolsa, godHand: G.godHand, visto: nowMs(), dummyTrain: G.dummyTrain, swordOwned: G.swordOwned, bowOwned: G.bowOwned, swordWoodOwned: G.swordWoodOwned, gear: G.gear,
     armasUnlocked: G.armasUnlocked, treesOpen: G.treesOpen, rocksOpen: G.rocksOpen, firstCropDone: G.firstCropDone, weapons: G.weapons,
     dishes: G.dishes, cooking: G.cooking, chests: G.chests, dummyUsedAt: G.dummyUsedAt,
     armCd: G.armCd, mkPend: G.mkPend, testeoDado: G.testeoDado,
@@ -73,6 +73,11 @@ function hydrate(d) {
   G.cosmeticos = Array.isArray(d.cosmeticos) ? d.cosmeticos : [];
   // Los animales pasaron de "uno por tipo" a una LISTA por tipo (10/8). Los guardados viejos
   // traen un objeto suelto por tipo: se envuelve en lista para que nada se pierda.
+  // cuánto tiempo estuviste afuera: lo usa la GOD HAND para sembrar "desde que te fuiste"
+  G._ausenteMs = (typeof d.visto === "number" && d.visto > 0) ? Math.max(0, nowMs() - d.visto) : 0;
+  G.decos = Array.isArray(d.decos) ? d.decos.slice(0, 200) : [];
+  G.decoBolsa = (d.decoBolsa && typeof d.decoBolsa === "object") ? d.decoBolsa : {};
+  G.godHand = d.godHand === true;
   G.zonaCdHasta = typeof d.zonaCdHasta === "number" ? d.zonaCdHasta : 0;
   G.zonaViaje = (d.zonaViaje && typeof d.zonaViaje === "object") ? d.zonaViaje : null;
   G.animals = {};

@@ -1457,6 +1457,35 @@ Los cuatro números nuevos quedaron en el panel de balanceo (808 entradas, ningu
   **cada familia tiene su color de borde** — recurso, semilla, pez, plato, herramienta — para
   reconocer una casilla sin leer el tooltip. Mismo criterio en la barra rápida.
 
+### Fase 4 — Tienda de adornos, parcelas y GOD HAND
+
+Los tres van en la **misma pestaña "Adornos"** de la Tienda, como pedía el documento.
+
+- **8 adornos** para decorar: valla, cantero de flores, farol, banco, espantapájaros, fuente de
+  piedra, estatua dorada y cerezo en flor. No dan **ninguna** ventaja — son para que la granja
+  se vea linda y para los eventos de "la más bonita" que vienen después. Se compran en la
+  Tienda, quedan en una bolsa aparte y se colocan desde el modo edición, donde se arrastran
+  como cualquier otra cosa. Tope de 40 puestos. Los seis primeros se pagan en plata y los dos
+  caros en $Golden.
+  **El arte va en la Fase 6**: por ahora cada uno se dibuja por código, con la paleta de los
+  edificios, para poder probar el sistema entero (comprar, poner, guardar, levantar) sin
+  depender de PixelLab.
+- **Parcelas con plata o con $Golden**, a elección. El precio en $Golden se calcula desde el de
+  plata con un cambio fijo, así se toca un solo número. Tiene un piso de 5 $Golden: sin él, la
+  primera salía **1 $Golden**, o sea regalada.
+- **GOD HAND**. Se compra una vez y queda para siempre. Mientras la tengas, al volver al juego
+  las parcelas que quedaron **vacías** aparecen ya sembradas con la semilla que tenías elegida,
+  gastando esas semillas — y el crecimiento **cuenta desde que te fuiste**, no desde que
+  volvés. Para eso el guardado ahora anota la hora de la última sesión. No cosecha: eso sigue
+  siendo del jugador. Solo saltea el paso aburrido.
+
+**Probado en Node**: comprar, colocar y levantar adornos deja los contadores coherentes;
+comprar parcelas con las dos monedas suma bien; y la GOD HAND, con 3 h de ausencia simuladas y
+6 parcelas (4 vacías), sembró exactamente esas 4, descontó 4 semillas y les puso el reloj
+corrido 3 horas.
+
+12 números nuevos en el panel de balanceo (820 entradas, ninguna rota).
+
 ---
 
 ## Pendientes conocidos

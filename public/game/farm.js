@@ -13,7 +13,7 @@ class FarmScene extends Phaser.Scene {
     // porque apunta a objetos ya destruidos (y usarlos rompía el juego al volver del Bosque).
     this.hoverFx = null; this.nearFx = null;
     this.destMk = null; this.destTw = null;
-    this.dummyObj = null; this.dummyTimer = null; this.fishBar = null;   // si no se suelta, al volver del bosque la barra de pesca no vuelve a aparecer (10/8)
+    this.dummyObj = null; this.dummyTimer = null; this.fishBar = null; this.adornos = null;   // si no se suelta, al volver del bosque la barra de pesca no vuelve a aparecer (10/8)
     this.editHl = null; this._nav = null; this.storeObj = null; this.forgeGlow = null;
     this.bobber = null; this.bobberTween = null; this.fishLine = null;
     this.hold = null; this.path = null; this.holdLast = null; this.holdPend = null;
@@ -540,6 +540,7 @@ class FarmScene extends Phaser.Scene {
     this.storeObj = storeObj;
     this.updateForge();
     this.crearCorral();       // patio de los animales del Establo
+    this.syncAdornos();       // adornos comprados en la Tienda (10/8)
     this.syncAnimales();      // aparecen los que ya tenés
     this.crearNubes();        // nubes que cruzan y proyectan sombra
     this.crearMariposas();    // mariposas que se posan sobre los cultivos listos
@@ -1369,6 +1370,91 @@ class FarmScene extends Phaser.Scene {
       return { x, y };
     }
     return null;
+  }
+
+  /* ---- ADORNOS DE LA GRANJA (10/8) -------------------------------------------
+     El arte definitivo va en la Fase 6; por ahora cada adorno se dibuja por código, con la
+     misma paleta cálida de los edificios, para que el sistema se pueda probar entero
+     (comprar, colocar, guardar, levantar) sin depender de PixelLab. */
+  dibujarAdorno(id, x, y) {
+    const g = this.add.graphics().setDepth(y);
+    const MAD = 0x8a5a33, MAD2 = 0xa8712f, OSC = 0x241505, PIE = 0x8b8f8c, VER = 0x55733f;
+    if (id === "valla") {
+      g.fillStyle(OSC, 1).fillRect(-20, -16, 40, 3).fillRect(-20, -8, 40, 3);
+      g.fillStyle(MAD2, 1).fillRect(-20, -15, 40, 1).fillRect(-20, -7, 40, 1);
+      [-18, 0, 18].forEach(px => { g.fillStyle(OSC, 1).fillRect(px - 2, -20, 5, 20); g.fillStyle(MAD, 1).fillRect(px - 1, -19, 3, 18); });
+    } else if (id === "flores") {
+      g.fillStyle(0x6b4a2a, 1).fillRoundedRect(-16, -10, 32, 10, 3);
+      g.fillStyle(VER, 1).fillRect(-14, -13, 28, 4);
+      [[-9, -15, 0xe86a6a], [0, -17, 0xf2d06b], [9, -15, 0xd98ad4]].forEach(([px, py, c]) => {
+        g.fillStyle(c, 1).fillCircle(px, py, 3).fillStyle(0xfff0b8, 1).fillCircle(px, py, 1.2);
+      });
+    } else if (id === "farol") {
+      g.fillStyle(OSC, 1).fillRect(-2, -26, 5, 26);
+      g.fillStyle(0x4a4038, 1).fillRoundedRect(-7, -38, 15, 13, 3);
+      g.fillStyle(0xffd88a, 0.95).fillRoundedRect(-5, -36, 11, 9, 2);
+    } else if (id === "banco") {
+      g.fillStyle(OSC, 1).fillRect(-16, -10, 32, 4).fillRect(-14, -20, 28, 3);
+      g.fillStyle(MAD, 1).fillRect(-16, -9, 32, 2).fillRect(-14, -19, 28, 1);
+      [-13, 13].forEach(px => g.fillStyle(0x4a4038, 1).fillRect(px - 1, -10, 3, 10));
+    } else if (id === "espantapajaros") {
+      g.fillStyle(OSC, 1).fillRect(-1, -30, 3, 30).fillRect(-12, -22, 25, 3);
+      g.fillStyle(0xd9b871, 1).fillCircle(0, -33, 6);
+      g.fillStyle(OSC, 1).fillCircle(-2, -34, 1).fillCircle(2, -34, 1);
+      g.fillStyle(0x9c5a3c, 1).fillTriangle(-8, -38, 8, -38, 0, -45);
+    } else if (id === "fuente") {
+      g.fillStyle(PIE, 1).fillEllipse(0, -6, 44, 20);
+      g.fillStyle(0x5cb4d8, 1).fillEllipse(0, -7, 34, 13);
+      g.fillStyle(PIE, 1).fillRect(-3, -22, 7, 15).fillEllipse(0, -24, 16, 7);
+      g.fillStyle(0xdff2ff, 0.85).fillEllipse(0, -25, 10, 4);
+    } else if (id === "estatua") {
+      g.fillStyle(PIE, 1).fillRect(-11, -8, 23, 8);
+      g.fillStyle(0xd9a521, 1).fillRect(-5, -28, 11, 20);
+      g.fillStyle(0xffe08a, 1).fillCircle(0, -32, 6).fillRect(-4, -27, 8, 4);
+    } else if (id === "arbolito") {
+      g.fillStyle(0x6b4a2a, 1).fillRect(-3, -16, 7, 16);
+      [[0, -30, 14], [-10, -24, 10], [10, -24, 10]].forEach(([px, py, r]) => {
+        g.fillStyle(0xe8a8c8, 1).fillCircle(px, py, r);
+        g.fillStyle(0xf6cadd, 1).fillCircle(px - r * 0.25, py - r * 0.25, r * 0.55);
+      });
+    } else {
+      g.fillStyle(MAD, 1).fillRoundedRect(-10, -20, 21, 20, 4);
+    }
+    g.setPosition(x, y);
+    return g;
+  }
+  // busca una celda libre para dejar un adorno recién comprado (no pisa nada de lo que ya hay)
+  huecoParaAdorno() {
+    const T = GF.TILE;
+    const ocupada = (col, row) => {
+      const x = (col + 0.5) * T, y = (row + 0.9) * T;
+      if (GF.blockedAt(x, y, 6)) return true;
+      if (GF.PLOTS.some(p => p.col === col && p.row === row)) return true;
+      if ((G.decos || []).some(d => d.col === col && d.row === row)) return true;
+      if ((G.chests || []).some(c => c.col === col && c.row === row)) return true;
+      return false;
+    };
+    const c0 = Math.floor(GF.COLS / 2), r0 = Math.floor(GF.ROWS / 2);
+    for (let rad = 0; rad < Math.max(GF.COLS, GF.ROWS); rad++) {
+      for (let dr = -rad; dr <= rad; dr++) for (let dc = -rad; dc <= rad; dc++) {
+        if (Math.max(Math.abs(dc), Math.abs(dr)) !== rad) continue;
+        const col = c0 + dc, row = r0 + dr;
+        if (col < 1 || row < 2 || col >= GF.COLS - 1 || row >= GF.ROWS - 1) continue;
+        if (!ocupada(col, row)) return { col, row };
+      }
+    }
+    return null;
+  }
+  // vuelve a dibujar todos los adornos colocados (al entrar y cada vez que se pone o saca uno)
+  syncAdornos() {
+    (this.adornos || []).forEach(a => a.g.destroy());
+    this.adornos = [];
+    const T = GF.TILE;
+    (G.decos || []).forEach((d, i) => {
+      if (!DECO_DEF[d.id]) return;
+      const x = (d.col + 0.5) * T, y = (d.row + 1) * T;
+      this.adornos.push({ i, id: d.id, col: d.col, row: d.row, cx: x, by: y, g: this.dibujarAdorno(d.id, x, y) });
+    });
   }
 
   // crea o saca los animales según los que tenga el jugador (se llama al entrar y al comprar)

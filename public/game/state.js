@@ -43,6 +43,7 @@ const G = {
   fish: { comun: 0, raro: 0, epico: 0, legendario: 0 },
   plots: [],   // estado de las parcelas: [{state, readyAt, cropKey}] — lo llena la FarmScene
   plotsOwned: 2,   // viernes (2): se nace con 2 parcelas; el resto se desbloquea
+  decos: [], decoBolsa: {}, godHand: false,   // adornos puestos · adornos sin colocar · NFT de siembra automática (10/8)
   daily: { day: 0, last: "" },   // cofre diario: día de racha reclamado (1..7) y fecha del último reclamo
   seedBuys: { date: "", count: 0 },   // cupo diario de semillas (compras + cofre)
   dishes: {},      // platos cocinados (van a la bolsa; clic para comer)
@@ -1222,7 +1223,8 @@ function decoSacar(i) {   // lo levanta y vuelve a la bolsa de adornos
 // El doc pide que el jugador elija con qué pagar. La de $Golden se calcula desde la de plata
 // con un cambio fijo, así el diseñador toca UN solo número y las dos quedan alineadas.
 var PLOT_GOLDEN_CAMBIO = 900;   // cuántas de plata "vale" 1 $Golden a la hora de comprar parcelas
-function plotUnlockGolden() { return Math.max(1, Math.ceil(plotUnlockCost() / PLOT_GOLDEN_CAMBIO)); }
+var PLOT_GOLDEN_MIN = 5;        // piso: sin esto la primera parcela salía 1 $Golden, o sea regalada
+function plotUnlockGolden() { return Math.max(PLOT_GOLDEN_MIN, Math.ceil(plotUnlockCost() / PLOT_GOLDEN_CAMBIO)); }
 function comprarParcela(conGolden) {
   if ((G.plotsOwned || 2) >= 12) { toast("Ya tenés las 12 parcelas"); return; }
   if (conGolden) {
@@ -1271,7 +1273,8 @@ function godHandSembrar(msAusente) {
     if (!p || p.state !== "dry") continue;               // solo las que quedaron vacías
     if ((G.seeds[k] || 0) <= 0) break;                   // sin semillas, hasta acá llegó
     G.seeds[k]--;
-    G.plots[i] = { state: "growing", cropKey: k, readyAt: desde + cropMs(k), growTotal: cropMs(k) };
+    const dur = CROP_DEF[k].grow * 1000 * (typeof cdMult === "function" ? cdMult() : 1);
+    G.plots[i] = { state: "growing", cropKey: k, readyAt: desde + dur, growTotal: dur, witherAt: 0 };
     n++;
   }
   if (n) {

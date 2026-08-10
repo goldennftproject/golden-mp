@@ -77,6 +77,7 @@ function enterGame() {
   try { if (typeof aplicarTesteo === "function") aplicarTesteo(); } catch (e) { console.warn(e); }
   loadPaso(LOAD_ETAPAS.ajustes, "Aplicando ajustes…");
   try { await window.SAVE_READY; returning = await loadFarm(); } catch (e) { console.warn(e); }
+  try { if (typeof godHandSembrar === "function") godHandSembrar(G._ausenteMs || 0); } catch (e) { console.warn(e); }   // GOD HAND: siembra lo que quedó vacío
   try { if (typeof testeoDestapar === "function") testeoDestapar(); } catch (e) { console.warn(e); }   // repara bolsas desbordadas por el regalo viejo de testeo
   if (returning && window.NICK) enterGame();
   else {

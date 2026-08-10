@@ -136,6 +136,15 @@ var BAL = (function () {
     add("Ambiente — efectos", "fx.fadeMs", "Fundido a negro al cambiar de escena (0 = corte seco)", "milisegundos", () => FX_FADE_MS, v => { FX_FADE_MS = v; }, 20);
     add("Ambiente — efectos", "fx.partMax", "Tope de partículas vivas a la vez (cuida el rendimiento)", "partículas · entero", () => FX_PART_MAX, v => { FX_PART_MAX = v; }, 5);
     // 10/8: lo nuevo del documento del diseñador
+    add("Tienda — parcelas y GOD HAND", "plotGoldenCambio", "Cuánta plata vale 1 $Golden al comprar parcelas", "plata por $Golden", () => PLOT_GOLDEN_CAMBIO, v => { PLOT_GOLDEN_CAMBIO = v; }, 10);
+    add("Tienda — parcelas y GOD HAND", "plotGoldenMin", "Precio mínimo de una parcela en $Golden", "$Golden · entero", () => PLOT_GOLDEN_MIN, v => { PLOT_GOLDEN_MIN = v; });
+    add("Tienda — parcelas y GOD HAND", "godHandGolden", "GOD HAND · precio", "$Golden · entero", () => GODHAND_GOLDEN, v => { GODHAND_GOLDEN = v; }, 10);
+    add("Tienda — adornos", "decoMax", "Cuántos adornos se pueden tener puestos a la vez", "adornos · entero", () => DECO_MAX, v => { DECO_MAX = v; });
+    DECO_ORDER.forEach(id => {
+      const d = DECO_DEF[id];
+      if (d.plata) add("Tienda — adornos", "deco." + id + ".plata", d.label + " · precio", U.plata, () => d.plata, v => { d.plata = v; }, 10);
+      if (d.golden) add("Tienda — adornos", "deco." + id + ".golden", d.label + " · precio", "$Golden · entero", () => d.golden, v => { d.golden = v; });
+    });
     add("Establo", "animalMax", "Cuántos animales se pueden tener de cada tipo", "animales · entero", () => ANIMAL_MAX, v => { ANIMAL_MAX = v; });
     add("Establo", "animalSube", "Cuánto más caro sale cada animal extra del mismo tipo", "0.5 = +50% por cada uno", () => ANIMAL_SUBE, v => { ANIMAL_SUBE = v; }, 0.05);
     add("Zona Negra", "zonaCdMin", "Descanso del granjero entre viaje y viaje a la Zona Negra", "", () => ZONA_CD_MIN * 60, v => { ZONA_CD_MIN = v / 60; }, 1, "tiempo");

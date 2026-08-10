@@ -1034,6 +1034,47 @@ function refreshAltar() {
 }
 
 /* ---- mercado / tienda ---- */
+/* ---- TIENDA · pestaña de ADORNOS (10/8) --------------------------------------
+   Decorar la granja y, más adelante, los eventos de "la más linda". Acá también van las
+   parcelas (pagables en plata o en $Golden) y la GOD HAND, porque son las tres compras
+   que el doc pidió meter "en la misma área de la tienda". */
+function refreshDeco() {
+  const box = $("deco-shop"); if (!box) return;
+  let h = "";
+  // --- parcelas ---
+  const tope = (G.plotsOwned || 2) >= 12;
+  h += '<div class="secc">Parcelas</div>';
+  h += '<div class="forge-row"><div class="finfo"><div class="fnm">Parcela nueva <span class="tag">' + (G.plotsOwned || 2) + '/12</span></div>' +
+    '<div class="fds">' + (tope ? "Ya tenés las 12." : "Elegís con qué pagarla. El precio sube con cada una.") + '</div></div>' +
+    '<div class="fbtns">' +
+      (tope ? '<button class="ghost sm" disabled>Completo</button>' :
+        '<button class="green sm" ' + (G.plata >= plotUnlockCost() ? "" : "disabled") + ' data-plot="plata">' + fmt(plotUnlockCost()) + ' plata</button>' +
+        '<button class="green sm" ' + (G.golden >= plotUnlockGolden() ? "" : "disabled") + ' data-plot="golden">' + plotUnlockGolden() + ' $G</button>') +
+    '</div></div>';
+  // --- GOD HAND ---
+  h += '<div class="secc">GOD HAND</div>';
+  h += '<div class="forge-row' + (tengoGodHand() ? ' eq' : '') + '"><div class="finfo"><div class="fnm">GOD HAND' + (tengoGodHand() ? ' <span class="tag">tuya</span>' : '') + '</div>' +
+    '<div class="fds">El cropper que siembra solo: mientras no estás, las parcelas que quedaron vacías aparecen sembradas con la semilla que tengas elegida, y el crecimiento cuenta desde que te fuiste.</div>' +
+    '<div class="fds">No cosecha — eso sigue siendo tuyo. Se compra una vez y queda para siempre.</div></div>' +
+    '<div class="fbtns">' + (tengoGodHand() ? '<button class="ghost sm" disabled>Comprada</button>' :
+      '<button class="green sm" ' + (G.golden >= GODHAND_GOLDEN ? "" : "disabled") + ' id="buy-godhand">' + GODHAND_GOLDEN + ' $G</button>') + '</div></div>';
+  // --- adornos ---
+  h += '<div class="secc">Adornos</div>';
+  h += '<div class="info">Los adornos no dan ninguna ventaja: son para que la granja se vea linda. Comprás acá y los ponés desde el modo edición. Puestos: <b>' + decoPuestos() + '/' + DECO_MAX + '</b></div>';
+  DECO_ORDER.forEach(id => {
+    const d = DECO_DEF[id], tengo = decoTengo(id);
+    const precio = d.plata ? fmt(d.plata) + " plata" : d.golden + " $G";
+    const puede = d.plata ? G.plata >= d.plata : G.golden >= d.golden;
+    h += '<div class="forge-row"><div class="finfo"><div class="fnm">' + d.label + (tengo ? ' <span class="tag">sin poner: ' + tengo + '</span>' : '') + '</div>' +
+      '<div class="fds">' + d.ds + '</div></div>' +
+      '<div class="fbtns"><button class="green sm" ' + (puede ? "" : "disabled") + ' data-buydeco="' + id + '">' + precio + '</button></div></div>';
+  });
+  box.innerHTML = h;
+  box.querySelectorAll("[data-buydeco]").forEach(b => b.onclick = () => { comprarDeco(b.dataset.buydeco); refreshDeco(); });
+  box.querySelectorAll("[data-plot]").forEach(b => b.onclick = () => { comprarParcela(b.dataset.plot === "golden"); refreshDeco(); });
+  const gh = $("buy-godhand"); if (gh) gh.onclick = () => { comprarGodHand(); refreshDeco(); };
+}
+
 function refreshMarket() {
   const cur = marketCur;
   $("mkt-list").innerHTML = SELLABLE.map(res => { const owned = G.res[res] || 0; const u = marketUnit(res); const uStr = cur === "plata" ? `${u} de plata c/u` : `${u.toFixed(1)} $Golden c/u`;
@@ -1309,10 +1350,12 @@ function initUI() {
   document.querySelectorAll(".curbtn").forEach(b => b.onclick = () => { marketCur = b.dataset.cur; refreshMarket(); });
   document.querySelectorAll(".lbtab").forEach(b => b.onclick = () => { lbTab = b.dataset.lb; refreshLb(); });
   document.querySelectorAll(".shoptab[data-shop]").forEach(b => b.onclick = () => {
+    if (b.dataset.shop === "deco") refreshDeco();
     document.querySelectorAll(".shoptab[data-shop]").forEach(x => x.classList.toggle("active", x === b));
     const s = b.dataset.shop;
     $("shop-buy").style.display = s === "buy" ? "" : "none";
     $("shop-sell").style.display = s === "sell" ? "" : "none";
+    { const dp = $("shop-deco"); if (dp) dp.style.display = s === "deco" ? "" : "none"; }
   });
   // clic fuera de una ventana abierta → se cierra (menos la bolsa: multitarea al minar/talar, detalles 29/7)
   // apretar un botón bloqueado: se sacude en vez de no hacer nada (el "no" se entiende sin cartel)
@@ -1342,12 +1385,35 @@ function initUI() {
     $("forge-pane-repair").style.display = s === "repair" ? "" : "none";
   });
   // modo edición: cierra las ventanas y deja solo dos botoncitos flotantes sobre la hotbar
+// llena el selector de adornos con lo que tengas sin colocar
+function syncEditDeco() {
+  const sel = $("edit-deco"), lbl = $("edit-decons"); if (!sel) return;
+  const hay = DECO_ORDER.filter(id => decoTengo(id) > 0);
+  sel.innerHTML = hay.length ? hay.map(id => '<option value="' + id + '">' + DECO_DEF[id].label + ' (' + decoTengo(id) + ')</option>').join("")
+                             : '<option value="">— no tenés adornos —</option>';
+  sel.disabled = !hay.length;
+  const bp = $("edit-poner"); if (bp) bp.disabled = !hay.length;
+  if (lbl) lbl.textContent = "Puestos: " + decoPuestos() + "/" + DECO_MAX + " · se compran en la Tienda";
+}
+// lo coloca en el primer hueco libre cerca del centro; después se arrastra como cualquier cosa
+function ponerAdornoElegido() {
+  const sel = $("edit-deco"); if (!sel || !sel.value) return;
+  const sc = window.farmScene;
+  if (!sc || !sc.huecoParaAdorno) { toast("Entrá a la granja para poner adornos"); return; }
+  const pt = sc.huecoParaAdorno();
+  if (!pt) { toast("No hay lugar libre en la granja"); return; }
+  if (!decoColocar(sel.value, pt.col, pt.row)) return;
+  sc.syncAdornos();
+  syncEditDeco();
+  toast(DECO_DEF[sel.value].label + " colocado — arrastralo a donde quieras");
+}
+
   window.setEditMode = (on) => {
     GF.editMode = on;
     const ce2 = $("cfg-edit"); if (ce2) ce2.textContent = on ? "Terminar edición" : "Modo edición";
     const eb = $("editbar"); if (eb) eb.classList.toggle("show", on);
     if (window.FARM && FARM.gridG) FARM.gridG.setVisible(on);   // el cuadriculado solo se ve editando
-    if (on) { closeAllOv(); toast("Arrastrá los objetos a otra celda"); }
+    if (on) { closeAllOv(); syncEditDeco(); toast("Arrastrá los objetos a otra celda"); }
     else toast("Edición terminada");
   };
   const doFarmReset = () => { G.layout = {}; G.layoutPlots = {}; G.layoutPond = null; if (typeof saveFarm === "function") saveFarm(true); if (window.FARM && window.FARM.scene) window.FARM.scene.restart(); toast("↺ Granja restaurada"); };
@@ -1358,6 +1424,8 @@ function initUI() {
   if (sndBtn) { sndLabel(); sndBtn.onclick = () => { if (window.sfxOn) sfxOn(!(window.sfxIsOn && sfxIsOn())); sndLabel(); if (window.sfx) sfx("click"); }; }
   const cr = $("cfg-reset"); if (cr) cr.onclick = doFarmReset;
   const ed = $("edit-done"); if (ed) ed.onclick = () => setEditMode(false);
+  // --- adornos: el selector y el botón de la barra de edición (10/8) ---
+  { const bp = $("edit-poner"); if (bp) bp.onclick = () => ponerAdornoElegido(); }
   const er = $("edit-reset"); if (er) er.onclick = doFarmReset;
   const dc = $("dy-claim"); if (dc) dc.onclick = () => claimDaily();
   const sw = $("seedwheel"); if (sw) sw.onclick = hideSeedWheel;
