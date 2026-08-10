@@ -8,11 +8,18 @@ class ForestScene extends Phaser.Scene {
     this.W = 32 * T; this.H = GF.WORLD_H;   // bosque más ancho que la granja
     GF.uiOpen = false;
 
-    // piso del bosque: damero de verdes OSCUROS (como la granja pero sombrío) + decoraciones
+    // 10/8: la Zona Negra dejó de ser un solo bosque. El mapa que se arma sale de ZONA_DEF:
+    // piso, densidad de árboles y qué bichos viven acá. Ver state.js.
+    const Z = (typeof ZONA_DEF !== "undefined" && ZONA_DEF[GF.zona]) ? ZONA_DEF[GF.zona] : null;
+    this.Z = Z; this.zonaKey = Z ? GF.zona : "pantano";
+    if (typeof zonaMarcarVisitada === "function") zonaMarcarVisitada(this.zonaKey);
+    const PISO = Z ? Z.piso : [0x2f4a20, 0x2a431c];
+
+    // piso del mapa: damero de dos tonos + decoraciones
     const g = this.add.graphics().setDepth(-1000);
     const cols = Math.ceil(this.W / T), rows = Math.ceil(this.H / T);
     for (let cy = 0; cy < rows; cy++) for (let cx = 0; cx < cols; cx++) {
-      g.fillStyle((cx + cy) % 2 === 0 ? 0x2f4a20 : 0x2a431c, 1);
+      g.fillStyle((cx + cy) % 2 === 0 ? PISO[0] : PISO[1], 1);
       g.fillRect(cx * T, cy * T, T, T);
     }
     // matas y piedritas deterministas (LCG) para que no se vea plano
@@ -20,8 +27,8 @@ class ForestScene extends Phaser.Scene {
     const rnd = () => { seed = (seed * 1664525 + 1013904223) >>> 0; return seed / 4294967296; };
     for (let i = 0; i < 260; i++) {
       const x = rnd() * this.W, y = rnd() * this.H, t = rnd();
-      if (t < 0.5) { g.fillStyle(0x223a16, 0.8); g.fillRect(x, y, 2, 4); g.fillRect(x + 3, y + 1, 2, 3); }        // mata oscura
-      else if (t < 0.8) { g.fillStyle(0x3a5527, 0.7); g.fillRect(x, y, 3, 2); }                                   // hierba
+      if (t < 0.5) { g.fillStyle(Z ? Z.mata : 0x223a16, 0.8); g.fillRect(x, y, 2, 4); g.fillRect(x + 3, y + 1, 2, 3); }   // mata
+      else if (t < 0.8) { g.fillStyle(Z ? Z.hierba : 0x3a5527, 0.7); g.fillRect(x, y, 3, 2); }                    // hierba
       else { g.fillStyle(0x4a4438, 0.6); g.fillRect(x, y, 3, 3); }                                                // piedrita
     }
     g.lineStyle(4, 0x22331a, 0.95).strokeRect(0, 0, this.W, this.H);
@@ -29,7 +36,10 @@ class ForestScene extends Phaser.Scene {
     // árboles decorativos (más densos a la derecha)
     this.treeCols = [];
     this.vientoArb = [];   // los mismos árboles, para mecerlos con el viento (se rearma en cada create)
-    for (let i = 0; i < 46; i++) {
+    // El doc pedía −40% de árboles: pasaron de 46 fijos a la densidad de cada mapa (el pantano
+    // tiene 28, y va bajando hasta 4 en la guarida, que es roca y fuego).
+    const NARB = Z ? Z.arboles : 28;
+    for (let i = 0; i < NARB; i++) {
       const x = 60 + Math.random() * (this.W - 120), y = 60 + Math.random() * (this.H - 90);
       if (x < 150 && y > this.H / 2 - 80 && y < this.H / 2 + 80) continue;   // entrada despejada
       const s = this.add.image(x, y, "tree").setOrigin(0.5, 1);
@@ -38,21 +48,49 @@ class ForestScene extends Phaser.Scene {
       this.vientoArb.push({ spr: s, fase: (x * 0.017 + y * 0.029) % (Math.PI * 2) });   // se mecen con el viento
     }
 
-    // salida (izquierda): volver a la granja
-    this.add.text(26, this.H / 2, "", { fontSize: "26px" }).setOrigin(0.5).setDepth(5);
-    this.add.text(26, this.H / 2 + 26, "Granja", { fontFamily: "system-ui", fontSize: "11px", fontStyle: "bold", color: "#ffe08a", stroke: "#20301a", strokeThickness: 3 }).setOrigin(0.5).setDepth(5);
+    // nombre del mapa, arriba a la izquierda
+    this.add.text(this.W / 2, 16, (Z ? Z.label : "Zona Negra"), { fontFamily: "system-ui", fontSize: "15px", fontStyle: "bold", color: "#ffe08a", stroke: "#20301a", strokeThickness: 4 })
+      .setOrigin(0.5, 0).setScrollFactor(0).setDepth(9000);
 
-    // monstruos: tier según profundidad (x)
+    // SALIDA IZQUIERDA: al mapa anterior, o a la granja si estás en el primero (10/8)
+    const ant = (typeof zonaAnt === "function") ? zonaAnt(this.zonaKey) : null;
+    this.salidaIzq = ant;   // null = a la granja
+    { const g2 = this.add.graphics().setDepth(5);
+      g2.fillStyle(0x241505, 1).fillEllipse(26, this.H / 2 - 16, 34, 44);
+      g2.fillStyle(ant ? 0x6b4a86 : 0x3fa3cc, 0.9).fillEllipse(26, this.H / 2 - 16, 24, 34); }
+    this.add.text(26, this.H / 2 + 16, ant ? ZONA_DEF[ant].label : "Granja",
+      { fontFamily: "system-ui", fontSize: "11px", fontStyle: "bold", color: "#ffe08a", stroke: "#20301a", strokeThickness: 3 }).setOrigin(0.5).setDepth(5);
+
+    // TELEPORT DERECHO: al mapa siguiente, si existe y si tenés el nivel de Combate
+    const sig = (typeof zonaSig === "function") ? zonaSig(this.zonaKey) : null;
+    this.salidaDer = sig;
+    if (sig) {
+      const zs = ZONA_DEF[sig], ok = zonaPuedeEntrar(sig);
+      const gx = this.W - 30;
+      const g3 = this.add.graphics().setDepth(5);
+      g3.fillStyle(0x241505, 1).fillEllipse(gx, this.H / 2 - 16, 36, 46);
+      g3.fillStyle(ok ? 0xb45ad8 : 0x555046, 0.9).fillEllipse(gx, this.H / 2 - 16, 26, 36);
+      this.add.text(gx, this.H / 2 + 16, ok ? zs.label : zs.label + " · Combate " + zs.lvl,
+        { fontFamily: "system-ui", fontSize: "11px", fontStyle: "bold", color: ok ? "#ffe08a" : "#c9bfa8", stroke: "#20301a", strokeThickness: 3 })
+        .setOrigin(0.5).setDepth(5);
+    }
+
+    // monstruos: los del mapa en el que estás, en su franja de profundidad
     this.monsters = [];
-    const zones = [   // bestiario doc 2/8: tier I (entrada) → jefe (fondo)
-      ["rata", 0.06, 0.20, 2], ["murcielago", 0.10, 0.26, 2], ["larva", 0.18, 0.32, 2],
-      ["baba", 0.24, 0.38, 2], ["arana", 0.30, 0.44, 2],
-      ["goblin", 0.38, 0.52, 2], ["orco", 0.44, 0.58, 2], ["esqueleto", 0.50, 0.64, 2],
-      ["lancero", 0.54, 0.66, 1], ["golem", 0.58, 0.72, 1], ["guerrero", 0.64, 0.76, 1],
-      ["hombre_lobo", 0.68, 0.80, 1], ["troll", 0.74, 0.86, 1], ["ogro", 0.78, 0.88, 1],
-      ["espectro", 0.82, 0.92, 1], ["demonio", 0.87, 0.95, 1], ["dragon", 0.93, 0.985, 1],
-    ];
+    const zones = Z ? Z.mobs : [["rata", 0.08, 0.40, 4], ["murcielago", 0.20, 0.62, 4], ["larva", 0.35, 0.90, 4]];
     zones.forEach(([key, x0, x1, n]) => { for (let i = 0; i < n; i++) this.spawnMonster(key, x0, x1); });
+    // Guarida: la vida del Dragón es la del asalto del clan, así que se trae de Supabase
+    if (this.zonaKey === "guarida" && typeof raidActivo === "function") {
+      raidActivo().then(r => {
+        if (!r || !r.raid) return;
+        this._jefeHp = Number(r.raid.hp); this._jefeMax = Number(r.raid.hp_max);
+        if (r.raid.estado === "vencido") {
+          const jefe = this.monsters.find(m => m.def && m.def.boss);
+          if (jefe) { jefe.dead = true; jefe.spr.setVisible(false); jefe.bar.clear(); }
+          toast("El Dragón ya está vencido — cobrá tu parte en Clan");
+        }
+      });
+    }
 
     // héroe
     const hero = this.add.sprite(90, this.H / 2, "hero_idle_0").setOrigin(0.5, 1);
@@ -374,6 +412,10 @@ class ForestScene extends Phaser.Scene {
       }
     }
     if (crit) this.floatTxt(m, "¡CRÍTICO!", "#ff9a3a");
+    // EL DRAGÓN NO ES UN MOB CUALQUIERA (10/8): su vida es del CLAN y vive en Supabase.
+    // Lo que le pegás acá se manda allá y se descuenta de la barra compartida; el sprite
+    // local nunca muere solo. Si no hay clan o no hay asalto abierto, no le entra nada.
+    if (m.def.boss) { this.pegarleAlJefe(m, dmg); return; }
     m.hp -= dmg;
     if (vamp > 0 && G.hp < G.hpMax) { G.hp = Math.min(G.hpMax, G.hp + Math.max(1, Math.round(dmg * vamp / 100))); refreshHud(); }   // Runa Vampírica
     // chispa de golpe (detalles 338)
@@ -394,6 +436,45 @@ class ForestScene extends Phaser.Scene {
     if (m.hp <= 0) this.killMonster(m, skill || "sword"); else { this.drawBar(m); m.tgt = "hero"; this.updateTargetFx(); }
   }
 
+
+  /* ---- el Dragón del asalto: el daño va a la barra compartida del clan (10/8) ----
+     Se acumula y se manda de a tandas cada 2 s: mandar una llamada por golpe sería un
+     pedido de red cada 2 segundos por jugador, y el server es el plan gratis. */
+  pegarleAlJefe(m, dmg) {
+    this.floatTxt(m, "-" + dmg, "#ffd24a");
+    this._jefeAcum = (this._jefeAcum || 0) + dmg;
+    if (nowMs() - (this._jefeEnvio || 0) < 2000) return;
+    this._jefeEnvio = nowMs();
+    const paquete = this._jefeAcum; this._jefeAcum = 0;
+    if (typeof raidPegar !== "function") return;
+    raidPegar(paquete).then(r => {
+      if (r && r.error) {
+        if (nowMs() - (this._jefeAviso || 0) > 4000) {
+          this._jefeAviso = nowMs();
+          toast(/clan/i.test(r.error) ? "Necesitás un clan con un asalto abierto" : "El Dragón no está en asalto");
+        }
+        return;
+      }
+      const q = r && r.ok; if (!q) return;
+      this._jefeHp = Number(q.hp); this._jefeMax = Number(q.hp_max);
+      if (q.estado === "vencido") {
+        this.floatTxt(m, "¡VENCIDO!", "#ffd75e");
+        log("¡El clan venció al Dragón! Cobrá tu parte en la ventana de Clan.", "gold");
+        toast("¡Dragón vencido! Cobrá en Clan");
+        m.dead = true; m.spr.setVisible(false);
+      }
+    });
+  }
+  // barra del jefe: la del clan, no la del sprite
+  dibujarBarraJefe(m) {
+    if (!this._jefeMax) return;
+    const pct = Math.max(0, Math.min(1, this._jefeHp / this._jefeMax));
+    m._barFirma = null;
+    m.bar.clear();
+    const w = 60, x = m.cx - w / 2, y = m.by - (m.spr.displayHeight || m.spr.height) - 10;
+    m.bar.fillStyle(0x000000, 0.6).fillRect(x - 1, y - 1, w + 2, 7);
+    m.bar.fillStyle(0xb44aff, 1).fillRect(x, y, w * pct, 5);
+  }
 
   // AURA DORADA (cosmético de nivel 30+): resplandor aditivo que late a los pies del granjero
   updateAura() {
@@ -578,8 +659,15 @@ class ForestScene extends Phaser.Scene {
     const loot = rollLoot(m.def);
     Object.keys(loot).forEach(k => drops.push({ k, n: loot[k], kind: "res" }));
     if ((m.def.lvl || 0) >= 8 && Math.random() < 0.30) drops.push({ k: "esencia_runica", n: 1, kind: "res" });   // Altar: drop de mobs Nv 8+
+    // ESENCIA OSCURA (10/8): el recurso que SOLO sale acá abajo. Cae más cuanto más hondo, y
+    // el jefe suelta un puñado. No se compra, no se cultiva y no lo dan los animales.
+    if (typeof rollEsencia === "function") {
+      const eo = rollEsencia(this.zonaKey, !!m.def.boss);
+      if (eo > 0) drops.push({ k: "esencia_oscura", n: eo, kind: "res" });
+    }
     { const dg = eqRunaVal("dorada"); if (dg && Math.random() * 100 < dg) { G.golden += 1; this.floatTxt(m, "+1 $Golden", "#ffe08a"); } }   // Runa Dorada
-    const parts = drops.map(d => d.kind === "gear" ? "" + ((GEAR_DEF[d.k] && GEAR_DEF[d.k].label) || d.k) : "+" + d.n + " " + (d.k === "plata" ? "" : (RES_EMOJI[d.k] || "")));
+    const parts = drops.map(d => d.kind === "gear" ? ((GEAR_DEF[d.k] && GEAR_DEF[d.k].label) || d.k)
+      : "+" + d.n + " " + (d.k === "plata" ? "plata" : (RES_LABEL[d.k] || d.k)));
     this.dropLoot(m, drops);   // todo el botín cae al piso, armaduras incluidas (detalles 338)
     log("Venciste a " + m.def.label + (parts.length ? ". Soltó: " + parts.join(" · ") : ". No soltó nada."), "gold");
     toast(m.def.label + " derrotado" + (parts.length ? ": " + parts.join(" · ") : ""));
@@ -643,6 +731,10 @@ class ForestScene extends Phaser.Scene {
     // tinte de daño
     if (this.hurtFx > 0) { this.hurtFx -= dt; hero.setTint(0xff6b5a); } else hero.clearTint();
     this.drawHeroBar();   // la barra de vida sigue al granjero
+    if (this.zonaKey === "guarida" && this._jefeMax) {
+      const jefe = this.monsters.find(m => m.def && m.def.boss && !m.dead);
+      if (jefe) this.dibujarBarraJefe(jefe);
+    }
     this.seguirAura();
     this.tickViento();    // mismo viento que en la granja
 
@@ -725,7 +817,29 @@ class ForestScene extends Phaser.Scene {
       if (vx < 0) this.facing = "west"; else if (vx > 0) this.facing = "east";
     }
 
-    // salir por la izquierda
+    // entrar al mapa siguiente por la derecha (10/8)
+    if (this.salidaDer && hero.x > this.W - 44) {
+      if (!zonaPuedeEntrar(this.salidaDer)) {
+        if (nowMs() - (this._avisoNivel || 0) > 2500) {
+          this._avisoNivel = nowMs();
+          toast("Necesitás Combate nivel " + ZONA_DEF[this.salidaDer].lvl + " para entrar a " + ZONA_DEF[this.salidaDer].label);
+        }
+        hero.x = this.W - 46;
+      } else {
+        GF.zona = this.salidaDer;
+        if (typeof saveFarm === "function") saveFarm();
+        this.leaving = true;
+        irAEscena(this, "forest"); return;
+      }
+    }
+
+    // salir por la izquierda: al mapa anterior, o a la granja si estás en el primero
+    if (hero.x < 40 && this.salidaIzq) {
+      GF.zona = this.salidaIzq;
+      if (typeof saveFarm === "function") saveFarm();
+      this.leaving = true;
+      irAEscena(this, "forest"); return;
+    }
     if (hero.x < 40) {
       const left = (GF.forestDrops || []).length;
       if (left) { log("Dejaste " + left + " objeto(s) en el suelo de la Zona Negra — siguen ahí si volvés.", "bad"); toast("Dejaste " + left + " objeto(s) en el suelo"); }

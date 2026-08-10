@@ -26,7 +26,7 @@ function snapshot() {
     tools: G.tools, toolsLost: G.toolsLost, sflStock: true, invRows: G.invRows, slots: G.slots, hotbar: G.hotbar, hotSel: G.hotSel, hbInit: G.hbInit, layout: G.layout,
     daily: G.daily, plotsOwned: G.plotsOwned, seedBuys: G.seedBuys, built: G.built,
     hp: G.hp, hpMax: G.hpMax, combatXp: G.combatXp, stam: G.stam, stamAcc: G.stamAcc, stamRec: G.stamRec, pass: G.pass, tuto: G.tuto, firstSeeds: G.firstSeeds,
-    stats: G.stats, statsBase: G.statsBase, chestCap: G.chestCap, edif2: G.edif2, cosmeticos: G.cosmeticos, animals: G.animals, armor: G.armor, armorEq: G.armorEq, ofrendaPts: G.ofrendaPts, ofrendaLog: G.ofrendaLog, nodoUsos: G.nodoUsos, cosEq: G.cosEq, incursion: G.incursion, incDia: G.incDia, zonaCdHasta: G.zonaCdHasta, zonaViaje: G.zonaViaje, decos: G.decos, decoBolsa: G.decoBolsa, godHand: G.godHand, visto: nowMs(), dummyTrain: G.dummyTrain, swordOwned: G.swordOwned, bowOwned: G.bowOwned, swordWoodOwned: G.swordWoodOwned, gear: G.gear,
+    stats: G.stats, statsBase: G.statsBase, chestCap: G.chestCap, edif2: G.edif2, cosmeticos: G.cosmeticos, animals: G.animals, armor: G.armor, armorEq: G.armorEq, ofrendaPts: G.ofrendaPts, ofrendaLog: G.ofrendaLog, nodoUsos: G.nodoUsos, cosEq: G.cosEq, incursion: G.incursion, incDia: G.incDia, zonaCdHasta: G.zonaCdHasta, zonaViaje: G.zonaViaje, decos: G.decos, decoBolsa: G.decoBolsa, godHand: G.godHand, zonasVistas: G.zonasVistas, visto: nowMs(), dummyTrain: G.dummyTrain, swordOwned: G.swordOwned, bowOwned: G.bowOwned, swordWoodOwned: G.swordWoodOwned, gear: G.gear,
     armasUnlocked: G.armasUnlocked, treesOpen: G.treesOpen, rocksOpen: G.rocksOpen, firstCropDone: G.firstCropDone, weapons: G.weapons,
     dishes: G.dishes, cooking: G.cooking, chests: G.chests, dummyUsedAt: G.dummyUsedAt,
     armCd: G.armCd, mkPend: G.mkPend, testeoDado: G.testeoDado,
@@ -75,6 +75,7 @@ function hydrate(d) {
   // traen un objeto suelto por tipo: se envuelve en lista para que nada se pierda.
   // cuánto tiempo estuviste afuera: lo usa la GOD HAND para sembrar "desde que te fuiste"
   G._ausenteMs = (typeof d.visto === "number" && d.visto > 0) ? Math.max(0, nowMs() - d.visto) : 0;
+  G.zonasVistas = Array.isArray(d.zonasVistas) && d.zonasVistas.length ? d.zonasVistas.slice(0, 8) : ["pantano"];
   G.decos = Array.isArray(d.decos) ? d.decos.slice(0, 200) : [];
   G.decoBolsa = (d.decoBolsa && typeof d.decoBolsa === "object") ? d.decoBolsa : {};
   G.godHand = d.godHand === true;
@@ -248,6 +249,64 @@ async function fetchOfrendaRank() {
     if (error) return { error: error.message };
     return { rows: (data || []).filter(r => (r.ofrenda_pts || 0) > 0).sort((a, b) => (b.ofrenda_pts || 0) - (a.ofrenda_pts || 0)) };
   } catch (e) { return { error: String(e && e.message || e) }; }
+}
+
+// ---- CLANES Y ASALTO AL DRAGÓN (10/8) ----
+// Todo pasa por funciones de Postgres (ver sql/clanes_y_asaltos.sql). Las tablas están
+// cerradas: si el cliente pudiera escribir el daño a mano, cualquiera se anotaría el asalto
+// entero desde la consola del navegador. Además el descuento de vida del jefe tiene que ser
+// atómico, o dos golpes simultáneos se pisan y uno se pierde.
+async function clanMio() {
+  if (!sb || !UID) return null;
+  try {
+    const { data, error } = await sb.from("clan_members").select("clan_id,rol").eq("user_id", UID).maybeSingle();
+    if (error || !data) return null;
+    const { data: c } = await sb.from("clans").select("id,nombre,codigo,lider,tope").eq("id", data.clan_id).maybeSingle();
+    const { data: ms } = await sb.from("clan_members").select("user_id,nombre,rol,desde").eq("clan_id", data.clan_id);
+    return c ? { clan: c, rol: data.rol, miembros: ms || [] } : null;
+  } catch (e) { return null; }
+}
+async function clanCrear(nombre) {
+  if (!sb || !UID) return { error: "sin conexión" };
+  const { data, error } = await sb.rpc("clan_crear", { p_uid: UID, p_nombre: nombre, p_jugador: (typeof nombreLucido === "function" ? nombreLucido() : (window.NICK || "Granjero")) });
+  return error ? { error: error.message } : { ok: Array.isArray(data) ? data[0] : data };
+}
+async function clanUnirse(codigo) {
+  if (!sb || !UID) return { error: "sin conexión" };
+  const { error } = await sb.rpc("clan_unirse", { p_uid: UID, p_codigo: codigo, p_jugador: (typeof nombreLucido === "function" ? nombreLucido() : (window.NICK || "Granjero")) });
+  return error ? { error: error.message } : { ok: true };
+}
+async function clanSalir() {
+  if (!sb || !UID) return { error: "sin conexión" };
+  const { error } = await sb.rpc("clan_salir", { p_uid: UID });
+  return error ? { error: error.message } : { ok: true };
+}
+async function raidActivo() {
+  if (!sb || !UID) return null;
+  try {
+    const { data: m } = await sb.from("clan_members").select("clan_id").eq("user_id", UID).maybeSingle();
+    if (!m) return null;
+    const { data: r } = await sb.from("raids").select("id,hp,hp_max,estado,cierra_at")
+      .eq("clan_id", m.clan_id).in("estado", ["abierto", "vencido"]).order("abierto_at", { ascending: false }).limit(1).maybeSingle();
+    if (!r) return null;
+    const { data: d } = await sb.from("raid_damage").select("user_id,nombre,dmg,cobrado").eq("raid_id", r.id).order("dmg", { ascending: false });
+    return { raid: r, dmg: d || [] };
+  } catch (e) { return null; }
+}
+async function raidAbrir(hp) {
+  if (!sb || !UID) return { error: "sin conexión" };
+  const { error } = await sb.rpc("raid_abrir", { p_uid: UID, p_hp: hp });
+  return error ? { error: error.message } : { ok: true };
+}
+async function raidPegar(dmg) {
+  if (!sb || !UID) return { error: "sin conexión" };
+  const { data, error } = await sb.rpc("raid_pegar", { p_uid: UID, p_nombre: (typeof nombreLucido === "function" ? nombreLucido() : (window.NICK || "Granjero")), p_dmg: dmg });
+  return error ? { error: error.message } : { ok: Array.isArray(data) ? data[0] : data };
+}
+async function raidCobrar() {
+  if (!sb || !UID) return { error: "sin conexión" };
+  const { data, error } = await sb.rpc("raid_cobrar", { p_uid: UID });
+  return error ? { error: error.message } : { parte: Number(data) || 0 };
 }
 
 // ---- chat global (Supabase Realtime broadcast) ----

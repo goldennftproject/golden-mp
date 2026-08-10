@@ -1457,6 +1457,13 @@ Los cuatro números nuevos quedaron en el panel de balanceo (808 entradas, ningu
   **cada familia tiene su color de borde** — recurso, semilla, pez, plato, herramienta — para
   reconocer una casilla sin leer el tooltip. Mismo criterio en la barra rápida.
 
+### Los edificios salen del menú (10/8)
+El menú tenía atajo directo a la **Tienda (O)**, la **Herrería (K)** y el **Granero (B)**, así
+que se podía usar cualquiera de los tres sin acercarse ni construirlos. Se sacaron los tres
+botones y sus teclas: ahora se entra clickeando el edificio en la granja, que es lo que le da
+sentido a haberlo construido. El tutorial no se rompe — solo resalta el panel si ya está
+abierto, y su flecha apunta al edificio, no al menú.
+
 ### Fase 4 — Tienda de adornos, parcelas y GOD HAND
 
 Los tres van en la **misma pestaña "Adornos"** de la Tienda, como pedía el documento.
@@ -1485,6 +1492,69 @@ comprar parcelas con las dos monedas suma bien; y la GOD HAND, con 3 h de ausenc
 corrido 3 horas.
 
 12 números nuevos en el panel de balanceo (820 entradas, ninguna rota).
+
+### Fase 5 (primera mitad) — La Zona Negra partida en mapas
+
+Era **un solo bosque** con los 17 monstruos repartidos por profundidad: la rata al lado del
+dragón. Ahora son **cuatro mapas encadenados**, cada uno con su familia de bichos, su piso y su
+nivel de entrada:
+
+| Mapa | Combate | Monstruos | Árboles |
+|---|---|---|---|
+| Pantano | 1 | rata, murciélago, larva | 28 |
+| Cañón de Piedra | 10 | baba, araña, goblin, orco, lancero | 14 |
+| Grietas de Fuego | 22 | esqueleto, golem, hombre lobo, guerrero, trol | 8 |
+| Guarida del Dragón | 35 | guardia de orcos adelante · ogro, espectro, demonio · **el jefe al fondo** | 4 |
+
+- Todo sale de **`ZONA_DEF`** en state.js: piso, densidad de árboles y qué bichos viven en cada
+  uno. Agregar un mapa nuevo es agregar una entrada, no tocar `forest.js`.
+- **Teleports**: se avanza por el portal del fondo a la derecha y se vuelve por el de la
+  izquierda. Desde el primer mapa, la izquierda es la granja. El teleport avisa el nivel que
+  pide y no te deja pasar si no lo tenés.
+- **−40% de árboles**, como pedía el doc: de 46 fijos a la densidad de cada mapa. La guarida es
+  roca y fuego, casi sin vegetación.
+- **La guardia de orcos antes del jefe**: en la guarida los orcos, lanceros y guerreros están
+  en la primera mitad del mapa y el dragón al 90% del fondo. Hay que abrirse paso.
+- **Esencia oscura**, el recurso que **solo** sale acá abajo: no se compra, no se cultiva y no
+  lo dan los animales. Cae más cuanto más hondo — medido sobre 1000 monstruos: 100 en el
+  pantano, 217 en piedra, 418 en fuego, 763 en la guarida. El jefe suelta unas 6 de una.
+- El **menú de mapa** ahora lista los cuatro, con cuál pide qué nivel y en cuáles ya estuviste.
+- De paso: los textos de botín volvieron a decir el nombre del recurso. Usaban el emoji, que se
+  había perdido del archivo, así que se leía "Venciste a Rata. Soltó: +3".
+
+### Fase 5 (segunda mitad) — Clanes y asalto al Dragón
+
+Las cuatro decisiones abiertas se resolvieron así, y el porqué importa más que el qué:
+
+- **El asalto NO es en tiempo real.** El clan abre el asalto y el Dragón queda con una barra de
+  vida **compartida**, guardada en Supabase. Cada miembro entra a la Guarida cuando puede y le
+  pega; su daño se descuenta de esa barra. Motivo: el juego ya es asíncrono (granja offline,
+  incursiones de un clic), un raid en vivo obligaría a montar salas de combate — hoy solo
+  existen en la plaza —, y con pocos jugadores conectados a la vez **no se juntaría nunca**.
+  Encima el server es el plan gratis de Render: no conviene sostener una sala de combate abierta.
+- **Hacen falta 3 miembros**, no 5. Con 5, un clan chico no llega nunca y la Guarida queda
+  muerta. Con 3 y 60.000 de vida compartida, son 20.000 cada uno.
+- **El botín se reparte proporcional al daño, con un piso del 10%.** Sin proporción aparece el
+  que se cuelga del trabajo ajeno; sin piso, el que recién empieza no vuelve más.
+- **Tope de 10 por clan**, y se entra con un **código de 6 letras** en vez de invitaciones
+  nominales: es lo más simple de compartir por Discord, que es donde está la comunidad.
+
+Detalles de implementación que valen la pena:
+
+- **Todo pasa por funciones de Postgres**, no por INSERT sueltos. Dos razones: si el cliente
+  pudiera escribir el daño, cualquiera se anotaría el asalto entero desde la consola del
+  navegador; y el descuento de vida tiene que ser **atómico**, o dos golpes simultáneos se
+  pisan y uno se pierde. Las cuatro tablas quedan con RLS y solo lectura.
+- **El daño se manda de a tandas cada 2 segundos**, no golpe por golpe: una llamada de red cada
+  2 s por jugador es lo que aguanta el plan gratis.
+- El Dragón del mapa **ya no muere solo**: su sprite no tiene vida propia, la barra que se ve es
+  la del clan. Sin clan o sin asalto abierto, no le entra daño y el juego lo dice.
+- Si el asalto ya está vencido al entrar, el Dragón no aparece y avisa que pases a cobrar.
+
+El SQL está en **`sql/clanes_y_asaltos.sql`**, listo para pegar entero: cuatro tablas, seis
+funciones, los permisos y un bloque de prueba al final.
+
+Panel de balanceo: 832 entradas, ninguna rota.
 
 ---
 

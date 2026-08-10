@@ -10,7 +10,7 @@ function log(m, k = "") { const b = $("log"); if (!b) return; const d = document
 /* ---- overlays ---- */
 function isOpen(id) { const e = $(id); return !!(e && e.classList.contains("show")); }
 function anyOvOpen() { return !!document.querySelector(".ov.show"); }
-const OV_REFRESH = { "ov-entrenando": () => entrenarSync(), "ov-misiones": () => refreshMisiones(), "ov-mapa": () => refreshMapa(), "ov-inv": () => refreshInv(), "ov-skills": () => refreshSkills(), "ov-equip": () => refreshEquip(),
+const OV_REFRESH = { "ov-entrenando": () => entrenarSync(), "ov-clan": () => refreshClan(), "ov-misiones": () => refreshMisiones(), "ov-mapa": () => refreshMapa(), "ov-inv": () => refreshInv(), "ov-skills": () => refreshSkills(), "ov-equip": () => refreshEquip(),
   "ov-forge": () => refreshForge(), "ov-market": () => refreshMarket(), "ov-barn": () => refreshBarn(),
   "ov-cocina": () => refreshCooking(),
   "ov-horno": () => refreshHorno(),
@@ -812,6 +812,122 @@ function syncMisionesBadge() {
   } catch (e) {}
 }
 
+/* ---- CLAN Y ASALTO AL DRAGÓN (10/8) ------------------------------------------
+   Decisiones tomadas y por qué:
+     · El asalto NO es en vivo. El clan abre el asalto y cada uno entra cuando puede: la
+       vida del jefe es compartida y vive en Supabase. Un raid en tiempo real obligaría a
+       montar salas de combate (hoy solo existen en la plaza) y, con pocos jugadores a la
+       vez, no se juntaría nunca.
+     · Hacen falta 3 miembros para abrirlo. Con 5 un clan chico nunca llega.
+     · El botín se reparte proporcional al daño, con un piso del 10% para el que aportó
+       poco: sin piso el que recién empieza no vuelve, sin proporción aparece el que se
+       cuelga del trabajo ajeno.
+   La barra de vida y el reparto los resuelve Postgres, no el cliente: si el daño se
+   escribiera desde el navegador, cualquiera se anotaría el asalto entero desde la consola. */
+let _clanCache = null, _clanT = 0;
+function refreshClan() {
+  const box = $("clan-list"); if (!box) return;
+  if (nowMs() - _clanT > 8000) {
+    _clanT = nowMs();
+    Promise.all([clanMio(), raidActivo()]).then(([c, r]) => { _clanCache = { c, r }; if (isOpen("ov-clan")) pintarClan(); });
+  }
+  pintarClan();
+}
+function pintarClan() {
+  const box = $("clan-list"); if (!box) return;
+  if (!_clanCache) { box.innerHTML = '<div class="fds">Cargando…</div>'; return; }
+  const { c, r } = _clanCache;
+  if (!c) {
+    box.innerHTML = '<div class="info">Todavía no estás en ningún clan. Podés fundar uno o entrar con el código de un amigo.</div>' +
+      '<div class="forge-row"><div class="finfo"><div class="fnm">Fundar un clan</div>' +
+      '<div class="fds"><input id="clan-nom" placeholder="Nombre del clan" maxlength="24" style="width:100%"></div></div>' +
+      '<div class="fbtns"><button class="green sm" id="clan-crear">Fundar</button></div></div>' +
+      '<div class="forge-row"><div class="finfo"><div class="fnm">Entrar a uno</div>' +
+      '<div class="fds"><input id="clan-cod" placeholder="Código de 6 letras" maxlength="6" style="width:100%"></div></div>' +
+      '<div class="fbtns"><button class="green sm" id="clan-unirse">Entrar</button></div></div>';
+    const bc = $("clan-crear"); if (bc) bc.onclick = async () => {
+      const n = ($("clan-nom") || {}).value || "";
+      if (n.trim().length < 3) { toast("Poné un nombre de al menos 3 letras"); return; }
+      const res = await clanCrear(n.trim());
+      if (res.error) { toast("No se pudo: " + res.error); return; }
+      toast("¡Clan fundado! Código: " + (res.ok && res.ok.codigo));
+      _clanT = 0; refreshClan();
+    };
+    const bu = $("clan-unirse"); if (bu) bu.onclick = async () => {
+      const k = ($("clan-cod") || {}).value || "";
+      const res = await clanUnirse(k.trim());
+      if (res.error) { toast("No se pudo: " + res.error); return; }
+      toast("¡Entraste al clan!"); _clanT = 0; refreshClan();
+    };
+    return;
+  }
+  const n = c.miembros.length;
+  let h = '<div class="info">Clan <b>' + c.clan.nombre + '</b> · ' + n + '/' + c.clan.tope + ' miembros · ' +
+    'código para invitar: <b>' + c.clan.codigo + '</b></div>';
+  h += '<div class="secc">Miembros</div>';
+  h += c.miembros.map(m => '<div class="forge-row"><div class="finfo"><div class="fnm">' + m.nombre +
+    (m.rol !== "miembro" ? ' <span class="tag">' + m.rol + '</span>' : '') + '</div></div></div>').join("");
+  // ---- el asalto ----
+  h += '<div class="secc">Asalto al Dragón</div>';
+  if (!r || !r.raid || r.raid.estado === "expirado") {
+    const puede = n >= RAID_MIN_MIEMBROS;
+    h += '<div class="info">' + (puede
+      ? 'No hay ningún asalto abierto. Al abrirlo, el Dragón aparece en la Guarida con <b>' + fmt(RAID_HP) + '</b> de vida compartida y el clan tiene <b>48 h</b> para bajarlo.'
+      : 'Hacen falta <b>' + RAID_MIN_MIEMBROS + '</b> miembros para abrir un asalto. Ahora son ' + n + '.') + '</div>' +
+      '<div class="forge-row"><div class="finfo"><div class="fnm">Abrir asalto</div>' +
+      '<div class="fds">Después cada uno entra a la Guarida cuando puede y le pega. No hace falta estar conectados a la vez.</div></div>' +
+      '<div class="fbtns"><button class="green sm" ' + (puede ? "" : "disabled") + ' id="raid-abrir">Abrir</button></div></div>';
+  } else {
+    const q = r.raid, pct = Math.max(0, Math.min(100, Math.round(q.hp / q.hp_max * 100)));
+    const mio = (r.dmg || []).find(d => d.user_id === UID);
+    const vencido = q.estado === "vencido";
+    h += '<div class="forge-row"><div class="finfo">' +
+      '<div class="fnm">Dragón de las Cavernas ' + (vencido ? '<span class="tag">¡vencido!</span>' : '') + '</div>' +
+      '<div class="durbar"><i style="width:' + pct + '%"></i></div>' +
+      '<div class="fds">' + fmt(Math.ceil(q.hp)) + ' / ' + fmt(q.hp_max) + ' de vida' +
+        (vencido ? '' : ' · cierra ' + new Date(q.cierra_at).toLocaleString()) + '</div></div>' +
+      '<div class="fbtns">' + (vencido && mio && !mio.cobrado ? '<button class="gold sm" id="raid-cobrar">Cobrar tu parte</button>' : '') + '</div></div>';
+    h += '<div class="secc">Quién pegó</div>';
+    const tot = (r.dmg || []).reduce((s, d) => s + Number(d.dmg || 0), 0) || 1;
+    h += (r.dmg || []).map(d => '<div class="forge-row' + (d.user_id === UID ? ' eq' : '') + '"><div class="finfo">' +
+      '<div class="fnm">' + d.nombre + (d.user_id === UID ? ' <span class="tag">vos</span>' : '') + '</div>' +
+      '<div class="fds">' + fmt(Math.round(d.dmg)) + ' de daño · ' + (d.dmg / tot * 100).toFixed(1) + '% del botín' +
+      (d.cobrado ? ' · ya cobró' : '') + '</div></div></div>').join("") ||
+      '<div class="fds">Nadie le pegó todavía. Entrá a la Guarida.</div>';
+  }
+  h += '<div class="forge-row"><div class="finfo"><div class="fds">Salir del clan te saca del asalto en curso.</div></div>' +
+    '<div class="fbtns"><button class="sm" id="clan-salir">Salir del clan</button></div></div>';
+  box.innerHTML = h;
+  const ra = $("raid-abrir"); if (ra) ra.onclick = async () => {
+    const res = await raidAbrir(RAID_HP);
+    if (res.error) { toast("No se pudo: " + res.error); return; }
+    toast("¡Asalto abierto! El Dragón espera en la Guarida."); _clanT = 0; refreshClan();
+  };
+  const rc = $("raid-cobrar"); if (rc) rc.onclick = async () => {
+    const res = await raidCobrar();
+    if (res.error || !res.parte) { toast("No hay nada para cobrar"); return; }
+    raidBotin(res.parte);
+    _clanT = 0; refreshClan();
+  };
+  const cs = $("clan-salir"); if (cs) cs.onclick = async () => {
+    askConfirm("¿Seguro que querés salir del clan?", async () => {
+      await clanSalir(); toast("Saliste del clan"); _clanT = 0; refreshClan();
+    }, { title: "Salir del clan", yes: "Salir", yesClass: "red", no: "Quedarme" });
+  };
+}
+// entrega la parte del botín del jefe que te tocó
+function raidBotin(parte) {
+  const p = Math.max(0, Math.min(1, parte));
+  const dar = { plata: Math.round(RAID_BOTIN.plata * p), esencia_oscura: Math.max(1, Math.round(RAID_BOTIN.esencia_oscura * p)),
+                diamante: Math.round(RAID_BOTIN.diamante * p), netherita: Math.round(RAID_BOTIN.netherita * p) };
+  G.plata += dar.plata;
+  ["esencia_oscura", "diamante", "netherita"].forEach(k => { if (dar[k] > 0) tryAddRes(k, dar[k]); });
+  const txt = Object.keys(dar).filter(k => dar[k] > 0).map(k => "+" + fmt(dar[k]) + " " + (k === "plata" ? "plata" : RES_LABEL[k])).join(" · ");
+  log("Botín del Dragón (" + Math.round(p * 100) + "% del reparto): " + txt, "gold");
+  if (window.celebrate) celebrate({ title: "¡DRAGÓN VENCIDO!", sub: "Asalto del clan", big: true, reward: txt });
+  refreshHud(); if (typeof saveFarm === "function") saveFarm(true);
+}
+
 /* ---- MAPA (10/8): dónde estás y a dónde podés ir ---- */
 function refreshMapa() {
   const box = $("mapa-list"); if (!box) return;
@@ -820,19 +936,31 @@ function refreshMapa() {
   const zonas = [
     { id: "farm",   nom: "Tu granja",   ds: "Cultivos, animales, edificios y la laguna.", ir: true },
     { id: "plaza",  nom: "La plaza",    ds: "El hub con los demás jugadores. Chat y encuentro.", ir: true },
-    { id: "forest", nom: "Zona Negra",  ds: "Monstruos, botín y la plata de verdad. Se entra por el portal de la granja.",
-      ir: aca === "farm", nota: espera > 0 ? "El granjero descansa — podés volver en " + fmtDur(espera) : "" },
   ];
-  box.innerHTML = zonas.map(z => {
+  let h = zonas.map(z => {
     const estoy = z.id === aca;
-    const puede = z.ir && !estoy && !(z.id === "forest" && espera > 0);
     return '<div class="forge-row' + (estoy ? ' eq' : '') + '"><div class="finfo">' +
       '<div class="fnm">' + z.nom + (estoy ? ' <span class="tag">estás acá</span>' : '') + '</div>' +
-      '<div class="fds">' + z.ds + '</div>' + (z.nota ? '<div class="fds">' + z.nota + '</div>' : '') +
-      '</div><div class="fbtns">' +
-      (estoy ? '' : '<button class="green sm" ' + (puede ? '' : 'disabled') + ' data-ir="' + z.id + '">Ir</button>') +
+      '<div class="fds">' + z.ds + '</div></div><div class="fbtns">' +
+      (estoy ? '' : '<button class="green sm" data-ir="' + z.id + '">Ir</button>') +
       '</div></div>';
   }).join("");
+  // ---- los mapas de la Zona Negra (10/8) ----
+  h += '<div class="secc">Zona Negra</div>';
+  h += '<div class="info">Se entra por el portal de la granja, y de un mapa al siguiente se pasa por el teleport del fondo. ' +
+    (espera > 0 ? 'El granjero descansa — podés volver en <b>' + fmtDur(espera) + '</b>.' : 'Cada mapa pide más nivel de Combate.') + '</div>';
+  const vistas = G.zonasVistas || ["pantano"];
+  h += ZONA_ORDER.map(k => {
+    const z = ZONA_DEF[k], estoy = (aca === "forest" && GF.zona === k);
+    const puede = zonaPuedeEntrar(k), visto = vistas.indexOf(k) >= 0;
+    return '<div class="forge-row' + (estoy ? ' eq' : (puede ? '' : ' locked')) + '"><div class="finfo">' +
+      '<div class="fnm">' + z.label + (estoy ? ' <span class="tag">estás acá</span>' : '') +
+        (z.clan ? ' <span class="tag">de clan</span>' : '') + '</div>' +
+      '<div class="fds">' + z.ds + '</div>' +
+      '<div class="fds">' + (puede ? (visto ? "Ya estuviste acá." : "Nunca entraste.") : "Pide Combate nivel " + z.lvl + ".") + '</div>' +
+      '</div><div class="fbtns"></div></div>';
+  }).join("");
+  box.innerHTML = h;
   box.querySelectorAll("[data-ir]").forEach(b => b.onclick = () => irAZona(b.dataset.ir));
 }
 function irAZona(id) {
@@ -1448,7 +1576,9 @@ function ponerAdornoElegido() {
   if (cs) cs.onclick = doSendChat;
 
   // 10/8: N = mapa, J = misiones de hoy. (M ya estaba tomada por desplegar el menú.)
-  const KEYS = { i: "ov-inv", x: "ov-skills", p: "ov-equip", l: "ov-lb", c: "ov-config", o: "ov-market", k: "ov-forge", b: "ov-barn", g: "ov-daily", n: "ov-mapa", j: "ov-misiones" };
+  // Los EDIFICIOS salieron del menú y de los atajos (Tienda O, Herrería K, Granero B): se
+  // entra clickeándolos en la granja, que es lo que les da sentido a estar construidos.
+  const KEYS = { i: "ov-inv", x: "ov-skills", p: "ov-equip", l: "ov-lb", c: "ov-config", g: "ov-daily", n: "ov-mapa", j: "ov-misiones" };
   window.addEventListener("keydown", (e) => {
     if (e.target && (e.target.tagName === "INPUT" || e.target.tagName === "TEXTAREA")) return;
     const key = e.key.toLowerCase();

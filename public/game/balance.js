@@ -136,6 +136,12 @@ var BAL = (function () {
     add("Ambiente — efectos", "fx.fadeMs", "Fundido a negro al cambiar de escena (0 = corte seco)", "milisegundos", () => FX_FADE_MS, v => { FX_FADE_MS = v; }, 20);
     add("Ambiente — efectos", "fx.partMax", "Tope de partículas vivas a la vez (cuida el rendimiento)", "partículas · entero", () => FX_PART_MAX, v => { FX_PART_MAX = v; }, 5);
     // 10/8: lo nuevo del documento del diseñador
+    add("Clan — asalto al Dragón", "raidMin", "Cuántos miembros hacen falta para abrir un asalto", "jugadores · entero", () => RAID_MIN_MIEMBROS, v => { RAID_MIN_MIEMBROS = v; });
+    add("Clan — asalto al Dragón", "raidHp", "Vida compartida del Dragón", U.vida, () => RAID_HP, v => { RAID_HP = v; }, 1000);
+    add("Clan — asalto al Dragón", "raidHoras", "Cuántas horas queda abierto el asalto", "horas · entero", () => RAID_HORAS, v => { RAID_HORAS = v; });
+    Object.keys(RAID_BOTIN).forEach(k => add("Clan — asalto al Dragón", "raidBotin." + k, "Botín total del Dragón — " + (RES_NAME(k) || k), "unidades · entero", () => RAID_BOTIN[k], v => { RAID_BOTIN[k] = v; }, 1));
+    add("Zona Negra — esencia oscura", "esenciaGuarida", "Esencia oscura por monstruo en la Guarida", "probabilidad · decimal", () => ESENCIA_POR_ZONA.guarida, v => { ESENCIA_POR_ZONA.guarida = v; }, 0.05);
+    ZONA_ORDER.forEach(k => add("Zona Negra — mapas", "zona." + k + ".lvl", ZONA_DEF[k].label + " · Combate para entrar", U.nivel, () => ZONA_DEF[k].lvl, v => { ZONA_DEF[k].lvl = v; }));
     add("Tienda — parcelas y GOD HAND", "plotGoldenCambio", "Cuánta plata vale 1 $Golden al comprar parcelas", "plata por $Golden", () => PLOT_GOLDEN_CAMBIO, v => { PLOT_GOLDEN_CAMBIO = v; }, 10);
     add("Tienda — parcelas y GOD HAND", "plotGoldenMin", "Precio mínimo de una parcela en $Golden", "$Golden · entero", () => PLOT_GOLDEN_MIN, v => { PLOT_GOLDEN_MIN = v; });
     add("Tienda — parcelas y GOD HAND", "godHandGolden", "GOD HAND · precio", "$Golden · entero", () => GODHAND_GOLDEN, v => { GODHAND_GOLDEN = v; }, 10);

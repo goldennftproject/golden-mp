@@ -16,6 +16,8 @@ GF.ISLA_MARGEN = 260;  // cuánto mar se puede recorrer más allá de la cerca
 // tools/build-isla.py. Este número es cuánto sobra la imagen alrededor de la granja,
 // y tiene que coincidir con el MARGEN de ese script.
 GF.ISLA_ORIGEN = 112;
+// En qué mapa de la Zona Negra estás. Lo setea el portal de la granja y los teleports (10/8).
+GF.zona = "pantano";
 var ZONA_NEGRA_VEL = 0.75;   // "detallitos (1)" punto 7: el granjero camina 25% más lento en la Zona Negra
 
 // RESPUESTA AL CLIC (4/8). Cuánto dura cada acción en la granja. En el modo de un clic el granjero

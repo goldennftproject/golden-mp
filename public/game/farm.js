@@ -720,6 +720,7 @@ class FarmScene extends Phaser.Scene {
       if (espera > 0) { toast("El granjero está descansando — podés volver en " + fmtDur(espera)); return; }
       const entrar = () => {
         if (typeof tutoEvent === "function") tutoEvent("portal");
+        GF.zona = "pantano";   // desde la granja siempre se entra por el primer mapa (10/8)
         if (typeof zonaEntrar === "function") zonaEntrar();
         if (typeof saveFarm === "function") saveFarm();
         this.leaving = true; irAEscena(this, "forest");

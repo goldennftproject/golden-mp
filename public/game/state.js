@@ -26,7 +26,7 @@ const G = {
   res: { madera: 0, piedra: 0, bronce: 0, hierro: 0, oro: 0, diamante: 0, netherita: 0, carne: 0, flecha: 0, lombriz: 0,
     tablon: 0, barra_piedra: 0, barra_bronce: 0, barra_hierro: 0, barra_oro: 0,
     papa: 0, zanahoria: 0, cebolla: 0, calabacin: 0, repollo: 0, calabaza: 0, brocoli: 0, girasol: 0, trigo: 0, maiz: 0,
-    fibra: 0, pelaje: 0, cuero: 0, colmillo: 0, esencia_runica: 0 },
+    fibra: 0, pelaje: 0, cuero: 0, colmillo: 0, esencia_runica: 0, esencia_oscura: 0 },
   seeds: { papa: 3, zanahoria: 0, cebolla: 0, calabacin: 0, repollo: 0, calabaza: 0, brocoli: 0, girasol: 0, trigo: 0, maiz: 0 },  // viernes (2): la bolsa nace con SOLO 3 semillas de papa
   selSeed: "papa",   // semilla elegida para plantar
   picks: { owned: { stone: true }, dur: { stone: 15 }, eq: "stone" },   // doc 2/8: set de arranque con usos generosos
@@ -43,7 +43,7 @@ const G = {
   fish: { comun: 0, raro: 0, epico: 0, legendario: 0 },
   plots: [],   // estado de las parcelas: [{state, readyAt, cropKey}] — lo llena la FarmScene
   plotsOwned: 2,   // viernes (2): se nace con 2 parcelas; el resto se desbloquea
-  decos: [], decoBolsa: {}, godHand: false,   // adornos puestos · adornos sin colocar · NFT de siembra automática (10/8)
+  decos: [], decoBolsa: {}, godHand: false, zonasVistas: ["pantano"],   // adornos puestos · adornos sin colocar · NFT de siembra automática (10/8)
   daily: { day: 0, last: "" },   // cofre diario: día de racha reclamado (1..7) y fecha del último reclamo
   seedBuys: { date: "", count: 0 },   // cupo diario de semillas (compras + cofre)
   dishes: {},      // platos cocinados (van a la bolsa; clic para comer)
@@ -1284,6 +1284,91 @@ function godHandSembrar(msAusente) {
   return n;
 }
 
+// ============ LA ZONA NEGRA, PARTIDA EN MAPAS (10/8, doc del diseñador) ============
+// Antes era UN solo bosque con todos los monstruos repartidos por profundidad: la rata al
+// lado del dragón. Ahora son cuatro mapas encadenados, cada uno con SU familia de bichos,
+// su piso y su nivel de entrada. Se pasa de uno al otro por teleports, y para volver a la
+// granja siempre se sale por la izquierda del primero.
+//
+//   pantano  →  piedra  →  fuego  →  guarida (el jefe)
+//
+// Cada mapa dice qué mobs viven ahí y con qué densidad. `x0` y `x1` son la franja del mapa
+// (0 = entrada, 1 = fondo) donde puede aparecer ese bicho, y el número es cuántos hay.
+const ZONA_ORDER = ["pantano", "piedra", "fuego", "guarida"];
+const ZONA_DEF = {
+  pantano: {
+    label: "Pantano", lvl: 1,
+    ds: "Agua estancada y bichos chicos. Por acá se empieza.",
+    piso: [0x2f4a20, 0x2a431c], mata: 0x223a16, hierba: 0x3a5527,
+    arboles: 28,
+    mobs: [["rata", 0.08, 0.40, 4], ["murcielago", 0.20, 0.62, 4], ["larva", 0.35, 0.90, 4]],
+  },
+  piedra: {
+    label: "Cañón de Piedra", lvl: 10,
+    ds: "Roca pelada y cosas que sí pegan. Traé algo mejor que la espada de madera.",
+    piso: [0x3b3a33, 0x35342e], mata: 0x2a2924, hierba: 0x4a4838,
+    arboles: 14,
+    mobs: [["baba", 0.08, 0.35, 3], ["arana", 0.20, 0.55, 3], ["goblin", 0.35, 0.70, 3],
+           ["orco", 0.50, 0.85, 3], ["lancero", 0.65, 0.92, 2]],
+  },
+  fuego: {
+    label: "Grietas de Fuego", lvl: 22,
+    ds: "El suelo está caliente. Acá abajo se saca lo que vale de verdad.",
+    piso: [0x4a2a20, 0x42251c], mata: 0x33170f, hierba: 0x6b3a22,
+    arboles: 8,
+    mobs: [["esqueleto", 0.08, 0.40, 3], ["golem", 0.25, 0.60, 3], ["hombre_lobo", 0.40, 0.75, 3],
+           ["guerrero", 0.55, 0.88, 3], ["troll", 0.70, 0.94, 2]],
+  },
+  guarida: {
+    label: "Guarida del Dragón", lvl: 35, clan: true,
+    ds: "Antes del jefe hay una guardia de orcos. El dragón NO se hace solo.",
+    piso: [0x2a2030, 0x241b2a], mata: 0x1a1420, hierba: 0x3d2f4a,
+    arboles: 4,
+    // guardia de orcos ADELANTE, el jefe al fondo
+    mobs: [["guerrero", 0.10, 0.35, 4], ["lancero", 0.20, 0.45, 3], ["orco", 0.15, 0.50, 4],
+           ["ogro", 0.45, 0.65, 2], ["espectro", 0.55, 0.72, 2], ["demonio", 0.62, 0.78, 2],
+           ["dragon", 0.90, 0.96, 1]],
+  },
+};
+function zonaActual() { return ZONA_DEF[GF.zona] ? GF.zona : "pantano"; }
+function zonaSig(k) { const i = ZONA_ORDER.indexOf(k || zonaActual()); return i >= 0 ? ZONA_ORDER[i + 1] || null : null; }
+function zonaAnt(k) { const i = ZONA_ORDER.indexOf(k || zonaActual()); return i > 0 ? ZONA_ORDER[i - 1] : null; }
+// ¿tengo nivel de Combate para entrar? (el del doc: cada mapa pide más)
+function zonaPuedeEntrar(k) {
+  const z = ZONA_DEF[k]; if (!z) return false;
+  const lvl = (typeof combatInfo === "function") ? combatInfo().lvl : 1;
+  return lvl >= z.lvl;
+}
+// hasta dónde llegó el jugador: los teleports solo llevan a lo ya visitado o al siguiente
+function zonaMarcarVisitada(k) {
+  G.zonasVistas = G.zonasVistas || ["pantano"];
+  if (k && G.zonasVistas.indexOf(k) < 0) { G.zonasVistas.push(k); if (typeof saveFarm === "function") saveFarm(true); }
+}
+
+// ---- ASALTO AL DRAGÓN: los números (10/8) ----
+// El jefe del asalto NO es el dragón suelto del mapa: tiene su propia vida, compartida por
+// todo el clan y guardada en Supabase. Estos números son los que ve la ventana de Clan.
+var RAID_MIN_MIEMBROS = 3;    // cuántos hacen falta para abrir un asalto
+var RAID_HP = 60000;          // vida compartida del Dragón (entre 3 son 20.000 cada uno)
+var RAID_HORAS = 48;          // cuánto dura abierto
+// botín COMPLETO del jefe: cada uno cobra su porción según el daño que aportó
+var RAID_BOTIN = { plata: 12000, esencia_oscura: 40, diamante: 6, netherita: 2 };
+
+// ---- ESENCIA OSCURA: el recurso que SOLO sale en la Zona Negra ----
+// El doc pide "el nuevo recurso que se farmea solo en zona negra". No se compra, no se
+// cultiva y no lo dan los animales: la única forma de tenerlo es bajar y pelear. Cada mapa
+// suelta más que el anterior.
+RES_LABEL.esencia_oscura = "Esencia oscura";
+if (typeof RES_EMOJI !== "undefined") RES_EMOJI.esencia_oscura = "🌑";
+var ESENCIA_POR_ZONA = { pantano: 0.10, piedra: 0.22, fuego: 0.40, guarida: 0.75 };
+// se tira por cada monstruo vencido; devuelve cuánta cayó (0 casi siempre en el pantano)
+function rollEsencia(zona, esBoss) {
+  const p = (ESENCIA_POR_ZONA[zona] || 0) * (esBoss ? 8 : 1);
+  let n = Math.floor(p);
+  if (Math.random() < (p - n)) n++;
+  return n;
+}
+
 // ============ VIAJE A LA ZONA NEGRA: enfriamiento + resumen (10/8) ==================
 // Antes se entraba y salía de la Zona Negra sin ninguna fricción, y al volver no quedaba
 // registro de qué habías sacado: el botín aparecía diluido en la bolsa. Ahora:
@@ -2264,7 +2349,7 @@ function tryAddRes(key, amt) {
 const ITEM_RES_ORDER = ["papa","zanahoria","cebolla","calabacin","repollo","calabaza","brocoli","girasol","trigo","maiz",
   "madera","piedra","bronce","hierro","oro","diamante","netherita","carne","flecha","lombriz",
   "tablon","barra_piedra","barra_bronce","barra_hierro","barra_oro",
-  "fibra","pelaje","cuero","colmillo","esencia_runica"];   // los 3 cultivos nuevos y los materiales de Establo/Curtiduría/Altar también ocupan casilla
+  "fibra","pelaje","cuero","colmillo","esencia_runica","esencia_oscura"];   // los 3 cultivos nuevos y los materiales de Establo/Curtiduría/Altar también ocupan casilla
 function descKey(d) { return d ? d.kind + ":" + d.key : ""; }
 function canonicalStacks() {
   const list = [];
