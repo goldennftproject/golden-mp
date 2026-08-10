@@ -1194,6 +1194,7 @@ function refreshDeco() {
   h += '<div class="info">Los adornos no dan ninguna ventaja: son para que la granja se vea linda. Comprás acá y los ponés desde el modo edición. Puestos: <b>' + decoPuestos() + '/' + DECO_MAX + '</b></div>';
   DECO_ORDER.forEach(id => {
     const d = DECO_DEF[id], tengo = decoTengo(id);
+    if (d.cofre) return;   // los del cofre de login no se venden acá
     const precio = d.plata ? fmt(d.plata) + " plata" : d.golden + " $G";
     const puede = d.plata ? G.plata >= d.plata : G.golden >= d.golden;
     h += '<div class="forge-row"><div class="finfo"><div class="fnm">' + d.label + (tengo ? ' <span class="tag">sin poner: ' + tengo + '</span>' : '') + '</div>' +
@@ -1809,6 +1810,15 @@ function refreshCosmeticos() {
     (cosAuraDisponible()
       ? '<button class="sm ' + (c.aura ? "green" : "ghost") + '" data-cost="aura:1">Encendida</button> <button class="sm ' + (!c.aura ? "green" : "ghost") + '" data-cost="aura:0">Apagada</button> <span class="fds">Se ve en la Zona Negra y en la plaza.</span>'
       : 'Se desbloquea con los títulos de granja nivel 30 en adelante.') + '</div></div></div>';
+  // MASCOTA (10/8): pasea por la granja. No produce nada, es para lucirla.
+  const masc = cosMascotasDisponibles();
+  h += '<div class="secc">Mascota</div><div class="forge-row">' +
+    (COS_MASCOTAS.gallina ? '<div class="fic"><img src="' + GF.spr(COS_MASCOTAS.gallina.sprite) + '" onerror="this.remove()"></div>' : '') +
+    '<div class="finfo"><div class="fds">' +
+    (masc.length > 1
+      ? masc.map(k => '<button class="sm ' + ((c.mascota || "ninguna") === k ? "green" : "ghost") + '" data-cost="mascota:' + k + '">' +
+          (k === "ninguna" ? "Ninguna" : COS_MASCOTAS[k].label) + '</button>').join(" ") + ' <span class="fds">Pasea por tu granja.</span>'
+      : 'Todavía no tenés ninguna — la gallina "Pinta" sale del cofre de login.') + '</div></div></div>';
   if ((G.cosmeticos || []).length) {
     h += '<div class="secc">Todo lo que ganaste (' + G.cosmeticos.length + ')</div>';
     h += '<div class="info">' + G.cosmeticos.map(x => escapeHtml(String(x))).join(" · ") + '</div>';

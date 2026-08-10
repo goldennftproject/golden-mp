@@ -111,14 +111,15 @@ class BootScene extends Phaser.Scene {
     ["plata","esencia"].forEach(k => L.push(["coin_" + k, P + "coin_" + k + ".png"]));
     // animales del Establo (10/8: definitivos, de PixelLab; antes eran provisorios por código)
     ["alpaca","conejo","toro","jabali"].forEach(k => L.push(["animal_" + k, P + "animal_" + k + ".png?v=2"]));
+    L.push(["pet_gallina", P + "pet_gallina.png"]);   // mascota "Pinta" del cofre de login (10/8)
     return L;
   }
 
   preload() {
     // ATLAS: todos los sprites del mundo en 2 archivos (mucho más liviano para el server free).
     // Si el atlas no llega, ensureAll() baja los archivos sueltos como respaldo.
-    this.load.image("__atlas", "assets/atlas.png?v=30");
-    this.load.json("__atlasmap", "assets/atlas.json?v=30");
+    this.load.image("__atlas", "assets/atlas.png?v=31");
+    this.load.json("__atlasmap", "assets/atlas.json?v=31");
 
     // No hay barra propia: la pantalla de carga es UNA sola, la del HTML, y le pasamos el avance.
     // (Antes había dos barras seguidas y el juego "aparecía" antes de estar listo.)

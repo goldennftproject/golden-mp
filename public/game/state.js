@@ -896,12 +896,25 @@ function cosMarcosDisponibles() {
   return out;
 }
 function cosAuraDisponible() { return cosTengo("aura") || G.level >= 30; }
-function cosElegido() { G.cosEq = G.cosEq || { titulo: "", color: "blanco", marco: "ninguno", aura: false }; return G.cosEq; }
+// MASCOTA (10/8): la gallina "Pinta" que entrega el cofre de login. Es puro adorno —
+// no produce nada ni se le puede dar de comer: pasea por la granja y te acompaña.
+const COS_MASCOTAS = { gallina: { label: 'Gallina "Pinta"', sprite: "pet_gallina" } };
+function cosMascotasDisponibles() {
+  const out = ["ninguna"];
+  if (cosTengo("Pinta") || cosTengo("mascota")) out.push("gallina");
+  return out;
+}
+function cosElegido() {
+  G.cosEq = G.cosEq || { titulo: "", color: "blanco", marco: "ninguno", aura: false };
+  if (!G.cosEq.mascota) G.cosEq.mascota = "ninguna";   // guardados viejos no la traen
+  return G.cosEq;
+}
 function cosSet(campo, valor) {
   const c = cosElegido();
   c[campo] = valor;
   if (campo === "aura" && valor && window.farmScene && window.farmScene.updateAura) { try { window.farmScene.updateAura(); } catch (e) {} }
   if (window.farmScene && window.farmScene.updateAura) { try { window.farmScene.updateAura(); } catch (e) {} }
+  if (campo === "mascota" && window.farmScene && window.farmScene.syncMascota) { try { window.farmScene.syncMascota(); } catch (e) {} }
   if (typeof refreshCosmeticos === "function" && isOpen("ov-cos")) refreshCosmeticos();
   if (typeof saveFarm === "function") saveFarm();
 }
@@ -1177,7 +1190,8 @@ function dummyCobrar() {
 // Cosas para decorar: no dan ninguna ventaja, son para que la granja se vea linda y después
 // poder hacer eventos de "la más bonita". Se compran en la Tienda, quedan en la bolsa de
 // adornos y se colocan en la granja. El arte va en la Fase 6: por ahora se dibujan por código.
-const DECO_ORDER = ["valla", "flores", "farol", "banco", "espantapajaros", "fuente", "estatua", "arbolito"];
+const DECO_ORDER = ["valla", "flores", "farol", "banco", "espantapajaros", "fuente", "estatua", "arbolito",
+                    "espantapajaros_oro", "farolito"];   // los dos últimos NO se compran: salen del cofre
 const DECO_DEF = {
   valla:          { label: "Valla de madera",   plata: 120,   golden: 0,  ds: "Un tramo de cerca para separar zonas." },
   flores:         { label: "Cantero de flores", plata: 200,   golden: 0,  ds: "Un cantero con flores de temporada." },
@@ -1187,18 +1201,24 @@ const DECO_DEF = {
   fuente:         { label: "Fuente de piedra",  plata: 4000,  golden: 0,  ds: "El centro de una granja ordenada." },
   estatua:        { label: "Estatua dorada",    plata: 0,     golden: 60, ds: "Para presumir. Se paga en $Golden." },
   arbolito:       { label: "Cerezo en flor",    plata: 0,     golden: 90, ds: "Un árbol ornamental. No se puede talar." },
+  // 10/8: los dos adornos del COFRE DE LOGIN. No se venden: caen del cofre de 7 días y por eso
+  // no aparecen en la Tienda. Antes eran una línea de texto en la lista de cosméticos y nada más.
+  espantapajaros_oro: { label: "Espantapájaros dorado", cofre: 1, plata: 0, golden: 0, ds: "Coleccionable del cofre de login. No se compra." },
+  farolito:           { label: "Farolito de luciérnagas", cofre: 1, plata: 0, golden: 0, ds: "Coleccionable del cofre de login. De noche titila." },
 };
 // alto en pantalla de cada adorno, en píxeles (el tile mide 42). El ancho sale solo,
 // respetando la proporción del sprite. Con esto un farol no queda del porte de un árbol.
 var DECO_ALTO = {
   valla: 24, flores: 24, farol: 40, banco: 26,
   espantapajaros: 48, fuente: 30, estatua: 36, arbolito: 46,
+  espantapajaros_oro: 48, farolito: 40,
 };
 var DECO_MAX = 40;   // cuántos adornos se pueden tener colocados a la vez
 function decoTengo(id) { G.decoBolsa = G.decoBolsa || {}; return G.decoBolsa[id] || 0; }
 function decoPuestos() { return (G.decos || []).length; }
 function comprarDeco(id) {
   const d = DECO_DEF[id]; if (!d) return;
+  if (d.cofre) { toast("Ese solo sale del cofre de login"); return; }   // no tiene precio: no se puede comprar
   if (d.plata && G.plata < d.plata) { toast("Te falta plata (" + fmt(d.plata) + ")"); return; }
   if (d.golden && G.golden < d.golden) { toast("Te falta $Golden (" + d.golden + ")"); return; }
   if (d.plata) G.plata -= d.plata;
@@ -2477,7 +2497,20 @@ const COLECCIONABLES = [
 ];
 function semanaISO(d) { const x = new Date(d || Date.now()); x.setHours(0,0,0,0); x.setDate(x.getDate() + 3 - ((x.getDay() + 6) % 7)); const w1 = new Date(x.getFullYear(), 0, 4); return Math.round(((x - w1) / 86400000 + ((w1.getDay() + 6) % 7) - 3) / 7 + 1); }
 function coleccionableDeLaSemana() { return COLECCIONABLES[semanaISO() % COLECCIONABLES.length]; }
-function darCosmetico(nombre) { G.cosmeticos = G.cosmeticos || []; G.cosmeticos.push(nombre + " (no vendible)"); }
+// qué coleccionable del cofre entrega, además del texto, un ADORNO de verdad para la granja (10/8)
+const COS_ADORNO = { "Espantapájaros dorado": "espantapajaros_oro", "Farolito de luciérnagas": "farolito" };
+function darCosmetico(nombre) {
+  G.cosmeticos = G.cosmeticos || [];
+  G.cosmeticos.push(nombre + " (no vendible)");
+  // los que son decoración van derecho a la bolsa de adornos: si no, quedaban como una línea
+  // de texto en la lista de cosméticos y nunca se veían en la granja.
+  const id = Object.keys(COS_ADORNO).find(k => String(nombre).indexOf(k) >= 0);
+  if (id) {
+    G.decoBolsa = G.decoBolsa || {};
+    G.decoBolsa[COS_ADORNO[id]] = (G.decoBolsa[COS_ADORNO[id]] || 0) + 1;
+    if (typeof syncEditDeco === "function") syncEditDeco();
+  }
+}
 
 function dayStamp(off) { const d = new Date(Date.now() + (off || 0) * 86400000); return d.getFullYear() + "-" + String(d.getMonth() + 1).padStart(2, "0") + "-" + String(d.getDate()).padStart(2, "0"); }
 // estado del cofre: ¿se puede reclamar hoy? ¿qué día de la racha toca? ¿se perdió la racha?

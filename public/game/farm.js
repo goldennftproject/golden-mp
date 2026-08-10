@@ -573,6 +573,7 @@ class FarmScene extends Phaser.Scene {
     this.crearCorral();       // patio de los animales del Establo
     this.syncAdornos();       // adornos comprados en la Tienda (10/8)
     this.syncAnimales();      // aparecen los que ya tenés
+    this.syncMascota();       // y la mascota, si tenés una puesta
     this.crearNubes();        // nubes que cruzan y proyectan sombra
     this.crearMariposas();    // mariposas que se posan sobre los cultivos listos
     this.arrancarBrilloVetas();   // chispitas sobre las vetas caras que están listas (9/8)
@@ -1414,7 +1415,17 @@ class FarmScene extends Phaser.Scene {
       const alto = DECO_ALTO[id] || 30;
       const im = this.add.image(x, y, "deco_" + id).setOrigin(0.5, 1).setDepth(y);
       im.setDisplaySize(Math.round(im.width * alto / im.height), alto);
-      return im;
+      if (id !== "farolito") return im;
+      // el farolito es el único adorno ANIMADO: las luciérnagas del frasco laten.
+      // Va en un contenedor para que al levantarlo se borre también el resplandor.
+      const c = this.add.container(x, y).setDepth(y);
+      const luz = this.add.circle(0, -alto * 0.62, alto * 0.42, 0xffe08a, 0.30);
+      im.setPosition(0, 0);
+      c.add([luz, im]);
+      c.setSize(im.displayWidth, alto);
+      this.tweens.add({ targets: luz, alpha: 0.12, scale: 0.78, duration: 1100 + Math.random() * 500,
+        yoyo: true, repeat: -1, ease: "Sine.easeInOut" });
+      return c;
     }
     const g = this.add.graphics().setDepth(y);
     const MAD = 0x8a5a33, MAD2 = 0xa8712f, OSC = 0x241505, PIE = 0x8b8f8c, VER = 0x55733f;
@@ -1556,6 +1567,38 @@ class FarmScene extends Phaser.Scene {
         this.animales.push({ k, spr, marca, tx: x, ty: y, esperaHasta: 0, bob: Math.random() * 6.28 });
       }
     });
+  }
+  /* ---- MASCOTA (10/8) ---------------------------------------------------------
+     La gallina "Pinta" del cofre de login. No produce ni come nada: pasea por la granja
+     como los animales del Establo, solo para que se note que la tenés. */
+  syncMascota() {
+    const quiero = (typeof cosElegido === "function") ? (cosElegido().mascota || "ninguna") : "ninguna";
+    const def = (typeof COS_MASCOTAS !== "undefined") ? COS_MASCOTAS[quiero] : null;
+    if (this.mascota && (!def || this.mascota.k !== quiero)) { this.mascota.spr.destroy(); this.mascota = null; }
+    if (!def || this.mascota) return;
+    if (!this.textures.exists(def.sprite)) return;   // todavía no cargó el arte: no pasa nada
+    const pt = this.puntoAnimal() || { x: GF.WORLD_W / 2, y: GF.WORLD_H / 2 };
+    const spr = this.add.image(pt.x, pt.y, def.sprite).setOrigin(0.5, 1);
+    spr.setScale((GF.TILE * 0.52) / spr.width);       // más chica que los animales del Establo
+    this.mascota = { k: quiero, spr, tx: pt.x, ty: pt.y, esperaHasta: 0, bob: Math.random() * 6.28 };
+  }
+  tickMascota(dt, t) {
+    const m = this.mascota; if (!m) return;
+    if (t >= m.esperaHasta) {   // picotea un rato y se va a otro lado (más inquieta que una vaca)
+      m.esperaHasta = t + 1200 + Math.random() * 2600;
+      const pt = this.puntoAnimal(m.spr.x, m.spr.y);
+      if (pt) { m.tx = pt.x; m.ty = pt.y; } else { m.esperaHasta = t + 600; }
+    }
+    const dx = m.tx - m.spr.x, dy = m.ty - m.spr.y, d = Math.hypot(dx, dy);
+    if (d > 3) {
+      const v = Math.min(d, 24 * dt);
+      m.spr.x += dx / d * v; m.spr.y += dy / d * v;
+      if (Math.abs(dx) > 1) m.spr.setFlipX(dx < 0);
+      m.bob += dt * 9;
+      const s = Math.abs(m.spr.scaleX);
+      m.spr.setScale(m.spr.scaleX, s * (1 + Math.sin(m.bob) * 0.06));
+    }
+    m.spr.setDepth(m.spr.y);
   }
   tickAnimales(dt, t) {
     if (!this.animales || !this.animales.length || !this.corral) return;
@@ -2317,6 +2360,7 @@ class FarmScene extends Phaser.Scene {
     this.tickGolpes();      // los golpes sueltos se pierden a los 5 s (el nodo vuelve a estar entero)
     this.tickViento();      // los árboles crecidos y los cultivos listos se mecen con el viento
     this.tickAnimales(dt, t);   // los animales del corral pastan y caminan
+    this.tickMascota(dt, t);    // la mascota pasea por la granja
     this.tickNubes(dt);     // nubes cruzando con su sombra
     this.tickMariposas(dt, t);
     this.tickVapor(t);      // vapor de la Cocina y chispas del Altar mejorado

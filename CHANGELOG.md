@@ -1646,6 +1646,19 @@ Estos 20 PNG NO van al atlas a propósito: el atlas es para lo que dibuja el jue
 estas piezas solo se ven en la ventana HTML de la Curtiduría, que carga los archivos directo.
 Meterlos habría engordado el atlas —que baja TODO el mundo al entrar— para nada.
 
+### Fase 6 (sexta parte) — La mascota: la gallina "Pinta"
+
+Era uno de los coleccionables del cofre de login que existía **solo como texto**: lo ganabas, se
+guardaba en la lista de cosméticos y no se veía en ninguna parte. Ahora es de verdad.
+
+Una gallina moteada crema y marrón pasea sola por la granja, igual que los animales del Establo
+pero más chica (la mitad de una celda) y más inquieta: se para a picotear y se va a otro lado
+cada segundo y medio. No produce nada ni come: es puro lucirla.
+
+Se prende y apaga desde una sección **Mascota** nueva en la ventana de Cosméticos, junto al
+título, el color del nombre, el marco y el aura. Si no la tenés, la sección explica de dónde sale.
+Atlas `?v=31`, 557 sprites.
+
 ---
 
 ## Pendientes conocidos
@@ -1659,7 +1672,8 @@ Meterlos habría engordado el atlas —que baja TODO el mundo al entrar— para 
 ### Arte pendiente
 - Las **11 criaturas del bestiario** y los **8 adornos** ya están integrados (10/8).
 - Efectos y animaciones por arma (el resto de los íconos ya está: materiales, esencias y mazo).
-- **Cosméticos**: skins, decoraciones y la mascota.
+- **Cosméticos**: faltan las skins (sombrero de paja, camino de pétalos, granja legendaria) y las
+  decoraciones del cofre. La **mascota** ya está hecha (10/8).
 - Íconos oficiales de la Espada de Madera y el Pico de Hierro (hoy son derivados).
 - Todo eso ya funciona en el juego con el ícono de respaldo: no hay nada bloqueado.
 
