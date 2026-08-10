@@ -69,7 +69,13 @@ class PlazaScene extends Phaser.Scene {
     if (typeof Colyseus === "undefined" || !Colyseus.Client) { this.statusText.setText("No cargó colyseus.js"); return; }
     try {
       const client = new Colyseus.Client(endpoint);
-      this.room = await client.joinOrCreate("world", { name: nick });
+      const room = await client.joinOrCreate("world", { name: nick });
+      // El await puede tardar (en el server gratis de Render la primera conexión arranca en
+      // frío). Si mientras tanto el jugador ya se volvió a la granja, la escena está muerta:
+      // el shutdown que cierra la sala ya pasó, así que hay que cerrarla acá o queda un
+      // WebSocket abierto y un jugador fantasma en la plaza hasta que expire (10/8).
+      if (!this.scene.isActive()) { try { room.leave(); } catch (e) {} return; }
+      this.room = room;
       this.myId = this.room.sessionId;
       this.statusText.setText("En la plaza");
       const initMe = () => {
@@ -81,7 +87,10 @@ class PlazaScene extends Phaser.Scene {
           this.cameras.main.startFollow(this.me.sprite, true, 0.15, 0.15);
           this.fitCamera();
           this.scale.on("resize", this.fitCamera, this);
-          this.events.once("shutdown", () => this.scale.off("resize", this.fitCamera, this));
+          // el ScaleManager es GLOBAL: si este once("shutdown") se registra cuando la escena
+          // ya se apagó, no se dispara nunca y el listener queda colgado el resto de la sesión
+          if (this.scene.isActive()) this.events.once("shutdown", () => this.scale.off("resize", this.fitCamera, this));
+          else this.scale.off("resize", this.fitCamera, this);
         }
       };
       initMe();
@@ -135,7 +144,15 @@ class PlazaScene extends Phaser.Scene {
       this.sendAcc += dt;
       if (this.sendAcc >= 0.066) {
         this.sendAcc = 0;
-        this.room.send("move", { x: Math.round(this.me.x), y: Math.round(this.me.y), dir: this.me.dir, moving: this.me.moving });
+        // Solo se manda si algo CAMBIÓ. Antes eran 15 mensajes por segundo por jugador aunque
+        // estuviera parado, puro ruido sobre el server gratis. El keepalive de 1 s alcanza (10/8).
+        const x = Math.round(this.me.x), y = Math.round(this.me.y);
+        const firma = x + "," + y + "," + this.me.dir + "," + (this.me.moving ? 1 : 0);
+        const ahora = this.time.now;
+        if (firma !== this._ultMov || ahora - (this._ultMovT || 0) > 1000) {
+          this._ultMov = firma; this._ultMovT = ahora;
+          this.room.send("move", { x, y, dir: this.me.dir, moving: this.me.moving });
+        }
       }
     }
   }

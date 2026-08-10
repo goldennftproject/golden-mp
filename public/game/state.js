@@ -118,7 +118,6 @@ function buffTick() {   // 1 vez por segundo desde el HUD: regeneración y vida 
   G.buffs = G.buffs.filter(b => b.until > t || b.on);
   if (dirty) { const el = document.getElementById("s-hp"); if (el) el.textContent = Math.ceil(G.hp) + "/" + G.hpMax; }
 }
-function hToMs(h) { return h * G.secPerGameHour * 1000 * cdMult(); }
 
 // --- recursos ---
 const RES_EMOJI = { madera:"", piedra:"", bronce:"", oro:"", diamante:"", netherita:"", carne:"", flecha:"", lombriz:"",
@@ -288,17 +287,27 @@ function skillInfo(xp) { let lvl = 1, acc = 0, need = skillNeed(1); while (xp >=
 var COMBAT_HP5 = 20, COMBAT_HP10 = 40;   // vida máxima extra en los hitos (editables en el panel)
 function combatInfo() { return skillInfo(G.combatXp || 0); }
 function combatHpBonus(lvl) { return (lvl >= 5 ? COMBAT_HP5 : 0) + (lvl >= 10 ? COMBAT_HP10 : 0); }
+// CURAR NO ES GRATIS (10/8). Antes, cada vez que la vida MÁXIMA subía se regalaba la
+// diferencia como vida actual. Como se llama al equipar, alcanzaba con desequipar y volver a
+// equipar un arma con Runa Guardiana (+120 de vida máx.) para curarse 120 de golpe, cuantas
+// veces quisieras: la comida y el riesgo de la Zona Negra dejaban de existir.
+// Ahora la vida máxima se recalcula igual, pero NO se regala vida. La única que cura sola es
+// la subida de nivel de Combate, y eso lo hace addCombatXp a mano con curarPorNivel().
 function applyCombatHp() {   // vida máxima = 100 + hitos de Combate (nivel 5 y 10)
   const want = 100 + combatHpBonus(combatInfo().lvl) + G.buffs.reduce((s, b) => s + (b.type === "hpmax" && b.on ? b.mult : 0), 0) + (typeof eqRunaVal === "function" && typeof armaEq === "function" ? eqRunaVal("guardiana") : 0) + (typeof armorBonoVal === "function" ? armorBonoVal("hpmax") : 0);
-  if (G.hpMax !== want) { const dif = want - G.hpMax; G.hpMax = want; if (dif > 0) G.hp = Math.min(G.hpMax, G.hp + dif); G.hp = Math.min(G.hpMax, G.hp); }
+  if (G.hpMax !== want) { G.hpMax = want; G.hp = Math.min(G.hpMax, G.hp); }
 }
+// subir de nivel de Combate sí cura lo que sumó de vida máxima (es una recompensa, no un bucle)
+function curarPorNivel(cuanto) { if (cuanto > 0) G.hp = Math.min(G.hpMax, (G.hp || 0) + cuanto); }
 function addCombatXp(xp) {
   xp = Math.round(xp * combatXpMult());   // Guiso Campestre: +% XP de combate
   const before = combatInfo().lvl;
   G.combatXp = (G.combatXp || 0) + xp;
   const after = combatInfo().lvl;
   if (after > before) {
+    const gano = combatHpBonus(after) - combatHpBonus(before);
     applyCombatHp();
+    curarPorNivel(gano);   // el hito de nivel sí regala la vida que sumó
     const salto = after - before;   // un Trol puede subir varios niveles: UN solo cartel (doc)
     const hito = after === 5 || after % 10 === 0;
     const vida = combatHpBonus(after) > combatHpBonus(before) ? "+" + (combatHpBonus(after) - combatHpBonus(before)) + " de vida máxima" : "";
@@ -443,7 +452,6 @@ function tareaLabel(t) {
   if (tipo === "cocinar") return "Cocinar " + n + " platos";
   return tipo + " " + n;
 }
-function farmLevelFromXp(xp) { let l = 1; for (let i = 2; i < FARM_XP_LVLS.length; i++) if (xp >= FARM_XP_LVLS[i]) l = i; return Math.min(FARM_NIVEL_MAX, l); }
 function farmPuedeSubir() {   // ¿se puede pasar al nivel siguiente ahora mismo?
   const nv = G.level + 1;
   if (nv > FARM_NIVEL_MAX) return false;
@@ -476,7 +484,6 @@ function recalcFarmLevelInterno() {
   refreshHud();
   if (subio && typeof saveFarm === "function") saveFarm(true);
 }
-function canLevel() { return false; }   // legado: ya no se sube pagando recursos
 function levelUp() { toast("El nivel sube cosechando (XP de Farmeo)"); }
 function prestige() {
   if (G.level < FARM_NIVEL_MAX) { toast("Llegá a nivel " + FARM_NIVEL_MAX); return; }
@@ -1189,12 +1196,6 @@ function ofrendar(k, n) {
   if (typeof refreshOfrendas === "function" && isOpen("ov-ofrendas")) refreshOfrendas();
   if (typeof saveFarm === "function") saveFarm(true);
 }
-// simulación informativa: qué porción del pozo te tocaría con los puntos totales de todos
-function ofrendaShare(totalGlobal) {
-  const t = Math.max(1, totalGlobal || 0);
-  const pct = ofrendaPuntos() / t;
-  return { pct, tokens: Math.floor(OFRENDA_POZO * pct) };
-}
 
 // ================= LA CURTIDURÍA: LAS 20 PIEZAS DE ARMADURA ("2das mejoras", 4/8) =================
 // 4 sets × 5 piezas. Se craftean con el material del animal + plata (la pesada además pide hierro).
@@ -1609,24 +1610,6 @@ function rollWeaponHit(defensa) {
 // --- LEGADO (espada/arco viejos): queda para migración de guardados; ya no se craftea ---
 const SWORD_COST = { bronce: 12 };   // 100% metal (feedback del diseñador: nada de madera)
 const SWORD_WOOD_COST = { madera: 5 };
-function craftSwordWood() {
-  if (G.swordWoodOwned) { toast("Ya tenés la Espada de Madera"); return; }
-  if (!canAfford(SWORD_WOOD_COST)) { toast("Te faltan materiales"); return; }
-  payCost(SWORD_WOOD_COST); G.swordWoodOwned = true; G.tools.sword_wood = TOOL_DEF.sword_wood.max;
-  if (!G.gear.arma) G.gear.arma = "sword_wood";
-  addXp("crafting", 8);
-  log("Crafteaste la Espada de Madera.", "gold"); toast("¡Espada de Madera!"); forgeWork();
-  refreshForge(); if (typeof syncSlots === "function") syncSlots(); if (isOpen("ov-inv")) refreshInv();
-}
-function craftSword() {
-  if (G.swordOwned) { toast("Ya tenés la espada"); return; }
-  if (!canAfford(SWORD_COST)) { toast("Te faltan materiales"); return; }
-  payCost(SWORD_COST); G.swordOwned = true; G.tools.sword = TOOL_DEF.sword.max;
-  if (!G.gear.arma) G.gear.arma = "sword";   // si el slot de arma está libre, se equipa sola
-  addXp("crafting", 14);
-  log("Crafteaste la Espada de Hierro.", "gold"); toast("¡Espada de Hierro!"); forgeWork();
-  refreshForge(); if (typeof syncSlots === "function") syncSlots(); if (isOpen("ov-inv")) refreshInv();
-}
 // daño del jugador — viernes (2): SOLO con arma equipada (sin arma no hay ataque, devuelve 0)
 function swordDmg() {   // legado: >0 si hay un arma CUERPO A CUERPO equipada y sana (el daño real sale de rollWeaponHit)
   const id = armaEq(); if (!id) return 0;
@@ -1637,15 +1620,6 @@ function swordDmg() {   // legado: >0 si hay un arma CUERPO A CUERPO equipada y 
 // --- arco y flechas (combate a distancia; usa la skill Arco) ---
 const BOW_COST = { madera: 12, bronce: 2 };
 const ARROW_COST = { madera: 2, piedra: 1 };   // craftea 10 flechas
-function craftBow() {
-  if (G.bowOwned) { toast("Ya tenés el arco"); return; }
-  if (!canAfford(BOW_COST)) { toast("Te faltan materiales"); return; }
-  payCost(BOW_COST); G.bowOwned = true; G.tools.bow = TOOL_DEF.bow.max;
-  if (!G.gear.arma) G.gear.arma = "bow";   // si el slot de arma está libre, se equipa solo
-  addXp("crafting", 12);
-  log("Crafteaste el Arco.", "gold"); toast("¡Arco!"); forgeWork();
-  refreshForge(); if (typeof syncSlots === "function") syncSlots(); if (isOpen("ov-inv")) refreshInv();
-}
 function craftArrows() {
   if (!canAfford(ARROW_COST)) { toast("Te faltan materiales"); return; }
   payCost(ARROW_COST); G.res.flecha = (G.res.flecha || 0) + 10;   // van a la bolsa, NO se autoequipan (detalles jueves)
@@ -1653,7 +1627,6 @@ function craftArrows() {
   log("Crafteaste 10 flechas — están en tu bolsa; equipalas en el panel de Equipo.", "good"); toast("+10 flechas en la bolsa"); forgeWork();
   refreshForge(); if (typeof syncSlots === "function") syncSlots(); if (isOpen("ov-inv")) refreshInv();
 }
-function bowDmg() { const id = armaEq(); if (!id || ARM_DEF[id].tipo !== "arco") return 0; const r = rollWeaponHit(0); return r ? r.dmg : 0; }
 // viernes (2): la pestaña Armas de la Herrería se desbloquea pagando
 const ARMAS_UNLOCK_COST = { madera: 20, piedra: 20 }; var ARMAS_UNLOCK_PLATA = 1000;
 function unlockArmas() {
@@ -1871,7 +1844,7 @@ function craftChest() {
   G.chests = G.chests || [];
   if (G.chests.length >= CHEST_MAX) { toast("Máximo de cofres (" + CHEST_MAX + ")"); return; }
   if (!canAfford(CHEST_COST)) { toast("Te faltan materiales"); return; }
-  if (G.plata < CHEST_PLATA) { toast("Te falta plata (" + CHEST_PLATA + " )"); return; }
+  if (G.plata < CHEST_PLATA) { toast("Te falta plata (" + CHEST_PLATA + ")"); return; }
   payCost(CHEST_COST); G.plata -= CHEST_PLATA;
   G.chests.push({ col: null, row: null, items: Array(CHEST_SLOTS + (G.chestCap || 0)).fill(null) });   // capacidad base + la ganada por niveles de granja
   addXp("crafting", 8);
@@ -2071,19 +2044,6 @@ function roomForDish(id) {
 }
 function bagFull(what) { toast("Bolsa llena — no podés " + what); log("No tenés espacio en la bolsa: liberá un hueco para " + what + ".", "bad"); }
 
-function invStacks() {
-  const st = [];
-  st.push({ sprite:"axe", em:"", nm:"Hacha ("+toolDur("axe")+"/"+TOOL_DEF.axe.max+")" });
-  { const eqp = equippedPick();
-    if (eqp) st.push({ sprite:PICK_DEF[eqp].sprite, em:"", nm:PICK_DEF[eqp].label+" ("+(G.picks.dur[eqp]||0)+"/"+PICK_DEF[eqp].dur+")" });
-    else st.push({ sprite:"pick_stone", em:"", nm:"Sin pico" }); }
-  st.push({ sprite:"fishing_rod", em:"", nm:"Caña ("+toolDur("rod")+"/"+TOOL_DEF.rod.max+")" });
-  for (const r of ["papa","zanahoria","cebolla","calabacin","repollo","calabaza","brocoli","girasol","trigo","maiz","madera","piedra","bronce","oro","diamante","netherita"]) {
-    let n = Math.floor(G.res[r] || 0);
-    while (n > 0) { const c = Math.min(99, n); st.push({ sprite:resSprite(r), em:RES_EMOJI[r], nm:RES_LABEL[r], count:c }); n -= 99; }
-  }
-  return st;
-}
 function tryAddRes(key, amt) {
   const b = G.res[key] || 0; G.res[key] = b + amt;
   if (canonicalStacks().length > invSlots()) { G.res[key] = b; return false; }
@@ -2227,7 +2187,6 @@ function dailyState() {
   return { claimable: true, day: dia, lost: false };
 }
 const STREAK_RECOVER_COST = 0;   // legado: ya no hay racha que perder ni que recuperar
-function recoverStreak() { toast("El cofre ya no castiga faltar un día"); }
 function claimDaily() {
   const st = dailyState();
   if (!st.claimable) { toast("Ya reclamaste hoy — volvé mañana"); return; }

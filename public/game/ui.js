@@ -56,6 +56,7 @@ let _entrEv = null;
 function entrenarSync() {
   const el = $("entr-info"); if (!el) return;
   if (typeof dummyEntrenando !== "function" || !dummyEntrenando()) { entrenarCerrar(); return; }
+  if (!isOpen("ov-entrenando")) { entrenarCerrar(); return; }   // si se cerró por otro lado, el tick no queda vivo
   const utiles = dummyMsUtiles();
   const xp = Math.round(Math.min(DUMMY_OFF_MAX_H, utiles / 3600000) * DUMMY_OFF_XP_H);
   const falta = Math.max(0, DUMMY_OFF_ESPERA_MS - (nowMs() - G.dummyTrain.desde));
@@ -74,7 +75,10 @@ function entrenarFin() {
   entrenarCerrar();
   try { refreshHud(); } catch (e) {}
 }
-function closeAllOv() { document.querySelectorAll(".ov.show").forEach(e => e.classList.remove("show")); }
+// Las ventanas .bloquea (hoy: el entrenamiento) NO se cierran con Escape, ni con un clic
+// afuera, ni al entrar en modo edición: si se cerraran, el jugador volvería al juego con el
+// entrenamiento corriendo, que es justo el exploit que la ventana viene a tapar (10/8).
+function closeAllOv() { document.querySelectorAll(".ov.show:not(.bloquea)").forEach(e => e.classList.remove("show")); }
 
 /* ---- HUD ---- */
 /* --- celebración de subida de nivel (doc maestro 2/8): cartel + glow + partículas, con COLA --- */
@@ -288,7 +292,8 @@ function hotCellHtml(d, i) {
   const ghost = hotItemExists(d) ? "" : " ghost";
   return `<div class="hcell filled${on}${sel}${eq}${ghost}" draggable="true" data-slot="${i}" data-zone="hot" title="${v.label}">${num}${itemIcon(v)}${cnt}${durBar(v)}</div>`;
 }
-function refreshHotbar() {
+let _hotFirma = null;
+function refreshHotbar(forzar) {
   if (dndActive) return;
   const box = $("hotbar"); if (!box) return;
   ensureHotbarDefaults();
@@ -296,6 +301,11 @@ function refreshHotbar() {
   if (!Array.isArray(G.hotbar)) G.hotbar = [];
   while (G.hotbar.length < 10) G.hotbar.push(null);
   let html = ""; for (let i = 0; i < 10; i++) html += hotCellHtml(G.hotbar[i], i);
+  // La llama refreshHud, o sea el tick de 1 segundo: si no comparamos, la barra se reconstruye
+  // entera 60 veces por minuto y se recuelgan sus 20 listeners aunque no haya cambiado nada.
+  // De paso se perdía el :hover en cada tick (10/8).
+  if (!forzar && html === _hotFirma && box.firstChild) return;
+  _hotFirma = html;
   box.innerHTML = html;
   bindZoneDnD(box, "hot");
   box.querySelectorAll("[data-slot]").forEach(c => {
@@ -678,9 +688,11 @@ function refreshCooking() {
     const own = Math.floor((G.dishes && G.dishes[id]) || 0);
     const vPlata = Math.round(dishPrice(r) * cookPot(r.lvl));
     let btns = '<button class="green sm" ' + ((!locked && canCook(id) && cookFree() > 0) ? "" : "disabled") + ' data-cook="' + id + '">' + (locked ? "Nivel " + r.lvl : "Cocinar") + '</button>';
+    // el tiempo que se muestra tiene que ser el que de verdad va a tardar: la Cocina nivel 2
+    // descuenta un % y el panel prometía el tiempo sin descuento (10/8)
     if (own > 0 && r.plata) btns += '<button class="sm" data-selld="' + id + '">Vender (' + own + ') · ' + vPlata + ' plata</button>';
     if (own > 0 && r.goldenP && lvl >= 8) btns += '<button class="sm" data-sellg="' + id + '">Vender · ' + r.goldenP + ' $G</button>';
-    return '<div class="forge-row' + (locked ? ' locked' : '') + '"><div class="fic">' + fic + '</div><div class="finfo"><div class="fnm">' + r.label + (locked ? ' · se desbloquea a nivel ' + r.lvl : '') + '</div><div class="fds">' + dishDesc(r) + ' · cocción ' + fmtSecs(r.cookS || 8) + ' · +' + r.xp + ' XP</div><div class="fds">Ingredientes: ' + parts.join(" · ") + (r.plata ? ' · Venta: ' + vPlata + ' plata' + (r.goldenP ? ' o ' + r.goldenP + ' $Golden (Nv 8)' : '') : '') + '</div></div><div class="fbtns">' + btns + '</div></div>';
+    return '<div class="forge-row' + (locked ? ' locked' : '') + '"><div class="fic">' + fic + '</div><div class="finfo"><div class="fnm">' + r.label + (locked ? ' · se desbloquea a nivel ' + r.lvl : '') + '</div><div class="fds">' + dishDesc(r) + ' · cocción ' + fmtSecs(Math.round((r.cookS || 8) * (typeof cocinaFactor === "function" ? cocinaFactor() : 1))) + ' · +' + r.xp + ' XP</div><div class="fds">Ingredientes: ' + parts.join(" · ") + (r.plata ? ' · Venta: ' + vPlata + ' plata' + (r.goldenP ? ' o ' + r.goldenP + ' $Golden (Nv 8)' : '') : '') + '</div></div><div class="fbtns">' + btns + '</div></div>';
    } catch (e) { console.warn("receta con problema:", id, e); return ""; }
   }).join("");
   box.querySelectorAll("[data-cook]").forEach(b => b.onclick = () => cook(b.dataset.cook));
@@ -873,7 +885,10 @@ function refreshAltar() {
       '<div class="fds">Éxito: <b>' + u.ex + '%</b> (con polvo ' + u.exP + '%) · +' + u.dmg + '% daño acum. · Cuesta ' + u.rp + ' Runa de Poder + ' + u.plata + ' plata' + (next >= 6 ? (next >= 11 ? ' · al fallar: −1 y RIESGO DE ROTURA' : ' · al fallar: baja −1') : ' · al fallar solo perdés materiales') + '</div>' +
       '<div class="fds"><label><input type="checkbox" data-polvo="' + id + '"> usar Polvo de Suerte</label> &nbsp; <label><input type="checkbox" data-prot="' + id + '"' + (next >= 11 ? ' checked' : '') + '> usar Runa de Protección</label></div>' +
       '<div class="fds">Ranuras de runa: ' + [1, 2, 3].map(sl => { const abre = sl === 1 ? 3 : sl === 2 ? 7 : 12; const sk = armSockets(id)[sl]; return sl <= socketsOpen(plus) ? (sk ? runaLabel(sk.t, sk.r) : "vacía") : "cerrada (+" + abre + ")"; }).join(" · ") + '</div>' +
-      '</div><div class="fbtns"><button class="green sm" data-upg="' + id + '">Mejorar</button></div></div>';
+      // El Altar era el ÚNICO panel donde ningún botón se deshabilitaba: salían todos verdes y
+      // state.js rebotaba con un toast. Además, como la sacudida noNo() depende de [disabled],
+      // nunca se disparaba acá (10/8).
+      '</div><div class="fbtns"><button class="green sm" ' + ((G.res.runa_poder || 0) >= (UPG[Math.min(15, (armPlus(id) || 0) + 1)] || { rp: 0 }).rp ? "" : "disabled") + ' data-upg="' + id + '">Mejorar</button></div></div>';
   });
   // ---- Sockets del arma equipada ----
   const eq = armaEq();
@@ -894,17 +909,19 @@ function refreshAltar() {
   for (const id in ALTAR_CRAFT) {
     const c = ALTAR_CRAFT[id];
     const costo = Object.keys(c.cost).map(k => c.cost[k] + " " + (RES_LABEL[k] || k)).join(" + ") + (c.plata ? " + " + c.plata + " plata" : "") + (c.golden ? " + " + c.golden + " $Golden" : "");
-    h += '<div class="forge-row"><div class="finfo"><div class="fnm">' + RES_LABEL[id] + ' <span class="fds">(tenés ' + (G.res[id] || 0) + ')</span></div><div class="fds">' + costo + '</div></div><div class="fbtns"><button class="green sm" data-caltar="' + id + '">Craftear</button><button class="green sm" data-caltar5="' + id + '" title="Craftear 5">×5</button></div></div>';
+    const okC = canAfford(c.cost) && (!c.plata || G.plata >= c.plata) && (!c.golden || G.golden >= c.golden);
+    h += '<div class="forge-row' + (okC ? '' : ' locked') + '"><div class="finfo"><div class="fnm">' + RES_LABEL[id] + ' <span class="fds">(tenés ' + (G.res[id] || 0) + ')</span></div><div class="fds">' + costo + '</div></div><div class="fbtns"><button class="green sm" ' + (okC ? "" : "disabled") + ' data-caltar="' + id + '">Craftear</button><button class="green sm" ' + (okC ? "" : "disabled") + ' data-caltar5="' + id + '" title="Craftear 5">×5</button></div></div>';
   }
   // runas de atributo I
   h += '<div class="secc">Craftear runas de atributo (rareza I)</div>';
   h += '<div class="info">Cuestan ' + Object.keys(RUNA_CRAFT.cost).map(k => RUNA_CRAFT.cost[k] + " " + (RES_LABEL[k] || k)).join(" + ") + ' + ' + RUNA_CRAFT.plata + ' plata.</div>';
+  const okR = canAfford(RUNA_CRAFT.cost) && G.plata >= RUNA_CRAFT.plata;
   RUNA_ORDER.forEach(t => {
-    h += '<div class="forge-row"><div class="finfo"><div class="fnm">' + RUNA_TIPOS[t].label + ' I <span class="fds">(tenés ' + (G.res[runaKey(t, 1)] || 0) + ')</span></div><div class="fds">' + RUNA_TIPOS[t].buff + ': +' + RUNA_TIPOS[t].vals[0] + RUNA_TIPOS[t].uni + ' → +' + RUNA_TIPOS[t].vals[4] + RUNA_TIPOS[t].uni + ' en rareza V</div></div><div class="fbtns"><button class="green sm" data-cruna="' + t + '">Craftear I</button><button class="green sm" data-cruna5="' + t + '" title="Craftear 5">×5</button></div></div>';
+    h += '<div class="forge-row' + (okR ? '' : ' locked') + '"><div class="finfo"><div class="fnm">' + RUNA_TIPOS[t].label + ' I <span class="fds">(tenés ' + (G.res[runaKey(t, 1)] || 0) + ')</span></div><div class="fds">' + RUNA_TIPOS[t].buff + ': +' + RUNA_TIPOS[t].vals[0] + RUNA_TIPOS[t].uni + ' → +' + RUNA_TIPOS[t].vals[4] + RUNA_TIPOS[t].uni + ' en rareza V</div></div><div class="fbtns"><button class="green sm" ' + (okR ? "" : "disabled") + ' data-cruna="' + t + '">Craftear I</button><button class="green sm" ' + (okR ? "" : "disabled") + ' data-cruna5="' + t + '" title="Craftear 5">×5</button></div></div>';
   });
   // ---- Fusión ----
   let fus = "";
-  RUNA_ORDER.forEach(t => { for (let r = 1; r <= 4; r++) { const n = G.res[runaKey(t, r)] || 0; if (n >= 3) fus += '<div class="forge-row"><div class="finfo"><div class="fnm">3× ' + runaLabel(t, r) + ' → 1× ' + runaLabel(t, r + 1) + '</div><div class="fds">' + (FUSE_GOLD[r] ? "Cuesta " + FUSE_GOLD[r] + " $Golden" : "Gratis") + ' · tenés ' + n + '</div></div><div class="fbtns"><button class="green sm" data-fuse="' + t + ':' + r + '">Fusionar</button></div></div>'; } });
+  RUNA_ORDER.forEach(t => { for (let r = 1; r <= 4; r++) { const n = G.res[runaKey(t, r)] || 0; if (n >= 3) fus += '<div class="forge-row"><div class="finfo"><div class="fnm">3× ' + runaLabel(t, r) + ' → 1× ' + runaLabel(t, r + 1) + '</div><div class="fds">' + (FUSE_GOLD[r] ? "Cuesta " + FUSE_GOLD[r] + " $Golden" : "Gratis") + ' · tenés ' + n + '</div></div><div class="fbtns"><button class="green sm" ' + ((!FUSE_GOLD[r] || G.golden >= FUSE_GOLD[r]) ? "" : "disabled") + ' data-fuse="' + t + ':' + r + '">Fusionar</button></div></div>'; } });
   if (fus) h += '<div class="secc">Fusionar runas (3 iguales → 1 de rareza superior)</div>' + fus;
   box.innerHTML = h;
   box.querySelectorAll("[data-upg]").forEach(b => b.onclick = () => {
@@ -1220,7 +1237,7 @@ function initUI() {
     if (gm && !gm.classList.contains("collapsed") && !e.target.closest("#gmenu, #menu-btn")) gm.classList.add("collapsed");
     if (!anyOvOpen()) return;
     if (e.target.closest(".card, #gmenu, #hotwrap, .hudbar, #logpanel, #editbar, #seedwheel")) return;
-    document.querySelectorAll(".ov.show").forEach(o => { if (o.id !== "ov-inv") o.classList.remove("show"); });
+    document.querySelectorAll(".ov.show:not(.bloquea)").forEach(o => { if (o.id !== "ov-inv") o.classList.remove("show"); });
   });
   // clic derecho en el juego sin menú del navegador (siembra rápida, detalles 29/7)
   // clic derecho: NUNCA el menú del navegador, en ninguna parte del juego (solo se permite en campos de texto)
@@ -1323,6 +1340,7 @@ function refreshOfrendas() {
 function refreshIncursion() {
   const box = $("inc-list"); if (!box) return;
   const inc = incActiva(), cupo = incCupoHoy(), poder = incPoder();
+  const sinCupo = !!(INC_CUPO_DIA && cupo.n >= INC_CUPO_DIA);   // el cupo también bloquea el botón (10/8)
   let h = '<div class="info">Tu poder de combate: <b>' + poder + '</b>' + (poder ? '' : ' — necesitás un arma equipada') +
     ' · incursiones de hoy: ' + cupo.n + '/' + (INC_CUPO_DIA || "sin tope") + '</div>';
   if (inc) {
@@ -1342,7 +1360,9 @@ function refreshIncursion() {
         (listo ? ' — <b style="color:#3f6b2a">estás listo</b>'
                : (flojo ? ' — <b style="color:#b03a2e">te van a superar</b>'
                         : ' — vas justo: volverías herido y con menos botín')) + '</div></div>' +
-      '<div class="fbtns"><button class="green sm" ' + (inc || !poder ? "disabled" : "") + ' data-inc="' + k + '">Salir</button></div></div>';
+      // el cupo diario también bloquea el botón: antes salía verde y incSalir rebotaba con un
+      // toast, aunque la misma ventana mostraba "incursiones de hoy: n/N" (10/8)
+      '<div class="fbtns"><button class="green sm" ' + (inc || !poder || sinCupo ? "disabled" : "") + ' data-inc="' + k + '">Salir</button></div></div>';
   });
   h += '<div class="info">Al Dragón de las Cavernas hay que ir a pelearlo en persona: no se puede por incursión.</div>';
   box.innerHTML = h;

@@ -1351,6 +1351,66 @@ juega exactamente igual que en la versión final, pero sin esperar.
 (los 4 útiles); 20 horas topean en 480; y con la Cocina y el Horno ya construidos el tutorial
 salta directo al paso siguiente.
 
+### Auditoría completa del código
+Se repartió el código en tres frentes (estado y guardado · escenas y rendimiento · interfaz) y
+se verificó a mano cada hallazgo antes de tocarlo.
+
+**Cuatro bugs críticos, los cuatro arreglados:**
+
+- **Los cofres perdían todo del espacio 11 en adelante.** `save.js` recortaba a 10 items al
+  cargar, pero un cofre crafteado con la granja alta tiene hasta 45 espacios y la ventana los
+  llena. Llenabas, recargabas y desaparecía sin aviso. Ahora la capacidad se calcula con
+  `G.chestCap` y los espacios ganados por nivel aparecen solos en los cofres viejos.
+- **Curación infinita gratis.** `applyCombatHp()` regalaba la diferencia de vida cada vez que
+  subía la vida MÁXIMA, y se llama al equipar: con una Runa Guardiana V, desequipar y volver a
+  equipar daba +120 de vida, repetible sin límite. Anulaba el costo de la comida y el riesgo de
+  la Zona Negra enteros. Ahora subir el máximo no cura; la única que cura es la subida de nivel
+  de Combate, y eso lo hace `curarPorNivel()` a mano.
+- **"Bolsa llena" 60 veces por segundo.** `tryPickup` corre en cada frame: pararse encima de un
+  drop con la bolsa llena dejaba el cartel clavado para siempre y tapaba cualquier otro aviso.
+  Ahora avisa una vez cada 2,5 s.
+- **El título se acumulaba en el nombre.** El guardado trae `"[Veterano] Juan"` y eso volvía a
+  `NICK`, así que cada sesión sumaba un prefijo: `[Veterano] [Veterano] [Veterano] Juan` en el
+  ranking, el chat y el mercado. Al cargar se le sacan los prefijos.
+
+**Rendimiento:**
+
+- **El triple barrido de la granja.** `hitsSprite` se llamaba ~85 veces por frame desde tres
+  lugares (timers, brillo del cursor y cartel de acción) y cada llamada alocaba un Rectangle y,
+  si el cursor caía adentro, leía un píxel real del canvas con `getPixelAlpha`. Ahora el
+  Rectangle se reusa y el resultado se cachea por frame: el trabajo pasa a ser una vez por
+  sprite en vez de tres.
+- **El atlas fuente quedaba vivo toda la sesión** después de desempaquetarse: 10,7 MB de RGBA
+  de puro descarte. Se libera al terminar.
+- Las **olas** se redibujaban 60 veces por segundo para un movimiento de ~1 Hz: pasan a 10 fps.
+- Las **barras de vida** de los 25 mobs y la del granjero se reconstruían por frame: ahora solo
+  cuando cambia la vida.
+- **La plaza filtraba un socket y un listener global** si salías mientras la conexión estaba en
+  vuelo — habitual con el server gratis, que arranca frío. Y mandaba 15 mensajes por segundo
+  aunque estuvieras parado: ahora solo si algo cambió, con keepalive de 1 s.
+- **Mover la laguna no invalidaba la grilla del pathfinding**: el A* seguía creyendo que el agua
+  estaba en el lugar viejo.
+
+**Interfaz:**
+
+- **Escape cerraba la ventana de entrenamiento** y te devolvía al juego con el entrenamiento
+  corriendo — el mismo exploit que la ventana venía a tapar, abierto el mismo día. Las ventanas
+  `.bloquea` ya no se cierran con Escape, ni con un clic afuera, ni al entrar en modo edición.
+- **La hotbar se reconstruía entera una vez por segundo** con sus 20 listeners, y se perdía el
+  `:hover` en cada tick. Ahora solo si cambió.
+- **El Altar era el único panel sin chequeo de costos**: todos los botones salían verdes.
+- **La Cocina mentía con el tiempo** de cocción si tenías la Cocina nivel 2 (no aplicaba el
+  descuento al mostrarlo), y el botón de **Incursión** ignoraba el cupo diario.
+- **Contraste**: el "Nv." de Skills estaba en 2,6:1 y las etiquetas verdes en 3,3:1; los dos
+  pasaron a ~5:1. Las filas bloqueadas estaban al 55% de opacidad, lo que dejaba **el Pase de
+  Batalla entero ilegible** porque los 30 niveles arrancan bloqueados: ahora 82% + gris.
+
+**Limpieza:** 10 funciones muertas borradas de state.js, 26 reglas de CSS sin uso, dos assets
+que se pedían dos veces. Y aparecieron **emojis perdidos del archivo a nivel de bytes**, que
+dejaban textos como "Desbloquear parcela (150 )" y, peor, 36 objetos de texto VACÍOS con tweens
+infinitos girando sobre las parcelas listas. Se reemplazaron por chispas, monedas y gotas
+dibujadas por código, que además no dependen de la fuente.
+
 ---
 
 ## Pendientes conocidos

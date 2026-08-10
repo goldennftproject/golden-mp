@@ -46,7 +46,6 @@ class BootScene extends Phaser.Scene {
     for (let i = 0; i < 4; i++) L.push(["guerrero_idle_" + i, P + "guerrero_idle_" + i + ".png"]);
     for (let i = 0; i < 7; i++) L.push(["guerrero_walk_" + i, P + "guerrero_walk_" + i + ".png"]);
     for (let i = 0; i < 9; i++) L.push(["guerrero_atk_" + i, P + "guerrero_atk_" + i + ".png"]);
-    ["fish_comun","fish_raro"].forEach(k => L.push([k, P + k + ".png"]));   // pececitos de la laguna
     ["sword","bow"].forEach(k => L.push([k, P + k + ".png"]));   // arma visible al atacar en el Bosque
     L.push(["sword_wood", P + "sword_wood.png"]);   // viernes (2): espada de madera (derivada de la de hierro)
     L.push(["pick_iron", P + "pick_iron.png"]);     // viernes (2): pico de hierro (derivado del de piedra)
@@ -139,6 +138,10 @@ class BootScene extends Phaser.Scene {
         cv.getContext("2d").drawImage(src, fr.x, fr.y, fr.w, fr.h, 0, 0, fr.w, fr.h);
         this.textures.addCanvas(key, cv);
       }
+      // El atlas fuente ya no hace falta: quedan las 365 texturas sueltas. Sin esto la textura
+      // de 2048x1370 se quedaba viva toda la sesión, o sea ~10,7 MB de RGBA de puro descarte
+      // (el doble de memoria de textura de la necesaria, y se nota en móviles) — 10/8.
+      try { this.textures.remove("__atlas"); this.cache.json.remove("__atlasmap"); } catch (e) {}
     }
     this.tries = 0;
     this.fallidos = {};   // cuántas veces falló cada archivo (para no insistir con los que NO EXISTEN)

@@ -134,7 +134,17 @@ function hydrate(d) {
   if (Array.isArray(d.cooking)) G.cooking = d.cooking.filter(c => c && c.endAt).slice(0, 12);   // tope: ninguna partida tiene 12 ollas
   else if (d.cooking && typeof d.cooking === "object" && d.cooking.endAt) G.cooking = [d.cooking];
   else G.cooking = [];
-  if (Array.isArray(d.chests)) G.chests = d.chests.slice(0, 50).map(c => ({ col: (typeof c.col === "number" ? c.col : null), row: (typeof c.row === "number" ? c.row : null), items: (Array.isArray(c.items) ? c.items.slice(0, 10) : Array(10).fill(null)) }));
+  // OJO (10/8): NO recortar a 10. Un cofre crafteado con la granja alta tiene 10 + G.chestCap
+  // espacios (hasta 45 en granja 33) y la ventana los llena. El slice(0,10) de antes borraba
+  // en silencio todo lo guardado del espacio 11 en adelante en cada recarga.
+  if (Array.isArray(d.chests)) {
+    const tope = 10 + Math.max(0, G.chestCap || 0);
+    G.chests = d.chests.slice(0, 50).map(c => {
+      const its = Array.isArray(c.items) ? c.items.slice(0, Math.max(tope, c.items.length)) : [];
+      while (its.length < tope) its.push(null);           // los espacios ganados por nivel aparecen solos
+      return { col: (typeof c.col === "number" ? c.col : null), row: (typeof c.row === "number" ? c.row : null), items: its };
+    });
+  }
   if (typeof d.dummyUsedAt === "number") G.dummyUsedAt = d.dummyUsedAt;
   if (d.armCd && typeof d.armCd === "object") G.armCd = d.armCd;   // el enfriamiento de forja ya no se saltea con F5
   G.mkPend = Array.isArray(d.mkPend) ? d.mkPend : [];               // entregas pendientes del Mercado
@@ -161,7 +171,10 @@ async function loadFarm() {
       if (error) { console.warn("loadFarm:", error.message); await sleepMs(1200 * (intento + 1)); continue; }
       if (data) {
         if (data.data) hydrate(data.data);
-        if (data.name && !window.NICK) window.NICK = data.name;  // si no tipeaste apodo, usá el guardado
+        // El guardado trae el nombre CON el título ("[Veterano] Juan"). Si lo metíamos tal cual
+        // en NICK, el guardado siguiente escribía "[Veterano] [Veterano] Juan" y crecía un
+        // prefijo por sesión en el ranking, el chat y el mercado (10/8).
+        if (data.name && !window.NICK) window.NICK = String(data.name).replace(/^\s*(\[[^\]]*\]\s*)+/, "") || data.name;
         lastSavedKey = snapKey();   // referencia: lo que acabás de cargar ya está guardado
         return true;
       }

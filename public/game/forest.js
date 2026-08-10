@@ -188,6 +188,11 @@ class ForestScene extends Phaser.Scene {
   }
 
   drawBar(m) {
+    // Solo se redibuja si CAMBIÓ. Antes update() llamaba a drawBar de los 25 mobs en cada
+    // frame y cada uno hacía clear() + 2 fillRect aunque no hubiera pasado nada (10/8).
+    const firma = m.dead ? "x" : (Math.round(m.hp) + "/" + m.def.hp);
+    if (m._barFirma === firma) return;
+    m._barFirma = firma;
     m.bar.clear();
     if (m.dead || m.hp >= m.def.hp) return;
     const w = 30, x = m.cx - w / 2, y = m.by - (m.spr.displayHeight || m.spr.height) - 8;
@@ -269,7 +274,13 @@ class ForestScene extends Phaser.Scene {
       if (g.kind === "gear") { gainGear(g.k); ok = true; label = (GEAR_DEF[g.k] && GEAR_DEF[g.k].label) || "equipo"; }
       else if (g.k === "plata") { G.plata += g.n; ok = true; label = g.n + " "; }
       else { ok = tryAddRes(g.k, g.n); label = g.n + " " + (RES_EMOJI[g.k] || ""); }
-      if (!ok) { toast("Bolsa llena"); continue; }
+      if (!ok) {
+        // tryPickup corre en CADA frame: sin este freno, pararse encima de un drop con la
+        // bolsa llena disparaba el toast 60 veces por segundo, el cartel quedaba clavado
+        // para siempre y tapaba cualquier otro aviso (10/8).
+        if (nowMs() - (this._avisoLleno || 0) > 2500) { this._avisoLleno = nowMs(); toast("Bolsa llena — liberá espacio para recoger"); }
+        continue;
+      }
       if (window.sfx) sfx("coin");
       if (g.kind !== "gear") toast("+" + label);
       const s = g.spr;
@@ -413,9 +424,14 @@ class ForestScene extends Phaser.Scene {
   }
 
   // barra de vida del jugador, encima del granjero (solo en la Zona Negra)
-  drawHeroBar() {
+  drawHeroBar(forzar) {
     if (!this.hero) return;
     if (!this.heroBar) this.heroBar = this.add.graphics().setDepth(99993);
+    // la barra SIGUE al granjero, así que se mueve cada frame; pero el relleno solo se
+    // reconstruye si cambió la vida (antes eran 4 fillRect por frame para nada) — 10/8
+    const firma = Math.round(G.hp) + "/" + (G.hpMax || 100) + "|" + Math.round(this.hero.x) + "," + Math.round(this.hero.y);
+    if (!forzar && this._heroBarFirma === firma) return;
+    this._heroBarFirma = firma;
     const w = 42, h = 5, x = this.hero.x - w / 2, y = this.hero.y - (this.hero.displayHeight || 46) - 12;
     const pct = Math.max(0, Math.min(1, G.hp / (G.hpMax || 100)));
     this.heroBar.clear();
@@ -566,7 +582,7 @@ class ForestScene extends Phaser.Scene {
     const parts = drops.map(d => d.kind === "gear" ? "" + ((GEAR_DEF[d.k] && GEAR_DEF[d.k].label) || d.k) : "+" + d.n + " " + (d.k === "plata" ? "" : (RES_EMOJI[d.k] || "")));
     this.dropLoot(m, drops);   // todo el botín cae al piso, armaduras incluidas (detalles 338)
     log("Venciste a " + m.def.label + (parts.length ? ". Soltó: " + parts.join(" · ") : ". No soltó nada."), "gold");
-    toast("" + m.def.label + " " + (parts.length ? " " + parts.join(" ") : ""));
+    toast(m.def.label + " derrotado" + (parts.length ? ": " + parts.join(" · ") : ""));
     refreshHud();
     this.tweens.add({ targets: m.spr, alpha: 0, y: m.by - 12, duration: 400, onComplete: () => m.spr.setVisible(false) });
     // las que no reaparecen (babitas) se sacan de la lista y se destruyen: si no, se acumulan sin techo
@@ -593,6 +609,7 @@ class ForestScene extends Phaser.Scene {
       m.spr.setAlpha(1);
       if (m.baseScale) m.spr.setScale(m.baseScale);
       if (m.def.sprite) { m.anim = null; m.atkUntil = 0; this.playMob(m, "idle"); }
+      m._barFirma = null;   // el mob revivió: la barra se rehace
       this.drawBar(m);
     });
   }
@@ -797,7 +814,7 @@ class ForestScene extends Phaser.Scene {
     if (GF.uiOpen || this.action) { el.classList.remove("show"); return; }
     const m = this.nearestMonster(60);
     const far = !m && canShoot() ? this.nearestMonster(190) : null;
-    if (m) { el.textContent = "Atacar " + m.def.label + " (" + Math.ceil(m.hp) + " ) · [E]"; el.classList.add("show"); }
+    if (m) { el.textContent = "Atacar " + m.def.label + " (" + Math.ceil(m.hp) + " de vida) · [E]"; el.classList.add("show"); }
     else if (far) { el.textContent = "Disparar a " + far.def.label + " (" + (G.res.flecha || 0) + ") · [E]"; el.classList.add("show"); }
     else if (this.hero.x < 90) { el.textContent = "Volver a la granja"; el.classList.add("show"); }
     else el.classList.remove("show");

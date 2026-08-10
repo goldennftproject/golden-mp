@@ -13,7 +13,7 @@ class FarmScene extends Phaser.Scene {
     // porque apunta a objetos ya destruidos (y usarlos rompía el juego al volver del Bosque).
     this.hoverFx = null; this.nearFx = null;
     this.destMk = null; this.destTw = null;
-    this.dummyObj = null; this.dummyTimer = null;
+    this.dummyObj = null; this.dummyTimer = null; this.fishBar = null;   // si no se suelta, al volver del bosque la barra de pesca no vuelve a aparecer (10/8)
     this.editHl = null; this._nav = null; this.storeObj = null; this.forgeGlow = null;
     this.bobber = null; this.bobberTween = null; this.fishLine = null;
     this.hold = null; this.path = null; this.holdLast = null; this.holdPend = null;
@@ -204,8 +204,11 @@ class FarmScene extends Phaser.Scene {
         pspr.setScale((T * 1.4) / pspr.width);
         if (this.anims.exists("portal_spin")) pspr.play("portal_spin");
         this.tweens.add({ targets: pspr, scaleY: pspr.scaleY * 1.02, duration: 1400, yoyo: true, repeat: -1, ease: "Sine.easeInOut" });   // latido sutil del vórtice
-      } else {
-        this.add.text(px, py, "", { fontSize: "26px" }).setOrigin(0.5, 1).setDepth(py);
+      } else {   // respaldo si falta el arte del portal: un arco oscuro dibujado (era un Text vacío)
+        const g = this.add.graphics().setDepth(py);
+        g.fillStyle(0x6b6357, 1).fillEllipse(0, -18, 44, 52);
+        g.fillStyle(0x140f1c, 1).fillEllipse(0, -16, 30, 38);
+        g.setPosition(px, py);
       }
       this.add.text(px, py + 12, "Zona Negra", { fontFamily: "system-ui", fontSize: "11px", fontStyle: "bold", color: "#ffe08a", stroke: "#20301a", strokeThickness: 3 }).setOrigin(0.5, 0.5).setDepth(py);
       this.portal = { type: "portal", cx: px, by: py, sprite: pspr, w: T * 1.4 };
@@ -465,6 +468,10 @@ class FarmScene extends Phaser.Scene {
         this.pondImg.setPosition((col + p2.cols / 2) * T, (row + p2.rows / 2) * T);
         this.pondFish.forEach(f => { const np = this.pondPoint(); f.s.setPosition(np.x, np.y); f.tgt = this.pondPoint(); });
         G.layoutPond = { col, row };
+        // la grilla del pathfinding está cacheada hasta un invalidate() explícito: sin esto el
+        // A* seguía creyendo que el agua estaba en el lugar viejo y armaba rutas que cruzaban
+        // la laguna nueva y rodeaban un charco que ya no existe (10/8)
+        this.rebuildCollisions();
         if (typeof saveFarm === "function") saveFarm(true);
         return;
       }
@@ -591,6 +598,12 @@ class FarmScene extends Phaser.Scene {
 
   drawOlas(dt) {
     if (!this.olas) return;
+    // Se redibujaba en cada frame: dos strokeRoundedRect de 1300x740 con esquinas redondeadas,
+    // o sea reteselar y volver a subir la geometría 60 veces por segundo. El movimiento real
+    // es un seno de ~1 Hz, así que a 10 fps se ve exactamente igual (10/8).
+    this._olasAcc = (this._olasAcc || 0) + dt;
+    if (this._olasAcc < 0.1) return;
+    dt = this._olasAcc; this._olasAcc = 0;
     this.olasT = (this.olasT || 0) + dt;
     const t = this.olasT, W2 = GF.WORLD_W, H2 = GF.WORLD_H, g = this.olas;
     g.clear(); g.lineStyle(2, 0xdff3ff, 0.30);
@@ -650,7 +663,7 @@ class FarmScene extends Phaser.Scene {
       return d.label + " — vuelve en " + fmtCorto(animalFalta(o.k) / 1000) + " (clic: Establo)";
     }
     if (o.type === "plot") {
-      if (o.state === "locked") return "Desbloquear parcela (" + plotUnlockCost() + " )";
+      if (o.state === "locked") return "Desbloquear parcela (" + plotUnlockCost() + " de plata)";
       if (o.state === "withered") return "Limpiar cultivo marchito";
       if (o.state === "dry") { const cd = CROP_DEF[G.selSeed]; return "Plantar " + (cd ? cd.label : "cultivo"); }
       if (o.state === "ready") { const cd = CROP_DEF[o.cropKey]; return "Cosechar " + (cd ? cd.label : ""); }
@@ -1656,7 +1669,9 @@ class FarmScene extends Phaser.Scene {
       const c = this.add.circle(x, y, 4, 0xbfe6ff, 0).setStrokeStyle(2, 0xdff2ff, 0.9).setDepth(-990);
       this.tweens.add({ targets: c, radius: 14 + i * 8, alpha: { from: 0.9, to: 0 }, delay: i * 140, duration: 600, onComplete: () => c.destroy() });
     }
-    const d = this.add.text(x, y - 4, "", { fontSize: "14px" }).setOrigin(0.5, 1).setDepth(-989);
+    const d = this.add.graphics().setDepth(-989);   // era un Text con emoji que quedó vacío (10/8)
+    d.fillStyle(0xdff2ff, 0.95).fillEllipse(0, 0, 5, 7);
+    d.setPosition(x, y - 8);
     this.tweens.add({ targets: d, y: y - 16, alpha: { from: 1, to: 0 }, duration: 700, onComplete: () => d.destroy() });
   }
 
@@ -1902,9 +1917,25 @@ class FarmScene extends Phaser.Scene {
 
   // ¿el clic cae sobre un píxel OPACO del sprite? Evita seleccionar un árbol clickeando
   // el hueco transparente que rodea la copa (el rectángulo del sprite es mucho más grande).
+  // RENDIMIENTO (10/8). Esto se llamaba ~85 veces por frame desde tres lugares distintos
+  // (timers, brillo del hover y el cartel de acción), y cada llamada alocaba un Rectangle
+  // nuevo y, si el cursor caía dentro, leía un píxel real del canvas con getPixelAlpha.
+  // Ahora: el Rectangle se reusa y el resultado se cachea por frame y por sprite, así que
+  // el trabajo real pasa a ser una vez por sprite en vez de tres.
   hitsSprite(s, wx, wy) {
     if (!s || !s.visible) return false;
-    const b = s.getBounds();
+    if (this._hitT !== this._frameT || this._hitX !== wx || this._hitY !== wy) {
+      this._hitT = this._frameT; this._hitX = wx; this._hitY = wy;
+      this._hitCache = new Map();
+    }
+    const yaEsta = this._hitCache.get(s);
+    if (yaEsta !== undefined) return yaEsta;
+    const r = this.hitsSpriteReal(s, wx, wy);
+    this._hitCache.set(s, r);
+    return r;
+  }
+  hitsSpriteReal(s, wx, wy) {
+    const b = s.getBounds(this._hitRect || (this._hitRect = new Phaser.Geom.Rectangle()));
     if (!Phaser.Geom.Rectangle.Contains(b, wx, wy)) return false;
     const key = s.texture && s.texture.key;
     if (!key || key.startsWith("__") || !b.width || !b.height) return true;
@@ -1933,8 +1964,17 @@ class FarmScene extends Phaser.Scene {
       this.tweens.add({ targets: pl.glowAura, scale: { from: 0.9, to: 1.18 }, alpha: { from: 0.32, to: 0.12 }, yoyo: true, repeat: -1, duration: 650 });
       // chispas alrededor, con destellos alternados
       pl.glowSp = [];
+      // Antes eran tres Text con emoji; los emojis se perdieron del archivo y quedaron TRES
+      // TEXTOS VACÍOS por parcela, cada uno con su tween infinito: con las 12 parcelas listas
+      // eran 36 objetos y ~60 tweens actualizándose por frame sin dibujar un solo píxel.
+      // Ahora son chispitas dibujadas por código, que además no dependen de la fuente (10/8).
       [[-0.38, -0.6], [0.36, -0.35], [0, -0.85]].forEach(([ox, oy], i) => {
-        const s = this.add.text(pl.cx + ox * T, pl.by + oy * T, i === 2 ? "" : "", { fontSize: i === 2 ? "12px" : "9px", color: "#ffe9a8" }).setOrigin(0.5).setDepth(pl.by + 2);
+        const r = i === 2 ? 3.4 : 2.4;
+        const s = this.add.graphics().setDepth(pl.by + 2).setBlendMode(Phaser.BlendModes.ADD);
+        s.fillStyle(0xffe9a8, 1)
+         .fillTriangle(0, -r * 2, r * 0.55, 0, -r * 0.55, 0).fillTriangle(0, r * 2, r * 0.55, 0, -r * 0.55, 0)
+         .fillTriangle(-r * 2, 0, 0, r * 0.55, 0, -r * 0.55).fillTriangle(r * 2, 0, 0, r * 0.55, 0, -r * 0.55);
+        s.setPosition(pl.cx + ox * T, pl.by + oy * T);
         this.tweens.add({ targets: s, alpha: { from: 1, to: 0.1 }, scale: { from: 1, to: 1.35 }, yoyo: true, repeat: -1, duration: 420 + i * 160, delay: i * 180 });
         pl.glowSp.push(s);
       });
@@ -1947,7 +1987,10 @@ class FarmScene extends Phaser.Scene {
     const flash = this.add.circle(x, y - 8, 6, 0xffe9a8, 0.85).setDepth(99998);
     this.tweens.add({ targets: flash, scale: 4, alpha: 0, duration: 350, onComplete: () => flash.destroy() });
     for (let i = 0; i < 5; i++) {
-      const c = this.add.text(x, y - 12, "", { fontSize: "12px" }).setOrigin(0.5).setDepth(99999);
+      // idem: eran Text con emoji de moneda, quedaron vacíos. Ahora es una monedita dibujada.
+      const c = this.add.graphics().setDepth(99999);
+      c.fillStyle(0xd9a521, 1).fillCircle(0, 0, 4).fillStyle(0xffe08a, 1).fillCircle(-1, -1, 2.6);
+      c.setPosition(x, y - 12);
       this.tweens.add({
         targets: c, x: x + (Math.random() - 0.5) * 52, y: y - 26 - Math.random() * 26,
         alpha: { from: 1, to: 0 }, duration: 520 + Math.random() * 240, delay: i * 40,
@@ -2051,6 +2094,7 @@ class FarmScene extends Phaser.Scene {
 
   update(time, deltaMs) {
     if (this.leaving || !this.hero) return;   // cambiando de escena: no tocar nada más
+    this._frameT = time;   // marca del frame: la usa la caché de hitsSprite (10/8)
     const dt = deltaMs / 1000, k = this.keys, hero = this.hero;
     this.drawOlas(dt);   // olas de la isla
     this.seguirAura();
