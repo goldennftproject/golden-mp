@@ -36,6 +36,11 @@ EXTRA = ["res_", "crop_", "fish_", "coin_", "animal_"]
 # Edificios que antes no tenían arte y por eso nunca entraron al atlas (9/8).
 SUELTOS = ["establo", "curtiduria", "ofrendas"]
 
+# BESTIARIO (10/8): las 11 criaturas nuevas son 176 cuadros. Sueltos serían 176 pedidos
+# extra al server gratis; en el atlas son cero. Los arma tools/build-bestiario.py.
+BESTIARIO = ["murcielago_", "baba_", "arana_", "goblin_", "esqueleto_", "golem_",
+             "hombre_lobo_", "ogro_", "espectro_", "demonio_", "dragon_"]
+
 
 def claves_pedidas():
     """Las claves que YA tenía el atlas anterior. Es la lista buena y probada: se conserva
@@ -55,7 +60,7 @@ def archivos():
         if not nombre.endswith(".png"):
             continue
         clave = nombre[:-4]
-        if clave in pedidos or clave in SUELTOS or any(clave.startswith(p) for p in EXTRA):
+        if clave in pedidos or clave in SUELTOS or any(clave.startswith(p) for p in EXTRA + BESTIARIO):
             todos[clave] = os.path.join(FARM, nombre)
     faltan = [k for k in pedidos if k not in todos]
     return todos, faltan

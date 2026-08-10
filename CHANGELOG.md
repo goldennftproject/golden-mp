@@ -1556,6 +1556,35 @@ funciones, los permisos y un bloque de prueba al final.
 
 Panel de balanceo: 832 entradas, ninguna rota.
 
+### Fase 6 (primera parte) — El bestiario, por fin en el juego
+
+Las 11 criaturas estaban generadas y animadas en PixelLab desde hace días, pero nunca habían
+llegado al juego: `bestiario.json` estaba vacío y cada bicho se dibujaba con su ícono
+provisorio. Hoy entraron las 176 imágenes.
+
+- Le faltaba **la animación de ataque a la araña**, que era el único hueco real. Generada. La
+  primera salió apuntando al sur y el juego usa sureste, así que se agregó esa dirección.
+- **`tools/build-bestiario.py`**, nuevo, hace la integración completa. Tres decisiones que
+  importan:
+  - **Recorta a 4/6/6 repartiendo parejo.** PixelLab entrega 5 de idle y 7 de walk y ataque.
+    Cortar los últimos dejaría la animación a mitad de camino y saltaría al reiniciar el ciclo;
+    eligiendo cuadros repartidos a lo largo de toda la secuencia, el ciclo cierra.
+  - **Recorta todos los cuadros con un marco COMÚN**, sacado de la unión de los 16. Si se
+    recortara cada uno por su cuenta, el bicho bailaría entre cuadros: cada frame quedaría
+    centrado distinto.
+  - **Baja la resolución al doble del tamaño real de cada criatura.** Venían de hasta 180 px y
+    el más grande se dibuja a 96.
+- **Los 176 cuadros van al ATLAS**, no sueltos. Sueltos eran 176 pedidos extra al server
+  gratis y 1,8 MB; en el atlas son **cero pedidos y 204 KB** (el atlas pasó de 453 a 657 KB,
+  4096×1058). De paso desaparece el riesgo que tenía el arranque: si el manifiesto tardaba más
+  de 1,8 s, los PNG no se pedían y los mobs quedaban estáticos toda la sesión. Ahora el arte ya
+  viene en el atlas, así que llegue o no el manifiesto, las animaciones se crean igual.
+- `boot.js` ya tenía cableadas las animaciones con esos nombres exactos: no hubo que tocar una
+  línea de código del juego.
+
+Falta de la Fase 6: adornos, mazo, efectos por arma, íconos de materiales, los 4 animales
+definitivos, las 20 piezas de armadura y los cosméticos.
+
 ---
 
 ## Pendientes conocidos

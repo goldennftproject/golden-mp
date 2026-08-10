@@ -1,4 +1,16 @@
 {
-  "_comentario": "Criaturas del bestiario nuevo que YA tienen arte en assets/farm (idle 4 frames, walk 6, atk 6). Agregá el nombre a la lista cuando subas sus PNG: murcielago, baba, arana, goblin, esqueleto, golem, hombre_lobo, ogro, espectro, demonio, dragon.",
-  "mobs": []
+  "_comentario": "Criaturas con arte propio en assets/farm (idle 4f, walk 6f, atk 6f). Lo arma tools/build-bestiario.py.",
+  "mobs": [
+    "murcielago",
+    "baba",
+    "arana",
+    "goblin",
+    "esqueleto",
+    "golem",
+    "hombre_lobo",
+    "ogro",
+    "espectro",
+    "demonio",
+    "dragon"
+  ]
 }

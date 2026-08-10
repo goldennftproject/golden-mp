@@ -115,8 +115,8 @@ class BootScene extends Phaser.Scene {
   preload() {
     // ATLAS: todos los sprites del mundo en 2 archivos (mucho más liviano para el server free).
     // Si el atlas no llega, ensureAll() baja los archivos sueltos como respaldo.
-    this.load.image("__atlas", "assets/atlas.png?v=26");
-    this.load.json("__atlasmap", "assets/atlas.json?v=26");
+    this.load.image("__atlas", "assets/atlas.png?v=27");
+    this.load.json("__atlasmap", "assets/atlas.json?v=27");
 
     // No hay barra propia: la pantalla de carga es UNA sola, la del HTML, y le pasamos el avance.
     // (Antes había dos barras seguidas y el juego "aparecía" antes de estar listo.)
@@ -178,7 +178,7 @@ class BootScene extends Phaser.Scene {
     this._optStarted = true;
     const start = () => { if (this._started) return; this._started = true; this.buildAnims(); this.scene.start("farm"); };
     this.load.on("loaderror", () => {});   // lo que no exista se ignora en silencio
-    this.load.json("__bestiario", "assets/farm/bestiario.json?v=1");
+    this.load.json("__bestiario", "assets/farm/bestiario.json?v=2");
     this.load.once("complete", () => {
       const lista = this.cache.json.get("__bestiario");
       const mobs = Array.isArray(lista) ? lista : (lista && Array.isArray(lista.mobs) ? lista.mobs : null);
