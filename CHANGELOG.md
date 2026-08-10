@@ -1596,10 +1596,31 @@ Van al atlas como todo lo demás (`?v=28`), y los provisorios quedaron respaldad
 Falta de la Fase 6: adornos, mazo, efectos por arma, íconos de materiales, las 20 piezas de
 armadura y los cosméticos.
 
+### Fase 6 (tercera parte) — Los 8 adornos de la Tienda, definitivos
+
+Eran lo último que quedaba dibujado por código. Ahora los ocho tienen arte de PixelLab, con la
+misma paleta cálida de los edificios: **valla** de tablones con pasto en la base, **cantero** de
+flores amarillas en cajón de madera, **farol** de pueblo con luz cálida, **banco** de tablones
+con respaldo, **espantapájaros** de sombrero de paja y brazos abiertos, **fuente** redonda de
+piedra, **estatua** dorada sobre pedestal y **cerezo** en flor.
+
+El alto en pantalla de cada uno lo fija `DECO_ALTO` (state.js) y el ancho sale solo, respetando
+la proporción del sprite: así el farol no queda del porte de un árbol y la valla no tapa media
+parcela. `dibujarAdorno` usa el sprite si está y, si falta, cae al dibujo por código de antes,
+o sea que no hay forma de que esto rompa nada. Los arma `tools/build-adornos.py` y van al atlas
+(`?v=29`, 549 sprites).
+
+**Bug que salió de paso:** al colocar un adorno el cartel decía *"arrastralo a donde quieras"*,
+pero no existía el código para agarrarlos — ni para moverlos ni para sacarlos. Una vez puesto un
+adorno quedaba clavado ahí para siempre y ocupando uno de los 40 lugares. Ahora en modo edición
+se arrastran como cualquier objeto (celda verde libre / roja ocupada, y si está ocupada vuelve a
+su lugar) y con **clic derecho** vuelven a la bolsa. Los adornos se miran ANTES que el resto al
+buscar qué agarraste, porque son chicos y suelen quedar encima de una parcela.
+
 ---
 
 ## Pendientes conocidos
-*(actualizado el 9/8)*
+*(actualizado el 10/8)*
 
 ### Antes de publicar
 - Deploy del 9/8 hecho: ya está todo en vivo.
@@ -1607,10 +1628,9 @@ armadura y los cosméticos.
   esto en 1 los tiempos son de segundos y el juego regala materiales.
 
 ### Arte pendiente
-- **11 criaturas del bestiario**: generadas en PixelLab, faltan bajar los frames e integrarlas
-  (a la araña todavía le falta la animación de ataque).
-- **4 animales del Establo** definitivos (hoy son los provisorios dibujados por código) y sus
-  materiales: fibra, pelaje, cuero, colmillo.
+- Las **11 criaturas del bestiario** y los **8 adornos** ya están integrados (10/8).
+- **Materiales de los animales**: fibra, pelaje, cuero, colmillo (los 4 animales ya están hechos).
+- **Mazo**, efectos y animaciones por arma, y la **esencia oscura**.
 - **20 piezas de armadura** de la Curtiduría.
 - **Cosméticos**: skins, decoraciones y la mascota.
 - Íconos oficiales de la Espada de Madera y el Pico de Hierro (hoy son derivados).

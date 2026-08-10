@@ -303,7 +303,12 @@ class FarmScene extends Phaser.Scene {
     // clic: si pegás a un objeto, caminá hacia él e interactuá; si no, movete al punto
     this.input.on("pointerdown", (pt) => {
       if (pt.rightButtonDown()) {
-        if (GF.uiOpen || GF.editMode) return;
+        if (GF.editMode) {   // en edición el clic derecho levanta el adorno que haya abajo (vuelve a la bolsa)
+          const ad = this.adornoEnPunto(pt.worldX, pt.worldY);
+          if (ad) this.levantarAdorno(ad);
+          return;
+        }
+        if (GF.uiOpen) return;
         const wx = pt.worldX, wy = pt.worldY;
         for (const pl of this.plots) {
           if (Math.abs(wx - pl.cx) < T / 2 && Math.abs(wy - pl.by) < T / 2) {
@@ -313,8 +318,12 @@ class FarmScene extends Phaser.Scene {
         }
         return;
       }
-      if (GF.editMode) {   // modo edición: agarrar objeto, parcela o laguna bajo el cursor
+      if (GF.editMode) {   // modo edición: agarrar adorno, objeto, parcela o laguna bajo el cursor
         const wx = pt.worldX, wy = pt.worldY; let hit = null, bd = 1e9;
+        // los adornos van PRIMERO: son chicos y suelen quedar encima de una parcela o pegados
+        // a un edificio, así que si no se miran antes nunca se los podría agarrar.
+        const ad = this.adornoEnPunto(wx, wy);
+        if (ad) { this.dragDeco = ad; return; }
         for (const o of this.objs) { if (o.type === "fish") continue; if (this.hitsSprite(o.sprite, wx, wy)) { const d = Math.hypot(o.cx - wx, o.by - wy); if (d < bd) { bd = d; hit = o; } } }
         if (hit) { hit.origCx = hit.cx; hit.origBy = hit.by; this.dragObj = hit; return; }
         for (const pl of this.plots) { if (Math.abs(wx - pl.cx) < T / 2 && Math.abs(wy - pl.by) < T / 2) { this.dragPlot = pl; return; } }
@@ -380,7 +389,14 @@ class FarmScene extends Phaser.Scene {
         return;
       }
       if (!this.editHl) this.editHl = this.add.rectangle(0, 0, T, T, 0x7ec95a, 0.35).setOrigin(0, 1).setDepth(99998);
-      if (this.dragObj) {
+      if (this.dragDeco) {
+        const a = this.dragDeco;
+        a.g.setPosition(pt.worldX, pt.worldY).setDepth(99999);
+        const col = Phaser.Math.Clamp(Math.floor(pt.worldX / T), 0, GF.COLS - 1);
+        const row = Phaser.Math.Clamp(Math.floor(pt.worldY / T), 0, GF.ROWS - 1);
+        this.editHl.setPosition(col * T, (row + 1) * T).setSize(T, T)
+          .setFillStyle(this.celdaLibreAdorno(col, row, a.i) ? 0x7ec95a : 0xd9534f, 0.4).setVisible(true);
+      } else if (this.dragObj) {
         const o = this.dragObj;
         o.sprite.setPosition(pt.worldX, pt.worldY).setDepth(99999);
         if (o.shadow) o.shadow.setPosition(pt.worldX, pt.worldY - 3);
@@ -431,7 +447,22 @@ class FarmScene extends Phaser.Scene {
       this.clickHit = null; this.clickPond = false;
       // al soltar el clic sostenido, el granjero sigue caminando hasta el último punto señalado
       if (this.hold) { if (!GF.CAM_PAN && this.hold.active && this.holdPend) { const p = this.holdPend; this.holdPend = null; this.holdSeek(p.x, p.y); } this.hold = null; }
-      if (!GF.editMode) { this.dragObj = this.dragPlot = null; this.dragPond = false; return; }
+      if (!GF.editMode) { this.dragObj = this.dragPlot = this.dragDeco = null; this.dragPond = false; return; }
+      // soltar un ADORNO
+      if (this.dragDeco) {
+        const a = this.dragDeco; this.dragDeco = null;
+        const col = Phaser.Math.Clamp(Math.floor(pt.worldX / T), 0, GF.COLS - 1);
+        const row = Phaser.Math.Clamp(Math.floor(pt.worldY / T), 0, GF.ROWS - 1);
+        if (!this.celdaLibreAdorno(col, row, a.i)) {
+          a.g.setPosition(a.cx, a.by).setDepth(a.by);
+          toast("Ahí ya hay algo — elegí otra celda"); return;
+        }
+        const d = (G.decos || [])[a.i];
+        if (d) { d.col = col; d.row = row; }
+        this.syncAdornos();
+        if (typeof saveFarm === "function") saveFarm(true);
+        return;
+      }
       // soltar una PARCELA
       if (this.dragPlot) {
         const pl = this.dragPlot; this.dragPlot = null;
@@ -1374,10 +1405,17 @@ class FarmScene extends Phaser.Scene {
   }
 
   /* ---- ADORNOS DE LA GRANJA (10/8) -------------------------------------------
-     El arte definitivo va en la Fase 6; por ahora cada adorno se dibuja por código, con la
-     misma paleta cálida de los edificios, para que el sistema se pueda probar entero
-     (comprar, colocar, guardar, levantar) sin depender de PixelLab. */
+     Ya tienen arte propio de PixelLab (deco_<id> en el atlas). Si por lo que sea falta
+     el sprite, cae al dibujo por código de más abajo, que es el que se usó mientras se
+     probaba el sistema (comprar, colocar, guardar, levantar). */
   dibujarAdorno(id, x, y) {
+    // sprite definitivo: se apoya en el suelo (origen abajo-centro) y se ordena por Y como todo lo demás
+    if (this.textures.exists("deco_" + id)) {
+      const alto = DECO_ALTO[id] || 30;
+      const im = this.add.image(x, y, "deco_" + id).setOrigin(0.5, 1).setDepth(y);
+      im.setDisplaySize(Math.round(im.width * alto / im.height), alto);
+      return im;
+    }
     const g = this.add.graphics().setDepth(y);
     const MAD = 0x8a5a33, MAD2 = 0xa8712f, OSC = 0x241505, PIE = 0x8b8f8c, VER = 0x55733f;
     if (id === "valla") {
@@ -1424,17 +1462,43 @@ class FarmScene extends Phaser.Scene {
     g.setPosition(x, y);
     return g;
   }
+  // ¿el adorno entra en esa celda? (ignora es el índice del que se está moviendo, que no se pisa a sí mismo)
+  celdaLibreAdorno(col, row, ignora) {
+    const T = GF.TILE;
+    if (col < 1 || row < 2 || col >= GF.COLS - 1 || row >= GF.ROWS - 1) return false;
+    const x = (col + 0.5) * T, y = (row + 0.9) * T;
+    if (GF.blockedAt(x, y, 6)) return false;
+    if (GF.PLOTS.some(p => p.col === col && p.row === row)) return false;
+    if ((G.decos || []).some((d, j) => j !== ignora && d.col === col && d.row === row)) return false;
+    if ((G.chests || []).some(c => c.col === col && c.row === row)) return false;
+    return true;
+  }
+  // el adorno que esté bajo el cursor, si hay alguno (para agarrarlo en modo edición)
+  adornoEnPunto(wx, wy) {
+    const T = GF.TILE;
+    let best = null, bd = 1e9;
+    (this.adornos || []).forEach(a => {
+      const alto = (typeof DECO_ALTO !== "undefined" && DECO_ALTO[a.id]) || 30;
+      const hw = (a.g.displayWidth > 0 ? a.g.displayWidth / 2 : T * 0.5) + 3;
+      if (wx < a.cx - hw || wx > a.cx + hw) return;
+      if (wy > a.by + 5 || wy < a.by - alto - 5) return;
+      const d = Math.hypot(a.cx - wx, a.by - wy);
+      if (d < bd) { bd = d; best = a; }
+    });
+    return best;
+  }
+  // clic derecho en modo edición: el adorno vuelve a la bolsa (así se puede volver a colocar)
+  levantarAdorno(a) {
+    if (typeof decoSacar !== "function" || !decoSacar(a.i)) return;
+    this.dragDeco = null;
+    this.syncAdornos();
+    if (typeof syncEditDeco === "function") syncEditDeco();   // el selector de la barra de edición vuelve a contarlo
+    toast(((typeof DECO_DEF !== "undefined" && DECO_DEF[a.id]) ? DECO_DEF[a.id].label : "Adorno") + " guardado en la bolsa");
+    if (typeof saveFarm === "function") saveFarm(true);
+  }
   // busca una celda libre para dejar un adorno recién comprado (no pisa nada de lo que ya hay)
   huecoParaAdorno() {
-    const T = GF.TILE;
-    const ocupada = (col, row) => {
-      const x = (col + 0.5) * T, y = (row + 0.9) * T;
-      if (GF.blockedAt(x, y, 6)) return true;
-      if (GF.PLOTS.some(p => p.col === col && p.row === row)) return true;
-      if ((G.decos || []).some(d => d.col === col && d.row === row)) return true;
-      if ((G.chests || []).some(c => c.col === col && c.row === row)) return true;
-      return false;
-    };
+    const ocupada = (col, row) => !this.celdaLibreAdorno(col, row, -1);
     const c0 = Math.floor(GF.COLS / 2), r0 = Math.floor(GF.ROWS / 2);
     for (let rad = 0; rad < Math.max(GF.COLS, GF.ROWS); rad++) {
       for (let dr = -rad; dr <= rad; dr++) for (let dc = -rad; dc <= rad; dc++) {

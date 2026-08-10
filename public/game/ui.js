@@ -1533,7 +1533,7 @@ function ponerAdornoElegido() {
   if (!decoColocar(sel.value, pt.col, pt.row)) return;
   sc.syncAdornos();
   syncEditDeco();
-  toast(DECO_DEF[sel.value].label + " colocado — arrastralo a donde quieras");
+  toast(DECO_DEF[sel.value].label + " colocado — arrastralo a donde quieras (clic derecho lo levanta)");
 }
 
   window.setEditMode = (on) => {

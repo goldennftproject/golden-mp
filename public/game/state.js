@@ -1184,6 +1184,12 @@ const DECO_DEF = {
   estatua:        { label: "Estatua dorada",    plata: 0,     golden: 60, ds: "Para presumir. Se paga en $Golden." },
   arbolito:       { label: "Cerezo en flor",    plata: 0,     golden: 90, ds: "Un árbol ornamental. No se puede talar." },
 };
+// alto en pantalla de cada adorno, en píxeles (el tile mide 42). El ancho sale solo,
+// respetando la proporción del sprite. Con esto un farol no queda del porte de un árbol.
+var DECO_ALTO = {
+  valla: 24, flores: 24, farol: 40, banco: 26,
+  espantapajaros: 48, fuente: 30, estatua: 36, arbolito: 46,
+};
 var DECO_MAX = 40;   // cuántos adornos se pueden tener colocados a la vez
 function decoTengo(id) { G.decoBolsa = G.decoBolsa || {}; return G.decoBolsa[id] || 0; }
 function decoPuestos() { return (G.decos || []).length; }
