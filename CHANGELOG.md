@@ -1628,6 +1628,24 @@ la runa grabada) y **esencia oscura** (orbe negro con humo). Se sumaron a `RES_S
 Aparte, el tipo de arma **Mazo** usaba prestado el ícono del pico de piedra; ahora tiene el suyo.
 Atlas `?v=30`, 556 sprites.
 
+### Fase 6 (quinta parte) — Las 20 piezas de armadura de la Curtiduría
+
+4 sets × 5 piezas (yelmo, pecho, pantalones, botas, guantes), con el estilo del granero que
+aprobó el diseñador: chibi redondeado de libro de cuentos, colores cálidos saturados y contorno
+grueso. Cada set se lee de un vistazo por su material:
+
+- **Fibra** (alpaca, ligera): lana crema tejida con correas beige.
+- **Piel** (conejo, vitalidad): forro de piel blanca sobre cuero gris.
+- **Cuero** (toro, equilibrada): cuero marrón curtido con hebillas de bronce.
+- **Colmillo** (jabalí, pesada): cuero oscuro, placas de hierro y colmillos de marfil.
+
+La lista de la Curtiduría era **puro texto**: 20 renglones idénticos donde solo cambiaba el
+nombre. Ahora cada fila lleva su casillero con el ícono, igual que la Herrería y la Cocina.
+
+Estos 20 PNG NO van al atlas a propósito: el atlas es para lo que dibuja el juego en pantalla, y
+estas piezas solo se ven en la ventana HTML de la Curtiduría, que carga los archivos directo.
+Meterlos habría engordado el atlas —que baja TODO el mundo al entrar— para nada.
+
 ---
 
 ## Pendientes conocidos
@@ -1641,7 +1659,6 @@ Atlas `?v=30`, 556 sprites.
 ### Arte pendiente
 - Las **11 criaturas del bestiario** y los **8 adornos** ya están integrados (10/8).
 - Efectos y animaciones por arma (el resto de los íconos ya está: materiales, esencias y mazo).
-- **20 piezas de armadura** de la Curtiduría.
 - **Cosméticos**: skins, decoraciones y la mascota.
 - Íconos oficiales de la Espada de Madera y el Pico de Hierro (hoy son derivados).
 - Todo eso ya funciona en el juego con el ícono de respaldo: no hay nada bloqueado.

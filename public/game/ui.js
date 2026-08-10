@@ -1027,7 +1027,10 @@ function refreshCurtiduria() {
       const p = sd.piezas[pz], tiene = armorTiene(set, pz);
       const costo = p.mat + " " + RES_LABEL[sd.mat] + (p.hierro ? " · " + p.hierro + " Hierro" : "") + " · " + p.plata + " plata";
       const puede = (G.res[sd.mat] || 0) >= p.mat && (!p.hierro || (G.res.hierro || 0) >= p.hierro) && G.plata >= p.plata && (G.built && G.built.curtiduria);
-      h += '<div class="forge-row' + (tiene ? ' eq' : '') + '"><div class="finfo">' +
+      // 10/8: cada pieza con su ícono (antes la lista era puro texto y las 20 filas se veían iguales)
+      h += '<div class="forge-row' + (tiene ? ' eq' : '') + '">' +
+        '<div class="fic"><img src="' + GF.spr("armor_" + set + "_" + pz) + '" onerror="this.remove()"></div>' +
+        '<div class="finfo">' +
         '<div class="fnm">' + ARMOR_SLOT_LABEL[pz] + ' <span class="tag">+' + p.def + ' def</span>' + (tiene ? ' ✓' : '') + '</div>' +
         '<div class="fds">' + (tiene ? "Ya la tenés" : "Costo: " + costo) + '</div></div>' +
         '<div class="fbtns">' + (tiene ? '<button class="ghost sm" disabled>Lista</button>'
