@@ -397,14 +397,15 @@ class ForestScene extends Phaser.Scene {
     if ((m.phaseUntil && tn < m.phaseUntil) || (m.blinkUntil && tn < m.blinkUntil)) { this.floatTxt(m, "Intangible", "#bfa8ff"); return; }   // Fase espectral / Parpadeo
     if (!this.cobrarEstamina(m)) return;   // se cobra DESPUÉS de intangible: un golpe que no puede pegar no gasta estamina
     if (window.sfx) sfx("hit");
-    let crit = false, vamp = 0;
+    let crit = false, vamp = 0, tipoFx = null;
     if (dmg == null) {   // doc 2/8: Daño = máx(1; tirada del arma + nivel/2 − defensa efectiva) + buff del tipo
       const roll = rollWeaponHit(this.mobDef(m));
       if (!roll) return;
       if (m.def.evade && ARM_DEF[roll.id].tipo !== "arco" && Math.random() < m.def.evade) { this.floatTxt(m, "Esquivó", "#a8d8ff"); return; }   // Vuelo evasivo (solo cuerpo a cuerpo)
       dmg = roll.dmg; crit = roll.crit; vamp = roll.vamp || 0;
-      skill = armSkillKey(ARM_DEF[roll.id].tipo);
-      if (roll.stun) { m.stunUntil = tn + 2100; this.floatTxt(m, "Aturdido", "#ffd24a"); }   // pierde su próximo golpe
+      tipoFx = ARM_DEF[roll.id].tipo;   // efecto visual propio de cada tipo de arma (pendiente del 10/8)
+      skill = armSkillKey(tipoFx);
+      if (roll.stun) { m.stunUntil = tn + 2100; this.floatTxt(m, "Aturdido", "#ffd24a"); this.stunStarsFx(m); }   // pierde su próximo golpe
       if (roll.bleed) m.bleed = { dps: roll.bleed, until: tn + 3000, next: tn + 1000 };   // sangrado 3 s
       if (ARM_DEF[roll.id].tipo !== "arco") {   // el arco gasta en shootArrow
         useWeapon(roll.id);
@@ -418,15 +419,8 @@ class ForestScene extends Phaser.Scene {
     if (m.def.boss) { this.pegarleAlJefe(m, dmg); return; }
     m.hp -= dmg;
     if (vamp > 0 && G.hp < G.hpMax) { G.hp = Math.min(G.hpMax, G.hp + Math.max(1, Math.round(dmg * vamp / 100))); refreshHud(); }   // Runa Vampírica
-    // chispa de golpe (detalles 338)
-    const hy = m.by - (m.spr.displayHeight || m.spr.height) * 0.5;
-    const flash = this.add.circle(m.cx, hy, 7, 0xffffff, 0.7).setDepth(99998);
-    this.tweens.add({ targets: flash, scale: 2.2, alpha: 0, duration: 190, onComplete: () => flash.destroy() });
-    for (let i = 0; i < 6; i++) {
-      const a = Math.random() * Math.PI * 2, len = 12 + Math.random() * 12;
-      const sp = this.add.rectangle(m.cx, hy, 2, 2, i % 2 ? 0xfff3cf : 0xffc23a).setDepth(99999);
-      this.tweens.add({ targets: sp, x: m.cx + Math.cos(a) * len, y: hy + Math.sin(a) * len, alpha: 0, duration: 240 + Math.random() * 120, onComplete: () => sp.destroy() });
-    }
+    // efecto de golpe: cada TIPO de arma pega distinto (10/8). Sin arma/skills: la chispa de siempre.
+    this.weaponFx(m, tipoFx, crit);
     const bs = m.baseScale || 1, sgn = m.spr.scaleX < 0 ? -1 : 1;
     m.spr.setScale(sgn * bs * 1.18, bs * 1.18);
     this.tweens.add({ targets: m.spr, scaleX: sgn * bs, scaleY: bs, duration: 160 });
@@ -434,6 +428,74 @@ class ForestScene extends Phaser.Scene {
     const t = this.add.text(m.cx, m.by - (m.spr.displayHeight || m.spr.height), "-" + dmg, { fontFamily: "system-ui", fontSize: "13px", fontStyle: "bold", color: skill === "range" ? "#a8d8ff" : "#ffd24a", stroke: "#20301a", strokeThickness: 3 }).setOrigin(0.5, 1).setDepth(99999);
     this.tweens.add({ targets: t, y: t.y - 18, alpha: 0, duration: 550, onComplete: () => t.destroy() });
     if (m.hp <= 0) this.killMonster(m, skill || "sword"); else { this.drawBar(m); m.tgt = "hero"; this.updateTargetFx(); }
+  }
+
+  /* ---- EFECTOS POR ARMA (pendiente del 10/8) ---------------------------------
+     Todo dibujado por código, sin arte nuevo. Cada tipo se lee de un vistazo:
+       espada -> estela de tajo (naranja y más grande si fue crítico)
+       hacha  -> cuña de hachazo + astillas que saltan
+       mazo   -> onda de impacto en el piso, polvo y una mini sacudida de cámara
+       arco   -> salpicadura roja (el sangrado gotea aparte, en el tic)
+     Sin tipo (a puños, o daño de una habilidad): la chispa blanca de siempre. */
+  weaponFx(m, tipo, crit) {
+    const hy = m.by - (m.spr.displayHeight || m.spr.height) * 0.5;
+    const sgn = this.hero && this.hero.x > m.cx ? -1 : 1;   // el tajo entra desde el lado del héroe
+    if (tipo === "espada") {
+      const col = crit ? 0xff9a3a : 0xf4f7ff, esc = crit ? 1.45 : 1;
+      const g = this.add.graphics().setDepth(99999);
+      g.lineStyle(crit ? 5 : 3, col, 0.95).beginPath();
+      g.arc(0, 0, 20 * esc, Math.PI * 0.75, Math.PI * 1.55); g.strokePath();
+      g.setPosition(m.cx, hy).setScale(sgn * 1, 1).setAngle(-15 + Math.random() * 30);
+      this.tweens.add({ targets: g, angle: g.angle + sgn * 55, alpha: 0, scaleX: sgn * 1.35, scaleY: 1.35, duration: crit ? 260 : 190, onComplete: () => g.destroy() });
+    } else if (tipo === "hacha") {
+      const g = this.add.graphics().setDepth(99999);   // la cuña del hachazo: triángulo que baja en diagonal
+      g.fillStyle(0xf4e7c8, 0.9).fillTriangle(0, 0, -6 * sgn, -24, 8 * sgn, -20);
+      g.setPosition(m.cx - sgn * 8, hy - 8);
+      this.tweens.add({ targets: g, y: hy + 8, x: m.cx + sgn * 6, alpha: 0, duration: 180, ease: "Quad.easeIn", onComplete: () => g.destroy() });
+      for (let i = 0; i < 5; i++) {   // astillas de madera/hueso
+        const sp = this.add.rectangle(m.cx, hy, 3, 2, i % 2 ? 0xb98a4e : 0x8a5a33).setDepth(99999).setAngle(Math.random() * 360);
+        this.tweens.add({ targets: sp, x: m.cx + (Math.random() - 0.5) * 34, y: hy + 6 + Math.random() * 16, angle: sp.angle + 180, alpha: 0, duration: 260 + Math.random() * 140, ease: "Quad.easeIn", onComplete: () => sp.destroy() });
+      }
+    } else if (tipo === "mazo") {
+      const ring = this.add.circle(m.cx, m.by - 2, 6).setStrokeStyle(3, 0xe8d3a8, 0.85).setDepth(99998);   // onda en el piso
+      ring.scaleY = 0.45;   // aplastada: es una onda EN el suelo, no una burbuja
+      this.tweens.add({ targets: ring, scaleX: 3.2, scaleY: 3.2 * 0.45, alpha: 0, duration: 300, ease: "Quad.easeOut", onComplete: () => ring.destroy() });
+      for (let i = 0; i < 6; i++) {   // polvo que levanta el mazazo
+        const a = Math.PI + Math.random() * Math.PI, d = 10 + Math.random() * 14;
+        const p = this.add.circle(m.cx + (Math.random() - 0.5) * 16, m.by - 2, 2 + Math.random() * 2, 0xcbb894, 0.7).setDepth(99998);
+        this.tweens.add({ targets: p, x: p.x + Math.cos(a) * d * 0.4, y: p.y - 8 - Math.random() * 10, alpha: 0, duration: 320 + Math.random() * 160, onComplete: () => p.destroy() });
+      }
+      this.cameras.main.shake(90, 0.004);   // se SIENTE pesado
+    } else if (tipo === "arco") {
+      for (let i = 0; i < 5; i++) {   // salpicadura al clavarse la flecha
+        const a = -Math.PI * 0.75 + Math.random() * Math.PI * 0.5, len = 8 + Math.random() * 12;
+        const p = this.add.circle(m.cx, hy, 1.5 + Math.random() * 1.5, i % 2 ? 0xe05a5a : 0xb43a3a, 0.9).setDepth(99999);
+        this.tweens.add({ targets: p, x: m.cx + Math.cos(a) * len, y: hy + Math.abs(Math.sin(a)) * len + 6, alpha: 0, duration: 280 + Math.random() * 140, ease: "Quad.easeIn", onComplete: () => p.destroy() });
+      }
+    } else {
+      // chispa de golpe de siempre (detalles 338): puños o daño que no viene de un arma
+      const flash = this.add.circle(m.cx, hy, 7, 0xffffff, 0.7).setDepth(99998);
+      this.tweens.add({ targets: flash, scale: 2.2, alpha: 0, duration: 190, onComplete: () => flash.destroy() });
+      for (let i = 0; i < 6; i++) {
+        const a = Math.random() * Math.PI * 2, len = 12 + Math.random() * 12;
+        const sp = this.add.rectangle(m.cx, hy, 2, 2, i % 2 ? 0xfff3cf : 0xffc23a).setDepth(99999);
+        this.tweens.add({ targets: sp, x: m.cx + Math.cos(a) * len, y: hy + Math.sin(a) * len, alpha: 0, duration: 240 + Math.random() * 120, onComplete: () => sp.destroy() });
+      }
+    }
+  }
+  // estrellitas que orbitan la cabeza del mob mientras dura el aturdido del mazo
+  stunStarsFx(m) {
+    const top = m.by - (m.spr.displayHeight || m.spr.height) - 4;
+    for (let i = 0; i < 3; i++) {
+      const s = this.add.text(m.cx, top, "★", { fontSize: "10px", color: "#ffd24a", stroke: "#20301a", strokeThickness: 2 }).setOrigin(0.5).setDepth(99999).setAlpha(0.95);
+      const fase = (i / 3) * Math.PI * 2, giro = { t: 0 };
+      this.tweens.add({ targets: giro, t: Math.PI * 4, duration: 2100, onUpdate: () => {
+        if (!s.active) return;
+        const topNow = m.by - (m.spr.displayHeight || m.spr.height) - 4;
+        s.setPosition(m.cx + Math.cos(giro.t + fase) * 12, topNow + Math.sin(giro.t + fase) * 3);
+      }, onComplete: () => s.destroy() });
+      this.tweens.add({ targets: s, alpha: 0, delay: 1800, duration: 300 });
+    }
   }
 
 
@@ -888,7 +950,16 @@ class ForestScene extends Phaser.Scene {
       }
       // sangrado del arco (doc 2/8): tic por segundo mientras dure
       if (m.bleed && t < m.bleed.until) {
-        if (t >= m.bleed.next) { m.bleed.next = t + 1000; m.hp -= m.bleed.dps; this.floatTxt(m, "-" + m.bleed.dps, "#e05a5a"); this.drawBar(m); if (m.hp <= 0) { this.killMonster(m, "range"); continue; } }
+        if (t >= m.bleed.next) {
+          m.bleed.next = t + 1000; m.hp -= m.bleed.dps; this.floatTxt(m, "-" + m.bleed.dps, "#e05a5a"); this.drawBar(m);
+          // gotitas del sangrado (efectos por arma 10/8): caen del cuerpo en cada tic
+          for (let gi = 0; gi < 3; gi++) {
+            const gx = m.cx + (Math.random() - 0.5) * 14, gy = m.by - (m.spr.displayHeight || m.spr.height) * (0.3 + Math.random() * 0.4);
+            const gota = this.add.circle(gx, gy, 1.5, 0xb43a3a, 0.9).setDepth(99999);
+            this.tweens.add({ targets: gota, y: gy + 10 + Math.random() * 8, alpha: 0, duration: 380 + Math.random() * 160, ease: "Quad.easeIn", onComplete: () => gota.destroy() });
+          }
+          if (m.hp <= 0) { this.killMonster(m, "range"); continue; }
+        }
       } else if (m.bleed) m.bleed = null;
       // ataque al héroe (aturdido por el mazo = pierde el golpe) + habilidades del bestiario
       if (m.stunUntil && t < m.stunUntil) { /* aturdido */ }

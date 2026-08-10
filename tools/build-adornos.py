@@ -30,6 +30,8 @@ from PIL import Image
 
 RAIZ = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 ORIGEN = os.path.join(RAIZ, "..", "pixellab_adornos")
+# los coleccionables del cofre de 7 días bajan a su propia carpeta (descargar_adornos_cofre.ps1)
+ORIGEN_COFRE = os.path.join(RAIZ, "..", "pixellab_adornos_cofre")
 FARM = os.path.join(RAIZ, "public", "assets", "farm")
 
 # alto con el que se DIBUJA cada adorno en el juego (DECO_ALTO en state.js).
@@ -38,24 +40,30 @@ TAM = {
     "valla": 24, "flores": 24, "farol": 40, "banco": 26,
     "espantapajaros": 48, "fuente": 30, "estatua": 36, "arbolito": 46,
 }
+# adornos del cofre de login (no se compran): mismos altos que DECO_ALTO en state.js
+TAM_COFRE = {
+    "espantapajaros_oro": 48, "farolito": 40,
+}
 
 
 def main():
     check = "--check" in sys.argv
     listos, faltan = [], []
 
-    for nombre, alto in TAM.items():
-        origen = os.path.join(ORIGEN, "deco_%s.png" % nombre)
+    fuentes = [(ORIGEN, TAM), (ORIGEN_COFRE, TAM_COFRE)]
+    pares = [(carpeta, nombre, alto) for carpeta, tam in fuentes for nombre, alto in tam.items()]
+    for carpeta, nombre, alto in pares:
+        origen = os.path.join(carpeta, "deco_%s.png" % nombre)
         if not os.path.isfile(origen):
             faltan.append(nombre)
-            print("  %-15s SALTEADO — no está %s" % (nombre, os.path.basename(origen)))
+            print("  %-18s SALTEADO — no está %s" % (nombre, os.path.basename(origen)))
             continue
 
         im = Image.open(origen).convert("RGBA")
         caja = im.getbbox()
         if not caja:
             faltan.append(nombre)
-            print("  %-15s SALTEADO — la imagen está vacía" % nombre)
+            print("  %-18s SALTEADO — la imagen está vacía" % nombre)
             continue
         im = im.crop(caja)
 
@@ -67,7 +75,7 @@ def main():
         if not check:
             im.save(os.path.join(FARM, "deco_%s.png" % nombre))
         listos.append(nombre)
-        print("  %-15s %dx%d  (en pantalla %d px de alto)" % (nombre, im.width, im.height, alto))
+        print("  %-18s %dx%d  (en pantalla %d px de alto)" % (nombre, im.width, im.height, alto))
 
     if check:
         print("\n(--check: no se escribió nada)")

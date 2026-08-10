@@ -1659,6 +1659,37 @@ Se prende y apaga desde una sección **Mascota** nueva en la ventana de Cosméti
 título, el color del nombre, el marco y el aura. Si no la tenés, la sección explica de dónde sale.
 Atlas `?v=31`, 557 sprites.
 
+### Fase 6 (séptima parte) — Los dos adornos del cofre de login
+
+Los últimos coleccionables del cofre de 7 días que existían **solo como texto** ya son adornos
+de verdad: caen en la bolsa al ganarlos y se colocan desde el modo edición.
+
+- **Espantapájaros dorado**: versión brillante del espantapájaros común (48 px de alto).
+- **Farolito de luciérnagas**: frasco de luciérnagas colgado de un poste (40 px). Es el único
+  adorno animado: el resplandor titila por código (tween sobre un círculo de luz).
+
+El código ya estaba preparado del 10/8 (DECO_ORDER, DECO_ALTO, COS_ADORNO, `dibujarAdorno` con
+la animación del farolito): solo faltaba el arte. Se bajó con `descargar_adornos_cofre.ps1` a
+`pixellab_adornos_cofre`, y `tools/build-adornos.py` ahora también procesa esa carpeta (recorte
+del aire + guardado a 2x del alto en pantalla). Atlas `?v=32`, 559 sprites.
+
+### Efectos por arma en el Bosque
+
+Hasta ahora todo golpe se veía igual: la chispita blanca genérica. Ahora cada tipo de arma
+pega distinto, todo dibujado por código (cero arte nuevo, cero peso):
+
+- **Espada**: estela de tajo que barre desde el lado del héroe. Si fue crítico, naranja y
+  más grande.
+- **Hacha**: cuña de hachazo que baja en diagonal + 5 astillas que saltan del impacto.
+- **Mazo**: onda aplastada que se expande por el piso, polvo que se levanta y una mini
+  sacudida de cámara (90 ms). Al aturdir, 3 estrellitas orbitan la cabeza del mob los 2,1 s
+  que dura.
+- **Arco**: salpicadura roja al clavarse la flecha, y en cada tic del sangrado caen gotitas
+  del cuerpo.
+
+A puños o con daño de habilidad sigue la chispa de siempre. Sin cambios de balance: es
+solo lectura visual de lo que ya pasaba.
+
 ---
 
 ## Pendientes conocidos
@@ -1671,9 +1702,10 @@ Atlas `?v=31`, 557 sprites.
 
 ### Arte pendiente
 - Las **11 criaturas del bestiario** y los **8 adornos** ya están integrados (10/8).
-- Efectos y animaciones por arma (el resto de los íconos ya está: materiales, esencias y mazo).
-- **Cosméticos**: faltan las skins (sombrero de paja, camino de pétalos, granja legendaria) y las
-  decoraciones del cofre. La **mascota** ya está hecha (10/8).
+- ~~Efectos por arma~~ hechos por código (10/8). Animaciones de ataque propias por arma siguen
+  pendientes (hoy todos usan el espadazo).
+- **Cosméticos**: faltan las skins (sombrero de paja, camino de pétalos, granja legendaria). La
+  **mascota** y las **decoraciones del cofre** (espantapájaros dorado y farolito) ya están (10/8).
 - Íconos oficiales de la Espada de Madera y el Pico de Hierro (hoy son derivados).
 - Todo eso ya funciona en el juego con el ícono de respaldo: no hay nada bloqueado.
 
