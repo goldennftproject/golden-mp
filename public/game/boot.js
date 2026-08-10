@@ -107,16 +107,16 @@ class BootScene extends Phaser.Scene {
     if (typeof CROP_ORDER !== "undefined") CROP_ORDER.forEach(k => L.push(["crop_" + k, P + "crop_" + k + ".png"]));
     ["comun","raro","epico","legendario"].forEach(k => L.push(["fish_" + k, P + "fish_" + k + ".png"]));
     ["plata","esencia"].forEach(k => L.push(["coin_" + k, P + "coin_" + k + ".png"]));
-    // animales del Establo (PROVISORIOS, dibujados por código en tools/animales-provisorios.py)
-    ["alpaca","conejo","toro","jabali"].forEach(k => L.push(["animal_" + k, P + "animal_" + k + ".png"]));
+    // animales del Establo (10/8: definitivos, de PixelLab; antes eran provisorios por código)
+    ["alpaca","conejo","toro","jabali"].forEach(k => L.push(["animal_" + k, P + "animal_" + k + ".png?v=2"]));
     return L;
   }
 
   preload() {
     // ATLAS: todos los sprites del mundo en 2 archivos (mucho más liviano para el server free).
     // Si el atlas no llega, ensureAll() baja los archivos sueltos como respaldo.
-    this.load.image("__atlas", "assets/atlas.png?v=27");
-    this.load.json("__atlasmap", "assets/atlas.json?v=27");
+    this.load.image("__atlas", "assets/atlas.png?v=28");
+    this.load.json("__atlasmap", "assets/atlas.json?v=28");
 
     // No hay barra propia: la pantalla de carga es UNA sola, la del HTML, y le pasamos el avance.
     // (Antes había dos barras seguidas y el juego "aparecía" antes de estar listo.)

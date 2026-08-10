@@ -1582,8 +1582,19 @@ provisorio. Hoy entraron las 176 imágenes.
 - `boot.js` ya tenía cableadas las animaciones con esos nombres exactos: no hubo que tocar una
   línea de código del juego.
 
-Falta de la Fase 6: adornos, mazo, efectos por arma, íconos de materiales, los 4 animales
-definitivos, las 20 piezas de armadura y los cosméticos.
+### Fase 6 (segunda parte) — Los 4 animales del Establo, definitivos
+
+Eran los provisorios dibujados por código, y desde que andan sueltos por la granja se ven todo
+el tiempo: eran lo que más cantaba. PixelLab devuelve 16 variantes de cada uno y se eligió una:
+**alpaca** crema parada de perfil, **conejo** blanco sentado, **toro** marrón de cuernos cortos
+y **jabalí** pardo con los colmillos claros. Los cuatro con la paleta cálida del resto, para
+que no peleen con los edificios nuevos.
+
+Van al atlas como todo lo demás (`?v=28`), y los provisorios quedaron respaldados en
+`_backup_animales_provisorios/`.
+
+Falta de la Fase 6: adornos, mazo, efectos por arma, íconos de materiales, las 20 piezas de
+armadura y los cosméticos.
 
 ---
 
