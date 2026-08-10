@@ -1436,6 +1436,27 @@ da 10 de fibra.
 
 Los cuatro números nuevos quedaron en el panel de balanceo (808 entradas, ninguna rota).
 
+### Fase 3 — La interfaz
+
+- **Las misiones diarias salieron del Pase de Batalla.** Metidas ahí adentro pasaban
+  desapercibidas, y son justamente lo que le da a alguien una razón para entrar hoy. Ahora
+  tienen su ventana propia (`ov-misiones`, tecla **J**) y una casilla destacada en el menú, con
+  contador **n/3** que pulsa mientras te quede alguna sin cumplir. El Pase queda como lo que
+  tiene que ser: la lista de recompensas, con un atajo a las misiones.
+- **Menú de MAPA** (tecla **N**): dónde estás y a dónde podés ir, con el estado de cada zona.
+  La Zona Negra avisa cuánto falta del descanso. Queda armado para sumar los 3 mapas nuevos
+  cuando se haga la Fase 5.
+- **Ranking del Altar de Ofrendas**: top 10 con el porcentaje del pozo que le toca a cada uno y
+  tu posición si estás más abajo. Se pide como mucho cada 60 s.
+  **Para encenderlo hay que agregar una columna a la vista `leaderboard` de Supabase**:
+  `(data->>'ofrendaPts')::numeric AS ofrenda_pts`. Hasta que esté, la ventana lo dice en vez de
+  romperse.
+- **Ítems de la bolsa rediseñados**, que era lo que no convencía al diseñador: el ícono flota
+  sobre un degradé suave en vez de un fondo blanco plano, la cantidad pasó a ser una chapita
+  oscura (antes era texto claro sobre sprites claros, se perdía: ahora 14,8:1 de contraste), y
+  **cada familia tiene su color de borde** — recurso, semilla, pez, plato, herramienta — para
+  reconocer una casilla sin leer el tooltip. Mismo criterio en la barra rápida.
+
 ---
 
 ## Pendientes conocidos

@@ -69,6 +69,11 @@
   /* Ventana que BLOQUEA el juego (9/8). Las .ov normales dejan pasar el clic al mundo a
      propósito; esta no, porque mientras el granjero entrena no se puede hacer otra cosa. */
   .ov.bloquea{pointer-events:auto;background:rgba(12,7,2,.55)}
+  /* Las misiones diarias salieron del Pase y tienen su propia casilla, más llamativa (10/8) */
+  .gmi.destacada{background:linear-gradient(180deg,#7a5606,#5d3f04);border-color:#c79a2b}
+  .gmi.destacada .key{background:#ffd76a;color:#3a2a04}
+  .gmi.destacada.listo{animation:misPulso 1.6s ease-in-out infinite}
+  @keyframes misPulso{0%,100%{box-shadow:0 0 0 0 rgba(255,215,106,.0)}50%{box-shadow:0 0 0 3px rgba(255,215,106,.45)}}
   .ov.show{display:block}
   .card{background:#a8622e url("assets/ui/wood_bg.png?a=5") repeat;background-size:220px auto;background-clip:border-box;border-radius:14px;color:#f6ecce;padding:14px 16px;width:min(440px,92%);box-shadow:0 20px 50px rgba(0,0,0,.45);position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);pointer-events:auto;
     border:18px solid transparent;border-image:url("assets/ui/panel_wood.png?a=4") 30 round;image-rendering:pixelated}
@@ -90,7 +95,22 @@
   .slot.filled{border-color:#c9b070;background:#fff}   /* detalles viernes (1): fondo blanco para los objetos (testeo visual) */
   .slot img{width:90%;height:90%;object-fit:contain;image-rendering:auto}
   .slot .em{font-size:22px;line-height:1}
-  .slot .cnt{position:absolute;right:2px;bottom:1px;font-size:11px;font-weight:800;color:#3a2e10;background:rgba(255,255,255,.82);border-radius:5px;padding:0 3px}
+  /* ÍTEMS DE LA BOLSA (10/8): al diseñador no lo terminaban de convencer. Tres cambios:
+     el ícono flota sobre un degradé suave en vez de un fondo blanco plano, la cantidad pasó a
+     ser una chapita oscura con contorno (se leía mal sobre los sprites claros), y cada familia
+     de objeto tiene su color de borde, para reconocerla sin leer. */
+  .slot.filled{background:radial-gradient(circle at 50% 38%, #ffffff 0%, #f6efdd 62%, #e8dcc0 100%);
+    box-shadow:inset 0 -3px 6px rgba(90,66,26,.14), inset 0 2px 0 rgba(255,255,255,.75)}
+  .slot .cnt{position:absolute;right:2px;bottom:2px;font-size:11px;font-weight:800;color:#ffeaa7;
+    background:rgba(36,21,5,.88);border-radius:6px;padding:0 4px;line-height:15px;
+    box-shadow:0 1px 0 rgba(0,0,0,.35)}
+  .slot.filled:hover{transform:translateY(-1px);transition:transform .08s}
+  /* familias: recurso · semilla · pez · plato · herramienta o pico */
+  .slot.k-res{border-color:#a98a54}
+  .slot.k-seed{border-color:#6f9a45}
+  .slot.k-fish{border-color:#4f93b8}
+  .slot.k-dish{border-color:#c07a3c}
+  .slot.k-tool,.slot.k-pick,.slot.k-chest{border-color:#8d8f96}
   .slot[draggable=true]{cursor:grab}
   .slot.sel{outline:2px solid #e2b23a;outline-offset:-2px}
   .slot.eq{box-shadow:inset 0 0 0 2px #6aa9e0}
@@ -105,6 +125,11 @@
   .hcell.eq{box-shadow:inset 0 0 0 2px #6aa9e0}
   .hcell.on{border-color:#f6d878;box-shadow:0 0 0 2px #e2b23a, 0 0 8px rgba(226,178,58,.6)}
   .hcell.ghost{opacity:.4}
+  .hcell.k-res{border-color:#a98a54}
+  .hcell.k-seed{border-color:#6f9a45}
+  .hcell.k-fish{border-color:#4f93b8}
+  .hcell.k-dish{border-color:#c07a3c}
+  .hcell.k-tool,.hcell.k-pick,.hcell.k-chest{border-color:#8d8f96}
   .hcell img{width:88%;height:88%;object-fit:contain;image-rendering:auto}
   .hcell .em{font-size:22px;line-height:1}
   .hcell .cnt{position:absolute;right:2px;bottom:1px;font-size:10px;font-weight:800;color:#3a2e10;background:rgba(255,255,255,.85);border-radius:5px;padding:0 3px}
@@ -570,10 +595,14 @@
     <h3>Tienda</h3>
     <div class="shoptabs">
       <button class="shoptab active" data-shop="buy">Comprar</button>
+      <button class="shoptab" data-shop="deco">Adornos</button>
       <button class="shoptab" data-shop="sell">Vender</button>
     </div>
     <div class="shoppane" id="shop-buy">
       <div class="mkt-list" id="seed-shop"></div>
+    </div>
+    <div class="shoppane" id="shop-deco" style="display:none">
+      <div class="forge-list" id="deco-shop" style="max-height:56vh"></div>
     </div>
     <div class="shoppane" id="shop-sell" style="display:none">
       <div class="mkt-cur">Cobrar en:
@@ -711,6 +740,20 @@
   </div></div>
 
   <!-- Horno de Piedra (detalles viernes 1): fundición de lingotes/barras -->
+  <div class="ov" id="ov-misiones"><div class="card" style="width:min(560px,94%)">
+    <button class="close" data-close="ov-misiones">×</button>
+    <h3>Misiones de hoy</h3>
+    <div class="sub">Tres por día, una por pilar del juego. Cumplirlas da estrellas, y las estrellas suben el Pase de Batalla.</div>
+    <div class="forge-list" id="mis-list" style="max-height:60vh"></div>
+  </div></div>
+
+  <div class="ov" id="ov-mapa"><div class="card" style="width:min(520px,94%)">
+    <button class="close" data-close="ov-mapa">×</button>
+    <h3>Mapa</h3>
+    <div class="sub">Dónde estás y a dónde podés ir.</div>
+    <div class="forge-list" id="mapa-list" style="max-height:58vh"></div>
+  </div></div>
+
   <div class="ov" id="ov-pass"><div class="card" style="width:min(680px,94%)">
     <button class="close" data-close="ov-pass">×</button>
     <h3>Pase de Batalla — Temporada 1</h3>
@@ -788,10 +831,12 @@
   <!-- menú -->
   <div class="gmenu collapsed" id="gmenu">
     <div class="gmitems">
+      <button class="gmi" data-panel="ov-mapa"><span class="ic"></span> Mapa <b class="key">N</b></button>
       <button class="gmi" data-panel="ov-inv"><span class="ic"></span> Inventario <b class="key">I</b></button>
       <button class="gmi" data-panel="ov-skills"><span class="ic"></span> Skills <b class="key">X</b></button>
       <button class="gmi" data-panel="ov-equip"><span class="ic"></span> Equipo <b class="key">P</b></button>
       <button class="gmi" data-panel="ov-daily"><span class="ic"></span> Cofre diario <b class="key">G</b></button>
+      <button class="gmi destacada" data-panel="ov-misiones"><span class="ic"></span> Misiones de hoy <b class="key" id="gm-mis">0/3</b></button>
       <button class="gmi" data-panel="ov-pass"><span class="ic"></span> Pase de Batalla</button>
       <button class="gmi" data-panel="ov-p2p"><span class="ic"></span> Mercado de jugadores</button>
       <button class="gmi" data-panel="ov-cos"><span class="ic"></span> Cosméticos</button>

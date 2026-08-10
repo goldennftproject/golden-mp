@@ -229,6 +229,22 @@ async function fetchLeaderboard() {
   } catch (e) { console.warn("leaderboard err:", e); return null; }
 }
 
+// ---- ranking del ALTAR DE OFRENDAS (10/8) ----
+// Lee la vista `ofrenda_rank`, que es APARTE de `leaderboard`. Se intentó agregarle la
+// columna a `leaderboard` y Postgres lo rechazó: esa vista define `level` como integer y un
+// "create or replace" no puede cambiarle el tipo a una columna que ya existe. Antes que
+// arriesgar el ranking que ya funciona, va una vista propia con tres columnas.
+// El SQL para crearla está en sql/ranking_ofrendas.sql. Mientras no exista, Supabase
+// responde error y la ventana lo dice en vez de romperse.
+async function fetchOfrendaRank() {
+  if (!sb) return { error: "sin conexión" };
+  try {
+    const { data, error } = await sb.from("ofrenda_rank").select("user_id,name,ofrenda_pts").limit(200);
+    if (error) return { error: error.message };
+    return { rows: (data || []).filter(r => (r.ofrenda_pts || 0) > 0).sort((a, b) => (b.ofrenda_pts || 0) - (a.ofrenda_pts || 0)) };
+  } catch (e) { return { error: String(e && e.message || e) }; }
+}
+
 // ---- chat global (Supabase Realtime broadcast) ----
 let chatChannel = null;
 function initChat(onMsg) {

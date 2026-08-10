@@ -1168,6 +1168,119 @@ function dummyCobrar() {
   return xp;
 }
 
+// ============ ADORNOS DE LA GRANJA (10/8, doc del diseñador) =======================
+// Cosas para decorar: no dan ninguna ventaja, son para que la granja se vea linda y después
+// poder hacer eventos de "la más bonita". Se compran en la Tienda, quedan en la bolsa de
+// adornos y se colocan en la granja. El arte va en la Fase 6: por ahora se dibujan por código.
+const DECO_ORDER = ["valla", "flores", "farol", "banco", "espantapajaros", "fuente", "estatua", "arbolito"];
+const DECO_DEF = {
+  valla:          { label: "Valla de madera",   plata: 120,   golden: 0,  ds: "Un tramo de cerca para separar zonas." },
+  flores:         { label: "Cantero de flores", plata: 200,   golden: 0,  ds: "Un cantero con flores de temporada." },
+  farol:          { label: "Farol",             plata: 450,   golden: 0,  ds: "Da un aire de pueblo al camino." },
+  banco:          { label: "Banco de plaza",    plata: 700,   golden: 0,  ds: "Para sentarse a mirar los cultivos." },
+  espantapajaros: { label: "Espantapájaros",    plata: 1200,  golden: 0,  ds: "Clásico de granja. No espanta nada, es decorativo." },
+  fuente:         { label: "Fuente de piedra",  plata: 4000,  golden: 0,  ds: "El centro de una granja ordenada." },
+  estatua:        { label: "Estatua dorada",    plata: 0,     golden: 60, ds: "Para presumir. Se paga en $Golden." },
+  arbolito:       { label: "Cerezo en flor",    plata: 0,     golden: 90, ds: "Un árbol ornamental. No se puede talar." },
+};
+var DECO_MAX = 40;   // cuántos adornos se pueden tener colocados a la vez
+function decoTengo(id) { G.decoBolsa = G.decoBolsa || {}; return G.decoBolsa[id] || 0; }
+function decoPuestos() { return (G.decos || []).length; }
+function comprarDeco(id) {
+  const d = DECO_DEF[id]; if (!d) return;
+  if (d.plata && G.plata < d.plata) { toast("Te falta plata (" + fmt(d.plata) + ")"); return; }
+  if (d.golden && G.golden < d.golden) { toast("Te falta $Golden (" + d.golden + ")"); return; }
+  if (d.plata) G.plata -= d.plata;
+  if (d.golden) G.golden -= d.golden;
+  G.decoBolsa = G.decoBolsa || {};
+  G.decoBolsa[id] = (G.decoBolsa[id] || 0) + 1;
+  log("Compraste " + d.label + ". Colocalo desde el modo edición de la granja.", "gold");
+  toast("+1 " + d.label);
+  refreshHud(); if (typeof refreshMarket === "function" && isOpen("ov-market")) refreshMarket();
+  if (typeof saveFarm === "function") saveFarm(true);
+}
+// coloca uno en la granja (lo llama la escena, que sabe dónde hay lugar)
+function decoColocar(id, col, row) {
+  if (decoTengo(id) <= 0) { toast("No te queda ninguno"); return false; }
+  if (decoPuestos() >= DECO_MAX) { toast("Ya tenés " + DECO_MAX + " adornos puestos (el tope)"); return false; }
+  G.decoBolsa[id]--;
+  G.decos = G.decos || [];
+  G.decos.push({ id, col, row });
+  if (typeof saveFarm === "function") saveFarm(true);
+  return true;
+}
+function decoSacar(i) {   // lo levanta y vuelve a la bolsa de adornos
+  const d = (G.decos || [])[i]; if (!d) return false;
+  G.decos.splice(i, 1);
+  G.decoBolsa = G.decoBolsa || {};
+  G.decoBolsa[d.id] = (G.decoBolsa[d.id] || 0) + 1;
+  if (typeof saveFarm === "function") saveFarm(true);
+  return true;
+}
+
+// ============ PARCELAS: pagar con PLATA o con $GOLDEN (10/8) =======================
+// El doc pide que el jugador elija con qué pagar. La de $Golden se calcula desde la de plata
+// con un cambio fijo, así el diseñador toca UN solo número y las dos quedan alineadas.
+var PLOT_GOLDEN_CAMBIO = 900;   // cuántas de plata "vale" 1 $Golden a la hora de comprar parcelas
+function plotUnlockGolden() { return Math.max(1, Math.ceil(plotUnlockCost() / PLOT_GOLDEN_CAMBIO)); }
+function comprarParcela(conGolden) {
+  if ((G.plotsOwned || 2) >= 12) { toast("Ya tenés las 12 parcelas"); return; }
+  if (conGolden) {
+    const c = plotUnlockGolden();
+    if (G.golden < c) { toast("Te falta $Golden (" + c + ")"); return; }
+    G.golden -= c;
+  } else {
+    const c = plotUnlockCost();
+    if (G.plata < c) { toast("Te falta plata (" + fmt(c) + ")"); return; }
+    G.plata -= c;
+  }
+  G.plotsOwned = Math.min(12, (G.plotsOwned || 2) + 1);
+  log("Desbloqueaste una parcela nueva. Ahora tenés " + G.plotsOwned + ".", "gold");
+  toast("¡Parcela nueva!");
+  if (window.farmScene && window.farmScene.refreshPlotLocks) { try { window.farmScene.refreshPlotLocks(); } catch (e) {} }
+  refreshHud(); if (typeof refreshMarket === "function" && isOpen("ov-market")) refreshMarket();
+  if (typeof saveFarm === "function") saveFarm(true);
+}
+
+// ============ GOD HAND: el cropper que siembra solo (10/8) =========================
+// Se compra una vez con $Golden y queda para siempre. Mientras lo tengas, al volver al juego
+// las parcelas que quedaron VACÍAS aparecen ya sembradas con la semilla que tenías elegida,
+// gastando esas semillas, y el crecimiento cuenta desde que te fuiste — no desde ahora.
+// No cosecha: cosechar sigue siendo tuyo. Solo te ahorra el paso aburrido.
+var GODHAND_GOLDEN = 500;
+function tengoGodHand() { return !!G.godHand; }
+function comprarGodHand() {
+  if (tengoGodHand()) { toast("Ya tenés la GOD HAND"); return; }
+  if (G.golden < GODHAND_GOLDEN) { toast("Te falta $Golden (" + GODHAND_GOLDEN + ")"); return; }
+  G.golden -= GODHAND_GOLDEN;
+  G.godHand = true;
+  log("Compraste la GOD HAND. De ahora en más, las parcelas vacías se siembran solas mientras no estás.", "gold");
+  if (window.celebrate) celebrate({ title: "GOD HAND", sub: "Siembra automática", big: true, reward: "Las parcelas vacías se siembran solas" });
+  refreshHud(); if (typeof refreshMarket === "function" && isOpen("ov-market")) refreshMarket();
+  if (typeof saveFarm === "function") saveFarm(true);
+}
+// La corre main.js al entrar, con los milisegundos que estuviste afuera.
+function godHandSembrar(msAusente) {
+  if (!tengoGodHand() || !Array.isArray(G.plots)) return 0;
+  const k = G.selSeed; if (!k || !CROP_DEF[k]) return 0;
+  const owned = Math.max(2, Math.min(GF.PLOTS.length, G.plotsOwned || 2));
+  const desde = nowMs() - Math.max(0, msAusente || 0);   // se planta "cuando te fuiste"
+  let n = 0;
+  for (let i = 0; i < owned; i++) {
+    const p = G.plots[i];
+    if (!p || p.state !== "dry") continue;               // solo las que quedaron vacías
+    if ((G.seeds[k] || 0) <= 0) break;                   // sin semillas, hasta acá llegó
+    G.seeds[k]--;
+    G.plots[i] = { state: "growing", cropKey: k, readyAt: desde + cropMs(k), growTotal: cropMs(k) };
+    n++;
+  }
+  if (n) {
+    log("GOD HAND sembró " + n + " parcela(s) de " + CROP_DEF[k].label + " mientras no estabas.", "gold");
+    if (typeof saveFarm === "function") saveFarm(true);
+  }
+  return n;
+}
+
 // ============ VIAJE A LA ZONA NEGRA: enfriamiento + resumen (10/8) ==================
 // Antes se entraba y salía de la Zona Negra sin ninguna fricción, y al volver no quedaba
 // registro de qué habías sacado: el botín aparecía diluido en la bolsa. Ahora:

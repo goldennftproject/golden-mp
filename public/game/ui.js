@@ -10,7 +10,7 @@ function log(m, k = "") { const b = $("log"); if (!b) return; const d = document
 /* ---- overlays ---- */
 function isOpen(id) { const e = $(id); return !!(e && e.classList.contains("show")); }
 function anyOvOpen() { return !!document.querySelector(".ov.show"); }
-const OV_REFRESH = { "ov-entrenando": () => entrenarSync(), "ov-inv": () => refreshInv(), "ov-skills": () => refreshSkills(), "ov-equip": () => refreshEquip(),
+const OV_REFRESH = { "ov-entrenando": () => entrenarSync(), "ov-misiones": () => refreshMisiones(), "ov-mapa": () => refreshMapa(), "ov-inv": () => refreshInv(), "ov-skills": () => refreshSkills(), "ov-equip": () => refreshEquip(),
   "ov-forge": () => refreshForge(), "ov-market": () => refreshMarket(), "ov-barn": () => refreshBarn(),
   "ov-cocina": () => refreshCooking(),
   "ov-horno": () => refreshHorno(),
@@ -157,7 +157,9 @@ function setNum(id, valor) {
     if (i >= pasos) { clearInterval(el._tm); el._tm = null; el.textContent = fmt(valor); }
   }, 26);
 }
-function refreshHud() { refreshStam(); setTxt("s-level", G.level); setTxt("s-prestige", G.prestige); setNum("s-plata", G.plata); setNum("s-golden", G.golden); setTxt("s-week", G.week); setTxt("s-hp", Math.ceil(G.hp) + "/" + G.hpMax); refreshCombatBar(); if (typeof checkCooking === "function") checkCooking(); if (typeof refreshHotbar === "function") refreshHotbar(); }
+function refreshHud() {
+  try { syncMisionesBadge(); } catch (e) {}   // contador de misiones del menú (10/8)
+  refreshStam(); setTxt("s-level", G.level); setTxt("s-prestige", G.prestige); setNum("s-plata", G.plata); setNum("s-golden", G.golden); setTxt("s-week", G.week); setTxt("s-hp", Math.ceil(G.hp) + "/" + G.hpMax); refreshCombatBar(); if (typeof checkCooking === "function") checkCooking(); if (typeof refreshHotbar === "function") refreshHotbar(); }
 // clic en la barra de estamina: ofrece la recarga premium (con su tope diario)
 function bindStamPill() {
   const pill = document.getElementById("stampill"); if (!pill || pill._bound) return;
@@ -235,7 +237,9 @@ function invCellHtml(d, i, rem, zone) {
   const v = itemView(d);
   const sel = (d.kind === "seed" && G.selSeed === d.key) ? " sel" : "";
   const eq = (d.kind === "pick" && G.picks.eq === d.key) ? " eq" : "";
-  return `<div class="slot filled${sel}${eq}" draggable="true" data-slot="${i}" data-zone="${zone}" title="${v.label}">${itemIcon(v)}${cnt}${durBar(v)}</div>`;
+  // 10/8: cada familia lleva su color de borde (k-res, k-seed, k-fish, k-dish, k-tool…), para
+  // reconocer de qué es una casilla sin tener que leer el tooltip.
+  return `<div class="slot filled k-${d.kind}${sel}${eq}" draggable="true" data-slot="${i}" data-zone="${zone}" title="${v.label}">${itemIcon(v)}${cnt}${durBar(v)}</div>`;
 }
 function bindTrash() {
   const tr = $("inv-trash"); if (!tr || tr._bound) return; tr._bound = true;
@@ -312,7 +316,7 @@ function hotCellHtml(d, i) {
   const sel = (d.kind === "seed" && G.selSeed === d.key) ? " sel" : "";
   const eq = (d.kind === "pick" && G.picks.eq === d.key) ? " eq" : "";
   const ghost = hotItemExists(d) ? "" : " ghost";
-  return `<div class="hcell filled${on}${sel}${eq}${ghost}" draggable="true" data-slot="${i}" data-zone="hot" title="${v.label}">${num}${itemIcon(v)}${cnt}${durBar(v)}</div>`;
+  return `<div class="hcell filled k-${d.kind}${on}${sel}${eq}${ghost}" draggable="true" data-slot="${i}" data-zone="hot" title="${v.label}">${num}${itemIcon(v)}${cnt}${durBar(v)}</div>`;
 }
 let _hotFirma = null;
 function refreshHotbar(forzar) {
@@ -774,6 +778,73 @@ function tutoCheck(txt) {   // tilde animado sobre el cartel al cumplir un paso
 window.tutoRefresh = tutoRefresh; window.tutoCheck = tutoCheck;
 
 /* ---- Pase de Batalla (doc maestro 2/8): 30 niveles Free/VIP, estrellas por misiones ---- */
+/* ---- MISIONES DE HOY, fuera del Pase (10/8) ------------------------------------
+   El diseñador las quería en su propia casilla, más llamativa: metidas adentro del Pase
+   pasaban desapercibidas, y son lo que le da a alguien una razón para entrar hoy. */
+function refreshMisiones() {
+  const box = $("mis-list"); if (!box) return;
+  const p = passInit();
+  const hechas = p.daily.mis.filter(m => m.ok).length;
+  let h = '<div class="info">Llevás <b>' + hechas + ' de ' + p.daily.mis.length + '</b> hoy · cada una da ' +
+    PASS_STAR_DAILY + ' estrellas, y las tres juntas suman <b>+' + PASS_STAR_BONUS + '</b> de bonus' +
+    (p.daily.bonus ? ' <span class="oro">(bonus ya cobrado)</span>' : '') + '</div>';
+  h += misionesHtml(p.daily.mis, PASS_STAR_DAILY);
+  h += '<div class="secc">Misiones de la semana</div>' + misionesHtml(p.weekly.mis, PASS_STAR_WEEKLY);
+  h += '<div class="fds" style="margin-top:6px">Las estrellas suben el <b>Pase de Batalla</b>, que es donde están las recompensas.</div>';
+  box.innerHTML = h;
+}
+function misionesHtml(lista, stars) {
+  return lista.map(m => {
+    const md = PASS_MISIONES[m.k] || { label: "Misión" };   // misión de una temporada vieja: no rompe el panel
+    return '<div class="forge-row' + (m.ok ? ' eq' : '') + '"><div class="finfo"><div class="fnm">' + md.label.replace("#", m.goal) +
+      (m.ok ? ' <span style="color:#3f6b2a">— CUMPLIDA (+' + stars + ' estrellas)</span>' : '') + '</div>' +
+      '<div class="durbar"><i style="width:' + Math.min(100, Math.round(m.n / m.goal * 100)) + '%"></i></div>' +
+      '<div class="fds">' + Math.min(m.n, m.goal) + '/' + m.goal + ' · recompensa: ' + stars + ' estrellas</div></div></div>';
+  }).join("");
+}
+// el contador del menú: cuántas llevás hoy, y pulsa si te queda alguna sin cumplir
+function syncMisionesBadge() {
+  const b = $("gm-mis"); if (!b || typeof passInit !== "function") return;
+  try {
+    const p = passInit(), hechas = p.daily.mis.filter(m => m.ok).length, tot = p.daily.mis.length;
+    b.textContent = hechas + "/" + tot;
+    const btn = b.closest(".gmi"); if (btn) btn.classList.toggle("listo", hechas < tot);
+  } catch (e) {}
+}
+
+/* ---- MAPA (10/8): dónde estás y a dónde podés ir ---- */
+function refreshMapa() {
+  const box = $("mapa-list"); if (!box) return;
+  const aca = (window.GF && GF.scene) || "farm";
+  const espera = (typeof zonaCdLeft === "function") ? zonaCdLeft() : 0;
+  const zonas = [
+    { id: "farm",   nom: "Tu granja",   ds: "Cultivos, animales, edificios y la laguna.", ir: true },
+    { id: "plaza",  nom: "La plaza",    ds: "El hub con los demás jugadores. Chat y encuentro.", ir: true },
+    { id: "forest", nom: "Zona Negra",  ds: "Monstruos, botín y la plata de verdad. Se entra por el portal de la granja.",
+      ir: aca === "farm", nota: espera > 0 ? "El granjero descansa — podés volver en " + fmtDur(espera) : "" },
+  ];
+  box.innerHTML = zonas.map(z => {
+    const estoy = z.id === aca;
+    const puede = z.ir && !estoy && !(z.id === "forest" && espera > 0);
+    return '<div class="forge-row' + (estoy ? ' eq' : '') + '"><div class="finfo">' +
+      '<div class="fnm">' + z.nom + (estoy ? ' <span class="tag">estás acá</span>' : '') + '</div>' +
+      '<div class="fds">' + z.ds + '</div>' + (z.nota ? '<div class="fds">' + z.nota + '</div>' : '') +
+      '</div><div class="fbtns">' +
+      (estoy ? '' : '<button class="green sm" ' + (puede ? '' : 'disabled') + ' data-ir="' + z.id + '">Ir</button>') +
+      '</div></div>';
+  }).join("");
+  box.querySelectorAll("[data-ir]").forEach(b => b.onclick = () => irAZona(b.dataset.ir));
+}
+function irAZona(id) {
+  const sc = window.farmScene || window.forestScene || window.plazaScene;
+  closeOv("ov-mapa");
+  if (id === "forest") { toast("Entrá por el portal de la granja"); return; }
+  const actual = (window.GF && GF.scene) || "farm";
+  if (id === actual) return;
+  const escena = (window.farmScene && window.farmScene.scene) ? window.farmScene : sc;
+  if (escena && escena.scene) { escena.leaving = true; irAEscena(escena, id); }
+}
+
 function refreshPass() {
   const box = $("pass-list"); if (!box) return;
   const p = passInit(), lvl = passLvl();
@@ -784,18 +855,11 @@ function refreshPass() {
     '<div class="fds">Se sube JUGANDO: misiones diarias y semanales dan estrellas. La temporada dura 4-6 semanas.</div></div>' +
     '<div class="fbtns">' + (p.vip ? '' : '<button class="green sm" id="pass-vip">Pase VIP · ' + PASS_VIP_PRICE + ' $G</button>') +
     (lvl < 30 ? '<button class="sm" id="pass-buylvl">+1 nivel · ' + PASS_LVL_GOLD + ' $G</button>' : '') + '</div></div>';
-  // misiones
-  h += '<div class="secc">Misiones de HOY (' + PASS_STAR_DAILY + ' estrellas c/u · las 3 = +' + PASS_STAR_BONUS + ')</div>';
-  const misRow = (m, stars) => {
-    const md = PASS_MISIONES[m.k] || { label: "Misión" };   // misión guardada de una temporada vieja: no rompe el panel entero
-    return '<div class="forge-row' + (m.ok ? ' eq' : '') + '"><div class="finfo"><div class="fnm">' + md.label.replace("#", m.goal) +
-      (m.ok ? ' <span style="color:#3f6b2a">— CUMPLIDA (+' + stars + ' estrellas cobradas)</span>' : '') + '</div>' +
-      '<div class="durbar"><i style="width:' + Math.min(100, Math.round(m.n / m.goal * 100)) + '%"></i></div>' +
-      '<div class="fds">' + Math.min(m.n, m.goal) + '/' + m.goal + ' · recompensa: ' + stars + ' estrellas</div></div></div>';
-  };
-  p.daily.mis.forEach(m => { h += misRow(m, PASS_STAR_DAILY); });
-  h += '<div class="secc">Misiones de la SEMANA (' + PASS_STAR_WEEKLY + ' estrellas c/u)</div>';
-  p.weekly.mis.forEach(m => { h += misRow(m, PASS_STAR_WEEKLY); });
+  // Las misiones se mudaron a su propia ventana (10/8): acá solo queda el atajo, para que el
+  // Pase sea lo que tiene que ser — la lista de recompensas.
+  { const hechas = p.daily.mis.filter(m => m.ok).length;
+    h += '<div class="info">Misiones de hoy: <b>' + hechas + '/' + p.daily.mis.length + '</b> cumplidas. ' +
+      '<button class="green sm" id="pass-ir-mis">Ver misiones</button></div>'; }
   // cosméticos ganados
   if (p.cosmetics.length) h += '<div class="fds" style="margin-top:6px">Tus cosméticos: ' + p.cosmetics.join(" · ") + '</div>';
   // los 30 niveles
@@ -812,6 +876,7 @@ function refreshPass() {
       '</div><div class="fbtns">' + bf + bv + '</div></div>';
   }
   box.innerHTML = h;
+  const im = $("pass-ir-mis"); if (im) im.onclick = () => { closeOv("ov-pass"); openOv("ov-misiones"); };
   const pv = $("pass-vip"); if (pv) pv.onclick = () => passBuyVip();
   const pl = $("pass-buylvl"); if (pl) pl.onclick = () => passBuyLevel();
   box.querySelectorAll("[data-pfree]").forEach(b => b.onclick = () => passClaim(Number(b.dataset.pfree), false));
@@ -1314,7 +1379,8 @@ function initUI() {
   }
   if (cs) cs.onclick = doSendChat;
 
-  const KEYS = { i: "ov-inv", x: "ov-skills", p: "ov-equip", l: "ov-lb", c: "ov-config", o: "ov-market", k: "ov-forge", b: "ov-barn", g: "ov-daily" };
+  // 10/8: N = mapa, J = misiones de hoy. (M ya estaba tomada por desplegar el menú.)
+  const KEYS = { i: "ov-inv", x: "ov-skills", p: "ov-equip", l: "ov-lb", c: "ov-config", o: "ov-market", k: "ov-forge", b: "ov-barn", g: "ov-daily", n: "ov-mapa", j: "ov-misiones" };
   window.addEventListener("keydown", (e) => {
     if (e.target && (e.target.tagName === "INPUT" || e.target.tagName === "TEXTAREA")) return;
     const key = e.key.toLowerCase();
@@ -1335,13 +1401,42 @@ initUI();
 /* ================= VENTANAS NUEVAS ("2das mejoras") ================= */
 
 /* ---- Altar de Ofrendas: quemar recursos por puntos ---- */
+// RANKING DEL ALTAR (10/8): quién lleva más puntos de ofrenda. Se pide una sola vez por
+// apertura y se guarda, para no golpear Supabase en cada refresco de la ventana.
+let _ofrRank = null, _ofrRankT = 0;
+function ofrendaRankHtml() {
+  if (!_ofrRank) return '<div class="fds">Cargando el ranking…</div>';
+  if (_ofrRank.error) {
+    return '<div class="fds">El ranking de ofrendas todavía no está publicado. Se enciende creando la ' +
+      'vista <b>ofrenda_rank</b> en Supabase (está el SQL en <b>sql/ranking_ofrendas.sql</b>).</div>';
+  }
+  const rows = _ofrRank.rows || [];
+  if (!rows.length) return '<div class="fds">Todavía no hay ofrendas de nadie. Podés ser el primero.</div>';
+  const total = rows.reduce((s, r) => s + (r.ofrenda_pts || 0), 0) || 1;
+  const yo = (typeof UID !== "undefined") ? rows.findIndex(r => r.user_id === UID) : -1;
+  let h = rows.slice(0, 10).map((r, i) => {
+    const mio = (typeof UID !== "undefined" && r.user_id === UID);
+    const parte = ((r.ofrenda_pts || 0) / total * 100).toFixed(1);
+    return '<div class="forge-row' + (mio ? ' eq' : '') + '"><div class="finfo"><div class="fnm">' +
+      (i + 1) + '. ' + (r.name || "Granjero") + (mio ? ' <span class="tag">vos</span>' : '') + '</div>' +
+      '<div class="fds">' + fmt(r.ofrenda_pts || 0) + ' puntos · ' + parte + '% del pozo</div></div></div>';
+  }).join("");
+  if (yo >= 10) h += '<div class="fds">Tu posición: <b>' + (yo + 1) + '</b> de ' + rows.length + '</div>';
+  return h;
+}
 function refreshOfrendas() {
   const box = $("ofr-list"); if (!box) return;
+  // el ranking se refresca como mucho cada 60 s
+  if (typeof fetchOfrendaRank === "function" && nowMs() - _ofrRankT > 60000) {
+    _ofrRankT = nowMs();
+    fetchOfrendaRank().then(r => { _ofrRank = r; if (isOpen("ov-ofrendas")) refreshOfrendas(); });
+  }
   let h = '<div class="forge-row"><div class="finfo">' +
     '<div class="fnm">Tus Puntos de Ofrenda: ' + fmt(ofrendaPuntos()) + '</div>' +
     '<div class="fds">Recursos entregados: ' + fmt(G.ofrendaLog || 0) + ' · los puntos no se gastan ni se pierden</div>' +
     '<div class="fds">Pozo de referencia del airdrop: ' + fmt(OFRENDA_POZO) + ' $Golden, repartido proporcionalmente. Es posible y discrecional: no hay un valor garantizado por recurso.</div>' +
     '</div></div>';
+  h += '<div class="secc">Quién lleva más</div>' + ofrendaRankHtml();
   OFRENDA_ORDER.forEach(k => {
     const tengo = Math.floor(G.res[k] || 0), pts = ofrendaValor(k);
     if (!pts) return;
