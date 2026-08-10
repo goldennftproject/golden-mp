@@ -1617,6 +1617,17 @@ se arrastran como cualquier objeto (celda verde libre / roja ocupada, y si está
 su lugar) y con **clic derecho** vuelven a la bolsa. Los adornos se miran ANTES que el resto al
 buscar qué agarraste, porque son chicos y suelen quedar encima de una parcela.
 
+### Fase 6 (cuarta parte) — Materiales y mazo
+
+Los últimos ítems de la bolsa que seguían saliendo con **emoji** en vez de ícono ya tienen arte:
+**fibra** (ovillo crema), **pelaje** (piel blanca), **cuero** (rollo curtido en tono claro, para
+que no se confunda con el tronco de madera), **colmillo**, **esencia rúnica** (cristal violeta con
+la runa grabada) y **esencia oscura** (orbe negro con humo). Se sumaron a `RES_SPRITE`, que es lo
+único que hacía falta: el resto de la interfaz ya los pedía.
+
+Aparte, el tipo de arma **Mazo** usaba prestado el ícono del pico de piedra; ahora tiene el suyo.
+Atlas `?v=30`, 556 sprites.
+
 ---
 
 ## Pendientes conocidos
@@ -1629,8 +1640,7 @@ buscar qué agarraste, porque son chicos y suelen quedar encima de una parcela.
 
 ### Arte pendiente
 - Las **11 criaturas del bestiario** y los **8 adornos** ya están integrados (10/8).
-- **Materiales de los animales**: fibra, pelaje, cuero, colmillo (los 4 animales ya están hechos).
-- **Mazo**, efectos y animaciones por arma, y la **esencia oscura**.
+- Efectos y animaciones por arma (el resto de los íconos ya está: materiales, esencias y mazo).
 - **20 piezas de armadura** de la Curtiduría.
 - **Cosméticos**: skins, decoraciones y la mascota.
 - Íconos oficiales de la Espada de Madera y el Pico de Hierro (hoy son derivados).

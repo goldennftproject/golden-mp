@@ -130,7 +130,11 @@ const RES_LABEL = { madera:"Madera", piedra:"Piedra", bronce:"Bronce", hierro:"H
   fibra:"Fibra", pelaje:"Pelaje", cuero:"Cuero", colmillo:"Colmillo", esencia_runica:"Esencia rúnica" };
 // íconos cozy de recursos (los cultivos usan crop_<key>)
 const RES_SPRITE = { madera:"res_madera", piedra:"res_piedra", bronce:"res_bronce", hierro:"res_hierro", oro:"res_oro", diamante:"res_diamante", netherita:"res_netherita", carne:"res_carne", flecha:"res_flecha", lombriz:"res_lombriz",
-  tablon:"res_tablon", barra_piedra:"res_barra_piedra", barra_bronce:"res_barra_bronce", barra_hierro:"res_barra_hierro", barra_oro:"res_barra_oro" };
+  tablon:"res_tablon", barra_piedra:"res_barra_piedra", barra_bronce:"res_barra_bronce", barra_hierro:"res_barra_hierro", barra_oro:"res_barra_oro",
+  // 10/8: materiales del Establo, la Curtiduría, el Altar y las incursiones. Eran los últimos
+  // ítems de la bolsa que salían con emoji en vez de ícono.
+  fibra:"res_fibra", pelaje:"res_pelaje", cuero:"res_cuero", colmillo:"res_colmillo",
+  esencia_runica:"res_esencia_runica", esencia_oscura:"res_esencia_oscura" };
 function resSprite(k) { return CROP_DEF[k] ? "crop_" + k : (RES_SPRITE[k] || null); }
 
 // --- cultivos (semillas compradas en la Tienda; se desbloquean por nivel de Cultivo) ---
@@ -1831,7 +1835,7 @@ const ARM_RAREZAS = ["madera", "piedra", "bronce", "oro", "diamante"];
 const ARM_TIPO_DEF = {
   espada: { label: "Espada", buff: "crit",   buffLabel: "Crítico",     skill: "sword", sprite: "sword", primQ: 5, secQ: 3, repQ: 2, plata: [10, 25, 60, 140, 320] },
   hacha:  { label: "Hacha",  buff: "pierce", buffLabel: "Perforación", skill: "hacha", sprite: "axe",   primQ: 6, secQ: 3, repQ: 3, plata: [10, 30, 70, 170, 385] },
-  mazo:   { label: "Mazo",   buff: "stun",   buffLabel: "Aturdir",     skill: "mazo",  sprite: "pick_stone", primQ: 8, secQ: 4, repQ: 4, plata: [15, 40, 90, 210, 480] },
+  mazo:   { label: "Mazo",   buff: "stun",   buffLabel: "Aturdir",     skill: "mazo",  sprite: "mazo", primQ: 8, secQ: 4, repQ: 4, plata: [15, 40, 90, 210, 480] },
   arco:   { label: "Arco",   buff: "bleed",  buffLabel: "Sangrado",    skill: "range", sprite: "bow",   primQ: 4, secQ: 2, repQ: 2, plata: [10, 20, 50, 110, 255] },
 };
 const ARM_MINMAX = {   // daño aleatorio min-max por tipo y rareza (tablas 15-18 del compendio)

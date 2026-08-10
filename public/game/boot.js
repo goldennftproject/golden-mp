@@ -103,7 +103,9 @@ class BootScene extends Phaser.Scene {
     // cuando talás, picás o cosechás. Antes solo existían para la interfaz HTML y en el juego
     // no se veían (salía el "+1" pelado). Están en el atlas, esto es solo el respaldo.
     ["madera","piedra","bronce","hierro","oro","diamante","netherita","carne","flecha","lombriz",
-     "tablon","barra_piedra","barra_bronce","barra_hierro","barra_oro"].forEach(k => L.push(["res_" + k, P + "res_" + k + ".png"]));
+     "tablon","barra_piedra","barra_bronce","barra_hierro","barra_oro",
+     "fibra","pelaje","cuero","colmillo","esencia_runica","esencia_oscura"].forEach(k => L.push(["res_" + k, P + "res_" + k + ".png"]));
+    L.push(["mazo", P + "mazo.png"]);   // ícono genérico del tipo de arma (la pestaña de Combate)
     if (typeof CROP_ORDER !== "undefined") CROP_ORDER.forEach(k => L.push(["crop_" + k, P + "crop_" + k + ".png"]));
     ["comun","raro","epico","legendario"].forEach(k => L.push(["fish_" + k, P + "fish_" + k + ".png"]));
     ["plata","esencia"].forEach(k => L.push(["coin_" + k, P + "coin_" + k + ".png"]));
@@ -115,8 +117,8 @@ class BootScene extends Phaser.Scene {
   preload() {
     // ATLAS: todos los sprites del mundo en 2 archivos (mucho más liviano para el server free).
     // Si el atlas no llega, ensureAll() baja los archivos sueltos como respaldo.
-    this.load.image("__atlas", "assets/atlas.png?v=29");
-    this.load.json("__atlasmap", "assets/atlas.json?v=29");
+    this.load.image("__atlas", "assets/atlas.png?v=30");
+    this.load.json("__atlasmap", "assets/atlas.json?v=30");
 
     // No hay barra propia: la pantalla de carga es UNA sola, la del HTML, y le pasamos el avance.
     // (Antes había dos barras seguidas y el juego "aparecía" antes de estar listo.)
