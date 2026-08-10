@@ -62,6 +62,9 @@ function enterGame() {
   setTimeout(juegoListo, 25000);   // red de seguridad: si algo se traba, nunca queda la pantalla pegada
   // cofre diario: se abre junto con el juego, no antes
   cuandoListo(() => { try { if (dailyState().claimable) openOv("ov-daily"); } catch (e) {} });
+  // si quedó entrenando de la sesión anterior, la ventana vuelve sola: no se puede jugar
+  // mientras el granjero entrena, ni recargando la página (9/8)
+  cuandoListo(() => { try { if (typeof dummyEntrenando === "function" && dummyEntrenando()) openOv("ov-entrenando"); } catch (e) {} });
 }
 
 // al cargar: si ya tenés cuenta + granja guardada, entrás directo (sin pedir apodo otra vez)
@@ -74,8 +77,7 @@ function enterGame() {
   try { if (typeof aplicarTesteo === "function") aplicarTesteo(); } catch (e) { console.warn(e); }
   loadPaso(LOAD_ETAPAS.ajustes, "Aplicando ajustes…");
   try { await window.SAVE_READY; returning = await loadFarm(); } catch (e) { console.warn(e); }
-  try { if (typeof testeoRegalo === "function") testeoRegalo(); } catch (e) { console.warn(e); }      // materiales de prueba (una sola vez)
-  try { if (typeof testeoDestapar === "function") testeoDestapar(); } catch (e) { console.warn(e); }   // si la bolsa quedó desbordada, la destapa
+  try { if (typeof testeoDestapar === "function") testeoDestapar(); } catch (e) { console.warn(e); }   // repara bolsas desbordadas por el regalo viejo de testeo
   if (returning && window.NICK) enterGame();
   else {
     hideEl("loading");                                            // jugador nuevo: primero el apodo

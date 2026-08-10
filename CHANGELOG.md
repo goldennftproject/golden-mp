@@ -1192,7 +1192,7 @@ a `-1002` y el pasto volvió a aparecer. Con la textura a la vista, los tiles se
 desde el original con el tono un poco más claro, y el borde de pasto de la isla se igualó
 al del suelo para que no se note el salto. También se calmaron las matas de la laguna.
 
-### Que los minerales se distingan (9/8)
+### Que los minerales se distingan
 Las seis vetas se veían como la misma piedra marrón. El arte estaba bien: el problema era el
 tamaño. Se dibujaban al **0.67 de la celda** desde un sprite de 92 px, o sea al 30%: las
 pepitas quedaban de 2 px y se volvían ruido. Tres cambios, todos por código y todos apagables
@@ -1214,7 +1214,7 @@ golpe hace `clearTint()`, el color del mineral se vuelve a poner al terminar.
 Sigue pendiente el caso difícil: **piedra vs hierro** son la misma roca, una pelada y la otra
 con motas. Eso pide siluetas distintas y arte nuevo, no código.
 
-### Animales sueltos por la granja (9/8)
+### Animales sueltos por la granja
 Estaban encerrados en un patio cercado al lado de la laguna. Ahora andan por toda la granja,
 como los del Establo de cualquier juego cozy.
 
@@ -1230,7 +1230,7 @@ como los del Establo de cualquier juego cozy.
   parado delante de una veta no te roba el clic.
 - El corral de antes queda a un interruptor de distancia: `GF.CORRAL_ON = 1` en config.js.
 
-### Las chimeneas, en su lugar (9/8)
+### Las chimeneas, en su lugar
 El arte nuevo movió las chimeneas y el humo se quedó donde estaba: en la Cocina salía del
 techo, en la Herrería del aire al costado, y el Horno directamente no humeaba.
 
@@ -1247,7 +1247,7 @@ techo, en la Herrería del aire al costado, y el Horno directamente no humeaba.
 - La `store_lit` (fragua encendida) se rehizo desde el arte sin humo, y el resplandor de la
   fragua se remidió sobre el sprite nuevo.
 
-### La costa terminada (9/8)
+### La costa terminada
 La orilla eran **tres rectángulos redondeados de color plano**, uno encima del otro: pasto,
 arena y agua, los tres con el borde duro y la misma curva perfecta. Se veía como un vector,
 no como pixel art.
@@ -1268,12 +1268,12 @@ Ahora es una imagen, `assets/farm/isla.png`, que arma **`tools/build-isla.py`**:
 - Pesa 83 KB y **no va al atlas** (mide 1190×854, no entra). Si el PNG no llega, el juego
   vuelve solo a los rectángulos de antes.
 
-### Nubes menos opacas (9/8)
+### Nubes menos opacas
 Estaban al 0,55 de opacidad y tapaban medio edificio al pasar. Bajaron a **0,22**, y la sombra
 que proyectan sobre el suelo de 0,10 a 0,06. Las dos quedaron en el panel de balanceo
 (`fx.nubesAlfa` y `fx.nubesSombra`) para moverlas en caliente.
 
-### Que no sean todos el mismo techo (9/8)
+### Que no sean todos el mismo techo
 El Granero, la Cocina, el Establo y la Curtiduría salieron los cuatro del Granero, así que
 compartían el mismo tejado y de lejos parecían el mismo edificio. Se rehicieron tres con la
 **forma** del techo distinta pero el **mismo tejado rojo**: el primer intento los diferenciaba
@@ -1293,9 +1293,63 @@ no por color.
 El Granero queda como el único con el tejado a dos aguas clásico. La Herrería (tejuelas de
 piedra), el Horno (cúpula) y el Mercado (toldo a rayas) ya se distinguían solos.
 
-### Verificación
-- `node --check` en los 13 JS, `tools/check-ui.js` (20 ventanas OK) y `build-atlas.py --check` sin faltantes.
-- Composición de la granja renderizada aparte para revisar alturas: ningún edificio se pisa.
+### Verificación del día
+- `node --check` en los 13 JS y `tools/check-ui.js`: 20 ventanas OK, ninguna función referenciada que no exista.
+- `build-atlas.py --check` sin faltantes. Atlas final: **365 sprites, `?v=26`**.
+- Panel de balanceo levantado en Node: **804 entradas, ninguna rota** (se sumaron 4 de minerales y 2 de nubes).
+- **Los animales, simulados aparte**: 4 bichos tomando 4000 decisiones sobre la geometría real de la
+  granja. Ningún destino inválido y ninguna vez que se quedaran sin salida. Les queda caminable el
+  56% del terreno y cada tramo son ~71 px, o sea 4,4 s de caminata.
+- Composición de la granja renderizada aparte (isla + suelo + los nueve edificios) para revisar
+  alturas y silueta: ningún edificio se pisa y los techos se distinguen entre sí.
+
+---
+
+## Día 15 — Lunes 10/08 · "Cosas nuevas por agregar" (doc del diseñador)
+
+Llegó un documento con 24 puntos. Se atacan por fases, dejando lo visual para el final.
+
+### Fase 1 — Los tres bugs
+
+**El entrenamiento en el dummy era XP gratis.** Se podía dejar entrenando, seguir jugando
+normal, volver a los dos segundos, cobrar, y repetir. Dos arreglos:
+
+- **El primer minuto no cuenta** (`DUMMY_OFF_ESPERA_MS`). Antes empezaba a sumar en el
+  instante del clic, así que clic → cobrar → clic → cobrar daba XP a puñados.
+- **Mientras entrena, el juego queda tapado.** La ventana nueva usa una clase `.ov.bloquea`:
+  las ventanas normales dejan pasar el clic al mundo a propósito, esta no. Y si recargás la
+  página vuelve sola, así que tampoco se escapa por ahí. Un clic en cualquier lado corta el
+  entrenamiento y cobra, como pedía el doc.
+
+**El tutorial pedía construir la Cocina teniéndola.** El chequeo de "este paso ya está hecho"
+solo corría al migrar un guardado viejo. Si construías algo ANTES de que el tutorial lo
+pidiera, después te lo pedía igual y no había forma de cumplirlo. Se sacó a `tutoHecho()` y
+ahora se consulta también cada vez que un paso pasa a ser el activo.
+
+**El Horno "se construía solo".** No era un bug del tutorial: era el modo testeo, que daba
+todos los edificios hechos.
+
+### El modo testeo ya no regala nada
+Tirando de ese hilo se decidió sacarle **todo el regalo**: daba 500.000 de plata, 5.000 de
+$Golden, 99 de cada material y semilla, todas las herramientas y picos, la pestaña de Armas
+abierta, los edificios construidos, las 12 parcelas y los nodos desbloqueados. Con eso puesto
+no había forma de probar la progresión: no se sentía cuánto cuesta nada, el tutorial venía
+medio hecho y el Horno aparecía solo.
+
+Ahora **lo único que hace el testeo es comprimir los tiempos**: cultivos, enfriamientos de
+árboles y vetas, cocina, animales, forja, incursiones, estamina y cupos diarios. El juego se
+juega exactamente igual que en la versión final, pero sin esperar.
+
+- Se borró `testeoRegalo()` y su llamada en main.js.
+- La bolsa vuelve a 20 casillas (el testeo la inflaba a 150 para aguantar el regalo).
+- Queda `testeoDestapar()`, que repara las bolsas desbordadas por el regalo viejo.
+- **Verificado en Node**: con el testeo activo, plata, $Golden, materiales, parcelas, árboles y
+  edificios quedan **exactamente como estaban**; y los tiempos sí bajan (papa 9 s, árbol y
+  piedra 40 s, dummy 15 s).
+
+**Verificado en Node** contra el estado real: cobrar al instante no paga; 5 minutos pagan 4 XP
+(los 4 útiles); 20 horas topean en 480; y con la Cocina y el Horno ya construidos el tutorial
+salta directo al paso siguiente.
 
 ---
 
@@ -1323,9 +1377,8 @@ piedra), el Horno (cúpula) y el Mercado (toldo a rayas) ya se distinguían solo
   animarlo (el generado es fijo y el del juego gira con 8 cuadros).
 
 ### Visual que quedó abierto
-- La **Curtiduría** se ve chica al lado del Establo: su arte es ancho y el juego escala por ancho.
-  Se arregla subiéndola de 2 a 3 celdas.
-- El **Mercado** quedó chico comparado con el resto.
+- El **Mercado** quedó chico comparado con el resto. (La Curtiduría, que tenía el mismo
+  problema, se resolvió sola: el arte nuevo es angosto y ya no se achica al escalar.)
 - **Árboles, piedras y parcelas** siguen siendo el set viejo: solo se les calmó el color, pero no
   comparten el estilo de los edificios nuevos.
 - **Piedra vs hierro** siguen pareciéndose: son la misma roca, una pelada y la otra con motas.

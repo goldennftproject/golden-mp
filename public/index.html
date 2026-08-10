@@ -66,6 +66,9 @@
   #prompt.show{opacity:1}
 
   .ov{position:fixed;inset:0;z-index:10;display:none;pointer-events:none}
+  /* Ventana que BLOQUEA el juego (9/8). Las .ov normales dejan pasar el clic al mundo a
+     propósito; esta no, porque mientras el granjero entrena no se puede hacer otra cosa. */
+  .ov.bloquea{pointer-events:auto;background:rgba(12,7,2,.55)}
   .ov.show{display:block}
   .card{background:#a8622e url("assets/ui/wood_bg.png?a=5") repeat;background-size:220px auto;background-clip:border-box;border-radius:14px;color:#f6ecce;padding:14px 16px;width:min(440px,92%);box-shadow:0 20px 50px rgba(0,0,0,.45);position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);pointer-events:auto;
     border:18px solid transparent;border-image:url("assets/ui/panel_wood.png?a=4") 30 round;image-rendering:pixelated}
@@ -684,6 +687,14 @@
     </div>
     <div class="row" style="justify-content:center"><button class="gold" id="dy-claim">Reclamar </button></div>
     <div class="dynote">Solo 1 al día · Adornos y mimos chicos, nada que acelere tu progreso · Si faltás un día seguís donde quedaste</div>
+  </div></div>
+
+  <div class="ov bloquea" id="ov-entrenando"><div class="card" style="width:min(430px,92%)">
+    <h3>Entrenando</h3>
+    <div class="sub">El granjero está golpeando el dummy. Mientras entrena no puede hacer otra cosa: cerrá el juego y volvé cuando quieras.</div>
+    <div class="info" id="entr-info">…</div>
+    <div class="row" style="justify-content:center"><button class="gold" id="entr-fin">Dejar de entrenar y cobrar</button></div>
+    <div class="dynote">El primer minuto no cuenta · Suma hasta 8 h · Un clic en cualquier lado también corta el entrenamiento</div>
   </div></div>
 
   <div class="ov" id="ov-lb"><div class="card" style="width:min(500px,94%)">

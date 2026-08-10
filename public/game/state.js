@@ -22,7 +22,7 @@ const G = {
   states: [],                    // doc 2/8: estados/debuffs del bestiario sobre el jugador (no se guardan)
   tuto: { step: 0, n: 0, done: false, v: 2 },   // doc 2/8: tutorial guiado de micro-objetivos (v = versión de la cadena)
   firstSeeds: 3,                 // semillas del starter pack que crecen en 45 s (se descuentan al plantarlas)
-  armCd: {}, mkPend: [], testeoDado: false,   // enfriamiento de crafteo por arma · entregas pendientes · regalo de testeo ya dado   // equipo (armas se equipan en el panel de Equipo — detalles jueves)
+  armCd: {}, mkPend: [], testeoDado: false,   // enfriamiento de crafteo por arma · entregas pendientes · (testeoDado quedó del regalo viejo, ya no se usa)   // equipo (armas se equipan en el panel de Equipo — detalles jueves)
   res: { madera: 0, piedra: 0, bronce: 0, hierro: 0, oro: 0, diamante: 0, netherita: 0, carne: 0, flecha: 0, lombriz: 0,
     tablon: 0, barra_piedra: 0, barra_bronce: 0, barra_hierro: 0, barra_oro: 0,
     papa: 0, zanahoria: 0, cebolla: 0, calabacin: 0, repollo: 0, calabaza: 0, brocoli: 0, girasol: 0, trigo: 0, maiz: 0,
@@ -636,9 +636,12 @@ function tutoMigrar() {
   tutoAutoSkip();
 }
 // salta los pasos que el jugador YA cumplió (evita pedir cosas hechas o mentir con "ya tenés los materiales")
-function tutoAutoSkip() {
-  for (let i = 0; i < TUTO_STEPS.length + 2; i++) {
-    const st = tutoActivo(); if (!st) return;
+// ¿este paso ya está cumplido? Se saca aparte porque ahora se consulta en dos momentos:
+// al migrar un guardado viejo Y cada vez que un paso pasa a ser el activo (9/8). Antes solo
+// se miraba al migrar, así que si construías la Cocina ANTES de que el tutorial la pidiera,
+// después te la pedía igual y no había manera de cumplirla.
+function tutoHecho(st) {
+  {
     let hecho = false;
     if (st.res) hecho = tutoTiene(st) >= tutoNeed(st);
     else if (st.id === "build_horno")  hecho = !!(G.built && G.built.horno);
@@ -662,7 +665,13 @@ function tutoAutoSkip() {
     else if (st.id === "invexp")    hecho = (G.invExtra || 0) > 0;
     else if (st.id === "passclaim") hecho = !!(G.pass && (Object.keys(G.pass.claimF || {}).length || Object.keys(G.pass.claimV || {}).length));
     else if (st.id === "socket")    hecho = Object.keys(G.weapons || {}).some(k => Object.keys((G.weapons[k].sockets) || {}).some(sl => G.weapons[k].sockets[sl]));
-    if (!hecho) return;
+    return hecho;
+  }
+}
+function tutoAutoSkip() {
+  for (let i = 0; i < TUTO_STEPS.length + 2; i++) {
+    const st = tutoActivo(); if (!st) return;
+    if (!tutoHecho(st)) return;
     G.tuto.step++; G.tuto.n = 0;
     if (G.tuto.step >= TUTO_STEPS.length) { G.tuto.done = true; return; }
   }
@@ -694,6 +703,8 @@ function tutoDone(st) {
     if (window.celebrate) celebrate({ title: "¡GRANJA LISTA!", sub: "Tutorial completo", big: true, reward: "+" + TUTO_REWARD_PLATA + " de plata" });
     refreshHud();
   } else {
+    tutoAutoSkip();   // si el paso nuevo ya estaba cumplido, no lo pide (9/8)
+    if (G.tuto.done) { if (typeof tutoRefresh === "function") tutoRefresh(); return; }
     log("Nuevo objetivo: " + tutoTxt(TUTO_STEPS[G.tuto.step]) + ".", "good");
   }
   if (typeof tutoRefresh === "function") tutoRefresh();
@@ -1111,21 +1122,31 @@ function incTick() { if (incActiva() && nowMs() >= G.incursion.endAt) incResolve
 // Dejás al granjero entrenando y al volver se cuenta el tiempo que pasó: XP del arma equipada.
 var DUMMY_OFF_XP_H = 60;      // XP por hora de entrenamiento
 var DUMMY_OFF_MAX_H = 8;      // tope de horas que acumula
+// El primer MINUTO no cuenta (9/8). Antes el entrenamiento arrancaba a contar en el instante
+// del clic, así que se podía clic → salir → cobrar → repetir, y sacar XP a puñados sin esperar
+// nada. Ahora hay que dejarlo entrenando de verdad: hasta el minuto, no paga.
+var DUMMY_OFF_ESPERA_MS = 60000;
 function dummyEntrenando() { return !!(G.dummyTrain && G.dummyTrain.desde); }
+// cuánto tiempo lleva entrenando que SÍ cuenta (0 mientras no pasó el minuto de espera)
+function dummyMsUtiles() {
+  if (!dummyEntrenando()) return 0;
+  return Math.max(0, nowMs() - G.dummyTrain.desde - DUMMY_OFF_ESPERA_MS);
+}
 function dummyIniciar() {
   const aid = armaEq();
   if (!aid || ARM_DEF[aid].tipo === "arco") { toast("Equipá un arma cuerpo a cuerpo para entrenar"); return; }
   G.dummyTrain = { desde: nowMs(), arma: aid };
-  log("Dejaste al granjero entrenando en el dummy. Al volver cobrás la XP del tiempo transcurrido (hasta " + DUMMY_OFF_MAX_H + " h).", "good");
+  if (typeof openOv === "function") openOv("ov-entrenando");   // tapa el juego: entrenar no es gratis
+  log("Dejaste al granjero entrenando en el dummy. El primer minuto no cuenta; de ahí en más cobrás la XP del tiempo que pase, hasta " + DUMMY_OFF_MAX_H + " h.", "good");
   toast("Entrenando…");
   if (typeof saveFarm === "function") saveFarm(true);
 }
 function dummyCobrar() {
   if (!dummyEntrenando()) return null;
-  const t = G.dummyTrain, horas = Math.min(DUMMY_OFF_MAX_H, (nowMs() - t.desde) / 3600000);
+  const t = G.dummyTrain, horas = Math.min(DUMMY_OFF_MAX_H, dummyMsUtiles() / 3600000);
   const aid = ARM_DEF[t.arma] ? t.arma : armaEq();
   G.dummyTrain = null;
-  if (!aid || horas < 0.02) { toast("Entrenaste muy poco tiempo"); return null; }
+  if (!aid || horas <= 0) { toast("Tiene que entrenar al menos un minuto"); return null; }
   const xp = Math.round(horas * DUMMY_OFF_XP_H);
   const sk = armSkillKey(ARM_DEF[aid].tipo);
   addXp(sk, xp);
@@ -2227,10 +2248,15 @@ function claimDaily() {
 }
 
 
-/* ================= MODO TESTEO ====================================================
+/* ================= MODO TESTEO (SOLO TIEMPOS) =====================================
    Comprime TODAS las esperas del juego a segundos y abre los cupos diarios, para que el
    diseñador pueda recorrer el juego entero (cultivos, cocina, animales, armaduras, pase,
    incursiones) sin esperar horas.
+
+   10/8: ACÁ NO SE REGALA NADA. Antes también daba materiales, herramientas, picos, plata,
+   $Golden, edificios, parcelas y nodos desbloqueados, y eso hacía imposible probar la
+   progresión de verdad: no se sentía cuánto cuesta nada. Ahora el juego se juega igual que
+   en la versión final y lo único distinto es que no hay que esperar.
 
    Importante: esto NO pisa la tabla del diseñador. Los valores reales siguen guardados en
    Supabase; acá solo se cambian los números EN MEMORIA, después de que el juego cargó los
@@ -2275,22 +2301,16 @@ function aplicarTesteo() {
   STAM_REGEN_SEG = 2;                                     // la estamina se llena sola enseguida
   STAM_RECARGAS_DIA = 99;
 
-  // --- BOLSA: con la bolsa llena no se puede probar NADA (no entra lo que recogés).
-  // Se agranda muchísimo para que nunca moleste. La ventana del inventario ya tiene scroll.
-  INV_BASE = 150;
-
   // --- PASE DE BATALLA: para poder ver los 30 niveles
   PASS_STARS_LVL = 2;
 
-  console.info("[Golden Farm] MODO TESTEO activo: todos los tiempos comprimidos. Poner GF.TESTEO = 0 para la versión final.");
+  console.info("[Golden Farm] MODO TESTEO activo: SOLO tiempos comprimidos, no se regala nada. Poner GF.TESTEO = 0 para la versión final.");
   return true;
 }
-// Materiales de arranque para probar TODO (edificios, armas, armaduras, animales, ofrendas).
-// Se da UNA sola vez por partida: si se vuelve a entrar, no se acumula.
-// DESTAPA-BOLSA: si la partida quedó con más stacks de los que entran (le pasó al diseñador con
-// el regalo viejo, que daba 500 de cada cosa = 6 casillas por material), lo que sobra queda
-// ESCONDIDO: tirás algo y aparece el stack de atrás, como si el juego siguiera dando cosas.
-// Esto recorta a 99 por recurso hasta que entre todo. Solo actúa si de verdad no entra.
+// DESTAPA-BOLSA: si una partida vieja quedó con más stacks de los que entran (le pasaba con el
+// regalo de testeo, que ya no existe), lo que sobra queda ESCONDIDO: tirás algo y aparece el
+// stack de atrás, como si el juego siguiera dando cosas. Esto lo recorta y solo actúa si de
+// verdad no entra. Se deja para reparar los guardados que arrastran el problema.
 function testeoDestapar() {
   if (!(window.GF && GF.TESTEO)) return false;
   if (typeof canonicalStacks !== "function" || canonicalStacks().length <= invSlots()) return false;
@@ -2300,28 +2320,4 @@ function testeoDestapar() {
   if (typeof syncSlots === "function") syncSlots();
   if (tocado && typeof log === "function") log("MODO TESTEO: la bolsa estaba desbordada (" + tocado + " montones de más) y se recortó a 99 por recurso, para que puedas seguir juntando cosas.", "gold");
   return tocado > 0;
-}
-function testeoRegalo() {
-  if (!(window.GF && GF.TESTEO) || G.testeoDado) return false;
-  G.testeoDado = true;
-  G.plata = Math.max(G.plata || 0, 500000);
-  G.golden = Math.max(G.golden || 0, 5000);
-  // 99 = UNA casilla por cosa. Antes eran 500 y 200, o sea 6 y 3 casillas de cada una: entre
-  // todo ocupaban 168 casillas en una bolsa de 50, y lo que sobraba quedaba escondido. Al tirar
-  // algo aparecía el stack de atrás y parecía que el juego "seguía dando cosas".
-  ["madera","piedra","bronce","hierro","oro","diamante","netherita","carne","flecha","lombriz",
-   "tablon","barra_piedra","barra_bronce","barra_hierro","barra_oro",
-   "fibra","pelaje","cuero","colmillo","esencia_runica"].forEach(k => { G.res[k] = Math.max(G.res[k] || 0, 99); });
-  CROP_ORDER.forEach(k => { G.res[k] = Math.max(G.res[k] || 0, 99); G.seeds[k] = Math.max(G.seeds[k] || 0, 50); });
-  G.tools = G.tools || {}; G.tools.axe = Math.max(G.tools.axe || 0, 99); G.tools.rod = Math.max(G.tools.rod || 0, 99);
-  G.picks = G.picks || { owned: {}, dur: {}, eq: null };
-  PICK_ORDER.forEach(id => { G.picks.owned[id] = true; G.picks.dur[id] = Math.max(G.picks.dur[id] || 0, 99); });
-  G.picks.eq = G.picks.eq || "netherite";
-  G.armasUnlocked = true;                                   // pestaña Armas abierta
-  G.built = Object.assign({}, G.built, { store: true, horno: true, cocina: true, altar: true, establo: true, curtiduria: true, ofrendas: true });
-  G.plotsOwned = Math.max(G.plotsOwned || 2, 12);            // todas las parcelas
-  G.treesOpen = [0,1,2,3,4,5]; G.rocksOpen = [0,1,2,3,4,5];  // todos los nodos desbloqueados
-  if (typeof syncSlots === "function") syncSlots();
-  if (typeof log === "function") log("MODO TESTEO: te dimos materiales, edificios y todas las parcelas para probar el juego entero.", "gold");
-  return true;
 }

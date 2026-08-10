@@ -10,7 +10,7 @@ function log(m, k = "") { const b = $("log"); if (!b) return; const d = document
 /* ---- overlays ---- */
 function isOpen(id) { const e = $(id); return !!(e && e.classList.contains("show")); }
 function anyOvOpen() { return !!document.querySelector(".ov.show"); }
-const OV_REFRESH = { "ov-inv": () => refreshInv(), "ov-skills": () => refreshSkills(), "ov-equip": () => refreshEquip(),
+const OV_REFRESH = { "ov-entrenando": () => entrenarSync(), "ov-inv": () => refreshInv(), "ov-skills": () => refreshSkills(), "ov-equip": () => refreshEquip(),
   "ov-forge": () => refreshForge(), "ov-market": () => refreshMarket(), "ov-barn": () => refreshBarn(),
   "ov-cocina": () => refreshCooking(),
   "ov-horno": () => refreshHorno(),
@@ -47,6 +47,33 @@ function noNo(el) {
   setTimeout(() => el.classList.remove("nono"), 320);
 }
 function closeOv(id) { const e = $(id); if (e) e.classList.remove("show"); }
+
+/* ---- ENTRENAMIENTO EN EL DUMMY (9/8) ----------------------------------------
+   Antes se podía dejar entrenando y seguir jugando, y encima cobrar al instante:
+   clic, salir, cobrar, repetir. Ahora la ventana TAPA el juego (clase .bloquea) y
+   el primer minuto no paga, así que hay que dejarlo entrenando de verdad. */
+let _entrEv = null;
+function entrenarSync() {
+  const el = $("entr-info"); if (!el) return;
+  if (typeof dummyEntrenando !== "function" || !dummyEntrenando()) { entrenarCerrar(); return; }
+  const utiles = dummyMsUtiles();
+  const xp = Math.round(Math.min(DUMMY_OFF_MAX_H, utiles / 3600000) * DUMMY_OFF_XP_H);
+  const falta = Math.max(0, DUMMY_OFF_ESPERA_MS - (nowMs() - G.dummyTrain.desde));
+  el.innerHTML = falta > 0
+    ? "Todavía no cuenta — arranca en <b>" + Math.ceil(falta / 1000) + " s</b>"
+    : "Entrenando hace <b>" + fmtDur(utiles) + "</b> · llevás <b>+" + fmt(xp) + " XP</b>";
+  if (!_entrEv) _entrEv = setInterval(entrenarSync, 1000);
+}
+function entrenarCerrar() {
+  if (_entrEv) { clearInterval(_entrEv); _entrEv = null; }
+  closeOv("ov-entrenando");
+}
+// corta el entrenamiento, cobra lo que corresponda y devuelve el juego
+function entrenarFin() {
+  if (typeof dummyCobrar === "function") dummyCobrar();
+  entrenarCerrar();
+  try { refreshHud(); } catch (e) {}
+}
 function closeAllOv() { document.querySelectorAll(".ov.show").forEach(e => e.classList.remove("show")); }
 
 /* ---- HUD ---- */
@@ -692,6 +719,9 @@ window.tutoHighlight = tutoHighlight;
 let _tutoSig = null;
 function tutoSync(force) {
   if (typeof tutoCheckRes === "function") tutoCheckRes();   // pasos de "juntá X de madera/piedra/plata"
+  // ...y también los pasos de HACER algo: si construiste la Cocina antes de que el tutorial
+  // te la pidiera, el paso se salta solo en vez de quedar pidiendo algo ya hecho (9/8)
+  if (typeof tutoAutoSkip === "function") { try { tutoAutoSkip(); } catch (e) {} }
   const st = (typeof tutoActivo === "function") ? tutoActivo() : null;
   const sig = G.tuto ? (G.tuto.step + ":" + (st && st.res ? tutoTiene(st) : (G.tuto.n || 0)) + ":" + !!G.tuto.done) : "-";
   if (!force && sig === _tutoSig) return;
@@ -1162,6 +1192,9 @@ function initUI() {
   // multiventana: abrir un panel ya no cierra los demás (detalles 29/7)
   document.querySelectorAll(".gmi").forEach(b => b.onclick = () => { openOv(b.dataset.panel); gmenu.classList.add("collapsed"); });
   document.querySelectorAll("[data-close]").forEach(b => b.onclick = () => closeOv(b.dataset.close));
+  // entrenamiento: el botón y también un clic en cualquier lado de la capa oscura
+  { const b = $("entr-fin"); if (b) b.onclick = entrenarFin;
+    const ov = $("ov-entrenando"); if (ov) ov.addEventListener("click", ev => { if (ev.target === ov) entrenarFin(); }); }
   // initOverlayDrag() reemplazado por initUniversalDrag(): ahora toda la ventana es agarrable, no solo el título
   const lu = $("levelup"); if (lu) lu.onclick = levelUp;
   const pr = $("prestige"); if (pr) pr.onclick = prestige;
