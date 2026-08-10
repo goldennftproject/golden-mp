@@ -1411,6 +1411,31 @@ dejaban textos como "Desbloquear parcela (150 )" y, peor, 36 objetos de texto VA
 infinitos girando sobre las parcelas listas. Se reemplazaron por chispas, monedas y gotas
 dibujadas por código, que además no dependen de la fuente.
 
+### Fase 2 — Los ajustes del documento
+
+- **Los primeros 10 árboles y piedras** con enfriamiento corto, no 3. Era lo que trababa el
+  final del tutorial: al cuarto árbol ya caías en el enfriamiento largo.
+- **La Herrería dejó de ser gratis**: cuesta 5 madera + 2 piedra y se agregó como primer paso
+  del tutorial. A las partidas que ya venían jugando se les respeta construida — nadie pierde
+  un edificio que ya tenía.
+- **Más de un animal por tipo.** `G.animals[k]` pasó de ser un bicho suelto a una LISTA, cada
+  uno con su felicidad y su ciclo. Hasta 5 por tipo, y cada extra cuesta 50% más que el
+  anterior (40 → 60 → 90 → 135 → 203 $Golden). Alimentar y recoger actúan sobre TODOS los del
+  tipo de una sola vez: con 5 alpacas, cinco botones sueltos sería un castigo. Los guardados
+  viejos se migran solos.
+- **Resumen al volver de la Zona Negra + descanso.** Al entrar se saca una foto del estado y al
+  volver se compara: sale un cuadro con cuántos monstruos mataste, la XP de Combate y todo lo
+  que trajiste. Después el granjero descansa 3 minutos antes de poder volver a entrar. Sale
+  también si te derrotan, aclarando que conservás lo que ya habías recogido.
+
+**Un bug encontrado por el propio test**: `animalLista()` devolvía un array nuevo sin
+guardarlo, así que el `push` de la compra caía en un array de descarte y **el animal comprado
+se perdía en silencio**. Se detectó porque la prueba mostraba "alpacas: 0" después de comprar
+tres. Corregido y vuelto a probar: 5 compradas, precios 40/60/90/135/203, y recoger todo de una
+da 10 de fibra.
+
+Los cuatro números nuevos quedaron en el panel de balanceo (808 entradas, ninguna rota).
+
 ---
 
 ## Pendientes conocidos

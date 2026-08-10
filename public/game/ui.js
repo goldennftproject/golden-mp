@@ -48,6 +48,28 @@ function noNo(el) {
 }
 function closeOv(id) { const e = $(id); if (e) e.classList.remove("show"); }
 
+/* ---- RESUMEN DEL VIAJE A LA ZONA NEGRA (10/8) --------------------------------
+   Al volver, un cuadro con lo que trajiste. Antes el botín se diluía en la bolsa y no
+   quedaba forma de saber si el viaje había valido la pena. */
+function mostrarResumenZona(r) {
+  if (!r) return;
+  const tit = $("zr-tit"), sub = $("zr-sub"), body = $("zr-body"), cd = $("zr-cd");
+  if (!body) return;
+  const filas = [];
+  Object.keys(r.res).forEach(k => filas.push((RES_LABEL[k] || k) + ": <b>+" + fmt(r.res[k]) + "</b>"));
+  if (r.plata) filas.push("Plata: <b>+" + fmt(r.plata) + "</b>");
+  if (r.golden) filas.push("$Golden: <b>+" + fmt(r.golden) + "</b>");
+  if (tit) tit.textContent = r.derrotado ? "Te trajeron de vuelta" : "De vuelta en la granja";
+  if (sub) sub.textContent = (r.derrotado ? "Te derrotaron, pero conservás lo que ya habías recogido. " : "") +
+    "Estuviste " + fmtSecs(Math.round(r.min * 60)) + " en la Zona Negra.";
+  body.innerHTML = "<div><b>" + r.matados + "</b> " + (r.matados === 1 ? "monstruo" : "monstruos") +
+    " · <b>+" + fmt(r.xp) + "</b> XP de Combate</div>" +
+    (filas.length ? "<div style=\"margin-top:6px\">" + filas.join(" · ") + "</div>"
+                  : "<div style=\"margin-top:6px\">No trajiste materiales.</div>");
+  if (cd) cd.textContent = "El granjero descansa " + ZONA_CD_MIN + " min antes de poder volver a entrar.";
+  cuandoListo(() => openOv("ov-zonares"));
+}
+
 /* ---- ENTRENAMIENTO EN EL DUMMY (9/8) ----------------------------------------
    Antes se podía dejar entrenando y seguir jugando, y encima cobrar al instante:
    clic, salir, cobrar, repetir. Ahora la ventana TAPA el juego (clase .bloquea) y
@@ -838,20 +860,24 @@ function refreshEstablo() {
         '<div class="fnm">' + d.label + '</div>' +
         '<div class="fds">Come ' + come + ' · produce ' + RES_LABEL[d.mat] + ' (' + d.porCiclo + ' cada ' + fmtSecs(d.cicloH * 3600) + ')</div>' +
         '<div class="fds">Desbloquea la armadura de ' + d.armadura + '</div></div>' +
-        '<div class="fbtns"><button class="green sm" ' + (G.golden >= d.golden ? "" : "disabled") + ' data-buyani="' + k + '">Comprar · ' + d.golden + ' $G</button></div></div>';
+        '<div class="fbtns"><button class="green sm" ' + (G.golden >= animalPrecio(k) ? "" : "disabled") + ' data-buyani="' + k + '">Comprar · ' + animalPrecio(k) + ' $G</button></div></div>';
       return;
     }
     const f = animalFelicidad(k), listo = animalListo(k);
+    // 10/8: ahora se puede tener más de uno por tipo. Alimentar y recoger actúan sobre TODOS
+    // los de ese tipo de una sola vez: con 5 alpacas, cinco botones sueltos sería un castigo.
+    const cant = animalCant(k), listos = animalListos(k), tope = cant >= ANIMAL_MAX;
     const tieneComida = d.come.some(c => (G.res[c] || 0) > 0);
     const rinde = Math.max(1, Math.round(d.porCiclo * (FELIZ_MIN_PROD + (1 - FELIZ_MIN_PROD) * f / 100)));
     h += '<div class="forge-row' + (listo ? ' eq' : '') + '"><div class="fic">' + d.emoji + '</div><div class="finfo">' +
-      '<div class="fnm">' + d.label + ' <span class="tag">felicidad ' + f + '/100</span></div>' +
+      '<div class="fnm">' + d.label + (cant > 1 ? ' ×' + cant : '') + ' <span class="tag">felicidad ' + f + '/100' + (cant > 1 ? ' (media)' : '') + '</span></div>' +
       '<div class="durbar"><i style="width:' + f + '%"></i></div>' +
-      '<div class="fds">' + (listo ? '<b style="color:#3f6b2a">¡Listo! Da ' + rinde + ' de ' + RES_LABEL[d.mat] + '</b>' : 'Produce en ' + fmtDur(animalFalta(k)) + ' · rendiría ' + rinde + ' de ' + RES_LABEL[d.mat]) + '</div>' +
+      '<div class="fds">' + (listo ? '<b style="color:#3f6b2a">' + (listos > 1 ? listos + ' listos' : '¡Listo!') + ' · dan ' + (rinde * listos) + ' de ' + RES_LABEL[d.mat] + '</b>' : 'El próximo produce en ' + fmtDur(animalFalta(k)) + ' · rendiría ' + rinde + ' de ' + RES_LABEL[d.mat]) + '</div>' +
       '<div class="fds">Alimentalo con ' + come + ' (+' + FELIZ_POR_COMIDA + ' de felicidad) · pierde ' + FELIZ_BAJA_H + '/hora si lo descuidás</div></div>' +
       '<div class="fbtns">' +
         '<button class="green sm" ' + (tieneComida ? "" : "disabled") + ' data-feed="' + k + '">Alimentar</button>' +
-        '<button class="green sm" ' + (listo ? "" : "disabled") + ' data-take="' + k + '">Recoger</button>' +
+        '<button class="green sm" ' + (listo ? "" : "disabled") + ' data-take="' + k + '">Recoger' + (listos > 1 ? ' todo (' + listos + ')' : '') + '</button>' +
+        '<button class="green sm" ' + (!tope && G.golden >= animalPrecio(k) ? "" : "disabled") + ' data-buyani="' + k + '">' + (tope ? 'Tope ' + ANIMAL_MAX : 'Otro · ' + animalPrecio(k) + ' $G') + '</button>' +
       '</div></div>';
   });
   h += '<div class="info">Materiales: ' + ANIMAL_ORDER.map(k => RES_LABEL[ANIMAL_DEF[k].mat] + " <b>" + (G.res[ANIMAL_DEF[k].mat] || 0) + "</b>").join(" · ") + '</div>';

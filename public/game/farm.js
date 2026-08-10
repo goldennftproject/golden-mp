@@ -714,7 +714,15 @@ class FarmScene extends Phaser.Scene {
 
   interactWith(o) {
     if (o.type === "portal") {
-      const entrar = () => { if (typeof tutoEvent === "function") tutoEvent("portal"); if (typeof saveFarm === "function") saveFarm(); this.leaving = true; irAEscena(this, "forest"); };
+      // 10/8: descanso entre viajes, y se abre el "viaje" para poder resumirlo al volver
+      const espera = (typeof zonaCdLeft === "function") ? zonaCdLeft() : 0;
+      if (espera > 0) { toast("El granjero está descansando — podés volver en " + fmtDur(espera)); return; }
+      const entrar = () => {
+        if (typeof tutoEvent === "function") tutoEvent("portal");
+        if (typeof zonaEntrar === "function") zonaEntrar();
+        if (typeof saveFarm === "function") saveFarm();
+        this.leaving = true; irAEscena(this, "forest");
+      };
       askConfirm("¿Entrás vos a pelear a la Zona Negra o mandás una incursión de un clic?", entrar,
         { title: "Zona Negra", yes: "Entrar a pelear", yesClass: "green", no: "Incursión (un clic)", noClass: "gold",
           onNo: () => { if (typeof refreshIncursion === "function") refreshIncursion(); openOv("ov-incursion"); } });
@@ -1367,10 +1375,17 @@ class FarmScene extends Phaser.Scene {
   syncAnimales() {
     if (!this.corral) return;
     this.animales = this.animales || [];
+    // 10/8: ahora se puede tener MÁS DE UNO de cada tipo, así que hay que crear tantos
+    // sprites como bichos haya, no uno por tipo.
     ANIMAL_ORDER.forEach(k => {
-      const tiene = typeof animalDe === "function" && !!animalDe(k);
-      const ya = this.animales.find(a => a.k === k);
-      if (tiene && !ya) {
+      const quiero = (typeof animalCant === "function") ? animalCant(k) : ((typeof animalDe === "function" && animalDe(k)) ? 1 : 0);
+      const hay = this.animales.filter(a => a.k === k);
+      for (let i = hay.length - 1; i >= quiero; i--) {   // sobran: se sacan de la granja
+        const v = hay[i];
+        v.spr.destroy(); if (v.marca) v.marca.destroy();
+        this.animales.splice(this.animales.indexOf(v), 1);
+      }
+      for (let n = hay.length; n < quiero; n++) {
         const key = "animal_" + k;
         if (!this.textures.exists(key)) return;
         // sueltos: aparecen cerca del Establo, que es de donde salen
@@ -1388,9 +1403,6 @@ class FarmScene extends Phaser.Scene {
         const marca = this.add.image(x, y - 30, resSprite(ANIMAL_DEF[k].mat) || key).setDepth(99991).setVisible(false);
         marca.setDisplaySize(16, 16);
         this.animales.push({ k, spr, marca, tx: x, ty: y, esperaHasta: 0, bob: Math.random() * 6.28 });
-      } else if (!tiene && ya) {
-        ya.spr.destroy(); if (ya.marca) ya.marca.destroy();
-        this.animales.splice(this.animales.indexOf(ya), 1);
       }
     });
   }

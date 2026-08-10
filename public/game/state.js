@@ -49,7 +49,7 @@ const G = {
   cooking: [],   // { id, endAt, total } — barra de enfriamiento al cocinar
   chests: [],      // cofres depósito: [{col,row,items:[{kind,key,n}|null × 10]}] — +1% materiales c/u
   dummyUsedAt: 0,  // último entrenamiento con el dummy (cooldown 4h)
-  built: { store: true, horno: false, cocina: false, altar: false, establo: false, curtiduria: false, ofrendas: false },   // viernes (2): la Herreria es el unico edificio gratis; el resto se construye
+  built: { store: false, horno: false, cocina: false, altar: false, establo: false, curtiduria: false, ofrendas: false },   // viernes (2): la Herreria es el unico edificio gratis; el resto se construye
   buffs: [], secPerGameHour: 1, gameHours: 0,
   skills: { fishing: 0, farming: 0, cooking: 0, range: 0, sword: 0, hacha: 0, mazo: 0, mining: 0, crafting: 0 },   // doc 2/8: cada arma es su propia skill (espada=sword, arco=range)
 };
@@ -171,8 +171,10 @@ var GOLPES_TALAR = 3, GOLPES_MINAR = 3;   // clics para tumbar un árbol o rompe
 var GOLPES_RESET_MS = 5000;
 var CD = { tree: 5400, rock: 7200 };            // 1 h 30 min el árbol · 2 h la piedra
 var CD_RAPIDO = {                                // enfriamiento corto de las primeras veces
-  tree:      { seg: 180, veces: 3 },             // 3 min · las primeras 3
-  piedra:    { seg: 240, veces: 3 },             // 4 min · las primeras 3
+  // 10/8: eran las primeras 3 y el diseñador pidió 10, para que el tutorial se pueda terminar
+  // sin quedarse esperando el enfriamiento largo del cuarto árbol.
+  tree:      { seg: 180, veces: 10 },            // 3 min · las primeras 10
+  piedra:    { seg: 240, veces: 10 },            // 4 min · las primeras 10
   bronce:    { seg: 360, veces: 2 },             // 6 min · las primeras 2
   hierro:    { seg: 480, veces: 2 },             // 8 min · las primeras 2
   oro:       { seg: 720, veces: 1 },             // 12 min · la primera
@@ -210,7 +212,7 @@ function buySeed(k, qty) {
 
 // --- construcción de edificios (detalles viernes 1): recetas para levantar cada edificio ---
 const BUILD_DEF = {
-  store:  { label: "Herrería",        cost: {} },   // viernes (2): la Herrería es gratis (ya construida)
+  store:  { label: "Herrería",        cost: { madera: 5, piedra: 2 } },   // 10/8: ya no es gratis (pedido del diseñador)
   horno:  { label: "Horno de Piedra", cost: { madera: 10, piedra: 8 },  lvl: 3 },   // doc 2/8: costo early + granja nv 3
   cocina: { label: "Cocina",          cost: { madera: 20, piedra: 15 }, lvl: 5 },   // doc 2/8: costo early + granja nv 5
   altar:  { label: "Altar de Runas",  cost: { piedra: 60, madera: 40, oro: 20 }, golden: 30 },   // doc 2/8: mejora +1..+15 y runas
@@ -583,6 +585,8 @@ const TUTO_STEPS = [
   { id: "sell",      n: 1, txt: "Vendé tus papas en el Mercado (necesitás plata)", target: "market", panel: "ov-market", ui: "#vb-papa" },
   { id: "buyseed",   n: 1, txt: "Con esa plata comprá semillas de papa",           target: "market", panel: "ov-market", ui: "[data-buy='papa']" },
   { id: "plant2",    n: 1, txt: "Replantá una semilla de papa",                    target: "plot" },
+  // — la Herrería ya no viene hecha (10/8): es la primera construcción, y es barata a propósito —
+  { id: "build_store", n: 1, txt: "Construí la Herrería (5 madera + 2 piedra)", target: "store" },
   // — cadena del Horno: primero los materiales de SU receta, después construirlo —
   { id: "wood",  res: "madera", need: () => BUILD_DEF.horno.cost.madera || 10,
     txt: "Juntá # de madera talando árboles (para el Horno)",                      target: "tree" },
@@ -631,7 +635,7 @@ var TUTO_REWARD_PLATA = 100;   // gran recompensa del cierre (editable)
 // después usan el tiempo normal del cultivo. 0 en el panel = sin excepción.
 var FIRST_GROW_MS = 45000;   // tope de crecimiento de las semillas de arranque
 var FIRST_GROW_N = 3;        // cuántas semillas de arranque tienen ese trato (las 3 papas del inicio)
-var TUTO_VER = 4;   // subir este número cuando cambie la CADENA de pasos (invalida progresos viejos)
+var TUTO_VER = 5;   // subir este número cuando cambie la CADENA de pasos (invalida progresos viejos) · v5 (10/8): se agregó "construí la Herrería"
 function tutoActivo() { return G.tuto && !G.tuto.done ? TUTO_STEPS[G.tuto.step] : null; }
 // migración: si el guardado trae una cadena vieja, los pasos ya no significan lo mismo → se recalcula
 function tutoMigrar() {
@@ -651,6 +655,7 @@ function tutoHecho(st) {
   {
     let hecho = false;
     if (st.res) hecho = tutoTiene(st) >= tutoNeed(st);
+    else if (st.id === "build_store")  hecho = !!(G.built && G.built.store);
     else if (st.id === "build_horno")  hecho = !!(G.built && G.built.horno);
     else if (st.id === "build_cocina") hecho = !!(G.built && G.built.cocina);
     else if (st.id === "build_altar")  hecho = !!(G.built && G.built.altar);
@@ -1163,6 +1168,42 @@ function dummyCobrar() {
   return xp;
 }
 
+// ============ VIAJE A LA ZONA NEGRA: enfriamiento + resumen (10/8) ==================
+// Antes se entraba y salía de la Zona Negra sin ninguna fricción, y al volver no quedaba
+// registro de qué habías sacado: el botín aparecía diluido en la bolsa. Ahora:
+//   · al entrar se saca una FOTO del estado (recursos, plata, XP de combate, muertes)
+//   · al volver se compara contra esa foto y sale un cuadro con lo que trajiste
+//   · y arranca un enfriamiento antes de poder volver a entrar
+var ZONA_CD_MIN = 3;          // minutos de descanso entre viaje y viaje
+function zonaCdLeft() { return Math.max(0, (G.zonaCdHasta || 0) - nowMs()); }
+function zonaMatados() {
+  const m = (G.stats && G.stats.matar) || {};
+  return Object.keys(m).reduce((s, k) => s + (m[k] || 0), 0);
+}
+function zonaEntrar() {
+  const res = {};
+  for (const k in G.res) res[k] = G.res[k] || 0;
+  G.zonaViaje = { t: nowMs(), res, plata: G.plata || 0, golden: G.golden || 0,
+                  combatXp: G.combatXp || 0, matados: zonaMatados(), hp: G.hp };
+}
+// devuelve el resumen del viaje (y lo cierra). null si no había viaje abierto.
+function zonaSalir(derrotado) {
+  const v = G.zonaViaje; G.zonaViaje = null;
+  G.zonaCdHasta = nowMs() + ZONA_CD_MIN * 60000;
+  if (!v) return null;
+  const gan = {};
+  for (const k in G.res) { const d = (G.res[k] || 0) - (v.res[k] || 0); if (d > 0) gan[k] = d; }
+  return {
+    min: Math.max(0, (nowMs() - v.t) / 60000),
+    res: gan,
+    plata: Math.max(0, (G.plata || 0) - v.plata),
+    golden: Math.max(0, (G.golden || 0) - v.golden),
+    xp: Math.max(0, (G.combatXp || 0) - v.combatXp),
+    matados: Math.max(0, zonaMatados() - v.matados),
+    derrotado: !!derrotado,
+  };
+}
+
 // ================= EL ALTAR DE OFRENDAS ("2das mejoras", 4/8) =================
 // Entregás recursos → se QUEMAN (salen del juego) → ganás Puntos de Ofrenda.
 // El pozo del airdrop es FIJO y se reparte PROPORCIONAL: entregar más no crea más token,
@@ -1289,56 +1330,106 @@ var ESTABLO_COST = { madera: 50, piedra: 30, oro: 10 };   // edificio (doc)
 var FELIZ_POR_COMIDA = 15;      // cuánta felicidad da alimentarlo con su cultivo preferido
 var FELIZ_BAJA_H = 1.5;         // cuánta felicidad pierde por hora sin comer
 var FELIZ_MIN_PROD = 0.5;       // rendimiento mínimo con felicidad 0 (produce la mitad)
-function animalDe(k) { G.animals = G.animals || {}; return G.animals[k]; }
-function animalFelicidad(k) {   // la felicidad baja sola con el tiempo
-  const a = animalDe(k); if (!a) return 0;
+// ANIMALES REPETIDOS (10/8, pedido del diseñador). Antes cada tipo era UNO solo:
+// G.animals[k] era un objeto y comprarAnimal rebotaba con "Ya tenés alpaca". Ahora
+// G.animals[k] es una LISTA de bichos de ese tipo, y cada uno lleva su propia felicidad y su
+// propio ciclo. Alimentar y recoger actúan sobre TODOS los del tipo de una: con 5 alpacas,
+// cinco botones separados sería un castigo.
+// Los guardados viejos (objeto suelto) se migran solos en save.js.
+var ANIMAL_MAX = 5;        // cuántos se pueden tener de cada tipo
+var ANIMAL_SUBE = 0.5;     // cada uno extra cuesta un 50% más que el anterior
+
+function animalLista(k) {
+  G.animals = G.animals || {};
+  const v = G.animals[k];
+  if (Array.isArray(v)) return v;
+  // OJO: hay que GUARDAR la lista, no devolver una suelta. Devolviendo [] a secas, el push de
+  // comprarAnimal caía en un array de descarte y la compra se perdía en silencio.
+  G.animals[k] = v ? [v] : [];   // (v = guardado viejo, un solo bicho suelto)
+  return G.animals[k];
+}
+function animalCant(k) { return animalLista(k).length; }
+function animalDe(k) { return animalLista(k)[0] || null; }   // "¿tengo de este tipo?" (arma la armadura, el tutorial, etc.)
+function animalPrecio(k) {
+  const d = ANIMAL_DEF[k]; if (!d) return 0;
+  return Math.round(d.golden * Math.pow(1 + ANIMAL_SUBE, animalCant(k)));
+}
+function animalFelizDe(a) {   // la felicidad baja sola con el tiempo
+  if (!a) return 0;
   const h = (nowMs() - (a.comidoAt || a.desde || nowMs())) / 3600000;
   return Math.max(0, Math.min(100, Math.round((a.feliz || 0) - h * FELIZ_BAJA_H)));
+}
+// felicidad del tipo = promedio de los que tenés (es lo que muestra la ventana)
+function animalFelicidad(k) {
+  const l = animalLista(k); if (!l.length) return 0;
+  return Math.round(l.reduce((s, a) => s + animalFelizDe(a), 0) / l.length);
 }
 function comprarAnimal(k) {
   const d = ANIMAL_DEF[k]; if (!d) return;
   if (!(G.built && G.built.establo)) { toast("Primero construí el Establo"); return; }
-  if (animalDe(k)) { toast("Ya tenés " + d.label.toLowerCase()); return; }
-  if (G.golden < d.golden) { toast("Te falta $Golden (" + d.golden + ")"); return; }
-  G.golden -= d.golden;
-  G.animals[k] = { desde: nowMs(), feliz: 50, comidoAt: nowMs(), prodAt: nowMs() };
-  log("Compraste " + d.label + " por " + d.golden + " $Golden. Alimentalo con " + d.come.map(c => CROP_DEF[c].label).join(" o ") + ".", "gold");
+  const tengo = animalCant(k);
+  if (tengo >= ANIMAL_MAX) { toast("Ya tenés " + ANIMAL_MAX + " " + d.label.toLowerCase() + " (el tope)"); return; }
+  const precio = animalPrecio(k);
+  if (G.golden < precio) { toast("Te falta $Golden (" + precio + ")"); return; }
+  G.golden -= precio;
+  animalLista(k).push({ desde: nowMs(), feliz: 50, comidoAt: nowMs(), prodAt: nowMs() });
+  log("Compraste " + d.label + " por " + precio + " $Golden (ahora tenés " + animalCant(k) + "). Alimentalo con " + d.come.map(c => CROP_DEF[c].label).join(" o ") + ".", "gold");
   toast("¡" + d.label + " en el Establo!");
-  if (window.celebrate) celebrate({ title: "¡" + d.label.toUpperCase() + "!", sub: "Establo", reward: "Desbloquea la armadura de " + d.mat });
+  if (!tengo && window.celebrate) celebrate({ title: "¡" + d.label.toUpperCase() + "!", sub: "Establo", reward: "Desbloquea la armadura de " + d.mat });
   refreshHud(); if (typeof refreshEstablo === "function" && isOpen("ov-establo")) refreshEstablo();
   if (window.farmScene && window.farmScene.syncAnimales) { try { window.farmScene.syncAnimales(); } catch (e) {} }   // aparece en la granja en el acto
   if (typeof saveFarm === "function") saveFarm(true);
 }
+// alimenta a TODOS los de ese tipo, uno por cultivo, hasta donde alcance
 function alimentarAnimal(k) {
-  const d = ANIMAL_DEF[k], a = animalDe(k); if (!d || !a) return;
-  const cultivo = d.come.find(c => (G.res[c] || 0) > 0);
-  if (!cultivo) { toast("Necesitás " + d.come.map(c => CROP_DEF[c].label).join(" o ")); return; }
-  G.res[cultivo] -= 1;
-  a.feliz = Math.min(100, animalFelicidad(k) + FELIZ_POR_COMIDA);
-  a.comidoAt = nowMs();
-  statAdd("alimentar", k);
-  log("Alimentaste a " + d.label + " con 1 " + CROP_DEF[cultivo].label + ". Felicidad: " + a.feliz + "/100.", "good");
-  toast(d.emoji + " Felicidad " + a.feliz);
+  const d = ANIMAL_DEF[k], l = animalLista(k); if (!d || !l.length) return;
+  let dados = 0, gastado = {};
+  for (const a of l) {
+    const cultivo = d.come.find(c => (G.res[c] || 0) > 0);
+    if (!cultivo) break;
+    G.res[cultivo] -= 1; gastado[cultivo] = (gastado[cultivo] || 0) + 1;
+    a.feliz = Math.min(100, animalFelizDe(a) + FELIZ_POR_COMIDA);
+    a.comidoAt = nowMs();
+    statAdd("alimentar", k); dados++;
+  }
+  if (!dados) { toast("Necesitás " + d.come.map(c => CROP_DEF[c].label).join(" o ")); return; }
+  const qué = Object.keys(gastado).map(c => gastado[c] + " " + CROP_DEF[c].label).join(" + ");
+  log("Alimentaste " + dados + " " + d.label + " con " + qué + ". Felicidad media: " + animalFelicidad(k) + "/100.", "good");
+  toast(d.label + " · felicidad " + animalFelicidad(k));
   refreshHud(); if (typeof refreshEstablo === "function" && isOpen("ov-establo")) refreshEstablo();
   if (isOpen("ov-inv")) refreshInv();
   if (typeof saveFarm === "function") saveFarm();
 }
-function animalListo(k) {   // ¿terminó su ciclo de producción?
-  const d = ANIMAL_DEF[k], a = animalDe(k); if (!d || !a) return false;
-  return nowMs() - (a.prodAt || 0) >= d.cicloH * 3600000;
+function animalListo(k) {   // ¿hay AL MENOS uno listo de este tipo?
+  const d = ANIMAL_DEF[k]; if (!d) return false;
+  return animalLista(k).some(a => nowMs() - (a.prodAt || 0) >= d.cicloH * 3600000);
 }
-function animalFalta(k) { const d = ANIMAL_DEF[k], a = animalDe(k); return Math.max(0, d.cicloH * 3600000 - (nowMs() - (a.prodAt || 0))); }
+// cuánto falta para el PRÓXIMO que va a estar listo
+function animalFalta(k) {
+  const d = ANIMAL_DEF[k], l = animalLista(k); if (!d || !l.length) return 0;
+  return Math.min.apply(null, l.map(a => Math.max(0, d.cicloH * 3600000 - (nowMs() - (a.prodAt || 0)))));
+}
+function animalListos(k) {   // cuántos hay listos para cobrar
+  const d = ANIMAL_DEF[k]; if (!d) return 0;
+  return animalLista(k).filter(a => nowMs() - (a.prodAt || 0) >= d.cicloH * 3600000).length;
+}
+// cobra TODOS los que estén listos de ese tipo
 function recogerAnimal(k) {
-  const d = ANIMAL_DEF[k], a = animalDe(k); if (!d || !a) return;
-  if (!animalListo(k)) { toast("Todavía no produjo — faltan " + fmtDur(animalFalta(k))); return; }
-  const f = animalFelicidad(k);
-  const n = Math.max(1, Math.round(d.porCiclo * (FELIZ_MIN_PROD + (1 - FELIZ_MIN_PROD) * f / 100)));   // feliz = ciclo completo
-  if (!roomForRes(d.mat, n)) { bagFull("recoger " + RES_LABEL[d.mat]); return; }
-  G.res[d.mat] = (G.res[d.mat] || 0) + n;
-  a.prodAt = nowMs();
-  addXp("farming", 20);
-  log(d.emoji + " " + d.label + " produjo " + n + " de " + RES_LABEL[d.mat] + " (felicidad " + f + "/100).", "gold");
-  toast("+" + n + " " + RES_LABEL[d.mat]);
+  const d = ANIMAL_DEF[k], l = animalLista(k); if (!d || !l.length) return;
+  const listos = l.filter(a => nowMs() - (a.prodAt || 0) >= d.cicloH * 3600000);
+  if (!listos.length) { toast("Todavía no produjo — faltan " + fmtDur(animalFalta(k))); return; }
+  let total = 0;
+  for (const a of listos) {
+    const f = animalFelizDe(a);
+    const n = Math.max(1, Math.round(d.porCiclo * (FELIZ_MIN_PROD + (1 - FELIZ_MIN_PROD) * f / 100)));   // feliz = ciclo completo
+    if (!roomForRes(d.mat, total + n)) break;   // lo que no entra queda para el próximo viaje
+    total += n; a.prodAt = nowMs();
+  }
+  if (!total) { bagFull("recoger " + RES_LABEL[d.mat]); return; }
+  G.res[d.mat] = (G.res[d.mat] || 0) + total;
+  addXp("farming", 20 * listos.length);
+  log(d.label + " ×" + listos.length + " produjo " + total + " de " + RES_LABEL[d.mat] + " (felicidad media " + animalFelicidad(k) + "/100).", "gold");
+  toast("+" + total + " " + RES_LABEL[d.mat]);
   refreshHud(); if (isOpen("ov-inv")) refreshInv();
   if (typeof refreshEstablo === "function" && isOpen("ov-establo")) refreshEstablo();
   if (typeof saveFarm === "function") saveFarm(true);

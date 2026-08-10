@@ -26,7 +26,7 @@ function snapshot() {
     tools: G.tools, toolsLost: G.toolsLost, sflStock: true, invRows: G.invRows, slots: G.slots, hotbar: G.hotbar, hotSel: G.hotSel, hbInit: G.hbInit, layout: G.layout,
     daily: G.daily, plotsOwned: G.plotsOwned, seedBuys: G.seedBuys, built: G.built,
     hp: G.hp, hpMax: G.hpMax, combatXp: G.combatXp, stam: G.stam, stamAcc: G.stamAcc, stamRec: G.stamRec, pass: G.pass, tuto: G.tuto, firstSeeds: G.firstSeeds,
-    stats: G.stats, statsBase: G.statsBase, chestCap: G.chestCap, edif2: G.edif2, cosmeticos: G.cosmeticos, animals: G.animals, armor: G.armor, armorEq: G.armorEq, ofrendaPts: G.ofrendaPts, ofrendaLog: G.ofrendaLog, nodoUsos: G.nodoUsos, cosEq: G.cosEq, incursion: G.incursion, incDia: G.incDia, dummyTrain: G.dummyTrain, swordOwned: G.swordOwned, bowOwned: G.bowOwned, swordWoodOwned: G.swordWoodOwned, gear: G.gear,
+    stats: G.stats, statsBase: G.statsBase, chestCap: G.chestCap, edif2: G.edif2, cosmeticos: G.cosmeticos, animals: G.animals, armor: G.armor, armorEq: G.armorEq, ofrendaPts: G.ofrendaPts, ofrendaLog: G.ofrendaLog, nodoUsos: G.nodoUsos, cosEq: G.cosEq, incursion: G.incursion, incDia: G.incDia, zonaCdHasta: G.zonaCdHasta, zonaViaje: G.zonaViaje, dummyTrain: G.dummyTrain, swordOwned: G.swordOwned, bowOwned: G.bowOwned, swordWoodOwned: G.swordWoodOwned, gear: G.gear,
     armasUnlocked: G.armasUnlocked, treesOpen: G.treesOpen, rocksOpen: G.rocksOpen, firstCropDone: G.firstCropDone, weapons: G.weapons,
     dishes: G.dishes, cooking: G.cooking, chests: G.chests, dummyUsedAt: G.dummyUsedAt,
     armCd: G.armCd, mkPend: G.mkPend, testeoDado: G.testeoDado,
@@ -47,10 +47,11 @@ function hydrate(d) {
   if (d.tools) G.tools = Object.assign({}, G.tools, d.tools);
   if (d.toolsLost) G.toolsLost = d.toolsLost;   // legado (pre-apilables)
   // edificios construibles (viernes 1): las partidas viejas ya los tienen construidos
-  const BUILT0 = { store: true, horno: false, cocina: false, altar: false, establo: false, curtiduria: false, ofrendas: false };
-  if (d.built) G.built = Object.assign({}, BUILT0, d.built);
-  else G.built = Object.assign({}, BUILT0, { horno: true, cocina: true });
-  G.built.store = true;   // viernes (2): la Herrería es gratis, siempre está
+  // 10/8: la Herrería dejó de ser gratis (5 madera + 2 piedra). A las partidas que YA venían
+  // jugando se les respeta construida: nadie pierde un edificio que ya tenía.
+  const BUILT0 = { store: false, horno: false, cocina: false, altar: false, establo: false, curtiduria: false, ofrendas: false };
+  if (d.built) G.built = Object.assign({}, BUILT0, d.built, { store: d.built.store !== false });
+  else G.built = Object.assign({}, BUILT0, { store: true, horno: true, cocina: true });
   if (typeof d.invRows === "number") G.invRows = Math.max(0, Math.min(INV_MAX_ROWS, d.invRows));
   if (Array.isArray(d.slots)) G.slots = d.slots;
   if (Array.isArray(d.hotbar)) G.hotbar = d.hotbar.slice(0, 10);
@@ -70,7 +71,18 @@ function hydrate(d) {
   G.chestCap = Number(d.chestCap) || 0;
   G.edif2 = (d.edif2 && typeof d.edif2 === "object") ? d.edif2 : {};
   G.cosmeticos = Array.isArray(d.cosmeticos) ? d.cosmeticos : [];
-  G.animals = (d.animals && typeof d.animals === "object") ? d.animals : {};
+  // Los animales pasaron de "uno por tipo" a una LISTA por tipo (10/8). Los guardados viejos
+  // traen un objeto suelto por tipo: se envuelve en lista para que nada se pierda.
+  G.zonaCdHasta = typeof d.zonaCdHasta === "number" ? d.zonaCdHasta : 0;
+  G.zonaViaje = (d.zonaViaje && typeof d.zonaViaje === "object") ? d.zonaViaje : null;
+  G.animals = {};
+  if (d.animals && typeof d.animals === "object") {
+    for (const k in d.animals) {
+      const v = d.animals[k];
+      if (Array.isArray(v)) G.animals[k] = v.slice(0, 20);
+      else if (v && typeof v === "object") G.animals[k] = [v];
+    }
+  }
   G.armor = (d.armor && typeof d.armor === "object") ? d.armor : {};
   G.armorEq = d.armorEq || null;
   G.ofrendaPts = Number(d.ofrendaPts) || 0;

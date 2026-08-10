@@ -135,6 +135,11 @@ var BAL = (function () {
     add("Ambiente — efectos", "fx.vapor", "Vapor de la Cocina y chispas del Altar mejorado", "1 o 0", () => FX_VAPOR, v => { FX_VAPOR = v ? 1 : 0; });
     add("Ambiente — efectos", "fx.fadeMs", "Fundido a negro al cambiar de escena (0 = corte seco)", "milisegundos", () => FX_FADE_MS, v => { FX_FADE_MS = v; }, 20);
     add("Ambiente — efectos", "fx.partMax", "Tope de partículas vivas a la vez (cuida el rendimiento)", "partículas · entero", () => FX_PART_MAX, v => { FX_PART_MAX = v; }, 5);
+    // 10/8: lo nuevo del documento del diseñador
+    add("Establo", "animalMax", "Cuántos animales se pueden tener de cada tipo", "animales · entero", () => ANIMAL_MAX, v => { ANIMAL_MAX = v; });
+    add("Establo", "animalSube", "Cuánto más caro sale cada animal extra del mismo tipo", "0.5 = +50% por cada uno", () => ANIMAL_SUBE, v => { ANIMAL_SUBE = v; }, 0.05);
+    add("Zona Negra", "zonaCdMin", "Descanso del granjero entre viaje y viaje a la Zona Negra", "", () => ZONA_CD_MIN * 60, v => { ZONA_CD_MIN = v / 60; }, 1, "tiempo");
+    add("Dummy", "dummyEspera", "Cuánto tarda el entrenamiento en empezar a contar", "", () => DUMMY_OFF_ESPERA_MS / 1000, v => { DUMMY_OFF_ESPERA_MS = v * 1000; }, 1, "tiempo");
     // MINERALES: que se distingan entre sí de un vistazo (9/8)
     add("Minerales — que se distingan", "nodo.escala", "Qué parte de la celda ocupa la veta (al 0.67 las pepitas no se leían)", "0 a 1", () => NODO_ESCALA, v => { NODO_ESCALA = v; }, 0.02);
     add("Minerales — que se distingan", "nodo.tinte", "Teñir la roca entera del color de su mineral (1 = sí · 0 = no)", "1 o 0", () => NODO_TINTE, v => { NODO_TINTE = v ? 1 : 0; });

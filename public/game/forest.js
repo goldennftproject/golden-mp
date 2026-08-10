@@ -627,6 +627,7 @@ class ForestScene extends Phaser.Scene {
       log("Te derrotaron en la Zona Negra. Despertás en la granja.", "bad");
       toast("Te llevaron de vuelta a la granja");
       G.hp = Math.ceil(G.hpMax / 2);
+      if (typeof zonaSalir === "function" && typeof mostrarResumenZona === "function") mostrarResumenZona(zonaSalir(true));
       if (typeof saveFarm === "function") saveFarm(true);
       this.leaving = true;
       irAEscena(this, "farm");
@@ -728,6 +729,7 @@ class ForestScene extends Phaser.Scene {
     if (hero.x < 40) {
       const left = (GF.forestDrops || []).length;
       if (left) { log("Dejaste " + left + " objeto(s) en el suelo de la Zona Negra — siguen ahí si volvés.", "bad"); toast("Dejaste " + left + " objeto(s) en el suelo"); }
+      if (typeof zonaSalir === "function" && typeof mostrarResumenZona === "function") mostrarResumenZona(zonaSalir(false));
       if (typeof saveFarm === "function") saveFarm();
       this.leaving = true;
       irAEscena(this, "farm"); return;
