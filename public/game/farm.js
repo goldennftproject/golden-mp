@@ -30,9 +30,16 @@ class FarmScene extends Phaser.Scene {
 
     this.dragPlot = null; this.dragPond = false;
     // posiciones editadas de laguna y parcelas: primero base, después lo guardado
-    if (GF.PLOTS_BASE) GF.PLOTS.forEach((b, i) => { b.col = GF.PLOTS_BASE[i].col; b.row = GF.PLOTS_BASE[i].row; });
+    if (GF.PLOTS_BASE) GF.PLOTS.forEach((b, i) => { if (GF.PLOTS_BASE[i]) { b.col = GF.PLOTS_BASE[i].col; b.row = GF.PLOTS_BASE[i].row; } });   // las extra (13+) no tienen base: conservan la suya
     if (GF.POND_BASE) { GF.POND.col = GF.POND_BASE.col; GF.POND.row = GF.POND_BASE.row; }
     if (G.layoutPond && typeof G.layoutPond.col === "number") { GF.POND.col = G.layoutPond.col; GF.POND.row = G.layoutPond.row; }
+    // PARCELAS EXTRA (13-60, pedido del diseñador 10/8): GF.PLOTS nace con la grilla de 12;
+    // las compradas de más se suman acá con la posición guardada en layoutPlots (la fija
+    // parcelaExtraCrear al comprarla). Sin posición guardada: al medio, y se mueve editando.
+    while (GF.PLOTS.length < Math.min(typeof PLOT_MAX !== "undefined" ? PLOT_MAX : 12, Math.max(2, G.plotsOwned || 2))) {
+      const sv = G.layoutPlots && G.layoutPlots[GF.PLOTS.length];
+      GF.PLOTS.push(sv ? { col: sv.col, row: sv.row } : { col: 11, row: 7 });
+    }
     if (G.layoutPlots) for (const k in G.layoutPlots) { const b = GF.PLOTS[k]; if (b) { b.col = G.layoutPlots[k].col; b.row = G.layoutPlots[k].row; } }
 
     // fondo + estanque + lotes-tierra + grilla
@@ -1533,6 +1540,19 @@ class FarmScene extends Phaser.Scene {
     }
     g.setPosition(x, y);
     return g;
+  }
+  // celda libre para una PARCELA nueva (13-60): mismas reglas que un adorno, más lejos de la
+  // laguna. Barre desde el centro hacia afuera para que las nuevas queden cerca de las demás.
+  celdaLibreParcela() {
+    const cc = Math.floor(GF.COLS / 2), cr = Math.floor(GF.ROWS / 2), p = GF.POND;
+    const celdas = [];
+    for (let r = 2; r < GF.ROWS - 1; r++) for (let c = 1; c < GF.COLS - 1; c++) celdas.push({ c, r, d: Math.abs(c - cc) + Math.abs(r - cr) });
+    celdas.sort((a, b) => a.d - b.d);
+    for (const q of celdas) {
+      if (q.c >= p.col - 1 && q.c < p.col + p.cols + 1 && q.r >= p.row - 1 && q.r < p.row + p.rows + 1) continue;   // la laguna y su borde
+      if (this.celdaLibreAdorno(q.c, q.r, -1)) return { col: q.c, row: q.r };
+    }
+    return null;
   }
   // ¿el adorno entra en esa celda? (ignora es el índice del que se está moviendo, que no se pisa a sí mismo)
   celdaLibreAdorno(col, row, ignora) {

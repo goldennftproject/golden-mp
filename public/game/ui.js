@@ -1173,10 +1173,10 @@ function refreshDeco() {
   const box = $("deco-shop"); if (!box) return;
   let h = "";
   // --- parcelas ---
-  const tope = (G.plotsOwned || 2) >= 12;
+  const tope = (G.plotsOwned || 2) >= PLOT_MAX;   // 10/8: el diseñador subió el tope de 12 a 60
   h += '<div class="secc">Parcelas</div>';
-  h += '<div class="forge-row"><div class="finfo"><div class="fnm">Parcela nueva <span class="tag">' + (G.plotsOwned || 2) + '/12</span></div>' +
-    '<div class="fds">' + (tope ? "Ya tenés las 12." : "Elegís con qué pagarla. El precio sube con cada una.") + '</div></div>' +
+  h += '<div class="forge-row"><div class="finfo"><div class="fnm">Parcela nueva <span class="tag">' + (G.plotsOwned || 2) + '/' + PLOT_MAX + '</span></div>' +
+    '<div class="fds">' + (tope ? "Ya tenés las " + PLOT_MAX + "." : "Elegís con qué pagarla. El precio sube con cada una." + ((G.plotsOwned || 2) >= 12 ? " Las nuevas aparecen en una celda libre: movelas desde el modo edición." : "")) + '</div></div>' +
     '<div class="fbtns">' +
       (tope ? '<button class="ghost sm" disabled>Completo</button>' :
         '<button class="green sm" ' + (G.plata >= plotUnlockCost() ? "" : "disabled") + ' data-plot="plata">' + fmt(plotUnlockCost()) + ' plata</button>' +
@@ -1186,12 +1186,17 @@ function refreshDeco() {
   h += '<div class="secc">GOD HAND</div>';
   h += '<div class="forge-row' + (tengoGodHand() ? ' eq' : '') + '"><div class="finfo"><div class="fnm">GOD HAND' + (tengoGodHand() ? ' <span class="tag">tuya</span>' : '') + '</div>' +
     '<div class="fds">El cropper que siembra solo: mientras no estás, las parcelas que quedaron vacías aparecen sembradas con la semilla que tengas elegida, y el crecimiento cuenta desde que te fuiste.</div>' +
-    '<div class="fds">No cosecha — eso sigue siendo tuyo. Se compra una vez y queda para siempre.</div></div>' +
+    '<div class="fds">No cosecha — eso sigue siendo tuyo. Se compra una vez y queda para siempre.</div>' +
+    (tengoGodHand() ? '<div class="fds"><b>Ya está trabajando:</b> no se ve en ningún lado — actúa solo la próxima vez que vuelvas al juego con parcelas vacías.</div>' : '') + '</div>' +
     '<div class="fbtns">' + (tengoGodHand() ? '<button class="ghost sm" disabled>Comprada</button>' :
       '<button class="green sm" ' + (G.golden >= GODHAND_GOLDEN ? "" : "disabled") + ' id="buy-godhand">' + GODHAND_GOLDEN + ' $G</button>') + '</div></div>';
   // --- adornos ---
   h += '<div class="secc">Adornos</div>';
-  h += '<div class="info">Los adornos no dan ninguna ventaja: son para que la granja se vea linda. Comprás acá y los ponés desde el modo edición. Puestos: <b>' + decoPuestos() + '/' + DECO_MAX + '</b></div>';
+  // Discord del diseñador (10/8): compraba vallas y flores y no sabía a dónde iban.
+  // Ahora la bolsa se ve acá mismo y hay un botón que te lleva directo a ponerlos.
+  const enBolsa = DECO_ORDER.reduce((a, id) => a + decoTengo(id), 0);
+  h += '<div class="info">Los adornos no dan ninguna ventaja: son para que la granja se vea linda. Al comprarlos van a tu <b>bolsa</b> y los colocás desde el modo edición. En bolsa: <b>' + enBolsa + '</b> · Puestos: <b>' + decoPuestos() + '/' + DECO_MAX + '</b>' +
+    (enBolsa ? ' <button class="green sm" id="deco-editar">✏️ Ponerlos ahora</button>' : '') + '</div>';
   DECO_ORDER.forEach(id => {
     const d = DECO_DEF[id], tengo = decoTengo(id);
     if (d.cofre) return;   // los del cofre de login no se venden acá
@@ -1205,6 +1210,7 @@ function refreshDeco() {
   box.querySelectorAll("[data-buydeco]").forEach(b => b.onclick = () => { comprarDeco(b.dataset.buydeco); refreshDeco(); });
   box.querySelectorAll("[data-plot]").forEach(b => b.onclick = () => { comprarParcela(b.dataset.plot === "golden"); refreshDeco(); });
   const gh = $("buy-godhand"); if (gh) gh.onclick = () => { comprarGodHand(); refreshDeco(); };
+  const de = $("deco-editar"); if (de) de.onclick = () => { if (window.setEditMode) setEditMode(true); };   // cierra la Tienda y abre el modo edición con el selector de adornos
 }
 
 function refreshMarket() {

@@ -832,7 +832,7 @@ function passClaim(nv, vipTrack) {
   if (r.seed) G.seeds[r.seed[0]] = (G.seeds[r.seed[0]] || 0) + r.seed[1];
   if (r.dish) { G.dishes = G.dishes || {}; G.dishes[r.dish[0]] = (G.dishes[r.dish[0]] || 0) + r.dish[1]; }
   if (r.pick) { G.picks.owned[r.pick] = true; G.picks.dur[r.pick] = (G.picks.dur[r.pick] || 0) + 1; }
-  if (r.ficha) { G.plotsOwned = Math.min(12, (G.plotsOwned || 2) + 1); if (window.farmScene && window.farmScene.refreshPlotLocks) { try { window.farmScene.refreshPlotLocks(); } catch (e) {} } }
+  if (r.ficha) { G.plotsOwned = Math.min(PLOT_MAX, (G.plotsOwned || 2) + 1); if (typeof parcelaExtraCrear === "function") parcelaExtraCrear(); }
   if (r.cos) { p.cosmetics.push(r.cos); }
   log("Pase nivel " + nv + (vipTrack ? " (VIP)" : "") + ": recibiste " + passRewardStr(r) + ".", "gold");
   if (typeof tutoEvent === "function") tutoEvent("passclaim");
@@ -1234,8 +1234,8 @@ function comprarDeco(id) {
   if (d.golden) G.golden -= d.golden;
   G.decoBolsa = G.decoBolsa || {};
   G.decoBolsa[id] = (G.decoBolsa[id] || 0) + 1;
-  log("Compraste " + d.label + ". Colocalo desde el modo edición de la granja.", "gold");
-  toast("+1 " + d.label);
+  log("Compraste " + d.label + ". Está en tu bolsa: colocalo desde el modo edición de la granja.", "gold");
+  toast("+1 " + d.label + " — en tu bolsa (✏️ modo edición para ponerlo)");
   refreshHud(); if (typeof refreshMarket === "function" && isOpen("ov-market")) refreshMarket();
   if (typeof saveFarm === "function") saveFarm(true);
 }
@@ -1263,9 +1263,28 @@ function decoSacar(i) {   // lo levanta y vuelve a la bolsa de adornos
 // con un cambio fijo, así el diseñador toca UN solo número y las dos quedan alineadas.
 var PLOT_GOLDEN_CAMBIO = 900;   // cuántas de plata "vale" 1 $Golden a la hora de comprar parcelas
 var PLOT_GOLDEN_MIN = 5;        // piso: sin esto la primera parcela salía 1 $Golden, o sea regalada
+// TOPE 60 (Discord del diseñador 10/8): "12 es muy poco, que compre la gente a placer".
+// Las primeras 12 son la grilla de siempre; de la 13 a la 60 cada una nace en una celda
+// libre y se acomoda desde el modo edición, como cualquier objeto.
+var PLOT_MAX = 60;
+var PLOT_EXTRA_SUBA = 1.12;   // suba por parcela después de la 12 (la duplicación de antes hacía imposible la 60)
 function plotUnlockGolden() { return Math.max(PLOT_GOLDEN_MIN, Math.ceil(plotUnlockCost() / PLOT_GOLDEN_CAMBIO)); }
+// la 13 en adelante no existe en GF.PLOTS: se le fija posición (celda libre) y se
+// reinicia la escena, que las levanta de layoutPlots — mismo mecanismo que "mover parcela"
+function parcelaExtraCrear() {
+  if ((G.plotsOwned || 2) <= GF.PLOTS.length) {
+    if (window.farmScene && window.farmScene.refreshPlotLocks) { try { window.farmScene.refreshPlotLocks(); } catch (e) {} }
+    return;
+  }
+  const i = GF.PLOTS.length, sc = window.farmScene;
+  const pt = (sc && sc.celdaLibreParcela) ? sc.celdaLibreParcela() : null;
+  G.layoutPlots = G.layoutPlots || {};
+  if (!G.layoutPlots[i]) G.layoutPlots[i] = pt || { col: 11, row: 7 };   // sin lugar: al medio, y se mueve editando
+  if (typeof saveFarm === "function") saveFarm(true);
+  if (window.FARM && window.FARM.scene) { try { window.FARM.scene.restart(); } catch (e) {} }
+}
 function comprarParcela(conGolden) {
-  if ((G.plotsOwned || 2) >= 12) { toast("Ya tenés las 12 parcelas"); return; }
+  if ((G.plotsOwned || 2) >= PLOT_MAX) { toast("Ya tenés las " + PLOT_MAX + " parcelas"); return; }
   if (conGolden) {
     const c = plotUnlockGolden();
     if (G.golden < c) { toast("Te falta $Golden (" + c + ")"); return; }
@@ -1275,10 +1294,10 @@ function comprarParcela(conGolden) {
     if (G.plata < c) { toast("Te falta plata (" + fmt(c) + ")"); return; }
     G.plata -= c;
   }
-  G.plotsOwned = Math.min(12, (G.plotsOwned || 2) + 1);
+  G.plotsOwned = Math.min(PLOT_MAX, (G.plotsOwned || 2) + 1);
   log("Desbloqueaste una parcela nueva. Ahora tenés " + G.plotsOwned + ".", "gold");
   toast("¡Parcela nueva!");
-  if (window.farmScene && window.farmScene.refreshPlotLocks) { try { window.farmScene.refreshPlotLocks(); } catch (e) {} }
+  parcelaExtraCrear();
   refreshHud(); if (typeof refreshMarket === "function" && isOpen("ov-market")) refreshMarket();
   if (typeof saveFarm === "function") saveFarm(true);
 }
@@ -2481,7 +2500,13 @@ function goFishing() {
 
 // --- parcelas bloqueadas: costo de desbloquear la siguiente (200, 400, 800, ... plata) ---
 var PLOT_UNLOCK_BASE = 200;
-function plotUnlockCost() { return PLOT_UNLOCK_BASE * Math.pow(2, Math.max(0, (G.plotsOwned || 6) - 6)); }
+// hasta la 12: se duplica como siempre. De la 13 a la 60: sube PLOT_EXTRA_SUBA por parcela
+// (con la duplicación, la 60 costaba 2^54 veces la base — imposible "a placer").
+function plotUnlockCost() {
+  const n = G.plotsOwned || 6;
+  const hasta12 = PLOT_UNLOCK_BASE * Math.pow(2, Math.max(0, Math.min(n, 12) - 6));
+  return Math.round(hasta12 * Math.pow(PLOT_EXTRA_SUBA, Math.max(0, n - 12)));
+}
 
 // --- cofre diario de login (racha de 7 días · anti-inflación: 80% insumos / 20% plata) ---
 // "2das mejoras" (4/8): el cofre reparte SOLO cosas laterales — cosméticos soulbound y consumibles

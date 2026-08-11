@@ -1709,6 +1709,39 @@ patrón Puesto/Guardado que el aura:
 El guardado viejo no se rompe: `cosEq` gana los tres campos con default apagado. La carga
 tolera que `skin_sombrero.png` no exista todavía (el loader abandona al 2º intento).
 
+### Íconos oficiales + el arte del sombrero, integrados
+
+Bajados de PixelLab e integrados al atlas (`?v=33`, 560 sprites):
+
+- **Espada de Madera** (`sword_wood` y su copia `arm_espada_madera`): dejó de ser la de
+  hierro recoloreada — ahora es una espada de entrenamiento de madera clara con veta.
+- **Pico de Hierro** (`pick_iron`): dejó de ser el de piedra con motas — cabeza de hierro
+  biselada con mango de madera.
+- **Sombrero de paja brillante** (`skin_sombrero`, 49×40): dorado con moño rojo. Reemplaza
+  al respaldo por código de la skin.
+
+### Feedback del diseñador por Discord (10/8, 21:33)
+
+**1. "Compro los adornos pero no sé a dónde se van."** Iban a la bolsa, pero nada lo decía
+con claridad. Ahora: la sección Adornos de la Tienda muestra **En bolsa: N · Puestos: N/tope**
+y, si tenés algo sin poner, un botón **"✏️ Ponerlos ahora"** que cierra la Tienda y abre el
+modo edición con el selector listo. El toast de compra también lo dice ("en tu bolsa"). Y el
+God Hand comprado avisa: "Ya está trabajando — actúa solo cuando volvés al juego".
+
+**2. "12 parcelas es muy poco, que compre la gente a placer — máximo 60."** Hecho:
+
+- `PLOT_MAX = 60` (un solo número para tocar). La Tienda muestra x/60.
+- Las primeras 12 siguen igual (la grilla de siempre, mismo precio duplicándose). De la 13
+  a la 60, cada parcela nueva **nace en una celda libre** cerca del centro (misma regla que
+  los adornos, esquivando laguna, edificios y lo ya puesto) y **se mueve desde el modo
+  edición** como cualquier objeto. Su posición viaja en `layoutPlots`, el mismo mecanismo
+  que ya guardaba las parcelas movidas — los guardados viejos no se enteran.
+- **Precio después de la 12**: duplicar cada vez hacía la 60 imposible (2^54 × base). Ahora
+  sube `PLOT_EXTRA_SUBA = 1.12` (+12%) por parcela: la 13 sale 14.336 de plata, la 30 unas
+  98 mil, la 60 unos 2,6 millones (o su cambio en $Golden). Otro número único para el
+  diseñador.
+- Las recompensas que regalan parcela (la ficha del pase) también respetan el tope nuevo.
+
 ---
 
 ## Pendientes conocidos
