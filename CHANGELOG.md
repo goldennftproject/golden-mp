@@ -1756,11 +1756,11 @@ God Hand comprado avisa: "Ya está trabajando — actúa solo cuando volvés al 
 - Las **11 criaturas del bestiario** y los **8 adornos** ya están integrados (10/8).
 - ~~Efectos por arma~~ hechos por código (10/8). Animaciones de ataque propias por arma siguen
   pendientes (hoy todos usan el espadazo).
-- **Cosméticos**: ~~skins~~ hechas (10/8): sombrero, pétalos y granja legendaria funcionan; solo
-  falta integrar el PNG del sombrero (mientras tanto usa el respaldo por código). La **mascota**
-  y las **decoraciones del cofre** (espantapájaros dorado y farolito) ya están (10/8).
-- Íconos oficiales de la Espada de Madera y el Pico de Hierro (hoy son derivados).
-- Todo eso ya funciona en el juego con el ícono de respaldo: no hay nada bloqueado.
+- **Cosméticos**: ~~skins~~ hechas (10/8): sombrero (con su PNG integrado), pétalos y granja
+  legendaria funcionan. La **mascota** y las **decoraciones del cofre** (espantapájaros dorado
+  y farolito) ya están (10/8).
+- ~~Íconos de Espada de Madera y Pico de Hierro~~ integrados (10/8): arte propio de PixelLab.
+- **No queda arte bloqueando nada.**
 
 ### En espera del diseñador
 - Usos de tablones y barras, cerca premium, tabla de stats definitiva del bestiario.
