@@ -4,9 +4,9 @@
 
 ## 🔴 Inmediato
 
-- [ ] **Deploy** (`deploy.bat`): atlas `?v=34` con fuente/farol nítidos, listo para subir.
-- [ ] **Correr `descargar_mazos_godhand.ps1`** y avisar para integrar (mazos de verdad #6 + arte NFT del God Hand).
-- [x] ~~Edificios v3~~ descartados por decisión del 11/8 (el set actual queda como está).
+- [ ] **Deploy** (`deploy.bat`): atlas `?v=35` con mazos de verdad, godhand.png, fuente/farol nítidos y los casilleros de armadura llenos. Todo listo para subir.
+- [x] ~~Mazos + God Hand~~ integrados (11/8).
+- [x] ~~Edificios v3~~ descartados por decisión final del 11/8 (los PNG quedan en `pixellab_edificios_v3` por si se retoman).
 - [ ] **`GF.TESTEO = 1` → 0** en `config.js` antes de abrir al público.
 
 ## 🟡 Esperando al diseñador

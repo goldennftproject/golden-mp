@@ -485,6 +485,26 @@ function refreshEquip() {
     refreshEquip(); if (typeof saveFarm === "function") saveFarm();
   };
   const ed = $("eq-def"); if (ed) ed.textContent = "Defensa total: " + gearDefTotal();
+  // 11/8 (2ª ronda del diseñador): las piezas EQUIPADAS de la Curtiduría llenan los CASILLEROS
+  // del área de equipo — antes solo salían en la lista de abajo y los casilleros quedaban vacíos.
+  // Guantes y Pantalones dejaron de ser "próximamente". El gear viejo de loot conserva su lugar.
+  {
+    const setEq = (G.armorEq && ARMOR_SETS[G.armorEq]) ? G.armorEq : null;
+    const MAPA = { "eq-casco": ["yelmo", "casco"], "eq-armadura": ["pecho", "armadura"], "eq-pantalones": ["pantalones", null], "eq-botas": ["botas", "botas"], "eq-guantes": ["guantes", null] };
+    for (const id in MAPA) {
+      const [pz, slotViejo] = MAPA[id], el = $(id); if (!el) continue;
+      const viejo = slotViejo && G.gear && G.gear[slotViejo] && GEAR_DEF[G.gear[slotViejo]];
+      if (viejo) continue;   // ese casillero ya lo dibujó gearSlot con el gear de loot
+      if (setEq && armorTiene(setEq, pz)) {
+        const sd = ARMOR_SETS[setEq];
+        el.classList.remove("ghost");
+        el.title = ARMOR_SLOT_LABEL[pz] + " · " + sd.label + " · defensa +" + sd.piezas[pz].def;
+        el.innerHTML = spIc("armor_" + setEq + "_" + pz, "🛡️");
+      } else if (!slotViejo) {   // guantes/pantalones vacíos: silueta genérica
+        el.classList.add("ghost"); el.title = ARMOR_SLOT_LABEL[pz]; el.innerHTML = '<span class="sil"></span>';
+      }
+    }
+  }
   // fixs.docx #7 (11/8): la armadura de la Curtiduría se crafteaba y "no aparecía en ningún
   // lado" fuera de esa ventana. Ahora el panel de Equipo lista tus sets, piezas y bonos.
   if (box) {

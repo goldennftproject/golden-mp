@@ -1797,12 +1797,20 @@ salvo la parte de arte que espera descarga (mazos y God Hand).
   alcanza, cobra hasta donde hay.
 - **Arte NFT**: guantelete dorado bajando de una nube con rayos (a integrar con el resto).
 
-### Arte nuevo pendiente de descarga
-- **#6 — Mazos de verdad**: los `arm_mazo_*` eran un pico. Generados los 5 (madera, piedra,
-  bronce, oro, diamante) como mazos de guerra con cabeza del material →
-  `descargar_mazos_godhand.ps1` (incluye el godhand.png).
-- Los **edificios v3** (sin techo repetido ni crema) quedaron generados y en pausa →
-  `descargar_edificios_v3.ps1`.
+### Segunda ronda del diseñador (misma tarde)
+- **La armadura equipada ahora llena los CASILLEROS del área de equipo** (la veía solo en la
+  lista de abajo). Yelmo→Casco, Pecho→Armadura, Botas→Botas, y **Guantes y Pantalones dejaron
+  de ser "próximamente"**: son casilleros reales que llena el set de la Curtiduría. El gear
+  viejo de loot conserva prioridad en su casillero si existe.
+- **Edificios: quedan como están** (decisión final tras ida y vuelta). Los v3 generados
+  duermen en `pixellab_edificios_v3` por si se retoman.
+
+### Arte integrado (atlas `?v=35`, 561 sprites)
+- **#6 — Mazos de verdad**: los `arm_mazo_*` eran un pico. Ahora son mazos de guerra, uno
+  por rareza con la cabeza del material (madera, piedra, bronce, oro, diamante). El ícono
+  genérico `mazo` (pestaña Combate) pasó a ser el de madera.
+- **godhand.png**: el guantelete dorado bajando de la nube — se ve en la Tienda y donde el
+  juego pinte la clave `godhand`.
 
 ---
 

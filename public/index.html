@@ -6,8 +6,8 @@
 <title>Golden Farm</title>
 <!-- El atlas es lo más pesado del juego (386 KB con 329 sprites). Se empieza a bajar YA,
      en paralelo con el login y la carga de la partida, en vez de esperar a que Phaser arranque. -->
-<link rel="preload" as="image" href="assets/atlas.png?v=34">
-<link rel="preload" as="fetch" href="assets/atlas.json?v=34" crossorigin>
+<link rel="preload" as="image" href="assets/atlas.png?v=35">
+<link rel="preload" as="fetch" href="assets/atlas.json?v=35" crossorigin>
 <link rel="preconnect" href="https://cdn.jsdelivr.net" crossorigin>
 <link rel="preconnect" href="https://eusxpsmqczmczgyhndtd.supabase.co" crossorigin>
 <style>
@@ -659,13 +659,14 @@
     <div class="eqlayout">
       <div class="eqcol">
         <div class="eqslot ghost" title="Collar (próximamente)"><span class="sil"></span></div>
-        <div class="eqslot ghost" title="Guantes (próximamente)"><span class="sil"></span></div>
+        <!-- 11/8: guantes y piernas dejaron de ser "próximamente" — los llena la armadura de la Curtiduría -->
+        <div class="eqslot ghost" id="eq-guantes" title="Guantes"><span class="sil"></span></div>
         <div class="eqslot ghost" title="Anillo (próximamente)"><span class="sil"></span></div>
       </div>
       <div class="eqcol">
         <div class="eqslot ghost" id="eq-casco" title="Casco"></div>
         <div class="eqslot ghost" id="eq-armadura" title="Armadura"></div>
-        <div class="eqslot ghost" title="Piernas (próximamente)"><span class="sil"></span></div>
+        <div class="eqslot ghost" id="eq-pantalones" title="Pantalones"><span class="sil"></span></div>
         <div class="eqslot ghost" id="eq-botas" title="Botas"></div>
       </div>
       <div class="eqcol">
