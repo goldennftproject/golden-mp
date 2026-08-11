@@ -17,7 +17,7 @@
 - [ ] Usos de **tablones y barras**, **cerca premium**, tabla definitiva de **stats del bestiario**.
 - [ ] "#3 Agregar vallas laterales" — pedir aclaración: ¿vallas de la cerca perimetral o poder comprar más vallas de adorno? (único punto ambiguo de fixs.docx)
 
-## 🟢 Visual abierto (no bloquea nada)
+## 🟢 Visual abierto (no bloquea nada — decisión del 11/8: queda TODO así, no tocar salvo pedido nuevo)
 
 - [ ] El **Mercado** quedó chico comparado con los edificios nuevos.
 - [ ] **Árboles, piedras y parcelas**: siguen siendo el set viejo con el color calmado.
