@@ -63,6 +63,7 @@ class BootScene extends Phaser.Scene {
     L.push(["dummy", P + "dummy.png"]);   // muñeco de práctica de espada
     L.push(["dummy_broken", P + "dummy_broken.png"]);   // dummy desgastado con cortes: se muestra durante el cooldown
     L.push(["cofre", P + "cofre.png"]);   // cofre depósito
+    L.push(["skin_sombrero", P + "skin_sombrero.png"]);   // Sombrero de paja brillante (skin del cofre 10/8); si falta, hay respaldo por código
     L.push(["withered", P + "withered.png?v=2"]);      // cultivo marchito cozy
     // etapas intermedias (la verdura asomando al 50% del crecimiento)
     if (typeof CROP_ORDER !== "undefined") CROP_ORDER.forEach(k => L.push(["cropm_" + k, P + "cropm_" + k + ".png?v=3"]));

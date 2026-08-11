@@ -140,19 +140,20 @@ class FarmScene extends Phaser.Scene {
     g.lineStyle(4, 0x3c4d31, 0.9).strokeRect(0, 0, W, H);
 
     // cerca de madera cozy alrededor de la granja (horizontal de frente, vertical de canto)
+    this.fenceSprites = [];   // referencias para la valla dorada de la Granja Legendaria (10/8)
     if (this.textures.exists("fence_top")) {
       const FH = T * 0.55, p2 = GF.POND;   // alto del tramo horizontal (de frente)
       const pondCell = (c, r) => c >= p2.col && c < p2.col + p2.cols && r >= p2.row && r < p2.row + p2.rows;
       // horizontales de punta a punta (incluyen las celdas de esquina)
       for (let c = 0; c < GF.COLS; c++) {
-        if (!pondCell(c, 0)) this.add.image(c * T + T / 2, T * 0.58, "fence_top").setDisplaySize(T, FH).setOrigin(0.5, 1).setDepth(2);
-        if (!pondCell(c, GF.ROWS - 1)) this.add.image(c * T + T / 2, H + 6, "fence_bottom").setDisplaySize(T, FH).setOrigin(0.5, 1).setDepth(H + 6);
+        if (!pondCell(c, 0)) this.fenceSprites.push(this.add.image(c * T + T / 2, T * 0.58, "fence_top").setDisplaySize(T, FH).setOrigin(0.5, 1).setDepth(2));
+        if (!pondCell(c, GF.ROWS - 1)) this.fenceSprites.push(this.add.image(c * T + T / 2, H + 6, "fence_bottom").setDisplaySize(T, FH).setOrigin(0.5, 1).setDepth(H + 6));
       }
       // verticales de arriba a abajo: al cruzarse con las horizontales en las esquinas, la unión
       // es perfecta por construcción (son las mismas piezas, sin sprite de esquina aparte)
       for (let r = 0; r < GF.ROWS; r++) {
-        if (!pondCell(0, r)) this.add.image(7, r * T + T, "fence_left").setDisplaySize(T * 0.22, T).setOrigin(0.5, 1).setDepth(3);
-        if (!pondCell(GF.COLS - 1, r)) this.add.image(W - 7, r * T + T, "fence_right").setDisplaySize(T * 0.22, T).setOrigin(0.5, 1).setDepth(3);
+        if (!pondCell(0, r)) this.fenceSprites.push(this.add.image(7, r * T + T, "fence_left").setDisplaySize(T * 0.22, T).setOrigin(0.5, 1).setDepth(3));
+        if (!pondCell(GF.COLS - 1, r)) this.fenceSprites.push(this.add.image(W - 7, r * T + T, "fence_right").setDisplaySize(T * 0.22, T).setOrigin(0.5, 1).setDepth(3));
       }
     }
 
@@ -294,6 +295,7 @@ class FarmScene extends Phaser.Scene {
     hero.setScale(this.idleScale);
     hero.play("idle");
     this.hero = hero; this.facing = "east"; this.moveTarget = null; this.path = null; this.action = null; this.pendingObj = null;
+    this.updateSkins();   // sombrero / pétalos / granja legendaria, si los tenías puestos
     if (GF.NO_WALK) hero.setVisible(false);   // el granjero solo se ve en la Zona Negra
     this.updateAura();
 
@@ -1101,6 +1103,65 @@ class FarmScene extends Phaser.Scene {
   seguirAura() {
     if (!this.auraFx || !this.hero) return;
     this.auraFx.setPosition(this.hero.x, this.hero.y - 3).setDepth(this.hero.y - 1).setVisible(this.hero.visible);
+  }
+
+  /* ---- SKINS DEL COFRE Y DEL NIVEL 50 (10/8) ---------------------------------
+     Eran los últimos cosméticos que existían solo como texto:
+       sombrero  -> Sombrero de paja brillante sobre la cabeza del granjero (sprite
+                    PixelLab "skin_sombrero" si está; si no, dibujado por código)
+       petalos   -> Camino de pétalos: caminando vas dejando pétalos que se apagan
+       granjaOro -> Granja legendaria: valla dorada + chispas de oro que flotan */
+  updateSkins() {
+    const c = (typeof cosElegido === "function") ? cosElegido() : {};
+    // sombrero
+    const sombOn = c.sombrero && (typeof cosSombreroDisponible !== "function" || cosSombreroDisponible());
+    if (!sombOn && this.hatFx) { this.hatFx.destroy(); this.hatFx = null; }
+    if (sombOn && !this.hatFx && this.hero) {
+      if (this.textures.exists("skin_sombrero")) {
+        this.hatFx = this.add.image(0, 0, "skin_sombrero").setOrigin(0.5, 0.9);
+        this.hatFx.setDisplaySize(Math.round(this.hatFx.width * 20 / this.hatFx.height), 20);
+      } else {   // respaldo por código hasta que llegue el arte: paja + cinta roja + brillo
+        const g = this.add.graphics();
+        g.fillStyle(0xe8c25a, 1).fillEllipse(0, 2, 26, 9);           // ala
+        g.fillStyle(0xf2d06b, 1).fillEllipse(0, -3, 14, 10);         // copa
+        g.fillStyle(0xc23a3a, 1).fillRect(-7, -2, 14, 3);            // cinta
+        g.fillStyle(0xfff3cf, 0.9).fillCircle(6, -6, 1.5);           // destello
+        this.hatFx = g;
+      }
+      this.tweens.add({ targets: this.hatFx, alpha: 0.88, duration: 800, yoyo: true, repeat: -1, ease: "Sine.easeInOut" });   // el "brillante" late suave
+    }
+    // granja legendaria: valla dorada + chispas
+    const oroOn = c.granjaOro && (typeof cosGranjaOroDisponible !== "function" || cosGranjaOroDisponible());
+    (this.fenceSprites || []).forEach(f => { if (f.active) { if (oroOn) f.setTint(0xe8c25a); else f.clearTint(); } });
+    if (oroOn && !this.oroTimer) {
+      this.oroTimer = this.time.addEvent({ delay: 700, loop: true, callback: () => {
+        const W = GF.COLS * GF.TILE, H = GF.ROWS * GF.TILE;   // una chispa dorada al azar que sube y se apaga
+        const x = 20 + Math.random() * (W - 40), y = 30 + Math.random() * (H - 40);
+        const p = this.add.circle(x, y, 1.5 + Math.random() * 1.5, 0xffd75e, 0.9).setDepth(y).setBlendMode(Phaser.BlendModes.ADD);
+        this.tweens.add({ targets: p, y: y - 14 - Math.random() * 10, alpha: 0, duration: 1400 + Math.random() * 600, onComplete: () => p.destroy() });
+      } });
+    } else if (!oroOn && this.oroTimer) { this.oroTimer.remove(); this.oroTimer = null; }
+  }
+  // por cuadro: el sombrero acompaña la cabeza y los pétalos caen al caminar
+  seguirSkins() {
+    const h = this.hero; if (!h) return;
+    const c = (typeof cosElegido === "function") ? cosElegido() : {};
+    if (this.hatFx) {
+      const sign = this.facing === "west" ? -1 : 1;
+      this.hatFx.setPosition(h.x + sign * 1, h.y - h.displayHeight + 4).setDepth(h.y + 1).setVisible(h.visible);
+      if (this.hatFx.setFlipX) this.hatFx.setFlipX(sign < 0); else this.hatFx.scaleX = Math.abs(this.hatFx.scaleX) * sign;
+    }
+    const petOn = c.petalos && (typeof cosPetalosDisponible !== "function" || cosPetalosDisponible());
+    if (petOn && h.visible) {
+      const lp = this.lastPetal || { x: h.x, y: h.y };
+      if (Math.hypot(h.x - lp.x, h.y - lp.y) > 14) {   // un pétalo cada ~14 px caminados
+        this.lastPetal = { x: h.x, y: h.y };
+        const cols = [0xe8a8c8, 0xf6cadd, 0xd98ad4];
+        const p = this.add.ellipse(h.x + (Math.random() - 0.5) * 12, h.y - 1 + (Math.random() - 0.5) * 5,
+          4, 2.5, cols[(Math.random() * cols.length) | 0], 0.85).setDepth(h.y - 2).setAngle(Math.random() * 360);
+        this.tweens.add({ targets: p, alpha: 0, angle: p.angle + 40, duration: 3200 + Math.random() * 800, ease: "Quad.easeIn", onComplete: () => p.destroy() });
+      }
+    }
   }
   // flecha del tutorial: triángulo dorado que rebota sobre el objetivo del paso actual
   updateTutoArrow() {
@@ -2304,6 +2365,7 @@ class FarmScene extends Phaser.Scene {
     const dt = deltaMs / 1000, k = this.keys, hero = this.hero;
     this.drawOlas(dt);   // olas de la isla
     this.seguirAura();
+    this.seguirSkins();
 
     // restaurar objetos que salieron de cooldown
     const t = nowMs();

@@ -1690,6 +1690,25 @@ pega distinto, todo dibujado por código (cero arte nuevo, cero peso):
 A puños o con daño de habilidad sigue la chispa de siempre. Sin cambios de balance: es
 solo lectura visual de lo que ya pasaba.
 
+### Las 3 skins que faltaban (cofre + nivel 50)
+
+Los últimos cosméticos que existían solo como texto en la lista. Se prenden y apagan desde
+tres secciones nuevas de la ventana de Cosméticos (Sombrero / Suelo / Granja), con el mismo
+patrón Puesto/Guardado que el aura:
+
+- **Sombrero de paja brillante** (cofre): el granjero lo lleva puesto en la granja, acompaña
+  la cabeza y se da vuelta con él. Arte PixelLab (`skin_sombrero`, dorado con moño rojo);
+  mientras el PNG no esté integrado hay un respaldo dibujado por código. "Brillante" = late
+  suave en alfa.
+- **Camino de pétalos** (cofre): al caminar vas dejando pétalos rosas (3 tonos, rotación al
+  azar, uno cada ~14 px) que se desvanecen en ~3,5 s. Por código, cero arte.
+- **Granja legendaria** (nivel 50, o si el texto está en tus cosméticos): la valla entera se
+  tiñe de dorado y cada 0,7 s una chispa de oro aditiva flota y se apaga en algún punto de
+  la granja. Se apaga al instante al guardarla.
+
+El guardado viejo no se rompe: `cosEq` gana los tres campos con default apagado. La carga
+tolera que `skin_sombrero.png` no exista todavía (el loader abandona al 2º intento).
+
 ---
 
 ## Pendientes conocidos
@@ -1704,8 +1723,9 @@ solo lectura visual de lo que ya pasaba.
 - Las **11 criaturas del bestiario** y los **8 adornos** ya están integrados (10/8).
 - ~~Efectos por arma~~ hechos por código (10/8). Animaciones de ataque propias por arma siguen
   pendientes (hoy todos usan el espadazo).
-- **Cosméticos**: faltan las skins (sombrero de paja, camino de pétalos, granja legendaria). La
-  **mascota** y las **decoraciones del cofre** (espantapájaros dorado y farolito) ya están (10/8).
+- **Cosméticos**: ~~skins~~ hechas (10/8): sombrero, pétalos y granja legendaria funcionan; solo
+  falta integrar el PNG del sombrero (mientras tanto usa el respaldo por código). La **mascota**
+  y las **decoraciones del cofre** (espantapájaros dorado y farolito) ya están (10/8).
 - Íconos oficiales de la Espada de Madera y el Pico de Hierro (hoy son derivados).
 - Todo eso ya funciona en el juego con el ícono de respaldo: no hay nada bloqueado.
 

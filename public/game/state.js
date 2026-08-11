@@ -904,9 +904,17 @@ function cosMascotasDisponibles() {
   if (cosTengo("Pinta") || cosTengo("mascota")) out.push("gallina");
   return out;
 }
+// SKINS (10/8): las últimas piezas del cofre y del nivel 50 que eran solo texto.
+//   sombrero  -> Sombrero de paja brillante: lo lleva puesto el granjero en la granja
+//   petalos   -> Camino de pétalos: al caminar vas dejando pétalos que se desvanecen
+//   granjaOro -> Granja legendaria: valla dorada + chispas de oro flotando (nivel 50)
+function cosSombreroDisponible() { return cosTengo("sombrero de paja"); }
+function cosPetalosDisponible() { return cosTengo("pétalos") || cosTengo("petalos"); }
+function cosGranjaOroDisponible() { return cosTengo("granja legendaria") || G.level >= 50; }
 function cosElegido() {
   G.cosEq = G.cosEq || { titulo: "", color: "blanco", marco: "ninguno", aura: false };
   if (!G.cosEq.mascota) G.cosEq.mascota = "ninguna";   // guardados viejos no la traen
+  if (G.cosEq.sombrero == null) { G.cosEq.sombrero = false; G.cosEq.petalos = false; G.cosEq.granjaOro = false; }   // guardados viejos
   return G.cosEq;
 }
 function cosSet(campo, valor) {
@@ -915,6 +923,7 @@ function cosSet(campo, valor) {
   if (campo === "aura" && valor && window.farmScene && window.farmScene.updateAura) { try { window.farmScene.updateAura(); } catch (e) {} }
   if (window.farmScene && window.farmScene.updateAura) { try { window.farmScene.updateAura(); } catch (e) {} }
   if (campo === "mascota" && window.farmScene && window.farmScene.syncMascota) { try { window.farmScene.syncMascota(); } catch (e) {} }
+  if (window.farmScene && window.farmScene.updateSkins) { try { window.farmScene.updateSkins(); } catch (e) {} }   // sombrero / pétalos / granja legendaria (10/8)
   if (typeof refreshCosmeticos === "function" && isOpen("ov-cos")) refreshCosmeticos();
   if (typeof saveFarm === "function") saveFarm();
 }

@@ -1819,6 +1819,21 @@ function refreshCosmeticos() {
       ? masc.map(k => '<button class="sm ' + ((c.mascota || "ninguna") === k ? "green" : "ghost") + '" data-cost="mascota:' + k + '">' +
           (k === "ninguna" ? "Ninguna" : COS_MASCOTAS[k].label) + '</button>').join(" ") + ' <span class="fds">Pasea por tu granja.</span>'
       : 'Todavía no tenés ninguna — la gallina "Pinta" sale del cofre de login.') + '</div></div></div>';
+  // SKINS (10/8): sombrero del cofre, camino de pétalos y granja legendaria de nivel 50
+  const skinBtns = (campo, on) => '<button class="sm ' + (on ? "green" : "ghost") + '" data-cost="' + campo + ':1">Puesto</button> ' +
+    '<button class="sm ' + (!on ? "green" : "ghost") + '" data-cost="' + campo + ':0">Guardado</button>';
+  h += '<div class="secc">Sombrero</div><div class="forge-row"><div class="finfo"><div class="fds">' +
+    (cosSombreroDisponible()
+      ? skinBtns("sombrero", c.sombrero) + ' <span class="fds">Paja brillante: lo lleva puesto el granjero.</span>'
+      : 'El Sombrero de paja brillante sale del cofre de login.') + '</div></div></div>';
+  h += '<div class="secc">Suelo</div><div class="forge-row"><div class="finfo"><div class="fds">' +
+    (cosPetalosDisponible()
+      ? skinBtns("petalos", c.petalos) + ' <span class="fds">Camino de pétalos: los vas dejando al caminar.</span>'
+      : 'El Camino de pétalos sale del cofre de login.') + '</div></div></div>';
+  h += '<div class="secc">Granja</div><div class="forge-row"><div class="finfo"><div class="fds">' +
+    (cosGranjaOroDisponible()
+      ? skinBtns("granjaOro", c.granjaOro) + ' <span class="fds">Legendaria: valla dorada y chispas de oro.</span>'
+      : 'La skin de Granja Legendaria llega con el nivel 50.') + '</div></div></div>';
   if ((G.cosmeticos || []).length) {
     h += '<div class="secc">Todo lo que ganaste (' + G.cosmeticos.length + ')</div>';
     h += '<div class="info">' + G.cosmeticos.map(x => escapeHtml(String(x))).join(" · ") + '</div>';
@@ -1826,7 +1841,8 @@ function refreshCosmeticos() {
   box.innerHTML = h;
   box.querySelectorAll("[data-cost]").forEach(b => b.onclick = () => {
     const [campo, val] = b.dataset.cost.split(":");
-    cosSet(campo, campo === "aura" ? val === "1" : val);
+    const esBool = campo === "aura" || campo === "sombrero" || campo === "petalos" || campo === "granjaOro";   // las skins son prendido/apagado
+    cosSet(campo, esBool ? val === "1" : val);
     refreshCosmeticos();
   });
 }
