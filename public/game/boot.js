@@ -120,8 +120,8 @@ class BootScene extends Phaser.Scene {
   preload() {
     // ATLAS: todos los sprites del mundo en 2 archivos (mucho más liviano para el server free).
     // Si el atlas no llega, ensureAll() baja los archivos sueltos como respaldo.
-    this.load.image("__atlas", "assets/atlas.png?v=33");
-    this.load.json("__atlasmap", "assets/atlas.json?v=33");
+    this.load.image("__atlas", "assets/atlas.png?v=34");
+    this.load.json("__atlasmap", "assets/atlas.json?v=34");
 
     // No hay barra propia: la pantalla de carga es UNA sola, la del HTML, y le pasamos el avance.
     // (Antes había dos barras seguidas y el juego "aparecía" antes de estar listo.)

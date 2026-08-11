@@ -4,13 +4,10 @@
 
 ## 🔴 Inmediato
 
-- [ ] **Deploy** (`deploy.bat`): los 19 fixes de fixs.docx están sin subir.
+- [ ] **Deploy** (`deploy.bat`): atlas `?v=34` con fuente/farol nítidos, listo para subir.
 - [ ] **Correr `descargar_mazos_godhand.ps1`** y avisar para integrar (mazos de verdad #6 + arte NFT del God Hand).
+- [x] ~~Edificios v3~~ descartados por decisión del 11/8 (el set actual queda como está).
 - [ ] **`GF.TESTEO = 1` → 0** en `config.js` antes de abrir al público.
-
-## 🟠 En pausa (retomable cuando digas)
-
-- [ ] **Edificios v3** sin techo repetido ni ribete crema (`descargar_edificios_v3.ps1` ya generado: cocina terracota, establo paja, curtiduría cuero, ofrendas pizarra+dorado).
 
 ## 🟡 Esperando al diseñador
 
