@@ -33,12 +33,13 @@ class FarmScene extends Phaser.Scene {
     if (GF.PLOTS_BASE) GF.PLOTS.forEach((b, i) => { if (GF.PLOTS_BASE[i]) { b.col = GF.PLOTS_BASE[i].col; b.row = GF.PLOTS_BASE[i].row; } });   // las extra (13+) no tienen base: conservan la suya
     if (GF.POND_BASE) { GF.POND.col = GF.POND_BASE.col; GF.POND.row = GF.POND_BASE.row; }
     if (G.layoutPond && typeof G.layoutPond.col === "number") { GF.POND.col = G.layoutPond.col; GF.POND.row = G.layoutPond.row; }
-    // PARCELAS EXTRA (13-60, pedido del diseñador 10/8): GF.PLOTS nace con la grilla de 12;
-    // las compradas de más se suman acá con la posición guardada en layoutPlots (la fija
-    // parcelaExtraCrear al comprarla). Sin posición guardada: al medio, y se mueve editando.
-    while (GF.PLOTS.length < Math.min(typeof PLOT_MAX !== "undefined" ? PLOT_MAX : 12, Math.max(2, G.plotsOwned || 2))) {
-      const sv = G.layoutPlots && G.layoutPlots[GF.PLOTS.length];
-      GF.PLOTS.push(sv ? { col: sv.col, row: sv.row } : { col: 11, row: 7 });
+    // PARCELAS EXTRA (13-60, pedido del diseñador 10/8, fix #17 11/8): GF.PLOTS nace con la
+    // grilla de 12; las compradas de más entran SOLO cuando el jugador las colocó con clic
+    // (parcelaColocar les guarda la celda en layoutPlots). Las no colocadas quedan pendientes
+    // en la zona de edición.
+    while (GF.PLOTS.length < (typeof PLOT_MAX !== "undefined" ? PLOT_MAX : 60) && G.layoutPlots && G.layoutPlots[GF.PLOTS.length]) {
+      const sv = G.layoutPlots[GF.PLOTS.length];
+      GF.PLOTS.push({ col: sv.col, row: sv.row });
     }
     if (G.layoutPlots) for (const k in G.layoutPlots) { const b = GF.PLOTS[k]; if (b) { b.col = G.layoutPlots[k].col; b.row = G.layoutPlots[k].row; } }
 
@@ -312,18 +313,37 @@ class FarmScene extends Phaser.Scene {
     // clic: si pegás a un objeto, caminá hacia él e interactuá; si no, movete al punto
     this.input.on("pointerdown", (pt) => {
       if (pt.rightButtonDown()) {
-        if (GF.editMode) {   // en edición el clic derecho levanta el adorno que haya abajo (vuelve a la bolsa)
+        if (GF.editMode) {
+          if (this.placing) { this.placing = null; toast("Colocación cancelada"); return; }   // clic derecho cancela el "colocar con clic"
+          // en edición el clic derecho levanta el adorno que haya abajo (vuelve a la bolsa)
           const ad = this.adornoEnPunto(pt.worldX, pt.worldY);
           if (ad) this.levantarAdorno(ad);
           return;
         }
         if (GF.uiOpen) return;
         const wx = pt.worldX, wy = pt.worldY;
+        // fixs.docx #12 (11/8): clic derecho sobre un animal lo ALIMENTA ahí mismo (la función
+        // existía pero solo dentro de la ventana del Establo y nadie la encontraba)
+        { const an = this.animalEnPunto && this.animalEnPunto(wx, wy);
+          if (an && typeof alimentarAnimal === "function") { alimentarAnimal(an.k); return; } }
         for (const pl of this.plots) {
           if (Math.abs(wx - pl.cx) < T / 2 && Math.abs(wy - pl.by) < T / 2) {
             if (pl.state === "dry" && typeof showSeedWheel === "function") showSeedWheel(pt.event.clientX, pt.event.clientY, pl);
             return;
           }
+        }
+        return;
+      }
+      if (GF.editMode && this.placing) {   // "colocar con clic" (#14/#17, 11/8): el jugador elige la celda
+        const col = Math.floor(pt.worldX / T), row = Math.floor(pt.worldY / T);
+        if (!this.celdaLibreAdorno(col, row, -1)) { toast("Ahí no entra — probá otra celda"); return; }
+        const pl = this.placing;
+        if (pl.tipo === "deco") {
+          if (decoColocar(pl.id, col, row)) { this.syncAdornos(); if (typeof syncEditDeco === "function") syncEditDeco(); toast(DECO_DEF[pl.id].label + " colocado"); }
+          this.placing = null;
+        } else if (pl.tipo === "plot") {
+          this.placing = null;
+          if (typeof parcelaColocar === "function" && parcelaColocar(col, row)) toast("Parcela colocada");   // reinicia la escena para dibujarla
         }
         return;
       }
@@ -535,6 +555,7 @@ class FarmScene extends Phaser.Scene {
       this.rebuildCollisions();
       if (typeof saveFarm === "function") saveFarm(true);
       this.dragObj = null;
+      this.updateTutoArrow();   // fixs.docx #15 (11/8): la flecha del tutorial sigue al edificio movido (antes hacía falta F5)
     });
 
     // bocanadas de humo IRREGULARES (blobs procedurales, no círculos)
@@ -776,7 +797,7 @@ class FarmScene extends Phaser.Scene {
         const antes = G.res[ANIMAL_DEF[o.k].mat] || 0;
         recogerAnimal(o.k);
         const gan = (G.res[ANIMAL_DEF[o.k].mat] || 0) - antes;
-        if (gan > 0) this.premioFx(o.cx, o.by, resSprite(ANIMAL_DEF[o.k].mat), "+" + gan);
+        if (gan > 0) { this.premioFx(o.cx, o.by, resSprite(ANIMAL_DEF[o.k].mat), "+" + gan); this.estrellasFx(o.cx, o.by - 14); }   // fixs #11: celebración
       } else { if (typeof refreshEstablo === "function") refreshEstablo(); openOv("ov-establo"); }
       return;
     }
@@ -1454,8 +1475,19 @@ class FarmScene extends Phaser.Scene {
       if (GF.blockedAt(x, y, 10)) return false;
       const T = GF.TILE, col = Math.floor(x / T), row = Math.floor(y / T);
       if (GF.PLOTS.some(p => p.col === col && p.row === row)) return false;
+      if ((G.decos || []).some(d => d.id === "valla" && d.col === col && d.row === row)) return false;   // fixs #13: la valla puesta FRENA a los animales
     }
     return true;
+  }
+  // fixs.docx #11 (11/8): lluvia de estrellitas al recoger materiales de un animal
+  estrellasFx(x, y) {
+    for (let i = 0; i < 8; i++) {
+      const a = Math.random() * Math.PI * 2, d = 16 + Math.random() * 18;
+      const s = this.add.text(x, y, i % 3 ? "★" : "✨", { fontSize: (9 + Math.random() * 5) + "px", color: i % 2 ? "#ffd75e" : "#fff3cf", stroke: "#20301a", strokeThickness: 2 })
+        .setOrigin(0.5).setDepth(99999).setAlpha(0.95);
+      this.tweens.add({ targets: s, x: x + Math.cos(a) * d, y: y + Math.sin(a) * d - 10, angle: (Math.random() - 0.5) * 180,
+        alpha: 0, duration: 520 + Math.random() * 260, ease: "Quad.easeOut", onComplete: () => s.destroy() });
+    }
   }
   // un destino nuevo cerca de donde está el animal (o en cualquier lado si no se le pasa origen)
   puntoAnimal(desdeX, desdeY) {
@@ -1540,6 +1572,13 @@ class FarmScene extends Phaser.Scene {
     }
     g.setPosition(x, y);
     return g;
+  }
+  // arranca el "colocar con clic" (#14/#17): el próximo clic en edición coloca esto en esa celda
+  iniciarColocar(tipo, id) {
+    if (!GF.editMode && window.setEditMode) setEditMode(true);   // por si vino de la Tienda
+    this.placing = { tipo, id };
+    toast(tipo === "plot" ? "Clic en la celda donde va la parcela (clic derecho cancela)"
+                          : "Clic en la celda donde va el adorno (clic derecho cancela)");
   }
   // celda libre para una PARCELA nueva (13-60): mismas reglas que un adorno, más lejos de la
   // laguna. Barre desde el centro hacia afuera para que las nuevas queden cerca de las demás.

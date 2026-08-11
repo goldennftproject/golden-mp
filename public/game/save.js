@@ -30,7 +30,7 @@ function snapshot() {
     armasUnlocked: G.armasUnlocked, treesOpen: G.treesOpen, rocksOpen: G.rocksOpen, firstCropDone: G.firstCropDone, weapons: G.weapons,
     dishes: G.dishes, cooking: G.cooking, chests: G.chests, dummyUsedAt: G.dummyUsedAt,
     armCd: G.armCd, mkPend: G.mkPend, testeoDado: G.testeoDado,
-    layoutPlots: G.layoutPlots, layoutPond: G.layoutPond };
+    layoutPlots: G.layoutPlots, layoutPond: G.layoutPond, ghInv: G.ghInv };
 }
 // "huella" del estado guardable (incluye el apodo); si no cambia, no hay nada que guardar
 function snapKey() { return JSON.stringify({ n: (typeof nombreLucido === "function" ? nombreLucido() : (window.NICK || "Granjero")), d: snapshot() }); }
@@ -62,7 +62,7 @@ function hydrate(d) {
   if (typeof d.hbInit === "boolean") G.hbInit = d.hbInit;
   if (d.layout && typeof d.layout === "object") G.layout = d.layout;
   if (d.daily && typeof d.daily === "object") G.daily = { day: d.daily.day || 0, last: d.daily.last || "" };
-  if (typeof d.plotsOwned === "number") G.plotsOwned = Math.max(2, Math.min(12, d.plotsOwned));   // viernes (2): se arranca con 2
+  if (typeof d.plotsOwned === "number") G.plotsOwned = Math.max(2, Math.min(typeof PLOT_MAX !== "undefined" ? PLOT_MAX : 60, d.plotsOwned));   // fix #18 (11/8): el tope acá seguía en 12 y el F5 te "devolvía" las parcelas compradas
   if (d.seedBuys && typeof d.seedBuys === "object") G.seedBuys = { date: d.seedBuys.date || "", count: d.seedBuys.count || 0 };
   if (typeof d.hpMax === "number") G.hpMax = d.hpMax;
   G.combatXp = (typeof d.combatXp === "number") ? d.combatXp : 0;
@@ -168,6 +168,7 @@ function hydrate(d) {
   G.mkPend = Array.isArray(d.mkPend) ? d.mkPend : [];               // entregas pendientes del Mercado
   G.testeoDado = d.testeoDado === true;                             // el regalo del modo testeo se da una sola vez
   if (d.layoutPlots && typeof d.layoutPlots === "object") G.layoutPlots = d.layoutPlots;
+  if (Array.isArray(d.ghInv)) G.ghInv = d.ghInv;   // GOD HAND 2.0 (11/8): su inventario de semillas
   if (d.layoutPond && typeof d.layoutPond === "object") G.layoutPond = { col: d.layoutPond.col, row: d.layoutPond.row };
   if (d.picks && d.picks.owned && d.picks.dur) G.picks = d.picks;
   // migración ÚNICA al modelo apilable (31/7): la durabilidad vieja pasa a ser "1 herramienta"

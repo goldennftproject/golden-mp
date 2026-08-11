@@ -714,17 +714,17 @@ class ForestScene extends Phaser.Scene {
     if (typeof tutoEvent === "function") { tutoEvent("kill"); tutoEvent("kill5"); }
     if (typeof statAdd === "function") statAdd("matar", m.key);
     this.floatTxt(m, "+" + m.def.xp + " XP", "#ffd75e");     // feedback por kill hacia la barra
-    // armaduras: chance de drop (se autoequipan si mejoran)
     const drops = [];
-    if (m.def.gearLoot) for (const [gk, ch] of m.def.gearLoot) { if (Math.random() < ch) drops.push({ k: gk, n: 1, kind: "gear" }); }
+    // fixs.docx #8 (11/8): los mobs YA NO sueltan piezas de armadura — la armadura sale
+    // solo de la Curtiduría. Las tablas gearLoot quedan en los datos por si se revierte.
+    // if (m.def.gearLoot) for (const [gk, ch] of m.def.gearLoot) { if (Math.random() < ch) drops.push({ k: gk, n: 1, kind: "gear" }); }
     if (this.target === m) this.clearTarget();
     const loot = rollLoot(m.def);
     Object.keys(loot).forEach(k => drops.push({ k, n: loot[k], kind: "res" }));
     if ((m.def.lvl || 0) >= 8 && Math.random() < 0.30) drops.push({ k: "esencia_runica", n: 1, kind: "res" });   // Altar: drop de mobs Nv 8+
-    // ESENCIA OSCURA (10/8): el recurso que SOLO sale acá abajo. Cae más cuanto más hondo, y
-    // el jefe suelta un puñado. No se compra, no se cultiva y no lo dan los animales.
+    // ESENCIA OSCURA (10/8 · fix #1 11/8): SOLO la dan los mobs de nivel 10-12.
     if (typeof rollEsencia === "function") {
-      const eo = rollEsencia(this.zonaKey, !!m.def.boss);
+      const eo = rollEsencia(this.zonaKey, !!m.def.boss, m.def.lvl || 0);
       if (eo > 0) drops.push({ k: "esencia_oscura", n: eo, kind: "res" });
     }
     { const dg = eqRunaVal("dorada"); if (dg && Math.random() * 100 < dg) { G.golden += 1; this.floatTxt(m, "+1 $Golden", "#ffe08a"); } }   // Runa Dorada

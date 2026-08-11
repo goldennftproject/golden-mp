@@ -832,7 +832,7 @@ function passClaim(nv, vipTrack) {
   if (r.seed) G.seeds[r.seed[0]] = (G.seeds[r.seed[0]] || 0) + r.seed[1];
   if (r.dish) { G.dishes = G.dishes || {}; G.dishes[r.dish[0]] = (G.dishes[r.dish[0]] || 0) + r.dish[1]; }
   if (r.pick) { G.picks.owned[r.pick] = true; G.picks.dur[r.pick] = (G.picks.dur[r.pick] || 0) + 1; }
-  if (r.ficha) { G.plotsOwned = Math.min(PLOT_MAX, (G.plotsOwned || 2) + 1); if (typeof parcelaExtraCrear === "function") parcelaExtraCrear(); }
+  if (r.ficha) { G.plotsOwned = Math.min(PLOT_MAX, (G.plotsOwned || 2) + 1); if (G.plotsOwned <= GF.PLOTS.length && window.farmScene && window.farmScene.refreshPlotLocks) { try { window.farmScene.refreshPlotLocks(); } catch (e) {} } if (typeof syncEditDeco === "function") syncEditDeco(); }
   if (r.cos) { p.cosmetics.push(r.cos); }
   log("Pase nivel " + nv + (vipTrack ? " (VIP)" : "") + ": recibiste " + passRewardStr(r) + ".", "gold");
   if (typeof tutoEvent === "function") tutoEvent("passclaim");
@@ -1218,8 +1218,8 @@ const DECO_DEF = {
 // alto en pantalla de cada adorno, en píxeles (el tile mide 42). El ancho sale solo,
 // respetando la proporción del sprite. Con esto un farol no queda del porte de un árbol.
 var DECO_ALTO = {
-  valla: 24, flores: 24, farol: 40, banco: 26,
-  espantapajaros: 48, fuente: 30, estatua: 36, arbolito: 46,
+  valla: 24, flores: 24, farol: 56, banco: 26,
+  espantapajaros: 48, fuente: 42, estatua: 36, arbolito: 46,   // fixs.docx #4 (11/8): fuente 30→42 y farol 40→56 (+40%)
   espantapajaros_oro: 48, farolito: 40,
 };
 var DECO_MAX = 40;   // cuántos adornos se pueden tener colocados a la vez
@@ -1269,19 +1269,16 @@ var PLOT_GOLDEN_MIN = 5;        // piso: sin esto la primera parcela salía 1 $G
 var PLOT_MAX = 60;
 var PLOT_EXTRA_SUBA = 1.12;   // suba por parcela después de la 12 (la duplicación de antes hacía imposible la 60)
 function plotUnlockGolden() { return Math.max(PLOT_GOLDEN_MIN, Math.ceil(plotUnlockCost() / PLOT_GOLDEN_CAMBIO)); }
-// la 13 en adelante no existe en GF.PLOTS: se le fija posición (celda libre) y se
-// reinicia la escena, que las levanta de layoutPlots — mismo mecanismo que "mover parcela"
-function parcelaExtraCrear() {
-  if ((G.plotsOwned || 2) <= GF.PLOTS.length) {
-    if (window.farmScene && window.farmScene.refreshPlotLocks) { try { window.farmScene.refreshPlotLocks(); } catch (e) {} }
-    return;
-  }
-  const i = GF.PLOTS.length, sc = window.farmScene;
-  const pt = (sc && sc.celdaLibreParcela) ? sc.celdaLibreParcela() : null;
+// fix #17 del diseñador (11/8): la parcela comprada NO se tira sola al suelo — queda
+// "pendiente" (plotsOwned > GF.PLOTS.length) y se coloca con clic desde el modo edición.
+function parcelasPendientes() { return Math.max(0, (G.plotsOwned || 2) - GF.PLOTS.length); }
+function parcelaColocar(col, row) {   // la llama la escena con la celda que eligió el jugador
+  if (parcelasPendientes() <= 0) return false;
   G.layoutPlots = G.layoutPlots || {};
-  if (!G.layoutPlots[i]) G.layoutPlots[i] = pt || { col: 11, row: 7 };   // sin lugar: al medio, y se mueve editando
+  G.layoutPlots[GF.PLOTS.length] = { col, row };   // la escena la levanta de acá al reiniciar
   if (typeof saveFarm === "function") saveFarm(true);
   if (window.FARM && window.FARM.scene) { try { window.FARM.scene.restart(); } catch (e) {} }
+  return true;
 }
 function comprarParcela(conGolden) {
   if ((G.plotsOwned || 2) >= PLOT_MAX) { toast("Ya tenés las " + PLOT_MAX + " parcelas"); return; }
@@ -1296,8 +1293,13 @@ function comprarParcela(conGolden) {
   }
   G.plotsOwned = Math.min(PLOT_MAX, (G.plotsOwned || 2) + 1);
   log("Desbloqueaste una parcela nueva. Ahora tenés " + G.plotsOwned + ".", "gold");
-  toast("¡Parcela nueva!");
-  parcelaExtraCrear();
+  if (G.plotsOwned > GF.PLOTS.length) {   // la 13 en adelante: se coloca a mano (#17)
+    toast("¡Parcela nueva! Está en tu zona de edición: ✏️ ponela donde quieras");
+    if (typeof syncEditDeco === "function") syncEditDeco();   // refresca el botón "Poner parcela"
+  } else {
+    toast("¡Parcela nueva!");
+    if (window.farmScene && window.farmScene.refreshPlotLocks) { try { window.farmScene.refreshPlotLocks(); } catch (e) {} }
+  }
   refreshHud(); if (typeof refreshMarket === "function" && isOpen("ov-market")) refreshMarket();
   if (typeof saveFarm === "function") saveFarm(true);
 }
@@ -1319,27 +1321,90 @@ function comprarGodHand() {
   refreshHud(); if (typeof refreshMarket === "function" && isOpen("ov-market")) refreshMarket();
   if (typeof saveFarm === "function") saveFarm(true);
 }
+/* ---- GOD HAND 2.0 (fixs.docx #19, 11/8): el cropper NFT completo -----------------
+   Ya no siembra "lo que tengas elegido" y listo: tiene SU PROPIO inventario de 6
+   espacios (50 semillas cada uno, 300 en total) y mientras no estás hace el ciclo
+   entero en tus parcelas vacías: SIEMBRA → COSECHA → RESIEMBRA, y al volver te
+   entrega todo lo producido junto. Cobra en plata por hora trabajada: la primera
+   sale GODHAND_PLATA_HORA y cada una que sigue un 10% más. Trabaja hasta 24 h. */
+var GODHAND_SLOTS = 6, GODHAND_CAP_SLOT = 50;            // 6 × 50 = 300 semillas
+var GODHAND_PLATA_HORA = 100;                            // la primera hora
+var GODHAND_SUBA_HORA = 1.10;                            // cada hora sale 10% más que la anterior
+var GODHAND_MAX_H = 24;                                  // tope de trabajo por ausencia
+function godHandInv() { if (!Array.isArray(G.ghInv) || G.ghInv.length !== GODHAND_SLOTS) G.ghInv = Array.from({ length: GODHAND_SLOTS }, () => null); return G.ghInv; }
+function godHandTotal() { return godHandInv().reduce((a, s) => a + (s ? s.n : 0), 0); }
+function godHandCostoHoras(h) { let c = 0, p = GODHAND_PLATA_HORA; for (let i = 0; i < h; i++) { c += Math.round(p); p *= GODHAND_SUBA_HORA; } return c; }
+function godHandCargar(slot, key) {   // pasa semillas de tu bolsa al puño (hasta llenar el espacio)
+  const inv = godHandInv(); if (slot < 0 || slot >= GODHAND_SLOTS || !CROP_DEF[key]) return;
+  const s = inv[slot];
+  if (s && s.key !== key && s.n > 0) { toast("Ese espacio ya tiene " + CROP_DEF[s.key].label); return; }
+  const cabe = GODHAND_CAP_SLOT - (s ? s.n : 0), hay = Math.floor(G.seeds[key] || 0);
+  const n = Math.min(cabe, hay);
+  if (n <= 0) { toast(hay <= 0 ? "No tenés semillas de " + CROP_DEF[key].label : "Ese espacio está lleno"); return; }
+  G.seeds[key] -= n;
+  inv[slot] = { key, n: (s ? s.n : 0) + n };
+  toast("+" + n + " " + CROP_DEF[key].label + " al GOD HAND");
+  if (typeof syncSlots === "function") syncSlots(); if (isOpen("ov-inv")) refreshInv();
+  if (typeof refreshGodHand === "function" && isOpen("ov-godhand")) refreshGodHand();
+  if (typeof saveFarm === "function") saveFarm(true);
+}
+function godHandVaciar(slot) {   // devuelve las semillas del espacio a tu bolsa
+  const inv = godHandInv(), s = inv[slot]; if (!s || !s.n) return;
+  G.seeds[s.key] = (G.seeds[s.key] || 0) + s.n;
+  inv[slot] = null;
+  if (typeof syncSlots === "function") syncSlots(); if (isOpen("ov-inv")) refreshInv();
+  if (typeof refreshGodHand === "function" && isOpen("ov-godhand")) refreshGodHand();
+  if (typeof saveFarm === "function") saveFarm(true);
+}
 // La corre main.js al entrar, con los milisegundos que estuviste afuera.
 function godHandSembrar(msAusente) {
   if (!tengoGodHand() || !Array.isArray(G.plots)) return 0;
-  const k = G.selSeed; if (!k || !CROP_DEF[k]) return 0;
+  const inv = godHandInv();
+  if (!godHandTotal()) return 0;
   const owned = Math.max(2, Math.min(GF.PLOTS.length, G.plotsOwned || 2));
-  const desde = nowMs() - Math.max(0, msAusente || 0);   // se planta "cuando te fuiste"
-  let n = 0;
-  for (let i = 0; i < owned; i++) {
-    const p = G.plots[i];
-    if (!p || p.state !== "dry") continue;               // solo las que quedaron vacías
-    if ((G.seeds[k] || 0) <= 0) break;                   // sin semillas, hasta acá llegó
-    G.seeds[k]--;
-    const dur = CROP_DEF[k].grow * 1000 * (typeof cdMult === "function" ? cdMult() : 1);
-    G.plots[i] = { state: "growing", cropKey: k, readyAt: desde + dur, growTotal: dur, witherAt: 0 };
-    n++;
+  const libres = [];
+  for (let i = 0; i < owned; i++) { const p = G.plots[i]; if (!p || p.state === "dry") libres.push(i); }
+  if (!libres.length) return 0;
+  const horasFuera = Math.min(GODHAND_MAX_H, Math.max(0, msAusente || 0) / 3600000);
+  if (horasFuera < 0.02) return 0;
+  const desde = nowMs() - Math.max(0, msAusente || 0);
+  const prod = {}, usado = {};
+  let horasTrabajadas = 0, ciclos = 0;
+  for (const i of libres) {
+    let t = horasFuera;   // horas de ausencia disponibles en ESTA parcela
+    while (true) {
+      const slot = inv.find(s => s && s.n > 0 && CROP_DEF[s.key]);
+      if (!slot) break;
+      const ghoras = (CROP_DEF[slot.key].grow * (typeof cdMult === "function" ? cdMult() : 1)) / 3600;
+      if (ghoras <= t) {   // le da el tiempo: cosecha completa y sigue
+        t -= ghoras; slot.n--; usado[slot.key] = (usado[slot.key] || 0) + 1; ciclos++;
+        const n = Math.max(1, Math.round((CROP_DEF[slot.key].yield || 1) * yieldMult()));
+        prod[slot.key] = (prod[slot.key] || 0) + n;
+        horasTrabajadas = Math.max(horasTrabajadas, horasFuera - t);
+      } else {   // no llega a otra cosecha: deja la parcela SEMBRADA creciendo desde ese momento
+        slot.n--; usado[slot.key] = (usado[slot.key] || 0) + 1;
+        const dur = CROP_DEF[slot.key].grow * 1000 * (typeof cdMult === "function" ? cdMult() : 1);
+        const t0 = desde + (horasFuera - t) * 3600000;
+        G.plots[i] = { state: "growing", cropKey: slot.key, readyAt: t0 + dur, growTotal: dur, witherAt: 0 };
+        horasTrabajadas = horasFuera;
+        break;
+      }
+    }
   }
-  if (n) {
-    log("GOD HAND sembró " + n + " parcela(s) de " + CROP_DEF[k].label + " mientras no estabas.", "gold");
-    if (typeof saveFarm === "function") saveFarm(true);
-  }
-  return n;
+  if (!ciclos && !Object.keys(usado).length) return 0;
+  // lo cosechado entra directo (los buffs de yield del momento ya se aplicaron por cosecha)
+  for (const k in prod) G.res[k] = (G.res[k] || 0) + prod[k];
+  // el sueldo: por hora trabajada, cada una más cara que la anterior
+  const horas = Math.max(1, Math.ceil(horasTrabajadas));
+  const costo = Math.min(G.plata, godHandCostoHoras(horas));
+  G.plata -= costo;
+  const detalle = Object.keys(prod).map(k => "+" + prod[k] + " " + CROP_DEF[k].label).join(" · ");
+  log("GOD HAND trabajó " + horas + " h mientras no estabas: " + ciclos + " cosecha(s)" + (detalle ? " — " + detalle : "") +
+      ". Cobró " + fmt(costo) + " de plata. Semillas restantes: " + godHandTotal() + "/300.", "gold");
+  if (window.celebrate && ciclos) celebrate({ title: "GOD HAND", sub: horas + " h de trabajo", big: false, reward: detalle || (ciclos + " cosechas") });
+  if (typeof saveFarm === "function") saveFarm(true);
+  if (typeof syncSlots === "function") syncSlots();
+  return ciclos;
 }
 
 // ============ LA ZONA NEGRA, PARTIDA EN MAPAS (10/8, doc del diseñador) ============
@@ -1420,8 +1485,11 @@ RES_LABEL.esencia_oscura = "Esencia oscura";
 if (typeof RES_EMOJI !== "undefined") RES_EMOJI.esencia_oscura = "🌑";
 var ESENCIA_POR_ZONA = { pantano: 0.10, piedra: 0.22, fuego: 0.40, guarida: 0.75 };
 // se tira por cada monstruo vencido; devuelve cuánta cayó (0 casi siempre en el pantano)
-function rollEsencia(zona, esBoss) {
-  const p = (ESENCIA_POR_ZONA[zona] || 0) * (esBoss ? 8 : 1);
+// fixs.docx #1 (11/8): la esencia oscura la dan SOLO los mobs de nivel 10 a 12
+// (araña y goblin hoy). Antes era por zona y caía de cualquier bicho de esa zona.
+function rollEsencia(zona, esBoss, lvlMob) {
+  if (!(lvlMob >= 10 && lvlMob <= 12)) return 0;
+  const p = (ESENCIA_POR_ZONA[zona] || 0);
   let n = Math.floor(p);
   if (Math.random() < (p - n)) n++;
   return n;
@@ -2295,10 +2363,16 @@ MONSTER_ORDER.forEach(k => { const m = MONSTER_DEF[k];
 const ATTACK_MS = 2000;
 const MELEE_RANGE = GF.TILE * 1.35;
 const BOW_RANGE = GF.TILE * 4;
+// fixs.docx #2 (11/8): "bajar el porcentaje de drops en todos los mobs". UN número para el
+// diseñador: multiplica la chance de TODOS los materiales. La plata garantizada no se toca
+// (chance 1), así matar siempre paga algo pero los materiales salen menos seguido.
+var DROP_CHANCE_MULT = 0.6;
 function rollLoot(def) {
   const out = {};
   for (const k in def.loot) {
-    const e = def.loot[k], a = e[0], b = e[1], chance = (e.length > 2 ? e[2] : 1);
+    const e = def.loot[k], a = e[0], b = e[1];
+    let chance = (e.length > 2 ? e[2] : 1);
+    if (chance < 1) chance *= DROP_CHANCE_MULT;   // #2: los no-garantizados caen menos
     if (Math.random() >= Math.min(1, chance * luckMult())) continue;   // suerte de la comida mejora los drops (detalles 338)
     let n = a + Math.floor(Math.random() * (b - a + 1));
     n = Math.round(n * (typeof chestBonus === "function" ? chestBonus() : 1));   // +1% de materiales por cofre colocado (el bono existía pero no se aplicaba)
@@ -2412,7 +2486,8 @@ function descKey(d) { return d ? d.kind + ":" + d.key : ""; }
 function canonicalStacks() {
   const list = [];
   ["axe", "rod"].forEach(k => { let n = toolCount(k); while (n > 0) { list.push({ kind: "tool", key: k }); n -= 99; } });   // apilables ×99
-  for (const id of ARM_ORDER) if (G.weapons && G.weapons[id]) list.push({ kind: "arm", key: id });   // doc 2/8: armas nuevas
+  // fixs.docx #9 (11/8): el arma EQUIPADA ya no ocupa lugar en la bolsa — vive en el panel de Equipo
+  for (const id of ARM_ORDER) if (G.weapons && G.weapons[id] && G.gear.arma !== id) list.push({ kind: "arm", key: id });
   PICK_ORDER.forEach(id => { let n = pickCount(id); while (n > 0) { list.push({ kind: "pick", key: id }); n -= 99; } });   // picos apilables ×99
   ITEM_RES_ORDER.forEach(r => { let n = Math.floor(G.res[r] || 0); while (n > 0) { list.push({ kind: "res", key: r }); n -= 99; } });
   CROP_ORDER.forEach(s => { let n = Math.floor(G.seeds[s] || 0); while (n > 0) { list.push({ kind: "seed", key: s }); n -= 99; } });
@@ -2491,9 +2566,12 @@ function goFishing() {
   G.fish[rar]++; addXp("fishing", 8); addXp("cooking", 3);
   if (typeof statAdd === "function") statAdd("pescar");
   if (typeof tutoEvent === "function") tutoEvent("fish");
+  // fixs.docx #16 (11/8): pescar ya NO regala buffs — el pez va a la bolsa y los buffs
+  // salen de COCINARLO (los platos con pescado ya los daban). La plata del común y el
+  // premio del legendario se conservan: son botín, no buff.
   if (rar === "comun") { const p = 8 + Math.floor(Math.random() * 8); G.plata += p; log(`Pez común: +${p} plata.`); toast("+" + p + " "); }
-  else if (rar === "raro") { addBuff("yield", "Yield +10%", 1.10, 90); log("Pez raro: buff Yield +10% (90s).", "good"); toast("¡Buff de yield!"); }
-  else if (rar === "epico") { addBuff("cd", "Cooldowns -25%", 0.75, 90); log("Pez épico: cooldowns -25% (90s).", "good"); toast("¡Cooldowns -25%!"); }
+  else if (rar === "raro") { log("Pez raro a la bolsa — cocinalo para sacarle un buff.", "good"); toast("¡Pez raro!"); }
+  else if (rar === "epico") { log("Pez épico a la bolsa — cocinalo para sacarle un buff.", "good"); toast("¡Pez épico!"); }
   else { G.golden += 15; tryAddRes("oro", 1); log("¡Legendario! +15 y +1 Oro.", "gold"); toast("¡LEGENDARIO!"); }
   refreshHud(); if (typeof syncSlots === "function") syncSlots(); if (isOpen("ov-inv")) refreshInv();
 }

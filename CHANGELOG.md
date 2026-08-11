@@ -1744,8 +1744,70 @@ God Hand comprado avisa: "Ya está trabajando — actúa solo cuando volvés al 
 
 ---
 
+## Día 16 — Martes 11/08 · Los 19 puntos de fixs.docx
+
+El diseñador mandó su lista de fixes probando la build en vivo. Estado: **todos resueltos**
+salvo la parte de arte que espera descarga (mazos y God Hand).
+
+### Bugs
+- **#18 — Comprar parcela y F5 la borraba.** `save.js` seguía recortando `plotsOwned` a 12
+  al cargar: comprabas la 13 y el refresh te la "devolvía". Ahora respeta `PLOT_MAX`.
+- **#15 — La flecha del tutorial no seguía al edificio movido** en edición (pedía F5).
+  Ahora `updateTutoArrow()` se rehace al soltar el edificio.
+
+### Colocación (#14 y #17): nada se "tira" solo a la granja
+- La parcela comprada (13+) ya **no aparece sola en una celda**: queda pendiente en la zona
+  de edición, con un botón **"Poner parcela (N)"** en la barra.
+- Adornos y parcelas se colocan con **"colocar con clic"**: apretás Poner, hacés clic en la
+  celda que quieras (verde si entra), clic derecho cancela. Chau "primer hueco libre".
+
+### Balance de la Zona Negra (#1, #2, #8)
+- **Esencia oscura: SOLO la dan los mobs de nivel 10-12** (araña y goblin, en el Cañón de
+  Piedra). Antes caía por zona, de cualquier bicho. El botín del asalto al dragón no cambia.
+- **Drops más raros**: `DROP_CHANCE_MULT = 0.6` multiplica la chance de todos los materiales
+  no garantizados (la plata por kill sigue fija). Un número único para el diseñador.
+- **Los mobs ya no sueltan piezas de armadura**: la armadura sale solo de la Curtiduría.
+
+### Interfaz y calidad de vida
+- **#4** — Fuente y farol un 40% más grandes (42 y 56 px), sprites reprocesados a 2x.
+- **#5** — Pase de batalla con botón **"🎁 RECLAMAR TODO (N)"**: junta lo pendiente de todos
+  los niveles alcanzados (free y VIP) de un clic.
+- **#7** — La armadura crafteada **ahora se ve**: el panel de Equipo lista tus sets de la
+  Curtiduría con piezas, defensa, bono de set y botón Equipar.
+- **#9** — El arma **equipada ya no ocupa lugar en la bolsa** (vive en el panel de Equipo).
+- **#10** — **Menú fijo**: opción "📌 Menú fijo" en el propio menú; queda desplegado y no se
+  cierra al elegir ni al hacer clic afuera. Sobrevive al F5.
+- **#16** — Pescar **ya no regala buffs**: el pez raro/épico va a la bolsa y el buff sale de
+  cocinarlo. La plata del común y el premio del legendario quedan (son botín).
+
+### Animales (#11, #12, #13)
+- **Estrellitas de celebración** al recoger materiales (8 estrellas doradas + el premio).
+- **Alimentar sin abrir ventanas**: clic derecho sobre el animal en la granja lo alimenta
+  (la función existía pero solo dentro del Establo y nadie la encontraba).
+- **Las vallas colocadas frenan a los animales**: la celda de una valla ya no es transitable.
+
+### GOD HAND 2.0 (#19) — el cropper NFT completo
+- **Inventario propio**: 6 espacios × 50 semillas (300 en total). Ventana nueva (desde la
+  Tienda → "✋ Cargar semillas") para cargar y vaciar espacios.
+- **Ciclo completo**: mientras no estás hace SIEMBRA → COSECHA → RESIEMBRA en las parcelas
+  que estaban vacías, consumiendo su propio inventario, y te entrega todo al volver (log +
+  celebración). Si una siembra queda a medias, encontrás la parcela creciendo.
+- **Tarifa**: 100 de plata la primera hora trabajada, +10% cada hora siguiente
+  (`GODHAND_PLATA_HORA`, `GODHAND_SUBA_HORA`), tope 24 h por ausencia. Si la plata no
+  alcanza, cobra hasta donde hay.
+- **Arte NFT**: guantelete dorado bajando de una nube con rayos (a integrar con el resto).
+
+### Arte nuevo pendiente de descarga
+- **#6 — Mazos de verdad**: los `arm_mazo_*` eran un pico. Generados los 5 (madera, piedra,
+  bronce, oro, diamante) como mazos de guerra con cabeza del material →
+  `descargar_mazos_godhand.ps1` (incluye el godhand.png).
+- Los **edificios v3** (sin techo repetido ni crema) quedaron generados y en pausa →
+  `descargar_edificios_v3.ps1`.
+
+---
+
 ## Pendientes conocidos
-*(actualizado el 10/8)*
+*(actualizado el 11/8)*
 
 ### Antes de publicar
 - Deploy del 9/8 hecho: ya está todo en vivo.

@@ -37,8 +37,8 @@ FARM = os.path.join(RAIZ, "public", "assets", "farm")
 # alto con el que se DIBUJA cada adorno en el juego (DECO_ALTO en state.js).
 # Se guarda al doble. Si cambiás uno allá, cambialo acá y volvé a correr esto.
 TAM = {
-    "valla": 24, "flores": 24, "farol": 40, "banco": 26,
-    "espantapajaros": 48, "fuente": 30, "estatua": 36, "arbolito": 46,
+    "valla": 24, "flores": 24, "farol": 56, "banco": 26,
+    "espantapajaros": 48, "fuente": 42, "estatua": 36, "arbolito": 46,   # fixs #4 (11/8): fuente y farol +40%
 }
 # adornos del cofre de login (no se compran): mismos altos que DECO_ALTO en state.js
 TAM_COFRE = {

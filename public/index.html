@@ -807,6 +807,14 @@
     <div class="forge-list" id="curti-list" style="max-height:62vh"></div>
   </div></div>
 
+  <!-- GOD HAND 2.0 (fixs.docx #19, 11/8): el inventario del cropper NFT -->
+  <div class="ov" id="ov-godhand"><div class="card" style="width:min(620px,94%)">
+    <button class="close" data-close="ov-godhand">×</button>
+    <h3>✋ GOD HAND</h3>
+    <div class="sub">Cargale semillas (6 espacios · 50 c/u · 300 en total) y mientras no estás hace el ciclo entero: siembra, cosecha y resiembra tus parcelas vacías. Al volver te entrega todo junto. Cobra 100 de plata la primera hora y cada hora sale 10% más — trabaja hasta 24 h por ausencia.</div>
+    <div class="forge-list" id="godhand-list" style="max-height:62vh"></div>
+  </div></div>
+
   <div class="ov" id="ov-establo"><div class="card" style="width:min(620px,94%)">
     <button class="close" data-close="ov-establo">×</button>
     <h3>Establo</h3>
@@ -850,6 +858,8 @@
       <button class="gmi" data-panel="ov-cos"><span class="ic"></span> Cosméticos</button>
       <button class="gmi" data-panel="ov-lb"><span class="ic"></span> Leaderboard <b class="key">L</b></button>
       <button class="gmi" data-panel="ov-config"><span class="ic"></span> Configuración <b class="key">C</b></button>
+      <!-- fixs.docx #10 (11/8): el menú puede quedarse desplegado -->
+      <button class="gmi" id="gm-fijar"><span class="ic"></span> 📌 Menú fijo: No</button>
     </div>
   </div>
 
@@ -863,6 +873,8 @@
     <!-- 10/8: desde el modo edición se ponen y se levantan los adornos comprados -->
     <select id="edit-deco" title="Adorno para colocar"></select>
     <button class="gold sm" id="edit-poner">Poner adorno</button>
+    <!-- fix #17 (11/8): las parcelas compradas se colocan a mano desde acá -->
+    <button class="gold sm" id="edit-parcela" style="display:none">Poner parcela</button>
     <span class="fds" id="edit-decons"></span>
   </div>
 

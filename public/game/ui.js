@@ -10,7 +10,7 @@ function log(m, k = "") { const b = $("log"); if (!b) return; const d = document
 /* ---- overlays ---- */
 function isOpen(id) { const e = $(id); return !!(e && e.classList.contains("show")); }
 function anyOvOpen() { return !!document.querySelector(".ov.show"); }
-const OV_REFRESH = { "ov-entrenando": () => entrenarSync(), "ov-clan": () => refreshClan(), "ov-misiones": () => refreshMisiones(), "ov-mapa": () => refreshMapa(), "ov-inv": () => refreshInv(), "ov-skills": () => refreshSkills(), "ov-equip": () => refreshEquip(),
+const OV_REFRESH = { "ov-entrenando": () => entrenarSync(), "ov-clan": () => refreshClan(), "ov-misiones": () => refreshMisiones(), "ov-mapa": () => refreshMapa(), "ov-inv": () => refreshInv(), "ov-skills": () => refreshSkills(), "ov-equip": () => refreshEquip(), "ov-godhand": () => refreshGodHand(),
   "ov-forge": () => refreshForge(), "ov-market": () => refreshMarket(), "ov-barn": () => refreshBarn(),
   "ov-cocina": () => refreshCooking(),
   "ov-horno": () => refreshHorno(),
@@ -485,6 +485,24 @@ function refreshEquip() {
     refreshEquip(); if (typeof saveFarm === "function") saveFarm();
   };
   const ed = $("eq-def"); if (ed) ed.textContent = "Defensa total: " + gearDefTotal();
+  // fixs.docx #7 (11/8): la armadura de la Curtiduría se crafteaba y "no aparecía en ningún
+  // lado" fuera de esa ventana. Ahora el panel de Equipo lista tus sets, piezas y bonos.
+  if (box) {
+    let h = '<div class="secc">Armadura de la Curtiduría</div>';
+    const tengoAlguna = ARMOR_ORDER.some(s => armorPuestas(s) > 0);
+    if (!tengoAlguna) h += '<div class="info">Todavía no crafteaste ninguna pieza — se hacen en la Curtiduría con los materiales de tus animales.</div>';
+    else ARMOR_ORDER.forEach(set => {
+      const n = armorPuestas(set); if (!n) return;
+      const sd = ARMOR_SETS[set], eq = armorEquipado(set);
+      h += '<div class="forge-row' + (eq ? ' eq' : '') + '"><div class="finfo"><div class="fnm">' + sd.label + (eq ? ' <span class="tag">equipada</span>' : '') + ' <span class="tag">' + n + '/5</span></div>' +
+        '<div class="fds">' + ARMOR_SLOTS.filter(pz => armorTiene(set, pz)).map(pz =>
+          '<img src="' + GF.spr("armor_" + set + "_" + pz) + '" title="' + ARMOR_SLOT_LABEL[pz] + '" style="width:26px;height:26px;image-rendering:pixelated;vertical-align:middle" onerror="this.remove()">').join(" ") + '</div>' +
+        (armorSetCompleto(set) ? '<div class="fds">Set completo: ' + sd.bono.txt + '</div>' : '<div class="fds">Defensa de las piezas: +' + ARMOR_SLOTS.reduce((a, pz) => a + (armorTiene(set, pz) ? sd.piezas[pz].def : 0), 0) + '</div>') + '</div>' +
+        '<div class="fbtns">' + (eq ? '' : '<button class="green sm" data-armeq="' + set + '">Equipar</button>') + '</div></div>';
+    });
+    box.innerHTML = h;
+    box.querySelectorAll("[data-armeq]").forEach(b => b.onclick = () => { G.armorEq = b.dataset.armeq; toast(ARMOR_SETS[b.dataset.armeq].label + " equipada"); if (typeof saveFarm === "function") saveFarm(); refreshEquip(); refreshHud(); });
+  }
 }
 
 /* ---- cofre diario ---- */
@@ -990,6 +1008,13 @@ function refreshPass() {
       '<button class="green sm" id="pass-ir-mis">Ver misiones</button></div>'; }
   // cosméticos ganados
   if (p.cosmetics.length) h += '<div class="fds" style="margin-top:6px">Tus cosméticos: ' + p.cosmetics.join(" · ") + '</div>';
+  // fixs.docx #5 (11/8): botón RECLAMAR TODO — junta lo pendiente de todos los niveles alcanzados
+  const pendientes = [];
+  for (let nv = 1; nv <= Math.min(lvl, 30); nv++) {
+    if (!p.claimF[nv]) pendientes.push([nv, false]);
+    if (p.vip && !p.claimV[nv]) pendientes.push([nv, true]);
+  }
+  if (pendientes.length) h += '<div class="info"><button class="green sm" id="pass-claimall">🎁 RECLAMAR TODO (' + pendientes.length + ')</button></div>';
   // los 30 niveles
   h += '<div class="secc">Recompensas (Free / VIP)</div>';
   for (let nv = 1; nv <= 30; nv++) {
@@ -1009,9 +1034,40 @@ function refreshPass() {
   const pl = $("pass-buylvl"); if (pl) pl.onclick = () => passBuyLevel();
   box.querySelectorAll("[data-pfree]").forEach(b => b.onclick = () => passClaim(Number(b.dataset.pfree), false));
   box.querySelectorAll("[data-pvip]").forEach(b => b.onclick = () => passClaim(Number(b.dataset.pvip), true));
+  const ca = $("pass-claimall"); if (ca) ca.onclick = () => { pendientes.forEach(([nv, vip]) => passClaim(nv, vip)); toast("Reclamaste " + pendientes.length + " recompensa(s) del pase"); };   // fixs #5
 }
 
 
+
+/* ---- GOD HAND 2.0 (fixs.docx #19, 11/8): los 6 espacios de semillas ---- */
+function refreshGodHand() {
+  const box = $("godhand-list"); if (!box) return;
+  if (!tengoGodHand()) { box.innerHTML = '<div class="info">Todavía no la compraste — está en la Tienda, sección GOD HAND.</div>'; return; }
+  const inv = godHandInv();
+  let h = '<div class="info">Semillas cargadas: <b>' + godHandTotal() + '/' + (GODHAND_SLOTS * GODHAND_CAP_SLOT) + '</b> · ' +
+    'Tarifa: <b>' + GODHAND_PLATA_HORA + ' plata</b> la 1ª hora, +10% cada una (24 h = ' + fmt(godHandCostoHoras(GODHAND_MAX_H)) + ')</div>';
+  inv.forEach((s, i) => {
+    const d = s && CROP_DEF[s.key];
+    h += '<div class="forge-row"><div class="fic">' + (d ? '<img src="' + GF.spr("crop_" + s.key) + '" onerror="this.outerHTML=\'' + d.emoji + '\'">' : '') + '</div>' +
+      '<div class="finfo"><div class="fnm">Espacio ' + (i + 1) + (d ? ' · ' + d.label + ' <span class="tag">' + s.n + '/' + GODHAND_CAP_SLOT + '</span>' : ' <span class="tag">vacío</span>') + '</div>' +
+      '<div class="fds">' + (d ? 'Ciclo de ' + d.label + ': siembra, cosecha y resiembra solo.' : 'Elegí qué semilla cargar.') + '</div></div>' +
+      '<div class="fbtns">' +
+        (d && s.n >= GODHAND_CAP_SLOT ? '' : '<select data-ghsel="' + i + '">' +
+          (d ? '<option value="' + s.key + '">' + CROP_DEF[s.key].label + '</option>'
+             : '<option value="">— semilla —</option>' + CROP_ORDER.filter(k => (G.seeds[k] || 0) > 0).map(k => '<option value="' + k + '">' + CROP_DEF[k].label + ' (' + Math.floor(G.seeds[k]) + ')</option>').join("")) +
+          '</select><button class="green sm" data-ghload="' + i + '">Cargar</button>') +
+        (d ? '<button class="ghost sm" data-ghout="' + i + '">Vaciar</button>' : '') +
+      '</div></div>';
+  });
+  h += '<div class="fds">Solo trabaja las parcelas que estaban VACÍAS al irte. Si una siembra queda a medias, la vas a encontrar creciendo.</div>';
+  box.innerHTML = h;
+  box.querySelectorAll("[data-ghload]").forEach(b => b.onclick = () => {
+    const i = Number(b.dataset.ghload), sel = box.querySelector('[data-ghsel="' + i + '"]');
+    const key = sel && sel.value; if (!key) { toast("Elegí una semilla"); return; }
+    godHandCargar(i, key);
+  });
+  box.querySelectorAll("[data-ghout]").forEach(b => b.onclick = () => godHandVaciar(Number(b.dataset.ghout)));
+}
 
 /* ---- Curtiduría: las 20 piezas de armadura ("2das mejoras") ---- */
 function refreshCurtiduria() {
@@ -1176,7 +1232,7 @@ function refreshDeco() {
   const tope = (G.plotsOwned || 2) >= PLOT_MAX;   // 10/8: el diseñador subió el tope de 12 a 60
   h += '<div class="secc">Parcelas</div>';
   h += '<div class="forge-row"><div class="finfo"><div class="fnm">Parcela nueva <span class="tag">' + (G.plotsOwned || 2) + '/' + PLOT_MAX + '</span></div>' +
-    '<div class="fds">' + (tope ? "Ya tenés las " + PLOT_MAX + "." : "Elegís con qué pagarla. El precio sube con cada una." + ((G.plotsOwned || 2) >= 12 ? " Las nuevas aparecen en una celda libre: movelas desde el modo edición." : "")) + '</div></div>' +
+    '<div class="fds">' + (tope ? "Ya tenés las " + PLOT_MAX + "." : "Elegís con qué pagarla. El precio sube con cada una." + ((G.plotsOwned || 2) >= 12 ? " Las nuevas van a tu zona de edición: las ponés vos donde quieras." : "")) + '</div></div>' +
     '<div class="fbtns">' +
       (tope ? '<button class="ghost sm" disabled>Completo</button>' :
         '<button class="green sm" ' + (G.plata >= plotUnlockCost() ? "" : "disabled") + ' data-plot="plata">' + fmt(plotUnlockCost()) + ' plata</button>' +
@@ -1184,11 +1240,11 @@ function refreshDeco() {
     '</div></div>';
   // --- GOD HAND ---
   h += '<div class="secc">GOD HAND</div>';
-  h += '<div class="forge-row' + (tengoGodHand() ? ' eq' : '') + '"><div class="finfo"><div class="fnm">GOD HAND' + (tengoGodHand() ? ' <span class="tag">tuya</span>' : '') + '</div>' +
-    '<div class="fds">El cropper que siembra solo: mientras no estás, las parcelas que quedaron vacías aparecen sembradas con la semilla que tengas elegida, y el crecimiento cuenta desde que te fuiste.</div>' +
-    '<div class="fds">No cosecha — eso sigue siendo tuyo. Se compra una vez y queda para siempre.</div>' +
-    (tengoGodHand() ? '<div class="fds"><b>Ya está trabajando:</b> no se ve en ningún lado — actúa solo la próxima vez que vuelvas al juego con parcelas vacías.</div>' : '') + '</div>' +
-    '<div class="fbtns">' + (tengoGodHand() ? '<button class="ghost sm" disabled>Comprada</button>' :
+  h += '<div class="forge-row' + (tengoGodHand() ? ' eq' : '') + '"><div class="fic"><img src="' + GF.spr("godhand") + '" onerror="this.remove()"></div><div class="finfo"><div class="fnm">GOD HAND' + (tengoGodHand() ? ' <span class="tag">tuya</span>' : '') + '</div>' +
+    '<div class="fds">El cropper NFT completo: cargale hasta 300 semillas (6 espacios) y mientras no estás hace TODO el ciclo en tus parcelas vacías — siembra, cosecha y resiembra — y te entrega lo producido al volver.</div>' +
+    '<div class="fds">Cobra en plata por hora trabajada (100 la primera, +10% cada una, hasta 24 h). Se compra una vez y queda para siempre.</div>' +
+    (tengoGodHand() ? '<div class="fds"><b>Semillas cargadas: ' + godHandTotal() + '/300.</b> Trabaja sola la próxima vez que vuelvas con parcelas vacías.</div>' : '') + '</div>' +
+    '<div class="fbtns">' + (tengoGodHand() ? '<button class="gold sm" id="gh-admin">✋ Cargar semillas</button>' :
       '<button class="green sm" ' + (G.golden >= GODHAND_GOLDEN ? "" : "disabled") + ' id="buy-godhand">' + GODHAND_GOLDEN + ' $G</button>') + '</div></div>';
   // --- adornos ---
   h += '<div class="secc">Adornos</div>';
@@ -1210,6 +1266,7 @@ function refreshDeco() {
   box.querySelectorAll("[data-buydeco]").forEach(b => b.onclick = () => { comprarDeco(b.dataset.buydeco); refreshDeco(); });
   box.querySelectorAll("[data-plot]").forEach(b => b.onclick = () => { comprarParcela(b.dataset.plot === "golden"); refreshDeco(); });
   const gh = $("buy-godhand"); if (gh) gh.onclick = () => { comprarGodHand(); refreshDeco(); };
+  const ga = $("gh-admin"); if (ga) ga.onclick = () => { if (typeof refreshGodHand === "function") refreshGodHand(); openOv("ov-godhand"); };   // GOD HAND 2.0
   const de = $("deco-editar"); if (de) de.onclick = () => { if (window.setEditMode) setEditMode(true); };   // cierra la Tienda y abre el modo edición con el selector de adornos
 }
 
@@ -1476,8 +1533,15 @@ function initUI() {
   const toggleMenu = () => gmenu.classList.toggle("collapsed");
   const gt = $("gmtoggle"); if (gt) gt.onclick = toggleMenu;
   const mb = $("menu-btn"); if (mb) mb.onclick = toggleMenu;
+  // fixs.docx #10 (11/8): opción de menú FIJO — queda desplegado y no se cierra al elegir
+  // ni al hacer clic afuera. La preferencia sobrevive al F5 (localStorage).
+  window.menuFijo = () => { try { return localStorage.getItem("gmenuFijo") === "1"; } catch (e) { return false; } };
+  const gmFijar = $("gm-fijar");
+  const gmFijarTxt = () => { if (gmFijar) gmFijar.innerHTML = '<span class="ic"></span> ' + (menuFijo() ? "📌 Menú fijo: Sí" : "📌 Menú fijo: No"); };
+  if (gmFijar) { gmFijarTxt(); gmFijar.onclick = () => { try { localStorage.setItem("gmenuFijo", menuFijo() ? "0" : "1"); } catch (e) {} gmFijarTxt(); toast(menuFijo() ? "El menú queda desplegado" : "El menú se recoge solo"); }; }
+  if (menuFijo()) gmenu.classList.remove("collapsed");
   // multiventana: abrir un panel ya no cierra los demás (detalles 29/7)
-  document.querySelectorAll(".gmi").forEach(b => b.onclick = () => { openOv(b.dataset.panel); gmenu.classList.add("collapsed"); });
+  document.querySelectorAll(".gmi[data-panel]").forEach(b => b.onclick = () => { openOv(b.dataset.panel); if (!menuFijo()) gmenu.classList.add("collapsed"); });
   document.querySelectorAll("[data-close]").forEach(b => b.onclick = () => closeOv(b.dataset.close));
   // entrenamiento: el botón y también un clic en cualquier lado de la capa oscura
   { const b = $("entr-fin"); if (b) b.onclick = entrenarFin;
@@ -1504,9 +1568,9 @@ function initUI() {
     if (b && cont.querySelectorAll("button").length === cont.querySelectorAll("button[disabled]").length) noNo(b);
   }, true);
   document.addEventListener("pointerdown", (e) => {
-    // el menú se pliega solo al clickear fuera de él (volver a jugar)
+    // el menú se pliega solo al clickear fuera de él (volver a jugar) — salvo con menú fijo (#10)
     const gm = $("gmenu");
-    if (gm && !gm.classList.contains("collapsed") && !e.target.closest("#gmenu, #menu-btn")) gm.classList.add("collapsed");
+    if (gm && !gm.classList.contains("collapsed") && !e.target.closest("#gmenu, #menu-btn") && !(window.menuFijo && menuFijo())) gm.classList.add("collapsed");
     if (!anyOvOpen()) return;
     if (e.target.closest(".card, #gmenu, #hotwrap, .hudbar, #logpanel, #editbar, #seedwheel")) return;
     document.querySelectorAll(".ov.show:not(.bloquea)").forEach(o => { if (o.id !== "ov-inv") o.classList.remove("show"); });
@@ -1531,19 +1595,21 @@ function syncEditDeco() {
                              : '<option value="">— no tenés adornos —</option>';
   sel.disabled = !hay.length;
   const bp = $("edit-poner"); if (bp) bp.disabled = !hay.length;
+  // fix #17 (11/8): el botón de parcelas pendientes de colocar
+  const ep = $("edit-parcela");
+  if (ep) {
+    const n = (typeof parcelasPendientes === "function") ? parcelasPendientes() : 0;
+    ep.style.display = n > 0 ? "" : "none";
+    ep.textContent = "Poner parcela (" + n + ")";
+  }
   if (lbl) lbl.textContent = "Puestos: " + decoPuestos() + "/" + DECO_MAX + " · se compran en la Tienda";
 }
-// lo coloca en el primer hueco libre cerca del centro; después se arrastra como cualquier cosa
+// fix #14 (11/8): ya no se tira al primer hueco — el jugador hace CLIC en la celda que quiere
 function ponerAdornoElegido() {
   const sel = $("edit-deco"); if (!sel || !sel.value) return;
   const sc = window.farmScene;
-  if (!sc || !sc.huecoParaAdorno) { toast("Entrá a la granja para poner adornos"); return; }
-  const pt = sc.huecoParaAdorno();
-  if (!pt) { toast("No hay lugar libre en la granja"); return; }
-  if (!decoColocar(sel.value, pt.col, pt.row)) return;
-  sc.syncAdornos();
-  syncEditDeco();
-  toast(DECO_DEF[sel.value].label + " colocado — arrastralo a donde quieras (clic derecho lo levanta)");
+  if (!sc || !sc.iniciarColocar) { toast("Entrá a la granja para poner adornos"); return; }
+  sc.iniciarColocar("deco", sel.value);
 }
 
   window.setEditMode = (on) => {
@@ -1564,6 +1630,7 @@ function ponerAdornoElegido() {
   const ed = $("edit-done"); if (ed) ed.onclick = () => setEditMode(false);
   // --- adornos: el selector y el botón de la barra de edición (10/8) ---
   { const bp = $("edit-poner"); if (bp) bp.onclick = () => ponerAdornoElegido(); }
+  { const ep2 = $("edit-parcela"); if (ep2) ep2.onclick = () => { const sc = window.farmScene; if (sc && sc.iniciarColocar) sc.iniciarColocar("plot"); }; }   // fix #17
   const er = $("edit-reset"); if (er) er.onclick = doFarmReset;
   const dc = $("dy-claim"); if (dc) dc.onclick = () => claimDaily();
   const sw = $("seedwheel"); if (sw) sw.onclick = hideSeedWheel;
