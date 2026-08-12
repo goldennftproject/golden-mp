@@ -193,12 +193,20 @@ class FarmScene extends Phaser.Scene {
       if (o.type === "rock") lockIdx = __rockN++;
       const locked = (o.type === "tree" && !(G.treesOpen || [0]).includes(lockIdx)) ||
                      (o.type === "rock" && !(G.rocksOpen || [0]).includes(lockIdx));
-      if (locked) s.setAlpha(0.5).setTint(0x555555);
+      // 12/8: chau gris fantasma — el árbol bloqueado es un RETOÑO y la roca bloqueada
+      // asoma ENTERRADA (el tinte del mineral se le aplica en tintarNodo). El gris queda
+      // de respaldo si faltara el arte.
+      if (locked) {
+        const lockTex = o.type === "tree" ? "tree_sapling" : "rock_buried";
+        if (this.textures.exists(lockTex)) s.setTexture(lockTex);
+        else s.setAlpha(0.5).setTint(0x555555);
+      }
       const rw = (o.type === "ore" || o.type === "rock") ? o.w * (typeof NODO_ESCALA === "number" ? NODO_ESCALA : 0.67)   // 9/8: 0.90 — al 0.67 las pepitas no se leían
         : (o.type === "tree") ? o.w * 0.8                                   // árboles −20%
         : (o.type === "market" || o.type === "store") ? o.w * 0.8           // tiendas −20%
         : (o.type === "dummy" ? o.w * 1.25 : o.w);                          // dummy +25%
       s.setScale(rw / s.width); s.setDepth(by);
+      if (locked && s.texture && s.texture.key === "tree_sapling") s.setScale((rw * 0.55) / s.width);   // el retoño es chico, como corresponde
       // sombra bajo árboles y edificios (detalles 29/7)
       let shadow = null;
       // los árboles NO llevan sombra: su sprite ya trae la base de tierra dibujada y la elipse quedaba abajo de la tierra
@@ -850,7 +858,31 @@ class FarmScene extends Phaser.Scene {
         G.res[res] -= cost;
         if (isTree) { G.treesOpen = G.treesOpen || [0]; G.treesOpen.push(o.lockIdx); }
         else { G.rocksOpen = G.rocksOpen || [0]; G.rocksOpen.push(o.lockIdx); }
-        o.locked = false; if (o.sprite) { o.sprite.setAlpha(1); o.sprite.clearTint(); }
+        o.locked = false;
+        // 12/8: el desbloqueo se VE — el retoño crece hasta árbol adulto, la roca emerge
+        if (o.sprite) {
+          o.sprite.setAlpha(1); o.sprite.clearTint();
+          const volver = () => { if (this.textures.exists(o.baseKey)) { o.sprite.setTexture(o.baseKey); o.sprite.setScale(o.rw / o.sprite.width); } };
+          if (isTree && o.sprite.texture && o.sprite.texture.key === "tree_sapling") {
+            volver();
+            o.sprite.setScale((o.rw * 0.3) / o.sprite.width);   // arranca chiquito y CRECE
+            this.tweens.add({ targets: o.sprite, scaleX: o.rw / o.sprite.width, scaleY: o.rw / o.sprite.width, duration: 700, ease: "Back.easeOut" });
+            for (let i = 0; i < 8; i++) {   // hojitas que vuelan del crecimiento
+              const a = Math.random() * Math.PI * 2, d = 18 + Math.random() * 22;
+              const p = this.add.ellipse(o.cx, o.by - 30, 4, 3, i % 2 ? 0x3f9b3f : 0x2f7a2f, 0.9).setDepth(o.by + 1).setAngle(Math.random() * 360);
+              this.tweens.add({ targets: p, x: o.cx + Math.cos(a) * d, y: o.by - 30 + Math.sin(a) * d, angle: p.angle + 160, alpha: 0, duration: 550 + Math.random() * 250, onComplete: () => p.destroy() });
+            }
+          } else if (!isTree && o.sprite.texture && o.sprite.texture.key === "rock_buried") {
+            volver();
+            o.sprite.y = o.by + 8; o.sprite.setScale((o.rw * 0.7) / o.sprite.width);   // sale de la tierra
+            this.tweens.add({ targets: o.sprite, y: o.by, scaleX: o.rw / o.sprite.width, scaleY: o.rw / o.sprite.width, duration: 450, ease: "Back.easeOut" });
+            for (let i = 0; i < 7; i++) {   // polvo del destape
+              const p = this.add.circle(o.cx + (Math.random() - 0.5) * 30, o.by - 4, 2 + Math.random() * 2, 0x8a6b4a, 0.75).setDepth(o.by + 1);
+              this.tweens.add({ targets: p, y: p.y - 10 - Math.random() * 12, alpha: 0, duration: 380 + Math.random() * 180, onComplete: () => p.destroy() });
+            }
+            this.cameras.main.shake(70, 0.003);
+          }
+        }
         this.tintarNodo(o);   // desbloqueada: recupera el color de su mineral
         addXp("crafting", 5); if (typeof syncSlots === "function") syncSlots();
         log("Desbloqueaste " + (isTree ? "un árbol" : "una piedra") + " por " + cost + " de " + RES_LABEL[res] + ".", "good");
@@ -1241,8 +1273,15 @@ class FarmScene extends Phaser.Scene {
   tintarNodo(o) {
     const s = o && o.sprite; if (!s || !s.setTint) return;
     if (o.locked || (typeof BUILD_DEF !== "undefined" && BUILD_DEF[o.type] && !(G.built && G.built[o.type]))) {
+      const k = s.texture ? String(s.texture.key) : "";
+      if (k === "tree_sapling") { s.clearTint(); return; }   // el retoño va a todo color (12/8)
+      if (k === "rock_buried") {   // la punta enterrada muestra el TINTE de su mineral: anzuelo visual
+        const t = (o.type === "ore" || o.type === "rock") && GF.ORE_TINTE ? GF.ORE_TINTE[o.ore || "piedra"] : null;
+        if (t && t !== 0xffffff) s.setTint(t); else s.clearTint();
+        return;
+      }
       // la OBRA (build_*) se ve a todo color; el gris es solo para bloqueados/sin arte de obra (12/8)
-      if (!(s.texture && String(s.texture.key).indexOf("build_") === 0)) s.setTint(0x555555);
+      if (k.indexOf("build_") !== 0) s.setTint(0x555555);
       return;
     }
     const t = (NODO_TINTE && (o.type === "ore" || o.type === "rock") && GF.ORE_TINTE) ? GF.ORE_TINTE[o.ore || "piedra"] : null;

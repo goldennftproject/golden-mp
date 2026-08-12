@@ -1904,6 +1904,22 @@ colisionan ni reciben clics, y la flecha del tutorial no apunta a edificios sin 
 (los textos de los pasos de construcción ahora mencionan el plano). El depósito respeta
 el requisito de nivel de cada edificio.
 
+### Retoños y rocas enterradas — el último gris fantasma, fuera
+
+Los árboles y rocas bloqueados eran el edificio-gris que quedaba: sprites transparentes
+apagados. Ahora son cosas del mundo:
+
+- **Árbol bloqueado = RETOÑO** silvestre (tallito flexible con tres matitas, derivado del
+  árbol nuevo, al 55% del ancho). Al pagar el desbloqueo **CRECE** hasta el árbol adulto
+  (tween con rebote + hojitas que vuelan).
+- **Roca bloqueada = ENTERRADA**: la punta gris asomando de un montículo de tierra, CON el
+  tinte de su mineral aplicado — ver la puntita dorada o celeste asomando es el anzuelo
+  visual de la progresión. Al desbloquear **EMERGE** de la tierra (tween + polvo + mini
+  sacudida).
+
+Misma economía de siempre (los costos no cambiaron), solo cambió la presentación. El gris
+queda como respaldo si faltara el arte. Claves `tree_sapling` y `rock_buried`.
+
 ### El "temblor leve" de toda la pantalla — arreglado
 
 Reporte del usuario: todo parecía vibrar milímetros, sub-segundo, constante. Causa:
@@ -1913,7 +1929,7 @@ quedarse quieta. Se apagó `roundPixels` (global y en el follow de granja, Bosqu
 plaza): con `antialias: true` y el atlas desempaquetado en texturas sueltas no cumplía
 ninguna función y solo generaba el temblor.
 
-Atlas final del día: `?v=42`, 577 sprites.
+Atlas final del día: `?v=43`, 579 sprites.
 
 ---
 
