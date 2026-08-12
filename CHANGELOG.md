@@ -1857,9 +1857,13 @@ domo del horno.
 
 **Código**: el edificio sin construir ya no se dibuja gris semitransparente — muestra su
 `build_*` a todo color; al pagar la receta salta al edificio terminado con lluvia de
-estrellitas. El gris queda de respaldo solo para el Altar (sin arte de obra) y los
-árboles/rocas bloqueados. Claves `build_*` en el atlas (`?v=38`, 569 sprites) y con
-respaldo suelto en boot.js.
+estrellitas. Claves `build_*` en el atlas y con respaldo suelto en boot.js.
+
+Después se sumó el **Altar de Runas en obra** (generado en SU grupo de estilo original):
+la base circular a medias y los monolitos tumbados con las runas talladas pero APAGADAS —
+se "encienden" recién al construirlo. Con esto **ningún edificio queda gris**: los 9 de
+BUILD_DEF tienen su obra. El gris sobrevive solo en árboles/rocas bloqueados. Atlas final
+del día: `?v=39`, 570 sprites.
 
 ---
 
