@@ -195,11 +195,9 @@ class FarmScene extends Phaser.Scene {
       // sombra bajo árboles y edificios (detalles 29/7)
       let shadow = null;
       // los árboles NO llevan sombra: su sprite ya trae la base de tierra dibujada y la elipse quedaba abajo de la tierra
-      if (o.type === "barn" || o.type === "market" || o.type === "store" || o.type === "cocina" || o.type === "horno" || o.type === "altar" || o.type === "establo" || o.type === "curtiduria" || o.type === "ofrendas") {
-        // sombra pegada al borde inferior y de 2 celdas como MÁXIMO (12/8): con el set nuevo
-        // la elipse a ancho completo sobresalía a los costados y el edificio parecía flotar
-        shadow = this.add.ellipse(cx, by - 1, Math.min(rw * 0.82, T * 2), T * 0.24, 0x1c2a12, 0.22).setDepth(by - 0.5);
-      } else if (o.type === "dummy") {   // sombra chiquita bajo el dummy
+      // 12/8: los edificios YA NO llevan elipse de sombra — con el set mercadillo no quedaba
+      // bien de ningún tamaño (el arte nuevo apoya directo sobre el pasto). Solo el dummy la conserva.
+      if (o.type === "dummy") {   // sombra chiquita bajo el dummy
         shadow = this.add.ellipse(cx, by - 2, rw * 0.55, T * 0.2, 0x1c2a12, 0.2).setDepth(by - 0.5);
       }
       return { i, type: o.type, ore: o.ore, cx, by, w: o.w, rw, baseKey: o.key, sprite: s, shadow, readyAt: 0, lockIdx, locked };
