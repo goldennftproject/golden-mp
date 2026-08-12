@@ -210,6 +210,7 @@ function itemView(d) {
     return { sprite: w.sprite || ARM_TIPO_DEF[w.tipo].sprite, emoji: "⚔️", label: w.label + " · daño " + w.min + "–" + w.max + " · durabilidad " + own.dur + "/" + w.dur, dur: Math.round(own.dur / w.dur * 100) };
   }
   if (d.kind === "pick") { const pd = PICK_DEF[d.key]; const glow = d.key === "diamond" ? "glow-cyan" : (d.key === "netherite" ? "glow-fire" : (d.key === "gold" ? "glow-gold" : "")); return { sprite: pd.sprite, emoji: "⛏️", glow, label: pd.label + " · 1 uso cada uno · tenés " + pickCount(d.key), dur: null }; }
+  if (d.kind === "plano") { const b = (typeof BUILD_DEF !== "undefined") && BUILD_DEF[d.key]; return { sprite: "plano_" + d.key, emoji: "📜", glow: "glow-gold", label: "Plano: " + (b ? b.label : d.key) + " · clic para colocar la obra", dur: null }; }   // blueprints (12/8)
   if (d.kind === "res") return { sprite: resSprite(d.key), emoji: RES_EMOJI[d.key], label: RES_LABEL[d.key], dur: null };
   if (d.kind === "seed") { const cd = CROP_DEF[d.key]; return { sprite: "seed_" + d.key, emoji: cd.emoji, label: cd.label + " (semilla)", dur: null }; }
   if (d.kind === "fish") { const f = FISH_DEF[d.key]; const glow = { raro: "glow-blue", epico: "glow-purple", legendario: "glow-gold" }[d.key] || ""; return { sprite: f ? f.sprite : null, emoji: f ? f.emoji : "🐟", glow, label: f ? f.label : "Pez", dur: null }; }
@@ -283,6 +284,13 @@ function invCellClick(i) {
   else if (d.kind === "pick") { if (G.picks.owned[d.key]) equipPick(d.key); }
   else if (d.kind === "dish") eatDish(d.key);
   else if (d.kind === "chest") { if (window.FARM && FARM.placeChestFromBag) FARM.placeChestFromBag(); }
+  // blueprints (12/8): clic en el plano → cerrar ventanas y elegir dónde levantar la obra
+  else if (d.kind === "plano") {
+    const sc = window.farmScene;
+    if (!sc || !sc.iniciarColocar) { toast("Entrá a la granja para colocar el plano"); return; }
+    closeAllOv();
+    sc.iniciarColocar("obra", d.key);
+  }
 }
 
 // botón para ampliar la bolsa (+6): primera fila con minerales, siguientes con plata

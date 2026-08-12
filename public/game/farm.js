@@ -167,17 +167,24 @@ class FarmScene extends Phaser.Scene {
 
     // objetos del mundo (con estado para interacción)
     let __treeN = 0, __rockN = 0;   // viernes (2): orden de desbloqueo de árboles y piedras
+    if (typeof planosSync === "function") planosSync(true);   // blueprints (12/8): guardados viejos reciben sus planos
     this.objs = GF.WORLD_OBJECTS.map((o, i) => {
       const lp = (G.layout && G.layout[i]) || null;                            // posición editada por el jugador
-      const cx = lp ? lp.cx : o.cx, by = lp ? lp.by : o.by;
+      // blueprints (12/8): si el edificio se colocó con su plano, ESA es su posición
+      // (el arrastre en edición, si lo mueven después, sigue ganando)
+      const op = (!lp && typeof BUILD_DEF !== "undefined" && BUILD_DEF[o.type] && typeof obraDe === "function") ? obraDe(o.type) : null;
+      const cx = lp ? lp.cx : (op ? (op.col + 0.5) * T : o.cx), by = lp ? lp.by : (op ? (op.row + 1) * T : o.by);
       // el portal es sprite para poder animar el espiral girando; el resto sigue como imagen
       const texKey = this.textures.exists(o.key) ? o.key : "store";   // respaldo si falta el arte (p.ej. horno.png aún no bajado)
       const s = (o.key === "portal" ? this.add.sprite(cx, by, texKey) : this.add.image(cx, by, texKey)).setOrigin(0.5, 1);
       if (o.key === "portal" && this.anims.exists("portal_spin")) s.play("portal_spin");
-      // edificios sin construir: la OBRA con cimientos y materiales (12/8). Antes era el
-      // edificio terminado en gris apagado; el gris queda de respaldo si falta el arte (altar).
+      // edificios sin construir (blueprints 12/8): si NO colocaste el plano, el edificio
+      // directamente NO EXISTE en el mapa. Si lo colocaste, se ve su OBRA (build_*) a la
+      // espera de materiales. El gris viejo queda de respaldo si faltara el arte de obra.
+      let oculto = false;
       if (typeof BUILD_DEF !== "undefined" && BUILD_DEF[o.type] && !(G.built && G.built[o.type])) {
-        if (this.textures.exists("build_" + o.type)) s.setTexture("build_" + o.type);
+        if (!op && !lp) { s.setVisible(false); oculto = true; }   // sin plano colocado: invisible
+        else if (this.textures.exists("build_" + o.type)) s.setTexture("build_" + o.type);
         else s.setAlpha(0.5).setTint(0x555555);
       }
       // viernes (2): árboles y piedras bloqueados (1 activo + resto difuminado, se desbloquean en orden)
@@ -200,9 +207,10 @@ class FarmScene extends Phaser.Scene {
       if (o.type === "dummy") {   // sombra chiquita bajo el dummy
         shadow = this.add.ellipse(cx, by - 2, rw * 0.55, T * 0.2, 0x1c2a12, 0.2).setDepth(by - 0.5);
       }
-      return { i, type: o.type, ore: o.ore, cx, by, w: o.w, rw, baseKey: o.key, sprite: s, shadow, readyAt: 0, lockIdx, locked };
+      return { i, type: o.type, ore: o.ore, cx, by, w: o.w, rw, baseKey: o.key, sprite: s, shadow, readyAt: 0, lockIdx, locked, oculto };
     });
     this.objs.forEach(o => this.tintarNodo(o));   // cada veta con el color de su mineral (9/8)
+    this.objs.forEach(o => this.letreroObra(o));  // blueprints (12/8): el cartel de materiales sobre cada obra
 
     // (los rótulos flotantes se quitaron: los edificios nuevos se distinguen solos
     //  y el aviso de interacción ya los nombra al acercarse)
@@ -348,6 +356,10 @@ class FarmScene extends Phaser.Scene {
         } else if (pl.tipo === "plot") {
           this.placing = null;
           if (typeof parcelaColocar === "function" && parcelaColocar(col, row)) toast("Parcela colocada");   // reinicia la escena para dibujarla
+        } else if (pl.tipo === "obra") {   // blueprint (12/8): la obra ocupa ~2-3 celdas, chequear las vecinas
+          if (!this.celdaLibreAdorno(col - 1, row, -1) || !this.celdaLibreAdorno(col + 1, row, -1)) { toast("Ahí no entra la obra — buscá un lugar más despejado"); return; }
+          this.placing = null;
+          if (typeof obraColocar === "function" && obraColocar(pl.id, col, row)) toast("¡Obra colocada! Llevale materiales");   // reinicia la escena para dibujarla
         }
         return;
       }
@@ -560,6 +572,7 @@ class FarmScene extends Phaser.Scene {
       if (typeof saveFarm === "function") saveFarm(true);
       this.dragObj = null;
       this.updateTutoArrow();   // fixs.docx #15 (11/8): la flecha del tutorial sigue al edificio movido (antes hacía falta F5)
+      this.letreroObra(o);      // blueprints (12/8): el cartel de materiales acompaña a la obra movida
     });
 
     // bocanadas de humo IRREGULARES (blobs procedurales, no círculos)
@@ -625,7 +638,7 @@ class FarmScene extends Phaser.Scene {
     { const m = GF.ISLA ? (GF.ISLA_MARGEN || 260) : 0;   // con isla, la cámara puede salir sobre el mar
       this.camLim = { x1: -m, y1: -m, x2: W + m, y2: H + m };
       this.cameras.main.setBounds(this.camLim.x1, this.camLim.y1, this.camLim.x2 - this.camLim.x1, this.camLim.y2 - this.camLim.y1); }
-    if (!GF.CAM_PAN) this.cameras.main.startFollow(hero, true, 0.15, 0.15);
+    if (!GF.CAM_PAN) this.cameras.main.startFollow(hero, false, 0.15, 0.15);
     else { this.cameras.main.stopFollow(); this.cameras.main.centerOn(W / 2, H * 0.42); }
     this.zoomUser = 1;
     this.fitCamera();
@@ -745,7 +758,10 @@ class FarmScene extends Phaser.Scene {
     if (o.type === "ore") { const od = ORE_DEF[o.ore]; if (!od) return "Minar"; if (cd) return od.emoji + " Vuelve en " + fmtSecs(secs); return "Minar " + od.label + gp(GOLPES_MINAR); }
     if (o.type === "barn") return "Granja";
     if (o.type === "market") return "Mercado";
-    if (typeof BUILD_DEF !== "undefined" && BUILD_DEF[o.type] && !(G.built && G.built[o.type])) return "Construir " + BUILD_DEF[o.type].label + " (" + buildCostStr(o.type) + ")";
+    if (typeof BUILD_DEF !== "undefined" && BUILD_DEF[o.type] && !(G.built && G.built[o.type])) {
+      const falta = (typeof obraFalta === "function") ? obraFalta(o.type) : [];
+      return "Obra de " + BUILD_DEF[o.type].label + " — clic para depositar (" + falta.map(x => x[1] + " " + (x[0] === "golden" ? "$G" : (RES_LABEL[x[0]] || x[0]))).join(" · ") + ")";
+    }
     if (o.type === "store") return "Herrería";
     if (o.type === "cocina") return "Cocina";
     if (o.type === "horno") return "Horno de Piedra";
@@ -807,25 +823,23 @@ class FarmScene extends Phaser.Scene {
     }
     if (o.type === "barn") return openOv("ov-barn");
     if (o.type === "market") return openOv("ov-market");
-    // edificios por construir (viernes 1): clic → receta de construcción con confirmación
+    // OBRA de blueprint (12/8): cada clic DEPOSITA los materiales que tengas; al
+    // completar, estrellitas y el edificio queda construido. Sin ventanas de confirmación.
     if (typeof BUILD_DEF !== "undefined" && BUILD_DEF[o.type] && !(G.built && G.built[o.type])) {
-      const b = BUILD_DEF[o.type];
-      if (b.lvl && G.level < b.lvl) { toast(b.label + " se desbloquea a granja nivel " + b.lvl); return; }   // doc 2/8
-      askConfirm("Construir " + b.label + " cuesta: " + buildCostStr(o.type) + ". ¿Construir?", () => {
-        if (!canAfford(b.cost)) { toast("Te faltan materiales para construir"); return; }
-        if (b.golden && G.golden < b.golden) { toast("Te falta $Golden (" + b.golden + ")"); return; }
-        payCost(b.cost); if (b.golden) G.golden -= b.golden; G.built[o.type] = true;
+      if (o.oculto) return;
+      const completo = (typeof obraDepositar === "function") && obraDepositar(o.type);
+      this.letreroObra(o);   // el cartel refleja lo depositado
+      if (completo) {
+        obraConstruir(o.type);
         if (o.sprite) {
-          // de la OBRA al edificio terminado (12/8), con su lluvia de estrellas
           if (this.textures.exists(o.baseKey) && o.sprite.texture.key !== o.baseKey) { o.sprite.setTexture(o.baseKey); o.sprite.setScale(o.rw / o.sprite.width); }
           o.sprite.setAlpha(1); o.sprite.clearTint();
           if (this.estrellasFx) this.estrellasFx(o.cx, o.by - (o.sprite.displayHeight || 60) * 0.5);
         }
+        if (o.letrero) { o.letrero.destroy(); o.letrero = null; }
         this.tintarNodo(o);
-        if (typeof tutoEvent === "function") tutoEvent("build_" + o.type);
-        addXp("crafting", 20); log("¡Construiste " + b.label + "!", "gold"); toast("¡" + b.label + " construida!");
-        refreshHud(); if (typeof saveFarm === "function") saveFarm(true);
-      }, { title: "Construir " + b.label, yes: "Construir", yesClass: "green", no: "Cancelar", noClass: "red" });
+        this.rebuildCollisions();
+      }
       return;
     }
     if ((o.type === "tree" || o.type === "rock") && o.locked) {   // viernes (2): se desbloquea CUALQUIERA (pedido Discord); el costo sube por cantidad
@@ -1214,7 +1228,7 @@ class FarmScene extends Phaser.Scene {
       const o = (this.objs || []).find(o => tipos.includes(o.type) && !o.locked);
       if (o) { x = o.cx; y = o.by - (o.sprite ? o.sprite.displayHeight : 60) - 10; }
     }
-    else { const o = (this.objs || []).find(o => o.type === st.target); if (o) { x = o.cx; y = o.by - (o.sprite ? o.sprite.displayHeight : 60) - 10; } }
+    else { const o = (this.objs || []).find(o => o.type === st.target && !o.oculto); if (o) { x = o.cx; y = o.by - (o.sprite ? o.sprite.displayHeight : 60) - 10; } }   // sin plano colocado no hay a qué apuntar (12/8)
     if (x == null) return;
     const tri = this.add.triangle(x, y, 0, 0, 16, 0, 8, 12, 0xffd75e).setStrokeStyle(2, 0x241505, 1).setDepth(99990);
     this.tutoArrow = tri;
@@ -1588,9 +1602,10 @@ class FarmScene extends Phaser.Scene {
   }
   // arranca el "colocar con clic" (#14/#17): el próximo clic en edición coloca esto en esa celda
   iniciarColocar(tipo, id) {
-    if (!GF.editMode && window.setEditMode) setEditMode(true);   // por si vino de la Tienda
+    if (!GF.editMode && window.setEditMode) setEditMode(true);   // por si vino de la Tienda o la bolsa
     this.placing = { tipo, id };
     toast(tipo === "plot" ? "Clic en la celda donde va la parcela (clic derecho cancela)"
+        : tipo === "obra" ? "Clic donde querés levantar la obra (clic derecho cancela)"
                           : "Clic en la celda donde va el adorno (clic derecho cancela)");
   }
   // celda libre para una PARCELA nueva (13-60): mismas reglas que un adorno, más lejos de la
@@ -2202,8 +2217,21 @@ class FarmScene extends Phaser.Scene {
   // recalcula las colisiones a partir de las posiciones actuales de los objetos (tras editar)
   rebuildCollisions() {
     const T = GF.TILE;
-    GF.COLLISIONS = this.objs.filter(o => o.type !== "fish").map(o => GF.solidRect(o));
+    GF.COLLISIONS = this.objs.filter(o => o.type !== "fish" && !o.oculto).map(o => GF.solidRect(o));   // los edificios sin plano colocado no estorban (12/8)
     this.navOf().invalidate();   // la rejilla de pathfinding se rearma sola en el próximo clic
+  }
+  // blueprints (12/8): el cartel de materiales que flota sobre una OBRA colocada
+  letreroObra(o) {
+    if (o.letrero) { o.letrero.destroy(); o.letrero = null; }
+    if (!o || o.oculto || !o.sprite) return;
+    if (typeof BUILD_DEF === "undefined" || !BUILD_DEF[o.type] || (G.built && G.built[o.type])) return;
+    if (typeof obraFalta !== "function" || !(typeof obraDe === "function" && obraDe(o.type))) return;
+    const falta = obraFalta(o.type);
+    if (!falta.length) return;
+    const partes = falta.map(([r, f, tot, dep]) => (r === "golden" ? "$G" : (RES_LABEL[r] || r)) + " " + dep + "/" + tot);
+    o.letrero = this.add.text(o.cx, o.by - (o.sprite.displayHeight || 60) - 6, "🔨 " + partes.join("  ·  "),
+      { fontFamily: "system-ui", fontSize: "11px", fontStyle: "bold", color: "#fff3cf", stroke: "#241505", strokeThickness: 4, align: "center" })
+      .setOrigin(0.5, 1).setDepth(99990);
   }
 
   // pathfinding A* (módulo compartido con el Bosque — nav.js)

@@ -149,7 +149,7 @@ class ForestScene extends Phaser.Scene {
     });
 
     this.cameras.main.setBounds(0, 0, this.W, this.H);
-    this.cameras.main.startFollow(hero, true, 0.15, 0.15);
+    this.cameras.main.startFollow(hero, false, 0.15, 0.15);
     this.cameras.main.setZoom(GF.ZOOM);
     this.cameras.main.setBackgroundColor("#2c4a20");
 

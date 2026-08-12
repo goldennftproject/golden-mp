@@ -30,7 +30,8 @@ function snapshot() {
     armasUnlocked: G.armasUnlocked, treesOpen: G.treesOpen, rocksOpen: G.rocksOpen, firstCropDone: G.firstCropDone, weapons: G.weapons,
     dishes: G.dishes, cooking: G.cooking, chests: G.chests, dummyUsedAt: G.dummyUsedAt,
     armCd: G.armCd, mkPend: G.mkPend, testeoDado: G.testeoDado,
-    layoutPlots: G.layoutPlots, layoutPond: G.layoutPond, ghInv: G.ghInv };
+    layoutPlots: G.layoutPlots, layoutPond: G.layoutPond, ghInv: G.ghInv,
+    planos: G.planos, obras: G.obras, obraDep: G.obraDep };   // blueprints (12/8)
 }
 // "huella" del estado guardable (incluye el apodo); si no cambia, no hay nada que guardar
 function snapKey() { return JSON.stringify({ n: (typeof nombreLucido === "function" ? nombreLucido() : (window.NICK || "Granjero")), d: snapshot() }); }
@@ -169,6 +170,9 @@ function hydrate(d) {
   G.testeoDado = d.testeoDado === true;                             // el regalo del modo testeo se da una sola vez
   if (d.layoutPlots && typeof d.layoutPlots === "object") G.layoutPlots = d.layoutPlots;
   if (Array.isArray(d.ghInv)) G.ghInv = d.ghInv;   // GOD HAND 2.0 (11/8): su inventario de semillas
+  if (d.planos && typeof d.planos === "object") G.planos = d.planos;     // blueprints (12/8)
+  if (d.obras && typeof d.obras === "object") G.obras = d.obras;
+  if (d.obraDep && typeof d.obraDep === "object") G.obraDep = d.obraDep;
   if (d.layoutPond && typeof d.layoutPond === "object") G.layoutPond = { col: d.layoutPond.col, row: d.layoutPond.row };
   if (d.picks && d.picks.owned && d.picks.dur) G.picks = d.picks;
   // migración ÚNICA al modelo apilable (31/7): la durabilidad vieja pasa a ser "1 herramienta"

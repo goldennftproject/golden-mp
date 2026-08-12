@@ -1882,7 +1882,38 @@ BUILD_DEF tienen su obra. El gris sobrevive solo en árboles/rocas bloqueados.
   fence `?v=3`, corner `?v=4`, y de paso se subieron las versiones sueltas de los árboles
   nuevos que seguían con número viejo.
 
-Atlas final del día: `?v=41`, 570 sprites.
+### BLUEPRINTS: la construcción nueva (la feature grande del día)
+
+Idea del usuario, implementada completa. Los edificios ya no aparecen grises en una
+posición fija esperando que pagues la receta — ahora **no existen hasta que los levantás**:
+
+1. **Al subir de nivel ganás el PLANO** del edificio que toca (`PLANO_NIVEL`: herrería 1,
+   horno 3, cocina 5, establo 6, altar 7, curtiduría 8, ofrendas 10 — números del
+   diseñador). Cae a la bolsa como ítem: pergamino envejecido con el dibujo técnico del
+   edificio en tinta azul y sello de lacre (7 planos generados en PixelLab, arte aprobado).
+2. **Clic en el plano → elegís dónde** (el "colocar con clic" de siempre; valida 3 celdas
+   libres). Aparece la OBRA del edificio con un cartel flotante: `🔨 Madera 0/50 · Piedra 0/30`.
+3. **Cada clic en la obra DEPOSITA** los materiales que tengas (el $Golden del Altar cuenta
+   como material más). Los contadores bajan de a poco — se puede construir en cuotas.
+4. **Al completar**: lluvia de estrellitas, celebración y la obra salta al edificio
+   terminado. La posición elegida queda para siempre (y se puede mover en edición).
+
+Detalles de compatibilidad: los guardados viejos reciben por `planosSync()` los planos de
+todos los niveles ya pasados; los edificios ya construidos no se tocan; los ocultos no
+colisionan ni reciben clics, y la flecha del tutorial no apunta a edificios sin colocar
+(los textos de los pasos de construcción ahora mencionan el plano). El depósito respeta
+el requisito de nivel de cada edificio.
+
+### El "temblor leve" de toda la pantalla — arreglado
+
+Reporte del usuario: todo parecía vibrar milímetros, sub-segundo, constante. Causa:
+`roundPixels: true` + zoom fraccionario + cámara con suavizado — el redondeo a píxel
+entero hacía que TODO saltara ±1px mientras la cámara se acomodaba sin llegar nunca a
+quedarse quieta. Se apagó `roundPixels` (global y en el follow de granja, Bosque y
+plaza): con `antialias: true` y el atlas desempaquetado en texturas sueltas no cumplía
+ninguna función y solo generaba el temblor.
+
+Atlas final del día: `?v=42`, 577 sprites.
 
 ---
 

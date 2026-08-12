@@ -84,7 +84,7 @@ class PlazaScene extends Phaser.Scene {
           this.me = this.makeFarmer(p.x, p.y, nick, true);
           this.me.x = p.x; this.me.y = p.y;
           this.cameras.main.setBounds(0, 0, this.pW, this.pH);
-          this.cameras.main.startFollow(this.me.sprite, true, 0.15, 0.15);
+          this.cameras.main.startFollow(this.me.sprite, false, 0.15, 0.15);
           this.fitCamera();
           this.scale.on("resize", this.fitCamera, this);
           // el ScaleManager es GLOBAL: si este once("shutdown") se registra cuando la escena

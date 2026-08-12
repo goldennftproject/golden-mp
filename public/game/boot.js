@@ -67,6 +67,8 @@ class BootScene extends Phaser.Scene {
     L.push(["godhand", P + "godhand.png"]);   // GOD HAND 2.0 (11/8): el arte NFT del cropper
     // edificios EN OBRA (12/8): lo que se ve antes de construirlos (chau edificio gris)
     ["market","barn","store","cocina","establo","curtiduria","ofrendas","horno","altar"].forEach(k => L.push(["build_" + k, P + "build_" + k + ".png"]));
+    // PLANOS de construcción (12/8): el pergamino que ganás al subir de nivel
+    ["store","horno","cocina","altar","establo","curtiduria","ofrendas"].forEach(k => L.push(["plano_" + k, P + "plano_" + k + ".png"]));
     L.push(["withered", P + "withered.png?v=2"]);      // cultivo marchito cozy
     // etapas intermedias (la verdura asomando al 50% del crecimiento)
     if (typeof CROP_ORDER !== "undefined") CROP_ORDER.forEach(k => L.push(["cropm_" + k, P + "cropm_" + k + ".png?v=3"]));
@@ -122,8 +124,8 @@ class BootScene extends Phaser.Scene {
   preload() {
     // ATLAS: todos los sprites del mundo en 2 archivos (mucho más liviano para el server free).
     // Si el atlas no llega, ensureAll() baja los archivos sueltos como respaldo.
-    this.load.image("__atlas", "assets/atlas.png?v=41");
-    this.load.json("__atlasmap", "assets/atlas.json?v=41");
+    this.load.image("__atlas", "assets/atlas.png?v=42");
+    this.load.json("__atlasmap", "assets/atlas.json?v=42");
 
     // No hay barra propia: la pantalla de carga es UNA sola, la del HTML, y le pasamos el avance.
     // (Antes había dos barras seguidas y el juego "aparecía" antes de estar listo.)

@@ -37,8 +37,11 @@ function startGame() {
     type: Phaser.AUTO,
     parent: "game",
     // 31/7: suavizado activado — casi todos los sprites se muestran REDUCIDOS y con nearest quedaban serruchados
+    // 12/8: roundPixels APAGADO — con zoom fraccionario y cámara con suavizado, el redondeo
+    // a píxel entero hacía saltar TODO ±1px a cada rato (el "temblor leve" reportado).
+    // Con antialias activo y el atlas desempaquetado en texturas sueltas, no hace falta.
     pixelArt: false,
-    render: { antialias: true, roundPixels: true },
+    render: { antialias: true, roundPixels: false },
     backgroundColor: "#243318",
     loader: { maxParallelDownloads: 6, maxRetries: 4 },   // suave con el server free de Render (evita REFUSED_STREAM)
     scale: {

@@ -4,7 +4,8 @@
 
 ## 🔴 Inmediato
 
-- [ ] **Deploy** (`deploy.bat`): atlas `?v=39` — set "mercadillo" completo (menos horno), árbol + talado, y los 9 edificios EN OBRA (altar incluido) reemplazando al gris. Listo para subir.
+- [ ] **Deploy** (`deploy.bat`): atlas `?v=42` — set "mercadillo", árbol + talado, obras, pasto y cerca al tono, y la MECÁNICA DE BLUEPRINTS completa (plano al subir de nivel → colocar → depositar → construir). Listo para subir.
+- [ ] **Reorganizar la escalera de objetivos nivel a nivel** (idea aprobada 12/8): ajustar XP y orden de TUTO_STEPS para que cada nivel desbloquee y haga probar su sistema justo a tiempo. `PLANO_NIVEL` ya marca el esqueleto.
 - [ ] **Hojas caídas / suelo del talado** como piezas sueltas reutilizables (decisión 12/8: separadas del árbol).
 - [x] ~~Set de edificios estilo mercadillo~~ integrado (12/8) — ver CHANGELOG Día 17.
 - [x] ~~Mazos + God Hand~~ integrados (11/8).

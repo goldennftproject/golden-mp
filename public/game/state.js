@@ -227,6 +227,82 @@ const BUILD_DEF = {
 };
 function buildCostStr(key) { const b = BUILD_DEF[key]; return Object.keys(b.cost).map(k => (b.cost[k]) + " " + (RES_LABEL[k] || k)).join(" + ") + (b.golden ? " + " + b.golden + " $Golden" : ""); }
 
+/* ============ PLANOS Y OBRAS (12/8): construcción al estilo blueprint ============
+   Al llegar al nivel ganás el PLANO del edificio (ítem de la bolsa, arte pergamino).
+   Lo colocás donde quieras con el "colocar con clic": aparece la OBRA (build_*) con
+   los materiales pedidos flotando encima. Cada clic en la obra deposita lo que
+   tengas; al completar, estrellitas y pasa al edificio construido.
+   El edificio ya NO aparece gris en una posición fija: no existe hasta que colocás
+   su plano, y queda donde VOS lo pusiste. */
+var PLANO_NIVEL = { store: 1, horno: 3, cocina: 5, establo: 6, altar: 7, curtiduria: 8, ofrendas: 10 };   // nivel en que cae cada plano (números del diseñador)
+function planoTengo(t) { return !!(G.planos && G.planos[t]); }
+function darPlano(t, silencioso) {
+  const b = BUILD_DEF[t]; if (!b) return;
+  if (G.built && G.built[t]) return;                  // ya construido
+  if (G.obras && G.obras[t]) return;                  // la obra ya está colocada
+  G.planos = G.planos || {};
+  if (G.planos[t]) return;
+  G.planos[t] = 1;
+  if (!silencioso) {
+    log("¡Ganaste el PLANO de " + b.label + "! Está en tu bolsa: clic para colocarlo donde quieras.", "gold");
+    toast("📜 ¡Plano de " + b.label + "!");
+    if (window.celebrate) celebrate({ title: "¡PLANO NUEVO!", sub: b.label, big: false, reward: "Colocalo desde la bolsa" });
+  }
+  if (typeof syncSlots === "function") syncSlots(); if (isOpen("ov-inv")) refreshInv();
+}
+// al subir de nivel — y al cargar, para guardados que ya pasaron esos niveles
+function planosSync(silencioso) { for (const t in PLANO_NIVEL) if (G.level >= PLANO_NIVEL[t]) darPlano(t, silencioso); }
+function obraDe(t) { return G.obras && G.obras[t]; }
+function obraColocar(t, col, row) {   // la llama la escena con la celda elegida
+  if (!planoTengo(t)) return false;
+  delete G.planos[t];
+  G.obras = G.obras || {}; G.obras[t] = { col, row };   // la posición queda para SIEMPRE (también construido)
+  G.obraDep = G.obraDep || {}; G.obraDep[t] = G.obraDep[t] || {};
+  if (typeof syncSlots === "function") syncSlots();
+  if (typeof saveFarm === "function") saveFarm(true);
+  if (window.FARM && window.FARM.scene) { try { window.FARM.scene.restart(); } catch (e) {} }
+  return true;
+}
+// qué falta depositar: [recurso, falta, total, puesto] — el $Golden cuenta como recurso más
+function obraFalta(t) {
+  const b = BUILD_DEF[t], dep = (G.obraDep && G.obraDep[t]) || {}, out = [];
+  for (const r in b.cost) { const f = b.cost[r] - (dep[r] || 0); if (f > 0) out.push([r, f, b.cost[r], dep[r] || 0]); }
+  if (b.golden) { const f = b.golden - (dep.golden || 0); if (f > 0) out.push(["golden", f, b.golden, dep.golden || 0]); }
+  return out;
+}
+function obraDepositar(t) {   // devuelve true si con este depósito quedó COMPLETA
+  const b = BUILD_DEF[t]; if (!b || !obraDe(t)) return false;
+  if (b.lvl && G.level < b.lvl) { toast(b.label + " pide granja nivel " + b.lvl); return false; }
+  G.obraDep = G.obraDep || {}; const dep = G.obraDep[t] = G.obraDep[t] || {};
+  const puso = [];
+  for (const [r, falta] of obraFalta(t)) {
+    const tengo = r === "golden" ? G.golden : Math.floor(G.res[r] || 0);
+    const n = Math.min(falta, tengo);
+    if (n <= 0) continue;
+    if (r === "golden") G.golden -= n; else G.res[r] -= n;
+    dep[r] = (dep[r] || 0) + n;
+    puso.push("+" + n + " " + (r === "golden" ? "$Golden" : (RES_LABEL[r] || r)));
+  }
+  if (!puso.length) {
+    toast("Te falta: " + obraFalta(t).map(x => x[1] + " " + (x[0] === "golden" ? "$Golden" : (RES_LABEL[x[0]] || x[0]))).join(" · "));
+    return false;
+  }
+  toast("Depositaste " + puso.join(" · "));
+  refreshHud(); if (typeof syncSlots === "function") syncSlots(); if (isOpen("ov-inv")) refreshInv();
+  if (typeof saveFarm === "function") saveFarm(true);
+  return obraFalta(t).length === 0;
+}
+function obraConstruir(t) {   // la llama la escena cuando el depósito se completó
+  const b = BUILD_DEF[t];
+  G.built[t] = true;
+  if (G.obraDep) delete G.obraDep[t];
+  if (typeof tutoEvent === "function") tutoEvent("build_" + t);
+  addXp("crafting", 20);
+  log("¡Construiste " + b.label + "!", "gold"); toast("¡" + b.label + " construida!");
+  if (window.celebrate) celebrate({ title: "¡CONSTRUIDA!", sub: b.label, big: false, reward: "Ya está funcionando" });
+  refreshHud(); if (typeof saveFarm === "function") saveFarm(true);
+}
+
 // --- materiales intermedios (detalles213: "tablones / stone bar / iron bar / iron gold" mapeados a nuestros recursos) ---
 const MAT_ORDER = ["tablon","barra_piedra","barra_bronce","barra_hierro","barra_oro"];
 const MAT_DEF = {
@@ -486,6 +562,7 @@ function recalcFarmLevelInterno() {
     else { toast("¡Granja nivel " + G.level + "!" + (gift ? " " + gift : "")); if (window.sfx) sfx("level"); }
     if (typeof window.onFarmLevelUp === "function") window.onFarmLevelUp(G.level, gift);
     if (window.farmScene && window.farmScene.refreshPlotLocks) { try { window.farmScene.refreshPlotLocks(); } catch (e) {} }   // la parcela regalada se abre en el acto
+    if (typeof planosSync === "function") planosSync(false);   // 12/8: el nivel te regala el PLANO del edificio que toca
   }
   if (typeof refreshBarn === "function" && isOpen("ov-barn")) refreshBarn();
   refreshHud();
@@ -591,13 +668,13 @@ const TUTO_STEPS = [
   { id: "buyseed",   n: 1, txt: "Con esa plata comprá semillas de papa",           target: "market", panel: "ov-market", ui: "[data-buy='papa']" },
   { id: "plant2",    n: 1, txt: "Replantá una semilla de papa",                    target: "plot" },
   // — la Herrería ya no viene hecha (10/8): es la primera construcción, y es barata a propósito —
-  { id: "build_store", n: 1, txt: "Construí la Herrería (5 madera + 2 piedra)", target: "store" },
+  { id: "build_store", n: 1, txt: "Colocá el PLANO de la Herrería (bolsa) y llenala de materiales", target: "store" },
   // — cadena del Horno: primero los materiales de SU receta, después construirlo —
   { id: "wood",  res: "madera", need: () => BUILD_DEF.horno.cost.madera || 10,
     txt: "Juntá # de madera talando árboles (para el Horno)",                      target: "tree" },
   { id: "stone", res: "piedra", need: () => BUILD_DEF.horno.cost.piedra || 8,
     txt: "Juntá # de piedra picando rocas (para el Horno)",                        target: "rock" },
-  { id: "build_horno", n: 1, txt: "Ya tenés los materiales: construí el Horno de Piedra", target: "horno" },
+  { id: "build_horno", n: 1, txt: "Ya tenés los materiales: colocá el plano del Horno y depositalos", target: "horno" },
   // — cadena del Hacha: primero la plata que cuesta, después craftearla —
   { id: "silver", res: "plata", need: () => TOOL_CRAFT.axe.plata || 10,
     txt: "Juntá # de plata vendiendo cosecha (para el Hacha)",                     target: "market", panel: "ov-market", ui: "#vb-papa" },
@@ -607,7 +684,7 @@ const TUTO_STEPS = [
     txt: "Juntá # de madera (para la Cocina)",                                  target: "tree" },
   { id: "stonec", res: "piedra", need: () => BUILD_DEF.cocina.cost.piedra || 15,
     txt: "Juntá # de piedra (para la Cocina)",                                  target: "rock" },
-  { id: "build_cocina", n: 1, pr: 50,  txt: "Construí la Cocina (pide granja nivel " + 5 + ")", target: "cocina" },
+  { id: "build_cocina", n: 1, pr: 50,  txt: "Colocá el plano de la Cocina y construíla (granja nivel 5)", target: "cocina" },
   { id: "cook",     n: 1, pr: 50,  txt: "Cociná tu primer plato: Papa Asada",   target: "cocina", panel: "ov-cocina", ui: "[data-cook='papa_asada']" },
   { id: "eat",      n: 1, pr: 25,  txt: "Comé un plato desde la bolsa (te da un buff)" },
   { id: "silverarm", res: "plata", need: () => ARMAS_UNLOCK_PLATA || 1000,
@@ -619,7 +696,7 @@ const TUTO_STEPS = [
   { id: "kill",      n: 1, pr: 50, txt: "Vencé tu primera criatura" },
   { id: "kill5",     n: 5, pr: 100, txt: "Vencé 5 criaturas más" },
   { id: "fish",      n: 1, pr: 50, txt: "Pescá un pez en la laguna (comprá lombrices en la Tienda)" },
-  { id: "build_altar", n: 1, pr: 100, txt: "Construí el Altar de Runas",        target: "altar" },
+  { id: "build_altar", n: 1, pr: 100, txt: "Colocá el plano del Altar de Runas y construílo", target: "altar" },
   { id: "upgrade",   n: 1, pr: 150, txt: "Mejorá un arma a +1 en el Altar",     target: "altar", panel: "ov-altar" },
   // ——— ETAPA 3: que el jugador descubra TODO lo que se puede hacer ———
   { id: "mat",       n: 1, pr: 40,  txt: "Fundí una barra en el Horno de Piedra", target: "horno", panel: "ov-horno", ui: "[data-mat='barra_piedra']" },
@@ -2488,6 +2565,7 @@ function canonicalStacks() {
   ["axe", "rod"].forEach(k => { let n = toolCount(k); while (n > 0) { list.push({ kind: "tool", key: k }); n -= 99; } });   // apilables ×99
   // fixs.docx #9 (11/8): el arma EQUIPADA ya no ocupa lugar en la bolsa — vive en el panel de Equipo
   for (const id of ARM_ORDER) if (G.weapons && G.weapons[id] && G.gear.arma !== id) list.push({ kind: "arm", key: id });
+  if (G.planos) for (const t in G.planos) if (G.planos[t]) list.push({ kind: "plano", key: t });   // blueprints (12/8): clic para colocarlos
   PICK_ORDER.forEach(id => { let n = pickCount(id); while (n > 0) { list.push({ kind: "pick", key: id }); n -= 99; } });   // picos apilables ×99
   ITEM_RES_ORDER.forEach(r => { let n = Math.floor(G.res[r] || 0); while (n > 0) { list.push({ kind: "res", key: r }); n -= 99; } });
   CROP_ORDER.forEach(s => { let n = Math.floor(G.seeds[s] || 0); while (n > 0) { list.push({ kind: "seed", key: s }); n -= 99; } });
