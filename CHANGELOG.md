@@ -1876,7 +1876,13 @@ BUILD_DEF tienen su obra. El gris sobrevive solo en árboles/rocas bloqueados.
   y a `deco_pasto` (los yuyitos quedaban amarillos), más el color de fondo de respaldo
   `#328032`. grass `?v=5`, decos `?v=4`.
 
-Atlas final del día: `?v=40`, 570 sprites.
+- **La cerca perimetral a la madera del set** (pedido: "que se parezca a la madera de los
+  edificios"). Transferencia de paleta: cada píxel de `fence_*` pasó al tono de madera del
+  granero con el brillo más parecido (24 tonos), conservando los contornos oscuros.
+  fence `?v=3`, corner `?v=4`, y de paso se subieron las versiones sueltas de los árboles
+  nuevos que seguían con número viejo.
+
+Atlas final del día: `?v=41`, 570 sprites.
 
 ---
 
