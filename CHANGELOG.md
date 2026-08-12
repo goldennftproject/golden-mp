@@ -1814,6 +1814,41 @@ salvo la parte de arte que espera descarga (mazos y God Hand).
 
 ---
 
+## Día 17 — Miércoles 12/08 · El set de edificios "mercadillo" + el árbol nuevo
+
+Sesión de dirección de arte mano a mano. Nació de un mercadillo suelto que gustó
+("ni cute ni rústico") y terminó siendo el estilo de todo el pueblo, generado EN CADENA
+como estados de un mismo objeto de PixelLab para mantener paleta y vista.
+
+Reglas del set, dictadas en vivo: vista frontal con la leve caída top-down del juego ·
+techos de madera al tono de las paredes (nada de colores de toldo) · sin césped ni
+plataformas de base · **cada edificio se identifica por sus productos AFUERA**, como un
+mercadillo · **ninguna forma de techo repetida**.
+
+Integrado (atlas `?v=37`, 561 sprites):
+
+- **Mercadillo** (el origen): toldo rayado rojo/blanco, balanza de bronce, cajones de
+  verdura y pan.
+- **Granero**: gambrel de madera (v2: sin el rojo del toldo, sin plataforma), portón con
+  cajones y barriles.
+- **Herrería**: techo de un agua con alero, fragua encendida, yunque y armas expuestas
+  (conserva su chimenea: es su identidad).
+- **Cocina**: techo curvo abombado, mesa con panes y tartas, sartenes colgando.
+- **Establo**: bajo y alargado, carretilla con fardos, herraduras — sin chimenea.
+- **Curtiduría**: techo a cuatro aguas, pieles en bastidores, barril de tinte — sin chimenea.
+- **Ofrendas**: tras varias iteraciones (abierta → piedra → frontal), quedó la de paredes
+  de tablones oscuros con el nicho iluminado: dos figuras doradas rezando y el cuenco.
+- **Horno: NO se tocó** — el domo actual queda (decisión del 12/8).
+- **El ÁRBOL del que sale esa madera** + su progresión completa de talado (corte leve,
+  corte profundo, pelado con brotes, tocón con anillos), todos LIMPIOS: sin suelo ni
+  hojas caídas — esas piezas se harán aparte para reutilizarse. `tree_stump_leaves`
+  apunta al tocón limpio.
+
+Los edificios v3 oscuros (estilo Curtiduría) y el set intermedio quedaron descartados;
+sus PNG duermen en `pixellab_edificios_v3` y `pixellab_edificios_curtiduria`.
+
+---
+
 ## Pendientes conocidos
 *(actualizado el 11/8)*
 

@@ -4,9 +4,10 @@
 
 ## 🔴 Inmediato
 
-- [ ] **Deploy** (`deploy.bat`): atlas `?v=35` con mazos de verdad, godhand.png, fuente/farol nítidos y los casilleros de armadura llenos. Todo listo para subir.
+- [ ] **Deploy** (`deploy.bat`): atlas `?v=37` con el set de edificios "mercadillo" completo (menos el horno, que queda), el árbol nuevo con su talado, y todo lo del 11/8 (mazos, godhand, casilleros de armadura). Todo listo para subir.
+- [ ] **Hojas caídas / suelo del talado** como piezas sueltas reutilizables (decisión 12/8: separadas del árbol).
+- [x] ~~Set de edificios estilo mercadillo~~ integrado (12/8) — ver CHANGELOG Día 17.
 - [x] ~~Mazos + God Hand~~ integrados (11/8).
-- [x] ~~Edificios v3~~ descartados por decisión final del 11/8 (los PNG quedan en `pixellab_edificios_v3` por si se retoman).
 - [ ] **`GF.TESTEO = 1` → 0** en `config.js` antes de abrir al público.
 
 ## 🟡 Esperando al diseñador
@@ -33,6 +34,7 @@
 
 ## 🔵 Pilares futuros
 
+- [ ] **Granjas visitables** (idea aprobada el 11/8, sin fecha): V1 snapshot de la granja en Supabase + "modo visita" de solo lectura desde la plaza y el leaderboard · V2 me-gusta y cortesía diaria (regar) con tope · V3 presencia real con room de Colyseus por granja. Da sentido social a adornos, skins y las 60 parcelas.
 - [ ] Login por email multi-dispositivo · PvP/endgame de netherita · referidos · token $Golden · audio · granja distinta por nivel (quinta.docx).
 
 ## ✅ Cerrado el 11/8 (fixs.docx, 19 puntos)
