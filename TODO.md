@@ -4,7 +4,7 @@
 
 ## 🔴 Inmediato
 
-- [ ] **Deploy** (`deploy.bat`): atlas `?v=37` con el set de edificios "mercadillo" completo (menos el horno, que queda), el árbol nuevo con su talado, y todo lo del 11/8 (mazos, godhand, casilleros de armadura). Todo listo para subir.
+- [ ] **Deploy** (`deploy.bat`): atlas `?v=38` — set "mercadillo" completo (menos horno), árbol + talado, edificios EN OBRA reemplazando al gris, y todo lo del 11/8. Listo para subir.
 - [ ] **Hojas caídas / suelo del talado** como piezas sueltas reutilizables (decisión 12/8: separadas del árbol).
 - [x] ~~Set de edificios estilo mercadillo~~ integrado (12/8) — ver CHANGELOG Día 17.
 - [x] ~~Mazos + God Hand~~ integrados (11/8).

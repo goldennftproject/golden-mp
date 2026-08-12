@@ -1847,6 +1847,20 @@ Integrado (atlas `?v=37`, 561 sprites):
 Los edificios v3 oscuros (estilo Curtiduría) y el set intermedio quedaron descartados;
 sus PNG duermen en `pixellab_edificios_v3` y `pixellab_edificios_curtiduria`.
 
+### Los edificios "EN OBRA" (misma tarde) — chau edificio gris
+
+Un estado en construcción para cada edificio del set, bien desarmado (nivel aprobado con
+la cocina de prueba): cimientos y parantes, ningún techo, materiales apilados y los
+objetos típicos de cada uno esperando en el piso — el toldo del mercadillo enrollado, el
+yunque sin colocar, las figuras doradas de Ofrendas en un cajón, el primer anillo del
+domo del horno.
+
+**Código**: el edificio sin construir ya no se dibuja gris semitransparente — muestra su
+`build_*` a todo color; al pagar la receta salta al edificio terminado con lluvia de
+estrellitas. El gris queda de respaldo solo para el Altar (sin arte de obra) y los
+árboles/rocas bloqueados. Claves `build_*` en el atlas (`?v=38`, 569 sprites) y con
+respaldo suelto en boot.js.
+
 ---
 
 ## Pendientes conocidos

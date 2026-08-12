@@ -31,7 +31,7 @@ BOOT = os.path.join(RAIZ, "public", "game", "boot.js")
 
 # Los iconos de recursos, cultivos, peces y monedas también van al atlas: el juego los
 # usa para el "premio" que sale volando cuando talás, picás o cosechás.
-EXTRA = ["res_", "crop_", "fish_", "coin_", "animal_", "deco_"]
+EXTRA = ["res_", "crop_", "fish_", "coin_", "animal_", "deco_", "build_"]   # build_: edificios en obra (12/8)
 
 # Edificios que antes no tenían arte y por eso nunca entraron al atlas (9/8).
 SUELTOS = ["establo", "curtiduria", "ofrendas", "mazo", "pet_gallina", "skin_sombrero", "godhand"]

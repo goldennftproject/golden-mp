@@ -174,8 +174,12 @@ class FarmScene extends Phaser.Scene {
       const texKey = this.textures.exists(o.key) ? o.key : "store";   // respaldo si falta el arte (p.ej. horno.png aún no bajado)
       const s = (o.key === "portal" ? this.add.sprite(cx, by, texKey) : this.add.image(cx, by, texKey)).setOrigin(0.5, 1);
       if (o.key === "portal" && this.anims.exists("portal_spin")) s.play("portal_spin");
-      // edificios sin construir (viernes 1): en sombra/difuminados hasta pagar la receta
-      if (typeof BUILD_DEF !== "undefined" && BUILD_DEF[o.type] && !(G.built && G.built[o.type])) s.setAlpha(0.5).setTint(0x555555);
+      // edificios sin construir: la OBRA con cimientos y materiales (12/8). Antes era el
+      // edificio terminado en gris apagado; el gris queda de respaldo si falta el arte (altar).
+      if (typeof BUILD_DEF !== "undefined" && BUILD_DEF[o.type] && !(G.built && G.built[o.type])) {
+        if (this.textures.exists("build_" + o.type)) s.setTexture("build_" + o.type);
+        else s.setAlpha(0.5).setTint(0x555555);
+      }
       // viernes (2): árboles y piedras bloqueados (1 activo + resto difuminado, se desbloquean en orden)
       let lockIdx = -1;
       if (o.type === "tree") lockIdx = __treeN++;
@@ -811,7 +815,12 @@ class FarmScene extends Phaser.Scene {
         if (!canAfford(b.cost)) { toast("Te faltan materiales para construir"); return; }
         if (b.golden && G.golden < b.golden) { toast("Te falta $Golden (" + b.golden + ")"); return; }
         payCost(b.cost); if (b.golden) G.golden -= b.golden; G.built[o.type] = true;
-        if (o.sprite) { o.sprite.setAlpha(1); o.sprite.clearTint(); }
+        if (o.sprite) {
+          // de la OBRA al edificio terminado (12/8), con su lluvia de estrellas
+          if (this.textures.exists(o.baseKey) && o.sprite.texture.key !== o.baseKey) { o.sprite.setTexture(o.baseKey); o.sprite.setScale(o.rw / o.sprite.width); }
+          o.sprite.setAlpha(1); o.sprite.clearTint();
+          if (this.estrellasFx) this.estrellasFx(o.cx, o.by - (o.sprite.displayHeight || 60) * 0.5);
+        }
         this.tintarNodo(o);
         if (typeof tutoEvent === "function") tutoEvent("build_" + o.type);
         addXp("crafting", 20); log("¡Construiste " + b.label + "!", "gold"); toast("¡" + b.label + " construida!");
@@ -1217,7 +1226,11 @@ class FarmScene extends Phaser.Scene {
   // que siempre gana. Hay que llamarlo cada vez que algo hace clearTint() sobre el nodo.
   tintarNodo(o) {
     const s = o && o.sprite; if (!s || !s.setTint) return;
-    if (o.locked || (typeof BUILD_DEF !== "undefined" && BUILD_DEF[o.type] && !(G.built && G.built[o.type]))) { s.setTint(0x555555); return; }
+    if (o.locked || (typeof BUILD_DEF !== "undefined" && BUILD_DEF[o.type] && !(G.built && G.built[o.type]))) {
+      // la OBRA (build_*) se ve a todo color; el gris es solo para bloqueados/sin arte de obra (12/8)
+      if (!(s.texture && String(s.texture.key).indexOf("build_") === 0)) s.setTint(0x555555);
+      return;
+    }
     const t = (NODO_TINTE && (o.type === "ore" || o.type === "rock") && GF.ORE_TINTE) ? GF.ORE_TINTE[o.ore || "piedra"] : null;
     if (t && t !== 0xffffff) s.setTint(t); else s.clearTint();
   }
