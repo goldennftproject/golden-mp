@@ -26,7 +26,7 @@ class FarmScene extends Phaser.Scene {
     this.corral = null; this.animales = null; this.corralCerca = null;
     this.nubes = null; this.maripos = null; this._part = 0; this._rafActiva = false; this._vaporAt = 0;   // efectos de ambiente
     this.queue = [];      // cola de acciones: clickeá varios objetivos y se hacen en orden
-    this.cameras.main.setBackgroundColor(GF.ISLA ? "#2e7fa8" : "#6c8c53");   // isla: agua alrededor
+    this.cameras.main.setBackgroundColor(GF.ISLA ? "#2e7fa8" : "#328032");   // isla: agua alrededor · 12/8: verde al tono del pasto nuevo
 
     this.dragPlot = null; this.dragPond = false;
     // posiciones editadas de laguna y parcelas: primero base, después lo guardado

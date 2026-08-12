@@ -49,8 +49,8 @@ class BootScene extends Phaser.Scene {
     ["sword","bow"].forEach(k => L.push([k, P + k + ".png"]));   // arma visible al atacar en el Bosque
     L.push(["sword_wood", P + "sword_wood.png"]);   // viernes (2): espada de madera (derivada de la de hierro)
     L.push(["pick_iron", P + "pick_iron.png"]);     // viernes (2): pico de hierro (derivado del de piedra)
-    ["grass_a","grass_b","grass_c"].forEach(k => L.push([k, P + k + ".png?v=4"]));   // suelo nuevo sin damero · v2: tiles de 42px (la celda real)
-    ["deco_flor_blanca","deco_flor_amarilla","deco_pasto","deco_piedras"].forEach(k => L.push([k, P + k + ".png?v=3"]));   // decoración del pasto (PixelLab)
+    ["grass_a","grass_b","grass_c"].forEach(k => L.push([k, P + k + ".png?v=5"]));   // v5 (12/8): recoloreado al verde de las copas de los árboles
+    ["deco_flor_blanca","deco_flor_amarilla","deco_pasto","deco_piedras"].forEach(k => L.push([k, P + k + ".png?v=4"]));   // v4 (12/8): deco_pasto al tono nuevo
     L.push(["cocina", P + "cocina.png?v=4"]);   // edificio de Cocina (detalles 29/7)
     L.push(["horno", P + "horno.png?v=4"]);     // Horno de Piedra (detalles viernes 1): fundición de barras
     // arte cozy nuevo (v2 rompe el caché del arte viejo)
@@ -122,8 +122,8 @@ class BootScene extends Phaser.Scene {
   preload() {
     // ATLAS: todos los sprites del mundo en 2 archivos (mucho más liviano para el server free).
     // Si el atlas no llega, ensureAll() baja los archivos sueltos como respaldo.
-    this.load.image("__atlas", "assets/atlas.png?v=39");
-    this.load.json("__atlasmap", "assets/atlas.json?v=39");
+    this.load.image("__atlas", "assets/atlas.png?v=40");
+    this.load.json("__atlasmap", "assets/atlas.json?v=40");
 
     // No hay barra propia: la pantalla de carga es UNA sola, la del HTML, y le pasamos el avance.
     // (Antes había dos barras seguidas y el juego "aparecía" antes de estar listo.)

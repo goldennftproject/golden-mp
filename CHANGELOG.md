@@ -1862,8 +1862,21 @@ estrellitas. Claves `build_*` en el atlas y con respaldo suelto en boot.js.
 Después se sumó el **Altar de Runas en obra** (generado en SU grupo de estilo original):
 la base circular a medias y los monolitos tumbados con las runas talladas pero APAGADAS —
 se "encienden" recién al construirlo. Con esto **ningún edificio queda gris**: los 9 de
-BUILD_DEF tienen su obra. El gris sobrevive solo en árboles/rocas bloqueados. Atlas final
-del día: `?v=39`, 570 sprites.
+BUILD_DEF tienen su obra. El gris sobrevive solo en árboles/rocas bloqueados.
+
+### Pulido en vivo (viendo el juego con todo puesto)
+
+- **Sombras de edificios: FUERA.** Se probó acotarlas (2 celdas, pegadas al borde) y ni
+  así — el arte nuevo apoya directo sobre el pasto. Solo el dummy conserva la suya.
+- **Tamaños emparejados** (`config.js`): antes 1,6-3 celdas pensadas para el arte viejo;
+  ahora granero/establo 2,5 · herrería/cocina 2,2 · horno/curtiduría/ofrendas/altar 2 ·
+  mercadillo 1,8. La cocina (sprite alto) era la gigante del pueblo.
+- **El pasto recoloreado al verde de las copas** (pedido: "césped color similar a los
+  árboles"). Corrimiento HSV medido de la copa del árbol nuevo aplicado a `grass_a/b/c`
+  y a `deco_pasto` (los yuyitos quedaban amarillos), más el color de fondo de respaldo
+  `#328032`. grass `?v=5`, decos `?v=4`.
+
+Atlas final del día: `?v=40`, 570 sprites.
 
 ---
 
