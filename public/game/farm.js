@@ -196,7 +196,9 @@ class FarmScene extends Phaser.Scene {
       let shadow = null;
       // los árboles NO llevan sombra: su sprite ya trae la base de tierra dibujada y la elipse quedaba abajo de la tierra
       if (o.type === "barn" || o.type === "market" || o.type === "store" || o.type === "cocina" || o.type === "horno" || o.type === "altar" || o.type === "establo" || o.type === "curtiduria" || o.type === "ofrendas") {
-        shadow = this.add.ellipse(cx, by - 3, rw * 0.82, T * 0.3, 0x1c2a12, 0.22).setDepth(by - 0.5);
+        // sombra pegada al borde inferior y de 2 celdas como MÁXIMO (12/8): con el set nuevo
+        // la elipse a ancho completo sobresalía a los costados y el edificio parecía flotar
+        shadow = this.add.ellipse(cx, by - 1, Math.min(rw * 0.82, T * 2), T * 0.24, 0x1c2a12, 0.22).setDepth(by - 0.5);
       } else if (o.type === "dummy") {   // sombra chiquita bajo el dummy
         shadow = this.add.ellipse(cx, by - 2, rw * 0.55, T * 0.2, 0x1c2a12, 0.2).setDepth(by - 0.5);
       }
@@ -552,7 +554,7 @@ class FarmScene extends Phaser.Scene {
       }
       o.cx = leftCol * T + wCells * T / 2; o.by = baseRow * T;
       o.sprite.setPosition(o.cx, o.by).setDepth(o.by);
-      if (o.shadow) o.shadow.setPosition(o.cx, o.by - 3).setDepth(o.by - 0.5);
+      if (o.shadow) o.shadow.setPosition(o.cx, o.by - 1).setDepth(o.by - 0.5);   // 12/8: la sombra pegada al borde inferior
       if (o.timer) o.timer.setPosition(o.cx, o.by - T * 0.85);
       if (o.type === "cofre") { const c = G.chests && G.chests[o.chestIdx]; if (c) { c.col = leftCol; c.row = baseRow - 1; } }
       else { if (!G.layout) G.layout = {}; G.layout[o.i] = { cx: o.cx, by: o.by }; }
