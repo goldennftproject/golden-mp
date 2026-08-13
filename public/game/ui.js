@@ -804,6 +804,18 @@ function tutoHighlight() {
   if (!st.ui) return;
   const cont = document.getElementById(st.panel); if (!cont) return;
   const el = cont.querySelector(st.ui); if (!el) return;
+  // 13/8: si el botón vive en una PESTAÑA oculta (Tienda: Comprar/Adornos/Vender ·
+  // Herrería: Craftear/Armas/Reparar), se ilumina la pestaña que lleva a él — el
+  // playtest mostró el caso: "vendé papas" con la Tienda abierta en Comprar y nada brillaba
+  if (el.offsetParent === null) {
+    let tab = null;
+    const sp = el.closest(".shoppane");
+    if (sp) tab = cont.querySelector('.shoptab[data-shop="' + sp.id.replace("shop-", "") + '"]');
+    const fp = el.closest('[id^="forge-pane-"]');
+    if (!tab && fp) tab = cont.querySelector('.forgetab[data-forge="' + fp.id.replace("forge-pane-", "") + '"]');
+    if (tab) tab.classList.add("tutohl");
+    return;
+  }
   el.classList.add("tutohl");
   const fila = el.closest(".forge-row, .mkt-row");
   if (fila) { fila.classList.add("tutohl"); fila.scrollIntoView({ block: "nearest" }); }
@@ -1597,6 +1609,7 @@ function initUI() {
     $("shop-buy").style.display = s === "buy" ? "" : "none";
     $("shop-sell").style.display = s === "sell" ? "" : "none";
     { const dp = $("shop-deco"); if (dp) dp.style.display = s === "deco" ? "" : "none"; }
+    if (typeof tutoHighlight === "function") tutoHighlight();   // 13/8: al cambiar de pestaña, el brillo salta al botón del objetivo
   });
   // clic fuera de una ventana abierta → se cierra (menos la bolsa: multitarea al minar/talar, detalles 29/7)
   // apretar un botón bloqueado: se sacude en vez de no hacer nada (el "no" se entiende sin cartel)
@@ -1624,6 +1637,7 @@ function initUI() {
     $("forge-pane-craft").style.display = s === "craft" ? "" : "none";
     const pa = $("forge-pane-armas"); if (pa) pa.style.display = s === "armas" ? "" : "none";
     $("forge-pane-repair").style.display = s === "repair" ? "" : "none";
+    if (typeof tutoHighlight === "function") tutoHighlight();   // 13/8: al cambiar de pestaña, el brillo salta al botón del objetivo
   });
   // modo edición: cierra las ventanas y deja solo dos botoncitos flotantes sobre la hotbar
 // llena el selector de adornos con lo que tengas sin colocar

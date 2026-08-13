@@ -2027,6 +2027,10 @@ Ahora la cadena de guía no tiene puntas sueltas:
   un panel sin edificio (Inventario, Pase), se resalta el botón ☰ Menú y la entrada del
   panel; al abrir el panel, el botón exacto brilla al instante (hook en `openOv`) y se
   re-aplica cada segundo aunque el panel se redibuje.
+- **Pestañas** (playtest: "vendé papas" con la Tienda abierta en Comprar y nada brillaba):
+  si el botón del objetivo vive en una pestaña oculta (`offsetParent === null`), brilla la
+  PESTAÑA que lleva a él — Tienda (`shop-*` → `.shoptab`) y Herrería (`forge-pane-*` →
+  `.forgetab`); al cambiar de pestaña el brillo salta al botón exacto.
 
 Y el "bloqueo momentáneo" al colocar un plano era el REINICIO de escena (reconstruye
 ~570 sprites de golpe): ahora pasa detrás de un telón de 160 ms con el fundido que ya
