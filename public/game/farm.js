@@ -1726,7 +1726,11 @@ class FarmScene extends Phaser.Scene {
     o.cx = (op.col + 0.5) * T; o.by = (op.row + 1) * T;
     o.oculto = false;
     o.sprite.setTexture("build_" + t).setVisible(true).setPosition(o.cx, o.by).setOrigin(0.5, 1);
+    // el sprite oculto venía con el gris de respaldo puesto desde el create (tintarNodo lo
+    // pinta ANTES del cambio de textura): acá se limpia — la obra se ve a todo color
+    o.sprite.clearTint().setAlpha(1);
     o.sprite.setScale(o.rw / o.sprite.width).setDepth(o.by);
+    this.tintarNodo(o);   // respeta la regla general (build_* queda sin tinte)
     this.letreroObra(o);
     if (this.rebuildCollisions) this.rebuildCollisions();
     if (typeof this.estrellasFx === "function") this.estrellasFx(o.cx, o.by - 20);   // mini festejo al apoyarla

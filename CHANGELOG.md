@@ -2064,6 +2064,9 @@ Ahora la cadena de guía no tiene puntas sueltas:
   VIVO (`colocarObraEnVivo`): textura `build_*`, posición, letrero, colisiones y
   estrellitas — sin reiniciar la escena. El reinicio con telón queda solo de respaldo
   (`obraColocar(t,col,row,vivo)`) y para las parcelas, que sí reconstruyen la grilla.
+- **Fix inmediato del playtest**: la obra en vivo salía OSCURA — el sprite oculto traía el
+  gris de respaldo puesto desde el create (tintarNodo corre antes del cambio de textura).
+  Ahora `colocarObraEnVivo` hace `clearTint().setAlpha(1)` tras poner `build_*`.
 
 Y el "bloqueo momentáneo" al colocar un plano era el REINICIO de escena (reconstruye
 ~570 sprites de golpe): ahora pasa detrás de un telón de 160 ms con el fundido que ya
