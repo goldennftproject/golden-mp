@@ -1964,19 +1964,19 @@ de madera, rocas en los de piedra, horno en el de fundir. Todo lo demás, a tiem
 Con guardia + acelerador + candado de venta, la cadena fluye al ritmo del jugador y no
 hay bucle de dinero infinito.
 
-### El mapa inicial ordenado por zonas + el CORRAL como zona reservada
+### El mapa inicial ordenado por zonas + la CERCA PERIMETRAL intocable
 
 El arranque queda zonificado con lógica de lectura: **parcelas + granero** al noroeste,
 **bosquecito** (6 árboles) al noreste, **cantera** (6 rocas + minerales) al sureste,
 **laguna** al suroeste, **mercadillo** al sur y **portal** en la esquina. Verificado por
 script que ninguna zona pisa a otra.
 
-El **corral se reubicó** a la pradera libre del centro-oeste (junto a donde va el
-Establo) y ahora **se dibuja siempre** — piso de tierra pisoteada + cerca de postes, por
-código — aunque los animales sigan sueltos como pidió el diseñador. Y es **zona
-reservada**: no se puede colocar ni arrastrar NADA encima — adornos, parcelas, obras de
-blueprint, edificios movidos, árboles, piedras ni la laguna (un solo helper
-`GF.enCorral` enchufado en los 5 validadores de colocación).
+**La cerca que rodea la granja es intocable**: el anillo del borde (2 filas arriba por
+la cerca de frente, 1 celda en los otros lados) ya no admite que se coloque ni se
+arrastre NADA encima — adornos, parcelas, obras de blueprint, edificios movidos,
+árboles, piedras ni la laguna. Un solo helper (`GF.enCerca`) enchufado en los 4
+validadores de colocación, así cualquier mecánica futura lo hereda gratis. (El corral
+de animales viejo sigue deprecado y sin dibujarse: los animales andan sueltos.)
 
 ### El "temblor leve" de toda la pantalla — arreglado
 

@@ -1493,23 +1493,16 @@ class FarmScene extends Phaser.Scene {
   crearCorral() {
     this.animales = [];
     const T = GF.TILE;
-    // 12/8: el corral SIEMPRE se dibuja (piso + cerca) — es la zona reservada donde nada
-    // se puede colocar. Los animales siguen sueltos por toda la granja (CORRAL_ON = 0);
-    // con CORRAL_ON = 1 vuelven a vivir encerrados adentro.
-    this.dibujarCorral();
+    // 9/8: los animales andan SUELTOS por la granja. No se dibuja patio ni cerca; la zona
+    // por donde pueden caminar es la granja entera y lo que esquivan se decide en puntoAnimal().
     if (!GF.CORRAL_ON) {
-      // 9/8: los animales andan SUELTOS: la zona caminable es la granja entera
       this.corral = { x1: 26, y1: T * 1.2, x2: GF.WORLD_W - 26, y2: GF.WORLD_H - 26 };
+      this.corralCerca = null;
       return;
     }
     const C = GF.CORRAL; if (!C) return;
     const x1 = C.col * T, y1 = C.row * T, w = C.cols * T, h = C.rows * T;
     this.corral = { x1, y1, x2: x1 + w, y2: y1 + h };
-  }
-  // el patio del corral: parche de tierra pisoteada + cerca de postes (por código, sin arte)
-  dibujarCorral() {
-    const T = GF.TILE, C = GF.CORRAL; if (!C) return;
-    const x1 = C.col * T, y1 = C.row * T, w = C.cols * T, h = C.rows * T;
     // piso: un parche de tierra pisoteada, más claro que el pasto
     const g = this.add.graphics().setDepth(-997);
     g.fillStyle(0xa88a52, 0.55).fillRoundedRect(x1 + 3, y1 + 3, w - 6, h - 6, 10);
@@ -1661,8 +1654,7 @@ class FarmScene extends Phaser.Scene {
   // ¿el adorno entra en esa celda? (ignora es el índice del que se está moviendo, que no se pisa a sí mismo)
   celdaLibreAdorno(col, row, ignora) {
     const T = GF.TILE;
-    if (col < 1 || row < 2 || col >= GF.COLS - 1 || row >= GF.ROWS - 1) return false;
-    if (GF.enCorral && GF.enCorral(col, row)) return false;   // 12/8: el corral es zona reservada
+    if (GF.enCerca && GF.enCerca(col, row)) return false;   // 12/8: la CERCA perimetral es intocable
     const x = (col + 0.5) * T, y = (row + 0.9) * T;
     if (GF.blockedAt(x, y, 6)) return false;
     if (GF.PLOTS.some(p => p.col === col && p.row === row)) return false;
@@ -2078,7 +2070,7 @@ class FarmScene extends Phaser.Scene {
     for (let j = 0; j < GF.PLOTS.length; j++) { if (j !== pl.i && GF.PLOTS[j].col === col && GF.PLOTS[j].row === row) return true; }
     const p = GF.POND;
     if (col >= p.col && col < p.col + p.cols && row >= p.row && row < p.row + p.rows) return true;
-    if (GF.enCorral && GF.enCorral(col, row)) return true;   // 12/8: el corral es zona reservada
+    if (GF.enCerca && GF.enCerca(col, row)) return true;   // 12/8: la CERCA perimetral es intocable
     return false;
   }
 
@@ -2091,7 +2083,7 @@ class FarmScene extends Phaser.Scene {
       if (qr - 1 >= row && qr - 1 < row + p.rows && col < qc + qw && qc < col + p.cols) return true;
     }
     for (const b of GF.PLOTS) { if (b.col >= col && b.col < col + p.cols && b.row >= row && b.row < row + p.rows) return true; }
-    if (GF.enCorral) for (let c = col; c < col + p.cols; c++) for (let r = row; r < row + p.rows; r++) if (GF.enCorral(c, r)) return true;   // 12/8: corral reservado
+    if (GF.enCerca) for (let c = col; c < col + p.cols; c++) for (let r = row; r < row + p.rows; r++) if (GF.enCerca(c, r)) return true;   // 12/8: la cerca perimetral es intocable
     return false;
   }
 
@@ -2107,8 +2099,8 @@ class FarmScene extends Phaser.Scene {
     for (const pl of GF.PLOTS) { if (pl.row + 1 === baseRow && pl.col >= leftCol && pl.col < leftCol + wCells) return true; }
     const p = GF.POND;
     if (baseRow > p.row && baseRow <= p.row + p.rows && leftCol < p.col + p.cols && p.col < leftCol + wCells) return true;
-    // 12/8: el CORRAL es zona reservada — ni edificios, ni árboles, ni piedras encima
-    if (GF.enCorral) for (let c = leftCol; c < leftCol + wCells; c++) if (GF.enCorral(c, baseRow - 1) || GF.enCorral(c, baseRow)) return true;
+    // 12/8: la CERCA perimetral es intocable — ni edificios, ni árboles, ni piedras encima
+    if (GF.enCerca) for (let c = leftCol; c < leftCol + wCells; c++) if (GF.enCerca(c, baseRow - 1) || GF.enCerca(c, baseRow)) return true;
     return false;
   }
 
