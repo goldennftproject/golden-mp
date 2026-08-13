@@ -373,20 +373,40 @@ function tutoAviso() {
    SUB-OBJETIVO con su propia guía (cartel + flechas + permisos):
    sin hachas → craftearla en la Herrería → y si falta la plata, vender/plantar papa.
    pico roto → repararlo en la Herrería. Se recalcula solo: al resolverse, vuelve el paso. */
+// la CADENA de la plata, eslabón por eslabón: vender lo cosechado → cosechar lo listo →
+// esperar lo que crece → plantar lo que hay → comprar semillas → vender materiales.
+// Se usa tanto en los pasos "juntá plata" como cuando falta la plata del hacha (13/8 v4).
+function tutoSubPlata(prefijo) {
+  const conStock = Object.keys(CROP_DEF || {}).find(k => (G.res[k] || 0) > 0);
+  if (conStock) return { txt: prefijo + "vendé tu cosecha en el Mercado",
+    target: "market", panel: "ov-market", ui: "#vb-" + conStock, permite: ["sell", "harvest"] };
+  const plots = Array.isArray(G.plots) ? G.plots : [];
+  if (plots.some(p => p && p.state === "ready")) return { txt: prefijo + "cosechá tus cultivos listos",
+    target: "plot", permite: ["harvest"] };
+  if (plots.some(p => p && p.state === "growing")) return { txt: prefijo + "tus cultivos están creciendo — cosechalos apenas estén",
+    target: "plot", permite: ["harvest"] };
+  if (Object.keys(G.seeds || {}).some(k => (G.seeds[k] || 0) > 0)) return { txt: prefijo + "plantá tus semillas",
+    target: "plot", permite: ["plant", "harvest", "plotunlock"] };
+  const precio = (CROP_DEF && CROP_DEF.papa && CROP_DEF.papa.seedCost) || 1;
+  if (G.plata >= precio) return { txt: prefijo + "comprá semillas de papa y plantalas",
+    target: "market", panel: "ov-market", ui: "[data-buy='papa']", permite: ["buyseed", "plant", "harvest"] };
+  return { txt: prefijo + "vendé lo que tengas en el Mercado (madera, piedra…)",
+    target: "market", panel: "ov-market", ui: "#shop-sell", permite: ["sell", "chop", "mine"] };
+}
 function tutoSub() {
   const st = tutoActivo(); if (!st) return null;
+  // paso "juntá plata": si no hay NADA cosechado para vender, guiar al eslabón anterior
+  // (playtest: "vendé tus papas" apuntando al Mercado con cero papas en la bolsa)
+  if (st.res === "plata") {
+    const hayCosecha = Object.keys(CROP_DEF || {}).some(k => (G.res[k] || 0) > 0);
+    return hayCosecha ? null : tutoSubPlata("Para esa plata: ");   // con cosecha, el paso ya te manda a vender
+  }
   const quiereTalar = st.res === "madera" || st.id === "unlocknode" || st.id === "chest";
   const quierePicar = st.res === "piedra";
   if (quiereTalar && typeof toolCount === "function" && toolCount("axe") <= 0) {
     if (!(G.built && G.built.store)) return null;   // fase pre-Herrería: con las hachas de arranque alcanza
     const plata = (TOOL_CRAFT && TOOL_CRAFT.axe && TOOL_CRAFT.axe.plata) || 10;
-    if (G.plata < plata) {
-      const tieneCosecha = Object.keys(CROP_DEF || {}).some(k => (G.res[k] || 0) > 0);
-      if (tieneCosecha) return { txt: "Sin hachas ni plata: vendé tu cosecha (el hacha cuesta " + plata + ")",
-        target: "market", panel: "ov-market", ui: "#vb-papa", permite: ["sell", "harvest"] };
-      return { txt: "Sin hachas: plantá, cosechá y vendé para juntar " + plata + " de plata",
-        target: "plot", permite: ["plant", "harvest", "sell", "buyseed", "plotunlock"] };
-    }
+    if (G.plata < plata) return tutoSubPlata("Sin hachas (cuesta " + plata + " de plata): ");
     return { txt: "Te quedaste sin hachas: crafteá una en la Herrería (" + plata + " de plata)",
       target: "store", panel: "ov-forge", ui: "[data-ctool='axe']", permite: ["crafttool"] };
   }

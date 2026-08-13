@@ -2108,6 +2108,12 @@ Ahora la cadena de guía no tiene puntas sueltas:
   el paso original (entra a la firma de tutoSync). Además `plotunlock` quedó permitido en
   los pasos de juntar plata — desbloquear tierras para plantar más es inversión, no
   exploit (el propio playtest lo hizo y estaba bien). Árbol verificado con 7 casos.
+- **v4 — la CADENA de la plata eslabón por eslabón (playtest: "vendé cosecha" con cero
+  papas en la bolsa)**: `tutoSubPlata()` guía al eslabón que SÍ se puede hacer, en orden:
+  vendé lo cosechado → cosechá lo listo → "están creciendo" → plantá tus semillas →
+  comprá semillas (la exención del guardia ya lo permitía) → vendé materiales (madera,
+  piedra…). La usan los pasos "juntá plata" (silver/silverarm) y el desvío del hacha.
+  Cada eslabón abre solo sus acciones y mueve cartel + flechas. 7 casos simulados más.
 
 Y el "bloqueo momentáneo" al colocar un plano era el REINICIO de escena (reconstruye
 ~570 sprites de golpe): ahora pasa detrás de un telón de 160 ms con el fundido que ya
