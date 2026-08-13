@@ -241,7 +241,7 @@
   .durbar>i{display:block;height:100%;background:linear-gradient(90deg,#8fc46a,#5a9a3a)}
   /* menú plegable */
   .gmenu{position:fixed;right:10px;top:52px;z-index:7;display:flex;flex-direction:column;align-items:flex-end;gap:7px}
-  .gmitems{display:flex;flex-direction:column;gap:6px;transition:opacity .15s,transform .15s;transform-origin:top right}
+  .gmitems{display:flex;flex-direction:column;gap:0;transition:opacity .15s,transform .15s;transform-origin:top right}   /* 13/8: botones del menú pegados, sin separación */
   .gmenu.collapsed .gmitems{opacity:0;transform:scale(.9);pointer-events:none;height:0;overflow:hidden}
   .gmi{display:flex;align-items:center;gap:8px;width:190px;text-align:left;background:rgba(38,51,31,.94);border:1px solid #3c4d31;color:#f2ead5;font-weight:700;font-size:13px;border-radius:10px;padding:8px 10px;cursor:pointer}
   .gmi:hover{filter:brightness(1.15)}
@@ -885,6 +885,8 @@
     <button class="gold sm" id="edit-poner">Poner adorno</button>
     <!-- fix #17 (11/8): las parcelas compradas se colocan a mano desde acá -->
     <button class="gold sm" id="edit-parcela" style="display:none">Poner parcela</button>
+    <!-- 13/8: mientras estás colocando un plano/adorno/parcela: cancelar y volver a como estaba -->
+    <button class="red sm" id="edit-cancelar" style="display:none">✕ Cancelar</button>
     <span class="fds" id="edit-decons"></span>
   </div>
 

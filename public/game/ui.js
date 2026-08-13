@@ -313,6 +313,7 @@ function hotItemExists(d) {
   if (d.kind === "seed") return (G.seeds[d.key] || 0) > 0;
   if (d.kind === "fish") return ((G.fish && G.fish[d.key]) || 0) > 0;
   if (d.kind === "dish") return ((G.dishes && G.dishes[d.key]) || 0) > 0;
+  if (d.kind === "plano") return !!(G.planos && G.planos[d.key]);   // 13/8: planos en la barra
   return true;   // herramientas siempre están
 }
 function hotCellHtml(d, i) {
@@ -357,6 +358,13 @@ function hotSelect(i) {
     if (d.kind === "pick" && G.picks.owned[d.key]) equipPick(d.key);
     else if (d.kind === "seed" && cropUnlocked(d.key)) selectSeed(d.key);
     else if (d.kind === "dish") eatDish(d.key);
+    // 13/8: clic al plano en la barra = igual que en la bolsa → elegir dónde levantar la obra
+    else if (d.kind === "plano" && G.planos && G.planos[d.key]) {
+      const sc = window.farmScene;
+      if (!sc || !sc.iniciarColocar) { toast("Entrá a la granja para colocar el plano"); return; }
+      closeAllOv();
+      sc.iniciarColocar("obra", d.key);
+    }
   }
   const v = d ? itemView(d) : null;
   toast(v ? "" + v.label : "Hueco " + (i === 9 ? 0 : i + 1) + " vacío");
@@ -1666,6 +1674,8 @@ function ponerAdornoElegido() {
 }
 
   window.setEditMode = (on) => {
+    // 13/8: salir de edición con algo "en la mano" lo suelta (queda en la bolsa)
+    if (!on) { const sc = window.farmScene; if (sc && sc.placing) { sc.placing = null; if (sc.editHl) sc.editHl.setVisible(false); sc.placingAuto = false; } if (window.syncPlacingUI) syncPlacingUI(false); }
     GF.editMode = on;
     const ce2 = $("cfg-edit"); if (ce2) ce2.textContent = on ? "Terminar edición" : "Modo edición";
     const eb = $("editbar"); if (eb) eb.classList.toggle("show", on);
@@ -1681,6 +1691,9 @@ function ponerAdornoElegido() {
   if (sndBtn) { sndLabel(); sndBtn.onclick = () => { if (window.sfxOn) sfxOn(!(window.sfxIsOn && sfxIsOn())); sndLabel(); if (window.sfx) sfx("click"); }; }
   const cr = $("cfg-reset"); if (cr) cr.onclick = doFarmReset;
   const ed = $("edit-done"); if (ed) ed.onclick = () => setEditMode(false);
+  // 13/8: botón Cancelar del modo colocar — visible solo mientras hay algo "en la mano"
+  window.syncPlacingUI = (on) => { const b = $("edit-cancelar"); if (b) b.style.display = on ? "" : "none"; };
+  { const ec = $("edit-cancelar"); if (ec) ec.onclick = () => { const sc = window.farmScene; if (sc && sc.cancelarColocar) sc.cancelarColocar(); }; }
   // --- adornos: el selector y el botón de la barra de edición (10/8) ---
   { const bp = $("edit-poner"); if (bp) bp.onclick = () => ponerAdornoElegido(); }
   { const ep2 = $("edit-parcela"); if (ep2) ep2.onclick = () => { const sc = window.farmScene; if (sc && sc.iniciarColocar) sc.iniciarColocar("plot"); }; }   // fix #17

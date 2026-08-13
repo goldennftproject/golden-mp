@@ -238,18 +238,26 @@ function buildCostStr(key) { const b = BUILD_DEF[key]; return Object.keys(b.cost
    su plano, y queda donde VOS lo pusiste. */
 var PLANO_NIVEL = { store: 1, horno: 3, cocina: 5, establo: 6, altar: 7, curtiduria: 8, ofrendas: 10 };   // nivel en que cae cada plano (números del diseñador)
 function planoTengo(t) { return !!(G.planos && G.planos[t]); }
+// 13/8: el plano también vive en la HOTBAR (primer hueco libre) — colocarlo sin abrir la bolsa
+function planoAHotbar(t) {
+  if (!Array.isArray(G.hotbar)) return;
+  if (G.hotbar.some(h => h && h.kind === "plano" && h.key === t)) return;
+  const li = G.hotbar.findIndex(h => !h);
+  if (li >= 0) { G.hotbar[li] = { kind: "plano", key: t }; if (typeof refreshHotbar === "function") refreshHotbar(true); }
+}
 function darPlano(t, silencioso) {
   const b = BUILD_DEF[t]; if (!b) return;
   if (G.built && G.built[t]) return;                  // ya construido
   if (G.obras && G.obras[t]) return;                  // la obra ya está colocada
   G.planos = G.planos || {};
-  if (G.planos[t]) return;
+  if (G.planos[t]) { planoAHotbar(t); return; }   // 13/8: guardados viejos — asegurar que esté en la barra
   G.planos[t] = 1;
   if (!silencioso) {
     log("¡Ganaste el PLANO de " + b.label + "! Está en tu bolsa: clic para colocarlo donde quieras.", "gold");
     toast("📜 ¡Plano de " + b.label + "!");
-    if (window.celebrate) celebrate({ title: "¡PLANO NUEVO!", sub: b.label, big: false, reward: "Colocalo desde la bolsa" });
+    if (window.celebrate) celebrate({ title: "¡PLANO NUEVO!", sub: b.label, big: false, reward: "Colocalo desde tu barra rápida" });
   }
+  planoAHotbar(t);
   if (typeof syncSlots === "function") syncSlots(); if (isOpen("ov-inv")) refreshInv();
 }
 // al subir de nivel, al avanzar el tutorial y al cargar. Durante el TUTORIAL (13/8):
@@ -268,6 +276,7 @@ function planosSync(silencioso) {
         // TESTEO), se retira de la bolsa hasta que su paso llegue (si la obra no se colocó)
         if (G.planos && G.planos[t] && !(G.obras && G.obras[t]) && !(G.built && G.built[t])) {
           delete G.planos[t];
+          if (Array.isArray(G.hotbar)) G.hotbar = G.hotbar.map(h => (h && h.kind === "plano" && h.key === t) ? null : h);   // 13/8
           if (typeof syncSlots === "function") syncSlots();
         }
         continue;
@@ -345,6 +354,8 @@ function obraDe(t) { return G.obras && G.obras[t]; }
 function obraColocar(t, col, row) {   // la llama la escena con la celda elegida
   if (!planoTengo(t)) return false;
   delete G.planos[t];
+  // 13/8: el plano usado sale de la hotbar (entró solo al ganarlo)
+  if (Array.isArray(G.hotbar)) G.hotbar = G.hotbar.map(h => (h && h.kind === "plano" && h.key === t) ? null : h);
   G.obras = G.obras || {}; G.obras[t] = { col, row };   // la posición queda para SIEMPRE (también construido)
   G.obraDep = G.obraDep || {}; G.obraDep[t] = G.obraDep[t] || {};
   if (typeof syncSlots === "function") syncSlots();

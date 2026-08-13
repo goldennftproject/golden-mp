@@ -2042,6 +2042,24 @@ Ahora la cadena de guía no tiene puntas sueltas:
   outline pulsante fuerte que las pestañas (+ brightness 1.12) y la fila sube a outline
   3px naranja (#f5a623) para contrastar con el fondo claro.
 
+### El modo COLOCAR pulido de punta a punta (13/8, pedido por audio)
+
+- **Menú sin separaciones**: los botones del menú desplegable van pegados (gap 0).
+- **El plano entra solo a la HOTBAR** al ganarlo (primer hueco libre) además de la bolsa:
+  un clic en la barra y ya estás eligiendo dónde levantarlo. Al usarse sale de la barra;
+  guardados viejos lo reciben retroactivamente (`planoAHotbar` en `darPlano`); el saneo
+  del tutorial también lo limpia de la barra si el plano se retira.
+- **La cámara se panea colocando y en edición**: colocar se resuelve al SOLTAR el clic
+  (antes era al apretar): arrastre = paneo, clic quieto = colocar. Con nada agarrado, el
+  arrastre en modo edición también panea, igual que en el juego normal.
+- **Vista previa de celda**: mientras estás colocando, el cursor pinta la celda destino
+  (verde libre / rojo ocupada; la obra pinta sus 3 celdas) — antes no había preview.
+- **Botón ✕ Cancelar** en la barra de edición mientras hay algo "en la mano" (también
+  clic derecho): el plano queda en la bolsa/barra y, si el colocado vino de la bolsa, se
+  sale del modo edición solo — lo mismo al terminar de colocar. "Terminar edición" con
+  algo en la mano lo suelta sin romper nada. La transición con telón queda SOLO para el
+  momento de colocar obra/parcela (que reinicia la escena); entrar a edición no la tiene.
+
 Y el "bloqueo momentáneo" al colocar un plano era el REINICIO de escena (reconstruye
 ~570 sprites de golpe): ahora pasa detrás de un telón de 160 ms con el fundido que ya
 existía (`reiniciarGranjaSuave`), también al colocar parcelas — el mismo parpadeo se lee

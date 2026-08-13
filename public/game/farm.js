@@ -277,6 +277,7 @@ class FarmScene extends Phaser.Scene {
     this.rebuildCollisions();
     GF.scene = "farm";
     window.farmScene = this;   // para refrescar la flecha del tutorial desde la UI
+    if (window.syncPlacingUI) syncPlacingUI(false);   // 13/8: la escena arranca sin nada "en la mano"
     this.time.delayedCall(400, () => { if (typeof tutoSync === "function") tutoSync(true); else this.updateTutoArrow(); });   // cartel + flecha del tutorial
 
     // parcelas (ciclo arcade: seco → plantar semilla elegida → creciendo (con timer) → listo → cosechar)
@@ -337,7 +338,7 @@ class FarmScene extends Phaser.Scene {
     this.input.on("pointerdown", (pt) => {
       if (pt.rightButtonDown()) {
         if (GF.editMode) {
-          if (this.placing) { this.placing = null; toast("Colocación cancelada"); return; }   // clic derecho cancela el "colocar con clic"
+          if (this.placing) { this.cancelarColocar(); return; }   // clic derecho cancela el "colocar con clic"
           // en edición el clic derecho levanta el adorno que haya abajo (vuelve a la bolsa)
           const ad = this.adornoEnPunto(pt.worldX, pt.worldY);
           if (ad) this.levantarAdorno(ad);
@@ -357,21 +358,8 @@ class FarmScene extends Phaser.Scene {
         }
         return;
       }
-      if (GF.editMode && this.placing) {   // "colocar con clic" (#14/#17, 11/8): el jugador elige la celda
-        const col = Math.floor(pt.worldX / T), row = Math.floor(pt.worldY / T);
-        if (!this.celdaLibreAdorno(col, row, -1)) { toast("Ahí no entra — probá otra celda"); return; }
-        const pl = this.placing;
-        if (pl.tipo === "deco") {
-          if (decoColocar(pl.id, col, row)) { this.syncAdornos(); if (typeof syncEditDeco === "function") syncEditDeco(); toast(DECO_DEF[pl.id].label + " colocado"); }
-          this.placing = null;
-        } else if (pl.tipo === "plot") {
-          this.placing = null;
-          if (typeof parcelaColocar === "function" && parcelaColocar(col, row)) toast("Parcela colocada");   // reinicia la escena para dibujarla
-        } else if (pl.tipo === "obra") {   // blueprint (12/8): la obra ocupa ~2-3 celdas, chequear las vecinas
-          if (!this.celdaLibreAdorno(col - 1, row, -1) || !this.celdaLibreAdorno(col + 1, row, -1)) { toast("Ahí no entra la obra — buscá un lugar más despejado"); return; }
-          this.placing = null;
-          if (typeof obraColocar === "function" && obraColocar(pl.id, col, row)) toast("¡Obra colocada! Llevale materiales");   // reinicia la escena para dibujarla
-        }
+      if (GF.editMode && this.placing) {   // 13/8: colocar se resuelve al SOLTAR — así el arrastre panea la cámara
+        this.hold = { sx: pt.x, sy: pt.y, px: pt.x, py: pt.y, active: false };
         return;
       }
       if (GF.editMode) {   // modo edición: agarrar adorno, objeto, parcela o laguna bajo el cursor
@@ -384,6 +372,7 @@ class FarmScene extends Phaser.Scene {
         if (hit) { hit.origCx = hit.cx; hit.origBy = hit.by; this.dragObj = hit; return; }
         for (const pl of this.plots) { if (Math.abs(wx - pl.cx) < T / 2 && Math.abs(wy - pl.by) < T / 2) { this.dragPlot = pl; return; } }
         if (this.pondImg && this.pondDist(wx, wy) < 1) { this.dragPond = true; return; }
+        this.hold = { sx: pt.x, sy: pt.y, px: pt.x, py: pt.y, active: false };   // 13/8: nada agarrado → el arrastre panea también en edición
         return;
       }
       if (GF.uiOpen) return;
@@ -445,6 +434,28 @@ class FarmScene extends Phaser.Scene {
         return;
       }
       if (!this.editHl) this.editHl = this.add.rectangle(0, 0, T, T, 0x7ec95a, 0.35).setOrigin(0, 1).setDepth(99998);
+      // 13/8: modo COLOCAR — arrastrar panea la cámara y el cursor muestra la celda (verde/rojo)
+      if (this.placing) {
+        if (this.hold && pt.isDown && !pt.rightButtonDown() &&
+            (this.hold.active || Math.hypot(pt.x - this.hold.sx, pt.y - this.hold.sy) >= 8)) {
+          this.hold.active = true;
+          const c = this.cameras.main, z = c.zoom || 1;
+          const dx = this.hold.px - pt.x, dy = this.hold.py - pt.y;
+          this.hold.px = pt.x; this.hold.py = pt.y;
+          const L = this.camLim || { x1: 0, y1: 0, x2: GF.WORLD_W, y2: GF.WORLD_H };
+          c.scrollX = Phaser.Math.Clamp(c.scrollX + dx / z, L.x1, Math.max(L.x1, L.x2 - c.width / z));
+          c.scrollY = Phaser.Math.Clamp(c.scrollY + dy / z, L.y1, Math.max(L.y1, L.y2 - c.height / z));
+        }
+        const col = Phaser.Math.Clamp(Math.floor(pt.worldX / T), 0, GF.COLS - 1);
+        const row = Phaser.Math.Clamp(Math.floor(pt.worldY / T), 0, GF.ROWS - 1);
+        const esObra = this.placing.tipo === "obra";
+        const libre = this.celdaLibreAdorno(col, row, -1) &&
+          (!esObra || (this.celdaLibreAdorno(col - 1, row, -1) && this.celdaLibreAdorno(col + 1, row, -1)));
+        const w = esObra ? 3 : 1, c0 = esObra ? col - 1 : col;
+        this.editHl.setPosition(c0 * T, (row + 1) * T).setSize(w * T, T)
+          .setFillStyle(libre ? 0x7ec95a : 0xd9534f, 0.4).setVisible(true);
+        return;
+      }
       if (this.dragDeco) {
         const a = this.dragDeco;
         a.g.setPosition(pt.worldX, pt.worldY).setDepth(99999);
@@ -478,10 +489,28 @@ class FarmScene extends Phaser.Scene {
         const blocked = this.pondSpotBlocked(col, row);
         this.editHl.setPosition(col * T, (row + p2.rows) * T).setSize(p2.cols * T, p2.rows * T)
           .setFillStyle(blocked ? 0xd9534f : 0x7ec95a, 0.3).setVisible(true);
+      } else if (this.hold && pt.isDown && !pt.rightButtonDown()) {
+        // 13/8: en edición, con nada agarrado, el arrastre panea la cámara igual que en modo normal
+        if (this.hold.active || Math.hypot(pt.x - this.hold.sx, pt.y - this.hold.sy) >= 8) {
+          this.hold.active = true;
+          const c = this.cameras.main, z = c.zoom || 1;
+          const dx = this.hold.px - pt.x, dy = this.hold.py - pt.y;
+          this.hold.px = pt.x; this.hold.py = pt.y;
+          const L = this.camLim || { x1: 0, y1: 0, x2: GF.WORLD_W, y2: GF.WORLD_H };
+          c.scrollX = Phaser.Math.Clamp(c.scrollX + dx / z, L.x1, Math.max(L.x1, L.x2 - c.width / z));
+          c.scrollY = Phaser.Math.Clamp(c.scrollY + dy / z, L.y1, Math.max(L.y1, L.y2 - c.height / z));
+        }
       }
     });
     this.input.on("pointerup", (pt) => {
       if (this.editHl) this.editHl.setVisible(false);
+      // 13/8: modo COLOCAR — si el clic no fue un paneo, se coloca en la celda al SOLTAR
+      if (GF.editMode && this.placing) {
+        const fuePan = !!(this.hold && this.hold.active);
+        this.hold = null;
+        if (!fuePan && !pt.rightButtonReleased()) this.colocarEn(pt.worldX, pt.worldY);
+        return;
+      }
       // granja de un clic: acá se resuelve la acción, solo si NO fue un arrastre de cámara
       if (GF.NO_WALK && !GF.editMode && !GF.uiOpen && (this.clickHit || this.clickPond)) {
         const arrastro = !!(this.hold && (this.hold.active || this.hold.disparo));   // ya paneó, o el golpe ya salió sin esperar a soltar
@@ -1649,11 +1678,45 @@ class FarmScene extends Phaser.Scene {
   }
   // arranca el "colocar con clic" (#14/#17): el próximo clic en edición coloca esto en esa celda
   iniciarColocar(tipo, id) {
+    this.placingAuto = !GF.editMode;   // 13/8: vino de la bolsa/hotbar → al terminar o cancelar vuelve al modo normal
     if (!GF.editMode && window.setEditMode) setEditMode(true);   // por si vino de la Tienda o la bolsa
     this.placing = { tipo, id };
+    if (window.syncPlacingUI) syncPlacingUI(true);   // muestra el botón Cancelar de la barra de edición
     toast(tipo === "plot" ? "Clic en la celda donde va la parcela (clic derecho cancela)"
         : tipo === "obra" ? "Clic donde querés levantar la obra (clic derecho cancela)"
                           : "Clic en la celda donde va el adorno (clic derecho cancela)");
+  }
+  // 13/8: colocar en la celda elegida (lo llama pointerup si el clic no fue paneo)
+  colocarEn(wx, wy) {
+    const T = GF.TILE;
+    const col = Math.floor(wx / T), row = Math.floor(wy / T);
+    const pl = this.placing; if (!pl) return;
+    if (!this.celdaLibreAdorno(col, row, -1)) { toast("Ahí no entra — probá otra celda"); return; }
+    if (pl.tipo === "deco") {
+      if (decoColocar(pl.id, col, row)) { this.syncAdornos(); if (typeof syncEditDeco === "function") syncEditDeco(); toast(DECO_DEF[pl.id].label + " colocado"); }
+      this.finColocar();
+    } else if (pl.tipo === "plot") {
+      this.finColocar();
+      if (typeof parcelaColocar === "function" && parcelaColocar(col, row)) toast("Parcela colocada");   // reinicia la escena para dibujarla
+    } else if (pl.tipo === "obra") {   // blueprint (12/8): la obra ocupa ~2-3 celdas, chequear las vecinas
+      if (!this.celdaLibreAdorno(col - 1, row, -1) || !this.celdaLibreAdorno(col + 1, row, -1)) { toast("Ahí no entra la obra — buscá un lugar más despejado"); return; }
+      this.finColocar();
+      if (typeof obraColocar === "function" && obraColocar(pl.id, col, row)) toast("¡Obra colocada! Llevale materiales");   // reinicia la escena para dibujarla
+    }
+  }
+  // 13/8: cierre común — y si el colocado vino de la bolsa/hotbar, se sale del modo edición solo
+  finColocar() {
+    this.placing = null;
+    if (this.editHl) this.editHl.setVisible(false);
+    if (window.syncPlacingUI) syncPlacingUI(false);
+    if (this.placingAuto && window.setEditMode) setEditMode(false);
+    this.placingAuto = false;
+  }
+  // 13/8: botón Cancelar (o clic derecho): el plano/adorno queda en la bolsa, todo vuelve a como estaba
+  cancelarColocar() {
+    if (!this.placing) return;
+    this.finColocar();
+    toast("Colocación cancelada — sigue en tu bolsa");
   }
   // celda libre para una PARCELA nueva (13-60): mismas reglas que un adorno, más lejos de la
   // laguna. Barre desde el centro hacia afuera para que las nuevas queden cerca de las demás.
