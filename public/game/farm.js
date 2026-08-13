@@ -1292,8 +1292,11 @@ class FarmScene extends Phaser.Scene {
   // flecha del tutorial: triángulo dorado que rebota sobre el objetivo del paso actual
   updateTutoArrow() {
     if (this.tutoArrow) { this.tutoArrow.destroy(); this.tutoArrow = null; if (this.tutoTw) { this.tutoTw.stop(); this.tutoTw = null; } }
-    const st = (typeof tutoActivo === "function") ? tutoActivo() : null;
+    let st = (typeof tutoActivo === "function") ? tutoActivo() : null;
     if (!st) return;
+    // 13/8 v3: el SUB-OBJETIVO dinámico (sin hachas, pico roto…) pisa el destino de la flecha
+    const sub = (typeof tutoSub === "function") ? tutoSub() : null;
+    if (sub) st = Object.assign({}, st, { target: null }, sub);
     let x = null, y = null;
     if (st.target === "plot") { const pl = (this.plots || []).find(o => o.state !== "locked"); if (pl) { x = pl.cx; y = pl.by - GF.TILE * 0.9; } }
     else if (st.target === "ore") { const o = (this.objs || []).find(o => o.type === "ore" && !o.locked); if (o) { x = o.cx; y = o.by - (o.sprite ? o.sprite.displayHeight : 60) - 10; } }

@@ -321,7 +321,7 @@ var TUTO_PERMISOS = {
   stone:       ["mine", "crafttool"],
   place_horno: ["obra"],
   build_horno: ["obra"],
-  silver:      ["sell", "plant", "harvest", "buyseed", "chop", "mine", "crafttool"],
+  silver:      ["sell", "plant", "harvest", "buyseed", "chop", "mine", "crafttool", "plotunlock"],   // 13/8 v3: desbloquear tierras para plantar más es inversión, no exploit (playtest)
   crafttool:   ["crafttool"],
   woodc:       ["chop", "crafttool"],
   stonec:      ["mine", "crafttool"],
@@ -329,7 +329,7 @@ var TUTO_PERMISOS = {
   build_cocina: ["obra"],
   cook:        ["cook", "plant", "harvest"],
   eat:         ["eat"],
-  silverarm:   ["sell", "plant", "harvest", "buyseed", "chop", "mine", "crafttool"],
+  silverarm:   ["sell", "plant", "harvest", "buyseed", "chop", "mine", "crafttool", "plotunlock"],
   unlockarm:   ["unlockarm"],
   craftarm:    ["craftarm"],
   equiparm:    ["equiparm"],
@@ -358,9 +358,45 @@ function tutoPermite(tag) {
   const lista = TUTO_PERMISOS[st.id];
   if (!lista) return true;
   if (tag === "obra") return true;   // trabajar una obra pendiente nunca exploitea (consume recursos)
-  return lista.includes(tag);
+  if (lista.includes(tag)) return true;
+  // 13/8 v3: el SUB-OBJETIVO dinámico abre exactamente las acciones que pide su cadena
+  const sub = (typeof tutoSub === "function") ? tutoSub() : null;
+  return !!(sub && sub.permite && sub.permite.includes(tag));
 }
-function tutoAviso() { const st = tutoActivo(); toast("🎯 Ahora toca: " + (st ? tutoTxt(st) : "el objetivo")); }
+function tutoAviso() {
+  const sub = (typeof tutoSub === "function") ? tutoSub() : null;
+  const st = tutoActivo();
+  toast("🎯 Ahora toca: " + (sub ? sub.txt : (st ? tutoTxt(st) : "el objetivo")));
+}
+/* 13/8 v3 (playtest cocina): "juntá 20 de madera" con CERO hachas no llevaba a ningún lado.
+   El tutorial ahora detecta si podés cumplir el paso activo y, si no, antepone un
+   SUB-OBJETIVO con su propia guía (cartel + flechas + permisos):
+   sin hachas → craftearla en la Herrería → y si falta la plata, vender/plantar papa.
+   pico roto → repararlo en la Herrería. Se recalcula solo: al resolverse, vuelve el paso. */
+function tutoSub() {
+  const st = tutoActivo(); if (!st) return null;
+  const quiereTalar = st.res === "madera" || st.id === "unlocknode" || st.id === "chest";
+  const quierePicar = st.res === "piedra";
+  if (quiereTalar && typeof toolCount === "function" && toolCount("axe") <= 0) {
+    if (!(G.built && G.built.store)) return null;   // fase pre-Herrería: con las hachas de arranque alcanza
+    const plata = (TOOL_CRAFT && TOOL_CRAFT.axe && TOOL_CRAFT.axe.plata) || 10;
+    if (G.plata < plata) {
+      const tieneCosecha = Object.keys(CROP_DEF || {}).some(k => (G.res[k] || 0) > 0);
+      if (tieneCosecha) return { txt: "Sin hachas ni plata: vendé tu cosecha (el hacha cuesta " + plata + ")",
+        target: "market", panel: "ov-market", ui: "#vb-papa", permite: ["sell", "harvest"] };
+      return { txt: "Sin hachas: plantá, cosechá y vendé para juntar " + plata + " de plata",
+        target: "plot", permite: ["plant", "harvest", "sell", "buyseed", "plotunlock"] };
+    }
+    return { txt: "Te quedaste sin hachas: crafteá una en la Herrería (" + plata + " de plata)",
+      target: "store", panel: "ov-forge", ui: "[data-ctool='axe']", permite: ["crafttool"] };
+  }
+  if (quierePicar && G.picks && G.picks.eq && Math.floor((G.picks.dur && G.picks.dur[G.picks.eq]) || 0) <= 0) {
+    if (!(G.built && G.built.store)) return null;
+    return { txt: "Tu pico está gastado: reparalo en la Herrería (pestaña Reparar)",
+      target: "store", panel: "ov-forge", ui: "[data-repair='" + G.picks.eq + "']", permite: ["repair"] };
+  }
+  return null;
+}
 function obraDe(t) { return G.obras && G.obras[t]; }
 function obraColocar(t, col, row, vivo) {   // la llama la escena con la celda elegida
   if (!planoTengo(t)) return false;
@@ -925,7 +961,14 @@ function tutoBoost(clase) {
     rock:  ["stone", "stonec", "stone_st", "stone_al"],
     horno: ["mat"],
   };
-  return (mapa[clase] || []).includes(st.id) ? TUTO_BOOST : 1;
+  if ((mapa[clase] || []).includes(st.id)) return TUTO_BOOST;
+  // 13/8 v3: si el SUB-OBJETIVO te mandó al loop de la papa (juntar plata para el hacha),
+  // esos cultivos también corren acelerados — si no, el desvío se siente eterno
+  if (clase === "papa") {
+    const sub = (typeof tutoSub === "function") ? tutoSub() : null;
+    if (sub && sub.permite && sub.permite.includes("sell")) return TUTO_BOOST;
+  }
+  return 1;
 }
 var TUTO_REWARD_PLATA = 100;   // gran recompensa del cierre (editable)
 // doc 2/8 §3.1: SOLO las semillas del starter pack crecen rápido (45 s). Las compradas o conseguidas

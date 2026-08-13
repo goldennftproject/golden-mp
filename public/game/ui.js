@@ -788,10 +788,12 @@ function tutoRefresh() {
   const st = (typeof tutoActivo === "function") ? tutoActivo() : null;
   if (!st) { el.classList.add("hidden"); return; }
   el.classList.remove("hidden");
-  document.getElementById("tuto-txt").textContent = tutoTxt(st);
+  // 13/8 v3: si hay SUB-OBJETIVO (sin hachas, pico roto…), el cartel muestra ESO
+  const sub = (typeof tutoSub === "function") ? tutoSub() : null;
+  document.getElementById("tuto-txt").textContent = sub ? sub.txt : tutoTxt(st);
   const need = tutoNeed(st);
-  document.getElementById("tuto-n").textContent = st.res ? " " + Math.min(tutoTiene(st), need) + "/" + need
-    : (st.n > 1 ? " " + Math.min(G.tuto.n || 0, st.n) + "/" + st.n : "");
+  document.getElementById("tuto-n").textContent = sub ? "" : (st.res ? " " + Math.min(tutoTiene(st), need) + "/" + need
+    : (st.n > 1 ? " " + Math.min(G.tuto.n || 0, st.n) + "/" + st.n : ""));
   tutoHighlight();
 }
 // 13/8 (audio): la guía DENTRO de las interfaces es una FLECHA dorada (la misma estética
@@ -809,7 +811,10 @@ function tutoFlechaUI(el) {
 }
 function tutoHighlight() {
   document.querySelectorAll(".tutohl").forEach(e => e.classList.remove("tutohl"));   // limpieza del sistema viejo
-  const st = (typeof tutoActivo === "function") ? tutoActivo() : null;
+  let st = (typeof tutoActivo === "function") ? tutoActivo() : null;
+  // 13/8 v3: el SUB-OBJETIVO manda — su guía pisa la del paso (misma cadena de flechas)
+  const sub = (st && typeof tutoSub === "function") ? tutoSub() : null;
+  if (sub) st = Object.assign({}, st, { hot: null, panel: null, ui: null, target: null }, sub);
   // 13/8: pasos "colocá el plano" — la flecha baja hasta el plano en la BARRA rápida
   if (st && st.hot) {
     const lbl = (typeof BUILD_DEF !== "undefined" && BUILD_DEF[st.hot]) ? BUILD_DEF[st.hot].label : null;
@@ -862,7 +867,9 @@ function tutoSync(force) {
   // te la pidiera, el paso se salta solo en vez de quedar pidiendo algo ya hecho (9/8)
   if (typeof tutoAutoSkip === "function") { try { tutoAutoSkip(); } catch (e) {} }
   const st = (typeof tutoActivo === "function") ? tutoActivo() : null;
-  const sig = G.tuto ? (G.tuto.step + ":" + (st && st.res ? tutoTiene(st) : (G.tuto.n || 0)) + ":" + !!G.tuto.done) : "-";
+  // 13/8 v3: el sub-objetivo entra a la firma — cuando aparece o se resuelve, cartel y flechas se redibujan
+  const sub = (st && typeof tutoSub === "function") ? tutoSub() : null;
+  const sig = G.tuto ? (G.tuto.step + ":" + (st && st.res ? tutoTiene(st) : (G.tuto.n || 0)) + ":" + !!G.tuto.done + ":" + (sub ? sub.txt : "")) : "-";
   if (!force && sig === _tutoSig) { tutoHighlight(); return; }   // 13/8: el resaltado se re-aplica aunque el paso no cambie (los paneles se redibujan y lo pierden)
   _tutoSig = sig;
   tutoRefresh();

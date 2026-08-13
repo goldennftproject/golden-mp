@@ -2098,6 +2098,16 @@ Ahora la cadena de guía no tiene puntas sueltas:
   habría forma de subir de nivel para destrabar la Cocina), y el paso "replantá una papa"
   se retiró: era reiterativo y dejaba una papa plantada que nadie pedía cosechar. 42
   pasos, verificación por script ampliada: place < juntá < depósito en los 4 edificios.
+- **v3 — SUB-OBJETIVOS dinámicos (playtest cocina)**: "juntá 20 de madera" con CERO
+  hachas no llevaba a ningún lado. `tutoSub()` detecta si podés cumplir el paso activo y,
+  si no, antepone la meta previa con guía completa (cartel + flecha del mundo + flechas
+  de interfaz + permisos SOLO de esa cadena): sin hachas → "crafteá una en la Herrería";
+  sin la plata del hacha → "vendé tu cosecha" o, sin nada que vender, el loop entero de
+  la papa (con el boost de crecimiento, para que el desvío no se sienta eterno); pico
+  gastado → "reparalo (pestaña Reparar)". Se recalcula solo: resuelto el faltante, vuelve
+  el paso original (entra a la firma de tutoSync). Además `plotunlock` quedó permitido en
+  los pasos de juntar plata — desbloquear tierras para plantar más es inversión, no
+  exploit (el propio playtest lo hizo y estaba bien). Árbol verificado con 7 casos.
 
 Y el "bloqueo momentáneo" al colocar un plano era el REINICIO de escena (reconstruye
 ~570 sprites de golpe): ahora pasa detrás de un telón de 160 ms con el fundido que ya
