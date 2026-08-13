@@ -1989,17 +1989,27 @@ se resetean a un estado consistente. Flujo verificado con simulación de 4 momen
 
 ### TERRENO SILVESTRE — la última pieza diegética (13/8)
 
-La parcela bloqueada era el último elemento gris del juego. Ahora es **terreno
-silvestre a todo color**: maleza tupida en el verde de las copas, ramitas caídas y la
-tierra asomando entre los yuyos — se lee al instante como "esto hay que desbrozar".
-Al desbloquearla, el **DESBROCE**: yuyos verdes y ramitas marrones salen volando con
-el destello de siempre, y aparece la tierra arada. Clave `plot_wild` (atlas `?v=44`,
-580 sprites), con el parche gris viejo de respaldo. Se limpiaron además las cargas de
-las `rock_buried_*` descartadas (evita 404s en cada arranque).
+La parcela bloqueada era el último elemento gris del juego. Se probó un "terreno
+silvestre" nuevo de PixelLab (`plot_wild`) pero en la grilla quedaba tupido y
+repetitivo — decisión final: **el parche clásico** (`plot_blocked`: tierra con ramas,
+piedritas y yuyos) **a todo color**, sin el tinte gris ni la transparencia. Al
+desbloquearla, el **DESBROCE**: yuyos verdes y ramitas marrones salen volando con el
+destello de siempre, y aparece la tierra arada. (`plot_wild` queda en el atlas `?v=44`
+por si se retoma.) Se limpiaron además las cargas de las `rock_buried_*` descartadas
+(evita 404s en cada arranque).
 
 Con esto el inventario diegético queda COMPLETO: edificios en obra con materiales,
 árboles en retoño que crecen, vetas a la vista con gate de nivel, y parcelas
 silvestres que se desbrozan. Cero sprites fantasma en todo el juego.
+
+### El bug real del "salió construida" — cazado en la 2ª pasada
+
+El usuario insistió (con razón): la obra de la Herrería mostraba el edificio TERMINADO
+aunque el cartel de materiales decía 0/5. No era TESTEO: era **`updateForge()`**, que
+corre en cada tick para prender/apagar la fragua y pisaba `build_store` con "store"
+terminado. Ahora se frena mientras la herrería no esté construida. De paso cayeron dos
+parientes: el **humo de la Herrería y de la Cocina** salía SIEMPRE (`() => true`) —
+humeaban sobre la obra o sobre el pasto vacío. Ahora solo humean construidas.
 
 ### El mapa inicial ordenado por zonas + la CERCA PERIMETRAL intocable
 

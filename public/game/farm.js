@@ -291,11 +291,10 @@ class FarmScene extends Phaser.Scene {
       const owned = Math.max(2, Math.min(GF.PLOTS.length, G.plotsOwned || 2));   // viernes (2): se nace con 2 parcelas
       if (i >= owned) {   // parcela bloqueada: se compra con plata
         obj.state = "locked";
-        // 13/8: la parcela bloqueada es TERRENO SILVESTRE a todo color (maleza por desbrozar);
-        // el parche gris viejo queda de respaldo si faltara el arte
+        // 13/8: la parcela bloqueada usa el parche clásico (ramas, piedritas y yuyos)
+        // pero A TODO COLOR — chau tinte gris y transparencia (el plot_wild tupido no gustó)
         if (obj.ground) {
-          if (this.textures.exists("plot_wild")) obj.ground.setTexture("plot_wild").setDisplaySize(T, T).clearTint().setAlpha(1);
-          else if (this.textures.exists("plot_blocked")) obj.ground.setTexture("plot_blocked").setDisplaySize(T, T).setTint(0x8f8f8f).setAlpha(0.8);
+          if (this.textures.exists("plot_blocked")) obj.ground.setTexture("plot_blocked").setDisplaySize(T, T).clearTint().setAlpha(1);
           else obj.ground.setAlpha(0.45);
         }
         return obj;
@@ -625,7 +624,7 @@ class FarmScene extends Phaser.Scene {
       }});
     };
     const storeObj = this.objs.find(o => o.type === "store");
-    if (storeObj) smokeFrom(storeObj, 0xd8d2c4, () => true);                             // herrería: siempre
+    if (storeObj) smokeFrom(storeObj, 0xd8d2c4, () => !!(G.built && G.built.store));     // 13/8: humo solo con la herrería CONSTRUIDA
     // fragua: media por defecto, encendida mientras se trabaja en la Herrería (detalles jueves)
     this.storeObj = storeObj;
     this.updateForge();
@@ -637,8 +636,8 @@ class FarmScene extends Phaser.Scene {
     this.crearMariposas();    // mariposas que se posan sobre los cultivos listos
     this.arrancarBrilloVetas();   // chispitas sobre las vetas caras que están listas (9/8)
     const cocinaObj = this.objs.find(o => o.type === "cocina");
-    if (cocinaObj) smokeFrom(cocinaObj, 0xefe9db, () => true);                           // cocina: humo SIEMPRE (detalles jueves)
-    if (cocinaObj) smokeFrom(cocinaObj, 0xffffff, () => (typeof cookList === "function" ? cookList().length > 0 : !!G.cooking));   // …y el doble de bocanadas mientras se cocina
+    if (cocinaObj) smokeFrom(cocinaObj, 0xefe9db, () => !!(G.built && G.built.cocina));   // 13/8: humo solo con la cocina CONSTRUIDA (antes humeaba sobre la obra o el pasto)
+    if (cocinaObj) smokeFrom(cocinaObj, 0xffffff, () => !!(G.built && G.built.cocina) && (typeof cookList === "function" ? cookList().length > 0 : !!G.cooking));   // …y el doble mientras se cocina
     // HORNO DE PIEDRA: mismo humo que los demás (antes tenía el suyo propio, hecho con
     // elipses dibujadas, mucho más flojo y difícil de ver). Solo humea si está construido.
     const hornoObj = this.objs.find(o => o.type === "horno");
@@ -2147,6 +2146,9 @@ class FarmScene extends Phaser.Scene {
   // fragua encendida mientras se craftea/repara; si no, a medio fuego (detalles jueves)
   updateForge() {
     const o = this.storeObj; if (!o || !o.sprite) return;
+    // 13/8: la herrería EN OBRA no se toca — este método pisaba build_store con "store"
+    // terminado en cada tick (el bug del playtest: "coloqué el plano y salió construida")
+    if (typeof BUILD_DEF !== "undefined" && BUILD_DEF.store && !(G.built && G.built.store)) return;
     const lit = (G.forgeLitUntil || 0) > nowMs();
     const key = lit && this.textures.exists("store_lit") ? "store_lit" : "store";
     if (o.sprite.texture.key !== key && this.textures.exists(key)) this.setObjTex(o, key, o.rw || o.w);
@@ -2467,8 +2469,7 @@ class FarmScene extends Phaser.Scene {
       } else if (i >= owned && pl.state !== "locked") {
         pl.state = "locked";
         if (pl.ground) {
-          if (this.textures.exists("plot_wild")) pl.ground.setTexture("plot_wild").setDisplaySize(GF.TILE, GF.TILE).clearTint().setAlpha(1);
-          else if (this.textures.exists("plot_blocked")) pl.ground.setTexture("plot_blocked").setDisplaySize(GF.TILE, GF.TILE).setTint(0x8f8f8f).setAlpha(0.8);
+          if (this.textures.exists("plot_blocked")) pl.ground.setTexture("plot_blocked").setDisplaySize(GF.TILE, GF.TILE).clearTint().setAlpha(1);
           else pl.ground.setAlpha(0.45);
         }
       }
