@@ -703,7 +703,7 @@ const TUTO_STEPS = [
   { id: "craftpick", n: 1, pr: 40,  txt: "Crafteá un Pico de Bronce en la Herrería", target: "store", panel: "ov-forge", ui: "[data-craft='bronze']" },
   { id: "mineore",   n: 1, pr: 60,  txt: "Miná un mineral con tu pico nuevo",    target: "ore" },
   { id: "dummy",     n: 1, pr: 40,  txt: "Entrená con el dummy de práctica",     target: "dummy" },
-  { id: "unlocknode", n: 1, pr: 60, txt: "Desbloqueá otro árbol o piedra de la granja", target: "tree" },
+  { id: "unlocknode", n: 1, pr: 60, txt: "Usá un segundo árbol o veta (se habilitan por nivel)", target: "tree" },
   { id: "chest",     n: 1, pr: 60,  txt: "Crafteá un cofre depósito y colocalo", target: "store", panel: "ov-forge", ui: "#forge-chest" },
   { id: "invexp",    n: 1, pr: 60,  txt: "Ampliá tu bolsa desde el inventario",  panel: "ov-inv", ui: "#inv-expbtn" },
   { id: "passclaim", n: 1, pr: 80,  txt: "Reclamá una recompensa del Pase de Batalla", panel: "ov-pass", ui: "[data-pfree]" },
@@ -2137,6 +2137,19 @@ function unlockArmas() {
 const NODE_UNLOCK_COSTS = [3, 9, 27, 81, 100];
 function treeUnlockCost() { return NODE_UNLOCK_COSTS[Math.min(NODE_UNLOCK_COSTS.length - 1, Math.max(0, (G.treesOpen || [0]).length - 1))]; }
 function rockUnlockCost() { return NODE_UNLOCK_COSTS[Math.min(NODE_UNLOCK_COSTS.length - 1, Math.max(0, (G.rocksOpen || [0]).length - 1))]; }
+
+// 12/8 (noche): las VETAS/PIEDRAS van sin fantasmas ni compra — todas a la vista y a
+// todo color, y el freno es de NIVEL: al intentar picar una que todavía no corresponde,
+// el juego te dice qué nivel de granja pide. Tabla por orden de aparición (números del
+// diseñador; la 1ª siempre libre). Quien PAGÓ desbloqueos viejos los conserva.
+// Los ÁRBOLES quedan con su sistema de siempre: retoño + desbloqueo pagando madera.
+var NIVEL_ROCAS = [1, 3, 5, 8, 12, 16];
+function nodoNivelReq(o) { return NIVEL_ROCAS[Math.min(o.lockIdx || 0, NIVEL_ROCAS.length - 1)] || 1; }
+function nodoBloqueado(o) {
+  if (!o || o.type !== "rock") return false;   // solo piedras/minerales: los árboles van por retoño+pago
+  if ((G.rocksOpen || [0]).includes(o.lockIdx)) return false;
+  return G.level < nodoNivelReq(o);
+}
 function canShoot() { const id = armaEq(); return !!(id && ARM_DEF[id].tipo === "arco" && G.gear.municion && (G.res.flecha || 0) > 0); }   // arco nuevo + flechas equipadas
 
 // --- armaduras (dropean de los monstruos del Bosque; reducen el daño recibido) ---

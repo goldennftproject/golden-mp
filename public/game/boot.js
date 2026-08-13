@@ -70,7 +70,8 @@ class BootScene extends Phaser.Scene {
     // PLANOS de construcción (12/8): el pergamino que ganás al subir de nivel
     ["store","horno","cocina","altar","establo","curtiduria","ofrendas"].forEach(k => L.push(["plano_" + k, P + "plano_" + k + ".png"]));
     L.push(["tree_sapling", P + "tree_sapling.png"]);   // árbol bloqueado = retoño (12/8)
-    L.push(["rock_buried", P + "rock_buried.png"]);     // roca bloqueada = enterrada, con tinte de mineral (12/8)
+    L.push(["rock_buried", P + "rock_buried.png"]);     // roca bloqueada = enterrada (genérica de respaldo)
+    ["piedra","bronce","hierro","oro","diamante","netherita"].forEach(k => L.push(["rock_buried_" + k, P + "rock_buried_" + k + ".png"]));   // enterrada POR MINERAL (12/8): cada una con su forma y color
     L.push(["withered", P + "withered.png?v=2"]);      // cultivo marchito cozy
     // etapas intermedias (la verdura asomando al 50% del crecimiento)
     if (typeof CROP_ORDER !== "undefined") CROP_ORDER.forEach(k => L.push(["cropm_" + k, P + "cropm_" + k + ".png?v=3"]));

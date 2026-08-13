@@ -191,14 +191,12 @@ class FarmScene extends Phaser.Scene {
       let lockIdx = -1;
       if (o.type === "tree") lockIdx = __treeN++;
       if (o.type === "rock") lockIdx = __rockN++;
-      const locked = (o.type === "tree" && !(G.treesOpen || [0]).includes(lockIdx)) ||
-                     (o.type === "rock" && !(G.rocksOpen || [0]).includes(lockIdx));
-      // 12/8: chau gris fantasma — el árbol bloqueado es un RETOÑO y la roca bloqueada
-      // asoma ENTERRADA (el tinte del mineral se le aplica en tintarNodo). El gris queda
-      // de respaldo si faltara el arte.
+      // 12/8 (noche): SOLO los árboles conservan el bloqueo visual — el bloqueado es un
+      // RETOÑO que crece al pagarlo. Las vetas/piedras van todas a la vista y a todo
+      // color: su freno es por NIVEL y avisa al intentar picarlas (nodoBloqueado).
+      const locked = o.type === "tree" && !(G.treesOpen || [0]).includes(lockIdx);
       if (locked) {
-        const lockTex = o.type === "tree" ? "tree_sapling" : "rock_buried";
-        if (this.textures.exists(lockTex)) s.setTexture(lockTex);
+        if (this.textures.exists("tree_sapling")) s.setTexture("tree_sapling");
         else s.setAlpha(0.5).setTint(0x555555);
       }
       const rw = (o.type === "ore" || o.type === "rock") ? o.w * (typeof NODO_ESCALA === "number" ? NODO_ESCALA : 0.67)   // 9/8: 0.90 — al 0.67 las pepitas no se leían
@@ -761,8 +759,8 @@ class FarmScene extends Phaser.Scene {
     const secs = cd ? Math.ceil((o.readyAt - nowMs()) / 1000) : 0;
     // cuántos clics faltan: un clic = un golpe, y si parás 5 s los golpes dados se pierden
     const gp = (tot) => " (" + ((o.golpes || 0) + 1) + "/" + tot + ")";
-    if (o.type === "tree") { if (o.locked) return "Desbloquear árbol (" + treeUnlockCost() + " madera)"; return cd ? "Vuelve en " + fmtSecs(secs) : "Talar madera" + gp(GOLPES_TALAR); }
-    if (o.type === "rock") { if (o.locked) return "Desbloquear piedra (" + rockUnlockCost() + " piedra)"; return cd ? "Vuelve en " + fmtSecs(secs) : "Picar piedra" + gp(GOLPES_MINAR); }
+    if (o.type === "tree") { if (o.locked) return "Cultivar árbol (" + treeUnlockCost() + " madera)"; return cd ? "Vuelve en " + fmtSecs(secs) : "Talar madera" + gp(GOLPES_TALAR); }
+    if (o.type === "rock") { if (typeof nodoBloqueado === "function" && nodoBloqueado(o)) return "🔒 Veta — se habilita a granja nivel " + nodoNivelReq(o); return cd ? "Vuelve en " + fmtSecs(secs) : "Picar piedra" + gp(GOLPES_MINAR); }
     if (o.type === "ore") { const od = ORE_DEF[o.ore]; if (!od) return "Minar"; if (cd) return od.emoji + " Vuelve en " + fmtSecs(secs); return "Minar " + od.label + gp(GOLPES_MINAR); }
     if (o.type === "barn") return "Granja";
     if (o.type === "market") return "Mercado";
@@ -850,45 +848,40 @@ class FarmScene extends Phaser.Scene {
       }
       return;
     }
-    if ((o.type === "tree" || o.type === "rock") && o.locked) {   // viernes (2): se desbloquea CUALQUIERA (pedido Discord); el costo sube por cantidad
-      const isTree = o.type === "tree";
-      const cost = isTree ? treeUnlockCost() : rockUnlockCost(), res = isTree ? "madera" : "piedra";
-      askConfirm("Cuesta " + cost + " de " + RES_LABEL[res] + ". ¿Desbloquear?", () => {
-        if ((G.res[res] || 0) < cost) { toast("Te falta " + RES_LABEL[res] + " (" + cost + ")"); return; }
-        G.res[res] -= cost;
-        if (isTree) { G.treesOpen = G.treesOpen || [0]; G.treesOpen.push(o.lockIdx); }
-        else { G.rocksOpen = G.rocksOpen || [0]; G.rocksOpen.push(o.lockIdx); }
+    // VETAS/PIEDRAS (12/8 noche): freno por NIVEL, sin compra — el aviso salta al intentar
+    if (o.type === "rock" && typeof nodoBloqueado === "function" && nodoBloqueado(o)) {
+      const req = nodoNivelReq(o);
+      toast("🔒 Para picar esta veta necesitás granja nivel " + req + " (tenés " + G.level + ")");
+      log("Esa veta se habilita a granja nivel " + req + ". Seguí subiendo de nivel para ampliarte.", "info");
+      return;
+    }
+    // el tutorial "ampliá la granja" también se cumple al USAR una segunda veta habilitada
+    if (o.type === "rock" && (o.lockIdx || 0) > 0 && typeof tutoEvent === "function") tutoEvent("unlocknode");
+    // ÁRBOLES: el bloqueado es un retoño — se desbloquea pagando madera y CRECE
+    if (o.type === "tree" && o.locked) {
+      const cost = treeUnlockCost();
+      askConfirm("Cuesta " + cost + " de " + RES_LABEL.madera + ". ¿Cultivar este árbol?", () => {
+        if ((G.res.madera || 0) < cost) { toast("Te falta " + RES_LABEL.madera + " (" + cost + ")"); return; }
+        G.res.madera -= cost;
+        G.treesOpen = G.treesOpen || [0]; G.treesOpen.push(o.lockIdx);
         o.locked = false;
-        // 12/8: el desbloqueo se VE — el retoño crece hasta árbol adulto, la roca emerge
-        if (o.sprite) {
+        if (o.sprite) {   // el retoño CRECE hasta el árbol adulto, con hojitas volando
+          if (this.textures.exists(o.baseKey)) { o.sprite.setTexture(o.baseKey); }
           o.sprite.setAlpha(1); o.sprite.clearTint();
-          const volver = () => { if (this.textures.exists(o.baseKey)) { o.sprite.setTexture(o.baseKey); o.sprite.setScale(o.rw / o.sprite.width); } };
-          if (isTree && o.sprite.texture && o.sprite.texture.key === "tree_sapling") {
-            volver();
-            o.sprite.setScale((o.rw * 0.3) / o.sprite.width);   // arranca chiquito y CRECE
-            this.tweens.add({ targets: o.sprite, scaleX: o.rw / o.sprite.width, scaleY: o.rw / o.sprite.width, duration: 700, ease: "Back.easeOut" });
-            for (let i = 0; i < 8; i++) {   // hojitas que vuelan del crecimiento
-              const a = Math.random() * Math.PI * 2, d = 18 + Math.random() * 22;
-              const p = this.add.ellipse(o.cx, o.by - 30, 4, 3, i % 2 ? 0x3f9b3f : 0x2f7a2f, 0.9).setDepth(o.by + 1).setAngle(Math.random() * 360);
-              this.tweens.add({ targets: p, x: o.cx + Math.cos(a) * d, y: o.by - 30 + Math.sin(a) * d, angle: p.angle + 160, alpha: 0, duration: 550 + Math.random() * 250, onComplete: () => p.destroy() });
-            }
-          } else if (!isTree && o.sprite.texture && o.sprite.texture.key === "rock_buried") {
-            volver();
-            o.sprite.y = o.by + 8; o.sprite.setScale((o.rw * 0.7) / o.sprite.width);   // sale de la tierra
-            this.tweens.add({ targets: o.sprite, y: o.by, scaleX: o.rw / o.sprite.width, scaleY: o.rw / o.sprite.width, duration: 450, ease: "Back.easeOut" });
-            for (let i = 0; i < 7; i++) {   // polvo del destape
-              const p = this.add.circle(o.cx + (Math.random() - 0.5) * 30, o.by - 4, 2 + Math.random() * 2, 0x8a6b4a, 0.75).setDepth(o.by + 1);
-              this.tweens.add({ targets: p, y: p.y - 10 - Math.random() * 12, alpha: 0, duration: 380 + Math.random() * 180, onComplete: () => p.destroy() });
-            }
-            this.cameras.main.shake(70, 0.003);
+          o.sprite.setScale((o.rw * 0.3) / o.sprite.width);
+          this.tweens.add({ targets: o.sprite, scaleX: o.rw / o.sprite.width, scaleY: o.rw / o.sprite.width, duration: 700, ease: "Back.easeOut" });
+          for (let i = 0; i < 8; i++) {
+            const a = Math.random() * Math.PI * 2, d = 18 + Math.random() * 22;
+            const p = this.add.ellipse(o.cx, o.by - 30, 4, 3, i % 2 ? 0x3f9b3f : 0x2f7a2f, 0.9).setDepth(o.by + 1).setAngle(Math.random() * 360);
+            this.tweens.add({ targets: p, x: o.cx + Math.cos(a) * d, y: o.by - 30 + Math.sin(a) * d, angle: p.angle + 160, alpha: 0, duration: 550 + Math.random() * 250, onComplete: () => p.destroy() });
           }
         }
-        this.tintarNodo(o);   // desbloqueada: recupera el color de su mineral
+        this.tintarNodo(o);
         addXp("crafting", 5); if (typeof syncSlots === "function") syncSlots();
-        log("Desbloqueaste " + (isTree ? "un árbol" : "una piedra") + " por " + cost + " de " + RES_LABEL[res] + ".", "good");
-        if (typeof tutoEvent === "function") tutoEvent("unlocknode"); toast("¡" + (isTree ? "Árbol" : "Piedra") + " desbloqueado!");
+        log("Cultivaste un árbol nuevo por " + cost + " de madera.", "good");
+        if (typeof tutoEvent === "function") tutoEvent("unlocknode"); toast("¡Árbol nuevo creciendo!");
         refreshHud(); if (isOpen("ov-inv")) refreshInv(); if (typeof saveFarm === "function") saveFarm(true);
-      }, { title: isTree ? "Desbloquear árbol" : "Desbloquear piedra", yes: "Desbloquear", yesClass: "green", no: "Cancelar", noClass: "red" });
+      }, { title: "Cultivar árbol", yes: "Cultivar", yesClass: "green", no: "Cancelar", noClass: "red" });
       return;
     }
     if (o.type === "store") return openOv("ov-forge");
@@ -1274,14 +1267,8 @@ class FarmScene extends Phaser.Scene {
     const s = o && o.sprite; if (!s || !s.setTint) return;
     if (o.locked || (typeof BUILD_DEF !== "undefined" && BUILD_DEF[o.type] && !(G.built && G.built[o.type]))) {
       const k = s.texture ? String(s.texture.key) : "";
-      if (k === "tree_sapling") { s.clearTint(); return; }   // el retoño va a todo color (12/8)
-      if (k === "rock_buried") {   // la punta enterrada muestra el TINTE de su mineral: anzuelo visual
-        const t = (o.type === "ore" || o.type === "rock") && GF.ORE_TINTE ? GF.ORE_TINTE[o.ore || "piedra"] : null;
-        if (t && t !== 0xffffff) s.setTint(t); else s.clearTint();
-        return;
-      }
-      // la OBRA (build_*) se ve a todo color; el gris es solo para bloqueados/sin arte de obra (12/8)
-      if (k.indexOf("build_") !== 0) s.setTint(0x555555);
+      // la OBRA (build_*) y el RETOÑO se ven a todo color; el gris es solo respaldo (12/8)
+      if (k !== "tree_sapling" && k.indexOf("build_") !== 0) s.setTint(0x555555);
       return;
     }
     const t = (NODO_TINTE && (o.type === "ore" || o.type === "rock") && GF.ORE_TINTE) ? GF.ORE_TINTE[o.ore || "piedra"] : null;

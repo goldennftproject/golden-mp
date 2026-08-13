@@ -1904,21 +1904,23 @@ colisionan ni reciben clics, y la flecha del tutorial no apunta a edificios sin 
 (los textos de los pasos de construcción ahora mencionan el plano). El depósito respeta
 el requisito de nivel de cada edificio.
 
-### Retoños y rocas enterradas — el último gris fantasma, fuera
+### Árboles con retoño · vetas por nivel — el último gris fantasma, fuera
 
-Los árboles y rocas bloqueados eran el edificio-gris que quedaba: sprites transparentes
-apagados. Ahora son cosas del mundo:
+Tras varias iteraciones (enterradas tipo "huevo" → por mineral → hundidas → decisión
+final), el modelo quedó así:
 
-- **Árbol bloqueado = RETOÑO** silvestre (tallito flexible con tres matitas, derivado del
-  árbol nuevo, al 55% del ancho). Al pagar el desbloqueo **CRECE** hasta el árbol adulto
-  (tween con rebote + hojitas que vuelan).
-- **Roca bloqueada = ENTERRADA**: la punta gris asomando de un montículo de tierra, CON el
-  tinte de su mineral aplicado — ver la puntita dorada o celeste asomando es el anzuelo
-  visual de la progresión. Al desbloquear **EMERGE** de la tierra (tween + polvo + mini
-  sacudida).
+- **Árbol bloqueado = RETOÑO** silvestre (tallito con tres matitas, derivado del árbol
+  nuevo, al 55% del ancho, a todo color). Se "cultiva" pagando la madera de siempre y
+  **CRECE** hasta el árbol adulto (tween con rebote + hojitas que vuelan).
+- **Vetas/piedras: TODAS a la vista y a todo color, sin fantasmas ni compra.** El freno
+  es de NIVEL: al intentar picar una que no corresponde salta el aviso "🔒 necesitás
+  granja nivel X (tenés Y)", también en el cartel de acercarse. Tabla `NIVEL_ROCAS =
+  [1,3,5,8,12,16]` por orden de aparición (números del diseñador). Quien pagó
+  desbloqueos con el sistema viejo los conserva.
 
-Misma economía de siempre (los costos no cambiaron), solo cambió la presentación. El gris
-queda como respaldo si faltara el arte. Claves `tree_sapling` y `rock_buried`.
+El paso del tutorial "ampliá la granja" se cumple cultivando un árbol o usando una
+segunda veta habilitada. Las versiones "hundidas" por mineral quedaron generadas en
+PixelLab por si se retoman.
 
 ### El "temblor leve" de toda la pantalla — arreglado
 

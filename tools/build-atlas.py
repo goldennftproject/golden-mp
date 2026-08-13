@@ -31,10 +31,10 @@ BOOT = os.path.join(RAIZ, "public", "game", "boot.js")
 
 # Los iconos de recursos, cultivos, peces y monedas también van al atlas: el juego los
 # usa para el "premio" que sale volando cuando talás, picás o cosechás.
-EXTRA = ["res_", "crop_", "fish_", "coin_", "animal_", "deco_", "build_", "plano_"]   # build_: obras · plano_: blueprints (12/8)
+EXTRA = ["res_", "crop_", "fish_", "coin_", "animal_", "deco_", "build_", "plano_", "rock_buried"]   # build_: obras · plano_: blueprints (12/8)
 
 # Edificios que antes no tenían arte y por eso nunca entraron al atlas (9/8).
-SUELTOS = ["establo", "curtiduria", "ofrendas", "mazo", "pet_gallina", "skin_sombrero", "godhand", "tree_sapling", "rock_buried"]
+SUELTOS = ["establo", "curtiduria", "ofrendas", "mazo", "pet_gallina", "skin_sombrero", "godhand", "tree_sapling"]
 
 # BESTIARIO (10/8): las 11 criaturas nuevas son 176 cuadros. Sueltos serían 176 pedidos
 # extra al server gratis; en el atlas son cero. Los arma tools/build-bestiario.py.
