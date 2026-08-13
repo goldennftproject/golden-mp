@@ -2114,6 +2114,12 @@ Ahora la cadena de guía no tiene puntas sueltas:
   comprá semillas (la exención del guardia ya lo permitía) → vendé materiales (madera,
   piedra…). La usan los pasos "juntá plata" (silver/silverarm) y el desvío del hacha.
   Cada eslabón abre solo sus acciones y mueve cartel + flechas. 7 casos simulados más.
+- **v5 — el plan con NÚMEROS (playtest: ciclo de a UNA semilla, "superfeo")**: la cadena
+  de la plata ahora calcula la TANDA — "comprá 3 semillas de papa de UNA y plantalas
+  todas — una tanda y alcanza": semillas útiles = lo que falta ÷ ganancia neta por papa
+  (precio − semilla), tope en la plata disponible. También numera el resto: "vendé tus 4
+  papas — con eso alcanza", "plantá tus 6 semillas", "cosechá tus 2 cultivos listos".
+  6 escenarios económicos simulados, incluido el del playtest (3 de plata, meta 10).
 
 Y el "bloqueo momentáneo" al colocar un plano era el REINICIO de escena (reconstruye
 ~570 sprites de golpe): ahora pasa detrás de un telón de 160 ms con el fundido que ya

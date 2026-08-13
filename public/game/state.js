@@ -376,20 +376,37 @@ function tutoAviso() {
 // la CADENA de la plata, eslabón por eslabón: vender lo cosechado → cosechar lo listo →
 // esperar lo que crece → plantar lo que hay → comprar semillas → vender materiales.
 // Se usa tanto en los pasos "juntá plata" como cuando falta la plata del hacha (13/8 v4).
-function tutoSubPlata(prefijo) {
+// v5 (playtest): CON NÚMEROS — el plan calcula la TANDA entera ("comprá 4 semillas") en
+// vez de dejar caer al jugador en el ciclo de a una semilla, que era un suplicio.
+function tutoSubPlata(prefijo, meta) {
+  const falta = Math.max(0, (meta || 0) - Math.floor(G.plata));
   const conStock = Object.keys(CROP_DEF || {}).find(k => (G.res[k] || 0) > 0);
-  if (conStock) return { txt: prefijo + "vendé tu cosecha en el Mercado",
-    target: "market", panel: "ov-market", ui: "#vb-" + conStock, permite: ["sell", "harvest"] };
+  if (conStock) {
+    const n = Math.floor(G.res[conStock]), cd = CROP_DEF[conStock];
+    const alcanza = meta && (G.plata + n * (cd.price || 0)) >= meta;
+    return { txt: prefijo + "vendé tus " + n + " " + (cd.label || conStock).toLowerCase() + (n > 1 ? "s" : "") + (alcanza ? " — con eso alcanza" : ""),
+      target: "market", panel: "ov-market", ui: "#vb-" + conStock, permite: ["sell", "harvest"] };
+  }
   const plots = Array.isArray(G.plots) ? G.plots : [];
-  if (plots.some(p => p && p.state === "ready")) return { txt: prefijo + "cosechá tus cultivos listos",
+  const listos = plots.filter(p => p && p.state === "ready").length;
+  if (listos) return { txt: prefijo + "cosechá tus " + listos + " cultivo" + (listos > 1 ? "s" : "") + " listo" + (listos > 1 ? "s" : ""),
     target: "plot", permite: ["harvest"] };
   if (plots.some(p => p && p.state === "growing")) return { txt: prefijo + "tus cultivos están creciendo — cosechalos apenas estén",
     target: "plot", permite: ["harvest"] };
-  if (Object.keys(G.seeds || {}).some(k => (G.seeds[k] || 0) > 0)) return { txt: prefijo + "plantá tus semillas",
+  const semillas = Object.keys(G.seeds || {}).reduce((a, k) => a + Math.floor(G.seeds[k] || 0), 0);
+  if (semillas) return { txt: prefijo + "plantá tus " + semillas + " semilla" + (semillas > 1 ? "s" : ""),
     target: "plot", permite: ["plant", "harvest", "plotunlock"] };
-  const precio = (CROP_DEF && CROP_DEF.papa && CROP_DEF.papa.seedCost) || 1;
-  if (G.plata >= precio) return { txt: prefijo + "comprá semillas de papa y plantalas",
-    target: "market", panel: "ov-market", ui: "[data-buy='papa']", permite: ["buyseed", "plant", "harvest"] };
+  const cd = (CROP_DEF && CROP_DEF.papa) || {};
+  const precio = cd.seedCost || 1, gana = Math.max(1, (cd.price || 3) - precio);   // lo que rinde cada papa neta
+  if (G.plata >= precio) {
+    // la tanda ÚTIL: las que hagan falta para llegar a la meta, tope en lo que alcanza la plata
+    const utiles = falta ? Math.ceil(falta / gana) : 3;
+    const n = Math.max(1, Math.min(Math.floor(G.plata / precio), utiles));
+    const deUna = falta && (G.plata - n * precio + n * (cd.price || 3)) >= meta;
+    const accion = n > 1 ? "comprá " + n + " semillas de papa de UNA y plantalas todas" : "comprá 1 semilla de papa y plantala";
+    return { txt: prefijo + accion + (deUna ? " — una tanda y alcanza" : ""),
+      target: "market", panel: "ov-market", ui: "[data-buy='papa']", permite: ["buyseed", "plant", "harvest"] };
+  }
   return { txt: prefijo + "vendé lo que tengas en el Mercado (madera, piedra…)",
     target: "market", panel: "ov-market", ui: "#shop-sell", permite: ["sell", "chop", "mine"] };
 }
@@ -399,14 +416,14 @@ function tutoSub() {
   // (playtest: "vendé tus papas" apuntando al Mercado con cero papas en la bolsa)
   if (st.res === "plata") {
     const hayCosecha = Object.keys(CROP_DEF || {}).some(k => (G.res[k] || 0) > 0);
-    return hayCosecha ? null : tutoSubPlata("Para esa plata: ");   // con cosecha, el paso ya te manda a vender
+    return hayCosecha ? null : tutoSubPlata("Para esa plata: ", tutoNeed(st));   // con cosecha, el paso ya te manda a vender
   }
   const quiereTalar = st.res === "madera" || st.id === "unlocknode" || st.id === "chest";
   const quierePicar = st.res === "piedra";
   if (quiereTalar && typeof toolCount === "function" && toolCount("axe") <= 0) {
     if (!(G.built && G.built.store)) return null;   // fase pre-Herrería: con las hachas de arranque alcanza
     const plata = (TOOL_CRAFT && TOOL_CRAFT.axe && TOOL_CRAFT.axe.plata) || 10;
-    if (G.plata < plata) return tutoSubPlata("Sin hachas (cuesta " + plata + " de plata): ");
+    if (G.plata < plata) return tutoSubPlata("Sin hachas (cuesta " + plata + " de plata): ", plata);
     return { txt: "Te quedaste sin hachas: crafteá una en la Herrería (" + plata + " de plata)",
       target: "store", panel: "ov-forge", ui: "[data-ctool='axe']", permite: ["crafttool"] };
   }
