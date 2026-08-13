@@ -2036,6 +2036,11 @@ Ahora la cadena de guía no tiene puntas sueltas:
   `box-shadow:none !important` (el glow estándar ES un box-shadow) y
   `filter:brightness(.62)` en las inactivas: el CSS lo mataba. Las pestañas ahora tienen su
   propio resaltado: OUTLINE dorado pulsante (`@keyframes ttab`) + brillo pleno.
+- **3ª pasada — el botón exacto tampoco se leía** (playtest: la pestaña Vender brilló, el
+  botón Vender de la papa no): el anillo semitransparente de `tglow` se pierde sobre la
+  madera del botón y la tarjeta crema. Todos los BOTONES marcados usan ahora el mismo
+  outline pulsante fuerte que las pestañas (+ brightness 1.12) y la fila sube a outline
+  3px naranja (#f5a623) para contrastar con el fondo claro.
 
 Y el "bloqueo momentáneo" al colocar un plano era el REINICIO de escena (reconstruye
 ~570 sprites de golpe): ahora pasa detrás de un telón de 160 ms con el fundido que ya
