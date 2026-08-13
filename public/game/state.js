@@ -263,7 +263,7 @@ function darPlano(t, silencioso) {
 // al subir de nivel, al avanzar el tutorial y al cargar. Durante el TUTORIAL (13/8):
 // cada plano cae recién cuando SU paso llega — playtest: con TESTEO el nivel corre tan
 // rápido que el del Horno caía junto al de la Herrería y el jugador no sabía cuál era cuál.
-var PLANO_PASO = { store: "wood_st", horno: "wood", cocina: "woodc", altar: "stone_al" };   // 13/8: el plano cae al ARRANCAR la juntada de sus materiales
+var PLANO_PASO = { store: "place_store", horno: "place_horno", cocina: "place_cocina", altar: "place_altar" };   // 13/8 v2: el plano cae JUSTO en su paso de colocación
 function tutoIdx(id) { return TUTO_STEPS.findIndex(s => s.id === id); }
 function planosSync(silencioso) {
   const tutoOn = G.tuto && !G.tuto.done;
@@ -281,6 +281,10 @@ function planosSync(silencioso) {
         }
         continue;
       }
+      // 13/8 v2: llegó SU paso de colocación → durante el tutorial manda el paso, no el
+      // nivel (con el embudo estricto no habría forma de subir de nivel para destrabarlo)
+      darPlano(t, silencioso);
+      continue;
     }
     if (G.level < PLANO_NIVEL[t]) continue;
     darPlano(t, silencioso);
@@ -309,10 +313,9 @@ var TUTO_PERMISOS = {
   harvest:     ["harvest"],
   sell:        ["sell", "harvest"],
   buyseed:     ["buyseed"],
-  plant2:      ["plant"],
+  place_store: ["obra"],
   wood_st:     ["chop", "crafttool"],
   stone_st:    ["mine", "crafttool"],
-  place_store: ["obra"],
   build_store: ["obra"],
   wood:        ["chop", "crafttool"],
   stone:       ["mine", "crafttool"],
@@ -791,33 +794,36 @@ const TUTO_STEPS = [
   { id: "plant",     n: 3, txt: "Plantá tus 3 papas en las parcelas",              target: "plot" },
   { id: "harvest",   n: 3, txt: "Cosechá tus 3 papas",                             target: "plot" },
   { id: "sell",      n: 1, txt: "Vendé tus papas en el Mercado (necesitás plata)", target: "market", panel: "ov-market", ui: "#vb-papa" },
+  // (13/8 v2: el paso "replantá una papa" se retiró — era reiterativo y dejaba una papa
+  //  plantada que ningún paso pedía cosechar. Plantar ya quedó aprendido en el paso 1.)
   { id: "buyseed",   n: 1, txt: "Con esa plata comprá semillas de papa",           target: "market", panel: "ov-market", ui: "[data-buy='papa']" },
-  { id: "plant2",    n: 1, txt: "Replantá una semilla de papa",                    target: "plot" },
   // — la Herrería ya no viene hecha (10/8): es la primera construcción, y es barata a propósito —
-  // 13/8 (audio): DESGLOSE hasta la acción mínima — juntá cada material, colocá el plano, depositá
-  { id: "wood_st",  res: "madera", need: () => BUILD_DEF.store.cost.madera || 5,
-    txt: "Juntá # de madera talando árboles (para la Herrería)",                   target: "tree" },
-  { id: "stone_st", res: "piedra", need: () => BUILD_DEF.store.cost.piedra || 2,
-    txt: "Juntá # de piedra picando rocas (para la Herrería)",                     target: "rock" },
+  // 13/8 v2 (audio): el orden LÓGICO — primero se coloca el plano (la obra queda a la vista
+  // con su cartel), DESPUÉS se juntan sus materiales, y al final se depositan. Lo depositado
+  // cuenta para los pasos de "juntá" (campo dep), así depositar temprano no traba nada.
   { id: "place_store", n: 1, txt: "Colocá el PLANO de la Herrería (está en tu barra rápida)", target: "store", hot: "store" },
+  { id: "wood_st",  res: "madera", dep: "store", need: () => BUILD_DEF.store.cost.madera || 5,
+    txt: "Juntá # de madera talando árboles (para la obra de la Herrería)",        target: "tree" },
+  { id: "stone_st", res: "piedra", dep: "store", need: () => BUILD_DEF.store.cost.piedra || 2,
+    txt: "Juntá # de piedra picando rocas (para la obra de la Herrería)",          target: "rock" },
   { id: "build_store", n: 1, txt: "Depositá los materiales en la obra de la Herrería (clic encima)", target: "store" },
-  // — cadena del Horno: primero los materiales de SU receta, después construirlo —
-  { id: "wood",  res: "madera", need: () => BUILD_DEF.horno.cost.madera || 10,
-    txt: "Juntá # de madera talando árboles (para el Horno)",                      target: "tree" },
-  { id: "stone", res: "piedra", need: () => BUILD_DEF.horno.cost.piedra || 8,
-    txt: "Juntá # de piedra picando rocas (para el Horno)",                        target: "rock" },
+  // — cadena del Horno: plano → materiales de SU receta → depósito —
   { id: "place_horno", n: 1, txt: "Colocá el plano del Horno de Piedra (barra rápida)", target: "horno", hot: "horno" },
+  { id: "wood",  res: "madera", dep: "horno", need: () => BUILD_DEF.horno.cost.madera || 10,
+    txt: "Juntá # de madera talando árboles (para la obra del Horno)",             target: "tree" },
+  { id: "stone", res: "piedra", dep: "horno", need: () => BUILD_DEF.horno.cost.piedra || 8,
+    txt: "Juntá # de piedra picando rocas (para la obra del Horno)",               target: "rock" },
   { id: "build_horno", n: 1, txt: "Depositá los materiales en la obra del Horno (clic encima)", target: "horno" },
   // — cadena del Hacha: primero la plata que cuesta, después craftearla —
   { id: "silver", res: "plata", need: () => TOOL_CRAFT.axe.plata || 10,
     txt: "Juntá # de plata vendiendo cosecha (para el Hacha)",                     target: "market", panel: "ov-market", ui: "#vb-papa" },
   { id: "crafttool", n: 1, pr: 25, txt: "Crafteá un Hacha en la Herrería",          target: "store", panel: "ov-forge", ui: "[data-ctool='axe']" },
   // ——— ETAPA 2: los sistemas nuevos (Cocina, Armas, Zona Negra, Pesca, Altar) ———
-  { id: "woodc",  res: "madera", need: () => BUILD_DEF.cocina.cost.madera || 20,
-    txt: "Juntá # de madera (para la Cocina)",                                  target: "tree" },
-  { id: "stonec", res: "piedra", need: () => BUILD_DEF.cocina.cost.piedra || 15,
-    txt: "Juntá # de piedra (para la Cocina)",                                  target: "rock" },
-  { id: "place_cocina", n: 1, txt: "Colocá el plano de la Cocina (granja nivel 5)", target: "cocina", hot: "cocina" },
+  { id: "place_cocina", n: 1, txt: "Colocá el plano de la Cocina (barra rápida)", target: "cocina", hot: "cocina" },
+  { id: "woodc",  res: "madera", dep: "cocina", need: () => BUILD_DEF.cocina.cost.madera || 20,
+    txt: "Juntá # de madera (para la obra de la Cocina)",                       target: "tree" },
+  { id: "stonec", res: "piedra", dep: "cocina", need: () => BUILD_DEF.cocina.cost.piedra || 15,
+    txt: "Juntá # de piedra (para la obra de la Cocina)",                       target: "rock" },
   { id: "build_cocina", n: 1, pr: 50,  txt: "Depositá los materiales en la obra de la Cocina (clic encima)", target: "cocina" },
   { id: "cook",     n: 1, pr: 50,  txt: "Cociná tu primer plato: Papa Asada",   target: "cocina", panel: "ov-cocina", ui: "[data-cook='papa_asada']" },
   { id: "eat",      n: 1, pr: 25,  txt: "Comé un plato desde la bolsa (te da un buff)" },
@@ -830,13 +836,13 @@ const TUTO_STEPS = [
   { id: "kill",      n: 1, pr: 50, txt: "Vencé tu primera criatura" },
   { id: "kill5",     n: 5, pr: 100, txt: "Vencé 5 criaturas más" },
   { id: "fish",      n: 1, pr: 50, txt: "Pescá un pez en la laguna (comprá lombrices en la Tienda)" },
-  // 13/8 (audio): el Altar también desglosado — piedra y madera se piden por separado; el oro
-  // y los $Golden se juntan durante el depósito (su paso deja el loop entero abierto)
-  { id: "stone_al", res: "piedra", need: () => BUILD_DEF.altar.cost.piedra || 60,
-    txt: "Juntá # de piedra (para el Altar de Runas)",                            target: "rock" },
-  { id: "wood_al",  res: "madera", need: () => BUILD_DEF.altar.cost.madera || 40,
-    txt: "Juntá # de madera (para el Altar de Runas)",                            target: "tree" },
+  // 13/8 (audio): el Altar también desglosado — plano primero, piedra y madera por separado;
+  // el oro y los $Golden se juntan durante el depósito (su paso deja el loop entero abierto)
   { id: "place_altar", n: 1, txt: "Colocá el plano del Altar de Runas (barra rápida)", target: "altar", hot: "altar" },
+  { id: "stone_al", res: "piedra", dep: "altar", need: () => BUILD_DEF.altar.cost.piedra || 60,
+    txt: "Juntá # de piedra (para la obra del Altar)",                            target: "rock" },
+  { id: "wood_al",  res: "madera", dep: "altar", need: () => BUILD_DEF.altar.cost.madera || 40,
+    txt: "Juntá # de madera (para la obra del Altar)",                            target: "tree" },
   { id: "build_altar", n: 1, pr: 100, txt: "Llevale a la obra del Altar lo que falta (incluye oro y $Golden)", target: "altar" },
   { id: "upgrade",   n: 1, pr: 150, txt: "Mejorá un arma a +1 en el Altar",     target: "altar", panel: "ov-altar" },
   // ——— ETAPA 3: que el jugador descubra TODO lo que se puede hacer ———
@@ -851,7 +857,14 @@ const TUTO_STEPS = [
   { id: "socket",    n: 1, pr: 120, txt: "Socketeá una runa en tu arma (Altar)", target: "altar", panel: "ov-altar" },
 ];
 function tutoNeed(st) { return st ? (typeof st.need === "function" ? st.need() : (st.n || 1)) : 0; }
-function tutoTiene(st) { return !st || !st.res ? 0 : Math.floor(st.res === "plata" ? G.plata : (G.res[st.res] || 0)); }
+function tutoTiene(st) {
+  if (!st || !st.res) return 0;
+  let n = Math.floor(st.res === "plata" ? G.plata : (G.res[st.res] || 0));
+  // 13/8 v2: lo YA DEPOSITADO en la obra del paso cuenta — depositar temprano no traba el "juntá"
+  if (st.dep && G.obraDep && G.obraDep[st.dep]) n += Math.floor(G.obraDep[st.dep][st.res] || 0);
+  if (st.dep && G.built && G.built[st.dep]) n = Math.max(n, tutoNeed(st));   // construido = todo depositado
+  return n;
+}
 function tutoTxt(st) { return st ? String(st.txt).replace("#", tutoNeed(st)) : ""; }
 
 /* ============ GUARDIA DEL TUTORIAL (12/8): que nadie se rompa la cadena =============
@@ -907,7 +920,7 @@ function tutoBoost(clase) {
   const st = (typeof tutoActivo === "function") ? tutoActivo() : null;
   if (!st) return 1;
   const mapa = {
-    papa:  ["plant", "harvest", "sell", "buyseed", "plant2", "silver"],   // el arranque entero fluye
+    papa:  ["plant", "harvest", "sell", "buyseed", "silver"],   // el arranque entero fluye (plant2 se retiró 13/8)
     tree:  ["wood", "woodc", "wood_st", "wood_al"],
     rock:  ["stone", "stonec", "stone_st", "stone_al"],
     horno: ["mat"],
@@ -919,7 +932,7 @@ var TUTO_REWARD_PLATA = 100;   // gran recompensa del cierre (editable)
 // después usan el tiempo normal del cultivo. 0 en el panel = sin excepción.
 var FIRST_GROW_MS = 45000;   // tope de crecimiento de las semillas de arranque
 var FIRST_GROW_N = 3;        // cuántas semillas de arranque tienen ese trato (las 3 papas del inicio)
-var TUTO_VER = 7;   // subir este número cuando cambie la CADENA de pasos (invalida progresos viejos) · v7 (13/8): construcción DESGLOSADA (juntá → colocá → depositá)
+var TUTO_VER = 8;   // subir este número cuando cambie la CADENA de pasos (invalida progresos viejos) · v8 (13/8): orden lógico colocá → juntá → depositá, sin plant2
 function tutoActivo() { return G.tuto && !G.tuto.done ? TUTO_STEPS[G.tuto.step] : null; }
 // migración: si el guardado trae una cadena vieja, los pasos ya no significan lo mismo → se recalcula
 function tutoMigrar() {
@@ -982,7 +995,7 @@ function tutoCheckRes() {
 }
 function tutoEvent(tipo) {
   const st = tutoActivo(); if (!st || st.res) return;
-  const acepta = st.id === tipo || (st.id === "plant2" && tipo === "plant");
+  const acepta = st.id === tipo;
   if (!acepta) return;
   G.tuto.n = (G.tuto.n || 0) + 1;
   if (G.tuto.n < st.n) { if (typeof tutoRefresh === "function") tutoRefresh(); return; }

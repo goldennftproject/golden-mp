@@ -2089,6 +2089,15 @@ Ahora la cadena de guía no tiene puntas sueltas:
   boost de árboles/rocas cubre los pasos nuevos, `PLANO_PASO` entrega cada plano al
   ARRANCAR la juntada de sus materiales. 43 pasos, 43 listas de permisos — verificado
   por script: sin softlocks, sin huérfanos, planos siempre antes de su `place_`.
+- **v8 — el ORDEN lógico (playtest inmediato)**: pedía madera "para la Herrería" antes de
+  que existiera obra alguna. Ahora cada edificio arranca COLOCANDO el plano (la obra queda
+  a la vista con su cartel) y recién después pide juntar y depositar. Tres piezas que lo
+  hacen posible: lo YA DEPOSITADO cuenta para los pasos de "juntá" (campo `dep` en
+  `tutoTiene` — depositar temprano no traba nada), el plano cae JUSTO en su paso `place_`
+  y durante el tutorial manda el paso y no el nivel de granja (con el embudo estricto no
+  habría forma de subir de nivel para destrabar la Cocina), y el paso "replantá una papa"
+  se retiró: era reiterativo y dejaba una papa plantada que nadie pedía cosechar. 42
+  pasos, verificación por script ampliada: place < juntá < depósito en los 4 edificios.
 
 Y el "bloqueo momentáneo" al colocar un plano era el REINICIO de escena (reconstruye
 ~570 sprites de golpe): ahora pasa detrás de un telón de 160 ms con el fundido que ya
