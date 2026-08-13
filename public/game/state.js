@@ -251,8 +251,37 @@ function darPlano(t, silencioso) {
   }
   if (typeof syncSlots === "function") syncSlots(); if (isOpen("ov-inv")) refreshInv();
 }
-// al subir de nivel — y al cargar, para guardados que ya pasaron esos niveles
-function planosSync(silencioso) { for (const t in PLANO_NIVEL) if (G.level >= PLANO_NIVEL[t]) darPlano(t, silencioso); }
+// al subir de nivel, al avanzar el tutorial y al cargar. Durante el TUTORIAL (13/8):
+// cada plano cae recién cuando SU paso llega — playtest: con TESTEO el nivel corre tan
+// rápido que el del Horno caía junto al de la Herrería y el jugador no sabía cuál era cuál.
+var PLANO_PASO = { store: "build_store", horno: "wood", cocina: "woodc", altar: "build_altar" };
+function tutoIdx(id) { return TUTO_STEPS.findIndex(s => s.id === id); }
+function planosSync(silencioso) {
+  const tutoOn = G.tuto && !G.tuto.done;
+  for (const t in PLANO_NIVEL) {
+    if (tutoOn) {
+      const gate = PLANO_PASO[t];
+      const antesDeTiempo = !gate || (G.tuto.step || 0) < tutoIdx(gate);
+      if (antesDeTiempo) {
+        // saneo del playtest (13/8): si un plano cayó antes de tiempo (nivel rápido de
+        // TESTEO), se retira de la bolsa hasta que su paso llegue (si la obra no se colocó)
+        if (G.planos && G.planos[t] && !(G.obras && G.obras[t]) && !(G.built && G.built[t])) {
+          delete G.planos[t];
+          if (typeof syncSlots === "function") syncSlots();
+        }
+        continue;
+      }
+    }
+    if (G.level < PLANO_NIVEL[t]) continue;
+    darPlano(t, silencioso);
+  }
+}
+// ¿esta acción ya fue presentada por el tutorial? (embudo 13/8: hasta que el paso de una
+// acción llega, la acción está cerrada — y una vez llegado, queda abierta para siempre)
+function tutoDesbloqueado(stepId) {
+  if (!G.tuto || G.tuto.done) return true;
+  return (G.tuto.step || 0) >= tutoIdx(stepId);
+}
 function obraDe(t) { return G.obras && G.obras[t]; }
 function obraColocar(t, col, row) {   // la llama la escena con la celda elegida
   if (!planoTengo(t)) return false;
@@ -615,6 +644,7 @@ function pickCount(id) { return G.picks.owned[id] ? Math.max(0, Math.floor(G.pic
 function craftPick(id) {
   const pd = PICK_DEF[id]; if (!pd) return;
   if (pickCount(id) >= 99) { toast("Máximo 99 " + pd.label); return; }
+  if (typeof tutoDesbloqueado === "function" && !tutoDesbloqueado("craftpick")) { toast("🎯 Los picos llegan más adelante en el tutorial — seguí el objetivo de arriba"); return; }   // embudo (13/8)
   if (typeof tutoGuardiaCosto === "function" && !tutoGuardiaCosto(pd.cost, pd.plata, "craftear " + pd.label)) return;   // guardia del tutorial (12/8)
   if (!canAfford(pd.cost)) { toast("Te faltan materiales"); return; }
   if (pd.plata && G.plata < pd.plata) { toast("Te falta plata"); return; }
@@ -781,7 +811,7 @@ var TUTO_REWARD_PLATA = 100;   // gran recompensa del cierre (editable)
 // después usan el tiempo normal del cultivo. 0 en el panel = sin excepción.
 var FIRST_GROW_MS = 45000;   // tope de crecimiento de las semillas de arranque
 var FIRST_GROW_N = 3;        // cuántas semillas de arranque tienen ese trato (las 3 papas del inicio)
-var TUTO_VER = 5;   // subir este número cuando cambie la CADENA de pasos (invalida progresos viejos) · v5 (10/8): se agregó "construí la Herrería"
+var TUTO_VER = 6;   // subir este número cuando cambie la CADENA de pasos (invalida progresos viejos) · v6 (13/8): construcción por PLANOS + embudo de acciones
 function tutoActivo() { return G.tuto && !G.tuto.done ? TUTO_STEPS[G.tuto.step] : null; }
 // migración: si el guardado trae una cadena vieja, los pasos ya no significan lo mismo → se recalcula
 function tutoMigrar() {
@@ -864,6 +894,7 @@ function tutoDone(st) {
     tutoAutoSkip();   // si el paso nuevo ya estaba cumplido, no lo pide (9/8)
     if (G.tuto.done) { if (typeof tutoRefresh === "function") tutoRefresh(); return; }
     log("Nuevo objetivo: " + tutoTxt(TUTO_STEPS[G.tuto.step]) + ".", "good");
+    if (typeof planosSync === "function") planosSync(false);   // 13/8: si el paso nuevo trae plano, cae ACÁ (con su celebración)
   }
   if (typeof tutoRefresh === "function") tutoRefresh();
   if (window.farmScene && window.farmScene.updateTutoArrow) try { window.farmScene.updateTutoArrow(); } catch (e) {}
@@ -1369,6 +1400,7 @@ function decoPuestos() { return (G.decos || []).length; }
 function comprarDeco(id) {
   const d = DECO_DEF[id]; if (!d) return;
   if (d.cofre) { toast("Ese solo sale del cofre de login"); return; }   // no tiene precio: no se puede comprar
+  if (G.tuto && !G.tuto.done) { toast("🎯 Los adornos se abren al terminar el tutorial — seguí el objetivo de arriba"); return; }   // embudo (13/8)
   if (d.plata && G.plata < d.plata) { toast("Te falta plata (" + fmt(d.plata) + ")"); return; }
   if (d.golden && G.golden < d.golden) { toast("Te falta $Golden (" + d.golden + ")"); return; }
   if (d.plata && typeof tutoGuardia === "function" && !tutoGuardia("plata", d.plata, "comprar adornos")) return;   // guardia del tutorial (12/8)
@@ -1424,6 +1456,7 @@ function parcelaColocar(col, row) {   // la llama la escena con la celda que eli
 }
 function comprarParcela(conGolden) {
   if ((G.plotsOwned || 2) >= PLOT_MAX) { toast("Ya tenés las " + PLOT_MAX + " parcelas"); return; }
+  if (G.tuto && !G.tuto.done) { toast("🎯 Durante el tutorial las parcelas llegan solas al subir de nivel — seguí el objetivo"); return; }   // embudo (13/8)
   if (conGolden) {
     const c = plotUnlockGolden();
     if (G.golden < c) { toast("Te falta $Golden (" + c + ")"); return; }
@@ -1456,6 +1489,7 @@ var GODHAND_GOLDEN = 500;
 function tengoGodHand() { return !!G.godHand; }
 function comprarGodHand() {
   if (tengoGodHand()) { toast("Ya tenés la GOD HAND"); return; }
+  if (G.tuto && !G.tuto.done) { toast("🎯 La GOD HAND se abre al terminar el tutorial — seguí el objetivo de arriba"); return; }   // embudo (13/8)
   if (G.golden < GODHAND_GOLDEN) { toast("Te falta $Golden (" + GODHAND_GOLDEN + ")"); return; }
   G.golden -= GODHAND_GOLDEN;
   G.godHand = true;
@@ -2127,6 +2161,7 @@ function armCdLeft(id) { return Math.max(0, ((G.armCd && G.armCd[id]) || 0) - no
 function craftWeapon(id) {
   const w = ARM_DEF[id]; if (!w) return;
   if (!G.armasUnlocked) { toast("Desbloqueá la sección de Armas primero"); return; }
+  if (typeof tutoDesbloqueado === "function" && !tutoDesbloqueado("craftarm")) { toast("🎯 Las armas llegan más adelante en el tutorial — seguí el objetivo de arriba"); return; }   // embudo (13/8)
   if (typeof tutoGuardiaCosto === "function" && !tutoGuardiaCosto(w.cost, w.plata, "forjar " + w.label)) return;   // guardia del tutorial (12/8)
   if (G.weapons[id]) { toast("Ya tenés " + w.label); return; }
   if (armCdLeft(id) > 0) { toast("La forja se enfría — " + fmtSecs(Math.ceil(armCdLeft(id) / 1000))); return; }
@@ -2560,6 +2595,7 @@ const TOOL_CRAFT = { axe: { cost:{}, plata:10 }, rod: { cost:{ madera:3, piedra:
 function craftTool(id, lote) {
   lote = Math.max(1, lote || 1);
   const tc = TOOL_CRAFT[id], td = TOOL_DEF[id]; if (!tc || !td) return;
+  if (typeof tutoDesbloqueado === "function" && !tutoDesbloqueado("crafttool")) { toast("🎯 El tutorial te va a enseñar a craftear enseguida — seguí el objetivo de arriba"); return; }   // embudo (13/8)
   if (typeof tutoGuardiaCosto === "function" && !tutoGuardiaCosto(tc.cost, tc.plata, "craftear " + td.label)) return;   // guardia del tutorial (12/8)
   if (lote > 1) {   // doc 2/8: crafteo en lote — la fricción es económica, no de clicks
     let hechas = 0;

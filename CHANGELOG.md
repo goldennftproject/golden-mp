@@ -1964,6 +1964,29 @@ de madera, rocas en los de piedra, horno en el de fundir. Todo lo demás, a tiem
 Con guardia + acelerador + candado de venta, la cadena fluye al ritmo del jugador y no
 hay bucle de dinero infinito.
 
+### EL EMBUDO (13/8) — primer playtest del usuario, tres arreglos
+
+1. **Planos a su tiempo**: con TESTEO el nivel corre tanto que el plano del Horno caía
+   junto al de la Herrería (dos pergaminos en la bolsa y confusión). Ahora, durante el
+   tutorial cada plano cae **cuando su paso llega** (`PLANO_PASO`): Herrería en su paso,
+   Horno al arrancar su cadena de materiales, Cocina y Altar ídem. Los que no están en
+   el tutorial (Establo, Curtiduría, Ofrendas) esperan a que termine. Y el saneo
+   retroactivo retira de la bolsa los que hubieran caído antes de tiempo.
+2. **Acciones bloqueadas hasta que el tutorial las presenta** (`tutoDesbloqueado`):
+   craftear herramientas, picos y armas están cerrados hasta su paso (y quedan abiertos
+   para siempre después); adornos, parcelas extra y GOD HAND se abren al terminar el
+   tutorial. Cada bloqueo avisa con 🎯 hacia dónde mirar. Nota de diseño: las
+   herramientas NO podían bloquearse después de su paso porque las hachas se consumen y
+   los pasos de madera las necesitan — por eso es "cerrado hasta su paso", no "solo
+   durante su paso".
+3. **"Coloqué el plano y salió el edificio terminado"**: era TESTEO — regala materiales
+   al empezar, así que el primer clic en la obra depositó todo y la completó al
+   instante. Con `TESTEO = 0` el jugador arranca vacío y la obra vive lo que tiene que
+   vivir.
+
+`TUTO_VER` subido a 6 (la cadena cambió de semántica): los progresos de prueba viejos
+se resetean a un estado consistente. Flujo verificado con simulación de 4 momentos.
+
 ### El mapa inicial ordenado por zonas + la CERCA PERIMETRAL intocable
 
 El arranque queda zonificado con lógica de lectura: **parcelas + granero** al noroeste,
