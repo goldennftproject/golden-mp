@@ -2068,6 +2068,28 @@ Ahora la cadena de guía no tiene puntas sueltas:
   gris de respaldo puesto desde el create (tintarNodo corre antes del cambio de textura).
   Ahora `colocarObraEnVivo` hace `clearTint().setAlpha(1)` tras poner `build_*`.
 
+### Guía por FLECHAS + granja limpia + tutorial DESGLOSADO (13/8, por audio)
+
+- **La guía en interfaces pasó de recuadros a FLECHA**: el brillo no se leía sobre la
+  madera. Ahora es el mismo triángulo dorado del mundo (`#tuto-flecha-ui`, DOM fijo)
+  rebotando sobre el botón/pestaña/entrada del menú — una sola por vez, con la cadena de
+  siempre: menú → panel → pestaña → botón. Sigue al objetivo aunque la lista se scrollee
+  o la ventana se arrastre (listener de scroll con rAF). El CSS de `.tutohl` se retiró.
+- **Letrero de obra y timers solo con el cursor encima**: el cartel de materiales de la
+  obra y el texto del timer de los cultivos aparecen solo al apuntarlos (la barrita de
+  progreso queda siempre) — misma regla que ya tenían los timers de los nodos.
+- **Tutorial v7 — construcción DESGLOSADA hasta la acción mínima** (pedido: "talar tanto,
+  picar tanto, colocar, depositar"). Cada edificio del tutorial es ahora su cadena:
+  juntá su madera (talando) → juntá su piedra (picando) → colocá el plano (la flecha baja
+  hasta el plano en la BARRA rápida, campo `hot`) → depositá los materiales (clic encima).
+  Herrería y Altar quedaron desglosados (el Horno y la Cocina ya lo estaban a medias);
+  en el Altar el oro y los $Golden se juntan durante el depósito, que deja el loop
+  abierto. Piezas nuevas: evento `place_<t>` al colocar la obra, `tutoHecho` reconoce
+  obras ya colocadas, `tutoGuardia` reserva materiales también en los pasos `place_`,
+  boost de árboles/rocas cubre los pasos nuevos, `PLANO_PASO` entrega cada plano al
+  ARRANCAR la juntada de sus materiales. 43 pasos, 43 listas de permisos — verificado
+  por script: sin softlocks, sin huérfanos, planos siempre antes de su `place_`.
+
 Y el "bloqueo momentáneo" al colocar un plano era el REINICIO de escena (reconstruye
 ~570 sprites de golpe): ahora pasa detrás de un telón de 160 ms con el fundido que ya
 existía (`reiniciarGranjaSuave`), también al colocar parcelas — el mismo parpadeo se lee

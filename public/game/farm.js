@@ -1436,7 +1436,8 @@ class FarmScene extends Phaser.Scene {
     const h = 6;
     const y = Math.round(abajo - 4 - h) + (FX_BARRA_DY || 0);   // apoyada por dentro del borde de abajo
     // el texto va justo ARRIBA de la barra (en SFL se lee "18m", "20h", "7d 13h")
-    if (pl.timer) pl.timer.setText(fmtCorto((pl.readyAt - t) / 1000)).setPosition(cx, y - 2).setDepth(pl.by + 3).setVisible(true);
+    // 13/8 (audio): el TEXTO solo con el cursor encima (la barrita de progreso queda siempre)
+    if (pl.timer) pl.timer.setText(fmtCorto((pl.readyAt - t) / 1000)).setPosition(cx, y - 2).setDepth(pl.by + 3).setVisible(this.timerOn(pl));
     if (!pl.barraG) pl.barraG = this.add.graphics().setDepth(pl.by + 2);
     if (pl.barraPct != null && Math.abs(pl.barraPct - pct) < 0.004) return;   // sin cambio visible: no redibujar
     pl.barraPct = pct;
@@ -2373,7 +2374,7 @@ class FarmScene extends Phaser.Scene {
     const partes = falta.map(([r, f, tot, dep]) => (r === "golden" ? "$G" : (RES_LABEL[r] || r)) + " " + dep + "/" + tot);
     o.letrero = this.add.text(o.cx, o.by - (o.sprite.displayHeight || 60) - 6, "🔨 " + partes.join("  ·  "),
       { fontFamily: "system-ui", fontSize: "11px", fontStyle: "bold", color: "#fff3cf", stroke: "#241505", strokeThickness: 4, align: "center" })
-      .setOrigin(0.5, 1).setDepth(99990);
+      .setOrigin(0.5, 1).setDepth(99990).setVisible(false);   // 13/8: aparece solo con el cursor encima (lo maneja update)
   }
 
   // pathfinding A* (módulo compartido con el Bosque — nav.js)
@@ -2649,6 +2650,9 @@ class FarmScene extends Phaser.Scene {
         if (over) o.timer.setText(fmtCorto((o.readyAt - t) / 1000)).setPosition(o.cx, this.topY(o, (o.type === "ore" || o.type === "rock") ? -6 : 7)).setVisible(true);   // detalles213: el timer del mineral pegado al nodo (antes flotaba alto y se mezclaba)
         else o.timer.setVisible(false);
       }
+      // 13/8 (audio): el letrero de materiales de la OBRA solo con el cursor encima —
+      // siempre visible ensuciaba la granja (misma regla que los timers de los nodos)
+      if (o.letrero) o.letrero.setVisible(this.timerOn(o));
     }
     // CLIC GUARDADO: tocaste otra vez mientras el golpe anterior todavía tenía el candado puesto.
     // Apenas se libera, sale. Así tocando rápido no se pierde ni un golpe (que es como se tala en

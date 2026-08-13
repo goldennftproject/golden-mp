@@ -794,41 +794,65 @@ function tutoRefresh() {
     : (st.n > 1 ? " " + Math.min(G.tuto.n || 0, st.n) + "/" + st.n : "");
   tutoHighlight();
 }
-// resalta el BOTÓN exacto del paso actual dentro del panel abierto (ej.: el Hacha en la
-// Herrería). 13/8: la CADENA completa — si el panel del objetivo está cerrado y no hay
-// edificio al que apuntar (Inventario, Pase…), se resalta el botón ☰ Menú y, con el menú
-// desplegado, la entrada del panel. Mundo → menú → panel → botón, sin puntas sueltas.
+// 13/8 (audio): la guía DENTRO de las interfaces es una FLECHA dorada (la misma estética
+// que la del mundo) apuntando al botón/pestaña/entrada del menú — los recuadros brillantes
+// no se leían sobre la madera. Una sola flecha por vez: menú → panel → pestaña → botón.
+function tutoFlechaUI(el) {
+  let f = document.getElementById("tuto-flecha-ui");
+  if (!el) { if (f) f.style.display = "none"; return; }
+  if (!f) { f = document.createElement("div"); f.id = "tuto-flecha-ui"; f.textContent = "▼"; document.body.appendChild(f); }
+  const r = el.getBoundingClientRect();
+  if (!r.width && !r.height) { f.style.display = "none"; return; }
+  f.style.display = "block";
+  f.style.left = (r.left + r.width / 2) + "px";
+  f.style.top = r.top + "px";
+}
 function tutoHighlight() {
-  document.querySelectorAll(".tutohl").forEach(e => e.classList.remove("tutohl"));
+  document.querySelectorAll(".tutohl").forEach(e => e.classList.remove("tutohl"));   // limpieza del sistema viejo
   const st = (typeof tutoActivo === "function") ? tutoActivo() : null;
-  if (!st || !st.panel) return;
+  // 13/8: pasos "colocá el plano" — la flecha baja hasta el plano en la BARRA rápida
+  if (st && st.hot) {
+    const lbl = (typeof BUILD_DEF !== "undefined" && BUILD_DEF[st.hot]) ? BUILD_DEF[st.hot].label : null;
+    let cel = null;
+    document.querySelectorAll("#hotbar .hcell.k-plano").forEach(c => { if (!cel && (!lbl || (c.title || "").includes(lbl))) cel = c; });
+    if (cel) { tutoFlechaUI(cel); return; }
+  }
+  if (!st || !st.panel) { tutoFlechaUI(null); return; }
   if (!isOpen(st.panel)) {
     if (!st.target) {   // sin edificio en el mundo: la guía va por el menú
-      const mb = document.getElementById("menu-btn"); if (mb) mb.classList.add("tutohl");
-      const gmi = document.querySelector('.gmi[data-panel="' + st.panel + '"]'); if (gmi) gmi.classList.add("tutohl");
-    }
+      const gm = document.getElementById("gmenu");
+      const desplegado = gm && !gm.classList.contains("collapsed");
+      const gmi = document.querySelector('.gmi[data-panel="' + st.panel + '"]');
+      tutoFlechaUI((desplegado && gmi) ? gmi : document.getElementById("menu-btn"));
+    } else tutoFlechaUI(null);   // la flecha del MUNDO ya apunta al edificio
     return;
   }
-  if (!st.ui) return;
-  const cont = document.getElementById(st.panel); if (!cont) return;
-  const el = cont.querySelector(st.ui); if (!el) return;
-  // 13/8: si el botón vive en una PESTAÑA oculta (Tienda: Comprar/Adornos/Vender ·
-  // Herrería: Craftear/Armas/Reparar), se ilumina la pestaña que lleva a él — el
-  // playtest mostró el caso: "vendé papas" con la Tienda abierta en Comprar y nada brillaba
+  if (!st.ui) { tutoFlechaUI(null); return; }
+  const cont = document.getElementById(st.panel); if (!cont) { tutoFlechaUI(null); return; }
+  const el = cont.querySelector(st.ui); if (!el) { tutoFlechaUI(null); return; }
+  // botón dentro de una PESTAÑA oculta (Tienda: Comprar/Adornos/Vender · Herrería:
+  // Craftear/Armas/Reparar): la flecha apunta a la pestaña que lleva a él
   if (el.offsetParent === null) {
     let tab = null;
     const sp = el.closest(".shoppane");
     if (sp) tab = cont.querySelector('.shoptab[data-shop="' + sp.id.replace("shop-", "") + '"]');
     const fp = el.closest('[id^="forge-pane-"]');
     if (!tab && fp) tab = cont.querySelector('.forgetab[data-forge="' + fp.id.replace("forge-pane-", "") + '"]');
-    if (tab) tab.classList.add("tutohl");
+    tutoFlechaUI(tab);
     return;
   }
-  el.classList.add("tutohl");
   const fila = el.closest(".forge-row, .mkt-row");
-  if (fila) { fila.classList.add("tutohl"); fila.scrollIntoView({ block: "nearest" }); }
+  if (fila) fila.scrollIntoView({ block: "nearest" });
+  tutoFlechaUI(el);
 }
 window.tutoHighlight = tutoHighlight;
+// la flecha sigue al botón aunque la lista se scrollee o la ventana se arrastre
+{ let _fRaf = 0;
+  const _fSync = () => { if (_fRaf) return; _fRaf = requestAnimationFrame(() => { _fRaf = 0; tutoHighlight(); }); };
+  document.addEventListener("scroll", _fSync, true);
+  window.addEventListener("resize", _fSync);
+  document.addEventListener("mousemove", (e) => { if (e.buttons) _fSync(); });   // ventanas arrastrándose
+}
 
 // el guardado se hidrata de forma asíncrona: si el paso cambia, se redibujan cartel Y flecha juntos
 let _tutoSig = null;
