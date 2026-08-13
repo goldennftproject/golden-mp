@@ -1701,7 +1701,12 @@ class FarmScene extends Phaser.Scene {
     } else if (pl.tipo === "obra") {   // blueprint (12/8): la obra ocupa ~2-3 celdas, chequear las vecinas
       if (!this.celdaLibreAdorno(col - 1, row, -1) || !this.celdaLibreAdorno(col + 1, row, -1)) { toast("Ahí no entra la obra — buscá un lugar más despejado"); return; }
       this.finColocar();
-      if (typeof obraColocar === "function" && obraColocar(pl.id, col, row)) toast("¡Obra colocada! Llevale materiales");   // reinicia la escena para dibujarla
+      // 13/8: la obra aparece EN VIVO (el edificio ya estaba en la escena, invisible) — sin
+      // reiniciar la escena ni pantalla oscura; el reinicio con telón queda de respaldo
+      if (typeof obraColocar === "function" && obraColocar(pl.id, col, row, true)) {
+        if (!this.colocarObraEnVivo(pl.id) && typeof reiniciarGranjaSuave === "function") reiniciarGranjaSuave();
+        toast("¡Obra colocada! Llevale materiales");
+      }
     }
   }
   // 13/8: cierre común — y si el colocado vino de la bolsa/hotbar, se sale del modo edición solo
@@ -1711,6 +1716,22 @@ class FarmScene extends Phaser.Scene {
     if (window.syncPlacingUI) syncPlacingUI(false);
     if (this.placingAuto && window.setEditMode) setEditMode(false);
     this.placingAuto = false;
+  }
+  // 13/8: "encender" el edificio oculto como OBRA sin reiniciar la escena (chau pantalla oscura)
+  colocarObraEnVivo(t) {
+    const o = this.objs && this.objs.find(x => x.type === t);
+    const op = (typeof obraDe === "function") ? obraDe(t) : null;
+    if (!o || !op || !o.sprite || !this.textures.exists("build_" + t)) return false;
+    const T = GF.TILE;
+    o.cx = (op.col + 0.5) * T; o.by = (op.row + 1) * T;
+    o.oculto = false;
+    o.sprite.setTexture("build_" + t).setVisible(true).setPosition(o.cx, o.by).setOrigin(0.5, 1);
+    o.sprite.setScale(o.rw / o.sprite.width).setDepth(o.by);
+    this.letreroObra(o);
+    if (this.rebuildCollisions) this.rebuildCollisions();
+    if (typeof this.estrellasFx === "function") this.estrellasFx(o.cx, o.by - 20);   // mini festejo al apoyarla
+    if (typeof tutoSync === "function") tutoSync(true); else if (this.updateTutoArrow) this.updateTutoArrow();
+    return true;
   }
   // 13/8: botón Cancelar (o clic derecho): el plano/adorno queda en la bolsa, todo vuelve a como estaba
   cancelarColocar() {

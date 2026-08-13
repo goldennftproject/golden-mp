@@ -351,7 +351,7 @@ function tutoPermite(tag) {
 }
 function tutoAviso() { const st = tutoActivo(); toast("🎯 Ahora toca: " + (st ? tutoTxt(st) : "el objetivo")); }
 function obraDe(t) { return G.obras && G.obras[t]; }
-function obraColocar(t, col, row) {   // la llama la escena con la celda elegida
+function obraColocar(t, col, row, vivo) {   // la llama la escena con la celda elegida
   if (!planoTengo(t)) return false;
   delete G.planos[t];
   // 13/8: el plano usado sale de la hotbar (entró solo al ganarlo)
@@ -360,7 +360,10 @@ function obraColocar(t, col, row) {   // la llama la escena con la celda elegida
   G.obraDep = G.obraDep || {}; G.obraDep[t] = G.obraDep[t] || {};
   if (typeof syncSlots === "function") syncSlots();
   if (typeof saveFarm === "function") saveFarm(true);
-  reiniciarGranjaSuave();
+  if (typeof refreshHotbar === "function") refreshHotbar(true);
+  // 13/8: si la escena puede dibujar la obra EN VIVO ya no se reinicia (chau telón oscuro);
+  // el reinicio con fundido queda solo de respaldo
+  if (!vivo) reiniciarGranjaSuave();
   return true;
 }
 // el reinicio de escena reconstruye ~570 sprites y se sentía como un CONGELAMIENTO (13/8).

@@ -2059,6 +2059,11 @@ Ahora la cadena de guía no tiene puntas sueltas:
   sale del modo edición solo — lo mismo al terminar de colocar. "Terminar edición" con
   algo en la mano lo suelta sin romper nada. La transición con telón queda SOLO para el
   momento de colocar obra/parcela (que reinicia la escena); entrar a edición no la tiene.
+- **2ª pasada — chau pantalla oscura al colocar la OBRA**: el edificio ya vivía en la
+  escena (invisible, esperando su plano), así que colocar el plano ahora lo "enciende" EN
+  VIVO (`colocarObraEnVivo`): textura `build_*`, posición, letrero, colisiones y
+  estrellitas — sin reiniciar la escena. El reinicio con telón queda solo de respaldo
+  (`obraColocar(t,col,row,vivo)`) y para las parcelas, que sí reconstruyen la grilla.
 
 Y el "bloqueo momentáneo" al colocar un plano era el REINICIO de escena (reconstruye
 ~570 sprites de golpe): ahora pasa detrás de un telón de 160 ms con el fundido que ya
