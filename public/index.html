@@ -351,6 +351,11 @@
   .shoptab{font-size:13px;margin-bottom:0;position:relative;z-index:2}   /* la inactiva apoya sobre el marco, sin pisarlo */
   /* las pestañas NO son botones: fuera el filo verde del estándar (también en la X de cerrar) */
   button.shoptab,button.lbtab,button.curbtn,button.ltab,.close{box-shadow:none !important}
+  /* 13/8: la guía del tutorial sobre una PESTAÑA — el brillo estándar (.tutohl) usa box-shadow
+     y acá arriba está anulado con !important, así que la pestaña usa OUTLINE pulsante y se
+     enciende a brillo pleno (las inactivas viven en brightness .62) */
+  .shoptab.tutohl,.forgetab.tutohl{outline:3px solid #ffd75e;outline-offset:-1px;filter:brightness(1) saturate(1);animation:ttab 1.1s ease-in-out infinite}
+  @keyframes ttab{0%,100%{outline-color:#ffd75e}50%{outline-color:rgba(255,215,94,.15)}}
   /* pestaña activa fundida con la placa: baja 14px (el grosor del marco) y su interior conecta con el de la tabla */
   .shoptabs,.lbtabs{align-items:flex-end}
   /* 31/7 v2: esquina CERRADA, sin cruces de madera.

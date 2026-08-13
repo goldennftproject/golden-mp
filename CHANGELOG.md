@@ -2031,6 +2031,11 @@ Ahora la cadena de guía no tiene puntas sueltas:
   si el botón del objetivo vive en una pestaña oculta (`offsetParent === null`), brilla la
   PESTAÑA que lleva a él — Tienda (`shop-*` → `.shoptab`) y Herrería (`forge-pane-*` →
   `.forgetab`); al cambiar de pestaña el brillo salta al botón exacto.
+- **2ª pasada — el brillo no se VEÍA**: el JS aplicaba `.tutohl` bien (verificado con
+  simulación jsdom), pero la skin de madera de las pestañas trae
+  `box-shadow:none !important` (el glow estándar ES un box-shadow) y
+  `filter:brightness(.62)` en las inactivas: el CSS lo mataba. Las pestañas ahora tienen su
+  propio resaltado: OUTLINE dorado pulsante (`@keyframes ttab`) + brillo pleno.
 
 Y el "bloqueo momentáneo" al colocar un plano era el REINICIO de escena (reconstruye
 ~570 sprites de golpe): ahora pasa detrás de un telón de 160 ms con el fundido que ya
