@@ -27,7 +27,7 @@ const OV_REFRESH = { "ov-entrenando": () => entrenarSync(), "ov-clan": () => ref
 // los overlays NO bloquean el juego: podés seguir moviéndote/interactuando con la ventana abierta
 // sonido propio de cada edificio al abrir su ventana (pedido del diseñador)
 const OV_SFX = { "ov-market": "shop", "ov-forge": "forge", "ov-barn": "door", "ov-cocina": "door", "ov-cofre": "door", "ov-daily": "coin", "ov-altar": "forge", "ov-establo": "door", "ov-curtiduria": "forge" };
-function openOv(id) { const e = $(id); if (!e) return; e.classList.add("show"); if (window.sfx) sfx(OV_SFX[id] || "click"); if (OV_REFRESH[id]) OV_REFRESH[id](); }
+function openOv(id) { const e = $(id); if (!e) return; e.classList.add("show"); if (window.sfx) sfx(OV_SFX[id] || "click"); if (OV_REFRESH[id]) OV_REFRESH[id](); if (typeof tutoHighlight === "function") tutoHighlight(); }   // 13/8: al abrir un panel, el botón del objetivo se resalta al instante
 
 // FUNDIDO A NEGRO al cambiar de escena (granja <-> Zona Negra <-> plaza). Antes era un corte seco.
 function irAEscena(sc, destino) {
@@ -786,11 +786,22 @@ function tutoRefresh() {
     : (st.n > 1 ? " " + Math.min(G.tuto.n || 0, st.n) + "/" + st.n : "");
   tutoHighlight();
 }
-// resalta el BOTÓN exacto del paso actual dentro del panel abierto (ej.: el Hacha en la Herrería)
+// resalta el BOTÓN exacto del paso actual dentro del panel abierto (ej.: el Hacha en la
+// Herrería). 13/8: la CADENA completa — si el panel del objetivo está cerrado y no hay
+// edificio al que apuntar (Inventario, Pase…), se resalta el botón ☰ Menú y, con el menú
+// desplegado, la entrada del panel. Mundo → menú → panel → botón, sin puntas sueltas.
 function tutoHighlight() {
   document.querySelectorAll(".tutohl").forEach(e => e.classList.remove("tutohl"));
   const st = (typeof tutoActivo === "function") ? tutoActivo() : null;
-  if (!st || !st.ui || !st.panel || !isOpen(st.panel)) return;
+  if (!st || !st.panel) return;
+  if (!isOpen(st.panel)) {
+    if (!st.target) {   // sin edificio en el mundo: la guía va por el menú
+      const mb = document.getElementById("menu-btn"); if (mb) mb.classList.add("tutohl");
+      const gmi = document.querySelector('.gmi[data-panel="' + st.panel + '"]'); if (gmi) gmi.classList.add("tutohl");
+    }
+    return;
+  }
+  if (!st.ui) return;
   const cont = document.getElementById(st.panel); if (!cont) return;
   const el = cont.querySelector(st.ui); if (!el) return;
   el.classList.add("tutohl");
@@ -808,7 +819,7 @@ function tutoSync(force) {
   if (typeof tutoAutoSkip === "function") { try { tutoAutoSkip(); } catch (e) {} }
   const st = (typeof tutoActivo === "function") ? tutoActivo() : null;
   const sig = G.tuto ? (G.tuto.step + ":" + (st && st.res ? tutoTiene(st) : (G.tuto.n || 0)) + ":" + !!G.tuto.done) : "-";
-  if (!force && sig === _tutoSig) return;
+  if (!force && sig === _tutoSig) { tutoHighlight(); return; }   // 13/8: el resaltado se re-aplica aunque el paso no cambie (los paneles se redibujan y lo pierden)
   _tutoSig = sig;
   tutoRefresh();
   if (window.farmScene && window.farmScene.updateTutoArrow) { try { window.farmScene.updateTutoArrow(); } catch (e) {} }

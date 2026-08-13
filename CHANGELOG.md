@@ -2002,6 +2002,37 @@ Con esto el inventario diegético queda COMPLETO: edificios en obra con material
 árboles en retoño que crecen, vetas a la vista con gate de nivel, y parcelas
 silvestres que se desbrozan. Cero sprites fantasma en todo el juego.
 
+### EMBUDO ESTRICTO — lista blanca por paso (13/8, 3ª vuelta del playtest)
+
+El embudo anterior cerraba crafteos y compras, pero el LOOP BASE seguía abierto: durante
+"colocá el plano" se podía plantar, cosechar acelerado, vender, talar y picar — grindeo
+fuera de guion. Decisión final del usuario: **estricto TOTAL** — los 33 pasos tienen su
+lista blanca (`TUTO_PERMISOS`): cada objetivo permite SOLO su acción más las
+estrictamente necesarias para cumplirlo (craftear hachas cuando hay que talar porque se
+consumen; el loop entero cuando el objetivo ES juntar plata; cocinar/comer en los pasos
+de combate para sobrevivir; juntar materiales cuando la receta del paso los pide).
+Cualquier otro intento: "🎯 Ahora toca: <objetivo>". Al terminar el tutorial, todo
+libre. Gates en: interacciones de granja (plantar/talar/picar/pescar/portal/dummy),
+vender, comprar semillas, craftear herramientas/picos/armas, fundir y cocinar.
+Verificado con recorrido anti-softlock de los 34 casos (cada paso puede cumplirse a sí
+mismo) + prueba de hermeticidad en build_store.
+
+### La GUÍA completa dentro de las interfaces + el telón del reinicio (13/8)
+
+El resaltado del botón exacto (`tutoHighlight`, clase `.tutohl`) existía pero solo corría
+al cambiar de paso: si abrías la ventana después, o el panel se redibujaba, se perdía.
+Ahora la cadena de guía no tiene puntas sueltas:
+
+- **Mundo → menú → panel → botón**: la flecha apunta al edificio; si el objetivo vive en
+  un panel sin edificio (Inventario, Pase), se resalta el botón ☰ Menú y la entrada del
+  panel; al abrir el panel, el botón exacto brilla al instante (hook en `openOv`) y se
+  re-aplica cada segundo aunque el panel se redibuje.
+
+Y el "bloqueo momentáneo" al colocar un plano era el REINICIO de escena (reconstruye
+~570 sprites de golpe): ahora pasa detrás de un telón de 160 ms con el fundido que ya
+existía (`reiniciarGranjaSuave`), también al colocar parcelas — el mismo parpadeo se lee
+como transición y no como congelamiento.
+
 ### El bug real del "salió construida" — cazado en la 2ª pasada
 
 El usuario insistió (con razón): la obra de la Herrería mostraba el edificio TERMINADO

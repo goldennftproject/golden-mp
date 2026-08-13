@@ -209,6 +209,7 @@ function buySeed(k, qty) {
   if (qty > left) { qty = left; toast("Cupo diario: solo podés comprar " + left + " más hoy"); }
   const cost = cd.seedCost * qty;
   if (G.plata < cost) { toast("Te falta plata"); return; }
+  if (typeof tutoPermite === "function" && !tutoPermite("buyseed")) { tutoAviso(); return; }   // embudo estricto (13/8)
   if (typeof tutoGuardia === "function" && !tutoGuardia("plata", cost, "comprar " + cd.label, { semilla: k })) return;   // guardia del tutorial (12/8)
   G.plata -= cost; G.seeds[k] = (G.seeds[k] || 0) + qty; sb.count += qty;
   if (typeof tutoEvent === "function") tutoEvent("buyseed");   // el objetivo se cumple con la compra HECHA, no al apretar el botón
@@ -282,6 +283,64 @@ function tutoDesbloqueado(stepId) {
   if (!G.tuto || G.tuto.done) return true;
   return (G.tuto.step || 0) >= tutoIdx(stepId);
 }
+
+/* ============ EMBUDO ESTRICTO (13/8): en el arranque, SOLO lo que el objetivo pide ==
+   Playtest: durante "colocá el plano" se podía plantar, cosechar acelerado, vender,
+   talar y picar — puro grindeo fuera de guion. Lista blanca POR PASO para las acciones
+   del loop económico (plantar, vender, comprar semillas, talar, picar). Reglas fijas:
+   COSECHAR lo ya plantado y trabajar OBRAS se permiten siempre (no generan plata por
+   sí solos). Los pasos que no figuran en la tabla (combate en adelante) van libres:
+   ahí el juego ya es el juego. */
+// TODOS los pasos tienen su lista (13/8, pedido del usuario: estricto total). Cada
+// paso permite SU acción + las estrictamente necesarias para cumplirla (craftear
+// hachas cuando hay que talar porque se gastan; el loop entero cuando hay que juntar
+// plata; cocinar cuando el paso lo pide). Al terminar el tutorial, todo libre.
+var TUTO_PERMISOS = {
+  plant:       ["plant"],
+  harvest:     ["harvest"],
+  sell:        ["sell", "harvest"],
+  buyseed:     ["buyseed"],
+  plant2:      ["plant"],
+  build_store: ["obra"],
+  wood:        ["chop", "crafttool"],
+  stone:       ["mine", "crafttool"],
+  build_horno: ["obra"],
+  silver:      ["sell", "plant", "harvest", "buyseed", "chop", "mine", "crafttool"],
+  crafttool:   ["crafttool"],
+  woodc:       ["chop", "crafttool"],
+  stonec:      ["mine", "crafttool"],
+  build_cocina: ["obra"],
+  cook:        ["cook", "plant", "harvest"],
+  eat:         ["eat"],
+  silverarm:   ["sell", "plant", "harvest", "buyseed", "chop", "mine", "crafttool"],
+  unlockarm:   ["unlockarm"],
+  craftarm:    ["craftarm"],
+  equiparm:    ["equiparm"],
+  portal:      ["portal", "cook", "eat"],
+  kill:        ["portal", "cook", "eat", "crafttool", "craftarm"],
+  kill5:       ["portal", "cook", "eat", "crafttool", "craftarm"],
+  fish:        ["fish", "crafttool", "eat"],
+  build_altar: ["obra", "chop", "mine", "sell", "plant", "harvest", "buyseed", "crafttool"],   // la receta pide piedra+madera+oro+$G: hay que juntar
+  upgrade:     ["altar", "eat"],
+  mat:         ["mat", "chop", "mine", "crafttool"],
+  craftpick:   ["craftpick", "mat", "chop", "mine", "crafttool"],   // el pico pide barras del horno
+  mineore:     ["mine", "craftpick", "crafttool"],
+  dummy:       ["dummy", "eat"],
+  unlocknode:  ["chop", "mine", "cultivar", "crafttool"],
+  chest:       ["chest", "chop", "crafttool"],   // el cofre pide madera
+  invexp:      ["invexp", "sell", "plant", "harvest", "buyseed", "chop", "mine", "crafttool"],   // ampliar pide plata/minerales
+  passclaim:   ["passclaim"],
+  socket:      ["altar", "eat"],
+};
+function tutoPermite(tag) {
+  const st = (typeof tutoActivo === "function") ? tutoActivo() : null;
+  if (!st || !tag) return true;
+  const lista = TUTO_PERMISOS[st.id];
+  if (!lista) return true;
+  if (tag === "obra") return true;   // trabajar una obra pendiente nunca exploitea (consume recursos)
+  return lista.includes(tag);
+}
+function tutoAviso() { const st = tutoActivo(); toast("🎯 Ahora toca: " + (st ? tutoTxt(st) : "el objetivo")); }
 function obraDe(t) { return G.obras && G.obras[t]; }
 function obraColocar(t, col, row) {   // la llama la escena con la celda elegida
   if (!planoTengo(t)) return false;
@@ -290,8 +349,18 @@ function obraColocar(t, col, row) {   // la llama la escena con la celda elegida
   G.obraDep = G.obraDep || {}; G.obraDep[t] = G.obraDep[t] || {};
   if (typeof syncSlots === "function") syncSlots();
   if (typeof saveFarm === "function") saveFarm(true);
-  if (window.FARM && window.FARM.scene) { try { window.FARM.scene.restart(); } catch (e) {} }
+  reiniciarGranjaSuave();
   return true;
+}
+// el reinicio de escena reconstruye ~570 sprites y se sentía como un CONGELAMIENTO (13/8).
+// Con el telón de 160 ms del fundido que ya existe, el mismo parpadeo se lee como transición.
+function reiniciarGranjaSuave() {
+  const fade = document.getElementById("fadeblk");
+  const reiniciar = () => { if (window.FARM && window.FARM.scene) { try { window.FARM.scene.restart(); } catch (e) {} } };
+  if (!fade) { reiniciar(); return; }
+  fade.style.transitionDuration = "160ms";
+  fade.classList.add("on");
+  setTimeout(() => { reiniciar(); setTimeout(() => fade.classList.remove("on"), 120); }, 170);
 }
 // qué falta depositar: [recurso, falta, total, puesto] — el $Golden cuenta como recurso más
 function obraFalta(t) {
@@ -368,6 +437,7 @@ function craftMat(id) {
   if (left > 0) { toast(md.label + " en enfriamiento (" + Math.ceil(left / 1000) + "s)"); return; }
   if (!canAfford(md.cost)) { toast("Te faltan materiales"); return; }
   if (!roomForRes(id, 1)) { bagFull("craftear " + md.label); return; }
+  if (typeof tutoPermite === "function" && !tutoPermite("mat")) { tutoAviso(); return; }   // embudo estricto (13/8)
   if (typeof tutoGuardiaCosto === "function" && !tutoGuardiaCosto(md.cost, 0, "fundir " + md.label)) return;   // guardia del tutorial (12/8)
   payCost(md.cost); G.res[id] = (G.res[id] || 0) + 1;
   G.matCd[id] = nowMs() + hornoCdMs() * (typeof tutoBoost === "function" ? tutoBoost("horno") : 1);   // acelerador del tutorial (12/8)
@@ -644,7 +714,7 @@ function pickCount(id) { return G.picks.owned[id] ? Math.max(0, Math.floor(G.pic
 function craftPick(id) {
   const pd = PICK_DEF[id]; if (!pd) return;
   if (pickCount(id) >= 99) { toast("Máximo 99 " + pd.label); return; }
-  if (typeof tutoDesbloqueado === "function" && !tutoDesbloqueado("craftpick")) { toast("🎯 Los picos llegan más adelante en el tutorial — seguí el objetivo de arriba"); return; }   // embudo (13/8)
+  if (typeof tutoPermite === "function" && !tutoPermite("craftpick")) { tutoAviso(); return; }   // embudo estricto (13/8)
   if (typeof tutoGuardiaCosto === "function" && !tutoGuardiaCosto(pd.cost, pd.plata, "craftear " + pd.label)) return;   // guardia del tutorial (12/8)
   if (!canAfford(pd.cost)) { toast("Te faltan materiales"); return; }
   if (pd.plata && G.plata < pd.plata) { toast("Te falta plata"); return; }
@@ -1451,7 +1521,7 @@ function parcelaColocar(col, row) {   // la llama la escena con la celda que eli
   G.layoutPlots = G.layoutPlots || {};
   G.layoutPlots[GF.PLOTS.length] = { col, row };   // la escena la levanta de acá al reiniciar
   if (typeof saveFarm === "function") saveFarm(true);
-  if (window.FARM && window.FARM.scene) { try { window.FARM.scene.restart(); } catch (e) {} }
+  reiniciarGranjaSuave();   // 13/8: con telón, no como congelamiento
   return true;
 }
 function comprarParcela(conGolden) {
@@ -2161,7 +2231,7 @@ function armCdLeft(id) { return Math.max(0, ((G.armCd && G.armCd[id]) || 0) - no
 function craftWeapon(id) {
   const w = ARM_DEF[id]; if (!w) return;
   if (!G.armasUnlocked) { toast("Desbloqueá la sección de Armas primero"); return; }
-  if (typeof tutoDesbloqueado === "function" && !tutoDesbloqueado("craftarm")) { toast("🎯 Las armas llegan más adelante en el tutorial — seguí el objetivo de arriba"); return; }   // embudo (13/8)
+  if (typeof tutoPermite === "function" && !tutoPermite("craftarm")) { tutoAviso(); return; }   // embudo estricto (13/8)
   if (typeof tutoGuardiaCosto === "function" && !tutoGuardiaCosto(w.cost, w.plata, "forjar " + w.label)) return;   // guardia del tutorial (12/8)
   if (G.weapons[id]) { toast("Ya tenés " + w.label); return; }
   if (armCdLeft(id) > 0) { toast("La forja se enfría — " + fmtSecs(Math.ceil(armCdLeft(id) / 1000))); return; }
@@ -2368,6 +2438,7 @@ function cookSlots() { return COOK_SLOTS + (edif2("cocina") ? EDIF2_COCINA_OLLA 
 function cookFree() { return Math.max(0, cookSlots() - cookList().length); }
 function cook(id) {
   const r = RECIPE_DEF[id]; if (!r) return;
+  if (typeof tutoPermite === "function" && !tutoPermite("cook")) { tutoAviso(); return; }   // embudo estricto (13/8)
   if (cookFree() <= 0) { toast("Las " + cookSlots() + " ollas están ocupadas"); return; }
   if (!canCook(id)) { toast("Te faltan ingredientes"); return; }
   if (!roomForDish(id)) { bagFull("cocinar " + r.label); return; }
@@ -2595,7 +2666,7 @@ const TOOL_CRAFT = { axe: { cost:{}, plata:10 }, rod: { cost:{ madera:3, piedra:
 function craftTool(id, lote) {
   lote = Math.max(1, lote || 1);
   const tc = TOOL_CRAFT[id], td = TOOL_DEF[id]; if (!tc || !td) return;
-  if (typeof tutoDesbloqueado === "function" && !tutoDesbloqueado("crafttool")) { toast("🎯 El tutorial te va a enseñar a craftear enseguida — seguí el objetivo de arriba"); return; }   // embudo (13/8)
+  if (typeof tutoPermite === "function" && !tutoPermite("crafttool")) { tutoAviso(); return; }   // embudo estricto (13/8)
   if (typeof tutoGuardiaCosto === "function" && !tutoGuardiaCosto(tc.cost, tc.plata, "craftear " + td.label)) return;   // guardia del tutorial (12/8)
   if (lote > 1) {   // doc 2/8: crafteo en lote — la fricción es económica, no de clicks
     let hechas = 0;
@@ -2745,6 +2816,7 @@ function sellItem(res) {
   // candado anti-exploit (12/8): durante un "juntá X" no se puede VENDER ese recurso por
   // debajo de la meta — si no, vender para quedar en 9/10 mantenía el boost vivo infinito
   if (typeof tutoGuardia === "function" && !tutoGuardia(res, q, "vender " + (RES_LABEL[res] || res))) return;
+  if (typeof tutoPermite === "function" && !tutoPermite("sell")) { tutoAviso(); return; }   // embudo estricto (13/8)
   if (marketCur === "plata") { const t=q*priceOf(res); G.plata+=t; G.res[res]-=q; log(`Vendiste ${q} ${RES_LABEL[res]} por ${t} de plata.`); toast("+"+t+" plata"); }
   else { const g=Math.floor(q*priceOf(res)/10); if (g<1){ toast("Muy poca cantidad para $Golden"); return; } G.res[res]-=q; G.golden+=g; log(`Vendiste ${q} ${RES_LABEL[res]} por ${g} $Golden.`,"gold"); toast("+"+g+" $Golden"); }
   if (window.sfx) sfx("coin");

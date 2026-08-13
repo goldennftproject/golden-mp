@@ -807,6 +807,18 @@ class FarmScene extends Phaser.Scene {
   }
 
   interactWith(o) {
+    // EMBUDO ESTRICTO (13/8): en los primeros pasos del tutorial, solo la acción que el
+    // objetivo pide. Cosechar lo plantado y trabajar obras se permiten siempre.
+    if (typeof tutoPermite === "function") {
+      let tag = null;
+      if (o.type === "plot") tag = o.state === "dry" ? "plant" : (o.state === "locked" ? "plotunlock" : null);
+      else if (o.type === "tree") tag = o.locked ? "cultivar" : "chop";
+      else if (o.type === "rock" || o.type === "ore") tag = "mine";
+      else if (o.type === "portal") tag = "portal";
+      else if (o.type === "fish") tag = "fish";
+      else if (o.type === "dummy") tag = "dummy";
+      if (tag && !tutoPermite(tag)) { if (typeof tutoAviso === "function") tutoAviso(); return; }
+    }
     if (o.type === "portal") {
       // 10/8: descanso entre viajes, y se abre el "viaje" para poder resumirlo al volver
       const espera = (typeof zonaCdLeft === "function") ? zonaCdLeft() : 0;
