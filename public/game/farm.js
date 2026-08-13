@@ -223,7 +223,7 @@ class FarmScene extends Phaser.Scene {
 
     // portal al Bosque — ahora con su sprite cozy (arco de piedra con vórtice)
     if (window.ForestScene !== undefined || typeof ForestScene !== "undefined") {
-      const px = GF.WORLD_W - 40, py = GF.WORLD_H - 40;
+      const px = GF.WORLD_W - 90, py = GF.WORLD_H - 52;   // 12/8: DENTRO de la cerca (antes nacía sobre la esquina)
       let pspr = null;
       if (this.textures.exists("portal")) {
         // sprite (no imagen) para que el espiral gire 360° en loop; el latido sutil se mantiene

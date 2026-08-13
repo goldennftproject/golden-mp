@@ -1978,6 +1978,13 @@ arrastre NADA encima — adornos, parcelas, obras de blueprint, edificios movido
 validadores de colocación, así cualquier mecánica futura lo hereda gratis. (El corral
 de animales viejo sigue deprecado y sin dibujarse: los animales andan sueltos.)
 
+**Y la GENERACIÓN inicial reordenada a la grilla** (la captura del usuario mostró
+árboles, minerales y el portal naciendo SOBRE la cerca): bosquecito NE en 3 filas
+prolijas (6 árboles), cantera SE en bloque — fila de rocas arriba, minerales abajo en
+orden de tier (piedra → bronce → oro / hierro → diamante → netherita) — y el portal
+adentro de la esquina (antes nacía pisando el vértice de la cerca). Verificado por
+script: nada pisa la cerca, nada se superpone.
+
 ### El "temblor leve" de toda la pantalla — arreglado
 
 Reporte del usuario: todo parecía vibrar milímetros, sub-segundo, constante. Causa:

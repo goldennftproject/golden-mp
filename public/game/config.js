@@ -139,29 +139,29 @@ function snap(key, meta, x, y, sizePx) {
 
 // --- objetos del mundo (posiciones aprox. de la granja, ahora encajadas en celdas) ---
 GF.WORLD_OBJECTS = [];
-[[770,150],[865,250],[730,330]].forEach(t => GF.WORLD_OBJECTS.push(snap("tree", {type:"tree"}, t[0], t[1], T*2)));       // 2 celdas
-[[865,390],[775,455]].forEach(r => GF.WORLD_OBJECTS.push(snap("node_stone", {type:"rock"}, r[0], r[1], T)));             // 1 celda (mismo boulder nuevo)
-[["piedra","node_stone",700,500],["bronce","node_bronze",770,545],["oro","node_gold",850,555],
- ["diamante","node_diamond",905,500],["netherita","node_netherite",915,430]]
+[[714,126],[840,126],[756,210]].forEach(t => GF.WORLD_OBJECTS.push(snap("tree", {type:"tree"}, t[0], t[1], T*2)));       // 12/8: bosquecito NE ordenado, DENTRO de la cerca
+[[693,420],[777,420]].forEach(r => GF.WORLD_OBJECTS.push(snap("node_stone", {type:"rock"}, r[0], r[1], T)));             // 12/8: cantera en bloque, dentro de la cerca
+[["piedra","node_stone",693,504],["bronce","node_bronze",777,504],["oro","node_gold",861,504],
+ ["diamante","node_diamond",819,546],["netherita","node_netherite",903,504]]
   .forEach(o => GF.WORLD_OBJECTS.push(snap(o[1], {type:"ore", ore:o[0]}, o[2], o[3], T)));                                // 1 celda
 GF.WORLD_OBJECTS.push(snap("barn",   {type:"barn"},   540, 150, T*2.5));   // 12/8: emparejado                                                    // 3 celdas
 GF.WORLD_OBJECTS.push(snap("market", {type:"market"}, 470, 505, T*2.2));   // 12/8: emparejado                                                    // 2 celdas (más chico que la herrería)
 GF.WORLD_OBJECTS.push(snap("store",  {type:"store"},  650, 480, T*2.8));   // 12/8: emparejado                                                    // 3 celdas
 // quinta.docx: 5 árboles y 4 piedras en total — agregados AL FINAL para no romper layouts guardados
-[[695,115],[915,300]].forEach(t => GF.WORLD_OBJECTS.push(snap("tree", {type:"tree"}, t[0], t[1], T*2)));
-[[705,420],[830,480]].forEach(r => GF.WORLD_OBJECTS.push(snap("node_stone", {type:"rock"}, r[0], r[1], T)));
+[[882,210],[714,294]].forEach(t => GF.WORLD_OBJECTS.push(snap("tree", {type:"tree"}, t[0], t[1], T*2)));   // 12/8: dentro de la cerca
+[[861,420],[735,462]].forEach(r => GF.WORLD_OBJECTS.push(snap("node_stone", {type:"rock"}, r[0], r[1], T)));   // 12/8: cantera
 // edificio de Cocina (detalles 29/7) — también al FINAL para preservar layouts guardados
 GF.WORLD_OBJECTS.push(snap("cocina", {type:"cocina"}, 390, 296, T*2.2));   // 12/8: el sprite nuevo es alto, a 3 celdas quedaba gigante                                                     // 3 celdas
 // dummy de práctica de espada (detalless.docx) — entrenar sube Espada, cooldown 4h
 GF.WORLD_OBJECTS.push(snap("dummy", {type:"dummy"}, 585, 350, T));                                                         // 1 celda (se dibuja +25%)
 // nodo de HIERRO (detalles213) — al FINAL para preservar layouts guardados; se mina con el pico de bronce
-GF.WORLD_OBJECTS.push(snap("node_iron", {type:"ore", ore:"hierro"}, 930, 555, T));
+GF.WORLD_OBJECTS.push(snap("node_iron", {type:"ore", ore:"hierro"}, 735, 546, T));   // 12/8: dentro de la cerca (antes pisaba la cerca)
 // HORNO DE PIEDRA (detalles viernes 1): acá se funden todos los lingotes/barras
 GF.WORLD_OBJECTS.push(snap("horno", {type:"horno"}, 320, 470, T*2));
 // viernes (2): 6 árboles y 6 piedras en total (1 activo + 5 por desbloquear) — al FINAL para preservar layouts
-GF.WORLD_OBJECTS.push(snap("tree", {type:"tree"}, 950, 205, T*2));
-GF.WORLD_OBJECTS.push(snap("node_stone", {type:"rock"}, 900, 470, T));
-GF.WORLD_OBJECTS.push(snap("node_stone", {type:"rock"}, 745, 515, T));
+GF.WORLD_OBJECTS.push(snap("tree", {type:"tree"}, 840, 294, T*2));   // 12/8: dentro de la cerca (antes pisaba la cerca derecha)
+GF.WORLD_OBJECTS.push(snap("node_stone", {type:"rock"}, 819, 462, T));   // 12/8: cantera
+GF.WORLD_OBJECTS.push(snap("node_stone", {type:"rock"}, 903, 462, T));   // 12/8: cantera
 
 // ALTAR DE RUNAS (doc maestro 2/8) — al FINAL para preservar layouts guardados
 GF.WORLD_OBJECTS.push(snap("altar", {type:"altar"}, 330, 165, T*2));
