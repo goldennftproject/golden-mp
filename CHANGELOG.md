@@ -2120,6 +2120,10 @@ Ahora la cadena de guía no tiene puntas sueltas:
   (precio − semilla), tope en la plata disponible. También numera el resto: "vendé tus 4
   papas — con eso alcanza", "plantá tus 6 semillas", "cosechá tus 2 cultivos listos".
   6 escenarios económicos simulados, incluido el del playtest (3 de plata, meta 10).
+- **Hotbar sin fantasmas (playtest)**: los consumibles agotados (semillas, recursos,
+  peces, platos) salen SOLOS de la barra — la bolsita en 0 quedaba muerta ocupando
+  lugar. Al recomprar semillas, `buySeed` la vuelve a poner en el primer hueco libre.
+  Herramientas y picos conservan su lógica de siempre.
 
 Y el "bloqueo momentáneo" al colocar un plano era el REINICIO de escena (reconstruye
 ~570 sprites de golpe): ahora pasa detrás de un telón de 160 ms con el fundido que ya

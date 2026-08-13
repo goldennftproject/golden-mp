@@ -335,6 +335,9 @@ function refreshHotbar(forzar) {
   syncSlots();
   if (!Array.isArray(G.hotbar)) G.hotbar = [];
   while (G.hotbar.length < 10) G.hotbar.push(null);
+  // 13/8 (playtest): los CONSUMIBLES agotados salen solos de la barra (la bolsita de semillas
+  // en 0 quedaba muerta ocupando lugar). Al recomprar semillas, buySeed la vuelve a poner.
+  G.hotbar = G.hotbar.map(h => (h && ["res", "seed", "fish", "dish"].includes(h.kind) && !hotItemExists(h)) ? null : h);
   let html = ""; for (let i = 0; i < 10; i++) html += hotCellHtml(G.hotbar[i], i);
   // La llama refreshHud, o sea el tick de 1 segundo: si no comparamos, la barra se reconstruye
   // entera 60 veces por minuto y se recuelgan sus 20 listeners aunque no haya cambiado nada.

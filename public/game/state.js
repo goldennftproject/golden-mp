@@ -212,6 +212,11 @@ function buySeed(k, qty) {
   if (typeof tutoPermite === "function" && !tutoPermite("buyseed")) { tutoAviso(); return; }   // embudo estricto (13/8)
   if (typeof tutoGuardia === "function" && !tutoGuardia("plata", cost, "comprar " + cd.label, { semilla: k })) return;   // guardia del tutorial (12/8)
   G.plata -= cost; G.seeds[k] = (G.seeds[k] || 0) + qty; sb.count += qty;
+  // 13/8: la semilla comprada vuelve a la barra rápida si no estaba (la agotada sale sola)
+  if (Array.isArray(G.hotbar) && !G.hotbar.some(h => h && h.kind === "seed" && h.key === k)) {
+    const li = G.hotbar.findIndex(h => !h);
+    if (li >= 0) { G.hotbar[li] = { kind: "seed", key: k }; if (typeof refreshHotbar === "function") refreshHotbar(true); }
+  }
   if (typeof tutoEvent === "function") tutoEvent("buyseed");   // el objetivo se cumple con la compra HECHA, no al apretar el botón
   log(`Compraste ${qty} semilla(s) de ${cd.label} por ${cost} plata. (cupo: ${sb.count}/${seedDailyMax()})`); toast("+" + qty + " " + cd.label);
   refreshHud(); if (typeof refreshSeedShop === "function") refreshSeedShop(); if (isOpen("ov-inv")) refreshInv();
