@@ -1922,6 +1922,62 @@ El paso del tutorial "ampliá la granja" se cumple cultivando un árbol o usando
 segunda veta habilitada. Las versiones "hundidas" por mineral quedaron generadas en
 PixelLab por si se retoman.
 
+### La GUARDIA del tutorial — imposible romperse la cadena
+
+Reporte del usuario: el jugador podía desviarse y fundirse los recursos que el objetivo
+activo necesitaba (vender las papas y gastar la plata en otra cosa = cadena trabada).
+Ahora hay una guardia central (`tutoGuardia`) que NO bloquea el juego — frena solo el
+gasto que haría imposible el objetivo de ahora, con un aviso 🎯 que devuelve al camino:
+
+- Paso "juntá X": ningún gasto puede bajarte de la meta (madera, piedra o plata).
+- Paso "comprá semillas de papa": esa plata queda reservada.
+- Paso "construí X": los materiales de la receta quedan reservados hasta terminar la obra.
+- **Excepción clave**: comprar semillas NUNCA se bloquea por plata — son el motor del
+  loop que genera la plata que el objetivo pide (sin esto, la guardia creaba el softlock
+  que quería evitar).
+
+Cubre: semillas, herramientas, picos, armas, adornos, parcelas, fundir barras, ampliar
+bolsa y cultivar árboles. Verificada con simulación de 7 escenarios (todos correctos).
+
+### El ACELERADOR del tutorial + auditoría anti-exploit
+
+Pedido del usuario: que los objetivos se cumplan EN EL MOMENTO (nadie espera 9 minutos
+una papa en su primer sesión), pero sin abrir agujeros de plata infinita.
+
+**Acelerador quirúrgico** (`tutoBoost`, timers a ~1/8): solo corre el timer que el
+objetivo ACTIVO necesita — papa rápida en los pasos del arranque (plantar → cosechar →
+vender → comprar → replantar → juntar la plata del hacha), árboles rápidos en los pasos
+de madera, rocas en los de piedra, horno en el de fundir. Todo lo demás, a tiempo real.
+
+**Por qué no se puede exploitear** (auditoría de los 33 pasos):
+
+1. Los pasos "juntá X" se COMPLETAN SOLOS al llegar a la meta → la ventana de aceleración
+   se cierra sola, no se puede quedar a vivir en ella.
+2. **El agujero real que apareció y se tapó**: vender el recurso del objetivo para quedar
+   en 9/10 mantenía el boost vivo para siempre (talar rápido → vender → talar). Ahora la
+   guardia también bloquea la VENTA (Mercado y P2P) del recurso pedido por debajo de la
+   meta.
+3. La papa acelerada rinde ~3 de plata y el cupo diario de semillas ya acota el volumen.
+4. Los gates largos quedan SIN boost a propósito: son ritmo, no fricción — juntar 1.000
+   para Armas, nivel 5 para la Cocina, matar 5 criaturas.
+
+Con guardia + acelerador + candado de venta, la cadena fluye al ritmo del jugador y no
+hay bucle de dinero infinito.
+
+### El mapa inicial ordenado por zonas + el CORRAL como zona reservada
+
+El arranque queda zonificado con lógica de lectura: **parcelas + granero** al noroeste,
+**bosquecito** (6 árboles) al noreste, **cantera** (6 rocas + minerales) al sureste,
+**laguna** al suroeste, **mercadillo** al sur y **portal** en la esquina. Verificado por
+script que ninguna zona pisa a otra.
+
+El **corral se reubicó** a la pradera libre del centro-oeste (junto a donde va el
+Establo) y ahora **se dibuja siempre** — piso de tierra pisoteada + cerca de postes, por
+código — aunque los animales sigan sueltos como pidió el diseñador. Y es **zona
+reservada**: no se puede colocar ni arrastrar NADA encima — adornos, parcelas, obras de
+blueprint, edificios movidos, árboles, piedras ni la laguna (un solo helper
+`GF.enCorral` enchufado en los 5 validadores de colocación).
+
 ### El "temblor leve" de toda la pantalla — arreglado
 
 Reporte del usuario: todo parecía vibrar milímetros, sub-segundo, constante. Causa:

@@ -862,6 +862,7 @@ class FarmScene extends Phaser.Scene {
       const cost = treeUnlockCost();
       askConfirm("Cuesta " + cost + " de " + RES_LABEL.madera + ". ¿Cultivar este árbol?", () => {
         if ((G.res.madera || 0) < cost) { toast("Te falta " + RES_LABEL.madera + " (" + cost + ")"); return; }
+        if (typeof tutoGuardia === "function" && !tutoGuardia("madera", cost, "cultivar árboles")) return;   // guardia del tutorial (12/8)
         G.res.madera -= cost;
         G.treesOpen = G.treesOpen || [0]; G.treesOpen.push(o.lockIdx);
         o.locked = false;
@@ -1086,7 +1087,7 @@ class FarmScene extends Phaser.Scene {
       o.golpes = 0; this.barraGolpes(o);
       const gr = 1;   // viernes (2): todos los recursos dan 1
       if (tryAddRes("madera", gr)) {
-        useTool("axe"); addXp("crafting", 4); nodoSumar(o); o.cdIni = nowMs(); o.readyAt = nowMs() + nodoCd(o, "tree", CD.tree) * 1000 * cdMult();
+        useTool("axe"); addXp("crafting", 4); nodoSumar(o); o.cdIni = nowMs(); o.readyAt = nowMs() + nodoCd(o, "tree", CD.tree) * 1000 * cdMult() * (typeof tutoBoost === "function" ? tutoBoost("tree") : 1);
         o.halfAt = nowMs() + (o.readyAt - nowMs()) / 2;   // a mitad del enfriamiento asoma el árbol a medio crecer (doc 4/8)
         // tocón nuevo con base de tierra y hojas caídas (encuadre del árbol, va a tamaño completo); respaldo: tocón viejo chico
         if (this.textures.exists("tree_stump_leaves")) this.setObjTex(o, "tree_stump_leaves", (o.rw || o.w) * 0.85);   // −15%: el tocón venía más grueso que el tronco del árbol
@@ -1113,7 +1114,7 @@ class FarmScene extends Phaser.Scene {
       if (tryAddRes("piedra", gr)) {
         const pk = equippedPick();   // picar piedra también gasta el pico (bug reportado)
         if (pk) { G.picks.dur[pk] = Math.max(0, (G.picks.dur[pk] || 0) - 1); if (G.picks.dur[pk] <= 0) { log(`¡${PICK_DEF[pk].label} se rompió en pedazos! Crafteá otro en la Herrería.`, "bad"); toast("¡Pico destruido!"); destroyPick(pk); } }
-        addXp("mining", 5); statAdd("minar", "piedra", gr); nodoSumar(o); o.cdIni = nowMs(); o.readyAt = nowMs() + nodoCd(o, "piedra", CD.rock) * 1000 * cdMult(); o.halfAt = nowMs() + (o.readyAt - nowMs()) / 2; this.setObjTex(o, "node_stone_mined", o.rw || GF.TILE); this.premioFx(o.cx, o.by, resSprite("piedra"), "+" + gr); log(`+${gr} Piedra.` + (pk ? ` ${G.picks.dur[pk]}/${PICK_DEF[pk].dur}` : ""), "good"); refreshHud();
+        addXp("mining", 5); statAdd("minar", "piedra", gr); nodoSumar(o); o.cdIni = nowMs(); o.readyAt = nowMs() + nodoCd(o, "piedra", CD.rock) * 1000 * cdMult() * (typeof tutoBoost === "function" ? tutoBoost("rock") : 1); o.halfAt = nowMs() + (o.readyAt - nowMs()) / 2; this.setObjTex(o, "node_stone_mined", o.rw || GF.TILE); this.premioFx(o.cx, o.by, resSprite("piedra"), "+" + gr); log(`+${gr} Piedra.` + (pk ? ` ${G.picks.dur[pk]}/${PICK_DEF[pk].dur}` : ""), "good"); refreshHud();
         if (typeof tutoEvent === "function") tutoEvent("gather");
       }
       else { this.setObjTex(o, o.baseKey, o.rw || o.w); toast("Bolsa llena — no podés picar"); log("Bolsa llena: liberá espacio para seguir picando.", "bad"); }   // vuelve entera: los golpes se perdieron
@@ -1141,7 +1142,10 @@ class FarmScene extends Phaser.Scene {
     } else if (a.kind === "plant") {
       const ck = a.seed || G.selSeed, cd = CROP_DEF[ck];   // la semilla que se validó al hacer clic (cambiarla a mitad de la animación no la cuela)
       if (cd && (G.seeds[ck] || 0) > 0) {
-        G.seeds[ck]--; o.cropKey = ck; o.state = "growing"; o.witherAt = 0; const real = cd.grow * 1000 * cdMult();
+        G.seeds[ck]--; o.cropKey = ck; o.state = "growing"; o.witherAt = 0;
+        // acelerador del tutorial (12/8): la papa crece rápido SOLO mientras el objetivo activo la pide
+        const boost = (ck === "papa" && typeof tutoBoost === "function") ? tutoBoost("papa") : 1;
+        const real = cd.grow * 1000 * cdMult() * boost;
         const starter = (G.firstSeeds || 0) > 0 && FIRST_GROW_MS > 0;   // solo las semillas del starter pack
         if (starter) G.firstSeeds--;
         o.readyAt = nowMs() + (starter ? Math.min(FIRST_GROW_MS, real) : real);   // nunca más lento que el tiempo real del cultivo
@@ -1489,16 +1493,23 @@ class FarmScene extends Phaser.Scene {
   crearCorral() {
     this.animales = [];
     const T = GF.TILE;
-    // 9/8: los animales andan SUELTOS por la granja. No se dibuja patio ni cerca; la zona
-    // por donde pueden caminar es la granja entera y lo que esquivan se decide en puntoAnimal().
+    // 12/8: el corral SIEMPRE se dibuja (piso + cerca) — es la zona reservada donde nada
+    // se puede colocar. Los animales siguen sueltos por toda la granja (CORRAL_ON = 0);
+    // con CORRAL_ON = 1 vuelven a vivir encerrados adentro.
+    this.dibujarCorral();
     if (!GF.CORRAL_ON) {
+      // 9/8: los animales andan SUELTOS: la zona caminable es la granja entera
       this.corral = { x1: 26, y1: T * 1.2, x2: GF.WORLD_W - 26, y2: GF.WORLD_H - 26 };
-      this.corralCerca = null;
       return;
     }
     const C = GF.CORRAL; if (!C) return;
     const x1 = C.col * T, y1 = C.row * T, w = C.cols * T, h = C.rows * T;
     this.corral = { x1, y1, x2: x1 + w, y2: y1 + h };
+  }
+  // el patio del corral: parche de tierra pisoteada + cerca de postes (por código, sin arte)
+  dibujarCorral() {
+    const T = GF.TILE, C = GF.CORRAL; if (!C) return;
+    const x1 = C.col * T, y1 = C.row * T, w = C.cols * T, h = C.rows * T;
     // piso: un parche de tierra pisoteada, más claro que el pasto
     const g = this.add.graphics().setDepth(-997);
     g.fillStyle(0xa88a52, 0.55).fillRoundedRect(x1 + 3, y1 + 3, w - 6, h - 6, 10);
@@ -1651,6 +1662,7 @@ class FarmScene extends Phaser.Scene {
   celdaLibreAdorno(col, row, ignora) {
     const T = GF.TILE;
     if (col < 1 || row < 2 || col >= GF.COLS - 1 || row >= GF.ROWS - 1) return false;
+    if (GF.enCorral && GF.enCorral(col, row)) return false;   // 12/8: el corral es zona reservada
     const x = (col + 0.5) * T, y = (row + 0.9) * T;
     if (GF.blockedAt(x, y, 6)) return false;
     if (GF.PLOTS.some(p => p.col === col && p.row === row)) return false;
@@ -2066,6 +2078,7 @@ class FarmScene extends Phaser.Scene {
     for (let j = 0; j < GF.PLOTS.length; j++) { if (j !== pl.i && GF.PLOTS[j].col === col && GF.PLOTS[j].row === row) return true; }
     const p = GF.POND;
     if (col >= p.col && col < p.col + p.cols && row >= p.row && row < p.row + p.rows) return true;
+    if (GF.enCorral && GF.enCorral(col, row)) return true;   // 12/8: el corral es zona reservada
     return false;
   }
 
@@ -2078,6 +2091,7 @@ class FarmScene extends Phaser.Scene {
       if (qr - 1 >= row && qr - 1 < row + p.rows && col < qc + qw && qc < col + p.cols) return true;
     }
     for (const b of GF.PLOTS) { if (b.col >= col && b.col < col + p.cols && b.row >= row && b.row < row + p.rows) return true; }
+    if (GF.enCorral) for (let c = col; c < col + p.cols; c++) for (let r = row; r < row + p.rows; r++) if (GF.enCorral(c, r)) return true;   // 12/8: corral reservado
     return false;
   }
 
@@ -2093,6 +2107,8 @@ class FarmScene extends Phaser.Scene {
     for (const pl of GF.PLOTS) { if (pl.row + 1 === baseRow && pl.col >= leftCol && pl.col < leftCol + wCells) return true; }
     const p = GF.POND;
     if (baseRow > p.row && baseRow <= p.row + p.rows && leftCol < p.col + p.cols && p.col < leftCol + wCells) return true;
+    // 12/8: el CORRAL es zona reservada — ni edificios, ni árboles, ni piedras encima
+    if (GF.enCorral) for (let c = leftCol; c < leftCol + wCells; c++) if (GF.enCorral(c, baseRow - 1) || GF.enCorral(c, baseRow)) return true;
     return false;
   }
 

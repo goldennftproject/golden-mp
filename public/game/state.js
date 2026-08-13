@@ -209,6 +209,7 @@ function buySeed(k, qty) {
   if (qty > left) { qty = left; toast("Cupo diario: solo podés comprar " + left + " más hoy"); }
   const cost = cd.seedCost * qty;
   if (G.plata < cost) { toast("Te falta plata"); return; }
+  if (typeof tutoGuardia === "function" && !tutoGuardia("plata", cost, "comprar " + cd.label, { semilla: k })) return;   // guardia del tutorial (12/8)
   G.plata -= cost; G.seeds[k] = (G.seeds[k] || 0) + qty; sb.count += qty;
   if (typeof tutoEvent === "function") tutoEvent("buyseed");   // el objetivo se cumple con la compra HECHA, no al apretar el botón
   log(`Compraste ${qty} semilla(s) de ${cd.label} por ${cost} plata. (cupo: ${sb.count}/${seedDailyMax()})`); toast("+" + qty + " " + cd.label);
@@ -338,8 +339,9 @@ function craftMat(id) {
   if (left > 0) { toast(md.label + " en enfriamiento (" + Math.ceil(left / 1000) + "s)"); return; }
   if (!canAfford(md.cost)) { toast("Te faltan materiales"); return; }
   if (!roomForRes(id, 1)) { bagFull("craftear " + md.label); return; }
+  if (typeof tutoGuardiaCosto === "function" && !tutoGuardiaCosto(md.cost, 0, "fundir " + md.label)) return;   // guardia del tutorial (12/8)
   payCost(md.cost); G.res[id] = (G.res[id] || 0) + 1;
-  G.matCd[id] = nowMs() + hornoCdMs();
+  G.matCd[id] = nowMs() + hornoCdMs() * (typeof tutoBoost === "function" ? tutoBoost("horno") : 1);   // acelerador del tutorial (12/8)
   addXp("crafting", 3); log("Fundiste 1 " + md.label + " en el Horno.", "good"); toast("+1 " + md.label);
   if (typeof tutoEvent === "function") tutoEvent("mat");
   if (typeof refreshHorno === "function" && isOpen("ov-horno")) refreshHorno();
@@ -613,6 +615,7 @@ function pickCount(id) { return G.picks.owned[id] ? Math.max(0, Math.floor(G.pic
 function craftPick(id) {
   const pd = PICK_DEF[id]; if (!pd) return;
   if (pickCount(id) >= 99) { toast("Máximo 99 " + pd.label); return; }
+  if (typeof tutoGuardiaCosto === "function" && !tutoGuardiaCosto(pd.cost, pd.plata, "craftear " + pd.label)) return;   // guardia del tutorial (12/8)
   if (!canAfford(pd.cost)) { toast("Te faltan materiales"); return; }
   if (pd.plata && G.plata < pd.plata) { toast("Te falta plata"); return; }
   payCost(pd.cost); if (pd.plata) G.plata -= pd.plata;
@@ -712,6 +715,67 @@ const TUTO_STEPS = [
 function tutoNeed(st) { return st ? (typeof st.need === "function" ? st.need() : (st.n || 1)) : 0; }
 function tutoTiene(st) { return !st || !st.res ? 0 : Math.floor(st.res === "plata" ? G.plata : (G.res[st.res] || 0)); }
 function tutoTxt(st) { return st ? String(st.txt).replace("#", tutoNeed(st)) : ""; }
+
+/* ============ GUARDIA DEL TUTORIAL (12/8): que nadie se rompa la cadena =============
+   El jugador puede pasear tranquilo, pero NO fundirse lo que el objetivo ACTIVO
+   necesita (pasó en pruebas: vender las papas y gastarse la plata en otra cosa dejaba
+   la cadena trabada). No bloquea el juego entero: frena SOLO el gasto que haría
+   imposible el objetivo de ahora, con un aviso 🎯 que devuelve al camino.
+   Excepción clave: comprar SEMILLAS nunca se bloquea por plata — son el motor del
+   loop que genera la plata que el objetivo pide. */
+function tutoGuardia(res, n, motivo, extra) {
+  const st = (typeof tutoActivo === "function") ? tutoActivo() : null;
+  if (!st || !n) return true;
+  const nombre = r => r === "plata" ? "plata" : (RES_LABEL[r] || r);
+  // 1) paso "juntá X de tal cosa": el gasto no puede bajarte de la meta
+  if (st.res === res && !(res === "plata" && extra && extra.semilla)) {
+    const need = tutoNeed(st);
+    if (tutoTiene(st) - n < need) { toast("🎯 Objetivo: juntar " + need + " de " + nombre(res) + " — " + (motivo || "ese gasto") + " puede esperar"); return false; }
+  }
+  // 2) paso "comprá semillas de papa": esa plata está reservada (comprar papa SÍ vale)
+  if (st.id === "buyseed" && res === "plata" && !(extra && extra.semilla === "papa")) {
+    const precio = (CROP_DEF.papa && CROP_DEF.papa.seedCost) || 1;
+    if (G.plata - n < precio) { toast("🎯 Guardá esa plata para las semillas de papa del objetivo"); return false; }
+  }
+  // 3) paso "construí X": los materiales de la receta están reservados hasta terminar la obra
+  if (st.id && st.id.indexOf("build_") === 0) {
+    const t = st.id.slice(6), b = BUILD_DEF[t];
+    if (b && b.cost[res]) {
+      const pend = (typeof obraDe === "function" && obraDe(t) && typeof obraFalta === "function")
+        ? ((obraFalta(t).find(x => x[0] === res) || [0, 0])[1]) : b.cost[res];
+      if (Math.floor(G.res[res] || 0) - n < pend) { toast("🎯 Esa " + nombre(res) + " está reservada para " + b.label + " — terminá esa obra primero"); return false; }
+    }
+  }
+  return true;
+}
+// versión para recetas enteras: chequea cada material + la plata de una
+function tutoGuardiaCosto(cost, plata, motivo) {
+  if (typeof tutoGuardia !== "function") return true;
+  for (const k in (cost || {})) if (!tutoGuardia(k, cost[k], motivo)) return false;
+  if (plata && !tutoGuardia("plata", plata, motivo)) return false;
+  return true;
+}
+
+/* ============ ACELERADOR DEL TUTORIAL (12/8): el objetivo no te hace esperar ========
+   Mientras el objetivo ACTIVO necesita un timer, ESE timer corre acelerado — y solo
+   ese. Si el paso pide madera, el árbol se recupera al toque pero las papas siguen a
+   tiempo real (y al revés). Como los pasos de "juntá X" se completan SOLOS al llegar
+   a la meta, la aceleración muere ahí: no hay ventana para farmear infinito. El
+   candado anti-exploit que cierra el círculo: durante un "juntá X" tampoco se puede
+   VENDER ese recurso por debajo de la meta (si no, vender para quedarse en 9/10
+   mantenía el boost vivo para siempre). */
+var TUTO_BOOST = 0.12;   // los timers del objetivo corren a ~1/8 del tiempo real
+function tutoBoost(clase) {
+  const st = (typeof tutoActivo === "function") ? tutoActivo() : null;
+  if (!st) return 1;
+  const mapa = {
+    papa:  ["plant", "harvest", "sell", "buyseed", "plant2", "silver"],   // el arranque entero fluye
+    tree:  ["wood", "woodc"],
+    rock:  ["stone", "stonec"],
+    horno: ["mat"],
+  };
+  return (mapa[clase] || []).includes(st.id) ? TUTO_BOOST : 1;
+}
 var TUTO_REWARD_PLATA = 100;   // gran recompensa del cierre (editable)
 // doc 2/8 §3.1: SOLO las semillas del starter pack crecen rápido (45 s). Las compradas o conseguidas
 // después usan el tiempo normal del cultivo. 0 en el panel = sin excepción.
@@ -1307,6 +1371,7 @@ function comprarDeco(id) {
   if (d.cofre) { toast("Ese solo sale del cofre de login"); return; }   // no tiene precio: no se puede comprar
   if (d.plata && G.plata < d.plata) { toast("Te falta plata (" + fmt(d.plata) + ")"); return; }
   if (d.golden && G.golden < d.golden) { toast("Te falta $Golden (" + d.golden + ")"); return; }
+  if (d.plata && typeof tutoGuardia === "function" && !tutoGuardia("plata", d.plata, "comprar adornos")) return;   // guardia del tutorial (12/8)
   if (d.plata) G.plata -= d.plata;
   if (d.golden) G.golden -= d.golden;
   G.decoBolsa = G.decoBolsa || {};
@@ -1366,6 +1431,7 @@ function comprarParcela(conGolden) {
   } else {
     const c = plotUnlockCost();
     if (G.plata < c) { toast("Te falta plata (" + fmt(c) + ")"); return; }
+    if (typeof tutoGuardia === "function" && !tutoGuardia("plata", c, "comprar parcelas")) return;   // guardia del tutorial (12/8)
     G.plata -= c;
   }
   G.plotsOwned = Math.min(PLOT_MAX, (G.plotsOwned || 2) + 1);
@@ -2061,6 +2127,7 @@ function armCdLeft(id) { return Math.max(0, ((G.armCd && G.armCd[id]) || 0) - no
 function craftWeapon(id) {
   const w = ARM_DEF[id]; if (!w) return;
   if (!G.armasUnlocked) { toast("Desbloqueá la sección de Armas primero"); return; }
+  if (typeof tutoGuardiaCosto === "function" && !tutoGuardiaCosto(w.cost, w.plata, "forjar " + w.label)) return;   // guardia del tutorial (12/8)
   if (G.weapons[id]) { toast("Ya tenés " + w.label); return; }
   if (armCdLeft(id) > 0) { toast("La forja se enfría — " + fmtSecs(Math.ceil(armCdLeft(id) / 1000))); return; }
   if (!canAfford(w.cost)) { toast("Te faltan materiales"); return; }
@@ -2493,6 +2560,7 @@ const TOOL_CRAFT = { axe: { cost:{}, plata:10 }, rod: { cost:{ madera:3, piedra:
 function craftTool(id, lote) {
   lote = Math.max(1, lote || 1);
   const tc = TOOL_CRAFT[id], td = TOOL_DEF[id]; if (!tc || !td) return;
+  if (typeof tutoGuardiaCosto === "function" && !tutoGuardiaCosto(tc.cost, tc.plata, "craftear " + td.label)) return;   // guardia del tutorial (12/8)
   if (lote > 1) {   // doc 2/8: crafteo en lote — la fricción es económica, no de clicks
     let hechas = 0;
     while (hechas < lote && toolCount(id) < 99 && canAfford(tc.cost) && G.plata >= tc.plata) { payCost(tc.cost); G.plata -= tc.plata; G.tools[id] = toolCount(id) + 1; hechas++; }
@@ -2524,8 +2592,8 @@ function nextInvCost() {
 function expandInv() {
   const nc = nextInvCost();
   if (!nc) { toast("Bolsa al máximo"); return; }
-  if (nc.type === "res") { if (!canAfford(nc.cost)) { toast("Te faltan minerales"); return; } payCost(nc.cost); }
-  else { if (G.plata < nc.cost) { toast("Te falta plata"); return; } G.plata -= nc.cost; }
+  if (nc.type === "res") { if (!canAfford(nc.cost)) { toast("Te faltan minerales"); return; } if (typeof tutoGuardiaCosto === "function" && !tutoGuardiaCosto(nc.cost, 0, "ampliar la bolsa")) return; payCost(nc.cost); }
+  else { if (G.plata < nc.cost) { toast("Te falta plata"); return; } if (typeof tutoGuardia === "function" && !tutoGuardia("plata", nc.cost, "ampliar la bolsa")) return; G.plata -= nc.cost; }
   G.invRows = (G.invRows || 0) + 1;
   log("Ampliaste la bolsa (+5 espacios).", "good"); toast("+5 espacios");
   if (typeof tutoEvent === "function") tutoEvent("invexp");
@@ -2638,6 +2706,9 @@ function sellItem(res) {
   const inp = $("mq-"+res); let q = Math.floor(parseFloat(inp && inp.value) || 0);
   q = Math.max(0, Math.min(q, G.res[res]));
   if (q <= 0) { toast("Poné una cantidad"); return; }
+  // candado anti-exploit (12/8): durante un "juntá X" no se puede VENDER ese recurso por
+  // debajo de la meta — si no, vender para quedar en 9/10 mantenía el boost vivo infinito
+  if (typeof tutoGuardia === "function" && !tutoGuardia(res, q, "vender " + (RES_LABEL[res] || res))) return;
   if (marketCur === "plata") { const t=q*priceOf(res); G.plata+=t; G.res[res]-=q; log(`Vendiste ${q} ${RES_LABEL[res]} por ${t} de plata.`); toast("+"+t+" plata"); }
   else { const g=Math.floor(q*priceOf(res)/10); if (g<1){ toast("Muy poca cantidad para $Golden"); return; } G.res[res]-=q; G.golden+=g; log(`Vendiste ${q} ${RES_LABEL[res]} por ${g} $Golden.`,"gold"); toast("+"+g+" $Golden"); }
   if (window.sfx) sfx("coin");

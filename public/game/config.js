@@ -183,10 +183,17 @@ GF.CHIMENEA = {
 // ANIMALES SUELTOS (9/8): andan por toda la granja, no encerrados en un patio.
 // Esquivan edificios, vetas, la laguna y las parcelas (no pisan los cultivos), y eligen
 // su próximo destino cerca de donde están, así deambulan en vez de cruzar el mapa entero.
-GF.CORRAL_ON = 0;              // 1 = vuelve el corral cercado de antes
+GF.CORRAL_ON = 0;              // 1 = los animales vuelven a vivir encerrados (hoy andan sueltos)
 GF.ANIMAL_RADIO = T * 2.6;     // qué tan lejos se van de un tirón
-// El patio de antes queda definido por si se quiere volver a encender (GF.CORRAL_ON = 1).
-GF.CORRAL = { col: 5, row: 11, cols: 4, rows: 3 };
+// El CORRAL (12/8): reubicado a la pradera libre del centro-oeste, junto a donde va el
+// Establo. Se DIBUJA siempre (piso + cerca) aunque los animales anden sueltos, y es zona
+// RESERVADA: nada se puede colocar ni arrastrar encima (ni adornos, ni parcelas, ni
+// obras, ni árboles/piedras movidos en edición).
+GF.CORRAL = { col: 6, row: 8, cols: 4, rows: 3 };
+GF.enCorral = function (col, row) {
+  const C = GF.CORRAL;
+  return C && col >= C.col && col < C.col + C.cols && row >= C.row && row < C.row + C.rows;
+};
 
 // AVISO DE SUPERPOSICIÓN: al agregar un edificio nuevo, la consola avisa si pisa parcelas,
 // la laguna, la cerca u otro objeto. Evita repetir el bug del Establo sobre los cultivos (4/8).

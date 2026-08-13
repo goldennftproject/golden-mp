@@ -1874,7 +1874,10 @@ async function refreshP2P() {
   box.querySelectorAll("[data-pub]").forEach(b => b.onclick = async () => {
     const [kind, key, i] = b.dataset.pub.split(":");
     const q = $("p2q-" + i), pr = $("p2p-" + i);
-    await marketPublicar(kind, key, kind === "arm" ? 1 : Math.max(1, +(q && q.value) || 1), Math.max(1, +(pr && pr.value) || 1));
+    const cant = kind === "arm" ? 1 : Math.max(1, +(q && q.value) || 1);
+    // candado anti-exploit (12/8): el P2P tampoco deja sacar recursos que el objetivo activo pide
+    if (kind === "res" && typeof tutoGuardia === "function" && !tutoGuardia(key, cant, "publicar " + (RES_LABEL[key] || key))) return;
+    await marketPublicar(kind, key, cant, Math.max(1, +(pr && pr.value) || 1));
     p2pCache = null; refreshP2P();
   });
   box.querySelectorAll("[data-buy]").forEach(b => b.onclick = async () => {
