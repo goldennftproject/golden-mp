@@ -34,7 +34,7 @@ BOOT = os.path.join(RAIZ, "public", "game", "boot.js")
 EXTRA = ["res_", "crop_", "fish_", "coin_", "animal_", "deco_", "build_", "plano_", "rock_buried"]   # build_: obras · plano_: blueprints (12/8)
 
 # Edificios que antes no tenían arte y por eso nunca entraron al atlas (9/8).
-SUELTOS = ["establo", "curtiduria", "ofrendas", "mazo", "pet_gallina", "skin_sombrero", "godhand", "tree_sapling"]
+SUELTOS = ["establo", "curtiduria", "ofrendas", "mazo", "pet_gallina", "skin_sombrero", "godhand", "tree_sapling", "plot_wild"]
 
 # BESTIARIO (10/8): las 11 criaturas nuevas son 176 cuadros. Sueltos serían 176 pedidos
 # extra al server gratis; en el atlas son cero. Los arma tools/build-bestiario.py.

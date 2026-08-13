@@ -1987,6 +1987,20 @@ hay bucle de dinero infinito.
 `TUTO_VER` subido a 6 (la cadena cambió de semántica): los progresos de prueba viejos
 se resetean a un estado consistente. Flujo verificado con simulación de 4 momentos.
 
+### TERRENO SILVESTRE — la última pieza diegética (13/8)
+
+La parcela bloqueada era el último elemento gris del juego. Ahora es **terreno
+silvestre a todo color**: maleza tupida en el verde de las copas, ramitas caídas y la
+tierra asomando entre los yuyos — se lee al instante como "esto hay que desbrozar".
+Al desbloquearla, el **DESBROCE**: yuyos verdes y ramitas marrones salen volando con
+el destello de siempre, y aparece la tierra arada. Clave `plot_wild` (atlas `?v=44`,
+580 sprites), con el parche gris viejo de respaldo. Se limpiaron además las cargas de
+las `rock_buried_*` descartadas (evita 404s en cada arranque).
+
+Con esto el inventario diegético queda COMPLETO: edificios en obra con materiales,
+árboles en retoño que crecen, vetas a la vista con gate de nivel, y parcelas
+silvestres que se desbrozan. Cero sprites fantasma en todo el juego.
+
 ### El mapa inicial ordenado por zonas + la CERCA PERIMETRAL intocable
 
 El arranque queda zonificado con lógica de lectura: **parcelas + granero** al noroeste,

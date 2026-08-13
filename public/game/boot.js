@@ -70,8 +70,8 @@ class BootScene extends Phaser.Scene {
     // PLANOS de construcción (12/8): el pergamino que ganás al subir de nivel
     ["store","horno","cocina","altar","establo","curtiduria","ofrendas"].forEach(k => L.push(["plano_" + k, P + "plano_" + k + ".png"]));
     L.push(["tree_sapling", P + "tree_sapling.png"]);   // árbol bloqueado = retoño (12/8)
-    L.push(["rock_buried", P + "rock_buried.png"]);     // roca bloqueada = enterrada (genérica de respaldo)
-    ["piedra","bronce","hierro","oro","diamante","netherita"].forEach(k => L.push(["rock_buried_" + k, P + "rock_buried_" + k + ".png"]));   // enterrada POR MINERAL (12/8): cada una con su forma y color
+    L.push(["plot_wild", P + "plot_wild.png"]);   // parcela bloqueada = terreno silvestre por desbrozar (13/8)
+    // (las "rock_buried_*" por mineral se descartaron: las vetas van todas a la vista con gate de NIVEL — 12/8)
     L.push(["withered", P + "withered.png?v=2"]);      // cultivo marchito cozy
     // etapas intermedias (la verdura asomando al 50% del crecimiento)
     if (typeof CROP_ORDER !== "undefined") CROP_ORDER.forEach(k => L.push(["cropm_" + k, P + "cropm_" + k + ".png?v=3"]));
@@ -127,8 +127,8 @@ class BootScene extends Phaser.Scene {
   preload() {
     // ATLAS: todos los sprites del mundo en 2 archivos (mucho más liviano para el server free).
     // Si el atlas no llega, ensureAll() baja los archivos sueltos como respaldo.
-    this.load.image("__atlas", "assets/atlas.png?v=43");
-    this.load.json("__atlasmap", "assets/atlas.json?v=43");
+    this.load.image("__atlas", "assets/atlas.png?v=44");
+    this.load.json("__atlasmap", "assets/atlas.json?v=44");
 
     // No hay barra propia: la pantalla de carga es UNA sola, la del HTML, y le pasamos el avance.
     // (Antes había dos barras seguidas y el juego "aparecía" antes de estar listo.)

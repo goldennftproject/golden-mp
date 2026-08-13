@@ -291,7 +291,13 @@ class FarmScene extends Phaser.Scene {
       const owned = Math.max(2, Math.min(GF.PLOTS.length, G.plotsOwned || 2));   // viernes (2): se nace con 2 parcelas
       if (i >= owned) {   // parcela bloqueada: se compra con plata
         obj.state = "locked";
-        if (obj.ground) { if (this.textures.exists("plot_blocked")) obj.ground.setTexture("plot_blocked").setDisplaySize(T, T).setTint(0x8f8f8f).setAlpha(0.8); else obj.ground.setAlpha(0.45); }   // apagado: se nota que no se puede usar
+        // 13/8: la parcela bloqueada es TERRENO SILVESTRE a todo color (maleza por desbrozar);
+        // el parche gris viejo queda de respaldo si faltara el arte
+        if (obj.ground) {
+          if (this.textures.exists("plot_wild")) obj.ground.setTexture("plot_wild").setDisplaySize(T, T).clearTint().setAlpha(1);
+          else if (this.textures.exists("plot_blocked")) obj.ground.setTexture("plot_blocked").setDisplaySize(T, T).setTint(0x8f8f8f).setAlpha(0.8);
+          else obj.ground.setAlpha(0.45);
+        }
         return obj;
       }
       const sv = savedPlots[i];   // restaura lo plantado antes del refresh (ignora estados viejos como "wet")
@@ -2461,7 +2467,8 @@ class FarmScene extends Phaser.Scene {
       } else if (i >= owned && pl.state !== "locked") {
         pl.state = "locked";
         if (pl.ground) {
-          if (this.textures.exists("plot_blocked")) pl.ground.setTexture("plot_blocked").setDisplaySize(GF.TILE, GF.TILE).setTint(0x8f8f8f).setAlpha(0.8);
+          if (this.textures.exists("plot_wild")) pl.ground.setTexture("plot_wild").setDisplaySize(GF.TILE, GF.TILE).clearTint().setAlpha(1);
+          else if (this.textures.exists("plot_blocked")) pl.ground.setTexture("plot_blocked").setDisplaySize(GF.TILE, GF.TILE).setTint(0x8f8f8f).setAlpha(0.8);
           else pl.ground.setAlpha(0.45);
         }
       }
@@ -2477,6 +2484,16 @@ class FarmScene extends Phaser.Scene {
       const a = Math.random() * Math.PI * 2, r = 20 + Math.random() * 26;
       const sp = this.add.rectangle(pl.cx, pl.by, 3, 3, i % 2 ? 0xfff3cf : 0xffd75e).setDepth(99991);
       this.tweens.add({ targets: sp, x: pl.cx + Math.cos(a) * r, y: pl.by + Math.sin(a) * r, alpha: 0, duration: 520 + Math.random() * 260, onComplete: () => sp.destroy() });
+    }
+    // DESBROCE (13/8): los yuyos y ramitas del terreno silvestre salen volando al abrirla
+    for (let i = 0; i < 9; i++) {
+      const a = Math.random() * Math.PI * 2, r = 16 + Math.random() * 24;
+      const esYuyo = i % 3 !== 2;
+      const p = esYuyo
+        ? this.add.ellipse(pl.cx + (Math.random() - 0.5) * 20, pl.by + (Math.random() - 0.5) * 20, 5, 3, i % 2 ? 0x3f9b3f : 0x2f7a2f, 0.95)
+        : this.add.rectangle(pl.cx + (Math.random() - 0.5) * 20, pl.by + (Math.random() - 0.5) * 20, 6, 2, 0x8a5a33, 0.95);
+      p.setDepth(99992).setAngle(Math.random() * 360);
+      this.tweens.add({ targets: p, x: p.x + Math.cos(a) * r, y: p.y + Math.sin(a) * r - 14, angle: p.angle + 200, alpha: 0, duration: 480 + Math.random() * 240, ease: "Quad.easeOut", onComplete: () => p.destroy() });
     }
   }
 
