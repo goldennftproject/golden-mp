@@ -420,7 +420,7 @@ function tutoSubPlata(prefijo, meta) {
     return { txt: prefijo + accion + (deUna ? " — una tanda y alcanza" : ""),
       target: "market", panel: "ov-market", ui: "[data-buy='papa']", permite: ["buyseed", "plant", "harvest"] };
   }
-  return { txt: prefijo + "vendé lo que tengas en el Mercado (madera, piedra…)",
+  return { txt: prefijo + "vendé lo que tengas suelto en el Mercado (el guardia protege lo del objetivo)",
     target: "market", panel: "ov-market", ui: "#shop-sell", permite: ["sell", "chop", "mine"] };
 }
 function tutoSub() {
@@ -431,10 +431,26 @@ function tutoSub() {
     const hayCosecha = Object.keys(CROP_DEF || {}).some(k => (G.res[k] || 0) > 0);
     return hayCosecha ? null : tutoSubPlata("Para esa plata: ", tutoNeed(st));   // con cosecha, el paso ya te manda a vender
   }
-  const quiereTalar = st.res === "madera" || st.id === "unlocknode" || st.id === "chest";
+  // 14/8 (dirección): en los pasos "juntá madera" el plan cubre el paso ENTERO — se
+  // calculan las hachas que faltan para TODA la meta (1 tala = 1 uso) y se junta la plata
+  // COMPLETA de una tanda, en vez de rebotar de a 10 en 10 (talar → rota → papa → craftear)
+  if (st.res === "madera" && typeof toolCount === "function") {
+    if (!(G.built && G.built.store)) return null;   // fase pre-Herrería: con las hachas de arranque alcanza
+    const falta = Math.max(0, tutoNeed(st) - tutoTiene(st));
+    const hachas = Math.max(0, falta - toolCount("axe"));
+    if (hachas > 0) {
+      const costo = (TOOL_CRAFT && TOOL_CRAFT.axe && TOOL_CRAFT.axe.plata) || 10;
+      const plataNec = hachas * costo;
+      if (G.plata >= plataNec) return { txt: "Crafteá tus " + hachas + " hacha" + (hachas > 1 ? "s" : "") + " de UNA (" + plataNec + " de plata" + (hachas >= 5 ? ", usá el botón ×5" : "") + ")",
+        target: "store", panel: "ov-forge", ui: hachas >= 5 ? "[data-ctool5='axe']" : "[data-ctool='axe']", permite: ["crafttool"] };
+      return tutoSubPlata("Te faltan " + hachas + " hachas (" + plataNec + " de plata): ", plataNec);
+    }
+    return null;   // hachas alcanzan para toda la meta: a talar
+  }
+  const quiereTalar = st.id === "unlocknode" || st.id === "chest";
   const quierePicar = st.res === "piedra";
   if (quiereTalar && typeof toolCount === "function" && toolCount("axe") <= 0) {
-    if (!(G.built && G.built.store)) return null;   // fase pre-Herrería: con las hachas de arranque alcanza
+    if (!(G.built && G.built.store)) return null;
     const plata = (TOOL_CRAFT && TOOL_CRAFT.axe && TOOL_CRAFT.axe.plata) || 10;
     if (G.plata < plata) return tutoSubPlata("Sin hachas (cuesta " + plata + " de plata): ", plata);
     return { txt: "Te quedaste sin hachas: crafteá una en la Herrería (" + plata + " de plata)",

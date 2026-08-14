@@ -2164,6 +2164,14 @@ horas y 122 ciclos** de papa. Arreglos (el embudo NO se toca):
 - **Dos números quedan para el diseñador** (TODO, con la medición): `ARMAS_UNLOCK_PLATA`
   1000 (~100 min aun con 8 parcelas) y los 20 de ORO del Altar (cadena de picos de ~700
   plata). El tutorial no puede arreglarlos sin tocar balance.
+- **El bucle de las hachas, resuelto por PLANIFICACIÓN (no por regalo)**: la primera idea
+  fue que la herramienta no se gaste durante su paso; dirección la bajó — la economía
+  tiene que seguir siendo real. En su lugar, el sub-objetivo de los pasos de madera
+  calcula el paso ENTERO: hachas que faltan para TODA la meta (1 tala = 1 uso) → si la
+  plata alcanza, "crafteá tus 17 hachas de UNA (170 de plata, botón ×5)" apuntando al
+  lote; si no, la cadena de la plata con la META COMPLETA ("te faltan 17 hachas (170):
+  comprá N semillas…") — una sola fase de plata en vez de rebotar de a 10 en 10 con
+  talar → rota → papa → craftear. Verificado con 5 escenarios simulados.
 
 Y el "bloqueo momentáneo" al colocar un plano era el REINICIO de escena (reconstruye
 ~570 sprites de golpe): ahora pasa detrás de un telón de 160 ms con el fundido que ya
