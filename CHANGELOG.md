@@ -2298,6 +2298,10 @@ Onboarding rediseñado desde cero alrededor de una VOZ y un TABLÓN (v1 para tes
   alguien te PIDE cosas, no un sistema te ordena.
 - Pendiente si cuaja: retrato real del capataz (PixelLab), tablón físico en el mapa,
   pedidos DIARIOS de bienes (unificar las misiones diarias al mismo sistema).
+- **Fix del playtest ("apareció unos segundos y desapareció")**: la burbuja ya NO se
+  cierra sola — una instrucción no puede evaporarse; cerrar es un clic. Y el cartel
+  "Pedido" de arriba quedó clickeable: lo tocás y el capataz repite la línea del
+  capítulo activo (las líneas una-sola-vez dejan de perderse para siempre).
 
 ### Feedback del diseñador sobre el panel Objetivos (14/8, Discord) — 4 pedidos
 

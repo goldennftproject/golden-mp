@@ -1062,8 +1062,8 @@ function _capMostrar() {
   $("capataz-txt").innerHTML = txt;
   el.classList.remove("hidden");
   if (window.sfx) sfx("click");
-  clearTimeout(_capTimer);
-  _capTimer = setTimeout(_capCerrar, 12000);   // se va sola a los 12 s si no la tocan
+  // 14/8 v2 (playtest: "apareció unos segundos y desapareció"): la burbuja QUEDA hasta
+  // que la toques — una instrucción no puede evaporarse sola. Cerrar es un clic.
 }
 function _capCerrar() {
   const el = $("capataz"); if (!el) return;
@@ -1072,7 +1072,22 @@ function _capCerrar() {
   if (_capCola.length) setTimeout(_capMostrar, 350);
 }
 window.capataz = capataz;
-document.addEventListener("DOMContentLoaded", () => { const el = $("capataz"); if (el) el.onclick = _capCerrar; });
+// volver a escuchar la línea del capítulo activo: clic en el cartel "Pedido" de arriba
+function capatazRepetir() {
+  if (typeof TUTO_CAPS === "undefined" || !G.tuto) return;
+  const idx = G.tuto.done ? -1 : (G.tuto.step || 0);
+  for (const cap of TUTO_CAPS) {
+    const idxs = cap.pasos.map(id => tutoIdx(id)).filter(i => i >= 0);
+    if (idx >= Math.min.apply(null, idxs) && idx <= Math.max.apply(null, idxs)) {
+      if (CAP_LINEAS[cap.id]) { _capCola.push(CAP_LINEAS[cap.id]); _capMostrar(); }
+      return;
+    }
+  }
+}
+document.addEventListener("DOMContentLoaded", () => {
+  const el = $("capataz"); if (el) el.onclick = _capCerrar;
+  const tu = $("tuto"); if (tu) tu.onclick = capatazRepetir;   // el cartel repite al capataz
+});
 
 /* ---- OBJETIVOS por capítulos (14/8): la guía opcional con forma de diario ---- */
 function refreshObjetivos() {

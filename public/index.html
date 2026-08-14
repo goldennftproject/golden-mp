@@ -166,7 +166,7 @@
   @keyframes cflash{from{opacity:1}to{opacity:0}}
   @keyframes cpart{0%{transform:translate(0,0);opacity:1}60%{transform:translate(var(--dx),var(--dy));opacity:1}100%{transform:translate(var(--dx),calc(var(--dy) + var(--fall)));opacity:0}}
   /* tutorial guiado (doc maestro 2/8): cartel con la meta actual */
-  #tuto{position:fixed;left:50%;transform:translateX(-50%);top:54px;z-index:7;display:flex;align-items:center;gap:8px;background:none;border:8px solid transparent;border-image:url("assets/ui/badge_wood.png") 26 fill round;image-rendering:pixelated;padding:1px 10px;font-size:13px;font-weight:700;color:#fff;text-shadow:-1px 0 #241505,1px 0 #241505,0 -1px #241505,0 1px #241505;pointer-events:none}
+  #tuto{position:fixed;left:50%;transform:translateX(-50%);top:54px;z-index:7;display:flex;align-items:center;gap:8px;background:none;border:8px solid transparent;border-image:url("assets/ui/badge_wood.png") 26 fill round;image-rendering:pixelated;padding:1px 10px;font-size:13px;font-weight:700;color:#fff;text-shadow:-1px 0 #241505,1px 0 #241505,0 -1px #241505,0 1px #241505;pointer-events:auto;cursor:pointer}   /* 14/8: clic = el capataz repite la línea del capítulo */
   #tuto.hidden{display:none}
   /* EL CAPATAZ (14/8): burbuja de diálogo — la voz del juego */
   #capataz{position:fixed;left:50%;transform:translateX(-50%);bottom:190px;z-index:8;display:flex;align-items:center;gap:10px;max-width:min(520px,92vw);
