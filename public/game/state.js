@@ -318,10 +318,14 @@ function tutoDesbloqueado(stepId) {
 // hachas cuando hay que talar porque se gastan; el loop entero cuando hay que juntar
 // plata; cocinar cuando el paso lo pide). Al terminar el tutorial, todo libre.
 var TUTO_PERMISOS = {
-  buyseed:     ["buyseed"],
-  plant:       ["plant", "buyseed"],   // 14/8: si compró menos de 3 semillas, puede volver por más
-  harvest:     ["harvest"],
-  sell:        ["sell", "harvest"],
+  // 14/8 v2 (playtest: compró 1 semilla, la plantó, cosechó y quedó BLOQUEADO en "cosechá
+  // tus 3"): el cuarteto inicial permite el loop ENTERO — es la fase de enseñanza y las
+  // flechas guían el orden; los permisos no pueden exigir 3 papas y a la vez impedir
+  // producirlas. Además "harvest" pasó a estar SIEMPRE permitido (ver tutoPermite).
+  buyseed:     ["buyseed", "plant", "harvest"],
+  plant:       ["plant", "buyseed", "harvest"],
+  harvest:     ["harvest", "plant", "buyseed"],
+  sell:        ["sell", "harvest", "plant", "buyseed"],
   place_store: ["obra"],
   wood_st:     ["chop", "crafttool", "cultivar"],   // 14/8: cultivar más árboles = juntar en paralelo (anti-tedio)
   stone_st:    ["mine", "crafttool"],
@@ -367,6 +371,7 @@ function tutoPermite(tag) {
   const lista = TUTO_PERMISOS[st.id];
   if (!lista) return true;
   if (tag === "obra") return true;   // trabajar una obra pendiente nunca exploitea (consume recursos)
+  if (tag === "harvest") return true;   // 14/8: cosechar lo propio JAMÁS se bloquea — no genera plata por sí solo (la puerta guardada es VENDER)
   if (lista.includes(tag)) return true;
   // 13/8 v3: el SUB-OBJETIVO dinámico abre exactamente las acciones que pide su cadena
   const sub = (typeof tutoSub === "function") ? tutoSub() : null;

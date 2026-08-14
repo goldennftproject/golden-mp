@@ -2228,6 +2228,12 @@ horas y 122 ciclos** de papa. Arreglos (el embudo NO se toca):
 - La cadena queda en **40 pasos**. Verificación completa: hermética, sin huérfanos,
   planos a tiempo, place<juntá<depósito, y 5 escenarios nuevos de adelanto (crafttool
   parcial, unlockarm pelado/parcial, arranque sin adelanto). `TUTO_VER=10`.
+- **El cuarteto inicial se estrangulaba solo (playtest: compró 1 semilla, la plantó, la
+  cosechó y quedó bloqueado en "cosechá tus 3")**: cada paso del arranque permitía solo
+  su acción — el paso podía exigir 3 papas y a la vez impedir producirlas. Los 4 pasos
+  del arranque permiten ahora el loop entero (las flechas guían el orden), y regla nueva
+  en `tutoPermite`: COSECHAR lo propio jamás se bloquea — no genera plata por sí solo,
+  la puerta guardada es vender.
 - **El depósito de la obra también respetaba el nivel de granja (playtest: "la Cocina
   pide nivel 5")**: `obraDepositar` tenía el mismo candado que ya se había sacado de la
   entrega del plano. Misma regla en ambos: durante el tutorial manda el PASO, no el nivel
