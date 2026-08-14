@@ -2228,6 +2228,11 @@ horas y 122 ciclos** de papa. Arreglos (el embudo NO se toca):
 - La cadena queda en **40 pasos**. Verificación completa: hermética, sin huérfanos,
   planos a tiempo, place<juntá<depósito, y 5 escenarios nuevos de adelanto (crafttool
   parcial, unlockarm pelado/parcial, arranque sin adelanto). `TUTO_VER=10`.
+- **Vender platos también pasa por el embudo (playtest: vendió la Papa Asada en pleno
+  "comé un plato" y quedó trabado)**: `sellDish` no consultaba `tutoPermite("sell")` —
+  era la única venta sin embudo. Además el paso "eat" tiene red doble: permite recocinar
+  y su kit repone los ingredientes SI no queda ningún plato en la bolsa (partidas ya
+  trabadas se curan solas al entrar el fix).
 - **El kit también repone los INGREDIENTES de la Papa Asada (playtest: "no tengo los
   ingredientes")**: al llegar a "cociná tu primer plato", las papas ya se vendieron y la
   madera se depositó en las obras — y la lección de ese paso es COCINAR, no volver a
