@@ -2182,6 +2182,13 @@ horas y 122 ciclos** de papa. Arreglos (el embudo NO se toca):
   `plata:true` en todos los eslabones de la cadena. El eslabón de venta liquida el stock
   de mayor precio primero. 4 escenarios simulados (niveles de Cultivo, plata corta, stock
   mixto) — guía correcta en todos.
+- **3ª pasada — los eslabones ya no estrangulan la tanda (playtest: "solo me deja plantar
+  UNA")**: con el boost la papa está lista en ~22 s — plantabas la primera, el sub saltaba
+  a "cosechá" (que solo permitía cosechar) y la tanda moría a mitad de plantada: bucle de
+  a 1 otra vez. Ahora TODOS los eslabones de la cadena de la plata permiten el loop
+  agrícola completo (plantar, cosechar, vender, comprar, desbloquear parcela) — el texto
+  y la flecha guían el foco, los permisos no frenan la mano. Reproducido y verificado en
+  simulación con el estado exacto del playtest (1 lista + 1 creciendo + semillas en bolsa).
 
 Y el "bloqueo momentáneo" al colocar un plano era el REINICIO de escena (reconstruye
 ~570 sprites de golpe): ahora pasa detrás de un telón de 160 ms con el fundido que ya

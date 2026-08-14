@@ -390,7 +390,11 @@ function tutoAviso() {
 // v5 (playtest): CON NÚMEROS — el plan calcula la TANDA entera ("comprá 4 semillas") en
 // vez de dejar caer al jugador en el ciclo de a una semilla, que era un suplicio.
 function tutoSubPlata(prefijo, meta) {
-  // todos los eslabones llevan plata:true — el boost de DESVÍO se prende con esa marca
+  // todos los eslabones llevan plata:true — el boost de DESVÍO se prende con esa marca.
+  // 14/8 (playtest): TODOS los eslabones permiten el loop agrícola COMPLETO — con el boost
+  // la papa está lista en ~22 s, el sub saltaba a "cosechá" (que solo permitía cosechar) y
+  // te frenaba la tanda a mitad de plantada: bucle de a 1 otra vez. El texto y la flecha
+  // GUÍAN el foco; los permisos no estrangulan la mano.
   const falta = Math.max(0, (meta || 0) - Math.floor(G.plata));
   // vender lo cosechado: el de MAYOR precio primero
   const conStock = Object.keys(CROP_DEF || {}).filter(k => (G.res[k] || 0) > 0)
@@ -399,19 +403,19 @@ function tutoSubPlata(prefijo, meta) {
     const n = Math.floor(G.res[conStock]), cd = CROP_DEF[conStock];
     const alcanza = meta && (G.plata + n * (cd.price || 0)) >= meta;
     return { plata: true, txt: prefijo + "vendé tus " + n + " " + (cd.label || conStock).toLowerCase() + (n > 1 ? "s" : "") + (alcanza ? " — con eso alcanza" : ""),
-      target: "market", panel: "ov-market", ui: "#vb-" + conStock, permite: ["sell", "harvest"] };
+      target: "market", panel: "ov-market", ui: "#vb-" + conStock, permite: ["plant", "harvest", "sell", "buyseed", "plotunlock"] };
   }
   const plots = Array.isArray(G.plots) ? G.plots : [];
   const listos = plots.filter(p => p && p.state === "ready").length;
   if (listos) return { plata: true, txt: prefijo + "cosechá tus " + listos + " cultivo" + (listos > 1 ? "s" : "") + " listo" + (listos > 1 ? "s" : ""),
-    target: "plot", permite: ["harvest"] };
+    target: "plot", permite: ["plant", "harvest", "sell", "buyseed", "plotunlock"] };
   // Fixes.docx 14/8 #3: comprar más semillas sigue permitido en estos eslabones — antes,
   // al comprar UNA el sub saltaba a "plantá" y bloqueaba el resto de la tanda (de a 1, feo)
   if (plots.some(p => p && p.state === "growing")) return { plata: true, txt: prefijo + "tus cultivos están creciendo — cosechalos apenas estén",
-    target: "plot", permite: ["harvest", "plant", "buyseed"] };
+    target: "plot", permite: ["plant", "harvest", "sell", "buyseed", "plotunlock"] };
   const semillas = Object.keys(G.seeds || {}).reduce((a, k) => a + Math.floor(G.seeds[k] || 0), 0);
   if (semillas) return { plata: true, txt: prefijo + "plantá tus " + semillas + " semilla" + (semillas > 1 ? "s" : ""),
-    target: "plot", permite: ["plant", "harvest", "plotunlock", "buyseed"] };
+    target: "plot", permite: ["plant", "harvest", "sell", "buyseed", "plotunlock"] };
   // 14/8 (dirección): el plan elige el MEJOR cultivo desbloqueado (mayor ganancia neta por
   // semilla) — cebolla rinde 10 netos contra 2 de la papa: 4-5 tandas en vez de 20. Con el
   // boost de desvío todos crecen acelerados, no solo la papa.
@@ -432,10 +436,10 @@ function tutoSubPlata(prefijo, meta) {
     const nom = (cd.label || mejor).toLowerCase();
     const accion = n > 1 ? "comprá " + n + " semillas de " + nom + " de UNA y plantalas todas" : "comprá 1 semilla de " + nom + " y plantala";
     return { plata: true, txt: prefijo + accion + (deUna ? " — una tanda y alcanza" : ""),
-      target: "market", panel: "ov-market", ui: "[data-buy='" + mejor + "']", permite: ["buyseed", "plant", "harvest"] };
+      target: "market", panel: "ov-market", ui: "[data-buy='" + mejor + "']", permite: ["plant", "harvest", "sell", "buyseed", "plotunlock"] };
   }
   return { plata: true, txt: prefijo + "vendé lo que tengas suelto en el Mercado (el guardia protege lo del objetivo)",
-    target: "market", panel: "ov-market", ui: "#shop-sell", permite: ["sell", "chop", "mine"] };
+    target: "market", panel: "ov-market", ui: "#shop-sell", permite: ["plant", "harvest", "sell", "buyseed", "plotunlock", "chop", "mine"] };
 }
 function tutoSub() {
   const st = tutoActivo(); if (!st) return null;
