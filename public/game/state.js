@@ -339,7 +339,7 @@ var TUTO_PERMISOS = {
   stonec:      ["mine", "crafttool"],
   place_cocina: ["obra"],
   build_cocina: ["obra"],
-  cook:        ["cook", "plant", "harvest"],
+  cook:        ["cook", "plant", "harvest", "buyseed", "chop", "crafttool"],   // 14/8: red por si malgasta el kit de ingredientes
   eat:         ["eat"],
   unlockarm:   ["unlockarm", "chop", "mine", "crafttool", "repair"],   // 14/8: el desbloqueo pide 20 madera + 20 piedra — se juntan acá (la plata llega de adelanto)
   craftarm:    ["craftarm"],
@@ -1181,7 +1181,7 @@ function tutoHecho(st) {
 function tutoAdelanto() {
   const st = tutoActivo(); if (!st || G.tuto.adelv === G.tuto.step) return;
   const esMadera = st.res === "madera", esPiedra = st.res === "piedra";
-  if (!esMadera && !esPiedra && st.id !== "crafttool" && st.id !== "unlockarm") return;
+  if (!esMadera && !esPiedra && st.id !== "crafttool" && st.id !== "unlockarm" && st.id !== "cook") return;
   G.tuto.adelv = G.tuto.step;
   const regalos = [];
   const darHachas = (n) => { if (n > 0) { G.tools = G.tools || {}; G.tools.axe = (G.tools.axe || 0) + n; regalos.push(n + " hacha" + (n > 1 ? "s" : "")); } };
@@ -1202,6 +1202,14 @@ function tutoAdelanto() {
     darUsosPico(Math.max(0, falta - usos));
   } else if (st.id === "crafttool") {
     plata = Math.max(0, costoHacha - Math.floor(G.plata));   // la lección de craftear se paga sola
+  } else if (st.id === "cook") {
+    // 14/8 (playtest: "no tengo los ingredientes"): la lección acá es COCINAR — las papas se
+    // vendieron y la madera se depositó en las obras; el kit repone lo que falte de la receta
+    const rec = (typeof RECIPE_DEF !== "undefined" && RECIPE_DEF.papa_asada && RECIPE_DEF.papa_asada.res) || { papa: 1, madera: 1 };
+    for (const r in rec) {
+      const falta = Math.max(0, rec[r] - Math.floor(G.res[r] || 0));
+      if (falta > 0) { G.res[r] = (G.res[r] || 0) + falta; regalos.push(falta + " " + ((typeof RES_LABEL !== "undefined" && RES_LABEL[r]) || r).toLowerCase()); }
+    }
   } else if (st.id === "unlockarm") {
     const base = (typeof ARMAS_UNLOCK_PLATA !== "undefined") ? ARMAS_UNLOCK_PLATA : 1000;
     const cost = (typeof ARMAS_UNLOCK_COST !== "undefined" && ARMAS_UNLOCK_COST) || {};

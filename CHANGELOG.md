@@ -2228,6 +2228,12 @@ horas y 122 ciclos** de papa. Arreglos (el embudo NO se toca):
 - La cadena queda en **40 pasos**. Verificación completa: hermética, sin huérfanos,
   planos a tiempo, place<juntá<depósito, y 5 escenarios nuevos de adelanto (crafttool
   parcial, unlockarm pelado/parcial, arranque sin adelanto). `TUTO_VER=10`.
+- **El kit también repone los INGREDIENTES de la Papa Asada (playtest: "no tengo los
+  ingredientes")**: al llegar a "cociná tu primer plato", las papas ya se vendieron y la
+  madera se depositó en las obras — y la lección de ese paso es COCINAR, no volver a
+  farmear migajas. El kit entrega lo que falte de la receta (1 papa + 1 madera, leído de
+  `RECIPE_DEF`, descontando lo que haya en bolsa). El paso además abre buyseed/chop/
+  crafttool como red por si se malgasta. Verificado: kit completo y kit parcial.
 - **El cuarteto inicial se estrangulaba solo (playtest: compró 1 semilla, la plantó, la
   cosechó y quedó bloqueado en "cosechá tus 3")**: cada paso del arranque permitía solo
   su acción — el paso podía exigir 3 papas y a la vez impedir producirlas. Los 4 pasos
