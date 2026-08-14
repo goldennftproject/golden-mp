@@ -4,6 +4,11 @@
 
 ## 🔴 Inmediato
 
+- [ ] **Ojo con los KITS ahora que la guía es opcional (14/8)**: el kit entrega "lo que
+  falte" al entrar a cada paso — un jugador astuto podría vaciarse a propósito (vender
+  madera antes de llegar al paso de madera) para inflar el kit. Es una vez por paso y
+  chico, pero si molesta: topear el kit al costo de receta del paso, o darlo fijo.
+
 - [ ] **Deploy** (`deploy.bat`): atlas `?v=42` — set "mercadillo", árbol + talado, obras, pasto y cerca al tono, y la MECÁNICA DE BLUEPRINTS completa (plano al subir de nivel → colocar → depositar → construir). Listo para subir.
 - [ ] **Reorganizar la escalera de objetivos nivel a nivel** (idea aprobada 12/8): ajustar XP y orden de TUTO_STEPS para que cada nivel desbloquee y haga probar su sistema justo a tiempo. `PLANO_NIVEL` ya marca el esqueleto.
 - [ ] **Hojas caídas / suelo del talado** como piezas sueltas reutilizables (decisión 12/8: separadas del árbol).

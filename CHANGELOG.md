@@ -2228,6 +2228,27 @@ horas y 122 ciclos** de papa. Arreglos (el embudo NO se toca):
 - La cadena queda en **40 pasos**. Verificación completa: hermética, sin huérfanos,
   planos a tiempo, place<juntá<depósito, y 5 escenarios nuevos de adelanto (crafttool
   parcial, unlockarm pelado/parcial, arranque sin adelanto). `TUTO_VER=10`.
+### GIRO DE DISEÑO (14/8, dirección): los objetivos pasan a ser GUÍA OPCIONAL
+
+Tras un día entero de tapar fugas del embudo (cada playtest encontraba una nueva), la
+decisión de fondo: el sistema de objetivos NO restringe nada. El jugador lo sigue cuando
+quiere o lo ignora y juega libre. Consecuencias, todas del mismo golpe:
+
+- **`tutoPermite` y `tutoGuardia` siempre dicen que sí** (quedan como funciones porque
+  hay ~15 llamadas repartidas; la tabla `TUTO_PERMISOS` se conserva como documentación
+  y el cuerpo viejo del guardia queda guardado por si se quiere reactivar).
+- **Los tiempos acelerados se retiran** (`tutoBoost` = 1 siempre, y el CD corto "mientras
+  el paso lo pide" también): con la guía opcional serían explotables jugando "con el
+  objetivo puesto". Quedan los pacings de diseño: `CD_RAPIDO` (primeras 10 por nodo) y
+  las semillas rápidas del arranque.
+- **Lo que SÍ queda**: la lista de 40 pasos con cartel + flechas + sub-objetivos como
+  CONSEJO, el avance automático, las recompensas (`pr`) y los KITS del objetivo
+  (herramientas/ingredientes al entrar a cada paso — ahora son catch-up, no desbloqueo).
+  La excepción de nivel en plano/depósito durante el tutorial también queda (la guía
+  cumple lo que promete).
+- **Interruptor "Guía de objetivos: Sí/No"** en Configuración (localStorage): apaga
+  cartel y flechas; los objetivos siguen avanzando y premiando en silencio.
+
 - **Vender platos también pasa por el embudo (playtest: vendió la Papa Asada en pleno
   "comé un plato" y quedó trabado)**: `sellDish` no consultaba `tutoPermite("sell")` —
   era la única venta sin embudo. Además el paso "eat" tiene red doble: permite recocinar

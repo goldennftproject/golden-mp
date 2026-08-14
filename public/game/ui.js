@@ -789,7 +789,7 @@ function refreshCooking() {
 function tutoRefresh() {
   const el = document.getElementById("tuto"); if (!el) return;
   const st = (typeof tutoActivo === "function") ? tutoActivo() : null;
-  if (!st) { el.classList.add("hidden"); return; }
+  if (!st || (window.guiaOn && !guiaOn())) { el.classList.add("hidden"); if (typeof tutoFlechaUI === "function") tutoFlechaUI(null); return; }   // 14/8: guía opcional
   el.classList.remove("hidden");
   // 13/8 v3: si hay SUB-OBJETIVO (sin hachas, pico roto…), el cartel muestra ESO
   const sub = (typeof tutoSub === "function") ? tutoSub() : null;
@@ -814,6 +814,7 @@ function tutoFlechaUI(el) {
 }
 function tutoHighlight() {
   document.querySelectorAll(".tutohl").forEach(e => e.classList.remove("tutohl"));   // limpieza del sistema viejo
+  if (window.guiaOn && !guiaOn()) { tutoFlechaUI(null); return; }   // 14/8: guía opcional apagada
   let st = (typeof tutoActivo === "function") ? tutoActivo() : null;
   // 13/8 v3: el SUB-OBJETIVO manda — su guía pisa la del paso (misma cadena de flechas)
   const sub = (st && typeof tutoSub === "function") ? tutoSub() : null;
@@ -1733,6 +1734,17 @@ function ponerAdornoElegido() {
   const doFarmReset = () => { G.layout = {}; G.layoutPlots = {}; G.layoutPond = null; if (typeof saveFarm === "function") saveFarm(true); if (window.FARM && window.FARM.scene) window.FARM.scene.restart(); toast("↺ Granja restaurada"); };
   const ce = $("cfg-edit"); if (ce) ce.onclick = () => setEditMode(!GF.editMode);
   // sonidos on/off (Configuración)
+  // 14/8: la guía de objetivos es OPCIONAL — este interruptor esconde cartel y flechas;
+  // los objetivos siguen avanzando y premiando en silencio, y se puede volver a prender
+  window.guiaOn = () => localStorage.getItem("guiaOff") !== "1";
+  { const gb = $("cfg-guia");
+    const gLabel = () => { if (gb) gb.textContent = "Guía de objetivos: " + (guiaOn() ? "Sí" : "No"); };
+    if (gb) { gLabel(); gb.onclick = () => {
+      localStorage.setItem("guiaOff", guiaOn() ? "1" : "0"); gLabel();
+      if (typeof tutoRefresh === "function") tutoRefresh();
+      if (window.farmScene && window.farmScene.updateTutoArrow) { try { window.farmScene.updateTutoArrow(); } catch (e) {} }
+      toast(guiaOn() ? "Guía de objetivos activada" : "Guía apagada — jugá como quieras (los objetivos premian igual)");
+    }; } }
   const sndBtn = $("cfg-sound");
   const sndLabel = () => { if (sndBtn) sndBtn.textContent = (window.sfxIsOn && sfxIsOn()) ? "Sonidos: Sí" : "Sonidos: No"; };
   if (sndBtn) { sndLabel(); sndBtn.onclick = () => { if (window.sfxOn) sfxOn(!(window.sfxIsOn && sfxIsOn())); sndLabel(); if (window.sfx) sfx("click"); }; }

@@ -1294,6 +1294,7 @@ class FarmScene extends Phaser.Scene {
   // flecha del tutorial: triángulo dorado que rebota sobre el objetivo del paso actual
   updateTutoArrow() {
     if (this.tutoArrow) { this.tutoArrow.destroy(); this.tutoArrow = null; if (this.tutoTw) { this.tutoTw.stop(); this.tutoTw = null; } }
+    if (window.guiaOn && !guiaOn()) return;   // 14/8: guía opcional apagada — sin flecha en el mundo
     let st = (typeof tutoActivo === "function") ? tutoActivo() : null;
     if (!st) return;
     // 13/8 v3: el SUB-OBJETIVO dinámico (sin hachas, pico roto…) pisa el destino de la flecha

@@ -193,10 +193,7 @@ function nodoSumar(o) { G.nodoUsos = G.nodoUsos || {}; G.nodoUsos[o.i] = nodoUso
 function nodoCd(o, clave, cdLargo) {
   const r = CD_RAPIDO[clave];
   if (r && nodoUsos(o) < r.veces) return r.seg;   // todavía está en su etapa de arranque rápido
-  // 14/8 (simulación de tedio): mientras el paso del tutorial pide ESTE recurso, el nodo
-  // NUNCA entra al enfriamiento largo. Sin esto, "juntá 20 de madera" con 1 árbol y CD de
-  // 90 min eran 3,5 HORAS de tutorial (medido) — el tedio que reportó el diseñador.
-  if (r && typeof tutoBoost === "function" && tutoBoost(clave === "piedra" ? "rock" : clave) < 1) return r.seg;
+  // (14/8: el CD corto "mientras el paso lo pide" se retiró junto con el embudo — guía opcional)
   return cdLargo;
 }
 function seedBuysToday() {
@@ -365,18 +362,11 @@ var TUTO_PERMISOS = {
   passclaim:   ["passclaim"],
   socket:      ["altar", "eat"],
 };
-function tutoPermite(tag) {
-  const st = (typeof tutoActivo === "function") ? tutoActivo() : null;
-  if (!st || !tag) return true;
-  const lista = TUTO_PERMISOS[st.id];
-  if (!lista) return true;
-  if (tag === "obra") return true;   // trabajar una obra pendiente nunca exploitea (consume recursos)
-  if (tag === "harvest") return true;   // 14/8: cosechar lo propio JAMÁS se bloquea — no genera plata por sí solo (la puerta guardada es VENDER)
-  if (lista.includes(tag)) return true;
-  // 13/8 v3: el SUB-OBJETIVO dinámico abre exactamente las acciones que pide su cadena
-  const sub = (typeof tutoSub === "function") ? tutoSub() : null;
-  return !!(sub && sub.permite && sub.permite.includes(tag));
-}
+/* 14/8 (dirección, decisión final): los objetivos son una GUÍA OPCIONAL — no restringen
+   NADA. El jugador los sigue cuando quiere o los ignora y juega como quiera. tutoPermite
+   queda como función (hay ~13 llamadas repartidas) pero siempre dice que sí; la tabla
+   TUTO_PERMISOS se conserva como documentación de qué acción enseña cada paso. */
+function tutoPermite(tag) { return true; }
 function tutoAviso() {
   const sub = (typeof tutoSub === "function") ? tutoSub() : null;
   const st = tutoActivo();
@@ -1029,7 +1019,10 @@ function tutoTxt(st) { return st ? String(st.txt).replace("#", tutoNeed(st)) : "
    imposible el objetivo de ahora, con un aviso 🎯 que devuelve al camino.
    Excepción clave: comprar SEMILLAS nunca se bloquea por plata — son el motor del
    loop que genera la plata que el objetivo pide. */
-function tutoGuardia(res, n, motivo, extra) {
+/* 14/8 (misma decisión): sin embudo, el guardia también se retira — reservar recursos era
+   parte del tutor obligatorio. Queda el cuerpo por si dirección quiere reactivarlo. */
+function tutoGuardia(res, n, motivo, extra) { return true; }
+function _tutoGuardiaViejo(res, n, motivo, extra) {
   const st = (typeof tutoActivo === "function") ? tutoActivo() : null;
   if (!st || !n) return true;
   const nombre = r => r === "plata" ? "plata" : (RES_LABEL[r] || r);
@@ -1091,18 +1084,11 @@ function tutoBoost(clase) {
     rock:  ["stone", "stonec", "stone_st", "stone_al", "unlockarm"],
     horno: ["mat"],
   };
+  // 14/8 (dirección, decisión final): con la guía OPCIONAL los tiempos acelerados se
+  // retiran — serían explotables jugando "con el objetivo puesto". Todos crecen igual.
+  return 1;
+  /* eslint-disable no-unreachable */
   if ((mapa[clase] || []).includes(st.id)) return TUTO_BOOST;
-  // 13/8 v3 · 14/8: si el SUB-OBJETIVO te mandó al loop de cultivo (juntar la plata de las
-  // hachas), crece con el boost de DESVÍO, más fuerte todavía — el desvío es un peaje y el
-  // juego quiere devolverte al camino cuanto antes (dirección: menos tandas, menos clics)
-  const sub = (typeof tutoSub === "function") ? tutoSub() : null;
-  if (sub) {
-    if (clase === "papa" && sub.plata) return TUTO_BOOST_DESVIO;   // cadena de la plata (todos sus eslabones)
-    // 14/8: si el sub te mandó a talar/picar (ej. madera para reparar el pico), esos nodos
-    // también corren con boost y CD corto — el desvío no puede ser más lento que el paso
-    if (clase === "tree" && sub.permite && sub.permite.includes("chop")) return TUTO_BOOST;
-    if (clase === "rock" && sub.permite && sub.permite.includes("mine")) return TUTO_BOOST;
-  }
   return 1;
 }
 var TUTO_BOOST_DESVIO = 0.04;   // los cultivos del desvío corren a 1/25 (papa: ~22 s · cebolla: ~2 min)
