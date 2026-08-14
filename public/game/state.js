@@ -272,28 +272,17 @@ function darPlano(t, silencioso) {
 var PLANO_PASO = { store: "place_store", horno: "place_horno", cocina: "place_cocina", altar: "place_altar" };   // 13/8 v2: el plano cae JUSTO en su paso de colocación
 function tutoIdx(id) { return TUTO_STEPS.findIndex(s => s.id === id); }
 function planosSync(silencioso) {
-  const tutoOn = G.tuto && !G.tuto.done;
+  // 14/8 (guía OPCIONAL): los planos caen por NIVEL puro, siempre — el jugador libre que
+  // sube a nivel 3 recibe su plano del Horno aunque ignore la guía. El paso "colocá el
+  // plano" de la guía espera al nivel si hace falta (es una guía, no una obligación).
+  // ADEMÁS: si la guía va ADELANTE del nivel (llegó al paso place_X), el plano cae igual
+  // — la guía cumple lo que pide (misma lógica de siempre, ahora ambos caminos abiertos).
+  const paso = (G.tuto && !G.tuto.done) ? (G.tuto.step || 0) : -1;
   for (const t in PLANO_NIVEL) {
-    if (tutoOn) {
-      const gate = PLANO_PASO[t];
-      const antesDeTiempo = !gate || (G.tuto.step || 0) < tutoIdx(gate);
-      if (antesDeTiempo) {
-        // saneo del playtest (13/8): si un plano cayó antes de tiempo (nivel rápido de
-        // TESTEO), se retira de la bolsa hasta que su paso llegue (si la obra no se colocó)
-        if (G.planos && G.planos[t] && !(G.obras && G.obras[t]) && !(G.built && G.built[t])) {
-          delete G.planos[t];
-          if (Array.isArray(G.hotbar)) G.hotbar = G.hotbar.map(h => (h && h.kind === "plano" && h.key === t) ? null : h);   // 13/8
-          if (typeof syncSlots === "function") syncSlots();
-        }
-        continue;
-      }
-      // 13/8 v2: llegó SU paso de colocación → durante el tutorial manda el paso, no el
-      // nivel (con el embudo estricto no habría forma de subir de nivel para destrabarlo)
-      darPlano(t, silencioso);
-      continue;
-    }
-    if (G.level < PLANO_NIVEL[t]) continue;
-    darPlano(t, silencioso);
+    const porNivel = G.level >= PLANO_NIVEL[t];
+    const gate = PLANO_PASO[t];
+    const porGuia = paso >= 0 && gate && tutoIdx(gate) >= 0 && paso >= tutoIdx(gate);
+    if (porNivel || porGuia) darPlano(t, silencioso);
   }
 }
 // ¿esta acción ya fue presentada por el tutorial? (embudo 13/8: hasta que el paso de una
@@ -1001,6 +990,41 @@ const TUTO_STEPS = [
   { id: "passclaim", n: 1, pr: 80,  txt: "Reclamá una recompensa del Pase de Batalla", panel: "ov-pass", ui: "[data-pfree]" },
   { id: "socket",    n: 1, pr: 120, txt: "Socketeá una runa en tu arma (Altar)", target: "altar", panel: "ov-altar" },
 ];
+/* 14/8: los 40 pasos agrupados en CAPÍTULOS reclamables — la guía opcional con forma de
+   diario de misiones. Cada capítulo junta pasos consecutivos y deja una recompensa que se
+   RECLAMA en el panel Objetivos (no cae sola): el que ignora la guía cobra igual cuando
+   le pasa por encima jugando libre. */
+const TUTO_CAPS = [
+  { id: "cosecha",  label: "Tu primera cosecha",   pasos: ["buyseed", "plant", "harvest", "sell"], premio: 25 },
+  { id: "herreria", label: "La Herrería",          pasos: ["place_store", "wood_st", "stone_st", "build_store"], premio: 50 },
+  { id: "horno",    label: "El Horno de Piedra",   pasos: ["place_horno", "wood", "stone", "build_horno", "crafttool"], premio: 50 },
+  { id: "cocina",   label: "La Cocina",            pasos: ["place_cocina", "woodc", "stonec", "build_cocina", "cook", "eat"], premio: 75 },
+  { id: "armas",    label: "Las Armas",            pasos: ["unlockarm", "craftarm", "equiparm"], premio: 75 },
+  { id: "zona",     label: "La Zona Negra",        pasos: ["portal", "kill", "kill5", "fish"], premio: 100 },
+  { id: "mineria",  label: "Minería avanzada",     pasos: ["mat", "craftpick", "mineore"], premio: 100 },
+  { id: "altar",    label: "El Altar de Runas",    pasos: ["place_altar", "stone_al", "wood_al", "build_altar", "upgrade"], premio: 150 },
+  { id: "maestria", label: "Maestría de la granja", pasos: ["dummy", "unlocknode", "chest", "invexp", "passclaim", "socket"], premio: 200 },
+];
+function capEstado(cap) {   // "hecho" | "activo" | "pendiente" (por el paso más avanzado de la cadena)
+  const idxs = cap.pasos.map(id => tutoIdx(id)).filter(i => i >= 0);
+  const fin = Math.max.apply(null, idxs);
+  if (G.tuto && (G.tuto.done || (G.tuto.step || 0) > fin)) return "hecho";
+  const ini = Math.min.apply(null, idxs);
+  return (G.tuto && (G.tuto.step || 0) >= ini) ? "activo" : "pendiente";
+}
+function capReclamar(id) {
+  const cap = TUTO_CAPS.find(c => c.id === id); if (!cap) return;
+  G.capsClaim = G.capsClaim || {};
+  if (G.capsClaim[id] || capEstado(cap) !== "hecho") return;
+  G.capsClaim[id] = 1;
+  G.plata += cap.premio;
+  log("Capítulo «" + cap.label + "» reclamado: +" + cap.premio + " de plata.", "gold");
+  if (window.celebrate) celebrate({ title: "¡CAPÍTULO COMPLETO!", sub: cap.label, big: false, reward: "+" + cap.premio + " de plata" });
+  // cierre de la primera sesión: el juego trabaja mientras no estás — la lección del género
+  if (id === "herreria") log("💡 Dejá una tanda plantada antes de salir: tus cultivos crecen aunque cierres el juego.", "good");
+  refreshHud(); if (typeof saveFarm === "function") saveFarm();
+  if (typeof refreshObjetivos === "function" && isOpen("ov-objetivos")) refreshObjetivos();
+}
 function tutoNeed(st) { return st ? (typeof st.need === "function" ? st.need() : (st.n || 1)) : 0; }
 function tutoTiene(st) {
   if (!st || !st.res) return 0;

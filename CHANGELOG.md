@@ -2249,6 +2249,23 @@ quiere o lo ignora y juega libre. Consecuencias, todas del mismo golpe:
 - **Interruptor "Guía de objetivos: Sí/No"** en Configuración (localStorage): apaga
   cartel y flechas; los objetivos siguen avanzando y premiando en silencio.
 
+### El ONBOARDING de 3 capas (14/8, aprobado por dirección)
+
+1. **Primeros 10 minutos**: comprá → plantá → cosechá → vendé + la Herrería (plano →
+   juntar 5+2 → depositar). Al reclamar ese capítulo, la lección del género: "💡 dejá una
+   tanda plantada antes de salir — tus cultivos crecen aunque cierres el juego".
+2. **Enseñanza por contacto**: los PLANOS caen por NIVEL puro, siempre (`planosSync`
+   reescrito) — el jugador libre que sube a nivel 3 recibe su plano del Horno con
+   celebración aunque ignore la guía; y si la guía va adelante del nivel, el plano cae
+   igual por su paso `place_` (ambos caminos abiertos, sin saneo retroactivo).
+3. **Panel "🎯 Objetivos"** (menú): los 40 pasos agrupados en **9 CAPÍTULOS reclamables**
+   (`TUTO_CAPS`): Tu primera cosecha (25) · La Herrería (50) · El Horno (50) · La Cocina
+   (75) · Las Armas (75) · La Zona Negra (100) · Minería avanzada (100) · El Altar (150)
+   · Maestría de la granja (200). Cada capítulo lista sus pasos con ✅/▶️/⬜, el premio se
+   RECLAMA con botón (no cae solo — `G.capsClaim`, persiste), y el que juega libre lo
+   cobra igual cuando le pasa por encima. Verificado por script: los 9 capítulos cubren
+   los 40 pasos exactos, sin repetidos y en el orden de la cadena.
+
 - **Vender platos también pasa por el embudo (playtest: vendió la Papa Asada en pleno
   "comé un plato" y quedó trabado)**: `sellDish` no consultaba `tutoPermite("sell")` —
   era la única venta sin embudo. Además el paso "eat" tiene red doble: permite recocinar

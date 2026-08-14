@@ -10,7 +10,7 @@ function log(m, k = "") { const b = $("log"); if (!b) return; const d = document
 /* ---- overlays ---- */
 function isOpen(id) { const e = $(id); return !!(e && e.classList.contains("show")); }
 function anyOvOpen() { return !!document.querySelector(".ov.show"); }
-const OV_REFRESH = { "ov-entrenando": () => entrenarSync(), "ov-clan": () => refreshClan(), "ov-misiones": () => refreshMisiones(), "ov-mapa": () => refreshMapa(), "ov-inv": () => refreshInv(), "ov-skills": () => refreshSkills(), "ov-equip": () => refreshEquip(), "ov-godhand": () => refreshGodHand(),
+const OV_REFRESH = { "ov-entrenando": () => entrenarSync(), "ov-clan": () => refreshClan(), "ov-misiones": () => refreshMisiones(), "ov-mapa": () => refreshMapa(), "ov-objetivos": () => refreshObjetivos(), "ov-inv": () => refreshInv(), "ov-skills": () => refreshSkills(), "ov-equip": () => refreshEquip(), "ov-godhand": () => refreshGodHand(),
   "ov-forge": () => refreshForge(), "ov-market": () => refreshMarket(), "ov-barn": () => refreshBarn(),
   "ov-cocina": () => refreshCooking(),
   "ov-horno": () => refreshHorno(),
@@ -1043,6 +1043,34 @@ function raidBotin(parte) {
 }
 
 /* ---- MAPA (10/8): dónde estás y a dónde podés ir ---- */
+/* ---- OBJETIVOS por capítulos (14/8): la guía opcional con forma de diario ---- */
+function refreshObjetivos() {
+  const box = $("objetivos-list"); if (!box) return;
+  if (typeof TUTO_CAPS === "undefined") { box.innerHTML = ""; return; }
+  const idxActual = (G.tuto && !G.tuto.done) ? (G.tuto.step || 0) : 1e9;
+  let h = "";
+  TUTO_CAPS.forEach(cap => {
+    const est = capEstado(cap);
+    const reclamado = !!(G.capsClaim && G.capsClaim[cap.id]);
+    const filas = cap.pasos.map(id => {
+      const i = tutoIdx(id); if (i < 0) return "";
+      const st = TUTO_STEPS[i];
+      const hecho = idxActual > i;
+      const activo = idxActual === i;
+      return '<div class="fds">' + (hecho ? "✅ " : (activo ? "▶️ " : "⬜ ")) + tutoTxt(st) + "</div>";
+    }).join("");
+    const btn = reclamado ? '<button class="ghost sm" disabled>Reclamado</button>'
+      : (est === "hecho" ? '<button class="gold sm" data-cap="' + cap.id + '">🎁 Reclamar ' + cap.premio + '</button>'
+        : '<button class="ghost sm" disabled>' + cap.premio + ' de plata</button>');
+    h += '<div class="forge-row' + (est === "activo" ? " eq" : (est === "hecho" && !reclamado ? "" : "")) + '"><div class="finfo">' +
+      '<div class="fnm">' + cap.label + (est === "hecho" ? ' <span class="tag">completo</span>' : (est === "activo" ? ' <span class="tag">en curso</span>' : "")) + '</div>' +
+      (est === "pendiente" ? '<div class="fds">Se abre al avanzar (o cumplilo jugando libre — se marca solo).</div>' : filas) +
+      '</div><div class="fbtns">' + btn + '</div></div>';
+  });
+  box.innerHTML = h;
+  box.querySelectorAll("[data-cap]").forEach(b => b.onclick = () => { capReclamar(b.dataset.cap); refreshObjetivos(); });
+}
+
 function refreshMapa() {
   const box = $("mapa-list"); if (!box) return;
   const aca = (window.GF && GF.scene) || "farm";
@@ -2054,7 +2082,7 @@ function refreshCosmeticos() {
    todas: el error se ve en la consola, el jugador recibe un aviso y el resto del
    juego sigue funcionando. */
 (function blindarPaneles() {
-  const paneles = ["refreshInv","refreshSkills","refreshEquip","refreshForge","refreshMarket","refreshBarn",
+  const paneles = ["refreshObjetivos","refreshInv","refreshSkills","refreshEquip","refreshForge","refreshMarket","refreshBarn",
     "refreshCooking","refreshHorno","refreshAltar","refreshEstablo","refreshCurtiduria","refreshOfrendas",
     "refreshIncursion","refreshP2P","refreshCosmeticos","refreshPass","refreshChest","refreshConfig",
     "refreshLb","refreshDaily","refreshSeedShop","refreshHotbar","refreshStam"];
