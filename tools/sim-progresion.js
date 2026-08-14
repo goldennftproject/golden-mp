@@ -27,7 +27,7 @@ const CROPS = [
   { k: "maiz", lvl: 10, seed: 720, price: 1680, growH: 24, xp: 1440 },
 ];
 const FARM_XP_LVLS = [0, 0, 25, 90, 225, 550, 1250, 2750, 5500, 9000, 14000, 17600, 25100];
-const FARM_PARCELA = { 1: 2, 2: 3, 4: 4, 6: 5, 7: 6, 12: 7 };
+const FARM_PARCELA = { 1: 3, 2: 3, 4: 4, 6: 5, 7: 6, 12: 7 };   // 14/8: se nace con 3 parcelas
 const SEED_DAILY = (lvl) => 18 + 2 * lvl;
 const XP_BASE = 100, XP_EXP = 2.7;   // curva de skills (Cultivo)
 const CD = { tree: 5400, rock: 7200 }, CD_FAST = { tree: 180, rock: 240 }, FAST_USES = 10;

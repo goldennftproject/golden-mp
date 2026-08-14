@@ -2258,6 +2258,10 @@ quiere o lo ignora y juega libre. Consecuencias, todas del mismo golpe:
    reescrito) — el jugador libre que sube a nivel 3 recibe su plano del Horno con
    celebración aunque ignore la guía; y si la guía va adelante del nivel, el plano cae
    igual por su paso `place_` (ambos caminos abiertos, sin saneo retroactivo).
+- **Se nace con 3 parcelas, no 2 (dirección)**: la primera misión planta 3 semillas y
+  tiene que haber 3 celdas donde apuntar. La tabla `FARM_PARCELA` sigue igual (nivel 2
+  "regalaba" la 3ª, que ahora ya viene de fábrica; la 4ª llega en nivel 4).
+
 ### Feedback del diseñador sobre el panel Objetivos (14/8, Discord) — 4 pedidos
 
 - **"Está muy llamativa y las recompensas está bien"** — panel aprobado.

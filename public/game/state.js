@@ -42,7 +42,7 @@ const G = {
   layoutPond: null,              // laguna movida: {col,row}
   fish: { comun: 0, raro: 0, epico: 0, legendario: 0 },
   plots: [],   // estado de las parcelas: [{state, readyAt, cropKey}] — lo llena la FarmScene
-  plotsOwned: 2,   // viernes (2): se nace con 2 parcelas; el resto se desbloquea
+  plotsOwned: 3,   // 14/8 (dirección): se nace con 3 parcelas — la primera misión planta 3 semillas y tiene que haber 3 celdas donde apuntar
   decos: [], decoBolsa: {}, godHand: false, zonasVistas: ["pantano"],   // adornos puestos · adornos sin colocar · NFT de siembra automática (10/8)
   daily: { day: 0, last: "" },   // cofre diario: día de racha reclamado (1..7) y fecha del último reclamo
   seedBuys: { date: "", count: 0 },   // cupo diario de semillas (compras + cofre)
