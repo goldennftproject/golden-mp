@@ -2309,6 +2309,10 @@ Onboarding rediseñado desde cero alrededor de una VOZ y un TABLÓN (v1 para tes
   de la flecha (RenderTexture con erase, 45% de sombra, se apaga en paneles/edición y al
   terminar la guía); en las INTERFACES, el botón apuntado queda iluminado y el resto del
   panel en penumbra (box-shadow gigante con agujero). Guía apagada = sin foco.
+- **v3 (playtest)**: el círculo salía CORRIDO con zoom — la posición en pantalla sale de
+  `cam.worldView`, no de `scroll` (difieren cuando hay zoom). Y decisión de dirección:
+  en el MUNDO ya no hay flecha triangular — el círculo de luz es el ÚNICO señalador
+  (la flecha DOM sigue viva dentro de interfaces y sobre la barra rápida).
 
 ### Feedback del diseñador sobre el panel Objetivos (14/8, Discord) — 4 pedidos
 

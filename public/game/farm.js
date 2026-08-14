@@ -1312,10 +1312,9 @@ class FarmScene extends Phaser.Scene {
     }
     else { const o = (this.objs || []).find(o => o.type === st.target && !o.oculto); if (o) { x = o.cx; y = o.by - (o.sprite ? o.sprite.displayHeight : 60) - 10; } }   // sin plano colocado no hay a qué apuntar (12/8)
     if (x == null) return;
-    const tri = this.add.triangle(x, y, 0, 0, 16, 0, 8, 12, 0xffd75e).setStrokeStyle(2, 0x241505, 1).setDepth(99990);
-    this.tutoArrow = tri;
-    this.focoTarget = { x, y: y + 40 };   // 14/8: el FOCO del mundo apunta a lo mismo que la flecha
-    this.tutoTw = this.tweens.add({ targets: tri, y: y - 10, duration: 420, yoyo: true, repeat: -1, ease: "Sine.easeInOut" });
+    // 14/8 v2 (dirección): en el MUNDO ya no hay flecha — el CÍRCULO DE LUZ del foco es el
+    // único señalador. La flecha DOM sigue viva para interfaces y barra rápida.
+    this.focoTarget = { x, y: y + 50 };
   }
 
   // TINTE DE LA VETA (9/8): el color va sobre la roca ENTERA, no solo sobre las pepitas.
@@ -2637,8 +2636,10 @@ class FarmScene extends Phaser.Scene {
     }
     const W = this.scale.width, H = this.scale.height;
     if (!this.focoRT) this.focoRT = this.add.renderTexture(0, 0, W, H).setOrigin(0, 0).setScrollFactor(0).setDepth(99980);
+    // OJO con el zoom: la posición en pantalla sale de worldView (scroll ≠ worldView cuando
+    // hay zoom — el círculo salía corrido, visto en playtest)
     const cam = this.cameras.main, z = cam.zoom || 1;
-    const sx = (this.focoTarget.x - cam.scrollX) * z, sy = (this.focoTarget.y - cam.scrollY) * z;
+    const sx = (this.focoTarget.x - cam.worldView.x) * z, sy = (this.focoTarget.y - cam.worldView.y) * z;
     this.focoRT.setVisible(true);
     this.focoRT.clear();
     this.focoRT.fill(0x100b04, 0.45, 0, 0, W, H);
