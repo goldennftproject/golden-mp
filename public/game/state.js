@@ -193,6 +193,10 @@ function nodoSumar(o) { G.nodoUsos = G.nodoUsos || {}; G.nodoUsos[o.i] = nodoUso
 function nodoCd(o, clave, cdLargo) {
   const r = CD_RAPIDO[clave];
   if (r && nodoUsos(o) < r.veces) return r.seg;   // todavía está en su etapa de arranque rápido
+  // 14/8 (simulación de tedio): mientras el paso del tutorial pide ESTE recurso, el nodo
+  // NUNCA entra al enfriamiento largo. Sin esto, "juntá 20 de madera" con 1 árbol y CD de
+  // 90 min eran 3,5 HORAS de tutorial (medido) — el tedio que reportó el diseñador.
+  if (r && typeof tutoBoost === "function" && tutoBoost(clave === "piedra" ? "rock" : clave) < 1) return r.seg;
   return cdLargo;
 }
 function seedBuysToday() {
@@ -319,16 +323,16 @@ var TUTO_PERMISOS = {
   sell:        ["sell", "harvest"],
   buyseed:     ["buyseed"],
   place_store: ["obra"],
-  wood_st:     ["chop", "crafttool"],
+  wood_st:     ["chop", "crafttool", "cultivar"],   // 14/8: cultivar más árboles = juntar en paralelo (anti-tedio)
   stone_st:    ["mine", "crafttool"],
   build_store: ["obra"],
-  wood:        ["chop", "crafttool"],
+  wood:        ["chop", "crafttool", "cultivar"],
   stone:       ["mine", "crafttool"],
   place_horno: ["obra"],
   build_horno: ["obra"],
   silver:      ["sell", "plant", "harvest", "buyseed", "chop", "mine", "crafttool", "plotunlock"],   // 13/8 v3: desbloquear tierras para plantar más es inversión, no exploit (playtest)
   crafttool:   ["crafttool"],
-  woodc:       ["chop", "crafttool"],
+  woodc:       ["chop", "crafttool", "cultivar"],
   stonec:      ["mine", "crafttool"],
   place_cocina: ["obra"],
   build_cocina: ["obra"],
@@ -345,8 +349,8 @@ var TUTO_PERMISOS = {
   // Fixes.docx 14/8 #2: la cadena del Altar cruza media economía (oro → Pico de Oro →
   // bronce → barras → Horno…), así que sus 4 pasos dejan el loop ENTERO abierto
   place_altar: ["obra", "chop", "mine", "sell", "plant", "harvest", "buyseed", "crafttool", "craftpick", "mat", "plotunlock"],
-  stone_al:    ["mine", "crafttool", "craftpick", "mat", "sell", "plant", "harvest", "buyseed"],
-  wood_al:     ["chop", "crafttool", "craftpick", "mat", "sell", "plant", "harvest", "buyseed"],
+  stone_al:    ["mine", "crafttool", "craftpick", "mat", "sell", "plant", "harvest", "buyseed", "cultivar"],
+  wood_al:     ["chop", "crafttool", "craftpick", "mat", "sell", "plant", "harvest", "buyseed", "cultivar"],
   build_altar: ["obra", "chop", "mine", "sell", "plant", "harvest", "buyseed", "crafttool", "craftpick", "mat", "plotunlock"],
   upgrade:     ["altar", "eat"],
   mat:         ["mat", "chop", "mine", "crafttool"],
@@ -1090,19 +1094,6 @@ function tutoEvent(tipo) {
   G.tuto.n = (G.tuto.n || 0) + 1;
   if (G.tuto.n < st.n) { if (typeof tutoRefresh === "function") tutoRefresh(); return; }
   tutoDone(st);
-}
-// Fixes.docx 14/8 #2: saltar el tutorial a voluntad — se libera todo, los planos pendientes
-// caen según nivel (vía planosSync) y no se cobra la recompensa final (esa es de terminarlo)
-function tutoSaltar() {
-  if (!G.tuto || G.tuto.done) return;
-  G.tuto.done = true;
-  log("Tutorial salteado. Todo desbloqueado — los objetivos ya no te guían.", "warn");
-  toast("Tutorial salteado — la granja es toda tuya");
-  if (typeof planosSync === "function") planosSync(false);
-  if (typeof tutoRefresh === "function") tutoRefresh();
-  if (window.farmScene && window.farmScene.updateTutoArrow) { try { window.farmScene.updateTutoArrow(); } catch (e) {} }
-  if (typeof saveFarm === "function") saveFarm();
-  refreshHud();
 }
 function tutoDone(st) {
   // paso cumplido: tilde + sonido + avance automático (doc)

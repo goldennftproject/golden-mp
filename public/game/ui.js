@@ -1736,8 +1736,6 @@ function ponerAdornoElegido() {
   if (sndBtn) { sndLabel(); sndBtn.onclick = () => { if (window.sfxOn) sfxOn(!(window.sfxIsOn && sfxIsOn())); sndLabel(); if (window.sfx) sfx("click"); }; }
   const cr = $("cfg-reset"); if (cr) cr.onclick = doFarmReset;
   const ed = $("edit-done"); if (ed) ed.onclick = () => setEditMode(false);
-  // Fixes.docx 14/8 #2: saltar el tutorial (con confirmación — es un camino sin vuelta)
-  { const ts = $("tuto-skip"); if (ts) ts.onclick = () => askConfirm("¿Saltar el tutorial? Se desbloquea todo, pero los objetivos dejan de guiarte y no cobrás la recompensa final.", () => { if (typeof tutoSaltar === "function") tutoSaltar(); }); }
   // 13/8: botón Cancelar del modo colocar — visible solo mientras hay algo "en la mano"
   window.syncPlacingUI = (on) => { const b = $("edit-cancelar"); if (b) b.style.display = on ? "" : "none"; };
   { const ec = $("edit-cancelar"); if (ec) ec.onclick = () => { const sc = window.farmScene; if (sc && sc.cancelarColocar) sc.cancelarColocar(); }; }

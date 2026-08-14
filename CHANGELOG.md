@@ -2134,9 +2134,9 @@ Ahora la cadena de guía no tiene puntas sueltas:
 - **#2 El Altar de Runas era un SOFTLOCK de manual**: su receta pide 20 de ORO, el oro
   pide Pico de Oro, y los picos se enseñaban DESPUÉS con el embudo cerrado. La cadena del
   Altar ahora va después de fundición/picos (TUTO_VER=9) y sus 4 pasos dejan el loop
-  entero abierto (mat, craftpick, venta…). Además, botón **✕ Saltar tutorial** en el
-  cartel del objetivo (con confirmación): libera todo, los planos caen por nivel y la
-  recompensa final no se cobra.
+  entero abierto (mat, craftpick, venta…). El botón "saltar tutorial" que sugería el doc
+  se probó y se QUITÓ por decisión de dirección (14/8): el tutorial es obligatorio por
+  diseño y el softlock ya está arreglado de fondo.
 - **#3 "Solo deja comprar de a 1 semilla"**: era el sub-objetivo — al comprar UNA, el
   eslabón saltaba a "plantá" y bloqueaba el resto de la tanda. Los eslabones de plantar
   y de "están creciendo" ahora mantienen `buyseed` (y `plant`) permitidos.
@@ -2146,6 +2146,24 @@ Ahora la cadena de guía no tiene puntas sueltas:
   viaja desde la escena DONDE ESTÁS (antes usaba farmScene aunque estuvieras en la plaza).
 - **#6 NFTs separados de los adornos**: pestaña **NFTs** propia en la Tienda con el GOD
   HAND (y nota del Mercado de jugadores); Adornos queda solo con parcelas y decoración.
+
+### El TEDIO medido con simulación (14/8, dirección: "no aflojar el embudo — hacerlo eficiente")
+
+La sugerencia del diseñador de "quitar restricciones" venía de un problema real: el
+camino guiado era LENTO, no estrecho. Simulación económica con los números del código
+(`sim-tedio.js`): "juntá 20 de madera" para la Cocina con 1 árbol y CD largo de 90 min
+eran **3,5 HORAS**; la piedra del Altar, **7 horas**; las 1000 de plata de Armas, **~2-3
+horas y 122 ciclos** de papa. Arreglos (el embudo NO se toca):
+
+- **CD corto mientras el paso pide ese recurso** (`nodoCd`): el árbol/roca del objetivo
+  nunca entra al enfriamiento largo durante su paso — 180/240 s que el boost deja en
+  ~22/29 s. La Cocina pasa de 3,5 h a **~4 min** (medido en la simulación).
+- **Cultivar árboles permitido en los pasos de madera** (`cultivar` en wood_st/wood/
+  woodc/wood_al): invertir madera en el 2º/3º árbol paraleliza la juntada — es la misma
+  lógica del `plotunlock` en los pasos de plata. Las rocas ya se abren solas por nivel.
+- **Dos números quedan para el diseñador** (TODO, con la medición): `ARMAS_UNLOCK_PLATA`
+  1000 (~100 min aun con 8 parcelas) y los 20 de ORO del Altar (cadena de picos de ~700
+  plata). El tutorial no puede arreglarlos sin tocar balance.
 
 Y el "bloqueo momentáneo" al colocar un plano era el REINICIO de escena (reconstruye
 ~570 sprites de golpe): ahora pasa detrás de un telón de 160 ms con el fundido que ya

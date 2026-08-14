@@ -17,6 +17,9 @@
 - [ ] **Alimentar animales** (Fixes.docx 14/8 #1 "Comida>material"): implementado como "preferido +15 / cualquier cultivo +8" — confirmar si era esto o alimentar con PLATOS cocinados.
 - [ ] Que pruebe los 19 fixes de fixs.docx (todos implementados, ver CHANGELOG Día 16).
 - [ ] Números tuneables por si quiere ajustar: `DROP_CHANCE_MULT` (0.6), `PLOT_MAX` (60), `PLOT_EXTRA_SUBA` (1.12), `GODHAND_PLATA_HORA` (100), `GODHAND_SUBA_HORA` (1.10).
+- [ ] **BALANCE con tedio medido por simulación (14/8)** — dos números que ni el CD corto arregla:
+  - `ARMAS_UNLOCK_PLATA` = **1000**: incluso con boost y 8 parcelas son ~100 min y 61 ciclos de papa dentro del tutorial. Sugerencia: 150–250, o que cuente plata GANADA acumulada en vez de plata en mano.
+  - **Altar: 20 de ORO**: cada oro pide 1 uso de Pico de Oro (35 plata + 5 bronce c/u) y el bronce pide picos de bronce → cadena de ~700+ plata y decenas de crafteos. Sugerencia: bajar a 5-8 de oro o cambiar oro por bronce.
 - [ ] Aprobación de los **12 edificios nuevos** (si aprueba → re-animar el portal).
 - [ ] Usos de **tablones y barras**, **cerca premium**, tabla definitiva de **stats del bestiario**.
 - [ ] "#3 Agregar vallas laterales" — pedir aclaración: ¿vallas de la cerca perimetral o poder comprar más vallas de adorno? (único punto ambiguo de fixs.docx)

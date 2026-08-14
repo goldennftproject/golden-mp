@@ -168,9 +168,6 @@
   /* tutorial guiado (doc maestro 2/8): cartel con la meta actual */
   #tuto{position:fixed;left:50%;transform:translateX(-50%);top:54px;z-index:7;display:flex;align-items:center;gap:8px;background:none;border:8px solid transparent;border-image:url("assets/ui/badge_wood.png") 26 fill round;image-rendering:pixelated;padding:1px 10px;font-size:13px;font-weight:700;color:#fff;text-shadow:-1px 0 #241505,1px 0 #241505,0 -1px #241505,0 1px #241505;pointer-events:none}
   #tuto.hidden{display:none}
-  /* Fixes.docx 14/8 #2: saltar el tutorial — chiquito y discreto, pero clickeable (el cartel es pointer-events:none) */
-  #tuto-skip{pointer-events:auto;border:none;border-image:none;background:rgba(36,21,5,.55);color:#e8d8b0;font-size:10px;line-height:1;padding:2px 5px;border-radius:5px;margin-left:6px;box-shadow:none;cursor:pointer}
-  #tuto-skip:hover{background:rgba(36,21,5,.85);color:#fff}
   #tuto .k{color:#ffe9ac;font-weight:800;font-size:12px}
   #tuto b{color:#fff}
   #tuto .check{color:#8fd14f;font-size:16px;animation:tcheck .5s cubic-bezier(.34,1.56,.64,1)}
@@ -545,7 +542,7 @@
 
   <!-- HUD -->
   <div id="celeb" class="hidden"></div>
-  <div id="tuto" class="hidden"><span class="k">Objetivo</span><b id="tuto-txt"></b><span id="tuto-n"></span><button id="tuto-skip" title="Saltar el tutorial">✕</button></div>
+  <div id="tuto" class="hidden"><span class="k">Objetivo</span><b id="tuto-txt"></b><span id="tuto-n"></span></div>
   <div class="hudbar">
     <div class="brand" style="display:flex;align-items:center;gap:12px"><h1>GOLDEN FARM</h1>
       <div class="pill" title="Ventanas del juego conectadas ahora"><span class="k">Jugadores en línea</span><b id="s-online">1</b></div>
