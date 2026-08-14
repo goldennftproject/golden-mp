@@ -4,7 +4,7 @@ GF.spr = (k) => "assets/farm/" + k + ".png?a=7";   // ?a=N rompe el caché de lo
 
 // --- estado principal (con algunos recursos de arranque para probar los menús) ---
 const G = {
-  plata: 0, golden: 20, level: 1, prestige: 0, week: 1,
+  plata: 3, golden: 20, level: 1, prestige: 0, week: 1,   // 14/8: nacés con 3 de plata (el 1er objetivo es COMPRAR tus semillas)
   hp: 100, hpMax: 100, swordOwned: false, bowOwned: false, swordWoodOwned: false, firstCropDone: false,   // combate (Fase D)
   armasUnlocked: false,          // viernes (2): la pestana Armas de la Herreria se paga (20 madera + 20 piedra + 1000 plata)
   treesOpen: [0], rocksOpen: [0],  // viernes (2): índices de árboles/piedras desbloqueados (cualquiera, sin orden — pedido Discord)
@@ -27,7 +27,7 @@ const G = {
     tablon: 0, barra_piedra: 0, barra_bronce: 0, barra_hierro: 0, barra_oro: 0,
     papa: 0, zanahoria: 0, cebolla: 0, calabacin: 0, repollo: 0, calabaza: 0, brocoli: 0, girasol: 0, trigo: 0, maiz: 0,
     fibra: 0, pelaje: 0, cuero: 0, colmillo: 0, esencia_runica: 0, esencia_oscura: 0 },
-  seeds: { papa: 3, zanahoria: 0, cebolla: 0, calabacin: 0, repollo: 0, calabaza: 0, brocoli: 0, girasol: 0, trigo: 0, maiz: 0 },  // viernes (2): la bolsa nace con SOLO 3 semillas de papa
+  seeds: { papa: 0, zanahoria: 0, cebolla: 0, calabacin: 0, repollo: 0, calabaza: 0, brocoli: 0, girasol: 0, trigo: 0, maiz: 0 },  // 14/8: la bolsa nace VACÍA — las 3 semillas se compran con la plata inicial (1er objetivo)
   selSeed: "papa",   // semilla elegida para plantar
   picks: { owned: { stone: true }, dur: { stone: 15 }, eq: "stone" },   // doc 2/8: set de arranque con usos generosos
   tools: { axe: 15, rod: 15 },   // doc 2/8: 15 usos de arranque; después se craftean de a 1 uso
@@ -318,10 +318,10 @@ function tutoDesbloqueado(stepId) {
 // hachas cuando hay que talar porque se gastan; el loop entero cuando hay que juntar
 // plata; cocinar cuando el paso lo pide). Al terminar el tutorial, todo libre.
 var TUTO_PERMISOS = {
-  plant:       ["plant"],
+  buyseed:     ["buyseed"],
+  plant:       ["plant", "buyseed"],   // 14/8: si compró menos de 3 semillas, puede volver por más
   harvest:     ["harvest"],
   sell:        ["sell", "harvest"],
-  buyseed:     ["buyseed"],
   place_store: ["obra"],
   wood_st:     ["chop", "crafttool", "cultivar"],   // 14/8: cultivar más árboles = juntar en paralelo (anti-tedio)
   stone_st:    ["mine", "crafttool"],
@@ -330,7 +330,6 @@ var TUTO_PERMISOS = {
   stone:       ["mine", "crafttool"],
   place_horno: ["obra"],
   build_horno: ["obra"],
-  silver:      ["sell", "plant", "harvest", "buyseed", "chop", "mine", "crafttool", "plotunlock"],   // 13/8 v3: desbloquear tierras para plantar más es inversión, no exploit (playtest)
   crafttool:   ["crafttool"],
   woodc:       ["chop", "crafttool", "cultivar"],
   stonec:      ["mine", "crafttool"],
@@ -338,8 +337,7 @@ var TUTO_PERMISOS = {
   build_cocina: ["obra"],
   cook:        ["cook", "plant", "harvest"],
   eat:         ["eat"],
-  silverarm:   ["sell", "plant", "harvest", "buyseed", "chop", "mine", "crafttool", "plotunlock"],
-  unlockarm:   ["unlockarm"],
+  unlockarm:   ["unlockarm", "chop", "mine", "crafttool", "repair"],   // 14/8: el desbloqueo pide 20 madera + 20 piedra — se juntan acá (la plata llega de adelanto)
   craftarm:    ["craftarm"],
   equiparm:    ["equiparm"],
   portal:      ["portal", "cook", "eat"],
@@ -936,12 +934,13 @@ const TOOL_DEF = {
 //   need  = cantidad exacta que pide el paso siguiente (sale de las recetas reales del juego)
 //   target= a qué apunta la flecha en el mundo · panel/ui = qué botón se resalta dentro de la ventana
 const TUTO_STEPS = [
+  // 14/8 (dirección): el arranque enseña el ciclo COMPLETO en su orden natural — nacés con
+  // 3 de plata (no con semillas): comprá → plantá → cosechá → vendé. Con eso el loop quedó
+  // aprendido y no se vuelve a pedir: de acá en más la plata repetitiva llega de PREMIO.
+  { id: "buyseed",   n: 1, txt: "Comprá 3 semillas de papa en el Mercado (tenés 3 de plata)", target: "market", panel: "ov-market", ui: "[data-buy='papa']" },
   { id: "plant",     n: 3, txt: "Plantá tus 3 papas en las parcelas",              target: "plot" },
   { id: "harvest",   n: 3, txt: "Cosechá tus 3 papas",                             target: "plot" },
-  { id: "sell",      n: 1, txt: "Vendé tus papas en el Mercado (necesitás plata)", target: "market", panel: "ov-market", ui: "#vb-papa" },
-  // (13/8 v2: el paso "replantá una papa" se retiró — era reiterativo y dejaba una papa
-  //  plantada que ningún paso pedía cosechar. Plantar ya quedó aprendido en el paso 1.)
-  { id: "buyseed",   n: 1, txt: "Con esa plata comprá semillas de papa",           target: "market", panel: "ov-market", ui: "[data-buy='papa']" },
+  { id: "sell",      n: 1, txt: "Vendé tus papas en el Mercado",                   target: "market", panel: "ov-market", ui: "#vb-papa" },
   // — la Herrería ya no viene hecha (10/8): es la primera construcción, y es barata a propósito —
   // 13/8 v2 (audio): el orden LÓGICO — primero se coloca el plano (la obra queda a la vista
   // con su cartel), DESPUÉS se juntan sus materiales, y al final se depositan. Lo depositado
@@ -959,9 +958,7 @@ const TUTO_STEPS = [
   { id: "stone", res: "piedra", dep: "horno", need: () => BUILD_DEF.horno.cost.piedra || 8,
     txt: "Juntá # de piedra picando rocas (para la obra del Horno)",               target: "rock" },
   { id: "build_horno", n: 1, txt: "Depositá los materiales en la obra del Horno (clic encima)", target: "horno" },
-  // — cadena del Hacha: primero la plata que cuesta, después craftearla —
-  { id: "silver", res: "plata", need: () => TOOL_CRAFT.axe.plata || 10,
-    txt: "Juntá # de plata vendiendo cosecha (para el Hacha)",                     target: "market", panel: "ov-market", ui: "#vb-papa" },
+  // — el Hacha: la plata llega de ADELANTO al entrar (ya sabés ganarla — dirección 14/8) —
   { id: "crafttool", n: 1, pr: 25, txt: "Crafteá un Hacha en la Herrería",          target: "store", panel: "ov-forge", ui: "[data-ctool='axe']" },
   // ——— ETAPA 2: los sistemas nuevos (Cocina, Armas, Zona Negra, Pesca, Altar) ———
   { id: "place_cocina", n: 1, txt: "Colocá el plano de la Cocina (barra rápida)", target: "cocina", hot: "cocina" },
@@ -972,9 +969,8 @@ const TUTO_STEPS = [
   { id: "build_cocina", n: 1, pr: 50,  txt: "Depositá los materiales en la obra de la Cocina (clic encima)", target: "cocina" },
   { id: "cook",     n: 1, pr: 50,  txt: "Cociná tu primer plato: Papa Asada",   target: "cocina", panel: "ov-cocina", ui: "[data-cook='papa_asada']" },
   { id: "eat",      n: 1, pr: 25,  txt: "Comé un plato desde la bolsa (te da un buff)" },
-  { id: "silverarm", res: "plata", need: () => ARMAS_UNLOCK_PLATA || 1000,
-    txt: "Juntá # de plata para abrir la forja de Armas",                       target: "market", panel: "ov-market", ui: "#vb-papa" },
-  { id: "unlockarm", n: 1,        txt: "Desbloqueá la pestaña Armas en la Herrería", target: "store", panel: "ov-forge", ui: "#forge-unlock-armas" },
+  // — la forja de Armas: la plata del desbloqueo llega de ADELANTO; los materiales se juntan acá —
+  { id: "unlockarm", n: 1,        txt: "Desbloqueá la pestaña Armas en la Herrería (juntá sus materiales)", target: "store", panel: "ov-forge", ui: "#forge-unlock-armas" },
   { id: "craftarm",  n: 1, pr: 50, txt: "Forjá tu primera arma: Espada de Madera", target: "store", panel: "ov-forge", ui: "[data-carm='espada_madera']" },
   { id: "equiparm",  n: 1,        txt: "Equipá tu arma",                        target: "store", panel: "ov-forge", ui: "[data-eqarm='espada_madera']" },
   { id: "portal",    n: 1,        txt: "Cruzá el portal a la Zona Negra",       target: "portal" },
@@ -1077,9 +1073,9 @@ function tutoBoost(clase) {
   const st = (typeof tutoActivo === "function") ? tutoActivo() : null;
   if (!st) return 1;
   const mapa = {
-    papa:  ["plant", "harvest", "sell", "buyseed", "silver"],   // el arranque entero fluye (plant2 se retiró 13/8)
-    tree:  ["wood", "woodc", "wood_st", "wood_al"],
-    rock:  ["stone", "stonec", "stone_st", "stone_al"],
+    papa:  ["plant", "harvest", "sell", "buyseed"],   // el arranque entero fluye (silver/plant2 retirados)
+    tree:  ["wood", "woodc", "wood_st", "wood_al", "unlockarm"],   // 14/8: los materiales de la forja de Armas también corren acelerados
+    rock:  ["stone", "stonec", "stone_st", "stone_al", "unlockarm"],
     horno: ["mat"],
   };
   if ((mapa[clase] || []).includes(st.id)) return TUTO_BOOST;
@@ -1102,7 +1098,7 @@ var TUTO_REWARD_PLATA = 100;   // gran recompensa del cierre (editable)
 // después usan el tiempo normal del cultivo. 0 en el panel = sin excepción.
 var FIRST_GROW_MS = 45000;   // tope de crecimiento de las semillas de arranque
 var FIRST_GROW_N = 3;        // cuántas semillas de arranque tienen ese trato (las 3 papas del inicio)
-var TUTO_VER = 9;   // subir este número cuando cambie la CADENA de pasos (invalida progresos viejos) · v9 (14/8): Altar después de picos/fundición (Fixes.docx #2)
+var TUTO_VER = 10;   // subir este número cuando cambie la CADENA de pasos (invalida progresos viejos) · v10 (14/8): arranque comprá→plantá→cosechá→vendé + plata repetitiva de ADELANTO (sin silver/silverarm)
 function tutoActivo() { return G.tuto && !G.tuto.done ? TUTO_STEPS[G.tuto.step] : null; }
 // migración: si el guardado trae una cadena vieja, los pasos ya no significan lo mismo → se recalcula
 function tutoMigrar() {
@@ -1124,6 +1120,8 @@ function tutoHecho(st) {
     if (st.res) hecho = tutoTiene(st) >= tutoNeed(st);
     // 13/8: pasos "colocá el plano" — hechos si la obra ya está en el piso (o el edificio construido)
     else if (st.id && st.id.indexOf("place_") === 0) { const t = st.id.slice(6); hecho = !!((G.obras && G.obras[t]) || (G.built && G.built[t])); }
+    // 14/8: el 1er paso ("comprá tus semillas") ya está hecho si hay semillas o si ya cosechó alguna vez
+    else if (st.id === "buyseed") hecho = Object.keys(G.seeds || {}).some(k => (G.seeds[k] || 0) > 0) || !!G.firstCropDone;
     else if (st.id === "build_store")  hecho = !!(G.built && G.built.store);
     else if (st.id === "build_horno")  hecho = !!(G.built && G.built.horno);
     else if (st.id === "build_cocina") hecho = !!(G.built && G.built.cocina);
@@ -1158,7 +1156,9 @@ function tutoHecho(st) {
    En los pasos tempranos el kit de arranque alcanza → adelanto 0 (la primera vez se
    aprende, las repeticiones se pagan). Se otorga UNA vez por paso (G.tuto.adel). */
 function tutoAdelanto() {
-  const st = tutoActivo(); if (!st || !st.res || G.tuto.adel === G.tuto.step) return;
+  const st = tutoActivo(); if (!st || G.tuto.adel === G.tuto.step) return;
+  const daAdelanto = st.res === "madera" || st.res === "piedra" || st.id === "crafttool" || st.id === "unlockarm";
+  if (!daAdelanto) return;
   if (st.id === "wood_st" || st.id === "stone_st") { G.tuto.adel = G.tuto.step; return; }   // las primeras juntadas: starter kit
   let plata = 0;
   const costoHacha = (TOOL_CRAFT && TOOL_CRAFT.axe && TOOL_CRAFT.axe.plata) || 10;
@@ -1171,6 +1171,20 @@ function tutoAdelanto() {
     const repas = Math.max(0, falta - usos);
     const madLibre = Math.max(0, Math.floor(G.res.madera || 0));   // aprox: la reserva fina la maneja el guardia
     plata = Math.max(0, repas - Math.max(0, toolCount("axe")) - madLibre) * costoHacha;
+  } else if (st.id === "crafttool") {
+    // 14/8 (dirección): ya no hay paso "juntá 10 de plata" — el hacha de la lección se paga sola
+    plata = Math.max(0, costoHacha - Math.floor(G.plata));
+  } else if (st.id === "unlockarm") {
+    // el paso "juntá 1000" también se retiró: el desbloqueo llega de adelanto, y encima las
+    // herramientas para juntar sus 20 madera + 20 piedra (los materiales se juntan acá)
+    const base = (typeof ARMAS_UNLOCK_PLATA !== "undefined") ? ARMAS_UNLOCK_PLATA : 1000;
+    const cost = (typeof ARMAS_UNLOCK_COST !== "undefined" && ARMAS_UNLOCK_COST) || {};
+    const madNec = Math.max(0, (cost.madera || 0) - Math.floor(G.res.madera || 0));
+    const pieNec = Math.max(0, (cost.piedra || 0) - Math.floor(G.res.piedra || 0));
+    const hachas = Math.max(0, madNec - toolCount("axe"));
+    const usos = (G.picks && G.picks.eq) ? Math.floor((G.picks.dur && G.picks.dur[G.picks.eq]) || 0) : 0;
+    const repas = Math.max(0, pieNec - usos);
+    plata = Math.max(0, base - Math.floor(G.plata)) + (hachas + repas) * costoHacha;
   }
   G.tuto.adel = G.tuto.step;
   if (plata > 0) {

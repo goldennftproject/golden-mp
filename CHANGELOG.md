@@ -2214,6 +2214,21 @@ horas y 122 ciclos** de papa. Arreglos (el embudo NO se toca):
   malgasta el adelanto. 7 casos verificados, incluido el del playtest (5/15 y pico muerto
   → +30 exactos).
 
+### Tutorial v10 — el arranque al derecho y CERO pasos de plata (14/8, dirección)
+
+- **Nacés con 3 de plata, no con semillas**: el 1er objetivo es COMPRAR las 3 semillas en
+  el Mercado → plantá → cosechá → vendé. El ciclo completo en su orden natural, y el
+  viejo paso 4 ("con esa plata comprá semillas") murió: era la misma lección repetida.
+- **Los pasos "juntá plata" desaparecieron** (silver y silverarm): "la primera vez se
+  aprende, las repeticiones se pagan". El Hacha de la lección llega con su adelanto (lo
+  que falte para 10) y la forja de Armas también: adelanto de `ARMAS_UNLOCK_PLATA` + las
+  herramientas para juntar sus 20 madera + 20 piedra, que ahora se juntan EN el paso
+  (chop/mine/crafttool permitidos y con boost + CD corto — `unlockarm` entró al mapa de
+  boost de árboles y rocas).
+- La cadena queda en **40 pasos**. Verificación completa: hermética, sin huérfanos,
+  planos a tiempo, place<juntá<depósito, y 5 escenarios nuevos de adelanto (crafttool
+  parcial, unlockarm pelado/parcial, arranque sin adelanto). `TUTO_VER=10`.
+
 Y el "bloqueo momentáneo" al colocar un plano era el REINICIO de escena (reconstruye
 ~570 sprites de golpe): ahora pasa detrás de un telón de 160 ms con el fundido que ya
 existía (`reiniciarGranjaSuave`), también al colocar parcelas — el mismo parpadeo se lee
