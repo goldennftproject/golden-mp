@@ -2228,6 +2228,11 @@ horas y 122 ciclos** de papa. Arreglos (el embudo NO se toca):
 - La cadena queda en **40 pasos**. Verificación completa: hermética, sin huérfanos,
   planos a tiempo, place<juntá<depósito, y 5 escenarios nuevos de adelanto (crafttool
   parcial, unlockarm pelado/parcial, arranque sin adelanto). `TUTO_VER=10`.
+- **El depósito de la obra también respetaba el nivel de granja (playtest: "la Cocina
+  pide nivel 5")**: `obraDepositar` tenía el mismo candado que ya se había sacado de la
+  entrega del plano. Misma regla en ambos: durante el tutorial manda el PASO, no el nivel
+  (con el embudo estricto no hay forma de subir de nivel para destrabar); fuera del
+  tutorial el candado sigue vigente.
 - **ADELANTO v2 — el KIT entrega HERRAMIENTAS, no plata (dirección, tras quedar
   bloqueado en 5/15 piedras)**: el pico a 0 usos se DESTRUYE (`destroyPick`), NO se
   repara — toda la cadena de "reparalo (1 madera)" estaba construida sobre un supuesto

@@ -545,7 +545,10 @@ function obraFalta(t) {
 }
 function obraDepositar(t) {   // devuelve true si con este depósito quedó COMPLETA
   const b = BUILD_DEF[t]; if (!b || !obraDe(t)) return false;
-  if (b.lvl && G.level < b.lvl) { toast(b.label + " pide granja nivel " + b.lvl); return false; }
+  // 14/8: durante el tutorial manda el PASO, no el nivel — misma regla que la entrega del
+  // plano (planosSync): con el embudo estricto no hay forma de subir de nivel para destrabar
+  const tutoOn = G.tuto && !G.tuto.done;
+  if (!tutoOn && b.lvl && G.level < b.lvl) { toast(b.label + " pide granja nivel " + b.lvl); return false; }
   G.obraDep = G.obraDep || {}; const dep = G.obraDep[t] = G.obraDep[t] || {};
   const puso = [];
   for (const [r, falta] of obraFalta(t)) {
