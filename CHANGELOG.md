@@ -2125,6 +2125,28 @@ Ahora la cadena de guía no tiene puntas sueltas:
   lugar. Al recomprar semillas, `buySeed` la vuelve a poner en el primer hueco libre.
   Herramientas y picos conservan su lógica de siempre.
 
+## Día 18 — Viernes 14/08 · Fixes.docx del diseñador (6 puntos)
+
+- **#1 Alimentar animales**: siempre se puede — el cultivo PREFERIDO da la felicidad
+  entera (+15); sin él, aceptan CUALQUIER cultivo (+8, `FELIZ_COMIDA_GENERICA`). Antes la
+  alpaca solo comía trigo (nivel alto) y se moría de hambre sin remedio. ("Comida>material"
+  quedó anotado en TODO para confirmar si además quería alimentar con platos.)
+- **#2 El Altar de Runas era un SOFTLOCK de manual**: su receta pide 20 de ORO, el oro
+  pide Pico de Oro, y los picos se enseñaban DESPUÉS con el embudo cerrado. La cadena del
+  Altar ahora va después de fundición/picos (TUTO_VER=9) y sus 4 pasos dejan el loop
+  entero abierto (mat, craftpick, venta…). Además, botón **✕ Saltar tutorial** en el
+  cartel del objetivo (con confirmación): libera todo, los planos caen por nivel y la
+  recompensa final no se cobra.
+- **#3 "Solo deja comprar de a 1 semilla"**: era el sub-objetivo — al comprar UNA, el
+  eslabón saltaba a "plantá" y bloqueaba el resto de la tanda. Los eslabones de plantar
+  y de "están creciendo" ahora mantienen `buyseed` (y `plant`) permitidos.
+- **#4 Outfit del granjero**: a TODO — falta definición de arte con el diseñador.
+- **#5 La plaza**: botón visible "⬅ Volver a la GRANJA" (la M sola no la encontraba
+  nadie), `GF.scene="plaza"` al entrar (el Mapa decía "estás en tu granja") y `irAZona`
+  viaja desde la escena DONDE ESTÁS (antes usaba farmScene aunque estuvieras en la plaza).
+- **#6 NFTs separados de los adornos**: pestaña **NFTs** propia en la Tienda con el GOD
+  HAND (y nota del Mercado de jugadores); Adornos queda solo con parcelas y decoración.
+
 Y el "bloqueo momentáneo" al colocar un plano era el REINICIO de escena (reconstruye
 ~570 sprites de golpe): ahora pasa detrás de un telón de 160 ms con el fundido que ya
 existía (`reiniciarGranjaSuave`), también al colocar parcelas — el mismo parpadeo se lee

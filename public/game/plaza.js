@@ -5,6 +5,9 @@ class PlazaScene extends Phaser.Scene {
   create() {
     const W = 1280, H = 800, T = GF.TILE;
     this.pW = W; this.pH = H;
+    // Fixes.docx 14/8 #5: la plaza no se anunciaba — el Mapa seguía diciendo "estás en tu granja"
+    GF.scene = "plaza";
+    window.plazaScene = this;
     this.cameras.main.setBackgroundColor("#6ea84a");
 
     const g = this.add.graphics().setDepth(-1000);
@@ -33,6 +36,15 @@ class PlazaScene extends Phaser.Scene {
       .setScrollFactor(0).setDepth(10000);
 
     this.keys.farm.on("down", () => { if (!GF.uiOpen) irAEscena(this, "farm"); });
+    // Fixes.docx 14/8 #5: botón VISIBLE para volver (la M sola no la encontraba nadie)
+    const volver = this.add.text(this.scale.width - 10, 10, "⬅ Volver a la GRANJA",
+      { fontFamily: "system-ui", fontSize: "14px", fontStyle: "bold", color: "#ffe08a",
+        backgroundColor: "rgba(20,28,15,0.85)", padding: { x: 10, y: 7 } })
+      .setOrigin(1, 0).setScrollFactor(0).setDepth(10001)
+      .setInteractive({ useHandCursor: true });
+    volver.on("pointerover", () => volver.setColor("#ffffff"));
+    volver.on("pointerout", () => volver.setColor("#ffe08a"));
+    volver.on("pointerdown", () => { if (!GF.uiOpen) irAEscena(this, "farm"); });
     this.events.once("shutdown", () => { if (this.room) { try { this.room.leave(); } catch(e){} this.room = null; } });
 
     this.connect();

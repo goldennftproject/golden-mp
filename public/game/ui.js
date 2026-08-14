@@ -1075,12 +1075,13 @@ function refreshMapa() {
   box.querySelectorAll("[data-ir]").forEach(b => b.onclick = () => irAZona(b.dataset.ir));
 }
 function irAZona(id) {
-  const sc = window.farmScene || window.forestScene || window.plazaScene;
   closeOv("ov-mapa");
   if (id === "forest") { toast("Entrá por el portal de la granja"); return; }
   const actual = (window.GF && GF.scene) || "farm";
   if (id === actual) return;
-  const escena = (window.farmScene && window.farmScene.scene) ? window.farmScene : sc;
+  // Fixes.docx 14/8 #5: usar la escena DONDE ESTÁS (antes agarraba farmScene aunque
+  // estuvieras en la plaza, y el viaje salía de una escena muerta)
+  const escena = actual === "plaza" ? window.plazaScene : (actual === "forest" ? window.forestScene : window.farmScene);
   if (escena && escena.scene) { escena.leaving = true; irAEscena(escena, id); }
 }
 
@@ -1331,14 +1332,7 @@ function refreshDeco() {
         '<button class="green sm" ' + (G.plata >= plotUnlockCost() ? "" : "disabled") + ' data-plot="plata">' + fmt(plotUnlockCost()) + ' plata</button>' +
         '<button class="green sm" ' + (G.golden >= plotUnlockGolden() ? "" : "disabled") + ' data-plot="golden">' + plotUnlockGolden() + ' $G</button>') +
     '</div></div>';
-  // --- GOD HAND ---
-  h += '<div class="secc">GOD HAND</div>';
-  h += '<div class="forge-row' + (tengoGodHand() ? ' eq' : '') + '"><div class="fic"><img src="' + GF.spr("godhand") + '" onerror="this.remove()"></div><div class="finfo"><div class="fnm">GOD HAND' + (tengoGodHand() ? ' <span class="tag">tuya</span>' : '') + '</div>' +
-    '<div class="fds">El cropper NFT completo: cargale hasta 300 semillas (6 espacios) y mientras no estás hace TODO el ciclo en tus parcelas vacías — siembra, cosecha y resiembra — y te entrega lo producido al volver.</div>' +
-    '<div class="fds">Cobra en plata por hora trabajada (100 la primera, +10% cada una, hasta 24 h). Se compra una vez y queda para siempre.</div>' +
-    (tengoGodHand() ? '<div class="fds"><b>Semillas cargadas: ' + godHandTotal() + '/300.</b> Trabaja sola la próxima vez que vuelvas con parcelas vacías.</div>' : '') + '</div>' +
-    '<div class="fbtns">' + (tengoGodHand() ? '<button class="gold sm" id="gh-admin">✋ Cargar semillas</button>' :
-      '<button class="green sm" ' + (G.golden >= GODHAND_GOLDEN ? "" : "disabled") + ' id="buy-godhand">' + GODHAND_GOLDEN + ' $G</button>') + '</div></div>';
+  // (Fixes.docx 14/8 #6: el GOD HAND se mudó a la pestaña NFTs — refreshNft)
   // --- adornos ---
   h += '<div class="secc">Adornos</div>';
   // Discord del diseñador (10/8): compraba vallas y flores y no sabía a dónde iban.
@@ -1358,9 +1352,24 @@ function refreshDeco() {
   box.innerHTML = h;
   box.querySelectorAll("[data-buydeco]").forEach(b => b.onclick = () => { comprarDeco(b.dataset.buydeco); refreshDeco(); });
   box.querySelectorAll("[data-plot]").forEach(b => b.onclick = () => { comprarParcela(b.dataset.plot === "golden"); refreshDeco(); });
-  const gh = $("buy-godhand"); if (gh) gh.onclick = () => { comprarGodHand(); refreshDeco(); };
-  const ga = $("gh-admin"); if (ga) ga.onclick = () => { if (typeof refreshGodHand === "function") refreshGodHand(); openOv("ov-godhand"); };   // GOD HAND 2.0
   const de = $("deco-editar"); if (de) de.onclick = () => { if (window.setEditMode) setEditMode(true); };   // cierra la Tienda y abre el modo edición con el selector de adornos
+}
+
+// Fixes.docx 14/8 #6: pestaña NFTs propia — el GOD HAND (y los NFTs que vengan) separados
+// de los adornos, que son cosmética pura. Así el que compra sabe QUÉ clase de cosa compra.
+function refreshNft() {
+  const box = $("nft-shop"); if (!box) return;
+  let h = '<div class="info">Los NFTs son objetos únicos con utilidad real. También podés comerciarlos con otros jugadores en el <b>Mercado de jugadores</b>.</div>';
+  h += '<div class="secc">GOD HAND</div>';
+  h += '<div class="forge-row' + (tengoGodHand() ? ' eq' : '') + '"><div class="fic"><img src="' + GF.spr("godhand") + '" onerror="this.remove()"></div><div class="finfo"><div class="fnm">GOD HAND' + (tengoGodHand() ? ' <span class="tag">tuya</span>' : '') + '</div>' +
+    '<div class="fds">El cropper NFT completo: cargale hasta 300 semillas (6 espacios) y mientras no estás hace TODO el ciclo en tus parcelas vacías — siembra, cosecha y resiembra — y te entrega lo producido al volver.</div>' +
+    '<div class="fds">Cobra en plata por hora trabajada (100 la primera, +10% cada una, hasta 24 h). Se compra una vez y queda para siempre.</div>' +
+    (tengoGodHand() ? '<div class="fds"><b>Semillas cargadas: ' + godHandTotal() + '/300.</b> Trabaja sola la próxima vez que vuelvas con parcelas vacías.</div>' : '') + '</div>' +
+    '<div class="fbtns">' + (tengoGodHand() ? '<button class="gold sm" id="gh-admin">✋ Cargar semillas</button>' :
+      '<button class="green sm" ' + (G.golden >= GODHAND_GOLDEN ? "" : "disabled") + ' id="buy-godhand">' + GODHAND_GOLDEN + ' $G</button>') + '</div></div>';
+  box.innerHTML = h;
+  const gh = $("buy-godhand"); if (gh) gh.onclick = () => { comprarGodHand(); refreshNft(); };
+  const ga = $("gh-admin"); if (ga) ga.onclick = () => { if (typeof refreshGodHand === "function") refreshGodHand(); openOv("ov-godhand"); };   // GOD HAND 2.0
 }
 
 function refreshMarket() {
@@ -1646,11 +1655,13 @@ function initUI() {
   document.querySelectorAll(".lbtab").forEach(b => b.onclick = () => { lbTab = b.dataset.lb; refreshLb(); });
   document.querySelectorAll(".shoptab[data-shop]").forEach(b => b.onclick = () => {
     if (b.dataset.shop === "deco") refreshDeco();
+    if (b.dataset.shop === "nft" && typeof refreshNft === "function") refreshNft();   // Fixes.docx 14/8 #6
     document.querySelectorAll(".shoptab[data-shop]").forEach(x => x.classList.toggle("active", x === b));
     const s = b.dataset.shop;
     $("shop-buy").style.display = s === "buy" ? "" : "none";
     $("shop-sell").style.display = s === "sell" ? "" : "none";
     { const dp = $("shop-deco"); if (dp) dp.style.display = s === "deco" ? "" : "none"; }
+    { const np = $("shop-nft"); if (np) np.style.display = s === "nft" ? "" : "none"; }
     if (typeof tutoHighlight === "function") tutoHighlight();   // 13/8: al cambiar de pestaña, el brillo salta al botón del objetivo
   });
   // clic fuera de una ventana abierta → se cierra (menos la bolsa: multitarea al minar/talar, detalles 29/7)
@@ -1725,6 +1736,8 @@ function ponerAdornoElegido() {
   if (sndBtn) { sndLabel(); sndBtn.onclick = () => { if (window.sfxOn) sfxOn(!(window.sfxIsOn && sfxIsOn())); sndLabel(); if (window.sfx) sfx("click"); }; }
   const cr = $("cfg-reset"); if (cr) cr.onclick = doFarmReset;
   const ed = $("edit-done"); if (ed) ed.onclick = () => setEditMode(false);
+  // Fixes.docx 14/8 #2: saltar el tutorial (con confirmación — es un camino sin vuelta)
+  { const ts = $("tuto-skip"); if (ts) ts.onclick = () => askConfirm("¿Saltar el tutorial? Se desbloquea todo, pero los objetivos dejan de guiarte y no cobrás la recompensa final.", () => { if (typeof tutoSaltar === "function") tutoSaltar(); }); }
   // 13/8: botón Cancelar del modo colocar — visible solo mientras hay algo "en la mano"
   window.syncPlacingUI = (on) => { const b = $("edit-cancelar"); if (b) b.style.display = on ? "" : "none"; };
   { const ec = $("edit-cancelar"); if (ec) ec.onclick = () => { const sc = window.farmScene; if (sc && sc.cancelarColocar) sc.cancelarColocar(); }; }

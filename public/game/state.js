@@ -342,10 +342,12 @@ var TUTO_PERMISOS = {
   kill:        ["portal", "cook", "eat", "crafttool", "craftarm"],
   kill5:       ["portal", "cook", "eat", "crafttool", "craftarm"],
   fish:        ["fish", "crafttool", "eat"],
-  stone_al:    ["mine", "crafttool"],
-  wood_al:     ["chop", "crafttool"],
-  place_altar: ["obra"],
-  build_altar: ["obra", "chop", "mine", "sell", "plant", "harvest", "buyseed", "crafttool"],   // el depósito pide además oro+$G: el loop queda abierto para juntarlos
+  // Fixes.docx 14/8 #2: la cadena del Altar cruza media economía (oro → Pico de Oro →
+  // bronce → barras → Horno…), así que sus 4 pasos dejan el loop ENTERO abierto
+  place_altar: ["obra", "chop", "mine", "sell", "plant", "harvest", "buyseed", "crafttool", "craftpick", "mat", "plotunlock"],
+  stone_al:    ["mine", "crafttool", "craftpick", "mat", "sell", "plant", "harvest", "buyseed"],
+  wood_al:     ["chop", "crafttool", "craftpick", "mat", "sell", "plant", "harvest", "buyseed"],
+  build_altar: ["obra", "chop", "mine", "sell", "plant", "harvest", "buyseed", "crafttool", "craftpick", "mat", "plotunlock"],
   upgrade:     ["altar", "eat"],
   mat:         ["mat", "chop", "mine", "crafttool"],
   craftpick:   ["craftpick", "mat", "chop", "mine", "crafttool"],   // el pico pide barras del horno
@@ -396,11 +398,13 @@ function tutoSubPlata(prefijo, meta) {
   const listos = plots.filter(p => p && p.state === "ready").length;
   if (listos) return { txt: prefijo + "cosechá tus " + listos + " cultivo" + (listos > 1 ? "s" : "") + " listo" + (listos > 1 ? "s" : ""),
     target: "plot", permite: ["harvest"] };
+  // Fixes.docx 14/8 #3: comprar más semillas sigue permitido en estos eslabones — antes,
+  // al comprar UNA el sub saltaba a "plantá" y bloqueaba el resto de la tanda (de a 1, feo)
   if (plots.some(p => p && p.state === "growing")) return { txt: prefijo + "tus cultivos están creciendo — cosechalos apenas estén",
-    target: "plot", permite: ["harvest"] };
+    target: "plot", permite: ["harvest", "plant", "buyseed"] };
   const semillas = Object.keys(G.seeds || {}).reduce((a, k) => a + Math.floor(G.seeds[k] || 0), 0);
   if (semillas) return { txt: prefijo + "plantá tus " + semillas + " semilla" + (semillas > 1 ? "s" : ""),
-    target: "plot", permite: ["plant", "harvest", "plotunlock"] };
+    target: "plot", permite: ["plant", "harvest", "plotunlock", "buyseed"] };
   const cd = (CROP_DEF && CROP_DEF.papa) || {};
   const precio = cd.seedCost || 1, gana = Math.max(1, (cd.price || 3) - precio);   // lo que rinde cada papa neta
   if (G.plata >= precio) {
@@ -914,8 +918,13 @@ const TUTO_STEPS = [
   { id: "kill",      n: 1, pr: 50, txt: "Vencé tu primera criatura" },
   { id: "kill5",     n: 5, pr: 100, txt: "Vencé 5 criaturas más" },
   { id: "fish",      n: 1, pr: 50, txt: "Pescá un pez en la laguna (comprá lombrices en la Tienda)" },
-  // 13/8 (audio): el Altar también desglosado — plano primero, piedra y madera por separado;
-  // el oro y los $Golden se juntan durante el depósito (su paso deja el loop entero abierto)
+  // ——— ETAPA 3: que el jugador descubra TODO lo que se puede hacer ———
+  { id: "mat",       n: 1, pr: 40,  txt: "Fundí una barra en el Horno de Piedra", target: "horno", panel: "ov-horno", ui: "[data-mat='barra_piedra']" },
+  { id: "craftpick", n: 1, pr: 40,  txt: "Crafteá un Pico de Bronce en la Herrería", target: "store", panel: "ov-forge", ui: "[data-craft='bronze']" },
+  { id: "mineore",   n: 1, pr: 60,  txt: "Miná un mineral con tu pico nuevo",    target: "ore" },
+  // Fixes.docx 14/8 #2: el Altar va DESPUÉS de picos y fundición — su receta pide ORO, y
+  // el oro necesita Pico de Oro (antes el embudo lo hacía softlock). Además su cadena deja
+  // abierto TODO el loop (ver permisos) porque la receta cruza media economía.
   { id: "place_altar", n: 1, txt: "Colocá el plano del Altar de Runas (barra rápida)", target: "altar", hot: "altar" },
   { id: "stone_al", res: "piedra", dep: "altar", need: () => BUILD_DEF.altar.cost.piedra || 60,
     txt: "Juntá # de piedra (para la obra del Altar)",                            target: "rock" },
@@ -923,10 +932,6 @@ const TUTO_STEPS = [
     txt: "Juntá # de madera (para la obra del Altar)",                            target: "tree" },
   { id: "build_altar", n: 1, pr: 100, txt: "Llevale a la obra del Altar lo que falta (incluye oro y $Golden)", target: "altar" },
   { id: "upgrade",   n: 1, pr: 150, txt: "Mejorá un arma a +1 en el Altar",     target: "altar", panel: "ov-altar" },
-  // ——— ETAPA 3: que el jugador descubra TODO lo que se puede hacer ———
-  { id: "mat",       n: 1, pr: 40,  txt: "Fundí una barra en el Horno de Piedra", target: "horno", panel: "ov-horno", ui: "[data-mat='barra_piedra']" },
-  { id: "craftpick", n: 1, pr: 40,  txt: "Crafteá un Pico de Bronce en la Herrería", target: "store", panel: "ov-forge", ui: "[data-craft='bronze']" },
-  { id: "mineore",   n: 1, pr: 60,  txt: "Miná un mineral con tu pico nuevo",    target: "ore" },
   { id: "dummy",     n: 1, pr: 40,  txt: "Entrená con el dummy de práctica",     target: "dummy" },
   { id: "unlocknode", n: 1, pr: 60, txt: "Usá un segundo árbol o veta (se habilitan por nivel)", target: "tree" },
   { id: "chest",     n: 1, pr: 60,  txt: "Crafteá un cofre depósito y colocalo", target: "store", panel: "ov-forge", ui: "#forge-chest" },
@@ -1017,7 +1022,7 @@ var TUTO_REWARD_PLATA = 100;   // gran recompensa del cierre (editable)
 // después usan el tiempo normal del cultivo. 0 en el panel = sin excepción.
 var FIRST_GROW_MS = 45000;   // tope de crecimiento de las semillas de arranque
 var FIRST_GROW_N = 3;        // cuántas semillas de arranque tienen ese trato (las 3 papas del inicio)
-var TUTO_VER = 8;   // subir este número cuando cambie la CADENA de pasos (invalida progresos viejos) · v8 (13/8): orden lógico colocá → juntá → depositá, sin plant2
+var TUTO_VER = 9;   // subir este número cuando cambie la CADENA de pasos (invalida progresos viejos) · v9 (14/8): Altar después de picos/fundición (Fixes.docx #2)
 function tutoActivo() { return G.tuto && !G.tuto.done ? TUTO_STEPS[G.tuto.step] : null; }
 // migración: si el guardado trae una cadena vieja, los pasos ya no significan lo mismo → se recalcula
 function tutoMigrar() {
@@ -1085,6 +1090,19 @@ function tutoEvent(tipo) {
   G.tuto.n = (G.tuto.n || 0) + 1;
   if (G.tuto.n < st.n) { if (typeof tutoRefresh === "function") tutoRefresh(); return; }
   tutoDone(st);
+}
+// Fixes.docx 14/8 #2: saltar el tutorial a voluntad — se libera todo, los planos pendientes
+// caen según nivel (vía planosSync) y no se cobra la recompensa final (esa es de terminarlo)
+function tutoSaltar() {
+  if (!G.tuto || G.tuto.done) return;
+  G.tuto.done = true;
+  log("Tutorial salteado. Todo desbloqueado — los objetivos ya no te guían.", "warn");
+  toast("Tutorial salteado — la granja es toda tuya");
+  if (typeof planosSync === "function") planosSync(false);
+  if (typeof tutoRefresh === "function") tutoRefresh();
+  if (window.farmScene && window.farmScene.updateTutoArrow) { try { window.farmScene.updateTutoArrow(); } catch (e) {} }
+  if (typeof saveFarm === "function") saveFarm();
+  refreshHud();
 }
 function tutoDone(st) {
   // paso cumplido: tilde + sonido + avance automático (doc)
@@ -2040,6 +2058,7 @@ const ANIMAL_DEF = {
 };
 var ESTABLO_COST = { madera: 50, piedra: 30, oro: 10 };   // edificio (doc)
 var FELIZ_POR_COMIDA = 15;      // cuánta felicidad da alimentarlo con su cultivo preferido
+var FELIZ_COMIDA_GENERICA = 8;  // Fixes.docx 14/8 #1: cualquier otro cultivo también alimenta, pero rinde menos
 var FELIZ_BAJA_H = 1.5;         // cuánta felicidad pierde por hora sin comer
 var FELIZ_MIN_PROD = 0.5;       // rendimiento mínimo con felicidad 0 (produce la mitad)
 // ANIMALES REPETIDOS (10/8, pedido del diseñador). Antes cada tipo era UNO solo:
@@ -2097,14 +2116,18 @@ function alimentarAnimal(k) {
   const d = ANIMAL_DEF[k], l = animalLista(k); if (!d || !l.length) return;
   let dados = 0, gastado = {};
   for (const a of l) {
-    const cultivo = d.come.find(c => (G.res[c] || 0) > 0);
+    // Fixes.docx 14/8 #1: siempre se puede alimentar — su cultivo PREFERIDO da la felicidad
+    // entera; si no hay, aceptan CUALQUIER cultivo por un poco menos (antes la alpaca solo
+    // comía trigo, que es de nivel alto, y los bichos se morían de hambre sin remedio)
+    let cultivo = d.come.find(c => (G.res[c] || 0) > 0), preferido = true;
+    if (!cultivo) { cultivo = Object.keys(CROP_DEF).find(c => (G.res[c] || 0) > 0); preferido = false; }
     if (!cultivo) break;
     G.res[cultivo] -= 1; gastado[cultivo] = (gastado[cultivo] || 0) + 1;
-    a.feliz = Math.min(100, animalFelizDe(a) + FELIZ_POR_COMIDA);
+    a.feliz = Math.min(100, animalFelizDe(a) + (preferido ? FELIZ_POR_COMIDA : FELIZ_COMIDA_GENERICA));
     a.comidoAt = nowMs();
     statAdd("alimentar", k); dados++;
   }
-  if (!dados) { toast("Necesitás " + d.come.map(c => CROP_DEF[c].label).join(" o ")); return; }
+  if (!dados) { toast("Necesitás algún cultivo — lo preferido de " + d.label + ": " + d.come.map(c => CROP_DEF[c].label).join(" o ")); return; }
   const qué = Object.keys(gastado).map(c => gastado[c] + " " + CROP_DEF[c].label).join(" + ");
   log("Alimentaste " + dados + " " + d.label + " con " + qué + ". Felicidad media: " + animalFelicidad(k) + "/100.", "good");
   toast(d.label + " · felicidad " + animalFelicidad(k));

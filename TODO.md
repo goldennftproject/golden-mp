@@ -13,6 +13,8 @@
 
 ## 🟡 Esperando al diseñador
 
+- [ ] **Outfit del granjero** (Fixes.docx 14/8 #4): pedir referencia/estilo — ¿outfit fijo nuevo o sistema de outfits como cosmético? Arte por PixelLab cuando se defina.
+- [ ] **Alimentar animales** (Fixes.docx 14/8 #1 "Comida>material"): implementado como "preferido +15 / cualquier cultivo +8" — confirmar si era esto o alimentar con PLATOS cocinados.
 - [ ] Que pruebe los 19 fixes de fixs.docx (todos implementados, ver CHANGELOG Día 16).
 - [ ] Números tuneables por si quiere ajustar: `DROP_CHANCE_MULT` (0.6), `PLOT_MAX` (60), `PLOT_EXTRA_SUBA` (1.12), `GODHAND_PLATA_HORA` (100), `GODHAND_SUBA_HORA` (1.10).
 - [ ] Aprobación de los **12 edificios nuevos** (si aprueba → re-animar el portal).
