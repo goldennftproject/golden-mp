@@ -2256,8 +2256,12 @@ class FarmScene extends Phaser.Scene {
     // terminado en cada tick (el bug del playtest: "coloqué el plano y salió construida")
     if (typeof BUILD_DEF !== "undefined" && BUILD_DEF.store && !(G.built && G.built.store)) return;
     const lit = (G.forgeLitUntil || 0) > nowMs();
-    const key = lit && this.textures.exists("store_lit") ? "store_lit" : "store";
-    if (o.sprite.texture.key !== key && this.textures.exists(key)) this.setObjTex(o, key, o.rw || o.w);
+    // 14/8: ya NO se cambia la textura al encenderse — store_lit era arte del set viejo
+    // (97×99 del 9/8 vs el mercadillo de 110×118 del 12/8) y en pleno crafteo la Herrería
+    // "viajaba en el tiempo" un segundo (visto en playtest). El fuego vivo por código de
+    // acá abajo ya dice "encendida"; si algún día se genera el estado lit del set nuevo,
+    // reactivar el swap.
+    if (o.sprite.texture.key !== "store" && this.textures.exists("store")) this.setObjTex(o, "store", o.rw || o.w);
     // fuego "vivo" por código: resplandor rojizo que aparece y palpita sobre la boca del horno.
     // La posición se saca del alto REAL del sprite, no de un número fijo: así el arte se puede
     // cambiar (herrería nueva del 9/8) sin que el resplandor quede flotando en cualquier lado.

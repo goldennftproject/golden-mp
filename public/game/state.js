@@ -1169,7 +1169,14 @@ function tutoAdelanto() {
     const falta = Math.max(0, tutoNeed(st) - tutoTiene(st));
     const usos = Math.floor((G.picks.dur && G.picks.dur[G.picks.eq]) || 0);
     const repas = Math.max(0, falta - usos);
-    const madLibre = Math.max(0, Math.floor(G.res.madera || 0));   // aprox: la reserva fina la maneja el guardia
+    // 14/8 (playtest cocina): la madera RESERVADA para la obra NO cuenta como libre — el
+    // adelanto daba 0 creyendo que las 20 maderas del depósito pagaban las reparaciones,
+    // y el sub (que sí resta la reserva) terminaba mandando al bucle de la papa
+    let reservada = 0;
+    if (st.dep && typeof obraDe === "function" && obraDe(st.dep) && typeof obraFalta === "function") {
+      const f = obraFalta(st.dep).find(x => x[0] === "madera"); if (f) reservada = f[1];
+    }
+    const madLibre = Math.max(0, Math.floor(G.res.madera || 0) - reservada);
     plata = Math.max(0, repas - Math.max(0, toolCount("axe")) - madLibre) * costoHacha;
   } else if (st.id === "crafttool") {
     // 14/8 (dirección): ya no hay paso "juntá 10 de plata" — el hacha de la lección se paga sola

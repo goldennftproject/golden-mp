@@ -2228,6 +2228,19 @@ horas y 122 ciclos** de papa. Arreglos (el embudo NO se toca):
 - La cadena queda en **40 pasos**. Verificación completa: hermética, sin huérfanos,
   planos a tiempo, place<juntá<depósito, y 5 escenarios nuevos de adelanto (crafttool
   parcial, unlockarm pelado/parcial, arranque sin adelanto). `TUTO_VER=10`.
+- **El adelanto de la piedra contaba madera RESERVADA como libre (playtest cocina)**: al
+  entrar a "juntá 15 de piedra", el adelanto restaba las 20 maderas en bolsa creyendo que
+  pagaban las reparaciones del pico — pero están reservadas para la obra (el guardia no
+  deja gastarlas) — y daba 0; el sub-planificador, que SÍ resta la reserva, terminaba
+  mandando al bucle de la papa que el jugador ya aprendió. Ahora ambos usan la misma
+  cuenta (madera libre = bolsa − pendiente de la obra vía `st.dep`): el adelanto llega
+  completo (+150 en el caso del playtest) y el bucle no aparece. Verificado con el par
+  reservada/libre en simulación.
+- **La Herrería "viajaba en el tiempo" al craftear (playtest)**: al encenderse la fragua,
+  `updateForge` cambiaba la textura a `store_lit` — arte del SET VIEJO (97×99 del 9/8;
+  el mercadillo es 110×118 del 12/8) — y al apagarse volvía. El swap se retiró: el fuego
+  vivo por código (resplandor + palpitación) ya dice "encendida". Si algún día se genera
+  el estado lit del set nuevo, reactivar el swap (nota en el código).
 
 Y el "bloqueo momentáneo" al colocar un plano era el REINICIO de escena (reconstruye
 ~570 sprites de golpe): ahora pasa detrás de un telón de 160 ms con el fundido que ya
