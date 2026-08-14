@@ -2258,6 +2258,11 @@ quiere o lo ignora y juega libre. Consecuencias, todas del mismo golpe:
    reescrito) — el jugador libre que sube a nivel 3 recibe su plano del Horno con
    celebración aunque ignore la guía; y si la guía va adelante del nivel, el plano cae
    igual por su paso `place_` (ambos caminos abiertos, sin saneo retroactivo).
+- **Fix inmediato (playtest: "tenía el plano de la Herrería desde el segundo inicial")**:
+  con planos por nivel puro y `PLANO_NIVEL.store = 1`, el plano caía en el segundo CERO.
+  Subió a nivel 2, que se alcanza cosechando la segunda papa (9 XP c/u, el nivel pide 10)
+  — llega en plena primera cosecha, justo antes de que la guía apunte a la Herrería. El
+  camino guiado no depende de esto: el paso `place_store` lo entrega igual.
 3. **Panel "🎯 Objetivos"** (menú): los 40 pasos agrupados en **9 CAPÍTULOS reclamables**
    (`TUTO_CAPS`): Tu primera cosecha (25) · La Herrería (50) · El Horno (50) · La Cocina
    (75) · Las Armas (75) · La Zona Negra (100) · Minería avanzada (100) · El Altar (150)

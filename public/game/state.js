@@ -242,7 +242,7 @@ function buildCostStr(key) { const b = BUILD_DEF[key]; return Object.keys(b.cost
    tengas; al completar, estrellitas y pasa al edificio construido.
    El edificio ya NO aparece gris en una posición fija: no existe hasta que colocás
    su plano, y queda donde VOS lo pusiste. */
-var PLANO_NIVEL = { store: 1, horno: 3, cocina: 5, establo: 6, altar: 7, curtiduria: 8, ofrendas: 10 };   // nivel en que cae cada plano (números del diseñador)
+var PLANO_NIVEL = { store: 2, horno: 3, cocina: 5, establo: 6, altar: 7, curtiduria: 8, ofrendas: 10 };   // nivel en que cae cada plano (números del diseñador · store 1→2 el 14/8: a nivel 1 caía en el SEGUNDO CERO de la partida, antes de aprender nada — el nivel 2 llega cosechando la primera tanda)
 function planoTengo(t) { return !!(G.planos && G.planos[t]); }
 // 13/8: el plano también vive en la HOTBAR (primer hueco libre) — colocarlo sin abrir la bolsa
 function planoAHotbar(t) {
