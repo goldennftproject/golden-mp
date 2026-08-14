@@ -700,7 +700,11 @@ function addCookXp(amt) {
 // DOC MAESTRO 2/8: el nivel de granja sube SOLO con XP de Farmeo (curva front-loaded 1-10) y regala desbloqueos
 // DOC "2das mejoras" (4/8): la granja llega a NIVEL 50. Del 1 al 10 se sube solo con XP de cosecha;
 // del 11 al 50 hace falta la XP Y cumplir TAREAS (plantar, talar, minar, matar, pescar, cocinar).
-var FARM_XP_LVLS = [0, 0, 10, 35, 90, 220, 500, 1100, 2400, 5200, 11000,
+// 14/8 (dirección): los primeros 10 niveles ~2.5× más lentos — con la curva vieja el nivel
+// 3 eran 4 papas y el 5 eran 24: los PLANOS llovían a la barra en los primeros 5 minutos.
+// Ahora nivel 2 = 3 papas, nivel 3 = 10, nivel 5 = ~60 (o menos con cultivos mejores).
+// Del 11 en adelante la tabla original del diseñador sigue igual.
+var FARM_XP_LVLS = [0, 0, 25, 90, 225, 550, 1250, 2750, 5500, 9000, 14000,
   17600, 25100, 33600, 43300, 54200, 66500, 80400, 96000, 114000, 134000,
   156000, 180000, 207000, 237000, 270000, 307000, 348000, 393000, 442000, 496000,
   555000, 619000, 689000, 765000, 848000, 938000, 1030000, 1130000, 1240000, 1360000,

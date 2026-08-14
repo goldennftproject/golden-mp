@@ -2258,6 +2258,12 @@ quiere o lo ignora y juega libre. Consecuencias, todas del mismo golpe:
    reescrito) — el jugador libre que sube a nivel 3 recibe su plano del Horno con
    celebración aunque ignore la guía; y si la guía va adelante del nivel, el plano cae
    igual por su paso `place_` (ambos caminos abiertos, sin saneo retroactivo).
+- **Curva de niveles de granja ~2.5× más lenta en los primeros 10 (dirección: "la barra
+  se llena de planos en 5 minutos")**: `FARM_XP_LVLS` 2-10 pasa a [25, 90, 225, 550,
+  1250, 2750, 5500, 9000, 14000] — en papas: nivel 2 = 3, nivel 3 = 10, nivel 5 = ~62,
+  nivel 7 = ~300 (menos con cultivos mejores, que dan mucha más XP). Del 11 en adelante
+  la tabla original del diseñador sigue intacta, y la XP de los cultivos no se tocó (el
+  nivel de Cultivo y las skills no cambian). Los planos ahora gotean al ritmo del juego.
 - **Fix inmediato (playtest: "tenía el plano de la Herrería desde el segundo inicial")**:
   con planos por nivel puro y `PLANO_NIVEL.store = 1`, el plano caía en el segundo CERO.
   Subió a nivel 2, que se alcanza cosechando la segunda papa (9 XP c/u, el nivel pide 10)
