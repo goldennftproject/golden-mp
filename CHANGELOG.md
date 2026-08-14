@@ -2258,6 +2258,23 @@ quiere o lo ignora y juega libre. Consecuencias, todas del mismo golpe:
    reescrito) — el jugador libre que sube a nivel 3 recibe su plano del Horno con
    celebración aunque ignore la guía; y si la guía va adelante del nivel, el plano cae
    igual por su paso `place_` (ambos caminos abiertos, sin saneo retroactivo).
+### Feedback del diseñador sobre el panel Objetivos (14/8, Discord) — 4 pedidos
+
+- **"Está muy llamativa y las recompensas está bien"** — panel aprobado.
+- **Tiempos y cupos REALES**: `GF.TESTEO = 0` — el diseñador testea con la economía real.
+- **🆘 KIT DE EMERGENCIA en $Golden** (Tienda → Comprar): hacha (2 $G), uso de pico
+  (2 $G) y semilla de papa (1 $G) — tope 5 diarias de cada una, contador visible, las
+  semillas NO gastan el cupo diario. "Por si se quedan atascados" + utilidad diaria para
+  el $Golden. Precios tuneables (`EMERG_GOLDEN`/`EMERG_MAX`) — a validar.
+- **El tutorial TERMINA con el capítulo del Hacha** (~Cultivo 2, cuando abre la
+  zanahoria): los kits del objetivo solo se entregan hasta el paso `crafttool`; de ahí en
+  más, tiempos y economía normales — el rescate para atascados es el kit de emergencia.
+- **Simulador de progresión** (`tools/sim-progresion.js`): 30 días × 3 perfiles con los
+  números reales. Hallazgos para balance: todos convergen a nivel 12 el día 30 (falta
+  techo para el hardcore), el pico hace que cada piedra cueste 3 maderas (la Cocina vale
+  65 maderas efectivas), y el margen de cultivos escala geométrico (hardcore junta 105k).
+  Palancas propuestas en el informe — decisión pendiente del diseñador.
+
 - **Curva de niveles de granja ~2.5× más lenta en los primeros 10 (dirección: "la barra
   se llena de planos en 5 minutos")**: `FARM_XP_LVLS` 2-10 pasa a [25, 90, 225, 550,
   1250, 2750, 5500, 9000, 14000] — en papas: nivel 2 = 3, nivel 3 = 10, nivel 5 = ~62,

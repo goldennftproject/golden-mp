@@ -115,7 +115,7 @@ var FX_PART_MAX = 40;      // tope de partículas vivas a la vez (cuida el rendi
 //
 //   PARA LA VERSIÓN FINAL: poner GF.TESTEO = 0
 //
-GF.TESTEO = 1;
+GF.TESTEO = 0;   // 14/8: el diseñador pidió probar con TIEMPOS REALES y cupo de semillas real
 var TEST_DIV = 60;       // los tiempos largos se dividen por esto (1 h → 1 min)
 var TEST_TOPE = 40;      // …y además ninguna espera pasa de estos segundos
 var TEST_MIN = 4;        // …ni baja de estos (si no, no se llega a ver el estado intermedio)

@@ -223,6 +223,37 @@ function buySeed(k, qty) {
   refreshHud(); if (typeof refreshSeedShop === "function") refreshSeedShop(); if (isOpen("ov-inv")) refreshInv();
 }
 
+/* ---- KIT DE EMERGENCIA en $Golden (14/8, pedido del diseñador): "por si se quedan
+   atascados" — 5 hachas, 5 usos de pico y 5 semillas de papa POR DÍA, pagando con
+   $Golden. Le da utilidad diaria al $Golden y reemplaza a los kits del tutorial como
+   válvula anti-atasco después de la guía temprana. Las semillas de acá NO consumen el
+   cupo diario (son el rescate, no el mercado). Precios tuneables — validar con diseñador. */
+var EMERG_GOLDEN = { axe: 2, pick: 2, seed: 1 };   // $G por unidad
+var EMERG_MAX = 5;                                  // tope diario por tipo
+function emergBuysToday() {
+  const e = G.emergBuys || (G.emergBuys = { date: "", axe: 0, pick: 0, seed: 0 });
+  if (e.date !== dayStamp(0)) { e.date = dayStamp(0); e.axe = 0; e.pick = 0; e.seed = 0; }
+  return e;
+}
+function comprarEmergencia(tipo) {
+  const precio = EMERG_GOLDEN[tipo]; if (precio == null) return;
+  const e = emergBuysToday();
+  if ((e[tipo] || 0) >= EMERG_MAX) { toast("Tope diario del kit de emergencia (" + EMERG_MAX + ") — volvé mañana"); return; }
+  if (G.golden < precio) { toast("Te faltan $Golden"); return; }
+  G.golden -= precio; e[tipo] = (e[tipo] || 0) + 1;
+  if (tipo === "axe") { G.tools = G.tools || {}; G.tools.axe = (G.tools.axe || 0) + 1; toast("🆘 +1 hacha"); }
+  else if (tipo === "pick") {
+    G.picks = G.picks || { owned: {}, dur: {}, eq: null };
+    if (!G.picks.eq || !G.picks.owned[G.picks.eq]) { G.picks.owned.stone = true; G.picks.eq = "stone"; G.picks.dur.stone = 0; }
+    G.picks.dur[G.picks.eq] = (G.picks.dur[G.picks.eq] || 0) + 1; toast("🆘 +1 uso de pico");
+  }
+  else if (tipo === "seed") { G.seeds.papa = (G.seeds.papa || 0) + 1; toast("🆘 +1 semilla de papa"); }
+  log("Kit de emergencia: compraste 1 " + (tipo === "axe" ? "hacha" : tipo === "pick" ? "uso de pico" : "semilla de papa") + " por " + precio + " $Golden (" + e[tipo] + "/" + EMERG_MAX + " hoy).", "warn");
+  refreshHud(); if (typeof refreshHotbar === "function") refreshHotbar(true);
+  if (typeof refreshSeedShop === "function" && isOpen("ov-market")) refreshSeedShop();
+  if (typeof saveFarm === "function") saveFarm();
+}
+
 // --- construcción de edificios (detalles viernes 1): recetas para levantar cada edificio ---
 const BUILD_DEF = {
   store:  { label: "Herrería",        cost: { madera: 5, piedra: 2 } },   // 10/8: ya no es gratis (pedido del diseñador)
@@ -1194,8 +1225,13 @@ function tutoHecho(st) {
    paso ya "cobrado" con la cuenta vieja RECIBEN el kit al entrar el fix). */
 function tutoAdelanto() {
   const st = tutoActivo(); if (!st || G.tuto.adelv === G.tuto.step) return;
+  // 14/8 (diseñador): la ayuda especial TERMINA con el capítulo del Hacha (~Cultivo 2,
+  // cuando abre la zanahoria). De ahí en más: tiempos y economía normales — el rescate
+  // para atascados es el KIT DE EMERGENCIA en $Golden de la Tienda (5 diarias).
+  const tope = tutoIdx("crafttool");
+  if (tope >= 0 && (G.tuto.step || 0) > tope) return;
   const esMadera = st.res === "madera", esPiedra = st.res === "piedra";
-  if (!esMadera && !esPiedra && st.id !== "crafttool" && st.id !== "unlockarm" && st.id !== "cook" && st.id !== "eat") return;
+  if (!esMadera && !esPiedra && st.id !== "crafttool") return;
   G.tuto.adelv = G.tuto.step;
   const regalos = [];
   const darHachas = (n) => { if (n > 0) { G.tools = G.tools || {}; G.tools.axe = (G.tools.axe || 0) + n; regalos.push(n + " hacha" + (n > 1 ? "s" : "")); } };

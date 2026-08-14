@@ -1426,8 +1426,23 @@ function refreshSeedShop() {
   }).join("")
   // carnada (detalles213): lombrices para pescar — fuera del cupo diario de semillas
   + '<div class="shophead">Carnada</div>'
-  + `<div class="mkt-row"><span class="mimg">${itemIcon({ sprite: "res_lombriz", emoji: "" })}</span><div class="minfo"><div class="mnm">Lombriz</div><div class="mds">Carnada de pesca · 1 por lanzamiento · tenés ${fmt(G.res.lombriz || 0)}</div></div><input id="sq-lombriz" type="number" min="1" value="10"><button class="green sm" id="buy-lombriz" ${G.plata >= WORM_PRICE ? "" : "disabled"}>Comprar · ${coinIc("plata")}${WORM_PRICE} c/u</button></div>`;
+  + `<div class="mkt-row"><span class="mimg">${itemIcon({ sprite: "res_lombriz", emoji: "" })}</span><div class="minfo"><div class="mnm">Lombriz</div><div class="mds">Carnada de pesca · 1 por lanzamiento · tenés ${fmt(G.res.lombriz || 0)}</div></div><input id="sq-lombriz" type="number" min="1" value="10"><button class="green sm" id="buy-lombriz" ${G.plata >= WORM_PRICE ? "" : "disabled"}>Comprar · ${coinIc("plata")}${WORM_PRICE} c/u</button></div>`
+  // 🆘 KIT DE EMERGENCIA (14/8, diseñador): 5 diarias de cada uno con $Golden, por si te atascás
+  + (function () {
+    if (typeof emergBuysToday !== "function") return "";
+    const e = emergBuysToday();
+    const fila = (tipo, sprite, emoji, nom, ds) => {
+      const usadas = e[tipo] || 0, tope = usadas >= EMERG_MAX, aff = G.golden >= EMERG_GOLDEN[tipo];
+      return `<div class="mkt-row"><span class="mimg">${itemIcon({ sprite, emoji })}</span><div class="minfo"><div class="mnm">${nom} <span class="seedlv">${usadas}/${EMERG_MAX} hoy</span></div><div class="mds">${ds}</div></div>` +
+        `<button class="green sm" data-emerg="${tipo}" ${(tope || !aff) ? "disabled" : ""}>${tope ? "Mañana" : "Comprar · " + EMERG_GOLDEN[tipo] + " $G"}</button></div>`;
+    };
+    return '<div class="shophead">🆘 Kit de emergencia (se paga en $Golden — por si te atascás)</div>'
+      + fila("axe", "axe", "🪓", "Hacha", "1 uso · para cuando no te queda ni para talar")
+      + fila("pick", "pick_stone", "⛏️", "Uso de pico", "recarga tu pico equipado · 1 picada")
+      + fila("seed", "seed_papa", "🥔", "Semilla de papa", "no gasta el cupo diario · para replantar de cero");
+  })();
   box.querySelectorAll("[data-buy]").forEach(b => b.onclick = () => { const inp = $("sq-" + b.dataset.buy); buySeed(b.dataset.buy, inp ? +inp.value : 1); });
+  box.querySelectorAll("[data-emerg]").forEach(b => b.onclick = () => { comprarEmergencia(b.dataset.emerg); refreshSeedShop(); });
   if (typeof tutoHighlight === "function") tutoHighlight();
   const wb = $("buy-lombriz"); if (wb) wb.onclick = () => { const inp = $("sq-lombriz"); buyWorm(inp ? +inp.value : 1); };
 }
