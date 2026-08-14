@@ -2258,6 +2258,25 @@ quiere o lo ignora y juega libre. Consecuencias, todas del mismo golpe:
    reescrito) — el jugador libre que sube a nivel 3 recibe su plano del Horno con
    celebración aunque ignore la guía; y si la guía va adelante del nivel, el plano cae
    igual por su paso `place_` (ambos caminos abiertos, sin saneo retroactivo).
+### ECONOMÍA WEB3 aplicada de punta a punta (14/8, dirección: "producirlo y mostrarlo")
+
+Principio: **cada plata regalada es emisión que termina en el P2P** — los premios pagan
+INSUMOS (cosas que se usan) y la plata sale de vender lo producido. Aplicado a todo:
+
+- **Capítulos**: de plata a insumos con identidad — 5 semillas (cosecha), 5 hachas
+  (Herrería), 5 usos de pico (Horno), 2 Papas Asadas (Cocina), 20 flechas (Armas),
+  10 lombrices + 5 carnes (Zona), 3 barras (Minería), 2 esencias rúnicas (Altar) y
+  **1 FICHA DE PARCELA** (Maestría). El panel muestra la recompensa de cada uno.
+- **Los 19 `pr` de plata por paso se eliminaron** — los capítulos son la capa de premio.
+- **El cierre de la guía paga TIERRA**: +1 parcela (antes 100 de plata).
+- **Pase FREE**: las 10 filas de plata → insumos equivalentes (madera, lombrices,
+  barras, flechas, carne, bronce, esencia, platos, +1 ficha).
+- **Pase VIP**: las 12 filas de plata → cosmético + insumos ricos + fichas; el $Golden
+  del track queda (devolución parcial de los 250 quemados al comprarlo). Regla: el VIP
+  jamás paga plata ni poder — con P2P, el pay-to-win destruye el mercado.
+- **Quedan como grifos de plata**: vender (el central, del jugador), el 20% del cofre
+  diario y los 10 del hacha-lección. Todos con tope o de una vez.
+
 - **Se nace con 3 parcelas, no 2 (dirección)**: la primera misión planta 3 semillas y
   tiene que haber 3 celdas donde apuntar. La tabla `FARM_PARCELA` sigue igual (nivel 2
   "regalaba" la 3ª, que ahora ya viene de fábrica; la 4ª llega en nivel 4).

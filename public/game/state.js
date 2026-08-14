@@ -986,28 +986,28 @@ const TUTO_STEPS = [
     txt: "Juntá # de piedra picando rocas (para la obra del Horno)",               target: "rock" },
   { id: "build_horno", n: 1, txt: "Depositá los materiales en la obra del Horno (clic encima)", target: "horno" },
   // — el Hacha: la plata llega de ADELANTO al entrar (ya sabés ganarla — dirección 14/8) —
-  { id: "crafttool", n: 1, pr: 25, txt: "Crafteá un Hacha en la Herrería",          target: "store", panel: "ov-forge", ui: "[data-ctool='axe']" },
+  { id: "crafttool", n: 1, txt: "Crafteá un Hacha en la Herrería",          target: "store", panel: "ov-forge", ui: "[data-ctool='axe']" },
   // ——— ETAPA 2: los sistemas nuevos (Cocina, Armas, Zona Negra, Pesca, Altar) ———
   { id: "place_cocina", n: 1, txt: "Colocá el plano de la Cocina (barra rápida)", target: "cocina", hot: "cocina" },
   { id: "woodc",  res: "madera", dep: "cocina", need: () => BUILD_DEF.cocina.cost.madera || 20,
     txt: "Juntá # de madera (para la obra de la Cocina)",                       target: "tree" },
   { id: "stonec", res: "piedra", dep: "cocina", need: () => BUILD_DEF.cocina.cost.piedra || 15,
     txt: "Juntá # de piedra (para la obra de la Cocina)",                       target: "rock" },
-  { id: "build_cocina", n: 1, pr: 50,  txt: "Depositá los materiales en la obra de la Cocina (clic encima)", target: "cocina" },
-  { id: "cook",     n: 1, pr: 50,  txt: "Cociná tu primer plato: Papa Asada",   target: "cocina", panel: "ov-cocina", ui: "[data-cook='papa_asada']" },
-  { id: "eat",      n: 1, pr: 25,  txt: "Comé un plato desde la bolsa (te da un buff)" },
+  { id: "build_cocina", n: 1, txt: "Depositá los materiales en la obra de la Cocina (clic encima)", target: "cocina" },
+  { id: "cook",     n: 1, txt: "Cociná tu primer plato: Papa Asada",   target: "cocina", panel: "ov-cocina", ui: "[data-cook='papa_asada']" },
+  { id: "eat",      n: 1, txt: "Comé un plato desde la bolsa (te da un buff)" },
   // — la forja de Armas: la plata del desbloqueo llega de ADELANTO; los materiales se juntan acá —
   { id: "unlockarm", n: 1,        txt: "Desbloqueá la pestaña Armas en la Herrería (juntá sus materiales)", target: "store", panel: "ov-forge", ui: "#forge-unlock-armas" },
-  { id: "craftarm",  n: 1, pr: 50, txt: "Forjá tu primera arma: Espada de Madera", target: "store", panel: "ov-forge", ui: "[data-carm='espada_madera']" },
+  { id: "craftarm",  n: 1, txt: "Forjá tu primera arma: Espada de Madera", target: "store", panel: "ov-forge", ui: "[data-carm='espada_madera']" },
   { id: "equiparm",  n: 1,        txt: "Equipá tu arma",                        target: "store", panel: "ov-forge", ui: "[data-eqarm='espada_madera']" },
   { id: "portal",    n: 1,        txt: "Cruzá el portal a la Zona Negra",       target: "portal" },
-  { id: "kill",      n: 1, pr: 50, txt: "Vencé tu primera criatura" },
-  { id: "kill5",     n: 5, pr: 100, txt: "Vencé 5 criaturas más" },
-  { id: "fish",      n: 1, pr: 50, txt: "Pescá un pez en la laguna (comprá lombrices en la Tienda)" },
+  { id: "kill",      n: 1, txt: "Vencé tu primera criatura" },
+  { id: "kill5",     n: 5, txt: "Vencé 5 criaturas más" },
+  { id: "fish",      n: 1, txt: "Pescá un pez en la laguna (comprá lombrices en la Tienda)" },
   // ——— ETAPA 3: que el jugador descubra TODO lo que se puede hacer ———
-  { id: "mat",       n: 1, pr: 40,  txt: "Fundí una barra en el Horno de Piedra", target: "horno", panel: "ov-horno", ui: "[data-mat='barra_piedra']" },
-  { id: "craftpick", n: 1, pr: 40,  txt: "Crafteá un Pico de Bronce en la Herrería", target: "store", panel: "ov-forge", ui: "[data-craft='bronze']" },
-  { id: "mineore",   n: 1, pr: 60,  txt: "Miná un mineral con tu pico nuevo",    target: "ore" },
+  { id: "mat",       n: 1, txt: "Fundí una barra en el Horno de Piedra", target: "horno", panel: "ov-horno", ui: "[data-mat='barra_piedra']" },
+  { id: "craftpick", n: 1, txt: "Crafteá un Pico de Bronce en la Herrería", target: "store", panel: "ov-forge", ui: "[data-craft='bronze']" },
+  { id: "mineore",   n: 1, txt: "Miná un mineral con tu pico nuevo",    target: "ore" },
   // Fixes.docx 14/8 #2: el Altar va DESPUÉS de picos y fundición — su receta pide ORO, y
   // el oro necesita Pico de Oro (antes el embudo lo hacía softlock). Además su cadena deja
   // abierto TODO el loop (ver permisos) porque la receta cruza media economía.
@@ -1016,29 +1016,32 @@ const TUTO_STEPS = [
     txt: "Juntá # de piedra (para la obra del Altar)",                            target: "rock" },
   { id: "wood_al",  res: "madera", dep: "altar", need: () => BUILD_DEF.altar.cost.madera || 40,
     txt: "Juntá # de madera (para la obra del Altar)",                            target: "tree" },
-  { id: "build_altar", n: 1, pr: 100, txt: "Llevale a la obra del Altar lo que falta (incluye oro y $Golden)", target: "altar" },
-  { id: "upgrade",   n: 1, pr: 150, txt: "Mejorá un arma a +1 en el Altar",     target: "altar", panel: "ov-altar" },
-  { id: "dummy",     n: 1, pr: 40,  txt: "Entrená con el dummy de práctica",     target: "dummy" },
-  { id: "unlocknode", n: 1, pr: 60, txt: "Usá un segundo árbol o veta (se habilitan por nivel)", target: "tree" },
-  { id: "chest",     n: 1, pr: 60,  txt: "Crafteá un cofre depósito y colocalo", target: "store", panel: "ov-forge", ui: "#forge-chest" },
-  { id: "invexp",    n: 1, pr: 60,  txt: "Ampliá tu bolsa desde el inventario",  panel: "ov-inv", ui: "#inv-expbtn" },
-  { id: "passclaim", n: 1, pr: 80,  txt: "Reclamá una recompensa del Pase de Batalla", panel: "ov-pass", ui: "[data-pfree]" },
-  { id: "socket",    n: 1, pr: 120, txt: "Socketeá una runa en tu arma (Altar)", target: "altar", panel: "ov-altar" },
+  { id: "build_altar", n: 1, txt: "Llevale a la obra del Altar lo que falta (incluye oro y $Golden)", target: "altar" },
+  { id: "upgrade",   n: 1, txt: "Mejorá un arma a +1 en el Altar",     target: "altar", panel: "ov-altar" },
+  { id: "dummy",     n: 1, txt: "Entrená con el dummy de práctica",     target: "dummy" },
+  { id: "unlocknode", n: 1, txt: "Usá un segundo árbol o veta (se habilitan por nivel)", target: "tree" },
+  { id: "chest",     n: 1, txt: "Crafteá un cofre depósito y colocalo", target: "store", panel: "ov-forge", ui: "#forge-chest" },
+  { id: "invexp",    n: 1, txt: "Ampliá tu bolsa desde el inventario",  panel: "ov-inv", ui: "#inv-expbtn" },
+  { id: "passclaim", n: 1, txt: "Reclamá una recompensa del Pase de Batalla", panel: "ov-pass", ui: "[data-pfree]" },
+  { id: "socket",    n: 1, txt: "Socketeá una runa en tu arma (Altar)", target: "altar", panel: "ov-altar" },
 ];
 /* 14/8: los 40 pasos agrupados en CAPÍTULOS reclamables — la guía opcional con forma de
    diario de misiones. Cada capítulo junta pasos consecutivos y deja una recompensa que se
    RECLAMA en el panel Objetivos (no cae sola): el que ignora la guía cobra igual cuando
    le pasa por encima jugando libre. */
+/* 14/8 v2 (filosofía web3, dirección): los premios son INSUMOS, no moneda — cada plata
+   regalada es emisión que termina en el P2P. La plata sale de vender lo producido; los
+   capítulos pagan cosas que se USAN. El último paga una FICHA DE PARCELA (tierra). */
 const TUTO_CAPS = [
-  { id: "cosecha",  label: "Tu primera cosecha",   pasos: ["buyseed", "plant", "harvest", "sell"], premio: 25 },
-  { id: "herreria", label: "La Herrería",          pasos: ["place_store", "wood_st", "stone_st", "build_store"], premio: 50 },
-  { id: "horno",    label: "El Horno de Piedra",   pasos: ["place_horno", "wood", "stone", "build_horno", "crafttool"], premio: 50 },
-  { id: "cocina",   label: "La Cocina",            pasos: ["place_cocina", "woodc", "stonec", "build_cocina", "cook", "eat"], premio: 75 },
-  { id: "armas",    label: "Las Armas",            pasos: ["unlockarm", "craftarm", "equiparm"], premio: 75 },
-  { id: "zona",     label: "La Zona Negra",        pasos: ["portal", "kill", "kill5", "fish"], premio: 100 },
-  { id: "mineria",  label: "Minería avanzada",     pasos: ["mat", "craftpick", "mineore"], premio: 100 },
-  { id: "altar",    label: "El Altar de Runas",    pasos: ["place_altar", "stone_al", "wood_al", "build_altar", "upgrade"], premio: 150 },
-  { id: "maestria", label: "Maestría de la granja", pasos: ["dummy", "unlocknode", "chest", "invexp", "passclaim", "socket"], premio: 200 },
+  { id: "cosecha",  label: "Tu primera cosecha",   pasos: ["buyseed", "plant", "harvest", "sell"], regalo: { seeds: { papa: 5 } },        premioTxt: "5 semillas de papa" },
+  { id: "herreria", label: "La Herrería",          pasos: ["place_store", "wood_st", "stone_st", "build_store"], regalo: { tools: { axe: 5 } }, premioTxt: "5 hachas" },
+  { id: "horno",    label: "El Horno de Piedra",   pasos: ["place_horno", "wood", "stone", "build_horno", "crafttool"], regalo: { pico: 5 }, premioTxt: "5 usos de pico" },
+  { id: "cocina",   label: "La Cocina",            pasos: ["place_cocina", "woodc", "stonec", "build_cocina", "cook", "eat"], regalo: { dishes: { papa_asada: 2 } }, premioTxt: "2 Papas Asadas" },
+  { id: "armas",    label: "Las Armas",            pasos: ["unlockarm", "craftarm", "equiparm"], regalo: { res: { flecha: 20 } },          premioTxt: "20 flechas" },
+  { id: "zona",     label: "La Zona Negra",        pasos: ["portal", "kill", "kill5", "fish"], regalo: { res: { lombriz: 10, carne: 5 } }, premioTxt: "10 lombrices + 5 carnes" },
+  { id: "mineria",  label: "Minería avanzada",     pasos: ["mat", "craftpick", "mineore"], regalo: { res: { barra_piedra: 3 } },           premioTxt: "3 barras de piedra" },
+  { id: "altar",    label: "El Altar de Runas",    pasos: ["place_altar", "stone_al", "wood_al", "build_altar", "upgrade"], regalo: { res: { esencia_runica: 2 } }, premioTxt: "2 esencias rúnicas" },
+  { id: "maestria", label: "Maestría de la granja", pasos: ["dummy", "unlocknode", "chest", "invexp", "passclaim", "socket"], regalo: { ficha: 1 }, premioTxt: "1 FICHA DE PARCELA" },
 ];
 function capEstado(cap) {   // "hecho" | "activo" | "pendiente" (por el paso más avanzado de la cadena)
   const idxs = cap.pasos.map(id => tutoIdx(id)).filter(i => i >= 0);
@@ -1052,9 +1055,20 @@ function capReclamar(id) {
   G.capsClaim = G.capsClaim || {};
   if (G.capsClaim[id] || capEstado(cap) !== "hecho") return;
   G.capsClaim[id] = 1;
-  G.plata += cap.premio;
-  log("Capítulo «" + cap.label + "» reclamado: +" + cap.premio + " de plata.", "gold");
-  if (window.celebrate) celebrate({ title: "¡CAPÍTULO COMPLETO!", sub: cap.label, big: false, reward: "+" + cap.premio + " de plata" });
+  const r = cap.regalo || {};
+  if (r.seeds) for (const k in r.seeds) G.seeds[k] = (G.seeds[k] || 0) + r.seeds[k];
+  if (r.res) for (const k in r.res) G.res[k] = (G.res[k] || 0) + r.res[k];
+  if (r.tools) { G.tools = G.tools || {}; for (const k in r.tools) G.tools[k] = (G.tools[k] || 0) + r.tools[k]; }
+  if (r.dishes) { G.dishes = G.dishes || {}; for (const k in r.dishes) G.dishes[k] = (G.dishes[k] || 0) + r.dishes[k]; }
+  if (r.pico) {
+    G.picks = G.picks || { owned: {}, dur: {}, eq: null };
+    if (!G.picks.eq || !G.picks.owned[G.picks.eq]) { G.picks.owned.stone = true; G.picks.eq = "stone"; G.picks.dur.stone = 0; }
+    G.picks.dur[G.picks.eq] = (G.picks.dur[G.picks.eq] || 0) + r.pico;
+  }
+  if (r.ficha) { G.plotsOwned = Math.min(PLOT_MAX, (G.plotsOwned || 3) + r.ficha); if (typeof syncEditDeco === "function") syncEditDeco(); }
+  log("Capítulo «" + cap.label + "» reclamado: " + cap.premioTxt + ".", "gold");
+  if (window.celebrate) celebrate({ title: "¡CAPÍTULO COMPLETO!", sub: cap.label, big: false, reward: cap.premioTxt });
+  if (typeof refreshHotbar === "function") refreshHotbar(true);
   // cierre de la primera sesión: el juego trabaja mientras no estás — la lección del género
   if (id === "herreria") log("💡 Dejá una tanda plantada antes de salir: tus cultivos crecen aunque cierres el juego.", "good");
   refreshHud(); if (typeof saveFarm === "function") saveFarm();
@@ -1314,9 +1328,11 @@ function tutoDone(st) {
   G.tuto.step++; G.tuto.n = 0;
   if (G.tuto.step >= TUTO_STEPS.length) {
     G.tuto.done = true;
-    G.plata += TUTO_REWARD_PLATA;
-    log("¡Tutorial completo! Recompensa: " + TUTO_REWARD_PLATA + " de plata. La granja es toda tuya.", "gold");
-    if (window.celebrate) celebrate({ title: "¡GRANJA LISTA!", sub: "Tutorial completo", big: true, reward: "+" + TUTO_REWARD_PLATA + " de plata" });
+    // 14/8 (web3): el cierre paga TIERRA, no moneda — una parcela extra de regalo
+    G.plotsOwned = Math.min(PLOT_MAX, (G.plotsOwned || 3) + 1);
+    log("¡Guía completa! Recompensa: una PARCELA extra. La granja es toda tuya.", "gold");
+    if (window.celebrate) celebrate({ title: "¡GRANJA LISTA!", sub: "Guía completa", big: true, reward: "+1 parcela de regalo" });
+    if (typeof syncEditDeco === "function") syncEditDeco();
     refreshHud();
   } else {
     tutoAutoSkip();   // si el paso nuevo ya estaba cumplido, no lo pide (9/8)
@@ -1335,21 +1351,26 @@ var PASS_VIP_PRICE = 250;     // $Golden (doc: ~250 o 4,99 USD)
 var PASS_LVL_GOLD = 15;       // comprar 1 nivel suelto con $Golden (para quien va tarde)
 var PASS_STAR_DAILY = 10, PASS_STAR_BONUS = 5, PASS_STAR_WEEKLY = 40;
 var PASS_VIP_BOOST = 1.2;     // perk VIP: +20% de estrellas (conveniencia, no poder)
-const PASS_FREE = [   // índice = nivel-1 (tabla del doc)
-  { plata:100 }, { seed:["papa",5] }, { res:["madera",20] }, { plata:150 }, { seed:["zanahoria",5] },
-  { res:["piedra",25] }, { dish:["pan_trigo",3] }, { plata:200 }, { seed:["cebolla",5] }, { pick:"bronze" },
-  { plata:250 }, { res:["madera",30] }, { seed:["repollo",5] }, { plata:250 }, { ficha:1 },
-  { res:["piedra",30] }, { seed:["calabacin",5] }, { plata:300 }, { dish:["estofado",1] }, { pick:"gold" },
-  { plata:300 }, { res:["madera",40] }, { seed:["brocoli",5] }, { plata:350 }, { ficha:1 },
-  { res:["piedra",40] }, { seed:["maiz",5] }, { plata:400 }, { dish:["banquete",1] }, { plata:500, cos:"Título de Cosecha" },
+// 14/8 (web3): el track FREE paga INSUMOS, no plata — cada plata regalada es emisión.
+// Los valores reemplazan cada fila de plata por insumos de valor equivalente.
+const PASS_FREE = [   // índice = nivel-1 (tabla del doc, plata→insumos 14/8)
+  { res:["madera",20] }, { seed:["papa",5] }, { res:["madera",20] }, { seed:["zanahoria",8] }, { seed:["zanahoria",5] },
+  { res:["piedra",25] }, { dish:["pan_trigo",3] }, { res:["lombriz",15] }, { seed:["cebolla",5] }, { pick:"bronze" },
+  { res:["barra_piedra",3] }, { res:["madera",30] }, { seed:["repollo",5] }, { dish:["papa_asada",5] }, { ficha:1 },
+  { res:["piedra",30] }, { seed:["calabacin",5] }, { res:["flecha",40] }, { dish:["estofado",1] }, { pick:"gold" },
+  { res:["carne",10] }, { res:["madera",40] }, { seed:["brocoli",5] }, { res:["bronce",8] }, { ficha:1 },
+  { res:["piedra",40] }, { seed:["maiz",5] }, { res:["esencia_runica",2] }, { dish:["banquete",1] }, { ficha:1, cos:"Título de Cosecha" },
 ];
+// 14/8 (web3): el VIP paga COSMÉTICO + conveniencia (insumos ricos y algo de $Golden —
+// devolución parcial de lo quemado al comprarlo), jamás plata ni poder: con economía
+// compartida y P2P, el pay-to-win destruye el mercado que es el producto.
 const PASS_VIP = [
-  { plata:250, cos:"Marco Brote" }, { plata:300 }, { golden:10 }, { cos:"Skin de Hacha Dorada" }, { plata:400, cos:"Emote Saludo" },
-  { plata:350 }, { golden:15 }, { cos:"Decoración: Farol Dorado" }, { plata:400 }, { cos:"Skin de Granjero Cosechador Ámbar" },
-  { plata:500 }, { golden:20 }, { cos:"Título Labrador" }, { plata:500 }, { golden:30, cos:"Estatua de Trigo" },
-  { plata:500 }, { cos:"Skin de Caña Reluciente" }, { golden:25 }, { plata:550 }, { cos:"Mascota Pollito Dorado" },
-  { plata:600 }, { golden:25 }, { cos:"Color de nombre Oro" }, { plata:600 }, { golden:40, cos:"Skin de Espada Filo Solar" },
-  { plata:650 }, { golden:30 }, { cos:"Decoración: Fuente Dorada" }, { plata:700 }, { golden:50, cos:"Skin LEGENDARIA Monarca Dorado + Aura" },
+  { seed:["cebolla",10], cos:"Marco Brote" }, { res:["madera",50] }, { golden:10 }, { cos:"Skin de Hacha Dorada" }, { dish:["papa_asada",8], cos:"Emote Saludo" },
+  { res:["piedra",40] }, { golden:15 }, { cos:"Decoración: Farol Dorado" }, { seed:["repollo",8] }, { cos:"Skin de Granjero Cosechador Ámbar" },
+  { res:["flecha",60] }, { golden:20 }, { cos:"Título Labrador" }, { res:["barra_piedra",5] }, { golden:30, cos:"Estatua de Trigo" },
+  { seed:["calabaza",6] }, { cos:"Skin de Caña Reluciente" }, { golden:25 }, { res:["carne",20] }, { cos:"Mascota Pollito Dorado" },
+  { res:["bronce",12] }, { golden:25 }, { cos:"Color de nombre Oro" }, { seed:["brocoli",6] }, { golden:40, cos:"Skin de Espada Filo Solar" },
+  { res:["esencia_runica",3] }, { golden:30 }, { cos:"Decoración: Fuente Dorada" }, { ficha:1 }, { golden:50, cos:"Skin LEGENDARIA Monarca Dorado + Aura" },
 ];
 const PASS_HITOS = { 1:"★", 5:"★", 10:"★★", 15:"★", 20:"★★", 25:"★", 30:"★★" };
 const PASS_MISIONES = {   // una por pilar del juego (doc)

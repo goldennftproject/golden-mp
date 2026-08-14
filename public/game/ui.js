@@ -1060,11 +1060,12 @@ function refreshObjetivos() {
       return '<div class="fds">' + (hecho ? "✅ " : (activo ? "▶️ " : "⬜ ")) + tutoTxt(st) + "</div>";
     }).join("");
     const btn = reclamado ? '<button class="ghost sm" disabled>Reclamado</button>'
-      : (est === "hecho" ? '<button class="gold sm" data-cap="' + cap.id + '">🎁 Reclamar ' + cap.premio + '</button>'
-        : '<button class="ghost sm" disabled>' + cap.premio + ' de plata</button>');
+      : (est === "hecho" ? '<button class="gold sm" data-cap="' + cap.id + '">🎁 Reclamar</button>'
+        : '<button class="ghost sm" disabled>Al completar</button>');
     h += '<div class="forge-row' + (est === "activo" ? " eq" : (est === "hecho" && !reclamado ? "" : "")) + '"><div class="finfo">' +
       '<div class="fnm">' + cap.label + (est === "hecho" ? ' <span class="tag">completo</span>' : (est === "activo" ? ' <span class="tag">en curso</span>' : "")) + '</div>' +
       (est === "pendiente" ? '<div class="fds">Se abre al avanzar (o cumplilo jugando libre — se marca solo).</div>' : filas) +
+      (reclamado ? "" : '<div class="fds">🎁 Recompensa: <b>' + cap.premioTxt + '</b></div>') +
       '</div><div class="fbtns">' + btn + '</div></div>';
   });
   box.innerHTML = h;
