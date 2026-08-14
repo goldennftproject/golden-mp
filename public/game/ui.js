@@ -804,13 +804,25 @@ function tutoRefresh() {
 // no se leían sobre la madera. Una sola flecha por vez: menú → panel → pestaña → botón.
 function tutoFlechaUI(el) {
   let f = document.getElementById("tuto-flecha-ui");
-  if (!el) { if (f) f.style.display = "none"; return; }
+  const foco = document.getElementById("tuto-foco");
+  if (!el) { if (f) f.style.display = "none"; if (foco) foco.style.display = "none"; return; }
   if (!f) { f = document.createElement("div"); f.id = "tuto-flecha-ui"; f.textContent = "▼"; document.body.appendChild(f); }
   const r = el.getBoundingClientRect();
-  if (!r.width && !r.height) { f.style.display = "none"; return; }
+  if (!r.width && !r.height) { f.style.display = "none"; if (foco) foco.style.display = "none"; return; }
   f.style.display = "block";
   f.style.left = (r.left + r.width / 2) + "px";
   f.style.top = r.top + "px";
+  // 14/8: FOCO — todo se oscurece menos el botón al que apunta la guía (solo durante la guía)
+  if (foco) {
+    const guiando = G.tuto && !G.tuto.done && (!window.guiaOn || guiaOn());
+    if (!guiando) { foco.style.display = "none"; return; }
+    const pad = 6;
+    foco.style.display = "block";
+    foco.style.left = (r.left - pad) + "px";
+    foco.style.top = (r.top - pad) + "px";
+    foco.style.width = (r.width + pad * 2) + "px";
+    foco.style.height = (r.height + pad * 2) + "px";
+  }
 }
 function tutoHighlight() {
   document.querySelectorAll(".tutohl").forEach(e => e.classList.remove("tutohl"));   // limpieza del sistema viejo
@@ -1061,6 +1073,7 @@ function _capMostrar() {
   const txt = _capCola.shift(); if (!txt) return;
   $("capataz-txt").innerHTML = txt;
   el.classList.remove("hidden");
+  { const tu = $("tuto"); if (tu) tu.style.visibility = "hidden"; }   // la burbuja ocupa el lugar del cartel
   if (window.sfx) sfx("click");
   // 14/8 v2 (playtest: "apareció unos segundos y desapareció"): la burbuja QUEDA hasta
   // que la toques — una instrucción no puede evaporarse sola. Cerrar es un clic.
@@ -1068,6 +1081,7 @@ function _capMostrar() {
 function _capCerrar() {
   const el = $("capataz"); if (!el) return;
   el.classList.add("hidden");
+  { const tu = $("tuto"); if (tu) tu.style.visibility = ""; }   // vuelve el cartel Pedido
   clearTimeout(_capTimer);
   if (_capCola.length) setTimeout(_capMostrar, 350);
 }
@@ -1084,10 +1098,10 @@ function capatazRepetir() {
     }
   }
 }
-document.addEventListener("DOMContentLoaded", () => {
-  const el = $("capataz"); if (el) el.onclick = _capCerrar;
-  const tu = $("tuto"); if (tu) tu.onclick = capatazRepetir;   // el cartel repite al capataz
-});
+// los scripts del juego se cargan DESPUÉS de DOMContentLoaded (inyección dinámica), así
+// que el enganche va directo — el DOM ya existe cuando este archivo corre (bug 14/8)
+{ const el = $("capataz"); if (el) el.onclick = _capCerrar;
+  const tu = $("tuto"); if (tu) tu.onclick = capatazRepetir; }   // el cartel repite al capataz
 
 /* ---- OBJETIVOS por capítulos (14/8): la guía opcional con forma de diario ---- */
 function refreshObjetivos() {

@@ -169,14 +169,17 @@
   #tuto{position:fixed;left:50%;transform:translateX(-50%);top:54px;z-index:7;display:flex;align-items:center;gap:8px;background:none;border:8px solid transparent;border-image:url("assets/ui/badge_wood.png") 26 fill round;image-rendering:pixelated;padding:1px 10px;font-size:13px;font-weight:700;color:#fff;text-shadow:-1px 0 #241505,1px 0 #241505,0 -1px #241505,0 1px #241505;pointer-events:auto;cursor:pointer}   /* 14/8: clic = el capataz repite la línea del capítulo */
   #tuto.hidden{display:none}
   /* EL CAPATAZ (14/8): burbuja de diálogo — la voz del juego */
-  #capataz{position:fixed;left:50%;transform:translateX(-50%);bottom:190px;z-index:8;display:flex;align-items:center;gap:10px;max-width:min(520px,92vw);
+  /* 14/8 v2: la burbuja va ARRIBA, en el lugar del cartel Pedido (que se esconde mientras habla) */
+  #capataz{position:fixed;left:50%;transform:translateX(-50%);top:50px;z-index:8;display:flex;align-items:center;gap:10px;max-width:min(520px,92vw);
     border:10px solid transparent;border-image:url("assets/ui/panel_wood.png?a=4") 30 round;background:rgba(30,22,12,.94);image-rendering:pixelated;
     padding:8px 14px;cursor:pointer;animation:capIn .25s ease-out}
   #capataz.hidden{display:none}
   #capataz-cara{font-size:30px;line-height:1;filter:drop-shadow(0 2px 2px rgba(0,0,0,.5))}
   #capataz-txt{color:#f2ead5;font-size:13.5px;font-weight:600;line-height:1.35}
   #capataz-txt b{color:#ffe08a}
-  @keyframes capIn{from{opacity:0;transform:translateX(-50%) translateY(8px)}to{opacity:1;transform:translateX(-50%) translateY(0)}}
+  @keyframes capIn{from{opacity:0;transform:translateX(-50%) translateY(-8px)}to{opacity:1;transform:translateX(-50%) translateY(0)}}
+  /* FOCO de interfaz (14/8): oscurece todo menos el botón al que apunta la guía */
+  #tuto-foco{position:fixed;z-index:99997;pointer-events:none;display:none;border-radius:12px;box-shadow:0 0 0 9999px rgba(16,11,4,.45)}
   #tuto .k{color:#ffe9ac;font-weight:800;font-size:12px}
   #tuto b{color:#fff}
   #tuto .check{color:#8fd14f;font-size:16px;animation:tcheck .5s cubic-bezier(.34,1.56,.64,1)}
@@ -558,6 +561,7 @@
     <div id="capataz-cara">🧑‍🌾</div>
     <div id="capataz-txt"></div>
   </div>
+  <div id="tuto-foco"></div>
   <div class="hudbar">
     <div class="brand" style="display:flex;align-items:center;gap:12px"><h1>GOLDEN FARM</h1>
       <div class="pill" title="Ventanas del juego conectadas ahora"><span class="k">Jugadores en línea</span><b id="s-online">1</b></div>

@@ -2302,6 +2302,13 @@ Onboarding rediseñado desde cero alrededor de una VOZ y un TABLÓN (v1 para tes
   cierra sola — una instrucción no puede evaporarse; cerrar es un clic. Y el cartel
   "Pedido" de arriba quedó clickeable: lo tocás y el capataz repite la línea del
   capítulo activo (las líneas una-sola-vez dejan de perderse para siempre).
+- **v2 (dirección): burbuja ARRIBA + el FOCO** — la burbuja habla desde arriba, en el
+  lugar del cartel Pedido (que se esconde mientras tanto: nunca dos textos compitiendo).
+  Y la "vignette de foco" del diseño original: durante la guía, TODO se oscurece salvo
+  el lugar donde hay que actuar — en el MUNDO, un círculo de luz suave sigue al objetivo
+  de la flecha (RenderTexture con erase, 45% de sombra, se apaga en paneles/edición y al
+  terminar la guía); en las INTERFACES, el botón apuntado queda iluminado y el resto del
+  panel en penumbra (box-shadow gigante con agujero). Guía apagada = sin foco.
 
 ### Feedback del diseñador sobre el panel Objetivos (14/8, Discord) — 4 pedidos
 

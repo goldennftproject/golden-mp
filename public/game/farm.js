@@ -1294,6 +1294,7 @@ class FarmScene extends Phaser.Scene {
   // flecha del tutorial: triángulo dorado que rebota sobre el objetivo del paso actual
   updateTutoArrow() {
     if (this.tutoArrow) { this.tutoArrow.destroy(); this.tutoArrow = null; if (this.tutoTw) { this.tutoTw.stop(); this.tutoTw = null; } }
+    this.focoTarget = null;   // sin flecha no hay foco (updateTutoArrow lo vuelve a poner si corresponde)
     if (window.guiaOn && !guiaOn()) return;   // 14/8: guía opcional apagada — sin flecha en el mundo
     let st = (typeof tutoActivo === "function") ? tutoActivo() : null;
     if (!st) return;
@@ -1313,6 +1314,7 @@ class FarmScene extends Phaser.Scene {
     if (x == null) return;
     const tri = this.add.triangle(x, y, 0, 0, 16, 0, 8, 12, 0xffd75e).setStrokeStyle(2, 0x241505, 1).setDepth(99990);
     this.tutoArrow = tri;
+    this.focoTarget = { x, y: y + 40 };   // 14/8: el FOCO del mundo apunta a lo mismo que la flecha
     this.tutoTw = this.tweens.add({ targets: tri, y: y - 10, duration: 420, yoyo: true, repeat: -1, ease: "Sine.easeInOut" });
   }
 
@@ -2622,7 +2624,29 @@ class FarmScene extends Phaser.Scene {
     pl.timer.setVisible(false);
   }
 
+  // 14/8 (dirección): el FOCO del mundo — todo se oscurece salvo un círculo de luz sobre
+  // el objetivo de la guía. Solo durante la guía activa, sin paneles abiertos ni edición.
+  focoSync() {
+    const activo = this.focoTarget && G.tuto && !G.tuto.done && (!window.guiaOn || guiaOn()) && !GF.uiOpen && !GF.editMode;
+    if (!activo) { if (this.focoRT) this.focoRT.setVisible(false); return; }
+    if (!this.textures.exists("focoLuz")) {
+      // círculo blanco con borde suave para "borrar" la oscuridad
+      const g = this.make.graphics({ add: false });
+      for (let r = 110; r > 0; r -= 2) { g.fillStyle(0xffffff, r > 80 ? (110 - r) / 30 : 1); g.fillCircle(120, 120, r); }
+      g.generateTexture("focoLuz", 240, 240); g.destroy();
+    }
+    const W = this.scale.width, H = this.scale.height;
+    if (!this.focoRT) this.focoRT = this.add.renderTexture(0, 0, W, H).setOrigin(0, 0).setScrollFactor(0).setDepth(99980);
+    const cam = this.cameras.main, z = cam.zoom || 1;
+    const sx = (this.focoTarget.x - cam.scrollX) * z, sy = (this.focoTarget.y - cam.scrollY) * z;
+    this.focoRT.setVisible(true);
+    this.focoRT.clear();
+    this.focoRT.fill(0x100b04, 0.45, 0, 0, W, H);
+    this.focoRT.erase("focoLuz", sx - 120, sy - 120);
+  }
+
   update(time, deltaMs) {
+    this.focoSync();
     if (this.leaving || !this.hero) return;   // cambiando de escena: no tocar nada más
     this._frameT = time;   // marca del frame: la usa la caché de hitsSprite (10/8)
     const dt = deltaMs / 1000, k = this.keys, hero = this.hero;
