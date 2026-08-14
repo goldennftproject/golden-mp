@@ -2228,6 +2228,19 @@ horas y 122 ciclos** de papa. Arreglos (el embudo NO se toca):
 - La cadena queda en **40 pasos**. Verificación completa: hermética, sin huérfanos,
   planos a tiempo, place<juntá<depósito, y 5 escenarios nuevos de adelanto (crafttool
   parcial, unlockarm pelado/parcial, arranque sin adelanto). `TUTO_VER=10`.
+- **ADELANTO v2 — el KIT entrega HERRAMIENTAS, no plata (dirección, tras quedar
+  bloqueado en 5/15 piedras)**: el pico a 0 usos se DESTRUYE (`destroyPick`), NO se
+  repara — toda la cadena de "reparalo (1 madera)" estaba construida sobre un supuesto
+  falso, y un Pico de Piedra nuevo sale 3 madera + 10 plata por UN uso: sin plata,
+  softlock. Ahora el kit del objetivo da lo concreto: pasos de madera → las hachas que
+  falten; pasos de piedra → usos de pico (y si el pico murió, revive el de piedra);
+  crafttool → plata (esa ES la lección); unlockarm → su plata + hachas + usos para los
+  materiales. Marca nueva `G.tuto.adelv` — los guardados trabados en un paso ya "cobrado"
+  con la cuenta vieja RECIBEN el kit al entrar el fix. El planificador de piedra se
+  reescribió como red de seguridad real: craftear picos (apilables, botón ×5) → sin
+  plata, su plan → sin madera libre, talar. Verificado con el estado exacto del bloqueo
+  (pico destruido, 30 maderas con 20 reservadas, marca vieja cobrada → kit de 10 usos y
+  a picar).
 - **El adelanto de la piedra contaba madera RESERVADA como libre (playtest cocina)**: al
   entrar a "juntá 15 de piedra", el adelanto restaba las 20 maderas en bolsa creyendo que
   pagaban las reparaciones del pico — pero están reservadas para la obra (el guardia no

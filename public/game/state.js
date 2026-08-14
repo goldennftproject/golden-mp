@@ -463,36 +463,41 @@ function tutoSub() {
     }
     return null;   // hachas alcanzan para toda la meta: a talar
   }
-  // 14/8 (playtest cocina, 5/15 piedras y pico muerto = softlock): el planificador de
-  // PIEDRA, espejo del de madera con un nivel más de cadena. El pico dura 1 uso por
-  // reparación y reparar cuesta 1 madera → faltan tantas maderas DE SOBRA (sin tocar lo
-  // reservado para la obra) como piedras falten; sin madera → talar; sin hachas → su plan.
-  if (st.res === "piedra" && G.picks && G.picks.eq) {
+  // 14/8 v2: planificador de PIEDRA como red de seguridad (el kit del adelanto ya entrega
+  // los usos de pico al entrar al paso — esto solo salta si se drenaron, p.ej. picando
+  // vetas de mineral). OJO: el pico NO se repara — a 0 usos se DESTRUYE (destroyPick); un
+  // Pico de Piedra nuevo sale 3 madera + 10 plata por UN uso. La cadena: craftear picos →
+  // sin plata, su plan → sin madera libre (la de la obra no se toca), talar.
+  if (st.res === "piedra") {
     if (!(G.built && G.built.store)) return null;   // fase pre-Herrería: el pico de arranque alcanza
     const falta = Math.max(0, tutoNeed(st) - tutoTiene(st));
-    const eq = G.picks.eq, usos = Math.floor((G.picks.dur && G.picks.dur[eq]) || 0);
-    const repas = Math.max(0, falta - usos);   // reparaciones que faltan (1 uso por reparación)
-    if (repas <= 0) return null;               // el pico aguanta toda la meta: a picar
-    // madera DISPONIBLE = en bolsa menos lo que la obra del paso todavía espera
+    const eq = (G.picks && G.picks.eq) || null;
+    const usos = eq ? Math.floor((G.picks.dur && G.picks.dur[eq]) || 0) : 0;
+    const picos = Math.max(0, falta - usos);   // picos de piedra a craftear (1 uso cada uno)
+    if (picos <= 0) return null;               // el pico aguanta toda la meta: a picar
+    const pd = (typeof PICK_DEF !== "undefined" && PICK_DEF.stone) || { cost: { madera: 3 }, plata: 10 };
+    const plataNec = picos * (pd.plata || 10);
+    const madNecT = picos * ((pd.cost && pd.cost.madera) || 3);
     let reservada = 0;
     if (st.dep && typeof obraDe === "function" && obraDe(st.dep) && typeof obraFalta === "function") {
       const f = obraFalta(st.dep).find(x => x[0] === "madera"); if (f) reservada = f[1];
     }
     const libre = Math.max(0, Math.floor(G.res.madera || 0) - reservada);
-    if (usos <= 0 && libre >= 1) return { txt: "Tu pico se gastó: reparalo (1 madera) y seguí picando — faltan " + falta + " piedras",
-      target: "store", panel: "ov-forge", ui: "[data-repair='" + eq + "']", permite: ["repair", "mine", "chop", "crafttool"] };
-    if (libre >= repas) return null;           // hay madera de sobra para todas las reparaciones: a picar y reparar
-    const madNec = repas - libre;
-    const hachas = Math.max(0, madNec - toolCount("axe"));
+    if (libre >= madNecT && G.plata >= plataNec) return { txt: "Crafteá " + picos + " Pico" + (picos > 1 ? "s" : "") + " de Piedra (" + madNecT + " madera + " + plataNec + " de plata" + (picos >= 5 ? ", botón ×5" : "") + ")",
+      target: "store", panel: "ov-forge", ui: picos >= 5 ? "[data-craft5='stone']" : "[data-craft='stone']", permite: ["craftpick", "mine", "chop", "crafttool"] };
+    if (G.plata < plataNec) return tutoSubPlata("Para " + picos + " picos (" + plataNec + " de plata): ", plataNec);
+    // plata alcanza pero falta madera LIBRE: talar (con hachas o su plan)
+    const madFalta = madNecT - libre;
+    const hachas = Math.max(0, madFalta - toolCount("axe"));
     if (hachas > 0) {
-      const costo = (TOOL_CRAFT && TOOL_CRAFT.axe && TOOL_CRAFT.axe.plata) || 10;
-      const plataNec = hachas * costo;
-      if (G.plata >= plataNec) return { txt: "Para reparar el pico vas a necesitar madera: crafteá " + hachas + " hacha" + (hachas > 1 ? "s" : "") + " (" + plataNec + " de plata" + (hachas >= 5 ? ", botón ×5" : "") + ")",
-        target: "store", panel: "ov-forge", ui: hachas >= 5 ? "[data-ctool5='axe']" : "[data-ctool='axe']", permite: ["crafttool", "chop", "repair", "mine"] };
-      return tutoSubPlata("Para las reparaciones del pico te faltan " + hachas + " hachas (" + plataNec + " de plata): ", plataNec);
+      const costoHacha = (TOOL_CRAFT && TOOL_CRAFT.axe && TOOL_CRAFT.axe.plata) || 10;
+      const plataHachas = hachas * costoHacha;
+      if (G.plata >= plataNec + plataHachas) return { txt: "Para los picos falta madera: crafteá " + hachas + " hacha" + (hachas > 1 ? "s" : "") + " (" + plataHachas + " de plata" + (hachas >= 5 ? ", botón ×5" : "") + ")",
+        target: "store", panel: "ov-forge", ui: hachas >= 5 ? "[data-ctool5='axe']" : "[data-ctool='axe']", permite: ["crafttool", "chop", "craftpick", "mine"] };
+      return tutoSubPlata("Para los picos y sus hachas (" + (plataNec + plataHachas) + " de plata): ", plataNec + plataHachas);
     }
-    return { txt: "Talá " + madNec + " árbol" + (madNec > 1 ? "es" : "") + " — esa madera repara el pico (lo de la obra no se toca)",
-      target: "tree", permite: ["chop", "crafttool", "repair", "mine"] };
+    return { txt: "Talá " + madFalta + " árbol" + (madFalta > 1 ? "es" : "") + " — madera para los picos (lo de la obra no se toca)",
+      target: "tree", permite: ["chop", "crafttool", "craftpick", "mine"] };
   }
   const quiereTalar = st.id === "unlocknode" || st.id === "chest";
   if (quiereTalar && typeof toolCount === "function" && toolCount("axe") <= 0) {
@@ -1155,51 +1160,58 @@ function tutoHecho(st) {
    · piedra → reparaciones faltantes × precio del hacha (reparar = 1 madera = 1 tala)
    En los pasos tempranos el kit de arranque alcanza → adelanto 0 (la primera vez se
    aprende, las repeticiones se pagan). Se otorga UNA vez por paso (G.tuto.adel). */
+/* 14/8 v2 (dirección, tras el bloqueo de la cocina): el adelanto entrega las HERRAMIENTAS
+   directamente, no la plata para comprarlas. El jugador ya aprendió a craftear — repetir
+   la conversión plata→herramienta era otro bucle (y con los picos era un SOFTLOCK: el
+   pico se DESTRUYE a 0 usos, no se repara; uno nuevo sale 3 madera + 10 plata por UN uso).
+   · pasos de madera → hachas que falten para la meta completa
+   · pasos de piedra → usos de pico (si el pico murió, revive el de piedra con esos usos)
+   · crafttool → plata (esa ES la lección: craftear pagando)
+   · unlockarm → la plata del desbloqueo + hachas/usos para sus materiales
+   Marca nueva G.tuto.adelv (la vieja adel queda ignorada → los guardados trabados en un
+   paso ya "cobrado" con la cuenta vieja RECIBEN el kit al entrar el fix). */
 function tutoAdelanto() {
-  const st = tutoActivo(); if (!st || G.tuto.adel === G.tuto.step) return;
-  const daAdelanto = st.res === "madera" || st.res === "piedra" || st.id === "crafttool" || st.id === "unlockarm";
-  if (!daAdelanto) return;
-  if (st.id === "wood_st" || st.id === "stone_st") { G.tuto.adel = G.tuto.step; return; }   // las primeras juntadas: starter kit
-  let plata = 0;
+  const st = tutoActivo(); if (!st || G.tuto.adelv === G.tuto.step) return;
+  const esMadera = st.res === "madera", esPiedra = st.res === "piedra";
+  if (!esMadera && !esPiedra && st.id !== "crafttool" && st.id !== "unlockarm") return;
+  G.tuto.adelv = G.tuto.step;
+  const regalos = [];
+  const darHachas = (n) => { if (n > 0) { G.tools = G.tools || {}; G.tools.axe = (G.tools.axe || 0) + n; regalos.push(n + " hacha" + (n > 1 ? "s" : "")); } };
+  const darUsosPico = (n) => {
+    if (n <= 0) return;
+    G.picks = G.picks || { owned: {}, dur: {}, eq: null };
+    if (!G.picks.eq || !G.picks.owned[G.picks.eq]) { G.picks.owned.stone = true; G.picks.eq = "stone"; G.picks.dur.stone = 0; }   // el pico murió: revive el de piedra
+    G.picks.dur[G.picks.eq] = (G.picks.dur[G.picks.eq] || 0) + n;
+    regalos.push(n + " uso" + (n > 1 ? "s" : "") + " de pico");
+  };
   const costoHacha = (TOOL_CRAFT && TOOL_CRAFT.axe && TOOL_CRAFT.axe.plata) || 10;
-  if (st.res === "madera" && typeof toolCount === "function") {
+  let plata = 0;
+  if (esMadera && typeof toolCount === "function") {
+    darHachas(Math.max(0, (tutoNeed(st) - tutoTiene(st)) - toolCount("axe")));
+  } else if (esPiedra) {
     const falta = Math.max(0, tutoNeed(st) - tutoTiene(st));
-    plata = Math.max(0, falta - toolCount("axe")) * costoHacha;
-  } else if (st.res === "piedra" && G.picks && G.picks.eq) {
-    const falta = Math.max(0, tutoNeed(st) - tutoTiene(st));
-    const usos = Math.floor((G.picks.dur && G.picks.dur[G.picks.eq]) || 0);
-    const repas = Math.max(0, falta - usos);
-    // 14/8 (playtest cocina): la madera RESERVADA para la obra NO cuenta como libre — el
-    // adelanto daba 0 creyendo que las 20 maderas del depósito pagaban las reparaciones,
-    // y el sub (que sí resta la reserva) terminaba mandando al bucle de la papa
-    let reservada = 0;
-    if (st.dep && typeof obraDe === "function" && obraDe(st.dep) && typeof obraFalta === "function") {
-      const f = obraFalta(st.dep).find(x => x[0] === "madera"); if (f) reservada = f[1];
-    }
-    const madLibre = Math.max(0, Math.floor(G.res.madera || 0) - reservada);
-    plata = Math.max(0, repas - Math.max(0, toolCount("axe")) - madLibre) * costoHacha;
+    const usos = (G.picks && G.picks.eq) ? Math.floor((G.picks.dur && G.picks.dur[G.picks.eq]) || 0) : 0;
+    darUsosPico(Math.max(0, falta - usos));
   } else if (st.id === "crafttool") {
-    // 14/8 (dirección): ya no hay paso "juntá 10 de plata" — el hacha de la lección se paga sola
-    plata = Math.max(0, costoHacha - Math.floor(G.plata));
+    plata = Math.max(0, costoHacha - Math.floor(G.plata));   // la lección de craftear se paga sola
   } else if (st.id === "unlockarm") {
-    // el paso "juntá 1000" también se retiró: el desbloqueo llega de adelanto, y encima las
-    // herramientas para juntar sus 20 madera + 20 piedra (los materiales se juntan acá)
     const base = (typeof ARMAS_UNLOCK_PLATA !== "undefined") ? ARMAS_UNLOCK_PLATA : 1000;
     const cost = (typeof ARMAS_UNLOCK_COST !== "undefined" && ARMAS_UNLOCK_COST) || {};
+    plata = Math.max(0, base - Math.floor(G.plata));
     const madNec = Math.max(0, (cost.madera || 0) - Math.floor(G.res.madera || 0));
     const pieNec = Math.max(0, (cost.piedra || 0) - Math.floor(G.res.piedra || 0));
-    const hachas = Math.max(0, madNec - toolCount("axe"));
+    darHachas(Math.max(0, madNec - (typeof toolCount === "function" ? toolCount("axe") : 0)));
     const usos = (G.picks && G.picks.eq) ? Math.floor((G.picks.dur && G.picks.dur[G.picks.eq]) || 0) : 0;
-    const repas = Math.max(0, pieNec - usos);
-    plata = Math.max(0, base - Math.floor(G.plata)) + (hachas + repas) * costoHacha;
+    darUsosPico(Math.max(0, pieNec - usos));
   }
-  G.tuto.adel = G.tuto.step;
-  if (plata > 0) {
-    G.plata += plata;
-    log("🎁 Adelanto por lo ya aprendido: +" + plata + " de plata (las herramientas de este paso).", "gold");
-    toast("🎁 +" + plata + " de plata — para tus herramientas");
-    if (window.celebrate) celebrate({ title: "¡ADELANTO!", sub: "+" + plata + " de plata para herramientas", big: false, reward: "Ya sabés ganarla — no hace falta repetir el ciclo" });
+  if (plata > 0) { G.plata += plata; regalos.unshift(plata + " de plata"); }
+  if (regalos.length) {
+    const lista = regalos.join(" + ");
+    log("🎁 Kit del objetivo: " + lista + " — ya sabés conseguirlo, no hace falta repetir el ciclo.", "gold");
+    toast("🎁 Kit del objetivo: " + lista);
+    if (window.celebrate) celebrate({ title: "¡KIT DEL OBJETIVO!", sub: lista, big: false, reward: "Ya sabés conseguirlo — no hace falta repetir el ciclo" });
     refreshHud();
+    if (typeof refreshHotbar === "function") refreshHotbar(true);
   }
 }
 function tutoAutoSkip() {
