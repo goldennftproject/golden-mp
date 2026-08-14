@@ -390,37 +390,51 @@ function tutoAviso() {
 // v5 (playtest): CON NÚMEROS — el plan calcula la TANDA entera ("comprá 4 semillas") en
 // vez de dejar caer al jugador en el ciclo de a una semilla, que era un suplicio.
 function tutoSubPlata(prefijo, meta) {
+  // todos los eslabones llevan plata:true — el boost de DESVÍO se prende con esa marca
   const falta = Math.max(0, (meta || 0) - Math.floor(G.plata));
-  const conStock = Object.keys(CROP_DEF || {}).find(k => (G.res[k] || 0) > 0);
+  // vender lo cosechado: el de MAYOR precio primero
+  const conStock = Object.keys(CROP_DEF || {}).filter(k => (G.res[k] || 0) > 0)
+    .sort((a, b) => (CROP_DEF[b].price || 0) - (CROP_DEF[a].price || 0))[0];
   if (conStock) {
     const n = Math.floor(G.res[conStock]), cd = CROP_DEF[conStock];
     const alcanza = meta && (G.plata + n * (cd.price || 0)) >= meta;
-    return { txt: prefijo + "vendé tus " + n + " " + (cd.label || conStock).toLowerCase() + (n > 1 ? "s" : "") + (alcanza ? " — con eso alcanza" : ""),
+    return { plata: true, txt: prefijo + "vendé tus " + n + " " + (cd.label || conStock).toLowerCase() + (n > 1 ? "s" : "") + (alcanza ? " — con eso alcanza" : ""),
       target: "market", panel: "ov-market", ui: "#vb-" + conStock, permite: ["sell", "harvest"] };
   }
   const plots = Array.isArray(G.plots) ? G.plots : [];
   const listos = plots.filter(p => p && p.state === "ready").length;
-  if (listos) return { txt: prefijo + "cosechá tus " + listos + " cultivo" + (listos > 1 ? "s" : "") + " listo" + (listos > 1 ? "s" : ""),
+  if (listos) return { plata: true, txt: prefijo + "cosechá tus " + listos + " cultivo" + (listos > 1 ? "s" : "") + " listo" + (listos > 1 ? "s" : ""),
     target: "plot", permite: ["harvest"] };
   // Fixes.docx 14/8 #3: comprar más semillas sigue permitido en estos eslabones — antes,
   // al comprar UNA el sub saltaba a "plantá" y bloqueaba el resto de la tanda (de a 1, feo)
-  if (plots.some(p => p && p.state === "growing")) return { txt: prefijo + "tus cultivos están creciendo — cosechalos apenas estén",
+  if (plots.some(p => p && p.state === "growing")) return { plata: true, txt: prefijo + "tus cultivos están creciendo — cosechalos apenas estén",
     target: "plot", permite: ["harvest", "plant", "buyseed"] };
   const semillas = Object.keys(G.seeds || {}).reduce((a, k) => a + Math.floor(G.seeds[k] || 0), 0);
-  if (semillas) return { txt: prefijo + "plantá tus " + semillas + " semilla" + (semillas > 1 ? "s" : ""),
+  if (semillas) return { plata: true, txt: prefijo + "plantá tus " + semillas + " semilla" + (semillas > 1 ? "s" : ""),
     target: "plot", permite: ["plant", "harvest", "plotunlock", "buyseed"] };
-  const cd = (CROP_DEF && CROP_DEF.papa) || {};
-  const precio = cd.seedCost || 1, gana = Math.max(1, (cd.price || 3) - precio);   // lo que rinde cada papa neta
+  // 14/8 (dirección): el plan elige el MEJOR cultivo desbloqueado (mayor ganancia neta por
+  // semilla) — cebolla rinde 10 netos contra 2 de la papa: 4-5 tandas en vez de 20. Con el
+  // boost de desvío todos crecen acelerados, no solo la papa.
+  let mejor = "papa";
+  for (const k in CROP_DEF) {
+    const cd = CROP_DEF[k];
+    const abierta = (typeof cropUnlocked === "function") ? cropUnlocked(k) : k === "papa";
+    if (!abierta || G.plata < (cd.seedCost || 1)) continue;
+    if (((cd.price || 0) - (cd.seedCost || 0)) > ((CROP_DEF[mejor].price || 0) - (CROP_DEF[mejor].seedCost || 0))) mejor = k;
+  }
+  const cd = CROP_DEF[mejor] || {};
+  const precio = cd.seedCost || 1, gana = Math.max(1, (cd.price || 3) - precio);
   if (G.plata >= precio) {
     // la tanda ÚTIL: las que hagan falta para llegar a la meta, tope en lo que alcanza la plata
     const utiles = falta ? Math.ceil(falta / gana) : 3;
     const n = Math.max(1, Math.min(Math.floor(G.plata / precio), utiles));
     const deUna = falta && (G.plata - n * precio + n * (cd.price || 3)) >= meta;
-    const accion = n > 1 ? "comprá " + n + " semillas de papa de UNA y plantalas todas" : "comprá 1 semilla de papa y plantala";
-    return { txt: prefijo + accion + (deUna ? " — una tanda y alcanza" : ""),
-      target: "market", panel: "ov-market", ui: "[data-buy='papa']", permite: ["buyseed", "plant", "harvest"] };
+    const nom = (cd.label || mejor).toLowerCase();
+    const accion = n > 1 ? "comprá " + n + " semillas de " + nom + " de UNA y plantalas todas" : "comprá 1 semilla de " + nom + " y plantala";
+    return { plata: true, txt: prefijo + accion + (deUna ? " — una tanda y alcanza" : ""),
+      target: "market", panel: "ov-market", ui: "[data-buy='" + mejor + "']", permite: ["buyseed", "plant", "harvest"] };
   }
-  return { txt: prefijo + "vendé lo que tengas suelto en el Mercado (el guardia protege lo del objetivo)",
+  return { plata: true, txt: prefijo + "vendé lo que tengas suelto en el Mercado (el guardia protege lo del objetivo)",
     target: "market", panel: "ov-market", ui: "#shop-sell", permite: ["sell", "chop", "mine"] };
 }
 function tutoSub() {
@@ -1029,14 +1043,16 @@ function tutoBoost(clase) {
     horno: ["mat"],
   };
   if ((mapa[clase] || []).includes(st.id)) return TUTO_BOOST;
-  // 13/8 v3: si el SUB-OBJETIVO te mandó al loop de la papa (juntar plata para el hacha),
-  // esos cultivos también corren acelerados — si no, el desvío se siente eterno
+  // 13/8 v3 · 14/8: si el SUB-OBJETIVO te mandó al loop de cultivo (juntar la plata de las
+  // hachas), crece con el boost de DESVÍO, más fuerte todavía — el desvío es un peaje y el
+  // juego quiere devolverte al camino cuanto antes (dirección: menos tandas, menos clics)
   if (clase === "papa") {
     const sub = (typeof tutoSub === "function") ? tutoSub() : null;
-    if (sub && sub.permite && sub.permite.includes("sell")) return TUTO_BOOST;
+    if (sub && sub.plata) return TUTO_BOOST_DESVIO;   // marca de la cadena de la plata (cubre TODOS sus eslabones)
   }
   return 1;
 }
+var TUTO_BOOST_DESVIO = 0.04;   // los cultivos del desvío corren a 1/25 (papa: ~22 s · cebolla: ~2 min)
 var TUTO_REWARD_PLATA = 100;   // gran recompensa del cierre (editable)
 // doc 2/8 §3.1: SOLO las semillas del starter pack crecen rápido (45 s). Las compradas o conseguidas
 // después usan el tiempo normal del cultivo. 0 en el panel = sin excepción.

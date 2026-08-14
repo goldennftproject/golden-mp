@@ -2172,6 +2172,16 @@ horas y 122 ciclos** de papa. Arreglos (el embudo NO se toca):
   lote; si no, la cadena de la plata con la META COMPLETA ("te faltan 17 hachas (170):
   comprá N semillas…") — una sola fase de plata en vez de rebotar de a 10 en 10 con
   talar → rota → papa → craftear. Verificado con 5 escenarios simulados.
+- **2ª pasada — menos tandas y menos clics (dirección: "sigue tedioso")**: aun con la
+  meta completa, la papa rinde 2 netos y el ciclo quedaba en ~20 tandas. Tres palancas de
+  DINAMISMO (la economía no se toca): el plan elige el MEJOR cultivo desbloqueado por
+  ganancia neta (cebolla 10 vs papa 2 → 4-5 tandas en vez de 20, con fallback si la plata
+  no alcanza para su semilla); el boost de cultivo aplica a CUALQUIER cultivo (antes solo
+  papa — la cebolla sugerida habría crecido 50 min reales); y el DESVÍO tiene boost propio
+  más fuerte (`TUTO_BOOST_DESVIO` 0.04: papa ~22 s, cebolla ~2 min), prendido por la marca
+  `plata:true` en todos los eslabones de la cadena. El eslabón de venta liquida el stock
+  de mayor precio primero. 4 escenarios simulados (niveles de Cultivo, plata corta, stock
+  mixto) — guía correcta en todos.
 
 Y el "bloqueo momentáneo" al colocar un plano era el REINICIO de escena (reconstruye
 ~570 sprites de golpe): ahora pasa detrás de un telón de 160 ms con el fundido que ya
