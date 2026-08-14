@@ -2281,6 +2281,24 @@ INSUMOS (cosas que se usan) y la plata sale de vender lo producido. Aplicado a t
   tiene que haber 3 celdas donde apuntar. La tabla `FARM_PARCELA` sigue igual (nivel 2
   "regalaba" la 3ª, que ahora ya viene de fábrica; la 4ª llega en nivel 4).
 
+### EL CAPATAZ + los PEDIDOS (14/8, dirección: "hagamos el cambio y probémoslo")
+
+Onboarding rediseñado desde cero alrededor de una VOZ y un TABLÓN (v1 para testear):
+
+- **El Capataz**: burbuja de diálogo (retrato placeholder 🧑‍🌾 — arte PixelLab si cuaja)
+  que habla de a UNA línea, clic para cerrar, cola si se amontonan, y cada línea se dice
+  una sola vez por partida (`G.capVisto`, persiste). Es el portavoz de todo: presenta
+  cada capítulo con su línea propia (9 líneas con carácter — "¡Al fin llegás! La granja
+  está dormida hace años…"), avisa cuando cae un plano ("te conseguí el plano — está en
+  tu barra"), da la lección del género al terminar la Herrería ("dejá una tanda plantada
+  — crece aunque cierres el juego") y se despide al final de la guía.
+- **Los Objetivos ahora son PEDIDOS**: el panel pasa a "📋 Pedidos del Capataz", el
+  cartel de arriba dice "Pedido", los botones "Cobrar"/"Cobrado" y la recompensa es "la
+  paga". Mismo motor de fondo (capítulos, flechas, kits) — cambia la cara y el tono:
+  alguien te PIDE cosas, no un sistema te ordena.
+- Pendiente si cuaja: retrato real del capataz (PixelLab), tablón físico en el mapa,
+  pedidos DIARIOS de bienes (unificar las misiones diarias al mismo sistema).
+
 ### Feedback del diseñador sobre el panel Objetivos (14/8, Discord) — 4 pedidos
 
 - **"Está muy llamativa y las recompensas está bien"** — panel aprobado.

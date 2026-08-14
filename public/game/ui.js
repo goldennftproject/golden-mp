@@ -872,6 +872,8 @@ function tutoSync(force) {
   if (typeof tutoAutoSkip === "function") { try { tutoAutoSkip(); } catch (e) {} }
   // 14/8: el ADELANTO del paso activo (idempotente — una vez por paso, cubre migraciones y F5)
   if (typeof tutoAdelanto === "function") { try { tutoAdelanto(); } catch (e) {} }
+  // …y la línea del capataz del capítulo activo (una sola vez por capítulo)
+  if (typeof capatazSync === "function") { try { capatazSync(); } catch (e) {} }
   const st = (typeof tutoActivo === "function") ? tutoActivo() : null;
   // 13/8 v3: el sub-objetivo entra a la firma — cuando aparece o se resuelve, cartel y flechas se redibujan
   const sub = (st && typeof tutoSub === "function") ? tutoSub() : null;
@@ -1043,6 +1045,35 @@ function raidBotin(parte) {
 }
 
 /* ---- MAPA (10/8): dónde estás y a dónde podés ir ---- */
+/* ---- EL CAPATAZ (14/8): la VOZ del juego — burbujas de una línea, de a una, cada una
+   se muestra UNA sola vez por partida (G.capVisto). Clic para cerrar; si hay cola, sigue. */
+let _capCola = [], _capTimer = null;
+function capataz(clave, txt) {
+  G.capVisto = G.capVisto || {};
+  if (clave && G.capVisto[clave]) return;
+  if (clave) G.capVisto[clave] = 1;
+  _capCola.push(txt);
+  _capMostrar();
+}
+function _capMostrar() {
+  const el = $("capataz"); if (!el) return;
+  if (!el.classList.contains("hidden")) return;   // ya hay una en pantalla: la cola espera
+  const txt = _capCola.shift(); if (!txt) return;
+  $("capataz-txt").innerHTML = txt;
+  el.classList.remove("hidden");
+  if (window.sfx) sfx("click");
+  clearTimeout(_capTimer);
+  _capTimer = setTimeout(_capCerrar, 12000);   // se va sola a los 12 s si no la tocan
+}
+function _capCerrar() {
+  const el = $("capataz"); if (!el) return;
+  el.classList.add("hidden");
+  clearTimeout(_capTimer);
+  if (_capCola.length) setTimeout(_capMostrar, 350);
+}
+window.capataz = capataz;
+document.addEventListener("DOMContentLoaded", () => { const el = $("capataz"); if (el) el.onclick = _capCerrar; });
+
 /* ---- OBJETIVOS por capítulos (14/8): la guía opcional con forma de diario ---- */
 function refreshObjetivos() {
   const box = $("objetivos-list"); if (!box) return;
@@ -1059,13 +1090,13 @@ function refreshObjetivos() {
       const activo = idxActual === i;
       return '<div class="fds">' + (hecho ? "✅ " : (activo ? "▶️ " : "⬜ ")) + tutoTxt(st) + "</div>";
     }).join("");
-    const btn = reclamado ? '<button class="ghost sm" disabled>Reclamado</button>'
-      : (est === "hecho" ? '<button class="gold sm" data-cap="' + cap.id + '">🎁 Reclamar</button>'
-        : '<button class="ghost sm" disabled>Al completar</button>');
+    const btn = reclamado ? '<button class="ghost sm" disabled>Cobrado</button>'
+      : (est === "hecho" ? '<button class="gold sm" data-cap="' + cap.id + '">🎁 Cobrar</button>'
+        : '<button class="ghost sm" disabled>Al cumplirlo</button>');
     h += '<div class="forge-row' + (est === "activo" ? " eq" : (est === "hecho" && !reclamado ? "" : "")) + '"><div class="finfo">' +
       '<div class="fnm">' + cap.label + (est === "hecho" ? ' <span class="tag">completo</span>' : (est === "activo" ? ' <span class="tag">en curso</span>' : "")) + '</div>' +
       (est === "pendiente" ? '<div class="fds">Se abre al avanzar (o cumplilo jugando libre — se marca solo).</div>' : filas) +
-      (reclamado ? "" : '<div class="fds">🎁 Recompensa: <b>' + cap.premioTxt + '</b></div>') +
+      (reclamado ? "" : '<div class="fds">🎁 Paga: <b>' + cap.premioTxt + '</b></div>') +
       '</div><div class="fbtns">' + btn + '</div></div>';
   });
   box.innerHTML = h;

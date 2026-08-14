@@ -292,6 +292,7 @@ function darPlano(t, silencioso) {
   if (!silencioso) {
     log("¡Ganaste el PLANO de " + b.label + "! Está en tu bolsa: clic para colocarlo donde quieras.", "gold");
     toast("📜 ¡Plano de " + b.label + "!");
+    if (window.capataz) capataz("cap_plano_" + t, "Te conseguí el <b>plano de " + b.label + "</b> — está en tu barra rápida. Colocalo donde te guste.");
     if (window.celebrate) celebrate({ title: "¡PLANO NUEVO!", sub: b.label, big: false, reward: "Colocalo desde tu barra rápida" });
   }
   planoAHotbar(t);
@@ -1043,12 +1044,38 @@ const TUTO_CAPS = [
   { id: "altar",    label: "El Altar de Runas",    pasos: ["place_altar", "stone_al", "wood_al", "build_altar", "upgrade"], regalo: { res: { esencia_runica: 2 } }, premioTxt: "2 esencias rúnicas" },
   { id: "maestria", label: "Maestría de la granja", pasos: ["dummy", "unlocknode", "chest", "invexp", "passclaim", "socket"], regalo: { ficha: 1 }, premioTxt: "1 FICHA DE PARCELA" },
 ];
+/* 14/8: las LÍNEAS del capataz — una por capítulo (al arrancar) y por momento clave.
+   El capataz es la voz del juego: pide, agradece y enseña de a una línea. */
+const CAP_LINEAS = {
+  cosecha:  "¡Al fin llegás! La granja está dormida hace años. Tomá <b>3 monedas</b> — comprá semillas en el mercadillo y plantá algo en esa parcela.",
+  herreria: "Buen comienzo. Sin herrería no somos nada: <b>colocá el plano</b> que te dejé en la barra y juntale materiales.",
+  horno:    "Con fuego se funde el metal. El <b>Horno</b> va después de la Herrería — mismo ritual: plano, materiales, obra.",
+  cocina:   "Un granjero que no come no rinde. La <b>Cocina</b> es más obra que las otras — tomate tu tiempo, el bosque no se va a ningún lado.",
+  armas:    "Del otro lado del portal hay cosas que muerden. Vamos a necesitar <b>armas</b> — y la forja no es barata.",
+  zona:     "¿Escuchás eso? Es la <b>Zona Negra</b>. Andá con el arma puesta y volvé con carne.",
+  mineria:  "La piedra es el principio. Con <b>barras y picos buenos</b> se llega al metal de verdad.",
+  altar:    "Los antiguos mejoraban sus armas en un <b>Altar de Runas</b>. Los planos siguen existiendo…",
+  maestria: "Ya casi no te queda nada por aprender de mí. Lo que sigue es <b>tuyo</b>.",
+};
 function capEstado(cap) {   // "hecho" | "activo" | "pendiente" (por el paso más avanzado de la cadena)
   const idxs = cap.pasos.map(id => tutoIdx(id)).filter(i => i >= 0);
   const fin = Math.max.apply(null, idxs);
   if (G.tuto && (G.tuto.done || (G.tuto.step || 0) > fin)) return "hecho";
   const ini = Math.min.apply(null, idxs);
   return (G.tuto && (G.tuto.step || 0) >= ini) ? "activo" : "pendiente";
+}
+// la línea del capítulo ACTIVO se dice una vez, al entrar en él (corre en tutoSync)
+function capatazSync() {
+  if (!window.capataz || !G.tuto) return;
+  if (G.tuto.done) { capataz("cap_fin", "La granja es toda tuya, granjero. Yo me quedo por acá — pasá por el <b>tablón de pedidos</b> cuando quieras cobrar lo que falta."); return; }
+  const idx = G.tuto.step || 0;
+  for (const cap of TUTO_CAPS) {
+    const idxs = cap.pasos.map(id => tutoIdx(id)).filter(i => i >= 0);
+    if (idx >= Math.min.apply(null, idxs) && idx <= Math.max.apply(null, idxs)) {
+      if (CAP_LINEAS[cap.id]) capataz("cap_" + cap.id, CAP_LINEAS[cap.id]);
+      return;
+    }
+  }
 }
 function capReclamar(id) {
   const cap = TUTO_CAPS.find(c => c.id === id); if (!cap) return;
@@ -1066,11 +1093,11 @@ function capReclamar(id) {
     G.picks.dur[G.picks.eq] = (G.picks.dur[G.picks.eq] || 0) + r.pico;
   }
   if (r.ficha) { G.plotsOwned = Math.min(PLOT_MAX, (G.plotsOwned || 3) + r.ficha); if (typeof syncEditDeco === "function") syncEditDeco(); }
-  log("Capítulo «" + cap.label + "» reclamado: " + cap.premioTxt + ".", "gold");
-  if (window.celebrate) celebrate({ title: "¡CAPÍTULO COMPLETO!", sub: cap.label, big: false, reward: cap.premioTxt });
+  log("Pedido «" + cap.label + "» cobrado: " + cap.premioTxt + ".", "gold");
+  if (window.celebrate) celebrate({ title: "¡PEDIDO CUMPLIDO!", sub: cap.label, big: false, reward: cap.premioTxt });
   if (typeof refreshHotbar === "function") refreshHotbar(true);
   // cierre de la primera sesión: el juego trabaja mientras no estás — la lección del género
-  if (id === "herreria") log("💡 Dejá una tanda plantada antes de salir: tus cultivos crecen aunque cierres el juego.", "good");
+  if (id === "herreria" && window.capataz) capataz("cap_crece_solo", "Bien hecho. Ahora <b>dejá una tanda plantada</b> antes de irte — tus cultivos crecen aunque cierres el juego. Mañana cosechás.");
   refreshHud(); if (typeof saveFarm === "function") saveFarm();
   if (typeof refreshObjetivos === "function" && isOpen("ov-objetivos")) refreshObjetivos();
 }
