@@ -2623,27 +2623,24 @@ class FarmScene extends Phaser.Scene {
     pl.timer.setVisible(false);
   }
 
-  // 14/8 (dirección): el FOCO del mundo — todo se oscurece salvo un círculo de luz sobre
-  // el objetivo de la guía. Solo durante la guía activa, sin paneles abiertos ni edición.
+  // 14/8 v2 (dirección): el FOCO vive EN EL MUNDO, no en la pantalla — un manto oscuro
+  // sobre toda la granja con un agujero ANCLADO al objeto en coordenadas de mundo (máscara
+  // de geometría invertida). La cámara mueve manto y agujero juntos: el foco queda clavado
+  // en la cosa, inmune a paneos, zoom y lerp (antes se recalculaba contra la cámara y se
+  // desfasaba). Solo durante la guía, sin paneles ni edición.
   focoSync() {
     const activo = this.focoTarget && G.tuto && !G.tuto.done && (!window.guiaOn || guiaOn()) && !GF.uiOpen && !GF.editMode;
-    if (!activo) { if (this.focoRT) this.focoRT.setVisible(false); return; }
-    if (!this.textures.exists("focoLuz")) {
-      // círculo blanco con borde suave para "borrar" la oscuridad
-      const g = this.make.graphics({ add: false });
-      for (let r = 110; r > 0; r -= 2) { g.fillStyle(0xffffff, r > 80 ? (110 - r) / 30 : 1); g.fillCircle(120, 120, r); }
-      g.generateTexture("focoLuz", 240, 240); g.destroy();
+    if (!activo) { if (this.focoDark) this.focoDark.setVisible(false); return; }
+    if (!this.focoDark) {
+      this.focoDark = this.add.rectangle(0, 0, GF.WORLD_W, GF.WORLD_H, 0x100b04, 0.45).setOrigin(0, 0).setDepth(99980);
+      this.focoHole = this.make.graphics({ add: false });
+      this.focoHole.fillStyle(0xffffff, 1).fillCircle(0, 0, 105);
+      const mask = this.focoHole.createGeometryMask();
+      mask.invertAlpha = true;   // el manto se dibuja en TODOS lados salvo el círculo
+      this.focoDark.setMask(mask);
     }
-    const W = this.scale.width, H = this.scale.height;
-    if (!this.focoRT) this.focoRT = this.add.renderTexture(0, 0, W, H).setOrigin(0, 0).setScrollFactor(0).setDepth(99980);
-    // OJO con el zoom: la posición en pantalla sale de worldView (scroll ≠ worldView cuando
-    // hay zoom — el círculo salía corrido, visto en playtest)
-    const cam = this.cameras.main, z = cam.zoom || 1;
-    const sx = (this.focoTarget.x - cam.worldView.x) * z, sy = (this.focoTarget.y - cam.worldView.y) * z;
-    this.focoRT.setVisible(true);
-    this.focoRT.clear();
-    this.focoRT.fill(0x100b04, 0.45, 0, 0, W, H);
-    this.focoRT.erase("focoLuz", sx - 120, sy - 120);
+    this.focoDark.setVisible(true);
+    this.focoHole.setPosition(this.focoTarget.x, this.focoTarget.y);
   }
 
   update(time, deltaMs) {

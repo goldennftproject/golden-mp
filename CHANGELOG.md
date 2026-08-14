@@ -2313,6 +2313,20 @@ Onboarding rediseñado desde cero alrededor de una VOZ y un TABLÓN (v1 para tes
   `cam.worldView`, no de `scroll` (difieren cuando hay zoom). Y decisión de dirección:
   en el MUNDO ya no hay flecha triangular — el círculo de luz es el ÚNICO señalador
   (la flecha DOM sigue viva dentro de interfaces y sobre la barra rápida).
+- **v4 (dirección: "el foco debe estar sobre la cosa, inmóvil, más allá de la cámara")**:
+  el foco pasó de pantalla a MUNDO — manto oscuro sobre toda la granja con el agujero
+  anclado al objeto en coordenadas de mundo (máscara de geometría invertida,
+  `invertAlpha`). La cámara mueve manto y agujero juntos: cero desfase con paneo, zoom o
+  lerp, y encima más barato (nada se redibuja por frame, solo `setPosition`).
+- **Se nace con las MANOS VACÍAS (dirección: "¿es necesario ese kit?")**: fuera el
+  starter de 15 hachas + 15 usos de pico + caña — la barra llena contradecía el
+  onboarding y desinflaba la lección de craftear. La hotbar nace vacía y cada
+  herramienta la da el CAPATAZ cuando su pedido la necesita: 5 hachas en "juntá 5 de
+  madera", el pico de piedra con 2 usos en su paso, 10 más para el Horno… y en el paso
+  de pesca —fuera del tope del Hacha, es primer contacto— le presta su caña vieja con
+  10 lanzamientos ("las nuevas se craftean en la Herrería"). Cada herramienta entra
+  sola a la barra al recibirse (`herramientaAHotbar`). El walkthrough simulado da
+  IDÉNTICO timing (45 min hasta el Hacha): los kits reemplazan al starter sin costo.
 
 ### Feedback del diseñador sobre el panel Objetivos (14/8, Discord) — 4 pedidos
 

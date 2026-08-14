@@ -29,8 +29,8 @@ const G = {
     fibra: 0, pelaje: 0, cuero: 0, colmillo: 0, esencia_runica: 0, esencia_oscura: 0 },
   seeds: { papa: 0, zanahoria: 0, cebolla: 0, calabacin: 0, repollo: 0, calabaza: 0, brocoli: 0, girasol: 0, trigo: 0, maiz: 0 },  // 14/8: la bolsa nace VACÍA — las 3 semillas se compran con la plata inicial (1er objetivo)
   selSeed: "papa",   // semilla elegida para plantar
-  picks: { owned: { stone: true }, dur: { stone: 15 }, eq: "stone" },   // doc 2/8: set de arranque con usos generosos
-  tools: { axe: 15, rod: 15 },   // doc 2/8: 15 usos de arranque; después se craftean de a 1 uso
+  picks: { owned: {}, dur: {}, eq: null },   // 14/8 (dirección): se nace con las MANOS VACÍAS — las herramientas las da el capataz cuando su pedido las necesita (kits)
+  tools: { axe: 0, rod: 0 },                 // (antes: 15 usos de arranque de todo — la barra llena contradecía el onboarding)
   toolsLost: {},                 // herramientas tiradas a la papelera (31/7: el diseñador pidió que se puedan tirar)
   invRows: 0,                    // filas extra de inventario compradas
   slots: [],                     // inventario por casillas: [{kind,key}|null]
@@ -1266,6 +1266,16 @@ function tutoHecho(st) {
    paso ya "cobrado" con la cuenta vieja RECIBEN el kit al entrar el fix). */
 function tutoAdelanto() {
   const st = tutoActivo(); if (!st || G.tuto.adelv === G.tuto.step) return;
+  // 14/8 v3: la CAÑA del capataz — primer contacto con la pesca, fuera del tope (es un
+  // regalo de primera vez, no un pago por repetición). Se nace sin caña.
+  if (st.id === "fish" && Math.floor((G.tools && G.tools.rod) || 0) <= 0) {
+    G.tuto.adelv = G.tuto.step;
+    G.tools = G.tools || {}; G.tools.rod = (G.tools.rod || 0) + 10;
+    if (typeof herramientaAHotbar === "function") herramientaAHotbar("tool", "rod");
+    if (window.capataz) capataz("cap_cana", "Tomá mi <b>caña vieja</b> — le quedan 10 lanzamientos. Las nuevas se craftean en la Herrería.");
+    if (typeof refreshHotbar === "function") refreshHotbar(true);
+    return;
+  }
   // 14/8 (diseñador): la ayuda especial TERMINA con el capítulo del Hacha (~Cultivo 2,
   // cuando abre la zanahoria). De ahí en más: tiempos y economía normales — el rescate
   // para atascados es el KIT DE EMERGENCIA en $Golden de la Tienda (5 diarias).
@@ -1275,13 +1285,14 @@ function tutoAdelanto() {
   if (!esMadera && !esPiedra && st.id !== "crafttool") return;
   G.tuto.adelv = G.tuto.step;
   const regalos = [];
-  const darHachas = (n) => { if (n > 0) { G.tools = G.tools || {}; G.tools.axe = (G.tools.axe || 0) + n; regalos.push(n + " hacha" + (n > 1 ? "s" : "")); } };
+  const darHachas = (n) => { if (n > 0) { G.tools = G.tools || {}; G.tools.axe = (G.tools.axe || 0) + n; regalos.push(n + " hacha" + (n > 1 ? "s" : "")); if (typeof herramientaAHotbar === "function") herramientaAHotbar("tool", "axe"); } };
   const darUsosPico = (n) => {
     if (n <= 0) return;
     G.picks = G.picks || { owned: {}, dur: {}, eq: null };
-    if (!G.picks.eq || !G.picks.owned[G.picks.eq]) { G.picks.owned.stone = true; G.picks.eq = "stone"; G.picks.dur.stone = 0; }   // el pico murió: revive el de piedra
+    if (!G.picks.eq || !G.picks.owned[G.picks.eq]) { G.picks.owned.stone = true; G.picks.eq = "stone"; G.picks.dur.stone = 0; }   // sin pico: el capataz da el de piedra
     G.picks.dur[G.picks.eq] = (G.picks.dur[G.picks.eq] || 0) + n;
     regalos.push(n + " uso" + (n > 1 ? "s" : "") + " de pico");
+    if (typeof herramientaAHotbar === "function") herramientaAHotbar("pick", G.picks.eq);
   };
   const costoHacha = (TOOL_CRAFT && TOOL_CRAFT.axe && TOOL_CRAFT.axe.plata) || 10;
   let plata = 0;
@@ -3205,13 +3216,15 @@ function ensureHotbarDefaults() {
   if (G.hbInit) return;
   if (!Array.isArray(G.hotbar)) G.hotbar = [];
   while (G.hotbar.length < 10) G.hotbar.push(null);
-  if (!G.hotbar.some(Boolean)) {
-    G.hotbar[0] = { kind: "tool", key: "axe" };
-    G.hotbar[1] = { kind: "pick", key: (G.picks && G.picks.eq) || "stone" };
-    G.hotbar[2] = { kind: "tool", key: "rod" };
-    G.hotbar[3] = { kind: "seed", key: G.selSeed || "papa" };
-  }
+  // 14/8: la barra nace VACÍA — cada herramienta entra sola cuando el capataz la da (kits)
   G.hbInit = true;
+}
+// una herramienta recién ganada entra sola a la barra (primer hueco libre), si no estaba
+function herramientaAHotbar(kind, key) {
+  if (!Array.isArray(G.hotbar)) return;
+  if (G.hotbar.some(h => h && h.kind === kind && h.key === key)) return;
+  const li = G.hotbar.findIndex(h => !h);
+  if (li >= 0) { G.hotbar[li] = { kind, key }; if (typeof refreshHotbar === "function") refreshHotbar(true); }
 }
 
 // --- mercado ---

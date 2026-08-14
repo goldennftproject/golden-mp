@@ -23,7 +23,7 @@ function skillLvl(xp) { let l = 1, acc = 0, need = XP_BASE; while (xp >= acc + n
 function granja(xp) { let l = 1; while (FARM_XP[l + 1] != null && xp >= FARM_XP[l + 1]) l++; return l; }
 
 // estado
-let t = 0, plata = 3, xp = 0, madera = 0, piedra = 0, axes = 15, picoUsos = 15, seeds = 0, firstLeft = 3;
+let t = 0, plata = 3, xp = 0, madera = 0, piedra = 0, axes = 0, picoUsos = 0, seeds = 0, firstLeft = 3;   // 14/8: manos vacías — los kits del capataz dan las herramientas
 let plots = [null, null, null];             // hora en que estará lista + datos, por parcela
 let arboles = [0], rocas = [0];             // readyAt por nodo (rocas se abren por nivel)
 let usosArbol = [0], usosRoca = [0];
@@ -97,12 +97,12 @@ paso(2, "Plantá tus 3 papas", () => { for (let i = 0; i < 3; i++) { plots[i] = 
 paso(3, "Cosechá tus 3 papas", () => { tick(t + FIRST_GROW + 30); plata += 9; xp += 27; plots = plots.map(() => null); });
 paso(4, "Vendé tus papas", () => tick(t + 30));
 paso(5, "Colocá el plano de la Herrería", () => tick(t + 40));
-paso(6, "Juntá 5 de madera (Herrería)", () => talar(5));
-paso(7, "Juntá 2 de piedra (Herrería)", () => picar(2));
+paso(6, "Juntá 5 de madera (Herrería)", () => { axes += 5; talar(5); });          // kit: 5 hachas
+paso(7, "Juntá 2 de piedra (Herrería)", () => { picoUsos += 2; picar(2); });      // kit: 2 usos
 paso(8, "Depositá (Herrería lista)", () => { madera -= 5; piedra -= 2; tick(t + 30); });
 paso(9, "Colocá el plano del Horno", () => tick(t + 40));
-paso(10, "Juntá 10 de madera (Horno)", () => talar(10));
-paso(11, "Juntá 8 de piedra (Horno)", () => picar(8));
+paso(10, "Juntá 10 de madera (Horno)", () => { axes += 10; talar(10); });         // kit
+paso(11, "Juntá 8 de piedra (Horno)", () => { picoUsos += 8; picar(8); });        // kit
 paso(12, "Depositá (Horno listo)", () => { madera -= 10; piedra -= 8; tick(t + 30); });
 paso(13, "Crafteá un Hacha (kit: 10 plata)", () => { plata += Math.max(0, 10 - plata); plata -= 10; axes++; tick(t + 40); });
 paso(14, "Colocá el plano de la Cocina", () => tick(t + 40));
