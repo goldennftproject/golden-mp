@@ -2189,6 +2189,30 @@ horas y 122 ciclos** de papa. Arreglos (el embudo NO se toca):
   agrícola completo (plantar, cosechar, vender, comprar, desbloquear parcela) — el texto
   y la flecha guían el foco, los permisos no frenan la mano. Reproducido y verificado en
   simulación con el estado exacto del playtest (1 lista + 1 creciendo + semillas en bolsa).
+- **4ª pasada — el planificador de PIEDRA (playtest: 5/15 piedras, pico muerto, BLOQUEADO)**:
+  el paso de piedra solo ofrecía "reparalo", pero reparar cuesta 1 madera POR USO, la
+  madera estaba reservada para la obra y el paso no permitía ni talar ni el loop de plata:
+  softlock completo. Espejo del planificador de madera con un nivel más de cadena:
+  faltan N piedras → N reparaciones → N maderas DE SOBRA (lo reservado para la obra no se
+  toca — `tutoGuardia` regla 3 ahora también cubre los pasos "juntá" vía `st.dep`, y
+  `repairPick` pasó a consultarla) → sin madera libre, talá (con boost y CD corto también
+  en los nodos del DESVÍO) → sin hachas, su plan de plata. 6 escenarios simulados,
+  incluido el estado exacto del playtest.
+- **Colchón anti-cero-absoluto** (detectado en la simulación, no en juego): con nada
+  plantado, sin semillas y sin cosecha, gastar la última plata te dejaba sin ninguna
+  palanca económica. El guardia ahora reserva siempre el precio de una semilla de papa;
+  comprar la semilla está exento — esa compra ES la salida.
+- **El ADELANTO (idea de dirección, 14/8) — "la primera vez se aprende, las repeticiones
+  se pagan"**: en vez de empujar al jugador a repetir 20 veces un loop que ya aprendió,
+  al ENTRAR a un paso de "juntá madera/piedra" el tutorial calcula las herramientas que
+  faltan para la meta completa y ACREDITA esa plata exacta (madera → hachas × precio;
+  piedra → reparaciones × precio del hacha, descontando hachas y madera en mano), con su
+  celebración. En los pasos tempranos el kit de arranque alcanza → adelanto 0: la
+  progresión enseña primero y regala después, sola, sin casos especiales. Una vez por
+  paso (`G.tuto.adel`, persiste en el guardado; idempotente ante F5 y migraciones — corre
+  en `tutoSync`). Las cadenas de sub-objetivos quedan como red de seguridad si el jugador
+  malgasta el adelanto. 7 casos verificados, incluido el del playtest (5/15 y pico muerto
+  → +30 exactos).
 
 Y el "bloqueo momentáneo" al colocar un plano era el REINICIO de escena (reconstruye
 ~570 sprites de golpe): ahora pasa detrás de un telón de 160 ms con el fundido que ya

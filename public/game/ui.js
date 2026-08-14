@@ -869,6 +869,8 @@ function tutoSync(force) {
   // ...y también los pasos de HACER algo: si construiste la Cocina antes de que el tutorial
   // te la pidiera, el paso se salta solo en vez de quedar pidiendo algo ya hecho (9/8)
   if (typeof tutoAutoSkip === "function") { try { tutoAutoSkip(); } catch (e) {} }
+  // 14/8: el ADELANTO del paso activo (idempotente — una vez por paso, cubre migraciones y F5)
+  if (typeof tutoAdelanto === "function") { try { tutoAdelanto(); } catch (e) {} }
   const st = (typeof tutoActivo === "function") ? tutoActivo() : null;
   // 13/8 v3: el sub-objetivo entra a la firma — cuando aparece o se resuelve, cartel y flechas se redibujan
   const sub = (st && typeof tutoSub === "function") ? tutoSub() : null;
