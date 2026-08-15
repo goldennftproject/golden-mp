@@ -1318,12 +1318,19 @@ class FarmScene extends Phaser.Scene {
     const sub = (typeof tutoSub === "function") ? tutoSub() : null;
     if (sub) st = Object.assign({}, st, { target: null }, sub);
     let x = null, y = null;
+    // 15/8 (playtest: la escolta revoloteaba sobre una veta EN ENFRIAMIENTO): un nodo solo
+    // se señala si se puede usar YA — sin cooldown, sin freno de nivel y con pico del tier.
+    // Si todo está enfriándose no se señala ninguno: la madurez avisa sola cuando vuelve.
+    const ahora = nowMs(), eqPk = (typeof equippedPick === "function") ? equippedPick() : null;
+    const usable = (o) => !(o.readyAt && o.readyAt > ahora)
+      && !(typeof nodoBloqueado === "function" && nodoBloqueado(o))
+      && (o.type !== "ore" || (eqPk && PICK_DEF[eqPk].mineTier >= (ORE_DEF[o.ore] ? ORE_DEF[o.ore].tier : 99)));
     if (st.target === "plot") { const pl = (this.plots || []).find(o => o.state !== "locked"); if (pl) { x = pl.cx; y = pl.by - GF.TILE * 0.9; } }
-    else if (st.target === "ore") { const o = (this.objs || []).find(o => o.type === "ore" && !o.locked); if (o) { x = o.cx; y = o.by - (o.sprite ? o.sprite.displayHeight : 60) - 10; } }
+    else if (st.target === "ore") { const o = (this.objs || []).find(o => o.type === "ore" && !o.locked && usable(o)); if (o) { x = o.cx; y = o.by - (o.sprite ? o.sprite.displayHeight : 60) - 10; } }
     else if (st.target === "portal") { const o = this.portal; if (o) { x = o.cx; y = o.by - 70; } }
     else if (st.target === "tree" || st.target === "rock") {
       const tipos = st.target === "rock" ? ["rock", "ore"] : ["tree"];
-      const o = (this.objs || []).find(o => tipos.includes(o.type) && !o.locked);
+      const o = (this.objs || []).find(o => tipos.includes(o.type) && !o.locked && usable(o));
       if (o) { x = o.cx; y = o.by - (o.sprite ? o.sprite.displayHeight : 60) - 10; }
     }
     else { const o = (this.objs || []).find(o => o.type === st.target && !o.oculto); if (o) { x = o.cx; y = o.by - (o.sprite ? o.sprite.displayHeight : 60) - 10; } }   // sin plano colocado no hay a qué apuntar (12/8)
@@ -2113,6 +2120,9 @@ class FarmScene extends Phaser.Scene {
       });
     }
     for (const m of this.maripos) {
+      // 15/8: si el recurso que señalaba entró en enfriamiento, lo suelta YA (sin esperar
+      // la reasignación de los 2,5 s) — nada de revolotear sobre un nodo que no se puede usar
+      if (m.ancla && m.ancla.o && m.ancla.o.readyAt && m.ancla.o.readyAt > t && !m.posadaHasta) { m.ancla = null; m.percha = null; }
       if (m.ancla) {   // merodear: órbita amplia y cambiante, con transiciones SUAVES
         if (t >= (m.orbCambio || 0)) {   // cada tanto la vuelta cambia de tamaño, ritmo y fase
           m.orbCambio = t + 1800 + Math.random() * 2600;

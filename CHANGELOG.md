@@ -2125,6 +2125,17 @@ Ahora la cadena de guía no tiene puntas sueltas:
   lugar. Al recomprar semillas, `buySeed` la vuelve a poner en el primer hueco libre.
   Herramientas y picos conservan su lógica de siempre.
 
+## Día 18 (cont.) — La escolta no señala nodos en enfriamiento (15/8)
+- Playtest: una mariposa revoloteaba sobre una veta EN ENFRIAMIENTO. Causa doble:
+  (1) la mariposa escolta del "jugador perdido" seguía al guiaTarget del objetivo, y
+  updateTutoArrow elegía el primer árbol/roca/veta SIN mirar cooldown, nivel ni tier de
+  pico; (2) entre reasignaciones (2,5 s) una mariposa podía quedar orbitando un nodo
+  recién usado.
+- Arreglo: el objetivo del mundo solo señala nodos usables YA (sin cooldown, nivel ok,
+  pico del tier); si todo está enfriándose, no señala ninguno — la madurez (>10 s
+  disponible) ya los marca cuando vuelven. Y si el nodo orbitado entra en cooldown, la
+  mariposa lo suelta en el acto.
+
 ## Día 18 (cont.) — Mariposas: flores y posada libre (15/8)
 - Las mariposas conocen las FLORES del suelo (blancas y amarillas, también las del
   fallback dibujado): cuando no hay recurso que señalar, la mitad de sus paseos van
