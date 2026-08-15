@@ -64,7 +64,7 @@ function enterGame() {
   startGame();   // la pantalla de carga SIGUE puesta hasta que FarmScene avise que está lista
   setTimeout(juegoListo, 25000);   // red de seguridad: si algo se traba, nunca queda la pantalla pegada
   // cofre diario: se abre junto con el juego, no antes
-  cuandoListo(() => { try { if (dailyState().claimable) openOv("ov-daily"); } catch (e) {} });
+  // 15/8 (buzón): el cofre diario ya NO se abre solo al entrar — la banderita del buzón lo anuncia
   // si quedó entrenando de la sesión anterior, la ventana vuelve sola: no se puede jugar
   // mientras el granjero entrena, ni recargando la página (9/8)
   cuandoListo(() => { try { if (typeof dummyEntrenando === "function" && dummyEntrenando()) openOv("ov-entrenando"); } catch (e) {} });

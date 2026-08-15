@@ -55,6 +55,8 @@ class BootScene extends Phaser.Scene {
     L.push(["horno", P + "horno.png?v=4"]);     // Horno de Piedra (detalles viernes 1): fundición de barras
     // arte cozy nuevo (v2 rompe el caché del arte viejo)
     L.push(["tree_stump", P + "tree_stump.png?v=4"]);
+    L.push(["buzon", P + "buzon.png?v=1"]);            // buzón (15/8) — banderita baja
+    L.push(["buzon_full", P + "buzon_full.png?v=1"]);  // …con carta y banderita alta
     L.push(["sprout", P + "sprout.png?v=5"]);
     // v7: restos correctos sobre su parche de tierra (los v6 venían de una copia vieja)
     ["node_stone_mined","node_bronze_mined","node_gold_mined","node_diamond_mined","node_netherite_mined"]

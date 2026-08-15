@@ -2125,6 +2125,16 @@ Ahora la cadena de guía no tiene puntas sueltas:
   lugar. Al recomprar semillas, `buySeed` la vuelve a poner en el primer hueco libre.
   Herramientas y picos conservan su lógica de siempre.
 
+## Día 18 (cont.) — EL BUZÓN (15/8, idea Stardew aprobada por dirección)
+- Buzón físico en la granja (450,420, cerca del spawn): las noticias llegan como CARTAS
+  y la banderita se levanta sola cuando hay algo. Arte de PixelLab (buzon.png /
+  buzon_full.png, recortados a caja común) + respaldo dibujado a código si falta.
+- Cartas v1: bienvenida del Capataz (única, botón Entendido), cofre diario listo
+  (botón → ov-daily) y niveles del Pase sin reclamar (botón → ov-pass). Se arman al
+  momento; solo persiste qué avisos únicos se leyeron (G.buzonLeidas).
+- El cofre diario YA NO se abre solo como popup al entrar — lo anuncia el buzón.
+- Sobre saltarín sobre el buzón cuando hay correo; prompt "Leer el correo (N cartas)".
+
 ## Día 18 (cont.) — TABLA DEFINITIVA: largos del diseñador + más nodos de arranque (15/8)
 - Dirección, decisión final: la tabla que rige es la del diseñador SIN aceleración de
   comienzo — cultivos v3 (papa 9 min → maíz 24 h) y nodos largos desde el primer golpe

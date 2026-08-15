@@ -11,7 +11,7 @@ function log(m, k = "") { const b = $("log"); if (!b) return; const d = document
 function isOpen(id) { const e = $(id); return !!(e && e.classList.contains("show")); }
 function anyOvOpen() { return !!document.querySelector(".ov.show"); }
 const OV_REFRESH = { "ov-entrenando": () => entrenarSync(), "ov-clan": () => refreshClan(), "ov-misiones": () => refreshMisiones(), "ov-mapa": () => refreshMapa(), "ov-objetivos": () => refreshObjetivos(), "ov-inv": () => refreshInv(), "ov-skills": () => refreshSkills(), "ov-equip": () => refreshEquip(), "ov-godhand": () => refreshGodHand(),
-  "ov-forge": () => refreshForge(), "ov-market": () => refreshMarket(), "ov-barn": () => refreshBarn(),
+  "ov-forge": () => refreshForge(), "ov-market": () => refreshMarket(), "ov-barn": () => refreshBarn(), "ov-buzon": () => refreshBuzon(),
   "ov-cocina": () => refreshCooking(),
   "ov-horno": () => refreshHorno(),
   "ov-altar": () => refreshAltar(),
@@ -1415,6 +1415,22 @@ function refreshMarket() {
 }
 
 // tienda de semillas: comprar con plata, bloqueadas por nivel de Cultivo
+/* ---- BUZÓN (15/8): las cartas se dibujan como sobres de papel ---- */
+function refreshBuzon() {
+  const box = $("buzon-list"); if (!box) return;
+  const cartas = (typeof buzonCartas === "function") ? buzonCartas() : [];
+  if (!cartas.length) { box.innerHTML = '<div class="sub" style="padding:14px 6px">El buzón está vacío. Cuando pase algo en tu granja, la banderita se levanta sola.</div>'; return; }
+  box.innerHTML = cartas.map(c => {
+    const btn = c.panel
+      ? '<button class="green sm" data-carta-ir="' + c.panel + '">' + (c.btn || "Ver") + '</button>'
+      : (c.leer ? '<button class="ghost sm" data-carta-ok="' + c.id + '">Entendido</button>' : "");
+    return '<div class="forge-row"><div class="fic">✉️</div><div class="finfo"><div class="fnm">' + c.titulo +
+      '</div><div class="fds">De: ' + c.de + '</div><div class="fds">' + c.txt + '</div></div><div class="fbtns">' + btn + '</div></div>';
+  }).join("");
+  box.querySelectorAll("[data-carta-ir]").forEach(b => b.onclick = () => { closeOv("ov-buzon"); openOv(b.dataset.cartaIr); });
+  box.querySelectorAll("[data-carta-ok]").forEach(b => b.onclick = () => buzonLeer(b.dataset.cartaOk));
+}
+
 function refreshSeedShop() {
   const box = $("seed-shop"); if (!box) return;
   const sb = seedBuysToday();

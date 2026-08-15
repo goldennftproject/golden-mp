@@ -171,6 +171,20 @@ class FarmScene extends Phaser.Scene {
     // objetos del mundo (con estado para interacción)
     let __treeN = 0, __rockN = 0;   // viernes (2): orden de desbloqueo de árboles y piedras
     if (typeof planosSync === "function") planosSync(true);   // blueprints (12/8): guardados viejos reciben sus planos
+    // BUZÓN (15/8): si el arte de PixelLab no está, se dibuja uno simple a código —
+    // así el objeto existe igual y el juego nunca cae al respaldo feo de "store"
+    ["buzon", "buzon_full"].forEach((k, esFull) => {
+      if (this.textures.exists(k)) return;
+      const g = this.make.graphics({ add: false });
+      g.fillStyle(0x6b4a2b, 1).fillRect(10, 14, 4, 18);            // poste
+      g.fillStyle(0x8a5a33, 1).fillRoundedRect(3, 4, 18, 12, 3);   // caja
+      g.fillStyle(0x5e3d20, 1).fillRect(3, 8, 18, 2);              // tapa
+      g.fillStyle(0xd94f3d, 1);                                     // banderita
+      if (esFull) g.fillRect(20, 0, 2, 8).fillRect(20, 0, 6, 3);
+      else g.fillRect(20, 10, 6, 2);
+      if (esFull) g.fillStyle(0xf6efdd, 1).fillRect(6, 6, 10, 7);  // sobre asomando
+      g.generateTexture(k, 27, 34); g.destroy();
+    });
     this.objs = GF.WORLD_OBJECTS.map((o, i) => {
       const lp = (G.layout && G.layout[i]) || null;                            // posición editada por el jugador
       // blueprints (12/8): si el edificio se colocó con su plano, ESA es su posición
@@ -809,6 +823,7 @@ class FarmScene extends Phaser.Scene {
     if (o.type === "tree") { if (o.locked) return "Cultivar árbol (" + treeUnlockCost() + " madera)"; return cd ? "Vuelve en " + fmtSecs(secs) : "Talar madera" + gp(GOLPES_TALAR); }
     if (o.type === "rock") { if (typeof nodoBloqueado === "function" && nodoBloqueado(o)) return "🔒 Veta — se habilita a granja nivel " + nodoNivelReq(o); return cd ? "Vuelve en " + fmtSecs(secs) : "Picar piedra" + gp(GOLPES_MINAR); }
     if (o.type === "ore") { const od = ORE_DEF[o.ore]; if (!od) return "Minar"; if (cd) return od.emoji + " Vuelve en " + fmtSecs(secs); return "Minar " + od.label + gp(GOLPES_MINAR); }
+    if (o.type === "buzon") { const n = (typeof buzonCartas === "function") ? buzonCartas().length : 0; return n ? ("Leer el correo (" + n + (n > 1 ? " cartas" : " carta") + ")") : "Buzón — sin cartas"; }
     if (o.type === "barn") return "Granja";
     if (o.type === "market") return "Mercado";
     if (typeof BUILD_DEF !== "undefined" && BUILD_DEF[o.type] && !(G.built && G.built[o.type])) {
@@ -886,6 +901,7 @@ class FarmScene extends Phaser.Scene {
       } else { if (typeof refreshEstablo === "function") refreshEstablo(); openOv("ov-establo"); }
       return;
     }
+    if (o.type === "buzon") return openOv("ov-buzon");   // buzón (15/8)
     if (o.type === "barn") return openOv("ov-barn");
     if (o.type === "market") return openOv("ov-market");
     // OBRA de blueprint (12/8): cada clic DEPOSITA los materiales que tengas; al
@@ -2209,6 +2225,21 @@ class FarmScene extends Phaser.Scene {
     }
   }
 
+  // BUZÓN (15/8): la banderita se levanta sola cuando hay cartas (y un sobre saltarín)
+  tickBuzon(t) {
+    if (t < (this._buzonAt || 0)) return;
+    this._buzonAt = t + 1200;
+    const o = (this.objs || []).find(x => x.type === "buzon");
+    if (!o || !o.sprite) return;
+    const n = (typeof buzonCartas === "function") ? buzonCartas().length : 0;
+    const key = n > 0 ? "buzon_full" : "buzon";
+    if (o.sprite.texture.key !== key) this.setObjTex(o, key, o.rw || o.w);
+    if (n > 0 && !o.emoBuzon) {
+      o.emoBuzon = this.add.text(o.cx, o.by - (o.sprite.displayHeight || 40) - 6, "✉️", { fontSize: "15px" }).setOrigin(0.5, 1).setDepth(99990);
+      this.tweens.add({ targets: o.emoBuzon, y: o.emoBuzon.y - 6, duration: 700, yoyo: true, repeat: -1, ease: "Sine.easeInOut" });
+    } else if (n === 0 && o.emoBuzon) { o.emoBuzon.destroy(); o.emoBuzon = null; }
+  }
+
   // VAPOR DE LA COCINA y CHISPAS DEL ALTAR: los edificios cuentan su estado sin abrir la ventana.
   tickVapor(t) {
     if (!FX_VAPOR) return;
@@ -2852,6 +2883,7 @@ class FarmScene extends Phaser.Scene {
     this.tickMascota(dt, t);    // la mascota pasea por la granja
     this.tickNubes(dt);     // nubes cruzando con su sombra
     this.tickMariposas(dt, t);
+    this.tickBuzon(t);
     this.tickVapor(t);      // vapor de la Cocina y chispas del Altar mejorado
     this.updateHoverFx();   // brillo sobre lo interactuable (hover + cercanía)
     // clic sostenido: aplicar el destino que quedó pendiente por el freno del recálculo

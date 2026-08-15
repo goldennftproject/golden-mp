@@ -3228,6 +3228,36 @@ function darCosmetico(nombre) {
 
 function dayStamp(off) { const d = new Date(Date.now() + (off || 0) * 86400000); return d.getFullYear() + "-" + String(d.getMonth() + 1).padStart(2, "0") + "-" + String(d.getDate()).padStart(2, "0"); }
 // estado del cofre: ¿se puede reclamar hoy? ¿qué día de la racha toca? ¿se perdió la racha?
+/* ================= BUZÓN (15/8, idea Stardew) ==================================
+   Las noticias llegan como CARTAS a un buzón físico en la granja. La banderita se
+   levanta cuando hay algo: reemplaza al popup del cofre diario al entrar. Las cartas
+   se ARMAN al momento (no se guardan): solo persiste qué avisos únicos ya se leyeron. */
+function passPendientes() {
+  try {
+    const pp = passInit(), lvl = passLvl(); let n = 0;
+    for (let i = 1; i <= lvl; i++) { if (!pp.claimF[i]) n++; if (pp.vip && !pp.claimV[i]) n++; }
+    return n;
+  } catch (e) { return 0; }
+}
+function buzonCartas() {
+  const cartas = [];
+  G.buzonLeidas = G.buzonLeidas || {};
+  if (!G.buzonLeidas.bienvenida) cartas.push({
+    id: "bienvenida", de: "El Capataz", titulo: "¡Bienvenido a Golden Farm!",
+    txt: "Esta tierra ya es tuya. Plantá, cosechá, vendé y construí a tu ritmo — nadie te apura. Cuando haya novedades, te las dejo acá, en el buzón: si ves la banderita levantada, pasá a leer.",
+    leer: true });
+  try { if (typeof dailyState === "function" && dailyState().claimable) cartas.push({
+    id: "cofre", de: "La Granja", titulo: "Tu cofre diario está listo",
+    txt: "Hay insumos esperándote en el cofre de la racha. Si venís todos los días, la racha crece.",
+    panel: "ov-daily", btn: "Abrir el cofre" }); } catch (e) {}
+  try { const n = passPendientes(); if (n > 0) cartas.push({
+    id: "pase", de: "El Pase de Cosecha", titulo: n + (n > 1 ? " niveles" : " nivel") + " sin reclamar",
+    txt: "Tus estrellas ya destrabaron premios en el Pase. Pasá a retirarlos cuando quieras.",
+    panel: "ov-pass", btn: "Ver el Pase" }); } catch (e) {}
+  return cartas;
+}
+function buzonLeer(id) { G.buzonLeidas = G.buzonLeidas || {}; G.buzonLeidas[id] = 1; if (typeof saveFarm === "function") saveFarm(); if (typeof refreshBuzon === "function") refreshBuzon(); }
+
 function dailyState() {
   const dd = G.daily || (G.daily = { day: 0, last: "" });
   if (dd.last === dayStamp(0)) return { claimable: false, day: dd.day, lost: false };
