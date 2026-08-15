@@ -148,20 +148,20 @@ var GROW_SCALE = 1;   // 2/8: FUERA la compresión de testeo — el tiempo que s
 // Tabla oficial de "2das mejoras" (4/8/2026): compra/venta con ganancia que dobla por tier y
 // ratio ~2,33; tiempos de 9 min (Papa) a 24 h (Maíz). XP por cosecha = minutos de crecimiento.
 const CROP_DEF = {
-  // 14/8 (dirección, decisión ESTRUCTURAL): el ritmo del tutorial ES el del juego — tier 1
-  // rápido DE BASE, escalera que duplica hacia arriba (estilo Sunflower Land). El CUPO
-  // diario de semillas hace el cambio neutro a inflación: el ingreso máximo POR DÍA no
-  // cambia, solo cuán rápido lo alcanzás. ⚠ Números a validar por el diseñador.
-  papa:      { label:"Papa",      emoji:"🥔", lvl:1,  seedCost:1,   growH:0.0125, yield:1, price:3,    xp:9 },    // 45 s (14/8 −50%)
-  zanahoria: { label:"Zanahoria", emoji:"🥕", lvl:2,  seedCost:3,   growH:0.0417, yield:1, price:8,    xp:25 },  // 2,5 min (14/8 −50%)
-  cebolla:   { label:"Cebolla",   emoji:"🧅", lvl:3,  seedCost:6,   growH:0.0833, yield:1, price:16,   xp:50 },  // 5 min (14/8 −50%)
-  calabacin: { label:"Calabacín", emoji:"🥒", lvl:4,  seedCost:12,  growH:0.25, yield:1, price:32,   xp:90 },   // 15 min (−50%)
-  repollo:   { label:"Repollo",   emoji:"🥬", lvl:5,  seedCost:20,  growH:0.5,  yield:1, price:50,   xp:150 },  // 30 min (−50%)
-  calabaza:  { label:"Calabaza",  emoji:"🎃", lvl:6,  seedCost:40,  growH:1,    yield:1, price:100,  xp:270 },  // 1 h (−50%)
-  brocoli:   { label:"Brócoli",   emoji:"🥦", lvl:7,  seedCost:90,  growH:2,    yield:1, price:210,  xp:480 },  // 2 h (−50%)
-  girasol:   { label:"Girasol",   emoji:"🌻", lvl:8,  seedCost:180, growH:4,    yield:1, price:420,  xp:720 },  // 4 h (−50%)
-  trigo:     { label:"Trigo",     emoji:"🌾", lvl:9,  seedCost:360, growH:6,    yield:1, price:840,  xp:1080 }, // 6 h (−50%)
-  maiz:      { label:"Maíz",      emoji:"🌽", lvl:10, seedCost:720, growH:12,   yield:1, price:1680, xp:1440 },  // 12 h (−50% · ⚠ se pierde el ancla nocturna de 24 h — a validar)
+  // 15/8 (dirección): TIEMPOS DE LA TABLA v3 DEL DISEÑADOR (1/8) puestos en juego para
+  // que los pruebe en vivo y vea los detalles — papa 9 min … maíz 24 h. Los PRECIOS y la
+  // XP siguen siendo los nuestros (semilla papa 1 / venta 3): con los precios v3 (semilla
+  // 20) el arranque con 3 de plata no funciona. El cupo diario sigue de ancla.
+  papa:      { label:"Papa",      emoji:"🥔", lvl:1,  seedCost:1,   growH:0.15, yield:1, price:3,    xp:9 },    // 9 min (tabla v3 del diseñador, 15/8)
+  zanahoria: { label:"Zanahoria", emoji:"🥕", lvl:2,  seedCost:3,   growH:0.25, yield:1, price:8,    xp:25 },  // 15 min (v3 diseñador)
+  cebolla:   { label:"Cebolla",   emoji:"🧅", lvl:3,  seedCost:6,   growH:0.5, yield:1, price:16,   xp:50 },  // 30 min (v3 diseñador)
+  calabacin: { label:"Calabacín", emoji:"🥒", lvl:4,  seedCost:12,  growH:0.75, yield:1, price:32,   xp:90 },   // 45 min (v3 diseñador)
+  repollo:   { label:"Repollo",   emoji:"🥬", lvl:5,  seedCost:20,  growH:1.5,  yield:1, price:50,   xp:150 },  // 1 h 30 (v3 diseñador)
+  calabaza:  { label:"Calabaza",  emoji:"🎃", lvl:6,  seedCost:40,  growH:3,    yield:1, price:100,  xp:270 },  // 3 h (v3 diseñador)
+  brocoli:   { label:"Brócoli",   emoji:"🥦", lvl:7,  seedCost:90,  growH:6,    yield:1, price:210,  xp:480 },  // 6 h (v3 diseñador)
+  girasol:   { label:"Girasol",   emoji:"🌻", lvl:8,  seedCost:180, growH:10,    yield:1, price:420,  xp:720 },  // 10 h (v3 diseñador)
+  trigo:     { label:"Trigo",     emoji:"🌾", lvl:9,  seedCost:360, growH:16,    yield:1, price:840,  xp:1080 }, // 16 h (v3 diseñador)
+  maiz:      { label:"Maíz",      emoji:"🌽", lvl:10, seedCost:720, growH:24,   yield:1, price:1680, xp:1440 },  // 24 h (v3 diseñador — vuelve el ancla nocturna)
 };
 function recomputeCropGrow() { for (const k in CROP_DEF) CROP_DEF[k].grow = Math.round(CROP_DEF[k].growH * 3600 * GROW_SCALE); }
 recomputeCropGrow();   // en segundos, como siempre

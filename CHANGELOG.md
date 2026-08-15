@@ -2125,6 +2125,17 @@ Ahora la cadena de guía no tiene puntas sueltas:
   lugar. Al recomprar semillas, `buySeed` la vuelve a poner en el primer hueco libre.
   Herramientas y picos conservan su lógica de siempre.
 
+## Día 18 (cont.) — EN PRUEBA: tiempos de cultivo de la tabla v3 del diseñador (15/8)
+- Pedido de dirección: poner EN JUEGO los tiempos de crecimiento que propuso el diseñador
+  (doc "Sistema de farmeo con 10 cultivos v3", 1/8) para que los pruebe en vivo:
+  papa 9 min · zanahoria 15 · cebolla 30 · calabacín 45 · repollo 1,5 h · calabaza 3 h ·
+  brócoli 6 h · girasol 10 h · trigo 16 h · maíz 24 h (vuelve el ancla nocturna).
+- PRECIOS y XP siguen siendo los nuestros (semilla papa 1 / venta 3): con los precios v3
+  (semilla 20) el arranque con 3 de plata no funciona. Nodos sin cambio (árbol 90 s,
+  piedra 2 min). Es una build de PRUEBA: revertir growH si no convence.
+- Sim del tutorial con estos tiempos: completo en ~57 min (antes ~49). El cambio grande
+  no es el tuto sino el ritmo del día 1: la papa pasa de 45 s a 9 min por ciclo.
+
 ## Día 18 (cont.) — Auditoría del tutorial: exploits y softlocks (15/8, sim-tuto-v2)
 - Simulación fiel al código de hoy (tools/sim-tuto-v2.js). Hallazgos y arreglos:
 - **EXPLOIT cerrado — cupo infinito** (regla final de dirección): la exención de cupo
