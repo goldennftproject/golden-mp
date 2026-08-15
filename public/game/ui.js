@@ -1418,9 +1418,8 @@ function refreshMarket() {
 function refreshSeedShop() {
   const box = $("seed-shop"); if (!box) return;
   const sb = seedBuysToday();
-  const cupoTxt = (G.tuto && !G.tuto.done)
-    ? 'Semillas SIN LÍMITE durante el tutorial (después: cupo diario de ' + seedDailyMax() + ')'
-    : 'Cupo diario: ' + sb.count + '/' + seedDailyMax() + ' semillas (sube con el nivel de granja)';
+  // 15/8 (dirección): el cupo de siempre manda también durante el tutorial (el kit cubre los insumos)
+  const cupoTxt = 'Cupo diario: ' + sb.count + '/' + seedDailyMax() + ' semillas (sube con el nivel de granja)';
   box.innerHTML = '<div class="shophead">' + cupoTxt + '</div>' + CROP_ORDER.map(k => {
     const cd = CROP_DEF[k], unlocked = cropUnlocked(k), aff = G.plata >= cd.seedCost;
     const controls = unlocked

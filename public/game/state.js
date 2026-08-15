@@ -29,8 +29,11 @@ const G = {
     fibra: 0, pelaje: 0, cuero: 0, colmillo: 0, esencia_runica: 0, esencia_oscura: 0 },
   seeds: { papa: 0, zanahoria: 0, cebolla: 0, calabacin: 0, repollo: 0, calabaza: 0, brocoli: 0, girasol: 0, trigo: 0, maiz: 0 },  // 14/8: la bolsa nace VACÍA — las 3 semillas se compran con la plata inicial (1er objetivo)
   selSeed: "papa",   // semilla elegida para plantar
-  picks: { owned: { stone: true }, dur: { stone: 15 }, eq: "stone" },   // 14/8 (reversión del capataz): vuelve el set de arranque
-  tools: { axe: 15, rod: 15 },   // 15 usos de arranque; después se craftean de a 1 uso
+  // 15/8 (sim-tuto-v2): el kit CUBRE los materiales del tutorial (31 talas + 18 picadas).
+  // Con 15/15 el jugador debía craftear 21 hachas (126 plata) financiadas con ~170 ciclos
+  // de papa — 40 min de microgestión. El kit es inventario inicial, no premio: insumos.
+  picks: { owned: { stone: true }, dur: { stone: 20 }, eq: "stone" },
+  tools: { axe: 35, rod: 15 },   // usos de arranque; después se craftean de a 1 uso
   toolsLost: {},                 // herramientas tiradas a la papelera (31/7: el diseñador pidió que se puedan tirar)
   invRows: 0,                    // filas extra de inventario compradas
   slots: [],                     // inventario por casillas: [{kind,key}|null]
@@ -222,7 +225,7 @@ function tutoAvisoCubierto() {
 function nodoCd(o, clave, cdLargo) { return cdLargo; }   // 14/8: un solo timer, sin etapas
 function seedBuysToday() {
   const sb = G.seedBuys || (G.seedBuys = { date: "", count: 0 });
-  if (sb.date !== dayStamp(0)) { sb.date = dayStamp(0); sb.count = 0; }
+  if (sb.date !== dayStamp(0)) { sb.date = dayStamp(0); sb.count = 0; sb.caridad = 0; }   // 15/8: también la semilla fiada del día
   return sb;
 }
 function buySeed(k, qty) {
@@ -230,23 +233,30 @@ function buySeed(k, qty) {
   if (!cropUnlocked(k)) { toast("Necesitás Cultivo nivel " + cd.lvl); return; }
   qty = Math.max(1, Math.floor(qty || 1));
   const sb = seedBuysToday();
-  // 14/8 v6 (dirección, regla simple y final): DURANTE el tutorial el cupo de semillas NO
-  // aplica — ninguna misión puede quedar matemáticamente imposible por el límite diario.
-  // Al completar el tutorial, el cupo manda como siempre (ancla anti-inflación). El riesgo
-  // de acaparar es chico: la plata para comprarlas hay que farmearla a tiempos reales, y
-  // solo las siembras "del plan" (contabilidad de la proyección) crecen aceleradas.
-  const delPlan = !!(G.tuto && !G.tuto.done);
-  if (!delPlan) {
-    const left = seedDailyMax() - sb.count;
-    if (left <= 0) { toast("Cupo diario de semillas alcanzado (" + seedDailyMax() + ") — volvé mañana"); return; }
-    if (qty > left) { qty = left; toast("Cupo diario: solo podés comprar " + left + " más hoy"); }
+  // 15/8 (dirección, regla final): el CUPO DE SIEMPRE manda para todos los cultivos,
+  // tutorial incluido — el kit inicial ya cubre los insumos del recorrido, así que
+  // ninguna misión depende de comprar de más. Sin excepciones = sin exploit.
+  const left = seedDailyMax() - sb.count;
+  if (left <= 0) { toast("Cupo diario de semillas alcanzado (" + seedDailyMax() + ") — volvé mañana"); return; }
+  if (qty > left) { qty = left; toast("Cupo diario: solo podés comprar " + left + " más hoy"); }
+  // 15/8: RED ANTI-SOFTLOCK — jugador en cero absoluto (sin plata, semillas, cultivos,
+  // platos ni nada creciendo): el Mercado le FÍA una semilla de papa por día. Sin esto,
+  // como los materiales no se venden, el cero era un callejón sin salida matemático.
+  let fiada = false;
+  if (k === "papa" && G.plata < cd.seedCost && !sb.caridad) {
+    const tieneSem = Object.keys(G.seeds || {}).some(s => (G.seeds[s] || 0) > 0);
+    const tieneCult = Object.keys(CROP_DEF).some(c => Math.floor(G.res[c] || 0) > 0);
+    const tienePlato = Object.keys(G.dishes || {}).some(d => (G.dishes[d] || 0) > 0);
+    const tieneSembrado = (G.plots || []).some(p => p && (p.state === "growing" || p.state === "ready"));
+    if (!tieneSem && !tieneCult && !tienePlato && !tieneSembrado) { fiada = true; qty = 1; sb.caridad = 1; }
   }
-  const cost = cd.seedCost * qty;
+  const cost = fiada ? 0 : cd.seedCost * qty;
   if (G.plata < cost) { toast("Te falta plata"); return; }
+  if (fiada) toast("El Mercado te fía tu primera semilla del día 🌱");
   if (typeof tutoPermite === "function" && !tutoPermite("buyseed")) { tutoAviso(); return; }   // embudo estricto (13/8)
   if (typeof tutoGuardia === "function" && !tutoGuardia("plata", cost, "comprar " + cd.label, { semilla: k })) return;   // guardia del tutorial (12/8)
   G.plata -= cost; G.seeds[k] = (G.seeds[k] || 0) + qty;
-  if (!delPlan) sb.count += qty;   // 14/8 v5: la compra del plan no consume cupo
+  sb.count += qty;
   // 13/8: la semilla comprada vuelve a la barra rápida si no estaba (la agotada sale sola)
   if (Array.isArray(G.hotbar) && !G.hotbar.some(h => h && h.kind === "seed" && h.key === k)) {
     const li = G.hotbar.findIndex(h => !h);

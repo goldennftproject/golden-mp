@@ -2125,6 +2125,26 @@ Ahora la cadena de guía no tiene puntas sueltas:
   lugar. Al recomprar semillas, `buySeed` la vuelve a poner en el primer hueco libre.
   Herramientas y picos conservan su lógica de siempre.
 
+## Día 18 (cont.) — Auditoría del tutorial: exploits y softlocks (15/8, sim-tuto-v2)
+- Simulación fiel al código de hoy (tools/sim-tuto-v2.js). Hallazgos y arreglos:
+- **EXPLOIT cerrado — cupo infinito** (regla final de dirección): la exención de cupo
+  durante el tutorial se ELIMINÓ por completo — el cupo de siempre (18+2×nivel) manda
+  para todos los cultivos desde el minuto uno. Es posible porque el kit inicial ahora
+  cubre los insumos del recorrido: ninguna misión depende de comprar de más (el tuto
+  usa ~6 semillas). Sin excepciones = sin exploit. (También se quitó el cartel
+  "SIN LÍMITE durante el tutorial" de la Tienda.)
+- **TEDIO estructural corregido**: con kit 15/15 el tuto exigía craftear 21 hachas
+  (126 plata) financiadas con ~170 ciclos de papa. El kit inicial ahora CUBRE los
+  materiales del recorrido: 35 hachas + 20 picos (31 talas + 18 picadas medidas).
+  El paso "Crafteá un Hacha" sigue enseñando el crafteo (6 plata).
+- **SOFTLOCK cerrado — cero absoluto**: los materiales no se venden; un jugador con
+  0 plata, sin semillas/cultivos/platos/siembras quedaba matemáticamente muerto.
+  El Mercado ahora FÍA 1 semilla de papa por día en ese estado exacto (sb.caridad).
+- Tiempo del recorrido completo (jugador activo): **~41 min**, dominado por los timers
+  de nodo (34 talas × 90 s / 18 picadas × 2 min). Consumo real de semillas: ~10-15.
+- Revisado sin hallazgos: depósito de obras (solo planos del tuto), venta del plato antes
+  de comer (se recocina), guía apagada (los pasos avanzan por eventos igual).
+
 ## Día 18 (cont.) — Herrería: el scroll queda libre (15/8)
 - Playtest: tras comprar un pico, la lista de la Herrería no dejaba subir el scroll más
   allá de la mitad. Causa: tutoHighlight corre cada segundo y en cada evento de scroll,
