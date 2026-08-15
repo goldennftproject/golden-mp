@@ -181,8 +181,16 @@ var GOLPES_TALAR = 3, GOLPES_MINAR = 3;   // clics para tumbar un árbol o rompe
 // si dejás un árbol o una piedra a medio golpear y no volvés en este tiempo, se recupera sola
 // y NO se gasta la herramienta: la herramienta solo se descuenta cuando el nodo cae del todo.
 var GOLPES_RESET_MS = 5000;
-var CD = { tree: 90, rock: 120 };               // 14/8 FINAL (dirección): UN SOLO TIMER SIEMPRE — árbol 90 s, roca 2 min, sin arranque rápido ni excepciones
-var CD_RAPIDO = {};   // 14/8 (dirección): el "arranque rápido por nodo" se ELIMINÓ — el timer es el mismo siempre
+var CD = { tree: 5400, rock: 7200 };            // 15/8 EN PRUEBA: tabla del DISEÑADOR (doc 4/8) — 1 h 30 el árbol · 2 h la piedra
+var CD_RAPIDO = {                                // 15/8 EN PRUEBA: arranque rápido del doc 4/8 del diseñador
+  tree:      { seg: 180, veces: 3 },             // 3 min · las primeras 3
+  piedra:    { seg: 240, veces: 3 },             // 4 min · las primeras 3
+  bronce:    { seg: 360, veces: 2 },             // 6 min · las primeras 2
+  hierro:    { seg: 480, veces: 2 },             // 8 min · las primeras 2
+  oro:       { seg: 720, veces: 1 },             // 12 min · la primera
+  diamante:  { seg: 720, veces: 1 },             // 12 min · la primera
+  netherita: { seg: 900, veces: 1 },             // 15 min · la primera
+};
 // cuántas veces se recogió YA de ese nodo (por nodo, no global)
 function nodoUsos(o) { G.nodoUsos = G.nodoUsos || {}; return G.nodoUsos[o.i] || 0; }
 function nodoSumar(o) { G.nodoUsos = G.nodoUsos || {}; G.nodoUsos[o.i] = nodoUsos(o) + 1; }
@@ -222,7 +230,11 @@ function tutoAvisoCubierto() {
     log("Con lo que está creciendo y lo que tenés en la bolsa ya llegás a los " + meta + " de plata del objetivo.", "good");
   }
 }
-function nodoCd(o, clave, cdLargo) { return cdLargo; }   // 14/8: un solo timer, sin etapas
+function nodoCd(o, clave, cdLargo) {   // 15/8: vuelve el esquema del diseñador (primeras rápidas → largo)
+  const r = CD_RAPIDO[clave];
+  if (r && nodoUsos(o) < r.veces) return r.seg;
+  return cdLargo;
+}
 function seedBuysToday() {
   const sb = G.seedBuys || (G.seedBuys = { date: "", count: 0 });
   if (sb.date !== dayStamp(0)) { sb.date = dayStamp(0); sb.count = 0; sb.caridad = 0; }   // 15/8: también la semilla fiada del día
@@ -934,14 +946,13 @@ function prestige() {
 
 // --- minerales y picos ---
 const ORE_ORDER = ["piedra","bronce","hierro","oro","diamante","netherita"];
-const ORE_DEF = {   // 15/8 (dirección): UN SISTEMA para todo — el timer lo define el RECURSO, no el nodo.
-  // Piedra = mismo timer que la cantera (CD.rock); el resto: su valor de diseño con el −50% general.
-  piedra:   { tier:0, label:"Piedra",    emoji:"🪨", sprite:"node_stone",     cd:120,   yield:1, price:6 },
-  bronce:   { tier:1, label:"Bronce",    emoji:"🟫", sprite:"node_bronze",    cd:14400, yield:1, price:12 },
-  hierro:   { tier:2, label:"Hierro",    emoji:"⛓️", sprite:"node_iron",      cd:21600, yield:1, price:15 },   // viernes (2): lo mina el Pico de Hierro
-  oro:      { tier:3, label:"Oro",       emoji:"🟡", sprite:"node_gold",      cd:25200, yield:1, price:30 },
-  diamante: { tier:4, label:"Diamante",  emoji:"💎", sprite:"node_diamond",   cd:25200, yield:1, price:80 },
-  netherita:{ tier:5, label:"Netherita", emoji:"🔶", sprite:"node_netherite", cd:25200, yield:1, price:200 },
+const ORE_DEF = {   // 15/8 EN PRUEBA: enfriamientos largos del doc 4/8 del diseñador
+  piedra:   { tier:0, label:"Piedra",    emoji:"🪨", sprite:"node_stone",     cd:7200,  yield:1, price:6 },
+  bronce:   { tier:1, label:"Bronce",    emoji:"🟫", sprite:"node_bronze",    cd:28800, yield:1, price:12 },
+  hierro:   { tier:2, label:"Hierro",    emoji:"⛓️", sprite:"node_iron",      cd:43200, yield:1, price:15 },   // viernes (2): lo mina el Pico de Hierro
+  oro:      { tier:3, label:"Oro",       emoji:"🟡", sprite:"node_gold",      cd:50400, yield:1, price:30 },
+  diamante: { tier:4, label:"Diamante",  emoji:"💎", sprite:"node_diamond",   cd:50400, yield:1, price:80 },
+  netherita:{ tier:5, label:"Netherita", emoji:"🔶", sprite:"node_netherite", cd:50400, yield:1, price:200 },
 };
 const PICK_ORDER = ["stone","bronze","iron","gold","diamond","netherite"];
 const PICK_DEF = {

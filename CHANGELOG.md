@@ -2125,6 +2125,17 @@ Ahora la cadena de guía no tiene puntas sueltas:
   lugar. Al recomprar semillas, `buySeed` la vuelve a poner en el primer hueco libre.
   Herramientas y picos conservan su lógica de siempre.
 
+## Día 18 (cont.) — EN PRUEBA: tabla COMPLETA del diseñador, nodos incluidos (15/8)
+- Dirección pidió poner TODOS los timers del diseñador, no solo cultivos. Restaurado el
+  doc "Enfriamiento de Árboles y Minerales" (4/8) tal cual: árbol 1 h 30 (3 primeras
+  taladas a 3 min) · piedra 2 h (3 primeras a 4 min) · bronce 8 h · hierro 12 h ·
+  oro/diamante 14 h — con el mecanismo de arranque rápido por nodo de vuelta (nodoCd).
+- Sim del tutorial con la tabla completa del diseñador (tools/sim-tuto-disenador.js):
+  Herrería a las 2 h · Horno a las 11,5 h · **Cocina a las 26 h** (2-3 días de visitas).
+  La madera domina: ~20 h de esperas de árbol para 34 talas con 2 árboles.
+- Build de PRUEBA para que el diseñador lo sienta en vivo. Para revertir: CD, CD_RAPIDO,
+  ORE_DEF (cds) y growH de CROP_DEF.
+
 ## Día 18 (cont.) — EN PRUEBA: tiempos de cultivo de la tabla v3 del diseñador (15/8)
 - Pedido de dirección: poner EN JUEGO los tiempos de crecimiento que propuso el diseñador
   (doc "Sistema de farmeo con 10 cultivos v3", 1/8) para que los pruebe en vivo:
