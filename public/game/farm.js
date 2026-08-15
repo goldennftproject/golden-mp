@@ -203,7 +203,15 @@ class FarmScene extends Phaser.Scene {
         : (o.type === "tree") ? o.w * 0.8                                   // árboles −20%
         : (o.type === "market" || o.type === "store") ? o.w * 0.8           // tiendas −20%
         : (o.type === "dummy" ? o.w * 1.25 : o.w);                          // dummy +25%
-      s.setScale(rw / s.width); s.setDepth(by);
+      // 15/8: si está mostrando su OBRA (build_*), se escala con la densidad del edificio
+      // TERMINADO — el arte de obra es el mismo edificio a medio hacer, dibujado al mismo
+      // píxel; estirar cada lienzo a rw los dejaba desparejos (obra chica/corrida vs final)
+      let escala = rw / s.width;
+      if (s.texture && s.texture.key.indexOf("build_") === 0 && this.textures.exists(o.key)) {
+        const bi = this.textures.get(o.key).getSourceImage();
+        if (bi && bi.width) escala = rw / bi.width;
+      }
+      s.setScale(escala); s.setDepth(by);
       if (locked && s.texture && s.texture.key === "tree_sapling") s.setScale((rw * 0.55) / s.width);   // el retoño es chico, como corresponde
       // sombra bajo árboles y edificios (detalles 29/7)
       let shadow = null;
@@ -1138,7 +1146,10 @@ class FarmScene extends Phaser.Scene {
         useTool("axe"); addXp("crafting", 4); nodoSumar(o); o.cdIni = nowMs(); o.readyAt = nowMs() + nodoCd(o, "tree", CD.tree) * 1000 * cdMult() * (typeof tutoBoost === "function" ? tutoBoost("tree") : 1);
         o.halfAt = nowMs() + (o.readyAt - nowMs()) / 2;   // a mitad del enfriamiento asoma el árbol a medio crecer (doc 4/8)
         // tocón nuevo con base de tierra y hojas caídas (encuadre del árbol, va a tamaño completo); respaldo: tocón viejo chico
-        if (this.textures.exists("tree_stump_leaves")) this.setObjTex(o, "tree_stump_leaves", (o.rw || o.w) * 0.85);   // −15%: el tocón venía más grueso que el tronco del árbol
+        // 15/8 (medido en los PNG): el disco del tocón es el 64% de su lienzo y el tronco
+        // del árbol el 23-30% del suyo → a 0.42 del ancho del árbol el corte queda del
+        // MISMO grosor que el tronco que había (antes 0.85: salía el doble de gordo).
+        if (this.textures.exists("tree_stump_leaves")) this.setObjTex(o, "tree_stump_leaves", (o.rw || o.w) * 0.42);
         else this.setObjTex(o, "tree_stump", (o.rw || o.w) * 0.42);
         statAdd("talar", null, gr);
         this.premioFx(o.cx, o.by, resSprite("madera"), "+" + gr);
@@ -1740,7 +1751,9 @@ class FarmScene extends Phaser.Scene {
     // el sprite oculto venía con el gris de respaldo puesto desde el create (tintarNodo lo
     // pinta ANTES del cambio de textura): acá se limpia — la obra se ve a todo color
     o.sprite.clearTint().setAlpha(1);
-    o.sprite.setScale(o.rw / o.sprite.width).setDepth(o.by);
+    // 15/8: misma densidad de píxel que el edificio terminado (ver create)
+    const biV = this.textures.exists(o.baseKey) ? this.textures.get(o.baseKey).getSourceImage() : null;
+    o.sprite.setScale(o.rw / ((biV && biV.width) || o.sprite.width)).setDepth(o.by);
     this.tintarNodo(o);   // respeta la regla general (build_* queda sin tinte)
     this.letreroObra(o);
     if (this.rebuildCollisions) this.rebuildCollisions();
@@ -2054,7 +2067,7 @@ class FarmScene extends Phaser.Scene {
     const lista = [];
     for (const p of (this.plots || [])) {
       if (p.state !== "ready" || t - (p.readyAt || 0) < MADURO) continue;
-      lista.push({ x: p.cx, y: p.by - 14, k: "listo" + p.i, prio: objPlots ? 0 : 1, edad: t - (p.readyAt || 0) });
+      lista.push({ x: p.cx, y: p.by - 14, k: "listo" + p.i, prio: objPlots ? 0 : 1, edad: t - (p.readyAt || 0), o: p });
     }
     const hayHacha = (typeof toolCount === "function") && toolCount("axe") > 0;
     const eq = (typeof equippedPick === "function") ? equippedPick() : null;
@@ -2065,14 +2078,14 @@ class FarmScene extends Phaser.Scene {
       const edad = t - (o.readyAt || 0);   // sin readyAt = disponible desde siempre
       if (edad < MADURO) continue;
       if (o.type === "tree" && hayHacha)
-        lista.push({ x: o.cx, y: o.by - (o.sprite ? o.sprite.displayHeight * 0.6 : 40), k: "arbol" + o.i, prio: objRes === "madera" ? 0 : 1, edad });
+        lista.push({ x: o.cx, y: o.by - (o.sprite ? o.sprite.displayHeight * 0.6 : 40), k: "arbol" + o.i, prio: objRes === "madera" ? 0 : 1, edad, o });
       if ((o.type === "rock" || (o.type === "ore" && typeof ORE_DEF !== "undefined" && eq && PICK_DEF[eq].mineTier >= (ORE_DEF[o.ore] ? ORE_DEF[o.ore].tier : 99))) && usosPico > 0)
-        lista.push({ x: o.cx, y: o.by - 18, k: "roca" + o.i, prio: objRes === "piedra" ? 0 : 1, edad });
+        lista.push({ x: o.cx, y: o.by - 18, k: "roca" + o.i, prio: objRes === "piedra" ? 0 : 1, edad, o });
     }
     if (perdido) {
       const haySemillas = Object.keys(G.seeds || {}).some(k => (G.seeds[k] || 0) > 0);
       if (haySemillas) for (const p of (this.plots || [])) {
-        if (p.state === "dry") { lista.push({ x: p.cx, y: p.by - 14, k: "seco" + p.i, prio: st && st.id === "plant" ? 0 : 2, edad: 0 }); break; }
+        if (p.state === "dry") { lista.push({ x: p.cx, y: p.by - 14, k: "seco" + p.i, prio: st && st.id === "plant" ? 0 : 2, edad: 0, o: p }); break; }
       }
     }
     // lo del objetivo primero; a igual prioridad, lo más viejo (más desatendido) primero
@@ -2092,7 +2105,7 @@ class FarmScene extends Phaser.Scene {
       this.maripos.forEach((m, i) => {
         if (perdido && i === 0 && this.guiaTarget) { m.ancla = { x: this.guiaTarget.x, y: this.guiaTarget.y + 26 }; tomados.add("guia"); return; }
         const libre = accion.find(a => !tomados.has(a.k));
-        if (libre) { tomados.add(libre.k); m.ancla = { x: libre.x, y: libre.y }; return; }
+        if (libre) { tomados.add(libre.k); m.ancla = { x: libre.x, y: libre.y, o: libre.o }; return; }
         m.ancla = null;   // nada maduro que señalar: mariposa libre
       });
     }
@@ -2114,14 +2127,25 @@ class FarmScene extends Phaser.Scene {
         m.esperaHasta = t + 2600 + Math.random() * 3200;
         m.tx = 40 + Math.random() * (GF.WORLD_W - 80); m.ty = 40 + Math.random() * (GF.WORLD_H - 80);
       }
-      // 14/8 v3: POSADA — a veces aterriza unos segundos donde llegó (aleteo casi quieto)
+      // 15/8 (dirección): POSADA solo SOBRE el sprite del recurso — nunca quieta en el aire.
+      // Y ESPANTO: si el jugador usa ese recurso (o se le para al lado), levanta vuelo ya.
+      const firma = (o) => o ? ((o.state || "") + ":" + (o.readyAt || 0)) : "";
       if (m.posadaHasta && t < m.posadaHasta) {
-        m.fase += dt * 2.2;
-        m.g.setScale(0.9 + Math.sin(m.fase) * 0.07, 1);   // alas casi plegadas, temblor suave
-        m.g.setDepth(99993);
-        continue;
-      }
-      if (m.posadaHasta) { m.posadaHasta = 0; m.rumbo = (m.rumbo || 0) + (Math.random() - 0.5) * 1.6; }   // despega hacia otro lado
+        const susto = (m.ancla && m.ancla.o && firma(m.ancla.o) !== m.firmaPosada) ||
+                      (this.hero && Math.hypot(this.hero.x - m.g.x, this.hero.y - m.g.y) < 26);
+        if (!susto) {
+          m.fase += dt * 2.2;
+          m.g.setScale(0.9 + Math.sin(m.fase) * 0.07, 1);   // alas casi plegadas, temblor suave
+          m.g.setDepth(99993);
+          continue;
+        }
+        // se ESPANTA: arranca rápido alejándose del jugador, después la curva la devuelve
+        m.sustoHasta = t + 700;
+        m.rumbo = this.hero ? Math.atan2(m.g.y - this.hero.y, m.g.x - this.hero.x) : (m.rumbo || 0);
+        m.rumbo += (Math.random() - 0.5) * 0.6;
+        m.posadaHasta = 0; m.percha = null;
+      } else if (m.posadaHasta) { m.posadaHasta = 0; m.percha = null; m.rumbo = (m.rumbo || 0) + (Math.random() - 0.5) * 1.6; }   // fin natural: despega hacia otro lado
+      if (m.percha) { m.tx = m.percha.x; m.ty = m.percha.y; }   // planeando hacia su punto de aterrizaje
       // 14/8 v2 (playtest: "curva ABIERTA, no doblar en seco"): vuelo por RUMBO — velocidad
       // casi constante y la dirección solo puede girar unos grados por frame (tope de
       // rad/s). Una vuelta en U le lleva ~1,5 s de arco: doblar en seco es físicamente
@@ -2134,12 +2158,21 @@ class FarmScene extends Phaser.Scene {
       while (dif < -Math.PI) dif += Math.PI * 2;
       const giroMax = 2.1 * dt;   // radianes por segundo de tope: la curva siempre abierta
       m.rumbo += Math.max(-giroMax, Math.min(giroMax, dif));
-      const vel = (m.ancla ? 44 : 32) * Math.min(1, d / 26 + 0.4);   // afloja al acercarse
+      const vel = (m.ancla ? 44 : 32) * Math.min(1, d / 26 + 0.4) * (t < (m.sustoHasta || 0) ? 1.9 : 1);   // afloja al acercarse; espantada va más rápido
       m.g.x += Math.cos(m.rumbo) * vel * dt;
       m.g.y += Math.sin(m.rumbo) * vel * dt;
       m.g.setRotation(m.rumbo + Math.PI / 2);   // 14/8: el CUERPO apunta hacia donde vuela (el dibujo nace mirando arriba)
-      // cerca del destino, a veces se posa un ratito (más seguido si está señalando algo)
-      if (d < 9 && Math.random() < dt * (m.ancla ? 0.65 : 0.35)) m.posadaHasta = t + 2200 + Math.random() * 3200;
+      // cerca del recurso, a veces decide posarse: elige un punto DEL SPRITE y planea hasta él
+      if (!m.percha && m.ancla && m.ancla.o && d < 12 && Math.random() < dt * 0.8) {
+        const o = m.ancla.o, spr = o.sprite || o.spr;
+        const w = (spr && spr.visible && spr.displayWidth) || 18, h = (spr && spr.visible && spr.displayHeight) || 8;
+        m.percha = { x: o.cx + (Math.random() - 0.5) * w * 0.45, y: o.by - h * (0.55 + Math.random() * 0.25) };
+      }
+      if (m.percha && Math.hypot(m.percha.x - m.g.x, m.percha.y - m.g.y) < 3.5) {   // ATERRIZÓ
+        m.g.x = m.percha.x; m.g.y = m.percha.y;
+        m.posadaHasta = t + 2200 + Math.random() * 3200;
+        m.firmaPosada = firma(m.ancla && m.ancla.o);   // recuerda el estado del recurso: si cambia, se espanta
+      }
       m.fase += dt * 9;
       m.g.setScale(0.75 + Math.abs(Math.sin(m.fase)) * 0.45, 1);   // aleteo: se angosta y se ensancha
       m.g.setDepth(99993);   // SIEMPRE al frente (antes quedaba detrás del mercadillo)

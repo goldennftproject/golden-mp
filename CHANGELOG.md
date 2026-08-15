@@ -2125,6 +2125,26 @@ Ahora la cadena de guía no tiene puntas sueltas:
   lugar. Al recomprar semillas, `buySeed` la vuelve a poner en el primer hueco libre.
   Herramientas y picos conservan su lógica de siempre.
 
+## Día 18 (cont.) — Sprites que encajan con sus intermedios (15/8)
+- **Tocón**: el disco de corte ocupa el 64% de su lienzo y el tronco del árbol solo el
+  23-30% del suyo — dibujado a 0.85 del ancho del árbol salía el DOBLE de gordo que el
+  tronco. Medido y corregido: ahora va a 0.42 (mismo grosor que el tronco talado).
+- **Obras**: cada `build_*.png` se estiraba al ancho de su propio lienzo, pero el
+  diseñador las dibujó a la MISMA densidad de píxel que el edificio (lienzos de otro
+  tamaño: horno 123 px vs 98, altar 119 vs 104…) → quedaban chicas o corridas. Ahora la
+  obra se escala con el ancho del edificio TERMINADO (create + colocarObraEnVivo), así el
+  andamiaje calza exacto sobre la silueta de lo que se va a construir.
+
+## Día 18 (cont.) — Mariposas: posada real + espanto (15/8)
+- La mariposa ya **no se posa "en el aire"**: solo aterriza SOBRE el sprite del recurso
+  (elige un punto del follaje/roca/cultivo y planea hasta él). Sin recurso, no se posa.
+- **Espanto**: si el jugador usa el recurso donde está posada (talar/picar/cosechar/plantar)
+  o se le para al lado (<26 px), levanta vuelo al instante, más rápida por ~0,7 s,
+  alejándose del jugador con la misma curva abierta de siempre.
+- Fix producción: el panel de balance tenía guardados valores de PRUEBA del 4/8 en la nube
+  (árbol y roca en 1 s + precios de cultivos viejos) que pisaban el código al arrancar.
+  Se vació la fila de overrides: mandan los valores del código (árbol 90 s, roca 2 min).
+
 ## Día 18 (cont.) — Timer único por nodo (15/8, dirección)
 - **Se eliminó el "arranque rápido por nodo"** (CD_RAPIDO): el jugador lo percibía como
   una aceleración inconsistente ("el árbol de la Cocina va más rápido que el mío").
