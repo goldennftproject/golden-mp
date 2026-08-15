@@ -2158,8 +2158,10 @@ class FarmScene extends Phaser.Scene {
         const susto = (m.ancla && m.ancla.o && firma(m.ancla.o) !== m.firmaPosada) ||
                       (this.hero && Math.hypot(this.hero.x - m.g.x, this.hero.y - m.g.y) < 26);
         if (!susto) {
-          m.fase += dt * 2.2;
-          m.g.setScale(0.9 + Math.sin(m.fase) * 0.07, 1);   // alas casi plegadas, temblor suave
+          // 15/8 (dirección): posada las alas SIGUEN aleteando — mismo movimiento que en
+          // vuelo (abre y cierra) pero mucho más lento y suave
+          m.fase += dt * 3.2;
+          m.g.setScale(0.84 + Math.abs(Math.sin(m.fase)) * 0.16, 1);
           m.g.setDepth(99993);
           continue;
         }
