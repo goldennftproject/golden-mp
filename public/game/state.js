@@ -213,7 +213,10 @@ function tutoAcelerado(tipo) {
    y AVISO de "ya te alcanza". Atesorar cuenta en la proyección → no hay imprenta. */
 function plataProyectada() {
   let p = Math.floor(G.plata || 0);
-  for (const k in CROP_DEF) p += Math.floor(G.res[k] || 0) * (CROP_DEF[k].price || 0);   // cosecha en bolsa
+  for (const k in CROP_DEF) {
+    p += Math.floor(G.res[k] || 0) * (CROP_DEF[k].price || 0);      // cosecha en bolsa
+    p += Math.floor(G.seeds[k] || 0) * (CROP_DEF[k].price || 0);    // 14/8 v5: las SEMILLAS también son cosecha futura — comprar baja plata y sube semillas, o sea la proyección crece por la ganancia NETA: la cuenta cierra sola
+  }
   if (Array.isArray(G.plots)) for (const pl of G.plots) {
     if (pl && pl.state === "growing" && pl.cropKey && CROP_DEF[pl.cropKey]) p += CROP_DEF[pl.cropKey].price || 0;
   }
@@ -249,14 +252,24 @@ function buySeed(k, qty) {
   const cd = CROP_DEF[k]; if (!cd) return;
   if (!cropUnlocked(k)) { toast("Necesitás Cultivo nivel " + cd.lvl); return; }
   qty = Math.max(1, Math.floor(qty || 1));
-  const sb = seedBuysToday(), left = seedDailyMax() - sb.count;
-  if (left <= 0) { toast("Cupo diario de semillas alcanzado (" + seedDailyMax() + ") — volvé mañana"); return; }
-  if (qty > left) { qty = left; toast("Cupo diario: solo podés comprar " + left + " más hoy"); }
+  const sb = seedBuysToday();
+  // 14/8 v5 (dirección): la COMPRA DEL PLAN no gasta cupo — mientras el sub de plata esté
+  // activo y la proyección no cubra su meta, estas semillas son del objetivo. La exención
+  // se acota SOLA por la contabilidad (las semillas en bolsa suman a la proyección): al
+  // llegar a la meta se corta, no se puede acaparar. Fuera del plan, el cupo diario manda.
+  const delPlan = (typeof subPlataMeta === "function" && subPlataMeta() > 0
+    && typeof plataProyectada === "function" && plataProyectada() < subPlataMeta());
+  if (!delPlan) {
+    const left = seedDailyMax() - sb.count;
+    if (left <= 0) { toast("Cupo diario de semillas alcanzado (" + seedDailyMax() + ") — volvé mañana"); return; }
+    if (qty > left) { qty = left; toast("Cupo diario: solo podés comprar " + left + " más hoy"); }
+  }
   const cost = cd.seedCost * qty;
   if (G.plata < cost) { toast("Te falta plata"); return; }
   if (typeof tutoPermite === "function" && !tutoPermite("buyseed")) { tutoAviso(); return; }   // embudo estricto (13/8)
   if (typeof tutoGuardia === "function" && !tutoGuardia("plata", cost, "comprar " + cd.label, { semilla: k })) return;   // guardia del tutorial (12/8)
-  G.plata -= cost; G.seeds[k] = (G.seeds[k] || 0) + qty; sb.count += qty;
+  G.plata -= cost; G.seeds[k] = (G.seeds[k] || 0) + qty;
+  if (!delPlan) sb.count += qty;   // 14/8 v5: la compra del plan no consume cupo
   // 13/8: la semilla comprada vuelve a la barra rápida si no estaba (la agotada sale sola)
   if (Array.isArray(G.hotbar) && !G.hotbar.some(h => h && h.kind === "seed" && h.key === k)) {
     const li = G.hotbar.findIndex(h => !h);
@@ -350,17 +363,17 @@ function darPlano(t, silencioso) {
 var PLANO_PASO = { store: "place_store", horno: "place_horno", cocina: "place_cocina", altar: "place_altar" };   // 13/8 v2: el plano cae JUSTO en su paso de colocación
 function tutoIdx(id) { return TUTO_STEPS.findIndex(s => s.id === id); }
 function planosSync(silencioso) {
-  // 14/8 (guía OPCIONAL): los planos caen por NIVEL puro, siempre — el jugador libre que
-  // sube a nivel 3 recibe su plano del Horno aunque ignore la guía. El paso "colocá el
-  // plano" de la guía espera al nivel si hace falta (es una guía, no una obligación).
-  // ADEMÁS: si la guía va ADELANTE del nivel (llegó al paso place_X), el plano cae igual
-  // — la guía cumple lo que pide (misma lógica de siempre, ahora ambos caminos abiertos).
-  const paso = (G.tuto && !G.tuto.done) ? (G.tuto.step || 0) : -1;
+  // 14/8 v2 (playtest: "el plano de la Herrería me llegó ANTES de vender las papas"):
+  // DURANTE el tutorial, los planos cuyo paso está en la cadena llegan SOLO cuando su
+  // misión "colocá el plano" aparece — el momento narrativo correcto. Los planos sin
+  // paso en la cadena (Altar, Establo…) y todo el post-tutorial van por NIVEL puro.
+  const tutoOn = G.tuto && !G.tuto.done;
+  const paso = tutoOn ? (G.tuto.step || 0) : -1;
   for (const t in PLANO_NIVEL) {
-    const porNivel = G.level >= PLANO_NIVEL[t];
     const gate = PLANO_PASO[t];
-    const porGuia = paso >= 0 && gate && tutoIdx(gate) >= 0 && paso >= tutoIdx(gate);
-    if (porNivel || porGuia) darPlano(t, silencioso);
+    const gi = gate ? tutoIdx(gate) : -1;
+    if (tutoOn && gi >= 0) { if (paso >= gi) darPlano(t, silencioso); continue; }   // en la cadena: manda el paso
+    if (G.level >= PLANO_NIVEL[t]) darPlano(t, silencioso);                          // fuera de la cadena o post-tutorial: manda el nivel
   }
 }
 // ¿esta acción ya fue presentada por el tutorial? (embudo 13/8: hasta que el paso de una

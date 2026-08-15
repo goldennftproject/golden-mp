@@ -2308,6 +2308,19 @@ Se probó y no cuajó. Vuelve el sistema anterior, más simple y más honesto:
   paso lo avanza solo, no hay dónde estacionarse; y vender lo acelerado es a pérdida
   (madera sale 3, el hacha 10). Verificado paso a paso: solo 7 de los 19 pasos aceleran
   algo, cada uno lo suyo, y al completar el tutorial todo queda a tiempo real.
+- **v5 (playtest: "el cupo de semillas me impide llegar a los 200")**: el cálculo lo
+  confirmó — 200 de plata con papas son ~100 semillas y el cupo diario es ~24: la misión
+  era imposible. Solución robusta (mejor que "sin límites en el tutorial"): la COMPRA DEL
+  PLAN no gasta cupo, y se acota SOLA por la contabilidad — las semillas en bolsa entran
+  a la proyección (cosecha futura), y como comprar baja plata y sube semillas, la
+  proyección crece por la ganancia NETA: la exención se corta en las semillas EXACTAS
+  que la meta necesita (verificado: meta 200 con 67 de plata → 67 papas justas y ni una
+  más). Fuera del plan, el cupo diario manda igual que siempre. Imposible acaparar.
+- **Y el plano en su MOMENTO (playtest: "me lo dan antes de vender las papas")**: durante
+  el tutorial, los planos cuya misión está en la cadena llegan SOLO al aparecer su paso
+  "colocá el plano" (`planosSync` v2) — ni el nivel los adelanta. Los planos fuera de la
+  cadena (Altar, Establo…) y todo el post-tutorial siguen cayendo por nivel puro.
+  Verificado: nivel 5 en el paso de cosechar = cero planos; paso 4 = la Herrería justa.
 - **v4 (dirección: el desvío de plata también acelera, pero con CONTROL contable)**: si
   el sub-objetivo pide plata (ej. "te faltan 20 hachas — 200 de plata"), las siembras
   "DEL PLAN" corren a 3 s mientras la PROYECCIÓN no cubra la meta: proyección = plata en
