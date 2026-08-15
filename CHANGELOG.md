@@ -2125,6 +2125,14 @@ Ahora la cadena de guía no tiene puntas sueltas:
   lugar. Al recomprar semillas, `buySeed` la vuelve a poner en el primer hueco libre.
   Herramientas y picos conservan su lógica de siempre.
 
+## Día 18 (cont.) — Mariposas: flores y posada libre (15/8)
+- Las mariposas conocen las FLORES del suelo (blancas y amarillas, también las del
+  fallback dibujado): cuando no hay recurso que señalar, la mitad de sus paseos van
+  derecho a una flor.
+- Posada libre: al llegar a una flor se posa casi siempre; en cualquier otro punto del
+  paseo, cada tanto. El espanto sigue igual (jugador cerca → levanta vuelo), y si
+  mientras está posada aparece un recurso que señalar, despega sola a trabajar.
+
 ## Día 18 (cont.) — Sprites que encajan con sus intermedios (15/8)
 - **Tocón**: el disco de corte ocupa el 64% de su lienzo y el tronco del árbol solo el
   23-30% del suyo — dibujado a 0.85 del ancho del árbol salía el DOBLE de gordo que el

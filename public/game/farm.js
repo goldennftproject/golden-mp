@@ -75,6 +75,8 @@ class FarmScene extends Phaser.Scene {
         const key = t < 0.45 ? "deco_pasto" : (t < 0.67 ? "deco_flor_blanca" : (t < 0.89 ? "deco_flor_amarilla" : "deco_piedras"));
         const sz = key === "deco_pasto" ? 15 + drnd() * 6 : (key === "deco_piedras" ? 11 + drnd() * 4 : 13 + drnd() * 4);
         this.add.image(dx, dy, key).setDisplaySize(sz, sz).setDepth(-999.5).setFlipX(drnd() < 0.5);
+        // 15/8: las mariposas conocen las flores del suelo (se posan en ellas cuando pasean)
+        if (key === "deco_flor_blanca" || key === "deco_flor_amarilla") (this.floresDeco = this.floresDeco || []).push({ x: dx, y: dy });
         continue;
       }
       if (t < 0.72) {          // matita de pasto
@@ -85,6 +87,7 @@ class FarmScene extends Phaser.Scene {
         const cols = [0xf0ebc8, 0xebbe5a, 0xdca0be];
         deco.fillStyle(cols[(drnd() * 3) | 0], 1).fillCircle(dx, dy, 2);
         deco.fillStyle(0x967832, 1).fillCircle(dx, dy, 0.8);
+        (this.floresDeco = this.floresDeco || []).push({ x: dx, y: dy });   // 15/8: también son percha de mariposas
       } else {                 // piedrita
         deco.fillStyle(0x8c8778, 1).fillEllipse(dx, dy, 6, 4);
         deco.lineStyle(1, 0x5a564a, 1).strokeEllipse(dx, dy, 6, 4);
@@ -2125,7 +2128,15 @@ class FarmScene extends Phaser.Scene {
         m.ty = m.ancla.y + Math.sin(m.orbita * 1.27 + m.orbFase2) * m.orbRy;
       } else if (t >= m.esperaHasta) {
         m.esperaHasta = t + 2600 + Math.random() * 3200;
-        m.tx = 40 + Math.random() * (GF.WORLD_W - 80); m.ty = 40 + Math.random() * (GF.WORLD_H - 80);
+        // 15/8: paseando sin recurso que señalar, la mitad de las veces va derecho a una FLOR
+        const flores = this.floresDeco || [];
+        if (flores.length && Math.random() < 0.5) {
+          const f = flores[(Math.random() * flores.length) | 0];
+          m.tx = f.x; m.ty = f.y - 1; m.enFlor = true;
+        } else {
+          m.tx = 40 + Math.random() * (GF.WORLD_W - 80); m.ty = 40 + Math.random() * (GF.WORLD_H - 80);
+          m.enFlor = false;
+        }
       }
       // 15/8 (dirección): POSADA solo SOBRE el sprite del recurso — nunca quieta en el aire.
       // Y ESPANTO: si el jugador usa ese recurso (o se le para al lado), levanta vuelo ya.
@@ -2168,6 +2179,10 @@ class FarmScene extends Phaser.Scene {
         const w = (spr && spr.visible && spr.displayWidth) || 18, h = (spr && spr.visible && spr.displayHeight) || 8;
         m.percha = { x: o.cx + (Math.random() - 0.5) * w * 0.45, y: o.by - h * (0.55 + Math.random() * 0.25) };
       }
+      // 15/8: paseando (sin recurso asignado) también se posa — casi siempre si llegó a una
+      // flor, cada tanto en cualquier lado, como mariposa que es
+      if (!m.percha && !m.ancla && d < 6 && Math.random() < dt * (m.enFlor ? 1.4 : 0.25))
+        m.percha = { x: m.tx, y: m.ty };
       if (m.percha && Math.hypot(m.percha.x - m.g.x, m.percha.y - m.g.y) < 3.5) {   // ATERRIZÓ
         m.g.x = m.percha.x; m.g.y = m.percha.y;
         m.posadaHasta = t + 2200 + Math.random() * 3200;
