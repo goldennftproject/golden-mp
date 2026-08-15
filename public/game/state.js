@@ -190,15 +190,25 @@ var CD_RAPIDO = {                                // enfriamiento corto de las pr
 function nodoUsos(o) { G.nodoUsos = G.nodoUsos || {}; return G.nodoUsos[o.i] || 0; }
 function nodoSumar(o) { G.nodoUsos = G.nodoUsos || {}; G.nodoUsos[o.i] = nodoUsos(o) + 1; }
 // enfriamiento que corresponde a este nodo AHORA (en segundos)
-// 14/8 v2 (dirección): durante TODO el tutorial del capataz, las ESPERAS duran 3 SEGUNDOS
-// — cultivos, árboles, minerales, horno y cocina. El tutorial enseña el ciclo, no la
-// paciencia. Al completar la guía, los timers se normalizan solos.
-// ⚠ Nota de diseño anotada en TODO: un jugador podría "estacionarse" en un paso tardío
-//   de acción (no cumplirlo a propósito) y farmear acelerado — vigilarlo en playtests.
+// 14/8 v3 (dirección, tras detectar el ESTACIONAMIENTO): la aceleración del tutorial es
+// POR PASO Y POR RECURSO — solo corre a 3 s lo que el paso ACTIVO pide, y como cumplirlo
+// avanza el paso solo, no hay dónde estacionarse a farmear. Los cultivos NO se aceleran
+// nunca (las 3 semillas del arranque ya crecen en 45 s por FIRST_GROW, y acelerar
+// cultivos era la imprenta de plata: comprá 2 semillas, no compres la 3ª y farmeá).
+// Vender lo acelerado tampoco rinde: la madera sale 3 y el hacha 10 — es a pérdida.
 var TUTO_ESPERA_SEG = 3;
-function tutoAcelerado() { return !!(G.tuto && !G.tuto.done); }
+function tutoAcelerado(tipo) {
+  if (!G.tuto || G.tuto.done) return false;
+  const st = tutoActivo(); if (!st) return false;
+  const mapa = {
+    tree:   ["wood_st", "wood", "woodc"],     // árboles a 3 s solo en SUS pasos de madera
+    piedra: ["stone_st", "stone", "stonec"],  // rocas a 3 s solo en SUS pasos de piedra
+    cocina: ["cook"],                         // la olla a 3 s solo al cocinar el primer plato
+  };
+  return (mapa[tipo] || []).includes(st.id);
+}
 function nodoCd(o, clave, cdLargo) {
-  if (tutoAcelerado()) return TUTO_ESPERA_SEG;
+  if (tutoAcelerado(clave)) return TUTO_ESPERA_SEG;
   const r = CD_RAPIDO[clave];
   if (r && nodoUsos(o) < r.veces) return r.seg;   // todavía está en su etapa de arranque rápido
   return cdLargo;
@@ -642,7 +652,7 @@ function craftMat(id) {
   if (typeof tutoPermite === "function" && !tutoPermite("mat")) { tutoAviso(); return; }   // embudo estricto (13/8)
   if (typeof tutoGuardiaCosto === "function" && !tutoGuardiaCosto(md.cost, 0, "fundir " + md.label)) return;   // guardia del tutorial (12/8)
   payCost(md.cost); G.res[id] = (G.res[id] || 0) + 1;
-  G.matCd[id] = nowMs() + (tutoAcelerado() ? TUTO_ESPERA_SEG * 1000 : hornoCdMs());   // 14/8 v2: 3 s durante el tutorial
+  G.matCd[id] = nowMs() + hornoCdMs();   // 14/8 v3: el horno ya no está en la cadena del tutorial — tiempo real siempre
   addXp("crafting", 3); log("Fundiste 1 " + md.label + " en el Horno.", "good"); toast("+1 " + md.label);
   if (typeof tutoEvent === "function") tutoEvent("mat");
   if (typeof refreshHorno === "function" && isOpen("ov-horno")) refreshHorno();
@@ -2727,7 +2737,7 @@ function cook(id) {
   if (!roomForDish(id)) { bagFull("cocinar " + r.label); return; }
   if (r.res) for (const k in r.res) G.res[k] -= r.res[k];
   if (r.fish) for (const k in r.fish) G.fish[k] -= r.fish[k];
-  const ms = tutoAcelerado() ? TUTO_ESPERA_SEG * 1000 : Math.max(1000, Math.round((r.cookS ? r.cookS * 1000 : COOK_MS) * cocinaFactor()));   // 14/8 v2: 3 s durante el tutorial
+  const ms = tutoAcelerado("cocina") ? TUTO_ESPERA_SEG * 1000 : Math.max(1000, Math.round((r.cookS ? r.cookS * 1000 : COOK_MS) * cocinaFactor()));   // 14/8 v3: 3 s SOLO en el paso "cociná tu primer plato"
   cookList().push({ id, endAt: nowMs() + ms, total: ms });
   log("Cocinando " + r.label + "… (" + fmtSecs(Math.round(ms / 1000)) + ")"); toast("Cocinando " + r.label);
   refreshHud(); if (typeof syncSlots === "function") syncSlots(); if (isOpen("ov-inv")) refreshInv();

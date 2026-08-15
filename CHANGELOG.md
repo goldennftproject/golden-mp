@@ -2299,6 +2299,15 @@ Se probó y no cuajó. Vuelve el sistema anterior, más simple y más honesto:
 - **Se queda**: las esperas de 3 s durante el tutorial (al completarlo, tiempos reales),
   el kit de emergencia en $Golden, la guía apagable, los sub-objetivos como consejo, y
   toda la economía web3 del Pase (esa no era del capataz).
+- **v2 — el ESTACIONAMIENTO, cerrado (dirección lo encontró jugando: quedarse en "colocá
+  el plano" comprando semillas y farmeando a 3 s = imprenta de plata)**: la aceleración
+  es ahora POR PASO Y POR RECURSO (`tutoAcelerado(tipo)`) — árboles a 3 s SOLO en sus 3
+  pasos de madera, rocas SOLO en sus 3 de piedra, la olla SOLO en "cociná tu primer
+  plato". Los CULTIVOS no se aceleran nunca (las 3 del arranque ya crecen en 45 s por
+  FIRST_GROW) y el horno va a tiempo real (ya no está en la cadena). Como cumplir el
+  paso lo avanza solo, no hay dónde estacionarse; y vender lo acelerado es a pérdida
+  (madera sale 3, el hacha 10). Verificado paso a paso: solo 7 de los 19 pasos aceleran
+  algo, cada uno lo suyo, y al completar el tutorial todo queda a tiempo real.
 
 ### EL CAPATAZ + los PEDIDOS (14/8, dirección: "hagamos el cambio y probémoslo")
 

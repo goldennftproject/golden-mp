@@ -1193,9 +1193,9 @@ class FarmScene extends Phaser.Scene {
         // 14/8: el boost del tutorial aplica a CUALQUIER cultivo (antes solo papa) — el
         // sub-objetivo puede mandar a cebolla/zanahoria y tienen que crecer acelerados igual
         const boost = (typeof tutoBoost === "function") ? tutoBoost("papa") : 1;
-        let real = cd.grow * 1000 * cdMult() * boost;
-        // 14/8 v2: durante el tutorial del capataz TODA espera dura 3 s (al terminar, tiempos reales)
-        if (typeof tutoAcelerado === "function" && tutoAcelerado()) real = TUTO_ESPERA_SEG * 1000;
+        const real = cd.grow * 1000 * cdMult() * boost;
+        // 14/8 v3: los cultivos NO se aceleran en el tutorial (era la imprenta de plata del
+        // estacionamiento) — las 3 del arranque ya crecen en 45 s por FIRST_GROW
         const starter = (G.firstSeeds || 0) > 0 && FIRST_GROW_MS > 0;   // solo las semillas del starter pack
         if (starter) G.firstSeeds--;
         o.readyAt = nowMs() + (starter ? Math.min(FIRST_GROW_MS, real) : real);   // nunca más lento que el tiempo real del cultivo
