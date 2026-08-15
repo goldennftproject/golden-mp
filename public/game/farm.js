@@ -2636,6 +2636,12 @@ class FarmScene extends Phaser.Scene {
     // restaurar objetos que salieron de cooldown
     const t = nowMs();
     for (const o of this.objs) {
+      // 14/8 v4 (playtest: "talé entre planos y el árbol quedó 2 min enfriándose"): si el
+      // paso ACTIVO pide este recurso, los enfriamientos YA CORRIENDO se recortan a 3 s
+      if (o.readyAt && typeof tutoAcelerado === "function") {
+        const clave = o.type === "tree" ? "tree" : (o.type === "rock" ? "piedra" : null);
+        if (clave && tutoAcelerado(clave) && o.readyAt > t + TUTO_ESPERA_SEG * 1000) { o.readyAt = t + TUTO_ESPERA_SEG * 1000; o.halfAt = 0; }
+      }
       // regeneración directa: de los restos vuelve al nodo entero (sin pasar por el dañado)
       if (o.readyAt && t >= o.readyAt) {
         o.readyAt = 0; o.halfAt = 0;

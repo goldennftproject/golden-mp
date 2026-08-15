@@ -1138,7 +1138,7 @@ var TUTO_BOOST_DESVIO = 0.04;   // los cultivos del desvío corren a 1/25 (papa:
 var TUTO_REWARD_PLATA = 100;   // gran recompensa del cierre (editable)
 // doc 2/8 §3.1: SOLO las semillas del starter pack crecen rápido (45 s). Las compradas o conseguidas
 // después usan el tiempo normal del cultivo. 0 en el panel = sin excepción.
-var FIRST_GROW_MS = 45000;   // tope de crecimiento de las semillas de arranque
+var FIRST_GROW_MS = 3000;   // tope de crecimiento de las semillas de arranque · 14/8: 45 s → 3 s (el espíritu del tutorial; son solo 3 semillas, sin exploit)
 var FIRST_GROW_N = 3;        // cuántas semillas de arranque tienen ese trato (las 3 papas del inicio)
 var TUTO_VER = 12;   // subir este número cuando cambie la CADENA de pasos (invalida progresos viejos) · v12 (14/8): reversión del capataz — 19 pasos de granja básica, sin premios
 function tutoActivo() { return G.tuto && !G.tuto.done ? TUTO_STEPS[G.tuto.step] : null; }

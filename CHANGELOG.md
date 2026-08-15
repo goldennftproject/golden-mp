@@ -2308,6 +2308,11 @@ Se probó y no cuajó. Vuelve el sistema anterior, más simple y más honesto:
   paso lo avanza solo, no hay dónde estacionarse; y vender lo acelerado es a pérdida
   (madera sale 3, el hacha 10). Verificado paso a paso: solo 7 de los 19 pasos aceleran
   algo, cada uno lo suyo, y al completar el tutorial todo queda a tiempo real.
+- **v3 (playtest: "talé entre planos y el árbol quedó 2 min enfriándose")**: los
+  enfriamientos YA CORRIENDO también se recortan — si el paso activo pide ese recurso,
+  el update de la escena baja en vivo cualquier readyAt a ≤3 s (una tala hecha fuera de
+  su paso dejaba el CD de 180 s cruzado en el paso siguiente). Y las 3 semillas del
+  arranque pasan de 45 s a **3 s** (`FIRST_GROW_MS` — son solo 3, sin exploit).
 
 ### EL CAPATAZ + los PEDIDOS (14/8, dirección: "hagamos el cambio y probémoslo")
 
