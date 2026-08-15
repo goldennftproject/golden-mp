@@ -2074,10 +2074,15 @@ class FarmScene extends Phaser.Scene {
       });
     }
     for (const m of this.maripos) {
-      if (m.ancla) {   // merodear: vueltitas alrededor del destino
-        m.orbita = (m.orbita || Math.random() * 6.28) + dt * 1.6;
-        m.tx = m.ancla.x + Math.cos(m.orbita) * 16;
-        m.ty = m.ancla.y + Math.sin(m.orbita * 1.3) * 10;
+      if (m.ancla) {   // merodear: órbita AMPLIA y cambiante (playtest: el surco fijo se notaba)
+        if (t >= (m.orbCambio || 0)) {   // cada tanto la vuelta cambia de tamaño, ritmo y fase
+          m.orbCambio = t + 1800 + Math.random() * 2600;
+          m.orbRx = 20 + Math.random() * 16; m.orbRy = 12 + Math.random() * 12;
+          m.orbVel = 0.9 + Math.random() * 1.0; m.orbFase2 = Math.random() * 6.28;
+        }
+        m.orbita = (m.orbita || Math.random() * 6.28) + dt * m.orbVel;
+        m.tx = m.ancla.x + Math.cos(m.orbita) * m.orbRx + Math.cos(m.orbita * 0.37 + m.orbFase2) * 6;
+        m.ty = m.ancla.y + Math.sin(m.orbita * 1.27 + m.orbFase2) * m.orbRy;
       } else if (t >= m.esperaHasta) {
         m.esperaHasta = t + 2600 + Math.random() * 3200;
         m.tx = 40 + Math.random() * (GF.WORLD_W - 80); m.ty = 40 + Math.random() * (GF.WORLD_H - 80);
@@ -2086,7 +2091,7 @@ class FarmScene extends Phaser.Scene {
       if (d > 2) { const v = Math.min(d, (m.ancla ? 55 : 34) * dt); m.g.x += dx / d * v; m.g.y += dy / d * v; }
       m.fase += dt * 9;
       m.g.setScale(0.75 + Math.abs(Math.sin(m.fase)) * 0.45, 1);   // aleteo: se angosta y se ensancha
-      m.g.setDepth(m.g.y + 4);
+      m.g.setDepth(99993);   // 14/8: SIEMPRE al frente — señalando el mercadillo quedaba DETRÁS del sprite
     }
   }
 
