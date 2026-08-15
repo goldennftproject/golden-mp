@@ -1052,9 +1052,9 @@ const TUTO_STEPS = [
   // ——— ETAPA 2: los sistemas nuevos (Cocina, Armas, Zona Negra, Pesca, Altar) ———
   { id: "place_cocina", n: 1, txt: "Colocá el plano de la Cocina (barra rápida)", target: "cocina", hot: "cocina" },
   { id: "woodc",  res: "madera", dep: "cocina", need: () => BUILD_DEF.cocina.cost.madera || 20,
-    txt: "Juntá # de madera (la Cocina es tu primer PROYECTO: dejá cultivos girando y volvé)", target: "tree" },
+    txt: "Juntá # de madera (para la obra de la Cocina)",                          target: "tree" },
   { id: "stonec", res: "piedra", dep: "cocina", need: () => BUILD_DEF.cocina.cost.piedra || 15,
-    txt: "Juntá # de piedra (los nodos se recargan solos aunque no estés)",     target: "rock" },
+    txt: "Juntá # de piedra (para la obra de la Cocina)",                          target: "rock" },
   { id: "build_cocina", n: 1, txt: "Depositá los materiales en la obra de la Cocina (clic encima)", target: "cocina" },
   { id: "cook",     n: 1, txt: "Cociná tu primer plato: Papa Asada",   target: "cocina", panel: "ov-cocina", ui: "[data-cook='papa_asada']" },
   { id: "eat",      n: 1, txt: "Comé un plato desde la bolsa (te da un buff)" },

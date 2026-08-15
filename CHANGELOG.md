@@ -2281,6 +2281,17 @@ INSUMOS (cosas que se usan) y la plata sale de vender lo producido. Aplicado a t
   tiene que haber 3 celdas donde apuntar. La tabla `FARM_PARCELA` sigue igual (nivel 2
   "regalaba" la 3ª, que ahora ya viene de fábrica; la 4ª llega en nivel 4).
 
+### El EMPUJONCITO silencioso (14/8, dirección: "sugerir el paralelo, pero no tan explícito")
+
+Primera versión: una 2ª línea de texto en el cartel ("⏳ mientras el árbol vuelve:
+picá…"). Dirección la bajó — demasiado literal. Versión final, IMPLÍCITA (`nudgeSync`):
+durante un paso de juntar, si TODO el recurso del objetivo está en enfriamiento, otra
+cosa accionable de la granja hace un GESTO — rebote suave + polvillo dorado — en orden
+de gracia: cosecha lista → el otro tipo de nodo disponible → una parcela seca si hay
+semillas. Sin una palabra; máximo un gesto cada 12 s; solo durante el tutorial, sin
+paneles ni edición. El mundo invita a jugar en paralelo, que es como se enseña de
+verdad la habilidad del género.
+
 ### REBALANCE INTEGRAL con mandato de dirección (14/8) — física única y ritmo real
 
 Dirección otorgó control total del balance con un criterio: "el juego marcha desde el

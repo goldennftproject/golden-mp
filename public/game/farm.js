@@ -2624,7 +2624,34 @@ class FarmScene extends Phaser.Scene {
     pl.timer.setVisible(false);
   }
 
+  // 14/8 (dirección: "no tan explícito — dar a entender"): el EMPUJONCITO silencioso.
+  // Durante un paso de juntar, si el recurso del objetivo está TODO en enfriamiento,
+  // otra cosa accionable de la granja hace un gesto (rebote + polvillo dorado): una
+  // parcela lista, otro nodo disponible, o una parcela seca si hay semillas. El mundo
+  // invita a jugar en paralelo sin decir una palabra. Máximo un gesto cada 12 s.
+  nudgeSync(t) {
+    if (!G.tuto || G.tuto.done || GF.uiOpen || GF.editMode) return;
+    const st = (typeof tutoActivo === "function") ? tutoActivo() : null;
+    if (!st || !st.res || st.res === "plata") return;   // solo pasos de juntar madera/piedra
+    if ((this._nudgeAt || 0) > t) return;
+    const esArbol = st.res === "madera";
+    const delPaso = (this.objs || []).filter(o => (esArbol ? o.type === "tree" : (o.type === "rock" || o.type === "ore")) && !o.locked && !o.oculto);
+    if (!delPaso.length || delPaso.some(o => !o.readyAt || o.readyAt <= t)) return;   // hay uno listo: no hace falta invitar
+    // otra cosa accionable, en orden de gracia: cosecha lista → el otro tipo de nodo → parcela seca con semillas
+    const plotListo = (this.plots || []).find(p => p.state === "ready");
+    const otroNodo = (this.objs || []).find(o => (esArbol ? (o.type === "rock" || o.type === "ore") : o.type === "tree") && !o.locked && !o.oculto && (!o.readyAt || o.readyAt <= t));
+    const haySemillas = Object.keys(G.seeds || {}).some(k => (G.seeds[k] || 0) > 0);
+    const plotSeco = haySemillas ? (this.plots || []).find(p => p.state === "dry") : null;
+    const invitado = plotListo || otroNodo || plotSeco;
+    if (!invitado) return;
+    this._nudgeAt = t + 12000;
+    const spr = invitado.sprite || invitado.spr || invitado.ground;
+    if (spr && spr.visible && this.popFx) this.popFx(spr, 0.5);            // rebote suave
+    if (this.puffFx) this.puffFx(invitado.cx, invitado.by - 20, 0xffe08a, 5);   // polvillo dorado
+  }
+
   update(time, deltaMs) {
+    this.nudgeSync(nowMs());
     if (this.leaving || !this.hero) return;   // cambiando de escena: no tocar nada más
     this._frameT = time;   // marca del frame: la usa la caché de hitsSprite (10/8)
     const dt = deltaMs / 1000, k = this.keys, hero = this.hero;
