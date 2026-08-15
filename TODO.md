@@ -65,3 +65,5 @@ Bug F5-parcelas · colocar con clic (parcelas y adornos) · esencia oscura solo 
 ## ✅ Cerrado el 10/8
 
 Bestiario (11 criaturas) · 8 adornos + 2 del cofre · mascota Pinta · 3 skins · efectos por arma · íconos de espada y pico · parcelas 12→60 · Tienda con bolsa visible · God Hand aclarado.
+
+- [ ] FUTURO (dirección 15/8): rendimiento por golpe (2-5 maderas por tala) como ÍTEMS y rama de SKILLS de granja (tala / minería / cosecha) — no como base del balance.

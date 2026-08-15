@@ -316,8 +316,8 @@ function comprarEmergencia(tipo) {
 // --- construcción de edificios (detalles viernes 1): recetas para levantar cada edificio ---
 const BUILD_DEF = {
   store:  { label: "Herrería",        cost: { madera: 5, piedra: 2 } },   // 10/8: ya no es gratis (pedido del diseñador)
-  horno:  { label: "Horno de Piedra", cost: { madera: 10, piedra: 8 },  lvl: 3 },   // doc 2/8: costo early + granja nv 3
-  cocina: { label: "Cocina",          cost: { madera: 15, piedra: 8 }, lvl: 5 },   // 14/8 rebalance: era 20+15 (muralla del tutorial medida por sim)
+  horno:  { label: "Horno de Piedra", cost: { madera: 6, piedra: 4 },  lvl: 3 },   // 15/8: a escala de los relojes del diseñador (era 10+8)
+  cocina: { label: "Cocina",          cost: { madera: 8, piedra: 5 }, lvl: 5 },   // 15/8: a escala de los relojes del diseñador (era 15+8)
   altar:  { label: "Altar de Runas",  cost: { piedra: 40, madera: 30, oro: 8 }, golden: 20 },   // 14/8 rebalance: era 60+40+20oro+30G (la cadena del oro medía ~700 de plata)
   establo:    { label: "Establo",     cost: { madera: 40, piedra: 25, oro: 6 }, lvl: 6 },   // 14/8 rebalance
   curtiduria: { label: "Curtiduría",  cost: { madera: 35, piedra: 28, oro: 8 }, lvl: 8 },   // 14/8 rebalance
@@ -2647,7 +2647,7 @@ function unlockArmas() {
   refreshForge(); refreshHud(); if (typeof saveFarm === "function") saveFarm();
 }
 // viernes (2): desbloqueo progresivo de árboles y piedras (3/9/27/81/100) — se paga por CANTIDAD ya abierta, el orden es libre
-const NODE_UNLOCK_COSTS = [3, 9, 27, 81, 100];
+const NODE_UNLOCK_COSTS = [2, 4, 8, 16, 32];   // 15/8: con los relojes del diseñador, ampliar en paralelo ES el juego — desbloqueos al alcance
 function treeUnlockCost() { return NODE_UNLOCK_COSTS[Math.min(NODE_UNLOCK_COSTS.length - 1, Math.max(0, (G.treesOpen || [0]).length - 1))]; }
 function rockUnlockCost() { return NODE_UNLOCK_COSTS[Math.min(NODE_UNLOCK_COSTS.length - 1, Math.max(0, (G.rocksOpen || [0]).length - 1))]; }
 
@@ -2656,7 +2656,7 @@ function rockUnlockCost() { return NODE_UNLOCK_COSTS[Math.min(NODE_UNLOCK_COSTS.
 // el juego te dice qué nivel de granja pide. Tabla por orden de aparición (números del
 // diseñador; la 1ª siempre libre). Quien PAGÓ desbloqueos viejos los conserva.
 // Los ÁRBOLES quedan con su sistema de siempre: retoño + desbloqueo pagando madera.
-var NIVEL_ROCAS = [1, 3, 5, 8, 12, 16];
+var NIVEL_ROCAS = [1, 2, 4, 6, 9, 12];
 function nodoNivelReq(o) { return NIVEL_ROCAS[Math.min(o.lockIdx || 0, NIVEL_ROCAS.length - 1)] || 1; }
 function nodoBloqueado(o) {
   if (!o || o.type !== "rock") return false;   // solo piedras/minerales: los árboles van por retoño+pago

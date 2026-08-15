@@ -2125,6 +2125,19 @@ Ahora la cadena de guía no tiene puntas sueltas:
   lugar. Al recomprar semillas, `buySeed` la vuelve a poner en el primer hueco libre.
   Herramientas y picos conservan su lógica de siempre.
 
+## Día 18 (cont.) — Ameno SIN tocar los timers del diseñador (15/8, dirección)
+- Decisión: los timers del diseñador quedan intactos; la experiencia se mejora con las
+  palancas de alrededor. El "rendimiento por golpe" (más de 1 madera por tala) queda
+  RESERVADO para ítems y la futura rama de skills (tala/minería/cosecha) — no se toca.
+- Palancas aplicadas:
+  · Desbloqueo de nodos al alcance: NODE_UNLOCK_COSTS [3,9,27,81,100] → [2,4,8,16,32]
+    (ampliar en paralelo ES el juego cuando el reloj es largo).
+  · Cantera más temprana: NIVEL_ROCAS [1,3,5,8,12,16] → [1,2,4,6,9,12].
+  · Obras del tutorial a escala de los relojes: Horno 10+8 → 6+4 · Cocina 15+8 → 8+5
+    (los textos de la guía toman los costos de BUILD_DEF solos).
+- Sim con los timers del diseñador + palancas: Herrería 1,8 h · Horno 6,5 h ·
+  **Cocina ~13 h** (una tarde + la noche + la mañana). Era 26 h. Madera sigue mandando.
+
 ## Día 18 (cont.) — EN PRUEBA: tabla COMPLETA del diseñador, nodos incluidos (15/8)
 - Dirección pidió poner TODOS los timers del diseñador, no solo cultivos. Restaurado el
   doc "Enfriamiento de Árboles y Minerales" (4/8) tal cual: árbol 1 h 30 (3 primeras

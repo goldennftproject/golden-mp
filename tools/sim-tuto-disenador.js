@@ -7,9 +7,9 @@
 const PAPA = { grow: 540, seed: 1, price: 3, xp: 9 };
 const T_FAST = 180, T_VECES = 3, T_LARGO = 5400;   // árbol (doc 4/8)
 const R_FAST = 240, R_VECES = 3, R_LARGO = 7200;   // piedra (doc 4/8) — cantera y veta
-const NEED = { store: { m: 5, p: 2 }, horno: { m: 10, p: 8 }, cocina: { m: 15, p: 8 } };
-const UNLOCK_ARBOL = [3, 9];
-const FARM_XP_3 = 90;   // nivel 3 de granja abre la 2ª roca de cantera
+const NEED = { store: { m: 5, p: 2 }, horno: { m: 6, p: 4 }, cocina: { m: 8, p: 5 } };   // 15/8: costos a escala
+const UNLOCK_ARBOL = [2, 4, 8];   // 15/8: desbloqueos baratos
+const FARM_XP_3 = 25;   // 15/8: la 2ª roca de cantera se abre a granja nivel 2 (NIVEL_ROCAS nuevo)
 
 let t = 0, plata = 3, madera = 0, piedra = 0, axes = 35, picos = 20, seeds = 0, papas = 0, xp = 0;
 let plots = [0, 0, 0];
@@ -37,9 +37,10 @@ function tick(dt) {
 }
 function talar(n) {
   while (madera < n) {
-    // solo el 2º árbol (3 maderas): el 3º (9 maderas × 1,5 h) no se paga dentro del tuto
-    if (arboles.length < 2 && madera >= UNLOCK_ARBOL[0] && (n - madera) >= 2) {
-      madera -= UNLOCK_ARBOL[0]; arboles.push({ r: t + T_FAST, usos: 0 }); continue;
+    // desbloquea árboles apenas puede: cada uno trae 3 taladas rápidas + un reloj paralelo
+    if (arboles.length < 4) {
+      const costo = UNLOCK_ARBOL[arboles.length - 1];
+      if (costo != null && madera >= costo + 1) { madera -= costo; arboles.push({ r: t + T_FAST, usos: 0 }); continue; }
     }
     let m = null; for (const a of arboles) if (a.r <= t && (!m || a.r < m.r)) m = a;
     if (!m) { tick(Math.max(10, Math.min(...arboles.map(a => a.r)) - t)); continue; }
