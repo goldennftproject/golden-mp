@@ -2125,6 +2125,26 @@ Ahora la cadena de guía no tiene puntas sueltas:
   lugar. Al recomprar semillas, `buySeed` la vuelve a poner en el primer hueco libre.
   Herramientas y picos conservan su lógica de siempre.
 
+## Día 18 (cont.) — TABLA DEFINITIVA: largos del diseñador + más nodos de arranque (15/8)
+- Dirección, decisión final: la tabla que rige es la del diseñador SIN aceleración de
+  comienzo — cultivos v3 (papa 9 min → maíz 24 h) y nodos largos desde el primer golpe
+  (árbol 1 h 30 · piedra 2 h · bronce 8 h · hierro 12 h · oro/diamante/netherita 14 h).
+- Compensación por cantidad, no por velocidad: se nace con 2 ÁRBOLES y 2 ROCAS de
+  cantera abiertos (treesOpen/rocksOpen [0,1] · NIVEL_ROCAS[1]=1) + la veta de piedra =
+  3 fuentes de piedra; ampliar sigue barato (2/4/8/16/32).
+- Sim del tutorial final: Herrería 3,2 h · Horno 11,2 h · **Cocina ~16 h** — dos tardes
+  con una noche en el medio, todo a UN solo ritmo, dentro y fuera del tutorial.
+
+## Día 18 (cont.) — Sin arranque rápido: los largos del diseñador desde el 1er golpe (15/8)
+- Dirección: "el timer tiene que ser uno siempre — el tutorial no puede sentirse un juego
+  distinto al de afuera". Se eliminó (otra vez, ahora sobre la tabla del diseñador) el
+  arranque rápido por nodo: árbol 1 h 30 y piedra 2 h DESDE el primer golpe, sin etapas.
+- Sim del tutorial: Herrería 6,2 h · Horno 14,2 h · **Cocina ~19 h** (con las palancas ya
+  aplicadas: desbloqueos 2/4/8, cantera desde nivel 2, obras 6+4 y 8+5).
+- Nota: el "enganche en minutos" era la parte del doc 4/8 del diseñador pensada para el
+  primer día; sin él, la primera madera de la Herrería tarda ~6 h en juntarse. Queda para
+  conversarlo con el diseñador con estos números sobre la mesa.
+
 ## Día 18 (cont.) — Cache-busting de scripts en cada deploy (15/8)
 - Playtest: tras un deploy, producción seguía con los timers viejos — el cargador de
   index.html pedía los .js SIN versión y el navegador servía su copia cacheada.

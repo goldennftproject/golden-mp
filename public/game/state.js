@@ -7,7 +7,7 @@ const G = {
   plata: 3, golden: 20, level: 1, prestige: 0, week: 1,   // 14/8: nacés con 3 de plata (el 1er objetivo es COMPRAR tus semillas)
   hp: 100, hpMax: 100, swordOwned: false, bowOwned: false, swordWoodOwned: false, firstCropDone: false,   // combate (Fase D)
   armasUnlocked: false,          // viernes (2): la pestana Armas de la Herreria se paga (20 madera + 20 piedra + 1000 plata)
-  treesOpen: [0], rocksOpen: [0],  // viernes (2): índices de árboles/piedras desbloqueados (cualquiera, sin orden — pedido Discord)
+  treesOpen: [0, 1], rocksOpen: [0, 1],  // 15/8 (dirección): con los relojes largos, se nace con 2 árboles y 2 rocas abiertos — ampliar en paralelo ES el juego
   gear: { casco: null, armadura: null, botas: null, escudo: null, arma: null, municion: false },
   weapons: {},                   // doc 2/8: armas nuevas — id ("espada_madera") -> { dur }
   stam: null, stamAcc: 0, stamRec: null,   // estamina de la Zona Negra ("2das mejoras")
@@ -181,16 +181,8 @@ var GOLPES_TALAR = 3, GOLPES_MINAR = 3;   // clics para tumbar un árbol o rompe
 // si dejás un árbol o una piedra a medio golpear y no volvés en este tiempo, se recupera sola
 // y NO se gasta la herramienta: la herramienta solo se descuenta cuando el nodo cae del todo.
 var GOLPES_RESET_MS = 5000;
-var CD = { tree: 5400, rock: 7200 };            // 15/8 EN PRUEBA: tabla del DISEÑADOR (doc 4/8) — 1 h 30 el árbol · 2 h la piedra
-var CD_RAPIDO = {                                // 15/8 EN PRUEBA: arranque rápido del doc 4/8 del diseñador
-  tree:      { seg: 180, veces: 3 },             // 3 min · las primeras 3
-  piedra:    { seg: 240, veces: 3 },             // 4 min · las primeras 3
-  bronce:    { seg: 360, veces: 2 },             // 6 min · las primeras 2
-  hierro:    { seg: 480, veces: 2 },             // 8 min · las primeras 2
-  oro:       { seg: 720, veces: 1 },             // 12 min · la primera
-  diamante:  { seg: 720, veces: 1 },             // 12 min · la primera
-  netherita: { seg: 900, veces: 1 },             // 15 min · la primera
-};
+var CD = { tree: 5400, rock: 7200 };            // 15/8 (dirección): timers LARGOS del diseñador desde el primer golpe — 1 h 30 árbol · 2 h piedra, sin excepciones
+var CD_RAPIDO = {};   // 15/8 (dirección, FINAL): SIN arranque rápido — el timer es UNO desde el primer golpe ("el tutorial no es otro juego")
 // cuántas veces se recogió YA de ese nodo (por nodo, no global)
 function nodoUsos(o) { G.nodoUsos = G.nodoUsos || {}; return G.nodoUsos[o.i] || 0; }
 function nodoSumar(o) { G.nodoUsos = G.nodoUsos || {}; G.nodoUsos[o.i] = nodoUsos(o) + 1; }
@@ -230,11 +222,7 @@ function tutoAvisoCubierto() {
     log("Con lo que está creciendo y lo que tenés en la bolsa ya llegás a los " + meta + " de plata del objetivo.", "good");
   }
 }
-function nodoCd(o, clave, cdLargo) {   // 15/8: vuelve el esquema del diseñador (primeras rápidas → largo)
-  const r = CD_RAPIDO[clave];
-  if (r && nodoUsos(o) < r.veces) return r.seg;
-  return cdLargo;
-}
+function nodoCd(o, clave, cdLargo) { return cdLargo; }   // 15/8 (dirección): un solo timer, sin etapas — largos del diseñador desde el comienzo
 function seedBuysToday() {
   const sb = G.seedBuys || (G.seedBuys = { date: "", count: 0 });
   if (sb.date !== dayStamp(0)) { sb.date = dayStamp(0); sb.count = 0; sb.caridad = 0; }   // 15/8: también la semilla fiada del día
@@ -2656,7 +2644,7 @@ function rockUnlockCost() { return NODE_UNLOCK_COSTS[Math.min(NODE_UNLOCK_COSTS.
 // el juego te dice qué nivel de granja pide. Tabla por orden de aparición (números del
 // diseñador; la 1ª siempre libre). Quien PAGÓ desbloqueos viejos los conserva.
 // Los ÁRBOLES quedan con su sistema de siempre: retoño + desbloqueo pagando madera.
-var NIVEL_ROCAS = [1, 2, 4, 6, 9, 12];
+var NIVEL_ROCAS = [1, 1, 4, 6, 9, 12]   // 15/8: la 2ª roca disponible desde el arranque;
 function nodoNivelReq(o) { return NIVEL_ROCAS[Math.min(o.lockIdx || 0, NIVEL_ROCAS.length - 1)] || 1; }
 function nodoBloqueado(o) {
   if (!o || o.type !== "rock") return false;   // solo piedras/minerales: los árboles van por retoño+pago

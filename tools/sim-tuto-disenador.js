@@ -5,15 +5,15 @@
    de piedra, y la 2ª roca cuando el nivel 3 de granja la abre. Correr: node tools/sim-tuto-disenador.js */
 
 const PAPA = { grow: 540, seed: 1, price: 3, xp: 9 };
-const T_FAST = 180, T_VECES = 3, T_LARGO = 5400;   // árbol (doc 4/8)
-const R_FAST = 240, R_VECES = 3, R_LARGO = 7200;   // piedra (doc 4/8) — cantera y veta
+const T_FAST = 0, T_VECES = 0, T_LARGO = 5400;   // 15/8: SIN arranque rápido — largo desde el 1er golpe
+const R_FAST = 0, R_VECES = 0, R_LARGO = 7200;
 const NEED = { store: { m: 5, p: 2 }, horno: { m: 6, p: 4 }, cocina: { m: 8, p: 5 } };   // 15/8: costos a escala
 const UNLOCK_ARBOL = [2, 4, 8];   // 15/8: desbloqueos baratos
-const FARM_XP_3 = 25;   // 15/8: la 2ª roca de cantera se abre a granja nivel 2 (NIVEL_ROCAS nuevo)
+const FARM_XP_3 = 999999;   // (la 2ª cantera ya está abierta de arranque)
 
 let t = 0, plata = 3, madera = 0, piedra = 0, axes = 35, picos = 20, seeds = 0, papas = 0, xp = 0;
 let plots = [0, 0, 0];
-let arboles = [{ r: 0, usos: 0 }], rocas = [{ r: 0, usos: 0 }, { r: 0, usos: 0 }];   // cantera + veta
+let arboles = [{ r: 0, usos: 0 }, { r: 0, usos: 0 }], rocas = [{ r: 0, usos: 0 }, { r: 0, usos: 0 }, { r: 0, usos: 0 }];   // 15/8: 2 árboles + 2 canteras + veta desde el arranque
 let compras = 0, roca2 = false, talas = 0, picadas = 0, diaSig = 86400;
 const CUPO = 20;
 const fmt = s => s < 90 ? Math.round(s) + " s" : s < 5400 ? (s / 60).toFixed(1) + " min" : (s / 3600).toFixed(1) + " h";
