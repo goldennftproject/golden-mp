@@ -924,13 +924,14 @@ function prestige() {
 
 // --- minerales y picos ---
 const ORE_ORDER = ["piedra","bronce","hierro","oro","diamante","netherita"];
-const ORE_DEF = {
-  piedra:   { tier:0, label:"Piedra",    emoji:"🪨", sprite:"node_stone",     cd:7200,  yield:1, price:6 },
-  bronce:   { tier:1, label:"Bronce",    emoji:"🟫", sprite:"node_bronze",    cd:28800,  yield:1, price:12 },
-  hierro:   { tier:2, label:"Hierro",    emoji:"⛓️", sprite:"node_iron",      cd:43200,  yield:1, price:15 },   // viernes (2): lo mina el Pico de Hierro
-  oro:      { tier:3, label:"Oro",       emoji:"🟡", sprite:"node_gold",      cd:50400,  yield:1, price:30 },
-  diamante: { tier:4, label:"Diamante",  emoji:"💎", sprite:"node_diamond",   cd:50400, yield:1, price:80 },
-  netherita:{ tier:5, label:"Netherita", emoji:"🔶", sprite:"node_netherite", cd:50400, yield:1, price:200 },
+const ORE_DEF = {   // 15/8 (dirección): UN SISTEMA para todo — el timer lo define el RECURSO, no el nodo.
+  // Piedra = mismo timer que la cantera (CD.rock); el resto: su valor de diseño con el −50% general.
+  piedra:   { tier:0, label:"Piedra",    emoji:"🪨", sprite:"node_stone",     cd:120,   yield:1, price:6 },
+  bronce:   { tier:1, label:"Bronce",    emoji:"🟫", sprite:"node_bronze",    cd:14400, yield:1, price:12 },
+  hierro:   { tier:2, label:"Hierro",    emoji:"⛓️", sprite:"node_iron",      cd:21600, yield:1, price:15 },   // viernes (2): lo mina el Pico de Hierro
+  oro:      { tier:3, label:"Oro",       emoji:"🟡", sprite:"node_gold",      cd:25200, yield:1, price:30 },
+  diamante: { tier:4, label:"Diamante",  emoji:"💎", sprite:"node_diamond",   cd:25200, yield:1, price:80 },
+  netherita:{ tier:5, label:"Netherita", emoji:"🔶", sprite:"node_netherite", cd:25200, yield:1, price:200 },
 };
 const PICK_ORDER = ["stone","bronze","iron","gold","diamond","netherite"];
 const PICK_DEF = {

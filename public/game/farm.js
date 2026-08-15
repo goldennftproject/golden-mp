@@ -1323,6 +1323,7 @@ class FarmScene extends Phaser.Scene {
     // Si todo está enfriándose no se señala ninguno: la madurez avisa sola cuando vuelve.
     const ahora = nowMs(), eqPk = (typeof equippedPick === "function") ? equippedPick() : null;
     const usable = (o) => !(o.readyAt && o.readyAt > ahora)
+      && !((o.golpes || 0) > 0)   // a medio talar/picar: tampoco (15/8)
       && !(typeof nodoBloqueado === "function" && nodoBloqueado(o))
       && (o.type !== "ore" || (eqPk && PICK_DEF[eqPk].mineTier >= (ORE_DEF[o.ore] ? ORE_DEF[o.ore].tier : 99)));
     if (st.target === "plot") { const pl = (this.plots || []).find(o => o.state !== "locked"); if (pl) { x = pl.cx; y = pl.by - GF.TILE * 0.9; } }
@@ -2084,6 +2085,7 @@ class FarmScene extends Phaser.Scene {
     const usosPico = eq ? Math.floor((G.picks.dur && G.picks.dur[eq]) || 0) : 0;
     for (const o of (this.objs || [])) {
       if (o.locked || o.oculto || (o.readyAt && o.readyAt > t)) continue;
+      if ((o.golpes || 0) > 0) continue;   // 15/8: a medio talar/picar tampoco se señala (ni sus intermedios)
       if (typeof nodoBloqueado === "function" && nodoBloqueado(o)) continue;   // la veta que pide nivel no se señala
       const edad = t - (o.readyAt || 0);   // sin readyAt = disponible desde siempre
       if (edad < MADURO) continue;
@@ -2122,7 +2124,8 @@ class FarmScene extends Phaser.Scene {
     for (const m of this.maripos) {
       // 15/8: si el recurso que señalaba entró en enfriamiento, lo suelta YA (sin esperar
       // la reasignación de los 2,5 s) — nada de revolotear sobre un nodo que no se puede usar
-      if (m.ancla && m.ancla.o && m.ancla.o.readyAt && m.ancla.o.readyAt > t && !m.posadaHasta) { m.ancla = null; m.percha = null; }
+      if (m.ancla && m.ancla.o && !m.posadaHasta &&
+          ((m.ancla.o.readyAt && m.ancla.o.readyAt > t) || (m.ancla.o.golpes || 0) > 0)) { m.ancla = null; m.percha = null; }
       if (m.ancla) {   // merodear: órbita amplia y cambiante, con transiciones SUAVES
         if (t >= (m.orbCambio || 0)) {   // cada tanto la vuelta cambia de tamaño, ritmo y fase
           m.orbCambio = t + 1800 + Math.random() * 2600;

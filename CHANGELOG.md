@@ -2125,12 +2125,33 @@ Ahora la cadena de guía no tiene puntas sueltas:
   lugar. Al recomprar semillas, `buySeed` la vuelve a poner en el primer hueco libre.
   Herramientas y picos conservan su lógica de siempre.
 
+## Día 18 (cont.) — Regla única de timers: el RECURSO define el timer (15/8, dirección)
+- Dirección: "todo lo extraíble de la granja va por UN sistema con el −50% general —
+  nada modificado de forma particular". La anomalía que quedaba: la piedra salía a 2 min
+  en cantera y a 1 h en la veta de piedra. Regla nueva: el timer es del RECURSO, no del
+  nodo → veta de piedra = 2 min, igual que la cantera.
+- Sistema completo (todo = valor de diseño ÷ 2, fijo, sin etapas ni excepciones):
+  cultivos papa 45 s → maíz 12 h (escalera duplicando) · madera 90 s · piedra 2 min
+  (cantera y veta) · bronce 4 h · hierro 6 h · oro/diamante/netherita 7 h.
+
+## Día 18 (cont.) — Vetas de mineral al −50% (15/8)
+- Playtest: "una roca minada me salió con ~1 h de enfriamiento" — era la VETA de piedra
+  (fila de minerales), que tiene timer propio en ORE_DEF, distinto de la cantera (2 min).
+  No era la nube: los overrides siguen vacíos.
+- Esos timers eran los únicos sin el −50% del rebalance. Ahora: piedra 1 h · bronce 4 h ·
+  hierro 6 h · oro/diamante/netherita 7 h (fijos, sin etapas). La escasez de minerales
+  se mantiene: son el freno del Altar y los picos altos.
+
 ## Día 18 (cont.) — La escolta no señala nodos en enfriamiento (15/8)
 - Playtest: una mariposa revoloteaba sobre una veta EN ENFRIAMIENTO. Causa doble:
   (1) la mariposa escolta del "jugador perdido" seguía al guiaTarget del objetivo, y
   updateTutoArrow elegía el primer árbol/roca/veta SIN mirar cooldown, nivel ni tier de
   pico; (2) entre reasignaciones (2,5 s) una mariposa podía quedar orbitando un nodo
   recién usado.
+- (v2, pedido de dirección): tampoco se señalan los nodos A MEDIO talar/picar (golpes
+  en curso — tree_cut1/2, veta half) — ni en la lista de maduros, ni como escolta, y si
+  el jugador empieza a golpear el nodo orbitado, la mariposa lo suelta al instante.
+  Las parcelas siguen igual: la seca se señala solo si tenés semillas; la lista, siempre.
 - Arreglo: el objetivo del mundo solo señala nodos usables YA (sin cooldown, nivel ok,
   pico del tier); si todo está enfriándose, no señala ninguno — la madurez (>10 s
   disponible) ya los marca cuando vuelven. Y si el nodo orbitado entra en cooldown, la
