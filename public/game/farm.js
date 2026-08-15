@@ -1311,11 +1311,11 @@ class FarmScene extends Phaser.Scene {
       if (o) { x = o.cx; y = o.by - (o.sprite ? o.sprite.displayHeight : 60) - 10; }
     }
     else { const o = (this.objs || []).find(o => o.type === st.target && !o.oculto); if (o) { x = o.cx; y = o.by - (o.sprite ? o.sprite.displayHeight : 60) - 10; } }   // sin plano colocado no hay a qué apuntar (12/8)
-    if (x == null) return;
-    // 14/8 (reversión del capataz): vuelve la FLECHITA del mundo
-    const tri = this.add.triangle(x, y, 0, 0, 16, 0, 8, 12, 0xffd75e).setStrokeStyle(2, 0x241505, 1).setDepth(99990);
-    this.tutoArrow = tri;
-    this.tutoTw = this.tweens.add({ targets: tri, y: y - 10, duration: 420, yoyo: true, repeat: -1, ease: "Sine.easeInOut" });
+    if (x == null) { this.guiaTarget = null; return; }
+    // 14/8 v2 (dirección): en el MUNDO señala la MARIPOSA GUÍA, no una flecha — la 1ª
+    // mariposa revolotea sobre el objetivo (tickMariposas). La flecha DOM sigue en interfaces.
+    this.guiaTarget = { x, y };
+    this._mariAt = 0;   // re-asignar destinos ya mismo
   }
 
   // TINTE DE LA VETA (9/8): el color va sobre la roca ENTERA, no solo sobre las pepitas.
@@ -2034,18 +2034,56 @@ class FarmScene extends Phaser.Scene {
       this.maripos.push({ g, tx: g.x, ty: g.y, esperaHasta: 0, posada: null, fase: Math.random() * 6.28 });
     }
   }
+  /* MARIPOSAS GUÍA (14/8, idea de dirección): las 3 mariposas dejan de ser adorno puro y
+     SEÑALAN revoloteando — sin flechas, sin texto. La 1ª acompaña al OBJETIVO del
+     tutorial; las otras dos merodean cosas que el jugador SÍ puede hacer ahora (y saben
+     lo que no puede: sin hachas no van al árbol, sin semillas no van a la tierra seca,
+     sin usos de pico no van a la roca). Cada una reclama un destino DISTINTO. Terminado
+     el tutorial, las tres quedan como señaladoras de accionables. */
+  mariposaAccionables(t) {
+    const lista = [];
+    for (const p of (this.plots || [])) {
+      if (p.state === "ready") lista.push({ x: p.cx, y: p.by - 14, k: "listo" + p.i });
+    }
+    const hayHacha = (typeof toolCount === "function") && toolCount("axe") > 0;
+    const eq = (typeof equippedPick === "function") ? equippedPick() : null;
+    const usosPico = eq ? Math.floor((G.picks.dur && G.picks.dur[eq]) || 0) : 0;
+    for (const o of (this.objs || [])) {
+      if (o.locked || o.oculto || (o.readyAt && o.readyAt > t)) continue;
+      if (o.type === "tree" && hayHacha) lista.push({ x: o.cx, y: o.by - (o.sprite ? o.sprite.displayHeight * 0.6 : 40), k: "arbol" + o.i });
+      if ((o.type === "rock" || (o.type === "ore" && typeof ORE_DEF !== "undefined" && eq && PICK_DEF[eq].mineTier >= (ORE_DEF[o.ore] ? ORE_DEF[o.ore].tier : 99))) && usosPico > 0)
+        lista.push({ x: o.cx, y: o.by - 18, k: "roca" + o.i });
+    }
+    const haySemillas = Object.keys(G.seeds || {}).some(k => (G.seeds[k] || 0) > 0);
+    if (haySemillas) for (const p of (this.plots || [])) {
+      if (p.state === "dry") { lista.push({ x: p.cx, y: p.by - 14, k: "seco" + p.i }); break; }   // con una tierra alcanza
+    }
+    return lista;
+  }
   tickMariposas(dt, t) {
     if (!this.maripos || !this.maripos.length) return;
-    const listos = this.plots.filter(p => p.state === "ready");
+    if (t >= (this._mariAt || 0)) {   // re-asignar destinos cada ~2,5 s
+      this._mariAt = t + 2500;
+      const accion = this.mariposaAccionables(t);
+      const tomados = new Set();
+      this.maripos.forEach((m, i) => {
+        if (i === 0 && this.guiaTarget) { m.ancla = { x: this.guiaTarget.x, y: this.guiaTarget.y + 26 }; tomados.add("guia"); return; }
+        const libre = accion.find(a => !tomados.has(a.k));
+        if (libre) { tomados.add(libre.k); m.ancla = { x: libre.x, y: libre.y }; }
+        else m.ancla = null;   // nada que señalar: vuelo libre
+      });
+    }
     for (const m of this.maripos) {
-      if (m.posada && m.posada.state !== "ready") { m.posada = null; m.esperaHasta = 0; }   // la cosecharon: a volar
-      if (t >= m.esperaHasta) {
+      if (m.ancla) {   // merodear: vueltitas alrededor del destino
+        m.orbita = (m.orbita || Math.random() * 6.28) + dt * 1.6;
+        m.tx = m.ancla.x + Math.cos(m.orbita) * 16;
+        m.ty = m.ancla.y + Math.sin(m.orbita * 1.3) * 10;
+      } else if (t >= m.esperaHasta) {
         m.esperaHasta = t + 2600 + Math.random() * 3200;
-        if (listos.length && Math.random() < 0.75) { m.posada = listos[Math.floor(Math.random() * listos.length)]; m.tx = m.posada.cx + (Math.random() - 0.5) * 14; m.ty = m.posada.by - 16 - Math.random() * 8; }
-        else { m.posada = null; m.tx = 40 + Math.random() * (GF.WORLD_W - 80); m.ty = 40 + Math.random() * (GF.WORLD_H - 80); }
+        m.tx = 40 + Math.random() * (GF.WORLD_W - 80); m.ty = 40 + Math.random() * (GF.WORLD_H - 80);
       }
       const dx = m.tx - m.g.x, dy = m.ty - m.g.y, d = Math.hypot(dx, dy);
-      if (d > 2) { const v = Math.min(d, 34 * dt); m.g.x += dx / d * v; m.g.y += dy / d * v; }
+      if (d > 2) { const v = Math.min(d, (m.ancla ? 55 : 34) * dt); m.g.x += dx / d * v; m.g.y += dy / d * v; }
       m.fase += dt * 9;
       m.g.setScale(0.75 + Math.abs(Math.sin(m.fase)) * 0.45, 1);   // aleteo: se angosta y se ensancha
       m.g.setDepth(m.g.y + 4);
@@ -2624,34 +2662,9 @@ class FarmScene extends Phaser.Scene {
     pl.timer.setVisible(false);
   }
 
-  // 14/8 (dirección: "no tan explícito — dar a entender"): el EMPUJONCITO silencioso.
-  // Durante un paso de juntar, si el recurso del objetivo está TODO en enfriamiento,
-  // otra cosa accionable de la granja hace un gesto (rebote + polvillo dorado): una
-  // parcela lista, otro nodo disponible, o una parcela seca si hay semillas. El mundo
-  // invita a jugar en paralelo sin decir una palabra. Máximo un gesto cada 12 s.
-  nudgeSync(t) {
-    if (!G.tuto || G.tuto.done || GF.uiOpen || GF.editMode) return;
-    const st = (typeof tutoActivo === "function") ? tutoActivo() : null;
-    if (!st || !st.res || st.res === "plata") return;   // solo pasos de juntar madera/piedra
-    if ((this._nudgeAt || 0) > t) return;
-    const esArbol = st.res === "madera";
-    const delPaso = (this.objs || []).filter(o => (esArbol ? o.type === "tree" : (o.type === "rock" || o.type === "ore")) && !o.locked && !o.oculto);
-    if (!delPaso.length || delPaso.some(o => !o.readyAt || o.readyAt <= t)) return;   // hay uno listo: no hace falta invitar
-    // otra cosa accionable, en orden de gracia: cosecha lista → el otro tipo de nodo → parcela seca con semillas
-    const plotListo = (this.plots || []).find(p => p.state === "ready");
-    const otroNodo = (this.objs || []).find(o => (esArbol ? (o.type === "rock" || o.type === "ore") : o.type === "tree") && !o.locked && !o.oculto && (!o.readyAt || o.readyAt <= t));
-    const haySemillas = Object.keys(G.seeds || {}).some(k => (G.seeds[k] || 0) > 0);
-    const plotSeco = haySemillas ? (this.plots || []).find(p => p.state === "dry") : null;
-    const invitado = plotListo || otroNodo || plotSeco;
-    if (!invitado) return;
-    this._nudgeAt = t + 12000;
-    const spr = invitado.sprite || invitado.spr || invitado.ground;
-    if (spr && spr.visible && this.popFx) this.popFx(spr, 0.5);            // rebote suave
-    if (this.puffFx) this.puffFx(invitado.cx, invitado.by - 20, 0xffe08a, 5);   // polvillo dorado
-  }
+  // (14/8: el "empujoncito" fue reemplazado por las MARIPOSAS GUÍA — señalización viva)
 
   update(time, deltaMs) {
-    this.nudgeSync(nowMs());
     if (this.leaving || !this.hero) return;   // cambiando de escena: no tocar nada más
     this._frameT = time;   // marca del frame: la usa la caché de hitsSprite (10/8)
     const dt = deltaMs / 1000, k = this.keys, hero = this.hero;

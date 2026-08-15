@@ -2281,16 +2281,19 @@ INSUMOS (cosas que se usan) y la plata sale de vender lo producido. Aplicado a t
   tiene que haber 3 celdas donde apuntar. La tabla `FARM_PARCELA` sigue igual (nivel 2
   "regalaba" la 3ª, que ahora ya viene de fábrica; la 4ª llega en nivel 4).
 
-### El EMPUJONCITO silencioso (14/8, dirección: "sugerir el paralelo, pero no tan explícito")
+### Las MARIPOSAS GUÍA (14/8, idea de dirección) — señalización viva, cero flechas
 
-Primera versión: una 2ª línea de texto en el cartel ("⏳ mientras el árbol vuelve:
-picá…"). Dirección la bajó — demasiado literal. Versión final, IMPLÍCITA (`nudgeSync`):
-durante un paso de juntar, si TODO el recurso del objetivo está en enfriamiento, otra
-cosa accionable de la granja hace un GESTO — rebote suave + polvillo dorado — en orden
-de gracia: cosecha lista → el otro tipo de nodo disponible → una parcela seca si hay
-semillas. Sin una palabra; máximo un gesto cada 12 s; solo durante el tutorial, sin
-paneles ni edición. El mundo invita a jugar en paralelo, que es como se enseña de
-verdad la habilidad del género.
+Tres iteraciones en una tarde: texto "mientras tanto" (muy explícito) → empujoncito de
+polvillo (mejor) → LA buena, de dirección: las 3 mariposas que ya volaban de adorno son
+ahora el sistema de señalización del mundo. **La 1ª acompaña al OBJETIVO del tutorial**
+(revolotea en circulitos sobre el árbol/parcela/obra que el cartel pide — la flecha
+triangular murió definitivamente). **Las otras 2 merodean cosas que el jugador SÍ puede
+hacer ahora**, con detección de capacidad: sin hachas no van al árbol, sin usos de pico
+no van a la roca (ni a vetas que su pico no puede), sin semillas no van a la tierra
+seca. Cada mariposa reclama un destino DISTINTO (no se amontonan), se reasignan cada
+2,5 s, y sin nada que señalar vuelan libres como siempre. Terminado el tutorial las
+tres quedan de señaladoras de accionables — la guía se funde con el mundo. La flecha
+DOM sigue viva solo dentro de interfaces y sobre la barra rápida.
 
 ### REBALANCE INTEGRAL con mandato de dirección (14/8) — física única y ritmo real
 
