@@ -2042,49 +2042,58 @@ class FarmScene extends Phaser.Scene {
      lo que no puede: sin hachas no van al árbol, sin semillas no van a la tierra seca,
      sin usos de pico no van a la roca). Cada una reclama un destino DISTINTO. Terminado
      el tutorial, las tres quedan como señaladoras de accionables. */
-  mariposaAccionables(t) {
+  /* 14/8 v3 (dirección): el imán de las mariposas es la MADUREZ — un recurso disponible
+     hace MÁS DE 10 SEGUNDOS está desatendido y atrae una mariposa (revolotea/se posa),
+     jugando o no. Y si ese recurso es del OBJETIVO actual, va primero en la fila.
+     La tierra seca solo entra cuando el jugador parece perdido (no es un recurso maduro). */
+  mariposaAccionables(t, perdido) {
+    const MADURO = 10000;
+    const st = (typeof tutoActivo === "function") ? tutoActivo() : null;
+    const objRes = st ? st.res : null;   // madera/piedra → árboles/rocas del objetivo
+    const objPlots = st && (st.id === "plant" || st.id === "harvest");
     const lista = [];
     for (const p of (this.plots || [])) {
-      if (p.state === "ready") lista.push({ x: p.cx, y: p.by - 14, k: "listo" + p.i });
+      if (p.state !== "ready" || t - (p.readyAt || 0) < MADURO) continue;
+      lista.push({ x: p.cx, y: p.by - 14, k: "listo" + p.i, prio: objPlots ? 0 : 1, edad: t - (p.readyAt || 0) });
     }
     const hayHacha = (typeof toolCount === "function") && toolCount("axe") > 0;
     const eq = (typeof equippedPick === "function") ? equippedPick() : null;
     const usosPico = eq ? Math.floor((G.picks.dur && G.picks.dur[eq]) || 0) : 0;
     for (const o of (this.objs || [])) {
       if (o.locked || o.oculto || (o.readyAt && o.readyAt > t)) continue;
-      if (typeof nodoBloqueado === "function" && nodoBloqueado(o)) continue;   // 14/8: la veta que pide nivel NO se señala (playtest: revoloteaba una roca de nivel 3)
-      if (o.type === "tree" && hayHacha) lista.push({ x: o.cx, y: o.by - (o.sprite ? o.sprite.displayHeight * 0.6 : 40), k: "arbol" + o.i });
+      if (typeof nodoBloqueado === "function" && nodoBloqueado(o)) continue;   // la veta que pide nivel no se señala
+      const edad = t - (o.readyAt || 0);   // sin readyAt = disponible desde siempre
+      if (edad < MADURO) continue;
+      if (o.type === "tree" && hayHacha)
+        lista.push({ x: o.cx, y: o.by - (o.sprite ? o.sprite.displayHeight * 0.6 : 40), k: "arbol" + o.i, prio: objRes === "madera" ? 0 : 1, edad });
       if ((o.type === "rock" || (o.type === "ore" && typeof ORE_DEF !== "undefined" && eq && PICK_DEF[eq].mineTier >= (ORE_DEF[o.ore] ? ORE_DEF[o.ore].tier : 99))) && usosPico > 0)
-        lista.push({ x: o.cx, y: o.by - 18, k: "roca" + o.i });
+        lista.push({ x: o.cx, y: o.by - 18, k: "roca" + o.i, prio: objRes === "piedra" ? 0 : 1, edad });
     }
-    const haySemillas = Object.keys(G.seeds || {}).some(k => (G.seeds[k] || 0) > 0);
-    if (haySemillas) for (const p of (this.plots || [])) {
-      if (p.state === "dry") { lista.push({ x: p.cx, y: p.by - 14, k: "seco" + p.i }); break; }   // con una tierra alcanza
+    if (perdido) {
+      const haySemillas = Object.keys(G.seeds || {}).some(k => (G.seeds[k] || 0) > 0);
+      if (haySemillas) for (const p of (this.plots || [])) {
+        if (p.state === "dry") { lista.push({ x: p.cx, y: p.by - 14, k: "seco" + p.i, prio: st && st.id === "plant" ? 0 : 2, edad: 0 }); break; }
+      }
     }
+    // lo del objetivo primero; a igual prioridad, lo más viejo (más desatendido) primero
+    lista.sort((a, b) => a.prio - b.prio || b.edad - a.edad);
     return lista;
   }
   tickMariposas(dt, t) {
     if (!this.maripos || !this.maripos.length) return;
-    // 14/8 v2 (dirección: "son mariposas, a fin de cuentas"): la señalización solo se
-    // activa cuando el jugador parece PERDIDO — quieto ~8 s con cosas por hacer. Mientras
-    // juega, vuelan libres y como mucho se posan en cosecha lista (su encanto original).
+    // 14/8 v3: los recursos MADUROS (disponibles >10 s) atraen mariposas SIEMPRE — lo del
+    // objetivo primero. El detector de "perdido" (~8 s quieto) suma la escolta del
+    // objetivo de la guía (edificios/obras) y la tierra seca como último recurso.
     const perdido = (t - (this.ultimaAccion || 0)) > 8000;
     if (t >= (this._mariAt || 0)) {   // re-asignar destinos cada ~2,5 s
       this._mariAt = t + 2500;
-      const accion = perdido ? this.mariposaAccionables(t) : [];
+      const accion = this.mariposaAccionables(t, perdido);
       const tomados = new Set();
-      const listos = (this.plots || []).filter(p => p.state === "ready");
       this.maripos.forEach((m, i) => {
         if (perdido && i === 0 && this.guiaTarget) { m.ancla = { x: this.guiaTarget.x, y: this.guiaTarget.y + 26 }; tomados.add("guia"); return; }
-        if (perdido) {
-          const libre = accion.find(a => !tomados.has(a.k));
-          if (libre) { tomados.add(libre.k); m.ancla = { x: libre.x, y: libre.y }; return; }
-        }
-        // jugador activo (o nada que señalar): vuelo libre, con visita ocasional a la cosecha
-        if (m.ancla || Math.random() < 0.4) {
-          m.ancla = null;
-          if (listos.length && Math.random() < 0.6) { const p = listos[Math.floor(Math.random() * listos.length)]; m.tx = p.cx + (Math.random() - 0.5) * 14; m.ty = p.by - 18; }
-        }
+        const libre = accion.find(a => !tomados.has(a.k));
+        if (libre) { tomados.add(libre.k); m.ancla = { x: libre.x, y: libre.y }; return; }
+        m.ancla = null;   // nada maduro que señalar: mariposa libre
       });
     }
     for (const m of this.maripos) {
@@ -2105,6 +2114,14 @@ class FarmScene extends Phaser.Scene {
         m.esperaHasta = t + 2600 + Math.random() * 3200;
         m.tx = 40 + Math.random() * (GF.WORLD_W - 80); m.ty = 40 + Math.random() * (GF.WORLD_H - 80);
       }
+      // 14/8 v3: POSADA — a veces aterriza unos segundos donde llegó (aleteo casi quieto)
+      if (m.posadaHasta && t < m.posadaHasta) {
+        m.fase += dt * 2.2;
+        m.g.setScale(0.9 + Math.sin(m.fase) * 0.07, 1);   // alas casi plegadas, temblor suave
+        m.g.setDepth(99993);
+        continue;
+      }
+      if (m.posadaHasta) { m.posadaHasta = 0; m.rumbo = (m.rumbo || 0) + (Math.random() - 0.5) * 1.6; }   // despega hacia otro lado
       // 14/8 v2 (playtest: "curva ABIERTA, no doblar en seco"): vuelo por RUMBO — velocidad
       // casi constante y la dirección solo puede girar unos grados por frame (tope de
       // rad/s). Una vuelta en U le lleva ~1,5 s de arco: doblar en seco es físicamente
@@ -2120,6 +2137,8 @@ class FarmScene extends Phaser.Scene {
       const vel = (m.ancla ? 44 : 32) * Math.min(1, d / 26 + 0.4);   // afloja al acercarse
       m.g.x += Math.cos(m.rumbo) * vel * dt;
       m.g.y += Math.sin(m.rumbo) * vel * dt;
+      // cerca del destino, a veces se posa un ratito (más seguido si está señalando algo)
+      if (d < 9 && Math.random() < dt * (m.ancla ? 0.65 : 0.35)) m.posadaHasta = t + 2200 + Math.random() * 3200;
       m.fase += dt * 9;
       m.g.setScale(0.75 + Math.abs(Math.sin(m.fase)) * 0.45, 1);   // aleteo: se angosta y se ensancha
       m.g.setDepth(99993);   // SIEMPRE al frente (antes quedaba detrás del mercadillo)

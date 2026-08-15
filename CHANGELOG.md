@@ -2281,6 +2281,21 @@ INSUMOS (cosas que se usan) y la plata sale de vender lo producido. Aplicado a t
   tiene que haber 3 celdas donde apuntar. La tabla `FARM_PARCELA` sigue igual (nivel 2
   "regalaba" la 3ª, que ahora ya viene de fábrica; la 4ª llega en nivel 4).
 
+### Las MARIPOSAS GUÍA v3 (14/8, dirección) — el imán es la MADUREZ del recurso
+
+- **Regla central nueva**: un recurso disponible hace **más de 10 segundos** está
+  desatendido y atrae una mariposa (revolotea y a ratos se posa), jugando o no — la
+  edad de disponibilidad se mide con el readyAt real de nodos y cosechas. **Prioridad**:
+  primero lo relacionado con el objetivo actual (madera del paso → árboles; piedra →
+  rocas; plantar/cosechar → parcelas), y a igual prioridad, lo más viejo primero (lo
+  más olvidado llama más). Recursos frescos (<10 s) no reciben mariposa: si lo estás
+  trabajando, no te persiguen.
+- El detector de "perdido" (~8 s quieto) queda para lo extra: la escolta del objetivo
+  cuando es un edificio/obra (guiaTarget) y la tierra seca como sugerencia final.
+- Vuelo: curvas abiertas por tope de giro, posadas de 2-5 s con alas casi plegadas,
+  despegue en curva, siempre al frente. El repertorio completo al servicio de señalar
+  sin decir nada.
+
 ### Las MARIPOSAS GUÍA v2 (14/8) — solo señalan al jugador PERDIDO
 
 - **Detector de "perdido"**: cualquier clic marca actividad (`ultimaAccion`); si pasan
