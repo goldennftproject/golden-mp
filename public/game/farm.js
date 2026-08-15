@@ -2105,14 +2105,21 @@ class FarmScene extends Phaser.Scene {
         m.esperaHasta = t + 2600 + Math.random() * 3200;
         m.tx = 40 + Math.random() * (GF.WORLD_W - 80); m.ty = 40 + Math.random() * (GF.WORLD_H - 80);
       }
-      // 14/8 (playtest: "giros bruscos"): vuelo con INERCIA — el destino ATRAE a la mariposa
-      // (resorte + amortiguación); para girar dibuja una curva, nunca invierte en seco
-      const dx = m.tx - m.g.x, dy = m.ty - m.g.y;
-      m.vx = ((m.vx || 0) + dx * dt * 4.2) * (1 - Math.min(1, dt * 2.6));
-      m.vy = ((m.vy || 0) + dy * dt * 4.2) * (1 - Math.min(1, dt * 2.6));
-      const sp = Math.hypot(m.vx, m.vy), max = m.ancla ? 62 : 40;
-      if (sp > max) { m.vx *= max / sp; m.vy *= max / sp; }
-      m.g.x += m.vx * dt; m.g.y += m.vy * dt;
+      // 14/8 v2 (playtest: "curva ABIERTA, no doblar en seco"): vuelo por RUMBO — velocidad
+      // casi constante y la dirección solo puede girar unos grados por frame (tope de
+      // rad/s). Una vuelta en U le lleva ~1,5 s de arco: doblar en seco es físicamente
+      // imposible, todas las correcciones salen como curvas amplias.
+      const dx = m.tx - m.g.x, dy = m.ty - m.g.y, d = Math.hypot(dx, dy);
+      const deseado = Math.atan2(dy, dx);
+      if (m.rumbo == null) m.rumbo = deseado;
+      let dif = deseado - m.rumbo;
+      while (dif > Math.PI) dif -= Math.PI * 2;
+      while (dif < -Math.PI) dif += Math.PI * 2;
+      const giroMax = 2.1 * dt;   // radianes por segundo de tope: la curva siempre abierta
+      m.rumbo += Math.max(-giroMax, Math.min(giroMax, dif));
+      const vel = (m.ancla ? 44 : 32) * Math.min(1, d / 26 + 0.4);   // afloja al acercarse
+      m.g.x += Math.cos(m.rumbo) * vel * dt;
+      m.g.y += Math.sin(m.rumbo) * vel * dt;
       m.fase += dt * 9;
       m.g.setScale(0.75 + Math.abs(Math.sin(m.fase)) * 0.45, 1);   // aleteo: se angosta y se ensancha
       m.g.setDepth(99993);   // SIEMPRE al frente (antes quedaba detrás del mercadillo)
