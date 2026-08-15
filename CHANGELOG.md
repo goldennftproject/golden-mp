@@ -2308,6 +2308,40 @@ Se probó y no cuajó. Vuelve el sistema anterior, más simple y más honesto:
   paso lo avanza solo, no hay dónde estacionarse; y vender lo acelerado es a pérdida
   (madera sale 3, el hacha 10). Verificado paso a paso: solo 7 de los 19 pasos aceleran
   algo, cada uno lo suyo, y al completar el tutorial todo queda a tiempo real.
+- **El PICO habla el idioma del HACHA (dirección: "el diseñador pidió que las
+  herramientas se gasten igual")**: mecánicamente YA era así — picos apilables, 1 pico =
+  1 picada, craftear suma al stock (decisión del 31/7) — pero la presentación mentía:
+  textos de "usos"/"durabilidad", displays "14/1", "¡Pico destruido!" y una función de
+  REPARAR que encima era destructiva (reparar ponía el stock en 1: 15 picos → 1). Ahora:
+  `repairPick` sellada ("los picos no se reparan — crafteá más"), logs "Quedan N picos",
+  "Usaste tu último pico", y el kit de emergencia vende "Pico de Piedra · se suma a tu
+  pila (como las hachas)". Un solo modelo mental para todas las herramientas.
+- **v8 — SIMULACIÓN ESCRITA del tutorial completo (dirección pidió el recorrido paso a
+  paso) → 4 trabas, 3 arregladas**: (1) el paso del Hacha con 9 de plata era un muro de
+  9 min — ahora tiene su sub de plata (meta 10) con siembra acelerada; (2) el tope del
+  125% acumulaba valor BRUTO y cortaba el plan en ~150 de 190 ganados — ahora acumula
+  GANANCIA NETA (precio − semilla): verificado, 95 papas aceleradas llegan justo a 191 y
+  el bucle sigue muerto en el 125% neto; (3) el SUB no aceleraba lo que él mismo pedía
+  ("talá 30 árboles para los picos" en un paso de piedra = 90 min de muro) — ahora el
+  recurso que el sub permite (chop/mine) también corre a 3 s. (4) El BALANCE del paso 16
+  (10 piedras = cadena de ~400 de plata por el pico de 1 uso) quedó en TODO para el
+  diseñador, junto con "guardá 1 papa para la receta del paso 18".
+- **v7 (dirección hizo la cuenta: "que NO se pueda hacer mucho más de 200 — la robustez
+  tiene que estar ahí")**: el agujero fino era GASTAR la plata en cosas que la proyección
+  no cuenta (parcelas, adornos) — la proyección bajaba y se podía volver a plantar
+  acelerado: bucle infinito. Cierre: **TOPE VITALICIO del plan al 125% de la meta**
+  (`planAcelListo`, `PLAN_TOPE_FACTOR`) — por misión de plata, el valor total sembrado
+  con aceleración no supera meta × 1.25, gastes en lo que gastes; el acumulado NO se
+  resetea con la proyección, solo al cambiar de misión (paso+meta). Ataque simulado:
+  farmear a 201, vaciar la plata en una parcela, reintentar → solo 3 siembras más y el
+  bucle muere en 240/250. Cualquier mezcla de cultivos respeta el mismo tope (se cuenta
+  por VALOR, no por semilla).
+- **v6 (playtest: "¿por qué la cebolla sí me capea?")**: la exención "del plan" era
+  demasiado fina — la cebolla cubre la proyección rapidísimo (16 por semilla) y el cupo
+  volvía a aplicar a mitad de compra. Regla simple y FINAL de dirección: **tutorial
+  activo = semillas sin cupo; tutorial terminado = cupo normal**. El cartel de la tienda
+  lo dice ("Semillas SIN LÍMITE durante el tutorial"). La aceleración de siembras sigue
+  acotada por la contabilidad del plan — sin cupo no significa sin control.
 - **v5 (playtest: "el cupo de semillas me impide llegar a los 200")**: el cálculo lo
   confirmó — 200 de plata con papas son ~100 semillas y el cupo diario es ~24: la misión
   era imposible. Solución robusta (mejor que "sin límites en el tutorial"): la COMPRA DEL

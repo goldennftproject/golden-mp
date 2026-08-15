@@ -1159,8 +1159,8 @@ class FarmScene extends Phaser.Scene {
       const gr = 1;   // viernes (2): todos los recursos dan 1
       if (tryAddRes("piedra", gr)) {
         const pk = equippedPick();   // picar piedra también gasta el pico (bug reportado)
-        if (pk) { G.picks.dur[pk] = Math.max(0, (G.picks.dur[pk] || 0) - 1); if (G.picks.dur[pk] <= 0) { log(`¡${PICK_DEF[pk].label} se rompió en pedazos! Crafteá otro en la Herrería.`, "bad"); toast("¡Pico destruido!"); destroyPick(pk); } }
-        addXp("mining", 5); statAdd("minar", "piedra", gr); nodoSumar(o); o.cdIni = nowMs(); o.readyAt = nowMs() + nodoCd(o, "piedra", CD.rock) * 1000 * cdMult() * (typeof tutoBoost === "function" ? tutoBoost("rock") : 1); o.halfAt = nowMs() + (o.readyAt - nowMs()) / 2; this.setObjTex(o, "node_stone_mined", o.rw || GF.TILE); this.premioFx(o.cx, o.by, resSprite("piedra"), "+" + gr); log(`+${gr} Piedra.` + (pk ? ` ${G.picks.dur[pk]}/${PICK_DEF[pk].dur}` : ""), "good"); refreshHud();
+        if (pk) { G.picks.dur[pk] = Math.max(0, (G.picks.dur[pk] || 0) - 1); if (G.picks.dur[pk] <= 0) { log("Usaste tu último " + PICK_DEF[pk].label + " — crafteá más en la Herrería.", "bad"); toast("Sin picos — crafteá más"); destroyPick(pk); } }
+        addXp("mining", 5); statAdd("minar", "piedra", gr); nodoSumar(o); o.cdIni = nowMs(); o.readyAt = nowMs() + nodoCd(o, "piedra", CD.rock) * 1000 * cdMult() * (typeof tutoBoost === "function" ? tutoBoost("rock") : 1); o.halfAt = nowMs() + (o.readyAt - nowMs()) / 2; this.setObjTex(o, "node_stone_mined", o.rw || GF.TILE); this.premioFx(o.cx, o.by, resSprite("piedra"), "+" + gr); log(`+${gr} Piedra.` + (pk ? ` Quedan ${G.picks.dur[pk]} picos.` : ""), "good"); refreshHud();
         if (typeof tutoEvent === "function") tutoEvent("gather");
       }
       else { this.setObjTex(o, o.baseKey, o.rw || o.w); toast("Bolsa llena — no podés picar"); log("Bolsa llena: liberá espacio para seguir picando.", "bad"); }   // vuelve entera: los golpes se perdieron
@@ -1181,9 +1181,9 @@ class FarmScene extends Phaser.Scene {
         nodoSumar(o); o.cdIni = nowMs(); o.readyAt = nowMs() + nodoCd(o, o.ore, od.cd) * 1000 * cdMult();
         o.halfAt = nowMs() + (o.readyAt - nowMs()) / 2;
         if (this.textures.exists(o.baseKey + "_mined")) this.setObjTex(o, o.baseKey + "_mined", o.rw || GF.TILE); else o.sprite.setAlpha(0.4);
-        this.premioFx(o.cx, o.by, resSprite(o.ore), "+" + gr); log(`${od.emoji} +${gr} ${od.label}. ${G.picks.dur[pk]}/${pd.dur}`, "good"); refreshHud();
+        this.premioFx(o.cx, o.by, resSprite(o.ore), "+" + gr); log(`${od.emoji} +${gr} ${od.label}. Quedan ${G.picks.dur[pk]} picos.`, "good"); refreshHud();
         if (typeof tutoEvent === "function") { tutoEvent("gather"); tutoEvent("mineore"); }
-        if (G.picks.dur[pk] <= 0) { log(`¡${pd.label} se rompió en pedazos! Crafteá otro en la Herrería.`, "bad"); toast("¡Pico destruido!"); destroyPick(pk); }
+        if (G.picks.dur[pk] <= 0) { log("Usaste tu último " + pd.label + " — crafteá más en la Herrería.", "bad"); toast("Sin picos — crafteá más"); destroyPick(pk); }
       } else { this.setObjTex(o, o.baseKey, o.rw || o.w); toast("Bolsa llena — no podés picar"); log("Bolsa llena: liberá espacio para seguir picando.", "bad"); }
     } else if (a.kind === "plant") {
       const ck = a.seed || G.selSeed, cd = CROP_DEF[ck];   // la semilla que se validó al hacer clic (cambiarla a mitad de la animación no la cuela)
@@ -1194,14 +1194,13 @@ class FarmScene extends Phaser.Scene {
         // sub-objetivo puede mandar a cebolla/zanahoria y tienen que crecer acelerados igual
         const boost = (typeof tutoBoost === "function") ? tutoBoost("papa") : 1;
         let real = cd.grow * 1000 * cdMult() * boost;
-        // 14/8 v4: siembra "DEL PLAN" — si el sub de plata está activo y la proyección
-        // (plata + bolsa + creciendo) aún NO cubre su meta, esta siembra corre a 3 s.
-        // Cubierta la meta: tiempo real + aviso (la contabilidad la lleva tutoAvisoCubierto)
-        if (typeof subPlataMeta === "function") {
+        // 14/8 v7: siembra "DEL PLAN" — acelerada solo si pasa el DOBLE candado de
+        // planAcelListo (proyección < meta Y tope vitalicio del 125% no superado)
+        if (typeof planAcelListo === "function" && typeof subPlataMeta === "function") {
           const meta = subPlataMeta();
           if (meta > 0) {
-            if (typeof plataProyectada === "function" && plataProyectada() < meta) real = TUTO_ESPERA_SEG * 1000;
-            else toast("🎯 Ya cubrís los " + meta + " de plata con lo plantado — esta crece a tiempo normal");
+            if (planAcelListo(cd.price || 0, cd.seedCost || 0)) real = TUTO_ESPERA_SEG * 1000;
+            else toast("🎯 Ya cubrís los " + meta + " del objetivo — esta crece a tiempo normal");
           }
         }
         const starter = (G.firstSeeds || 0) > 0 && FIRST_GROW_MS > 0;   // solo las semillas del starter pack

@@ -1413,7 +1413,10 @@ function refreshMarket() {
 function refreshSeedShop() {
   const box = $("seed-shop"); if (!box) return;
   const sb = seedBuysToday();
-  box.innerHTML = '<div class="shophead">Cupo diario: ' + sb.count + '/' + seedDailyMax() + ' semillas (sube con el nivel de granja)</div>' + CROP_ORDER.map(k => {
+  const cupoTxt = (G.tuto && !G.tuto.done)
+    ? 'Semillas SIN LÍMITE durante el tutorial (después: cupo diario de ' + seedDailyMax() + ')'
+    : 'Cupo diario: ' + sb.count + '/' + seedDailyMax() + ' semillas (sube con el nivel de granja)';
+  box.innerHTML = '<div class="shophead">' + cupoTxt + '</div>' + CROP_ORDER.map(k => {
     const cd = CROP_DEF[k], unlocked = cropUnlocked(k), aff = G.plata >= cd.seedCost;
     const controls = unlocked
       ? `<input id="sq-${k}" type="number" min="1" value="1"><button class="green sm" data-buy="${k}" ${aff ? "" : "disabled"}>Comprar · ${coinIc("plata")}${cd.seedCost} c/u</button>`
@@ -1434,7 +1437,7 @@ function refreshSeedShop() {
     };
     return '<div class="shophead">🆘 Kit de emergencia (se paga en $Golden — por si te atascás)</div>'
       + fila("axe", "axe", "🪓", "Hacha", "1 uso · para cuando no te queda ni para talar")
-      + fila("pick", "pick_stone", "⛏️", "Uso de pico", "recarga tu pico equipado · 1 picada")
+      + fila("pick", "pick_stone", "⛏️", "Pico de Piedra", "1 picada · se suma a tu pila (como las hachas)")
       + fila("seed", "seed_papa", "🥔", "Semilla de papa", "no gasta el cupo diario · para replantar de cero");
   })();
   box.querySelectorAll("[data-buy]").forEach(b => b.onclick = () => { const inp = $("sq-" + b.dataset.buy); buySeed(b.dataset.buy, inp ? +inp.value : 1); });

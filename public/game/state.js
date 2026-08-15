@@ -205,7 +205,15 @@ function tutoAcelerado(tipo) {
     piedra: ["stone_st", "stone", "stonec"],  // rocas a 3 s solo en SUS pasos de piedra
     cocina: ["cook"],                         // la olla a 3 s solo al cocinar el primer plato
   };
-  return (mapa[tipo] || []).includes(st.id);
+  if ((mapa[tipo] || []).includes(st.id)) return true;
+  // 14/8 v2 (sim escrita, traba 3): el SUB también acelera lo que ÉL pide — "talá 30
+  // árboles para los picos" en un paso de piedra iba a CD normal (90 min de muro)
+  const sub = (typeof tutoSub === "function") ? tutoSub() : null;
+  if (sub && sub.permite) {
+    if (tipo === "tree" && sub.permite.includes("chop")) return true;
+    if (tipo === "piedra" && sub.permite.includes("mine")) return true;
+  }
+  return false;
 }
 /* 14/8 v4 (dirección): el DESVÍO de plata también acelera, pero con CONTABILIDAD —
    una siembra corre a 3 s solo si la PROYECCIÓN (plata + cosecha en bolsa + lo que está
@@ -225,6 +233,26 @@ function plataProyectada() {
 function subPlataMeta() {   // meta del sub de plata activo (0 si no hay)
   const sub = (typeof tutoSub === "function") ? tutoSub() : null;
   return (sub && sub.plata && sub.meta) ? sub.meta : 0;
+}
+/* 14/8 v7 (dirección: "que NO se pueda hacer más de ~250 con la meta en 200 — la robustez
+   tiene que estar ahí"): ¿esta siembra puede ir acelerada? Doble candado:
+   1. la PROYECCIÓN (plata + bolsa + semillas + creciendo) aún no cubre la meta, y
+   2. el TOPE VITALICIO del plan: el valor total sembrado con aceleración en ESTA misión
+      no supera meta × 1.25 — aunque gastes la plata en parcelas/adornos para bajar la
+      proyección y volver a plantar, el acumulado no se resetea: el bucle muere ahí.
+   El acumulado se reinicia solo al cambiar de misión (paso+meta distintos). */
+var PLAN_TOPE_FACTOR = 1.25;
+function planAcelListo(precio, costoSemilla) {
+  const meta = subPlataMeta(); if (!meta) return false;
+  const key = (G.tuto ? (G.tuto.step || 0) : -1) + ":" + meta;
+  if (G._planKey !== key) { G._planKey = key; G._planAcum = 0; }
+  if (plataProyectada() >= meta) return false;
+  // 14/8 v2 (sim escrita, traba 2): el tope acumula la GANANCIA NETA (precio − semilla),
+  // no el valor bruto — con bruto, 190 de meta cortaban el plan en ~150 ganados
+  const neta = Math.max(1, (precio || 0) - (costoSemilla || 0));
+  if ((G._planAcum || 0) + neta > meta * PLAN_TOPE_FACTOR) return false;
+  G._planAcum = (G._planAcum || 0) + neta;   // se anota al conceder la aceleración
+  return true;
 }
 // aviso ÚNICO por meta: "con lo plantado ya cubrís los X" (lo llama tutoSync cada segundo)
 function tutoAvisoCubierto() {
@@ -253,12 +281,12 @@ function buySeed(k, qty) {
   if (!cropUnlocked(k)) { toast("Necesitás Cultivo nivel " + cd.lvl); return; }
   qty = Math.max(1, Math.floor(qty || 1));
   const sb = seedBuysToday();
-  // 14/8 v5 (dirección): la COMPRA DEL PLAN no gasta cupo — mientras el sub de plata esté
-  // activo y la proyección no cubra su meta, estas semillas son del objetivo. La exención
-  // se acota SOLA por la contabilidad (las semillas en bolsa suman a la proyección): al
-  // llegar a la meta se corta, no se puede acaparar. Fuera del plan, el cupo diario manda.
-  const delPlan = (typeof subPlataMeta === "function" && subPlataMeta() > 0
-    && typeof plataProyectada === "function" && plataProyectada() < subPlataMeta());
+  // 14/8 v6 (dirección, regla simple y final): DURANTE el tutorial el cupo de semillas NO
+  // aplica — ninguna misión puede quedar matemáticamente imposible por el límite diario.
+  // Al completar el tutorial, el cupo manda como siempre (ancla anti-inflación). El riesgo
+  // de acaparar es chico: la plata para comprarlas hay que farmearla a tiempos reales, y
+  // solo las siembras "del plan" (contabilidad de la proyección) crecen aceleradas.
+  const delPlan = !!(G.tuto && !G.tuto.done);
   if (!delPlan) {
     const left = seedDailyMax() - sb.count;
     if (left <= 0) { toast("Cupo diario de semillas alcanzado (" + seedDailyMax() + ") — volvé mañana"); return; }
@@ -305,10 +333,10 @@ function comprarEmergencia(tipo) {
   else if (tipo === "pick") {
     G.picks = G.picks || { owned: {}, dur: {}, eq: null };
     if (!G.picks.eq || !G.picks.owned[G.picks.eq]) { G.picks.owned.stone = true; G.picks.eq = "stone"; G.picks.dur.stone = 0; }
-    G.picks.dur[G.picks.eq] = (G.picks.dur[G.picks.eq] || 0) + 1; toast("🆘 +1 uso de pico");
+    G.picks.dur[G.picks.eq] = (G.picks.dur[G.picks.eq] || 0) + 1; toast("🆘 +1 pico");   // los picos son apilables como las hachas: 1 pico = 1 picada
   }
   else if (tipo === "seed") { G.seeds.papa = (G.seeds.papa || 0) + 1; toast("🆘 +1 semilla de papa"); }
-  log("Kit de emergencia: compraste 1 " + (tipo === "axe" ? "hacha" : tipo === "pick" ? "uso de pico" : "semilla de papa") + " por " + precio + " $Golden (" + e[tipo] + "/" + EMERG_MAX + " hoy).", "warn");
+  log("Kit de emergencia: compraste 1 " + (tipo === "axe" ? "hacha" : tipo === "pick" ? "pico" : "semilla de papa") + " por " + precio + " $Golden (" + e[tipo] + "/" + EMERG_MAX + " hoy).", "warn");
   refreshHud(); if (typeof refreshHotbar === "function") refreshHotbar(true);
   if (typeof refreshSeedShop === "function" && isOpen("ov-market")) refreshSeedShop();
   if (typeof saveFarm === "function") saveFarm();
@@ -573,6 +601,13 @@ function tutoSub() {
     }
     return { txt: "Talá " + madFalta + " árbol" + (madFalta > 1 ? "es" : "") + " — madera para los picos (lo de la obra no se toca)",
       target: "tree", permite: ["chop", "crafttool", "craftpick", "mine"] };
+  }
+  // 14/8 (sim escrita, traba 1): el paso del Hacha con 9 de plata era un muro de 9 min —
+  // ahora tiene su sub de plata (meta 10) y la siembra del plan corre acelerada
+  if (st.id === "crafttool") {
+    const costo = (TOOL_CRAFT && TOOL_CRAFT.axe && TOOL_CRAFT.axe.plata) || 10;
+    if (G.plata < costo) return tutoSubPlata("Para el Hacha (" + costo + " de plata): ", costo);
+    return null;
   }
   const quiereTalar = st.id === "unlocknode" || st.id === "chest";
   if (quiereTalar && typeof toolCount === "function" && toolCount("axe") <= 0) {
@@ -1001,7 +1036,9 @@ function uiRefreshAfterBreak() {
   } catch (e) {}
 }
 function repairCostOf(id) { const pd=PICK_DEF[id]; const c={}; for (const k in pd.cost) c[k]=Math.max(1,Math.ceil(pd.cost[k]*0.3)); return c; }
-function repairPick(id) { const pd=PICK_DEF[id]; if (!G.picks.owned[id]) return; if ((G.picks.dur[id]||0)>=pd.dur){ toast("Ya está al 100%"); return; } const c=repairCostOf(id); if (!canAfford(c)){ toast("Te faltan materiales para reparar"); return; } if (typeof tutoGuardiaCosto === "function" && !tutoGuardiaCosto(c, 0, "reparar " + pd.label)) return; payCost(c); G.picks.dur[id]=pd.dur; log("Reparaste "+pd.label+" (100%).","good"); toast("Reparado"); forgeWork(); refreshForge(); }
+// 14/8 (dirección): los picos NO se reparan — son apilables como las hachas (1 pico = 1
+// picada, se craftean más). Reparar "el stock" ponía dur=1 y te DESTRUÍA la pila entera.
+function repairPick(id) { toast("Los picos no se reparan — crafteá más en la Herrería"); }
 function equipPick(id) { if (!G.picks.owned[id]){ toast("No lo tenés"); return; } G.picks.eq=id; log("Equipaste "+PICK_DEF[id].label+".");  toast("Equipado"); refreshForge(); refreshInv(); }
 
 // --- herramientas (hacha + caña con durabilidad; el pico se maneja aparte) ---

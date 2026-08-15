@@ -4,6 +4,11 @@
 
 ## 🔴 Inmediato
 
+- [ ] **⚠ BALANCE del paso 16 del tutorial (sim escrita 14/8)**: "juntá 15 de piedra" con
+  el pico de 1 uso encadena 10 picos → 30 maderas → 30 hachas → **~400 de plata** por 10
+  piedras. Opciones para el diseñador: pico de arranque con más usos (15→35), pedir menos
+  piedra en la Cocina (15→8), o pico de piedra más barato. También: guardar 1 papa para
+  la receta del paso 18 (el jugador la vende sin saber que la necesita).
 - [ ] **⚠ Estacionamiento en el tutorial acelerado (14/8)**: con TODAS las esperas en 3 s
   durante la guía completa, un jugador podría no cumplir a propósito un paso tardío de
   acción (p.ej. quedarse antes de "socketeá la runa") y farmear acelerado sin límite.
