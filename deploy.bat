@@ -7,6 +7,10 @@ REM ================================================
 cd /d "%~dp0"
 
 echo.
+echo == Sello de build (rompe la cache del navegador) ==
+powershell -NoProfile -ExecutionPolicy Bypass -File "tools\stamp-build.ps1"
+
+echo.
 echo == Subiendo cambios a GitHub ==
 git add -A
 git commit -m "deploy %date% %time%"

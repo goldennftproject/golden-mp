@@ -2125,6 +2125,12 @@ Ahora la cadena de guía no tiene puntas sueltas:
   lugar. Al recomprar semillas, `buySeed` la vuelve a poner en el primer hueco libre.
   Herramientas y picos conservan su lógica de siempre.
 
+## Día 18 (cont.) — Cache-busting de scripts en cada deploy (15/8)
+- Playtest: tras un deploy, producción seguía con los timers viejos — el cargador de
+  index.html pedía los .js SIN versión y el navegador servía su copia cacheada.
+- Arreglo: sello GF_BUILD en el cargador (todos los scripts se piden con ?b=SELLO) y
+  deploy.bat lo actualiza solo con fecha/hora en cada deploy. Nunca más "borrá caché".
+
 ## Día 18 (cont.) — Ameno SIN tocar los timers del diseñador (15/8, dirección)
 - Decisión: los timers del diseñador quedan intactos; la experiencia se mejora con las
   palancas de alrededor. El "rendimiento por golpe" (más de 1 madera por tala) queda
