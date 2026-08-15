@@ -157,7 +157,7 @@ GF.WORLD_OBJECTS.push(snap("dummy", {type:"dummy"}, 585, 350, T));              
 // nodo de HIERRO (detalles213) — al FINAL para preservar layouts guardados; se mina con el pico de bronce
 GF.WORLD_OBJECTS.push(snap("node_iron", {type:"ore", ore:"hierro"}, 735, 546, T));   // 12/8: dentro de la cerca (antes pisaba la cerca)
 // BUZÓN (15/8, idea Stardew aprobada por dirección): las noticias de la granja llegan acá
-GF.WORLD_OBJECTS.push(snap("buzon", {type:"buzon"}, 450, 420, T*0.9));
+GF.WORLD_OBJECTS.push(snap("buzon", {type:"buzon"}, 625, 150, T*0.72));   // 15/8: a la derecha del granero, 20% más chico
 // HORNO DE PIEDRA (detalles viernes 1): acá se funden todos los lingotes/barras
 GF.WORLD_OBJECTS.push(snap("horno", {type:"horno"}, 320, 470, T*2));
 // viernes (2): 6 árboles y 6 piedras en total (1 activo + 5 por desbloquear) — al FINAL para preservar layouts
