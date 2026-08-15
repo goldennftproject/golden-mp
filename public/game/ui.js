@@ -1416,32 +1416,38 @@ function refreshMarket() {
 
 // tienda de semillas: comprar con plata, bloqueadas por nivel de Cultivo
 /* ---- BUZÓN (15/8): las cartas se dibujan como sobres de papel ---- */
+var _buzonTab = "nuevos";   // pestaña activa (15/8: Nuevos / Leídos, pedido de dirección)
 function refreshBuzon() {
   const box = $("buzon-list"); if (!box) return;
-  const cartas = (typeof buzonCartas === "function") ? buzonCartas() : [];
-  // ARCHIVO (15/8): las cartas de días anteriores se pueden releer 7 días
-  const archivo = (G.buzonArchivo || []).filter(a => !cartas.some(c => c.id === a.id && a.dia === dayStamp(0))).slice().reverse();
-  let html = "";
-  if (!cartas.length && !archivo.length) { box.innerHTML = '<div class="sub" style="padding:14px 6px">El buzón está vacío. Cuando pase algo en tu granja, la banderita se levanta sola.</div>'; return; }
-  if (!cartas.length) html += '<div class="sub" style="padding:6px 6px 0">Sin cartas nuevas — estas son las últimas que recibiste:</div>';
-  html += cartas.map(c => {
-    const btn = c.panel
-      ? '<button class="green sm" data-carta-ir="' + c.panel + '">' + (c.btn || "Ver") + '</button>'
-      : (c.leer ? '<button class="ghost sm" data-carta-ok="' + c.id + '">Entendido</button>' : "");
-    return '<div class="forge-row"><div class="fic">✉️</div><div class="finfo"><div class="fnm">' + c.titulo +
-      '</div><div class="fds">De: ' + c.de + '</div><div class="fds">' + c.txt + '</div></div><div class="fbtns">' + btn + '</div></div>';
-  }).join("");
-  if (archivo.length) {
-    html += '<div class="shophead">Leídas (se guardan ' + (typeof BUZON_ARCHIVO_DIAS !== "undefined" ? BUZON_ARCHIVO_DIAS : 7) + ' días)</div>';
-    html += archivo.map(a => {
-      const f = a.dia ? a.dia.slice(8, 10) + "/" + a.dia.slice(5, 7) : "";
-      return '<div class="forge-row" style="opacity:.72"><div class="fic">📄</div><div class="finfo"><div class="fnm">' + a.titulo +
-        '</div><div class="fds">De: ' + a.de + (f ? " · " + f : "") + '</div><div class="fds">' + a.txt + '</div></div></div>';
+  document.querySelectorAll(".buzontab").forEach(b => b.classList.toggle("active", b.dataset.buzon === _buzonTab));
+  const cartas = (typeof buzonCartas === "function") ? buzonCartas() : [];   // también archiva (primera vez que se ven)
+  if (_buzonTab === "nuevos") {
+    if (!cartas.length) { box.innerHTML = '<div class="sub" style="padding:14px 6px">Sin cartas nuevas. Las que ya leíste están en la pestaña Leídos.</div>'; return; }
+    box.innerHTML = cartas.map(c => {
+      const btn = c.panel
+        ? '<button class="green sm" data-carta-ir="' + c.panel + '">' + (c.btn || "Ver") + '</button>'
+        : (c.leer ? '<button class="ghost sm" data-carta-ok="' + c.id + '">Entendido</button>' : "");
+      return '<div class="forge-row"><div class="fic">✉️</div><div class="finfo"><div class="fnm">' + c.titulo +
+        '</div><div class="fds">De: ' + c.de + '</div><div class="fds">' + c.txt + '</div></div><div class="fbtns">' + btn + '</div></div>';
     }).join("");
+    box.querySelectorAll("[data-carta-ir]").forEach(b => b.onclick = () => { closeOv("ov-buzon"); openOv(b.dataset.cartaIr); });
+    box.querySelectorAll("[data-carta-ok]").forEach(b => b.onclick = () => buzonLeer(b.dataset.cartaOk));
+    return;
   }
-  box.innerHTML = html;
-  box.querySelectorAll("[data-carta-ir]").forEach(b => b.onclick = () => { closeOv("ov-buzon"); openOv(b.dataset.cartaIr); });
-  box.querySelectorAll("[data-carta-ok]").forEach(b => b.onclick = () => buzonLeer(b.dataset.cartaOk));
+  // pestaña LEÍDOS: el archivo completo (menos lo que sigue activo hoy), con papelera
+  const activasHoy = new Set(cartas.map(c => c.id + "|" + dayStamp(0)));
+  const archivo = (G.buzonArchivo || []).filter(a => !activasHoy.has(a.id + "|" + a.dia)).slice().reverse();
+  if (!archivo.length) { box.innerHTML = '<div class="sub" style="padding:14px 6px">Todavía no hay cartas leídas. Acá se guardan ' + (typeof BUZON_ARCHIVO_DIAS !== "undefined" ? BUZON_ARCHIVO_DIAS : 7) + ' días.</div>'; return; }
+  box.innerHTML = '<div class="sub" style="padding:2px 6px 0">Se guardan ' + (typeof BUZON_ARCHIVO_DIAS !== "undefined" ? BUZON_ARCHIVO_DIAS : 7) + ' días y después se descartan solas.</div>' + archivo.map(a => {
+    const f = a.dia ? a.dia.slice(8, 10) + "/" + a.dia.slice(5, 7) : "";
+    return '<div class="forge-row" style="opacity:.8"><div class="fic">📄</div><div class="finfo"><div class="fnm">' + a.titulo +
+      '</div><div class="fds">De: ' + a.de + (f ? " · " + f : "") + '</div><div class="fds">' + a.txt + '</div></div>' +
+      '<div class="fbtns"><button class="ghost sm" data-carta-del="' + a.id + '|' + a.dia + '" title="Borrar esta carta">🗑</button></div></div>';
+  }).join("");
+  box.querySelectorAll("[data-carta-del]").forEach(b => b.onclick = () => {
+    const [id, dia] = b.dataset.cartaDel.split("|");
+    if (typeof buzonBorrar === "function") buzonBorrar(id, dia);
+  });
 }
 
 function refreshSeedShop() {
@@ -1762,6 +1768,7 @@ function initUI() {
   // clic derecho: NUNCA el menú del navegador, en ninguna parte del juego (solo se permite en campos de texto)
   document.addEventListener("contextmenu", e => { if (!e.target.closest("input,textarea")) e.preventDefault(); });
   // pestañas de la Herrería: Picos / Herramientas
+  document.querySelectorAll(".buzontab").forEach(b => b.onclick = () => { _buzonTab = b.dataset.buzon; refreshBuzon(); });
   document.querySelectorAll(".forgetab").forEach(b => b.onclick = () => {
     document.querySelectorAll(".forgetab").forEach(x => x.classList.toggle("active", x === b));
     const s = b.dataset.forge;

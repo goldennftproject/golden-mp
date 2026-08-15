@@ -2125,6 +2125,19 @@ Ahora la cadena de guía no tiene puntas sueltas:
   lugar. Al recomprar semillas, `buySeed` la vuelve a poner en el primer hueco libre.
   Herramientas y picos conservan su lógica de siempre.
 
+## Día 18 (cont.) — Fix: acentos rotos en index.html (15/8)
+- El stamp-build.ps1 leía index.html con codificación ANSI (default de PowerShell 5) y
+  lo reescribía rompiendo acentos y símbolos ("ediciÃ³n", "âº"). Reparado con reversión
+  quirúrgica del mojibake (290 secuencias, preservando las inserciones nuevas sanas) y
+  el script ahora fuerza UTF-8 sin BOM en lectura y escritura ([System.IO.File]).
+
+## Día 18 (cont.) — Buzón v2: pestañas Nuevos / Leídos + papelera (15/8)
+- El buzón ahora tiene dos pestañas fijas (mismo estilo que la Herrería): NUEVOS con las
+  cartas activas y LEÍDOS con el archivo de 7 días — una carta pasa a Leídos apenas se
+  vio por primera vez (el archivado ocurre al abrir el buzón).
+- Cada carta leída tiene su papelera 🗑 para borrarla a mano (buzonBorrar por id+día);
+  las no borradas se descartan solas a los 7 días.
+
 ## Día 18 (cont.) — Buzón: archivo de cartas leídas (15/8)
 - Las cartas ya no desaparecen al leerlas: toda carta que pasa por el buzón queda en la
   sección "Leídas" durante 7 días (releíble, atenuada, con fecha). Después se descarta

@@ -1,10 +1,10 @@
-﻿<!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="es">
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Golden Farm</title>
-<!-- El atlas es lo mÃ¡s pesado del juego (386 KB con 329 sprites). Se empieza a bajar YA,
+<!-- El atlas es lo más pesado del juego (386 KB con 329 sprites). Se empieza a bajar YA,
      en paralelo con el login y la carga de la partida, en vez de esperar a que Phaser arranque. -->
 <link rel="preload" as="image" href="assets/atlas.png?v=44">
 <link rel="preload" as="fetch" href="assets/atlas.json?v=44" crossorigin>
@@ -47,10 +47,10 @@
   .uidrag{outline:2px dashed #e2b23a !important;outline-offset:4px;cursor:move !important;user-select:none}
   .btnpill{font-family:inherit;font-size:12px;padding:6px 11px;border-radius:8px;border:1px solid #3c4d31;background:rgba(38,51,31,.92);color:#f2ead5;cursor:pointer;font-weight:700}
 
-  /* fundido a negro entre escenas Â· pop al abrir ventanas Â· sacudida del botÃ³n deshabilitado */
+  /* fundido a negro entre escenas · pop al abrir ventanas · sacudida del botón deshabilitado */
   #fadeblk{position:fixed;inset:0;background:#000;opacity:0;pointer-events:none;z-index:900;transition:opacity .26s ease}
   #fadeblk.on{opacity:1}
-  /* la ventana centrada vive con transform:translate(-50%,-50%); la que el jugador arrastrÃ³, no.
+  /* la ventana centrada vive con transform:translate(-50%,-50%); la que el jugador arrastró, no.
      Por eso hay dos animaciones: si no, al abrirse una ventana movida saltaba de lugar. */
   @keyframes ovpop{0%{transform:translate(-50%,-50%) scale(.88);opacity:0}60%{transform:translate(-50%,-50%) scale(1.03)}100%{transform:translate(-50%,-50%) scale(1);opacity:1}}
   @keyframes ovpopm{0%{transform:scale(.88);opacity:0}60%{transform:scale(1.03)}100%{transform:scale(1);opacity:1}}
@@ -58,7 +58,7 @@
   .ov.show>.card.movida{animation:ovpopm .26s cubic-bezier(.2,.9,.3,1.2)}
   @keyframes nono{0%,100%{transform:translateX(0)}20%{transform:translateX(-4px)}40%{transform:translateX(4px)}60%{transform:translateX(-3px)}80%{transform:translateX(3px)}}
   .nono{animation:nono .3s}
-  /* el botÃ³n bloqueado deja pasar el clic al contenedor: asÃ­ se puede detectar y sacudirlo */
+  /* el botón bloqueado deja pasar el clic al contenedor: así se puede detectar y sacudirlo */
   .card button[disabled]{pointer-events:none}
   #toast{position:fixed;left:50%;top:60px;transform:translateX(-50%);z-index:200;background:rgba(20,25,15,.92);color:#fff;padding:8px 16px;border-radius:10px;font-size:14px;font-weight:600;opacity:0;transition:opacity .2s;pointer-events:none;border:1px solid #4a5340}
   #toast.show{opacity:1}
@@ -67,9 +67,9 @@
 
   .ov{position:fixed;inset:0;z-index:10;display:none;pointer-events:none}
   /* Ventana que BLOQUEA el juego (9/8). Las .ov normales dejan pasar el clic al mundo a
-     propÃ³sito; esta no, porque mientras el granjero entrena no se puede hacer otra cosa. */
+     propósito; esta no, porque mientras el granjero entrena no se puede hacer otra cosa. */
   .ov.bloquea{pointer-events:auto;background:rgba(12,7,2,.55)}
-  /* Las misiones diarias salieron del Pase y tienen su propia casilla, mÃ¡s llamativa (10/8) */
+  /* Las misiones diarias salieron del Pase y tienen su propia casilla, más llamativa (10/8) */
   .gmi.destacada{background:linear-gradient(180deg,#7a5606,#5d3f04);border-color:#c79a2b}
   .gmi.destacada .key{background:#ffd76a;color:#3a2a04}
   .gmi.destacada.listo{animation:misPulso 1.6s ease-in-out infinite}
@@ -95,9 +95,9 @@
   .slot.filled{border-color:#c9b070;background:#fff}   /* detalles viernes (1): fondo blanco para los objetos (testeo visual) */
   .slot img{width:90%;height:90%;object-fit:contain;image-rendering:auto}
   .slot .em{font-size:22px;line-height:1}
-  /* ÃTEMS DE LA BOLSA (10/8): al diseÃ±ador no lo terminaban de convencer. Tres cambios:
-     el Ã­cono flota sobre un degradÃ© suave en vez de un fondo blanco plano, la cantidad pasÃ³ a
-     ser una chapita oscura con contorno (se leÃ­a mal sobre los sprites claros), y cada familia
+  /* ÍTEMS DE LA BOLSA (10/8): al diseñador no lo terminaban de convencer. Tres cambios:
+     el ícono flota sobre un degradé suave en vez de un fondo blanco plano, la cantidad pasó a
+     ser una chapita oscura con contorno (se leía mal sobre los sprites claros), y cada familia
      de objeto tiene su color de borde, para reconocerla sin leer. */
   .slot.filled{background:radial-gradient(circle at 50% 38%, #ffffff 0%, #f6efdd 62%, #e8dcc0 100%);
     box-shadow:inset 0 -3px 6px rgba(90,66,26,.14), inset 0 2px 0 rgba(255,255,255,.75)}
@@ -105,7 +105,7 @@
     background:rgba(36,21,5,.88);border-radius:6px;padding:0 4px;line-height:15px;
     box-shadow:0 1px 0 rgba(0,0,0,.35)}
   .slot.filled:hover{transform:translateY(-1px);transition:transform .08s}
-  /* familias: recurso Â· semilla Â· pez Â· plato Â· herramienta o pico */
+  /* familias: recurso · semilla · pez · plato · herramienta o pico */
   .slot.k-res{border-color:#a98a54}
   .slot.k-seed{border-color:#6f9a45}
   .slot.k-fish{border-color:#4f93b8}
@@ -119,7 +119,7 @@
   #hotwrap{position:fixed;left:50%;bottom:10px;transform:translateX(-50%);z-index:6;display:flex;align-items:center;gap:4px}
   #hotbar{display:flex;gap:5px;background:rgba(20,28,15,.85);border:1px solid #3c4d31;border-radius:12px;padding:6px}
   .hcell{position:relative;width:46px;height:46px;background:#26331f;border:2px solid #3c4d31;border-radius:8px;display:flex;align-items:center;justify-content:center;cursor:pointer}
-  .hcell.filled{background:#fff;border-color:#c9b070}   /* fondo blanco tambiÃ©n en la hotbar */
+  .hcell.filled{background:#fff;border-color:#c9b070}   /* fondo blanco también en la hotbar */
   .hcell.filled[draggable=true]{cursor:grab}
   .hcell.sel{outline:2px solid #e2b23a;outline-offset:-2px}
   .hcell.eq{box-shadow:inset 0 0 0 2px #6aa9e0}
@@ -147,7 +147,7 @@
   .glow-fire{filter:drop-shadow(0 0 3px #f08a3a) drop-shadow(0 0 6px rgba(240,138,58,.6))}
   .seed{position:relative;width:46px;height:46px;background:#efe3c6;border:2px solid #d3c298;border-radius:9px;cursor:pointer;display:flex;align-items:center;justify-content:center;padding:0}
   .forge-row.locked{opacity:.82;filter:grayscale(.35)}   /* .55 dejaba el Pase entero en 2,7:1 (10/8) */
-  /* celebraciÃ³n de subida de nivel (doc maestro 2/8): cartel pop + halo + partÃ­culas + shine */
+  /* celebración de subida de nivel (doc maestro 2/8): cartel pop + halo + partículas + shine */
   #celeb{position:fixed;inset:0;z-index:40;pointer-events:none;display:flex;align-items:center;justify-content:center}
   #celeb.hidden{display:none}
   #celeb .halo{position:absolute;width:430px;height:430px;border-radius:50%;background:radial-gradient(circle,rgba(255,215,94,.55),rgba(255,215,94,0) 65%);mix-blend-mode:screen}
@@ -168,12 +168,12 @@
   /* tutorial guiado (doc maestro 2/8): cartel con la meta actual */
   #tuto{position:fixed;left:50%;transform:translateX(-50%);top:54px;z-index:7;display:flex;align-items:center;gap:8px;background:none;border:8px solid transparent;border-image:url("assets/ui/badge_wood.png") 26 fill round;image-rendering:pixelated;padding:1px 10px;font-size:13px;font-weight:700;color:#fff;text-shadow:-1px 0 #241505,1px 0 #241505,0 -1px #241505,0 1px #241505;pointer-events:none}
   #tuto.hidden{display:none}
-  /* EL CAPATAZ (14/8): burbuja de diÃ¡logo â€” la voz del juego */
+  /* EL CAPATAZ (14/8): burbuja de diálogo — la voz del juego */
 
   #tuto .k{color:#ffe9ac;font-weight:800;font-size:12px}
   #tuto b{color:#fff}
   #tuto .check{color:#8fd14f;font-size:16px;animation:tcheck .5s cubic-bezier(.34,1.56,.64,1)}
-  /* (13/8: el resaltado .tutohl por recuadro se reemplazÃ³ por la flecha #tuto-flecha-ui) */
+  /* (13/8: el resaltado .tutohl por recuadro se reemplazó por la flecha #tuto-flecha-ui) */
   @keyframes tglow{0%,100%{box-shadow:0 0 0 0 rgba(255,215,94,.85)}50%{box-shadow:0 0 0 6px rgba(255,215,94,0)}}
   @keyframes tcheck{0%{transform:scale(0)}70%{transform:scale(1.5)}100%{transform:scale(1)}}
   .shophead{font-weight:800;font-size:13px;color:var(--ink);margin:12px 0 6px}
@@ -183,7 +183,7 @@
   .curbtn.active{background:linear-gradient(#f6d878,#e9b93f);border-color:var(--gold-deep)}
   .mkt-list{display:flex;flex-direction:column;gap:8px;max-height:360px;overflow:auto}
   .mkt-row{display:flex;align-items:center;gap:10px;background:#faf3e2;border:1px solid var(--line);border-radius:10px;padding:8px 10px}
-  #shop-buy .mkt-row{background:#fdf9ee}   /* pestaÃ±a Comprar mÃ¡s clara (detalles 29/7) */
+  #shop-buy .mkt-row{background:#fdf9ee}   /* pestaña Comprar más clara (detalles 29/7) */
   .mkt-row .mimg{width:44px;height:44px;display:flex;align-items:center;justify-content:center;font-size:24px;flex:0 0 auto;background:#efe3c6;border:2px solid #d3c298;border-radius:9px}
   .mkt-row .mimg img{width:82%;height:82%;object-fit:contain;image-rendering:auto}
   .mkt-row .mimg img{width:42px;height:42px;object-fit:contain;image-rendering:auto}
@@ -235,9 +235,9 @@
   .forge-row .fbtns{display:flex;flex-direction:column;gap:5px;flex:0 0 auto}
   .durbar{height:7px;background:#e6dcc2;border-radius:5px;overflow:hidden;border:1px solid var(--line);margin-top:4px;width:160px;max-width:42vw}
   .durbar>i{display:block;height:100%;background:linear-gradient(90deg,#8fc46a,#5a9a3a)}
-  /* menÃº plegable */
+  /* menú plegable */
   .gmenu{position:fixed;right:10px;top:52px;z-index:7;display:flex;flex-direction:column;align-items:flex-end;gap:7px}
-  .gmitems{display:flex;flex-direction:column;gap:0;transition:opacity .15s,transform .15s;transform-origin:top right}   /* 13/8: botones del menÃº pegados, sin separaciÃ³n */
+  .gmitems{display:flex;flex-direction:column;gap:0;transition:opacity .15s,transform .15s;transform-origin:top right}   /* 13/8: botones del menú pegados, sin separación */
   .gmenu.collapsed .gmitems{opacity:0;transform:scale(.9);pointer-events:none;height:0;overflow:hidden}
   .gmi{display:flex;align-items:center;gap:8px;width:190px;text-align:left;background:rgba(38,51,31,.94);border:1px solid #3c4d31;color:#f2ead5;font-weight:700;font-size:13px;border-radius:10px;padding:8px 10px;cursor:pointer}
   .gmi:hover{filter:brightness(1.15)}
@@ -275,7 +275,7 @@
   #saveind .sdot{font-size:14px;line-height:1;display:inline-block;color:#8fd06a}
   #saveind.saving .sdot{color:#e0c76a;animation:spin .7s linear infinite}
   @keyframes spin{to{transform:rotate(360deg)}}
-  /* aviso de nueva versiÃ³n */
+  /* aviso de nueva versión */
   #updbanner{position:fixed;top:12px;left:50%;transform:translateX(-50%);z-index:300;display:none;align-items:center;gap:10px;background:linear-gradient(#0f150b,#1a2413);border:1px solid #e2b23a;color:#f2ead5;padding:9px 16px;border-radius:999px;font-size:13px;font-weight:700;box-shadow:0 6px 20px rgba(0,0,0,.4)}
   #updbanner .updc{color:#f6d878;font-size:14px;min-width:14px;text-align:center;display:inline-block}
   #updbanner button{border:none;border-radius:8px;padding:6px 12px;font-weight:800;font-size:12px;background:linear-gradient(#f6d878,#e9b93f);color:#3a2e10;cursor:pointer}
@@ -289,12 +289,12 @@
   #gate .enter{width:100%;padding:12px;border:none;border-radius:10px;font-weight:800;font-size:15px;background:linear-gradient(#f6d878,#e9b93f);color:#3a2e10;cursor:pointer}
 
   /* ---- UI de madera (PixelLab) ---- */
-  /* (regla .card vieja eliminada â€” la definiciÃ³n actual con fondo de madera estÃ¡ arriba) */
+  /* (regla .card vieja eliminada — la definición actual con fondo de madera está arriba) */
   .slot{background:#3a2b1c url("assets/ui/slot_wood.png") center/100% 100% no-repeat;border:none;image-rendering:pixelated}
   .hcell{background:#3a2b1c url("assets/ui/slot_wood.png") center/100% 100% no-repeat;border:2px solid transparent;image-rendering:pixelated}
   #hotbar{border:10px solid transparent;border-image:url("assets/ui/panel_wood.png") 23 stretch;background:rgba(30,22,12,.92);border-radius:4px}
-  /* ESTÃNDAR 30/7: TODOS los botones (no pestaÃ±as) iguales al de Modo ediciÃ³n: madera + filo verde + letra blanca.
-     31/7: la madera va en 9-SLICE (border-image) â€” los bordes/esquinas no se estiran aunque el botÃ³n sea ancho */
+  /* ESTÁNDAR 30/7: TODOS los botones (no pestañas) iguales al de Modo edición: madera + filo verde + letra blanca.
+     31/7: la madera va en 9-SLICE (border-image) — los bordes/esquinas no se estiran aunque el botón sea ancho */
   button{border:8px solid transparent;border-image:url("assets/ui/btn_wood.png") 16 fill stretch;background:none;padding:2px 8px;color:#f7ecd2;text-shadow:0 1px 0 rgba(0,0,0,.5);image-rendering:pixelated;box-shadow:inset 0 0 0 2px rgba(120,205,90,.55)}
   button.sm{padding:0 5px}
   button.green,button.gold,button.red,button.ghost{background:none;border:8px solid transparent;border-image:url("assets/ui/btn_wood.png") 16 fill stretch;box-shadow:inset 0 0 0 2px rgba(120,205,90,.55)}
@@ -304,16 +304,16 @@
   button:hover:not(:disabled){filter:brightness(1.12)}
   /* pills del HUD en 9-SLICE: el marco no se estira aunque la pill sea ancha o angosta */
   .pill{background:none;border:8px solid transparent;border-image:url("assets/ui/badge_wood.png") 26 fill round;border-radius:0;padding:0 7px;image-rendering:pixelated;color:#4a2e10;text-shadow:0 1px 0 rgba(255,240,200,.35)}
-  /* estÃ¡ndar sobre madera: letra blanca con sombra; etiquetas en Ã¡mbar claro (el 9-slice dejÃ³ el centro mÃ¡s oscuro) */
+  /* estándar sobre madera: letra blanca con sombra; etiquetas en ámbar claro (el 9-slice dejó el centro más oscuro) */
   .pill{color:#fff;text-shadow:0 1px 0 rgba(0,0,0,.5)}
   .pill .k{color:#ffe9ac;font-weight:800;font-size:12.5px}
   .pill b{color:#fff}
-  /* botÃ³n MenÃº y panel del menÃº con la misma madera */
+  /* botón Menú y panel del menú con la misma madera */
   .btnpill{background:none;border:8px solid transparent;border-image:url("assets/ui/btn_wood.png") 16 fill stretch;border-radius:0;color:#fff;font-weight:800;text-shadow:0 1px 0 rgba(0,0,0,.55);image-rendering:pixelated;padding:1px 7px;box-shadow:inset 0 0 0 2px rgba(120,205,90,.55)}
   .gmi{background:none;border:8px solid transparent;border-image:url("assets/ui/btn_wood.png") 16 fill stretch;border-radius:0;color:#2e1c06;text-shadow:0 1px 0 rgba(255,240,200,.35);image-rendering:pixelated}
   .gmi:hover{filter:brightness(1.12)}
   .gmi b.key{background:rgba(58,40,16,.85);border:1px solid #7a5a2c;color:#f2e2b8}
-  /* tÃ­tulos y textos sobre la madera: crema con sombra, sin placas */
+  /* títulos y textos sobre la madera: crema con sombra, sin placas */
   .card h3{background:none;color:#ffe9ac !important;text-shadow:0 2px 0 rgba(40,22,6,.55);display:block;text-align:center;margin:-2px 0 8px;padding:2px 0;font-size:18px}
   .card .sub{color:#eedeb2;text-align:center}
   .cost{color:#eedeb2}
@@ -323,13 +323,13 @@
   #inv-cap,#inv-selseed,#cofre-info{color:#eedeb2}
   #inv-trash{border-color:#caa25c;color:#f2dfae}
   .invexp .exmax{color:#e2cf9e}
-  /* ESTÃNDAR de tipografÃ­a: blanco sobre madera/botones, negro sobre pergamino claro */
+  /* ESTÁNDAR de tipografía: blanco sobre madera/botones, negro sobre pergamino claro */
   button{color:#fff !important;text-shadow:0 1px 0 rgba(0,0,0,.55)}
-  /* estÃ¡ndar 30/7: ghost, banner de versiÃ³n y Entrar tambiÃ©n van en madera con filo verde y letra blanca */
+  /* estándar 30/7: ghost, banner de versión y Entrar también van en madera con filo verde y letra blanca */
   button.ghost{color:#fff !important}
   #updbanner button,#gate .enter{background:none;border:8px solid transparent;border-image:url("assets/ui/btn_wood.png") 16 fill stretch;box-shadow:inset 0 0 0 2px rgba(120,205,90,.55);color:#fff !important;text-shadow:0 1px 0 rgba(0,0,0,.55);image-rendering:pixelated}
   .card h3{color:#fff !important}
-  /* estÃ¡ndar 30/7 (ConfiguraciÃ³n de referencia): secciones en pergamino con encabezado Ã¡mbar y texto oscuro legible */
+  /* estándar 30/7 (Configuración de referencia): secciones en pergamino con encabezado ámbar y texto oscuro legible */
   .card .sub,.cost,#inv-cap,#inv-selseed,#cofre-info,.invexp .exmax{background:#faf3e2;border:1px solid var(--line);border-radius:10px;padding:7px 11px;color:#8a7f66;text-shadow:none;text-align:left}
   .card .sub:empty,.cost:empty{display:none}
   span.cost{background:none;border:none;padding:0;display:inline}
@@ -339,43 +339,43 @@
   .forge-row,.mkt-row,.skrow,.lbrow{color:#241d10}
   .fds,.mds{color:#241d10}
   .fnm,.mnm{color:#100c06}
-  /* filas y listas en pergamino cÃ¡lido, nada de blanco pelado */
+  /* filas y listas en pergamino cálido, nada de blanco pelado */
   .forge-row,.mkt-row{background:#f2e5c4;border:2px solid #d9c290;border-radius:10px}
   .skrow{background:#f2e5c4;border:2px solid #d9c290;border-radius:10px}
   .lbrow{background:#f2e5c4}
-  /* pestaÃ±as estilo barra superior (badge_wood en 9-slice): Comprar/Vender, Craftear/Reparar, monedas, leaderboard */
+  /* pestañas estilo barra superior (badge_wood en 9-slice): Comprar/Vender, Craftear/Reparar, monedas, leaderboard */
   .shoptab,.lbtab,.curbtn{border:9px solid transparent;border-image:url("assets/ui/badge_wood.png") 26 round;background:#b5793f url("assets/ui/badge_bg.png?a=1") repeat;background-size:132px auto;background-clip:padding-box;border-radius:0;image-rendering:pixelated;color:#fff !important;font-weight:800;text-shadow:0 1px 0 rgba(0,0,0,.55);filter:brightness(.62) saturate(.8)}
-  /* pestaÃ±as con EL MISMO marco que la tabla interna (badge_wood a 14px, como .shoppane):
-     el borde recorre costadoâ†’arribaâ†’costado de cada pestaÃ±a y empalma con el marco de la placa */
+  /* pestañas con EL MISMO marco que la tabla interna (badge_wood a 14px, como .shoppane):
+     el borde recorre costado→arriba→costado de cada pestaña y empalma con el marco de la placa */
   .shoptab,.lbtab{border-width:14px 14px 0;padding:0 2px 4px}
   .shoptab{font-size:13px;margin-bottom:0;position:relative;z-index:2}   /* la inactiva apoya sobre el marco, sin pisarlo */
-  /* las pestaÃ±as NO son botones: fuera el filo verde del estÃ¡ndar (tambiÃ©n en la X de cerrar) */
+  /* las pestañas NO son botones: fuera el filo verde del estándar (también en la X de cerrar) */
   button.shoptab,button.lbtab,button.curbtn,button.ltab,.close{box-shadow:none !important}
-  /* 13/8 v2 (audio): la guÃ­a en interfaces pasÃ³ de recuadros a FLECHA â€” misma estÃ©tica que
-     la del mundo: triÃ¡ngulo dorado con borde oscuro, rebotando sobre el botÃ³n/pestaÃ±a */
+  /* 13/8 v2 (audio): la guía en interfaces pasó de recuadros a FLECHA — misma estética que
+     la del mundo: triángulo dorado con borde oscuro, rebotando sobre el botón/pestaña */
   #tuto-flecha-ui{position:fixed;z-index:99999;pointer-events:none;display:none;font-size:20px;line-height:1;color:#ffd75e;
     text-shadow:-2px 0 #241505,2px 0 #241505,0 -2px #241505,0 2px #241505,-1px -1px #241505,1px 1px #241505;
     transform:translate(-50%,-100%);animation:tfui .42s ease-in-out infinite alternate}
   @keyframes tfui{from{margin-top:-12px}to{margin-top:-3px}}
-  /* pestaÃ±a activa fundida con la placa: baja 14px (el grosor del marco) y su interior conecta con el de la tabla */
+  /* pestaña activa fundida con la placa: baja 14px (el grosor del marco) y su interior conecta con el de la tabla */
   .shoptabs,.lbtabs{align-items:flex-end}
   /* 31/7 v2: esquina CERRADA, sin cruces de madera.
-     - La pestaÃ±a activa termina EXACTO en el borde superior del panel (margen -12 anula el
+     - La pestaña activa termina EXACTO en el borde superior del panel (margen -12 anula el
        margen 12 de la fila): sus maderas laterales mueren justo donde nace la banda horizontal.
      - El ::after abre la "boca": tapa la banda del marco solo ENTRE las dos maderas laterales
-       y funde el interior de la pestaÃ±a con el del panel.
-     - En las pestaÃ±as pegadas a la esquina del panel (primera a la izq., Ãºltima a la der. en
-       filas flex:1), el ::before prolonga la madera lateral a travÃ©s de la banda: un solo
+       y funde el interior de la pestaña con el del panel.
+     - En las pestañas pegadas a la esquina del panel (primera a la izq., última a la der. en
+       filas flex:1), el ::before prolonga la madera lateral a través de la banda: un solo
        borde vertical continuo que empalma con el marco lateral del panel. */
   /* OJO: .shoptabs/.lbtabs tienen margen inferior 0 (linea ~305): la fila apoya DIRECTO sobre el panel.
      La activa NO baja nada: su borde dorado vertical muere exactamente donde corre el dorado horizontal
      de la banda (esquina cerrada). La fusion interior la hacen ::after y ::before desde el borde. */
   .shoptab.active{margin-bottom:0;padding-bottom:4px}
   .lbtab.active{margin-bottom:0;padding-bottom:4px}
-  /* 31/7 v3: ESQUINEROS. El ::after cubre todo el ancho de la pestaÃ±a sobre la banda del marco:
+  /* 31/7 v3: ESQUINEROS. El ::after cubre todo el ancho de la pestaña sobre la banda del marco:
      relleno al centro (boca abierta) y en cada extremo una pieza de esquina (tabjoin) donde el
-     dorado vertical DOBLA y sale como dorado horizontal de la banda â€” nada pasa de largo.
-     En las pestaÃ±as pegadas a la esquina del panel, la madera sigue derecha (tabweld) y
+     dorado vertical DOBLA y sale como dorado horizontal de la banda — nada pasa de largo.
+     En las pestañas pegadas a la esquina del panel, la madera sigue derecha (tabweld) y
      empalma con el marco lateral. */
   .shoptab.active::after,.lbtab.active::after{content:"";position:absolute;left:-14px;right:-14px;top:100%;height:19px;background:url("assets/ui/tabjoin_l.png") left top/14px 19px no-repeat,url("assets/ui/tabjoin_r.png") right top/14px 19px no-repeat,url("assets/ui/badge_bg.png?a=1") left top/132px auto repeat;image-rendering:pixelated;pointer-events:none}
   .shoptab.active:first-child::after,.lbtab.active:first-child::after{background:url("assets/ui/tabweld_l.png") left top/14px 19px no-repeat,url("assets/ui/tabjoin_r.png") right top/14px 19px no-repeat,url("assets/ui/badge_bg.png?a=1") left top/132px auto repeat}
@@ -391,7 +391,7 @@
   .shoppane,#forge-pane-craft,#forge-pane-armas,#forge-pane-repair,.lblist{border:14px solid transparent;border-image:url("assets/ui/badge_wood.png") 26 round;background:#b5793f url("assets/ui/badge_bg.png?a=1") repeat;background-size:132px auto;background-clip:padding-box;image-rendering:pixelated;padding:6px;border-radius:0}
   .shoppane .mkt-list,.forge-list{max-height:46vh}
   .mkt-cur{color:#fff;font-weight:700}
-  /* inventario âˆ’20% (detalles jueves) */
+  /* inventario −20% (detalles jueves) */
   #ov-inv .card{font-size:12px}
   #ov-inv .slots{gap:5px;max-height:272px}
   /* registro/chat, toasts y prompt con la misma madera */
@@ -417,8 +417,8 @@
 
   /* cofre diario */
   .dyrow{display:flex;gap:6px;justify-content:center;margin:10px 0;flex-wrap:wrap}
-  /* dÃ­as del cofre en pergamino (estÃ¡ndar ConfiguraciÃ³n) â€” nada de cajas negras estiradas */
-  /* 31/7: geometrÃ­a FIJA para que la celda mida igual reclamada o no (alto fijo + hueco del icono reservado) */
+  /* días del cofre en pergamino (estándar Configuración) — nada de cajas negras estiradas */
+  /* 31/7: geometría FIJA para que la celda mida igual reclamada o no (alto fijo + hueco del icono reservado) */
   .dylock{flex:0 0 56px;width:56px;height:52px;display:flex;flex-direction:column;align-items:center;justify-content:flex-end;text-align:center;padding:5px 2px;background:#f2e5c4;border:2px solid #d9c290;border-radius:9px}
   .dylock .ic{font-size:17px;height:22px;line-height:22px}
   .dylock .ic img{vertical-align:middle}
@@ -431,7 +431,7 @@
   #dy-chest{width:92px;image-rendering:pixelated}
   .dyreward{font-weight:800;font-size:14px;max-width:260px;color:#2e2a1f;background:#f2e5c4;border:1px solid #d9c290;border-radius:9px;padding:7px 11px}
   .dynote{text-align:center;font-size:11px;color:#8a6a3a;margin-top:10px}
-  /* cosmÃ©ticos: marcos y color de nombre */
+  /* cosméticos: marcos y color de nombre */
   .nm.marco-brote{padding:0 6px;border:2px solid #8fd14f;border-radius:8px}
   .nm.marco-hoja{padding:0 6px;border:2px dashed #5aa832;border-radius:8px}
   .nm.marco-dorado{padding:0 6px;border:2px solid #e0a63c;border-radius:8px;box-shadow:0 0 6px rgba(224,166,60,.6)}
@@ -448,7 +448,7 @@
   .eqslot .eqcnt{position:absolute;right:5px;bottom:4px;font-size:10px;font-weight:800;color:#ffe9a8;background:rgba(30,22,12,.75);border-radius:5px;padding:0 4px}
   .eqh{margin:10px 0 6px;color:#7a4d1f;font-size:14px}
 
-  /* rueda de sembrado rÃ¡pido */
+  /* rueda de sembrado rápido */
   #seedwheel{position:fixed;inset:0;z-index:60;display:none}
   #seedwheel.show{display:block}
   #seedwheel .swc{position:absolute}
@@ -458,7 +458,7 @@
   .swi b{font-size:9px;color:#ffe8b0}
   .swi.center{width:40px;height:40px;pointer-events:none;filter:brightness(.9)}
 
-  /* barra flotante del modo ediciÃ³n */
+  /* barra flotante del modo edición */
   #editbar{position:fixed;left:50%;bottom:122px;transform:translateX(-50%);z-index:7;display:none;gap:8px}
   #editbar.show{display:flex}
 
@@ -466,21 +466,21 @@
      Se aplica a las pills del HUD (Granja/Prestigio/Jugadores en linea), titulos de ventanas y aviso de interaccion. */
   .pill,.pill .k,.pill b,.card h3,#prompt{color:#fff;text-shadow:-1px 0 #241505,1px 0 #241505,0 -1px #241505,0 1px #241505,-1px -1px #241505,1px -1px #241505,-1px 1px #241505,1px 1px #241505}
 
-  /* ============ ESTANDARIZACIÃ“N DE VENTANAS (4/8) ==========================
-     Las ventanas viejas (HerrerÃ­a, Tienda, Ranking) ya tenÃ­an el panel interior de
-     madera y se veÃ­an bien; las nuevas (Establo, CurtidurÃ­a, Altar, Ofrendas,
-     IncursiÃ³n, Mercado P2P, Pase, CosmÃ©ticos, Cocina, Granero, Horno, Habilidades,
+  /* ============ ESTANDARIZACIÓN DE VENTANAS (4/8) ==========================
+     Las ventanas viejas (Herrería, Tienda, Ranking) ya tenían el panel interior de
+     madera y se veían bien; las nuevas (Establo, Curtiduría, Altar, Ofrendas,
+     Incursión, Mercado P2P, Pase, Cosméticos, Cocina, Granero, Horno, Habilidades,
      Bolsa, Cofre, Ajustes, Cofre diario) mostraban la lista suelta sobre la madera
-     de la tarjeta y se veÃ­an pobres. AcÃ¡ se les da a TODAS el mismo tratamiento.  */
+     de la tarjeta y se veían pobres. Acá se les da a TODAS el mismo tratamiento.  */
 
   /* 1) Panel interior de madera para toda lista de contenido */
   .forge-list,.skgrid,.mkt-list,.cfgsec,#ov-inv .slots,#ov-cofre .slots{
     border:14px solid transparent;border-image:url("assets/ui/badge_wood.png") 26 round;
     background:#b5793f url("assets/ui/badge_bg.png?a=1") repeat;background-size:132px auto;
     background-clip:padding-box;image-rendering:pixelated;border-radius:0}
-  .shoppane .mkt-list{border:none;background:none;image-rendering:auto}   /* ya estÃ¡ dentro de otro panel */
+  .shoppane .mkt-list{border:none;background:none;image-rendering:auto}   /* ya está dentro de otro panel */
 
-  /* 2) Encabezado de secciÃ³n ÃšNICO (antes cada panel se lo inventaba con estilos sueltos) */
+  /* 2) Encabezado de sección ÚNICO (antes cada panel se lo inventaba con estilos sueltos) */
   .secc,.shophead,.eqh{background:#b5793f url("assets/ui/badge_bg.png?a=1") repeat;background-size:132px auto;
     background-clip:padding-box;border:9px solid transparent;
     border-image:url("assets/ui/badge_wood.png") 26 round;image-rendering:pixelated;
@@ -489,9 +489,9 @@
   .secc:first-child{margin-top:2px}
   .shophead,.eqh{margin:12px 0 8px}   /* Cofre y Equipo usaban su propio encabezado: ahora es el mismo */
 
-  /* 3) Texto sobre madera: SIEMPRE blanco con contorno oscuro, que es el estÃ¡ndar del juego
-        (el mismo del tÃ­tulo de las ventanas y del cartel del tutorial). El amarillo crema sobre
-        el marrÃ³n no tenÃ­a contraste y se leÃ­a mal, sobre todo en celular. */
+  /* 3) Texto sobre madera: SIEMPRE blanco con contorno oscuro, que es el estándar del juego
+        (el mismo del título de las ventanas y del cartel del tutorial). El amarillo crema sobre
+        el marrón no tenía contraste y se leía mal, sobre todo en celular. */
   .cfgsec h4,.eqh,.shophead,.secc,.dyreward .bad{
     color:#fff !important;
     text-shadow:-1px 0 #241505,1px 0 #241505,0 -1px #241505,0 1px #241505,
@@ -503,15 +503,15 @@
   .cfgsec p{font-size:12.5px;line-height:1.55}
   .lbnote{border-top-color:rgba(255,255,255,.28)}
 
-  /* 4) Recuadros de datos: todos con el mismo fondo crema del estÃ¡ndar */
+  /* 4) Recuadros de datos: todos con el mismo fondo crema del estándar */
   .dyreward,.skrow,.lbrow,.forge-row,.mkt-row{box-shadow:0 1px 0 rgba(0,0,0,.18)}
   .dyreward{background:#f2e5c4;border:2px solid #d9c290;color:#241d10}
   .dynote{margin-top:12px}
 
-  /* 5) Texto secundario sobre los recuadros CREMA: marrÃ³n oscuro, no el gris claro de antes.
-        El gris #8a7f66 daba 3,2 de contraste sobre el crema de las filas (mÃ­nimo 4,5) y se leÃ­a
-        lavado. Este marrÃ³n da 5,9 y 6,6, y sigue siendo claramente "secundario" al lado del
-        tÃ­tulo negro de la fila. Es el mismo criterio que en la madera: el texto tiene que leerse. */
+  /* 5) Texto secundario sobre los recuadros CREMA: marrón oscuro, no el gris claro de antes.
+        El gris #8a7f66 daba 3,2 de contraste sobre el crema de las filas (mínimo 4,5) y se leía
+        lavado. Este marrón da 5,9 y 6,6, y sigue siendo claramente "secundario" al lado del
+        título negro de la fila. Es el mismo criterio que en la madera: el texto tiene que leerse. */
   .forge-row .fds,.mkt-row .mds,.skrow .xp,.card .sub,.cost,
   #inv-cap,#inv-selseed,#cofre-info,.invexp .exmax,.mkt-row input,
   .cfgsec:not([data-x]) .row + p{color:#5f5540}
@@ -520,7 +520,7 @@
   .lbrow .rk{color:#5f5540}
 
   /* 6) DATOS SUELTOS: van en un RECUADRO CREMA, no escritos sobre la madera (4/8).
-        Criterio del diseÃ±ador, y es el correcto: en vez de resolver la legibilidad con
+        Criterio del diseñador, y es el correcto: en vez de resolver la legibilidad con
         contornos, se extiende el mismo recuadro claro que ya usan las filas. Queda todo con
         el mismo lenguaje y el texto se lee sin trucos. */
   .info{background:#f2e5c4;border:2px solid #d9c290;border-radius:10px;padding:8px 11px;
@@ -529,13 +529,13 @@
   .info b{color:#241d10}
   .info .oro{color:#7a5606;font-weight:700}      /* dorado oscuro: se lee sobre el crema */
   .info .verde{color:#33591f;font-weight:700}
-  /* el texto secundario es marrÃ³n oscuro en TODOS lados, porque ahora siempre va sobre crema */
+  /* el texto secundario es marrón oscuro en TODOS lados, porque ahora siempre va sobre crema */
   .fds,.mds{color:#5f5540}
   .forge-row .fds.vip{color:#7a5606;font-weight:700}
   .forge-row .fds.free{color:#33591f;font-weight:700}
   .secc .fds{color:#fff;font-weight:600;font-size:11.5px;
     text-shadow:-1px 0 #241505,1px 0 #241505,0 -1px #241505,0 1px #241505,1px 1px #241505}
-  /* que un texto largo NUNCA se meta debajo del botÃ³n de la fila */
+  /* que un texto largo NUNCA se meta debajo del botón de la fila */
   .forge-row .finfo,.mkt-row .minfo{overflow-wrap:anywhere}
 </style>
 </head>
@@ -549,18 +549,18 @@
 
   <div class="hudbar">
     <div class="brand" style="display:flex;align-items:center;gap:12px"><h1>GOLDEN FARM</h1>
-      <div class="pill" title="Ventanas del juego conectadas ahora"><span class="k">Jugadores en lÃ­nea</span><b id="s-online">1</b></div>
+      <div class="pill" title="Ventanas del juego conectadas ahora"><span class="k">Jugadores en línea</span><b id="s-online">1</b></div>
     </div>
     <div class="hud">
       <div class="pill"><span class="k">Granja</span><b id="s-level">1</b><span class="k">/50</span></div>
       <div class="pill"><span class="k">Prestigio</span><b id="s-prestige">0</b></div>
-      <div class="pill" title="Plata â€” la moneda del juego"><img class="ric" src="assets/farm/coin_plata.png?a=4" onerror="this.outerHTML='<span class=&quot;coin silver&quot;></span>'"><b id="s-plata">0</b></div>
-      <div class="pill" title="Esencia $Golden â€” se usa para pescar"><img class="ric" src="assets/farm/coin_esencia.png?a=4" onerror="this.outerHTML='âœ¨'"><b id="s-golden">20</b></div>
-      <div class="pill" title="Vida â€” cuidado en la Zona Negra"><span></span><b id="s-hp">100/100</b></div>
-      <div class="pill cpill" id="stampill" style="display:none" title="Estamina de combate â€” solo se gasta en la Zona Negra. Se recupera sola, comiendo guisos o con una recarga."><span class="k">Estamina</span><span class="cbarw"><span class="cfill stamf" id="stam-fill"></span></span><span class="k" id="s-stam">100/100</span></div>
-      <div class="pill cpill" id="cbar" title="Nivel de Combate â€” suma la XP de todos los kills, sin importar el arma"><b id="c-lvl">1</b><span class="k">Combate</span><span class="cbarw"><span class="cfill" id="c-fill"></span></span><span class="k" id="c-xp">0/100</span></div>
+      <div class="pill" title="Plata — la moneda del juego"><img class="ric" src="assets/farm/coin_plata.png?a=4" onerror="this.outerHTML='<span class=&quot;coin silver&quot;></span>'"><b id="s-plata">0</b></div>
+      <div class="pill" title="Esencia $Golden — se usa para pescar"><img class="ric" src="assets/farm/coin_esencia.png?a=4" onerror="this.outerHTML='✨'"><b id="s-golden">20</b></div>
+      <div class="pill" title="Vida — cuidado en la Zona Negra"><span></span><b id="s-hp">100/100</b></div>
+      <div class="pill cpill" id="stampill" style="display:none" title="Estamina de combate — solo se gasta en la Zona Negra. Se recupera sola, comiendo guisos o con una recarga."><span class="k">Estamina</span><span class="cbarw"><span class="cfill stamf" id="stam-fill"></span></span><span class="k" id="s-stam">100/100</span></div>
+      <div class="pill cpill" id="cbar" title="Nivel de Combate — suma la XP de todos los kills, sin importar el arma"><b id="c-lvl">1</b><span class="k">Combate</span><span class="cbarw"><span class="cfill" id="c-fill"></span></span><span class="k" id="c-xp">0/100</span></div>
       <div class="pill"><span class="k">Semana</span><b id="s-week">1</b></div>
-      <button class="btnpill" id="menu-btn">â˜° MenÃº</button>
+      <button class="btnpill" id="menu-btn">☰ Menú</button>
     </div>
   </div>
 
@@ -568,38 +568,38 @@
   <div id="prompt"></div>
   <!-- fundido a negro al cambiar de escena (granja <-> Zona Negra <-> plaza) -->
   <div id="fadeblk"></div>
-  <div id="updbanner">Nueva versiÃ³n disponible Â· actualizando en <b class="updc">5</b>s <button id="updnow">Actualizar ahora</button></div>
+  <div id="updbanner">Nueva versión disponible · actualizando en <b class="updc">5</b>s <button id="updnow">Actualizar ahora</button></div>
 
   <!-- overlays -->
   <div class="ov" id="ov-barn"><div class="card" style="width:min(560px,94%)">
-    <button class="close" data-close="ov-barn">Ã—</button>
+    <button class="close" data-close="ov-barn">×</button>
     <h3>Granja</h3>
-    <div class="sub">Del nivel 1 al 10 subÃ­s solo cosechando. Del 11 al 50 hace falta la XP y cumplir las tareas del nivel.</div>
+    <div class="sub">Del nivel 1 al 10 subís solo cosechando. Del 11 al 50 hace falta la XP y cumplir las tareas del nivel.</div>
     <div class="forge-list" id="barn-body" style="max-height:60vh"></div>
   </div></div>
 
-  <!-- Cofre depÃ³sito: 10 espacios de guardado (detalles 29/7) -->
+  <!-- Cofre depósito: 10 espacios de guardado (detalles 29/7) -->
   <div class="ov" id="ov-cofre"><div class="card" style="width:min(500px,94%)">
-    <button class="close" data-close="ov-cofre">Ã—</button>
-    <h3>Cofre depÃ³sito</h3>
+    <button class="close" data-close="ov-cofre">×</button>
+    <h3>Cofre depósito</h3>
     <div class="sub" id="cofre-info"></div>
-    <div class="shophead">En el cofre â€” clic para sacar</div>
+    <div class="shophead">En el cofre — clic para sacar</div>
     <div class="slots" id="cofre-slots" style="grid-template-columns:repeat(5,1fr);max-height:none"></div>
-    <div class="shophead">Tu bolsa â€” clic para guardar</div>
+    <div class="shophead">Tu bolsa — clic para guardar</div>
     <div class="slots" id="cofre-inv" style="max-height:190px"></div>
     <div class="row" style="justify-content:center;margin-top:10px"><button class="ghost sm" id="cofre-pickup">Recoger cofre</button></div>
   </div></div>
 
   <!-- Cocina: edificio propio con las recetas (detalles 29/7) -->
   <div class="ov" id="ov-cocina"><div class="card" style="width:min(500px,94%)">
-    <button class="close" data-close="ov-cocina">Ã—</button>
+    <button class="close" data-close="ov-cocina">×</button>
     <h3>Cocina</h3>
-    <div class="sub">Los platos curan vida y dan buffs. Cada receta tarda varios minutos y podÃ©s tener varias ollas al mismo tiempo; cuando termina, el plato va a tu bolsa. Cocinar sube la skill Cocina y la maestrÃ­a mejora buffs y precios.</div>
+    <div class="sub">Los platos curan vida y dan buffs. Cada receta tarda varios minutos y podés tener varias ollas al mismo tiempo; cuando termina, el plato va a tu bolsa. Cocinar sube la skill Cocina y la maestría mejora buffs y precios.</div>
     <div class="forge-list" id="cook-list"></div>
   </div></div>
 
   <div class="ov" id="ov-market"><div class="card" style="width:min(520px,94%)">
-    <button class="close" data-close="ov-market">Ã—</button>
+    <button class="close" data-close="ov-market">×</button>
     <h3>Tienda</h3>
     <div class="shoptabs">
       <button class="shoptab active" data-shop="buy">Comprar</button>
@@ -630,12 +630,16 @@
     <button class="close" data-close="ov-buzon">×</button>
     <h3>📬 Buzón</h3>
     <div class="sub">Las noticias de tu granja llegan acá — la banderita avisa sola.</div>
+    <div class="shoptabs">
+      <button class="shoptab buzontab active" data-buzon="nuevos">Nuevos</button>
+      <button class="shoptab buzontab" data-buzon="leidos">Leídos</button>
+    </div>
     <div class="forge-list" id="buzon-list"></div>
   </div></div>
 
   <div class="ov" id="ov-forge"><div class="card" style="width:min(580px,94%)">
-    <button class="close" data-close="ov-forge">Ã—</button>
-    <h3>HerrerÃ­a</h3>
+    <button class="close" data-close="ov-forge">×</button>
+    <h3>Herrería</h3>
     <div class="shoptabs">
       <button class="shoptab forgetab active" data-forge="craft">Craftear</button>
       <button class="shoptab forgetab" data-forge="armas">Armas</button>
@@ -646,7 +650,7 @@
       <div class="forge-list" id="forge-craft"></div>
     </div>
     <div id="forge-pane-armas" style="display:none">
-      <div class="sub">Espada, arco y flechas. El daÃ±o escala con la skill de cada arma.</div>
+      <div class="sub">Espada, arco y flechas. El daño escala con la skill de cada arma.</div>
       <div class="forge-list" id="forge-armas"></div>
     </div>
     <div id="forge-pane-repair" style="display:none">
@@ -656,32 +660,32 @@
   </div></div>
 
   <div class="ov" id="ov-inv"><div class="card" style="width:min(432px,94%)">
-    <button class="close" data-close="ov-inv">Ã—</button>
+    <button class="close" data-close="ov-inv">×</button>
     <h3>Inventario</h3>
-    <div class="sub" id="inv-cap">Bolsa: 0/30 espacios Â· mÃ¡x 99 por recurso</div>
+    <div class="sub" id="inv-cap">Bolsa: 0/30 espacios · máx 99 por recurso</div>
     <div class="slots" id="inv-slots"></div>
     <div class="sub" id="inv-selseed"></div>
-    <div class="invrow"><div class="invexp" id="inv-expand"></div><div id="inv-trash" title="ArrastrÃ¡ un objeto acÃ¡ para tirarlo">Tirar</div></div>
+    <div class="invrow"><div class="invexp" id="inv-expand"></div><div id="inv-trash" title="Arrastrá un objeto acá para tirarlo">Tirar</div></div>
   </div></div>
 
   <div class="ov" id="ov-skills"><div class="card" style="width:min(500px,94%)">
-    <button class="close" data-close="ov-skills">Ã—</button>
+    <button class="close" data-close="ov-skills">×</button>
     <h3>Skills</h3>
     <div class="avgpill" id="sk-avg">Nivel medio: <b>1</b></div>
     <div class="skgrid" id="sk-grid"></div>
   </div></div>
 
   <div class="ov" id="ov-equip"><div class="card" style="width:min(520px,94%)">
-    <button class="close" data-close="ov-equip">Ã—</button>
+    <button class="close" data-close="ov-equip">×</button>
     <h3>Equipo</h3>
     <div class="sub">Slots de armadura y armas.</div>
     <div class="sub" id="eq-def">Defensa total: 0</div>
     <div class="eqlayout">
       <div class="eqcol">
-        <div class="eqslot ghost" title="Collar (prÃ³ximamente)"><span class="sil"></span></div>
-        <!-- 11/8: guantes y piernas dejaron de ser "prÃ³ximamente" â€” los llena la armadura de la CurtidurÃ­a -->
+        <div class="eqslot ghost" title="Collar (próximamente)"><span class="sil"></span></div>
+        <!-- 11/8: guantes y piernas dejaron de ser "próximamente" — los llena la armadura de la Curtiduría -->
         <div class="eqslot ghost" id="eq-guantes" title="Guantes"><span class="sil"></span></div>
-        <div class="eqslot ghost" title="Anillo (prÃ³ximamente)"><span class="sil"></span></div>
+        <div class="eqslot ghost" title="Anillo (próximamente)"><span class="sil"></span></div>
       </div>
       <div class="eqcol">
         <div class="eqslot ghost" id="eq-casco" title="Casco"></div>
@@ -692,7 +696,7 @@
       <div class="eqcol">
         <div class="eqslot ghost" id="eq-arma" title="Arma"></div>
         <div class="eqslot ghost" id="eq-escudo" title="Escudo"></div>
-        <div class="eqslot ghost" id="eq-municion" title="MuniciÃ³n"></div>
+        <div class="eqslot ghost" id="eq-municion" title="Munición"></div>
       </div>
     </div>
     <h4 class="eqh">Herramientas</h4>
@@ -700,21 +704,21 @@
   </div></div>
 
   <div class="ov" id="ov-daily"><div class="card" style="width:min(560px,94%)">
-    <button class="close" data-close="ov-daily">Ã—</button>
+    <button class="close" data-close="ov-daily">×</button>
     <h3>Cofre diario</h3>
-    <div class="sub">CosmÃ©ticos que son solo para lucir (no se venden) y consumibles chicos. El dÃ­a 7 entrega el coleccionable de la semana, que cambia y no vuelve.</div>
-    <div class="sub" id="dy-banner">DÃ­a 1 de 7</div>
+    <div class="sub">Cosméticos que son solo para lucir (no se venden) y consumibles chicos. El día 7 entrega el coleccionable de la semana, que cambia y no vuelve.</div>
+    <div class="sub" id="dy-banner">Día 1 de 7</div>
     <div class="dyrow" id="dy-locks"></div>
     <div class="dycenter">
       <img id="dy-chest" src="assets/ui/chest_daily.png" onerror="this.style.display='none'">
       <div id="dy-reward" class="dyreward"></div>
     </div>
     <div class="row" style="justify-content:center"><button class="gold" id="dy-claim">Reclamar </button></div>
-    <div class="dynote">Solo 1 al dÃ­a Â· Adornos y mimos chicos, nada que acelere tu progreso Â· Si faltÃ¡s un dÃ­a seguÃ­s donde quedaste</div>
+    <div class="dynote">Solo 1 al día · Adornos y mimos chicos, nada que acelere tu progreso · Si faltás un día seguís donde quedaste</div>
   </div></div>
 
   <div class="ov" id="ov-zonares"><div class="card" style="width:min(460px,94%)">
-    <button class="close" data-close="ov-zonares">Ã—</button>
+    <button class="close" data-close="ov-zonares">×</button>
     <h3 id="zr-tit">De vuelta en la granja</h3>
     <div class="sub" id="zr-sub"></div>
     <div class="info" id="zr-body"></div>
@@ -723,14 +727,14 @@
 
   <div class="ov bloquea" id="ov-entrenando"><div class="card" style="width:min(430px,92%)">
     <h3>Entrenando</h3>
-    <div class="sub">El granjero estÃ¡ golpeando el dummy. Mientras entrena no puede hacer otra cosa: cerrÃ¡ el juego y volvÃ© cuando quieras.</div>
-    <div class="info" id="entr-info">â€¦</div>
+    <div class="sub">El granjero está golpeando el dummy. Mientras entrena no puede hacer otra cosa: cerrá el juego y volvé cuando quieras.</div>
+    <div class="info" id="entr-info">…</div>
     <div class="row" style="justify-content:center"><button class="gold" id="entr-fin">Dejar de entrenar y cobrar</button></div>
-    <div class="dynote">El primer minuto no cuenta Â· Suma hasta 8 h Â· Un clic en cualquier lado tambiÃ©n corta el entrenamiento</div>
+    <div class="dynote">El primer minuto no cuenta · Suma hasta 8 h · Un clic en cualquier lado también corta el entrenamiento</div>
   </div></div>
 
   <div class="ov" id="ov-lb"><div class="card" style="width:min(500px,94%)">
-    <button class="close" data-close="ov-lb">Ã—</button>
+    <button class="close" data-close="ov-lb">×</button>
     <h3>Leaderboard</h3>
     <div class="lbtabs">
       <button class="lbtab active" data-lb="plata"><img class="ric" src="assets/farm/coin_plata.png?a=4"> Plata</button>
@@ -742,73 +746,73 @@
   </div></div>
 
   <div class="ov" id="ov-config"><div class="card" style="width:min(480px,94%)">
-    <button class="close" data-close="ov-config">Ã—</button>
-    <h3>ConfiguraciÃ³n</h3>
+    <button class="close" data-close="ov-config">×</button>
+    <h3>Configuración</h3>
     <div class="cfgsec">
       <h4>Cuenta</h4>
-      <p id="cfg-auth-status">â€”</p>
-      <div class="row"><button class="green" id="cfg-login" style="display:none">Conectar</button><button class="ghost sm" id="cfg-logout" style="display:none">Cerrar sesiÃ³n</button></div>
+      <p id="cfg-auth-status">—</p>
+      <div class="row"><button class="green" id="cfg-login" style="display:none">Conectar</button><button class="ghost sm" id="cfg-logout" style="display:none">Cerrar sesión</button></div>
     </div>
     <div class="cfgsec">
       <h4>Sonido</h4>
-      <div class="row"><button class="ghost sm" id="cfg-sound">Sonidos: SÃ­</button></div>
-      <!-- 14/8: la guÃ­a de objetivos es OPCIONAL â€” se puede apagar y jugar libre -->
-      <div class="row"><button class="ghost sm" id="cfg-guia">GuÃ­a de objetivos: SÃ­</button></div>
+      <div class="row"><button class="ghost sm" id="cfg-sound">Sonidos: Sí</button></div>
+      <!-- 14/8: la guía de objetivos es OPCIONAL — se puede apagar y jugar libre -->
+      <div class="row"><button class="ghost sm" id="cfg-guia">Guía de objetivos: Sí</button></div>
     </div>
     <div class="cfgsec">
       <h4>Editar granja</h4>
       <p>Colocar y mover objetos por celda llega en otra fase.</p>
-      <div class="row"><button class="green" id="cfg-edit">Modo ediciÃ³n</button><button class="ghost sm" id="cfg-reset">Restaurar</button></div>
+      <div class="row"><button class="green" id="cfg-edit">Modo edición</button><button class="ghost sm" id="cfg-reset">Restaurar</button></div>
     </div>
   </div></div>
 
-  <!-- Horno de Piedra (detalles viernes 1): fundiciÃ³n de lingotes/barras -->
+  <!-- Horno de Piedra (detalles viernes 1): fundición de lingotes/barras -->
   <div class="ov" id="ov-misiones"><div class="card" style="width:min(560px,94%)">
-    <button class="close" data-close="ov-misiones">Ã—</button>
+    <button class="close" data-close="ov-misiones">×</button>
     <h3>Misiones de hoy</h3>
-    <div class="sub">Tres por dÃ­a, una por pilar del juego. Cumplirlas da estrellas, y las estrellas suben el Pase de Batalla.</div>
+    <div class="sub">Tres por día, una por pilar del juego. Cumplirlas da estrellas, y las estrellas suben el Pase de Batalla.</div>
     <div class="forge-list" id="mis-list" style="max-height:60vh"></div>
   </div></div>
 
   <div class="ov" id="ov-clan"><div class="card" style="width:min(560px,94%)">
-    <button class="close" data-close="ov-clan">Ã—</button>
+    <button class="close" data-close="ov-clan">×</button>
     <h3>Clan</h3>
-    <div class="sub">El DragÃ³n de la Guarida no se hace solo. El clan abre un asalto y entre todos le bajan la vida â€” no hace falta estar conectados a la vez.</div>
+    <div class="sub">El Dragón de la Guarida no se hace solo. El clan abre un asalto y entre todos le bajan la vida — no hace falta estar conectados a la vez.</div>
     <div class="forge-list" id="clan-list" style="max-height:58vh"></div>
   </div></div>
 
   <div class="ov" id="ov-mapa"><div class="card" style="width:min(520px,94%)">
-    <button class="close" data-close="ov-mapa">Ã—</button>
+    <button class="close" data-close="ov-mapa">×</button>
     <h3>Mapa</h3>
-    <div class="sub">DÃ³nde estÃ¡s y a dÃ³nde podÃ©s ir.</div>
+    <div class="sub">Dónde estás y a dónde podés ir.</div>
     <div class="forge-list" id="mapa-list" style="max-height:58vh"></div>
   </div></div>
 
-  <!-- 14/8: los objetivos como CAPÃTULOS reclamables â€” guÃ­a opcional estilo diario de misiones -->
+  <!-- 14/8: los objetivos como CAPÍTULOS reclamables — guía opcional estilo diario de misiones -->
   <div class="ov" id="ov-objetivos"><div class="card" style="width:min(560px,94%)">
-    <button class="close" data-close="ov-objetivos">Ã—</button>
-    <h3>ðŸŽ¯ Objetivos</h3>
-    <div class="sub">Una guÃ­a, no una obligaciÃ³n: seguila cuando quieras. EnseÃ±a lo bÃ¡sico de la granja â€” no da premios.</div>
+    <button class="close" data-close="ov-objetivos">×</button>
+    <h3>🎯 Objetivos</h3>
+    <div class="sub">Una guía, no una obligación: seguila cuando quieras. Enseña lo básico de la granja — no da premios.</div>
     <div class="forge-list" id="objetivos-list" style="max-height:58vh"></div>
   </div></div>
 
   <div class="ov" id="ov-pass"><div class="card" style="width:min(680px,94%)">
-    <button class="close" data-close="ov-pass">Ã—</button>
-    <h3>Pase de Batalla â€” Temporada 1</h3>
+    <button class="close" data-close="ov-pass">×</button>
+    <h3>Pase de Batalla — Temporada 1</h3>
     <div class="forge-list" id="pass-list" style="max-height:64vh"></div>
   </div></div>
 
   <div class="ov" id="ov-cos"><div class="card" style="width:min(560px,94%)">
-    <button class="close" data-close="ov-cos">Ã—</button>
-    <h3>CosmÃ©ticos</h3>
-    <div class="sub">Lo que ganaste jugando: tÃ­tulos, color de nombre, marcos y el aura. ElegÃ­ quÃ© lucir â€” los demÃ¡s jugadores lo ven en el ranking, el chat y la plaza.</div>
+    <button class="close" data-close="ov-cos">×</button>
+    <h3>Cosméticos</h3>
+    <div class="sub">Lo que ganaste jugando: títulos, color de nombre, marcos y el aura. Elegí qué lucir — los demás jugadores lo ven en el ranking, el chat y la plaza.</div>
     <div class="forge-list" id="cos-list" style="max-height:58vh"></div>
   </div></div>
 
   <div class="ov" id="ov-p2p"><div class="card" style="width:min(680px,94%)">
-    <button class="close" data-close="ov-p2p">Ã—</button>
+    <button class="close" data-close="ov-p2p">×</button>
     <h3>Mercado de jugadores</h3>
-    <div class="sub">PublicÃ¡ lo que te sobra y compralo a otros granjeros. El cobro te espera acÃ¡: cuando alguien te compra algo, volvÃ©s y retirÃ¡s la plata (comisiÃ³n del 5%, que se quema).</div>
+    <div class="sub">Publicá lo que te sobra y compralo a otros granjeros. El cobro te espera acá: cuando alguien te compra algo, volvés y retirás la plata (comisión del 5%, que se quema).</div>
     <div class="shoptabs">
       <button class="shoptab active" data-p2p="comprar">Comprar</button>
       <button class="shoptab" data-p2p="vender">Vender</button>
@@ -818,67 +822,67 @@
   </div></div>
 
   <div class="ov" id="ov-incursion"><div class="card" style="width:min(600px,94%)">
-    <button class="close" data-close="ov-incursion">Ã—</button>
-    <h3>IncursiÃ³n</h3>
-    <div class="sub">MandÃ¡ al granjero a pelear solo: tarda tiempo real y vuelve con botÃ­n y XP. Rinde menos que pelear a mano, gasta durabilidad y estamina, y si vas flojo de poder volvÃ©s herido. Al jefe hay que ir en persona.</div>
+    <button class="close" data-close="ov-incursion">×</button>
+    <h3>Incursión</h3>
+    <div class="sub">Mandá al granjero a pelear solo: tarda tiempo real y vuelve con botín y XP. Rinde menos que pelear a mano, gasta durabilidad y estamina, y si vas flojo de poder volvés herido. Al jefe hay que ir en persona.</div>
     <div class="forge-list" id="inc-list" style="max-height:60vh"></div>
   </div></div>
 
   <div class="ov" id="ov-ofrendas"><div class="card" style="width:min(620px,94%)">
-    <button class="close" data-close="ov-ofrendas">Ã—</button>
+    <button class="close" data-close="ov-ofrendas">×</button>
     <h3>Altar de Ofrendas</h3>
-    <div class="sub">EntregÃ¡ recursos y se queman para siempre a cambio de Puntos de Ofrenda. El pozo del airdrop es FIJO y se reparte proporcionalmente entre todos: entregar mÃ¡s no crea mÃ¡s token, solo cambia tu porciÃ³n.</div>
+    <div class="sub">Entregá recursos y se queman para siempre a cambio de Puntos de Ofrenda. El pozo del airdrop es FIJO y se reparte proporcionalmente entre todos: entregar más no crea más token, solo cambia tu porción.</div>
     <div class="forge-list" id="ofr-list" style="max-height:60vh"></div>
   </div></div>
 
   <div class="ov" id="ov-curtiduria"><div class="card" style="width:min(660px,94%)">
-    <button class="close" data-close="ov-curtiduria">Ã—</button>
-    <h3>CurtidurÃ­a</h3>
-    <div class="sub">La contraparte defensiva de la HerrerÃ­a. Cada set son 5 piezas: podÃ©s usar sueltas (defensa parcial) y completar las 5 activa el bono del set. El material sale de los animales del Establo.</div>
+    <button class="close" data-close="ov-curtiduria">×</button>
+    <h3>Curtiduría</h3>
+    <div class="sub">La contraparte defensiva de la Herrería. Cada set son 5 piezas: podés usar sueltas (defensa parcial) y completar las 5 activa el bono del set. El material sale de los animales del Establo.</div>
     <div class="forge-list" id="curti-list" style="max-height:62vh"></div>
   </div></div>
 
   <!-- GOD HAND 2.0 (fixs.docx #19, 11/8): el inventario del cropper NFT -->
   <div class="ov" id="ov-godhand"><div class="card" style="width:min(620px,94%)">
-    <button class="close" data-close="ov-godhand">Ã—</button>
-    <h3>âœ‹ GOD HAND</h3>
-    <div class="sub">Cargale semillas (6 espacios Â· 50 c/u Â· 300 en total) y mientras no estÃ¡s hace el ciclo entero: siembra, cosecha y resiembra tus parcelas vacÃ­as. Al volver te entrega todo junto. Cobra 100 de plata la primera hora y cada hora sale 10% mÃ¡s â€” trabaja hasta 24 h por ausencia.</div>
+    <button class="close" data-close="ov-godhand">×</button>
+    <h3>✋ GOD HAND</h3>
+    <div class="sub">Cargale semillas (6 espacios · 50 c/u · 300 en total) y mientras no estás hace el ciclo entero: siembra, cosecha y resiembra tus parcelas vacías. Al volver te entrega todo junto. Cobra 100 de plata la primera hora y cada hora sale 10% más — trabaja hasta 24 h por ausencia.</div>
     <div class="forge-list" id="godhand-list" style="max-height:62vh"></div>
   </div></div>
 
   <div class="ov" id="ov-establo"><div class="card" style="width:min(620px,94%)">
-    <button class="close" data-close="ov-establo">Ã—</button>
+    <button class="close" data-close="ov-establo">×</button>
     <h3>Establo</h3>
-    <div class="sub">ComprÃ¡ el animal con $Golden, alimentalo con su cultivo preferido y recogÃ© su material. Cuanto mÃ¡s feliz, mÃ¡s produce â€” y con ese material se craftean las armaduras en la CurtidurÃ­a.</div>
+    <div class="sub">Comprá el animal con $Golden, alimentalo con su cultivo preferido y recogé su material. Cuanto más feliz, más produce — y con ese material se craftean las armaduras en la Curtiduría.</div>
     <div class="forge-list" id="establo-list" style="max-height:62vh"></div>
   </div></div>
 
   <div class="ov" id="ov-altar"><div class="card" style="width:min(640px,94%)">
-    <button class="close" data-close="ov-altar">Ã—</button>
+    <button class="close" data-close="ov-altar">×</button>
     <h3>Altar de Runas</h3>
-    <div class="sub">MejorÃ¡ tus armas de +1 a +15 (con su % de Ã©xito a la vista) y socketeÃ¡ runas de atributo. La esencia rÃºnica la sueltan los mobs fuertes de la Zona Negra.</div>
+    <div class="sub">Mejorá tus armas de +1 a +15 (con su % de éxito a la vista) y socketeá runas de atributo. La esencia rúnica la sueltan los mobs fuertes de la Zona Negra.</div>
     <div class="forge-list" id="altar-list" style="max-height:60vh"></div>
   </div></div>
 
   <div class="ov" id="ov-horno"><div class="card" style="width:min(460px,94%)">
-    <button class="close" data-close="ov-horno">Ã—</button>
+    <button class="close" data-close="ov-horno">×</button>
     <h3>Horno de Piedra</h3>
-    <div class="sub">AcÃ¡ se funden todos los lingotes y barras. Cada fundiciÃ³n tiene un enfriamiento.</div>
+    <div class="sub">Acá se funden todos los lingotes y barras. Cada fundición tiene un enfriamiento.</div>
     <div class="forge-list" id="horno-mats"></div>
   </div></div>
 
-  <!-- confirmaciÃ³n al tirar a la papelera (Ãºltimo en el DOM: queda por encima del inventario) -->
+  <!-- confirmación al tirar a la papelera (último en el DOM: queda por encima del inventario) -->
   <div class="ov" id="ov-confirm"><div class="card" style="width:min(330px,90%)">
     <h3 id="cf-title">Tirar a la papelera</h3>
     <div class="sub" id="cf-msg" style="margin-bottom:14px"></div>
     <div class="row" style="justify-content:center;gap:10px"><button class="red" id="cf-yes">Tirar</button><button class="ghost sm" id="cf-no">Cancelar</button></div>
   </div></div>
 
-  <!-- menÃº -->
+  <!-- menú -->
   <div class="gmenu collapsed" id="gmenu">
     <div class="gmitems">
       <button class="gmi" data-panel="ov-mapa"><span class="ic"></span> Mapa <b class="key">N</b></button>
-      <button class="gmi" data-panel="ov-objetivos"><span class="ic">ðŸŽ¯</span> Objetivos</button>
+      <button class="gmi" data-panel="ov-objetivos"><span class="ic">🎯</span> Objetivos</button>
       <button class="gmi" data-panel="ov-inv"><span class="ic"></span> Inventario <b class="key">I</b></button>
       <button class="gmi" data-panel="ov-skills"><span class="ic"></span> Skills <b class="key">X</b></button>
       <button class="gmi" data-panel="ov-equip"><span class="ic"></span> Equipo <b class="key">P</b></button>
@@ -887,28 +891,28 @@
       <button class="gmi" data-panel="ov-pass"><span class="ic"></span> Pase de Batalla</button>
       <button class="gmi" data-panel="ov-clan"><span class="ic"></span> Clan</button>
       <button class="gmi" data-panel="ov-p2p"><span class="ic"></span> Mercado de jugadores</button>
-      <button class="gmi" data-panel="ov-cos"><span class="ic"></span> CosmÃ©ticos</button>
+      <button class="gmi" data-panel="ov-cos"><span class="ic"></span> Cosméticos</button>
       <button class="gmi" data-panel="ov-lb"><span class="ic"></span> Leaderboard <b class="key">L</b></button>
-      <button class="gmi" data-panel="ov-config"><span class="ic"></span> ConfiguraciÃ³n <b class="key">C</b></button>
-      <!-- fixs.docx #10 (11/8): el menÃº puede quedarse desplegado -->
-      <button class="gmi" id="gm-fijar"><span class="ic"></span> ðŸ“Œ MenÃº fijo: No</button>
+      <button class="gmi" data-panel="ov-config"><span class="ic"></span> Configuración <b class="key">C</b></button>
+      <!-- fixs.docx #10 (11/8): el menú puede quedarse desplegado -->
+      <button class="gmi" id="gm-fijar"><span class="ic"></span> 📌 Menú fijo: No</button>
     </div>
   </div>
 
-  <!-- rueda de sembrado rÃ¡pido (clic derecho sobre una parcela seca) -->
+  <!-- rueda de sembrado rápido (clic derecho sobre una parcela seca) -->
   <div id="seedwheel"><div class="swc"></div></div>
 
-  <!-- barra flotante del modo ediciÃ³n -->
+  <!-- barra flotante del modo edición -->
   <div id="editbar">
-    <button class="green sm" id="edit-done">Terminar ediciÃ³n</button>
-    <button class="ghost sm" id="edit-reset">â†º Restaurar</button>
-    <!-- 10/8: desde el modo ediciÃ³n se ponen y se levantan los adornos comprados -->
+    <button class="green sm" id="edit-done">Terminar edición</button>
+    <button class="ghost sm" id="edit-reset">↺ Restaurar</button>
+    <!-- 10/8: desde el modo edición se ponen y se levantan los adornos comprados -->
     <select id="edit-deco" title="Adorno para colocar"></select>
     <button class="gold sm" id="edit-poner">Poner adorno</button>
-    <!-- fix #17 (11/8): las parcelas compradas se colocan a mano desde acÃ¡ -->
+    <!-- fix #17 (11/8): las parcelas compradas se colocan a mano desde acá -->
     <button class="gold sm" id="edit-parcela" style="display:none">Poner parcela</button>
-    <!-- 13/8: mientras estÃ¡s colocando un plano/adorno/parcela: cancelar y volver a como estaba -->
-    <button class="red sm" id="edit-cancelar" style="display:none">âœ• Cancelar</button>
+    <!-- 13/8: mientras estás colocando un plano/adorno/parcela: cancelar y volver a como estaba -->
+    <button class="red sm" id="edit-cancelar" style="display:none">✕ Cancelar</button>
     <span class="fds" id="edit-decons"></span>
   </div>
 
@@ -920,36 +924,36 @@
         <button class="ltab" data-tab="chat">Chat</button>
       </div>
       <div class="logbtns">
-        <button class="logmin" id="logmin">â–¾</button>
+        <button class="logmin" id="logmin">▾</button>
       </div>
     </div>
     <div class="logbody">
       <div id="log" class="pane"></div>
       <div id="chatpane" class="pane" style="display:none">
         <div id="chat-msgs"></div>
-        <div class="chatbar"><input id="chat-in" maxlength="140" placeholder="EscribÃ­ y Enterâ€¦" autocomplete="off"><button id="chat-send">â–¶</button></div>
+        <div class="chatbar"><input id="chat-in" maxlength="140" placeholder="Escribí y Enter…" autocomplete="off"><button id="chat-send">▶</button></div>
       </div>
     </div>
   </div>
   <div id="hotwrap"><div id="hotbar"></div></div>
   <div id="saveind"><span class="sdot"></span><span class="stxt"></span></div>
 
-  <!-- pantalla de carga ÃšNICA: se queda hasta que la granja estÃ¡ lista de verdad.
+  <!-- pantalla de carga ÚNICA: se queda hasta que la granja está lista de verdad.
        Antes se iba antes de tiempo y quedaba el canvas cargando por su cuenta, con la ventana
-       del cofre diario abriÃ©ndose encima de un juego a medio armar. -->
+       del cofre diario abriéndose encima de un juego a medio armar. -->
   <div id="loading" style="position:fixed;inset:0;z-index:120;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:18px;background:#243318;color:#e2b23a;font:800 20px/1 system-ui,sans-serif;letter-spacing:2px">
     <div>GOLDEN FARM</div>
     <div style="width:min(260px,60vw);height:14px;border:2px solid #8fc46a;border-radius:8px;background:#2a3a1c;overflow:hidden">
       <i id="ldfill" style="display:block;height:100%;width:4%;background:#8fc46a;transition:width .2s"></i>
     </div>
-    <div id="ldmsg" style="font:600 13px/1 system-ui,sans-serif;letter-spacing:.5px;color:#c9b98a">Preparando tu granjaâ€¦</div>
+    <div id="ldmsg" style="font:600 13px/1 system-ui,sans-serif;letter-spacing:.5px;color:#c9b98a">Preparando tu granja…</div>
   </div>
 
   <!-- gate de apodo (oculto hasta saber si sos jugador nuevo) -->
   <div id="gate" style="display:none">
     <div class="gcard">
       <h1>GOLDEN FARM</h1>
-      <p>ElegÃ­ un apodo para entrar a tu granja.</p>
+      <p>Elegí un apodo para entrar a tu granja.</p>
       <input id="nick" maxlength="14" placeholder="Tu apodo" autocomplete="off">
       <button class="enter" id="enter">Entrar</button>
     </div>
@@ -960,16 +964,16 @@
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
   <script type="module">
     try { const mod = await import("https://esm.sh/colyseus.js@0.15"); window.Colyseus = mod; window.__colyseusReady = true; window.dispatchEvent(new Event("colyseus-ready")); }
-    catch (e) { console.error("colyseus.js no cargÃ³:", e); }
+    catch (e) { console.error("colyseus.js no cargó:", e); }
   </script>
   <script>
   /* Cargador con reintentos: el server free de Render a veces corta conexiones.
      Carga los scripts del juego EN FILA (uno por vez) y reintenta cada uno hasta 8 veces. */
   (function () {
-    // 15/8: VERSIÃ“N DE BUILD â€” rompe la cachÃ© del navegador en cada deploy (sin esto, el
-    // jugador seguÃ­a corriendo el state.js viejo aunque el servidor tuviera el nuevo).
+    // 15/8: VERSIÓN DE BUILD — rompe la caché del navegador en cada deploy (sin esto, el
+    // jugador seguía corriendo el state.js viejo aunque el servidor tuviera el nuevo).
     // deploy.bat la actualiza sola (busca GF_BUILD y pone la fecha/hora del deploy).
-    const GF_BUILD = "20260815-1905";
+    const GF_BUILD = "20260815-1917";
     const files = ["game/config.js","game/nav.js","game/audio.js","game/state.js","game/balance.js","game/save.js","game/ui.js","game/boot.js",
                    "game/farm.js","game/forest.js","game/plaza.js","game/main.js","game/update.js"];
     let i = 0;
@@ -984,7 +988,7 @@
         const r = (retry || 0) + 1;
         if (r > 8) {
           const el = document.getElementById("loading");
-          if (el) el.innerHTML += "<div style='color:#ffd24a;font-size:13px;margin-top:8px'>El servidor estÃ¡ despertandoâ€¦ <a href='' style='color:#8fc46a'>recargÃ¡ la pÃ¡gina</a></div>";
+          if (el) el.innerHTML += "<div style='color:#ffd24a;font-size:13px;margin-top:8px'>El servidor está despertando… <a href='' style='color:#8fc46a'>recargá la página</a></div>";
           return;
         }
         setTimeout(function () { next(r); }, 250 * r);   // espera creciente entre reintentos

@@ -3257,6 +3257,11 @@ function buzonCartas() {
   try { buzonArchivar(cartas); } catch (e) {}
   return cartas;
 }
+function buzonBorrar(id, dia) {
+  G.buzonArchivo = (G.buzonArchivo || []).filter(a => !(a.id === id && a.dia === dia));
+  if (typeof saveFarm === "function") saveFarm();
+  if (typeof refreshBuzon === "function") refreshBuzon();
+}
 function buzonLeer(id) { G.buzonLeidas = G.buzonLeidas || {}; G.buzonLeidas[id] = 1; if (typeof saveFarm === "function") saveFarm(); if (typeof refreshBuzon === "function") refreshBuzon(); }
 // ARCHIVO (15/8): toda carta que pasó por el buzón queda guardada 7 días para releerla.
 // Se archiva una vez por día por id (el aviso del cofre de hoy y el de mañana son cartas distintas).
