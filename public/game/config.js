@@ -174,10 +174,13 @@ GF.WORLD_OBJECTS.push(snap("ofrendas", {type:"ofrendas"}, 861, 168, T*2));      
 // a ojo: dx es el corrimiento respecto del CENTRO del sprite (en anchos de sprite) y dy es
 // la altura de la boca contada desde el techo (en altos de sprite). Si el arte cambia, se
 // vuelven a medir estos dos números y el humo sigue saliendo del caño.
+// 14/8: offsets RE-MEDIDOS sobre los PNG del set mercadillo (script de silueta: la
+// chimenea es el pico más alto del contorno alfa). El set nuevo cambió los lados:
+// la cocina la tiene a la DERECHA (antes izquierda) y la herrería a la IZQUIERDA.
 GF.CHIMENEA = {
-  cocina: { dx: -0.314, dy: 0.01 },   // caño de ladrillo, a la izquierda del techo
-  store:  { dx:  0.299, dy: 0.01 },   // herrería: caño de piedra, a la derecha
-  horno:  { dx:  0.005, dy: 0.01 },   // horno de piedra: caño centrado arriba de la cúpula
+  cocina: { dx:  0.312, dy: 0.01 },   // caño a la derecha del techo curvo
+  store:  { dx: -0.249, dy: 0.01 },   // herrería mercadillo: chimenea a la izquierda
+  horno:  { dx:  0.005, dy: 0.01 },   // horno: centrado (el arte no cambió)
 };
 
 // ANIMALES SUELTOS (9/8): andan por toda la granja, no encerrados en un patio.
