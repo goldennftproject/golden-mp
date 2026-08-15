@@ -1355,7 +1355,13 @@ function tutoEvent(tipo) {
   const acepta = st.id === tipo;
   if (!acepta) return;
   G.tuto.n = (G.tuto.n || 0) + 1;
-  if (G.tuto.n < st.n) { if (typeof tutoRefresh === "function") tutoRefresh(); return; }
+  if (G.tuto.n < st.n) {
+    // 14/8 v3: el capataz REACCIONA en vivo a cada acción del paso ("¡Bien! 2/3")
+    const gritos = ["¡Bien!", "¡Eso!", "¡Muy bien!", "¡Así se hace!"];
+    G._capReact = gritos[(G.tuto.n - 1) % gritos.length];
+    if (typeof tutoRefresh === "function") tutoRefresh();
+    return;
+  }
   tutoDone(st);
 }
 function tutoDone(st) {
@@ -1375,6 +1381,7 @@ function tutoDone(st) {
   } else {
     tutoAutoSkip();   // si el paso nuevo ya estaba cumplido, no lo pide (9/8)
     if (G.tuto.done) { if (typeof tutoRefresh === "function") tutoRefresh(); return; }
+    G._capReact = "¡Perfecto!";   // 14/8 v3: el paso cumplido se celebra al presentar el siguiente
     log("Nuevo objetivo: " + tutoTxt(TUTO_STEPS[G.tuto.step]) + ".", "good");
     if (typeof planosSync === "function") planosSync(false);   // 13/8: si el paso nuevo trae plano, cae ACÁ (con su celebración)
   }

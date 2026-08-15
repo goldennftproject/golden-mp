@@ -2313,6 +2313,14 @@ Onboarding rediseñado desde cero alrededor de una VOZ y un TABLÓN (v1 para tes
   `cam.worldView`, no de `scroll` (difieren cuando hay zoom). Y decisión de dirección:
   en el MUNDO ya no hay flecha triangular — el círculo de luz es el ÚNICO señalador
   (la flecha DOM sigue viva dentro de interfaces y sobre la barra rápida).
+- **v5 (dirección: "que TODO el tutorial sea en diálogos")**: el cartel Pedido MURIÓ —
+  el capataz es el único canal de guía. Su burbuja es PERSISTENTE (muestra siempre la
+  instrucción del momento con el progreso: "Plantá tus 3 papas <b>2/3</b>") y REACCIONA
+  en vivo a cada acción: gritos rotativos por unidad ("¡Bien!", "¡Eso!", "¡Muy bien!",
+  "¡Así se hace!") y "¡Perfecto!" al presentar el paso siguiente. Las intros de capítulo
+  pisan la instrucción al entrar (misma burbuja) y la primera acción las reemplaza. Clic
+  en la burbuja la achica a la CARITA (chip) — la guía nunca desaparece, solo se hace
+  chiquita; otro clic la reabre. Con la guía apagada o terminada, el capataz se calla.
 - **v4 (dirección: "el foco debe estar sobre la cosa, inmóvil, más allá de la cámara")**:
   el foco pasó de pantalla a MUNDO — manto oscuro sobre toda la granja con el agujero
   anclado al objeto en coordenadas de mundo (máscara de geometría invertida,

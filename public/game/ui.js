@@ -788,15 +788,20 @@ function refreshCooking() {
 /* ---- Tutorial guiado (doc maestro 2/8): cartel de objetivo + tilde animado ---- */
 function tutoRefresh() {
   const el = document.getElementById("tuto"); if (!el) return;
+  el.classList.add("hidden");   // 14/8 v3: el cartel Pedido MURIÓ — la guía habla por el capataz
   const st = (typeof tutoActivo === "function") ? tutoActivo() : null;
-  if (!st || (window.guiaOn && !guiaOn())) { el.classList.add("hidden"); if (typeof tutoFlechaUI === "function") tutoFlechaUI(null); return; }   // 14/8: guía opcional
-  el.classList.remove("hidden");
-  // 13/8 v3: si hay SUB-OBJETIVO (sin hachas, pico roto…), el cartel muestra ESO
+  if (!st || (window.guiaOn && !guiaOn())) { if (typeof capatazOcultar === "function") capatazOcultar(); if (typeof tutoFlechaUI === "function") tutoFlechaUI(null); tutoHighlight(); return; }
+  // 13/8 v3: si hay SUB-OBJETIVO (sin hachas, pico roto…), la guía dice ESO
   const sub = (typeof tutoSub === "function") ? tutoSub() : null;
-  document.getElementById("tuto-txt").textContent = sub ? sub.txt : tutoTxt(st);
   const need = tutoNeed(st);
-  document.getElementById("tuto-n").textContent = sub ? "" : (st.res ? " " + Math.min(tutoTiene(st), need) + "/" + need
-    : (st.n > 1 ? " " + Math.min(G.tuto.n || 0, st.n) + "/" + st.n : ""));
+  let prog = "";
+  if (!sub) {
+    if (st.res) { const tng = Math.min(tutoTiene(st), need); if (tng > 0) prog = " <b>" + tng + "/" + need + "</b>"; }
+    else if (st.n > 1) { const n = Math.min(G.tuto.n || 0, st.n); if (n > 0) prog = " <b>" + n + "/" + st.n + "</b>"; }
+  }
+  const pre = G._capReact ? "<b>" + G._capReact + "</b> " : "";
+  G._capReact = "";   // la reacción se dice una vez y no se repite en cada refresco
+  if (typeof capatazDecir === "function") capatazDecir(pre + (sub ? sub.txt : tutoTxt(st)) + prog);
   tutoHighlight();
 }
 // 13/8 (audio): la guía DENTRO de las interfaces es una FLECHA dorada (la misma estética
@@ -884,8 +889,6 @@ function tutoSync(force) {
   if (typeof tutoAutoSkip === "function") { try { tutoAutoSkip(); } catch (e) {} }
   // 14/8: el ADELANTO del paso activo (idempotente — una vez por paso, cubre migraciones y F5)
   if (typeof tutoAdelanto === "function") { try { tutoAdelanto(); } catch (e) {} }
-  // …y la línea del capataz del capítulo activo (una sola vez por capítulo)
-  if (typeof capatazSync === "function") { try { capatazSync(); } catch (e) {} }
   const st = (typeof tutoActivo === "function") ? tutoActivo() : null;
   // 13/8 v3: el sub-objetivo entra a la firma — cuando aparece o se resuelve, cartel y flechas se redibujan
   const sub = (st && typeof tutoSub === "function") ? tutoSub() : null;
@@ -893,6 +896,9 @@ function tutoSync(force) {
   if (!force && sig === _tutoSig) { tutoHighlight(); return; }   // 13/8: el resaltado se re-aplica aunque el paso no cambie (los paneles se redibujan y lo pierden)
   _tutoSig = sig;
   tutoRefresh();
+  // la INTRO del capítulo va DESPUÉS del refresco: así pisa la instrucción al entrar a un
+  // capítulo nuevo (es la misma burbuja) y la primera acción del jugador la reemplaza
+  if (typeof capatazSync === "function") { try { capatazSync(); } catch (e) {} }
   if (window.farmScene && window.farmScene.updateTutoArrow) { try { window.farmScene.updateTutoArrow(); } catch (e) {} }
 }
 window.tutoSync = tutoSync;
@@ -1057,51 +1063,26 @@ function raidBotin(parte) {
 }
 
 /* ---- MAPA (10/8): dónde estás y a dónde podés ir ---- */
-/* ---- EL CAPATAZ (14/8): la VOZ del juego — burbujas de una línea, de a una, cada una
-   se muestra UNA sola vez por partida (G.capVisto). Clic para cerrar; si hay cola, sigue. */
-let _capCola = [], _capTimer = null;
-function capataz(clave, txt) {
+/* ---- EL CAPATAZ (14/8 v3, dirección): TODO el tutorial es DIÁLOGO — el capataz es el
+   único canal de guía, la burbuja es PERSISTENTE y reacciona en vivo a cada acción
+   ("¡Bien! Te faltan 2"). El cartel Pedido murió. Clic en la burbuja la achica a la
+   carita (chip); clic en la carita la vuelve a abrir. */
+function capatazDecir(html) {
+  const el = $("capataz"); if (!el) return;
+  $("capataz-txt").innerHTML = html;
+  el.classList.remove("hidden");
+}
+function capatazOcultar() { const el = $("capataz"); if (el) el.classList.add("hidden"); }
+function capataz(clave, txt) {   // líneas de UNA vez (planos, caña, hitos): pisan la guía un rato
   G.capVisto = G.capVisto || {};
   if (clave && G.capVisto[clave]) return;
   if (clave) G.capVisto[clave] = 1;
-  _capCola.push(txt);
-  _capMostrar();
-}
-function _capMostrar() {
-  const el = $("capataz"); if (!el) return;
-  if (!el.classList.contains("hidden")) return;   // ya hay una en pantalla: la cola espera
-  const txt = _capCola.shift(); if (!txt) return;
-  $("capataz-txt").innerHTML = txt;
-  el.classList.remove("hidden");
-  { const tu = $("tuto"); if (tu) tu.style.visibility = "hidden"; }   // la burbuja ocupa el lugar del cartel
+  capatazDecir(txt);
   if (window.sfx) sfx("click");
-  // 14/8 v2 (playtest: "apareció unos segundos y desapareció"): la burbuja QUEDA hasta
-  // que la toques — una instrucción no puede evaporarse sola. Cerrar es un clic.
-}
-function _capCerrar() {
-  const el = $("capataz"); if (!el) return;
-  el.classList.add("hidden");
-  { const tu = $("tuto"); if (tu) tu.style.visibility = ""; }   // vuelve el cartel Pedido
-  clearTimeout(_capTimer);
-  if (_capCola.length) setTimeout(_capMostrar, 350);
 }
 window.capataz = capataz;
-// volver a escuchar la línea del capítulo activo: clic en el cartel "Pedido" de arriba
-function capatazRepetir() {
-  if (typeof TUTO_CAPS === "undefined" || !G.tuto) return;
-  const idx = G.tuto.done ? -1 : (G.tuto.step || 0);
-  for (const cap of TUTO_CAPS) {
-    const idxs = cap.pasos.map(id => tutoIdx(id)).filter(i => i >= 0);
-    if (idx >= Math.min.apply(null, idxs) && idx <= Math.max.apply(null, idxs)) {
-      if (CAP_LINEAS[cap.id]) { _capCola.push(CAP_LINEAS[cap.id]); _capMostrar(); }
-      return;
-    }
-  }
-}
-// los scripts del juego se cargan DESPUÉS de DOMContentLoaded (inyección dinámica), así
-// que el enganche va directo — el DOM ya existe cuando este archivo corre (bug 14/8)
-{ const el = $("capataz"); if (el) el.onclick = _capCerrar;
-  const tu = $("tuto"); if (tu) tu.onclick = capatazRepetir; }   // el cartel repite al capataz
+// clic: se achica a la carita (nunca desaparece — es la guía); otro clic la reabre
+{ const el = $("capataz"); if (el) el.onclick = () => el.classList.toggle("mini"); }
 
 /* ---- OBJETIVOS por capítulos (14/8): la guía opcional con forma de diario ---- */
 function refreshObjetivos() {
