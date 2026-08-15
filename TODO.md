@@ -4,6 +4,11 @@
 
 ## 🔴 Inmediato
 
+- [ ] **⚠ Estacionamiento en el tutorial acelerado (14/8)**: con TODAS las esperas en 3 s
+  durante la guía completa, un jugador podría no cumplir a propósito un paso tardío de
+  acción (p.ej. quedarse antes de "socketeá la runa") y farmear acelerado sin límite.
+  Vigilar en playtests; mitigación fácil si pasa: acelerar solo hasta cierto capítulo, o
+  límite de días con tutorial abierto.
 - [ ] **Ojo con los KITS ahora que la guía es opcional (14/8)**: el kit entrega "lo que
   falte" al entrar a cada paso — un jugador astuto podría vaciarse a propósito (vender
   madera antes de llegar al paso de madera) para inflar el kit. Es una vez por paso y
