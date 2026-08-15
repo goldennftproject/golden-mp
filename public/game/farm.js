@@ -1193,9 +1193,17 @@ class FarmScene extends Phaser.Scene {
         // 14/8: el boost del tutorial aplica a CUALQUIER cultivo (antes solo papa) — el
         // sub-objetivo puede mandar a cebolla/zanahoria y tienen que crecer acelerados igual
         const boost = (typeof tutoBoost === "function") ? tutoBoost("papa") : 1;
-        const real = cd.grow * 1000 * cdMult() * boost;
-        // 14/8 v3: los cultivos NO se aceleran en el tutorial (era la imprenta de plata del
-        // estacionamiento) — las 3 del arranque ya crecen en 45 s por FIRST_GROW
+        let real = cd.grow * 1000 * cdMult() * boost;
+        // 14/8 v4: siembra "DEL PLAN" — si el sub de plata está activo y la proyección
+        // (plata + bolsa + creciendo) aún NO cubre su meta, esta siembra corre a 3 s.
+        // Cubierta la meta: tiempo real + aviso (la contabilidad la lleva tutoAvisoCubierto)
+        if (typeof subPlataMeta === "function") {
+          const meta = subPlataMeta();
+          if (meta > 0) {
+            if (typeof plataProyectada === "function" && plataProyectada() < meta) real = TUTO_ESPERA_SEG * 1000;
+            else toast("🎯 Ya cubrís los " + meta + " de plata con lo plantado — esta crece a tiempo normal");
+          }
+        }
         const starter = (G.firstSeeds || 0) > 0 && FIRST_GROW_MS > 0;   // solo las semillas del starter pack
         if (starter) G.firstSeeds--;
         o.readyAt = nowMs() + (starter ? Math.min(FIRST_GROW_MS, real) : real);   // nunca más lento que el tiempo real del cultivo

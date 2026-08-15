@@ -2308,6 +2308,14 @@ Se probó y no cuajó. Vuelve el sistema anterior, más simple y más honesto:
   paso lo avanza solo, no hay dónde estacionarse; y vender lo acelerado es a pérdida
   (madera sale 3, el hacha 10). Verificado paso a paso: solo 7 de los 19 pasos aceleran
   algo, cada uno lo suyo, y al completar el tutorial todo queda a tiempo real.
+- **v4 (dirección: el desvío de plata también acelera, pero con CONTROL contable)**: si
+  el sub-objetivo pide plata (ej. "te faltan 20 hachas — 200 de plata"), las siembras
+  "DEL PLAN" corren a 3 s mientras la PROYECCIÓN no cubra la meta: proyección = plata en
+  mano + cosecha en bolsa + lo que está creciendo (atesorar cuenta → no hay imprenta).
+  Cubierta la meta: las siembras extra van a tiempo real con aviso al plantar, y suena
+  el AVISO único "🎯 con lo plantado y tu bolsa ya cubrís los X — cosechá y vendé"
+  (`plataProyectada`/`subPlataMeta`/`tutoAvisoCubierto`, chequeado por segundo en
+  tutoSync). Contabilidad verificada con 3 escenarios.
 - **v3 (playtest: "talé entre planos y el árbol quedó 2 min enfriándose")**: los
   enfriamientos YA CORRIENDO también se recortan — si el paso activo pide ese recurso,
   el update de la escena baja en vivo cualquier readyAt a ≤3 s (una tala hecha fuera de

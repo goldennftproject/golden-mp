@@ -867,6 +867,7 @@ window.tutoHighlight = tutoHighlight;
 let _tutoSig = null;
 function tutoSync(force) {
   if (typeof tutoCheckRes === "function") tutoCheckRes();   // pasos de "juntá X de madera/piedra/plata"
+  if (typeof tutoAvisoCubierto === "function") { try { tutoAvisoCubierto(); } catch (e) {} }   // 14/8 v4: "ya cubrís la meta" (una vez por meta)
   // ...y también los pasos de HACER algo: si construiste la Cocina antes de que el tutorial
   // te la pidiera, el paso se salta solo en vez de quedar pidiendo algo ya hecho (9/8)
   if (typeof tutoAutoSkip === "function") { try { tutoAutoSkip(); } catch (e) {} }

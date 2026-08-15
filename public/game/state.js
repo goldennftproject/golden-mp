@@ -207,6 +207,33 @@ function tutoAcelerado(tipo) {
   };
   return (mapa[tipo] || []).includes(st.id);
 }
+/* 14/8 v4 (dirección): el DESVÍO de plata también acelera, pero con CONTABILIDAD —
+   una siembra corre a 3 s solo si la PROYECCIÓN (plata + cosecha en bolsa + lo que está
+   creciendo) todavía no cubre la meta del sub. Cubierta la meta: siembras a tiempo real
+   y AVISO de "ya te alcanza". Atesorar cuenta en la proyección → no hay imprenta. */
+function plataProyectada() {
+  let p = Math.floor(G.plata || 0);
+  for (const k in CROP_DEF) p += Math.floor(G.res[k] || 0) * (CROP_DEF[k].price || 0);   // cosecha en bolsa
+  if (Array.isArray(G.plots)) for (const pl of G.plots) {
+    if (pl && pl.state === "growing" && pl.cropKey && CROP_DEF[pl.cropKey]) p += CROP_DEF[pl.cropKey].price || 0;
+  }
+  return p;
+}
+function subPlataMeta() {   // meta del sub de plata activo (0 si no hay)
+  const sub = (typeof tutoSub === "function") ? tutoSub() : null;
+  return (sub && sub.plata && sub.meta) ? sub.meta : 0;
+}
+// aviso ÚNICO por meta: "con lo plantado ya cubrís los X" (lo llama tutoSync cada segundo)
+function tutoAvisoCubierto() {
+  const meta = subPlataMeta();
+  if (!meta) { G._cubAviso = 0; return; }
+  if (G._cubAviso === meta) return;
+  if (plataProyectada() >= meta) {
+    G._cubAviso = meta;
+    toast("🎯 Con lo plantado y tu bolsa ya cubrís los " + meta + " de plata — cosechá y vendé");
+    log("Con lo que está creciendo y lo que tenés en la bolsa ya llegás a los " + meta + " de plata del objetivo.", "good");
+  }
+}
 function nodoCd(o, clave, cdLargo) {
   if (tutoAcelerado(clave)) return TUTO_ESPERA_SEG;
   const r = CD_RAPIDO[clave];
@@ -435,19 +462,19 @@ function tutoSubPlata(prefijo, meta) {
   if (conStock) {
     const n = Math.floor(G.res[conStock]), cd = CROP_DEF[conStock];
     const alcanza = meta && (G.plata + n * (cd.price || 0)) >= meta;
-    return { plata: true, txt: prefijo + "vendé tus " + n + " " + (cd.label || conStock).toLowerCase() + (n > 1 ? "s" : "") + (alcanza ? " — con eso alcanza" : ""),
+    return { plata: true, meta: meta || 0, txt: prefijo + "vendé tus " + n + " " + (cd.label || conStock).toLowerCase() + (n > 1 ? "s" : "") + (alcanza ? " — con eso alcanza" : ""),
       target: "market", panel: "ov-market", ui: "#vb-" + conStock, permite: ["plant", "harvest", "sell", "buyseed", "plotunlock"] };
   }
   const plots = Array.isArray(G.plots) ? G.plots : [];
   const listos = plots.filter(p => p && p.state === "ready").length;
-  if (listos) return { plata: true, txt: prefijo + "cosechá tus " + listos + " cultivo" + (listos > 1 ? "s" : "") + " listo" + (listos > 1 ? "s" : ""),
+  if (listos) return { plata: true, meta: meta || 0, txt: prefijo + "cosechá tus " + listos + " cultivo" + (listos > 1 ? "s" : "") + " listo" + (listos > 1 ? "s" : ""),
     target: "plot", permite: ["plant", "harvest", "sell", "buyseed", "plotunlock"] };
   // Fixes.docx 14/8 #3: comprar más semillas sigue permitido en estos eslabones — antes,
   // al comprar UNA el sub saltaba a "plantá" y bloqueaba el resto de la tanda (de a 1, feo)
-  if (plots.some(p => p && p.state === "growing")) return { plata: true, txt: prefijo + "tus cultivos están creciendo — cosechalos apenas estén",
+  if (plots.some(p => p && p.state === "growing")) return { plata: true, meta: meta || 0, txt: prefijo + "tus cultivos están creciendo — cosechalos apenas estén",
     target: "plot", permite: ["plant", "harvest", "sell", "buyseed", "plotunlock"] };
   const semillas = Object.keys(G.seeds || {}).reduce((a, k) => a + Math.floor(G.seeds[k] || 0), 0);
-  if (semillas) return { plata: true, txt: prefijo + "plantá tus " + semillas + " semilla" + (semillas > 1 ? "s" : ""),
+  if (semillas) return { plata: true, meta: meta || 0, txt: prefijo + "plantá tus " + semillas + " semilla" + (semillas > 1 ? "s" : ""),
     target: "plot", permite: ["plant", "harvest", "sell", "buyseed", "plotunlock"] };
   // 14/8 (dirección): el plan elige el MEJOR cultivo desbloqueado (mayor ganancia neta por
   // semilla) — cebolla rinde 10 netos contra 2 de la papa: 4-5 tandas en vez de 20. Con el
@@ -468,10 +495,10 @@ function tutoSubPlata(prefijo, meta) {
     const deUna = falta && (G.plata - n * precio + n * (cd.price || 3)) >= meta;
     const nom = (cd.label || mejor).toLowerCase();
     const accion = n > 1 ? "comprá " + n + " semillas de " + nom + " de UNA y plantalas todas" : "comprá 1 semilla de " + nom + " y plantala";
-    return { plata: true, txt: prefijo + accion + (deUna ? " — una tanda y alcanza" : ""),
+    return { plata: true, meta: meta || 0, txt: prefijo + accion + (deUna ? " — una tanda y alcanza" : ""),
       target: "market", panel: "ov-market", ui: "[data-buy='" + mejor + "']", permite: ["plant", "harvest", "sell", "buyseed", "plotunlock"] };
   }
-  return { plata: true, txt: prefijo + "vendé lo que tengas suelto en el Mercado (el guardia protege lo del objetivo)",
+  return { plata: true, meta: meta || 0, txt: prefijo + "vendé lo que tengas suelto en el Mercado (el guardia protege lo del objetivo)",
     target: "market", panel: "ov-market", ui: "#shop-sell", permite: ["plant", "harvest", "sell", "buyseed", "plotunlock", "chop", "mine"] };
 }
 function tutoSub() {
