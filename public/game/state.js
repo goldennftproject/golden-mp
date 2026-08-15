@@ -190,10 +190,19 @@ var CD_RAPIDO = {                                // enfriamiento corto de las pr
 function nodoUsos(o) { G.nodoUsos = G.nodoUsos || {}; return G.nodoUsos[o.i] || 0; }
 function nodoSumar(o) { G.nodoUsos = G.nodoUsos || {}; G.nodoUsos[o.i] = nodoUsos(o) + 1; }
 // enfriamiento que corresponde a este nodo AHORA (en segundos)
+// 14/8 (dirección): la FASE DE ENSEÑANZA va acelerada — hasta el capítulo del Hacha
+// (tope crafttool), árboles y rocas vuelven en SEGUNDOS: esperar 3 min por árbol mata el
+// onboarding. Sin exploit posible: las herramientas de esa fase las da el capataz en
+// cantidades EXACTAS (5 hachas, 2 usos de pico…) — no hay con qué farmear de más.
+// Del Hacha en adelante: tiempos reales del juego.
+var TUTO_CD_ENSENANZA = { tree: 20, piedra: 25 };   // segundos por nodo durante la enseñanza
 function nodoCd(o, clave, cdLargo) {
+  if (G.tuto && !G.tuto.done && TUTO_CD_ENSENANZA[clave] != null && typeof tutoIdx === "function") {
+    const tope = tutoIdx("crafttool");
+    if (tope >= 0 && (G.tuto.step || 0) <= tope) return TUTO_CD_ENSENANZA[clave];
+  }
   const r = CD_RAPIDO[clave];
   if (r && nodoUsos(o) < r.veces) return r.seg;   // todavía está en su etapa de arranque rápido
-  // (14/8: el CD corto "mientras el paso lo pide" se retiró junto con el embudo — guía opcional)
   return cdLargo;
 }
 function seedBuysToday() {

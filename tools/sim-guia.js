@@ -14,6 +14,7 @@ const CROPS = [
 const FARM_XP = [0, 0, 25, 90, 225, 550, 1250, 2750, 5500, 9000, 14000];
 const XP_BASE = 100, XP_EXP = 2.7;   // curva del skill Cultivo (desbloquea cultivos)
 const CDT = { fast: 180, long: 5400, uses: 10 }, CDR = { fast: 240, long: 7200, uses: 10 };
+let ensenanza = true;   // hasta el Hacha (paso 13): nodos en 20/25 s (14/8)
 const NIVEL_ROCAS = [1, 3, 5, 8, 12, 16];
 const UNLOCK_ARBOL = [3, 9, 27];   // madera que cuesta el 2º/3º/4º árbol
 const AXE = 10, PICK = { madera: 3, plata: 10 };
@@ -63,7 +64,7 @@ function talar(n, conKit) {   // junta n maderas; devuelve el tiempo que llevó
     if (mejor < 0) { tick(Math.min.apply(null, arboles)); continue; }
     if (axes <= 0) { if (plata >= AXE) { plata -= AXE; axes++; } else { tick(t + 60); continue; } }
     axes--; madera++; hechas++; usosArbol[mejor]++;
-    arboles[mejor] = t + (usosArbol[mejor] <= CDT.uses ? CDT.fast : CDT.long);
+    arboles[mejor] = t + (ensenanza ? 20 : (usosArbol[mejor] <= CDT.uses ? CDT.fast : CDT.long));
     tick(t + 15);
   }
   return t - ini;
@@ -81,7 +82,7 @@ function picar(n) {
       madera -= PICK.madera; plata -= PICK.plata; picoUsos++;
     }
     picoUsos--; piedra++; hechas++; usosRoca[mejor]++;
-    rocas[mejor] = t + (usosRoca[mejor] <= CDR.uses ? CDR.fast : CDR.long);
+    rocas[mejor] = t + (ensenanza ? 25 : (usosRoca[mejor] <= CDR.uses ? CDR.fast : CDR.long));
     tick(t + 15);
   }
   return t - ini;
@@ -105,6 +106,7 @@ paso(10, "Juntá 10 de madera (Horno)", () => { axes += 10; talar(10); });      
 paso(11, "Juntá 8 de piedra (Horno)", () => { picoUsos += 8; picar(8); });        // kit
 paso(12, "Depositá (Horno listo)", () => { madera -= 10; piedra -= 8; tick(t + 30); });
 paso(13, "Crafteá un Hacha (kit: 10 plata)", () => { plata += Math.max(0, 10 - plata); plata -= 10; axes++; tick(t + 40); });
+ensenanza = false;   // fin de la fase acelerada
 paso(14, "Colocá el plano de la Cocina", () => tick(t + 40));
 paso(15, "Juntá 20 de madera (Cocina)", () => talar(20));   // SIN kit (la ayuda termina en el Hacha)
 paso(16, "Juntá 15 de piedra (Cocina)", () => picar(15));

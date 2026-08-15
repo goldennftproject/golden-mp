@@ -2313,6 +2313,12 @@ Onboarding rediseñado desde cero alrededor de una VOZ y un TABLÓN (v1 para tes
   `cam.worldView`, no de `scroll` (difieren cuando hay zoom). Y decisión de dirección:
   en el MUNDO ya no hay flecha triangular — el círculo de luz es el ÚNICO señalador
   (la flecha DOM sigue viva dentro de interfaces y sobre la barra rápida).
+- **v7 (dirección: "acelerar SOLO la fase de enseñanza")**: hasta el capítulo del Hacha,
+  árboles y rocas vuelven en 20/25 SEGUNDOS (`TUTO_CD_ENSENANZA` en `nodoCd`) — esperar
+  3 min por árbol mataba el onboarding. Sin exploit: las herramientas de esa fase las da
+  el capataz en cantidades exactas, no hay con qué farmear de más. Del Hacha en adelante,
+  tiempos reales. La primera sesión completa (capítulos 1-3) pasa de 45 a **~15 min**
+  (walkthrough simulado); la Cocina en adelante no cambia.
 - **v6 (dirección: "que se ASEGURE de que cumpla lo que pide")**: el capataz verificaba
   el EVENTO (una compra) y no la CANTIDAD — comprabas 1 semilla y ya te mandaba a
   plantar 3. Los cuatro pasos del arranque cuentan de a UNA unidad real: comprar dispara
