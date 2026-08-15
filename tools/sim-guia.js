@@ -5,20 +5,20 @@
    herramientas cuando hacen falta y la plata alcanza. Correr: node tools/sim-guia.js */
 
 const CROPS = [   // 14/8: escalera nueva (papa 90 s)
-  { k: "papa", lvl: 1, seed: 1, price: 3, grow: 90, xp: 9 },
-  { k: "zanahoria", lvl: 2, seed: 3, price: 8, grow: 300, xp: 25 },
-  { k: "cebolla", lvl: 3, seed: 6, price: 16, grow: 600, xp: 50 },
-  { k: "calabacin", lvl: 4, seed: 12, price: 32, grow: 1800, xp: 90 },
-  { k: "repollo", lvl: 5, seed: 20, price: 50, grow: 3600, xp: 150 },
+  { k: "papa", lvl: 1, seed: 1, price: 3, grow: 45, xp: 9 },
+  { k: "zanahoria", lvl: 2, seed: 3, price: 8, grow: 150, xp: 25 },
+  { k: "cebolla", lvl: 3, seed: 6, price: 16, grow: 300, xp: 50 },
+  { k: "calabacin", lvl: 4, seed: 12, price: 32, grow: 900, xp: 90 },
+  { k: "repollo", lvl: 5, seed: 20, price: 50, grow: 1800, xp: 150 },
 ];
 const FARM_XP = [0, 0, 25, 90, 225, 550, 1250, 2750, 5500, 9000, 14000];
 const XP_BASE = 100, XP_EXP = 2.7;   // curva del skill Cultivo (desbloquea cultivos)
-const CDT = { fast: 120, long: 3600, uses: 15 }, CDR = { fast: 180, long: 5400, uses: 15 };   // 14/8 rebalance
+const CDT = { fast: 60, long: 1800, uses: 15 }, CDR = { fast: 90, long: 2700, uses: 15 };   // 14/8 −50%
 let ensenanza = false;   // 14/8: FÍSICA ÚNICA — sin aceleración de tutorial
 const NIVEL_ROCAS = [1, 3, 5, 8, 12, 16];
 const UNLOCK_ARBOL = [3, 9, 27];   // madera que cuesta el 2º/3º/4º árbol
 const AXE = 6, PICK = { madera: 2, plata: 6 };   // 14/8 rebalance
-const FIRST_GROW = 90;   // sin trato especial: papa base
+const FIRST_GROW = 45;   // papa base (−50%)
 
 function skillLvl(xp) { let l = 1, acc = 0, need = XP_BASE; while (xp >= acc + need && l < 50) { acc += need; l++; need = Math.round(XP_BASE * Math.pow(l, XP_EXP)); } return l; }
 function granja(xp) { let l = 1; while (FARM_XP[l + 1] != null && xp >= FARM_XP[l + 1]) l++; return l; }

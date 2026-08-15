@@ -149,16 +149,16 @@ const CROP_DEF = {
   // rápido DE BASE, escalera que duplica hacia arriba (estilo Sunflower Land). El CUPO
   // diario de semillas hace el cambio neutro a inflación: el ingreso máximo POR DÍA no
   // cambia, solo cuán rápido lo alcanzás. ⚠ Números a validar por el diseñador.
-  papa:      { label:"Papa",      emoji:"🥔", lvl:1,  seedCost:1,   growH:0.025, yield:1, price:3,    xp:9 },    // 90 s (era 9 min)
-  zanahoria: { label:"Zanahoria", emoji:"🥕", lvl:2,  seedCost:3,   growH:0.0833, yield:1, price:8,    xp:25 },  // 5 min (era 25)
-  cebolla:   { label:"Cebolla",   emoji:"🧅", lvl:3,  seedCost:6,   growH:0.1667, yield:1, price:16,   xp:50 },  // 10 min (era 50)
-  calabacin: { label:"Calabacín", emoji:"🥒", lvl:4,  seedCost:12,  growH:0.5,  yield:1, price:32,   xp:90 },   // 30 min
-  repollo:   { label:"Repollo",   emoji:"🥬", lvl:5,  seedCost:20,  growH:1,    yield:1, price:50,   xp:150 },  // 1 h
-  calabaza:  { label:"Calabaza",  emoji:"🎃", lvl:6,  seedCost:40,  growH:2,    yield:1, price:100,  xp:270 },  // 2 h
-  brocoli:   { label:"Brócoli",   emoji:"🥦", lvl:7,  seedCost:90,  growH:4,    yield:1, price:210,  xp:480 },  // 4 h
-  girasol:   { label:"Girasol",   emoji:"🌻", lvl:8,  seedCost:180, growH:8,    yield:1, price:420,  xp:720 },  // 8 h
-  trigo:     { label:"Trigo",     emoji:"🌾", lvl:9,  seedCost:360, growH:12,   yield:1, price:840,  xp:1080 }, // 12 h
-  maiz:      { label:"Maíz",      emoji:"🌽", lvl:10, seedCost:720, growH:24,   yield:1, price:1680, xp:1440 },  // 24 h (tope, igual)
+  papa:      { label:"Papa",      emoji:"🥔", lvl:1,  seedCost:1,   growH:0.0125, yield:1, price:3,    xp:9 },    // 45 s (14/8 −50%)
+  zanahoria: { label:"Zanahoria", emoji:"🥕", lvl:2,  seedCost:3,   growH:0.0417, yield:1, price:8,    xp:25 },  // 2,5 min (14/8 −50%)
+  cebolla:   { label:"Cebolla",   emoji:"🧅", lvl:3,  seedCost:6,   growH:0.0833, yield:1, price:16,   xp:50 },  // 5 min (14/8 −50%)
+  calabacin: { label:"Calabacín", emoji:"🥒", lvl:4,  seedCost:12,  growH:0.25, yield:1, price:32,   xp:90 },   // 15 min (−50%)
+  repollo:   { label:"Repollo",   emoji:"🥬", lvl:5,  seedCost:20,  growH:0.5,  yield:1, price:50,   xp:150 },  // 30 min (−50%)
+  calabaza:  { label:"Calabaza",  emoji:"🎃", lvl:6,  seedCost:40,  growH:1,    yield:1, price:100,  xp:270 },  // 1 h (−50%)
+  brocoli:   { label:"Brócoli",   emoji:"🥦", lvl:7,  seedCost:90,  growH:2,    yield:1, price:210,  xp:480 },  // 2 h (−50%)
+  girasol:   { label:"Girasol",   emoji:"🌻", lvl:8,  seedCost:180, growH:4,    yield:1, price:420,  xp:720 },  // 4 h (−50%)
+  trigo:     { label:"Trigo",     emoji:"🌾", lvl:9,  seedCost:360, growH:6,    yield:1, price:840,  xp:1080 }, // 6 h (−50%)
+  maiz:      { label:"Maíz",      emoji:"🌽", lvl:10, seedCost:720, growH:12,   yield:1, price:1680, xp:1440 },  // 12 h (−50% · ⚠ se pierde el ancla nocturna de 24 h — a validar)
 };
 function recomputeCropGrow() { for (const k in CROP_DEF) CROP_DEF[k].grow = Math.round(CROP_DEF[k].growH * 3600 * GROW_SCALE); }
 recomputeCropGrow();   // en segundos, como siempre
@@ -178,16 +178,16 @@ var GOLPES_TALAR = 3, GOLPES_MINAR = 3;   // clics para tumbar un árbol o rompe
 // si dejás un árbol o una piedra a medio golpear y no volvés en este tiempo, se recupera sola
 // y NO se gasta la herramienta: la herramienta solo se descuenta cuando el nodo cae del todo.
 var GOLPES_RESET_MS = 5000;
-var CD = { tree: 3600, rock: 5400 };            // 14/8 rebalance: 1 h el árbol · 1,5 h la piedra (eran 1,5/2)
+var CD = { tree: 1800, rock: 2700 };            // 14/8 −50%: 30 min el árbol · 45 min la piedra
 var CD_RAPIDO = {                                // enfriamiento corto de las primeras veces
   // 10/8: eran las primeras 3 y el diseñador pidió 10, para que el tutorial se pueda terminar
   // sin quedarse esperando el enfriamiento largo del cuarto árbol.
-  tree:      { seg: 120, veces: 15 },            // 14/8: 2 min · las primeras 15 (la tala dominaba la sesión 1)
-  piedra:    { seg: 180, veces: 15 },            // 14/8: 3 min · las primeras 15
-  bronce:    { seg: 360, veces: 2 },             // 6 min · las primeras 2
-  hierro:    { seg: 480, veces: 2 },             // 8 min · las primeras 2
-  oro:       { seg: 720, veces: 1 },             // 12 min · la primera
-  diamante:  { seg: 720, veces: 1 },             // 12 min · la primera
+  tree:      { seg: 60, veces: 15 },             // 14/8 −50%: 1 min · las primeras 15
+  piedra:    { seg: 90, veces: 15 },             // 14/8 −50%: 1,5 min · las primeras 15
+  bronce:    { seg: 180, veces: 2 },             // 14/8 −50%: 3 min · las primeras 2
+  hierro:    { seg: 240, veces: 2 },             // 14/8 −50%: 4 min
+  oro:       { seg: 360, veces: 1 },             // 14/8 −50%: 6 min
+  diamante:  { seg: 360, veces: 1 },             // 14/8 −50%: 6 min
   netherita: { seg: 900, veces: 1 },             // 15 min · la primera
 };
 // cuántas veces se recogió YA de ese nodo (por nodo, no global)

@@ -2303,8 +2303,14 @@ principio, sin ritmo ficticio". El MANIFIESTO completo (todo a validar por el di
 | Aceleración del tutorial | 3 s por paso | **ELIMINADA** | una sola física; FIRST_GROW apagado |
 
 Nota anti-inflación: el CUPO diario de semillas (intacto) hace que la velocidad de los
-cultivos no cambie el ingreso máximo POR DÍA — solo cuán rápido se alcanza. Arco medido
-por walkthrough: sesión 1 = 32 min · Cocina = 75 min · Armas = día 2 · Altar = semana 1.
+cultivos no cambie el ingreso máximo POR DÍA — solo cuán rápido se alcanza.
+
+**−50% adicional (dirección, mismo día)**: todos los tiempos de espera a la mitad —
+papa 45 s, zanahoria 2,5 min … maíz 12 h; árbol 1 min ×15 / 30 min; roca 1,5 min ×15 /
+45 min; vetas también. ⚠ Único punto a validar: el maíz a 12 h pierde el ancla "de un
+día completo" (plantá antes de dormir) — si el diseñador la quiere, es una línea.
+Arco final medido: sesión 1 (hasta el Hacha) = **19 min** · Cocina = **42 min** · Armas
+= **6,4 h** (esa misma noche o día 2) · Minería = **11 h** · Altar = **36 h** (día 2-3).
 
 ### REVERSIÓN DEL CAPATAZ (14/8, dirección: "al final no me gustó — flechitas y sin premios")
 
