@@ -3248,7 +3248,7 @@ function buzonCartas() {
     leer: true });
   try { if (typeof dailyState === "function" && dailyState().claimable) cartas.push({
     id: "cofre", de: "La Granja", titulo: "Tu cofre diario está listo",
-    txt: "Hay insumos esperándote en el cofre de la racha. Si venís todos los días, la racha crece.",
+    txt: "Hay insumos esperándote en el cofre grande junto al buzón. Si venís todos los días, la racha crece.",
     panel: "ov-daily", btn: "Abrir el cofre" }); } catch (e) {}
   try { const n = passPendientes(); if (n > 0) cartas.push({
     id: "pase", de: "El Pase de Cosecha", titulo: n + (n > 1 ? " niveles" : " nivel") + " sin reclamar",

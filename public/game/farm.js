@@ -824,6 +824,7 @@ class FarmScene extends Phaser.Scene {
     if (o.type === "rock") { if (typeof nodoBloqueado === "function" && nodoBloqueado(o)) return "🔒 Veta — se habilita a granja nivel " + nodoNivelReq(o); return cd ? "Vuelve en " + fmtSecs(secs) : "Picar piedra" + gp(GOLPES_MINAR); }
     if (o.type === "ore") { const od = ORE_DEF[o.ore]; if (!od) return "Minar"; if (cd) return od.emoji + " Vuelve en " + fmtSecs(secs); return "Minar " + od.label + gp(GOLPES_MINAR); }
     if (o.type === "buzon") { const n = (typeof buzonCartas === "function") ? buzonCartas().length : 0; return n ? ("Leer el correo (" + n + (n > 1 ? " cartas" : " carta") + ")") : "Buzón — sin cartas"; }
+    if (o.type === "cofre_diario") { try { return dailyState().claimable ? "¡Abrir tu cofre de premios!" : "Cofre de premios — vuelve mañana"; } catch (e) { return "Cofre de premios"; } }
     if (o.type === "barn") return "Granja";
     if (o.type === "market") return "Mercado";
     if (typeof BUILD_DEF !== "undefined" && BUILD_DEF[o.type] && !(G.built && G.built[o.type])) {
@@ -901,6 +902,7 @@ class FarmScene extends Phaser.Scene {
       } else { if (typeof refreshEstablo === "function") refreshEstablo(); openOv("ov-establo"); }
       return;
     }
+    if (o.type === "cofre_diario") return openOv("ov-daily");   // cofre de premios (15/8)
     if (o.type === "buzon") return openOv("ov-buzon");   // buzón (15/8)
     if (o.type === "barn") return openOv("ov-barn");
     if (o.type === "market") return openOv("ov-market");
@@ -2238,6 +2240,17 @@ class FarmScene extends Phaser.Scene {
       o.emoBuzon = this.add.text(o.cx, o.by - (o.sprite.displayHeight || 40) - 6, "✉️", { fontSize: "15px" }).setOrigin(0.5, 1).setDepth(99990);
       this.tweens.add({ targets: o.emoBuzon, y: o.emoBuzon.y - 6, duration: 700, yoyo: true, repeat: -1, ease: "Sine.easeInOut" });
     } else if (n === 0 && o.emoBuzon) { o.emoBuzon.destroy(); o.emoBuzon = null; }
+    // BAÚL DE PREMIOS (15/8): con premio se ABRE (textura llena) y salta un 🎁
+    const cf = (this.objs || []).find(x => x.type === "cofre_diario");
+    if (cf && cf.sprite) {
+      let listo = false; try { listo = !!dailyState().claimable; } catch (e) {}
+      const kc = listo ? "baul_premios_lleno" : "baul_premios";
+      if (this.textures.exists(kc) && cf.sprite.texture.key !== kc) this.setObjTex(cf, kc, cf.rw || cf.w);
+      if (listo && !cf.emoPremio) {
+        cf.emoPremio = this.add.text(cf.cx, cf.by - (cf.sprite.displayHeight || 34) - 6, "🎁", { fontSize: "15px" }).setOrigin(0.5, 1).setDepth(99990);
+        this.tweens.add({ targets: cf.emoPremio, y: cf.emoPremio.y - 7, duration: 650, yoyo: true, repeat: -1, ease: "Sine.easeInOut" });
+      } else if (!listo && cf.emoPremio) { cf.emoPremio.destroy(); cf.emoPremio = null; }
+    }
   }
 
   // VAPOR DE LA COCINA y CHISPAS DEL ALTAR: los edificios cuentan su estado sin abrir la ventana.

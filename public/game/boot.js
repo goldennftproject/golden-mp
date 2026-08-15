@@ -55,8 +55,8 @@ class BootScene extends Phaser.Scene {
     L.push(["horno", P + "horno.png?v=4"]);     // Horno de Piedra (detalles viernes 1): fundición de barras
     // arte cozy nuevo (v2 rompe el caché del arte viejo)
     L.push(["tree_stump", P + "tree_stump.png?v=4"]);
-    L.push(["buzon", P + "buzon.png?v=2"]);            // buzón (15/8) — banderita baja
-    L.push(["buzon_full", P + "buzon_full.png?v=2"]);  // …con carta y banderita alta
+    L.push(["buzon", P + "buzon.png?v=3"]);            // buzón (15/8) — banderita baja
+    L.push(["buzon_full", P + "buzon_full.png?v=3"]);  // …con carta y banderita alta
     L.push(["sprout", P + "sprout.png?v=5"]);
     // v7: restos correctos sobre su parche de tierra (los v6 venían de una copia vieja)
     ["node_stone_mined","node_bronze_mined","node_gold_mined","node_diamond_mined","node_netherite_mined"]
@@ -65,6 +65,8 @@ class BootScene extends Phaser.Scene {
     L.push(["dummy", P + "dummy.png"]);   // muñeco de práctica de espada
     L.push(["dummy_broken", P + "dummy_broken.png"]);   // dummy desgastado con cortes: se muestra durante el cooldown
     L.push(["cofre", P + "cofre.png"]);   // cofre depósito
+    L.push(["baul_premios", P + "baul_premios.png?v=1"]);          // BAÚL de premios (15/8, estilo shipping bin) — cerrado
+    L.push(["baul_premios_lleno", P + "baul_premios_lleno.png?v=1"]); // …abierto y rebosante (hay premio)
     L.push(["skin_sombrero", P + "skin_sombrero.png"]);   // Sombrero de paja brillante (skin del cofre 10/8); si falta, hay respaldo por código
     L.push(["godhand", P + "godhand.png"]);   // GOD HAND 2.0 (11/8): el arte NFT del cropper
     // edificios EN OBRA (12/8): lo que se ve antes de construirlos (chau edificio gris)

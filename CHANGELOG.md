@@ -2125,6 +2125,32 @@ Ahora la cadena de guía no tiene puntas sueltas:
   lugar. Al recomprar semillas, `buySeed` la vuelve a poner en el primer hueco libre.
   Herramientas y picos conservan su lógica de siempre.
 
+## Día 18 (cont.) — Buzón v2 frontal: mismo contexto que el granero (15/8)
+- El buzón se regeneró FRONTAL con leve picado (derivado del baúl v2 para heredar la
+  perspectiva): casita de madera sobre poste, techito que rima con el del granero.
+  Dos estados a caja común (cerrado / puerta abierta con sobre y banderita alta).
+- Reteñido exacto a la paleta de los edificios (0.068/0.62/0.47). Validado en escena:
+  granero + buzón + baúl comparten perspectiva, luz y madera. Los isométricos v1 quedan
+  en PixelLab sin borrar.
+
+## Día 18 (cont.) — Baúl de premios v2: perspectiva del granero (15/8)
+- Dirección: el arte debe CUAJAR junto al granero, no solo parecerse. El baúl se regeneró
+  frontal con leve picado (la vista de los edificios) en el grupo del mercadillo, y se
+  validó compuesto sobre el pasto del juego al lado del granero real.
+- Dos estados con caja común: baul_premios (cerrado) / baul_premios_lleno (tapa abierta y
+  resplandor dorado con sacos y monedas — se muestra cuando hay premio sin reclamar).
+- Reteñido a la paleta de madera de los edificios (0.066/0.62/0.46 vs objetivo
+  0.068/0.62/0.475), protegiendo el brillo dorado del interior. Los v1 isométricos quedan
+  guardados en PixelLab por si se quieren comparar.
+
+## Día 18 (cont.) — Cofre de premios físico junto al buzón (15/8, idea Stardew)
+- El cofre diario deja de vivir solo en un menú: ahora es un COFRE grande en el mundo
+  (chest_daily, junto al buzón, a la derecha del granero). Cuando hay premio sin
+  reclamar, late suavemente y salta un 🎁; el clic abre el panel de la racha de siempre.
+- Prompt contextual: "¡Abrir tu cofre de premios!" / "vuelve mañana". La carta del buzón
+  ahora dice que el premio espera "en el cofre grande junto al buzón".
+- Rincón del correo completo: buzón (noticias) + cofre (premios), los dos diegéticos.
+
 ## Día 18 (cont.) — Fix: acentos rotos en index.html (15/8)
 - El stamp-build.ps1 leía index.html con codificación ANSI (default de PowerShell 5) y
   lo reescribía rompiendo acentos y símbolos ("ediciÃ³n", "âº"). Reparado con reversión
