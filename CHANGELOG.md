@@ -2281,6 +2281,19 @@ INSUMOS (cosas que se usan) y la plata sale de vender lo producido. Aplicado a t
   tiene que haber 3 celdas donde apuntar. La tabla `FARM_PARCELA` sigue igual (nivel 2
   "regalaba" la 3ª, que ahora ya viene de fábrica; la 4ª llega en nivel 4).
 
+### Las MARIPOSAS GUÍA v2 (14/8) — solo señalan al jugador PERDIDO
+
+- **Detector de "perdido"**: cualquier clic marca actividad (`ultimaAccion`); si pasan
+  ~8 s sin tocar nada Y hay cosas por hacer, recién ahí las mariposas van a señalarlas
+  (la 1ª al objetivo, las otras a accionables distintos). Mientras jugás: vuelo libre y
+  su encanto original de posarse en la cosecha lista. Son mariposas, a fin de cuentas.
+- **Nivel también cuenta**: la veta bloqueada por nivel de granja (`nodoBloqueado`) ya
+  no se señala — revoloteaba una roca "necesitás nivel 3" (playtest).
+- **Vuelo con inercia** (playtest: "giros bruscos"): el destino ATRAE a la mariposa
+  (resorte + amortiguación + tope de velocidad) — para girar dibuja una curva, nunca
+  invierte en seco; y los cambios de órbita (radio/ritmo/fase) se deslizan en vez de
+  saltar. Siempre al frente (quedaba detrás del sprite del mercadillo).
+
 ### Las MARIPOSAS GUÍA (14/8, idea de dirección) — señalización viva, cero flechas
 
 Tres iteraciones en una tarde: texto "mientras tanto" (muy explícito) → empujoncito de

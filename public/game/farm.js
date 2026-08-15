@@ -277,6 +277,7 @@ class FarmScene extends Phaser.Scene {
     this.rebuildCollisions();
     GF.scene = "farm";
     window.farmScene = this;   // para refrescar la flecha del tutorial desde la UI
+    this.ultimaAccion = nowMs();   // el reloj del "jugador perdido" arranca al entrar a la escena
     if (window.syncPlacingUI) syncPlacingUI(false);   // 13/8: la escena arranca sin nada "en la mano"
     this.time.delayedCall(400, () => { if (typeof tutoSync === "function") tutoSync(true); else this.updateTutoArrow(); });   // cartel + flecha del tutorial
 
@@ -336,6 +337,7 @@ class FarmScene extends Phaser.Scene {
 
     // clic: si pegás a un objeto, caminá hacia él e interactuá; si no, movete al punto
     this.input.on("pointerdown", (pt) => {
+      this.ultimaAccion = nowMs();   // 14/8: cualquier clic = jugador activo (las mariposas señalan solo al "perdido")
       if (pt.rightButtonDown()) {
         if (GF.editMode) {
           if (this.placing) { this.cancelarColocar(); return; }   // clic derecho cancela el "colocar con clic"
@@ -2050,6 +2052,7 @@ class FarmScene extends Phaser.Scene {
     const usosPico = eq ? Math.floor((G.picks.dur && G.picks.dur[eq]) || 0) : 0;
     for (const o of (this.objs || [])) {
       if (o.locked || o.oculto || (o.readyAt && o.readyAt > t)) continue;
+      if (typeof nodoBloqueado === "function" && nodoBloqueado(o)) continue;   // 14/8: la veta que pide nivel NO se señala (playtest: revoloteaba una roca de nivel 3)
       if (o.type === "tree" && hayHacha) lista.push({ x: o.cx, y: o.by - (o.sprite ? o.sprite.displayHeight * 0.6 : 40), k: "arbol" + o.i });
       if ((o.type === "rock" || (o.type === "ore" && typeof ORE_DEF !== "undefined" && eq && PICK_DEF[eq].mineTier >= (ORE_DEF[o.ore] ? ORE_DEF[o.ore].tier : 99))) && usosPico > 0)
         lista.push({ x: o.cx, y: o.by - 18, k: "roca" + o.i });
@@ -2062,24 +2065,39 @@ class FarmScene extends Phaser.Scene {
   }
   tickMariposas(dt, t) {
     if (!this.maripos || !this.maripos.length) return;
+    // 14/8 v2 (dirección: "son mariposas, a fin de cuentas"): la señalización solo se
+    // activa cuando el jugador parece PERDIDO — quieto ~8 s con cosas por hacer. Mientras
+    // juega, vuelan libres y como mucho se posan en cosecha lista (su encanto original).
+    const perdido = (t - (this.ultimaAccion || 0)) > 8000;
     if (t >= (this._mariAt || 0)) {   // re-asignar destinos cada ~2,5 s
       this._mariAt = t + 2500;
-      const accion = this.mariposaAccionables(t);
+      const accion = perdido ? this.mariposaAccionables(t) : [];
       const tomados = new Set();
+      const listos = (this.plots || []).filter(p => p.state === "ready");
       this.maripos.forEach((m, i) => {
-        if (i === 0 && this.guiaTarget) { m.ancla = { x: this.guiaTarget.x, y: this.guiaTarget.y + 26 }; tomados.add("guia"); return; }
-        const libre = accion.find(a => !tomados.has(a.k));
-        if (libre) { tomados.add(libre.k); m.ancla = { x: libre.x, y: libre.y }; }
-        else m.ancla = null;   // nada que señalar: vuelo libre
+        if (perdido && i === 0 && this.guiaTarget) { m.ancla = { x: this.guiaTarget.x, y: this.guiaTarget.y + 26 }; tomados.add("guia"); return; }
+        if (perdido) {
+          const libre = accion.find(a => !tomados.has(a.k));
+          if (libre) { tomados.add(libre.k); m.ancla = { x: libre.x, y: libre.y }; return; }
+        }
+        // jugador activo (o nada que señalar): vuelo libre, con visita ocasional a la cosecha
+        if (m.ancla || Math.random() < 0.4) {
+          m.ancla = null;
+          if (listos.length && Math.random() < 0.6) { const p = listos[Math.floor(Math.random() * listos.length)]; m.tx = p.cx + (Math.random() - 0.5) * 14; m.ty = p.by - 18; }
+        }
       });
     }
     for (const m of this.maripos) {
-      if (m.ancla) {   // merodear: órbita AMPLIA y cambiante (playtest: el surco fijo se notaba)
+      if (m.ancla) {   // merodear: órbita amplia y cambiante, con transiciones SUAVES
         if (t >= (m.orbCambio || 0)) {   // cada tanto la vuelta cambia de tamaño, ritmo y fase
           m.orbCambio = t + 1800 + Math.random() * 2600;
-          m.orbRx = 20 + Math.random() * 16; m.orbRy = 12 + Math.random() * 12;
-          m.orbVel = 0.9 + Math.random() * 1.0; m.orbFase2 = Math.random() * 6.28;
+          m.orbRxMeta = 20 + Math.random() * 16; m.orbRyMeta = 12 + Math.random() * 12;
+          m.orbVelMeta = 0.9 + Math.random() * 1.0; m.orbFase2 = Math.random() * 6.28;
         }
+        // los radios y el ritmo se deslizan hacia su nuevo valor (nada salta de golpe)
+        m.orbRx = (m.orbRx || 24) + ((m.orbRxMeta || 24) - (m.orbRx || 24)) * dt * 1.5;
+        m.orbRy = (m.orbRy || 14) + ((m.orbRyMeta || 14) - (m.orbRy || 14)) * dt * 1.5;
+        m.orbVel = (m.orbVel || 1.2) + ((m.orbVelMeta || 1.2) - (m.orbVel || 1.2)) * dt * 1.5;
         m.orbita = (m.orbita || Math.random() * 6.28) + dt * m.orbVel;
         m.tx = m.ancla.x + Math.cos(m.orbita) * m.orbRx + Math.cos(m.orbita * 0.37 + m.orbFase2) * 6;
         m.ty = m.ancla.y + Math.sin(m.orbita * 1.27 + m.orbFase2) * m.orbRy;
@@ -2087,11 +2105,17 @@ class FarmScene extends Phaser.Scene {
         m.esperaHasta = t + 2600 + Math.random() * 3200;
         m.tx = 40 + Math.random() * (GF.WORLD_W - 80); m.ty = 40 + Math.random() * (GF.WORLD_H - 80);
       }
-      const dx = m.tx - m.g.x, dy = m.ty - m.g.y, d = Math.hypot(dx, dy);
-      if (d > 2) { const v = Math.min(d, (m.ancla ? 55 : 34) * dt); m.g.x += dx / d * v; m.g.y += dy / d * v; }
+      // 14/8 (playtest: "giros bruscos"): vuelo con INERCIA — el destino ATRAE a la mariposa
+      // (resorte + amortiguación); para girar dibuja una curva, nunca invierte en seco
+      const dx = m.tx - m.g.x, dy = m.ty - m.g.y;
+      m.vx = ((m.vx || 0) + dx * dt * 4.2) * (1 - Math.min(1, dt * 2.6));
+      m.vy = ((m.vy || 0) + dy * dt * 4.2) * (1 - Math.min(1, dt * 2.6));
+      const sp = Math.hypot(m.vx, m.vy), max = m.ancla ? 62 : 40;
+      if (sp > max) { m.vx *= max / sp; m.vy *= max / sp; }
+      m.g.x += m.vx * dt; m.g.y += m.vy * dt;
       m.fase += dt * 9;
       m.g.setScale(0.75 + Math.abs(Math.sin(m.fase)) * 0.45, 1);   // aleteo: se angosta y se ensancha
-      m.g.setDepth(99993);   // 14/8: SIEMPRE al frente — señalando el mercadillo quedaba DETRÁS del sprite
+      m.g.setDepth(99993);   // SIEMPRE al frente (antes quedaba detrás del mercadillo)
     }
   }
 
