@@ -2137,6 +2137,7 @@ class FarmScene extends Phaser.Scene {
       const vel = (m.ancla ? 44 : 32) * Math.min(1, d / 26 + 0.4);   // afloja al acercarse
       m.g.x += Math.cos(m.rumbo) * vel * dt;
       m.g.y += Math.sin(m.rumbo) * vel * dt;
+      m.g.setRotation(m.rumbo + Math.PI / 2);   // 14/8: el CUERPO apunta hacia donde vuela (el dibujo nace mirando arriba)
       // cerca del destino, a veces se posa un ratito (más seguido si está señalando algo)
       if (d < 9 && Math.random() < dt * (m.ancla ? 0.65 : 0.35)) m.posadaHasta = t + 2200 + Math.random() * 3200;
       m.fase += dt * 9;
