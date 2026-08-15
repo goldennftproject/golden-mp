@@ -2281,6 +2281,31 @@ INSUMOS (cosas que se usan) y la plata sale de vender lo producido. Aplicado a t
   tiene que haber 3 celdas donde apuntar. La tabla `FARM_PARCELA` sigue igual (nivel 2
   "regalaba" la 3ª, que ahora ya viene de fábrica; la 4ª llega en nivel 4).
 
+### REBALANCE INTEGRAL con mandato de dirección (14/8) — física única y ritmo real
+
+Dirección otorgó control total del balance con un criterio: "el juego marcha desde el
+principio, sin ritmo ficticio". El MANIFIESTO completo (todo a validar por el diseñador):
+
+| Qué | Antes | Ahora | Por qué |
+|---|---|---|---|
+| Papa | 9 min | **90 s** | tier 1 rápido DE BASE (estilo SFL) — jubila la aceleración |
+| Zanahoria→Maíz | 25m→24h | **5m→24h** | escalera que duplica por tier; el maíz no cambia |
+| Árbol CD | 3m×10 / 90m | **2m×15 / 60m** | la tala dominaba la sesión 1 (25 de 39 min) |
+| Roca CD | 4m×10 / 120m | **3m×15 / 90m** | ídem |
+| Hacha | 10 plata | **6** | baja el peaje por unidad; la venta sigue siendo EL grifo |
+| Pico piedra | 3 mad + 10 | **2 mad + 6** | cada piedra costaba 3 maderas + plata (cadena medida) |
+| Pico bronce/oro | 4+5+10 / 5br+35 | **3+4+8 / 3br+20** | la cadena del oro del Altar medía ~700 de plata |
+| Caña | 15 oro | **8 oro** | proporción con el pico de oro nuevo |
+| Cocina | 20 mad + 15 pie | **15 + 8** | la muralla del tutorial (23 h → 75 min, medido) |
+| Altar | 60+40+20oro+30$G | **40+30+8oro+20$G** | proyecto de semana 1, no de mes |
+| Establo/Curtid./Ofrendas | 50/45/80… | **40/35/60…** | misma proporción |
+| Forja de Armas | 1000 + 20+20 | **300 + 15+10** | meta del día 2 (12.8 h, medido) |
+| Aceleración del tutorial | 3 s por paso | **ELIMINADA** | una sola física; FIRST_GROW apagado |
+
+Nota anti-inflación: el CUPO diario de semillas (intacto) hace que la velocidad de los
+cultivos no cambie el ingreso máximo POR DÍA — solo cuán rápido se alcanza. Arco medido
+por walkthrough: sesión 1 = 32 min · Cocina = 75 min · Armas = día 2 · Altar = semana 1.
+
 ### REVERSIÓN DEL CAPATAZ (14/8, dirección: "al final no me gustó — flechitas y sin premios")
 
 Se probó y no cuajó. Vuelve el sistema anterior, más simple y más honesto:

@@ -1193,16 +1193,8 @@ class FarmScene extends Phaser.Scene {
         // 14/8: el boost del tutorial aplica a CUALQUIER cultivo (antes solo papa) — el
         // sub-objetivo puede mandar a cebolla/zanahoria y tienen que crecer acelerados igual
         const boost = (typeof tutoBoost === "function") ? tutoBoost("papa") : 1;
-        let real = cd.grow * 1000 * cdMult() * boost;
-        // 14/8 v7: siembra "DEL PLAN" — acelerada solo si pasa el DOBLE candado de
-        // planAcelListo (proyección < meta Y tope vitalicio del 125% no superado)
-        if (typeof planAcelListo === "function" && typeof subPlataMeta === "function") {
-          const meta = subPlataMeta();
-          if (meta > 0) {
-            if (planAcelListo(cd.price || 0, cd.seedCost || 0)) real = TUTO_ESPERA_SEG * 1000;
-            else toast("🎯 Ya cubrís los " + meta + " del objetivo — esta crece a tiempo normal");
-          }
-        }
+        const real = cd.grow * 1000 * cdMult() * boost;
+        // (14/8: la aceleración del plan se eliminó — física única; el aviso de meta cubierta vive en tutoAvisoCubierto)
         const starter = (G.firstSeeds || 0) > 0 && FIRST_GROW_MS > 0;   // solo las semillas del starter pack
         if (starter) G.firstSeeds--;
         o.readyAt = nowMs() + (starter ? Math.min(FIRST_GROW_MS, real) : real);   // nunca más lento que el tiempo real del cultivo
@@ -2643,12 +2635,6 @@ class FarmScene extends Phaser.Scene {
     // restaurar objetos que salieron de cooldown
     const t = nowMs();
     for (const o of this.objs) {
-      // 14/8 v4 (playtest: "talé entre planos y el árbol quedó 2 min enfriándose"): si el
-      // paso ACTIVO pide este recurso, los enfriamientos YA CORRIENDO se recortan a 3 s
-      if (o.readyAt && typeof tutoAcelerado === "function") {
-        const clave = o.type === "tree" ? "tree" : (o.type === "rock" ? "piedra" : null);
-        if (clave && tutoAcelerado(clave) && o.readyAt > t + TUTO_ESPERA_SEG * 1000) { o.readyAt = t + TUTO_ESPERA_SEG * 1000; o.halfAt = 0; }
-      }
       // regeneración directa: de los restos vuelve al nodo entero (sin pasar por el dañado)
       if (o.readyAt && t >= o.readyAt) {
         o.readyAt = 0; o.halfAt = 0;

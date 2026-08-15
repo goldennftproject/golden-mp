@@ -4,7 +4,7 @@
 
 ## 🔴 Inmediato
 
-- [ ] **⚠ BALANCE del paso 16 del tutorial (sim escrita 14/8)**: "juntá 15 de piedra" con
+- [x] ~~BALANCE del paso 16~~ RESUELTO por el rebalance integral (cocina 15+8, pico 2 mad+6) — ver manifiesto en CHANGELOG. Queda: guardar 1 papa para la receta del paso 18. Original: "juntá 15 de piedra" con
   el pico de 1 uso encadena 10 picos → 30 maderas → 30 hachas → **~400 de plata** por 10
   piedras. Opciones para el diseñador: pico de arranque con más usos (15→35), pedir menos
   piedra en la Cocina (15→8), o pico de piedra más barato. También: guardar 1 papa para
@@ -32,7 +32,7 @@
 - [ ] **Alimentar animales** (Fixes.docx 14/8 #1 "Comida>material"): implementado como "preferido +15 / cualquier cultivo +8" — confirmar si era esto o alimentar con PLATOS cocinados.
 - [ ] Que pruebe los 19 fixes de fixs.docx (todos implementados, ver CHANGELOG Día 16).
 - [ ] Números tuneables por si quiere ajustar: `DROP_CHANCE_MULT` (0.6), `PLOT_MAX` (60), `PLOT_EXTRA_SUBA` (1.12), `GODHAND_PLATA_HORA` (100), `GODHAND_SUBA_HORA` (1.10).
-- [ ] **BALANCE con tedio medido por simulación (14/8)** — dos números que ni el CD corto arregla:
+- [x] ~~BALANCE con tedio medido~~ RESUELTO por el rebalance integral (Armas 300, Altar 8 de oro + picos baratos). Original:
   - `ARMAS_UNLOCK_PLATA` = **1000**: incluso con boost y 8 parcelas son ~100 min y 61 ciclos de papa dentro del tutorial. Sugerencia: 150–250, o que cuente plata GANADA acumulada en vez de plata en mano.
   - **Altar: 20 de ORO**: cada oro pide 1 uso de Pico de Oro (35 plata + 5 bronce c/u) y el bronce pide picos de bronce → cadena de ~700+ plata y decenas de crafteos. Sugerencia: bajar a 5-8 de oro o cambiar oro por bronce.
 - [ ] Aprobación de los **12 edificios nuevos** (si aprueba → re-animar el portal).

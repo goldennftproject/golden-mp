@@ -145,16 +145,20 @@ var GROW_SCALE = 1;   // 2/8: FUERA la compresión de testeo — el tiempo que s
 // Tabla oficial de "2das mejoras" (4/8/2026): compra/venta con ganancia que dobla por tier y
 // ratio ~2,33; tiempos de 9 min (Papa) a 24 h (Maíz). XP por cosecha = minutos de crecimiento.
 const CROP_DEF = {
-  papa:      { label:"Papa",      emoji:"🥔", lvl:1,  seedCost:1,   growH:0.15, yield:1, price:3,    xp:9 },
-  zanahoria: { label:"Zanahoria", emoji:"🥕", lvl:2,  seedCost:3,   growH:0.4167, yield:1, price:8,    xp:25 },
-  cebolla:   { label:"Cebolla",   emoji:"🧅", lvl:3,  seedCost:6,   growH:0.8333, yield:1, price:16,   xp:50 },
-  calabacin: { label:"Calabacín", emoji:"🥒", lvl:4,  seedCost:12,  growH:1.5,  yield:1, price:32,   xp:90 },
-  repollo:   { label:"Repollo",   emoji:"🥬", lvl:5,  seedCost:20,  growH:2.5,  yield:1, price:50,   xp:150 },
-  calabaza:  { label:"Calabaza",  emoji:"🎃", lvl:6,  seedCost:40,  growH:4.5,  yield:1, price:100,  xp:270 },
-  brocoli:   { label:"Brócoli",   emoji:"🥦", lvl:7,  seedCost:90,  growH:8,    yield:1, price:210,  xp:480 },
-  girasol:   { label:"Girasol",   emoji:"🌻", lvl:8,  seedCost:180, growH:12,   yield:1, price:420,  xp:720 },
-  trigo:     { label:"Trigo",     emoji:"🌾", lvl:9,  seedCost:360, growH:18,   yield:1, price:840,  xp:1080 },
-  maiz:      { label:"Maíz",      emoji:"🌽", lvl:10, seedCost:720, growH:24,   yield:1, price:1680, xp:1440 },
+  // 14/8 (dirección, decisión ESTRUCTURAL): el ritmo del tutorial ES el del juego — tier 1
+  // rápido DE BASE, escalera que duplica hacia arriba (estilo Sunflower Land). El CUPO
+  // diario de semillas hace el cambio neutro a inflación: el ingreso máximo POR DÍA no
+  // cambia, solo cuán rápido lo alcanzás. ⚠ Números a validar por el diseñador.
+  papa:      { label:"Papa",      emoji:"🥔", lvl:1,  seedCost:1,   growH:0.025, yield:1, price:3,    xp:9 },    // 90 s (era 9 min)
+  zanahoria: { label:"Zanahoria", emoji:"🥕", lvl:2,  seedCost:3,   growH:0.0833, yield:1, price:8,    xp:25 },  // 5 min (era 25)
+  cebolla:   { label:"Cebolla",   emoji:"🧅", lvl:3,  seedCost:6,   growH:0.1667, yield:1, price:16,   xp:50 },  // 10 min (era 50)
+  calabacin: { label:"Calabacín", emoji:"🥒", lvl:4,  seedCost:12,  growH:0.5,  yield:1, price:32,   xp:90 },   // 30 min
+  repollo:   { label:"Repollo",   emoji:"🥬", lvl:5,  seedCost:20,  growH:1,    yield:1, price:50,   xp:150 },  // 1 h
+  calabaza:  { label:"Calabaza",  emoji:"🎃", lvl:6,  seedCost:40,  growH:2,    yield:1, price:100,  xp:270 },  // 2 h
+  brocoli:   { label:"Brócoli",   emoji:"🥦", lvl:7,  seedCost:90,  growH:4,    yield:1, price:210,  xp:480 },  // 4 h
+  girasol:   { label:"Girasol",   emoji:"🌻", lvl:8,  seedCost:180, growH:8,    yield:1, price:420,  xp:720 },  // 8 h
+  trigo:     { label:"Trigo",     emoji:"🌾", lvl:9,  seedCost:360, growH:12,   yield:1, price:840,  xp:1080 }, // 12 h
+  maiz:      { label:"Maíz",      emoji:"🌽", lvl:10, seedCost:720, growH:24,   yield:1, price:1680, xp:1440 },  // 24 h (tope, igual)
 };
 function recomputeCropGrow() { for (const k in CROP_DEF) CROP_DEF[k].grow = Math.round(CROP_DEF[k].growH * 3600 * GROW_SCALE); }
 recomputeCropGrow();   // en segundos, como siempre
@@ -174,12 +178,12 @@ var GOLPES_TALAR = 3, GOLPES_MINAR = 3;   // clics para tumbar un árbol o rompe
 // si dejás un árbol o una piedra a medio golpear y no volvés en este tiempo, se recupera sola
 // y NO se gasta la herramienta: la herramienta solo se descuenta cuando el nodo cae del todo.
 var GOLPES_RESET_MS = 5000;
-var CD = { tree: 5400, rock: 7200 };            // 1 h 30 min el árbol · 2 h la piedra
+var CD = { tree: 3600, rock: 5400 };            // 14/8 rebalance: 1 h el árbol · 1,5 h la piedra (eran 1,5/2)
 var CD_RAPIDO = {                                // enfriamiento corto de las primeras veces
   // 10/8: eran las primeras 3 y el diseñador pidió 10, para que el tutorial se pueda terminar
   // sin quedarse esperando el enfriamiento largo del cuarto árbol.
-  tree:      { seg: 180, veces: 10 },            // 3 min · las primeras 10
-  piedra:    { seg: 240, veces: 10 },            // 4 min · las primeras 10
+  tree:      { seg: 120, veces: 15 },            // 14/8: 2 min · las primeras 15 (la tala dominaba la sesión 1)
+  piedra:    { seg: 180, veces: 15 },            // 14/8: 3 min · las primeras 15
   bronce:    { seg: 360, veces: 2 },             // 6 min · las primeras 2
   hierro:    { seg: 480, veces: 2 },             // 8 min · las primeras 2
   oro:       { seg: 720, veces: 1 },             // 12 min · la primera
@@ -190,32 +194,10 @@ var CD_RAPIDO = {                                // enfriamiento corto de las pr
 function nodoUsos(o) { G.nodoUsos = G.nodoUsos || {}; return G.nodoUsos[o.i] || 0; }
 function nodoSumar(o) { G.nodoUsos = G.nodoUsos || {}; G.nodoUsos[o.i] = nodoUsos(o) + 1; }
 // enfriamiento que corresponde a este nodo AHORA (en segundos)
-// 14/8 v3 (dirección, tras detectar el ESTACIONAMIENTO): la aceleración del tutorial es
-// POR PASO Y POR RECURSO — solo corre a 3 s lo que el paso ACTIVO pide, y como cumplirlo
-// avanza el paso solo, no hay dónde estacionarse a farmear. Los cultivos NO se aceleran
-// nunca (las 3 semillas del arranque ya crecen en 45 s por FIRST_GROW, y acelerar
-// cultivos era la imprenta de plata: comprá 2 semillas, no compres la 3ª y farmeá).
-// Vender lo acelerado tampoco rinde: la madera sale 3 y el hacha 10 — es a pérdida.
-var TUTO_ESPERA_SEG = 3;
-function tutoAcelerado(tipo) {
-  if (!G.tuto || G.tuto.done) return false;
-  const st = tutoActivo(); if (!st) return false;
-  const mapa = {
-    tree:   ["wood_st", "wood", "woodc"],     // árboles a 3 s solo en SUS pasos de madera
-    piedra: ["stone_st", "stone", "stonec"],  // rocas a 3 s solo en SUS pasos de piedra
-    cocina: ["cook"],                         // la olla a 3 s solo al cocinar el primer plato
-  };
-  if ((mapa[tipo] || []).includes(st.id)) return true;
-  // 14/8 v2 (sim escrita, traba 3): el SUB también acelera lo que ÉL pide — "talá 30
-  // árboles para los picos" en un paso de piedra iba a CD normal (90 min de muro)
-  const sub = (typeof tutoSub === "function") ? tutoSub() : null;
-  if (sub && sub.permite) {
-    if (tipo === "tree" && sub.permite.includes("chop")) return true;
-    if (tipo === "piedra" && sub.permite.includes("mine")) return true;
-  }
-  return false;
-}
-/* 14/8 v4 (dirección): el DESVÍO de plata también acelera, pero con CONTABILIDAD —
+// 14/8 FINAL (dirección): la ACELERACIÓN del tutorial se ELIMINÓ — el ritmo del
+// tutorial ES el ritmo del juego: escalera de cultivos rápida en tier 1 (papa 90 s) y
+// CD_RAPIDO en los nodos. Una sola física; las esperas del tutorial se SOLAPAN.
+/* 14/8 (proyección como GUÍA — la aceleración se eliminó; la contabilidad queda) —
    una siembra corre a 3 s solo si la PROYECCIÓN (plata + cosecha en bolsa + lo que está
    creciendo) todavía no cubre la meta del sub. Cubierta la meta: siembras a tiempo real
    y AVISO de "ya te alcanza". Atesorar cuenta en la proyección → no hay imprenta. */
@@ -234,26 +216,8 @@ function subPlataMeta() {   // meta del sub de plata activo (0 si no hay)
   const sub = (typeof tutoSub === "function") ? tutoSub() : null;
   return (sub && sub.plata && sub.meta) ? sub.meta : 0;
 }
-/* 14/8 v7 (dirección: "que NO se pueda hacer más de ~250 con la meta en 200 — la robustez
-   tiene que estar ahí"): ¿esta siembra puede ir acelerada? Doble candado:
-   1. la PROYECCIÓN (plata + bolsa + semillas + creciendo) aún no cubre la meta, y
-   2. el TOPE VITALICIO del plan: el valor total sembrado con aceleración en ESTA misión
-      no supera meta × 1.25 — aunque gastes la plata en parcelas/adornos para bajar la
-      proyección y volver a plantar, el acumulado no se resetea: el bucle muere ahí.
-   El acumulado se reinicia solo al cambiar de misión (paso+meta distintos). */
-var PLAN_TOPE_FACTOR = 1.25;
-function planAcelListo(precio, costoSemilla) {
-  const meta = subPlataMeta(); if (!meta) return false;
-  const key = (G.tuto ? (G.tuto.step || 0) : -1) + ":" + meta;
-  if (G._planKey !== key) { G._planKey = key; G._planAcum = 0; }
-  if (plataProyectada() >= meta) return false;
-  // 14/8 v2 (sim escrita, traba 2): el tope acumula la GANANCIA NETA (precio − semilla),
-  // no el valor bruto — con bruto, 190 de meta cortaban el plan en ~150 ganados
-  const neta = Math.max(1, (precio || 0) - (costoSemilla || 0));
-  if ((G._planAcum || 0) + neta > meta * PLAN_TOPE_FACTOR) return false;
-  G._planAcum = (G._planAcum || 0) + neta;   // se anota al conceder la aceleración
-  return true;
-}
+// (la aceleración "del plan" se eliminó con la física única; la PROYECCIÓN y el
+//  aviso de "ya cubrís la meta" quedan como guía — útiles también a tiempo real)
 // aviso ÚNICO por meta: "con lo plantado ya cubrís los X" (lo llama tutoSync cada segundo)
 function tutoAvisoCubierto() {
   const meta = subPlataMeta();
@@ -266,7 +230,6 @@ function tutoAvisoCubierto() {
   }
 }
 function nodoCd(o, clave, cdLargo) {
-  if (tutoAcelerado(clave)) return TUTO_ESPERA_SEG;
   const r = CD_RAPIDO[clave];
   if (r && nodoUsos(o) < r.veces) return r.seg;   // todavía está en su etapa de arranque rápido
   return cdLargo;
@@ -346,11 +309,11 @@ function comprarEmergencia(tipo) {
 const BUILD_DEF = {
   store:  { label: "Herrería",        cost: { madera: 5, piedra: 2 } },   // 10/8: ya no es gratis (pedido del diseñador)
   horno:  { label: "Horno de Piedra", cost: { madera: 10, piedra: 8 },  lvl: 3 },   // doc 2/8: costo early + granja nv 3
-  cocina: { label: "Cocina",          cost: { madera: 20, piedra: 15 }, lvl: 5 },   // doc 2/8: costo early + granja nv 5
-  altar:  { label: "Altar de Runas",  cost: { piedra: 60, madera: 40, oro: 20 }, golden: 30 },   // doc 2/8: mejora +1..+15 y runas
-  establo:    { label: "Establo",     cost: { madera: 50, piedra: 30, oro: 10 }, lvl: 6 },   // "2das mejoras": animales
-  curtiduria: { label: "Curtiduría",  cost: { madera: 45, piedra: 35, oro: 15 }, lvl: 8 },   // "2das mejoras": armaduras
-  ofrendas:   { label: "Altar de Ofrendas", cost: { piedra: 80, madera: 60, oro: 25 }, lvl: 10 },   // "2das mejoras": quemar recursos por puntos
+  cocina: { label: "Cocina",          cost: { madera: 15, piedra: 8 }, lvl: 5 },   // 14/8 rebalance: era 20+15 (muralla del tutorial medida por sim)
+  altar:  { label: "Altar de Runas",  cost: { piedra: 40, madera: 30, oro: 8 }, golden: 20 },   // 14/8 rebalance: era 60+40+20oro+30G (la cadena del oro medía ~700 de plata)
+  establo:    { label: "Establo",     cost: { madera: 40, piedra: 25, oro: 6 }, lvl: 6 },   // 14/8 rebalance
+  curtiduria: { label: "Curtiduría",  cost: { madera: 35, piedra: 28, oro: 8 }, lvl: 8 },   // 14/8 rebalance
+  ofrendas:   { label: "Altar de Ofrendas", cost: { piedra: 60, madera: 45, oro: 12 }, lvl: 10 },   // 14/8 rebalance
 };
 function buildCostStr(key) { const b = BUILD_DEF[key]; return Object.keys(b.cost).map(k => (b.cost[k]) + " " + (RES_LABEL[k] || k)).join(" + ") + (b.golden ? " + " + b.golden + " $Golden" : ""); }
 
@@ -987,10 +950,10 @@ const PICK_ORDER = ["stone","bronze","iron","gold","diamond","netherite"];
 const PICK_DEF = {
   // modelo SFL puro (31/7): 1 uso por pico, costos baratos (material del tier anterior + madera + monedas)
   // costos "detalles viernes (2)"; el Pico de Bronce no figura en el doc y se interpola
-  stone:    { tier:0, label:"Pico de Piedra",    mineTier:0, dur:1, cost:{madera:3},            plata:10,  sprite:"pick_stone" },
-  bronze:   { tier:1, label:"Pico de Bronce",    mineTier:1, dur:1, cost:{madera:4,piedra:5},   plata:10,  sprite:"pick_bronze" },   // confirmado por el diseñador (Discord 31/7)
+  stone:    { tier:0, label:"Pico de Piedra",    mineTier:0, dur:1, cost:{madera:2},            plata:6,   sprite:"pick_stone" },   // 14/8: era 3 madera + 10
+  bronze:   { tier:1, label:"Pico de Bronce",    mineTier:1, dur:1, cost:{madera:3,piedra:4},   plata:8,   sprite:"pick_bronze" },   // 14/8 rebalance (era 4+5+10)
   iron:     { tier:2, label:"Pico de Hierro",    mineTier:2, dur:1, cost:{madera:3,piedra:5},   plata:10,  sprite:"pick_iron" },
-  gold:     { tier:3, label:"Pico de Oro",       mineTier:3, dur:1, cost:{madera:3,bronce:5},   plata:35,  sprite:"pick_gold" },
+  gold:     { tier:3, label:"Pico de Oro",       mineTier:3, dur:1, cost:{madera:3,bronce:3},   plata:20,  sprite:"pick_gold" },   // 14/8: era 5 bronce + 35 (cadena del Altar)
   diamond:  { tier:4, label:"Pico de Diamante",  mineTier:4, dur:1, cost:{oro:3,madera:3},      plata:45,  sprite:"pick_diamond" },
   netherite:{ tier:5, label:"Pico de Netherita", mineTier:5, dur:1, cost:{diamante:1,madera:5}, plata:100, sprite:"pick_netherite" },
 };
@@ -1089,9 +1052,9 @@ const TUTO_STEPS = [
   // ——— ETAPA 2: los sistemas nuevos (Cocina, Armas, Zona Negra, Pesca, Altar) ———
   { id: "place_cocina", n: 1, txt: "Colocá el plano de la Cocina (barra rápida)", target: "cocina", hot: "cocina" },
   { id: "woodc",  res: "madera", dep: "cocina", need: () => BUILD_DEF.cocina.cost.madera || 20,
-    txt: "Juntá # de madera (para la obra de la Cocina)",                       target: "tree" },
+    txt: "Juntá # de madera (la Cocina es tu primer PROYECTO: dejá cultivos girando y volvé)", target: "tree" },
   { id: "stonec", res: "piedra", dep: "cocina", need: () => BUILD_DEF.cocina.cost.piedra || 15,
-    txt: "Juntá # de piedra (para la obra de la Cocina)",                       target: "rock" },
+    txt: "Juntá # de piedra (los nodos se recargan solos aunque no estés)",     target: "rock" },
   { id: "build_cocina", n: 1, txt: "Depositá los materiales en la obra de la Cocina (clic encima)", target: "cocina" },
   { id: "cook",     n: 1, txt: "Cociná tu primer plato: Papa Asada",   target: "cocina", panel: "ov-cocina", ui: "[data-cook='papa_asada']" },
   { id: "eat",      n: 1, txt: "Comé un plato desde la bolsa (te da un buff)" },
@@ -1215,7 +1178,7 @@ var TUTO_BOOST_DESVIO = 0.04;   // los cultivos del desvío corren a 1/25 (papa:
 var TUTO_REWARD_PLATA = 100;   // gran recompensa del cierre (editable)
 // doc 2/8 §3.1: SOLO las semillas del starter pack crecen rápido (45 s). Las compradas o conseguidas
 // después usan el tiempo normal del cultivo. 0 en el panel = sin excepción.
-var FIRST_GROW_MS = 3000;   // tope de crecimiento de las semillas de arranque · 14/8: 45 s → 3 s (el espíritu del tutorial; son solo 3 semillas, sin exploit)
+var FIRST_GROW_MS = 0;   // 14/8: APAGADO — la papa crece en 90 s de base (escalera nueva), sin trato especial
 var FIRST_GROW_N = 3;        // cuántas semillas de arranque tienen ese trato (las 3 papas del inicio)
 var TUTO_VER = 12;   // subir este número cuando cambie la CADENA de pasos (invalida progresos viejos) · v12 (14/8): reversión del capataz — 19 pasos de granja básica, sin premios
 function tutoActivo() { return G.tuto && !G.tuto.done ? TUTO_STEPS[G.tuto.step] : null; }
@@ -2665,7 +2628,7 @@ function craftArrows() {
   refreshForge(); if (typeof syncSlots === "function") syncSlots(); if (isOpen("ov-inv")) refreshInv();
 }
 // viernes (2): la pestaña Armas de la Herrería se desbloquea pagando
-const ARMAS_UNLOCK_COST = { madera: 20, piedra: 20 }; var ARMAS_UNLOCK_PLATA = 1000;
+const ARMAS_UNLOCK_COST = { madera: 15, piedra: 10 }; var ARMAS_UNLOCK_PLATA = 300;   // 14/8 rebalance: era 20+20+1000 (~100 min de papa aún con 8 parcelas, medido)
 function unlockArmas() {
   if (G.armasUnlocked) return;
   if (!canAfford(ARMAS_UNLOCK_COST)) { toast("Te faltan materiales"); return; }
@@ -2814,7 +2777,7 @@ function cook(id) {
   if (!roomForDish(id)) { bagFull("cocinar " + r.label); return; }
   if (r.res) for (const k in r.res) G.res[k] -= r.res[k];
   if (r.fish) for (const k in r.fish) G.fish[k] -= r.fish[k];
-  const ms = tutoAcelerado("cocina") ? TUTO_ESPERA_SEG * 1000 : Math.max(1000, Math.round((r.cookS ? r.cookS * 1000 : COOK_MS) * cocinaFactor()));   // 14/8 v3: 3 s SOLO en el paso "cociná tu primer plato"
+  const ms = Math.max(1000, Math.round((r.cookS ? r.cookS * 1000 : COOK_MS) * cocinaFactor()));
   cookList().push({ id, endAt: nowMs() + ms, total: ms });
   log("Cocinando " + r.label + "… (" + fmtSecs(Math.round(ms / 1000)) + ")"); toast("Cocinando " + r.label);
   refreshHud(); if (typeof syncSlots === "function") syncSlots(); if (isOpen("ov-inv")) refreshInv();
@@ -3035,7 +2998,7 @@ function useTool(id) {
   return true;
 }
 // craftear herramientas consumibles — costos estilo SFL, apilan hasta 99
-const TOOL_CRAFT = { axe: { cost:{}, plata:10 }, rod: { cost:{ madera:3, piedra:1, oro:15 }, plata:0 } };   // viernes (2): hacha 10 plata; caña 3 madera + 1 piedra + 15 ORO (recurso)
+const TOOL_CRAFT = { axe: { cost:{}, plata:6 }, rod: { cost:{ madera:3, piedra:1, oro:8 }, plata:0 } };   // 14/8 rebalance: hacha 6 (era 10) · caña con 8 de oro (era 15)
 function craftTool(id, lote) {
   lote = Math.max(1, lote || 1);
   const tc = TOOL_CRAFT[id], td = TOOL_DEF[id]; if (!tc || !td) return;

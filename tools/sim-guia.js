@@ -4,21 +4,21 @@
    apenas el nodo está listo, cultiva árboles nuevos cuando la madera sobra, compra
    herramientas cuando hacen falta y la plata alcanza. Correr: node tools/sim-guia.js */
 
-const CROPS = [
-  { k: "papa", lvl: 1, seed: 1, price: 3, grow: 540, xp: 9 },
-  { k: "zanahoria", lvl: 2, seed: 3, price: 8, grow: 1500, xp: 25 },
-  { k: "cebolla", lvl: 3, seed: 6, price: 16, grow: 3000, xp: 50 },
-  { k: "calabacin", lvl: 4, seed: 12, price: 32, grow: 5400, xp: 90 },
-  { k: "repollo", lvl: 5, seed: 20, price: 50, grow: 9000, xp: 150 },
+const CROPS = [   // 14/8: escalera nueva (papa 90 s)
+  { k: "papa", lvl: 1, seed: 1, price: 3, grow: 90, xp: 9 },
+  { k: "zanahoria", lvl: 2, seed: 3, price: 8, grow: 300, xp: 25 },
+  { k: "cebolla", lvl: 3, seed: 6, price: 16, grow: 600, xp: 50 },
+  { k: "calabacin", lvl: 4, seed: 12, price: 32, grow: 1800, xp: 90 },
+  { k: "repollo", lvl: 5, seed: 20, price: 50, grow: 3600, xp: 150 },
 ];
 const FARM_XP = [0, 0, 25, 90, 225, 550, 1250, 2750, 5500, 9000, 14000];
 const XP_BASE = 100, XP_EXP = 2.7;   // curva del skill Cultivo (desbloquea cultivos)
-const CDT = { fast: 180, long: 5400, uses: 10 }, CDR = { fast: 240, long: 7200, uses: 10 };
-let ensenanza = true;   // hasta el Hacha (paso 13): nodos en 20/25 s (14/8)
+const CDT = { fast: 120, long: 3600, uses: 15 }, CDR = { fast: 180, long: 5400, uses: 15 };   // 14/8 rebalance
+let ensenanza = false;   // 14/8: FÍSICA ÚNICA — sin aceleración de tutorial
 const NIVEL_ROCAS = [1, 3, 5, 8, 12, 16];
 const UNLOCK_ARBOL = [3, 9, 27];   // madera que cuesta el 2º/3º/4º árbol
-const AXE = 10, PICK = { madera: 3, plata: 10 };
-const FIRST_GROW = 45;   // las 3 primeras semillas
+const AXE = 6, PICK = { madera: 2, plata: 6 };   // 14/8 rebalance
+const FIRST_GROW = 90;   // sin trato especial: papa base
 
 function skillLvl(xp) { let l = 1, acc = 0, need = XP_BASE; while (xp >= acc + need && l < 50) { acc += need; l++; need = Math.round(XP_BASE * Math.pow(l, XP_EXP)); } return l; }
 function granja(xp) { let l = 1; while (FARM_XP[l + 1] != null && xp >= FARM_XP[l + 1]) l++; return l; }
@@ -106,14 +106,13 @@ paso(10, "Juntá 10 de madera (Horno)", () => { axes += 10; talar(10); });      
 paso(11, "Juntá 8 de piedra (Horno)", () => { picoUsos += 8; picar(8); });        // kit
 paso(12, "Depositá (Horno listo)", () => { madera -= 10; piedra -= 8; tick(t + 30); });
 paso(13, "Crafteá un Hacha (kit: 10 plata)", () => { plata += Math.max(0, 10 - plata); plata -= 10; axes++; tick(t + 40); });
-ensenanza = false;   // fin de la fase acelerada
 paso(14, "Colocá el plano de la Cocina", () => tick(t + 40));
-paso(15, "Juntá 20 de madera (Cocina)", () => talar(20));   // SIN kit (la ayuda termina en el Hacha)
-paso(16, "Juntá 15 de piedra (Cocina)", () => picar(15));
-paso(17, "Depositá (Cocina lista)", () => { madera -= 20; piedra -= 15; tick(t + 30); });
+paso(15, "Juntá 15 de madera (Cocina)", () => talar(15));   // 14/8: cocina 15+8
+paso(16, "Juntá 8 de piedra (Cocina)", () => picar(8));
+paso(17, "Depositá (Cocina lista)", () => { madera -= 15; piedra -= 8; tick(t + 30); });
 paso(18, "Cociná tu Papa Asada", () => { tick(t + 180 + 60); });
 paso(19, "Comé un plato", () => tick(t + 30));
-paso(20, "Desbloqueá Armas (1000 plata + 20 madera + 20 piedra)", () => { juntarPlata(1000 + 200); talar(20); picar(20); plata -= 1000; madera -= 20; piedra -= 20; });
+paso(20, "Desbloqueá Armas (300 plata + 15 madera + 10 piedra)", () => { juntarPlata(300 + 100); talar(15); picar(10); plata -= 300; madera -= 15; piedra -= 10; });
 paso(21, "Forjá la Espada de Madera", () => tick(t + 60));
 paso(22, "Equipá tu arma", () => tick(t + 30));
 paso(23, "Cruzá el portal", () => tick(t + 60));
@@ -121,11 +120,11 @@ paso(24, "Vencé tu primera criatura", () => tick(t + 120));
 paso(25, "Vencé 5 criaturas más", () => tick(t + 600));
 paso(26, "Pescá un pez", () => tick(t + 180));
 paso(27, "Fundí una barra", () => { if (piedra < 2) picar(2 - piedra); piedra -= 2; tick(t + 300); });
-paso(28, "Crafteá un Pico de Bronce", () => { if (madera < 4) talar(4 - madera); if (piedra < 5) picar(5 - piedra); juntarPlata(10); madera -= 4; piedra -= 5; plata -= 10; tick(t + 60); });
+paso(28, "Crafteá un Pico de Bronce", () => { if (madera < 3) talar(3 - madera); if (piedra < 4) picar(4 - piedra); juntarPlata(8); madera -= 3; piedra -= 4; plata -= 8; tick(t + 60); });
 paso(29, "Miná un mineral", () => tick(t + 400));
 paso(30, "Colocá el plano del Altar", () => tick(t + 40));
-paso(31, "Juntá 60 de piedra (Altar)", () => picar(60));
-paso(32, "Juntá 40 de madera (Altar)", () => talar(40));
+paso(31, "Juntá 40 de piedra (Altar)", () => picar(40));
+paso(32, "Juntá 30 de madera (Altar)", () => talar(30));
 paso(33, "Depositá el Altar (20 oro + 30 $G — cadena de picos)", () => { tick(t + 6 * 3600); });   // estimación gruesa: ver TODO diseñador
 paso(34, "Mejorá un arma a +1", () => tick(t + 300));
 
