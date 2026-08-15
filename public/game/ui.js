@@ -1419,14 +1419,27 @@ function refreshMarket() {
 function refreshBuzon() {
   const box = $("buzon-list"); if (!box) return;
   const cartas = (typeof buzonCartas === "function") ? buzonCartas() : [];
-  if (!cartas.length) { box.innerHTML = '<div class="sub" style="padding:14px 6px">El buzón está vacío. Cuando pase algo en tu granja, la banderita se levanta sola.</div>'; return; }
-  box.innerHTML = cartas.map(c => {
+  // ARCHIVO (15/8): las cartas de días anteriores se pueden releer 7 días
+  const archivo = (G.buzonArchivo || []).filter(a => !cartas.some(c => c.id === a.id && a.dia === dayStamp(0))).slice().reverse();
+  let html = "";
+  if (!cartas.length && !archivo.length) { box.innerHTML = '<div class="sub" style="padding:14px 6px">El buzón está vacío. Cuando pase algo en tu granja, la banderita se levanta sola.</div>'; return; }
+  if (!cartas.length) html += '<div class="sub" style="padding:6px 6px 0">Sin cartas nuevas — estas son las últimas que recibiste:</div>';
+  html += cartas.map(c => {
     const btn = c.panel
       ? '<button class="green sm" data-carta-ir="' + c.panel + '">' + (c.btn || "Ver") + '</button>'
       : (c.leer ? '<button class="ghost sm" data-carta-ok="' + c.id + '">Entendido</button>' : "");
     return '<div class="forge-row"><div class="fic">✉️</div><div class="finfo"><div class="fnm">' + c.titulo +
       '</div><div class="fds">De: ' + c.de + '</div><div class="fds">' + c.txt + '</div></div><div class="fbtns">' + btn + '</div></div>';
   }).join("");
+  if (archivo.length) {
+    html += '<div class="shophead">Leídas (se guardan ' + (typeof BUZON_ARCHIVO_DIAS !== "undefined" ? BUZON_ARCHIVO_DIAS : 7) + ' días)</div>';
+    html += archivo.map(a => {
+      const f = a.dia ? a.dia.slice(8, 10) + "/" + a.dia.slice(5, 7) : "";
+      return '<div class="forge-row" style="opacity:.72"><div class="fic">📄</div><div class="finfo"><div class="fnm">' + a.titulo +
+        '</div><div class="fds">De: ' + a.de + (f ? " · " + f : "") + '</div><div class="fds">' + a.txt + '</div></div></div>';
+    }).join("");
+  }
+  box.innerHTML = html;
   box.querySelectorAll("[data-carta-ir]").forEach(b => b.onclick = () => { closeOv("ov-buzon"); openOv(b.dataset.cartaIr); });
   box.querySelectorAll("[data-carta-ok]").forEach(b => b.onclick = () => buzonLeer(b.dataset.cartaOk));
 }

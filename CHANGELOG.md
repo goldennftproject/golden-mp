@@ -2125,6 +2125,13 @@ Ahora la cadena de guía no tiene puntas sueltas:
   lugar. Al recomprar semillas, `buySeed` la vuelve a poner en el primer hueco libre.
   Herramientas y picos conservan su lógica de siempre.
 
+## Día 18 (cont.) — Buzón: archivo de cartas leídas (15/8)
+- Las cartas ya no desaparecen al leerlas: toda carta que pasa por el buzón queda en la
+  sección "Leídas" durante 7 días (releíble, atenuada, con fecha). Después se descarta
+  sola (BUZON_ARCHIVO_DIAS · tope 40 cartas · persiste en G.buzonArchivo).
+- Se archiva una vez por día por tipo (el aviso del cofre de hoy y el de mañana son
+  cartas distintas). Con cartas nuevas + archivo, el buzón nunca se ve "vacío" de golpe.
+
 ## Día 18 (cont.) — EL BUZÓN (15/8, idea Stardew aprobada por dirección)
 - Buzón físico en la granja (450,420, cerca del spawn): las noticias llegan como CARTAS
   y la banderita se levanta sola cuando hay algo. Arte de PixelLab (buzon.png /

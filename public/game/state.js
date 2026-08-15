@@ -3254,9 +3254,25 @@ function buzonCartas() {
     id: "pase", de: "El Pase de Cosecha", titulo: n + (n > 1 ? " niveles" : " nivel") + " sin reclamar",
     txt: "Tus estrellas ya destrabaron premios en el Pase. Pasá a retirarlos cuando quieras.",
     panel: "ov-pass", btn: "Ver el Pase" }); } catch (e) {}
+  try { buzonArchivar(cartas); } catch (e) {}
   return cartas;
 }
 function buzonLeer(id) { G.buzonLeidas = G.buzonLeidas || {}; G.buzonLeidas[id] = 1; if (typeof saveFarm === "function") saveFarm(); if (typeof refreshBuzon === "function") refreshBuzon(); }
+// ARCHIVO (15/8): toda carta que pasó por el buzón queda guardada 7 días para releerla.
+// Se archiva una vez por día por id (el aviso del cofre de hoy y el de mañana son cartas distintas).
+var BUZON_ARCHIVO_DIAS = 7;
+function buzonArchivar(cartas) {
+  G.buzonArchivo = Array.isArray(G.buzonArchivo) ? G.buzonArchivo : [];
+  const hoy = dayStamp(0), ahora = Date.now();
+  for (const c of cartas) {
+    if (!G.buzonArchivo.some(a => a.id === c.id && a.dia === hoy))
+      G.buzonArchivo.push({ id: c.id, de: c.de, titulo: c.titulo, txt: c.txt, dia: hoy, ts: ahora });
+  }
+  const tope = ahora - BUZON_ARCHIVO_DIAS * 86400000;
+  const antes = G.buzonArchivo.length;
+  G.buzonArchivo = G.buzonArchivo.filter(a => (a.ts || 0) >= tope).slice(-40);   // 7 días y máx 40 cartas
+  if (G.buzonArchivo.length !== antes && typeof saveFarm === "function") saveFarm(true);
+}
 
 function dailyState() {
   const dd = G.daily || (G.daily = { day: 0, last: "" });
