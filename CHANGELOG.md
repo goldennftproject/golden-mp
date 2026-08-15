@@ -2313,6 +2313,12 @@ Onboarding rediseñado desde cero alrededor de una VOZ y un TABLÓN (v1 para tes
   `cam.worldView`, no de `scroll` (difieren cuando hay zoom). Y decisión de dirección:
   en el MUNDO ya no hay flecha triangular — el círculo de luz es el ÚNICO señalador
   (la flecha DOM sigue viva dentro de interfaces y sobre la barra rápida).
+- **v6 (dirección: "que se ASEGURE de que cumpla lo que pide")**: el capataz verificaba
+  el EVENTO (una compra) y no la CANTIDAD — comprabas 1 semilla y ya te mandaba a
+  plantar 3. Los cuatro pasos del arranque cuentan de a UNA unidad real: comprar dispara
+  un evento POR SEMILLA (solo papa), vender POR PAPA, y los pasos piden 3/3/3/3
+  (`TUTO_VER=11`). El diálogo queda: compro 1 → "¡Bien! 1/3" → compro 2 → "¡Eso! 2/3" →
+  "¡Perfecto! Plantá tus 3 papas". Verificado con el recorrido completo simulado.
 - **v5 (dirección: "que TODO el tutorial sea en diálogos")**: el cartel Pedido MURIÓ —
   el capataz es el único canal de guía. Su burbuja es PERSISTENTE (muestra siempre la
   instrucción del momento con el progreso: "Plantá tus 3 papas <b>2/3</b>") y REACCIONA

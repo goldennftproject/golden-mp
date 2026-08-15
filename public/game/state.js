@@ -218,7 +218,10 @@ function buySeed(k, qty) {
     const li = G.hotbar.findIndex(h => !h);
     if (li >= 0) { G.hotbar[li] = { kind: "seed", key: k }; if (typeof refreshHotbar === "function") refreshHotbar(true); }
   }
-  if (typeof tutoEvent === "function") tutoEvent("buyseed");   // el objetivo se cumple con la compra HECHA, no al apretar el botón
+  // 14/8 v4 (dirección: "que se asegure de que cumpla lo que pide"): el evento se dispara
+  // POR SEMILLA, no por compra — comprar 1 de 3 deja al capataz diciendo "te faltan 2".
+  // Solo cuentan las de PAPA: el paso pide esas.
+  if (k === "papa" && typeof tutoEvent === "function") for (let i = 0; i < qty; i++) tutoEvent("buyseed");
   log(`Compraste ${qty} semilla(s) de ${cd.label} por ${cost} plata. (cupo: ${sb.count}/${seedDailyMax()})`); toast("+" + qty + " " + cd.label);
   refreshHud(); if (typeof refreshSeedShop === "function") refreshSeedShop(); if (isOpen("ov-inv")) refreshInv();
 }
@@ -965,10 +968,12 @@ const TUTO_STEPS = [
   // 14/8 (dirección): el arranque enseña el ciclo COMPLETO en su orden natural — nacés con
   // 3 de plata (no con semillas): comprá → plantá → cosechá → vendé. Con eso el loop quedó
   // aprendido y no se vuelve a pedir: de acá en más la plata repetitiva llega de PREMIO.
-  { id: "buyseed",   n: 1, txt: "Comprá 3 semillas de papa en el Mercado (tenés 3 de plata)", target: "market", panel: "ov-market", ui: "[data-buy='papa']" },
+  // 14/8 v4: los CUATRO pasos del arranque verifican CANTIDADES (3/3/3/3) — el capataz
+  // no avanza hasta que compraste, plantaste, cosechaste y vendiste las TRES
+  { id: "buyseed",   n: 3, txt: "Comprá 3 semillas de papa en el Mercado (tenés 3 de plata)", target: "market", panel: "ov-market", ui: "[data-buy='papa']" },
   { id: "plant",     n: 3, txt: "Plantá tus 3 papas en las parcelas",              target: "plot" },
   { id: "harvest",   n: 3, txt: "Cosechá tus 3 papas",                             target: "plot" },
-  { id: "sell",      n: 1, txt: "Vendé tus papas en el Mercado",                   target: "market", panel: "ov-market", ui: "#vb-papa" },
+  { id: "sell",      n: 3, txt: "Vendé tus 3 papas en el Mercado",                 target: "market", panel: "ov-market", ui: "#vb-papa" },
   // — la Herrería ya no viene hecha (10/8): es la primera construcción, y es barata a propósito —
   // 13/8 v2 (audio): el orden LÓGICO — primero se coloca el plano (la obra queda a la vista
   // con su cartel), DESPUÉS se juntan sus materiales, y al final se depositan. Lo depositado
@@ -1197,7 +1202,7 @@ var TUTO_REWARD_PLATA = 100;   // gran recompensa del cierre (editable)
 // después usan el tiempo normal del cultivo. 0 en el panel = sin excepción.
 var FIRST_GROW_MS = 45000;   // tope de crecimiento de las semillas de arranque
 var FIRST_GROW_N = 3;        // cuántas semillas de arranque tienen ese trato (las 3 papas del inicio)
-var TUTO_VER = 10;   // subir este número cuando cambie la CADENA de pasos (invalida progresos viejos) · v10 (14/8): arranque comprá→plantá→cosechá→vendé + plata repetitiva de ADELANTO (sin silver/silverarm)
+var TUTO_VER = 11;   // subir este número cuando cambie la CADENA de pasos (invalida progresos viejos) · v11 (14/8): el arranque verifica CANTIDADES (3 compradas/plantadas/cosechadas/vendidas)
 function tutoActivo() { return G.tuto && !G.tuto.done ? TUTO_STEPS[G.tuto.step] : null; }
 // migración: si el guardado trae una cadena vieja, los pasos ya no significan lo mismo → se recalcula
 function tutoMigrar() {
@@ -1219,8 +1224,8 @@ function tutoHecho(st) {
     if (st.res) hecho = tutoTiene(st) >= tutoNeed(st);
     // 13/8: pasos "colocá el plano" — hechos si la obra ya está en el piso (o el edificio construido)
     else if (st.id && st.id.indexOf("place_") === 0) { const t = st.id.slice(6); hecho = !!((G.obras && G.obras[t]) || (G.built && G.built[t])); }
-    // 14/8: el 1er paso ("comprá tus semillas") ya está hecho si hay semillas o si ya cosechó alguna vez
-    else if (st.id === "buyseed") hecho = Object.keys(G.seeds || {}).some(k => (G.seeds[k] || 0) > 0) || !!G.firstCropDone;
+    // 14/8 v4: el 1er paso ("comprá tus 3 semillas") solo está hecho con las 3 (o si ya cosechó alguna vez)
+    else if (st.id === "buyseed") hecho = (G.seeds && (G.seeds.papa || 0) >= 3) || !!G.firstCropDone;
     else if (st.id === "build_store")  hecho = !!(G.built && G.built.store);
     else if (st.id === "build_horno")  hecho = !!(G.built && G.built.horno);
     else if (st.id === "build_cocina") hecho = !!(G.built && G.built.cocina);
@@ -3254,7 +3259,7 @@ function sellItem(res) {
   if (marketCur === "plata") { const t=q*priceOf(res); G.plata+=t; G.res[res]-=q; log(`Vendiste ${q} ${RES_LABEL[res]} por ${t} de plata.`); toast("+"+t+" plata"); }
   else { const g=Math.floor(q*priceOf(res)/10); if (g<1){ toast("Muy poca cantidad para $Golden"); return; } G.res[res]-=q; G.golden+=g; log(`Vendiste ${q} ${RES_LABEL[res]} por ${g} $Golden.`,"gold"); toast("+"+g+" $Golden"); }
   if (window.sfx) sfx("coin");
-  if (CROP_DEF[res] && typeof tutoEvent === "function") tutoEvent("sell");   // tutorial: vender la cosecha
+  if (CROP_DEF[res] && typeof tutoEvent === "function") for (let i = 0; i < q; i++) tutoEvent("sell");   // 14/8 v4: un evento POR UNIDAD vendida — el capataz verifica cantidades
   refreshMarket(); refreshHud();
 }
 
