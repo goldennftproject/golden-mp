@@ -2125,6 +2125,13 @@ Ahora la cadena de guía no tiene puntas sueltas:
   lugar. Al recomprar semillas, `buySeed` la vuelve a poner en el primer hueco libre.
   Herramientas y picos conservan su lógica de siempre.
 
+## Día 18 (cont.) — Herrería: el scroll queda libre (15/8)
+- Playtest: tras comprar un pico, la lista de la Herrería no dejaba subir el scroll más
+  allá de la mitad. Causa: tutoHighlight corre cada segundo y en cada evento de scroll,
+  y su scrollIntoView devolvía la lista a la fila guiada apenas el jugador se alejaba.
+- Arreglo: la lista se acomoda UNA vez cuando cambia el destino de la guía; después el
+  scroll es del jugador.
+
 ## Día 18 (cont.) — Regla única de timers: el RECURSO define el timer (15/8, dirección)
 - Dirección: "todo lo extraíble de la granja va por UN sistema con el −50% general —
   nada modificado de forma particular". La anomalía que quedaba: la piedra salía a 2 min

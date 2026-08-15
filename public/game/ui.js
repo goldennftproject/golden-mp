@@ -851,7 +851,12 @@ function tutoHighlight() {
     return;
   }
   const fila = el.closest(".forge-row, .mkt-row");
-  if (fila) fila.scrollIntoView({ block: "nearest" });
+  // 15/8 (playtest: "no puedo subir el scroll de la Herrería"): tutoHighlight corre cada
+  // segundo Y en cada evento de scroll — el scrollIntoView de acá devolvía la lista a la
+  // fila guiada apenas el jugador intentaba alejarse. Ahora la lista se acomoda UNA sola
+  // vez por objetivo (cuando cambia el destino de la guía); después el scroll es libre.
+  const claveScroll = st.panel + "|" + (st.ui || "");
+  if (fila && window._guiaScrollKey !== claveScroll) { fila.scrollIntoView({ block: "nearest" }); window._guiaScrollKey = claveScroll; }
   tutoFlechaUI(el);
 }
 window.tutoHighlight = tutoHighlight;
