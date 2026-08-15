@@ -2125,6 +2125,17 @@ Ahora la cadena de guía no tiene puntas sueltas:
   lugar. Al recomprar semillas, `buySeed` la vuelve a poner en el primer hueco libre.
   Herramientas y picos conservan su lógica de siempre.
 
+## Día 18 (cont.) — Timer único por nodo (15/8, dirección)
+- **Se eliminó el "arranque rápido por nodo"** (CD_RAPIDO): el jugador lo percibía como
+  una aceleración inconsistente ("el árbol de la Cocina va más rápido que el mío").
+  Decisión de dirección: **el timer es el mismo siempre**, sin etapas ni excepciones.
+- Nuevos valores fijos: **árbol 90 s · roca 2 min** (punto medio del rebalance −50%).
+  Las vetas conservan su CD propio de ORE_DEF (también fijo, sin atajos de primeras veces).
+- Impacto medido (sim-guia): Cocina 45 min · Armas 1.7 h · Minería 2.6 h · Altar ~11 h.
+  ⚠ Para el diseñador: sin el CD largo de 30/45 min, la madera/piedra fluye constante —
+  los frenos de la economía quedan en la plata (cupo de semillas), los niveles y los costos.
+  Si se quiere frenar materiales a la larga, el dial es CD.tree / CD.rock (un solo número).
+
 ## Día 18 — Viernes 14/08 · Fixes.docx del diseñador (6 puntos)
 
 - **#1 Alimentar animales**: siempre se puede — el cultivo PREFERIDO da la felicidad

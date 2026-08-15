@@ -13,7 +13,7 @@ const CROPS = [   // 14/8: escalera nueva (papa 90 s)
 ];
 const FARM_XP = [0, 0, 25, 90, 225, 550, 1250, 2750, 5500, 9000, 14000];
 const XP_BASE = 100, XP_EXP = 2.7;   // curva del skill Cultivo (desbloquea cultivos)
-const CDT = { fast: 60, long: 1800, uses: 15 }, CDR = { fast: 90, long: 2700, uses: 15 };   // 14/8 −50%
+const CDT = { fast: 90, long: 90, uses: 99 }, CDR = { fast: 120, long: 120, uses: 99 };   // 14/8: TIMER ÚNICO
 let ensenanza = false;   // 14/8: FÍSICA ÚNICA — sin aceleración de tutorial
 const NIVEL_ROCAS = [1, 3, 5, 8, 12, 16];
 const UNLOCK_ARBOL = [3, 9, 27];   // madera que cuesta el 2º/3º/4º árbol

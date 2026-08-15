@@ -178,25 +178,15 @@ var GOLPES_TALAR = 3, GOLPES_MINAR = 3;   // clics para tumbar un árbol o rompe
 // si dejás un árbol o una piedra a medio golpear y no volvés en este tiempo, se recupera sola
 // y NO se gasta la herramienta: la herramienta solo se descuenta cuando el nodo cae del todo.
 var GOLPES_RESET_MS = 5000;
-var CD = { tree: 1800, rock: 2700 };            // 14/8 −50%: 30 min el árbol · 45 min la piedra
-var CD_RAPIDO = {                                // enfriamiento corto de las primeras veces
-  // 10/8: eran las primeras 3 y el diseñador pidió 10, para que el tutorial se pueda terminar
-  // sin quedarse esperando el enfriamiento largo del cuarto árbol.
-  tree:      { seg: 60, veces: 15 },             // 14/8 −50%: 1 min · las primeras 15
-  piedra:    { seg: 90, veces: 15 },             // 14/8 −50%: 1,5 min · las primeras 15
-  bronce:    { seg: 180, veces: 2 },             // 14/8 −50%: 3 min · las primeras 2
-  hierro:    { seg: 240, veces: 2 },             // 14/8 −50%: 4 min
-  oro:       { seg: 360, veces: 1 },             // 14/8 −50%: 6 min
-  diamante:  { seg: 360, veces: 1 },             // 14/8 −50%: 6 min
-  netherita: { seg: 900, veces: 1 },             // 15 min · la primera
-};
+var CD = { tree: 90, rock: 120 };               // 14/8 FINAL (dirección): UN SOLO TIMER SIEMPRE — árbol 90 s, roca 2 min, sin arranque rápido ni excepciones
+var CD_RAPIDO = {};   // 14/8 (dirección): el "arranque rápido por nodo" se ELIMINÓ — el timer es el mismo siempre
 // cuántas veces se recogió YA de ese nodo (por nodo, no global)
 function nodoUsos(o) { G.nodoUsos = G.nodoUsos || {}; return G.nodoUsos[o.i] || 0; }
 function nodoSumar(o) { G.nodoUsos = G.nodoUsos || {}; G.nodoUsos[o.i] = nodoUsos(o) + 1; }
 // enfriamiento que corresponde a este nodo AHORA (en segundos)
 // 14/8 FINAL (dirección): la ACELERACIÓN del tutorial se ELIMINÓ — el ritmo del
 // tutorial ES el ritmo del juego: escalera de cultivos rápida en tier 1 (papa 90 s) y
-// CD_RAPIDO en los nodos. Una sola física; las esperas del tutorial se SOLAPAN.
+// timers de nodo FIJOS (árbol 90 s / roca 120 s). Una sola física; las esperas se SOLAPAN.
 /* 14/8 (proyección como GUÍA — la aceleración se eliminó; la contabilidad queda) —
    una siembra corre a 3 s solo si la PROYECCIÓN (plata + cosecha en bolsa + lo que está
    creciendo) todavía no cubre la meta del sub. Cubierta la meta: siembras a tiempo real
@@ -229,11 +219,7 @@ function tutoAvisoCubierto() {
     log("Con lo que está creciendo y lo que tenés en la bolsa ya llegás a los " + meta + " de plata del objetivo.", "good");
   }
 }
-function nodoCd(o, clave, cdLargo) {
-  const r = CD_RAPIDO[clave];
-  if (r && nodoUsos(o) < r.veces) return r.seg;   // todavía está en su etapa de arranque rápido
-  return cdLargo;
-}
+function nodoCd(o, clave, cdLargo) { return cdLargo; }   // 14/8: un solo timer, sin etapas
 function seedBuysToday() {
   const sb = G.seedBuys || (G.seedBuys = { date: "", count: 0 });
   if (sb.date !== dayStamp(0)) { sb.date = dayStamp(0); sb.count = 0; }
