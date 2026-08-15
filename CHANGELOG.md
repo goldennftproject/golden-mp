@@ -2281,6 +2281,25 @@ INSUMOS (cosas que se usan) y la plata sale de vender lo producido. Aplicado a t
   tiene que haber 3 celdas donde apuntar. La tabla `FARM_PARCELA` sigue igual (nivel 2
   "regalaba" la 3ª, que ahora ya viene de fábrica; la 4ª llega en nivel 4).
 
+### REVERSIÓN DEL CAPATAZ (14/8, dirección: "al final no me gustó — flechitas y sin premios")
+
+Se probó y no cuajó. Vuelve el sistema anterior, más simple y más honesto:
+
+- **Fuera**: la burbuja del capataz, sus líneas y reacciones, el foco (mundo e interfaz),
+  los kits del objetivo, las pagas de los capítulos, la parcela final de regalo, las
+  manos vacías. **El tutorial NO da nada** — ni premios ni experiencia regalada: enseña.
+- **Vuelve**: el cartel "Objetivo" con contador, la flechita triangular del mundo, la
+  flecha DOM en interfaces, el set de arranque (15 hachas, 15 usos de pico, caña) y los
+  accesos de la barra.
+- **La cadena se recorta a LO BÁSICO de la granja: 19 pasos** (comprá→plantá→cosechá→
+  vendé → Herrería → Horno + Hacha → Cocina + comer). Armas, Zona Negra, minería
+  avanzada y Altar se aprenden jugando: sus planos caen por nivel y cada sistema se
+  presenta solo. El panel Objetivos queda como lista de progreso (4 capítulos, sin
+  botones de cobro). `TUTO_VER=12`.
+- **Se queda**: las esperas de 3 s durante el tutorial (al completarlo, tiempos reales),
+  el kit de emergencia en $Golden, la guía apagable, los sub-objetivos como consejo, y
+  toda la economía web3 del Pase (esa no era del capataz).
+
 ### EL CAPATAZ + los PEDIDOS (14/8, dirección: "hagamos el cambio y probémoslo")
 
 Onboarding rediseñado desde cero alrededor de una VOZ y un TABLÓN (v1 para testear):

@@ -166,23 +166,10 @@
   @keyframes cflash{from{opacity:1}to{opacity:0}}
   @keyframes cpart{0%{transform:translate(0,0);opacity:1}60%{transform:translate(var(--dx),var(--dy));opacity:1}100%{transform:translate(var(--dx),calc(var(--dy) + var(--fall)));opacity:0}}
   /* tutorial guiado (doc maestro 2/8): cartel con la meta actual */
-  #tuto{position:fixed;left:50%;transform:translateX(-50%);top:54px;z-index:7;display:flex;align-items:center;gap:8px;background:none;border:8px solid transparent;border-image:url("assets/ui/badge_wood.png") 26 fill round;image-rendering:pixelated;padding:1px 10px;font-size:13px;font-weight:700;color:#fff;text-shadow:-1px 0 #241505,1px 0 #241505,0 -1px #241505,0 1px #241505;pointer-events:auto;cursor:pointer}   /* 14/8: clic = el capataz repite la línea del capítulo */
+  #tuto{position:fixed;left:50%;transform:translateX(-50%);top:54px;z-index:7;display:flex;align-items:center;gap:8px;background:none;border:8px solid transparent;border-image:url("assets/ui/badge_wood.png") 26 fill round;image-rendering:pixelated;padding:1px 10px;font-size:13px;font-weight:700;color:#fff;text-shadow:-1px 0 #241505,1px 0 #241505,0 -1px #241505,0 1px #241505;pointer-events:none}
   #tuto.hidden{display:none}
   /* EL CAPATAZ (14/8): burbuja de diálogo — la voz del juego */
-  /* 14/8 v2: la burbuja va ARRIBA, en el lugar del cartel Pedido (que se esconde mientras habla) */
-  #capataz{position:fixed;left:50%;transform:translateX(-50%);top:50px;z-index:8;display:flex;align-items:center;gap:10px;max-width:min(520px,92vw);
-    border:10px solid transparent;border-image:url("assets/ui/panel_wood.png?a=4") 30 round;background:rgba(30,22,12,.94);image-rendering:pixelated;
-    padding:8px 14px;cursor:pointer;animation:capIn .25s ease-out}
-  #capataz.hidden{display:none}
-  /* achicada a la carita: la guía nunca desaparece, solo se hace chiquita */
-  #capataz.mini{max-width:56px;padding:5px 8px}
-  #capataz.mini #capataz-txt{display:none}
-  #capataz-cara{font-size:30px;line-height:1;filter:drop-shadow(0 2px 2px rgba(0,0,0,.5))}
-  #capataz-txt{color:#f2ead5;font-size:13.5px;font-weight:600;line-height:1.35}
-  #capataz-txt b{color:#ffe08a}
-  @keyframes capIn{from{opacity:0;transform:translateX(-50%) translateY(-8px)}to{opacity:1;transform:translateX(-50%) translateY(0)}}
-  /* FOCO de interfaz (14/8): oscurece todo menos el botón al que apunta la guía */
-  #tuto-foco{position:fixed;z-index:99997;pointer-events:none;display:none;border-radius:12px;box-shadow:0 0 0 9999px rgba(16,11,4,.45)}
+
   #tuto .k{color:#ffe9ac;font-weight:800;font-size:12px}
   #tuto b{color:#fff}
   #tuto .check{color:#8fd14f;font-size:16px;animation:tcheck .5s cubic-bezier(.34,1.56,.64,1)}
@@ -557,14 +544,9 @@
 
   <!-- HUD -->
   <div id="celeb" class="hidden"></div>
-  <div id="tuto" class="hidden"><span class="k">Pedido</span><b id="tuto-txt"></b><span id="tuto-n"></span></div>
+  <div id="tuto" class="hidden"><span class="k">Objetivo</span><b id="tuto-txt"></b><span id="tuto-n"></span></div>
 
-  <!-- EL CAPATAZ (14/8): la voz del juego — una línea por vez, clic para cerrar -->
-  <div id="capataz" class="hidden">
-    <div id="capataz-cara">🧑‍🌾</div>
-    <div id="capataz-txt"></div>
-  </div>
-  <div id="tuto-foco"></div>
+
   <div class="hudbar">
     <div class="brand" style="display:flex;align-items:center;gap:12px"><h1>GOLDEN FARM</h1>
       <div class="pill" title="Ventanas del juego conectadas ahora"><span class="k">Jugadores en línea</span><b id="s-online">1</b></div>
@@ -798,8 +780,8 @@
   <!-- 14/8: los objetivos como CAPÍTULOS reclamables — guía opcional estilo diario de misiones -->
   <div class="ov" id="ov-objetivos"><div class="card" style="width:min(560px,94%)">
     <button class="close" data-close="ov-objetivos">×</button>
-    <h3>📋 Pedidos del Capataz</h3>
-    <div class="sub">El capataz pide, vos cumplís cuando quieras, y cada pedido terminado deja su paga para cobrar.</div>
+    <h3>🎯 Objetivos</h3>
+    <div class="sub">Una guía, no una obligación: seguila cuando quieras. Enseña lo básico de la granja — no da premios.</div>
     <div class="forge-list" id="objetivos-list" style="max-height:58vh"></div>
   </div></div>
 
@@ -889,7 +871,7 @@
   <div class="gmenu collapsed" id="gmenu">
     <div class="gmitems">
       <button class="gmi" data-panel="ov-mapa"><span class="ic"></span> Mapa <b class="key">N</b></button>
-      <button class="gmi" data-panel="ov-objetivos"><span class="ic">📋</span> Pedidos</button>
+      <button class="gmi" data-panel="ov-objetivos"><span class="ic">🎯</span> Objetivos</button>
       <button class="gmi" data-panel="ov-inv"><span class="ic"></span> Inventario <b class="key">I</b></button>
       <button class="gmi" data-panel="ov-skills"><span class="ic"></span> Skills <b class="key">X</b></button>
       <button class="gmi" data-panel="ov-equip"><span class="ic"></span> Equipo <b class="key">P</b></button>

@@ -29,8 +29,8 @@ const G = {
     fibra: 0, pelaje: 0, cuero: 0, colmillo: 0, esencia_runica: 0, esencia_oscura: 0 },
   seeds: { papa: 0, zanahoria: 0, cebolla: 0, calabacin: 0, repollo: 0, calabaza: 0, brocoli: 0, girasol: 0, trigo: 0, maiz: 0 },  // 14/8: la bolsa nace VACÍA — las 3 semillas se compran con la plata inicial (1er objetivo)
   selSeed: "papa",   // semilla elegida para plantar
-  picks: { owned: {}, dur: {}, eq: null },   // 14/8 (dirección): se nace con las MANOS VACÍAS — las herramientas las da el capataz cuando su pedido las necesita (kits)
-  tools: { axe: 0, rod: 0 },                 // (antes: 15 usos de arranque de todo — la barra llena contradecía el onboarding)
+  picks: { owned: { stone: true }, dur: { stone: 15 }, eq: "stone" },   // 14/8 (reversión del capataz): vuelve el set de arranque
+  tools: { axe: 15, rod: 15 },   // 15 usos de arranque; después se craftean de a 1 uso
   toolsLost: {},                 // herramientas tiradas a la papelera (31/7: el diseñador pidió que se puedan tirar)
   invRows: 0,                    // filas extra de inventario compradas
   slots: [],                     // inventario por casillas: [{kind,key}|null]
@@ -302,7 +302,6 @@ function darPlano(t, silencioso) {
   if (!silencioso) {
     log("¡Ganaste el PLANO de " + b.label + "! Está en tu bolsa: clic para colocarlo donde quieras.", "gold");
     toast("📜 ¡Plano de " + b.label + "!");
-    if (window.capataz) capataz("cap_plano_" + t, "Te conseguí el <b>plano de " + b.label + "</b> — está en tu barra rápida. Colocalo donde te guste.");
     if (window.celebrate) celebrate({ title: "¡PLANO NUEVO!", sub: b.label, big: false, reward: "Colocalo desde tu barra rápida" });
   }
   planoAHotbar(t);
@@ -1009,34 +1008,9 @@ const TUTO_STEPS = [
   { id: "build_cocina", n: 1, txt: "Depositá los materiales en la obra de la Cocina (clic encima)", target: "cocina" },
   { id: "cook",     n: 1, txt: "Cociná tu primer plato: Papa Asada",   target: "cocina", panel: "ov-cocina", ui: "[data-cook='papa_asada']" },
   { id: "eat",      n: 1, txt: "Comé un plato desde la bolsa (te da un buff)" },
-  // — la forja de Armas: la plata del desbloqueo llega de ADELANTO; los materiales se juntan acá —
-  { id: "unlockarm", n: 1,        txt: "Desbloqueá la pestaña Armas en la Herrería (juntá sus materiales)", target: "store", panel: "ov-forge", ui: "#forge-unlock-armas" },
-  { id: "craftarm",  n: 1, txt: "Forjá tu primera arma: Espada de Madera", target: "store", panel: "ov-forge", ui: "[data-carm='espada_madera']" },
-  { id: "equiparm",  n: 1,        txt: "Equipá tu arma",                        target: "store", panel: "ov-forge", ui: "[data-eqarm='espada_madera']" },
-  { id: "portal",    n: 1,        txt: "Cruzá el portal a la Zona Negra",       target: "portal" },
-  { id: "kill",      n: 1, txt: "Vencé tu primera criatura" },
-  { id: "kill5",     n: 5, txt: "Vencé 5 criaturas más" },
-  { id: "fish",      n: 1, txt: "Pescá un pez en la laguna (comprá lombrices en la Tienda)" },
-  // ——— ETAPA 3: que el jugador descubra TODO lo que se puede hacer ———
-  { id: "mat",       n: 1, txt: "Fundí una barra en el Horno de Piedra", target: "horno", panel: "ov-horno", ui: "[data-mat='barra_piedra']" },
-  { id: "craftpick", n: 1, txt: "Crafteá un Pico de Bronce en la Herrería", target: "store", panel: "ov-forge", ui: "[data-craft='bronze']" },
-  { id: "mineore",   n: 1, txt: "Miná un mineral con tu pico nuevo",    target: "ore" },
-  // Fixes.docx 14/8 #2: el Altar va DESPUÉS de picos y fundición — su receta pide ORO, y
-  // el oro necesita Pico de Oro (antes el embudo lo hacía softlock). Además su cadena deja
-  // abierto TODO el loop (ver permisos) porque la receta cruza media economía.
-  { id: "place_altar", n: 1, txt: "Colocá el plano del Altar de Runas (barra rápida)", target: "altar", hot: "altar" },
-  { id: "stone_al", res: "piedra", dep: "altar", need: () => BUILD_DEF.altar.cost.piedra || 60,
-    txt: "Juntá # de piedra (para la obra del Altar)",                            target: "rock" },
-  { id: "wood_al",  res: "madera", dep: "altar", need: () => BUILD_DEF.altar.cost.madera || 40,
-    txt: "Juntá # de madera (para la obra del Altar)",                            target: "tree" },
-  { id: "build_altar", n: 1, txt: "Llevale a la obra del Altar lo que falta (incluye oro y $Golden)", target: "altar" },
-  { id: "upgrade",   n: 1, txt: "Mejorá un arma a +1 en el Altar",     target: "altar", panel: "ov-altar" },
-  { id: "dummy",     n: 1, txt: "Entrená con el dummy de práctica",     target: "dummy" },
-  { id: "unlocknode", n: 1, txt: "Usá un segundo árbol o veta (se habilitan por nivel)", target: "tree" },
-  { id: "chest",     n: 1, txt: "Crafteá un cofre depósito y colocalo", target: "store", panel: "ov-forge", ui: "#forge-chest" },
-  { id: "invexp",    n: 1, txt: "Ampliá tu bolsa desde el inventario",  panel: "ov-inv", ui: "#inv-expbtn" },
-  { id: "passclaim", n: 1, txt: "Reclamá una recompensa del Pase de Batalla", panel: "ov-pass", ui: "[data-pfree]" },
-  { id: "socket",    n: 1, txt: "Socketeá una runa en tu arma (Altar)", target: "altar", panel: "ov-altar" },
+  // (14/8, reversión del capataz: la cadena TERMINA acá — el tutorial enseña LO BÁSICO de
+  //  la granja. Armas, Zona Negra, minería avanzada y Altar se aprenden jugando: sus
+  //  planos caen por nivel y cada sistema se presenta solo.)
 ];
 /* 14/8: los 40 pasos agrupados en CAPÍTULOS reclamables — la guía opcional con forma de
    diario de misiones. Cada capítulo junta pasos consecutivos y deja una recompensa que se
@@ -1046,72 +1020,19 @@ const TUTO_STEPS = [
    regalada es emisión que termina en el P2P. La plata sale de vender lo producido; los
    capítulos pagan cosas que se USAN. El último paga una FICHA DE PARCELA (tierra). */
 const TUTO_CAPS = [
-  { id: "cosecha",  label: "Tu primera cosecha",   pasos: ["buyseed", "plant", "harvest", "sell"], regalo: { seeds: { papa: 5 } },        premioTxt: "5 semillas de papa" },
-  { id: "herreria", label: "La Herrería",          pasos: ["place_store", "wood_st", "stone_st", "build_store"], regalo: { tools: { axe: 5 } }, premioTxt: "5 hachas" },
-  { id: "horno",    label: "El Horno de Piedra",   pasos: ["place_horno", "wood", "stone", "build_horno", "crafttool"], regalo: { pico: 5 }, premioTxt: "5 usos de pico" },
-  { id: "cocina",   label: "La Cocina",            pasos: ["place_cocina", "woodc", "stonec", "build_cocina", "cook", "eat"], regalo: { dishes: { papa_asada: 2 } }, premioTxt: "2 Papas Asadas" },
-  { id: "armas",    label: "Las Armas",            pasos: ["unlockarm", "craftarm", "equiparm"], regalo: { res: { flecha: 20 } },          premioTxt: "20 flechas" },
-  { id: "zona",     label: "La Zona Negra",        pasos: ["portal", "kill", "kill5", "fish"], regalo: { res: { lombriz: 10, carne: 5 } }, premioTxt: "10 lombrices + 5 carnes" },
-  { id: "mineria",  label: "Minería avanzada",     pasos: ["mat", "craftpick", "mineore"], regalo: { res: { barra_piedra: 3 } },           premioTxt: "3 barras de piedra" },
-  { id: "altar",    label: "El Altar de Runas",    pasos: ["place_altar", "stone_al", "wood_al", "build_altar", "upgrade"], regalo: { res: { esencia_runica: 2 } }, premioTxt: "2 esencias rúnicas" },
-  { id: "maestria", label: "Maestría de la granja", pasos: ["dummy", "unlocknode", "chest", "invexp", "passclaim", "socket"], regalo: { ficha: 1 }, premioTxt: "1 FICHA DE PARCELA" },
+  // 14/8 (reversión): el tutorial NO premia — enseña. Capítulos = progreso visible, nada más.
+  { id: "cosecha",  label: "Tu primera cosecha", pasos: ["buyseed", "plant", "harvest", "sell"] },
+  { id: "herreria", label: "La Herrería",        pasos: ["place_store", "wood_st", "stone_st", "build_store"] },
+  { id: "horno",    label: "El Horno de Piedra", pasos: ["place_horno", "wood", "stone", "build_horno", "crafttool"] },
+  { id: "cocina",   label: "La Cocina",          pasos: ["place_cocina", "woodc", "stonec", "build_cocina", "cook", "eat"] },
 ];
-/* 14/8: las LÍNEAS del capataz — una por capítulo (al arrancar) y por momento clave.
-   El capataz es la voz del juego: pide, agradece y enseña de a una línea. */
-const CAP_LINEAS = {
-  cosecha:  "¡Al fin llegás! La granja está dormida hace años. Tomá <b>3 monedas</b> — comprá semillas en el mercadillo y plantá algo en esa parcela.",
-  herreria: "Buen comienzo. Sin herrería no somos nada: <b>colocá el plano</b> que te dejé en la barra y juntale materiales.",
-  horno:    "Con fuego se funde el metal. El <b>Horno</b> va después de la Herrería — mismo ritual: plano, materiales, obra.",
-  cocina:   "Un granjero que no come no rinde. La <b>Cocina</b> es más obra que las otras — tomate tu tiempo, el bosque no se va a ningún lado.",
-  armas:    "Del otro lado del portal hay cosas que muerden. Vamos a necesitar <b>armas</b> — y la forja no es barata.",
-  zona:     "¿Escuchás eso? Es la <b>Zona Negra</b>. Andá con el arma puesta y volvé con carne.",
-  mineria:  "La piedra es el principio. Con <b>barras y picos buenos</b> se llega al metal de verdad.",
-  altar:    "Los antiguos mejoraban sus armas en un <b>Altar de Runas</b>. Los planos siguen existiendo…",
-  maestria: "Ya casi no te queda nada por aprender de mí. Lo que sigue es <b>tuyo</b>.",
-};
+
 function capEstado(cap) {   // "hecho" | "activo" | "pendiente" (por el paso más avanzado de la cadena)
   const idxs = cap.pasos.map(id => tutoIdx(id)).filter(i => i >= 0);
   const fin = Math.max.apply(null, idxs);
   if (G.tuto && (G.tuto.done || (G.tuto.step || 0) > fin)) return "hecho";
   const ini = Math.min.apply(null, idxs);
   return (G.tuto && (G.tuto.step || 0) >= ini) ? "activo" : "pendiente";
-}
-// la línea del capítulo ACTIVO se dice una vez, al entrar en él (corre en tutoSync)
-function capatazSync() {
-  if (!window.capataz || !G.tuto) return;
-  if (G.tuto.done) { capataz("cap_fin", "La granja es toda tuya, granjero. Yo me quedo por acá — pasá por el <b>tablón de pedidos</b> cuando quieras cobrar lo que falta."); return; }
-  const idx = G.tuto.step || 0;
-  for (const cap of TUTO_CAPS) {
-    const idxs = cap.pasos.map(id => tutoIdx(id)).filter(i => i >= 0);
-    if (idx >= Math.min.apply(null, idxs) && idx <= Math.max.apply(null, idxs)) {
-      if (CAP_LINEAS[cap.id]) capataz("cap_" + cap.id, CAP_LINEAS[cap.id]);
-      return;
-    }
-  }
-}
-function capReclamar(id) {
-  const cap = TUTO_CAPS.find(c => c.id === id); if (!cap) return;
-  G.capsClaim = G.capsClaim || {};
-  if (G.capsClaim[id] || capEstado(cap) !== "hecho") return;
-  G.capsClaim[id] = 1;
-  const r = cap.regalo || {};
-  if (r.seeds) for (const k in r.seeds) G.seeds[k] = (G.seeds[k] || 0) + r.seeds[k];
-  if (r.res) for (const k in r.res) G.res[k] = (G.res[k] || 0) + r.res[k];
-  if (r.tools) { G.tools = G.tools || {}; for (const k in r.tools) G.tools[k] = (G.tools[k] || 0) + r.tools[k]; }
-  if (r.dishes) { G.dishes = G.dishes || {}; for (const k in r.dishes) G.dishes[k] = (G.dishes[k] || 0) + r.dishes[k]; }
-  if (r.pico) {
-    G.picks = G.picks || { owned: {}, dur: {}, eq: null };
-    if (!G.picks.eq || !G.picks.owned[G.picks.eq]) { G.picks.owned.stone = true; G.picks.eq = "stone"; G.picks.dur.stone = 0; }
-    G.picks.dur[G.picks.eq] = (G.picks.dur[G.picks.eq] || 0) + r.pico;
-  }
-  if (r.ficha) { G.plotsOwned = Math.min(PLOT_MAX, (G.plotsOwned || 3) + r.ficha); if (typeof syncEditDeco === "function") syncEditDeco(); }
-  log("Pedido «" + cap.label + "» cobrado: " + cap.premioTxt + ".", "gold");
-  if (window.celebrate) celebrate({ title: "¡PEDIDO CUMPLIDO!", sub: cap.label, big: false, reward: cap.premioTxt });
-  if (typeof refreshHotbar === "function") refreshHotbar(true);
-  // cierre de la primera sesión: el juego trabaja mientras no estás — la lección del género
-  if (id === "herreria" && window.capataz) capataz("cap_crece_solo", "Bien hecho. Ahora <b>dejá una tanda plantada</b> antes de irte — tus cultivos crecen aunque cierres el juego. Mañana cosechás.");
-  refreshHud(); if (typeof saveFarm === "function") saveFarm();
-  if (typeof refreshObjetivos === "function" && isOpen("ov-objetivos")) refreshObjetivos();
 }
 function tutoNeed(st) { return st ? (typeof st.need === "function" ? st.need() : (st.n || 1)) : 0; }
 function tutoTiene(st) {
@@ -1209,7 +1130,7 @@ var TUTO_REWARD_PLATA = 100;   // gran recompensa del cierre (editable)
 // después usan el tiempo normal del cultivo. 0 en el panel = sin excepción.
 var FIRST_GROW_MS = 45000;   // tope de crecimiento de las semillas de arranque
 var FIRST_GROW_N = 3;        // cuántas semillas de arranque tienen ese trato (las 3 papas del inicio)
-var TUTO_VER = 11;   // subir este número cuando cambie la CADENA de pasos (invalida progresos viejos) · v11 (14/8): el arranque verifica CANTIDADES (3 compradas/plantadas/cosechadas/vendidas)
+var TUTO_VER = 12;   // subir este número cuando cambie la CADENA de pasos (invalida progresos viejos) · v12 (14/8): reversión del capataz — 19 pasos de granja básica, sin premios
 function tutoActivo() { return G.tuto && !G.tuto.done ? TUTO_STEPS[G.tuto.step] : null; }
 // migración: si el guardado trae una cadena vieja, los pasos ya no significan lo mismo → se recalcula
 function tutoMigrar() {
@@ -1276,78 +1197,9 @@ function tutoHecho(st) {
    · unlockarm → la plata del desbloqueo + hachas/usos para sus materiales
    Marca nueva G.tuto.adelv (la vieja adel queda ignorada → los guardados trabados en un
    paso ya "cobrado" con la cuenta vieja RECIBEN el kit al entrar el fix). */
-function tutoAdelanto() {
-  const st = tutoActivo(); if (!st || G.tuto.adelv === G.tuto.step) return;
-  // 14/8 v3: la CAÑA del capataz — primer contacto con la pesca, fuera del tope (es un
-  // regalo de primera vez, no un pago por repetición). Se nace sin caña.
-  if (st.id === "fish" && Math.floor((G.tools && G.tools.rod) || 0) <= 0) {
-    G.tuto.adelv = G.tuto.step;
-    G.tools = G.tools || {}; G.tools.rod = (G.tools.rod || 0) + 10;
-    if (typeof herramientaAHotbar === "function") herramientaAHotbar("tool", "rod");
-    if (window.capataz) capataz("cap_cana", "Tomá mi <b>caña vieja</b> — le quedan 10 lanzamientos. Las nuevas se craftean en la Herrería.");
-    if (typeof refreshHotbar === "function") refreshHotbar(true);
-    return;
-  }
-  // 14/8 (diseñador): la ayuda especial TERMINA con el capítulo del Hacha (~Cultivo 2,
-  // cuando abre la zanahoria). De ahí en más: tiempos y economía normales — el rescate
-  // para atascados es el KIT DE EMERGENCIA en $Golden de la Tienda (5 diarias).
-  const tope = tutoIdx("crafttool");
-  if (tope >= 0 && (G.tuto.step || 0) > tope) return;
-  const esMadera = st.res === "madera", esPiedra = st.res === "piedra";
-  if (!esMadera && !esPiedra && st.id !== "crafttool") return;
-  G.tuto.adelv = G.tuto.step;
-  const regalos = [];
-  const darHachas = (n) => { if (n > 0) { G.tools = G.tools || {}; G.tools.axe = (G.tools.axe || 0) + n; regalos.push(n + " hacha" + (n > 1 ? "s" : "")); if (typeof herramientaAHotbar === "function") herramientaAHotbar("tool", "axe"); } };
-  const darUsosPico = (n) => {
-    if (n <= 0) return;
-    G.picks = G.picks || { owned: {}, dur: {}, eq: null };
-    if (!G.picks.eq || !G.picks.owned[G.picks.eq]) { G.picks.owned.stone = true; G.picks.eq = "stone"; G.picks.dur.stone = 0; }   // sin pico: el capataz da el de piedra
-    G.picks.dur[G.picks.eq] = (G.picks.dur[G.picks.eq] || 0) + n;
-    regalos.push(n + " uso" + (n > 1 ? "s" : "") + " de pico");
-    if (typeof herramientaAHotbar === "function") herramientaAHotbar("pick", G.picks.eq);
-  };
-  const costoHacha = (TOOL_CRAFT && TOOL_CRAFT.axe && TOOL_CRAFT.axe.plata) || 10;
-  let plata = 0;
-  if (esMadera && typeof toolCount === "function") {
-    darHachas(Math.max(0, (tutoNeed(st) - tutoTiene(st)) - toolCount("axe")));
-  } else if (esPiedra) {
-    const falta = Math.max(0, tutoNeed(st) - tutoTiene(st));
-    const usos = (G.picks && G.picks.eq) ? Math.floor((G.picks.dur && G.picks.dur[G.picks.eq]) || 0) : 0;
-    darUsosPico(Math.max(0, falta - usos));
-  } else if (st.id === "crafttool") {
-    plata = Math.max(0, costoHacha - Math.floor(G.plata));   // la lección de craftear se paga sola
-  } else if (st.id === "cook" || st.id === "eat") {
-    // 14/8 (playtest: "no tengo los ingredientes" · "vendí la comida"): la lección es
-    // COCINAR/COMER — el kit repone lo que falte de la receta. En "eat" solo si no queda
-    // NINGÚN plato en la bolsa (vendió el que cocinó): repone ingredientes y a recocinar.
-    const sinPlatos = !Object.keys(G.dishes || {}).some(k => (G.dishes[k] || 0) > 0);
-    if (st.id === "cook" || sinPlatos) {
-      const rec = (typeof RECIPE_DEF !== "undefined" && RECIPE_DEF.papa_asada && RECIPE_DEF.papa_asada.res) || { papa: 1, madera: 1 };
-      for (const r in rec) {
-        const falta = Math.max(0, rec[r] - Math.floor(G.res[r] || 0));
-        if (falta > 0) { G.res[r] = (G.res[r] || 0) + falta; regalos.push(falta + " " + ((typeof RES_LABEL !== "undefined" && RES_LABEL[r]) || r).toLowerCase()); }
-      }
-    }
-  } else if (st.id === "unlockarm") {
-    const base = (typeof ARMAS_UNLOCK_PLATA !== "undefined") ? ARMAS_UNLOCK_PLATA : 1000;
-    const cost = (typeof ARMAS_UNLOCK_COST !== "undefined" && ARMAS_UNLOCK_COST) || {};
-    plata = Math.max(0, base - Math.floor(G.plata));
-    const madNec = Math.max(0, (cost.madera || 0) - Math.floor(G.res.madera || 0));
-    const pieNec = Math.max(0, (cost.piedra || 0) - Math.floor(G.res.piedra || 0));
-    darHachas(Math.max(0, madNec - (typeof toolCount === "function" ? toolCount("axe") : 0)));
-    const usos = (G.picks && G.picks.eq) ? Math.floor((G.picks.dur && G.picks.dur[G.picks.eq]) || 0) : 0;
-    darUsosPico(Math.max(0, pieNec - usos));
-  }
-  if (plata > 0) { G.plata += plata; regalos.unshift(plata + " de plata"); }
-  if (regalos.length) {
-    const lista = regalos.join(" + ");
-    log("🎁 Kit del objetivo: " + lista + " — ya sabés conseguirlo, no hace falta repetir el ciclo.", "gold");
-    toast("🎁 Kit del objetivo: " + lista);
-    if (window.celebrate) celebrate({ title: "¡KIT DEL OBJETIVO!", sub: lista, big: false, reward: "Ya sabés conseguirlo — no hace falta repetir el ciclo" });
-    refreshHud();
-    if (typeof refreshHotbar === "function") refreshHotbar(true);
-  }
-}
+// (14/8, reversión: tutoAdelanto/kits eliminados — el tutorial no regala nada;
+//  el set de arranque de herramientas volvió y el kit de emergencia en $G sigue en la Tienda)
+function tutoAdelanto() {}
 function tutoAutoSkip() {
   for (let i = 0; i < TUTO_STEPS.length + 2; i++) {
     const st = tutoActivo(); if (!st) return;
@@ -1367,13 +1219,7 @@ function tutoEvent(tipo) {
   const acepta = st.id === tipo;
   if (!acepta) return;
   G.tuto.n = (G.tuto.n || 0) + 1;
-  if (G.tuto.n < st.n) {
-    // 14/8 v3: el capataz REACCIONA en vivo a cada acción del paso ("¡Bien! 2/3")
-    const gritos = ["¡Bien!", "¡Eso!", "¡Muy bien!", "¡Así se hace!"];
-    G._capReact = gritos[(G.tuto.n - 1) % gritos.length];
-    if (typeof tutoRefresh === "function") tutoRefresh();
-    return;
-  }
+  if (G.tuto.n < st.n) { if (typeof tutoRefresh === "function") tutoRefresh(); return; }
   tutoDone(st);
 }
 function tutoDone(st) {
@@ -1384,16 +1230,12 @@ function tutoDone(st) {
   G.tuto.step++; G.tuto.n = 0;
   if (G.tuto.step >= TUTO_STEPS.length) {
     G.tuto.done = true;
-    // 14/8 (web3): el cierre paga TIERRA, no moneda — una parcela extra de regalo
-    G.plotsOwned = Math.min(PLOT_MAX, (G.plotsOwned || 3) + 1);
-    log("¡Guía completa! Recompensa: una PARCELA extra. La granja es toda tuya.", "gold");
-    if (window.celebrate) celebrate({ title: "¡GRANJA LISTA!", sub: "Guía completa", big: true, reward: "+1 parcela de regalo" });
-    if (typeof syncEditDeco === "function") syncEditDeco();
+    log("¡Tutorial completo! Ya sabés lo básico — la granja es toda tuya.", "gold");
+    if (window.celebrate) celebrate({ title: "¡GRANJA LISTA!", sub: "Tutorial completo", big: true });
     refreshHud();
   } else {
     tutoAutoSkip();   // si el paso nuevo ya estaba cumplido, no lo pide (9/8)
     if (G.tuto.done) { if (typeof tutoRefresh === "function") tutoRefresh(); return; }
-    G._capReact = "¡Perfecto!";   // 14/8 v3: el paso cumplido se celebra al presentar el siguiente
     log("Nuevo objetivo: " + tutoTxt(TUTO_STEPS[G.tuto.step]) + ".", "good");
     if (typeof planosSync === "function") planosSync(false);   // 13/8: si el paso nuevo trae plano, cae ACÁ (con su celebración)
   }
@@ -3235,15 +3077,13 @@ function ensureHotbarDefaults() {
   if (G.hbInit) return;
   if (!Array.isArray(G.hotbar)) G.hotbar = [];
   while (G.hotbar.length < 10) G.hotbar.push(null);
-  // 14/8: la barra nace VACÍA — cada herramienta entra sola cuando el capataz la da (kits)
+  if (!G.hotbar.some(Boolean)) {   // 14/8 (reversión): vuelven los accesos de arranque
+    G.hotbar[0] = { kind: "tool", key: "axe" };
+    G.hotbar[1] = { kind: "pick", key: (G.picks && G.picks.eq) || "stone" };
+    G.hotbar[2] = { kind: "tool", key: "rod" };
+    G.hotbar[3] = { kind: "seed", key: G.selSeed || "papa" };
+  }
   G.hbInit = true;
-}
-// una herramienta recién ganada entra sola a la barra (primer hueco libre), si no estaba
-function herramientaAHotbar(kind, key) {
-  if (!Array.isArray(G.hotbar)) return;
-  if (G.hotbar.some(h => h && h.kind === kind && h.key === key)) return;
-  const li = G.hotbar.findIndex(h => !h);
-  if (li >= 0) { G.hotbar[li] = { kind, key }; if (typeof refreshHotbar === "function") refreshHotbar(true); }
 }
 
 // --- mercado ---

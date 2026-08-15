@@ -788,20 +788,15 @@ function refreshCooking() {
 /* ---- Tutorial guiado (doc maestro 2/8): cartel de objetivo + tilde animado ---- */
 function tutoRefresh() {
   const el = document.getElementById("tuto"); if (!el) return;
-  el.classList.add("hidden");   // 14/8 v3: el cartel Pedido MURIÓ — la guía habla por el capataz
   const st = (typeof tutoActivo === "function") ? tutoActivo() : null;
-  if (!st || (window.guiaOn && !guiaOn())) { if (typeof capatazOcultar === "function") capatazOcultar(); if (typeof tutoFlechaUI === "function") tutoFlechaUI(null); tutoHighlight(); return; }
-  // 13/8 v3: si hay SUB-OBJETIVO (sin hachas, pico roto…), la guía dice ESO
+  if (!st || (window.guiaOn && !guiaOn())) { el.classList.add("hidden"); if (typeof tutoFlechaUI === "function") tutoFlechaUI(null); return; }
+  el.classList.remove("hidden");
+  // 14/8 (reversión del capataz): cartel + flechitas, como antes
   const sub = (typeof tutoSub === "function") ? tutoSub() : null;
+  document.getElementById("tuto-txt").textContent = sub ? sub.txt : tutoTxt(st);
   const need = tutoNeed(st);
-  let prog = "";
-  if (!sub) {
-    if (st.res) { const tng = Math.min(tutoTiene(st), need); if (tng > 0) prog = " <b>" + tng + "/" + need + "</b>"; }
-    else if (st.n > 1) { const n = Math.min(G.tuto.n || 0, st.n); if (n > 0) prog = " <b>" + n + "/" + st.n + "</b>"; }
-  }
-  const pre = G._capReact ? "<b>" + G._capReact + "</b> " : "";
-  G._capReact = "";   // la reacción se dice una vez y no se repite en cada refresco
-  if (typeof capatazDecir === "function") capatazDecir(pre + (sub ? sub.txt : tutoTxt(st)) + prog);
+  document.getElementById("tuto-n").textContent = sub ? "" : (st.res ? " " + Math.min(tutoTiene(st), need) + "/" + need
+    : (st.n > 1 ? " " + Math.min(G.tuto.n || 0, st.n) + "/" + st.n : ""));
   tutoHighlight();
 }
 // 13/8 (audio): la guía DENTRO de las interfaces es una FLECHA dorada (la misma estética
@@ -809,25 +804,13 @@ function tutoRefresh() {
 // no se leían sobre la madera. Una sola flecha por vez: menú → panel → pestaña → botón.
 function tutoFlechaUI(el) {
   let f = document.getElementById("tuto-flecha-ui");
-  const foco = document.getElementById("tuto-foco");
-  if (!el) { if (f) f.style.display = "none"; if (foco) foco.style.display = "none"; return; }
+  if (!el) { if (f) f.style.display = "none"; return; }
   if (!f) { f = document.createElement("div"); f.id = "tuto-flecha-ui"; f.textContent = "▼"; document.body.appendChild(f); }
   const r = el.getBoundingClientRect();
-  if (!r.width && !r.height) { f.style.display = "none"; if (foco) foco.style.display = "none"; return; }
+  if (!r.width && !r.height) { f.style.display = "none"; return; }
   f.style.display = "block";
   f.style.left = (r.left + r.width / 2) + "px";
   f.style.top = r.top + "px";
-  // 14/8: FOCO — todo se oscurece menos el botón al que apunta la guía (solo durante la guía)
-  if (foco) {
-    const guiando = G.tuto && !G.tuto.done && (!window.guiaOn || guiaOn());
-    if (!guiando) { foco.style.display = "none"; return; }
-    const pad = 6;
-    foco.style.display = "block";
-    foco.style.left = (r.left - pad) + "px";
-    foco.style.top = (r.top - pad) + "px";
-    foco.style.width = (r.width + pad * 2) + "px";
-    foco.style.height = (r.height + pad * 2) + "px";
-  }
 }
 function tutoHighlight() {
   document.querySelectorAll(".tutohl").forEach(e => e.classList.remove("tutohl"));   // limpieza del sistema viejo
@@ -896,9 +879,6 @@ function tutoSync(force) {
   if (!force && sig === _tutoSig) { tutoHighlight(); return; }   // 13/8: el resaltado se re-aplica aunque el paso no cambie (los paneles se redibujan y lo pierden)
   _tutoSig = sig;
   tutoRefresh();
-  // la INTRO del capítulo va DESPUÉS del refresco: así pisa la instrucción al entrar a un
-  // capítulo nuevo (es la misma burbuja) y la primera acción del jugador la reemplaza
-  if (typeof capatazSync === "function") { try { capatazSync(); } catch (e) {} }
   if (window.farmScene && window.farmScene.updateTutoArrow) { try { window.farmScene.updateTutoArrow(); } catch (e) {} }
 }
 window.tutoSync = tutoSync;
@@ -1063,27 +1043,6 @@ function raidBotin(parte) {
 }
 
 /* ---- MAPA (10/8): dónde estás y a dónde podés ir ---- */
-/* ---- EL CAPATAZ (14/8 v3, dirección): TODO el tutorial es DIÁLOGO — el capataz es el
-   único canal de guía, la burbuja es PERSISTENTE y reacciona en vivo a cada acción
-   ("¡Bien! Te faltan 2"). El cartel Pedido murió. Clic en la burbuja la achica a la
-   carita (chip); clic en la carita la vuelve a abrir. */
-function capatazDecir(html) {
-  const el = $("capataz"); if (!el) return;
-  $("capataz-txt").innerHTML = html;
-  el.classList.remove("hidden");
-}
-function capatazOcultar() { const el = $("capataz"); if (el) el.classList.add("hidden"); }
-function capataz(clave, txt) {   // líneas de UNA vez (planos, caña, hitos): pisan la guía un rato
-  G.capVisto = G.capVisto || {};
-  if (clave && G.capVisto[clave]) return;
-  if (clave) G.capVisto[clave] = 1;
-  capatazDecir(txt);
-  if (window.sfx) sfx("click");
-}
-window.capataz = capataz;
-// clic: se achica a la carita (nunca desaparece — es la guía); otro clic la reabre
-{ const el = $("capataz"); if (el) el.onclick = () => el.classList.toggle("mini"); }
-
 /* ---- OBJETIVOS por capítulos (14/8): la guía opcional con forma de diario ---- */
 function refreshObjetivos() {
   const box = $("objetivos-list"); if (!box) return;
@@ -1092,7 +1051,6 @@ function refreshObjetivos() {
   let h = "";
   TUTO_CAPS.forEach(cap => {
     const est = capEstado(cap);
-    const reclamado = !!(G.capsClaim && G.capsClaim[cap.id]);
     const filas = cap.pasos.map(id => {
       const i = tutoIdx(id); if (i < 0) return "";
       const st = TUTO_STEPS[i];
@@ -1100,17 +1058,12 @@ function refreshObjetivos() {
       const activo = idxActual === i;
       return '<div class="fds">' + (hecho ? "✅ " : (activo ? "▶️ " : "⬜ ")) + tutoTxt(st) + "</div>";
     }).join("");
-    const btn = reclamado ? '<button class="ghost sm" disabled>Cobrado</button>'
-      : (est === "hecho" ? '<button class="gold sm" data-cap="' + cap.id + '">🎁 Cobrar</button>'
-        : '<button class="ghost sm" disabled>Al cumplirlo</button>');
-    h += '<div class="forge-row' + (est === "activo" ? " eq" : (est === "hecho" && !reclamado ? "" : "")) + '"><div class="finfo">' +
+    h += '<div class="forge-row' + (est === "activo" ? " eq" : "") + '"><div class="finfo">' +
       '<div class="fnm">' + cap.label + (est === "hecho" ? ' <span class="tag">completo</span>' : (est === "activo" ? ' <span class="tag">en curso</span>' : "")) + '</div>' +
-      (est === "pendiente" ? '<div class="fds">Se abre al avanzar (o cumplilo jugando libre — se marca solo).</div>' : filas) +
-      (reclamado ? "" : '<div class="fds">🎁 Paga: <b>' + cap.premioTxt + '</b></div>') +
-      '</div><div class="fbtns">' + btn + '</div></div>';
+      (est === "pendiente" ? '<div class="fds">Se abre al avanzar.</div>' : filas) +
+      '</div></div>';
   });
   box.innerHTML = h;
-  box.querySelectorAll("[data-cap]").forEach(b => b.onclick = () => { capReclamar(b.dataset.cap); refreshObjetivos(); });
 }
 
 function refreshMapa() {

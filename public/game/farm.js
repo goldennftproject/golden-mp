@@ -1296,7 +1296,6 @@ class FarmScene extends Phaser.Scene {
   // flecha del tutorial: triángulo dorado que rebota sobre el objetivo del paso actual
   updateTutoArrow() {
     if (this.tutoArrow) { this.tutoArrow.destroy(); this.tutoArrow = null; if (this.tutoTw) { this.tutoTw.stop(); this.tutoTw = null; } }
-    this.focoTarget = null;   // sin flecha no hay foco (updateTutoArrow lo vuelve a poner si corresponde)
     if (window.guiaOn && !guiaOn()) return;   // 14/8: guía opcional apagada — sin flecha en el mundo
     let st = (typeof tutoActivo === "function") ? tutoActivo() : null;
     if (!st) return;
@@ -1314,9 +1313,10 @@ class FarmScene extends Phaser.Scene {
     }
     else { const o = (this.objs || []).find(o => o.type === st.target && !o.oculto); if (o) { x = o.cx; y = o.by - (o.sprite ? o.sprite.displayHeight : 60) - 10; } }   // sin plano colocado no hay a qué apuntar (12/8)
     if (x == null) return;
-    // 14/8 v2 (dirección): en el MUNDO ya no hay flecha — el CÍRCULO DE LUZ del foco es el
-    // único señalador. La flecha DOM sigue viva para interfaces y barra rápida.
-    this.focoTarget = { x, y: y + 50 };
+    // 14/8 (reversión del capataz): vuelve la FLECHITA del mundo
+    const tri = this.add.triangle(x, y, 0, 0, 16, 0, 8, 12, 0xffd75e).setStrokeStyle(2, 0x241505, 1).setDepth(99990);
+    this.tutoArrow = tri;
+    this.tutoTw = this.tweens.add({ targets: tri, y: y - 10, duration: 420, yoyo: true, repeat: -1, ease: "Sine.easeInOut" });
   }
 
   // TINTE DE LA VETA (9/8): el color va sobre la roca ENTERA, no solo sobre las pepitas.
@@ -2625,28 +2625,7 @@ class FarmScene extends Phaser.Scene {
     pl.timer.setVisible(false);
   }
 
-  // 14/8 v2 (dirección): el FOCO vive EN EL MUNDO, no en la pantalla — un manto oscuro
-  // sobre toda la granja con un agujero ANCLADO al objeto en coordenadas de mundo (máscara
-  // de geometría invertida). La cámara mueve manto y agujero juntos: el foco queda clavado
-  // en la cosa, inmune a paneos, zoom y lerp (antes se recalculaba contra la cámara y se
-  // desfasaba). Solo durante la guía, sin paneles ni edición.
-  focoSync() {
-    const activo = this.focoTarget && G.tuto && !G.tuto.done && (!window.guiaOn || guiaOn()) && !GF.uiOpen && !GF.editMode;
-    if (!activo) { if (this.focoDark) this.focoDark.setVisible(false); return; }
-    if (!this.focoDark) {
-      this.focoDark = this.add.rectangle(0, 0, GF.WORLD_W, GF.WORLD_H, 0x100b04, 0.45).setOrigin(0, 0).setDepth(99980);
-      this.focoHole = this.make.graphics({ add: false });
-      this.focoHole.fillStyle(0xffffff, 1).fillCircle(0, 0, 105);
-      const mask = this.focoHole.createGeometryMask();
-      mask.invertAlpha = true;   // el manto se dibuja en TODOS lados salvo el círculo
-      this.focoDark.setMask(mask);
-    }
-    this.focoDark.setVisible(true);
-    this.focoHole.setPosition(this.focoTarget.x, this.focoTarget.y);
-  }
-
   update(time, deltaMs) {
-    this.focoSync();
     if (this.leaving || !this.hero) return;   // cambiando de escena: no tocar nada más
     this._frameT = time;   // marca del frame: la usa la caché de hitsSprite (10/8)
     const dt = deltaMs / 1000, k = this.keys, hero = this.hero;
