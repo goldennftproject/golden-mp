@@ -11,7 +11,7 @@ function log(m, k = "") { const b = $("log"); if (!b) return; const d = document
 function isOpen(id) { const e = $(id); return !!(e && e.classList.contains("show")); }
 function anyOvOpen() { return !!document.querySelector(".ov.show"); }
 const OV_REFRESH = { "ov-entrenando": () => entrenarSync(), "ov-clan": () => refreshClan(), "ov-misiones": () => refreshMisiones(), "ov-mapa": () => refreshMapa(), "ov-objetivos": () => refreshObjetivos(), "ov-inv": () => refreshInv(), "ov-skills": () => refreshSkills(), "ov-equip": () => refreshEquip(), "ov-godhand": () => refreshGodHand(),
-  "ov-forge": () => refreshForge(), "ov-market": () => refreshMarket(), "ov-barn": () => refreshBarn(), "ov-buzon": () => { _bzVista = "sobres"; _bzCartaAbierta = null; refreshBuzon(); }, "ov-paquete": () => refreshPaquete(), "ov-baul": () => refreshBaul(),
+  "ov-forge": () => refreshForge(), "ov-market": () => refreshMarket(), "ov-barn": () => refreshBarn(), "ov-buzon": () => { _bzVista = "sobres"; _bzCartaAbierta = null; refreshBuzon(); }, "ov-paquete": () => refreshPaquete(), "ov-baul": () => refreshBaul(), "ov-pedidos": () => { _pdVista = "pedidos"; refreshPedidos(); },
   "ov-cocina": () => refreshCooking(),
   "ov-horno": () => refreshHorno(),
   "ov-altar": () => refreshAltar(),
@@ -26,7 +26,7 @@ const OV_REFRESH = { "ov-entrenando": () => entrenarSync(), "ov-clan": () => ref
   "ov-config": () => refreshConfig(), "ov-lb": () => refreshLb() };
 // los overlays NO bloquean el juego: podés seguir moviéndote/interactuando con la ventana abierta
 // sonido propio de cada edificio al abrir su ventana (pedido del diseñador)
-const OV_SFX = { "ov-market": "shop", "ov-forge": "forge", "ov-barn": "door", "ov-cocina": "door", "ov-cofre": "door", "ov-paquete": "coin", "ov-altar": "forge", "ov-establo": "door", "ov-curtiduria": "forge" };
+const OV_SFX = { "ov-pedidos": "shop", "ov-market": "shop", "ov-forge": "forge", "ov-barn": "door", "ov-cocina": "door", "ov-cofre": "door", "ov-paquete": "coin", "ov-altar": "forge", "ov-establo": "door", "ov-curtiduria": "forge" };
 function openOv(id) { const e = $(id); if (!e) return; e.classList.add("show"); if (window.sfx) sfx(OV_SFX[id] || "click"); if (OV_REFRESH[id]) OV_REFRESH[id](); if (typeof tutoHighlight === "function") tutoHighlight(); }   // 13/8: al abrir un panel, el botón del objetivo se resalta al instante
 
 // FUNDIDO A NEGRO al cambiar de escena (granja <-> Zona Negra <-> plaza). Antes era un corte seco.
@@ -1536,6 +1536,67 @@ function refreshPaquete() {
   };
   img.onpointerdown = alTocar;   // pointerdown dispara SIEMPRE (el click se perdía si el mouse se movía 2px)
   img.onclick = alTocar;         // respaldo
+}
+
+/* ---- TABLÓN DE PEDIDOS (16/8): notas clavadas + canje de vales. Misma gramática del
+   rincón (pocas palabras, toque directo, temblor antes de entregar) y DELEGACIÓN de
+   clics con data-attrs — la lección aprendida con el buzón. ---- */
+var _pdVista = "pedidos";   // pedidos | canje
+document.addEventListener("pointerdown", (e) => {
+  const cont = document.getElementById("ov-pedidos");
+  if (!cont || !cont.classList.contains("show") || !e.target || !e.target.closest) return;
+  const ent = e.target.closest("[data-pd-entregar]");
+  const des = e.target.closest("[data-pd-desc]");
+  const can = e.target.closest("[data-pd-canje]");
+  const vis = e.target.closest("[data-pd-vista]");
+  if (!ent && !des && !can && !vis) return;
+  e.preventDefault(); e.stopPropagation();
+  if (des) { const i = +des.getAttribute("data-pd-desc"); askConfirm("¿Descartar este pedido? Otro vecino colgará el suyo.", () => pedidoDescartar(i)); return; }
+  if (vis) { _pdVista = vis.getAttribute("data-pd-vista"); refreshPedidos(); return; }
+  if (ent) {   // temblor corto y a entregar (la gramática del rincón)
+    const i = +ent.getAttribute("data-pd-entregar");
+    const nota = ent.closest(".pd-nota") || ent;
+    if (nota._entregando) return; nota._entregando = true;
+    nota.classList.add("shake");
+    setTimeout(() => pedidoEntregar(i), 430);
+    return;
+  }
+  if (can) valesCanjear(can.getAttribute("data-pd-canje"));
+}, true);
+function pdIcono(p) {
+  const s = (typeof pedidoSprite === "function") ? pedidoSprite(p) : null;
+  const em = p.tipo === "fish" ? "🐟" : ((CROP_DEF[p.key] && CROP_DEF[p.key].emoji) || RES_EMOJI[p.key] || "📦");
+  return s ? '<img src="' + GF.spr(s) + '" draggable="false" onerror="this.outerHTML=\'' + em + '\'">' : em;
+}
+function refreshPedidos() {
+  const cont = $("pd-lista"); if (!cont) return;
+  const e = pedidosEstado();
+  const chip = $("pd-vales"); if (chip) chip.textContent = "🎟 × " + (G.vales || 0);
+  const sub = $("pd-sub");
+  // VISTA: la tienda de canje (el costado del tablón)
+  if (_pdVista === "canje") {
+    if (sub) sub.textContent = "La plata no compra esto — los vales sí.";
+    cont.innerHTML = VALES_SHOP.map(it => {
+      const puede = (G.vales || 0) >= it.vales;
+      const ic = it.sprite ? '<img src="' + GF.spr(it.sprite) + '" draggable="false" onerror="this.outerHTML=\'' + it.emoji + '\'">' : it.emoji;
+      return '<div class="pd-canje' + (puede ? " ok" : "") + '"' + (puede ? ' data-pd-canje="' + it.id + '"' : "") + '><span class="ic">' + ic + '</span><span class="nm">' + it.label + '</span><span class="precio">🎟 ' + it.vales + '</span></div>';
+    }).join("") + '<div style="text-align:center;margin-top:8px"><button class="ghost sm" data-pd-vista="pedidos">↩ Volver al tablón</button></div>';
+    return;
+  }
+  // VISTA: las notas del día
+  if (sub) sub.textContent = (e.dobles || 0) > 0 ? "Los vales se canjean acá mismo." : "El primer pedido del día paga 🎟 doble.";
+  const rots = [-2.2, 1.6, -1.1];
+  cont.innerHTML = e.lista.map((p, i) => {
+    const stock = pedidoStock(p), ok = !p.hecho && stock >= p.n;
+    const cls = "pd-nota" + (p.hecho ? " hecha" : ok ? " lista" : "");
+    return '<div class="' + cls + '" style="transform:rotate(' + rots[i % 3] + 'deg)"' + (ok ? ' data-pd-entregar="' + i + '"' : "") + '>' +
+      (!p.hecho ? '<span class="pd-x" data-pd-desc="' + i + '" title="Descartar">✕</span>' : "") +
+      '<div class="de">' + p.de + ' <i>— ' + p.nota + '</i></div>' +
+      '<div class="pide">' + pdIcono(p) + '<b>× ' + p.n + '</b>' + (!p.hecho && !ok ? '<span class="falta">(tenés ' + stock + ')</span>' : "") + '</div>' +
+      (p.hecho ? '<div class="sello">✓ ENTREGADO</div>'
+        : '<div class="paga">🪙 ' + p.plata + ' · 🎟 ' + p.vales + (ok ? '<div class="toca">tocá la nota para entregar</div>' : "") + '</div>') +
+      '</div>';
+  }).join("") + '<div style="text-align:center;margin-top:6px"><button class="ghost sm" data-pd-vista="canje">🎟 Canjear vales</button></div>';
 }
 
 /* ---- BUZÓN (15/8): las cartas se dibujan como sobres de papel ---- */

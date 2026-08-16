@@ -2125,6 +2125,61 @@ Ahora la cadena de guía no tiene puntas sueltas:
   lugar. Al recomprar semillas, `buySeed` la vuelve a poner en el primer hueco libre.
   Herramientas y picos conservan su lógica de siempre.
 
+## Día 19 (cont.) — TABLÓN DE PEDIDOS v2 + VALES (16/8, dirección: "implementémoslo")
+- Nace el motor de la visita diaria (investigación Hay Day/Sunflower Land/Stardew/
+  Township/Pixels/Animal Crossing — doc en la carpeta del proyecto):
+  · 3 PEDIDOS DIARIOS deterministas (fecha+apodo, FNV-1a como las excavaciones), firmados
+    por vecinos con nombre y motivo ("Doña Rosa — para la sopa del domingo"). El pool
+    pide SOLO lo producible hoy: cultivos desbloqueados (cortos en tanda, anclas de a 1),
+    madera/piedra, minerales ya minados, pescado si hay caña, platos ya cocinados si hay
+    Cocina. Tres tamaños de tanda (chica/media/grande) por pedido.
+  · PAGAN plata (~1.5× mercado) + XP de farmeo (~valor/2) + VALES 🎟 — moneda NUEVA que
+    solo sale del tablón. El PRIMER pedido cumplido del día paga vales ×2 (Nook Miles).
+  · DESCARTE: el primero libre, el siguiente a los 30 min (Hay Day); el reemplazo nunca
+    repite el producto descartado ni los otros dos.
+  · TIENDA DE CANJE en el mismo tablón: fardo de 10 hachas (3v), 10 picos (3v), lata de
+    6 lombrices (2v), sobre de 5 semillas del mejor cultivo (3v). REGLA DE ORO: NUNCA
+    vende madera/piedra — los relojes del diseñador no se puentean con vales.
+- MUEBLE en el mundo (580,148, junto al buzón): dos estados (papelitos clavados si hay
+  pedidos pendientes, tabla pelada si no). Letrero con cuántos hay para entregar.
+  CERRADO durante el tutorial (sin conflicto con el embudo ni la guardia).
+- ARTE OFICIAL del grupo mercadillo (mismo día): tablón vacío derivado del buzón frontal
+  (create_object_state, perspectiva heredada) y el lleno derivado del vacío — tabla ancha
+  con techito y 3 notas con chinche. Trim a caja común entre estados (no salta al cambiar)
+  y reteñido a la paleta del granero MEDIDO contra buzon.png (h .068/s .58/v .50; la
+  fuente venía .063/.64/.57). El reteñido quedó como script reutilizable:
+  tools/retint-rincon.py (madera 0.035<h<0.14, dorados v>0.85 protegidos, referencia
+  configurable). boot.js carga tablon_pedidos(_full).png?v=1; el respaldo a código queda
+  por si el PNG no llega.
+- PANTALLA ov-pedidos con la gramática del rincón: notas de papel con chinche, remitente
+  y sprite del producto, la cumplible brilla y tiembla al tocarla antes de entregar,
+  sello "✓ ENTREGADO", ✕ para descartar con confirmación. Vista de canje al dorso.
+  Clics 100% por DELEGACIÓN con data-attrs (la lección del buzón).
+- Carta única del buzón al terminar el tutorial: "El pueblo colgó sus pedidos" → abre el
+  tablón. Persistencia: G.vales + G.pedidos en save.js.
+- VERIFICADO con el motor real en Node (vm + stubs): generación determinista, entrega
+  (plata/vales/stock, doble del 1º, re-entrega bloqueada), descarte (2º bloqueado,
+  reemplazo distinto), canje (cobra y bloquea sin saldo), candado del tutorial.
+
+## Día 19 — Sábado 16/08 · Balance sin tocar timers: escalera de árboles + XP = minutos
+- CONTEXTO (dirección): el diseñador sostiene los timers largos (juego chill, no demandante).
+  Se balancea alrededor: cantidad de nodos y XP por acción, timers intactos.
+- ESCALERA DE ÁRBOLES POR NIVEL: `NIVEL_ARBOLES = [1,1,3,4,6,8]` — espejo de NIVEL_ROCAS.
+  El retoño N recién se puede pagar al nivel N (el pago en madera de siempre se mantiene:
+  NODE_UNLOCK_COSTS). Anclada a los edificios: nivel 6 (Establo, 40 maderas) ya permite
+  5 árboles. Letrero y toast avisan el nivel que falta, igual que las vetas.
+- XP = MINUTOS DEL RELOJ (regla única, la que ya cumplían los cultivos: papa 9 min→9 XP,
+  maíz 24 h→1440): tala 90 (era 4) · piedra 120 (era 5) · bronce 480 · hierro 720 ·
+  oro/diamante/netherita 840 (eran 8-20). La XP fija venía de la era de cooldowns de 90 s;
+  con los relojes del diseñador cada golpe es escaso y Minería tardaba ~80 días en llegar
+  a nivel 5. Helper `nodoXpMin(cdSeg)` en state.js: si un timer cambia, la XP se corrige sola.
+- SIM 30 DÍAS (tools/sim-30-dias-16-8.js, jugador chill de 3 visitas/día): granja 1→10 en
+  4 días (curva front-loaded, después mandan las tareas 11-50) · Minería nivel 10 y Crafteo 7
+  al día 30 (sanos) · la MADERA es la moneda de ritmo real: Cocina día 4, Curtiduría día 9,
+  Establo día 13 — un edificio grande por semana, ritmo chill coherente. Nota para el
+  diseñador: el plano del Establo cae al nivel 6 (día 3) pero se construye el día 13 —
+  10 días mirando el plano; si molesta, la palanca es su costo de madera, no el timer.
+
 ## Día 18 (cont.) — AMBIENTE VIVO: viento, hojas, peces y día/noche (15/8, dirección 1+2+3+5)
 - VIENTO: una onda que viaja por la granja — pasto y flores pivotean desde la base y se
   inclinan en secuencia (fase por posición), con ráfagas lentas; los árboles se mecen

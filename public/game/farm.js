@@ -197,6 +197,20 @@ class FarmScene extends Phaser.Scene {
       if (esFull) g.fillStyle(0xf6efdd, 1).fillRect(6, 6, 10, 7);  // sobre asomando
       g.generateTexture(k, 27, 34); g.destroy();
     });
+    // TABLÓN DE PEDIDOS (16/8): respaldo a código (dos postes + tabla de corcho); la
+    // versión _full lleva papelitos clavados — arte de PixelLab pendiente, mismo patrón que el buzón
+    ["tablon_pedidos", "tablon_pedidos_full"].forEach((k, esFull) => {
+      if (this.textures.exists(k)) return;
+      const g = this.make.graphics({ add: false });
+      g.fillStyle(0x6d4f2a, 1).fillRect(3, 10, 3, 22).fillRect(30, 10, 3, 22);   // postes
+      g.fillStyle(0x8a6a3c, 1).fillRoundedRect(0, 2, 36, 18, 2);                 // marco
+      g.fillStyle(0xc9a06a, 1).fillRect(2, 4, 32, 14);                            // tabla
+      if (esFull) {   // papelitos clavados
+        g.fillStyle(0xf6efdd, 1).fillRect(5, 6, 8, 9).fillRect(15, 5, 8, 10).fillRect(25, 7, 7, 8);
+        g.fillStyle(0xa03a2a, 1).fillCircle(9, 7, 1).fillCircle(19, 6, 1).fillCircle(28, 8, 1);   // chinches
+      }
+      g.generateTexture(k, 36, 32); g.destroy();
+    });
     if (!this.textures.exists("monticulo")) {   // respaldo a código del montículo
       const g = this.make.graphics({ add: false });
       g.fillStyle(0x6b4a2b, 1).fillEllipse(13, 16, 24, 10);
@@ -841,11 +855,16 @@ class FarmScene extends Phaser.Scene {
     const secs = cd ? Math.ceil((o.readyAt - nowMs()) / 1000) : 0;
     // cuántos clics faltan: un clic = un golpe, y si parás 5 s los golpes dados se pierden
     const gp = (tot) => " (" + ((o.golpes || 0) + 1) + "/" + tot + ")";
-    if (o.type === "tree") { if (o.locked) return "Cultivar árbol (" + treeUnlockCost() + " madera)"; return cd ? "Vuelve en " + fmtSecs(secs) : "Talar madera" + gp(GOLPES_TALAR); }
+    if (o.type === "tree") { if (o.locked) { if (typeof arbolBloqueado === "function" && arbolBloqueado(o)) return "🔒 Retoño — se habilita a granja nivel " + arbolNivelReq(o); return "Cultivar árbol (" + treeUnlockCost() + " madera)"; } return cd ? "Vuelve en " + fmtSecs(secs) : "Talar madera" + gp(GOLPES_TALAR); }
     if (o.type === "rock") { if (typeof nodoBloqueado === "function" && nodoBloqueado(o)) return "🔒 Veta — se habilita a granja nivel " + nodoNivelReq(o); return cd ? "Vuelve en " + fmtSecs(secs) : "Picar piedra" + gp(GOLPES_MINAR); }
     if (o.type === "ore") { const od = ORE_DEF[o.ore]; if (!od) return "Minar"; if (cd) return od.emoji + " Vuelve en " + fmtSecs(secs); return "Minar " + od.label + gp(GOLPES_MINAR); }
     if (o.type === "buzon") { const n = (typeof buzonCartas === "function") ? buzonCartas().length : 0; return n ? ("Leer el correo (" + n + (n > 1 ? " cartas" : " carta") + ")") : "Buzón — sin cartas"; }
     if (o.type === "excav") return "Cavar el montículo";
+    if (o.type === "tablon_pedidos") {
+      if (G.tuto && !G.tuto.done) return "Tablón de pedidos — abre al terminar el tutorial";
+      const n = (typeof pedidosCumplibles === "function") ? pedidosCumplibles() : 0;
+      return n ? ("Tablón de pedidos — " + n + " para entregar") : "Tablón de pedidos del pueblo";
+    }
     if (o.type === "paquete") return "Levantar tu paquete del día 📦";
     if (o.type === "cofre_diario") {
       if (!G.kitReclamado) return "¡Abrí tu kit de bienvenida!";
@@ -942,6 +961,10 @@ class FarmScene extends Phaser.Scene {
       const ex = (this.excavObjs || []).indexOf(o); if (ex >= 0) this.excavObjs.splice(ex, 1);
       return;
     }
+    if (o.type === "tablon_pedidos") {   // TABLÓN (16/8): cerrado durante el tutorial
+      if (G.tuto && !G.tuto.done) { toast("El tablón abre cuando termines el tutorial"); return; }
+      return openOv("ov-pedidos");
+    }
     if (o.type === "cofre_diario") return openOv("ov-baul");   // 15/8 v3: el baúl tiene su propia pantalla
     if (o.type === "buzon") return openOv("ov-buzon");   // buzón (15/8)
     if (o.type === "barn") return openOv("ov-barn");
@@ -976,6 +999,13 @@ class FarmScene extends Phaser.Scene {
     if (o.type === "rock" && (o.lockIdx || 0) > 0 && typeof tutoEvent === "function") tutoEvent("unlocknode");
     // ÁRBOLES: el bloqueado es un retoño — se desbloquea pagando madera y CRECE
     if (o.type === "tree" && o.locked) {
+      // 16/8: escalera de nivel espejo de las rocas — el retoño N se paga recién al nivel N
+      if (typeof arbolBloqueado === "function" && arbolBloqueado(o)) {
+        const req = arbolNivelReq(o);
+        toast("🔒 Este retoño se habilita a granja nivel " + req + " (tenés " + G.level + ")");
+        log("Ese árbol se cultiva a granja nivel " + req + ". Seguí subiendo de nivel para ampliarte.", "info");
+        return;
+      }
       const cost = treeUnlockCost();
       askConfirm("Cuesta " + cost + " de " + RES_LABEL.madera + ". ¿Cultivar este árbol?", () => {
         if ((G.res.madera || 0) < cost) { toast("Te falta " + RES_LABEL.madera + " (" + cost + ")"); return; }
@@ -1204,7 +1234,7 @@ class FarmScene extends Phaser.Scene {
       o.golpes = 0; this.barraGolpes(o);
       const gr = 1;   // viernes (2): todos los recursos dan 1
       if (tryAddRes("madera", gr)) {
-        useTool("axe"); addXp("crafting", 4); nodoSumar(o); o.cdIni = nowMs(); o.readyAt = nowMs() + nodoCd(o, "tree", CD.tree) * 1000 * cdMult() * (typeof tutoBoost === "function" ? tutoBoost("tree") : 1);
+        useTool("axe"); addXp("crafting", nodoXpMin(CD.tree)); /* 16/8: XP = minutos del reloj (1 h 30 → 90) */ nodoSumar(o); o.cdIni = nowMs(); o.readyAt = nowMs() + nodoCd(o, "tree", CD.tree) * 1000 * cdMult() * (typeof tutoBoost === "function" ? tutoBoost("tree") : 1);
         o.halfAt = nowMs() + (o.readyAt - nowMs()) / 2;   // a mitad del enfriamiento asoma el árbol a medio crecer (doc 4/8)
         // tocón nuevo con base de tierra y hojas caídas (encuadre del árbol, va a tamaño completo); respaldo: tocón viejo chico
         // 15/8 (medido en los PNG): el disco del tocón es el 64% de su lienzo y el tronco
@@ -1234,7 +1264,7 @@ class FarmScene extends Phaser.Scene {
       if (tryAddRes("piedra", gr)) {
         const pk = equippedPick();   // picar piedra también gasta el pico (bug reportado)
         if (pk) { G.picks.dur[pk] = Math.max(0, (G.picks.dur[pk] || 0) - 1); if (G.picks.dur[pk] <= 0) { log("Usaste tu último " + PICK_DEF[pk].label + " — crafteá más en la Herrería.", "bad"); toast("Sin picos — crafteá más"); destroyPick(pk); } }
-        addXp("mining", 5); statAdd("minar", "piedra", gr); nodoSumar(o); o.cdIni = nowMs(); o.readyAt = nowMs() + nodoCd(o, "piedra", CD.rock) * 1000 * cdMult() * (typeof tutoBoost === "function" ? tutoBoost("rock") : 1); o.halfAt = nowMs() + (o.readyAt - nowMs()) / 2; this.setObjTex(o, "node_stone_mined", o.rw || GF.TILE); this.premioFx(o.cx, o.by, resSprite("piedra"), "+" + gr); log(`+${gr} Piedra.` + (pk ? ` Quedan ${G.picks.dur[pk]} picos.` : ""), "good"); refreshHud();
+        addXp("mining", nodoXpMin(CD.rock)); /* 16/8: XP = minutos del reloj (2 h → 120) */ statAdd("minar", "piedra", gr); nodoSumar(o); o.cdIni = nowMs(); o.readyAt = nowMs() + nodoCd(o, "piedra", CD.rock) * 1000 * cdMult() * (typeof tutoBoost === "function" ? tutoBoost("rock") : 1); o.halfAt = nowMs() + (o.readyAt - nowMs()) / 2; this.setObjTex(o, "node_stone_mined", o.rw || GF.TILE); this.premioFx(o.cx, o.by, resSprite("piedra"), "+" + gr); log(`+${gr} Piedra.` + (pk ? ` Quedan ${G.picks.dur[pk]} picos.` : ""), "good"); refreshHud();
         if (typeof tutoEvent === "function") tutoEvent("gather");
       }
       else { this.setObjTex(o, o.baseKey, o.rw || o.w); toast("Bolsa llena — no podés picar"); log("Bolsa llena: liberá espacio para seguir picando.", "bad"); }   // vuelve entera: los golpes se perdieron
@@ -1251,7 +1281,7 @@ class FarmScene extends Phaser.Scene {
       const gr = 1;   // viernes (2): todos los recursos dan 1
       if (tryAddRes(o.ore, gr)) {
         G.picks.dur[pk] = Math.max(0, (G.picks.dur[pk] || 0) - 1);
-        addXp("mining", 5 + od.tier * 3); statAdd("minar", o.ore, gr);
+        addXp("mining", nodoXpMin(od.cd)); statAdd("minar", o.ore, gr);   // 16/8: XP = minutos del reloj (bronce 8 h → 480 … oro 14 h → 840)
         nodoSumar(o); o.cdIni = nowMs(); o.readyAt = nowMs() + nodoCd(o, o.ore, od.cd) * 1000 * cdMult();
         o.halfAt = nowMs() + (o.readyAt - nowMs()) / 2;
         if (this.textures.exists(o.baseKey + "_mined")) this.setObjTex(o, o.baseKey + "_mined", o.rw || GF.TILE); else o.sprite.setAlpha(0.4);
@@ -2311,6 +2341,13 @@ class FarmScene extends Phaser.Scene {
       const kc = listo ? "baul_premios_lleno" : "baul_premios";
       if (this.textures.exists(kc) && cf.sprite.texture.key !== kc) this.setObjTex(cf, kc, cf.rw || cf.w);
       if (cf.emoPremio) { cf.emoPremio.destroy(); cf.emoPremio = null; }   // 15/8: sin emoji — la tapa abierta ya lo dice
+    }
+    // TABLÓN (16/8): con pedidos pendientes se ven los papelitos clavados; sin nada, la tabla pelada
+    const tb = (this.objs || []).find(x => x.type === "tablon_pedidos");
+    if (tb && tb.sprite) {
+      let pend = 0; try { pend = (G.tuto && !G.tuto.done) ? 0 : pedidosEstado().lista.filter(p => !p.hecho).length; } catch (e) {}
+      const tk = pend > 0 ? "tablon_pedidos_full" : "tablon_pedidos";
+      if (this.textures.exists(tk) && tb.sprite.texture.key !== tk) this.setObjTex(tb, tk, tb.rw || tb.w);
     }
     // EL PAQUETE DE LA MAÑANA (15/8, idea Stardew elegida por dirección): cada día con
     // premio pendiente aparece un paquete atado con cordel al pie del buzón. Se levanta

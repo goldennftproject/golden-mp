@@ -18,6 +18,7 @@ const G = {
   nodoUsos: {},                  // cuántas veces se recogió de cada nodo (para el arranque rápido)
   cosEq: null,                   // cosmético lucido: título, color de nombre, marco y aura
   incursion: null, incDia: null, dummyTrain: null,   // incursiones de un clic y entrenamiento offline   // tareas de nivel 11-50, mejoras y cosméticos
+  vales: 0, pedidos: null,   // 16/8: TABLÓN DE PEDIDOS — vales (moneda del tablón) + estado diario
   combatXp: 0,                   // doc 2/8: barra de Combate GLOBAL — suma la XP de todos los kills
   states: [],                    // doc 2/8: estados/debuffs del bestiario sobre el jugador (no se guardan)
   tuto: { step: 0, n: 0, done: false, v: 2 },   // doc 2/8: tutorial guiado de micro-objetivos (v = versión de la cadena)
@@ -2649,6 +2650,21 @@ function rockUnlockCost() { return NODE_UNLOCK_COSTS[Math.min(NODE_UNLOCK_COSTS.
 // Los ÁRBOLES quedan con su sistema de siempre: retoño + desbloqueo pagando madera.
 var NIVEL_ROCAS = [1, 1, 4, 6, 9, 12]   // 15/8: la 2ª roca disponible desde el arranque;
 function nodoNivelReq(o) { return NIVEL_ROCAS[Math.min(o.lockIdx || 0, NIVEL_ROCAS.length - 1)] || 1; }
+// 16/8: los ÁRBOLES ganan su propia escalera de nivel, espejo de las rocas — con los
+// relojes largos, cuántos nodos tenés activos ES la progresión. El pago en madera se
+// mantiene (el retoño se "cultiva"), pero el retoño N recién se puede pagar al nivel N
+// de la tabla. Anclada a los edificios: nivel 6 (Establo, 40 maderas) = hasta 5 árboles.
+var NIVEL_ARBOLES = [1, 1, 3, 4, 6, 8];
+function arbolNivelReq(o) { return NIVEL_ARBOLES[Math.min(o.lockIdx || 0, NIVEL_ARBOLES.length - 1)] || 1; }
+function arbolBloqueado(o) {
+  if (!o || o.type !== "tree" || !o.locked) return false;
+  return G.level < arbolNivelReq(o);
+}
+// 16/8: regla ÚNICA de XP por recurso — XP = minutos del reloj del nodo (los cultivos ya
+// la siguen: papa 9 min→9 XP … maíz 24 h→1440). Con los timers del diseñador cada golpe
+// es escaso: la XP fija de la era de los 90 s (piedra 5 XP/2 h) dejaba Minería en ~80 días
+// para nivel 5. Con esta regla, si el diseñador cambia un timer la XP se corrige sola.
+function nodoXpMin(cdSeg) { return Math.max(1, Math.round(cdSeg / 60)); }
 function nodoBloqueado(o) {
   if (!o || o.type !== "rock") return false;   // solo piedras/minerales: los árboles van por retoño+pago
   if ((G.rocksOpen || [0]).includes(o.lockIdx)) return false;
@@ -3288,6 +3304,11 @@ function buzonCartas() {
     id: "cofre", de: "La Granja", titulo: "Te llegó tu paquete del día",
     txt: "Está al pie del buzón, atado con cordel. Levantalo y es tuyo — si venís todos los días, la racha crece.",
     panel: "ov-paquete", btn: "Ver la racha" }); } catch (e) {}
+  // TABLÓN (16/8): el pueblo se presenta una sola vez, cuando el tutorial ya terminó
+  try { if (G.tuto && G.tuto.done && !G.buzonLeidas.tablon) cartas.push({
+    id: "tablon", de: "El pueblo", titulo: "Colgamos nuestros pedidos en el tablón",
+    txt: "Cada mañana dejamos tres encargos en el tablón, junto al buzón. Pagamos en plata y en VALES — juntalos: en el mismo tablón se canjean por cosas que la plata no compra. El primer pedido que cumplas cada día paga doble.",
+    leer: true, panel: "ov-pedidos", btn: "Ver el tablón" }); } catch (e) {}
   try { const n = passPendientes(); if (n > 0 && !G.buzonLeidas["pase|" + hoy]) cartas.push({
     id: "pase", de: "El Pase de Cosecha", titulo: n + (n > 1 ? " niveles" : " nivel") + " sin reclamar",
     txt: "Tus estrellas ya destrabaron premios en el Pase. Pasá a retirarlos cuando quieras.",
@@ -3315,6 +3336,153 @@ function buzonArchivar(cartas) {
   const antes = G.buzonArchivo.length;
   G.buzonArchivo = G.buzonArchivo.filter(a => (a.ts || 0) >= tope).slice(-40);   // 7 días y máx 40 cartas
   if (G.buzonArchivo.length !== antes && typeof saveFarm === "function") saveFarm(true);
+}
+
+/* ============ TABLÓN DE PEDIDOS v2 (16/8, investigación Hay Day/SFL/Stardew/AC) =======
+   3 pedidos diarios DETERMINISTAS (fecha+apodo, mismo truco que las excavaciones), pidiendo
+   SOLO lo que el jugador puede producir hoy (Hay Day: el tablón nunca frustra). Pagan
+   plata (~1.5× mercado) + XP de farmeo + VALES: la moneda que SOLO sale del tablón.
+   El 1º cumplido del día paga vales DOBLES (Nook Miles). Descartar: gratis el primero,
+   después 30 min de espera (Hay Day). La tienda de canje NO vende madera/piedra —
+   los relojes del diseñador no se puentean con vales. */
+var PED_POR_DIA = 3, PED_DESCARTE_MIN = 30;
+var PED_REMITENTES = [   // pedidos con cara y voz (Sunflower Land), no un menú
+  ["Doña Rosa", "para la sopa del domingo"],
+  ["Tomás el panadero", "el horno no espera"],
+  ["Lupe la tejedora", "pago bien, como siempre"],
+  ["Don Emilio", "mi despensa quedó vacía"],
+  ["Ramón el pescador", "ando corto de provisiones"],
+  ["La maestra Inés", "es para los chicos de la escuela"],
+  ["Blas el herrero", "la fragua pide más"],
+  ["Marta la posadera", "tengo la posada llena"]];
+function pedAzar(n) {   // 0..1 determinístico del día para este jugador (FNV-1a)
+  let h = 2166136261;
+  const str = dayStamp(0) + "|PED|" + (window.NICK || "granjero") + "|" + n;
+  for (let i = 0; i < str.length; i++) { h ^= str.charCodeAt(i); h = Math.imul(h, 16777619); }
+  return ((h >>> 0) % 100000) / 100000;
+}
+// qué puede producir el jugador HOY — de acá salen los pedidos
+function pedPool() {
+  const pool = [];
+  for (const k in CROP_DEF) {
+    const cd = CROP_DEF[k];
+    if (typeof farmLevel !== "function" || farmLevel() < cd.lvl) continue;
+    const min = Math.round(cd.growH * 60);
+    const n = min <= 30 ? 3 : min <= 90 ? 2 : 1;   // cultivos cortos piden tandas, anclas piden 1
+    pool.push({ tipo: "res", key: k, n: n, val: (cd.price || 1) * n });
+  }
+  pool.push({ tipo: "res", key: "madera", n: 3, val: (priceOf("madera") || 2) * 3 });
+  pool.push({ tipo: "res", key: "piedra", n: 3, val: (priceOf("piedra") || 3) * 3 });
+  for (const k in ORE_DEF) {
+    if (k === "piedra") continue;
+    try { if (statGet("minar", k) > 0) pool.push({ tipo: "res", key: k, n: 1, val: (ORE_DEF[k].price || 6) * 2 }); } catch (e) {}
+  }
+  if (((G.fish && G.fish.comun) || 0) > 0 || toolCount("rod") > 0)
+    pool.push({ tipo: "fish", key: "comun", n: 2, val: 12 });
+  if (G.built && G.built.cocina) for (const id of ["papa_asada", "sopa_zanahoria", "pure_papa"]) {
+    const r = RECIPE_DEF[id]; if (!r) continue;
+    let hecho = false; try { hecho = statGet("cocinar", id) > 0; } catch (e) {}
+    if (hecho || ((G.dishes && G.dishes[id]) || 0) > 0) pool.push({ tipo: "dish", key: id, n: 1, val: (r.plata || 8) * 2 });
+  }
+  return pool;
+}
+function pedidoGenerar(seed) {
+  const pool = pedPool(); if (!pool.length) return null;
+  const p = pool[Math.floor(pedAzar(seed) * pool.length) % pool.length];
+  const extra = pedAzar(seed + 31);   // tanda chica / media / grande
+  const n = Math.max(1, p.n + (extra < 0.35 ? 0 : extra < 0.8 ? Math.ceil(p.n * 0.5) : p.n));
+  const val = Math.round(p.val / p.n * n);
+  const rem = PED_REMITENTES[Math.floor(pedAzar(seed + 7) * PED_REMITENTES.length) % PED_REMITENTES.length];
+  return { tipo: p.tipo, key: p.key, n: n, plata: Math.max(2, Math.round(val * 1.5)), xp: Math.max(1, Math.round(val / 2)),
+    vales: val >= 120 ? 3 : val >= 40 ? 2 : 1, de: rem[0], nota: rem[1], hecho: false };
+}
+function pedidosEstado() {
+  const e = G.pedidos || (G.pedidos = { dia: "", lista: [], reroll: 0, descarteAt: 0, dobles: 0 });
+  if (e.dia !== dayStamp(0)) {
+    e.dia = dayStamp(0); e.reroll = 0; e.descarteAt = 0; e.dobles = 0; e.lista = [];
+    for (let i = 0; i < PED_POR_DIA; i++) {   // sin repetir producto entre los 3
+      let p = null;
+      for (let t = 0; t < 6 && !p; t++) { const c = pedidoGenerar(i * 100 + t * 13); if (c && !e.lista.some(x => x.key === c.key)) p = c; }
+      if (!p) p = pedidoGenerar(i * 100);
+      if (p) e.lista.push(p);
+    }
+  }
+  return e;
+}
+function pedidoStock(p) {
+  if (p.tipo === "res") return Math.floor(G.res[p.key] || 0);
+  if (p.tipo === "fish") return Math.floor((G.fish && G.fish[p.key]) || 0);
+  if (p.tipo === "dish") return Math.floor((G.dishes && G.dishes[p.key]) || 0);
+  return 0;
+}
+function pedidoLabel(p) {
+  if (p.tipo === "fish") return (typeof FISH_DEF !== "undefined" && FISH_DEF[p.key]) ? FISH_DEF[p.key].label : "Pescado";
+  if (p.tipo === "dish") return (RECIPE_DEF[p.key] && RECIPE_DEF[p.key].label) || p.key;
+  return (CROP_DEF[p.key] && CROP_DEF[p.key].label) || RES_LABEL[p.key] || p.key;
+}
+function pedidoSprite(p) {
+  if (p.tipo === "fish") return (typeof FISH_DEF !== "undefined" && FISH_DEF[p.key] && FISH_DEF[p.key].sprite) || null;
+  if (p.tipo === "dish") return (RECIPE_DEF[p.key] && RECIPE_DEF[p.key].sprite) || null;
+  return resSprite(p.key);
+}
+function pedidosCumplibles() { try { return pedidosEstado().lista.filter(p => !p.hecho && pedidoStock(p) >= p.n).length; } catch (e) { return 0; } }
+function pedidoEntregar(i) {
+  const e = pedidosEstado(), p = e.lista[i];
+  if (!p || p.hecho) return false;
+  if (G.tuto && !G.tuto.done) { toast("El tablón abre al terminar el tutorial"); return false; }
+  if (pedidoStock(p) < p.n) { toast("Te falta " + pedidoLabel(p) + " (" + pedidoStock(p) + "/" + p.n + ")"); return false; }
+  if (p.tipo === "res") G.res[p.key] -= p.n;
+  else if (p.tipo === "fish") G.fish[p.key] -= p.n;
+  else if (p.tipo === "dish") G.dishes[p.key] -= p.n;
+  const doble = !(e.dobles > 0);   // el 1º cumplido del día paga vales ×2
+  const vales = p.vales * (doble ? 2 : 1);
+  p.hecho = true; e.dobles = (e.dobles || 0) + 1;
+  G.plata += p.plata; G.vales = (G.vales || 0) + vales;
+  addXp("farming", p.xp);
+  log(p.de + " recibió " + p.n + " × " + pedidoLabel(p) + ": +" + p.plata + " plata y +" + vales + (vales > 1 ? " vales" : " vale") + (doble ? " (¡primer pedido del día ×2!)" : "") + ".", "gold");
+  toast("🎟 +" + vales + " · 🪙 +" + p.plata);
+  if (window.sfx) sfx("coin");
+  refreshHud(); if (typeof refreshPedidos === "function" && isOpen("ov-pedidos")) refreshPedidos();
+  if (typeof saveFarm === "function") saveFarm(true);
+  return true;
+}
+function pedidoDescartar(i) {
+  const e = pedidosEstado(), p = e.lista[i];
+  if (!p || p.hecho) return;
+  if (nowMs() < (e.descarteAt || 0)) { toast("El próximo descarte llega en " + Math.ceil(((e.descarteAt || 0) - nowMs()) / 60000) + " min"); return; }
+  e.descarteAt = nowMs() + PED_DESCARTE_MIN * 60000;   // el primero del día es gratis; el siguiente, a los 30 min
+  e.reroll = (e.reroll || 0) + 1;
+  let nuevo = null;
+  for (let t = 0; t < 8 && !nuevo; t++) { const c = pedidoGenerar(1000 + e.reroll * 50 + t * 13); if (c && c.key !== p.key && !e.lista.some((x, xi) => xi !== i && x.key === c.key)) nuevo = c; }   // distinto del descartado y de los otros dos
+  e.lista[i] = nuevo || p;
+  log("Descartaste un pedido — otro vecino colgó el suyo.", "info");
+  if (typeof refreshPedidos === "function" && isOpen("ov-pedidos")) refreshPedidos();
+  if (typeof saveFarm === "function") saveFarm(true);
+}
+// --- la tienda de canje: lo que la plata no compra (y NUNCA madera/piedra) ---
+var VALES_SHOP = [
+  { id: "hachas", label: "Fardo de 10 hachas", sprite: "axe", emoji: "🪓", vales: 3 },
+  { id: "picos", label: "Fardo de 10 picos", sprite: "pick_stone", emoji: "⛏️", vales: 3 },
+  { id: "lombrices", label: "Lata con 6 lombrices", sprite: "res_lombriz", emoji: "🪱", vales: 2 },
+  { id: "semillas", label: "Sobre de 5 semillas (tu mejor cultivo)", sprite: null, emoji: "🌱", vales: 3 }];
+function valesCanjear(id) {
+  const it = VALES_SHOP.find(s => s.id === id); if (!it) return;
+  if ((G.vales || 0) < it.vales) { toast("Te faltan vales (tenés " + (G.vales || 0) + ", pide " + it.vales + ")"); return; }
+  if (id === "semillas") {
+    const desb = Object.keys(CROP_DEF).filter(k => farmLevel() >= CROP_DEF[k].lvl).sort((a, b) => CROP_DEF[b].lvl - CROP_DEF[a].lvl);
+    const k = desb[0] || "papa";
+    G.seeds[k] = (G.seeds[k] || 0) + 5; toast("+5 semillas de " + CROP_DEF[k].label);
+  } else if (id === "hachas") { G.tools.axe = toolCount("axe") + 10; toast("+10 hachas"); }
+  else if (id === "picos") {
+    G.picks.owned.stone = true; if (!G.picks.eq) G.picks.eq = "stone";
+    G.picks.dur[G.picks.eq] = (G.picks.dur[G.picks.eq] || 0) + 10; toast("+10 picos");
+  } else if (id === "lombrices") { if (!tryAddRes("lombriz", 6)) { toast("Bolsa llena — hacé lugar"); return; } toast("+6 lombrices"); }
+  G.vales -= it.vales;
+  log("Canjeaste " + it.vales + " vales por " + it.label + ".", "good");
+  if (window.sfx) sfx("coin");
+  refreshHud(); if (typeof refreshPedidos === "function" && isOpen("ov-pedidos")) refreshPedidos();
+  if (typeof syncSlots === "function") syncSlots(); if (typeof refreshHotbar === "function") refreshHotbar();
+  if (typeof saveFarm === "function") saveFarm(true);
 }
 
 function dailyState() {

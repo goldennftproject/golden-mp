@@ -159,6 +159,9 @@ GF.WORLD_OBJECTS.push(snap("node_iron", {type:"ore", ore:"hierro"}, 735, 546, T)
 // BUZÓN (15/8, idea Stardew aprobada por dirección): las noticias de la granja llegan acá
 GF.WORLD_OBJECTS.push(snap("buzon", {type:"buzon"}, 625, 150, T*0.4));   // 15/8: ~1/6 del granero — un buzón de verdad
 GF.WORLD_OBJECTS.push(snap("baul_premios", {type:"cofre_diario"}, 668, 152, T*0.8));   // 15/8: ~1/3 del granero, como el shipping bin de Stardew
+// TABLÓN DE PEDIDOS (16/8): a la IZQUIERDA del granero (dirección) — el rincón del correo
+// (buzón + baúl + paquete) queda a la derecha, y los encargos del pueblo del otro lado
+GF.WORLD_OBJECTS.push(snap("tablon_pedidos", {type:"tablon_pedidos"}, 462, 150, T*0.9));
 // HORNO DE PIEDRA (detalles viernes 1): acá se funden todos los lingotes/barras
 GF.WORLD_OBJECTS.push(snap("horno", {type:"horno"}, 320, 470, T*2));
 // viernes (2): 6 árboles y 6 piedras en total (1 activo + 5 por desbloquear) — al FINAL para preservar layouts
@@ -250,6 +253,7 @@ GF.SOLID = {
   cofre:  { hw: 0.34, dep: 0.30 },
   buzon:  { hw: 0.22, dep: 0.22 },   // 15/8: el poste del buzón
   cofre_diario: { hw: 0.32, dep: 0.26 },
+  tablon_pedidos: { hw: 0.38, dep: 0.20 },   // 16/8: el tablón — dos postes y poca panza
 };
 GF.solidRect = function (o) {
   const d = GF.SOLID[o.type] || { hw: 0.40, dep: 0.36 };
