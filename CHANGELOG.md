@@ -2125,6 +2125,19 @@ Ahora la cadena de guía no tiene puntas sueltas:
   lugar. Al recomprar semillas, `buySeed` la vuelve a poner en el primer hueco libre.
   Herramientas y picos conservan su lógica de siempre.
 
+## Día 18 (cont.) — BUZÓN ESCÉNICO: la interfaz custom (15/8, aprobada a prueba)
+- La pantalla del buzón dejó de ser una lista con pestañas: ahora es una ESCENA.
+  · El buzón grande arriba (con carta asomando si hay correo, cerrado si no).
+  · Los sobres NUEVOS en abanico debajo, cerrados con lacre, remitente chiquito,
+    el más nuevo latiendo. Se tocan (pointerdown + temblor corto) y se DESPLIEGAN
+    como papel de carta con el texto y una sola acción tocable ("Ver la racha →").
+  · "↩ guardar" manda la carta a la PILA de leídas: papelitos apilados en la esquina
+    con contador — se toca y se despliega con fecha y papelera por carta.
+  · Vacío: el buzón cerrado y "Sin correo por hoy". Pocas palabras, la imagen manda.
+- Assets nuevos del grupo mercadillo: sobre_carta (lacre rojo) y papel_carta (pergamino
+  envejecido, la v1 blanca se descartó). Reutiliza toda la lógica existente
+  (buzonCartas / archivo 7 días / borrar por id) — solo cambió la piel.
+
 ## Día 18 (cont.) — La pantalla del paquete ES el claim diario (15/8, dirección)
 - La interfaz vieja del cofre diario (ov-daily) se RETIRÓ. La pantalla del paquete es la
   única: paquete grande (cerrado latiendo si hay premio · abierto si ya se cobró) + la

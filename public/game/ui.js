@@ -11,7 +11,7 @@ function log(m, k = "") { const b = $("log"); if (!b) return; const d = document
 function isOpen(id) { const e = $(id); return !!(e && e.classList.contains("show")); }
 function anyOvOpen() { return !!document.querySelector(".ov.show"); }
 const OV_REFRESH = { "ov-entrenando": () => entrenarSync(), "ov-clan": () => refreshClan(), "ov-misiones": () => refreshMisiones(), "ov-mapa": () => refreshMapa(), "ov-objetivos": () => refreshObjetivos(), "ov-inv": () => refreshInv(), "ov-skills": () => refreshSkills(), "ov-equip": () => refreshEquip(), "ov-godhand": () => refreshGodHand(),
-  "ov-forge": () => refreshForge(), "ov-market": () => refreshMarket(), "ov-barn": () => refreshBarn(), "ov-buzon": () => refreshBuzon(), "ov-paquete": () => refreshPaquete(),
+  "ov-forge": () => refreshForge(), "ov-market": () => refreshMarket(), "ov-barn": () => refreshBarn(), "ov-buzon": () => { _bzVista = "sobres"; _bzCartaAbierta = null; refreshBuzon(); }, "ov-paquete": () => refreshPaquete(),
   "ov-cocina": () => refreshCooking(),
   "ov-horno": () => refreshHorno(),
   "ov-altar": () => refreshAltar(),
@@ -1485,37 +1485,89 @@ function refreshPaquete() {
 }
 
 /* ---- BUZÓN (15/8): las cartas se dibujan como sobres de papel ---- */
-var _buzonTab = "nuevos";   // pestaña activa (15/8: Nuevos / Leídos, pedido de dirección)
+/* ---- BUZÓN ESCÉNICO (15/8): el buzón grande, sobres en abanico que se abren como
+   papel de carta, y la pila de leídas en la esquina. Pocas palabras: la imagen manda. ---- */
+var _bzVista = "sobres";   // sobres | carta | pila
+var _bzCartaAbierta = null;
 function refreshBuzon() {
-  const box = $("buzon-list"); if (!box) return;
-  document.querySelectorAll(".buzontab").forEach(b => b.classList.toggle("active", b.dataset.buzon === _buzonTab));
-  const cartas = (typeof buzonCartas === "function") ? buzonCartas() : [];   // también archiva (primera vez que se ven)
-  if (_buzonTab === "nuevos") {
-    if (!cartas.length) { box.innerHTML = '<div class="sub" style="padding:14px 6px">Sin cartas nuevas. Las que ya leíste están en la pestaña Leídos.</div>'; return; }
-    box.innerHTML = cartas.map(c => {
-      const btn = c.panel
-        ? '<button class="green sm" data-carta-ir="' + c.panel + '">' + (c.btn || "Ver") + '</button>'
-        : (c.leer ? '<button class="ghost sm" data-carta-ok="' + c.id + '">Entendido</button>' : "");
-      return '<div class="forge-row"><div class="fic">✉️</div><div class="finfo"><div class="fnm">' + c.titulo +
-        '</div><div class="fds">De: ' + c.de + '</div><div class="fds">' + c.txt + '</div></div><div class="fbtns">' + btn + '</div></div>';
-    }).join("");
-    box.querySelectorAll("[data-carta-ir]").forEach(b => b.onclick = () => { closeOv("ov-buzon"); openOv(b.dataset.cartaIr); });
-    box.querySelectorAll("[data-carta-ok]").forEach(b => b.onclick = () => buzonLeer(b.dataset.cartaOk));
+  const img = $("bz-img"), sobres = $("bz-sobres"), carta = $("bz-carta"), pila = $("bz-pila"), estado = $("bz-estado");
+  if (!img || !sobres) return;
+  const cartas = (typeof buzonCartas === "function") ? buzonCartas() : [];   // también archiva
+  const leidas = (G.buzonArchivo || []).filter(a => !cartas.some(c => c.id === a.id && a.dia === dayStamp(0))).slice().reverse();
+
+  // el buzón grande cuenta el estado: con carta asomando si hay nuevas
+  img.src = "assets/farm/" + (cartas.length ? "buzon_full" : "buzon") + ".png?v=3";
+  estado.textContent = "";
+
+  // pila de leídas (esquina): papelitos apilados + contador
+  if (pila) {
+    if (leidas.length && _bzVista !== "pila") {
+      const rot = [-6, 4, -2];
+      pila.style.display = "";
+      pila.innerHTML = leidas.slice(0, 3).map((a, i) =>
+        '<img src="assets/farm/papel_carta.png?v=1" style="transform:rotate(' + rot[i % 3] + 'deg) translateY(' + (-i * 3) + 'px)" onerror="this.style.display=\'none\'">'
+      ).join("") + '<span class="n">' + leidas.length + '</span>';
+      pila.onclick = () => { _bzVista = "pila"; refreshBuzon(); };
+    } else { pila.style.display = "none"; pila.onclick = null; }
+  }
+
+  // VISTA: leyendo una carta (papel desplegado)
+  if (_bzVista === "carta" && _bzCartaAbierta) {
+    const c = _bzCartaAbierta;
+    sobres.innerHTML = ""; sobres.style.display = "none";
+    carta.style.display = "";
+    carta.innerHTML = '<div class="bz-carta-papel"><div class="de">De: ' + c.de + '</div><b>' + c.titulo + '</b><br>' + c.txt +
+      (c.panel ? '<br><span class="accion" id="bz-accion">' + (c.btn || "Ver") + ' →</span>' : "") +
+      '<span class="volver" id="bz-volver">↩ guardar</span></div>';
+    const acc = $("bz-accion");
+    if (acc) acc.onclick = () => { closeOv("ov-buzon"); openOv(c.panel); };
+    const vol = $("bz-volver");
+    if (vol) vol.onclick = () => {
+      if (c.leer) buzonLeer(c.id);   // la de bienvenida pasa al archivo al guardarla
+      _bzVista = "sobres"; _bzCartaAbierta = null; refreshBuzon();
+    };
     return;
   }
-  // pestaña LEÍDOS: el archivo completo (menos lo que sigue activo hoy), con papelera
-  const activasHoy = new Set(cartas.map(c => c.id + "|" + dayStamp(0)));
-  const archivo = (G.buzonArchivo || []).filter(a => !activasHoy.has(a.id + "|" + a.dia)).slice().reverse();
-  if (!archivo.length) { box.innerHTML = '<div class="sub" style="padding:14px 6px">Todavía no hay cartas leídas. Acá se guardan ' + (typeof BUZON_ARCHIVO_DIAS !== "undefined" ? BUZON_ARCHIVO_DIAS : 7) + ' días.</div>'; return; }
-  box.innerHTML = '<div class="sub" style="padding:2px 6px 0">Se guardan ' + (typeof BUZON_ARCHIVO_DIAS !== "undefined" ? BUZON_ARCHIVO_DIAS : 7) + ' días y después se descartan solas.</div>' + archivo.map(a => {
-    const f = a.dia ? a.dia.slice(8, 10) + "/" + a.dia.slice(5, 7) : "";
-    return '<div class="forge-row" style="opacity:.8"><div class="fic">📄</div><div class="finfo"><div class="fnm">' + a.titulo +
-      '</div><div class="fds">De: ' + a.de + (f ? " · " + f : "") + '</div><div class="fds">' + a.txt + '</div></div>' +
-      '<div class="fbtns"><button class="ghost sm" data-carta-del="' + a.id + '|' + a.dia + '" title="Borrar esta carta">🗑</button></div></div>';
-  }).join("");
-  box.querySelectorAll("[data-carta-del]").forEach(b => b.onclick = () => {
-    const [id, dia] = b.dataset.cartaDel.split("|");
-    if (typeof buzonBorrar === "function") buzonBorrar(id, dia);
+
+  // VISTA: la pila desplegada (leídas con fecha y papelera)
+  if (_bzVista === "pila") {
+    sobres.style.display = "none"; carta.style.display = "";
+    if (!leidas.length) { _bzVista = "sobres"; refreshBuzon(); return; }
+    carta.innerHTML = leidas.map(a => {
+      const f = a.dia ? a.dia.slice(8, 10) + "/" + a.dia.slice(5, 7) : "";
+      return '<div class="bz-leida"><span class="fecha">' + f + ' · De: ' + a.de + '</span><br><b>' + a.titulo + '</b><br>' + a.txt +
+        '<span class="tacho" data-bz-del="' + a.id + '|' + a.dia + '" title="Borrar">🗑</span></div>';
+    }).join("") + '<div style="text-align:center;margin-top:4px"><span class="accion" id="bz-cerrar-pila" style="color:#f6ecce">↩ volver</span></div>';
+    carta.querySelectorAll("[data-bz-del]").forEach(b => b.onclick = () => {
+      const [id, dia] = b.dataset.bzDel.split("|");
+      if (typeof buzonBorrar === "function") buzonBorrar(id, dia);
+    });
+    const cp = $("bz-cerrar-pila"); if (cp) cp.onclick = () => { _bzVista = "sobres"; refreshBuzon(); };
+    return;
+  }
+
+  // VISTA: los sobres asomando del buzón
+  carta.style.display = "none"; sobres.style.display = "";
+  if (!cartas.length) {
+    sobres.innerHTML = "";
+    estado.textContent = leidas.length ? "" : "Sin correo por hoy.";
+    return;
+  }
+  const rots = [-7, 3, -3, 6];
+  sobres.innerHTML = cartas.map((c, i) =>
+    '<div class="bz-sobre' + (i === 0 ? " late" : "") + '" data-bz-idx="' + i + '" style="transform:rotate(' + rots[i % 4] + 'deg)">' +
+    '<img src="assets/farm/sobre_carta.png?v=1" draggable="false" onerror="this.src=\'\';this.outerHTML=\'✉️\'">' +
+    '<div class="de">' + c.de + '</div></div>'
+  ).join("");
+  sobres.querySelectorAll("[data-bz-idx]").forEach(el => {
+    const abrir = (ev) => {
+      if (ev && ev.preventDefault) ev.preventDefault();
+      const c = cartas[parseInt(el.dataset.bzIdx, 10)]; if (!c) return;
+      el.classList.remove("late");
+      el.classList.add("paq-shake");   // el mismo temblor del paquete, cortito
+      setTimeout(() => { _bzVista = "carta"; _bzCartaAbierta = c; refreshBuzon(); }, 450);
+    };
+    el.onpointerdown = abrir; el.onclick = abrir;
   });
 }
 
@@ -1837,7 +1889,6 @@ function initUI() {
   // clic derecho: NUNCA el menú del navegador, en ninguna parte del juego (solo se permite en campos de texto)
   document.addEventListener("contextmenu", e => { if (!e.target.closest("input,textarea")) e.preventDefault(); });
   // pestañas de la Herrería: Picos / Herramientas
-  document.querySelectorAll(".buzontab").forEach(b => b.onclick = () => { _buzonTab = b.dataset.buzon; refreshBuzon(); });
   document.querySelectorAll(".forgetab").forEach(b => b.onclick = () => {
     document.querySelectorAll(".forgetab").forEach(x => x.classList.toggle("active", x === b));
     const s = b.dataset.forge;

@@ -235,6 +235,25 @@
     100%{transform:translate(-4px,0) rotate(-3deg)}
   }
   .paq-shake{animation:paqshake .8s ease-in 1;cursor:pointer}
+  /* buzón escénico (15/8): sobres en abanico, carta papel, pila de leídas */
+  #bz-sobres{display:flex;justify-content:center;align-items:flex-end;gap:2px;min-height:86px;margin-top:-6px}
+  .bz-sobre{width:74px;cursor:pointer;position:relative;transition:transform .15s}
+  .bz-sobre img{width:100%;image-rendering:pixelated;display:block}
+  .bz-sobre .de{font-size:10px;color:#f6ecce;text-shadow:0 1px 0 rgba(40,22,6,.6);margin-top:-4px}
+  .bz-sobre:hover{transform:translateY(-5px)}
+  .bz-sobre.late{animation:paqlatido 2.6s ease-in-out infinite}
+  .bz-carta-papel{position:relative;margin:2px auto;width:min(300px,86%);background:#f6efdd;color:#3d2c14;border-radius:6px;
+    padding:14px 16px 12px;text-align:left;font-size:13px;line-height:1.45;box-shadow:0 4px 0 rgba(40,22,6,.3);transform:rotate(-.6deg)}
+  .bz-carta-papel .de{font-size:11px;color:#8a6f45;margin-bottom:5px}
+  .bz-carta-papel .accion{display:inline-block;margin-top:9px;font-weight:800;color:#3f6d2c;cursor:pointer;text-decoration:underline}
+  .bz-carta-papel .volver{position:absolute;right:10px;bottom:6px;font-size:11px;color:#8a6f45;cursor:pointer}
+  #bz-pila{position:absolute;right:12px;bottom:10px;cursor:pointer;min-width:44px;min-height:34px}
+  #bz-pila img{width:40px;image-rendering:pixelated;position:absolute;right:0;bottom:0;opacity:.85}
+  #bz-pila .n{position:absolute;right:-4px;top:-8px;background:#8a5a2c;color:#fff;font-size:10px;font-weight:800;border-radius:8px;padding:1px 5px}
+  .bz-leida{position:relative;background:#efe6cd;color:#4a3418;border-radius:6px;padding:8px 30px 8px 12px;text-align:left;font-size:12px;margin:5px 2px;box-shadow:0 2px 0 rgba(40,22,6,.2)}
+  .bz-leida .fecha{font-size:10px;color:#8a6f45}
+  .bz-leida .tacho{position:absolute;right:7px;top:8px;cursor:pointer;opacity:.55}
+  .bz-leida .tacho:hover{opacity:1}
   .paq-mini{width:20px;image-rendering:pixelated;opacity:.4}
   .paq-mini.ok{opacity:1}
   .paq-mini.hoy{opacity:1;animation:paqlatido 2.6s ease-in-out infinite}
@@ -654,15 +673,14 @@
     <button class="green" id="paq-abrir" style="margin:4px auto 6px">Abrir el paquete</button>
   </div></div>
 
-  <div class="ov" id="ov-buzon"><div class="card" style="width:min(430px,92%)">
+  <div class="ov" id="ov-buzon"><div class="card" style="width:min(400px,92%);text-align:center;min-height:330px">
     <button class="close" data-close="ov-buzon">×</button>
-    <h3>📬 Buzón</h3>
-    <div class="sub">Las noticias de tu granja llegan acá — la banderita avisa sola.</div>
-    <div class="shoptabs">
-      <button class="shoptab buzontab active" data-buzon="nuevos">Nuevos</button>
-      <button class="shoptab buzontab" data-buzon="leidos">Leídos</button>
-    </div>
-    <div class="forge-list" id="buzon-list"></div>
+    <h3 style="cursor:default">📬 Buzón</h3>
+    <div class="sub" id="bz-estado"></div>
+    <img id="bz-img" src="assets/farm/buzon.png" alt="" style="width:84px;image-rendering:pixelated;margin:0 auto;display:block">
+    <div id="bz-sobres"></div>
+    <div id="bz-carta" style="display:none"></div>
+    <div id="bz-pila" title="Cartas leídas"></div>
   </div></div>
 
   <div class="ov" id="ov-forge"><div class="card" style="width:min(580px,94%)">
@@ -987,7 +1005,7 @@
     // 15/8: VERSIÓN DE BUILD — rompe la caché del navegador en cada deploy (sin esto, el
     // jugador seguía corriendo el state.js viejo aunque el servidor tuviera el nuevo).
     // deploy.bat la actualiza sola (busca GF_BUILD y pone la fecha/hora del deploy).
-    const GF_BUILD = "20260815-2309";
+    const GF_BUILD = "20260815-2319";
     const files = ["game/config.js","game/nav.js","game/audio.js","game/state.js","game/balance.js","game/save.js","game/ui.js","game/boot.js",
                    "game/farm.js","game/forest.js","game/plaza.js","game/main.js","game/update.js"];
     let i = 0;
