@@ -1497,6 +1497,28 @@ function refreshPaquete() {
 /* ---- BUZÓN ESCÉNICO (15/8): el buzón grande, sobres en abanico que se abren como
    papel de carta, y la pila de leídas en la esquina. Pocas palabras: la imagen manda. ---- */
 var _bzVista = "sobres";   // sobres | carta | pila
+// 15/8 v2: los clics del buzón van por DELEGACIÓN — un solo oyente en el documento.
+// Antes se re-enganchaban a cada nodo tras redibujar y algunos quedaban muertos.
+document.addEventListener("pointerdown", (e) => {
+  const cont = document.getElementById("ov-buzon");
+  if (!cont || !cont.classList.contains("show") || !e.target || !e.target.closest) return;
+  const acc = e.target.closest("[data-bz-acc]");
+  const led = e.target.closest("[data-bz-leida]");
+  const del = e.target.closest("[data-bz-del]");
+  const vol = e.target.closest("[data-bz-volver]");
+  if (!acc && !led && !del && !vol) return;
+  e.preventDefault(); e.stopPropagation();
+  const marcarLeida = () => {
+    const c = _bzCartaAbierta; if (!c) return null;
+    _bzVista = "sobres"; _bzCartaAbierta = null;   // primero la vista (buzonLeer redibuja)
+    buzonLeer(c.leer ? c.id : (c.id + "|" + dayStamp(0)));
+    return c;
+  };
+  if (acc) { const c = marcarLeida(); closeOv("ov-buzon"); if (c && c.panel) openOv(c.panel); return; }
+  if (led) { marcarLeida(); refreshBuzon(); return; }
+  if (del) { const [id, dia] = del.dataset.bzDel.split("|"); if (typeof buzonBorrar === "function") buzonBorrar(id, dia); return; }
+  if (vol) { _bzVista = "sobres"; refreshBuzon(); return; }
+}, true);
 var _bzCartaAbierta = null;
 function refreshBuzon() {
   const img = $("bz-img"), sobres = $("bz-sobres"), carta = $("bz-carta"), pila = $("bz-pila"), estado = $("bz-estado");
@@ -1528,18 +1550,9 @@ function refreshBuzon() {
     carta.style.display = "";
     carta.innerHTML = '<div class="bz-carta-papel"><div class="de">De: ' + c.de + '</div><b>' + c.titulo + '</b><br>' + c.txt +
       '<div style="display:flex;gap:8px;justify-content:center;margin-top:12px">' +
-      (c.panel ? '<button class="green sm" id="bz-accion">' + (c.btn || "Ver") + '</button>' : "") +
-      '<button class="ghost sm" id="bz-leida">✓ Leída</button>' +
+      (c.panel ? '<button class="green sm" data-bz-acc="1">' + (c.btn || "Ver") + '</button>' : "") +
+      '<button class="ghost sm" data-bz-leida="1">✓ Leída</button>' +
       '</div></div>';
-    const marcarLeida = () => {
-      // la de bienvenida se guarda para siempre; los avisos del día, por hoy (mañana vuelven si siguen vivos)
-      buzonLeer(c.leer ? c.id : (c.id + "|" + dayStamp(0)));
-      _bzVista = "sobres"; _bzCartaAbierta = null; refreshBuzon();
-    };
-    const acc = $("bz-accion");
-    if (acc) acc.onclick = () => { marcarLeida(); closeOv("ov-buzon"); openOv(c.panel); };
-    const led = $("bz-leida");
-    if (led) led.onclick = marcarLeida;
     return;
   }
 
@@ -1551,12 +1564,7 @@ function refreshBuzon() {
       const f = a.dia ? a.dia.slice(8, 10) + "/" + a.dia.slice(5, 7) : "";
       return '<div class="bz-leida"><span class="fecha">' + f + ' · De: ' + a.de + '</span><br><b>' + a.titulo + '</b><br>' + a.txt +
         '<span class="tacho" data-bz-del="' + a.id + '|' + a.dia + '" title="Borrar">🗑</span></div>';
-    }).join("") + '<div style="text-align:center;margin-top:4px"><span class="accion" id="bz-cerrar-pila" style="color:#f6ecce">↩ volver</span></div>';
-    carta.querySelectorAll("[data-bz-del]").forEach(b => {
-      const borrar = (ev) => { if (ev && ev.stopPropagation) ev.stopPropagation(); const [id, dia] = b.dataset.bzDel.split("|"); if (typeof buzonBorrar === "function") buzonBorrar(id, dia); };
-      b.onpointerdown = borrar; b.onclick = borrar;
-    });
-    const cp = $("bz-cerrar-pila"); if (cp) cp.onclick = () => { _bzVista = "sobres"; refreshBuzon(); };
+    }).join("") + '<div style="text-align:center;margin-top:8px"><button class="ghost sm" data-bz-volver="1">↩ Volver</button></div>';
     return;
   }
 

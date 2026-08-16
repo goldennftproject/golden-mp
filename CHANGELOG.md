@@ -2125,6 +2125,14 @@ Ahora la cadena de guía no tiene puntas sueltas:
   lugar. Al recomprar semillas, `buySeed` la vuelve a poner en el primer hueco libre.
   Herramientas y picos conservan su lógica de siempre.
 
+## Día 18 (cont.) — Buzón: clics por delegación (15/8, fix)
+- El "↩ volver" de la pila (y a veces otros botones) quedaba muerto: los onclick se
+  re-enganchaban a cada nodo después de redibujar y el redibujo intermedio de buzonLeer
+  los pisaba. Ahora TODOS los clics del buzón van por UN oyente delegado en el documento
+  (pointerdown, fase captura) con data-attrs — sobrevive a cualquier redibujado.
+- Botón "↩ Volver" real (estilo ghost) en la pila; acción de carta cierra y navega;
+  "✓ Leída" y papeleras 🗑 por la misma vía.
+
 ## Día 18 (cont.) — BUZÓN ESCÉNICO: la interfaz custom (15/8, aprobada a prueba)
 - La pantalla del buzón dejó de ser una lista con pestañas: ahora es una ESCENA.
   · El buzón grande arriba (con carta asomando si hay correo, cerrado si no).
