@@ -2277,7 +2277,7 @@ class FarmScene extends Phaser.Scene {
     // EL PAQUETE DE LA MAÑANA (15/8, idea Stardew elegida por dirección): cada día con
     // premio pendiente aparece un paquete atado con cordel al pie del buzón. Se levanta
     // con un clic y se abre ahí mismo. Sin premio, no hay paquete: ayer no estaba, hoy sí.
-    let hayPremio = false; try { hayPremio = G.kitReclamado && !!dailyState().claimable; } catch (e) {}
+    let hayPremio = false; try { hayPremio = !!dailyState().claimable; } catch (e) {}   // 15/8: independiente del kit — cada sistema con su vida
     if (hayPremio && !this.paqueteObj) {
       const bz = (this.objs || []).find(x => x.type === "buzon");
       const px = bz ? bz.cx + 10 : 635, py = bz ? bz.by + 12 : 164, w = GF.TILE * 0.5;   // apoyado en el pasto, al pie del poste
