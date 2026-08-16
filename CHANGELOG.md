@@ -2130,8 +2130,8 @@ Ahora la cadena de guía no tiene puntas sueltas:
   FIJAS durante el día (semilla FNV = fecha + apodo: recargar no los mueve). Al cambiar
   el día se renuevan solos (chequeo en el tick lento).
 - Se cavan con un clic al acercarse, sin herramienta: puff de tierra + botín volando.
-  Botín determinístico del día: 2 madera (35%) · 2 piedra (30%) · 1 lombriz (20%) ·
-  1 semilla de papa (15%). INSUMOS, nunca plata — cero riesgo de inflación.
+  Botín (v2, dirección): LOMBRICES siempre — 1 (70%) o 2 (30%). Tierra removida con
+  gusanos = carnada de pesca: temático, y le da a la pesca su fuente diaria natural.
 - Arte: monticulo.png del grupo mercadillo (tierra oscura con gusanitos asomando) +
   respaldo dibujado a código. Persiste en G.excav {dia, hechos}.
 

@@ -3247,12 +3247,10 @@ function excavAzar(n) {   // 0..1 determinístico del día para este jugador (FN
   for (let i = 0; i < str.length; i++) { h ^= str.charCodeAt(i); h = Math.imul(h, 16777619); }
   return ((h >>> 0) % 100000) / 100000;
 }
-function excavBotin(i) {   // qué esconde el montículo i de hoy (también determinístico)
+function excavBotin(i) {   // 15/8 v2 (dirección): tierra removida = LOMBRICES, siempre — la carnada de la pesca
   const r = excavAzar(100 + i);
-  if (r < 0.35) return { res: "madera", n: 2, txt: "+2 Madera" };
-  if (r < 0.65) return { res: "piedra", n: 2, txt: "+2 Piedra" };
-  if (r < 0.85) return { res: "lombriz", n: 1, txt: "+1 Lombriz" };
-  return { seed: "papa", n: 1, txt: "+1 Semilla de papa" };
+  const n = r < 0.7 ? 1 : 2;   // a veces la tierra viene generosa
+  return { res: "lombriz", n, txt: "+" + n + (n > 1 ? " Lombrices" : " Lombriz") };
 }
 function excavCavar(i) {   // devuelve el botín si se pudo cavar
   const e = excavEstado();
