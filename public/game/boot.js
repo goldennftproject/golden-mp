@@ -67,6 +67,7 @@ class BootScene extends Phaser.Scene {
     L.push(["cofre", P + "cofre.png"]);   // cofre depósito
     L.push(["baul_premios", P + "baul_premios.png?v=1"]);          // BAÚL de premios (15/8, estilo shipping bin) — cerrado
     L.push(["baul_premios_lleno", P + "baul_premios_lleno.png?v=1"]); // …abierto y rebosante (hay premio)
+    L.push(["paquete_dia", P + "paquete_dia.png?v=1"]);   // EL PAQUETE DE LA MAÑANA (15/8)
     L.push(["skin_sombrero", P + "skin_sombrero.png"]);   // Sombrero de paja brillante (skin del cofre 10/8); si falta, hay respaldo por código
     L.push(["godhand", P + "godhand.png"]);   // GOD HAND 2.0 (11/8): el arte NFT del cropper
     // edificios EN OBRA (12/8): lo que se ve antes de construirlos (chau edificio gris)

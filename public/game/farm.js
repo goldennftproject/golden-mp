@@ -173,6 +173,16 @@ class FarmScene extends Phaser.Scene {
     if (typeof planosSync === "function") planosSync(true);   // blueprints (12/8): guardados viejos reciben sus planos
     // BUZÓN (15/8): si el arte de PixelLab no está, se dibuja uno simple a código —
     // así el objeto existe igual y el juego nunca cae al respaldo feo de "store"
+    if (!this.textures.exists("paquete_dia")) {   // PAQUETE del día (15/8): respaldo a código
+      const g = this.make.graphics({ add: false });
+      g.fillStyle(0xc9a06a, 1).fillRoundedRect(1, 6, 20, 14, 3);    // caja kraft
+      g.fillStyle(0xb08650, 1).fillRect(1, 6, 20, 3);               // tapa
+      g.lineStyle(2, 0x7a5a33, 1);
+      g.beginPath(); g.moveTo(11, 6); g.lineTo(11, 20); g.strokePath();   // cordel vertical
+      g.beginPath(); g.moveTo(1, 13); g.lineTo(21, 13); g.strokePath();   // cordel horizontal
+      g.fillStyle(0x7a5a33, 1).fillCircle(11, 13, 2);               // nudito
+      g.generateTexture("paquete_dia", 22, 21); g.destroy();
+    }
     ["buzon", "buzon_full"].forEach((k, esFull) => {
       if (this.textures.exists(k)) return;
       const g = this.make.graphics({ add: false });
@@ -824,7 +834,11 @@ class FarmScene extends Phaser.Scene {
     if (o.type === "rock") { if (typeof nodoBloqueado === "function" && nodoBloqueado(o)) return "🔒 Veta — se habilita a granja nivel " + nodoNivelReq(o); return cd ? "Vuelve en " + fmtSecs(secs) : "Picar piedra" + gp(GOLPES_MINAR); }
     if (o.type === "ore") { const od = ORE_DEF[o.ore]; if (!od) return "Minar"; if (cd) return od.emoji + " Vuelve en " + fmtSecs(secs); return "Minar " + od.label + gp(GOLPES_MINAR); }
     if (o.type === "buzon") { const n = (typeof buzonCartas === "function") ? buzonCartas().length : 0; return n ? ("Leer el correo (" + n + (n > 1 ? " cartas" : " carta") + ")") : "Buzón — sin cartas"; }
-    if (o.type === "cofre_diario") { try { return dailyState().claimable ? "¡Abrir tu cofre de premios!" : "Cofre de premios — vuelve mañana"; } catch (e) { return "Cofre de premios"; } }
+    if (o.type === "paquete") return "Levantar tu paquete del día 📦";
+    if (o.type === "cofre_diario") {
+      if (!G.kitReclamado) return "¡Abrí tu kit de bienvenida!";
+      return "Baúl de premios — mirá tu racha";
+    }
     if (o.type === "barn") return "Granja";
     if (o.type === "market") return "Mercado";
     if (typeof BUILD_DEF !== "undefined" && BUILD_DEF[o.type] && !(G.built && G.built[o.type])) {
@@ -902,7 +916,22 @@ class FarmScene extends Phaser.Scene {
       } else { if (typeof refreshEstablo === "function") refreshEstablo(); openOv("ov-establo"); }
       return;
     }
-    if (o.type === "cofre_diario") return openOv("ov-daily");   // cofre de premios (15/8)
+    if (o.type === "paquete") {   // EL PAQUETE DE LA MAÑANA (15/8): se abre donde se levanta
+      claimDaily();
+      if (this.estrellasFx) this.estrellasFx(o.cx, o.by - 12);
+      if (this.coinBurst) this.coinBurst(o.cx, o.by);
+      const po = this.paqueteObj; this.paqueteObj = null;
+      if (po) { if (po.sprite) po.sprite.destroy(); if (po.brillo) po.brillo.destroy(); const ix = this.objs.indexOf(po); if (ix >= 0) this.objs.splice(ix, 1); }
+      return;
+    }
+    if (o.type === "cofre_diario") {   // BAÚL (15/8 v2): las cosas se RETIRAN acá, sin menú
+      if (!G.kitReclamado && typeof kitReclamar === "function") {   // 1ª vez: el kit de bienvenida
+        kitReclamar();
+        if (this.estrellasFx) this.estrellasFx(o.cx, o.by - (o.sprite ? o.sprite.displayHeight * 0.6 : 24));
+        return;
+      }
+      return openOv("ov-daily");   // el premio del día llega como PAQUETE al pie del buzón; acá se mira la racha
+    }
     if (o.type === "buzon") return openOv("ov-buzon");   // buzón (15/8)
     if (o.type === "barn") return openOv("ov-barn");
     if (o.type === "market") return openOv("ov-market");
@@ -1024,23 +1053,23 @@ class FarmScene extends Phaser.Scene {
       }
       toast("Todavía está creciendo"); return;
     }
-    if (o.type === "fish") { if (toolDur("rod") <= 0) { toast("No tenés caña — craftéala en la Herrería"); return; } if ((G.res.lombriz || 0) < 1) { toast("Necesitás lombrices — compralas en la Tienda"); return; } if (!roomForFish()) { bagFull("pescar"); return; } return this.startAction("fish", o); }
+    if (o.type === "fish") { if (toolDur("rod") <= 0) { toast(!G.kitReclamado ? "Tu kit de bienvenida está en el baúl, junto al granero" : "No tenés caña — craftéala en la Herrería"); return; } if ((G.res.lombriz || 0) < 1) { toast("Necesitás lombrices — compralas en la Tienda"); return; } if (!roomForFish()) { bagFull("pescar"); return; } return this.startAction("fish", o); }
     if (nowMs() < o.readyAt) { toast(this.promptText(o)); return; }
     if (o.type === "ore") {
       const pk = equippedPick();   // el pico sale solo de la bolsa (el equipado define el tier)
-      if (!pk) { toast("Necesitás un pico — craftealo en la Herrería"); return; }
+      if (!pk || (!G.kitReclamado && (G.picks.dur[pk] || 0) <= 0)) { toast(!G.kitReclamado ? "Tu kit de bienvenida está en el baúl, junto al granero" : "Necesitás un pico — craftealo en la Herrería"); return; }
       const pd = PICK_DEF[pk], od = ORE_DEF[o.ore];
       if (od.tier > pd.mineTier) { toast("Tu " + pd.label + " no puede con " + od.label); log("Necesitás un pico mejor para " + od.label + " (Herrería).", "bad"); return; }
       if ((G.picks.dur[pk] || 0) <= 0) { toast("No tenés pico útil — craftéalo en la Herrería"); return; }
       if (!roomForRes(o.ore)) { bagFull("picar " + od.label); return; }
       this.startAction("mine", o);
     } else if (o.type === "tree") {
-      if (toolDur("axe") <= 0) { toast("No tenés hacha — craftéala en la Herrería"); return; }
+      if (toolDur("axe") <= 0) { toast(!G.kitReclamado ? "Tu kit de bienvenida está en el baúl, junto al granero" : "No tenés hacha — craftéala en la Herrería"); return; }
       if (!roomForRes("madera")) { bagFull("talar"); return; }
       this.startAction("chop", o);
     } else if (o.type === "rock") {
       const pk = equippedPick();
-      if (!pk) { toast("Necesitás un pico — craftealo en la Herrería"); return; }
+      if (!pk || (!G.kitReclamado && (G.picks.dur[pk] || 0) <= 0)) { toast(!G.kitReclamado ? "Tu kit de bienvenida está en el baúl, junto al granero" : "Necesitás un pico — craftealo en la Herrería"); return; }
       if ((G.picks.dur[pk] || 0) <= 0) { toast("No tenés pico útil — craftéalo en la Herrería"); return; }
       if (!roomForRes("piedra")) { bagFull("picar piedra"); return; }
       this.startAction("mine", o);
@@ -2240,16 +2269,34 @@ class FarmScene extends Phaser.Scene {
       o.emoBuzon = this.add.text(o.cx, o.by - (o.sprite.displayHeight || 40) - 6, "✉️", { fontSize: "15px" }).setOrigin(0.5, 1).setDepth(99990);
       this.tweens.add({ targets: o.emoBuzon, y: o.emoBuzon.y - 6, duration: 700, yoyo: true, repeat: -1, ease: "Sine.easeInOut" });
     } else if (n === 0 && o.emoBuzon) { o.emoBuzon.destroy(); o.emoBuzon = null; }
-    // BAÚL DE PREMIOS (15/8): con premio se ABRE (textura llena) y salta un 🎁
+    // BAÚL (15/8 v3): el 🎁 y la tapa abierta son SOLO del kit de bienvenida
     const cf = (this.objs || []).find(x => x.type === "cofre_diario");
     if (cf && cf.sprite) {
-      let listo = false; try { listo = !!dailyState().claimable; } catch (e) {}
+      const listo = !G.kitReclamado;
       const kc = listo ? "baul_premios_lleno" : "baul_premios";
       if (this.textures.exists(kc) && cf.sprite.texture.key !== kc) this.setObjTex(cf, kc, cf.rw || cf.w);
       if (listo && !cf.emoPremio) {
         cf.emoPremio = this.add.text(cf.cx, cf.by - (cf.sprite.displayHeight || 34) - 6, "🎁", { fontSize: "15px" }).setOrigin(0.5, 1).setDepth(99990);
         this.tweens.add({ targets: cf.emoPremio, y: cf.emoPremio.y - 7, duration: 650, yoyo: true, repeat: -1, ease: "Sine.easeInOut" });
       } else if (!listo && cf.emoPremio) { cf.emoPremio.destroy(); cf.emoPremio = null; }
+    }
+    // EL PAQUETE DE LA MAÑANA (15/8, idea Stardew elegida por dirección): cada día con
+    // premio pendiente aparece un paquete atado con cordel al pie del buzón. Se levanta
+    // con un clic y se abre ahí mismo. Sin premio, no hay paquete: ayer no estaba, hoy sí.
+    let hayPremio = false; try { hayPremio = G.kitReclamado && !!dailyState().claimable; } catch (e) {}
+    if (hayPremio && !this.paqueteObj) {
+      const px = 646, py = 164, w = GF.TILE * 0.5;
+      const spr = this.add.image(px, py, "paquete_dia").setOrigin(0.5, 1).setDepth(py);
+      spr.setScale(w / spr.width);
+      this.tweens.add({ targets: spr, y: py - 3, duration: 900, yoyo: true, repeat: -1, ease: "Sine.easeInOut" });   // respira: "estoy acá"
+      const brillo = this.add.text(px + 9, py - (spr.displayHeight || 18) - 2, "✨", { fontSize: "11px" }).setOrigin(0.5, 1).setDepth(99990);
+      this.tweens.add({ targets: brillo, alpha: 0.25, duration: 700, yoyo: true, repeat: -1 });
+      this.paqueteObj = { i: "paquete", type: "paquete", cx: px, by: py, w, rw: w, baseKey: "paquete_dia", sprite: spr, brillo, readyAt: 0 };
+      this.objs.push(this.paqueteObj);
+    } else if (!hayPremio && this.paqueteObj) {
+      const po = this.paqueteObj; this.paqueteObj = null;
+      if (po.sprite) po.sprite.destroy(); if (po.brillo) po.brillo.destroy();
+      const ix = this.objs.indexOf(po); if (ix >= 0) this.objs.splice(ix, 1);
     }
   }
 

@@ -31,7 +31,7 @@ function snapshot() {
     dishes: G.dishes, cooking: G.cooking, chests: G.chests, dummyUsedAt: G.dummyUsedAt,
     armCd: G.armCd, mkPend: G.mkPend, testeoDado: G.testeoDado,
     layoutPlots: G.layoutPlots, layoutPond: G.layoutPond, ghInv: G.ghInv,
-    planos: G.planos, obras: G.obras, obraDep: G.obraDep, capsClaim: G.capsClaim, emergBuys: G.emergBuys, buzonLeidas: G.buzonLeidas, buzonArchivo: G.buzonArchivo };   // buzón + archivo (15/8)   // blueprints (12/8) · capítulos + emergencia (14/8)
+    planos: G.planos, obras: G.obras, obraDep: G.obraDep, capsClaim: G.capsClaim, emergBuys: G.emergBuys, buzonLeidas: G.buzonLeidas, buzonArchivo: G.buzonArchivo, kitReclamado: G.kitReclamado };   // buzón + kit (15/8)   // blueprints (12/8) · capítulos + emergencia (14/8)
 }
 // "huella" del estado guardable (incluye el apodo); si no cambia, no hay nada que guardar
 function snapKey() { return JSON.stringify({ n: (typeof nombreLucido === "function" ? nombreLucido() : (window.NICK || "Granjero")), d: snapshot() }); }
@@ -176,6 +176,8 @@ function hydrate(d) {
   if (d.emergBuys && typeof d.emergBuys === "object") G.emergBuys = d.emergBuys;   // kit de emergencia (14/8)
   if (d.buzonLeidas && typeof d.buzonLeidas === "object") G.buzonLeidas = d.buzonLeidas;   // cartas leídas del buzón (15/8)
   if (Array.isArray(d.buzonArchivo)) G.buzonArchivo = d.buzonArchivo;   // archivo de cartas (15/8)
+  // kit de bienvenida (15/8): los guardados VIEJOS ya lo recibieron con el arranque de antes
+  G.kitReclamado = d.kitReclamado != null ? !!d.kitReclamado : true;
   if (d.obraDep && typeof d.obraDep === "object") G.obraDep = d.obraDep;
   if (d.layoutPond && typeof d.layoutPond === "object") G.layoutPond = { col: d.layoutPond.col, row: d.layoutPond.row };
   if (d.picks && d.picks.owned && d.picks.dur) G.picks = d.picks;

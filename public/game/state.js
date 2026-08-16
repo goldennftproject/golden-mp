@@ -29,11 +29,12 @@ const G = {
     fibra: 0, pelaje: 0, cuero: 0, colmillo: 0, esencia_runica: 0, esencia_oscura: 0 },
   seeds: { papa: 0, zanahoria: 0, cebolla: 0, calabacin: 0, repollo: 0, calabaza: 0, brocoli: 0, girasol: 0, trigo: 0, maiz: 0 },  // 14/8: la bolsa nace VACÍA — las 3 semillas se compran con la plata inicial (1er objetivo)
   selSeed: "papa",   // semilla elegida para plantar
-  // 15/8 (sim-tuto-v2): el kit CUBRE los materiales del tutorial (31 talas + 18 picadas).
-  // Con 15/15 el jugador debía craftear 21 hachas (126 plata) financiadas con ~170 ciclos
-  // de papa — 40 min de microgestión. El kit es inventario inicial, no premio: insumos.
-  picks: { owned: { stone: true }, dur: { stone: 20 }, eq: "stone" },
-  tools: { axe: 35, rod: 15 },   // usos de arranque; después se craftean de a 1 uso
+  // 15/8 v2 (dirección): se nace con las MANOS VACÍAS — el KIT DE BIENVENIDA espera en
+  // el BAÚL junto al granero (35 hachas + 20 picos + 15 cañas, medido por sim-tuto-v2:
+  // cubre los materiales del tutorial). Primera acción del juego: abrir el baúl.
+  picks: { owned: { stone: true }, dur: { stone: 0 }, eq: "stone" },
+  tools: { axe: 0, rod: 0 },
+  kitReclamado: false,
   toolsLost: {},                 // herramientas tiradas a la papelera (31/7: el diseñador pidió que se puedan tirar)
   invRows: 0,                    // filas extra de inventario compradas
   slots: [],                     // inventario por casillas: [{kind,key}|null]
@@ -1022,6 +1023,7 @@ const TUTO_STEPS = [
   // aprendido y no se vuelve a pedir: de acá en más la plata repetitiva llega de PREMIO.
   // 14/8 v4: los CUATRO pasos del arranque verifican CANTIDADES (3/3/3/3) — el capataz
   // no avanza hasta que compraste, plantaste, cosechaste y vendiste las TRES
+  { id: "kit",       n: 1, txt: "Abrí el baúl junto al granero — tu kit de bienvenida te espera", target: "cofre_diario" },
   { id: "buyseed",   n: 3, txt: "Comprá 3 semillas de papa en el Mercado (tenés 3 de plata)", target: "market", panel: "ov-market", ui: "[data-buy='papa']" },
   { id: "plant",     n: 3, txt: "Plantá tus 3 papas en las parcelas",              target: "plot" },
   { id: "harvest",   n: 3, txt: "Cosechá tus 3 papas",                             target: "plot" },
@@ -1067,7 +1069,7 @@ const TUTO_STEPS = [
    capítulos pagan cosas que se USAN. El último paga una FICHA DE PARCELA (tierra). */
 const TUTO_CAPS = [
   // 14/8 (reversión): el tutorial NO premia — enseña. Capítulos = progreso visible, nada más.
-  { id: "cosecha",  label: "Tu primera cosecha", pasos: ["buyseed", "plant", "harvest", "sell"] },
+  { id: "cosecha",  label: "Tu primera cosecha", pasos: ["kit", "buyseed", "plant", "harvest", "sell"] },
   { id: "herreria", label: "La Herrería",        pasos: ["place_store", "wood_st", "stone_st", "build_store"] },
   { id: "horno",    label: "El Horno de Piedra", pasos: ["place_horno", "wood", "stone", "build_horno", "crafttool"] },
   { id: "cocina",   label: "La Cocina",          pasos: ["place_cocina", "woodc", "stonec", "build_cocina", "cook", "eat"] },
@@ -1176,7 +1178,7 @@ var TUTO_REWARD_PLATA = 100;   // gran recompensa del cierre (editable)
 // después usan el tiempo normal del cultivo. 0 en el panel = sin excepción.
 var FIRST_GROW_MS = 0;   // 14/8: APAGADO — la papa crece en 90 s de base (escalera nueva), sin trato especial
 var FIRST_GROW_N = 3;        // cuántas semillas de arranque tienen ese trato (las 3 papas del inicio)
-var TUTO_VER = 12;   // subir este número cuando cambie la CADENA de pasos (invalida progresos viejos) · v12 (14/8): reversión del capataz — 19 pasos de granja básica, sin premios
+var TUTO_VER = 13;   // v13 (15/8): paso 0 nuevo — el kit de bienvenida se retira del BAÚL
 function tutoActivo() { return G.tuto && !G.tuto.done ? TUTO_STEPS[G.tuto.step] : null; }
 // migración: si el guardado trae una cadena vieja, los pasos ya no significan lo mismo → se recalcula
 function tutoMigrar() {
@@ -1199,6 +1201,7 @@ function tutoHecho(st) {
     // 13/8: pasos "colocá el plano" — hechos si la obra ya está en el piso (o el edificio construido)
     else if (st.id && st.id.indexOf("place_") === 0) { const t = st.id.slice(6); hecho = !!((G.obras && G.obras[t]) || (G.built && G.built[t])); }
     // 14/8 v4: el 1er paso ("comprá tus 3 semillas") solo está hecho con las 3 (o si ya cosechó alguna vez)
+    else if (st.id === "kit") hecho = !!G.kitReclamado;
     else if (st.id === "buyseed") hecho = (G.seeds && (G.seeds.papa || 0) >= 3) || !!G.firstCropDone;
     else if (st.id === "build_store")  hecho = !!(G.built && G.built.store);
     else if (st.id === "build_horno")  hecho = !!(G.built && G.built.horno);
@@ -3247,9 +3250,9 @@ function buzonCartas() {
     txt: "Esta tierra ya es tuya. Plantá, cosechá, vendé y construí a tu ritmo — nadie te apura. Cuando haya novedades, te las dejo acá, en el buzón: si ves la banderita levantada, pasá a leer.",
     leer: true });
   try { if (typeof dailyState === "function" && dailyState().claimable) cartas.push({
-    id: "cofre", de: "La Granja", titulo: "Tu cofre diario está listo",
-    txt: "Hay insumos esperándote en el cofre grande junto al buzón. Si venís todos los días, la racha crece.",
-    panel: "ov-daily", btn: "Abrir el cofre" }); } catch (e) {}
+    id: "cofre", de: "La Granja", titulo: "Te llegó tu paquete del día",
+    txt: "Está al pie del buzón, atado con cordel. Levantalo y es tuyo — si venís todos los días, la racha crece.",
+    panel: "ov-daily", btn: "Ver la racha" }); } catch (e) {}
   try { const n = passPendientes(); if (n > 0) cartas.push({
     id: "pase", de: "El Pase de Cosecha", titulo: n + (n > 1 ? " niveles" : " nivel") + " sin reclamar",
     txt: "Tus estrellas ya destrabaron premios en el Pase. Pasá a retirarlos cuando quieras.",
@@ -3287,6 +3290,24 @@ function dailyState() {
   return { claimable: true, day: dia, lost: false };
 }
 const STREAK_RECOVER_COST = 0;   // legado: ya no hay racha que perder ni que recuperar
+// KIT DE BIENVENIDA (15/8): se entrega al abrir el BAÚL por primera vez
+var KIT_INICIAL = { axe: 35, rod: 15, pico: 20 };
+function kitReclamar() {
+  if (G.kitReclamado) return false;
+  G.kitReclamado = true;
+  G.tools.axe = (G.tools.axe || 0) + KIT_INICIAL.axe;
+  G.tools.rod = (G.tools.rod || 0) + KIT_INICIAL.rod;
+  G.picks.owned.stone = true;
+  G.picks.dur.stone = (G.picks.dur.stone || 0) + KIT_INICIAL.pico;
+  if (!G.picks.eq) G.picks.eq = "stone";
+  log("Kit de bienvenida: " + KIT_INICIAL.axe + " hachas, " + KIT_INICIAL.pico + " picos y " + KIT_INICIAL.rod + " cañas.", "gold");
+  toast("¡Tu kit de bienvenida! 🪓⛏🎣");
+  if (window.celebrate) celebrate({ title: "¡KIT DE BIENVENIDA!", sub: "Hachas, picos y cañas para arrancar", big: false, reward: "Ya podés talar, picar y pescar" });
+  if (typeof tutoEvent === "function") tutoEvent("kit");
+  refreshHud(); if (typeof syncSlots === "function") syncSlots(); if (typeof refreshHotbar === "function") refreshHotbar();
+  if (typeof saveFarm === "function") saveFarm(true);
+  return true;
+}
 function claimDaily() {
   const st = dailyState();
   if (!st.claimable) { toast("Ya reclamaste hoy — volvé mañana"); return; }

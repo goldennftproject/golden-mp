@@ -2125,6 +2125,26 @@ Ahora la cadena de guía no tiene puntas sueltas:
   lugar. Al recomprar semillas, `buySeed` la vuelve a poner en el primer hueco libre.
   Herramientas y picos conservan su lógica de siempre.
 
+## Día 18 (cont.) — EL PAQUETE DE LA MAÑANA (15/8, elegido por dirección)
+- El claim diario dejó de ser un botón: cada día con premio pendiente aparece un PAQUETE
+  de papel kraft atado con cordel al pie del buzón (ayer no estaba, hoy sí). Se levanta
+  con un clic al llegar y se abre ahí mismo (claimDaily + estrellas + monedas). Respira
+  suavecito y tiene un ✨ para leerse a la distancia.
+- El BAÚL queda para el kit de bienvenida (tapa abierta + 🎁 solo mientras espera) y
+  para MIRAR la racha (clic → ov-daily, ya sin reclamo dentro). La carta del buzón ahora
+  dice "Te llegó tu paquete del día" con botón "Ver la racha".
+- Arte del paquete generado en el grupo del mercadillo (paquete del dia), con respaldo
+  dibujado a código si no carga. Rincón completo: buzón → paquete → baúl.
+
+## Día 18 (cont.) — El BAÚL entrega: kit de bienvenida + claim diario orgánico (15/8)
+- Se nace con las MANOS VACÍAS: el kit (35 hachas + 20 picos + 15 cañas) espera en el
+  baúl junto al granero. Paso 0 nuevo del tutorial: "Abrí el baúl — tu kit te espera"
+  (TUTO_VER 13; los guardados viejos ya lo recibieron: kitReclamado=true por defecto).
+- Claim diario ORGÁNICO: con premio pendiente, el clic al baúl lo retira DIRECTO
+  (claimDaily + estrellas + monedas), sin panel. Sin premio, el clic abre la racha para
+  mirarla. El 🎁 late mientras haya algo que retirar (kit o premio del día).
+- Todos los avisos de "no tenés herramienta" apuntan al baúl si el kit está sin retirar.
+
 ## Día 18 (cont.) — Buzón v2 frontal: mismo contexto que el granero (15/8)
 - El buzón se regeneró FRONTAL con leve picado (derivado del baúl v2 para heredar la
   perspectiva): casita de madera sobre poste, techito que rima con el del granero.
