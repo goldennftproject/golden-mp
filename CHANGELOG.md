@@ -2125,6 +2125,18 @@ Ahora la cadena de guía no tiene puntas sueltas:
   lugar. Al recomprar semillas, `buySeed` la vuelve a poner en el primer hueco libre.
   Herramientas y picos conservan su lógica de siempre.
 
+## Día 18 (cont.) — Pantalla propia del paquete del día (15/8) — plantilla del rincón
+- Dirección: buzón, baúl y claim diario tendrán interfaces CUSTOM, gráficas y orgánicas.
+  Técnica elegida: arte protagonista de PixelLab en grande (pixelated ×4-6, mismo asset
+  del mundo) + overlay HTML alrededor. Primera implementada: EL PAQUETE.
+- ov-paquete: el paquete grande cerrado + notita de papel ("¿Qué habrá hoy? Tirá del
+  cordel…") + botón "Abrir el paquete" → claimDaily, el arte cambia al paquete ABIERTO
+  (papel desplegado, brillo dorado, cordel suelto — estado nuevo del grupo mercadillo),
+  la notita dice qué te tocó y el botón pasa a "¡A la bolsa!". Estrellas en el mundo al
+  cerrar. El clic del paquete del mundo ahora abre esta pantalla.
+- Pendiente con la misma receta: interfaz del BAÚL (baúl abierto grande + kit visible +
+  botón Recoger) y del BUZÓN (buzón grande, cartas nuevas sobresaliendo, leídas a un lado).
+
 ## Día 18 (cont.) — Rincón del correo sin emojis: los sprites hablan solos (15/8)
 - Fuera los emojis flotantes ✉️/🎁/✨: el buzón con la carta asomando y el baúl con la
   tapa abierta ya comunican su estado — para eso tienen dos sprites cada uno.

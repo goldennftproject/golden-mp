@@ -626,6 +626,15 @@
     </div>
   </div></div>
 
+  <div class="ov" id="ov-paquete"><div class="card" style="width:min(340px,90%);text-align:center">
+    <button class="close" data-close="ov-paquete">×</button>
+    <h3 style="cursor:default">📦 Tu paquete del día</h3>
+    <div class="sub" id="paq-dia">Día 1 de 7</div>
+    <img id="paq-img" src="assets/farm/paquete_dia.png" alt="" style="width:150px;image-rendering:pixelated;margin:6px auto 2px;display:block">
+    <div id="paq-nota" style="background:#f6efdd;color:#4a3418;border-radius:9px;padding:10px 12px;margin:8px 4px;font-size:13px;box-shadow:0 2px 0 rgba(40,22,6,.25);transform:rotate(-1deg)">¿Qué habrá hoy?</div>
+    <button class="green" id="paq-abrir" style="margin:4px auto 6px">Abrir el paquete</button>
+  </div></div>
+
   <div class="ov" id="ov-buzon"><div class="card" style="width:min(430px,92%)">
     <button class="close" data-close="ov-buzon">×</button>
     <h3>📬 Buzón</h3>
@@ -973,7 +982,7 @@
     // 15/8: VERSIÓN DE BUILD — rompe la caché del navegador en cada deploy (sin esto, el
     // jugador seguía corriendo el state.js viejo aunque el servidor tuviera el nuevo).
     // deploy.bat la actualiza sola (busca GF_BUILD y pone la fecha/hora del deploy).
-    const GF_BUILD = "20260815-2244";
+    const GF_BUILD = "20260815-2251";
     const files = ["game/config.js","game/nav.js","game/audio.js","game/state.js","game/balance.js","game/save.js","game/ui.js","game/boot.js",
                    "game/farm.js","game/forest.js","game/plaza.js","game/main.js","game/update.js"];
     let i = 0;

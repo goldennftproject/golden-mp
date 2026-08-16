@@ -11,7 +11,7 @@ function log(m, k = "") { const b = $("log"); if (!b) return; const d = document
 function isOpen(id) { const e = $(id); return !!(e && e.classList.contains("show")); }
 function anyOvOpen() { return !!document.querySelector(".ov.show"); }
 const OV_REFRESH = { "ov-entrenando": () => entrenarSync(), "ov-clan": () => refreshClan(), "ov-misiones": () => refreshMisiones(), "ov-mapa": () => refreshMapa(), "ov-objetivos": () => refreshObjetivos(), "ov-inv": () => refreshInv(), "ov-skills": () => refreshSkills(), "ov-equip": () => refreshEquip(), "ov-godhand": () => refreshGodHand(),
-  "ov-forge": () => refreshForge(), "ov-market": () => refreshMarket(), "ov-barn": () => refreshBarn(), "ov-buzon": () => refreshBuzon(),
+  "ov-forge": () => refreshForge(), "ov-market": () => refreshMarket(), "ov-barn": () => refreshBarn(), "ov-buzon": () => refreshBuzon(), "ov-paquete": () => refreshPaquete(),
   "ov-cocina": () => refreshCooking(),
   "ov-horno": () => refreshHorno(),
   "ov-altar": () => refreshAltar(),
@@ -1415,6 +1415,35 @@ function refreshMarket() {
 }
 
 // tienda de semillas: comprar con plata, bloqueadas por nivel de Cultivo
+/* ---- EL PAQUETE DEL DÍA (15/8): pantalla propia, gráfica — el paquete grande, la
+   notita y el botón. Plantilla de las interfaces custom del rincón del correo. ---- */
+function refreshPaquete() {
+  const img = $("paq-img"), nota = $("paq-nota"), btn = $("paq-abrir"), dia = $("paq-dia");
+  if (!img || !btn) return;
+  let st = null; try { st = dailyState(); } catch (e) {}
+  if (!st || !st.claimable) { closeOv("ov-paquete"); return; }
+  dia.textContent = "Día " + st.day + " de 7" + (st.day === 7 ? " — ¡el grande!" : "");
+  img.src = "assets/farm/paquete_dia.png?v=1";
+  img.style.transform = "";
+  nota.textContent = "¿Qué habrá hoy? Tirá del cordel…";
+  btn.textContent = "Abrir el paquete";
+  btn.disabled = false;
+  btn.onclick = () => {
+    const r = (typeof DAILY_REWARDS !== "undefined") ? DAILY_REWARDS[st.day - 1] : null;
+    claimDaily();
+    img.src = "assets/farm/paquete_dia_abierto.png?v=1";
+    img.style.transform = "scale(1.06)";
+    nota.textContent = "🎁 " + ((r && r.label) || "¡Tu premio del día!");
+    btn.textContent = "¡A la bolsa!";
+    btn.onclick = () => {
+      closeOv("ov-paquete");
+      // el paquete del mundo desaparece solo (tick) — acá solo el festejo
+      const fs = window.farmScene;
+      if (fs && fs.paqueteObj && fs.estrellasFx) fs.estrellasFx(fs.paqueteObj.cx, fs.paqueteObj.by - 10);
+    };
+  };
+}
+
 /* ---- BUZÓN (15/8): las cartas se dibujan como sobres de papel ---- */
 var _buzonTab = "nuevos";   // pestaña activa (15/8: Nuevos / Leídos, pedido de dirección)
 function refreshBuzon() {

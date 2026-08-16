@@ -916,12 +916,8 @@ class FarmScene extends Phaser.Scene {
       } else { if (typeof refreshEstablo === "function") refreshEstablo(); openOv("ov-establo"); }
       return;
     }
-    if (o.type === "paquete") {   // EL PAQUETE DE LA MAÑANA (15/8): se abre donde se levanta
-      claimDaily();
-      if (this.estrellasFx) this.estrellasFx(o.cx, o.by - 12);
-      if (this.coinBurst) this.coinBurst(o.cx, o.by);
-      const po = this.paqueteObj; this.paqueteObj = null;
-      if (po) { if (po.sprite) po.sprite.destroy(); const ix = this.objs.indexOf(po); if (ix >= 0) this.objs.splice(ix, 1); }
+    if (o.type === "paquete") {   // EL PAQUETE DE LA MAÑANA (15/8): su propia pantalla
+      openOv("ov-paquete");
       return;
     }
     if (o.type === "cofre_diario") {   // BAÚL (15/8 v2): las cosas se RETIRAN acá, sin menú
