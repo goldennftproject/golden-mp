@@ -921,7 +921,7 @@ class FarmScene extends Phaser.Scene {
       if (this.estrellasFx) this.estrellasFx(o.cx, o.by - 12);
       if (this.coinBurst) this.coinBurst(o.cx, o.by);
       const po = this.paqueteObj; this.paqueteObj = null;
-      if (po) { if (po.sprite) po.sprite.destroy(); if (po.brillo) po.brillo.destroy(); const ix = this.objs.indexOf(po); if (ix >= 0) this.objs.splice(ix, 1); }
+      if (po) { if (po.sprite) po.sprite.destroy(); const ix = this.objs.indexOf(po); if (ix >= 0) this.objs.splice(ix, 1); }
       return;
     }
     if (o.type === "cofre_diario") {   // BAÚL (15/8 v2): las cosas se RETIRAN acá, sin menú
@@ -2265,37 +2265,30 @@ class FarmScene extends Phaser.Scene {
     const n = (typeof buzonCartas === "function") ? buzonCartas().length : 0;
     const key = n > 0 ? "buzon_full" : "buzon";
     if (o.sprite.texture.key !== key) this.setObjTex(o, key, o.rw || o.w);
-    if (n > 0 && !o.emoBuzon) {
-      o.emoBuzon = this.add.text(o.cx, o.by - (o.sprite.displayHeight || 40) - 6, "✉️", { fontSize: "15px" }).setOrigin(0.5, 1).setDepth(99990);
-      this.tweens.add({ targets: o.emoBuzon, y: o.emoBuzon.y - 6, duration: 700, yoyo: true, repeat: -1, ease: "Sine.easeInOut" });
-    } else if (n === 0 && o.emoBuzon) { o.emoBuzon.destroy(); o.emoBuzon = null; }
+    if (o.emoBuzon) { o.emoBuzon.destroy(); o.emoBuzon = null; }   // 15/8: sin emoji — el sprite con la carta asomando ya lo dice
     // BAÚL (15/8 v3): el 🎁 y la tapa abierta son SOLO del kit de bienvenida
     const cf = (this.objs || []).find(x => x.type === "cofre_diario");
     if (cf && cf.sprite) {
       const listo = !G.kitReclamado;
       const kc = listo ? "baul_premios_lleno" : "baul_premios";
       if (this.textures.exists(kc) && cf.sprite.texture.key !== kc) this.setObjTex(cf, kc, cf.rw || cf.w);
-      if (listo && !cf.emoPremio) {
-        cf.emoPremio = this.add.text(cf.cx, cf.by - (cf.sprite.displayHeight || 34) - 6, "🎁", { fontSize: "15px" }).setOrigin(0.5, 1).setDepth(99990);
-        this.tweens.add({ targets: cf.emoPremio, y: cf.emoPremio.y - 7, duration: 650, yoyo: true, repeat: -1, ease: "Sine.easeInOut" });
-      } else if (!listo && cf.emoPremio) { cf.emoPremio.destroy(); cf.emoPremio = null; }
+      if (cf.emoPremio) { cf.emoPremio.destroy(); cf.emoPremio = null; }   // 15/8: sin emoji — la tapa abierta ya lo dice
     }
     // EL PAQUETE DE LA MAÑANA (15/8, idea Stardew elegida por dirección): cada día con
     // premio pendiente aparece un paquete atado con cordel al pie del buzón. Se levanta
     // con un clic y se abre ahí mismo. Sin premio, no hay paquete: ayer no estaba, hoy sí.
     let hayPremio = false; try { hayPremio = G.kitReclamado && !!dailyState().claimable; } catch (e) {}
     if (hayPremio && !this.paqueteObj) {
-      const px = 646, py = 164, w = GF.TILE * 0.5;
+      const bz = (this.objs || []).find(x => x.type === "buzon");
+      const px = bz ? bz.cx + 10 : 635, py = bz ? bz.by + 12 : 164, w = GF.TILE * 0.5;   // apoyado en el pasto, al pie del poste
       const spr = this.add.image(px, py, "paquete_dia").setOrigin(0.5, 1).setDepth(py);
       spr.setScale(w / spr.width);
-      this.tweens.add({ targets: spr, y: py - 3, duration: 900, yoyo: true, repeat: -1, ease: "Sine.easeInOut" });   // respira: "estoy acá"
-      const brillo = this.add.text(px + 9, py - (spr.displayHeight || 18) - 2, "✨", { fontSize: "11px" }).setOrigin(0.5, 1).setDepth(99990);
-      this.tweens.add({ targets: brillo, alpha: 0.25, duration: 700, yoyo: true, repeat: -1 });
-      this.paqueteObj = { i: "paquete", type: "paquete", cx: px, by: py, w, rw: w, baseKey: "paquete_dia", sprite: spr, brillo, readyAt: 0 };
+      this.tweens.add({ targets: spr, scaleY: spr.scaleY * 1.04, duration: 900, yoyo: true, repeat: -1, ease: "Sine.easeInOut" });   // respira apenas, sin flotar
+      this.paqueteObj = { i: "paquete", type: "paquete", cx: px, by: py, w, rw: w, baseKey: "paquete_dia", sprite: spr, readyAt: 0 };
       this.objs.push(this.paqueteObj);
     } else if (!hayPremio && this.paqueteObj) {
       const po = this.paqueteObj; this.paqueteObj = null;
-      if (po.sprite) po.sprite.destroy(); if (po.brillo) po.brillo.destroy();
+      if (po.sprite) po.sprite.destroy();
       const ix = this.objs.indexOf(po); if (ix >= 0) this.objs.splice(ix, 1);
     }
   }

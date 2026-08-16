@@ -2125,6 +2125,12 @@ Ahora la cadena de guía no tiene puntas sueltas:
   lugar. Al recomprar semillas, `buySeed` la vuelve a poner en el primer hueco libre.
   Herramientas y picos conservan su lógica de siempre.
 
+## Día 18 (cont.) — Rincón del correo sin emojis: los sprites hablan solos (15/8)
+- Fuera los emojis flotantes ✉️/🎁/✨: el buzón con la carta asomando y el baúl con la
+  tapa abierta ya comunican su estado — para eso tienen dos sprites cada uno.
+- El paquete del día ahora se apoya DE VERDAD al pie del poste del buzón (posición
+  relativa al buzón, no coordenada suelta) y respira apenas, sin flotar.
+
 ## Día 18 (cont.) — EL PAQUETE DE LA MAÑANA (15/8, elegido por dirección)
 - El claim diario dejó de ser un botón: cada día con premio pendiente aparece un PAQUETE
   de papel kraft atado con cordel al pie del buzón (ayer no estaba, hoy sí). Se levanta
