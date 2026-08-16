@@ -1417,6 +1417,15 @@ function refreshMarket() {
 }
 
 // tienda de semillas: comprar con plata, bloqueadas por nivel de Cultivo
+// 15/8: PRECARGA de las imágenes del rincón del correo — sin esto, la primera apertura
+// del panel mostraba el salto de "se abre y se recoloca" (la imagen llegaba tarde y el
+// panel centrado crecía y se re-centraba)
+(function precargarCorreo() {
+  ["paquete_dia", "paquete_dia_abierto", "sobre_carta", "papel_carta", "buzon", "buzon_full"].forEach(n => {
+    const im = new Image(); im.src = "assets/farm/" + n + ".png?v=" + (n.indexOf("buzon") === 0 ? "3" : "1");
+  });
+})();
+
 /* ---- EL PAQUETE DEL DÍA (15/8): pantalla propia, gráfica — el paquete grande, la
    notita y el botón. Plantilla de las interfaces custom del rincón del correo. ---- */
 function refreshPaquete() {
@@ -1505,10 +1514,11 @@ function refreshBuzon() {
       const rot = [-6, 4, -2];
       pila.style.display = "";
       pila.innerHTML = leidas.slice(0, 3).map((a, i) =>
-        '<img src="assets/farm/papel_carta.png?v=1" style="transform:rotate(' + rot[i % 3] + 'deg) translateY(' + (-i * 3) + 'px)" onerror="this.style.display=\'none\'">'
-      ).join("") + '<span class="n">' + leidas.length + '</span>';
-      pila.onclick = () => { _bzVista = "pila"; refreshBuzon(); };
-    } else { pila.style.display = "none"; pila.onclick = null; }
+        '<img src="assets/farm/papel_carta.png?v=1" draggable="false" style="transform:rotate(' + rot[i % 3] + 'deg) translateY(' + (-i * 3) + 'px)">'
+      ).join("") + '<span class="n">' + leidas.length + '</span><div class="rotulo">leídas</div>';
+      const abrirPila = (ev) => { if (ev && ev.preventDefault) ev.preventDefault(); _bzVista = "pila"; refreshBuzon(); };
+      pila.onpointerdown = abrirPila; pila.onclick = abrirPila;   // como el paquete: dispara siempre
+    } else { pila.style.display = "none"; pila.onclick = null; pila.onpointerdown = null; }
   }
 
   // VISTA: leyendo una carta (papel desplegado)
@@ -1542,9 +1552,9 @@ function refreshBuzon() {
       return '<div class="bz-leida"><span class="fecha">' + f + ' · De: ' + a.de + '</span><br><b>' + a.titulo + '</b><br>' + a.txt +
         '<span class="tacho" data-bz-del="' + a.id + '|' + a.dia + '" title="Borrar">🗑</span></div>';
     }).join("") + '<div style="text-align:center;margin-top:4px"><span class="accion" id="bz-cerrar-pila" style="color:#f6ecce">↩ volver</span></div>';
-    carta.querySelectorAll("[data-bz-del]").forEach(b => b.onclick = () => {
-      const [id, dia] = b.dataset.bzDel.split("|");
-      if (typeof buzonBorrar === "function") buzonBorrar(id, dia);
+    carta.querySelectorAll("[data-bz-del]").forEach(b => {
+      const borrar = (ev) => { if (ev && ev.stopPropagation) ev.stopPropagation(); const [id, dia] = b.dataset.bzDel.split("|"); if (typeof buzonBorrar === "function") buzonBorrar(id, dia); };
+      b.onpointerdown = borrar; b.onclick = borrar;
     });
     const cp = $("bz-cerrar-pila"); if (cp) cp.onclick = () => { _bzVista = "sobres"; refreshBuzon(); };
     return;
@@ -1554,9 +1564,15 @@ function refreshBuzon() {
   carta.style.display = "none"; sobres.style.display = "";
   if (!cartas.length) {
     sobres.innerHTML = "";
-    estado.textContent = leidas.length ? "" : "Sin correo por hoy.";
+    estado.textContent = leidas.length ? "Sin correo nuevo — tus cartas leídas están en la pila." : "Sin correo por hoy.";
+    if (leidas.length) {   // el buzón grande también abre la pila
+      img.style.cursor = "pointer";
+      const irPila = (ev) => { if (ev && ev.preventDefault) ev.preventDefault(); _bzVista = "pila"; refreshBuzon(); };
+      img.onpointerdown = irPila; img.onclick = irPila;
+    } else { img.style.cursor = ""; img.onpointerdown = null; img.onclick = null; }
     return;
   }
+  img.style.cursor = ""; img.onpointerdown = null; img.onclick = null;
   const rots = [-7, 3, -3, 6];
   sobres.innerHTML = cartas.map((c, i) =>
     '<div class="bz-sobre' + (i === 0 ? " late" : "") + '" data-bz-idx="' + i + '" style="transform:rotate(' + rots[i % 4] + 'deg)">' +
