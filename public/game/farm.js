@@ -926,7 +926,7 @@ class FarmScene extends Phaser.Scene {
         if (this.estrellasFx) this.estrellasFx(o.cx, o.by - (o.sprite ? o.sprite.displayHeight * 0.6 : 24));
         return;
       }
-      return openOv("ov-daily");   // el premio del día llega como PAQUETE al pie del buzón; acá se mira la racha
+      return openOv("ov-paquete");   // la racha vive en la pantalla del paquete
     }
     if (o.type === "buzon") return openOv("ov-buzon");   // buzón (15/8)
     if (o.type === "barn") return openOv("ov-barn");

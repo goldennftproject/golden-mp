@@ -23,10 +23,10 @@ const OV_REFRESH = { "ov-entrenando": () => entrenarSync(), "ov-clan": () => ref
   "ov-cos": () => refreshCosmeticos(),
   "ov-pass": () => refreshPass(),
   "ov-cofre": () => refreshChest(),
-  "ov-config": () => refreshConfig(), "ov-lb": () => refreshLb(), "ov-daily": () => refreshDaily() };
+  "ov-config": () => refreshConfig(), "ov-lb": () => refreshLb() };
 // los overlays NO bloquean el juego: podés seguir moviéndote/interactuando con la ventana abierta
 // sonido propio de cada edificio al abrir su ventana (pedido del diseñador)
-const OV_SFX = { "ov-market": "shop", "ov-forge": "forge", "ov-barn": "door", "ov-cocina": "door", "ov-cofre": "door", "ov-daily": "coin", "ov-altar": "forge", "ov-establo": "door", "ov-curtiduria": "forge" };
+const OV_SFX = { "ov-market": "shop", "ov-forge": "forge", "ov-barn": "door", "ov-cocina": "door", "ov-cofre": "door", "ov-paquete": "coin", "ov-altar": "forge", "ov-establo": "door", "ov-curtiduria": "forge" };
 function openOv(id) { const e = $(id); if (!e) return; e.classList.add("show"); if (window.sfx) sfx(OV_SFX[id] || "click"); if (OV_REFRESH[id]) OV_REFRESH[id](); if (typeof tutoHighlight === "function") tutoHighlight(); }   // 13/8: al abrir un panel, el botón del objetivo se resalta al instante
 
 // FUNDIDO A NEGRO al cambiar de escena (granja <-> Zona Negra <-> plaza). Antes era un corte seco.
@@ -546,6 +546,8 @@ function refreshEquip() {
 
 /* ---- cofre diario ---- */
 function refreshDaily() {
+  if (!document.getElementById("dy-banner")) return;   // 15/8: la interfaz vieja del cofre se retiró — manda la pantalla del paquete
+
   const box = $("dy-locks"); if (!box || typeof dailyState !== "function") return;
   const st = dailyState();
   const claimed = (G.daily && G.daily.day) || 0;
@@ -1421,20 +1423,45 @@ function refreshPaquete() {
   const img = $("paq-img"), nota = $("paq-nota"), btn = $("paq-abrir"), dia = $("paq-dia");
   if (!img || !btn) return;
   let st = null; try { st = dailyState(); } catch (e) {}
-  if (!st || !st.claimable) { closeOv("ov-paquete"); return; }
+  const cobrados = (st && st.claimable) ? st.day - 1 : ((G.daily && G.daily.day) || 0);
+  // la RACHA como paquetitos: abiertos los cobrados, latiendo el de hoy (pocas palabras)
+  const pintarRacha = (extra) => {
+    const strip = $("paq-racha"); if (!strip) return;
+    let html = "";
+    for (let d = 1; d <= 7; d++) {
+      const ok = d <= cobrados + (extra || 0);
+      const hoy = !extra && st && st.claimable && d === st.day;
+      html += '<img class="paq-mini' + (ok ? " ok" : "") + (hoy ? " hoy" : "") + (d === 7 ? " siete" : "") +
+        '" src="assets/farm/' + (ok ? "paquete_dia_abierto" : "paquete_dia") + '.png?v=1">';
+    }
+    strip.innerHTML = html;
+  };
+  pintarRacha(0);
+  if (!st || !st.claimable) {   // ya abrió el de hoy: paquete abierto y a esperar
+    dia.textContent = cobrados >= 7 ? "¡Semana completa!" : "Volvé mañana";
+    img.src = "assets/farm/paquete_dia_abierto.png?v=1";
+    img.classList.remove("paq-latido"); img.onclick = null; img.style.transform = "";
+    nota.textContent = "Ya abriste el de hoy.";
+    btn.style.display = "none";
+    return;
+  }
   dia.textContent = "Día " + st.day + " de 7" + (st.day === 7 ? " — ¡el grande!" : "");
   img.src = "assets/farm/paquete_dia.png?v=1";
+  img.classList.add("paq-latido");   // late despacito: dan ganas de abrirlo
   img.style.transform = "";
-  nota.textContent = "¿Qué habrá hoy? Tirá del cordel…";
-  btn.textContent = "Abrir el paquete";
-  btn.disabled = false;
-  btn.onclick = () => {
+  nota.textContent = "¿Qué habrá hoy? Tocá el paquete…";
+  btn.style.display = "none";   // 15/8: sin botón de abrir — se abre TOCANDO el paquete
+  img.onclick = () => {
+    img.onclick = null;
     const r = (typeof DAILY_REWARDS !== "undefined") ? DAILY_REWARDS[st.day - 1] : null;
     claimDaily();
+    pintarRacha(1);   // el de hoy pasa a abierto en la tira
+    img.classList.remove("paq-latido");
     img.src = "assets/farm/paquete_dia_abierto.png?v=1";
     img.style.transform = "scale(1.06)";
     nota.textContent = "🎁 " + ((r && r.label) || "¡Tu premio del día!");
     btn.textContent = "¡A la bolsa!";
+    btn.style.display = "";
     btn.onclick = () => {
       closeOv("ov-paquete");
       // el paquete del mundo desaparece solo (tick) — acá solo el festejo
@@ -1891,7 +1918,7 @@ function ponerAdornoElegido() {
   // 10/8: N = mapa, J = misiones de hoy. (M ya estaba tomada por desplegar el menú.)
   // Los EDIFICIOS salieron del menú y de los atajos (Tienda O, Herrería K, Granero B): se
   // entra clickeándolos en la granja, que es lo que les da sentido a estar construidos.
-  const KEYS = { i: "ov-inv", x: "ov-skills", p: "ov-equip", l: "ov-lb", c: "ov-config", g: "ov-daily", n: "ov-mapa", j: "ov-misiones" };
+  const KEYS = { i: "ov-inv", x: "ov-skills", p: "ov-equip", l: "ov-lb", c: "ov-config", g: "ov-paquete", n: "ov-mapa", j: "ov-misiones" };
   window.addEventListener("keydown", (e) => {
     if (e.target && (e.target.tagName === "INPUT" || e.target.tagName === "TEXTAREA")) return;
     const key = e.key.toLowerCase();

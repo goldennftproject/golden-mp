@@ -2125,6 +2125,14 @@ Ahora la cadena de guía no tiene puntas sueltas:
   lugar. Al recomprar semillas, `buySeed` la vuelve a poner en el primer hueco libre.
   Herramientas y picos conservan su lógica de siempre.
 
+## Día 18 (cont.) — La pantalla del paquete ES el claim diario (15/8, dirección)
+- La interfaz vieja del cofre diario (ov-daily) se RETIRÓ. La pantalla del paquete es la
+  única: paquete grande (cerrado latiendo si hay premio · abierto si ya se cobró) + la
+  RACHA de 7 días dibujada como paquetitos (abiertos los cobrados, latiendo el de hoy,
+  el 7º más grande). Pocas palabras: la imagen lo dice.
+- Redirecciones: menú "Paquete del día" (tecla G), clic al baúl, carta del buzón — todo
+  abre ov-paquete. refreshDaily queda inofensiva (guard) porque claimDaily la llamaba.
+
 ## Día 18 (cont.) — Pantalla propia del paquete del día (15/8) — plantilla del rincón
 - Dirección: buzón, baúl y claim diario tendrán interfaces CUSTOM, gráficas y orgánicas.
   Técnica elegida: arte protagonista de PixelLab en grande (pixelated ×4-6, mismo asset

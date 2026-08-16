@@ -3252,7 +3252,7 @@ function buzonCartas() {
   try { if (typeof dailyState === "function" && dailyState().claimable) cartas.push({
     id: "cofre", de: "La Granja", titulo: "Te llegó tu paquete del día",
     txt: "Está al pie del buzón, atado con cordel. Levantalo y es tuyo — si venís todos los días, la racha crece.",
-    panel: "ov-daily", btn: "Ver la racha" }); } catch (e) {}
+    panel: "ov-paquete", btn: "Ver la racha" }); } catch (e) {}
   try { const n = passPendientes(); if (n > 0) cartas.push({
     id: "pase", de: "El Pase de Cosecha", titulo: n + (n > 1 ? " niveles" : " nivel") + " sin reclamar",
     txt: "Tus estrellas ya destrabaron premios en el Pase. Pasá a retirarlos cuando quieras.",

@@ -221,6 +221,13 @@
   .cfgsec{background:#faf3e2;border:1px solid var(--line);border-radius:11px;padding:12px 13px;margin-top:10px}
   .cfgsec h4{margin:0 0 4px;font-size:13px;color:var(--gold-deep)}
   .cfgsec p{margin:0 0 8px;font-size:12px;color:var(--muted);line-height:1.5}
+  /* paquete del día (15/8): latido lento — dan ganas de abrirlo */
+  @keyframes paqlatido{0%,100%{transform:scale(1)}50%{transform:scale(1.055)}}
+  .paq-latido{animation:paqlatido 2.6s ease-in-out infinite;cursor:pointer}
+  .paq-mini{width:20px;image-rendering:pixelated;opacity:.4}
+  .paq-mini.ok{opacity:1}
+  .paq-mini.hoy{opacity:1;animation:paqlatido 2.6s ease-in-out infinite}
+  .paq-mini.siete{width:26px}
   .forge-list{display:flex;flex-direction:column;gap:8px;margin-top:10px;max-height:52vh;overflow:auto}
   .forge-row{display:flex;align-items:center;gap:10px;background:#faf3e2;border:1px solid var(--line);border-radius:11px;padding:9px 10px}
   .forge-row.eq{border-color:var(--gold);box-shadow:0 0 0 1px var(--gold) inset}
@@ -631,6 +638,7 @@
     <h3 style="cursor:default">📦 Tu paquete del día</h3>
     <div class="sub" id="paq-dia">Día 1 de 7</div>
     <img id="paq-img" src="assets/farm/paquete_dia.png" alt="" style="width:150px;image-rendering:pixelated;margin:6px auto 2px;display:block">
+    <div id="paq-racha" style="display:flex;gap:6px;justify-content:center;align-items:flex-end;margin:6px 0 2px"></div>
     <div id="paq-nota" style="background:#f6efdd;color:#4a3418;border-radius:9px;padding:10px 12px;margin:8px 4px;font-size:13px;box-shadow:0 2px 0 rgba(40,22,6,.25);transform:rotate(-1deg)">¿Qué habrá hoy?</div>
     <button class="green" id="paq-abrir" style="margin:4px auto 6px">Abrir el paquete</button>
   </div></div>
@@ -710,20 +718,6 @@
     </div>
     <h4 class="eqh">Herramientas</h4>
     <div class="eqtoolrow" id="eq-grid"></div>
-  </div></div>
-
-  <div class="ov" id="ov-daily"><div class="card" style="width:min(560px,94%)">
-    <button class="close" data-close="ov-daily">×</button>
-    <h3>Cofre diario</h3>
-    <div class="sub">Cosméticos que son solo para lucir (no se venden) y consumibles chicos. El día 7 entrega el coleccionable de la semana, que cambia y no vuelve.</div>
-    <div class="sub" id="dy-banner">Día 1 de 7</div>
-    <div class="dyrow" id="dy-locks"></div>
-    <div class="dycenter">
-      <img id="dy-chest" src="assets/ui/chest_daily.png" onerror="this.style.display='none'">
-      <div id="dy-reward" class="dyreward"></div>
-    </div>
-    <div class="row" style="justify-content:center"><button class="gold" id="dy-claim">Reclamar </button></div>
-    <div class="dynote">Solo 1 al día · Adornos y mimos chicos, nada que acelere tu progreso · Si faltás un día seguís donde quedaste</div>
   </div></div>
 
   <div class="ov" id="ov-zonares"><div class="card" style="width:min(460px,94%)">
@@ -895,7 +889,7 @@
       <button class="gmi" data-panel="ov-inv"><span class="ic"></span> Inventario <b class="key">I</b></button>
       <button class="gmi" data-panel="ov-skills"><span class="ic"></span> Skills <b class="key">X</b></button>
       <button class="gmi" data-panel="ov-equip"><span class="ic"></span> Equipo <b class="key">P</b></button>
-      <button class="gmi" data-panel="ov-daily"><span class="ic"></span> Cofre diario <b class="key">G</b></button>
+      <button class="gmi" data-panel="ov-paquete"><span class="ic"></span> Paquete del día <b class="key">G</b></button>
       <button class="gmi destacada" data-panel="ov-misiones"><span class="ic"></span> Misiones de hoy <b class="key" id="gm-mis">0/3</b></button>
       <button class="gmi" data-panel="ov-pass"><span class="ic"></span> Pase de Batalla</button>
       <button class="gmi" data-panel="ov-clan"><span class="ic"></span> Clan</button>
@@ -982,7 +976,7 @@
     // 15/8: VERSIÓN DE BUILD — rompe la caché del navegador en cada deploy (sin esto, el
     // jugador seguía corriendo el state.js viejo aunque el servidor tuviera el nuevo).
     // deploy.bat la actualiza sola (busca GF_BUILD y pone la fecha/hora del deploy).
-    const GF_BUILD = "20260815-2251";
+    const GF_BUILD = "20260815-2300";
     const files = ["game/config.js","game/nav.js","game/audio.js","game/state.js","game/balance.js","game/save.js","game/ui.js","game/boot.js",
                    "game/farm.js","game/forest.js","game/plaza.js","game/main.js","game/update.js"];
     let i = 0;
