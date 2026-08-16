@@ -2125,6 +2125,16 @@ Ahora la cadena de guía no tiene puntas sueltas:
   lugar. Al recomprar semillas, `buySeed` la vuelve a poner en el primer hueco libre.
   Herramientas y picos conservan su lógica de siempre.
 
+## Día 18 (cont.) — EXCAVACIONES DIARIAS (15/8, idea Stardew elegida)
+- 3 montículos de tierra removida por día (EXCAV_POR_DIA), en celdas libres al azar pero
+  FIJAS durante el día (semilla FNV = fecha + apodo: recargar no los mueve). Al cambiar
+  el día se renuevan solos (chequeo en el tick lento).
+- Se cavan con un clic al acercarse, sin herramienta: puff de tierra + botín volando.
+  Botín determinístico del día: 2 madera (35%) · 2 piedra (30%) · 1 lombriz (20%) ·
+  1 semilla de papa (15%). INSUMOS, nunca plata — cero riesgo de inflación.
+- Arte: monticulo.png del grupo mercadillo (tierra oscura con gusanitos asomando) +
+  respaldo dibujado a código. Persiste en G.excav {dia, hechos}.
+
 ## Día 18 (cont.) — EL BAÚL: pantalla propia y entrega animada (15/8) — trío completo
 - Tercera y última interfaz custom del rincón: ov-baul. Con el kit pendiente, el baúl
   grande abierto y rebosante late, con los 3 ítems flotando encima (hacha ×35, pico ×20,

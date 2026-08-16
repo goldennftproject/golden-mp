@@ -195,6 +195,14 @@ class FarmScene extends Phaser.Scene {
       if (esFull) g.fillStyle(0xf6efdd, 1).fillRect(6, 6, 10, 7);  // sobre asomando
       g.generateTexture(k, 27, 34); g.destroy();
     });
+    if (!this.textures.exists("monticulo")) {   // respaldo a código del montículo
+      const g = this.make.graphics({ add: false });
+      g.fillStyle(0x6b4a2b, 1).fillEllipse(13, 16, 24, 10);
+      g.fillStyle(0x543a20, 1).fillEllipse(13, 14, 18, 8);
+      g.fillStyle(0x8a6a43, 1).fillCircle(8, 12, 2).fillCircle(17, 13, 2).fillCircle(12, 10, 2);
+      g.fillStyle(0xd98a9a, 1).fillCircle(15, 9, 1.5);   // el gusanito
+      g.generateTexture("monticulo", 26, 22); g.destroy();
+    }
     this.objs = GF.WORLD_OBJECTS.map((o, i) => {
       const lp = (G.layout && G.layout[i]) || null;                            // posición editada por el jugador
       // blueprints (12/8): si el edificio se colocó con su plano, ESA es su posición
@@ -711,6 +719,7 @@ class FarmScene extends Phaser.Scene {
 
     // cofres depósito colocados por el jugador (los que están en la bolsa NO se colocan solos)
     (G.chests = G.chests || []).forEach((c, idx) => { if (c.col != null) this.spawnChest(idx); });
+    this.crearExcavaciones();   // los 3 montículos del día (15/8)
 
     { const m = GF.ISLA ? (GF.ISLA_MARGEN || 260) : 0;   // con isla, la cámara puede salir sobre el mar
       this.camLim = { x1: -m, y1: -m, x2: W + m, y2: H + m };
@@ -834,6 +843,7 @@ class FarmScene extends Phaser.Scene {
     if (o.type === "rock") { if (typeof nodoBloqueado === "function" && nodoBloqueado(o)) return "🔒 Veta — se habilita a granja nivel " + nodoNivelReq(o); return cd ? "Vuelve en " + fmtSecs(secs) : "Picar piedra" + gp(GOLPES_MINAR); }
     if (o.type === "ore") { const od = ORE_DEF[o.ore]; if (!od) return "Minar"; if (cd) return od.emoji + " Vuelve en " + fmtSecs(secs); return "Minar " + od.label + gp(GOLPES_MINAR); }
     if (o.type === "buzon") { const n = (typeof buzonCartas === "function") ? buzonCartas().length : 0; return n ? ("Leer el correo (" + n + (n > 1 ? " cartas" : " carta") + ")") : "Buzón — sin cartas"; }
+    if (o.type === "excav") return "Cavar el montículo";
     if (o.type === "paquete") return "Levantar tu paquete del día 📦";
     if (o.type === "cofre_diario") {
       if (!G.kitReclamado) return "¡Abrí tu kit de bienvenida!";
@@ -918,6 +928,16 @@ class FarmScene extends Phaser.Scene {
     }
     if (o.type === "paquete") {   // EL PAQUETE DE LA MAÑANA (15/8): su propia pantalla
       openOv("ov-paquete");
+      return;
+    }
+    if (o.type === "excav") {   // EXCAVACIÓN (15/8): un clic, puff de tierra y el botín
+      const b = (typeof excavCavar === "function") ? excavCavar(o.idx) : null;
+      if (!b) return;
+      if (this.puffFx) this.puffFx(o.cx, o.by - 4, 0x6b4a2b, 10);
+      if (this.premioFx) this.premioFx(o.cx, o.by, b.res ? resSprite(b.res) : "seed_papa", b.txt);
+      if (o.sprite) o.sprite.destroy();
+      const ix = this.objs.indexOf(o); if (ix >= 0) this.objs.splice(ix, 1);
+      const ex = (this.excavObjs || []).indexOf(o); if (ex >= 0) this.excavObjs.splice(ex, 1);
       return;
     }
     if (o.type === "cofre_diario") return openOv("ov-baul");   // 15/8 v3: el baúl tiene su propia pantalla
@@ -2245,9 +2265,36 @@ class FarmScene extends Phaser.Scene {
     }
   }
 
+  // EXCAVACIONES DIARIAS (15/8): 3 montículos en celdas libres, fijos durante el día
+  crearExcavaciones() {
+    (this.excavObjs || []).forEach(o => { if (o.sprite) o.sprite.destroy(); const ix = this.objs.indexOf(o); if (ix >= 0) this.objs.splice(ix, 1); });
+    this.excavObjs = [];
+    const e = (typeof excavEstado === "function") ? excavEstado() : null; if (!e) return;
+    this._excavDia = e.dia;
+    const T = GF.TILE;
+    for (let i = 0; i < (typeof EXCAV_POR_DIA !== "undefined" ? EXCAV_POR_DIA : 3); i++) {
+      if (e.hechos.includes(i)) continue;   // ya cavado hoy
+      // busca una celda libre determinística: arranca del azar del día y barre desde ahí
+      let px = 0, py = 0, ok = false;
+      for (let intento = 0; intento < 60 && !ok; intento++) {
+        const r1 = excavAzar(i * 7 + intento * 2), r2 = excavAzar(i * 7 + intento * 2 + 1);
+        px = 60 + r1 * (GF.WORLD_W - 120); py = 70 + r2 * (GF.WORLD_H - 140);
+        ok = !GF.blockedAt(px, py, 14) && !GF.PLOTS.some(pl => Math.abs((pl.col + 0.5) * T - px) < T && Math.abs((pl.row + 0.5) * T - py) < T);
+      }
+      if (!ok) continue;
+      const w = T * 0.55;
+      const spr = this.add.image(px, py, "monticulo").setOrigin(0.5, 1).setDepth(py);
+      spr.setScale(w / spr.width);
+      const o = { i: "excav" + i, type: "excav", idx: i, cx: px, by: py, w, rw: w, baseKey: "monticulo", sprite: spr, readyAt: 0 };
+      this.objs.push(o); this.excavObjs.push(o);
+    }
+  }
+
   // BUZÓN (15/8): la banderita se levanta sola cuando hay cartas (y un sobre saltarín)
   tickBuzon(t) {
     if (t < (this._buzonAt || 0)) return;
+    // día nuevo → montículos nuevos
+    try { if (typeof excavEstado === "function" && this._excavDia !== excavEstado().dia) this.crearExcavaciones(); } catch (e) {}
     this._buzonAt = t + 1200;
     const o = (this.objs || []).find(x => x.type === "buzon");
     if (!o || !o.sprite) return;

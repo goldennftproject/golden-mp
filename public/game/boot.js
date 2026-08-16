@@ -69,6 +69,7 @@ class BootScene extends Phaser.Scene {
     L.push(["baul_premios_lleno", P + "baul_premios_lleno.png?v=1"]); // …abierto y rebosante (hay premio)
     L.push(["paquete_dia", P + "paquete_dia.png?v=1"]);   // EL PAQUETE DE LA MAÑANA (15/8)
     L.push(["paquete_dia_abierto", P + "paquete_dia_abierto.png?v=1"]);   // …abierto (pantalla del claim)
+    L.push(["monticulo", P + "monticulo.png?v=1"]);   // excavación diaria (15/8)
     L.push(["sobre_carta", P + "sobre_carta.png?v=1"]);   // sobre del buzón escénico (15/8)
     L.push(["papel_carta", P + "papel_carta.png?v=1"]);   // papel de la pila de leídas
     L.push(["skin_sombrero", P + "skin_sombrero.png"]);   // Sombrero de paja brillante (skin del cofre 10/8); si falta, hay respaldo por código

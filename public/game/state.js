@@ -3231,6 +3231,42 @@ function darCosmetico(nombre) {
 
 function dayStamp(off) { const d = new Date(Date.now() + (off || 0) * 86400000); return d.getFullYear() + "-" + String(d.getMonth() + 1).padStart(2, "0") + "-" + String(d.getDate()).padStart(2, "0"); }
 // estado del cofre: ¿se puede reclamar hoy? ¿qué día de la racha toca? ¿se perdió la racha?
+/* ============ EXCAVACIONES DIARIAS (15/8, idea Stardew aprobada) ==============
+   3 montículos de tierra removida por día, en lugares al azar pero FIJOS durante el
+   día (semilla = fecha + apodo: recargar no los mueve). Se cavan con un clic, sin
+   herramienta: sale un insumo chico. Insumos, nunca plata — cero riesgo económico. */
+var EXCAV_POR_DIA = 3;
+function excavEstado() {
+  const e = G.excav || (G.excav = { dia: "", hechos: [] });
+  if (e.dia !== dayStamp(0)) { e.dia = dayStamp(0); e.hechos = []; }
+  return e;
+}
+function excavAzar(n) {   // 0..1 determinístico del día para este jugador (FNV-1a)
+  let h = 2166136261;
+  const str = dayStamp(0) + "|" + (window.NICK || "granjero") + "|" + n;
+  for (let i = 0; i < str.length; i++) { h ^= str.charCodeAt(i); h = Math.imul(h, 16777619); }
+  return ((h >>> 0) % 100000) / 100000;
+}
+function excavBotin(i) {   // qué esconde el montículo i de hoy (también determinístico)
+  const r = excavAzar(100 + i);
+  if (r < 0.35) return { res: "madera", n: 2, txt: "+2 Madera" };
+  if (r < 0.65) return { res: "piedra", n: 2, txt: "+2 Piedra" };
+  if (r < 0.85) return { res: "lombriz", n: 1, txt: "+1 Lombriz" };
+  return { seed: "papa", n: 1, txt: "+1 Semilla de papa" };
+}
+function excavCavar(i) {   // devuelve el botín si se pudo cavar
+  const e = excavEstado();
+  if (e.hechos.includes(i)) return null;
+  const b = excavBotin(i);
+  if (b.res) { if (!tryAddRes(b.res, b.n)) { toast("Bolsa llena — hacé lugar y volvé"); return null; } }
+  else if (b.seed) G.seeds[b.seed] = (G.seeds[b.seed] || 0) + b.n;
+  e.hechos.push(i);
+  log("Excavaste un montículo: " + b.txt + ".", "good");
+  refreshHud(); if (typeof syncSlots === "function") syncSlots();
+  if (typeof saveFarm === "function") saveFarm(true);
+  return b;
+}
+
 /* ================= BUZÓN (15/8, idea Stardew) ==================================
    Las noticias llegan como CARTAS a un buzón físico en la granja. La banderita se
    levanta cuando hay algo: reemplaza al popup del cofre diario al entrar. Las cartas
