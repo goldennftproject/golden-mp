@@ -837,7 +837,7 @@ class FarmScene extends Phaser.Scene {
     if (o.type === "paquete") return "Levantar tu paquete del día 📦";
     if (o.type === "cofre_diario") {
       if (!G.kitReclamado) return "¡Abrí tu kit de bienvenida!";
-      return "Baúl de premios — mirá tu racha";
+      return "Baúl de premios";
     }
     if (o.type === "barn") return "Granja";
     if (o.type === "market") return "Mercado";
@@ -920,14 +920,7 @@ class FarmScene extends Phaser.Scene {
       openOv("ov-paquete");
       return;
     }
-    if (o.type === "cofre_diario") {   // BAÚL (15/8 v2): las cosas se RETIRAN acá, sin menú
-      if (!G.kitReclamado && typeof kitReclamar === "function") {   // 1ª vez: el kit de bienvenida
-        kitReclamar();
-        if (this.estrellasFx) this.estrellasFx(o.cx, o.by - (o.sprite ? o.sprite.displayHeight * 0.6 : 24));
-        return;
-      }
-      return openOv("ov-paquete");   // la racha vive en la pantalla del paquete
-    }
+    if (o.type === "cofre_diario") return openOv("ov-baul");   // 15/8 v3: el baúl tiene su propia pantalla
     if (o.type === "buzon") return openOv("ov-buzon");   // buzón (15/8)
     if (o.type === "barn") return openOv("ov-barn");
     if (o.type === "market") return openOv("ov-market");

@@ -11,7 +11,7 @@ function log(m, k = "") { const b = $("log"); if (!b) return; const d = document
 function isOpen(id) { const e = $(id); return !!(e && e.classList.contains("show")); }
 function anyOvOpen() { return !!document.querySelector(".ov.show"); }
 const OV_REFRESH = { "ov-entrenando": () => entrenarSync(), "ov-clan": () => refreshClan(), "ov-misiones": () => refreshMisiones(), "ov-mapa": () => refreshMapa(), "ov-objetivos": () => refreshObjetivos(), "ov-inv": () => refreshInv(), "ov-skills": () => refreshSkills(), "ov-equip": () => refreshEquip(), "ov-godhand": () => refreshGodHand(),
-  "ov-forge": () => refreshForge(), "ov-market": () => refreshMarket(), "ov-barn": () => refreshBarn(), "ov-buzon": () => { _bzVista = "sobres"; _bzCartaAbierta = null; refreshBuzon(); }, "ov-paquete": () => refreshPaquete(),
+  "ov-forge": () => refreshForge(), "ov-market": () => refreshMarket(), "ov-barn": () => refreshBarn(), "ov-buzon": () => { _bzVista = "sobres"; _bzCartaAbierta = null; refreshBuzon(); }, "ov-paquete": () => refreshPaquete(), "ov-baul": () => refreshBaul(),
   "ov-cocina": () => refreshCooking(),
   "ov-horno": () => refreshHorno(),
   "ov-altar": () => refreshAltar(),
@@ -1421,10 +1421,55 @@ function refreshMarket() {
 // del panel mostraba el salto de "se abre y se recoloca" (la imagen llegaba tarde y el
 // panel centrado crecía y se re-centraba)
 (function precargarCorreo() {
-  ["paquete_dia", "paquete_dia_abierto", "sobre_carta", "papel_carta", "buzon", "buzon_full"].forEach(n => {
-    const im = new Image(); im.src = "assets/farm/" + n + ".png?v=" + (n.indexOf("buzon") === 0 ? "3" : "1");
+  ["paquete_dia", "paquete_dia_abierto", "sobre_carta", "papel_carta", "buzon", "buzon_full", "baul_premios", "baul_premios_lleno"].forEach(n => {
+    const im = new Image(); im.src = "assets/farm/" + n + ".png?v=" + (n.indexOf("buzon") === 0 ? "3" : "1");   // baúl y paquete van con v=1
   });
 })();
+
+/* ---- EL BAÚL (15/8): pantalla propia — abierto y rebosante con el kit a la vista;
+   se toca, tiembla, y los ítems VUELAN a la bolsa. Después queda cerrado y tranquilo. ---- */
+function refreshBaul() {
+  const img = $("baul-img"), items = $("baul-items"), nota = $("baul-nota"), sub = $("baul-sub");
+  if (!img || !items) return;
+  img.setAttribute("draggable", "false");
+  if (G.kitReclamado) {   // nada esperando: baúl cerrado, en paz
+    img.src = "assets/farm/baul_premios.png?v=1";
+    img.classList.remove("paq-latido", "paq-shake");
+    img.onpointerdown = null; img.onclick = null; img.style.cursor = "";
+    items.innerHTML = "";
+    sub.textContent = "";
+    nota.textContent = "Nada esperando por hoy.";
+    return;
+  }
+  // el KIT a la vista, flotando sobre el baúl abierto
+  img.src = "assets/farm/baul_premios_lleno.png?v=1";
+  img.classList.add("paq-latido");
+  img.style.cursor = "pointer";
+  sub.textContent = "Tu kit de bienvenida";
+  nota.textContent = "Tocá el baúl y es todo tuyo.";
+  const K = (typeof KIT_INICIAL !== "undefined") ? KIT_INICIAL : { axe: 35, rod: 15, pico: 20 };
+  const item = (spr, n) => '<div class="baul-item"><img src="' + GF.spr(spr) + '" draggable="false"><span class="cant">×' + n + '</span></div>';
+  items.innerHTML = item("axe", K.axe) + item("pick_stone", K.pico) + item("fishing_rod", K.rod);
+  let abriendo = false;
+  const alTocar = (ev) => {
+    if (ev && ev.preventDefault) ev.preventDefault();
+    if (abriendo) return; abriendo = true;
+    img.classList.remove("paq-latido");
+    img.classList.add("paq-shake");
+    setTimeout(() => {
+      img.classList.remove("paq-shake");
+      try { if (typeof kitReclamar === "function") kitReclamar(); } catch (e) { console.error("[baul]", e); }
+      items.querySelectorAll(".baul-item").forEach((el, i) => setTimeout(() => el.classList.add("vuela"), i * 120));   // vuelan a la bolsa, en fila
+      setTimeout(() => {
+        img.src = "assets/farm/baul_premios.png?v=1";
+        items.innerHTML = "";
+        sub.textContent = "";
+        nota.textContent = "Todo tuyo. ¡A trabajar la granja!";
+      }, 900);
+    }, 800);
+  };
+  img.onpointerdown = alTocar; img.onclick = alTocar;
+}
 
 /* ---- EL PAQUETE DEL DÍA (15/8): pantalla propia, gráfica — el paquete grande, la
    notita y el botón. Plantilla de las interfaces custom del rincón del correo. ---- */

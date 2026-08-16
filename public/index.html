@@ -256,6 +256,12 @@
   .bz-leida .fecha{font-size:10px;color:#8a6f45}
   .bz-leida .tacho{position:absolute;right:7px;top:8px;cursor:pointer;opacity:.55}
   .bz-leida .tacho:hover{opacity:1}
+  /* baúl (15/8): los ítems del kit flotan sobre el baúl y VUELAN a la bolsa al recogerlo */
+  #baul-items{display:flex;justify-content:center;gap:14px;min-height:52px;align-items:flex-end}
+  .baul-item{position:relative;transition:transform .6s ease, opacity .6s ease}
+  .baul-item img{width:34px;image-rendering:pixelated;display:block}
+  .baul-item .cant{position:absolute;right:-8px;bottom:-4px;background:#8a5a2c;color:#fff;font-size:10px;font-weight:800;border-radius:8px;padding:1px 4px}
+  .baul-item.vuela{transform:translateY(-70px) scale(.5);opacity:0}
   .paq-mini{width:20px;image-rendering:pixelated;opacity:.4}
   .paq-mini.ok{opacity:1}
   .paq-mini.hoy{opacity:1;animation:paqlatido 2.6s ease-in-out infinite}
@@ -665,6 +671,15 @@
     </div>
   </div></div>
 
+  <div class="ov" id="ov-baul"><div class="card" style="width:min(340px,90%);text-align:center;min-height:300px">
+    <button class="close" data-close="ov-baul">×</button>
+    <h3 style="cursor:default">🧰 Baúl</h3>
+    <div class="sub" id="baul-sub"></div>
+    <div id="baul-items"></div>
+    <img id="baul-img" src="assets/farm/baul_premios.png" alt="" style="height:110px;width:auto;image-rendering:pixelated;margin:2px auto 6px;display:block">
+    <div id="baul-nota" style="background:#f6efdd;color:#4a3418;border-radius:9px;padding:9px 12px;margin:6px 4px;font-size:13px;box-shadow:0 2px 0 rgba(40,22,6,.25);transform:rotate(.6deg)"></div>
+  </div></div>
+
   <div class="ov" id="ov-paquete"><div class="card" style="width:min(340px,90%);text-align:center;min-height:330px">
     <button class="close" data-close="ov-paquete">×</button>
     <h3 style="cursor:default">📦 Tu paquete del día</h3>
@@ -1007,7 +1022,7 @@
     // 15/8: VERSIÓN DE BUILD — rompe la caché del navegador en cada deploy (sin esto, el
     // jugador seguía corriendo el state.js viejo aunque el servidor tuviera el nuevo).
     // deploy.bat la actualiza sola (busca GF_BUILD y pone la fecha/hora del deploy).
-    const GF_BUILD = "20260815-2349";
+    const GF_BUILD = "20260815-2356";
     const files = ["game/config.js","game/nav.js","game/audio.js","game/state.js","game/balance.js","game/save.js","game/ui.js","game/boot.js",
                    "game/farm.js","game/forest.js","game/plaza.js","game/main.js","game/update.js"];
     let i = 0;

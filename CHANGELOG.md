@@ -2125,6 +2125,16 @@ Ahora la cadena de guía no tiene puntas sueltas:
   lugar. Al recomprar semillas, `buySeed` la vuelve a poner en el primer hueco libre.
   Herramientas y picos conservan su lógica de siempre.
 
+## Día 18 (cont.) — EL BAÚL: pantalla propia y entrega animada (15/8) — trío completo
+- Tercera y última interfaz custom del rincón: ov-baul. Con el kit pendiente, el baúl
+  grande abierto y rebosante late, con los 3 ítems flotando encima (hacha ×35, pico ×20,
+  caña ×15, sprites reales). Se toca → tiembla in crescendo → kitReclamar y los ítems
+  VUELAN a la bolsa en fila. Queda el baúl cerrado: "Todo tuyo. ¡A trabajar la granja!".
+- Sin nada pendiente: baúl cerrado, "Nada esperando por hoy". El clic del mundo abre
+  siempre esta pantalla (la racha vive en la del paquete).
+- Trío terminado: buzón escénico + paquete del día + baúl — tres muebles, tres pantallas
+  gráficas con la misma gramática (latido, toque directo, shake, pocas palabras).
+
 ## Día 18 (cont.) — Buzón: clics por delegación (15/8, fix)
 - El "↩ volver" de la pila (y a veces otros botones) quedaba muerto: los onclick se
   re-enganchaban a cada nodo después de redibujar y el redibujo intermedio de buzonLeer
