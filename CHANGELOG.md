@@ -2125,6 +2125,19 @@ Ahora la cadena de guía no tiene puntas sueltas:
   lugar. Al recomprar semillas, `buySeed` la vuelve a poner en el primer hueco libre.
   Herramientas y picos conservan su lógica de siempre.
 
+## Día 18 (cont.) — AMBIENTE VIVO: viento, hojas, peces y día/noche (15/8, dirección 1+2+3+5)
+- VIENTO: una onda que viaja por la granja — pasto y flores pivotean desde la base y se
+  inclinan en secuencia (fase por posición), con ráfagas lentas; los árboles se mecen
+  apenas (pausa mientras los golpeás). Cero assets nuevos, puro tween.
+- HOJAS: cada 6-18 s una hojita se suelta de un árbol y baja meciéndose hasta
+  desvanecerse (usa el presupuesto de partículas).
+- PECES: chapoteo con ondas en la laguna — cada 5-11 s si PODÉS pescar (caña+lombriz,
+  la laguna te invita), cada 16-30 s si no. Arquito plateado + onda expansiva.
+- DÍA/NOCHE con la hora REAL del jugador: velo suave (noche azulada 21:30-05:30 al 38%,
+  amanecer y atardecer con tinte cálido, día limpio) actualizado cada 20 s con
+  transición de 3 s. Los FAROLES (farol y farolito de los adornos) se encienden solos
+  de noche con halo cálido y latido de llama. Cada check-in se ve distinto.
+
 ## Día 18 (cont.) — EXCAVACIONES DIARIAS (15/8, idea Stardew elegida)
 - 3 montículos de tierra removida por día (EXCAV_POR_DIA), en celdas libres al azar pero
   FIJAS durante el día (semilla FNV = fecha + apodo: recargar no los mueve). Al cambiar

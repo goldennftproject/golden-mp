@@ -74,7 +74,9 @@ class FarmScene extends Phaser.Scene {
         // pasto pesa doble; tamaños chicos y variados para que respiren
         const key = t < 0.45 ? "deco_pasto" : (t < 0.67 ? "deco_flor_blanca" : (t < 0.89 ? "deco_flor_amarilla" : "deco_piedras"));
         const sz = key === "deco_pasto" ? 15 + drnd() * 6 : (key === "deco_piedras" ? 11 + drnd() * 4 : 13 + drnd() * 4);
-        this.add.image(dx, dy, key).setDisplaySize(sz, sz).setDepth(-999.5).setFlipX(drnd() < 0.5);
+        const im = this.add.image(dx, dy + sz / 2, key).setDisplaySize(sz, sz).setDepth(-999.5).setFlipX(drnd() < 0.5);
+        im.setOrigin(0.5, 1);   // pivote en la base: el VIENTO la inclina desde el suelo (15/8)
+        if (key !== "deco_piedras") (this.vientoDecos = this.vientoDecos || []).push(im);
         // 15/8: las mariposas conocen las flores del suelo (se posan en ellas cuando pasean)
         if (key === "deco_flor_blanca" || key === "deco_flor_amarilla") (this.floresDeco = this.floresDeco || []).push({ x: dx, y: dy });
         continue;
@@ -2329,6 +2331,77 @@ class FarmScene extends Phaser.Scene {
     }
   }
 
+  /* ============ AMBIENTE VIVO (15/8, dirección: 1+2+3+5) ============
+     VIENTO en oleadas (pasto/flores se inclinan en secuencia, árboles se mecen apenas),
+     HOJAS que caen de a ratos, PECES que saltan en la laguna (más si podés pescar),
+     y el CICLO DÍA/NOCHE con la hora real + FAROLES que se encienden solos. */
+  tickAmbiente(dt, t) {
+    // --- VIENTO: una onda que viaja por la granja, con ráfagas lentas
+    const fase = t / 900, amp = 0.06 + 0.05 * Math.sin(t / 7000);
+    if (this.vientoDecos) for (const d of this.vientoDecos) d.rotation = Math.sin(fase - d.x * 0.02) * amp;
+    for (const o of this.objs) {
+      if (o.type !== "tree" || !o.sprite || o.locked) continue;
+      if (o.golpesAt && t - o.golpesAt < 1200) continue;   // recién golpeado: manda la sacudida
+      o.sprite.rotation = Math.sin(fase * 0.8 - o.cx * 0.015) * 0.012;
+    }
+    // --- HOJAS: cada tanto una hojita se suelta y baja meciéndose
+    if (t >= (this._hojaAt || 0)) {
+      this._hojaAt = t + 6000 + Math.random() * 12000;
+      const arboles = this.objs.filter(o => o.type === "tree" && o.sprite && o.sprite.visible && !o.locked && o.sprite.texture.key === "tree");
+      if (arboles.length && this.pidoPart(1)) {
+        const a = arboles[(Math.random() * arboles.length) | 0];
+        const hx = a.cx + (Math.random() - 0.5) * a.sprite.displayWidth * 0.5;
+        const hy = a.by - a.sprite.displayHeight * (0.55 + Math.random() * 0.25);
+        const h = this.add.ellipse(hx, hy, 4, 2.6, 0x97c459, 0.9).setDepth(a.by + 1);
+        const dur = 2600 + Math.random() * 1600, x0 = hx, vaiven = 6 + Math.random() * 6;
+        this.tweens.add({ targets: h, y: hy + 34 + Math.random() * 22, alpha: 0, angle: (Math.random() < 0.5 ? 1 : -1) * 200, duration: dur, ease: "Sine.easeIn",
+          onUpdate: (tw) => { h.x = x0 + Math.sin(tw.progress * 6.2 + 1) * vaiven; },
+          onComplete: () => { h.destroy(); this.sueltoPart(1); } });
+      }
+    }
+    // --- PECES: chapoteo con ondas — la laguna invita más cuando PODÉS pescar
+    if (t >= (this._pezAt || 0)) {
+      const invita = (typeof toolDur === "function" && toolDur("rod") > 0 && (G.res.lombriz || 0) > 0);
+      this._pezAt = t + (invita ? 5000 + Math.random() * 6000 : 16000 + Math.random() * 14000);
+      const p = this.pondPoint();
+      if (this.pidoPart(2)) {
+        const onda = this.add.ellipse(p.x, p.y, 6, 3).setStrokeStyle(1.5, 0xcfe8ff, 0.7).setDepth(p.y);
+        this.tweens.add({ targets: onda, scaleX: 3.4, scaleY: 3.4, alpha: 0, duration: 900, onComplete: () => { onda.destroy(); this.sueltoPart(1); } });
+        const pez = this.add.ellipse(p.x, p.y - 2, 7, 3.4, 0x9db9d6, 1).setDepth(p.y + 1);
+        this.tweens.add({ targets: pez, x: p.x + 14, duration: 620, ease: "Linear",
+          onUpdate: (tw) => { const pr = tw.progress; pez.y = p.y - 2 - Math.sin(pr * Math.PI) * 14; pez.rotation = (pr - 0.5) * 1.6; },
+          onComplete: () => { pez.destroy(); this.sueltoPart(1); } });
+      }
+    }
+    // --- CIELO: día/noche con la hora REAL del jugador + faroles de noche
+    if (!this.cielo) {
+      this.cielo = this.add.rectangle(0, 0, GF.WORLD_W, GF.WORLD_H, 0x0a1030, 0).setOrigin(0).setDepth(90000);
+      this.faroles = [];
+      this._cieloAt = 0;
+    }
+    if (t >= (this._cieloAt || 0)) {
+      this._cieloAt = t + 20000;
+      const ahora = new Date(), min = ahora.getHours() * 60 + ahora.getMinutes();
+      const lerp = (a, b, k) => a + (b - a) * k;
+      let col = 0x0a1030, alpha = 0;
+      if (min >= 1290 || min < 330) { alpha = 0.38; }                                                        // noche (21:30-05:30)
+      else if (min < 510) { const k = (min - 330) / 180; alpha = lerp(0.38, 0, k); col = k > 0.5 ? 0x803010 : 0x0a1030; }   // amanecer
+      else if (min < 1080) { alpha = 0; }                                                                    // día pleno
+      else { const k = (min - 1080) / 210; alpha = lerp(0, 0.38, k); col = k < 0.5 ? 0x803010 : 0x0a1030; }  // atardecer (18:00-21:30)
+      this.cielo.fillColor = col;
+      this.tweens.add({ targets: this.cielo, fillAlpha: alpha, duration: 3000 });
+      const noche = alpha > 0.12;
+      if (noche && !this.faroles.length) {
+        (this.adornos || []).forEach(a => {
+          if (a.id !== "farol" && a.id !== "farolito") return;
+          const g = this.add.circle(a.cx, a.by - 24, 20, 0xffd27a, 0.22).setDepth(90001);
+          this.tweens.add({ targets: g, alpha: 0.32, scaleX: 1.12, scaleY: 1.12, duration: 900 + Math.random() * 500, yoyo: true, repeat: -1, ease: "Sine.easeInOut" });
+          this.faroles.push(g);
+        });
+      } else if (!noche && this.faroles.length) { this.faroles.forEach(g => g.destroy()); this.faroles = []; }
+    }
+  }
+
   // VAPOR DE LA COCINA y CHISPAS DEL ALTAR: los edificios cuentan su estado sin abrir la ventana.
   tickVapor(t) {
     if (!FX_VAPOR) return;
@@ -2973,6 +3046,7 @@ class FarmScene extends Phaser.Scene {
     this.tickNubes(dt);     // nubes cruzando con su sombra
     this.tickMariposas(dt, t);
     this.tickBuzon(t);
+    this.tickAmbiente(dt, t);
     this.tickVapor(t);      // vapor de la Cocina y chispas del Altar mejorado
     this.updateHoverFx();   // brillo sobre lo interactuable (hover + cercanía)
     // clic sostenido: aplicar el destino que quedó pendiente por el freno del recálculo
