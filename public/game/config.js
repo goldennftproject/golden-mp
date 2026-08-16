@@ -161,7 +161,7 @@ GF.WORLD_OBJECTS.push(snap("buzon", {type:"buzon"}, 625, 150, T*0.4));   // 15/8
 GF.WORLD_OBJECTS.push(snap("baul_premios", {type:"cofre_diario"}, 668, 152, T*0.8));   // 15/8: ~1/3 del granero, como el shipping bin de Stardew
 // TABLÓN DE PEDIDOS (16/8): a la IZQUIERDA del granero (dirección) — el rincón del correo
 // (buzón + baúl + paquete) queda a la derecha, y los encargos del pueblo del otro lado
-GF.WORLD_OBJECTS.push(snap("tablon_pedidos", {type:"tablon_pedidos"}, 462, 150, T*0.9));
+GF.WORLD_OBJECTS.push(snap("tablon_pedidos", {type:"tablon_pedidos"}, 420, 150, T*0.9));   // 16/8: una celda más a la izquierda (captura: pisaba la pared del granero)
 // HORNO DE PIEDRA (detalles viernes 1): acá se funden todos los lingotes/barras
 GF.WORLD_OBJECTS.push(snap("horno", {type:"horno"}, 320, 470, T*2));
 // viernes (2): 6 árboles y 6 piedras en total (1 activo + 5 por desbloquear) — al FINAL para preservar layouts
