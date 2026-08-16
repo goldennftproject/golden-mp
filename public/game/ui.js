@@ -1440,35 +1440,48 @@ function refreshPaquete() {
   if (!st || !st.claimable) {   // ya abrió el de hoy: paquete abierto y a esperar
     dia.textContent = cobrados >= 7 ? "¡Semana completa!" : "Volvé mañana";
     img.src = "assets/farm/paquete_dia_abierto.png?v=1";
-    img.classList.remove("paq-latido"); img.onclick = null; img.style.transform = "";
+    img.classList.remove("paq-latido"); img.classList.remove("paq-shake"); img.onclick = null; img.onpointerdown = null; img.style.transform = "";
     nota.textContent = "Ya abriste el de hoy.";
     btn.style.display = "none";
     return;
   }
   dia.textContent = "Día " + st.day + " de 7" + (st.day === 7 ? " — ¡el grande!" : "");
   img.src = "assets/farm/paquete_dia.png?v=1";
+  img.setAttribute("draggable", "false");   // 15/8 fix: el drag nativo de la imagen se TRAGABA el click
+  img.classList.remove("paq-shake");
   img.classList.add("paq-latido");   // late despacito: dan ganas de abrirlo
   img.style.transform = "";
   nota.textContent = "¿Qué habrá hoy? Tocá el paquete…";
   btn.style.display = "none";   // 15/8: sin botón de abrir — se abre TOCANDO el paquete
-  img.onclick = () => {
-    img.onclick = null;
-    const r = (typeof DAILY_REWARDS !== "undefined") ? DAILY_REWARDS[st.day - 1] : null;
-    claimDaily();
-    pintarRacha(1);   // el de hoy pasa a abierto en la tira
+  let abriendo = false;
+  const alTocar = (ev) => {
+    if (ev && ev.preventDefault) ev.preventDefault();
+    if (abriendo) return; abriendo = true;
+    // 15/8 (dirección): SHAKE in crescendo — tiembla de menor a mayor y recién ahí se abre
     img.classList.remove("paq-latido");
-    img.src = "assets/farm/paquete_dia_abierto.png?v=1";
-    img.style.transform = "scale(1.06)";
-    nota.textContent = "🎁 " + ((r && r.label) || "¡Tu premio del día!");
-    btn.textContent = "¡A la bolsa!";
-    btn.style.display = "";
-    btn.onclick = () => {
-      closeOv("ov-paquete");
-      // el paquete del mundo desaparece solo (tick) — acá solo el festejo
-      const fs = window.farmScene;
-      if (fs && fs.paqueteObj && fs.estrellasFx) fs.estrellasFx(fs.paqueteObj.cx, fs.paqueteObj.by - 10);
-    };
+    img.classList.add("paq-shake");
+    setTimeout(() => {
+      try {
+        const r = (typeof DAILY_REWARDS !== "undefined") ? DAILY_REWARDS[st.day - 1] : null;
+        claimDaily();
+        pintarRacha(1);   // el de hoy pasa a abierto en la tira
+        nota.textContent = "🎁 " + ((r && r.label) || "¡Tu premio del día!");
+      } catch (e) { console.error("[paquete]", e); nota.textContent = "🎁 ¡Tu premio del día!"; }
+      img.classList.remove("paq-shake");
+      img.src = "assets/farm/paquete_dia_abierto.png?v=1";
+      img.style.transform = "scale(1.06)";
+      btn.textContent = "¡A la bolsa!";
+      btn.style.display = "";
+      btn.onclick = () => {
+        closeOv("ov-paquete");
+        // el paquete del mundo desaparece solo (tick) — acá solo el festejo
+        const fs = window.farmScene;
+        if (fs && fs.paqueteObj && fs.estrellasFx) fs.estrellasFx(fs.paqueteObj.cx, fs.paqueteObj.by - 10);
+      };
+    }, 800);   // dura lo que dura el temblor
   };
+  img.onpointerdown = alTocar;   // pointerdown dispara SIEMPRE (el click se perdía si el mouse se movía 2px)
+  img.onclick = alTocar;         // respaldo
 }
 
 /* ---- BUZÓN (15/8): las cartas se dibujan como sobres de papel ---- */

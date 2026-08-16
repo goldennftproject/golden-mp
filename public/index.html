@@ -224,6 +224,17 @@
   /* paquete del día (15/8): latido lento — dan ganas de abrirlo */
   @keyframes paqlatido{0%,100%{transform:scale(1)}50%{transform:scale(1.055)}}
   .paq-latido{animation:paqlatido 2.6s ease-in-out infinite;cursor:pointer}
+  @keyframes paqshake{
+    0%{transform:translate(0,0) rotate(0deg)}
+    15%{transform:translate(-1px,0) rotate(-1deg)}
+    30%{transform:translate(2px,0) rotate(1.5deg)}
+    45%{transform:translate(-3px,1px) rotate(-2.5deg)}
+    60%{transform:translate(4px,-1px) rotate(3.5deg)}
+    75%{transform:translate(-5px,1px) rotate(-5deg)}
+    88%{transform:translate(6px,-2px) rotate(6deg)}
+    100%{transform:translate(-4px,0) rotate(-3deg)}
+  }
+  .paq-shake{animation:paqshake .8s ease-in 1;cursor:pointer}
   .paq-mini{width:20px;image-rendering:pixelated;opacity:.4}
   .paq-mini.ok{opacity:1}
   .paq-mini.hoy{opacity:1;animation:paqlatido 2.6s ease-in-out infinite}
@@ -976,7 +987,7 @@
     // 15/8: VERSIÓN DE BUILD — rompe la caché del navegador en cada deploy (sin esto, el
     // jugador seguía corriendo el state.js viejo aunque el servidor tuviera el nuevo).
     // deploy.bat la actualiza sola (busca GF_BUILD y pone la fecha/hora del deploy).
-    const GF_BUILD = "20260815-2300";
+    const GF_BUILD = "20260815-2309";
     const files = ["game/config.js","game/nav.js","game/audio.js","game/state.js","game/balance.js","game/save.js","game/ui.js","game/boot.js",
                    "game/farm.js","game/forest.js","game/plaza.js","game/main.js","game/update.js"];
     let i = 0;
