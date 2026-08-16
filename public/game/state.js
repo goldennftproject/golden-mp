@@ -3249,11 +3249,12 @@ function buzonCartas() {
     id: "bienvenida", de: "El Capataz", titulo: "¡Bienvenido a Golden Farm!",
     txt: "Esta tierra ya es tuya. Plantá, cosechá, vendé y construí a tu ritmo — nadie te apura. Cuando haya novedades, te las dejo acá, en el buzón: si ves la banderita levantada, pasá a leer.",
     leer: true });
-  try { if (typeof dailyState === "function" && dailyState().claimable) cartas.push({
+  const hoy = dayStamp(0);
+  try { if (typeof dailyState === "function" && dailyState().claimable && !G.buzonLeidas["cofre|" + hoy]) cartas.push({
     id: "cofre", de: "La Granja", titulo: "Te llegó tu paquete del día",
     txt: "Está al pie del buzón, atado con cordel. Levantalo y es tuyo — si venís todos los días, la racha crece.",
     panel: "ov-paquete", btn: "Ver la racha" }); } catch (e) {}
-  try { const n = passPendientes(); if (n > 0) cartas.push({
+  try { const n = passPendientes(); if (n > 0 && !G.buzonLeidas["pase|" + hoy]) cartas.push({
     id: "pase", de: "El Pase de Cosecha", titulo: n + (n > 1 ? " niveles" : " nivel") + " sin reclamar",
     txt: "Tus estrellas ya destrabaron premios en el Pase. Pasá a retirarlos cuando quieras.",
     panel: "ov-pass", btn: "Ver el Pase" }); } catch (e) {}

@@ -1517,15 +1517,19 @@ function refreshBuzon() {
     sobres.innerHTML = ""; sobres.style.display = "none";
     carta.style.display = "";
     carta.innerHTML = '<div class="bz-carta-papel"><div class="de">De: ' + c.de + '</div><b>' + c.titulo + '</b><br>' + c.txt +
-      (c.panel ? '<br><span class="accion" id="bz-accion">' + (c.btn || "Ver") + ' →</span>' : "") +
-      '<span class="volver" id="bz-volver">↩ guardar</span></div>';
-    const acc = $("bz-accion");
-    if (acc) acc.onclick = () => { closeOv("ov-buzon"); openOv(c.panel); };
-    const vol = $("bz-volver");
-    if (vol) vol.onclick = () => {
-      if (c.leer) buzonLeer(c.id);   // la de bienvenida pasa al archivo al guardarla
+      '<div style="display:flex;gap:8px;justify-content:center;margin-top:12px">' +
+      (c.panel ? '<button class="green sm" id="bz-accion">' + (c.btn || "Ver") + '</button>' : "") +
+      '<button class="ghost sm" id="bz-leida">✓ Leída</button>' +
+      '</div></div>';
+    const marcarLeida = () => {
+      // la de bienvenida se guarda para siempre; los avisos del día, por hoy (mañana vuelven si siguen vivos)
+      buzonLeer(c.leer ? c.id : (c.id + "|" + dayStamp(0)));
       _bzVista = "sobres"; _bzCartaAbierta = null; refreshBuzon();
     };
+    const acc = $("bz-accion");
+    if (acc) acc.onclick = () => { marcarLeida(); closeOv("ov-buzon"); openOv(c.panel); };
+    const led = $("bz-leida");
+    if (led) led.onclick = marcarLeida;
     return;
   }
 
