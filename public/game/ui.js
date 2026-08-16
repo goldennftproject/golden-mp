@@ -237,7 +237,7 @@ function invCellHtml(d, i, rem, zone) {
   if (d.kind === "res" || d.kind === "seed" || d.kind === "fish" || d.kind === "dish" || d.kind === "chest" || (d.kind === "tool" && (d.key === "axe" || d.key === "rod")) || d.kind === "pick") { const k = d.kind + ":" + d.key; const n = Math.min(99, rem[k] || 0); rem[k] = (rem[k] || 0) - n; cnt = `<span class="cnt">${fmt(n)}</span>`; }
   const v = itemView(d);
   const sel = (d.kind === "seed" && G.selSeed === d.key) ? " sel" : "";
-  const eq = (d.kind === "pick" && G.picks.eq === d.key) ? " eq" : "";
+  const eq = pickEqCls(d);
   // 10/8: cada familia lleva su color de borde (k-res, k-seed, k-fish, k-dish, k-tool…), para
   // reconocer de qué es una casilla sin tener que leer el tooltip.
   return `<div class="slot filled k-${d.kind}${sel}${eq}" draggable="true" data-slot="${i}" data-zone="${zone}" title="${v.label}">${itemIcon(v)}${cnt}${durBar(v)}</div>`;
@@ -316,6 +316,13 @@ function hotItemExists(d) {
   if (d.kind === "plano") return !!(G.planos && G.planos[d.key]);   // 13/8: planos en la barra
   return true;   // herramientas siempre están
 }
+// 16/8: el anillo azul de "pico equipado" solo cuando hay 2+ picos — con uno solo
+// no distingue nada y parecía un borde fuera de lugar (captura del director)
+function pickEqCls(d) {
+  if (!d || d.kind !== "pick" || G.picks.eq !== d.key) return "";
+  const varios = Object.keys(G.picks.owned || {}).filter(k => G.picks.owned[k]).length > 1;
+  return varios ? " eq" : "";
+}
 function hotCellHtml(d, i) {
   const num = `<span class="hk">${i === 9 ? 0 : i + 1}</span>`;
   const on = (G.hotSel === i) ? " on" : "";
@@ -323,7 +330,7 @@ function hotCellHtml(d, i) {
   const v = itemView(d);
   let cnt = ""; if (d.kind === "res") cnt = `<span class="cnt">${fmt(G.res[d.key] || 0)}</span>`; if (d.kind === "seed") cnt = `<span class="cnt">${fmt(G.seeds[d.key] || 0)}</span>`; if (d.kind === "fish") cnt = `<span class="cnt">${fmt((G.fish && G.fish[d.key]) || 0)}</span>`; if (d.kind === "dish") cnt = `<span class="cnt">${fmt((G.dishes && G.dishes[d.key]) || 0)}</span>`;
   const sel = (d.kind === "seed" && G.selSeed === d.key) ? " sel" : "";
-  const eq = (d.kind === "pick" && G.picks.eq === d.key) ? " eq" : "";
+  const eq = pickEqCls(d);
   const ghost = hotItemExists(d) ? "" : " ghost";
   return `<div class="hcell filled k-${d.kind}${on}${sel}${eq}${ghost}" draggable="true" data-slot="${i}" data-zone="hot" title="${v.label}">${num}${itemIcon(v)}${cnt}${durBar(v)}</div>`;
 }
