@@ -22,16 +22,14 @@ GF.ISLA_MARGEN = 260;   // cuánto mar se puede recorrer más allá de la cerca
    nada por frame aunque sean miles de árboles. Más adelante, cada porción se limpiará al
    subir de nivel y revelará lo que esconde. Todo tuneable desde acá. */
 GF.BOSQUE = 1;              // 1 = anillo de bosque · 0 = la isla de siempre
-// ANCHO DEL ANILLO, por eje (17/8, dirección: "los 4 lados del bosque deben ser visibles porque
-// lo que interesa es que la granja se pueda expandir").
-// Medido: con un anillo cuadrado de 1522x1312 y una pantalla de 1341x630, al alejar del todo se
-// veían 1522x715 — quedaban 597 px de bosque FUERA de pantalla, arriba y abajo, y solo se
-// llegaba arrastrando. El anillo tiene que ser más ANCHO que alto, en la proporción de una
-// pantalla, para que entre entero. 3014x1424 da una relación de 2,1:1, que cubre la mayoría
-// de los monitores.
-GF.BOSQUE_MARGEN_X = 1150;  // bosque a izquierda y derecha
-GF.BOSQUE_MARGEN_Y = 460;   // bosque arriba y abajo
-GF.BOSQUE_MARGEN = 460;     // respaldo, si alguien lee el valor viejo
+// EL MAPA ES CUADRADO: 1600 x 1600, con la granja CENTRADA (17/8, dirección).
+// La granja mide 714 x 504, así que los márgenes NO son iguales entre sí — lo que tiene que
+// quedar igual es el total. Se calculan solos a partir de GF.MAPA para que nadie tenga que
+// rehacer la cuenta si el mundo cambia de tamaño.
+GF.MAPA = 1600;             // lado del mapa completo, en píxeles
+GF.BOSQUE_MARGEN_X = Math.round((GF.MAPA - GF.WORLD_W) / 2);   // 443
+GF.BOSQUE_MARGEN_Y = Math.round((GF.MAPA - GF.WORLD_H) / 2);   // 548
+GF.BOSQUE_MARGEN = GF.BOSQUE_MARGEN_Y;   // respaldo, si alguien lee el valor viejo
 // TAMAÑO DEL ÁRBOL, EN CELDAS (17/8). Se pide en celdas y la escala se deriva del sprite, así
 // que no puede volver a desincronizarse del resto del juego. Se descubrió midiendo que los
 // árboles del BOSQUE eran de 2,3 a 3,2 celdas, o sea MÁS GRANDES que los que se talan dentro

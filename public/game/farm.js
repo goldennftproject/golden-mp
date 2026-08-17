@@ -846,6 +846,56 @@ class FarmScene extends Phaser.Scene {
     }
   }
 
+  // MOSAICO DE BOSQUE PARA LO QUE QUEDA FUERA DEL MAPA (17/8).
+  // Se arma UNA textura cuadrada de 8x8 celdas con las mismas leyes. Es SIN COSTURA porque el
+  // patrón se repite cada 42 px y 336 es múltiplo de 42; además cada árbol se dibuja también
+  // desplazado ±336, así que el que cruza un borde reaparece por el otro. Después se estira en
+  // un tileSprite enorme por debajo de todo. Coste: una textura de 336x336, una sola vez.
+  fondoBosque(anchoT, altoT, eMin, eMax) {
+    const T = GF.TILE, P = T * 8, clave = "bosque_mosaico";
+    if (!this.textures.exists(clave)) {
+      const tex = this.textures.createCanvas(clave, P, P);
+      const g = tex.getContext();
+      const src = this.textures.get("tree").getSourceImage();
+      const LEYES = String(GF.BOSQUE_LEYES || "cv");
+      const ANCLA = {
+        c: (c, r) => [(c + 0.5) * T, (r + 1) * T],
+        x: (c, r) => [c * T, r * T],
+        v: (c, r) => [c * T, (r + 0.5) * T]
+      };
+      let sem = 987654321;   // semilla propia: el mosaico es siempre el mismo
+      const az = () => { sem = (sem * 1664525 + 1013904223) % 4294967296; return sem / 4294967296; };
+      const DENS = GF.BOSQUE_DENSIDAD || {}, JF = GF.BOSQUE_JITTER_FONDO || 0;
+      const n = P / T, lista = [];
+      for (let r = -2; r < n + 2; r++)
+        for (let c = -2; c < n + 2; c++)
+          for (const ley of LEYES) {
+            const f = ANCLA[ley]; if (!f) continue;
+            const a = f(c, r);
+            const esc = eMin + az() * (eMax - eMin);
+            const dx = Math.round((az() * 2 - 1) * JF), dy = Math.round((az() * 2 - 1) * JF);
+            const flip = az() < 0.45;
+            if (az() > (DENS[ley] != null ? DENS[ley] : 1)) continue;
+            const w = anchoT * esc, h = altoT * esc;
+            lista.push([a[1] + dy, a[0] + dx - w / 2, w, h, flip]);
+          }
+      lista.sort((p, q) => p[0] - q[0]);   // por la base, igual que el resto
+      for (const [base, px, w, h, flip] of lista)
+        for (const ox of [-P, 0, P]) for (const oy of [-P, 0, P]) {
+          const x = px + ox, y = base - h + oy;
+          if (x > P || x + w < 0 || y > P || y + h < 0) continue;
+          g.save();
+          if (flip) { g.translate(x + w, y); g.scale(-1, 1); g.drawImage(src, 0, 0, w, h); }
+          else g.drawImage(src, x, y, w, h);
+          g.restore();
+        }
+      tex.refresh();
+    }
+    const L = this.limiteVista(), LADO = 8000;
+    this.add.tileSprite((L.x1 + L.x2) / 2, (L.y1 + L.y2) / 2, LADO, LADO, clave)
+      .setDepth((GF.BOSQUE_DEPTH || -999) - 2);   // debajo del pasto y del anillo
+  }
+
   // HASTA DÓNDE HAY MUNDO DIBUJADO (17/8).
   // El bosque se pinta sobre mundo + BOSQUE_MARGEN. Todo lo que esté más afuera no existe:
   // es el color de fondo de la cámara, y se ve como una plancha verde lisa. Antes los límites
@@ -3238,6 +3288,13 @@ class FarmScene extends Phaser.Scene {
     if (usarLote) rt.endDraw();
     t.destroy();
     this.bosqueRT = rt;
+    // BOSQUE QUE SIGUE MÁS ALLÁ DEL MAPA (17/8). El mapa es CUADRADO (1600x1600) pero las
+    // pantallas son panorámicas: para ver el mapa entero hay que alejar tanto que sobran ~1.700
+    // px a los lados, y ahí antes se veía el color de fondo liso. Se rellena con un MOSAICO
+    // hecho con las mismas leyes, así que lo que sobra se lee como bosque que continúa y el
+    // mapa cuadrado deja de tener un "afuera" visible.
+    try { this.fondoBosque(anchoT, altoT, eMin, eMax); }
+    catch (e) { console.warn("[bosque] sin mosaico de fondo:", e); }
     console.log("[bosque] " + lista.length + " árboles en una sola textura · " + Math.round(performance.now() - t0) + " ms");
   }
 

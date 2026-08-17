@@ -3691,3 +3691,23 @@ desorden y el raleo se aplican **solo pasado `BOSQUE_FRENTE_SOLIDO`**: la primer
 exactamente como la compuso, y el fondo se rompe con un 14% de claros y 6 px de desorden. Para
 que el azar no baile entre una zona y otra, los números aleatorios se sacan **siempre**, se usen
 o no.
+
+### El mapa pasa a ser cuadrado: 1600 x 1600, granja al centro
+Dirección: *"el mapa debe ser igual para alto y ancho, y la granja en el centro, 1600x1600"*.
+
+Los márgenes se calculan solos desde `GF.MAPA`, porque la granja (714x504) **no** es cuadrada y
+por tanto los márgenes tampoco pueden serlo: 443 px a los lados y 548 arriba y abajo. Lo que
+queda igual es el total. Si algún día cambia el tamaño del mundo, la cuenta se rehace sola.
+
+**Consecuencia medida, y cómo se resolvió.** Un mapa cuadrado en una pantalla panorámica no encaja:
+para ver los 1600 de alto hay que alejar hasta que entren ~3.300 de ancho, así que sobran **1.770 px
+a los lados** — más ancho que el propio mapa. Antes ahí se veía color liso.
+
+Ahora se rellena con un **mosaico del propio bosque**, generado con las mismas leyes: una textura
+de 336x336 (8x8 celdas) dibujada con envoltura —cada árbol se pinta también desplazado ±336, así
+que el que cruza un borde reaparece por el otro— y estirada en un tileSprite por debajo de todo.
+El resultado es que **el mapa cuadrado deja de tener un "afuera" visible**: se ve bosque que sigue.
+Coste: una textura de 336x336 generada una sola vez.
+
+La vista previa aprende a dibujarlo también: `EXTRA=700 python3 tools/preview-granja.py` renderiza
+el mapa con 700 px de bosque alrededor, para comprobar que no asoma ningún borde.

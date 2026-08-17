@@ -191,6 +191,41 @@ def main():
         im = escalar_al_ancho(im, o["wCells"] * T)
         lienzo.alpha_composite(im, (OX + o["leftCol"] * T, OY + (o["baseRow"] + 1) * T - im.height))
 
+    # ---- lo que hay MÁS ALLÁ del mapa: el mosaico de bosque que sigue ----
+    # El mapa es cuadrado y las pantallas son panorámicas, así que al alejar del todo sobra
+    # sitio a los lados. En el juego se rellena con un mosaico hecho con las mismas leyes.
+    # Acá se dibuja igual, para poder comprobar que no aparece ningún borde ni color liso.
+    EXTRA = int(os.environ.get("EXTRA", "0"))
+    if EXTRA and tree:
+        gran = Image.new("RGBA", (lienzo.width + 2 * EXTRA, lienzo.height + 2 * EXTRA), (47, 90, 40, 255))
+        sem2 = [987654321]
+
+        def az2():
+            sem2[0] = (sem2[0] * 1664525 + 1013904223) % 4294967296
+            return sem2[0] / 4294967296
+
+        fondo = []
+        for r in range(-2, gran.height // T + 2):
+            for c2 in range(-2, gran.width // T + 2):
+                for ley in str(d["B"]["leyes"] or "cv"):
+                    if ley not in ANCLA:
+                        continue
+                    ax, ay = ANCLA[ley](c2, r)
+                    esc = eMin + az2() * (eMax - eMin)
+                    jf = d["B"]["jf"] or 0
+                    ax += round((az2() * 2 - 1) * jf)
+                    ay += round((az2() * 2 - 1) * jf)
+                    az2()
+                    if az2() > (d["B"]["dens"] or {}).get(ley, 1):
+                        continue
+                    fondo.append((ay, ax, esc))
+        fondo.sort(key=lambda t: t[0])
+        for ay, ax, esc in fondo:
+            im2 = tree.resize((max(1, round(anchoT * esc)), max(1, round(altoT * esc))), Image.NEAREST)
+            gran.alpha_composite(im2, (int(ax - im2.width / 2), int(ay - im2.height)))
+        gran.alpha_composite(lienzo, (EXTRA, EXTRA))
+        lienzo = gran
+
     salida = sys.argv[1] if len(sys.argv) > 1 else os.path.join(RAIZ, "vista-granja.png")
     lienzo.convert("RGB").save(salida)
     print("mundo %dx%d celdas · %d objetos · %s (%dx%d px)"
