@@ -769,11 +769,12 @@ class FarmScene extends Phaser.Scene {
     (G.chests = G.chests || []).forEach((c, idx) => { if (c.col != null) this.spawnChest(idx); });
     this.crearExcavaciones();   // los 3 montículos del día (15/8)
 
-    { const m = GF.ISLA ? (GF.ISLA_MARGEN || 260) : 0;   // con isla, la cámara puede salir sobre el mar
-      this.camLim = { x1: -m, y1: -m, x2: W + m, y2: H + m };
+    { this.camLim = this.limiteVista();
       this.cameras.main.setBounds(this.camLim.x1, this.camLim.y1, this.camLim.x2 - this.camLim.x1, this.camLim.y2 - this.camLim.y1); }
     if (!GF.CAM_PAN) this.cameras.main.startFollow(hero, false, 0.15, 0.15);
-    else { this.cameras.main.stopFollow(); this.cameras.main.centerOn(W / 2, H * 0.42); }
+    // 17/8 (dirección): la granja va CENTRADA en el bosque. El 0.42 de antes la subía un poco
+    // para despejar la barra de abajo, pero con el anillo alrededor eso se lee como descentrado.
+    else { this.cameras.main.stopFollow(); this.cameras.main.centerOn(W / 2, H / 2); }
     this.zoomUser = 1;
     this.fitCamera();
     this.scale.on("resize", this.fitCamera, this);
@@ -827,14 +828,34 @@ class FarmScene extends Phaser.Scene {
     }
   }
 
+  // HASTA DÓNDE HAY MUNDO DIBUJADO (17/8).
+  // El bosque se pinta sobre mundo + BOSQUE_MARGEN. Todo lo que esté más afuera no existe:
+  // es el color de fondo de la cámara, y se ve como una plancha verde lisa. Antes los límites
+  // de la cámara usaban ISLA_MARGEN (260) mientras el bosque llegaba a 300, así que los dos
+  // números decían cosas distintas. Ahora hay UNA sola fuente de verdad y todo se cuelga de acá.
+  // El recorte de 16 px es para no llegar nunca al pixel del borde del lienzo.
+  limiteVista() {
+    const M = GF.BOSQUE ? (GF.BOSQUE_MARGEN || 300) : (GF.ISLA ? (GF.ISLA_MARGEN || 260) : 0);
+    const b = M > 0 ? 16 : 0;
+    return { x1: -M + b, y1: -M + b, x2: GF.WORLD_W + M - b, y2: GF.WORLD_H + M - b };
+  }
+
   fitCamera() {
     const cw = this.scale.width, ch = this.scale.height;
     if (GF.CAM_PAN) {
-      // vista tipo SFL: se ve TODA la isla con su mar alrededor, y queda margen para arrastrar.
-      // (antes el zoom obligaba a que la granja llenara la pantalla y no se podía mover nada)
-      const m = GF.ISLA ? (GF.ISLA_MARGEN || 260) : 0;
+      // vista tipo SFL: se ve TODA la granja con su bosque alrededor, y queda margen para arrastrar.
+      const m = GF.BOSQUE ? Math.round((GF.BOSQUE_MARGEN || 300) * 0.6) : (GF.ISLA ? (GF.ISLA_MARGEN || 260) : 0);
       const z = Math.max(cw / (GF.WORLD_W + m), ch / (GF.WORLD_H + m));   // que SIEMPRE quede margen para arrastrar en los dos ejes
-      this.cameras.main.setZoom(Phaser.Math.Clamp(z * (this.zoomUser || 1), 0.35, 2.2));
+      // TOPE DE ALEJADO: por debajo de este zoom la pantalla mostraría MÁS de lo que hay
+      // dibujado y aparecería la franja verde lisa. Se calcula, no se pone a mano: así vale
+      // para cualquier ventana, cualquier zoom del navegador y cualquier margen de bosque.
+      const L = this.camLim || this.limiteVista();
+      const zMin = Math.max(cw / (L.x2 - L.x1), ch / (L.y2 - L.y1));
+      // y se corrige el zoom del jugador para que no siga bajando en el vacío: si no, la rueda
+      // "no hace nada" varias vueltas y después hay que darle muchas para volver.
+      const uMin = zMin / z;
+      if ((this.zoomUser || 1) < uMin) this.zoomUser = uMin;
+      this.cameras.main.setZoom(Phaser.Math.Clamp(z * (this.zoomUser || 1), zMin, 2.2));
       return;
     }
     const fill = Math.max(GF.ZOOM, cw / GF.WORLD_W, ch / GF.WORLD_H);

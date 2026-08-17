@@ -3400,3 +3400,38 @@ Dirección: *"la forma cuadrada creo que queda mejor que el resto, esta forma es
 también es rectangular, y por eso lee mejor que el óvalo. La irregularidad del borde la sigue dando
 `BOSQUE_JITTER` (el desorden de cada árbol), que alcanza para que no parezca dibujado con regla.
 Los parámetros quedan en el código por si algún día se quiere volver a probar: es cambiar un número.
+
+### La granja se comprime: el mundo pasa de 23x15 a 17x12
+Dirección, viendo la granja alejada: *"todo el corral, todos los edificios y todos los nodos deben
+estar más comprimidos"*. Los números le daban la razón sin discusión: **345 celdas para 73 de
+contenido (21%)**, con las filas 0, 1, 2, 6 y 14 **enteras vacías** y los 18 nodos exiliados en las
+columnas 16 a 22, lejísimos del granero.
+
+Mundo nuevo: **17x12 = 204 celdas, 36% ocupado, sin una sola fila muerta.** Todo el contenido vive
+entre las columnas 1-15 y las filas 2-10:
+
+- **Izquierda:** las 12 parcelas arriba (1-4 / 2-4), el Establo en el medio, la laguna abajo.
+- **Centro:** el granero arriba con el tablón a su izquierda y el buzón + baúl a su derecha (como
+  pidió dirección), y debajo la columna de oficios en bandas de dos filas — cocina y horno,
+  mercado y altar, herrería y curtiduría.
+- **Derecha:** los 6 árboles en tres pares, y debajo las 6 piedras y los 6 minerales.
+
+Las posiciones se reescribieron **sin tocar el orden de `WORLD_OBJECTS`**: los layouts guardados de
+los jugadores referencian los objetos por índice, así que reordenar la lista les movería la granja.
+
+### El bosque ya no se sube a la cerca
+Dirección: *"el corral pasa por encima de los árboles"*. Cierto, y la primera corrección fue
+**equivocada**: subí `BOSQUE_COLCHON`, que no es la palanca — ese número solo agranda el radio de
+referencia. El hueco real lo da `BOSQUE_AIRE`, porque el borde del claro cae en
+`mitad del mundo + AIRE x radio`.
+
+Medido: con `AIRE = 0,05` el árbol de la derecha se metía **32 px dentro** del mundo y el tronco de
+la fila de arriba colgaba **15 px por debajo** del borde, justo encima de la cerca. Ahora `0,23`,
+que es la cuenta para dejar una celda entera de césped teniendo en cuenta el ancho del sprite
+(105 px) y que el punto de medición está al 72% de su alto — de ahí venía el error.
+
+### tools/preview-granja.py — aprobar el layout sin deployar
+Cada vez que se movía un edificio había que deployar y entrar a mirar. Ahora este script lee las
+**mismas** posiciones que usa el juego (ejecuta `config.js` de verdad con node, no las reescribe) y
+arma un PNG con los sprites reales, el césped, la cerca y el anillo de bosque. Fue lo que dejó al
+descubierto lo del `AIRE`: en la primera pasada se veía el bosque pisando la cerca igual.
