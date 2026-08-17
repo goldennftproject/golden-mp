@@ -44,7 +44,10 @@ class FarmScene extends Phaser.Scene {
     this.corral = null; this.animales = null; this.corralCerca = null;
     this.nubes = null; this.maripos = null; this._part = 0; this._rafActiva = false; this._vaporAt = 0;   // efectos de ambiente
     this.queue = [];      // cola de acciones: clickeá varios objetivos y se hacen en orden
-    this.cameras.main.setBackgroundColor(GF.ISLA ? "#2e7fa8" : "#328032");   // isla: agua alrededor · 12/8: verde al tono del pasto nuevo
+    // 16/8 (dirección): "el suelo será solo césped, no va a haber tierra de playa, arena ni
+    // agua". Con BOSQUE el fondo de la cámara es verde: si algún borde quedara al aire,
+    // se ve pasto y no mar.
+    this.cameras.main.setBackgroundColor(GF.BOSQUE ? "#2f5c28" : (GF.ISLA ? "#2e7fa8" : "#328032"));
 
     this.dragPlot = null; this.dragPond = false;
     // posiciones editadas de laguna y parcelas: primero base, después lo guardado
@@ -334,7 +337,7 @@ class FarmScene extends Phaser.Scene {
       // igual que los tiles y, al crearse después, los tapaba: el suelo de la granja se
       // veía como un verde plano y la textura del pasto nunca llegaba a verse (9/8).
       const g = this.add.graphics().setDepth(-1003);
-      g.fillStyle(0x2e7fa8, 1).fillRect(-MAR, -MAR, GF.WORLD_W + MAR * 2, GF.WORLD_H + MAR * 2);   // mar profundo
+      g.fillStyle(GF.BOSQUE ? 0x2f5c28 : 0x2e7fa8, 1).fillRect(-MAR, -MAR, GF.WORLD_W + MAR * 2, GF.WORLD_H + MAR * 2);   // 16/8: con bosque, verde en vez de mar profundo
       // COSTA (9/8): la orilla es una imagen con las transiciones terminadas (pasto → arena
       // mojada → espuma → bajío → mar), con dithering y el contorno irregular. Antes eran tres
       // rectángulos redondeados de color plano, uno arriba del otro, y el borde quedaba duro.
@@ -343,11 +346,15 @@ class FarmScene extends Phaser.Scene {
         const o = GF.ISLA_ORIGEN || 112;
         // 16/8: con BOSQUE, el claro está en tierra firme — nada de arena ni mar asomando
         if (!GF.BOSQUE) this.add.image(-o, -o, "isla").setOrigin(0, 0).setDepth(-1002);
-        if (GF.BOSQUE) this.dibujarBosque();   // el claro rodeado de bosque
+        // 16/8: BLINDADO — si el bosque falla por lo que sea, el juego arranca igual.
+        // Un error acá antes se llevaba puesta la escena entera y quedaba la carga colgada.
+        if (GF.BOSQUE) { try { this.dibujarBosque(); } catch (e) { console.error("[bosque] no se pudo dibujar:", e); } }
       } else {   // respaldo: si el PNG no llegó, los rectángulos de siempre
         const r = this.add.graphics().setDepth(-1002);
-        r.fillStyle(0x3fa3cc, 1).fillRoundedRect(-70, -70, GF.WORLD_W + 140, GF.WORLD_H + 140, 90);
-        r.fillStyle(0xe8d9a6, 1).fillRoundedRect(-34, -34, GF.WORLD_W + 68, GF.WORLD_H + 68, 60);
+        if (!GF.BOSQUE) {   // 16/8: con bosque no hay mar ni arena — solo césped
+          r.fillStyle(0x3fa3cc, 1).fillRoundedRect(-70, -70, GF.WORLD_W + 140, GF.WORLD_H + 140, 90);
+          r.fillStyle(0xe8d9a6, 1).fillRoundedRect(-34, -34, GF.WORLD_W + 68, GF.WORLD_H + 68, 60);
+        }
         r.fillStyle(0x75975a, 1).fillRoundedRect(-8, -8, GF.WORLD_W + 16, GF.WORLD_H + 16, 34);
       }
       // espuma: líneas claras que van y vienen sobre la orilla
@@ -3016,6 +3023,7 @@ class FarmScene extends Phaser.Scene {
      Próxima etapa: partir el anillo en claros que se limpian al subir de nivel. */
   dibujarBosque() {
     if (!this.textures.exists("tree")) return;
+    const t0 = performance.now();
     const T = GF.TILE, W = GF.WORLD_W, H = GF.WORLD_H;
     const M = GF.BOSQUE_MARGEN || 300;
     const rt = this.add.renderTexture(-M, -M, W + 2 * M, H + 2 * M).setOrigin(0, 0).setDepth(GF.BOSQUE_DEPTH || -999);
@@ -3024,16 +3032,20 @@ class FarmScene extends Phaser.Scene {
     if (pastos.length) {
       const g = this.add.image(0, 0, pastos[0]).setOrigin(0, 0).setVisible(false);
       g.setDisplaySize(T, T);
+      // OJO (16/8, FIX de carga): esto iba con rt.draw por tesela. En Phaser CADA rt.draw
+      // abre y cierra un pase de render completo, así que ~1.000 teselas eran ~1.000 pases
+      // y el juego se quedaba clavado en la pantalla de carga. En lote es un solo pase.
+      const lote = typeof rt.beginDraw === "function";
+      if (lote) rt.beginDraw();
       for (let y = 0; y < H + 2 * M; y += T)
         for (let x = 0; x < W + 2 * M; x += T) {
-          // OJO: esta textura va ENCIMA del suelo de la granja (para que las copas se metan
-          // en el claro). Así que el pasto del bosque NO se pinta sobre el rectángulo del
-          // mundo: si no, taparía las parcelas y los caminos.
+          // el pasto del bosque NO se pinta sobre el rectángulo del mundo (taparía las parcelas)
           const wx = x - M, wy = y - M;
           if (wx > -T && wx < W && wy > -T && wy < H) continue;
           g.setTexture(pastos[(x * 7 + y * 13) % pastos.length]);
-          rt.draw(g, x, y);
+          if (lote) rt.batchDraw(g, x, y); else rt.draw(g, x, y);
         }
+      if (lote) rt.endDraw();
       g.destroy();
     }
     // los árboles: de arriba abajo, para que los de adelante tapen a los de atrás
@@ -3086,7 +3098,7 @@ class FarmScene extends Phaser.Scene {
     if (usarLote) rt.endDraw();
     t.destroy();
     this.bosqueRT = rt;
-    console.log("[bosque] " + lista.length + " árboles en una sola textura");
+    console.log("[bosque] " + lista.length + " árboles en una sola textura · " + Math.round(performance.now() - t0) + " ms");
   }
 
   // 16/8: al reclamar un Retoño o una Roca del baúl, el nodo aparece en la granja
