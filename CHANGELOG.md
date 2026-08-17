@@ -3777,3 +3777,25 @@ di por rotos unos cortes de HUD que eran del recorte, no del juego. Dirección s
 Antes de diagnosticar sobre una imagen hay que preguntar si es la ventana entera. (Lo que sí quedó
 verificado de aquello, y sigue en pie como deuda: en todo `index.html` hay **una sola** `@media`,
 y es para un modal — el HUD no tiene ninguna regla de adaptación al ancho.)
+
+### La diferencia de color era el fondo de la cámara, y lo había puesto yo
+Dirección: *"hay diferencia en el color"*. Medido:
+
+    césped (media de grass_a)   rgb(50, 128, 50)
+    fondo de la cámara          rgb(47,  90, 40)   ← 38 niveles más oscuro
+
+Yo había elegido ese fondo muestreando **la copa de los árboles** y oscureciéndola un 18%,
+pensando en "bosque lejano". Pero el fondo no se ve donde hay bosque: se ve por los **huecos**. Y
+un hueco con 38 niveles de diferencia contra el césped canta como una mancha apagada.
+
+Peor: el mosaico del bosque lo dibujaba sobre **lienzo transparente**, y tiene un 14% de claros
+por el raleo. Cada claro dejaba ver ese verde oscuro, así que todo el bosque de más allá del mapa
+salía moteado. Dentro del anillo esos mismos claros dejan ver el césped de verdad — o sea que el
+mosaico no imitaba lo que imita.
+
+Dos correcciones: el fondo de la cámara pasa a ser **el color medio del césped** (0x328032), y el
+mosaico se dibuja **sobre baldosas de césped** en vez de sobre transparente. Así un hueco se lee
+como suelo en los dos sitios.
+
+Regla que sale de acá: **un color de relleno no se elige por lo que representa, sino por lo que
+va a aparecer al lado.** El fondo estaba junto al césped, no junto a las copas.

@@ -29,7 +29,11 @@ class FarmScene extends Phaser.Scene {
     // 16/8 (dirección): "el suelo será solo césped, no va a haber tierra de playa, arena ni
     // agua". Con BOSQUE el fondo de la cámara es verde: si algún borde quedara al aire,
     // se ve pasto y no mar.
-    this.cameras.main.setBackgroundColor(GF.BOSQUE ? "#2f5a28" : (GF.ISLA ? "#2e7fa8" : "#328032"));
+    // 17/8: el fondo es el COLOR MEDIO DEL CÉSPED (rgb 50,128,50), medido de grass_a. Antes
+    // era un verde de copa 18% más oscuro: 38 niveles por debajo del césped, o sea
+    // perfectamente visible. Cualquier hueco —un claro del mosaico, un borde— cantaba como
+    // una mancha apagada. Con el color del césped, un hueco se lee como suelo y no se nota.
+    this.cameras.main.setBackgroundColor(GF.BOSQUE ? "#328032" : (GF.ISLA ? "#2e7fa8" : "#328032"));
 
     this.dragPlot = null; this.dragPond = false;
     // posiciones editadas de laguna y parcelas: primero base, después lo guardado
@@ -353,7 +357,7 @@ class FarmScene extends Phaser.Scene {
       // OJO con la profundidad: va DEBAJO del pasto (-1000). Estaba en -1000 igual que los
       // tiles y, al crearse después, los tapaba: el suelo se veía verde plano (9/8).
       this.add.graphics().setDepth(-1003)
-        .fillStyle(GF.BOSQUE ? 0x2f5a28 : 0x2e7fa8, 1)   // 0x2f5a28 = el verde medio de las copas, un 18% más oscuro
+        .fillStyle(GF.BOSQUE ? 0x328032 : 0x2e7fa8, 1)   // 0x328032 = el color medio del césped
         .fillRect(-MARGEN, -MARGEN, GF.WORLD_W + MARGEN * 2, GF.WORLD_H + MARGEN * 2);
     }
     if (GF.BOSQUE) {
@@ -889,6 +893,16 @@ class FarmScene extends Phaser.Scene {
     if (!this.textures.exists(clave)) {
       const tex = this.textures.createCanvas(clave, P, P);
       const g = tex.getContext();
+      // FONDO DEL MOSAICO: césped. Iba sobre lienzo transparente, así que por cada claro del
+      // raleo (un 14%) asomaba el color de fondo de la cámara — más oscuro que el suelo — y se
+      // veía moteado. Dentro del anillo esos mismos claros dejan ver el césped de verdad; acá
+      // hay que imitarlo. Si existe la baldosa, se usa la baldosa; si no, su color medio.
+      if (this.textures.exists("grass_a")) {
+        const gsrc = this.textures.get("grass_a").getSourceImage();
+        for (let y = 0; y < P; y += T) for (let x = 0; x < P; x += T) g.drawImage(gsrc, x, y, T, T);
+      } else {
+        g.fillStyle = "#328032"; g.fillRect(0, 0, P, P);
+      }
       const src = this.textures.get("tree").getSourceImage();
       const LEYES = String(GF.BOSQUE_LEYES || "cv");
       const ANCLA = {

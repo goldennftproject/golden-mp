@@ -59,7 +59,7 @@ def main():
     T, C, R = d["T"], d["COLS"], d["ROWS"]
     W, H = C * T, R * T
     MX, MY = d["B"]["mx"] or d["B"]["margen"], d["B"]["my"] or d["B"]["margen"]
-    lienzo = Image.new("RGBA", (W + 2 * MX, H + 2 * MY), (47, 90, 40, 255))
+    lienzo = Image.new("RGBA", (W + 2 * MX, H + 2 * MY), (50, 128, 50, 255))   # color medio del césped
     OX, OY = MX, MY   # origen del mundo dentro del lienzo
 
     # ---- césped del claro ----
@@ -231,7 +231,7 @@ def main():
     # Acá se dibuja igual, para poder comprobar que no aparece ningún borde ni color liso.
     EXTRA = int(os.environ.get("EXTRA", "0"))
     if EXTRA and tree:
-        gran = Image.new("RGBA", (lienzo.width + 2 * EXTRA, lienzo.height + 2 * EXTRA), (47, 90, 40, 255))
+        gran = Image.new("RGBA", (lienzo.width + 2 * EXTRA, lienzo.height + 2 * EXTRA), (50, 128, 50, 255))
         sem2 = [987654321]
 
         def az2():
