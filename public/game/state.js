@@ -19,6 +19,7 @@ const G = {
   cosEq: null,                   // cosmético lucido: título, color de nombre, marco y aura
   incursion: null, incDia: null, dummyTrain: null,   // incursiones de un clic y entrenamiento offline   // tareas de nivel 11-50, mejoras y cosméticos
   vales: 0, pedidos: null,   // 16/8: TABLÓN DE PEDIDOS — vales (moneda del tablón) + estado diario
+  regalos: { tree: 0, rock: 0, plot: 0 },   // 16/8: nodos y parcelas que el nivel regaló y esperan en el BAÚL
   combatXp: 0,                   // doc 2/8: barra de Combate GLOBAL — suma la XP de todos los kills
   states: [],                    // doc 2/8: estados/debuffs del bestiario sobre el jugador (no se guardan)
   tuto: { step: 0, n: 0, done: false, v: 2 },   // doc 2/8: tutorial guiado de micro-objetivos (v = versión de la cadena)
@@ -164,13 +165,20 @@ const CROP_DEF = {
      15 min, ganancia 5 y 25 XP = 20 plata/h y 100 XP/h), la escalera sale sola en progresión
      aritmética: 3-6-9-12-15 min · ganancia 1-2-3-4-5 · XP 5-10-15-20-25. Todos a 20 plata/h
      y 100 XP/h: lo que crece no es el ritmo, es el tamaño de la transacción. */
-  papa:      { label:"Papa",      emoji:"🥔", lvl:1,  seedCost:1,   growH:0.05, yield:1, price:2,    xp:5 },    // 3 min — el piso del ancla; sigue siendo el cultivo del tutorial
-  ciruela:   { label:"Ciruela",   emoji:"🫐", lvl:1,  seedCost:1,   growH:0.10, yield:1, price:3,    xp:10 },   // 6 min  (plum)
-  cereza:    { label:"Cereza",    emoji:"🍒", lvl:2,  seedCost:1,   growH:0.15, yield:1, price:4,    xp:15 },   // 9 min  (cherry)
-  remolacha: { label:"Remolacha", emoji:"🟣", lvl:3,  seedCost:2,   growH:0.20, yield:1, price:6,    xp:20 },   // 12 min (beetroot)
+  // 16/8 v3 (dirección: "papa y ciruela tienen el mismo precio"): la GANANCIA es lo que fija
+  // el ancla (20 plata/h), pero el costo de la SEMILLA es libre — solo hay que subir la venta
+  // en la misma cantidad. Así la semilla también escala (1 → 2 → 2 → 3 → 3) y cada escalón se
+  // siente como una inversión mayor, sin mover ni un punto el rendimiento por hora.
+  papa:      { label:"Papa",      emoji:"🥔", lvl:1,  seedCost:1,   growH:0.05, yield:1, price:2,    xp:5 },    // 3 min · gana 1 — piso del ancla; el cultivo del tutorial
+  ciruela:   { label:"Ciruela",   emoji:"🫐", lvl:1,  seedCost:2,   growH:0.10, yield:1, price:4,    xp:10 },   // 6 min · gana 2  (plum)
+  cereza:    { label:"Cereza",    emoji:"🍒", lvl:2,  seedCost:2,   growH:0.15, yield:1, price:5,    xp:15 },   // 9 min · gana 3  (cherry)
+  remolacha: { label:"Remolacha", emoji:"🟣", lvl:3,  seedCost:3,   growH:0.20, yield:1, price:7,    xp:20 },   // 12 min · gana 4 (beetroot)
   zanahoria: { label:"Zanahoria", emoji:"🥕", lvl:2,  seedCost:3,   growH:0.25, yield:1, price:8,    xp:25 },  // 15 min (v3 diseñador)
   cebolla:   { label:"Cebolla",   emoji:"🧅", lvl:3,  seedCost:6,   growH:0.5, yield:1, price:16,   xp:50 },  // 30 min (v3 diseñador)
-  calabacin: { label:"Calabacín", emoji:"🥒", lvl:4,  seedCost:12,  growH:0.75, yield:1, price:32,   xp:90 },   // 45 min (v3 diseñador)
+  // 16/8: el calabacín era el único de la tabla fuera del ancla — rendía 26,7 plata/h y 120 XP/h
+  // contra los 20 y 100 de sus vecinos. Reanclado: ganancia 15 (20/h) y 75 XP (100/h), con la
+  // relación venta/semilla en 2,5 como el resto. Era 12 → 32 → 90.
+  calabacin: { label:"Calabacín", emoji:"🥒", lvl:4,  seedCost:10,  growH:0.75, yield:1, price:25,   xp:75 },   // 45 min (v3 diseñador, reanclado 16/8)
   repollo:   { label:"Repollo",   emoji:"🥬", lvl:5,  seedCost:20,  growH:1.5,  yield:1, price:50,   xp:150 },  // 1 h 30 (v3 diseñador)
   calabaza:  { label:"Calabaza",  emoji:"🎃", lvl:6,  seedCost:40,  growH:3,    yield:1, price:100,  xp:270 },  // 3 h (v3 diseñador)
   // 16/8 (auditoría C): los cuatro de arriba se corren a la banda 11-50 del nivel de granja
@@ -942,7 +950,10 @@ function recalcFarmLevelInterno() {
   while (farmPuedeSubir()) {
     G.level++; subio = true;
     const gift = FARM_UNLOCK[G.level] || "";
-    if (FARM_PARCELA[G.level]) G.plotsOwned = Math.max(G.plotsOwned || 2, FARM_PARCELA[G.level]);
+    // 16/8: la parcela ya NO se abre sola — igual que el árbol y la roca, llega al BAÚL
+    // como premio y el jugador la coloca. regalosSync() calcula lo que corresponde.
+    const regalos = (typeof regalosSync === "function") ? regalosSync() : 0;
+    if (regalos) { log("Te llegaron " + regalos + " premio" + (regalos > 1 ? "s" : "") + " al baúl.", "gold"); }
     if (FARM_COFRE[G.level]) G.chestCap = (G.chestCap || 0) + FARM_COFRE[G.level];
     if (FARM_EDIF2[G.level]) { G.edif2 = G.edif2 || {}; G.edif2[FARM_EDIF2[G.level]] = true; }
     if (gift && /Título|aura|AURA|Skin|Marco|Emote|Decoración/.test(gift)) { G.cosmeticos = G.cosmeticos || []; G.cosmeticos.push("Nivel " + G.level + ": " + gift); }
@@ -957,6 +968,75 @@ function recalcFarmLevelInterno() {
   if (typeof refreshBarn === "function" && isOpen("ov-barn")) refreshBarn();
   refreshHud();
   if (subio && typeof saveFarm === "function") saveFarm(true);
+}
+/* ============ LOS NODOS SON UN REGALO DEL NIVEL (16/8, dirección) ==================
+   Antes: los árboles se COMPRABAN con madera (2-4-8-16-32) y las rocas y parcelas se
+   abrían solas al subir de nivel, mostrándose de antemano como retoños / piedras
+   bloqueadas / terreno silvestre. Dos problemas: (1) dos reglas distintas para cosas
+   iguales, y (2) el círculo vicioso de la madera — necesitabas madera para tener más
+   árboles, pero la madera sale de los árboles, y ahogaba justo cuando menos tenías
+   (los desbloqueos costaban 60 maderas = 90 h de nodo, MÁS que los tres edificios del
+   tutorial juntos).
+   Ahora: al subir de nivel te llega el nodo AL BAÚL como premio y lo reclamás desde ahí.
+   Nada se muestra en el mapa hasta que es tuyo. Las tablas de siempre (NIVEL_ARBOLES,
+   NIVEL_ROCAS, FARM_PARCELA) pasan a ser el CALENDARIO de entrega. */
+function nodosQueTocan(lvl) {
+  const arb = NIVEL_ARBOLES.filter(n => n <= lvl).length;
+  const roc = NIVEL_ROCAS.filter(n => n <= lvl).length;
+  let par = 3; for (const k in FARM_PARCELA) if (lvl >= +k) par = FARM_PARCELA[k];
+  return { tree: arb, rock: roc, plot: par };
+}
+// pone al día la cola de regalos: idempotente, así que sirve igual para un level-up,
+// para un salto de varios niveles o para migrar un guardado viejo.
+function regalosSync() {
+  const q = G.regalos || (G.regalos = { tree: 0, rock: 0, plot: 0 });
+  const meta = nodosQueTocan(G.level || 1);
+  const tiene = {
+    tree: (G.treesOpen || [0]).length + q.tree,
+    rock: (G.rocksOpen || [0]).length + q.rock,
+    plot: (G.plotsOwned || 3) + q.plot,
+  };
+  let nuevos = 0;
+  for (const k of ["tree", "rock", "plot"]) {
+    const falta = meta[k] - tiene[k];
+    if (falta > 0) { q[k] += falta; nuevos += falta; }
+  }
+  return nuevos;
+}
+var REGALO_LABEL = { tree: "Retoño", rock: "Roca", plot: "Parcela" };
+function regalosPendientes() { const q = G.regalos || {}; return (q.tree || 0) + (q.rock || 0) + (q.plot || 0); }
+// reclamar UNO: lo saca de la cola y lo activa en la granja
+function regaloReclamar(tipo) {
+  const q = G.regalos || (G.regalos = { tree: 0, rock: 0, plot: 0 });
+  if (!q[tipo]) return false;
+  if (tipo === "tree") {
+    G.treesOpen = G.treesOpen || [0];
+    const libre = NIVEL_ARBOLES.map((_, i) => i).find(i => !G.treesOpen.includes(i));
+    if (libre == null) { toast("Ya tenés todos los árboles"); return false; }
+    G.treesOpen.push(libre);
+  } else if (tipo === "rock") {
+    G.rocksOpen = G.rocksOpen || [0];
+    const libre = NIVEL_ROCAS.map((_, i) => i).find(i => !G.rocksOpen.includes(i));
+    if (libre == null) { toast("Ya tenés todas las rocas"); return false; }
+    G.rocksOpen.push(libre);
+  } else if (tipo === "plot") {
+    const tope = typeof PLOT_MAX !== "undefined" ? PLOT_MAX : 60;
+    if ((G.plotsOwned || 3) >= tope) { toast("Ya tenés todas las parcelas"); return false; }
+    G.plotsOwned = (G.plotsOwned || 3) + 1;
+  } else return false;
+  q[tipo]--;
+  log("Colocaste " + (REGALO_LABEL[tipo] || tipo) + " en la granja.", "gold");
+  toast("¡" + (REGALO_LABEL[tipo] || tipo) + " en la granja!");
+  if (window.sfx) sfx("level");
+  // la granja lo tiene que ver en el acto
+  try {
+    if (window.farmScene) {
+      if (tipo === "plot" && window.farmScene.refreshPlotLocks) window.farmScene.refreshPlotLocks();
+      if ((tipo === "tree" || tipo === "rock") && window.farmScene.refreshNodeLocks) window.farmScene.refreshNodeLocks();
+    }
+  } catch (e) {}
+  refreshHud(); if (typeof saveFarm === "function") saveFarm(true);
+  return true;
 }
 function levelUp() { toast("El nivel sube cosechando (XP de Farmeo)"); }
 function prestige() {
@@ -2712,10 +2792,11 @@ function arbolBloqueado(o) {
 // es escaso: la XP fija de la era de los 90 s (piedra 5 XP/2 h) dejaba Minería en ~80 días
 // para nivel 5. Con esta regla, si el diseñador cambia un timer la XP se corrige sola.
 function nodoXpMin(cdSeg) { return Math.max(1, Math.round(cdSeg / 60)); }
+// 16/8: una roca está disponible SOLO si el jugador la reclamó del baúl. La tabla de niveles
+// dejó de ser el candado y pasó a ser el CALENDARIO de entrega del regalo.
 function nodoBloqueado(o) {
-  if (!o || o.type !== "rock") return false;   // solo piedras/minerales: los árboles van por retoño+pago
-  if ((G.rocksOpen || [0]).includes(o.lockIdx)) return false;
-  return G.level < nodoNivelReq(o);
+  if (!o || o.type !== "rock") return false;   // las vetas de mineral van por tier de pico
+  return !(G.rocksOpen || [0]).includes(o.lockIdx);
 }
 function canShoot() { const id = armaEq(); return !!(id && ARM_DEF[id].tipo === "arco" && G.gear.municion && (G.res.flecha || 0) > 0); }   // arco nuevo + flechas equipadas
 
@@ -3149,7 +3230,9 @@ function tryAddRes(key, amt) {
 }
 
 // --- casillas: todo es ítem (recursos/semillas apilan 99; herramientas/picos 1 c/u con durabilidad) ---
-const ITEM_RES_ORDER = ["papa","zanahoria","cebolla","calabacin","repollo","calabaza","brocoli","girasol","trigo","maiz",
+// 16/8 BUG: los tres cultivos nuevos faltaban acá (el comentario decía que estaban, el array no).
+// Lo cosechado entraba a G.res pero NO aparecía en la bolsa ni contaba para el espacio.
+const ITEM_RES_ORDER = ["papa","ciruela","cereza","remolacha","zanahoria","cebolla","calabacin","repollo","calabaza","brocoli","girasol","trigo","maiz",
   "madera","piedra","bronce","hierro","oro","diamante","netherita","carne","flecha","lombriz",
   "tablon","barra_piedra","barra_bronce","barra_hierro","barra_oro",
   "fibra","pelaje","cuero","colmillo","esencia_runica","esencia_oscura"];   // los 3 cultivos nuevos y los materiales de Establo/Curtiduría/Altar también ocupan casilla
@@ -3221,7 +3304,11 @@ function priceOf(res) { return CROP_DEF[res] ? CROP_DEF[res].price : (PRICE[res]
 // detalles viernes (1): los minerales, madera y flechas NO se venden — solo cultivos y lo farmeado en la Zona Negra (carne)
 const SELLABLE = ["papa","ciruela","cereza","remolacha","zanahoria","cebolla","calabacin","repollo","calabaza","brocoli","girasol","trigo","maiz"];   // 16/8: los tres cultivos nuevos también se venden   // viernes (2): la carne no se vende
 let marketCur = "plata";
-function marketUnit(res) { return marketCur === "plata" ? priceOf(res) : priceOf(res)/10; }
+// 16/8 (caza de exploits): vender en $Golden usaba precio/10, o sea 10 plata de cultivo por
+// 1 $Golden — mientras comprar parcelas valora el $Golden en GOLDEN_EN_PLATA (500). Eso era
+// un arbitraje ×50: vendías cultivos por $Golden y comprabas con ellos parcelas que en plata
+// costaban 25 veces más. Ahora las dos puntas usan EL MISMO número: sin arbitraje posible.
+function marketUnit(res) { return marketCur === "plata" ? priceOf(res) : priceOf(res)/GOLDEN_EN_PLATA; }
 function sellItem(res) {
   const inp = $("mq-"+res); let q = Math.floor(parseFloat(inp && inp.value) || 0);
   q = Math.max(0, Math.min(q, G.res[res]));
@@ -3231,7 +3318,7 @@ function sellItem(res) {
   if (typeof tutoGuardia === "function" && !tutoGuardia(res, q, "vender " + (RES_LABEL[res] || res))) return;
   if (typeof tutoPermite === "function" && !tutoPermite("sell")) { tutoAviso(); return; }   // embudo estricto (13/8)
   if (marketCur === "plata") { const t=q*priceOf(res); G.plata+=t; G.res[res]-=q; log(`Vendiste ${q} ${RES_LABEL[res]} por ${t} de plata.`); toast("+"+t+" plata"); }
-  else { const g=Math.floor(q*priceOf(res)/10); if (g<1){ toast("Muy poca cantidad para $Golden"); return; } G.res[res]-=q; G.golden+=g; log(`Vendiste ${q} ${RES_LABEL[res]} por ${g} $Golden.`,"gold"); toast("+"+g+" $Golden"); }
+  else { const g=Math.floor(q*priceOf(res)/GOLDEN_EN_PLATA); if (g<1){ toast("Muy poca cantidad para $Golden"); return; } G.res[res]-=q; G.golden+=g; log(`Vendiste ${q} ${RES_LABEL[res]} por ${g} $Golden.`,"gold"); toast("+"+g+" $Golden"); }
   if (window.sfx) sfx("coin");
   if (CROP_DEF[res] && typeof tutoEvent === "function") for (let i = 0; i < q; i++) tutoEvent("sell");   // 14/8 v4: un evento POR UNIDAD vendida — el capataz verifica cantidades
   refreshMarket(); refreshHud();

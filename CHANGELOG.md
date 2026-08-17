@@ -2125,6 +2125,68 @@ Ahora la cadena de guía no tiene puntas sueltas:
   lugar. Al recomprar semillas, `buySeed` la vuelve a poner en el primer hueco libre.
   Herramientas y picos conservan su lógica de siempre.
 
+## Día 19 (cont.) — LOS NODOS SON UN REGALO DEL NIVEL, y llegan al BAÚL (16/8, dirección)
+- POR QUÉ: había DOS reglas para cosas iguales — los árboles se compraban con madera
+  (2-4-8-16-32) mientras las rocas y parcelas se abrían solas por nivel. Y el pago creaba un
+  círculo vicioso: necesitabas madera para tener más árboles, pero la madera sale de los
+  árboles, y ahogaba justo cuando menos tenías. Medido: desbloquear los árboles 3 al 6
+  costaba **60 maderas = 90 h de nodo**, MÁS que los tres edificios del tutorial juntos (50 h).
+- AHORA: al subir de nivel, el nodo llega al BAÚL como premio y se coloca con un toque.
+  Vale para las TRES cosas: Retoño, Roca y Parcela. Las tablas de siempre (NIVEL_ARBOLES,
+  NIVEL_ROCAS, FARM_PARCELA) dejan de ser candados y pasan a ser el CALENDARIO de entrega.
+- EL MUNDO ARRANCA LIMPIO: lo que todavía no es tuyo NO SE VE. Se fueron los retoños, las
+  rocas bloqueadas y los parches de terreno silvestre. Al colocar un nodo aparece con saltito
+  y chispas. Se nace con 2 árboles + 2 rocas + 3 parcelas, como antes.
+- CÓDIGO: `nodosQueTocan(lvl)` (qué corresponde a cada nivel) · `regalosSync()` (pone al día
+  la cola; es IDEMPOTENTE, así que sirve para un level-up, un salto de varios niveles o para
+  migrar un guardado viejo) · `regaloReclamar(tipo)` (activa el siguiente libre) ·
+  `refreshNodeLocks()` en la escena. `nodoBloqueado` ya no mira el nivel sino si la roca fue
+  reclamada. Los árboles ya no cobran madera. G.regalos persiste en save.js.
+- BAÚL: las fichas de premio se tocan una por una (mismo patrón de delegación del buzón).
+  El kit de bienvenida mantiene la prioridad — primero el kit, después los nodos.
+- VERIFICADO con el motor real: arranque sin premios pendientes, nivel 3 entrega 1 retoño,
+  reclamarlo abre el 3er árbol sin costar madera, un salto a nivel 7 entrega los 7 que
+  faltaban y al colocarlos la granja queda exactamente en la tabla (5 árboles, 4 rocas,
+  6 parcelas). La regla de oro sigue cerrando: 120 de ingreso contra 32 de mantenimiento.
+
+## Día 19 (cont.) — BUG: los cultivos nuevos no entraban en la bolsa + calabacín reanclado (16/8)
+- BUG REAL (reportado por el director al probar): `ITEM_RES_ORDER` — la lista que define QUÉ
+  ocupa casilla en la bolsa — no incluía ciruela, cereza ni remolacha. El comentario decía que
+  sí, el array no. Efecto: lo cosechado entraba a `G.res` pero era INVISIBLE en el inventario
+  y no contaba para el espacio. Arreglado.
+- CALABACÍN REANCLADO (pedido de dirección): era el único de la tabla fuera del ancla —
+  26,7 plata/h y 120 XP/h contra los 20 y 100 de sus vecinos. Ahora semilla 10 · venta 25 ·
+  75 XP → 20 plata/h, 100 XP/h y relación venta/semilla 2,5 como el resto. Los 13 cultivos
+  quedan en línea salvo la prima deliberada de los largos (girasol 24, trigo 30, maíz 40).
+- LO DE LA MADERA — verificado con el motor real, NO hay bug: un jugador nivel 3 con el kit
+  tala en 3 clics y la madera entra a la bolsa (`tryAddRes` OK, aparece en `canonicalStacks`).
+  El tercer árbol tampoco está trabado: a nivel 3 el gate de NIVEL_ARBOLES ya lo abre y
+  `tutoPermite`/`tutoGuardia` están desactivados (devuelven true). Lo que pasa es que **cuesta
+  4 maderas** y el tutorial se las va comiendo en las obras (Herrería 5 + Horno 6 + Cocina 8 =
+  19 maderas, a 1 h 30 por tala con 2 árboles). O sea: no falta madera por un fallo, falta
+  porque el reloj de los árboles es el cuello de botella del tutorial — que es justo lo que
+  mide el simulador (18,1 h, de las cuales 12 son esperando árboles).
+
+## Día 19 (cont.) — CAZA DE EXPLOITS: el arbitraje del $Golden (16/8, pedido de dirección)
+- `tools/auditoria-exploits.js` (nuevo): lee state.js y compara TODAS las vías de convertir
+  valor en valor. Si dos caminos valoran lo mismo distinto, ahí hay arbitraje. Revisa el
+  tipo de cambio del $Golden, la cocina contra la venta en crudo, las vías que esquivan el
+  cupo de semillas, los cultivos fuera del ancla y los materiales del Horno.
+- EXPLOIT GRAVE ENCONTRADO Y CERRADO — **arbitraje ×50 con el $Golden**: el Mercado vendía
+  cultivos por $Golden a `precio/10` (10 plata de cultivo = 1 $Golden), mientras comprar
+  parcelas valora el $Golden en `GOLDEN_EN_PLATA` = 500. O sea: vendías 50 de cultivo, te
+  daban 5 $Golden y con eso comprabas una parcela que en plata costaba 1.282. El `/10`
+  venía de cuando los precios eran chicos y nadie lo volvió a mirar. Ahora las dos puntas
+  usan la MISMA constante (`marketUnit` y `sellItem` → `GOLDEN_EN_PLATA`): arbitraje ×1,0.
+- De paso se cerraron los ×6 del kit de emergencia (hachas y picos) y quedó sin sentido
+  económico comprar semillas de emergencia para esquivar el cupo: al tipo de cambio correcto,
+  esas 25 semillas cuestan 2.500 de cultivo. Queda anotado como hallazgo menor.
+- LO QUE NO ES EXPLOIT (medido): cocinar paga +25% sobre los ingredientes — es el premio por
+  tener Cocina y está dentro de rango; los materiales del Horno no crean valor; el único
+  cultivo por encima del ancla en la parte baja es el CALABACÍN (26,7/h contra 20), que viene
+  de la tabla original del diseñador — conviene preguntarle si es intencional. La prima de
+  los cultivos largos (girasol 24, trigo 30, maíz 40) sí es deliberada: paga la espera.
+
 ## Día 19 (cont.) — ESCALERA DE ENTRADA: 3-6-9-12-15 min (16/8 v2, charla con el diseñador)
 - PEDIDO DEL DISEÑADOR: cultivos más cortos al principio "para tener interacción siempre",
   con nombres suyos (plum, cherry, beetroot) y uno de 1 minuto.
@@ -2137,10 +2199,14 @@ Ahora la cadena de guía no tiene puntas sueltas:
   15 min, ganancia 5 y 25 XP, o sea 20 plata/h y 100 XP/h exactos. Extendiéndola hacia abajo,
   la escalera sale sola en progresión aritmética:
   · Papa 3 min · semilla 1 · venta 2 · 5 XP · nivel 1  (sigue siendo el cultivo del tutorial)
-  · Ciruela 6 min · 1 · 3 · 10 XP · nivel 1   (plum)
-  · Cereza 9 min · 1 · 4 · 15 XP · nivel 2    (cherry)
-  · Remolacha 12 min · 2 · 6 · 20 XP · nivel 3   (beetroot)
+  · Ciruela 6 min · 2 · 4 · 10 XP · nivel 1   (plum)
+  · Cereza 9 min · 2 · 5 · 15 XP · nivel 2    (cherry)
+  · Remolacha 12 min · 3 · 7 · 20 XP · nivel 3   (beetroot)
   · Zanahoria 15 min · 3 · 8 · 25 XP  (sin tocar)
+  v3 (el director: "papa y ciruela tienen el mismo precio"): el ancla la fija la GANANCIA, no
+  la semilla — subiendo semilla y venta en la misma cantidad, el rendimiento por hora no se
+  mueve. Así la semilla también escala (1 → 2 → 2 → 3 → 3) y cada escalón se siente como una
+  inversión mayor. Verificado: las seis siguen en 20 plata/h y 100 XP/h exactos.
   Ganancia 1-2-3-4-5 · XP 5-10-15-20-25 · TODOS a 20 plata/h y 100 XP/h. Lo que crece no es
   el ritmo, es el tamaño de la transacción. La papa deja de ser el único cultivo por debajo
   del ancla (venía de 13,3/h) y la primera cosecha del tutorial baja a 2,7 minutos.

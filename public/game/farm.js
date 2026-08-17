@@ -245,11 +245,12 @@ class FarmScene extends Phaser.Scene {
       // 12/8 (noche): SOLO los árboles conservan el bloqueo visual — el bloqueado es un
       // RETOÑO que crece al pagarlo. Las vetas/piedras van todas a la vista y a todo
       // color: su freno es por NIVEL y avisa al intentar picarlas (nodoBloqueado).
+      // 16/8 (dirección): lo que todavía NO es tuyo NO SE VE. Antes el árbol bloqueado era
+      // un retoño y la roca bloqueada estaba a la vista con un cartel de nivel; ahora los
+      // nodos llegan como premio al baúl y aparecen recién al colocarlos.
       const locked = o.type === "tree" && !(G.treesOpen || [0]).includes(lockIdx);
-      if (locked) {
-        if (this.textures.exists("tree_sapling")) s.setTexture("tree_sapling");
-        else s.setAlpha(0.5).setTint(0x555555);
-      }
+      const rocaBloq = o.type === "rock" && typeof nodoBloqueado === "function" && nodoBloqueado({ type: "rock", lockIdx });
+      if (locked || rocaBloq) { s.setVisible(false); oculto = true; }
       const rw = (o.type === "ore" || o.type === "rock") ? o.w * (typeof NODO_ESCALA === "number" ? NODO_ESCALA : 0.67)   // 9/8: 0.90 — al 0.67 las pepitas no se leían
         : (o.type === "tree") ? o.w * 0.8                                   // árboles −20%
         : (o.type === "market" || o.type === "store") ? o.w * 0.8           // tiendas −20%
@@ -350,8 +351,10 @@ class FarmScene extends Phaser.Scene {
       const timer = this.add.text(cx, cy - T * 0.55, "", { fontFamily: "system-ui", fontSize: "11px", fontStyle: "bold", color: "#fff", stroke: "#20301a", strokeThickness: 3 }).setOrigin(0.5, 1).setDepth(cy + 1).setVisible(false);
       const obj = { type: "plot", i, cx, by: cy, state: "dry", readyAt: 0, cropKey: null, spr, emo, timer, ground: this.plotGrounds[i] || null };
       const owned = Math.max(2, Math.min(GF.PLOTS.length, G.plotsOwned || 2));   // viernes (2): se nace con 2 parcelas
-      if (i >= owned) {   // parcela bloqueada: se compra con plata
+      if (i >= owned) {   // 16/8: parcela todavía no entregada → NO SE VE (llega como premio al baúl)
         obj.state = "locked";
+        if (obj.ground) obj.ground.setVisible(false);
+        if (spr) spr.setVisible(false); if (emo) emo.setVisible(false); if (timer) timer.setVisible(false);
         // 13/8: la parcela bloqueada usa el parche clásico (ramas, piedritas y yuyos)
         // pero A TODO COLOR — chau tinte gris y transparencia (el plot_wild tupido no gustó)
         if (obj.ground) {
@@ -1016,8 +1019,10 @@ class FarmScene extends Phaser.Scene {
     }
     // el tutorial "ampliá la granja" también se cumple al USAR una segunda veta habilitada
     if (o.type === "rock" && (o.lockIdx || 0) > 0 && typeof tutoEvent === "function") tutoEvent("unlocknode");
-    // ÁRBOLES: el bloqueado es un retoño — se desbloquea pagando madera y CRECE
-    if (o.type === "tree" && o.locked) {
+    // 16/8: los árboles ya NO se compran con madera — llegan como premio al baúl. Un árbol
+    // bloqueado ni siquiera se ve, así que esto solo puede pasar por un clic fantasma.
+    if (o.type === "tree" && o.locked) { toast("Los retoños llegan al baúl al subir de nivel"); return; }
+    if (false) {
       // 16/8: escalera de nivel espejo de las rocas — el retoño N se paga recién al nivel N
       if (typeof arbolBloqueado === "function" && arbolBloqueado(o)) {
         const req = arbolNivelReq(o);
@@ -2991,6 +2996,33 @@ class FarmScene extends Phaser.Scene {
 
   // Cuando el juego REGALA una parcela (nivel de granja, ficha del pase), hay que abrirla en el acto:
   // antes se sumaba al guardado pero el dibujo seguía en gris hasta apretar F5 (reporte del diseñador).
+  // 16/8: al reclamar un Retoño o una Roca del baúl, el nodo aparece en la granja
+  refreshNodeLocks() {
+    if (!this.objs) return;
+    for (const o of this.objs) {
+      if (o.type !== "tree" && o.type !== "rock") continue;
+      const abierto = o.type === "tree"
+        ? (G.treesOpen || [0]).includes(o.lockIdx)
+        : !(typeof nodoBloqueado === "function" && nodoBloqueado(o));
+      if (abierto && o.oculto) {                       // recién colocado: aparece con un saltito
+        o.oculto = false; o.locked = false;
+        if (o.sprite) {
+          o.sprite.setVisible(true);
+          if (this.textures.exists(o.baseKey)) o.sprite.setTexture(o.baseKey);
+          o.sprite.setAlpha(1).clearTint();
+          this.setObjTex(o, o.baseKey, o.rw || o.w);
+          this.popFx(o.sprite, 1);
+          for (let i = 0; i < 8; i++) {                // chispitas de "acá está"
+            const a = Math.random() * Math.PI * 2, d = 16 + Math.random() * 20;
+            this.puffFx(o.cx + Math.cos(a) * d * 0.4, o.by - 8 + Math.sin(a) * d * 0.3, 0xd8f0a8, 1);
+          }
+        }
+      } else if (!abierto && !o.oculto) {              // (prestigio / migración): vuelve a esconderse
+        o.oculto = true; if (o.sprite) o.sprite.setVisible(false);
+      }
+    }
+  }
+
   refreshPlotLocks() {
     if (!this.plots) return;
     const owned = Math.max(2, Math.min(GF.PLOTS.length, G.plotsOwned || 2));
@@ -2999,15 +3031,12 @@ class FarmScene extends Phaser.Scene {
         pl.state = "dry";
         if (pl.ground) {
           if (this.textures.exists("plot")) pl.ground.setTexture("plot").setDisplaySize(GF.TILE, GF.TILE);
-          pl.ground.clearTint().setAlpha(1);
+          pl.ground.clearTint().setAlpha(1).setVisible(true);   // 16/8: aparece al colocarla
         }
         this.plotUnlockFx(pl);   // se nota que se abrió
       } else if (i >= owned && pl.state !== "locked") {
         pl.state = "locked";
-        if (pl.ground) {
-          if (this.textures.exists("plot_blocked")) pl.ground.setTexture("plot_blocked").setDisplaySize(GF.TILE, GF.TILE).clearTint().setAlpha(1);
-          else pl.ground.setAlpha(0.45);
-        }
+        if (pl.ground) pl.ground.setVisible(false);   // 16/8: si no es tuya, no se ve
       }
     });
     this.syncPlots();

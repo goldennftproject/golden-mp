@@ -31,7 +31,7 @@ function snapshot() {
     dishes: G.dishes, cooking: G.cooking, chests: G.chests, dummyUsedAt: G.dummyUsedAt,
     armCd: G.armCd, mkPend: G.mkPend, testeoDado: G.testeoDado,
     layoutPlots: G.layoutPlots, layoutPond: G.layoutPond, ghInv: G.ghInv,
-    planos: G.planos, obras: G.obras, obraDep: G.obraDep, capsClaim: G.capsClaim, emergBuys: G.emergBuys, buzonLeidas: G.buzonLeidas, buzonArchivo: G.buzonArchivo, kitReclamado: G.kitReclamado, excav: G.excav, vales: G.vales, pedidos: G.pedidos };   // buzón + kit + excavaciones (15/8) · tablón + vales (16/8)   // blueprints (12/8) · capítulos + emergencia (14/8)
+    planos: G.planos, obras: G.obras, obraDep: G.obraDep, capsClaim: G.capsClaim, emergBuys: G.emergBuys, buzonLeidas: G.buzonLeidas, buzonArchivo: G.buzonArchivo, kitReclamado: G.kitReclamado, excav: G.excav, vales: G.vales, pedidos: G.pedidos, regalos: G.regalos };   // buzón + kit + excavaciones (15/8) · tablón + vales (16/8)   // blueprints (12/8) · capítulos + emergencia (14/8)
 }
 // "huella" del estado guardable (incluye el apodo); si no cambia, no hay nada que guardar
 function snapKey() { return JSON.stringify({ n: (typeof nombreLucido === "function" ? nombreLucido() : (window.NICK || "Granjero")), d: snapshot() }); }
@@ -181,6 +181,8 @@ function hydrate(d) {
   if (d.excav && typeof d.excav === "object") G.excav = d.excav;   // montículos del día (15/8)
   if (typeof d.vales === "number") G.vales = Math.max(0, d.vales);   // tablón de pedidos (16/8)
   if (d.pedidos && typeof d.pedidos === "object") G.pedidos = d.pedidos;
+  if (d.regalos && typeof d.regalos === "object") G.regalos = { tree: d.regalos.tree || 0, rock: d.regalos.rock || 0, plot: d.regalos.plot || 0 };   // premios del nivel esperando en el baúl (16/8)
+  try { if (typeof regalosSync === "function") regalosSync(); } catch (e) {}   // guardados viejos: recalcula lo que le corresponde por su nivel
   if (d.obraDep && typeof d.obraDep === "object") G.obraDep = d.obraDep;
   if (d.layoutPond && typeof d.layoutPond === "object") G.layoutPond = { col: d.layoutPond.col, row: d.layoutPond.row };
   if (d.picks && d.picks.owned && d.picks.dur) G.picks = d.picks;

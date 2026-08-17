@@ -1435,10 +1435,51 @@ function refreshMarket() {
 
 /* ---- EL BAÚL (15/8): pantalla propia — abierto y rebosante con el kit a la vista;
    se toca, tiembla, y los ítems VUELAN a la bolsa. Después queda cerrado y tranquilo. ---- */
+/* 16/8 (dirección): además del kit, el baúl entrega los NODOS que regala el nivel —
+   Retoños, Rocas y Parcelas. Se muestran como fichas tocables: una toca, una se coloca
+   en la granja. El kit sigue teniendo prioridad (es el paso 0 del tutorial). */
+function baulRegalosHtml() {
+  const q = (typeof G.regalos === "object" && G.regalos) || {};
+  const F = [
+    { k: "tree", spr: "tree_sapling", em: "🌱", nom: "Retoño" },
+    { k: "rock", spr: "node_stone", em: "🪨", nom: "Roca" },
+    { k: "plot", spr: "plot", em: "🟫", nom: "Parcela" },
+  ];
+  return F.filter(f => (q[f.k] || 0) > 0).map(f =>
+    '<div class="baul-item" data-regalo="' + f.k + '" title="Colocar ' + f.nom + ' en la granja">' +
+    '<img src="' + GF.spr(f.spr) + '" draggable="false" onerror="this.outerHTML=\'<span class=&quot;em&quot;>' + f.em + '</span>\'">' +
+    '<span class="cant">×' + q[f.k] + '</span></div>').join("");
+}
+// un solo oyente delegado (la lección del buzón): sobrevive a los redibujados
+document.addEventListener("pointerdown", (e) => {
+  const cont = document.getElementById("ov-baul");
+  if (!cont || !cont.classList.contains("show") || !e.target || !e.target.closest) return;
+  const el = e.target.closest("[data-regalo]"); if (!el) return;
+  e.preventDefault(); e.stopPropagation();
+  if (el._puesto) return; el._puesto = true;
+  el.classList.add("paq-shake");
+  setTimeout(() => {
+    try { if (typeof regaloReclamar === "function") regaloReclamar(el.getAttribute("data-regalo")); } catch (err) { console.error("[baul]", err); }
+    el.classList.add("vuela");
+    setTimeout(refreshBaul, 420);
+  }, 380);
+}, true);
+
 function refreshBaul() {
   const img = $("baul-img"), items = $("baul-items"), nota = $("baul-nota"), sub = $("baul-sub");
   if (!img || !items) return;
   img.setAttribute("draggable", "false");
+  // 16/8: premios del nivel esperando (van DESPUÉS del kit)
+  const regalos = (typeof regalosPendientes === "function") ? regalosPendientes() : 0;
+  if (G.kitReclamado && regalos > 0) {
+    img.src = "assets/farm/baul_premios_lleno.png?v=1";
+    img.classList.add("paq-latido"); img.style.cursor = "";
+    img.onpointerdown = null; img.onclick = null;
+    sub.textContent = regalos > 1 ? "Te llegaron " + regalos + " premios" : "Te llegó un premio";
+    items.innerHTML = baulRegalosHtml();
+    nota.textContent = "Tocá cada uno para colocarlo en la granja.";
+    return;
+  }
   if (G.kitReclamado) {   // nada esperando: baúl cerrado, en paz
     img.src = "assets/farm/baul_premios.png?v=1";
     img.classList.remove("paq-latido", "paq-shake");
