@@ -28,6 +28,15 @@ GF.BOSQUE_REDONDEZ = 0.62;  // forma del claro: 0 = rectángulo · 1 = óvalo pu
 GF.BOSQUE_ONDA = 0.45;      // cuánto se ondula el borde (0 = liso · 1 = muy irregular)
 GF.BOSQUE_AIRE = 0.05;      // aire extra entre la esquina del área jugable y el bosque
 GF.BOSQUE_DEPTH = -999;     // encima del suelo, debajo de todo lo interactuable
+/* INTERRUPTOR DE EMERGENCIA (16/8): si el juego no carga y sospechás del bosque, abrí la
+   página con  ?sinbosque=1  al final de la URL y arranca sin él, sin tocar el código ni
+   deployar. Con  ?bosque=1  se fuerza al revés. Sirve para aislar el problema en un minuto. */
+try {
+  const _q = new URLSearchParams(location.search);
+  if (_q.get("sinbosque") === "1") GF.BOSQUE = 0;
+  if (_q.get("bosque") === "1") GF.BOSQUE = 1;
+  if (_q.get("bosquepaso")) GF.BOSQUE_PASO = parseFloat(_q.get("bosquepaso")) || GF.BOSQUE_PASO;
+} catch (e) {}
 // La costa (arena, espuma y bajío) es una imagen: assets/farm/isla.png, hecha con
 // tools/build-isla.py. Este número es cuánto sobra la imagen alrededor de la granja,
 // y tiene que coincidir con el MARGEN de ese script.
