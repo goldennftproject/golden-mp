@@ -2125,6 +2125,24 @@ Ahora la cadena de guía no tiene puntas sueltas:
   lugar. Al recomprar semillas, `buySeed` la vuelve a poner en el primer hueco libre.
   Herramientas y picos conservan su lógica de siempre.
 
+## Día 19 (cont.) — RESPUESTA AL CLIC: el golpe se corta con el clic siguiente (16/8, dirección)
+- SÍNTOMA (director, probando el deploy): "cuando le doy a un árbol pasa un tiempo entre el
+  intermedio y el tronco cortado, me frena para talar rápido" — y lo mismo al plantar.
+- El código está en 0,08 s por acción (ACT_DUR) y el impacto es instantáneo (ACT_IMPACTO = 0),
+  así que lo que quedaba después del hachazo era SOLO animación… que igual bloqueaba el
+  siguiente clic. Ahora, si volvés a tocar el MISMO objetivo, esa animación se corta y el
+  golpe se cierra al instante: el juego responde a la velocidad de tus clics, no a la del
+  reloj de la animación. Vale para talar, picar, plantar y cosechar (la pesca no se corta:
+  su cast largo es a propósito). En talar/picar solo se corta DESPUÉS de que pegó el hachazo,
+  para no comerse el destello.
+- CAUSA PROBABLE DE FONDO — y el arreglo estructural: la fila `balance` de Supabase pisa el
+  código al arrancar, y ya nos costó días TRES veces (los timers de árbol en 1 s, y ahora
+  "volvió a como estaba antes"). El código decía una cosa y el juego hacía otra, sin forma de
+  verlo. Ahora `BAL.apply` compara cada override contra el valor del código, guarda el detalle
+  en `window.BAL_PISADOS`, lo escribe en consola con console.table y — lo importante — lo
+  AVISA DENTRO DEL JUEGO en el registro y con un toast: "⚙ N valores del panel están pisando
+  al código: act.chop 0.08→0.3 …". Se limpian en balance.html → "Restaurar TODO".
+
 ## Día 19 (cont.) — LA PASADA DE ECONOMÍA: un ancla y nueve arreglos (16/8, dirección)
 - DIAGNÓSTICO (tools/auditoria-economia.js, mide el código real): la economía no estaba
   diseñada sino ACUMULADA — cada número decidido en un momento distinto, sin una unidad de

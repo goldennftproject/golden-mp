@@ -582,6 +582,21 @@ class FarmScene extends Phaser.Scene {
         // Sin esto, tocando rápido (que es como se juega) se perdían golpes y se sentía trabado.
         if (!arrastro && !pt.rightButtonReleased()) {
           if (this.action) {
+            // 16/8 (dirección: "me frena para talar rápido"): con ACT_IMPACTO = 0 el golpe YA
+            // pegó en el primer frame — lo que queda de la acción es SOLO animación. Si volvés
+            // a tocar el MISMO objetivo, esa animación se corta y el golpe se cierra al
+            // instante: el juego responde a la velocidad de tus clics, no a la del reloj de
+            // la animación. Así ningún valor de ACT_DUR (ni local ni pisado desde la nube)
+            // puede volver a sentirse pegajoso.
+            const k = this.action.kind;
+            const golpeDado = (k === "chop" || k === "mine") ? !!this.action.golpeYa : true;   // en talar/picar, solo después de que el hachazo pegó (si no, se perdería el destello)
+            const mismo = hit && hit === this.action.o && golpeDado;
+            const rapida = k !== "fish";   // la pesca es un cast largo a propósito: no se corta
+            if (mismo && rapida) {
+              this.finishAction();                        // cierra el golpe en curso YA
+              if (!this.action && hit) { this.pendingObj = null; this.interactWith(hit); }   // y arranca el siguiente
+              return;
+            }
             // el clic que cae durante el candado no se tira: se guarda UNO y sale enseguida.
             // Vale para nodos y para parcelas (cosechar una fila seguida es lo más común).
             const n = hit && (hit.type === "tree" || hit.type === "rock" || hit.type === "ore" || hit.type === "plot");

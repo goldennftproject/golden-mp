@@ -322,12 +322,22 @@ var BAL = (function () {
     if (!r.ok) throw new Error("balance save " + r.status);
   }
 
-  /* aplica los ajustes guardados sobre las definiciones reales del juego */
+  /* aplica los ajustes guardados sobre las definiciones reales del juego.
+     16/8: además DELATA lo que pisó. Esta fila de la nube nos costó días tres veces
+     (timers de árbol en 1 s, y la respuesta al clic "que volvió a como estaba antes"):
+     el código decía una cosa, el juego hacía otra y no había forma de verlo. Ahora cada
+     override queda registrado con su valor de código y su valor de la nube. */
   function apply(data) {
     if (!data) return 0;
     const E = schema(); let n = 0;
-    for (const e of E) if (data[e.id] != null && typeof data[e.id] === "number" && isFinite(data[e.id])) { e.set(data[e.id]); n++; }
+    const detalle = [];
+    for (const e of E) if (data[e.id] != null && typeof data[e.id] === "number" && isFinite(data[e.id])) {
+      const codigo = (typeof e.get === "function") ? e.get() : null;
+      if (codigo !== data[e.id]) detalle.push({ id: e.id, etiqueta: e.label || e.id, codigo, nube: data[e.id] });
+      e.set(data[e.id]); n++;
+    }
     if (typeof recomputeCropGrow === "function") recomputeCropGrow();   // growH/escala cambiados → segundos derivados
+    if (typeof window !== "undefined") window.BAL_PISADOS = detalle;    // inspeccionable desde la consola
     return n;
   }
 
@@ -341,7 +351,21 @@ if (typeof window !== "undefined") {
     try {
       const row = await Promise.race([BAL.fetchOverrides(), new Promise((_, rj) => setTimeout(rj, 4000, new Error("timeout")))]);
       const n = BAL.apply(row.data);
-      if (n) console.log("[balance] " + n + " ajustes del panel aplicados (" + (row.updated_at || "") + ")");
+      const p = window.BAL_PISADOS || [];
+      if (n) {
+        console.log("[balance] " + n + " ajustes del panel aplicados (" + (row.updated_at || "") + ")");
+        if (p.length) {
+          console.warn("[balance] ⚠ " + p.length + " valor(es) del CÓDIGO están pisados por la nube (balance.html → \"Restaurar TODO\" los borra):");
+          try { console.table(p); } catch (e) { p.forEach(x => console.warn("   " + x.id + ": código " + x.codigo + " → nube " + x.nube)); }
+          // y que se vea SIN abrir la consola: aviso en el juego, una sola vez al arrancar
+          setTimeout(() => {
+            const txt = "⚙ " + p.length + " valor(es) del panel de balanceo están pisando al código";
+            const det = p.slice(0, 6).map(x => x.id + " " + x.codigo + "→" + x.nube).join(" · ");
+            if (typeof log === "function") log(txt + ": " + det + (p.length > 6 ? " …" : "") + ". Si algo no se comporta como dice el código, es esto (balance.html → \"Restaurar TODO\").", "warn");
+            if (typeof toast === "function") toast(txt);
+          }, 2500);
+        }
+      }
     } catch (e) { console.warn("[balance] sin ajustes remotos:", e.message); }
   })();
 }
