@@ -3799,3 +3799,28 @@ como suelo en los dos sitios.
 
 Regla que sale de acá: **un color de relleno no se elige por lo que representa, sino por lo que
 va a aparecer al lado.** El fondo estaba junto al césped, no junto a las copas.
+
+### La laguna cortada estaba en el ARTE, no en el código
+Dirección insistió tres veces con *"laguna cortada"*, y tenía razón las tres. Yo busqué la causa en
+el código —proporción, atlas, profundidades, recortes— y no estaba ahí.
+
+`pond.png` venía con la forma **tocando el borde izquierdo del lienzo**: 12 filas de orilla
+seccionadas en plano, como si el PNG se hubiera recortado un poco corto. Ningún cambio de código
+podía arreglarlo porque el corte estaba dentro del sprite. Se ve de un vistazo ampliándolo x5 sobre
+césped, que es lo que había que hacer desde el principio en vez de teorizar.
+
+`tools/arreglar-laguna.py` lo cierra sin inventar dibujo: ensancha el lienzo y **prolonga la curva
+real del contorno**. Toma las filas sanas de arriba y abajo del corte, ajusta por mínimos cuadrados
+la parábola que describe la orilla (`x = 0,0247·(y−40,5)² − 0,26`) y la continúa por dentro del
+corte. Guarda `pond_original.png` como copia.
+
+La primera versión metía una media elipse y salía **un nudo**: la elipse moría de golpe contra un
+contorno que ya venía retrocediendo. Prolongar la curva que ya existe, en vez de superponerle una
+forma inventada, es lo que hace que empalme sin escalón.
+
+Atlas reconstruido (el sprite pasó de 107 a 108 px) y `?v=47`.
+
+**Lección del día, la más cara.** Ante un fallo visual, mi reflejo fue buscarlo en el código: probé
+proporción del sprite, integridad del atlas, orden de profundidades y recortes de cámara. El fallo
+estaba en el PNG y se veía **abriendo el PNG**. Cuando algo "se ve cortado", lo primero es mirar el
+arte a tamaño grande; el código es la segunda hipótesis, no la primera.
