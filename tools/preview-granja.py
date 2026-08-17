@@ -148,13 +148,47 @@ def main():
             im = tree.resize((max(1, round(anchoT * esc)), max(1, round(altoT * esc))), Image.NEAREST)
             lienzo.alpha_composite(im, (OX + int(px), OY + int(py)))
 
+    # ---- adornos del césped ----
+    # Mismo azar y mismas cuentas que farm.js. Se dibujan porque el "corte" que se veía en el
+    # juego era justo esto: se sembraban solo dentro del mundo y la franja entre la cerca y el
+    # bosque quedaba pelada. Sin dibujarlos acá, la vista previa no podía delatarlo.
+    DK = ["deco_pasto", "deco_flor_blanca", "deco_flor_amarilla", "deco_piedras"]
+    decos = {k: abrir(k) for k in DK}
+    if all(decos.values()):
+        ds = [20260730]
+
+        def drnd():
+            ds[0] = (ds[0] * 1664525 + 1013904223) & 0xFFFFFFFF
+            return ds[0] / 4294967296
+
+        RD = T * 3
+        AW, AH = W + RD * 2, H + RD * 2
+        n = round(110 * (AW * AH) / (W * H))
+        for _ in range(n):
+            dx = -RD + drnd() * AW
+            dy = -RD + drnd() * AH
+            t = drnd()
+            key = "deco_pasto" if t < 0.45 else ("deco_flor_blanca" if t < 0.67 else
+                  ("deco_flor_amarilla" if t < 0.89 else "deco_piedras"))
+            sz = 15 + drnd() * 6 if key == "deco_pasto" else (11 + drnd() * 4 if key == "deco_piedras" else 13 + drnd() * 4)
+            sz = max(1, round(sz))
+            im = decos[key].resize((sz, sz), Image.NEAREST)
+            if drnd() < 0.5:
+                im = im.transpose(Image.FLIP_LEFT_RIGHT)
+            lienzo.alpha_composite(im, (int(OX + dx - sz / 2), int(OY + dy - sz / 2)))
+
     # ---- laguna ----
     p = d["POND"]
     pond = abrir("pond")
     caja = (OX + p["col"] * T, OY + p["row"] * T, OX + (p["col"] + p["cols"]) * T, OY + (p["row"] + p["rows"]) * T)
     if pond:
-        im = pond.resize((caja[2] - caja[0], caja[3] - caja[1]), Image.NEAREST)
-        lienzo.alpha_composite(im, (caja[0], caja[1]))
+        # sin deformar: se encaja dentro de la caja conservando la relación del sprite
+        cw2, ch2 = caja[2] - caja[0], caja[3] - caja[1]
+        rel = pond.width / pond.height
+        aP = min(cw2, ch2 * rel)
+        hP = aP / rel
+        im = pond.resize((max(1, round(aP)), max(1, round(hP))), Image.NEAREST)
+        lienzo.alpha_composite(im, (caja[0] + (cw2 - im.width) // 2, caja[1] + (ch2 - im.height) // 2))
     else:
         ImageDraw.Draw(lienzo).ellipse(caja, fill=(70, 150, 200, 255), outline=(230, 180, 90, 255), width=4)
 

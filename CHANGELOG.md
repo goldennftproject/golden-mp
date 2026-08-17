@@ -3751,3 +3751,29 @@ navegador al 25%, al 100% o al 300%. Verificado en los cuatro casos: el mapa ent
 
 Lección, y van varias del mismo tipo: **cuando mi cuenta y la de la librería dan cosas distintas,
 la que sobra es la mía.** Phaser ya sabía recortar el scroll; yo dupliqué esa lógica mal.
+
+### El corte de la laguna y el del césped
+Dirección: *"el corte en la laguna y decoración del césped"*. Dos cosas distintas, las dos reales.
+
+**La laguna estaba deformada.** Se estiraba a la caja de celdas sin mirar su proporción:
+`pond.png` mide 107x93 (relación 1,15) y la caja 178x136 (1,31), o sea **un 14% de deformación
+horizontal**. La forma redonda salía aplastada, y eso es lo que se leía como un corte. Ahora se
+encaja DENTRO de la caja conservando su relación: 156x136, con 22 px de césped a los lados.
+
+**Los adornos del césped se sembraban solo dentro del mundo.** `dx = 8 + azar * (W - 16)`, o sea
+entre 0 y W. Pero el césped ahora llega hasta el bosque, así que la franja entre la cerca y los
+árboles quedaba **pelada**, con un rectángulo perfecto marcando dónde se acaban las matitas y las
+flores. Ahora se siembran con 3 celdas de desborde y la cantidad sube en proporción al área
+(110 → 223) para que la densidad no baje. Van a profundidad -999,5, debajo del anillo, así que
+los que caen bajo el bosque no se ven ni estorban.
+
+**La vista previa no dibujaba los adornos**, así que no podía delatar este fallo — el "corte" era
+invisible para la herramienta que existe justamente para verlo antes de deployar. Ahora los dibuja,
+con el mismo azar y las mismas cuentas que el juego.
+
+### Nota sobre el diagnóstico de este día
+Ante *"¿qué ves mal?"* respondí analizando la INTERFAZ de una captura que resultó ser **un recorte**:
+di por rotos unos cortes de HUD que eran del recorte, no del juego. Dirección se refería al mundo.
+Antes de diagnosticar sobre una imagen hay que preguntar si es la ventana entera. (Lo que sí quedó
+verificado de aquello, y sigue en pie como deuda: en todo `index.html` hay **una sola** `@media`,
+y es para un modal — el HUD no tiene ninguna regla de adaptación al ancho.)

@@ -83,8 +83,17 @@ class FarmScene extends Phaser.Scene {
     const deco = this.add.graphics().setDepth(-999.5);
     const DKEYS = ["deco_pasto", "deco_flor_blanca", "deco_flor_amarilla", "deco_piedras"];
     const hasDecos = DKEYS.every(k => this.textures.exists(k));
-    for (let i = 0; i < (hasDecos ? 110 : 210); i++) {
-      const dx = 8 + drnd() * (W - 16), dy = 8 + drnd() * (H - 16), t = drnd();
+    // 17/8 (dirección: "el corte en la decoración del césped"). Los adornos se sembraban SOLO
+    // dentro del mundo (0..W, 0..H), pero el césped ahora llega hasta el bosque. Resultado: la
+    // franja de pasto entre la cerca y los árboles quedaba PELADA, con un rectángulo perfecto
+    // marcando dónde se acaban las matitas. Ahora se siembran también fuera, con 3 celdas de
+    // desborde —lo que se ve— y la cantidad sube en proporción al área para que la densidad no
+    // baje. Los que caen bajo el bosque no se ven (van a profundidad -999,5, debajo del anillo)
+    // pero tampoco estorban.
+    const RD = T * 3, AW = W + RD * 2, AH = H + RD * 2;
+    const nDecos = Math.round((hasDecos ? 110 : 210) * (AW * AH) / (W * H));
+    for (let i = 0; i < nDecos; i++) {
+      const dx = -RD + drnd() * AW, dy = -RD + drnd() * AH, t = drnd();
       if (hasDecos) {
         // pasto pesa doble; tamaños chicos y variados para que respiren
         const key = t < 0.45 ? "deco_pasto" : (t < 0.67 ? "deco_flor_blanca" : (t < 0.89 ? "deco_flor_amarilla" : "deco_piedras"));
@@ -112,7 +121,16 @@ class FarmScene extends Phaser.Scene {
     }
     const p = GF.POND, pcx = (p.col + p.cols / 2) * T, pcy = (p.row + p.rows / 2) * T, pw = p.cols * T, ph = p.rows * T;
     if (this.textures.exists("pond")) {
-      this.pondImg = this.add.image(pcx, pcy, "pond").setDisplaySize(pw + 10, ph + 10).setDepth(-999);
+      // 17/8 (dirección: "el corte en la laguna"). Estaba estirada a la caja de celdas sin mirar
+      // su proporción: el sprite es 107x93 (1,15) y la caja 178x136 (1,31), o sea un 14% de
+      // deformación horizontal. La forma redonda salía aplastada y se leía como cortada.
+      // Ahora se encaja DENTRO de la caja conservando su relación: se toca por el lado que
+      // limite y sobra césped por el otro, que es lo correcto para un sprite con forma propia.
+      const src = this.textures.get("pond").getSourceImage();
+      const rel = (src && src.width && src.height) ? src.width / src.height : (pw + 10) / (ph + 10);
+      const cajaW = pw + 10, cajaH = ph + 10;
+      const anchoP = Math.min(cajaW, cajaH * rel), altoP = anchoP / rel;
+      this.pondImg = this.add.image(pcx, pcy, "pond").setDisplaySize(anchoP, altoP).setDepth(-999);
     } else {   // fallback: laguna dibujada (no movible sin sprite)
       g.fillStyle(0x2f5f8c, 1).fillEllipse(pcx, pcy, pw, ph);
       g.fillStyle(0x66a9dc, 1).fillEllipse(pcx, pcy - 6, pw - 26, ph - 26);
