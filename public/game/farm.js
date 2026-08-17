@@ -50,15 +50,28 @@ class FarmScene extends Phaser.Scene {
     const g = this.add.graphics().setDepth(-1000);
     // SUELO NUEVO (31/7): tiles de pasto seamless con variantes esparcidas — chau damero
     if (this.textures.exists("grass_a")) {
-      const rt = this.add.renderTexture(0, 0, GF.COLS * T, GF.ROWS * T).setOrigin(0).setDepth(-1000);
+      // 17/8: el pasto ahora se extiende MÁS ALLÁ DE LA CERCA, hasta donde llega el bosque.
+      // Antes cubría solo el mundo jugable, así que la franja entre la cerca y el primer árbol
+      // —que existe a propósito, para que el bosque no se suba al corral— quedaba pintada con
+      // el verde liso del fondo de la cámara. Se veía como un anillo plano alrededor de la
+      // granja. Los tiles de más quedan tapados por el bosque y no cuestan nada: es un solo
+      // renderTexture que se arma una vez.
+      const MB = GF.BOSQUE ? (GF.BOSQUE_MARGEN || 300) : 0;
+      const cExtra = Math.ceil(MB / T), rExtra = Math.ceil(MB / T);
+      const rt = this.add.renderTexture(-cExtra * T, -rExtra * T,
+        (GF.COLS + cExtra * 2) * T, (GF.ROWS + rExtra * 2) * T).setOrigin(0).setDepth(-1000);
       let gseed = 20260731;
       const grnd = () => { gseed = (gseed * 1664525 + 1013904223) >>> 0; return gseed / 4294967296; };
       const hasB = this.textures.exists("grass_b"), hasC = this.textures.exists("grass_c");
-      for (let r = 0; r < GF.ROWS; r++) for (let c = 0; c < GF.COLS; c++) {
+      const lote = typeof rt.beginDraw === "function";   // en lote: son ~1.200 tiles, no 200
+      if (lote) rt.beginDraw();
+      for (let r = -rExtra; r < GF.ROWS + rExtra; r++) for (let c = -cExtra; c < GF.COLS + cExtra; c++) {
         const x = grnd();
         const key = (x < 0.55 || (!hasB && !hasC)) ? "grass_a" : (x < 0.90 && hasB ? "grass_b" : (hasC ? "grass_c" : "grass_a"));
-        rt.draw(key, c * T, r * T);
+        const px = (c + cExtra) * T, py = (r + rExtra) * T;
+        if (lote) rt.batchDraw(key, px, py); else rt.draw(key, px, py);
       }
+      if (lote) rt.endDraw();
     } else {   // respaldo: el damero de siempre
       for (let r = 0; r < GF.ROWS; r++) for (let c = 0; c < GF.COLS; c++) {
         g.fillStyle((r + c) % 2 === 0 ? 0x6c8c53 : 0x64834c, 1);
@@ -3060,8 +3073,15 @@ class FarmScene extends Phaser.Scene {
     // los árboles: se ordenan por dónde APOYAN, para que los de adelante tapen a los de atrás
     const paso = Math.max(8, T * (GF.BOSQUE_PASO || 0.6));
     const pasoY = Math.max(8, paso * (GF.BOSQUE_FILAS || 0.74));
-    const J = GF.BOSQUE_JITTER || 8;
-    const eMin = GF.BOSQUE_ESC_MIN || 0.92, eMax = GF.BOSQUE_ESC_MAX || 1.26;
+    // DESORDEN separado por eje (17/8). El horizontal es el que abre rendijas entre troncos
+    // —el tronco mide 25 px y con ±8 px dos vecinos podían quedar a 41 px— y por ahí asomaba
+    // la fila de atrás. El vertical puede seguir alto sin romper nada, así que van por separado.
+    const JX = GF.BOSQUE_JITTER_X != null ? GF.BOSQUE_JITTER_X : (GF.BOSQUE_JITTER || 8);
+    const JY = GF.BOSQUE_JITTER_Y != null ? GF.BOSQUE_JITTER_Y : (GF.BOSQUE_JITTER || 8);
+    // TRABA (17/8, dirección: "con dos a los costados del que está más adelantado ya cubrís").
+    // Las filas alternas se corren media columna, así el árbol de atrás cae en el HUECO de los
+    // dos de adelante en vez de justo detrás de uno. Cubrir a lo ancho en vez de apilar en fondo.
+    const TRABA = GF.BOSQUE_TRABA != null ? GF.BOSQUE_TRABA : 0.5;
     const colchon = (GF.BOSQUE_COLCHON != null ? GF.BOSQUE_COLCHON : 0.5) * T;
     let semilla = 20250816;                       // azar estable: el bosque es el MISMO cada partida
     const az = () => { semilla = (semilla * 1664525 + 1013904223) % 4294967296; return semilla / 4294967296; };
@@ -3073,6 +3093,18 @@ class FarmScene extends Phaser.Scene {
     // jugador por mucho que se redondee o se ondule.
     const RX = W / 2 + colchon, RY = H / 2 + colchon, tw = this.textures.get("tree").getSourceImage();
     const anchoT = (tw && tw.width) || T, altoT = (tw && tw.height) || T * 2;
+    // TAMAÑO EN CELDAS (17/8, dirección: "ten en cuenta que un árbol ocupe solo una celda").
+    // Al medirlo apareció una incoherencia: los árboles del BOSQUE salían de 2,3 a 3,2 celdas
+    // de ancho, o sea MÁS GRANDES que los que se talan dentro de la granja, que miden 2. El
+    // fondo era más grande que el primer plano. Ahora el tamaño se pide en celdas y la escala
+    // se deriva del sprite, así que no hay forma de que vuelvan a desincronizarse.
+    // (Probado a 1 celda: no cierra. La copa es ancha; achicada a 42 px hacen falta 300 árboles
+    //  y aun así queda 1,8% de fondo a la vista, y separándolos salta a 19%. A 2 celdas: 126
+    //  árboles y 0,02%.)
+    const escBase = (GF.BOSQUE_TAM || 2) * T / anchoT;
+    const VAR = GF.BOSQUE_ESC_VAR != null ? GF.BOSQUE_ESC_VAR : 0.15;
+    const eMin = escBase * (1 - VAR), eMax = escBase * (1 + VAR);
+    const anchoS = anchoT * escBase, altoS = altoT * escBase;   // tamaño DIBUJADO: manda para la forma del claro
     const R = GF.BOSQUE_REDONDEZ != null ? GF.BOSQUE_REDONDEZ : 0.62;
     const met = (nx, ny) => Math.max(Math.abs(nx), Math.abs(ny)) * (1 - R) + Math.hypot(nx, ny) * R;
     const AMP = [0.085, 0.055, 0.035, 0.02], ONDA = GF.BOSQUE_ONDA != null ? GF.BOSQUE_ONDA : 0.45;
@@ -3084,13 +3116,16 @@ class FarmScene extends Phaser.Scene {
         AMP[2] * Math.sin(8 * a + 4.3) + AMP[3] * Math.sin(13 * a));
     };
     const lista = [];
-    for (let y = -M; y < H + M; y += pasoY)
+    let fila = 0;
+    for (let y = -M; y < H + M; y += pasoY, fila++) {
+      const corr = Math.round(paso * TRABA * (fila % 2));   // filas trabadas como ladrillos
       for (let x = -M; x < W + M; x += paso) {
-        const px = x + Math.round((az() * 2 - 1) * J), py = y + Math.round((az() * 2 - 1) * J);
-        const nx = (px + anchoT * 0.5 - W / 2) / RX, ny = (py + altoT * 0.72 - H / 2) / RY;
+        const px = x + corr + Math.round((az() * 2 - 1) * JX), py = y + Math.round((az() * 2 - 1) * JY);
+        const nx = (px + anchoS * 0.5 - W / 2) / RX, ny = (py + altoS * 0.72 - H / 2) / RY;
         if (met(nx, ny) < borde(nx, ny)) continue;            // está en el claro
         lista.push([py, px, eMin + az() * (eMax - eMin), az() < 0.45]);
       }
+    }
     // ORDEN DE DIBUJO (17/8, dirección: "hay árboles que deben estar por detrás de los que
     // están más cerca del corral, por proximidad"). Se ordenaba por py, que es el BORDE DE
     // ARRIBA del sprite. Pero cada árbol tiene SU escala (0,92 a 1,26), así que dos árboles

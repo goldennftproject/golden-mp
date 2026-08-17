@@ -33,7 +33,8 @@ def datos_del_juego():
       T:G.TILE, COLS:G.COLS, ROWS:G.ROWS, POND:G.POND, PLOTS:G.PLOTS_BASE,
       OBJ:G.WORLD_OBJECTS.map(o=>({key:o.key,type:o.type,leftCol:o.leftCol,baseRow:o.baseRow,wCells:o.wCells})),
       B:{margen:G.BOSQUE_MARGEN,paso:G.BOSQUE_PASO,filas:G.BOSQUE_FILAS,jitter:G.BOSQUE_JITTER,
-         eMin:G.BOSQUE_ESC_MIN,eMax:G.BOSQUE_ESC_MAX,colchon:G.BOSQUE_COLCHON,
+         tam:G.BOSQUE_TAM,var:G.BOSQUE_ESC_VAR,traba:G.BOSQUE_TRABA,
+         jx:G.BOSQUE_JITTER_X,jy:G.BOSQUE_JITTER_Y,colchon:G.BOSQUE_COLCHON,
          redondez:G.BOSQUE_REDONDEZ,onda:G.BOSQUE_ONDA,aire:G.BOSQUE_AIRE}
     }));
     """
@@ -65,9 +66,12 @@ def main():
     pastos = [p for p in (abrir("grass_a"), abrir("grass_b"), abrir("grass_c")) if p]
     if pastos:
         pastos = [escalar_al_ancho(p, T) for p in pastos]
-        for r in range(R):
-            for c in range(C):
-                lienzo.alpha_composite(pastos[(c * 7 + r * 3) % len(pastos)], (OX + c * T, OY + r * T))
+        ce = -(-M // T)   # el pasto llega hasta donde llega el bosque, igual que en el juego
+        for r in range(-ce, R + ce):
+            for c in range(-ce, C + ce):
+                x, y = OX + c * T, OY + r * T
+                if -T < x < lienzo.width and -T < y < lienzo.height:
+                    lienzo.alpha_composite(pastos[(c * 7 + r * 3) % len(pastos)], (x, y))
 
     # ---- anillo de bosque (misma métrica que farm.js: dibujarBosque) ----
     tree = abrir("tree")
@@ -75,6 +79,9 @@ def main():
         b = d["B"]
         paso = max(1, round(T * b["paso"]))
         pasoY = max(1, round(paso * b["filas"]))
+        escBase = (b["tam"] or 2) * T / tree.width
+        eMin, eMax = escBase * (1 - b["var"]), escBase * (1 + b["var"])
+        anchoS, altoS = tree.width * escBase, tree.height * escBase
         colchon = b["colchon"] * T
         RX, RY = W / 2 + colchon, H / 2 + colchon
         anchoT, altoT = tree.width, tree.height
@@ -100,19 +107,21 @@ def main():
             return semilla / 4294967296
 
         lista = []
-        y = -M
+        y, fila = -M, 0
         while y < H + M:
+            corr = round(paso * b["traba"] * (fila % 2))
             x = -M
             while x < W + M:
-                px = x + round((az() * 2 - 1) * b["jitter"])
-                py = y + round((az() * 2 - 1) * b["jitter"])
-                nx = (px + anchoT * 0.5 - W / 2) / RX
-                ny = (py + altoT * 0.72 - H / 2) / RY
-                esc = b["eMin"] + az() * (b["eMax"] - b["eMin"])
+                px = x + corr + round((az() * 2 - 1) * b["jx"])
+                py = y + round((az() * 2 - 1) * b["jy"])
+                nx = (px + anchoS * 0.5 - W / 2) / RX
+                ny = (py + altoS * 0.72 - H / 2) / RY
+                esc = eMin + az() * (eMax - eMin)
                 if met(nx, ny) >= borde(nx, ny):
                     lista.append((py, px, esc))
                 x += paso
             y += pasoY
+            fila += 1
         lista.sort(key=lambda t: t[0] + altoT * t[2])   # por la BASE, no por el techo del sprite
         for py, px, esc in lista:
             im = tree.resize((max(1, round(anchoT * esc)), max(1, round(altoT * esc))), Image.NEAREST)

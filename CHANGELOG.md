@@ -3477,3 +3477,95 @@ anillo, prácticamente todos cambian de posición en la lista.
 
 La vista previa (`tools/preview-granja.py`) replica el algoritmo del bosque, así que se corrigió
 igual: si no, mostraría un bosque que el juego ya no dibuja.
+
+### El bosque, medido en vez de discutido
+Dirección: *"no hace falta poner tres árboles detrás de uno; con dos a los costados del que está
+más adelantado ya cubrís"* y *"ten en cuenta que un árbol ocupe solo una celda"*.
+
+Se hicieron dos herramientas para dejar de opinar a ojo: `tools/medir-bosque.py` (cuenta árboles y
+% de fondo visible) y `tools/comparar-bosque.py` (renderiza el borde con distintas configuraciones).
+Lo que salió:
+
+- **Agujeros de fondo NO había.** Ni con un 80% menos de árboles. El anillo estaba masivamente
+  sobredibujado: 3.349 árboles, la enorme mayoría tapados por completo.
+- **Lo que molestaba era otra cosa:** por las rendijas entre troncos asomaba **la fila de atrás**.
+  Medido en el sprite, el tronco tiene 23-27 px y las columnas van cada 25 px: deberían tocarse.
+  El culpable era el **jitter horizontal de ±8 px**, que podía separar dos troncos hasta 41 px.
+- **Incoherencia de escala encontrada de paso:** los árboles del BOSQUE medían 2,3 a 3,2 celdas de
+  ancho, o sea **más grandes que los que se talan en la granja**, que miden 2. El fondo era más
+  grande que el primer plano.
+- **"Un árbol = una celda" se probó y no funciona.** La copa del sprite es ancha; a 42 px deja de
+  leerse como árbol y hacen falta 300 para cerrar la masa, y aun así queda 1,8% de fondo a la
+  vista. Separándolos salta a 19% y 37%. A **2 celdas** —el mismo tamaño que los de la granja—
+  alcanzan 126 con 0,02%.
+
+Cambios: `BOSQUE_TAM` (ancho en CELDAS, así no se puede volver a desincronizar del resto del
+juego), `BOSQUE_TRABA` (filas alternas corridas media columna: el de atrás cae en el hueco de los
+dos de adelante, que es la idea de dirección aplicada), y `BOSQUE_JITTER_X` / `_Y` separados.
+`BOSQUE_PASO` a 0,65, elegido probando 0,90 / 0,75 / 0,65 / 0,55 sobre el borde real: a 0,90 queda
+dentado y asoma el fondo, a 0,55 vuelve a ser una pared.
+
+### El pasto ahora llega hasta el bosque
+La franja entre la cerca y el primer árbol —que existe a propósito— estaba pintada con el verde
+liso del fondo de la cámara, porque el mosaico de pasto cubría solo el mundo jugable. Se veía como
+un anillo plano alrededor de la granja. Ahora el renderTexture del pasto se extiende hasta el
+margen del bosque, en lote. Los tiles de más quedan tapados por los árboles y no cuestan nada.
+
+### tools/editor-bosque.html — el banco de pruebas del bosque
+Dirección: *"¿puedes generarme un HTML donde yo poner los árboles y mostrarte cómo debería quedar?"*.
+
+Hecho, y con una condición que viene de la lección del panel de balanceo: **vive en `tools/`, no en
+`public/`**. No se deploya, no habla con la nube y no puede escribir un solo valor del juego. Solo
+lee y devuelve texto. La regla que quedó es clara: las herramientas que ESCRIBEN en el juego
+terminan rompiéndolo; esta exporta números que se pasan a mano.
+
+Es un archivo suelto que se abre con doble clic, sin servidor: el arte (árbol, césped y cerca) va
+incrustado en base64, así que funciona desde cualquier carpeta. Y como va incrustado y no como
+ruta externa, el lienzo no queda bloqueado y **puede medirse en vivo el % de fondo a la vista**
+mientras se colocan los árboles.
+
+Segunda versión, por dirección: *"dibuja la cuadrícula y centra el árbol en cada celda pegado al
+borde de abajo"*. Se abandonó la colocación a mano libre: ahora hay **un árbol por CELDA**,
+centrado horizontalmente y apoyado en la línea de abajo de su celda, con la cuadrícula dibujada
+POR ENCIMA de los árboles para no perderla de vista. Es como razona el resto del juego —todo se
+ancla a la grilla por su base—, así que lo que se compone ahí es trasladable tal cual, sin
+traducir coordenadas sueltas a nada.
+
+Qué hace: clic planta en la celda, arrastrar planta varias de una (pincel), clic derecho borra
+—también arrastrando—, Ctrl+Z deshace, la rueda cambia el tamaño. Dibuja ordenando por FILA, igual
+que el juego. Botones de *Llenar todo* y *Damero* para partir de algo en vez de un lienzo vacío.
+El de copiar devuelve la lista de celdas, la ocupación y cuántos árboles hay por fila.
+
+### Las tres leyes de colocación del bosque
+Dirección, 17/8: además de la celda, *"que los árboles se puedan poner en la encrucijada entre
+cuatro celdas"*. Y una aclaración importante que queda escrita en la propia herramienta:
+**estas reglas son SOLO para dibujar el bosque. Dentro de la granja no rigen** — ahí cada objeto
+se sigue anclando como siempre (leftCol + baseRow, un objeto por celda, sin encrucijadas).
+
+    LEY 1 · CELDA        centrado en la celda, apoyado en su borde de abajo
+                         x = (gx + 0,5) x 42        base = (gy + 1) x 42
+
+    LEY 2 · ENCRUCIJADA  en el cruce de cuatro celdas, o sea en un vértice de la cuadrícula
+                         x = gx x 42                base = gy x 42
+
+    LEY 3 · MEDIA ARISTA a la mitad exacta de una arista VERTICAL de la celda: sobre la línea,
+                         pero a media altura
+                         x = gx x 42                base = (gy + 0,5) x 42
+
+El patrón es limpio: ley 1 = *x a media celda + y entera* · ley 2 = *x entera + y entera* ·
+ley 3 = *x entera + y a media celda*. Falta la cuarta combinación —*x a media + y a media*, que
+sería el centro de la celda—: no está pedida, pero el sitio existe y se puede sumar cuando se
+quiera. Con las tres, los anclajes caen en una rejilla de **media celda (21 px)**, que es la
+resolución más fina posible sin salirse de la cuadrícula del juego.
+
+Lo interesante es que las rejillas quedan **a media celda unas de otras**. Usadas
+juntas dan exactamente el trabado que veníamos persiguiendo a mano con `BOSQUE_TRABA` y el jitter
+—cada árbol de una rejilla cae en el hueco de la otra— pero expresado como una regla que se puede
+dibujar y razonar, en vez de un número suelto que hay que adivinar. Si esta composición gusta, el
+algoritmo del juego se puede reescribir directamente sobre las dos leyes y desaparecen `TRABA`,
+`PASO` y `FILAS` como números mágicos.
+
+El editor tiene las tres leyes como interruptores independientes (se pueden activar y desactivar
+por separado, siempre con una encendida como mínimo), dibuja las anclas —punto verde para la
+celda, aspa azul para la encrucijada, barrita rosa para la media arista— y el clic salta a la más
+cercana entre las activas.

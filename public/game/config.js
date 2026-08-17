@@ -25,10 +25,24 @@ GF.BOSQUE = 1;              // 1 = anillo de bosque · 0 = la isla de siempre
 // 17/8: 300 → 420. El anillo manda el tope de alejado (limiteVista): cuanto más ancho, más
 // lejos se puede alejar sin que asome el vacío, y más se lee "la granja en medio de un bosque".
 GF.BOSQUE_MARGEN = 420;     // cuánto bosque hay más allá del mundo
-GF.BOSQUE_PASO = 0.60;      // separación entre árboles, en celdas. MENOR = más tupido
-GF.BOSQUE_FILAS = 0.74;     // separación vertical respecto de la horizontal (solapan más)
-GF.BOSQUE_JITTER = 8;       // desorden en píxeles, para que no se vea la cuadrícula
-GF.BOSQUE_ESC_MIN = 0.92; GF.BOSQUE_ESC_MAX = 1.26;   // variedad de tamaño
+// 17/8 (dirección): "un árbol ocupe solo una celda" + "no hace falta poner tres detrás de uno,
+// con dos a los costados ya cubrís". Medido con tools/medir-bosque.py y comparar-bosque.py:
+//  · Agujeros de fondo NO había: ni con un 80% menos de árboles. El anillo estaba masivamente
+//    sobredibujado (3.349 árboles, la mayoría tapados por completo).
+//  · Lo que molestaba era que por las rendijas entre troncos asomaba LA FILA DE ATRÁS. Se
+//    arregla trabando las filas (el de atrás cae en el hueco) y bajando el desorden horizontal.
+//  · A 1 celda de ancho el árbol no cierra la masa: 300 árboles y todavía 1,8% de fondo visible.
+//    A 2 celdas —el MISMO tamaño que los árboles de la granja— alcanzan 126 con 0,02%.
+GF.BOSQUE_TAM = 2;          // ancho del árbol EN CELDAS (2 = igual que los de la granja)
+GF.BOSQUE_ESC_VAR = 0.15;   // variedad de tamaño, ±15% sobre ese ancho
+// 0,65: probado 0,90 / 0,75 / 0,65 / 0,55 sobre el borde real. A 0,90 el borde queda DENTADO
+// (entre tronco y tronco asoma el fondo); a 0,55 vuelve a ser una pared. 0,65 es donde los
+// troncos se leen separados sin abrir agujeros.
+GF.BOSQUE_PASO = 0.65;      // separación entre árboles, en celdas
+GF.BOSQUE_FILAS = 0.90;     // separación vertical respecto de la horizontal
+GF.BOSQUE_TRABA = 0.5;      // corrimiento de las filas alternas (0 = alineadas · 0,5 = trabadas)
+GF.BOSQUE_JITTER_X = 5;     // desorden horizontal: BAJO, es el que abre rendijas entre troncos
+GF.BOSQUE_JITTER_Y = 7;     // desorden vertical: puede ser alto sin romper nada
 GF.BOSQUE_COLCHON = 1.5;    // radio del claro: agranda el óvalo/rectángulo de referencia
 // 17/8 (dirección): "la forma cuadrada queda mejor que el resto, esta forma está bien".
 // Se probó redondeada (0.62) y ondulada (0.45) y no ganaba nada: el claro rectangular lee
