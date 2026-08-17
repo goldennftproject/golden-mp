@@ -877,23 +877,40 @@ class FarmScene extends Phaser.Scene {
             const flip = az() < 0.45;
             if (az() > (DENS[ley] != null ? DENS[ley] : 1)) continue;
             const w = anchoT * esc, h = altoT * esc;
-            lista.push([a[1] + dy, a[0] + dx - w / 2, w, h, flip]);
+            // ENVOLTURA: cada árbol entra también desplazado ±P, para que el que cruza un borde
+            // reaparezca por el otro y el mosaico no tenga costura.
+            // OJO — esto ya salió mal una vez: las copias desplazadas hay que meterlas en la
+            // lista COMO ÁRBOLES PROPIOS, con SU base desplazada, y ordenar después. Ordenar
+            // por la base del original y desplazar al dibujar rompe la profundidad: la copia
+            // que envuelve desde abajo se pintaba tarde arriba y su tronco tapaba a los de
+            // delante. El resultado eran bandas de troncos repetidas, nada que ver con el anillo.
+            for (const ox of [-P, 0, P]) for (const oy of [-P, 0, P]) {
+              const px2 = a[0] + dx - w / 2 + ox, base2 = a[1] + dy + oy;
+              if (px2 > P || px2 + w < 0 || base2 - h > P || base2 < 0) continue;
+              lista.push([base2, px2, w, h, flip]);
+            }
           }
-      lista.sort((p, q) => p[0] - q[0]);   // por la base, igual que el resto
-      for (const [base, px, w, h, flip] of lista)
-        for (const ox of [-P, 0, P]) for (const oy of [-P, 0, P]) {
-          const x = px + ox, y = base - h + oy;
-          if (x > P || x + w < 0 || y > P || y + h < 0) continue;
-          g.save();
-          if (flip) { g.translate(x + w, y); g.scale(-1, 1); g.drawImage(src, 0, 0, w, h); }
-          else g.drawImage(src, x, y, w, h);
-          g.restore();
-        }
+      lista.sort((p, q) => p[0] - q[0]);   // por la base YA desplazada, igual que el resto del juego
+      for (const [base, px, w, h, flip] of lista) {
+        const y = base - h;
+        g.save();
+        if (flip) { g.translate(px + w, y); g.scale(-1, 1); g.drawImage(src, 0, 0, w, h); }
+        else g.drawImage(src, px, y, w, h);
+        g.restore();
+      }
       tex.refresh();
     }
     const L = this.limiteVista(), LADO = 8000;
-    this.add.tileSprite((L.x1 + L.x2) / 2, (L.y1 + L.y2) / 2, LADO, LADO, clave)
+    const cx = (L.x1 + L.x2) / 2, cy = (L.y1 + L.y2) / 2;
+    const ts = this.add.tileSprite(cx, cy, LADO, LADO, clave)
       .setDepth((GF.BOSQUE_DEPTH || -999) - 2);   // debajo del pasto y del anillo
+    // ALINEAR el mosaico con la retícula del mundo. Si no, el patrón arranca donde caiga el
+    // borde del tileSprite y se ve una costura contra el anillo por mucho que el dibujo sea
+    // correcto. Como el mosaico mide 8 celdas justas, cualquier múltiplo de 42 encaja: basta
+    // con desplazar la textura por lo que valga la esquina del sprite en coordenadas de mundo.
+    const izq = cx - LADO / 2, arr = cy - LADO / 2;
+    ts.tilePositionX = ((izq % P) + P) % P;
+    ts.tilePositionY = ((arr % P) + P) % P;
   }
 
   // HASTA DÓNDE HAY MUNDO DIBUJADO (17/8).

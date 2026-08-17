@@ -219,7 +219,7 @@ def main():
                     if az2() > (d["B"]["dens"] or {}).get(ley, 1):
                         continue
                     fondo.append((ay, ax, esc))
-        fondo.sort(key=lambda t: t[0])
+        fondo.sort(key=lambda t: t[0])   # por la base: el de abajo tapa al de arriba
         for ay, ax, esc in fondo:
             im2 = tree.resize((max(1, round(anchoT * esc)), max(1, round(altoT * esc))), Image.NEAREST)
             gran.alpha_composite(im2, (int(ax - im2.width / 2), int(ay - im2.height)))

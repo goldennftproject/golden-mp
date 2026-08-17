@@ -3711,3 +3711,22 @@ Coste: una textura de 336x336 generada una sola vez.
 
 La vista previa aprende a dibujarlo también: `EXTRA=700 python3 tools/preview-granja.py` renderiza
 el mapa con 700 px de bosque alrededor, para comprobar que no asoma ningún borde.
+
+### El mosaico del fondo salía en bandas — dos fallos, los dos míos
+Dirección, sobre el juego ya deployado: *"no se ve como lo que me mostrás"*. Cierto: la mitad
+derecha de la pantalla salía en **bandas horizontales de troncos repetidas**, con una costura
+vertical dura contra el anillo. Dos causas:
+
+1. **Orden de profundidad en la envoltura.** Para que el mosaico no tenga costura, cada árbol se
+   dibuja también desplazado ±336. Yo ordenaba por la base del ORIGINAL y desplazaba al dibujar,
+   así que la copia que envolvía desde abajo se pintaba tarde arriba y su tronco tapaba a los que
+   iban delante. De ahí las bandas. Ahora las copias entran en la lista **como árboles propios,
+   con su base ya desplazada**, y se ordena después.
+   (Es exactamente el mismo error de ordenar por el sitio equivocado que ya había aparecido con
+   `py` vs base y con el buzón. Tercera vez.)
+2. **El mosaico no estaba alineado con la retícula del mundo**, así que arrancaba donde cayera el
+   borde del tileSprite. Se corrige con `tilePositionX/Y` = la esquina del sprite en coordenadas
+   de mundo, módulo 336. Como el mosaico mide 8 celdas justas, cualquier múltiplo de 42 encaja.
+
+Comprobado antes de deployar reproduciendo el mosaico del juego en Python y **tileándolo 3x3**
+para buscarle la costura: no la tiene.
