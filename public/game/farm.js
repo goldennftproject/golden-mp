@@ -590,11 +590,15 @@ class FarmScene extends Phaser.Scene {
             // puede volver a sentirse pegajoso.
             const k = this.action.kind;
             const golpeDado = (k === "chop" || k === "mine") ? !!this.action.golpeYa : true;   // en talar/picar, solo después de que el hachazo pegó (si no, se perdería el destello)
-            const mismo = hit && hit === this.action.o && golpeDado;
             const rapida = k !== "fish";   // la pesca es un cast largo a propósito: no se corta
-            if (mismo && rapida) {
-              this.finishAction();                        // cierra el golpe en curso YA
-              if (!this.action && hit) { this.pendingObj = null; this.interactWith(hit); }   // y arranca el siguiente
+            // 16/8 v2 (dirección: "en los cultivos todavía se siente el delay"): el corte vale
+            // para CUALQUIER objetivo rápido, no solo el mismo. Sembrar y cosechar se hace
+            // saltando de parcela en parcela, así que el candado se sentía justo ahí: tocabas
+            // la parcela de al lado y el clic quedaba esperando a que terminara la anterior.
+            const destinoRapido = hit && (hit.type === "tree" || hit.type === "rock" || hit.type === "ore" || hit.type === "plot");
+            if (rapida && golpeDado && destinoRapido) {
+              this.finishAction();                        // cierra la acción en curso YA
+              if (!this.action) { this.pendingObj = null; this.interactWith(hit); }   // y arranca la siguiente
               return;
             }
             // el clic que cae durante el candado no se tira: se guarda UNO y sale enseguida.

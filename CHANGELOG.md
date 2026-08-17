@@ -2135,6 +2135,10 @@ Ahora la cadena de guía no tiene puntas sueltas:
   reloj de la animación. Vale para talar, picar, plantar y cosechar (la pesca no se corta:
   su cast largo es a propósito). En talar/picar solo se corta DESPUÉS de que pegó el hachazo,
   para no comerse el destello.
+- v2 (mismo día, el director: "en los cultivos todavía se siente"): el corte ahora vale para
+  CUALQUIER objetivo rápido, no solo el que estabas golpeando. Sembrar y cosechar se hace
+  saltando de parcela en parcela — tocabas la de al lado y el clic quedaba esperando a que
+  terminara la anterior. Con la granja sin caminar (NO_WALK), ese candado era todo el freno.
 - CAUSA PROBABLE DE FONDO — y el arreglo estructural: la fila `balance` de Supabase pisa el
   código al arrancar, y ya nos costó días TRES veces (los timers de árbol en 1 s, y ahora
   "volvió a como estaba antes"). El código decía una cosa y el juego hacía otra, sin forma de
