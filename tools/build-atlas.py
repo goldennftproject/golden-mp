@@ -31,10 +31,17 @@ BOOT = os.path.join(RAIZ, "public", "game", "boot.js")
 
 # Los iconos de recursos, cultivos, peces y monedas también van al atlas: el juego los
 # usa para el "premio" que sale volando cuando talás, picás o cosechás.
-EXTRA = ["res_", "crop_", "fish_", "coin_", "animal_", "deco_", "build_", "plano_", "rock_buried"]   # build_: obras · plano_: blueprints (12/8)
+EXTRA = ["res_", "crop_", "cropm_", "cropg_", "fish_", "coin_", "animal_", "deco_", "build_", "plano_", "rock_buried"]   # build_: obras · plano_: blueprints (12/8)
+# 17/8: cropm_/cropg_ (planta a medias y crecida) SE HABÍAN QUEDADO AFUERA. "crop_" no los
+# atrapa, así que cada cultivo nuevo entraba con su icono al atlas pero sus dos etapas de
+# crecimiento se bajaban sueltas. Con 3 cultivos nuevos eran 6 pedidos extra + la fase de
+# reintentos del arranque, que es donde la barra de carga se plantaba a la mitad.
 
 # Edificios que antes no tenían arte y por eso nunca entraron al atlas (9/8).
-SUELTOS = ["establo", "curtiduria", "ofrendas", "mazo", "pet_gallina", "skin_sombrero", "godhand", "tree_sapling", "plot_wild"]
+SUELTOS = ["establo", "curtiduria", "ofrendas", "mazo", "pet_gallina", "skin_sombrero", "godhand", "tree_sapling", "plot_wild",
+           # 17/8: mobiliario de la granja que se fue sumando después del último atlas
+           "buzon", "buzon_full", "baul_premios", "baul_premios_lleno", "paquete_dia", "paquete_dia_abierto",
+           "monticulo", "tablon_pedidos", "tablon_pedidos_full", "sobre_carta", "papel_carta", "isla"]
 
 # BESTIARIO (10/8): las 11 criaturas nuevas son 176 cuadros. Sueltos serían 176 pedidos
 # extra al server gratis; en el atlas son cero. Los arma tools/build-bestiario.py.

@@ -59,8 +59,8 @@ var ZONA_NEGRA_VEL = 0.75;   // "detallitos (1)" punto 7: el granjero camina 25%
 // 16/8 (dirección): "la interacción y el cambio de sprites debe ser instantáneo en todo
 // recurso, no debe haber delays". Las cuatro acciones de la granja pasan a 0: el golpe se
 // resuelve y el sprite cambia EN EL MISMO FRAME del clic. Solo la pesca conserva su cast
-// largo (es su mecánica). Ya NO se pueden tocar desde balance.html: no son una palanca de
-// balance sino la sensación del juego, y un valor guardado en la nube reintroducía el freno.
+// largo (es su mecánica). No son una palanca de balance sino la sensación del juego: se tocan
+// acá y en ningún otro lado.
 var ACT_DUR = { chop: 0, mine: 0, plant: 0, harvest: 0, water: 0, fish: 1.5 };
 // Los clics que llegan durante el candado NO se tiran: se guarda uno y sale en cuanto termina.
 // Es lo que hace que tocando rápido no se pierda ni un golpe. Solo vale para el MISMO nodo,

@@ -147,7 +147,7 @@ function resSprite(k) { return CROP_DEF[k] ? "crop_" + k : (RES_SPRITE[k] || nul
 const CROP_ORDER = ["papa","ciruela","cereza","remolacha","zanahoria","cebolla","calabacin","repollo","calabaza","brocoli","girasol","trigo","maiz"];
 // TABLA DE PRECIOS del diseñador (31/7): Ganancia = Tiempo × Riesgo × Nivel. Papa base: compra 1 / venta 3 / 1h.
 // growH = horas reales de la tabla. En TESTEO corre comprimido: 1h → 1min (GROW_SCALE). Para pasar a real: GROW_SCALE = 1.
-var GROW_SCALE = 1;   // 2/8: FUERA la compresión de testeo — el tiempo que se pone en balance.html es el tiempo real del juego
+var GROW_SCALE = 1;   // 2/8: FUERA la compresión de testeo — el tiempo que se escribe acá es el tiempo real del juego
 // Tabla oficial de "2das mejoras" (4/8/2026): compra/venta con ganancia que dobla por tier y
 // ratio ~2,33; tiempos de 9 min (Papa) a 24 h (Maíz). XP por cosecha = minutos de crecimiento.
 const CROP_DEF = {
@@ -762,7 +762,7 @@ function buyWorm(qty) {
 const SKILL_DEFS = [["farming","","Cultivo"],["fishing","","Pesca"],["mining","","Minería"],
   ["sword","","Espada"],["hacha","","Hacha (combate)"],["mazo","","Mazo"],["range","","Arco"],["cooking","","Cocina"],["crafting","","Artesanía"]];
 const SKILL_NAME = {}; SKILL_DEFS.forEach(([k,,nm]) => SKILL_NAME[k] = nm);
-var XP_BASE = 100, XP_EXP = 2.7;   // doc maestro 2/8: curva 1-150 anclada (nivel 40 = 360 h); editables en balance.html
+var XP_BASE = 100, XP_EXP = 2.7;   // doc maestro 2/8: curva 1-150 anclada (nivel 40 = 360 h)
 function skillNeed(lvl) { return Math.round(XP_BASE * Math.pow(lvl, XP_EXP)); }
 function skillInfo(xp) { let lvl = 1, acc = 0, need = skillNeed(1); while (xp >= acc + need && lvl < 150) { acc += need; lvl++; need = skillNeed(lvl); } return { lvl, into: xp - acc, need }; }
 // --- Barra de Combate GLOBAL (doc maestro 2/8): un solo nivel que suma la XP de TODOS los kills.
@@ -3304,7 +3304,7 @@ function ensureHotbarDefaults() {
 // cualquier sistema — recompensas, pedidos, proyecciones — debe valorarlos. Y si algún día
 // se vendieran, estos son los precios que NO rompen la economía.
 const PRICE = { madera:36, piedra:46, bronce:210, hierro:300, oro:470, diamante:990, netherita:1240, carne:8, flecha:2 };
-// 1/8: los CULTIVOS venden según CROP_DEF.price (la tabla que edita balance.html) — PRICE quedó solo para lo demás.
+// 1/8: los CULTIVOS venden según CROP_DEF.price — PRICE quedó solo para lo demás.
 //      Antes el mercado usaba una copia vieja acá y los cambios del panel no se veían (bug reportado por el diseñador).
 function priceOf(res) { return CROP_DEF[res] ? CROP_DEF[res].price : (PRICE[res] || 0); }
 // detalles viernes (1): los minerales, madera y flechas NO se venden — solo cultivos y lo farmeado en la Zona Negra (carne)

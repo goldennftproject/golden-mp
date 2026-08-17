@@ -74,9 +74,11 @@ function enterGame() {
 (async function boot() {
   let returning = false;
   loadPaso(LOAD_ETAPAS.cuenta, "Buscando tu cuenta…");
-  try { await window.BAL_READY; } catch (e) {}   // ajustes del panel de balanceo (balance.html) antes de crear nada
-  // MODO TESTEO: va DESPUÉS del panel (para pisar sus tiempos en memoria) y SOLO acá, en el juego.
-  // balance.html no lo llama nunca, así el diseñador sigue viendo y guardando los valores reales.
+  // 16/8 (dirección): el panel de balanceo se ELIMINÓ. Guardaba valores en la nube que
+  // pisaban al código y nos costó tres problemas seguidos (timers fantasma, la respuesta
+  // al clic "que volvía sola" y un arranque trabado). Ahora manda el código y punto:
+  // los números viven en state.js y config.js, y lo que se ve es lo que está escrito.
+  // MODO TESTEO: comprime tiempos en memoria, solo cuando se activa a mano.
   try { if (typeof aplicarTesteo === "function") aplicarTesteo(); } catch (e) { console.warn(e); }
   loadPaso(LOAD_ETAPAS.ajustes, "Aplicando ajustes…");
   try { await window.SAVE_READY; returning = await loadFarm(); } catch (e) { console.warn(e); }

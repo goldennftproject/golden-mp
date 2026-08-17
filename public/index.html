@@ -1047,14 +1047,56 @@
     catch (e) { console.error("colyseus.js no cargó:", e); }
   </script>
   <script>
+  /* 17/8 · VIGÍA DE ARRANQUE.
+     Antes, si algo fallaba al entrar, la barra se quedaba clavada y la única forma de saber
+     qué pasó era abrir la consola. Eso se acabó: cualquier error que ocurra mientras la
+     pantalla de carga está puesta se ESCRIBE EN LA PROPIA PANTALLA, y si a los 20 segundos
+     seguimos ahí, el vigía cuenta en qué paso se atascó. Nada de F12. */
+  (function () {
+    var caja = null, errores = [];
+    function pantalla() { return document.getElementById("loading"); }
+    function mostrar(txt) {
+      var ld = pantalla(); if (!ld) return;               // ya entró al juego: no molestamos
+      if (!caja) {
+        caja = document.createElement("div");
+        caja.style.cssText = "max-width:min(560px,86vw);margin-top:10px;padding:10px 12px;border:2px solid #8a5a2a;border-radius:8px;background:#1b2612;color:#ffd24a;font:600 12px/1.5 ui-monospace,Consolas,monospace;letter-spacing:0;text-align:left;white-space:pre-wrap;word-break:break-word";
+        ld.appendChild(caja);
+      }
+      caja.textContent = txt;
+    }
+    function apuntar(msg) {
+      msg = String(msg || "").slice(0, 300);
+      if (errores.indexOf(msg) < 0) errores.push(msg);
+      if (pantalla()) mostrar("Se trabó por esto:\n\n• " + errores.join("\n• ") + "\n\nSacale una foto y mandámela.");
+    }
+    window.addEventListener("error", function (e) {
+      if (e && e.target && e.target.tagName === "SCRIPT") return;   // eso ya lo reintenta el cargador
+      apuntar((e && e.message) || "error desconocido");
+    }, true);
+    window.addEventListener("unhandledrejection", function (e) {
+      var r = e && e.reason; apuntar((r && (r.message || r)) || "promesa rechazada");
+    });
+    // a los 20 s sin entrar, decimos en qué paso quedó (el texto de la barra) por si no hubo error
+    setTimeout(function () {
+      if (!pantalla() || errores.length) return;
+      var m = document.getElementById("ldmsg");
+      var f = document.getElementById("ldfill");
+      mostrar("Tarda más de lo normal.\n\nPaso: " + ((m && m.textContent) || "?") +
+              "\nBarra: " + ((f && f.style.width) || "?") +
+              "\n\nSuele ser el servidor despertando. Recargá la página; si se repite, mandame esta pantalla.");
+    }, 20000);
+  })();
+  </script>
+
+  <script>
   /* Cargador con reintentos: el server free de Render a veces corta conexiones.
      Carga los scripts del juego EN FILA (uno por vez) y reintenta cada uno hasta 8 veces. */
   (function () {
     // 15/8: VERSIÓN DE BUILD — rompe la caché del navegador en cada deploy (sin esto, el
     // jugador seguía corriendo el state.js viejo aunque el servidor tuviera el nuevo).
     // deploy.bat la actualiza sola (busca GF_BUILD y pone la fecha/hora del deploy).
-    const GF_BUILD = "20260817-1702";
-    const files = ["game/config.js","game/nav.js","game/audio.js","game/state.js","game/balance.js","game/save.js","game/ui.js","game/boot.js",
+    const GF_BUILD = "20260817-1715";
+    const files = ["game/config.js","game/nav.js","game/audio.js","game/state.js","game/save.js","game/ui.js","game/boot.js",
                    "game/farm.js","game/forest.js","game/plaza.js","game/main.js","game/update.js"];
     let i = 0;
     function next(retry) {

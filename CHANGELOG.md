@@ -3341,3 +3341,42 @@ Atlas final del día: `?v=43`, 579 sprites.
 ### Pilares futuros
 - Login por email multi-dispositivo, PvP/endgame de netherita, referidos, token $Golden, audio,
   granja distinta por nivel (quinta.docx).
+
+---
+
+## Día 22 — Lunes 17/08 · Se cae el panel de balanceo y se arregla el arranque
+
+### Fuera todo el HTML que no es el juego
+Decisión de dirección: **el único HTML que queda es `public/index.html`**, el que abre el juego.
+Se borraron `public/balance.html`, `public/vista-ventanas.html` y `public/game/balance.js`.
+
+El motivo no es orden, es que ese panel hacía daño: guardaba valores en una tabla de la nube que
+**pisaban al código al arrancar**, y eso nos costó tres problemas seguidos que parecían bugs del
+juego y no lo eran (timers fantasma, la respuesta al clic que "volvía sola" y, ahora, un arranque
+trabado). A partir de acá **manda el código**: los números viven en `state.js` y `config.js`, y lo
+que se ve es lo que está escrito.
+
+También se sacó `await window.BAL_READY` de `main.js` y los comentarios que todavía mandaban a
+editar cosas en `balance.html`.
+
+### Por qué la barra de carga se plantaba a la mitad
+Dos causas encadenadas, las dos reales:
+
+1. **`index.html` seguía pidiendo `game/balance.js`**, que ya no existía. El cargador reintenta
+   cada script 8 veces con espera creciente antes de rendirse: eran ~10 segundos de nada en cada
+   entrada.
+2. **18 sprites no estaban en el atlas** y se bajaban sueltos: los tablones, el buzón, el baúl de
+   premios, el montículo, la isla y — el hallazgo grueso — las etapas de crecimiento
+   `cropm_`/`cropg_` de ciruela, cereza y remolacha. El armador del atlas filtraba por el prefijo
+   `crop_`, que **no** atrapa a `cropm_` ni a `cropg_`: cada cultivo nuevo entraba con su ícono
+   pero sus dos etapas quedaban afuera. Esos 18 pedidos caían en la fase de reintentos de `boot.js`,
+   y ahí la barra se dibuja justo a la mitad. No era el bosque ni el peso: era esperar.
+
+**Arreglado:** `cropm_`/`cropg_` agregados a los prefijos del armador, los one-off agregados a mano,
+atlas reconstruido (604 sprites, 790 KB) y `?v=46` para romper caché. Verificado por script:
+**assetList pide 414 sprites y los 414 están en el atlas — cero pedidos sueltos.**
+
+### Vigía de arranque (para no depender más de la consola)
+Si algo falla mientras está la pantalla de carga, ahora **el error se escribe en la propia pantalla**,
+en un recuadro legible. Y si a los 20 segundos seguimos ahí sin ningún error, el vigía cuenta en qué
+paso quedó y a qué altura está la barra. Alcanza con una foto de la pantalla: se terminó el F12.
