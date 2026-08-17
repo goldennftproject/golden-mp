@@ -33,7 +33,7 @@ def datos_del_juego():
       T:G.TILE, COLS:G.COLS, ROWS:G.ROWS, POND:G.POND, PLOTS:G.PLOTS_BASE,
       OBJ:G.WORLD_OBJECTS.map(o=>({key:o.key,type:o.type,leftCol:o.leftCol,baseRow:o.baseRow,wCells:o.wCells})),
       B:{margen:G.BOSQUE_MARGEN,
-         tam:G.BOSQUE_TAM,var:G.BOSQUE_ESC_VAR,leyes:G.BOSQUE_LEYES,cada:G.BOSQUE_FILA_CADA,dens:G.BOSQUE_DENSIDAD,
+         tam:G.BOSQUE_TAM,var:G.BOSQUE_ESC_VAR,leyes:G.BOSQUE_LEYES,cada:G.BOSQUE_FILA_CADA,dens:G.BOSQUE_DENSIDAD,frente:G.BOSQUE_FRENTE_SOLIDO,
          jx:G.BOSQUE_JITTER_X,jy:G.BOSQUE_JITTER_Y,colchon:G.BOSQUE_COLCHON,
          redondez:G.BOSQUE_REDONDEZ,onda:G.BOSQUE_ONDA,aire:G.BOSQUE_AIRE}
     }));
@@ -119,17 +119,23 @@ def main():
                 for ley in str(b["leyes"] or "cxv"):
                     if ley not in ANCLA:
                         continue
-                    if az() > (b["dens"] or {}).get(ley, 1):
-                        continue
                     ax, ay = ANCLA[ley](c2, r)
                     ax += round((az() * 2 - 1) * b["jx"])
                     ay += round((az() * 2 - 1) * b["jy"])
                     esc = eMin + az() * (eMax - eMin)
-                    az()
+                    r2 = az()
                     nx = (ax - W / 2) / RX
                     ny = (ay - altoS * 0.28 - H / 2) / RY
-                    if met(nx, ny) >= borde(nx, ny):
-                        lista.append((ay - altoT * esc, ax - anchoT * esc / 2, esc))
+                    fuera = met(nx, ny) - borde(nx, ny)
+                    if fuera < 0:
+                        continue
+                    hondura = fuera * min(RX, RY)
+                    enFrente = hondura <= (b["frente"] or 1.5) * T
+                    if enFrente and ley == "x":
+                        continue
+                    if not enFrente and r2 > (b["dens"] or {}).get(ley, 1):
+                        continue
+                    lista.append((ay - altoT * esc, ax - anchoT * esc / 2, esc))
         lista.sort(key=lambda t: t[0] + altoT * t[2])   # por la BASE, no por el techo del sprite
         for py, px, esc in lista:
             im = tree.resize((max(1, round(anchoT * esc)), max(1, round(altoT * esc))), Image.NEAREST)

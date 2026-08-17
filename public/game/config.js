@@ -47,12 +47,24 @@ GF.BOSQUE_ESC_VAR = 0;      // variedad de tamaño (0 = todos idénticos, como e
 //   "v" MEDIA ARISTA a la mitad de la arista vertical (sobre la línea, a media altura)
 // Juntas dan una rejilla de media celda sin salirse de la cuadrícula del juego. Se compusieron
 // a mano en tools/editor-bosque.html, que dibuja exactamente esto.
-GF.BOSQUE_LEYES = "cxv";    // qué anclajes se usan · prueba "xv", "cx", "c"...
+// 17/8, DIRECCIÓN LO EXPLICÓ EN UNA FRASE y se acabó la deducción:
+//   "una fila de árboles cubriendo el centro inferior de cada celda, la siguiente fila ocupando
+//    la mitad de las líneas en vertical, y repetir con los dos siguientes, y así".
+// O sea: se ALTERNAN dos leyes, y la de encrucijada NO entra.
+//   banda 1  CELDA         x = (col+0,5)x42   base = (fila+1)x42
+//   banda 2  MEDIA ARISTA  x =  col x42       base = (fila+0,5)x42
+// Las bandas caen cada 21 px alternando y cada una queda corrida media celda respecto de la
+// anterior: ese es el entrelazado. La de encrucijada sobraba —comparte base con la de celda y
+// juntas cerraban la línea del todo, como un muro corrido.
+GF.BOSQUE_LEYES = "cv";     // celda + media arista, alternando
 GF.BOSQUE_FILA_CADA = 1;    // se planta cada N filas (1 = todas)
 // RALEO POR LEY. Medido sobre la composición a mano de dirección (tools/editor-bosque.html):
 // llenó el 100% de las celdas, el 69% de las encrucijadas y el 84% de las medias aristas.
 // Los claros que dejó en esas dos son lo que impide que el bosque se lea como una retícula.
-GF.BOSQUE_DENSIDAD = { c: 1, x: 0.69, v: 0.84 };
+GF.BOSQUE_DENSIDAD = { c: 1, v: 1 };   // filas enteras: la regla de dirección no deja huecos
+// Con las filas enteras el raleo queda inactivo, pero se conserva la palanca por si
+// alguna vez se quiere abrir claros: solo se aplicaría a partir de esta hondura.
+GF.BOSQUE_FRENTE_SOLIDO = 1.5;   // celdas de bosque sin ralear junto al claro
 // Los cinco números de antes (PASO, FILAS, TRABA y los dos JITTER) desaparecen como sistema:
 // eran valores que nadie sabía justificar. El jitter queda pero en CERO — la gracia de las
 // leyes es que el patrón es exacto; se sube solo si se quiere ensuciar el borde a propósito.

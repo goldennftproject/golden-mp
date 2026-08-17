@@ -3612,3 +3612,53 @@ quedan alineados al pixel.
 Vale la pena anotar el patrón: las tres últimas diferencias entre lo compuesto y lo generado
 —orden por la base, tamaño de 2 celdas, tamaño uniforme— **estaban todas en los datos**, y ninguna
 se resolvió mirando la imagen. Se resolvieron leyendo el export.
+
+### El raleo va hacia adentro, no en el frente
+Dirección: *"sigue sin verse igual"*. Al volver al export y leerlo **banda por banda** —en vez de
+como un total— apareció lo que faltaba:
+
+- En las dos bandas pegadas al claro puso **todos** los árboles: 26 de 26 y 27 de 27.
+  Los claros los abrió **atrás**. Mi raleo era parejo y agujereaba justo la primera línea,
+  que es la única que se ve entera.
+- Y su primera banda tiene **solo árboles de la ley de CELDA**, uno cada 42 px. La ley de
+  encrucijada comparte base con la de celda, así que juntas dejan un árbol cada 21 px y la línea
+  cierra del todo, como un muro corrido.
+
+Dos reglas nuevas, las dos leídas del export: `BOSQUE_FRENTE_SOLIDO` (celdas de bosque sin ralear
+junto al claro) y, dentro de esa franja, la ley de encrucijada se calla.
+
+**Aviso sobre la métrica de "proporción de madera".** Se usó para comparar y ha fallado tres veces,
+dando 68%, 41%, 4% y 100% sobre imágenes equivalentes, según qué fila tomara: dentro del bosque
+cualquier fila da 100%, y la fila del frente depende de dónde se recorte. **No es de fiar y no
+debe usarse para decidir.** Lo que vale es mirar el render.
+
+
+### La regla, dicha en una frase por dirección
+Después de varias rondas deduciendo el patrón del export, dirección lo dijo directamente:
+
+> *"una fila de árboles cubriendo el centro inferior de cada celda, la siguiente fila ocupando la
+> mitad de las líneas en vertical, y repetir con los dos siguientes, y así"*
+
+Se **alternan dos leyes**, y la de encrucijada no entra:
+
+    banda 1   CELDA          x = (col + 0,5) x 42     base = (fila + 1) x 42
+    banda 2   MEDIA ARISTA   x =  col x 42            base = (fila + 0,5) x 42
+    banda 3   CELDA          ...y así
+
+Las bandas caen cada 21 px alternando, y cada una queda corrida media celda respecto de la
+anterior: **ese es el entrelazado**, y sale solo de la geometría. La encrucijada sobraba porque
+comparte base con la celda: juntas dejaban un árbol cada 21 px y la línea cerraba como un muro.
+
+`GF.BOSQUE_LEYES = "cv"` y filas enteras. Con esto el bosque queda descrito por **una frase**.
+
+### Lo que costó llegar, y por qué
+Se dieron varias vueltas intentando deducir la regla midiendo píxeles y contando totales del
+export. Dos aprendizajes que conviene no repetir:
+
+1. **La métrica de "proporción de madera" no servía.** Dio 68%, 41%, 4% y 100% sobre imágenes
+   equivalentes según qué fila tomara. Cuando una medición da resultados incompatibles para la
+   misma pregunta, el problema no es afinarla: es que no mide lo que se cree.
+2. **Los totales del export escondían la estructura.** Contar 260/187/228 llevó a "las tres leyes
+   con raleo", que era una descripción estadísticamente parecida pero estructuralmente falsa. La
+   estructura solo apareció al leerlo **banda por banda**, y quedó clara del todo cuando dirección
+   la enunció. Ante un patrón, preguntar la intención ahorra más que medirla.

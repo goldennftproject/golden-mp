@@ -3142,6 +3142,7 @@ class FarmScene extends Phaser.Scene {
     // troncos: la masa sale al 100% de tronco, una pared. Saltando filas se recupera el aire.
     const CADA = Math.max(1, GF.BOSQUE_FILA_CADA || 1);
     const DENS = GF.BOSQUE_DENSIDAD || { c: 1, x: 0.69, v: 0.84 };
+    const FRENTE = GF.BOSQUE_FRENTE_SOLIDO != null ? GF.BOSQUE_FRENTE_SOLIDO : 1.5;
     const cIni = Math.floor(-M / T) - 1, cFin = Math.ceil((W + M) / T) + 1;
     const rIni = Math.floor(-M / T) - 1, rFin = Math.ceil((H + M) / T) + 1;
     const lista = [];
@@ -3154,19 +3155,32 @@ class FarmScene extends Phaser.Scene {
           const a = f(col, row);
           // jitter opcional: con las leyes puestas suele ir en 0, pero se deja por si se
           // quiere ensuciar un poco el patrón sin cambiar de sistema.
-          // RALEO POR LEY (17/8). Dirección compuso el bosque a mano en el editor y exportó:
-          // 260 de 260 anclajes de CELDA (el 100%), 187 de 270 de ENCRUCIJADA (69%) y 228 de
-          // 270 de MEDIA ARISTA (84%). O sea: puso las tres leyes enteras y después ABRIÓ
-          // CLAROS a mano en dos de ellas para romper la regularidad. Eso es lo que hace que
-          // no se lea como una retícula. Se reproduce acá con una probabilidad por ley.
-          if (az() > (DENS[ley] != null ? DENS[ley] : 1)) continue;
           const cxA = a[0] + Math.round((az() * 2 - 1) * JX);
           const baseA = a[1] + Math.round((az() * 2 - 1) * JY);
           const esc = eMin + az() * (eMax - eMin);
           const flip = az() < 0.45;
           const px = cxA - anchoT * esc / 2, py = baseA - altoT * esc;   // esquina del sprite
           const nx = (cxA - W / 2) / RX, ny = (baseA - altoS * 0.28 - H / 2) / RY;
-          if (met(nx, ny) < borde(nx, ny)) continue;            // está en el claro
+          const fuera = met(nx, ny) - borde(nx, ny);
+          if (fuera < 0) continue;                              // está en el claro
+          // RALEO POR LEY, PERO SOLO HACIA ADENTRO (17/8).
+          // Dirección compuso el bosque a mano y exportó 260/260 anclajes de CELDA (100%),
+          // 187/270 de ENCRUCIJADA (69%) y 228/270 de MEDIA ARISTA (84%). Al mirar el export
+          // fila por fila apareció lo importante: en las DOS BANDAS PEGADAS AL CLARO puso
+          // TODOS los árboles (26 de 26 y 27 de 27). Los claros los abrió ATRÁS.
+          // Aplicar el raleo parejo agujereaba justo la primera línea —la única que se ve
+          // entera— y por eso el bosque del juego tenía el doble de hueco que el compuesto
+          // (proporción de madera 0,33 contra 0,55, medida sobre las dos capturas).
+          // Así que el frente va macizo y el raleo empieza a partir de FRENTE_SOLIDO celdas.
+          const hondura = fuera * Math.min(RX, RY);              // cuánto se mete en el bosque, en px
+          const enFrente = hondura <= FRENTE * T;
+          // En el FRENTE, además, se calla la ley de ENCRUCIJADA. Motivo: comparte base con la
+          // de celda (las dos apoyan en fila x 42), así que juntas dejan un árbol cada 21 px y
+          // la línea cierra del todo. En el export de dirección la primera banda tiene SOLO
+          // árboles de celda, cada 42 px: por eso su frente tiene hueco entre tronco y tronco
+          // (proporción de madera 0,55) en vez de ser un muro corrido.
+          if (enFrente && ley === "x") continue;
+          if (!enFrente && az() > (DENS[ley] != null ? DENS[ley] : 1)) continue;
           lista.push([py, px, esc, flip]);
         }
     }
