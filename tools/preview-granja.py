@@ -113,7 +113,7 @@ def main():
                     lista.append((py, px, esc))
                 x += paso
             y += pasoY
-        lista.sort(key=lambda t: t[0])
+        lista.sort(key=lambda t: t[0] + altoT * t[2])   # por la BASE, no por el techo del sprite
         for py, px, esc in lista:
             im = tree.resize((max(1, round(anchoT * esc)), max(1, round(altoT * esc))), Image.NEAREST)
             lienzo.alpha_composite(im, (OX + int(px), OY + int(py)))

@@ -206,10 +206,13 @@ GF.WORLD_OBJECTS.push(snap("dummy", {type:"dummy"}, 231, 168, T));              
 // nodo de HIERRO (detalles213) — al FINAL para preservar layouts guardados; se mina con el pico de bronce
 GF.WORLD_OBJECTS.push(snap("node_iron", {type:"ore", ore:"hierro"}, 651, 336, T));   // 12/8: dentro de la cerca (antes pisaba la cerca)
 // BUZÓN (15/8, idea Stardew aprobada por dirección): las noticias de la granja llegan acá
-GF.WORLD_OBJECTS.push(snap("buzon", {type:"buzon"}, 399, 126, T*0.4));   // 15/8: ~1/6 del granero — un buzón de verdad
-GF.WORLD_OBJECTS.push(snap("baul_premios", {type:"cofre_diario"}, 399, 84, T*0.8));   // 15/8: ~1/3 del granero, como el shipping bin de Stardew
+GF.WORLD_OBJECTS.push(snap("buzon", {type:"buzon"}, 399, 84, T*0.4));   // 15/8: ~1/6 del granero — un buzón de verdad
+GF.WORLD_OBJECTS.push(snap("baul_premios", {type:"cofre_diario"}, 441, 84, T*0.8));   // 15/8: ~1/3 del granero, como el shipping bin de Stardew
 // TABLÓN DE PEDIDOS (16/8): a la IZQUIERDA del granero (dirección) — el rincón del correo
-// (buzón + baúl + paquete) queda a la derecha, y los encargos del pueblo del otro lado
+// (buzón + baúl) queda a la derecha, y los encargos del pueblo del otro lado.
+// 17/8: los tres van en la MISMA fila que el granero. Al comprimir el mundo el buzón había
+// quedado una fila más abajo, o sea DELANTE del baúl, y se lo tapaba. Orden: granero (6-8),
+// buzón (9), baúl (10) — el buzón entre medio, como estaba antes.
 GF.WORLD_OBJECTS.push(snap("tablon_pedidos", {type:"tablon_pedidos"}, 231, 84, T*0.9));   // 16/8: una celda más a la izquierda (captura: pisaba la pared del granero)
 // HORNO DE PIEDRA (detalles viernes 1): acá se funden todos los lingotes/barras
 GF.WORLD_OBJECTS.push(snap("horno", {type:"horno"}, 378, 252, T*2));

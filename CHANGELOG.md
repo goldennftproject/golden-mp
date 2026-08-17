@@ -3451,3 +3451,29 @@ Los dos caminos quedaron separados: `if (GF.BOSQUE) → bosque` / `else if (GF.I
 olas`. `GF.ISLA` se deja en `true` a propósito: es el respaldo del interruptor `?sinbosque=1`, que
 sin esto abriría el juego sobre un vacío liso. De paso, las nubes ahora cruzan el margen del bosque
 (420) y no el de la isla (260), que las cortaba a media pantalla.
+
+### El buzón tapaba el baúl
+Al comprimir el mundo, el buzón quedó en la fila 3 y el baúl en la 2. En un juego con profundidad
+por fila eso no es "un poco más abajo": es **delante**, así que el buzón se dibujaba encima del
+baúl y lo tapaba. Los tres vuelven a la misma fila que el granero, en el orden de siempre:
+granero (columnas 6-8), buzón (9), baúl (10).
+
+Lección para el resto del layout: cuando se mueve algo, la fila no es solo posición vertical,
+también es orden de dibujado. Dos objetos que se quieren "al lado" tienen que compartir fila.
+
+### El bosque se ordenaba mal: por el techo del árbol en vez de por su base
+Dirección: *"hay árboles que deben estar por detrás de los que están más cerca del corral, por
+proximidad"*. Tenía razón, y el error era de una línea.
+
+`dibujarBosque()` ordenaba con `lista.sort((a,b) => a[0] - b[0])`, donde `a[0]` es **py: el borde
+de ARRIBA del sprite**. Pero cada árbol se dibuja con su propia escala (0,92 a 1,26), así que dos
+árboles que arrancan a la misma altura **apoyan hasta 37 px distinto**. Como la fila del bosque
+mide 18 px, el error valía hasta **2,1 filas**: un árbol grande del fondo se dibujaba antes que uno
+chico de adelante y su tronco asomaba por delante del que estaba más cerca del corral.
+
+Ahora ordena por `py + alto x escala`, o sea por **dónde apoya**, que es el mismo criterio con el
+que el resto del juego ordena todo (`baseRow`, no el techo del sprite). De los 3.349 árboles del
+anillo, prácticamente todos cambian de posición en la lista.
+
+La vista previa (`tools/preview-granja.py`) replica el algoritmo del bosque, así que se corrigió
+igual: si no, mostraría un bosque que el juego ya no dibuja.

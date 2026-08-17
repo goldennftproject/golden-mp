@@ -3057,7 +3057,7 @@ class FarmScene extends Phaser.Scene {
       if (lote) rt.endDraw();
       g.destroy();
     }
-    // los árboles: de arriba abajo, para que los de adelante tapen a los de atrás
+    // los árboles: se ordenan por dónde APOYAN, para que los de adelante tapen a los de atrás
     const paso = Math.max(8, T * (GF.BOSQUE_PASO || 0.6));
     const pasoY = Math.max(8, paso * (GF.BOSQUE_FILAS || 0.74));
     const J = GF.BOSQUE_JITTER || 8;
@@ -3091,7 +3091,15 @@ class FarmScene extends Phaser.Scene {
         if (met(nx, ny) < borde(nx, ny)) continue;            // está en el claro
         lista.push([py, px, eMin + az() * (eMax - eMin), az() < 0.45]);
       }
-    lista.sort((a, b) => a[0] - b[0]);
+    // ORDEN DE DIBUJO (17/8, dirección: "hay árboles que deben estar por detrás de los que
+    // están más cerca del corral, por proximidad"). Se ordenaba por py, que es el BORDE DE
+    // ARRIBA del sprite. Pero cada árbol tiene SU escala (0,92 a 1,26), así que dos árboles
+    // que arrancan a la misma altura apoyan hasta 37 px distinto: DOS FILAS enteras, porque
+    // la fila mide 19 px. Resultado: un árbol grande del fondo se dibujaba antes que uno chico
+    // de adelante, y su tronco asomaba por delante del que estaba más cerca del corral.
+    // La profundidad la manda dónde APOYA el árbol (py + alto x escala), igual que el resto
+    // del juego ordena por baseRow y no por el techo del sprite.
+    lista.sort((a, b) => (a[0] + altoT * a[2]) - (b[0] + altoT * b[2]));
     const t = this.add.image(0, 0, "tree").setOrigin(0, 0).setVisible(false);
     const usarLote = typeof rt.beginDraw === "function";   // Phaser 3.50+: dibujar en lote es mucho más rápido
     if (usarLote) rt.beginDraw();
