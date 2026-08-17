@@ -1,23 +1,5 @@
-    // LA FORMA DEL CLARO (16/8, dirección: "más redonda, menos irregular").
-    // La métrica mezcla cuadrado y círculo: BOSQUE_REDONDEZ manda (0 = rectángulo, 1 = óvalo).
-    // Encima va un oleaje suave por ángulo para que el borde no sea perfecto.
-    // El umbral NO es un número a mano: se calcula a partir de la ESQUINA del área jugable
-    // más el aire y la amplitud del oleaje, así el bosque NUNCA puede taparle una celda al
-    // jugador por mucho que se redondee o se ondule.
-    const RX = W / 2 + colchon, RY = H / 2 + colchon, tw = this.textures.get("tree").getSourceImage();
-    const anchoT = (tw && tw.width) || T, altoT = (tw && tw.height) || T * 2;
-    const R = GF.BOSQUE_REDONDEZ != null ? GF.BOSQUE_REDONDEZ : 0.62;
-    const met = (nx, ny) => Math.max(Math.abs(nx), Math.abs(ny)) * (1 - R) + Math.hypot(nx, ny) * R;
-    const AMP = [0.085, 0.055, 0.035, 0.02], ONDA = GF.BOSQUE_ONDA != null ? GF.BOSQUE_ONDA : 0.45;
-    const ampTotal = AMP.reduce((a, b) => a + b, 0) * ONDA;
-    const BASE = met((W - W / 2) / RX, (H - H / 2) / RY) + (GF.BOSQUE_AIRE != null ? GF.BOSQUE_AIRE : 0.05) + ampTotal;
-    const borde = (nx, ny) => {
-      const a = Math.atan2(ny, nx);
-      return BASE + ONDA * (AMP[0] * Math.sin(3 * a + 0.7) + AMP[1] * Math.sin(5 * a + 2.1) +
-        AMP[2] * Math.sin(8 * a + 4.3) + AMP[3] * Math.sin(13 * a));
-    };
 /* FarmScene: la granja privada. Fase 1 (mundo) + Fase 3 (interacciones). */
-// CD (enfriamiento árbol/piedra) ahora vive en state.js para el panel de balanceo
+// CD (enfriamiento árbol/piedra) vive en state.js
 function witherMs(ck) { const cd = CROP_DEF[ck]; return cd ? cd.grow * 1000 * 0.5 : 120000; }   // marchitado proporcional: mitad del tiempo de cultivo
 // (los enfriamientos ahora salen de ORE_DEF[x].cd y de nodoCd(), doc 4/8)
 
@@ -3056,15 +3038,23 @@ class FarmScene extends Phaser.Scene {
     const colchon = (GF.BOSQUE_COLCHON != null ? GF.BOSQUE_COLCHON : 0.5) * T;
     let semilla = 20250816;                       // azar estable: el bosque es el MISMO cada partida
     const az = () => { semilla = (semilla * 1664525 + 1013904223) % 4294967296; return semilla / 4294967296; };
-    // EL CLARO ES IRREGULAR (16/8, dirección): en vez de un rectángulo, un contorno orgánico.
-    // Se mide con una métrica mezcla de cuadrado y círculo, y se le suma oleaje por ángulo.
-    // El oleaje nunca baja de 1, así que el bosque JAMÁS se mete en el rectángulo jugable.
+    // LA FORMA DEL CLARO (16/8, dirección: "más redonda, menos irregular").
+    // La métrica mezcla cuadrado y círculo: BOSQUE_REDONDEZ manda (0 = rectángulo, 1 = óvalo).
+    // Encima va un oleaje suave por ángulo para que el borde no sea perfecto.
+    // El umbral NO es un número a mano: se calcula a partir de la ESQUINA del área jugable
+    // más el aire y la amplitud del oleaje, así el bosque NUNCA puede taparle una celda al
+    // jugador por mucho que se redondee o se ondule.
     const RX = W / 2 + colchon, RY = H / 2 + colchon, tw = this.textures.get("tree").getSourceImage();
     const anchoT = (tw && tw.width) || T, altoT = (tw && tw.height) || T * 2;
+    const R = GF.BOSQUE_REDONDEZ != null ? GF.BOSQUE_REDONDEZ : 0.62;
+    const met = (nx, ny) => Math.max(Math.abs(nx), Math.abs(ny)) * (1 - R) + Math.hypot(nx, ny) * R;
+    const AMP = [0.085, 0.055, 0.035, 0.02], ONDA = GF.BOSQUE_ONDA != null ? GF.BOSQUE_ONDA : 0.45;
+    const ampTotal = AMP.reduce((a, b) => a + b, 0) * ONDA;
+    const BASE = met((W - W / 2) / RX, (H - H / 2) / RY) + (GF.BOSQUE_AIRE != null ? GF.BOSQUE_AIRE : 0.05) + ampTotal;
     const borde = (nx, ny) => {
       const a = Math.atan2(ny, nx);
-      return 1.11 + (GF.BOSQUE_ONDA != null ? GF.BOSQUE_ONDA : 1) *
-        (0.085 * Math.sin(3 * a + 0.7) + 0.055 * Math.sin(5 * a + 2.1) + 0.035 * Math.sin(8 * a + 4.3) + 0.02 * Math.sin(13 * a));
+      return BASE + ONDA * (AMP[0] * Math.sin(3 * a + 0.7) + AMP[1] * Math.sin(5 * a + 2.1) +
+        AMP[2] * Math.sin(8 * a + 4.3) + AMP[3] * Math.sin(13 * a));
     };
     const lista = [];
     for (let y = -M; y < H + M; y += pasoY)

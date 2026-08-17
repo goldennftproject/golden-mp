@@ -24,8 +24,13 @@ GF.BOSQUE_FILAS = 0.74;     // separación vertical respecto de la horizontal (s
 GF.BOSQUE_JITTER = 8;       // desorden en píxeles, para que no se vea la cuadrícula
 GF.BOSQUE_ESC_MIN = 0.92; GF.BOSQUE_ESC_MAX = 1.26;   // variedad de tamaño
 GF.BOSQUE_COLCHON = 0.5;    // celdas de aire entre el claro y la primera fila de árboles
-GF.BOSQUE_REDONDEZ = 0.62;  // forma del claro: 0 = rectángulo · 1 = óvalo puro
-GF.BOSQUE_ONDA = 0.45;      // cuánto se ondula el borde (0 = liso · 1 = muy irregular)
+// 17/8 (dirección): "la forma cuadrada queda mejor que el resto, esta forma está bien".
+// Se probó redondeada (0.62) y ondulada (0.45) y no ganaba nada: el claro rectangular lee
+// mejor porque acompaña a la grilla de celdas, que también es rectangular. La irregularidad
+// que se ve en el borde ya la da BOSQUE_JITTER (el desorden de cada árbol), y con eso alcanza
+// para que no parezca dibujado con regla.
+GF.BOSQUE_REDONDEZ = 0;     // forma del claro: 0 = rectángulo · 1 = óvalo puro
+GF.BOSQUE_ONDA = 0;         // cuánto se ondula el borde (0 = liso · 1 = muy irregular)
 GF.BOSQUE_AIRE = 0.05;      // aire extra entre la esquina del área jugable y el bosque
 GF.BOSQUE_DEPTH = -999;     // encima del suelo, debajo de todo lo interactuable
 /* INTERRUPTOR DE EMERGENCIA (16/8): si el juego no carga y sospechás del bosque, abrí la

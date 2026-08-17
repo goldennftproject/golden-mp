@@ -3380,3 +3380,23 @@ atlas reconstruido (604 sprites, 790 KB) y `?v=46` para romper caché. Verificad
 Si algo falla mientras está la pantalla de carga, ahora **el error se escribe en la propia pantalla**,
 en un recuadro legible. Y si a los 20 segundos seguimos ahí sin ningún error, el vigía cuenta en qué
 paso quedó y a qué altura está la barra. Alcanza con una foto de la pantalla: se terminó el F12.
+
+### El error real del arranque: un bloque de código pegado en el lugar equivocado
+Con el vigía puesto, el juego lo dijo solo en pantalla: `W is not defined` → `FarmScene is not defined`.
+
+Un edit anterior había pegado las 18 líneas de **la forma del claro del bosque al principio de
+`farm.js`**, fuera de toda función. Ahí `W` (el ancho del mundo) no existe, así que el archivo
+reventaba en la línea 7 y **nunca llegaba a declarar `FarmScene`**. De paso, dentro de
+`dibujarBosque()` había quedado la versión vieja, que llamaba a `met()` sin tenerlo definido: o
+sea que el bloque no solo estaba de más arriba, estaba **faltando abajo**. Movido a su lugar.
+
+Queda un aprendizaje de método: `node --check` no lo agarraba porque **la sintaxis era válida** —
+el error era de ejecución. Ahora la verificación corre cada archivo entero y comprueba que declare
+su escena (`FarmScene`, `BootScene`, `ForestScene`, `PlazaScene`). Eso sí lo habría cazado.
+
+### La forma del bosque queda rectangular
+Dirección: *"la forma cuadrada creo que queda mejor que el resto, esta forma está bien"*.
+`BOSQUE_REDONDEZ` y `BOSQUE_ONDA` a **0**. El claro rectangular acompaña a la grilla de celdas, que
+también es rectangular, y por eso lee mejor que el óvalo. La irregularidad del borde la sigue dando
+`BOSQUE_JITTER` (el desorden de cada árbol), que alcanza para que no parezca dibujado con regla.
+Los parámetros quedan en el código por si algún día se quiere volver a probar: es cambiar un número.
