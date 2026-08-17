@@ -3824,3 +3824,30 @@ Atlas reconstruido (el sprite pasó de 107 a 108 px) y `?v=47`.
 proporción del sprite, integridad del atlas, orden de profundidades y recortes de cámara. El fallo
 estaba en el PNG y se veía **abriendo el PNG**. Cuando algo "se ve cortado", lo primero es mirar el
 arte a tamaño grande; el código es la segunda hipótesis, no la primera.
+
+### La laguna cortada: cuatro hipótesis descartadas y un diagnóstico en pantalla
+Dirección: *"de verdad ves la laguna entera?"*. No. Y peor: **había dicho que sí sin mirarla**,
+que es exactamente el error por el que venía pidiendo disculpas todo el día. Ampliada x4, sigue
+cortada.
+
+Lo medido sobre su captura, que es lo único firme:
+
+- El agua empieza en **x=313 exacto en el 94% de las filas**: una recta perfecta.
+- El agua ocupa **126 px de ancho por 147 de alto**. El sprite es 108x93, o sea **siempre más
+  ancho que alto**. Que salga más alto que ancho solo puede significar que le falta un trozo por
+  el costado, y la cuenta da **exactamente una celda (42 px de mundo)**.
+
+Hipótesis descartadas **con datos**, no por intuición:
+
+1. *La proporción del sprite* — corregida, y no era.
+2. *El arte* — el sprite tenía un corte real de 16% de su alto, se cerró prolongando la curva del
+   contorno... y el corte del juego sigue siendo del 94%. No era (o no era solo eso).
+3. *El atlas* — frames correctos, cero solapes, y el atlas **del servidor** ya sirve `pond` con
+   108 px: el deploy llegó.
+4. *El código* — `pondImg` solo se crea y se reposiciona; no hay `setCrop` ni máscara sobre ella.
+
+Como llevo cuatro teorías erradas mirando imágenes, se acabó teorizar: se añade un diagnóstico
+que se abre con **`?laguna=1`** en la URL y dibuja el recuadro donde el juego cree que está la
+laguna (rojo), sus celdas (azul) y la grilla (amarillo), más su tamaño de textura y de dibujo.
+Con eso se distingue de una vez entre "se dibuja entera y algo la tapa" y "se dibuja ya recortada".
+No se enciende solo, y no necesita consola.

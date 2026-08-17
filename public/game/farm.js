@@ -135,6 +135,33 @@ class FarmScene extends Phaser.Scene {
       const cajaW = pw + 10, cajaH = ph + 10;
       const anchoP = Math.min(cajaW, cajaH * rel), altoP = anchoP / rel;
       this.pondImg = this.add.image(pcx, pcy, "pond").setDisplaySize(anchoP, altoP).setDepth(-999);
+      // ————— DIAGNÓSTICO DE LA LAGUNA (17/8) —————
+      // Se abre con  ?laguna=1  al final de la URL. No se enciende solo nunca.
+      // Existe porque la laguna se ve cortada por la izquierda y llevo cuatro hipótesis
+      // erradas mirando capturas: sprite, proporción, atlas y profundidades, todas descartadas
+      // con datos. Medido sobre la pantalla, el agua sale MÁS ALTA QUE ANCHA (126x147) cuando
+      // el sprite es más ancho que alto: le falta un trozo por la izquierda, y la cuenta da
+      // exactamente una celda. Esto dibuja DÓNDE cree el juego que está la laguna y CUÁNTO
+      // mide de verdad, para distinguir de una vez entre "se dibuja entera y algo la tapa" y
+      // "se dibuja ya recortada".
+      try {
+        if (new URLSearchParams(location.search).get("laguna") === "1") {
+          const src2 = this.textures.get("pond").getSourceImage();
+          const gd = this.add.graphics().setDepth(99998);
+          gd.lineStyle(2, 0xff3b3b, 1).strokeRect(pcx - anchoP / 2, pcy - altoP / 2, anchoP, altoP);   // rojo: el sprite
+          gd.lineStyle(2, 0x3bd0ff, 1).strokeRect(p.col * T, p.row * T, p.cols * T, p.rows * T);        // azul: sus celdas
+          gd.lineStyle(1, 0xffe066, 0.9);                                                              // amarillo: la grilla
+          for (let c = p.col - 2; c <= p.col + p.cols + 2; c++) {
+            gd.beginPath(); gd.moveTo(c * T, (p.row - 2) * T); gd.lineTo(c * T, (p.row + p.rows + 2) * T); gd.strokePath();
+          }
+          this.add.text(pcx - anchoP / 2, pcy - altoP / 2 - 30,
+            "textura " + (src2 ? src2.width + "x" + src2.height : "?") +
+            "  ·  dibujada " + Math.round(this.pondImg.displayWidth) + "x" + Math.round(this.pondImg.displayHeight) +
+            "  ·  rojo=sprite  azul=celdas  amarillo=grilla",
+            { fontFamily: "system-ui", fontSize: "12px", fontStyle: "bold", color: "#fff",
+              backgroundColor: "#000c", padding: { x: 5, y: 3 } }).setDepth(99999);
+        }
+      } catch (e) {}
     } else {   // fallback: laguna dibujada (no movible sin sprite)
       g.fillStyle(0x2f5f8c, 1).fillEllipse(pcx, pcy, pw, ph);
       g.fillStyle(0x66a9dc, 1).fillEllipse(pcx, pcy - 6, pw - 26, ph - 26);
