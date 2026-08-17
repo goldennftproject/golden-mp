@@ -312,34 +312,40 @@ class FarmScene extends Phaser.Scene {
         o.timer = this.add.text(o.cx, o.by - T * 0.85, "", { fontFamily: "system-ui", fontSize: "11px", fontStyle: "bold", color: "#fff", stroke: "#20301a", strokeThickness: 3 }).setOrigin(0.5, 1).setDepth(o.by + 3).setVisible(false);
       }
     });
-    // ——— ISLA SOBRE EL MAR ("detallitos (1)" punto 6): agua alrededor de la granja, orilla y olas ———
-    if (GF.ISLA) {
-      const MAR = (GF.ISLA_MARGEN || 260) + 900;   // el mar tapa todo lo que la cámara pueda mostrar
-      // OJO con la profundidad: este dibujo va DEBAJO del pasto (-1000). Estaba en -1000
-      // igual que los tiles y, al crearse después, los tapaba: el suelo de la granja se
-      // veía como un verde plano y la textura del pasto nunca llegaba a verse (9/8).
-      const g = this.add.graphics().setDepth(-1003);
-      g.fillStyle(GF.BOSQUE ? 0x2f5c28 : 0x2e7fa8, 1).fillRect(-MAR, -MAR, GF.WORLD_W + MAR * 2, GF.WORLD_H + MAR * 2);   // 16/8: con bosque, verde en vez de mar profundo
+    // ——— QUÉ HAY ALREDEDOR DE LA GRANJA: bosque (ahora) o mar (el modo viejo) ———
+    // 17/8: esto estaba todo mezclado dentro de un solo `if (GF.ISLA)`, con el bosque colgando
+    // de que EXISTIERA la textura del mar — si "isla" no cargaba, no se dibujaba el bosque.
+    // Y la espuma de las olas se creaba igual con el bosque puesto: era el borde blanco
+    // redondeado que se veía en las esquinas, la orilla del mar sobreviviendo al cambio.
+    // Ahora son dos caminos separados que no se pisan.
+    {
+      const MARGEN = (GF.BOSQUE ? (GF.BOSQUE_MARGEN || 300) : (GF.ISLA_MARGEN || 260)) + 900;
+      // OJO con la profundidad: va DEBAJO del pasto (-1000). Estaba en -1000 igual que los
+      // tiles y, al crearse después, los tapaba: el suelo se veía verde plano (9/8).
+      this.add.graphics().setDepth(-1003)
+        .fillStyle(GF.BOSQUE ? 0x2f5c28 : 0x2e7fa8, 1)
+        .fillRect(-MARGEN, -MARGEN, GF.WORLD_W + MARGEN * 2, GF.WORLD_H + MARGEN * 2);
+    }
+    if (GF.BOSQUE) {
+      // BLINDADO: si el bosque falla por lo que sea, el juego arranca igual. Un error acá
+      // antes se llevaba puesta la escena entera y la carga se quedaba colgada.
+      try { this.dibujarBosque(); } catch (e) { console.error("[bosque] no se pudo dibujar:", e); }
+    } else if (GF.ISLA) {
       // COSTA (9/8): la orilla es una imagen con las transiciones terminadas (pasto → arena
       // mojada → espuma → bajío → mar), con dithering y el contorno irregular. Antes eran tres
-      // rectángulos redondeados de color plano, uno arriba del otro, y el borde quedaba duro.
+      // rectángulos redondeados de color plano y el borde quedaba duro.
       // La genera tools/build-isla.py; su origen es (-GF.ISLA_ORIGEN, -GF.ISLA_ORIGEN).
       if (this.textures.exists("isla")) {
         const o = GF.ISLA_ORIGEN || 112;
-        // 16/8: con BOSQUE, el claro está en tierra firme — nada de arena ni mar asomando
-        if (!GF.BOSQUE) this.add.image(-o, -o, "isla").setOrigin(0, 0).setDepth(-1002);
-        // 16/8: BLINDADO — si el bosque falla por lo que sea, el juego arranca igual.
-        // Un error acá antes se llevaba puesta la escena entera y quedaba la carga colgada.
-        if (GF.BOSQUE) { try { this.dibujarBosque(); } catch (e) { console.error("[bosque] no se pudo dibujar:", e); } }
+        this.add.image(-o, -o, "isla").setOrigin(0, 0).setDepth(-1002);
       } else {   // respaldo: si el PNG no llegó, los rectángulos de siempre
-        const r = this.add.graphics().setDepth(-1002);
-        if (!GF.BOSQUE) {   // 16/8: con bosque no hay mar ni arena — solo césped
-          r.fillStyle(0x3fa3cc, 1).fillRoundedRect(-70, -70, GF.WORLD_W + 140, GF.WORLD_H + 140, 90);
-          r.fillStyle(0xe8d9a6, 1).fillRoundedRect(-34, -34, GF.WORLD_W + 68, GF.WORLD_H + 68, 60);
-        }
-        r.fillStyle(0x75975a, 1).fillRoundedRect(-8, -8, GF.WORLD_W + 16, GF.WORLD_H + 16, 34);
+        this.add.graphics().setDepth(-1002)
+          .fillStyle(0x3fa3cc, 1).fillRoundedRect(-70, -70, GF.WORLD_W + 140, GF.WORLD_H + 140, 90)
+          .fillStyle(0xe8d9a6, 1).fillRoundedRect(-34, -34, GF.WORLD_W + 68, GF.WORLD_H + 68, 60)
+          .fillStyle(0x75975a, 1).fillRoundedRect(-8, -8, GF.WORLD_W + 16, GF.WORLD_H + 16, 34);
       }
-      // espuma: líneas claras que van y vienen sobre la orilla
+      // espuma: líneas claras que van y vienen sobre la orilla. SOLO con mar: con bosque
+      // quedaban dibujadas encima del césped como un contorno blanco fantasma.
       this.olas = this.add.graphics().setDepth(-999);
       this.olasT = 0;
     }
@@ -2115,7 +2121,7 @@ class FarmScene extends Phaser.Scene {
   // Es lo que más "respira" por lo poco que cuesta: son elipses blancas y una sombra oscura debajo.
   crearNubes() {
     this.nubes = [];
-    const W = GF.WORLD_W, H = GF.WORLD_H, m = GF.ISLA ? (GF.ISLA_MARGEN || 260) : 0;
+    const W = GF.WORLD_W, H = GF.WORLD_H, m = GF.BOSQUE ? (GF.BOSQUE_MARGEN || 300) : (GF.ISLA ? (GF.ISLA_MARGEN || 260) : 0);   // 17/8: las nubes cruzan TODO lo visible, también el bosque
     for (let i = 0; i < (FX_NUBES || 0); i++) {
       const esc = 0.7 + Math.random() * 0.9;
       const g = this.add.graphics().setDepth(99000).setAlpha(typeof FX_NUBES_ALFA === "number" ? FX_NUBES_ALFA : 0.22);
@@ -2131,7 +2137,7 @@ class FarmScene extends Phaser.Scene {
   }
   tickNubes(dt) {
     if (!this.nubes || !this.nubes.length) return;
-    const W = GF.WORLD_W, H = GF.WORLD_H, m = GF.ISLA ? (GF.ISLA_MARGEN || 260) : 0;
+    const W = GF.WORLD_W, H = GF.WORLD_H, m = GF.BOSQUE ? (GF.BOSQUE_MARGEN || 300) : (GF.ISLA ? (GF.ISLA_MARGEN || 260) : 0);   // 17/8: las nubes cruzan TODO lo visible, también el bosque
     for (const n of this.nubes) {
       n.x += n.vel * dt;
       if (n.x > W + m + 160) { n.x = -m - 160; n.y = -m + 40 + Math.random() * (H + m - 80); }

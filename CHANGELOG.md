@@ -3435,3 +3435,19 @@ Cada vez que se movía un edificio había que deployar y entrar a mirar. Ahora e
 **mismas** posiciones que usa el juego (ejecuta `config.js` de verdad con node, no las reescribe) y
 arma un PNG con los sprites reales, el césped, la cerca y el anillo de bosque. Fue lo que dejó al
 descubierto lo del `AIRE`: en la primera pasada se veía el bosque pisando la cerca igual.
+
+### El borde blanco era la orilla del mar
+Dirección, sobre una captura: *"ese borde blanco quedó la orilla de mar"*. Exacto. `drawOlas()`
+pintaba dos rectángulos redondeados blanquecinos —la espuma de la costa— y su objeto gráfico se
+creaba dentro de un `if (GF.ISLA)` que seguía en `true`. O sea: cambiamos el mar por bosque, pero
+**la espuma de la orilla sobrevivió al cambio** y quedó flotando sobre el césped como un contorno
+fantasma en las esquinas.
+
+Al abrir ese bloque apareció algo peor: **el bosque se dibujaba dentro de
+`if (this.textures.exists("isla"))`**. El anillo entero colgaba de que cargara la textura del mar,
+que ya no se usa para nada. Si ese PNG faltaba, no había bosque.
+
+Los dos caminos quedaron separados: `if (GF.BOSQUE) → bosque` / `else if (GF.ISLA) → mar, costa y
+olas`. `GF.ISLA` se deja en `true` a propósito: es el respaldo del interruptor `?sinbosque=1`, que
+sin esto abriría el juego sobre un vacío liso. De paso, las nubes ahora cruzan el margen del bosque
+(420) y no el de la isla (260), que las cortaba a media pantalla.
