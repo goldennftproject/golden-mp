@@ -16,7 +16,8 @@
 
 // 16/8: niveles actualizados — los cultivos se desbloquean por NIVEL DE GRANJA (auditoría C)
 const CROPS = [
-  ["papa", 9, 1, 3, 9, 1], ["zanahoria", 15, 3, 8, 25, 2], ["cebolla", 30, 6, 16, 50, 3],
+  ["papa", 3, 1, 2, 5, 1], ["ciruela", 6, 1, 3, 10, 1], ["cereza", 9, 1, 4, 15, 2], ["remolacha", 12, 2, 6, 20, 3],   // 16/8 v2: escalera derivada del ancla
+  ["zanahoria", 15, 3, 8, 25, 2], ["cebolla", 30, 6, 16, 50, 3],
   ["calabacin", 45, 12, 32, 90, 4], ["repollo", 90, 20, 50, 150, 5], ["calabaza", 180, 40, 100, 270, 6],
   ["brocoli", 360, 90, 210, 480, 8], ["girasol", 600, 180, 420, 720, 10], ["trigo", 960, 360, 840, 1080, 12],
   ["maiz", 1440, 720, 1680, 1440, 15]];   // [k, growMin, seed, price, xp, nivelGranja]

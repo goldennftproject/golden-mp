@@ -2125,6 +2125,73 @@ Ahora la cadena de guía no tiene puntas sueltas:
   lugar. Al recomprar semillas, `buySeed` la vuelve a poner en el primer hueco libre.
   Herramientas y picos conservan su lógica de siempre.
 
+## Día 19 (cont.) — ESCALERA DE ENTRADA: 3-6-9-12-15 min (16/8 v2, charla con el diseñador)
+- PEDIDO DEL DISEÑADOR: cultivos más cortos al principio "para tener interacción siempre",
+  con nombres suyos (plum, cherry, beetroot) y uno de 1 minuto.
+- EL PISO SON 3 MINUTOS, y es matemático, no una opinión: el ancla pide 20 plata/hora y con
+  precios ENTEROS la ganancia mínima es 1, así que 1 ÷ 0,05 h = 20 → 3 minutos. Un cultivo
+  de 1 minuto con esa misma ganancia rendiría 60 plata/hora, el TRIPLE que todo el resto:
+  sería el único que alguien plantaría, justo lo contrario del juego chill que buscan los
+  timers largos.
+- HALLAZGO: la tabla del diseñador YA seguía esta regla sin estar escrita — la zanahoria son
+  15 min, ganancia 5 y 25 XP, o sea 20 plata/h y 100 XP/h exactos. Extendiéndola hacia abajo,
+  la escalera sale sola en progresión aritmética:
+  · Papa 3 min · semilla 1 · venta 2 · 5 XP · nivel 1  (sigue siendo el cultivo del tutorial)
+  · Ciruela 6 min · 1 · 3 · 10 XP · nivel 1   (plum)
+  · Cereza 9 min · 1 · 4 · 15 XP · nivel 2    (cherry)
+  · Remolacha 12 min · 2 · 6 · 20 XP · nivel 3   (beetroot)
+  · Zanahoria 15 min · 3 · 8 · 25 XP  (sin tocar)
+  Ganancia 1-2-3-4-5 · XP 5-10-15-20-25 · TODOS a 20 plata/h y 100 XP/h. Lo que crece no es
+  el ritmo, es el tamaño de la transacción. La papa deja de ser el único cultivo por debajo
+  del ancla (venía de 13,3/h) y la primera cosecha del tutorial baja a 2,7 minutos.
+- Los niveles se insertan sin cascada: nivel 1 papa + ciruela · nivel 2 cereza + zanahoria ·
+  nivel 3 remolacha + cebolla. El resto de la tabla queda intacto.
+- ARTE — 12 PNG nuevos, y una LECCIÓN DE PIPELINE (el director cazó el error): la primera
+  tanda se generó en un grupo NUEVO, copiando el estilo desde el PNG con `style_images`.
+  Parecido pero no en familia. **El grupo correcto del juego es `f747c514`** (el del granero
+  "cozy chibi cartoon farm barn"), y ahí cada cultivo tiene CUATRO estados con esta
+  nomenclatura: `X planta` · `X media` · `X cosecha` · `Bolsa X`. Objetos de referencia
+  para derivar en el futuro:
+    · planta madura → `43074a7f` (la zanahoria: montículo bajo, encuadre correcto)
+    · brote/media   → `7eb206ba` (genérico, sirve para CUALQUIER cultivo — no hace falta
+                       generar uno por cultivo, se reusa y no gasta créditos)
+    · bolsa         → `da254a05` (la del brócoli; se le pide cambiar SOLO el emblema)
+    · cosecha       → cualquier ícono suelto del grupo
+  Regla aprendida: derivar SIEMPRE con `create_object_state` desde un objeto del grupo, con
+  un origen que ya tenga la FORMA correcta (pedirle plantas a un girasol devolvía girasoles).
+- El rábano de la versión anterior y los PNG del grupo equivocado quedaron retirados.
+- VERIFICADO: la cadena del tutorial CIERRA (18,1 h, sin trabas), el sim de 24 h no se mueve
+  (+937 de plata, granja 9) y la auditoría da los 13 cultivos con su plata/hora. La prueba
+  funcional cazó un bug antes de deployar: los tres nuevos no estaban en SELLABLE y no se
+  podían vender.
+
+## Día 19 (cont.) — LA PAPA BAJA A 4 min 30 y nace el RÁBANO (16/8, idea de dirección)
+- IDEA DEL DIRECTOR (mejor que la mía): en vez de agregar un cultivo nuevo DEBAJO de la papa,
+  correr la papa al escalón de entrada y que el rábano herede sus 9 minutos. Así el problema
+  se arregla donde vive — la espera muerta del TUTORIAL — sin tocar una línea de la guía, y
+  la papa conserva todo lo que tiene cosido encima (Papa Asada, semilla fiada, kit de
+  emergencia, los 20 pasos).
+- PAPA: 9 min → **4 min 30** · venta 3 → **2** · XP 9 → **5**. El precio baja a propósito: a
+  4,5 min con venta 3 rendía 27 plata/hora y se volvía el mejor cultivo del juego; con 2
+  mantiene sus 13,3/h de siempre. Mismo escalón de aprendiz, la mitad de espera.
+- RÁBANO (nuevo, nivel 2): 9 min · semilla 1 · venta 4 · 12 XP → 20 plata/hora, exactamente
+  el ancla. Es la primera graduación al terminar la guía. Escalera nueva: 4,5 → 9 → 15 → 30
+  → 45 → 90 min…
+- SIMULADOR NUEVO `tools/sim-tutorial.js`: en vez de copiar las tablas a mano (los sim-tuto
+  viejos se desincronizaban a los dos días), CARGA state.js y usa los valores reales. Dice si
+  la cadena se traba, cuánto tarda y con qué márgenes. Comparación con la papa vieja
+  incluida (`PAPA_MIN=9 PAPA_PRECIO=3 node tools/sim-tutorial.js`).
+- RESULTADO: **la cadena CIERRA**. Primera cosecha 8,7 min → **4,2 min**. Duración total del
+  tutorial IDÉNTICA (18,2 h) porque la manda el reloj de árboles y rocas, no el cultivo:
+  o sea que el cambio mejora la primera impresión sin alterar el ritmo general.
+- EFECTO SECUNDARIO MEDIDO: el jugador termina el tutorial con 40 de plata en vez de 84. La
+  razón es estructural y vale anotarla: **con un cupo POR SEMILLA, lo que importa es la
+  ganancia por semilla, no por hora** — la papa pasó de 2 a 1 de ganancia por semilla. No
+  traba nada (sobra plata para el hacha) y hasta empuja hacia los cultivos largos, que es lo
+  que quiere el diseño chill; pero si se quisiera compensar, la perilla es SEED_POR_PARCELA.
+- El sim de 24 h no se mueve (937 de plata, granja 9): el jugador de medio juego salta a
+  cultivos largos enseguida, así que el cambio solo toca los primeros minutos.
+
 ## Día 19 (cont.) — RESPUESTA AL CLIC: el golpe se corta con el clic siguiente (16/8, dirección)
 - SÍNTOMA (director, probando el deploy): "cuando le doy a un árbol pasa un tiempo entre el
   intermedio y el tronco cortado, me frena para talar rápido" — y lo mismo al plantar.

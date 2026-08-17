@@ -26,9 +26,9 @@ const G = {
   armCd: {}, mkPend: [], testeoDado: false,   // enfriamiento de crafteo por arma · entregas pendientes · (testeoDado quedó del regalo viejo, ya no se usa)   // equipo (armas se equipan en el panel de Equipo — detalles jueves)
   res: { madera: 0, piedra: 0, bronce: 0, hierro: 0, oro: 0, diamante: 0, netherita: 0, carne: 0, flecha: 0, lombriz: 0,
     tablon: 0, barra_piedra: 0, barra_bronce: 0, barra_hierro: 0, barra_oro: 0,
-    papa: 0, zanahoria: 0, cebolla: 0, calabacin: 0, repollo: 0, calabaza: 0, brocoli: 0, girasol: 0, trigo: 0, maiz: 0,
+    papa: 0, ciruela: 0, cereza: 0, remolacha: 0, zanahoria: 0, cebolla: 0, calabacin: 0, repollo: 0, calabaza: 0, brocoli: 0, girasol: 0, trigo: 0, maiz: 0,
     fibra: 0, pelaje: 0, cuero: 0, colmillo: 0, esencia_runica: 0, esencia_oscura: 0 },
-  seeds: { papa: 0, zanahoria: 0, cebolla: 0, calabacin: 0, repollo: 0, calabaza: 0, brocoli: 0, girasol: 0, trigo: 0, maiz: 0 },  // 14/8: la bolsa nace VACÍA — las 3 semillas se compran con la plata inicial (1er objetivo)
+  seeds: { papa: 0, ciruela: 0, cereza: 0, remolacha: 0, zanahoria: 0, cebolla: 0, calabacin: 0, repollo: 0, calabaza: 0, brocoli: 0, girasol: 0, trigo: 0, maiz: 0 },  // 14/8: la bolsa nace VACÍA — las 3 semillas se compran con la plata inicial (1er objetivo)
   selSeed: "papa",   // semilla elegida para plantar
   // 15/8 v2 (dirección): se nace con las MANOS VACÍAS — el KIT DE BIENVENIDA espera en
   // el BAÚL junto al granero (35 hachas + 20 picos + 15 cañas, medido por sim-tuto-v2:
@@ -127,10 +127,10 @@ function buffTick() {   // 1 vez por segundo desde el HUD: regeneración y vida 
 
 // --- recursos ---
 const RES_EMOJI = { madera:"", piedra:"", bronce:"", oro:"", diamante:"", netherita:"", carne:"", flecha:"", lombriz:"",
-  papa:"", zanahoria:"", cebolla:"", calabacin:"", repollo:"", calabaza:"", brocoli:"" };
+  papa:"", ciruela:"", cereza:"", remolacha:"", zanahoria:"", cebolla:"", calabacin:"", repollo:"", calabaza:"", brocoli:"" };
 const RES_LABEL = { madera:"Madera", piedra:"Piedra", bronce:"Bronce", hierro:"Hierro", oro:"Oro", diamante:"Diamante", netherita:"Netherita", carne:"Carne", flecha:"Flecha", lombriz:"Lombriz",
   tablon:"Tablón de madera", barra_piedra:"Bloques de piedra", barra_bronce:"Barra de bronce", barra_hierro:"Barra de hierro", barra_oro:"Barra de oro",
-  papa:"Papa", zanahoria:"Zanahoria", cebolla:"Cebolla", calabacin:"Calabacín", repollo:"Repollo", calabaza:"Calabaza", brocoli:"Brócoli",
+  papa:"Papa", ciruela:"Ciruela", cereza:"Cereza", remolacha:"Remolacha", zanahoria:"Zanahoria", cebolla:"Cebolla", calabacin:"Calabacín", repollo:"Repollo", calabaza:"Calabaza", brocoli:"Brócoli",
   girasol:"Girasol", trigo:"Trigo", maiz:"Maíz",
   fibra:"Fibra", pelaje:"Pelaje", cuero:"Cuero", colmillo:"Colmillo", esencia_runica:"Esencia rúnica" };
 // íconos cozy de recursos (los cultivos usan crop_<key>)
@@ -143,7 +143,7 @@ const RES_SPRITE = { madera:"res_madera", piedra:"res_piedra", bronce:"res_bronc
 function resSprite(k) { return CROP_DEF[k] ? "crop_" + k : (RES_SPRITE[k] || null); }
 
 // --- cultivos (semillas compradas en la Tienda; se desbloquean por nivel de Cultivo) ---
-const CROP_ORDER = ["papa","zanahoria","cebolla","calabacin","repollo","calabaza","brocoli","girasol","trigo","maiz"];
+const CROP_ORDER = ["papa","ciruela","cereza","remolacha","zanahoria","cebolla","calabacin","repollo","calabaza","brocoli","girasol","trigo","maiz"];
 // TABLA DE PRECIOS del diseñador (31/7): Ganancia = Tiempo × Riesgo × Nivel. Papa base: compra 1 / venta 3 / 1h.
 // growH = horas reales de la tabla. En TESTEO corre comprimido: 1h → 1min (GROW_SCALE). Para pasar a real: GROW_SCALE = 1.
 var GROW_SCALE = 1;   // 2/8: FUERA la compresión de testeo — el tiempo que se pone en balance.html es el tiempo real del juego
@@ -154,7 +154,20 @@ const CROP_DEF = {
   // que los pruebe en vivo y vea los detalles — papa 9 min … maíz 24 h. Los PRECIOS y la
   // XP siguen siendo los nuestros (semilla papa 1 / venta 3): con los precios v3 (semilla
   // 20) el arranque con 3 de plata no funciona. El cupo diario sigue de ancla.
-  papa:      { label:"Papa",      emoji:"🥔", lvl:1,  seedCost:1,   growH:0.15, yield:1, price:3,    xp:9 },    // 9 min (tabla v3 del diseñador, 15/8)
+  /* 16/8 v2 — ESCALERA DE ENTRADA DERIVADA DEL ANCLA (pedido del diseñador: cultivos más
+     cortos y más interacción al principio; nombres suyos: plum, cherry, beetroot).
+     El ancla dice 20 plata/hora por parcela. Con precios ENTEROS, la ganancia mínima es 1,
+     así que el cultivo MÁS RÁPIDO posible sin romper el ancla es de 3 minutos (1 ÷ 0,05 h
+     = 20). Nada por debajo de 3 min es balanceable: a 1 minuto ese mismo 1 de ganancia son
+     60 plata/hora, el triple que todo el resto.
+     Extendiendo hacia abajo el patrón que la tabla del diseñador YA tenía (la zanahoria son
+     15 min, ganancia 5 y 25 XP = 20 plata/h y 100 XP/h), la escalera sale sola en progresión
+     aritmética: 3-6-9-12-15 min · ganancia 1-2-3-4-5 · XP 5-10-15-20-25. Todos a 20 plata/h
+     y 100 XP/h: lo que crece no es el ritmo, es el tamaño de la transacción. */
+  papa:      { label:"Papa",      emoji:"🥔", lvl:1,  seedCost:1,   growH:0.05, yield:1, price:2,    xp:5 },    // 3 min — el piso del ancla; sigue siendo el cultivo del tutorial
+  ciruela:   { label:"Ciruela",   emoji:"🫐", lvl:1,  seedCost:1,   growH:0.10, yield:1, price:3,    xp:10 },   // 6 min  (plum)
+  cereza:    { label:"Cereza",    emoji:"🍒", lvl:2,  seedCost:1,   growH:0.15, yield:1, price:4,    xp:15 },   // 9 min  (cherry)
+  remolacha: { label:"Remolacha", emoji:"🟣", lvl:3,  seedCost:2,   growH:0.20, yield:1, price:6,    xp:20 },   // 12 min (beetroot)
   zanahoria: { label:"Zanahoria", emoji:"🥕", lvl:2,  seedCost:3,   growH:0.25, yield:1, price:8,    xp:25 },  // 15 min (v3 diseñador)
   cebolla:   { label:"Cebolla",   emoji:"🧅", lvl:3,  seedCost:6,   growH:0.5, yield:1, price:16,   xp:50 },  // 30 min (v3 diseñador)
   calabacin: { label:"Calabacín", emoji:"🥒", lvl:4,  seedCost:12,  growH:0.75, yield:1, price:32,   xp:90 },   // 45 min (v3 diseñador)
@@ -3206,7 +3219,7 @@ const PRICE = { madera:36, piedra:46, bronce:210, hierro:300, oro:470, diamante:
 //      Antes el mercado usaba una copia vieja acá y los cambios del panel no se veían (bug reportado por el diseñador).
 function priceOf(res) { return CROP_DEF[res] ? CROP_DEF[res].price : (PRICE[res] || 0); }
 // detalles viernes (1): los minerales, madera y flechas NO se venden — solo cultivos y lo farmeado en la Zona Negra (carne)
-const SELLABLE = ["papa","zanahoria","cebolla","calabacin","repollo","calabaza","brocoli","girasol","trigo","maiz"];   // viernes (2): la carne no se vende
+const SELLABLE = ["papa","ciruela","cereza","remolacha","zanahoria","cebolla","calabacin","repollo","calabaza","brocoli","girasol","trigo","maiz"];   // 16/8: los tres cultivos nuevos también se venden   // viernes (2): la carne no se vende
 let marketCur = "plata";
 function marketUnit(res) { return marketCur === "plata" ? priceOf(res) : priceOf(res)/10; }
 function sellItem(res) {
