@@ -2135,6 +2135,17 @@ Ahora la cadena de guía no tiene puntas sueltas:
   reloj de la animación. Vale para talar, picar, plantar y cosechar (la pesca no se corta:
   su cast largo es a propósito). En talar/picar solo se corta DESPUÉS de que pegó el hachazo,
   para no comerse el destello.
+- v3 — INSTANTÁNEO DE VERDAD (dirección: "la interacción y el cambio de sprites debe ser
+  instantáneo en todo recurso, no debe haber delays"):
+  · `ACT_DUR` de talar, picar, plantar, cosechar y regar pasa a **0** (la pesca conserva su cast).
+  · BUG ENCONTRADO al hacerlo: `ACT_DUR[kind] || 1.2` convertía un 0 en **1,2 segundos** — el
+    respaldo se comía justo el valor que queríamos. Ahora solo entra si la acción no existe.
+  · El SPRITE INTERMEDIO (tajo del árbol, roca a medio romper) se aplica en el frame del clic,
+    dentro de `startAction`, en vez de esperar al `update` siguiente.
+  · Con duración 0 la acción se cierra en el mismo frame (`finishAction` desde `startAction`),
+    sin el frame muerto de candado que quedaba.
+  · Talar/picar/plantar/cosechar SALEN del panel de balanceo: no son una palanca de balance
+    sino la sensación del juego, y un valor viejo en la nube los frenaba en cada arranque.
 - v2 (mismo día, el director: "en los cultivos todavía se siente"): el corte ahora vale para
   CUALQUIER objetivo rápido, no solo el que estabas golpeando. Sembrar y cosechar se hace
   saltando de parcela en parcela — tocabas la de al lado y el clic quedaba esperando a que

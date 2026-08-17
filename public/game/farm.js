@@ -1143,7 +1143,9 @@ class FarmScene extends Phaser.Scene {
     }
     this.facing = (o.cx < this.hero.x) ? "west" : "east";
     // pescar lleva 15–20s ININTERRUMPIDOS (detalles jueves); moverse cancela la pesca
-    let dur = kind === "fish" ? 15 + Math.random() * 5 : (ACT_DUR[kind] || 1.2);
+    // OJO (16/8): con `|| 1.2` un ACT_DUR de 0 se convertía en 1,2 s — justo lo contrario de
+    // lo pedido. El respaldo solo debe entrar si la acción NO está en la tabla.
+    let dur = kind === "fish" ? 15 + Math.random() * 5 : (ACT_DUR[kind] != null ? ACT_DUR[kind] : 1.2);
     if (kind === "plant" || kind === "harvest") dur *= farmSpeedMult();   // buff "+% vel. de farmeo" de la comida
     this.action = { kind, o, t: 0, dur };
     if (kind === "plant") this.action.seed = G.selSeed;   // queda fijada la semilla ya validada
@@ -1155,8 +1157,23 @@ class FarmScene extends Phaser.Scene {
       if (kind === "chop" || kind === "mine") { this.destelloFx(o); this.golpeFx(o, kind); this.action.golpeYa = true; }
       else if (kind === "harvest") { this.destelloFx(o); this.puffFx(o.cx, o.by + 2, 0xc0dd97, 5); }
       else if (kind === "plant") { this.puffFx(o.cx, o.by + 2, 0xb4b2a9, 4); }
+      // 16/8 (dirección): el SPRITE INTERMEDIO también cambia acá, en el frame del clic.
+      // Antes esperaba al update siguiente y ese salto se veía como un tironcito.
+      if (kind === "chop" && o.type === "tree") {
+        this.action.cutDone = true;
+        const g = (o.golpes || 0) + 1;
+        const tex = g === 1 ? "tree_cut1" : (g < GOLPES_TALAR ? "tree_cut2" : null);
+        if (tex && this.textures.exists(tex)) this.setObjTex(o, tex, o.rw || o.w);
+      } else if (kind === "mine" && (o.type === "rock" || o.type === "ore")) {
+        this.action.halfDone = true;
+        if ((o.golpes || 0) + 1 >= GOLPES_MINAR - 1 && this.textures.exists(o.baseKey + "_half")) this.setObjTex(o, o.baseKey + "_half", o.rw || o.w);
+      }
     }
     if (kind === "fish") this.castBobber(o.bx != null ? o.bx : o.cx, o.by2 != null ? o.by2 : (GF.POND.row + GF.POND.rows / 2) * GF.TILE);
+    // 16/8 (dirección): duración 0 = se resuelve YA, en el mismo frame del clic. Si se dejaba
+    // que lo cerrara el update siguiente, quedaba un frame de candado (~16 ms) que en clics
+    // encadenados se notaba. Con esto, un clic es un golpe completo, sin ventana muerta.
+    if (dur <= 0 && this.action) this.finishAction();
   }
 
   // lanza la caña: el corcho vuela desde el granjero hasta el agua y flota ahí mientras dura la pesca

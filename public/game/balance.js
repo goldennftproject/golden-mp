@@ -109,12 +109,14 @@ var BAL = (function () {
     add("Ambiente — viento", "viento.seg", "Cuánto tarda una oscilación completa", "", () => VIENTO_SEG, v => { VIENTO_SEG = v; }, 0.1, "tiempo");
     add("Ambiente — viento", "viento.rafagaCada", "Cada cuánto pasa una ráfaga", "", () => VIENTO_RAFAGA_CADA, v => { VIENTO_RAFAGA_CADA = v; }, 1, "tiempo");
     add("Ambiente — viento", "viento.rafagaMult", "Cuánto más se inclinan durante la ráfaga", "veces", () => VIENTO_RAFAGA_MULT, v => { VIENTO_RAFAGA_MULT = v; }, 0.1);
-    // RESPUESTA AL CLIC: cuánto tarda cada acción y cuándo "pega" la herramienta
-    Object.keys(ACT_DUR).forEach(k => {
-      const nom = { chop: "Talar", mine: "Picar", plant: "Plantar", harvest: "Cosechar", water: "Regar", fish: "Pescar" }[k] || k;
-      add("Respuesta al clic", "act." + k, nom + " · cuánto dura la acción (candado entre golpes)", "", () => ACT_DUR[k], v => { ACT_DUR[k] = v; }, 0.05, "tiempo");
+    // RESPUESTA AL CLIC. 16/8 (dirección): talar, picar, plantar y cosechar son INSTANTÁNEOS
+    // y ya NO se editan desde acá. No son una palanca de balance sino la sensación del juego,
+    // y un valor viejo guardado en la nube reintroducía el freno en cada arranque (nos costó
+    // días). Solo queda la pesca, cuyo cast largo sí es una decisión de diseño.
+    ["fish"].forEach(k => {
+      const nom = { fish: "Pescar" }[k] || k;
+      add("Respuesta al clic", "act." + k, nom + " · cuánto dura la acción", "", () => ACT_DUR[k], v => { ACT_DUR[k] = v; }, 0.05, "tiempo");
     });
-    add("Respuesta al clic", "actImpacto", "Cuándo pega la herramienta (0 = al instante del clic · 1 = al final)", "0 a 1", () => ACT_IMPACTO, v => { ACT_IMPACTO = v; }, 0.05);
     add("Respuesta al clic", "clicBuffer", "Ventana para guardar el clic que llega durante el candado (0 = se pierde)", "milisegundos", () => CLIC_BUFFER_MS, v => { CLIC_BUFFER_MS = v; }, 20);
     add("Respuesta al clic", "destelloMs", "Cuánto dura el destello blanco del nodo al golpearlo (Sunflower Land: ~100 ms)", "milisegundos", () => FX_DESTELLO_MS, v => { FX_DESTELLO_MS = v; }, 10);
     add("Respuesta al clic", "barraGolpes", "Barrita de progreso bajo el nodo mientras lo golpeás", "1 o 0", () => FX_BARRA_GOLPES, v => { FX_BARRA_GOLPES = v ? 1 : 0; });
