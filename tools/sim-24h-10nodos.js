@@ -16,11 +16,12 @@
 
 // 16/8: niveles actualizados — los cultivos se desbloquean por NIVEL DE GRANJA (auditoría C)
 const CROPS = [
-  ["papa", 3, 1, 2, 5, 1], ["ciruela", 6, 1, 3, 10, 1], ["cereza", 9, 1, 4, 15, 2], ["remolacha", 12, 2, 6, 20, 3],   // 16/8 v2: escalera derivada del ancla
-  ["zanahoria", 15, 3, 8, 25, 2], ["cebolla", 30, 6, 16, 50, 3],
-  ["calabacin", 45, 12, 32, 90, 4], ["repollo", 90, 20, 50, 150, 5], ["calabaza", 180, 40, 100, 270, 6],
-  ["brocoli", 360, 90, 210, 480, 8], ["girasol", 600, 180, 420, 720, 10], ["trigo", 960, 360, 840, 1080, 12],
-  ["maiz", 1440, 720, 1680, 1440, 15]];   // [k, growMin, seed, price, xp, nivelGranja]
+  // 16/8 v3: UN CULTIVO POR NIVEL (1-9 seguidos, los largos de a dos niveles)
+  ["papa", 3, 1, 2, 5, 1], ["ciruela", 6, 2, 4, 10, 2], ["cereza", 9, 2, 5, 15, 3], ["remolacha", 12, 3, 7, 20, 4],
+  ["zanahoria", 15, 3, 8, 25, 5], ["cebolla", 30, 6, 16, 50, 6],
+  ["calabacin", 45, 10, 25, 75, 7], ["repollo", 90, 20, 50, 150, 8], ["calabaza", 180, 40, 100, 270, 9],
+  ["brocoli", 360, 90, 210, 480, 11], ["girasol", 600, 180, 420, 720, 13], ["trigo", 960, 360, 840, 1080, 15],
+  ["maiz", 1440, 720, 1680, 1440, 18]];   // [k, growMin, seed, price, xp, nivelGranja]
 const FARM_XP = [0, 0, 25, 90, 225, 550, 1250, 2750, 5500, 9000, 14000];   // nivel de granja 1-10
 const PARCELAS = { 1: 3, 2: 3, 4: 4, 6: 5, 7: 6 };
 const skillNeed = l => Math.round(100 * Math.pow(l, 2.7));
@@ -39,7 +40,7 @@ let plots = [];   // {done, xp, price}
 const hitos = [];
 const nivelGranja = () => { let n = 1; while (FARM_XP[n + 1] != null && xpFarm >= FARM_XP[n + 1]) n++; return Math.min(10, n); };
 const parcelas = () => { let p = 3; const n = nivel; for (const k in PARCELAS) if (n >= +k) p = PARCELAS[k]; return p; };
-const cupo = () => process.env.SIN_CUPO ? Infinity : 15 * parcelas();   // 16/8: cupo por parcela (auditoría A)
+const cupo = () => process.env.SIN_CUPO ? Infinity : (+process.env.SPP || 15) * parcelas();   // 16/8: cupo por parcela (auditoría A)
 const mejorCultivo = () => {   // 16/8: desbloqueo por NIVEL DE GRANJA (auditoría C)
   const cands = CROPS.filter(c => nivel >= c[5] && c[1] <= 180);
   return cands.length ? cands[cands.length - 1] : CROPS[0];

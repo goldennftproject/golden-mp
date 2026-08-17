@@ -1367,7 +1367,7 @@ function refreshDeco() {
   const tope = (G.plotsOwned || 2) >= PLOT_MAX;   // 10/8: el diseñador subió el tope de 12 a 60
   h += '<div class="secc">Parcelas</div>';
   h += '<div class="forge-row"><div class="finfo"><div class="fnm">Parcela nueva <span class="tag">' + (G.plotsOwned || 2) + '/' + PLOT_MAX + '</span></div>' +
-    '<div class="fds">' + (tope ? "Ya tenés las " + PLOT_MAX + "." : "Elegís con qué pagarla. El precio sube con cada una." + ((G.plotsOwned || 2) >= 12 ? " Las nuevas van a tu zona de edición: las ponés vos donde quieras." : "")) + '</div></div>' +
+    '<div class="fds">' + (tope ? "Ya tenés las " + PLOT_MAX + "." : "ADELANTA una parcela de las que igual te van a llegar al baúl al subir de nivel. El precio sube con cada una." + ((G.plotsOwned || 2) >= 12 ? " Las nuevas van a tu zona de edición: las ponés vos donde quieras." : "")) + '</div></div>' +
     '<div class="fbtns">' +
       (tope ? '<button class="ghost sm" disabled>Completo</button>' :
         '<button class="green sm" ' + (G.plata >= plotUnlockCost() ? "" : "disabled") + ' data-plot="plata">' + fmt(plotUnlockCost()) + ' plata</button>' +

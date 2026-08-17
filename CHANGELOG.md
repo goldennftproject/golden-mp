@@ -2125,6 +2125,87 @@ Ahora la cadena de guía no tiene puntas sueltas:
   lugar. Al recomprar semillas, `buySeed` la vuelve a poner en el primer hueco libre.
   Herramientas y picos conservan su lógica de siempre.
 
+## Día 19 (cont.) — EL BOSQUE QUE RODEA AL CLARO · etapa 1: el anillo (16/8, idea de dirección)
+- LA IDEA (director): que la granja deje de ser una isla en el mar y pase a ser un CLARO
+  dentro de un bosque cerrado; y que al subir de nivel se limpie una porción del bosque, que
+  se vacía de un clic y revela lo que escondía (un nodo de piedra, un árbol, parcelas).
+  Es el sistema de expansión de Sunflower Land, pero vaciando bosque en vez de comprar islas.
+- ETAPA 1 (esta): el ANILLO estático, para ver cómo se siente el encierro y medir el coste.
+- POR QUÉ SALE BARATO — tres cosas del motor que ya estaban:
+  1. La granja es NO_WALK: nadie camina, así que el bosque **no necesita colisiones**. Encierra
+     por composición visual y por los límites de cámara. Eso borra la mitad del trabajo.
+  2. El suelo ya se pinta en un `renderTexture`: el bosque usa lo mismo, así que son ~3.000
+     árboles dibujados UNA vez y para el motor es una sola imagen — coste por frame CERO.
+     (Como sprites vivos, el bucle del viento los recorrería 60 veces por segundo.)
+  3. Revelar objetos en caliente ya está probado (excavaciones, paquete del día, cofres).
+  Y no hace falta arte nuevo: es el `tree.png` de siempre, repetido con variación de escala
+  y volteo. Se dibuja en lote (`beginDraw`/`batchDraw`) cuando el Phaser lo soporta.
+- DETALLE QUE CASI SE ESCAPA: la textura del bosque va ENCIMA del suelo (para que las copas
+  se metan en el claro), así que su pasto NO se pinta sobre el rectángulo del mundo — si no,
+  taparía parcelas y caminos. Solo se rellena el anillo.
+- El azar del bosque es una semilla FIJA: el bosque es idéntico en todas las partidas y entre
+  recargas. El margen (300) es mayor que el límite de cámara (260), así que nunca se ve el borde.
+- Todo tuneable desde config.js: `GF.BOSQUE` (1/0 para comparar con la isla), `BOSQUE_MARGEN`,
+  `BOSQUE_PASO` (densidad), `BOSQUE_FILAS`, `BOSQUE_JITTER`, `BOSQUE_ESC_MIN/MAX`,
+  `BOSQUE_COLCHON` (aire entre el claro y la primera fila) y `BOSQUE_DEPTH`.
+- v2, las tres notas de arte del director:
+  · **CLARO IRREGULAR**: el borde ya no es un rectángulo. Métrica mezcla de cuadrado y círculo
+    más oleaje por ángulo (cuatro senos). El oleaje nunca baja de 1, así que el bosque no
+    puede meterse en el rectángulo jugable por mucho que ondule. `GF.BOSQUE_ONDA` lo gradúa
+    (0 = rectangular como antes).
+  · **MASA en vez de arbolitos**: los árboles del interior se tiñen hacia `BOSQUE_TINTE`
+    (verde oscuro). Como el contorno de la copa ya es oscuro, al teñir todo del mismo verde
+    los bordes se funden entre sí y el interior deja de leerse como muchos sprites juntos.
+    La primera fila queda intacta, con sus troncos de frente mirando al claro.
+  · **SOMBRA HACIA ADENTRO**: el mismo tinte es un degradado según la profundidad, así que
+    cuanto más adentro está el árbol, más oscuro — da el fondo en penumbra detrás de la
+    primera línea. Una sola mecánica resuelve las dos notas.
+- Con BOSQUE encendido ya NO se dibuja la isla (arena y mar): el claro está en tierra firme,
+  y así no asoma la costa entre los troncos.
+- PENDIENTE de decidir antes de la etapa 2: si el bosque entrega los nodos, el retoño en el
+  baúl sobra. Propuesta: el nivel desbloquea el CLARO, limpiarlo revela lo que hay dentro, y
+  el baúl vuelve a ser kit + paquete del día.
+
+## Día 19 (cont.) — FIX: el césped seguía ofreciendo comprar parcelas (16/8, reportado en vivo)
+- Al ocultar las parcelas bloqueadas quedó un fantasma: el sprite no se veía, pero el CLIC
+  las seguía encontrando porque la detección de parcelas es por COORDENADAS (a diferencia de
+  árboles y rocas, que usan `hitsSprite` y ese sí mira `visible`). Resultado: tocabas césped
+  vacío alrededor de tus 3 celdas y saltaba "¿Gastar X de plata para desbloquear esta parcela?".
+- Arreglado en los cuatro puntos: la detección del clic y el arrastre en modo edición saltean
+  las parcelas bloqueadas, el letrero ya no las anuncia, y la compra desde el mundo se retiró
+  (queda un toast informativo como red de seguridad: "Las parcelas llegan al baúl al subir de
+  nivel"). `nearestInteract` ya las excluía.
+- La compra de parcelas de la TIENDA se conserva (es un sumidero de plata y de $Golden) pero
+  ahora el texto dice la verdad: **ADELANTA** una parcela de las que igual iban a llegar al
+  baúl. `regalosSync` ya lo contempla — comprar no duplica, adelanta.
+
+## Día 19 (cont.) — UN CULTIVO POR NIVEL, y el cupo que eso obligó a subir (16/8, dirección)
+- PROBLEMA DETECTADO: el desbloqueo por nivel era lo ÚNICO de la tabla de cultivos sin regla
+  — los tres nuevos se habían insertado sin mover los del diseñador y quedaban DOS cultivos
+  en los niveles 1, 2 y 3. Y en el nivel 1 eso era una TRAMPA: el primer paso del tutorial
+  pide "3 semillas de papa" y `buySeed` solo cuenta el evento si la semilla es papa, así que
+  un jugador nuevo que comprara ciruela (2 de sus 3 platas) no avanzaba y sin ninguna pista.
+- REGLA NUEVA: **un cultivo por nivel**. Papa 1 · Ciruela 2 · Cereza 3 · Remolacha 4 ·
+  Zanahoria 5 · Cebolla 6 · Calabacín 7 · Repollo 8 · Calabaza 9, y los cuatro largos
+  espaciados de a dos: Brócoli 11 · Girasol 13 · Trigo 15 · Maíz 18. Cada subida de nivel
+  desbloquea algo nuevo para plantar — que sumado al nodo que ahora llega al baúl hace que
+  subir de nivel siempre entregue dos cosas. El nivel 1 queda SOLO con papa: el tutorial ya
+  no se puede romper.
+- CONSECUENCIA QUE CAZÓ EL SIMULADOR (y que no era obvia): al espaciar los cultivos, el
+  jugador pasa mucho más tiempo con los CORTOS, y un cupo POR SEMILLA los castiga — con papa
+  de 3 minutos, 15 semillas por parcela se agotan en menos de una hora. Medido: con 15 el
+  jugador activo terminaba el día en nivel 5, con 0 de plata y los nodos parados (el mismo
+  apagón que arreglamos en la auditoría, entrando por otra puerta). **SEED_POR_PARCELA sube
+  de 15 a 40**: con eso llega a nivel 9 con ~1.000 de plata y los 20 nodos girando. Son 240
+  siembras diarias con 6 parcelas — el 8% de lo que automatizaría un bot, así que el cupo
+  sigue haciendo su trabajo real sin decidir por un humano.
+- Nota estructural para el diseñador: **un cupo por semilla rompe el ancla**. El ancla dice
+  que todos los cultivos rinden 20/hora, pero el cupo dice "N siembras por día", y como la
+  ganancia por siembra crece con la duración, bajo el cupo los cultivos largos rinden mucho
+  más por día. Es coherente con el juego chill (empuja a los largos), pero conviene saberlo:
+  es la única regla del juego que contradice el ancla a propósito.
+- Verificado: tutorial cierra igual (18,1 h) y termina con 115 de plata en vez de 40.
+
 ## Día 19 (cont.) — LOS NODOS SON UN REGALO DEL NIVEL, y llegan al BAÚL (16/8, dirección)
 - POR QUÉ: había DOS reglas para cosas iguales — los árboles se compraban con madera
   (2-4-8-16-32) mientras las rocas y parcelas se abrían solas por nivel. Y el pago creaba un

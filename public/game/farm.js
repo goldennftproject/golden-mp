@@ -323,7 +323,9 @@ class FarmScene extends Phaser.Scene {
       // La genera tools/build-isla.py; su origen es (-GF.ISLA_ORIGEN, -GF.ISLA_ORIGEN).
       if (this.textures.exists("isla")) {
         const o = GF.ISLA_ORIGEN || 112;
-        this.add.image(-o, -o, "isla").setOrigin(0, 0).setDepth(-1002);
+        // 16/8: con BOSQUE, el claro está en tierra firme — nada de arena ni mar asomando
+        if (!GF.BOSQUE) this.add.image(-o, -o, "isla").setOrigin(0, 0).setDepth(-1002);
+        if (GF.BOSQUE) this.dibujarBosque();   // el claro rodeado de bosque
       } else {   // respaldo: si el PNG no llegó, los rectángulos de siempre
         const r = this.add.graphics().setDepth(-1002);
         r.fillStyle(0x3fa3cc, 1).fillRoundedRect(-70, -70, GF.WORLD_W + 140, GF.WORLD_H + 140, 90);
@@ -434,7 +436,7 @@ class FarmScene extends Phaser.Scene {
         if (ad) { this.dragDeco = ad; return; }
         for (const o of this.objs) { if (o.type === "fish") continue; if (this.hitsSprite(o.sprite, wx, wy)) { const d = Math.hypot(o.cx - wx, o.by - wy); if (d < bd) { bd = d; hit = o; } } }
         if (hit) { hit.origCx = hit.cx; hit.origBy = hit.by; this.dragObj = hit; return; }
-        for (const pl of this.plots) { if (Math.abs(wx - pl.cx) < T / 2 && Math.abs(wy - pl.by) < T / 2) { this.dragPlot = pl; return; } }
+        for (const pl of this.plots) { if (pl.state === "locked") continue; if (Math.abs(wx - pl.cx) < T / 2 && Math.abs(wy - pl.by) < T / 2) { this.dragPlot = pl; return; } }
         if (this.pondImg && this.pondDist(wx, wy) < 1) { this.dragPond = true; return; }
         this.hold = { sx: pt.x, sy: pt.y, px: pt.x, py: pt.y, active: false };   // 13/8: nada agarrado → el arrastre panea también en edición
         return;
@@ -446,7 +448,8 @@ class FarmScene extends Phaser.Scene {
       for (const o of this.objs.concat(this.threats)) {
         if (this.hitsSprite(o.sprite, wx, wy)) { const d = Math.hypot(o.cx - wx, o.by - wy); if (d < bd) { bd = d; hit = o; } }
       }
-      if (!hit) { for (const pl of this.plots) { if (Math.abs(wx - pl.cx) < T / 2 && Math.abs(wy - pl.by) < T / 2) { hit = pl; break; } } }
+      // 16/8: una parcela que todavía no es tuya es CÉSPED — ni se ve ni se puede clickear
+      if (!hit) { for (const pl of this.plots) { if (pl.state === "locked") continue; if (Math.abs(wx - pl.cx) < T / 2 && Math.abs(wy - pl.by) < T / 2) { hit = pl; break; } } }
       if (!hit) { const an = this.animalEnPunto(wx, wy); if (an) hit = { type: "animal", k: an.k, cx: an.spr.x, by: an.spr.y }; }   // animal del corral
       if (!hit && this.portal && Math.abs(wx - this.portal.cx) < 26 && Math.abs(wy - (this.portal.by - 14)) < 30) hit = this.portal;   // clic en el portal : caminar y teletransportarse
       if (this.action && !GF.NO_WALK) {   // acción en curso: encolar el próximo objetivo (hasta 7) sin esperar la animación
@@ -867,7 +870,7 @@ class FarmScene extends Phaser.Scene {
       return d.label + " — vuelve en " + fmtCorto(animalFalta(o.k) / 1000) + " (clic: Establo)";
     }
     if (o.type === "plot") {
-      if (o.state === "locked") return "Desbloquear parcela (" + plotUnlockCost() + " de plata)";
+      if (o.state === "locked") return "";   // 16/8: no es tuya todavía — llega al baúl por nivel
       if (o.state === "withered") return "Limpiar cultivo marchito";
       if (o.state === "dry") { const cd = CROP_DEF[G.selSeed]; return "Plantar " + (cd ? cd.label : "cultivo"); }
       if (o.state === "ready") { const cd = CROP_DEF[o.cropKey]; return "Cosechar " + (cd ? cd.label : ""); }
@@ -1077,18 +1080,9 @@ class FarmScene extends Phaser.Scene {
     }
     if (o.type === "boar") { o.sprite.destroy(); const i = this.threats.indexOf(o); if (i >= 0) this.threats.splice(i, 1); log("Espantaste al jabalí.", "good"); toast("¡Espantado!"); return; }   // XP de espada llega con el combate (necesita espada equipada)
     if (o.type === "plot") {
-      if (o.state === "locked") {   // desbloquear con plata: recuadro de confirmación (detalles viernes)
-        const cost = plotUnlockCost();
-        askConfirm("¿Gastar " + cost + " de plata para desbloquear esta parcela?", () => {
-          if (G.plata < cost) { toast("Te falta plata (" + cost + ")"); return; }
-          G.plata -= cost; G.plotsOwned = (G.plotsOwned || 2) + 1;
-          this.refreshPlotLocks();   // un solo camino para abrir parcelas (comprada o regalada)
-          addXp("farming", 5);
-          log("Desbloqueaste una parcela por " + cost + " plata.", "good"); toast("¡Parcela desbloqueada!");
-          refreshHud(); if (typeof saveFarm === "function") saveFarm(true);
-        }, { title: "Desbloquear parcela", yes: "Aceptar", yesClass: "green", no: "Cancelar", noClass: "red" });
-        return;
-      }
+      // 16/8: las parcelas ya NO se compran — llegan al baúl como premio del nivel.
+      // Además, una bloqueada es invisible y el clic ni la encuentra: esto es red de seguridad.
+      if (o.state === "locked") { toast("Las parcelas llegan al baúl al subir de nivel"); return; }
       if (o.state === "withered") {   // limpiar el cultivo perdido: la parcela vuelve a estar libre
         o.state = "dry"; o.cropKey = null; o.witherAt = 0;
         o.spr.clearTint().setAlpha(1).setVisible(false); o.emo.setVisible(false); o.timer.setVisible(false);
@@ -2996,6 +2990,92 @@ class FarmScene extends Phaser.Scene {
 
   // Cuando el juego REGALA una parcela (nivel de granja, ficha del pase), hay que abrirla en el acto:
   // antes se sumaba al guardado pero el dibujo seguía en gris hasta apretar F5 (reporte del diseñador).
+  /* EL BOSQUE QUE RODEA AL CLARO (16/8, idea de dirección). Todo el anillo se dibuja UNA
+     vez dentro de un renderTexture, igual que el suelo: son miles de árboles pero para el
+     motor es una sola imagen, así que el coste por frame es CERO. Se apoya en que la granja
+     es NO_WALK — nadie camina, así que el bosque no necesita colisiones: encierra por
+     composición y por los límites de cámara. Números en config.js (GF.BOSQUE_*).
+     Próxima etapa: partir el anillo en claros que se limpian al subir de nivel. */
+  dibujarBosque() {
+    if (!this.textures.exists("tree")) return;
+    const T = GF.TILE, W = GF.WORLD_W, H = GF.WORLD_H;
+    const M = GF.BOSQUE_MARGEN || 300;
+    const rt = this.add.renderTexture(-M, -M, W + 2 * M, H + 2 * M).setOrigin(0, 0).setDepth(GF.BOSQUE_DEPTH || -999);
+    // suelo de bosque: pasto por debajo, para que no asome el mar entre los troncos
+    const pastos = ["grass_a", "grass_b", "grass_c"].filter(k => this.textures.exists(k));
+    if (pastos.length) {
+      const g = this.add.image(0, 0, pastos[0]).setOrigin(0, 0).setVisible(false);
+      g.setDisplaySize(T, T);
+      for (let y = 0; y < H + 2 * M; y += T)
+        for (let x = 0; x < W + 2 * M; x += T) {
+          // OJO: esta textura va ENCIMA del suelo de la granja (para que las copas se metan
+          // en el claro). Así que el pasto del bosque NO se pinta sobre el rectángulo del
+          // mundo: si no, taparía las parcelas y los caminos.
+          const wx = x - M, wy = y - M;
+          if (wx > -T && wx < W && wy > -T && wy < H) continue;
+          g.setTexture(pastos[(x * 7 + y * 13) % pastos.length]);
+          rt.draw(g, x, y);
+        }
+      g.destroy();
+    }
+    // los árboles: de arriba abajo, para que los de adelante tapen a los de atrás
+    const paso = Math.max(8, T * (GF.BOSQUE_PASO || 0.6));
+    const pasoY = Math.max(8, paso * (GF.BOSQUE_FILAS || 0.74));
+    const J = GF.BOSQUE_JITTER || 8;
+    const eMin = GF.BOSQUE_ESC_MIN || 0.92, eMax = GF.BOSQUE_ESC_MAX || 1.26;
+    const colchon = (GF.BOSQUE_COLCHON != null ? GF.BOSQUE_COLCHON : 0.5) * T;
+    let semilla = 20250816;                       // azar estable: el bosque es el MISMO cada partida
+    const az = () => { semilla = (semilla * 1664525 + 1013904223) % 4294967296; return semilla / 4294967296; };
+    // EL CLARO ES IRREGULAR (16/8, dirección): en vez de un rectángulo, un contorno orgánico.
+    // Se mide con una métrica mezcla de cuadrado y círculo, y se le suma oleaje por ángulo.
+    // El oleaje nunca baja de 1, así que el bosque JAMÁS se mete en el rectángulo jugable.
+    const RX = W / 2 + colchon, RY = H / 2 + colchon, tw = this.textures.get("tree").getSourceImage();
+    const anchoT = (tw && tw.width) || T, altoT = (tw && tw.height) || T * 2;
+    const borde = (nx, ny) => {
+      const a = Math.atan2(ny, nx);
+      return 1.11 + (GF.BOSQUE_ONDA != null ? GF.BOSQUE_ONDA : 1) *
+        (0.085 * Math.sin(3 * a + 0.7) + 0.055 * Math.sin(5 * a + 2.1) + 0.035 * Math.sin(8 * a + 4.3) + 0.02 * Math.sin(13 * a));
+    };
+    const lista = [];
+    for (let y = -M; y < H + M; y += pasoY)
+      for (let x = -M; x < W + M; x += paso) {
+        const px = x + Math.round((az() * 2 - 1) * J), py = y + Math.round((az() * 2 - 1) * J);
+        const nx = (px + anchoT * 0.5 - W / 2) / RX, ny = (py + altoT * 0.72 - H / 2) / RY;
+        const d = Math.max(Math.abs(nx), Math.abs(ny)) * 0.62 + Math.hypot(nx, ny) * 0.38;
+        if (d < borde(nx, ny)) continue;                      // está en el claro
+        // OJO: la profundidad se mide con la distancia LISA (sin la onda del borde). Si se
+        // midiera contra el borde ondulado, dos árboles vecinos podían quedar uno claro y
+        // otro oscuro sin razón visible — el fallo que se veía en las bahías.
+        const prof = d - 1.11;
+        lista.push([py, px, eMin + az() * (eMax - eMin), az() < 0.45, prof]);
+      }
+    lista.sort((a, b) => a[0] - b[0]);
+    const t = this.add.image(0, 0, "tree").setOrigin(0, 0).setVisible(false);
+    const usarLote = typeof rt.beginDraw === "function";   // Phaser 3.50+: dibujar en lote es mucho más rápido
+    if (usarLote) rt.beginDraw();
+    // COPA y TRONCO se dibujan POR SEPARADO, cada uno con su tratamiento (16/8, dirección):
+    //  · COPA: un tinte verde CONSTANTE apenas te alejás de la primera fila. Como el contorno
+    //    de la copa ya es oscuro, al quedar todas del mismo verde los bordes se funden entre
+    //    sí y el interior se lee como UNA MASA, no como muchos arbolitos pegados. Sin
+    //    degradado: la masa es pareja.
+    //  · TRONCO: acá SÍ va el degradado, y es corto a propósito — un tronco una fila más
+    //    atrás ya está a media sombra, y dos filas atrás en penumbra. Eso es lo que da la
+    //    sensación de fondo detrás de la primera línea de árboles.
+    // Se logra con dos dibujos por árbol usando setCrop, sin arte nuevo.
+    // 16/8 (dirección, final): HORNEADO LIMPIO — el árbol se dibuja tal cual es, sin tocarle
+    // el color. Probamos teñir las copas para fundir los contornos y oscurecer los troncos del
+    // fondo; ninguna de las dos convenció, así que el bosque es el sprite de siempre repetido
+    // con variación de tamaño y volteo, ordenado de atrás hacia adelante.
+    for (const [py, px, esc, flip] of lista) {
+      t.setScale(esc); t.setFlipX(flip);
+      if (usarLote) rt.batchDraw(t, px + M, py + M); else rt.draw(t, px + M, py + M);
+    }
+    if (usarLote) rt.endDraw();
+    t.destroy();
+    this.bosqueRT = rt;
+    console.log("[bosque] " + lista.length + " árboles en una sola textura");
+  }
+
   // 16/8: al reclamar un Retoño o una Roca del baúl, el nodo aparece en la granja
   refreshNodeLocks() {
     if (!this.objs) return;

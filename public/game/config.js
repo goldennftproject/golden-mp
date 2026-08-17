@@ -11,7 +11,21 @@ GF.SPEED = 175;
 GF.NO_WALK = true;    // el granjero no aparece en la granja: se interactúa con un clic desde donde sea
 GF.CAM_PAN = true;    // cámara libre: se arrastra y la rueda desplaza (en vez de seguir al granjero)
 GF.ISLA = true;       // fondo de mar alrededor de la granja
-GF.ISLA_MARGEN = 260;  // cuánto mar se puede recorrer más allá de la cerca
+GF.ISLA_MARGEN = 260;   // cuánto mar se puede recorrer más allá de la cerca
+/* ============ EL BOSQUE QUE RODEA AL CLARO (16/8, idea de dirección) ==============
+   La granja deja de ser una isla en el mar y pasa a ser un CLARO dentro de un bosque
+   cerrado. Se dibuja UNA sola vez en un renderTexture (como el suelo), así que no cuesta
+   nada por frame aunque sean miles de árboles. Más adelante, cada porción se limpiará al
+   subir de nivel y revelará lo que esconde. Todo tuneable desde acá. */
+GF.BOSQUE = 1;              // 1 = anillo de bosque · 0 = la isla de siempre
+GF.BOSQUE_MARGEN = 300;     // cuánto bosque hay más allá del mundo (mayor que ISLA_MARGEN: nunca se ve el borde)
+GF.BOSQUE_PASO = 0.60;      // separación entre árboles, en celdas. MENOR = más tupido
+GF.BOSQUE_FILAS = 0.74;     // separación vertical respecto de la horizontal (solapan más)
+GF.BOSQUE_JITTER = 8;       // desorden en píxeles, para que no se vea la cuadrícula
+GF.BOSQUE_ESC_MIN = 0.92; GF.BOSQUE_ESC_MAX = 1.26;   // variedad de tamaño
+GF.BOSQUE_COLCHON = 0.5;    // celdas de aire entre el claro y la primera fila de árboles
+GF.BOSQUE_ONDA = 1;          // cuánto se ondula el borde del claro (0 = rectangular)
+GF.BOSQUE_DEPTH = -999;     // encima del suelo, debajo de todo lo interactuable
 // La costa (arena, espuma y bajío) es una imagen: assets/farm/isla.png, hecha con
 // tools/build-isla.py. Este número es cuánto sobra la imagen alrededor de la granja,
 // y tiene que coincidir con el MARGEN de ese script.

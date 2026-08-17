@@ -170,24 +170,24 @@ const CROP_DEF = {
   // en la misma cantidad. Así la semilla también escala (1 → 2 → 2 → 3 → 3) y cada escalón se
   // siente como una inversión mayor, sin mover ni un punto el rendimiento por hora.
   papa:      { label:"Papa",      emoji:"🥔", lvl:1,  seedCost:1,   growH:0.05, yield:1, price:2,    xp:5 },    // 3 min · gana 1 — piso del ancla; el cultivo del tutorial
-  ciruela:   { label:"Ciruela",   emoji:"🫐", lvl:1,  seedCost:2,   growH:0.10, yield:1, price:4,    xp:10 },   // 6 min · gana 2  (plum)
-  cereza:    { label:"Cereza",    emoji:"🍒", lvl:2,  seedCost:2,   growH:0.15, yield:1, price:5,    xp:15 },   // 9 min · gana 3  (cherry)
-  remolacha: { label:"Remolacha", emoji:"🟣", lvl:3,  seedCost:3,   growH:0.20, yield:1, price:7,    xp:20 },   // 12 min · gana 4 (beetroot)
-  zanahoria: { label:"Zanahoria", emoji:"🥕", lvl:2,  seedCost:3,   growH:0.25, yield:1, price:8,    xp:25 },  // 15 min (v3 diseñador)
-  cebolla:   { label:"Cebolla",   emoji:"🧅", lvl:3,  seedCost:6,   growH:0.5, yield:1, price:16,   xp:50 },  // 30 min (v3 diseñador)
+  ciruela:   { label:"Ciruela",   emoji:"🫐", lvl:2,  seedCost:2,   growH:0.10, yield:1, price:4,    xp:10 },   // 6 min · gana 2  (plum)
+  cereza:    { label:"Cereza",    emoji:"🍒", lvl:3,  seedCost:2,   growH:0.15, yield:1, price:5,    xp:15 },   // 9 min · gana 3  (cherry)
+  remolacha: { label:"Remolacha", emoji:"🟣", lvl:4,  seedCost:3,   growH:0.20, yield:1, price:7,    xp:20 },   // 12 min · gana 4 (beetroot)
+  zanahoria: { label:"Zanahoria", emoji:"🥕", lvl:5,  seedCost:3,   growH:0.25, yield:1, price:8,    xp:25 },  // 15 min (v3 diseñador)
+  cebolla:   { label:"Cebolla",   emoji:"🧅", lvl:6,  seedCost:6,   growH:0.5, yield:1, price:16,   xp:50 },  // 30 min (v3 diseñador)
   // 16/8: el calabacín era el único de la tabla fuera del ancla — rendía 26,7 plata/h y 120 XP/h
   // contra los 20 y 100 de sus vecinos. Reanclado: ganancia 15 (20/h) y 75 XP (100/h), con la
   // relación venta/semilla en 2,5 como el resto. Era 12 → 32 → 90.
-  calabacin: { label:"Calabacín", emoji:"🥒", lvl:4,  seedCost:10,  growH:0.75, yield:1, price:25,   xp:75 },   // 45 min (v3 diseñador, reanclado 16/8)
-  repollo:   { label:"Repollo",   emoji:"🥬", lvl:5,  seedCost:20,  growH:1.5,  yield:1, price:50,   xp:150 },  // 1 h 30 (v3 diseñador)
-  calabaza:  { label:"Calabaza",  emoji:"🎃", lvl:6,  seedCost:40,  growH:3,    yield:1, price:100,  xp:270 },  // 3 h (v3 diseñador)
+  calabacin: { label:"Calabacín", emoji:"🥒", lvl:7,  seedCost:10,  growH:0.75, yield:1, price:25,   xp:75 },   // 45 min (v3 diseñador, reanclado 16/8)
+  repollo:   { label:"Repollo",   emoji:"🥬", lvl:8,  seedCost:20,  growH:1.5,  yield:1, price:50,   xp:150 },  // 1 h 30 (v3 diseñador)
+  calabaza:  { label:"Calabaza",  emoji:"🎃", lvl:9,  seedCost:40,  growH:3,    yield:1, price:100,  xp:270 },  // 3 h (v3 diseñador)
   // 16/8 (auditoría C): los cuatro de arriba se corren a la banda 11-50 del nivel de granja
   // (la que además pide TAREAS). Con el gate por nivel, quedarse en 7-10 los volvía casi
   // inmediatos; así el early game no cambia y las anclas largas siguen siendo una meta.
-  brocoli:   { label:"Brócoli",   emoji:"🥦", lvl:8,  seedCost:90,  growH:6,    yield:1, price:210,  xp:480 },  // 6 h (v3 diseñador)
-  girasol:   { label:"Girasol",   emoji:"🌻", lvl:10, seedCost:180, growH:10,    yield:1, price:420,  xp:720 },  // 10 h (v3 diseñador)
-  trigo:     { label:"Trigo",     emoji:"🌾", lvl:12, seedCost:360, growH:16,    yield:1, price:840,  xp:1080 }, // 16 h (v3 diseñador)
-  maiz:      { label:"Maíz",      emoji:"🌽", lvl:15, seedCost:720, growH:24,   yield:1, price:1680, xp:1440 },  // 24 h (v3 diseñador — el ancla nocturna)
+  brocoli:   { label:"Brócoli",   emoji:"🥦", lvl:11,  seedCost:90,  growH:6,    yield:1, price:210,  xp:480 },  // 6 h (v3 diseñador)
+  girasol:   { label:"Girasol",   emoji:"🌻", lvl:13, seedCost:180, growH:10,    yield:1, price:420,  xp:720 },  // 10 h (v3 diseñador)
+  trigo:     { label:"Trigo",     emoji:"🌾", lvl:15, seedCost:360, growH:16,    yield:1, price:840,  xp:1080 }, // 16 h (v3 diseñador)
+  maiz:      { label:"Maíz",      emoji:"🌽", lvl:18, seedCost:720, growH:24,   yield:1, price:1680, xp:1440 },  // 24 h (v3 diseñador — el ancla nocturna)
 };
 function recomputeCropGrow() { for (const k in CROP_DEF) CROP_DEF[k].grow = Math.round(CROP_DEF[k].growH * 3600 * GROW_SCALE); }
 recomputeCropGrow();   // en segundos, como siempre
@@ -211,7 +211,13 @@ var SEED_DAILY_BASE = 18, SEED_DAILY_POR_NIVEL = 2;   // (legado: la fórmula vi
 // sin herramientas los nodos quedan parados. Ahora el cupo se ata a las PARCELAS —
 // SEED_POR_PARCELA siembras por parcela y día — así crece solo con la progresión y solo
 // muerde al jugador hiperactivo de cultivos cortos, que es donde estaba el exploit real.
-var SEED_POR_PARCELA = 15;
+// 16/8 v2: subido de 15 a 40. Al espaciar los cultivos (uno por nivel), el jugador pasa
+// mucho más tiempo con los CORTOS, y esos queman el cupo a otra velocidad: con papa de 3
+// minutos, 15 por parcela se agotan en menos de una hora de juego y el día se apaga igual
+// que antes (medido: con 15 el jugador activo termina en nivel 5 con 0 de plata y los nodos
+// parados; con 40 llega a nivel 9 con ~1.000). El cupo tiene que frenar bots, no jugadores:
+// 40 por parcela son 240 siembras diarias con 6 parcelas, el 8% de lo que automatizaría un bot.
+var SEED_POR_PARCELA = 40;
 function seedDailyMax() {
   if (SEED_DAILY_BASE >= 999) return SEED_DAILY_BASE;   // modo testeo: sin cupo
   return SEED_POR_PARCELA * Math.max(3, G.plotsOwned || 3);
