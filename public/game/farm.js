@@ -509,9 +509,13 @@ class FarmScene extends Phaser.Scene {
           const dx = (this.hold.px == null ? pt.x : this.hold.px) - pt.x;
           const dy = (this.hold.py == null ? pt.y : this.hold.py) - pt.y;
           this.hold.px = pt.x; this.hold.py = pt.y;
-          const L = this.camLim || { x1: 0, y1: 0, x2: GF.WORLD_W, y2: GF.WORLD_H };
-          c.scrollX = Phaser.Math.Clamp(c.scrollX + dx / z, L.x1, Math.max(L.x1, L.x2 - c.width / z));
-          c.scrollY = Phaser.Math.Clamp(c.scrollY + dy / z, L.y1, Math.max(L.y1, L.y2 - c.height / z));
+          // 17/8: NADA de recortar a mano. scrollX/scrollY NO son el borde visible: en Phaser el
+          // área visible se CENTRA y mide alto/zoom, así que con zoom != 1 mi cuenta se separaba
+          // de la suya. Con el navegador al 25% los dos rangos ni se solapaban: yo ponía un
+          // valor, Phaser lo corregía a otro, y la cámara quedaba clavada sin poder arrastrar.
+          // La cámara YA tiene setBounds(camLim): que recorte ella, que sabe hacerlo bien.
+          c.scrollX += dx / z;
+          c.scrollY += dy / z;
           return;
         }
         // CLIC SOSTENIDO: si mantenés apretado y movés el cursor, el granjero te sigue
@@ -534,9 +538,13 @@ class FarmScene extends Phaser.Scene {
           const c = this.cameras.main, z = c.zoom || 1;
           const dx = this.hold.px - pt.x, dy = this.hold.py - pt.y;
           this.hold.px = pt.x; this.hold.py = pt.y;
-          const L = this.camLim || { x1: 0, y1: 0, x2: GF.WORLD_W, y2: GF.WORLD_H };
-          c.scrollX = Phaser.Math.Clamp(c.scrollX + dx / z, L.x1, Math.max(L.x1, L.x2 - c.width / z));
-          c.scrollY = Phaser.Math.Clamp(c.scrollY + dy / z, L.y1, Math.max(L.y1, L.y2 - c.height / z));
+          // 17/8: NADA de recortar a mano. scrollX/scrollY NO son el borde visible: en Phaser el
+          // área visible se CENTRA y mide alto/zoom, así que con zoom != 1 mi cuenta se separaba
+          // de la suya. Con el navegador al 25% los dos rangos ni se solapaban: yo ponía un
+          // valor, Phaser lo corregía a otro, y la cámara quedaba clavada sin poder arrastrar.
+          // La cámara YA tiene setBounds(camLim): que recorte ella, que sabe hacerlo bien.
+          c.scrollX += dx / z;
+          c.scrollY += dy / z;
         }
         const col = Phaser.Math.Clamp(Math.floor(pt.worldX / T), 0, GF.COLS - 1);
         const row = Phaser.Math.Clamp(Math.floor(pt.worldY / T), 0, GF.ROWS - 1);
@@ -588,9 +596,13 @@ class FarmScene extends Phaser.Scene {
           const c = this.cameras.main, z = c.zoom || 1;
           const dx = this.hold.px - pt.x, dy = this.hold.py - pt.y;
           this.hold.px = pt.x; this.hold.py = pt.y;
-          const L = this.camLim || { x1: 0, y1: 0, x2: GF.WORLD_W, y2: GF.WORLD_H };
-          c.scrollX = Phaser.Math.Clamp(c.scrollX + dx / z, L.x1, Math.max(L.x1, L.x2 - c.width / z));
-          c.scrollY = Phaser.Math.Clamp(c.scrollY + dy / z, L.y1, Math.max(L.y1, L.y2 - c.height / z));
+          // 17/8: NADA de recortar a mano. scrollX/scrollY NO son el borde visible: en Phaser el
+          // área visible se CENTRA y mide alto/zoom, así que con zoom != 1 mi cuenta se separaba
+          // de la suya. Con el navegador al 25% los dos rangos ni se solapaban: yo ponía un
+          // valor, Phaser lo corregía a otro, y la cámara quedaba clavada sin poder arrastrar.
+          // La cámara YA tiene setBounds(camLim): que recorte ella, que sabe hacerlo bien.
+          c.scrollX += dx / z;
+          c.scrollY += dy / z;
         }
       }
     });
@@ -803,12 +815,15 @@ class FarmScene extends Phaser.Scene {
     // rueda del mouse: acercar/alejar la cámara de la granja
     this.input.on("wheel", (ptr, over, dx, dy) => {
       if (GF.CAM_PAN && (ptr.event.ctrlKey || ptr.event.shiftKey)) {   // Ctrl/Shift + rueda = acercar o alejar
-        this.zoomUser = Phaser.Math.Clamp((this.zoomUser || 1) * (dy > 0 ? 0.92 : 1.08), 0.6, 2.2);
+        // el mínimo lo calcula fitCamera a partir de lo que mide el mapa y la ventana:
+        // así el jugador SIEMPRE puede alejar hasta ver el mapa entero, con cualquier zoom
+        // de navegador. El 0,6 fijo de antes se lo impedía.
+        const uMin = this.zoomUserMin != null ? this.zoomUserMin : 0.6;
+        this.zoomUser = Phaser.Math.Clamp((this.zoomUser || 1) * (dy > 0 ? 0.92 : 1.08), uMin, 2.4);
         this.fitCamera(); return;
       }
       if (GF.CAM_PAN) {   // SFL: la rueda DESPLAZA la granja
-        const c = this.cameras.main, L = this.camLim || { y1: 0, y2: GF.WORLD_H };
-        c.scrollY = Phaser.Math.Clamp(c.scrollY + dy * 0.6, L.y1, Math.max(L.y1, L.y2 - c.height / c.zoom));
+        this.cameras.main.scrollY += dy * 0.6;   // el recorte lo hace setBounds, no nosotros
         return;
       }
       this.zoomUser = Phaser.Math.Clamp(this.zoomUser * (dy > 0 ? 0.9 : 1.1), 0.4, 2.4);
@@ -950,11 +965,16 @@ class FarmScene extends Phaser.Scene {
       // sobrara un poco, se lee como bosque lejano y no como un panel liso.
       const L = this.camLim || this.limiteVista();
       const zMin = Math.min(cw / (L.x2 - L.x1), ch / (L.y2 - L.y1));
-      // y se corrige el zoom del jugador para que no siga bajando en el vacío: si no, la rueda
-      // "no hace nada" varias vueltas y después hay que darle muchas para volver.
-      const uMin = zMin / z;
-      if ((this.zoomUser || 1) < uMin) this.zoomUser = uMin;
-      this.cameras.main.setZoom(Phaser.Math.Clamp(z * (this.zoomUser || 1), zMin, 2.2));
+      // TOPES DEL JUGADOR, DERIVADOS. Antes la rueda recortaba a [0,6 … 2,2] a secas, y ahí
+      // estaba el otro fallo: con el navegador al 25% el zoom base sube a ~5, el 0,6 dejaba el
+      // mínimo alcanzable en ~3 y el tope duro de 2,2 lo pisaba. Resultado: el jugador NUNCA
+      // llegaba al zoom que hace entrar el mapa, y encima quedaba pegado a una esquina.
+      // Ahora el rango del jugador SALE del zoom que hace falta, así que vale igual con el
+      // navegador al 25%, al 100% o al 300%.
+      this.zoomUserMin = zMin / z;
+      const u = Phaser.Math.Clamp(this.zoomUser || 1, this.zoomUserMin, 2.4);
+      this.zoomUser = u;
+      this.cameras.main.setZoom(Math.max(zMin, z * u));
       return;
     }
     const fill = Math.max(GF.ZOOM, cw / GF.WORLD_W, ch / GF.WORLD_H);

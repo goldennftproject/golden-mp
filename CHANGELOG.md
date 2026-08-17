@@ -3730,3 +3730,24 @@ vertical dura contra el anillo. Dos causas:
 
 Comprobado antes de deployar reproduciendo el mosaico del juego en Python y **tileándolo 3x3**
 para buscarle la costura: no la tiene.
+
+### Los dos fallos que impedían mover la cámara
+Dirección, con el navegador al 25%: *"es como si todo no tenga posición relativa, ahí yo no puedo
+arrastrar la cámara hacia arriba"*. Dos fallos independientes, los dos míos, y los dos por asumir
+en vez de comprobar cómo funciona Phaser.
+
+**1. Mis límites de arrastre estaban mal.** Yo recortaba a mano el scroll suponiendo que
+`scrollX/scrollY` es el borde visible de la cámara. **No lo es cuando el zoom no vale 1**: en
+Phaser el área visible se CENTRA y mide `alto / zoom`. Mi fórmula y la suya divergen con el zoom,
+y con el navegador al 25% los dos rangos **ni se solapaban**: mi código ponía un valor, el recorte
+de Phaser lo corregía a otro, y la cámara quedaba clavada. Fuera los recortes manuales (había
+cuatro, uno por cada sitio que panea): la cámara ya tiene `setBounds`, que recorta bien.
+
+**2. El tope de alejado del jugador era un número fijo.** La rueda recortaba a `[0,6 … 2,2]`. Con
+el navegador al 25% el zoom base sube a ~5,2, así que el 0,6 dejaba el mínimo alcanzable en ~3,1
+y el tope duro de 2,2 lo pisaba: el jugador **nunca** podía llegar al 1,61 que hace entrar el
+mapa. Ahora el rango sale de la cuenta (`zoomUserMin = zMin / zBase`), así que vale igual con el
+navegador al 25%, al 100% o al 300%. Verificado en los cuatro casos: el mapa entra en todos.
+
+Lección, y van varias del mismo tipo: **cuando mi cuenta y la de la librería dan cosas distintas,
+la que sobra es la mía.** Phaser ya sabía recortar el scroll; yo dupliqué esa lógica mal.
