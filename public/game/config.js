@@ -35,14 +35,24 @@ GF.BOSQUE_MARGEN = 420;     // cuánto bosque hay más allá del mundo
 //    A 2 celdas —el MISMO tamaño que los árboles de la granja— alcanzan 126 con 0,02%.
 GF.BOSQUE_TAM = 2;          // ancho del árbol EN CELDAS (2 = igual que los de la granja)
 GF.BOSQUE_ESC_VAR = 0.15;   // variedad de tamaño, ±15% sobre ese ancho
-// 0,65: probado 0,90 / 0,75 / 0,65 / 0,55 sobre el borde real. A 0,90 el borde queda DENTADO
-// (entre tronco y tronco asoma el fondo); a 0,55 vuelve a ser una pared. 0,65 es donde los
-// troncos se leen separados sin abrir agujeros.
-GF.BOSQUE_PASO = 0.65;      // separación entre árboles, en celdas
-GF.BOSQUE_FILAS = 0.90;     // separación vertical respecto de la horizontal
-GF.BOSQUE_TRABA = 0.5;      // corrimiento de las filas alternas (0 = alineadas · 0,5 = trabadas)
-GF.BOSQUE_JITTER_X = 5;     // desorden horizontal: BAJO, es el que abre rendijas entre troncos
-GF.BOSQUE_JITTER_Y = 7;     // desorden vertical: puede ser alto sin romper nada
+// LAS TRES LEYES (17/8, dirección). El bosque ya NO se genera con separaciones a ojo, sino
+// colocando un árbol en cada anclaje de la cuadrícula. Se eligen con letras:
+//   "c" CELDA        centrado en la celda, apoyado en su borde de abajo
+//   "x" ENCRUCIJADA  en el cruce de cuatro celdas
+//   "v" MEDIA ARISTA a la mitad de la arista vertical (sobre la línea, a media altura)
+// Juntas dan una rejilla de media celda sin salirse de la cuadrícula del juego. Se compusieron
+// a mano en tools/editor-bosque.html, que dibuja exactamente esto.
+GF.BOSQUE_LEYES = "cxv";    // qué anclajes se usan · prueba "xv", "cx", "c"...
+GF.BOSQUE_FILA_CADA = 1;    // se planta cada N filas (1 = todas)
+// RALEO POR LEY. Medido sobre la composición a mano de dirección (tools/editor-bosque.html):
+// llenó el 100% de las celdas, el 69% de las encrucijadas y el 84% de las medias aristas.
+// Los claros que dejó en esas dos son lo que impide que el bosque se lea como una retícula.
+GF.BOSQUE_DENSIDAD = { c: 1, x: 0.69, v: 0.84 };
+// Los cinco números de antes (PASO, FILAS, TRABA y los dos JITTER) desaparecen como sistema:
+// eran valores que nadie sabía justificar. El jitter queda pero en CERO — la gracia de las
+// leyes es que el patrón es exacto; se sube solo si se quiere ensuciar el borde a propósito.
+GF.BOSQUE_JITTER_X = 0;
+GF.BOSQUE_JITTER_Y = 0;
 GF.BOSQUE_COLCHON = 1.5;    // radio del claro: agranda el óvalo/rectángulo de referencia
 // 17/8 (dirección): "la forma cuadrada queda mejor que el resto, esta forma está bien".
 // Se probó redondeada (0.62) y ondulada (0.45) y no ganaba nada: el claro rectangular lee

@@ -3569,3 +3569,27 @@ El editor tiene las tres leyes como interruptores independientes (se pueden acti
 por separado, siempre con una encendida como mínimo), dibuja las anclas —punto verde para la
 celda, aspa azul para la encrucijada, barrita rosa para la media arista— y el clic salta a la más
 cercana entre las activas.
+
+### La composición a mano resultó ser una regla — y el bosque se reescribe sobre ella
+Dirección compuso el borde a mano en `tools/editor-bosque.html` y exportó 675 árboles. Al contar,
+el patrón salió solo:
+
+| ley           | puestos | posibles | ocupación |
+|---------------|---------|----------|-----------|
+| celda         | 260     | 260      | **100%**  |
+| encrucijada   | 187     | 270      | 69%       |
+| media arista  | 228     | 270      | 84%       |
+
+O sea: puso **las tres leyes en todos sus anclajes** y después **abrió claros a mano** en dos de
+ellas. Eso —y no la separación— es lo que impide que el bosque se lea como una retícula.
+
+`dibujarBosque()` deja de generar con separaciones y pasa a recorrer los anclajes de las tres
+leyes, con una densidad por ley (`GF.BOSQUE_DENSIDAD`) que reproduce ese raleo. Desaparecen como
+sistema `BOSQUE_PASO`, `BOSQUE_FILAS` y `BOSQUE_TRABA`: cinco números que nadie sabía justificar,
+sustituidos por tres reglas geométricas y dos porcentajes medidos.
+
+**Nota de método, para no repetirlo.** Antes de tener el export intenté deducir la composición
+midiendo píxeles de las capturas. Fue tiempo perdido y, peor, dio tres respuestas distintas para la
+misma imagen según dónde recortara: 68%, 41% y 4% de cobertura de tronco. La conclusión no era
+"medir mal", era que **la medición no servía para esa pregunta**. El export de un clic dio la
+respuesta exacta en un segundo. Cuando existe el dato, no se estima.

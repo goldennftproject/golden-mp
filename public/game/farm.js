@@ -3115,16 +3115,60 @@ class FarmScene extends Phaser.Scene {
       return BASE + ONDA * (AMP[0] * Math.sin(3 * a + 0.7) + AMP[1] * Math.sin(5 * a + 2.1) +
         AMP[2] * Math.sin(8 * a + 4.3) + AMP[3] * Math.sin(13 * a));
     };
+    // ================= LAS TRES LEYES DE COLOCACIÓN (17/8, dirección) =================
+    // Antes el bosque se generaba con cinco números a ojo: PASO, FILAS, TRABA, JITTER_X y
+    // JITTER_Y. Nadie podía decir por qué valían lo que valían. Dirección lo reformuló como
+    // reglas que se pueden DIBUJAR, y se compusieron a mano en tools/editor-bosque.html:
+    //
+    //   "c" CELDA         centrado en la celda, apoyado en su borde de abajo
+    //                     x = (col + 0,5) x T        base = (fila + 1) x T
+    //   "x" ENCRUCIJADA   en el cruce de cuatro celdas (un vértice de la cuadrícula)
+    //                     x = col x T                base = fila x T
+    //   "v" MEDIA ARISTA  a la mitad de la arista VERTICAL: sobre la línea, a media altura
+    //                     x = col x T                base = (fila + 0,5) x T
+    //
+    // Combinadas, los anclajes caen en una rejilla de MEDIA CELDA (21 px) sin salirse nunca de
+    // la cuadrícula del juego. Cada ley cubre los huecos que dejan las otras: eso es lo que
+    // buscábamos con la traba y el jitter, pero ahora es exacto y no hay nada que adivinar.
+    // Qué leyes se usan sale de GF.BOSQUE_LEYES (por ejemplo "cxv", "xv", "c").
+    const LEYES = String(GF.BOSQUE_LEYES || "cxv");
+    const ANCLA = {
+      c: (col, row) => [(col + 0.5) * T, (row + 1) * T],
+      x: (col, row) => [col * T, row * T],
+      v: (col, row) => [col * T, (row + 0.5) * T]
+    };
+    // CADA CUÁNTAS FILAS se planta. Las leyes ponen un ancla en TODAS las filas, y con el árbol
+    // midiendo 88 px de alto y las filas a 42, el de atrás asoma siempre por los huecos entre
+    // troncos: la masa sale al 100% de tronco, una pared. Saltando filas se recupera el aire.
+    const CADA = Math.max(1, GF.BOSQUE_FILA_CADA || 1);
+    const DENS = GF.BOSQUE_DENSIDAD || { c: 1, x: 0.69, v: 0.84 };
+    const cIni = Math.floor(-M / T) - 1, cFin = Math.ceil((W + M) / T) + 1;
+    const rIni = Math.floor(-M / T) - 1, rFin = Math.ceil((H + M) / T) + 1;
     const lista = [];
-    let fila = 0;
-    for (let y = -M; y < H + M; y += pasoY, fila++) {
-      const corr = Math.round(paso * TRABA * (fila % 2));   // filas trabadas como ladrillos
-      for (let x = -M; x < W + M; x += paso) {
-        const px = x + corr + Math.round((az() * 2 - 1) * JX), py = y + Math.round((az() * 2 - 1) * JY);
-        const nx = (px + anchoS * 0.5 - W / 2) / RX, ny = (py + altoS * 0.72 - H / 2) / RY;
-        if (met(nx, ny) < borde(nx, ny)) continue;            // está en el claro
-        lista.push([py, px, eMin + az() * (eMax - eMin), az() < 0.45]);
-      }
+    for (let row = rIni; row <= rFin; row++) {
+      if (((row % CADA) + CADA) % CADA !== 0) continue;
+      for (let col = cIni; col <= cFin; col++)
+        for (const ley of LEYES) {
+          const f = ANCLA[ley];
+          if (!f) continue;
+          const a = f(col, row);
+          // jitter opcional: con las leyes puestas suele ir en 0, pero se deja por si se
+          // quiere ensuciar un poco el patrón sin cambiar de sistema.
+          // RALEO POR LEY (17/8). Dirección compuso el bosque a mano en el editor y exportó:
+          // 260 de 260 anclajes de CELDA (el 100%), 187 de 270 de ENCRUCIJADA (69%) y 228 de
+          // 270 de MEDIA ARISTA (84%). O sea: puso las tres leyes enteras y después ABRIÓ
+          // CLAROS a mano en dos de ellas para romper la regularidad. Eso es lo que hace que
+          // no se lea como una retícula. Se reproduce acá con una probabilidad por ley.
+          if (az() > (DENS[ley] != null ? DENS[ley] : 1)) continue;
+          const cxA = a[0] + Math.round((az() * 2 - 1) * JX);
+          const baseA = a[1] + Math.round((az() * 2 - 1) * JY);
+          const esc = eMin + az() * (eMax - eMin);
+          const flip = az() < 0.45;
+          const px = cxA - anchoT * esc / 2, py = baseA - altoT * esc;   // esquina del sprite
+          const nx = (cxA - W / 2) / RX, ny = (baseA - altoS * 0.28 - H / 2) / RY;
+          if (met(nx, ny) < borde(nx, ny)) continue;            // está en el claro
+          lista.push([py, px, esc, flip]);
+        }
     }
     // ORDEN DE DIBUJO (17/8, dirección: "hay árboles que deben estar por detrás de los que
     // están más cerca del corral, por proximidad"). Se ordenaba por py, que es el BORDE DE

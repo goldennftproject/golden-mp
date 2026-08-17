@@ -32,8 +32,8 @@ def datos_del_juego():
     process.stdout.write(JSON.stringify({
       T:G.TILE, COLS:G.COLS, ROWS:G.ROWS, POND:G.POND, PLOTS:G.PLOTS_BASE,
       OBJ:G.WORLD_OBJECTS.map(o=>({key:o.key,type:o.type,leftCol:o.leftCol,baseRow:o.baseRow,wCells:o.wCells})),
-      B:{margen:G.BOSQUE_MARGEN,paso:G.BOSQUE_PASO,filas:G.BOSQUE_FILAS,jitter:G.BOSQUE_JITTER,
-         tam:G.BOSQUE_TAM,var:G.BOSQUE_ESC_VAR,traba:G.BOSQUE_TRABA,
+      B:{margen:G.BOSQUE_MARGEN,
+         tam:G.BOSQUE_TAM,var:G.BOSQUE_ESC_VAR,leyes:G.BOSQUE_LEYES,cada:G.BOSQUE_FILA_CADA,dens:G.BOSQUE_DENSIDAD,
          jx:G.BOSQUE_JITTER_X,jy:G.BOSQUE_JITTER_Y,colchon:G.BOSQUE_COLCHON,
          redondez:G.BOSQUE_REDONDEZ,onda:G.BOSQUE_ONDA,aire:G.BOSQUE_AIRE}
     }));
@@ -77,8 +77,6 @@ def main():
     tree = abrir("tree")
     if tree:
         b = d["B"]
-        paso = max(1, round(T * b["paso"]))
-        pasoY = max(1, round(paso * b["filas"]))
         escBase = (b["tam"] or 2) * T / tree.width
         eMin, eMax = escBase * (1 - b["var"]), escBase * (1 + b["var"])
         anchoS, altoS = tree.width * escBase, tree.height * escBase
@@ -106,22 +104,32 @@ def main():
             semilla = (semilla * 1664525 + 1013904223) % 4294967296
             return semilla / 4294967296
 
+        # LAS TRES LEYES, igual que farm.js
+        ANCLA = {"c": lambda c, r: ((c + 0.5) * T, (r + 1) * T),
+                 "x": lambda c, r: (c * T, r * T),
+                 "v": lambda c, r: (c * T, (r + 0.5) * T)}
         lista = []
-        y, fila = -M, 0
-        while y < H + M:
-            corr = round(paso * b["traba"] * (fila % 2))
-            x = -M
-            while x < W + M:
-                px = x + corr + round((az() * 2 - 1) * b["jx"])
-                py = y + round((az() * 2 - 1) * b["jy"])
-                nx = (px + anchoS * 0.5 - W / 2) / RX
-                ny = (py + altoS * 0.72 - H / 2) / RY
-                esc = eMin + az() * (eMax - eMin)
-                if met(nx, ny) >= borde(nx, ny):
-                    lista.append((py, px, esc))
-                x += paso
-            y += pasoY
-            fila += 1
+        cIni, cFin = int(-M // T) - 1, int(-(-(W + M) // T)) + 1
+        rIni, rFin = int(-M // T) - 1, int(-(-(H + M) // T)) + 1
+        CADA = max(1, b["cada"] or 1)
+        for r in range(rIni, rFin + 1):
+            if r % CADA != 0:
+                continue
+            for c2 in range(cIni, cFin + 1):
+                for ley in str(b["leyes"] or "cxv"):
+                    if ley not in ANCLA:
+                        continue
+                    if az() > (b["dens"] or {}).get(ley, 1):
+                        continue
+                    ax, ay = ANCLA[ley](c2, r)
+                    ax += round((az() * 2 - 1) * b["jx"])
+                    ay += round((az() * 2 - 1) * b["jy"])
+                    esc = eMin + az() * (eMax - eMin)
+                    az()
+                    nx = (ax - W / 2) / RX
+                    ny = (ay - altoS * 0.28 - H / 2) / RY
+                    if met(nx, ny) >= borde(nx, ny):
+                        lista.append((ay - altoT * esc, ax - anchoT * esc / 2, esc))
         lista.sort(key=lambda t: t[0] + altoT * t[2])   # por la BASE, no por el techo del sprite
         for py, px, esc in lista:
             im = tree.resize((max(1, round(anchoT * esc)), max(1, round(altoT * esc))), Image.NEAREST)
