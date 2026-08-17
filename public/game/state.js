@@ -160,10 +160,13 @@ const CROP_DEF = {
   calabacin: { label:"Calabacín", emoji:"🥒", lvl:4,  seedCost:12,  growH:0.75, yield:1, price:32,   xp:90 },   // 45 min (v3 diseñador)
   repollo:   { label:"Repollo",   emoji:"🥬", lvl:5,  seedCost:20,  growH:1.5,  yield:1, price:50,   xp:150 },  // 1 h 30 (v3 diseñador)
   calabaza:  { label:"Calabaza",  emoji:"🎃", lvl:6,  seedCost:40,  growH:3,    yield:1, price:100,  xp:270 },  // 3 h (v3 diseñador)
-  brocoli:   { label:"Brócoli",   emoji:"🥦", lvl:7,  seedCost:90,  growH:6,    yield:1, price:210,  xp:480 },  // 6 h (v3 diseñador)
-  girasol:   { label:"Girasol",   emoji:"🌻", lvl:8,  seedCost:180, growH:10,    yield:1, price:420,  xp:720 },  // 10 h (v3 diseñador)
-  trigo:     { label:"Trigo",     emoji:"🌾", lvl:9,  seedCost:360, growH:16,    yield:1, price:840,  xp:1080 }, // 16 h (v3 diseñador)
-  maiz:      { label:"Maíz",      emoji:"🌽", lvl:10, seedCost:720, growH:24,   yield:1, price:1680, xp:1440 },  // 24 h (v3 diseñador — vuelve el ancla nocturna)
+  // 16/8 (auditoría C): los cuatro de arriba se corren a la banda 11-50 del nivel de granja
+  // (la que además pide TAREAS). Con el gate por nivel, quedarse en 7-10 los volvía casi
+  // inmediatos; así el early game no cambia y las anclas largas siguen siendo una meta.
+  brocoli:   { label:"Brócoli",   emoji:"🥦", lvl:8,  seedCost:90,  growH:6,    yield:1, price:210,  xp:480 },  // 6 h (v3 diseñador)
+  girasol:   { label:"Girasol",   emoji:"🌻", lvl:10, seedCost:180, growH:10,    yield:1, price:420,  xp:720 },  // 10 h (v3 diseñador)
+  trigo:     { label:"Trigo",     emoji:"🌾", lvl:12, seedCost:360, growH:16,    yield:1, price:840,  xp:1080 }, // 16 h (v3 diseñador)
+  maiz:      { label:"Maíz",      emoji:"🌽", lvl:15, seedCost:720, growH:24,   yield:1, price:1680, xp:1440 },  // 24 h (v3 diseñador — el ancla nocturna)
 };
 function recomputeCropGrow() { for (const k in CROP_DEF) CROP_DEF[k].grow = Math.round(CROP_DEF[k].growH * 3600 * GROW_SCALE); }
 recomputeCropGrow();   // en segundos, como siempre
@@ -171,12 +174,27 @@ recomputeCropGrow();   // en segundos, como siempre
 const FISH_ORDER = ["comun", "raro", "epico", "legendario"];
 const FISH_DEF = { comun: { label: "Pez común", emoji: "🐟", sprite: "fish_comun" }, raro: { label: "Pez raro", emoji: "🐠", sprite: "fish_raro" }, epico: { label: "Pez épico", emoji: "🐡", sprite: "fish_epico" }, legendario: { label: "Pez legendario", emoji: "🐋", sprite: "fish_legendario" } };
 
-function farmLevel() { return skillInfo(G.skills.farming).lvl; }
+// 16/8 (auditoría C): los cultivos se desbloquean por NIVEL DE GRANJA, no por el skill de
+// Farmeo. Las dos curvas se alimentan de la MISMA XP con varas incompatibles: la granja
+// llegaba a 10 con 14.000 XP y con esa misma XP el skill estaba en 5 — el jugador tenía
+// todas las parcelas mucho antes que cultivos para plantar en ellas, y el maíz (111.525 XP)
+// quedaba a meses. Una sola vara para toda la granja; el skill queda para bonos y prestigio.
+function farmLevel() { return G.level || 1; }
+function farmSkillLevel() { return skillInfo(G.skills.farming).lvl; }   // el skill sigue existiendo (bonos, panel de skills)
 function cropUnlocked(k) { const cd = CROP_DEF[k]; return !!cd && farmLevel() >= cd.lvl; }
 function selectSeed(k) { if (!CROP_DEF[k]) return; G.selSeed = k; if (isOpen("ov-inv")) refreshInv(); }
 // cupo diario de semillas (anti-inflación): compras + las del cofre suman al mismo límite
-var SEED_DAILY_BASE = 18, SEED_DAILY_POR_NIVEL = 2;   // "2das mejoras": el cupo escala con el nivel de granja
-function seedDailyMax() { return SEED_DAILY_BASE + SEED_DAILY_POR_NIVEL * (G.level || 1); }
+var SEED_DAILY_BASE = 18, SEED_DAILY_POR_NIVEL = 2;   // (legado: la fórmula vieja, la sigue usando el MODO TESTEO)
+// 16/8 (auditoría A): el cupo viejo (18+2×nivel) alcanzaba para UNA HORA de juego y era la
+// pieza que apagaba el día entero: sin semillas no hay plata, sin plata no hay herramientas,
+// sin herramientas los nodos quedan parados. Ahora el cupo se ata a las PARCELAS —
+// SEED_POR_PARCELA siembras por parcela y día — así crece solo con la progresión y solo
+// muerde al jugador hiperactivo de cultivos cortos, que es donde estaba el exploit real.
+var SEED_POR_PARCELA = 15;
+function seedDailyMax() {
+  if (SEED_DAILY_BASE >= 999) return SEED_DAILY_BASE;   // modo testeo: sin cupo
+  return SEED_POR_PARCELA * Math.max(3, G.plotsOwned || 3);
+}
 // Doc "Enfriamiento de Árboles y Minerales" (4/8): farmeo chill. Las primeras recolecciones de cada
 // nodo salen en minutos (enganche) y después el nodo pasa a su enfriamiento largo real.
 var GOLPES_TALAR = 3, GOLPES_MINAR = 3;   // clics para tumbar un árbol o romper una roca (lo usa también el panel de balanceo)
@@ -277,7 +295,12 @@ function buySeed(k, qty) {
    $Golden. Le da utilidad diaria al $Golden y reemplaza a los kits del tutorial como
    válvula anti-atasco después de la guía temprana. Las semillas de acá NO consumen el
    cupo diario (son el rescate, no el mercado). Precios tuneables — validar con diseñador. */
-var EMERG_GOLDEN = { axe: 2, pick: 2, seed: 1 };   // $G por unidad
+// 16/8 (auditoría F): el kit vendía 1 hacha (6 plata) por 2 $Golden — valoraba el $Golden a
+// 3 plata, mientras comprar parcelas lo valora a cientos. Como es una válvula ANTI-ATASCO,
+// ahora entrega LOTES: 1 $Golden = 10 hachas / 10 picos / 5 semillas. Rescata de verdad y
+// deja de ser el peor canje del juego. (Tipo de cambio de referencia: GOLDEN_EN_PLATA.)
+var EMERG_GOLDEN = { axe: 1, pick: 1, seed: 1 };   // $G por LOTE
+var EMERG_LOTE   = { axe: 10, pick: 10, seed: 5 }; // unidades por lote
 var EMERG_MAX = 5;                                  // tope diario por tipo
 function emergBuysToday() {
   const e = G.emergBuys || (G.emergBuys = { date: "", axe: 0, pick: 0, seed: 0 });
@@ -290,14 +313,15 @@ function comprarEmergencia(tipo) {
   if ((e[tipo] || 0) >= EMERG_MAX) { toast("Tope diario del kit de emergencia (" + EMERG_MAX + ") — volvé mañana"); return; }
   if (G.golden < precio) { toast("Te faltan $Golden"); return; }
   G.golden -= precio; e[tipo] = (e[tipo] || 0) + 1;
-  if (tipo === "axe") { G.tools = G.tools || {}; G.tools.axe = (G.tools.axe || 0) + 1; toast("🆘 +1 hacha"); }
+  const n = (EMERG_LOTE && EMERG_LOTE[tipo]) || 1;   // 16/8: se entrega por lotes
+  if (tipo === "axe") { G.tools = G.tools || {}; G.tools.axe = (G.tools.axe || 0) + n; toast("🆘 +" + n + " hachas"); }
   else if (tipo === "pick") {
     G.picks = G.picks || { owned: {}, dur: {}, eq: null };
     if (!G.picks.eq || !G.picks.owned[G.picks.eq]) { G.picks.owned.stone = true; G.picks.eq = "stone"; G.picks.dur.stone = 0; }
-    G.picks.dur[G.picks.eq] = (G.picks.dur[G.picks.eq] || 0) + 1; toast("🆘 +1 pico");   // los picos son apilables como las hachas: 1 pico = 1 picada
+    G.picks.dur[G.picks.eq] = (G.picks.dur[G.picks.eq] || 0) + n; toast("🆘 +" + n + " picos");   // los picos son apilables como las hachas: 1 pico = 1 picada
   }
-  else if (tipo === "seed") { G.seeds.papa = (G.seeds.papa || 0) + 1; toast("🆘 +1 semilla de papa"); }
-  log("Kit de emergencia: compraste 1 " + (tipo === "axe" ? "hacha" : tipo === "pick" ? "pico" : "semilla de papa") + " por " + precio + " $Golden (" + e[tipo] + "/" + EMERG_MAX + " hoy).", "warn");
+  else if (tipo === "seed") { G.seeds.papa = (G.seeds.papa || 0) + n; toast("🆘 +" + n + " semillas de papa"); }
+  log("Kit de emergencia: compraste " + n + " " + (tipo === "axe" ? "hachas" : tipo === "pick" ? "picos" : "semillas de papa") + " por " + precio + " $Golden (" + e[tipo] + "/" + EMERG_MAX + " hoy).", "warn");
   refreshHud(); if (typeof refreshHotbar === "function") refreshHotbar(true);
   if (typeof refreshSeedShop === "function" && isOpen("ov-market")) refreshSeedShop();
   if (typeof saveFarm === "function") saveFarm();
@@ -940,15 +964,21 @@ const ORE_DEF = {   // 15/8 EN PRUEBA: enfriamientos largos del doc 4/8 del dise
   piedra:   { tier:0, label:"Piedra",    emoji:"🪨", sprite:"node_stone",     cd:7200,  yield:1, price:6 },
   bronce:   { tier:1, label:"Bronce",    emoji:"🟫", sprite:"node_bronze",    cd:28800, yield:1, price:12 },
   hierro:   { tier:2, label:"Hierro",    emoji:"⛓️", sprite:"node_iron",      cd:43200, yield:1, price:15 },   // viernes (2): lo mina el Pico de Hierro
-  oro:      { tier:3, label:"Oro",       emoji:"🟡", sprite:"node_gold",      cd:50400, yield:1, price:30 },
-  diamante: { tier:4, label:"Diamante",  emoji:"💎", sprite:"node_diamond",   cd:50400, yield:1, price:80 },
-  netherita:{ tier:5, label:"Netherita", emoji:"🔶", sprite:"node_netherite", cd:50400, yield:1, price:200 },
+  // 16/8 (auditoría G): oro, diamante y netherita compartían enfriamiento (14 h) pero valen
+  // 30, 80 y 200. Con el ancla de tiempo, una hora de nodo es una hora de nodo: si el valor
+  // sube, el reloj tiene que subir. Ahora la escalera se lee sola: 14 h → 18 h → 24 h.
+  oro:      { tier:3, label:"Oro",       emoji:"🟡", sprite:"node_gold",      cd:50400, yield:1, price:30 },   // 14 h
+  diamante: { tier:4, label:"Diamante",  emoji:"💎", sprite:"node_diamond",   cd:64800, yield:1, price:80 },   // 18 h (era 14)
+  netherita:{ tier:5, label:"Netherita", emoji:"🔶", sprite:"node_netherite", cd:86400, yield:1, price:200 },  // 24 h (era 14) — el ancla diaria de la minería
 };
 const PICK_ORDER = ["stone","bronze","iron","gold","diamond","netherite"];
 const PICK_DEF = {
   // modelo SFL puro (31/7): 1 uso por pico, costos baratos (material del tier anterior + madera + monedas)
   // costos "detalles viernes (2)"; el Pico de Bronce no figura en el doc y se interpola
-  stone:    { tier:0, label:"Pico de Piedra",    mineTier:0, dur:1, cost:{madera:2},            plata:6,   sprite:"pick_stone" },   // 14/8: era 3 madera + 10
+  // 16/8 (auditoría G): el pico base ya no pide madera. Con 2 maderas encima, cada piedra
+  // costaba 18 plata efectivas contra 6 de la madera (el triple) y una parcela financiaba
+  // 2,2 rocas en vez de 6,7. La cadena madera→pico sigue viva en los picos de tier alto.
+  stone:    { tier:0, label:"Pico de Piedra",    mineTier:0, dur:1, cost:{},                    plata:6,   sprite:"pick_stone" },   // 14/8: era 3 madera + 10 · 16/8: sin madera
   bronze:   { tier:1, label:"Pico de Bronce",    mineTier:1, dur:1, cost:{madera:3,piedra:4},   plata:8,   sprite:"pick_bronze" },   // 14/8 rebalance (era 4+5+10)
   iron:     { tier:2, label:"Pico de Hierro",    mineTier:2, dur:1, cost:{madera:3,piedra:5},   plata:10,  sprite:"pick_iron" },
   gold:     { tier:3, label:"Pico de Oro",       mineTier:3, dur:1, cost:{madera:3,bronce:3},   plata:20,  sprite:"pick_gold" },   // 14/8: era 5 bronce + 35 (cadena del Altar)
@@ -1833,7 +1863,11 @@ function decoSacar(i) {   // lo levanta y vuelve a la bolsa de adornos
 // ============ PARCELAS: pagar con PLATA o con $GOLDEN (10/8) =======================
 // El doc pide que el jugador elija con qué pagar. La de $Golden se calcula desde la de plata
 // con un cambio fijo, así el diseñador toca UN solo número y las dos quedan alineadas.
-var PLOT_GOLDEN_CAMBIO = 900;   // cuántas de plata "vale" 1 $Golden a la hora de comprar parcelas
+// 16/8 (auditoría F): tipo de cambio ÚNICO del juego. Antes cada sistema tenía el suyo
+// (900 para parcelas, 3 para el kit de emergencia): 300× de diferencia. Todo lo que cobre
+// $Golden se expresa desde acá.
+var GOLDEN_EN_PLATA = 500;
+var PLOT_GOLDEN_CAMBIO = GOLDEN_EN_PLATA;   // cuántas de plata "vale" 1 $Golden a la hora de comprar parcelas
 var PLOT_GOLDEN_MIN = 5;        // piso: sin esto la primera parcela salía 1 $Golden, o sea regalada
 // TOPE 60 (Discord del diseñador 10/8): "12 es muy poco, que compre la gente a placer".
 // Las primeras 12 son la grilla de siempre; de la 13 a la 60 cada una nace en una celda
@@ -2707,11 +2741,15 @@ const RECIPE_ORDER = [
   "guiso_campestre", "pan_maiz_trigo", "estofado_cosecha", "banquete_bosque",
   "pescado_asado", "estofado", "banquete"];
 const RECIPE_DEF = {
-  papa_asada:         { label:"Papa Asada",             emoji:"🥔", sprite:"dish_papa_asada", res:{papa:1, madera:1},                                        lvl:1,  heal:10, buff:{type:"farm",    val:5},  cookS:180,  xp:8,  plata:5 },
-  pure_papa:          { label:"Puré de Papa",           emoji:"🥣", sprite:"dish_pure_papa", res:{papa:2, cebolla:1, madera:1},                             lvl:2,  heal:13, buff:{type:"regen",   val:2},  cookS:240,  xp:10, plata:12 },
-  sopa_zanahoria:     { label:"Sopa de Zanahoria",      emoji:"🍜", sprite:"dish_sopa_zanahoria", res:{zanahoria:2, cebolla:1, madera:1},                        lvl:2,  heal:15, buff:{type:"speed",   val:8},  cookS:240,  xp:10, plata:14 },
-  ensalada_repollo:   { label:"Ensalada de Repollo",    emoji:"🥗", sprite:"dish_ensalada_repollo", res:{repollo:2, zanahoria:1, madera:1},                        lvl:3,  heal:17, buff:{type:"def",     val:6},  cookS:300, xp:14, plata:18 },
-  calabacin_salteado: { label:"Calabacín Salteado",     emoji:"🥒", sprite:"dish_calabacin_salteado", res:{calabacin:2, cebolla:1, madera:1},                        lvl:3,  heal:18, buff:{type:"dmg",     val:6},  cookS:300, xp:14, plata:20 },
+  // 16/8 (auditoría E): las recetas simples ya no piden MADERA. La madera cuesta 6 plata de
+  // producir (más un reloj de 1 h 30) y el plato se vendía a 5: cocinar destruía valor, y el
+  // tutorial enseñaba a cocinar con la operación que más plata pierde. Las recetas grandes
+  // (nivel 4+) la conservan: ahí el jugador ya tiene excedente y la madera es sumidero sano.
+  papa_asada:         { label:"Papa Asada",             emoji:"🥔", sprite:"dish_papa_asada", res:{papa:1},                                                  lvl:1,  heal:10, buff:{type:"farm",    val:5},  cookS:180,  xp:8,  plata:5 },
+  pure_papa:          { label:"Puré de Papa",           emoji:"🥣", sprite:"dish_pure_papa", res:{papa:2, cebolla:1},                                       lvl:2,  heal:13, buff:{type:"regen",   val:2},  cookS:240,  xp:10, plata:12 },
+  sopa_zanahoria:     { label:"Sopa de Zanahoria",      emoji:"🍜", sprite:"dish_sopa_zanahoria", res:{zanahoria:2, cebolla:1},                                  lvl:2,  heal:15, buff:{type:"speed",   val:8},  cookS:240,  xp:10, plata:14 },
+  ensalada_repollo:   { label:"Ensalada de Repollo",    emoji:"🥗", sprite:"dish_ensalada_repollo", res:{repollo:2, zanahoria:1},                                  lvl:3,  heal:17, buff:{type:"def",     val:6},  cookS:300, xp:14, plata:18 },
+  calabacin_salteado: { label:"Calabacín Salteado",     emoji:"🥒", sprite:"dish_calabacin_salteado", res:{calabacin:2, cebolla:1},                                  lvl:3,  heal:18, buff:{type:"dmg",     val:6},  cookS:300, xp:14, plata:20 },
   pan_trigo:          { label:"Pan de Trigo",           emoji:"🍞", sprite:"dish_pan_trigo", res:{trigo:3, madera:2},                                       lvl:4,  heal:20, buff:{type:"cookxp",  val:10}, cookS:360, xp:18, plata:22 },
   salteado_brocoli:   { label:"Salteado de Brócoli",    emoji:"🥦", sprite:"dish_salteado_brocoli", res:{brocoli:2, calabacin:1, madera:2},                        lvl:5,  heal:23, buff:{type:"farm",    val:10}, cookS:360, xp:22, plata:28 },
   crema_calabaza:     { label:"Crema de Calabaza",      emoji:"🎃", sprite:"dish_crema_calabaza", res:{calabaza:2, cebolla:1, madera:2},                         lvl:5,  heal:25, buff:{type:"def",     val:10}, cookS:420, xp:24, plata:32 },
@@ -2722,7 +2760,7 @@ const RECIPE_DEF = {
   estofado_cosecha:   { label:"Estofado de la Cosecha", emoji:"🥘", sprite:"dish_estofado_cosecha", res:{calabaza:2, maiz:1, papa:1, zanahoria:1, madera:3},       lvl:9,  heal:37, buff:{type:"dmg",     val:15}, cookS:540, xp:52, plata:110, goldenP:2 },
   banquete_bosque:    { label:"Banquete del Bosque",    emoji:"🍱", sprite:"dish_banquete_bosque", res:{papa:1, zanahoria:1, repollo:1, brocoli:1, calabaza:1, madera:3}, lvl:10, heal:40, buff:{type:"feast", val:20}, cookS:600, xp:70, plata:180, goldenP:4 },
   // clásicas (siguen dándole uso al pescado y la carne)
-  pescado_asado: { label:"Pescado asado", emoji:"🐟", sprite:"dish_pescado_asado", fish:{comun:1}, res:{madera:1}, lvl:1,
+  pescado_asado: { label:"Pescado asado", emoji:"🐟", sprite:"dish_pescado_asado", fish:{comun:1}, res:{}, lvl:1,   // 16/8: sin madera (auditoría E)
     heal:30, buff:{type:"yield",label:"Cosecha +10%",mult:1.10,dur:90}, cookS:240, xp:8, plata:15,
     desc:"Cura 30 · Cosecha +10% (1 min 30 s)" },
   estofado: { label:"Estofado de carne", emoji:"🍲", sprite:"dish_estofado", res:{carne:2, papa:1, madera:1}, lvl:3,
@@ -3013,7 +3051,11 @@ function useTool(id) {
   return true;
 }
 // craftear herramientas consumibles — costos estilo SFL, apilan hasta 99
-const TOOL_CRAFT = { axe: { cost:{}, plata:6 }, rod: { cost:{ madera:3, piedra:1, oro:8 }, plata:0 } };   // 14/8 rebalance: hacha 6 (era 10) · caña con 8 de oro (era 15)
+// 16/8 (auditoría B): la caña pedía 8 de ORO — 119 horas de un nodo de 14 h, o 2.692 plata
+// efectivas POR PESCA. El kit regala 15 y el tutorial enseña a pescar: al gastarlas, la pesca
+// se terminaba para siempre. Ahora cuesta 1 madera: quien limita la pesca es la CARNADA
+// (las lombrices de los montículos diarios), que es el freno que el diseño ya tenía puesto.
+const TOOL_CRAFT = { axe: { cost:{}, plata:6 }, rod: { cost:{ madera:1 }, plata:0 } };   // 14/8: hacha 6 (era 10) · 16/8: caña 1 madera (era 3 madera + 1 piedra + 8 oro)
 function craftTool(id, lote) {
   lote = Math.max(1, lote || 1);
   const tc = TOOL_CRAFT[id], td = TOOL_DEF[id]; if (!tc || !td) return;
@@ -3152,7 +3194,14 @@ function ensureHotbarDefaults() {
 }
 
 // --- mercado ---
-const PRICE = { madera:3, piedra:6, bronce:12, hierro:15, oro:30, diamante:80, netherita:200, carne:8, flecha:2 };
+// 16/8 (auditoría D): PRICE era una tabla fantasma — precios para cosas que NO se venden y
+// desconectados de lo que cuesta producirlas (decía 3 por una madera que cuesta 6 y ocupa
+// 1 h 30 de reloj). Ahora cada material vale su PRECIO SOMBRA, derivado del ancla:
+//     valor = horas del reloj del nodo × 20 (lo que rinde una parcela por hora) + costo de la herramienta
+// Los materiales SIGUEN sin venderse (SELLABLE = solo cultivos): esto es la vara con la que
+// cualquier sistema — recompensas, pedidos, proyecciones — debe valorarlos. Y si algún día
+// se vendieran, estos son los precios que NO rompen la economía.
+const PRICE = { madera:36, piedra:46, bronce:210, hierro:300, oro:470, diamante:990, netherita:1240, carne:8, flecha:2 };
 // 1/8: los CULTIVOS venden según CROP_DEF.price (la tabla que edita balance.html) — PRICE quedó solo para lo demás.
 //      Antes el mercado usaba una copia vieja acá y los cambios del panel no se veían (bug reportado por el diseñador).
 function priceOf(res) { return CROP_DEF[res] ? CROP_DEF[res].price : (PRICE[res] || 0); }
@@ -3203,7 +3252,10 @@ var PLOT_UNLOCK_BASE = 200;
 // (con la duplicación, la 60 costaba 2^54 veces la base — imposible "a placer").
 function plotUnlockCost() {
   const n = G.plotsOwned || 6;
-  const hasta12 = PLOT_UNLOCK_BASE * Math.pow(2, Math.max(0, Math.min(n, 12) - 6));
+  // 16/8 (auditoría G): la duplicación llevaba la parcela 12 a 12.800 de plata mientras el
+  // NIVEL de granja la regala — el camino de plata era decorativo. Con 1,45× por parcela la
+  // compra vuelve a ser una opción real para el impaciente (la 12 sale ~2.100).
+  const hasta12 = PLOT_UNLOCK_BASE * Math.pow(1.45, Math.max(0, Math.min(n, 12) - 6));
   return Math.round(hasta12 * Math.pow(PLOT_EXTRA_SUBA, Math.max(0, n - 12)));
 }
 

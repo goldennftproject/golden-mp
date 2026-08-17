@@ -2125,6 +2125,48 @@ Ahora la cadena de guía no tiene puntas sueltas:
   lugar. Al recomprar semillas, `buySeed` la vuelve a poner en el primer hueco libre.
   Herramientas y picos conservan su lógica de siempre.
 
+## Día 19 (cont.) — LA PASADA DE ECONOMÍA: un ancla y nueve arreglos (16/8, dirección)
+- DIAGNÓSTICO (tools/auditoria-economia.js, mide el código real): la economía no estaba
+  diseñada sino ACUMULADA — cada número decidido en un momento distinto, sin una unidad de
+  medida común. El tablón quedó FUERA de la pasada (aún sin aprobar por el diseñador).
+- EL ANCLA, que ya existía sin estar escrita: **una parcela rinde ~20 plata/hora**. Los
+  cultivos ya estaban balanceados entre sí (13 la papa, 40 el maíz, todos los demás en 20);
+  lo que faltaba era medir el RESTO contra esa vara.
+- LA REGLA DE ORO derivada: `parcelas × 20 ≥ árboles × 4 + rocas × 3`. Los cultivos son la
+  única fuente de plata y los nodos el sumidero (herramientas). La escalera de nodos por
+  nivel la cumple con margen en los 10 niveles.
+- LOS NUEVE ARREGLOS (ninguno toca timers de cultivos ni de árbol/piedra):
+  1. CUPO DE SEMILLAS por parcela: `15 × parcelas` (45 a 90) en vez de 18+2×nivel (20 a 38).
+     El viejo duraba UNA hora de juego y apagaba el día entero. Ahora escala solo y solo
+     muerde al hiperactivo de cultivos cortos. `SEED_POR_PARCELA` = la perilla a tunear.
+  2. CAÑA sin oro: 1 madera (era 3 madera + 1 piedra + **8 oro** = 119 horas de nodo por
+     pesca). El freno de la pesca pasa a ser la CARNADA de los montículos, como corresponde.
+  3. CULTIVOS POR NIVEL DE GRANJA (`farmLevel()` → `G.level`): las dos curvas se comían la
+     misma XP con varas incompatibles (granja 10 = 14.000 XP; el skill con esa XP iba en 5;
+     el maíz pedía 111.525 = 8×). Los cuatro cultivos altos se corren a la banda de tareas:
+     brócoli 8, girasol 10, trigo 12, maíz 15. El skill sobrevive para bonos (`farmSkillLevel`).
+  4. PRECIO SOMBRA en PRICE: `horas del nodo × 20 + costo de la herramienta` → madera 36,
+     piedra 46, bronce 210, hierro 300, oro 470, diamante 990, netherita 1240 (decía 3/6/12/
+     15/30/80/200). Los materiales SIGUEN sin venderse: es la vara para valorarlos.
+  5. COCINA: las recetas simples (nivel 1-3) ya no piden madera. CORRECCIÓN de la auditoría:
+     cocinar NO destruía valor — `COOK_PRICE_AUTO` ya paga ingredientes ×1.25 y el campo
+     `plata` de la tabla es legado. El riesgo real era el inverso: con el precio sombra, una
+     receta barata con madera convertía la Cocina en la mejor salida de la madera justo
+     cuando hace falta para construir.
+  6. $GOLDEN con UN tipo de cambio: `GOLDEN_EN_PLATA = 500`. Antes convivían 900 (parcelas)
+     y 3 (kit de emergencia): 300× de diferencia. El kit pasa a entregar LOTES — 1 $Golden =
+     10 hachas / 10 picos / 5 semillas — y vuelve a ser un rescate de verdad.
+  7. PICO DE PIEDRA sin madera (era 2 + 6 plata): la piedra costaba 18 contra 6 de la madera
+     y una parcela financiaba 2,2 rocas; ahora 6 y 6,7 rocas.
+  8. MINERALES con relojes escalonados: diamante 14 h → 18 h, netherita 14 h → 24 h. Oro,
+     diamante y netherita compartían enfriamiento pero valían 30, 80 y 200.
+  9. PARCELAS por plata con curva 1,45× en vez de 2× (la nº 12 baja de 12.800 a ~1.280): el
+     camino de compra era decorativo porque el nivel las regala.
+- VALIDADO: sintaxis + prueba funcional del motor real en Node (cupo, desbloqueos por nivel,
+  crafteo de caña y pico, precios de cocina, lotes de emergencia, materiales no vendibles,
+  tutorial entero de 20 pasos intacto) + sim de 24 h: el día pasa de morir en la hora 5 con
+  neto 0 a cerrar con **+937 de plata, 56 cosechas y los 20 nodos girando las 24 horas**.
+
 ## Día 19 (cont.) — TABLÓN DE PEDIDOS v2 + VALES (16/8, dirección: "implementémoslo")
 - Nace el motor de la visita diaria (investigación Hay Day/Sunflower Land/Stardew/
   Township/Pixels/Animal Crossing — doc en la carpeta del proyecto):
