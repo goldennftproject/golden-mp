@@ -32,8 +32,8 @@ def datos_del_juego():
     process.stdout.write(JSON.stringify({
       T:G.TILE, COLS:G.COLS, ROWS:G.ROWS, POND:G.POND, PLOTS:G.PLOTS_BASE,
       OBJ:G.WORLD_OBJECTS.map(o=>({key:o.key,type:o.type,leftCol:o.leftCol,baseRow:o.baseRow,wCells:o.wCells})),
-      B:{margen:G.BOSQUE_MARGEN,
-         tam:G.BOSQUE_TAM,var:G.BOSQUE_ESC_VAR,leyes:G.BOSQUE_LEYES,cada:G.BOSQUE_FILA_CADA,dens:G.BOSQUE_DENSIDAD,frente:G.BOSQUE_FRENTE_SOLIDO,
+      B:{margen:G.BOSQUE_MARGEN,mx:G.BOSQUE_MARGEN_X,my:G.BOSQUE_MARGEN_Y,
+         tam:G.BOSQUE_TAM,var:G.BOSQUE_ESC_VAR,leyes:G.BOSQUE_LEYES,cada:G.BOSQUE_FILA_CADA,dens:G.BOSQUE_DENSIDAD,frente:G.BOSQUE_FRENTE_SOLIDO,jf:G.BOSQUE_JITTER_FONDO,
          jx:G.BOSQUE_JITTER_X,jy:G.BOSQUE_JITTER_Y,colchon:G.BOSQUE_COLCHON,
          redondez:G.BOSQUE_REDONDEZ,onda:G.BOSQUE_ONDA,aire:G.BOSQUE_AIRE}
     }));
@@ -58,17 +58,17 @@ def main():
     d = datos_del_juego()
     T, C, R = d["T"], d["COLS"], d["ROWS"]
     W, H = C * T, R * T
-    M = d["B"]["margen"]
-    lienzo = Image.new("RGBA", (W + 2 * M, H + 2 * M), (47, 92, 40, 255))
-    OX, OY = M, M   # origen del mundo dentro del lienzo
+    MX, MY = d["B"]["mx"] or d["B"]["margen"], d["B"]["my"] or d["B"]["margen"]
+    lienzo = Image.new("RGBA", (W + 2 * MX, H + 2 * MY), (47, 90, 40, 255))
+    OX, OY = MX, MY   # origen del mundo dentro del lienzo
 
     # ---- césped del claro ----
     pastos = [p for p in (abrir("grass_a"), abrir("grass_b"), abrir("grass_c")) if p]
     if pastos:
         pastos = [escalar_al_ancho(p, T) for p in pastos]
-        ce = -(-M // T)   # el pasto llega hasta donde llega el bosque, igual que en el juego
-        for r in range(-ce, R + ce):
-            for c in range(-ce, C + ce):
+        cx2, cy2 = -(-MX // T), -(-MY // T)   # el pasto llega hasta donde llega el bosque
+        for r in range(-cy2, R + cy2):
+            for c in range(-cx2, C + cx2):
                 x, y = OX + c * T, OY + r * T
                 if -T < x < lienzo.width and -T < y < lienzo.height:
                     lienzo.alpha_composite(pastos[(c * 7 + r * 3) % len(pastos)], (x, y))
@@ -109,8 +109,8 @@ def main():
                  "x": lambda c, r: (c * T, r * T),
                  "v": lambda c, r: (c * T, (r + 0.5) * T)}
         lista = []
-        cIni, cFin = int(-M // T) - 1, int(-(-(W + M) // T)) + 1
-        rIni, rFin = int(-M // T) - 1, int(-(-(H + M) // T)) + 1
+        cIni, cFin = int(-MX // T) - 1, int(-(-(W + MX) // T)) + 1
+        rIni, rFin = int(-MY // T) - 1, int(-(-(H + MY) // T)) + 1
         CADA = max(1, b["cada"] or 1)
         for r in range(rIni, rFin + 1):
             if r % CADA != 0:
@@ -119,21 +119,28 @@ def main():
                 for ley in str(b["leyes"] or "cxv"):
                     if ley not in ANCLA:
                         continue
-                    ax, ay = ANCLA[ley](c2, r)
-                    ax += round((az() * 2 - 1) * b["jx"])
-                    ay += round((az() * 2 - 1) * b["jy"])
+                    ax0, ay0 = ANCLA[ley](c2, r)
                     esc = eMin + az() * (eMax - eMin)
-                    r2 = az()
+                    az()
+                    rx, ry, rd = az(), az(), az()
+                    nx0 = (ax0 - W / 2) / RX
+                    ny0 = (ay0 - altoS * 0.28 - H / 2) / RY
+                    fuera0 = met(nx0, ny0) - borde(nx0, ny0)
+                    if fuera0 < 0:
+                        continue
+                    enFrente = fuera0 * min(RX, RY) <= (b["frente"] or 1.5) * T
+                    jf = b["jf"] or 0
+                    jx = b["jx"] if enFrente else max(b["jx"], jf)
+                    jy = b["jy"] if enFrente else max(b["jy"], jf)
+                    ax = ax0 + round((rx * 2 - 1) * jx)
+                    ay = ay0 + round((ry * 2 - 1) * jy)
                     nx = (ax - W / 2) / RX
                     ny = (ay - altoS * 0.28 - H / 2) / RY
-                    fuera = met(nx, ny) - borde(nx, ny)
-                    if fuera < 0:
+                    if met(nx, ny) - borde(nx, ny) < 0:
                         continue
-                    hondura = fuera * min(RX, RY)
-                    enFrente = hondura <= (b["frente"] or 1.5) * T
                     if enFrente and ley == "x":
                         continue
-                    if not enFrente and r2 > (b["dens"] or {}).get(ley, 1):
+                    if not enFrente and rd > (b["dens"] or {}).get(ley, 1):
                         continue
                     lista.append((ay - altoT * esc, ax - anchoT * esc / 2, esc))
         lista.sort(key=lambda t: t[0] + altoT * t[2])   # por la BASE, no por el techo del sprite

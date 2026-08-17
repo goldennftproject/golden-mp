@@ -29,7 +29,7 @@ class FarmScene extends Phaser.Scene {
     // 16/8 (dirección): "el suelo será solo césped, no va a haber tierra de playa, arena ni
     // agua". Con BOSQUE el fondo de la cámara es verde: si algún borde quedara al aire,
     // se ve pasto y no mar.
-    this.cameras.main.setBackgroundColor(GF.BOSQUE ? "#2f5c28" : (GF.ISLA ? "#2e7fa8" : "#328032"));
+    this.cameras.main.setBackgroundColor(GF.BOSQUE ? "#2f5a28" : (GF.ISLA ? "#2e7fa8" : "#328032"));
 
     this.dragPlot = null; this.dragPond = false;
     // posiciones editadas de laguna y parcelas: primero base, después lo guardado
@@ -56,8 +56,7 @@ class FarmScene extends Phaser.Scene {
       // el verde liso del fondo de la cámara. Se veía como un anillo plano alrededor de la
       // granja. Los tiles de más quedan tapados por el bosque y no cuestan nada: es un solo
       // renderTexture que se arma una vez.
-      const MB = GF.BOSQUE ? (GF.BOSQUE_MARGEN || 300) : 0;
-      const cExtra = Math.ceil(MB / T), rExtra = Math.ceil(MB / T);
+      const cExtra = Math.ceil(this.margenBosque("x") / T), rExtra = Math.ceil(this.margenBosque("y") / T);
       const rt = this.add.renderTexture(-cExtra * T, -rExtra * T,
         (GF.COLS + cExtra * 2) * T, (GF.ROWS + rExtra * 2) * T).setOrigin(0).setDepth(-1000);
       let gseed = 20260731;
@@ -332,11 +331,11 @@ class FarmScene extends Phaser.Scene {
     // redondeado que se veía en las esquinas, la orilla del mar sobreviviendo al cambio.
     // Ahora son dos caminos separados que no se pisan.
     {
-      const MARGEN = (GF.BOSQUE ? (GF.BOSQUE_MARGEN || 300) : (GF.ISLA_MARGEN || 260)) + 900;
+      const MARGEN = (GF.BOSQUE ? Math.max(this.margenBosque("x"), this.margenBosque("y")) : (GF.ISLA_MARGEN || 260)) + 900;
       // OJO con la profundidad: va DEBAJO del pasto (-1000). Estaba en -1000 igual que los
       // tiles y, al crearse después, los tapaba: el suelo se veía verde plano (9/8).
       this.add.graphics().setDepth(-1003)
-        .fillStyle(GF.BOSQUE ? 0x2f5c28 : 0x2e7fa8, 1)
+        .fillStyle(GF.BOSQUE ? 0x2f5a28 : 0x2e7fa8, 1)   // 0x2f5a28 = el verde medio de las copas, un 18% más oscuro
         .fillRect(-MARGEN, -MARGEN, GF.WORLD_W + MARGEN * 2, GF.WORLD_H + MARGEN * 2);
     }
     if (GF.BOSQUE) {
@@ -854,22 +853,36 @@ class FarmScene extends Phaser.Scene {
   // números decían cosas distintas. Ahora hay UNA sola fuente de verdad y todo se cuelga de acá.
   // El recorte de 16 px es para no llegar nunca al pixel del borde del lienzo.
   limiteVista() {
-    const M = GF.BOSQUE ? (GF.BOSQUE_MARGEN || 300) : (GF.ISLA ? (GF.ISLA_MARGEN || 260) : 0);
-    const b = M > 0 ? 16 : 0;
-    return { x1: -M + b, y1: -M + b, x2: GF.WORLD_W + M - b, y2: GF.WORLD_H + M - b };
+    const MX = this.margenBosque("x"), MY = this.margenBosque("y");
+    const b = MX > 0 ? 16 : 0;
+    return { x1: -MX + b, y1: -MY + b, x2: GF.WORLD_W + MX - b, y2: GF.WORLD_H + MY - b };
+  }
+
+  // Ancho del anillo por eje. Es más ancho que alto a propósito: la pantalla también lo es, y
+  // así el bosque entero entra en el encuadre al alejar del todo (dirección, 17/8).
+  margenBosque(eje) {
+    if (!GF.BOSQUE) return GF.ISLA ? (GF.ISLA_MARGEN || 260) : 0;
+    const d = GF.BOSQUE_MARGEN || 420;
+    return eje === "x" ? (GF.BOSQUE_MARGEN_X || d) : (GF.BOSQUE_MARGEN_Y || d);
   }
 
   fitCamera() {
     const cw = this.scale.width, ch = this.scale.height;
     if (GF.CAM_PAN) {
       // vista tipo SFL: se ve TODA la granja con su bosque alrededor, y queda margen para arrastrar.
-      const m = GF.BOSQUE ? Math.round((GF.BOSQUE_MARGEN || 300) * 0.6) : (GF.ISLA ? (GF.ISLA_MARGEN || 260) : 0);
-      const z = Math.max(cw / (GF.WORLD_W + m), ch / (GF.WORLD_H + m));   // que SIEMPRE quede margen para arrastrar en los dos ejes
-      // TOPE DE ALEJADO: por debajo de este zoom la pantalla mostraría MÁS de lo que hay
-      // dibujado y aparecería la franja verde lisa. Se calcula, no se pone a mano: así vale
-      // para cualquier ventana, cualquier zoom del navegador y cualquier margen de bosque.
+      const m = Math.round(this.margenBosque("y") * 0.6);
+      const z = Math.max(cw / (GF.WORLD_W + m), ch / (GF.WORLD_H + m));   // vista de trabajo, cerca de la granja
+      // TOPE DE ALEJADO (17/8, dirección: "los 4 lados del bosque deben ser visibles porque lo
+      // que interesa es que la granja se pueda expandir").
+      // Antes se calculaba para que NUNCA se viera el borde del dibujo, y el efecto secundario
+      // era que el anillo no entraba: con pantalla de 1341x630 se veían 1522x715 de un anillo
+      // de 1522x1312 — 597 px de bosque fuera de cuadro, alcanzables solo arrastrando.
+      // Ahora al alejar del todo entra el anillo ENTERO. Que no asome el vacío se resuelve
+      // donde corresponde: el anillo es más ancho que alto (BOSQUE_MARGEN_X > _Y) y el fondo
+      // de la cámara es el verde de las copas, así que si en una pantalla muy panorámica
+      // sobrara un poco, se lee como bosque lejano y no como un panel liso.
       const L = this.camLim || this.limiteVista();
-      const zMin = Math.max(cw / (L.x2 - L.x1), ch / (L.y2 - L.y1));
+      const zMin = Math.min(cw / (L.x2 - L.x1), ch / (L.y2 - L.y1));
       // y se corrige el zoom del jugador para que no siga bajando en el vacío: si no, la rueda
       // "no hace nada" varias vueltas y después hay que darle muchas para volver.
       const uMin = zMin / z;
@@ -3047,8 +3060,9 @@ class FarmScene extends Phaser.Scene {
     if (!this.textures.exists("tree")) return;
     const t0 = performance.now();
     const T = GF.TILE, W = GF.WORLD_W, H = GF.WORLD_H;
-    const M = GF.BOSQUE_MARGEN || 300;
-    const rt = this.add.renderTexture(-M, -M, W + 2 * M, H + 2 * M).setOrigin(0, 0).setDepth(GF.BOSQUE_DEPTH || -999);
+    const MX = this.margenBosque("x"), MY = this.margenBosque("y");
+    const M = MY;   // compatibilidad con el resto de la función
+    const rt = this.add.renderTexture(-MX, -MY, W + 2 * MX, H + 2 * MY).setOrigin(0, 0).setDepth(GF.BOSQUE_DEPTH || -999);
     // suelo de bosque: pasto por debajo, para que no asome el mar entre los troncos
     const pastos = ["grass_a", "grass_b", "grass_c"].filter(k => this.textures.exists(k));
     if (pastos.length) {
@@ -3143,8 +3157,9 @@ class FarmScene extends Phaser.Scene {
     const CADA = Math.max(1, GF.BOSQUE_FILA_CADA || 1);
     const DENS = GF.BOSQUE_DENSIDAD || { c: 1, x: 0.69, v: 0.84 };
     const FRENTE = GF.BOSQUE_FRENTE_SOLIDO != null ? GF.BOSQUE_FRENTE_SOLIDO : 1.5;
-    const cIni = Math.floor(-M / T) - 1, cFin = Math.ceil((W + M) / T) + 1;
-    const rIni = Math.floor(-M / T) - 1, rFin = Math.ceil((H + M) / T) + 1;
+    const JFONDO = GF.BOSQUE_JITTER_FONDO || 0;   // desorden SOLO en el interior del bosque
+    const cIni = Math.floor(-MX / T) - 1, cFin = Math.ceil((W + MX) / T) + 1;
+    const rIni = Math.floor(-MY / T) - 1, rFin = Math.ceil((H + MY) / T) + 1;
     const lista = [];
     for (let row = rIni; row <= rFin; row++) {
       if (((row % CADA) + CADA) % CADA !== 0) continue;
@@ -3155,14 +3170,22 @@ class FarmScene extends Phaser.Scene {
           const a = f(col, row);
           // jitter opcional: con las leyes puestas suele ir en 0, pero se deja por si se
           // quiere ensuciar un poco el patrón sin cambiar de sistema.
-          const cxA = a[0] + Math.round((az() * 2 - 1) * JX);
-          const baseA = a[1] + Math.round((az() * 2 - 1) * JY);
           const esc = eMin + az() * (eMax - eMin);
           const flip = az() < 0.45;
+          const rx = az(), ry = az(), rd = az();   // se sacan SIEMPRE, para que el azar no baile
+          // Primero hay que saber si el anclaje cae en el frente o en el fondo, porque de eso
+          // depende cuánto desorden se le permite. Se mide sobre el anclaje SIN mover.
+          const nx0 = (a[0] - W / 2) / RX, ny0 = (a[1] - altoS * 0.28 - H / 2) / RY;
+          const fuera0 = met(nx0, ny0) - borde(nx0, ny0);
+          if (fuera0 < 0) continue;                             // está en el claro
+          const enFrente0 = fuera0 * Math.min(RX, RY) <= FRENTE * T;
+          const jx = enFrente0 ? JX : Math.max(JX, JFONDO);
+          const jy = enFrente0 ? JY : Math.max(JY, JFONDO);
+          const cxA = a[0] + Math.round((rx * 2 - 1) * jx);
+          const baseA = a[1] + Math.round((ry * 2 - 1) * jy);
           const px = cxA - anchoT * esc / 2, py = baseA - altoT * esc;   // esquina del sprite
           const nx = (cxA - W / 2) / RX, ny = (baseA - altoS * 0.28 - H / 2) / RY;
-          const fuera = met(nx, ny) - borde(nx, ny);
-          if (fuera < 0) continue;                              // está en el claro
+          if (met(nx, ny) - borde(nx, ny) < 0) continue;         // quedó dentro del claro al moverse
           // RALEO POR LEY, PERO SOLO HACIA ADENTRO (17/8).
           // Dirección compuso el bosque a mano y exportó 260/260 anclajes de CELDA (100%),
           // 187/270 de ENCRUCIJADA (69%) y 228/270 de MEDIA ARISTA (84%). Al mirar el export
@@ -3172,15 +3195,14 @@ class FarmScene extends Phaser.Scene {
           // entera— y por eso el bosque del juego tenía el doble de hueco que el compuesto
           // (proporción de madera 0,33 contra 0,55, medida sobre las dos capturas).
           // Así que el frente va macizo y el raleo empieza a partir de FRENTE_SOLIDO celdas.
-          const hondura = fuera * Math.min(RX, RY);              // cuánto se mete en el bosque, en px
-          const enFrente = hondura <= FRENTE * T;
+          const enFrente = enFrente0;
           // En el FRENTE, además, se calla la ley de ENCRUCIJADA. Motivo: comparte base con la
           // de celda (las dos apoyan en fila x 42), así que juntas dejan un árbol cada 21 px y
           // la línea cierra del todo. En el export de dirección la primera banda tiene SOLO
           // árboles de celda, cada 42 px: por eso su frente tiene hueco entre tronco y tronco
           // (proporción de madera 0,55) en vez de ser un muro corrido.
           if (enFrente && ley === "x") continue;
-          if (!enFrente && az() > (DENS[ley] != null ? DENS[ley] : 1)) continue;
+          if (!enFrente && rd > (DENS[ley] != null ? DENS[ley] : 1)) continue;
           lista.push([py, px, esc, flip]);
         }
     }
@@ -3211,7 +3233,7 @@ class FarmScene extends Phaser.Scene {
     // con variación de tamaño y volteo, ordenado de atrás hacia adelante.
     for (const [py, px, esc, flip] of lista) {
       t.setScale(esc); t.setFlipX(flip);
-      if (usarLote) rt.batchDraw(t, px + M, py + M); else rt.draw(t, px + M, py + M);
+      if (usarLote) rt.batchDraw(t, px + MX, py + MY); else rt.draw(t, px + MX, py + MY);
     }
     if (usarLote) rt.endDraw();
     t.destroy();

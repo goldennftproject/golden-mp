@@ -3662,3 +3662,32 @@ export. Dos aprendizajes que conviene no repetir:
    con raleo", que era una descripción estadísticamente parecida pero estructuralmente falsa. La
    estructura solo apareció al leerlo **banda por banda**, y quedó clara del todo cuando dirección
    la enunció. Ante un patrón, preguntar la intención ahorra más que medirla.
+
+### Los cuatro lados del bosque, visibles de una vez
+Dirección: *"hice el máximo de zoom out y no puedo arrastrar la cámara hacia arriba; creo que los
+4 lados del bosque deben ser visibles porque lo que interesa es que la granja se pueda expandir"*.
+
+Medido, y el problema era de criterio, no un fallo suelto: el zoom mínimo estaba calculado para
+que **nunca se viera el borde del dibujo**, y el efecto secundario era que el anillo no entraba.
+Con una pantalla de 1341x630 la vista al alejar medía 1522x715 sobre un anillo de 1522x1312:
+**597 px de bosque fuera de cuadro**, arriba y abajo, alcanzables solo arrastrando.
+
+Tres cambios:
+
+- **El anillo pasa a tener margen por eje**, y es más ancho que alto: `BOSQUE_MARGEN_X = 1150` y
+  `_Y = 460`. Total 3014x1424, relación 2,14:1 — la de una pantalla. Antes era casi cuadrado, que
+  es justo la forma que no entra en un monitor.
+- **El zoom mínimo pasa de "llenar" a "encajar"** (`max` → `min`): al alejar del todo entra el
+  anillo entero, con la granja centrada y bosque a los cuatro lados.
+- **El fondo de la cámara pasa a ser el verde medio de las copas** (0x2f5a28, muestreado del
+  sprite): si en una pantalla muy panorámica sobra un poco, se lee como bosque lejano.
+
+### El fondo del bosque se rompe; el frente no se toca
+Al ver el anillo entero por primera vez apareció algo que de cerca no se notaba: con todos los
+árboles idénticos y en retícula perfecta, **el interior se leía como papel pintado**.
+
+La regla de dirección está pensada para el borde, que es lo que se ve de cerca. Así que el
+desorden y el raleo se aplican **solo pasado `BOSQUE_FRENTE_SOLIDO`**: la primera línea queda
+exactamente como la compuso, y el fondo se rompe con un 14% de claros y 6 px de desorden. Para
+que el azar no baile entre una zona y otra, los números aleatorios se sacan **siempre**, se usen
+o no.
