@@ -34,7 +34,12 @@ GF.BOSQUE_MARGEN = 420;     // cuánto bosque hay más allá del mundo
 //  · A 1 celda de ancho el árbol no cierra la masa: 300 árboles y todavía 1,8% de fondo visible.
 //    A 2 celdas —el MISMO tamaño que los árboles de la granja— alcanzan 126 con 0,02%.
 GF.BOSQUE_TAM = 2;          // ancho del árbol EN CELDAS (2 = igual que los de la granja)
-GF.BOSQUE_ESC_VAR = 0.15;   // variedad de tamaño, ±15% sobre ese ancho
+// 17/8: A CERO. El export de la composición de dirección trae tamMin=2 y tamMax=2: TODOS los
+// árboles exactamente del mismo tamaño. Con variación, dos árboles de la misma fila apoyan a
+// alturas distintas y la franja de troncos se ensancha y se emborrona; con todos iguales, los
+// troncos de cada fila quedan alineados al pixel y el borde se lee limpio. Era la diferencia
+// entre el bosque compuesto a mano y el que generaba el juego.
+GF.BOSQUE_ESC_VAR = 0;      // variedad de tamaño (0 = todos idénticos, como en la composición)
 // LAS TRES LEYES (17/8, dirección). El bosque ya NO se genera con separaciones a ojo, sino
 // colocando un árbol en cada anclaje de la cuadrícula. Se eligen con letras:
 //   "c" CELDA        centrado en la celda, apoyado en su borde de abajo

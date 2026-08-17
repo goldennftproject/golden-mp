@@ -3593,3 +3593,22 @@ midiendo píxeles de las capturas. Fue tiempo perdido y, peor, dio tres respuest
 misma imagen según dónde recortara: 68%, 41% y 4% de cobertura de tronco. La conclusión no era
 "medir mal", era que **la medición no servía para esa pregunta**. El export de un clic dio la
 respuesta exacta en un segundo. Cuando existe el dato, no se estima.
+
+### Por qué el bosque del juego no se veía como la composición a mano
+Dirección: *"¿por qué no se ve como el que hice?"*. La respuesta estaba en su propio export, en
+dos líneas fáciles de pasar por alto:
+
+    "tamMin": 2,
+    "tamMax": 2
+
+**Todos sus árboles miden exactamente lo mismo.** El juego los variaba ±15% (`BOSQUE_ESC_VAR`).
+Con variación, dos árboles del mismo anclaje apoyan a alturas distintas: la franja de troncos se
+ensancha y se emborrona, y se pierde la línea limpia. Con todos iguales, los troncos de cada fila
+quedan alineados al pixel.
+
+`BOSQUE_ESC_VAR` pasa a **0**. La variedad que hace falta ya la da el volteo horizontal aleatorio y
+—sobre todo— los claros del raleo. La variación de tamaño no aportaba riqueza, aportaba ruido.
+
+Vale la pena anotar el patrón: las tres últimas diferencias entre lo compuesto y lo generado
+—orden por la base, tamaño de 2 celdas, tamaño uniforme— **estaban todas en los datos**, y ninguna
+se resolvió mirando la imagen. Se resolvieron leyendo el export.
