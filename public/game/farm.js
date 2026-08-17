@@ -1,3 +1,21 @@
+    // LA FORMA DEL CLARO (16/8, dirección: "más redonda, menos irregular").
+    // La métrica mezcla cuadrado y círculo: BOSQUE_REDONDEZ manda (0 = rectángulo, 1 = óvalo).
+    // Encima va un oleaje suave por ángulo para que el borde no sea perfecto.
+    // El umbral NO es un número a mano: se calcula a partir de la ESQUINA del área jugable
+    // más el aire y la amplitud del oleaje, así el bosque NUNCA puede taparle una celda al
+    // jugador por mucho que se redondee o se ondule.
+    const RX = W / 2 + colchon, RY = H / 2 + colchon, tw = this.textures.get("tree").getSourceImage();
+    const anchoT = (tw && tw.width) || T, altoT = (tw && tw.height) || T * 2;
+    const R = GF.BOSQUE_REDONDEZ != null ? GF.BOSQUE_REDONDEZ : 0.62;
+    const met = (nx, ny) => Math.max(Math.abs(nx), Math.abs(ny)) * (1 - R) + Math.hypot(nx, ny) * R;
+    const AMP = [0.085, 0.055, 0.035, 0.02], ONDA = GF.BOSQUE_ONDA != null ? GF.BOSQUE_ONDA : 0.45;
+    const ampTotal = AMP.reduce((a, b) => a + b, 0) * ONDA;
+    const BASE = met((W - W / 2) / RX, (H - H / 2) / RY) + (GF.BOSQUE_AIRE != null ? GF.BOSQUE_AIRE : 0.05) + ampTotal;
+    const borde = (nx, ny) => {
+      const a = Math.atan2(ny, nx);
+      return BASE + ONDA * (AMP[0] * Math.sin(3 * a + 0.7) + AMP[1] * Math.sin(5 * a + 2.1) +
+        AMP[2] * Math.sin(8 * a + 4.3) + AMP[3] * Math.sin(13 * a));
+    };
 /* FarmScene: la granja privada. Fase 1 (mundo) + Fase 3 (interacciones). */
 // CD (enfriamiento árbol/piedra) ahora vive en state.js para el panel de balanceo
 function witherMs(ck) { const cd = CROP_DEF[ck]; return cd ? cd.grow * 1000 * 0.5 : 120000; }   // marchitado proporcional: mitad del tiempo de cultivo
@@ -3041,13 +3059,8 @@ class FarmScene extends Phaser.Scene {
       for (let x = -M; x < W + M; x += paso) {
         const px = x + Math.round((az() * 2 - 1) * J), py = y + Math.round((az() * 2 - 1) * J);
         const nx = (px + anchoT * 0.5 - W / 2) / RX, ny = (py + altoT * 0.72 - H / 2) / RY;
-        const d = Math.max(Math.abs(nx), Math.abs(ny)) * 0.62 + Math.hypot(nx, ny) * 0.38;
-        if (d < borde(nx, ny)) continue;                      // está en el claro
-        // OJO: la profundidad se mide con la distancia LISA (sin la onda del borde). Si se
-        // midiera contra el borde ondulado, dos árboles vecinos podían quedar uno claro y
-        // otro oscuro sin razón visible — el fallo que se veía en las bahías.
-        const prof = d - 1.11;
-        lista.push([py, px, eMin + az() * (eMax - eMin), az() < 0.45, prof]);
+        if (met(nx, ny) < borde(nx, ny)) continue;            // está en el claro
+        lista.push([py, px, eMin + az() * (eMax - eMin), az() < 0.45]);
       }
     lista.sort((a, b) => a[0] - b[0]);
     const t = this.add.image(0, 0, "tree").setOrigin(0, 0).setVisible(false);

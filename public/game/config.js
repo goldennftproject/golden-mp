@@ -24,7 +24,9 @@ GF.BOSQUE_FILAS = 0.74;     // separación vertical respecto de la horizontal (s
 GF.BOSQUE_JITTER = 8;       // desorden en píxeles, para que no se vea la cuadrícula
 GF.BOSQUE_ESC_MIN = 0.92; GF.BOSQUE_ESC_MAX = 1.26;   // variedad de tamaño
 GF.BOSQUE_COLCHON = 0.5;    // celdas de aire entre el claro y la primera fila de árboles
-GF.BOSQUE_ONDA = 1;          // cuánto se ondula el borde del claro (0 = rectangular)
+GF.BOSQUE_REDONDEZ = 0.62;  // forma del claro: 0 = rectángulo · 1 = óvalo puro
+GF.BOSQUE_ONDA = 0.45;      // cuánto se ondula el borde (0 = liso · 1 = muy irregular)
+GF.BOSQUE_AIRE = 0.05;      // aire extra entre la esquina del área jugable y el bosque
 GF.BOSQUE_DEPTH = -999;     // encima del suelo, debajo de todo lo interactuable
 // La costa (arena, espuma y bajío) es una imagen: assets/farm/isla.png, hecha con
 // tools/build-isla.py. Este número es cuánto sobra la imagen alrededor de la granja,
