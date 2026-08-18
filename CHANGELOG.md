@@ -4447,3 +4447,86 @@ Las 17 en verde, más `test-terreno.js` (9 comprobaciones) y `test-tutorial-atas
 
 **El único cambio visible con 0 expansiones**: las esquinas del claro quedan levemente redondeadas,
 porque el aire de 2,3 celdas se mide en radio y no en rectángulo. El resto es idéntico.
+
+---
+
+## 18/8 — Las expansiones ya se pueden comprar
+
+Cerrado el círculo: el motor estaba, faltaba la puerta.
+
+**Dónde**: en la Tienda, pestaña de adornos, **arriba del todo**. Va primero porque es la compra
+que cambia el mapa — sin terreno, comprar parcelas o adornos no lleva a ningún lado. Se muestra
+**siempre**, también cuando todavía no llegaste al nivel, para que se vea qué viene y por qué vale
+la pena subir.
+
+Lo que enseña la ficha: qué número de expansión es, cuántas llevás de 16, si es lateral o esquina,
+y el material que pide **con lo que tenés al lado en verde o rojo**, para que no haya que ir a
+contar al cofre.
+
+**Qué pasa al comprar**: se cobra el material, sube `G.expansiones`, salta la celebración y la
+escena se reinicia con telón — porque la forma del mundo cambió y hay que rehacer césped, bosque,
+cerca, adornos y límites de cámara. Se guarda antes de reiniciar.
+
+`G.expansiones` es un solo número: como el orden de compra es fijo, no hace falta guardar qué
+bloques. Se guarda y se carga con tope en 16.
+
+### Verificado de punta a punta
+
+`tools/test-expansiones.js` compra las 16 una por una, dándole **justo** lo que cuesta cada vez:
+
+| # | nivel | granja | |
+|---|---|---|---|
+| 1 | 3 | 225 → 250 | +25 |
+| 6 | 14 | 350 → 375 | +25 |
+| 11 | 30 | 475 → 500 | +25 |
+| 16 | 50 | 600 → 625 | +25 |
+
+Ocho comprobaciones en verde: el nivel frena · el material frena · cada compra suma exactamente un
+bloque de 5×5 · descuenta el material exacto · no se puede pasar del tope · con las 16 nada del
+contenido pisa la cerca · el mundo termina en 25×25 · el origen se corrió a (−210, −210), que es la
+prueba de que las coordenadas negativas funcionan.
+
+### Lo que queda
+
+Los **nodos de cada expansión**. Hoy el bloque llega vacío: es terreno donde poner lo que compres.
+Con el orden fijo hay solo 17 formas posibles, así que se pueden dibujar a mano los árboles y rocas
+de cada una y revisarlas de a una, en vez de confiar en una colocación automática.
+
+---
+
+## 18/8 — Los nodos se veían enteros antes de tiempo
+
+Reporte del diseñador, con captura: *"crecen antes de la hora"*, y después *"lo mismo sucede con las
+de piedra... tenés que cambiar la manera en la que los sprites van rotando. Tiene que depender eso
+sí o sí del tiempo que tengan de enfriamiento."* Tenía razón en el diagnóstico y en el arreglo.
+
+**El fallo.** El sprite cambiaba **por evento**: al cruzar la mitad del enfriamiento se ponía el
+retoño, al llegar al final el nodo entero. Un evento solo ocurre si la escena está viva en ese
+instante. Si se reconstruye —volver de la Zona Negra, un F5— el sprite **nace con la textura del
+nodo entero** y ya no queda ningún umbral que cruzar: se queda entero, y sin poder usarse, hasta que
+venza el reloj.
+
+**Lo destapó el arreglo de ayer.** Antes los enfriamientos se reiniciaban al reconstruir la escena,
+así que los nodos siempre estaban legítimamente enteros y esto no se podía ver. Al guardarlos, salió.
+
+**El arreglo, tal cual lo pidió dirección**: la textura pasa a ser una **función del tiempo que le
+falta**, no un evento.
+
+| | 0 → 50% del enfriamiento | 50% → 100% | listo |
+|---|---|---|---|
+| árbol | `tree_stump_leaves` | `tree_half` | `tree` |
+| roca | `node_stone_mined` | `node_stone_half` | `node_stone` |
+| veta | `node_<mineral>_mined` | `node_<mineral>_half` | `node_<mineral>` |
+
+`texNodo(o, t)` la calcula y `aplicarTexNodo` la pone **solo si cambió**. Se llama en el tick y
+—esto es lo que faltaba— **también al construir la escena**, así que el sprite dice la verdad desde
+el primer frame venga de donde venga. Los efectos (saltito y polvillo) se disparan con el cambio de
+textura, no con el paso del tiempo, así que siguen viéndose una sola vez.
+
+Los nodos a medio talar no se tocan: mientras hay golpes encima manda el golpe, no el reloj.
+
+**Verificado**: `tools/test-sprites-nodo.js` recorre el enfriamiento completo de un árbol, una roca
+y una veta de oro en 101 pasos y comprueba que recién usado no se ve entero, que a la mitad se ve
+distinto, que al terminar vuelve al sprite entero y opaco, y que en todo el enfriamiento hay
+exactamente 2 cambios de textura — ni parpadeo ni saltos. 13 comprobaciones en verde, más el caso
+de un guardado viejo sin `cdIni`.

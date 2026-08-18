@@ -952,6 +952,54 @@ const FARM_PARCELA = { 2:4, 4:5, 6:6, 7:7, 12:8, 18:9, 25:10, 35:11, 45:12, 50:1
    ponerlas. */
 const FARM_EXPANSION = [3, 5, 7, 9, 11, 14, 17, 20, 23, 26, 30, 34, 38, 42, 46, 50];
 function expansionesQueTocan(lvl) { return FARM_EXPANSION.filter(n => n <= (lvl || 1)).length; }
+/* COSTE DE CADA EXPANSIÓN (tools/costear-expansiones.js). No son números a ojo: se elige cuántos
+   DÍAS DE GRANJA debe costar cada una —de 4 la primera a 12 la última— y el script los traduce a
+   unidades con la producción real que tenés en ese nivel. El nivel abre la puerta; el material
+   marca el ritmo. Y como cobra MATERIAL y no plata, es además el sumidero que faltaba: la plata se
+   farmea rápido con cultivos, la madera y los minerales están atados a los relojes de los nodos. */
+const EXPANSION_COSTO = [
+  { madera: 48,  piedra: 48 },
+  { madera: 63,  piedra: 54 },
+  { madera: 71,  piedra: 71 },
+  { madera: 63,  piedra: 63,  bronce: 5 },
+  { madera: 77,  piedra: 69,  bronce: 11 },
+  { madera: 93,  piedra: 84,  bronce: 12 },
+  { madera: 72,  piedra: 72,  bronce: 11, hierro: 11 },
+  { madera: 85,  piedra: 85,  bronce: 12, hierro: 12 },
+  { madera: 99,  piedra: 91,  bronce: 12, hierro: 12 },
+  { madera: 92,  piedra: 84,  hierro: 16, oro: 16 },
+  { madera: 105, piedra: 97,  hierro: 17, oro: 17 },
+  { madera: 111, piedra: 111, hierro: 18, oro: 18 },
+  { madera: 94,  piedra: 94,  oro: 22, diamante: 7 },
+  { madera: 105, piedra: 105, oro: 34, diamante: 8 },
+  { madera: 110, piedra: 117, oro: 36, diamante: 8 },
+  { madera: 122, piedra: 130, oro: 38, diamante: 8 },
+];
+var EXPANSION_MAX = 16;
+// La expansión que toca ahora: qué número es, en qué nivel se abre y qué cuesta.
+function expansionSiguiente() {
+  const hechas = G.expansiones || 0;
+  if (hechas >= EXPANSION_MAX) return null;
+  return { i: hechas, n: hechas + 1, nivel: FARM_EXPANSION[hechas], costo: EXPANSION_COSTO[hechas],
+    bloque: (GF.EXPANSIONES || [])[hechas] || null };
+}
+function expansionComprar() {
+  const e = expansionSiguiente();
+  if (!e) { toast("Ya tenés las " + EXPANSION_MAX + " expansiones"); return false; }
+  if ((G.level || 1) < e.nivel) { toast("La expansión " + e.n + " se abre en el nivel " + e.nivel); return false; }
+  if (!canAfford(e.costo)) { toast("Te faltan materiales para expandir"); return false; }
+  payCost(e.costo);
+  G.expansiones = e.i + 1;
+  log("¡Expansión " + e.n + " de " + EXPANSION_MAX + "! La granja creció " + (GF.BLOQUE * GF.BLOQUE) + " celdas.", "gold");
+  toast("¡La granja creció!");
+  if (window.sfx) sfx("level");
+  if (window.celebrate) celebrate({ title: "¡GRANJA MÁS GRANDE!", sub: "Expansión " + e.n + " de " + EXPANSION_MAX,
+    big: true, reward: (GF.BLOQUE * GF.BLOQUE) + " celdas nuevas" });
+  if (typeof saveFarm === "function") saveFarm(true);
+  // la forma del mundo cambió: hay que rehacer césped, bosque, cerca y límites de cámara
+  if (typeof reiniciarGranjaSuave === "function") reiniciarGranjaSuave();
+  return true;
+}
 const FARM_COFRE   = { 13:10, 23:10, 33:15 };                                          // nivel → capacidad extra de cofre
 const FARM_EDIF2   = { 17:"horno", 21:"cocina", 27:"altar" };                          // nivel → edificio que sube a nivel 2
 

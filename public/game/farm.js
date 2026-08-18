@@ -393,6 +393,11 @@ class FarmScene extends Phaser.Scene {
         lockIdx, locked, oculto };
     });
     this.objs.forEach(o => this.tintarNodo(o));   // cada veta con el color de su mineral (9/8)
+    // 18/8: y la textura QUE LE TOCA POR SU ENFRIAMIENTO. Sin esto el sprite nace entero aunque el
+    // nodo esté a medio regenerar, que es el fallo que se veía al volver de la Zona Negra o tras
+    // un F5: árboles y rocas enteros y sin poder usarse. Ahora el sprite dice la verdad desde el
+    // primer frame, porque sale del reloj y no de haber presenciado el momento del cambio.
+    { const t0 = nowMs(); this.objs.forEach(o => this.aplicarTexNodo(o, t0)); }
     this.objs.forEach(o => this.letreroObra(o));  // blueprints (12/8): el cartel de materiales sobre cada obra
 
     // (los rótulos flotantes se quitaron: los edificios nuevos se distinguen solos
@@ -3325,6 +3330,47 @@ class FarmScene extends Phaser.Scene {
   /* 18/8: el equivalente de syncPlots para los NODOS. Solo se anotan los que están enfriándose,
      así el guardado no engorda con treinta entradas en cero. Se guarda por índice de objeto, que
      es estable porque WORLD_OBJECTS solo crece por el final. */
+  /* QUÉ TEXTURA LE TOCA A UN NODO SEGÚN CUÁNTO LE FALTA (18/8).
+     Una función del tiempo, no un evento. Vale igual en el tick, al construir la escena, al volver
+     del Bosque o tras un F5, porque no depende de que nadie estuviera mirando en un instante.
+       0 … 0,5 del enfriamiento → recién usado (tocón / roca picada)
+       0,5 … 1                  → a medio crecer
+       ya listo                 → entero                                                       */
+  texNodo(o, t) {
+    const ancho = o.rw || o.w;
+    if (!o.readyAt || t >= o.readyAt) return { key: o.baseKey, ancho, alfa: 1 };
+    const total = Math.max(1, o.readyAt - (o.cdIni || (o.readyAt - 1)));
+    const p = 1 - (o.readyAt - t) / total;                 // 0 recién usado … 1 listo
+    const hay = k => this.textures.exists(k);
+    if (o.type === "tree") {
+      if (p < 0.5) return hay("tree_stump_leaves") ? { key: "tree_stump_leaves", ancho: ancho * 0.42, alfa: 1 }
+                                                   : { key: "tree_stump", ancho: ancho * 0.42, alfa: 1 };
+      if (hay("tree_half")) return { key: "tree_half", ancho, alfa: 1 };
+      if (hay("tree_sapling")) return { key: "tree_sapling", ancho: ancho * 0.6, alfa: 1 };
+      return { key: o.baseKey, ancho, alfa: 0.7 };
+    }
+    if (o.type === "rock" || o.type === "ore") {
+      if (p < 0.5) return hay(o.baseKey + "_mined") ? { key: o.baseKey + "_mined", ancho, alfa: 1 }
+                 : hay("node_stone_mined") ? { key: "node_stone_mined", ancho, alfa: 1 }
+                 : { key: o.baseKey, ancho, alfa: 0.5 };
+      if (hay(o.baseKey + "_half")) return { key: o.baseKey + "_half", ancho, alfa: 1 };
+      if (hay("node_stone_half")) return { key: "node_stone_half", ancho, alfa: 1 };
+      return { key: o.baseKey, ancho, alfa: 0.75 };
+    }
+    return { key: o.baseKey, ancho, alfa: 1 };
+  }
+  // La aplica si cambió. Devuelve true SOLO cuando hubo cambio, para que los efectos se disparen
+  // una vez y no en cada frame.
+  aplicarTexNodo(o, t) {
+    if (!o.sprite || (o.type !== "tree" && o.type !== "rock" && o.type !== "ore")) return false;
+    if (o.locked || o.oculto || (o.golpes || 0) > 0) return false;   // a medio talar manda el golpe, no el reloj
+    const d = this.texNodo(o, t == null ? nowMs() : t);
+    const cambio = o.sprite.texture.key !== d.key || Math.abs((o.sprite.alpha || 1) - d.alfa) > 0.01;
+    if (!cambio) return false;
+    if (o.sprite.texture.key !== d.key) this.setObjTex(o, d.key, d.ancho);
+    o.sprite.setAlpha(d.alfa);
+    return true;
+  }
   syncNodos() {
     if (!this.objs) return;
     const n = {}, t = nowMs();
@@ -3646,26 +3692,26 @@ class FarmScene extends Phaser.Scene {
     // restaurar objetos que salieron de cooldown
     const t = nowMs();
     for (const o of this.objs) {
-      // regeneración directa: de los restos vuelve al nodo entero (sin pasar por el dañado)
+      /* 18/8 (reporte del diseñador: "crecen antes de la hora... tenés que cambiar la manera en la
+         que los sprites van rotando, tiene que depender sí o sí del tiempo de enfriamiento").
+         Tenía toda la razón. Antes el sprite cambiaba POR EVENTO: al cruzar la mitad del
+         enfriamiento se ponía el retoño, al llegar al final el árbol entero. Un evento solo ocurre
+         si la escena está viva en ese instante — y si se reconstruye (volver de la Zona Negra, un
+         F5) el sprite NACE con la textura del nodo entero y ya no hay ningún umbral que cruzar.
+         Resultado: árboles y rocas enteros, y sin poder usarse, hasta que venciera el reloj.
+         Salió a la luz al guardar los enfriamientos: antes se reiniciaban y siempre estaban enteros.
+         Ahora la textura es una FUNCIÓN de cuánto le falta (texNodo), se aplica también al construir
+         la escena, y el tick solo la refresca si cambió. Los efectos se disparan con el cambio de
+         textura, no con el paso del tiempo, así que siguen viéndose una sola vez. */
       if (o.readyAt && t >= o.readyAt) {
         o.readyAt = 0; o.halfAt = 0; this.syncNodos();
-        if (o.type === "tree" || o.type === "rock") this.setObjTex(o, o.baseKey, o.rw || o.w);
-        else if (o.type === "ore") { this.setObjTex(o, o.baseKey, o.rw || o.w); o.sprite.setAlpha(1); }
-        if (o.timer) o.timer.setVisible(false);
-        // TERMINÓ DE CRECER: saltito con resorte + polvillo (se nota que ya se puede volver a usar)
-        this.popFx(o.sprite, 1);
-        this.puffFx(o.cx, o.by - 3, o.type === "tree" ? 0x97c459 : 0xb4b2a9, o.type === "tree" ? 8 : 6);
-      } else if (o.readyAt && o.halfAt && t >= o.halfAt) {
-        // MITAD del enfriamiento: se ve que va regenerando (doc 4/8)
-        o.halfAt = 0;
-        if (o.type === "tree") {
-          if (this.textures.exists("tree_half")) this.setObjTex(o, "tree_half", o.rw || o.w);
-          else if (this.textures.exists("sprout")) this.setObjTex(o, "sprout", (o.rw || o.w) * 0.6);
-        } else if (o.type === "rock" || o.type === "ore") {
-          if (this.textures.exists(o.baseKey + "_half")) this.setObjTex(o, o.baseKey + "_half", o.rw || o.w);
-          else o.sprite.setAlpha(0.75);
+        if (this.aplicarTexNodo(o, t)) {
+          this.popFx(o.sprite, 1);   // TERMINÓ DE CRECER: saltito con resorte + polvillo
+          this.puffFx(o.cx, o.by - 3, o.type === "tree" ? 0x97c459 : 0xb4b2a9, o.type === "tree" ? 8 : 6);
         }
-        this.popFx(o.sprite, POP_INTERMEDIO);   // el retoño también asoma con un saltito, más chico
+        if (o.timer) o.timer.setVisible(false);
+      } else if (o.readyAt && this.aplicarTexNodo(o, t)) {
+        this.popFx(o.sprite, POP_INTERMEDIO);   // el retoño asoma con un saltito, más chico
       } else if (o.readyAt && o.timer) {
         // cuarta.docx: el timer del recurso solo aparece con el cursor encima (al clickear ya sale el aviso)
         const p = this.input.activePointer;

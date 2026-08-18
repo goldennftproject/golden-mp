@@ -1363,6 +1363,38 @@ function refreshAltar() {
 function refreshDeco() {
   const box = $("deco-shop"); if (!box) return;
   let h = "";
+  /* --- EXPANSIÓN DEL TERRENO (18/8) ---
+     Va primero porque es la compra más grande y la que cambia el mapa: sin terreno, comprar
+     parcelas o adornos no lleva a ningún lado. Se muestra siempre —también cuando todavía no
+     llegaste al nivel— para que se vea qué viene y por qué vale la pena subir. */
+  {
+    const ex = (typeof expansionSiguiente === "function") ? expansionSiguiente() : null;
+    const hechas = G.expansiones || 0;
+    h += '<div class="secc">Terreno</div>';
+    if (!ex) {
+      h += '<div class="forge-row"><div class="finfo"><div class="fnm">Granja completa <span class="tag">' +
+        EXPANSION_MAX + '/' + EXPANSION_MAX + '</span></div>' +
+        '<div class="fds">Compraste las ' + EXPANSION_MAX + ' expansiones. La granja llegó a su tamaño máximo.</div></div>' +
+        '<div class="fbtns"><button class="ghost sm" disabled>Completa</button></div></div>';
+    } else {
+      const faltaNivel = (G.level || 1) < ex.nivel;
+      const puede = !faltaNivel && canAfford(ex.costo);
+      const lista = Object.keys(ex.costo).map(k =>
+        '<span class="' + ((G.res[k] || 0) >= ex.costo[k] ? "verde" : "rojo") + '">' +
+        resIc(k) + ' ' + fmt(Math.floor(G.res[k] || 0)) + '/' + ex.costo[k] + '</span>').join(' · ');
+      const donde = ex.bloque ? (ex.bloque.esquina ? "una esquina" : "un lateral") : "un bloque";
+      h += '<div class="forge-row"><div class="finfo"><div class="fnm">Expansión ' + ex.n +
+        ' <span class="tag">' + hechas + '/' + EXPANSION_MAX + '</span></div>' +
+        '<div class="fds">' + (GF.BLOQUE * GF.BLOQUE) + ' celdas nuevas de terreno en ' + donde +
+        ', pegadas a tu granja. La cerca y el bosque se corren solos.' +
+        (faltaNivel ? ' <b>Se abre en el nivel ' + ex.nivel + '</b> (vas por el ' + (G.level || 1) + ').' : '') +
+        '<div style="margin-top:4px">' + lista + '</div></div></div>' +
+        '<div class="fbtns">' + (faltaNivel
+          ? '<button class="ghost sm" disabled>Nivel ' + ex.nivel + '</button>'
+          : '<button class="green sm" ' + (puede ? "" : "disabled") + ' id="exp-comprar">Expandir</button>') +
+        '</div></div>';
+    }
+  }
   // --- parcelas ---
   const tope = (G.plotsOwned || 2) >= PLOT_MAX;   // 10/8: el diseñador subió el tope de 12 a 60
   h += '<div class="secc">Parcelas</div>';
@@ -1393,6 +1425,10 @@ function refreshDeco() {
   box.innerHTML = h;
   box.querySelectorAll("[data-buydeco]").forEach(b => b.onclick = () => { comprarDeco(b.dataset.buydeco); refreshDeco(); });
   box.querySelectorAll("[data-plot]").forEach(b => b.onclick = () => { comprarParcela(b.dataset.plot === "golden"); refreshDeco(); });
+  // 18/8: expandir el terreno. No se refresca el panel después porque la escena se reinicia con
+  // telón (la forma del mundo cambió) y el panel se vuelve a pintar al abrirlo.
+  const eb = $("exp-comprar");
+  if (eb) eb.onclick = () => { if (typeof expansionComprar === "function" && expansionComprar()) { try { refreshDeco(); refreshHud(); } catch (e) {} } };
   const de = $("deco-editar"); if (de) de.onclick = () => { if (window.setEditMode) setEditMode(true); };   // cierra la Tienda y abre el modo edición con el selector de adornos
 }
 
