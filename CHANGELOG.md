@@ -3922,3 +3922,49 @@ Patrón que se repite en los tres fallos de hoy —el pasto, los adornos y ahora
 estaban dimensionados al mundo jugable**, porque hasta ayer no había nada más allá de la cerca.
 Al meter el bosque, todo lo que medía `WORLD_W x WORLD_H` se quedó corto a la vez. Si aparece otro
 fallo de este estilo, ahí es donde hay que mirar primero.
+
+### Las flores de fuera existían, pero el bosque se las comía
+Dirección: *"falta ver si se puede poner por encima del césped, fuera del corral, las mismas flores
+que hay dentro"*. Estaban puestas —el reparto ya llegaba a 4 celdas más allá de la cerca— pero no
+se veían, y el motivo es de CAPAS, no de posición:
+
+- los adornos van a profundidad **-999,5**
+- el bosque se dibuja a **-999**, o sea **por encima**
+
+Los que caían bajo los árboles no existían para el jugador. Y como el reparto era uniforme sobre
+todo el rectángulo, la mayoría de los de fuera caían justo ahí: solo el césped visible mide 2,3
+celdas más allá de la cerca, el resto es bosque.
+
+La solución no es subirlos de capa —quedarían flotando encima de los troncos— sino **sembrarlos
+solo donde se ven**. Se añade `dentroDelClaro(x, y)`, que usa la misma métrica que
+`dibujarBosque()` y vive en un solo sitio para que no se puedan desincronizar. Los adornos ahora:
+
+1. descartan cualquier posición que quede bajo el bosque,
+2. estiman el área ÚTIL muestreando, y calculan la cantidad sobre ESA área.
+
+Resultado: 173 adornos, **1 cada 3.263 px² dentro y fuera** — la misma densidad, y ninguno tirado.
+
+Tercer fallo seguido con la misma raíz: algo pensado para un mundo que se acababa en la cerca.
+Van el pasto, el velo de día/noche y ahora los adornos.
+
+### De día mariposas, de noche luciérnagas
+Dirección: *"cuando hay claridad, las mariposas revoloteando; cuando sea de noche, reemplazadas por
+luciérnagas con cierto halo de luz alrededor, el mismo comportamiento. Y que no desaparezcan
+bruscamente, sino con un fade out"*.
+
+Decisión de implementación: **no son dos bichos, es uno con dos trajes**. Cada mariposa lleva ahora
+un segundo dibujo —la luciérnaga— en la misma posición, y lo único que cambia con la hora es cuál
+de los dos se ve. Así se conserva TODO el comportamiento que ya estaba: el merodeo, el posarse en
+las flores, y la función de guía que señala lo accionable. Si fueran entidades separadas habría que
+duplicar esa lógica y se desincronizarían.
+
+- **El halo** son cuatro círculos concéntricos de alfa decreciente (0,055 → 0,30) más un cuerpo casi
+  blanco. Graphics no hace degradados, pero apilados de fuera hacia dentro dan el resplandor.
+- **Late, no brilla parejo**: la intensidad oscila con un seno, y cada luciérnaga lleva su propia
+  fase para que no parpadeen todas a la vez.
+- **El relevo es un fundido de 6 segundos** (`nocheMezcla`, de 0 a 1), enganchado al **mismo umbral
+  que enciende los faroles**: todo lo nocturno pasa junto y no hay dos momentos distintos.
+- Si entrás con el juego ya de noche, se aplica seco — el fundido es para la transición, no para
+  la carga.
+
+`FX_LUCIERNAGAS = 1` en config; a 0 las mariposas vuelan también de noche.

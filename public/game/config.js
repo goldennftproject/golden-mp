@@ -176,6 +176,10 @@ var FX_HOJAS = 1;          // hojas volando cuando pasa una ráfaga de viento
 var FX_NUBES = 3;          // cuántas nubes cruzan la granja (0 = ninguna)
 var FX_NUBES_ALFA = 0.22;  // qué tan opacas (estaban en 0.55 y tapaban medio edificio)
 var FX_NUBES_SOMBRA = 0.06;// la sombra que proyectan sobre el suelo
+// 17/8 (dirección): de día mariposas, de noche LUCIÉRNAGAS con su halo. Es el MISMO bicho con
+// otro traje: mismo movimiento, mismo revoloteo, misma guía. Solo cambia el aspecto, con un
+// fundido de 6 s enganchado al mismo umbral que enciende los faroles.
+var FX_LUCIERNAGAS = 1;    // 0 = de noche siguen siendo mariposas
 var FX_MARIPOSAS = 3;      // 14/8: las 3 mariposas son la GUÍA VIVA — la 1ª sigue al objetivo, las otras 2 merodean lo accionable (0 = ninguna)
 var FX_VAPOR = 1;          // vapor de la Cocina mientras hay ollas y chispas del Altar mejorado
 var FX_FADE_MS = 260;      // fundido a negro al cambiar de escena (0 = corte seco)

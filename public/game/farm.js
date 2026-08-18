@@ -103,9 +103,19 @@ class FarmScene extends Phaser.Scene {
     // se sube a 4 celdas —lo mismo que ahora cubre el pasto— y la densidad se calcula por ÁREA,
     // así que la franja de fuera queda igual de poblada que la de dentro y no se nota la cerca.
     const RD = T * 4, AW = W + RD * 2, AH = H + RD * 2;
-    const nDecos = Math.round((hasDecos ? 110 : 210) * (AW * AH) / (W * H));
-    for (let i = 0; i < nDecos; i++) {
-      const dx = -RD + drnd() * AW, dy = -RD + drnd() * AH, t = drnd();
+    // El área ÚTIL no es el rectángulo entero: es solo lo que queda dentro del claro, porque el
+    // resto lo tapa el bosque. Se estima muestreando, y con eso se calcula cuántos hacen falta
+    // para que la densidad sea la MISMA dentro y fuera de la cerca.
+    let dentro = 0;
+    for (let m = 0; m < 400; m++) if (this.dentroDelClaro(-RD + (m % 20) / 19 * AW, -RD + Math.floor(m / 20) / 19 * AH)) dentro++;
+    const util = Math.max(0.2, dentro / 400) * AW * AH;
+    const nDecos = Math.round((hasDecos ? 110 : 210) * util / (W * H));
+    let intentos = 0;
+    for (let i = 0; i < nDecos && intentos < nDecos * 12; i++) {
+      let dx = 0, dy = 0;
+      do { dx = -RD + drnd() * AW; dy = -RD + drnd() * AH; intentos++; }
+      while (!this.dentroDelClaro(dx, dy) && intentos < nDecos * 12);
+      const t = drnd();
       if (hasDecos) {
         // pasto pesa doble; tamaños chicos y variados para que respiren
         const key = t < 0.45 ? "deco_pasto" : (t < 0.67 ? "deco_flor_blanca" : (t < 0.89 ? "deco_flor_amarilla" : "deco_piedras"));
@@ -916,6 +926,24 @@ class FarmScene extends Phaser.Scene {
       const o = 62 + i * 16 + Math.sin(t * 0.9 + i) * 5;
       g.strokeRoundedRect(-20 - o, -20 - o, W2 + 40 + o * 2, H2 + 40 + o * 2, 50 + o);
     }
+  }
+
+  // ¿ESTE PUNTO SE VE, O LO TAPA EL BOSQUE? (17/8)
+  // Misma métrica que dibujarBosque, en un solo sitio para que no se puedan desincronizar.
+  // La usan los adornos del césped: sembrarlos por toda el área era tirarlos, porque van a
+  // profundidad -999,5 y el bosque se dibuja a -999, o sea POR ENCIMA. Los que caían bajo los
+  // árboles simplemente no existían para el jugador, y como el reparto era uniforme, casi todos
+  // los de fuera de la cerca caían ahí: por eso la franja de césped salía pelada.
+  dentroDelClaro(x, y) {
+    if (!GF.BOSQUE) return true;
+    const T = GF.TILE, W = GF.WORLD_W, H = GF.WORLD_H;
+    const colchon = (GF.BOSQUE_COLCHON != null ? GF.BOSQUE_COLCHON : 0.5) * T;
+    const RX = W / 2 + colchon, RY = H / 2 + colchon;
+    const R = GF.BOSQUE_REDONDEZ != null ? GF.BOSQUE_REDONDEZ : 0;
+    const nx = (x - W / 2) / RX, ny = (y - H / 2) / RY;
+    const met = Math.max(Math.abs(nx), Math.abs(ny)) * (1 - R) + Math.hypot(nx, ny) * R;
+    const BASE = Math.max((W - W / 2) / RX, (H - H / 2) / RY) + (GF.BOSQUE_AIRE != null ? GF.BOSQUE_AIRE : 0.05);
+    return met < BASE;
   }
 
   // MOSAICO DE BOSQUE PARA LO QUE QUEDA FUERA DEL MAPA (17/8).
@@ -2394,7 +2422,18 @@ class FarmScene extends Phaser.Scene {
       g.fillStyle(col, 1).fillEllipse(-2.6, 0, 5, 7).fillEllipse(2.6, 0, 5, 7);
       g.fillStyle(0x241505, 0.8).fillRect(-0.6, -3, 1.2, 6);
       g.setPosition(GF.WORLD_W * Math.random(), GF.WORLD_H * Math.random());
-      this.maripos.push({ g, tx: g.x, ty: g.y, esperaHasta: 0, posada: null, fase: Math.random() * 6.28 });
+      // LUCIÉRNAGA (17/8, dirección): el mismo bicho con otro traje. De día vuela la mariposa;
+      // de noche se apaga y se enciende la luciérnaga, EN EL MISMO SITIO y con el mismo
+      // movimiento — no son dos bichos distintos, es uno que cambia de aspecto.
+      // El halo son cuatro círculos concéntricos de alfa decreciente: Graphics no hace
+      // degradados, pero apilados de fuera hacia dentro dan un resplandor convincente.
+      let luz = null;
+      if (FX_LUCIERNAGAS) {
+        luz = this.add.graphics().setDepth(99993).setAlpha(0).setVisible(false);
+        [[13, 0.055], [9, 0.09], [6, 0.16], [3.4, 0.30]].forEach(([r, a]) => luz.fillStyle(0xbff06a, a).fillCircle(0, 0, r));
+        luz.fillStyle(0xf2ffd0, 0.95).fillCircle(0, 0, 1.7);   // el cuerpo, casi blanco
+      }
+      this.maripos.push({ g, luz, tx: g.x, ty: g.y, esperaHasta: 0, posada: null, fase: Math.random() * 6.28 });
     }
   }
   /* MARIPOSAS GUÍA (14/8, idea de dirección): las 3 mariposas dejan de ser adorno puro y
@@ -2544,6 +2583,18 @@ class FarmScene extends Phaser.Scene {
       m.g.setScale(0.75 + Math.abs(Math.sin(m.fase)) * 0.45, 1);   // aleteo: se angosta y se ensancha
       m.g.setDepth(99993);   // SIEMPRE al frente (antes quedaba detrás del mercadillo)
     }
+    // DÍA ↔ NOCHE: mariposa y luciérnaga se cruzan en un fundido, nunca aparecen ni
+    // desaparecen de golpe. this.nocheMezcla va de 0 (día) a 1 (noche) con un tween de 6 s,
+    // así que el relevo dura lo que tarda el cielo en cambiar y no se nota el corte.
+    const n = this.nocheMezcla || 0;
+    for (const m of this.maripos) {
+      m.g.setVisible(n < 0.99).setAlpha(1 - n);
+      if (!m.luz) continue;
+      // la luciérnaga NO brilla parejo: late. Cada una con su fase, para que no parpadeen juntas.
+      const late = 0.62 + 0.38 * Math.sin(t / 240 + m.fase * 0.7);
+      m.luz.setPosition(m.g.x, m.g.y).setVisible(n > 0.01).setAlpha(n * late)
+           .setScale(0.85 + 0.25 * late);
+    }
   }
 
   // EXCAVACIONES DIARIAS (15/8): 3 montículos en celdas libres, fijos durante el día
@@ -2683,6 +2734,14 @@ class FarmScene extends Phaser.Scene {
       this.cielo.fillColor = col;
       this.tweens.add({ targets: this.cielo, fillAlpha: alpha, duration: 3000 });
       const noche = alpha > 0.12;
+      // el relevo mariposas ↔ luciérnagas se engancha al MISMO umbral que enciende los faroles,
+      // así que todo lo nocturno pasa a la vez. La primera vez se aplica seco (si entrás de
+      // noche, ya hay luciérnagas); después siempre con fundido.
+      if (this._nocheAnt === undefined) { this._nocheAnt = noche; this.nocheMezcla = noche ? 1 : 0; }
+      else if (this._nocheAnt !== noche) {
+        this._nocheAnt = noche;
+        this.tweens.add({ targets: this, nocheMezcla: noche ? 1 : 0, duration: 6000, ease: "Sine.easeInOut" });
+      }
       if (noche && !this.faroles.length) {
         (this.adornos || []).forEach(a => {
           if (a.id !== "farol" && a.id !== "farolito") return;
