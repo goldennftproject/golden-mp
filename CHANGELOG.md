@@ -4046,3 +4046,92 @@ El interior pasó de 15×9 (tumbado) a 13×12 (casi cuadrado): sobran 3 filas y 
   y que las texturas se subieran a medias, así que ahora se mide en cada cambio de tamaño.
   **Aviso para cuando lleguen las expansiones: al final (25×25) esto da 17,6 MB.** Sigue lejos de 39,
   pero es el doble de hoy y hay que volver a medirlo entonces.
+
+---
+
+## 17/8 — AUDITORÍA: la vara de los minerales no sigue el ancla
+
+Dirección: *"siempre todo tiene que encajar con el ancla, la fórmula. Nada está armado en torno a
+otra cosa. Tiene todo que ser parte de un puzzle, de la columna vertebral."*
+
+Antes de montar la escalera diaria/semanal/mensual del tablón fui a verificar el ancla sobre el
+código, porque el tablón valora cada pedido con `priceOf()` — o sea, con `PRICE`. Si la vara está
+torcida, todo lo que cuelgue de ella sale torcido, y no se nota nunca **porque los materiales no
+se venden**: no hay mercado que lo delate.
+
+`state.js` ya declara la fórmula: **valor = horas del reloj × 20 + costo de la herramienta**.
+
+| material | reloj | ancla (h × 20) | herramienta | fórmula | PRICE de hoy | desvío |
+|---|---|---|---|---|---|---|
+| madera | 1,5 h | 30 | 6 | 36 | 36 | **0%** |
+| piedra | 2 h | 40 | 6 | 46 | 46 | **0%** |
+| bronce | 8 h | 160 | 300 | 460 | 210 | −54% |
+| hierro | 12 h | 240 | 348 | 588 | 300 | −49% |
+| oro | 14 h | 280 | 1.508 | 1.788 | 470 | −74% |
+| diamante | 18 h | 360 | 5.517 | 5.877 | 990 | −83% |
+| netherita | 24 h | 480 | 6.157 | 6.637 | 1.240 | −81% |
+
+Madera y piedra están clavadas en la fórmula. Los cinco minerales no.
+
+### Lo que eso significa en la mesa
+
+Los picos tienen `dur: 1` — **un pico por picada** — y cada pico se craftea con el mineral del tier
+anterior, así que el costo se compone hacia arriba. Con los precios del propio juego:
+
+| mineral | vale | el pico cuesta | neto por picada |
+|---|---|---|---|
+| bronce | 210 | 300 | **−90** |
+| hierro | 300 | 348 | **−48** |
+| oro | 470 | 758 | **−288** |
+| diamante | 990 | 1.563 | **−573** |
+| netherita | 1.240 | 1.270 | **−30** |
+
+**Picar cualquier mineral por encima de la piedra da pérdida.** No es un desajuste de tabla: es que
+toda la escalera de minería está por debajo del ancla, y el jugador que sube por ella se empobrece
+respecto del que se queda talando.
+
+### El arreglo que propongo
+
+El ancla dice cuánto puede costar la herramienta por uso: `PRICE − 20 × horas`. O sea 50, 60, 190,
+630 y 760. Los picos cuestan hoy entre 2,5 y 6 veces eso.
+
+**Un solo número de diseño: todos los picos duran 5 picadas**, y la receta se deriva para que el
+costo por uso sea exactamente el que el ancla permite (5 × 50, 5 × 60, 5 × 190…). Ventajas: no se
+toca ningún precio, así que nada de lo que lee `priceOf()` se mueve; la escalera entera queda sobre
+la fórmula de una sola vez; y el desgaste pasa a ser un sumidero de material recurrente, que es
+justo lo que faltaba.
+
+Lo que NO hay que hacer es dejar `dur: 1` y subir los precios a la columna "fórmula": el diamante
+pasaría a valer 5.877 y cualquier pedido del tablón que lo pida se vuelve absurdo.
+
+**Auditoría reproducible**: `node tools/auditar-precio-sombra.js`. Resuelve el costo de la
+herramienta por iteración, porque es recursivo (el pico de oro se hace con bronce, que vale según
+esta misma tabla).
+
+### APLICADO — y el campo que había que arreglar primero
+
+Al ir a subir la durabilidad apareció el verdadero fallo: **`dur` en `PICK_DEF` estaba muerto.**
+El campo existía desde siempre, pero `craftPick` hacía `G.picks.dur[id] = pickCount(id) + 1` — un
+1 fijo — y nadie leía `pd.dur`. O sea que poner `dur: 5` no habría hecho absolutamente nada, y el
+arreglo del ancla habría sido un **no-op silencioso** anunciado como resuelto.
+
+Arreglado en una línea (`+ (pd.dur || 1)`), y el toast ahora dice "+5" en vez de "+1".
+
+Recetas derivadas (presupuesto = lo que el ancla permite por uso × 5 usos), pagadas **solo en
+material** para que el desgaste sea además sumidero:
+
+| pico | antes | ahora | usos | cuesta/picada | el ancla dice |
+|---|---|---|---|---|---|
+| Bronce | 3 madera + 4 piedra + 8 plata | **7 madera** | 5 | 50 | 50 |
+| Hierro | 3 madera + 5 piedra + 10 plata | **2 madera + 5 piedra** | 5 | 60 | 60 |
+| Oro | 3 madera + 3 bronce + 20 plata | **4 bronce + 3 madera** | 5 | 190 | 190 |
+| Diamante | 3 oro + 3 madera + 45 plata | **6 oro + 4 madera + 4 piedra** | 5 | 630 | 630 |
+| Netherita | 1 diamante + 5 madera + 100 plata | **3 diamante + 18 piedra** | 5 | 760 | 760 |
+
+Los cinco minerales pasan de dar pérdida a rendir **exactamente 20 plata/hora**, igual que una
+parcela y que un árbol. El de netherita salía 3,84 diamantes: redondear a 4 lo dejaba un 7% por
+debajo, así que se parte en 3 diamantes + 18 piedra y da el presupuesto clavado.
+
+El pico de piedra **no se toca**: ya estaba sobre el ancla (46 − 40 = 6 = su costo) y el tutorial
+consume 11, así que moverlo cambiaba el arranque sin necesidad. Verificado: `sim-tutorial.js` sigue
+cerrando en 18,1 h.

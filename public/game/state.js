@@ -908,6 +908,19 @@ const FARM_UNLOCK = {
   50: "12ª parcela + Título 'Leyenda de la Granja Dorada' + AURA DORADA + skin de granja legendaria",
 };
 const FARM_PARCELA = { 2:3, 4:4, 6:5, 7:6, 12:7, 18:8, 25:9, 35:10, 45:11, 50:12 };   // nivel → parcelas totales
+/* 17/8 — EN QUÉ NIVEL CAE CADA UNA DE LAS 16 EXPANSIONES (bloques de 5x5, ver GF.EXPANSIONES).
+   El hueco se abre solo: 2 niveles entre las cinco primeras, 3 entre las cinco siguientes y 4
+   entre las seis últimas. Arranca rápido para enseñar la mecánica y se espacia cuando cada
+   nivel ya cuesta días.
+   El bloque 16 cae en el 50, que es el techo de FARM_UNLOCK ("Leyenda de la Granja Dorada"):
+   el mapa se termina de armar exactamente cuando se termina el arco de premios.
+   PAQUETE: cada expansión trae el TERRENO (25 celdas) + 1 árbol + 1 roca. Siempre el mismo,
+   así no hay tabla que memorizar y las 16 valen lo mismo.
+   Las PARCELAS no vienen acá: siguen su propia escalera (FARM_PARCELA) y la tienda. El terreno
+   es justamente lo que hace que valga la pena comprarlas — hoy el tope es 60 y no hay dónde
+   ponerlas. */
+const FARM_EXPANSION = [3, 5, 7, 9, 11, 14, 17, 20, 23, 26, 30, 34, 38, 42, 46, 50];
+function expansionesQueTocan(lvl) { return FARM_EXPANSION.filter(n => n <= (lvl || 1)).length; }
 const FARM_COFRE   = { 13:10, 23:10, 33:15 };                                          // nivel → capacidad extra de cofre
 const FARM_EDIF2   = { 17:"horno", 21:"cocina", 27:"altar" };                          // nivel → edificio que sube a nivel 2
 
@@ -1078,11 +1091,25 @@ const PICK_DEF = {
   // costaba 18 plata efectivas contra 6 de la madera (el triple) y una parcela financiaba
   // 2,2 rocas en vez de 6,7. La cadena madera→pico sigue viva en los picos de tier alto.
   stone:    { tier:0, label:"Pico de Piedra",    mineTier:0, dur:1, cost:{},                    plata:6,   sprite:"pick_stone" },   // 14/8: era 3 madera + 10 · 16/8: sin madera
-  bronze:   { tier:1, label:"Pico de Bronce",    mineTier:1, dur:1, cost:{madera:3,piedra:4},   plata:8,   sprite:"pick_bronze" },   // 14/8 rebalance (era 4+5+10)
-  iron:     { tier:2, label:"Pico de Hierro",    mineTier:2, dur:1, cost:{madera:3,piedra:5},   plata:10,  sprite:"pick_iron" },
-  gold:     { tier:3, label:"Pico de Oro",       mineTier:3, dur:1, cost:{madera:3,bronce:3},   plata:20,  sprite:"pick_gold" },   // 14/8: era 5 bronce + 35 (cadena del Altar)
-  diamond:  { tier:4, label:"Pico de Diamante",  mineTier:4, dur:1, cost:{oro:3,madera:3},      plata:45,  sprite:"pick_diamond" },
-  netherite:{ tier:5, label:"Pico de Netherita", mineTier:5, dur:1, cost:{diamante:1,madera:5}, plata:100, sprite:"pick_netherite" },
+  /* 17/8 — LOS CINCO PICOS DE ARRIBA, RE-DERIVADOS DEL ANCLA.
+     El problema medido (tools/auditar-precio-sombra.js): con dur 1 cada picada consumía un pico
+     entero, y como cada pico se craftea con el mineral del tier anterior, el costo se componía
+     hacia arriba hasta que picar DABA PÉRDIDA: bronce −90, oro −288, diamante −573 por picada.
+     La escalera de minería entera estaba por debajo del ancla y no se veía, porque los
+     materiales no se venden y no hay mercado que lo delate.
+     El arreglo: UN número de diseño, `dur: 5` — un crafteo rinde 5 picadas — y la receta se
+     deriva para que el costo POR USO sea exactamente el que el ancla permite (PRICE − 20×horas):
+     50, 60, 190, 630 y 760. Ningún precio se toca, así que nada de lo que lee priceOf() se mueve.
+     Se pagan solo en MATERIAL (plata 0): así el desgaste es además el sumidero recurrente que
+     faltaba, que era lo que no drenaba el stock de minerales.
+     El de netherita sale 3,84 diamantes: redondear a 4 dejaba el mineral un 7% por debajo del
+     ancla, así que se parte en 3 diamantes + 18 piedra, que da el presupuesto clavado y sigue
+     siendo una receta de dos ingredientes. */
+  bronze:   { tier:1, label:"Pico de Bronce",    mineTier:1, dur:5, cost:{madera:7},                    plata:0, sprite:"pick_bronze" },
+  iron:     { tier:2, label:"Pico de Hierro",    mineTier:2, dur:5, cost:{madera:2,piedra:5},           plata:0, sprite:"pick_iron" },
+  gold:     { tier:3, label:"Pico de Oro",       mineTier:3, dur:5, cost:{bronce:4,madera:3},           plata:0, sprite:"pick_gold" },
+  diamond:  { tier:4, label:"Pico de Diamante",  mineTier:4, dur:5, cost:{oro:6,madera:4,piedra:4},     plata:0, sprite:"pick_diamond" },
+  netherite:{ tier:5, label:"Pico de Netherita", mineTier:5, dur:5, cost:{diamante:3,piedra:18},        plata:0, sprite:"pick_netherite" },
 };
 function equippedPick() { return (G.picks.eq && G.picks.owned[G.picks.eq]) ? G.picks.eq : null; }
 function canAfford(c) { for (const k in c) if ((G.res[k]||0) < c[k]) return false; return true; }
@@ -1101,11 +1128,14 @@ function craftPick(id) {
   if (pd.plata && G.plata < pd.plata) { toast("Te falta plata"); return; }
   payCost(pd.cost); if (pd.plata) G.plata -= pd.plata;
   const first = !G.picks.owned[id];
-  G.picks.owned[id] = true; G.picks.dur[id] = pickCount(id) + 1;
+  // 17/8: un crafteo rinde pd.dur PICADAS, no una. El campo `dur` existía en PICK_DEF desde
+  // siempre pero NADIE lo leía: acá se sumaba un 1 fijo. O sea que subir `dur` no hacía nada
+  // y el arreglo del ancla habría sido un no-op silencioso. Ahora la receta paga dur usos.
+  G.picks.owned[id] = true; G.picks.dur[id] = pickCount(id) + (pd.dur || 1);
   if (first || !G.picks.eq) G.picks.eq = id;
   addXp("crafting", 10 + pd.tier * 4);
   if (typeof tutoEvent === "function") { tutoEvent("crafttool"); tutoEvent("craftpick"); }
-  log("Crafteaste " + pd.label + " (tenés " + G.picks.dur[id] + ").", "gold"); toast("+1 " + pd.label);
+  log("Crafteaste " + pd.label + " ×" + (pd.dur || 1) + " (tenés " + G.picks.dur[id] + ").", "gold"); toast("+" + (pd.dur || 1) + " " + pd.label);
   forgeWork(); refreshForge(); refreshInv(); refreshHud(); syncSlots(); if (typeof refreshHotbar === "function") refreshHotbar();
 }
 // modelo SFL (31/7): los picos NO se reparan — se rompen y se craftean de nuevo
