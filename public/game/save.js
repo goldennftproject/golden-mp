@@ -22,7 +22,7 @@ async function initSave() {
 // campos de progreso que guardamos (no world/cooldowns/buffs, que son de la sesión)
 function snapshot() {
   return { plata: G.plata, golden: G.golden, level: G.level, prestige: G.prestige, week: G.week,
-    res: G.res, picks: G.picks, skills: G.skills, fish: G.fish, plots: G.plots, seeds: G.seeds, selSeed: G.selSeed,
+    res: G.res, picks: G.picks, skills: G.skills, fish: G.fish, plots: G.plots, nodos: G.nodos, seeds: G.seeds, selSeed: G.selSeed,
     tools: G.tools, toolsLost: G.toolsLost, sflStock: true, invRows: G.invRows, slots: G.slots, hotbar: G.hotbar, hotSel: G.hotSel, hbInit: G.hbInit, layout: G.layout,
     daily: G.daily, plotsOwned: G.plotsOwned, seedBuys: G.seedBuys, built: G.built,
     hp: G.hp, hpMax: G.hpMax, combatXp: G.combatXp, stam: G.stam, stamAcc: G.stamAcc, stamRec: G.stamRec, pass: G.pass, tuto: G.tuto, firstSeeds: G.firstSeeds,
@@ -43,6 +43,9 @@ function hydrate(d) {
   if (d.skills) G.skills = Object.assign({}, G.skills, d.skills);
   if (d.fish) G.fish = Object.assign({}, G.fish, d.fish);
   if (Array.isArray(d.plots)) G.plots = d.plots;
+  // 18/8: enfriamientos de árboles, rocas y vetas. Antes no se guardaban y cualquier recarga —o
+  // un viaje a la Zona Negra— los dejaba todos listos otra vez, que era barra libre de material.
+  if (d.nodos && typeof d.nodos === "object") G.nodos = d.nodos;
   if (d.seeds) G.seeds = Object.assign({}, G.seeds, d.seeds);
   if (d.selSeed && CROP_DEF[d.selSeed]) G.selSeed = d.selSeed;
   if (d.tools) G.tools = Object.assign({}, G.tools, d.tools);

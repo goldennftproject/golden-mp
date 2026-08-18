@@ -355,7 +355,18 @@ class FarmScene extends Phaser.Scene {
       if (o.type === "dummy") {   // sombra chiquita bajo el dummy
         shadow = this.add.ellipse(cx, by - 2, rw * 0.55, T * 0.2, 0x1c2a12, 0.2).setDepth(by - 0.5);
       }
-      return { i, type: o.type, ore: o.ore, cx, by, w: o.w, rw, baseKey: o.key, sprite: s, shadow, readyAt: 0, lockIdx, locked, oculto };
+      /* 18/8 (reporte del diseñador: "al regresar se reinician los nodos"). El enfriamiento
+         vivía SOLO acá, en el objeto de la escena, y nacía en 0. Los cultivos sí se guardaban
+         (syncPlots), los nodos no. Así que cualquier cosa que reconstruyera la escena —entrar
+         a la Zona Negra, y también un simple F5— dejaba todos los árboles, rocas y vetas listos
+         otra vez. No era solo un reinicio: era barra libre. Talás todo, cruzás el portal, volvés
+         y talás todo de nuevo, sin límite. Con eso el ancla de 20 plata/hora no significaba nada,
+         porque las horas de reloj se podían saltar.
+         Ahora el enfriamiento se guarda en G.nodos, indexado por el mismo índice del objeto. */
+      const svn = (G.nodos || {})[i];
+      return { i, type: o.type, ore: o.ore, cx, by, w: o.w, rw, baseKey: o.key, sprite: s, shadow,
+        readyAt: (svn && svn.readyAt) || 0, halfAt: (svn && svn.halfAt) || 0, cdIni: (svn && svn.cdIni) || 0,
+        lockIdx, locked, oculto };
     });
     this.objs.forEach(o => this.tintarNodo(o));   // cada veta con el color de su mineral (9/8)
     this.objs.forEach(o => this.letreroObra(o));  // blueprints (12/8): el cartel de materiales sobre cada obra
@@ -1118,7 +1129,9 @@ class FarmScene extends Phaser.Scene {
       if (o.state === "ready") { const cd = CROP_DEF[o.cropKey]; return "Cosechar " + (cd ? cd.label : ""); }
       return "Creciendo…";
     }
-    if (o.type === "portal") return "Teletransportarte a la Zona Negra" + (Object.keys(G.weapons || {}).length ? "" : " sin arma");
+    if (o.type === "portal") return (typeof armaEq === "function" && !armaEq())
+      ? "Zona Negra — hace falta un arma equipada"
+      : "Teletransportarte a la Zona Negra";
     const secs = cd ? Math.ceil((o.readyAt - nowMs()) / 1000) : 0;
     // cuántos clics faltan: un clic = un golpe, y si parás 5 s los golpes dados se pierden
     const gp = (tot) => " (" + ((o.golpes || 0) + 1) + "/" + tot + ")";
@@ -1194,6 +1207,17 @@ class FarmScene extends Phaser.Scene {
       const espera = (typeof zonaCdLeft === "function") ? zonaCdLeft() : 0;
       if (espera > 0) { toast("El granjero está descansando — podés volver en " + fmtDur(espera)); return; }
       const entrar = () => {
+        /* 18/8 (reporte del diseñador: "es posible entrar a la zona negra sin arma"). No había
+           ninguna comprobación: el propio rótulo del portal decía "Teletransportarte a la Zona
+           Negra SIN ARMA" — describía el problema y lo dejaba pasar igual. Entrar desarmado es
+           entrar a que te maten, y al morir se pierde lo que llevás encima.
+           Se pide arma EQUIPADA, no solo tenerla en el cofre: llevarla puesta es la decisión. */
+        if (typeof armaEq === "function" && !armaEq()) {
+          toast(Object.keys(G.weapons || {}).length
+            ? "Equipate un arma antes de entrar — está en tu inventario"
+            : "Necesitás un arma para entrar. Se craftean en la Herrería");
+          return;
+        }
         if (typeof tutoEvent === "function") tutoEvent("portal");
         GF.zona = "pantano";   // desde la granja siempre se entra por el primer mapa (10/8)
         if (typeof zonaEntrar === "function") zonaEntrar();
@@ -1512,7 +1536,7 @@ class FarmScene extends Phaser.Scene {
       const gr = 1;   // viernes (2): todos los recursos dan 1
       if (tryAddRes("madera", gr)) {
         useTool("axe"); addXp("crafting", nodoXpMin(CD.tree)); /* 16/8: XP = minutos del reloj (1 h 30 → 90) */ nodoSumar(o); o.cdIni = nowMs(); o.readyAt = nowMs() + nodoCd(o, "tree", CD.tree) * 1000 * cdMult() * (typeof tutoBoost === "function" ? tutoBoost("tree") : 1);
-        o.halfAt = nowMs() + (o.readyAt - nowMs()) / 2;   // a mitad del enfriamiento asoma el árbol a medio crecer (doc 4/8)
+        o.halfAt = nowMs() + (o.readyAt - nowMs()) / 2; this.syncNodos();   // a mitad del enfriamiento asoma el árbol a medio crecer (doc 4/8)
         // tocón nuevo con base de tierra y hojas caídas (encuadre del árbol, va a tamaño completo); respaldo: tocón viejo chico
         // 15/8 (medido en los PNG): el disco del tocón es el 64% de su lienzo y el tronco
         // del árbol el 23-30% del suyo → a 0.42 del ancho del árbol el corte queda del
@@ -1541,7 +1565,7 @@ class FarmScene extends Phaser.Scene {
       if (tryAddRes("piedra", gr)) {
         const pk = equippedPick();   // picar piedra también gasta el pico (bug reportado)
         if (pk) { G.picks.dur[pk] = Math.max(0, (G.picks.dur[pk] || 0) - 1); if (G.picks.dur[pk] <= 0) { log("Usaste tu último " + PICK_DEF[pk].label + " — crafteá más en la Herrería.", "bad"); toast("Sin picos — crafteá más"); destroyPick(pk); } }
-        addXp("mining", nodoXpMin(CD.rock)); /* 16/8: XP = minutos del reloj (2 h → 120) */ statAdd("minar", "piedra", gr); nodoSumar(o); o.cdIni = nowMs(); o.readyAt = nowMs() + nodoCd(o, "piedra", CD.rock) * 1000 * cdMult() * (typeof tutoBoost === "function" ? tutoBoost("rock") : 1); o.halfAt = nowMs() + (o.readyAt - nowMs()) / 2; this.setObjTex(o, "node_stone_mined", o.rw || GF.TILE); this.premioFx(o.cx, o.by, resSprite("piedra"), "+" + gr); log(`+${gr} Piedra.` + (pk ? ` Quedan ${G.picks.dur[pk]} picos.` : ""), "good"); refreshHud();
+        addXp("mining", nodoXpMin(CD.rock)); /* 16/8: XP = minutos del reloj (2 h → 120) */ statAdd("minar", "piedra", gr); nodoSumar(o); o.cdIni = nowMs(); o.readyAt = nowMs() + nodoCd(o, "piedra", CD.rock) * 1000 * cdMult() * (typeof tutoBoost === "function" ? tutoBoost("rock") : 1); o.halfAt = nowMs() + (o.readyAt - nowMs()) / 2; this.syncNodos(); this.setObjTex(o, "node_stone_mined", o.rw || GF.TILE); this.premioFx(o.cx, o.by, resSprite("piedra"), "+" + gr); log(`+${gr} Piedra.` + (pk ? ` Quedan ${G.picks.dur[pk]} picos.` : ""), "good"); refreshHud();
         if (typeof tutoEvent === "function") tutoEvent("gather");
       }
       else { this.setObjTex(o, o.baseKey, o.rw || o.w); toast("Bolsa llena — no podés picar"); log("Bolsa llena: liberá espacio para seguir picando.", "bad"); }   // vuelve entera: los golpes se perdieron
@@ -1560,7 +1584,7 @@ class FarmScene extends Phaser.Scene {
         G.picks.dur[pk] = Math.max(0, (G.picks.dur[pk] || 0) - 1);
         addXp("mining", nodoXpMin(od.cd)); statAdd("minar", o.ore, gr);   // 16/8: XP = minutos del reloj (bronce 8 h → 480 … oro 14 h → 840)
         nodoSumar(o); o.cdIni = nowMs(); o.readyAt = nowMs() + nodoCd(o, o.ore, od.cd) * 1000 * cdMult();
-        o.halfAt = nowMs() + (o.readyAt - nowMs()) / 2;
+        o.halfAt = nowMs() + (o.readyAt - nowMs()) / 2; this.syncNodos();
         if (this.textures.exists(o.baseKey + "_mined")) this.setObjTex(o, o.baseKey + "_mined", o.rw || GF.TILE); else o.sprite.setAlpha(0.4);
         this.premioFx(o.cx, o.by, resSprite(o.ore), "+" + gr); log(`${od.emoji} +${gr} ${od.label}. Quedan ${G.picks.dur[pk]} picos.`, "good"); refreshHud();
         if (typeof tutoEvent === "function") { tutoEvent("gather"); tutoEvent("mineore"); }
@@ -3266,6 +3290,20 @@ class FarmScene extends Phaser.Scene {
 
   // vuelca el estado de las parcelas a G.plots para que el autoguardado lo persista
   syncPlots() { if (this.plots) G.plots = this.plots.map(pl => ({ state: pl.state, readyAt: pl.readyAt, cropKey: pl.cropKey, witherAt: pl.witherAt || 0, growTotal: pl.growTotal || 0 })); }   // growTotal: sin él, tras un F5 la barrita de crecimiento arrancaba desde donde no era
+  /* 18/8: el equivalente de syncPlots para los NODOS. Solo se anotan los que están enfriándose,
+     así el guardado no engorda con treinta entradas en cero. Se guarda por índice de objeto, que
+     es estable porque WORLD_OBJECTS solo crece por el final. */
+  syncNodos() {
+    if (!this.objs) return;
+    const n = {}, t = nowMs();
+    this.objs.forEach(o => {
+      if (typeof o.i !== "number") return;                       // excavaciones, paquete, cofres: no son nodos
+      if (o.type !== "tree" && o.type !== "rock" && o.type !== "ore") return;
+      if (!o.readyAt || o.readyAt <= t) return;                  // ya está listo: nada que recordar
+      n[o.i] = { readyAt: o.readyAt, halfAt: o.halfAt || 0, cdIni: o.cdIni || 0 };
+    });
+    G.nodos = n;
+  }
 
   // Cuando el juego REGALA una parcela (nivel de granja, ficha del pase), hay que abrirla en el acto:
   // antes se sumaba al guardado pero el dibujo seguía en gris hasta apretar F5 (reporte del diseñador).
@@ -3568,7 +3606,7 @@ class FarmScene extends Phaser.Scene {
     for (const o of this.objs) {
       // regeneración directa: de los restos vuelve al nodo entero (sin pasar por el dañado)
       if (o.readyAt && t >= o.readyAt) {
-        o.readyAt = 0; o.halfAt = 0;
+        o.readyAt = 0; o.halfAt = 0; this.syncNodos();
         if (o.type === "tree" || o.type === "rock") this.setObjTex(o, o.baseKey, o.rw || o.w);
         else if (o.type === "ore") { this.setObjTex(o, o.baseKey, o.rw || o.w); o.sprite.setAlpha(1); }
         if (o.timer) o.timer.setVisible(false);

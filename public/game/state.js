@@ -48,6 +48,7 @@ const G = {
   layoutPond: null,              // laguna movida: {col,row}
   fish: { comun: 0, raro: 0, epico: 0, legendario: 0 },
   plots: [],   // estado de las parcelas: [{state, readyAt, cropKey}] — lo llena la FarmScene
+  nodos: {},   // enfriamiento de árboles/rocas/vetas por índice de objeto — lo llena syncNodos()
   plotsOwned: 3,   // 14/8 (dirección): se nace con 3 parcelas — la primera misión planta 3 semillas y tiene que haber 3 celdas donde apuntar
   decos: [], decoBolsa: {}, godHand: false, zonasVistas: ["pantano"],   // adornos puestos · adornos sin colocar · NFT de siembra automática (10/8)
   daily: { day: 0, last: "" },   // cofre diario: día de racha reclamado (1..7) y fecha del último reclamo
@@ -355,14 +356,36 @@ function comprarEmergencia(tipo) {
 }
 
 // --- construcción de edificios (detalles viernes 1): recetas para levantar cada edificio ---
+/* 18/8 — LOS EDIFICIOS PASAN A COLGAR DEL ANCLA (tools/costear-edificios.js)
+   Antes eran números a ojo. Medido contra la granja que tenés cuando cada uno se abre, había un
+   FACTOR 25 entre el más barato y el más caro — y el más caro del juego (Altar de Runas, 9,8 días
+   de granja) estaba disponible desde el nivel 1. No hay lectura de diseño donde eso sea a propósito.
+
+   Regla nueva, la misma que las expansiones: un edificio cuesta N DÍAS DE LA GRANJA QUE TENÉS
+   CUANDO SE ABRE. N sube de 0,4 (los tres del tutorial) a 3,0 (el último). Es el único número de
+   diseño; las cantidades las deriva el script.
+
+   Dos cosas más, que no son de gusto:
+   · FUERA EL ORO. Era más de la mitad del coste de los cuatro caros, y ataba el Establo (nivel 6)
+     a un mineral que a ese nivel no rinde. Sobre todo: impedía que el oro llegara por expansión,
+     porque dejaba el Establo inconstruible catorce niveles.
+   · Los edificios de segundo nivel se pagan en TABLONES y BLOQUES. Sunflower llama a esto su
+     trampa nº2 — "recursos para hacer más recursos, ¿pero para qué sirve el resultado?" — y
+     nosotros caíamos de lleno: tablón, bloques de piedra y barra de hierro NO LOS GASTABA NADIE.
+     Eran madera y piedra convertidas en un ítem sin salida. Ahora son el material de obra.
+   · El Altar de Runas gana nivel 7, entre el Establo y la Curtiduría. */
 const BUILD_DEF = {
-  store:  { label: "Herrería",        cost: { madera: 5, piedra: 2 } },   // 10/8: ya no es gratis (pedido del diseñador)
-  horno:  { label: "Horno de Piedra", cost: { madera: 6, piedra: 4 },  lvl: 3 },   // 15/8: a escala de los relojes del diseñador (era 10+8)
-  cocina: { label: "Cocina",          cost: { madera: 8, piedra: 5 }, lvl: 5 },   // 15/8: a escala de los relojes del diseñador (era 15+8)
-  altar:  { label: "Altar de Runas",  cost: { piedra: 40, madera: 30, oro: 8 }, golden: 20 },   // 14/8 rebalance: era 60+40+20oro+30G (la cadena del oro medía ~700 de plata)
-  establo:    { label: "Establo",     cost: { madera: 40, piedra: 25, oro: 6 }, lvl: 6 },   // 14/8 rebalance
-  curtiduria: { label: "Curtiduría",  cost: { madera: 35, piedra: 28, oro: 8 }, lvl: 8 },   // 14/8 rebalance
-  ofrendas:   { label: "Altar de Ofrendas", cost: { piedra: 60, madera: 45, oro: 12 }, lvl: 10 },   // 14/8 rebalance
+  /* El VALOR de los tres del tutorial lo fija el ancla (0,4-0,5 días de granja), pero el reparto
+     entre madera y piedra es libre — y no da igual. Con 2 árboles de 1 h 30 y 2 rocas de 2 h, el
+     tutorial dura lo que dure el recurso más lento. Cargando hacia la madera se iba a 20,6 h;
+     repartiendo 1,33 de madera por cada piedra los dos relojes terminan a la vez y baja a 17,4 h. */
+  store:  { label: "Herrería",        cost: { madera: 4, piedra: 3 } },   // 10/8: ya no es gratis (pedido del diseñador)
+  horno:  { label: "Horno de Piedra", cost: { madera: 6, piedra: 5 },  lvl: 3 },
+  cocina: { label: "Cocina",          cost: { madera: 8, piedra: 6 }, lvl: 5 },
+  altar:  { label: "Altar de Runas",  cost: { tablon: 19, barra_piedra: 7 }, lvl: 7 },
+  establo:    { label: "Establo",     cost: { tablon: 14, barra_piedra: 5 }, lvl: 6 },
+  curtiduria: { label: "Curtiduría",  cost: { tablon: 25, barra_piedra: 10 }, lvl: 8 },
+  ofrendas:   { label: "Altar de Ofrendas", cost: { tablon: 21, barra_piedra: 10, barra_hierro: 2 }, lvl: 10 },
 };
 function buildCostStr(key) { const b = BUILD_DEF[key]; return Object.keys(b.cost).map(k => (b.cost[k]) + " " + (RES_LABEL[k] || k)).join(" + ") + (b.golden ? " + " + b.golden + " $Golden" : ""); }
 
@@ -893,21 +916,28 @@ const FARM_TAREAS = {
 };
 // recompensas: parcela (nº), cofre (+capacidad), edificio nivel 2, y cosméticos (título/decoración/emote/marco/skin/aura)
 const FARM_UNLOCK = {
-  2: "3ª parcela GRATIS", 3: "Horno básico disponible", 4: "4ª parcela GRATIS", 5: "Cocina disponible",
-  6: "5ª parcela GRATIS", 7: "6ª parcela GRATIS", 8: "Cultivo Girasol", 9: "Cultivo Trigo", 10: "Cultivo Maíz",
-  11: "Decoración de granja", 12: "7ª parcela", 13: "+10 de capacidad de cofre", 14: "Marco de perfil",
-  15: "Título 'Granjero Experto'", 16: "Decoración", 17: "Horno nivel 2 (más rápido)", 18: "8ª parcela",
+  2: "4ª parcela GRATIS", 3: "Horno básico disponible", 4: "5ª parcela GRATIS", 5: "Cocina disponible",
+  6: "6ª parcela GRATIS", 7: "7ª parcela GRATIS", 8: "Cultivo Girasol", 9: "Cultivo Trigo", 10: "Cultivo Maíz",
+  11: "Decoración de granja", 12: "8ª parcela", 13: "+10 de capacidad de cofre", 14: "Marco de perfil",
+  15: "Título 'Granjero Experto'", 16: "Decoración", 17: "Horno nivel 2 (más rápido)", 18: "9ª parcela",
   19: "Emote", 20: "Título 'Maestro de Cultivos' + decoración exclusiva", 21: "Cocina nivel 2 (más rápida)",
-  22: "Decoración", 23: "+10 de capacidad de cofre", 24: "Marco de perfil", 25: "9ª parcela + Título 'Veterano'",
+  22: "Decoración", 23: "+10 de capacidad de cofre", 24: "Marco de perfil", 25: "10ª parcela + Título 'Veterano'",
   26: "Decoración", 27: "Altar de Runas nivel 2", 28: "Emote", 29: "Decoración",
   30: "Título 'Leyenda Naciente' + aura menor", 31: "Decoración", 32: "Marco de perfil", 33: "+15 de capacidad de cofre",
-  34: "Decoración", 35: "10ª parcela + Título 'Amo de la Granja'", 36: "Decoración", 37: "Skin de herramienta",
+  34: "Decoración", 35: "11ª parcela + Título 'Amo de la Granja'", 36: "Decoración", 37: "Skin de herramienta",
   38: "Emote", 39: "Decoración", 40: "Título 'Señor de la Cosecha' + aura", 41: "Decoración", 42: "Marco de perfil",
-  43: "Skin de granjero", 44: "Decoración", 45: "11ª parcela + Título 'Élite'", 46: "Decoración",
+  43: "Skin de granjero", 44: "Decoración", 45: "12ª parcela + Título 'Élite'", 46: "Decoración",
   47: "Skin de arma", 48: "Emote", 49: "Decoración",
-  50: "12ª parcela + Título 'Leyenda de la Granja Dorada' + AURA DORADA + skin de granja legendaria",
+  50: "13ª parcela + Título 'Leyenda de la Granja Dorada' + AURA DORADA + skin de granja legendaria",
 };
-const FARM_PARCELA = { 2:3, 4:4, 6:5, 7:6, 12:7, 18:8, 25:9, 35:10, 45:11, 50:12 };   // nivel → parcelas totales
+/* 18/8 (reporte del diseñador: "la parcela gratis no la da la granja; dice que te la da pero no
+   aparece"). No es que no apareciera: es que no se regalaba ninguna. El 14/8 se pasó a NACER CON
+   3 PARCELAS ("la primera misión planta 3 semillas y tiene que haber 3 celdas donde apuntar"),
+   pero esta tabla y sus textos siguieron escritos para cuando se nacía con 2. Al nivel 2 el cartel
+   anunciaba "3ª parcela GRATIS", regalosSync hacía la resta 3 − 3 = 0 y no encolaba nada. El
+   jugador leía la promesa en el cartel de nivel y no encontraba la parcela por ningún lado.
+   Corregido: la escalera empieza en la 4ª, que es la que de verdad toca. */
+const FARM_PARCELA = { 2:4, 4:5, 6:6, 7:7, 12:8, 18:9, 25:10, 35:11, 45:12, 50:13 };   // nivel → parcelas totales
 /* 17/8 — EN QUÉ NIVEL CAE CADA UNA DE LAS 16 EXPANSIONES (bloques de 5x5, ver GF.EXPANSIONES).
    El hueco se abre solo: 2 niveles entre las cinco primeras, 3 entre las cinco siguientes y 4
    entre las seis últimas. Arranca rápido para enseñar la mecánica y se espacia cuando cada
@@ -1091,25 +1121,25 @@ const PICK_DEF = {
   // costaba 18 plata efectivas contra 6 de la madera (el triple) y una parcela financiaba
   // 2,2 rocas en vez de 6,7. La cadena madera→pico sigue viva en los picos de tier alto.
   stone:    { tier:0, label:"Pico de Piedra",    mineTier:0, dur:1, cost:{},                    plata:6,   sprite:"pick_stone" },   // 14/8: era 3 madera + 10 · 16/8: sin madera
-  /* 17/8 — LOS CINCO PICOS DE ARRIBA, RE-DERIVADOS DEL ANCLA.
-     El problema medido (tools/auditar-precio-sombra.js): con dur 1 cada picada consumía un pico
-     entero, y como cada pico se craftea con el mineral del tier anterior, el costo se componía
-     hacia arriba hasta que picar DABA PÉRDIDA: bronce −90, oro −288, diamante −573 por picada.
-     La escalera de minería entera estaba por debajo del ancla y no se veía, porque los
-     materiales no se venden y no hay mercado que lo delate.
-     El arreglo: UN número de diseño, `dur: 5` — un crafteo rinde 5 picadas — y la receta se
-     deriva para que el costo POR USO sea exactamente el que el ancla permite (PRICE − 20×horas):
-     50, 60, 190, 630 y 760. Ningún precio se toca, así que nada de lo que lee priceOf() se mueve.
-     Se pagan solo en MATERIAL (plata 0): así el desgaste es además el sumidero recurrente que
-     faltaba, que era lo que no drenaba el stock de minerales.
-     El de netherita sale 3,84 diamantes: redondear a 4 dejaba el mineral un 7% por debajo del
-     ancla, así que se parte en 3 diamantes + 18 piedra, que da el presupuesto clavado y sigue
-     siendo una receta de dos ingredientes. */
-  bronze:   { tier:1, label:"Pico de Bronce",    mineTier:1, dur:5, cost:{madera:7},                    plata:0, sprite:"pick_bronze" },
-  iron:     { tier:2, label:"Pico de Hierro",    mineTier:2, dur:5, cost:{madera:2,piedra:5},           plata:0, sprite:"pick_iron" },
-  gold:     { tier:3, label:"Pico de Oro",       mineTier:3, dur:5, cost:{bronce:4,madera:3},           plata:0, sprite:"pick_gold" },
-  diamond:  { tier:4, label:"Pico de Diamante",  mineTier:4, dur:5, cost:{oro:6,madera:4,piedra:4},     plata:0, sprite:"pick_diamond" },
-  netherite:{ tier:5, label:"Pico de Netherita", mineTier:5, dur:5, cost:{diamante:3,piedra:18},        plata:0, sprite:"pick_netherite" },
+  /* 17-18/8 — LA ESCALERA DE PICOS, PENDIENTE DE ARREGLO.
+     El problema medido (tools/auditar-precio-sombra.js) es REAL y sigue abierto: con un uso por
+     pico, y como cada pico se craftea con el mineral de abajo, el coste se compone hacia arriba
+     hasta que picar DA PÉRDIDA — bronce −90, oro −288, diamante −573 por picada. Toda la escalera
+     de minería está por debajo del ancla y no se ve, porque los materiales no se venden.
+     Se probó arreglarlo dando 5 usos al pico. REVERTIDO por dirección (18/8): "las herramientas
+     tienen un uso, esa es una norma; la idea es balancear al ancla sin modificar cómo funcionan
+     las cosas". Correcto: eso arreglaba el número cambiando la mecánica.
+     Lo que sí se descubrió al revertir: con UN uso y cantidades enteras, la escalera NO puede
+     mantenerse. El presupuesto del pico de oro es 190 y UNA unidad de bronce ya vale 210 — no
+     entra ni pidiendo una. Igual el de netherita (760) contra un diamante (990). O sea que o se
+     renuncia a que el pico pida el mineral de abajo, o hacen falta CANTIDADES DECIMALES
+     (0,9 bronce · 1,34 oro · 0,77 diamante), que es la vía que pidió dirección.
+     Hasta que eso esté, las recetas quedan COMO ESTABAN. */
+  bronze:   { tier:1, label:"Pico de Bronce",    mineTier:1, dur:1, cost:{madera:3,piedra:4},   plata:8,   sprite:"pick_bronze" },   // 14/8 rebalance (era 4+5+10)
+  iron:     { tier:2, label:"Pico de Hierro",    mineTier:2, dur:1, cost:{madera:3,piedra:5},   plata:10,  sprite:"pick_iron" },
+  gold:     { tier:3, label:"Pico de Oro",       mineTier:3, dur:1, cost:{madera:3,bronce:3},   plata:20,  sprite:"pick_gold" },   // 14/8: era 5 bronce + 35 (cadena del Altar)
+  diamond:  { tier:4, label:"Pico de Diamante",  mineTier:4, dur:1, cost:{oro:3,madera:3},      plata:45,  sprite:"pick_diamond" },
+  netherite:{ tier:5, label:"Pico de Netherita", mineTier:5, dur:1, cost:{diamante:1,madera:5}, plata:100, sprite:"pick_netherite" },
 };
 function equippedPick() { return (G.picks.eq && G.picks.owned[G.picks.eq]) ? G.picks.eq : null; }
 function canAfford(c) { for (const k in c) if ((G.res[k]||0) < c[k]) return false; return true; }
@@ -1135,7 +1165,7 @@ function craftPick(id) {
   if (first || !G.picks.eq) G.picks.eq = id;
   addXp("crafting", 10 + pd.tier * 4);
   if (typeof tutoEvent === "function") { tutoEvent("crafttool"); tutoEvent("craftpick"); }
-  log("Crafteaste " + pd.label + " ×" + (pd.dur || 1) + " (tenés " + G.picks.dur[id] + ").", "gold"); toast("+" + (pd.dur || 1) + " " + pd.label);
+  log("Crafteaste " + pd.label + ((pd.dur || 1) > 1 ? " ×" + pd.dur : "") + " (tenés " + G.picks.dur[id] + ").", "gold"); toast("+" + (pd.dur || 1) + " " + pd.label);
   forgeWork(); refreshForge(); refreshInv(); refreshHud(); syncSlots(); if (typeof refreshHotbar === "function") refreshHotbar();
 }
 // modelo SFL (31/7): los picos NO se reparan — se rompen y se craftean de nuevo
@@ -3581,8 +3611,18 @@ function pedidoGenerar(seed) {
   const n = Math.max(1, p.n + (extra < 0.35 ? 0 : extra < 0.8 ? Math.ceil(p.n * 0.5) : p.n));
   const val = Math.round(p.val / p.n * n);
   const rem = PED_REMITENTES[Math.floor(pedAzar(seed + 7) * PED_REMITENTES.length) % PED_REMITENTES.length];
-  return { tipo: p.tipo, key: p.key, n: n, plata: Math.max(2, Math.round(val * 1.5)), xp: Math.max(1, Math.round(val / 2)),
-    vales: val >= 120 ? 3 : val >= 40 ? 2 : 1, de: rem[0], nota: rem[1], hecho: false };
+  /* 18/8 — EL TABLÓN NO PUEDE PAGAR POR ENCIMA DEL ANCLA.
+     Pagaba plata a 1,5× el valor de lo que pedía. Eso no es un sumidero: es un cambio con prima.
+     Saca material y mete MÁS dinero del que valía, así que cuantos más pedidos cumplís, más rico
+     te hacés — lo contrario de regular. Y encima el plan de la escalera semanal/mensual habría
+     multiplicado el problema en vez de arreglarlo.
+     Ahora paga el valor EXACTO (1,0×): el pedido es neutral en plata, y quien lo cumple gana lo
+     mismo que si hubiera vendido. La recompensa de verdad está en lo que NO vuelve a la
+     producción — vales y XP —, que es el modelo que Sunflower usa con la moneda de su capítulo.
+     Los vales suben para compensar: la ganancia sigue existiendo, pero en una moneda que solo
+     sale del tablón y solo se gasta en el tablón. */
+  return { tipo: p.tipo, key: p.key, n: n, plata: Math.max(2, Math.round(val)), xp: Math.max(1, Math.round(val * 0.8)),
+    vales: val >= 200 ? 5 : val >= 120 ? 4 : val >= 40 ? 3 : 2, de: rem[0], nota: rem[1], hecho: false };
 }
 function pedidosEstado() {
   const e = G.pedidos || (G.pedidos = { dia: "", lista: [], reroll: 0, descarteAt: 0, dobles: 0 });

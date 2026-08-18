@@ -4135,3 +4135,139 @@ debajo, así que se parte en 3 diamantes + 18 piedra y da el presupuesto clavado
 El pico de piedra **no se toca**: ya estaba sobre el ancla (46 − 40 = 6 = su costo) y el tutorial
 consume 11, así que moverlo cambiaba el arranque sin necesidad. Verificado: `sim-tutorial.js` sigue
 cerrando en 18,1 h.
+
+---
+
+## 18/8 — Tres del reporte del diseñador
+
+### 1. Los nodos se reiniciaban al volver de la Zona Negra (y con un F5)
+
+Reportado como *"al regresar se reinician los nodos"*. Al mirarlo resultó ser bastante más que eso.
+
+El enfriamiento de un nodo vivía **solo en el objeto de la escena** y nacía en 0. Los cultivos sí
+se guardaban (`syncPlots` → `G.plots` → save), los nodos no tenían equivalente: el comentario del
+save decía *"no world/cooldowns/buffs, que son de la sesión"*, y para relojes de 1 h 30 y 2 h eso
+nunca pudo ser cierto.
+
+Consecuencias reales, en orden de gravedad:
+
+1. **Era barra libre.** Talás los seis árboles, cruzás el portal, volvés, y los seis están listos
+   otra vez. Sin límite. Lo mismo con rocas y vetas.
+2. Un **F5 hacía exactamente lo mismo** — ni siquiera hacía falta el portal.
+3. Con eso **el ancla no significaba nada**: los 20 de plata por hora se sostienen en que las horas
+   de reloj existan. Si se pueden saltar, el árbol y la roca son infinitos y todas las cuentas de
+   la economía estaban de más.
+
+Arreglado: `syncNodos()` guarda el enfriamiento en `G.nodos`, indexado por el índice del objeto —
+que es estable porque `WORLD_OBJECTS` solo crece por el final. Se anotan **solo los nodos que están
+enfriándose**, así el guardado no engorda con treinta entradas en cero. Se restaura al construir la
+escena y se guarda en cada golpe y cuando un nodo vuelve a estar listo.
+
+### 2. Se podía entrar a la Zona Negra sin arma
+
+No había ninguna comprobación. El rótulo del propio portal decía *"Teletransportarte a la Zona
+Negra **sin arma**"* — describía el problema y dejaba pasar igual.
+
+Ahora se pide **arma equipada**, no solo tenerla en el cofre: llevarla puesta es la decisión. Si la
+tenés pero sin equipar, el aviso lo dice; si no tenés ninguna, te manda a la Herrería. El rótulo
+del portal también cambió, porque anunciar la carencia no es lo mismo que impedirla.
+
+### 3. "La parcela gratis no la da la granja"
+
+No es que no apareciera: **es que no se regalaba ninguna.**
+
+El 14/8 se pasó a nacer con 3 parcelas (*"la primera misión planta 3 semillas y tiene que haber 3
+celdas donde apuntar"*), pero `FARM_PARCELA` y sus textos siguieron escritos para cuando se nacía
+con 2. Al nivel 2 el cartel anunciaba "3ª parcela GRATIS", `regalosSync` hacía la resta 3 − 3 = 0
+y no encolaba nada. El jugador leía la promesa y no encontraba la parcela por ningún lado.
+
+Corregida la escalera entera (`{2:4, 4:5, 6:6, 7:7, 12:8, 18:9, 25:10, 35:11, 45:12, 50:13}`) y
+los diez textos de `FARM_UNLOCK` que la nombran.
+
+**Verificado**: se recorren los 50 niveles comparando lo que promete el cartel contra lo que
+`regalosSync` encola de verdad. Antes fallaba el nivel 2; ahora coinciden los diez. Al nivel 50 son
+13 parcelas: la número 13 pasa a la zona de edición, como cualquiera por encima de la grilla de 12.
+
+*Nota*: la clase de fallo de los puntos 1 y 3 es la misma — dos cambios correctos por separado que
+nadie volvió a cruzar. Por eso las dos verificaciones nuevas comparan **lo que el juego dice** con
+**lo que el juego hace**, en vez de comprobar cada lado por su cuenta.
+
+---
+
+## 18/8 — Los edificios cuelgan del ancla, y se cierra la trampa de Sunflower
+
+Investigado el código abierto de Sunflower Land (no la wiki, que no sirve) para ver de qué se puede
+aprender. Tres cosas que valen, y una que hay que desmentir.
+
+### Lo que NO es cierto: cada edificio no es su propia economía
+
+La hipótesis era que en Sunflower cada edificio es un sistema cerrado y se puede jugar
+especializándose en uno. **Es falso como mecánica.** Ningún edificio tiene bucle cerrado: los
+animales solo comen cultivos (la única comida que no sale del campo cuesta gemas, moneda premium),
+la Bakery pide 20-40 huevos en 12 de sus 14 recetas, el Deli vive de la leche del Barn, y el mejor
+fertilizante de cultivos exige huevos. La especialización real vive en el **árbol de habilidades**,
+donde cada rama lleva penalización obligatoria: `Acre Farm` da +1 a cultivos avanzados y −0,5 a los
+básicos; elegir dieta de gallinas encarece la de vacas y ovejas.
+
+Y es deliberado — adamhannigan, en su discusión de balance de recursos:
+> *"Taken too far it will favour extractors and steer players away from playing the game how it is
+> intended. We respect strategies, but don't want people focussing on singular resources &
+> extracting — we want them playing the entire game."*
+
+### Sus costes de edificio tampoco están anclados
+
+`buildings.ts` no tiene **ni un solo comentario**: es una tabla de números pelados. En cambio su
+progresión de islas y ascensiones **sí** está parametrizada con fórmula (`coste = base × 1,4^(a−1)`).
+O sea que ellos llegaron a la misma conclusión: lo que hay que formular es la curva de expansión.
+
+### La trampa nº2, en la que caíamos de lleno
+
+De su documento de utilidad de recursos, las cuatro que se prohíben a sí mismos: efecto bola de
+nieve · **recursos para hacer más recursos** · desalineación inflacionaria · usos de una sola vez.
+
+Comprobado sobre nuestro código: de los cinco materiales intermedios, **tres no los gastaba nadie**
+— tablón de madera, bloques de piedra y barra de hierro eran madera y piedra convertidas en un
+ítem sin salida. Ahora son el material de obra de los edificios de segundo nivel. Huérfanos: 0.
+
+### Los edificios, derivados del ancla
+
+Medido contra la granja que tenés cuando cada uno se abre, había un **factor 25** entre el más
+barato y el más caro — y el más caro del juego estaba disponible desde el nivel 1.
+
+| edificio | nivel | antes | ahora |
+|---|---|---|---|
+| Herrería | 1 | 0,4 días | 0,4 |
+| Horno de Piedra | 3 | 0,5 | 0,5 |
+| Cocina | 5 | 0,4 | 0,5 |
+| Establo | 6 | 3,7 | **1,5** |
+| Altar de Runas | 1 → **7** | **9,8** | **2,0** |
+| Curtiduría | 8 | 3,8 | **2,5** |
+| Altar de Ofrendas | 10 | 5,6 | **3,0** |
+
+**Fuera el oro de las cuatro recetas.** Era más de la mitad de su coste, ataba el Establo del nivel
+6 a un mineral que a ese nivel no rinde, y sobre todo **impedía que el oro llegara por expansión**:
+lo dejaba inconstruible catorce niveles. Ahora ningún edificio pide oro y esa atadura desaparece.
+
+**El Altar de Runas gana nivel 7.** Ser el edificio más caro del juego y estar disponible en el
+minuto uno no era una decisión, era un número que nadie volvió a mirar.
+
+Detalle que costó una iteración: el **reparto entre madera y piedra no da igual**. El valor lo fija
+el ancla, pero con 2 árboles de 1 h 30 y 2 rocas de 2 h el tutorial dura lo que dure el recurso más
+lento. Cargando hacia la madera se iba a 20,6 h; repartiendo 1,33 de madera por piedra los dos
+relojes terminan a la vez. Queda en **19,2 h** (antes 18,1, el 6% que subió el valor de las recetas).
+
+### El tablón deja de imprimir dinero
+
+Pagaba plata a **1,5× el valor de lo que pedía**. Eso no es un sumidero: saca material y mete más
+dinero del que valía, así que cuantos más pedidos cumplís más rico te hacés. Y montarle encima la
+escalera semanal/mensual habría multiplicado el problema.
+
+Ahora paga el valor **exacto** (1,0×) — el pedido es neutral en plata — y la ganancia se mueve a
+**vales y XP**, que no vuelven a la producción. Los vales suben de 1-3 a 2-5 para compensar. Es el
+mismo modelo que Sunflower usa con la moneda de su capítulo.
+
+### Lo que sigue abierto
+
+Los **precios de los minerales están entre 2 y 6 veces por debajo** de lo que cuesta sacarlos, y
+arreglarlo necesita cantidades decimales, porque el suelo de "mínimo 1 unidad" no deja abaratar los
+picos. Es la única pieza grande que queda del equilibrio.
