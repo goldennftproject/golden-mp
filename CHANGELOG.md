@@ -4795,3 +4795,129 @@ picás a la vez), el total es esa cifra y ninguno es el cuello de botella.
 
 `tools/auditar-costo-expansiones.js` lo vuelve a medir cuando haga falta — que era justo lo que
 faltaba: los costes se derivaron una vez y nada avisaba cuando cambiaba algo debajo.
+
+---
+
+## 18/8 — AUDITORÍA COMPLETA: los exploits
+
+Dirección: *"audita todo"*. Se auditaron los sistemas que nunca se habían medido — combate, armas,
+Zona Negra, $Golden, vales, pase, pesca, excavaciones, adornos.
+
+### Antes que nada: dos desbalances que reporté y NO existían
+
+**La cocina no está rota.** Reporté que 8 recetas eran ruinosas comparando ingredientes contra
+`r.plata`. **El juego no usa `r.plata`**: con `COOK_PRICE_AUTO = 1`, `dishPrice()` calcula
+ingredientes × 1,25. Todo plato vende un 25% por encima de lo que costó, por construcción — está
+hecho así para que no se rompa al cambiar los cultivos.
+
+**Los animales tampoco.** Salían en pérdida brutal porque `fibra`, `pelaje`, `cuero` y `colmillo`
+**no tienen precio sombra**: valían 0 y la cuenta era basura. No están desanclados, están sin medir.
+
+Dos veces en un día un desbalance inventado por medir con la vara rota. La auditoría ahora comprueba
+primero que el número que mira sea el que el juego usa de verdad.
+
+### Los exploits reales, arreglados
+
+**1. El tablón imprimía dinero: ×800.** Y era el sistema que toqué esa misma mañana. Los vales se
+emitían por escalón del valor del pedido y se gastaban a precio fijo, y el sobre de semillas
+entregaba el cultivo de mayor nivel — cuyo coste escala ×720 de la papa al maíz. Entregabas 3 papas
+(6 de plata) y sacabas 3.600 en semillas.
+Arreglo: **el vale pasa a valer algo** (`VALE_EN_PLATA = 40`) y las dos puntas usan la misma vara —
+se emite `valor/40` y cada premio cuesta lo que entrega. Ningún pedido puede valer menos que un vale
+(si el producto es barato se pide una tanda mayor, que además suena mejor). **×800 → ×2**, y ese ×2
+es el bonus del primer pedido del día, que es a propósito. El spread interno de la tienda pasa de
+×133 a ×2,2.
+
+**2. La pesca no tenía ningún freno.** Sin enfriamiento, sin estamina, sin tope: 39 de plata por
+clic con valor esperado 246 y un 3% de legendario que pagaba **15 $Golden = 7.500 de plata**. Once
+horas de granja por clic, repetible. Ahora tiene **enfriamiento de 15 minutos** como cualquier nodo,
+el común paga lo que dice el ancla para ese tiempo, y **el legendario paga en oro, no en $Golden**:
+un pez no puede imprimir moneda premium.
+
+**3. El pase VIP se autofinanciaba al 98%** — costaba 250 $Golden y devolvía 245. Coste neto real:
+5 $G. Y **siete de los treinta niveles devolvían más de lo que cuesta comprarlos** (15 $G), así que
+comprar niveles daba ganancia. Bajado a 60 $G de devolución (24%, parcial de verdad) y ningún nivel
+suelto devuelve más que su precio.
+
+**4. La Runa Dorada era un grifo sin techo**: +1 $Golden por muerte con probabilidad = suma de las
+runas equipadas (54% con tres de rareza V) = 270 de plata esperadas por bicho, sin tope. Ahora tiene
+**tope diario de 10 $Golden**. Sigue siendo la mejor runa; deja de escalar con las horas.
+
+**5. Vender platos en $Golden: ×3,3.** `goldenP` era un número escrito a mano que no pasaba por
+`GOLDEN_EN_PLATA`. Ahora se deriva del mismo valor que la venta en plata, igual que hacen `sellItem`
+y `plotUnlockGolden` — los dos sitios que estaban bien.
+
+**6. Las incursiones invertían el diseño.** `INC_RENDIMIENTO = 0.7` promete que jugar a mano rinde
+más, pero el arma se gastaba **1 punto por muerte** en la incursión y **1 por golpe** peleando — y un
+demonio son 12 golpes. Por punto de estamina el clic rendía 1,7× lo que rendía jugar. Ahora la
+incursión gasta los mismos golpes que habría costado pelear: el desgaste en la Guarida pasa de 105 a
+945. El 0,7 vuelve a ser lo único que separa las dos cosas.
+
+**La causa común de casi todo lo del $Golden**: cantidades de moneda premium **escritas a mano** en
+vez de derivarse. `tools/auditar-golden.js` comprueba ahora que todo grifo tenga techo o derive.
+
+### La escalera de armas estaba invertida
+
+Medido el **costo por punto de daño** (lo que cuesta reparar, dividido por los usos, dividido por el
+daño medio) — si esa cifra sube al subir de tier, ese tramo es un impuesto:
+
+| | madera | piedra | bronce | oro | diamante |
+|---|---|---|---|---|---|
+| antes | 0,45 | 0,26 | **1,56** | **1,55** | 0,50 |
+| ahora | 0,45 | 0,51 | 0,52 | 0,52 | 0,50 |
+
+El bronce y el oro salían **seis veces más caros por punto de daño** que la piedra. Consecuencia
+concreta: **la Espada de Piedra era el arma óptima en las cuatro zonas**, incluida la Guarida a
+nivel 35. Todo el tramo medio de la progresión empobrecía al que subía.
+
+La causa era una sola línea: `ARM_MAT` **mezclaba materia prima con barras**. `barra_bronce` son 3
+de bronce y `barra_oro` 3 de oro, mientras madera, piedra y diamante iban en crudo. Reparar saltaba
+de 1,5 a 14 por uso mientras el daño subía de 6 a 9.
+
+Arreglo, y de paso una distinción que faltaba: **forjar** un arma nueva pide material elaborado
+(barras donde las hay), porque fabricar es fabricar; **reparar** pide materia prima, porque reponer
+no es fabricar. Las barras no se quedan sin uso — siguen siendo lo que hace falta para el arma nueva.
+
+`tools/auditar-armas.js` comprueba que ningún tramo sea impuesto (peor caso ×1,3, antes ×6,0), que
+reparar use siempre la misma clase de material, y que cada arma pegue más que la anterior.
+
+### Los nueve materiales sin precio, y el Pantano
+
+**Nueve materiales no tenían precio sombra**, y eso no es un hueco de contabilidad: es que **nada
+del juego puede valorarlos**. Dos veces en el día me dieron un desbalance inventado —los animales, y
+de rebote las armaduras— porque valían 0 y las cuentas salían en pérdida brutal. Un material sin
+precio convierte en mentira cualquier medición que lo toque.
+
+Derivados con la regla de siempre, lo que cuesta obtenerlos:
+
+| material | de dónde | precio |
+|---|---|---|
+| fibra | Alpaca · 12 h · da 2 · come trigo | 300 |
+| pelaje | Conejo · 12 h · da 2 · come zanahoria | 122 |
+| cuero | Toro · 16 h · da 2 · come trigo | 340 |
+| colmillo | Jabalí · 20 h · da 1 · come calabaza | 440 |
+| esencia rúnica | 30% de los bichos nv 8+ ≈ 3,3 muertes | 165 |
+| esencia oscura | solo nv 10-12 y más rara | 330 |
+
+Con eso los cuatro animales dan **exactamente 20 la hora**, y las armaduras pasan a ser medibles.
+
+### El Pantano daba pérdida
+
+Es la puerta de entrada al combate. Medido con el arma de su propio tier (Espada de Madera):
+**4 de los 5 bichos dejaban menos de lo que costaba el desgaste**. La Baba −56 y la Araña −71 por
+muerte. El primer contacto del jugador con la Zona Negra destruía valor, sin avisar.
+
+Dos causas, no una:
+
+- **Defensa.** Con def 2 la espada de madera hacía 2 de daño: la Baba pasaba de 9 golpes a 18 y la
+  Araña a 23. Un bicho de entrada no puede estar blindado contra el arma de entrada.
+- **Botín.** La plata no cubría ni el desgaste, mucho menos los 20/hora.
+
+| | golpes antes | golpes ahora | neto antes | neto ahora |
+|---|---|---|---|---|
+| Larva | 11 | 6 | −7,4 | **+3,6** |
+| Baba | 35 | 9 | −56,0 | **+1,8** |
+| Araña | 45 | 12 | −70,8 | **+0,6** |
+
+Los bichos de entrada van sin defensa —el freno es su vida, que se ve— y el botín se derivó para que
+cada muerte cubra el arma **más** 20 por hora del tiempo que lleva.

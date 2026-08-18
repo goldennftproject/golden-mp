@@ -22,7 +22,7 @@ async function initSave() {
 // campos de progreso que guardamos (no world/cooldowns/buffs, que son de la sesión)
 function snapshot() {
   return { plata: G.plata, golden: G.golden, level: G.level, prestige: G.prestige, iniciado: G.iniciado,
-    res: G.res, picks: G.picks, skills: G.skills, fish: G.fish, plots: G.plots, nodos: G.nodos, expansiones: G.expansiones, buffs: G.buffs, seeds: G.seeds, selSeed: G.selSeed,
+    res: G.res, picks: G.picks, skills: G.skills, fish: G.fish, plots: G.plots, nodos: G.nodos, expansiones: G.expansiones, pescaHasta: G.pescaHasta, runaOro: G.runaOro, buffs: G.buffs, seeds: G.seeds, selSeed: G.selSeed,
     tools: G.tools, sflStock: true, invRows: G.invRows, slots: G.slots, hotbar: G.hotbar, hotSel: G.hotSel, hbInit: G.hbInit, layout: G.layout,
     daily: G.daily, plotsOwned: G.plotsOwned, seedBuys: G.seedBuys, built: G.built,
     hp: G.hp, hpMax: G.hpMax, combatXp: G.combatXp, stam: G.stam, stamAcc: G.stamAcc, stamRec: G.stamRec, pass: G.pass, tuto: G.tuto, firstSeeds: G.firstSeeds,
@@ -48,6 +48,8 @@ function hydrate(d) {
   // 18/8: enfriamientos de árboles, rocas y vetas. Antes no se guardaban y cualquier recarga —o
   // un viaje a la Zona Negra— los dejaba todos listos otra vez, que era barra libre de material.
   if (d.nodos && typeof d.nodos === "object") G.nodos = d.nodos;
+  if (typeof d.pescaHasta === "number") G.pescaHasta = d.pescaHasta;
+  if (d.runaOro && typeof d.runaOro === "object") G.runaOro = d.runaOro;
   if (typeof d.expansiones === "number") G.expansiones = Math.max(0, Math.min(16, d.expansiones));
   // los buffs traen su propio vencimiento: se descartan los que ya caducaron mientras no estabas
   if (Array.isArray(d.buffs)) G.buffs = d.buffs.filter(b => b && b.until > Date.now());

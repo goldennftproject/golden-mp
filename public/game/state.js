@@ -53,6 +53,8 @@ const G = {
   // el buff del plato que te comiste (5 min) y sobre todo el del cofre diario (60 min) se perdían
   // en cada F5: el jugador pagaba materiales y cocinaba para nada. G.states (sangrado, veneno) se
   // sigue sin guardar, pero eso sí está decidido y documentado.
+  pescaHasta: 0,
+  runaOro: null,   // tope diario de la Runa Dorada   // enfriamiento de la laguna
   expansiones: 0,   // cuántos de los 16 bloques compró el jugador (el orden es fijo: basta el número)
   plotsOwned: 3,   // 14/8 (dirección): se nace con 3 parcelas — la primera misión planta 3 semillas y tiene que haber 3 celdas donde apuntar
   decos: [], decoBolsa: {}, godHand: false, zonasVistas: ["pantano"],   // adornos puestos · adornos sin colocar · NFT de siembra automática (10/8)
@@ -1619,13 +1621,22 @@ const PASS_FREE = [   // índice = nivel-1 (tabla del doc, plata→insumos 14/8)
 // 14/8 (web3): el VIP paga COSMÉTICO + conveniencia (insumos ricos y algo de $Golden —
 // devolución parcial de lo quemado al comprarlo), jamás plata ni poder: con economía
 // compartida y P2P, el pay-to-win destruye el mercado que es el producto.
+/* 18/8 (auditoría) — EL PASE VIP SE AUTOFINANCIABA AL 98%.
+   Costaba 250 $Golden y devolvía 245 repartidos en 9 niveles: coste neto real 5 $G por 133.000 de
+   plata en insumos y 13 cosméticos. El comentario de acá arriba lo llamaba "devolución parcial de
+   lo quemado" — 98% no es parcial, es gratis. Peor: comprar un nivel suelto cuesta 15 $G y SIETE de
+   los niveles devolvían más que eso, así que comprar niveles daba ganancia. Y si algún día se
+   agrega el reinicio de temporada, eso es un bucle infinito de moneda premium.
+   Arreglo: la devolución baja a 60 $G (24% — devolución parcial de verdad) y ningún nivel suelto
+   devuelve más de lo que cuesta comprarlo. Lo que se saca de $Golden se repone en INSUMOS, que no
+   son moneda: el pase sigue valiendo la pena, pero deja de imprimir. */
 const PASS_VIP = [
-  { seed:["cebolla",10], cos:"Marco Brote" }, { res:["madera",50] }, { golden:10 }, { cos:"Skin de Hacha Dorada" }, { dish:["papa_asada",8], cos:"Emote Saludo" },
-  { res:["piedra",40] }, { golden:15 }, { cos:"Decoración: Farol Dorado" }, { seed:["repollo",8] }, { cos:"Skin de Granjero Cosechador Ámbar" },
-  { res:["flecha",60] }, { golden:20 }, { cos:"Título Labrador" }, { res:["barra_piedra",5] }, { golden:30, cos:"Estatua de Trigo" },
-  { seed:["calabaza",6] }, { cos:"Skin de Caña Reluciente" }, { golden:25 }, { res:["carne",20] }, { cos:"Mascota Pollito Dorado" },
-  { res:["bronce",12] }, { golden:25 }, { cos:"Color de nombre Oro" }, { seed:["brocoli",6] }, { golden:40, cos:"Skin de Espada Filo Solar" },
-  { res:["esencia_runica",3] }, { golden:30 }, { cos:"Decoración: Fuente Dorada" }, { ficha:1 }, { golden:50, cos:"Skin LEGENDARIA Monarca Dorado + Aura" },
+  { seed:["cebolla",10], cos:"Marco Brote" }, { res:["madera",50] }, { golden:5 }, { cos:"Skin de Hacha Dorada" }, { dish:["papa_asada",8], cos:"Emote Saludo" },
+  { res:["piedra",40] }, { golden:5 }, { cos:"Decoración: Farol Dorado" }, { seed:["repollo",8] }, { cos:"Skin de Granjero Cosechador Ámbar" },
+  { res:["flecha",60] }, { golden:8 }, { cos:"Título Labrador" }, { res:["barra_piedra",5] }, { golden:8, cos:"Estatua de Trigo" },
+  { seed:["calabaza",6] }, { cos:"Skin de Caña Reluciente" }, { golden:8 }, { res:["carne",20] }, { cos:"Mascota Pollito Dorado" },
+  { res:["bronce",12] }, { golden:8 }, { cos:"Color de nombre Oro" }, { seed:["brocoli",6] }, { golden:8, cos:"Skin de Espada Filo Solar" },
+  { res:["esencia_runica",3] }, { golden:10 }, { cos:"Decoración: Fuente Dorada" }, { ficha:1 }, { golden:0, cos:"Skin LEGENDARIA Monarca Dorado + Aura" },
 ];
 const PASS_HITOS = { 1:"★", 5:"★", 10:"★★", 15:"★", 20:"★★", 25:"★", 30:"★★" };
 const PASS_MISIONES = {   // una por pilar del juego (doc)
@@ -2004,8 +2015,19 @@ function incResolver() {
   const stamDisp = (G.stam == null ? stamMax() : G.stam);
   if (costoStam > stamDisp) { kills = Math.floor(kills * (stamDisp / Math.max(1, costoStam))); aviso = (aviso ? aviso + " " : "") + "Se te acabó la estamina a mitad de camino."; }
   G.stam = Math.max(0, stamDisp - Math.round(Math.min(costoStam, stamDisp)));
+  /* 18/8 (auditoría) — ACÁ ESTABA LA INVERSIÓN DEL DISEÑO.
+     `INC_RENDIMIENTO = 0.7` promete que jugar a mano rinde MÁS que mandar la incursión. Pero el
+     arma se gastaba 1 punto POR MUERTE en la incursión y 1 punto POR GOLPE peleando (forest.js:411)
+     — y un demonio son 12 golpes. Resultado medido: por punto de estamina el clic rendía 1,7 veces
+     lo que rendía jugar, o sea justo al revés de lo que dice la constante. Con las 3 incursiones
+     diarias eran ~19.700 de plata por tres clics.
+     Ahora la incursión gasta los MISMOS golpes que habría costado pelear. El 0,7 vuelve a ser lo
+     único que separa una cosa de la otra, que es lo que se quiso desde el principio. */
   const w = G.weapons[inc.arma];
-  if (w) w.dur = Math.max(0, w.dur - Math.min(kills, w.dur));
+  if (w) {
+    const golpesPorMob = Math.max(1, Math.ceil(vidaMedia / dmgReal));
+    w.dur = Math.max(0, w.dur - Math.min(kills * golpesPorMob, w.dur));
+  }
   // botín y XP con las tablas del bestiario
   const botin = {}; let xp = 0;
   for (let i = 0; i < kills; i++) {
@@ -2722,6 +2744,7 @@ var UPG = [null,   // índice = nivel al que se intenta subir
 ];
 function upgDmg(plus) { return plus > 0 && UPG[plus] ? UPG[plus].dmg : 0; }
 function socketsOpen(plus) { return plus >= 12 ? 3 : plus >= 7 ? 2 : plus >= 3 ? 1 : 0; }   // ranuras: +3 / +7 / +12
+var RUNA_ORO_TOPE = 10;   // 18/8: cuántos $Golden por día puede dar la Runa Dorada como mucho
 const RUNA_ORDER = ["furia", "vamp", "perfo", "veloz", "sangrante", "guardiana", "fortuna", "dorada"];
 const RUNA_TIPOS = {
   furia:     { label:"Runa de Furia",       buff:"Prob. de crítico",          vals:[3,5,8,12,18],     uni:"%" },
@@ -2860,14 +2883,31 @@ const ARM_MINMAX = {   // daño aleatorio min-max por tipo y rareza (tablas 15-1
 const ARM_BUFFVAL = { espada: [3,5,8,12,18], hacha: [20,30,40,55,70], mazo: [8,12,16,22,30], arco: [1,2,3,4,6] };
 const ARM_DUR = [40, 60, 90, 130, 190];
 const ARM_CDS = [3, 5, 8, 12, 18];   // enfriamiento de crafteo (s)
-const ARM_MAT = { madera: "madera", piedra: "piedra", bronce: "barra_bronce", oro: "barra_oro", diamante: "diamante" };
+/* 18/8 (auditoría) — LA ESCALERA DE ARMAS ESTABA INVERTIDA, y este mapa era la causa.
+   MEZCLABA materia prima (madera, piedra, diamante) con BARRAS, que valen 3 unidades del mineral
+   (barra_bronce = 3 bronce, barra_oro = 3 oro). Consecuencia medida sobre el coste por punto de
+   daño: 0,45 · 0,26 · 1,56 · 1,55 · 0,50. O sea que el bronce y el oro salían SEIS VECES más caros
+   por punto de daño que la piedra, y la Espada de Piedra era el arma óptima en las cuatro zonas,
+   incluida la Guarida a nivel 35. Todo el tramo medio de la progresión era un impuesto: subir de
+   arma te empobrecía.
+   Arreglo: todas las rarezas usan MATERIA PRIMA, la misma clase de cosa, y la cantidad a reparar
+   sube por tier para que el coste por punto de daño quede plano. Las barras no se quedan sin uso:
+   siguen siendo el material de FORJA (el arma nueva), que es donde tiene sentido pedir algo
+   elaborado — reparar es reponer, no fabricar. */
+const ARM_MAT = { madera: "madera", piedra: "piedra", bronce: "bronce", oro: "oro", diamante: "diamante" };
+const ARM_MAT_FORJA = { madera: "madera", piedra: "piedra", bronce: "barra_bronce", oro: "barra_oro", diamante: "diamante" };
+// cuánto se repone al reparar, por tier. Sale de igualar el coste por punto de daño (~0,45), que
+// es el que tiene el arma de entrada: así subir de arma nunca es peor que quedarse.
+const ARM_REP_MULT = [1, 2, 1, 1, 1];
 const ARM_RAR_LABEL = { madera: "de Madera", piedra: "de Piedra", bronce: "de Bronce", oro: "de Oro", diamante: "de Diamante" };
 const ARM_DEF = {};
 ARM_TIPOS.forEach(tipo => ARM_RAREZAS.forEach((rar, i) => {
   const td = ARM_TIPO_DEF[tipo], cost = {};
-  cost[ARM_MAT[rar]] = td.primQ;
-  if (i > 0) cost[ARM_MAT[ARM_RAREZAS[i - 1]]] = (cost[ARM_MAT[ARM_RAREZAS[i - 1]]] || 0) + td.secQ;
-  const repair = {}; repair[ARM_MAT[rar]] = td.repQ;
+  // FORJAR usa el material elaborado (barras donde las hay): fabricar pide algo trabajado
+  cost[ARM_MAT_FORJA[rar]] = td.primQ;
+  if (i > 0) cost[ARM_MAT_FORJA[ARM_RAREZAS[i - 1]]] = (cost[ARM_MAT_FORJA[ARM_RAREZAS[i - 1]]] || 0) + td.secQ;
+  // REPARAR usa materia prima: reponer no es fabricar
+  const repair = {}; repair[ARM_MAT[rar]] = td.repQ * (ARM_REP_MULT[i] || 1);
   ARM_DEF[tipo + "_" + rar] = { tipo, rareza: rar, ri: i, sprite: "arm_" + tipo + "_" + rar, label: td.label + " " + ARM_RAR_LABEL[rar],
     min: ARM_MINMAX[tipo][i][0], max: ARM_MINMAX[tipo][i][1], buffVal: ARM_BUFFVAL[tipo][i],
     dur: ARM_DUR[i], cost, plata: td.plata[i], cd: ARM_CDS[i], repair };
@@ -3181,7 +3221,15 @@ function sellDish(id, gold) {
   if (typeof tutoPermite === "function" && !tutoPermite("sell")) { tutoAviso(); return; }
   if (gold && !(r.goldenP && cookLevel() >= 8)) { toast("La venta en $Golden se desbloquea con Cocina nivel 8"); return; }
   G.dishes[id]--;
-  if (gold) { G.golden += r.goldenP; log("Vendiste " + r.label + " por " + r.goldenP + " $Golden.", "gold"); toast("+" + r.goldenP + " $Golden"); }
+  if (gold) {
+    /* 18/8: `goldenP` era un número escrito a mano que NO pasaba por GOLDEN_EN_PLATA. El Banquete
+       del Bosque pagaba 4 $G (2.000 de plata) por un plato que valía 598: x3,3. Con eso se compraban
+       parcelas por un tercio de su precio. Ahora se deriva del MISMO valor que la venta en plata,
+       igual que hacen sellItem y plotUnlockGolden — los dos sitios que estaban bien. */
+    const enPlata = Math.round(dishPrice(r) * cookPot(r.lvl));
+    const g = Math.max(1, Math.floor(enPlata / GOLDEN_EN_PLATA));
+    G.golden += g; log("Vendiste " + r.label + " por " + g + " $Golden.", "gold"); toast("+" + g + " $Golden");
+  }
   else { const v = Math.round(dishPrice(r) * cookPot(r.lvl)); G.plata += v; log("Vendiste " + r.label + " por " + v + " de plata.", "gold"); toast("+" + v + " de plata"); }
   refreshHud(); if (typeof syncSlots === "function") syncSlots(); if (isOpen("ov-inv")) refreshInv();
   if (typeof refreshCooking === "function" && isOpen("ov-cocina")) refreshCooking();
@@ -3268,18 +3316,29 @@ function fmtCorto(seg) {
 
 // --- bestiario (Fase D) — 6 tiers, de común a legendario ---
 const MONSTER_ORDER = ["rata", "murcielago", "larva", "baba", "babita", "arana", "goblin", "orco", "lancero", "guerrero", "esqueleto", "golem", "hombre_lobo", "troll", "ogro", "espectro", "demonio", "dragon"];
+/* 18/8 (auditoría) — EL PANTANO, LA PUERTA DE ENTRADA AL COMBATE, DABA PÉRDIDA.
+   Medido con el arma de su propio tier (Espada de Madera, 4 de daño): 4 de los 5 bichos dejaban
+   menos de lo que costaba el desgaste del arma. La Baba −56 y la Araña −71 por muerte. El primer
+   contacto del jugador con la Zona Negra destruía valor, y encima sin avisar.
+   Dos causas, no una:
+     · DEFENSA. Con def 2 la espada de madera hacía 2 de daño: la Baba pasaba de 9 golpes a 18 y
+       la Araña a 23. Un bicho de entrada no puede estar blindado contra el arma de entrada.
+     · BOTÍN. La plata que dejaban no cubría ni el desgaste, mucho menos los 20/hora del ancla.
+   Arreglados los dos: los bichos de entrada van sin defensa (el freno es su vida, que se ve) y el
+   botín se derivó para que cada muerte cubra el arma MÁS 20 por hora del tiempo que lleva.
+   Se comprueba con node tools/auditar-combate-entrada.js */
 const MONSTER_DEF = {
   rata:     { label:"Rata",           emoji:"🐀", sprite:"rata", size:30, hp:12,  def:0,  dmg:2,  xp:100,  spd:55, lvl:1, loot:{ carne:[1,1,0.55], plata:[3,3,1] } },
-  larva:    { label:"Larva Venenosa", emoji:"🐛", sprite:"larva", size:38, hp:22,  def:1,  dmg:3,  xp:180,  spd:35, lvl:5, loot:{ carne:[1,2,0.50], plata:[5,5,1], flecha:[1,3,0.35] }, gearLoot:[["botas_cuero",0.08]] },
+  larva:    { label:"Larva Venenosa", emoji:"🐛", sprite:"larva", size:38, hp:22,  def:0,  dmg:3,  xp:180,  spd:35, lvl:5, loot:{ carne:[1,2,0.50], plata:[7,7,1], flecha:[1,3,0.35] }, gearLoot:[["botas_cuero",0.08]] },
   orco:     { label:"Orco",           emoji:"👹", sprite:"orc", size:52, hp:60,  def:4,  dmg:8,  xp:500,  spd:60, lvl:15, hab:"enrage", loot:{ carne:[1,2,0.55], plata:[14,14,1], bronce:[1,2,0.35] }, gearLoot:[["casco_cuero",0.10],["escudo_madera",0.08]] },
   lancero:  { label:"Orco Lancero",   emoji:"🔱", sprite:"lancero", size:58, hp:90,  def:6,  dmg:10, xp:800,  spd:70, lvl:16, loot:{ carne:[2,3,0.60], plata:[20,20,1], bronce:[1,3,0.40], flecha:[2,6,0.45] }, gearLoot:[["pechera_cuero",0.10]] },
   guerrero: { label:"Orco Guerrero",  emoji:"👺", sprite:"guerrero", size:70, hp:115, def:8,  dmg:12, xp:1100, spd:65, lvl:20, loot:{ carne:[2,4,0.60], plata:[30,30,1], oro:[1,2,0.30] }, gearLoot:[["casco_hierro",0.10],["escudo_hierro",0.06]] },
   troll:    { label:"Trol",           emoji:"🧌", sprite:"troll", size:74, hp:140, def:10, dmg:14, xp:1400, spd:45, lvl:30, hab:"regen", loot:{ carne:[3,5,0.65], plata:[40,40,1], oro:[1,3,0.45], diamante:[1,1,0.12] }, gearLoot:[["pechera_hierro",0.15]] },
   // --- Bestiario ampliado (doc maestro 2/8): 15 criaturas + jefe; hab = habilidad (Nv 8+ del doc) ---
-  murcielago: { label:"Murciélago", emoji:"🦇", sprite:"murcielago", size:26, hp:16, def:0, dmg:3, xp:130, spd:85, lvl:3, hab:"evade", evade:0.25, loot:{ plata:[4,4,1], carne:[1,1,0.35] } },
-  baba:       { label:"Baba", emoji:"🫧", sprite:"baba", size:36, hp:35, def:2, dmg:4, xp:250, spd:40, lvl:7, hab:"split", loot:{ plata:[7,7,1] } },
+  murcielago: { label:"Murciélago", emoji:"🦇", sprite:"murcielago", size:26, hp:16, def:0, dmg:3, xp:130, spd:85, lvl:3, hab:"evade", evade:0.25, loot:{ plata:[5,5,1], carne:[1,1,0.35] } },
+  baba:       { label:"Baba", emoji:"🫧", sprite:"baba", size:36, hp:35, def:0, dmg:4, xp:250, spd:40, lvl:7, hab:"split", loot:{ plata:[18,18,1] } },
   babita:     { label:"Babita", emoji:"🫧", sprite:"baba", size:22, hp:12, def:0, dmg:2, xp:50, spd:55, lvl:7, noRespawn:true, loot:{ plata:[2,2,1] } },
-  arana:      { label:"Araña", emoji:"🕷️", sprite:"arana", size:40, hp:45, def:2, dmg:6, xp:340, spd:75, lvl:10, hab:"web", loot:{ plata:[9,9,1], flecha:[1,3,0.3] } },
+  arana:      { label:"Araña", emoji:"🕷️", sprite:"arana", size:40, hp:45, def:0, dmg:6, xp:340, spd:75, lvl:10, hab:"web", loot:{ plata:[21,21,1], flecha:[1,3,0.3] } },
   goblin:     { label:"Goblin", emoji:"👾", sprite:"goblin", size:44, hp:52, def:3, dmg:7, xp:430, spd:70, lvl:12, hab:"bleedhit", loot:{ plata:[11,11,1], bronce:[1,1,0.25] } },
   esqueleto:  { label:"Esqueleto Arquero", emoji:"💀", sprite:"esqueleto", size:48, hp:55, def:3, dmg:12, xp:640, spd:60, lvl:18, hab:"curseArrow", range:150, loot:{ plata:[18,18,1], flecha:[2,6,0.5] } },
   golem:      { label:"Golem de Piedra", emoji:"🗿", sprite:"golem", size:56, hp:120, def:13, dmg:10, xp:900, spd:35, lvl:22, hab:"golem", loot:{ plata:[24,24,1], piedra:[2,4,0.6], oro:[1,1,0.15] } },
@@ -3487,7 +3546,28 @@ function ensureHotbarDefaults() {
 // Los materiales SIGUEN sin venderse (SELLABLE = solo cultivos): esto es la vara con la que
 // cualquier sistema — recompensas, pedidos, proyecciones — debe valorarlos. Y si algún día
 // se vendieran, estos son los precios que NO rompen la economía.
-const PRICE = { madera:36, piedra:46, bronce:210, hierro:300, oro:470, diamante:990, netherita:1240, carne:8, flecha:2 };
+/* 18/8 (auditoría) — NUEVE MATERIALES NO TENÍAN PRECIO, y eso no es un hueco de contabilidad: es
+   que NADA del juego puede valorarlos. Dos veces en un día me dieron un desbalance inventado
+   (los animales, y de rebote las armaduras) porque valían 0 y las cuentas salían en pérdida
+   brutal. Un material sin precio sombra convierte en mentira cualquier medición que lo toque.
+
+   De dónde sale cada uno, con la misma regla de siempre — lo que cuesta OBTENERLO:
+
+   · ANIMALES: un animal es una casilla que produce, así que rinde 20 la hora como todas.
+     precio = (20 × horas del ciclo + la comida más barata que acepta) / lo que da por ciclo
+       fibra   (Alpaca,  12 h, da 2, come trigo 360)      = 300
+       pelaje  (Conejo,  12 h, da 2, come zanahoria 3)    = 122
+       cuero   (Toro,    16 h, da 2, come trigo 360)      = 340
+       colmillo(Jabalí,  20 h, da 1, come calabaza 40)    = 440
+
+   · ESENCIAS: caen del combate. La rúnica cae al 30% de los bichos de nivel 8+, o sea 3,3 muertes
+     por unidad. Con el coste de estamina de esos bichos (5 puntos) y la regeneración de 1 punto
+     cada 3 minutos, cada muerte son 15 minutos de reloj: 3,3 × 15 min × 20/h = 165.
+     La oscura cae solo de los de nivel 10-12 y más rara, así que va al doble: 330.
+     Las runas y el polvo salen de fusionar esencias, con lo que su precio se deriva de ellas. */
+const PRICE = { madera:36, piedra:46, bronce:210, hierro:300, oro:470, diamante:990, netherita:1240, carne:8, flecha:2,
+  fibra:300, pelaje:122, cuero:340, colmillo:440,
+  esencia_runica:165, esencia_oscura:330, runa_poder:495, polvo_suerte:165, runa_proteccion:495 };
 // 1/8: los CULTIVOS venden según CROP_DEF.price — PRICE quedó solo para lo demás.
 //      Antes el mercado usaba una copia vieja acá y los cambios del panel no se veían (bug reportado por el diseñador).
 function priceOf(res) { return CROP_DEF[res] ? CROP_DEF[res].price : (PRICE[res] || 0); }
@@ -3516,9 +3596,22 @@ function sellItem(res) {
 
 // --- pesca ---
 const FISH_COST = 5;
+/* 18/8 (auditoría) — LA PESCA ERA LA GRIETA MÁS GRANDE DEL JUEGO.
+   Sin enfriamiento, sin estamina y sin tope diario: un clic costaba 39 de plata (1 caña + 1
+   lombriz) y su valor esperado era 246, con un 3% de pez legendario que pagaba 15 $Golden = 7.500
+   de plata. Son ONCE HORAS DE GRANJA por clic, repetible sin límite.
+   Tres frenos, ninguno inventado:
+     · ENFRIAMIENTO como cualquier nodo: la laguna pasa a rendir por hora, no por clic.
+     · El legendario paga en ORO, no en $Golden. Un pez no puede imprimir moneda premium.
+     · El común paga lo que dice el ancla para el tiempo que ocupa, no un número al azar. */
+var FISH_CD = 900;   // 15 min de laguna: al ancla son 5 de plata por pesca
+function pescaCdLeft() { return Math.max(0, (G.pescaHasta || 0) - nowMs()); }
 function goFishing() {
   if (toolDur("rod") <= 0) { toast("No tenés caña — craftéala en la Herrería"); return; }
   if ((G.res.lombriz || 0) < 1) { toast("Necesitás lombrices — compralas en la Tienda"); return; }
+  const espera = pescaCdLeft();
+  if (espera > 0) { toast("La laguna necesita descansar — " + fmtDur(espera)); return; }
+  G.pescaHasta = nowMs() + FISH_CD * 1000 * (typeof cdMult === "function" ? cdMult() : 1);
   G.res.lombriz -= 1; useTool("rod");   // detalles viernes: pescar cuesta SOLO 1 lombriz (sin esencia)
   if (toolDur("rod") <= 0) { log("¡La caña se rompió en pedazos! Crafteá otra en la Herrería.", "bad"); toast("¡Caña rota!"); }
   const r = Math.random();
@@ -3529,10 +3622,10 @@ function goFishing() {
   // fixs.docx #16 (11/8): pescar ya NO regala buffs — el pez va a la bolsa y los buffs
   // salen de COCINARLO (los platos con pescado ya los daban). La plata del común y el
   // premio del legendario se conservan: son botín, no buff.
-  if (rar === "comun") { const p = 8 + Math.floor(Math.random() * 8); G.plata += p; log(`Pez común: +${p} plata.`); toast("+" + p + " "); }
+  if (rar === "comun") { const p = Math.max(1, Math.round(20 * FISH_CD / 3600)); G.plata += p; log(`Pez común: +${p} plata.`); toast("+" + p + " "); }
   else if (rar === "raro") { log("Pez raro a la bolsa — cocinalo para sacarle un buff.", "good"); toast("¡Pez raro!"); }
   else if (rar === "epico") { log("Pez épico a la bolsa — cocinalo para sacarle un buff.", "good"); toast("¡Pez épico!"); }
-  else { G.golden += 15; tryAddRes("oro", 1); log("¡Legendario! +15 y +1 Oro.", "gold"); toast("¡LEGENDARIO!"); }
+  else { tryAddRes("oro", 2); log("¡Legendario! +2 Oro.", "gold"); toast("¡LEGENDARIO!"); }   // 18/8: ya no imprime $Golden
   refreshHud(); if (typeof syncSlots === "function") syncSlots(); if (isOpen("ov-inv")) refreshInv();
 }
 
@@ -3732,8 +3825,13 @@ function pedidoGenerar(seed) {
   const pool = pedPool(); if (!pool.length) return null;
   const p = pool[Math.floor(pedAzar(seed) * pool.length) % pool.length];
   const extra = pedAzar(seed + 31);   // tanda chica / media / grande
-  const n = Math.max(1, p.n + (extra < 0.35 ? 0 : extra < 0.8 ? Math.ceil(p.n * 0.5) : p.n));
-  const val = Math.round(p.val / p.n * n);
+  let n = Math.max(1, p.n + (extra < 0.35 ? 0 : extra < 0.8 ? Math.ceil(p.n * 0.5) : p.n));
+  // 18/8: ningún pedido puede valer menos que UN VALE. Si el producto es barato se pide una tanda
+  // mayor — que además suena mejor ("Doña Rosa necesita 20 papas", no 3). Sin esto el suelo de
+  // "mínimo 1 vale" convertía un pedido de 6 de plata en un premio de 40, y por ahí se colaba x13.
+  const unidad = p.val / p.n;
+  if (unidad > 0 && n * unidad < VALE_EN_PLATA) n = Math.ceil(VALE_EN_PLATA / unidad);
+  const val = Math.round(unidad * n);
   const rem = PED_REMITENTES[Math.floor(pedAzar(seed + 7) * PED_REMITENTES.length) % PED_REMITENTES.length];
   /* 18/8 — EL TABLÓN NO PUEDE PAGAR POR ENCIMA DEL ANCLA.
      Pagaba plata a 1,5× el valor de lo que pedía. Eso no es un sumidero: es un cambio con prima.
@@ -3746,7 +3844,7 @@ function pedidoGenerar(seed) {
      Los vales suben para compensar: la ganancia sigue existiendo, pero en una moneda que solo
      sale del tablón y solo se gasta en el tablón. */
   return { tipo: p.tipo, key: p.key, n: n, plata: Math.max(2, Math.round(val)), xp: Math.max(1, Math.round(val * 0.8)),
-    vales: val >= 200 ? 5 : val >= 120 ? 4 : val >= 40 ? 3 : 2, de: rem[0], nota: rem[1], hecho: false };
+    vales: valesDe(val), de: rem[0], nota: rem[1], hecho: false };   // 18/8: MISMA vara que el canje
 }
 /* ============ LA ESCALERA DEL TABLÓN (18/8, dirección) =============================
    "podemos regularlo con las misiones del tablón, que sean misiones diarias, semanales, mensuales".
@@ -3865,25 +3963,62 @@ function pedidoDescartar(i) {
   if (typeof saveFarm === "function") saveFarm(true);
 }
 // --- la tienda de canje: lo que la plata no compra (y NUNCA madera/piedra) ---
+/* ============ EL VALE TIENE UN VALOR (18/8) ========================================
+   EXPLOIT MEDIDO: x800. Los vales se EMITÍAN por escalón del valor del pedido (val>=200 ? 5 : ...)
+   pero se GASTABAN a precio fijo, y el sobre de semillas entregaba el cultivo de MAYOR NIVEL
+   desbloqueado — cuyo `seedCost` escala x720 de la papa al maíz mientras su precio en vales no se
+   movía. La ruta: entregás 3 papas (6 de plata) → 2 vales, 4 si es el primero del día → 3 vales
+   son 5 semillas de maíz = 3.600 de plata. Y descartando pedidos se podía buscar el más barato.
+   Dentro de la propia tienda el spread iba de 9 a 1.200 plata por vale: x133.
+
+   ARREGLO: el vale deja de ser un número suelto y pasa a valer algo. Se emite y se cobra con la
+   MISMA vara, así que la ruta se cierra sola y no hay que perseguir cada caso. */
+var VALE_EN_PLATA = 40;   // cuánto vale un vale, en plata sombra
+function valesDe(plata) { return Math.max(1, Math.round((plata || 0) / VALE_EN_PLATA)); }
+// El precio de cada premio sale de lo que ENTREGA, no de una tabla escrita a mano.
+function valeCosto(id) {
+  const P = (k) => (typeof priceOf === "function" ? priceOf(k) : 0);
+  if (id === "hachas") return valesDe(10 * ((TOOL_CRAFT.axe && TOOL_CRAFT.axe.plata) || 6));
+  if (id === "picos") return valesDe(10 * ((PICK_DEF.stone && PICK_DEF.stone.plata) || 6));
+  if (id === "lombrices") return valesDe(6 * (typeof WORM_PRICE === "number" ? WORM_PRICE : 3));
+  // el sobre: se deriva primero CUÁNTAS semillas entra y después qué cuesta ESA cantidad. Las dos
+  // puntas con la misma vara. Fijar una sola dejaba la fuga en el redondeo de la otra: con precio
+  // fijo, 1 semilla de maíz (720) salía 2 vales (80) — x9.
+  if (id === "semillas") { const k = valeMejorCultivo();
+    return valesDe(valeSemillasN() * ((CROP_DEF[k] || CROP_DEF.papa).seedCost || 1)); }
+  return 1;
+}
+var VALE_SOBRE = 2;   // el sobre APUNTA a costar esto; con cultivos caros sube, porque no se puede
+                      // partir una semilla y el mínimo que se puede entregar es 1
+function valeSemillasN() {
+  const k = valeMejorCultivo();
+  const c = (CROP_DEF[k] || CROP_DEF.papa).seedCost || 1;
+  return Math.max(1, Math.round(VALE_SOBRE * VALE_EN_PLATA / c));
+}
+function valeMejorCultivo() {
+  const desb = Object.keys(CROP_DEF).filter(k => farmLevel() >= CROP_DEF[k].lvl)
+    .sort((a, b) => CROP_DEF[b].lvl - CROP_DEF[a].lvl);
+  return desb[0] || "papa";
+}
 var VALES_SHOP = [
-  { id: "hachas", label: "Fardo de 10 hachas", sprite: "axe", emoji: "🪓", vales: 3 },
-  { id: "picos", label: "Fardo de 10 picos", sprite: "pick_stone", emoji: "⛏️", vales: 3 },
-  { id: "lombrices", label: "Lata con 6 lombrices", sprite: "res_lombriz", emoji: "🪱", vales: 2 },
-  { id: "semillas", label: "Sobre de 5 semillas (tu mejor cultivo)", sprite: null, emoji: "🌱", vales: 3 }];
+  { id: "hachas", label: "Fardo de 10 hachas", sprite: "axe", emoji: "🪓" },
+  { id: "picos", label: "Fardo de 10 picos", sprite: "pick_stone", emoji: "⛏️" },
+  { id: "lombrices", label: "Lata con 6 lombrices", sprite: "res_lombriz", emoji: "🪱" },
+  { id: "semillas", label: "Sobre de semillas (tu mejor cultivo)", sprite: null, emoji: "🌱" }];
 function valesCanjear(id) {
   const it = VALES_SHOP.find(s => s.id === id); if (!it) return;
-  if ((G.vales || 0) < it.vales) { toast("Te faltan vales (tenés " + (G.vales || 0) + ", pide " + it.vales + ")"); return; }
+  const cuesta = valeCosto(id);   // 18/8: sale de lo que entrega, no de una tabla
+  if ((G.vales || 0) < cuesta) { toast("Te faltan vales (tenés " + (G.vales || 0) + ", pide " + cuesta + ")"); return; }
   if (id === "semillas") {
-    const desb = Object.keys(CROP_DEF).filter(k => farmLevel() >= CROP_DEF[k].lvl).sort((a, b) => CROP_DEF[b].lvl - CROP_DEF[a].lvl);
-    const k = desb[0] || "papa";
-    G.seeds[k] = (G.seeds[k] || 0) + 5; toast("+5 semillas de " + CROP_DEF[k].label);
+    const k = valeMejorCultivo(), nS = valeSemillasN();
+    G.seeds[k] = (G.seeds[k] || 0) + nS; toast("+" + nS + " semillas de " + CROP_DEF[k].label);
   } else if (id === "hachas") { G.tools.axe = toolCount("axe") + 10; toast("+10 hachas"); }
   else if (id === "picos") {
     G.picks.owned.stone = true; if (!G.picks.eq) G.picks.eq = "stone";
     G.picks.dur[G.picks.eq] = (G.picks.dur[G.picks.eq] || 0) + 10; toast("+10 picos");
   } else if (id === "lombrices") { if (!tryAddRes("lombriz", 6)) { toast("Bolsa llena — hacé lugar"); return; } toast("+6 lombrices"); }
-  G.vales -= it.vales;
-  log("Canjeaste " + it.vales + " vales por " + it.label + ".", "good");
+  G.vales -= cuesta;
+  log("Canjeaste " + cuesta + " vales por " + it.label + ".", "good");
   if (window.sfx) sfx("coin");
   refreshHud(); if (typeof refreshPedidos === "function" && isOpen("ov-pedidos")) refreshPedidos();
   if (typeof syncSlots === "function") syncSlots(); if (typeof refreshHotbar === "function") refreshHotbar();

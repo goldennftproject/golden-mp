@@ -727,7 +727,19 @@ class ForestScene extends Phaser.Scene {
       const eo = rollEsencia(this.zonaKey, !!m.def.boss, m.def.lvl || 0);
       if (eo > 0) drops.push({ k: "esencia_oscura", n: eo, kind: "res" });
     }
-    { const dg = eqRunaVal("dorada"); if (dg && Math.random() * 100 < dg) { G.golden += 1; this.floatTxt(m, "+1 $Golden", "#ffe08a"); } }   // Runa Dorada
+    /* 18/8 (auditoría) — LA RUNA DORADA ERA UN GRIFO SIN TECHO.
+       +1 $Golden (500 de plata) por muerte, con probabilidad = SUMA de las runas equipadas: con 3
+       sockets de rareza V son 54%, o sea 270 de plata esperadas por bicho, sin tope diario ni por
+       sesión. Es la única fuente de moneda premium del juego que no tiene límite.
+       Se le pone un TOPE DIARIO. La runa sigue siendo la mejor del juego, pero deja de escalar
+       con el tiempo que le dediques. */
+    { const dg = eqRunaVal("dorada");
+      const hoy = (typeof dayStamp === "function") ? dayStamp(0) : "";
+      if (!G.runaOro || G.runaOro.dia !== hoy) G.runaOro = { dia: hoy, n: 0 };
+      if (dg && G.runaOro.n < RUNA_ORO_TOPE && Math.random() * 100 < dg) {
+        G.golden += 1; G.runaOro.n++;
+        this.floatTxt(m, "+1 $Golden" + (G.runaOro.n >= RUNA_ORO_TOPE ? " (tope del día)" : ""), "#ffe08a");
+      } }
     const parts = drops.map(d => d.kind === "gear" ? ((GEAR_DEF[d.k] && GEAR_DEF[d.k].label) || d.k)
       : "+" + d.n + " " + (d.k === "plata" ? "plata" : (RES_LABEL[d.k] || d.k)));
     this.dropLoot(m, drops);   // todo el botín cae al piso, armaduras incluidas (detalles 338)

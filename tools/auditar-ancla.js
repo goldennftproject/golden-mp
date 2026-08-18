@@ -8,7 +8,7 @@ const fs = require("fs"), vm = require("vm");
 const ctx = { console: { log(){}, warn(){} }, Math, Date, JSON }; ctx.window = ctx;
 vm.runInNewContext(fs.readFileSync("public/game/config.js", "utf8"), ctx, { filename: "config.js" });
 vm.runInNewContext(fs.readFileSync("public/game/state.js", "utf8") +
-  "\n;window.__X={CROP_DEF,ORE_DEF,PRICE,CD,PICK_DEF,BUILD_DEF,MAT_DEF,EXPANSION_COSTO,FARM_EXPANSION,ARM_DEF," +
+  "\n;window.COOK_PRICE_AUTO=typeof COOK_PRICE_AUTO!==\"undefined\"?COOK_PRICE_AUTO:1;window.COOK_MARGEN=typeof COOK_MARGEN!==\"undefined\"?COOK_MARGEN:1.25;window.__X={CROP_DEF,ORE_DEF,PRICE,CD,PICK_DEF,BUILD_DEF,MAT_DEF,EXPANSION_COSTO,FARM_EXPANSION,ARM_DEF,ANIMAL_DEF,RECIPE_DEF,GOLDEN_EN_PLATA," +
   "TOOL_CRAFT,SEED_POR_PARCELA:typeof SEED_POR_PARCELA!=='undefined'?SEED_POR_PARCELA:null};",
   ctx, { filename: "state.js" });
 const X = ctx.__X, GF = ctx.GF, ANCLA = 20;
@@ -89,6 +89,41 @@ console.log("\n=== 5. LAS EXPANSIONES · el coste sube y nunca baja ===");
   });
   filas++; if (!sube) avisos++;
   console.log((sube ? "  ok " : "  !! ") + "el coste crece a lo largo de las 16");
+}
+
+console.log("\n=== 5b. LOS ANIMALES · no se pueden medir todavía ===");
+{
+  // 18/8: la primera versión de esto medía (material x precio − comida) / horas y daba a los cuatro
+  // animales en pérdida brutal. Era la VARA la que estaba rota: fibra, pelaje, cuero y colmillo NO
+  // TIENEN PRECIO en la tabla PRICE, así que valían 0. Es el mismo agujero que tenían los minerales
+  // hasta hoy: si un material no tiene precio sombra, ningún sistema puede valorarlo y cualquier
+  // medición sobre él miente. Se deja marcado, no medido.
+  const sinPrecio = [];
+  for (const k in X.ANIMAL_DEF) { const a = X.ANIMAL_DEF[k];
+    if (X.PRICE[a.mat] == null) sinPrecio.push(a.mat); }
+  filas++; if (sinPrecio.length) avisos++;
+  console.log((sinPrecio.length ? "  !! " : "  ok ") + "los materiales de los animales tienen precio".padEnd(34) +
+    (sinPrecio.length ? "FALTAN: " + [...new Set(sinPrecio)].join(", ") : "todos"));
+}
+
+console.log("\n=== 5c. LA COCINA · se paga sola por construcción ===");
+{
+  /* 18/8 — ACÁ HABÍA UNA MEDICIÓN FALSA, y conviene que quede escrita.
+     La primera versión comparaba los ingredientes contra `r.plata` y marcaba 8 platos como
+     RUINOSOS: el Pan de Maíz y Trigo "perdía" 3.788. Era mentira. El juego NO USA `r.plata`:
+     con COOK_PRICE_AUTO=1 (state.js) el precio lo calcula dishPrice() como
+     ingredientes x COOK_MARGEN, y COOK_MARGEN vale 1,25. O sea que TODO plato vende un 25% por
+     encima de lo que costó, por construcción, y no puede destruir valor aunque cambien los
+     precios de los cultivos — que es exactamente para lo que se hizo así.
+     `r.plata` es la planilla vieja, viva solo si alguien pone COOK_PRICE_AUTO=0.
+     Segunda vez en el día que una vara rota da un desbalance inventado (la otra fueron los
+     animales). Por eso ahora la auditoría comprueba PRIMERO que el número que mira sea el que
+     el juego usa de verdad. */
+  filas++;
+  const auto = ctx.COOK_PRICE_AUTO !== 0;
+  if (!auto) avisos++;
+  console.log((auto ? "  ok " : "  !! ") + "el precio del plato sale de sus ingredientes".padEnd(34) +
+    (auto ? "sí, x" + (ctx.COOK_MARGEN || 1.25) + " — no puede dar pérdida" : "NO: manda la planilla fija r.plata"));
 }
 
 console.log("\n=== 6. LOS MATERIALES INTERMEDIOS · ¿los gasta alguien? ===");
