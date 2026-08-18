@@ -1371,13 +1371,30 @@ var FIRST_GROW_N = 3;        // cuántas semillas de arranque tienen ese trato (
 var TUTO_VER = 13;   // v13 (15/8): paso 0 nuevo — el kit de bienvenida se retira del BAÚL
 function tutoActivo() { return G.tuto && !G.tuto.done ? TUTO_STEPS[G.tuto.step] : null; }
 // migración: si el guardado trae una cadena vieja, los pasos ya no significan lo mismo → se recalcula
+/* 18/8 (reporte del diseñador: "compré las 3 papas y el tuto no lo detecta").
+   El fallo no estaba en la compra: el tutorial seguía parado en el PASO 0, el del baúl, y
+   `tutoEvent` descarta en silencio cualquier evento que no sea el del paso activo. O sea que
+   comprar, plantar y cosechar no contaban nada y no se avisaba de nada.
+
+   Por qué se quedaba parado en el 0: `kitReclamar()` arranca con `if (G.kitReclamado) return false`
+   y es el ÚNICO sitio que dispara el evento "kit". Y al cargar un guardado que no trae ese campo,
+   save.js hace `G.kitReclamado = d.kitReclamado != null ? !!d.kitReclamado : true` — o sea, lo da
+   por reclamado. Resultado: el baúl no tiene nada que entregar, el evento no se dispara nunca y el
+   paso no se puede cumplir ni jugando bien.
+
+   `tutoAutoSkip()` habría arreglado esto solo, porque `tutoHecho` ya sabe que el paso del kit está
+   hecho si `G.kitReclamado` es true. Pero solo se llamaba al MIGRAR de versión, así que a quien ya
+   tenía la versión actual no le corría nunca.
+
+   Arreglo: se llama SIEMPRE al cargar. Cualquier paso ya cumplido se salta, venga de donde venga
+   el desajuste. Es la clase de fallo entera, no solo este caso. */
 function tutoMigrar() {
   if (!G.tuto) G.tuto = { step: 0, n: 0, done: false, v: TUTO_VER };
-  if (G.tuto.v === TUTO_VER) return;
-  G.tuto.v = TUTO_VER;
-  if (G.tuto.done) return;
-  G.tuto.step = 0; G.tuto.n = 0;   // vuelve al principio de la cadena nueva y salta solo lo ya hecho
-  tutoAutoSkip();
+  if (G.tuto.v !== TUTO_VER) {
+    G.tuto.v = TUTO_VER;
+    if (!G.tuto.done) { G.tuto.step = 0; G.tuto.n = 0; }   // cadena nueva: se recalcula desde el principio
+  }
+  if (!G.tuto.done) tutoAutoSkip();   // y SIEMPRE se saltan los pasos que ya estaban cumplidos
 }
 // salta los pasos que el jugador YA cumplió (evita pedir cosas hechas o mentir con "ya tenés los materiales")
 // ¿este paso ya está cumplido? Se saca aparte porque ahora se consulta en dos momentos:

@@ -44,17 +44,33 @@ GF.SPEED = 175;
    guardado se rompe: lo que se mueve es el BORDE, no el contenido. */
 GF.BLOQUE = 5;              // lado del bloque de expansión, en celdas
 // Los 16 bloques, en coordenadas de BLOQUE respecto del corral: el corral es (0,0)-(2,2).
+/* EL ORDEN ES UN RECORRIDO DEL PERÍMETRO (18/8, dirección): "cada expansión va a ir de forma
+   consecutiva una tras la otra. La expansión uno sería, desde el lado izquierdo, la que está más
+   arriba de todas, sin ser la esquina. Partiendo de la uno irá hacia abajo hasta la esquina
+   inferior izquierda, luego hacia la derecha, luego para arriba y luego hacia la izquierda,
+   cerrando todo el cuadrado."
+
+   Se recorre el marco en ese sentido y el índice del array ES el orden de compra: la 1 es
+   GF.EXPANSIONES[0]. Así la granja siempre queda de una pieza y creciendo por un lado, nunca con
+   bloques sueltos colgando en diagonal.
+
+        13 14 15 16          <- el cierre, por arriba, de derecha a izquierda
+        12 ·  ·  ·  1
+        11 ·  ·  ·  2        <- baja por la izquierda (1-3), esquina (4),
+        10 ·  ·  ·  3           cruza abajo (5-7), esquina (8),
+         9  8  7  6  5          sube por la derecha (9-11), esquina (12) */
 GF.EXPANSIONES = [];
 (function () {
-  for (let br = -1; br <= 3; br++) {
-    for (let bc = -1; bc <= 3; bc++) {
-      if (bc >= 0 && bc <= 2 && br >= 0 && br <= 2) continue;   // el 3x3 del centro es el corral
-      const esquina = (bc < 0 || bc > 2) && (br < 0 || br > 2);
-      GF.EXPANSIONES.push({ bc, br, esquina,
-        c0: bc * GF.BLOQUE, r0: br * GF.BLOQUE,
-        c1: bc * GF.BLOQUE + GF.BLOQUE, r1: br * GF.BLOQUE + GF.BLOQUE });
-    }
-  }
+  const B = GF.BLOQUE, paso = [];
+  for (let br = 0; br <= 3; br++) paso.push([-1, br]);   // baja por la izquierda + esquina abajo-izq
+  for (let bc = 0; bc <= 3; bc++) paso.push([bc, 3]);    // cruza abajo + esquina abajo-der
+  for (let br = 2; br >= -1; br--) paso.push([3, br]);   // sube por la derecha + esquina arriba-der
+  for (let bc = 2; bc >= -1; bc--) paso.push([bc, -1]);  // cierra por arriba + esquina arriba-izq
+  paso.forEach(([bc, br], i) => {
+    const esquina = (bc < 0 || bc > 2) && (br < 0 || br > 2);
+    GF.EXPANSIONES.push({ n: i + 1, bc, br, esquina,
+      c0: bc * B, r0: br * B, c1: bc * B + B, r1: br * B + B });
+  });
 })();
 // El rectángulo que envuelve el corral + los bloques comprados. `compradas` es la lista de
 // índices de GF.EXPANSIONES que el jugador ya tiene.
@@ -68,13 +84,62 @@ GF.mundoCon = function (compradas) {
   });
   return { c0, r0, c1, r1, cols: c1 - c0, rows: r1 - r0 };
 };
-// ¿La celda está dentro del terreno que el jugador posee?
-GF.celdaComprada = function (col, row, compradas) {
-  if (col >= 0 && col < GF.COLS_BASE && row >= 0 && row < GF.ROWS_BASE) return true;   // el corral
-  return (compradas || []).some(i => {
+/* ============ EL TERRENO: UNA SOLA FUENTE DE VERDAD (18/8) =========================
+   Todo el mapa —césped, bosque, cerca, adornos, cámara, por dónde se puede caminar— dejaba de
+   preguntar "¿qué forma tiene la granja?" y daba por sentado un rectángulo que empieza en (0,0).
+   Con las expansiones eso deja de ser cierto: la granja es una forma que crece y que puede tener
+   ángulos hacia dentro. Así que la pregunta se responde en UN solo sitio y el resto consulta.
+
+   Como el orden de compra es fijo, "lo que tenés" es simplemente LAS N PRIMERAS del array — no
+   hace falta guardar qué bloques, solo cuántos.
+
+   Dos conjuntos, no uno:
+     · MÍAS       — las celdas que poseés. Manda la cerca y dónde se puede construir.
+     · DESPEJADAS — las mías MÁS un aire de 2,3 celdas. Manda hasta dónde llega el césped y desde
+                    dónde empieza el bosque. Es lo que mantiene los troncos separados del cercado,
+                    que es como se ve la granja hoy y tiene que seguir viéndose igual.
+   Se cachea por cantidad de expansiones: se arma una vez y se reusa. */
+GF.AIRE_BOSQUE = 2.3;      // celdas de césped entre la cerca y el primer tronco
+GF.expOwned = 0;           // cuántas expansiones tiene el jugador AHORA (lo pone la escena desde G)
+GF._terrenoCache = {};
+GF.terreno = function (n) {
+  n = Math.max(0, Math.min(GF.EXPANSIONES.length, (n == null) ? (GF.expOwned || 0) : n));
+  if (GF._terrenoCache[n]) return GF._terrenoCache[n];
+  const mias = new Set(), k = (c, r) => c + "," + r;
+  for (let c = 0; c < GF.COLS_BASE; c++) for (let r = 0; r < GF.ROWS_BASE; r++) mias.add(k(c, r));
+  for (let i = 0; i < n; i++) {
     const e = GF.EXPANSIONES[i];
-    return e && col >= e.c0 && col < e.c1 && row >= e.r0 && row < e.r1;
+    for (let c = e.c0; c < e.c1; c++) for (let r = e.r0; r < e.r1; r++) mias.add(k(c, r));
+  }
+  const A = GF.AIRE_BOSQUE, RA = Math.ceil(A), desp = new Set(mias);
+  let c0 = Infinity, r0 = Infinity, c1 = -Infinity, r1 = -Infinity;
+  mias.forEach(s => {
+    const p = s.split(","), c = +p[0], r = +p[1];
+    for (let dc = -RA; dc <= RA; dc++) for (let dr = -RA; dr <= RA; dr++)
+      if (dc * dc + dr * dr <= A * A) desp.add(k(c + dc, r + dr));
+    if (c < c0) c0 = c; if (r < r0) r0 = r;
+    if (c + 1 > c1) c1 = c + 1; if (r + 1 > r1) r1 = r + 1;
   });
+  const t = { n, mias, desp, c0, r0, c1, r1, cols: c1 - c0, rows: r1 - r0,
+    // el recuadro de lo DESPEJADO, que es lo que la cámara tiene que poder recorrer
+    dc0: c0 - RA, dr0: r0 - RA, dc1: c1 + RA, dr1: r1 + RA };
+  GF._terrenoCache[n] = t;
+  return t;
+};
+GF.tuyo      = function (col, row, n) { return GF.terreno(n).mias.has(col + "," + row); };
+GF.despejado = function (col, row, n) { return GF.terreno(n).desp.has(col + "," + row); };
+// El recuadro del terreno poseído, en PÍXELES (para cámara, fondos y límites).
+GF.cajaTerreno = function (n) {
+  const t = GF.terreno(n), T = GF.TILE;
+  return { x1: t.c0 * T, y1: t.r0 * T, x2: t.c1 * T, y2: t.r1 * T, w: t.cols * T, h: t.rows * T };
+};
+// (compatibilidad) el rectángulo que envuelve el corral + lo comprado
+GF.mundoCon = function (compradas) {
+  const t = GF.terreno(Array.isArray(compradas) ? compradas.length : compradas);
+  return { c0: t.c0, r0: t.r0, c1: t.c1, r1: t.r1, cols: t.cols, rows: t.rows };
+};
+GF.celdaComprada = function (col, row, compradas) {
+  return GF.tuyo(col, row, Array.isArray(compradas) ? compradas.length : compradas);
 };
 // "detallitos (1)" 4-5-6: la granja se juega SIN caminar (todo con clic), la cámara se desplaza
 // en vez de seguir al granjero, y la finca está sobre el mar. Cada cosa se puede apagar por separado.
@@ -353,8 +418,18 @@ GF.CORRAL = { col: 5, row: 11, cols: 4, rows: 3 };
 // LA CERCA PERIMETRAL es intocable (12/8): el anillo del borde de la granja no admite
 // que se coloque ni se arrastre NADA encima — adornos, parcelas, obras, edificios,
 // árboles, piedras o la laguna. (Arriba son 2 filas: la cerca de frente + su sombra.)
+/* 18/8: la definición era "el borde del rectángulo" (col<1 || row<2 || col>=COLS-1 || row>=ROWS-1)
+   y con las expansiones el terreno deja de ser un rectángulo. La regla de verdad, la que siempre
+   se quiso decir, es: una celda es CERCA si es tuya y tiene al lado algo que no lo es. Arriba son
+   dos filas porque el arte es la cerca de frente más su sombra.
+   En el corral 15x15 sin expansiones da exactamente lo mismo que la fórmula vieja — comprobado en
+   tools/test-terreno.js — pero ahora también acierta en las esquinas hacia dentro. */
 GF.enCerca = function (col, row) {
-  return col < 1 || row < 2 || col >= GF.COLS - 1 || row >= GF.ROWS - 1;
+  if (!GF.tuyo(col, row)) return true;                                    // fuera del terreno: intocable
+  if (!GF.tuyo(col - 1, row) || !GF.tuyo(col + 1, row)) return true;      // pegado al borde izq/der
+  if (!GF.tuyo(col, row + 1)) return true;                                // borde de abajo
+  if (!GF.tuyo(col, row - 1) || !GF.tuyo(col, row - 2)) return true;      // arriba: dos filas
+  return false;
 };
 
 // AVISO DE SUPERPOSICIÓN: al agregar un edificio nuevo, la consola avisa si pisa parcelas,

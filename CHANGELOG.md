@@ -4271,3 +4271,132 @@ mismo modelo que Sunflower usa con la moneda de su capítulo.
 Los **precios de los minerales están entre 2 y 6 veces por debajo** de lo que cuesta sacarlos, y
 arreglarlo necesita cantidades decimales, porque el suelo de "mínimo 1 unidad" no deja abaratar los
 picos. Es la única pieza grande que queda del equilibrio.
+
+---
+
+## 18/8 — El tutorial se atascaba en el paso 0 (y el baúl no lo decía)
+
+Reportado como *"compré las 3 papas y el tuto no lo detecta"*. La compra no tenía nada que ver.
+
+**El tutorial seguía parado en el paso 0, el del baúl**, y `tutoEvent` descarta en silencio
+cualquier evento que no sea el del paso activo. Comprar, plantar y cosechar no contaban nada, y no
+se avisaba de nada: desde fuera parece que el juego ignora lo que hacés.
+
+Por qué se quedaba parado ahí:
+
+1. `kitReclamar()` arranca con `if (G.kitReclamado) return false`, y es el **único** sitio que
+   dispara el evento `"kit"`.
+2. Al cargar un guardado que no trae ese campo, `save.js` hace
+   `G.kitReclamado = d.kitReclamado != null ? !!d.kitReclamado : true` — o sea, **lo da por
+   reclamado**.
+3. Resultado: el baúl no tiene nada que entregar, el evento no se dispara nunca, y el paso no se
+   puede cumplir ni jugando perfecto.
+
+`tutoAutoSkip()` habría arreglado esto solo — `tutoHecho` ya sabe que el paso del kit está hecho si
+`G.kitReclamado` es true. Pero solo se llamaba **al migrar de versión**, así que a quien ya tenía la
+versión actual no le corría nunca.
+
+Arreglo: **se llama siempre al cargar.** Cualquier paso ya cumplido se salta, venga de donde venga
+el desajuste. Cubre la clase entera, no solo este caso.
+
+**Test que lo fija**: `node tools/test-tutorial-atasco.js`. Reproduce el guardado del diseñador y
+comprueba además que no se rompe lo que funcionaba (partida nueva, veterano, guardado de versión
+vieja). Con el arreglo, 6 en verde; revirtiéndolo, los dos primeros fallan.
+
+### El baúl no se veía abierto con premios dentro
+
+Dirección: *"cuando se recompensa en el baúl debe mostrarse abierto"*. La tapa abierta era **solo
+del kit de bienvenida**, así que los premios de nivel —parcelas, árboles y rocas, que desde el 16/8
+llegan justamente ahí— caían en un baúl que se veía cerrado. El jugador leía "te llegaron premios al
+baúl" y no tenía ni un indicio en el mapa. Ahora la tapa se abre con cualquier cosa esperando.
+
+Es la misma familia que el fallo de arriba y que el de la parcela de ayer: **dos cosas que tienen
+que ir juntas y que nadie volvió a cruzar** después de cambiar una de las dos.
+
+### Verificación reproducible
+
+`tools/run-archivos.js` reemplaza al script suelto de ayer: ejecuta los cinco archivos con Phaser
+stubbeado (no `node --check`, que ya nos dejó pasar un bloque huérfano entero) y comprueba la
+sintaxis de `ui.js`, que necesita DOM real.
+
+---
+
+## 18/8 — La cerca abraza el contorno real (vista previa)
+
+Dirección: *"las cercas también se expanden"*. O sea que la cerca no rodea un rectángulo: abraza
+exactamente lo que compraste, con ángulos hacia dentro incluidos.
+
+**Se puede hacer sin arte nuevo.** En vez de enumerar casos y dibujar esquinas, se **recorre el
+perímetro celda a celda**: para cada celda tuya, si el vecino de arriba no es tuyo va cerca de
+arriba; si el de la izquierda no es tuyo, cerca izquierda; y así. Cualquier forma sale sola —
+cóncava, con entrantes, con un bloque suelto en diagonal. Los cuatro sprites que ya existen bastan.
+
+`tools/preview-expansiones.py` lo dibuja con el arte real y cualquier combinación de bloques:
+
+    BLOQUES="6,2,13,5,8" python3 tools/preview-expansiones.py
+
+**Y el aire viaja con la cerca.** Primera versión: el bosque quedaba pegado al cercado. Dirección:
+*"fijate la distancia que están cercados de los árboles — el cercado no puede pisar los árboles"*.
+Hoy hay un anillo de césped de 2,3 celdas entre la cerca y el primer tronco, y ese aire tiene que
+acompañar a la expansión. Generalizado a cualquier forma: **el bosque se retira de toda celda que
+esté a menos de 2,3 celdas de algo tuyo**. En un rectángulo da exactamente el anillo de siempre; en
+un contorno irregular lo sigue sin enumerar ni un caso, igual que la cerca.
+
+Comprobado con 0, 2, 5 y los 16 bloques. La granja va de 225 a 625 celdas y el bosque retrocede
+solo alrededor de los bloques comprados, que es lo que hace que la expansión se sienta.
+
+Queda una decisión de dirección antes de escribirlo en el juego: **si el jugador elige qué bloque
+comprar o el orden viene fijado.** Con la cerca por perímetro las dos opciones cuestan lo mismo.
+
+### El orden: un recorrido del perímetro
+
+Dirección: *"cada expansión va a ir de forma consecutiva una tras la otra. La expansión uno sería,
+desde el lado izquierdo, la que está más arriba de todas, sin ser la esquina. Partiendo de la uno
+irá hacia abajo hasta la esquina inferior izquierda, luego hacia la derecha, luego para arriba y
+luego hacia la izquierda, cerrando todo el cuadrado."*
+
+El índice del array **es** el orden de compra, así que no hace falta una tabla aparte:
+
+| # | nivel | dónde | | # | nivel | dónde |
+|---|---|---|---|---|---|---|
+| 1-3 | 3, 5, 7 | laterales izquierda, bajando | | 9-11 | 23, 26, 30 | laterales derecha, subiendo |
+| **4** | 9 | **esquina abajo-izquierda** | | **12** | 34 | **esquina arriba-derecha** |
+| 5-7 | 11, 14, 17 | laterales de abajo | | 13-15 | 38, 42, 46 | laterales de arriba |
+| **8** | 20 | **esquina abajo-derecha** | | **16** | 50 | **esquina arriba-izquierda** |
+
+Con esto la granja crece **siempre de una pieza**, envolviendo el corral como una espiral. Se
+comprueba en el arranque que los 16 bloques existen, que no hay repetidos, que hay 4 esquinas y —lo
+que importa— que **cada bloque toca terreno que ya era tuyo**: nunca queda uno suelto en diagonal.
+
+Ventaja que no es menor: con el orden fijo las formas posibles son 17, no 65.536. Se pueden dibujar
+a mano los nodos de cada expansión y comprobar cada etapa una por una.
+
+### La base del refactor: una sola fuente de verdad para el terreno
+
+Todo el mapa —césped, bosque, cerca, adornos, cámara, por dónde se camina— preguntaba "¿qué forma
+tiene la granja?" dando por sentado **un rectángulo que empieza en (0,0)**. Con las expansiones eso
+deja de ser cierto. Ahora la pregunta se responde en un solo sitio (`config.js`) y el resto consulta.
+
+Como el orden de compra es fijo, "lo que tenés" son **las N primeras del array**: no hace falta
+guardar qué bloques, solo cuántos.
+
+Dos conjuntos, no uno:
+
+- **MÍAS** — las celdas que poseés. Manda la cerca y dónde se puede construir.
+- **DESPEJADAS** — las mías más el aire de 2,3 celdas. Manda hasta dónde llega el césped y desde
+  dónde empieza el bosque. Es lo que mantiene los troncos separados del cercado.
+
+`GF.terreno(n)` los arma y los cachea por cantidad de expansiones. Encima: `GF.tuyo`,
+`GF.despejado`, `GF.cajaTerreno`.
+
+**`GF.enCerca` se reescribió con la regla que siempre se quiso decir**: una celda es cerca si es
+tuya y tiene al lado algo que no lo es (arriba dos filas, porque el arte es la cerca más su sombra).
+Antes era la fórmula del rectángulo. Ahora también acierta en las esquinas hacia dentro.
+
+**La propiedad que hace que esto sea seguro de subir**: con 0 expansiones, la regla nueva da
+*exactamente* lo mismo que la vieja, celda por celda. `tools/test-terreno.js` lo comprueba sobre las
+289 celdas del mapa, y además que el interior útil sigue siendo 13×12, que nada del contenido pisa
+la cerca, y que en las 17 etapas la cerca es siempre el borde real. Nueve comprobaciones en verde.
+
+Falta pasar `farm.js` a consultar esto (césped, bosque, adornos, cerca, cámara y límites) — son 56
+sitios y va en su propia tanda.

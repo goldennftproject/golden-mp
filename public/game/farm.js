@@ -2658,10 +2658,16 @@ class FarmScene extends Phaser.Scene {
     const key = n > 0 ? "buzon_full" : "buzon";
     if (o.sprite.texture.key !== key) this.setObjTex(o, key, o.rw || o.w);
     if (o.emoBuzon) { o.emoBuzon.destroy(); o.emoBuzon = null; }   // 15/8: sin emoji — el sprite con la carta asomando ya lo dice
-    // BAÚL (15/8 v3): el 🎁 y la tapa abierta son SOLO del kit de bienvenida
+    /* BAÚL. 18/8 (dirección: "cuando se recompensa en el baúl debe mostrarse abierto").
+       La tapa abierta era SOLO del kit de bienvenida, así que los premios de nivel —parcelas,
+       árboles y rocas, que desde el 16/8 llegan justamente acá— caían en un baúl que se veía
+       cerrado. El jugador leía "te llegaron premios al baúl" y no tenía ni un indicio en el mapa.
+       Ahora la tapa se abre con CUALQUIER cosa esperando dentro. */
     const cf = (this.objs || []).find(x => x.type === "cofre_diario");
     if (cf && cf.sprite) {
-      const listo = !G.kitReclamado;
+      let pend = 0;
+      try { pend = (typeof regalosPendientes === "function") ? regalosPendientes() : 0; } catch (e) {}
+      const listo = !G.kitReclamado || pend > 0;
       const kc = listo ? "baul_premios_lleno" : "baul_premios";
       if (this.textures.exists(kc) && cf.sprite.texture.key !== kc) this.setObjTex(cf, kc, cf.rw || cf.w);
       if (cf.emoPremio) { cf.emoPremio.destroy(); cf.emoPremio = null; }   // 15/8: sin emoji — la tapa abierta ya lo dice
