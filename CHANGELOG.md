@@ -3968,3 +3968,81 @@ duplicar esa lógica y se desincronizarían.
   la carga.
 
 `FX_LUCIERNAGAS = 1` en config; a 0 las mariposas vuelan también de noche.
+
+---
+
+## 17/8 — La granja es CUADRADA: 15×15, y el anillo de 16 expansiones
+
+Dirección: *"el ancho de la granja, incluyendo el corral, debe ser el mismo de largo que de ancho,
+y el rectángulo que forma el bosque también, y el conjunto entero también, que es 1600"*.
+
+La granja era 17×12. No cumplía ninguna de las tres condiciones.
+
+### Por qué 15×15 y no 12×12 ni 16×16
+
+Los dos números que propuso dirección no entran, y por la misma razón: **el contenido mide 15
+celdas de ancho**, así que el interior necesita 15 columnas y el mundo 17 como mínimo... salvo que
+se re-maquete. Se re-maquetó, y entonces la restricción que manda es otra: **el lado tiene que
+partirse en 3 partes iguales**, porque el anillo de expansiones lleva 3 bloques por lado.
+
+| granja | interior | ¿lado ÷ 3? | final | árboles que quedan |
+|---|---|---|---|---|
+| 12×12 | 10×9 | 4 | 20×20 | 6,75 |
+| **15×15** | **13×12** | **5** | **25×25** | **4,25** |
+| 16×16 | 14×13 | **no** | 24×24 | 4,75 |
+| 17×17 | 15×14 | **no** | 25×25 | 4,25 |
+| 18×18 | 16×15 | 6 | 24×24 | 4,75 |
+
+15 y 18 son los únicos que se parten en 3. **15 gana porque la granja casi se triplica** (225 → 625)
+contra el +78% de 18×18, y porque 18×18 devolvía 6 filas vacías al nivel 1 — justo lo que se sacó
+ayer al comprimir el mundo.
+
+### El anillo: 16 bloques IDÉNTICOS de 5×5
+
+Dirección: *"un lateral, sin contar las esquinas, sea tres expansiones... las cuatro esquinas son
+cuatro... entre todo serían dieciséis"*, y después *"cada expansión medirá cinco por cinco"*.
+
+Ese segundo dato corrige la propuesta anterior, que tenía la banda en 4 y dejaba los bloques
+desparejos (laterales 5×4, esquinas 4×4) sin ninguna necesidad. Con la banda en 5 sale la figura
+que se explica sola:
+
+> **El mapa entero es una grilla de 5×5 BLOQUES de 5×5 CELDAS.**
+> El corral es el 3×3 del centro; las 16 expansiones son el marco.
+
+Los 16 bloques valen exactamente lo mismo (25 celdas), así que no hay que explicarle a nadie por
+qué una esquina rinde menos que un lateral. **Por qué no entra una expansión 17**: el bosque
+quedaría en 4,25 celdas de árboles puros descontando el anillo de césped, y por debajo de eso deja
+de leer como bosque.
+
+`GF.EXPANSIONES` (los 16 bloques), `GF.mundoCon(compradas)` y `GF.celdaComprada(col,row,compradas)`
+quedan escritos en config. **Todavía no los lee el juego** — esta entrega es solo la granja cuadrada.
+
+**El origen se corre.** Al comprar por la izquierda o por arriba el claro pasa a tener columnas y
+filas NEGATIVAS. Las coordenadas guardadas de los objetos no se tocan: se mueve el BORDE, no el
+contenido, así que ningún layout guardado se rompe.
+
+### El re-maquetado interior
+
+El interior pasó de 15×9 (tumbado) a 13×12 (casi cuadrado): sobran 3 filas y faltan 2 columnas.
+
+- **Las parcelas giran**: de 4×3 a 3×4. Son las mismas 12, pero libera la columna que el rincón del
+  correo necesitaba, porque los árboles ahora empiezan en la columna 10 en vez de la 11.
+- **Todo el bloque natural baja**: árboles a las columnas 10-13 filas 2/4/6 (el mismo ritmo de
+  antes), cantera a las columnas 10 y 12 filas 8/10/12, y las vetas a las columnas 11 y 13 filas
+  9/11/13, en orden de tier hacia abajo.
+- **La laguna baja** a las filas 10-12 y el sitio de pesca la acompaña.
+- **El establo baja a la fila 9.** Con la grilla de parcelas de pie su tejado las pisaba: mide 2,5
+  celdas de alto y las tapaba dos filas más arriba de su base. Lo delató `checkLayout`, no el ojo.
+
+### Verificado antes de subir
+
+- `checkLayout` pasa de **6 avisos a 1**, y el que queda (*"barn se sale de la cerca"*) **ya estaba
+  en git HEAD**: es el tejado del granero asomando sobre la cerca de arriba, que es como se ve
+  desde siempre. Comprobado stasheando los cambios y volviendo a correrlo.
+- Los seis archivos del juego se **ejecutan** con Phaser stubbeado, no solo `node --check` — que ya
+  nos dejó pasar un bloque huérfano entero. `ui.js` falla por falta de DOM real, y falla igual en
+  git HEAD.
+- **Memoria de textura: 8,79 → 9,22 MB** (+0,43). El bug de la laguna cortada fue por llegar a 39 MB
+  y que las texturas se subieran a medias, así que ahora se mide en cada cambio de tamaño.
+  **Aviso para cuando lleguen las expansiones: al final (25×25) esto da 17,6 MB.** Sigue lejos de 39,
+  pero es el doble de hoy y hay que volver a medirlo entonces.

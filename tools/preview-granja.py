@@ -32,6 +32,8 @@ def datos_del_juego():
     process.stdout.write(JSON.stringify({
       T:G.TILE, COLS:G.COLS, ROWS:G.ROWS, POND:G.POND, PLOTS:G.PLOTS_BASE,
       OBJ:G.WORLD_OBJECTS.map(o=>({key:o.key,type:o.type,leftCol:o.leftCol,baseRow:o.baseRow,wCells:o.wCells})),
+      MAPA:G.MAPA, EXPANSIONES:G.EXPANSIONES,
+      RECTS:G.EXPANSIONES.map((_,i)=>G.mundoCon(G.EXPANSIONES.map((_,j)=>j).slice(0,i+1))).concat([G.mundoCon([])]),
       B:{margen:G.BOSQUE_MARGEN,mx:G.BOSQUE_MARGEN_X,my:G.BOSQUE_MARGEN_Y,
          tam:G.BOSQUE_TAM,var:G.BOSQUE_ESC_VAR,leyes:G.BOSQUE_LEYES,cada:G.BOSQUE_FILA_CADA,dens:G.BOSQUE_DENSIDAD,frente:G.BOSQUE_FRENTE_SOLIDO,jf:G.BOSQUE_JITTER_FONDO,
          jx:G.BOSQUE_JITTER_X,jy:G.BOSQUE_JITTER_Y,colchon:G.BOSQUE_COLCHON,
@@ -56,19 +58,31 @@ def escalar_al_ancho(im, ancho):
 
 def main():
     d = datos_del_juego()
-    T, C, R = d["T"], d["COLS"], d["ROWS"]
+    T = d["T"]
+    # EXPANSION=n dibuja el claro con n bloques comprados (0 = la granja de hoy, 16 = el final).
+    # El claro crece comiéndole terreno al bosque: el mapa sigue midiendo 1600 y lo que cambia
+    # es el MARGEN, así que se ve directamente cuánto bosque queda en cada etapa.
+    EXP = max(0, min(len(d["EXPANSIONES"]), int(os.environ.get("EXPANSION", "0"))))
+    rect = d["RECTS"][-1] if EXP == 0 else d["RECTS"][EXP - 1]
+    C0, R0, C1, R1 = rect["c0"], rect["r0"], rect["c1"], rect["r1"]
+    C, R = rect["cols"], rect["rows"]
     W, H = C * T, R * T
-    MX, MY = d["B"]["mx"] or d["B"]["margen"], d["B"]["my"] or d["B"]["margen"]
+    MAPA = d["MAPA"] or 1600
+    MX, MY = round((MAPA - W) / 2), round((MAPA - H) / 2)
     lienzo = Image.new("RGBA", (W + 2 * MX, H + 2 * MY), (50, 128, 50, 255))   # color medio del césped
-    OX, OY = MX, MY   # origen del mundo dentro del lienzo
+    # OX/OY es dónde cae la CELDA 0 — no la esquina del claro. Las coordenadas guardadas de los
+    # objetos siguen contando desde el claro original, así que al crecer por la izquierda o por
+    # arriba el claro tiene celdas negativas y el origen se corre, pero nada del contenido se mueve.
+    OX, OY = MX - C0 * T, MY - R0 * T
+    CXW, CYW = (C0 + C1) / 2.0 * T, (R0 + R1) / 2.0 * T   # centro del claro, en coordenadas de celda 0
 
     # ---- césped del claro ----
     pastos = [p for p in (abrir("grass_a"), abrir("grass_b"), abrir("grass_c")) if p]
     if pastos:
         pastos = [escalar_al_ancho(p, T) for p in pastos]
         cx2, cy2 = -(-MX // T), -(-MY // T)   # el pasto llega hasta donde llega el bosque
-        for r in range(-cy2, R + cy2):
-            for c in range(-cx2, C + cx2):
+        for r in range(R0 - cy2, R1 + cy2):
+            for c in range(C0 - cx2, C1 + cx2):
                 x, y = OX + c * T, OY + r * T
                 if -T < x < lienzo.width and -T < y < lienzo.height:
                     lienzo.alpha_composite(pastos[(c * 7 + r * 3) % len(pastos)], (x, y))
@@ -82,6 +96,7 @@ def main():
         anchoS, altoS = tree.width * escBase, tree.height * escBase
         colchon = b["colchon"] * T
         RX, RY = W / 2 + colchon, H / 2 + colchon
+        # el claro se mide desde SU centro, que ya no es (W/2, H/2) porque el origen se corrió
         anchoT, altoT = tree.width, tree.height
         RED = b["redondez"] or 0
         ONDA = b["onda"] or 0
@@ -90,7 +105,7 @@ def main():
         def met(nx, ny):
             return max(abs(nx), abs(ny)) * (1 - RED) + math.hypot(nx, ny) * RED
 
-        BASE = met((W - W / 2) / RX, (H - H / 2) / RY) + b["aire"] + sum(AMP) * ONDA
+        BASE = met((W / 2) / RX, (H / 2) / RY) + b["aire"] + sum(AMP) * ONDA
 
         def borde(nx, ny):
             a = math.atan2(ny, nx)
@@ -109,8 +124,8 @@ def main():
                  "x": lambda c, r: (c * T, r * T),
                  "v": lambda c, r: (c * T, (r + 0.5) * T)}
         lista = []
-        cIni, cFin = int(-MX // T) - 1, int(-(-(W + MX) // T)) + 1
-        rIni, rFin = int(-MY // T) - 1, int(-(-(H + MY) // T)) + 1
+        cIni, cFin = C0 + int(-MX // T) - 1, C1 + int(-(-MX // T)) + 1
+        rIni, rFin = R0 + int(-MY // T) - 1, R1 + int(-(-MY // T)) + 1
         CADA = max(1, b["cada"] or 1)
         for r in range(rIni, rFin + 1):
             if r % CADA != 0:
@@ -123,8 +138,8 @@ def main():
                     esc = eMin + az() * (eMax - eMin)
                     az()
                     rx, ry, rd = az(), az(), az()
-                    nx0 = (ax0 - W / 2) / RX
-                    ny0 = (ay0 - altoS * 0.28 - H / 2) / RY
+                    nx0 = (ax0 - CXW) / RX
+                    ny0 = (ay0 - altoS * 0.28 - CYW) / RY
                     fuera0 = met(nx0, ny0) - borde(nx0, ny0)
                     if fuera0 < 0:
                         continue
@@ -134,8 +149,8 @@ def main():
                     jy = b["jy"] if enFrente else max(b["jy"], jf)
                     ax = ax0 + round((rx * 2 - 1) * jx)
                     ay = ay0 + round((ry * 2 - 1) * jy)
-                    nx = (ax - W / 2) / RX
-                    ny = (ay - altoS * 0.28 - H / 2) / RY
+                    nx = (ax - CXW) / RX
+                    ny = (ay - altoS * 0.28 - CYW) / RY
                     if met(nx, ny) - borde(nx, ny) < 0:
                         continue
                     if enFrente and ley == "x":
@@ -165,8 +180,8 @@ def main():
         AW, AH = W + RD * 2, H + RD * 2
         n = round(110 * (AW * AH) / (W * H))
         for _ in range(n):
-            dx = -RD + drnd() * AW
-            dy = -RD + drnd() * AH
+            dx = C0 * T - RD + drnd() * AW
+            dy = R0 * T - RD + drnd() * AH
             t = drnd()
             key = "deco_pasto" if t < 0.45 else ("deco_flor_blanca" if t < 0.67 else
                   ("deco_flor_amarilla" if t < 0.89 else "deco_piedras"))
@@ -208,13 +223,13 @@ def main():
             continue
         if pos in "tb":
             im = escalar_al_ancho(im, T)
-            fila = OY - im.height // 2 if pos == "t" else OY + H - im.height // 2
-            for c in range(C):
+            fila = OY + R0 * T - im.height // 2 if pos == "t" else OY + R1 * T - im.height // 2
+            for c in range(C0, C1):
                 lienzo.alpha_composite(im, (OX + c * T, fila))
         else:
             im = im.resize((max(1, round(T * 0.22)), T), Image.NEAREST)
-            col = OX - im.width // 2 if pos == "l" else OX + W - im.width // 2
-            for r in range(R):
+            col = OX + C0 * T - im.width // 2 if pos == "l" else OX + C1 * T - im.width // 2
+            for r in range(R0, R1):
                 lienzo.alpha_composite(im, (col, OY + r * T))
 
     # ---- objetos, de arriba hacia abajo para que el de adelante tape al de atrás ----

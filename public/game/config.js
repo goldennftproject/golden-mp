@@ -6,10 +6,76 @@ GF.TILE = 42;
 // comprimidos". Era 23x15 = 345 celdas para 73 de contenido: 21% de ocupación, con las filas
 // 0,1,2,6 y 14 ENTERAS vacías y los nodos exiliados en la columna 16-22. Ahora 17x12 = 204,
 // con el contenido metido entre las columnas 1-15 y las filas 2-10, sin ninguna fila muerta.
-GF.COLS = 17; GF.ROWS = 12;                 // mundo en celdas enteras
+// 17/8 (dirección): LA GRANJA ES CUADRADA. "el ancho de la granja, incluyendo el corral, debe
+// ser el mismo de largo que de ancho, y el rectángulo que forma el bosque también, y el conjunto
+// entero también, que es 1600". 17x12 no cumplía nada de eso. 15x15 es el único cuadrado que
+// además se parte en 3 partes iguales de 5, que es lo que pide el anillo de expansiones.
+GF.COLS_BASE = 15; GF.ROWS_BASE = 15;       // el claro con el que arranca la partida
+GF.COLS = GF.COLS_BASE; GF.ROWS = GF.ROWS_BASE;   // mundo en celdas enteras (crece con las expansiones)
 GF.WORLD_W = GF.COLS * GF.TILE;             // 714
 GF.WORLD_H = GF.ROWS * GF.TILE;             // 504
 GF.SPEED = 175;
+
+/* ============ EL ANILLO DE 16 EXPANSIONES (17/8, dirección) =======================
+   Idea de dirección, tomada de Sunflower Land: la granja no crece como un anillo que se
+   ensancha entero, sino comprando PARCELAS DE TERRENO de a una alrededor del corral.
+
+   Palabras suyas: "un lateral, sin contar las esquinas, sea tres expansiones... las
+   cuatro esquinas son cuatro... entre todo serían dieciséis expansiones alrededor del
+   corral". Y después: "cada expansión medirá cinco por cinco".
+
+   Con la granja en 15x15 y la banda en 5, sale una figura que se explica sola:
+
+        EL MAPA ENTERO ES UNA GRILLA DE 5x5 BLOQUES DE 5x5 CELDAS.
+        El corral es el 3x3 del centro; las 16 expansiones son el marco.
+
+   Los 16 bloques miden exactamente lo mismo (25 celdas), así que cada expansión vale lo
+   mismo que las demás y no hay que explicarle a nadie por qué una esquina rinde menos.
+
+      granja  15x15 = 225 celdas   →   final 25x25 = 625   (+400, casi el triple)
+      bosque  6,55 celdas por los CUATRO lados al terminar (hoy 11,5)
+
+   Por qué no entra una expansión 17: el bosque quedaría en 4,25 celdas de árboles puros
+   descontando el anillo de césped, y por debajo de eso deja de leer como bosque.
+
+   IMPORTANTE — el origen se corre. Al comprar por la izquierda o por arriba, el claro
+   pasa a tener columnas y filas NEGATIVAS. Las coordenadas guardadas de los objetos NO
+   se tocan (siguen contando desde la esquina del corral original), así que ningún layout
+   guardado se rompe: lo que se mueve es el BORDE, no el contenido. */
+GF.BLOQUE = 5;              // lado del bloque de expansión, en celdas
+// Los 16 bloques, en coordenadas de BLOQUE respecto del corral: el corral es (0,0)-(2,2).
+GF.EXPANSIONES = [];
+(function () {
+  for (let br = -1; br <= 3; br++) {
+    for (let bc = -1; bc <= 3; bc++) {
+      if (bc >= 0 && bc <= 2 && br >= 0 && br <= 2) continue;   // el 3x3 del centro es el corral
+      const esquina = (bc < 0 || bc > 2) && (br < 0 || br > 2);
+      GF.EXPANSIONES.push({ bc, br, esquina,
+        c0: bc * GF.BLOQUE, r0: br * GF.BLOQUE,
+        c1: bc * GF.BLOQUE + GF.BLOQUE, r1: br * GF.BLOQUE + GF.BLOQUE });
+    }
+  }
+})();
+// El rectángulo que envuelve el corral + los bloques comprados. `compradas` es la lista de
+// índices de GF.EXPANSIONES que el jugador ya tiene.
+GF.mundoCon = function (compradas) {
+  let c0 = 0, r0 = 0, c1 = GF.COLS_BASE, r1 = GF.ROWS_BASE;
+  (compradas || []).forEach(i => {
+    const e = GF.EXPANSIONES[i];
+    if (!e) return;
+    c0 = Math.min(c0, e.c0); r0 = Math.min(r0, e.r0);
+    c1 = Math.max(c1, e.c1); r1 = Math.max(r1, e.r1);
+  });
+  return { c0, r0, c1, r1, cols: c1 - c0, rows: r1 - r0 };
+};
+// ¿La celda está dentro del terreno que el jugador posee?
+GF.celdaComprada = function (col, row, compradas) {
+  if (col >= 0 && col < GF.COLS_BASE && row >= 0 && row < GF.ROWS_BASE) return true;   // el corral
+  return (compradas || []).some(i => {
+    const e = GF.EXPANSIONES[i];
+    return e && col >= e.c0 && col < e.c1 && row >= e.r0 && row < e.r1;
+  });
+};
 // "detallitos (1)" 4-5-6: la granja se juega SIN caminar (todo con clic), la cámara se desplaza
 // en vez de seguir al granjero, y la finca está sobre el mar. Cada cosa se puede apagar por separado.
 GF.NO_WALK = true;    // el granjero no aparece en la granja: se interactúa con un clic desde donde sea
@@ -215,46 +281,54 @@ function snap(key, meta, x, y, sizePx) {
 }
 
 // --- objetos del mundo (posiciones aprox. de la granja, ahora encajadas en celdas) ---
+/* 17/8 — RE-MAQUETADO PARA LA GRANJA CUADRADA. El interior pasó de 15x9 (tumbado) a 13x12
+   (casi cuadrado): sobran 3 filas y faltan 2 columnas. Todo el bloque natural que estaba
+   apilado a la derecha (columnas 11-16) BAJA y se reordena en las columnas 10-13:
+     · árboles  columnas 10-11 y 12-13, filas 2, 4 y 6  (el mismo ritmo de antes)
+     · rocas    columnas 10 y 12, filas 8, 10 y 12
+     · vetas    columnas 11 y 13, filas 9, 11 y 13, en orden de tier hacia abajo
+   Y el correo (buzón + baúl) se corre una columna a la izquierda porque los árboles ahora
+   empiezan en la 10. El ORDEN del array no se toca: los layouts guardados indexan acá. */
 GF.WORLD_OBJECTS = [];
-[[504,84],[630,84],[504,168]].forEach(t => GF.WORLD_OBJECTS.push(snap("tree", {type:"tree"}, t[0], t[1], T*2)));       // 12/8: bosquecito NE ordenado, DENTRO de la cerca
-[[567,126],[483,294]].forEach(r => GF.WORLD_OBJECTS.push(snap("node_stone", {type:"rock"}, r[0], r[1], T)));             // 12/8: cantera en bloque, dentro de la cerca
-[["piedra","node_stone",483,336],["bronce","node_bronze",567,336],["oro","node_gold",567,420],
- ["diamante","node_diamond",567,210],["netherita","node_netherite",651,294]]
+[[462,84],[546,84],[462,168]].forEach(t => GF.WORLD_OBJECTS.push(snap("tree", {type:"tree"}, t[0], t[1], T*2)));       // bosquecito NE, ahora en columnas 10-13
+[[441,336],[525,336]].forEach(r => GF.WORLD_OBJECTS.push(snap("node_stone", {type:"rock"}, r[0], r[1], T)));             // cantera, debajo del bosquecito
+[["piedra","node_stone",483,378],["bronce","node_bronze",567,378],["oro","node_gold",567,462],
+ ["diamante","node_diamond",483,546],["netherita","node_netherite",567,546]]
   .forEach(o => GF.WORLD_OBJECTS.push(snap(o[1], {type:"ore", ore:o[0]}, o[2], o[3], T)));                                // 1 celda
-GF.WORLD_OBJECTS.push(snap("barn",   {type:"barn"},   315, 84, T*2.5));   // 12/8: emparejado                                                    // 3 celdas
-GF.WORLD_OBJECTS.push(snap("market", {type:"market"}, 252, 336, T*2.2));   // 12/8: emparejado                                                    // 2 celdas (más chico que la herrería)
-GF.WORLD_OBJECTS.push(snap("store",  {type:"store"},  273, 420, T*2.8));   // 12/8: emparejado                                                    // 3 celdas
+GF.WORLD_OBJECTS.push(snap("barn",   {type:"barn"},   273, 84, T*2.5));                                                   // 3 celdas (5-7)
+GF.WORLD_OBJECTS.push(snap("market", {type:"market"}, 252, 336, T*2.2));                                                  // 2 celdas (5-6)
+GF.WORLD_OBJECTS.push(snap("store",  {type:"store"},  273, 420, T*2.8));                                                  // 3 celdas (5-7)
 // quinta.docx: 5 árboles y 4 piedras en total — agregados AL FINAL para no romper layouts guardados
-[[630,168],[504,252]].forEach(t => GF.WORLD_OBJECTS.push(snap("tree", {type:"tree"}, t[0], t[1], T*2)));   // 12/8: dentro de la cerca
-[[525,378],[609,378]].forEach(r => GF.WORLD_OBJECTS.push(snap("node_stone", {type:"rock"}, r[0], r[1], T)));   // 12/8: cantera
+[[546,168],[462,252]].forEach(t => GF.WORLD_OBJECTS.push(snap("tree", {type:"tree"}, t[0], t[1], T*2)));
+[[441,420],[525,420]].forEach(r => GF.WORLD_OBJECTS.push(snap("node_stone", {type:"rock"}, r[0], r[1], T)));   // cantera
 // edificio de Cocina (detalles 29/7) — también al FINAL para preservar layouts guardados
 GF.WORLD_OBJECTS.push(snap("cocina", {type:"cocina"}, 252, 252, T*2.2));   // 12/8: el sprite nuevo es alto, a 3 celdas quedaba gigante                                                     // 3 celdas
 // dummy de práctica de espada (detalless.docx) — entrenar sube Espada, cooldown 4h
-GF.WORLD_OBJECTS.push(snap("dummy", {type:"dummy"}, 231, 168, T));                                                         // 1 celda (se dibuja +25%)
+GF.WORLD_OBJECTS.push(snap("dummy", {type:"dummy"}, 189, 168, T));                                                         // 1 celda (se dibuja +25%) — columna 4
 // nodo de HIERRO (detalles213) — al FINAL para preservar layouts guardados; se mina con el pico de bronce
-GF.WORLD_OBJECTS.push(snap("node_iron", {type:"ore", ore:"hierro"}, 651, 336, T));   // 12/8: dentro de la cerca (antes pisaba la cerca)
+GF.WORLD_OBJECTS.push(snap("node_iron", {type:"ore", ore:"hierro"}, 483, 462, T));   // veta, columna 11 fila 11
 // BUZÓN (15/8, idea Stardew aprobada por dirección): las noticias de la granja llegan acá
-GF.WORLD_OBJECTS.push(snap("buzon", {type:"buzon"}, 399, 84, T*0.4));   // 15/8: ~1/6 del granero — un buzón de verdad
-GF.WORLD_OBJECTS.push(snap("baul_premios", {type:"cofre_diario"}, 441, 84, T*0.8));   // 15/8: ~1/3 del granero, como el shipping bin de Stardew
+GF.WORLD_OBJECTS.push(snap("buzon", {type:"buzon"}, 357, 84, T*0.4));   // 15/8: ~1/6 del granero — un buzón de verdad
+GF.WORLD_OBJECTS.push(snap("baul_premios", {type:"cofre_diario"}, 399, 84, T*0.8));   // 15/8: ~1/3 del granero, como el shipping bin de Stardew
 // TABLÓN DE PEDIDOS (16/8): a la IZQUIERDA del granero (dirección) — el rincón del correo
 // (buzón + baúl) queda a la derecha, y los encargos del pueblo del otro lado.
 // 17/8: los tres van en la MISMA fila que el granero. Al comprimir el mundo el buzón había
-// quedado una fila más abajo, o sea DELANTE del baúl, y se lo tapaba. Orden: granero (6-8),
-// buzón (9), baúl (10) — el buzón entre medio, como estaba antes.
-GF.WORLD_OBJECTS.push(snap("tablon_pedidos", {type:"tablon_pedidos"}, 231, 84, T*0.9));   // 16/8: una celda más a la izquierda (captura: pisaba la pared del granero)
+// quedado una fila más abajo, o sea DELANTE del baúl, y se lo tapaba. Con la granja cuadrada
+// el rincón se corre una columna: tablón (4), granero (5-7), buzón (8), baúl (9).
+GF.WORLD_OBJECTS.push(snap("tablon_pedidos", {type:"tablon_pedidos"}, 189, 84, T*0.9));
 // HORNO DE PIEDRA (detalles viernes 1): acá se funden todos los lingotes/barras
 GF.WORLD_OBJECTS.push(snap("horno", {type:"horno"}, 378, 252, T*2));
 // viernes (2): 6 árboles y 6 piedras en total (1 activo + 5 por desbloquear) — al FINAL para preservar layouts
-GF.WORLD_OBJECTS.push(snap("tree", {type:"tree"}, 630, 252, T*2));   // 12/8: dentro de la cerca (antes pisaba la cerca derecha)
-GF.WORLD_OBJECTS.push(snap("node_stone", {type:"rock"}, 483, 420, T));   // 12/8: cantera
-GF.WORLD_OBJECTS.push(snap("node_stone", {type:"rock"}, 651, 420, T));   // 12/8: cantera
+GF.WORLD_OBJECTS.push(snap("tree", {type:"tree"}, 546, 252, T*2));   // columnas 12-13, fila 6
+GF.WORLD_OBJECTS.push(snap("node_stone", {type:"rock"}, 441, 504, T));   // cantera, columna 10 fila 12
+GF.WORLD_OBJECTS.push(snap("node_stone", {type:"rock"}, 525, 504, T));   // cantera, columna 12 fila 12
 
 // ALTAR DE RUNAS (doc maestro 2/8) — al FINAL para preservar layouts guardados
 GF.WORLD_OBJECTS.push(snap("altar", {type:"altar"}, 378, 336, T*2));
 // "2das mejoras": Establo (animales) y Curtiduría (armaduras), juntos para que el bucle quede en la misma zona
-GF.WORLD_OBJECTS.push(snap("establo", {type:"establo"}, 105, 252, T*2.5));   // 12/8: emparejado      // hueco libre verificado (no pisa parcelas, laguna ni cerca)
+GF.WORLD_OBJECTS.push(snap("establo", {type:"establo"}, 105, 378, T*2.5));   // 17/8: baja a la fila 9 — con la grilla de parcelas de pie (3x4) su tejado las pisaba, y mide 2,5 celdas de alto
 GF.WORLD_OBJECTS.push(snap("curtiduria", {type:"curtiduria"}, 378, 420, T*2));   // al lado del Establo, como pide el doc
-GF.WORLD_OBJECTS.push(snap("ofrendas", {type:"ofrendas"}, 378, 168, T*2));      // Altar de Ofrendas, en el claro del noreste
+GF.WORLD_OBJECTS.push(snap("ofrendas", {type:"ofrendas"}, 294, 168, T*2));      // Altar de Ofrendas, columnas 6-7
 
 // CHIMENEAS (9/8). Dónde sale el humo en cada edificio, medido sobre el arte nuevo y no
 // a ojo: dx es el corrimiento respecto del CENTRO del sprite (en anchos de sprite) y dy es
@@ -302,16 +376,17 @@ GF.checkLayout = function () {
   return avisos;
 };
 
-// lotes 4x3, cada uno 1 celda, alineados a la grilla (col 2, fila 3)
+// lotes de 1 celda. 17/8: con la granja cuadrada la grilla pasa de 4x3 (tumbada) a 3x4 (de pie)
+// — son las mismas 12 parcelas, pero libera la columna 4 que el rincón del correo necesitaba.
 GF.PLOTS = [];
-(function(){ const c0=1, r0=2; for(let r=0;r<3;r++) for(let c=0;c<4;c++) GF.PLOTS.push({ col:c0+c, row:r0+r }); })();
+(function(){ const c0=1, r0=2; for(let r=0;r<4;r++) for(let c=0;c<3;c++) GF.PLOTS.push({ col:c0+c, row:r0+r }); })();
 
 // estanque: rectángulo de celdas (4x3) — separado del borde para no cortar la cerca
-GF.POND = { col:1, row:8, cols:4, rows:3 };   // 17/8: sube con el mundo comprimido
+GF.POND = { col:1, row:10, cols:4, rows:3 };   // 17/8: baja a las filas nuevas de la granja cuadrada
 // copias base (para "Restaurar" después de mover parcelas/laguna en edición)
 GF.PLOTS_BASE = GF.PLOTS.map(p => ({ col: p.col, row: p.row }));
 GF.POND_BASE = { col: GF.POND.col, row: GF.POND.row };
-GF.FISH = { col:7, row:11 };
+GF.FISH = { col:5, row:12 };   // 17/8: al lado de la laguna, que bajó a las filas 10-12
 
 // --- footprint SÓLIDO por tipo de objeto ---
 // Solo estorba lo que de verdad pisa el suelo: el TRONCO del árbol (no la copa), la BASE del
