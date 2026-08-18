@@ -182,14 +182,21 @@ const CROP_DEF = {
   // relación venta/semilla en 2,5 como el resto. Era 12 → 32 → 90.
   calabacin: { label:"Calabacín", emoji:"🥒", lvl:7,  seedCost:10,  growH:0.75, yield:1, price:25,   xp:75 },   // 45 min (v3 diseñador, reanclado 16/8)
   repollo:   { label:"Repollo",   emoji:"🥬", lvl:8,  seedCost:20,  growH:1.5,  yield:1, price:50,   xp:150 },  // 1 h 30 (v3 diseñador)
-  calabaza:  { label:"Calabaza",  emoji:"🎃", lvl:9,  seedCost:40,  growH:3,    yield:1, price:100,  xp:270 },  // 3 h (v3 diseñador)
+  calabaza:  { label:"Calabaza",  emoji:"🎃", lvl:9,  seedCost:40,  growH:3,    yield:1, price:100,  xp:300 },  // 3 h · 18/8: XP re-anclada (era 270 = 90 XP/h)
   // 16/8 (auditoría C): los cuatro de arriba se corren a la banda 11-50 del nivel de granja
   // (la que además pide TAREAS). Con el gate por nivel, quedarse en 7-10 los volvía casi
   // inmediatos; así el early game no cambia y las anclas largas siguen siendo una meta.
-  brocoli:   { label:"Brócoli",   emoji:"🥦", lvl:11,  seedCost:90,  growH:6,    yield:1, price:210,  xp:480 },  // 6 h (v3 diseñador)
-  girasol:   { label:"Girasol",   emoji:"🌻", lvl:13, seedCost:180, growH:10,    yield:1, price:420,  xp:720 },  // 10 h (v3 diseñador)
-  trigo:     { label:"Trigo",     emoji:"🌾", lvl:15, seedCost:360, growH:16,    yield:1, price:840,  xp:1080 }, // 16 h (v3 diseñador)
-  maiz:      { label:"Maíz",      emoji:"🌽", lvl:18, seedCost:720, growH:24,   yield:1, price:1680, xp:1440 },  // 24 h (v3 diseñador — el ancla nocturna)
+  brocoli:   { label:"Brócoli",   emoji:"🥦", lvl:11,  seedCost:90,  growH:6,    yield:1, price:210,  xp:600 },  // 6 h · 18/8: XP re-anclada (era 480 = 80 XP/h)
+  girasol:   { label:"Girasol",   emoji:"🌻", lvl:13, seedCost:180, growH:10,    yield:1, price:380,  xp:1000 },  // 10 h · 18/8: rendía 24 plata/h y 72 XP/h
+  trigo:     { label:"Trigo",     emoji:"🌾", lvl:15, seedCost:360, growH:16,    yield:1, price:680,  xp:1600 }, // 16 h · 18/8: rendía 30 plata/h y 67 XP/h
+  /* 18/8 (auditoría del ancla) — LOS CINCO CULTIVOS LARGOS ESTABAN FUERA DE LA FÓRMULA, y en las
+     DOS direcciones: rendían de más en plata y de menos en XP. El maíz era el caso extremo:
+     40 plata/hora contra los 20 de todos los demás (el DOBLE) y 60 XP/hora contra 100.
+     O sea que quien llegaba al maíz duplicaba su plata por hora y frenaba su progresión — el
+     cultivo del final del juego rompía el ancla por arriba y por abajo a la vez.
+     Re-anclados: la ganancia por hora vuelve a 20 bajando la VENTA (no subiendo la semilla, que
+     dejaría una relación venta/semilla absurda), y la XP vuelve a 100 por hora. */
+  maiz:      { label:"Maíz",      emoji:"🌽", lvl:18, seedCost:720, growH:24,   yield:1, price:1200, xp:2400 },  // 24 h — el ancla nocturna
 };
 function recomputeCropGrow() { for (const k in CROP_DEF) CROP_DEF[k].grow = Math.round(CROP_DEF[k].growH * 3600 * GROW_SCALE); }
 recomputeCropGrow();   // en segundos, como siempre

@@ -85,7 +85,19 @@ function enterGame() {
   try { if (typeof godHandSembrar === "function") godHandSembrar(G._ausenteMs || 0); } catch (e) { console.warn(e); }   // GOD HAND: siembra lo que quedó vacío
   try { if (typeof testeoDestapar === "function") testeoDestapar(); } catch (e) { console.warn(e); }   // repara bolsas desbordadas por el regalo viejo de testeo
   if (returning && window.NICK) enterGame();
-  else {
+  else if (typeof CARGA_FALLO !== "undefined" && CARGA_FALLO) {
+    // 18/8: no se pudo LEER la granja. Antes esto caía en la puerta del apodo y el jugador
+    // terminaba pisando su propia partida con una nueva. Ahora se lo decimos y no se toca nada.
+    hideEl("loading");
+    const g = document.getElementById("gate");
+    if (g) { g.style.display = "flex";
+      const t = g.querySelector("h1, h2, .tit") || g.firstElementChild;
+      if (t) t.textContent = "No se pudo cargar tu granja";
+      const b = document.getElementById("enter");
+      if (b) { b.textContent = "Reintentar"; b.onclick = () => location.reload(); }
+      const n = document.getElementById("nick"); if (n) n.style.display = "none";
+    }
+  } else {
     hideEl("loading");                                            // jugador nuevo: primero el apodo
     document.getElementById("gate").style.display = "flex";
   }

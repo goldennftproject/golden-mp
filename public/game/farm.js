@@ -653,8 +653,8 @@ class FarmScene extends Phaser.Scene {
           c.scrollX += dx / z;
           c.scrollY += dy / z;
         }
-        const col = Phaser.Math.Clamp(Math.floor(pt.worldX / T), 0, GF.COLS - 1);
-        const row = Phaser.Math.Clamp(Math.floor(pt.worldY / T), 0, GF.ROWS - 1);
+        const col = Phaser.Math.Clamp(Math.floor(pt.worldX / T), GF.C0, GF.C1 - 1);
+        const row = Phaser.Math.Clamp(Math.floor(pt.worldY / T), GF.R0, GF.R1 - 1);
         const esObra = this.placing.tipo === "obra";
         const libre = this.celdaLibreAdorno(col, row, -1) &&
           (!esObra || (this.celdaLibreAdorno(col - 1, row, -1) && this.celdaLibreAdorno(col + 1, row, -1)));
@@ -666,8 +666,8 @@ class FarmScene extends Phaser.Scene {
       if (this.dragDeco) {
         const a = this.dragDeco;
         a.g.setPosition(pt.worldX, pt.worldY).setDepth(99999);
-        const col = Phaser.Math.Clamp(Math.floor(pt.worldX / T), 0, GF.COLS - 1);
-        const row = Phaser.Math.Clamp(Math.floor(pt.worldY / T), 0, GF.ROWS - 1);
+        const col = Phaser.Math.Clamp(Math.floor(pt.worldX / T), GF.C0, GF.C1 - 1);
+        const row = Phaser.Math.Clamp(Math.floor(pt.worldY / T), GF.R0, GF.R1 - 1);
         this.editHl.setPosition(col * T, (row + 1) * T).setSize(T, T)
           .setFillStyle(this.celdaLibreAdorno(col, row, a.i) ? 0x7ec95a : 0xd9534f, 0.4).setVisible(true);
       } else if (this.dragObj) {
@@ -675,24 +675,24 @@ class FarmScene extends Phaser.Scene {
         o.sprite.setPosition(pt.worldX, pt.worldY).setDepth(99999);
         if (o.shadow) o.shadow.setPosition(pt.worldX, pt.worldY - 3);
         const wCells = Math.max(1, Math.round(o.w / T));
-        const leftCol = Phaser.Math.Clamp(Math.round((pt.worldX - wCells * T / 2) / T), 0, GF.COLS - wCells);
-        const baseRow = Phaser.Math.Clamp(Math.round(pt.worldY / T), 1, GF.ROWS);
+        const leftCol = Phaser.Math.Clamp(Math.round((pt.worldX - wCells * T / 2) / T), GF.C0, GF.C1 - wCells);
+        const baseRow = Phaser.Math.Clamp(Math.round(pt.worldY / T), GF.R0 + 1, GF.R1);
         const blocked = this.placeBlocked(o, leftCol, baseRow, wCells);
         this.editHl.setPosition(leftCol * T, baseRow * T).setSize(wCells * T, T)
           .setFillStyle(blocked ? 0xd9534f : 0x7ec95a, 0.4).setVisible(true);
       } else if (this.dragPlot) {
         const pl = this.dragPlot;
         if (pl.ground) pl.ground.setPosition(pt.worldX, pt.worldY).setDepth(99999);
-        const col = Phaser.Math.Clamp(Math.floor(pt.worldX / T), 0, GF.COLS - 1);
-        const row = Phaser.Math.Clamp(Math.floor(pt.worldY / T), 0, GF.ROWS - 1);
+        const col = Phaser.Math.Clamp(Math.floor(pt.worldX / T), GF.C0, GF.C1 - 1);
+        const row = Phaser.Math.Clamp(Math.floor(pt.worldY / T), GF.R0, GF.R1 - 1);
         const blocked = this.plotSpotBlocked(pl, col, row);
         this.editHl.setPosition(col * T, (row + 1) * T).setSize(T, T)
           .setFillStyle(blocked ? 0xd9534f : 0x7ec95a, 0.4).setVisible(true);
       } else if (this.dragPond) {
         const p2 = GF.POND;
         this.pondImg.setPosition(pt.worldX, pt.worldY);
-        const col = Phaser.Math.Clamp(Math.round(pt.worldX / T - p2.cols / 2), 0, GF.COLS - p2.cols);
-        const row = Phaser.Math.Clamp(Math.round(pt.worldY / T - p2.rows / 2), 0, GF.ROWS - p2.rows);
+        const col = Phaser.Math.Clamp(Math.round(pt.worldX / T - p2.cols / 2), GF.C0, GF.C1 - p2.cols);
+        const row = Phaser.Math.Clamp(Math.round(pt.worldY / T - p2.rows / 2), GF.R0, GF.R1 - p2.rows);
         const blocked = this.pondSpotBlocked(col, row);
         this.editHl.setPosition(col * T, (row + p2.rows) * T).setSize(p2.cols * T, p2.rows * T)
           .setFillStyle(blocked ? 0xd9534f : 0x7ec95a, 0.3).setVisible(true);
@@ -766,8 +766,8 @@ class FarmScene extends Phaser.Scene {
       // soltar un ADORNO
       if (this.dragDeco) {
         const a = this.dragDeco; this.dragDeco = null;
-        const col = Phaser.Math.Clamp(Math.floor(pt.worldX / T), 0, GF.COLS - 1);
-        const row = Phaser.Math.Clamp(Math.floor(pt.worldY / T), 0, GF.ROWS - 1);
+        const col = Phaser.Math.Clamp(Math.floor(pt.worldX / T), GF.C0, GF.C1 - 1);
+        const row = Phaser.Math.Clamp(Math.floor(pt.worldY / T), GF.R0, GF.R1 - 1);
         if (!this.celdaLibreAdorno(col, row, a.i)) {
           a.g.setPosition(a.cx, a.by).setDepth(a.by);
           toast("Ahí ya hay algo — elegí otra celda"); return;
@@ -781,8 +781,8 @@ class FarmScene extends Phaser.Scene {
       // soltar una PARCELA
       if (this.dragPlot) {
         const pl = this.dragPlot; this.dragPlot = null;
-        const col = Phaser.Math.Clamp(Math.floor(pt.worldX / T), 0, GF.COLS - 1);
-        const row = Phaser.Math.Clamp(Math.floor(pt.worldY / T), 0, GF.ROWS - 1);
+        const col = Phaser.Math.Clamp(Math.floor(pt.worldX / T), GF.C0, GF.C1 - 1);
+        const row = Phaser.Math.Clamp(Math.floor(pt.worldY / T), GF.R0, GF.R1 - 1);
         if (this.plotSpotBlocked(pl, col, row)) {
           if (pl.ground) pl.ground.setPosition(pl.cx, pl.by).setDepth(-998);
           toast("Ahí ya hay algo — elegí otra celda"); return;
@@ -803,8 +803,8 @@ class FarmScene extends Phaser.Scene {
       if (this.dragPond) {
         this.dragPond = false;
         const p2 = GF.POND;
-        const col = Phaser.Math.Clamp(Math.round(pt.worldX / T - p2.cols / 2), 0, GF.COLS - p2.cols);
-        const row = Phaser.Math.Clamp(Math.round(pt.worldY / T - p2.rows / 2), 0, GF.ROWS - p2.rows);
+        const col = Phaser.Math.Clamp(Math.round(pt.worldX / T - p2.cols / 2), GF.C0, GF.C1 - p2.cols);
+        const row = Phaser.Math.Clamp(Math.round(pt.worldY / T - p2.rows / 2), GF.R0, GF.R1 - p2.rows);
         const pcx0 = (p2.col + p2.cols / 2) * T, pcy0 = (p2.row + p2.rows / 2) * T;
         if (this.pondSpotBlocked(col, row)) {
           this.pondImg.setPosition(pcx0, pcy0);
@@ -823,8 +823,8 @@ class FarmScene extends Phaser.Scene {
       }
       if (!this.dragObj) return;
       const o = this.dragObj, wCells = Math.max(1, Math.round(o.w / T));
-      const leftCol = Phaser.Math.Clamp(Math.round((pt.worldX - wCells * T / 2) / T), 0, GF.COLS - wCells);
-      const baseRow = Phaser.Math.Clamp(Math.round(pt.worldY / T), 1, GF.ROWS);
+      const leftCol = Phaser.Math.Clamp(Math.round((pt.worldX - wCells * T / 2) / T), GF.C0, GF.C1 - wCells);
+      const baseRow = Phaser.Math.Clamp(Math.round(pt.worldY / T), GF.R0 + 1, GF.R1);
       if (this.placeBlocked(o, leftCol, baseRow, wCells)) {   // ocupado: devolver a su lugar
         o.sprite.setPosition(o.origCx, o.origBy).setDepth(o.origBy);
         if (o.shadow) o.shadow.setPosition(o.origCx, o.origBy - 3).setDepth(o.origBy - 0.5);
@@ -911,7 +911,8 @@ class FarmScene extends Phaser.Scene {
     if (!GF.CAM_PAN) this.cameras.main.startFollow(hero, false, 0.15, 0.15);
     // 17/8 (dirección): la granja va CENTRADA en el bosque. El 0.42 de antes la subía un poco
     // para despejar la barra de abajo, pero con el anillo alrededor eso se lee como descentrado.
-    else { this.cameras.main.stopFollow(); this.cameras.main.centerOn(W / 2, H / 2); }
+    // 18/8: el centro del mundo ya no es (W/2, H/2) — el origen puede ser negativo.
+    else { this.cameras.main.stopFollow(); this.cameras.main.centerOn(GF.ORIG_X + W / 2, GF.ORIG_Y + H / 2); }
     this.zoomUser = 1;
     this.fitCamera();
     this.scale.on("resize", this.fitCamera, this);
@@ -1699,7 +1700,7 @@ class FarmScene extends Phaser.Scene {
     if (oroOn && !this.oroTimer) {
       this.oroTimer = this.time.addEvent({ delay: 700, loop: true, callback: () => {
         const W = GF.WORLD_W, H = GF.WORLD_H;   // una chispa dorada al azar que sube y se apaga
-        const x = 20 + Math.random() * (W - 40), y = 30 + Math.random() * (H - 40);
+        const x = GF.ORIG_X + 20 + Math.random() * (W - 40), y = GF.ORIG_Y + 30 + Math.random() * (H - 40);
         const p = this.add.circle(x, y, 1.5 + Math.random() * 1.5, 0xffd75e, 0.9).setDepth(y).setBlendMode(Phaser.BlendModes.ADD);
         this.tweens.add({ targets: p, y: y - 14 - Math.random() * 10, alpha: 0, duration: 1400 + Math.random() * 600, onComplete: () => p.destroy() });
       } });
@@ -3055,8 +3056,8 @@ class FarmScene extends Phaser.Scene {
     const c = G.chests[idx]; if (!c) return;
     const T = GF.TILE;
     if (c.col == null) {   // primera vez: buscar una celda libre cerca del granjero
-      const hc = Math.floor((this.hero ? this.hero.x : GF.WORLD_W / 2) / T);
-      const hr = Math.floor((this.hero ? this.hero.y : GF.WORLD_H / 2) / T);
+      const hc = Math.floor((this.hero ? this.hero.x : GF.ORIG_X + GF.WORLD_W / 2) / T);
+      const hr = Math.floor((this.hero ? this.hero.y : GF.ORIG_Y + GF.WORLD_H / 2) / T);
       outer: for (let r = 1; r < 9; r++) for (let dy = -r; dy <= r; dy++) for (let dx = -r; dx <= r; dx++) {
         if (Math.max(Math.abs(dx), Math.abs(dy)) !== r) continue;
         const col = hc + dx, row = hr + dy;
@@ -3152,7 +3153,7 @@ class FarmScene extends Phaser.Scene {
   }
 
   // pathfinding A* (módulo compartido con el Bosque — nav.js)
-  navOf() { if (!this._nav) this._nav = new GF.Nav((x, y, p) => GF.blockedAt(x, y, p), GF.WORLD_W, GF.WORLD_H); return this._nav; }
+  navOf() { if (!this._nav) this._nav = new GF.Nav((x, y, p) => GF.blockedAt(x, y, p), GF.WORLD_W, GF.WORLD_H, GF.ORIG_X, GF.ORIG_Y); return this._nav; }
   lineFree(x0, y0, x1, y1) { return this.navOf().lineFree(x0, y0, x1, y1); }
   findPath(sx, sy, tx, ty) { return this.navOf().find(sx, sy, tx, ty); }
 
@@ -3402,8 +3403,13 @@ class FarmScene extends Phaser.Scene {
     const CEL = GF.BOSQUE_RT_CELDAS || 7;
     const MX = Math.min(this.margenBosque("x"), CEL * T);
     const MY = Math.min(this.margenBosque("y"), CEL * T);
-    const M = MY;   // compatibilidad con el resto de la función
-    const rt = this.add.renderTexture(-MX, -MY, W + 2 * MX, H + 2 * MY).setOrigin(0, 0).setDepth(GF.BOSQUE_DEPTH || -999);
+    // 18/8: el anillo se ancla al ORIGEN del terreno. Estaba clavado en (0,0), así que en cuanto
+    // el jugador compraba el primer bloque (que es por la izquierda) todo ese flanco se quedaba
+    // sin bosque dibujado: césped pelado hasta el mosaico repetido, y del otro lado 200 px de
+    // árboles fuera del límite de cámara. Y el "no pintar sobre el mundo" protegía el rectángulo
+    // viejo, así que el suelo de bosque tapaba las florcitas del terreno recién comprado.
+    const RX0 = GF.ORIG_X - MX, RY0 = GF.ORIG_Y - MY;
+    const rt = this.add.renderTexture(RX0, RY0, W + 2 * MX, H + 2 * MY).setOrigin(0, 0).setDepth(GF.BOSQUE_DEPTH || -999);
     // suelo de bosque: pasto por debajo, para que no asome el mar entre los troncos
     const pastos = ["grass_a", "grass_b", "grass_c"].filter(k => this.textures.exists(k));
     if (pastos.length) {
@@ -3414,11 +3420,11 @@ class FarmScene extends Phaser.Scene {
       // y el juego se quedaba clavado en la pantalla de carga. En lote es un solo pase.
       const lote = typeof rt.beginDraw === "function";
       if (lote) rt.beginDraw();
-      for (let y = 0; y < H + 2 * M; y += T)
-        for (let x = 0; x < W + 2 * M; x += T) {
-          // el pasto del bosque NO se pinta sobre el rectángulo del mundo (taparía las parcelas)
-          const wx = x - M, wy = y - M;
-          if (wx > -T && wx < W && wy > -T && wy < H) continue;
+      for (let y = 0; y < H + 2 * MY; y += T)
+        for (let x = 0; x < W + 2 * MX; x += T) {
+          // el pasto del bosque NO se pinta sobre lo DESPEJADO (taparía adornos y parcelas)
+          const wx = RX0 + x, wy = RY0 + y;
+          if (GF.despejado(Math.floor(wx / T), Math.floor(wy / T))) continue;
           g.setTexture(pastos[(x * 7 + y * 13) % pastos.length]);
           if (lote) rt.batchDraw(g, x, y); else rt.draw(g, x, y);
         }
@@ -3499,8 +3505,8 @@ class FarmScene extends Phaser.Scene {
     const DENS = GF.BOSQUE_DENSIDAD || { c: 1, x: 0.69, v: 0.84 };
     const FRENTE = GF.BOSQUE_FRENTE_SOLIDO != null ? GF.BOSQUE_FRENTE_SOLIDO : 1.5;
     const JFONDO = GF.BOSQUE_JITTER_FONDO || 0;   // desorden SOLO en el interior del bosque
-    const cIni = Math.floor(-MX / T) - 1, cFin = Math.ceil((W + MX) / T) + 1;
-    const rIni = Math.floor(-MY / T) - 1, rFin = Math.ceil((H + MY) / T) + 1;
+    const cIni = Math.floor(RX0 / T) - 1, cFin = Math.ceil((GF.ORIG_X + W + MX) / T) + 1;
+    const rIni = Math.floor(RY0 / T) - 1, rFin = Math.ceil((GF.ORIG_Y + H + MY) / T) + 1;
     const lista = [];
     for (let row = rIni; row <= rFin; row++) {
       if (((row % CADA) + CADA) % CADA !== 0) continue;
@@ -3584,7 +3590,9 @@ class FarmScene extends Phaser.Scene {
     // con variación de tamaño y volteo, ordenado de atrás hacia adelante.
     for (const [py, px, esc, flip] of lista) {
       t.setScale(esc); t.setFlipX(flip);
-      if (usarLote) rt.batchDraw(t, px + MX, py + MY); else rt.draw(t, px + MX, py + MY);
+      // 18/8: las coordenadas del árbol son de MUNDO; hay que pasarlas a coordenadas del
+      // renderTexture restando su esquina, que ahora cuelga del origen del terreno.
+      if (usarLote) rt.batchDraw(t, px - RX0, py - RY0); else rt.draw(t, px - RX0, py - RY0);
     }
     if (usarLote) rt.endDraw();
     t.destroy();

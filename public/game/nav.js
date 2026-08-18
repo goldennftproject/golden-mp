@@ -2,8 +2,13 @@
    Se le pasa la función blocked(x,y,pad) de cada escena y el tamaño del mundo. */
 window.GF = window.GF || {};
 GF.Nav = class {
-  constructor(blocked, W, H, cell) {
+  /* 18/8: la grilla arrancaba SIEMPRE en (0,0). Con las expansiones el mundo de la granja puede
+     empezar en coordenadas negativas, y ahí cualquier x<0 daba índice negativo → "no hay camino"
+     en medio mapa, más una franja de grilla sobrante por el otro lado. Ahora se le puede pasar el
+     ORIGEN; sin él vale 0 y el Bosque sigue funcionando igual. */
+  constructor(blocked, W, H, ox, oy, cell) {
     this.blocked = blocked; this.W = W; this.H = H;
+    this.OX = ox || 0; this.OY = oy || 0;
     this.S = cell || (GF.TILE / 2);   // nodo = media celda (21px)
     this.grid = null;
   }
@@ -13,14 +18,14 @@ GF.Nav = class {
     this.cols = Math.ceil(this.W / S); this.rows = Math.ceil(this.H / S);
     const g = new Uint8Array(this.cols * this.rows);
     for (let j = 0; j < this.rows; j++) for (let i = 0; i < this.cols; i++)
-      g[j * this.cols + i] = this.blocked(i * S + S / 2, j * S + S / 2, 8) ? 0 : 1;
+      g[j * this.cols + i] = this.blocked(this.OX + i * S + S / 2, this.OY + j * S + S / 2, 8) ? 0 : 1;
     this.grid = g;
   }
   free(i, j) { return i >= 0 && j >= 0 && i < this.cols && j < this.rows && this.grid[j * this.cols + i] === 1; }
-  pt(i, j) { return { x: i * this.S + this.S / 2, y: j * this.S + this.S / 2 }; }
+  pt(i, j) { return { x: this.OX + i * this.S + this.S / 2, y: this.OY + j * this.S + this.S / 2 }; }
   // nodo libre más cercano (destinos sobre un edificio, arranques en un rincón)
   nearestFree(x, y) {
-    const i0 = Math.floor(x / this.S), j0 = Math.floor(y / this.S);
+    const i0 = Math.floor((x - this.OX) / this.S), j0 = Math.floor((y - this.OY) / this.S);
     if (this.free(i0, j0)) return { i: i0, j: j0 };
     for (let r = 1; r <= 8; r++) {
       let bd = 1e9, bi = -1, bj = -1;

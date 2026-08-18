@@ -109,10 +109,14 @@ function hydrate(d) {
   G.pass = (d.pass && typeof d.pass === "object") ? d.pass : null;
   if (d.tuto && typeof d.tuto === "object") G.tuto = d.tuto;
   else G.tuto = { step: 0, n: 0, done: !!(d.firstCropDone || (d.level && d.level > 1) || (d.plata && d.plata > 50)) };   // veteranos: sin tutorial
-  if (typeof tutoMigrar === "function") tutoMigrar();   // cadena nueva: recalcula el paso si el guardado es viejo
-  if (typeof tutoSync === "function") tutoSync(true);   // el cartel y la flecha se rehacen con el paso ya cargado
-  if (typeof applyCombatHp === "function") applyCombatHp();   // vida máxima = 100 + hitos de Combate
-  if (typeof d.hp === "number") G.hp = Math.max(1, Math.min(G.hpMax, d.hp));
+  // 18/8: tutoMigrar, tutoSync, applyCombatHp y el recorte de vida SE MUDARON AL FINAL de hydrate.
+  // Acá corrían antes de cargar la mitad del estado que necesitan leer, y eso los volvía mentirosos:
+  //   · tutoMigrar/tutoAutoSkip leen kitReclamado, obras, obraDep, weapons, picks, treesOpen…
+  //     que se cargan hasta 70 líneas más abajo. El arreglo del tutorial de hoy no llegaba a hacer
+  //     nada acá: se autocuraba de rebote 400 ms después, desde FarmScene.
+  //   · applyCombatHp suma la Runa Guardiana (hasta +120 de vida máxima) leyendo gear y weapons,
+  //     que tampoco estaban. Y la línea siguiente RECORTABA la vida contra ese máximo mal
+  //     calculado: cada F5 te comía vida máxima y vida de verdad.
   if (typeof d.swordOwned === "boolean") G.swordOwned = d.swordOwned;
   if (typeof d.bowOwned === "boolean") G.bowOwned = d.bowOwned;
   G.swordWoodOwned = d.swordWoodOwned === true;
@@ -196,12 +200,27 @@ function hydrate(d) {
     for (const k in G.picks.dur) if ((G.picks.dur[k] || 0) > 0) G.picks.dur[k] = 1;
     if (d.toolsLost) for (const k in d.toolsLost) if (d.toolsLost[k]) G.tools[k] = 0;
   }
+
+  /* ---- AL FINAL, CON EL ESTADO YA COMPLETO (18/8) ----
+     Todo lo que sigue LEE el estado cargado, así que no puede correr a mitad de la carga. */
+  if (typeof applyCombatHp === "function") applyCombatHp();   // vida máxima: ahora sí ve gear y weapons
+  if (typeof d.hp === "number") G.hp = Math.max(1, Math.min(G.hpMax, d.hp));
+  if (typeof tutoMigrar === "function") tutoMigrar();   // salta los pasos ya cumplidos, con los datos delante
+  if (typeof tutoSync === "function") tutoSync(true);   // el cartel y la flecha, con el paso definitivo
 }
 
 const sleepMs = (ms) => new Promise(r => setTimeout(r, ms));
 
+/* 18/8 — EL FALLO MÁS GRAVE DE TODA LA AUDITORÍA, y era anterior a las expansiones.
+   loadFarm devolvía `false` en DOS casos que no son lo mismo: "este jugador es nuevo" y "no pude
+   leer la nube". main.js trataba los dos igual: mostraba la puerta del apodo, el jugador escribía
+   un nombre, y eso disparaba un saveFarm() con G EN LOS VALORES POR DEFECTO. La granja de la nube
+   quedaba pisada por una partida de nivel 1. Un parpadeo de red al entrar borraba la partida.
+   Ahora hay una bandera: hasta que un hydrate() no termine COMPLETO, saveFarm no escribe nada. */
+var CARGA_OK = false;      // ¿se llegó a leer y aplicar el guardado de la nube?
+var CARGA_FALLO = false;   // ¿falló la lectura? (distinto de "no hay fila")
 async function loadFarm() {
-  if (!sb || !UID) return false;
+  if (!sb || !UID) { CARGA_OK = true; return false; }   // sin nube no hay nada que pisar
   // hasta 3 intentos con espera creciente: la red del jugador puede parpadear justo al entrar
   for (let intento = 0; intento < 3; intento++) {
     try {
@@ -209,6 +228,7 @@ async function loadFarm() {
       if (error) { console.warn("loadFarm:", error.message); await sleepMs(1200 * (intento + 1)); continue; }
       if (data) {
         if (data.data) hydrate(data.data);
+        CARGA_OK = true;   // recién ACÁ, con el hydrate terminado, se puede volver a escribir
         // El guardado trae el nombre CON el título ("[Veterano] Juan"). Si lo metíamos tal cual
         // en NICK, el guardado siguiente escribía "[Veterano] [Veterano] Juan" y crecía un
         // prefijo por sesión en el ranking, el chat y el mercado (10/8).
@@ -216,17 +236,24 @@ async function loadFarm() {
         lastSavedKey = snapKey();   // referencia: lo que acabás de cargar ya está guardado
         return true;
       }
-      // primera vez: crear la fila
+      // primera vez de verdad: no hay fila. Es seguro crearla.
+      CARGA_OK = true;
       await saveFarm();
       return false;
     } catch (e) { console.warn("loadFarm error:", e); await sleepMs(1200 * (intento + 1)); }
   }
+  // se agotaron los tres intentos: NO es un jugador nuevo, es que no se pudo leer.
+  CARGA_FALLO = true;
+  console.warn("loadFarm: no se pudo leer la granja. Guardado BLOQUEADO para no pisarla.");
   return false;
 }
 
 // force=true guarda siempre; sin force, solo si el progreso cambió desde el último guardado
 async function saveFarm(force) {
   if (!sb || !UID) return;
+  // 18/8: si nunca se llegó a cargar, NO se escribe. Es preferible perder una sesión de juego
+  // antes que pisar la granja buena con los valores por defecto.
+  if (!CARGA_OK) { console.warn("saveFarm bloqueado: la granja no se llegó a cargar"); return; }
   const key = snapKey();
   if (!force && key === lastSavedKey) return;   // nada que guardar: ni siquiera muestra el indicador
   if (typeof showSaving === "function") showSaving();

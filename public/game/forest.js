@@ -5,7 +5,7 @@ class ForestScene extends Phaser.Scene {
 
   create() {
     const T = GF.TILE;
-    this.W = 32 * T; this.H = GF.WORLD_H;   // bosque más ancho que la granja
+    this.W = 32 * T; this.H = (GF.ROWS_BASE || 15) * T;   // 18/8: alto PROPIO. Antes tomaba GF.WORLD_H, que ahora crece con las expansiones: comprar césped en la granja agrandaba el mapa de combate un 67% y dispersaba a los bichos.   // bosque más ancho que la granja
     GF.uiOpen = false;
 
     // 10/8: la Zona Negra dejó de ser un solo bosque. El mapa que se arma sale de ZONA_DEF:

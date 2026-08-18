@@ -4530,3 +4530,93 @@ y una veta de oro en 101 pasos y comprueba que recién usado no se ve entero, qu
 distinto, que al terminar vuelve al sprite entero y opaco, y que en todo el enfriamiento hay
 exactamente 2 cambios de textura — ni parpadeo ni saltos. 13 comprobaciones en verde, más el caso
 de un guardado viejo sin `cdIni`.
+
+---
+
+## 18/8 — Auditoría completa: bugs y anclaje
+
+Dirección pidió revisar todo el código buscando bugs y comprobar que el balance quedara colgado de
+la fórmula. Salieron cosas gordas, y una de ellas no tenía nada que ver con las expansiones.
+
+### 1. CATASTRÓFICO (y anterior a todo esto): un parpadeo de red borraba la partida
+
+`loadFarm()` devolvía `false` en dos casos que no son lo mismo: **"este jugador es nuevo"** y **"no
+pude leer la nube"**. `main.js` los trataba igual: mostraba la puerta del apodo, el jugador escribía
+un nombre, y eso disparaba un `saveFarm()` **con G en los valores por defecto**. La granja de la
+nube quedaba pisada por una partida de nivel 1. Tres intentos de lectura fallidos —una mala conexión
+al entrar— y la partida se perdía.
+
+Arreglado con una bandera: hasta que un `hydrate()` no termine COMPLETO, `saveFarm` no escribe nada.
+Y si la lectura falla, el jugador ve "No se pudo cargar tu granja · Reintentar" en vez de la puerta
+del apodo. Es preferible perder una sesión antes que pisar la granja buena.
+
+### 2. El orden de carga volvía mentirosas a tres funciones
+
+`tutoMigrar`, `tutoSync` y `applyCombatHp` corrían **a mitad** de `hydrate()`, antes de que
+existieran los datos que leen:
+
+- `tutoMigrar` → `tutoAutoSkip` lee `kitReclamado`, `obras`, `obraDep`, `weapons`, `picks`,
+  `treesOpen`… que se cargan hasta 70 líneas más abajo. **El arreglo del tutorial de esta mañana no
+  llegaba a hacer nada ahí**: se autocuraba de rebote 400 ms después desde `FarmScene`.
+- `applyCombatHp` suma la Runa Guardiana (hasta **+120 de vida máxima**) leyendo `gear` y `weapons`,
+  que tampoco estaban. Y la línea siguiente **recortaba la vida contra ese máximo mal calculado**:
+  cada F5 te comía vida máxima y vida de verdad.
+
+Las tres se mudaron al final de `hydrate()`, con el estado completo delante.
+
+### 3. Nueve clamps impedían usar el terreno comprado
+
+`Phaser.Math.Clamp(col, 0, GF.COLS - 1)` en los nueve sitios de colocación y arrastre. Los dos
+extremos son falsos ahora: el mínimo no es 0 (es `GF.C0`, que vale −5 desde la primera expansión) y
+el tope no es `COLS-1` (`COLS` es el ANCHO, no el índice). **Era imposible mover nada a la franja
+recién comprada**: el clamp lo pegaba contra el borde del corral viejo. Se compraba terreno y no se
+podía amueblar, que es literalmente para lo que se compra.
+
+### 4. El anillo de bosque seguía anclado a (0,0)
+
+La colocación por árbol ya usaba el terreno, pero el rectángulo y el rango de generación no. Todo el
+flanco izquierdo se quedaba **sin bosque dibujado**: césped pelado hasta el mosaico repetido. Y el
+"no pintar sobre el mundo" protegía el rectángulo viejo, así que el suelo de bosque **tapaba las
+florcitas del terreno nuevo**. Corregidos el rt, el rango, el suelo y las coordenadas de dibujo.
+
+### 5. La Zona Negra crecía porque comprabas césped
+
+`forest.js` hacía `this.H = GF.WORLD_H`, que era una constante y ahora la reescribe
+`aplicarTerreno()`. Con 12 expansiones el mapa de combate pasaba de 630 a 1050 px de alto (+67%):
+los bichos más dispersos y más camino que hacer, **por haber comprado terreno en la granja**. Ahora
+tiene alto propio.
+
+### 6. Otros
+
+Cámara descentrada 210 px al entrar · chispas de la Granja Legendaria fuera de la cerca y ausentes
+en el terreno nuevo · `GF.Nav` (pathfinding) con la grilla desde (0,0), dormido por `NO_WALK` pero
+listo para romperse · respaldo de `spawnChest` en el centro equivocado.
+
+### 7. La auditoría del ancla: 13 números fuera, ahora 5
+
+`tools/auditar-ancla.js` recorre los **48 números** de la economía y mide el desvío contra la
+fórmula. Hallazgo nuevo, que no había visto nadie:
+
+**Los cinco cultivos largos estaban fuera de la fórmula en las DOS direcciones.**
+
+| cultivo | plata/h | XP/h | | venta | XP |
+|---|---|---|---|---|---|
+| Calabaza | 20 ✓ | **90** | | — | 270 → **300** |
+| Brócoli | 20 ✓ | **80** | | — | 480 → **600** |
+| Girasol | **24** | **72** | | 420 → **380** | 720 → **1000** |
+| Trigo | **30** | **67** | | 840 → **680** | 1080 → **1600** |
+| Maíz | **40** | **60** | | 1680 → **1200** | 1440 → **2400** |
+
+El maíz era el caso extremo: **el doble de plata por hora** que cualquier otra casilla y **60% de la
+XP**. Quien llegaba al maíz duplicaba su plata y frenaba su progresión: el cultivo del final del
+juego rompía el ancla por arriba y por abajo a la vez. Re-anclados bajando la venta (no subiendo la
+semilla, que dejaría una relación absurda) y subiendo la XP.
+
+**Quedan 5 desvíos, y son los mismos de siempre**: las cinco vetas de mineral, que dan pérdida
+porque el pico cuesta más que lo que saca. Es la única pieza que necesita cantidades decimales.
+
+### Bancos de pruebas
+
+Seis, todos en verde: `test-terreno` · `test-etapas` · `test-expansiones` · `test-tutorial-atasco` ·
+`test-sprites-nodo` · `test-coords-negativas` (nuevo: cubre lo que los otros no veían, porque
+ninguno probaba con expansiones compradas). Más `auditar-ancla` y `auditar-precio-sombra`.
