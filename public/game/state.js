@@ -970,28 +970,41 @@ const FARM_PARCELA = { 2:4, 4:5, 6:6, 7:7, 12:8, 18:9, 25:10, 35:11, 45:12, 50:1
    ponerlas. */
 const FARM_EXPANSION = [3, 5, 7, 9, 11, 14, 17, 20, 23, 26, 30, 34, 38, 42, 46, 50];
 function expansionesQueTocan(lvl) { return FARM_EXPANSION.filter(n => n <= (lvl || 1)).length; }
-/* COSTE DE CADA EXPANSIÓN (tools/costear-expansiones.js). No son números a ojo: se elige cuántos
-   DÍAS DE GRANJA debe costar cada una —de 4 la primera a 12 la última— y el script los traduce a
-   unidades con la producción real que tenés en ese nivel. El nivel abre la puerta; el material
-   marca el ritmo. Y como cobra MATERIAL y no plata, es además el sumidero que faltaba: la plata se
-   farmea rápido con cultivos, la madera y los minerales están atados a los relojes de los nodos. */
+/* COSTE DE CADA EXPANSIÓN. No son números a ojo: se elige cuántos DÍAS DE GRANJA debe costar cada
+   una —de 1,5 la primera a 6 la última— y se traducen a unidades con la producción REAL que tenés
+   en ese nivel, con los nodos que el nivel y las expansiones anteriores ya te dieron.
+
+   18/8 — RE-DERIVADOS. La primera tanda salió con forma de U: 6,0 días la primera, 1,8 las del
+   medio y 6,3 la última. O sea que la PRIMERA era de las más caras en tiempo real, justo cuando
+   el jugador está aprendiendo y tiene 2 árboles y 2 rocas. Dos motivos: la producción que usé de
+   referencia suponía más granja de la que hay al nivel 3, y después las vetas pasaron a dar 2 por
+   picada, lo que abarató a la mitad todo lo que se paga en mineral.
+   Ahora se mide contra la producción de cada nivel y la curva sube siempre: 1,5 → 6,0 días.
+
+   Cada recurso pide los días que le tocan DE SU PROPIA producción. Como se juntan en paralelo
+   (talás y picás a la vez), el total es esa misma cifra y ningún recurso es el cuello de botella.
+
+   El nivel abre la puerta; el material marca el ritmo. Y como cobra MATERIAL y no plata, es además
+   el sumidero que faltaba: la plata se farmea rápido con cultivos, la madera y los minerales están
+   atados a los relojes de los nodos.
+   Se re-mide con  node tools/auditar-costo-expansiones.js  */
 const EXPANSION_COSTO = [
-  { madera: 48,  piedra: 48 },
-  { madera: 63,  piedra: 54 },
-  { madera: 71,  piedra: 71 },
-  { madera: 63,  piedra: 63,  bronce: 5 },
-  { madera: 77,  piedra: 69,  bronce: 11 },
-  { madera: 93,  piedra: 84,  bronce: 12 },
-  { madera: 72,  piedra: 72,  bronce: 11, hierro: 11 },
-  { madera: 85,  piedra: 85,  bronce: 12, hierro: 12 },
-  { madera: 99,  piedra: 91,  bronce: 12, hierro: 12 },
-  { madera: 92,  piedra: 84,  hierro: 16, oro: 16 },
-  { madera: 105, piedra: 97,  hierro: 17, oro: 17 },
-  { madera: 111, piedra: 111, hierro: 18, oro: 18 },
-  { madera: 94,  piedra: 94,  oro: 22, diamante: 7 },
-  { madera: 105, piedra: 105, oro: 34, diamante: 8 },
-  { madera: 110, piedra: 117, oro: 36, diamante: 8 },
-  { madera: 122, piedra: 130, oro: 38, diamante: 8 },
+  { madera: 18,  piedra: 12 },
+  { madera: 36,  piedra: 29 },
+  { madera: 59,  piedra: 50 },
+  { madera: 86,  piedra: 77,  bronce: 14 },
+  { madera: 108, piedra: 97,  bronce: 16 },
+  { madera: 132, piedra: 132, bronce: 18 },
+  { madera: 158, piedra: 158, bronce: 20, hierro: 20 },
+  { madera: 187, piedra: 187, bronce: 22, hierro: 22 },
+  { madera: 218, piedra: 218, bronce: 23, hierro: 23 },
+  { madera: 252, piedra: 252, hierro: 25, oro: 25 },
+  { madera: 288, piedra: 288, hierro: 27, oro: 27 },
+  { madera: 326, piedra: 326, hierro: 29, oro: 29 },
+  { madera: 367, piedra: 367, oro: 31, diamante: 20 },
+  { madera: 410, piedra: 410, oro: 32, diamante: 22 },
+  { madera: 456, piedra: 456, oro: 34, diamante: 23 },
+  { madera: 504, piedra: 504, oro: 36, diamante: 24 },
 ];
 var EXPANSION_MAX = 16;
 // La expansión que toca ahora: qué número es, en qué nivel se abre y qué cuesta.

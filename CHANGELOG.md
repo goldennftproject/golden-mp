@@ -4771,3 +4771,27 @@ segundo) pero lleva una FIRMA — bloque, nivel y cuánto tenés de lo que pide,
 se rehacen los ~40 objetos si cambió algo que se VE.
 
 El botón de la Tienda se queda donde está: sirve de respaldo y no molesta.
+
+### El coste de las expansiones estaba mal, y la primera era la peor
+
+Dirección preguntó si estaba balanceado. Medido contra la producción de HOY, la curva **tenía forma
+de U**:
+
+| | 1ª | 4ª | 7ª | 13ª | 16ª |
+|---|---|---|---|---|---|
+| antes | **6,0 días** | 2,0 | 1,8 | 3,7 | 6,3 |
+| ahora | **1,5** | 2,4 | 3,3 | 5,2 | 6,0 |
+
+O sea que **la primera expansión era de las más caras en tiempo real**, justo cuando el jugador
+está aprendiendo y tiene 2 árboles y 2 rocas — y las del medio salían casi gratis.
+
+Dos causas, las dos mías: la producción de referencia que usé suponía más granja de la que hay al
+nivel 3, y después **las vetas pasaron a dar 2 por picada**, lo que abarató a la mitad todo lo que
+se paga en mineral sin que yo volviera a mirar la tabla.
+
+Re-derivados contra la producción real de cada nivel: **1,5 → 6,0 días, subiendo siempre**. Cada
+recurso pide los días que le tocan de su propia producción; como se juntan en paralelo (talás y
+picás a la vez), el total es esa cifra y ninguno es el cuello de botella.
+
+`tools/auditar-costo-expansiones.js` lo vuelve a medir cuando haga falta — que era justo lo que
+faltaba: los costes se derivaron una vez y nada avisaba cuando cambiaba algo debajo.
