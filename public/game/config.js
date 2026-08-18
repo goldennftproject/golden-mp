@@ -30,6 +30,11 @@ GF.MAPA = 1600;             // lado del mapa completo, en píxeles
 GF.BOSQUE_MARGEN_X = Math.round((GF.MAPA - GF.WORLD_W) / 2);   // 443
 GF.BOSQUE_MARGEN_Y = Math.round((GF.MAPA - GF.WORLD_H) / 2);   // 548
 GF.BOSQUE_MARGEN = GF.BOSQUE_MARGEN_Y;   // respaldo, si alguien lee el valor viejo
+// Cuántas celdas de bosque se DIBUJAN de verdad en el renderTexture. De ahí para afuera el
+// mosaico repite el mismo patrón y se ve idéntico, pero sin costar memoria de textura.
+// Con el bosque puesto la escena llegaba a 39 MB de textura y las texturas se corrompían:
+// la laguna salía recortada, y con ?sinbosque=1 salía entera. Esto lo baja a la mitad.
+GF.BOSQUE_RT_CELDAS = 7;
 // TAMAÑO DEL ÁRBOL, EN CELDAS (17/8). Se pide en celdas y la escala se deriva del sprite, así
 // que no puede volver a desincronizarse del resto del juego. Se descubrió midiendo que los
 // árboles del BOSQUE eran de 2,3 a 3,2 celdas, o sea MÁS GRANDES que los que se talan dentro

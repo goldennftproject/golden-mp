@@ -3865,3 +3865,37 @@ el `drawImage(src, fr.x, fr.y, ...)` que desempaqueta cada frame lee de **coorde
 y cada sprite sale con un trozo de otro sitio. Encaja con lo observado: el recuadro del sprite tiene
 el tamaño correcto (158x136 confirmado por el diagnóstico) pero su contenido está desplazado y
 recortado. No está demostrado, pero es la primera hipótesis que explica el síntoma exacto.
+
+### El corte de la laguna era el BOSQUE — lo encontró dirección, no yo
+Después de cinco hipótesis mías erradas (proporción del sprite, el arte, el atlas, las
+profundidades, la caché), dirección propuso la sexta: *"no será por los cambios que hicimos en el
+bosque"*. Se probó con el interruptor que ya existía, `?sinbosque=1`, y **la laguna sale entera**.
+
+La causa es memoria de textura. Con el bosque puesto la escena creaba:
+
+| textura                    | tamaño      | memoria |
+|----------------------------|-------------|---------|
+| renderTexture del césped   | 1638 x 1680 | 10,5 MB |
+| renderTexture del bosque   | 1600 x 1600 |  9,8 MB |
+| atlas desempaquetado       | ~600 lienzos| ~18 MB  |
+| **total**                  |             | **39 MB** |
+
+Cuando eso se agota, las subidas de textura fallan en silencio y los sprites salen a medias: la
+laguna se dibujaba con el tamaño correcto (el diagnóstico confirmó 158x136) pero con su contenido
+recortado. Encaja con todo lo observado, incluido que mejorara al reducir el atlas.
+
+Dos recortes, sin perder nada visible:
+
+- **El césped no necesita cubrir el mapa.** Solo se ve la franja entre la cerca y el primer árbol;
+  de ahí para afuera lo tapa el bosque, y donde el bosque tiene claros el fondo ya es del color del
+  césped. De 1638x1680 a **1050x840**: de 10,5 a 3,4 MB.
+- **El anillo dibujado se recorta a 7 celdas** (`BOSQUE_RT_CELDAS`). Más allá, el mosaico repite
+  el mismo patrón con las mismas leyes y se ve idéntico, pero no cuesta memoria porque se repite.
+  De 1600x1600 a **1302x1092**: de 9,8 a 5,4 MB.
+
+**11,5 MB menos**, de 39 a 27.
+
+**Lección, y es la más importante del día.** Llevaba cinco hipótesis mirando el síntoma (la laguna)
+y ninguna miró el CONTEXTO (qué cambió al mismo tiempo). Dirección lo resolvió con una pregunta de
+correlación: *¿no será por lo que acabamos de tocar?*. Y la prueba costó diez segundos porque el
+interruptor ya existía. **Ante un fallo nuevo, lo primero es apagar lo último que se añadió.**

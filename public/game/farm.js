@@ -60,7 +60,12 @@ class FarmScene extends Phaser.Scene {
       // el verde liso del fondo de la cámara. Se veía como un anillo plano alrededor de la
       // granja. Los tiles de más quedan tapados por el bosque y no cuestan nada: es un solo
       // renderTexture que se arma una vez.
-      const cExtra = Math.ceil(this.margenBosque("x") / T), rExtra = Math.ceil(this.margenBosque("y") / T);
+      // 17/8: el pasto NO necesita cubrir el mapa entero. Solo se ve la franja entre la cerca y
+      // el primer árbol (~1,5 celdas); de ahí para afuera lo tapa el bosque, y donde el bosque
+      // tiene claros el fondo ya es del color del césped. Cubría 1638x1680 = 10,5 MB de textura
+      // para enseñar 4 celdas de pasto. Con 4 celdas de sobra basta y sobra.
+      const cExtra = GF.BOSQUE ? 4 : Math.ceil(this.margenBosque("x") / T);
+      const rExtra = GF.BOSQUE ? 4 : Math.ceil(this.margenBosque("y") / T);
       const rt = this.add.renderTexture(-cExtra * T, -rExtra * T,
         (GF.COLS + cExtra * 2) * T, (GF.ROWS + rExtra * 2) * T).setOrigin(0).setDepth(-1000);
       let gseed = 20260731;
@@ -974,7 +979,7 @@ class FarmScene extends Phaser.Scene {
       }
       tex.refresh();
     }
-    const L = this.limiteVista(), LADO = 8000;
+    const L = this.limiteVista(), LADO = 8000;   // el tileSprite no reserva textura: solo repite
     const cx = (L.x1 + L.x2) / 2, cy = (L.y1 + L.y2) / 2;
     const ts = this.add.tileSprite(cx, cy, LADO, LADO, clave)
       .setDepth((GF.BOSQUE_DEPTH || -999) - 2);   // debajo del pasto y del anillo
@@ -3206,7 +3211,13 @@ class FarmScene extends Phaser.Scene {
     if (!this.textures.exists("tree")) return;
     const t0 = performance.now();
     const T = GF.TILE, W = GF.WORLD_W, H = GF.WORLD_H;
-    const MX = this.margenBosque("x"), MY = this.margenBosque("y");
+    // 17/8: el anillo DIBUJADO se recorta a unas pocas celdas. Más allá no hace falta: el
+    // mosaico usa las mismas leyes y se ve igual, pero no cuesta memoria porque se repite.
+    // El renderTexture cubría el mapa entero (1600x1600 = 9,8 MB) para dibujar árboles que
+    // el mosaico puede repetir gratis.
+    const CEL = GF.BOSQUE_RT_CELDAS || 7;
+    const MX = Math.min(this.margenBosque("x"), CEL * T);
+    const MY = Math.min(this.margenBosque("y"), CEL * T);
     const M = MY;   // compatibilidad con el resto de la función
     const rt = this.add.renderTexture(-MX, -MY, W + 2 * MX, H + 2 * MY).setOrigin(0, 0).setDepth(GF.BOSQUE_DEPTH || -999);
     // suelo de bosque: pasto por debajo, para que no asome el mar entre los troncos
