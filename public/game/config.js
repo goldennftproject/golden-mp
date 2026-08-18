@@ -356,7 +356,11 @@ GF.SIZE = { hero: Math.round(T * 1.4), wheat: 38, sprout: 34 };
 // con ancho en CELDAS ENTERAS y anclado a la grilla (borde izq y base sobre líneas).
 function snap(key, meta, x, y, sizePx) {
   const wCells = Math.max(1, Math.round(sizePx / T));
-  const leftCol = Math.max(0, Math.round((x - wCells * T / 2) / T));
+  // 18/8: el Math.max(0, ...) que había acá se escribió cuando el mundo empezaba en la columna 0.
+  // Con las expansiones hay columnas NEGATIVAS, y ese recorte mandaba a la columna 0 todo lo que
+  // se colocara a la izquierda — los nodos de las expansiones del flanco izquierdo aterrizaban
+  // todos apilados sobre el corral.
+  const leftCol = Math.round((x - wCells * T / 2) / T);
   const baseRow = Math.round(y / T);
   const cx = leftCol * T + wCells * T / 2;   // centro X
   const by = baseRow * T;                    // base (abajo) sobre una línea
@@ -518,6 +522,44 @@ GF.solidRect = function (o) {
   return { cx: o.cx, by: o.by, hw: w * d.hw, dep: T * d.dep };
 };
 GF.COLLISIONS = GF.WORLD_OBJECTS.map(o => GF.solidRect(o));
+
+/* ============ LOS NODOS QUE TRAE CADA EXPANSIÓN (18/8) =============================
+   Cada bloque trae 1 ÁRBOL y 1 ROCA. Antes llegaba pelado: terreno para poner lo que compres,
+   que ya sirve, pero la idea era que la expansión trajera algo vivo.
+
+   Las 32 posiciones NO se escriben a mano: se DERIVAN de la geometría del bloque. Se piden las
+   celdas del bloque que no son cerca en el momento en que se compra, y se eligen las dos más
+   centradas. Ventaja: si mañana cambia el tamaño del bloque o el orden del recorrido, las
+   posiciones se recalculan solas y no hay 32 números que revisar.
+
+   Por qué es seguro: la cerca solo RETROCEDE. Una celda que es interior cuando comprás el bloque
+   lo sigue siendo para siempre, porque comprar más terreno nunca convierte interior en borde.
+
+   Van al FINAL de WORLD_OBJECTS, como manda el aviso de arriba, y llevan `exp` para que la escena
+   sepa que no existen hasta que se compre esa expansión. */
+(function () {
+  const B = GF.BLOQUE, T = GF.TILE;
+  GF.EXPANSIONES.forEach((e, i) => {
+    const t = GF.terreno(i + 1);                 // el terreno JUSTO después de comprar este bloque
+    const esCerca = (c, r) => {
+      if (!t.mias.has(c + "," + r)) return true;
+      return !t.mias.has((c - 1) + "," + r) || !t.mias.has((c + 1) + "," + r) ||
+             !t.mias.has(c + "," + (r + 1)) || !t.mias.has(c + "," + (r - 1)) || !t.mias.has(c + "," + (r - 2));
+    };
+    const cx = e.c0 + (B - 1) / 2, cy = e.r0 + (B - 1) / 2;
+    const libres = [];
+    for (let c = e.c0; c < e.c1; c++) for (let r = e.r0; r < e.r1; r++)
+      if (!esCerca(c, r)) libres.push({ c, r, d: Math.abs(c - cx) + Math.abs(r - cy) });
+    libres.sort((a, b) => a.d - b.d || a.c - b.c || a.r - b.r);
+    // el árbol mide 2 celdas de ancho: necesita que la de al lado también sea interior
+    const arb = libres.find(p => libres.some(q => q.c === p.c + 1 && q.r === p.r)) || libres[0];
+    const roc = libres.find(p => p !== arb && !(p.c === arb.c + 1 && p.r === arb.r)) || libres[1] || libres[0];
+    if (arb) GF.WORLD_OBJECTS.push(Object.assign(
+      snap("tree", { type: "tree", exp: i }, (arb.c + 1) * T, (arb.r + 1) * T, T * 2)));
+    if (roc) GF.WORLD_OBJECTS.push(Object.assign(
+      snap("node_stone", { type: "rock", exp: i }, (roc.c + 0.5) * T, (roc.r + 1) * T, T)));
+  });
+})();
 
 GF.blockedAt = function(x, y, pad){
   pad = pad || 0;

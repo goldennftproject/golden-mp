@@ -52,7 +52,7 @@ ok("no se puede pasar del tope", X.expansionSiguiente() === null && X.expansionC
 // --- el terreno resultante sigue siendo coherente ---
 GF.aplicarTerreno(16);
 let pisan = 0;
-GF.WORLD_OBJECTS.forEach(o => { for (let c = o.leftCol; c < o.leftCol + Math.ceil(o.wCells); c++) if (GF.enCerca(c, o.baseRow)) pisan++; });
+GF.WORLD_OBJECTS.filter(o => o.exp == null).forEach(o => { for (let c = o.leftCol; c < o.leftCol + Math.ceil(o.wCells); c++) if (GF.enCerca(c, o.baseRow)) pisan++; });
 ok("con las 16, nada del contenido pisa la cerca", pisan === 0);
 ok("el mundo final mide 25x25", GF.COLS === 25 && GF.ROWS === 25, GF.COLS + "x" + GF.ROWS);
 ok("el origen se corrió a negativo", GF.ORIG_X < 0 && GF.ORIG_Y < 0, "(" + GF.ORIG_X + "," + GF.ORIG_Y + ")");

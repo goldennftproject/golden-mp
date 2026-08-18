@@ -25,7 +25,7 @@ def datos():
     const G=ctx.GF;
     process.stdout.write(JSON.stringify({T:G.TILE, COLS:G.COLS_BASE, ROWS:G.ROWS_BASE, MAPA:G.MAPA,
       POND:G.POND, PLOTS:G.PLOTS_BASE, EXP:G.EXPANSIONES, BLOQUE:G.BLOQUE,
-      OBJ:G.WORLD_OBJECTS.map(o=>({key:o.key,type:o.type,leftCol:o.leftCol,baseRow:o.baseRow,wCells:o.wCells}))}));
+      OBJ:G.WORLD_OBJECTS.map(o=>({key:o.key,type:o.type,leftCol:o.leftCol,baseRow:o.baseRow,wCells:o.wCells,exp:o.exp==null?null:o.exp}))}));
     """
     out = subprocess.run(["node", "-e", js], cwd=RAIZ, capture_output=True, text=True)
     if out.returncode:
@@ -128,6 +128,8 @@ def main():
         if plot:
             im.alpha_composite(esc_ancho(plot, T), xy(pl["col"], pl["row"]))
     for o in sorted(d["OBJ"], key=lambda o: o["baseRow"]):
+        if o.get("exp") is not None and o["exp"] >= len(comprados):
+            continue                      # los nodos de una expansión no existen hasta comprarla
         s = abrir(SPRITE.get(o["type"], o["key"]))
         if not s:
             continue

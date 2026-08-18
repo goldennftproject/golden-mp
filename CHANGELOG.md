@@ -4689,3 +4689,53 @@ mueve.
 - **Fuera cuatro campos zombis del guardado** (`toolsLost`, `testeoDado`, `capsClaim`, `week`): se
   pagaban en cada escritura a la nube y no los leía ninguna función viva. La carga los sigue
   aceptando, así que ningún guardado viejo se rompe.
+
+---
+
+## 18/8 — Cada expansión trae su árbol y su roca · y el tablón gana escalera
+
+### Los 32 nodos se DERIVAN, no se escriben
+
+Cada bloque trae 1 árbol y 1 roca. Antes llegaba pelado: terreno para poner lo que compres, que ya
+sirve, pero la idea era que la expansión trajera algo vivo.
+
+Las 32 posiciones **no están escritas a mano**: se piden las celdas del bloque que no son cerca *en
+el momento en que se compra* y se eligen las dos más centradas. Si mañana cambia el tamaño del
+bloque o el orden del recorrido, se recalculan solas y no hay 32 números que revisar.
+
+Es seguro porque **la cerca solo retrocede**: una celda que es interior cuando comprás el bloque lo
+sigue siendo para siempre — comprar más terreno nunca convierte interior en borde. El test lo
+comprueba para los 32 nodos en **todas** las etapas posteriores, no solo en la suya.
+
+Al terminar las 16: **22 árboles y 22 rocas** (6 del corral + 16 de cada uno).
+
+**Bug que apareció al hacerlo**: `snap()` hacía `Math.max(0, ...)` sobre `leftCol`. Se escribió
+cuando el mundo empezaba en la columna 0, y con las expansiones mandaba **a la columna 0 todo lo
+que se colocara a la izquierda** — los nodos del flanco izquierdo aterrizaban todos apilados sobre
+el corral. Quitado el recorte.
+
+### El tablón: diaria, semanal y mensual
+
+Dirección: *"podemos regularlo con las misiones del tablón, que sean misiones diarias, semanales,
+mensuales"*. Cuánto pide cada escalón, medido contra lo que producís **ese día** — no números fijos,
+así escala solo con la granja:
+
+| | pide | paga |
+|---|---|---|
+| Diaria (3) | 10% de la producción del día | vales + XP |
+| **Semanal** | un día entero de producción | vales, ×6 lo de una diaria |
+| **Mensual** | tres días de producción | vales, ×18 |
+
+En 30 días eso quema **10 días de producción: el 33%**. Sumado a las expansiones (20%) y a
+edificios y herramientas (4%), se quema ~57% y al jugador le queda el 43%.
+
+La regla que lo hace sumidero y no cambio con ganancia: **el extra se paga en vales**, que solo salen
+del tablón y solo se gastan ahí. Verificado que los tres escalones pagan **exactamente 1,00 veces**
+el valor de lo que piden en plata — neutral — y que toda la ganancia va en vales. El ×2 del primer
+pedido del día queda solo para los diarios; el semanal y el mensual no se pueden descartar.
+
+### Tests
+
+Siete, todos en verde. Los de terreno y etapas tuvieron que aprender que los nodos de expansión
+están legítimamente fuera del terreno hasta que se compran — eso lo comprueba `test-nodos-expansion`,
+cada nodo en la etapa que le toca.

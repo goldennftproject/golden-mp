@@ -32,7 +32,9 @@ chequeo("interior útil sigue siendo 13 x 12",
 
 // 3) ningún objeto ni parcela ni la laguna pisa la cerca
 const fuera = [];
-G.WORLD_OBJECTS.forEach(o => { for (let c = o.leftCol; c < o.leftCol + Math.ceil(o.wCells); c++)
+// los nodos que trae una expansión (o.exp) están fuera del terreno hasta que se compra: los
+// comprueba tools/test-nodos-expansion.js, cada uno en la etapa que le toca
+G.WORLD_OBJECTS.filter(o => o.exp == null).forEach(o => { for (let c = o.leftCol; c < o.leftCol + Math.ceil(o.wCells); c++)
   if (G.enCerca(c, o.baseRow)) fuera.push(o.type + " en (" + c + "," + o.baseRow + ")"); });
 G.PLOTS.forEach((p, i) => { if (G.enCerca(p.col, p.row)) fuera.push("parcela " + i); });
 for (let c = 0; c < G.POND.cols; c++) for (let r = 0; r < G.POND.rows; r++)

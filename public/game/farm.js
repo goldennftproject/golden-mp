@@ -354,9 +354,13 @@ class FarmScene extends Phaser.Scene {
       // 16/8 (dirección): lo que todavía NO es tuyo NO SE VE. Antes el árbol bloqueado era
       // un retoño y la roca bloqueada estaba a la vista con un cartel de nivel; ahora los
       // nodos llegan como premio al baúl y aparecen recién al colocarlos.
-      const locked = o.type === "tree" && !(G.treesOpen || [0]).includes(lockIdx);
-      const rocaBloq = o.type === "rock" && typeof nodoBloqueado === "function" && nodoBloqueado({ type: "rock", lockIdx });
-      if (locked || rocaBloq) { s.setVisible(false); oculto = true; }
+      const locked = o.type === "tree" && o.exp == null && !(G.treesOpen || [0]).includes(lockIdx);
+      const rocaBloq = o.type === "rock" && o.exp == null && typeof nodoBloqueado === "function" && nodoBloqueado({ type: "rock", lockIdx });
+      // 18/8: los nodos que trae una expansión no existen hasta que esa expansión se compró. No
+      // pasan por el baúl ni por la escalera de niveles: vienen CON el terreno, que es lo que hace
+      // que la compra se sienta. Su freno es haber comprado el bloque, y nada más.
+      const sinExpansion = o.exp != null && (G.expansiones || 0) <= o.exp;
+      if (locked || rocaBloq || sinExpansion) { s.setVisible(false); oculto = true; }
       const rw = (o.type === "ore" || o.type === "rock") ? o.w * (typeof NODO_ESCALA === "number" ? NODO_ESCALA : 0.67)   // 9/8: 0.90 — al 0.67 las pepitas no se leían
         : (o.type === "tree") ? o.w * 0.8                                   // árboles −20%
         : (o.type === "market" || o.type === "store") ? o.w * 0.8           // tiendas −20%

@@ -29,7 +29,8 @@ for (let n = 0; n <= 16; n++) {
 
   // 2) nada del contenido puede quedar sobre la cerca ni fuera del terreno
   const fuera = [];
-  G.WORLD_OBJECTS.forEach(o => { for (let c = o.leftCol; c < o.leftCol + Math.ceil(o.wCells); c++)
+  // los de expansión se comprueban aparte (test-nodos-expansion), en la etapa que les toca
+  G.WORLD_OBJECTS.filter(o => o.exp == null).forEach(o => { for (let c = o.leftCol; c < o.leftCol + Math.ceil(o.wCells); c++)
     if (G.enCerca(c, o.baseRow)) fuera.push(o.type); });
   G.PLOTS.forEach((p, i) => { if (G.enCerca(p.col, p.row)) fuera.push("parcela" + i); });
   for (let c = 0; c < G.POND.cols; c++) for (let r = 0; r < G.POND.rows; r++)

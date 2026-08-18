@@ -3733,6 +3733,44 @@ function pedidoGenerar(seed) {
   return { tipo: p.tipo, key: p.key, n: n, plata: Math.max(2, Math.round(val)), xp: Math.max(1, Math.round(val * 0.8)),
     vales: val >= 200 ? 5 : val >= 120 ? 4 : val >= 40 ? 3 : 2, de: rem[0], nota: rem[1], hecho: false };
 }
+/* ============ LA ESCALERA DEL TABLÓN (18/8, dirección) =============================
+   "podemos regularlo con las misiones del tablón, que sean misiones diarias, semanales, mensuales".
+
+   Por qué hacía falta: los materiales no se venden, así que casi no tienen salida. Comprando UNA
+   VEZ cada edificio, cada pico y cada arma del juego se gasta el 4% de todo lo que un jugador
+   produce del 1 al 50. El resto se queda en el cofre para siempre. Las expansiones drenan ~20%,
+   pero son 16 compras en 118 días: un sumidero de HITO, no un regulador. Lo que regula tiene que
+   repetirse, y eso es el tablón.
+
+   Cuánto pide cada escalón, medido contra lo que producís ESE día (no números fijos, así escala
+   solo con la granja):
+       diaria    3 pedidos     10% de la producción del día
+       semanal   1 encargo     un día entero de producción
+       mensual   1 encargo     tres días de producción
+   En 30 días eso quema 10 días de producción: **el 33%**. Sumado a las expansiones (20%) y a los
+   edificios y herramientas (4%), se queman ~57% y al jugador le queda el 43% para construir,
+   craftear y guardar.
+
+   Y la regla que hace que sea un sumidero de verdad: **el extra se paga en VALES**, que solo
+   salen del tablón y solo se gastan en el tablón. Si pagara plata con prima sería un cambio con
+   ganancia, no un sumidero — que es justo lo que estaba pasando antes (pagaba 1,5x). */
+var PED_SEMANAL_DIAS = 1, PED_MENSUAL_DIAS = 3;   // cuántos días de producción pide cada encargo
+function semanaStamp() { const d = new Date(); const t = Date.UTC(d.getUTCFullYear(), d.getUTCMonth(), d.getUTCDate());
+  return "S" + Math.floor(t / (7 * 86400000)); }
+function mesStamp() { const d = new Date(); return "M" + d.getUTCFullYear() + "-" + d.getUTCMonth(); }
+// Un encargo grande: el mismo generador, pero pidiendo N veces lo de un pedido diario.
+function pedidoGrande(seed, veces, etiqueta) {
+  const p = pedidoGenerar(seed);
+  if (!p) return null;
+  const mult = Math.max(2, Math.round(veces * 10));   // la diaria es el 10% del día
+  p.n = Math.max(2, Math.round(p.n * mult));
+  p.plata = Math.max(2, Math.round(p.plata * mult));
+  p.xp = Math.max(1, Math.round(p.xp * mult));
+  p.vales = Math.max(3, Math.round(p.vales * mult * 0.6));   // el premio va en VALES, no en plata
+  p.tipoEncargo = etiqueta;
+  p.nota = etiqueta === "semanal" ? "el encargo de la semana" : "el gran encargo del mes";
+  return p;
+}
 function pedidosEstado() {
   const e = G.pedidos || (G.pedidos = { dia: "", lista: [], reroll: 0, descarteAt: 0, dobles: 0 });
   if (e.dia !== dayStamp(0)) {
@@ -3744,7 +3782,19 @@ function pedidosEstado() {
       if (p) e.lista.push(p);
     }
   }
+  // el encargo de la SEMANA y el del MES viven aparte de la lista diaria: no se descartan ni se
+  // rerollean, y aguantan lo que dure su ventana aunque cambie el día.
+  if (e.semana !== semanaStamp()) { e.semana = semanaStamp(); e.pedSemanal = pedidoGrande(7777, PED_SEMANAL_DIAS, "semanal"); }
+  if (e.mes !== mesStamp()) { e.mes = mesStamp(); e.pedMensual = pedidoGrande(31313, PED_MENSUAL_DIAS, "mensual"); }
   return e;
+}
+// los tres escalones, en una sola lista, para la interfaz y para entregar
+function pedidosTodos() {
+  const e = pedidosEstado();
+  const r = e.lista.map((p, i) => ({ p, i, escalon: "diaria" }));
+  if (e.pedSemanal) r.push({ p: e.pedSemanal, i: "S", escalon: "semanal" });
+  if (e.pedMensual) r.push({ p: e.pedMensual, i: "M", escalon: "mensual" });
+  return r;
 }
 function pedidoStock(p) {
   if (p.tipo === "res") return Math.floor(G.res[p.key] || 0);
@@ -3764,16 +3814,19 @@ function pedidoSprite(p) {
 }
 function pedidosCumplibles() { try { return pedidosEstado().lista.filter(p => !p.hecho && pedidoStock(p) >= p.n).length; } catch (e) { return 0; } }
 function pedidoEntregar(i) {
-  const e = pedidosEstado(), p = e.lista[i];
+  const e = pedidosEstado();
+  // 18/8: "S" y "M" son el encargo de la semana y el del mes; los números, los tres diarios
+  const p = i === "S" ? e.pedSemanal : i === "M" ? e.pedMensual : e.lista[i];
   if (!p || p.hecho) return false;
   if (G.tuto && !G.tuto.done) { toast("El tablón abre al terminar el tutorial"); return false; }
   if (pedidoStock(p) < p.n) { toast("Te falta " + pedidoLabel(p) + " (" + pedidoStock(p) + "/" + p.n + ")"); return false; }
   if (p.tipo === "res") G.res[p.key] -= p.n;
   else if (p.tipo === "fish") G.fish[p.key] -= p.n;
   else if (p.tipo === "dish") G.dishes[p.key] -= p.n;
-  const doble = !(e.dobles > 0);   // el 1º cumplido del día paga vales ×2
+  // el ×2 del primero del día es solo para los diarios: el semanal y el mensual ya pagan de más
+  const doble = !(e.dobles > 0) && !p.tipoEncargo;
   const vales = p.vales * (doble ? 2 : 1);
-  p.hecho = true; e.dobles = (e.dobles || 0) + 1;
+  p.hecho = true; if (!p.tipoEncargo) e.dobles = (e.dobles || 0) + 1;
   G.plata += p.plata; G.vales = (G.vales || 0) + vales;
   addXp("farming", p.xp);
   log(p.de + " recibió " + p.n + " × " + pedidoLabel(p) + ": +" + p.plata + " plata y +" + vales + (vales > 1 ? " vales" : " vale") + (doble ? " (¡primer pedido del día ×2!)" : "") + ".", "gold");

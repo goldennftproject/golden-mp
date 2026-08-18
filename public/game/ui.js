@@ -1670,11 +1670,20 @@ function refreshPedidos() {
   // VISTA: las notas del día
   if (sub) sub.textContent = (e.dobles || 0) > 0 ? "Los vales se canjean acá mismo." : "El primer pedido del día paga 🎟 doble.";
   const rots = [-2.2, 1.6, -1.1];
-  cont.innerHTML = e.lista.map((p, i) => {
+  // 18/8: los tres escalones en una sola lista. El semanal y el mensual van al final, con su
+  // propio color, porque son la parte que de verdad drena stock: piden un día y tres días de
+  // producción contra el 10% de los diarios.
+  const todos = (typeof pedidosTodos === "function") ? pedidosTodos() : e.lista.map((p, i) => ({ p, i, escalon: "diaria" }));
+  cont.innerHTML = todos.map(({ p, i, escalon }, idx) => {
     const stock = pedidoStock(p), ok = !p.hecho && stock >= p.n;
+    const grande = escalon !== "diaria";
     const cls = "pd-nota" + (p.hecho ? " hecha" : ok ? " lista" : "");
-    return '<div class="' + cls + '" style="transform:rotate(' + rots[i % 3] + 'deg)"' + (ok ? ' data-pd-entregar="' + i + '"' : "") + '>' +
-      (!p.hecho ? '<span class="pd-x" data-pd-desc="' + i + '" title="Descartar">✕</span>' : "") +
+    const estilo = "transform:rotate(" + rots[idx % 3] + "deg)" +
+      (grande ? ";box-shadow:0 0 0 2px " + (escalon === "mensual" ? "#c9a227" : "#7fa356") + " inset" : "");
+    return '<div class="' + cls + '" style="' + estilo + '"' + (ok ? ' data-pd-entregar="' + i + '"' : "") + '>' +
+      (grande ? '<div class="de" style="color:' + (escalon === "mensual" ? "#c9a227" : "#7fa356") + '"><b>' +
+        (escalon === "mensual" ? "ENCARGO DEL MES" : "ENCARGO DE LA SEMANA") + '</b></div>' : "") +
+      (!p.hecho && !grande ? '<span class="pd-x" data-pd-desc="' + i + '" title="Descartar">✕</span>' : "") +
       '<div class="de">' + p.de + ' <i>— ' + p.nota + '</i></div>' +
       '<div class="pide">' + pdIcono(p) + '<b>× ' + p.n + '</b>' + (!p.hecho && !ok ? '<span class="falta">(tenés ' + stock + ')</span>' : "") + '</div>' +
       (p.hecho ? '<div class="sello">✓ ENTREGADO</div>'
