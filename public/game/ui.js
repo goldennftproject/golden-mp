@@ -159,6 +159,9 @@ function setNum(id, valor) {
 }
 function refreshHud() {
   try { syncMisionesBadge(); } catch (e) {}   // contador de misiones del menú (10/8)
+  // 18/8: el cartel de expansión del mapa refleja el material que tenés; la firma interna evita
+  // que se rehaga si no cambió nada de lo que se ve.
+  if (window.FARM && window.FARM.dibujarExpansion) { try { window.FARM.dibujarExpansion(); } catch (e) {} }
   refreshStam(); setTxt("s-level", G.level); setTxt("s-prestige", G.prestige); setNum("s-plata", G.plata); setNum("s-golden", G.golden); setTxt("s-week", (typeof semanaActual === "function") ? semanaActual() : G.week); setTxt("s-hp", Math.ceil(G.hp) + "/" + G.hpMax); refreshCombatBar(); if (typeof checkCooking === "function") checkCooking(); if (typeof refreshHotbar === "function") refreshHotbar(); }
 // clic en la barra de estamina: ofrece la recarga premium (con su tope diario)
 function bindStamPill() {

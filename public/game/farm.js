@@ -914,6 +914,7 @@ class FarmScene extends Phaser.Scene {
     // cofres depósito colocados por el jugador (los que están en la bolsa NO se colocan solos)
     (G.chests = G.chests || []).forEach((c, idx) => { if (c.col != null) this.spawnChest(idx); });
     this.crearExcavaciones();   // los 3 montículos del día (15/8)
+    this.dibujarExpansion();     // 18/8: el lote que podés comprar, marcado en el bosque
 
     { this.camLim = this.limiteVista();
       this.cameras.main.setBounds(this.camLim.x1, this.camLim.y1, this.camLim.x2 - this.camLim.x1, this.camLim.y2 - this.camLim.y1); }
@@ -3159,6 +3160,94 @@ class FarmScene extends Phaser.Scene {
     o.letrero = this.add.text(o.cx, o.by - (o.sprite.displayHeight || 60) - 6, "🔨 " + partes.join("  ·  "),
       { fontFamily: "system-ui", fontSize: "11px", fontStyle: "bold", color: "#fff3cf", stroke: "#241505", strokeThickness: 4, align: "center" })
       .setOrigin(0.5, 1).setDepth(99990).setVisible(false);   // 13/8: aparece solo con el cursor encima (lo maneja update)
+  }
+
+  /* ============ EL CARTEL DE EXPANSIÓN, SOBRE EL MAPA (18/8) ========================
+     Dirección, con captura de Sunflower: "cuando hay una zona que ya es expandible se pone esa
+     delimitación, marcando que ese lugar ya puede ser expandido, y le das al botón entregando los
+     recursos que pida".
+     Antes esto vivía en la Tienda, pestaña Adornos — la compra más grande del juego escondida
+     donde se venden macetas. Dirección, que sabía que existía, no la encontró; un jugador menos.
+     Ahora el bloque que te toca se marca EN EL BOSQUE, con estacas en su perímetro y un cartel en
+     el centro que dice qué cuesta. Se ve el terreno antes de pagarlo, que es de lo que se trata. */
+  dibujarExpansion() {
+    const ex = (typeof expansionSiguiente === "function") ? expansionSiguiente() : null;
+    // FIRMA: el cartel se redibuja solo si cambió algo que se VE (el bloque, el nivel, o cuánto
+    // material tenés de lo que pide). Sin esto habría que destruir y rehacer ~40 objetos en cada
+    // refresco del HUD, o sea varias veces por segundo.
+    const firma = !ex ? "-" : [ex.n, G.level, Object.keys(ex.costo)
+      .map(k => k + Math.min(Math.floor((G.res && G.res[k]) || 0), ex.costo[k])).join("|")].join("/");
+    if (this.expFx && this._expFirma === firma) return;
+    this._expFirma = firma;
+    if (this.expFx) { this.expFx.forEach(o => { try { o.destroy(); } catch (e) {} }); }
+    this.expFx = [];
+    if (!ex || !ex.bloque) return;
+    const T = GF.TILE, b = ex.bloque;
+    const x0 = b.c0 * T, y0 = b.r0 * T, w = (b.c1 - b.c0) * T, h = (b.r1 - b.r0) * T;
+    const falta = (G.level || 1) < ex.nivel;
+    const puede = !falta && typeof canAfford === "function" && canAfford(ex.costo);
+    const col = falta ? 0x8a8f7a : (puede ? 0xffd54a : 0xd8b45a);
+
+    // el suelo del bloque, apenas insinuado: se ve QUÉ terreno vas a ganar
+    this.expFx.push(this.add.rectangle(x0 + w / 2, y0 + h / 2, w, h, col, falta ? 0.05 : 0.10)
+      .setDepth(-998).setStrokeStyle(2, col, falta ? 0.35 : 0.7));
+    // ESTACAS en el perímetro, como las de Sunflower: marcan el lote sin taparlo
+    const paso = T;
+    for (let x = x0 + paso / 2; x < x0 + w; x += paso) {
+      for (const y of [y0, y0 + h]) {
+        this.expFx.push(this.add.rectangle(x, y, 4, 11, col, falta ? 0.5 : 0.95).setDepth(y + 1));
+        this.expFx.push(this.add.ellipse(x, y + 5, 7, 3, 0x2b2417, 0.35).setDepth(y));
+      }
+    }
+    for (let y = y0 + paso / 2; y < y0 + h; y += paso) {
+      for (const x of [x0, x0 + w]) {
+        this.expFx.push(this.add.rectangle(x, y, 4, 11, col, falta ? 0.5 : 0.95).setDepth(y + 1));
+        this.expFx.push(this.add.ellipse(x, y + 5, 7, 3, 0x2b2417, 0.35).setDepth(y));
+      }
+    }
+
+    // el cartel del centro: qué cuesta, en verde lo que tenés y en rojo lo que falta
+    const cx = x0 + w / 2, cy = y0 + h / 2;
+    const D = 99980;
+    const chapa = this.add.rectangle(cx, cy, 132, falta ? 40 : 56, 0x1d2a14, 0.86)
+      .setStrokeStyle(2, col, 0.9).setDepth(D).setInteractive({ useHandCursor: true });
+    this.expFx.push(chapa);
+    const titulo = falta ? "Nivel " + ex.nivel : "EXPANDIR";
+    this.expFx.push(this.add.text(cx, cy - (falta ? 6 : 18), titulo,
+      { fontFamily: "system-ui", fontSize: "12px", fontStyle: "bold", color: falta ? "#b9c0a6" : "#ffe08a" })
+      .setOrigin(0.5, 0.5).setDepth(D + 1));
+    if (falta) {
+      this.expFx.push(this.add.text(cx, cy + 10, "terreno bloqueado",
+        { fontFamily: "system-ui", fontSize: "10px", color: "#8f977f" }).setOrigin(0.5, 0.5).setDepth(D + 1));
+    } else {
+      const partes = Object.keys(ex.costo).map(k => {
+        const tengo = Math.floor((G.res && G.res[k]) || 0);
+        return { txt: (RES_LABEL[k] || k) + " " + tengo + "/" + ex.costo[k], ok: tengo >= ex.costo[k] };
+      });
+      partes.forEach((p, i) => {
+        this.expFx.push(this.add.text(cx, cy - 2 + i * 12, p.txt,
+          { fontFamily: "system-ui", fontSize: "10px", fontStyle: "bold", color: p.ok ? "#9fe07a" : "#ff9a8a" })
+          .setOrigin(0.5, 0.5).setDepth(D + 1));
+      });
+      chapa.setSize(132, 34 + partes.length * 12);
+      if (puede) {   // late suave cuando ya lo podés pagar: el cartel pide que lo toques
+        this.tweens.add({ targets: chapa, scaleX: 1.04, scaleY: 1.04, duration: 700,
+          yoyo: true, repeat: -1, ease: "Sine.easeInOut" });
+      }
+    }
+    chapa.on("pointerdown", () => {
+      if (falta) { toast("Esta expansión se abre en el nivel " + ex.nivel + " (vas por el " + (G.level || 1) + ")"); return; }
+      if (!canAfford(ex.costo)) {
+        toast("Te falta material: " + Object.keys(ex.costo)
+          .filter(k => Math.floor((G.res[k] || 0)) < ex.costo[k])
+          .map(k => (ex.costo[k] - Math.floor(G.res[k] || 0)) + " " + (RES_LABEL[k] || k)).join(" · "));
+        return;
+      }
+      const lista = Object.keys(ex.costo).map(k => ex.costo[k] + " " + (RES_LABEL[k] || k)).join(" + ");
+      askConfirm("Expandir la granja " + (GF.BLOQUE * GF.BLOQUE) + " celdas por " + lista + "?",
+        () => { if (typeof expansionComprar === "function") expansionComprar(); },
+        { title: "Expansión " + ex.n + " de " + EXPANSION_MAX, yes: "Expandir", yesClass: "green", no: "Ahora no" });
+    });
   }
 
   // pathfinding A* (módulo compartido con el Bosque — nav.js)

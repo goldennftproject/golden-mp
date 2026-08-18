@@ -4739,3 +4739,35 @@ pedido del día queda solo para los diarios; el semanal y el mensual no se puede
 Siete, todos en verde. Los de terreno y etapas tuvieron que aprender que los nodos de expansión
 están legítimamente fuera del terreno hasta que se compran — eso lo comprueba `test-nodos-expansion`,
 cada nodo en la etapa que le toca.
+
+---
+
+## 18/8 — El cartel de expansión, sobre el mapa
+
+Dirección, con captura de Sunflower: *"cuando hay una zona que ya es expandible se pone esa
+delimitación, marcando que ese lugar ya puede ser expandido, y le das al botón entregando los
+recursos que pida"*.
+
+**El diagnóstico primero**: la había metido en la Tienda, pestaña **Adornos**. La compra más grande
+del juego, la que cambia el mapa, escondida donde se venden macetas. Dirección —que sabía que
+existía porque la pedimos juntos— no la encontró siendo nivel 3 y teniéndola desbloqueada. Si no la
+encuentra quien la diseñó, no la encuentra nadie.
+
+Ahora el lote que te toca se marca **en el bosque**:
+
+- **El suelo del bloque, insinuado** con un tinte y un borde. Se ve QUÉ terreno vas a ganar.
+- **Estacas en todo el perímetro**, una por celda, con su sombrita. Marcan el lote sin taparlo.
+- **Un cartel en el centro** con el coste y, al lado de cada material, **cuánto tenés**: verde si
+  llega, rojo si falta. No hay que ir a contar al cofre.
+- **Late suavemente cuando ya lo podés pagar.** Es la única animación: el cartel pide que lo toques
+  solo cuando tocarlo sirve de algo.
+- Si todavía no tenés el nivel, sale en gris con "Nivel N · terreno bloqueado". Se muestra igual,
+  porque enseñar que el terreno se compra es la mitad del trabajo.
+
+Al tocarlo, confirmación con el coste escrito, y al aceptar se cobra y la granja crece.
+
+**Detalle de rendimiento**: el cartel se engancha al refresco del HUD (que corre varias veces por
+segundo) pero lleva una FIRMA — bloque, nivel y cuánto tenés de lo que pide, recortado al tope. Solo
+se rehacen los ~40 objetos si cambió algo que se VE.
+
+El botón de la Tienda se queda donde está: sirve de respaldo y no molesta.

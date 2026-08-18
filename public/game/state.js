@@ -1082,6 +1082,8 @@ function recalcFarmLevelInterno() {
     if (typeof planosSync === "function") planosSync(false);   // 12/8: el nivel te regala el PLANO del edificio que toca
   }
   if (typeof refreshBarn === "function" && isOpen("ov-barn")) refreshBarn();
+  // 18/8: al subir de nivel puede haberse abierto una expansión — el cartel del mapa lo dice solo
+  if (window.FARM && window.FARM.dibujarExpansion) { try { window.FARM.dibujarExpansion(); } catch (e) {} }
   refreshHud();
   if (subio && typeof saveFarm === "function") saveFarm(true);
 }
