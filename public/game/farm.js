@@ -99,7 +99,10 @@ class FarmScene extends Phaser.Scene {
     // desborde —lo que se ve— y la cantidad sube en proporción al área para que la densidad no
     // baje. Los que caen bajo el bosque no se ven (van a profundidad -999,5, debajo del anillo)
     // pero tampoco estorban.
-    const RD = T * 3, AW = W + RD * 2, AH = H + RD * 2;
+    // 17/8 (dirección): "el césped debe tener florcitas también fuera del corral". El desborde
+    // se sube a 4 celdas —lo mismo que ahora cubre el pasto— y la densidad se calcula por ÁREA,
+    // así que la franja de fuera queda igual de poblada que la de dentro y no se nota la cerca.
+    const RD = T * 4, AW = W + RD * 2, AH = H + RD * 2;
     const nDecos = Math.round((hasDecos ? 110 : 210) * (AW * AH) / (W * H));
     for (let i = 0; i < nDecos; i++) {
       const dx = -RD + drnd() * AW, dy = -RD + drnd() * AH, t = drnd();
@@ -2658,7 +2661,13 @@ class FarmScene extends Phaser.Scene {
     }
     // --- CIELO: día/noche con la hora REAL del jugador + faroles de noche
     if (!this.cielo) {
-      this.cielo = this.add.rectangle(0, 0, GF.WORLD_W, GF.WORLD_H, 0x0a1030, 0).setOrigin(0).setDepth(90000);
+      // 17/8 (dirección): "dentro del corral es de un día y fuera es otro horario".
+      // Cierto: el velo medía SOLO el mundo jugable (714x504), así que el bosque, la franja de
+      // césped y el mosaico se quedaban en mediodía perpetuo mientras la granja anochecía.
+      // Ahora cubre todo lo que la cámara pueda mostrar, centrado en el mismo sitio que el
+      // mosaico, así que la hora es una sola en toda la pantalla.
+      const _c = { x: GF.WORLD_W / 2, y: GF.WORLD_H / 2 }, _lado = 9000;
+      this.cielo = this.add.rectangle(_c.x, _c.y, _lado, _lado, 0x0a1030, 0).setDepth(90000);
       this.faroles = [];
       this._cieloAt = 0;
     }

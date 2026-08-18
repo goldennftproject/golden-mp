@@ -3899,3 +3899,26 @@ Dos recortes, sin perder nada visible:
 y ninguna miró el CONTEXTO (qué cambió al mismo tiempo). Dirección lo resolvió con una pregunta de
 correlación: *¿no será por lo que acabamos de tocar?*. Y la prueba costó diez segundos porque el
 interruptor ya existía. **Ante un fallo nuevo, lo primero es apagar lo último que se añadió.**
+
+### El día y la noche solo pasaban dentro del corral
+Dirección: *"dentro del corral es de un día y fuera del corral es otro horario, y se ve claro"*.
+Exacto, y el motivo estaba a la vista en una línea:
+
+    this.cielo = this.add.rectangle(0, 0, GF.WORLD_W, GF.WORLD_H, ...)
+
+El velo de día/noche medía **solo el mundo jugable**, 714x504. Cubría el interior de la cerca y
+nada más: el bosque, la franja de césped y el mosaico se quedaban en mediodía perpetuo mientras la
+granja anochecía. Nunca se había notado porque hasta ayer fuera de la cerca solo había mar.
+
+Ahora el velo mide 9000x9000 y va centrado en el mismo punto que el mosaico: **la hora es una sola
+en toda la pantalla**, la cámara vaya donde vaya.
+
+### Flores también fuera de la cerca
+El desborde de adornos sube de 3 a 4 celdas —lo mismo que ahora cubre el césped— y la cantidad se
+calcula por ÁREA (270 en total). Así la franja de fuera queda **igual de poblada** que la de
+dentro, y la cerca deja de marcar dónde se acaban las florcitas.
+
+Patrón que se repite en los tres fallos de hoy —el pasto, los adornos y ahora el velo—: **todos
+estaban dimensionados al mundo jugable**, porque hasta ayer no había nada más allá de la cerca.
+Al meter el bosque, todo lo que medía `WORLD_W x WORLD_H` se quedó corto a la vez. Si aparece otro
+fallo de este estilo, ahí es donde hay que mirar primero.
