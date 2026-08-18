@@ -4620,3 +4620,72 @@ porque el pico cuesta más que lo que saca. Es la única pieza que necesita cant
 Seis, todos en verde: `test-terreno` · `test-etapas` · `test-expansiones` · `test-tutorial-atasco` ·
 `test-sprites-nodo` · `test-coords-negativas` (nuevo: cubre lo que los otros no veían, porque
 ninguno probaba con expansiones compradas). Más `auditar-ancla` y `auditar-precio-sombra`.
+
+### Lo que faltaba de la auditoría
+
+- **El enfriamiento de la Zona Negra se paga AL ENTRAR.** Se fijaba solo en `zonaSalir()`, que
+  corre al salir caminando o al morir. Un F5 dentro siempre cae en la granja: el jugador farmeaba,
+  recargaba en vez de salir, y volvía sin enfriamiento y sin resumen, con el viaje colgado en el
+  guardado. Mismo patrón que los nodos: entrar y salir tienen que ir juntas.
+- **Los buffs se guardan.** No estaban ni en el guardado ni en la carga: el buff del plato (5 min)
+  y sobre todo **el del cofre diario (60 min)** se perdían en cada F5. El jugador pagaba materiales
+  y cocinaba para nada. Se descartan al cargar los que ya caducaron mientras no estaba.
+- **`chestCap` se recalcula si falta.** Si el campo no venía, la capacidad extra de cofre se perdía
+  **para siempre** — no había ningún `regalosSync` equivalente. Ahora se deriva de los niveles.
+- **La clave de los enfriamientos deja de ser el índice del array.** Era una mina justo debajo de lo
+  siguiente que hay que hacer: agregar los nodos de cada expansión habría corrido todos los índices
+  y el reloj de un árbol habría caído sobre una roca. Ahora la clave es la **celda original** del
+  objeto, que no cambia aunque el array crezca. Verificado: 18 nodos, 18 claves, cero colisiones.
+  `G.layout` sigue usando el índice (tiene guardados en producción), así que queda un aviso grande
+  en `config.js`: **los objetos nuevos van SIEMPRE al final**.
+- **`GF.BOSQUE_AIRE` marcada como muerta.** Quedó huérfana al dejar de ser una elipse el claro, y
+  se llama casi igual que la viva (`GF.AIRE_BOSQUE`). Era una trampa para el próximo que quisiera
+  ajustar el aire entre la cerca y los árboles.
+- **`checkLayout` mide contra el origen del terreno**, no contra el rectángulo desde (0,0).
+
+---
+
+## 18/8 — LA MINERÍA VUELVE AL ANCLA · los 48 números cuelgan de la fórmula
+
+Era el último desvío que quedaba, y el más viejo: **picar cualquier mineral daba pérdida** — bronce
+−90, oro −288, diamante −573 por picada — porque el pico se craftea con el mineral de abajo y el
+coste se compone hacia arriba. Toda la escalera de minería estaba por debajo del ancla, y no se veía
+porque los materiales no se venden: no hay mercado que lo delate.
+
+Se probaron dos vías y las dos se descartaron:
+
+- **5 usos por pico** → rechazado por dirección: *"las herramientas tienen un uso, esa es una norma;
+  la idea es balancear al ancla sin modificar cómo funcionan las cosas"*. Tenía razón: arreglaba el
+  número cambiando la mecánica.
+- **Cantidades decimales** → más profundo que el problema que arregla. Tocaba los 74 sitios donde se
+  suma o resta un recurso, y obligaba a decidir qué ve el jugador en el inventario.
+
+**La que cierra sin tocar nada: la picada rinde 2.**
+
+| pico | receta | la picada da | rinde |
+|---|---|---|---|
+| Bronce | 3 madera + 3 piedra + 14 plata | 2 bronce | 20/h |
+| Hierro | 3 madera + 5 piedra + 22 plata | 2 hierro | 20/h |
+| Oro | 3 bronce + 30 plata | 2 oro | 20/h |
+| Diamante | 3 oro + 5 madera + 30 plata | 2 diamante | 20/h |
+| Netherita | 2 diamante + 20 plata | 2 netherita | 20/h |
+
+Un uso por pico, cantidades enteras, la escalera intacta —cada pico sigue pidiendo el mineral de
+abajo, que era lo que con enteros parecía imposible— y `(2 × precio − costo del pico) / horas = 20`
+**exacto en los cinco tiers**. Los precios no se tocan, así que nada de lo que lee `priceOf()` se
+mueve.
+
+    node tools/auditar-ancla.js   →   los 48 números cuelgan del ancla
+
+### Limpieza de la misma tanda
+
+- **Se fueron las 31 líneas de la métrica elíptica del claro** (`RX`, `RY`, `met`, `borde`, `AMP`,
+  `ONDA`, `BASE`, `colchon`). No las llamaba nadie desde que la forma la decide el terreno, y eran
+  una trampa: el próximo que quisiera ajustar el aire entre la cerca y los árboles habría tocado
+  `GF.BOSQUE_AIRE`, que está muerta. La viva es `GF.AIRE_BOSQUE`, en celdas.
+- **La semana del HUD avanza.** `G.week` se dibujaba en pantalla y **no la incrementaba nadie**: el
+  jugador veía "semana 1" para siempre. Ahora se deriva de cuándo empezó la partida — es un dato,
+  no un contador que alguien se tiene que acordar de subir. Los guardados viejos migran su `week`.
+- **Fuera cuatro campos zombis del guardado** (`toolsLost`, `testeoDado`, `capsClaim`, `week`): se
+  pagaban en cada escritura a la nube y no los leía ninguna función viva. La carga los sigue
+  aceptando, así que ningún guardado viejo se rompe.

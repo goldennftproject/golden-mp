@@ -46,7 +46,8 @@ console.log("                                            rinde       debe   desv
     const pd = X.PICK_DEF[PICK[k]];
     let c = pd.plata || 0;
     for (const m in pd.cost || {}) c += pd.cost[m] * (X.PRICE[m] || 0);
-    linea("Veta de " + k, (X.PRICE[k] - c / (pd.dur || 1)) / (X.ORE_DEF[k].cd / 3600), ANCLA, "plata/h");
+    const Y = X.ORE_DEF[k].yield || 1;
+    linea("Veta de " + k + " (da " + Y + ")", (Y * X.PRICE[k] - c / (pd.dur || 1)) / (X.ORE_DEF[k].cd / 3600), ANCLA, "plata/h");
   }
 }
 

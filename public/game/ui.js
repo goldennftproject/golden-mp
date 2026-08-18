@@ -159,7 +159,7 @@ function setNum(id, valor) {
 }
 function refreshHud() {
   try { syncMisionesBadge(); } catch (e) {}   // contador de misiones del menú (10/8)
-  refreshStam(); setTxt("s-level", G.level); setTxt("s-prestige", G.prestige); setNum("s-plata", G.plata); setNum("s-golden", G.golden); setTxt("s-week", G.week); setTxt("s-hp", Math.ceil(G.hp) + "/" + G.hpMax); refreshCombatBar(); if (typeof checkCooking === "function") checkCooking(); if (typeof refreshHotbar === "function") refreshHotbar(); }
+  refreshStam(); setTxt("s-level", G.level); setTxt("s-prestige", G.prestige); setNum("s-plata", G.plata); setNum("s-golden", G.golden); setTxt("s-week", (typeof semanaActual === "function") ? semanaActual() : G.week); setTxt("s-hp", Math.ceil(G.hp) + "/" + G.hpMax); refreshCombatBar(); if (typeof checkCooking === "function") checkCooking(); if (typeof refreshHotbar === "function") refreshHotbar(); }
 // clic en la barra de estamina: ofrece la recarga premium (con su tope diario)
 function bindStamPill() {
   const pill = document.getElementById("stampill"); if (!pill || pill._bound) return;

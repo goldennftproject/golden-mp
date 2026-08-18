@@ -4,7 +4,7 @@ GF.spr = (k) => "assets/farm/" + k + ".png?a=7";   // ?a=N rompe el caché de lo
 
 // --- estado principal (con algunos recursos de arranque para probar los menús) ---
 const G = {
-  plata: 3, golden: 20, level: 1, prestige: 0, week: 1,   // 14/8: nacés con 3 de plata (el 1er objetivo es COMPRAR tus semillas)
+  plata: 3, golden: 20, level: 1, prestige: 0, week: 1, iniciado: 0,   // 18/8: cuándo empezó la partida — de ahí sale la semana del HUD   // 14/8: nacés con 3 de plata (el 1er objetivo es COMPRAR tus semillas)
   hp: 100, hpMax: 100, swordOwned: false, bowOwned: false, swordWoodOwned: false, firstCropDone: false,   // combate (Fase D)
   armasUnlocked: false,          // viernes (2): la pestana Armas de la Herreria se paga (20 madera + 20 piedra + 1000 plata)
   treesOpen: [0, 1], rocksOpen: [0, 1],  // 15/8 (dirección): con los relojes largos, se nace con 2 árboles y 2 rocas abiertos — ampliar en paralelo ES el juego
@@ -49,6 +49,10 @@ const G = {
   fish: { comun: 0, raro: 0, epico: 0, legendario: 0 },
   plots: [],   // estado de las parcelas: [{state, readyAt, cropKey}] — lo llena la FarmScene
   nodos: {},   // enfriamiento de árboles/rocas/vetas por índice de objeto — lo llena syncNodos()
+  // 18/8 (auditoría): los buffs SÍ se guardan. No estaban ni en snapshot ni en la carga, así que
+  // el buff del plato que te comiste (5 min) y sobre todo el del cofre diario (60 min) se perdían
+  // en cada F5: el jugador pagaba materiales y cocinaba para nada. G.states (sangrado, veneno) se
+  // sigue sin guardar, pero eso sí está decidido y documentado.
   expansiones: 0,   // cuántos de los 16 bloques compró el jugador (el orden es fijo: basta el número)
   plotsOwned: 3,   // 14/8 (dirección): se nace con 3 parcelas — la primera misión planta 3 semillas y tiene que haber 3 celdas donde apuntar
   decos: [], decoBolsa: {}, godHand: false, zonasVistas: ["pantano"],   // adornos puestos · adornos sin colocar · NFT de siembra automática (10/8)
@@ -67,6 +71,13 @@ window.G = G;
 // --- utilidades ---
 function fmt(n) { n = Math.floor(n); return n >= 1000 ? (n / 1000).toFixed(n % 1000 < 100 ? 0 : 1).replace(".0", "") + "k" : "" + n; }
 function nowMs() { return Date.now(); }
+/* 18/8 (auditoría): G.week se DIBUJA en el HUD y no la incrementaba nadie — el jugador veía
+   "semana 1" para siempre. Ahora se deriva de los días jugados: es un dato, no un contador que
+   alguien se tiene que acordar de subir. */
+function semanaActual() {
+  const ini = G.iniciado || (G.iniciado = Date.now());
+  return 1 + Math.floor((Date.now() - ini) / (7 * 86400000));
+}
 function cdMult() { const t = Date.now(); let m = 1; for (const b of G.buffs) if (b.type === "cd" && b.until > t) m *= b.mult; return m; }
 function yieldMult() { const t = Date.now(); let m = 1 + 0.015 * (G.level - 1) + G.prestige * 0.015; for (const b of G.buffs) if (b.type === "yield" && b.until > t) m *= b.mult; return m; }
 function addBuff(type, label, mult, durSec) { G.buffs.push({ type, label, mult, until: Date.now() + durSec * 1000 }); }
@@ -1158,16 +1169,22 @@ function prestige() {
 
 // --- minerales y picos ---
 const ORE_ORDER = ["piedra","bronce","hierro","oro","diamante","netherita"];
+/* 18/8 — LA PICADA DE MINERAL RINDE 2, NO 1.
+   Es lo que devuelve la minería al ancla sin tocar ninguna mecánica: el pico sigue siendo de un
+   uso, las cantidades siguen enteras y la escalera sigue intacta (cada pico pide el mineral de
+   abajo). Con yield 1 picar daba PÉRDIDA en los cinco tiers, porque el coste del pico se compone
+   hacia arriba y supera lo que saca. Con yield 2 y los picos re-costeados,
+   (2 x precio − costo del pico) / horas = 20 exacto. Los precios no se tocan. */
 const ORE_DEF = {   // 15/8 EN PRUEBA: enfriamientos largos del doc 4/8 del diseñador
   piedra:   { tier:0, label:"Piedra",    emoji:"🪨", sprite:"node_stone",     cd:7200,  yield:1, price:6 },
-  bronce:   { tier:1, label:"Bronce",    emoji:"🟫", sprite:"node_bronze",    cd:28800, yield:1, price:12 },
-  hierro:   { tier:2, label:"Hierro",    emoji:"⛓️", sprite:"node_iron",      cd:43200, yield:1, price:15 },   // viernes (2): lo mina el Pico de Hierro
+  bronce:   { tier:1, label:"Bronce",    emoji:"🟫", sprite:"node_bronze",    cd:28800, yield:2, price:12 },
+  hierro:   { tier:2, label:"Hierro",    emoji:"⛓️", sprite:"node_iron",      cd:43200, yield:2, price:15 },   // viernes (2): lo mina el Pico de Hierro
   // 16/8 (auditoría G): oro, diamante y netherita compartían enfriamiento (14 h) pero valen
   // 30, 80 y 200. Con el ancla de tiempo, una hora de nodo es una hora de nodo: si el valor
   // sube, el reloj tiene que subir. Ahora la escalera se lee sola: 14 h → 18 h → 24 h.
-  oro:      { tier:3, label:"Oro",       emoji:"🟡", sprite:"node_gold",      cd:50400, yield:1, price:30 },   // 14 h
-  diamante: { tier:4, label:"Diamante",  emoji:"💎", sprite:"node_diamond",   cd:64800, yield:1, price:80 },   // 18 h (era 14)
-  netherita:{ tier:5, label:"Netherita", emoji:"🔶", sprite:"node_netherite", cd:86400, yield:1, price:200 },  // 24 h (era 14) — el ancla diaria de la minería
+  oro:      { tier:3, label:"Oro",       emoji:"🟡", sprite:"node_gold",      cd:50400, yield:2, price:30 },   // 14 h
+  diamante: { tier:4, label:"Diamante",  emoji:"💎", sprite:"node_diamond",   cd:64800, yield:2, price:80 },   // 18 h (era 14)
+  netherita:{ tier:5, label:"Netherita", emoji:"🔶", sprite:"node_netherite", cd:86400, yield:2, price:200 },  // 24 h (era 14) — el ancla diaria de la minería
 };
 const PICK_ORDER = ["stone","bronze","iron","gold","diamond","netherite"];
 const PICK_DEF = {
@@ -1191,11 +1208,23 @@ const PICK_DEF = {
      renuncia a que el pico pida el mineral de abajo, o hacen falta CANTIDADES DECIMALES
      (0,9 bronce · 1,34 oro · 0,77 diamante), que es la vía que pidió dirección.
      Hasta que eso esté, las recetas quedan COMO ESTABAN. */
-  bronze:   { tier:1, label:"Pico de Bronce",    mineTier:1, dur:1, cost:{madera:3,piedra:4},   plata:8,   sprite:"pick_bronze" },   // 14/8 rebalance (era 4+5+10)
-  iron:     { tier:2, label:"Pico de Hierro",    mineTier:2, dur:1, cost:{madera:3,piedra:5},   plata:10,  sprite:"pick_iron" },
-  gold:     { tier:3, label:"Pico de Oro",       mineTier:3, dur:1, cost:{madera:3,bronce:3},   plata:20,  sprite:"pick_gold" },   // 14/8: era 5 bronce + 35 (cadena del Altar)
-  diamond:  { tier:4, label:"Pico de Diamante",  mineTier:4, dur:1, cost:{oro:3,madera:3},      plata:45,  sprite:"pick_diamond" },
-  netherite:{ tier:5, label:"Pico de Netherita", mineTier:5, dur:1, cost:{diamante:1,madera:5}, plata:100, sprite:"pick_netherite" },
+  /* 18/8 — LA MINERÍA VUELVE AL ANCLA, SIN TOCAR NINGUNA MECÁNICA.
+     El problema medido: picar CUALQUIER mineral daba pérdida — bronce −90, oro −288, diamante
+     −573 por picada — porque el pico se craftea con el mineral de abajo y el coste se compone
+     hacia arriba. Toda la escalera de minería estaba por debajo del ancla y no se veía, porque
+     los materiales no se venden y no hay mercado que lo delate.
+     Se probaron dos vías y las dos se descartaron: dar 5 usos al pico (dirección: "las
+     herramientas tienen un uso, esa es una norma") y cantidades decimales (más profundo que el
+     problema que arregla). La que cierra sin tocar nada:
+        LA PICADA RINDE 2, y el pico cuesta lo que el ancla permite para esa picada.
+     Un uso por pico, cantidades enteras, la escalera intacta (cada pico sigue pidiendo el mineral
+     de abajo) y (2 x precio − costo del pico) / horas = 20 EXACTO en los cinco tiers.
+     Los precios NO se tocan, así que nada de lo que lee priceOf() se mueve. */
+  bronze:   { tier:1, label:"Pico de Bronce",    mineTier:1, dur:1, cost:{madera:3,piedra:3},   plata:14, sprite:"pick_bronze" },
+  iron:     { tier:2, label:"Pico de Hierro",    mineTier:2, dur:1, cost:{madera:3,piedra:5},   plata:22, sprite:"pick_iron" },
+  gold:     { tier:3, label:"Pico de Oro",       mineTier:3, dur:1, cost:{bronce:3},            plata:30, sprite:"pick_gold" },
+  diamond:  { tier:4, label:"Pico de Diamante",  mineTier:4, dur:1, cost:{oro:3,madera:5},      plata:30, sprite:"pick_diamond" },
+  netherite:{ tier:5, label:"Pico de Netherita", mineTier:5, dur:1, cost:{diamante:2},          plata:20, sprite:"pick_netherite" },
 };
 function equippedPick() { return (G.picks.eq && G.picks.owned[G.picks.eq]) ? G.picks.eq : null; }
 function canAfford(c) { for (const k in c) if ((G.res[k]||0) < c[k]) return false; return true; }
@@ -2348,7 +2377,14 @@ function zonaMatados() {
   const m = (G.stats && G.stats.matar) || {};
   return Object.keys(m).reduce((s, k) => s + (m[k] || 0), 0);
 }
+/* 18/8 (auditoría) — el enfriamiento se fijaba SOLO en zonaSalir(), que se llama al salir
+   caminando o al ser derrotado. Un F5 dentro de la Zona Negra siempre cae en la granja, así que
+   el jugador farmeaba, recargaba en vez de salir, y volvía SIN enfriamiento y sin resumen del
+   viaje — con el viaje además colgado en el guardado. Es el mismo patrón que el de los nodos:
+   entrar y salir son dos cosas que tienen que ir juntas y no lo estaban.
+   Ahora el enfriamiento se paga AL ENTRAR: recargar ya no lo puentea. */
 function zonaEntrar() {
+  G.zonaCdHasta = nowMs() + ZONA_CD_MIN * 60000;
   const res = {};
   for (const k in G.res) res[k] = G.res[k] || 0;
   G.zonaViaje = { t: nowMs(), res, plata: G.plata || 0, golden: G.golden || 0,

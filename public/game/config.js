@@ -218,7 +218,8 @@ GF.BOSQUE_ONDA = 0;         // cuánto se ondula el borde
 // 17/8: el hueco entre la cerca y el primer tronco lo da ESTE número, no el colchón. Con 0,05
 // el árbol de la derecha se metía 32 px dentro del mundo y el tronco de arriba colgaba 15 px
 // por debajo del borde, encima de la cerca. 0,23 deja una celda entera de césped.
-GF.BOSQUE_AIRE = 0.23;      // aire entre la cerca y la primera fila de árboles
+GF.BOSQUE_AIRE = 0.23;      // MUERTA desde el 18/8: el claro dejó de ser una elipse. El aire entre
+                            // la cerca y los troncos lo manda GF.AIRE_BOSQUE (arriba), en CELDAS.
 GF.BOSQUE_DEPTH = -999;     // encima del suelo, debajo de todo lo interactuable
 /* INTERRUPTOR DE EMERGENCIA (16/8): si el juego no carga y sospechás del bosque, abrí la
    página con  ?sinbosque=1  al final de la URL y arranca sin él, sin tocar el código ni
@@ -371,6 +372,14 @@ function snap(key, meta, x, y, sizePx) {
      · vetas    columnas 11 y 13, filas 9, 11 y 13, en orden de tier hacia abajo
    Y el correo (buzón + baúl) se corre una columna a la izquierda porque los árboles ahora
    empiezan en la 10. El ORDEN del array no se toca: los layouts guardados indexan acá. */
+/* ============ AVISO: EL ORDEN DE ESTE ARRAY ES PARTE DEL GUARDADO ==================
+   `G.layout` guarda las posiciones que el jugador movió en modo edición, INDEXADAS POR LA
+   POSICIÓN EN ESTE ARRAY. Insertar un objeto en cualquier sitio que no sea EL FINAL corre todos
+   los índices posteriores, y entonces el granero salta a donde había un árbol en la granja de
+   todo el que ya movió algo. Por eso cada tanda histórica dice "al FINAL para preservar layouts".
+   REGLA: los objetos nuevos SIEMPRE se agregan al final. Nunca se reordena ni se borra del medio.
+   (Los enfriamientos de los nodos ya NO dependen de esto: desde el 18/8 usan la celda original
+   como clave, precisamente para poder agregar los nodos de las expansiones sin miedo.) */
 GF.WORLD_OBJECTS = [];
 [[462,84],[546,84],[462,168]].forEach(t => GF.WORLD_OBJECTS.push(snap("tree", {type:"tree"}, t[0], t[1], T*2)));       // bosquecito NE, ahora en columnas 10-13
 [[441,336],[525,336]].forEach(r => GF.WORLD_OBJECTS.push(snap("node_stone", {type:"rock"}, r[0], r[1], T)));             // cantera, debajo del bosquecito
@@ -461,7 +470,8 @@ GF.checkLayout = function () {
   GF.WORLD_OBJECTS.forEach(o => {
     const w = o.w, h = w * 0.9, r = { x1: o.cx - w / 2, x2: o.cx + w / 2, y1: o.by - h, y2: o.by };
     const natural = o.type === "tree" || o.type === "rock" || o.type === "ore";   // el arte de árboles/rocas tiene copa transparente: no molesta contra la cerca
-    if (!natural && (r.x1 < M || r.x2 > W2 - M || r.y1 < M || r.y2 > H2 - M)) avisos.push(o.type + " se sale de la cerca");
+    // 18/8: se mide contra el ORIGEN del terreno, que puede ser negativo
+    if (!natural && (r.x1 < GF.ORIG_X + M || r.x2 > GF.ORIG_X + W2 - M || r.y1 < GF.ORIG_Y + M || r.y2 > GF.ORIG_Y + H2 - M)) avisos.push(o.type + " se sale de la cerca");
     R.forEach(q => { if (q.n !== o.type && (q.n === "parcela" || q.n === "laguna") && cruza(r, q)) avisos.push(o.type + " pisa " + q.n); });
   });
   if (avisos.length) console.warn("[layout]", [...new Set(avisos)].join(" · "));

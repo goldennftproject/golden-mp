@@ -21,17 +21,17 @@ async function initSave() {
 
 // campos de progreso que guardamos (no world/cooldowns/buffs, que son de la sesión)
 function snapshot() {
-  return { plata: G.plata, golden: G.golden, level: G.level, prestige: G.prestige, week: G.week,
-    res: G.res, picks: G.picks, skills: G.skills, fish: G.fish, plots: G.plots, nodos: G.nodos, expansiones: G.expansiones, seeds: G.seeds, selSeed: G.selSeed,
-    tools: G.tools, toolsLost: G.toolsLost, sflStock: true, invRows: G.invRows, slots: G.slots, hotbar: G.hotbar, hotSel: G.hotSel, hbInit: G.hbInit, layout: G.layout,
+  return { plata: G.plata, golden: G.golden, level: G.level, prestige: G.prestige, iniciado: G.iniciado,
+    res: G.res, picks: G.picks, skills: G.skills, fish: G.fish, plots: G.plots, nodos: G.nodos, expansiones: G.expansiones, buffs: G.buffs, seeds: G.seeds, selSeed: G.selSeed,
+    tools: G.tools, sflStock: true, invRows: G.invRows, slots: G.slots, hotbar: G.hotbar, hotSel: G.hotSel, hbInit: G.hbInit, layout: G.layout,
     daily: G.daily, plotsOwned: G.plotsOwned, seedBuys: G.seedBuys, built: G.built,
     hp: G.hp, hpMax: G.hpMax, combatXp: G.combatXp, stam: G.stam, stamAcc: G.stamAcc, stamRec: G.stamRec, pass: G.pass, tuto: G.tuto, firstSeeds: G.firstSeeds,
     stats: G.stats, statsBase: G.statsBase, chestCap: G.chestCap, edif2: G.edif2, cosmeticos: G.cosmeticos, animals: G.animals, armor: G.armor, armorEq: G.armorEq, ofrendaPts: G.ofrendaPts, ofrendaLog: G.ofrendaLog, nodoUsos: G.nodoUsos, cosEq: G.cosEq, incursion: G.incursion, incDia: G.incDia, zonaCdHasta: G.zonaCdHasta, zonaViaje: G.zonaViaje, decos: G.decos, decoBolsa: G.decoBolsa, godHand: G.godHand, zonasVistas: G.zonasVistas, visto: nowMs(), dummyTrain: G.dummyTrain, swordOwned: G.swordOwned, bowOwned: G.bowOwned, swordWoodOwned: G.swordWoodOwned, gear: G.gear,
     armasUnlocked: G.armasUnlocked, treesOpen: G.treesOpen, rocksOpen: G.rocksOpen, firstCropDone: G.firstCropDone, weapons: G.weapons,
     dishes: G.dishes, cooking: G.cooking, chests: G.chests, dummyUsedAt: G.dummyUsedAt,
-    armCd: G.armCd, mkPend: G.mkPend, testeoDado: G.testeoDado,
+    armCd: G.armCd, mkPend: G.mkPend,
     layoutPlots: G.layoutPlots, layoutPond: G.layoutPond, ghInv: G.ghInv,
-    planos: G.planos, obras: G.obras, obraDep: G.obraDep, capsClaim: G.capsClaim, emergBuys: G.emergBuys, buzonLeidas: G.buzonLeidas, buzonArchivo: G.buzonArchivo, kitReclamado: G.kitReclamado, excav: G.excav, vales: G.vales, pedidos: G.pedidos, regalos: G.regalos };   // buzón + kit + excavaciones (15/8) · tablón + vales (16/8)   // blueprints (12/8) · capítulos + emergencia (14/8)
+    planos: G.planos, obras: G.obras, obraDep: G.obraDep, emergBuys: G.emergBuys, buzonLeidas: G.buzonLeidas, buzonArchivo: G.buzonArchivo, kitReclamado: G.kitReclamado, excav: G.excav, vales: G.vales, pedidos: G.pedidos, regalos: G.regalos };   // buzón + kit + excavaciones (15/8) · tablón + vales (16/8)   // blueprints (12/8) · capítulos + emergencia (14/8)
 }
 // "huella" del estado guardable (incluye el apodo); si no cambia, no hay nada que guardar
 function snapKey() { return JSON.stringify({ n: (typeof nombreLucido === "function" ? nombreLucido() : (window.NICK || "Granjero")), d: snapshot() }); }
@@ -42,11 +42,15 @@ function hydrate(d) {
   if (d.res) G.res = Object.assign({}, G.res, d.res);
   if (d.skills) G.skills = Object.assign({}, G.skills, d.skills);
   if (d.fish) G.fish = Object.assign({}, G.fish, d.fish);
+  if (typeof d.iniciado === "number") G.iniciado = d.iniciado;
+  else if (!G.iniciado) G.iniciado = Date.now() - ((d.week || 1) - 1) * 7 * 86400000;   // migración de G.week
   if (Array.isArray(d.plots)) G.plots = d.plots;
   // 18/8: enfriamientos de árboles, rocas y vetas. Antes no se guardaban y cualquier recarga —o
   // un viaje a la Zona Negra— los dejaba todos listos otra vez, que era barra libre de material.
   if (d.nodos && typeof d.nodos === "object") G.nodos = d.nodos;
   if (typeof d.expansiones === "number") G.expansiones = Math.max(0, Math.min(16, d.expansiones));
+  // los buffs traen su propio vencimiento: se descartan los que ya caducaron mientras no estabas
+  if (Array.isArray(d.buffs)) G.buffs = d.buffs.filter(b => b && b.until > Date.now());
   if (d.seeds) G.seeds = Object.assign({}, G.seeds, d.seeds);
   if (d.selSeed && CROP_DEF[d.selSeed]) G.selSeed = d.selSeed;
   if (d.tools) G.tools = Object.assign({}, G.tools, d.tools);
@@ -73,7 +77,10 @@ function hydrate(d) {
   G.combatXp = (typeof d.combatXp === "number") ? d.combatXp : 0;
   G.stats = (d.stats && typeof d.stats === "object") ? d.stats : {};
   G.statsBase = (d.statsBase && typeof d.statsBase === "object") ? d.statsBase : {};
-  G.chestCap = Number(d.chestCap) || 0;
+  // 18/8 (auditoría): si el campo faltaba, la capacidad extra de cofre se perdía PARA SIEMPRE —
+  // no hay ningún regalosSync que la recalcule. Ahora se deriva de los niveles ya alcanzados.
+  G.chestCap = Number(d.chestCap) || (typeof FARM_COFRE === "object"
+    ? Object.keys(FARM_COFRE).reduce((a, k) => a + ((G.level || 1) >= +k ? FARM_COFRE[k] : 0), 0) : 0);
   G.edif2 = (d.edif2 && typeof d.edif2 === "object") ? d.edif2 : {};
   G.cosmeticos = Array.isArray(d.cosmeticos) ? d.cosmeticos : [];
   // Los animales pasaron de "uno por tipo" a una LISTA por tipo (10/8). Los guardados viejos

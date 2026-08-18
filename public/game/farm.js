@@ -387,7 +387,12 @@ class FarmScene extends Phaser.Scene {
          y talás todo de nuevo, sin límite. Con eso el ancla de 20 plata/hora no significaba nada,
          porque las horas de reloj se podían saltar.
          Ahora el enfriamiento se guarda en G.nodos, indexado por el mismo índice del objeto. */
-      const svn = (G.nodos || {})[i];
+      /* 18/8 (auditoría) — la clave era el ÍNDICE en GF.WORLD_OBJECTS. Insertar un objeto en
+         cualquier sitio que no fuera el final corría todos los índices posteriores y el
+         enfriamiento de un árbol caía sobre una roca. Y lo siguiente en la lista es justamente
+         agregar los nodos de cada expansión. Ahora la clave es la CELDA ORIGINAL del objeto, que
+         no cambia aunque el array se reordene. */
+      const svn = (G.nodos || {})[o.type + ":" + o.leftCol + "," + o.baseRow];
       return { i, type: o.type, ore: o.ore, cx, by, w: o.w, rw, baseKey: o.key, sprite: s, shadow,
         readyAt: (svn && svn.readyAt) || 0, halfAt: (svn && svn.halfAt) || 0, cdIni: (svn && svn.cdIni) || 0,
         lockIdx, locked, oculto };
@@ -3379,7 +3384,9 @@ class FarmScene extends Phaser.Scene {
       if (typeof o.i !== "number") return;                       // excavaciones, paquete, cofres: no son nodos
       if (o.type !== "tree" && o.type !== "rock" && o.type !== "ore") return;
       if (!o.readyAt || o.readyAt <= t) return;                  // ya está listo: nada que recordar
-      n[o.i] = { readyAt: o.readyAt, halfAt: o.halfAt || 0, cdIni: o.cdIni || 0 };
+      const base = GF.WORLD_OBJECTS[o.i];
+      if (!base) return;
+      n[base.type + ":" + base.leftCol + "," + base.baseRow] = { readyAt: o.readyAt, halfAt: o.halfAt || 0, cdIni: o.cdIni || 0 };
     });
     G.nodos = n;
   }
@@ -3443,39 +3450,22 @@ class FarmScene extends Phaser.Scene {
     // Las filas alternas se corren media columna, así el árbol de atrás cae en el HUECO de los
     // dos de adelante en vez de justo detrás de uno. Cubrir a lo ancho en vez de apilar en fondo.
     const TRABA = GF.BOSQUE_TRABA != null ? GF.BOSQUE_TRABA : 0.5;
-    const colchon = (GF.BOSQUE_COLCHON != null ? GF.BOSQUE_COLCHON : 0.5) * T;
     let semilla = 20250816;                       // azar estable: el bosque es el MISMO cada partida
     const az = () => { semilla = (semilla * 1664525 + 1013904223) % 4294967296; return semilla / 4294967296; };
-    // LA FORMA DEL CLARO (16/8, dirección: "más redonda, menos irregular").
-    // La métrica mezcla cuadrado y círculo: BOSQUE_REDONDEZ manda (0 = rectángulo, 1 = óvalo).
-    // Encima va un oleaje suave por ángulo para que el borde no sea perfecto.
-    // El umbral NO es un número a mano: se calcula a partir de la ESQUINA del área jugable
-    // más el aire y la amplitud del oleaje, así el bosque NUNCA puede taparle una celda al
-    // jugador por mucho que se redondee o se ondule.
-    const RX = W / 2 + colchon, RY = H / 2 + colchon, tw = this.textures.get("tree").getSourceImage();
+    /* 18/8 — LA MÉTRICA ELÍPTICA DEL CLARO SE FUE.
+       Eran ~25 líneas (RX, RY, met, borde, AMP, ONDA, BASE, redondez) que calculaban una forma
+       convexa alrededor de un centro. El claro dejó de ser eso: ahora la forma la decide el
+       terreno que poseés, celda a celda, y esas líneas no las llamaba ya nadie. Se van porque
+       eran una trampa: el próximo que quisiera "ajustar el aire entre la cerca y los árboles"
+       habría tocado GF.BOSQUE_AIRE, que está muerta. El que manda es GF.AIRE_BOSQUE, en celdas.
+       Queda solo lo que sigue vivo: el TAMAÑO del árbol, que se pide en CELDAS y se deriva del
+       sprite para que el bosque no vuelva a tener árboles más grandes que los de la granja. */
+    const tw = this.textures.get("tree").getSourceImage();
     const anchoT = (tw && tw.width) || T, altoT = (tw && tw.height) || T * 2;
-    // TAMAÑO EN CELDAS (17/8, dirección: "ten en cuenta que un árbol ocupe solo una celda").
-    // Al medirlo apareció una incoherencia: los árboles del BOSQUE salían de 2,3 a 3,2 celdas
-    // de ancho, o sea MÁS GRANDES que los que se talan dentro de la granja, que miden 2. El
-    // fondo era más grande que el primer plano. Ahora el tamaño se pide en celdas y la escala
-    // se deriva del sprite, así que no hay forma de que vuelvan a desincronizarse.
-    // (Probado a 1 celda: no cierra. La copa es ancha; achicada a 42 px hacen falta 300 árboles
-    //  y aun así queda 1,8% de fondo a la vista, y separándolos salta a 19%. A 2 celdas: 126
-    //  árboles y 0,02%.)
     const escBase = (GF.BOSQUE_TAM || 2) * T / anchoT;
     const VAR = GF.BOSQUE_ESC_VAR != null ? GF.BOSQUE_ESC_VAR : 0.15;
     const eMin = escBase * (1 - VAR), eMax = escBase * (1 + VAR);
-    const anchoS = anchoT * escBase, altoS = altoT * escBase;   // tamaño DIBUJADO: manda para la forma del claro
-    const R = GF.BOSQUE_REDONDEZ != null ? GF.BOSQUE_REDONDEZ : 0.62;
-    const met = (nx, ny) => Math.max(Math.abs(nx), Math.abs(ny)) * (1 - R) + Math.hypot(nx, ny) * R;
-    const AMP = [0.085, 0.055, 0.035, 0.02], ONDA = GF.BOSQUE_ONDA != null ? GF.BOSQUE_ONDA : 0.45;
-    const ampTotal = AMP.reduce((a, b) => a + b, 0) * ONDA;
-    const BASE = met((W - W / 2) / RX, (H - H / 2) / RY) + (GF.BOSQUE_AIRE != null ? GF.BOSQUE_AIRE : 0.05) + ampTotal;
-    const borde = (nx, ny) => {
-      const a = Math.atan2(ny, nx);
-      return BASE + ONDA * (AMP[0] * Math.sin(3 * a + 0.7) + AMP[1] * Math.sin(5 * a + 2.1) +
-        AMP[2] * Math.sin(8 * a + 4.3) + AMP[3] * Math.sin(13 * a));
-    };
+    const altoS = altoT * escBase;   // alto DIBUJADO: manda para decidir en qué celda apoya
     // ================= LAS TRES LEYES DE COLOCACIÓN (17/8, dirección) =================
     // Antes el bosque se generaba con cinco números a ojo: PASO, FILAS, TRABA, JITTER_X y
     // JITTER_Y. Nadie podía decir por qué valían lo que valían. Dirección lo reformuló como
