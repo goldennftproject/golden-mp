@@ -4400,3 +4400,50 @@ la cerca, y que en las 17 etapas la cerca es siempre el borde real. Nueve compro
 
 Falta pasar `farm.js` a consultar esto (césped, bosque, adornos, cerca, cámara y límites) — son 56
 sitios y va en su propia tanda.
+
+---
+
+## 18/8 — `farm.js` deja de dar por sentado un rectángulo
+
+La tanda gorda. Todo el mapa se dibujaba sobre "un rectángulo que empieza en (0,0)"; ahora consulta
+el terreno. Lo que cambió, por partes:
+
+**El origen puede ser negativo.** `GF.ORIG_X` / `GF.ORIG_Y` — al comprar por la izquierda o por
+arriba el claro se extiende hacia allá. Las coordenadas guardadas de los objetos **no se tocan**:
+siguen contando desde la esquina del corral original, que es lo que hace que ningún layout se rompa.
+Phaser trabaja sin problema con coordenadas negativas. `GF.aplicarTerreno(n)` recalcula COLS, ROWS,
+WORLD_W, WORLD_H y el origen, y se llama **lo primero** en `create()`.
+
+**La cerca se recorre, no se enumera.** Eran cuatro bucles (fila 0, fila ROWS-1, columna 0, columna
+COLS-1), que solo sabe describir un rectángulo. Ahora: para cada celda tuya, si el vecino de arriba
+no es tuyo va cerca de arriba, etc. Cualquier forma sale sola, con los cuatro sprites que ya existen.
+
+**El claro deja de ser una elipse.** `met`/`borde` con redondez y oleaje solo sabe describir una
+forma convexa alrededor de un centro; los entrantes de las expansiones no los describe ninguna
+elipse. Ahora se pregunta por la celda: si está despejada no va árbol. `dentroDelClaro` usa la misma
+verdad, así que los adornos y el bosque ya no se pueden desincronizar — que era el fallo de ayer.
+
+**El césped** dibuja el terreno más el aire, no el rectángulo. **Los adornos** se siembran anclados
+al origen. **`GF.blockedAt`** pregunta por la celda en vez de comparar contra el borde del
+rectángulo. **`margenBosque`** se calcula por diferencia contra `GF.MAPA`, así que el anillo encoge
+solo a medida que el claro crece, sin ningún número a mano.
+
+### Verificado
+
+`tools/test-etapas.js` recorre las 17 etapas con la geometría del juego y comprueba en cada una:
+la cerca tiene tramos y la banda de borde es coherente · nada del contenido pisa la cerca · la
+cámara alcanza todo el césped · la memoria de textura no se dispara.
+
+| etapa | granja | tramos de cerca | césped | bosque | total |
+|---|---|---|---|---|---|
+| 0 | 15×15 | 60 | 3,6 | 5,7 | **9,2 MB** |
+| 8 | 25×20 | 90 | 6,2 | 8,7 | 14,9 MB |
+| 16 | 25×25 | 100 | 7,3 | 9,8 | **17,1 MB** |
+
+17,1 MB en la etapa final, contra los 39 que corrompieron la laguna. Con margen, y ahora medido en
+cada etapa en vez de descubrirlo con un sprite roto.
+
+Las 17 en verde, más `test-terreno.js` (9 comprobaciones) y `test-tutorial-atasco.js` (6).
+
+**El único cambio visible con 0 expansiones**: las esquinas del claro quedan levemente redondeadas,
+porque el aire de 2,3 celdas se mide en radio y no en rectángulo. El resto es idéntico.

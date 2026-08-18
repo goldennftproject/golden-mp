@@ -12,7 +12,9 @@ GF.TILE = 42;
 // además se parte en 3 partes iguales de 5, que es lo que pide el anillo de expansiones.
 GF.COLS_BASE = 15; GF.ROWS_BASE = 15;       // el claro con el que arranca la partida
 GF.COLS = GF.COLS_BASE; GF.ROWS = GF.ROWS_BASE;   // mundo en celdas enteras (crece con las expansiones)
-GF.WORLD_W = GF.COLS * GF.TILE;             // 714
+GF.WORLD_W = GF.COLS * GF.TILE;             // 630
+GF.ORIG_X = 0; GF.ORIG_Y = 0;               // esquina del mundo: se vuelve NEGATIVA al expandir
+GF.C0 = 0; GF.R0 = 0; GF.C1 = GF.COLS_BASE; GF.R1 = GF.ROWS_BASE;
 GF.WORLD_H = GF.ROWS * GF.TILE;             // 504
 GF.SPEED = 175;
 
@@ -124,6 +126,21 @@ GF.terreno = function (n) {
     // el recuadro de lo DESPEJADO, que es lo que la cámara tiene que poder recorrer
     dc0: c0 - RA, dr0: r0 - RA, dc1: c1 + RA, dr1: r1 + RA };
   GF._terrenoCache[n] = t;
+  return t;
+};
+/* Pone al día los valores derivados que TODO el juego ya usaba (COLS, ROWS, WORLD_W, WORLD_H).
+   La clave para no reescribir medio farm.js: el origen del mundo deja de ser (0,0) y pasa a poder
+   ser NEGATIVO —  GF.ORIG_X / GF.ORIG_Y —, porque al comprar por la izquierda o por arriba el
+   claro se extiende hacia allá. Las coordenadas guardadas de los objetos no se tocan: siguen
+   contando desde la esquina del corral original, que es lo que hace que ningún layout se rompa.
+   Phaser trabaja sin problema con coordenadas negativas. */
+GF.aplicarTerreno = function (n) {
+  GF.expOwned = Math.max(0, Math.min(GF.EXPANSIONES.length, n || 0));
+  const t = GF.terreno(GF.expOwned), T = GF.TILE;
+  GF.C0 = t.c0; GF.R0 = t.r0; GF.C1 = t.c1; GF.R1 = t.r1;
+  GF.COLS = t.cols; GF.ROWS = t.rows;
+  GF.WORLD_W = t.cols * T; GF.WORLD_H = t.rows * T;
+  GF.ORIG_X = t.c0 * T; GF.ORIG_Y = t.r0 * T;      // <= 0
   return t;
 };
 GF.tuyo      = function (col, row, n) { return GF.terreno(n).mias.has(col + "," + row); };
@@ -494,8 +511,17 @@ GF.COLLISIONS = GF.WORLD_OBJECTS.map(o => GF.solidRect(o));
 
 GF.blockedAt = function(x, y, pad){
   pad = pad || 0;
-  // la cerca del borde es sólida: no se puede pisar ni traspasar
-  if (x < 18 || y < T * 0.72 || x > GF.WORLD_W - 18 || y > GF.WORLD_H - 16) return true;
+  // 18/8: la cerca es sólida, pero "el borde" ya no es el del rectángulo — es el borde del
+  // TERRENO que poseés, que puede tener entrantes. Se pregunta por la celda, con un recorte
+  // pequeño para que no se pueda quedar montado justo encima del palo.
+  {
+    const c = Math.floor(x / T), r = Math.floor(y / T);
+    if (!GF.tuyo(c, r)) return true;
+    if (!GF.tuyo(c - 1, r) && (x - c * T) < 18) return true;
+    if (!GF.tuyo(c + 1, r) && ((c + 1) * T - x) < 18) return true;
+    if (!GF.tuyo(c, r - 1) && (y - r * T) < T * 0.72) return true;
+    if (!GF.tuyo(c, r + 1) && ((r + 1) * T - y) < 16) return true;
+  }
   const p = GF.POND, px = p.col*T, py = p.row*T, pw = p.cols*T, ph = p.rows*T;
   const ex = px + pw/2, ey = py + ph/2;
   const dxp = (x-ex)/(pw/2 + pad), dyp = (y-ey)/(ph/2 + pad);

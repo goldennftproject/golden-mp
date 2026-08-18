@@ -7,6 +7,11 @@ class FarmScene extends Phaser.Scene {
   constructor() { super("farm"); }
 
   create() {
+    /* 18/8 — LO PRIMERO: fijar la FORMA de la granja para esta partida.
+       Todo lo que viene después (césped, bosque, cerca, adornos, cámara, límites) cuelga de acá,
+       así que tiene que resolverse antes de dibujar el primer píxel. `G.expansiones` es cuántos
+       bloques compró el jugador; como el orden es fijo, con el número alcanza. */
+    GF.aplicarTerreno((typeof G !== "undefined" && G.expansiones) || 0);
     const W = GF.WORLD_W, H = GF.WORLD_H, T = GF.TILE;
     window.FARM = this;   // para restaurar la granja desde la config
     // Phaser REUTILIZA la instancia al reiniciar la escena: hay que soltar todo lo cacheado,
@@ -64,27 +69,35 @@ class FarmScene extends Phaser.Scene {
       // el primer árbol (~1,5 celdas); de ahí para afuera lo tapa el bosque, y donde el bosque
       // tiene claros el fondo ya es del color del césped. Cubría 1638x1680 = 10,5 MB de textura
       // para enseñar 4 celdas de pasto. Con 4 celdas de sobra basta y sobra.
+      // 18/8: el pasto ya no cubre "el rectángulo del mundo": cubre EL TERRENO QUE TENÉS más el
+      // aire de bosque, que es la forma que puede tener ángulos hacia dentro. El renderTexture
+      // sigue siendo un rectángulo (es una textura), pero solo se DIBUJAN los tiles despejados,
+      // así que la memoria no crece con el hueco y el bosque tapa el resto.
+      const ter = GF.terreno();
       const cExtra = GF.BOSQUE ? 4 : Math.ceil(this.margenBosque("x") / T);
       const rExtra = GF.BOSQUE ? 4 : Math.ceil(this.margenBosque("y") / T);
-      const rt = this.add.renderTexture(-cExtra * T, -rExtra * T,
-        (GF.COLS + cExtra * 2) * T, (GF.ROWS + rExtra * 2) * T).setOrigin(0).setDepth(-1000);
+      const c0 = ter.c0 - cExtra, r0 = ter.r0 - rExtra;
+      const c1 = ter.c1 + cExtra, r1 = ter.r1 + rExtra;
+      const rt = this.add.renderTexture(c0 * T, r0 * T, (c1 - c0) * T, (r1 - r0) * T)
+        .setOrigin(0).setDepth(-1000);
       let gseed = 20260731;
       const grnd = () => { gseed = (gseed * 1664525 + 1013904223) >>> 0; return gseed / 4294967296; };
       const hasB = this.textures.exists("grass_b"), hasC = this.textures.exists("grass_c");
       const lote = typeof rt.beginDraw === "function";   // en lote: son ~1.200 tiles, no 200
       if (lote) rt.beginDraw();
-      for (let r = -rExtra; r < GF.ROWS + rExtra; r++) for (let c = -cExtra; c < GF.COLS + cExtra; c++) {
+      for (let r = r0; r < r1; r++) for (let c = c0; c < c1; c++) {
         const x = grnd();
         const key = (x < 0.55 || (!hasB && !hasC)) ? "grass_a" : (x < 0.90 && hasB ? "grass_b" : (hasC ? "grass_c" : "grass_a"));
-        const px = (c + cExtra) * T, py = (r + rExtra) * T;
-        if (lote) rt.batchDraw(key, px, py); else rt.draw(key, px, py);
+        if (lote) rt.batchDraw(key, (c - c0) * T, (r - r0) * T); else rt.draw(key, (c - c0) * T, (r - r0) * T);
       }
       if (lote) rt.endDraw();
     } else {   // respaldo: el damero de siempre
-      for (let r = 0; r < GF.ROWS; r++) for (let c = 0; c < GF.COLS; c++) {
+      const ter = GF.terreno();
+      ter.mias.forEach(s => {
+        const p = s.split(","), c = +p[0], r = +p[1];
         g.fillStyle((r + c) % 2 === 0 ? 0x6c8c53 : 0x64834c, 1);
         g.fillRect(c * T, r * T, T, T);
-      }
+      });
     }
     // detalles del césped (semilla fija): sprites de PixelLab; si faltan, el dibujo por código de antes
     let dseed = 20260730;
@@ -102,18 +115,20 @@ class FarmScene extends Phaser.Scene {
     // 17/8 (dirección): "el césped debe tener florcitas también fuera del corral". El desborde
     // se sube a 4 celdas —lo mismo que ahora cubre el pasto— y la densidad se calcula por ÁREA,
     // así que la franja de fuera queda igual de poblada que la de dentro y no se nota la cerca.
+    // 18/8: el área se ancla al ORIGEN del terreno, que puede ser negativo
     const RD = T * 4, AW = W + RD * 2, AH = H + RD * 2;
+    const AX = GF.ORIG_X - RD, AY = GF.ORIG_Y - RD;
     // El área ÚTIL no es el rectángulo entero: es solo lo que queda dentro del claro, porque el
     // resto lo tapa el bosque. Se estima muestreando, y con eso se calcula cuántos hacen falta
     // para que la densidad sea la MISMA dentro y fuera de la cerca.
     let dentro = 0;
-    for (let m = 0; m < 400; m++) if (this.dentroDelClaro(-RD + (m % 20) / 19 * AW, -RD + Math.floor(m / 20) / 19 * AH)) dentro++;
+    for (let m = 0; m < 400; m++) if (this.dentroDelClaro(AX + (m % 20) / 19 * AW, AY + Math.floor(m / 20) / 19 * AH)) dentro++;
     const util = Math.max(0.2, dentro / 400) * AW * AH;
     const nDecos = Math.round((hasDecos ? 110 : 210) * util / (W * H));
     let intentos = 0;
     for (let i = 0; i < nDecos && intentos < nDecos * 12; i++) {
       let dx = 0, dy = 0;
-      do { dx = -RD + drnd() * AW; dy = -RD + drnd() * AH; intentos++; }
+      do { dx = AX + drnd() * AW; dy = AY + drnd() * AH; intentos++; }
       while (!this.dentroDelClaro(dx, dy) && intentos < nDecos * 12);
       const t = drnd();
       if (hasDecos) {
@@ -230,26 +245,35 @@ class FarmScene extends Phaser.Scene {
     // cuadriculado: solo visible en modo edición (detalles 29/7)
     this.gridG = this.add.graphics().setDepth(-999.4).setVisible(!!GF.editMode);
     this.gridG.lineStyle(1, 0x18300f, 0.25);
-    for (let x = 0; x <= W; x += T) { this.gridG.beginPath(); this.gridG.moveTo(x, 0); this.gridG.lineTo(x, H); this.gridG.strokePath(); }
-    for (let y = 0; y <= H; y += T) { this.gridG.beginPath(); this.gridG.moveTo(0, y); this.gridG.lineTo(W, y); this.gridG.strokePath(); }
-    g.lineStyle(4, 0x3c4d31, 0.9).strokeRect(0, 0, W, H);
+    // 18/8: el mundo puede empezar en coordenadas NEGATIVAS (al comprar por la izquierda o por
+    // arriba), así que la grilla y el marco arrancan en el origen del terreno, no en (0,0).
+    const OX = GF.ORIG_X, OY = GF.ORIG_Y;
+    for (let x = OX; x <= OX + W; x += T) { this.gridG.beginPath(); this.gridG.moveTo(x, OY); this.gridG.lineTo(x, OY + H); this.gridG.strokePath(); }
+    for (let y = OY; y <= OY + H; y += T) { this.gridG.beginPath(); this.gridG.moveTo(OX, y); this.gridG.lineTo(OX + W, y); this.gridG.strokePath(); }
+    g.lineStyle(4, 0x3c4d31, 0.9).strokeRect(OX, OY, W, H);
 
     // cerca de madera cozy alrededor de la granja (horizontal de frente, vertical de canto)
     this.fenceSprites = [];   // referencias para la valla dorada de la Granja Legendaria (10/8)
     if (this.textures.exists("fence_top")) {
       const FH = T * 0.55, p2 = GF.POND;   // alto del tramo horizontal (de frente)
       const pondCell = (c, r) => c >= p2.col && c < p2.col + p2.cols && r >= p2.row && r < p2.row + p2.rows;
-      // horizontales de punta a punta (incluyen las celdas de esquina)
-      for (let c = 0; c < GF.COLS; c++) {
-        if (!pondCell(c, 0)) this.fenceSprites.push(this.add.image(c * T + T / 2, T * 0.58, "fence_top").setDisplaySize(T, FH).setOrigin(0.5, 1).setDepth(2));
-        if (!pondCell(c, GF.ROWS - 1)) this.fenceSprites.push(this.add.image(c * T + T / 2, H + 6, "fence_bottom").setDisplaySize(T, FH).setOrigin(0.5, 1).setDepth(H + 6));
-      }
-      // verticales de arriba a abajo: al cruzarse con las horizontales en las esquinas, la unión
-      // es perfecta por construcción (son las mismas piezas, sin sprite de esquina aparte)
-      for (let r = 0; r < GF.ROWS; r++) {
-        if (!pondCell(0, r)) this.fenceSprites.push(this.add.image(7, r * T + T, "fence_left").setDisplaySize(T * 0.22, T).setOrigin(0.5, 1).setDepth(3));
-        if (!pondCell(GF.COLS - 1, r)) this.fenceSprites.push(this.add.image(W - 7, r * T + T, "fence_right").setDisplaySize(T * 0.22, T).setOrigin(0.5, 1).setDepth(3));
-      }
+      /* 18/8 — SE RECORRE EL PERÍMETRO, no lado por lado.
+         Antes eran cuatro bucles (fila 0, fila ROWS-1, columna 0, columna COLS-1), que solo sabe
+         describir un rectángulo. Con las expansiones el contorno tiene entrantes y esquinas hacia
+         dentro. La regla nueva no enumera casos: para cada celda TUYA, si el vecino de arriba no
+         es tuyo va cerca de arriba; si el de la izquierda no es tuyo, cerca izquierda; etc.
+         Cualquier forma sale sola, con los cuatro sprites que ya existen — las uniones encajan por
+         construcción, igual que encajaban en las esquinas del rectángulo. */
+      const ter = GF.terreno(), esMia = (c, r) => ter.mias.has(c + "," + r);
+      ter.mias.forEach(s => {
+        const p = s.split(","), c = +p[0], r = +p[1];
+        if (pondCell(c, r)) return;                       // la laguna se come su tramo, como siempre
+        const x = c * T, y = r * T;
+        if (!esMia(c, r - 1)) this.fenceSprites.push(this.add.image(x + T / 2, y + T * 0.58, "fence_top").setDisplaySize(T, FH).setOrigin(0.5, 1).setDepth(2));
+        if (!esMia(c, r + 1)) this.fenceSprites.push(this.add.image(x + T / 2, y + T + 6, "fence_bottom").setDisplaySize(T, FH).setOrigin(0.5, 1).setDepth(y + T + 6));
+        if (!esMia(c - 1, r)) this.fenceSprites.push(this.add.image(x + 7, y + T, "fence_left").setDisplaySize(T * 0.22, T).setOrigin(0.5, 1).setDepth(3));
+        if (!esMia(c + 1, r)) this.fenceSprites.push(this.add.image(x + T - 7, y + T, "fence_right").setDisplaySize(T * 0.22, T).setOrigin(0.5, 1).setDepth(3));
+      });
     }
 
     // objetos del mundo (con estado para interacción)
@@ -376,7 +400,7 @@ class FarmScene extends Phaser.Scene {
 
     // portal al Bosque — ahora con su sprite cozy (arco de piedra con vórtice)
     if (window.ForestScene !== undefined || typeof ForestScene !== "undefined") {
-      const px = GF.WORLD_W - 90, py = GF.WORLD_H - 52;   // 12/8: DENTRO de la cerca (antes nacía sobre la esquina)
+      const px = GF.ORIG_X + GF.WORLD_W - 90, py = GF.ORIG_Y + GF.WORLD_H - 52;   // 12/8: DENTRO de la cerca · 18/8: sigue al terreno
       let pspr = null;
       if (this.textures.exists("portal")) {
         // sprite (no imagen) para que el espiral gire 360° en loop; el latido sutil se mantiene
@@ -414,7 +438,7 @@ class FarmScene extends Phaser.Scene {
       // tiles y, al crearse después, los tapaba: el suelo se veía verde plano (9/8).
       this.add.graphics().setDepth(-1003)
         .fillStyle(GF.BOSQUE ? 0x328032 : 0x2e7fa8, 1)   // 0x328032 = el color medio del césped
-        .fillRect(-MARGEN, -MARGEN, GF.WORLD_W + MARGEN * 2, GF.WORLD_H + MARGEN * 2);
+        .fillRect(GF.ORIG_X - MARGEN, GF.ORIG_Y - MARGEN, GF.WORLD_W + MARGEN * 2, GF.WORLD_H + MARGEN * 2);
     }
     if (GF.BOSQUE) {
       // BLINDADO: si el bosque falla por lo que sea, el juego arranca igual. Un error acá
@@ -947,14 +971,9 @@ class FarmScene extends Phaser.Scene {
   // los de fuera de la cerca caían ahí: por eso la franja de césped salía pelada.
   dentroDelClaro(x, y) {
     if (!GF.BOSQUE) return true;
-    const T = GF.TILE, W = GF.WORLD_W, H = GF.WORLD_H;
-    const colchon = (GF.BOSQUE_COLCHON != null ? GF.BOSQUE_COLCHON : 0.5) * T;
-    const RX = W / 2 + colchon, RY = H / 2 + colchon;
-    const R = GF.BOSQUE_REDONDEZ != null ? GF.BOSQUE_REDONDEZ : 0;
-    const nx = (x - W / 2) / RX, ny = (y - H / 2) / RY;
-    const met = Math.max(Math.abs(nx), Math.abs(ny)) * (1 - R) + Math.hypot(nx, ny) * R;
-    const BASE = Math.max((W - W / 2) / RX, (H - H / 2) / RY) + (GF.BOSQUE_AIRE != null ? GF.BOSQUE_AIRE : 0.05);
-    return met < BASE;
+    // 18/8: una sola verdad con dibujarBosque — la celda está despejada o no lo está.
+    const T = GF.TILE;
+    return GF.despejado(Math.floor(x / T), Math.floor(y / T));
   }
 
   // MOSAICO DE BOSQUE PARA LO QUE QUEDA FUERA DEL MAPA (17/8).
@@ -1043,15 +1062,20 @@ class FarmScene extends Phaser.Scene {
   limiteVista() {
     const MX = this.margenBosque("x"), MY = this.margenBosque("y");
     const b = MX > 0 ? 16 : 0;
-    return { x1: -MX + b, y1: -MY + b, x2: GF.WORLD_W + MX - b, y2: GF.WORLD_H + MY - b };
+    // 18/8: el mundo puede empezar en negativo, así que el límite cuelga del ORIGEN del terreno
+    return { x1: GF.ORIG_X - MX + b, y1: GF.ORIG_Y - MY + b,
+             x2: GF.ORIG_X + GF.WORLD_W + MX - b, y2: GF.ORIG_Y + GF.WORLD_H + MY - b };
   }
 
   // Ancho del anillo por eje. Es más ancho que alto a propósito: la pantalla también lo es, y
   // así el bosque entero entra en el encuadre al alejar del todo (dirección, 17/8).
   margenBosque(eje) {
     if (!GF.BOSQUE) return GF.ISLA ? (GF.ISLA_MARGEN || 260) : 0;
-    const d = GF.BOSQUE_MARGEN || 420;
-    return eje === "x" ? (GF.BOSQUE_MARGEN_X || d) : (GF.BOSQUE_MARGEN_Y || d);
+    // 18/8: el mapa mide siempre GF.MAPA; lo que cambia con las expansiones es la granja, así que
+    // el anillo de bosque se calcula por diferencia y ENCOGE solo a medida que el claro crece.
+    const mapa = GF.MAPA || 1600;
+    const m = eje === "x" ? (mapa - GF.WORLD_W) / 2 : (mapa - GF.WORLD_H) / 2;
+    return Math.max(GF.TILE * 3, Math.round(m));   // nunca menos de 3 celdas: si no, se ve el vacío
   }
 
   fitCamera() {
@@ -1669,7 +1693,7 @@ class FarmScene extends Phaser.Scene {
     (this.fenceSprites || []).forEach(f => { if (f.active) { if (oroOn) f.setTint(0xe8c25a); else f.clearTint(); } });
     if (oroOn && !this.oroTimer) {
       this.oroTimer = this.time.addEvent({ delay: 700, loop: true, callback: () => {
-        const W = GF.COLS * GF.TILE, H = GF.ROWS * GF.TILE;   // una chispa dorada al azar que sube y se apaga
+        const W = GF.WORLD_W, H = GF.WORLD_H;   // una chispa dorada al azar que sube y se apaga
         const x = 20 + Math.random() * (W - 40), y = 30 + Math.random() * (H - 40);
         const p = this.add.circle(x, y, 1.5 + Math.random() * 1.5, 0xffd75e, 0.9).setDepth(y).setBlendMode(Phaser.BlendModes.ADD);
         this.tweens.add({ targets: p, y: y - 14 - Math.random() * 10, alpha: 0, duration: 1400 + Math.random() * 600, onComplete: () => p.destroy() });
@@ -1964,7 +1988,7 @@ class FarmScene extends Phaser.Scene {
     // 9/8: los animales andan SUELTOS por la granja. No se dibuja patio ni cerca; la zona
     // por donde pueden caminar es la granja entera y lo que esquivan se decide en puntoAnimal().
     if (!GF.CORRAL_ON) {
-      this.corral = { x1: 26, y1: T * 1.2, x2: GF.WORLD_W - 26, y2: GF.WORLD_H - 26 };
+      this.corral = { x1: GF.ORIG_X + 26, y1: GF.ORIG_Y + T * 1.2, x2: GF.ORIG_X + GF.WORLD_W - 26, y2: GF.ORIG_Y + GF.WORLD_H - 26 };
       this.corralCerca = null;
       return;
     }
@@ -2170,9 +2194,11 @@ class FarmScene extends Phaser.Scene {
   // celda libre para una PARCELA nueva (13-60): mismas reglas que un adorno, más lejos de la
   // laguna. Barre desde el centro hacia afuera para que las nuevas queden cerca de las demás.
   celdaLibreParcela() {
-    const cc = Math.floor(GF.COLS / 2), cr = Math.floor(GF.ROWS / 2), p = GF.POND;
+    const cc = GF.C0 + Math.floor(GF.COLS / 2), cr = GF.R0 + Math.floor(GF.ROWS / 2), p = GF.POND;
     const celdas = [];
-    for (let r = 2; r < GF.ROWS - 1; r++) for (let c = 1; c < GF.COLS - 1; c++) celdas.push({ c, r, d: Math.abs(c - cc) + Math.abs(r - cr) });
+    // 18/8: se recorre el terreno de verdad; enCerca ya sabe cuál es el borde de cualquier forma
+    GF.terreno().mias.forEach(s2 => { const q = s2.split(","), c = +q[0], r = +q[1];
+      if (!GF.enCerca(c, r)) celdas.push({ c, r, d: Math.abs(c - cc) + Math.abs(r - cr) }); });
     celdas.sort((a, b) => a.d - b.d);
     for (const q of celdas) {
       if (q.c >= p.col - 1 && q.c < p.col + p.cols + 1 && q.r >= p.row - 1 && q.r < p.row + p.rows + 1) continue;   // la laguna y su borde
@@ -2217,12 +2243,12 @@ class FarmScene extends Phaser.Scene {
   // busca una celda libre para dejar un adorno recién comprado (no pisa nada de lo que ya hay)
   huecoParaAdorno() {
     const ocupada = (col, row) => !this.celdaLibreAdorno(col, row, -1);
-    const c0 = Math.floor(GF.COLS / 2), r0 = Math.floor(GF.ROWS / 2);
+    const c0 = GF.C0 + Math.floor(GF.COLS / 2), r0 = GF.R0 + Math.floor(GF.ROWS / 2);
     for (let rad = 0; rad < Math.max(GF.COLS, GF.ROWS); rad++) {
       for (let dr = -rad; dr <= rad; dr++) for (let dc = -rad; dc <= rad; dc++) {
         if (Math.max(Math.abs(dc), Math.abs(dr)) !== rad) continue;
         const col = c0 + dc, row = r0 + dr;
-        if (col < 1 || row < 2 || col >= GF.COLS - 1 || row >= GF.ROWS - 1) continue;
+        if (GF.enCerca(col, row)) continue;   // 18/8: vale para cualquier forma, no solo el rectángulo
         if (!ocupada(col, row)) return { col, row };
       }
     }
@@ -2284,7 +2310,7 @@ class FarmScene extends Phaser.Scene {
     if (this.mascota && (!def || this.mascota.k !== quiero)) { this.mascota.spr.destroy(); this.mascota = null; }
     if (!def || this.mascota) return;
     if (!this.textures.exists(def.sprite)) return;   // todavía no cargó el arte: no pasa nada
-    const pt = this.puntoAnimal() || { x: GF.WORLD_W / 2, y: GF.WORLD_H / 2 };
+    const pt = this.puntoAnimal() || { x: GF.ORIG_X + GF.WORLD_W / 2, y: GF.ORIG_Y + GF.WORLD_H / 2 };
     const spr = this.add.image(pt.x, pt.y, def.sprite).setOrigin(0.5, 1);
     spr.setScale((GF.TILE * 0.52) / spr.width);       // más chica que los animales del Establo
     this.mascota = { k: quiero, spr, tx: pt.x, ty: pt.y, esperaHasta: 0, bob: Math.random() * 6.28 };
@@ -2445,7 +2471,7 @@ class FarmScene extends Phaser.Scene {
       const col = [0xffd75e, 0xf4c0d1, 0xb5d4f4][i % 3];
       g.fillStyle(col, 1).fillEllipse(-2.6, 0, 5, 7).fillEllipse(2.6, 0, 5, 7);
       g.fillStyle(0x241505, 0.8).fillRect(-0.6, -3, 1.2, 6);
-      g.setPosition(GF.WORLD_W * Math.random(), GF.WORLD_H * Math.random());
+      g.setPosition(GF.ORIG_X + GF.WORLD_W * Math.random(), GF.ORIG_Y + GF.WORLD_H * Math.random());
       // LUCIÉRNAGA (17/8, dirección): el mismo bicho con otro traje. De día vuela la mariposa;
       // de noche se apaga y se enciende la luciérnaga, EN EL MISMO SITIO y con el mismo
       // movimiento — no son dos bichos distintos, es uno que cambia de aspecto.
@@ -2547,7 +2573,7 @@ class FarmScene extends Phaser.Scene {
           const f = flores[(Math.random() * flores.length) | 0];
           m.tx = f.x; m.ty = f.y - 1; m.enFlor = true;
         } else {
-          m.tx = 40 + Math.random() * (GF.WORLD_W - 80); m.ty = 40 + Math.random() * (GF.WORLD_H - 80);
+          m.tx = GF.ORIG_X + 40 + Math.random() * (GF.WORLD_W - 80); m.ty = GF.ORIG_Y + 40 + Math.random() * (GF.WORLD_H - 80);
           m.enFlor = false;
         }
       }
@@ -2634,7 +2660,7 @@ class FarmScene extends Phaser.Scene {
       let px = 0, py = 0, ok = false;
       for (let intento = 0; intento < 60 && !ok; intento++) {
         const r1 = excavAzar(i * 7 + intento * 2), r2 = excavAzar(i * 7 + intento * 2 + 1);
-        px = 60 + r1 * (GF.WORLD_W - 120); py = 70 + r2 * (GF.WORLD_H - 140);
+        px = GF.ORIG_X + 60 + r1 * (GF.WORLD_W - 120); py = GF.ORIG_Y + 70 + r2 * (GF.WORLD_H - 140);
         ok = !GF.blockedAt(px, py, 14) && !GF.PLOTS.some(pl => Math.abs((pl.col + 0.5) * T - px) < T && Math.abs((pl.row + 0.5) * T - py) < T);
       }
       if (!ok) continue;
@@ -2747,7 +2773,7 @@ class FarmScene extends Phaser.Scene {
       // césped y el mosaico se quedaban en mediodía perpetuo mientras la granja anochecía.
       // Ahora cubre todo lo que la cámara pueda mostrar, centrado en el mismo sitio que el
       // mosaico, así que la hora es una sola en toda la pantalla.
-      const _c = { x: GF.WORLD_W / 2, y: GF.WORLD_H / 2 }, _lado = 9000;
+      const _c = { x: GF.ORIG_X + GF.WORLD_W / 2, y: GF.ORIG_Y + GF.WORLD_H / 2 }, _lado = 9000;
       this.cielo = this.add.rectangle(_c.x, _c.y, _lado, _lado, 0x0a1030, 0).setDepth(90000);
       this.faroles = [];
       this._cieloAt = 0;
@@ -3029,7 +3055,7 @@ class FarmScene extends Phaser.Scene {
       outer: for (let r = 1; r < 9; r++) for (let dy = -r; dy <= r; dy++) for (let dx = -r; dx <= r; dx++) {
         if (Math.max(Math.abs(dx), Math.abs(dy)) !== r) continue;
         const col = hc + dx, row = hr + dy;
-        if (col < 1 || row < 2 || col >= GF.COLS - 1 || row >= GF.ROWS - 2) continue;
+        if (GF.enCerca(col, row) || !GF.tuyo(col, row + 1)) continue;   // 18/8: ídem, y deja libre la fila de abajo
         const cx = (col + 0.5) * T, cy = (row + 0.6) * T;
         if (GF.blockedAt(cx, cy, 8)) continue;
         if (GF.PLOTS.some(p => p.col === col && p.row === row)) continue;
@@ -3444,17 +3470,27 @@ class FarmScene extends Phaser.Scene {
           const rx = az(), ry = az(), rd = az();   // se sacan SIEMPRE, para que el azar no baile
           // Primero hay que saber si el anclaje cae en el frente o en el fondo, porque de eso
           // depende cuánto desorden se le permite. Se mide sobre el anclaje SIN mover.
-          const nx0 = (a[0] - W / 2) / RX, ny0 = (a[1] - altoS * 0.28 - H / 2) / RY;
-          const fuera0 = met(nx0, ny0) - borde(nx0, ny0);
-          if (fuera0 < 0) continue;                             // está en el claro
-          const enFrente0 = fuera0 * Math.min(RX, RY) <= FRENTE * T;
+          /* 18/8 — EL CLARO YA NO ES UNA ELIPSE, ES EL TERRENO QUE TENÉS.
+             La métrica de antes (met/borde con redondez y oleaje) solo sabe describir una forma
+             convexa alrededor de un centro. Con las expansiones el claro puede tener entrantes y
+             esquinas hacia dentro, y ninguna elipse los describe. Ahora se pregunta por la CELDA:
+             si está despejada no va árbol, y si no, sí. La forma sale sola, y el aire de 2,3
+             celdas entre la cerca y el primer tronco lo garantiza el propio conjunto DESPEJADAS.
+             "Estar en el frente" pasa a ser "tener el claro a menos de FRENTE celdas", medido
+             sobre la misma cuadrícula. */
+          const cA = Math.floor(a[0] / T), rA = Math.floor((a[1] - altoS * 0.28) / T);
+          if (GF.despejado(cA, rA)) continue;                   // está en el claro
+          let enFrente0 = false;
+          const FR = Math.ceil(FRENTE);
+          for (let dc = -FR; dc <= FR && !enFrente0; dc++)
+            for (let dr = -FR; dr <= FR && !enFrente0; dr++)
+              if (GF.despejado(cA + dc, rA + dr)) enFrente0 = true;
           const jx = enFrente0 ? JX : Math.max(JX, JFONDO);
           const jy = enFrente0 ? JY : Math.max(JY, JFONDO);
           const cxA = a[0] + Math.round((rx * 2 - 1) * jx);
           const baseA = a[1] + Math.round((ry * 2 - 1) * jy);
           const px = cxA - anchoT * esc / 2, py = baseA - altoT * esc;   // esquina del sprite
-          const nx = (cxA - W / 2) / RX, ny = (baseA - altoS * 0.28 - H / 2) / RY;
-          if (met(nx, ny) - borde(nx, ny) < 0) continue;         // quedó dentro del claro al moverse
+          if (GF.despejado(Math.floor(cxA / T), Math.floor((baseA - altoS * 0.28) / T))) continue;   // quedó dentro del claro al moverse
           // RALEO POR LEY, PERO SOLO HACIA ADENTRO (17/8).
           // Dirección compuso el bosque a mano y exportó 260/260 anclajes de CELDA (100%),
           // 187/270 de ENCRUCIJADA (69%) y 228/270 de MEDIA ARISTA (84%). Al mirar el export
