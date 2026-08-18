@@ -41,7 +41,12 @@ EXTRA = ["res_", "crop_", "cropm_", "cropg_", "fish_", "coin_", "animal_", "deco
 SUELTOS = ["establo", "curtiduria", "ofrendas", "mazo", "pet_gallina", "skin_sombrero", "godhand", "tree_sapling", "plot_wild",
            # 17/8: mobiliario de la granja que se fue sumando después del último atlas
            "buzon", "buzon_full", "baul_premios", "baul_premios_lleno", "paquete_dia", "paquete_dia_abierto",
-           "monticulo", "tablon_pedidos", "tablon_pedidos_full", "sobre_carta", "papel_carta", "isla"]
+           "monticulo", "tablon_pedidos", "tablon_pedidos_full", "sobre_carta", "papel_carta"]
+# 17/8: "isla" FUERA del atlas. La metí buscando "cero pedidos sueltos" y fue un error: mide
+# 1190x854, o sea que ella sola empuja el lienzo del atlas a 4096 de ancho y reordena TODO el
+# empaquetado. boot.js ya lo decía en un comentario —"imagen grande y aparte, NO va al atlas"—
+# y no lo leí. Además con el bosque puesto ni siquiera se dibuja: solo la usa el modo mar.
+EXCLUIR = {"isla"}
 
 # BESTIARIO (10/8): las 11 criaturas nuevas son 176 cuadros. Sueltos serían 176 pedidos
 # extra al server gratis; en el atlas son cero. Los arma tools/build-bestiario.py.
@@ -54,7 +59,7 @@ def claves_pedidas():
     entera y encima se le suman los iconos EXTRA. Si no hay atlas previo, arranca vacía."""
     try:
         viejo = json.load(open(SALIDA_JSON, encoding="utf-8"))
-        return {k: k + ".png" for k in viejo.get("frames", {})}
+        return {k: k + ".png" for k in viejo.get("frames", {}) if k not in EXCLUIR}
     except Exception:
         return {}
 
@@ -67,6 +72,8 @@ def archivos():
         if not nombre.endswith(".png"):
             continue
         clave = nombre[:-4]
+        if clave in EXCLUIR:
+            continue
         if clave in pedidos or clave in SUELTOS or any(clave.startswith(p) for p in EXTRA + BESTIARIO):
             todos[clave] = os.path.join(FARM, nombre)
     faltan = [k for k in pedidos if k not in todos]

@@ -3851,3 +3851,17 @@ que se abre con **`?laguna=1`** en la URL y dibuja el recuadro donde el juego cr
 laguna (rojo), sus celdas (azul) y la grilla (amarillo), más su tamaño de textura y de dibujo.
 Con eso se distingue de una vez entre "se dibuja entera y algo la tapa" y "se dibuja ya recortada".
 No se enciende solo, y no necesita consola.
+
+### La isla no debía estar en el atlas (y puede ser la causa de la laguna)
+Buscando "cero pedidos sueltos" metí `isla` dentro del atlas. `boot.js` ya lo desaconsejaba en un
+comentario que no leí: *"COSTA de la isla: imagen grande y aparte, NO va al atlas (mide 1190x854)"*.
+
+Consecuencias: ella sola empujaba el lienzo del atlas a **4096x1934 = 7,9 millones de píxeles**
+(unos 31 MB de textura RGBA en memoria) y reordenaba todo el empaquetado. Fuera del atlas queda en
+**4096x1142** y 764 KB. Encima, con el bosque puesto la isla ni se dibuja: solo la usa el modo mar.
+
+Por qué puede ser la causa del corte de la laguna: si el navegador reescala una textura tan grande,
+el `drawImage(src, fr.x, fr.y, ...)` que desempaqueta cada frame lee de **coordenadas equivocadas**,
+y cada sprite sale con un trozo de otro sitio. Encaja con lo observado: el recuadro del sprite tiene
+el tamaño correcto (158x136 confirmado por el diagnóstico) pero su contenido está desplazado y
+recortado. No está demostrado, pero es la primera hipótesis que explica el síntoma exacto.
