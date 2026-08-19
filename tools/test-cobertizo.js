@@ -20,7 +20,7 @@ const ok=(n,c,d)=>{if(!c)fallos++;console.log((c?"  ok   ":"  FALLA")+"  "+n+(d?
 // 1) LA BOLSA YA NO MEZCLA
 {
   const g=juego();
-  g.G.regalos={tree:2,rock:1,plot:1};
+  g.G.cobertizo={tree:2,rock:1,plot:1};
   g.G.planos={store:true,horno:true};
   g.G.decoBolsa={}; if(g.DECO_ORDER[0]) g.G.decoBolsa[g.DECO_ORDER[0]]=3;
   g.G.tools.axe=5; g.G.res.madera=40; g.G.seeds.papa=6;   // cosas que SÍ se gastan
@@ -34,7 +34,7 @@ const ok=(n,c,d)=>{if(!c)fallos++;console.log((c?"  ok   ":"  FALLA")+"  "+n+(d?
 // 2) EL COBERTIZO LLEVA TODO LO COLOCABLE, Y NADA MÁS
 {
   const g=juego();
-  g.G.regalos={tree:2,rock:1,plot:1};
+  g.G.cobertizo={tree:2,rock:1,plot:1};
   g.G.planos={store:true};
   g.G.decoBolsa={}; if(g.DECO_ORDER[0]) g.G.decoBolsa[g.DECO_ORDER[0]]=3;
   g.G.chests=[{col:null,row:null},{col:5,row:5}];   // uno sin colocar, otro ya puesto
@@ -47,20 +47,36 @@ const ok=(n,c,d)=>{if(!c)fallos++;console.log((c?"  ok   ":"  FALLA")+"  "+n+(d?
   ok("y nada que se gaste", !it.some(d=>["res","seed","tool","pick","dish","fish"].includes(d.kind)));
   ok("el contador cuadra", g.cobertizoCuenta()===it.length, it.length+"");
 }
-// 3) EL BAÚL NO PASA POR LA BARRA RÁPIDA
+// 3) EL PREMIO VIAJA DEL BAÚL AL COBERTIZO (bug: "suena el ruidito pero no son entregados")
 {
   const g=juego();
   g.G.regalos={tree:1,rock:0,plot:0};
-  g.regaloReclamar("tree");
-  ok("reclamar NO deja nada en la barra rápida",
-     !g.G.hotbar.some(h=>h&&h.kind==="regalo"));
-  ok("...y la pieza está en el cobertizo",
+  ok("antes de reclamar: está en el BAÚL y NO en el cobertizo",
+     g.regalosPendientes()===1 && g.cobertizoCuenta()===0);
+  ok("reclamar devuelve true", g.regaloReclamar("tree")===true);
+  ok("...y SALE del baúl", g.regalosPendientes()===0, "quedan "+g.regalosPendientes());
+  ok("...y ENTRA en el cobertizo",
      g.cobertizoItems().some(d=>d.kind==="regalo"&&d.key==="tree"));
+  ok("...y no deja nada en la barra rápida", !g.G.hotbar.some(h=>h&&h.kind==="regalo"));
+  ok("reclamar otra vez ya no da nada", g.regaloReclamar("tree")===false);
+}
+// 3b) NO SE PUEDEN FABRICAR PREMIOS INFINITOS reclamando y resincronizando
+{
+  const g=juego();
+  g.G.level=10; g.G.expansiones=0; g.G.plotsOwned=3;
+  g.G.regalos={tree:0,rock:0,plot:0}; g.G.cobertizo={tree:0,rock:0,plot:0};
+  g.regalosSync();
+  const total=g.regalosPendientes();
+  g.regaloReclamar("plot");                 // uno pasa al cobertizo
+  g.regalosSync(); g.regalosSync();         // y ahora resincronizar NO puede reponerlo
+  ok("recoger un premio no hace que el nivel lo vuelva a regalar",
+     g.regalosPendientes()+g.cobertizoCuenta()===total,
+     "baúl "+g.regalosPendientes()+" + cobertizo "+g.cobertizoCuenta()+" = "+total);
 }
 // 4) COLOCAR LA SACA DEL COBERTIZO
 {
   const g=juego();
-  g.G.regalos={tree:1,rock:0,plot:0};
+  g.G.cobertizo={tree:1,rock:0,plot:0};
   const antes=g.cobertizoCuenta();
   g.regaloColocar("tree",6,6);
   ok("colocar vacía su hueco del cobertizo", g.cobertizoCuenta()===antes-1, antes+" → "+g.cobertizoCuenta());

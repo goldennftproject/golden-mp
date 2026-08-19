@@ -19,7 +19,15 @@ const G = {
   cosEq: null,                   // cosmético lucido: título, color de nombre, marco y aura
   incursion: null, incDia: null, dummyTrain: null,   // incursiones de un clic y entrenamiento offline   // tareas de nivel 11-50, mejoras y cosméticos
   vales: 0, pedidos: null,   // 16/8: TABLÓN DE PEDIDOS — vales (moneda del tablón) + estado diario
-  regalos: { tree: 0, rock: 0, plot: 0 },   // 16/8: nodos y parcelas que el nivel regaló y esperan en el BAÚL
+  /* DOS BOLSAS, NO UNA (18/8) — el fallo que reportó dirección: "aparece que me dan un nodo de
+     árbol y uno de cultivo, al reclamarlos suena el ruidito, pero no son entregados".
+     Causa: regaloReclamar no descontaba nada, y el baúl y el Cobertizo leían LA MISMA lista. El
+     premio ya estaba en el Cobertizo desde que lo daba el nivel, así que el clic del baúl no
+     movía nada: solo sonaba. Ahora son dos sitios de verdad y el premio VIAJA de uno al otro.
+       · regalos   = esperando en el BAÚL, sin recoger
+       · cobertizo = recogido, esperando a que elijas dónde va */
+  regalos: { tree: 0, rock: 0, plot: 0 },
+  cobertizo: { tree: 0, rock: 0, plot: 0 },   // 16/8: nodos y parcelas que el nivel regaló y esperan en el BAÚL
   combatXp: 0,                   // doc 2/8: barra de Combate GLOBAL — suma la XP de todos los kills
   states: [],                    // doc 2/8: estados/debuffs del bestiario sobre el jugador (no se guardan)
   tuto: { step: 0, n: 0, done: false, v: 2 },   // doc 2/8: tutorial guiado de micro-objetivos (v = versión de la cadena)
@@ -1220,10 +1228,13 @@ function nodosQueTocan(lvl) {
 function regalosSync() {
   const q = G.regalos || (G.regalos = { tree: 0, rock: 0, plot: 0 });
   const meta = nodosQueTocan(G.level || 1);
+  /* 18/8: cuenta las DOS bolsas. Si solo mirara el baúl, en cuanto el jugador recogiera un premio
+     regalosSync creería que le falta y se lo volvería a dar: premios infinitos con solo abrir el baúl. */
+  const cb = cobertizoBolsa();
   const tiene = {
-    tree: (G.treesOpen || [0]).length + q.tree,
-    rock: (G.rocksOpen || [0]).length + q.rock,
-    plot: (G.plotsOwned || 3) + q.plot,
+    tree: (G.treesOpen || [0]).length + q.tree + (cb.tree || 0),
+    rock: (G.rocksOpen || [0]).length + q.rock + (cb.rock || 0),
+    plot: (G.plotsOwned || 3) + q.plot + (cb.plot || 0),
   };
   let nuevos = 0;
   for (const k of ["tree", "rock", "plot"]) {
@@ -1236,6 +1247,7 @@ var REGALO_LABEL = { tree: "Retoño", rock: "Roca", plot: "Parcela" };
 // el género importa: "ninguna retoño" quedaba mal en el aviso
 function REGALO_NADA(t) { return { tree: "ningún retoño", rock: "ninguna roca", plot: "ninguna parcela" }[t] || "ninguno"; }
 function regalosPendientes() { const q = G.regalos || {}; return (q.tree || 0) + (q.rock || 0) + (q.plot || 0); }
+function cobertizoBolsa() { return G.cobertizo || (G.cobertizo = { tree: 0, rock: 0, plot: 0 }); }
 // reclamar UNO: lo saca de la cola y lo activa en la granja
 /* ============ LOS REGALOS SE COLOCAN A MANO (18/8, dirección) =======================
    "Cuando te llegan al baúl, en vez de plantarse automáticamente en el terreno, que vayan al
@@ -1253,6 +1265,8 @@ function regaloAHotbar() {}
 function regaloReclamar(tipo) {
   const q = G.regalos || (G.regalos = { tree: 0, rock: 0, plot: 0 });
   if (!q[tipo]) return false;
+  q[tipo]--;                                   // sale del baúl…
+  cobertizoBolsa()[tipo] = (cobertizoBolsa()[tipo] || 0) + 1;   // …y entra en el cobertizo
   log((REGALO_LABEL[tipo] || tipo) + " al Cobertizo — desde ahí elegís dónde va.", "gold");
   toast((REGALO_LABEL[tipo] || tipo) + " al Cobertizo 🏚");
   if (window.sfx) sfx("level");
@@ -1274,7 +1288,7 @@ function nodoIndicePorLock(tipo, lockIdx) {
 /* colocar de verdad: acá es donde el regalo pasa a ser parte de la granja, en la celda que
    eligió el jugador. La escena llama a esto desde colocarEn(). */
 function regaloColocar(tipo, col, row) {
-  const q = G.regalos || (G.regalos = { tree: 0, rock: 0, plot: 0 });
+  const q = cobertizoBolsa();   // 18/8: se coloca lo que está EN EL COBERTIZO, no lo que sigue en el baúl
   if (!q[tipo]) { toast("No te queda " + REGALO_NADA(tipo)); return false; }
   const T = GF.TILE;
   if (tipo === "plot") {
@@ -3707,9 +3721,8 @@ function canonicalStacks() {
    Los regalos del baúl vienen DIRECTOS acá; no pasan por la barra rápida ni por el inventario. */
 function cobertizoItems() {
   const list = [];
-  if (G.regalos) for (const t of ["plot", "tree", "rock"]) {
-    for (let i = 0; i < (G.regalos[t] || 0); i++) list.push({ kind: "regalo", key: t });
-  }
+  { const cb = cobertizoBolsa();
+    for (const t of ["plot", "tree", "rock"]) for (let i = 0; i < (cb[t] || 0); i++) list.push({ kind: "regalo", key: t }); }
   if (typeof DECO_ORDER !== "undefined") DECO_ORDER.forEach(id => {
     for (let i = 0; i < decoTengo(id); i++) list.push({ kind: "deco", key: id });
   });

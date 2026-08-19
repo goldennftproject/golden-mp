@@ -30,21 +30,22 @@ const ok=(n,c,d)=>{if(!c)fallos++;console.log((c?"  ok   ":"  FALLA")+"  "+n+(d?
   ok("...y aparece en el cobertizo, no en la barra",
     g.cobertizoItems().some(d=>d.kind==="regalo"&&d.key==="tree") &&
     !g.G.hotbar.some(h=>h&&h.kind==="regalo"));
-  ok("sigue contando como pendiente hasta colocarlo", g.G.regalos.tree===1);
+  ok("sale del baúl y queda en el cobertizo, pendiente de colocar",
+     g.G.regalos.tree===0 && g.G.cobertizo.tree===1);
   g.regaloReclamar("plot");
   ok("la parcela tampoco se planta sola", g.G.plotsOwned===parAntes);
   ok("y también va al cobertizo", g.cobertizoItems().some(d=>d.kind==="regalo"&&d.key==="plot"));
 }
 // 2) COLOCAR SÍ LO PONE, EN LA CELDA ELEGIDA
 {
-  const g=juego(); g.G.regalos={tree:1,rock:1,plot:1};
+  const g=juego(); g.G.cobertizo={tree:1,rock:1,plot:1};   // ya recogidos del baúl
   const GF=g.GF;
   const arbAntes=g.G.treesOpen.length;
   ok("colocar el árbol lo abre", g.regaloColocar("tree",6,6)===true && g.G.treesOpen.length===arbAntes+1);
   const idx=g.nodoIndicePorLock("tree", g.G.treesOpen[g.G.treesOpen.length-1]);
   const lay=g.G.layout&&g.G.layout[idx];
   ok("...y queda en la celda que se eligió", !!lay && lay.by===(6+1)*GF.TILE, lay?("cx="+lay.cx+" by="+lay.by):"sin layout");
-  ok("el regalo se gasta", g.G.regalos.tree===0);
+  ok("el regalo se gasta del cobertizo", g.G.cobertizo.tree===0);
   const par=g.G.plotsOwned;
   ok("colocar la parcela la suma", g.regaloColocar("plot",7,7)===true && g.G.plotsOwned===par+1);
   ok("...y guarda su celda", g.G.layoutPlots && Object.values(g.G.layoutPlots).some(v=>v.col===7&&v.row===7));
@@ -52,7 +53,7 @@ const ok=(n,c,d)=>{if(!c)fallos++;console.log((c?"  ok   ":"  FALLA")+"  "+n+(d?
 }
 // 3) NO SE PUEDE COLOCAR LO QUE NO TENÉS
 {
-  const g=juego(); g.G.regalos={tree:0,rock:0,plot:0};
+  const g=juego(); g.G.cobertizo={tree:0,rock:0,plot:0};
   ok("sin regalos, colocar devuelve false y avisa",
     g.regaloColocar("tree",6,6)===false && !!g.ultToast, g.ultToast||"(sin aviso)");
 }
@@ -83,16 +84,17 @@ const ok=(n,c,d)=>{if(!c)fallos++;console.log((c?"  ok   ":"  FALLA")+"  "+n+(d?
   const primera=g.G.regalos.plot;
   g.regalosSync(); g.regalosSync();          // volver a sincronizar no puede regalar de nuevo
   ok("regalosSync es idempotente", g.G.regalos.plot===primera, "x3 → "+g.G.regalos.plot);
-  g.regaloColocar("plot",6,6);
+  g.regaloReclamar("plot"); g.regaloColocar("plot",6,6);
   g.regalosSync();
-  ok("colocar una y resincronizar no la devuelve", g.G.regalos.plot===primera-1,
-     "quedan "+g.G.regalos.plot+" (tenía "+primera+")");
+  ok("colocar una y resincronizar no la devuelve",
+     g.G.regalos.plot + (g.G.cobertizo.plot||0) === primera-1,
+     "quedan "+(g.G.regalos.plot+(g.G.cobertizo.plot||0))+" (tenía "+primera+")");
 }
 // 7) COLOCAR NO REINICIA LA ESCENA (18/8: "no es necesaria esa transición de pantalla en negro
 //    y el movimiento de cámara que te lo resetea")
 {
   const g=juego(); g.reinicios=0;
-  g.G.regalos={tree:1,rock:1,plot:1};
+  g.G.cobertizo={tree:1,rock:1,plot:1};
   g.regaloColocar("tree",6,6); g.regaloColocar("plot",8,8); g.regaloColocar("rock",9,9);
   ok("colocar los tres no dispara ningún reinicio con telón", (g.reinicios||0)===0, "reinicios="+(g.reinicios||0));
   const GF=g.GF,T=GF.TILE;
@@ -108,7 +110,7 @@ const ok=(n,c,d)=>{if(!c)fallos++;console.log((c?"  ok   ":"  FALLA")+"  "+n+(d?
   const g=juego();
   const o=g.GF.WORLD_OBJECTS.find(x=>x.type==="tree"&&x.exp==null);
   const clave=o.type+":"+o.leftCol+","+o.baseRow;
-  g.G.regalos={tree:1,rock:0,plot:0};
+  g.G.cobertizo={tree:1,rock:0,plot:0};
   g.regaloColocar("tree",6,6);
   ok("mover un nodo no cambia su clave de enfriamiento",
      clave===o.type+":"+o.leftCol+","+o.baseRow, clave);
