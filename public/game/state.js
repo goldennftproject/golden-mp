@@ -3966,7 +3966,11 @@ function pedidoEntregar(i) {
   const e = pedidosEstado();
   // 18/8: "S" y "M" son el encargo de la semana y el del mes; los números, los tres diarios
   const p = i === "S" ? e.pedSemanal : i === "M" ? e.pedMensual : e.lista[i];
-  if (!p || p.hecho) return false;
+  /* 18/8: NUNCA salir de aquí en silencio. El fallo que reportó el diseñador ("el papelito se
+     mueve y no pasa nada") era exactamente esto: la UI mandaba NaN, `p` quedaba undefined y esta
+     línea devolvía false sin decir una palabra. Un clic siempre tiene que contestar algo. */
+  if (!p) { toast("Ese encargo ya no está en el tablón"); return false; }
+  if (p.hecho) { toast("Ese encargo ya está entregado"); return false; }
   if (G.tuto && !G.tuto.done) { toast("El tablón abre al terminar el tutorial"); return false; }
   if (pedidoStock(p) < p.n) { toast("Te falta " + pedidoLabel(p) + " (" + pedidoStock(p) + "/" + p.n + ")"); return false; }
   if (p.tipo === "res") G.res[p.key] -= p.n;

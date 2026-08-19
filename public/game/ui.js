@@ -1641,11 +1641,23 @@ document.addEventListener("pointerdown", (e) => {
   if (des) { const i = +des.getAttribute("data-pd-desc"); askConfirm("¿Descartar este pedido? Otro vecino colgará el suyo.", () => pedidoDescartar(i)); return; }
   if (vis) { _pdVista = vis.getAttribute("data-pd-vista"); refreshPedidos(); return; }
   if (ent) {   // temblor corto y a entregar (la gramática del rincón)
-    const i = +ent.getAttribute("data-pd-entregar");
+    /* 18/8 (reporte del diseñador: "el papelito se mueve pero no se entrega nada").
+       DOS FALLOS ENCADENADOS, los dos de esta misma mañana al añadir los encargos semanal y mensual:
+       1. El índice se convertía a número con `+`. Los diarios son 0,1,2 y funcionaban, pero el
+          semanal y el mensual son "S" y "M" → `+"S"` es NaN → `e.lista[NaN]` es undefined y
+          pedidoEntregar salía en silencio. Los dos encargos grandes no se podían cobrar NUNCA.
+       2. El candado `_entregando` se ponía ANTES de intentar y no se soltaba si fallaba, así que
+          después del primer clic fallido la nota quedaba muerta hasta redibujar el panel. Eso es
+          lo que hacía que pareciera que "no responde": el temblor sale primero y el fallo no. */
+    const raw = ent.getAttribute("data-pd-entregar");
+    const i = /^\d+$/.test(raw) ? +raw : raw;   // los diarios son número; el semanal "S" y el mensual "M"
     const nota = ent.closest(".pd-nota") || ent;
     if (nota._entregando) return; nota._entregando = true;
     nota.classList.add("shake");
-    setTimeout(() => pedidoEntregar(i), 430);
+    setTimeout(() => {
+      const ok = pedidoEntregar(i);
+      if (!ok) { nota._entregando = false; nota.classList.remove("shake"); }   // falló: se puede reintentar
+    }, 430);
     return;
   }
   if (can) valesCanjear(can.getAttribute("data-pd-canje"));
