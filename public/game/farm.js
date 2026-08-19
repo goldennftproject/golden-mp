@@ -2074,13 +2074,27 @@ class FarmScene extends Phaser.Scene {
     let ancho = 1, c0 = col;
     if (pl) {
       if (pl.tipo === "obra") { ancho = 3; c0 = col - 1; }                 // la obra se centra en el cursor
-      else if (pl.tipo === "regalo" && pl.id === "tree") ancho = 2;        // el árbol crece hacia la derecha
+      else if (pl.tipo === "regalo" && pl.id === "tree") ancho = 2;
     }
-    let libre = true, motivo = null;
-    for (let c = c0; c < c0 + ancho; c++) {
-      if (!this.celdaLibreAdorno(c, row, -1)) { libre = false; if (!motivo) motivo = this.porQueNoEntra(c, row, -1); }
+    const prueba = (desde) => {
+      let ok = true, por = null;
+      for (let c = desde; c < desde + ancho; c++)
+        if (!this.celdaLibreAdorno(c, row, -1)) { ok = false; if (!por) por = this.porQueNoEntra(c, row, -1); }
+      return { ok, por };
+    };
+    let r = prueba(c0);
+    /* 18/8 (reporte de dirección: "hay dos celdas vacías y al árbol no lo he podido poner ahí").
+       El árbol mide DOS celdas y crecía siempre HACIA LA DERECHA. Si señalabas la celda libre que
+       toca la cerca por su derecha, la segunda caía sobre la cerca y salía rojo — aunque la celda
+       que señalabas, y la de su izquierda, estuvieran las dos libres. Desde fuera se lee como una
+       celda bloqueada sin nada dentro, que es exactamente lo que se reportó.
+       Ahora, si no cabe hacia la derecha, se prueba hacia la IZQUIERDA. La pieza se acomoda al
+       hueco en vez de exigirle al jugador que adivine por qué lado va a crecer. */
+    if (!r.ok && ancho > 1 && !pl.tipoFijo) {
+      const alt = prueba(c0 - (ancho - 1));
+      if (alt.ok) return { c0: c0 - (ancho - 1), ancho, libre: true, motivo: null };
     }
-    return { c0, ancho, libre, motivo };
+    return { c0, ancho, libre: r.ok, motivo: r.por };
   }
   // 13/8: colocar en la celda elegida (lo llama pointerup si el clic no fue paneo)
   colocarEn(wx, wy) {
@@ -2102,9 +2116,10 @@ class FarmScene extends Phaser.Scene {
         toast("Parcela colocada");
       }
     } else if (pl.tipo === "regalo") {
-      // el ancho (2 para el árbol) ya lo comprobó huellaColocar, arriba
+      // el ancho (2 para el árbol) ya lo comprobó huellaColocar, y hu.c0 es la columna DEFINITIVA
+      // (puede ser col−1 si el árbol tuvo que acomodarse hacia la izquierda)
       this.finColocar();
-      if (typeof regaloColocar === "function" && regaloColocar(pl.id, col, row)) {
+      if (typeof regaloColocar === "function" && regaloColocar(pl.id, hu.c0, row)) {
         // sin telón: el nodo aparece donde lo apoyaste y la cámara no se mueve
         if (!this.colocarRegaloEnVivo(pl.id) && typeof reiniciarGranjaSuave === "function") reiniciarGranjaSuave();
       }

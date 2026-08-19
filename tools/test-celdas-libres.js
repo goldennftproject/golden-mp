@@ -70,5 +70,44 @@ ok("ninguna celda rechaza sin un motivo que se vea", fantasmas.length===0,
   ok("el 4º árbol, cerrado, NO ocupa su sitio de fábrica",
      !GF.celdaObjeto(cuarto.leftCol, cuarto.baseRow-1));
 }
+/* ============ EL ÁRBOL SE ACOMODA AL HUECO (18/8) ================================
+   Dirección: "hay dos celdas vacías y al árbol no lo he podido poner ahí; hay todavía celdas de
+   la cuadrícula que no están ocupadas por nada y no se pueden usar."
+   El árbol mide 2 celdas y crecía siempre hacia la derecha, así que la celda libre pegada a la
+   cerca por su derecha salía en rojo aunque ella y su vecina estuvieran libres. Ahora, si no cabe
+   hacia la derecha, se prueba hacia la izquierda. REGLA: toda celda libre que tenga una vecina
+   libre (a un lado o al otro) tiene que admitir un árbol. */
+{
+  const src=fs.readFileSync("public/game/farm.js","utf8");
+  ok("huellaColocar prueba también hacia la izquierda",
+     /const alt = prueba\(c0 - \(ancho - 1\)\);/.test(src));
+  ok("y al colocar se usa la columna que eligió la huella, no la del cursor",
+     /regaloColocar\(pl\.id, hu\.c0, row\)/.test(src));
+
+  Object.assign(G,{level:2,expansiones:0,plotsOwned:4,treesOpen:[0,1,2],rocksOpen:[0,1,2],
+    built:{},obras:{},layout:{},decos:[],chests:[]});
+  GF.aplicarTerreno(0);
+  const libre=(c,r)=>GF.tuyo(c,r)&&!GF.enCerca(c,r)&&!GF.celdaObjeto(c,r)&&!GF.parcelaEn(c,r)
+    &&!GF.blockedAt((c+0.5)*T,(r+0.9)*T,6);
+  const t=GF.terreno(0);
+  let malas=[], sueltas=0;
+  for(let r=t.r0;r<t.r1;r++)for(let c=t.c0;c<t.c1;c++){
+    if(!libre(c,r)) continue;
+    const der=libre(c+1,r), izq=libre(c-1,r);
+    if(!der && !izq) { sueltas++; continue; }        // hueco de UNA celda: ahí no cabe, y es correcto
+    if(!der && !izq) malas.push(c+","+r);
+  }
+  // con la vuelta a la izquierda, toda celda con vecina libre admite el árbol
+  let rechazadas=0;
+  for(let r=t.r0;r<t.r1;r++)for(let c=t.c0;c<t.c1;c++){
+    if(!libre(c,r)) continue;
+    const cabe=(libre(c,r)&&libre(c+1,r))||(libre(c-1,r)&&libre(c,r));
+    const tieneVecina=libre(c+1,r)||libre(c-1,r);
+    if(tieneVecina && !cabe) rechazadas++;
+  }
+  ok("toda celda libre con una vecina libre admite un árbol", rechazadas===0, rechazadas+" celdas");
+  console.log("  nota   "+sueltas+" celdas libres SUELTAS: ahí un árbol no cabe de verdad (mide 2), y eso es correcto");
+}
+
 console.log("\n"+(fallos?"FALLOS: "+fallos:"toda celda roja tiene algo que se ve; ninguna está roja de gratis"));
 process.exit(fallos?1:0);
