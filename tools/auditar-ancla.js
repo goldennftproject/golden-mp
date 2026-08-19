@@ -9,7 +9,7 @@ const ctx = { console: { log(){}, warn(){} }, Math, Date, JSON }; ctx.window = c
 vm.runInNewContext(fs.readFileSync("public/game/config.js", "utf8"), ctx, { filename: "config.js" });
 vm.runInNewContext(fs.readFileSync("public/game/state.js", "utf8") +
   "\n;window.COOK_PRICE_AUTO=typeof COOK_PRICE_AUTO!==\"undefined\"?COOK_PRICE_AUTO:1;window.COOK_MARGEN=typeof COOK_MARGEN!==\"undefined\"?COOK_MARGEN:1.25;window.__X={CROP_DEF,ORE_DEF,PRICE,CD,PICK_DEF,BUILD_DEF,MAT_DEF,EXPANSION_COSTO,FARM_EXPANSION,ARM_DEF,ANIMAL_DEF,RECIPE_DEF,GOLDEN_EN_PLATA," +
-  "TOOL_CRAFT,SEED_POR_PARCELA:typeof SEED_POR_PARCELA!=='undefined'?SEED_POR_PARCELA:null};",
+  "CROP_ORDER,XP_ACCION,TOOL_CRAFT,SEED_POR_PARCELA:typeof SEED_POR_PARCELA!=='undefined'?SEED_POR_PARCELA:null};",
   ctx, { filename: "state.js" });
 const X = ctx.__X, GF = ctx.GF, ANCLA = 20;
 let avisos = 0, filas = 0;
@@ -31,9 +31,20 @@ for (const k in X.CROP_DEF) {
   linea(c.label, (c.price - c.seedCost) / c.growH, ANCLA, "plata/h");
 }
 
-console.log("\n=== 1b. LA XP DE LOS CULTIVOS · la regla es 100 XP por hora ===");
+/* 18/8 — VARA CAMBIADA POR DECISIÓN, NO PARA TAPAR ROJOS.
+   Esta sección medía "100 XP por hora", o sea XP proporcional al RELOJ. Dirección retiró esa
+   regla: "que la experiencia esté ligada al tiempo que tarda algo en crecer es una inconsistencia
+   muy abrupta". La XP pasa a medir GESTOS, escalados por el escalón del material. Así que lo que
+   hay que comprobar ya no es XP/hora: es que cada cultivo pague su escalón, ni más ni menos.
+   Dejo la vara vieja calculada al lado para que se vea qué se cambió y cuánto. */
+console.log("\n=== 1b. LA XP DE LOS CULTIVOS · cada uno paga su ESCALÓN (18/8) ===");
 console.log("                                            da          debe   desvío");
-for (const k in X.CROP_DEF) { const c = X.CROP_DEF[k]; linea(c.label, c.xp / c.growH, 100, "XP/h"); }
+X.CROP_ORDER.forEach((k, i) => {
+  const c = X.CROP_DEF[k];
+  linea(c.label + " (escalón " + (i + 1) + ")", c.xp, X.XP_ACCION * (i + 1), "XP");
+});
+console.log("   nota: con la vara VIEJA (XP proporcional al reloj) esto daba de 200 a 5 XP/h");
+console.log("         según el cultivo — la dispersión que motivó el cambio.");
 
 console.log("\n=== 2. LOS NODOS · lo mismo, descontando la herramienta ===");
 console.log("                                            rinde       debe   desvío");
