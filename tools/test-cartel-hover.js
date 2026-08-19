@@ -32,5 +32,16 @@ ok("la pesca solo se ofrece si no hay nada bajo el cursor",
   /else if \(!hit && this\.pondDist/.test(src));
 ok("…y lo mismo con la tecla", /else if \(!o && this\.nearPond\(\)\)/.test(src));
 
+/* 18/8 — MIENTRAS COLOCÁS, EL CARTEL EXPLICA. Un rectángulo rojo mudo es un bug de información:
+   la dirección reportó "celdas bloqueadas fantasma" que en realidad eran la franja de la cerca. */
+ok("mientras colocás, el cartel sigue vivo (antes se apagaba en modo edición)",
+  /if \(this\.placing\) \{[\s\S]{0,400}el\.classList\.add\("show"\);/.test(src));
+ok("…y dice POR QUÉ no entra, no solo que no entra",
+  /el\.textContent = hu\.libre[\s\S]{0,200}hu\.motivo/.test(src));
+ok("…y avisa de que el árbol ocupa dos celdas",
+  /ocupa " \+ hu\.ancho \+ " celdas/.test(src));
+ok("el motivo de la cerca ya no dice 'no se puede construir' a secas",
+  /La cerca se reserva esta franja/.test(src));
+
 console.log("\n"+(fallos?"FALLOS: "+fallos:"el cartel solo sale cuando hay algo que decir"));
 process.exit(fallos?1:0);

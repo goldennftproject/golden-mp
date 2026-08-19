@@ -2214,7 +2214,7 @@ class FarmScene extends Phaser.Scene {
       ((typeof BUILD_DEF !== "undefined" && BUILD_DEF[t]) ? "la " + BUILD_DEF[t].label : null));
     const T = GF.TILE;
     if (!GF.tuyo(col, row)) return "Ese terreno todavía no es tuyo";
-    if (GF.enCerca && GF.enCerca(col, row)) return "Pegado a la cerca no se puede construir";
+    if (GF.enCerca && GF.enCerca(col, row)) return "La cerca se reserva esta franja — probá una celda más adentro";
     const x = (col + 0.5) * T, y = (row + 0.9) * T;
     const p = GF.POND;
     if (col >= p.col && col < p.col + p.cols && row >= p.row && row < p.row + p.rows) return "Ahí está la laguna";
@@ -4336,6 +4336,21 @@ class FarmScene extends Phaser.Scene {
 
   updatePrompt() {
     const el = $("prompt"); if (!el) return;
+    /* 18/8 (reporte: "no pude ponerlo una celda más arriba porque me marca rojo, creo que aún
+       quedan celdas bloqueadas fantasma"). No eran fantasma —era la franja que la cerca se reserva
+       arriba— pero el jugador NO TENÍA CÓMO SABERLO: en modo edición el cartel se apagaba entero,
+       así que veías rojo y ninguna explicación. Mientras llevás algo en la mano, el cartel dice si
+       cabe o POR QUÉ no. Un rectángulo rojo mudo es un bug de información. */
+    if (this.placing) {
+      const pt = this.input.activePointer;
+      const col = Math.floor(pt.worldX / GF.TILE), row = Math.floor(pt.worldY / GF.TILE);
+      const hu = this.huellaColocar(col, row);
+      el.textContent = hu.libre
+        ? ("Clic para colocar acá" + (hu.ancho > 1 ? " (ocupa " + hu.ancho + " celdas)" : ""))
+        : (hu.motivo || "Acá no entra");
+      el.classList.add("show");
+      return;
+    }
     if (GF.uiOpen || this.action || GF.editMode) { el.classList.remove("show"); return; }
     if (GF.NO_WALK) {   // granja de un clic: el cartel describe lo que hay BAJO EL CURSOR
       const pt = this.input.activePointer, wx = pt.worldX, wy = pt.worldY;
