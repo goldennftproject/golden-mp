@@ -34,7 +34,10 @@ const G = {
   // 15/8 v2 (dirección): se nace con las MANOS VACÍAS — el KIT DE BIENVENIDA espera en
   // el BAÚL junto al granero (35 hachas + 20 picos + 15 cañas, medido por sim-tuto-v2:
   // cubre los materiales del tutorial). Primera acción del juego: abrir el baúl.
-  picks: { owned: { stone: true }, dur: { stone: 0 }, eq: "stone" },
+  /* 18/8: el pico de piedra ya NO figura como poseído de arranque. Con 0 usos no servía para
+     nada y hacía que la bolsa y la barra enseñaran un pico que el jugador no tiene. Llega con el
+     kit del baúl, igual que el hacha y la caña. */
+  picks: { owned: {}, dur: {}, eq: null },
   tools: { axe: 0, rod: 0 },
   kitReclamado: false,
   toolsLost: {},                 // herramientas tiradas a la papelera (31/7: el diseñador pidió que se puedan tirar)
@@ -3698,11 +3701,22 @@ function activeTool() {
   return null;                            // recurso u otro
 }
 // la primera vez, precarga la hotbar con las herramientas básicas
+/* ============ LA BARRA ARRANCA VACÍA (18/8, dirección) =============================
+   "En una cuenta que comienza, en la barra rápida aparece el hacha en opaco, la caña en opaco y
+   el pico, como que tengo picos al principio. ¿Por qué mejor no aparecer con la barra sin nada,
+   el inventario en nada, y que al darle al baúl recién ahí me den el kit inicial y se pongan en
+   la barra las cosas que me dan?"
+   Tiene razón: la barra se rellenaba con hacha, pico y caña ANTES de que el jugador tuviera
+   ninguna de las tres. Como no las tiene, salían apagadas — enseñando huecos muertos y
+   contradiciendo al primer objetivo del tutorial, que es justamente ir al baúl a por el kit.
+   Ahora los accesos se ponen CUANDO el kit llega, y no antes. Ojo con hbInit: si se marcara
+   igual, la barra quedaría vacía para siempre; por eso solo se marca cuando de verdad se llenó. */
 function ensureHotbarDefaults() {
   if (G.hbInit) return;
   if (!Array.isArray(G.hotbar)) G.hotbar = [];
   while (G.hotbar.length < 10) G.hotbar.push(null);
-  if (!G.hotbar.some(Boolean)) {   // 14/8 (reversión): vuelven los accesos de arranque
+  if (!G.kitReclamado) return;            // el baúl todavía no se abrió: barra vacía, y se vuelve a intentar
+  if (!G.hotbar.some(Boolean)) {          // 14/8 (reversión): vuelven los accesos de arranque
     G.hotbar[0] = { kind: "tool", key: "axe" };
     G.hotbar[1] = { kind: "pick", key: (G.picks && G.picks.eq) || "stone" };
     G.hotbar[2] = { kind: "tool", key: "rod" };
@@ -4232,7 +4246,8 @@ function kitReclamar() {
   toast("¡Tu kit de bienvenida! 🪓⛏🎣");
   if (window.celebrate) celebrate({ title: "¡KIT DE BIENVENIDA!", sub: "Hachas, picos y cañas para arrancar", big: false, reward: "Ya podés talar, picar y pescar" });
   if (typeof tutoEvent === "function") tutoEvent("kit");
-  refreshHud(); if (typeof syncSlots === "function") syncSlots(); if (typeof refreshHotbar === "function") refreshHotbar();
+  ensureHotbarDefaults();   // 18/8: los accesos aparecen AHORA, con las herramientas ya en la mano
+  refreshHud(); if (typeof syncSlots === "function") syncSlots(); if (typeof refreshHotbar === "function") refreshHotbar(true);
   if (typeof saveFarm === "function") saveFarm(true);
   return true;
 }

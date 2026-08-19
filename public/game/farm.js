@@ -567,12 +567,12 @@ class FarmScene extends Phaser.Scene {
         }
         const col = Phaser.Math.Clamp(Math.floor(pt.worldX / T), GF.C0, GF.C1 - 1);
         const row = Phaser.Math.Clamp(Math.floor(pt.worldY / T), GF.R0, GF.R1 - 1);
-        const esObra = this.placing.tipo === "obra";
-        const libre = this.celdaLibreAdorno(col, row, -1) &&
-          (!esObra || (this.celdaLibreAdorno(col - 1, row, -1) && this.celdaLibreAdorno(col + 1, row, -1)));
-        const w = esObra ? 3 : 1, c0 = esObra ? col - 1 : col;
-        this.editHl.setPosition(c0 * T, (row + 1) * T).setSize(w * T, T)
-          .setFillStyle(libre ? 0x7ec95a : 0xd9534f, 0.4).setVisible(true);
+        /* 18/8: el marcador y la regla tienen que ser EL MISMO código. Antes el rectángulo solo
+           se ensanchaba para las obras, así que un ÁRBOL —que mide dos celdas— se marcaba en verde
+           sobre una celda y al soltarlo fallaba. huellaColocar() es ahora la única autoridad. */
+        const hu = this.huellaColocar(col, row);
+        this.editHl.setPosition(hu.c0 * T, (row + 1) * T).setSize(hu.ancho * T, T)
+          .setFillStyle(hu.libre ? 0x7ec95a : 0xd9534f, 0.4).setVisible(true);
         return;
       }
       if (this.dragDeco) {
@@ -2061,12 +2061,32 @@ class FarmScene extends Phaser.Scene {
         : tipo === "regalo" ? "Clic en la celda donde va " + ({ plot: "la parcela", tree: "el árbol", rock: "la roca" }[id] || "esto") + " (clic derecho cancela)"
                           : "Clic en la celda donde va el adorno (clic derecho cancela)");
   }
+  /* ¿QUÉ CELDAS OCUPA LO QUE LLEVO EN LA MANO, Y CABEN? (18/8)
+     Una sola función para el rectángulo verde/rojo y para la comprobación al soltar. Mientras
+     fueron dos, el marcador mentía: decía que sí sobre una celda y el árbol pedía dos. */
+  huellaColocar(col, row) {
+    const pl = this.placing;
+    let ancho = 1, c0 = col;
+    if (pl) {
+      if (pl.tipo === "obra") { ancho = 3; c0 = col - 1; }                 // la obra se centra en el cursor
+      else if (pl.tipo === "regalo" && pl.id === "tree") ancho = 2;        // el árbol crece hacia la derecha
+    }
+    let libre = true, motivo = null;
+    for (let c = c0; c < c0 + ancho; c++) {
+      if (!this.celdaLibreAdorno(c, row, -1)) { libre = false; if (!motivo) motivo = this.porQueNoEntra(c, row, -1); }
+    }
+    return { c0, ancho, libre, motivo };
+  }
   // 13/8: colocar en la celda elegida (lo llama pointerup si el clic no fue paneo)
   colocarEn(wx, wy) {
     const T = GF.TILE;
     const col = Math.floor(wx / T), row = Math.floor(wy / T);
     const pl = this.placing; if (!pl) return;
-    if (!this.celdaLibreAdorno(col, row, -1)) { toast(this.porQueNoEntra(col, row, -1) || "Ahí no entra — probá otra celda"); return; }
+    const hu = this.huellaColocar(col, row);
+    if (!hu.libre) {
+      toast((hu.motivo || "Ahí no entra") + (hu.ancho > 1 ? " — esto ocupa " + hu.ancho + " celdas" : " — probá otra celda"));
+      return;
+    }
     if (pl.tipo === "deco") {
       if (decoColocar(pl.id, col, row)) { this.syncAdornos(); if (typeof syncEditDeco === "function") syncEditDeco(); toast(DECO_DEF[pl.id].label + " colocado"); }
       this.finColocar();
@@ -2077,22 +2097,13 @@ class FarmScene extends Phaser.Scene {
         toast("Parcela colocada");
       }
     } else if (pl.tipo === "regalo") {
-      /* 18/8: el árbol mide DOS celdas de ancho, así que también hay que mirar la de al lado.
-         Se comprueba acá y no dentro de regaloColocar para poder decir POR QUÉ no entra. */
-      if (pl.id === "tree" && !this.celdaLibreAdorno(col + 1, row, -1)) {
-        toast((this.porQueNoEntra(col + 1, row, -1) || "No hay sitio") + " — el árbol ocupa dos celdas");
-        return;
-      }
+      // el ancho (2 para el árbol) ya lo comprobó huellaColocar, arriba
       this.finColocar();
       if (typeof regaloColocar === "function" && regaloColocar(pl.id, col, row)) {
         // sin telón: el nodo aparece donde lo apoyaste y la cámara no se mueve
         if (!this.colocarRegaloEnVivo(pl.id) && typeof reiniciarGranjaSuave === "function") reiniciarGranjaSuave();
       }
-    } else if (pl.tipo === "obra") {   // blueprint (12/8): la obra ocupa ~2-3 celdas, chequear las vecinas
-      if (!this.celdaLibreAdorno(col - 1, row, -1) || !this.celdaLibreAdorno(col + 1, row, -1)) {
-        const pq = this.porQueNoEntra(col - 1, row, -1) || this.porQueNoEntra(col + 1, row, -1);
-        toast((pq ? pq + " — " : "") + "la obra ocupa tres celdas de ancho"); return;
-      }
+    } else if (pl.tipo === "obra") {   // blueprint (12/8): las 3 celdas ya las comprobó huellaColocar
       this.finColocar();
       // 13/8: la obra aparece EN VIVO (el edificio ya estaba en la escena, invisible) — sin
       // reiniciar la escena ni pantalla oscura; el reinicio con telón queda de respaldo
