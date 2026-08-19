@@ -3196,38 +3196,35 @@ class FarmScene extends Phaser.Scene {
     const puede = !falta && typeof canAfford === "function" && canAfford(ex.costo);
     const col = falta ? 0x8a8f7a : (puede ? 0xffd54a : 0xd8b45a);
 
-    /* 18/8 (dirección): "en vez de mostrar permanentemente el cartel de nivel bloqueado, que solo
-       pasando el cursor por encima se iluminen los árboles que van a desaparecer y aparezca el
-       cartelito". Tiene razón: un cartel fijo sobre el bosque es ruido el 99% del tiempo.
-       El lote se marca SIEMPRE con las estacas —eso es información, no ruido— y al pasar el cursor
-       se ilumina el bloque entero, con lo que se ve exactamente qué árboles se van, y sale el
-       cartel con el precio. Cuando ya lo podés pagar, el cartel se queda a la vista: ahí sí es una
-       llamada, no un aviso. */
-    const zona = this.add.rectangle(x0 + w / 2, y0 + h / 2, w, h, col, falta ? 0.05 : 0.10)
-      .setDepth(-998).setStrokeStyle(2, col, falta ? 0.35 : 0.7);
+    /* 18/8 (dirección, 2ª pasada): "no quiero que haya líneas de puntos grises... lo de que se
+       puede desbloquear el lugar solo debe aparecer cuando pasó el cursor encima".
+       Estaba dejando el lote marcado en reposo: borde gris + estacas al 0,5 de alfa, que a una
+       estaca por celda se leen justo como una línea de puntos sobre el bosque. Ahora EN REPOSO EL
+       LOTE NO SE VE: ni relleno, ni borde, ni estacas. Todo eso aparece al pasar el cursor.
+       Ojo: la zona NO puede ocultarse con setVisible(false) —Phaser deja de hacerle hit-test y no
+       habría hover que encender—. Se apaga bajando el alfa a 0, que sigue siendo interactiva. */
+    const zona = this.add.rectangle(x0 + w / 2, y0 + h / 2, w, h, col, 0)
+      .setDepth(-998).setStrokeStyle(2, col, 0);
     this.expFx.push(zona);
     zona.setInteractive({ useHandCursor: !falta });
+    const estacas = [];   // se encienden y apagan con el cursor, igual que el resaltado
     const resaltar = (on) => {
-      zona.setFillStyle(col, on ? 0.34 : (falta ? 0.05 : 0.10));
-      zona.setStrokeStyle(on ? 3 : 2, col, on ? 1 : (falta ? 0.35 : 0.7));
+      zona.setFillStyle(col, on ? 0.34 : 0);
+      zona.setStrokeStyle(on ? 3 : 2, col, on ? 1 : 0);
+      estacas.forEach(o => { try { o.setVisible(on); } catch (e) {} });
       if (this.expCartel) this.expCartel.forEach(o => { try { o.setVisible(on || puede); } catch (e) {} });
     };
     zona.on("pointerover", () => resaltar(true));
     zona.on("pointerout", () => resaltar(false));
-    // ESTACAS en el perímetro, como las de Sunflower: marcan el lote sin taparlo
+    // ESTACAS en el perímetro, como las de Sunflower: marcan el lote sin taparlo. Nacen ocultas.
     const paso = T;
-    for (let x = x0 + paso / 2; x < x0 + w; x += paso) {
-      for (const y of [y0, y0 + h]) {
-        this.expFx.push(this.add.rectangle(x, y, 4, 11, col, falta ? 0.5 : 0.95).setDepth(y + 1));
-        this.expFx.push(this.add.ellipse(x, y + 5, 7, 3, 0x2b2417, 0.35).setDepth(y));
-      }
-    }
-    for (let y = y0 + paso / 2; y < y0 + h; y += paso) {
-      for (const x of [x0, x0 + w]) {
-        this.expFx.push(this.add.rectangle(x, y, 4, 11, col, falta ? 0.5 : 0.95).setDepth(y + 1));
-        this.expFx.push(this.add.ellipse(x, y + 5, 7, 3, 0x2b2417, 0.35).setDepth(y));
-      }
-    }
+    const estaca = (x, y) => {
+      estacas.push(this.add.rectangle(x, y, 4, 11, col, falta ? 0.5 : 0.95).setDepth(y + 1));
+      estacas.push(this.add.ellipse(x, y + 5, 7, 3, 0x2b2417, 0.35).setDepth(y));
+    };
+    for (let x = x0 + paso / 2; x < x0 + w; x += paso) for (const y of [y0, y0 + h]) estaca(x, y);
+    for (let y = y0 + paso / 2; y < y0 + h; y += paso) for (const x of [x0, x0 + w]) estaca(x, y);
+    estacas.forEach(o => { o.setVisible(false); this.expFx.push(o); });
 
     // el cartel del centro: qué cuesta, en verde lo que tenés y en rojo lo que falta
     const cx = x0 + w / 2, cy = y0 + h / 2;
@@ -3262,8 +3259,9 @@ class FarmScene extends Phaser.Scene {
           yoyo: true, repeat: -1, ease: "Sine.easeInOut" });
       }
     }
-    // arranca OCULTO: solo se ve con el cursor encima. Salvo que ya lo puedas pagar, que entonces
-    // es una llamada a la acción y tiene que estar a la vista sin buscarla.
+    // arranca OCULTO: solo se ve con el cursor encima. La ÚNICA excepción es cuando ya lo podés
+    // pagar: ahí el cartel dorado se queda a la vista porque es una llamada a la acción, no un
+    // aviso gris. Si te falta nivel o material, el bosque se ve limpio.
     this.expCartel.forEach(o => o.setVisible(puede));
     // que el cartel también cuente como "encima del lote": si no, al mover el cursor del bloque a
     // la chapa el cartel se escondería justo cuando vas a tocarlo
