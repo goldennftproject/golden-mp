@@ -29,22 +29,35 @@ const ok=(n,c,d)=>{if(!c)fallos++;console.log((c?"  ok   ":"  FALLA")+"  "+n+(d?
      "zoomUser="+(c&&c.zoomUser)+" (el absoluto 2.1 no sirve: el base cambia con la pantalla)");
   ok("no pide mirar a ningún sitio", c && !c.mirar);
 }
-// 2) comprar terreno: vuelve MIRANDO el bloque nuevo
+// 2) COMPRAR TERRENO: si la escena sabe crecer en vivo, NO hay telón
 {
   const g=juego(1.3,0,0);
   g.G.level=99; g.G.expansiones=0;
+  let bloqueVisto=null;
+  g.FARM.scene.expandirEnVivo=(b)=>{bloqueVisto=b;return true;};
   const e=g.expansionSiguiente();
   ok("la expansión se compra", g.expansionComprar()===true);
-  ok("y reinicia la escena (cambia la forma del mundo)", g.RESTARTS===1, "restarts="+g.RESTARTS);
+  ok("NO reinicia la escena (crece en vivo)", g.RESTARTS===0, "restarts="+g.RESTARTS);
+  ok("y le pasa el bloque comprado, para que la cámara viaje hasta él",
+     bloqueVisto===e.bloque);
+}
+// 3) SI CRECER EN VIVO FALLA, el telón sigue de respaldo y encima mirando el bloque nuevo
+{
+  const g=juego(1.3,0,0);
+  g.G.level=99; g.G.expansiones=0;
+  g.FARM.scene.expandirEnVivo=()=>false;   // simula que algo salió mal
+  const e=g.expansionSiguiente();
+  g.expansionComprar();
+  ok("cae al reinicio con telón", g.RESTARTS===1, "restarts="+g.RESTARTS);
   const c=g.GF._camTras, b=e.bloque, T=g.GF.TILE;
-  ok("al volver, la cámara mira el bloque recién comprado",
-     c && c.mirar && c.mirar.x===(b.c0+b.c1)/2*T && c.mirar.y===(b.r0+b.r1)/2*T,
-     c&&c.mirar?("x="+c.mirar.x+" y="+c.mirar.y):"sin mirar");
+  ok("y al volver mira el bloque recién comprado",
+     c && c.mirar && c.mirar.x===(b.c0+b.c1)/2*T && c.mirar.y===(b.r0+b.r1)/2*T);
   ok("...conservando el zoom del jugador", c && c.zoomUser===1.3);
 }
-// 3) las 16 expansiones apuntan a un sitio distinto cada una
+// 4) las 16 expansiones apuntan a un sitio distinto cada una
 {
   const g=juego(1,0,0); g.G.level=99; g.G.expansiones=0;
+  g.FARM.scene.expandirEnVivo=()=>false;   // por la vía del telón, que es la que guarda _camTras
   const vistos=new Set();
   for(let i=0;i<16;i++){ g.expansionComprar(); const c=g.GF._camTras; if(c&&c.mirar) vistos.add(c.mirar.x+","+c.mirar.y); }
   ok("las 16 miran a 16 sitios distintos", vistos.size===16, vistos.size+"/16");

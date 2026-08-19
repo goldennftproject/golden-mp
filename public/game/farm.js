@@ -73,107 +73,11 @@ class FarmScene extends Phaser.Scene {
     };
     this._crecerPlots();
 
-    // fondo + estanque + lotes-tierra + grilla
+    // fondo + estanque + lotes-tierra (el césped, las florcitas, la grilla y la cerca
+    // viven en sus propios métodos desde el 18/8 para poder rehacerlos al expandir)
     const g = this.add.graphics().setDepth(-1000);
-    // SUELO NUEVO (31/7): tiles de pasto seamless con variantes esparcidas — chau damero
-    if (this.textures.exists("grass_a")) {
-      // 17/8: el pasto ahora se extiende MÁS ALLÁ DE LA CERCA, hasta donde llega el bosque.
-      // Antes cubría solo el mundo jugable, así que la franja entre la cerca y el primer árbol
-      // —que existe a propósito, para que el bosque no se suba al corral— quedaba pintada con
-      // el verde liso del fondo de la cámara. Se veía como un anillo plano alrededor de la
-      // granja. Los tiles de más quedan tapados por el bosque y no cuestan nada: es un solo
-      // renderTexture que se arma una vez.
-      // 17/8: el pasto NO necesita cubrir el mapa entero. Solo se ve la franja entre la cerca y
-      // el primer árbol (~1,5 celdas); de ahí para afuera lo tapa el bosque, y donde el bosque
-      // tiene claros el fondo ya es del color del césped. Cubría 1638x1680 = 10,5 MB de textura
-      // para enseñar 4 celdas de pasto. Con 4 celdas de sobra basta y sobra.
-      // 18/8: el pasto ya no cubre "el rectángulo del mundo": cubre EL TERRENO QUE TENÉS más el
-      // aire de bosque, que es la forma que puede tener ángulos hacia dentro. El renderTexture
-      // sigue siendo un rectángulo (es una textura), pero solo se DIBUJAN los tiles despejados,
-      // así que la memoria no crece con el hueco y el bosque tapa el resto.
-      const ter = GF.terreno();
-      const cExtra = GF.BOSQUE ? 4 : Math.ceil(this.margenBosque("x") / T);
-      const rExtra = GF.BOSQUE ? 4 : Math.ceil(this.margenBosque("y") / T);
-      const c0 = ter.c0 - cExtra, r0 = ter.r0 - rExtra;
-      const c1 = ter.c1 + cExtra, r1 = ter.r1 + rExtra;
-      const rt = this.add.renderTexture(c0 * T, r0 * T, (c1 - c0) * T, (r1 - r0) * T)
-        .setOrigin(0).setDepth(-1000);
-      let gseed = 20260731;
-      const grnd = () => { gseed = (gseed * 1664525 + 1013904223) >>> 0; return gseed / 4294967296; };
-      const hasB = this.textures.exists("grass_b"), hasC = this.textures.exists("grass_c");
-      const lote = typeof rt.beginDraw === "function";   // en lote: son ~1.200 tiles, no 200
-      if (lote) rt.beginDraw();
-      for (let r = r0; r < r1; r++) for (let c = c0; c < c1; c++) {
-        const x = grnd();
-        const key = (x < 0.55 || (!hasB && !hasC)) ? "grass_a" : (x < 0.90 && hasB ? "grass_b" : (hasC ? "grass_c" : "grass_a"));
-        if (lote) rt.batchDraw(key, (c - c0) * T, (r - r0) * T); else rt.draw(key, (c - c0) * T, (r - r0) * T);
-      }
-      if (lote) rt.endDraw();
-    } else {   // respaldo: el damero de siempre
-      const ter = GF.terreno();
-      ter.mias.forEach(s => {
-        const p = s.split(","), c = +p[0], r = +p[1];
-        g.fillStyle((r + c) % 2 === 0 ? 0x6c8c53 : 0x64834c, 1);
-        g.fillRect(c * T, r * T, T, T);
-      });
-    }
-    // detalles del césped (semilla fija): sprites de PixelLab; si faltan, el dibujo por código de antes
-    let dseed = 20260730;
-    const drnd = () => { dseed = (dseed * 1664525 + 1013904223) >>> 0; return dseed / 4294967296; };
-    const deco = this.add.graphics().setDepth(-999.5);
-    const DKEYS = ["deco_pasto", "deco_flor_blanca", "deco_flor_amarilla", "deco_piedras"];
-    const hasDecos = DKEYS.every(k => this.textures.exists(k));
-    // 17/8 (dirección: "el corte en la decoración del césped"). Los adornos se sembraban SOLO
-    // dentro del mundo (0..W, 0..H), pero el césped ahora llega hasta el bosque. Resultado: la
-    // franja de pasto entre la cerca y los árboles quedaba PELADA, con un rectángulo perfecto
-    // marcando dónde se acaban las matitas. Ahora se siembran también fuera, con 3 celdas de
-    // desborde —lo que se ve— y la cantidad sube en proporción al área para que la densidad no
-    // baje. Los que caen bajo el bosque no se ven (van a profundidad -999,5, debajo del anillo)
-    // pero tampoco estorban.
-    // 17/8 (dirección): "el césped debe tener florcitas también fuera del corral". El desborde
-    // se sube a 4 celdas —lo mismo que ahora cubre el pasto— y la densidad se calcula por ÁREA,
-    // así que la franja de fuera queda igual de poblada que la de dentro y no se nota la cerca.
-    // 18/8: el área se ancla al ORIGEN del terreno, que puede ser negativo
-    const RD = T * 4, AW = W + RD * 2, AH = H + RD * 2;
-    const AX = GF.ORIG_X - RD, AY = GF.ORIG_Y - RD;
-    // El área ÚTIL no es el rectángulo entero: es solo lo que queda dentro del claro, porque el
-    // resto lo tapa el bosque. Se estima muestreando, y con eso se calcula cuántos hacen falta
-    // para que la densidad sea la MISMA dentro y fuera de la cerca.
-    let dentro = 0;
-    for (let m = 0; m < 400; m++) if (this.dentroDelClaro(AX + (m % 20) / 19 * AW, AY + Math.floor(m / 20) / 19 * AH)) dentro++;
-    const util = Math.max(0.2, dentro / 400) * AW * AH;
-    const nDecos = Math.round((hasDecos ? 110 : 210) * util / (W * H));
-    let intentos = 0;
-    for (let i = 0; i < nDecos && intentos < nDecos * 12; i++) {
-      let dx = 0, dy = 0;
-      do { dx = AX + drnd() * AW; dy = AY + drnd() * AH; intentos++; }
-      while (!this.dentroDelClaro(dx, dy) && intentos < nDecos * 12);
-      const t = drnd();
-      if (hasDecos) {
-        // pasto pesa doble; tamaños chicos y variados para que respiren
-        const key = t < 0.45 ? "deco_pasto" : (t < 0.67 ? "deco_flor_blanca" : (t < 0.89 ? "deco_flor_amarilla" : "deco_piedras"));
-        const sz = key === "deco_pasto" ? 15 + drnd() * 6 : (key === "deco_piedras" ? 11 + drnd() * 4 : 13 + drnd() * 4);
-        const im = this.add.image(dx, dy + sz / 2, key).setDisplaySize(sz, sz).setDepth(-999.5).setFlipX(drnd() < 0.5);
-        im.setOrigin(0.5, 1);   // pivote en la base: el VIENTO la inclina desde el suelo (15/8)
-        if (key !== "deco_piedras") (this.vientoDecos = this.vientoDecos || []).push(im);
-        // 15/8: las mariposas conocen las flores del suelo (se posan en ellas cuando pasean)
-        if (key === "deco_flor_blanca" || key === "deco_flor_amarilla") (this.floresDeco = this.floresDeco || []).push({ x: dx, y: dy });
-        continue;
-      }
-      if (t < 0.72) {          // matita de pasto
-        const col = drnd() < 0.6 ? 0x455c35 : 0x688451;
-        deco.lineStyle(1, col, 1);
-        for (let b = 0; b < 3; b++) { deco.beginPath(); deco.moveTo(dx + b * 2, dy + 3); deco.lineTo(dx + b * 2 + (drnd() * 3 - 1.5), dy - 2 - drnd() * 3); deco.strokePath(); }
-      } else if (t < 0.92) {   // florcita
-        const cols = [0xf0ebc8, 0xebbe5a, 0xdca0be];
-        deco.fillStyle(cols[(drnd() * 3) | 0], 1).fillCircle(dx, dy, 2);
-        deco.fillStyle(0x967832, 1).fillCircle(dx, dy, 0.8);
-        (this.floresDeco = this.floresDeco || []).push({ x: dx, y: dy });   // 15/8: también son percha de mariposas
-      } else {                 // piedrita
-        deco.fillStyle(0x8c8778, 1).fillEllipse(dx, dy, 6, 4);
-        deco.lineStyle(1, 0x5a564a, 1).strokeEllipse(dx, dy, 6, 4);
-      }
-    }
+    this.dibujarCesped();      // 18/8: extraído a método para poder rehacerlo al expandir
+    this.dibujarDecosCesped();
     const p = GF.POND, pcx = (p.col + p.cols / 2) * T, pcy = (p.row + p.rows / 2) * T, pw = p.cols * T, ph = p.rows * T;
     if (this.textures.exists("pond")) {
       // 17/8 (dirección: "el corte en la laguna"). Estaba estirada a la caja de celdas sin mirar
@@ -260,39 +164,8 @@ class FarmScene extends Phaser.Scene {
         : this.add.text(p0.x, p0.y, fi === 1 ? "" : "", { fontSize: "13px" }).setOrigin(0.5).setDepth(-990).setAlpha(0.85);
       this.pondFish.push({ s, tgt: this.pondPoint(), sp: 10 + Math.random() * 12 });
     });
-    // cuadriculado: solo visible en modo edición (detalles 29/7)
-    this.gridG = this.add.graphics().setDepth(-999.4).setVisible(!!GF.editMode);
-    this.gridG.lineStyle(1, 0x18300f, 0.25);
-    // 18/8: el mundo puede empezar en coordenadas NEGATIVAS (al comprar por la izquierda o por
-    // arriba), así que la grilla y el marco arrancan en el origen del terreno, no en (0,0).
-    const OX = GF.ORIG_X, OY = GF.ORIG_Y;
-    for (let x = OX; x <= OX + W; x += T) { this.gridG.beginPath(); this.gridG.moveTo(x, OY); this.gridG.lineTo(x, OY + H); this.gridG.strokePath(); }
-    for (let y = OY; y <= OY + H; y += T) { this.gridG.beginPath(); this.gridG.moveTo(OX, y); this.gridG.lineTo(OX + W, y); this.gridG.strokePath(); }
-    g.lineStyle(4, 0x3c4d31, 0.9).strokeRect(OX, OY, W, H);
-
-    // cerca de madera cozy alrededor de la granja (horizontal de frente, vertical de canto)
-    this.fenceSprites = [];   // referencias para la valla dorada de la Granja Legendaria (10/8)
-    if (this.textures.exists("fence_top")) {
-      const FH = T * 0.55, p2 = GF.POND;   // alto del tramo horizontal (de frente)
-      const pondCell = (c, r) => c >= p2.col && c < p2.col + p2.cols && r >= p2.row && r < p2.row + p2.rows;
-      /* 18/8 — SE RECORRE EL PERÍMETRO, no lado por lado.
-         Antes eran cuatro bucles (fila 0, fila ROWS-1, columna 0, columna COLS-1), que solo sabe
-         describir un rectángulo. Con las expansiones el contorno tiene entrantes y esquinas hacia
-         dentro. La regla nueva no enumera casos: para cada celda TUYA, si el vecino de arriba no
-         es tuyo va cerca de arriba; si el de la izquierda no es tuyo, cerca izquierda; etc.
-         Cualquier forma sale sola, con los cuatro sprites que ya existen — las uniones encajan por
-         construcción, igual que encajaban en las esquinas del rectángulo. */
-      const ter = GF.terreno(), esMia = (c, r) => ter.mias.has(c + "," + r);
-      ter.mias.forEach(s => {
-        const p = s.split(","), c = +p[0], r = +p[1];
-        if (pondCell(c, r)) return;                       // la laguna se come su tramo, como siempre
-        const x = c * T, y = r * T;
-        if (!esMia(c, r - 1)) this.fenceSprites.push(this.add.image(x + T / 2, y + T * 0.58, "fence_top").setDisplaySize(T, FH).setOrigin(0.5, 1).setDepth(2));
-        if (!esMia(c, r + 1)) this.fenceSprites.push(this.add.image(x + T / 2, y + T + 6, "fence_bottom").setDisplaySize(T, FH).setOrigin(0.5, 1).setDepth(y + T + 6));
-        if (!esMia(c - 1, r)) this.fenceSprites.push(this.add.image(x + 7, y + T, "fence_left").setDisplaySize(T * 0.22, T).setOrigin(0.5, 1).setDepth(3));
-        if (!esMia(c + 1, r)) this.fenceSprites.push(this.add.image(x + T - 7, y + T, "fence_right").setDisplaySize(T * 0.22, T).setOrigin(0.5, 1).setDepth(3));
-      });
-    }
+    this.dibujarGrilla();
+    this.dibujarCerca();
 
     // objetos del mundo (con estado para interacción)
     let __treeN = 0, __rockN = 0;   // viernes (2): orden de desbloqueo de árboles y piedras
@@ -1095,7 +968,8 @@ class FarmScene extends Phaser.Scene {
     }
     const L = this.limiteVista(), LADO = 8000;   // el tileSprite no reserva textura: solo repite
     const cx = (L.x1 + L.x2) / 2, cy = (L.y1 + L.y2) / 2;
-    const ts = this.add.tileSprite(cx, cy, LADO, LADO, clave)
+    if (this.mosaicoTS) { try { this.mosaicoTS.destroy(); } catch (e) {} }
+    const ts = this.mosaicoTS = this.add.tileSprite(cx, cy, LADO, LADO, clave)
       .setDepth((GF.BOSQUE_DEPTH || -999) - 2);   // debajo del pasto y del anillo
     // ALINEAR el mosaico con la retícula del mundo. Si no, el patrón arranca donde caiga el
     // borde del tileSprite y se ve una costura contra el anillo por mucho que el dibujo sea
@@ -3631,6 +3505,212 @@ class FarmScene extends Phaser.Scene {
      es NO_WALK — nadie camina, así que el bosque no necesita colisiones: encierra por
      composición y por los límites de cámara. Números en config.js (GF.BOSQUE_*).
      Próxima etapa: partir el anillo en claros que se limpian al subir de nivel. */
+
+  /* ============ EL TERRENO, EN PIEZAS QUE SE PUEDEN REHACER SOLAS (18/8) =============
+     Dirección: "¿por qué en expansión puede llegar a ser caro? No se puede dejar de renderizar
+     los árboles que toca, quitar la parte del corral que hay que quitar y ya está?"
+     Tenía razón y yo me pasé de prudente. Comprar terreno NO cambia "todo": cambia CUATRO cosas
+     —el césped, sus florcitas, la grilla y la cerca— más el bosque (que ya era un método) y los
+     límites de cámara. El problema era que esas cuatro estaban escritas dentro de create(), así
+     que la única forma de rehacerlas era rehacer la escena entera.
+     Ahora cada una es un método que se limpia a sí mismo y se puede volver a llamar en caliente.
+     create() llama a las cuatro igual que antes; expandirEnVivo() las vuelve a llamar. */
+  dibujarCesped() {
+    if (this.cespedRT) { try { this.cespedRT.destroy(); } catch (e) {} this.cespedRT = null; }
+    if (this.cespedG) { try { this.cespedG.destroy(); } catch (e) {} this.cespedG = null; }
+    const T = GF.TILE, W = GF.WORLD_W, H = GF.WORLD_H;
+    const g = this.cespedG = this.add.graphics().setDepth(-1000);
+      // SUELO NUEVO (31/7): tiles de pasto seamless con variantes esparcidas — chau damero
+      if (this.textures.exists("grass_a")) {
+        // 17/8: el pasto ahora se extiende MÁS ALLÁ DE LA CERCA, hasta donde llega el bosque.
+        // Antes cubría solo el mundo jugable, así que la franja entre la cerca y el primer árbol
+        // —que existe a propósito, para que el bosque no se suba al corral— quedaba pintada con
+        // el verde liso del fondo de la cámara. Se veía como un anillo plano alrededor de la
+        // granja. Los tiles de más quedan tapados por el bosque y no cuestan nada: es un solo
+        // renderTexture que se arma una vez.
+        // 17/8: el pasto NO necesita cubrir el mapa entero. Solo se ve la franja entre la cerca y
+        // el primer árbol (~1,5 celdas); de ahí para afuera lo tapa el bosque, y donde el bosque
+        // tiene claros el fondo ya es del color del césped. Cubría 1638x1680 = 10,5 MB de textura
+        // para enseñar 4 celdas de pasto. Con 4 celdas de sobra basta y sobra.
+        // 18/8: el pasto ya no cubre "el rectángulo del mundo": cubre EL TERRENO QUE TENÉS más el
+        // aire de bosque, que es la forma que puede tener ángulos hacia dentro. El renderTexture
+        // sigue siendo un rectángulo (es una textura), pero solo se DIBUJAN los tiles despejados,
+        // así que la memoria no crece con el hueco y el bosque tapa el resto.
+        const ter = GF.terreno();
+        const cExtra = GF.BOSQUE ? 4 : Math.ceil(this.margenBosque("x") / T);
+        const rExtra = GF.BOSQUE ? 4 : Math.ceil(this.margenBosque("y") / T);
+        const c0 = ter.c0 - cExtra, r0 = ter.r0 - rExtra;
+        const c1 = ter.c1 + cExtra, r1 = ter.r1 + rExtra;
+        const rt = this.add.renderTexture(c0 * T, r0 * T, (c1 - c0) * T, (r1 - r0) * T)
+          .setOrigin(0).setDepth(-1000);
+        let gseed = 20260731;
+        const grnd = () => { gseed = (gseed * 1664525 + 1013904223) >>> 0; return gseed / 4294967296; };
+        const hasB = this.textures.exists("grass_b"), hasC = this.textures.exists("grass_c");
+        const lote = typeof rt.beginDraw === "function";   // en lote: son ~1.200 tiles, no 200
+        if (lote) rt.beginDraw();
+        for (let r = r0; r < r1; r++) for (let c = c0; c < c1; c++) {
+          const x = grnd();
+          const key = (x < 0.55 || (!hasB && !hasC)) ? "grass_a" : (x < 0.90 && hasB ? "grass_b" : (hasC ? "grass_c" : "grass_a"));
+          if (lote) rt.batchDraw(key, (c - c0) * T, (r - r0) * T); else rt.draw(key, (c - c0) * T, (r - r0) * T);
+        }
+        if (lote) rt.endDraw();
+        this.cespedRT = rt;   // 18/8: se guarda para poder destruirlo y rehacerlo al expandir
+      } else {   // respaldo: el damero de siempre
+        const ter = GF.terreno();
+        ter.mias.forEach(s => {
+          const p = s.split(","), c = +p[0], r = +p[1];
+          g.fillStyle((r + c) % 2 === 0 ? 0x6c8c53 : 0x64834c, 1);
+          g.fillRect(c * T, r * T, T, T);
+        });
+      }
+  }
+  dibujarDecosCesped() {
+    if (this.decoG) { try { this.decoG.destroy(); } catch (e) {} this.decoG = null; }
+    this.floresDeco = [];
+    const T = GF.TILE, W = GF.WORLD_W, H = GF.WORLD_H;
+      // detalles del césped (semilla fija): sprites de PixelLab; si faltan, el dibujo por código de antes
+      let dseed = 20260730;
+      const drnd = () => { dseed = (dseed * 1664525 + 1013904223) >>> 0; return dseed / 4294967296; };
+      const deco = this.add.graphics().setDepth(-999.5);
+      const DKEYS = ["deco_pasto", "deco_flor_blanca", "deco_flor_amarilla", "deco_piedras"];
+      const hasDecos = DKEYS.every(k => this.textures.exists(k));
+      // 17/8 (dirección: "el corte en la decoración del césped"). Los adornos se sembraban SOLO
+      // dentro del mundo (0..W, 0..H), pero el césped ahora llega hasta el bosque. Resultado: la
+      // franja de pasto entre la cerca y los árboles quedaba PELADA, con un rectángulo perfecto
+      // marcando dónde se acaban las matitas. Ahora se siembran también fuera, con 3 celdas de
+      // desborde —lo que se ve— y la cantidad sube en proporción al área para que la densidad no
+      // baje. Los que caen bajo el bosque no se ven (van a profundidad -999,5, debajo del anillo)
+      // pero tampoco estorban.
+      // 17/8 (dirección): "el césped debe tener florcitas también fuera del corral". El desborde
+      // se sube a 4 celdas —lo mismo que ahora cubre el pasto— y la densidad se calcula por ÁREA,
+      // así que la franja de fuera queda igual de poblada que la de dentro y no se nota la cerca.
+      // 18/8: el área se ancla al ORIGEN del terreno, que puede ser negativo
+      const RD = T * 4, AW = W + RD * 2, AH = H + RD * 2;
+      const AX = GF.ORIG_X - RD, AY = GF.ORIG_Y - RD;
+      // El área ÚTIL no es el rectángulo entero: es solo lo que queda dentro del claro, porque el
+      // resto lo tapa el bosque. Se estima muestreando, y con eso se calcula cuántos hacen falta
+      // para que la densidad sea la MISMA dentro y fuera de la cerca.
+      let dentro = 0;
+      for (let m = 0; m < 400; m++) if (this.dentroDelClaro(AX + (m % 20) / 19 * AW, AY + Math.floor(m / 20) / 19 * AH)) dentro++;
+      const util = Math.max(0.2, dentro / 400) * AW * AH;
+      const nDecos = Math.round((hasDecos ? 110 : 210) * util / (W * H));
+      let intentos = 0;
+      for (let i = 0; i < nDecos && intentos < nDecos * 12; i++) {
+        let dx = 0, dy = 0;
+        do { dx = AX + drnd() * AW; dy = AY + drnd() * AH; intentos++; }
+        while (!this.dentroDelClaro(dx, dy) && intentos < nDecos * 12);
+        const t = drnd();
+        if (hasDecos) {
+          // pasto pesa doble; tamaños chicos y variados para que respiren
+          const key = t < 0.45 ? "deco_pasto" : (t < 0.67 ? "deco_flor_blanca" : (t < 0.89 ? "deco_flor_amarilla" : "deco_piedras"));
+          const sz = key === "deco_pasto" ? 15 + drnd() * 6 : (key === "deco_piedras" ? 11 + drnd() * 4 : 13 + drnd() * 4);
+          const im = this.add.image(dx, dy + sz / 2, key).setDisplaySize(sz, sz).setDepth(-999.5).setFlipX(drnd() < 0.5);
+          im.setOrigin(0.5, 1);   // pivote en la base: el VIENTO la inclina desde el suelo (15/8)
+          if (key !== "deco_piedras") (this.vientoDecos = this.vientoDecos || []).push(im);
+          // 15/8: las mariposas conocen las flores del suelo (se posan en ellas cuando pasean)
+          if (key === "deco_flor_blanca" || key === "deco_flor_amarilla") (this.floresDeco = this.floresDeco || []).push({ x: dx, y: dy });
+          continue;
+        }
+        if (t < 0.72) {          // matita de pasto
+          const col = drnd() < 0.6 ? 0x455c35 : 0x688451;
+          deco.lineStyle(1, col, 1);
+          for (let b = 0; b < 3; b++) { deco.beginPath(); deco.moveTo(dx + b * 2, dy + 3); deco.lineTo(dx + b * 2 + (drnd() * 3 - 1.5), dy - 2 - drnd() * 3); deco.strokePath(); }
+        } else if (t < 0.92) {   // florcita
+          const cols = [0xf0ebc8, 0xebbe5a, 0xdca0be];
+          deco.fillStyle(cols[(drnd() * 3) | 0], 1).fillCircle(dx, dy, 2);
+          deco.fillStyle(0x967832, 1).fillCircle(dx, dy, 0.8);
+          (this.floresDeco = this.floresDeco || []).push({ x: dx, y: dy });   // 15/8: también son percha de mariposas
+        } else {                 // piedrita
+          deco.fillStyle(0x8c8778, 1).fillEllipse(dx, dy, 6, 4);
+          deco.lineStyle(1, 0x5a564a, 1).strokeEllipse(dx, dy, 6, 4);
+        }
+      }
+    this.decoG = deco;
+  }
+  dibujarGrilla() {
+    if (this.gridG) { try { this.gridG.destroy(); } catch (e) {} this.gridG = null; }
+    if (this.marcoG) { try { this.marcoG.destroy(); } catch (e) {} this.marcoG = null; }
+    const T = GF.TILE, W = GF.WORLD_W, H = GF.WORLD_H;
+    // 18/8: el marco del mundo sale del graphics compartido `g` y pasa al suyo, para poder
+    // rehacerlo al expandir sin tocar la laguna, que se dibuja en el mismo `g` y no cambia.
+    const g = this.marcoG = this.add.graphics().setDepth(-999.45);
+      // cuadriculado: solo visible en modo edición (detalles 29/7)
+      this.gridG = this.add.graphics().setDepth(-999.4).setVisible(!!GF.editMode);
+      this.gridG.lineStyle(1, 0x18300f, 0.25);
+      // 18/8: el mundo puede empezar en coordenadas NEGATIVAS (al comprar por la izquierda o por
+      // arriba), así que la grilla y el marco arrancan en el origen del terreno, no en (0,0).
+      const OX = GF.ORIG_X, OY = GF.ORIG_Y;
+      for (let x = OX; x <= OX + W; x += T) { this.gridG.beginPath(); this.gridG.moveTo(x, OY); this.gridG.lineTo(x, OY + H); this.gridG.strokePath(); }
+      for (let y = OY; y <= OY + H; y += T) { this.gridG.beginPath(); this.gridG.moveTo(OX, y); this.gridG.lineTo(OX + W, y); this.gridG.strokePath(); }
+      g.lineStyle(4, 0x3c4d31, 0.9).strokeRect(OX, OY, W, H);
+  }
+  dibujarCerca() {
+    if (this.fenceSprites) { this.fenceSprites.forEach(s => { try { s.destroy(); } catch (e) {} }); }
+    const T = GF.TILE, W = GF.WORLD_W, H = GF.WORLD_H;
+      // cerca de madera cozy alrededor de la granja (horizontal de frente, vertical de canto)
+      this.fenceSprites = [];   // referencias para la valla dorada de la Granja Legendaria (10/8)
+      if (this.textures.exists("fence_top")) {
+        const FH = T * 0.55, p2 = GF.POND;   // alto del tramo horizontal (de frente)
+        const pondCell = (c, r) => c >= p2.col && c < p2.col + p2.cols && r >= p2.row && r < p2.row + p2.rows;
+        /* 18/8 — SE RECORRE EL PERÍMETRO, no lado por lado.
+           Antes eran cuatro bucles (fila 0, fila ROWS-1, columna 0, columna COLS-1), que solo sabe
+           describir un rectángulo. Con las expansiones el contorno tiene entrantes y esquinas hacia
+           dentro. La regla nueva no enumera casos: para cada celda TUYA, si el vecino de arriba no
+           es tuyo va cerca de arriba; si el de la izquierda no es tuyo, cerca izquierda; etc.
+           Cualquier forma sale sola, con los cuatro sprites que ya existen — las uniones encajan por
+           construcción, igual que encajaban en las esquinas del rectángulo. */
+        const ter = GF.terreno(), esMia = (c, r) => ter.mias.has(c + "," + r);
+        ter.mias.forEach(s => {
+          const p = s.split(","), c = +p[0], r = +p[1];
+          if (pondCell(c, r)) return;                       // la laguna se come su tramo, como siempre
+          const x = c * T, y = r * T;
+          if (!esMia(c, r - 1)) this.fenceSprites.push(this.add.image(x + T / 2, y + T * 0.58, "fence_top").setDisplaySize(T, FH).setOrigin(0.5, 1).setDepth(2));
+          if (!esMia(c, r + 1)) this.fenceSprites.push(this.add.image(x + T / 2, y + T + 6, "fence_bottom").setDisplaySize(T, FH).setOrigin(0.5, 1).setDepth(y + T + 6));
+          if (!esMia(c - 1, r)) this.fenceSprites.push(this.add.image(x + 7, y + T, "fence_left").setDisplaySize(T * 0.22, T).setOrigin(0.5, 1).setDepth(3));
+          if (!esMia(c + 1, r)) this.fenceSprites.push(this.add.image(x + T - 7, y + T, "fence_right").setDisplaySize(T * 0.22, T).setOrigin(0.5, 1).setDepth(3));
+        });
+      }
+  }
+  /* ============ EXPANDIR SIN TELÓN (18/8, dirección) ================================
+     "No se puede dejar de renderizar los árboles que toca, quitar la parte del corral que hay
+     que quitar para extenderlo hacia ese terreno, y ya está, ¿un poco más?"
+     Sí se puede. Comprar terreno cambia SEIS cosas, no "todo": el césped, sus florcitas, la
+     grilla, la cerca, el anillo de bosque (que retrocede) y los límites de cámara. Más los nodos
+     que trae el bloque, que ya estaban en la escena esperando. Todo eso son llamadas a métodos
+     que se limpian solos; lo que faltaba era que existieran esos métodos.
+     Devuelve false si algo sale mal, y ahí sí cae al reinicio con telón, que sigue de respaldo. */
+  expandirEnVivo(bloque) {
+    try {
+      GF.aplicarTerreno((typeof G !== "undefined" && G.expansiones) || 0);   // la forma nueva del terreno
+      this.dibujarCesped();          // el pasto llega hasta el bloque nuevo
+      this.dibujarDecosCesped();     // y sus florcitas, para que no quede pelado
+      this.dibujarGrilla();
+      this.dibujarCerca();           // el perímetro se recorre de nuevo: la cerca abraza la forma nueva
+      this.dibujarBosque();          // los árboles del bloque comprado dejan de dibujarse
+      // los nodos que venían con el terreno aparecen (ya estaban en la escena, ocultos)
+      (this.objs || []).forEach(o => {
+        if (o.exp == null || (G.expansiones || 0) <= o.exp || !o.oculto) return;
+        o.oculto = false; o.locked = false;
+        if (o.sprite) { o.sprite.setVisible(true).setAlpha(1).clearTint(); this.popFx(o.sprite, 1); }
+      });
+      if (this.rebuildCollisions) this.rebuildCollisions();
+      this._nav = null;                       // el buscador de caminos tenía cacheado el mapa viejo
+      if (this.syncNodos) this.syncNodos();
+      this.dibujarExpansion();                // el cartel salta al bloque siguiente
+      try { this.refreshPlotLocks(); } catch (e) {}
+      this.camLim = this.limiteVista();
+      this.cameras.main.setBounds(this.camLim.x1, this.camLim.y1,
+        this.camLim.x2 - this.camLim.x1, this.camLim.y2 - this.camLim.y1);
+      this.fitCamera();
+      // y en vez de un corte, la cámara VIAJA hasta el terreno nuevo: se ve crecer la granja
+      if (bloque) {
+        const T = GF.TILE;
+        this.cameras.main.pan((bloque.c0 + bloque.c1) / 2 * T, (bloque.r0 + bloque.r1) / 2 * T,
+          760, "Sine.easeInOut", true);
+      }
+      return true;
+    } catch (e) { console.warn("[expandir] en vivo falló, se rehace la escena:", e); return false; }
+  }
   dibujarBosque() {
     if (!this.textures.exists("tree")) return;
     const t0 = performance.now();
@@ -3818,6 +3898,7 @@ class FarmScene extends Phaser.Scene {
     }
     if (usarLote) rt.endDraw();
     t.destroy();
+    if (this.bosqueRT && this.bosqueRT !== rt) { try { this.bosqueRT.destroy(); } catch (e) {} }   // 18/8: al rehacerlo en caliente
     this.bosqueRT = rt;
     // BOSQUE QUE SIGUE MÁS ALLÁ DEL MAPA (17/8). El mapa es CUADRADO (1600x1600) pero las
     // pantallas son panorámicas: para ver el mapa entero hay que alejar tanto que sobran ~1.700

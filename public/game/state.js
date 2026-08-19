@@ -1070,11 +1070,15 @@ function expansionComprar() {
   const nuevos = (typeof regalosSync === "function") ? regalosSync() : 0;   // 18/8: la parcela del bloque, al baúl
   if (nuevos) log("La expansión trajo " + nuevos + " premio" + (nuevos > 1 ? "s" : "") + " al baúl.", "gold");
   if (typeof saveFarm === "function") saveFarm(true);
-  // la forma del mundo cambió: hay que rehacer césped, bosque, cerca y límites de cámara.
-  // 18/8: al volver, la cámara mira el BLOQUE RECIÉN COMPRADO. Antes se plantaba en el centro
-  // del mundo, así que el corte te dejaba mirando lo de siempre y el terreno nuevo ni se veía.
+  /* 18/8 (dirección): SIN TELÓN. La granja crece delante del jugador y la cámara viaja hasta el
+     terreno nuevo. Comprar terreno cambia seis cosas —césped, florcitas, grilla, cerca, anillo de
+     bosque y límites de cámara— y desde hoy cada una es un método que se rehace solo.
+     El reinicio con pantalla negra queda de RESPALDO: si expandirEnVivo falla por lo que sea, la
+     escena se rehace entera y el jugador ve su expansión igual. */
   const b = e.bloque, T = GF.TILE;
-  if (typeof reiniciarGranjaSuave === "function")
+  const sc = window.FARM && window.FARM.scene;
+  const vivo = sc && typeof sc.expandirEnVivo === "function" && sc.expandirEnVivo(b);
+  if (!vivo && typeof reiniciarGranjaSuave === "function")
     reiniciarGranjaSuave(b ? { x: (b.c0 + b.c1) / 2 * T, y: (b.r0 + b.r1) / 2 * T } : null);
   return true;
 }
