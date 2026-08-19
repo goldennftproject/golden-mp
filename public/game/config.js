@@ -487,6 +487,31 @@ GF.checkLayout = function () {
 GF.PLOTS = [];
 (function(){ const c0=1, r0=2; for(let r=0;r<4;r++) for(let c=0;c<3;c++) GF.PLOTS.push({ col:c0+c, row:r0+r }); })();
 
+/* ============ UNA PARCELA QUE NO ES TUYA NO RESERVA NADA (18/8) =====================
+   REPORTE: "en esa celda no se puede colocar una parcela. En algunas celdas dentro del corral no
+   se pueden poner cosas."
+   CAUSA: GF.PLOTS nace con las 12 posiciones, pero el jugador arranca con 3. Las otras 9 son
+   invisibles y aun así toda comprobación de "¿está libre esta celda?" las contaba, porque miraban
+   GF.PLOTS ENTERO. Resultado: nueve celdas muertas repartidas por el corral, sin nada a la vista
+   que lo explique, y un mensaje inútil ("Ahí no entra — probá otra celda").
+   REGLA: una parcela ocupa su celda cuando es TUYA. Antes de eso es solo una reserva y el terreno
+   está libre. Al desbloquearse, si su celda de siempre quedó ocupada, la parcela se muda a la más
+   cercana que esté libre (que es justo lo que ya hacen las parcelas 13+).
+   Esta es LA autoridad: cualquier sitio que pregunte "¿hay parcela acá?" pasa por acá. */
+GF.parcelasTuyas = function () {
+  const n = (typeof G !== "undefined" && G && G.plotsOwned) || 2;
+  return Math.max(2, Math.min(GF.PLOTS.length, n));
+};
+GF.parcelaEn = function (col, row, ignora) {
+  const n = GF.parcelasTuyas();
+  for (let i = 0; i < n; i++) {
+    if (i === ignora) continue;
+    const p = GF.PLOTS[i];
+    if (p && p.col === col && p.row === row) return true;
+  }
+  return false;
+};
+
 // estanque: rectángulo de celdas (4x3) — separado del borde para no cortar la cerca
 GF.POND = { col:1, row:10, cols:4, rows:3 };   // 17/8: baja a las filas nuevas de la granja cuadrada
 // copias base (para "Restaurar" después de mover parcelas/laguna en edición)
@@ -521,7 +546,13 @@ GF.solidRect = function (o) {
   const w = o.rw || o.w || T;
   return { cx: o.cx, by: o.by, hw: w * d.hw, dep: T * d.dep };
 };
-GF.COLLISIONS = GF.WORLD_OBJECTS.map(o => GF.solidRect(o));
+/* 18/8: se RECALCULA, no se calcula una vez. Aquí había un fallo de orden que costó caro:
+   COLLISIONS se armaba en esta línea y los 32 nodos de expansión se añaden MÁS ABAJO, así que
+   esos 32 árboles y rocas no tenían caja sólida. Se podía caminar a través de ellos, plantar
+   encima y el buscador de caminos no los veía. Cualquier cosa que se sume a WORLD_OBJECTS
+   después de este punto TIENE que llamar a GF.rehacerColisiones(). */
+GF.rehacerColisiones = function () { GF.COLLISIONS = GF.WORLD_OBJECTS.map(o => GF.solidRect(o)); };
+GF.rehacerColisiones();
 
 /* ============ LOS NODOS QUE TRAE CADA EXPANSIÓN (18/8) =============================
    Cada bloque trae 1 ÁRBOL y 1 ROCA. Antes llegaba pelado: terreno para poner lo que compres,
@@ -559,6 +590,7 @@ GF.COLLISIONS = GF.WORLD_OBJECTS.map(o => GF.solidRect(o));
     if (roc) GF.WORLD_OBJECTS.push(Object.assign(
       snap("node_stone", { type: "rock", exp: i }, (roc.c + 0.5) * T, (roc.r + 1) * T, T)));
   });
+  GF.rehacerColisiones();   // 18/8: los nodos recién añadidos también son sólidos
 })();
 
 GF.blockedAt = function(x, y, pad){

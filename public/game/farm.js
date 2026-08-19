@@ -783,7 +783,7 @@ class FarmScene extends Phaser.Scene {
         const row = Phaser.Math.Clamp(Math.floor(pt.worldY / T), GF.R0, GF.R1 - 1);
         if (!this.celdaLibreAdorno(col, row, a.i)) {
           a.g.setPosition(a.cx, a.by).setDepth(a.by);
-          toast("Ahí ya hay algo — elegí otra celda"); return;
+          toast(this.porQueNoEntra(col, row, -1) || "Ahí ya hay algo — elegí otra celda"); return;
         }
         const d = (G.decos || [])[a.i];
         if (d) { d.col = col; d.row = row; }
@@ -800,15 +800,7 @@ class FarmScene extends Phaser.Scene {
           if (pl.ground) pl.ground.setPosition(pl.cx, pl.by).setDepth(-998);
           toast("Ahí ya hay algo — elegí otra celda"); return;
         }
-        GF.PLOTS[pl.i].col = col; GF.PLOTS[pl.i].row = row;
-        pl.cx = (col + 0.5) * T; pl.by = (row + 0.5) * T;
-        if (pl.ground) pl.ground.setPosition(pl.cx, pl.by).setDepth(-998);
-        pl.spr.setPosition(pl.cx, pl.by + 6).setDepth(pl.by);
-        pl.emo.setPosition(pl.cx, pl.by + 8).setDepth(pl.by);
-        pl.timer.setPosition(pl.cx, pl.by - T * 0.55).setDepth(pl.by + 1);
-        if (pl.glowTxt) pl.glowTxt.setPosition(pl.cx + T * 0.3, pl.by - T * 0.55);
-        if (!G.layoutPlots) G.layoutPlots = {};
-        G.layoutPlots[pl.i] = { col, row };
+        this.moverParcela(pl, col, row);
         if (typeof saveFarm === "function") saveFarm(true);
         return;
       }
@@ -2047,7 +2039,7 @@ class FarmScene extends Phaser.Scene {
     if (!GF.CORRAL_ON) {
       if (GF.blockedAt(x, y, 10)) return false;
       const T = GF.TILE, col = Math.floor(x / T), row = Math.floor(y / T);
-      if (GF.PLOTS.some(p => p.col === col && p.row === row)) return false;
+      if (GF.parcelaEn(col, row)) return false;   // 18/8: solo las TUYAS ocupan celda
       if ((G.decos || []).some(d => d.id === "valla" && d.col === col && d.row === row)) return false;   // fixs #13: la valla puesta FRENA a los animales
     }
     return true;
@@ -2161,7 +2153,7 @@ class FarmScene extends Phaser.Scene {
     const T = GF.TILE;
     const col = Math.floor(wx / T), row = Math.floor(wy / T);
     const pl = this.placing; if (!pl) return;
-    if (!this.celdaLibreAdorno(col, row, -1)) { toast("Ahí no entra — probá otra celda"); return; }
+    if (!this.celdaLibreAdorno(col, row, -1)) { toast(this.porQueNoEntra(col, row, -1) || "Ahí no entra — probá otra celda"); return; }
     if (pl.tipo === "deco") {
       if (decoColocar(pl.id, col, row)) { this.syncAdornos(); if (typeof syncEditDeco === "function") syncEditDeco(); toast(DECO_DEF[pl.id].label + " colocado"); }
       this.finColocar();
@@ -2169,7 +2161,10 @@ class FarmScene extends Phaser.Scene {
       this.finColocar();
       if (typeof parcelaColocar === "function" && parcelaColocar(col, row)) toast("Parcela colocada");   // reinicia la escena para dibujarla
     } else if (pl.tipo === "obra") {   // blueprint (12/8): la obra ocupa ~2-3 celdas, chequear las vecinas
-      if (!this.celdaLibreAdorno(col - 1, row, -1) || !this.celdaLibreAdorno(col + 1, row, -1)) { toast("Ahí no entra la obra — buscá un lugar más despejado"); return; }
+      if (!this.celdaLibreAdorno(col - 1, row, -1) || !this.celdaLibreAdorno(col + 1, row, -1)) {
+        const pq = this.porQueNoEntra(col - 1, row, -1) || this.porQueNoEntra(col + 1, row, -1);
+        toast((pq ? pq + " — " : "") + "la obra ocupa tres celdas de ancho"); return;
+      }
       this.finColocar();
       // 13/8: la obra aparece EN VIVO (el edificio ya estaba en la escena, invisible) — sin
       // reiniciar la escena ni pantalla oscura; el reinicio con telón queda de respaldo
@@ -2230,13 +2225,30 @@ class FarmScene extends Phaser.Scene {
     }
     return null;
   }
+  /* 18/8: POR QUÉ no entra. "Ahí no entra — probá otra celda" no dice nada, y con celdas muertas
+     invisibles el jugador se queda mirando pasto vacío sin entender. Devuelve el motivo en
+     castellano o null si la celda está libre. celdaLibreAdorno se apoya en esto, así que no puede
+     haber un motivo que la comprobación no vea ni al revés. */
+  porQueNoEntra(col, row, ignora) {
+    const T = GF.TILE;
+    if (!GF.tuyo(col, row)) return "Ese terreno todavía no es tuyo";
+    if (GF.enCerca && GF.enCerca(col, row)) return "Pegado a la cerca no se puede construir";
+    const x = (col + 0.5) * T, y = (row + 0.9) * T;
+    const p = GF.POND;
+    if (col >= p.col && col < p.col + p.cols && row >= p.row && row < p.row + p.rows) return "Ahí está la laguna";
+    if (GF.parcelaEn(col, row)) return "Ahí ya tenés una parcela";
+    if ((G.chests || []).some(c => c.col === col && c.row === row)) return "Ahí está el baúl";
+    if ((G.decos || []).some((d, j) => j !== ignora && d.col === col && d.row === row)) return "Ahí ya hay un adorno";
+    if (GF.blockedAt(x, y, 6)) return "Ahí hay algo plantado o construido";
+    return null;
+  }
   // ¿el adorno entra en esa celda? (ignora es el índice del que se está moviendo, que no se pisa a sí mismo)
   celdaLibreAdorno(col, row, ignora) {
     const T = GF.TILE;
     if (GF.enCerca && GF.enCerca(col, row)) return false;   // 12/8: la CERCA perimetral es intocable
     const x = (col + 0.5) * T, y = (row + 0.9) * T;
     if (GF.blockedAt(x, y, 6)) return false;
-    if (GF.PLOTS.some(p => p.col === col && p.row === row)) return false;
+    if (GF.parcelaEn(col, row)) return false;   // 18/8: una parcela que aún no es tuya no reserva la celda
     if ((G.decos || []).some((d, j) => j !== ignora && d.col === col && d.row === row)) return false;
     if ((G.chests || []).some(c => c.col === col && c.row === row)) return false;
     return true;
@@ -2962,7 +2974,7 @@ class FarmScene extends Phaser.Scene {
       const qc = Math.round((q.cx - qw * T / 2) / T), qr = Math.round(q.by / T);
       if (row === qr - 1 && col >= qc && col < qc + qw) return true;
     }
-    for (let j = 0; j < GF.PLOTS.length; j++) { if (j !== pl.i && GF.PLOTS[j].col === col && GF.PLOTS[j].row === row) return true; }
+    if (GF.parcelaEn(col, row, pl.i)) return true;   // 18/8: ídem — solo estorban las parcelas que ya tenés
     const p = GF.POND;
     if (col >= p.col && col < p.col + p.cols && row >= p.row && row < p.row + p.rows) return true;
     if (GF.enCerca && GF.enCerca(col, row)) return true;   // 12/8: la CERCA perimetral es intocable
@@ -2977,7 +2989,7 @@ class FarmScene extends Phaser.Scene {
       const qc = Math.round((q.cx - qw * T / 2) / T), qr = Math.round(q.by / T);
       if (qr - 1 >= row && qr - 1 < row + p.rows && col < qc + qw && qc < col + p.cols) return true;
     }
-    for (const b of GF.PLOTS) { if (b.col >= col && b.col < col + p.cols && b.row >= row && b.row < row + p.rows) return true; }
+    for (let c2 = col; c2 < col + p.cols; c2++) for (let r2 = row; r2 < row + p.rows; r2++) if (GF.parcelaEn(c2, r2)) return true;
     if (GF.enCerca) for (let c = col; c < col + p.cols; c++) for (let r = row; r < row + p.rows; r++) if (GF.enCerca(c, r)) return true;   // 12/8: la cerca perimetral es intocable
     return false;
   }
@@ -2991,7 +3003,7 @@ class FarmScene extends Phaser.Scene {
       const qc = Math.round((q.cx - qw * T / 2) / T), qr = Math.round(q.by / T);
       if (baseRow === qr && leftCol < qc + qw && qc < leftCol + wCells) return true;
     }
-    for (const pl of GF.PLOTS) { if (pl.row + 1 === baseRow && pl.col >= leftCol && pl.col < leftCol + wCells) return true; }
+    for (let c2 = leftCol; c2 < leftCol + wCells; c2++) if (GF.parcelaEn(c2, baseRow - 1)) return true;
     const p = GF.POND;
     if (baseRow > p.row && baseRow <= p.row + p.rows && leftCol < p.col + p.cols && p.col < leftCol + wCells) return true;
     // 12/8: la CERCA perimetral es intocable — ni edificios, ni árboles, ni piedras encima
@@ -3759,11 +3771,35 @@ class FarmScene extends Phaser.Scene {
     pl.ground.clearTint().setAlpha(1).setVisible(true);
   }
 
+  /* 18/8: mover una parcela a otra celda, en UN solo sitio. Lo usan el arrastre en modo edición
+     y el desbloqueo, que ahora puede necesitar reubicarla. */
+  moverParcela(pl, col, row) {
+    const T = GF.TILE;
+    GF.PLOTS[pl.i].col = col; GF.PLOTS[pl.i].row = row;
+    pl.cx = (col + 0.5) * T; pl.by = (row + 0.5) * T;
+    if (pl.ground) pl.ground.setPosition(pl.cx, pl.by).setDepth(-998);
+    if (pl.spr) pl.spr.setPosition(pl.cx, pl.by + 6).setDepth(pl.by);
+    if (pl.emo) pl.emo.setPosition(pl.cx, pl.by + 8).setDepth(pl.by);
+    if (pl.timer) pl.timer.setPosition(pl.cx, pl.by - T * 0.55).setDepth(pl.by + 1);
+    if (pl.glowTxt) pl.glowTxt.setPosition(pl.cx + T * 0.3, pl.by - T * 0.55);
+    if (!G.layoutPlots) G.layoutPlots = {};
+    G.layoutPlots[pl.i] = { col, row };
+  }
+
   refreshPlotLocks() {
     if (!this.plots) return;
     const owned = Math.max(2, Math.min(GF.PLOTS.length, G.plotsOwned || 2));
     this.plots.forEach((pl, i) => {
       if (i < owned && pl.state === "locked") {
+        /* 18/8: ahora que una parcela bloqueada NO reserva su celda, al llegarte de verdad el
+           sitio de siempre puede estar ocupado (pusiste un adorno, un baúl, moviste la laguna).
+           En ese caso se muda a la celda libre más cercana al resto, igual que las parcelas 13+.
+           Si no hubiera ninguna —imposible en la práctica— se queda donde estaba antes que perderla. */
+        if (!this.celdaLibreAdorno(GF.PLOTS[i].col, GF.PLOTS[i].row, -1)) {
+          const h = this.celdaLibreParcela();
+          if (h) { this.moverParcela(pl, h.col, h.row);
+                   toast("Tu parcela nueva no cabía en su sitio — la puse en un hueco libre"); }
+        }
         pl.state = "dry";
         this.pintarSueloParcela(pl, false);   // 16/8: aparece al colocarla
         this.plotUnlockFx(pl);   // se nota que se abrió
