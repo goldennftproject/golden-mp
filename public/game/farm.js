@@ -496,14 +496,18 @@ class FarmScene extends Phaser.Scene {
       const owned = Math.max(2, Math.min(GF.PLOTS.length, G.plotsOwned || 2));   // viernes (2): se nace con 2 parcelas
       if (i >= owned) {   // 16/8: parcela todavía no entregada → NO SE VE (llega como premio al baúl)
         obj.state = "locked";
-        if (obj.ground) obj.ground.setVisible(false);
+        /* 18/8 (reporte del diseñador: un cuadrado de tierra clara asomando detrás de una parcela).
+           Acá había DOS CAMBIOS DE DÍAS DISTINTOS QUE SE CONTRADECÍAN. El del 13/8 le ponía a la
+           parcela bloqueada la textura del parche silvestre "a todo color"; el del 16/8 decidió que
+           lo que todavía no es tuyo NO SE VE y le puso setVisible(false) delante. Quedaron los dos:
+           el suelo se oculta y, acto seguido, se le asigna una textura que nadie va a ver — salvo
+           que cualquier otra cosa lo vuelva a mostrar, y ahí aparece el parche de tierra.
+           Es la misma clase de fallo que la parcela que no llegaba y que el baúl cerrado: dos
+           decisiones correctas por separado que nadie volvió a cruzar.
+           Se queda la del 16/8, que es la vigente, y el estado del suelo pasa a derivarse SIEMPRE
+           de la verdad en pintarSueloParcela() en vez de depender del orden de las asignaciones. */
         if (spr) spr.setVisible(false); if (emo) emo.setVisible(false); if (timer) timer.setVisible(false);
-        // 13/8: la parcela bloqueada usa el parche clásico (ramas, piedritas y yuyos)
-        // pero A TODO COLOR — chau tinte gris y transparencia (el plot_wild tupido no gustó)
-        if (obj.ground) {
-          if (this.textures.exists("plot_blocked")) obj.ground.setTexture("plot_blocked").setDisplaySize(T, T).clearTint().setAlpha(1);
-          else obj.ground.setAlpha(0.45);
-        }
+        this.pintarSueloParcela(obj, true);
         return obj;
       }
       const sv = savedPlots[i];   // restaura lo plantado antes del refresh (ignora estados viejos como "wet")
@@ -915,6 +919,10 @@ class FarmScene extends Phaser.Scene {
     (G.chests = G.chests || []).forEach((c, idx) => { if (c.col != null) this.spawnChest(idx); });
     this.crearExcavaciones();   // los 3 montículos del día (15/8)
     this.dibujarExpansion();     // 18/8: el lote que podés comprar, marcado en el bosque
+    // 18/8: repintar TODOS los suelos de parcela al terminar de armar la escena. Es barato y cierra
+    // la clase de fallo entera: da igual en qué orden se hayan tocado antes, acá quedan como dice
+    // el estado. El parche de tierra colgado que reportó dirección salía justo de ese desorden.
+    try { this.refreshPlotLocks(); } catch (e) {}
 
     { this.camLim = this.limiteVista();
       this.cameras.main.setBounds(this.camLim.x1, this.camLim.y1, this.camLim.x2 - this.camLim.x1, this.camLim.y2 - this.camLim.y1); }
@@ -3717,20 +3725,28 @@ class FarmScene extends Phaser.Scene {
     }
   }
 
+  /* CÓMO SE VE EL SUELO DE UNA PARCELA — una sola función, y siempre desde la verdad (18/8).
+     Antes esto estaba repartido entre la creación de la escena y refreshPlotLocks, cada una con su
+     idea, y bastaba con que una corriera sin la otra para que quedara un parche de tierra colgado. */
+  pintarSueloParcela(pl, bloqueada) {
+    if (!pl || !pl.ground) return;
+    const T = GF.TILE;
+    if (bloqueada) { pl.ground.setVisible(false); return; }   // lo que no es tuyo, no se ve
+    if (this.textures.exists("plot")) pl.ground.setTexture("plot").setDisplaySize(T, T);
+    pl.ground.clearTint().setAlpha(1).setVisible(true);
+  }
+
   refreshPlotLocks() {
     if (!this.plots) return;
     const owned = Math.max(2, Math.min(GF.PLOTS.length, G.plotsOwned || 2));
     this.plots.forEach((pl, i) => {
       if (i < owned && pl.state === "locked") {
         pl.state = "dry";
-        if (pl.ground) {
-          if (this.textures.exists("plot")) pl.ground.setTexture("plot").setDisplaySize(GF.TILE, GF.TILE);
-          pl.ground.clearTint().setAlpha(1).setVisible(true);   // 16/8: aparece al colocarla
-        }
+        this.pintarSueloParcela(pl, false);   // 16/8: aparece al colocarla
         this.plotUnlockFx(pl);   // se nota que se abrió
       } else if (i >= owned && pl.state !== "locked") {
         pl.state = "locked";
-        if (pl.ground) pl.ground.setVisible(false);   // 16/8: si no es tuya, no se ve
+        this.pintarSueloParcela(pl, true);   // 16/8: si no es tuya, no se ve
       }
     });
     this.syncPlots();

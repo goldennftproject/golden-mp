@@ -5045,3 +5045,37 @@ cinco minerales un −100%. **El fallo era del auditor, no de lo auditado** — 
 dos días que una vara con números copiados inventa un desbalance. Los tres leen del juego ahora.
 
 Ocho bancos de pruebas y siete auditorías, todo limpio.
+
+---
+
+## 18/8 — El parche de tierra colgado detrás de una parcela
+
+Reportado con captura: un cuadrado de tierra clara asomando en el césped. Dirección lo identificó:
+era la textura de la **parcela bloqueada**, que no se debería ver nunca.
+
+**La causa: dos cambios de días distintos que se contradecían.**
+
+- El **13/8** decidió que la parcela bloqueada se viera con el parche silvestre (ramas, piedritas
+  y yuyos) *"a todo color — chau tinte gris y transparencia"*.
+- El **16/8** decidió lo contrario: *"lo que todavía NO es tuyo NO SE VE"*, y le puso un
+  `setVisible(false)` delante.
+
+Quedaron **los dos**. El suelo se oculta y, acto seguido, se le asigna una textura que nadie va a
+ver — salvo que cualquier otra cosa lo vuelva a mostrar, y ahí aparece el parche.
+
+Es exactamente la misma clase de fallo que la parcela que no llegaba, el baúl que no se abría y el
+tutorial atascado: **dos decisiones correctas por separado que nadie volvió a cruzar.** Cuatro veces
+en dos días.
+
+**El arreglo no persigue el síntoma.** En vez de buscar quién lo volvía a mostrar —que no lo
+encontré—, el estado del suelo pasa a derivarse **siempre** de la verdad:
+
+- Una sola función, `pintarSueloParcela(pl, bloqueada)`, decide cómo se ve un suelo. Es el único
+  sitio del archivo que toca su visibilidad.
+- Los tres sitios que antes lo manejaban por su cuenta ahora la llaman.
+- Y al terminar de armar la escena se repintan **todos** los suelos. Es barato y cierra la clase
+  entera: da igual en qué orden se hayan tocado antes.
+
+`tools/test-suelo-parcelas.js` comprueba que no vuelva a haber dos verdades sobre lo mismo: que
+nadie asigne la textura de bloqueada, que exista una sola función que decida, que la usen todos, y
+que la única asignación de visibilidad esté dentro de ella.
