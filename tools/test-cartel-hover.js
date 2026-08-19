@@ -51,13 +51,20 @@ ok("el rectángulo de colocar se apaga solo si no hay nada en la mano",
    sombrean todas las celdas tomadas; sin eso, cualquier rechazo parece arbitrario. */
 ok("mientras colocás se sombrean las celdas ocupadas",
   /dibujarOcupadas\(\) \{/.test(src) && /this\.dibujarOcupadas\(\);/.test(src));
-ok("…usando la MISMA regla que decide (celdaLibreAdorno), no una copia",
-  /if \(this\.celdaLibreAdorno\(c, r, -1\)\) continue;/.test(src));
+ok("…leyendo el MISMO mapa que decide, no una copia",
+  /if \(!GF\.celdaOcupada\(c, r\)\) continue;/.test(src));
 ok("…y se apaga al soltar", /if \(this\.ocupG\) this\.ocupG\.setVisible\(false\)/.test(src));
 ok("el recuadro amarillo suelto ya no está (era un diagnóstico, no una función)",
   !/culpaHl/.test(src));
 ok("el motivo avisa si el estorbo NO tiene dibujo (eso sí sería un fallo)",
-  /sin dibujo en esa celda/.test(src));
+  /sin dibujo acá/.test(src));
+/* 18/8 — UN SOLO MAPA. Dirección: "tiene que ser un sistema por el cual ya tenga en su memoria qué
+   ubicación está ocupando cada sprite... la forma en la que se tiene mapeado la granja no es la
+   más eficiente, porque da pie a estas situaciones". */
+ok("colocar decide con UNA pregunta al mapa, no con cinco comprobaciones",
+  /const oc = GF\.celdaOcupada\(col, row\);\s*\n\s*if \(!oc\) return true;/.test(src));
+ok("blockedAt ya no decide sobre la rejilla (es para caminar)",
+  !/if \(GF\.blockedAt\(x, y, 6\)\) return false;/.test(src));
 
 console.log("\n"+(fallos?"FALLOS: "+fallos:"el cartel solo sale cuando hay algo que decir"));
 process.exit(fallos?1:0);

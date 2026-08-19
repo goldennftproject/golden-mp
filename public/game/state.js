@@ -1305,6 +1305,7 @@ function regaloColocar(tipo, col, row) {
     G.layoutPlots = G.layoutPlots || {};
     G.layoutPlots[idx] = { col, row };
     G.plotsOwned = idx + 1;
+    GF.ocupCambio();
   } else if (tipo === "tree" || tipo === "rock") {
     const tabla = tipo === "tree" ? NIVEL_ARBOLES : NIVEL_ROCAS;
     const abiertos = tipo === "tree" ? (G.treesOpen = G.treesOpen || [0]) : (G.rocksOpen = G.rocksOpen || [0]);
@@ -1317,6 +1318,7 @@ function regaloColocar(tipo, col, row) {
     G.layout = G.layout || {};
     G.layout[idx] = { cx: (col + ancho / 2) * T, by: (row + 1) * T };
     abiertos.push(libre);
+    GF.ocupCambio();
   } else return false;
   q[tipo]--;
   if (typeof syncCobertizo === "function") syncCobertizo();
@@ -2371,6 +2373,7 @@ function parcelaColocar(col, row) {   // la llama la escena con la celda que eli
   if (parcelasPendientes() <= 0) return false;
   G.layoutPlots = G.layoutPlots || {};
   G.layoutPlots[GF.PLOTS.length] = { col, row };   // la escena la levanta de acá
+  GF.ocupCambio();
   if (typeof saveFarm === "function") saveFarm(true);
   return true;   // 18/8: sin telón — la escena la dibuja en vivo (colocarRegaloEnVivo)
 }

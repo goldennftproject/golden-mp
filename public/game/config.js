@@ -639,7 +639,11 @@ GF.rehacerColisiones();
    Para la rejilla hay que preguntar por la REJILLA. Esta es la autoridad de "¿hay un objeto
    del mundo en esta celda?", y usa leftCol/baseRow/wCells, que es como el juego coloca.
    OJO: un objeto con la base en la fila R ocupa la fila R−1 (así lo hace placeBlocked). */
-GF.celdaObjeto = function (col, row, ignoraIdx) {
+GF.celdaObjeto = function (col, row) {   /* 18/8: envoltorio del mapa único, para no romper a quien ya lo llamaba */
+  const o = GF.celdaOcupada(col, row);
+  return (o && o.tipo !== "parcela" && o.tipo !== "laguna" && o.tipo !== "adorno" && o.tipo !== "cofre") ? o.tipo : null;
+};
+GF._celdaObjetoViejo = function (col, row, ignoraIdx) {
   const T2 = GF.TILE;
   for (let i = 0; i < GF.WORLD_OBJECTS.length; i++) {
     if (i === ignoraIdx) continue;
@@ -663,7 +667,8 @@ GF.celdaObjeto = function (col, row, ignoraIdx) {
    vos ves un árbol?". Si el juego cree que hay algo donde no se ve nada, hay que poder SEÑALARLO
    sin abrir una consola. Devuelve el objeto entero y las celdas que ocupa, para poder dibujarle
    un recuadro encima y que se vea dónde está ese fantasma. */
-GF.celdaOcupante = function (col, row) {
+GF.celdaOcupante = function (col, row) { const o = GF.celdaOcupada(col, row); return o && o.i != null ? o : null; };
+GF._celdaOcupanteViejo = function (col, row) {
   const T2 = GF.TILE;
   for (let i = 0; i < GF.WORLD_OBJECTS.length; i++) {
     const c = GF.COLLISIONS[i];
@@ -682,6 +687,64 @@ GF.celdaOcupante = function (col, row) {
   }
   return null;
 };
+
+/* ============ EL MAPA DE OCUPACIÓN — UNA SOLA VERDAD (18/8) ========================
+   Dirección: "la forma en la que se tiene mapeado la granja no es lo más eficiente, porque da pie
+   a estas situaciones. Tiene que ser un sistema por el cual ya tenga en su memoria qué ubicación
+   está ocupando cada sprite, y saber de antemano cuántas celdas ocupa cada cosa."
+   Tiene razón. Hasta hoy había CINCO fuentes opinando sobre si una celda estaba libre —la caja de
+   píxeles de blockedAt, los objetos del mundo, las parcelas, los adornos y los cofres— y cada
+   fallo de la jornada fue una de ellas desalineada con las otras. La peor era blockedAt: mide
+   cajas CON UN MARGEN de 6 px para que el héroe no se pegue a los sprites, así que preguntándole
+   por la rejilla cada objeto ensuciaba a sus celdas vecinas.
+   A partir de acá hay UN mapa: celda → qué la ocupa. Se construye recorriendo cada cosa UNA vez,
+   con su ancho en celdas declarado, y todo lo demás (colocar, el marcador, el sombreado, los
+   mensajes) lo consulta. blockedAt se queda para lo suyo: CAMINAR.                              */
+GF._ocupVer = 0;
+GF.ocupCambio = function () { GF._ocupVer++; };   // lo llama quien mueva o coloque algo
+GF.ocupFirma = function () {
+  const g = (typeof G !== "undefined" && G) || {};
+  return [GF._ocupVer, GF.C0, GF.C1, GF.R0, GF.R1, g.expansiones || 0,
+    (g.treesOpen || []).length, (g.rocksOpen || []).length, g.plotsOwned || 0,
+    (g.decos || []).length, (g.chests || []).length,
+    Object.keys(g.layout || {}).length, Object.keys(g.obras || {}).length,
+    Object.keys(g.built || {}).length, GF.PLOTS.length].join("|");
+};
+GF.ocupacion = function () {
+  const f = GF.ocupFirma();
+  if (GF._ocupMapa && GF._ocupFirma === f) return GF._ocupMapa;
+  const T2 = GF.TILE, m = new Map();
+  const poner = (c, r, que) => { const k = c + "," + r; if (!m.has(k)) m.set(k, que); };
+  // 1) objetos del mundo que están PRESENTES, con su ancho en celdas
+  for (let i = 0; i < GF.WORLD_OBJECTS.length; i++) {
+    const col = GF.COLLISIONS[i];
+    if (col && !GF.objetoPresente(col)) continue;
+    const o = GF.WORLD_OBJECTS[i];
+    const an = Math.max(1, Math.ceil(o.wCells || 1));
+    let lc = o.leftCol, br = o.baseRow;
+    const lp = (typeof G !== "undefined" && G && G.layout) ? G.layout[i] : null;
+    if (lp) { lc = Math.round((lp.cx - an * T2 / 2) / T2); br = Math.round(lp.by / T2); }
+    else {
+      const ob = (typeof G !== "undefined" && G && G.obras) ? G.obras[o.type] : null;
+      if (ob && typeof ob.col === "number") { lc = ob.col; br = ob.row + 1; }
+    }
+    for (let k = 0; k < an; k++) poner(lc + k, br - 1, { tipo: o.type, i, ancho: an, leftCol: lc, fila: br - 1 });
+  }
+  // 2) las parcelas que YA son tuyas (una que no es tuya no ocupa nada)
+  const nPar = GF.parcelasTuyas();
+  for (let i = 0; i < nPar; i++) { const p = GF.PLOTS[i]; if (p) poner(p.col, p.row, { tipo: "parcela", i, ancho: 1, leftCol: p.col, fila: p.row }); }
+  // 3) la laguna: su rectángulo de celdas, declarado, no deducido de una elipse
+  { const p = GF.POND;
+    for (let c = p.col; c < p.col + p.cols; c++) for (let r = p.row; r < p.row + p.rows; r++)
+      poner(c, r, { tipo: "laguna", ancho: p.cols, leftCol: p.col, fila: r }); }
+  // 4) adornos y cofres colocados
+  const g2 = (typeof G !== "undefined" && G) || {};
+  (g2.decos || []).forEach((d, j) => poner(d.col, d.row, { tipo: "adorno", i: j, ancho: 1, leftCol: d.col, fila: d.row, id: d.id }));
+  (g2.chests || []).forEach((c, j) => { if (c && c.col != null) poner(c.col, c.row, { tipo: "cofre", i: j, ancho: 1, leftCol: c.col, fila: c.row }); });
+  GF._ocupMapa = m; GF._ocupFirma = f;
+  return m;
+};
+GF.celdaOcupada = function (col, row) { return GF.ocupacion().get(col + "," + row) || null; };
 
 GF.blockedAt = function(x, y, pad){
   pad = pad || 0;

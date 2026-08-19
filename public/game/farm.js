@@ -743,6 +743,7 @@ class FarmScene extends Phaser.Scene {
       if (o.timer) o.timer.setPosition(o.cx, o.by - T * 0.85);
       if (o.type === "cofre") { const c = G.chests && G.chests[o.chestIdx]; if (c) { c.col = leftCol; c.row = baseRow - 1; } }
       else { if (!G.layout) G.layout = {}; G.layout[o.i] = { cx: o.cx, by: o.by }; }
+      GF.ocupCambio();   // 18/8: el mapa de ocupación tiene que enterarse
       this.rebuildCollisions();
       if (typeof saveFarm === "function") saveFarm(true);
       this.dragObj = null;
@@ -2154,7 +2155,7 @@ class FarmScene extends Phaser.Scene {
     const t = GF.terreno();
     for (let r = t.r0; r < t.r1; r++) for (let c = t.c0; c < t.c1; c++) {
       if (!GF.tuyo(c, r) || GF.enCerca(c, r)) continue;         // la cerca ya se ve sola
-      if (this.celdaLibreAdorno(c, r, -1)) continue;            // libre: no se pinta
+      if (!GF.celdaOcupada(c, r)) continue;                     // libre: no se pinta
       this.ocupG.fillStyle(0x1a2410, 0.30).fillRect(c * T, r * T, T, T);
       this.ocupG.lineStyle(1, 0xffe9a8, 0.22).strokeRect(c * T + 0.5, r * T + 0.5, T - 1, T - 1);
     }
@@ -2254,47 +2255,36 @@ class FarmScene extends Phaser.Scene {
       buzon: "el buzón", cofre_diario: "el baúl", tablon_pedidos: "el tablón", portal: "el portal",
       excav: "un montículo", paquete: "tu paquete" }[t] ||
       ((typeof BUILD_DEF !== "undefined" && BUILD_DEF[t]) ? "la " + BUILD_DEF[t].label : null));
-    /* 18/8 — MISMO ORDEN Y MISMAS PREGUNTAS QUE celdaLibreAdorno. Estaban escritas por separado y
-       ya se habían separado: el motivo decía "ahí está la laguna" en las esquinas del rectángulo
-       de la laguna, que en realidad SÍ son colocables (la laguna es una elipse, no un rectángulo).
-       Un mensaje que miente es peor que ninguno, así que ahora las dos funciones hacen las mismas
-       comprobaciones en el mismo orden y hay un test que falla si vuelven a divergir. */
-    const T = GF.TILE;
+    // 18/8: el motivo sale del MISMO mapa que la decisión. No pueden separarse porque son uno.
     if (!GF.tuyo(col, row)) return "Ese terreno todavía no es tuyo";
     if (GF.enCerca && GF.enCerca(col, row)) return "La cerca se reserva esta franja — probá una celda más adentro";
-    const oc = GF.celdaOcupante(col, row);
-    if (oc) {
-      const nom = NOMBRE_OBJETO(oc.tipo) || "algo construido";
-      /* 18/8: ¿ese estorbo se VE? El objeto de la escena guarda `oculto`. Si el juego dice que hay
-         un árbol y su dibujo está apagado, eso no es un aviso: es un fallo, y el jugador tiene que
-         poder leerlo tal cual en vez de pelearse con una celda muda. */
-      const esc = (this.objs || []).find(x => x.i === oc.i);
-      const invisible = esc && (esc.oculto || (esc.sprite && esc.sprite.visible === false));
-      return invisible ? ("⚠ Hay " + nom + " sin dibujo en esa celda — es un fallo, avisá") : ("Ahí hay " + nom);
-    }
-    if (GF.blockedAt((col + 0.5) * T, (row + 0.9) * T, 6)) {
-      const p = GF.POND;
-      if (col >= p.col - 1 && col < p.col + p.cols + 1 && row >= p.row - 1 && row < p.row + p.rows + 1)
-        return "Ahí está la laguna";
-      return "Ahí hay algo plantado o construido";
-    }
-    if (GF.parcelaEn(col, row)) return "Ahí ya tenés una parcela";
-    if ((G.decos || []).some((d, j) => j !== ignora && d.col === col && d.row === row)) return "Ahí ya hay un adorno";
-    if ((G.chests || []).some(c => c.col === col && c.row === row)) return "Ahí está el baúl";
-    return null;
+    const oc = GF.celdaOcupada(col, row);
+    if (!oc) return null;
+    if (oc.tipo === "adorno" && oc.i === ignora) return null;
+    if (oc.tipo === "laguna") return "Ahí está la laguna";
+    if (oc.tipo === "parcela") return "Ahí ya tenés una parcela";
+    if (oc.tipo === "adorno") return "Ahí ya hay un adorno";
+    if (oc.tipo === "cofre") return "Ahí está el baúl";
+    const nom = NOMBRE_OBJETO(oc.tipo) || "algo construido";
+    /* ¿ese estorbo se VE? Si el juego cree que hay un árbol y su dibujo está apagado, eso no es un
+       aviso: es un fallo, y el jugador tiene que poder leerlo tal cual. */
+    const esc = (this.objs || []).find(x => x.i === oc.i);
+    const invisible = esc && (esc.oculto || (esc.sprite && esc.sprite.visible === false));
+    if (invisible) return "⚠ Hay " + nom + " sin dibujo acá — es un fallo, avisá";
+    return "Ahí hay " + nom + (oc.ancho > 1 ? " (ocupa " + oc.ancho + " celdas)" : "");
   }
   // ¿el adorno entra en esa celda? (ignora es el índice del que se está moviendo, que no se pisa a sí mismo)
   celdaLibreAdorno(col, row, ignora) {
-    const T = GF.TILE;
+    if (!GF.tuyo(col, row)) return false;
     if (GF.enCerca && GF.enCerca(col, row)) return false;   // 12/8: la CERCA perimetral es intocable
-    const x = (col + 0.5) * T, y = (row + 0.9) * T;
-    // 18/8: la rejilla PRIMERO. blockedAt mide cajas de caminar y se le escapan los árboles.
-    if (GF.celdaObjeto(col, row)) return false;   // `ignora` es el índice de un ADORNO, no de un objeto del mundo
-    if (GF.blockedAt(x, y, 6)) return false;
-    if (GF.parcelaEn(col, row)) return false;   // 18/8: una parcela que aún no es tuya no reserva la celda
-    if ((G.decos || []).some((d, j) => j !== ignora && d.col === col && d.row === row)) return false;
-    if ((G.chests || []).some(c => c.col === col && c.row === row)) return false;
-    return true;
+    /* 18/8: UNA sola pregunta, al MAPA DE OCUPACIÓN. Antes eran cinco comprobaciones sueltas, y
+       una de ellas —blockedAt— medía cajas de píxeles CON un margen de 6 px (el que evita que el
+       héroe se pegue a los sprites), así que cada objeto ensuciaba a sus celdas vecinas. blockedAt
+       ya no participa en decisiones de rejilla: sirve para CAMINAR y nada más. */
+    const oc = GF.celdaOcupada(col, row);
+    if (!oc) return true;
+    if (oc.tipo === "adorno" && oc.i === ignora) return true;   // el adorno que se mueve no se pisa a sí mismo
+    return false;
   }
   // el adorno que esté bajo el cursor, si hay alguno (para agarrarlo en modo edición)
   adornoEnPunto(wx, wy) {
@@ -4034,6 +4024,7 @@ class FarmScene extends Phaser.Scene {
     if (pl.glowTxt) pl.glowTxt.setPosition(pl.cx + T * 0.3, pl.by - T * 0.55);
     if (!G.layoutPlots) G.layoutPlots = {};
     G.layoutPlots[pl.i] = { col, row };
+    GF.ocupCambio();
   }
 
   refreshPlotLocks() {
