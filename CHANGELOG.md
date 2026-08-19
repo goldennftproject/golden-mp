@@ -5079,3 +5079,21 @@ encontré—, el estado del suelo pasa a derivarse **siempre** de la verdad:
 `tools/test-suelo-parcelas.js` comprueba que no vuelva a haber dos verdades sobre lo mismo: que
 nadie asigne la textura de bloqueada, que exista una sola función que decida, que la usen todos, y
 que la única asignación de visibilidad esté dentro de ella.
+
+### El cartel de expansión, solo con el cursor encima
+
+Dirección, con captura: *"en vez de mostrar permanentemente el cartel de nivel tres bloqueado, que
+solo pasando el cursor por encima se iluminen los árboles que van a desaparecer y aparezca el
+cartelito"*. Tiene razón — un cartel fijo sobre el bosque es ruido el 99% del tiempo.
+
+Cómo queda:
+
+- **Las estacas siguen siempre.** Marcan el lote y eso es información, no ruido.
+- **Al pasar el cursor, el bloque entero se ilumina** (del 5% al 34%), así que se ve exactamente
+  qué árboles se van a ir. Y sale el cartel con el precio.
+- **Si ya lo podés pagar, el cartel se queda a la vista.** Ahí deja de ser un aviso y pasa a ser una
+  llamada a la acción: no tiene sentido esconderla.
+
+Detalle que hubo que cuidar: al mover el cursor del bloque al propio cartel, el cartel se escondía
+justo cuando ibas a tocarlo. El cartel reenvía el `pointerover` al bloque, así que cuenta como estar
+encima del lote.

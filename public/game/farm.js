@@ -3196,9 +3196,24 @@ class FarmScene extends Phaser.Scene {
     const puede = !falta && typeof canAfford === "function" && canAfford(ex.costo);
     const col = falta ? 0x8a8f7a : (puede ? 0xffd54a : 0xd8b45a);
 
-    // el suelo del bloque, apenas insinuado: se ve QUÉ terreno vas a ganar
-    this.expFx.push(this.add.rectangle(x0 + w / 2, y0 + h / 2, w, h, col, falta ? 0.05 : 0.10)
-      .setDepth(-998).setStrokeStyle(2, col, falta ? 0.35 : 0.7));
+    /* 18/8 (dirección): "en vez de mostrar permanentemente el cartel de nivel bloqueado, que solo
+       pasando el cursor por encima se iluminen los árboles que van a desaparecer y aparezca el
+       cartelito". Tiene razón: un cartel fijo sobre el bosque es ruido el 99% del tiempo.
+       El lote se marca SIEMPRE con las estacas —eso es información, no ruido— y al pasar el cursor
+       se ilumina el bloque entero, con lo que se ve exactamente qué árboles se van, y sale el
+       cartel con el precio. Cuando ya lo podés pagar, el cartel se queda a la vista: ahí sí es una
+       llamada, no un aviso. */
+    const zona = this.add.rectangle(x0 + w / 2, y0 + h / 2, w, h, col, falta ? 0.05 : 0.10)
+      .setDepth(-998).setStrokeStyle(2, col, falta ? 0.35 : 0.7);
+    this.expFx.push(zona);
+    zona.setInteractive({ useHandCursor: !falta });
+    const resaltar = (on) => {
+      zona.setFillStyle(col, on ? 0.34 : (falta ? 0.05 : 0.10));
+      zona.setStrokeStyle(on ? 3 : 2, col, on ? 1 : (falta ? 0.35 : 0.7));
+      if (this.expCartel) this.expCartel.forEach(o => { try { o.setVisible(on || puede); } catch (e) {} });
+    };
+    zona.on("pointerover", () => resaltar(true));
+    zona.on("pointerout", () => resaltar(false));
     // ESTACAS en el perímetro, como las de Sunflower: marcan el lote sin taparlo
     const paso = T;
     for (let x = x0 + paso / 2; x < x0 + w; x += paso) {
@@ -3217,25 +3232,29 @@ class FarmScene extends Phaser.Scene {
     // el cartel del centro: qué cuesta, en verde lo que tenés y en rojo lo que falta
     const cx = x0 + w / 2, cy = y0 + h / 2;
     const D = 99980;
+    this.expCartel = [];   // lo que solo se ve con el cursor encima (o siempre, si ya lo podés pagar)
     const chapa = this.add.rectangle(cx, cy, 132, falta ? 40 : 56, 0x1d2a14, 0.86)
       .setStrokeStyle(2, col, 0.9).setDepth(D).setInteractive({ useHandCursor: true });
-    this.expFx.push(chapa);
+    this.expFx.push(chapa); this.expCartel.push(chapa);
     const titulo = falta ? "Nivel " + ex.nivel : "EXPANDIR";
-    this.expFx.push(this.add.text(cx, cy - (falta ? 6 : 18), titulo,
-      { fontFamily: "system-ui", fontSize: "12px", fontStyle: "bold", color: falta ? "#b9c0a6" : "#ffe08a" })
-      .setOrigin(0.5, 0.5).setDepth(D + 1));
+    { const t = this.add.text(cx, cy - (falta ? 6 : 18), titulo,
+        { fontFamily: "system-ui", fontSize: "12px", fontStyle: "bold", color: falta ? "#b9c0a6" : "#ffe08a" })
+        .setOrigin(0.5, 0.5).setDepth(D + 1);
+      this.expFx.push(t); this.expCartel.push(t); }
     if (falta) {
-      this.expFx.push(this.add.text(cx, cy + 10, "terreno bloqueado",
-        { fontFamily: "system-ui", fontSize: "10px", color: "#8f977f" }).setOrigin(0.5, 0.5).setDepth(D + 1));
+      const t2 = this.add.text(cx, cy + 10, "terreno bloqueado",
+        { fontFamily: "system-ui", fontSize: "10px", color: "#8f977f" }).setOrigin(0.5, 0.5).setDepth(D + 1);
+      this.expFx.push(t2); this.expCartel.push(t2);
     } else {
       const partes = Object.keys(ex.costo).map(k => {
         const tengo = Math.floor((G.res && G.res[k]) || 0);
         return { txt: (RES_LABEL[k] || k) + " " + tengo + "/" + ex.costo[k], ok: tengo >= ex.costo[k] };
       });
       partes.forEach((p, i) => {
-        this.expFx.push(this.add.text(cx, cy - 2 + i * 12, p.txt,
+        const t3 = this.add.text(cx, cy - 2 + i * 12, p.txt,
           { fontFamily: "system-ui", fontSize: "10px", fontStyle: "bold", color: p.ok ? "#9fe07a" : "#ff9a8a" })
-          .setOrigin(0.5, 0.5).setDepth(D + 1));
+          .setOrigin(0.5, 0.5).setDepth(D + 1);
+        this.expFx.push(t3); this.expCartel.push(t3);
       });
       chapa.setSize(132, 34 + partes.length * 12);
       if (puede) {   // late suave cuando ya lo podés pagar: el cartel pide que lo toques
@@ -3243,6 +3262,12 @@ class FarmScene extends Phaser.Scene {
           yoyo: true, repeat: -1, ease: "Sine.easeInOut" });
       }
     }
+    // arranca OCULTO: solo se ve con el cursor encima. Salvo que ya lo puedas pagar, que entonces
+    // es una llamada a la acción y tiene que estar a la vista sin buscarla.
+    this.expCartel.forEach(o => o.setVisible(puede));
+    // que el cartel también cuente como "encima del lote": si no, al mover el cursor del bloque a
+    // la chapa el cartel se escondería justo cuando vas a tocarlo
+    chapa.on("pointerover", () => { zona.emit("pointerover"); });
     chapa.on("pointerdown", () => {
       if (falta) { toast("Esta expansión se abre en el nivel " + ex.nivel + " (vas por el " + (G.level || 1) + ")"); return; }
       if (!canAfford(ex.costo)) {
