@@ -250,7 +250,17 @@ var GOLPES_TALAR = 3, GOLPES_MINAR = 3;   // clics para tumbar un árbol o rompe
 // si dejás un árbol o una piedra a medio golpear y no volvés en este tiempo, se recupera sola
 // y NO se gasta la herramienta: la herramienta solo se descuenta cuando el nodo cae del todo.
 var GOLPES_RESET_MS = 5000;
-var CD = { tree: 5400, rock: 7200 };            // 15/8 (dirección): timers LARGOS del diseñador desde el primer golpe — 1 h 30 árbol · 2 h piedra, sin excepciones
+/* 18/8 (dirección) — LOS RELOJES DEL ÁRBOL Y LA ROCA SE ACORTAN. Medido: en la PRIMERA HORA de
+   juego el 100% de las acciones eran plantar papa, porque el árbol tardaba 90 min y la roca 120 y
+   ninguno llegaba a completarse. La relación entre el reloj más rápido (papa, 3 min) y el más
+   lento era de 1 a 40; Stardew y Sunflower se mueven entre 1:4 y 1:12.
+   Con 30 y 40 minutos queda en 1:10 y la primera hora pasa de 0 acciones de nodo a 5.
+   EL ANCLA NO SE ROMPE: el árbol tarda un tercio y la madera vale un tercio, así que sigue
+   rindiendo 20 la hora. Lo que cambia es el tamaño de los números de las recetas, y eso se
+   re-derivó entero (precios, herramientas, picos, edificios, expansiones, botín y armas).
+   Las VETAS de mineral NO se tocan: 8 a 24 h es el ritmo diario, no el momento a momento, y
+   dividirlas aplastaba la escalera de la minería. */
+var CD = { tree: 1800, rock: 2400 };            // 30 min árbol · 40 min piedra
 var CD_RAPIDO = {};   // 15/8 (dirección, FINAL): SIN arranque rápido — el timer es UNO desde el primer golpe ("el tutorial no es otro juego")
 // cuántas veces se recogió YA de ese nodo (por nodo, no global)
 function nodoUsos(o) { G.nodoUsos = G.nodoUsos || {}; return G.nodoUsos[o.i] || 0; }
@@ -400,13 +410,13 @@ const BUILD_DEF = {
      entre madera y piedra es libre — y no da igual. Con 2 árboles de 1 h 30 y 2 rocas de 2 h, el
      tutorial dura lo que dure el recurso más lento. Cargando hacia la madera se iba a 20,6 h;
      repartiendo 1,33 de madera por cada piedra los dos relojes terminan a la vez y baja a 17,4 h. */
-  store:  { label: "Herrería",        cost: { madera: 4, piedra: 3 } },   // 10/8: ya no es gratis (pedido del diseñador)
-  horno:  { label: "Horno de Piedra", cost: { madera: 6, piedra: 5 },  lvl: 3 },
-  cocina: { label: "Cocina",          cost: { madera: 8, piedra: 6 }, lvl: 5 },
-  altar:  { label: "Altar de Runas",  cost: { tablon: 19, barra_piedra: 7 }, lvl: 7 },
-  establo:    { label: "Establo",     cost: { tablon: 14, barra_piedra: 5 }, lvl: 6 },
-  curtiduria: { label: "Curtiduría",  cost: { tablon: 25, barra_piedra: 10 }, lvl: 8 },
-  ofrendas:   { label: "Altar de Ofrendas", cost: { tablon: 21, barra_piedra: 10, barra_hierro: 2 }, lvl: 10 },
+  store:  { label: "Herrería",        cost: { piedra: 2, madera: 8 } },   // 10/8: ya no es gratis (pedido del diseñador)
+  horno:  { label: "Horno de Piedra", cost: { piedra: 4, madera: 11 },  lvl: 3 },
+  cocina: { label: "Cocina",          cost: { piedra: 6, madera: 14 }, lvl: 5 },
+  altar:  { label: "Altar de Runas",  cost: { barra_piedra: 10, tablon: 26 }, lvl: 7 },
+  establo:    { label: "Establo",     cost: { barra_piedra: 7, tablon: 18 }, lvl: 6 },
+  curtiduria: { label: "Curtiduría",  cost: { barra_piedra: 14, tablon: 33 }, lvl: 8 },
+  ofrendas:   { label: "Altar de Ofrendas", cost: { barra_hierro: 1, barra_piedra: 14, tablon: 28 }, lvl: 10 },
 };
 function buildCostStr(key) { const b = BUILD_DEF[key]; return Object.keys(b.cost).map(k => (b.cost[k]) + " " + (RES_LABEL[k] || k)).join(" + ") + (b.golden ? " + " + b.golden + " $Golden" : ""); }
 
@@ -991,11 +1001,11 @@ function expansionesQueTocan(lvl) { return FARM_EXPANSION.filter(n => n <= (lvl 
    atados a los relojes de los nodos.
    Se re-mide con  node tools/auditar-costo-expansiones.js  */
 const EXPANSION_COSTO = [
-  { madera: 18,  piedra: 12 },
-  { madera: 36,  piedra: 29 },
-  { madera: 59,  piedra: 50 },
-  { madera: 86,  piedra: 77,  bronce: 14 },
-  { madera: 108, piedra: 97,  bronce: 16 },
+  { madera: 18, piedra: 12 },
+  { madera: 36, piedra: 29 },
+  { madera: 59, piedra: 50 },
+  { madera: 86, piedra: 77, bronce: 14 },
+  { madera: 108, piedra: 97, bronce: 16 },
   { madera: 132, piedra: 132, bronce: 18 },
   { madera: 158, piedra: 158, bronce: 20, hierro: 20 },
   { madera: 187, piedra: 187, bronce: 22, hierro: 22 },
@@ -1210,7 +1220,7 @@ const PICK_DEF = {
   // 16/8 (auditoría G): el pico base ya no pide madera. Con 2 maderas encima, cada piedra
   // costaba 18 plata efectivas contra 6 de la madera (el triple) y una parcela financiaba
   // 2,2 rocas en vez de 6,7. La cadena madera→pico sigue viva en los picos de tier alto.
-  stone:    { tier:0, label:"Pico de Piedra",    mineTier:0, dur:1, cost:{},                    plata:6,   sprite:"pick_stone" },   // 14/8: era 3 madera + 10 · 16/8: sin madera
+  stone:    { tier:0, label:"Pico de Piedra",    mineTier:0, dur:1, cost:{},                    plata:2,   sprite:"pick_stone" },   // 18/8: baja a 2 con la roca de 40 min (13% de lo que saca)
   /* 17-18/8 — LA ESCALERA DE PICOS, PENDIENTE DE ARREGLO.
      El problema medido (tools/auditar-precio-sombra.js) es REAL y sigue abierto: con un uso por
      pico, y como cada pico se craftea con el mineral de abajo, el coste se compone hacia arriba
@@ -1237,11 +1247,11 @@ const PICK_DEF = {
      Un uso por pico, cantidades enteras, la escalera intacta (cada pico sigue pidiendo el mineral
      de abajo) y (2 x precio − costo del pico) / horas = 20 EXACTO en los cinco tiers.
      Los precios NO se tocan, así que nada de lo que lee priceOf() se mueve. */
-  bronze:   { tier:1, label:"Pico de Bronce",    mineTier:1, dur:1, cost:{madera:3,piedra:3},   plata:14, sprite:"pick_bronze" },
-  iron:     { tier:2, label:"Pico de Hierro",    mineTier:2, dur:1, cost:{madera:3,piedra:5},   plata:22, sprite:"pick_iron" },
-  gold:     { tier:3, label:"Pico de Oro",       mineTier:3, dur:1, cost:{bronce:3},            plata:30, sprite:"pick_gold" },
-  diamond:  { tier:4, label:"Pico de Diamante",  mineTier:4, dur:1, cost:{oro:3,madera:5},      plata:30, sprite:"pick_diamond" },
-  netherite:{ tier:5, label:"Pico de Netherita", mineTier:5, dur:1, cost:{diamante:2},          plata:20, sprite:"pick_netherite" },
+  bronze:   { tier:1, label:"Pico de Bronce",    mineTier:1, dur:1, cost:{madera:7,piedra:5},   plata:1,  sprite:"pick_bronze" },
+  iron:     { tier:2, label:"Pico de Hierro",    mineTier:2, dur:1, cost:{madera:8,piedra:8},   plata:24, sprite:"pick_iron" },
+  gold:     { tier:3, label:"Pico de Oro",       mineTier:3, dur:1, cost:{bronce:1,piedra:8},   plata:0,  sprite:"pick_gold" },
+  diamond:  { tier:4, label:"Pico de Diamante",  mineTier:4, dur:1, cost:{oro:1,madera:4,piedra:2}, plata:2, sprite:"pick_diamond" },
+  netherite:{ tier:5, label:"Pico de Netherita", mineTier:5, dur:1, cost:{diamante:1,piedra:8}, plata:0,  sprite:"pick_netherite" },
 };
 function equippedPick() { return (G.picks.eq && G.picks.owned[G.picks.eq]) ? G.picks.eq : null; }
 function canAfford(c) { for (const k in c) if ((G.res[k]||0) < c[k]) return false; return true; }
@@ -2881,7 +2891,14 @@ const ARM_MINMAX = {   // daño aleatorio min-max por tipo y rareza (tablas 15-1
   arco:   [[2,4],[3,5],[5,9],[8,12],[12,20]],
 };
 const ARM_BUFFVAL = { espada: [3,5,8,12,18], hacha: [20,30,40,55,70], mazo: [8,12,16,22,30], arco: [1,2,3,4,6] };
-const ARM_DUR = [40, 60, 90, 130, 190];
+/* 18/8 — DURABILIDAD RE-DERIVADA con los relojes nuevos. Al acortar el árbol, la madera pasó a
+   valer 12 y los minerales se quedaron en sus relojes de 8 a 24 h, así que el bronce pasó de valer
+   6 veces una madera a valer 13. Con eso, reparar un arma de mineral se comía todo su margen.
+   La palanca correcta acá es la DURABILIDAD (las armas sí la tienen; las herramientas siguen con
+   un uso, que es la norma). Sale de igualar el costo por punto de daño en toda la escalera:
+       dur = lo que repone x lo que vale / (0,15 x daño)
+   Suavizada para que SUBA siempre — un arma mejor no puede durar menos. */
+const ARM_DUR = [80, 100, 240, 270, 300];
 const ARM_CDS = [3, 5, 8, 12, 18];   // enfriamiento de crafteo (s)
 /* 18/8 (auditoría) — LA ESCALERA DE ARMAS ESTABA INVERTIDA, y este mapa era la causa.
    MEZCLABA materia prima (madera, piedra, diamante) con BARRAS, que valen 3 unidades del mineral
@@ -2898,7 +2915,7 @@ const ARM_MAT = { madera: "madera", piedra: "piedra", bronce: "bronce", oro: "or
 const ARM_MAT_FORJA = { madera: "madera", piedra: "piedra", bronce: "barra_bronce", oro: "barra_oro", diamante: "diamante" };
 // cuánto se repone al reparar, por tier. Sale de igualar el coste por punto de daño (~0,45), que
 // es el que tiene el arma de entrada: así subir de arma nunca es peor que quedarse.
-const ARM_REP_MULT = [1, 2, 1, 1, 1];
+const ARM_REP_MULT = [2, 3, 1, 1, 1];
 const ARM_RAR_LABEL = { madera: "de Madera", piedra: "de Piedra", bronce: "de Bronce", oro: "de Oro", diamante: "de Diamante" };
 const ARM_DEF = {};
 ARM_TIPOS.forEach(tipo => ARM_RAREZAS.forEach((rar, i) => {
@@ -3341,24 +3358,24 @@ const MONSTER_ORDER = ["rata", "murcielago", "larva", "baba", "babita", "arana",
    para que cada muerte cubra el desgaste MÁS 20 por hora del tiempo que lleva.
    Se comprueba con node tools/auditar-combate.js */
 const MONSTER_DEF = {
-  rata:     { label:"Rata",           emoji:"🐀", sprite:"rata", size:30, hp:12,  def:0,  dmg:2,  xp:100,  spd:55, lvl:1, loot:{ carne:[1,1,0.54], plata:[2,2,1] } },
-  larva:    { label:"Larva Venenosa", emoji:"🐛", sprite:"larva", size:38, hp:22,  def:0,  dmg:3,  xp:180,  spd:35, lvl:5, loot:{ carne:[1,2,0.5], flecha:[1,3,0.35], plata:[4,4,1] }, gearLoot:[["botas_cuero",0.08]] },
-  orco:     { label:"Orco",           emoji:"👹", sprite:"orc", size:52, hp:60,  def:2,  dmg:8,  xp:500,  spd:60, lvl:15, hab:"enrage", loot:{ carne:[1,2,0.17], bronce:[1,2,0.11], plata:[9,9,1] }, gearLoot:[["casco_cuero",0.10],["escudo_madera",0.08]] },
-  lancero:  { label:"Orco Lancero",   emoji:"🔱", sprite:"lancero", size:58, hp:90,  def:2,  dmg:10, xp:800,  spd:70, lvl:16, loot:{ carne:[2,3,0.19], bronce:[1,3,0.12], flecha:[2,6,0.14], plata:[15,15,1] }, gearLoot:[["pechera_cuero",0.10]] },
-  guerrero: { label:"Orco Guerrero",  emoji:"👺", sprite:"guerrero", size:70, hp:115, def:2,  dmg:12, xp:1100, spd:65, lvl:20, loot:{ carne:[2,4,0.19], oro:[1,2,0.09], plata:[21,21,1] }, gearLoot:[["casco_hierro",0.10],["escudo_hierro",0.06]] },
-  troll:    { label:"Trol",           emoji:"🧌", sprite:"troll", size:74, hp:140, def:3, dmg:14, xp:1400, spd:45, lvl:30, hab:"regen", loot:{ carne:[3,5,0.1], oro:[1,3,0.07], diamante:[1,1,0.02], plata:[23,23,1] }, gearLoot:[["pechera_hierro",0.15]] },
+  rata:     { label:"Rata",           emoji:"🐀", sprite:"rata", size:30, hp:12,  def:0,  dmg:2,  xp:100,  spd:55, lvl:1, loot:{ carne:[1,1,0.18], plata:[1,1,1] } },
+  larva:    { label:"Larva Venenosa", emoji:"🐛", sprite:"larva", size:38, hp:22,  def:0,  dmg:3,  xp:180,  spd:35, lvl:5, loot:{ carne:[1,2,0.2], flecha:[1,3,0.14], plata:[1,1,1] }, gearLoot:[["botas_cuero",0.08]] },
+  orco:     { label:"Orco",           emoji:"👹", sprite:"orc", size:52, hp:60,  def:2,  dmg:8,  xp:500,  spd:60, lvl:15, hab:"enrage", loot:{ carne:[1,2,0.07], bronce:[1,2,0.04], plata:[4,4,1] }, gearLoot:[["casco_cuero",0.10],["escudo_madera",0.08]] },
+  lancero:  { label:"Orco Lancero",   emoji:"🔱", sprite:"lancero", size:58, hp:90,  def:2,  dmg:10, xp:800,  spd:70, lvl:16, loot:{ carne:[2,3,0.07], bronce:[1,3,0.05], flecha:[2,6,0.05], plata:[4,4,1] }, gearLoot:[["pechera_cuero",0.10]] },
+  guerrero: { label:"Orco Guerrero",  emoji:"👺", sprite:"guerrero", size:70, hp:115, def:2,  dmg:12, xp:1100, spd:65, lvl:20, loot:{ carne:[2,4,0.09], oro:[1,2,0.04], plata:[8,8,1] }, gearLoot:[["casco_hierro",0.10],["escudo_hierro",0.06]] },
+  troll:    { label:"Trol",           emoji:"🧌", sprite:"troll", size:74, hp:140, def:3, dmg:14, xp:1400, spd:45, lvl:30, hab:"regen", loot:{ carne:[3,5,0.05], oro:[1,3,0.04], diamante:[1,1,0.02], plata:[2,2,1] }, gearLoot:[["pechera_hierro",0.15]] },
   // --- Bestiario ampliado (doc maestro 2/8): 15 criaturas + jefe; hab = habilidad (Nv 8+ del doc) ---
-  murcielago: { label:"Murciélago", emoji:"🦇", sprite:"murcielago", size:26, hp:16, def:0, dmg:3, xp:130, spd:85, lvl:3, hab:"evade", evade:0.25, loot:{ carne:[1,1,0.35], plata:[5,5,1] } },
-  baba:       { label:"Baba", emoji:"🫧", sprite:"baba", size:36, hp:35, def:0, dmg:4, xp:250, spd:40, lvl:7, hab:"split", loot:{ plata:[17,17,1] } },
-  babita:     { label:"Babita", emoji:"🫧", sprite:"baba", size:22, hp:12, def:0, dmg:2, xp:50, spd:55, lvl:7, noRespawn:true, loot:{ plata:[6,6,1] } },
-  arana:      { label:"Araña", emoji:"🕷️", sprite:"arana", size:40, hp:45, def:0, dmg:6, xp:340, spd:75, lvl:10, hab:"web", loot:{ flecha:[1,3,0.3], plata:[22,22,1] } },
-  goblin:     { label:"Goblin", emoji:"👾", sprite:"goblin", size:44, hp:52, def:2, dmg:7, xp:430, spd:70, lvl:12, hab:"bleedhit", loot:{ bronce:[1,1,0.15], plata:[9,9,1] } },
-  esqueleto:  { label:"Esqueleto Arquero", emoji:"💀", sprite:"esqueleto", size:48, hp:55, def:2, dmg:12, xp:640, spd:60, lvl:18, hab:"curseArrow", range:150, loot:{ flecha:[2,6,0.5], plata:[39,39,1] } },
-  golem:      { label:"Golem de Piedra", emoji:"🗿", sprite:"golem", size:56, hp:120, def:3, dmg:10, xp:900, spd:35, lvl:22, hab:"golem", loot:{ piedra:[2,4,0.29], oro:[1,1,0.07], plata:[21,21,1] } },
-  hombre_lobo:{ label:"Hombre Lobo", emoji:"🐺", sprite:"hombre_lobo", size:52, hp:130, def:3, dmg:16, xp:1300, spd:80, lvl:27, hab:"howl", loot:{ carne:[2,4,0.6], plata:[89,89,1] } },
-  ogro:       { label:"Ogro", emoji:"🧟", sprite:"ogro", size:64, hp:190, def:4, dmg:19, xp:2000, spd:50, lvl:35, hab:"charge", loot:{ oro:[1,2,0.16], plata:[25,25,1] } },
-  espectro:   { label:"Espectro", emoji:"👻", sprite:"espectro", size:50, hp:150, def:4, dmg:23, xp:2700, spd:70, lvl:40, hab:"phase", loot:{ diamante:[1,1,0.09], plata:[20,20,1] } },
-  demonio:    { label:"Demonio Menor", emoji:"😈", sprite:"demonio", size:58, hp:250, def:4, dmg:27, xp:3900, spd:65, lvl:45, hab:"demon", loot:{ oro:[1,3,0.11], diamante:[1,1,0.04], plata:[38,38,1] } },
+  murcielago: { label:"Murciélago", emoji:"🦇", sprite:"murcielago", size:26, hp:16, def:0, dmg:3, xp:130, spd:85, lvl:3, hab:"evade", evade:0.25, loot:{ carne:[1,1,0.24], plata:[1,1,1] } },
+  baba:       { label:"Baba", emoji:"🫧", sprite:"baba", size:36, hp:35, def:0, dmg:4, xp:250, spd:40, lvl:7, hab:"split", loot:{ plata:[6,6,1] } },
+  babita:     { label:"Babita", emoji:"🫧", sprite:"baba", size:22, hp:12, def:0, dmg:2, xp:50, spd:55, lvl:7, noRespawn:true, loot:{ plata:[2,2,1] } },
+  arana:      { label:"Araña", emoji:"🕷️", sprite:"arana", size:40, hp:45, def:0, dmg:6, xp:340, spd:75, lvl:10, hab:"web", loot:{ flecha:[1,3,0.3], plata:[7,7,1] } },
+  goblin:     { label:"Goblin", emoji:"👾", sprite:"goblin", size:44, hp:52, def:2, dmg:7, xp:430, spd:70, lvl:12, hab:"bleedhit", loot:{ bronce:[1,1,0.06], plata:[3,3,1] } },
+  esqueleto:  { label:"Esqueleto Arquero", emoji:"💀", sprite:"esqueleto", size:48, hp:55, def:2, dmg:12, xp:640, spd:60, lvl:18, hab:"curseArrow", range:150, loot:{ flecha:[2,6,0.5], plata:[9,9,1] } },
+  golem:      { label:"Golem de Piedra", emoji:"🗿", sprite:"golem", size:56, hp:120, def:3, dmg:10, xp:900, spd:35, lvl:22, hab:"golem", loot:{ piedra:[2,4,0.19], oro:[1,1,0.05], plata:[5,5,1] } },
+  hombre_lobo:{ label:"Hombre Lobo", emoji:"🐺", sprite:"hombre_lobo", size:52, hp:130, def:3, dmg:16, xp:1300, spd:80, lvl:27, hab:"howl", loot:{ carne:[2,4,0.6], plata:[16,16,1] } },
+  ogro:       { label:"Ogro", emoji:"🧟", sprite:"ogro", size:64, hp:190, def:4, dmg:19, xp:2000, spd:50, lvl:35, hab:"charge", loot:{ oro:[1,2,0.08], plata:[7,7,1] } },
+  espectro:   { label:"Espectro", emoji:"👻", sprite:"espectro", size:50, hp:150, def:4, dmg:23, xp:2700, spd:70, lvl:40, hab:"phase", loot:{ diamante:[1,1,0.07], plata:[7,7,1] } },
+  demonio:    { label:"Demonio Menor", emoji:"😈", sprite:"demonio", size:58, hp:250, def:4, dmg:27, xp:3900, spd:65, lvl:45, hab:"demon", loot:{ oro:[1,3,0.06], diamante:[1,1,0.02], plata:[12,12,1] } },
   dragon:     { label:"Dragón de las Cavernas", emoji:"🐉", sprite:"dragon", size:96, hp:900, def:28, dmg:42, xp:14000, spd:55, lvl:50, hab:"dragon", boss:true, loot:{ plata:[500,500,1], diamante:[1,3,0.8], netherita:[1,1,0.25] } },
 };
 /* "detallitos (1)" punto 2: los mobs pegan más. Multiplicador global editable.
@@ -3417,7 +3434,7 @@ function useTool(id) {
 // efectivas POR PESCA. El kit regala 15 y el tutorial enseña a pescar: al gastarlas, la pesca
 // se terminaba para siempre. Ahora cuesta 1 madera: quien limita la pesca es la CARNADA
 // (las lombrices de los montículos diarios), que es el freno que el diseño ya tenía puesto.
-const TOOL_CRAFT = { axe: { cost:{}, plata:6 }, rod: { cost:{ madera:1 }, plata:0 } };   // 14/8: hacha 6 (era 10) · 16/8: caña 1 madera (era 3 madera + 1 piedra + 8 oro)
+const TOOL_CRAFT = { axe: { cost:{}, plata:2 }, rod: { cost:{ madera:1 }, plata:0 } };   // 18/8: el hacha baja a 2 con el árbol de 30 min (sigue siendo el 17% de lo que saca)
 function craftTool(id, lote) {
   lote = Math.max(1, lote || 1);
   const tc = TOOL_CRAFT[id], td = TOOL_DEF[id]; if (!tc || !td) return;
@@ -3584,7 +3601,7 @@ function ensureHotbarDefaults() {
      cada 3 minutos, cada muerte son 15 minutos de reloj: 3,3 × 15 min × 20/h = 165.
      La oscura cae solo de los de nivel 10-12 y más rara, así que va al doble: 330.
      Las runas y el polvo salen de fusionar esencias, con lo que su precio se deriva de ellas. */
-const PRICE = { madera:36, piedra:46, bronce:210, hierro:300, oro:470, diamante:990, netherita:1240, carne:8, flecha:2,
+const PRICE = { madera:12, piedra:15, bronce:160, hierro:240, oro:280, diamante:360, netherita:480, carne:8, flecha:2,
   fibra:300, pelaje:122, cuero:340, colmillo:440,
   esencia_runica:165, esencia_oscura:330, runa_poder:495, polvo_suerte:165, runa_proteccion:495 };
 // 1/8: los CULTIVOS venden según CROP_DEF.price — PRICE quedó solo para lo demás.

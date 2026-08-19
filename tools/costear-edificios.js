@@ -21,14 +21,23 @@ function cosechasDia(cd) {
   for (let i = 0; i < SES; i++) { const t = i * hueco; if (t - u >= h) { n++; u = t; } }
   return n + 1;
 }
-const P = { madera:36, piedra:46, hierro:300 };
-P.tablon = 3 * P.madera; P.barra_piedra = 3 * P.piedra; P.barra_hierro = 3 * P.hierro;
+/* 18/8: estos precios estaban ESCRITOS A MANO acá, que es justo el error que este script existe
+   para cazar. Ahora se leen del juego: si cambia un reloj, el coste de los edificios se recalcula
+   solo en vez de quedar clavado en los números de ayer. */
+const fs2 = require("fs"), vm2 = require("vm");
+const c2 = { console: { log(){}, warn(){} }, Math, Date, JSON }; c2.window = c2;
+vm2.runInNewContext(fs2.readFileSync("public/game/config.js", "utf8"), c2, { filename: "config.js" });
+vm2.runInNewContext(fs2.readFileSync("public/game/state.js", "utf8") +
+  "\n;window.__P={PRICE,MAT_DEF,CD,NIVEL_ARBOLES,NIVEL_ROCAS};", c2, { filename: "state.js" });
+const P = Object.assign({}, c2.__P.PRICE);
+for (const m in c2.__P.MAT_DEF) { let v = 0; for (const k in c2.__P.MAT_DEF[m].cost) v += c2.__P.MAT_DEF[m].cost[k] * (P[k] || 0); P[m] = v; }
+const CDreal = c2.__P.CD;
 const NA = [1,1,3,4,6,8], NR = [1,1,4,6,9,12];
 const PAR = { 2:4, 4:5, 6:6, 7:7, 12:8, 18:9, 25:10, 35:11, 45:12, 50:13 };
 function prodDia(l) {                      // valor en plata que produce la granja en un día
   const arb = NA.filter(n => n <= l).length, roc = NR.filter(n => n <= l).length;
   let par = 3; for (const k in PAR) if (l >= +k) par = PAR[k];
-  return (par * 2 + arb * cosechasDia(5400) * 1.5 + roc * cosechasDia(7200) * 2) * 20;
+  return (par * 2 + arb * cosechasDia(CDreal.tree) * (CDreal.tree/3600) + roc * cosechasDia(CDreal.rock) * (CDreal.rock/3600)) * 20;
 }
 // edificio · nivel · días de granja · en qué se paga
 const PLAN = [

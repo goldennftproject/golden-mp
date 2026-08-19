@@ -52,17 +52,18 @@ console.log("\ndesvio maximo: " + peor.toFixed(0) + "%");
    entero, y ese pico se hace con el mineral del tier anterior. El costo se compone hacia
    arriba. La pregunta es si lo que sacás vale más que lo que gastaste.                   */
 console.log("\n===== ¿CONVIENE PICAR? (con los PRICE de hoy, que son la vara del juego) =====");
-console.log("mineral      vale   pico   usos   cuesta/picada   neto por picada   el ancla dice   ok?");
+console.log("mineral      vale   pico   da   cuesta/picada   neto por picada   el ancla dice   ok?");
 const PICK = { bronce:"bronze", hierro:"iron", oro:"gold", diamante:"diamond", netherita:"netherite" };
 for (const k of ["bronce","hierro","oro","diamante","netherita"]) {
   const pd = X.PICK_DEF[PICK[k]];
   let c = pd.plata || 0;
   for (const m in pd.cost || {}) c += pd.cost[m] * X.PRICE[m];
   const usos = pd.dur || 1, porUso = c / usos;
-  const vale = X.PRICE[k], neto = vale - porUso, debe = ANCLA * HORAS[k];
+  const Y = (X.ORE_DEF[k] && X.ORE_DEF[k].yield) || 1;   // 18/8: la picada da Y unidades, no una
+  const vale = X.PRICE[k], neto = Y * vale - porUso, debe = ANCLA * HORAS[k];
   const ok = Math.abs(neto - debe) / debe < 0.06;
   console.log(k.padEnd(12) + String(vale).padStart(6) + String(Math.round(c)).padStart(7) +
-    String(usos).padStart(7) + String(Math.round(porUso)).padStart(16) +
+    String(Y).padStart(5) + String(Math.round(porUso)).padStart(16) +
     (neto >= 0 ? "  +" : "  ") + String(Math.round(neto)).padStart(13) +
     String(Math.round(debe)).padStart(16) + "   " + (ok ? "si" : "NO (" + (100*(neto-debe)/debe).toFixed(0) + "%)"));
 }

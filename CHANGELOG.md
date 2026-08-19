@@ -4980,3 +4980,68 @@ Cuatro cortes, sin tocar nada del arte:
 - **alto ≤ 560 px** (portátiles al 125%, móvil apaisado) — lo que falta ahí es alto, no ancho.
 
 Y `.hudbar` gana `flex-wrap`, que es lo que le faltaba para no desbordar nunca.
+
+---
+
+## 18/8 — LOS RELOJES: árbol 30 min, roca 40, y todo re-anclado detrás
+
+Dirección puso el dedo en lo que ninguna simulación de la semana medía: *"solo te vas a quedar
+haciendo patatas cada dos minutos porque el resto del tiempo no hay más nada"*.
+
+**Medido: en la primera hora de juego, el 100% de las acciones eran plantar papa.** Cero de nodo,
+porque el árbol tardaba 90 minutos y la roca 120 y ninguno llegaba a completarse. La relación entre
+el reloj más rápido (papa, 3 min) y el más lento era **de 1 a 40**; Stardew y Sunflower se mueven
+entre 1:4 y 1:12.
+
+Un hallazgo de camino: **poner más árboles no arregla nada.** Los seis empiezan a la vez y vuelven
+a la vez — a los 90 minutos hay seis acciones de golpe y antes, ninguna. Era mi idea de la víspera
+y estaba mal.
+
+### El ancla no era el obstáculo
+
+Acortar los relojes la respeta sola: si el árbol tarda un tercio, la madera vale un tercio y sigue
+rindiendo 20 la hora. Lo que cambia es el **tamaño de los números**, no la economía.
+
+| | antes | ahora |
+|---|---|---|
+| árbol | 90 min | **30 min** |
+| roca | 120 min | **40 min** |
+| madera | 36 | 12 |
+| piedra | 46 | 15 |
+| hacha / pico | 6 / 6 | 2 / 2 |
+| papa : árbol | 1:30 | **1:10** |
+
+**Las vetas de mineral NO se tocan.** De 8 a 24 h es el ritmo diario —lo que se hace una vez al
+día—, no el momento a momento, y dividirlas aplastaba la escalera de la minería.
+
+### La cascada, entera
+
+Todo lo que colgaba de los precios viejos se re-derivó, nada a mano: precios sombra · herramientas ·
+las cinco recetas de pico · los siete edificios · las dieciséis expansiones · el botín y la defensa
+de los diecisiete monstruos · la durabilidad y reparación de las veinte armas.
+
+Dos resultados que salieron solos y que vale la pena anotar:
+
+- **El pico cuesta exactamente lo que vale una veta.** Gastás una para sacar dos. No lo elegí: es
+  lo que da el ancla con rendimiento 2.
+- **La durabilidad de las armas** pasó a ser la palanca del equilibrio (las armas sí la tienen; las
+  herramientas siguen con un uso, que es la norma). Con la madera a 12 y el bronce a 160, reparar
+  se comía el margen de las armas de mineral. Derivada: 80 · 100 · 240 · 270 · 300. Y el arma
+  óptima pasa a ser **el diamante**, que es lo que uno esperaría.
+
+### El resultado
+
+| | antes | ahora |
+|---|---|---|
+| acciones en la primera hora | 60 | 66 |
+| de ellas, de nodo | **0** | **6** |
+| tutorial completo | 19,2 h | **9,6 h** |
+
+### Tres scripts míos tenían los relojes escritos a mano
+
+`auditar-ancla`, `costear-edificios` y `auditar-precio-sombra` llevaban `5400` y `7200` metidos en
+el código, así que al cambiar los relojes daban a los siete edificios un 55% por debajo y a los
+cinco minerales un −100%. **El fallo era del auditor, no de lo auditado** — y es la tercera vez en
+dos días que una vara con números copiados inventa un desbalance. Los tres leen del juego ahora.
+
+Ocho bancos de pruebas y siete auditorías, todo limpio.

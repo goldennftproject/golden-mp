@@ -63,7 +63,9 @@ console.log("\n=== 4. LOS EDIFICIOS · días de granja al nivel en que se abren 
   const NA = [1,1,3,4,6,8], NR = [1,1,4,6,9,12], PAR = {2:4,4:5,6:6,7:7,12:8,18:9,25:10,35:11,45:12,50:13};
   const prod = l => { const a = NA.filter(n => n <= l).length, r = NR.filter(n => n <= l).length;
     let p = 3; for (const k in PAR) if (l >= +k) p = PAR[k];
-    return (p * 2 + a * cos(5400) * 1.5 + r * cos(7200) * 2) * ANCLA; };
+    // 18/8: los relojes se LEEN del juego. Estaban escritos a mano y al acortar el árbol
+    // este auditor daba a los siete edificios un 55% por debajo — el fallo era suyo, no de ellos.
+    return (p * 2 + a * cos(X.CD.tree) * (X.CD.tree/3600) + r * cos(X.CD.rock) * (X.CD.rock/3600)) * ANCLA; };
   const P = Object.assign({}, X.PRICE);
   for (const m in X.MAT_DEF) { let v = 0; for (const k in X.MAT_DEF[m].cost) v += X.MAT_DEF[m].cost[k] * (P[k] || 0); P[m] = v; }
   const ESPERADO = { store: 0.4, horno: 0.5, cocina: 0.5, establo: 1.5, altar: 2.0, curtiduria: 2.5, ofrendas: 3.0 };
