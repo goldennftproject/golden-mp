@@ -62,4 +62,20 @@ if(mudas.length){
 }
 console.log("  ok     toda celda rechazada sabe decir por qué");
 console.log("  ok     y ninguna celda buena se marca con un motivo falso");
+/* 18/8: y si el motivo es un objeto, tiene que poder SEÑALARLO (para el recuadro amarillo). */
+{
+  let sinCulpable=0, casos2=0;
+  Object.assign(G,{level:50,expansiones:0,plotsOwned:5,treesOpen:[0,1,2,3,4,5],rocksOpen:[0,1,2,3,4,5],
+    built:{},obras:{},layout:{},decos:[],chests:[]});
+  GF.aplicarTerreno(0);
+  const t2=GF.terreno(0);
+  for(let r=t2.r0;r<t2.r1;r++)for(let c=t2.c0;c<t2.c1;c++){
+    const q=GF.celdaObjeto(c,r); if(!q) continue;
+    casos2++;
+    const o=GF.celdaOcupante(c,r);
+    if(!o || o.tipo!==q) sinCulpable++;
+  }
+  if(sinCulpable) { console.log("  FALLA  "+sinCulpable+" celdas ocupadas sin culpable señalable"); process.exit(1); }
+  console.log("  ok     las "+casos2+" celdas ocupadas saben señalar QUÉ objeto y DÓNDE está");
+}
 console.log("\nla regla y el motivo dicen lo mismo en los 72 estados");

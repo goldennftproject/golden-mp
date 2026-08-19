@@ -573,6 +573,17 @@ class FarmScene extends Phaser.Scene {
         const hu = this.huellaColocar(col, row);
         this.editHl.setPosition(hu.c0 * T, (row + 1) * T).setSize(hu.ancho * T, T)
           .setFillStyle(hu.libre ? 0x7ec95a : 0xd9534f, 0.4).setVisible(true);
+        /* 18/8: si lo que estorba es un OBJETO, se le dibuja un recuadro amarillo encima. Cuando el
+           juego dice "ahí hay un árbol" y no se ve ninguno, esto enseña dónde cree que está — sin
+           consola, que es la norma de la casa. Si el recuadro sale sobre pasto vacío, el fantasma
+           queda señalado con el dedo. */
+        if (!this.culpaHl) this.culpaHl = this.add.rectangle(0, 0, T, T, 0xffd54a, 0.55)
+          .setOrigin(0, 1).setDepth(99999).setStrokeStyle(2, 0xffe9a8, 1).setVisible(false);
+        let culpa = null;
+        if (!hu.libre) for (let c = hu.c0; c < hu.c0 + hu.ancho && !culpa; c++) culpa = GF.celdaOcupante(c, row);
+        if (culpa) this.culpaHl.setPosition(culpa.leftCol * T, (culpa.fila + 1) * T)
+          .setSize(culpa.ancho * T, T).setVisible(true);
+        else this.culpaHl.setVisible(false);
         return;
       }
       if (this.dragDeco) {
@@ -2137,6 +2148,7 @@ class FarmScene extends Phaser.Scene {
   finColocar() {
     this.placing = null;
     if (this.editHl) this.editHl.setVisible(false);
+    if (this.culpaHl) this.culpaHl.setVisible(false);
     if (window.syncPlacingUI) syncPlacingUI(false);
     if (this.placingAuto && window.setEditMode) setEditMode(false);
     this.placingAuto = false;
@@ -4366,6 +4378,7 @@ class FarmScene extends Phaser.Scene {
     if (this.editHl && this.editHl.visible &&
         !this.placing && !this.dragDeco && !this.dragObj && !this.dragPlot && !this.dragPond) {
       this.editHl.setVisible(false);
+      if (this.culpaHl) this.culpaHl.setVisible(false);
     }
     const el = $("prompt"); if (!el) return;
     /* 18/8 (reporte: "no pude ponerlo una celda más arriba porque me marca rojo, creo que aún

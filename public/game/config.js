@@ -659,6 +659,29 @@ GF.celdaObjeto = function (col, row, ignoraIdx) {
   }
   return null;
 };
+/* 18/8 — QUIÉN ocupa la celda, no solo qué. Dirección: "el mensaje dice que hay un árbol, ¿pero
+   vos ves un árbol?". Si el juego cree que hay algo donde no se ve nada, hay que poder SEÑALARLO
+   sin abrir una consola. Devuelve el objeto entero y las celdas que ocupa, para poder dibujarle
+   un recuadro encima y que se vea dónde está ese fantasma. */
+GF.celdaOcupante = function (col, row) {
+  const T2 = GF.TILE;
+  for (let i = 0; i < GF.WORLD_OBJECTS.length; i++) {
+    const c = GF.COLLISIONS[i];
+    if (c && !GF.objetoPresente(c)) continue;
+    const o = GF.WORLD_OBJECTS[i];
+    const an = Math.max(1, Math.ceil(o.wCells || 1));
+    let lc = o.leftCol, br = o.baseRow;
+    const lp = (typeof G !== "undefined" && G && G.layout) ? G.layout[i] : null;
+    if (lp) { lc = Math.round((lp.cx - an * T2 / 2) / T2); br = Math.round(lp.by / T2); }
+    else {
+      const ob = (typeof G !== "undefined" && G && G.obras) ? G.obras[o.type] : null;
+      if (ob && typeof ob.col === "number") { lc = ob.col; br = ob.row + 1; }
+    }
+    if (row === br - 1 && col >= lc && col < lc + an)
+      return { i, tipo: o.type, leftCol: lc, fila: br - 1, ancho: an, movido: !!lp };
+  }
+  return null;
+};
 
 GF.blockedAt = function(x, y, pad){
   pad = pad || 0;
