@@ -3622,6 +3622,10 @@ function canonicalStacks() {
   // fixs.docx #9 (11/8): el arma EQUIPADA ya no ocupa lugar en la bolsa — vive en el panel de Equipo
   for (const id of ARM_ORDER) if (G.weapons && G.weapons[id] && G.gear.arma !== id) list.push({ kind: "arm", key: id });
   if (G.planos) for (const t in G.planos) if (G.planos[t]) list.push({ kind: "plano", key: t });   // blueprints (12/8): clic para colocarlos
+  /* 18/8: los regalos sin colocar (parcela, árbol, roca) TAMBIÉN viven en la bolsa, no solo en la
+     barra rápida. Si no, con la barra llena regaloAHotbar no encuentra hueco y el premio queda
+     inalcanzable: lo tenés en G.regalos y no hay forma de tocarlo. La bolsa es la red de seguridad. */
+  if (G.regalos) for (const t of ["plot", "tree", "rock"]) if ((G.regalos[t] || 0) > 0) list.push({ kind: "regalo", key: t });
   PICK_ORDER.forEach(id => { let n = pickCount(id); while (n > 0) { list.push({ kind: "pick", key: id }); n -= 99; } });   // picos apilables ×99
   ITEM_RES_ORDER.forEach(r => { let n = Math.floor(G.res[r] || 0); while (n > 0) { list.push({ kind: "res", key: r }); n -= 99; } });
   CROP_ORDER.forEach(s => { let n = Math.floor(G.seeds[s] || 0); while (n > 0) { list.push({ kind: "seed", key: s }); n -= 99; } });

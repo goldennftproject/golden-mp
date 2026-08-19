@@ -4,10 +4,15 @@
    Replica celdaLibreAdorno() sin Phaser y dice el MOTIVO de cada rechazo.
      node tools/auditar-celdas.js [etapa]                                                          */
 const fs=require("fs"),vm=require("vm");
-const ctx={console,Math,Date,JSON,Object,Array,Number,String,Boolean,Set,Map,isNaN,parseInt,parseFloat};
-ctx.G={plotsOwned:+(process.env.PARCELAS||3)};
-ctx.window=ctx;ctx.globalThis=ctx;vm.createContext(ctx);
+const LOG=console.log;
+const ctx={console:{log(){},warn(){}},Math,Date,JSON,Object,Array,Number,String,Boolean,Set,Map,isNaN,parseInt,parseFloat};
+ctx.window=ctx;ctx.globalThis=ctx;ctx.setTimeout=()=>0;vm.createContext(ctx);
 vm.runInContext(fs.readFileSync("public/game/config.js","utf8"),ctx);
+// state.js hace falta para que exista BUILD_DEF: sin él, objetoPresente cae en "ante la duda,
+// presente" y los 7 edificios sin plano se cuentan como si estuvieran puestos
+vm.runInContext(fs.readFileSync("public/game/state.js","utf8"),ctx);
+Object.assign(ctx.G,{plotsOwned:+(process.env.PARCELAS||3),treesOpen:[0,1,2],rocksOpen:[0,1,2],
+  built:{},obras:{},layout:{},expansiones:+(process.env.EXPANSIONES||0)});
 const GF=ctx.GF,T=GF.TILE;
 
 // el motivo por el que una celda rechaza una parcela (mismo orden que celdaLibreAdorno)
@@ -24,9 +29,12 @@ function motivo(col,row){
   const p=GF.POND,px=p.col*T,py=p.row*T,pw=p.cols*T,ph=p.rows*T;
   const ex=px+pw/2,ey=py+ph/2,dxp=(x-ex)/(pw/2+pad),dyp=(y-ey)/(ph/2+pad);
   if (dxp*dxp+dyp*dyp<1) return "estanque";
+  /* 18/8: la REJILLA primero. Antes esto medía con las cajas de píxeles de blockedAt y encima
+     usaba o.baseRow como fila ocupada cuando la buena es baseRow−1: los árboles no salían nunca. */
+  const q=GF.celdaObjeto(col,row); if(q) return "choca:"+q;
   for (const c2 of GF.COLLISIONS)
-    if (x>c2.cx-c2.hw-pad && x<c2.cx+c2.hw+pad && y>c2.by-c2.dep-pad && y<c2.by+pad)
-      return "choca:"+(c2.tipo||c2.type||c2.id||"objeto");
+    if (x>c2.cx-c2.hw-pad && x<c2.cx+c2.hw+pad && y>c2.by-c2.dep-pad && y<c2.by+pad && GF.objetoPresente(c2))
+      return "choca:"+(c2.tipo||"objeto");
   return null;
 }
 
@@ -50,10 +58,10 @@ for (let n=0;n<=GF.EXPANSIONES.length;n++){
     mapa.push(fila);
   }
   const clave=Object.keys(rechazo).filter(k=>k!=="cerca"&&!k.startsWith("borde")&&k!=="estanque"&&k!=="parcela");
-  console.log("\n=== etapa "+n+"  ("+celdas+" celdas propias, "+libres+" colocables) ===");
-  if (soloEtapa!=null) mapa.forEach(f=>console.log("   "+f));
-  console.log("   "+Object.entries(rechazo).map(([k,v])=>k+"="+v).join("  "));
+  LOG("\n=== etapa "+n+"  ("+celdas+" celdas propias, "+libres+" colocables) ===");
+  if (soloEtapa!=null) mapa.forEach(f=>LOG("   "+f));
+  LOG("   "+Object.entries(rechazo).map(([k,v])=>k+"="+v).join("  "));
   clave.forEach(k=>{ totalMuertas+=rechazo[k]; });
 }
-console.log("\nleyenda: . colocable   # cerca   b borde   ~ estanque   P parcela tuya   X objeto del mundo");
-console.log("celdas bloqueadas por un OBJETO (sospechosas): "+totalMuertas);
+LOG("\nleyenda: . colocable   # cerca   b borde   ~ estanque   P parcela tuya   X objeto del mundo");
+LOG("celdas bloqueadas por un OBJETO (sospechosas): "+totalMuertas);

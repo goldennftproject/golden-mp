@@ -269,6 +269,7 @@ function refreshInv() {
   FISH_ORDER.forEach(f => rem["fish:" + f] = Math.floor((G.fish && G.fish[f]) || 0));
   RECIPE_ORDER.forEach(d => rem["dish:" + d] = Math.floor((G.dishes && G.dishes[d]) || 0));
   rem["chest:cofre"] = (typeof chestsInBag === "function") ? chestsInBag() : 0;
+  ["plot", "tree", "rock"].forEach(t => rem["regalo:" + t] = (G.regalos && G.regalos[t]) || 0);   // 18/8: el ×N del regalo sin colocar
   rem["tool:axe"] = toolCount("axe"); rem["tool:rod"] = toolCount("rod");   // herramientas apilables
   PICK_ORDER.forEach(id => rem["pick:" + id] = pickCount(id));
   let html = "";

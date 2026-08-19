@@ -2265,6 +2265,11 @@ class FarmScene extends Phaser.Scene {
      castellano o null si la celda está libre. celdaLibreAdorno se apoya en esto, así que no puede
      haber un motivo que la comprobación no vea ni al revés. */
   porQueNoEntra(col, row, ignora) {
+    const NOMBRE_OBJETO = (t) => ({ tree: "un árbol", rock: "una roca", ore: "una veta",
+      barn: "el granero", market: "el mercado", dummy: "el muñeco de entrenamiento",
+      buzon: "el buzón", cofre_diario: "el baúl", tablon_pedidos: "el tablón", portal: "el portal",
+      excav: "un montículo", paquete: "tu paquete" }[t] ||
+      ((typeof BUILD_DEF !== "undefined" && BUILD_DEF[t]) ? "la " + BUILD_DEF[t].label : null));
     const T = GF.TILE;
     if (!GF.tuyo(col, row)) return "Ese terreno todavía no es tuyo";
     if (GF.enCerca && GF.enCerca(col, row)) return "Pegado a la cerca no se puede construir";
@@ -2274,6 +2279,8 @@ class FarmScene extends Phaser.Scene {
     if (GF.parcelaEn(col, row)) return "Ahí ya tenés una parcela";
     if ((G.chests || []).some(c => c.col === col && c.row === row)) return "Ahí está el baúl";
     if ((G.decos || []).some((d, j) => j !== ignora && d.col === col && d.row === row)) return "Ahí ya hay un adorno";
+    const q = GF.celdaObjeto(col, row);
+    if (q) return "Ahí hay " + (NOMBRE_OBJETO(q) || "algo construido");
     if (GF.blockedAt(x, y, 6)) return "Ahí hay algo plantado o construido";
     return null;
   }
@@ -2282,6 +2289,8 @@ class FarmScene extends Phaser.Scene {
     const T = GF.TILE;
     if (GF.enCerca && GF.enCerca(col, row)) return false;   // 12/8: la CERCA perimetral es intocable
     const x = (col + 0.5) * T, y = (row + 0.9) * T;
+    // 18/8: la rejilla PRIMERO. blockedAt mide cajas de caminar y se le escapan los árboles.
+    if (GF.celdaObjeto(col, row)) return false;   // `ignora` es el índice de un ADORNO, no de un objeto del mundo
     if (GF.blockedAt(x, y, 6)) return false;
     if (GF.parcelaEn(col, row)) return false;   // 18/8: una parcela que aún no es tuya no reserva la celda
     if ((G.decos || []).some((d, j) => j !== ignora && d.col === col && d.row === row)) return false;

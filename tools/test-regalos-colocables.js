@@ -62,5 +62,29 @@ const ok=(n,c,d)=>{if(!c)fallos++;console.log((c?"  ok   ":"  FALLA")+"  "+n+(d?
   ok("nodoIndicePorLock ignora los de expansión",
     g.NIVEL_ARBOLES.every((_,i)=>{const k=g.nodoIndicePorLock("tree",i);return k>=0&&g.GF.WORLD_OBJECTS[k].exp==null;}));
 }
+// 5) CON LA BARRA LLENA, EL REGALO SIGUE SIENDO ALCANZABLE (bug encontrado el 18/8 auditando)
+{
+  const g=juego();
+  g.G.hotbar=new Array(10).fill({kind:"tool",key:"axe"});   // barra sin un solo hueco
+  g.G.regalos={tree:0,rock:0,plot:2};
+  g.regaloReclamar("plot");
+  const enBarra=g.G.hotbar.some(h=>h&&h.kind==="regalo");
+  const enBolsa=g.canonicalStacks().some(d=>d.kind==="regalo"&&d.key==="plot");
+  ok("con la barra llena no entra en la barra...", !enBarra);
+  ok("...pero SÍ está en la bolsa (si no, sería inalcanzable)", enBolsa);
+}
+// 6) NO SE PUEDE COBRAR DOS VECES: lo pendiente cuenta como si ya lo tuvieras
+{
+  const g=juego();
+  g.G.level=10; g.G.expansiones=0; g.G.plotsOwned=3; g.G.regalos={tree:0,rock:0,plot:0};
+  g.regalosSync();
+  const primera=g.G.regalos.plot;
+  g.regalosSync(); g.regalosSync();          // volver a sincronizar no puede regalar de nuevo
+  ok("regalosSync es idempotente", g.G.regalos.plot===primera, "x3 → "+g.G.regalos.plot);
+  g.regaloColocar("plot",6,6);
+  g.regalosSync();
+  ok("colocar una y resincronizar no la devuelve", g.G.regalos.plot===primera-1,
+     "quedan "+g.G.regalos.plot+" (tenía "+primera+")");
+}
 console.log("\n"+(fallos?"FALLOS: "+fallos:"los regalos se colocan a mano y las expansiones nacen puestas"));
 process.exit(fallos?1:0);

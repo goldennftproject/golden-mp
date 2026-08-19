@@ -551,7 +551,36 @@ GF.solidRect = function (o) {
    esos 32 árboles y rocas no tenían caja sólida. Se podía caminar a través de ellos, plantar
    encima y el buscador de caminos no los veía. Cualquier cosa que se sume a WORLD_OBJECTS
    después de este punto TIENE que llamar a GF.rehacerColisiones(). */
-GF.rehacerColisiones = function () { GF.COLLISIONS = GF.WORLD_OBJECTS.map(o => GF.solidRect(o)); };
+GF.rehacerColisiones = function () {
+  let nArb = 0, nRoc = 0;
+  GF.COLLISIONS = GF.WORLD_OBJECTS.map((o, i) => {
+    const r = GF.solidRect(o);
+    r.i = i; r.tipo = o.type; r.exp = o.exp;
+    if (o.exp == null) {                 // el nº de orden que usa treesOpen / rocksOpen
+      if (o.type === "tree") r.lock = nArb++;
+      if (o.type === "rock") r.lock = nRoc++;
+    }
+    return r;
+  });
+};
+/* ============ UN OBJETO QUE NO SE VE NO OCUPA CELDA (18/8) ==========================
+   MEDIDO: 13 objetos del corral tenían caja sólida sin estar en la partida — los 7 edificios
+   cuyo plano todavía no se colocó (ni siquiera se DIBUJAN: su posición de fábrica no se usa
+   nunca, la elige el jugador con el plano) y los árboles y rocas todavía no entregados. Eran
+   13 celdas muertas de 112, invisibles y sin explicación, y encima chocaban de frente con que
+   ahora los nodos los coloca el jugador donde quiere: no podías poner tu árbol nuevo justo
+   donde había un árbol futuro que no existe.
+   Es la MISMA regla que ya vale para las parcelas: se ocupa la celda cuando la cosa es tuya.
+   Ante la duda, presente — así un fallo acá deja una celda de más, nunca un objeto atravesable. */
+GF.objetoPresente = function (c) {
+  if (typeof G === "undefined" || !G) return true;
+  if (c.exp != null) return (G.expansiones || 0) > c.exp;              // el bloque todavía no se compró
+  if (typeof BUILD_DEF !== "undefined" && BUILD_DEF[c.tipo])           // edificio: existe al colocar su plano
+    return !!((G.built && G.built[c.tipo]) || (G.obras && G.obras[c.tipo]) || (G.layout && G.layout[c.i]));
+  if (c.tipo === "tree") return (G.treesOpen || [0]).includes(c.lock);
+  if (c.tipo === "rock") return (G.rocksOpen || [0]).includes(c.lock);
+  return true;
+};
 GF.rehacerColisiones();
 
 /* ============ LOS NODOS QUE TRAE CADA EXPANSIÓN (18/8) =============================
@@ -601,6 +630,36 @@ GF.rehacerColisiones();
   GF.rehacerColisiones();   // 18/8: los nodos recién añadidos también son sólidos
 })();
 
+/* ============ OCUPACIÓN POR CELDA ≠ COLISIÓN POR PÍXELES (18/8) =====================
+   blockedAt mide con CAJAS y está pensado para CAMINAR: la del árbol es solo el tronco
+   (hw 0.17) para que el héroe pueda pasar bajo la copa. Pero se estaba usando también para
+   "¿cabe algo en esta celda?", y ahí falla: el tronco queda centrado justo en la frontera
+   entre las dos celdas del árbol y falla el centro de las DOS por 0,7 px. Resultado: las dos
+   celdas de cada árbol se leían como suelo libre y se podía plantar una parcela encima.
+   Para la rejilla hay que preguntar por la REJILLA. Esta es la autoridad de "¿hay un objeto
+   del mundo en esta celda?", y usa leftCol/baseRow/wCells, que es como el juego coloca.
+   OJO: un objeto con la base en la fila R ocupa la fila R−1 (así lo hace placeBlocked). */
+GF.celdaObjeto = function (col, row, ignoraIdx) {
+  const T2 = GF.TILE;
+  for (let i = 0; i < GF.WORLD_OBJECTS.length; i++) {
+    if (i === ignoraIdx) continue;
+    const c = GF.COLLISIONS[i];
+    if (c && !GF.objetoPresente(c)) continue;
+    const o = GF.WORLD_OBJECTS[i];
+    const an = Math.max(1, Math.ceil(o.wCells || 1));
+    let lc = o.leftCol, br = o.baseRow;
+    const lp = (typeof G !== "undefined" && G && G.layout) ? G.layout[i] : null;
+    if (lp) { lc = Math.round((lp.cx - an * T2 / 2) / T2); br = Math.round(lp.by / T2); }
+    else {
+      const ob = (typeof G !== "undefined" && G && G.obras) ? G.obras[o.type] : null;   // obra colocada con su plano
+      if (ob && typeof ob.col === "number") { lc = ob.col; br = ob.row + 1; }
+    }
+    if (row !== br - 1) continue;
+    if (col >= lc && col < lc + an) return o.type;
+  }
+  return null;
+};
+
 GF.blockedAt = function(x, y, pad){
   pad = pad || 0;
   // 18/8: la cerca es sólida, pero "el borde" ya no es el del rectángulo — es el borde del
@@ -621,7 +680,7 @@ GF.blockedAt = function(x, y, pad){
   // rectángulos (no elipses): el borde es predecible y no se cuela por las esquinas
   for (const c of GF.COLLISIONS){
     if (x > c.cx - c.hw - pad && x < c.cx + c.hw + pad &&
-        y > c.by - c.dep - pad && y < c.by + pad) return true;
+        y > c.by - c.dep - pad && y < c.by + pad) { if (GF.objetoPresente(c)) return true; }
   }
   return false;
 };
