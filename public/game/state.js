@@ -1167,38 +1167,79 @@ function regalosSync() {
   return nuevos;
 }
 var REGALO_LABEL = { tree: "Retoño", rock: "Roca", plot: "Parcela" };
+// el género importa: "ninguna retoño" quedaba mal en el aviso
+function REGALO_NADA(t) { return { tree: "ningún retoño", rock: "ninguna roca", plot: "ninguna parcela" }[t] || "ninguno"; }
 function regalosPendientes() { const q = G.regalos || {}; return (q.tree || 0) + (q.rock || 0) + (q.plot || 0); }
 // reclamar UNO: lo saca de la cola y lo activa en la granja
+/* ============ LOS REGALOS SE COLOCAN A MANO (18/8, dirección) =======================
+   "Cuando te llegan al baúl, en vez de plantarse automáticamente en el terreno, que vayan al
+   inventario y a la barra de acceso rápido, y que el jugador pueda seleccionarlas, pasar a modo
+   colocación y plantarlas. Lo mismo con los árboles y las piedras. Excepto cuando expande el
+   terreno, que los nodos ya aparecen puestos, pero uno los puede mover en modo edición."
+   Antes, reclamar en el baúl activaba el siguiente nodo de la lista EN SU POSICIÓN DE FÁBRICA:
+   el jugador no elegía nada. Ahora el baúl solo te da el objeto; la granja la dibujás vos.
+   Es el mismo camino que ya hacían los planos de los edificios, reutilizado entero. */
+function regaloAHotbar(tipo) {
+  if (!Array.isArray(G.hotbar)) return;
+  if (G.hotbar.some(h => h && h.kind === "regalo" && h.key === tipo)) return;   // ya está, el contador sube solo
+  const li = G.hotbar.findIndex(h => !h);
+  if (li >= 0) { G.hotbar[li] = { kind: "regalo", key: tipo }; if (typeof refreshHotbar === "function") refreshHotbar(true); }
+}
+// del baúl a la bolsa: NO se coloca nada todavía
 function regaloReclamar(tipo) {
   const q = G.regalos || (G.regalos = { tree: 0, rock: 0, plot: 0 });
   if (!q[tipo]) return false;
-  if (tipo === "tree") {
-    G.treesOpen = G.treesOpen || [0];
-    const libre = NIVEL_ARBOLES.map((_, i) => i).find(i => !G.treesOpen.includes(i));
-    if (libre == null) { toast("Ya tenés todos los árboles"); return false; }
-    G.treesOpen.push(libre);
-  } else if (tipo === "rock") {
-    G.rocksOpen = G.rocksOpen || [0];
-    const libre = NIVEL_ROCAS.map((_, i) => i).find(i => !G.rocksOpen.includes(i));
-    if (libre == null) { toast("Ya tenés todas las rocas"); return false; }
-    G.rocksOpen.push(libre);
-  } else if (tipo === "plot") {
+  regaloAHotbar(tipo);
+  log((REGALO_LABEL[tipo] || tipo) + " a tu bolsa — elegí dónde va desde la barra rápida.", "gold");
+  toast((REGALO_LABEL[tipo] || tipo) + " en la bolsa · tocala para colocarla");
+  if (window.sfx) sfx("level");
+  refreshHud(); if (typeof refreshHotbar === "function") refreshHotbar(true);
+  if (typeof saveFarm === "function") saveFarm(true);
+  return true;
+}
+// ¿cuál es el índice en WORLD_OBJECTS del nodo nº lockIdx del corral? (los de expansión no cuentan)
+function nodoIndicePorLock(tipo, lockIdx) {
+  let n = 0;
+  for (let i = 0; i < GF.WORLD_OBJECTS.length; i++) {
+    const o = GF.WORLD_OBJECTS[i];
+    if (o.type !== tipo || o.exp != null) continue;
+    if (n === lockIdx) return i;
+    n++;
+  }
+  return -1;
+}
+/* colocar de verdad: acá es donde el regalo pasa a ser parte de la granja, en la celda que
+   eligió el jugador. La escena llama a esto desde colocarEn(). */
+function regaloColocar(tipo, col, row) {
+  const q = G.regalos || (G.regalos = { tree: 0, rock: 0, plot: 0 });
+  if (!q[tipo]) { toast("No te queda " + REGALO_NADA(tipo)); return false; }
+  const T = GF.TILE;
+  if (tipo === "plot") {
     const tope = typeof PLOT_MAX !== "undefined" ? PLOT_MAX : 60;
     if ((G.plotsOwned || 3) >= tope) { toast("Ya tenés todas las parcelas"); return false; }
+    G.layoutPlots = G.layoutPlots || {};
+    G.layoutPlots[GF.PLOTS.length] = { col, row };
     G.plotsOwned = (G.plotsOwned || 3) + 1;
+  } else if (tipo === "tree" || tipo === "rock") {
+    const tabla = tipo === "tree" ? NIVEL_ARBOLES : NIVEL_ROCAS;
+    const abiertos = tipo === "tree" ? (G.treesOpen = G.treesOpen || [0]) : (G.rocksOpen = G.rocksOpen || [0]);
+    const libre = tabla.map((_, i) => i).find(i => !abiertos.includes(i));
+    if (libre == null) { toast(tipo === "tree" ? "Ya tenés todos los árboles" : "Ya tenés todas las rocas"); return false; }
+    const idx = nodoIndicePorLock(tipo, libre);
+    if (idx < 0) { toast("No encuentro dónde ponerlo"); return false; }
+    const o = GF.WORLD_OBJECTS[idx];
+    const ancho = Math.max(1, o.wCells || 1);            // el árbol mide 2 celdas
+    G.layout = G.layout || {};
+    G.layout[idx] = { cx: (col + ancho / 2) * T, by: (row + 1) * T };
+    abiertos.push(libre);
   } else return false;
   q[tipo]--;
+  if (!q[tipo] && Array.isArray(G.hotbar)) G.hotbar = G.hotbar.map(h => (h && h.kind === "regalo" && h.key === tipo) ? null : h);
   log("Colocaste " + (REGALO_LABEL[tipo] || tipo) + " en la granja.", "gold");
   toast("¡" + (REGALO_LABEL[tipo] || tipo) + " en la granja!");
   if (window.sfx) sfx("level");
-  // la granja lo tiene que ver en el acto
-  try {
-    if (window.farmScene) {
-      if (tipo === "plot" && window.farmScene.refreshPlotLocks) window.farmScene.refreshPlotLocks();
-      if ((tipo === "tree" || tipo === "rock") && window.farmScene.refreshNodeLocks) window.farmScene.refreshNodeLocks();
-    }
-  } catch (e) {}
-  refreshHud(); if (typeof saveFarm === "function") saveFarm(true);
+  if (typeof saveFarm === "function") saveFarm(true);
+  if (typeof reiniciarGranjaSuave === "function") reiniciarGranjaSuave();   // la escena la lee de G.layout al rehacerse
   return true;
 }
 function levelUp() { toast("El nivel sube cosechando (XP de Farmeo)"); }
@@ -1223,7 +1264,16 @@ const ORE_ORDER = ["piedra","bronce","hierro","oro","diamante","netherita"];
    hacia arriba y supera lo que saca. Con yield 2 y los picos re-costeados,
    (2 x precio − costo del pico) / horas = 20 exacto. Los precios no se tocan. */
 const ORE_DEF = {   // 15/8 EN PRUEBA: enfriamientos largos del doc 4/8 del diseñador
-  piedra:   { tier:0, label:"Piedra",    emoji:"🪨", sprite:"node_stone",     cd:7200,  yield:1, price:6 },
+  /* 18/8 (dirección): "la veta de piedra tiene que tener el mismo enfriamiento que las piedras
+     normales — no tiene que hacer la excepción. De hecho no sé por qué se llama veta de piedra
+     si las otras son rocas y dan el mismo recurso."
+     Tenía razón y el ancla lo confirma: este nodo daba 1 piedra cada 2 HORAS (las rocas la dan
+     cada 40 min) y encima con un precio propio de 6 cuando la piedra vale 15. Salía a 7,5
+     plata/hora, un tercio del ancla — estrictamente peor que una roca en las tres cosas.
+     Era una anomalía heredada, no una decisión. Ahora es una roca más: mismo reloj, mismo precio.
+     No se borra el objeto porque G.layout indexa WORLD_OBJECTS por posición (ver el aviso de
+     config.js); se iguala su definición, que es lo que se veía roto. */
+  piedra:   { tier:0, label:"Piedra",    emoji:"🪨", sprite:"node_stone",     cd:2400,  yield:1, price:15 },   // = CD.rock y PRICE.piedra; se re-atan más abajo para que no puedan separarse
   bronce:   { tier:1, label:"Bronce",    emoji:"🟫", sprite:"node_bronze",    cd:28800, yield:2, price:12 },
   hierro:   { tier:2, label:"Hierro",    emoji:"⛓️", sprite:"node_iron",      cd:43200, yield:2, price:15 },   // viernes (2): lo mina el Pico de Hierro
   // 16/8 (auditoría G): oro, diamante y netherita compartían enfriamiento (14 h) pero valen
@@ -3648,6 +3698,14 @@ function ensureHotbarDefaults() {
 const PRICE = { madera:12, piedra:15, bronce:160, hierro:240, oro:280, diamante:360, netherita:480, carne:8, flecha:2,
   fibra:300, pelaje:122, cuero:340, colmillo:440,
   esencia_runica:165, esencia_oscura:330, runa_poder:495, polvo_suerte:165, runa_proteccion:495 };
+
+/* 18/8 — LA "VETA DE PIEDRA" ES UNA ROCA. PRICE se define acá abajo del todo y ORE_DEF 2400
+   líneas más arriba, así que la definición de la piedra no puede referenciarlo directamente.
+   Se re-ata acá: a partir de este punto es IMPOSIBLE que el nodo de piedra y las rocas tengan
+   relojes o precios distintos, que es justo lo que estaba pasando (2 h contra 40 min, 6 contra 15). */
+ORE_DEF.piedra.cd = CD.rock;
+ORE_DEF.piedra.price = PRICE.piedra;
+
 // 1/8: los CULTIVOS venden según CROP_DEF.price — PRICE quedó solo para lo demás.
 //      Antes el mercado usaba una copia vieja acá y los cambios del panel no se veían (bug reportado por el diseñador).
 function priceOf(res) { return CROP_DEF[res] ? CROP_DEF[res].price : (PRICE[res] || 0); }

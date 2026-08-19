@@ -1200,7 +1200,8 @@ class FarmScene extends Phaser.Scene {
     // cuántos clics faltan: un clic = un golpe, y si parás 5 s los golpes dados se pierden
     const gp = (tot) => " (" + ((o.golpes || 0) + 1) + "/" + tot + ")";
     if (o.type === "tree") { if (o.locked) { if (typeof arbolBloqueado === "function" && arbolBloqueado(o)) return "🔒 Retoño — se habilita a granja nivel " + arbolNivelReq(o); return "Cultivar árbol (" + treeUnlockCost() + " madera)"; } return cd ? "Vuelve en " + fmtSecs(secs) : "Talar madera" + gp(GOLPES_TALAR); }
-    if (o.type === "rock") { if (typeof nodoBloqueado === "function" && nodoBloqueado(o)) return "🔒 Veta — se habilita a granja nivel " + nodoNivelReq(o); return cd ? "Vuelve en " + fmtSecs(secs) : "Picar piedra" + gp(GOLPES_MINAR); }
+    // 18/8: "veta" se reserva para los minerales — esto da piedra, o sea que es una ROCA
+    if (o.type === "rock") { if (typeof nodoBloqueado === "function" && nodoBloqueado(o)) return "🔒 Roca — se habilita a granja nivel " + nodoNivelReq(o); return cd ? "Vuelve en " + fmtSecs(secs) : "Picar piedra" + gp(GOLPES_MINAR); }
     if (o.type === "ore") { const od = ORE_DEF[o.ore]; if (!od) return "Minar"; if (cd) return od.emoji + " Vuelve en " + fmtSecs(secs); return "Minar " + od.label + gp(GOLPES_MINAR); }
     if (o.type === "buzon") { const n = (typeof buzonCartas === "function") ? buzonCartas().length : 0; return n ? ("Leer el correo (" + n + (n > 1 ? " cartas" : " carta") + ")") : "Buzón — sin cartas"; }
     if (o.type === "excav") return "Cavar el montículo";
@@ -1346,8 +1347,8 @@ class FarmScene extends Phaser.Scene {
     // VETAS/PIEDRAS (12/8 noche): freno por NIVEL, sin compra — el aviso salta al intentar
     if (o.type === "rock" && typeof nodoBloqueado === "function" && nodoBloqueado(o)) {
       const req = nodoNivelReq(o);
-      toast("🔒 Para picar esta veta necesitás granja nivel " + req + " (tenés " + G.level + ")");
-      log("Esa veta se habilita a granja nivel " + req + ". Seguí subiendo de nivel para ampliarte.", "info");
+      toast("🔒 Para picar esta roca necesitás granja nivel " + req + " (tenés " + G.level + ")");
+      log("Esa roca se habilita a granja nivel " + req + ". Seguí subiendo de nivel para ampliarte.", "info");
       return;
     }
     // el tutorial "ampliá la granja" también se cumple al USAR una segunda veta habilitada
@@ -2170,6 +2171,7 @@ class FarmScene extends Phaser.Scene {
     if (window.syncPlacingUI) syncPlacingUI(true);   // muestra el botón Cancelar de la barra de edición
     toast(tipo === "plot" ? "Clic en la celda donde va la parcela (clic derecho cancela)"
         : tipo === "obra" ? "Clic donde querés levantar la obra (clic derecho cancela)"
+        : tipo === "regalo" ? "Clic en la celda donde va " + ({ plot: "la parcela", tree: "el árbol", rock: "la roca" }[id] || "esto") + " (clic derecho cancela)"
                           : "Clic en la celda donde va el adorno (clic derecho cancela)");
   }
   // 13/8: colocar en la celda elegida (lo llama pointerup si el clic no fue paneo)
@@ -2184,6 +2186,15 @@ class FarmScene extends Phaser.Scene {
     } else if (pl.tipo === "plot") {
       this.finColocar();
       if (typeof parcelaColocar === "function" && parcelaColocar(col, row)) toast("Parcela colocada");   // reinicia la escena para dibujarla
+    } else if (pl.tipo === "regalo") {
+      /* 18/8: el árbol mide DOS celdas de ancho, así que también hay que mirar la de al lado.
+         Se comprueba acá y no dentro de regaloColocar para poder decir POR QUÉ no entra. */
+      if (pl.id === "tree" && !this.celdaLibreAdorno(col + 1, row, -1)) {
+        toast((this.porQueNoEntra(col + 1, row, -1) || "No hay sitio") + " — el árbol ocupa dos celdas");
+        return;
+      }
+      this.finColocar();
+      if (typeof regaloColocar === "function") regaloColocar(pl.id, col, row);
     } else if (pl.tipo === "obra") {   // blueprint (12/8): la obra ocupa ~2-3 celdas, chequear las vecinas
       if (!this.celdaLibreAdorno(col - 1, row, -1) || !this.celdaLibreAdorno(col + 1, row, -1)) {
         const pq = this.porQueNoEntra(col - 1, row, -1) || this.porQueNoEntra(col + 1, row, -1);

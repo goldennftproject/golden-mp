@@ -214,6 +214,15 @@ function itemView(d) {
   }
   if (d.kind === "pick") { const pd = PICK_DEF[d.key]; const glow = d.key === "diamond" ? "glow-cyan" : (d.key === "netherite" ? "glow-fire" : (d.key === "gold" ? "glow-gold" : "")); return { sprite: pd.sprite, emoji: "⛏️", glow, label: pd.label + " · 1 uso cada uno · tenés " + pickCount(d.key), dur: null }; }
   if (d.kind === "plano") { const b = (typeof BUILD_DEF !== "undefined") && BUILD_DEF[d.key]; return { sprite: "plano_" + d.key, emoji: "📜", glow: "glow-gold", label: "Plano: " + (b ? b.label : d.key) + " · clic para colocar la obra", dur: null }; }   // blueprints (12/8)
+  /* 18/8: los regalos del baúl (parcela, árbol, roca) viven en la bolsa hasta que el jugador
+     elige dónde van. Mismo patrón que el plano de un edificio. */
+  if (d.kind === "regalo") {
+    const nq = (G.regalos && G.regalos[d.key]) || 0;
+    const spr = { plot: "plot", tree: "tree", rock: "node_stone" }[d.key];
+    const emo = { plot: "🟫", tree: "🌳", rock: "🪨" }[d.key] || "🎁";
+    return { sprite: spr, emoji: emo, glow: "glow-gold",
+             label: (REGALO_LABEL[d.key] || d.key) + " ×" + nq + " · clic para elegir dónde va", dur: null, n: nq };
+  }
   if (d.kind === "res") return { sprite: resSprite(d.key), emoji: RES_EMOJI[d.key], label: RES_LABEL[d.key], dur: null };
   if (d.kind === "seed") { const cd = CROP_DEF[d.key]; return { sprite: "seed_" + d.key, emoji: cd.emoji, label: cd.label + " (semilla)", dur: null }; }
   if (d.kind === "fish") { const f = FISH_DEF[d.key]; const glow = { raro: "glow-blue", epico: "glow-purple", legendario: "glow-gold" }[d.key] || ""; return { sprite: f ? f.sprite : null, emoji: f ? f.emoji : "🐟", glow, label: f ? f.label : "Pez", dur: null }; }
@@ -294,6 +303,13 @@ function invCellClick(i) {
     closeAllOv();
     sc.iniciarColocar("obra", d.key);
   }
+  else if (d.kind === "regalo") {   // 18/8: parcela / árbol / roca → elegir celda
+    const sc = window.farmScene;
+    if (!sc || !sc.iniciarColocar) { toast("Entrá a la granja para colocarlo"); return; }
+    if (((G.regalos && G.regalos[d.key]) || 0) <= 0) { toast("No te queda " + (typeof REGALO_NADA === "function" ? REGALO_NADA(d.key) : "ninguno")); return; }
+    closeAllOv();
+    sc.iniciarColocar("regalo", d.key);
+  }
 }
 
 // botón para ampliar la bolsa (+6): primera fila con minerales, siguientes con plata
@@ -317,6 +333,7 @@ function hotItemExists(d) {
   if (d.kind === "fish") return ((G.fish && G.fish[d.key]) || 0) > 0;
   if (d.kind === "dish") return ((G.dishes && G.dishes[d.key]) || 0) > 0;
   if (d.kind === "plano") return !!(G.planos && G.planos[d.key]);   // 13/8: planos en la barra
+  if (d.kind === "regalo") return ((G.regalos && G.regalos[d.key]) || 0) > 0;   // 18/8
   return true;   // herramientas siempre están
 }
 // 16/8: el anillo azul de "pico equipado" solo cuando hay 2+ picos — con uno solo
@@ -377,6 +394,13 @@ function hotSelect(i) {
       if (!sc || !sc.iniciarColocar) { toast("Entrá a la granja para colocar el plano"); return; }
       closeAllOv();
       sc.iniciarColocar("obra", d.key);
+    }
+    else if (d.kind === "regalo") {   // 18/8
+      const sc = window.farmScene;
+      if (!sc || !sc.iniciarColocar) { toast("Entrá a la granja para colocarlo"); return; }
+      if (((G.regalos && G.regalos[d.key]) || 0) <= 0) { toast("No te queda " + (typeof REGALO_NADA === "function" ? REGALO_NADA(d.key) : "ninguno")); return; }
+      closeAllOv();
+      sc.iniciarColocar("regalo", d.key);
     }
   }
   const v = d ? itemView(d) : null;
@@ -1485,7 +1509,7 @@ function baulRegalosHtml() {
     { k: "plot", spr: "plot", em: "🟫", nom: "Parcela" },
   ];
   return F.filter(f => (q[f.k] || 0) > 0).map(f =>
-    '<div class="baul-item" data-regalo="' + f.k + '" title="Colocar ' + f.nom + ' en la granja">' +
+    '<div class="baul-item" data-regalo="' + f.k + '" title="' + f.nom + ' a tu bolsa — después elegís dónde va">' +
     '<img src="' + GF.spr(f.spr) + '" draggable="false" onerror="this.outerHTML=\'<span class=&quot;em&quot;>' + f.em + '</span>\'">' +
     '<span class="cant">×' + q[f.k] + '</span></div>').join("");
 }
