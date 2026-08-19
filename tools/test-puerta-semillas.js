@@ -12,7 +12,7 @@ vm.runInContext(fs.readFileSync("public/game/state.js","utf8")+
 const X=ctx.X,G=ctx.G;
 let fallos=0;
 const ok=(n,c,d)=>{if(!c)fallos++;console.log((c?"  ok   ":"  FALLA")+"  "+n+(d?"   "+d:""));};
-const acum=n=>{let a=0;for(let i=1;i<n;i++)a+=X.skillNeed(i);return a;};
+const acum=n=>{let a=0;for(let i=1;i<n;i++)a+=X.skillNeed(i,"farming");return a;};   // 18/8: la curva es por oficio
 
 ok("la etiqueta y la puerta hablan de lo mismo: 'Cultivo' es la skill",
    X.SKILL_NAME.farming==="Cultivo");
@@ -34,24 +34,25 @@ ok("la etiqueta y la puerta hablan de lo mismo: 'Cultivo' es la skill",
      new Set(niveles).size===niveles.length, niveles.join(","));
   ok("y la escalera solo sube", niveles.every((v,i)=>i===0||v>niveles[i-1]));
 }
-// 3) EL RITMO NO SE DISPARA: cada cultivo pide una XP parecida a la de antes
+/* 3) EL RITMO EN HORAS. La comparación con los costes viejos ya no vale: el 18/8 la XP pasó a
+   medir gestos y no relojes, así que los números absolutos cambiaron a propósito. Lo que hay que
+   garantizar es que la escalera de semillas siga siendo alcanzable y que suba de forma pareja. */
 {
-  const antes={papa:0,ciruela:25,cereza:90,remolacha:225,zanahoria:550,cebolla:1250,
-    calabacin:2750,repollo:5500,calabaza:9000,brocoli:17600,girasol:33600,trigo:54200,maiz:96000};
-  /* Se comparan solo los cultivos cuyo coste es lo bastante grande como para que el ratio
-     signifique algo. La ciruela pasa de 25 XP a 10: son segundos de juego, y un ×0,4 ahí no dice
-     nada — comparar porcentajes sobre números diminutos es engañarse. */
-  let peor=1,quien="";
-  X.CROP_ORDER.forEach(k=>{const a=antes[k]||0,b=acum(X.CROP_DEF[k].lvl);
-    if(a>=500){const r=b/a; if(Math.abs(Math.log(r))>Math.abs(Math.log(peor))){peor=r;quien=k;}}});
-  ok("de la zanahoria en adelante, ningún cultivo cambia su coste más de ×1,5",
-     peor>0.66&&peor<1.5, "el que más se mueve: "+quien+" ×"+peor.toFixed(2));
-  const chicos=X.CROP_ORDER.filter(k=>(antes[k]||0)>0&&(antes[k]||0)<500);
-  console.log("  nota   los "+chicos.length+" primeros (ciruela, cereza, remolacha) bajan de 25/90/225 XP a 10/65/214: irrelevante");
+  const RIT = 3*3600/X.CROP_DEF.papa.grow*X.CROP_DEF.papa.xp;   // Cultivo con 3 parcelas de papa
+  const hs = X.CROP_ORDER.map(k=>acum(X.CROP_DEF[k].lvl)/RIT);
+  ok("la escalera de semillas solo sube", hs.every((v,i)=>i===0||v>=hs[i-1]));
+  ok("la primera semilla nueva llega en menos de 1 h", hs[1]<1, hs[1].toFixed(2)+" h");
+  ok("el maíz queda entre 5 y 30 días de Cultivo", hs[12]/24>5 && hs[12]/24<30,
+     (hs[12]/24).toFixed(1)+" días");
+  /* El ratio solo se mide donde el número absoluto significa algo. Los primeros saltos son de
+     0,35 h a 1,5 h: un ×4 sobre veinte minutos no es un muro, es un rato. */
+  const saltos=hs.map((v,i)=>i<1||hs[i-1]<1?0:v/hs[i-1]);
+  ok("a partir de la primera hora, ningún salto entre semillas pasa de ×3",
+     saltos.every(r=>r<=3), "el mayor: ×"+Math.max(...saltos).toFixed(1));
 }
 // 4) Y LA CURVA DEJA DE SER UN MURO (era el hallazgo grave de la auditoría)
 {
-  const xpH=14*30/0.5;                            // 14 árboles × 30 XP cada media hora
+  const xpH=14*X.CROP_DEF.papa.xp*3600/X.CROP_DEF.papa.grow;   // ritmo de Cultivo con 14 parcelas
   const anios=n=>acum(n)/xpH/24/365;
   ok("el nivel 40 baja de 3 años a menos de 3 meses", anios(40)<0.25,
      (anios(40)*365).toFixed(0)+" días");

@@ -22,15 +22,15 @@ ok("y el jugador nace con las dos en su hoja",
 ok("son 11 oficios en total", X.SKILL_DEFS.length===11, X.SKILL_DEFS.length+"");
 
 // 2) TALAR YA NO ES ARTESANÍA
-ok("talar paga a Tala", /addXp\("tala", nodoXpMin\(CD\.tree\)\)/.test(SRC));
-ok("…y ya no paga a Artesanía", !/addXp\("crafting", nodoXpMin\(CD\.tree\)\)/.test(SRC));
+ok("talar paga a Tala", /addXp\("tala", xpDeNodo\("tree"\)\)/.test(SRC));
+ok("…y ya no paga a Artesanía", !/addXp\("crafting", (nodoXpMin|xpDeNodo)/.test(SRC));
 
 // 3) PESCAR YA NO PAGA A COCINA
-ok("pescar paga solo a Pesca", /addXp\("fishing", 8\);/.test(SRC) && !/addXp\("fishing", 8\); addXp\("cooking"/.test(SRC));
+ok("pescar paga solo a Pesca", /addXp\("fishing", XP_PEZ\);/.test(SRC) && !/addXp\("fishing", XP_PEZ\); addXp\("cooking"/.test(SRC));
 
 // 4) LOS ANIMALES SON GANADERÍA
-ok("recoger de los animales paga a Ganadería", /addXp\("ganaderia", 20 \* listos\.length\)/.test(SRC));
-ok("…y ya no a Cultivo", !/addXp\("farming", 20 \* listos\.length\)/.test(SRC));
+ok("recoger de los animales paga a Ganadería", /addXp\("ganaderia", XP_ANIMAL \* listos\.length\)/.test(SRC));
+ok("…y ya no a Cultivo", !/addXp\("farming", (20|XP_ANIMAL) \* listos\.length\)/.test(SRC));
 
 // 5) EL TABLÓN PAGA A LA SKILL DE LO QUE ENTREGÁS
 {

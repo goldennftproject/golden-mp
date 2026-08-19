@@ -196,24 +196,24 @@ const CROP_DEF = {
   // el ancla (20 plata/h), pero el costo de la SEMILLA es libre — solo hay que subir la venta
   // en la misma cantidad. Así la semilla también escala (1 → 2 → 2 → 3 → 3) y cada escalón se
   // siente como una inversión mayor, sin mover ni un punto el rendimiento por hora.
-  papa:      { label:"Papa",      emoji:"🥔", lvl:1,  seedCost:1,   growH:0.05, yield:1, price:2,    xp:5 },    // 3 min · gana 1 — piso del ancla; el cultivo del tutorial
-  ciruela:   { label:"Ciruela",   emoji:"🫐", lvl:2,  seedCost:2,   growH:0.10, yield:1, price:4,    xp:10 },   // 6 min · gana 2  (plum)
-  cereza:    { label:"Cereza",    emoji:"🍒", lvl:3,  seedCost:2,   growH:0.15, yield:1, price:5,    xp:15 },   // 9 min · gana 3  (cherry)
-  remolacha: { label:"Remolacha", emoji:"🟣", lvl:4,  seedCost:3,   growH:0.20, yield:1, price:7,    xp:20 },   // 12 min · gana 4 (beetroot)
-  zanahoria: { label:"Zanahoria", emoji:"🥕", lvl:5,  seedCost:3,   growH:0.25, yield:1, price:8,    xp:25 },  // 15 min (v3 diseñador)
-  cebolla:   { label:"Cebolla",   emoji:"🧅", lvl:6,  seedCost:6,   growH:0.5, yield:1, price:16,   xp:50 },  // 30 min (v3 diseñador)
+  papa:      { label:"Papa",      emoji:"🥔", lvl:1,  seedCost:1,   growH:0.05, yield:1, price:2,    xp:10 },    // 3 min · gana 1 — piso del ancla; el cultivo del tutorial
+  ciruela:   { label:"Ciruela",   emoji:"🫐", lvl:2,  seedCost:2,   growH:0.10, yield:1, price:4,    xp:20 },   // 6 min · gana 2  (plum)
+  cereza:    { label:"Cereza",    emoji:"🍒", lvl:3,  seedCost:2,   growH:0.15, yield:1, price:5,    xp:30 },   // 9 min · gana 3  (cherry)
+  remolacha: { label:"Remolacha", emoji:"🟣", lvl:4,  seedCost:3,   growH:0.20, yield:1, price:7,    xp:40 },   // 12 min · gana 4 (beetroot)
+  zanahoria: { label:"Zanahoria", emoji:"🥕", lvl:5,  seedCost:3,   growH:0.25, yield:1, price:8,    xp:50 },  // 15 min (v3 diseñador)
+  cebolla:   { label:"Cebolla",   emoji:"🧅", lvl:6,  seedCost:6,   growH:0.5, yield:1, price:16,   xp:60 },  // 30 min (v3 diseñador)
   // 16/8: el calabacín era el único de la tabla fuera del ancla — rendía 26,7 plata/h y 120 XP/h
   // contra los 20 y 100 de sus vecinos. Reanclado: ganancia 15 (20/h) y 75 XP (100/h), con la
   // relación venta/semilla en 2,5 como el resto. Era 12 → 32 → 90.
-  calabacin: { label:"Calabacín", emoji:"🥒", lvl:7,  seedCost:10,  growH:0.75, yield:1, price:25,   xp:75 },   // 45 min (v3 diseñador, reanclado 16/8)
-  repollo:   { label:"Repollo",   emoji:"🥬", lvl:9,  seedCost:20,  growH:1.5,  yield:1, price:50,   xp:150 },  // 1 h 30 (v3 diseñador)
-  calabaza:  { label:"Calabaza",  emoji:"🎃", lvl:10,  seedCost:40,  growH:3,    yield:1, price:100,  xp:300 },  // 3 h · 18/8: XP re-anclada (era 270 = 90 XP/h)
+  calabacin: { label:"Calabacín", emoji:"🥒", lvl:7,  seedCost:10,  growH:0.75, yield:1, price:25,   xp:70 },   // 45 min (v3 diseñador, reanclado 16/8)
+  repollo:   { label:"Repollo",   emoji:"🥬", lvl:9,  seedCost:20,  growH:1.5,  yield:1, price:50,   xp:80 },  // 1 h 30 (v3 diseñador)
+  calabaza:  { label:"Calabaza",  emoji:"🎃", lvl:10,  seedCost:40,  growH:3,    yield:1, price:100,  xp:90 },  // 3 h · 18/8: XP re-anclada (era 270 = 90 XP/h)
   // 16/8 (auditoría C): los cuatro de arriba se corren a la banda 11-50 del nivel de granja
   // (la que además pide TAREAS). Con el gate por nivel, quedarse en 7-10 los volvía casi
   // inmediatos; así el early game no cambia y las anclas largas siguen siendo una meta.
-  brocoli:   { label:"Brócoli",   emoji:"🥦", lvl:12,  seedCost:90,  growH:6,    yield:1, price:210,  xp:600 },  // 6 h · 18/8: XP re-anclada (era 480 = 80 XP/h)
-  girasol:   { label:"Girasol",   emoji:"🌻", lvl:15, seedCost:180, growH:10,    yield:1, price:380,  xp:1000 },  // 10 h · 18/8: rendía 24 plata/h y 72 XP/h
-  trigo:     { label:"Trigo",     emoji:"🌾", lvl:17, seedCost:360, growH:16,    yield:1, price:680,  xp:1600 }, // 16 h · 18/8: rendía 30 plata/h y 67 XP/h
+  brocoli:   { label:"Brócoli",   emoji:"🥦", lvl:12,  seedCost:90,  growH:6,    yield:1, price:210,  xp:100 },  // 6 h · 18/8: XP re-anclada (era 480 = 80 XP/h)
+  girasol:   { label:"Girasol",   emoji:"🌻", lvl:15, seedCost:180, growH:10,    yield:1, price:380,  xp:110 },  // 10 h · 18/8: rendía 24 plata/h y 72 XP/h
+  trigo:     { label:"Trigo",     emoji:"🌾", lvl:17, seedCost:360, growH:16,    yield:1, price:680,  xp:120 }, // 16 h · 18/8: rendía 30 plata/h y 67 XP/h
   /* 18/8 (auditoría del ancla) — LOS CINCO CULTIVOS LARGOS ESTABAN FUERA DE LA FÓRMULA, y en las
      DOS direcciones: rendían de más en plata y de menos en XP. El maíz era el caso extremo:
      40 plata/hora contra los 20 de todos los demás (el DOBLE) y 60 XP/hora contra 100.
@@ -221,7 +221,7 @@ const CROP_DEF = {
      cultivo del final del juego rompía el ancla por arriba y por abajo a la vez.
      Re-anclados: la ganancia por hora vuelve a 20 bajando la VENTA (no subiendo la semilla, que
      dejaría una relación venta/semilla absurda), y la XP vuelve a 100 por hora. */
-  maiz:      { label:"Maíz",      emoji:"🌽", lvl:20, seedCost:720, growH:24,   yield:1, price:1200, xp:2400 },  // 24 h — el ancla nocturna
+  maiz:      { label:"Maíz",      emoji:"🌽", lvl:20, seedCost:720, growH:24,   yield:1, price:1200, xp:130 },  // 24 h — el ancla nocturna
 };
 function recomputeCropGrow() { for (const k in CROP_DEF) CROP_DEF[k].grow = Math.round(CROP_DEF[k].growH * 3600 * GROW_SCALE); }
 recomputeCropGrow();   // en segundos, como siempre
@@ -235,7 +235,7 @@ const FISH_DEF = { comun: { label: "Pez común", emoji: "🐟", sprite: "fish_co
 // todas las parcelas mucho antes que cultivos para plantar en ellas, y el maíz (111.525 XP)
 // quedaba a meses. Una sola vara para toda la granja; el skill queda para bonos y prestigio.
 function farmLevel() { return G.level || 1; }
-function farmSkillLevel() { return skillInfo(G.skills.farming).lvl; }   // el skill sigue existiendo (bonos, panel de skills)
+function farmSkillLevel() { return skillInfo(G.skills.farming, "farming").lvl; }   // el skill sigue existiendo (bonos, panel de skills)
 /* 18/8 (dirección): la puerta de las semillas es la SKILL DE CULTIVO. El `lvl` de cada cultivo
    pasa a ser un nivel de skill, no de granja — y la etiqueta del Mercado, que siempre dijo
    "Cultivo nv N", por fin dice la verdad. El nivel de GRANJA sigue mandando en lo suyo: parcelas,
@@ -861,9 +861,41 @@ const SKILL_NAME = {}; SKILL_DEFS.forEach(([k,,nm]) => SKILL_NAME[k] = nm);
    10/2,46 sale de resolver las dos cosas a la vez: que los trece cultivos caigan en niveles
    distintos (1…20, uno por cultivo) y que la curva llegue a algún sitio. Ahora el 40 son 48 días
    y el 150, 13 años — sigue siendo un techo enorme, pero es una meta y no un muro. */
-var XP_BASE = 10, XP_EXP = 2.46;
-function skillNeed(lvl) { return Math.round(XP_BASE * Math.pow(lvl, XP_EXP)); }
-function skillInfo(xp) { let lvl = 1, acc = 0, need = skillNeed(1); while (xp >= acc + need && lvl < 150) { acc += need; lvl++; need = skillNeed(lvl); } return { lvl, into: xp - acc, need }; }
+/* ============ LA XP MIDE LA PRÁCTICA, NO LA ESPERA (18/8, dirección) ===============
+   "Que la experiencia esté ligada al tiempo que tarda algo en crecer es una inconsistencia muy
+   abrupta." Y lo era: tres clics en netherita pagaban 1.440 XP y tres clics en una roca, 40 — el
+   mismo gesto, 36 veces más, solo porque el reloj era más largo. La XP se había copiado del ancla
+   económica, donde el tiempo SÍ es lo que se paga. Pero la XP no es dinero: es oficio. Un leñador
+   no mejora esperando a que crezca el árbol; mejora talando.
+   REGLA NUEVA: la XP se paga POR ACCIÓN COMPLETADA, escalada por el ESCALÓN del material (su
+   posición en la escalera), no por su reloj. La plata sigue midiendo tiempo; la XP mide gestos.
+
+   CONSECUENCIA, y hay que asumirla: los oficios de ciclo corto acumulan más XP por hora que los
+   de ciclo largo. Con parcelas de 3 minutos se hacen 60 gestos por hora; talando, 6. Eso es
+   correcto —quien hace 60 gestos ha practicado 60 veces— pero obliga a que CADA OFICIO TENGA SU
+   CURVA. La garantía que se le da al jugador ya no es "el mismo número de XP" sino algo mejor:
+       Minería 6 y Cultivo 6 significan lo mismo: unas 10 horas DE ESE OFICIO.
+   RITMO es cuántas veces más rápido acumula cada oficio que el más lento (la Tala), medido con
+   los nodos de arranque. La curva de cada uno se estira por ese factor. */
+var XP_ACCION = 10;                    // una extracción del primer escalón
+var XP_ESCALON = { piedra:1, bronce:2, hierro:3, oro:4, diamante:5, netherita:6 };
+var XP_PEZ = 15, XP_ANIMAL = 20;
+function xpDeNodo(tipo, key) {
+  if (tipo === "tree") return XP_ACCION;
+  return XP_ACCION * (XP_ESCALON[key] || 1);
+}
+function xpDeCultivo(k) {              // escalón 1..13 en la escalera de cultivos
+  const i = (typeof CROP_ORDER !== "undefined") ? CROP_ORDER.indexOf(k) : -1;
+  return XP_ACCION * (i >= 0 ? i + 1 : 1);
+}
+var SKILL_RITMO = { tala:1, mining:0.75, fishing:1, ganaderia:1, farming:10,
+                    cooking:1, crafting:1, sword:1, hacha:1, mazo:1, range:1 };
+var XP_BASE = 21, XP_EXP = 1.70;
+function skillNeed(lvl, sk) {
+  const r = (sk && SKILL_RITMO[sk]) || 1;
+  return Math.round(XP_BASE * r * Math.pow(lvl, XP_EXP));
+}
+function skillInfo(xp, sk) { let lvl = 1, acc = 0, need = skillNeed(1, sk); while (xp >= acc + need && lvl < 150) { acc += need; lvl++; need = skillNeed(lvl, sk); } return { lvl, into: xp - acc, need }; }
 // --- Barra de Combate GLOBAL (doc maestro 2/8): un solo nivel que suma la XP de TODOS los kills.
 //     Convive con las skills por arma (esas siguen dando el +Nivel/2 al daño). Misma curva 1-150.
 var COMBAT_HP5 = 20, COMBAT_HP10 = 40;   // vida máxima extra en los hitos (editables en el panel)
@@ -900,13 +932,13 @@ function addCombatXp(xp) {
   }
   refreshHud();
 }
-function avgSkillLevel() { let s=0,n=0; for (const k in G.skills){ s+=skillInfo(G.skills[k]).lvl; n++; } return n ? s/n : 1; }
+function avgSkillLevel() { let s=0,n=0; for (const k in G.skills){ s+=skillInfo(G.skills[k], k).lvl; n++; } return n ? s/n : 1; }
 function addXp(sk, amt) {
   if (!(sk in G.skills)) return;
   if (sk === "cooking") return addCookXp(amt);   // la cocina tiene SU tabla 1-10 (doc maestro 2/8)
-  const before = skillInfo(G.skills[sk]).lvl;
+  const before = skillInfo(G.skills[sk], sk).lvl;
   G.skills[sk] += amt;
-  const after = skillInfo(G.skills[sk]).lvl;
+  const after = skillInfo(G.skills[sk], sk).lvl;
   if (after > before) {
     log(`${SKILL_NAME[sk]} subió a nivel ${after}.`, "good");
     if (window.celebrate) celebrate({ title: "¡NIVEL " + after + "!" + (after - before > 1 ? " (+" + (after - before) + ")" : ""), sub: SKILL_NAME[sk] });
@@ -2179,7 +2211,7 @@ const INCURSIONES = {
 const INC_ORDER = ["zn1", "zn2", "zn3", "guarida"];
 function incPoder() {   // poder de combate del jugador con lo que tiene equipado
   const id = armaEq(); if (!id) return 0;
-  const w = ARM_DEF[id], lvl = skillInfo(G.skills[armSkillKey(w.tipo)] || 0).lvl;
+  const w = ARM_DEF[id], lvl = skillInfo(G.skills[armSkillKey(w.tipo)] || 0, armSkillKey(w.tipo)).lvl;
   let p = (w.min + w.max) / 2 + Math.floor(lvl / 2);
   p *= 1 + upgDmg(armPlus(id)) / 100;
   p *= dmgMult();
@@ -2888,7 +2920,7 @@ function recogerAnimal(k) {
   }
   if (!total) { bagFull("recoger " + RES_LABEL[d.mat]); return; }
   G.res[d.mat] = (G.res[d.mat] || 0) + total;
-  addXp("ganaderia", 20 * listos.length);   // 18/8: los animales son Ganadería, no Cultivo
+  addXp("ganaderia", XP_ANIMAL * listos.length);   // 18/8: los animales son Ganadería, no Cultivo
   log(d.label + " ×" + listos.length + " produjo " + total + " de " + RES_LABEL[d.mat] + " (felicidad media " + animalFelicidad(k) + "/100).", "gold");
   toast("+" + total + " " + RES_LABEL[d.mat]);
   refreshHud(); if (isOpen("ov-inv")) refreshInv();
@@ -3170,7 +3202,7 @@ function useWeapon(id) { if (G.weapons[id] && G.weapons[id].dur > 0) G.weapons[i
 // la tirada de un golpe (doc: Daño = máx(1; Ataque − Def efectiva); Ataque = tirada aleatoria + nivel de la skill del arma / 2)
 function rollWeaponHit(defensa) {
   const id = armaEq(); if (!id) return null;
-  const w = ARM_DEF[id], lvl = skillInfo(G.skills[armSkillKey(w.tipo)] || 0).lvl;
+  const w = ARM_DEF[id], lvl = skillInfo(G.skills[armSkillKey(w.tipo)] || 0, armSkillKey(w.tipo)).lvl;
   let atk = w.min + Math.floor(Math.random() * (w.max - w.min + 1)) + Math.floor(lvl / 2);
   atk *= 1 + upgDmg(armPlus(id)) / 100;                       // Altar: mejora +1..+15 (daño acumulado)
   let defEf = defensa || 0;
@@ -3193,7 +3225,7 @@ const SWORD_WOOD_COST = { madera: 5 };
 function swordDmg() {   // legado: >0 si hay un arma CUERPO A CUERPO equipada y sana (el daño real sale de rollWeaponHit)
   const id = armaEq(); if (!id) return 0;
   const w = ARM_DEF[id]; if (w.tipo === "arco") return 0;
-  return Math.round((w.min + w.max) / 2) + Math.floor(skillInfo(G.skills[armSkillKey(w.tipo)] || 0).lvl / 2);
+  return Math.round((w.min + w.max) / 2) + Math.floor(skillInfo(G.skills[armSkillKey(w.tipo)] || 0, armSkillKey(w.tipo)).lvl / 2);
 }
 
 // --- arco y flechas (combate a distancia; usa la skill Arco) ---
@@ -3902,7 +3934,7 @@ function goFishing() {
   let rar; if (r < 0.60) rar = "comun"; else if (r < 0.85) rar = "raro"; else if (r < 0.97) rar = "epico"; else rar = "legendario";
   /* 18/8 (dirección): "pescar tiene su propio skill, ¿por qué le da experiencia a cocinar?".
      Resto de cuando la pesca era "conseguir ingredientes". La Cocina se gana cocinando. */
-  G.fish[rar]++; addXp("fishing", 8);
+  G.fish[rar]++; addXp("fishing", XP_PEZ);
   if (typeof statAdd === "function") statAdd("pescar");
   if (typeof tutoEvent === "function") tutoEvent("fish");
   // fixs.docx #16 (11/8): pescar ya NO regala buffs — el pez va a la bolsa y los buffs

@@ -1498,7 +1498,7 @@ class FarmScene extends Phaser.Scene {
       o.golpes = 0; this.barraGolpes(o);
       const gr = 1;   // viernes (2): todos los recursos dan 1
       if (tryAddRes("madera", gr)) {
-        useTool("axe"); addXp("tala", nodoXpMin(CD.tree));   /* 18/8: talar es TALA, no Artesanía */ /* 16/8: XP = minutos del reloj (1 h 30 → 90) */ nodoSumar(o); o.cdIni = nowMs(); o.readyAt = nowMs() + nodoCd(o, "tree", CD.tree) * 1000 * cdMult() * (typeof tutoBoost === "function" ? tutoBoost("tree") : 1);
+        useTool("axe"); addXp("tala", xpDeNodo("tree"));   /* 18/8: por acción, no por reloj */   /* 18/8: talar es TALA, no Artesanía */ /* 16/8: XP = minutos del reloj (1 h 30 → 90) */ nodoSumar(o); o.cdIni = nowMs(); o.readyAt = nowMs() + nodoCd(o, "tree", CD.tree) * 1000 * cdMult() * (typeof tutoBoost === "function" ? tutoBoost("tree") : 1);
         o.halfAt = nowMs() + (o.readyAt - nowMs()) / 2; this.syncNodos();   // a mitad del enfriamiento asoma el árbol a medio crecer (doc 4/8)
         // tocón nuevo con base de tierra y hojas caídas (encuadre del árbol, va a tamaño completo); respaldo: tocón viejo chico
         // 15/8 (medido en los PNG): el disco del tocón es el 64% de su lienzo y el tronco
@@ -1528,7 +1528,7 @@ class FarmScene extends Phaser.Scene {
       if (tryAddRes("piedra", gr)) {
         const pk = equippedPick();   // picar piedra también gasta el pico (bug reportado)
         if (pk) { G.picks.dur[pk] = Math.max(0, (G.picks.dur[pk] || 0) - 1); if (G.picks.dur[pk] <= 0) { log("Usaste tu último " + PICK_DEF[pk].label + " — crafteá más en la Herrería.", "bad"); toast("Sin picos — crafteá más"); destroyPick(pk); } }
-        addXp("mining", nodoXpMin(CD.rock)); /* 16/8: XP = minutos del reloj (2 h → 120) */ statAdd("minar", "piedra", gr); nodoSumar(o); o.cdIni = nowMs(); o.readyAt = nowMs() + nodoCd(o, "piedra", CD.rock) * 1000 * cdMult() * (typeof tutoBoost === "function" ? tutoBoost("rock") : 1); o.halfAt = nowMs() + (o.readyAt - nowMs()) / 2; this.syncNodos(); this.setObjTex(o, "node_stone_mined", o.rw || GF.TILE); this.premioFx(o.cx, o.by, resSprite("piedra"), "+" + gr); log(`+${gr} Piedra.` + (pk ? ` Quedan ${G.picks.dur[pk]} picos.` : ""), "good"); refreshHud();
+        addXp("mining", xpDeNodo("rock", "piedra")); /* 16/8: XP = minutos del reloj (2 h → 120) */ statAdd("minar", "piedra", gr); nodoSumar(o); o.cdIni = nowMs(); o.readyAt = nowMs() + nodoCd(o, "piedra", CD.rock) * 1000 * cdMult() * (typeof tutoBoost === "function" ? tutoBoost("rock") : 1); o.halfAt = nowMs() + (o.readyAt - nowMs()) / 2; this.syncNodos(); this.setObjTex(o, "node_stone_mined", o.rw || GF.TILE); this.premioFx(o.cx, o.by, resSprite("piedra"), "+" + gr); log(`+${gr} Piedra.` + (pk ? ` Quedan ${G.picks.dur[pk]} picos.` : ""), "good"); refreshHud();
         if (typeof tutoEvent === "function") tutoEvent("gather");
       }
       else { this.setObjTex(o, o.baseKey, o.rw || o.w); toast("Bolsa llena — no podés picar"); log("Bolsa llena: liberá espacio para seguir picando.", "bad"); }   // vuelve entera: los golpes se perdieron
@@ -1545,7 +1545,7 @@ class FarmScene extends Phaser.Scene {
       const gr = 1;   // viernes (2): todos los recursos dan 1
       if (tryAddRes(o.ore, gr)) {
         G.picks.dur[pk] = Math.max(0, (G.picks.dur[pk] || 0) - 1);
-        addXp("mining", nodoXpMin(od.cd)); statAdd("minar", o.ore, gr);   // 16/8: XP = minutos del reloj (bronce 8 h → 480 … oro 14 h → 840)
+        addXp("mining", xpDeNodo("ore", o.ore)); statAdd("minar", o.ore, gr);   // 16/8: XP = minutos del reloj (bronce 8 h → 480 … oro 14 h → 840)
         nodoSumar(o); o.cdIni = nowMs(); o.readyAt = nowMs() + nodoCd(o, o.ore, od.cd) * 1000 * cdMult();
         o.halfAt = nowMs() + (o.readyAt - nowMs()) / 2; this.syncNodos();
         if (this.textures.exists(o.baseKey + "_mined")) this.setObjTex(o, o.baseKey + "_mined", o.rw || GF.TILE); else o.sprite.setAlpha(0.4);

@@ -549,7 +549,7 @@ function refreshSkills() {
   $("sk-grid").innerHTML = SKILL_DEFS.map(([k, ic, nm]) => {
     let inf;
     if (k === "cooking") { const l = cookLevel(), xp = G.skills.cooking || 0, nx = COOK_LVLS[l + 1]; inf = { lvl: l, into: xp - COOK_LVLS[l], need: nx != null ? nx - COOK_LVLS[l] : (xp - COOK_LVLS[l] || 1) }; }
-    else inf = skillInfo(G.skills[k]);
+    else inf = skillInfo(G.skills[k], k);   // 18/8: cada oficio, su curva
     const pct = Math.round(inf.into / inf.need * 100); const soon = (k === "range" && G.skills[k] === 0) ? " · próximamente" : "";
     return `<div class="skrow"><span class="ic"><img class="skic" src="${GF.spr("sk_" + k)}" onerror="this.outerHTML='${ic}'"></span><div class="body"><div class="nm"><span>${nm}</span><span class="lv">Nv. ${inf.lvl}</span></div><div class="skbar"><i style="width:${pct}%"></i></div><div class="xp">${fmt(inf.into)}/${fmt(inf.need)} XP${soon}</div></div></div>`; }).join("");
 }
@@ -1985,7 +1985,7 @@ function lbRowHtml(r, i, col) {
 function avgSkillFromObj(sk) {
   if (!sk || typeof sk !== "object") return 1;
   let s = 0, n = 0;
-  for (const k in sk) { s += skillInfo(Number(sk[k]) || 0).lvl; n++; }
+  for (const k in sk) { s += skillInfo(Number(sk[k]) || 0, k).lvl; n++; }
   return n ? +(s / n).toFixed(2) : 1;
 }
 
@@ -2009,7 +2009,7 @@ function topSkillFromObj(sk) {
   if (!sk || typeof sk !== "object") return null;
   let mejor = null;
   for (const k in sk) {
-    const lvl = (k === "cooking" && typeof cookLevelFromXp === "function") ? cookLevelFromXp(Number(sk[k]) || 0) : skillInfo(Number(sk[k]) || 0).lvl;
+    const lvl = (k === "cooking" && typeof cookLevelFromXp === "function") ? cookLevelFromXp(Number(sk[k]) || 0) : skillInfo(Number(sk[k]) || 0, k).lvl;
     if (!mejor || lvl > mejor.lvl) mejor = { k, lvl, nombre: (typeof SKILL_NAME !== "undefined" && SKILL_NAME[k]) || k };
   }
   return mejor;
