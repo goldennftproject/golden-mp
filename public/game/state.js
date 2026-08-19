@@ -1504,7 +1504,22 @@ function tutoMigrar() {
   if (!G.tuto) G.tuto = { step: 0, n: 0, done: false, v: TUTO_VER };
   if (G.tuto.v !== TUTO_VER) {
     G.tuto.v = TUTO_VER;
-    if (!G.tuto.done) { G.tuto.step = 0; G.tuto.n = 0; }   // cadena nueva: se recalcula desde el principio
+    /* 18/8 (dirección): "cuando haces deploy, si estás en una etapa del tutorial, el tutorial
+       regresa como al principio. Debería mantener el progreso."
+       Antes esto hacía step = 0 a secas y confiaba en que tutoAutoSkip volviera a subir. Pero
+       autoskip solo puede saltar los pasos que dejan RASTRO en la partida (tener madera, haber
+       construido). Los pasos de acción —moverte, abrir un menú, tocar un nodo— no dejan rastro,
+       así que el recálculo se frenaba en el primero de esos y el jugador volvía atrás de verdad.
+       Ahora se recalcula igual, pero el paso guardado hace de SUELO: la cadena nueva puede
+       adelantarte, nunca devolverte. */
+    if (!G.tuto.done) {
+      const guardado = G.tuto.step || 0;
+      G.tuto.step = 0; G.tuto.n = 0;
+      tutoAutoSkip();
+      if (!G.tuto.done && guardado > G.tuto.step) {
+        G.tuto.step = Math.min(guardado, TUTO_STEPS.length - 1); G.tuto.n = 0;
+      }
+    }
   }
   if (!G.tuto.done) tutoAutoSkip();   // y SIEMPRE se saltan los pasos que ya estaban cumplidos
 }
@@ -1587,7 +1602,11 @@ function tutoEvent(tipo) {
   const acepta = st.id === tipo;
   if (!acepta) return;
   G.tuto.n = (G.tuto.n || 0) + 1;
-  if (G.tuto.n < st.n) { if (typeof tutoRefresh === "function") tutoRefresh(); return; }
+  if (G.tuto.n < st.n) {
+    if (typeof tutoRefresh === "function") tutoRefresh();
+    if (typeof saveFarm === "function") saveFarm(true);   // 18/8: también el "2 de 3", que si no se pierde al recargar
+    return;
+  }
   tutoDone(st);
 }
 function tutoDone(st) {
@@ -1608,6 +1627,11 @@ function tutoDone(st) {
     if (typeof planosSync === "function") planosSync(false);   // 13/8: si el paso nuevo trae plano, cae ACÁ (con su celebración)
   }
   if (typeof tutoRefresh === "function") tutoRefresh();
+  /* 18/8: GUARDAR AL AVANZAR. Este era el motivo real de "el deploy me devuelve al principio":
+     el paso del tutorial solo vivía en memoria. Se escribía si por casualidad otra acción
+     disparaba un guardado (plantar, cobrar…), pero los pasos de pura acción no guardaban nada,
+     así que al recargar la página volvías al último paso que sí se hubiera escrito. */
+  if (typeof saveFarm === "function") saveFarm(true);
   if (window.farmScene && window.farmScene.updateTutoArrow) try { window.farmScene.updateTutoArrow(); } catch (e) {}
   if (typeof saveFarm === "function") saveFarm();
 }
