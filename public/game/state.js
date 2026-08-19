@@ -997,6 +997,49 @@ const FARM_UNLOCK = {
    expansión, mismo total de 57 celdas al final, pero las parcelas pasan del 23% al 51%.
    De regalo, arregla el tutorial: más árboles y rocas antes = menos horas mirando el reloj. */
 const FARM_PARCELA = { 2:4, 3:5, 4:6, 5:7, 6:8, 8:9, 10:10, 13:11, 17:12, 22:13 };   // nivel → parcelas totales
+/* ============ EL CARTEL DEL NIVEL SE DERIVA, NO SE ESCRIBE (18/8) ==================
+   Al generar la tabla para el diseñador saltó que SIETE textos de FARM_UNLOCK mentían: en el
+   nivel 25 le prometía al jugador "10ª parcela" cuando con la tabla nueva ya tiene 13, y en el
+   7, el 12, el 18, el 35, el 45 y el 50 anunciaba parcelas que no llegan.
+   Es la MISMA clase de fallo que el cartel que prometía la 3ª parcela y no llegaba ninguna: dos
+   sitios que dicen lo mismo y solo uno se actualizó. La cuenta de parcelas sale ahora de
+   FARM_PARCELA —la única que la sabe— y el texto a mano se queda solo con lo suyo (cosméticos,
+   títulos, cultivos). Así no pueden volver a separarse. */
+function parcelasDelNivel(n) {
+  const en = (l) => { let p = 3; for (const k in FARM_PARCELA) if (l >= +k) p = FARM_PARCELA[k]; return p; };
+  const d = en(n) - en(n - 1);
+  return d > 0 ? (en(n) + "ª parcela") : "";
+}
+function farmUnlockTxt(n) {
+  /* Del texto a mano se quitan las cosas que ahora SE DERIVAN, porque estaban desfasadas:
+       · las parcelas (decía "10ª parcela" en el nivel 25, cuando ya se tienen 13)
+       · los cultivos (decía "Cultivo Girasol" en el 8, y el girasol abre en el 13)
+       · los edificios (decía "Horno básico disponible" donde ya va "plano de Horno de Piedra")
+     Lo que queda es lo suyo: títulos, auras, marcos, emotes, skins y decoraciones. */
+  let base = (FARM_UNLOCK[n] || "")
+    .replace(/\d+ª parcela( GRATIS)?/gi, "")
+    .replace(/Cultivo [A-ZÁÉÍÓÚÑ][\wáéíóúñ]*/g, "")
+    .replace(/[A-ZÁÉÍÓÚÑ][\wáéíóúñ ]*\b(disponible|nivel 2)[^+]*/g, "")
+    .replace(/\+?\s*\d+ de capacidad de cofre/gi, "")
+    .replace(/\s*\+\s*\+\s*/g, " + ").replace(/^\s*\+\s*|\s*\+\s*$/g, "").trim();
+  const partes = [];
+  const par = parcelasDelNivel(n); if (par) partes.push(par);
+  // los nodos, la expansión, el cultivo y el plano también salen de SU tabla, no de un texto
+  const nodos = (t, l) => t.filter(v => v === n).length;
+  const na = nodos(NIVEL_ARBOLES), nr = nodos(NIVEL_ROCAS);
+  if (na) partes.push(na + (na > 1 ? " árboles" : " árbol"));
+  if (nr) partes.push(nr + (nr > 1 ? " rocas" : " roca"));
+  const ex = FARM_EXPANSION.indexOf(n); if (ex >= 0) partes.push("expansión " + (ex + 1));
+  for (const k in CROP_DEF) if (CROP_DEF[k].lvl === n && !new RegExp(CROP_DEF[k].label, "i").test(base))
+    partes.push("cultivo " + CROP_DEF[k].label);
+  if (typeof PLANO_NIVEL !== "undefined") for (const t in PLANO_NIVEL)
+    if (PLANO_NIVEL[t] === n && BUILD_DEF[t]) partes.push("plano de " + BUILD_DEF[t].label);
+  if (typeof FARM_EDIF2 !== "undefined" && FARM_EDIF2[n] && BUILD_DEF[FARM_EDIF2[n]])
+    partes.push(BUILD_DEF[FARM_EDIF2[n]].label + " nivel 2");
+  if (typeof FARM_COFRE !== "undefined" && FARM_COFRE[n]) partes.push("+" + FARM_COFRE[n] + " de capacidad de cofre");
+  if (base) partes.push(base);
+  return partes.join(" + ");
+}
 /* 17/8 — EN QUÉ NIVEL CAE CADA UNA DE LAS 16 EXPANSIONES (bloques de 5x5, ver GF.EXPANSIONES).
    El hueco se abre solo: 2 niveles entre las cinco primeras, 3 entre las cinco siguientes y 4
    entre las seis últimas. Arranca rápido para enseñar la mecánica y se espacia cuando cada
@@ -1128,7 +1171,7 @@ function recalcFarmLevelInterno() {
   let subio = false;
   while (farmPuedeSubir()) {
     G.level++; subio = true;
-    const gift = FARM_UNLOCK[G.level] || "";
+    const gift = farmUnlockTxt(G.level);   // 18/8: derivado, para que no prometa parcelas que no llegan
     // 16/8: la parcela ya NO se abre sola — igual que el árbol y la roca, llega al BAÚL
     // como premio y el jugador la coloca. regalosSync() calcula lo que corresponde.
     const regalos = (typeof regalosSync === "function") ? regalosSync() : 0;

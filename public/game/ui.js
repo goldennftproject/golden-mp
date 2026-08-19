@@ -1952,7 +1952,8 @@ function refreshBarn() {
           '<div class="fds">' + p0 + '/' + t[2] + '</div></div></div>';
       });
     } else info += '<div>Nivel rápido: sube solo con la XP de cosecha.</div>';
-    if (FARM_UNLOCK[sig]) info += '<div class="verde">Recompensa del nivel ' + sig + ': ' + FARM_UNLOCK[sig] + '</div>';
+    { const gtxt = (typeof farmUnlockTxt === "function") ? farmUnlockTxt(sig) : (FARM_UNLOCK[sig] || "");
+      if (gtxt) info += '<div class="verde">Recompensa del nivel ' + sig + ': ' + gtxt + '</div>'; }
     h = h.replace("@INFO@", '<div class="info">' + info + '</div>');
   }
   h += '<div class="info"><div>Parcelas: <b>' + (G.plotsOwned || 2) + '</b> · Cofres: <b>+' + (G.chestCap || 0) + '</b> de capacidad</div>' +
