@@ -77,7 +77,8 @@ const G = {
   dummyUsedAt: 0,  // último entrenamiento con el dummy (cooldown 4h)
   built: { store: false, horno: false, cocina: false, altar: false, establo: false, curtiduria: false, ofrendas: false },   // viernes (2): la Herreria es el unico edificio gratis; el resto se construye
   buffs: [], secPerGameHour: 1, gameHours: 0,
-  skills: { fishing: 0, farming: 0, cooking: 0, range: 0, sword: 0, hacha: 0, mazo: 0, mining: 0, crafting: 0 },   // doc 2/8: cada arma es su propia skill (espada=sword, arco=range)
+  // 18/8: Tala y Ganadería salen de Artesanía y de Cultivo — cada oficio, su barra
+  skills: { fishing: 0, farming: 0, tala: 0, ganaderia: 0, cooking: 0, range: 0, sword: 0, hacha: 0, mazo: 0, mining: 0, crafting: 0 },   // doc 2/8: cada arma es su propia skill (espada=sword, arco=range)
 };
 window.G = G;
 
@@ -840,8 +841,17 @@ function buyWorm(qty) {
 }
 
 // --- skills ---
-const SKILL_DEFS = [["farming","","Cultivo"],["fishing","","Pesca"],["mining","","Minería"],
-  ["sword","","Espada"],["hacha","","Hacha (combate)"],["mazo","","Mazo"],["range","","Arco"],["cooking","","Cocina"],["crafting","","Artesanía"]];
+/* ============ LOS OFICIOS (18/8, dirección) ========================================
+   "Artesanía debería ser artesanía, el arte de crear algo, de craftear, no de talar. Talar es un
+   oficio como lo es picar en minería o cultivar."
+   REGLA, en una frase: un oficio tiene RECURSO propio, RELOJ propio y ACCIÓN repetida. Con esa
+   vara, talar y cuidar animales son oficios y estaban escondidos dentro de otras skills — la tala
+   dentro de Artesanía (que no extrae nada: transforma) y los animales dentro de Cultivo.
+   La consecuencia práctica era que la barra de "Artesanía" era en realidad una barra de leñador
+   con otro nombre: subía sobre todo talando, que es la acción más repetida del juego. */
+const SKILL_DEFS = [["farming","","Cultivo"],["tala","","Tala"],["mining","","Minería"],
+  ["fishing","","Pesca"],["ganaderia","","Ganadería"],["cooking","","Cocina"],["crafting","","Artesanía"],
+  ["sword","","Espada"],["hacha","","Hacha (combate)"],["mazo","","Mazo"],["range","","Arco"]];
 const SKILL_NAME = {}; SKILL_DEFS.forEach(([k,,nm]) => SKILL_NAME[k] = nm);
 /* ============ LA CURVA DE HABILIDAD (18/8, dirección) ==============================
    "Las semillas se bloquean con la skill de Cultivo, no con el nivel de granja."
@@ -2878,7 +2888,7 @@ function recogerAnimal(k) {
   }
   if (!total) { bagFull("recoger " + RES_LABEL[d.mat]); return; }
   G.res[d.mat] = (G.res[d.mat] || 0) + total;
-  addXp("farming", 20 * listos.length);
+  addXp("ganaderia", 20 * listos.length);   // 18/8: los animales son Ganadería, no Cultivo
   log(d.label + " ×" + listos.length + " produjo " + total + " de " + RES_LABEL[d.mat] + " (felicidad media " + animalFelicidad(k) + "/100).", "gold");
   toast("+" + total + " " + RES_LABEL[d.mat]);
   refreshHud(); if (isOpen("ov-inv")) refreshInv();
@@ -3890,7 +3900,9 @@ function goFishing() {
   if (toolDur("rod") <= 0) { log("¡La caña se rompió en pedazos! Crafteá otra en la Herrería.", "bad"); toast("¡Caña rota!"); }
   const r = Math.random();
   let rar; if (r < 0.60) rar = "comun"; else if (r < 0.85) rar = "raro"; else if (r < 0.97) rar = "epico"; else rar = "legendario";
-  G.fish[rar]++; addXp("fishing", 8); addXp("cooking", 3);
+  /* 18/8 (dirección): "pescar tiene su propio skill, ¿por qué le da experiencia a cocinar?".
+     Resto de cuando la pesca era "conseguir ingredientes". La Cocina se gana cocinando. */
+  G.fish[rar]++; addXp("fishing", 8);
   if (typeof statAdd === "function") statAdd("pescar");
   if (typeof tutoEvent === "function") tutoEvent("fish");
   // fixs.docx #16 (11/8): pescar ya NO regala buffs — el pez va a la bolsa y los buffs
@@ -4200,6 +4212,19 @@ function pedidoSprite(p) {
   return resSprite(p.key);
 }
 function pedidosCumplibles() { try { return pedidosEstado().lista.filter(p => !p.hecho && pedidoStock(p) >= p.n).length; } catch (e) { return 0; } }
+/* 18/8: ¿a qué oficio le toca la XP de un pedido? Al que produjo lo que estás entregando. Es la
+   misma regla de siempre: cada acción paga a su oficio. Se deriva del pedido, no se escribe a mano. */
+function skillDeEntrega(p) {
+  if (!p) return "farming";
+  if (p.tipo === "fish") return "fishing";
+  if (p.tipo === "dish") return "cooking";
+  if (p.key === "madera") return "tala";
+  if (typeof ORE_ORDER !== "undefined" && ORE_ORDER.includes(p.key)) return "mining";
+  if (typeof ANIMAL_ORDER !== "undefined" &&
+      ANIMAL_ORDER.some(a => ANIMAL_DEF[a] && ANIMAL_DEF[a].mat === p.key)) return "ganaderia";
+  if (typeof MAT_ORDER !== "undefined" && MAT_ORDER.includes(p.key)) return "crafting";
+  return "farming";                                    // los cultivos, que es el caso normal
+}
 function pedidoEntregar(i) {
   const e = pedidosEstado();
   // 18/8: "S" y "M" son el encargo de la semana y el del mes; los números, los tres diarios
@@ -4219,7 +4244,9 @@ function pedidoEntregar(i) {
   const vales = p.vales * (doble ? 2 : 1);
   p.hecho = true; if (!p.tipoEncargo) e.dobles = (e.dobles || 0) + 1;
   G.plata += p.plata; G.vales = (G.vales || 0) + vales;
-  addXp("farming", p.xp);
+  /* 18/8 (dirección): el tablón pagaba XP de Cultivo aunque le llevaras PIEDRA. Ahora paga a la
+     skill de lo que entregás — que es lo que el jugador ha trabajado de verdad. */
+  addXp(skillDeEntrega(p), p.xp);
   log(p.de + " recibió " + p.n + " × " + pedidoLabel(p) + ": +" + p.plata + " plata y +" + vales + (vales > 1 ? " vales" : " vale") + (doble ? " (¡primer pedido del día ×2!)" : "") + ".", "gold");
   toast("🎟 +" + vales + " · 🪙 +" + p.plata);
   if (window.sfx) sfx("coin");

@@ -1498,7 +1498,7 @@ class FarmScene extends Phaser.Scene {
       o.golpes = 0; this.barraGolpes(o);
       const gr = 1;   // viernes (2): todos los recursos dan 1
       if (tryAddRes("madera", gr)) {
-        useTool("axe"); addXp("crafting", nodoXpMin(CD.tree)); /* 16/8: XP = minutos del reloj (1 h 30 → 90) */ nodoSumar(o); o.cdIni = nowMs(); o.readyAt = nowMs() + nodoCd(o, "tree", CD.tree) * 1000 * cdMult() * (typeof tutoBoost === "function" ? tutoBoost("tree") : 1);
+        useTool("axe"); addXp("tala", nodoXpMin(CD.tree));   /* 18/8: talar es TALA, no Artesanía */ /* 16/8: XP = minutos del reloj (1 h 30 → 90) */ nodoSumar(o); o.cdIni = nowMs(); o.readyAt = nowMs() + nodoCd(o, "tree", CD.tree) * 1000 * cdMult() * (typeof tutoBoost === "function" ? tutoBoost("tree") : 1);
         o.halfAt = nowMs() + (o.readyAt - nowMs()) / 2; this.syncNodos();   // a mitad del enfriamiento asoma el árbol a medio crecer (doc 4/8)
         // tocón nuevo con base de tierra y hojas caídas (encuadre del árbol, va a tamaño completo); respaldo: tocón viejo chico
         // 15/8 (medido en los PNG): el disco del tocón es el 64% de su lienzo y el tronco
