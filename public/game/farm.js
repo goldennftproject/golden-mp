@@ -54,6 +54,22 @@ class FarmScene extends Phaser.Scene {
       GF.PLOTS.push({ col: sv.col, row: sv.row });
     }
     if (G.layoutPlots) for (const k in G.layoutPlots) { const b = GF.PLOTS[k]; if (b) { b.col = G.layoutPlots[k].col; b.row = G.layoutPlots[k].row; } }
+    /* 18/8 — LAS PARCELAS 13+ NO EXISTÍAN. GF.PLOTS nace con 12 posiciones y solo crecía si el
+       jugador ARRASTRABA una parcela en modo edición (que es lo único que escribe layoutPlots).
+       Pero plotsOwned puede llegar a PLOT_MAX=60 por nivel, por compra o por expansión, y
+       refreshPlotLocks recorta a GF.PLOTS.length: la parcela nº13 se cobraba y no aparecía nunca.
+       Ahora la lista se estira sola hasta lo que el jugador tiene, buscando celda libre. */
+    this._crecerPlots = () => {
+      let guardia = 0;
+      while (GF.PLOTS.length < Math.min((typeof PLOT_MAX !== "undefined" ? PLOT_MAX : 60), G.plotsOwned || 3) && guardia++ < 80) {
+        const h = this.celdaLibreParcela();
+        if (!h) break;                                  // granja sin sitio: se queda esperando terreno
+        GF.PLOTS.push({ col: h.col, row: h.row });
+        if (!G.layoutPlots) G.layoutPlots = {};
+        G.layoutPlots[GF.PLOTS.length - 1] = { col: h.col, row: h.row };
+      }
+    };
+    this._crecerPlots();
 
     // fondo + estanque + lotes-tierra + grilla
     const g = this.add.graphics().setDepth(-1000);
@@ -486,7 +502,14 @@ class FarmScene extends Phaser.Scene {
 
     // parcelas (ciclo arcade: seco → plantar semilla elegida → creciendo (con timer) → listo → cosechar)
     const savedPlots = Array.isArray(G.plots) ? G.plots : [];
-    this.plots = GF.PLOTS.map((pl, i) => {
+    this.crearParcela = (i, savedPlots) => {
+      const pl = GF.PLOTS[i];
+      const T = GF.TILE;
+      if (!this.plotGrounds[i]) {   // el suelo de una parcela nacida después del arranque
+        this.plotGrounds[i] = this.textures.exists("plot")
+          ? this.add.image((pl.col + 0.5) * T, (pl.row + 0.5) * T, "plot").setDisplaySize(T, T).setDepth(-998)
+          : null;
+      }
       const cx = (pl.col + 0.5) * T, cy = (pl.row + 0.5) * T;
       const spr = this.add.image(cx, cy + 6, "sprout").setOrigin(0.5, 0.95).setDepth(cy).setVisible(false);
       spr.setScale((T * 0.75) / spr.width);
@@ -522,7 +545,8 @@ class FarmScene extends Phaser.Scene {
         else { obj.state = "dry"; obj.cropKey = null; this.applyPlotVisual(obj); }
       }
       return obj;
-    });
+    };
+    this.plots = GF.PLOTS.map((pl, i) => this.crearParcela(i, savedPlots));
     this.syncPlots();
 
     // amenazas (jabalíes)
@@ -3788,6 +3812,20 @@ class FarmScene extends Phaser.Scene {
 
   refreshPlotLocks() {
     if (!this.plots) return;
+    /* 18/8: si el jugador tiene MÁS parcelas que posiciones en el mapa (regalo de nivel, compra o
+       expansión), acá se crean de verdad. Antes esto se recortaba en silencio y la parcela nº13 en
+       adelante se cobraba sin aparecer nunca. */
+    if ((G.plotsOwned || 3) > GF.PLOTS.length && this._crecerPlots) {
+      const antes = GF.PLOTS.length;
+      this._crecerPlots();
+      for (let i = antes; i < GF.PLOTS.length; i++) {
+        const nueva = this.crearParcela(i, {});
+        this.plots.push(nueva);
+        this.pintarSueloParcela(nueva, false);
+        this.plotUnlockFx(nueva);
+      }
+      if (GF.PLOTS.length < (G.plotsOwned || 3)) toast("No queda sitio para más parcelas — expandí la granja");
+    }
     const owned = Math.max(2, Math.min(GF.PLOTS.length, G.plotsOwned || 2));
     this.plots.forEach((pl, i) => {
       if (i < owned && pl.state === "locked") {

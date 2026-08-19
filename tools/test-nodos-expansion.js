@@ -1,6 +1,8 @@
 /* LOS NODOS QUE TRAE CADA EXPANSIÓN (18/8)
-   Cada bloque trae 1 árbol y 1 roca, y sus 32 posiciones se DERIVAN de la geometría en vez de
-   escribirse a mano. Esto comprueba que la derivación no deja ninguno en un sitio imposible.
+   18/8 (2ª pasada): cada bloque trae DOS celdas productivas, como siempre, pero ahora son
+   1 PARCELA + 1 nodo, y el nodo alterna árbol (bloques pares) y roca (impares). La parcela no
+   es un objeto del mapa: llega al baúl y la coloca el jugador (nodosQueTocan la cuenta). Acá se
+   comprueba el nodo, que sí es geometría, y que la derivación no lo deja en un sitio imposible.
      node tools/test-nodos-expansion.js                                                        */
 const fs = require("fs"), vm = require("vm");
 const ctx = { console: { log(){}, warn(){} }, Math, Date, JSON }; ctx.window = ctx;
@@ -10,12 +12,14 @@ let fallos = 0;
 const ok = (n, c, d) => { if (!c) fallos++; console.log((c ? "  ok   " : "  FALLA") + "  " + n + (d ? "   " + d : "")); };
 
 const nuevos = G.WORLD_OBJECTS.filter(o => o.exp != null);
-ok("hay 2 nodos por expansión (16 x 2)", nuevos.length === 32, nuevos.length);
-ok("uno es árbol y otro roca en cada bloque",
+ok("hay 1 nodo por expansión (16)", nuevos.length === 16, nuevos.length);
+ok("alternan árbol y roca, bloque a bloque",
   G.EXPANSIONES.every((e, i) => {
     const d = nuevos.filter(o => o.exp === i);
-    return d.length === 2 && d.some(o => o.type === "tree") && d.some(o => o.type === "rock");
+    return d.length === 1 && d[0].type === (i % 2 === 0 ? "tree" : "rock");
   }));
+ok("salen 8 árboles y 8 rocas",
+  nuevos.filter(o => o.type === "tree").length === 8 && nuevos.filter(o => o.type === "rock").length === 8);
 
 let fuera = 0, cerca = 0, choque = 0, pisaViejo = 0;
 const ocupadasBase = new Set();
@@ -36,12 +40,12 @@ G.EXPANSIONES.forEach((e, i) => {
     if (ocupadasBase.has(k)) pisaViejo++;             // ¿pisa algo del corral?
     if (c < e.c0 || c >= e.c1 || r < e.r0 || r >= e.r1) fuera++;   // ¿se salió de SU bloque?
   });
-  if (new Set(celdas).size !== celdas.length) choque++;   // ¿el árbol y la roca se pisan?
+  if (new Set(celdas).size !== celdas.length) choque++;   // ¿el nodo se pisa a sí mismo?
 });
 ok("ninguno cae fuera de su propio bloque", fuera === 0, fuera + " casos");
 ok("ninguno pisa la cerca al comprarse", cerca === 0, cerca + " casos");
 ok("ninguno pisa contenido del corral", pisaViejo === 0, pisaViejo + " casos");
-ok("el árbol y la roca nunca se solapan", choque === 0, choque + " bloques");
+ok("ningún nodo se solapa consigo mismo", choque === 0, choque + " bloques");
 
 // y una vez interior, interior para siempre (la cerca solo retrocede)
 let despues = 0;
@@ -55,12 +59,12 @@ ok("y siguen siendo interior en TODAS las etapas posteriores", despues === 0, de
 
 // no se ven hasta que la expansión se compró
 G.aplicarTerreno(0);
-ok("con 0 expansiones, los 32 están ocultos", nuevos.every(o => o.exp >= 0));
+ok("con 0 expansiones, los 16 están ocultos", nuevos.every(o => o.exp >= 0));
 console.log("\n  totales al terminar las 16:");
 const arb = G.WORLD_OBJECTS.filter(o => o.type === "tree").length;
 const roc = G.WORLD_OBJECTS.filter(o => o.type === "rock").length;
-console.log("    árboles " + arb + " (6 del corral + 16)   ·   rocas " + roc + " (6 + 16)");
-ok("los totales cuadran", arb === 22 && roc === 22);
+console.log("    árboles " + arb + " (6 del corral + 8)   ·   rocas " + roc + " (6 + 8)");
+ok("los totales cuadran", arb === 14 && roc === 14, arb + "/" + roc);
 
 console.log("\n" + (fallos ? "FALLOS: " + fallos : "todo en verde"));
 process.exit(fallos ? 1 : 0);

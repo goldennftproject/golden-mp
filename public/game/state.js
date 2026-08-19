@@ -7,7 +7,7 @@ const G = {
   plata: 3, golden: 20, level: 1, prestige: 0, week: 1, iniciado: 0,   // 18/8: cuándo empezó la partida — de ahí sale la semana del HUD   // 14/8: nacés con 3 de plata (el 1er objetivo es COMPRAR tus semillas)
   hp: 100, hpMax: 100, swordOwned: false, bowOwned: false, swordWoodOwned: false, firstCropDone: false,   // combate (Fase D)
   armasUnlocked: false,          // viernes (2): la pestana Armas de la Herreria se paga (20 madera + 20 piedra + 1000 plata)
-  treesOpen: [0, 1], rocksOpen: [0, 1],  // 15/8 (dirección): con los relojes largos, se nace con 2 árboles y 2 rocas abiertos — ampliar en paralelo ES el juego
+  treesOpen: [0, 1, 2], rocksOpen: [0, 1, 2],  // 18/8: TRES de cada uno al arrancar. Con 2 el tutorial pedía 33 madera a 1 cada 30 min: 8 h de reloj para 3 min de juego.
   gear: { casco: null, armadura: null, botas: null, escudo: null, arma: null, municion: false },
   weapons: {},                   // doc 2/8: armas nuevas — id ("espada_madera") -> { dur }
   stam: null, stamAcc: 0, stamRec: null,   // estamina de la Zona Negra ("2das mejoras")
@@ -968,7 +968,20 @@ const FARM_UNLOCK = {
    anunciaba "3ª parcela GRATIS", regalosSync hacía la resta 3 − 3 = 0 y no encolaba nada. El
    jugador leía la promesa en el cartel de nivel y no encontraba la parcela por ningún lado.
    Corregido: la escalera empieza en la 4ª, que es la que de verdad toca. */
-const FARM_PARCELA = { 2:4, 4:5, 6:6, 7:7, 12:8, 18:9, 25:10, 35:11, 45:12, 50:13 };   // nivel → parcelas totales
+/* ============ LA CURVA DE CELDAS PRODUCTIVAS (18/8, dirección) ======================
+   "El diseñador dice que las parcelas son muy pocas. La idea no es agregar al tuntún."
+   MEDIDO (tools/costear-parcelas.js): el ancla se cumple — parcela, árbol y roca dan las TRES
+   20 plata/hora netas. O sea que el número de parcelas no desequilibra nada por sí solo; lo que
+   hay que decidir a conciencia es (a) la curva TOTAL de celdas y (b) el reparto entre las tres.
+   DIAGNÓSTICO: las parcelas eran el 40% del total por nivel y, contando lo que traen las 16
+   expansiones (1 árbol + 1 roca cada una), solo el 23% del final. En un juego de granja eso está
+   del revés: la parcela es lo que el jugador toca, el nodo es lo que trabaja solo mientras no está.
+   DECISIÓN: se ADELANTA la curva sin subir el techo. Las 13 parcelas por nivel siguen siendo 13,
+   pero se llega en el nivel 22 y no en el 50, y el tramo 1-10 va mucho más rápido. Y cada
+   expansión pasa a traer 1 PARCELA + 1 nodo en vez de 1 árbol + 1 roca: mismas 2 celdas por
+   expansión, mismo total de 57 celdas al final, pero las parcelas pasan del 23% al 51%.
+   De regalo, arregla el tutorial: más árboles y rocas antes = menos horas mirando el reloj. */
+const FARM_PARCELA = { 2:4, 3:5, 4:6, 5:7, 6:8, 8:9, 10:10, 13:11, 17:12, 22:13 };   // nivel → parcelas totales
 /* 17/8 — EN QUÉ NIVEL CAE CADA UNA DE LAS 16 EXPANSIONES (bloques de 5x5, ver GF.EXPANSIONES).
    El hueco se abre solo: 2 niveles entre las cinco primeras, 3 entre las cinco siguientes y 4
    entre las seis últimas. Arranca rápido para enseñar la mecánica y se espacia cuando cada
@@ -1038,6 +1051,8 @@ function expansionComprar() {
   if (window.sfx) sfx("level");
   if (window.celebrate) celebrate({ title: "¡GRANJA MÁS GRANDE!", sub: "Expansión " + e.n + " de " + EXPANSION_MAX,
     big: true, reward: (GF.BLOQUE * GF.BLOQUE) + " celdas nuevas" });
+  const nuevos = (typeof regalosSync === "function") ? regalosSync() : 0;   // 18/8: la parcela del bloque, al baúl
+  if (nuevos) log("La expansión trajo " + nuevos + " premio" + (nuevos > 1 ? "s" : "") + " al baúl.", "gold");
   if (typeof saveFarm === "function") saveFarm(true);
   // la forma del mundo cambió: hay que rehacer césped, bosque, cerca y límites de cámara
   if (typeof reiniciarGranjaSuave === "function") reiniciarGranjaSuave();
@@ -1127,7 +1142,12 @@ function nodosQueTocan(lvl) {
   const arb = NIVEL_ARBOLES.filter(n => n <= lvl).length;
   const roc = NIVEL_ROCAS.filter(n => n <= lvl).length;
   let par = 3; for (const k in FARM_PARCELA) if (lvl >= +k) par = FARM_PARCELA[k];
-  return { tree: arb, rock: roc, plot: par };
+  /* 18/8: cada expansión comprada suma UNA parcela ENCIMA de las que da el nivel. Se cuenta acá
+     y no en expansionComprar a propósito: así regalosSync sigue siendo idempotente y las partidas
+     que ya tenían expansiones reciben sus parcelas atrasadas la primera vez que entren. Los
+     árboles y rocas de expansión NO van por acá: son nodos físicos dentro del bloque. */
+  par += (G.expansiones || 0);
+  return { tree: arb, rock: roc, plot: Math.min(typeof PLOT_MAX !== "undefined" ? PLOT_MAX : 60, par) };
 }
 // pone al día la cola de regalos: idempotente, así que sirve igual para un level-up,
 // para un salto de varios niveles o para migrar un guardado viejo.
@@ -1753,7 +1773,7 @@ function passClaim(nv, vipTrack) {
   if (r.seed) G.seeds[r.seed[0]] = (G.seeds[r.seed[0]] || 0) + r.seed[1];
   if (r.dish) { G.dishes = G.dishes || {}; G.dishes[r.dish[0]] = (G.dishes[r.dish[0]] || 0) + r.dish[1]; }
   if (r.pick) { G.picks.owned[r.pick] = true; G.picks.dur[r.pick] = (G.picks.dur[r.pick] || 0) + 1; }
-  if (r.ficha) { G.plotsOwned = Math.min(PLOT_MAX, (G.plotsOwned || 2) + 1); if (G.plotsOwned <= GF.PLOTS.length && window.farmScene && window.farmScene.refreshPlotLocks) { try { window.farmScene.refreshPlotLocks(); } catch (e) {} } if (typeof syncEditDeco === "function") syncEditDeco(); }
+  if (r.ficha) { G.plotsOwned = Math.min(PLOT_MAX, (G.plotsOwned || 2) + 1); if (window.farmScene && window.farmScene.refreshPlotLocks)   /* 18/8: la guardia "<= GF.PLOTS.length" era parte del fallo de las parcelas 13+ */ { try { window.farmScene.refreshPlotLocks(); } catch (e) {} } if (typeof syncEditDeco === "function") syncEditDeco(); }
   if (r.cos) { p.cosmetics.push(r.cos); }
   log("Pase nivel " + nv + (vipTrack ? " (VIP)" : "") + ": recibiste " + passRewardStr(r) + ".", "gold");
   if (typeof tutoEvent === "function") tutoEvent("passclaim");
@@ -3046,13 +3066,13 @@ function rockUnlockCost() { return NODE_UNLOCK_COSTS[Math.min(NODE_UNLOCK_COSTS.
 // el juego te dice qué nivel de granja pide. Tabla por orden de aparición (números del
 // diseñador; la 1ª siempre libre). Quien PAGÓ desbloqueos viejos los conserva.
 // Los ÁRBOLES quedan con su sistema de siempre: retoño + desbloqueo pagando madera.
-var NIVEL_ROCAS = [1, 1, 4, 6, 9, 12]   // 15/8: la 2ª roca disponible desde el arranque;
+var NIVEL_ROCAS = [1, 1, 1, 3, 5, 8]   /* 18/8: 3 rocas de arranque; las 6 en el nivel 8 (antes 12) */   // 15/8: la 2ª roca disponible desde el arranque;
 function nodoNivelReq(o) { return NIVEL_ROCAS[Math.min(o.lockIdx || 0, NIVEL_ROCAS.length - 1)] || 1; }
 // 16/8: los ÁRBOLES ganan su propia escalera de nivel, espejo de las rocas — con los
 // relojes largos, cuántos nodos tenés activos ES la progresión. El pago en madera se
 // mantiene (el retoño se "cultiva"), pero el retoño N recién se puede pagar al nivel N
 // de la tabla. Anclada a los edificios: nivel 6 (Establo, 40 maderas) = hasta 5 árboles.
-var NIVEL_ARBOLES = [1, 1, 3, 4, 6, 8];
+var NIVEL_ARBOLES = [1, 1, 1, 2, 4, 6];   /* 18/8: 3 árboles de arranque; los 6 en el nivel 6 (antes 8) — la madera era el cuello de botella del tutorial */
 function arbolNivelReq(o) { return NIVEL_ARBOLES[Math.min(o.lockIdx || 0, NIVEL_ARBOLES.length - 1)] || 1; }
 function arbolBloqueado(o) {
   if (!o || o.type !== "tree" || !o.locked) return false;

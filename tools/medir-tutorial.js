@@ -8,7 +8,7 @@ ctx.window = ctx; ctx.globalThis = ctx;
 vm.runInNewContext(fs.readFileSync("public/game/config.js", "utf8"), ctx, { filename: "config.js" });
 vm.runInNewContext(fs.readFileSync("public/game/state.js", "utf8") +
   "\n;window.__X={TUTO_STEPS,BUILD_DEF,CROP_DEF,RECIPE_DEF,CD,GOLPES_TALAR,GOLPES_MINAR," +
-  "NIVEL_ARBOLES,NIVEL_ROCAS,NODE_UNLOCK_COSTS,G,skillNeed,nodoXpMin,TOOL_CRAFT,FARM_XP_LVLS,PRICE};",
+  "NIVEL_ARBOLES,NIVEL_ROCAS,NODE_UNLOCK_COSTS,G,skillNeed,nodoXpMin,TOOL_CRAFT,FARM_XP_LVLS,PRICE,FARM_PARCELA};",
   ctx, { filename: "state.js" });
 const X = ctx.__X, CD = X.CD;
 
@@ -30,23 +30,21 @@ function nivelGranja(xpCultivo) {
 function simular(rellena) {
   let t = 0, activo = 0, muerto = 0;
   let madera = 0, piedra = 0, plata = X.G.plata, xpCult = 0, nivel = 1;
-  let arboles = 2, rocas = 2, parcelas = 3, papasEnMano = 0;
-  const libreArb = [0, 0], libreRoc = [0, 0];
+  // se leen del juego: si mañana cambia el arranque, este número cambia solo
+  let arboles = (X.G.treesOpen || [0]).length, rocas = (X.G.rocksOpen || [0]).length;
+  let parcelas = X.G.plotsOwned || 3, papasEnMano = 0;
+  const libreArb = Array(arboles).fill(0), libreRoc = Array(rocas).fill(0);
   const bitacora = [];
   const papa = X.CROP_DEF.papa;
 
   const abrirNodos = () => {
     while (arboles < NIV_ARB.length && NIV_ARB[arboles] <= nivel) {
-      const c = UNLOCK[Math.min(UNLOCK.length - 1, arboles - 1)];
-      if (madera < c) break;
-      madera -= c; libreArb.push(t); arboles++;
-      bitacora.push(["invertir", t, "árbol nº" + arboles + " por " + c + " madera"]);
+      libreArb.push(t); arboles++;   // los del NIVEL son regalo al baúl (regalosSync): no cuestan madera
+      bitacora.push(["nodo", t, "árbol nº" + arboles + " (regalo de nivel)"]);
     }
     while (rocas < NIV_ROC.length && NIV_ROC[rocas] <= nivel) {
-      const c = UNLOCK[Math.min(UNLOCK.length - 1, rocas - 1)];
-      if (madera < c) break;
-      madera -= c; libreRoc.push(t); rocas++;
-      bitacora.push(["invertir", t, "roca nº" + rocas + " por " + c + " madera"]);
+      libreRoc.push(t); rocas++;
+      bitacora.push(["nodo", t, "roca nº" + rocas + " (regalo de nivel)"]);
     }
   };
   // una vuelta de papas: plantar todas las parcelas, esperar, cosechar. Devuelve los segundos.
@@ -60,7 +58,11 @@ function simular(rellena) {
     papasEnMano += parcelas;
     xpCult += parcelas * (5 + papa.xp);
     const antes = nivel; nivel = nivelGranja(xpCult);
-    if (nivel > antes) bitacora.push(["nivel", t, "granja nivel " + nivel]);
+    if (nivel > antes) {
+      bitacora.push(["nivel", t, "granja nivel " + nivel]);
+      let p = X.G.plotsOwned || 3; for (const k in X.FARM_PARCELA) if (nivel >= +k) p = X.FARM_PARCELA[k];
+      if (p > parcelas) { bitacora.push(["parcela", t, "el nivel regala parcelas: " + parcelas + " → " + p]); parcelas = p; }
+    }
     abrirNodos();
   };
   const vender = () => { if (!papasEnMano) return; activo += S_PANEL + S_CLIC; t += S_PANEL + S_CLIC;
@@ -126,7 +128,7 @@ console.log("TUTORIAL COMPLETO — con los relojes nuevos (árbol " + CD.tree / 
 console.log("materiales que pide la cadena: " +
   (X.BUILD_DEF.store.cost.madera + X.BUILD_DEF.horno.cost.madera + X.BUILD_DEF.cocina.cost.madera) + " madera y " +
   (X.BUILD_DEF.store.cost.piedra + X.BUILD_DEF.horno.cost.piedra + X.BUILD_DEF.cocina.cost.piedra) + " piedra");
-console.log("de arranque: 2 árboles (1 madera cada " + CD.tree / 60 + " min) y 2 rocas (1 piedra cada " + CD.rock / 60 + " min)\n");
+console.log("de arranque: " + (X.G.treesOpen||[0]).length + " árboles (1 madera / " + CD.tree/60 + " min), " + (X.G.rocksOpen||[0]).length + " rocas (1 piedra / " + CD.rock/60 + " min) y " + (X.G.plotsOwned||3) + " parcelas\n");
 
 for (const [nombre, rel] of [["EL QUE SOLO HACE LO QUE PIDE EL TUTORIAL", false],
                              ["EL QUE LLENA LA ESPERA PLANTANDO PAPAS", true]]) {
@@ -152,7 +154,7 @@ simular(true).bitacora.filter(b => b[0] !== "hacer")
   const mad = B.store.cost.madera + B.horno.cost.madera + B.cocina.cost.madera;
   const pie = B.store.cost.piedra + B.horno.cost.piedra + B.cocina.cost.piedra;
   const valor = mad * P.madera + pie * P.piedra;
-  const celdas = 4, porHora = celdas * 20;
+  const celdas = (X.G.treesOpen||[0]).length + (X.G.rocksOpen||[0]).length, porHora = celdas * 20;
   console.log("\n\nCONTRA EL ANCLA (20 plata por celda productiva y por hora)\n");
   console.log("   lo que pide la cadena ... " + mad + " madera (" + mad * P.madera + ") + " + pie + " piedra (" + pie * P.piedra + ") = " + valor + " plata de valor");
   console.log("   lo que produce la granja  " + celdas + " celdas × 20 = " + porHora + " plata/hora");
