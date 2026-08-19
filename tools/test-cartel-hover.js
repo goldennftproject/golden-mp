@@ -43,5 +43,9 @@ ok("…y avisa de que el árbol ocupa dos celdas",
 ok("el motivo de la cerca ya no dice 'no se puede construir' a secas",
   /La cerca se reserva esta franja/.test(src));
 
+/* 18/8 — el marcador no puede quedarse pegado: se apaga solo cada frame si no llevás nada. */
+ok("el rectángulo de colocar se apaga solo si no hay nada en la mano",
+  /if \(this\.editHl && this\.editHl\.visible &&[\s\S]{0,220}setVisible\(false\);/.test(src));
+
 console.log("\n"+(fallos?"FALLOS: "+fallos:"el cartel solo sale cuando hay algo que decir"));
 process.exit(fallos?1:0);

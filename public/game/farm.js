@@ -4350,6 +4350,16 @@ class FarmScene extends Phaser.Scene {
   }
 
   updatePrompt() {
+    /* 18/8: EL RECTÁNGULO DE COLOCAR SE APAGA SOLO. Se mostraba desde el movimiento del ratón y se
+       ocultaba en un puñado de sitios (soltar, cancelar, salir de edición); bastaba con que un
+       camino nuevo no pasara por ninguno para que quedara pegado en el suelo — un rectángulo rojo
+       de 2x1 sobre el pasto, que es justo lo que se ve en la captura de dirección. En vez de
+       añadir un sexto sitio donde ocultarlo, se DERIVA: si no llevás nada en la mano ni estás
+       arrastrando, no hay marcador. Esto corre cada frame, así que no hay camino que se escape. */
+    if (this.editHl && this.editHl.visible &&
+        !this.placing && !this.dragDeco && !this.dragObj && !this.dragPlot && !this.dragPond) {
+      this.editHl.setVisible(false);
+    }
     const el = $("prompt"); if (!el) return;
     /* 18/8 (reporte: "no pude ponerlo una celda más arriba porque me marca rojo, creo que aún
        quedan celdas bloqueadas fantasma"). No eran fantasma —era la franja que la cerca se reserva
