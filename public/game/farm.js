@@ -2106,6 +2106,20 @@ class FarmScene extends Phaser.Scene {
     const hu = this.huellaColocar(col, row);
     if (!hu.libre) {
       toast((hu.motivo || "Ahí no entra") + (hu.ancho > 1 ? " — esto ocupa " + hu.ancho + " celdas" : " — probá otra celda"));
+      /* 18/8: y AL REGISTRO, el detalle exacto. La norma de la casa es no usar consola, así que
+         cuando algo se rechaza queda escrito en el panel de Registro: qué celdas se pidieron y qué
+         dice el mapa de cada una. Con eso, una captura del registro basta para saber qué pasa, en
+         vez de deducirlo de una foto del pasto. */
+      if (typeof log === "function") {
+        const partes = [];
+        for (let c = hu.c0; c < hu.c0 + hu.ancho; c++) {
+          const o = GF.celdaOcupada(c, row);
+          partes.push(c + "," + row + "=" + (!GF.tuyo(c, row) ? "fuera"
+            : GF.enCerca(c, row) ? "cerca"
+            : o ? (o.tipo + (o.ancho > 1 ? "×" + o.ancho + "@" + o.leftCol + "," + o.fila : "")) : "libre"));
+        }
+        log("No entra " + (pl.id || pl.tipo) + " → " + partes.join("  ·  "), "bad");
+      }
       return;
     }
     if (pl.tipo === "deco") {
@@ -4057,10 +4071,20 @@ class FarmScene extends Phaser.Scene {
         const elegida = G.layoutPlots && G.layoutPlots[i];
         if (elegida && (GF.PLOTS[i].col !== elegida.col || GF.PLOTS[i].row !== elegida.row)) {
           this.moverParcela(pl, elegida.col, elegida.row);
-        } else if (!this.celdaLibreAdorno(GF.PLOTS[i].col, GF.PLOTS[i].row, -1)) {
-          const h = this.celdaLibreParcela();
-          if (h) { this.moverParcela(pl, h.col, h.row);
-                   toast("Tu parcela nueva no cabía en su sitio — la puse en un hueco libre"); }
+        } else if (!elegida) {
+          /* 18/8 — LA PARCELA SE PISABA A SÍ MISMA. Acá se preguntaba "¿está libre la celda de esta
+             parcela?" con celdaLibreAdorno… y para entonces plotsOwned YA se había incrementado, así
+             que el mapa de ocupación contestaba "sí, hay una parcela": ella misma. La respuesta era
+             siempre "ocupado", saltaba al plan B —celdaLibreParcela(), que barre DESDE EL CENTRO— y
+             la parcela aparecía en mitad de la granja. Eso es lo que reportó dirección.
+             Ahora la comprobación IGNORA a la propia parcela, que es lo único que tenía sentido. */
+          const oc = GF.celdaOcupada(GF.PLOTS[i].col, GF.PLOTS[i].row);
+          const suyaOLibre = !oc || (oc.tipo === "parcela" && oc.i === i);
+          if (!suyaOLibre) {
+            const h = this.celdaLibreParcela();
+            if (h) { this.moverParcela(pl, h.col, h.row);
+                     toast("Tu parcela nueva no cabía en su sitio — la puse en un hueco libre"); }
+          }
         }
         pl.state = "dry";
         this.pintarSueloParcela(pl, false);   // 16/8: aparece al colocarla

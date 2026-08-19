@@ -66,5 +66,13 @@ ok("colocar decide con UNA pregunta al mapa, no con cinco comprobaciones",
 ok("blockedAt ya no decide sobre la rejilla (es para caminar)",
   !/if \(GF\.blockedAt\(x, y, 6\)\) return false;/.test(src));
 
+/* 18/8 — TRAZA EN EL REGISTRO. Sin consola (norma de la casa), cada rechazo escribe en el panel
+   de Registro qué celdas se pidieron y qué dice el mapa de cada una. Una captura del registro
+   basta para diagnosticar, en vez de deducirlo de una foto del pasto. */
+ok("cada rechazo deja la traza de las celdas en el registro",
+  /log\("No entra " \+ \(pl\.id \|\| pl\.tipo\) \+ " → " \+ partes\.join/.test(src));
+ok("…y la traza dice el tipo, el ancho y dónde empieza el ocupante",
+  /o\.tipo \+ \(o\.ancho > 1 \? "×" \+ o\.ancho \+ "@" \+ o\.leftCol/.test(src));
+
 console.log("\n"+(fallos?"FALLOS: "+fallos:"el cartel solo sale cuando hay algo que decir"));
 process.exit(fallos?1:0);

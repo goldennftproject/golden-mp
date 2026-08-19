@@ -148,6 +148,24 @@ ok("el buscador de caminos se invalida (tenía el mapa viejo)", esc._nav === nul
        obj && Math.round(obj.cx) === Math.round((DEST.col + 0.5) * ctx.GF.TILE),
        obj ? ("cx=" + Math.round(obj.cx)) : "sin objeto");
     ok("...y deja de estar bloqueada", obj && obj.state !== "locked", obj ? obj.state : "?");
+
+    /* 18/8 — LA PARCELA SIN CELDA ELEGIDA SE QUEDA EN SU SITIO. Reporte de dirección: "quise
+       poner la parcela al lado de las otras y se puso en el centro". La comprobación de "¿está
+       libre mi celda?" se contestaba a sí misma que sí estaba ocupada —por ella misma— y saltaba
+       al plan B, que busca hueco BARRIENDO DESDE EL CENTRO. */
+    const idx2 = ctx.G.plotsOwned || 3;
+    const casa = ctx.GF.PLOTS[idx2] ? { c: ctx.GF.PLOTS[idx2].col, r: ctx.GF.PLOTS[idx2].row } : null;
+    ctx.G.plotsOwned = idx2 + 1;                 // la parcela llega SIN celda elegida
+    if (ctx.G.layoutPlots) delete ctx.G.layoutPlots[idx2];
+    ctx.GF.ocupCambio();
+    esc2.refreshPlotLocks();
+    const p2 = ctx.GF.PLOTS[idx2];
+    ok("una parcela sin celda elegida se queda en su sitio de la rejilla",
+       casa && p2 && p2.col === casa.c && p2.row === casa.r,
+       casa ? ("de fábrica " + casa.c + "," + casa.r + " → quedó " + (p2 ? p2.col + "," + p2.row : "?")) : "?");
+    const centro = ctx.GF.C0 + Math.floor(ctx.GF.COLS / 2);
+    ok("...y NO se teletransporta al centro de la granja", !p2 || p2.col !== centro,
+       "centro de la granja = columna " + centro);
   }
 }
 console.log("\n" + (fallos ? "FALLOS: " + fallos : "el terreno se rehace en caliente sin reiniciar la escena"));
