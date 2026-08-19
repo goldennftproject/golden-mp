@@ -62,7 +62,9 @@ class FarmScene extends Phaser.Scene {
     this._crecerPlots = () => {
       let guardia = 0;
       while (GF.PLOTS.length < Math.min((typeof PLOT_MAX !== "undefined" ? PLOT_MAX : 60), G.plotsOwned || 3) && guardia++ < 80) {
-        const h = this.celdaLibreParcela();
+        // si el jugador ya eligió celda para ésta (la acaba de colocar), MANDA la suya
+        const sv = G.layoutPlots && G.layoutPlots[GF.PLOTS.length];
+        const h = sv ? { col: sv.col, row: sv.row } : this.celdaLibreParcela();
         if (!h) break;                                  // granja sin sitio: se queda esperando terreno
         GF.PLOTS.push({ col: h.col, row: h.row });
         if (!G.layoutPlots) G.layoutPlots = {};
@@ -2185,7 +2187,10 @@ class FarmScene extends Phaser.Scene {
       this.finColocar();
     } else if (pl.tipo === "plot") {
       this.finColocar();
-      if (typeof parcelaColocar === "function" && parcelaColocar(col, row)) toast("Parcela colocada");   // reinicia la escena para dibujarla
+      if (typeof parcelaColocar === "function" && parcelaColocar(col, row)) {
+        if (!this.colocarRegaloEnVivo("plot") && typeof reiniciarGranjaSuave === "function") reiniciarGranjaSuave();
+        toast("Parcela colocada");
+      }
     } else if (pl.tipo === "regalo") {
       /* 18/8: el árbol mide DOS celdas de ancho, así que también hay que mirar la de al lado.
          Se comprueba acá y no dentro de regaloColocar para poder decir POR QUÉ no entra. */
@@ -2194,7 +2199,10 @@ class FarmScene extends Phaser.Scene {
         return;
       }
       this.finColocar();
-      if (typeof regaloColocar === "function") regaloColocar(pl.id, col, row);
+      if (typeof regaloColocar === "function" && regaloColocar(pl.id, col, row)) {
+        // sin telón: el nodo aparece donde lo apoyaste y la cámara no se mueve
+        if (!this.colocarRegaloEnVivo(pl.id) && typeof reiniciarGranjaSuave === "function") reiniciarGranjaSuave();
+      }
     } else if (pl.tipo === "obra") {   // blueprint (12/8): la obra ocupa ~2-3 celdas, chequear las vecinas
       if (!this.celdaLibreAdorno(col - 1, row, -1) || !this.celdaLibreAdorno(col + 1, row, -1)) {
         const pq = this.porQueNoEntra(col - 1, row, -1) || this.porQueNoEntra(col + 1, row, -1);
@@ -2237,6 +2245,39 @@ class FarmScene extends Phaser.Scene {
     if (this.rebuildCollisions) this.rebuildCollisions();
     if (typeof this.estrellasFx === "function") this.estrellasFx(o.cx, o.by - 20);   // mini festejo al apoyarla
     if (typeof tutoSync === "function") tutoSync(true); else if (this.updateTutoArrow) this.updateTutoArrow();
+    return true;
+  }
+  /* ============ COLOCAR UN REGALO EN VIVO (18/8, dirección) ==========================
+     "En el momento en el que lo pongo en el suelo hace una transición de pantalla en negro...
+     no es necesaria esa transición ni el movimiento de cámara que te lo resetea."
+     Tiene razón: reiniciar la escena entera para aparecer UN nodo es desproporcionado, y encima
+     te devuelve la cámara al centro. Los edificios ya se colocaban en vivo desde el 13/8
+     (colocarObraEnVivo); esto es lo mismo para parcelas, árboles y rocas.
+     El objeto YA está en la escena, oculto y en su posición de fábrica: solo hay que moverlo a
+     la celda elegida y destaparlo. El reinicio con telón queda de respaldo por si algo falla. */
+  colocarRegaloEnVivo(tipo) {
+    const T = GF.TILE;
+    if (tipo === "plot") {
+      if (!this.refreshPlotLocks) return false;
+      this.refreshPlotLocks();   // ya crea la parcela en su celda, con su destello de estreno
+      return true;
+    }
+    if (tipo !== "tree" && tipo !== "rock") return false;
+    const abiertos = (tipo === "tree" ? G.treesOpen : G.rocksOpen) || [];
+    const lock = abiertos[abiertos.length - 1];
+    const o = this.objs && this.objs.find(x => x.type === tipo && x.exp == null && x.lockIdx === lock);
+    if (!o || !o.sprite) return false;
+    const lp = G.layout && G.layout[o.i];
+    if (lp) {
+      o.cx = lp.cx; o.by = lp.by;
+      o.sprite.setPosition(o.cx, o.by).setDepth(o.by);
+      if (o.shadow) o.shadow.setPosition(o.cx, o.by - 1).setDepth(o.by - 0.5);
+      if (o.timer) o.timer.setPosition(o.cx, o.by - T * 0.85);
+      if (o.barra) o.barra.setPosition(o.cx, o.by + 4);
+    }
+    this.refreshNodeLocks();      // lo destapa con su saltito y sus chispas
+    if (this.rebuildCollisions) this.rebuildCollisions();
+    if (this.syncNodos) this.syncNodos();
     return true;
   }
   // 13/8: botón Cancelar (o clic derecho): el plano/adorno queda en la bolsa, todo vuelve a como estaba

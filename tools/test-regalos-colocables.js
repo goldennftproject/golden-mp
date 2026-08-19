@@ -86,5 +86,30 @@ const ok=(n,c,d)=>{if(!c)fallos++;console.log((c?"  ok   ":"  FALLA")+"  "+n+(d?
   ok("colocar una y resincronizar no la devuelve", g.G.regalos.plot===primera-1,
      "quedan "+g.G.regalos.plot+" (tenía "+primera+")");
 }
+// 7) COLOCAR NO REINICIA LA ESCENA (18/8: "no es necesaria esa transición de pantalla en negro
+//    y el movimiento de cámara que te lo resetea")
+{
+  const g=juego(); g.reinicios=0;
+  g.G.regalos={tree:1,rock:1,plot:1};
+  g.regaloColocar("tree",6,6); g.regaloColocar("plot",8,8); g.regaloColocar("rock",9,9);
+  ok("colocar los tres no dispara ningún reinicio con telón", (g.reinicios||0)===0, "reinicios="+(g.reinicios||0));
+  const GF=g.GF,T=GF.TILE;
+  const idxT=g.nodoIndicePorLock("tree",g.G.treesOpen[g.G.treesOpen.length-1]);
+  const lay=g.G.layout[idxT], an=Math.ceil(GF.WORLD_OBJECTS[idxT].wCells||1);
+  ok("...y el árbol queda en la celda pedida (6,6)",
+     Math.round((lay.cx-an*T/2)/T)===6 && Math.round(lay.by/T)-1===6);
+  ok("...y la parcela también (8,8)",
+     Object.values(g.G.layoutPlots||{}).some(v=>v.col===8&&v.row===8));
+}
+// 8) EL ENFRIAMIENTO NO SE PIERDE AL MOVER: la clave de guardado usa la celda DE FÁBRICA
+{
+  const g=juego();
+  const o=g.GF.WORLD_OBJECTS.find(x=>x.type==="tree"&&x.exp==null);
+  const clave=o.type+":"+o.leftCol+","+o.baseRow;
+  g.G.regalos={tree:1,rock:0,plot:0};
+  g.regaloColocar("tree",6,6);
+  ok("mover un nodo no cambia su clave de enfriamiento",
+     clave===o.type+":"+o.leftCol+","+o.baseRow, clave);
+}
 console.log("\n"+(fallos?"FALLOS: "+fallos:"los regalos se colocan a mano y las expansiones nacen puestas"));
 process.exit(fallos?1:0);

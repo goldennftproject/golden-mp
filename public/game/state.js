@@ -1239,7 +1239,9 @@ function regaloColocar(tipo, col, row) {
   toast("¡" + (REGALO_LABEL[tipo] || tipo) + " en la granja!");
   if (window.sfx) sfx("level");
   if (typeof saveFarm === "function") saveFarm(true);
-  if (typeof reiniciarGranjaSuave === "function") reiniciarGranjaSuave();   // la escena la lee de G.layout al rehacerse
+  /* 18/8: acá NO se reinicia la escena. Quien llama (colocarEn) lo pone en vivo con
+     colocarRegaloEnVivo y solo cae al reinicio con telón si eso falla. Reiniciar entero para
+     aparecer un nodo daba pantalla negra y te reseteaba la cámara. */
   return true;
 }
 function levelUp() { toast("El nivel sube cosechando (XP de Farmeo)"); }
@@ -2283,10 +2285,9 @@ function parcelasPendientes() { return Math.max(0, (G.plotsOwned || 2) - GF.PLOT
 function parcelaColocar(col, row) {   // la llama la escena con la celda que eligió el jugador
   if (parcelasPendientes() <= 0) return false;
   G.layoutPlots = G.layoutPlots || {};
-  G.layoutPlots[GF.PLOTS.length] = { col, row };   // la escena la levanta de acá al reiniciar
+  G.layoutPlots[GF.PLOTS.length] = { col, row };   // la escena la levanta de acá
   if (typeof saveFarm === "function") saveFarm(true);
-  reiniciarGranjaSuave();   // 13/8: con telón, no como congelamiento
-  return true;
+  return true;   // 18/8: sin telón — la escena la dibuja en vivo (colocarRegaloEnVivo)
 }
 function comprarParcela(conGolden) {
   if ((G.plotsOwned || 2) >= PLOT_MAX) { toast("Ya tenés las " + PLOT_MAX + " parcelas"); return; }
