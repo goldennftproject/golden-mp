@@ -2227,18 +2227,25 @@ class FarmScene extends Phaser.Scene {
       buzon: "el buzón", cofre_diario: "el baúl", tablon_pedidos: "el tablón", portal: "el portal",
       excav: "un montículo", paquete: "tu paquete" }[t] ||
       ((typeof BUILD_DEF !== "undefined" && BUILD_DEF[t]) ? "la " + BUILD_DEF[t].label : null));
+    /* 18/8 — MISMO ORDEN Y MISMAS PREGUNTAS QUE celdaLibreAdorno. Estaban escritas por separado y
+       ya se habían separado: el motivo decía "ahí está la laguna" en las esquinas del rectángulo
+       de la laguna, que en realidad SÍ son colocables (la laguna es una elipse, no un rectángulo).
+       Un mensaje que miente es peor que ninguno, así que ahora las dos funciones hacen las mismas
+       comprobaciones en el mismo orden y hay un test que falla si vuelven a divergir. */
     const T = GF.TILE;
     if (!GF.tuyo(col, row)) return "Ese terreno todavía no es tuyo";
     if (GF.enCerca && GF.enCerca(col, row)) return "La cerca se reserva esta franja — probá una celda más adentro";
-    const x = (col + 0.5) * T, y = (row + 0.9) * T;
-    const p = GF.POND;
-    if (col >= p.col && col < p.col + p.cols && row >= p.row && row < p.row + p.rows) return "Ahí está la laguna";
-    if (GF.parcelaEn(col, row)) return "Ahí ya tenés una parcela";
-    if ((G.chests || []).some(c => c.col === col && c.row === row)) return "Ahí está el baúl";
-    if ((G.decos || []).some((d, j) => j !== ignora && d.col === col && d.row === row)) return "Ahí ya hay un adorno";
     const q = GF.celdaObjeto(col, row);
     if (q) return "Ahí hay " + (NOMBRE_OBJETO(q) || "algo construido");
-    if (GF.blockedAt(x, y, 6)) return "Ahí hay algo plantado o construido";
+    if (GF.blockedAt((col + 0.5) * T, (row + 0.9) * T, 6)) {
+      const p = GF.POND;
+      if (col >= p.col - 1 && col < p.col + p.cols + 1 && row >= p.row - 1 && row < p.row + p.rows + 1)
+        return "Ahí está la laguna";
+      return "Ahí hay algo plantado o construido";
+    }
+    if (GF.parcelaEn(col, row)) return "Ahí ya tenés una parcela";
+    if ((G.decos || []).some((d, j) => j !== ignora && d.col === col && d.row === row)) return "Ahí ya hay un adorno";
+    if ((G.chests || []).some(c => c.col === col && c.row === row)) return "Ahí está el baúl";
     return null;
   }
   // ¿el adorno entra en esa celda? (ignora es el índice del que se está moviendo, que no se pisa a sí mismo)
