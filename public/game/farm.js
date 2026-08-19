@@ -1058,6 +1058,7 @@ class FarmScene extends Phaser.Scene {
     let best = null, bd = 1e9;
     const all = this.objs.concat(this.plots).concat(this.threats); if (this.portal) all.push(this.portal);
     for (const o of all) {
+      if (o.type === "plot" && o.state === "locked") continue;   // 18/8: no es tuya, no es objetivo
       const rad = (o.type === "barn" || o.type === "market" || o.type === "store" || o.type === "cocina" || o.type === "horno" || o.type === "altar" || o.type === "establo" || o.type === "curtiduria" || o.type === "ofrendas") ? 72 : (o.type === "plot" ? 26 : (o.type === "boar" ? 55 : (o.type === "portal" ? 50 : 58)));   // plot 26: hay que estar encima de la tierra para plantar/cosechar
       const d = Math.hypot(o.cx - this.hero.x, o.by - this.hero.y);
       if (d < rad && d < bd) { bd = d; best = o; }
@@ -1132,7 +1133,11 @@ class FarmScene extends Phaser.Scene {
       const pt = this.input.activePointer, wx = pt.worldX, wy = pt.worldY;
       let hit = null, bd = 1e9;
       for (const q of this.objs) { if (this.hitsSprite(q.sprite, wx, wy)) { const d = Math.hypot(q.cx - wx, q.by - wy); if (d < bd) { bd = d; hit = q; } } }
-      if (!hit) for (const pl of this.plots) { if (Math.abs(wx - pl.cx) < GF.TILE / 2 && Math.abs(wy - pl.by) < GF.TILE / 2) { hit = pl; break; } }
+      /* 18/8 (reporte de dirección: "por debajo de las tres parcelas iniciales aparece el
+         cuadradito con una leyenda vacía"). Las parcelas BLOQUEADAS —las de la fila de abajo, que
+         todavía no son tuyas— seguían captando el cursor. No se ven, no se pueden usar y su texto
+         es "", así que salía el cartel vacío. */
+      if (!hit) for (const pl of this.plots) { if (pl.state === "locked") continue; if (Math.abs(wx - pl.cx) < GF.TILE / 2 && Math.abs(wy - pl.by) < GF.TILE / 2) { hit = pl; break; } }
       if (!hit) for (const q of this.threats) { if (this.hitsSprite(q.sprite, wx, wy)) { hit = q; break; } }
       if (!hit && this.portal && Math.abs(wx - this.portal.cx) < 26 && Math.abs(wy - (this.portal.by - 14)) < 30) hit = this.portal;   // mismo alcance que el clic
       if (hit) this.interactWith(hit); else if (this.pondDist(wx, wy) < 1.05) this.tryFish(wx, wy);
@@ -4339,14 +4344,17 @@ class FarmScene extends Phaser.Scene {
       if (!hit) for (const pl of this.plots) { if (Math.abs(wx - pl.cx) < GF.TILE / 2 && Math.abs(wy - pl.by) < GF.TILE / 2) { hit = pl; break; } }
       if (!hit) { const an = this.animalEnPunto(wx, wy); if (an) hit = { type: "animal", k: an.k }; }
       if (!hit && this.portal && Math.abs(wx - this.portal.cx) < 26 && Math.abs(wy - (this.portal.by - 14)) < 30) hit = this.portal;
-      if (hit) { el.textContent = this.promptText(hit); el.classList.add("show"); }
-      else if (this.pondDist(wx, wy) < 1.05) { el.textContent = "Pescar (1 lombriz · tenés " + fmt(G.res.lombriz || 0) + ")"; el.classList.add("show"); }
+      // y por si algo más devolviera texto vacío alguna vez: sin texto, no hay cartel
+      const txt = hit ? this.promptText(hit) : "";
+      if (txt) { el.textContent = txt; el.classList.add("show"); }
+      else if (!hit && this.pondDist(wx, wy) < 1.05) { el.textContent = "Pescar (1 lombriz · tenés " + fmt(G.res.lombriz || 0) + ")"; el.classList.add("show"); }
       else el.classList.remove("show");
       return;
     }
     const o = this.nearestInteract();
-    if (o) { el.textContent = this.promptText(o) + "  ·  [E]"; el.classList.add("show"); }
-    else if (this.nearPond()) { el.textContent = "Pescar (1 lombriz · tenés " + fmt(G.res.lombriz || 0) + ") · [E]"; el.classList.add("show"); }
+    const t2 = o ? this.promptText(o) : "";
+    if (t2) { el.textContent = t2 + "  ·  [E]"; el.classList.add("show"); }
+    else if (!o && this.nearPond()) { el.textContent = "Pescar (1 lombriz · tenés " + fmt(G.res.lombriz || 0) + ") · [E]"; el.classList.add("show"); }
     else el.classList.remove("show");
   }
 }
