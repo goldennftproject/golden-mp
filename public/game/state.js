@@ -205,14 +205,14 @@ const CROP_DEF = {
   // contra los 20 y 100 de sus vecinos. Reanclado: ganancia 15 (20/h) y 75 XP (100/h), con la
   // relación venta/semilla en 2,5 como el resto. Era 12 → 32 → 90.
   calabacin: { label:"Calabacín", emoji:"🥒", lvl:7,  seedCost:10,  growH:0.75, yield:1, price:25,   xp:75 },   // 45 min (v3 diseñador, reanclado 16/8)
-  repollo:   { label:"Repollo",   emoji:"🥬", lvl:8,  seedCost:20,  growH:1.5,  yield:1, price:50,   xp:150 },  // 1 h 30 (v3 diseñador)
-  calabaza:  { label:"Calabaza",  emoji:"🎃", lvl:9,  seedCost:40,  growH:3,    yield:1, price:100,  xp:300 },  // 3 h · 18/8: XP re-anclada (era 270 = 90 XP/h)
+  repollo:   { label:"Repollo",   emoji:"🥬", lvl:9,  seedCost:20,  growH:1.5,  yield:1, price:50,   xp:150 },  // 1 h 30 (v3 diseñador)
+  calabaza:  { label:"Calabaza",  emoji:"🎃", lvl:10,  seedCost:40,  growH:3,    yield:1, price:100,  xp:300 },  // 3 h · 18/8: XP re-anclada (era 270 = 90 XP/h)
   // 16/8 (auditoría C): los cuatro de arriba se corren a la banda 11-50 del nivel de granja
   // (la que además pide TAREAS). Con el gate por nivel, quedarse en 7-10 los volvía casi
   // inmediatos; así el early game no cambia y las anclas largas siguen siendo una meta.
-  brocoli:   { label:"Brócoli",   emoji:"🥦", lvl:11,  seedCost:90,  growH:6,    yield:1, price:210,  xp:600 },  // 6 h · 18/8: XP re-anclada (era 480 = 80 XP/h)
-  girasol:   { label:"Girasol",   emoji:"🌻", lvl:13, seedCost:180, growH:10,    yield:1, price:380,  xp:1000 },  // 10 h · 18/8: rendía 24 plata/h y 72 XP/h
-  trigo:     { label:"Trigo",     emoji:"🌾", lvl:15, seedCost:360, growH:16,    yield:1, price:680,  xp:1600 }, // 16 h · 18/8: rendía 30 plata/h y 67 XP/h
+  brocoli:   { label:"Brócoli",   emoji:"🥦", lvl:12,  seedCost:90,  growH:6,    yield:1, price:210,  xp:600 },  // 6 h · 18/8: XP re-anclada (era 480 = 80 XP/h)
+  girasol:   { label:"Girasol",   emoji:"🌻", lvl:15, seedCost:180, growH:10,    yield:1, price:380,  xp:1000 },  // 10 h · 18/8: rendía 24 plata/h y 72 XP/h
+  trigo:     { label:"Trigo",     emoji:"🌾", lvl:17, seedCost:360, growH:16,    yield:1, price:680,  xp:1600 }, // 16 h · 18/8: rendía 30 plata/h y 67 XP/h
   /* 18/8 (auditoría del ancla) — LOS CINCO CULTIVOS LARGOS ESTABAN FUERA DE LA FÓRMULA, y en las
      DOS direcciones: rendían de más en plata y de menos en XP. El maíz era el caso extremo:
      40 plata/hora contra los 20 de todos los demás (el DOBLE) y 60 XP/hora contra 100.
@@ -220,7 +220,7 @@ const CROP_DEF = {
      cultivo del final del juego rompía el ancla por arriba y por abajo a la vez.
      Re-anclados: la ganancia por hora vuelve a 20 bajando la VENTA (no subiendo la semilla, que
      dejaría una relación venta/semilla absurda), y la XP vuelve a 100 por hora. */
-  maiz:      { label:"Maíz",      emoji:"🌽", lvl:18, seedCost:720, growH:24,   yield:1, price:1200, xp:2400 },  // 24 h — el ancla nocturna
+  maiz:      { label:"Maíz",      emoji:"🌽", lvl:20, seedCost:720, growH:24,   yield:1, price:1200, xp:2400 },  // 24 h — el ancla nocturna
 };
 function recomputeCropGrow() { for (const k in CROP_DEF) CROP_DEF[k].grow = Math.round(CROP_DEF[k].growH * 3600 * GROW_SCALE); }
 recomputeCropGrow();   // en segundos, como siempre
@@ -235,7 +235,11 @@ const FISH_DEF = { comun: { label: "Pez común", emoji: "🐟", sprite: "fish_co
 // quedaba a meses. Una sola vara para toda la granja; el skill queda para bonos y prestigio.
 function farmLevel() { return G.level || 1; }
 function farmSkillLevel() { return skillInfo(G.skills.farming).lvl; }   // el skill sigue existiendo (bonos, panel de skills)
-function cropUnlocked(k) { const cd = CROP_DEF[k]; return !!cd && farmLevel() >= cd.lvl; }
+/* 18/8 (dirección): la puerta de las semillas es la SKILL DE CULTIVO. El `lvl` de cada cultivo
+   pasa a ser un nivel de skill, no de granja — y la etiqueta del Mercado, que siempre dijo
+   "Cultivo nv N", por fin dice la verdad. El nivel de GRANJA sigue mandando en lo suyo: parcelas,
+   nodos y expansiones. */
+function cropUnlocked(k) { const cd = CROP_DEF[k]; return !!cd && farmSkillLevel() >= cd.lvl; }
 function selectSeed(k) { if (!CROP_DEF[k]) return; G.selSeed = k; if (isOpen("ov-inv")) refreshInv(); }
 // cupo diario de semillas (anti-inflación): compras + las del cofre suman al mismo límite
 var SEED_DAILY_BASE = 18, SEED_DAILY_POR_NIVEL = 2;   // (legado: la fórmula vieja, la sigue usando el MODO TESTEO)
@@ -839,7 +843,15 @@ function buyWorm(qty) {
 const SKILL_DEFS = [["farming","","Cultivo"],["fishing","","Pesca"],["mining","","Minería"],
   ["sword","","Espada"],["hacha","","Hacha (combate)"],["mazo","","Mazo"],["range","","Arco"],["cooking","","Cocina"],["crafting","","Artesanía"]];
 const SKILL_NAME = {}; SKILL_DEFS.forEach(([k,,nm]) => SKILL_NAME[k] = nm);
-var XP_BASE = 100, XP_EXP = 2.7;   // doc maestro 2/8: curva 1-150 anclada (nivel 40 = 360 h)
+/* ============ LA CURVA DE HABILIDAD (18/8, dirección) ==============================
+   "Las semillas se bloquean con la skill de Cultivo, no con el nivel de granja."
+   Para que eso sea jugable la curva tenía que cambiar. Con 100/2,7 la skill no servía de puerta:
+   los trece cultivos se apelotonaban en los niveles 1-9 (cuatro choques) y, según midió la
+   auditoría de hoy, el nivel 40 pedía 3 AÑOS de juego sin parar y el 150, 408.
+   10/2,46 sale de resolver las dos cosas a la vez: que los trece cultivos caigan en niveles
+   distintos (1…20, uno por cultivo) y que la curva llegue a algún sitio. Ahora el 40 son 48 días
+   y el 150, 13 años — sigue siendo un techo enorme, pero es una meta y no un muro. */
+var XP_BASE = 10, XP_EXP = 2.46;
 function skillNeed(lvl) { return Math.round(XP_BASE * Math.pow(lvl, XP_EXP)); }
 function skillInfo(xp) { let lvl = 1, acc = 0, need = skillNeed(1); while (xp >= acc + need && lvl < 150) { acc += need; lvl++; need = skillNeed(lvl); } return { lvl, into: xp - acc, need }; }
 // --- Barra de Combate GLOBAL (doc maestro 2/8): un solo nivel que suma la XP de TODOS los kills.
@@ -1038,8 +1050,8 @@ function farmUnlockTxt(n) {
   if (na) partes.push(na + (na > 1 ? " árboles" : " árbol"));
   if (nr) partes.push(nr + (nr > 1 ? " rocas" : " roca"));
   const ex = FARM_EXPANSION.indexOf(n); if (ex >= 0) partes.push("expansión " + (ex + 1));
-  for (const k in CROP_DEF) if (CROP_DEF[k].lvl === n && !new RegExp(CROP_DEF[k].label, "i").test(base))
-    partes.push("cultivo " + CROP_DEF[k].label);
+  // 18/8: los cultivos YA NO se anuncian acá — su puerta es la skill de Cultivo, no el nivel de
+  // granja. Anunciarlos por nivel de granja sería otra vez el cartel que promete lo que no llega.
   if (typeof PLANO_NIVEL !== "undefined") for (const t in PLANO_NIVEL)
     if (PLANO_NIVEL[t] === n && BUILD_DEF[t]) partes.push("plano de " + BUILD_DEF[t].label);
   if (typeof FARM_EDIF2 !== "undefined" && FARM_EDIF2[n] && BUILD_DEF[FARM_EDIF2[n]])

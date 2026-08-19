@@ -1897,12 +1897,12 @@ function refreshSeedShop() {
   const box = $("seed-shop"); if (!box) return;
   const sb = seedBuysToday();
   // 15/8 (dirección): el cupo de siempre manda también durante el tutorial (el kit cubre los insumos)
-  const cupoTxt = 'Cupo diario: ' + sb.count + '/' + seedDailyMax() + ' semillas (sube con el nivel de granja)';
+  const cupoTxt = 'Cupo diario: ' + sb.count + '/' + seedDailyMax() + ' semillas (sube con el nivel de granja) · las semillas se abren con la skill de Cultivo';
   box.innerHTML = '<div class="shophead">' + cupoTxt + '</div>' + CROP_ORDER.map(k => {
     const cd = CROP_DEF[k], unlocked = cropUnlocked(k), aff = G.plata >= cd.seedCost;
     const controls = unlocked
       ? `<input id="sq-${k}" type="number" min="1" value="1"><button class="green sm" data-buy="${k}" ${aff ? "" : "disabled"}>Comprar · ${coinIc("plata")}${cd.seedCost} c/u</button>`
-      : `<button class="ghost sm" disabled>Cultivo nv ${cd.lvl}</button>`;
+      : `<button class="ghost sm" disabled title="Se abre con la skill de Cultivo">Cultivo nv ${cd.lvl}</button>`;
     return `<div class="mkt-row"><span class="mimg">${itemIcon({ sprite: "seed_" + k, emoji: cd.emoji })}</span><div class="minfo"><div class="mnm">${cd.label} <span class="seedlv">nv ${cd.lvl}</span></div><div class="mds">Semilla · crece en ${fmtSecs(cd.grow)} · tenés ${fmt(G.seeds[k] || 0)}</div></div>${controls}</div>`;
   }).join("")
   // carnada (detalles213): lombrices para pescar — fuera del cupo diario de semillas
