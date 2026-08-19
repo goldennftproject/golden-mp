@@ -48,7 +48,14 @@ const ok=(n,c,d)=>{if(!c)fallos++;console.log((c?"  ok   ":"  FALLA")+"  "+n+(d?
   ok("el regalo se gasta del cobertizo", g.G.cobertizo.tree===0);
   const par=g.G.plotsOwned;
   ok("colocar la parcela la suma", g.regaloColocar("plot",7,7)===true && g.G.plotsOwned===par+1);
-  ok("...y guarda su celda", g.G.layoutPlots && Object.values(g.G.layoutPlots).some(v=>v.col===7&&v.row===7));
+  /* 18/8 — el índice importa. La celda tiene que quedar anotada para LA PARCELA QUE SE
+     DESBLOQUEA (índice plotsOwned antes de sumar), no para un hueco futuro. Si se anota mal, la
+     parcela aparece en su sitio de fábrica —el centro de la rejilla— y no donde tocó el jugador. */
+  ok("...y guarda su celda EN EL ÍNDICE de la parcela nueva",
+     g.G.layoutPlots && g.G.layoutPlots[par] && g.G.layoutPlots[par].col===7 && g.G.layoutPlots[par].row===7,
+     "índice "+par+" → "+JSON.stringify(g.G.layoutPlots && g.G.layoutPlots[par]));
+  ok("...y NO en el hueco de las parcelas extra (el fallo del centro de la granja)",
+     !(g.G.layoutPlots && g.G.layoutPlots[g.GF.PLOTS.length]));
   ok("colocar la roca la abre", g.regaloColocar("rock",8,8)===true);
 }
 // 3) NO SE PUEDE COLOCAR LO QUE NO TENÉS

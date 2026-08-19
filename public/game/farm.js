@@ -3997,7 +3997,14 @@ class FarmScene extends Phaser.Scene {
            sitio de siempre puede estar ocupado (pusiste un adorno, un baúl, moviste la laguna).
            En ese caso se muda a la celda libre más cercana al resto, igual que las parcelas 13+.
            Si no hubiera ninguna —imposible en la práctica— se queda donde estaba antes que perderla. */
-        if (!this.celdaLibreAdorno(GF.PLOTS[i].col, GF.PLOTS[i].row, -1)) {
+        /* 18/8: si el jugador eligió celda para ESTA parcela (la acaba de colocar desde el
+           Cobertizo), manda la suya. Si no eligió ninguna y su sitio de fábrica está ocupado,
+           se muda al hueco libre más cercano. Antes solo existía el segundo caso, así que la
+           parcela recién colocada aparecía donde la rejilla decía y no donde tocaste. */
+        const elegida = G.layoutPlots && G.layoutPlots[i];
+        if (elegida && (GF.PLOTS[i].col !== elegida.col || GF.PLOTS[i].row !== elegida.row)) {
+          this.moverParcela(pl, elegida.col, elegida.row);
+        } else if (!this.celdaLibreAdorno(GF.PLOTS[i].col, GF.PLOTS[i].row, -1)) {
           const h = this.celdaLibreParcela();
           if (h) { this.moverParcela(pl, h.col, h.row);
                    toast("Tu parcela nueva no cabía en su sitio — la puse en un hueco libre"); }

@@ -1294,9 +1294,17 @@ function regaloColocar(tipo, col, row) {
   if (tipo === "plot") {
     const tope = typeof PLOT_MAX !== "undefined" ? PLOT_MAX : 60;
     if ((G.plotsOwned || 3) >= tope) { toast("Ya tenés todas las parcelas"); return false; }
+    /* 18/8 — ERROR DE ÍNDICE (reporte: "se ha plantado en el centro de la granja, como si fuera
+       una posición por defecto"). Se guardaba la celda elegida en layoutPlots[GF.PLOTS.length],
+       o sea en el hueco 12 — el de la primera parcela EXTRA. Pero las 12 primeras ya existen en
+       la rejilla de fábrica, así que la parcela que se desbloqueaba (la 5ª, índice 4) se dibujaba
+       en SU sitio de siempre y la celda del jugador quedaba anotada para una parcela futura.
+       El índice de la que se desbloquea es plotsOwned ANTES de sumar: las usables son 0..owned−1,
+       así que la nueva es justo la número `owned`. */
+    const idx = G.plotsOwned || 3;
     G.layoutPlots = G.layoutPlots || {};
-    G.layoutPlots[GF.PLOTS.length] = { col, row };
-    G.plotsOwned = (G.plotsOwned || 3) + 1;
+    G.layoutPlots[idx] = { col, row };
+    G.plotsOwned = idx + 1;
   } else if (tipo === "tree" || tipo === "rock") {
     const tabla = tipo === "tree" ? NIVEL_ARBOLES : NIVEL_ROCAS;
     const abiertos = tipo === "tree" ? (G.treesOpen = G.treesOpen || [0]) : (G.rocksOpen = G.rocksOpen || [0]);

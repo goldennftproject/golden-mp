@@ -127,6 +127,27 @@ ok("el buscador de caminos se invalida (tenía el mapa viejo)", esc._nav === nul
     ok("...y deja el césped, las florcitas, la grilla y la cerca puestos",
        !!esc2.cespedRT && !!esc2.decoG && !!esc2.gridG && Array.isArray(esc2.fenceSprites) && esc2.fenceSprites.length > 0,
        "cerca: " + (esc2.fenceSprites || []).length + " palos");
+
+    /* 18/8 — LA PARCELA VA DONDE TOCÓ EL JUGADOR (reporte: "se ha plantado en el centro de la
+       granja, como si fuera una posición por defecto"). Se prueba con la ESCENA de verdad, que es
+       donde estaba el fallo: los datos ya guardaban bien la celda, pero refreshPlotLocks dibujaba
+       la parcela en su sitio de fábrica porque solo se mudaba si su celda estaba ocupada. */
+    const owned = ctx.G.plotsOwned || 3;
+    const antes = ctx.GF.PLOTS[owned] ? { c: ctx.GF.PLOTS[owned].col, r: ctx.GF.PLOTS[owned].row } : null;
+    ctx.G.cobertizo = { tree: 0, rock: 0, plot: 1 };
+    const DEST = { col: 8, row: 9 };
+    ctx.regaloColocar("plot", DEST.col, DEST.row);
+    esc2.colocarRegaloEnVivo("plot");
+    const p = ctx.GF.PLOTS[owned];
+    ok("la parcela nueva queda en la celda que tocó el jugador",
+       p && p.col === DEST.col && p.row === DEST.row,
+       "de fábrica " + (antes ? antes.c + "," + antes.r : "?") + " → quedó " + (p ? p.col + "," + p.row : "?") +
+       " (pedida " + DEST.col + "," + DEST.row + ")");
+    const obj = esc2.plots && esc2.plots[owned];
+    ok("...y su sprite se mueve con ella",
+       obj && Math.round(obj.cx) === Math.round((DEST.col + 0.5) * ctx.GF.TILE),
+       obj ? ("cx=" + Math.round(obj.cx)) : "sin objeto");
+    ok("...y deja de estar bloqueada", obj && obj.state !== "locked", obj ? obj.state : "?");
   }
 }
 console.log("\n" + (fallos ? "FALLOS: " + fallos : "el terreno se rehace en caliente sin reiniciar la escena"));
