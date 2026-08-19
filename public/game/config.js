@@ -576,7 +576,14 @@ GF.objetoPresente = function (c) {
   if (typeof G === "undefined" || !G) return true;
   if (c.exp != null) return (G.expansiones || 0) > c.exp;              // el bloque todavía no se compró
   if (typeof BUILD_DEF !== "undefined" && BUILD_DEF[c.tipo])           // edificio: existe al colocar su plano
-    return !!((G.built && G.built[c.tipo]) || (G.obras && G.obras[c.tipo]) || (G.layout && G.layout[c.i]));
+    /* 18/8 — EL FANTASMA DE LOS EDIFICIOS. Acá se contaba `G.layout[c.i]` como prueba de que el
+       edificio existe. Y G.layout NO dice si algo existe: dice DÓNDE ESTÁ. En la época en que los
+       edificios venían puestos en el mapa se podían arrastrar en modo edición, y eso escribía su
+       posición. Al cambiar a planos, esas entradas se quedaron en los guardados viejos: el Horno,
+       la Cocina, el Establo y el Altar seguían ocupando sus celdas —invisibles— en partidas donde
+       ni siquiera se ha colocado su plano. Es justo lo que reportó dirección.
+       Un edificio existe si está CONSTRUIDO o si su obra está colocada. Punto. */
+    return !!((G.built && G.built[c.tipo]) || (G.obras && G.obras[c.tipo]));
   if (c.tipo === "tree") return (G.treesOpen || [0]).includes(c.lock);
   if (c.tipo === "rock") return (G.rocksOpen || [0]).includes(c.lock);
   return true;

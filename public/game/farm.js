@@ -231,7 +231,11 @@ class FarmScene extends Phaser.Scene {
       // espera de materiales. El gris viejo queda de respaldo si faltara el arte de obra.
       let oculto = false;
       if (typeof BUILD_DEF !== "undefined" && BUILD_DEF[o.type] && !(G.built && G.built[o.type])) {
-        if (!op && !lp) { s.setVisible(false); oculto = true; }   // sin plano colocado: invisible
+        /* 18/8: quien decide si el edificio EXISTE es GF.objetoPresente, la misma función que usa
+           el mapa de ocupación. Antes esto tenía su propia regla (que además contaba G.layout como
+           prueba de existencia) y por eso el mapa y el dibujo podían discrepar: celdas ocupadas por
+           edificios que no se ven. Una sola autoridad, y no pueden separarse. */
+        if (!GF.objetoPresente(GF.COLLISIONS[i] || { tipo: o.type, i })) { s.setVisible(false); oculto = true; }   // sin plano colocado: invisible
         else if (this.textures.exists("build_" + o.type)) s.setTexture("build_" + o.type);
         else s.setAlpha(0.5).setTint(0x555555);
       }

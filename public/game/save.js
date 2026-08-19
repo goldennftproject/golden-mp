@@ -73,6 +73,23 @@ function hydrate(d) {
      A quien ya los tenía enganchados en la barra hay que soltárselos, o le quedan huecos muertos
      que no responden. La bolsa se limpia sola (syncSlots quita lo que canonicalStacks ya no lista);
      la barra no, porque el jugador la ordena a mano y nadie la reconcilia. */
+  /* 18/8 — LIMPIEZA DE FANTASMAS. Los guardados de antes de los planos traen posiciones en
+     G.layout para edificios que hoy no existen hasta colocar su plano. Esa entrada ya no implica
+     existencia (lo arreglamos en objetoPresente), pero además hay que BORRARLA: si no, el día que
+     el jugador coloque el plano, el edificio saltaría a la posición vieja en vez de a la que
+     elija. Se borran solo las de edificios sin construir y sin obra. */
+  try {
+    if (G.layout && typeof BUILD_DEF !== "undefined" && GF.WORLD_OBJECTS) {
+      let n = 0;
+      for (const k in G.layout) {
+        const o = GF.WORLD_OBJECTS[k];
+        if (!o || !BUILD_DEF[o.type]) continue;
+        if ((G.built && G.built[o.type]) || (G.obras && G.obras[o.type])) continue;
+        delete G.layout[k]; n++;
+      }
+      if (n) console.info("[migración] " + n + " posiciones fantasma de edificios sin plano, borradas");
+    }
+  } catch (e) {}
   {
     const MUDADOS = ["plano", "chest", "regalo", "deco"];
     const antes = (G.hotbar || []).filter(h => h && MUDADOS.includes(h.kind)).length;
