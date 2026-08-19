@@ -68,6 +68,19 @@ function hydrate(d) {
   if (Array.isArray(d.hotbar)) G.hotbar = d.hotbar.slice(0, 10);
   // la azada se retiró del juego (pedido del diseñador 31/7): se limpia de hotbar y bolsa guardadas
   G.hotbar = (G.hotbar || []).map(h => (h && h.kind === "tool" && h.key === "hoe") ? null : h);
+  /* 18/8 — MUDANZA AL COBERTIZO. Los planos, los cofres sin colocar, los adornos y los regalos
+     del baúl dejaron de vivir en la barra rápida y en la bolsa: ahora están en el Cobertizo.
+     A quien ya los tenía enganchados en la barra hay que soltárselos, o le quedan huecos muertos
+     que no responden. La bolsa se limpia sola (syncSlots quita lo que canonicalStacks ya no lista);
+     la barra no, porque el jugador la ordena a mano y nadie la reconcilia. */
+  {
+    const MUDADOS = ["plano", "chest", "regalo", "deco"];
+    const antes = (G.hotbar || []).filter(h => h && MUDADOS.includes(h.kind)).length;
+    if (antes) {
+      G.hotbar = G.hotbar.map(h => (h && MUDADOS.includes(h.kind)) ? null : h);
+      G._avisoCobertizo = antes;   // ui.js lo cuenta una vez y lo borra
+    }
+  }
   if (Array.isArray(G.slots)) G.slots = G.slots.map(sl => (sl && sl.kind === "tool" && sl.key === "hoe") ? null : sl);
   if (typeof d.hotSel === "number") G.hotSel = Math.max(0, Math.min(9, d.hotSel));
   if (typeof d.hbInit === "boolean") G.hbInit = d.hbInit;

@@ -430,12 +430,8 @@ function buildCostStr(key) { const b = BUILD_DEF[key]; return Object.keys(b.cost
 var PLANO_NIVEL = { store: 2, horno: 3, cocina: 5, establo: 6, altar: 7, curtiduria: 8, ofrendas: 10 };   // nivel en que cae cada plano (números del diseñador · store 1→2 el 14/8: a nivel 1 caía en el SEGUNDO CERO de la partida, antes de aprender nada — el nivel 2 llega cosechando la primera tanda)
 function planoTengo(t) { return !!(G.planos && G.planos[t]); }
 // 13/8: el plano también vive en la HOTBAR (primer hueco libre) — colocarlo sin abrir la bolsa
-function planoAHotbar(t) {
-  if (!Array.isArray(G.hotbar)) return;
-  if (G.hotbar.some(h => h && h.kind === "plano" && h.key === t)) return;
-  const li = G.hotbar.findIndex(h => !h);
-  if (li >= 0) { G.hotbar[li] = { kind: "plano", key: t }; if (typeof refreshHotbar === "function") refreshHotbar(true); }
-}
+// 18/8: los planos también se mudaron al Cobertizo — ya no ocupan un hueco de la barra rápida
+function planoAHotbar() {}
 function darPlano(t, silencioso) {
   const b = BUILD_DEF[t]; if (!b) return;
   if (G.built && G.built[t]) return;                  // ya construido
@@ -1203,21 +1199,18 @@ function regalosPendientes() { const q = G.regalos || {}; return (q.tree || 0) +
    Antes, reclamar en el baúl activaba el siguiente nodo de la lista EN SU POSICIÓN DE FÁBRICA:
    el jugador no elegía nada. Ahora el baúl solo te da el objeto; la granja la dibujás vos.
    Es el mismo camino que ya hacían los planos de los edificios, reutilizado entero. */
-function regaloAHotbar(tipo) {
-  if (!Array.isArray(G.hotbar)) return;
-  if (G.hotbar.some(h => h && h.kind === "regalo" && h.key === tipo)) return;   // ya está, el contador sube solo
-  const li = G.hotbar.findIndex(h => !h);
-  if (li >= 0) { G.hotbar[li] = { kind: "regalo", key: tipo }; if (typeof refreshHotbar === "function") refreshHotbar(true); }
-}
+/* 18/8 (2ª pasada): los regalos ya NO van a la barra rápida. Van al Cobertizo, que es donde
+   vive todo lo colocable. Esta función se queda vacía a propósito y no se borra porque la
+   llamaban desde el baúl; así el cambio es de UNA pieza y no de tres. */
+function regaloAHotbar() {}
 // del baúl a la bolsa: NO se coloca nada todavía
 function regaloReclamar(tipo) {
   const q = G.regalos || (G.regalos = { tree: 0, rock: 0, plot: 0 });
   if (!q[tipo]) return false;
-  regaloAHotbar(tipo);
-  log((REGALO_LABEL[tipo] || tipo) + " a tu bolsa — elegí dónde va desde la barra rápida.", "gold");
-  toast((REGALO_LABEL[tipo] || tipo) + " en la bolsa · tocala para colocarla");
+  log((REGALO_LABEL[tipo] || tipo) + " al Cobertizo — desde ahí elegís dónde va.", "gold");
+  toast((REGALO_LABEL[tipo] || tipo) + " al Cobertizo 🏚");
   if (window.sfx) sfx("level");
-  refreshHud(); if (typeof refreshHotbar === "function") refreshHotbar(true);
+  refreshHud(); if (typeof syncCobertizo === "function") syncCobertizo();
   if (typeof saveFarm === "function") saveFarm(true);
   return true;
 }
@@ -1258,7 +1251,7 @@ function regaloColocar(tipo, col, row) {
     abiertos.push(libre);
   } else return false;
   q[tipo]--;
-  if (!q[tipo] && Array.isArray(G.hotbar)) G.hotbar = G.hotbar.map(h => (h && h.kind === "regalo" && h.key === tipo) ? null : h);
+  if (typeof syncCobertizo === "function") syncCobertizo();
   log("Colocaste " + (REGALO_LABEL[tipo] || tipo) + " en la granja.", "gold");
   toast("¡" + (REGALO_LABEL[tipo] || tipo) + " en la granja!");
   if (window.sfx) sfx("level");
@@ -3646,19 +3639,40 @@ function canonicalStacks() {
   ["axe", "rod"].forEach(k => { let n = toolCount(k); while (n > 0) { list.push({ kind: "tool", key: k }); n -= 99; } });   // apilables ×99
   // fixs.docx #9 (11/8): el arma EQUIPADA ya no ocupa lugar en la bolsa — vive en el panel de Equipo
   for (const id of ARM_ORDER) if (G.weapons && G.weapons[id] && G.gear.arma !== id) list.push({ kind: "arm", key: id });
-  if (G.planos) for (const t in G.planos) if (G.planos[t]) list.push({ kind: "plano", key: t });   // blueprints (12/8): clic para colocarlos
-  /* 18/8: los regalos sin colocar (parcela, árbol, roca) TAMBIÉN viven en la bolsa, no solo en la
-     barra rápida. Si no, con la barra llena regaloAHotbar no encuentra hueco y el premio queda
-     inalcanzable: lo tenés en G.regalos y no hay forma de tocarlo. La bolsa es la red de seguridad. */
-  if (G.regalos) for (const t of ["plot", "tree", "rock"]) if ((G.regalos[t] || 0) > 0) list.push({ kind: "regalo", key: t });
+  /* 18/8 (dirección): "la bolsa se llena de recursos farmeables y termina todo mezclado con las
+     herramientas". Los PLANOS, los COFRES sin colocar, los ADORNOS y los regalos del baúl ya no
+     están acá: viven en el COBERTIZO (cobertizoItems), que es el sitio de lo que se COLOCA.
+     La bolsa queda para lo que se GASTA: recursos, semillas, pescado, comida y herramientas. */
   PICK_ORDER.forEach(id => { let n = pickCount(id); while (n > 0) { list.push({ kind: "pick", key: id }); n -= 99; } });   // picos apilables ×99
   ITEM_RES_ORDER.forEach(r => { let n = Math.floor(G.res[r] || 0); while (n > 0) { list.push({ kind: "res", key: r }); n -= 99; } });
   CROP_ORDER.forEach(s => { let n = Math.floor(G.seeds[s] || 0); while (n > 0) { list.push({ kind: "seed", key: s }); n -= 99; } });
   FISH_ORDER.forEach(f => { let n = Math.floor((G.fish && G.fish[f]) || 0); while (n > 0) { list.push({ kind: "fish", key: f }); n -= 99; } });
   RECIPE_ORDER.forEach(d => { let n = Math.floor((G.dishes && G.dishes[d]) || 0); while (n > 0) { list.push({ kind: "dish", key: d }); n -= 99; } });
-  { let n = chestsInBag(); while (n > 0) { list.push({ kind: "chest", key: "cofre" }); n -= 99; } }   // cofres sin colocar
+  // (los cofres sin colocar también se mudaron al Cobertizo)
   return list;
 }
+/* ============ EL COBERTIZO (18/8, dirección) =======================================
+   "Todo lo que son como mueble, por así decirlo: los plots, los árboles, los minerales... debe
+   tener su propio apartado, porque la bolsa se llena de recursos farmeables y termina todo
+   mezclado con las herramientas."
+   Regla de qué entra: SE COLOCA EN EL SUELO Y NO SE GASTA AL USARLO. O sea parcelas, retoños,
+   rocas, adornos, cofres y planos de edificio. NO entran los recursos, las semillas, la comida,
+   las herramientas ni los materiales intermedios: todo eso se consume y sigue en la bolsa.
+   Los regalos del baúl vienen DIRECTOS acá; no pasan por la barra rápida ni por el inventario. */
+function cobertizoItems() {
+  const list = [];
+  if (G.regalos) for (const t of ["plot", "tree", "rock"]) {
+    for (let i = 0; i < (G.regalos[t] || 0); i++) list.push({ kind: "regalo", key: t });
+  }
+  if (typeof DECO_ORDER !== "undefined") DECO_ORDER.forEach(id => {
+    for (let i = 0; i < decoTengo(id); i++) list.push({ kind: "deco", key: id });
+  });
+  { let n = chestsInBag(); while (n-- > 0) list.push({ kind: "chest", key: "cofre" }); }
+  if (G.planos) for (const t in G.planos) if (G.planos[t]) list.push({ kind: "plano", key: t });
+  return list;
+}
+function cobertizoCuenta() { return cobertizoItems().length; }
+
 // reconcilia G.slots con lo que hay realmente, preservando el orden que armó el jugador
 function syncSlots() {
   const cap = invSlots();

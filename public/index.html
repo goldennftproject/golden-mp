@@ -459,8 +459,8 @@
   .shoppane .mkt-list,.forge-list{max-height:46vh}
   .mkt-cur{color:#fff;font-weight:700}
   /* inventario −20% (detalles jueves) */
-  #ov-inv .card{font-size:12px}
-  #ov-inv .slots{gap:5px;max-height:272px}
+  #ov-inv .card,#ov-cobertizo .card{font-size:12px}
+  #ov-inv .slots,#ov-cobertizo .slots{gap:5px;max-height:272px}
   /* registro/chat, toasts y prompt con la misma madera */
   .logpanel{border:10px solid transparent;border-image:url("assets/ui/panel_wood.png?a=4") 23 round;background:#a8622e url("assets/ui/wood_bg.png?a=5") repeat;background-size:220px auto;background-clip:border-box;border-radius:10px;image-rendering:pixelated}
   .loghead{background:rgba(58,40,16,.55);color:#fff;text-shadow:0 1px 0 rgba(0,0,0,.5)}
@@ -541,7 +541,7 @@
      de la tarjeta y se veían pobres. Acá se les da a TODAS el mismo tratamiento.  */
 
   /* 1) Panel interior de madera para toda lista de contenido */
-  .forge-list,.skgrid,.mkt-list,.cfgsec,#ov-inv .slots,#ov-cofre .slots{
+  .forge-list,.skgrid,.mkt-list,.cfgsec,#ov-inv .slots,#ov-cobertizo .slots,#ov-cofre .slots{
     border:14px solid transparent;border-image:url("assets/ui/badge_wood.png") 26 round;
     background:#b5793f url("assets/ui/badge_bg.png?a=1") repeat;background-size:132px auto;
     background-clip:padding-box;image-rendering:pixelated;border-radius:0}
@@ -801,6 +801,18 @@
     <div class="invrow"><div class="invexp" id="inv-expand"></div><div id="inv-trash" title="Arrastrá un objeto acá para tirarlo">Tirar</div></div>
   </div></div>
 
+  <!-- 18/8 (dirección): "la bolsa se llena de recursos farmeables y termina todo mezclado con las
+       herramientas". El COBERTIZO guarda lo que se COLOCA en la granja —parcelas, retoños, rocas,
+       adornos, cofres y planos— y nada más. La bolsa queda para lo que se gasta: recursos,
+       semillas, comida y herramientas. -->
+  <div class="ov" id="ov-cobertizo"><div class="card" style="width:min(432px,94%)">
+    <button class="close" data-close="ov-cobertizo">×</button>
+    <h3>🏚 Cobertizo</h3>
+    <div class="sub" id="cob-sub">Lo que todavía no colocaste en la granja. Tocá una pieza para elegir dónde va.</div>
+    <div class="slots" id="cob-slots"></div>
+    <div class="sub" id="cob-pie"></div>
+  </div></div>
+
   <div class="ov" id="ov-skills"><div class="card" style="width:min(500px,94%)">
     <button class="close" data-close="ov-skills">×</button>
     <h3>Skills</h3>
@@ -1003,6 +1015,7 @@
       <button class="gmi" data-panel="ov-mapa"><span class="ic"></span> Mapa <b class="key">N</b></button>
       <button class="gmi" data-panel="ov-objetivos"><span class="ic">🎯</span> Objetivos</button>
       <button class="gmi" data-panel="ov-inv"><span class="ic"></span> Inventario <b class="key">I</b></button>
+      <button class="gmi" data-panel="ov-cobertizo"><span class="ic">🏚</span> Cobertizo <b class="key" id="gm-cob"></b></button>
       <button class="gmi" data-panel="ov-skills"><span class="ic"></span> Skills <b class="key">X</b></button>
       <button class="gmi" data-panel="ov-equip"><span class="ic"></span> Equipo <b class="key">P</b></button>
       <button class="gmi" data-panel="ov-paquete"><span class="ic"></span> Paquete del día <b class="key">G</b></button>
@@ -1028,6 +1041,8 @@
     <!-- 10/8: desde el modo edición se ponen y se levantan los adornos comprados -->
     <select id="edit-deco" title="Adorno para colocar"></select>
     <button class="gold sm" id="edit-poner">Poner adorno</button>
+    <!-- 18/8: acceso directo al Cobertizo desde la edición -->
+    <button class="ghost sm" id="edit-cobertizo">🏚 Cobertizo</button>
     <!-- fix #17 (11/8): las parcelas compradas se colocan a mano desde acá -->
     <button class="gold sm" id="edit-parcela" style="display:none">Poner parcela</button>
     <!-- 13/8: mientras estás colocando un plano/adorno/parcela: cancelar y volver a como estaba -->

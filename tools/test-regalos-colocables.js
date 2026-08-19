@@ -25,12 +25,15 @@ const ok=(n,c,d)=>{if(!c)fallos++;console.log((c?"  ok   ":"  FALLA")+"  "+n+(d?
   const arbAntes=(g.G.treesOpen||[]).length, parAntes=g.G.plotsOwned;
   g.regaloReclamar("tree");
   ok("reclamar un árbol NO lo planta", (g.G.treesOpen||[]).length===arbAntes);
-  ok("...y aparece en la barra rápida",
-    g.G.hotbar.some(h=>h&&h.kind==="regalo"&&h.key==="tree"));
+  /* 18/8, 2ª pasada: los regalos ya NO van a la barra rápida ni a la bolsa — van al COBERTIZO,
+     que es el sitio de todo lo que se coloca. Ver test-cobertizo.js. */
+  ok("...y aparece en el cobertizo, no en la barra",
+    g.cobertizoItems().some(d=>d.kind==="regalo"&&d.key==="tree") &&
+    !g.G.hotbar.some(h=>h&&h.kind==="regalo"));
   ok("sigue contando como pendiente hasta colocarlo", g.G.regalos.tree===1);
   g.regaloReclamar("plot");
   ok("la parcela tampoco se planta sola", g.G.plotsOwned===parAntes);
-  ok("y también va a la barra", g.G.hotbar.some(h=>h&&h.kind==="regalo"&&h.key==="plot"));
+  ok("y también va al cobertizo", g.cobertizoItems().some(d=>d.kind==="regalo"&&d.key==="plot"));
 }
 // 2) COLOCAR SÍ LO PONE, EN LA CELDA ELEGIDA
 {
@@ -62,16 +65,15 @@ const ok=(n,c,d)=>{if(!c)fallos++;console.log((c?"  ok   ":"  FALLA")+"  "+n+(d?
   ok("nodoIndicePorLock ignora los de expansión",
     g.NIVEL_ARBOLES.every((_,i)=>{const k=g.nodoIndicePorLock("tree",i);return k>=0&&g.GF.WORLD_OBJECTS[k].exp==null;}));
 }
-// 5) CON LA BARRA LLENA, EL REGALO SIGUE SIENDO ALCANZABLE (bug encontrado el 18/8 auditando)
+// 5) LA BARRA LLENA YA NO PUEDE DEJAR UN REGALO INALCANZABLE (el cobertizo no tiene tope)
 {
   const g=juego();
   g.G.hotbar=new Array(10).fill({kind:"tool",key:"axe"});   // barra sin un solo hueco
   g.G.regalos={tree:0,rock:0,plot:2};
   g.regaloReclamar("plot");
-  const enBarra=g.G.hotbar.some(h=>h&&h.kind==="regalo");
-  const enBolsa=g.canonicalStacks().some(d=>d.kind==="regalo"&&d.key==="plot");
-  ok("con la barra llena no entra en la barra...", !enBarra);
-  ok("...pero SÍ está en la bolsa (si no, sería inalcanzable)", enBolsa);
+  ok("con la barra llena, el regalo sigue alcanzable en el cobertizo",
+     g.cobertizoItems().some(d=>d.kind==="regalo"&&d.key==="plot"));
+  ok("y no ensucia la barra rápida", !g.G.hotbar.some(h=>h&&h.kind==="regalo"));
 }
 // 6) NO SE PUEDE COBRAR DOS VECES: lo pendiente cuenta como si ya lo tuvieras
 {

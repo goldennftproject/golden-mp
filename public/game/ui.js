@@ -10,7 +10,7 @@ function log(m, k = "") { const b = $("log"); if (!b) return; const d = document
 /* ---- overlays ---- */
 function isOpen(id) { const e = $(id); return !!(e && e.classList.contains("show")); }
 function anyOvOpen() { return !!document.querySelector(".ov.show"); }
-const OV_REFRESH = { "ov-entrenando": () => entrenarSync(), "ov-clan": () => refreshClan(), "ov-misiones": () => refreshMisiones(), "ov-mapa": () => refreshMapa(), "ov-objetivos": () => refreshObjetivos(), "ov-inv": () => refreshInv(), "ov-skills": () => refreshSkills(), "ov-equip": () => refreshEquip(), "ov-godhand": () => refreshGodHand(),
+const OV_REFRESH = { "ov-entrenando": () => entrenarSync(), "ov-clan": () => refreshClan(), "ov-misiones": () => refreshMisiones(), "ov-mapa": () => refreshMapa(), "ov-objetivos": () => refreshObjetivos(), "ov-inv": () => refreshInv(), "ov-cobertizo": () => refreshCobertizo(), "ov-skills": () => refreshSkills(), "ov-equip": () => refreshEquip(), "ov-godhand": () => refreshGodHand(),
   "ov-forge": () => refreshForge(), "ov-market": () => refreshMarket(), "ov-barn": () => refreshBarn(), "ov-buzon": () => { _bzVista = "sobres"; _bzCartaAbierta = null; refreshBuzon(); }, "ov-paquete": () => refreshPaquete(), "ov-baul": () => refreshBaul(), "ov-pedidos": () => { _pdVista = "pedidos"; refreshPedidos(); },
   "ov-cocina": () => refreshCooking(),
   "ov-horno": () => refreshHorno(),
@@ -216,6 +216,9 @@ function itemView(d) {
   if (d.kind === "plano") { const b = (typeof BUILD_DEF !== "undefined") && BUILD_DEF[d.key]; return { sprite: "plano_" + d.key, emoji: "📜", glow: "glow-gold", label: "Plano: " + (b ? b.label : d.key) + " · clic para colocar la obra", dur: null }; }   // blueprints (12/8)
   /* 18/8: los regalos del baúl (parcela, árbol, roca) viven en la bolsa hasta que el jugador
      elige dónde van. Mismo patrón que el plano de un edificio. */
+  if (d.kind === "deco") { const dd = (typeof DECO_DEF !== "undefined") && DECO_DEF[d.key];
+    return { sprite: dd && dd.sprite ? dd.sprite : null, emoji: (dd && dd.emoji) || "🪴",
+             label: (dd ? dd.label : d.key) + " · clic para elegir dónde va", dur: null }; }
   if (d.kind === "regalo") {
     const nq = (G.regalos && G.regalos[d.key]) || 0;
     const spr = { plot: "plot", tree: "tree", rock: "node_stone" }[d.key];
@@ -282,6 +285,57 @@ function refreshInv() {
   $("inv-slots").querySelectorAll("[data-slot]").forEach(c => c.addEventListener("click", () => invCellClick(+c.dataset.slot)));
   refreshHotbar();
 }
+/* ============ EL COBERTIZO (18/8) =================================================
+   Rejilla propia con lo que se COLOCA. Un clic elige dónde va — el mismo camino que ya usaban
+   los planos (iniciarColocar), así que no hay una segunda forma de colocar cosas que mantener. */
+function refreshCobertizo() {
+  const cont = $("cob-slots"); if (!cont) return;
+  const items = (typeof cobertizoItems === "function") ? cobertizoItems() : [];
+  if (!items.length) {
+    cont.innerHTML = '<div class="sub" style="grid-column:1/-1;text-align:center;padding:18px 6px">' +
+      'El cobertizo está vacío.<br>Acá llegan las parcelas, los retoños, las rocas, los adornos, ' +
+      'los cofres y los planos que todavía no pusiste en la granja.</div>';
+  } else {
+    cont.innerHTML = items.map((d, i) => {
+      const v = itemView(d);
+      return '<div class="slot filled k-' + d.kind + '" data-cob="' + i + '" title="' + v.label + '">' +
+             itemIcon(v) + '</div>';
+    }).join("");
+    cont.querySelectorAll("[data-cob]").forEach(c =>
+      c.addEventListener("click", () => cobertizoClick(items[+c.dataset.cob])));
+  }
+  const pie = $("cob-pie");
+  if (pie) pie.textContent = items.length
+    ? items.length + (items.length === 1 ? " pieza esperando" : " piezas esperando") +
+      " · los adornos puestos van " + (typeof decoPuestos === "function" ? decoPuestos() : 0) + "/" + (typeof DECO_MAX !== "undefined" ? DECO_MAX : 0)
+    : "";
+  const key = $("gm-cob"); if (key) key.textContent = items.length ? String(items.length) : "";
+}
+// el contadorcito del menú, sin abrir el panel (lo llaman el baúl, el nivel y la expansión)
+function syncCobertizo() {
+  // aviso único de la mudanza, para quien tenía planos o adornos en la barra rápida
+  if (G._avisoCobertizo) {
+    const n = G._avisoCobertizo; delete G._avisoCobertizo;
+    log("Lo que se coloca en la granja se mudó al COBERTIZO (menú · 🏚). " + n +
+        (n === 1 ? " pieza salió" : " piezas salieron") + " de tu barra rápida.", "gold");
+    toast("🏚 Tus planos y adornos están ahora en el Cobertizo");
+  }
+  const key = $("gm-cob");
+  const n = (typeof cobertizoCuenta === "function") ? cobertizoCuenta() : 0;
+  if (key) key.textContent = n ? String(n) : "";
+  if (isOpen("ov-cobertizo")) refreshCobertizo();
+}
+function cobertizoClick(d) {
+  if (!d) return;
+  const sc = window.farmScene;
+  if (!sc || !sc.iniciarColocar) { toast("Entrá a la granja para colocarlo"); return; }
+  closeAllOv();
+  if (d.kind === "regalo") sc.iniciarColocar("regalo", d.key);
+  else if (d.kind === "plano") sc.iniciarColocar("obra", d.key);
+  else if (d.kind === "deco") sc.iniciarColocar("deco", d.key);
+  else if (d.kind === "chest") { if (window.FARM && FARM.placeChestFromBag) FARM.placeChestFromBag(); }
+}
+
 function invCellClick(i) {
   const d = G.slots[i]; if (!d) return;
   if (d.kind === "seed") { if (!cropUnlocked(d.key)) { toast("Necesitás Cultivo nivel " + CROP_DEF[d.key].lvl); return; } selectSeed(d.key); toast("Plantando: " + CROP_DEF[d.key].label); }
@@ -2168,6 +2222,7 @@ function initUI() {
   // modo edición: cierra las ventanas y deja solo dos botoncitos flotantes sobre la hotbar
 // llena el selector de adornos con lo que tengas sin colocar
 function syncEditDeco() {
+  if (typeof syncCobertizo === "function") syncCobertizo();   // 18/8
   const sel = $("edit-deco"), lbl = $("edit-decons"); if (!sel) return;
   const hay = DECO_ORDER.filter(id => decoTengo(id) > 0);
   sel.innerHTML = hay.length ? hay.map(id => '<option value="' + id + '">' + DECO_DEF[id].label + ' (' + decoTengo(id) + ')</option>').join("")
@@ -2226,6 +2281,8 @@ function ponerAdornoElegido() {
   // --- adornos: el selector y el botón de la barra de edición (10/8) ---
   { const bp = $("edit-poner"); if (bp) bp.onclick = () => ponerAdornoElegido(); }
   { const ep2 = $("edit-parcela"); if (ep2) ep2.onclick = () => { const sc = window.farmScene; if (sc && sc.iniciarColocar) sc.iniciarColocar("plot"); }; }   // fix #17
+  // 18/8: desde la barra de edición se abre el Cobertizo, que es donde vive lo colocable
+  { const eb2 = $("edit-cobertizo"); if (eb2) eb2.onclick = () => openOv("ov-cobertizo"); }
   const er = $("edit-reset"); if (er) er.onclick = doFarmReset;
   const dc = $("dy-claim"); if (dc) dc.onclick = () => claimDaily();
   const sw = $("seedwheel"); if (sw) sw.onclick = hideSeedWheel;
