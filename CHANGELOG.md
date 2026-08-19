@@ -4921,3 +4921,62 @@ Dos causas, no una:
 
 Los bichos de entrada van sin defensa —el freno es su vida, que se ve— y el botín se derivó para que
 cada muerte cubra el arma **más** 20 por hora del tiempo que lleva.
+
+---
+
+## 18/8 — La Zona Negra entera, y la interfaz que entra en pantalla
+
+### El combate estaba mucho peor de lo que decía la auditoría
+
+Arreglar la escalera de armas destapó lo que había debajo. La auditoría había medido la Guarida a
+17,7× el ancla, pero **midiendo con el arma óptima** — que era la Espada de Piedra en todas partes,
+justo por el fallo de `ARM_MAT`. Al enderezar las armas y volver a medir **con el arma del tramo de
+cada bicho**, el resultado fue el contrario:
+
+| bicho | golpes | neto por muerte |
+|---|---|---|
+| Orco (nv 15) | 60 | −53 |
+| Golem (nv 22) | 120 | −383 |
+| Hombre Lobo (nv 27) | 130 | −558 |
+| Ogro (nv 35) | 190 | −1.072 |
+| **Demonio (nv 45)** | **250** | **−1.183** |
+
+Doscientos cincuenta golpes son **ocho minutos de clic** para un solo demonio.
+
+**La causa: la defensa había crecido por encima del daño de cualquier arma del juego.** El Demonio
+tenía 24 de defensa y la espada de oro pega 14, así que el daño caía siempre al mínimo de 1. Once de
+los diecisiete bichos estaban blindados contra el arma que les toca.
+
+Y tardé dos vueltas en encontrar el resto: **`MOB_DEF_MULT = 1.5` multiplica la defensa DESPUÉS de
+la tabla**, así que ninguna medición sobre `MONSTER_DEF` lo veía. Un `def: 4` era en realidad un 6.
+Pasa a 1: la defensa ahora se deriva bicho por bicho y un multiplicador global encima la vuelve
+indecidible. `MOB_DMG_MULT` se queda — lo que ellos te pegan es otro eje.
+
+**Regla nueva**: la defensa es el 30% del daño del arma de su tramo (0 en los de entrada, donde el
+freno es la vida, que se ve en la barra), así que el arma que te toca **siempre sirve**. Los golpes
+bajan de 250 a 25 como máximo. Y el botín se derivó para que cada muerte cubra el desgaste del arma
+más 20 por hora — recortando la PROBABILIDAD de los drops de mineral donde sobraban, no la cantidad:
+así el drop se siente igual cuando cae, solo cae menos seguido.
+
+Resultado: **los 17 bichos dentro de ±2 de plata del ancla**, contra un rango de −1.183 a +294.
+
+*Nota de método*: mi primera auditoría de esto medía plata/HORA y marcaba en rojo a la rata. Era el
+criterio: en algo que muere en 6 segundos, redondear la plata a un entero se vuelve 500/h. Se mide
+el neto POR MUERTE, que es lo que el jugador ve.
+
+### La interfaz entra en pantallas angostas
+
+Estaba marcado desde el primer día y nunca se hizo. En todo `index.html` había **un solo `@media`**,
+y era para un modal. La barra de arriba no envolvía, la hotbar pedía 540 px fijos (10 celdas de 46
+más los huecos) y el cartel del capataz no tenía ancho máximo: en un móvil, o con el navegador al
+125%, las tres cosas se salían o se pisaban.
+
+Cuatro cortes, sin tocar nada del arte:
+
+- **900 px** — tipografía y celdas un punto más chicas.
+- **640 px** — la hotbar se lleva el ancho completo y las celdas se reparten con `flex`, así que las
+  diez entran siempre sea cual sea el ancho. El cartel del tutorial baja al pie, donde no tapa.
+- **420 px** — el título cede el sitio: los datos importan más que la marca.
+- **alto ≤ 560 px** (portátiles al 125%, móvil apaisado) — lo que falta ahí es alto, no ancho.
+
+Y `.hudbar` gana `flex-wrap`, que es lo que le faltaba para no desbordar nunca.

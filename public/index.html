@@ -604,6 +604,45 @@
     text-shadow:-1px 0 #241505,1px 0 #241505,0 -1px #241505,0 1px #241505,1px 1px #241505}
   /* que un texto largo NUNCA se meta debajo del botón de la fila */
   .forge-row .finfo,.mkt-row .minfo{overflow-wrap:anywhere}
+
+  /* ============ QUE ENTRE EN PANTALLAS ANGOSTAS (18/8) ==============================
+     Estaba marcado desde el primer día y nunca se hizo: en todo el archivo había UN SOLO @media,
+     y era para un modal. La barra de arriba no envuelve, la hotbar pide 540 px fijos (10 celdas
+     de 46 más los huecos) y el cartel del capataz no tiene ancho máximo. En un móvil, o con el
+     navegador al 125%, las tres cosas se salen o se pisan.
+     Nada de esto toca el arte ni el juego: solo deja que lo que ya existe quepa. */
+
+  /* la barra de arriba puede envolver en vez de desbordar */
+  .hudbar{flex-wrap:wrap;row-gap:6px}
+  #tuto{max-width:min(92vw,560px);white-space:normal;text-align:center;line-height:1.25}
+
+  @media(max-width:900px){
+    .brand h1{font-size:16px;letter-spacing:1px}
+    .pill{font-size:12px;padding:4px 9px}
+    .pill .k{font-size:11px}
+    #hotbar{gap:4px;padding:4px}
+    .hcell{width:40px;height:40px}
+  }
+  @media(max-width:640px){
+    .hudbar{padding:6px 8px;gap:6px}
+    .brand h1{font-size:14px}
+    .pill{font-size:11px;padding:3px 7px;gap:3px}
+    /* la hotbar se lleva TODO el ancho y las celdas se reparten: 10 celdas siempre entran */
+    #hotbar{width:calc(100vw - 16px);justify-content:space-between;gap:3px;padding:3px}
+    .hcell{width:auto;flex:1 1 0;min-width:0;aspect-ratio:1/1;height:auto}
+    #tuto{top:auto;bottom:96px;font-size:12px;max-width:94vw}
+  }
+  @media(max-width:420px){
+    .brand h1{font-size:0}            /* el título cede el sitio: los datos importan más */
+    .pill{font-size:10px;padding:3px 6px}
+    #tuto{font-size:11px;bottom:88px}
+  }
+  /* pantallas bajas (portátiles a 125%, móvil apaisado): el alto es lo que falta */
+  @media(max-height:560px){
+    .hudbar{padding:4px 8px}
+    .hcell{width:36px;height:36px}
+    #tuto{top:44px;font-size:11px}
+  }
 </style>
 </head>
 <body>
@@ -1095,7 +1134,7 @@
     // 15/8: VERSIÓN DE BUILD — rompe la caché del navegador en cada deploy (sin esto, el
     // jugador seguía corriendo el state.js viejo aunque el servidor tuviera el nuevo).
     // deploy.bat la actualiza sola (busca GF_BUILD y pone la fecha/hora del deploy).
-    const GF_BUILD = "20260818-1923";
+    const GF_BUILD = "20260818-2257";
     const files = ["game/config.js","game/nav.js","game/audio.js","game/state.js","game/save.js","game/ui.js","game/boot.js",
                    "game/farm.js","game/forest.js","game/plaza.js","game/main.js","game/update.js"];
     let i = 0;

@@ -3327,29 +3327,48 @@ const MONSTER_ORDER = ["rata", "murcielago", "larva", "baba", "babita", "arana",
    Arreglados los dos: los bichos de entrada van sin defensa (el freno es su vida, que se ve) y el
    botín se derivó para que cada muerte cubra el arma MÁS 20 por hora del tiempo que lleva.
    Se comprueba con node tools/auditar-combate-entrada.js */
+/* 18/8 (auditoría) — LA DEFENSA SE COMÍA TODA LA ESCALERA DE ARMAS.
+   Medido con el arma del tramo de cada bicho, TODO el juego medio y alto hacía 1 DE DAÑO POR
+   GOLPE: el Demonio tiene 24 de defensa y la espada de oro pega 14. La defensa había crecido por
+   encima del daño de cualquier arma del juego (el tope es 21, el diamante), así que el daño caía
+   siempre al mínimo de 1. Consecuencia: 250 golpes por demonio = 8 minutos de clic, y pérdidas de
+   hasta −1.183 por muerte contando el desgaste del arma.
+   (La auditoría anterior había medido 17,7x el ancla en la Guarida porque el jugador usaba la
+   Espada de PIEDRA en todas partes — algo que solo tenía sentido por el fallo de ARM_MAT que se
+   arregló hoy. Al enderezar las armas, salió a la luz lo que había debajo.)
+   REGLA NUEVA: la defensa es el 30% del daño del arma de su tramo, así que nunca lo supera y el
+   arma que te toca siempre sirve. Los golpes bajan de 250 a 25 como máximo. El botín se derivó
+   para que cada muerte cubra el desgaste MÁS 20 por hora del tiempo que lleva.
+   Se comprueba con node tools/auditar-combate.js */
 const MONSTER_DEF = {
-  rata:     { label:"Rata",           emoji:"🐀", sprite:"rata", size:30, hp:12,  def:0,  dmg:2,  xp:100,  spd:55, lvl:1, loot:{ carne:[1,1,0.55], plata:[3,3,1] } },
-  larva:    { label:"Larva Venenosa", emoji:"🐛", sprite:"larva", size:38, hp:22,  def:0,  dmg:3,  xp:180,  spd:35, lvl:5, loot:{ carne:[1,2,0.50], plata:[7,7,1], flecha:[1,3,0.35] }, gearLoot:[["botas_cuero",0.08]] },
-  orco:     { label:"Orco",           emoji:"👹", sprite:"orc", size:52, hp:60,  def:4,  dmg:8,  xp:500,  spd:60, lvl:15, hab:"enrage", loot:{ carne:[1,2,0.55], plata:[14,14,1], bronce:[1,2,0.35] }, gearLoot:[["casco_cuero",0.10],["escudo_madera",0.08]] },
-  lancero:  { label:"Orco Lancero",   emoji:"🔱", sprite:"lancero", size:58, hp:90,  def:6,  dmg:10, xp:800,  spd:70, lvl:16, loot:{ carne:[2,3,0.60], plata:[20,20,1], bronce:[1,3,0.40], flecha:[2,6,0.45] }, gearLoot:[["pechera_cuero",0.10]] },
-  guerrero: { label:"Orco Guerrero",  emoji:"👺", sprite:"guerrero", size:70, hp:115, def:8,  dmg:12, xp:1100, spd:65, lvl:20, loot:{ carne:[2,4,0.60], plata:[30,30,1], oro:[1,2,0.30] }, gearLoot:[["casco_hierro",0.10],["escudo_hierro",0.06]] },
-  troll:    { label:"Trol",           emoji:"🧌", sprite:"troll", size:74, hp:140, def:10, dmg:14, xp:1400, spd:45, lvl:30, hab:"regen", loot:{ carne:[3,5,0.65], plata:[40,40,1], oro:[1,3,0.45], diamante:[1,1,0.12] }, gearLoot:[["pechera_hierro",0.15]] },
+  rata:     { label:"Rata",           emoji:"🐀", sprite:"rata", size:30, hp:12,  def:0,  dmg:2,  xp:100,  spd:55, lvl:1, loot:{ carne:[1,1,0.54], plata:[2,2,1] } },
+  larva:    { label:"Larva Venenosa", emoji:"🐛", sprite:"larva", size:38, hp:22,  def:0,  dmg:3,  xp:180,  spd:35, lvl:5, loot:{ carne:[1,2,0.5], flecha:[1,3,0.35], plata:[4,4,1] }, gearLoot:[["botas_cuero",0.08]] },
+  orco:     { label:"Orco",           emoji:"👹", sprite:"orc", size:52, hp:60,  def:2,  dmg:8,  xp:500,  spd:60, lvl:15, hab:"enrage", loot:{ carne:[1,2,0.17], bronce:[1,2,0.11], plata:[9,9,1] }, gearLoot:[["casco_cuero",0.10],["escudo_madera",0.08]] },
+  lancero:  { label:"Orco Lancero",   emoji:"🔱", sprite:"lancero", size:58, hp:90,  def:2,  dmg:10, xp:800,  spd:70, lvl:16, loot:{ carne:[2,3,0.19], bronce:[1,3,0.12], flecha:[2,6,0.14], plata:[15,15,1] }, gearLoot:[["pechera_cuero",0.10]] },
+  guerrero: { label:"Orco Guerrero",  emoji:"👺", sprite:"guerrero", size:70, hp:115, def:2,  dmg:12, xp:1100, spd:65, lvl:20, loot:{ carne:[2,4,0.19], oro:[1,2,0.09], plata:[21,21,1] }, gearLoot:[["casco_hierro",0.10],["escudo_hierro",0.06]] },
+  troll:    { label:"Trol",           emoji:"🧌", sprite:"troll", size:74, hp:140, def:3, dmg:14, xp:1400, spd:45, lvl:30, hab:"regen", loot:{ carne:[3,5,0.1], oro:[1,3,0.07], diamante:[1,1,0.02], plata:[23,23,1] }, gearLoot:[["pechera_hierro",0.15]] },
   // --- Bestiario ampliado (doc maestro 2/8): 15 criaturas + jefe; hab = habilidad (Nv 8+ del doc) ---
-  murcielago: { label:"Murciélago", emoji:"🦇", sprite:"murcielago", size:26, hp:16, def:0, dmg:3, xp:130, spd:85, lvl:3, hab:"evade", evade:0.25, loot:{ plata:[5,5,1], carne:[1,1,0.35] } },
-  baba:       { label:"Baba", emoji:"🫧", sprite:"baba", size:36, hp:35, def:0, dmg:4, xp:250, spd:40, lvl:7, hab:"split", loot:{ plata:[18,18,1] } },
-  babita:     { label:"Babita", emoji:"🫧", sprite:"baba", size:22, hp:12, def:0, dmg:2, xp:50, spd:55, lvl:7, noRespawn:true, loot:{ plata:[2,2,1] } },
-  arana:      { label:"Araña", emoji:"🕷️", sprite:"arana", size:40, hp:45, def:0, dmg:6, xp:340, spd:75, lvl:10, hab:"web", loot:{ plata:[21,21,1], flecha:[1,3,0.3] } },
-  goblin:     { label:"Goblin", emoji:"👾", sprite:"goblin", size:44, hp:52, def:3, dmg:7, xp:430, spd:70, lvl:12, hab:"bleedhit", loot:{ plata:[11,11,1], bronce:[1,1,0.25] } },
-  esqueleto:  { label:"Esqueleto Arquero", emoji:"💀", sprite:"esqueleto", size:48, hp:55, def:3, dmg:12, xp:640, spd:60, lvl:18, hab:"curseArrow", range:150, loot:{ plata:[18,18,1], flecha:[2,6,0.5] } },
-  golem:      { label:"Golem de Piedra", emoji:"🗿", sprite:"golem", size:56, hp:120, def:13, dmg:10, xp:900, spd:35, lvl:22, hab:"golem", loot:{ plata:[24,24,1], piedra:[2,4,0.6], oro:[1,1,0.15] } },
-  hombre_lobo:{ label:"Hombre Lobo", emoji:"🐺", sprite:"hombre_lobo", size:52, hp:130, def:6, dmg:16, xp:1300, spd:80, lvl:27, hab:"howl", loot:{ plata:[34,34,1], carne:[2,4,0.6] } },
-  ogro:       { label:"Ogro", emoji:"🧟", sprite:"ogro", size:64, hp:190, def:12, dmg:19, xp:2000, spd:50, lvl:35, hab:"charge", loot:{ plata:[55,55,1], oro:[1,2,0.35] } },
-  espectro:   { label:"Espectro", emoji:"👻", sprite:"espectro", size:50, hp:150, def:8, dmg:23, xp:2700, spd:70, lvl:40, hab:"phase", loot:{ plata:[70,70,1], diamante:[1,1,0.10] } },
-  demonio:    { label:"Demonio Menor", emoji:"😈", sprite:"demonio", size:58, hp:250, def:16, dmg:27, xp:3900, spd:65, lvl:45, hab:"demon", loot:{ plata:[100,100,1], oro:[1,3,0.4], diamante:[1,1,0.15] } },
+  murcielago: { label:"Murciélago", emoji:"🦇", sprite:"murcielago", size:26, hp:16, def:0, dmg:3, xp:130, spd:85, lvl:3, hab:"evade", evade:0.25, loot:{ carne:[1,1,0.35], plata:[5,5,1] } },
+  baba:       { label:"Baba", emoji:"🫧", sprite:"baba", size:36, hp:35, def:0, dmg:4, xp:250, spd:40, lvl:7, hab:"split", loot:{ plata:[17,17,1] } },
+  babita:     { label:"Babita", emoji:"🫧", sprite:"baba", size:22, hp:12, def:0, dmg:2, xp:50, spd:55, lvl:7, noRespawn:true, loot:{ plata:[6,6,1] } },
+  arana:      { label:"Araña", emoji:"🕷️", sprite:"arana", size:40, hp:45, def:0, dmg:6, xp:340, spd:75, lvl:10, hab:"web", loot:{ flecha:[1,3,0.3], plata:[22,22,1] } },
+  goblin:     { label:"Goblin", emoji:"👾", sprite:"goblin", size:44, hp:52, def:2, dmg:7, xp:430, spd:70, lvl:12, hab:"bleedhit", loot:{ bronce:[1,1,0.15], plata:[9,9,1] } },
+  esqueleto:  { label:"Esqueleto Arquero", emoji:"💀", sprite:"esqueleto", size:48, hp:55, def:2, dmg:12, xp:640, spd:60, lvl:18, hab:"curseArrow", range:150, loot:{ flecha:[2,6,0.5], plata:[39,39,1] } },
+  golem:      { label:"Golem de Piedra", emoji:"🗿", sprite:"golem", size:56, hp:120, def:3, dmg:10, xp:900, spd:35, lvl:22, hab:"golem", loot:{ piedra:[2,4,0.29], oro:[1,1,0.07], plata:[21,21,1] } },
+  hombre_lobo:{ label:"Hombre Lobo", emoji:"🐺", sprite:"hombre_lobo", size:52, hp:130, def:3, dmg:16, xp:1300, spd:80, lvl:27, hab:"howl", loot:{ carne:[2,4,0.6], plata:[89,89,1] } },
+  ogro:       { label:"Ogro", emoji:"🧟", sprite:"ogro", size:64, hp:190, def:4, dmg:19, xp:2000, spd:50, lvl:35, hab:"charge", loot:{ oro:[1,2,0.16], plata:[25,25,1] } },
+  espectro:   { label:"Espectro", emoji:"👻", sprite:"espectro", size:50, hp:150, def:4, dmg:23, xp:2700, spd:70, lvl:40, hab:"phase", loot:{ diamante:[1,1,0.09], plata:[20,20,1] } },
+  demonio:    { label:"Demonio Menor", emoji:"😈", sprite:"demonio", size:58, hp:250, def:4, dmg:27, xp:3900, spd:65, lvl:45, hab:"demon", loot:{ oro:[1,3,0.11], diamante:[1,1,0.04], plata:[38,38,1] } },
   dragon:     { label:"Dragón de las Cavernas", emoji:"🐉", sprite:"dragon", size:96, hp:900, def:28, dmg:42, xp:14000, spd:55, lvl:50, hab:"dragon", boss:true, loot:{ plata:[500,500,1], diamante:[1,3,0.8], netherita:[1,1,0.25] } },
 };
-// "detallitos (1)" punto 2: los mobs pegan y aguantan más. Multiplicadores globales editables:
-var MOB_DMG_MULT = 1.3, MOB_DEF_MULT = 1.5;
+/* "detallitos (1)" punto 2: los mobs pegan más. Multiplicador global editable.
+   18/8 (auditoría): MOB_DEF_MULT pasa de 1,5 a 1. La DEFENSA ahora se deriva bicho por bicho
+   (el 30% del daño del arma de su tramo, para que el arma que te toca siempre sirva), y un
+   multiplicador global encima la vuelve indecidible: es lo que convertía un def 4 en 6 y hacía
+   que la espada de oro, que pega 14, se quedara en 8 contra el Demonio.
+   Me costó dos vueltas encontrarlo, porque multiplica DESPUÉS de la tabla y ninguna medición
+   sobre MONSTER_DEF lo veía. MOB_DMG_MULT se queda: lo que ELLOS te pegan es otro eje. */
+var MOB_DMG_MULT = 1.3, MOB_DEF_MULT = 1;
 MONSTER_ORDER.forEach(k => { const m = MONSTER_DEF[k];
   m.dmg = Math.max(1, Math.round(m.dmg * MOB_DMG_MULT));
   m.def = Math.round((m.def || 0) * MOB_DEF_MULT);
