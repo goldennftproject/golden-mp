@@ -704,7 +704,23 @@ function obraColocar(t, col, row, vivo) {   // la llama la escena con la celda e
 }
 // el reinicio de escena reconstruye ~570 sprites y se sentía como un CONGELAMIENTO (13/8).
 // Con el telón de 160 ms del fundido que ya existe, el mismo parpadeo se lee como transición.
-function reiniciarGranjaSuave() {
+/* 18/8 (dirección): "el movimiento de cámara que te lo resetea también".
+   El reinicio con telón queda solo para lo que cambia la FORMA del mundo (comprar terreno):
+   césped, cerca, bosque y límites de cámara se rehacen enteros y eso no se puede hacer en vivo
+   sin destripar create(). Pero lo que de verdad desorienta no es el corte: es que al volver la
+   cámara está en otro sitio y con otro zoom. Eso sí tiene arreglo.
+     · sin argumento  → vuelve EXACTAMENTE a donde estabas
+     · con {x,y}      → vuelve mirando ahí (la expansión lo usa para enseñarte el terreno nuevo)
+   Lo lee create() al final, después de fitCamera. */
+function reiniciarGranjaSuave(mirarA) {
+  try {
+    const sc = window.FARM && window.FARM.scene;
+    const cam = sc && sc.cameras && sc.cameras.main;
+    // se guarda zoomUser (el que eligió el jugador con la rueda), NO el zoom absoluto: el zoom
+    // base se recalcula con el tamaño de pantalla y del mundo, que acaba de cambiar.
+    GF._camTras = cam ? { mirar: mirarA || null, zoomUser: sc.zoomUser || 1,
+                          scrollX: cam.scrollX, scrollY: cam.scrollY } : null;
+  } catch (e) { GF._camTras = null; }
   const fade = document.getElementById("fadeblk");
   const reiniciar = () => { if (window.FARM && window.FARM.scene) { try { window.FARM.scene.restart(); } catch (e) {} } };
   if (!fade) { reiniciar(); return; }
@@ -1054,8 +1070,12 @@ function expansionComprar() {
   const nuevos = (typeof regalosSync === "function") ? regalosSync() : 0;   // 18/8: la parcela del bloque, al baúl
   if (nuevos) log("La expansión trajo " + nuevos + " premio" + (nuevos > 1 ? "s" : "") + " al baúl.", "gold");
   if (typeof saveFarm === "function") saveFarm(true);
-  // la forma del mundo cambió: hay que rehacer césped, bosque, cerca y límites de cámara
-  if (typeof reiniciarGranjaSuave === "function") reiniciarGranjaSuave();
+  // la forma del mundo cambió: hay que rehacer césped, bosque, cerca y límites de cámara.
+  // 18/8: al volver, la cámara mira el BLOQUE RECIÉN COMPRADO. Antes se plantaba en el centro
+  // del mundo, así que el corte te dejaba mirando lo de siempre y el terreno nuevo ni se veía.
+  const b = e.bloque, T = GF.TILE;
+  if (typeof reiniciarGranjaSuave === "function")
+    reiniciarGranjaSuave(b ? { x: (b.c0 + b.c1) / 2 * T, y: (b.r0 + b.r1) / 2 * T } : null);
   return true;
 }
 const FARM_COFRE   = { 13:10, 23:10, 33:15 };                                          // nivel → capacidad extra de cofre

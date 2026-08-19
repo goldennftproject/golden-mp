@@ -949,8 +949,19 @@ class FarmScene extends Phaser.Scene {
     // para despejar la barra de abajo, pero con el anillo alrededor eso se lee como descentrado.
     // 18/8: el centro del mundo ya no es (W/2, H/2) — el origen puede ser negativo.
     else { this.cameras.main.stopFollow(); this.cameras.main.centerOn(GF.ORIG_X + W / 2, GF.ORIG_Y + H / 2); }
-    this.zoomUser = 1;
+    /* 18/8: si venimos de un reinicio con telón, la vista vuelve a donde estaba — o mira el
+       bloque que acabás de comprar. Sin esto, cada reinicio te devolvía al centro del mundo con
+       el zoom por defecto, y ESO es lo que se sentía como "me resetea la vista", más que el corte.
+       El zoom se restaura ANTES de fitCamera porque fitCamera lo deriva de zoomUser. */
+    const _ct = GF._camTras; GF._camTras = null;
+    this.zoomUser = (_ct && _ct.zoomUser) || 1;
     this.fitCamera();
+    if (_ct) {
+      try {
+        if (_ct.mirar) this.cameras.main.centerOn(_ct.mirar.x, _ct.mirar.y);
+        else if (_ct.scrollX != null) this.cameras.main.setScroll(_ct.scrollX, _ct.scrollY);
+      } catch (e) {}
+    }
     this.scale.on("resize", this.fitCamera, this);
     this.events.once("shutdown", () => {
       this.scale.off("resize", this.fitCamera, this);
