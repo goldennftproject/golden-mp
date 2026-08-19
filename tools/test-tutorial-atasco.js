@@ -41,8 +41,13 @@ caso("partida nueva de verdad: nada reclamado",
   g => { g.kitReclamado = false; g.tuto = { step: 0, n: 0, done: false, v: 13 }; }, "kit");
 caso("veterano con el tutorial terminado",
   g => { g.kitReclamado = true; g.tuto = { step: 0, n: 0, done: true, v: 13 }; }, "(tutorial terminado)");
-caso("guardado de una version vieja del tutorial",
-  g => { g.kitReclamado = true; g.tuto = { step: 7, n: 0, done: false, v: 1 }; }, "buyseed");
+/* 18/8 — CONTRATO CAMBIADO A PROPÓSITO. Este caso esperaba "buyseed", o sea que un guardado de
+   una versión vieja VOLVIERA ATRÁS hasta el primer paso que no se puede deducir de la partida.
+   Eso era justo lo que la dirección reportó: "cuando haces deploy, si estás en una etapa del
+   tutorial, el tutorial regresa como al principio". Ahora el paso guardado hace de suelo: la
+   cadena nueva puede adelantarte, nunca devolverte. Un v1 en el paso 7 se queda en el 7. */
+caso("guardado de una version vieja: mantiene el progreso, no retrocede",
+  g => { g.kitReclamado = true; g.tuto = { step: 7, n: 0, done: false, v: 1 }; }, "stone_st");
 
 console.log("\nLA COMPRA CUENTA UNA VEZ DESATASCADO\n");
 {
