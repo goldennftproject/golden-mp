@@ -45,7 +45,19 @@ ok("el motivo de la cerca ya no dice 'no se puede construir' a secas",
 
 /* 18/8 — el marcador no puede quedarse pegado: se apaga solo cada frame si no llevás nada. */
 ok("el rectángulo de colocar se apaga solo si no hay nada en la mano",
-  /if \(this\.editHl && this\.editHl\.visible &&[\s\S]{0,220}setVisible\(false\);/.test(src));
+  /if \(this\.editHl && this\.editHl\.visible &&[\s\S]{0,260}setVisible\(false\);/.test(src));
+/* 18/8 — LA HUELLA DE LO QUE YA ESTÁ. El "árbol fantasma" era un TOCÓN: un árbol talado ocupa sus
+   dos celdas pero su dibujo es chico, así que la de al lado se lee como pasto. Mientras colocás se
+   sombrean todas las celdas tomadas; sin eso, cualquier rechazo parece arbitrario. */
+ok("mientras colocás se sombrean las celdas ocupadas",
+  /dibujarOcupadas\(\) \{/.test(src) && /this\.dibujarOcupadas\(\);/.test(src));
+ok("…usando la MISMA regla que decide (celdaLibreAdorno), no una copia",
+  /if \(this\.celdaLibreAdorno\(c, r, -1\)\) continue;/.test(src));
+ok("…y se apaga al soltar", /if \(this\.ocupG\) this\.ocupG\.setVisible\(false\)/.test(src));
+ok("el recuadro amarillo suelto ya no está (era un diagnóstico, no una función)",
+  !/culpaHl/.test(src));
+ok("el motivo avisa si el estorbo NO tiene dibujo (eso sí sería un fallo)",
+  /sin dibujo en esa celda/.test(src));
 
 console.log("\n"+(fallos?"FALLOS: "+fallos:"el cartel solo sale cuando hay algo que decir"));
 process.exit(fallos?1:0);

@@ -573,17 +573,7 @@ class FarmScene extends Phaser.Scene {
         const hu = this.huellaColocar(col, row);
         this.editHl.setPosition(hu.c0 * T, (row + 1) * T).setSize(hu.ancho * T, T)
           .setFillStyle(hu.libre ? 0x7ec95a : 0xd9534f, 0.4).setVisible(true);
-        /* 18/8: si lo que estorba es un OBJETO, se le dibuja un recuadro amarillo encima. Cuando el
-           juego dice "ahí hay un árbol" y no se ve ninguno, esto enseña dónde cree que está — sin
-           consola, que es la norma de la casa. Si el recuadro sale sobre pasto vacío, el fantasma
-           queda señalado con el dedo. */
-        if (!this.culpaHl) this.culpaHl = this.add.rectangle(0, 0, T, T, 0xffd54a, 0.55)
-          .setOrigin(0, 1).setDepth(99999).setStrokeStyle(2, 0xffe9a8, 1).setVisible(false);
-        let culpa = null;
-        if (!hu.libre) for (let c = hu.c0; c < hu.c0 + hu.ancho && !culpa; c++) culpa = GF.celdaOcupante(c, row);
-        if (culpa) this.culpaHl.setPosition(culpa.leftCol * T, (culpa.fila + 1) * T)
-          .setSize(culpa.ancho * T, T).setVisible(true);
-        else this.culpaHl.setVisible(false);
+        this.dibujarOcupadas();   // 18/8: mientras colocás, se ve QUÉ celdas están tomadas
         return;
       }
       if (this.dragDeco) {
@@ -2144,11 +2134,36 @@ class FarmScene extends Phaser.Scene {
       }
     }
   }
+  /* ============ LA HUELLA DE LO QUE YA ESTÁ (18/8) ==================================
+     Dirección: "el mensaje dice que hay un árbol, ¿pero vos ves un árbol?".
+     Sí lo había: era un TOCÓN. Un árbol talado sigue ocupando sus DOS celdas, pero su dibujo es
+     chico y va centrado en el tronco, así que la celda de al lado se lee como pasto vacío. El
+     jugador no tenía forma de saber dónde acaba una cosa y empieza el suelo libre — y sin eso,
+     cualquier rechazo parece arbitrario.
+     Mientras llevás algo en la mano, se sombrean TODAS las celdas ocupadas. Es la información que
+     faltaba, no hace falta arte nuevo, y desaparece en cuanto soltás. */
+  dibujarOcupadas() {
+    if (!this.placing) { if (this.ocupG) this.ocupG.setVisible(false); return; }
+    if (this.ocupG && this.ocupFirma === (GF.C0 + "," + GF.C1 + "," + (G.expansiones || 0) + "," + (G.treesOpen || []).length + "," + (G.rocksOpen || []).length + "," + (G.plotsOwned || 0) + "," + (G.decos || []).length)) {
+      this.ocupG.setVisible(true); return;
+    }
+    const T = GF.TILE;
+    if (!this.ocupG) this.ocupG = this.add.graphics().setDepth(99997);
+    this.ocupG.clear().setVisible(true);
+    this.ocupFirma = GF.C0 + "," + GF.C1 + "," + (G.expansiones || 0) + "," + (G.treesOpen || []).length + "," + (G.rocksOpen || []).length + "," + (G.plotsOwned || 0) + "," + (G.decos || []).length;
+    const t = GF.terreno();
+    for (let r = t.r0; r < t.r1; r++) for (let c = t.c0; c < t.c1; c++) {
+      if (!GF.tuyo(c, r) || GF.enCerca(c, r)) continue;         // la cerca ya se ve sola
+      if (this.celdaLibreAdorno(c, r, -1)) continue;            // libre: no se pinta
+      this.ocupG.fillStyle(0x1a2410, 0.30).fillRect(c * T, r * T, T, T);
+      this.ocupG.lineStyle(1, 0xffe9a8, 0.22).strokeRect(c * T + 0.5, r * T + 0.5, T - 1, T - 1);
+    }
+  }
   // 13/8: cierre común — y si el colocado vino de la bolsa/hotbar, se sale del modo edición solo
   finColocar() {
     this.placing = null;
     if (this.editHl) this.editHl.setVisible(false);
-    if (this.culpaHl) this.culpaHl.setVisible(false);
+    if (this.ocupG) this.ocupG.setVisible(false);
     if (window.syncPlacingUI) syncPlacingUI(false);
     if (this.placingAuto && window.setEditMode) setEditMode(false);
     this.placingAuto = false;
@@ -2247,8 +2262,16 @@ class FarmScene extends Phaser.Scene {
     const T = GF.TILE;
     if (!GF.tuyo(col, row)) return "Ese terreno todavía no es tuyo";
     if (GF.enCerca && GF.enCerca(col, row)) return "La cerca se reserva esta franja — probá una celda más adentro";
-    const q = GF.celdaObjeto(col, row);
-    if (q) return "Ahí hay " + (NOMBRE_OBJETO(q) || "algo construido");
+    const oc = GF.celdaOcupante(col, row);
+    if (oc) {
+      const nom = NOMBRE_OBJETO(oc.tipo) || "algo construido";
+      /* 18/8: ¿ese estorbo se VE? El objeto de la escena guarda `oculto`. Si el juego dice que hay
+         un árbol y su dibujo está apagado, eso no es un aviso: es un fallo, y el jugador tiene que
+         poder leerlo tal cual en vez de pelearse con una celda muda. */
+      const esc = (this.objs || []).find(x => x.i === oc.i);
+      const invisible = esc && (esc.oculto || (esc.sprite && esc.sprite.visible === false));
+      return invisible ? ("⚠ Hay " + nom + " sin dibujo en esa celda — es un fallo, avisá") : ("Ahí hay " + nom);
+    }
     if (GF.blockedAt((col + 0.5) * T, (row + 0.9) * T, 6)) {
       const p = GF.POND;
       if (col >= p.col - 1 && col < p.col + p.cols + 1 && row >= p.row - 1 && row < p.row + p.rows + 1)
@@ -4378,7 +4401,7 @@ class FarmScene extends Phaser.Scene {
     if (this.editHl && this.editHl.visible &&
         !this.placing && !this.dragDeco && !this.dragObj && !this.dragPlot && !this.dragPond) {
       this.editHl.setVisible(false);
-      if (this.culpaHl) this.culpaHl.setVisible(false);
+      if (this.ocupG) this.ocupG.setVisible(false);
     }
     const el = $("prompt"); if (!el) return;
     /* 18/8 (reporte: "no pude ponerlo una celda más arriba porque me marca rojo, creo que aún
