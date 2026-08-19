@@ -220,7 +220,7 @@ function itemView(d) {
     return { sprite: dd && dd.sprite ? dd.sprite : null, emoji: (dd && dd.emoji) || "🪴",
              label: (dd ? dd.label : d.key) + " · clic para elegir dónde va", dur: null }; }
   if (d.kind === "regalo") {
-    const nq = (G.regalos && G.regalos[d.key]) || 0;
+    const nq = (typeof cobertizoBolsa === "function" ? cobertizoBolsa()[d.key] : 0) || 0;   // 18/8: el del COBERTIZO, no el del baúl
     const spr = { plot: "plot", tree: "tree", rock: "node_stone" }[d.key];
     const emo = { plot: "🟫", tree: "🌳", rock: "🪨" }[d.key] || "🎁";
     return { sprite: spr, emoji: emo, glow: "glow-gold",
@@ -272,7 +272,7 @@ function refreshInv() {
   FISH_ORDER.forEach(f => rem["fish:" + f] = Math.floor((G.fish && G.fish[f]) || 0));
   RECIPE_ORDER.forEach(d => rem["dish:" + d] = Math.floor((G.dishes && G.dishes[d]) || 0));
   rem["chest:cofre"] = (typeof chestsInBag === "function") ? chestsInBag() : 0;
-  ["plot", "tree", "rock"].forEach(t => rem["regalo:" + t] = (G.regalos && G.regalos[t]) || 0);   // 18/8: el ×N del regalo sin colocar
+  // (18/8: los regalos ya no están en la bolsa — viven en el Cobertizo)
   rem["tool:axe"] = toolCount("axe"); rem["tool:rod"] = toolCount("rod");   // herramientas apilables
   PICK_ORDER.forEach(id => rem["pick:" + id] = pickCount(id));
   let html = "";
@@ -361,7 +361,7 @@ function invCellClick(i) {
   else if (d.kind === "regalo") {   // 18/8: parcela / árbol / roca → elegir celda
     const sc = window.farmScene;
     if (!sc || !sc.iniciarColocar) { toast("Entrá a la granja para colocarlo"); return; }
-    if (((G.regalos && G.regalos[d.key]) || 0) <= 0) { toast("No te queda " + (typeof REGALO_NADA === "function" ? REGALO_NADA(d.key) : "ninguno")); return; }
+    if (((typeof cobertizoBolsa === "function" ? cobertizoBolsa()[d.key] : 0) || 0) <= 0) { toast("No te queda " + (typeof REGALO_NADA === "function" ? REGALO_NADA(d.key) : "ninguno")); return; }
     closeAllOv();
     sc.iniciarColocar("regalo", d.key);
   }
@@ -388,7 +388,7 @@ function hotItemExists(d) {
   if (d.kind === "fish") return ((G.fish && G.fish[d.key]) || 0) > 0;
   if (d.kind === "dish") return ((G.dishes && G.dishes[d.key]) || 0) > 0;
   if (d.kind === "plano") return !!(G.planos && G.planos[d.key]);   // 13/8: planos en la barra
-  if (d.kind === "regalo") return ((G.regalos && G.regalos[d.key]) || 0) > 0;   // 18/8
+  if (d.kind === "regalo") return ((typeof cobertizoBolsa === "function" ? cobertizoBolsa()[d.key] : 0) || 0) > 0;   // 18/8: el cobertizo
   return true;   // herramientas siempre están
 }
 // 16/8: el anillo azul de "pico equipado" solo cuando hay 2+ picos — con uno solo
@@ -453,7 +453,7 @@ function hotSelect(i) {
     else if (d.kind === "regalo") {   // 18/8
       const sc = window.farmScene;
       if (!sc || !sc.iniciarColocar) { toast("Entrá a la granja para colocarlo"); return; }
-      if (((G.regalos && G.regalos[d.key]) || 0) <= 0) { toast("No te queda " + (typeof REGALO_NADA === "function" ? REGALO_NADA(d.key) : "ninguno")); return; }
+      if (((typeof cobertizoBolsa === "function" ? cobertizoBolsa()[d.key] : 0) || 0) <= 0) { toast("No te queda " + (typeof REGALO_NADA === "function" ? REGALO_NADA(d.key) : "ninguno")); return; }
       closeAllOv();
       sc.iniciarColocar("regalo", d.key);
     }
