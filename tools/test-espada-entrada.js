@@ -14,7 +14,7 @@ ctx.window = ctx; ctx.globalThis = ctx; ctx.setTimeout = () => 0; vm.createConte
 vm.runInContext(fs.readFileSync("public/game/config.js", "utf8"), ctx);
 vm.runInContext(fs.readFileSync("public/game/state.js", "utf8") +
   "\n;this.X={ARM_DEF,ARM_ORDER,ARMA_ENTRADA,ARMAS_UNLOCK_COST,ARMAS_UNLOCK_PLATA,TUTO_STEPS,TUTO_CAPS," +
-  "TUTO_PERMISOS,KIT_INICIAL,CROP_DEF,CD,STAM_BASE,STAM_REGEN_SEG,STAM_COSTO};", ctx);
+  "TUTO_PERMISOS,KIT_INICIAL,CROP_DEF,CD,STAM_BASE,STAM_REGEN_SEG,STAM_COSTO,RECIPE_DEF,COOK_LVLS};", ctx);
 ["isOpen", "refreshInv", "syncSlots", "toast", "log", "refreshHud", "saveFarm", "celebrate", "sfx",
  "refreshForge", "refreshEquip", "applyCombatHp", "tutoRefresh", "tutoAviso"].forEach(f => { if (typeof ctx[f] !== "function") ctx[f] = () => {}; });
 const X = ctx.X, G = ctx.G, UI = fs.readFileSync("public/game/ui.js", "utf8");
@@ -54,7 +54,10 @@ console.log("\nEL TUTORIAL ENSEÑA LOS DOS GESTOS QUE HABÍA QUE ADIVINAR");
   ok("equiparla, también", ids.includes("equiparm"), "paso " + (ids.indexOf("equiparm") + 1));
   ok("entrar a la Zona Negra es un paso", ids.includes("portal"));
   /* Y una vez dentro hay algo que hacer: cruzar el portal y mirar no es un tutorial. */
-  ok("y el tutorial cierra cazando, no mirando", ids[ids.length - 1] === "kill",
+  /* El botín tenía que servir para algo: el tutorial cierra cocinando lo que cazaste. */
+  ok("el paso de caza pide el BOTÍN, no un número de muertes",
+    (X.TUTO_STEPS.find(s2 => s2.id === "hunt") || {}).res === "carne");
+  ok("y el tutorial cierra cocinando lo cazado", ids[ids.length - 1] === "estofado",
     X.TUTO_STEPS[X.TUTO_STEPS.length - 1].txt);
   /* El paso que se fue: "crafteá un Hacha" con 35 hachas ya en la mochila. */
   ok("ya no se pide craftear un hacha que el kit regala", !ids.includes("crafttool"),
@@ -69,13 +72,32 @@ console.log("\nNINGÚN PASO NUEVO DEJA AL JUGADOR ENCERRADO");
   /* El embudo del tutorial permite SOLO lo que el paso activo necesita. Si "forjá la espada" no
      dejara talar, quien llegue sin 5 de madera se queda sin salida — y el paso viene justo después
      de construir el Horno, que se lleva toda la madera. */
-  ["craftarm", "equiparm", "portal", "kill"].forEach(id => {
+  ["craftarm", "equiparm", "portal", "hunt", "estofado"].forEach(id => {
     const p = X.TUTO_PERMISOS[id] || [];
     ok("el paso " + id + " deja seguir jugando", p.includes("chop") || p.includes("plant"),
       p.length + " gestos permitidos");
   });
   ok("el último paso no encierra la granja", (X.TUTO_PERMISOS.portal || []).length >= 8,
     "entrar a pelear es una invitación, no un peaje");
+}
+
+console.log("\nCADA FUENTE DE COMIDA TIENE SU RECETA DE NIVEL 1");
+{
+  /* La huerta, la laguna y la caza son las tres formas de conseguir comida. Si una no tiene receta
+     en el nivel 1, su botín es un adorno hasta que la Cocina suba — y la caza estaba así: su
+     primera receta pedía Cocina 3, diez platos más allá. */
+  const R = X.RECIPE_DEF, uno = Object.keys(R).filter(k => (R[k].lvl || 1) === 1);
+  const deHuerta = uno.some(k => Object.keys(R[k].res || {}).some(i => X.CROP_DEF[i]));
+  const deLaguna = uno.some(k => R[k].fish);
+  const deCaza   = uno.some(k => (R[k].res || {}).carne);
+  ok("la huerta tiene la suya", deHuerta);
+  ok("la laguna tiene la suya", deLaguna);
+  ok("y la caza, también", deCaza, uno.filter(k => (R[k].res || {}).carne).map(k => R[k].label).join(", "));
+  /* Y que lo que pide sea alcanzable con lo que sueltan los bichos de entrada. */
+  const carneQuiere = ((uno.find(k => (R[k].res || {}).carne) && R[uno.find(k => (R[k].res || {}).carne)].res.carne) || 0);
+  const porBicho = (0.18 + 0.24 + 0.2 * 1.5) / 3;
+  ok("y se junta en unas " + Math.ceil(carneQuiere / porBicho) + " muertes", carneQuiere / porBicho <= 8,
+    "pide " + carneQuiere + " de carne · el Pantano suelta " + porBicho.toFixed(2) + " por bicho");
 }
 
 console.log("\nY LA CUENTA QUE MOTIVÓ TODO ESTO");

@@ -631,6 +631,10 @@ var TUTO_PERMISOS = {
   /* 19/8: "cazá 3 bichos" es el último paso del tutorial. Si su permiso fuera solo pelear, el
      jugador que muere o se queda sin estamina no podría ni plantar mientras se repone. */
   kill:        ["portal", "cook", "eat", "crafttool", "craftarm", "equiparm", "chop", "mine", "cultivar", "plant", "harvest", "buyseed", "sell", "fish", "obra"],
+  /* Los dos pasos que cierran el tutorial dejan el juego entero abierto: cazar depende del azar del
+     botín y de la estamina, así que el jugador tiene que poder seguir con su granja mientras. */
+  hunt:        ["portal", "cook", "eat", "chop", "mine", "cultivar", "plant", "harvest", "buyseed", "sell", "fish", "obra", "crafttool", "craftarm", "equiparm"],
+  estofado:    ["cook", "eat", "portal", "chop", "mine", "cultivar", "plant", "harvest", "buyseed", "sell", "fish", "obra"],
   kill5:       ["portal", "cook", "eat", "crafttool", "craftarm"],
   fish:        ["fish", "crafttool", "eat"],
   // Fixes.docx 14/8 #2: la cadena del Altar cruza media economía (oro → Pico de Oro →
@@ -1774,7 +1778,13 @@ const TUTO_STEPS = [
      economía). O sea que el que quiere jugar tiene dónde, y el que quiere estar tranquilo no
      pierde nada por no ir. Solo faltaba que alguien se lo dijera. */
   { id: "portal",   n: 1, txt: "Cruzá el portal del norte con la espada equipada",       target: "portal" },
-  { id: "kill",     n: 3, txt: "Cazá 3 bichos en el Pantano y volvé con el botín" },
+  /* 19/8: el paso pide la CARNE, no un número de muertes. Así el botín deja de ser un adorno —
+     es lo que cierra el tutorial— y de paso el jugador aprende que en la Zona el botín es azaroso:
+     la rata la suelta el 18% de las veces, el murciélago el 24%. De media son cuatro o cinco
+     bichos, unos 20 de estamina de los 100 que tiene. */
+  { id: "hunt", res: "carne", need: () => (RECIPE_DEF.estofado && RECIPE_DEF.estofado.res.carne) || 1,
+    txt: "Cazá en el Pantano hasta traer # de carne" },
+  { id: "estofado", n: 1, txt: "Cociná un Estofado con lo que cazaste", target: "cocina", panel: "ov-cocina", ui: "[data-cook='estofado']" },
   // (14/8, reversión del capataz: la cadena TERMINA acá — el tutorial enseña LO BÁSICO de
   //  la granja. Armas, Zona Negra, minería avanzada y Altar se aprenden jugando: sus
   //  planos caen por nivel y cada sistema se presenta solo.)
@@ -1793,7 +1803,7 @@ const TUTO_CAPS = [
   { id: "horno",    label: "El Horno de Piedra", pasos: ["place_horno", "wood", "stone", "build_horno"] },
   { id: "arma",     label: "Tu primera espada",  pasos: ["craftarm", "equiparm"] },
   { id: "cocina",   label: "La Cocina",          pasos: ["place_cocina", "woodc", "stonec", "build_cocina", "cook", "eat"] },
-  { id: "zona",     label: "La Zona Negra",      pasos: ["portal", "kill"] },
+  { id: "zona",     label: "La Zona Negra",      pasos: ["portal", "hunt", "estofado"] },
 ];
 
 function capEstado(cap) {   // "hecho" | "activo" | "pendiente" (por el paso más avanzado de la cadena)
@@ -1962,6 +1972,10 @@ function tutoHecho(st) {
     else if (st.id === "build_altar")  hecho = !!(G.built && G.built.altar);
     else if (st.id === "crafttool") hecho = !!(G.built && G.built.horno);   // si ya construyó, el hacha quedó atrás
     else if (st.id === "cook")      hecho = (G.skills && G.skills.cooking > 0);
+    /* 19/8: el paso del Estofado no tiene evento propio —tutoEvent("cook") ya lo usa el paso de la
+       Papa Asada— así que se detecta por el plato en la bolsa o por haberlo cocinado alguna vez. */
+    else if (st.id === "estofado")  hecho = ((G.dishes && G.dishes.estofado) || 0) > 0 ||
+                                            (typeof statGet === "function" && statGet("cocinar", "estofado") > 0);
     else if (st.id === "eat")       hecho = (G.skills && G.skills.cooking > 0) && (G.buffs || []).length > 0;
     else if (st.id === "unlockarm") hecho = !!G.armasUnlocked;
     else if (st.id === "craftarm")  hecho = Object.keys(G.weapons || {}).length > 0;
@@ -3630,7 +3644,14 @@ const RECIPE_DEF = {
   pescado_asado: { label:"Pescado asado", emoji:"🐟", sprite:"dish_pescado_asado", fish:{comun:1}, res:{}, lvl:1,   // 16/8: sin madera (auditoría E)
     heal:30, buff:{type:"yield",label:"Cosecha +10%",mult:1.10,dur:90}, cookS:240, xp:8, plata:15,
     desc:"Cura 30 · Cosecha +10% (1 min 30 s)" },
-  estofado: { label:"Estofado de carne", emoji:"🍲", sprite:"dish_estofado", res:{carne:2, papa:1, madera:1}, lvl:3,
+  /* CADA FUENTE DE COMIDA, SU RECETA DE NIVEL 1 (19/8, dirección: "el botín tiene que servir para
+     algo"). La huerta tiene la Papa Asada y la laguna el Pescado asado, las dos en el nivel 1. La
+     CAZA no tenía ninguna: su primera receta era este Estofado en Cocina 3, o sea a diez platos de
+     distancia. Resultado medido: matabas bichos, traías carne y no podías hacer nada con ella
+     durante días. Es la misma regla del primer escalón que puso la Espada de Madera fuera del
+     peaje. Baja a nivel 1 y pide UNA carne — tres bichos del Pantano dan 0,72 de media, así que
+     dos de carne era pedir nueve muertes para un plato. */
+  estofado: { label:"Estofado de carne", emoji:"🍲", sprite:"dish_estofado", res:{carne:1, papa:1, madera:1}, lvl:1,
     heal:60, buff:{type:"cd",label:"Enfriamientos -15%",mult:0.85,dur:90}, cookS:300, xp:12, plata:30,
     desc:"Cura 60 · Enfriamientos -15% (1 min 30 s)" },
   banquete: { label:"Banquete del granjero", emoji:"🍗", sprite:"dish_banquete", fish:{raro:1}, res:{carne:2, calabaza:1, madera:1}, lvl:6,
