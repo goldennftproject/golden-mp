@@ -628,7 +628,9 @@ var TUTO_PERMISOS = {
      hasta entrar a pelear — justo al revés de lo que queremos: entrar tiene que ser una invitación,
      no un peaje. Se abre el juego entero. */
   portal:      ["portal", "cook", "eat", "chop", "mine", "cultivar", "plant", "harvest", "buyseed", "sell", "crafttool", "craftarm", "equiparm", "fish", "obra"],
-  kill:        ["portal", "cook", "eat", "crafttool", "craftarm"],
+  /* 19/8: "cazá 3 bichos" es el último paso del tutorial. Si su permiso fuera solo pelear, el
+     jugador que muere o se queda sin estamina no podría ni plantar mientras se repone. */
+  kill:        ["portal", "cook", "eat", "crafttool", "craftarm", "equiparm", "chop", "mine", "cultivar", "plant", "harvest", "buyseed", "sell", "fish", "obra"],
   kill5:       ["portal", "cook", "eat", "crafttool", "craftarm"],
   fish:        ["fish", "crafttool", "eat"],
   // Fixes.docx 14/8 #2: la cadena del Altar cruza media economía (oro → Pico de Oro →
@@ -1771,7 +1773,8 @@ const TUTO_STEPS = [
      seguido, y la estamina ya la regula sola (120 bichos al día, unos 30 minutos, el 1,7% de la
      economía). O sea que el que quiere jugar tiene dónde, y el que quiere estar tranquilo no
      pierde nada por no ir. Solo faltaba que alguien se lo dijera. */
-  { id: "portal",   n: 1, txt: "Entrá a la Zona Negra: ahí no hay relojes que esperar", target: "portal" },
+  { id: "portal",   n: 1, txt: "Cruzá el portal del norte con la espada equipada",       target: "portal" },
+  { id: "kill",     n: 3, txt: "Cazá 3 bichos en el Pantano y volvé con el botín" },
   // (14/8, reversión del capataz: la cadena TERMINA acá — el tutorial enseña LO BÁSICO de
   //  la granja. Armas, Zona Negra, minería avanzada y Altar se aprenden jugando: sus
   //  planos caen por nivel y cada sistema se presenta solo.)
@@ -1790,7 +1793,7 @@ const TUTO_CAPS = [
   { id: "horno",    label: "El Horno de Piedra", pasos: ["place_horno", "wood", "stone", "build_horno"] },
   { id: "arma",     label: "Tu primera espada",  pasos: ["craftarm", "equiparm"] },
   { id: "cocina",   label: "La Cocina",          pasos: ["place_cocina", "woodc", "stonec", "build_cocina", "cook", "eat"] },
-  { id: "zona",     label: "La Zona Negra",      pasos: ["portal"] },
+  { id: "zona",     label: "La Zona Negra",      pasos: ["portal", "kill"] },
 ];
 
 function capEstado(cap) {   // "hecho" | "activo" | "pendiente" (por el paso más avanzado de la cadena)

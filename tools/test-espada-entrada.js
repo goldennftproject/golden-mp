@@ -52,7 +52,10 @@ console.log("\nEL TUTORIAL ENSEÑA LOS DOS GESTOS QUE HABÍA QUE ADIVINAR");
   const ids = X.TUTO_STEPS.map(s => s.id);
   ok("forjar el arma es un paso", ids.includes("craftarm"), "paso " + (ids.indexOf("craftarm") + 1) + " de " + ids.length);
   ok("equiparla, también", ids.includes("equiparm"), "paso " + (ids.indexOf("equiparm") + 1));
-  ok("y entrar a la Zona Negra cierra el tutorial", ids[ids.length - 1] === "portal");
+  ok("entrar a la Zona Negra es un paso", ids.includes("portal"));
+  /* Y una vez dentro hay algo que hacer: cruzar el portal y mirar no es un tutorial. */
+  ok("y el tutorial cierra cazando, no mirando", ids[ids.length - 1] === "kill",
+    X.TUTO_STEPS[X.TUTO_STEPS.length - 1].txt);
   /* El paso que se fue: "crafteá un Hacha" con 35 hachas ya en la mochila. */
   ok("ya no se pide craftear un hacha que el kit regala", !ids.includes("crafttool"),
     "el kit trae " + X.KIT_INICIAL.axe + " hachas");
@@ -66,7 +69,7 @@ console.log("\nNINGÚN PASO NUEVO DEJA AL JUGADOR ENCERRADO");
   /* El embudo del tutorial permite SOLO lo que el paso activo necesita. Si "forjá la espada" no
      dejara talar, quien llegue sin 5 de madera se queda sin salida — y el paso viene justo después
      de construir el Horno, que se lleva toda la madera. */
-  ["craftarm", "equiparm", "portal"].forEach(id => {
+  ["craftarm", "equiparm", "portal", "kill"].forEach(id => {
     const p = X.TUTO_PERMISOS[id] || [];
     ok("el paso " + id + " deja seguir jugando", p.includes("chop") || p.includes("plant"),
       p.length + " gestos permitidos");
