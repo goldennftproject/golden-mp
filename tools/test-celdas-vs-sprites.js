@@ -166,5 +166,90 @@ console.log("\nLAS DOS REGLAS DE LAS ROCAS TIENEN QUE DECIR LO MISMO");
   ok("dibujo y mapa coinciden en todas las rocas", !mal.length, mal.join(" · ") || "una sola verdad");
 }
 
+/* ===================================================================================
+   EL GUARDADO HOSTIL (20/8, CUARTA vuelta)
+   Los bloques de arriba prueban una cuenta NUEVA, y por eso daban verde mientras dirección seguía
+   viendo celdas oscuras en SU partida. Una partida vieja trae cosas que una cuenta nueva no tiene:
+   edificios marcados como construidos por migraciones antiguas, posiciones en G.layout, obras a
+   medio hacer, cofres colocados. Cada una de esas seis fuentes tenía su forma de desfasarse.
+   Acá se monta el guardado más sucio que se puede montar y se vuelve a hacer LA pregunta. Si el
+   mapa sigue deduciendo en vez de mirar, esto lo delata. */
+console.log("\nEL GUARDADO SUCIO: UNA PARTIDA VIEJA, CON DE TODO");
+{
+  /* Se ensucia el estado ANTES de arrancar una escena nueva. */
+  G.built = { store: false, horno: true, cocina: true, altar: true };   // migración vieja: los daba por hechos
+  G.obras = { establo: { col: 6, row: 6 } };                            // una obra colocada
+  G.layout = {};
+  GF.WORLD_OBJECTS.forEach((o, i) => { if (o.type === "tree" || o.type === "rock") G.layout[i] = { cx: o.cx, by: o.by }; });
+  G.chests = []; G.decos = []; G.treesOpen = [0]; G.rocksOpen = [0]; G.plotsOwned = 3;
+  GF.ocupCambio();
+
+  const esc2 = new ctx.FarmScene();
+  esc2.add = new Proxy({}, { get: (t, k) => (...a) => enc(k, []) });
+  esc2.textures = esc.textures; esc2.cameras = esc.cameras; esc2.scale = esc.scale;
+  esc2.tweens = esc.tweens; esc2.input = esc.input; esc2.events = esc.events;
+  esc2.time = esc.time; esc2.anims = esc.anims; esc2.sound = esc.sound;
+  esc2.physics = esc.physics; esc2.game = esc.game;
+  let ok2 = true;
+  try { esc2.create(); } catch (e) { ok2 = false; console.log("      (create: " + e.message + ")"); }
+  ok("la escena arranca con el guardado sucio", ok2);
+
+  /* Y ésta es la prueba de fuego: con la escena viva, el mapa tiene que salir de lo que se ve. */
+  ctx.window.farmScene = esc2; GF.scene = "farm"; GF.ocupCambio();
+  const cub2 = new Set();
+  (esc2.objs || []).forEach(o => {
+    if (o.type === "excav") return;
+    if (o.oculto || (o.sprite && o.sprite.visible === false)) return;
+    const an = Math.max(1, Math.round((o.w || T) / T));
+    const lc = Math.round((o.cx - an * T / 2) / T), br = Math.round(o.by / T);
+    for (let k = 0; k < an; k++) cub2.add((lc + k) + "," + (br - 1));
+  });
+  for (let i = 0; i < GF.parcelasTuyas(); i++) { const p = GF.PLOTS[i]; if (p) cub2.add(p.col + "," + p.row); }
+  const m2 = GF.ocupacion();
+  const huerf2 = [];
+  m2.forEach((v, k) => {
+    if (v.tipo === "laguna" || v.tipo === "parcela") return;
+    if (!enVista(k)) return;
+    if (!cub2.has(k)) huerf2.push(k + " → " + v.tipo);
+  });
+  ok("tampoco con el guardado sucio hay celdas oscuras vacías", !huerf2.length,
+    huerf2.join(" · ") || m2.size + " celdas, todas con su dibujo");
+
+  /* Y la otra dirección: que un edificio que SÍ se ve reserve lo suyo. */
+  const inv2 = [...cub2].filter(k => !m2.has(k) && enVista(k));
+  ok("y todo lo que se ve reserva su celda", !inv2.length, inv2.join(" · ") || "las dos listas coinciden");
+
+  /* ¿Y este test tiene dientes? Se apaga la regla nueva —se le esconde la escena al mapa— y se
+     vuelve a contar. Si sin ella salen celdas huérfanas, queda demostrado que es la regla la que
+     arregla el fallo y no una casualidad del guardado que monté. Un test que pasa igual con el
+     arreglo y sin él no prueba nada, que es exactamente lo que me pasó las tres veces anteriores. */
+  ctx.window.farmScene = null; GF.ocupCambio();
+  const mViejo = GF.ocupacion();
+  const sinRegla = [];
+  mViejo.forEach((v, k) => {
+    if (v.tipo === "laguna" || v.tipo === "parcela") return;
+    if (!enVista(k)) return;
+    if (!cub2.has(k)) sinRegla.push(k + " → " + v.tipo);
+  });
+  ok("y sin la regla nueva el fallo VUELVE (o sea que es ella la que lo arregla)", sinRegla.length > 0,
+    sinRegla.length + " celdas huérfanas al deducir en vez de mirar: " + sinRegla.slice(0,5).join(" · "));
+  GF.ocupCambio();
+}
+
+console.log("\nY EL SOMBREADO SE REHACE CUANDO EL MAPA CAMBIA");
+{
+  /* El otro fallo de la misma familia: dibujarOcupadas tenía SU PROPIA firma de caché, hecha a
+     mano con siete cosas, y no incluía built, obras, layout ni el contador del mapa. El sombreado
+     se pintaba una vez y se quedaba viejo. Ahora usa la firma del mapa. */
+  const FARM = fs.readFileSync("public/game/farm.js", "utf8");
+  const fn = FARM.slice(FARM.indexOf("dibujarOcupadas() {"), FARM.indexOf("finColocar() {"));
+  ok("el sombreado usa la firma del mapa, no una propia", /const firma = GF\.ocupFirma\(\);/.test(fn));
+  ok("y no quedan firmas escritas a mano", !/ocupFirma = GF\.C0 \+/.test(fn));
+  /* Y la firma del mapa tiene que enterarse de si hay escena: si no, el mapa calculado en el
+     arranque (sin escena) se queda cacheado para toda la partida. */
+  const CFG = fs.readFileSync("public/game/config.js", "utf8");
+  ok("la firma del mapa mira si la escena está viva", /const hayEsc =/.test(CFG));
+}
+
 console.log(fallos ? "\n  ✗ " + fallos + " fallas\n" : "\n  ✓ lo que ocupa una celda se ve, y lo que se ve ocupa su celda\n");
 process.exit(fallos ? 1 : 0);

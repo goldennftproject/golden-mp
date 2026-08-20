@@ -720,7 +720,11 @@ GF._ocupVer = 0;
 GF.ocupCambio = function () { GF._ocupVer++; };   // lo llama quien mueva o coloque algo
 GF.ocupFirma = function () {
   const g = (typeof G !== "undefined" && G) || {};
-  return [GF._ocupVer, GF.C0, GF.C1, GF.R0, GF.R1, g.expansiones || 0,
+  /* 20/8: si la escena está viva es ELLA la que decide qué ocupa, así que la firma tiene que
+     enterarse de cuándo aparece o desaparece. Sin esto, el mapa calculado durante el arranque
+     —cuando todavía no había escena— se quedaba cacheado para toda la partida. */
+  const hayEsc = (typeof window !== "undefined" && window.farmScene) ? 1 : 0;
+  return [hayEsc, GF._ocupVer, GF.C0, GF.C1, GF.R0, GF.R1, g.expansiones || 0,
     (g.treesOpen || []).length, (g.rocksOpen || []).length, g.plotsOwned || 0,
     (g.decos || []).length, (g.chests || []).length,
     Object.keys(g.layout || {}).length, Object.keys(g.obras || {}).length,
@@ -731,19 +735,50 @@ GF.ocupacion = function () {
   if (GF._ocupMapa && GF._ocupFirma === f) return GF._ocupMapa;
   const T2 = GF.TILE, m = new Map();
   const poner = (c, r, que) => { const k = c + "," + r; if (!m.has(k)) m.set(k, que); };
-  // 1) objetos del mundo que están PRESENTES, con su ancho en celdas
+  /* 1) OBJETOS DEL MUNDO — Y LA REGLA SE INVIERTE (20/8, dirección, CUARTO aviso)
+     "Son celdas oscuras que arriba de ellas no tienen ningún objeto."
+     Llevo tres arreglos y sigue pasando, así que el problema no es cuál de las causas encontré:
+     es que este mapa DEDUCÍA quién existe en vez de MIRARLO. Reconstruía la respuesta a partir de
+     G.built, G.obras, G.layout, treesOpen, rocksOpen y las cajas de colisión — seis fuentes, cada
+     una con su forma de estar desfasada— cuando a dos metros de aquí la escena ya tiene la lista
+     de sprites y sabe cuáles están visibles. Cada vez que arreglé una de las seis, quedaban cinco.
+
+     A partir de ahora, SI LA ESCENA ESTÁ VIVA, MANDA LA ESCENA: una celda se marca ocupada solo si
+     el objeto que la ocupa tiene un sprite dibujado en pantalla. Lo que no se ve, no ocupa. No es
+     una comprobación más: es la que hace imposibles a todas las demás, porque ya no hay forma de
+     que el mapa y el dibujo discrepen — son la misma cosa preguntada una vez.
+     `objetoPresente` se queda como respaldo para cuando no hay escena (el arranque, los tests, el
+     Bosque), y ahí sigue valiendo la regla vieja: ante la duda, presente. */
+  /* `window.farmScene` sobrevive al viaje al Bosque, así que además se exige estar EN la granja:
+     una escena apagada tiene sprites destruidos cuya visibilidad ya no significa nada. */
+  const esc = (typeof window !== "undefined" && window.farmScene && GF.scene === "farm") ? window.farmScene : null;
+  let vivos = null;
+  if (esc && Array.isArray(esc.objs)) {   // índice por posición en WORLD_OBJECTS, para no buscar en bucle
+    vivos = new Map();
+    esc.objs.forEach(o => { if (typeof o.i === "number") vivos.set(o.i, o); });
+  }
+  const seVe = (o) => !o.oculto && (!o.sprite || o.sprite.visible !== false);
   for (let i = 0; i < GF.WORLD_OBJECTS.length; i++) {
-    const col = GF.COLLISIONS[i];
-    if (col && !GF.objetoPresente(col)) continue;
     const o = GF.WORLD_OBJECTS[i];
-    const an = Math.max(1, Math.ceil(o.wCells || 1));
     let lc = o.leftCol, br = o.baseRow;
-    const lp = (typeof G !== "undefined" && G && G.layout) ? G.layout[i] : null;
-    if (lp) { lc = Math.round((lp.cx - an * T2 / 2) / T2); br = Math.round(lp.by / T2); }
-    else {
-      const ob = (typeof G !== "undefined" && G && G.obras) ? G.obras[o.type] : null;
-      if (ob && typeof ob.col === "number") { lc = ob.col; br = ob.row + 1; }
+    if (vivos) {
+      /* La escena manda: existe si tiene sprite a la vista, y está DONDE lo pintó la escena. */
+      const v = vivos.get(i);
+      if (!v || !seVe(v)) continue;
+      const an0 = Math.max(1, Math.ceil(o.wCells || 1));
+      lc = Math.round((v.cx - an0 * T2 / 2) / T2); br = Math.round(v.by / T2);
+    } else {
+      const col = GF.COLLISIONS[i];
+      if (col && !GF.objetoPresente(col)) continue;
+      const lp = (typeof G !== "undefined" && G && G.layout) ? G.layout[i] : null;
+      const an0 = Math.max(1, Math.ceil(o.wCells || 1));
+      if (lp) { lc = Math.round((lp.cx - an0 * T2 / 2) / T2); br = Math.round(lp.by / T2); }
+      else {
+        const ob = (typeof G !== "undefined" && G && G.obras) ? G.obras[o.type] : null;
+        if (ob && typeof ob.col === "number") { lc = ob.col; br = ob.row + 1; }
+      }
     }
+    const an = Math.max(1, Math.ceil(o.wCells || 1));
     for (let k = 0; k < an; k++) poner(lc + k, br - 1, { tipo: o.type, i, ancho: an, leftCol: lc, fila: br - 1 });
   }
   // 2) las parcelas que YA son tuyas (una que no es tuya no ocupa nada)

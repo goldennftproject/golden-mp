@@ -2204,13 +2204,19 @@ class FarmScene extends Phaser.Scene {
      faltaba, no hace falta arte nuevo, y desaparece en cuanto soltás. */
   dibujarOcupadas() {
     if (!this.placing) { if (this.ocupG) this.ocupG.setVisible(false); return; }
-    if (this.ocupG && this.ocupFirma === (GF.C0 + "," + GF.C1 + "," + (G.expansiones || 0) + "," + (G.treesOpen || []).length + "," + (G.rocksOpen || []).length + "," + (G.plotsOwned || 0) + "," + (G.decos || []).length)) {
-      this.ocupG.setVisible(true); return;
-    }
+    /* 20/8 — LA FIRMA ERA SUYA Y ESTABA INCOMPLETA. Se armaba a mano con siete cosas y NO incluía
+       G.built, G.obras, G.layout, los cofres ni el contador de cambios del mapa. O sea que el
+       sombreado se dibujaba una vez y se quedaba: colocabas un edificio, movías algo en modo
+       edición o se limpiaba un fantasma, y seguías viendo el sombreado viejo. Dos listas del mismo
+       dato, otra vez, y la de aquí era la peor de las dos.
+       Ahora se usa la firma DEL MAPA: si el mapa cambia, el dibujo se rehace, y no hay manera de
+       que se separen. */
+    const firma = GF.ocupFirma();
+    if (this.ocupG && this.ocupFirma === firma) { this.ocupG.setVisible(true); return; }
     const T = GF.TILE;
     if (!this.ocupG) this.ocupG = this.add.graphics().setDepth(99997);
     this.ocupG.clear().setVisible(true);
-    this.ocupFirma = GF.C0 + "," + GF.C1 + "," + (G.expansiones || 0) + "," + (G.treesOpen || []).length + "," + (G.rocksOpen || []).length + "," + (G.plotsOwned || 0) + "," + (G.decos || []).length;
+    this.ocupFirma = firma;
     const t = GF.terreno();
     for (let r = t.r0; r < t.r1; r++) for (let c = t.c0; c < t.c1; c++) {
       if (!GF.tuyo(c, r) || GF.enCerca(c, r)) continue;         // la cerca ya se ve sola
