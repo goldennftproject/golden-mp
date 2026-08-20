@@ -739,6 +739,34 @@ function tutoSubPlata(prefijo, meta) {
   return { plata: true, meta: meta || 0, txt: prefijo + "vendé lo que tengas suelto en el Mercado (el guardia protege lo del objetivo)",
     target: "market", panel: "ov-market", ui: "#shop-sell", permite: ["plant", "harvest", "sell", "buyseed", "plotunlock", "chop", "mine"] };
 }
+/* ============ "MIENTRAS TANTO…" (19/8, dirección) ==================================
+   "El tutorial es muy estático y te hace hacer solo una cosa a la vez, cuando el jugador
+    probablemente lo haga todo a la vez."
+   Lo primero que hice fue ir a mirar si el juego lo IMPEDÍA, y no: el 14/8 se decidió que los
+   objetivos son una guía opcional, `tutoPermite` devuelve siempre sí y la tabla TUTO_PERMISOS
+   quedó como documentación. O sea que talar mientras crece la papa ya se puede — lo que faltaba
+   es que alguien se lo dijera. El cartel enseña un objetivo por vez y el jugador nuevo deduce,
+   razonablemente, que eso es todo lo que hay para hacer.
+   Esta línea aparece SOLO cuando el paso activo está esperando un reloj, y señala algo que se
+   puede hacer ahora mismo y que no le rompe el objetivo. Es una sugerencia, no una tarea: no
+   cuenta para nada ni bloquea nada. */
+function tutoMientras() {
+  const st = tutoActivo(); if (!st) return null;
+  const plots = Array.isArray(G.plots) ? G.plots : [];
+  const creciendo = plots.some(p => p && p.state === "growing");
+  const listo = plots.some(p => p && p.state === "ready");
+  /* Si hay algo cosechable o el paso no depende de una espera, no se dice nada: el jugador ya
+     tiene qué hacer y el cartel no debe competir consigo mismo. */
+  if (!creciendo || listo) return null;
+  const cavados = ((G.excav && G.excav.hechos) || []).length;
+  if (cavados < (typeof EXCAV_POR_DIA !== "undefined" ? EXCAV_POR_DIA : 3))
+    return "Mientras crecen: cavá un montículo de tierra 🪱";
+  if (typeof toolCount === "function" && toolCount("axe") > 0)
+    return "Mientras crecen: andá talando y picando 🪓";
+  if (typeof toolCount === "function" && toolCount("rod") > 0 && (G.res && (G.res.lombriz || 0) > 0))
+    return "Mientras crecen: tirá la caña en la laguna 🎣";
+  return "Mientras crecen: date una vuelta por la granja";
+}
 function tutoSub() {
   const st = tutoActivo(); if (!st) return null;
   // paso "juntá plata": si no hay NADA cosechado para vender, guiar al eslabón anterior

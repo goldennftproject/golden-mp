@@ -43,17 +43,21 @@ console.log("\nCADA PASO SE PUEDE CUMPLIR DE ALGUNA MANERA");
 
 console.log("\nNINGÚN PASO ENCIERRA LA GRANJA");
 {
-  /* La regla: todo paso tiene que dejar al menos UNA forma de producir. Los cuatro primeros son la
-     excepción legítima —el cuarteto de enseñanza del bucle, que a propósito solo permite comprar,
-     plantar, cosechar y vender— y por eso se miden aparte. */
-  const ENSENANZA = ["kit", "buyseed", "plant", "harvest", "sell"];
-  X.TUTO_STEPS.forEach((s, i) => {
-    if (ENSENANZA.includes(s.id)) return;
-    const p = X.TUTO_PERMISOS[s.id];
-    if (!p) { ok("paso " + (i + 1) + " · " + s.id + " tiene permisos declarados", false, "sin entrada en TUTO_PERMISOS"); return; }
-    const produce = ["chop", "mine", "plant", "harvest", "cultivar", "obra"].some(g => p.includes(g));
-    ok("paso " + (i + 1) + " · " + s.id, produce, p.length + " gestos");
-  });
+  /* 19/8 — ESTE BLOQUE MEDÍA UNA TABLA MUERTA, y conviene que quede escrito.
+     Recorría TUTO_PERMISOS paso por paso como si restringiera algo. No restringe: el 14/8 se
+     decidió que los objetivos son una guía opcional, `tutoPermite` devuelve SIEMPRE true y la
+     tabla quedó como documentación de qué acción enseña cada paso. O sea que yo estaba
+     "verificando" con mucho detalle algo que no tiene ningún efecto sobre el juego — y de paso
+     me llevó a arreglar el permiso del paso "comer", que tampoco hacía nada.
+     Lo que hay que vigilar es la FUNCIÓN, no la tabla: si alguien vuelve a enchufar el embudo,
+     el juego pasa a bloquear talar mientras crece la papa y ahí sí hay un problema.
+     La comprobación fina de cada paso vive ahora en test-tutorial-paralelo.js. */
+  ok("los objetivos siguen siendo una guía y no un embudo",
+    /function tutoPermite\(tag\) \{ return true; \}/.test(SRC),
+    "tutoPermite no bloquea ningún gesto");
+  ok("y la tabla sigue documentando qué enseña cada paso",
+    Object.keys(X.TUTO_PERMISOS).length >= X.TUTO_STEPS.length - 5,
+    Object.keys(X.TUTO_PERMISOS).length + " entradas para " + X.TUTO_STEPS.length + " pasos");
 }
 
 console.log("\nLA CADENA NO SE REPITE NI RETROCEDE");

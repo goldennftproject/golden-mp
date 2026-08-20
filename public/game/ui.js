@@ -927,6 +927,19 @@ function tutoRefresh() {
   const need = tutoNeed(st);
   document.getElementById("tuto-n").textContent = sub ? "" : (st.res ? " " + Math.min(tutoTiene(st), need) + "/" + need
     : (st.n > 1 ? " " + Math.min(G.tuto.n || 0, st.n) + "/" + st.n : ""));
+  /* 19/8: la línea de "mientras tanto". Se crea sola la primera vez —así no hay que tocar el
+     index.html— y solo aparece cuando el paso activo está esperando un reloj. Va debajo del
+     objetivo y en otro tono: es una sugerencia, no una orden. */
+  {
+    const hint = (!sub && typeof tutoMientras === "function") ? tutoMientras() : null;
+    let m = document.getElementById("tuto-mientras");
+    if (hint) {
+      if (!m) { m = document.createElement("div"); m.id = "tuto-mientras";
+        m.style.cssText = "font-size:12px;font-weight:700;color:#ffe9ac;opacity:.85;margin-top:2px";
+        el.appendChild(m); }
+      m.textContent = hint; m.style.display = "block";
+    } else if (m) m.style.display = "none";
+  }
   tutoHighlight();
 }
 // 13/8 (audio): la guía DENTRO de las interfaces es una FLECHA dorada (la misma estética
