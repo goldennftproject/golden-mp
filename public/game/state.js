@@ -1332,10 +1332,35 @@ function expansionCostos() {
   const H0 = 2, HN = 30;                        // horas de granja que cuesta la 1ª y la última
   const tramo = t => t < 0.20 ? [] : t < 0.40 ? ["bronce"] : t < 0.60 ? ["bronce", "hierro"]
     : t < 0.75 ? ["hierro", "oro"] : t < 0.90 ? ["oro", "diamante"] : ["diamante", "netherita"];
+  /* ============ LAS DOS PRIMERAS SE MIDEN CONTRA OTRO RELOJ (20/8, dirección) =========
+     "¿El coste de las expansiones es el correcto, o había que abaratarlo?"
+     Medido con el jugador de tres sesiones al día, comparando el día en que se ABRE cada expansión
+     con el día en que se puede PAGAR:
+
+       #1 (nivel 3):  se abre el día 0,0 · se paga el 1,4  →  1,4 días mirando el lote
+       #2 (nivel 5):  se abre el día 1,0 · se paga el 3,1  →  2,1 días
+       #3 (nivel 7):  se abre el día 4,0 · se paga el 4,5  →  medio día
+       #4 en adelante: el material está listo mucho antes que el nivel — manda el nivel, y bien.
+
+     O sea que el coste global NO estaba mal: de la cuarta en adelante ni se nota, porque subir de
+     nivel tarda entre 9 y 53 días y acopiar tarda entre 3 y 6. El problema era solo del arranque,
+     y ahí era grave: el nivel 3 llega a los DOCE MINUTOS y el juego anuncia "recompensa del nivel
+     3: expansión 1" — le prometía al jugador nuevo algo que no podía tomar hasta el día siguiente.
+
+     Y hay una razón matemática por la que esto no se arregla tocando la curva: si se hace la cuenta,
+     los días de acopio salen ≈ 0,71 × horas y NO dependen del número de expansión (el coste sube
+     con las celdas y la producción también, y se cancelan). Bajar la curva entera abarataría las
+     dieciséis por igual para arreglar dos.
+
+     Así que estas dos llevan su hora escrita a mano. Es la única excepción a "todo se deriva" del
+     modelo, y va con su motivo: las dos primeras no se miden contra el ancla —contra la granja que
+     tenés— sino contra el reloj de alguien que empezó hace un rato y a quien el juego ya le
+     prometió terreno. El resto de la tabla no se toca. */
+  const HORAS_ARRANQUE = [0.7, 2.0];
   let celdas = 9;                               // 3 parcelas + 3 árboles + 3 rocas de arranque
   for (let i = 0; i < EXPANSION_MAX; i++) {
     const t = i / (EXPANSION_MAX - 1);
-    const horas = H0 + (HN - H0) * Math.pow(t, 0.9);
+    const horas = (HORAS_ARRANQUE[i] != null) ? HORAS_ARRANQUE[i] : H0 + (HN - H0) * Math.pow(t, 0.9);
     const plata = horas * celdas * ANCLA;
     const mins = tramo(t);
     const partes = [["madera", mins.length ? 0.30 : 0.55], ["piedra", mins.length ? 0.30 : 0.45]]

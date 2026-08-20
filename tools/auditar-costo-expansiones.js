@@ -52,6 +52,33 @@ X.EXPANSION_COSTO.forEach((c, i) => {
       dias.toFixed(1).padStart(6) + " días" + "".padEnd(22) + cuello +
       " (" + c[cuello] + " y producís " + (pd[cuello] || 0).toFixed(1) + "/día)");
 });
+/* 20/8 — LA MEDIDA QUE FALTABA: NO ES CUÁNTO CUESTA, ES CUÁNTO ESPERÁS MIRÁNDOLA.
+   Dirección: "¿el coste de las expansiones es el correcto o había que abaratarlo?"
+   Este auditor contestaba con "días de acopio", y con eso parecía que todo estaba bien: de 1,4 a
+   11,3 días, dentro del objetivo. Pero el jugador no vive el acopio en el vacío: vive la distancia
+   entre el día en que el juego le ABRE la expansión (y se la anuncia como recompensa del nivel) y
+   el día en que puede pagarla. Esa distancia es la que duele, y no se veía.
+   Los días de nivel salen del simulador de partida a 3 sesiones/día. Si mañana cambia la curva de
+   XP, esta tabla se queda vieja — por eso están escritos aquí con su fecha y no escondidos. */
+const NIVEL_DIA = { 3: 0.0, 5: 1.0, 7: 4.0, 9: 9.0, 12: 17.7, 15: 27.7, 18: 38.7, 21: 53.0 };
+console.log("\n  la espera de verdad: del día que se abre al día que se puede pagar\n");
+console.log("   #  nivel   se abre   se paga   ESPERA");
+let peorEspera = 0;
+X.EXPANSION_COSTO.forEach((c, i) => {
+  const L = X.FARM_EXPANSION[i], abre = NIVEL_DIA[L];
+  if (abre == null) return;   // más allá del nivel 21 el simulador no llega: no se inventa
+  const pd = prodDia(L, i);
+  let ac = 0; for (const k in c) { const d = c[k] / (pd[k] || 0.0001); if (d > ac) ac = d; }
+  const esp = Math.max(0, ac - abre);
+  peorEspera = Math.max(peorEspera, esp);
+  console.log("  " + String(i + 1).padStart(2) + "     " + String(L).padStart(2) +
+    "   " + abre.toFixed(1).padStart(6) + "   " + Math.max(abre, ac).toFixed(1).padStart(6) +
+    "   " + (esp > 0.4 ? esp.toFixed(1) + " días" : "—  manda el nivel"));
+});
+console.log("\n  " + (peorEspera > 1.5
+  ? "!! la peor espera es de " + peorEspera.toFixed(1) + " días: el juego promete terreno que no se puede tomar"
+  : "✓ ninguna espera pasa de día y medio — el nivel es la puerta, no el material"));
+
 console.log("\n  más barata " + mejor.toFixed(1) + " días · más cara " + peor.toFixed(1) +
   " días · media " + (suma / 16).toFixed(1) + " · relación x" + (peor / mejor).toFixed(1));
 console.log("\n  (se mide por el recurso que MÁS tarda: de nada sirve tener la madera si falta el oro)");
