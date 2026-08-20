@@ -49,7 +49,13 @@ function expansionCostosSeguro() { try { ctx.expansionCostos(); } catch (e) {} }
    próxima vez. */
 var MIN_SESION = 12 * 60;
 
-function simular(sesionesDia, tope, minSesion, cargasTope, loteOn) {
+function simular(sesionesDia, tope, minSesion, cargasTope, loteOn, doma) {
+  /* LA DOMA (idea de dirección, 19/8): un bicho domado ATIENDE la granja mientras no estás. Ojo con
+     lo que hace exactamente, porque de eso depende que el ancla aguante: NO produce nada nuevo —
+     RECOGE lo que el nodo ya produjo y que hoy se tira. Su techo es, por construcción, el ancla:
+     ni con cien bichos podés sacar más de lo que tus celdas dan.
+     Se le paga con una parte de lo que junta (doma.corte), que es el sumidero, y no aparece hasta
+     cierto nivel de granja (doma.desde), porque al principio rompería el aprendizaje del bucle. */
   const dur = minSesion == null ? MIN_SESION : minSesion;
   /* CARGAS ACUMULADAS: el "¿y si...?" que se prueba abajo. Con cargasTope=1 el juego es el de hoy —
      el árbol solo guarda UNA tala por más que tardes en volver. Con un tope mayor, el nodo va
@@ -92,13 +98,20 @@ function simular(sesionesDia, tope, minSesion, cargasTope, loteOn) {
     let clics = 0, clicsLote = 0;
     clics += cosechar(t0);                                   // lo que dejó plantado la vez pasada
     // los nodos: una carga por sesión (su reloj es más largo que la sesión) o las que quepan
-    const cargas = (libre, cd) => Math.max(0, Math.min(TOPE, Math.floor((t0 + dur - libre) / cd) + (t0 + dur >= libre ? 0 : -1) + 1));
+    const domando = doma && nivel >= doma.desde;
+    const topeReal = domando ? Math.floor(hueco / X.CD.tree) + 1 : TOPE;   // el bicho recoge cada vez que hay
+    const cargas = (libre, cd) => Math.max(0, Math.min(topeReal, Math.floor((t0 + dur - libre) / cd) + (t0 + dur >= libre ? 0 : -1) + 1));
+    const corte = domando ? (1 - doma.corte) : 1;
     { const c = cargas(libreArb, X.CD.tree);
-      if (c > 0) { res.madera += arboles * c; xpTala += arboles * c * X.XP_ACCION;
-        clics += arboles * c * X.GOLPES_TALAR; clicsLote += arboles * X.GOLPES_TALAR; libreArb = t0 + dur + X.CD.tree; } }
+      /* LA XP NO LA JUNTA EL BICHO. La regla que ya rige todo el juego es que la experiencia mide
+         LA PRÁCTICA, así que lo que recoge el domado da material pero no oficio: nadie sube de
+         nivel durmiendo. Si esto no fuera así, la doma subiría Tala y Minería sola y las puertas
+         de material se abrirían sin que el jugador toque un árbol. */
+      if (c > 0) { res.madera += arboles * c * corte; xpTala += arboles * (domando ? 1 : c) * X.XP_ACCION;
+        clics += domando ? arboles * X.GOLPES_TALAR : arboles * c * X.GOLPES_TALAR; clicsLote += arboles * X.GOLPES_TALAR; libreArb = t0 + dur + X.CD.tree; } }
     { const c = cargas(libreRoc, X.CD.rock);
-      if (c > 0) { res.piedra += rocas * c; xpMin += rocas * c * X.XP_ACCION;
-        clics += rocas * c * X.GOLPES_MINAR; clicsLote += rocas * X.GOLPES_MINAR; libreRoc = t0 + dur + X.CD.rock; } }
+      if (c > 0) { res.piedra += rocas * c * corte; xpMin += rocas * (domando ? 1 : c) * X.XP_ACCION;
+        clics += domando ? rocas * X.GOLPES_MINAR : rocas * c * X.GOLPES_MINAR; clicsLote += rocas * X.GOLPES_MINAR; libreRoc = t0 + dur + X.CD.rock; } }
     /* MIENTRAS ESTÁ: si el cultivo que tiene abierto crece en menos de lo que le queda de sesión,
        lo planta y lo cosecha ahí mismo, tantas veces como entre. Esto es lo que salva al jugador
        de nivel bajo, que solo tiene papas de 3 minutos. */
@@ -205,6 +218,23 @@ LOG("\n──── ¿Y SI LOS NODOS ACUMULARAN CARGAS? ────\n");
   });
   LOG("");
   LOG("  (la última columna son los minutos de juego al día: clic a clic / recogiendo en lote)");
+}
+
+LOG("\n──── ¿Y SI UN BICHO DOMADO ATENDIERA LOS NODOS? ────\n");
+{
+  /* El bicho no fabrica nada: recoge lo que el nodo ya dio. Por eso su techo es el ancla y no hay
+     forma de romperla por arriba. Lo que se prueba acá es DESDE QUÉ NIVEL conviene que aparezca —
+     si llega muy pronto, el jugador nunca aprende el bucle a mano — y QUÉ PARTE se queda él. */
+  LOG("  aparece en   se queda   plata/hora   % del ancla   días al nivel 20   min/día");
+  [[1, 0.3], [5, 0.3], [10, 0.3], [10, 0.5], [15, 0.3], [99, 0]].forEach(([desde, corte]) => {
+    const q = simular(SES, 21, null, 1, false, desde > 50 ? null : { desde, corte });
+    const real = (q.plata + q.enCofre) / (q.t / 3600);
+    LOG("  " + (desde > 50 ? "nunca (hoy)" : "granja " + desde).padStart(12) +
+      (desde > 50 ? "—" : Math.round(corte * 100) + "%").padStart(11) +
+      String(real.toFixed(0)).padStart(13) + pct(q.plata + q.enCofre, q.ancla).padStart(14) +
+      String((q.t / 86400).toFixed(1)).padStart(19) +
+      String((q.activo / (q.t / 86400) / 60).toFixed(0)).padStart(10));
+  });
 }
 
 LOG("\n──── EL MISMO JUEGO CON OTROS HÁBITOS ────\n");
