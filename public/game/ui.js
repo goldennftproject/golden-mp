@@ -916,7 +916,6 @@ function refreshCooking() {
 
 
 /* ---- Tutorial guiado (doc maestro 2/8): cartel de objetivo + tilde animado ---- */
-var TUTO_ROTA = 4;   // segundos que dura cada mensaje de la ronda
 function tutoRefresh() {
   const el = document.getElementById("tuto"); if (!el) return;
   const st = (typeof tutoActivo === "function") ? tutoActivo() : null;
@@ -924,27 +923,19 @@ function tutoRefresh() {
   el.classList.remove("hidden");
   // 14/8 (reversión del capataz): cartel + flechitas, como antes
   const sub = (typeof tutoSub === "function") ? tutoSub() : null;
+  document.getElementById("tuto-txt").textContent = sub ? sub.txt : tutoTxt(st);
   const need = tutoNeed(st);
-  /* ==== UNA SOLA LÍNEA, QUE ALTERNA MIENTRAS SE ESPERA (19/8, dirección) ====
-     El objetivo sigue siendo el objetivo y es siempre el primero de la ronda; lo que hace la línea
-     es turnarse con las cosas que se pueden hacer AHORA, cada TUTO_ROTA segundos. Si no hay espera
-     —o hay un sub-objetivo, que es una instrucción y no admite competencia— no rota nada y el
-     cartel se comporta como siempre.
-     La ronda se calcula del reloj y no de un temporizador propio: así no hay nada que limpiar si
-     el cartel se esconde, y todas las pestañas van sincronizadas. */
-  const espera = (!sub && typeof tutoEsperaSeg === "function") ? tutoEsperaSeg() : 0;
-  const opciones = (espera > 0 && typeof tutoMientras === "function") ? tutoMientras() : [];
-  let txt = sub ? sub.txt : tutoTxt(st), cont = sub ? "" : (st.res ? " " + Math.min(tutoTiene(st), need) + "/" + need
+  document.getElementById("tuto-n").textContent = sub ? "" : (st.res ? " " + Math.min(tutoTiene(st), need) + "/" + need
     : (st.n > 1 ? " " + Math.min(G.tuto.n || 0, st.n) + "/" + st.n : ""));
-  if (espera > 0) {
-    const turno = Math.floor(Date.now() / (TUTO_ROTA * 1000)) % (opciones.length + 1);
-    if (turno === 0) {
-      /* El objetivo, con la cuenta atrás: saber que faltan 1:42 es la mitad de la paciencia. */
-      txt += " · listo en " + (typeof fmtSecs === "function" ? fmtSecs(espera) : espera + "s");
-    } else { txt = "Mientras tanto: " + opciones[turno - 1]; cont = ""; }
-  }
-  document.getElementById("tuto-txt").textContent = txt;
-  document.getElementById("tuto-n").textContent = cont;
+  /* 19/8 (dirección) — ACÁ HUBO DOS INTENTOS Y LOS DOS SE FUERON, que conviene dejar escrito:
+     una segunda línea con sugerencias ("no queda bien") y después UNA línea que rotaba entre el
+     objetivo con cuenta atrás y las cosas que se podían hacer ("no es el efecto que quiero").
+     El error de fondo era el mismo en los dos: poner la espera en palabras la vuelve el
+     protagonista. Nombrar los segundos que faltan hace la espera más pesada, no más liviana, y un
+     texto que cambia solo se lleva el ojo del jugador justo cuando queremos que mire su granja.
+     Lo que sí queda es que el MUNDO señale: las mariposas ya revolotean sobre lo que está listo
+     y desatendido (ver mariposaAccionables en farm.js). El cartel vuelve a ser lo que era: una
+     línea quieta con el objetivo. */
   tutoHighlight();
 }
 // 13/8 (audio): la guía DENTRO de las interfaces es una FLECHA dorada (la misma estética

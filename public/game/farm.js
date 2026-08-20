@@ -2619,6 +2619,14 @@ class FarmScene extends Phaser.Scene {
         lista.push({ x: o.cx, y: o.by - (o.sprite ? o.sprite.displayHeight * 0.6 : 40), k: "arbol" + o.i, prio: objRes === "madera" ? 0 : 1, edad, o });
       if ((o.type === "rock" || (o.type === "ore" && typeof ORE_DEF !== "undefined" && eq && PICK_DEF[eq].mineTier >= (ORE_DEF[o.ore] ? ORE_DEF[o.ore].tier : 99))) && usosPico > 0)
         lista.push({ x: o.cx, y: o.by - 18, k: "roca" + o.i, prio: objRes === "piedra" ? 0 : 1, edad, o });
+      /* 19/8 (dirección) — LOS MONTÍCULOS ENTRAN AL IMÁN. Son lo único gratis, instantáneo y
+         disponible desde el primer segundo de la partida: ni herramienta ni enfriamiento, tres por
+         día y siempre dan lombriz. O sea, exactamente lo que llena la primera espera de todas — la
+         de las papas, a los dos minutos de empezar. Estaban en la lista de objetos desde el 15/8
+         pero este imán no tenía su caso, así que el jugador los veía sin que nada se los señalara.
+         Van con prioridad 0 mientras el objetivo espera un reloj: es cuando más falta hacen. */
+      if (o.type === "excav")
+        lista.push({ x: o.cx, y: o.by - 12, k: "excav" + o.idx, prio: objPlots ? 0 : 1, edad, o });
     }
     if (perdido) {
       const haySemillas = Object.keys(G.seeds || {}).some(k => (G.seeds[k] || 0) > 0);

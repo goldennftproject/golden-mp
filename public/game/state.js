@@ -739,43 +739,12 @@ function tutoSubPlata(prefijo, meta) {
   return { plata: true, meta: meta || 0, txt: prefijo + "vendé lo que tengas suelto en el Mercado (el guardia protege lo del objetivo)",
     target: "market", panel: "ov-market", ui: "#shop-sell", permite: ["plant", "harvest", "sell", "buyseed", "plotunlock", "chop", "mine"] };
 }
-/* ============ "MIENTRAS TANTO…" — UNA SOLA LÍNEA QUE ALTERNA (19/8, dirección) =========
-   "No lo pondría como una segunda línea, que no queda bien. Lo intercalaría entre los mensajes.
-    Me gustaría que sea dinámico: las papas están plantadas, faltan dos minutos para cosecharlas,
-    mientras tanto hacé esto otro, o esto otro."
-   El cartel tiene UNA línea y sigue teniéndola. Lo que cambia es que, mientras el objetivo espera
-   un reloj, esa línea va rotando entre el objetivo —con su cuenta atrás— y las cosas que se pueden
-   hacer AHORA MISMO. Nada de listas fijas: cada sugerencia se comprueba contra el estado, así que
-   solo aparece lo que de verdad está disponible. Si ya cavaste los tres montículos del día, el
-   montículo no se nombra; si no te queda ninguna hacha, no te manda a talar.
-   Lo que NO se toca: siguen siendo sugerencias. No cuentan para nada, no bloquean nada y el
-   objetivo real nunca deja de verse — es el primero de la ronda. */
-function tutoEsperaSeg() {
-  const plots = Array.isArray(G.plots) ? G.plots : [];
-  if (plots.some(p => p && p.state === "ready")) return 0;      // hay algo listo: no es espera, es trabajo
-  const creciendo = plots.filter(p => p && p.state === "growing" && p.readyAt);
-  if (!creciendo.length) return 0;
-  const falta = Math.min.apply(null, creciendo.map(p => p.readyAt)) - nowMs();
-  return Math.max(0, Math.ceil(falta / 1000));
-}
-function tutoMientras() {
-  const out = [];
-  /* El orden es el del esfuerzo: primero lo gratis y de un clic, después lo que gasta herramienta.
-     Los montículos van primeros a propósito — están en la granja desde el primer segundo y son
-     justo lo que llena la primera espera de todas. */
-  const cavados = ((G.excav && G.excav.hechos) || []).length;
-  const tope = (typeof EXCAV_POR_DIA !== "undefined" ? EXCAV_POR_DIA : 3);
-  if (cavados < tope) out.push("cavá un montículo de tierra 🪱");
-  if (typeof toolCount === "function" && toolCount("axe") > 0) out.push("andá talando un árbol 🪓");
-  const pico = (G.picks && G.picks.eq) || null;
-  if (pico && ((G.picks.dur && G.picks.dur[pico]) || 0) > 0) out.push("picá una roca ⛏");
-  const lagunaLibre = !(G.pescaHasta && G.pescaHasta > nowMs());
-  if (typeof toolCount === "function" && toolCount("rod") > 0 && (G.res && (G.res.lombriz || 0) > 0) && lagunaLibre)
-    out.push("tirá la caña en la laguna 🎣");
-  if (G.built && G.built.cocina) out.push("cociná algo en la Cocina 🍳");
-  if (G.gear && G.gear.arma) out.push("date una vuelta por la Zona Negra ⚔");
-  return out;
-}
+/* ============ QUÉ HACER MIENTRAS SE ESPERA (19/8, dirección) =======================
+   Hubo dos intentos por CARTEL —una segunda línea, y una línea que rotaba con cuenta atrás— y los
+   dos se descartaron por lo mismo: poner la espera en palabras la vuelve el protagonista.
+   La respuesta estaba ya en el juego y es del mundo, no de la interfaz: las MARIPOSAS. Cualquier
+   recurso disponible y desatendido atrae una, y lo del objetivo actual va primero. El jugador mira
+   su granja, ve algo revolotear, y va. Ver mariposaAccionables() en farm.js. */
 function tutoSub() {
   const st = tutoActivo(); if (!st) return null;
   // paso "juntá plata": si no hay NADA cosechado para vender, guiar al eslabón anterior
