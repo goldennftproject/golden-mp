@@ -498,7 +498,10 @@ class FarmScene extends Phaser.Scene {
         const ad = this.adornoEnPunto(wx, wy);
         if (ad) { this.dragDeco = ad; return; }
         for (const o of this.objs) { if (o.type === "fish") continue; if (this.hitsSprite(o.sprite, wx, wy)) { const d = Math.hypot(o.cx - wx, o.by - wy); if (d < bd) { bd = d; hit = o; } } }
-        if (hit) { hit.origCx = hit.cx; hit.origBy = hit.by; this.dragObj = hit; return; }
+        // Un árbol crecido está partido en copa y tronco para que lo meza el viento. Mientras se
+        // lo arrastra vuelve a ser UN solo dibujo: entero, quieto y sin viento, que es como uno
+        // quiere ver algo que está colocando. Al soltarlo, el viento lo vuelve a partir.
+        if (hit) { hit.origCx = hit.cx; hit.origBy = hit.by; this.dragObj = hit; this.copaSacar(hit); if (hit.sprite) hit.sprite.setAngle(0); return; }
         for (const pl of this.plots) { if (pl.state === "locked") continue; if (Math.abs(wx - pl.cx) < T / 2 && Math.abs(wy - pl.by) < T / 2) { this.dragPlot = pl; return; } }
         if (this.pondImg && this.pondDist(wx, wy) < 1) { this.dragPond = true; return; }
         this.hold = { sx: pt.x, sy: pt.y, px: pt.x, py: pt.y, active: false };   // 13/8: nada agarrado → el arrastre panea también en edición
@@ -2975,9 +2978,18 @@ class FarmScene extends Phaser.Scene {
     const W = fr.width, H = fr.height;
     const f = Math.max(0.15, Math.min(0.95, VIENTO_CORTE));
     const clave = spr.texture.key + "|" + (fr.name || "") + "|" + f.toFixed(3) + "|" + spr.scaleY.toFixed(4);
-    if (o.copa && o.copaClave === clave) return;
-    if (o.copa) o.copa.destroy();
     const unionY = spr.y - H * Math.abs(spr.scaleY) * (1 - f);   // dónde se juntan copa y tronco
+    // 20/8 (dirección): "arrastro un árbol crecido y la copa se queda en el lugar dibujado, como
+    // si se partiera en dos". La copa se COLOCABA UNA SOLA VEZ, al armarla, y esta clave mira la
+    // textura y la escala pero NO la posición: mientras el tronco seguía al cursor, la copa se
+    // quedaba clavada donde se armó. Y no se recuperaba sola ni al soltar, porque la clave seguía
+    // siendo la misma. Ahora, si el árbol se movió, la copa se vuelve a apoyar sobre su tronco.
+    if (o.copa && o.copaClave === clave) {
+      if (o.copa.x !== spr.x || o.copa.y !== unionY) o.copa.setPosition(spr.x, unionY);
+      if (o.copa.depth !== spr.depth + 0.1) o.copa.setDepth(spr.depth + 0.1);
+      return;
+    }
+    if (o.copa) o.copa.destroy();
     o.copa = this.add.image(spr.x, unionY, spr.texture.key, fr.name)
       .setOrigin(0.5, f)                        // el pivote cae justo en la unión
       .setScale(spr.scaleX, spr.scaleY)
@@ -3014,8 +3026,8 @@ class FarmScene extends Phaser.Scene {
     this.tickHojas(raf);   // en el pico de la ráfaga vuelan unas hojas
     for (const o of this.objs) {
       if (o.type !== "tree" || !o.sprite || !o.sprite.visible) continue;
-      // tocón, retoño, árbol bloqueado o en pleno saltito de crecimiento: entero y quieto
-      if (o.locked || nowMs() < (o.readyAt || 0) || o.sprite._popTw) { this.copaSacar(o); if (o.sprite.angle) o.sprite.setAngle(0); continue; }
+      // tocón, retoño, árbol bloqueado, en pleno saltito de crecimiento O EN LA MANO: entero y quieto
+      if (o === this.dragObj || o.locked || nowMs() < (o.readyAt || 0) || o.sprite._popTw) { this.copaSacar(o); if (o.sprite.angle) o.sprite.setAngle(0); continue; }
       this.copaArmar(o);
       if (o.sprite._golpeTw || (o.copa && o.copa._golpeTw)) continue;   // se está sacudiendo por un hachazo: el viento no manda
       if (o.vFase == null) o.vFase = (o.cx * 0.017 + o.by * 0.029) % (Math.PI * 2);
