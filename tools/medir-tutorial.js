@@ -8,7 +8,7 @@ ctx.window = ctx; ctx.globalThis = ctx;
 vm.runInNewContext(fs.readFileSync("public/game/config.js", "utf8"), ctx, { filename: "config.js" });
 vm.runInNewContext(fs.readFileSync("public/game/state.js", "utf8") +
   "\n;window.__X={TUTO_STEPS,BUILD_DEF,CROP_DEF,RECIPE_DEF,CD,GOLPES_TALAR,GOLPES_MINAR," +
-  "NIVEL_ARBOLES,NIVEL_ROCAS,NODE_UNLOCK_COSTS,G,skillNeed,nodoXpMin,TOOL_CRAFT,FARM_XP_LVLS,PRICE,FARM_PARCELA,ARM_DEF,ARMA_ENTRADA};",
+  "NIVEL_ARBOLES,NIVEL_ROCAS,NODE_UNLOCK_COSTS,G,skillNeed,nodoXpMin,TOOL_CRAFT,FARM_XP_LVLS,PRICE,FARM_PARCELA,ARM_DEF,ARMA_ENTRADA,EXPANSION_COSTO};",
   ctx, { filename: "state.js" });
 const X = ctx.__X, CD = X.CD;
 
@@ -129,10 +129,15 @@ console.log("TUTORIAL COMPLETO — con los relojes nuevos (árbol " + CD.tree / 
    equipar la Espada de Madera, sus 5 de madera también hay que juntarlos. Se suma acá o el número
    de arriba se queda corto y la medición miente por lo bajo. */
 const espada = (X.ARM_DEF && X.ARMA_ENTRADA && X.ARM_DEF[X.ARMA_ENTRADA]) ? X.ARM_DEF[X.ARMA_ENTRADA].cost : {};
+/* 19/8: y la PRIMERA EXPANSIÓN, que ahora también es un paso del tutorial. Es la compra más cara de
+   la cadena y la que enseña el camino de crecimiento; dejarla fuera de la cuenta haría parecer el
+   tutorial más corto de lo que es. */
+if (typeof ctx.expansionCostos === "function") ctx.expansionCostos();
+const exp1 = (X.EXPANSION_COSTO && X.EXPANSION_COSTO[0]) || {};
 console.log("materiales que pide la cadena: " +
-  (X.BUILD_DEF.store.cost.madera + X.BUILD_DEF.horno.cost.madera + X.BUILD_DEF.cocina.cost.madera + (espada.madera || 0)) + " madera y " +
-  (X.BUILD_DEF.store.cost.piedra + X.BUILD_DEF.horno.cost.piedra + X.BUILD_DEF.cocina.cost.piedra + (espada.piedra || 0)) + " piedra" +
-  (espada.madera ? "  (incluye la Espada de Madera: " + espada.madera + ")" : ""));
+  (X.BUILD_DEF.store.cost.madera + X.BUILD_DEF.horno.cost.madera + X.BUILD_DEF.cocina.cost.madera + (espada.madera || 0) + (exp1.madera || 0)) + " madera y " +
+  (X.BUILD_DEF.store.cost.piedra + X.BUILD_DEF.horno.cost.piedra + X.BUILD_DEF.cocina.cost.piedra + (espada.piedra || 0) + (exp1.piedra || 0)) + " piedra" +
+  "  (3 edificios + la Espada de Madera " + (espada.madera || 0) + " + la 1ª expansión " + (exp1.madera || 0) + "/" + (exp1.piedra || 0) + ")");
 console.log("de arranque: " + (X.G.treesOpen||[0]).length + " árboles (1 madera / " + CD.tree/60 + " min), " + (X.G.rocksOpen||[0]).length + " rocas (1 piedra / " + CD.rock/60 + " min) y " + (X.G.plotsOwned||3) + " parcelas\n");
 
 for (const [nombre, rel] of [["EL QUE SOLO HACE LO QUE PIDE EL TUTORIAL", false],

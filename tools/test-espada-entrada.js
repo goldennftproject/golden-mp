@@ -14,7 +14,7 @@ ctx.window = ctx; ctx.globalThis = ctx; ctx.setTimeout = () => 0; vm.createConte
 vm.runInContext(fs.readFileSync("public/game/config.js", "utf8"), ctx);
 vm.runInContext(fs.readFileSync("public/game/state.js", "utf8") +
   "\n;this.X={ARM_DEF,ARM_ORDER,ARMA_ENTRADA,ARMAS_UNLOCK_COST,ARMAS_UNLOCK_PLATA,TUTO_STEPS,TUTO_CAPS," +
-  "TUTO_PERMISOS,KIT_INICIAL,CROP_DEF,CD,STAM_BASE,STAM_REGEN_SEG,STAM_COSTO,RECIPE_DEF,COOK_LVLS};", ctx);
+  "TUTO_PERMISOS,KIT_INICIAL,CROP_DEF,CD,STAM_BASE,STAM_REGEN_SEG,STAM_COSTO,RECIPE_DEF,COOK_LVLS,EXPANSION_COSTO};", ctx);
 ["isOpen", "refreshInv", "syncSlots", "toast", "log", "refreshHud", "saveFarm", "celebrate", "sfx",
  "refreshForge", "refreshEquip", "applyCombatHp", "tutoRefresh", "tutoAviso"].forEach(f => { if (typeof ctx[f] !== "function") ctx[f] = () => {}; });
 const X = ctx.X, G = ctx.G, UI = fs.readFileSync("public/game/ui.js", "utf8");
@@ -57,8 +57,7 @@ console.log("\nEL TUTORIAL ENSEÑA LOS DOS GESTOS QUE HABÍA QUE ADIVINAR");
   /* El botín tenía que servir para algo: el tutorial cierra cocinando lo que cazaste. */
   ok("el paso de caza pide el BOTÍN, no un número de muertes",
     (X.TUTO_STEPS.find(s2 => s2.id === "hunt") || {}).res === "carne");
-  ok("y el tutorial cierra cocinando lo cazado", ids[ids.length - 1] === "estofado",
-    X.TUTO_STEPS[X.TUTO_STEPS.length - 1].txt);
+  ok("y cocinar lo cazado cierra el capítulo de la Zona", ids.indexOf("estofado") > ids.indexOf("hunt"));
   /* El paso que se fue: "crafteá un Hacha" con 35 hachas ya en la mochila. */
   ok("ya no se pide craftear un hacha que el kit regala", !ids.includes("crafttool"),
     "el kit trae " + X.KIT_INICIAL.axe + " hachas");
@@ -131,6 +130,35 @@ console.log("\nLA RED DE SEGURIDAD DEL PASO DE CAZA (y solo de ese paso)");
   let s2 = 0;
   for (let i = 0; i < 20; i++) { const out = {}; ctx.tutoPity(rata, out); if (out.carne) s2++; }
   ok("ni en un paso que no pide botín", s2 === 0);
+}
+
+console.log("\nEL CAMINO DE CRECIMIENTO, QUE ERA EL ÚNICO SIN ENSEÑAR");
+{
+  /* Las expansiones son la ÚNICA fuente de nodos, y la cadena tiene tres eslabones que había que
+     adivinar enteros: comprar → el regalo llega al baúl → pasa al Cobertizo → lo colocás vos. */
+  const ids = X.TUTO_STEPS.map(s2 => s2.id);
+  ["expandir", "reclamar", "colocar"].forEach(id =>
+    ok("el tutorial enseña " + id, ids.includes(id), "paso " + (ids.indexOf(id) + 1)));
+  /* EL ORDEN IMPORTA y no es el intuitivo: el regalo NO existe hasta que la expansión está
+     comprada, porque se nace con las 3 parcelas que corresponden al nivel 1. Si los pasos
+     estuvieran al revés, el jugador se quedaría mirando un baúl vacío. */
+  ok("y en el orden real: primero expandir, después reclamar y colocar",
+    ids.indexOf("expandir") < ids.indexOf("reclamar") && ids.indexOf("reclamar") < ids.indexOf("colocar"));
+  G.level = 3; G.expansiones = 0; G.regalos = { tree: 0, rock: 0, plot: 0 }; G.cobertizo = {}; G.plotsOwned = 3;
+  ctx.regalosSync();
+  ok("sin expansión, el baúl está vacío", ((G.regalos || {}).plot || 0) === 0,
+    "por eso 'reclamá tu parcela' no puede ir antes");
+  G.expansiones = 1; ctx.regalosSync();
+  ok("con la expansión comprada, llega la parcela", ((G.regalos || {}).plot || 0) === 1);
+  ctx.regaloReclamar("plot");
+  ok("y al reclamarla pasa al Cobertizo", ((G.cobertizo || {}).plot || 0) === 1,
+    "desde ahí el jugador elige dónde va");
+  ok("el capítulo existe", X.TUTO_CAPS.some(c => c.pasos.includes("expandir")),
+    X.TUTO_CAPS.map(c => c.label).join(" · "));
+  ["expandir", "reclamar", "colocar"].forEach(id => {
+    const p = X.TUTO_PERMISOS[id] || [];
+    ok("el paso " + id + " deja juntar materiales", p.includes("chop"), p.length + " gestos");
+  });
 }
 
 console.log("\nY LA CUENTA QUE MOTIVÓ TODO ESTO");

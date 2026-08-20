@@ -635,6 +635,11 @@ var TUTO_PERMISOS = {
      botín y de la estamina, así que el jugador tiene que poder seguir con su granja mientras. */
   hunt:        ["portal", "cook", "eat", "chop", "mine", "cultivar", "plant", "harvest", "buyseed", "sell", "fish", "obra", "crafttool", "craftarm", "equiparm"],
   estofado:    ["cook", "eat", "portal", "chop", "mine", "cultivar", "plant", "harvest", "buyseed", "sell", "fish", "obra"],
+  /* La expansión pide madera y piedra, así que el paso TIENE que dejar talar y picar; y los dos
+     siguientes son gestos de un clic que no deben cerrar nada. */
+  expandir:    ["expandir", "chop", "mine", "cultivar", "plant", "harvest", "buyseed", "sell", "cook", "eat", "fish", "portal", "obra", "crafttool"],
+  reclamar:    ["regalo", "chop", "mine", "cultivar", "plant", "harvest", "buyseed", "sell", "cook", "eat", "fish", "portal", "obra"],
+  colocar:     ["regalo", "chop", "mine", "cultivar", "plant", "harvest", "buyseed", "sell", "cook", "eat", "fish", "portal", "obra"],
   kill5:       ["portal", "cook", "eat", "crafttool", "craftarm"],
   fish:        ["fish", "crafttool", "eat"],
   // Fixes.docx 14/8 #2: la cadena del Altar cruza media economía (oro → Pico de Oro →
@@ -1785,6 +1790,17 @@ const TUTO_STEPS = [
   { id: "hunt", res: "carne", need: () => (RECIPE_DEF.estofado && RECIPE_DEF.estofado.res.carne) || 1,
     txt: "Cazá en el Pantano hasta traer # de carne" },
   { id: "estofado", n: 1, txt: "Cociná un Estofado con lo que cazaste", target: "cocina", panel: "ov-cocina", ui: "[data-cook='estofado']" },
+  /* ======= EL CAMINO DE CRECIMIENTO, QUE ERA EL ÚNICO QUE NO SE ENSEÑABA (19/8, dirección) =======
+     Desde el rediseño, las EXPANSIONES son la única fuente de nodos: no hay otra forma de tener una
+     parcela, un árbol o una roca más. Y la cadena tiene tres eslabones que el jugador tenía que
+     adivinar enteros: comprás la expansión → la parcela llega al BAÚL → pasa al COBERTIZO → la
+     colocás vos donde quieras. El tutorial no nombraba ninguno de los tres, así que quien no
+     tropezara con el Cobertizo por casualidad se quedaba con nueve celdas para siempre.
+     El orden de los pasos es el orden real, comprobado: el regalo NO existe hasta que la expansión
+     está comprada (regalosSync cuenta 3 parcelas + 1 por expansión, y se nace con las 3). */
+  { id: "expandir", n: 1, txt: "Comprá tu primera expansión de terreno", panel: "ov-deco", ui: "#exp-comprar" },
+  { id: "reclamar", n: 1, txt: "Reclamá la parcela que te llegó al baúl",  target: "cofre_diario", panel: "ov-baul" },
+  { id: "colocar",  n: 1, txt: "Colocá tu parcela nueva donde más te guste (Cobertizo)", panel: "ov-cobertizo" },
   // (14/8, reversión del capataz: la cadena TERMINA acá — el tutorial enseña LO BÁSICO de
   //  la granja. Armas, Zona Negra, minería avanzada y Altar se aprenden jugando: sus
   //  planos caen por nivel y cada sistema se presenta solo.)
@@ -1804,6 +1820,7 @@ const TUTO_CAPS = [
   { id: "arma",     label: "Tu primera espada",  pasos: ["craftarm", "equiparm"] },
   { id: "cocina",   label: "La Cocina",          pasos: ["place_cocina", "woodc", "stonec", "build_cocina", "cook", "eat"] },
   { id: "zona",     label: "La Zona Negra",      pasos: ["portal", "hunt", "estofado"] },
+  { id: "crecer",   label: "La granja crece",    pasos: ["expandir", "reclamar", "colocar"] },
 ];
 
 function capEstado(cap) {   // "hecho" | "activo" | "pendiente" (por el paso más avanzado de la cadena)
@@ -1976,6 +1993,13 @@ function tutoHecho(st) {
        Papa Asada— así que se detecta por el plato en la bolsa o por haberlo cocinado alguna vez. */
     else if (st.id === "estofado")  hecho = ((G.dishes && G.dishes.estofado) || 0) > 0 ||
                                             (typeof statGet === "function" && statGet("cocinar", "estofado") > 0);
+    /* Los tres del crecimiento se detectan por el ESTADO, no por un evento: así el paso se salta
+       solo si el jugador ya lo había hecho por su cuenta antes de que el tutorial se lo pidiera. */
+    else if (st.id === "expandir")  hecho = (G.expansiones || 0) > 0;
+    else if (st.id === "reclamar")  hecho = (G.expansiones || 0) > 0 &&
+                                            (((G.regalos && G.regalos.plot) || 0) === 0 ||
+                                             ((G.cobertizo && G.cobertizo.plot) || 0) > 0 || (G.plotsOwned || 3) > 3);
+    else if (st.id === "colocar")   hecho = (G.plotsOwned || 3) > 3;
     else if (st.id === "eat")       hecho = (G.skills && G.skills.cooking > 0) && (G.buffs || []).length > 0;
     else if (st.id === "unlockarm") hecho = !!G.armasUnlocked;
     else if (st.id === "craftarm")  hecho = Object.keys(G.weapons || {}).length > 0;
