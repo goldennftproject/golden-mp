@@ -1,32 +1,129 @@
-/* EL CARTEL DE EXPANSIÓN SOLO CON EL CURSOR ENCIMA (18/8)
-   Dirección: "en vez de mostrar permanentemente el cartel de nivel bloqueado, que solo pasando el
-   cursor por encima se iluminen los árboles que van a desaparecer y aparezca el cartelito".
-   No se puede arrancar Phaser acá, así que se comprueba sobre el código que la lógica esté puesta.
+/* EL LOTE DE EXPANSIÓN: NO EXISTE HASTA QUE TENÉS EL NIVEL (18/8 · 20/8)
+   Dirección, 18/8: "en vez de mostrar permanentemente el cartel de nivel bloqueado, que solo
+   pasando el cursor por encima se iluminen los árboles que van a desaparecer y aparezca el
+   cartelito". Y 2ª pasada: "no quiero que haya líneas de puntos grises".
+   Dirección, 20/8: "lo de expandir a nivel tres sale antes de ser nivel tres. Que se demuestre que
+   se puede expandir cuando sea el nivel que se pueda expandir. Antes no tiene por qué mostrar eso".
+
+   20/8 — ESTE TEST SE REESCRIBIÓ ENTERO, y el motivo importa. Leía el CÓDIGO con expresiones
+   regulares: mientras la línea existiera, verde. Hoy encontramos dos fallos que un test así no
+   puede ver —una migración que corría antes de tiempo y un paso que apuntaba a una ventana
+   inexistente— así que ahora se EJECUTA dibujarExpansion() con una escena de mentira y se cuenta
+   qué dibujó. Si no dibuja nada, no hay nada que ver: eso es lo que se mide.
      node tools/test-cartel-expansion.js                                                          */
-const fs = require("fs");
+const fs = require("fs"), vm = require("vm");
+
+/* Objeto de Phaser de mentira: acepta cualquier método encadenado y anota lo que le hacen. */
+function stub(tipo, reg) {
+  const o = { __tipo: tipo, visible: true, alfaRelleno: null, handlers: {}, width: 0, height: 0 };
+  const p = new Proxy(o, {
+    get(t, k) {
+      if (k in t) return t[k];
+      if (typeof k === "symbol") return undefined;
+      if (k === "setVisible") return v => { t.visible = v; return p; };
+      if (k === "setFillStyle") return (c, a) => { t.alfaRelleno = a; return p; };
+      if (k === "on") return (ev, fn) => { t.handlers[ev] = fn; return p; };
+      if (k === "destroy") return () => { t.destruido = true; };
+      return () => p;
+    },
+    set(t, k, v) { t[k] = v; return true; }
+  });
+  reg.push(o);
+  return p;
+}
+function escenaFalsa(reg) {
+  return {
+    add: new Proxy({}, { get: (t, k) => (...a) => stub(k, reg) }),
+    tweens: { add: () => stub("tween", []) },
+  };
+}
+
+/* El juego, sin Phaser: solo hace falta el estado y la geometría. */
+const ctx = { console: { log() {}, warn() {}, info() {} }, Math, Date, JSON, Object, Array, Number,
+  String, Boolean, Set, Map, isNaN, parseInt, parseFloat };
+ctx.window = ctx; ctx.globalThis = ctx; ctx.setTimeout = () => 0;
+vm.createContext(ctx);
+["isOpen", "refreshInv", "syncSlots", "toast", "log", "refreshHud", "saveFarm", "celebrate", "sfx",
+ "tutoRefresh", "tutoCheck", "refreshSeedShop", "refreshHotbar", "askConfirm"].forEach(f => { ctx[f] = () => {}; });
+vm.runInContext(fs.readFileSync("public/game/config.js", "utf8"), ctx);
+vm.runInContext(fs.readFileSync("public/game/state.js", "utf8"), ctx);
+const GF = ctx.GF, G = ctx.G;
+
+/* Se extrae el método del archivo y se ata al contexto del juego: así corre el código REAL, con
+   sus llamadas a expansionSiguiente(), canAfford() y GF.TILE. */
 const src = fs.readFileSync("public/game/farm.js", "utf8");
-const fn = src.slice(src.indexOf("dibujarExpansion() {"), src.indexOf("  // pathfinding A*"));
+const i0 = src.indexOf("  dibujarExpansion() {");
+const i1 = src.indexOf("  // pathfinding A*");
+const cuerpo = src.slice(i0, i1);
+vm.runInContext("this.__dibujar = function () { const o = { " + cuerpo + " }; return o.dibujarExpansion; }();", ctx);
+const dibujar = ctx.__dibujar;
+
 let fallos = 0;
 const ok = (n, c, d) => { if (!c) fallos++; console.log((c ? "  ok   " : "  FALLA") + "  " + n + (d ? "   " + d : "")); };
 
-ok("el bloque reacciona al cursor", /zona\.on\("pointerover"/.test(fn) && /zona\.on\("pointerout"/.test(fn));
-ok("al pasar por encima se ilumina el lote (se ve qué árboles se van)",
-  /setFillStyle\(col, on \? 0\.3/.test(fn));
-ok("el cartel nace oculto si todavía no lo podés pagar",
-  /expCartel\.forEach\(o => o\.setVisible\(puede\)\)/.test(fn));
-ok("y se muestra con el cursor encima", /setVisible\(on \|\| puede\)/.test(fn));
-ok("pasar del lote al cartel no lo esconde", /chapa\.on\("pointerover"/.test(fn));
-/* 2ª pasada: "no quiero que haya líneas de puntos grises... solo debe aparecer cuando pasó el
-   cursor encima". En reposo el lote tiene que ser INVISIBLE del todo. */
-ok("en reposo el relleno del lote es 0 (sin tinte gris sobre el bosque)",
-  /setFillStyle\(col, on \? 0\.34 : 0\)/.test(fn));
-ok("en reposo el borde del lote es 0 (sin recuadro gris)",
-  /setStrokeStyle\(on \? 3 : 2, col, on \? 1 : 0\)/.test(fn) &&
-  /this\.add\.rectangle\(x0 \+ w \/ 2, y0 \+ h \/ 2, w, h, col, 0\)/.test(fn));
-ok("las estacas nacen ocultas (eran la 'línea de puntos')",
-  /estacas\.forEach\(o => \{ o\.setVisible\(false\)/.test(fn));
-ok("y se encienden con el cursor", /estacas\.forEach\(o => \{ try \{ o\.setVisible\(on\)/.test(fn));
-ok("la zona NO se oculta con setVisible (perdería el hover)",
-  !/zona\.setVisible\(/.test(fn));
-console.log("\n" + (fallos ? "FALLOS: " + fallos : "todo en verde"));
+function pintar(nivel, recursos) {
+  G.expansiones = 0; G.level = nivel; G.res = Object.assign({}, G.res, recursos || {});
+  GF.aplicarTerreno(0);
+  const reg = [];
+  const esc = escenaFalsa(reg);
+  esc._expFirma = null;
+  dibujar.call(esc);
+  return { reg, esc };
+}
+
+const ex = ctx.expansionSiguiente();
+console.log("\nLA PRIMERA EXPANSIÓN PIDE NIVEL " + ex.nivel);
+
+console.log("\nPOR DEBAJO DEL NIVEL: EL BOSQUE ESTÁ LIMPIO");
+{
+  for (let lv = 1; lv < ex.nivel; lv++) {
+    const { reg } = pintar(lv, {});
+    ok("nivel " + lv + ": no se dibuja nada", reg.length === 0,
+      reg.length ? reg.length + " objetos (" + [...new Set(reg.map(o => o.__tipo))].join(", ") + ")" : "ni zona, ni estacas, ni cartel");
+  }
+  /* Y lo que de verdad reportó dirección: que al pasar el cursor NO aparezca el cartel gris de
+     "Nivel 3 · terreno bloqueado". Sin zona interactiva no hay hover que valga. */
+  const { reg } = pintar(1, {});
+  ok("y no queda ninguna zona que responda al cursor", !reg.some(o => o.handlers && o.handlers.pointerover),
+    "sin hover no hay cartel de puerta cerrada");
+}
+
+console.log("\nCON EL NIVEL JUSTO: EL LOTE APARECE");
+{
+  const { reg } = pintar(ex.nivel, {});
+  ok("se dibuja el lote", reg.length > 0, reg.length + " objetos");
+  const zona = reg.find(o => o.handlers && o.handlers.pointerover);
+  ok("y responde al cursor", !!zona);
+  ok("las estacas nacen ocultas (eran la 'línea de puntos' gris)",
+    reg.filter(o => o.__tipo === "rectangle" && o.visible === false).length > 0);
+  /* En reposo el lote es invisible del todo: relleno 0. Se comprueba disparando el hover. */
+  zona.handlers.pointerout();
+  ok("en reposo el relleno del lote es 0", zona.alfaRelleno === 0, String(zona.alfaRelleno));
+  zona.handlers.pointerover();
+  ok("y con el cursor encima se ilumina", zona.alfaRelleno > 0, String(zona.alfaRelleno));
+}
+
+console.log("\nY UNA VEZ QUE SUBÍS, SE REDIBUJA SOLO");
+{
+  /* La firma del cartel incluye G.level: sin eso, el lote no aparecería hasta recargar la página
+     — y el jugador sube de nivel y no ve nada nuevo. */
+  ok("la firma del redibujado mira el nivel", /const firma = !ex \? "-" : \[ex\.n, G\.level/.test(src),
+    "subir de nivel hace aparecer el lote sin recargar");
+}
+
+console.log("\nY EL CÓDIGO NO SE QUEDÓ CON RAMAS MUERTAS");
+{
+  /* Al cortar por nivel, todo lo que decía "si te falta nivel" dejó de tener sentido. Dejarlo
+     sería la clase de mentira que hoy nos costó dos fallos: código que describe un caso al que
+     ya no se llega. */
+  /* Se miran las CADENAS que ve el jugador, no los comentarios que explican por qué se fueron —
+     el mismo tropiezo que tuvo el test de los textos del tutorial: se marcaba a sí mismo por citar
+     el texto viejo dentro de una explicación. */
+  const vivo = cuerpo.replace(/\/\*[\s\S]*?\*\//g, "").replace(/\/\/[^\n]*/g, "");
+  ok("no quedan carteles de 'terreno bloqueado'", !/terreno bloqueado/.test(vivo));
+  ok("ni el aviso de 'se abre en el nivel' al hacer clic", !/se abre en el nivel/.test(vivo));
+  ok("y el corte está arriba del todo, antes de dibujar", /const falta = \(G\.level \|\| 1\) < ex\.nivel;[\s\S]{0,1800}?if \(falta\) return;/.test(cuerpo));
+}
+
+console.log("\n" + (fallos ? "  ✗ " + fallos + " fallas\n" : "  ✓ el lote no existe hasta que podés tomarlo\n"));
 process.exit(fallos ? 1 : 0);
