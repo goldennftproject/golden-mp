@@ -178,10 +178,18 @@ console.log("\nLOS DOS SISTEMAS QUE EL TUTORIAL DEJABA SIN NOMBRAR");
      bolsa desde el minuto uno. Y el tablón está plantado en la granja como un objeto más. */
   ok("la pesca es un paso", ids.includes("fish"), "la caña trae " + X.KIT_INICIAL.rod + " usos");
   ok("el tablón, también", ids.includes("pedido"));
-  /* Pescar pide una LOMBRIZ que se compra en el Mercado: si el paso no dejara comprar, el jugador
-     llegaría a la laguna y se comería un "necesitás lombrices" sin salida. */
-  ok("el paso de pesca deja comprar la carnada", (X.TUTO_PERMISOS.fish || []).includes("buyseed"),
+  /* LA CARNADA SALE DE LA TIERRA, NO DE LA TIENDA. Los montículos están en la granja desde el
+     primer segundo, son tres por día, se cavan con un clic sin herramienta y siempre dan lombriz.
+     Mandar al jugador a comprarla por 3 de plata teniéndola gratis a diez metros era enseñarle el
+     camino largo — y de paso dejaba los montículos sin explicar, que era otro sistema mudo. */
+  ok("antes de pescar, el tutorial enseña los montículos", ids.includes("excavar"),
+    "paso " + (ids.indexOf("excavar") + 1) + ", justo antes de la caña");
+  ok("y van en ese orden", ids.indexOf("excavar") < ids.indexOf("fish"));
+  ok("el botín del montículo ES la carnada", ctx.excavBotin(0).res === "lombriz",
+    "siempre lombriz, " + ctx.EXCAV_POR_DIA + " montículos por día");
+  ok("y el Mercado sigue estando para cuando se acaben", ctx.WORM_PRICE > 0,
     "la lombriz cuesta " + ctx.WORM_PRICE + " de plata");
+  ok("el paso de pesca igual deja comprar", (X.TUTO_PERMISOS.fish || []).includes("buyseed"));
   ok("y el del tablón deja producir lo que le pidan", (X.TUTO_PERMISOS.pedido || []).includes("chop"));
   ok("los dos tienen su capítulo", X.TUTO_CAPS.some(c2 => c2.pasos.includes("fish") && c2.pasos.includes("pedido")),
     X.TUTO_CAPS.map(c2 => c2.label).join(" · "));

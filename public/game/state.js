@@ -643,7 +643,8 @@ var TUTO_PERMISOS = {
   /* 19/8: pescar necesita comprar carnada, así que el paso TIENE que dejar comprar y vender; y el
      tablón pide entregar algo que quizá haya que cultivar o talar primero. Los dos son los últimos
      pasos del tutorial: encerrar la granja acá no tendría ningún sentido. */
-  fish:        ["fish", "crafttool", "eat", "buyseed", "sell", "plant", "harvest", "chop", "mine", "cultivar", "cook", "obra", "portal"],
+  excavar:     ["excavar", "fish", "buyseed", "sell", "plant", "harvest", "chop", "mine", "cultivar", "cook", "eat", "obra", "portal"],
+  fish:        ["fish", "excavar", "crafttool", "eat", "buyseed", "sell", "plant", "harvest", "chop", "mine", "cultivar", "cook", "obra", "portal"],
   pedido:      ["pedido", "sell", "buyseed", "plant", "harvest", "chop", "mine", "cultivar", "cook", "eat", "fish", "obra", "portal"],
   // Fixes.docx 14/8 #2: la cadena del Altar cruza media economía (oro → Pico de Oro →
   // bronce → barras → Horno…), así que sus 4 pasos dejan el loop ENTERO abierto
@@ -1831,7 +1832,13 @@ const TUTO_STEPS = [
      EL TABLÓN: es el regulador de la economía y la única fuente de VALES —la moneda que solo sale
      de ahí y solo se gasta ahí—. Está plantado en la granja como un objeto más, así que el jugador
      lo ve y le hace clic sin entender qué es. */
-  { id: "fish",     n: 1, txt: "Comprá una lombriz en el Mercado y probá la caña en la laguna", target: "fish" },
+  /* 19/8 (dirección): "los montículos ya están desde que el jugador aparece, y de ahí salen
+     lombrices". Cierto, y cambia el paso: mandarlo a COMPRAR carnada cuando la tiene gratis a diez
+     metros era enseñarle el camino largo. Los montículos son tres por día, se cavan con un clic sin
+     herramienta y siempre dan lombriz — y son otro sistema que nadie le explicaba. El Mercado sigue
+     ahí para cuando se le acaben. */
+  { id: "excavar",  n: 1, txt: "Cavá uno de los montículos de tierra: adentro hay carnada" },
+  { id: "fish",     n: 1, txt: "Probá la caña en la laguna (la lombriz es el cebo)", target: "fish" },
   { id: "pedido",   n: 1, txt: "Entregá un encargo en el tablón de pedidos", target: "tablon_pedidos", panel: "ov-pedidos" },
   // (14/8, reversión del capataz: la cadena TERMINA acá — el tutorial enseña LO BÁSICO de
   //  la granja. Armas, Zona Negra, minería avanzada y Altar se aprenden jugando: sus
@@ -1853,7 +1860,7 @@ const TUTO_CAPS = [
   { id: "cocina",   label: "La Cocina",          pasos: ["place_cocina", "woodc", "stonec", "build_cocina", "cook", "eat"] },
   { id: "zona",     label: "La Zona Negra",      pasos: ["portal", "hunt", "estofado"] },
   { id: "crecer",   label: "La granja crece",    pasos: ["expandir", "editar"] },
-  { id: "pueblo",   label: "La laguna y el tablón", pasos: ["fish", "pedido"] },
+  { id: "pueblo",   label: "La laguna y el tablón", pasos: ["excavar", "fish", "pedido"] },
 ];
 
 function capEstado(cap) {   // "hecho" | "activo" | "pendiente" (por el paso más avanzado de la cadena)
@@ -2031,6 +2038,11 @@ function tutoHecho(st) {
     else if (st.id === "expandir")  hecho = (G.expansiones || 0) > 0;
     else if (st.id === "editar")    hecho = !!G.editVisto;
     else if (st.id === "pedido")    hecho = (typeof statGet === "function" && statGet("pedido") > 0) || (G.vales || 0) > 0;
+    /* Los montículos se reinician cada día, así que "ya cavaste hoy" no sirve como prueba de que
+       aprendiste: vale también tener la carnada en la bolsa o haber pescado alguna vez. */
+    else if (st.id === "excavar")   hecho = ((G.excav && G.excav.hechos && G.excav.hechos.length) || 0) > 0 ||
+                                            (G.res && (G.res.lombriz || 0) > 0) ||
+                                            (G.skills && (G.skills.fishing || 0) > 0);
     else if (st.id === "eat")       hecho = (G.skills && G.skills.cooking > 0) && (G.buffs || []).length > 0;
     else if (st.id === "unlockarm") hecho = !!G.armasUnlocked;
     else if (st.id === "craftarm")  hecho = Object.keys(G.weapons || {}).length > 0;
@@ -4450,6 +4462,7 @@ function excavCavar(i) {   // devuelve el botín si se pudo cavar
   else if (b.seed) G.seeds[b.seed] = (G.seeds[b.seed] || 0) + b.n;
   e.hechos.push(i);
   log("Excavaste un montículo: " + b.txt + ".", "good");
+  if (typeof tutoEvent === "function") tutoEvent("excavar");   // 19/8: es un paso del tutorial
   refreshHud(); if (typeof syncSlots === "function") syncSlots();
   if (typeof saveFarm === "function") saveFarm(true);
   return b;
