@@ -97,5 +97,85 @@ console.log("\nY SI LA CELDA RESERVADA ESTÁ OCUPADA, BUSCA OTRA DEL MISMO BLOQU
     "la celda reservada estaba tomada");
 }
 
+console.log("\nLAS DIECISÉIS, UNA POR UNA: ¿CADA BLOQUE ENTREGA LO SUYO?");
+{
+  /* 20/8, dirección: "hay que asegurarse de que las expansiones realmente estén dando los nodos y
+     las parcelas en CADA UNA de las expansiones."
+     Comprobar la 1 y la 2 no dice nada de la 16. Se compran las dieciséis en orden, y después de
+     cada compra se mira el bloque recién abierto: su árbol, su roca y su parcela. */
+  G.level = 60; G.expansiones = 0; G.plotsOwned = 3; G.treesOpen = [0]; G.rocksOpen = [0];
+  G.built = {}; G.obras = {}; G.layout = {}; G.layoutPlots = {}; G.decos = []; G.chests = [];
+  G.regalos = { tree: 0, rock: 0, plot: 0 }; G.cobertizo = { tree: 0, rock: 0, plot: 0 };
+  GF.aplicarTerreno(0); GF.ocupCambio();
+
+  const fallan = { compra: [], arbol: [], roca: [], parcela: [], fuera: [], encima: [], cerca: [] };
+  for (let i = 0; i < GF.EXPANSIONES.length; i++) {
+    G.res = { madera: 99999, piedra: 99999, bronce: 9999, hierro: 9999, oro: 9999, diamante: 9999, netherita: 9999 };
+    G.plata = 9999999;
+    const e = ctx.expansionSiguiente();
+    const b = e.bloque, n = e.n;
+    if (!ctx.expansionComprar()) { fallan.compra.push(n); continue; }
+    /* El terreno se re-aplica al comprar, pero eso lo hace la ESCENA al reiniciarse y aquí no hay
+       escena. Sin esto, enCerca() seguiría contestando sobre el corral viejo —donde el bloque nuevo
+       ni siquiera existe— y las dieciséis parcelas salían "en la cerca". Un test que no reproduce
+       el estado real inventa fallos: ya me pasó tres veces hoy. */
+    GF.aplicarTerreno(G.expansiones); GF.ocupCambio();
+
+    /* El árbol y la roca del bloque: presentes y dentro. */
+    const suyos = [];
+    GF.WORLD_OBJECTS.forEach((o, k) => {
+      if (o.exp !== i) return;
+      const pres = GF.objetoPresente(GF.COLLISIONS[k] || { tipo: o.type, exp: o.exp, i: k });
+      const dentro = o.leftCol >= b.c0 && o.leftCol < b.c1 && (o.baseRow - 1) >= b.r0 && (o.baseRow - 1) < b.r1;
+      if (pres && dentro) suyos.push(o.type);
+      if (pres && !dentro) fallan.fuera.push(n + ":" + o.type);
+    });
+    if (!suyos.includes("tree")) fallan.arbol.push(n);
+    if (!suyos.includes("rock")) fallan.roca.push(n);
+
+    /* Y la parcela: colocada, dentro del bloque, tuya, y no encima de otra cosa. */
+    const par = Object.keys(G.layoutPlots).map(k => G.layoutPlots[k])
+      .find(p => p && p.col >= b.c0 && p.col < b.c1 && p.row >= b.r0 && p.row < b.r1);
+    if (!par) { fallan.parcela.push(n); continue; }
+    if (GF.enCerca(par.col, par.row)) fallan.cerca.push(n + " en " + par.col + "," + par.row);
+    /* ¿Cayó encima del árbol o la roca del propio bloque? */
+    const choca = GF.WORLD_OBJECTS.some((o, k) => o.exp === i &&
+      par.col >= o.leftCol && par.col < o.leftCol + Math.max(1, Math.ceil(o.wCells || 1)) &&
+      par.row === o.baseRow - 1);
+    if (choca) fallan.encima.push(n + " en " + par.col + "," + par.row);
+  }
+
+  ok("las " + GF.EXPANSIONES.length + " se pueden comprar", !fallan.compra.length, fallan.compra.join(", "));
+  ok("las " + GF.EXPANSIONES.length + " traen su ÁRBOL", !fallan.arbol.length, fallan.arbol.join(", ") || "una por bloque, presente y dentro");
+  ok("las " + GF.EXPANSIONES.length + " traen su ROCA", !fallan.roca.length, fallan.roca.join(", ") || "una por bloque, presente y dentro");
+  ok("las " + GF.EXPANSIONES.length + " traen su PARCELA colocada", !fallan.parcela.length, fallan.parcela.join(", ") || "arada y dentro del bloque");
+  ok("ningún nodo de expansión cae fuera de su bloque", !fallan.fuera.length, fallan.fuera.join(" · "));
+  ok("ninguna parcela cae en la franja de la cerca", !fallan.cerca.length, fallan.cerca.join(" · "));
+  ok("ni encima del árbol o la roca de su propio bloque", !fallan.encima.length, fallan.encima.join(" · "));
+  ok("y al final tiene 3 + 16 = 19 parcelas", G.plotsOwned === 19, G.plotsOwned + " parcelas");
+  ok("sin haber pasado ninguna por el baúl", (G.regalos.plot || 0) === 0,
+    "el terreno comprado viene con lo suyo puesto");
+}
+
+console.log("\nY LA REPARACIÓN, TAMBIÉN PARA LAS DIECISÉIS");
+{
+  /* El caso extremo del arreglo retroactivo: alguien que compró las dieciséis antes de que la
+     entrega existiera. Si la migración solo supiera reparar las primeras, el jugador avanzado
+     —el que más terreno pagó— sería el peor servido. */
+  GF.aplicarTerreno(16);
+  ctx.hydrate({ level: 60, expansiones: 16, plotsOwned: 3, treesOpen: [0], rocksOpen: [0],
+    built: { store: false }, obras: {}, layout: {}, layoutPlots: {}, decos: [], chests: [],
+    regalos: { tree: 0, rock: 0, plot: 0 }, cobertizo: { tree: 0, rock: 0, plot: 0 }, sflStock: true });
+  ok("recupera las 16 parcelas de golpe", G.plotsOwned === 19, "3 → " + G.plotsOwned);
+  const puestas = Object.keys(G.layoutPlots).map(k => G.layoutPlots[k]);
+  const sinParcela = [];
+  GF.EXPANSIONES.forEach((b, i) => { if (!puestas.some(p => dentroDe(b, p))) sinParcela.push(i + 1); });
+  ok("y cada bloque tiene la suya dentro", !sinParcela.length, sinParcela.join(", ") || "los 16 servidos");
+  /* Y ninguna encima de otra: dos parcelas en la misma celda sería peor que ninguna. */
+  const claves = puestas.map(p => p.col + "," + p.row);
+  ok("sin dos parcelas en la misma celda", new Set(claves).size === claves.length,
+    claves.length + " parcelas, " + new Set(claves).size + " celdas distintas");
+}
+
 console.log(fallos ? "\n  ✗ " + fallos + " fallas\n" : "\n  ✓ lo que compraste con el terreno está dentro del terreno\n");
 process.exit(fallos ? 1 : 0);
