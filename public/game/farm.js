@@ -1347,7 +1347,15 @@ class FarmScene extends Phaser.Scene {
       const pk = equippedPick();   // el pico sale solo de la bolsa (el equipado define el tier)
       if (!pk || (!G.kitReclamado && (G.picks.dur[pk] || 0) <= 0)) { toast(!G.kitReclamado ? "Tu kit de bienvenida está en el baúl, junto al granero" : "Necesitás un pico — craftealo en la Herrería"); return; }
       const pd = PICK_DEF[pk], od = ORE_DEF[o.ore];
+      /* 18/8 (dirección): el PICO decide qué mineral puede tocar; la SKILL DE MINERÍA decide si
+         ya sabés hacerlo. Las dos, y cada una dice lo suyo — así el pico no pierde su papel
+         (sigue siendo el consumible que se paga y está dentro del ancla) y la skill deja de ser
+         decorativa en su propio oficio. */
       if (od.tier > pd.mineTier) { toast("Tu " + pd.label + " no puede con " + od.label); log("Necesitás un pico mejor para " + od.label + " (Herrería).", "bad"); return; }
+      if (typeof oreUnlocked === "function" && !oreUnlocked(o.ore)) {
+        toast("Necesitás Minería nivel " + oreNivelReq(o.ore) + " para " + od.label);
+        log("El " + od.label + " se aprende a picar con Minería nivel " + oreNivelReq(o.ore) + ".", "info"); return;
+      }
       if ((G.picks.dur[pk] || 0) <= 0) { toast("No tenés pico útil — craftéalo en la Herrería"); return; }
       if (!roomForRes(o.ore)) { bagFull("picar " + od.label); return; }
       this.startAction("mine", o);

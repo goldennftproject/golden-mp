@@ -692,7 +692,12 @@ function refreshForge() {
   // picos APILABLES (31/7): cada uno es 1 uso; craftear suma al stock
   PICK_ORDER.forEach(id => {
     const pd = PICK_DEF[id], n = pickCount(id), isEq = eq === id && n > 0;
-    const mineEmo = ORE_ORDER.filter(o => ORE_DEF[o].tier <= pd.mineTier).map(o => resIc(o)).join("");
+    /* 18/8: dos puertas por mineral — el pico (lo que la herramienta aguanta) y Minería (lo que
+       sabés hacer). El que todavía no sabés sale a media tinta con el nivel que pide, para que se
+       vea de un golpe qué falta y de qué lado. */
+    const mineEmo = ORE_ORDER.filter(o => ORE_DEF[o].tier <= pd.mineTier).map(o =>
+      oreUnlocked(o) ? resIc(o)
+        : '<span style="opacity:.4" title="Minería nivel ' + oreNivelReq(o) + '">' + resIc(o) + '</span>').join("");
     const img = '<img src="' + GF.spr(pd.sprite) + '">';
     const costStr = Object.keys(pd.cost).map(k => resIc(k) + " " + pd.cost[k]).join(" · ") + (pd.plata ? " · " + coinIc("plata") + " " + pd.plata : "");
     const afford = canAfford(pd.cost) && (!pd.plata || G.plata >= pd.plata);
@@ -851,7 +856,11 @@ function refreshCooking() {
         '<div class="fds">' + fmtSecs(Math.ceil(left / 1000)) + ' restantes</div></div></div>';
     });
   }
-  box.innerHTML = head + RECIPE_ORDER.map(id => {
+  /* 18/8: el recetario se lista POR NIVEL. RECIPE_ORDER trae primero las recetas de huerta y
+     después las de pescado y carne, que vuelven a empezar en el 1 — así la lista saltaba de "nivel
+     10" a "nivel 1" y parecía un error. El orden de la constante no se toca (otras partes cuentan
+     con él); solo se ordena lo que se dibuja. */
+  box.innerHTML = head + RECIPE_ORDER.slice().sort((a, b) => (RECIPE_DEF[a].lvl || 1) - (RECIPE_DEF[b].lvl || 1)).map(id => {
    try {
     const r = RECIPE_DEF[id];
     const locked = r.lvl && lvl < r.lvl;
@@ -1322,14 +1331,16 @@ function refreshEstablo() {
   const box = $("establo-list"); if (!box) return;
   let h = "";
   ANIMAL_ORDER.forEach(k => {
-    const d = ANIMAL_DEF[k], a = animalDe(k);
+    const d = ANIMAL_DEF[k], a = animalDe(k), abierto = animalUnlocked(k);
     const come = d.come.map(c => (CROP_DEF[c] ? CROP_DEF[c].label : c)).join(" o ");
     if (!a) {
       h += '<div class="forge-row"><div class="fic">' + d.emoji + '</div><div class="finfo">' +
         '<div class="fnm">' + d.label + '</div>' +
         '<div class="fds">Come ' + come + ' · produce ' + RES_LABEL[d.mat] + ' (' + d.porCiclo + ' cada ' + fmtSecs(d.cicloH * 3600) + ')</div>' +
-        '<div class="fds">Desbloquea la armadura de ' + d.armadura + '</div></div>' +
-        '<div class="fbtns"><button class="green sm" ' + (G.golden >= animalPrecio(k) ? "" : "disabled") + ' data-buyani="' + k + '">Comprar · ' + animalPrecio(k) + ' $G</button></div></div>';
+        '<div class="fds">Desbloquea la armadura de ' + d.armadura + '</div>' +
+        /* 18/8: el establo dice en la cara qué te falta. Si es nivel, no es un botón gris mudo. */
+        (abierto ? '' : '<div class="fds" style="color:#8a5a1a">🔒 Ganadería nivel ' + animalNivelReq(k) + ' (tenés ' + nivelOficio("ganaderia") + ')</div>') + '</div>' +
+        '<div class="fbtns"><button class="green sm" ' + (abierto && G.golden >= animalPrecio(k) ? "" : "disabled") + ' data-buyani="' + k + '">' + (abierto ? 'Comprar · ' + animalPrecio(k) + ' $G' : 'Nivel ' + animalNivelReq(k)) + '</button></div></div>';
       return;
     }
     const f = animalFelicidad(k), listo = animalListo(k);

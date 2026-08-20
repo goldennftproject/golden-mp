@@ -72,10 +72,40 @@ ok("total a pagar",true,Math.round(totalP).toLocaleString("es")+" de plata = "+M
 
 /* ---- 4. LOS OFICIOS: qué abre cada uno ---- */
 LOG("\n═══ 4. LOS OFICIOS · qué escalón abre cada uno ═══\n");
-const abre={Cultivo:X.CROP_ORDER.length,"Minería":X.ORE_ORDER.length,Pesca:4,
-  "Ganadería":X.ANIMAL_ORDER.length,Cocina:X.RECIPE_ORDER.length,Tala:0};
-Object.keys(abre).forEach(k=>{
-  ok(k,abre[k]>0||k==="Tala",abre[k]?abre[k]+" escalones":"nada — la madera es plana (decidido)");});
+/* 18/8: esto ya NO es un modelo sobre papel — las puertas están escritas. Así que en vez de contar
+   cuántos escalones "habría", se le pregunta al juego a qué nivel abre cada uno y cuántas horas de
+   práctica cuesta. Si mañana alguien mueve un nivel, esta tabla lo canta. */
+const HORAS={farming:3*3600/X.CROP_DEF.papa.grow*X.CROP_DEF.papa.xp, mining:3*3600/X.CD.rock*X.XP_ACCION,
+  fishing:3600/X.FISH_CD*X.XP_PEZ, ganaderia:60, cooking:60};
+const puertas={
+  Cultivo:["farming",X.CROP_ORDER.map(k=>[X.CROP_DEF[k].label,X.CROP_DEF[k].lvl])],
+  "Minería":["mining",X.ORE_ORDER.map(k=>[X.ORE_DEF[k].label,ctx.oreNivelReq(k)])],
+  Pesca:["fishing",["comun","raro","epico","legendario"].map(r=>[r,ctx.pezNivelReq(r)])],
+  "Ganadería":["ganaderia",X.ANIMAL_ORDER.map(k=>[X.ANIMAL_DEF[k].label,ctx.animalNivelReq(k)])],
+  Cocina:["cooking",X.RECIPE_ORDER.map(k=>[X.RECIPE_DEF[k].label,X.RECIPE_DEF[k].lvl||1])]};
+/* La COCINA no es una escalera sino un RECETARIO: varias recetas comparten nivel y hay dos ramas
+   (huerta, y pescado/carne) que empiezan las dos por abajo. Se le pide suelo y que no deje niveles
+   muertos, no que suba de uno en uno. */
+const ESCALERA={Cultivo:1,"Minería":1,Pesca:1,"Ganadería":1};
+Object.keys(puertas).forEach(nom=>{
+  const [sk,esc]=puertas[nom]; const niv=esc.map(e=>e[1]).slice().sort((a,b)=>a-b);
+  const sube=!ESCALERA[nom]||niv.every((v,i)=>i===0||v>niv[i-1]), suelo=niv[0]===1;
+  const h=acum(niv[niv.length-1],sk)/(HORAS[sk]||60);
+  ok(nom,sube&&suelo,esc.length+(ESCALERA[nom]?" escalones · nv ":" recetas · nv ")+niv.join(",")+" · el último a "+
+    (h<48?h.toFixed(0)+" h":(h/24).toFixed(0)+" d"));
+  if(!suelo) grave(nom+" no tiene ningún escalón abierto en el nivel 1: el jugador abre el panel y lo ve todo gris");
+  if(!sube) grave("La escalera de "+nom+" no sube limpia: "+niv.join(","));
+  {const hueco=niv.filter((v,i)=>i&&v-niv[i-1]>3);
+   if(hueco.length) menor(nom+" deja un tramo sin nada nuevo antes del nivel "+hueco.join(", "));}
+  if(h/24>30) menor("El último escalón de "+nom+" pide "+(h/24).toFixed(0)+" días de práctica");});
+ok("Tala",true,"nada — la madera es plana (decidido)");
+/* LAS DOS PUERTAS DE LA MINERÍA no se pueden pisar: el PICO es el consumible que sostiene el ancla
+   (su coste entra en el precio sombra) y la SKILL es el saber. Si un mineral pidiera un pico que no
+   existe, la puerta de la skill sería adorno. */
+{const topePico=Math.max.apply(null,Object.keys(X.PICK_DEF).map(p=>X.PICK_DEF[p].mineTier));
+ const huerfanos=X.ORE_ORDER.filter(k=>X.ORE_DEF[k].tier>topePico);
+ ok("cada mineral tiene un pico que lo alcanza",!huerfanos.length,huerfanos.join(", ")||"los "+X.ORE_ORDER.length);
+ if(huerfanos.length) grave("Minerales sin pico posible: "+huerfanos.join(", "));}
 { // ¿los niveles que piden los cultivos siguen siendo alcanzables?
   const RIT=3*3600/X.CROP_DEF.papa.grow*X.CROP_DEF.papa.xp;
   const hMaiz=acum(X.CROP_DEF.maiz.lvl,"farming")/RIT/24;

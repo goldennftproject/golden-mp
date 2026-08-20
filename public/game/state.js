@@ -253,6 +253,20 @@ function farmSkillLevel() { return skillInfo(G.skills.farming, "farming").lvl; }
    "Cultivo nv N", por fin dice la verdad. El nivel de GRANJA sigue mandando en lo suyo: parcelas,
    nodos y expansiones. */
 function cropUnlocked(k) { const cd = CROP_DEF[k]; return !!cd && farmSkillLevel() >= cd.lvl; }
+
+/* ============ CADA OFICIO ABRE SU ESCALÓN (18/8, dirección) ========================
+   "La skill de cultivo te desbloquea las semillas; la de minería, poder minar diferentes
+   minerales. Está bien que la tala no desbloquee nada."
+   Esto es lo mismo para los cinco oficios que tienen escalera. El nivel se deriva de la posición
+   del material en SU escalera: el escalón N pide nivel N del oficio, sin tablas a mano.
+   La TALA no está: la madera es plana y se decidió que su oficio sea una medida, no una puerta. */
+function nivelOficio(sk) { return skillInfo((G.skills && G.skills[sk]) || 0, sk).lvl; }
+function oreNivelReq(k) { const o = ORE_DEF[k]; return o ? (o.tier + 1) * 2 - 1 : 1; }   // piedra 1, bronce 3, hierro 5, oro 7, diamante 9, netherita 11
+function oreUnlocked(k) { return nivelOficio("mining") >= oreNivelReq(k); }
+function pezNivelReq(r) { return { comun: 1, raro: 3, epico: 6, legendario: 10 }[r] || 1; }
+function pezUnlocked(r) { return nivelOficio("fishing") >= pezNivelReq(r); }
+function animalNivelReq(k) { const i = ANIMAL_ORDER.indexOf(k); return i <= 0 ? 1 : i * 4; }   // 1, 4, 8, 12
+function animalUnlocked(k) { return nivelOficio("ganaderia") >= animalNivelReq(k); }
 function selectSeed(k) { if (!CROP_DEF[k]) return; G.selSeed = k; if (isOpen("ov-inv")) refreshInv(); }
 // cupo diario de semillas (anti-inflación): compras + las del cofre suman al mismo límite
 var SEED_DAILY_BASE = 18, SEED_DAILY_POR_NIVEL = 2;   // (legado: la fórmula vieja, la sigue usando el MODO TESTEO)
@@ -2885,6 +2899,12 @@ function animalFelicidad(k) {
   return Math.round(l.reduce((s, a) => s + animalFelizDe(a), 0) / l.length);
 }
 function comprarAnimal(k) {
+  /* 18/8 (dirección): la skill de GANADERÍA abre los animales. La alpaca desde el principio; el
+     conejo, el toro y el jabalí según vas cuidando el establo. */
+  if (typeof animalUnlocked === "function" && !animalUnlocked(k)) {
+    toast("Necesitás Ganadería nivel " + animalNivelReq(k) + " para " + (ANIMAL_DEF[k] ? ANIMAL_DEF[k].label : k));
+    return;
+  }
   const d = ANIMAL_DEF[k]; if (!d) return;
   if (!(G.built && G.built.establo)) { toast("Primero construí el Establo"); return; }
   const tengo = animalCant(k);
@@ -3996,6 +4016,13 @@ function goFishing() {
   if (toolDur("rod") <= 0) { log("¡La caña se rompió en pedazos! Crafteá otra en la Herrería.", "bad"); toast("¡Caña rota!"); }
   const r = Math.random();
   let rar; if (r < 0.60) rar = "comun"; else if (r < 0.85) rar = "raro"; else if (r < 0.97) rar = "epico"; else rar = "legendario";
+  /* 18/8 (dirección): la skill de Pesca abre las RAREZAS. Si todavía no llegás, sale la mejor que
+     sepas sacar — el sorteo no se toca, se recorta por arriba. Así la Pesca deja de ser un oficio
+     que no decide nada: cada nivel amplía de verdad lo que puede aparecer. */
+  if (typeof pezUnlocked === "function") {
+    const orden = ["legendario", "epico", "raro", "comun"];
+    while (!pezUnlocked(rar)) rar = orden[orden.indexOf(rar) + 1] || "comun";
+  }
   /* 18/8 (dirección): "pescar tiene su propio skill, ¿por qué le da experiencia a cocinar?".
      Resto de cuando la pesca era "conseguir ingredientes". La Cocina se gana cocinando. */
   G.fish[rar]++; addXp("fishing", XP_PEZ);
@@ -4187,7 +4214,11 @@ function pedPool() {
   const pool = [];
   for (const k in CROP_DEF) {
     const cd = CROP_DEF[k];
-    if (typeof farmLevel !== "function" || farmLevel() < cd.lvl) continue;
+    /* 18/8: el tablón pedía cultivos por NIVEL DE GRANJA, pero desde que las semillas se abren con
+       la skill de Cultivo ese `cd.lvl` es un nivel de OFICIO. Con la vara vieja, el tablón te
+       encargaba maíz porque el granero iba alto aunque no pudieras ni comprar la semilla. Se
+       pregunta a la misma puerta que el mercado. */
+    if (typeof cropUnlocked === "function" ? !cropUnlocked(k) : (farmLevel() < cd.lvl)) continue;
     const min = Math.round(cd.growH * 60);
     const n = min <= 30 ? 3 : min <= 90 ? 2 : 1;   // cultivos cortos piden tandas, anclas piden 1
     pool.push({ tipo: "res", key: k, n: n, val: (cd.price || 1) * n });
@@ -4401,7 +4432,9 @@ function valeSemillasN() {
   return Math.max(1, Math.round(VALE_SOBRE * VALE_EN_PLATA / c));
 }
 function valeMejorCultivo() {
-  const desb = Object.keys(CROP_DEF).filter(k => farmLevel() >= CROP_DEF[k].lvl)
+  // 18/8: misma corrección que en el tablón — la semilla que canjeás tiene que ser una que el
+  // MERCADO te venda, y el mercado mira la skill de Cultivo, no el granero.
+  const desb = Object.keys(CROP_DEF).filter(k => (typeof cropUnlocked === "function" ? cropUnlocked(k) : farmLevel() >= CROP_DEF[k].lvl))
     .sort((a, b) => CROP_DEF[b].lvl - CROP_DEF[a].lvl);
   return desb[0] || "papa";
 }
