@@ -104,19 +104,29 @@ console.log("\n=== 5. LAS EXPANSIONES · el coste sube y nunca baja ===");
   console.log((sube ? "  ok " : "  !! ") + "el coste crece a lo largo de las 16");
 }
 
-console.log("\n=== 5b. LOS ANIMALES · no se pueden medir todavía ===");
+console.log("\n=== 5b. LOS ANIMALES · el establo también rinde 20 plata/hora ===");
 {
-  // 18/8: la primera versión de esto medía (material x precio − comida) / horas y daba a los cuatro
-  // animales en pérdida brutal. Era la VARA la que estaba rota: fibra, pelaje, cuero y colmillo NO
-  // TIENEN PRECIO en la tabla PRICE, así que valían 0. Es el mismo agujero que tenían los minerales
-  // hasta hoy: si un material no tiene precio sombra, ningún sistema puede valorarlo y cualquier
-  // medición sobre él miente. Se deja marcado, no medido.
-  const sinPrecio = [];
-  for (const k in X.ANIMAL_DEF) { const a = X.ANIMAL_DEF[k];
-    if (X.PRICE[a.mat] == null) sinPrecio.push(a.mat); }
-  filas++; if (sinPrecio.length) avisos++;
-  console.log((sinPrecio.length ? "  !! " : "  ok ") + "los materiales de los animales tienen precio".padEnd(34) +
-    (sinPrecio.length ? "FALTAN: " + [...new Set(sinPrecio)].join(", ") : "todos"));
+  /* 18/8: la primera versión de esto daba a los cuatro animales en pérdida brutal, y era la VARA la
+     que estaba rota — fibra, pelaje, cuero y colmillo no tenían precio sombra, así que valían 0.
+     19/8: ya lo tienen y el establo está anclado de verdad, así que ahora SÍ se mide. Lo que se
+     comprueba es lo mismo que en todo lo demás: producción menos comida = 20 plata/hora. */
+  console.log("                                            rinde       debe   desvío");
+  for (const k in X.ANIMAL_DEF) {
+    const a = X.ANIMAL_DEF[k];
+    const neto = ctx.animalBrutoH(k) - ctx.animalRacionH(k);
+    linea(a.label + " (" + ctx.animalPorCiclo(k) + " cada " + a.cicloH + " h)", neto, ANCLA, "plata/h");
+  }
+  /* Y la regla que no se ve en el número: cuidarlo tiene que ganarle a abandonarlo. Con felicidad 0
+     el animal produce la mitad y no come nada, así que si la comida costara más que esa mitad, el
+     juego estaría premiando el maltrato. Pasó: la alpaca y el toro comían trigo. */
+  for (const k in X.ANIMAL_DEF) {
+    const cuidado = ctx.animalBrutoH(k) - ctx.animalRacionH(k);
+    const abandonado = ctx.animalBrutoH(k) * 0.5;
+    filas++; if (cuidado <= abandonado) avisos++;
+    console.log((cuidado > abandonado ? "  ok " : "  !! ") +
+      ("cuidar a " + X.ANIMAL_DEF[k].label + " gana a abandonarlo").padEnd(38) +
+      (cuidado.toFixed(0) + " contra " + abandonado.toFixed(0)).padStart(12));
+  }
 }
 
 console.log("\n=== 5c. LA COCINA · se paga sola por construcción ===");
