@@ -916,6 +916,7 @@ function refreshCooking() {
 
 
 /* ---- Tutorial guiado (doc maestro 2/8): cartel de objetivo + tilde animado ---- */
+var TUTO_ROTA = 4;   // segundos que dura cada mensaje de la ronda
 function tutoRefresh() {
   const el = document.getElementById("tuto"); if (!el) return;
   const st = (typeof tutoActivo === "function") ? tutoActivo() : null;
@@ -923,23 +924,27 @@ function tutoRefresh() {
   el.classList.remove("hidden");
   // 14/8 (reversión del capataz): cartel + flechitas, como antes
   const sub = (typeof tutoSub === "function") ? tutoSub() : null;
-  document.getElementById("tuto-txt").textContent = sub ? sub.txt : tutoTxt(st);
   const need = tutoNeed(st);
-  document.getElementById("tuto-n").textContent = sub ? "" : (st.res ? " " + Math.min(tutoTiene(st), need) + "/" + need
+  /* ==== UNA SOLA LÍNEA, QUE ALTERNA MIENTRAS SE ESPERA (19/8, dirección) ====
+     El objetivo sigue siendo el objetivo y es siempre el primero de la ronda; lo que hace la línea
+     es turnarse con las cosas que se pueden hacer AHORA, cada TUTO_ROTA segundos. Si no hay espera
+     —o hay un sub-objetivo, que es una instrucción y no admite competencia— no rota nada y el
+     cartel se comporta como siempre.
+     La ronda se calcula del reloj y no de un temporizador propio: así no hay nada que limpiar si
+     el cartel se esconde, y todas las pestañas van sincronizadas. */
+  const espera = (!sub && typeof tutoEsperaSeg === "function") ? tutoEsperaSeg() : 0;
+  const opciones = (espera > 0 && typeof tutoMientras === "function") ? tutoMientras() : [];
+  let txt = sub ? sub.txt : tutoTxt(st), cont = sub ? "" : (st.res ? " " + Math.min(tutoTiene(st), need) + "/" + need
     : (st.n > 1 ? " " + Math.min(G.tuto.n || 0, st.n) + "/" + st.n : ""));
-  /* 19/8: la línea de "mientras tanto". Se crea sola la primera vez —así no hay que tocar el
-     index.html— y solo aparece cuando el paso activo está esperando un reloj. Va debajo del
-     objetivo y en otro tono: es una sugerencia, no una orden. */
-  {
-    const hint = (!sub && typeof tutoMientras === "function") ? tutoMientras() : null;
-    let m = document.getElementById("tuto-mientras");
-    if (hint) {
-      if (!m) { m = document.createElement("div"); m.id = "tuto-mientras";
-        m.style.cssText = "font-size:12px;font-weight:700;color:#ffe9ac;opacity:.85;margin-top:2px";
-        el.appendChild(m); }
-      m.textContent = hint; m.style.display = "block";
-    } else if (m) m.style.display = "none";
+  if (espera > 0) {
+    const turno = Math.floor(Date.now() / (TUTO_ROTA * 1000)) % (opciones.length + 1);
+    if (turno === 0) {
+      /* El objetivo, con la cuenta atrás: saber que faltan 1:42 es la mitad de la paciencia. */
+      txt += " · listo en " + (typeof fmtSecs === "function" ? fmtSecs(espera) : espera + "s");
+    } else { txt = "Mientras tanto: " + opciones[turno - 1]; cont = ""; }
   }
+  document.getElementById("tuto-txt").textContent = txt;
+  document.getElementById("tuto-n").textContent = cont;
   tutoHighlight();
 }
 // 13/8 (audio): la guía DENTRO de las interfaces es una FLECHA dorada (la misma estética

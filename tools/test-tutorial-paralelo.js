@@ -72,30 +72,58 @@ console.log("\n2. LO QUE HACÉS ADELANTADO CUENTA");
   });
 }
 
-console.log("\n3. Y EL CARTEL LO SUGIERE MIENTRAS ESPERÁS");
+console.log("\n3. Y EL CARTEL LO INTERCALA MIENTRAS ESPERÁS");
 {
-  /* Que se PUEDA no alcanza: el jugador nuevo lee un objetivo por vez y deduce que eso es todo
-     lo que hay. La línea de "mientras tanto" solo aparece cuando el paso está esperando un reloj. */
-  ok("existe la línea de sugerencia", typeof ctx.tutoMientras === "function");
+  /* Que se PUEDA no alcanza: el jugador nuevo lee un objetivo por vez y deduce que eso es todo lo
+     que hay. Pero tampoco va una segunda línea —dirección: "no queda bien"—: es UNA línea que se
+     turna entre el objetivo, con su cuenta atrás, y lo que se puede hacer ahora mismo. */
+  ok("el juego sabe cuánto falta", typeof ctx.tutoEsperaSeg === "function");
+  ok("y qué se puede hacer mientras", typeof ctx.tutoMientras === "function");
+
   G.tuto = { step: idx("harvest"), done: false };
-  G.plots = [{ state: "growing" }, { state: "growing" }, { state: "growing" }];
-  G.excav = { dia: "x", hechos: [] }; G.tools = { axe: 10, rod: 5 }; G.res = {};
-  const conEspera = ctx.tutoMientras();
-  ok("con las papas creciendo, sugiere algo", !!conEspera, conEspera || "nada");
-
-  /* Y CALLA cuando hay algo cosechable: el cartel no puede competir consigo mismo. */
-  G.plots = [{ state: "ready" }, { state: "growing" }];
-  ok("con una papa lista, se calla", !ctx.tutoMientras(), "primero cosechá");
+  const ahora = Date.now();
+  G.plots = [{ state: "growing", readyAt: ahora + 100000 }, { state: "growing", readyAt: ahora + 180000 }];
+  ok("con las papas creciendo, hay cuenta atrás", ctx.tutoEsperaSeg() > 0,
+    "faltan " + ctx.tutoEsperaSeg() + " s");
+  ok("y mide la que llega ANTES, no la más lenta", Math.abs(ctx.tutoEsperaSeg() - 100) <= 2,
+    "la primera en " + ctx.tutoEsperaSeg() + " s");
+  G.plots = [{ state: "ready" }, { state: "growing", readyAt: ahora + 90000 }];
+  ok("con una papa lista, no hay espera que anunciar", ctx.tutoEsperaSeg() === 0,
+    "eso no es esperar, es trabajo pendiente");
   G.plots = [{ state: "dry" }];
-  ok("y con las parcelas vacías, también", !ctx.tutoMientras(), "primero plantá");
+  ok("y con las parcelas vacías, tampoco", ctx.tutoEsperaSeg() === 0);
 
-  /* La sugerencia sigue el orden de lo que es GRATIS y está a mano: primero los montículos
-     (tres por día, un clic, sin herramienta), después las herramientas. */
-  G.plots = [{ state: "growing" }];
-  G.excav = { dia: "x", hechos: [] };
-  ok("primero manda a cavar, que es gratis", /montículo/i.test(ctx.tutoMientras() || ""), ctx.tutoMientras());
+  /* LA RONDA SOLO OFRECE LO QUE ESTÁ DISPONIBLE. Ésta es la parte que pidió dirección: "cada paso
+     detecta si los anteriores están hechos o no". Nada de listas fijas. */
+  G.plots = [{ state: "growing", readyAt: ahora + 120000 }];
+  G.excav = { dia: "x", hechos: [] }; G.tools = { axe: 5, rod: 3 }; G.res = {};
+  G.picks = { eq: null, dur: {} }; G.pescaHasta = 0; G.built = {}; G.gear = {};
+  let m = ctx.tutoMientras();
+  ok("con los montículos sin cavar, los ofrece", m.some(t => /montículo/i.test(t)), m.join(" · "));
+  ok("y con hacha, ofrece talar", m.some(t => /talando/i.test(t)));
+  ok("pero sin lombriz no manda a pescar", !m.some(t => /caña/i.test(t)), "la caña sin cebo es un viaje al pedo");
+  ok("ni a picar sin pico equipado", !m.some(t => /roca/i.test(t)));
+
   G.excav = { dia: "x", hechos: [0, 1, 2] };
-  ok("y con los montículos gastados, a talar", /talando|caña|vuelta/i.test(ctx.tutoMientras() || ""), ctx.tutoMientras());
+  m = ctx.tutoMientras();
+  ok("con los tres montículos del día cavados, deja de nombrarlos", !m.some(t => /montículo/i.test(t)), m.join(" · "));
+
+  G.res = { lombriz: 2 }; G.pescaHasta = 0;
+  ok("con cebo y la laguna libre, ya ofrece pescar", ctx.tutoMientras().some(t => /caña/i.test(t)));
+  G.pescaHasta = ahora + 600000;
+  ok("y con la laguna descansando, la calla", !ctx.tutoMientras().some(t => /caña/i.test(t)),
+    "el enfriamiento también cuenta");
+
+  G.tools = { axe: 0, rod: 0 }; G.res = {}; G.excav = { dia: "x", hechos: [0, 1, 2] };
+  G.picks = { eq: null, dur: {} }; G.built = {}; G.gear = {};
+  ok("y si de verdad no hay nada que hacer, no inventa", ctx.tutoMientras().length === 0,
+    "mejor callarse que mandar a hacer algo imposible");
+
+  /* Y el objetivo nunca desaparece: es el primero de la ronda. */
+  const UI = fs.readFileSync("public/game/ui.js", "utf8");
+  ok("el objetivo es el primer turno de la ronda", /turno === 0/.test(UI) && /listo en/.test(UI),
+    "y lleva la cuenta atrás pegada");
+  ok("la segunda línea se fue", !/tuto-mientras/.test(UI), "una sola línea, como pidió dirección");
 }
 
 console.log(fallos ? "\n  ✗ " + fallos + " fallas\n" : "\n  ✓ se puede jugar en paralelo, cuenta lo adelantado y el cartel lo dice\n");
