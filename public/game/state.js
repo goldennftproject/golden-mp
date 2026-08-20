@@ -68,6 +68,7 @@ const G = {
   runaOro: null,   // tope diario de la Runa Dorada   // enfriamiento de la laguna
   expansiones: 0,   // cuántos de los 16 bloques compró el jugador (el orden es fijo: basta el número)
   plotsOwned: 3,   // 14/8 (dirección): se nace con 3 parcelas — la primera misión planta 3 semillas y tiene que haber 3 celdas donde apuntar
+  plotsCompradas: 0,   // 20/8 (dirección): SOLO las compradas en tienda — el precio sube con éstas; las regaladas por expansión no lo tocan
   decos: [], decoBolsa: {}, godHand: false, zonasVistas: ["pantano"],   // adornos puestos · adornos sin colocar · NFT de siembra automática (10/8)
   daily: { day: 0, last: "" },   // cofre diario: día de racha reclamado (1..7) y fecha del último reclamo
   seedBuys: { date: "", count: 0 },   // cupo diario de semillas (compras + cofre)
@@ -2849,6 +2850,7 @@ function comprarParcela() {
     if (typeof tutoGuardia === "function" && !tutoGuardia("plata", c, "comprar parcelas")) return;   // guardia del tutorial (12/8)
     G.plata -= c;
   }
+  G.plotsCompradas = (G.plotsCompradas || 0) + 1;   // el precio de la próxima sube por ESTA compra, no por las expansiones
   G.plotsOwned = Math.min(PLOT_MAX, (G.plotsOwned || 2) + 1);
   log("Desbloqueaste una parcela nueva. Ahora tenés " + G.plotsOwned + ".", "gold");
   if (G.plotsOwned > GF.PLOTS.length) {   // la 13 en adelante: se coloca a mano (#17)
@@ -4621,16 +4623,17 @@ function goFishing() {
 // comprar con plata "cada una un poco más cara que la anterior". La curva vieja (1,45× hasta la
 // 12, 1,12× después) estaba calibrada contra un modelo que ya no existe — el nivel de granja
 // regalando parcelas — y anclada en n=6 cuando hoy se nace con 3.
-// La nueva es UNA regla: base 200, +10% por parcela que ya tenés, vengan de donde vengan.
-//   · 200 ≙ 10 horas del ancla (una celda productiva = 20 plata/hora): se paga sola en una tarde.
-//   · Como el precio mira plotsOwned, cada parcela regalada por expansión también encarece la
-//     siguiente compra — los dos caminos se balancean solos, sin tabla aparte.
-//   · La 60 sale ~41.600: cara para el final del juego, no imposible.
+// La regla: base 200, +10% por parcela COMPRADA. 200 ≙ 10 horas del ancla (una celda
+// productiva = 20 plata/hora): se paga sola en una tarde.
+// 20/8, segunda vuelta (dirección): el precio mira SOLO las compradas en tienda. La primera
+// versión miraba plotsOwned y entonces cada parcela regalada por una expansión encarecía la
+// siguiente compra — con lo cual convenía comprar ANTES de expandir y el orden importaba
+// (hasta 4,6× de diferencia con las 16 expansiones). Con el contador propio, tu compra n°k
+// cuesta lo mismo la hagas cuando la hagas: 200 · 1,10^k. El orden deja de importar.
 var PLOT_UNLOCK_BASE = 200;
 var PLOT_UNLOCK_SUBA = 1.10;
 function plotUnlockCost() {
-  const n = G.plotsOwned || 3;
-  return Math.round(PLOT_UNLOCK_BASE * Math.pow(PLOT_UNLOCK_SUBA, Math.max(0, n - 3)));
+  return Math.round(PLOT_UNLOCK_BASE * Math.pow(PLOT_UNLOCK_SUBA, Math.max(0, G.plotsCompradas || 0)));
 }
 
 // --- cofre diario de login (racha de 7 días · anti-inflación: 80% insumos / 20% plata) ---

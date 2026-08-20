@@ -3,10 +3,15 @@
     parcela cueste un poco más que la anterior. Lo de $Golden lo dejamos para cuando tenga sentido
     venderlo así."
 
+   Segunda vuelta (20/8, más tarde): "que el precio solo se vea afectado por las compras. Si yo
+   adquiero una parcela por expansión, que no le afecte al precio de las que se venden."
+   La primera versión miraba plotsOwned y entonces convenía comprar ANTES de expandir: el orden
+   importaba. Ahora el precio mira G.plotsCompradas, un contador propio.
+
    Tres reglas, y este test EJECUTA las tres — no lee el código:
-     1. El precio arranca en 200 (10 horas del ancla) y sube 10% por parcela que ya tenés.
-     2. Las parcelas regaladas por expansión también encarecen la siguiente compra: el precio
-        mira plotsOwned, no "cuántas compraste". Los dos caminos comparten una sola cuenta.
+     1. El precio arranca en 200 (10 horas del ancla) y sube 10% por parcela COMPRADA.
+     2. Las parcelas regaladas por expansión NO tocan el precio: tu compra n°k cuesta lo mismo
+        la hagas cuando la hagas.
      3. En la tienda no queda ningún botón de parcela en $Golden.
      node tools/test-precio-parcelas.js                                                           */
 const fs = require("fs"), vm = require("vm");
@@ -27,16 +32,16 @@ const G = ctx.G;
 let fallos = 0;
 const ok = (n, c, d) => { if (!c) fallos++; console.log((c ? "  ok   " : "  FALLA") + "  " + n + (d ? "   " + d : "")); };
 
-console.log("\nLA CURVA: 200 DE BASE, +10% POR PARCELA");
+console.log("\nLA CURVA: 200 DE BASE, +10% POR PARCELA COMPRADA");
 {
-  G.plotsOwned = 3;
-  ok("con las 3 de nacimiento, la cuarta sale 200", ctx.plotUnlockCost() === 200, ctx.plotUnlockCost() + " plata = 10 h del ancla");
-  G.plotsOwned = 4;
-  ok("la quinta sale 220 (+10%)", ctx.plotUnlockCost() === 220, ctx.plotUnlockCost() + "");
+  G.plotsOwned = 3; G.plotsCompradas = 0;
+  ok("la primera compra sale 200", ctx.plotUnlockCost() === 200, ctx.plotUnlockCost() + " plata = 10 h del ancla");
+  G.plotsCompradas = 1;
+  ok("la segunda sale 220 (+10%)", ctx.plotUnlockCost() === 220, ctx.plotUnlockCost() + "");
   let previo = 0;
   let monotona = true, suave = true;
-  for (let n = 3; n < 60; n++) {
-    G.plotsOwned = n;
+  for (let k = 0; k < 57; k++) {
+    G.plotsCompradas = k;
     const c = ctx.plotUnlockCost();
     if (c <= previo) monotona = false;
     if (previo && c / previo > 1.11) suave = false;   // nunca salta más del 10% (+ redondeo)
@@ -44,34 +49,34 @@ console.log("\nLA CURVA: 200 DE BASE, +10% POR PARCELA");
   }
   ok("las 57 compras posibles suben SIEMPRE", monotona);
   ok("y ninguna salta más del 10%", suave, "sin escalones sorpresa");
-  G.plotsOwned = 59;
-  ok("la 60 (la última) queda alcanzable", ctx.plotUnlockCost() < 50000, ctx.plotUnlockCost() + " plata: cara, no imposible");
+  G.plotsCompradas = 40;   // el peor caso real: 60 − 3 de nacimiento − 16 de expansión − 1
+  ok("la última compra posible queda alcanzable", ctx.plotUnlockCost() < 15000, ctx.plotUnlockCost() + " plata: cara, no imposible");
 }
 
-console.log("\nLOS DOS CAMINOS COMPARTEN LA CUENTA");
+console.log("\nLA EXPANSIÓN NO TOCA EL PRECIO DE LA TIENDA");
 {
-  /* Si una expansión te regala una parcela, la siguiente compra sale más cara: así el que
-     expande y el que compra pagan curvas coherentes, sin tabla aparte. */
-  G.plotsOwned = 5;
+  /* La regla de dirección, literal: "si yo adquiero una parcela por expansión, que no le afecte
+     al precio de las que se venden". El orden comprar/expandir deja de importar. */
+  G.plotsCompradas = 2; G.plotsOwned = 5;
   const antes = ctx.plotUnlockCost();
-  G.plotsOwned = 6;   // llegó la parcela de una expansión
+  G.plotsOwned = 9;   // llegaron CUATRO parcelas de expansiones
   const despues = ctx.plotUnlockCost();
-  ok("la parcela regalada por la expansión encarece la próxima compra", despues > antes,
-    antes + " → " + despues + " plata");
+  ok("con 4 parcelas regaladas de por medio, la tienda pide lo mismo", antes === despues,
+    antes + " = " + despues + " plata");
 }
 
 console.log("\nCOMPRAR DE VERDAD: PAGA, SUMA Y AVISA");
 {
-  G.plotsOwned = 3; G.tuto = { done: true }; G.plata = 1000; G.golden = 0;
+  G.plotsOwned = 3; G.plotsCompradas = 0; G.tuto = { done: true }; G.plata = 1000; G.golden = 0;
   avisos.length = 0;
   ctx.comprarParcela();
   ok("descuenta el precio exacto", G.plata === 800, "1000 − 200 = " + G.plata);
-  ok("y suma la parcela", G.plotsOwned === 4);
+  ok("y suma la parcela Y el contador de compradas", G.plotsOwned === 4 && G.plotsCompradas === 1);
   ok("y avisa", avisos.some(a => /[Pp]arcela/.test(a)), avisos.join(" · "));
   /* sin plata: rechaza ANTES de cobrar */
   G.plata = 10; avisos.length = 0;
   ctx.comprarParcela();
-  ok("sin plata no cobra ni suma", G.plata === 10 && G.plotsOwned === 4);
+  ok("sin plata no cobra ni suma", G.plata === 10 && G.plotsOwned === 4 && G.plotsCompradas === 1);
   ok("y dice qué falta", avisos.some(a => /falta plata/i.test(a)), avisos.join(" · "));
   /* comprarParcela ya no acepta pagar con $Golden: aunque alguien llame con el argumento viejo,
      cobra plata igual — no hay camino que descuente G.golden. */
@@ -79,6 +84,25 @@ console.log("\nCOMPRAR DE VERDAD: PAGA, SUMA Y AVISA");
   ctx.comprarParcela(true);
   ok("el argumento viejo de $Golden ya no existe: cobra plata igual", G.golden === 99 && G.plata < 1000,
     "$Golden intacto (" + G.golden + ") · plata cobrada");
+}
+
+console.log("\nY EL GUARDADO VIEJO DEDUCE SUS COMPRAS UNA SOLA VEZ");
+{
+  /* Los guardados de antes no traen plotsCompradas. La migración deduce: de las que tenés,
+     3 son de nacimiento y las de expansión son regalo — el resto salió de la tienda.
+     Se ejecuta hydrate() con un guardado armado a mano, como haría el jugador al volver. */
+  vm.runInContext(fs.readFileSync("public/game/save.js", "utf8"), ctx);
+  ctx.localStorage = { getItem: () => null, setItem() {}, removeItem() {} };
+  const regalo = (() => { let r = 0; for (let i = 0; i < 2; i++) if (ctx.GF.EXPANSIONES && ctx.GF.EXPANSIONES[i] && ctx.GF.EXPANSIONES[i].parcela) r++; return r; })();
+  /* jugador viejo: 2 expansiones y 7 parcelas — 3 de nacimiento + las regaladas + el resto comprado */
+  G.plotsCompradas = undefined;
+  ctx.hydrate({ plotsOwned: 7, expansiones: 2, sflStock: true, layoutPlots: { 3: { col: 2, row: 2 } } });
+  const esperado = Math.max(0, (G.plotsOwned || 3) - 3 - regalo);
+  ok("deduce las compradas descontando nacimiento y expansiones", G.plotsCompradas === esperado,
+    G.plotsOwned + " tenidas − 3 − " + regalo + " de expansión = " + G.plotsCompradas + " compradas");
+  /* y si el guardado YA trae el contador, se respeta tal cual */
+  ctx.hydrate({ plotsOwned: 7, plotsCompradas: 1, expansiones: 2, sflStock: true });
+  ok("y si el guardado ya lo trae, no lo pisa", G.plotsCompradas === 1, "guardado dice 1 → queda 1");
 }
 
 console.log("\nY EN LA TIENDA NO QUEDA BOTÓN DE $GOLDEN PARA PARCELAS");

@@ -24,7 +24,7 @@ function snapshot() {
   return { plata: G.plata, golden: G.golden, level: G.level, prestige: G.prestige, iniciado: G.iniciado,
     res: G.res, picks: G.picks, skills: G.skills, fish: G.fish, plots: G.plots, nodos: G.nodos, expansiones: G.expansiones, pescaHasta: G.pescaHasta, runaOro: G.runaOro, buffs: G.buffs, seeds: G.seeds, selSeed: G.selSeed,
     tools: G.tools, sflStock: true, invRows: G.invRows, slots: G.slots, hotbar: G.hotbar, hotSel: G.hotSel, hbInit: G.hbInit, layout: G.layout,
-    daily: G.daily, plotsOwned: G.plotsOwned, seedBuys: G.seedBuys, built: G.built,
+    daily: G.daily, plotsOwned: G.plotsOwned, plotsCompradas: G.plotsCompradas, seedBuys: G.seedBuys, built: G.built,
     hp: G.hp, hpMax: G.hpMax, combatXp: G.combatXp, stam: G.stam, stamAcc: G.stamAcc, stamRec: G.stamRec, pass: G.pass, tuto: G.tuto, firstSeeds: G.firstSeeds,
     stats: G.stats, statsBase: G.statsBase, chestCap: G.chestCap, edif2: G.edif2, cosmeticos: G.cosmeticos, animals: G.animals, armor: G.armor, armorEq: G.armorEq, ofrendaPts: G.ofrendaPts, ofrendaLog: G.ofrendaLog, nodoUsos: G.nodoUsos, cosEq: G.cosEq, incursion: G.incursion, incDia: G.incDia, zonaCdHasta: G.zonaCdHasta, zonaViaje: G.zonaViaje, decos: G.decos, decoBolsa: G.decoBolsa, godHand: G.godHand, zonasVistas: G.zonasVistas, visto: nowMs(), dummyTrain: G.dummyTrain, swordOwned: G.swordOwned, bowOwned: G.bowOwned, swordWoodOwned: G.swordWoodOwned, gear: G.gear,
     armasUnlocked: G.armasUnlocked, editVisto: G.editVisto, treesOpen: G.treesOpen, rocksOpen: G.rocksOpen, firstCropDone: G.firstCropDone, weapons: G.weapons,
@@ -83,6 +83,7 @@ function hydrate(d) {
   if (d.layout && typeof d.layout === "object") G.layout = d.layout;
   if (d.daily && typeof d.daily === "object") G.daily = { day: d.daily.day || 0, last: d.daily.last || "" };
   if (typeof d.plotsOwned === "number") G.plotsOwned = Math.max(2, Math.min(typeof PLOT_MAX !== "undefined" ? PLOT_MAX : 60, d.plotsOwned));   // fix #18 (11/8): el tope acá seguía en 12 y el F5 te "devolvía" las parcelas compradas
+  if (typeof d.plotsCompradas === "number") G.plotsCompradas = Math.max(0, d.plotsCompradas);   // 20/8: el precio de tienda sube solo con éstas
   if (d.seedBuys && typeof d.seedBuys === "object") G.seedBuys = { date: d.seedBuys.date || "", count: d.seedBuys.count || 0 };
   if (typeof d.hpMax === "number") G.hpMax = d.hpMax;
   G.combatXp = (typeof d.combatXp === "number") ? d.combatXp : 0;
@@ -305,6 +306,19 @@ function migrarGuardado(d) {
       }
     }
   } catch (e) {}
+
+  /* ============ CUÁNTAS PARCELAS SE COMPRARON EN TIENDA (20/8, dirección) ==========
+     El precio de la tienda pasó a subir SOLO con las compradas: "si yo adquiero una parcela por
+     expansión, que no le afecte al precio de las que se venden". Los guardados viejos no traen
+     ese contador, así que se deduce una única vez: de las que tenés, 3 son de nacimiento y las
+     de expansión son regalo — el resto solo pudo salir de la tienda.
+     Va DESPUÉS de la migración de arriba a propósito: esa suma parcelas de expansión a
+     plotsOwned, y si esto corriera antes las contaría como compradas y encarecería la tienda. */
+  if (typeof d.plotsCompradas !== "number") {
+    let regalo = 0;
+    try { for (let i = 0; i < (G.expansiones || 0); i++) if (GF.EXPANSIONES && GF.EXPANSIONES[i] && GF.EXPANSIONES[i].parcela) regalo++; } catch (e) {}
+    G.plotsCompradas = Math.max(0, (G.plotsOwned || 3) - 3 - regalo);
+  }
 
   /* ============ LIMPIEZA DE FANTASMAS DEL GUARDADO =================================
      18/8 — Los guardados de antes de los planos traen posiciones en G.layout para edificios que
