@@ -454,11 +454,20 @@ GF.CORRAL = { col: 5, row: 11, cols: 4, rows: 3 };
    dos filas porque el arte es la cerca de frente más su sombra.
    En el corral 15x15 sin expansiones da exactamente lo mismo que la fórmula vieja — comprobado en
    tools/test-terreno.js — pero ahora también acierta en las esquinas hacia dentro. */
+/* 20/8 (dirección) — UNA SOLA CELDA DE CERCA, EN LOS CUATRO LADOS.
+   "El corral solo debe ocupar los extremos de la grilla. Si la grilla midiera 16×16, de 0,0 a 0,15
+    sería la parte superior del corral, y de 1,1 a 1,15 ya sería DENTRO."
+   Arriba se reservaban DOS filas ("la cerca de frente más su sombra") y eso se comía unas veinte
+   celdas por granja, más las de arriba de cada bloque de expansión. Y el juego no se aplicaba su
+   propia regla: el granero, el buzón, el baúl y el tablón están apoyados justo en esa segunda fila
+   — o sea que sí cabe. Lo que el jugador veía era hierba vacía a la izquierda del granero, en su
+   misma línea, y un « no » sin motivo aparente.
+   Que se vea bien lo garantiza el orden de dibujo, que va por altura: lo que pongas en esa fila se
+   dibuja POR DELANTE de la cerca, igual que ya hace el granero. */
 GF.enCerca = function (col, row) {
   if (!GF.tuyo(col, row)) return true;                                    // fuera del terreno: intocable
   if (!GF.tuyo(col - 1, row) || !GF.tuyo(col + 1, row)) return true;      // pegado al borde izq/der
-  if (!GF.tuyo(col, row + 1)) return true;                                // borde de abajo
-  if (!GF.tuyo(col, row - 1) || !GF.tuyo(col, row - 2)) return true;      // arriba: dos filas
+  if (!GF.tuyo(col, row + 1) || !GF.tuyo(col, row - 1)) return true;      // pegado al borde de arriba/abajo
   return false;
 };
 

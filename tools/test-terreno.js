@@ -14,20 +14,28 @@ const chequeo = (nombre, ok, detalle) => {
 
 // 1) sin expansiones, enCerca tiene que dar lo mismo que la fórmula del rectángulo
 G.expOwned = 0;
+/* 20/8 (dirección) — LA REFERENCIA CAMBIÓ, Y A PROPÓSITO.
+   "El corral solo debe ocupar los extremos de la grilla: de 0,0 a 0,15 la parte de arriba, y de
+    1,1 en adelante ya es DENTRO."
+   Hasta hoy arriba se reservaban DOS filas (`r < 2`) por el arte de la cerca, y eso se comía trece
+   celdas en el corral de arranque. Se contrastaba contra esa fórmula vieja; ahora se contrasta
+   contra la regla que pidió dirección: UN anillo de una celda en los cuatro lados. */
 let dif = 0, ejemplo = "";
 for (let c = -2; c < G.COLS_BASE + 2; c++) for (let r = -2; r < G.ROWS_BASE + 2; r++) {
-  const viejo = c < 1 || r < 2 || c >= G.COLS_BASE - 1 || r >= G.ROWS_BASE - 1;
-  if (G.enCerca(c, r) !== viejo) { dif++; if (!ejemplo) ejemplo = "(" + c + "," + r + ")"; }
+  const anillo = c < 1 || r < 1 || c >= G.COLS_BASE - 1 || r >= G.ROWS_BASE - 1;
+  if (G.enCerca(c, r) !== anillo) { dif++; if (!ejemplo) ejemplo = "(" + c + "," + r + ")"; }
 }
-chequeo("sin expansiones, enCerca = la fórmula vieja, celda por celda", dif === 0,
-  dif ? dif + " diferencias, la primera en " + ejemplo : "");
+chequeo("sin expansiones, la cerca es un anillo de UNA celda en los cuatro lados", dif === 0,
+  dif ? dif + " diferencias, la primera en " + ejemplo : "de (1,1) a (13,13) es todo tuyo");
 
 // 2) el interior útil sigue siendo el mismo
 const interior = [];
 for (let c = 0; c < G.COLS_BASE; c++) for (let r = 0; r < G.ROWS_BASE; r++) if (!G.enCerca(c, r)) interior.push([c, r]);
 const cs = interior.map(p => p[0]), rs = interior.map(p => p[1]);
-chequeo("interior útil sigue siendo 13 x 12",
-  (Math.max(...cs) - Math.min(...cs) + 1) === 13 && (Math.max(...rs) - Math.min(...rs) + 1) === 12,
+/* 13 x 13: el interior es cuadrado, como la grilla. Antes era 13 x 12 porque arriba faltaba una
+   fila entera — trece celdas que eran tuyas y no podías usar. */
+chequeo("el interior útil es 13 x 13, simétrico",
+  (Math.max(...cs) - Math.min(...cs) + 1) === 13 && (Math.max(...rs) - Math.min(...rs) + 1) === 13,
   "cols " + Math.min(...cs) + "-" + Math.max(...cs) + " · filas " + Math.min(...rs) + "-" + Math.max(...rs));
 
 // 3) ningún objeto ni parcela ni la laguna pisa la cerca
@@ -52,7 +60,9 @@ for (let n = 0; n <= 16; n++) {
   G.expOwned = n;
   let mal = 0;
   t.mias.forEach(s => { const p = s.split(","), c = +p[0], r = +p[1];
-    const borde = !G.tuyo(c - 1, r) || !G.tuyo(c + 1, r) || !G.tuyo(c, r + 1) || !G.tuyo(c, r - 1) || !G.tuyo(c, r - 2);
+    /* 20/8: sin la fila extra de arriba. Una celda es cerca si toca por los CUATRO lados algo que
+       no es tuyo — la misma regla en el corral de arranque y en cualquier forma con entrantes. */
+    const borde = !G.tuyo(c - 1, r) || !G.tuyo(c + 1, r) || !G.tuyo(c, r + 1) || !G.tuyo(c, r - 1);
     if (G.enCerca(c, r) !== borde) mal++; });
   if (mal) cercaOk = false;
   if (n % 4 === 0 || n === 16)
