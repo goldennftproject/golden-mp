@@ -1520,11 +1520,13 @@ function refreshDeco() {
   const tope = (G.plotsOwned || 2) >= PLOT_MAX;   // 10/8: el diseñador subió el tope de 12 a 60
   h += '<div class="secc">Parcelas</div>';
   h += '<div class="forge-row"><div class="finfo"><div class="fnm">Parcela nueva <span class="tag">' + (G.plotsOwned || 2) + '/' + PLOT_MAX + '</span></div>' +
-    '<div class="fds">' + (tope ? "Ya tenés las " + PLOT_MAX + "." : "ADELANTA una parcela de las que igual te van a llegar al baúl al subir de nivel. El precio sube con cada una." + ((G.plotsOwned || 2) >= 12 ? " Las nuevas van a tu zona de edición: las ponés vos donde quieras." : "")) + '</div></div>' +
+    // 20/8 (dirección + diseñador): las parcelas llegan con las expansiones Y se compran con
+    // plata, cada una un 10% más cara que la anterior. El botón de $Golden se fue: vuelve
+    // cuando tenga sentido vender en $Golden.
+    '<div class="fds">' + (tope ? "Ya tenés las " + PLOT_MAX + "." : "Cada expansión trae una parcela — y si querés más, acá se compran con plata. Cada una sale un 10% más que la anterior." + ((G.plotsOwned || 2) >= 12 ? " Las nuevas van a tu zona de edición: las ponés vos donde quieras." : "")) + '</div></div>' +
     '<div class="fbtns">' +
       (tope ? '<button class="ghost sm" disabled>Completo</button>' :
-        '<button class="green sm" ' + (G.plata >= plotUnlockCost() ? "" : "disabled") + ' data-plot="plata">' + fmt(plotUnlockCost()) + ' plata</button>' +
-        '<button class="green sm" ' + (G.golden >= plotUnlockGolden() ? "" : "disabled") + ' data-plot="golden">' + plotUnlockGolden() + ' $G</button>') +
+        '<button class="green sm" ' + (G.plata >= plotUnlockCost() ? "" : "disabled") + ' data-plot="plata">' + fmt(plotUnlockCost()) + ' plata</button>') +
     '</div></div>';
   // (Fixes.docx 14/8 #6: el GOD HAND se mudó a la pestaña NFTs — refreshNft)
   // --- adornos ---
@@ -1545,7 +1547,7 @@ function refreshDeco() {
   });
   box.innerHTML = h;
   box.querySelectorAll("[data-buydeco]").forEach(b => b.onclick = () => { comprarDeco(b.dataset.buydeco); refreshDeco(); });
-  box.querySelectorAll("[data-plot]").forEach(b => b.onclick = () => { comprarParcela(b.dataset.plot === "golden"); refreshDeco(); });
+  box.querySelectorAll("[data-plot]").forEach(b => b.onclick = () => { comprarParcela(); refreshDeco(); });
   // 18/8: expandir el terreno. No se refresca el panel después porque la escena se reinicia con
   // telón (la forma del mundo cambió) y el panel se vuelve a pintar al abrirlo.
   const eb = $("exp-comprar");

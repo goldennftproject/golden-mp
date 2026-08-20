@@ -2816,21 +2816,19 @@ function decoSacar(i) {   // lo levanta y vuelve a la bolsa de adornos
   return true;
 }
 
-// ============ PARCELAS: pagar con PLATA o con $GOLDEN (10/8) =======================
-// El doc pide que el jugador elija con qué pagar. La de $Golden se calcula desde la de plata
-// con un cambio fijo, así el diseñador toca UN solo número y las dos quedan alineadas.
+// ============ PARCELAS: llegan con las expansiones Y se compran con plata ==========
+// 20/8 (dirección): "las parcelas se den con las expansiones, y sumado a eso que se consigan
+// con plata. Lo de $Golden lo dejamos para cuando tenga sentido venderlo así" — o sea, en plata.
+// El botón de $Golden se quitó de la tienda; si el token cobra valor, el precio se derivaría
+// de GOLDEN_EN_PLATA como todo lo que cobre $Golden.
 // 16/8 (auditoría F): tipo de cambio ÚNICO del juego. Antes cada sistema tenía el suyo
 // (900 para parcelas, 3 para el kit de emergencia): 300× de diferencia. Todo lo que cobre
 // $Golden se expresa desde acá.
 var GOLDEN_EN_PLATA = 500;
-var PLOT_GOLDEN_CAMBIO = GOLDEN_EN_PLATA;   // cuántas de plata "vale" 1 $Golden a la hora de comprar parcelas
-var PLOT_GOLDEN_MIN = 5;        // piso: sin esto la primera parcela salía 1 $Golden, o sea regalada
 // TOPE 60 (Discord del diseñador 10/8): "12 es muy poco, que compre la gente a placer".
 // Las primeras 12 son la grilla de siempre; de la 13 a la 60 cada una nace en una celda
 // libre y se acomoda desde el modo edición, como cualquier objeto.
 var PLOT_MAX = 60;
-var PLOT_EXTRA_SUBA = 1.12;   // suba por parcela después de la 12 (la duplicación de antes hacía imposible la 60)
-function plotUnlockGolden() { return Math.max(PLOT_GOLDEN_MIN, Math.ceil(plotUnlockCost() / PLOT_GOLDEN_CAMBIO)); }
 // fix #17 del diseñador (11/8): la parcela comprada NO se tira sola al suelo — queda
 // "pendiente" (plotsOwned > GF.PLOTS.length) y se coloca con clic desde el modo edición.
 function parcelasPendientes() { return Math.max(0, (G.plotsOwned || 2) - GF.PLOTS.length); }
@@ -2842,14 +2840,10 @@ function parcelaColocar(col, row) {   // la llama la escena con la celda que eli
   if (typeof saveFarm === "function") saveFarm(true);
   return true;   // 18/8: sin telón — la escena la dibuja en vivo (colocarRegaloEnVivo)
 }
-function comprarParcela(conGolden) {
+function comprarParcela() {
   if ((G.plotsOwned || 2) >= PLOT_MAX) { toast("Ya tenés las " + PLOT_MAX + " parcelas"); return; }
-  if (G.tuto && !G.tuto.done) { toast("🎯 Durante el tutorial las parcelas llegan solas al subir de nivel — seguí el objetivo"); return; }   // embudo (13/8)
-  if (conGolden) {
-    const c = plotUnlockGolden();
-    if (G.golden < c) { toast("Te falta $Golden (" + c + ")"); return; }
-    G.golden -= c;
-  } else {
+  if (G.tuto && !G.tuto.done) { toast("🎯 Durante el tutorial alcanzan las parcelas que tenés — seguí el objetivo"); return; }   // embudo (13/8)
+  {
     const c = plotUnlockCost();
     if (G.plata < c) { toast("Te falta plata (" + fmt(c) + ")"); return; }
     if (typeof tutoGuardia === "function" && !tutoGuardia("plata", c, "comprar parcelas")) return;   // guardia del tutorial (12/8)
@@ -4011,7 +4005,7 @@ function sellDish(id, gold) {
     /* 18/8: `goldenP` era un número escrito a mano que NO pasaba por GOLDEN_EN_PLATA. El Banquete
        del Bosque pagaba 4 $G (2.000 de plata) por un plato que valía 598: x3,3. Con eso se compraban
        parcelas por un tercio de su precio. Ahora se deriva del MISMO valor que la venta en plata,
-       igual que hacen sellItem y plotUnlockGolden — los dos sitios que estaban bien. */
+       igual que hace sellItem — el sitio que estaba bien. */
     const enPlata = Math.round(dishPrice(r) * cookPot(r.lvl));
     const g = Math.max(1, Math.floor(enPlata / GOLDEN_EN_PLATA));
     G.golden += g; log("Vendiste " + r.label + " por " + g + " $Golden.", "gold"); toast("+" + g + " $Golden");
@@ -4622,17 +4616,21 @@ function goFishing() {
   refreshHud(); if (typeof syncSlots === "function") syncSlots(); if (isOpen("ov-inv")) refreshInv();
 }
 
-// --- parcelas bloqueadas: costo de desbloquear la siguiente (200, 400, 800, ... plata) ---
+// --- parcelas: costo de comprar la siguiente con plata ---
+// 20/8 (dirección + diseñador): las parcelas llegan con las EXPANSIONES, y además se pueden
+// comprar con plata "cada una un poco más cara que la anterior". La curva vieja (1,45× hasta la
+// 12, 1,12× después) estaba calibrada contra un modelo que ya no existe — el nivel de granja
+// regalando parcelas — y anclada en n=6 cuando hoy se nace con 3.
+// La nueva es UNA regla: base 200, +10% por parcela que ya tenés, vengan de donde vengan.
+//   · 200 ≙ 10 horas del ancla (una celda productiva = 20 plata/hora): se paga sola en una tarde.
+//   · Como el precio mira plotsOwned, cada parcela regalada por expansión también encarece la
+//     siguiente compra — los dos caminos se balancean solos, sin tabla aparte.
+//   · La 60 sale ~41.600: cara para el final del juego, no imposible.
 var PLOT_UNLOCK_BASE = 200;
-// hasta la 12: se duplica como siempre. De la 13 a la 60: sube PLOT_EXTRA_SUBA por parcela
-// (con la duplicación, la 60 costaba 2^54 veces la base — imposible "a placer").
+var PLOT_UNLOCK_SUBA = 1.10;
 function plotUnlockCost() {
-  const n = G.plotsOwned || 6;
-  // 16/8 (auditoría G): la duplicación llevaba la parcela 12 a 12.800 de plata mientras el
-  // NIVEL de granja la regala — el camino de plata era decorativo. Con 1,45× por parcela la
-  // compra vuelve a ser una opción real para el impaciente (la 12 sale ~2.100).
-  const hasta12 = PLOT_UNLOCK_BASE * Math.pow(1.45, Math.max(0, Math.min(n, 12) - 6));
-  return Math.round(hasta12 * Math.pow(PLOT_EXTRA_SUBA, Math.max(0, n - 12)));
+  const n = G.plotsOwned || 3;
+  return Math.round(PLOT_UNLOCK_BASE * Math.pow(PLOT_UNLOCK_SUBA, Math.max(0, n - 3)));
 }
 
 // --- cofre diario de login (racha de 7 días · anti-inflación: 80% insumos / 20% plata) ---

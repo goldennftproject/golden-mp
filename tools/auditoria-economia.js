@@ -94,7 +94,8 @@ out.caña = { pide: cañaDet.join(" + ") + (rod.plata ? " + " + rod.plata + " pl
 
 // ---------- 6) TIPOS DE CAMBIO DE $GOLDEN ----------
 out.golden = [
-  { sistema: "Comprar parcela", ratio: S.PLOT_GOLDEN_CAMBIO + " plata = 1 $Golden" },
+  // 20/8: la parcela dejo de venderse en $Golden (direccion: "lo dejamos para cuando tenga
+  // sentido venderlo asi") — se compra solo con plata y ya no aparece entre los cambios.
   { sistema: "Kit de emergencia: hacha", ratio: r2(costoHacha / S.EMERG_GOLDEN.axe) + " plata = 1 $Golden" },
   { sistema: "Kit de emergencia: pico", ratio: r2(costoPico / S.EMERG_GOLDEN.pick) + " plata = 1 $Golden" },
   { sistema: "Kit de emergencia: semilla papa", ratio: r2(S.CROP_DEF.papa.seedCost / S.EMERG_GOLDEN.seed) + " plata = 1 $Golden" },
