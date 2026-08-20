@@ -547,9 +547,11 @@ function darPlano(t, silencioso) {
   if (G.planos[t]) { planoAHotbar(t); return; }   // 13/8: guardados viejos — asegurar que esté en la barra
   G.planos[t] = 1;
   if (!silencioso) {
-    log("¡Ganaste el PLANO de " + b.label + "! Está en tu bolsa: clic para colocarlo donde quieras.", "gold");
-    toast("📜 ¡Plano de " + b.label + "!");
-    if (window.celebrate) celebrate({ title: "¡PLANO NUEVO!", sub: b.label, big: false, reward: "Colocalo desde tu barra rápida" });
+    /* 19/8: y el aviso de la entrega repetía el error — "está en tu bolsa", "desde tu barra
+       rápida". Los planos viven en el COBERTIZO desde el 18/8. */
+    log("¡Ganaste el PLANO de " + b.label + "! Te espera en el Cobertizo: abrilo y elegí dónde va.", "gold");
+    toast("📜 ¡Plano de " + b.label + "! → Cobertizo");
+    if (window.celebrate) celebrate({ title: "¡PLANO NUEVO!", sub: b.label, big: false, reward: "Te espera en el Cobertizo 🏚" });
   }
   planoAHotbar(t);
   if (typeof syncSlots === "function") syncSlots(); if (isOpen("ov-inv")) refreshInv();
@@ -1777,14 +1779,20 @@ const TUTO_STEPS = [
   // 13/8 v2 (audio): el orden LÓGICO — primero se coloca el plano (la obra queda a la vista
   // con su cartel), DESPUÉS se juntan sus materiales, y al final se depositan. Lo depositado
   // cuenta para los pasos de "juntá" (campo dep), así depositar temprano no traba nada.
-  { id: "place_store", n: 1, txt: "Colocá el PLANO de la Herrería (está en tu barra rápida)", target: "store", hot: "store" },
+  /* 19/8 (dirección: "dice barra rápida y en realidad está en el cobertizo"). Cierto, y era un
+     texto huérfano: el 18/8 los planos se mudaron al Cobertizo y planoAHotbar() quedó vacía, pero
+     estos tres carteles siguieron mandando al jugador a mirar una barra donde no hay nada. Mandar
+     a alguien al lugar equivocado en su primer edificio es de los errores más caros que hay: no
+     sabe si el juego está roto o si es él el que no entiende.
+     Ahora nombran el Cobertizo y la flecha lo señala en el menú. */
+  { id: "place_store", n: 1, txt: "Abrí el Cobertizo y colocá el PLANO de la Herrería", panel: "ov-cobertizo", ui: ".slot.k-plano" },
   { id: "wood_st",  res: "madera", dep: "store", need: () => BUILD_DEF.store.cost.madera || 5,
     txt: "Juntá # de madera talando árboles (para la obra de la Herrería)",        target: "tree" },
   { id: "stone_st", res: "piedra", dep: "store", need: () => BUILD_DEF.store.cost.piedra || 2,
     txt: "Juntá # de piedra picando rocas (para la obra de la Herrería)",          target: "rock" },
   { id: "build_store", n: 1, txt: "Depositá los materiales en la obra de la Herrería (clic encima)", target: "store" },
   // — cadena del Horno: plano → materiales de SU receta → depósito —
-  { id: "place_horno", n: 1, txt: "Colocá el plano del Horno de Piedra (barra rápida)", target: "horno", hot: "horno" },
+  { id: "place_horno", n: 1, txt: "Colocá el plano del Horno de Piedra (está en el Cobertizo)", panel: "ov-cobertizo", ui: ".slot.k-plano" },
   { id: "wood",  res: "madera", dep: "horno", need: () => BUILD_DEF.horno.cost.madera || 10,
     txt: "Juntá # de madera talando árboles (para la obra del Horno)",             target: "tree" },
   { id: "stone", res: "piedra", dep: "horno", need: () => BUILD_DEF.horno.cost.piedra || 8,
@@ -1799,7 +1807,7 @@ const TUTO_STEPS = [
   { id: "craftarm", n: 1, txt: "Forjá una Espada de Madera en la Herrería (5 de madera)", target: "store", panel: "ov-forge", ui: "[data-carm='espada_madera']" },
   { id: "equiparm", n: 1, txt: "Equipate la espada en el panel de Equipo",                panel: "ov-equip", ui: "#eq-arma" },
   // ——— ETAPA 2: los sistemas nuevos (Cocina, Armas, Zona Negra, Pesca, Altar) ———
-  { id: "place_cocina", n: 1, txt: "Colocá el plano de la Cocina (barra rápida)", target: "cocina", hot: "cocina" },
+  { id: "place_cocina", n: 1, txt: "Colocá el plano de la Cocina (está en el Cobertizo)", panel: "ov-cobertizo", ui: ".slot.k-plano" },
   { id: "woodc",  res: "madera", dep: "cocina", need: () => BUILD_DEF.cocina.cost.madera || 20,
     txt: "Juntá # de madera (para la obra de la Cocina)",                          target: "tree" },
   { id: "stonec", res: "piedra", dep: "cocina", need: () => BUILD_DEF.cocina.cost.piedra || 15,

@@ -958,7 +958,11 @@ function tutoHighlight() {
   // 13/8 v3: el SUB-OBJETIVO manda — su guía pisa la del paso (misma cadena de flechas)
   const sub = (st && typeof tutoSub === "function") ? tutoSub() : null;
   if (sub) st = Object.assign({}, st, { hot: null, panel: null, ui: null, target: null }, sub);
-  // 13/8: pasos "colocá el plano" — la flecha baja hasta el plano en la BARRA rápida
+  /* 13/8: pasos "colocá el plano" — la flecha bajaba hasta el plano en la BARRA rápida.
+     19/8: los tres pasos del tutorial ya no usan `hot` (los planos viven en el Cobertizo desde el
+     18/8 y el cartel mandaba al jugador a mirar una barra vacía). Este bloque se deja porque la
+     rama sigue siendo válida para cualquier paso que sí apunte a la barra, pero hoy no lo usa
+     ninguno: la flecha va por el menú → Cobertizo → el plano. */
   if (st && st.hot) {
     const lbl = (typeof BUILD_DEF !== "undefined" && BUILD_DEF[st.hot]) ? BUILD_DEF[st.hot].label : null;
     let cel = null;
