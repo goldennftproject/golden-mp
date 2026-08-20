@@ -585,6 +585,10 @@ function refreshEquip() {
     if (opts.length === 1) { toast("No tenés armas — crafteálas en la Herrería"); return; }
     G.gear.arma = opts[(opts.indexOf(G.gear.arma) + 1) % opts.length];
     toast(G.gear.arma ? ARM_DEF[G.gear.arma].label + " equipada" : "Arma desequipada");
+    /* 19/8: el tutorial señala ESTE slot para el paso "equipate la espada", así que la tercera vía
+       de equipar también tiene que avisarle. Las otras dos (la bolsa y la Herrería) ya lo hacían;
+       ésta no, y el paso se quedaba colgado justo cuando el jugador hacía lo que se le pedía. */
+    if (G.gear.arma && typeof tutoEvent === "function") tutoEvent("equiparm");
     refreshEquip(); if (typeof syncSlots === "function") syncSlots(); if (typeof saveFarm === "function") saveFarm();
   };
   // munición: las flechas se equipan a mano con clic (ya no se autoequipan al craftear)
@@ -736,9 +740,28 @@ function refreshForge() {
   // armas y flechas → pestaña ARMAS (detalles viernes: no se mezclan con las herramientas)
   let armas = "";
   if (!G.armasUnlocked) {   // viernes (2): la pestaña Armas se desbloquea pagando
+    /* 19/8: pero el PRIMER ESCALÓN se ve igual. Antes, con la pestaña cerrada no se mostraba ni una
+       sola arma: el jugador no tenía forma de saber que existía una espada a su alcance, y el
+       combate —lo único sin relojes— quedaba invisible el primer día. La de madera se dibuja
+       arriba del cartel; el cartel sigue vendiendo las otras diecinueve. */
+    const we = ARM_DEF[ARMA_ENTRADA];
+    if (we) {
+      const own = G.weapons && G.weapons[ARMA_ENTRADA], eqNow = G.gear.arma === ARMA_ENTRADA;
+      const cs = Object.keys(we.cost).map(k => resIc(k) + " " + we.cost[k]).join(" · ") + " · " + coinIc("plata") + " " + we.plata;
+      const puede = canAfford(we.cost) && G.plata >= we.plata;
+      const btn = own
+        ? (eqNow ? '<button class="ghost sm" disabled>Equipada</button>'
+                 : '<button class="ghost sm" data-eqarm="' + ARMA_ENTRADA + '">Equipar</button>')
+        : '<button class="green sm" ' + (puede ? "" : "disabled") + ' data-carm="' + ARMA_ENTRADA + '">Forjar</button>';
+      armas += '<div class="forge-row"><div class="fic"><img src="' + GF.spr(we.sprite || ARM_TIPO_DEF[we.tipo].sprite) + '"></div>' +
+        '<div class="finfo"><div class="fnm">' + we.label + '</div>' +
+        '<div class="fds">Tu primera arma — con ella se entra a la Zona Negra</div>' +
+        '<div class="fds">' + cs + ' · ' + we.dur + ' usos</div></div>' +
+        '<div class="fbtns">' + btn + '</div></div>';
+    }
     const ustr = Object.keys(ARMAS_UNLOCK_COST).map(k => resIc(k) + " " + ARMAS_UNLOCK_COST[k]).join(" · ") + " · " + coinIc("plata") + " " + ARMAS_UNLOCK_PLATA;
     const uok = canAfford(ARMAS_UNLOCK_COST) && G.plata >= ARMAS_UNLOCK_PLATA;
-    armas = '<div class="forge-row"><div class="fic"><img src="' + GF.spr("sword") + '" onerror="this.outerHTML=\'⚔️\'"></div><div class="finfo"><div class="fnm">Sección de Armas cerrada</div><div class="fds">Habilitá la forja de armas pagando una única vez.</div><div class="fds">Costo: ' + ustr + '</div></div><div class="fbtns"><button class="green sm" ' + (uok ? "" : "disabled") + ' id="forge-unlock-armas">Desbloquear</button></div></div>';
+    armas += '<div class="forge-row"><div class="fic"><img src="' + GF.spr("sword") + '" onerror="this.outerHTML=\'⚔️\'"></div><div class="finfo"><div class="fnm">Sección de Armas cerrada</div><div class="fds">Habilitá la forja de armas pagando una única vez.</div><div class="fds">Costo: ' + ustr + '</div></div><div class="fbtns"><button class="green sm" ' + (uok ? "" : "disabled") + ' id="forge-unlock-armas">Desbloquear</button></div></div>';
     $("forge-armas").innerHTML = armas;
     const fu = $("forge-unlock-armas"); if (fu) fu.onclick = () => unlockArmas();
   }

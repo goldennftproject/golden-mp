@@ -618,9 +618,16 @@ var TUTO_PERMISOS = {
   cook:        ["cook", "plant", "harvest", "buyseed", "chop", "crafttool"],   // 14/8: red por si malgasta el kit de ingredientes
   eat:         ["eat", "cook"],   // 14/8: si vendió su único plato, puede recocinar (el kit repone ingredientes)
   unlockarm:   ["unlockarm", "chop", "mine", "crafttool", "repair"],   // 14/8: el desbloqueo pide 20 madera + 20 piedra — se juntan acá (la plata llega de adelanto)
-  craftarm:    ["craftarm"],
-  equiparm:    ["equiparm"],
-  portal:      ["portal", "cook", "eat"],
+  /* 19/8: estos dos pasos llegan justo después de construir el Horno, y forjar pide 5 de madera que
+     puede que el jugador no tenga. Si el permiso fuera solo "craftarm", quedaría encerrado sin
+     poder talar para conseguirla. Se abren los gestos de juntar y el bucle de la plata. */
+  craftarm:    ["craftarm", "chop", "mine", "crafttool", "cultivar", "plant", "harvest", "buyseed", "sell"],
+  equiparm:    ["equiparm", "craftarm", "chop", "plant", "harvest", "buyseed", "sell"],
+  /* 19/8: el portal es ahora el ÚLTIMO paso del tutorial, así que su permiso no puede ser una
+     jaula. Con ["portal","cook","eat"] el jugador terminaba el tutorial sin poder plantar ni talar
+     hasta entrar a pelear — justo al revés de lo que queremos: entrar tiene que ser una invitación,
+     no un peaje. Se abre el juego entero. */
+  portal:      ["portal", "cook", "eat", "chop", "mine", "cultivar", "plant", "harvest", "buyseed", "sell", "crafttool", "craftarm", "equiparm", "fish", "obra"],
   kill:        ["portal", "cook", "eat", "crafttool", "craftarm"],
   kill5:       ["portal", "cook", "eat", "crafttool", "craftarm"],
   fish:        ["fish", "crafttool", "eat"],
@@ -1742,7 +1749,13 @@ const TUTO_STEPS = [
     txt: "Juntá # de piedra picando rocas (para la obra del Horno)",               target: "rock" },
   { id: "build_horno", n: 1, txt: "Depositá los materiales en la obra del Horno (clic encima)", target: "horno" },
   // — el Hacha: la plata llega de ADELANTO al entrar (ya sabés ganarla — dirección 14/8) —
-  { id: "crafttool", n: 1, txt: "Crafteá un Hacha en la Herrería",          target: "store", panel: "ov-forge", ui: "[data-ctool='axe']" },
+  /* 19/8 (dirección): acá había un "Crafteá un Hacha" que no enseñaba NADA — el baúl de bienvenida
+     ya entrega 35 hachas, así que el paso era una vuelta en falso. En su lugar van los dos gestos
+     que hoy hay que adivinar y que abren el único sistema sin relojes que tiene el juego: forjar un
+     arma y ponérsela. Sin ellos, el jugador llega al portal y se come un "equipate un arma" sin
+     saber dónde se equipa. */
+  { id: "craftarm", n: 1, txt: "Forjá una Espada de Madera en la Herrería (5 de madera)", target: "store", panel: "ov-forge", ui: "[data-carm='espada_madera']" },
+  { id: "equiparm", n: 1, txt: "Equipate la espada en el panel de Equipo",                panel: "ov-equip", ui: "#eq-arma" },
   // ——— ETAPA 2: los sistemas nuevos (Cocina, Armas, Zona Negra, Pesca, Altar) ———
   { id: "place_cocina", n: 1, txt: "Colocá el plano de la Cocina (barra rápida)", target: "cocina", hot: "cocina" },
   { id: "woodc",  res: "madera", dep: "cocina", need: () => BUILD_DEF.cocina.cost.madera || 20,
@@ -1752,6 +1765,13 @@ const TUTO_STEPS = [
   { id: "build_cocina", n: 1, txt: "Depositá los materiales en la obra de la Cocina (clic encima)", target: "cocina" },
   { id: "cook",     n: 1, txt: "Cociná tu primer plato: Papa Asada",   target: "cocina", panel: "ov-cocina", ui: "[data-cook='papa_asada']" },
   { id: "eat",      n: 1, txt: "Comé un plato desde la bolsa (te da un buff)" },
+  /* EL ÚLTIMO CAPÍTULO, Y EL MÁS IMPORTANTE PARA EL TIEMPO MUERTO (19/8). Medido: en una sesión de
+     12 minutos al empezar hay 42 clics — 36 segundos de acción y el 95% mirando crecer una papa.
+     Todo lo que la granja ofrece tiene reloj. La Zona Negra no: es lo único que se puede jugar
+     seguido, y la estamina ya la regula sola (120 bichos al día, unos 30 minutos, el 1,7% de la
+     economía). O sea que el que quiere jugar tiene dónde, y el que quiere estar tranquilo no
+     pierde nada por no ir. Solo faltaba que alguien se lo dijera. */
+  { id: "portal",   n: 1, txt: "Entrá a la Zona Negra: ahí no hay relojes que esperar", target: "portal" },
   // (14/8, reversión del capataz: la cadena TERMINA acá — el tutorial enseña LO BÁSICO de
   //  la granja. Armas, Zona Negra, minería avanzada y Altar se aprenden jugando: sus
   //  planos caen por nivel y cada sistema se presenta solo.)
@@ -1767,8 +1787,10 @@ const TUTO_CAPS = [
   // 14/8 (reversión): el tutorial NO premia — enseña. Capítulos = progreso visible, nada más.
   { id: "cosecha",  label: "Tu primera cosecha", pasos: ["kit", "buyseed", "plant", "harvest", "sell"] },
   { id: "herreria", label: "La Herrería",        pasos: ["place_store", "wood_st", "stone_st", "build_store"] },
-  { id: "horno",    label: "El Horno de Piedra", pasos: ["place_horno", "wood", "stone", "build_horno", "crafttool"] },
+  { id: "horno",    label: "El Horno de Piedra", pasos: ["place_horno", "wood", "stone", "build_horno"] },
+  { id: "arma",     label: "Tu primera espada",  pasos: ["craftarm", "equiparm"] },
   { id: "cocina",   label: "La Cocina",          pasos: ["place_cocina", "woodc", "stonec", "build_cocina", "cook", "eat"] },
+  { id: "zona",     label: "La Zona Negra",      pasos: ["portal"] },
 ];
 
 function capEstado(cap) {   // "hecho" | "activo" | "pendiente" (por el paso más avanzado de la cadena)
@@ -3418,9 +3440,22 @@ ARM_TIPOS.forEach(t => ARM_RAREZAS.forEach(r => ARM_ORDER.push(t + "_" + r)));
 function armaEq() { const id = G.gear.arma; return (id && ARM_DEF[id] && G.weapons[id] && G.weapons[id].dur > 0) ? id : null; }
 function armSkillKey(tipo) { return ARM_TIPO_DEF[tipo].skill; }
 function armCdLeft(id) { return Math.max(0, ((G.armCd && G.armCd[id]) || 0) - nowMs()); }
+/* EL PRIMER ESCALÓN DE UNA ESCALERA SIEMPRE ESTÁ ABIERTO (19/8, dirección).
+   "La espada de madera es como la semilla de papa para el nivel 1 de Cultivo."
+   La regla ya rige en todo el juego: la papa está en Cultivo 1, la piedra en Minería 1, el pez
+   común en Pesca 1, la alpaca en Ganadería 1. La Espada de Madera es el primer escalón del
+   combate y era la ÚNICA con una caja registradora delante: había que pagar la pestaña Armas
+   (15 madera + 10 piedra + 300 de plata) para poder forjar un arma de 5 de madera. Medido, esas
+   300 de plata son 5 horas de cultivo con tres parcelas — o sea que el sistema entero del combate,
+   que es lo único del juego SIN enfriamiento y por tanto lo único que llena el tiempo muerto,
+   quedaba cerrado el primer día.
+   Ahora se forja en la Herrería desde el minuto uno. La pestaña Armas sigue costando lo mismo y
+   sigue abriendo lo que de verdad justifica pagarla: los otros 19 modelos, de la Espada de Piedra
+   para arriba, con sus cuatro tipos y sus buffs. */
+var ARMA_ENTRADA = "espada_madera";
 function craftWeapon(id) {
   const w = ARM_DEF[id]; if (!w) return;
-  if (!G.armasUnlocked) { toast("Desbloqueá la sección de Armas primero"); return; }
+  if (!G.armasUnlocked && id !== ARMA_ENTRADA) { toast("Desbloqueá la sección de Armas primero"); return; }
   if (typeof tutoPermite === "function" && !tutoPermite("craftarm")) { tutoAviso(); return; }   // embudo estricto (13/8)
   if (typeof tutoGuardiaCosto === "function" && !tutoGuardiaCosto(w.cost, w.plata, "forjar " + w.label)) return;   // guardia del tutorial (12/8)
   if (G.weapons[id]) { toast("Ya tenés " + w.label); return; }

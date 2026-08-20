@@ -8,7 +8,7 @@ ctx.window = ctx; ctx.globalThis = ctx;
 vm.runInNewContext(fs.readFileSync("public/game/config.js", "utf8"), ctx, { filename: "config.js" });
 vm.runInNewContext(fs.readFileSync("public/game/state.js", "utf8") +
   "\n;window.__X={TUTO_STEPS,BUILD_DEF,CROP_DEF,RECIPE_DEF,CD,GOLPES_TALAR,GOLPES_MINAR," +
-  "NIVEL_ARBOLES,NIVEL_ROCAS,NODE_UNLOCK_COSTS,G,skillNeed,nodoXpMin,TOOL_CRAFT,FARM_XP_LVLS,PRICE,FARM_PARCELA};",
+  "NIVEL_ARBOLES,NIVEL_ROCAS,NODE_UNLOCK_COSTS,G,skillNeed,nodoXpMin,TOOL_CRAFT,FARM_XP_LVLS,PRICE,FARM_PARCELA,ARM_DEF,ARMA_ENTRADA};",
   ctx, { filename: "state.js" });
 const X = ctx.__X, CD = X.CD;
 
@@ -125,9 +125,14 @@ function simular(rellena) {
 const hm = s => { const h = Math.floor(s / 3600), m = Math.round((s % 3600) / 60); return (h ? h + " h " : "") + m + " min"; };
 
 console.log("TUTORIAL COMPLETO — con los relojes nuevos (árbol " + CD.tree / 60 + " min · roca " + CD.rock / 60 + " min)\n");
+/* 19/8: la cadena ya no son solo los tres edificios — desde que el tutorial enseña a forjar y
+   equipar la Espada de Madera, sus 5 de madera también hay que juntarlos. Se suma acá o el número
+   de arriba se queda corto y la medición miente por lo bajo. */
+const espada = (X.ARM_DEF && X.ARMA_ENTRADA && X.ARM_DEF[X.ARMA_ENTRADA]) ? X.ARM_DEF[X.ARMA_ENTRADA].cost : {};
 console.log("materiales que pide la cadena: " +
-  (X.BUILD_DEF.store.cost.madera + X.BUILD_DEF.horno.cost.madera + X.BUILD_DEF.cocina.cost.madera) + " madera y " +
-  (X.BUILD_DEF.store.cost.piedra + X.BUILD_DEF.horno.cost.piedra + X.BUILD_DEF.cocina.cost.piedra) + " piedra");
+  (X.BUILD_DEF.store.cost.madera + X.BUILD_DEF.horno.cost.madera + X.BUILD_DEF.cocina.cost.madera + (espada.madera || 0)) + " madera y " +
+  (X.BUILD_DEF.store.cost.piedra + X.BUILD_DEF.horno.cost.piedra + X.BUILD_DEF.cocina.cost.piedra + (espada.piedra || 0)) + " piedra" +
+  (espada.madera ? "  (incluye la Espada de Madera: " + espada.madera + ")" : ""));
 console.log("de arranque: " + (X.G.treesOpen||[0]).length + " árboles (1 madera / " + CD.tree/60 + " min), " + (X.G.rocksOpen||[0]).length + " rocas (1 piedra / " + CD.rock/60 + " min) y " + (X.G.plotsOwned||3) + " parcelas\n");
 
 for (const [nombre, rel] of [["EL QUE SOLO HACE LO QUE PIDE EL TUTORIAL", false],
