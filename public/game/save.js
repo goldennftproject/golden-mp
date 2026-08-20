@@ -257,6 +257,55 @@ function migrarGuardado(d) {
     if (d.toolsLost) for (const k in d.toolsLost) if (d.toolsLost[k]) G.tools[k] = 0;
   }
 
+  /* ============ LAS PARCELAS DE LAS EXPANSIONES YA COMPRADAS (20/8, dirección) ======
+     "Si hay algún jugador que ya tiene expansiones, debes colocarle los nodos y las parcelas que
+      toquen a cada expansión. El diseñador tiene la 1 y la 2 y no tiene ni los nodos ni las
+      parcelas en esos lugares."
+     Reproducido y medido con su guardado (nivel 5, dos expansiones):
+       · los NODOS sí están — el árbol y la roca de cada bloque aparecen solos, porque su existencia
+         se deduce de `exp < G.expansiones` y no hace falta guardar nada;
+       · la PARCELA no, y la razón es el orden en que se hicieron las cosas: la entrega ocurre
+         DENTRO de expansionComprar(), o sea que solo la recibe quien compra la expansión DESPUÉS
+         de que ese código existiera. Quien ya había expandido se quedó sin ella para siempre.
+     Y no vale dejar que regalosSync se la dé como premio al baúl: dirección fue explícito en que
+     dentro del bloque nuevo la parcela tiene que estar YA PUESTA, igual que el árbol y la roca.
+     Cuando comprás terreno despejado, lo que hay dentro es tuyo y está en su sitio.
+     La migración es idempotente: si el bloque ya tiene una parcela tuya, no hace nada. Y si la
+     celda reservada quedó ocupada (el jugador construyó encima), busca otra libre del mismo
+     bloque antes que dejarlo sin nada. */
+  try {
+    const n = G.expansiones || 0;
+    if (n > 0 && GF.EXPANSIONES) {
+      G.layoutPlots = G.layoutPlots || {};
+      const puestas = Object.keys(G.layoutPlots).map(k => G.layoutPlots[k]);
+      let dadas = 0;
+      for (let i = 0; i < n; i++) {
+        const b = GF.EXPANSIONES[i]; if (!b || !b.parcela) continue;
+        const dentro = (c, r) => c >= b.c0 && c < b.c1 && r >= b.r0 && r < b.r1;
+        /* ¿Ya hay una parcela tuya dentro de este bloque? Entonces no falta nada. */
+        if (puestas.some(p => p && dentro(p.col, p.row))) continue;
+        /* La celda que el bloque reservó; si está ocupada, la primera libre del bloque. */
+        let destino = b.parcela;
+        if (GF.celdaOcupada && GF.celdaOcupada(destino.col, destino.row)) {
+          destino = null;
+          for (let r = b.r0; r < b.r1 && !destino; r++)
+            for (let c = b.c0; c < b.c1 && !destino; c++)
+              if (GF.tuyo(c, r) && !GF.enCerca(c, r) && !GF.celdaOcupada(c, r)) destino = { col: c, row: r };
+        }
+        if (!destino) continue;
+        const idx = G.plotsOwned || 3;
+        G.layoutPlots[idx] = { col: destino.col, row: destino.row };
+        G.plotsOwned = idx + 1;
+        puestas.push(destino);
+        dadas++;
+      }
+      if (dadas) {
+        console.info("[migración] " + dadas + " parcela(s) de expansiones ya compradas, colocadas en su bloque");
+        if (GF.ocupCambio) GF.ocupCambio();
+      }
+    }
+  } catch (e) {}
+
   /* ============ LIMPIEZA DE FANTASMAS DEL GUARDADO =================================
      18/8 — Los guardados de antes de los planos traen posiciones en G.layout para edificios que
      hoy no existen hasta colocar su plano. Esa entrada ya no implica existencia (se arregló en
