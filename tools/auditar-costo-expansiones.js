@@ -10,6 +10,13 @@ vm.runInNewContext(fs.readFileSync("public/game/state.js", "utf8") +
   "\n;window.__X={EXPANSION_COSTO,FARM_EXPANSION,ORE_DEF,CD,PRICE,NIVEL_ARBOLES,NIVEL_ROCAS,FARM_PARCELA};",
   ctx, { filename: "state.js" });
 const X = ctx.__X;
+/* 19/8 — REGLA ROTA, ARREGLADA: desde que las expansiones se DERIVAN (EXPANSION_MAX), la tabla
+   EXPANSION_COSTO nace vacía y la rellena expansionCostos() la primera vez que el juego la pide.
+   Este auditor la leía antes de eso, así que llevaba días recorriendo un array vacío e imprimiendo
+   "más barata 99 días · más cara 0" sin que saltara ninguna alarma. Un auditor mudo es peor que no
+   tenerlo: parece que mide. */
+if (typeof ctx.expansionCostos === "function") ctx.expansionCostos();
+if (!X.EXPANSION_COSTO.length) { console.log("  !! EXPANSION_COSTO sigue vacía: el auditor no puede medir nada"); process.exit(1); }
 const SES = 3;
 function cosechasDia(cd) { const h = cd / 3600, q = 14 / (SES - 1); let n = 0, u = -99;
   for (let i = 0; i < SES; i++) { const t = i * q; if (t - u >= h) { n++; u = t; } } return n + 1; }
@@ -21,7 +28,10 @@ function prodDia(L, expHechas) {
   const p = {};
   p.madera = arb * cosechasDia(X.CD.tree);
   p.piedra = roc * cosechasDia(X.CD.rock);
-  for (const k of ["bronce", "hierro", "oro", "diamante"]) {
+  /* 19/8: faltaba la NETHERITA en esta lista, y las expansiones 15 y 16 la piden. El auditor
+     dividía por cero y cantaba "14.000 días" como si la última expansión fuera imposible. Hay una
+     veta de netherita en la granja desde siempre: el que estaba mal era el auditor. */
+  for (const k of ["bronce", "hierro", "oro", "diamante", "netherita"]) {
     const d = X.ORE_DEF[k];
     p[k] = 1 * cosechasDia(d.cd) * (d.yield || 1);   // 1 veta de cada mineral
   }
