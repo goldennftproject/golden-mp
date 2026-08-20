@@ -93,7 +93,19 @@ function semanaActual() {
   return 1 + Math.floor((Date.now() - ini) / (7 * 86400000));
 }
 function cdMult() { const t = Date.now(); let m = 1; for (const b of G.buffs) if (b.type === "cd" && b.until > t) m *= b.mult; return m; }
-function yieldMult() { const t = Date.now(); let m = 1 + 0.015 * (G.level - 1) + G.prestige * 0.015; for (const b of G.buffs) if (b.type === "yield" && b.until > t) m *= b.mult; return m; }
+/* ============ EL BONO DEL GRANERO SE PAGA EN PLATA (18/8, dirección) ===============
+   El +1,5% por nivel de granja multiplicaba la CANTIDAD cosechada… y después redondeaba. Como
+   todos los cultivos dan 1 unidad, `round(1 × 1,435)` seguía siendo 1: el jugador subía TREINTA Y
+   TRES NIVELES sin notar absolutamente nada, y al llegar a ×1,5 el redondeo saltaba a 2 y la
+   parcela pasaba de 20 a 40 plata/hora de golpe. Un bono invisible durante 33 niveles y roto en
+   el 34. No estaba en ninguna auditoría: lo encontró dirección preguntando por él.
+   Ahora el bono es de PRECIO, no de cantidad: cosechás 1 y lo vendés un 1,5% más caro por nivel.
+   Sin redondeos, sin saltos, y se nota desde el primer nivel.
+   OJO CON EL ANCLA: esto la mueve A PROPÓSITO. Deja de ser "20 plata/hora" y pasa a ser
+   "20 plata/hora al nivel 1, creciendo un 1,5% por nivel de granja". Al 50 son 34,7. Está escrito
+   así para que ninguna auditoría futura lo marque en rojo creyendo que es un fallo. */
+function ventaMult() { const t = Date.now(); let m = 1 + 0.015 * ((G.level || 1) - 1) + (G.prestige || 0) * 0.015; for (const b of G.buffs) if (b.type === "yield" && b.until > t) m *= b.mult; return m; }
+function yieldMult() { return 1; }   // legado: la cantidad cosechada ya no se multiplica
 function addBuff(type, label, mult, durSec) { G.buffs.push({ type, label, mult, until: Date.now() + durSec * 1000 }); }
 // buffs de comida (doc maestro 2/8): suma de valores activos por tipo
 function buffTotal(type) { const t = Date.now(); let s = 0; for (const b of G.buffs) if (b.type === type && b.until > t) s += b.mult; return s; }
@@ -2532,7 +2544,7 @@ function godHandSembrar(msAusente) {
       const ghoras = (CROP_DEF[slot.key].grow * (typeof cdMult === "function" ? cdMult() : 1)) / 3600;
       if (ghoras <= t) {   // le da el tiempo: cosecha completa y sigue
         t -= ghoras; slot.n--; usado[slot.key] = (usado[slot.key] || 0) + 1; ciclos++;
-        const n = Math.max(1, Math.round((CROP_DEF[slot.key].yield || 1) * yieldMult()));
+        const n = Math.max(1, CROP_DEF[slot.key].yield || 1);   // 18/8: la cantidad ya no se multiplica
         prod[slot.key] = (prod[slot.key] || 0) + n;
         horasTrabajadas = Math.max(horasTrabajadas, horasFuera - t);
       } else {   // no llega a otra cosecha: deja la parcela SEMBRADA creciendo desde ese momento
@@ -3894,7 +3906,25 @@ let marketCur = "plata";
 // 1 $Golden — mientras comprar parcelas valora el $Golden en GOLDEN_EN_PLATA (500). Eso era
 // un arbitraje ×50: vendías cultivos por $Golden y comprabas con ellos parcelas que en plata
 // costaban 25 veces más. Ahora las dos puntas usan EL MISMO número: sin arbitraje posible.
-function marketUnit(res) { return marketCur === "plata" ? priceOf(res) : priceOf(res)/GOLDEN_EN_PLATA; }
+/* 18/8 — Y EL REDONDEO, UNA SOLA VEZ, AL FINAL. Redondear el precio POR UNIDAD reproduce el
+   mismo fallo que teníamos con la cantidad: la papa vale 2, y `round(2 × 1,135)` sigue siendo 2
+   hasta el nivel 20, cuando salta a 3 (+50% de golpe). El bono tiene que aplicarse al TOTAL de la
+   venta y redondearse una sola vez: así vender 10 papas al nivel 10 da 23 en vez de 20, y la
+   curva es continua de verdad. */
+/* 18/8 — Y EL BONO VA SOBRE EL MARGEN, NO SOBRE EL PRECIO. Aplicándolo al precio, la semilla
+   no subía con él y cada cultivo se beneficiaba distinto: al nivel 30 la papa rendía 33,9/h y el
+   maíz 41,8. Se rompía la propiedad central del ancla —que los trece rindan lo mismo— justo en
+   los niveles altos, que es donde nadie mira.
+   Sobre el margen, los trece se mueven juntos y la fórmula cuadra exacta:
+       venta = semilla + (precio − semilla) × bono
+   Papa al 50: 1 + 1×1,735 = 2,735 → 34,7 plata/h.  Maíz: 720 + 480×1,735 → 34,7 plata/h. */
+function precioVenta(res) {
+  const c = CROP_DEF[res];
+  if (!c) return priceOf(res) * ventaMult();
+  return c.seedCost + (c.price - c.seedCost) * ventaMult();
+}
+function totalVenta(res, q) { return Math.max(1, Math.round(q * precioVenta(res))); }
+function marketUnit(res) { const u = precioVenta(res); return marketCur === "plata" ? u : u / GOLDEN_EN_PLATA; }
 function sellItem(res) {
   const inp = $("mq-"+res); let q = Math.floor(parseFloat(inp && inp.value) || 0);
   q = Math.max(0, Math.min(q, G.res[res]));
@@ -3903,8 +3933,8 @@ function sellItem(res) {
   // debajo de la meta — si no, vender para quedar en 9/10 mantenía el boost vivo infinito
   if (typeof tutoGuardia === "function" && !tutoGuardia(res, q, "vender " + (RES_LABEL[res] || res))) return;
   if (typeof tutoPermite === "function" && !tutoPermite("sell")) { tutoAviso(); return; }   // embudo estricto (13/8)
-  if (marketCur === "plata") { const t=q*priceOf(res); G.plata+=t; G.res[res]-=q; log(`Vendiste ${q} ${RES_LABEL[res]} por ${t} de plata.`); toast("+"+t+" plata"); }
-  else { const g=Math.floor(q*priceOf(res)/GOLDEN_EN_PLATA); if (g<1){ toast("Muy poca cantidad para $Golden"); return; } G.res[res]-=q; G.golden+=g; log(`Vendiste ${q} ${RES_LABEL[res]} por ${g} $Golden.`,"gold"); toast("+"+g+" $Golden"); }
+  if (marketCur === "plata") { const t=totalVenta(res,q); G.plata+=t; G.res[res]-=q; log(`Vendiste ${q} ${RES_LABEL[res]} por ${t} de plata.`); toast("+"+t+" plata"); }
+  else { const g=Math.floor(totalVenta(res,q)/GOLDEN_EN_PLATA); if (g<1){ toast("Muy poca cantidad para $Golden"); return; } G.res[res]-=q; G.golden+=g; log(`Vendiste ${q} ${RES_LABEL[res]} por ${g} $Golden.`,"gold"); toast("+"+g+" $Golden"); }
   if (window.sfx) sfx("coin");
   if (CROP_DEF[res] && typeof tutoEvent === "function") for (let i = 0; i < q; i++) tutoEvent("sell");   // 14/8 v4: un evento POR UNIDAD vendida — el capataz verifica cantidades
   refreshMarket(); refreshHud();
