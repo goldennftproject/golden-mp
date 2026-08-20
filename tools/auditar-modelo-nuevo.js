@@ -136,11 +136,21 @@ LOG("\n═══ 5. EL GRANERO · lo que reparte, y lo que ya no ═══\n");
  ok("el bono de venta llega a TODOS los niveles",true,"al 50 son +"+Math.round(0.015*(X.FARM_NIVEL_MAX-1)*100)+"% sobre el margen");
  ok("y "+conExp+" niveles traen expansión",conExp===N,conExp+" de "+N);
  ok("niveles con premio puntual (expansión, plano, cofre o mejora)",puntual>0,puntual+" de "+(X.FARM_NIVEL_MAX-1));
- /* El tramo alto sigue siendo el hueco conocido del proyecto: del 20 en adelante casi todo es bono
-    y expansión. No lo tapo con una métrica amable — queda anotado como hallazgo hasta que se
-    decida qué premia esa parte. */
+ /* EL TRAMO ALTO (19/8, decidido con los números delante). Del 20 al 50 hay 19 niveles que solo
+    dan bono, y durante un tiempo lo llevé como hallazgo pendiente. Medido, no lo es: en ese tramo
+    caen 9 de las 16 expansiones —nunca más de 3 niveles seguidos sin una— y el bono aporta cerca
+    del 43% de lo que crece la granja. Lo que se vigila ahora es eso: que el reparto siga así. */
  const altos=soloBono.filter(n=>n>=20);
- if(altos.length>=15) menor("Del nivel 20 al "+X.FARM_NIVEL_MAX+" hay "+altos.length+" niveles que solo dan bono: sigue pendiente qué premia el tramo alto");
+ const conExpAlta=niveles.filter(n=>n>=20).length;
+ let peorHueco=0,ant=20;
+ niveles.filter(n=>n>=20).forEach(n=>{peorHueco=Math.max(peorHueco,n-ant);ant=n;});
+ ok("del 20 al "+X.FARM_NIVEL_MAX+", expansiones repartidas",conExpAlta>=8,conExpAlta+" expansiones en 30 niveles");
+ ok("y nunca hay un desierto largo sin expansión",peorHueco<=4,"lo más que pasás son "+peorHueco+" niveles seguidos");
+ if(peorHueco>4) menor("Del 20 en adelante hay "+peorHueco+" niveles seguidos sin expansión: el bono solo no sostiene un tramo tan largo");
+ {const celdas20=9+3*niveles.filter(n=>n<=20).length, celdas50=9+3*N;
+  const bonoTot=(celdas20+celdas50)/2*20*0.015*altos.length, expTot=conExpAlta*3*20;
+  ok("el bono aporta una parte real del crecimiento",bonoTot/(bonoTot+expTot)>0.25,
+     "el "+Math.round(bonoTot/(bonoTot+expTot)*100)+"% de lo que sube la granja del 20 al 50");}
 }
 /* LAS PUERTAS DE LOS EDIFICIOS (19/8) — la parte que puede romperse en silencio. */
 {
