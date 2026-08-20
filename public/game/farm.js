@@ -3848,7 +3848,7 @@ class FarmScene extends Phaser.Scene {
      que trae el bloque, que ya estaban en la escena esperando. Todo eso son llamadas a métodos
      que se limpian solos; lo que faltaba era que existieran esos métodos.
      Devuelve false si algo sale mal, y ahí sí cae al reinicio con telón, que sigue de respaldo. */
-  expandirEnVivo(bloque) {
+  expandirEnVivo(bloque, alLlegar) {
     try {
       GF.aplicarTerreno((typeof G !== "undefined" && G.expansiones) || 0);   // la forma nueva del terreno
       this.dibujarCesped();          // el pasto llega hasta el bloque nuevo
@@ -3871,12 +3871,38 @@ class FarmScene extends Phaser.Scene {
       this.cameras.main.setBounds(this.camLim.x1, this.camLim.y1,
         this.camLim.x2 - this.camLim.x1, this.camLim.y2 - this.camLim.y1);
       this.fitCamera();
-      // y en vez de un corte, la cámara VIAJA hasta el terreno nuevo: se ve crecer la granja
+      /* ---- Y EL VIAJE, QUE AHORA SE VE (20/8, dirección) ----
+         "Lo que daría al momento de expandir es la transición y el movimiento de cámara."
+         El viaje ya estaba, pero ocurría detrás del Mercado abierto y de la celebración a pantalla
+         completa: 760 ms de cámara tapados por 2.600 ms de confeti. Ahora el panel se cierra antes
+         (lo hace expansionComprar) y la celebración espera a que la cámara LLEGUE — se avisa por
+         `alLlegar`. El jugador ve abrirse la cerca y aparecer su terreno, y el cartel remata.
+         El bloque además se enciende un momento al llegar: sin eso, después del viaje el jugador
+         mira una zona nueva sin saber cuál de todo lo que ve es lo que acaba de comprar. */
       if (bloque) {
         const T = GF.TILE;
-        this.cameras.main.pan((bloque.c0 + bloque.c1) / 2 * T, (bloque.r0 + bloque.r1) / 2 * T,
-          760, "Sine.easeInOut", true);
-      }
+        const cx = (bloque.c0 + bloque.c1) / 2 * T, cy = (bloque.r0 + bloque.r1) / 2 * T;
+        const DUR = 900;
+        this.cameras.main.pan(cx, cy, DUR, "Sine.easeInOut", true);
+        const destello = () => {
+          try {
+            const x0 = bloque.c0 * T, y0 = bloque.r0 * T;
+            const w = (bloque.c1 - bloque.c0) * T, h = (bloque.r1 - bloque.r0) * T;
+            const g = this.add.rectangle(x0 + w / 2, y0 + h / 2, w, h, 0xffe08a, 0.35)
+              .setDepth(99996).setStrokeStyle(3, 0xffd54a, 0.9);
+            this.tweens.add({ targets: g, alpha: 0, duration: 900, ease: "Quad.easeOut",
+              onComplete: () => { try { g.destroy(); } catch (e) {} } });
+          } catch (e) {}
+        };
+        /* `camerapancomplete` es lo correcto, pero si por lo que sea no llega (la cámara ya estaba
+           ahí, o el pan se interrumpe) el festejo no puede perderse: hay un plazo de respaldo y
+           una bandera para que no salga dos veces. Perder la celebración de algo que el jugador
+           pagó es peor que verla un instante tarde. */
+        let hecho = false;
+        const llegada = () => { if (hecho) return; hecho = true; destello(); if (alLlegar) alLlegar(); };
+        try { this.cameras.main.once("camerapancomplete", llegada); } catch (e) {}
+        this.time.delayedCall(DUR + 120, llegada);
+      } else if (alLlegar) alLlegar();
       return true;
     } catch (e) { console.warn("[expandir] en vivo falló, se rehace la escena:", e); return false; }
   }

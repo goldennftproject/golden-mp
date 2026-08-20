@@ -1389,10 +1389,24 @@ function expansionComprar() {
   payCost(e.costo);
   G.expansiones = e.i + 1;
   log("¡Expansión " + e.n + " de " + EXPANSION_MAX + "! La granja creció " + (GF.BLOQUE * GF.BLOQUE) + " celdas.", "gold");
-  toast("¡La granja creció!");
   if (window.sfx) sfx("level");
-  if (window.celebrate) celebrate({ title: "¡GRANJA MÁS GRANDE!", sub: "Expansión " + e.n + " de " + EXPANSION_MAX,
-    big: true, reward: (GF.BLOQUE * GF.BLOQUE) + " celdas nuevas" });
+  /* 20/8 (dirección): "lo que daría al momento de expandir es la transición y el movimiento de
+     cámara". El viaje YA existía —expandirEnVivo hace un pan de 760 ms hasta el bloque— pero era
+     invisible, y por dos motivos a la vez:
+       · el Mercado se quedaba ABIERTO encima del mundo (comprás desde su pestaña de Adornos);
+       · y justo después salía la celebración a pantalla completa, 2,6 segundos de fogonazo y
+         confeti. Para cuando se apagaba, la cámara ya había llegado.
+     O sea que el jugador pagaba su expansión y veía… un cartel. El momento en que la cerca se abre
+     y el terreno aparece —que es POR LO QUE pagó— pasaba detrás del telón.
+     Ahora el orden es el que tiene sentido: se cierra el panel, la cámara viaja con el mundo a la
+     vista, y la celebración salta CUANDO LLEGA. El cartel deja de tapar la noticia y pasa a
+     rematarla. */
+  if (typeof closeOv === "function") { closeOv("ov-market"); closeOv("ov-deco"); }
+  const festejar = () => {
+    toast("¡La granja creció!");
+    if (window.celebrate) celebrate({ title: "¡GRANJA MÁS GRANDE!", sub: "Expansión " + e.n + " de " + EXPANSION_MAX,
+      big: true, reward: (GF.BLOQUE * GF.BLOQUE) + " celdas nuevas" });
+  };
   /* 19/8 (dirección): LA PARCELA APARECE DENTRO DEL BLOQUE, no en el baúl. Las tres celdas que
      trae una expansión —árbol, roca y parcela— ahora llegan igual: puestas y a la vista. Antes la
      parcela era la excepción y había que ir a reclamarla al Cobertizo, un rodeo que además nadie
@@ -1420,9 +1434,14 @@ function expansionComprar() {
      escena se rehace entera y el jugador ve su expansión igual. */
   const b = e.bloque, T = GF.TILE;
   const sc = window.FARM && window.FARM.scene;
-  const vivo = sc && typeof sc.expandirEnVivo === "function" && sc.expandirEnVivo(b);
-  if (!vivo && typeof reiniciarGranjaSuave === "function")
-    reiniciarGranjaSuave(b ? { x: (b.c0 + b.c1) / 2 * T, y: (b.r0 + b.r1) / 2 * T } : null);
+  const vivo = sc && typeof sc.expandirEnVivo === "function" && sc.expandirEnVivo(b, festejar);
+  if (!vivo) {
+    /* Sin escena viva no hay viaje que mostrar: se festeja al momento y se cae al reinicio con
+       telón, que sigue de respaldo. */
+    festejar();
+    if (typeof reiniciarGranjaSuave === "function")
+      reiniciarGranjaSuave(b ? { x: (b.c0 + b.c1) / 2 * T, y: (b.r0 + b.r1) / 2 * T } : null);
+  }
   return true;
 }
 const FARM_COFRE   = { 13:10, 23:10, 33:15 };                                          // nivel → capacidad extra de cofre

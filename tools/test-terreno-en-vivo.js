@@ -93,10 +93,20 @@ esc.popFx = () => {};
 esc.syncNodos = () => {};
 esc.dibujarExpansion = () => {};
 esc.fitCamera = () => {};
+/* 20/8: expandirEnVivo pasó a avisar cuando la cámara LLEGA al bloque —para que la celebración
+   no tape el viaje— y para eso usa `cameras.main.once` y `time.delayedCall`. El arnés no los
+   tenía, la función reventaba y devolvía false: el juego habría caído al reinicio con telón.
+   Un banco de pruebas al que le faltan piezas no informa de un fallo, INVENTA uno. */
+/* Ojo con el `||`: esc.time YA existía (con addEvent y nada más), así que el respaldo no entraba
+   y delayedCall seguía sin existir. Se AÑADE la pieza que falta, no se reemplaza el objeto. */
+esc.time.delayedCall = esc.time.delayedCall || ((ms, f) => { if (typeof f === "function") f(); return {}; });
+if (!esc.cameras.main.once) esc.cameras.main.once = () => {};
 ctx.G.expansiones = 1;
-let vivo = null;
-corre("expandirEnVivo() completo", () => { vivo = esc.expandirEnVivo(ctx.GF.EXPANSIONES[0]); });
+let vivo = null, llego = 0;
+corre("expandirEnVivo() completo", () => { vivo = esc.expandirEnVivo(ctx.GF.EXPANSIONES[0], () => llego++); });
 ok("...y devuelve true (si diera false, caería al telón)", vivo === true);
+/* Y el aviso de llegada: sin él la celebración no saldría nunca. */
+ok("avisa cuando la cámara llega al bloque", llego === 1, llego + " aviso(s)");
 ok("el buscador de caminos se invalida (tenía el mapa viejo)", esc._nav === null);
 
 /* Y LO QUE DE VERDAD IMPORTA: que create() siga corriendo entero después de sacarle las 131
