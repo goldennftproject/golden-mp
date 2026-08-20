@@ -88,20 +88,18 @@ LOG("\n   PESCA  (lo que paga DE VERDAD, leído del sorteo de state.js)");
    herramientas tienen un uso. */
 {
   const P = { comun: 0.60, raro: 0.25, epico: 0.12, legendario: 0.03 };   // el sorteo: r<0.60/0.85/0.97
-  const plataComun = Math.max(1, Math.round(20 * (X.FISH_CD || 900) / 3600));
+  /* 18/8: los cuatro peces son ya lo mismo — un ingrediente con su valor. Antes esta tabla tenía
+     escritos a mano los dos casos especiales (el común pagaba plata suelta, el legendario 2 de
+     oro) y por eso seguía midiendo el modelo viejo después de arreglarlo. */
   const margen = (typeof X.COOK_PRICE_AUTO !== "undefined" && X.COOK_PRICE_AUTO) ? 1.25 : 1;
-  const pago = {
-    comun: plataComun,
-    raro: ((X.FISH_VALOR||{}).raro || 0) * margen,
-    epico: ((X.FISH_VALOR||{}).epico || 0) * margen,
-    legendario: 2 * (X.PRICE.oro || 0),                 // tryAddRes("oro", 2)
-  };
+  const pago = {};
+  X.FISH_ORDER.forEach(k => pago[k] = ((X.FISH_VALOR || {})[k] || 0) * margen);
   const costoCana = (X.TOOL_CRAFT.rod ? (X.TOOL_CRAFT.rod.plata || 0) +
       Object.keys(X.TOOL_CRAFT.rod.cost||{}).reduce((a,k)=>a+(X.PRICE[k]||0)*X.TOOL_CRAFT.rod.cost[k],0) : 0);
   const costoTiro = 3 /* WORM_PRICE */ + costoCana;
   X.FISH_ORDER.forEach(k => LOG("     " + (X.FISH_DEF[k].label + " ").padEnd(16, ".") +
     pad((P[k]*100).toFixed(0) + "%", 6) + "  paga " + pad(Math.round(pago[k]), 6) +
-    (k === "legendario" ? "  (2 de oro)" : k === "comun" ? "  (plata directa)" : "  (el pez, al cocinarlo)")));
+    "  (vale " + ((X.FISH_VALOR||{})[k]||0) + " al cocinarlo)"));
   const esperado = X.FISH_ORDER.reduce((a, k) => a + P[k] * pago[k], 0);
   const neto = esperado - costoTiro;
   const porH = neto / h(X.FISH_CD || 900);
@@ -115,8 +113,8 @@ LOG("\n   PESCA  (lo que paga DE VERDAD, leído del sorteo de state.js)");
       "El grueso es el LEGENDARIO: 3% de 2 oro = " + Math.round(P.legendario * pago.legendario) +
       " de los " + esperado.toFixed(0) + " del tiro medio. Con la caña a " + ((X.FISH_CD||900)/60) +
       " min, el tiro medio debería pagar " + Math.round(ANCLA * h(X.FISH_CD||900) + costoTiro) + ".");
-    nota(2, "Sugerencia anclada: el legendario a 1 oro y el enfriamiento a " +
-      Math.round((esperado - costoTiro) / ANCLA * 60) + " min dejarían la pesca en el ancla sin tocar las probabilidades.");
+    nota(2, "Para cuadrarla sin tocar probabilidades: el tiro medio debería pagar " +
+      Math.round(ANCLA * h(X.FISH_CD||900) + costoTiro) + " y paga " + esperado.toFixed(0) + ".");
   }
 }
 }

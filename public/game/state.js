@@ -3368,7 +3368,17 @@ function cookPot(rlvl) { return Math.min(1.5, 1 + 0.02 * Math.max(0, cookLevel()
 // ANTI "impresora de plata" (3/8): cocinar no puede valer más que sus ingredientes + un margen.
 // Con COOK_PRICE_AUTO=1 el precio sale de lo que costó el plato, así el balance no se rompe
 // aunque el diseñador cambie los precios de los cultivos. Con 0 manda la tabla del doc.
-var FISH_VALOR = { comun: 20, raro: 60, epico: 150, legendario: 400 };   // cuánto "vale" cada pez al calcular el precio de un plato
+/* ============ LA PESCA, DERIVADA DEL ANCLA (18/8, dirección) =======================
+   Medido: rendía 184 plata/h — el 921% del ancla. Un tiro medio pagaba 61 y cuesta 15 (una
+   lombriz y una caña). Con la caña a 15 min, para rendir 20/h el tiro medio tiene que pagar 20.
+   Los cuatro valores salen de ahí: escalera 1 : 4 : 12 : 40 entre rarezas, con el margen ×1,25
+   de la cocina, y la esperanza cae clavada en 20,1.
+   Y SE QUITAN LOS DOS CASOS ESPECIALES que eran la mitad del problema:
+     · el común pagaba plata SUELTA además de dejarte el pez (cobraba dos veces)
+     · el legendario imprimía 2 de ORO (560 de plata) — el 28% de todo lo que pagaba la pesca
+   Ahora los cuatro son lo mismo: un ingrediente, con su valor. La rareza está en el valor, no en
+   una regla aparte. */
+var FISH_VALOR = { comun: 4, raro: 15, epico: 45, legendario: 151 };   // cuánto vale cada pez como ingrediente
 var COOK_PRICE_AUTO = 1;     // 1 = precio calculado sobre ingredientes · 0 = precio fijo de la planilla
 var COOK_MARGEN = 1.25;      // ganancia de cocinar sobre el valor de los ingredientes (+25%)
 function dishValue(r) {      // cuánto valen los ingredientes de un plato
@@ -3970,10 +3980,14 @@ function goFishing() {
   // fixs.docx #16 (11/8): pescar ya NO regala buffs — el pez va a la bolsa y los buffs
   // salen de COCINARLO (los platos con pescado ya los daban). La plata del común y el
   // premio del legendario se conservan: son botín, no buff.
-  if (rar === "comun") { const p = Math.max(1, Math.round(20 * FISH_CD / 3600)); G.plata += p; log(`Pez común: +${p} plata.`); toast("+" + p + " "); }
+  /* 18/8: los cuatro peces se tratan igual — van a la bolsa y valen lo que valen al cocinarlos.
+     Antes el común pagaba plata suelta ADEMÁS de dejarte el pez, y el legendario imprimía 2 de
+     oro: entre los dos se llevaban la mitad de lo que pagaba la pesca. */
+  const nomb = (typeof FISH_DEF !== "undefined" && FISH_DEF[rar]) ? FISH_DEF[rar].label : "Pez";
+  if (rar === "comun") { log(nomb + " a la bolsa.", "good"); toast(nomb); }
   else if (rar === "raro") { log("Pez raro a la bolsa — cocinalo para sacarle un buff.", "good"); toast("¡Pez raro!"); }
   else if (rar === "epico") { log("Pez épico a la bolsa — cocinalo para sacarle un buff.", "good"); toast("¡Pez épico!"); }
-  else { tryAddRes("oro", 2); log("¡Legendario! +2 Oro.", "gold"); toast("¡LEGENDARIO!"); }   // 18/8: ya no imprime $Golden
+  else { log("¡LEGENDARIO! El pez más valioso de la laguna — cocinalo.", "gold"); toast("¡LEGENDARIO!"); }
   refreshHud(); if (typeof syncSlots === "function") syncSlots(); if (isOpen("ov-inv")) refreshInv();
 }
 
