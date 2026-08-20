@@ -749,10 +749,23 @@ GF.ocupacion = function () {
   // 2) las parcelas que YA son tuyas (una que no es tuya no ocupa nada)
   const nPar = GF.parcelasTuyas();
   for (let i = 0; i < nPar; i++) { const p = GF.PLOTS[i]; if (p) poner(p.col, p.row, { tipo: "parcela", i, ancho: 1, leftCol: p.col, fila: p.row }); }
-  // 3) la laguna: su rectángulo de celdas, declarado, no deducido de una elipse
+  /* 3) LA LAGUNA — 20/8, dirección: "el sombreado no me deja colocar cosas donde no hay nada ahí".
+     Acá había DOS verdades sobre la misma laguna, y es el mismo patrón que nos rompió la pesca:
+       · para CAMINAR (blockedAt) la laguna es una ELIPSE — la forma del agua que se ve;
+       · para CONSTRUIR (este mapa) era el RECTÁNGULO entero de 4×3.
+     O sea que las cuatro celdas de las esquinas eran césped que se podía pisar y no se podía usar.
+     Sombreadas en verde oscuro, sin nada encima que lo explicara. El jugador no está viendo un
+     fantasma del guardado: está viendo una laguna cuadrada que nadie dibujó nunca.
+     Una celda es agua si su CENTRO está dentro de la misma elipse que usa blockedAt. Un solo
+     criterio para las dos preguntas, que es de lo que se trataba el mapa de ocupación. */
   { const p = GF.POND;
-    for (let c = p.col; c < p.col + p.cols; c++) for (let r = p.row; r < p.row + p.rows; r++)
-      poner(c, r, { tipo: "laguna", ancho: p.cols, leftCol: p.col, fila: r }); }
+    const ex = (p.col + p.cols / 2) * T2, ey = (p.row + p.rows / 2) * T2;
+    const rx = p.cols * T2 / 2, ry = p.rows * T2 / 2;
+    for (let c = p.col; c < p.col + p.cols; c++) for (let r = p.row; r < p.row + p.rows; r++) {
+      const dx = ((c + 0.5) * T2 - ex) / rx, dy = ((r + 0.5) * T2 - ey) / ry;
+      if (dx * dx + dy * dy > 1) continue;   // esquina seca: se ve césped y se comporta como césped
+      poner(c, r, { tipo: "laguna", ancho: p.cols, leftCol: p.col, fila: r });
+    } }
   // 4) adornos y cofres colocados
   const g2 = (typeof G !== "undefined" && G) || {};
   (g2.decos || []).forEach((d, j) => poner(d.col, d.row, { tipo: "adorno", i: j, ancho: 1, leftCol: d.col, fila: d.row, id: d.id }));

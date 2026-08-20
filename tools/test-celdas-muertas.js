@@ -19,6 +19,39 @@ ok("todos los objetos son sólidos (los nodos de expansión también)",
   GF.COLLISIONS.length===GF.WORLD_OBJECTS.length,
   GF.COLLISIONS.length+"/"+GF.WORLD_OBJECTS.length);
 
+/* 1bis) LA LAGUNA: UNA SOLA VERDAD (20/8, dirección)
+   "El sombreado no me deja colocar cosas donde no hay nada ahí."
+   Y era literal. La laguna se dibuja redonda y para CAMINAR el juego la trata como una elipse
+   (blockedAt), pero el mapa de ocupación reservaba el RECTÁNGULO entero de 4×3: las cuatro
+   esquinas eran césped que se podía pisar y no se podía usar, sombreadas en verde oscuro sin nada
+   encima que lo explicara.
+   Es la misma forma de error que la pesca de ayer —dos sitios opinando sobre lo mismo— y por eso
+   se ata acá: si mañana alguien vuelve a rellenar el rectángulo, salta. */
+{
+  const p = GF.POND;
+  const dentro = (c, r) => {
+    const ex = (p.col + p.cols / 2) * T, ey = (p.row + p.rows / 2) * T;
+    const dx = ((c + 0.5) * T - ex) / (p.cols * T / 2), dy = ((r + 0.5) * T - ey) / (p.rows * T / 2);
+    return dx * dx + dy * dy <= 1;
+  };
+  const mal = [];
+  for (let c = p.col; c < p.col + p.cols; c++) for (let r = p.row; r < p.row + p.rows; r++) {
+    const oc = GF.celdaOcupada(c, r);
+    const esLaguna = !!(oc && oc.tipo === "laguna");
+    /* Lo que decide para caminar: el mismo criterio, la misma elipse. */
+    if (esLaguna !== dentro(c, r)) mal.push(c + "," + r + (esLaguna ? " bloqueada y seca" : " agua y libre"));
+  }
+  ok("la laguna ocupa el agua que se dibuja, no su caja", !mal.length, mal.join(" · ") || "elipse, igual que al caminar");
+  const nLag = [...GF.ocupacion().values()].filter(v => v.tipo === "laguna").length;
+  ok("son " + nLag + " celdas y no las " + (p.cols * p.rows) + " del rectángulo", nLag < p.cols * p.rows,
+    "las 4 esquinas secas vuelven a ser terreno usable");
+  /* Y lo que el jugador comprueba con los pies: lo que no es agua, se camina. */
+  const secas = [];
+  for (let c = p.col; c < p.col + p.cols; c++) for (let r = p.row; r < p.row + p.rows; r++)
+    if (!dentro(c, r) && GF.blockedAt((c + 0.5) * T, (r + 0.5) * T)) secas.push(c + "," + r);
+  ok("y las esquinas secas también se pueden pisar", !secas.length, secas.join(" · ") || "construir y caminar dicen lo mismo");
+}
+
 // 2) UNA PARCELA QUE NO ES TUYA NO RESERVA CELDA
 {
   const p3=GF.PLOTS[3];   // con plotsOwned=3, la 4ª todavía no es tuya
