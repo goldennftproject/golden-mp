@@ -12,14 +12,17 @@ let fallos = 0;
 const ok = (n, c, d) => { if (!c) fallos++; console.log((c ? "  ok   " : "  FALLA") + "  " + n + (d ? "   " + d : "")); };
 
 const nuevos = G.WORLD_OBJECTS.filter(o => o.exp != null);
-ok("hay 1 nodo por expansión (16)", nuevos.length === 16, nuevos.length);
-ok("alternan árbol y roca, bloque a bloque",
+/* 18/8 (3ª pasada, dirección): las expansiones son la ÚNICA fuente de nodos, así que cada bloque
+   trae UN ÁRBOL Y UNA ROCA. La parcela va aparte, al Cobertizo. Tres celdas productivas por
+   expansión: 9 de arranque + 16×3 = 57, el techo de siempre. */
+ok("hay 2 nodos por expansión (16 × 2)", nuevos.length === 32, nuevos.length);
+ok("cada bloque trae un árbol y una roca",
   G.EXPANSIONES.every((e, i) => {
     const d = nuevos.filter(o => o.exp === i);
-    return d.length === 1 && d[0].type === (i % 2 === 0 ? "tree" : "rock");
+    return d.length === 2 && d.some(o => o.type === "tree") && d.some(o => o.type === "rock");
   }));
-ok("salen 8 árboles y 8 rocas",
-  nuevos.filter(o => o.type === "tree").length === 8 && nuevos.filter(o => o.type === "rock").length === 8);
+ok("salen 16 árboles y 16 rocas",
+  nuevos.filter(o => o.type === "tree").length === 16 && nuevos.filter(o => o.type === "rock").length === 16);
 
 let fuera = 0, cerca = 0, choque = 0, pisaViejo = 0;
 const ocupadasBase = new Set();
@@ -59,12 +62,13 @@ ok("y siguen siendo interior en TODAS las etapas posteriores", despues === 0, de
 
 // no se ven hasta que la expansión se compró
 G.aplicarTerreno(0);
-ok("con 0 expansiones, los 16 están ocultos", nuevos.every(o => o.exp >= 0));
+ok("con 0 expansiones, los 32 están ocultos", nuevos.every(o => o.exp >= 0));
 console.log("\n  totales al terminar las 16:");
 const arb = G.WORLD_OBJECTS.filter(o => o.type === "tree").length;
 const roc = G.WORLD_OBJECTS.filter(o => o.type === "rock").length;
-console.log("    árboles " + arb + " (6 del corral + 8)   ·   rocas " + roc + " (6 + 8)");
-ok("los totales cuadran", arb === 14 && roc === 14, arb + "/" + roc);
+console.log("    árboles " + arb + " en el mapa   ·   rocas " + roc);
+ok("el mapa tiene 6 base + 16 de expansión de cada", arb === 22 && roc === 22, arb + "/" + roc);
+console.log("    (de los 6 base solo se abren 3: la granja de arranque tiene 3 árboles y 3 rocas)");
 
 console.log("\n" + (fallos ? "FALLOS: " + fallos : "todo en verde"));
 process.exit(fallos ? 1 : 0);

@@ -20,13 +20,15 @@ const valorMat=k=>{ if(X.PRICE[k]!=null)return X.PRICE[k];
 const filas=[];
 for(let n=1;n<=X.FARM_NIVEL_MAX;n++){
   const exps=X.FARM_EXPANSION.filter(v=>v<=n).length;
+  /* 18/8: las celdas las reparte SOLO la expansión (3 cada una) sobre las 9 de arranque.
+     El nivel de granja ya no da parcelas ni nodos. */
   filas.push({ n, xp:X.FARM_XP_LVLS[n]||0,
-    celdas: parcelasEn(n)+exps+arbEn(n)+rocEn(n),
+    celdas: 9 + 3*exps,
     gana: n===1 ? "granja de arranque: 3 parcelas, 3 árboles, 3 rocas" : ctx.farmUnlockTxt(n) });
 }
 const md=["# Qué se gana en cada nivel de granja","",
   "Generado de las tablas del juego (`tools/tabla-niveles.js`). Si cambia un número, esta tabla cambia sola.","",
-  "**Celdas** = parcelas + árboles + rocas + las parcelas que traen las expansiones.",
+  "**Celdas** = 9 de arranque (3 parcelas, 3 árboles, 3 rocas) + 3 por cada expansión comprada.",
   "Cada celda rinde **20 plata/hora** (el ancla), así que la columna de celdas *es* la curva de ingresos.","",
   "| Nivel | XP de granja | Celdas | Qué gana |","|---:|---:|---:|---|"];
 LOG("QUÉ SE GANA EN CADA NIVEL DE GRANJA\n");

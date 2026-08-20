@@ -75,10 +75,11 @@ const ok=(n,c,d)=>{if(!c)fallos++;console.log((c?"  ok   ":"  FALLA")+"  "+n+(d?
 }
 // 4) COLOCAR LA SACA DEL COBERTIZO
 {
+  /* 18/8: por el Cobertizo pasan PARCELAS. Los árboles y rocas vienen con el bloque. */
   const g=juego();
-  g.G.cobertizo={tree:1,rock:0,plot:0};
+  g.G.cobertizo={tree:0,rock:0,plot:1};
   const antes=g.cobertizoCuenta();
-  g.regaloColocar("tree",6,6);
+  g.regaloColocar("plot",6,6);
   ok("colocar vacía su hueco del cobertizo", g.cobertizoCuenta()===antes-1, antes+" → "+g.cobertizoCuenta());
 }
 // 5) LOS PLANOS TAMPOCO OCUPAN BARRA RÁPIDA

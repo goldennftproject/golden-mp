@@ -38,14 +38,14 @@ const ok=(n,c,d)=>{if(!c)fallos++;console.log((c?"  ok   ":"  FALLA")+"  "+n+(d?
 }
 // 2) COLOCAR SÍ LO PONE, EN LA CELDA ELEGIDA
 {
-  const g=juego(); g.G.cobertizo={tree:1,rock:1,plot:1};   // ya recogidos del baúl
+  /* 18/8 (3ª pasada): los ÁRBOLES y las ROCAS ya no son regalos — vienen físicamente dentro del
+     bloque de la expansión. Por el Cobertizo pasan solo las PARCELAS. Las ramas de árbol y roca
+     de regaloColocar se quedan por los guardados viejos que tuvieran uno pendiente. */
+  const g=juego(); g.G.cobertizo={tree:0,rock:0,plot:1};
   const GF=g.GF;
   const arbAntes=g.G.treesOpen.length;
-  ok("colocar el árbol lo abre", g.regaloColocar("tree",6,6)===true && g.G.treesOpen.length===arbAntes+1);
-  const idx=g.nodoIndicePorLock("tree", g.G.treesOpen[g.G.treesOpen.length-1]);
-  const lay=g.G.layout&&g.G.layout[idx];
-  ok("...y queda en la celda que se eligió", !!lay && lay.by===(6+1)*GF.TILE, lay?("cx="+lay.cx+" by="+lay.by):"sin layout");
-  ok("el regalo se gasta del cobertizo", g.G.cobertizo.tree===0);
+  ok("un árbol ya no se puede reclamar como regalo", g.regaloColocar("tree",6,6)===false);
+  ok("...porque la granja de arranque ya tiene sus 3", g.G.treesOpen.length===arbAntes, arbAntes+" árboles");
   const par=g.G.plotsOwned;
   ok("colocar la parcela la suma", g.regaloColocar("plot",7,7)===true && g.G.plotsOwned===par+1);
   /* 18/8 — el índice importa. La celda tiene que quedar anotada para LA PARCELA QUE SE
@@ -56,7 +56,7 @@ const ok=(n,c,d)=>{if(!c)fallos++;console.log((c?"  ok   ":"  FALLA")+"  "+n+(d?
      "índice "+par+" → "+JSON.stringify(g.G.layoutPlots && g.G.layoutPlots[par]));
   ok("...y NO en el hueco de las parcelas extra (el fallo del centro de la granja)",
      !(g.G.layoutPlots && g.G.layoutPlots[g.GF.PLOTS.length]));
-  ok("colocar la roca la abre", g.regaloColocar("rock",8,8)===true);
+
 }
 // 3) NO SE PUEDE COLOCAR LO QUE NO TENÉS
 {
@@ -68,7 +68,7 @@ const ok=(n,c,d)=>{if(!c)fallos++;console.log((c?"  ok   ":"  FALLA")+"  "+n+(d?
 {
   const g=juego();
   const conExp=g.GF.WORLD_OBJECTS.filter(o=>o.exp!=null);
-  ok("los nodos de expansión existen en el mapa desde el principio", conExp.length===16, conExp.length+"");
+  ok("los nodos de expansión existen en el mapa desde el principio", conExp.length===32, conExp.length+"");
   ok("...y no cuentan como regalo pendiente", (g.G.regalos&&g.G.regalos.tree||0)===0);
   ok("nodoIndicePorLock ignora los de expansión",
     g.NIVEL_ARBOLES.every((_,i)=>{const k=g.nodoIndicePorLock("tree",i);return k>=0&&g.GF.WORLD_OBJECTS[k].exp==null;}));
@@ -86,7 +86,8 @@ const ok=(n,c,d)=>{if(!c)fallos++;console.log((c?"  ok   ":"  FALLA")+"  "+n+(d?
 // 6) NO SE PUEDE COBRAR DOS VECES: lo pendiente cuenta como si ya lo tuvieras
 {
   const g=juego();
-  g.G.level=10; g.G.expansiones=0; g.G.plotsOwned=3; g.G.regalos={tree:0,rock:0,plot:0};
+  // 18/8: las parcelas llegan por EXPANSIÓN. Sin expansiones no hay nada que regalar.
+  g.G.level=50; g.G.expansiones=5; g.G.plotsOwned=3; g.G.regalos={tree:0,rock:0,plot:0}; g.G.cobertizo={tree:0,rock:0,plot:0};
   g.regalosSync();
   const primera=g.G.regalos.plot;
   g.regalosSync(); g.regalosSync();          // volver a sincronizar no puede regalar de nuevo
@@ -101,15 +102,11 @@ const ok=(n,c,d)=>{if(!c)fallos++;console.log((c?"  ok   ":"  FALLA")+"  "+n+(d?
 //    y el movimiento de cámara que te lo resetea")
 {
   const g=juego(); g.reinicios=0;
-  g.G.cobertizo={tree:1,rock:1,plot:1};
-  g.regaloColocar("tree",6,6); g.regaloColocar("plot",8,8); g.regaloColocar("rock",9,9);
-  ok("colocar los tres no dispara ningún reinicio con telón", (g.reinicios||0)===0, "reinicios="+(g.reinicios||0));
+  g.G.cobertizo={tree:0,rock:0,plot:1};
+  g.regaloColocar("plot",8,8);
+  ok("colocar la parcela no dispara ningún reinicio con telón", (g.reinicios||0)===0, "reinicios="+(g.reinicios||0));
   const GF=g.GF,T=GF.TILE;
-  const idxT=g.nodoIndicePorLock("tree",g.G.treesOpen[g.G.treesOpen.length-1]);
-  const lay=g.G.layout[idxT], an=Math.ceil(GF.WORLD_OBJECTS[idxT].wCells||1);
-  ok("...y el árbol queda en la celda pedida (6,6)",
-     Math.round((lay.cx-an*T/2)/T)===6 && Math.round(lay.by/T)-1===6);
-  ok("...y la parcela también (8,8)",
+  ok("...y la parcela queda en la celda pedida (8,8)",
      Object.values(g.G.layoutPlots||{}).some(v=>v.col===8&&v.row===8));
 }
 // 8) EL ENFRIAMIENTO NO SE PIERDE AL MOVER: la clave de guardado usa la celda DE FÁBRICA
@@ -117,8 +114,6 @@ const ok=(n,c,d)=>{if(!c)fallos++;console.log((c?"  ok   ":"  FALLA")+"  "+n+(d?
   const g=juego();
   const o=g.GF.WORLD_OBJECTS.find(x=>x.type==="tree"&&x.exp==null);
   const clave=o.type+":"+o.leftCol+","+o.baseRow;
-  g.G.cobertizo={tree:1,rock:0,plot:0};
-  g.regaloColocar("tree",6,6);
   ok("mover un nodo no cambia su clave de enfriamiento",
      clave===o.type+":"+o.leftCol+","+o.baseRow, clave);
 }

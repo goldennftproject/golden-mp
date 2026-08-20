@@ -1070,7 +1070,10 @@ const FARM_UNLOCK = {
    expansión pasa a traer 1 PARCELA + 1 nodo en vez de 1 árbol + 1 roca: mismas 2 celdas por
    expansión, mismo total de 57 celdas al final, pero las parcelas pasan del 23% al 51%.
    De regalo, arregla el tutorial: más árboles y rocas antes = menos horas mirando el reloj. */
-const FARM_PARCELA = { 2:4, 3:5, 4:6, 5:7, 6:8, 8:9, 10:10, 13:11, 17:12, 22:13 };   // nivel → parcelas totales
+/* 18/8: LAS PARCELAS TAMPOCO LAS DA EL NIVEL. Vienen con la expansión, igual que el árbol y la
+   roca. La tabla se queda vacía a propósito: nodosQueTocan ya no la usa, pero varios sitios la
+   leen y romper eso hoy sería buscarse un fallo tonto. */
+const FARM_PARCELA = {};
 /* ============ EL CARTEL DEL NIVEL SE DERIVA, NO SE ESCRIBE (18/8) ==================
    Al generar la tabla para el diseñador saltó que SIETE textos de FARM_UNLOCK mentían: en el
    nivel 25 le prometía al jugador "10ª parcela" cuando con la tabla nueva ya tiene 13, y en el
@@ -1085,33 +1088,19 @@ function parcelasDelNivel(n) {
   return d > 0 ? (en(n) + "ª parcela") : "";
 }
 function farmUnlockTxt(n) {
-  /* Del texto a mano se quitan las cosas que ahora SE DERIVAN, porque estaban desfasadas:
-       · las parcelas (decía "10ª parcela" en el nivel 25, cuando ya se tienen 13)
-       · los cultivos (decía "Cultivo Girasol" en el 8, y el girasol abre en el 13)
-       · los edificios (decía "Horno básico disponible" donde ya va "plano de Horno de Piedra")
-     Lo que queda es lo suyo: títulos, auras, marcos, emotes, skins y decoraciones. */
-  let base = (FARM_UNLOCK[n] || "")
-    .replace(/\d+ª parcela( GRATIS)?/gi, "")
-    .replace(/Cultivo [A-ZÁÉÍÓÚÑ][\wáéíóúñ]*/g, "")
-    .replace(/[A-ZÁÉÍÓÚÑ][\wáéíóúñ ]*\b(disponible|nivel 2)[^+]*/g, "")
-    .replace(/\+?\s*\d+ de capacidad de cofre/gi, "")
-    .replace(/\s*\+\s*\+\s*/g, " + ").replace(/^\s*\+\s*|\s*\+\s*$/g, "").trim();
+  /* 18/8 (dirección): "el Granero lo dejaría con las dos cosas: que te desbloquee expansiones en
+     ciertos niveles y el bono, y punto."
+     Así que el cartel anuncia eso y lo que sigue colgando del nivel por el tutorial (los planos)
+     o por comodidad (cofre, edificios de nivel 2). Ni parcelas, ni árboles, ni rocas: eso lo dan
+     las expansiones. Ni cultivos: eso lo da la skill de Cultivo. */
   const partes = [];
-  const par = parcelasDelNivel(n); if (par) partes.push(par);
-  // los nodos, la expansión, el cultivo y el plano también salen de SU tabla, no de un texto
-  const nodos = (t, l) => t.filter(v => v === n).length;
-  const na = nodos(NIVEL_ARBOLES), nr = nodos(NIVEL_ROCAS);
-  if (na) partes.push(na + (na > 1 ? " árboles" : " árbol"));
-  if (nr) partes.push(nr + (nr > 1 ? " rocas" : " roca"));
   const ex = FARM_EXPANSION.indexOf(n); if (ex >= 0) partes.push("expansión " + (ex + 1));
-  // 18/8: los cultivos YA NO se anuncian acá — su puerta es la skill de Cultivo, no el nivel de
-  // granja. Anunciarlos por nivel de granja sería otra vez el cartel que promete lo que no llega.
   if (typeof PLANO_NIVEL !== "undefined") for (const t in PLANO_NIVEL)
     if (PLANO_NIVEL[t] === n && BUILD_DEF[t]) partes.push("plano de " + BUILD_DEF[t].label);
   if (typeof FARM_EDIF2 !== "undefined" && FARM_EDIF2[n] && BUILD_DEF[FARM_EDIF2[n]])
     partes.push(BUILD_DEF[FARM_EDIF2[n]].label + " nivel 2");
   if (typeof FARM_COFRE !== "undefined" && FARM_COFRE[n]) partes.push("+" + FARM_COFRE[n] + " de capacidad de cofre");
-  if (base) partes.push(base);
+  partes.push("+1,5% al precio de venta");     // el bono, que llega en TODOS los niveles
   return partes.join(" + ");
 }
 /* 17/8 — EN QUÉ NIVEL CAE CADA UNA DE LAS 16 EXPANSIONES (bloques de 5x5, ver GF.EXPANSIONES).
@@ -1125,7 +1114,25 @@ function farmUnlockTxt(n) {
    Las PARCELAS no vienen acá: siguen su propia escalera (FARM_PARCELA) y la tienda. El terreno
    es justamente lo que hace que valga la pena comprarlas — hoy el tope es 60 y no hay dónde
    ponerlas. */
-const FARM_EXPANSION = [3, 5, 7, 9, 11, 14, 17, 20, 23, 26, 30, 34, 38, 42, 46, 50];
+/* ============ LAS EXPANSIONES SE DERIVAN (18/8, dirección) =========================
+   "Ten en cuenta que quizás mañana pongamos más expansiones de las que tenemos hoy."
+   Los niveles estaban escritos a mano y los costes pegados de una derivación vieja: añadir la 17ª
+   obligaba a rehacer las dos tablas con los dedos. Ahora salen de EXPANSION_MAX.
+   NIVELES: la primera en el 3 —cuando ya vendiste tu primera cosecha— y la última en el tope.
+   En medio una curva suave: seguidas al principio, espaciadas al final.
+   COSTES: no se eligen unidades. Se elige cuántas HORAS de la granja que YA TENÉS debe costar
+   cada una (de 2 a 30) y se traduce a material con la producción real de ese momento. Así el
+   precio sube solo cuando la granja crece y ninguna expansión es un muro. */
+var EXPANSION_MAX = 16;                        // ← cambiar SOLO esto para tener más
+const FARM_EXPANSION = (function () {
+  const a = [], min = 3, max = 50;
+  for (let i = 0; i < EXPANSION_MAX; i++) {
+    let n = Math.round(min + (max - min) * Math.pow(i / (EXPANSION_MAX - 1), 1.25));
+    if (i && n <= a[i - 1]) n = a[i - 1] + 1;
+    a.push(Math.min(n, max));
+  }
+  return a;
+})();
 function expansionesQueTocan(lvl) { return FARM_EXPANSION.filter(n => n <= (lvl || 1)).length; }
 /* COSTE DE CADA EXPANSIÓN. No son números a ojo: se elige cuántos DÍAS DE GRANJA debe costar cada
    una —de 1,5 la primera a 6 la última— y se traducen a unidades con la producción REAL que tenés
@@ -1145,30 +1152,39 @@ function expansionesQueTocan(lvl) { return FARM_EXPANSION.filter(n => n <= (lvl 
    el sumidero que faltaba: la plata se farmea rápido con cultivos, la madera y los minerales están
    atados a los relojes de los nodos.
    Se re-mide con  node tools/auditar-costo-expansiones.js  */
-const EXPANSION_COSTO = [
-  { madera: 18, piedra: 12 },
-  { madera: 36, piedra: 29 },
-  { madera: 59, piedra: 50 },
-  { madera: 86, piedra: 77, bronce: 14 },
-  { madera: 108, piedra: 97, bronce: 16 },
-  { madera: 132, piedra: 132, bronce: 18 },
-  { madera: 158, piedra: 158, bronce: 20, hierro: 20 },
-  { madera: 187, piedra: 187, bronce: 22, hierro: 22 },
-  { madera: 218, piedra: 218, bronce: 23, hierro: 23 },
-  { madera: 252, piedra: 252, hierro: 25, oro: 25 },
-  { madera: 288, piedra: 288, hierro: 27, oro: 27 },
-  { madera: 326, piedra: 326, hierro: 29, oro: 29 },
-  { madera: 367, piedra: 367, oro: 31, diamante: 20 },
-  { madera: 410, piedra: 410, oro: 32, diamante: 22 },
-  { madera: 456, piedra: 456, oro: 34, diamante: 23 },
-  { madera: 504, piedra: 504, oro: 36, diamante: 24 },
-];
+/* Se calcula PEREZOSAMENTE: PRICE se define 2.000 líneas más abajo y una IIFE aquí arriba
+   petaría al cargar. `EXPANSION_COSTO` sigue siendo un array para quien ya lo usaba; se rellena
+   la primera vez que alguien lo lee. */
+const EXPANSION_COSTO = [];
+function expansionCostos() {
+  if (EXPANSION_COSTO.length) return EXPANSION_COSTO;
+  (function () {
+  const ANCLA = 20, CELDAS_POR_EXP = 3;        // cada expansión trae 1 parcela + 1 árbol + 1 roca
+  const H0 = 2, HN = 30;                        // horas de granja que cuesta la 1ª y la última
+  const tramo = t => t < 0.20 ? [] : t < 0.40 ? ["bronce"] : t < 0.60 ? ["bronce", "hierro"]
+    : t < 0.75 ? ["hierro", "oro"] : t < 0.90 ? ["oro", "diamante"] : ["diamante", "netherita"];
+  let celdas = 9;                               // 3 parcelas + 3 árboles + 3 rocas de arranque
+  for (let i = 0; i < EXPANSION_MAX; i++) {
+    const t = i / (EXPANSION_MAX - 1);
+    const horas = H0 + (HN - H0) * Math.pow(t, 0.9);
+    const plata = horas * celdas * ANCLA;
+    const mins = tramo(t);
+    const partes = [["madera", mins.length ? 0.30 : 0.55], ["piedra", mins.length ? 0.30 : 0.45]]
+      .concat(mins.map(m => [m, 0.40 / mins.length]));
+    const c = {};
+    partes.forEach(([k, f]) => { const pr = PRICE[k] || 1; c[k] = Math.max(1, Math.round(plata * f / pr)); });
+    EXPANSION_COSTO.push(c);
+    celdas += CELDAS_POR_EXP;
+  }
+  })();
+  return EXPANSION_COSTO;
+}
 var EXPANSION_MAX = 16;
 // La expansión que toca ahora: qué número es, en qué nivel se abre y qué cuesta.
 function expansionSiguiente() {
   const hechas = G.expansiones || 0;
   if (hechas >= EXPANSION_MAX) return null;
-  return { i: hechas, n: hechas + 1, nivel: FARM_EXPANSION[hechas], costo: EXPANSION_COSTO[hechas],
+  return { i: hechas, n: hechas + 1, nivel: FARM_EXPANSION[hechas], costo: expansionCostos()[hechas],
     bloque: (GF.EXPANSIONES || [])[hechas] || null };
 }
 function expansionComprar() {
@@ -1279,9 +1295,12 @@ function recalcFarmLevelInterno() {
    Nada se muestra en el mapa hasta que es tuyo. Las tablas de siempre (NIVEL_ARBOLES,
    NIVEL_ROCAS, FARM_PARCELA) pasan a ser el CALENDARIO de entrega. */
 function nodosQueTocan(lvl) {
-  const arb = NIVEL_ARBOLES.filter(n => n <= lvl).length;
-  const roc = NIVEL_ROCAS.filter(n => n <= lvl).length;
-  let par = 3; for (const k in FARM_PARCELA) if (lvl >= +k) par = FARM_PARCELA[k];
+  /* 18/8: tres de cada al arrancar, y una parcela más por cada expansión comprada. Los árboles y
+     las rocas de expansión NO pasan por acá: son objetos físicos dentro de su bloque y aparecen
+     al comprarlo (GF.objetoPresente). La parcela sí, porque el jugador elige dónde la pone. */
+  const arb = NIVEL_ARBOLES.length;
+  const roc = NIVEL_ROCAS.length;
+  let par = 3;
   /* 18/8: cada expansión comprada suma UNA parcela ENCIMA de las que da el nivel. Se cuenta acá
      y no en expansionComprar a propósito: así regalosSync sigue siendo idempotente y las partidas
      que ya tenían expansiones reciben sus parcelas atrasadas la primera vez que entren. Los
@@ -3271,13 +3290,18 @@ function rockUnlockCost() { return NODE_UNLOCK_COSTS[Math.min(NODE_UNLOCK_COSTS.
 // el juego te dice qué nivel de granja pide. Tabla por orden de aparición (números del
 // diseñador; la 1ª siempre libre). Quien PAGÓ desbloqueos viejos los conserva.
 // Los ÁRBOLES quedan con su sistema de siempre: retoño + desbloqueo pagando madera.
-var NIVEL_ROCAS = [1, 1, 1, 3, 5, 8]   /* 18/8: 3 rocas de arranque; las 6 en el nivel 8 (antes 12) */   // 15/8: la 2ª roca disponible desde el arranque;
+var NIVEL_ROCAS = [1, 1, 1]   // 15/8: la 2ª roca disponible desde el arranque;
 function nodoNivelReq(o) { return NIVEL_ROCAS[Math.min(o.lockIdx || 0, NIVEL_ROCAS.length - 1)] || 1; }
 // 16/8: los ÁRBOLES ganan su propia escalera de nivel, espejo de las rocas — con los
 // relojes largos, cuántos nodos tenés activos ES la progresión. El pago en madera se
 // mantiene (el retoño se "cultiva"), pero el retoño N recién se puede pagar al nivel N
 // de la tabla. Anclada a los edificios: nivel 6 (Establo, 40 maderas) = hasta 5 árboles.
-var NIVEL_ARBOLES = [1, 1, 1, 2, 4, 6];   /* 18/8: 3 árboles de arranque; los 6 en el nivel 6 (antes 8) — la madera era el cuello de botella del tutorial */
+/* 18/8 (dirección): "las expansiones son lo único que añade nodos".
+   La granja de arranque tiene TRES de cada, y a partir de ahí cada expansión trae 1 árbol y 1 roca
+   EN SU PROPIO BLOQUE. El nivel de granja ya no reparte nodos: solo el bono de venta y el permiso
+   para expandir. Estas tablas quedan con 3 entradas —los tres de arranque— y los otros tres
+   objetos base del mapa simplemente no se abren nunca (objetoPresente los deja invisibles). */
+var NIVEL_ARBOLES = [1, 1, 1];
 function arbolNivelReq(o) { return NIVEL_ARBOLES[Math.min(o.lockIdx || 0, NIVEL_ARBOLES.length - 1)] || 1; }
 function arbolBloqueado(o) {
   if (!o || o.type !== "tree" || !o.locked) return false;

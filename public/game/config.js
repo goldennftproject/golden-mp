@@ -623,16 +623,15 @@ GF.rehacerColisiones();
        eran 1 árbol + 1 roca, y con eso las parcelas quedaban en el 23% de la granja terminada;
        ahora quedan en el 51%. La parcela no se dibuja acá: llega como regalo al baúl y el jugador
        la coloca donde quiera (expansionComprar la encola). Acá solo va el nodo. */
-    const parArbol = (i % 2) === 0;   // pares: árbol · impares: roca
-    if (parArbol) {
-      const arb = libres.find(p => libres.some(q => q.c === p.c + 1 && q.r === p.r)) || libres[0];
-      if (arb) GF.WORLD_OBJECTS.push(Object.assign(
-        snap("tree", { type: "tree", exp: i }, (arb.c + 1) * T, (arb.r + 1) * T, T * 2)));
-    } else {
-      const roc = libres[0];
-      if (roc) GF.WORLD_OBJECTS.push(Object.assign(
-        snap("node_stone", { type: "rock", exp: i }, (roc.c + 0.5) * T, (roc.r + 1) * T, T)));
-    }
+    /* 18/8 (dirección, 3ª pasada): las expansiones son la ÚNICA fuente de nodos, así que cada
+       bloque trae UN ÁRBOL Y UNA ROCA. La parcela va aparte: llega al Cobertizo y la coloca el
+       jugador donde quiera (nodosQueTocan la cuenta). Total por expansión: 3 celdas productivas. */
+    const arb = libres.find(p => libres.some(q => q.c === p.c + 1 && q.r === p.r)) || libres[0];
+    const roc = libres.find(p => p !== arb && !(p.c === arb.c + 1 && p.r === arb.r)) || libres[1] || libres[0];
+    if (arb) GF.WORLD_OBJECTS.push(Object.assign(
+      snap("tree", { type: "tree", exp: i }, (arb.c + 1) * T, (arb.r + 1) * T, T * 2)));
+    if (roc) GF.WORLD_OBJECTS.push(Object.assign(
+      snap("node_stone", { type: "rock", exp: i }, (roc.c + 0.5) * T, (roc.r + 1) * T, T)));
   });
   GF.rehacerColisiones();   // 18/8: los nodos recién añadidos también son sólidos
 })();

@@ -27,31 +27,33 @@ const ok = (n, c, d) => { if (!c) fallos++; console.log((c ? "  ok   " : "  FALL
   ok("roca    = 20 plata/h", dentro(roc), roc.toFixed(1));
 }
 
-// 2) EL TECHO NO SUBE
+/* 2) EL TECHO NO SUBE — y ahora los nodos los reparte SOLO la expansión (18/8, dirección).
+   La granja de arranque tiene 3 parcelas, 3 árboles y 3 rocas. Cada expansión trae 3 celdas
+   (1 + 1 + 1). Techo: 9 + 16×3 = 57, el mismo de siempre. */
 {
   const exps = X.FARM_EXPANSION.length;
-  let parNivel = 3; for (const k in X.FARM_PARCELA) if (50 >= +k) parNivel = X.FARM_PARCELA[k];
   const arbExp = GF.WORLD_OBJECTS.filter(o => o.exp != null && o.type === "tree").length;
   const rocExp = GF.WORLD_OBJECTS.filter(o => o.exp != null && o.type === "rock").length;
-  const par = parNivel + exps, arb = X.NIVEL_ARBOLES.length + arbExp, roc = X.NIVEL_ROCAS.length + rocExp;
+  const par = 3 + exps, arb = 3 + arbExp, roc = 3 + rocExp;
   const tot = par + arb + roc;
-  ok("la granja terminada sigue teniendo 57 celdas", tot === 57, par + " parcelas + " + arb + " árboles + " + roc + " rocas = " + tot);
-  ok("las parcelas son mayoría al final", par / tot >= 0.5, Math.round(100 * par / tot) + "%");
-  ok("cada expansión trae exactamente 2 celdas", (arbExp + rocExp + exps) / exps === 2);
+  ok("la granja terminada sigue teniendo 57 celdas", tot === 57,
+     par + " parcelas + " + arb + " árboles + " + roc + " rocas = " + tot);
+  ok("cada expansión trae exactamente 3 celdas", (arbExp + rocExp + exps) / exps === 3);
+  ok("y el reparto es parejo: un tercio de cada", par === arb && arb === roc, par + "/" + arb + "/" + roc);
   ok("las parcelas caben en el tope del juego", par <= X.PLOT_MAX, par + "/" + X.PLOT_MAX);
 }
-
-// 3) LA CURVA SOLO SUBE
+/* 3) LA CURVA LA MARCA LA EXPANSIÓN, NO EL NIVEL. El Granero ya no reparte celdas: da el bono de
+   venta y el permiso de expandir, y nada más. */
 {
-  const cel = l => { let p = 3; for (const k in X.FARM_PARCELA) if (l >= +k) p = X.FARM_PARCELA[k];
-    return p + X.NIVEL_ARBOLES.filter(n => n <= l).length + X.NIVEL_ROCAS.filter(n => n <= l).length; };
-  let sube = true, baja = "";
-  for (let l = 2; l <= 60; l++) if (cel(l) < cel(l - 1)) { sube = false; baja = "nivel " + l; }
-  ok("la curva por nivel nunca retrocede", sube, baja);
-  ok("el nivel 1 arranca con 9 celdas (3+3+3)", cel(1) === 9, cel(1) + "");
-  ok("en el nivel 10 ya hay 22 (antes hacían falta 12 niveles)", cel(10) >= 22, cel(10) + "");
+  const celdasCon = e => 9 + 3 * e;
+  ok("el arranque son 9 celdas (3+3+3)", celdasCon(0) === 9);
+  ok("la curva solo sube con cada expansión",
+     X.FARM_EXPANSION.every((n, i) => celdasCon(i + 1) > celdasCon(i)));
+  ok("y llega a 57 con la última", celdasCon(X.FARM_EXPANSION.length) === 57);
+  const src = fs.readFileSync("public/game/state.js", "utf8");
+  ok("el nivel de granja YA NO reparte parcelas", /const FARM_PARCELA = \{\};/.test(src));
+  ok("ni árboles ni rocas", /var NIVEL_ARBOLES = \[1, 1, 1\];/.test(src) && /var NIVEL_ROCAS = \[1, 1, 1\]/.test(src));
 }
-
 // 4) LAS EXPANSIONES SUMAN PARCELAS DE VERDAD (encima de las del nivel, no en lugar de)
 {
   const g = X.G;
