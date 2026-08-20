@@ -87,6 +87,29 @@ console.log("\nY NADIE IMPRIME ESOS NÚMEROS SIN PASARLOS POR EL FORMATEADOR");
   ok("ninguna plantilla interpola el precio sin formatear", !crudos.length, crudos.join(" · ") || "todas pasan por fmtDec");
 }
 
+console.log("\n¿DÓNDE SE APLICA EL BONO? DONDE DICE QUE SE APLICA");
+{
+  /* 20/8, dirección: "tengo decimales al vender pero no al cosechar. ¿Habías especificado que el
+     yield era también al cosechar?".
+     No: el 18/8 el bono del Granero dejó de multiplicar la CANTIDAD y pasó a multiplicar el PRECIO,
+     porque como bono de cantidad era invisible —todos los cultivos dan 1 unidad, y round(1 × 1,435)
+     sigue siendo 1— durante treinta y tres niveles, y al 34 saltaba a 2 de golpe.
+     Por eso hay decimales al vender y no al cosechar: cosechás 1 papa entera y la vendés a 2,44.
+     Está bien. Lo que estaba mal era que dos platos seguían prometiendo "Cosecha +10%". */
+  ok("la cantidad cosechada NO se multiplica", ctx.yieldMult() === 1, "yieldMult() = 1, legado");
+  G.level = 30; G.prestige = 0; G.buffs = [];
+  ok("y el precio de venta SÍ", ctx.ventaMult() > 1, "al nivel 30, ×" + ctx.fmtDec(ctx.ventaMult(), 3));
+  /* Y ninguna etiqueta que vea el jugador puede llamarlo "cosecha": el buff entra por ventaMult. */
+  const SRC = fs.readFileSync("public/game/state.js", "utf8");
+  const mentiras = [];
+  const re = /buff:\s*\{[^}]*type:\s*"yield"[^}]*\}/g;
+  let m; while ((m = re.exec(SRC))) if (/cosecha/i.test(m[0])) mentiras.push(m[0].slice(0, 70));
+  ok("ningún buff de venta se anuncia como de cosecha", !mentiras.length,
+    mentiras.join(" · ") || "los platos dicen « precio de venta »");
+  const descs = (SRC.match(/desc:\s*"[^"]*Cosecha \+[^"]*"/g) || []);
+  ok("ni su descripción", !descs.length, descs.join(" · ") || "ninguna");
+}
+
 console.log("\nY EL BARRIDO DE VERDAD: SE DIBUJAN LOS PANELES Y SE MIRA EL TEXTO");
 {
   /* Lo anterior comprueba las funciones que YO sospecho. Esto comprueba lo que el jugador LEE, que

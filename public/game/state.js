@@ -3771,8 +3771,16 @@ const RECIPE_DEF = {
   banquete_bosque:    { label:"Banquete del Bosque",    emoji:"🍱", sprite:"dish_banquete_bosque", res:{papa:1, zanahoria:1, repollo:1, brocoli:1, calabaza:1, madera:3}, lvl:10, heal:40, buff:{type:"feast", val:20}, cookS:600, xp:70, plata:180, goldenP:4 },
   // clásicas (siguen dándole uso al pescado y la carne)
   pescado_asado: { label:"Pescado asado", emoji:"🐟", sprite:"dish_pescado_asado", fish:{comun:1}, res:{}, lvl:1,   // 16/8: sin madera (auditoría E)
-    heal:30, buff:{type:"yield",label:"Cosecha +10%",mult:1.10,dur:90}, cookS:240, xp:8, plata:15,
-    desc:"Cura 30 · Cosecha +10% (1 min 30 s)" },
+    /* 20/8 (dirección: "¿habías especificado que el yield era también al cosechar?"). No, y estos
+       dos platos eran los únicos que seguían diciendo que sí. El 18/8 el bono dejó de multiplicar
+       la CANTIDAD cosechada —con todos los cultivos dando 1 unidad, round(1 × 1,435) seguía siendo
+       1 y el bono era invisible durante 33 niveles— y pasó a ser de PRECIO DE VENTA. La mecánica se
+       cambió bien; las etiquetas de estos dos platos se quedaron en la versión vieja.
+       El `type:"yield"` de dentro se queda como está: es la llave que lee ventaMult() y renombrarla
+       obliga a tocar los guardados de quien tenga el buff activo. Lo que se corrige es lo que el
+       jugador LEE, que es lo que estaba mintiendo. */
+    heal:30, buff:{type:"yield",label:"Precio de venta +10%",mult:1.10,dur:90}, cookS:240, xp:8, plata:15,
+    desc:"Cura 30 · Precio de venta +10% (1 min 30 s)" },
   /* CADA FUENTE DE COMIDA, SU RECETA DE NIVEL 1 (19/8, dirección: "el botín tiene que servir para
      algo"). La huerta tiene la Papa Asada y la laguna el Pescado asado, las dos en el nivel 1. La
      CAZA no tenía ninguna: su primera receta era este Estofado en Cocina 3, o sea a diez platos de
@@ -3784,8 +3792,8 @@ const RECIPE_DEF = {
     heal:60, buff:{type:"cd",label:"Enfriamientos -15%",mult:0.85,dur:90}, cookS:300, xp:12, plata:30,
     desc:"Cura 60 · Enfriamientos -15% (1 min 30 s)" },
   banquete: { label:"Banquete del granjero", emoji:"🍗", sprite:"dish_banquete", fish:{raro:1}, res:{carne:2, calabaza:1, madera:1}, lvl:6,
-    heal:9999, buff:{type:"yield",label:"Cosecha +20%",mult:1.20,dur:180}, cookS:420, xp:25, plata:60,
-    desc:"Cura TODA la vida · Cosecha +20% (3 min)" },
+    heal:9999, buff:{type:"yield",label:"Precio de venta +20%",mult:1.20,dur:180}, cookS:420, xp:25, plata:60,
+    desc:"Cura TODA la vida · Precio de venta +20% (3 min)" },
 };
 // niveles de cocina 1-10 (tabla del doc, XP ACUMULADA por nivel) + maestría
 var COOK_LVLS = [0, 0, 30, 80, 160, 300, 520, 850, 1300, 1900, 2700];
