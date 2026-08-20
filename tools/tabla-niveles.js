@@ -51,8 +51,7 @@ const fmtH=h=>h<1?Math.round(h*60)+" min":h<48?h.toFixed(1)+" h":(h/24).toFixed(
    semillas, minerales, rarezas, animales, recetas, los planos que se mudaron a su oficio y las
    mejoras de nivel 2. Si mañana se mueve una puerta, el doc del diseñador cambia solo. */
 const QUE={farming:"las semillas del Mercado",mining:"los minerales que podés picar",
-  fishing:"las rarezas que pueden picar el anzuelo",ganaderia:"los animales del Establo",
-  cooking:"las recetas"};
+  ganaderia:"los animales del Establo",cooking:"las recetas"};
 const oficios=Object.keys(QUE).map(sk=>{
   const nom=X.SKILL_NAME[sk];
   return [nom,sk,QUE[sk],ctx.oficioAbre(sk).map(e=>[e[1],e[0]])];});
@@ -60,8 +59,13 @@ md.push("","## Qué abre cada oficio","",
  "El nivel de granja **no** reparte materiales: solo permite expandir y sube el bono de venta.",
  "Lo que abre cada escalón de material es **su propio oficio**, y se sube practicándolo: cada acción",
  "paga XP a la skill que le corresponde (talar a Tala, picar a Minería, cosechar a Cultivo…).","",
- "La **Tala** no abre nada, y es a propósito: la madera es plana, sin rarezas ni derivados. Su nivel",
- "mide la práctica y cuenta para la XP, pero no cierra ninguna puerta.","");
+ "Dos oficios no abren nada, y en los dos casos está medido:","",
+ "- **Tala**: la madera es plana, sin rarezas ni derivados. A cambio es el cuello de botella de las",
+ "  16 expansiones — o sea que la Tala no abre materiales, pero paga el crecimiento.",
+ "- **Pesca**: se probó a que abriera las rarezas y hubo que deshacerlo. Un tiro cuesta 15 y un pez",
+ "  común vale 5, así que recortar la cola dejaba la laguna en −40 plata/h y solo se llegaba al",
+ "  ancla en Pesca 10: un oficio que únicamente subía perdiendo plata.","",
+ "Los dos miden la práctica y cuentan para la XP, pero no cierran ninguna puerta.","");
 LOG("\n\nQUÉ ABRE CADA OFICIO\n");
 oficios.forEach(([nom,sk,que,esc])=>{
   md.push("### "+nom+" — abre "+que,"","| Nivel de "+nom+" | Se abre | Práctica acumulada |","|---:|---|---:|");

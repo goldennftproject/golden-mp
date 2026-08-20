@@ -75,18 +75,20 @@ LOG("\n═══ 4. LOS OFICIOS · qué escalón abre cada uno ═══\n");
 /* 18/8: esto ya NO es un modelo sobre papel — las puertas están escritas. Así que en vez de contar
    cuántos escalones "habría", se le pregunta al juego a qué nivel abre cada uno y cuántas horas de
    práctica cuesta. Si mañana alguien mueve un nivel, esta tabla lo canta. */
-const HORAS={farming:3*3600/X.CROP_DEF.papa.grow*X.CROP_DEF.papa.xp, mining:3*3600/X.CD.rock*X.XP_ACCION,
-  fishing:3600/X.FISH_CD*X.XP_PEZ, ganaderia:60, cooking:60};
+/* 19/8: los ritmos se le preguntan al juego. El "ganaderia:60" que había acá era inventado y
+   escondía que la Ganadería va doce veces más lenta que el resto. */
+const REF=3*3600/X.CD.tree*X.XP_ACCION;
+const HORAS={}; ["farming","mining","ganaderia"].forEach(k=>HORAS[k]=REF*ctx.skillRitmo(k));
+HORAS.cooking=60;   // la Cocina lleva su tabla propia (COOK_LVLS): no cuelga de skillRitmo
 const puertas={
   Cultivo:["farming",X.CROP_ORDER.map(k=>[X.CROP_DEF[k].label,X.CROP_DEF[k].lvl])],
   "Minería":["mining",X.ORE_ORDER.map(k=>[X.ORE_DEF[k].label,ctx.oreNivelReq(k)])],
-  Pesca:["fishing",["comun","raro","epico","legendario"].map(r=>[r,ctx.pezNivelReq(r)])],
   "Ganadería":["ganaderia",X.ANIMAL_ORDER.map(k=>[X.ANIMAL_DEF[k].label,ctx.animalNivelReq(k)])],
   Cocina:["cooking",X.RECIPE_ORDER.map(k=>[X.RECIPE_DEF[k].label,X.RECIPE_DEF[k].lvl||1])]};
 /* La COCINA no es una escalera sino un RECETARIO: varias recetas comparten nivel y hay dos ramas
    (huerta, y pescado/carne) que empiezan las dos por abajo. Se le pide suelo y que no deje niveles
    muertos, no que suba de uno en uno. */
-const ESCALERA={Cultivo:1,"Minería":1,Pesca:1,"Ganadería":1};
+const ESCALERA={Cultivo:1,"Minería":1,"Ganadería":1};
 Object.keys(puertas).forEach(nom=>{
   const [sk,esc]=puertas[nom]; const niv=esc.map(e=>e[1]).slice().sort((a,b)=>a-b);
   const sube=!ESCALERA[nom]||niv.every((v,i)=>i===0||v>niv[i-1]), suelo=niv[0]===1;
@@ -99,6 +101,10 @@ Object.keys(puertas).forEach(nom=>{
    if(hueco.length) menor(nom+" deja un tramo sin nada nuevo antes del nivel "+hueco.join(", "));}
   if(h/24>30) menor("El último escalón de "+nom+" pide "+(h/24).toFixed(0)+" días de práctica");});
 ok("Tala",true,"nada — la madera es plana (decidido)");
+/* 19/8: la Pesca tampoco abre nada, y NO por gusto — se probó y la cuenta lo prohíbe. Con un tiro
+   que cuesta 15 y un común que vale 5, recortar la cola deja la laguna en −40 plata/h. Queda
+   escrito acá para que la próxima auditoría no lo lea como un olvido. */
+ok("Pesca",true,"nada — recortar la cola dejaba la laguna bajo su coste (medido el 19/8)");
 /* LAS DOS PUERTAS DE LA MINERÍA no se pueden pisar: el PICO es el consumible que sostiene el ancla
    (su coste entra en el precio sombra) y la SKILL es el saber. Si un mineral pidiera un pico que no
    existe, la puerta de la skill sería adorno. */

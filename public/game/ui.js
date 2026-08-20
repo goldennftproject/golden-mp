@@ -1343,11 +1343,11 @@ function refreshEstablo() {
     if (!a) {
       h += '<div class="forge-row"><div class="fic">' + d.emoji + '</div><div class="finfo">' +
         '<div class="fnm">' + d.label + '</div>' +
-        '<div class="fds">Come ' + come + ' · produce ' + RES_LABEL[d.mat] + ' (' + d.porCiclo + ' cada ' + fmtSecs(d.cicloH * 3600) + ')</div>' +
+        '<div class="fds">Come ' + come + ' · produce ' + RES_LABEL[d.mat] + ' (' + animalPorCiclo(k) + ' cada ' + fmtSecs(d.cicloH * 3600) + ')</div>' +
         '<div class="fds">Desbloquea la armadura de ' + d.armadura + '</div>' +
         /* 18/8: el establo dice en la cara qué te falta. Si es nivel, no es un botón gris mudo. */
         (abierto ? '' : '<div class="fds" style="color:#8a5a1a">🔒 Ganadería nivel ' + animalNivelReq(k) + ' (tenés ' + nivelOficio("ganaderia") + ')</div>') + '</div>' +
-        '<div class="fbtns"><button class="green sm" ' + (abierto && G.golden >= animalPrecio(k) ? "" : "disabled") + ' data-buyani="' + k + '">' + (abierto ? 'Comprar · ' + animalPrecio(k) + ' $G' : 'Nivel ' + animalNivelReq(k)) + '</button></div></div>';
+        '<div class="fbtns"><button class="green sm" ' + (abierto && G.plata >= animalPrecio(k) ? "" : "disabled") + ' data-buyani="' + k + '">' + (abierto ? 'Comprar · ' + coinIc("plata") + fmt(animalPrecio(k)) : 'Nivel ' + animalNivelReq(k)) + '</button></div></div>';
       return;
     }
     const f = animalFelicidad(k), listo = animalListo(k);
@@ -1355,16 +1355,18 @@ function refreshEstablo() {
     // los de ese tipo de una sola vez: con 5 alpacas, cinco botones sueltos sería un castigo.
     const cant = animalCant(k), listos = animalListos(k), tope = cant >= ANIMAL_MAX;
     const tieneComida = d.come.some(c => (G.res[c] || 0) > 0);
-    const rinde = Math.max(1, Math.round(d.porCiclo * (FELIZ_MIN_PROD + (1 - FELIZ_MIN_PROD) * f / 100)));
+    const rinde = Math.max(1, Math.round(animalPorCiclo(k) * (FELIZ_MIN_PROD + (1 - FELIZ_MIN_PROD) * f / 100)));
     h += '<div class="forge-row' + (listo ? ' eq' : '') + '"><div class="fic">' + d.emoji + '</div><div class="finfo">' +
       '<div class="fnm">' + d.label + (cant > 1 ? ' ×' + cant : '') + ' <span class="tag">felicidad ' + f + '/100' + (cant > 1 ? ' (media)' : '') + '</span></div>' +
       '<div class="durbar"><i style="width:' + f + '%"></i></div>' +
       '<div class="fds">' + (listo ? '<b style="color:#3f6b2a">' + (listos > 1 ? listos + ' listos' : '¡Listo!') + ' · dan ' + (rinde * listos) + ' de ' + RES_LABEL[d.mat] + '</b>' : 'El próximo produce en ' + fmtDur(animalFalta(k)) + ' · rendiría ' + rinde + ' de ' + RES_LABEL[d.mat]) + '</div>' +
-      '<div class="fds">Alimentalo con ' + come + ' (+' + FELIZ_POR_COMIDA + ' de felicidad) · pierde ' + FELIZ_BAJA_H + '/hora si lo descuidás</div></div>' +
+      /* 19/8: la felicidad que da un cultivo es proporcional a lo que vale, así que el cartel muestra
+       lo que da EL SUYO. Con cualquier otro cuesta lo mismo por hora: no hay un truco que buscar. */
+      '<div class="fds">Alimentalo con ' + come + ' (+' + Math.round(felizDeComida(k, d.come[0], true)) + ' de felicidad) · pierde ' + FELIZ_BAJA_H + '/hora si lo descuidás</div></div>' +
       '<div class="fbtns">' +
         '<button class="green sm" ' + (tieneComida ? "" : "disabled") + ' data-feed="' + k + '">Alimentar</button>' +
         '<button class="green sm" ' + (listo ? "" : "disabled") + ' data-take="' + k + '">Recoger' + (listos > 1 ? ' todo (' + listos + ')' : '') + '</button>' +
-        '<button class="green sm" ' + (!tope && G.golden >= animalPrecio(k) ? "" : "disabled") + ' data-buyani="' + k + '">' + (tope ? 'Tope ' + ANIMAL_MAX : 'Otro · ' + animalPrecio(k) + ' $G') + '</button>' +
+        '<button class="green sm" ' + (!tope && G.plata >= animalPrecio(k) ? "" : "disabled") + ' data-buyani="' + k + '">' + (tope ? 'Tope ' + ANIMAL_MAX : 'Otro · ' + coinIc("plata") + fmt(animalPrecio(k))) + '</button>' +
       '</div></div>';
   });
   h += '<div class="info">Materiales: ' + ANIMAL_ORDER.map(k => RES_LABEL[ANIMAL_DEF[k].mat] + " <b>" + (G.res[ANIMAL_DEF[k].mat] || 0) + "</b>").join(" · ") + '</div>';

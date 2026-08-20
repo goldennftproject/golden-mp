@@ -2,16 +2,16 @@
    Dirección: "la skill de cultivo te desbloquea las semillas; la minería, poder minar diferentes
    minerales. Está bien que la tala de por sí no te desbloquee nada."
    Desde que las EXPANSIONES son la única fuente de nodos, los oficios se quedaron sin trabajo si no
-   abren el material. Este test vigila las cuatro puertas nuevas (minería, pesca, ganadería) y la que
+   abren el material. Este test vigila las puertas nuevas (minería, ganadería) y la que
    ya existía (cultivo), y que sigan siendo escaleras: un escalón por nivel, siempre hacia arriba y
-   alcanzables. La TALA no aparece a propósito — su oficio es una medida, no una puerta.
+   alcanzables. La TALA y la PESCA no aparecen: sus oficios son una medida, no una puerta.
      node tools/test-escalones-oficio.js                                                          */
 const fs = require("fs"), vm = require("vm");
 const ctx = { console: { log() {}, warn() {} }, Math, Date, JSON, Object, Array, Number, String, Boolean, Set, Map, isNaN, parseInt, parseFloat };
 ctx.window = ctx; ctx.globalThis = ctx; ctx.setTimeout = () => 0; vm.createContext(ctx);
 vm.runInContext(fs.readFileSync("public/game/config.js", "utf8"), ctx);
 vm.runInContext(fs.readFileSync("public/game/state.js", "utf8") +
-  "\n;this.X={ORE_ORDER,ORE_DEF,ANIMAL_ORDER,ANIMAL_DEF,CROP_ORDER,CROP_DEF,PICK_ORDER,PICK_DEF,SKILL_DEFS,skillNeed};", ctx);
+  "\n;this.X={ORE_ORDER,ORE_DEF,ANIMAL_ORDER,ANIMAL_DEF,CROP_ORDER,CROP_DEF,PICK_ORDER,PICK_DEF,SKILL_DEFS,skillNeed,CD};", ctx);
 const X = ctx.X, G = ctx.G;
 let fallos = 0;
 const ok = (n, c, d) => { if (!c) fallos++; console.log((c ? "  ok   " : "  FALLA") + "  " + n + (d ? "   " + d : "")); };
@@ -36,21 +36,6 @@ console.log("\nMINERÍA — abre los minerales");
     X.ORE_ORDER.every(k => X.ORE_DEF[k].tier <= topePico));
 }
 
-console.log("\nPESCA — abre las rarezas");
-{
-  const rar = ["comun", "raro", "epico", "legendario"];
-  const req = rar.map(r => ctx.pezNivelReq(r));
-  ok("las 4 rarezas caen en 4 niveles distintos", new Set(req).size === req.length, req.join(","));
-  ok("y la escalera solo sube", req.every((v, i) => i === 0 || v > req[i - 1]));
-  subir("fishing", 1);
-  ok("a nivel 1 solo la común", rar.filter(r => ctx.pezUnlocked(r)).join(",") === "comun");
-  /* EL RECORTE NO PUEDE DEJARTE SIN PEZ. El sorteo no se toca: si sale una rareza que todavía no
-     sabés, baja hasta la mejor que sepas. La común está a nivel 1, así que siempre hay suelo. */
-  ok("la común está abierta desde el primer nivel", ctx.pezNivelReq("comun") === 1);
-  subir("fishing", Math.max.apply(null, req));
-  ok("con la skill al tope están las 4", rar.every(r => ctx.pezUnlocked(r)));
-}
-
 console.log("\nGANADERÍA — abre los animales");
 {
   const req = X.ANIMAL_ORDER.map(k => ctx.animalNivelReq(k));
@@ -62,25 +47,35 @@ console.log("\nGANADERÍA — abre los animales");
   ok("con la skill al tope están todos", X.ANIMAL_ORDER.every(k => ctx.animalUnlocked(k)));
   /* NADIE SE QUEDA SIN NADA QUE HACER: el primer escalón de cada oficio está en el nivel 1, o el
      jugador abre el establo/la caña y se encuentra una lista entera en gris. */
-  ok("cultivo, minería, pesca y ganadería arrancan con un escalón abierto",
-    X.CROP_DEF.papa.lvl === 1 && ctx.oreNivelReq("piedra") === 1 && ctx.pezNivelReq("comun") === 1 && ctx.animalNivelReq(X.ANIMAL_ORDER[0]) === 1);
+  ok("cultivo, minería y ganadería arrancan con un escalón abierto",
+    X.CROP_DEF.papa.lvl === 1 && ctx.oreNivelReq("piedra") === 1 && ctx.animalNivelReq(X.ANIMAL_ORDER[0]) === 1);
 }
 
-console.log("\nLA TALA NO ES UNA PUERTA (por decisión)");
+console.log("\nLA TALA Y LA PESCA NO SON PUERTAS");
 {
-  /* Se decidió que la madera sea plana: sin rarezas y sin productos nuevos. Su oficio mide la
-     práctica y alimenta la XP, pero no cierra ningún material. Lo dejo escrito aquí para que nadie
-     "arregle" mañana lo que es una decisión, no un olvido. */
+  /* La madera es plana por DECISIÓN: sin rarezas ni derivados. La Pesca es distinto — ahí se
+     probó a cerrar las rarezas y hubo que deshacerlo: con un tiro que cuesta 15 y un común que
+     vale 5, cualquier recorte por arriba deja la laguna por debajo de su coste (a Pesca 1 daba
+     −40 plata/h). Las dos quedan como oficios que MIDEN la práctica.
+     Este test existe para que nadie vuelva a poner la puerta sin volver a hacer la cuenta. */
   ok("no hay ninguna función que cierre madera por nivel de tala",
     typeof ctx.maderaUnlocked !== "function");
+  ok("ni ninguna que cierre peces por nivel de pesca",
+    typeof ctx.pezUnlocked !== "function" && typeof ctx.pezNivelReq !== "function");
+  ok("y el sorteo de la laguna no mira ninguna skill",
+    !/pezUnlocked|nivelOficio\("fishing"\)/.test(require("fs").readFileSync("public/game/state.js", "utf8").split("function goFishing")[1].slice(0, 2000)));
 }
 
 console.log("\nLOS OFICIOS QUE ABREN ALGO SIGUEN SIENDO ALCANZABLES");
 {
-  const horas = { mining: 3 * 3600 / 2400 * 10, fishing: 3600 / 900 * 15, ganaderia: 60, farming: 3 * 3600 / 180 * 10 };
+  /* 19/8: los ritmos ya no se copian a mano acá — se le preguntan al juego (skillRitmo), que es la
+     misma cuenta que usa la curva de XP. Antes esta línea llevaba "ganaderia: 60" inventado, y por
+     eso el test daba por bueno que el toro estaba a 30 h cuando de verdad estaba a 15 días. Una
+     regla escrita a mano en la herramienta que mide es la forma más silenciosa de mentirse. */
+  const REF = 3 * 3600 / X.CD.tree * 10;
+  const horas = {}; ["mining", "ganaderia", "farming"].forEach(k => horas[k] = REF * ctx.skillRitmo(k));
   const tope = {
     mining: Math.max.apply(null, X.ORE_ORDER.map(k => ctx.oreNivelReq(k))),
-    fishing: ctx.pezNivelReq("legendario"),
     ganaderia: ctx.animalNivelReq(X.ANIMAL_ORDER[X.ANIMAL_ORDER.length - 1]),
     farming: X.CROP_DEF.maiz.lvl
   };

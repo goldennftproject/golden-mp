@@ -11,7 +11,7 @@ const ctx={console:{log(){},warn(){}},Math,Date,JSON,Object,Array,Number,String,
 ctx.window=ctx;ctx.globalThis=ctx;ctx.setTimeout=()=>0;vm.createContext(ctx);
 vm.runInContext(fs.readFileSync("public/game/config.js","utf8"),ctx);
 vm.runInContext(fs.readFileSync("public/game/state.js","utf8")+
- "\n;this.X={CD,ORE_DEF,ORE_ORDER,CROP_DEF,CROP_ORDER,FISH_CD,skillNeed,skillInfo,xpDeNodo,xpDeCultivo,SKILL_RITMO,XP_ACCION,XP_PEZ};",ctx);
+ "\n;this.X={CD,ORE_DEF,ORE_ORDER,CROP_DEF,CROP_ORDER,FISH_CD,skillNeed,skillInfo,xpDeNodo,xpDeCultivo,XP_ACCION,XP_PEZ,XP_ANIMAL,ANIMAL_DEF};",ctx);
 const X=ctx.X;
 let fallos=0;
 const ok=(n,c,d)=>{if(!c)fallos++;console.log((c?"  ok   ":"  FALLA")+"  "+n+(d?"   "+d:""));};
@@ -35,17 +35,29 @@ const acum=(n,sk)=>{let a=0;for(let i=1;i<n;i++)a+=X.skillNeed(i,sk);return a;};
 }
 // 3) LA GARANTÍA: el nivel N son las mismas horas en cada oficio
 {
+  /* 19/8 — ESTE BLOQUE MENTÍA POR OMISIÓN. Comparaba cuatro oficios de once y decía "el nivel N
+     son las mismas horas en todos". Ganadería no estaba, y era justo la que estaba mal: su ritmo
+     estaba escrito a mano en 1 cuando lo real es 0,083, doce veces menos. Resultado: la Curtiduría
+     pedía 1,9 días en vez de 3,8 h y el jabalí 47 días.
+     Ahora entran los CINCO oficios con escalera y los ritmos salen de la misma cuenta que usa el
+     juego (skillRitmo), no de una copia a mano. */
   const RIT={tala:3*3600/X.CD.tree*X.xpDeNodo("tree"),
              mining:3*3600/X.CD.rock*X.xpDeNodo("rock","piedra"),
              farming:3*3600/X.CROP_DEF.papa.grow*X.CROP_DEF.papa.xp,
-             fishing:3600/(X.FISH_CD||900)*X.XP_PEZ};
+             fishing:3600/(X.FISH_CD||900)*X.XP_PEZ,
+             ganaderia:3*X.XP_ANIMAL/X.ANIMAL_DEF.alpaca.cicloH};
+  // y que el ritmo que usa la curva sea EXACTAMENTE ese, no uno parecido
+  Object.keys(RIT).forEach(sk=>{
+    const esperado=Math.round(RIT[sk]/RIT.tala*1000)/1000;
+    ok("el ritmo de "+sk+" sale de su producción real",
+       Math.abs(ctx.skillRitmo(sk)-esperado)<0.002, ctx.skillRitmo(sk)+" (cuenta: "+esperado+")");});
   let peor=0, quien="";
   [2,4,6,8,10,13,17,20].forEach(n=>{
     const hs=Object.keys(RIT).map(sk=>acum(n,sk)/RIT[sk]);
     const d=Math.max(...hs)/Math.min(...hs);
     if(d>peor){peor=d;quien="nivel "+n;}
   });
-  ok("el nivel N son las mismas horas en Tala, Minería, Cultivo y Pesca",
+  ok("el nivel N son las mismas horas en los CINCO oficios con escalera",
      peor<1.05, "la mayor diferencia es "+((peor-1)*100).toFixed(1)+"% en "+quien);
 }
 // 4) Y NO SE ROMPIÓ LO QUE YA ESTABA

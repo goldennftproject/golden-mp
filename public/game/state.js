@@ -272,8 +272,6 @@ function oficioAbre(sk) {
   const l = [];
   if (sk === "farming") for (const k in CROP_DEF) l.push([CROP_DEF[k].lvl, CROP_DEF[k].label]);
   if (sk === "mining")  for (const k in ORE_DEF)  l.push([oreNivelReq(k), ORE_DEF[k].label]);
-  if (sk === "fishing") { const PL = { comun: "peces comunes", raro: "peces raros", epico: "peces épicos", legendario: "peces legendarios" };
-    for (const r in PL) l.push([pezNivelReq(r), PL[r]]); }
   if (sk === "ganaderia") ANIMAL_ORDER.forEach(k => l.push([animalNivelReq(k), ANIMAL_DEF[k].label]));
   if (sk === "cooking") for (const k in RECIPE_DEF) l.push([RECIPE_DEF[k].lvl || 1, RECIPE_DEF[k].label]);
   for (const t in PLANO_OFICIO) if (PLANO_OFICIO[t][0] === sk && BUILD_DEF[t])
@@ -290,8 +288,19 @@ function oficioProximo(sk) {
 }
 function oreNivelReq(k) { const o = ORE_DEF[k]; return o ? (o.tier + 1) * 2 - 1 : 1; }   // piedra 1, bronce 3, hierro 5, oro 7, diamante 9, netherita 11
 function oreUnlocked(k) { return nivelOficio("mining") >= oreNivelReq(k); }
-function pezNivelReq(r) { return { comun: 1, raro: 3, epico: 6, legendario: 10 }[r] || 1; }
-function pezUnlocked(r) { return nivelOficio("fishing") >= pezNivelReq(r); }
+/* LA PESCA NO RECORTA RAREZAS (19/8, medido) — corrección de lo que puse ayer.
+   Ayer la skill de Pesca cerraba las rarezas: si no llegabas al nivel, el pez bajaba al mejor que
+   supieras sacar. Al medirlo, el recorte deja la laguna EN NEGATIVO: un tiro cuesta 15 (3 de
+   lombriz + 12 de caña) y el común vale 5 cocinado, así que a Pesca 1 la laguna daba −40 plata/h
+   y no llegaba al ancla hasta Pesca 10. Un bucle imposible: el oficio que hay que subir para que
+   la laguna sea rentable solo subía pescando a pérdida.
+   El motivo de fondo NO es un número mal puesto: el 55% del valor de la laguna está en el épico y
+   el legendario, así que CUALQUIER recorte por arriba deja el nodo por debajo de su coste. El
+   recorte es el mecanismo equivocado para una tirada con cola gorda.
+   Así que la Pesca queda como la Tala: mide la práctica y no cierra ninguna puerta. Si algún día
+   se quiere que abra algo, el camino es que la rareza mande en el BUFF del plato y no en la plata
+   (aplanar FISH_VALOR), que es como funciona el resto del juego: la papa y el maíz rinden lo
+   mismo, la escalera cambia lo que hacés, no cuánto ganás. */
 function animalNivelReq(k) { const i = ANIMAL_ORDER.indexOf(k); return i <= 0 ? 1 : i * 4; }   // 1, 4, 8, 12
 function animalUnlocked(k) { return nivelOficio("ganaderia") >= animalNivelReq(k); }
 function selectSeed(k) { if (!CROP_DEF[k]) return; G.selSeed = k; if (isOpen("ov-inv")) refreshInv(); }
@@ -972,12 +981,43 @@ function xpDeCultivo(k) {              // escalón 1..13 en la escalera de culti
   const i = (typeof CROP_ORDER !== "undefined") ? CROP_ORDER.indexOf(k) : -1;
   return XP_ACCION * (i >= 0 ? i + 1 : 1);
 }
-var SKILL_RITMO = { tala:1, mining:0.75, fishing:1, ganaderia:1, farming:10,
-                    cooking:1, crafting:1, sword:1, hacha:1, mazo:1, range:1 };
+/* EL RITMO DE CADA OFICIO — cuánta XP paga por hora, comparado con la Tala (19/8, derivado).
+   La regla aprobada es "el nivel N son las mismas horas en cualquier oficio". Para que eso sea
+   verdad, la curva de cada oficio va multiplicada por LO QUE ESE OFICIO PAGA POR HORA.
+   Estos números estaban escritos a mano y uno era falso: GANADERÍA valía 1 cuando lo real es
+   0,083 — doce veces menos. Medido: la Curtiduría pedía 1,9 días en vez de 3,8 h, el toro 14,9
+   días y el jabalí 47,3. Se coló porque el test de paridad comparaba cuatro oficios de once.
+   Ahora salen de una cuenta contra el propio juego, así que no se pueden quedar viejos.
+   Se calcula la PRIMERA VEZ que se pide, no acá: las tablas que necesita (ANIMAL_DEF, FISH_CD)
+   se declaran más abajo en este mismo archivo. */
+var SKILL_RITMO = null;
+function skillRitmo(sk) {
+  if (!SKILL_RITMO) {
+    const REF = 3 * 3600 / CD.tree * XP_ACCION;                     // la vara: 3 árboles, 10 XP cada uno
+    const xpH = {
+      tala:      REF,
+      mining:    3 * 3600 / CD.rock * XP_ACCION,                    // 3 rocas
+      farming:   3 * 3600 / CROP_DEF.papa.grow * XP_ACCION,         // 3 parcelas de papa
+      fishing:   3600 / FISH_CD * XP_PEZ,                           // 1 laguna
+      ganaderia: 3 * XP_ANIMAL / ANIMAL_DEF.alpaca.cicloH           // 3 alpacas, 1 recogida por ciclo
+    };
+    SKILL_RITMO = {};
+    for (const k in xpH) SKILL_RITMO[k] = Math.round(xpH[k] / REF * 1000) / 1000;
+    /* Los que no tienen escalera van a 1: la Cocina lleva su tabla aparte (COOK_LVLS), y Artesanía
+       y las cuatro de combate no abren material, así que su ritmo no calibra nada. */
+    ["cooking", "crafting", "sword", "hacha", "mazo", "range"].forEach(k => SKILL_RITMO[k] = 1);
+  }
+  return SKILL_RITMO[sk] || 1;
+}
 var XP_BASE = 21, XP_EXP = 1.70;
 function skillNeed(lvl, sk) {
-  const r = (sk && SKILL_RITMO[sk]) || 1;
-  return Math.round(XP_BASE * r * Math.pow(lvl, XP_EXP));
+  const r = sk ? skillRitmo(sk) : 1;
+  const v = XP_BASE * r * Math.pow(lvl, XP_EXP);
+  /* 19/8: los primeros escalones de un oficio LENTO piden menos de 10 de XP, y ahí redondear a
+     entero deforma la curva —el nivel 2 de Ganadería pedía 2 en vez de 1,74: un 14% de más—.
+     Por debajo de 10 se guardan dos decimales; de ahí para arriba el redondeo no se nota y los
+     números quedan limpios. La XP se sigue ganando en enteros: esto solo afecta al listón. */
+  return v < 10 ? Math.round(v * 100) / 100 : Math.round(v);
 }
 function skillInfo(xp, sk) { let lvl = 1, acc = 0, need = skillNeed(1, sk); while (xp >= acc + need && lvl < 150) { acc += need; lvl++; need = skillNeed(lvl, sk); } return { lvl, into: xp - acc, need }; }
 // --- Barra de Combate GLOBAL (doc maestro 2/8): un solo nivel que suma la XP de TODOS los kills.
@@ -2942,7 +2982,49 @@ const ANIMAL_DEF = {
   jabali: { label:"Jabalí", emoji:"🐗", golden:100, mat:"colmillo", come:["calabaza","maiz"],     cicloH:20, porCiclo:1, armadura:"colmillo" },
 };
 var ESTABLO_COST = { madera: 50, piedra: 30, oro: 10 };   // edificio (doc)
-var FELIZ_POR_COMIDA = 15;      // cuánta felicidad da alimentarlo con su cultivo preferido
+var FELIZ_POR_COMIDA = 15;      // (legado) lo que daba una ración antes de que la comida se anclara
+/* ============ EL ESTABLO, ANCLADO (19/8) ==========================================
+   Al ponerle precio en PLATA a los animales salió a la luz que nunca estuvieron anclados, y que
+   el precio en $Golden lo tapaba: pagabas 20.000 de plata por una alpaca y a partir de ahí
+   imprimía. Medido, con la comida más barata (una papa vale 2, y CUALQUIER cultivo alimenta):
+
+       alpaca  50,0 plata/h     toro  42,5 plata/h     conejo 20,3     jabalí 22,0
+       (el ancla es 20 · o sea que la alpaca valía dos animales y medio)
+
+   Y había un segundo problema encima: como con felicidad 0 igual producen la mitad, a la alpaca y
+   al toro les convenía que los DESCUIDARAS si les dabas trigo (68 plata/h de comida contra 25 de
+   producir a media máquina). El juego premiaba maltratar al animal.
+
+   Las dos cosas se arreglan con la misma idea que el resto del juego: derivar en vez de escribir.
+     · Lo que produce por ciclo sale del ancla, no de un número a mano.
+     · La felicidad que da un cultivo es PROPORCIONAL A SU VALOR, así que da igual con qué lo
+       alimentes: mantenerlo a tope cuesta lo mismo por hora — y ese coste es exactamente lo que
+       sobra por encima del ancla. Alimentar siempre gana; descuidarlo, nunca. */
+var ANIMAL_BRUTO_H = 25;        // plata/hora que produce un animal a felicidad plena (20 del ancla + la comida)
+function animalValorMat(k) {
+  const d = ANIMAL_DEF[k]; if (!d) return 0;
+  return (typeof priceOf === "function" ? priceOf(d.mat) : (PRICE[d.mat] || 0)) || 0;
+}
+function animalPorCiclo(k) {
+  const d = ANIMAL_DEF[k]; if (!d) return 1;
+  const v = animalValorMat(k); if (!v) return d.porCiclo || 1;
+  return Math.max(1, Math.round(ANIMAL_BRUTO_H * d.cicloH / v));
+}
+function animalBrutoH(k) {
+  const d = ANIMAL_DEF[k]; if (!d) return 0;
+  return animalValorMat(k) * animalPorCiclo(k) / d.cicloH;
+}
+// lo que cuesta por hora tenerlo a 100 de felicidad: justo lo que produce por encima del ancla
+function animalRacionH(k) { return Math.max(0.2, animalBrutoH(k) - 20); }
+// cuánta felicidad da UNA unidad de un cultivo: proporcional a lo que vale ese cultivo
+function felizDeComida(k, crop, preferido) {
+  const cd = CROP_DEF[crop]; if (!cd) return FELIZ_COMIDA_GENERICA;
+  const f = FELIZ_BAJA_H * cd.price / animalRacionH(k);
+  /* Sin redondear: si esto devolviera enteros, una papa daría "1" en vez de 0,6 y alimentar con lo
+     más barato saldría un 40% más barato que con lo bueno — el hueco por el que se cuelan los
+     exploits. La felicidad se guarda con decimales y se REDONDEA AL MOSTRARLA. */
+  return Math.max(0.01, Math.min(100, f * (preferido ? 1 : 0.75)));
+}
 var FELIZ_COMIDA_GENERICA = 8;  // Fixes.docx 14/8 #1: cualquier otro cultivo también alimenta, pero rinde menos
 var FELIZ_BAJA_H = 1.5;         // cuánta felicidad pierde por hora sin comer
 var FELIZ_MIN_PROD = 0.5;       // rendimiento mínimo con felicidad 0 (produce la mitad)
@@ -2966,9 +3048,26 @@ function animalLista(k) {
 }
 function animalCant(k) { return animalLista(k).length; }
 function animalDe(k) { return animalLista(k)[0] || null; }   // "¿tengo de este tipo?" (arma la armadura, el tutorial, etc.)
+/* LOS ANIMALES SE COMPRAN CON PLATA (19/8, dirección) ===============================
+   "Todo lo que la persona adquiera tiene que funcionar con plata. El $Golden lo veremos más
+   adelante, porque no podemos determinar qué valor tendrá."
+   El precio en $Golden se queda escrito en ANIMAL_DEF pero YA NO SE COBRA: cuando salga el token
+   se decidirá la equivalencia y volverá a servir. Mientras tanto el precio sale del ancla, que es
+   lo único que no depende del mercado:
+
+       precio = 20 plata/hora × las horas que tarda en pagarse solo
+
+   y las horas suben un escalón por animal (24, 48, 72, 96), igual que sube la escalera de la
+   Ganadería. Cada animal EXTRA del mismo tipo sigue costando un 50% más (ANIMAL_SUBE), así que
+   llenar el establo hasta el tope sigue siendo caro. */
+var ANIMAL_PAGO_H = 24;      // horas de ancla que cuesta el PRIMER animal; el resto, un múltiplo
+function animalPrecioBase(k) {
+  const i = ANIMAL_ORDER.indexOf(k);
+  return Math.round(20 * ANIMAL_PAGO_H * (Math.max(0, i) + 1));
+}
 function animalPrecio(k) {
   const d = ANIMAL_DEF[k]; if (!d) return 0;
-  return Math.round(d.golden * Math.pow(1 + ANIMAL_SUBE, animalCant(k)));
+  return Math.round(animalPrecioBase(k) * Math.pow(1 + ANIMAL_SUBE, animalCant(k)));
 }
 function animalFelizDe(a) {   // la felicidad baja sola con el tiempo
   if (!a) return 0;
@@ -2992,10 +3091,10 @@ function comprarAnimal(k) {
   const tengo = animalCant(k);
   if (tengo >= ANIMAL_MAX) { toast("Ya tenés " + ANIMAL_MAX + " " + d.label.toLowerCase() + " (el tope)"); return; }
   const precio = animalPrecio(k);
-  if (G.golden < precio) { toast("Te falta $Golden (" + precio + ")"); return; }
-  G.golden -= precio;
+  if (G.plata < precio) { toast("Te falta plata (" + precio + ")"); return; }
+  G.plata -= precio;
   animalLista(k).push({ desde: nowMs(), feliz: 50, comidoAt: nowMs(), prodAt: nowMs() });
-  log("Compraste " + d.label + " por " + precio + " $Golden (ahora tenés " + animalCant(k) + "). Alimentalo con " + d.come.map(c => CROP_DEF[c].label).join(" o ") + ".", "gold");
+  log("Compraste " + d.label + " por " + precio + " de plata (ahora tenés " + animalCant(k) + "). Alimentalo con " + d.come.map(c => CROP_DEF[c].label).join(" o ") + ".", "gold");
   toast("¡" + d.label + " en el Establo!");
   if (!tengo && window.celebrate) celebrate({ title: "¡" + d.label.toUpperCase() + "!", sub: "Establo", reward: "Desbloquea la armadura de " + d.mat });
   refreshHud(); if (typeof refreshEstablo === "function" && isOpen("ov-establo")) refreshEstablo();
@@ -3014,7 +3113,7 @@ function alimentarAnimal(k) {
     if (!cultivo) { cultivo = Object.keys(CROP_DEF).find(c => (G.res[c] || 0) > 0); preferido = false; }
     if (!cultivo) break;
     G.res[cultivo] -= 1; gastado[cultivo] = (gastado[cultivo] || 0) + 1;
-    a.feliz = Math.min(100, animalFelizDe(a) + (preferido ? FELIZ_POR_COMIDA : FELIZ_COMIDA_GENERICA));
+    a.feliz = Math.min(100, animalFelizDe(a) + felizDeComida(k, cultivo, preferido));
     a.comidoAt = nowMs();
     statAdd("alimentar", k); dados++;
   }
@@ -3047,7 +3146,7 @@ function recogerAnimal(k) {
   let total = 0;
   for (const a of listos) {
     const f = animalFelizDe(a);
-    const n = Math.max(1, Math.round(d.porCiclo * (FELIZ_MIN_PROD + (1 - FELIZ_MIN_PROD) * f / 100)));   // feliz = ciclo completo
+    const n = Math.max(1, Math.round(animalPorCiclo(k) * (FELIZ_MIN_PROD + (1 - FELIZ_MIN_PROD) * f / 100)));   // feliz = ciclo completo
     if (!roomForRes(d.mat, total + n)) break;   // lo que no entra queda para el próximo viaje
     total += n; a.prodAt = nowMs();
   }
@@ -4098,13 +4197,6 @@ function goFishing() {
   if (toolDur("rod") <= 0) { log("¡La caña se rompió en pedazos! Crafteá otra en la Herrería.", "bad"); toast("¡Caña rota!"); }
   const r = Math.random();
   let rar; if (r < 0.60) rar = "comun"; else if (r < 0.85) rar = "raro"; else if (r < 0.97) rar = "epico"; else rar = "legendario";
-  /* 18/8 (dirección): la skill de Pesca abre las RAREZAS. Si todavía no llegás, sale la mejor que
-     sepas sacar — el sorteo no se toca, se recorta por arriba. Así la Pesca deja de ser un oficio
-     que no decide nada: cada nivel amplía de verdad lo que puede aparecer. */
-  if (typeof pezUnlocked === "function") {
-    const orden = ["legendario", "epico", "raro", "comun"];
-    while (!pezUnlocked(rar)) rar = orden[orden.indexOf(rar) + 1] || "comun";
-  }
   /* 18/8 (dirección): "pescar tiene su propio skill, ¿por qué le da experiencia a cocinar?".
      Resto de cuando la pesca era "conseguir ingredientes". La Cocina se gana cocinando. */
   G.fish[rar]++; addXp("fishing", XP_PEZ);
