@@ -100,6 +100,39 @@ console.log("\nCADA FUENTE DE COMIDA TIENE SU RECETA DE NIVEL 1");
     "pide " + carneQuiere + " de carne · el Pantano suelta " + porBicho.toFixed(2) + " por bicho");
 }
 
+console.log("\nLA RED DE SEGURIDAD DEL PASO DE CAZA (y solo de ese paso)");
+{
+  /* Con un 24% de caída, uno de cada cuatro jugadores mata siete bichos sin ver carne. En medio del
+     tutorial eso no es "aprender que el botín es azaroso", es quedarse sin estamina con el juego a
+     medio explicar. Se garantiza en la muerte nº TUTO_PITY — y SOLO mientras el paso está activo. */
+  const rata = { loot: { carne: [1, 1, 0.18], plata: [1, 1, 1] } };
+  const paso = X.TUTO_STEPS.findIndex(s2 => s2.id === "hunt");
+  const peorCaso = () => {
+    G.res = { carne: 0 }; G.tuto = { step: paso, done: false, n: 0, pity: 0 };
+    let muertes = 0;
+    for (let i = 0; i < 30 && (G.res.carne || 0) < 1; i++) {
+      muertes++;
+      const out = {};                      // el peor caso posible: el azar nunca acompaña
+      ctx.tutoPity(rata, out);
+      Object.keys(out).forEach(k => G.res[k] = (G.res[k] || 0) + out[k]);
+    }
+    return muertes;
+  };
+  const m = peorCaso();
+  ok("con la peor suerte del mundo, la carne cae en la muerte nº " + m, m <= ctx.TUTO_PITY,
+    "el tutorial no depende de un dado");
+  /* Y fuera del paso, el azar manda: si esto se filtrara, cazar carne sería trivial para siempre. */
+  G.tuto = { done: true, step: 99 }; G.res = { carne: 0 };
+  let sueltos = 0;
+  for (let i = 0; i < 20; i++) { const out = {}; ctx.tutoPity(rata, out); if (out.carne) sueltos++; }
+  ok("fuera del tutorial no regala nada", sueltos === 0, "20 muertes, 0 botines regalados");
+  /* Ni en otros pasos que no piden ese material. */
+  G.tuto = { step: X.TUTO_STEPS.findIndex(s2 => s2.id === "estofado"), done: false }; G.res = { carne: 0 };
+  let s2 = 0;
+  for (let i = 0; i < 20; i++) { const out = {}; ctx.tutoPity(rata, out); if (out.carne) s2++; }
+  ok("ni en un paso que no pide botín", s2 === 0);
+}
+
 console.log("\nY LA CUENTA QUE MOTIVÓ TODO ESTO");
 {
   const antes = X.ARMAS_UNLOCK_PLATA / (3 * (X.CROP_DEF.papa.price - X.CROP_DEF.papa.seedCost) * 3600 / X.CROP_DEF.papa.grow);

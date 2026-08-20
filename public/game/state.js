@@ -3966,7 +3966,31 @@ function rollLoot(def) {
     n = Math.round(n * (typeof chestBonus === "function" ? chestBonus() : 1));   // +1% de materiales por cofre colocado (el bono existía pero no se aplicaba)
     if (n > 0) out[k] = n;
   }
+  /* RED DE SEGURIDAD DEL TUTORIAL (19/8, dirección) — y SOLO del tutorial.
+     "Al ser un tutorial, controlemos cuántos bichos va matando y que al último le caiga sí o sí lo
+     que necesita. Pero solo en ese paso."
+     El azar del botín está bien como lección —el jugador tiene que aprender que la Zona no es una
+     máquina expendedora— pero no puede ser lo que decida si termina el tutorial o lo abandona: con
+     un 24% de caída, uno de cada cuatro jugadores mata siete bichos sin ver nada y se queda sin
+     estamina en el último paso, con el juego a medio explicar.
+     Así que se lleva la cuenta y en la muerte número TUTO_PITY el drop es seguro. Fuera del paso
+     activo del tutorial esto no existe: el contador ni se toca, y el que quiera cazar carne más
+     adelante juega con las mismas probabilidades que todos. */
+  tutoPity(def, out);
   return out;
+}
+var TUTO_PITY = 4;              // muertes hasta que el botín del paso cae garantizado
+function tutoPity(def, out) {
+  const st = (typeof tutoActivo === "function") ? tutoActivo() : null;
+  if (!st || !st.res || !def || !def.loot || !def.loot[st.res]) return;   // solo en un paso de "traé X"
+  if (typeof tutoTiene === "function" && tutoTiene(st) >= tutoNeed(st)) return;   // ya lo tiene: nada que compensar
+  G.tuto = G.tuto || {};
+  if (out[st.res]) { G.tuto.pity = 0; return; }                          // cayó solo: se reinicia la cuenta
+  G.tuto.pity = (G.tuto.pity || 0) + 1;
+  if (G.tuto.pity < TUTO_PITY) return;
+  G.tuto.pity = 0;
+  out[st.res] = Math.max(1, tutoNeed(st) - (typeof tutoTiene === "function" ? tutoTiene(st) : 0));
+  if (typeof log === "function") log("El bicho suelta justo lo que te falta.", "gold");
 }
 // modelo SFL APILABLE (31/7): G.tools[axe/rod] es la CANTIDAD de herramientas (1 uso cada una).
 // Craftear suma al stock; usar consume 1. La espada y el arco conservan durabilidad + reparación.
