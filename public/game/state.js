@@ -84,6 +84,20 @@ window.G = G;
 
 // --- utilidades ---
 function fmt(n) { n = Math.floor(n); return n >= 1000 ? (n / 1000).toFixed(n % 1000 < 100 ? 0 : 1).replace(".0", "") + "k" : "" + n; }
+/* 20/8 (dirección: "¿están bien estos decimales?" — 25.450000000000003 en la lista del Mercado).
+   No estaban, y no es un error de cálculo sino de IMPRESIÓN. Los precios salen de multiplicar por
+   el bono de venta (1,135…) y en coma flotante 25,45 se guarda como 25,450000000000003. El número
+   es correcto; lo que está mal es enseñarlo crudo.
+   Y NO se puede arreglar redondeando el precio: el 18/8 ya aprendimos que redondear por unidad
+   rompe el balance —la papa vale 2, y round(2 × 1,135) sigue siendo 2 hasta el nivel 20, cuando
+   salta a 3 de golpe (+50%)—. El redondeo va UNA sola vez, al total de la venta (totalVenta).
+   Así que el cálculo se queda exacto y esto es solo para los ojos: dos decimales como mucho, y sin
+   ceros de relleno (7,12 · 16,3 · 50,9 · 2). */
+function fmtDec(n, dec) {
+  if (!isFinite(n)) return "0";
+  const s = Number(n).toFixed(dec == null ? 2 : dec);
+  return s.indexOf(".") < 0 ? s : s.replace(/0+$/, "").replace(/\.$/, "");
+}
 function nowMs() { return Date.now(); }
 /* 18/8 (auditoría): G.week se DIBUJA en el HUD y no la incrementaba nadie — el jugador veía
    "semana 1" para siempre. Ahora se deriva de los días jugados: es un dato, no un contador que
