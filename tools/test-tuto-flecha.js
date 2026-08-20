@@ -56,6 +56,36 @@ window.__sondeo = function (idPaso) {
 window.__pasosDePanel = function () {
   return JSON.stringify(TUTO_STEPS.filter(s => s.panel && !s.target).map(s => s.id));
 };
+/* 20/8 — EL CATÁLOGO, VALIDADO. El tutorial nombra la interfaz con cadenas sueltas: un panel
+   ("ov-market") y un selector dentro ("[data-buy='papa']"). Nadie comprobaba ninguna de las dos, y
+   así se coló ov-deco, una ventana que no existe en el HTML.
+   El catálogo ya existía y no lo estábamos usando: OV_REFRESH, en ui.js, dice qué función dibuja
+   cada panel. Con eso se puede hacer lo que faltaba — PINTAR el panel y mirar si el botón aparece.
+   Un selector que apunta a un botón que ya no se dibuja es exactamente el mismo fallo que el panel
+   inventado, solo que un nivel más adentro y más difícil de ver. */
+window.__validarDestinos = function () {
+  const out = [];
+  /* Un estado en el que TODO lo que el tutorial señala debería existir: con plata, con semillas,
+     con el plano en el Cobertizo y las recetas al alcance. Si aun así el botón no aparece, es que
+     el selector está mal. */
+  G.plata = 9999; G.golden = 50; G.level = 20;
+  Object.keys(CROP_DEF).forEach(k => { G.seeds[k] = 5; G.res[k] = 5; });
+  G.res.madera = 99; G.res.piedra = 99; G.res.carne = 5;
+  G.planos = { store: 1, horno: 1, cocina: 1 }; G.built = { store: true, horno: true, cocina: true };
+  G.obras = {}; G.decos = []; G.chests = []; G.cobertizo = { tree: 0, rock: 0, plot: 0 };
+  G.skills = G.skills || {}; G.skills.cooking = 99999; G.skills.crafting = 99999;
+  G.weapons = {}; G.gear = {}; G.dishes = {};
+  TUTO_STEPS.forEach(function (s) {
+    if (!s.panel || !s.ui) return;
+    const cont = document.getElementById(s.panel);
+    if (!cont) { out.push({ id: s.id, panel: s.panel, ui: s.ui, estado: "el panel no existe" }); return; }
+    try { if (OV_REFRESH[s.panel]) OV_REFRESH[s.panel](); } catch (e) {
+      out.push({ id: s.id, panel: s.panel, ui: s.ui, estado: "al pintarlo: " + e.message }); return;
+    }
+    out.push({ id: s.id, panel: s.panel, ui: s.ui, estado: cont.querySelector(s.ui) ? "ok" : "el botón no aparece" });
+  });
+  return JSON.stringify(out);
+};
 window.__panelesDePasos = function () {
   return JSON.stringify(TUTO_STEPS.filter(s => s.panel).map(function (s) {
     const p = document.getElementById(s.panel);
@@ -126,5 +156,16 @@ console.log("\nY NINGÚN PASO MANDA A UNA VENTANA QUE NO EXISTE");
   console.log("      selectores que se dibujan al abrir el panel: " + (sinUi.join(", ") || "ninguno"));
 }
 
-console.log(fallos ? "\n  ✗ " + fallos + " fallas\n" : "\n  ✓ la flecha va Menú → Cobertizo, y el cartel dice lo mismo\n");
+console.log("\nY EL BOTÓN AL QUE APUNTA EXISTE DE VERDAD (se pinta el panel y se busca)");
+{
+  /* Esto es lo que faltaba: comprobar el selector, no solo el panel. Se dibuja cada ventana con su
+     propia función —la que el juego usa al abrirla— y se busca el botón. Si un día se renombra una
+     receta o cambia la plantilla de una lista, la flecha apuntaría al vacío y el jugador se
+     quedaría mirando un paso que no puede completar. */
+  const r = JSON.parse(w.__validarDestinos());
+  r.forEach(x => ok("« " + x.id + " » → " + x.panel + " " + x.ui, x.estado === "ok", x.estado));
+  ok("los " + r.length + " destinos del tutorial existen", r.every(x => x.estado === "ok"));
+}
+
+console.log(fallos ? "\n  ✗ " + fallos + " fallas\n" : "\n  ✓ la flecha va Menú → Cobertizo, el cartel dice lo mismo, y el botón está ahí\n");
 process.exit(fallos ? 1 : 0);

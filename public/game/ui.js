@@ -1578,6 +1578,15 @@ function refreshMarket() {
   if (typeof tutoHighlight === "function") tutoHighlight();
   document.querySelectorAll(".curbtn").forEach(b => b.classList.toggle("active", b.dataset.cur === cur));
   refreshSeedShop();
+  /* 20/8 — Y LA PESTAÑA DE ADORNOS TAMBIÉN, aunque esté oculta.
+     Lo encontró el validador nuevo de destinos del tutorial: el paso « Comprá tu primera expansión »
+     apunta a #exp-comprar, que vive en la pestaña Adornos. Esa pestaña solo se dibujaba al hacerle
+     clic, así que hasta entonces el botón NO EXISTÍA en el documento — y la flecha, que busca el
+     elemento para después señalar la pestaña que lo contiene, no encontraba nada y no aparecía.
+     Es el mismo fallo que el panel inventado (ov-deco), un nivel más adentro: el tutorial mandando
+     a un sitio que todavía no está. Dibujarla cuesta unas líneas de HTML y se hace una vez al abrir
+     el Mercado. */
+  if (typeof refreshDeco === "function") { try { refreshDeco(); } catch (e) {} }
 }
 
 // tienda de semillas: comprar con plata, bloqueadas por nivel de Cultivo
