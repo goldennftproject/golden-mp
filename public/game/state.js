@@ -260,7 +260,34 @@ function cropUnlocked(k) { const cd = CROP_DEF[k]; return !!cd && farmSkillLevel
    Esto es lo mismo para los cinco oficios que tienen escalera. El nivel se deriva de la posición
    del material en SU escalera: el escalón N pide nivel N del oficio, sin tablas a mano.
    La TALA no está: la madera es plana y se decidió que su oficio sea una medida, no una puerta. */
-function nivelOficio(sk) { return skillInfo((G.skills && G.skills[sk]) || 0, sk).lvl; }
+function nivelOficio(sk) {
+  if (sk === "cooking" && typeof cookLevel === "function") return cookLevel();   // la Cocina tiene su propia tabla
+  return skillInfo((G.skills && G.skills[sk]) || 0, sk).lvl;
+}
+/* TODO LO QUE ABRE UN OFICIO, EN UNA SOLA LISTA (19/8).
+   Sirve para dos cosas a la vez: pintar en el panel de Oficios qué te espera en el próximo nivel
+   —que es lo que hacía falta para que subir de oficio se SIENTA—, y para que las auditorías lean
+   las puertas del juego en vez de una copia a mano que se queda vieja. */
+function oficioAbre(sk) {
+  const l = [];
+  if (sk === "farming") for (const k in CROP_DEF) l.push([CROP_DEF[k].lvl, CROP_DEF[k].label]);
+  if (sk === "mining")  for (const k in ORE_DEF)  l.push([oreNivelReq(k), ORE_DEF[k].label]);
+  if (sk === "fishing") { const PL = { comun: "peces comunes", raro: "peces raros", epico: "peces épicos", legendario: "peces legendarios" };
+    for (const r in PL) l.push([pezNivelReq(r), PL[r]]); }
+  if (sk === "ganaderia") ANIMAL_ORDER.forEach(k => l.push([animalNivelReq(k), ANIMAL_DEF[k].label]));
+  if (sk === "cooking") for (const k in RECIPE_DEF) l.push([RECIPE_DEF[k].lvl || 1, RECIPE_DEF[k].label]);
+  for (const t in PLANO_OFICIO) if (PLANO_OFICIO[t][0] === sk && BUILD_DEF[t])
+    l.push([PLANO_OFICIO[t][1], "plano de " + BUILD_DEF[t].label]);
+  for (const t in EDIF2_OFICIO) if (EDIF2_OFICIO[t][0] === sk && BUILD_DEF[t])
+    l.push([EDIF2_OFICIO[t][1], BUILD_DEF[t].label + " nivel 2"]);
+  return l.sort((a, b) => a[0] - b[0]);
+}
+function oficioProximo(sk) {
+  const nv = nivelOficio(sk), l = oficioAbre(sk).filter(e => e[0] > nv);
+  if (!l.length) return "";
+  const n = l[0][0];
+  return "Nv. " + n + ": " + l.filter(e => e[0] === n).map(e => e[1]).join(" · ");
+}
 function oreNivelReq(k) { const o = ORE_DEF[k]; return o ? (o.tier + 1) * 2 - 1 : 1; }   // piedra 1, bronce 3, hierro 5, oro 7, diamante 9, netherita 11
 function oreUnlocked(k) { return nivelOficio("mining") >= oreNivelReq(k); }
 function pezNivelReq(r) { return { comun: 1, raro: 3, epico: 6, legendario: 10 }[r] || 1; }
@@ -469,7 +496,36 @@ function buildCostStr(key) { const b = BUILD_DEF[key]; return Object.keys(b.cost
    tengas; al completar, estrellitas y pasa al edificio construido.
    El edificio ya NO aparece gris en una posición fija: no existe hasta que colocás
    su plano, y queda donde VOS lo pusiste. */
-var PLANO_NIVEL = { store: 2, horno: 3, cocina: 5, establo: 6, altar: 7, curtiduria: 8, ofrendas: 10 };   // nivel en que cae cada plano (números del diseñador · store 1→2 el 14/8: a nivel 1 caía en el SEGUNDO CERO de la partida, antes de aprender nada — el nivel 2 llega cosechando la primera tanda)
+/* ============ QUIÉN ABRE CADA PLANO (19/8, dirección) ==============================
+   El Granero quedó con dos trabajos —permitir expandir y subir el bono— pero seguía repartiendo
+   los siete planos. La regla que los coloca sin discutir:
+
+     · un edificio que ABRE un oficio no puede pedir ese oficio (sería circular: la Cocina
+       pidiendo Cocina, el Establo pidiendo Ganadería);
+     · un edificio que PROCESA lo de otro oficio se le pide AL OFICIO QUE LO ALIMENTA.
+
+   Con eso, cuatro planos se mudan a su oficio y tres se quedan en el Granero:
+     Herrería ......... granero 2 — es la puerta de entrada, no la alimenta nadie (y el tutorial
+                        la necesita antes de que exista ningún oficio)
+     Altar de Runas ... granero 7  \ no procesan nada: son progresión, no oficio
+     Altar de Ofrendas  granero 10 /
+   Los cuatro que se mudan están en PLANO_OFICIO. */
+var PLANO_NIVEL = { store: 2, altar: 7, ofrendas: 10 };
+var PLANO_OFICIO = {
+  horno:      ["mining",    3],   // funde lo que picás → Minería (≈7 rocas: cae dentro del tutorial)
+  cocina:     ["farming",   3],   // cocina lo que cosechás → Cultivo (~1,5 h)
+  establo:    ["farming",   5],   // los animales COMEN cultivos → Cultivo (~7,4 h). No circular:
+                                  // pedir Ganadería sería pedir el establo para abrir el establo
+  curtiduria: ["ganaderia", 4]    // curte el cuero de TUS animales → Ganadería (el escalón del conejo)
+};
+function planoOficioListo(t) {
+  const g = PLANO_OFICIO[t]; if (!g) return false;
+  return nivelOficio(g[0]) >= g[1];
+}
+function planoPuertaTxt(t) {
+  const g = PLANO_OFICIO[t];
+  return g ? SKILL_NAME[g[0]] + " nivel " + g[1] : (PLANO_NIVEL[t] ? "Granja nivel " + PLANO_NIVEL[t] : "");
+}   // nivel en que cae cada plano (números del diseñador · store 1→2 el 14/8: a nivel 1 caía en el SEGUNDO CERO de la partida, antes de aprender nada — el nivel 2 llega cosechando la primera tanda)
 function planoTengo(t) { return !!(G.planos && G.planos[t]); }
 // 13/8: el plano también vive en la HOTBAR (primer hueco libre) — colocarlo sin abrir la bolsa
 // 18/8: los planos también se mudaron al Cobertizo — ya no ocupan un hueco de la barra rápida
@@ -501,11 +557,13 @@ function planosSync(silencioso) {
   // paso en la cadena (Altar, Establo…) y todo el post-tutorial van por NIVEL puro.
   const tutoOn = G.tuto && !G.tuto.done;
   const paso = tutoOn ? (G.tuto.step || 0) : -1;
-  for (const t in PLANO_NIVEL) {
+  const todos = {}; for (const t in PLANO_NIVEL) todos[t] = 1; for (const t in PLANO_OFICIO) todos[t] = 1;
+  for (const t in todos) {
     const gate = PLANO_PASO[t];
     const gi = gate ? tutoIdx(gate) : -1;
     if (tutoOn && gi >= 0) { if (paso >= gi) darPlano(t, silencioso); continue; }   // en la cadena: manda el paso
-    if (G.level >= PLANO_NIVEL[t]) darPlano(t, silencioso);                          // fuera de la cadena o post-tutorial: manda el nivel
+    // 19/8: fuera de la cadena manda SU puerta — el oficio si lo tiene, y si no el nivel de granja
+    if (PLANO_OFICIO[t] ? planoOficioListo(t) : (G.level >= PLANO_NIVEL[t])) darPlano(t, silencioso);
   }
 }
 // ¿esta acción ya fue presentada por el tutorial? (embudo 13/8: hasta que el paso de una
@@ -971,6 +1029,7 @@ function addXp(sk, amt) {
     else { toast("" + SKILL_NAME[sk] + " nivel " + after); if (window.sfx) sfx("level"); }
   }
   if (sk === "farming" || sk === "mining" || sk === "fishing") recalcFarmLevel();   // la XP de granja y las tareas pueden habilitar el nivel
+  if (after > before && typeof oficiosSync === "function") oficiosSync(false);   // 19/8: el oficio abre planos y mejoras
   if (typeof passEvent === "function") passEvent(sk);   // misiones del Pase de Batalla
   if (isOpen("ov-skills")) refreshSkills();
 }
@@ -987,6 +1046,7 @@ function addCookXp(amt) {
       reward: (rec.length ? "Nueva receta: " + rec.join(" · ") : "") + (after === 8 ? (rec.length ? " · " : "") + "Venta en $Golden" : "") });
     else { toast("Cocina nivel " + after); if (window.sfx) sfx("level"); }
     if (window.onCookLevelUp) window.onCookLevelUp(after);   // celebración (Fase 5)
+    if (typeof oficiosSync === "function") oficiosSync(false);   // 19/8: la Cocina abre su nivel 2
   }
   if (isOpen("ov-skills")) refreshSkills();
 }
@@ -1229,7 +1289,29 @@ function expansionComprar() {
   return true;
 }
 const FARM_COFRE   = { 13:10, 23:10, 33:15 };                                          // nivel → capacidad extra de cofre
-const FARM_EDIF2   = { 17:"horno", 21:"cocina", 27:"altar" };                          // nivel → edificio que sube a nivel 2
+/* 19/8: misma regla para las mejoras. El Horno lo mejora quien más lo usa (Minería) y la Cocina,
+   la Cocina misma —ahí NO es circular: cocinar ya lo sabés, la mejora es al que ya practica—.
+   El Altar no cuelga de ningún oficio y se queda en el Granero. */
+const FARM_EDIF2   = { 27:"altar" };                          // nivel de granja → edificio que sube a nivel 2
+const EDIF2_OFICIO = { horno: ["mining", 6], cocina: ["cooking", 5] };
+function edif2Sync(silencioso) {
+  for (const t in EDIF2_OFICIO) {
+    const g = EDIF2_OFICIO[t];
+    if (nivelOficio(g[0]) < g[1]) continue;
+    G.edif2 = G.edif2 || {};
+    if (G.edif2[t]) continue;
+    G.edif2[t] = true;
+    if (!silencioso && BUILD_DEF[t]) {
+      log("¡" + BUILD_DEF[t].label + " nivel 2! Lo abrió " + SKILL_NAME[g[0]] + " nivel " + g[1] + ".", "gold");
+      toast("⬆ " + BUILD_DEF[t].label + " nivel 2");
+    }
+  }
+}
+/* Una sola puerta para "subí de oficio: ¿te toca algo?" — la llaman addXp y addCookXp. */
+function oficiosSync(silencioso) {
+  try { planosSync(silencioso); } catch (e) {}
+  try { edif2Sync(silencioso); } catch (e) {}
+}
 
 // ---- contadores de tareas (se guardan) ----
 function statAdd(tipo, key, n) {

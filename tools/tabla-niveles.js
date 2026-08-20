@@ -6,7 +6,7 @@ const LOG=console.log;
 const ctx={console:{log(){},warn(){}},Math,Date,JSON,Object,Array,Number,String,Boolean,Set,Map,isNaN,parseInt,parseFloat};
 ctx.window=ctx;ctx.globalThis=ctx;ctx.setTimeout=()=>0;vm.createContext(ctx);
 vm.runInContext(fs.readFileSync("public/game/config.js","utf8"),ctx);
-vm.runInContext(fs.readFileSync("public/game/state.js","utf8")+"\n;this.farmUnlockTxt=farmUnlockTxt;this.X={FARM_XP_LVLS,FARM_UNLOCK,FARM_PARCELA,FARM_EXPANSION,FARM_COFRE,FARM_EDIF2,FARM_NIVEL_MAX,NIVEL_ARBOLES,NIVEL_ROCAS,CROP_DEF,CROP_ORDER,BUILD_DEF,PLANO_NIVEL,EXPANSION_COSTO,PRICE,MAT_DEF,ORE_DEF,ORE_ORDER,ANIMAL_DEF,ANIMAL_ORDER,RECIPE_DEF,RECIPE_ORDER,CD,FISH_CD,XP_ACCION,XP_PEZ,skillNeed};",ctx);
+vm.runInContext(fs.readFileSync("public/game/state.js","utf8")+"\n;this.farmUnlockTxt=farmUnlockTxt;this.X={FARM_XP_LVLS,FARM_UNLOCK,FARM_PARCELA,FARM_EXPANSION,FARM_COFRE,FARM_EDIF2,FARM_NIVEL_MAX,NIVEL_ARBOLES,NIVEL_ROCAS,CROP_DEF,CROP_ORDER,BUILD_DEF,PLANO_NIVEL,EXPANSION_COSTO,PRICE,MAT_DEF,SKILL_NAME,ORE_DEF,ORE_ORDER,ANIMAL_DEF,ANIMAL_ORDER,RECIPE_DEF,RECIPE_ORDER,CD,FISH_CD,XP_ACCION,XP_PEZ,skillNeed};",ctx);
 const X=ctx.X;
 const parcelasEn=n=>{let p=3;for(const k in X.FARM_PARCELA)if(n>=+k)p=X.FARM_PARCELA[k];return p;};
 const arbEn=n=>X.NIVEL_ARBOLES.filter(v=>v<=n).length;
@@ -47,12 +47,15 @@ const HORAS={farming:3*3600/X.CROP_DEF.papa.grow*X.CROP_DEF.papa.xp, mining:3*36
   fishing:3600/X.FISH_CD*X.XP_PEZ, ganaderia:60, cooking:60};
 const acum=(n,sk)=>{let a=0;for(let i=1;i<n;i++)a+=X.skillNeed(i,sk);return a;};
 const fmtH=h=>h<1?Math.round(h*60)+" min":h<48?h.toFixed(1)+" h":(h/24).toFixed(1)+" días";
-const oficios=[
-  ["Cultivo","farming","semillas del Mercado",X.CROP_ORDER.map(k=>[X.CROP_DEF[k].label,X.CROP_DEF[k].lvl])],
-  ["Minería","mining","minerales que podés picar",X.ORE_ORDER.map(k=>[X.ORE_DEF[k].label,ctx.oreNivelReq(k)])],
-  ["Pesca","fishing","rarezas que pueden picar",["comun","raro","epico","legendario"].map(r=>[r[0].toUpperCase()+r.slice(1),ctx.pezNivelReq(r)])],
-  ["Ganadería","ganaderia","animales del Establo",X.ANIMAL_ORDER.map(k=>[X.ANIMAL_DEF[k].label,ctx.animalNivelReq(k)])],
-  ["Cocina","cooking","recetas",X.RECIPE_ORDER.map(k=>[X.RECIPE_DEF[k].label,X.RECIPE_DEF[k].lvl||1]).sort((a,b)=>a[1]-b[1])]];
+/* 19/8: la lista NO se copia a mano — se le pregunta al juego con oficioAbre(), que ya junta
+   semillas, minerales, rarezas, animales, recetas, los planos que se mudaron a su oficio y las
+   mejoras de nivel 2. Si mañana se mueve una puerta, el doc del diseñador cambia solo. */
+const QUE={farming:"las semillas del Mercado",mining:"los minerales que podés picar",
+  fishing:"las rarezas que pueden picar el anzuelo",ganaderia:"los animales del Establo",
+  cooking:"las recetas"};
+const oficios=Object.keys(QUE).map(sk=>{
+  const nom=X.SKILL_NAME[sk];
+  return [nom,sk,QUE[sk],ctx.oficioAbre(sk).map(e=>[e[1],e[0]])];});
 md.push("","## Qué abre cada oficio","",
  "El nivel de granja **no** reparte materiales: solo permite expandir y sube el bono de venta.",
  "Lo que abre cada escalón de material es **su propio oficio**, y se sube practicándolo: cada acción",

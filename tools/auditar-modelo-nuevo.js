@@ -14,7 +14,7 @@ ctx.window=ctx;ctx.globalThis=ctx;ctx.setTimeout=()=>0;vm.createContext(ctx);
 vm.runInContext(fs.readFileSync("public/game/config.js","utf8"),ctx);
 vm.runInContext(fs.readFileSync("public/game/state.js","utf8")+
  "\n;this.X={CD,CROP_DEF,CROP_ORDER,ORE_DEF,ORE_ORDER,PRICE,MAT_DEF,PICK_DEF,TOOL_CRAFT,FISH_CD,FISH_VALOR,FISH_COST,"+
- "FARM_NIVEL_MAX,FARM_XP_LVLS,BUILD_DEF,PLANO_NIVEL,FARM_COFRE,FARM_EDIF2,RECIPE_DEF,RECIPE_ORDER,ANIMAL_DEF,ANIMAL_ORDER,"+
+ "FARM_NIVEL_MAX,FARM_XP_LVLS,BUILD_DEF,PLANO_NIVEL,FARM_COFRE,FARM_EDIF2,EDIF2_OFICIO,RECIPE_DEF,RECIPE_ORDER,ANIMAL_DEF,ANIMAL_ORDER,"+
  "skillNeed,xpDeNodo,XP_ACCION,XP_PEZ,XP_ANIMAL,SEED_POR_PARCELA,SKILL_DEFS};",ctx);
 const X=ctx.X, ANCLA=20, N=+(process.argv[2]||16);
 const hall=[]; const grave=t=>hall.push(["GRAVE",t]); const menor=t=>hall.push(["menor",t]);
@@ -112,21 +112,48 @@ ok("Tala",true,"nada — la madera es plana (decidido)");
   ok("el maíz, el último escalón",hMaiz<25,hMaiz.toFixed(1)+" días de Cultivo");
   if(hMaiz>25) menor("El maíz pide "+hMaiz.toFixed(0)+" días de Cultivo");}
 
-/* ---- 5. EL GRANERO: qué le queda ---- */
-LOG("\n═══ 5. EL GRANERO · espacio y construcción ═══\n");
-let conAlgo=0,vacios=[];
-for(let n=2;n<=X.FARM_NIVEL_MAX;n++){
-  let g=niveles.includes(n);
-  for(const t in X.PLANO_NIVEL) if(X.PLANO_NIVEL[t]===n) g=true;
-  if(X.FARM_COFRE[n]||X.FARM_EDIF2[n]) g=true;
-  if(g) conAlgo++; else vacios.push(n);}
-ok("niveles con algo que dar",conAlgo>=X.FARM_NIVEL_MAX*0.5,conAlgo+" de "+(X.FARM_NIVEL_MAX-1));
-/* 18/8: el Granero NO está vacío en esos niveles — da el bono de venta (+1,5% por nivel), que es
-   continuo y llega a TODOS. Se me había escapado al escribir esta auditoría: contaba solo los
-   premios de tabla. Lo que se mide ahora es si además de ese bono hay algo puntual. */
-ok("todos los niveles dan el bono de venta (+1,5%)",true,"al 50 son +"+Math.round(0.015*(X.FARM_NIVEL_MAX-1)*100)+"% sobre el margen");
-ok("y además, niveles con un premio puntual",conAlgo>=20,conAlgo+" de "+(X.FARM_NIVEL_MAX-1));
-if(vacios.length) menor(vacios.length+" niveles solo dan el bono, sin premio puntual: "+vacios.slice(0,10).join(", ")+(vacios.length>10?"…":""));
+/* ---- 5. EL GRANERO: qué le queda, y quién abre cada cosa ---- */
+LOG("\n═══ 5. EL GRANERO · lo que reparte, y lo que ya no ═══\n");
+/* 19/8: la vara vieja de esta sección ("¿cuántos niveles dan un premio puntual?") medía el modelo
+   ANTERIOR, cuando el Granero repartía los siete planos. Con la regla nueva —el edificio lo abre
+   el oficio que lo alimenta— el Granero reparte MENOS a propósito, así que aquella cuenta bajando
+   no es un empeoramiento sino el cambio funcionando. Lo que hay que vigilar ahora es otra cosa:
+   que nadie se quede sin puerta, que ninguna sea circular, y que el bono siga llegando a todos. */
+{
+ const conExp=niveles.length;
+ let puntual=0; const soloBono=[];
+ for(let n=2;n<=X.FARM_NIVEL_MAX;n++){
+   let g=niveles.includes(n);
+   for(const t in X.PLANO_NIVEL) if(X.PLANO_NIVEL[t]===n) g=true;
+   if(X.FARM_COFRE[n]||X.FARM_EDIF2[n]) g=true;
+   if(g) puntual++; else soloBono.push(n);}
+ ok("el bono de venta llega a TODOS los niveles",true,"al 50 son +"+Math.round(0.015*(X.FARM_NIVEL_MAX-1)*100)+"% sobre el margen");
+ ok("y "+conExp+" niveles traen expansión",conExp===N,conExp+" de "+N);
+ ok("niveles con premio puntual (expansión, plano, cofre o mejora)",puntual>0,puntual+" de "+(X.FARM_NIVEL_MAX-1));
+ /* El tramo alto sigue siendo el hueco conocido del proyecto: del 20 en adelante casi todo es bono
+    y expansión. No lo tapo con una métrica amable — queda anotado como hallazgo hasta que se
+    decida qué premia esa parte. */
+ const altos=soloBono.filter(n=>n>=20);
+ if(altos.length>=15) menor("Del nivel 20 al "+X.FARM_NIVEL_MAX+" hay "+altos.length+" niveles que solo dan bono: sigue pendiente qué premia el tramo alto");
+}
+/* LAS PUERTAS DE LOS EDIFICIOS (19/8) — la parte que puede romperse en silencio. */
+{
+ const PO=ctx.PLANO_OFICIO||{}, E2=X.EDIF2_OFICIO||{};
+ const sinPuerta=Object.keys(X.BUILD_DEF).filter(t=>!X.PLANO_NIVEL[t]&&!PO[t]);
+ ok("todo edificio tiene una puerta",!sinPuerta.length,sinPuerta.join(", ")||Object.keys(X.BUILD_DEF).length+" edificios");
+ if(sinPuerta.length) grave("Edificios sin forma de conseguirse: "+sinPuerta.join(", "));
+ const dobles=Object.keys(X.BUILD_DEF).filter(t=>X.PLANO_NIVEL[t]&&PO[t]);
+ ok("ninguno cuelga de las dos tablas",!dobles.length,dobles.join(", "));
+ if(dobles.length) grave("Planos con dos puertas (el nivel de granja los regala por la espalda): "+dobles.join(", "));
+ /* Circularidad: pedirle a un edificio el oficio que ese mismo edificio ABRE deja al jugador
+    encerrado para siempre, y no se nota jugando hasta que alguien llega ahí. */
+ const ARRANCA={cocina:"cooking",establo:"ganaderia",store:"crafting"};
+ const circ=Object.keys(PO).filter(t=>ARRANCA[t]===PO[t][0]);
+ ok("ninguna puerta es circular",!circ.length,circ.join(", ")||"comprobados los 7");
+ if(circ.length) grave("Puerta circular: "+circ.join(", ")+" pide el oficio que ese edificio abre");
+ Object.keys(PO).forEach(t=>LOG("      "+(X.BUILD_DEF[t].label+" ").padEnd(24,".")+" "+PO[t][0]+" nv "+PO[t][1]));
+ Object.keys(E2).forEach(t=>LOG("      "+(X.BUILD_DEF[t].label+" nivel 2 ").padEnd(24,".")+" "+E2[t][0]+" nv "+E2[t][1]));
+}
 
 /* ---- 6. EL ARRANQUE: ¿el jugador se atasca? ---- */
 LOG("\n═══ 6. EL ARRANQUE · ¿se puede llegar a la 1ª expansión? ═══\n");

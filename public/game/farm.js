@@ -169,7 +169,8 @@ class FarmScene extends Phaser.Scene {
 
     // objetos del mundo (con estado para interacción)
     let __treeN = 0, __rockN = 0;   // viernes (2): orden de desbloqueo de árboles y piedras
-    if (typeof planosSync === "function") planosSync(true);   // blueprints (12/8): guardados viejos reciben sus planos
+    if (typeof oficiosSync === "function") oficiosSync(true);   // blueprints y mejoras (12/8 · 19/8):
+    else if (typeof planosSync === "function") planosSync(true);   // guardados viejos reciben lo que ya tenían ganado
     // BUZÓN (15/8): si el arte de PixelLab no está, se dibuja uno simple a código —
     // así el objeto existe igual y el juego nunca cae al respaldo feo de "store"
     if (!this.textures.exists("paquete_dia")) {   // PAQUETE del día (15/8): respaldo a código
