@@ -616,7 +616,11 @@ var TUTO_PERMISOS = {
   place_cocina: ["obra"],
   build_cocina: ["obra"],
   cook:        ["cook", "plant", "harvest", "buyseed", "chop", "crafttool"],   // 14/8: red por si malgasta el kit de ingredientes
-  eat:         ["eat", "cook"],   // 14/8: si vendió su único plato, puede recocinar (el kit repone ingredientes)
+  /* 19/8: le faltaba el bucle del cultivo. El razonamiento del 14/8 —"si vendió su único plato,
+     puede recocinar"— solo vale si le QUEDAN ingredientes: quien vendió el plato Y las papas se
+     quedaba sin nada que hacer, con dos gestos permitidos y ninguna forma de conseguir una papa.
+     Es un rincón raro, pero es exactamente el tipo de rincón que se lleva a un jugador nuevo. */
+  eat:         ["eat", "cook", "buyseed", "plant", "harvest", "sell", "chop", "mine", "cultivar"],
   unlockarm:   ["unlockarm", "chop", "mine", "crafttool", "repair"],   // 14/8: el desbloqueo pide 20 madera + 20 piedra — se juntan acá (la plata llega de adelanto)
   /* 19/8: estos dos pasos llegan justo después de construir el Horno, y forjar pide 5 de madera que
      puede que el jugador no tenga. Si el permiso fuera solo "craftarm", quedaría encerrado sin
