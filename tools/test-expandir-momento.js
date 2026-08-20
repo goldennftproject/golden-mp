@@ -32,17 +32,24 @@ vm.runInContext(fs.readFileSync("public/game/config.js", "utf8"), ctx);
 vm.runInContext(STATE, ctx);
 const GF = ctx.GF, G = ctx.G;
 
-/* La escena falsa: registra el viaje y llama al aviso de llegada, como hace Phaser. */
+/* La escena falsa. OJO CON LA FORMA, que aquí estuvo el fallo más caro del día:
+   farm.js hace `window.FARM = this`, o sea que FARM ES LA ESCENA. La primera versión de este test
+   montaba `FARM = { scene: esc }` —copiando la suposición equivocada del código en vez de lo que
+   hace el juego— y por eso daba verde mientras en la partida real toda expansión caía al telón
+   negro. Un arnés que reproduce el error que quiere cazar no prueba nada.
+   Se monta como lo monta el juego, y punto. */
 let panDur = 0;
-ctx.FARM = { scene: {
+ctx.FARM = {
   expandirEnVivo(bloque, alLlegar) {
     orden.push("cámara viaja");
     panDur = 900;
     orden.push("cámara llega");
     if (alLlegar) alLlegar();
     return true;
-  }
-} };
+  },
+  /* Y el ScenePlugin, que es lo que de verdad cuelga de `.scene` y solo sirve para reiniciar. */
+  scene: { restart() { orden.push("TELÓN: la escena se rehace entera"); } }
+};
 
 G.level = 60; G.expansiones = 0; G.plotsOwned = 3; G.treesOpen = [0]; G.rocksOpen = [0];
 G.built = {}; G.obras = {}; G.layout = {}; G.layoutPlots = {}; G.decos = []; G.chests = [];
@@ -63,6 +70,22 @@ console.log("      " + orden.join("  →  "));
   ok("y la celebración espera a que LLEGUE", iFiesta > iViaje,
     "antes tapaba el viaje con 2,6 s de confeti");
   ok("el viaje dura lo suficiente para verse", panDur >= 700, panDur + " ms");
+  /* Y LO QUE REPORTÓ DIRECCIÓN: que NO se rehaga la escena entera. El telón es el respaldo, no el
+     camino normal — si aparece aquí, el jugador está viendo la pantalla negra en cada expansión. */
+  ok("y la escena NO se rehace entera", orden.indexOf("TELÓN: la escena se rehace entera") < 0,
+    "el dibujado en caliente es el camino normal, el telón es el respaldo");
+}
+
+console.log("\nY LA LÍNEA QUE LO ROMPÍA, VIGILADA");
+{
+  /* `window.FARM` es la escena. Pedirle `.scene` devuelve el ScenePlugin de Phaser, que tiene
+     restart() pero no los métodos de la escena — y como restart() SÍ existe, el fallo se disfraza
+     de "funciona": la granja se rehace y el jugador ve el telón. Se vigila que no vuelva. */
+  const cuerpo = STATE.slice(STATE.indexOf("function expansionComprar()"), STATE.indexOf("const FARM_COFRE"));
+  const vivo = cuerpo.replace(/\/\*[\s\S]*?\*\//g, "").replace(/\/\/[^\n]*/g, "");
+  ok("expansionComprar toma la escena, no el ScenePlugin", !/window\.FARM && window\.FARM\.scene/.test(vivo),
+    "window.FARM YA es la escena");
+  ok("y llama a expandirEnVivo sobre ella", /window\.FARM;[\s\S]{0,200}expandirEnVivo/.test(vivo));
 }
 
 console.log("\nY SI NO HAY ESCENA, LA CELEBRACIÓN NO SE PIERDE");
@@ -70,7 +93,7 @@ console.log("\nY SI NO HAY ESCENA, LA CELEBRACIÓN NO SE PIERDE");
   /* Un festejo diferido que depende de un aviso de cámara puede no llegar nunca: si la escena no
      existe, o el pan se interrumpe, el jugador se queda sin la celebración de algo que pagó. */
   orden.length = 0;
-  ctx.FARM = { scene: null };
+  ctx.FARM = null;
   G.expansiones = 0; G.plotsOwned = 3; G.layoutPlots = {};
   G.res = { madera: 9999, piedra: 9999 }; G.plata = 999999;
   ctx.expansionComprar();

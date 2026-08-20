@@ -177,5 +177,29 @@ console.log("\nY LA REPARACIÓN, TAMBIÉN PARA LAS DIECISÉIS");
     claves.length + " parcelas, " + new Set(claves).size + " celdas distintas");
 }
 
+console.log("\nY LA ROCA QUE VIENE CON EL BLOQUE SE PUEDE PICAR");
+{
+  /* 20/8, dirección: "la expansión del nivel 3 me dio una piedra que al picarla dice que necesito
+     granja nivel 1. Y soy nivel 3."
+     La roca de un bloque comprado NO pertenece a la escalera de rocas: su peaje fue el terreno.
+     Pero se la medía con la escalera igual, y como su número de orden es el 4º y rocksOpen solo
+     tiene la 0, salía bloqueada — anunciando un nivel que el jugador ya tenía. */
+  G.level = 3; G.rocksOpen = [0]; G.treesOpen = [0]; G.expansiones = 1;
+  const rocaBase = GF.WORLD_OBJECTS.find(o => o.type === "rock" && o.exp == null);
+  const rocaExp = GF.WORLD_OBJECTS.find(o => o.type === "rock" && o.exp === 0);
+  ok("hay una roca de la escalera y una del bloque", !!rocaBase && !!rocaExp);
+  ok("la roca que vino con el bloque NO está bloqueada",
+    !ctx.nodoBloqueado({ type: "rock", exp: 0, lockIdx: 3 }), "el peaje fue comprar el terreno");
+  /* Y la escalera sigue funcionando para las suyas: no se abrió la puerta de par en par. */
+  ok("pero la 2ª roca de la escalera sigue esperando su nivel",
+    ctx.nodoBloqueado({ type: "rock", exp: null, lockIdx: 1 }), "rocksOpen = [0]");
+  ok("y la 1ª, que sí es tuya, no", !ctx.nodoBloqueado({ type: "rock", exp: null, lockIdx: 0 }));
+  /* La numeración: farm.js no puede contar los nodos de expansión, o vuelve el desfase. */
+  const FARM2 = fs.readFileSync("public/game/farm.js", "utf8");
+  ok("y farm.js numera solo los nodos de la escalera",
+    /o\.exp == null && o\.type === "rock"\) lockIdx = __rockN\+\+/.test(FARM2),
+    "una sola numeración, la misma que config.js");
+}
+
 console.log(fallos ? "\n  ✗ " + fallos + " fallas\n" : "\n  ✓ lo que compraste con el terreno está dentro del terreno\n");
 process.exit(fallos ? 1 : 0);

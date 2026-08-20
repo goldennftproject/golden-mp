@@ -869,7 +869,10 @@ function obraColocar(t, col, row, vivo) {   // la llama la escena con la celda e
    Lo lee create() al final, después de fitCamera. */
 function reiniciarGranjaSuave(mirarA) {
   try {
-    const sc = window.FARM && window.FARM.scene;
+    /* Ojo: acá también hacía falta LA ESCENA (para leer su cámara y su zoom), no el ScenePlugin.
+       `cam` salía undefined, así que la travesía de cámara entre reinicios nunca se guardaba y el
+       jugador volvía siempre al encuadre por defecto. Mismo error, dos líneas más arriba. */
+    const sc = window.FARM;
     const cam = sc && sc.cameras && sc.cameras.main;
     // se guarda zoomUser (el que eligió el jugador con la rueda), NO el zoom absoluto: el zoom
     // base se recalcula con el tamaño de pantalla y del mundo, que acaba de cambiar.
@@ -1433,7 +1436,22 @@ function expansionComprar() {
      El reinicio con pantalla negra queda de RESPALDO: si expandirEnVivo falla por lo que sea, la
      escena se rehace entera y el jugador ve su expansión igual. */
   const b = e.bloque, T = GF.TILE;
-  const sc = window.FARM && window.FARM.scene;
+  /* 20/8 (dirección): "cuando le doy a expandir la pantalla se vuelve oscura y la cámara se mueve.
+     Creo que el juego dibuja toda la pantalla de cero. No debería."
+     Tenía razón en las dos cosas, y la causa era una línea:
+
+         const sc = window.FARM && window.FARM.scene;   ← MAL
+
+     `window.FARM` YA ES LA ESCENA (farm.js hace `window.FARM = this`). Así que `window.FARM.scene`
+     no es la escena: es el ScenePlugin de Phaser. Y el ScenePlugin sí tiene `.restart()` —por eso
+     reiniciarGranjaSuave funcionaba perfecto y nadie sospechó— pero NO tiene `expandirEnVivo`.
+     Resultado: `vivo` salía false SIEMPRE y toda expansión caía al respaldo con telón negro. El
+     dibujado en caliente que escribimos el 18/8 no se ejecutó ni una sola vez.
+     Lo peor es cómo se me escapó: mi propio banco de pruebas montaba `FARM = { scene: esc }`,
+     copiando la suposición equivocada en vez de lo que hace el juego. El test confirmaba mi error
+     en lugar de delatarlo. Ahora el arnés hace `FARM = esc`, como farm.js.
+     Las otras dos llamadas —las de restart()— sí quieren el ScenePlugin y se quedan como están. */
+  const sc = window.FARM;
   const vivo = sc && typeof sc.expandirEnVivo === "function" && sc.expandirEnVivo(b, festejar);
   if (!vivo) {
     /* Sin escena viva no hay viaje que mostrar: se festeja al momento y se cae al reinicio con
@@ -3756,6 +3774,19 @@ function nodoXpMin(cdSeg) { return Math.max(1, Math.round(cdSeg / 60)); }
 // dejó de ser el candado y pasó a ser el CALENDARIO de entrega del regalo.
 function nodoBloqueado(o) {
   if (!o || o.type !== "rock") return false;   // las vetas de mineral van por tier de pico
+  /* 20/8 (dirección): "la expansión del nivel 3 me dio una piedra que al picarla dice que necesito
+     granja nivel 1. Y soy nivel 3. Obviamente no va a funcionar."
+     La roca que viene DENTRO de un bloque comprado no pertenece a la escalera de rocas: su peaje ya
+     lo pagaste al comprar el terreno. Pero acá se la medía con la escalera igual, y salía mal por
+     partida doble:
+       · su número de orden es el 4º (farm.js cuenta todas las rocas), y rocksOpen solo tiene la 0
+         → la daba por bloqueada;
+       · y el nivel que anunciaba salía de NIVEL_ROCAS recortado al último índice, o sea 1 → «se
+         habilita a granja nivel 1» siendo ya nivel 3. Un mensaje imposible de obedecer.
+     Lo vi y lo deseché esta mañana, escribiendo en un test que las dos numeraciones «coinciden
+     para las primeras N». Coinciden para las primeras; la expansión es la N+1.
+     Un nodo que llegó con su terreno está abierto: ésa es la regla, y vive acá. */
+  if (o.exp != null) return false;
   return !(G.rocksOpen || [0]).includes(o.lockIdx);
 }
 function canShoot() { const id = armaEq(); return !!(id && ARM_DEF[id].tipo === "arco" && G.gear.municion && (G.res.flecha || 0) > 0); }   // arco nuevo + flechas equipadas

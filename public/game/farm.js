@@ -242,8 +242,12 @@ class FarmScene extends Phaser.Scene {
       }
       // viernes (2): árboles y piedras bloqueados (1 activo + resto difuminado, se desbloquean en orden)
       let lockIdx = -1;
-      if (o.type === "tree") lockIdx = __treeN++;
-      if (o.type === "rock") lockIdx = __rockN++;
+      /* 20/8: el número de orden es SOLO para los nodos de la escalera. Los que vienen dentro de un
+         bloque comprado no tienen puesto en esa fila —su peaje fue el terreno— y contarlos aquí los
+         numeraba como el 4º, el 5º… mientras config.js los saltaba. Dos numeraciones para la misma
+         cosa, y de ahí salía «se habilita a granja nivel 1» sobre una roca ya comprada. */
+      if (o.exp == null && o.type === "tree") lockIdx = __treeN++;
+      if (o.exp == null && o.type === "rock") lockIdx = __rockN++;
       // 12/8 (noche): SOLO los árboles conservan el bloqueo visual — el bloqueado es un
       // RETOÑO que crece al pagarlo. Las vetas/piedras van todas a la vista y a todo
       // color: su freno es por NIVEL y avisa al intentar picarlas (nodoBloqueado).

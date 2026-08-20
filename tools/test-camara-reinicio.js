@@ -12,7 +12,16 @@ function juego(zoomUser,scrollX,scrollY){
   vm.runInContext(fs.readFileSync("public/game/state.js","utf8"),ctx);
   ctx.toast=()=>{};ctx.log=()=>{};ctx.refreshHud=()=>{};ctx.saveFarm=()=>{};
   ctx.canAfford=()=>true;ctx.payCost=()=>{};ctx.sfx=()=>{};ctx.celebrate=()=>{};
-  ctx.FARM={scene:{zoomUser,cameras:{main:{scrollX,scrollY,zoom:2.1}},restart(){ctx.RESTARTS=(ctx.RESTARTS||0)+1;}}};
+  /* 20/8 — LA FORMA IMPORTA, Y AQUÍ ESTUVO EL FALLO MÁS CARO DEL DÍA.
+     farm.js hace `window.FARM = this`: FARM ES LA ESCENA. Este arnés montaba `FARM = {scene:{…}}`,
+     copiando la suposición equivocada que tenía el código, y por eso daba verde mientras en la
+     partida real TODA expansión caía al telón negro: en el navegador, `window.FARM.scene` es el
+     ScenePlugin de Phaser —que tiene restart() pero no expandirEnVivo— así que el dibujado en
+     caliente no se ejecutó nunca desde que se escribió.
+     Ahora se monta como lo monta el juego: la escena arriba, y el ScenePlugin colgando de .scene,
+     que es lo único que restart() necesita. */
+  ctx.FARM = { zoomUser, cameras: { main: { scrollX, scrollY, zoom: 2.1 } },
+    scene: { restart() { ctx.RESTARTS = (ctx.RESTARTS || 0) + 1; } } };
   ctx.RESTARTS=0;
   return ctx;
 }
@@ -34,7 +43,7 @@ const ok=(n,c,d)=>{if(!c)fallos++;console.log((c?"  ok   ":"  FALLA")+"  "+n+(d?
   const g=juego(1.3,0,0);
   g.G.level=99; g.G.expansiones=0;
   let bloqueVisto=null;
-  g.FARM.scene.expandirEnVivo=(b)=>{bloqueVisto=b;return true;};
+  g.FARM.expandirEnVivo=(b)=>{bloqueVisto=b;return true;};
   const e=g.expansionSiguiente();
   ok("la expansión se compra", g.expansionComprar()===true);
   ok("NO reinicia la escena (crece en vivo)", g.RESTARTS===0, "restarts="+g.RESTARTS);
@@ -45,7 +54,7 @@ const ok=(n,c,d)=>{if(!c)fallos++;console.log((c?"  ok   ":"  FALLA")+"  "+n+(d?
 {
   const g=juego(1.3,0,0);
   g.G.level=99; g.G.expansiones=0;
-  g.FARM.scene.expandirEnVivo=()=>false;   // simula que algo salió mal
+  g.FARM.expandirEnVivo=()=>false;   // simula que algo salió mal
   const e=g.expansionSiguiente();
   g.expansionComprar();
   ok("cae al reinicio con telón", g.RESTARTS===1, "restarts="+g.RESTARTS);
@@ -57,7 +66,7 @@ const ok=(n,c,d)=>{if(!c)fallos++;console.log((c?"  ok   ":"  FALLA")+"  "+n+(d?
 // 4) las 16 expansiones apuntan a un sitio distinto cada una
 {
   const g=juego(1,0,0); g.G.level=99; g.G.expansiones=0;
-  g.FARM.scene.expandirEnVivo=()=>false;   // por la vía del telón, que es la que guarda _camTras
+  g.FARM.expandirEnVivo=()=>false;   // por la vía del telón, que es la que guarda _camTras
   const vistos=new Set();
   for(let i=0;i<16;i++){ g.expansionComprar(); const c=g.GF._camTras; if(c&&c.mirar) vistos.add(c.mirar.x+","+c.mirar.y); }
   ok("las 16 miran a 16 sitios distintos", vistos.size===16, vistos.size+"/16");
