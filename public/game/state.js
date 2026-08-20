@@ -2159,6 +2159,17 @@ const PASS_FREE = [   // índice = nivel-1 (tabla del doc, plata→insumos 14/8)
 // 14/8 (web3): el VIP paga COSMÉTICO + conveniencia (insumos ricos y algo de $Golden —
 // devolución parcial de lo quemado al comprarlo), jamás plata ni poder: con economía
 // compartida y P2P, el pay-to-win destruye el mercado que es el producto.
+/* 19/8 — NOTA PARA EL DÍA DEL TOKEN, no para hoy.
+   De los doce cosméticos de este recorrido, CINCO son "Skin de…" y no hay una sola línea que
+   cambie el sprite del granjero ni de las herramientas. El aura, la mascota, las decoraciones, el
+   título, el marco y el color de nombre SÍ están enganchados y funcionan.
+   Hoy eso no le cuesta un centavo a nadie: no hay pasarela de pago, ni wallet, ni forma de comprar
+   $Golden con dinero — el pase se paga con moneda del juego. Por eso no bloquea nada, y por eso
+   dirección decidió no priorizarlo: "los adornos son cosas que al jugador le gustará tener si le
+   gusta el juego; si no, no tiene sentido".
+   Lo que hay que mirar es OTRO momento: en cuanto se pueda comprar $Golden con dinero real, estas
+   cinco líneas pasan a ser una promesa cobrada. Antes de ese día, o se implementan o se cambian
+   por recompensas que sí existen. Queda escrito acá para que nadie lo descubra tarde. */
 /* 18/8 (auditoría) — EL PASE VIP SE AUTOFINANCIABA AL 98%.
    Costaba 250 $Golden y devolvía 245 repartidos en 9 niveles: coste neto real 5 $G por 133.000 de
    plata en insumos y 13 cosméticos. El comentario de acá arriba lo llamaba "devolución parcial de
