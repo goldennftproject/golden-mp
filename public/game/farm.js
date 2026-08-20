@@ -1764,9 +1764,18 @@ class FarmScene extends Phaser.Scene {
     return { x: ex + Math.cos(a) * r * (p.cols * T / 2), y: ey + Math.sin(a) * r * (p.rows * T / 2) };
   }
   tryFish(clickX, clickY) {
+    /* 19/8 (dirección, SEGUNDO reporte del mismo fallo) — ÉSTA era la puerta que faltaba.
+       La primera corrección la puse en el clic sobre el OBJETO pesquero, pero al agua se le hace
+       clic por otro camino: pondDist() → tryFish(), que tiene cinco llamadores (el clic, el clic
+       sostenido, la tecla de acción, el clic del móvil…). Arreglar una de las dos puertas y dar el
+       trabajo por bueno es exactamente el error que mi propio auditor no vio: comprobaba UN sitio
+       donde se llama a startAction("fish") cuando hay DOS.
+       Las cuatro comprobaciones tienen que estar en las dos puertas, y el descanso primero. */
     if (this.action) return;
-    if (toolDur("rod") <= 0) { toast("No tenés caña — craftéala en la Herrería"); return; }
-    if ((G.res.lombriz || 0) < 1) { toast("Necesitás lombrices — compralas en la Tienda"); return; }
+    const espera = (typeof pescaCdLeft === "function") ? pescaCdLeft() : 0;
+    if (espera > 0) { toast("La laguna está en reposo — vuelve en " + fmtDur(espera)); return; }
+    if (toolDur("rod") <= 0) { toast(!G.kitReclamado ? "Tu kit de bienvenida está en el baúl, junto al granero" : "No tenés caña — craftéala en la Herrería"); return; }
+    if ((G.res.lombriz || 0) < 1) { toast("Necesitás lombrices — cavá un montículo o compralas en la Tienda"); return; }
     if (!roomForFish()) { bagFull("pescar"); return; }
     const p = GF.POND, T = GF.TILE;
     const bx = clickX != null ? clickX : (p.col + p.cols / 2) * T, by2 = clickY != null ? clickY : (p.row + p.rows / 2) * T;

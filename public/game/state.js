@@ -4381,10 +4381,15 @@ const FISH_COST = 5;
 var FISH_CD = 900;   // 15 min de laguna: al ancla son 5 de plata por pesca
 function pescaCdLeft() { return Math.max(0, (G.pescaHasta || 0) - nowMs()); }
 function goFishing() {
-  if (toolDur("rod") <= 0) { toast("No tenés caña — craftéala en la Herrería"); return; }
-  if ((G.res.lombriz || 0) < 1) { toast("Necesitás lombrices — compralas en la Tienda"); return; }
+  /* 20/8 — ESTAS TRES SON LA RED, NO LA PUERTA. Las mismas comprobaciones viven ahora arriba, en
+     las DOS entradas del clic (el objeto pesquero y el agua), así que a esta altura ya nadie
+     debería llegar sin caña, sin cebo o con la laguna en reposo. Se quedan por si mañana aparece
+     una tercera entrada, pero se ordenan igual que allá —el descanso primero— y dicen lo mismo:
+     un aviso que cambia de texto según por dónde entraste es un aviso que no se entiende. */
   const espera = pescaCdLeft();
-  if (espera > 0) { toast("La laguna necesita descansar — " + fmtDur(espera)); return; }
+  if (espera > 0) { toast("La laguna está en reposo — vuelve en " + fmtDur(espera)); return; }
+  if (toolDur("rod") <= 0) { toast("No tenés caña — craftéala en la Herrería"); return; }
+  if ((G.res.lombriz || 0) < 1) { toast("Necesitás lombrices — cavá un montículo o compralas en la Tienda"); return; }
   G.pescaHasta = nowMs() + FISH_CD * 1000 * (typeof cdMult === "function" ? cdMult() : 1);
   G.res.lombriz -= 1; useTool("rod");   // detalles viernes: pescar cuesta SOLO 1 lombriz (sin esencia)
   if (toolDur("rod") <= 0) { log("¡La caña se rompió en pedazos! Crafteá otra en la Herrería.", "bad"); toast("¡Caña rota!"); }
@@ -4478,7 +4483,34 @@ function excavAzar(n) {   // 0..1 determinístico del día para este jugador (FN
   for (let i = 0; i < str.length; i++) { h ^= str.charCodeAt(i); h = Math.imul(h, 16777619); }
   return ((h >>> 0) % 100000) / 100000;
 }
+/* 20/8 — EL SUELO DEL QUE NADIE PUEDE CAERSE (hallazgo de tools/test-herramientas.js)
+   Buscando si alguna herramienta podía dejar al jugador encerrado apareció un agujero que no es de
+   las herramientas sino de la ECONOMÍA entera, y es definitivo: la plata sale de vender cultivos
+   (SELLABLE son solo cultivos, por diseño: ni madera ni minerales ni lombrices se venden), y las
+   semillas se compran con plata. Un jugador con 0 de plata, 0 semillas y la tierra vacía no tiene
+   ninguna manera de conseguir la primera moneda. No es lento: es imposible, para siempre.
+   Hoy la única válvula anti-atasco es el kit de emergencia, y cobra $Golden — o sea que no existe,
+   porque el token todavía no tiene precio y la orden es que todo funcione con plata.
+   La salida se pone donde ya hay un sistema que el jugador conoce y que el tutorial le enseña: el
+   montículo. Cavás la tierra y sale una papa en vez de una lombriz. No hace falta ninguna pantalla
+   nueva, no se puede farmear (la condición exige estar a cero: con una sola semilla en la bolsa ya
+   no salta) y son tres por día como máximo.
+   Y no toca el ancla: una papa son 3 minutos y ~2 de plata. No es un regalo, es un suelo. */
+function granjaAtascada() {
+  if (typeof CROP_DEF === "undefined" || !G.seeds) return false;
+  /* ¿Le queda alguna semilla, de la que sea? */
+  if (Object.keys(G.seeds).some(k => (G.seeds[k] || 0) > 0)) return false;
+  /* ¿Tiene algo creciendo o listo en la tierra? */
+  if ((G.plots || []).some(p => p && p.state && p.state !== "dry")) return false;
+  /* ¿Le queda algo vendible en la bolsa? */
+  if (typeof SELLABLE !== "undefined" && SELLABLE.some(k => (G.res[k] || 0) > 0)) return false;
+  if (G.fish && Object.keys(G.fish).some(k => (G.fish[k] || 0) > 0)) return false;
+  /* ¿Y le alcanza la plata para la semilla más barata? */
+  const min = Math.min.apply(Math, Object.keys(CROP_DEF).map(k => CROP_DEF[k].seedCost || 999));
+  return (G.plata || 0) < min;
+}
 function excavBotin(i) {   // 15/8 v2 (dirección): tierra removida = LOMBRICES, siempre — la carnada de la pesca
+  if (granjaAtascada()) return { seed: "papa", n: 1, txt: "+1 Semilla de papa" };
   const r = excavAzar(100 + i);
   const n = r < 0.7 ? 1 : 2;   // a veces la tierra viene generosa
   return { res: "lombriz", n, txt: "+" + n + (n > 1 ? " Lombrices" : " Lombriz") };

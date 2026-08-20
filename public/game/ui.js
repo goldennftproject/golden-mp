@@ -644,32 +644,15 @@ function refreshEquip() {
   }
 }
 
-/* ---- cofre diario ---- */
-function refreshDaily() {
-  if (!document.getElementById("dy-banner")) return;   // 15/8: la interfaz vieja del cofre se retiró — manda la pantalla del paquete
-
-  const box = $("dy-locks"); if (!box || typeof dailyState !== "function") return;
-  const st = dailyState();
-  const claimed = (G.daily && G.daily.day) || 0;
-  const base = st.claimable ? st.day - 1 : claimed;   // días ya cobrados de esta racha
-  $("dy-banner").innerHTML = st.claimable
-    ? "Día <b>" + st.day + "</b> de 7 — reclamá tu recompensa de hoy."
-    : "Día <b>" + (claimed || 1) + "</b> de 7 reclamado — volvé mañana.";
-  box.innerHTML = DAILY_REWARDS.map((r, i) => {
-    const d = i + 1;
-    let cls = "fut", ic = "";
-    if (d <= base) { cls = "done"; ic = ""; }
-    else if (st.claimable && d === st.day) { cls = "now"; ic = `<img class="dyimg" src="${GF.spr("chest_daily")}" onerror="this.outerHTML='🎁'">`; }
-    return `<div class="dylock ${cls}" title="${r.label}"><div class="ic">${ic}</div><div class="dl">Día ${d}</div></div>`;
-  }).join("");
-  const idx = (st.claimable ? st.day : Math.max(1, claimed)) - 1;
-  const esDia7 = (st.claimable ? st.day : Math.max(1, claimed)) === 7;
-  $("dy-reward").innerHTML = (st.claimable ? "Hoy: " : "Reclamado: ") + DAILY_REWARDS[idx].label
-    + (esDia7 ? '<br><b style="color:#7a5606">Esta semana: ' + coleccionableDeLaSemana() + '</b>' : "")
-    + '<br><span class="fds">Si faltás un día no perdés nada: seguís donde quedaste.</span>';
-  const b = $("dy-claim");
-  if (b) { b.disabled = !st.claimable; b.textContent = st.claimable ? "Reclamar " : "Vuelve mañana"; }
-}
+/* ---- cofre diario ----
+   20/8 — SE BARRE LA PANTALLA VIEJA. El 15/8 el cofre diario pasó a la pantalla del paquete y esta
+   función quedó con veinticinco líneas detrás de un `return` que se cumple siempre: nadie las
+   ejecutaba nunca, pero seguían nombrando cinco ids que no existen (dy-banner, dy-locks, dy-reward,
+   dy-claim) y por eso auditar-botones daba un aviso permanente. Un aviso que sale todos los días
+   deja de leerse — y eso es exactamente lo que dejó pasar dos veces el fallo de la laguna.
+   La función se queda como cáscara porque `claimDaily()` la llama al cobrar y ui.js la lista entre
+   las que se refrescan; se borra lo que estaba muerto, no el enganche. */
+function refreshDaily() { /* la recompensa diaria se muestra en la pantalla del paquete */ }
 
 /* ---- sembrado rápido: rueda de semillas (clic derecho en parcela seca) ---- */
 function showSeedWheel(px, py, plot) {
