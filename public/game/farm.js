@@ -297,7 +297,17 @@ class FarmScene extends Phaser.Scene {
          agregar los nodos de cada expansión. Ahora la clave es la CELDA ORIGINAL del objeto, que
          no cambia aunque el array se reordene. */
       const svn = (G.nodos || {})[o.type + ":" + o.leftCol + "," + o.baseRow];
-      return { i, type: o.type, ore: o.ore, cx, by, w: o.w, rw, baseKey: o.key, sprite: s, shadow,
+      /* 20/8 — `exp` TIENE QUE VIAJAR AL OBJETO DE LA ESCENA. No estaba, y eso rompía dos cosas
+         que solo se notan cuando la expansión se dibuja en caliente (o sea, desde hoy, que es
+         cuando expandirEnVivo empezó a ejecutarse de verdad):
+           · expandirEnVivo recorre this.objs buscando `o.exp` para destapar los nodos del bloque
+             recién comprado. Sin ese campo la condición salía siempre por el `continue` y el árbol
+             y la roca se quedaban invisibles hasta recargar la página.
+           · y nodoBloqueado(o) mira `o.exp` para saber que un nodo vino con su terreno. Sin él,
+             volvía a medirlo con la escalera de rocas.
+         El objeto de la escena es una COPIA del de WORLD_OBJECTS: si un campo decide algo, tiene
+         que estar en la copia. */
+      return { i, exp: o.exp, type: o.type, ore: o.ore, cx, by, w: o.w, rw, baseKey: o.key, sprite: s, shadow,
         readyAt: (svn && svn.readyAt) || 0, halfAt: (svn && svn.halfAt) || 0, cdIni: (svn && svn.cdIni) || 0,
         lockIdx, locked, oculto };
     });
@@ -3084,19 +3094,36 @@ class FarmScene extends Phaser.Scene {
   }
 
   // ¿la celda destino pisa otro objeto, una parcela o la laguna? (modo edición)
+  /* ============ MOVER EN MODO EDICIÓN PREGUNTA AL MISMO MAPA (20/8, dirección) =======
+     "Al expandir un bloque, no se puede poner nada en las celdas nuevas, en modo edición."
+     Medido: tras comprar el bloque 1, el mapa de ocupación dice que hay 7 celdas libres y esta
+     función rechazaba 6. Otra vez el mismo patrón — DOS reglas para la misma pregunta:
+
+       · para COLOCAR desde el Cobertizo manda huellaColocar → GF.celdaOcupada (el mapa);
+       · para MOVER en edición mandaba esta función, que se lo calculaba por su cuenta recorriendo
+         this.objs con posiciones redondeadas, más la laguna y la cerca a mano.
+
+     Y su cuenta propia tenía dos defectos que el mapa no tiene: contaba objetos OCULTOS (los nodos
+     de las quince expansiones que aún no compraste siguen en la escena, invisibles, en sus
+     posiciones de fábrica) y comparaba filas con `Math.round(q.by / T)` sin restar uno, así que
+     desplazaba un renglón entero de estorbos.
+     Ahora pregunta al mapa, que es quien sabe — el mismo que decide el sombreado y los mensajes.
+     El objeto que se está arrastrando no se estorba a sí mismo: se reconoce por su índice. */
   placeBlocked(o, leftCol, baseRow, wCells) {
-    const T = GF.TILE;
-    for (const q of this.objs) {
-      if (q === o || q.type === "fish") continue;
-      const qw = Math.max(1, Math.round(q.w / T));
-      const qc = Math.round((q.cx - qw * T / 2) / T), qr = Math.round(q.by / T);
-      if (baseRow === qr && leftCol < qc + qw && qc < leftCol + wCells) return true;
+    const fila = baseRow - 1;   // la celda del objeto: su base se apoya en baseRow
+    for (let c = leftCol; c < leftCol + wCells; c++) {
+      if (!GF.tuyo(c, fila)) return true;                                   // fuera de tu terreno
+      /* La cerca es intocable, pero solo LA CELDA DEL OBJETO. La versión vieja rechazaba también
+         la fila de abajo (`baseRow`), que es donde se apoya el sprite — y eso descartaba el anillo
+         entero de celdas pegadas a la cerca, que son tuyas y están libres. El dibujo no invade esa
+         fila: con origen (0,5 · 1) el sprite crece hacia ARRIBA desde la línea. Colocar desde el
+         Cobertizo nunca lo miró; solo lo miraba el arrastre, y por eso las dos vías discrepaban. */
+      if (GF.enCerca && GF.enCerca(c, fila)) return true;
+      const oc = GF.celdaOcupada(c, fila);
+      if (!oc) continue;
+      if (o && oc.i != null && o.i != null && oc.i === o.i) continue;       // es él mismo
+      return true;
     }
-    for (let c2 = leftCol; c2 < leftCol + wCells; c2++) if (GF.parcelaEn(c2, baseRow - 1)) return true;
-    const p = GF.POND;
-    if (baseRow > p.row && baseRow <= p.row + p.rows && leftCol < p.col + p.cols && p.col < leftCol + wCells) return true;
-    // 12/8: la CERCA perimetral es intocable — ni edificios, ni árboles, ni piedras encima
-    if (GF.enCerca) for (let c = leftCol; c < leftCol + wCells; c++) if (GF.enCerca(c, baseRow - 1) || GF.enCerca(c, baseRow)) return true;
     return false;
   }
 
