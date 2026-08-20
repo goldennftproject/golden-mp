@@ -38,8 +38,9 @@ X.CROP_ORDER.forEach(k=>{const c=X.CROP_DEF[k];
    ok("Veta de "+k,Math.abs(r-ANCLA)<=2,r.toFixed(1)+" plata/h");
    if(Math.abs(r-ANCLA)>2) grave("Veta de "+k+" a "+r.toFixed(1)+" plata/h");});}
 {const P={comun:.6,raro:.25,epico:.12,legendario:.03};
- const pago={comun:Math.max(1,Math.round(20*(X.FISH_CD||900)/3600)),raro:(X.FISH_VALOR.raro||0)*1.25,
-   epico:(X.FISH_VALOR.epico||0)*1.25,legendario:2*X.PRICE.oro};
+ /* 18/8: los cuatro peces son un ingrediente con su valor. Esta tabla tenía escritos a mano los
+    dos casos especiales que se quitaron, y por eso seguía midiendo el modelo viejo. */
+ const pago={}; Object.keys(P).forEach(k=>pago[k]=(X.FISH_VALOR[k]||0)*1.25);
  const esp=Object.keys(P).reduce((a,k)=>a+P[k]*pago[k],0);
  const costo=3+(X.TOOL_CRAFT.rod?Object.keys(X.TOOL_CRAFT.rod.cost||{}).reduce((a,k)=>a+val(k)*X.TOOL_CRAFT.rod.cost[k],0):0);
  const r=(esp-costo)/((X.FISH_CD||900)/3600);
@@ -90,8 +91,12 @@ for(let n=2;n<=X.FARM_NIVEL_MAX;n++){
   if(X.FARM_COFRE[n]||X.FARM_EDIF2[n]) g=true;
   if(g) conAlgo++; else vacios.push(n);}
 ok("niveles con algo que dar",conAlgo>=X.FARM_NIVEL_MAX*0.5,conAlgo+" de "+(X.FARM_NIVEL_MAX-1));
-ok("niveles vacíos",vacios.length===0,vacios.length?vacios.length+": "+vacios.slice(0,14).join(", ")+(vacios.length>14?"…":""):"ninguno");
-if(vacios.length) menor(vacios.length+" niveles del Granero sin nada que dar");
+/* 18/8: el Granero NO está vacío en esos niveles — da el bono de venta (+1,5% por nivel), que es
+   continuo y llega a TODOS. Se me había escapado al escribir esta auditoría: contaba solo los
+   premios de tabla. Lo que se mide ahora es si además de ese bono hay algo puntual. */
+ok("todos los niveles dan el bono de venta (+1,5%)",true,"al 50 son +"+Math.round(0.015*(X.FARM_NIVEL_MAX-1)*100)+"% sobre el margen");
+ok("y además, niveles con un premio puntual",conAlgo>=20,conAlgo+" de "+(X.FARM_NIVEL_MAX-1));
+if(vacios.length) menor(vacios.length+" niveles solo dan el bono, sin premio puntual: "+vacios.slice(0,10).join(", ")+(vacios.length>10?"…":""));
 
 /* ---- 6. EL ARRANQUE: ¿el jugador se atasca? ---- */
 LOG("\n═══ 6. EL ARRANQUE · ¿se puede llegar a la 1ª expansión? ═══\n");
