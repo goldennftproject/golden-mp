@@ -2297,7 +2297,15 @@ function ponerAdornoElegido() {
     const ce2 = $("cfg-edit"); if (ce2) ce2.textContent = on ? "Terminar edición" : "Modo edición";
     const eb = $("editbar"); if (eb) eb.classList.toggle("show", on);
     if (window.FARM && FARM.gridG) FARM.gridG.setVisible(on);   // el cuadriculado solo se ve editando
-    if (on) { closeAllOv(); syncEditDeco(); toast("Arrastrá los objetos a otra celda"); }
+    if (on) {
+      closeAllOv(); syncEditDeco(); toast("Arrastrá los objetos a otra celda");
+      /* 19/8: el modo edición es el paso final del tutorial. Se marca que el jugador lo vio —una
+         sola vez, y queda guardado— para que el paso se cierre sin pedirle que mueva nada: la
+         lección es que el modo EXISTE, no obligarlo a reordenar la granja. */
+      G.editVisto = true;
+      if (typeof tutoEvent === "function") tutoEvent("editar");
+      if (typeof saveFarm === "function") saveFarm(true);
+    }
     else toast("Edición terminada");
   };
   const doFarmReset = () => { G.layout = {}; G.layoutPlots = {}; G.layoutPond = null; if (typeof saveFarm === "function") saveFarm(true); if (window.FARM && window.FARM.scene) window.FARM.scene.restart(); toast("↺ Granja restaurada"); };

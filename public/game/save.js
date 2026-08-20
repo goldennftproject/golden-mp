@@ -27,7 +27,7 @@ function snapshot() {
     daily: G.daily, plotsOwned: G.plotsOwned, seedBuys: G.seedBuys, built: G.built,
     hp: G.hp, hpMax: G.hpMax, combatXp: G.combatXp, stam: G.stam, stamAcc: G.stamAcc, stamRec: G.stamRec, pass: G.pass, tuto: G.tuto, firstSeeds: G.firstSeeds,
     stats: G.stats, statsBase: G.statsBase, chestCap: G.chestCap, edif2: G.edif2, cosmeticos: G.cosmeticos, animals: G.animals, armor: G.armor, armorEq: G.armorEq, ofrendaPts: G.ofrendaPts, ofrendaLog: G.ofrendaLog, nodoUsos: G.nodoUsos, cosEq: G.cosEq, incursion: G.incursion, incDia: G.incDia, zonaCdHasta: G.zonaCdHasta, zonaViaje: G.zonaViaje, decos: G.decos, decoBolsa: G.decoBolsa, godHand: G.godHand, zonasVistas: G.zonasVistas, visto: nowMs(), dummyTrain: G.dummyTrain, swordOwned: G.swordOwned, bowOwned: G.bowOwned, swordWoodOwned: G.swordWoodOwned, gear: G.gear,
-    armasUnlocked: G.armasUnlocked, treesOpen: G.treesOpen, rocksOpen: G.rocksOpen, firstCropDone: G.firstCropDone, weapons: G.weapons,
+    armasUnlocked: G.armasUnlocked, editVisto: G.editVisto, treesOpen: G.treesOpen, rocksOpen: G.rocksOpen, firstCropDone: G.firstCropDone, weapons: G.weapons,
     dishes: G.dishes, cooking: G.cooking, chests: G.chests, dummyUsedAt: G.dummyUsedAt,
     armCd: G.armCd, mkPend: G.mkPend,
     layoutPlots: G.layoutPlots, layoutPond: G.layoutPond, ghInv: G.ghInv,
@@ -175,7 +175,8 @@ function hydrate(d) {
   G.firstCropDone = d.firstCropDone !== false;   // legado
   G.firstSeeds = (typeof d.firstSeeds === "number") ? d.firstSeeds
     : (d.firstCropDone === false ? FIRST_GROW_N : 0);   // veteranos: 0 (ya no les toca el arranque rápido)
-  G.armasUnlocked = d.armasUnlocked === true;   // viernes (2): la pestaña Armas se paga (también para veteranos)
+  G.armasUnlocked = d.armasUnlocked === true;
+  G.editVisto = d.editVisto === true;   // 19/8: "ya vio el modo edición" (cierra el último paso del tutorial)   // viernes (2): la pestaña Armas se paga (también para veteranos)
   // viernes (2): sets de árboles/piedras abiertos; compat con el guardado por contador de la primera versión
   G.treesOpen = Array.isArray(d.treesOpen) ? d.treesOpen.filter(n => typeof n === "number") : (typeof d.treesOwned === "number" ? Array.from({length: Math.max(1, Math.min(6, d.treesOwned))}, (_, i) => i) : [0]);
   G.rocksOpen = Array.isArray(d.rocksOpen) ? d.rocksOpen.filter(n => typeof n === "number") : (typeof d.rocksOwned === "number" ? Array.from({length: Math.max(1, Math.min(6, d.rocksOwned))}, (_, i) => i) : [0]);

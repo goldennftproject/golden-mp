@@ -632,6 +632,16 @@ GF.rehacerColisiones();
       snap("tree", { type: "tree", exp: i }, (arb.c + 1) * T, (arb.r + 1) * T, T * 2)));
     if (roc) GF.WORLD_OBJECTS.push(Object.assign(
       snap("node_stone", { type: "rock", exp: i }, (roc.c + 0.5) * T, (roc.r + 1) * T, T)));
+    /* 19/8 (dirección): "cuando uno hace la expansión, los nodos no tienen por qué llegar al baúl:
+       tienen que aparecer dentro de la expansión hecha, y desde ahí el jugador decide si los mueve".
+       El árbol y la roca ya aparecían colocados; la PARCELA era la excepción —se iba al baúl, había
+       que reclamarla en el Cobertizo y colocarla a mano— y esa asimetría no tenía ninguna razón:
+       tres celdas del mismo bloque, dos aparecen y una hay que ir a buscarla.
+       Acá se reserva su celda, pegada a las otras dos, y expansionComprar la usa al comprar. Si el
+       jugador la quiere en otro lado, la arrastra en modo edición como cualquier otra cosa. */
+    const par = libres.find(p => p !== arb && p !== roc &&
+      !(p.c === (arb ? arb.c + 1 : -99) && p.r === (arb ? arb.r : -99)));
+    e.parcela = par ? { col: par.c, row: par.r } : null;
   });
   GF.rehacerColisiones();   // 18/8: los nodos recién añadidos también son sólidos
 })();

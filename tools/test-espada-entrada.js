@@ -16,7 +16,11 @@ vm.runInContext(fs.readFileSync("public/game/state.js", "utf8") +
   "\n;this.X={ARM_DEF,ARM_ORDER,ARMA_ENTRADA,ARMAS_UNLOCK_COST,ARMAS_UNLOCK_PLATA,TUTO_STEPS,TUTO_CAPS," +
   "TUTO_PERMISOS,KIT_INICIAL,CROP_DEF,CD,STAM_BASE,STAM_REGEN_SEG,STAM_COSTO,RECIPE_DEF,COOK_LVLS,EXPANSION_COSTO};", ctx);
 ["isOpen", "refreshInv", "syncSlots", "toast", "log", "refreshHud", "saveFarm", "celebrate", "sfx",
- "refreshForge", "refreshEquip", "applyCombatHp", "tutoRefresh", "tutoAviso"].forEach(f => { if (typeof ctx[f] !== "function") ctx[f] = () => {}; });
+ "refreshForge", "refreshEquip", "applyCombatHp", "tutoRefresh", "tutoAviso",
+ "reiniciarGranjaSuave", "syncCobertizo", "refreshDeco"].forEach(f => { if (typeof ctx[f] !== "function") ctx[f] = () => {}; });
+/* expansionComprar reinicia la escena por si expandirEnVivo falla, y eso toca el DOM. Acá no hay
+   pantalla: se le presta un document mínimo para poder medir la LÓGICA de la compra. */
+ctx.document = { getElementById: () => null, querySelector: () => null, querySelectorAll: () => [] };
 const X = ctx.X, G = ctx.G, UI = fs.readFileSync("public/game/ui.js", "utf8");
 let fallos = 0;
 const ok = (n, c, d) => { if (!c) fallos++; console.log((c ? "  ok   " : "  FALLA") + "  " + n + (d ? "   " + d : "")); };
@@ -134,28 +138,34 @@ console.log("\nLA RED DE SEGURIDAD DEL PASO DE CAZA (y solo de ese paso)");
 
 console.log("\nEL CAMINO DE CRECIMIENTO, QUE ERA EL ÚNICO SIN ENSEÑAR");
 {
-  /* Las expansiones son la ÚNICA fuente de nodos, y la cadena tiene tres eslabones que había que
-     adivinar enteros: comprar → el regalo llega al baúl → pasa al Cobertizo → lo colocás vos. */
+  /* Las expansiones son la ÚNICA fuente de nodos. Y las tres celdas que trae un bloque tienen que
+     llegar IGUAL: puestas y a la vista. Antes la parcela era la excepción —se iba al baúl y había
+     que reclamarla en el Cobertizo—, un rodeo que además casi nadie descubría. */
   const ids = X.TUTO_STEPS.map(s2 => s2.id);
-  ["expandir", "reclamar", "colocar"].forEach(id =>
-    ok("el tutorial enseña " + id, ids.includes(id), "paso " + (ids.indexOf(id) + 1)));
-  /* EL ORDEN IMPORTA y no es el intuitivo: el regalo NO existe hasta que la expansión está
-     comprada, porque se nace con las 3 parcelas que corresponden al nivel 1. Si los pasos
-     estuvieran al revés, el jugador se quedaría mirando un baúl vacío. */
-  ok("y en el orden real: primero expandir, después reclamar y colocar",
-    ids.indexOf("expandir") < ids.indexOf("reclamar") && ids.indexOf("reclamar") < ids.indexOf("colocar"));
-  G.level = 3; G.expansiones = 0; G.regalos = { tree: 0, rock: 0, plot: 0 }; G.cobertizo = {}; G.plotsOwned = 3;
-  ctx.regalosSync();
-  ok("sin expansión, el baúl está vacío", ((G.regalos || {}).plot || 0) === 0,
-    "por eso 'reclamá tu parcela' no puede ir antes");
-  G.expansiones = 1; ctx.regalosSync();
-  ok("con la expansión comprada, llega la parcela", ((G.regalos || {}).plot || 0) === 1);
-  ctx.regaloReclamar("plot");
-  ok("y al reclamarla pasa al Cobertizo", ((G.cobertizo || {}).plot || 0) === 1,
-    "desde ahí el jugador elige dónde va");
-  ok("el capítulo existe", X.TUTO_CAPS.some(c => c.pasos.includes("expandir")),
-    X.TUTO_CAPS.map(c => c.label).join(" · "));
-  ["expandir", "reclamar", "colocar"].forEach(id => {
+  ok("el tutorial enseña a expandir", ids.includes("expandir"), "paso " + (ids.indexOf("expandir") + 1));
+  ok("y enseña que existe el modo edición", ids.includes("editar"), "paso " + (ids.indexOf("editar") + 1));
+  ok("ya no manda al Cobertizo a buscar la parcela", !ids.includes("reclamar") && !ids.includes("colocar"));
+  ok("cada bloque reserva la celda de su parcela",
+    ctx.GF.EXPANSIONES.every(e => e.parcela && e.parcela.col != null),
+    ctx.GF.EXPANSIONES.length + " bloques");
+  /* La prueba de fuego: comprar y que la parcela EXISTA, sin pasar por ninguna bolsa. */
+  G.level = 50; G.expansiones = 0; G.plotsOwned = 3; G.layoutPlots = {};
+  G.regalos = { tree: 0, rock: 0, plot: 0 }; G.cobertizo = {};
+  const c = ctx.expansionCostos()[0];
+  G.res = {}; Object.keys(c).forEach(k => G.res[k] = c[k] * 2);
+  ctx.expansionComprar();
+  ok("al comprar, la parcela ya es tuya", (G.plotsOwned || 3) === 4, "plotsOwned " + G.plotsOwned);
+  ok("y con su celda anotada dentro del bloque", !!(G.layoutPlots && G.layoutPlots[3]),
+    JSON.stringify(G.layoutPlots[3]));
+  ok("sin dejar nada esperando en el baúl", ((G.regalos || {}).plot || 0) === 0);
+  const b = ctx.GF.EXPANSIONES[0];
+  const dentro = G.layoutPlots[3].col >= b.c0 && G.layoutPlots[3].col < b.c1 &&
+                 G.layoutPlots[3].row >= b.r0 && G.layoutPlots[3].row < b.r1;
+  ok("la celda cae DENTRO del terreno que acabás de comprar", dentro,
+    "bloque " + b.c0 + "," + b.r0 + " → " + b.c1 + "," + b.r1);
+  ok("el capítulo existe", X.TUTO_CAPS.some(c2 => c2.pasos.includes("expandir")),
+    X.TUTO_CAPS.map(c2 => c2.label).join(" · "));
+  ["expandir", "editar"].forEach(id => {
     const p = X.TUTO_PERMISOS[id] || [];
     ok("el paso " + id + " deja juntar materiales", p.includes("chop"), p.length + " gestos");
   });

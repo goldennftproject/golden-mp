@@ -638,8 +638,7 @@ var TUTO_PERMISOS = {
   /* La expansión pide madera y piedra, así que el paso TIENE que dejar talar y picar; y los dos
      siguientes son gestos de un clic que no deben cerrar nada. */
   expandir:    ["expandir", "chop", "mine", "cultivar", "plant", "harvest", "buyseed", "sell", "cook", "eat", "fish", "portal", "obra", "crafttool"],
-  reclamar:    ["regalo", "chop", "mine", "cultivar", "plant", "harvest", "buyseed", "sell", "cook", "eat", "fish", "portal", "obra"],
-  colocar:     ["regalo", "chop", "mine", "cultivar", "plant", "harvest", "buyseed", "sell", "cook", "eat", "fish", "portal", "obra"],
+  editar:      ["editar", "regalo", "chop", "mine", "cultivar", "plant", "harvest", "buyseed", "sell", "cook", "eat", "fish", "portal", "obra"],
   kill5:       ["portal", "cook", "eat", "crafttool", "craftarm"],
   fish:        ["fish", "crafttool", "eat"],
   // Fixes.docx 14/8 #2: la cadena del Altar cruza media economía (oro → Pico de Oro →
@@ -1336,7 +1335,24 @@ function expansionComprar() {
   if (window.sfx) sfx("level");
   if (window.celebrate) celebrate({ title: "¡GRANJA MÁS GRANDE!", sub: "Expansión " + e.n + " de " + EXPANSION_MAX,
     big: true, reward: (GF.BLOQUE * GF.BLOQUE) + " celdas nuevas" });
-  const nuevos = (typeof regalosSync === "function") ? regalosSync() : 0;   // 18/8: la parcela del bloque, al baúl
+  /* 19/8 (dirección): LA PARCELA APARECE DENTRO DEL BLOQUE, no en el baúl. Las tres celdas que
+     trae una expansión —árbol, roca y parcela— ahora llegan igual: puestas y a la vista. Antes la
+     parcela era la excepción y había que ir a reclamarla al Cobertizo, un rodeo que además nadie
+     descubría. Si el jugador la quiere en otro sitio, la arrastra en modo edición.
+     El índice es plotsOwned ANTES de sumar (las usables son 0..owned−1), el mismo cuidado que hubo
+     que tener en regaloColocar cuando la parcela se plantaba sola en el centro de la granja. */
+  if (e.bloque && e.bloque.parcela) {
+    const tope = typeof PLOT_MAX !== "undefined" ? PLOT_MAX : 60;
+    if ((G.plotsOwned || 3) < tope) {
+      const idx = G.plotsOwned || 3;
+      G.layoutPlots = G.layoutPlots || {};
+      G.layoutPlots[idx] = { col: e.bloque.parcela.col, row: e.bloque.parcela.row };
+      G.plotsOwned = idx + 1;
+      if (typeof GF !== "undefined" && GF.ocupCambio) GF.ocupCambio();
+      log("La expansión trae una parcela ya arada. Si la querés en otro lado, movela en modo edición.", "gold");
+    }
+  }
+  const nuevos = (typeof regalosSync === "function") ? regalosSync() : 0;   // por si quedaba algo atrasado
   if (nuevos) log("La expansión trajo " + nuevos + " premio" + (nuevos > 1 ? "s" : "") + " al baúl.", "gold");
   if (typeof saveFarm === "function") saveFarm(true);
   /* 18/8 (dirección): SIN TELÓN. La granja crece delante del jugador y la cámara viaja hasta el
@@ -1799,8 +1815,10 @@ const TUTO_STEPS = [
      El orden de los pasos es el orden real, comprobado: el regalo NO existe hasta que la expansión
      está comprada (regalosSync cuenta 3 parcelas + 1 por expansión, y se nace con las 3). */
   { id: "expandir", n: 1, txt: "Comprá tu primera expansión de terreno", panel: "ov-deco", ui: "#exp-comprar" },
-  { id: "reclamar", n: 1, txt: "Reclamá la parcela que te llegó al baúl",  target: "cofre_diario", panel: "ov-baul" },
-  { id: "colocar",  n: 1, txt: "Colocá tu parcela nueva donde más te guste (Cobertizo)", panel: "ov-cobertizo" },
+  /* Y como la parcela ya viene puesta, lo único que queda por enseñar es que SE PUEDE MOVER. El
+     modo edición es de esas cosas que el jugador no descubre solo y que cambian por completo lo que
+     cree que puede hacer con su granja. */
+  { id: "editar",   n: 1, txt: "Probá el modo edición: todo lo de tu granja se puede mover", panel: "ov-config", ui: "#cfg-edit" },
   // (14/8, reversión del capataz: la cadena TERMINA acá — el tutorial enseña LO BÁSICO de
   //  la granja. Armas, Zona Negra, minería avanzada y Altar se aprenden jugando: sus
   //  planos caen por nivel y cada sistema se presenta solo.)
@@ -1820,7 +1838,7 @@ const TUTO_CAPS = [
   { id: "arma",     label: "Tu primera espada",  pasos: ["craftarm", "equiparm"] },
   { id: "cocina",   label: "La Cocina",          pasos: ["place_cocina", "woodc", "stonec", "build_cocina", "cook", "eat"] },
   { id: "zona",     label: "La Zona Negra",      pasos: ["portal", "hunt", "estofado"] },
-  { id: "crecer",   label: "La granja crece",    pasos: ["expandir", "reclamar", "colocar"] },
+  { id: "crecer",   label: "La granja crece",    pasos: ["expandir", "editar"] },
 ];
 
 function capEstado(cap) {   // "hecho" | "activo" | "pendiente" (por el paso más avanzado de la cadena)
@@ -1996,10 +2014,7 @@ function tutoHecho(st) {
     /* Los tres del crecimiento se detectan por el ESTADO, no por un evento: así el paso se salta
        solo si el jugador ya lo había hecho por su cuenta antes de que el tutorial se lo pidiera. */
     else if (st.id === "expandir")  hecho = (G.expansiones || 0) > 0;
-    else if (st.id === "reclamar")  hecho = (G.expansiones || 0) > 0 &&
-                                            (((G.regalos && G.regalos.plot) || 0) === 0 ||
-                                             ((G.cobertizo && G.cobertizo.plot) || 0) > 0 || (G.plotsOwned || 3) > 3);
-    else if (st.id === "colocar")   hecho = (G.plotsOwned || 3) > 3;
+    else if (st.id === "editar")    hecho = !!G.editVisto;
     else if (st.id === "eat")       hecho = (G.skills && G.skills.cooking > 0) && (G.buffs || []).length > 0;
     else if (st.id === "unlockarm") hecho = !!G.armasUnlocked;
     else if (st.id === "craftarm")  hecho = Object.keys(G.weapons || {}).length > 0;
