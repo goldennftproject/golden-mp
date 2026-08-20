@@ -4223,6 +4223,100 @@ function roomForDish(id) {
 }
 function bagFull(what) { toast("Bolsa llena — no podés " + what); log("No tenés espacio en la bolsa: liberá un hueco para " + what + ".", "bad"); }
 
+/* ============ UNA SOLA PUERTA POR ACCIÓN (20/8) =====================================
+   Dirección: "cada cosa que tocamos rompe otras. ¿El código está bien modulado?"
+   Éste es el primero de los cuatro arreglos que salieron de esa pregunta, y es el que más daño
+   estaba haciendo. Hasta hoy, las razones por las que una acción puede fallar —el enfriamiento, la
+   herramienta, la carnada, el sitio en la bolsa— estaban escritas A MANO EN CADA SITIO DESDE DONDE
+   SE ENTRA. Y a casi todas se entra por más de un sitio: a la pesca por el objeto pesquero y por el
+   agua; a talar y picar por el clic, por el clic sostenido y por la tecla de acción.
+   El resultado documentado: el 19/8 arreglé el aviso del reposo de la laguna en UNA de sus dos
+   puertas, di el trabajo por bueno, y dirección se encontró el mismo fallo intacto después de
+   desplegar. No fue mala suerte: con la regla copiada en N sitios, arreglar N-1 es lo normal.
+
+   A partir de acá hay UNA función que contesta « ¿puedo? » y devuelve por qué no. La usan todas las
+   entradas Y TAMBIÉN el rótulo del cursor, así que el aviso que leés antes de hacer clic y el
+   rechazo que recibís al hacerlo son literalmente la misma frase: no pueden discrepar.
+
+   Devuelve { ok:true } o { ok:false, toast, log, logTipo, bag }.
+     · bag  — la acción no cabe en la bolsa; el llamador usa bagFull(bag), que ya tiene su formato.
+     · log  — mensaje largo para el registro, opcional, cuando el toast se queda corto.           */
+function sinKitTxt(m) { return !G.kitReclamado ? "Tu kit de bienvenida está en el baúl, junto al granero" : m; }
+function puedeAccion(tipo, o, rotulo) {
+  o = o || {};
+  const OK = { ok: true };
+
+  /* El enfriamiento del nodo, común a árbol, roca y veta. Se mira PRIMERO: es la razón más
+     frecuente y la que peor sienta descubrir al final.
+     El TEXTO sale del rótulo del cursor (promptText) cuando el llamador lo pasa, que es siempre
+     que hay escena. No es un capricho: así el cartel que leés al pasar por encima y el aviso que
+     recibís al hacer clic son la MISMA cadena, generada una vez. Cuando no hay escena —tests,
+     cabecera sin interfaz— hay un texto de respaldo con el mismo formato. */
+  if (tipo === "chop" || tipo === "mine") {
+    const falta = (o.readyAt || 0) - nowMs();
+    if (falta > 0) return { ok: false, toast: (typeof rotulo === "function" && rotulo(o)) || ("Vuelve en " + fmtDur(falta)) };
+  }
+
+  if (tipo === "fish") {
+    const espera = pescaCdLeft();
+    if (espera > 0) return { ok: false, toast: "La laguna está en reposo — vuelve en " + fmtDur(espera) };
+    if (toolDur("rod") <= 0) return { ok: false, toast: sinKitTxt("No tenés caña — craftéala en la Herrería") };
+    if ((G.res.lombriz || 0) < 1) return { ok: false, toast: "Necesitás lombrices — cavá un montículo o compralas en la Tienda" };
+    if (!roomForFish()) return { ok: false, bag: "pescar" };
+    return OK;
+  }
+
+  if (tipo === "chop") {
+    if (toolDur("axe") <= 0) return { ok: false, toast: sinKitTxt("No tenés hacha — craftéala en la Herrería") };
+    if (!roomForRes("madera")) return { ok: false, bag: "talar" };
+    return OK;
+  }
+
+  if (tipo === "mine") {
+    const pk = equippedPick();
+    if (!pk || (!G.kitReclamado && (G.picks.dur[pk] || 0) <= 0))
+      return { ok: false, toast: sinKitTxt("Necesitás un pico — craftealo en la Herrería") };
+    if (o.type === "ore") {
+      /* El PICO decide qué mineral podés tocar; la SKILL decide si ya sabés hacerlo. Las dos, y
+         cada una dice lo suyo: así el pico no pierde su papel y la skill no es decorativa. */
+      const pd = PICK_DEF[pk], od = ORE_DEF[o.ore];
+      if (od.tier > pd.mineTier) return { ok: false, toast: "Tu " + pd.label + " no puede con " + od.label,
+        log: "Necesitás un pico mejor para " + od.label + " (Herrería).", logTipo: "bad" };
+      if (typeof oreUnlocked === "function" && !oreUnlocked(o.ore))
+        return { ok: false, toast: "Necesitás Minería nivel " + oreNivelReq(o.ore) + " para " + od.label,
+          log: "El " + od.label + " se aprende a picar con Minería nivel " + oreNivelReq(o.ore) + ".", logTipo: "info" };
+    }
+    if ((G.picks.dur[pk] || 0) <= 0) return { ok: false, toast: "No tenés pico útil — craftéalo en la Herrería" };
+    const res = o.type === "ore" ? o.ore : "piedra";
+    if (!roomForRes(res)) return { ok: false, bag: "picar " + (o.type === "ore" ? ORE_DEF[o.ore].label : "piedra") };
+    return OK;
+  }
+
+  if (tipo === "plant") {
+    const ck = o.seed || G.selSeed, cd = CROP_DEF[ck];
+    if (!cd) return { ok: false, toast: "Elegí una semilla en la bolsa (I)" };
+    if (!cropUnlocked(ck)) return { ok: false, toast: "Necesitás Cultivo nivel " + cd.lvl + " para " + cd.label };
+    if ((G.seeds[ck] || 0) <= 0) return { ok: false, toast: "Sin semillas de " + cd.label + " — comprá en la Tienda" };
+    return OK;
+  }
+
+  if (tipo === "harvest") {
+    const ck = o.cropKey || "papa";
+    if (!roomForRes(ck)) return { ok: false, bag: "cosechar " + ((CROP_DEF[ck] || {}).label || ck) };
+    return OK;
+  }
+
+  return OK;   // acción sin guardias declaradas: no se inventa una negativa
+}
+/* El aviso, en un solo sitio: así ningún llamador se olvida del registro ni escribe su propia
+   versión del mensaje. */
+function avisoAccion(p) {
+  if (!p || p.ok) return;
+  if (p.bag) { bagFull(p.bag); return; }
+  if (p.toast) toast(p.toast);
+  if (p.log) log(p.log, p.logTipo || "info");
+}
+
 function tryAddRes(key, amt) {
   const b = G.res[key] || 0; G.res[key] = b + amt;
   if (canonicalStacks().length > invSlots()) { G.res[key] = b; return false; }
@@ -4422,15 +4516,13 @@ const FISH_COST = 5;
 var FISH_CD = 900;   // 15 min de laguna: al ancla son 5 de plata por pesca
 function pescaCdLeft() { return Math.max(0, (G.pescaHasta || 0) - nowMs()); }
 function goFishing() {
-  /* 20/8 — ESTAS TRES SON LA RED, NO LA PUERTA. Las mismas comprobaciones viven ahora arriba, en
-     las DOS entradas del clic (el objeto pesquero y el agua), así que a esta altura ya nadie
-     debería llegar sin caña, sin cebo o con la laguna en reposo. Se quedan por si mañana aparece
-     una tercera entrada, pero se ordenan igual que allá —el descanso primero— y dicen lo mismo:
-     un aviso que cambia de texto según por dónde entraste es un aviso que no se entiende. */
-  const espera = pescaCdLeft();
-  if (espera > 0) { toast("La laguna está en reposo — vuelve en " + fmtDur(espera)); return; }
-  if (toolDur("rod") <= 0) { toast("No tenés caña — craftéala en la Herrería"); return; }
-  if ((G.res.lombriz || 0) < 1) { toast("Necesitás lombrices — cavá un montículo o compralas en la Tienda"); return; }
+  /* 20/8 — LA RED, NO LA PUERTA, Y CON LA MISMA REGLA. Las comprobaciones viven en las entradas
+     del clic (el objeto pesquero y el agua), así que a esta altura ya nadie debería llegar sin
+     caña, sin cebo o con la laguna en reposo. Esto se queda por si mañana aparece una tercera
+     entrada — pero preguntando a la MISMA función, no repitiendo la regla. Antes había aquí tres
+     comprobaciones copiadas, y ese era exactamente el problema: cada copia envejece por su lado. */
+  const p = puedeAccion("fish", { type: "fish" });
+  if (!p.ok) { avisoAccion(p); return; }
   G.pescaHasta = nowMs() + FISH_CD * 1000 * (typeof cdMult === "function" ? cdMult() : 1);
   G.res.lombriz -= 1; useTool("rod");   // detalles viernes: pescar cuesta SOLO 1 lombriz (sin esencia)
   if (toolDur("rod") <= 0) { log("¡La caña se rompió en pedazos! Crafteá otra en la Herrería.", "bad"); toast("¡Caña rota!"); }

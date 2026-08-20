@@ -51,7 +51,11 @@ console.log("\n1. DE DÓNDE SALE LA PRIMERA");
 
 console.log("\n2. PARA QUÉ SIRVE CADA UNA (si nada la exige, es un adorno)");
 {
-  HERR.forEach(h => ok("sin " + h.nom + " no se puede " + h.abre, h.usa.test(FARM),
+  /* 20/8: las guardias se mudaron de farm.js a puedeAccion() en state.js, así que se busca en los
+     dos. Lo que importa no es en qué archivo está escrito, sino que EXISTA una razón por la que la
+     herramienta hace falta — y eso además se prueba ejecutándolo en el punto 6. */
+  const TODO = SRC + FARM;
+  HERR.forEach(h => ok("sin " + h.nom + " no se puede " + h.abre, h.usa.test(TODO),
     "la acción la comprueba antes de empezar"));
   /* Y la espada: sin arma equipada no se entra a la Zona Negra. */
   ok("sin arma no se entra a la Zona Negra", /gear.*arma|armaEquipada|G\.gear\.arma/.test(SRC + FARM),
@@ -137,12 +141,81 @@ console.log("\n5. Y CUANDO SE ROMPE, EL JUEGO LO DICE Y DICE DÓNDE ARREGLARLO")
   ok("el pico se destruye y hay una función para eso", /function destroyPick/.test(SRC));
   /* Los avisos de "no tenés X" distinguen al que nunca abrió el kit del que se quedó sin: son dos
      problemas con dos soluciones opuestas (ir al baúl vs. ir a la Herrería). */
-  const distinguen = (FARM.match(/kitReclamado \? "Tu kit de bienvenida/g) || []).length;
-  ok("los " + distinguen + " avisos distinguen « nunca lo abriste » de « se te acabó »", distinguen >= 3,
-    "hacha, pico, caña");
+  /* 20/8: antes esto se escribía tres veces (hacha, pico, caña) y se contaban las copias. Ahora
+     es UNA función, sinKitTxt(), y lo que se cuenta es cuántas razones la usan. Contar copias era
+     medir el síntoma; esto mide la regla. */
+  const usos = (SRC.match(/sinKitTxt\(/g) || []).length - 1;   // -1: la definición
+  ok("el aviso del kit es una sola función, usada " + usos + " veces", /function sinKitTxt/.test(SRC) && usos >= 3,
+    "hacha, pico y caña dicen lo mismo");
+  ok("y distingue « nunca lo abriste » de « se te acabó »", /kitReclamado \?/.test(SRC),
+    "son dos problemas con soluciones opuestas: el baúl o la Herrería");
 }
 
-console.log("\n6. LA LAGUNA, QUE ES LA QUE DIO PROBLEMA DOS VECES");
+console.log("\n6. LA PUERTA ÚNICA: puedeAccion() CONTESTA POR TODAS LAS ENTRADAS");
+{
+  /* 20/8 — el primero de los cuatro arreglos de estructura. Hasta hoy las razones por las que una
+     acción puede fallar estaban copiadas en cada sitio desde donde se entra, y por eso el fallo de
+     la laguna sobrevivió a su propio arreglo. Ahora hay UNA función; esto la ejecuta caso por caso.
+     Se prueba el NO y también el SÍ: una guardia que dice que no siempre es tan inútil como una
+     que nunca lo dice. */
+  const base = () => {
+    G.kitReclamado = true; G.tools = { axe: 5, rod: 5 };
+    G.picks = { owned: { stone: true }, dur: { stone: 5 }, eq: "stone" };
+    G.res = { lombriz: 3 }; G.fish = {}; G.seeds = { papa: 3 }; G.selSeed = "papa";
+    G.pescaHasta = 0; G.skills = { farming: 0, mining: 0 }; G.invRows = 4; G.slots = [];
+  };
+
+  base();
+  ok("con todo en regla, se puede pescar", ctx.puedeAccion("fish", { type: "fish" }).ok);
+  ok("…talar", ctx.puedeAccion("chop", { type: "tree", readyAt: 0 }).ok);
+  ok("…picar piedra", ctx.puedeAccion("mine", { type: "rock", readyAt: 0 }).ok);
+  ok("…plantar", ctx.puedeAccion("plant", { seed: "papa" }).ok);
+  ok("…y cosechar", ctx.puedeAccion("harvest", { cropKey: "papa" }).ok);
+
+  /* Y ahora cada motivo, uno por uno, con el texto que ve el jugador. */
+  const no = (t, o) => ctx.puedeAccion(t, o);
+  base(); G.pescaHasta = ctx.nowMs() + 60000;
+  let r = no("fish", { type: "fish" });
+  ok("laguna en reposo: no deja empezar", !r.ok && /reposo/i.test(r.toast || ""), r.toast);
+
+  base(); G.tools.rod = 0;
+  r = no("fish", { type: "fish" });
+  ok("sin caña: no deja empezar", !r.ok && /caña/i.test(r.toast || ""), r.toast);
+
+  base(); G.res.lombriz = 0;
+  r = no("fish", { type: "fish" });
+  ok("sin carnada: manda a los montículos", !r.ok && /montículo/i.test(r.toast || ""), r.toast);
+
+  base(); G.tools.axe = 0;
+  r = no("chop", { type: "tree", readyAt: 0 });
+  ok("sin hacha: no deja talar", !r.ok && /hacha/i.test(r.toast || ""), r.toast);
+
+  base();
+  r = no("chop", { type: "tree", readyAt: ctx.nowMs() + 60000 });
+  ok("árbol en enfriamiento: no deja talar", !r.ok, r.toast);
+
+  base(); G.picks.dur.stone = 0;
+  r = no("mine", { type: "rock", readyAt: 0 });
+  ok("sin pico útil: no deja picar", !r.ok && /pico/i.test(r.toast || ""), r.toast);
+
+  base();
+  r = no("mine", { type: "ore", ore: "netherita", readyAt: 0 });
+  ok("veta por encima de tu pico: lo dice y nombra el pico", !r.ok && /pico|puede con/i.test(r.toast || ""), r.toast);
+
+  base(); G.seeds.papa = 0;
+  r = no("plant", { seed: "papa" });
+  ok("sin semillas: manda a la Tienda", !r.ok && /Tienda/i.test(r.toast || ""), r.toast);
+
+  /* El rótulo del cursor manda en el texto del enfriamiento: si el llamador lo pasa, se usa ése. */
+  base();
+  r = no("chop", { type: "tree", readyAt: ctx.nowMs() + 60000 });
+  const conRotulo = ctx.puedeAccion("chop", { type: "tree", readyAt: ctx.nowMs() + 60000 }, () => "Vuelve en 1:00");
+  ok("y el aviso del enfriamiento sale del rótulo del cursor", conRotulo.toast === "Vuelve en 1:00",
+    "el cartel y el rechazo son la misma cadena");
+  base();
+}
+
+console.log("\n7. LA LAGUNA, QUE ES LA QUE DIO PROBLEMA DOS VECES");
 {
   /* El fallo se reportó, se "arregló" y volvió: había DOS puertas al agua y yo miré una. Acá se
      comprueba lo que el jugador vive, no el texto del código: con la laguna en reposo, ninguna de
@@ -150,22 +223,25 @@ console.log("\n6. LA LAGUNA, QUE ES LA QUE DIO PROBLEMA DOS VECES");
   const puertas = (FARM.match(/this\.startAction\("fish"/g) || []).length;
   ok("hay " + puertas + " maneras de tirar la caña", puertas >= 2, "el objeto pesquero y el agua");
   /* Cada una, con su bloque de guardias inmediatamente antes. */
-  let i = -1, sinGuardia = [];
-  const re = /this\.startAction\("fish"/g; let m, n = 0;
+  /* 20/8: ya no se busca la comprobación COPIADA en cada puerta —eso era auditar copias— sino que
+     cada puerta pregunte a la función única. Es la misma exigencia, dicha de la única forma que no
+     se puede cumplir a medias. */
+  let sinGuardia = [], n = 0;
+  const re = /this\.startAction\("fish"/g; let m;
   while ((m = re.exec(FARM))) {
     n++;
-    const antes = FARM.slice(Math.max(0, m.index - 1400), m.index);
-    if (!/pescaCdLeft\(\)/.test(antes)) sinGuardia.push("puerta " + n);
+    const antes = FARM.slice(Math.max(0, m.index - 900), m.index);
+    if (!/puedeAccion\("fish"/.test(antes)) sinGuardia.push("puerta " + n);
   }
-  ok("las " + n + " miran el descanso ANTES", !sinGuardia.length, sinGuardia.join(", ") || "ninguna deja empezar en vano");
+  ok("las " + n + " preguntan a puedeAccion ANTES", !sinGuardia.length, sinGuardia.join(", ") || "ninguna deja empezar en vano");
   /* Y el rótulo del cursor lo dice sin que haga falta probar. */
   ok("y el rótulo del cursor ya lo anuncia", /La laguna descansa/.test(FARM),
     "se ve antes de hacer clic");
   /* La red del final dice lo mismo que la puerta: un aviso que cambia de texto según por dónde
      entraste es un aviso que no se entiende. */
   ok("el aviso tardío dice lo mismo que el temprano",
-    (SRC.match(/La laguna está en reposo/g) || []).length >= 1 && !/La laguna necesita descansar/.test(SRC),
-    "un solo texto para una sola cosa");
+    (SRC.match(/La laguna está en reposo/g) || []).length === 1 && !/La laguna necesita descansar/.test(SRC),
+    "ya no hay dos textos: hay uno, escrito una vez");
 }
 
 console.log(fallos ? "\n  ✗ " + fallos + " fallas\n" : "\n  ✓ cada herramienta tiene uso, se enseña, y ninguna deja al jugador encerrado\n");

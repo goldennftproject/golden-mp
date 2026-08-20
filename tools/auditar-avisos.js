@@ -1,15 +1,25 @@
-/* ¿ALGÚN NODO TE DEJA EMPEZAR PARA NEGÁRTELO DESPUÉS? (19/8, dirección)
-   "Tiro la caña igual, la barra carga, y después me dice que la laguna está en reposo. Tiene que
-    parar antes."
-   Tenía razón y era un caso único: la comprobación del descanso vivía dentro de goFishing(), que
-   corre al TERMINAR el lanzamiento. Los demás nodos avisan antes de mover un dedo.
-   Este auditor busca esa forma de error en todos lados a la vez. La regla es simple y vale para
-   cualquier juego con acciones que tardan:
+/* ¿ALGÚN NODO TE DEJA EMPEZAR PARA NEGÁRTELO DESPUÉS? (19/8 · reescrito el 20/8)
+   Dirección, 19/8: "tiro la caña igual, la barra carga, y después me dice que la laguna está en
+   reposo. Tiene que parar antes."
+
+   La regla que vigila este auditor no ha cambiado:
 
      TODA razón por la que una acción puede fallar tiene que comprobarse ANTES de empezarla.
 
-   Si una comprobación solo existe al final, el jugador paga el gesto y la espera para recibir un
-   "no". Y lo peor es que no parece un fallo del juego: parece que el juego se burla.
+   Lo que cambió es CÓMO se cumple, y por eso el auditor se reescribió entero. Antes cada entrada al
+   juego llevaba sus comprobaciones copiadas a mano, y este archivo iba puerta por puerta buscando
+   las cuatro líneas. Ese diseño ya me falló dos veces: el 19/8 arreglé una de las dos puertas de la
+   pesca y este auditor —que entonces miraba UNA— me dio verde. Después lo corregí para que las
+   contara todas, y seguía siendo un auditor que comprobaba copias.
+
+   Desde el 20/8 hay UNA función, puedeAccion() en state.js, que contesta « ¿puedo? » y devuelve por
+   qué no. Así que la comprobación se vuelve mucho más simple y mucho más fuerte:
+
+     1. TODA llamada a startAction("X") tiene que ir precedida de puedeAccion("X").
+     2. TODAS las razones viven dentro de puedeAccion, ninguna suelta por ahí.
+     3. Y el aviso del enfriamiento sale del MISMO rótulo que se ve al pasar el cursor.
+
+   Con eso ya no hay « puertas » que auditar una por una: hay una regla y un sitio donde vive.
      node tools/auditar-avisos.js                                                                 */
 const fs = require("fs");
 const FARM = fs.readFileSync("public/game/farm.js", "utf8");
@@ -17,109 +27,117 @@ const STATE = fs.readFileSync("public/game/state.js", "utf8");
 let avisos = 0;
 const ok = (n, c, d) => { if (!c) avisos++; console.log((c ? "  ok  " : "  !!  ") + n.padEnd(46) + (d || "")); };
 
-/* TODAS las puertas, no una. La segunda versión de este auditor miraba el PRIMER sitio donde se
-   llama a startAction("fish") y daba el trabajo por bueno — y había DOS: el clic sobre el objeto
-   pesquero y el clic sobre el agua (tryFish, con cinco llamadores). Dirección lo encontró probando
-   el juego después de que yo diera esto por cerrado.
-   La lección va en el código del auditor porque es donde sirve: cuando una acción se puede empezar
-   desde varios sitios, comprobar uno no dice nada del resto. */
+/* Toda LLAMADA (con `this.` delante) a startAction, con el trozo de código que la precede. */
 function puertasDe(nombre, ventana) {
-  /* Se buscan LLAMADAS, no menciones: `this.startAction("fish"` o `return this.startAction(...)`.
-     Sin el `this.` delante, la propia frase de este comentario contaba como una puerta más y el
-     auditor se acusaba a sí mismo — que es la versión tonta del mismo error que vino a cazar. */
-  const out = []; const re = new RegExp('this\\.startAction\\("' + nombre + '"', "g");
-  const V = ventana || 1400;
+  const out = [], V = ventana || 900;
+  const re = new RegExp('this\\.startAction\\("' + nombre + '"', "g");
   let m; while ((m = re.exec(FARM))) out.push(FARM.slice(Math.max(0, m.index - V), m.index));
   return out;
 }
-const puertasFish = puertasDe("fish");
+const ACCIONES = ["fish", "chop", "mine", "plant", "harvest"];
 
-console.log("\nLA LAGUNA (el caso que reportó dirección)\n");
+console.log("\nCADA PUERTA PREGUNTA A LA MISMA FUNCIÓN\n");
 {
-  ok("se puede empezar a pescar desde " + puertasFish.length + " sitios", puertasFish.length >= 2,
-    "el objeto pesquero y el agua");
-  const falla = [];
-  puertasFish.forEach((puerta, i) => {
-    const n = "puerta " + (i + 1);
-    if (!/pescaCdLeft\(\)/.test(puerta)) falla.push(n + ": no mira el descanso");
-    if (!/toolDur\("rod"\)/.test(puerta)) falla.push(n + ": no mira la caña");
-    if (!/lombriz/.test(puerta)) falla.push(n + ": no mira la carnada");
-    if (!/roomForFish\(\)/.test(puerta)) falla.push(n + ": no mira la bolsa");
+  let total = 0;
+  const mal = [];
+  ACCIONES.forEach(acc => {
+    const puertas = puertasDe(acc);
+    total += puertas.length;
+    puertas.forEach((p, i) => {
+      if (!new RegExp('puedeAccion\\("' + acc + '"').test(p)) mal.push(acc + " puerta " + (i + 1));
+    });
+    if (!puertas.length) mal.push(acc + ": no se empieza desde ningún sitio (¿se renombró?)");
   });
-  ok("y las " + puertasFish.length + " comprueban las cuatro cosas antes", !falla.length,
-    falla.join(" · ") || "descanso, caña, carnada y sitio");
-  /* Y que se vea SIN hacer clic: el rótulo del cursor tiene que decir el descanso, como ya lo
-     dicen el árbol ("Vuelve en 4:12") y la roca. */
-  const rotulo = FARM.split('if (o.type === "fish") {')[1] || "";
-  ok("el rótulo del cursor anuncia el reposo", /descansa|reposo/i.test(rotulo.slice(0, 500)),
-    "sin tener que probar para enterarse");
+  ok("hay " + total + " sitios donde se empieza una acción", total >= 6);
+  ok("y los " + total + " preguntan antes a puedeAccion()", !mal.length, mal.join(" · ") || "una sola regla, un solo sitio");
+  /* Y que nadie se salte el aviso: si preguntás y no avisas, el clic no hace nada y el jugador
+     cree que el juego se colgó. */
+  /* Se cuentan LLAMADAS, no menciones: el comentario que explica la función contaba como una
+     pregunta más y el auditor se acusaba a sí mismo — la misma tontería que ya me pasó contando
+     puertas de pesca. */
+  const preguntas = (FARM.match(/= puedeAccion\(/g) || []).length;
+  const avisosF = (FARM.match(/avisoAccion\(/g) || []).length;
+  ok("cada pregunta va con su aviso", avisosF >= preguntas, preguntas + " preguntas · " + avisosF + " avisos");
 }
 
-console.log("\nLOS DEMÁS NODOS: ¿AVISAN ANTES?\n");
+console.log("\nY TODAS LAS RAZONES VIVEN DENTRO DE ESA FUNCIÓN\n");
 {
-  /* El enfriamiento de árboles, rocas y vetas se comprueba en una sola línea compartida, antes de
-     cualquier startAction: `if (nowMs() < o.readyAt) { toast(this.promptText(o)); return; }` */
-  ok("árbol, roca y veta: el enfriamiento frena el clic",
-    /if \(nowMs\(\) < o\.readyAt\) \{ toast\(this\.promptText\(o\)\); return; \}/.test(FARM),
-    "una sola guardia para los tres");
-  ok("y el rótulo dice cuánto falta", /Vuelve en " \+ fmtSecs\(secs\)/.test(FARM),
-    "el árbol y la roca ya lo hacían");
-  /* La bolsa llena: cosechar y plantar lo comprueban antes (bagFull) — si no, la cosecha se
-     perdería después de la animación. */
-  ok("cosechar comprueba la bolsa antes", /if \(!roomForRes\(ck\)\) \{ bagFull/.test(FARM));
-  ok("y la veta, su pico antes de picar", /no puede con " \+ od\.label/.test(FARM),
-    "el pico decide qué mineral toca");
+  const i0 = STATE.indexOf("function puedeAccion(");
+  const i1 = STATE.indexOf("function avisoAccion(");
+  ok("puedeAccion() existe y está antes de avisoAccion()", i0 > 0 && i1 > i0);
+  const fn = STATE.slice(i0, i1);
+  const EXIGE = [
+    [/pescaCdLeft\(\)/, "el reposo de la laguna"],
+    [/toolDur\("rod"\)/, "la caña"],
+    [/lombriz/, "la carnada"],
+    [/roomForFish\(\)/, "sitio para el pez"],
+    [/toolDur\("axe"\)/, "el hacha"],
+    [/equippedPick\(\)/, "el pico"],
+    [/mineTier/, "la categoría del pico"],
+    [/oreUnlocked/, "el nivel de Minería"],
+    [/roomForRes\(/, "sitio en la bolsa"],
+    [/o\.readyAt/, "el enfriamiento del nodo"],
+    [/cropUnlocked/, "el nivel del cultivo"],
+    [/G\.seeds\[/, "tener la semilla"],
+  ];
+  const falta = EXIGE.filter(([re]) => !re.test(fn)).map(x => x[1]);
+  ok("y contempla las " + EXIGE.length + " razones", !falta.length, falta.join(" · ") || "de la caña al nivel de Minería");
+  /* El orden importa: el enfriamiento primero, porque es la razón más frecuente y la peor de
+     descubrir al final. */
+  ok("el enfriamiento se mira antes que la herramienta",
+    fn.indexOf("o.readyAt") < fn.indexOf('toolDur("axe")'), "lo más frecuente, primero");
 }
 
-console.log("\nY LA MISMA CUENTA DE PUERTAS PARA LAS DEMÁS ACCIONES\n");
+console.log("\nY NINGUNA RAZÓN SE QUEDÓ SUELTA POR AHÍ\n");
 {
-  /* La lección de la laguna generalizada: no basta con que la guardia EXISTA, tiene que estar en
-     TODAS las puertas por las que se entra a la acción. Se cuentan y se comprueban una por una.
-     Si mañana alguien añade un segundo camino para talar —un atajo de teclado, el clic sostenido—
-     y se olvida del hacha, salta acá y no en la partida del jugador. */
-  const EXIGE = {
-    chop:    [[/toolDur\("axe"\)/, "el hacha"], [/roomForRes\("madera"\)/, "la bolsa"], [/nowMs\(\) < o\.readyAt/, "el enfriamiento"]],
-    mine:    [[/equippedPick\(\)/, "el pico"], [/roomForRes\(/, "la bolsa"], [/nowMs\(\) < o\.readyAt/, "el enfriamiento"]],
-    plant:   [[/G\.selSeed/, "la semilla elegida"], [/seeds\[/, "tener esa semilla"]],
-    harvest: [[/roomForRes\(ck\)/, "la bolsa"]],
-  };
-  Object.keys(EXIGE).forEach(acc => {
-    /* Ventana ancha a propósito: el enfriamiento de árboles, rocas y vetas se comprueba UNA vez
-       para los tres, arriba del reparto por tipo, y con 1400 caracteres quedaba justo fuera del
-       recorte — un "fallo" del auditor, no del juego. Se mide desde donde empieza el reparto. */
-    const puertas = puertasDe(acc, 2600);
-    const falla = [];
-    puertas.forEach((p, i) => EXIGE[acc].forEach(([re, nom]) => {
-      if (!re.test(p)) falla.push("puerta " + (i + 1) + " no mira " + nom);
-    }));
-    ok(acc + ": " + puertas.length + " puerta(s), todas comprueban lo suyo", puertas.length > 0 && !falla.length,
-      falla.join(" · ") || EXIGE[acc].map(x => x[1]).join(", "));
-  });
+  /* Ésta es la comprobación que impide volver al modelo viejo. Si alguien vuelve a escribir la
+     regla a mano en una entrada, aparece aquí. Se mira el bloque del clic, no el archivo entero:
+     farm.js usa toolDur en sitios legítimos (el aviso de « se rompió el hacha », por ejemplo). */
+  /* El bloque del clic es interactWith(), no "clickObj" — que era como lo llamaba yo de memoria.
+     Buscar por un nombre que no existe devuelve una cadena vacía, y una cadena vacía pasa todas
+     las comprobaciones de « no contiene X ». Un auditor que no encuentra lo que audita tiene que
+     FALLAR, no dar verde: por eso se comprueba primero que el bloque se localice. */
+  const i0 = FARM.indexOf("  interactWith(o) {");
+  const i1 = FARM.indexOf("  startAction(kind, o) {");
+  const clic = i0 > 0 && i1 > i0 ? FARM.slice(i0, i1) : "";
+  ok("el bloque del clic se localiza", !!clic, clic.length + " caracteres");
+  const sueltas = [];
+  [[/toolDur\("rod"\)/, "la caña"], [/toolDur\("axe"\)/, "el hacha"], [/pescaCdLeft\(\)/, "el reposo"],
+   [/roomForFish\(\)/, "sitio para el pez"], [/G\.picks\.dur\[/, "el desgaste del pico"],
+   [/oreNivelReq\(/, "el nivel de Minería"]].forEach(([re, nom]) => { if (re.test(clic)) sueltas.push(nom); });
+  ok("no quedan comprobaciones copiadas en el clic", !sueltas.length,
+    sueltas.join(" · ") || "todas pasan por puedeAccion");
+}
+
+console.log("\nEL AVISO Y EL RÓTULO DICEN LO MISMO\n");
+{
+  /* El caso concreto de dirección: el rótulo del cursor tiene que anunciar el reposo SIN hacer
+     clic, y el aviso al hacer clic tiene que decir exactamente eso. */
+  ok("el rótulo del cursor anuncia el reposo de la laguna", /La laguna descansa/.test(FARM),
+    "se ve antes de probar");
+  ok("y el enfriamiento del nodo usa ese mismo rótulo",
+    /puedeAccion\("mine", o, rot\)/.test(FARM) && /const rot = \(x\) => this\.promptText\(x\)/.test(FARM),
+    "una cadena, generada una vez");
+  ok("el aviso de la carnada nombra los montículos", /cavá un montículo/.test(STATE),
+    "es gratis y está a diez metros");
+  ok("y el de la herramienta distingue al que no abrió el kit", /function sinKitTxt/.test(STATE));
 }
 
 console.log("\nY LO QUE SIGUE COMPROBÁNDOSE AL FINAL (por diseño)\n");
 {
-  /* No todo lo del final es un error. Hay cosas que SOLO se saben al terminar y está bien que
-     estén ahí; lo que no puede haber es una razón CONOCIDA de antemano escondida en el final. */
+  /* No todo lo del final es un error: hay cosas que solo se saben al terminar. Lo que no puede
+     haber es una razón CONOCIDA de antemano escondida ahí. */
   const fin = FARM.split("finishAction()")[1] || "";
   const tardias = [];
   if (/tryAddRes\(/.test(fin.slice(0, 4000))) tardias.push("bolsa llena al guardar el recurso");
   console.log("      " + (tardias.join(" · ") || "nada"));
-  ok("la bolsa al final es una red, no la única guardia",
-    /bagFull/.test(FARM),
+  ok("la bolsa al final es una red, no la única guardia", /bagFull/.test(STATE),
     "el aviso temprano ya existe; tryAddRes solo evita perder el recurso");
-}
-
-console.log("\nY LOS TEXTOS MANDAN AL SITIO CORRECTO\n");
-{
-  /* La carnada: el aviso decía solo "compralas en la Tienda" cuando lo más cercano y gratis son
-     los montículos — el mismo error que teníamos en el tutorial. */
-  ok("el aviso de la carnada nombra los montículos", /cavá un montículo/.test(FARM),
-    "es gratis y está a diez metros");
-  /* Y el de la caña distingue al que todavía no abrió el baúl del que se quedó sin cañas. */
-  ok("y el de la caña distingue al que no abrió el kit", /kitReclamado \? "Tu kit de bienvenida/.test(FARM));
+  /* Y goFishing, que es el final de la pesca, pregunta a la misma función en vez de repetirla. */
+  const gf = STATE.slice(STATE.indexOf("function goFishing()"), STATE.indexOf("function goFishing()") + 900);
+  ok("goFishing usa puedeAccion, no su propia copia", /puedeAccion\("fish"/.test(gf));
 }
 
 console.log("\n" + (avisos ? "  " + avisos + " AVISOS — hay acciones que se niegan tarde\n"
-                            : "  ✓ toda acción que puede fallar avisa antes de empezar\n"));
+                            : "  ✓ una sola regla por acción, y se comprueba antes de empezar\n"));
 process.exit(0);

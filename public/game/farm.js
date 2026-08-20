@@ -1340,15 +1340,13 @@ class FarmScene extends Phaser.Scene {
           else { const alt = CROP_ORDER.find(k => cropUnlocked(k) && (G.seeds[k] || 0) > 0); if (alt) ck = alt; }
           if (ck !== G.selSeed && CROP_DEF[ck]) { G.selSeed = ck; toast("Plantando: " + CROP_DEF[ck].label); if (typeof refreshHotbar === "function") refreshHotbar(); }
         }
-        const cd = CROP_DEF[ck];
-        if (!cd) { toast("Elegí una semilla en la bolsa (I)"); return; }
-        if (!cropUnlocked(ck)) { toast("Necesitás Cultivo nivel " + cd.lvl + " para " + cd.label); return; }
-        if ((G.seeds[ck] || 0) <= 0) { toast("Sin semillas de " + cd.label + " — comprá en la Tienda"); return; }
+        const pP = puedeAccion("plant", { seed: ck });
+        if (!pP.ok) { avisoAccion(pP); return; }
         return this.startAction("plant", o);
       }
       if (o.state === "ready") {
-        const ck = o.cropKey || "papa";
-        if (!roomForRes(ck)) { bagFull("cosechar " + ((CROP_DEF[ck] || {}).label || ck)); return; }
+        const pH = puedeAccion("harvest", o);
+        if (!pH.ok) { avisoAccion(pH); return; }
         return this.startAction("harvest", o);
       }
       toast("Todavía está creciendo"); return;
@@ -1359,40 +1357,24 @@ class FarmScene extends Phaser.Scene {
          miraba cargar la barra unos segundos y recién ahí le decían que la laguna estaba en reposo.
          Todos los demás nodos avisan antes de empezar; éste era el único que dejaba gastar el gesto
          para negárselo después. La comprobación sube acá, junto a las otras tres. */
-      const espera = (typeof pescaCdLeft === "function") ? pescaCdLeft() : 0;
-      if (espera > 0) { toast("La laguna está en reposo — vuelve en " + fmtDur(espera)); return; }
-      if (toolDur("rod") <= 0) { toast(!G.kitReclamado ? "Tu kit de bienvenida está en el baúl, junto al granero" : "No tenés caña — craftéala en la Herrería"); return; }
-      if ((G.res.lombriz || 0) < 1) { toast("Necesitás lombrices — cavá un montículo o compralas en la Tienda"); return; }
-      if (!roomForFish()) { bagFull("pescar"); return; }
+      const pF = puedeAccion("fish", o);
+      if (!pF.ok) { avisoAccion(pF); return; }
       return this.startAction("fish", o);
     }
-    if (nowMs() < o.readyAt) { toast(this.promptText(o)); return; }
-    if (o.type === "ore") {
-      const pk = equippedPick();   // el pico sale solo de la bolsa (el equipado define el tier)
-      if (!pk || (!G.kitReclamado && (G.picks.dur[pk] || 0) <= 0)) { toast(!G.kitReclamado ? "Tu kit de bienvenida está en el baúl, junto al granero" : "Necesitás un pico — craftealo en la Herrería"); return; }
-      const pd = PICK_DEF[pk], od = ORE_DEF[o.ore];
-      /* 18/8 (dirección): el PICO decide qué mineral puede tocar; la SKILL DE MINERÍA decide si
-         ya sabés hacerlo. Las dos, y cada una dice lo suyo — así el pico no pierde su papel
-         (sigue siendo el consumible que se paga y está dentro del ancla) y la skill deja de ser
-         decorativa en su propio oficio. */
-      if (od.tier > pd.mineTier) { toast("Tu " + pd.label + " no puede con " + od.label); log("Necesitás un pico mejor para " + od.label + " (Herrería).", "bad"); return; }
-      if (typeof oreUnlocked === "function" && !oreUnlocked(o.ore)) {
-        toast("Necesitás Minería nivel " + oreNivelReq(o.ore) + " para " + od.label);
-        log("El " + od.label + " se aprende a picar con Minería nivel " + oreNivelReq(o.ore) + ".", "info"); return;
-      }
-      if ((G.picks.dur[pk] || 0) <= 0) { toast("No tenés pico útil — craftéalo en la Herrería"); return; }
-      if (!roomForRes(o.ore)) { bagFull("picar " + od.label); return; }
+    /* 20/8 — LAS TRES PUERTAS DEL MISMO SITIO, UNA SOLA REGLA.
+       Aquí vivían veinte líneas de comprobaciones copiadas: el enfriamiento, el pico, su categoría,
+       la skill, el desgaste y la bolsa, repetidas entre la veta, el árbol y la roca. Ahora todo eso
+       está en puedeAccion() (state.js) y esto solo pregunta. El rótulo del cursor se le pasa como
+       función para que el aviso del enfriamiento sea LA MISMA cadena que ves al pasar por encima. */
+    const rot = (x) => this.promptText(x);
+    if (o.type === "ore" || o.type === "rock") {
+      const p = puedeAccion("mine", o, rot);
+      if (!p.ok) { avisoAccion(p); return; }
       this.startAction("mine", o);
     } else if (o.type === "tree") {
-      if (toolDur("axe") <= 0) { toast(!G.kitReclamado ? "Tu kit de bienvenida está en el baúl, junto al granero" : "No tenés hacha — craftéala en la Herrería"); return; }
-      if (!roomForRes("madera")) { bagFull("talar"); return; }
+      const p = puedeAccion("chop", o, rot);
+      if (!p.ok) { avisoAccion(p); return; }
       this.startAction("chop", o);
-    } else if (o.type === "rock") {
-      const pk = equippedPick();
-      if (!pk || (!G.kitReclamado && (G.picks.dur[pk] || 0) <= 0)) { toast(!G.kitReclamado ? "Tu kit de bienvenida está en el baúl, junto al granero" : "Necesitás un pico — craftealo en la Herrería"); return; }
-      if ((G.picks.dur[pk] || 0) <= 0) { toast("No tenés pico útil — craftéalo en la Herrería"); return; }
-      if (!roomForRes("piedra")) { bagFull("picar piedra"); return; }
-      this.startAction("mine", o);
     }
   }
 
@@ -1772,11 +1754,8 @@ class FarmScene extends Phaser.Scene {
        donde se llama a startAction("fish") cuando hay DOS.
        Las cuatro comprobaciones tienen que estar en las dos puertas, y el descanso primero. */
     if (this.action) return;
-    const espera = (typeof pescaCdLeft === "function") ? pescaCdLeft() : 0;
-    if (espera > 0) { toast("La laguna está en reposo — vuelve en " + fmtDur(espera)); return; }
-    if (toolDur("rod") <= 0) { toast(!G.kitReclamado ? "Tu kit de bienvenida está en el baúl, junto al granero" : "No tenés caña — craftéala en la Herrería"); return; }
-    if ((G.res.lombriz || 0) < 1) { toast("Necesitás lombrices — cavá un montículo o compralas en la Tienda"); return; }
-    if (!roomForFish()) { bagFull("pescar"); return; }
+    const pF = puedeAccion("fish", { type: "fish" });
+    if (!pF.ok) { avisoAccion(pF); return; }
     const p = GF.POND, T = GF.TILE;
     const bx = clickX != null ? clickX : (p.col + p.cols / 2) * T, by2 = clickY != null ? clickY : (p.row + p.rows / 2) * T;
     this.startAction("fish", { cx: (p.col + p.cols / 2) * T, bx, by2 });
