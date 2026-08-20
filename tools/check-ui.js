@@ -23,7 +23,15 @@ console.log(refs.length + " ventanas revisadas → " + (mal ? mal + " problemas"
 
 // 2) funciones llamadas desde el juego que no existen en ningún archivo
 const llamadas = new Set([...todo.matchAll(/typeof\s+(\w+)\s*===\s*"function"/g)].map(m => m[1]));
-const faltan = [...llamadas].filter(f => !new RegExp("function\\s+" + f + "\\s*\\(|var\\s+" + f + "\\s*=|window\\." + f + "\\s*=").test(todo));
+/* 20/8 — Y TAMBIÉN CUENTAN LOS PARÁMETROS. `puedeAccion(tipo, o, rotulo)` recibe una función y la
+   comprueba con `typeof rotulo === "function"`: es correcto y este chequeo lo daba por inexistente
+   porque solo buscaba declaraciones globales. Un aviso permanente por algo que está bien es un
+   aviso que se deja de leer, y hoy ya nos costó caro dos veces. */
+const params = new Set();
+[...todo.matchAll(/function\s+\w*\s*\(([^)]*)\)/g)].forEach(m =>
+  m[1].split(",").forEach(x => { const n = x.trim().split(/[=\s]/)[0]; if (/^\w+$/.test(n)) params.add(n); }));
+const faltan = [...llamadas].filter(f => !params.has(f) &&
+  !new RegExp("function\\s+" + f + "\\s*\\(|var\\s+" + f + "\\s*=|window\\." + f + "\\s*=").test(todo));
 console.log("funciones referenciadas que no existen:", faltan.length ? faltan.join(", ") : "ninguna");
 
 // 3) ids usados con $("...") en ui.js que no están en el html

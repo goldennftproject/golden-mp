@@ -132,12 +132,33 @@ ok("y objetoPresente ya no confunde 'dónde está' con 'si existe'",
 /* Y la trampa que dejó pasar esto: que la limpieza viva DESPUÉS de cargar layout, built y obras.
    Si alguien la vuelve a subir de sitio, el orden se rompe en silencio. */
 {
+  /* 20/8 — SE COMPRUEBA LA ESTRUCTURA, NO LA DISTANCIA. La primera versión de esto comparaba
+     posiciones de bytes dentro del archivo: valía, pero solo mientras nadie moviera nada, y no
+     decía nada sobre POR QUÉ el orden importa. Ahora la carga tiene tres fases con nombre, así que
+     lo que se vigila es que sigan siendo tres y en ese orden — que es la regla de verdad. */
   const SAVE = fs.readFileSync("public/game/save.js", "utf8");
-  const iLayout = SAVE.indexOf("if (d.layout && typeof d.layout");
-  const iObras  = SAVE.indexOf("if (d.obras && typeof d.obras");
-  const iLimpia = SAVE.indexOf("LIMPIEZA DE FANTASMAS DEL GUARDADO");
-  ok("la limpieza corre DESPUÉS de cargar layout y obras", iLimpia > iLayout && iLimpia > iObras,
-    "layout@" + iLayout + " obras@" + iObras + " limpieza@" + iLimpia);
+  const cuerpo = SAVE.slice(SAVE.indexOf("function hydrate(d) {"), SAVE.indexOf("function migrarGuardado("));
+  ok("existen las tres fases", /function hydrate\(d\) \{/.test(SAVE) &&
+    /function migrarGuardado\(d\) \{/.test(SAVE) && /function derivarEstado\(d\) \{/.test(SAVE));
+  const iMig = cuerpo.indexOf("migrarGuardado(d);"), iDer = cuerpo.indexOf("derivarEstado(d);");
+  ok("migrar y derivar se llaman, y en ese orden", iMig > 0 && iDer > iMig,
+    "aplicar → migrar → derivar");
+  /* Y la comprobación que impide volver al agujero: en la fase 1 no puede haber migraciones. Una
+     migración es cualquier cosa que BORRA o REESCRIBE lo que acaba de llegar del guardado. */
+  /* Se mira el CÓDIGO, no los comentarios: la cabecera de la fase 2 explica el fallo de los
+     fantasmas y cae dentro del recorte, así que sin quitar comentarios el test se acusa a sí mismo
+     por hablar del problema. Es el mismo tropiezo que ya tuve en el test de los textos. */
+  const vivo = cuerpo.replace(/\/\*[\s\S]*?\*\//g, "").replace(/\/\/[^\n]*/g, "");
+  const sueltas = [];
+  if (/delete G\./.test(vivo)) sueltas.push("un delete en la fase de aplicar");
+  if (/sflStock/.test(vivo)) sueltas.push("la migración de apilables");
+  if (/hoe/.test(vivo)) sueltas.push("la limpieza de la azada");
+  ok("y la fase de aplicar no migra nada", !sueltas.length,
+    sueltas.join(" · ") || "solo asignaciones, como debe ser");
+  /* Y las migraciones ven el estado entero: la limpieza de fantasmas lee G.layout y G.built, que
+     la fase 1 ya dejó puestos. Esto es lo que estuvo mal dos días. */
+  const mig = SAVE.slice(SAVE.indexOf("function migrarGuardado("), SAVE.indexOf("function derivarEstado("));
+  ok("y la limpieza de fantasmas vive dentro de migrar", /LIMPIEZA DE FANTASMAS DEL GUARDADO/.test(mig));
 }
 
 console.log("\n"+(fallos?"FALLOS: "+fallos:"lo que ocupa una celda, se ve"));

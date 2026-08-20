@@ -36,8 +36,20 @@ function snapshot() {
 // "huella" del estado guardable (incluye el apodo); si no cambia, no hay nada que guardar
 function snapKey() { return JSON.stringify({ n: (typeof nombreLucido === "function" ? nombreLucido() : (window.NICK || "Granjero")), d: snapshot() }); }
 
+/* ============ CARGAR UNA PARTIDA, EN TRES FASES (20/8) ==============================
+   Dirección: "cada cosa que tocamos rompe otras".
+   Esto eran 239 líneas seguidas en las que se mezclaban tres trabajos distintos —copiar el
+   guardado, arreglar guardados viejos y calcular lo que se deduce— y en las que el ORDEN importaba
+   sin estar escrito en ninguna parte. Ese orden implícito nos costó las celdas oscuras: una
+   migración colocada antes de los datos que migra.
+   Ahora son tres fases con nombre y un orden que se lee de un vistazo:
+     1. APLICAR  — copiar el guardado al estado. Solo asignaciones, sin lógica.
+     2. MIGRAR   — arreglar lo que traen las partidas viejas. Siempre después de la 1.
+     3. DERIVAR  — calcular lo que no se guarda (vida máxima, paso del tutorial, regalos).
+   Regla: si algo LEE otra parte del estado, no va en la fase 1.                                 */
 function hydrate(d) {
   if (!d) return;
+  /* ---- FASE 1 · APLICAR ---- */
   ["plata", "golden", "level", "prestige", "week"].forEach(k => { if (typeof d[k] === "number") G[k] = d[k]; });
   if (d.res) G.res = Object.assign({}, G.res, d.res);
   if (d.skills) G.skills = Object.assign({}, G.skills, d.skills);
@@ -66,22 +78,6 @@ function hydrate(d) {
   if (typeof d.invRows === "number") G.invRows = Math.max(0, Math.min(INV_MAX_ROWS, d.invRows));
   if (Array.isArray(d.slots)) G.slots = d.slots;
   if (Array.isArray(d.hotbar)) G.hotbar = d.hotbar.slice(0, 10);
-  // la azada se retiró del juego (pedido del diseñador 31/7): se limpia de hotbar y bolsa guardadas
-  G.hotbar = (G.hotbar || []).map(h => (h && h.kind === "tool" && h.key === "hoe") ? null : h);
-  /* 18/8 — MUDANZA AL COBERTIZO. Los planos, los cofres sin colocar, los adornos y los regalos
-     del baúl dejaron de vivir en la barra rápida y en la bolsa: ahora están en el Cobertizo.
-     A quien ya los tenía enganchados en la barra hay que soltárselos, o le quedan huecos muertos
-     que no responden. La bolsa se limpia sola (syncSlots quita lo que canonicalStacks ya no lista);
-     la barra no, porque el jugador la ordena a mano y nadie la reconcilia. */
-  {
-    const MUDADOS = ["plano", "chest", "regalo", "deco"];
-    const antes = (G.hotbar || []).filter(h => h && MUDADOS.includes(h.kind)).length;
-    if (antes) {
-      G.hotbar = G.hotbar.map(h => (h && MUDADOS.includes(h.kind)) ? null : h);
-      G._avisoCobertizo = antes;   // ui.js lo cuenta una vez y lo borra
-    }
-  }
-  if (Array.isArray(G.slots)) G.slots = G.slots.map(sl => (sl && sl.kind === "tool" && sl.key === "hoe") ? null : sl);
   if (typeof d.hotSel === "number") G.hotSel = Math.max(0, Math.min(9, d.hotSel));
   if (typeof d.hbInit === "boolean") G.hbInit = d.hbInit;
   if (d.layout && typeof d.layout === "object") G.layout = d.layout;
@@ -204,6 +200,63 @@ function hydrate(d) {
   if (d.planos && typeof d.planos === "object") G.planos = d.planos;     // blueprints (12/8)
   if (d.obras && typeof d.obras === "object") G.obras = d.obras;
 
+  if (d.capsClaim && typeof d.capsClaim === "object") G.capsClaim = d.capsClaim;   // capítulos reclamados (14/8)
+  if (d.emergBuys && typeof d.emergBuys === "object") G.emergBuys = d.emergBuys;   // kit de emergencia (14/8)
+  if (d.buzonLeidas && typeof d.buzonLeidas === "object") G.buzonLeidas = d.buzonLeidas;   // cartas leídas del buzón (15/8)
+  if (Array.isArray(d.buzonArchivo)) G.buzonArchivo = d.buzonArchivo;   // archivo de cartas (15/8)
+  // kit de bienvenida (15/8): los guardados VIEJOS ya lo recibieron con el arranque de antes
+  G.kitReclamado = d.kitReclamado != null ? !!d.kitReclamado : true;
+  if (d.excav && typeof d.excav === "object") G.excav = d.excav;   // montículos del día (15/8)
+  if (typeof d.vales === "number") G.vales = Math.max(0, d.vales);   // tablón de pedidos (16/8)
+  if (d.pedidos && typeof d.pedidos === "object") G.pedidos = d.pedidos;
+  if (d.regalos && typeof d.regalos === "object") G.regalos = { tree: d.regalos.tree || 0, rock: d.regalos.rock || 0, plot: d.regalos.plot || 0 };   // premios del nivel esperando en el baúl (16/8)
+  // 18/8: la segunda bolsa — lo ya recogido del baúl y todavía sin colocar (el Cobertizo)
+  if (d.cobertizo && typeof d.cobertizo === "object") G.cobertizo = { tree: d.cobertizo.tree || 0, rock: d.cobertizo.rock || 0, plot: d.cobertizo.plot || 0 };
+  else G.cobertizo = { tree: 0, rock: 0, plot: 0 };
+  if (d.obraDep && typeof d.obraDep === "object") G.obraDep = d.obraDep;
+  if (d.layoutPond && typeof d.layoutPond === "object") G.layoutPond = { col: d.layoutPond.col, row: d.layoutPond.row };
+  if (d.picks && d.picks.owned && d.picks.dur) G.picks = d.picks;
+
+  /* ---- Y las tres fases siguientes, en ORDEN Y SIN EXCEPCIONES ---- */
+  migrarGuardado(d);     // arregla lo que traen las partidas viejas
+  derivarEstado(d);      // calcula lo que se deduce del estado ya completo
+}
+
+/* ============ FASE 2 · MIGRAR (20/8) ================================================
+   Todo lo que arregla un guardado viejo vive aquí, y aquí corre SIEMPRE DESPUÉS de que la fase 1
+   haya copiado el guardado al estado. No es una preferencia de estilo: es la lección más cara de
+   esta semana. La limpieza de posiciones fantasma estaba escrita cien líneas por encima de donde
+   se cargaba `d.layout`, así que recorría un objeto vacío, no borraba nada, y el guardado entraba
+   entero con sus fantasmas dentro. Estuvo dos días "hecha" sin haberse ejecutado ni una vez, y
+   dirección la vio en su partida antes que yo en el código.
+   Con las migraciones en su propia función, llamada al final, ese error no se puede repetir: para
+   cometerlo habría que mover la llamada, no una línea suelta en medio de doscientas.           */
+function migrarGuardado(d) {
+  // la azada se retiró del juego (pedido del diseñador 31/7): se limpia de hotbar y bolsa guardadas
+  G.hotbar = (G.hotbar || []).map(h => (h && h.kind === "tool" && h.key === "hoe") ? null : h);
+  if (Array.isArray(G.slots)) G.slots = G.slots.map(sl => (sl && sl.kind === "tool" && sl.key === "hoe") ? null : sl);
+
+  /* 18/8 — MUDANZA AL COBERTIZO. Los planos, los cofres sin colocar, los adornos y los regalos
+     del baúl dejaron de vivir en la barra rápida y en la bolsa: ahora están en el Cobertizo.
+     A quien ya los tenía enganchados en la barra hay que soltárselos, o le quedan huecos muertos
+     que no responden. La bolsa se limpia sola (syncSlots quita lo que canonicalStacks ya no lista);
+     la barra no, porque el jugador la ordena a mano y nadie la reconcilia. */
+  {
+    const MUDADOS = ["plano", "chest", "regalo", "deco"];
+    const antes = (G.hotbar || []).filter(h => h && MUDADOS.includes(h.kind)).length;
+    if (antes) {
+      G.hotbar = G.hotbar.map(h => (h && MUDADOS.includes(h.kind)) ? null : h);
+      G._avisoCobertizo = antes;   // ui.js lo cuenta una vez y lo borra
+    }
+  }
+
+  // migración ÚNICA al modelo apilable (31/7): la durabilidad vieja pasa a ser "1 herramienta"
+  if (!d.sflStock) {
+    for (const k of ["axe", "rod"]) if ((G.tools[k] || 0) > 0) G.tools[k] = 1;
+    for (const k in G.picks.dur) if ((G.picks.dur[k] || 0) > 0) G.picks.dur[k] = 1;
+    if (d.toolsLost) for (const k in d.toolsLost) if (d.toolsLost[k]) G.tools[k] = 0;
+  }
+
   /* ============ LIMPIEZA DE FANTASMAS DEL GUARDADO =================================
      18/8 — Los guardados de antes de los planos traen posiciones en G.layout para edificios que
      hoy no existen hasta colocar su plano. Esa entrada ya no implica existencia (se arregló en
@@ -244,32 +297,15 @@ function hydrate(d) {
       if (n && GF.ocupCambio) GF.ocupCambio();   // el mapa de ocupación tiene que rehacerse
     }
   } catch (e) {}
-  if (d.capsClaim && typeof d.capsClaim === "object") G.capsClaim = d.capsClaim;   // capítulos reclamados (14/8)
-  if (d.emergBuys && typeof d.emergBuys === "object") G.emergBuys = d.emergBuys;   // kit de emergencia (14/8)
-  if (d.buzonLeidas && typeof d.buzonLeidas === "object") G.buzonLeidas = d.buzonLeidas;   // cartas leídas del buzón (15/8)
-  if (Array.isArray(d.buzonArchivo)) G.buzonArchivo = d.buzonArchivo;   // archivo de cartas (15/8)
-  // kit de bienvenida (15/8): los guardados VIEJOS ya lo recibieron con el arranque de antes
-  G.kitReclamado = d.kitReclamado != null ? !!d.kitReclamado : true;
-  if (d.excav && typeof d.excav === "object") G.excav = d.excav;   // montículos del día (15/8)
-  if (typeof d.vales === "number") G.vales = Math.max(0, d.vales);   // tablón de pedidos (16/8)
-  if (d.pedidos && typeof d.pedidos === "object") G.pedidos = d.pedidos;
-  if (d.regalos && typeof d.regalos === "object") G.regalos = { tree: d.regalos.tree || 0, rock: d.regalos.rock || 0, plot: d.regalos.plot || 0 };   // premios del nivel esperando en el baúl (16/8)
-  // 18/8: la segunda bolsa — lo ya recogido del baúl y todavía sin colocar (el Cobertizo)
-  if (d.cobertizo && typeof d.cobertizo === "object") G.cobertizo = { tree: d.cobertizo.tree || 0, rock: d.cobertizo.rock || 0, plot: d.cobertizo.plot || 0 };
-  else G.cobertizo = { tree: 0, rock: 0, plot: 0 };
-  try { if (typeof regalosSync === "function") regalosSync(); } catch (e) {}   // guardados viejos: recalcula lo que le corresponde por su nivel
-  if (d.obraDep && typeof d.obraDep === "object") G.obraDep = d.obraDep;
-  if (d.layoutPond && typeof d.layoutPond === "object") G.layoutPond = { col: d.layoutPond.col, row: d.layoutPond.row };
-  if (d.picks && d.picks.owned && d.picks.dur) G.picks = d.picks;
-  // migración ÚNICA al modelo apilable (31/7): la durabilidad vieja pasa a ser "1 herramienta"
-  if (!d.sflStock) {
-    for (const k of ["axe", "rod"]) if ((G.tools[k] || 0) > 0) G.tools[k] = 1;
-    for (const k in G.picks.dur) if ((G.picks.dur[k] || 0) > 0) G.picks.dur[k] = 1;
-    if (d.toolsLost) for (const k in d.toolsLost) if (d.toolsLost[k]) G.tools[k] = 0;
-  }
+}
 
-  /* ---- AL FINAL, CON EL ESTADO YA COMPLETO (18/8) ----
-     Todo lo que sigue LEE el estado cargado, así que no puede correr a mitad de la carga. */
+/* ============ FASE 3 · DERIVAR (20/8) ===============================================
+   Lo que no se guarda porque se CALCULA: la vida máxima sale del equipo, el paso del tutorial sale
+   de lo que el jugador ya hizo, los regalos pendientes salen de su nivel. Corre al final por la
+   misma razón que la fase 2 — necesita el estado entero delante — y se separa de ella porque son
+   cosas distintas: migrar arregla el pasado, derivar calcula el presente.                      */
+function derivarEstado(d) {
+  try { if (typeof regalosSync === "function") regalosSync(); } catch (e) {}   // guardados viejos: recalcula lo que le corresponde por su nivel
   if (typeof applyCombatHp === "function") applyCombatHp();   // vida máxima: ahora sí ve gear y weapons
   if (typeof d.hp === "number") G.hp = Math.max(1, Math.min(G.hpMax, d.hp));
   if (typeof tutoMigrar === "function") tutoMigrar();   // salta los pasos ya cumplidos, con los datos delante
