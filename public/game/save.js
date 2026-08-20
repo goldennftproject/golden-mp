@@ -73,23 +73,6 @@ function hydrate(d) {
      A quien ya los tenía enganchados en la barra hay que soltárselos, o le quedan huecos muertos
      que no responden. La bolsa se limpia sola (syncSlots quita lo que canonicalStacks ya no lista);
      la barra no, porque el jugador la ordena a mano y nadie la reconcilia. */
-  /* 18/8 — LIMPIEZA DE FANTASMAS. Los guardados de antes de los planos traen posiciones en
-     G.layout para edificios que hoy no existen hasta colocar su plano. Esa entrada ya no implica
-     existencia (lo arreglamos en objetoPresente), pero además hay que BORRARLA: si no, el día que
-     el jugador coloque el plano, el edificio saltaría a la posición vieja en vez de a la que
-     elija. Se borran solo las de edificios sin construir y sin obra. */
-  try {
-    if (G.layout && typeof BUILD_DEF !== "undefined" && GF.WORLD_OBJECTS) {
-      let n = 0;
-      for (const k in G.layout) {
-        const o = GF.WORLD_OBJECTS[k];
-        if (!o || !BUILD_DEF[o.type]) continue;
-        if ((G.built && G.built[o.type]) || (G.obras && G.obras[o.type])) continue;
-        delete G.layout[k]; n++;
-      }
-      if (n) console.info("[migración] " + n + " posiciones fantasma de edificios sin plano, borradas");
-    }
-  } catch (e) {}
   {
     const MUDADOS = ["plano", "chest", "regalo", "deco"];
     const antes = (G.hotbar || []).filter(h => h && MUDADOS.includes(h.kind)).length;
@@ -220,6 +203,47 @@ function hydrate(d) {
   if (Array.isArray(d.ghInv)) G.ghInv = d.ghInv;   // GOD HAND 2.0 (11/8): su inventario de semillas
   if (d.planos && typeof d.planos === "object") G.planos = d.planos;     // blueprints (12/8)
   if (d.obras && typeof d.obras === "object") G.obras = d.obras;
+
+  /* ============ LIMPIEZA DE FANTASMAS DEL GUARDADO =================================
+     18/8 — Los guardados de antes de los planos traen posiciones en G.layout para edificios que
+     hoy no existen hasta colocar su plano. Esa entrada ya no implica existencia (se arregló en
+     objetoPresente), pero además hay que BORRARLA: si no, el día que el jugador coloque el plano
+     el edificio salta a la posición vieja en vez de a la que eligió, y mientras tanto esas celdas
+     salen sombreadas al colocar — zonas oscuras donde no se ve nada y no dejan poner nada.
+
+     20/8 — Y LA LIMPIEZA NUNCA CORRIÓ. Estaba escrita cien líneas más arriba, ANTES de que este
+     mismo cargador copiara `d.layout` y `d.obras` del guardado al estado. O sea que recorría un
+     G.layout vacío, no borraba nada, y acto seguido el guardado entraba entero con sus fantasmas
+     dentro. El test la daba por buena porque la llamaba a mano, con los datos ya puestos — probaba
+     la función, no el momento en que se usa. Dirección lo vio en su partida: "¿por qué no lo
+     quitaste?". Estaba quitado en el código y no en el juego, que es lo mismo que no estarlo.
+     Ahora corre acá, con layout, built y obras ya cargados, y de paso barre dos fantasmas más que
+     el original no miraba:
+       · índices que ya no existen — el mundo se reorganizó el 17/8 y WORLD_OBJECTS cambió de
+         orden y de largo; una entrada vieja apunta hoy a otra cosa o a nada;
+       · posiciones fuera del terreno que poseés, que no se pueden ni ver ni alcanzar.          */
+  try {
+    if (G.layout && GF.WORLD_OBJECTS) {
+      const t = GF.terreno ? GF.terreno() : null;
+      let sinPlano = 0, huerfanas = 0, fuera = 0;
+      for (const k in G.layout) {
+        const o = GF.WORLD_OBJECTS[k], lp = G.layout[k];
+        if (!o) { delete G.layout[k]; huerfanas++; continue; }
+        if (typeof BUILD_DEF !== "undefined" && BUILD_DEF[o.type] &&
+            !((G.built && G.built[o.type]) || (G.obras && G.obras[o.type]))) {
+          delete G.layout[k]; sinPlano++; continue;
+        }
+        if (t && lp && GF.TILE) {
+          const c = Math.round(lp.cx / GF.TILE), r = Math.round(lp.by / GF.TILE) - 1;
+          if (c < t.c0 || c >= t.c1 || r < t.r0 || r >= t.r1) { delete G.layout[k]; fuera++; }
+        }
+      }
+      const n = sinPlano + huerfanas + fuera;
+      if (n) console.info("[migración] " + n + " posiciones fantasma borradas (" +
+        sinPlano + " sin plano, " + huerfanas + " de objetos que ya no existen, " + fuera + " fuera del terreno)");
+      if (n && GF.ocupCambio) GF.ocupCambio();   // el mapa de ocupación tiene que rehacerse
+    }
+  } catch (e) {}
   if (d.capsClaim && typeof d.capsClaim === "object") G.capsClaim = d.capsClaim;   // capítulos reclamados (14/8)
   if (d.emergBuys && typeof d.emergBuys === "object") G.emergBuys = d.emergBuys;   // kit de emergencia (14/8)
   if (d.buzonLeidas && typeof d.buzonLeidas === "object") G.buzonLeidas = d.buzonLeidas;   // cartas leídas del buzón (15/8)

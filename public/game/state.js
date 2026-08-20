@@ -549,8 +549,10 @@ function darPlano(t, silencioso) {
   if (!silencioso) {
     /* 19/8: y el aviso de la entrega repetía el error — "está en tu bolsa", "desde tu barra
        rápida". Los planos viven en el COBERTIZO desde el 18/8. */
-    log("¡Ganaste el PLANO de " + b.label + "! Te espera en el Cobertizo: abrilo y elegí dónde va.", "gold");
-    toast("📜 ¡Plano de " + b.label + "! → Cobertizo");
+    /* 20/8: el aviso también nombra el camino. "Está en el Cobertizo" no sirve de nada si el
+       jugador no sabe que el Cobertizo se abre desde el Menú. */
+    log("¡Ganaste el PLANO de " + b.label + "! Te espera en el Cobertizo (Menú ☰ → Cobertizo): abrilo y elegí dónde va.", "gold");
+    toast("📜 ¡Plano de " + b.label + "! → Menú ☰ → Cobertizo");
     if (window.celebrate) celebrate({ title: "¡PLANO NUEVO!", sub: b.label, big: false, reward: "Te espera en el Cobertizo 🏚" });
   }
   planoAHotbar(t);
@@ -1785,14 +1787,23 @@ const TUTO_STEPS = [
      a alguien al lugar equivocado en su primer edificio es de los errores más caros que hay: no
      sabe si el juego está roto o si es él el que no entiende.
      Ahora nombran el Cobertizo y la flecha lo señala en el menú. */
-  { id: "place_store", n: 1, txt: "Abrí el Cobertizo y colocá el PLANO de la Herrería", panel: "ov-cobertizo", ui: ".slot.k-plano" },
+  /* 20/8 (dirección) — EL CARTEL TIENE QUE NOMBRAR EL CAMINO ENTERO, NO EL DESTINO.
+     "Está bien que apuntes al botón del Cobertizo, pero también quiero que apuntes al del Menú,
+      que sepa el jugador que tiene que entrar ahí primero."
+     La flecha ya hacía la cadena bien —con el menú cerrado apunta a ☰ Menú, y al abrirlo baja al
+     Cobertizo (verificado en tools/test-tuto-flecha.js, que carga el HTML de verdad)— pero el
+     cartel decía solo "Abrí el Cobertizo". El jugador lee "Cobertizo", busca un botón que se llame
+     así, no lo encuentra, y la flecha le está señalando algo que se llama "Menú": el cartel y la
+     flecha discrepaban. Es el mismo fallo de ayer con la barra rápida, con otra ropa.
+     Ahora el texto nombra las dos paradas, en orden, y coincide con lo que la flecha va haciendo. */
+  { id: "place_store", n: 1, txt: "Abrí el Menú ☰ → Cobertizo y colocá el PLANO de la Herrería", panel: "ov-cobertizo", ui: ".slot.k-plano" },
   { id: "wood_st",  res: "madera", dep: "store", need: () => BUILD_DEF.store.cost.madera || 5,
     txt: "Juntá # de madera talando árboles (para la obra de la Herrería)",        target: "tree" },
   { id: "stone_st", res: "piedra", dep: "store", need: () => BUILD_DEF.store.cost.piedra || 2,
     txt: "Juntá # de piedra picando rocas (para la obra de la Herrería)",          target: "rock" },
   { id: "build_store", n: 1, txt: "Depositá los materiales en la obra de la Herrería (clic encima)", target: "store" },
   // — cadena del Horno: plano → materiales de SU receta → depósito —
-  { id: "place_horno", n: 1, txt: "Colocá el plano del Horno de Piedra (está en el Cobertizo)", panel: "ov-cobertizo", ui: ".slot.k-plano" },
+  { id: "place_horno", n: 1, txt: "Colocá el plano del Horno de Piedra (Menú ☰ → Cobertizo)", panel: "ov-cobertizo", ui: ".slot.k-plano" },
   { id: "wood",  res: "madera", dep: "horno", need: () => BUILD_DEF.horno.cost.madera || 10,
     txt: "Juntá # de madera talando árboles (para la obra del Horno)",             target: "tree" },
   { id: "stone", res: "piedra", dep: "horno", need: () => BUILD_DEF.horno.cost.piedra || 8,
@@ -1805,9 +1816,9 @@ const TUTO_STEPS = [
      arma y ponérsela. Sin ellos, el jugador llega al portal y se come un "equipate un arma" sin
      saber dónde se equipa. */
   { id: "craftarm", n: 1, txt: "Forjá una Espada de Madera en la Herrería (5 de madera)", target: "store", panel: "ov-forge", ui: "[data-carm='espada_madera']" },
-  { id: "equiparm", n: 1, txt: "Equipate la espada en el panel de Equipo",                panel: "ov-equip", ui: "#eq-arma" },
+  { id: "equiparm", n: 1, txt: "Equipate la espada en el panel de Equipo (Menú ☰ → Equipo)", panel: "ov-equip", ui: "#eq-arma" },
   // ——— ETAPA 2: los sistemas nuevos (Cocina, Armas, Zona Negra, Pesca, Altar) ———
-  { id: "place_cocina", n: 1, txt: "Colocá el plano de la Cocina (está en el Cobertizo)", panel: "ov-cobertizo", ui: ".slot.k-plano" },
+  { id: "place_cocina", n: 1, txt: "Colocá el plano de la Cocina (Menú ☰ → Cobertizo)", panel: "ov-cobertizo", ui: ".slot.k-plano" },
   { id: "woodc",  res: "madera", dep: "cocina", need: () => BUILD_DEF.cocina.cost.madera || 20,
     txt: "Juntá # de madera (para la obra de la Cocina)",                          target: "tree" },
   { id: "stonec", res: "piedra", dep: "cocina", need: () => BUILD_DEF.cocina.cost.piedra || 15,
@@ -1837,11 +1848,19 @@ const TUTO_STEPS = [
      tropezara con el Cobertizo por casualidad se quedaba con nueve celdas para siempre.
      El orden de los pasos es el orden real, comprobado: el regalo NO existe hasta que la expansión
      está comprada (regalosSync cuenta 3 parcelas + 1 por expansión, y se nace con las 3). */
-  { id: "expandir", n: 1, txt: "Comprá tu primera expansión de terreno", panel: "ov-deco", ui: "#exp-comprar" },
+  /* 20/8 — ESTE PASO APUNTABA A UNA VENTANA QUE NO EXISTE. `ov-deco` no está en el HTML: la
+     expansión se compra en el MERCADO, pestaña Adornos (#shop-deco), y ahí vive #exp-comprar.
+     Con el panel inventado la flecha se quedaba clavada en el ☰ Menú para siempre —abrías el menú
+     y seguía señalando el menú— y el cartel no decía dónde ir. Apareció al escribir el primer test
+     que EJECUTA la interfaz en vez de leer la tabla (tools/test-tuto-flecha.js): la tabla se veía
+     perfecta, el juego no.
+     Con el panel correcto la flecha ya sabe sola bajar hasta la pestaña oculta (tutoHighlight
+     detecta el .shoppane escondido y apunta primero a su .shoptab). */
+  { id: "expandir", n: 1, txt: "Comprá tu primera expansión de terreno (Mercado → Adornos)", target: "market", panel: "ov-market", ui: "#exp-comprar" },
   /* Y como la parcela ya viene puesta, lo único que queda por enseñar es que SE PUEDE MOVER. El
      modo edición es de esas cosas que el jugador no descubre solo y que cambian por completo lo que
      cree que puede hacer con su granja. */
-  { id: "editar",   n: 1, txt: "Probá el modo edición: todo lo de tu granja se puede mover", panel: "ov-config", ui: "#cfg-edit" },
+  { id: "editar",   n: 1, txt: "Probá el modo edición: todo lo de tu granja se puede mover (Menú ☰ → Configuración)", panel: "ov-config", ui: "#cfg-edit" },
   /* ======= LOS DOS QUE FALTABAN (19/8) =======
      LA PESCA: la caña viene en el kit de bienvenida con 15 usos y hasta hoy nadie decía para qué
      sirve — un icono muerto en la bolsa desde el minuto uno. Ojo: pescar pide UNA LOMBRIZ, que se

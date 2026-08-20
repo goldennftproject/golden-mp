@@ -85,8 +85,60 @@ ok("el dibujo pregunta a GF.objetoPresente, no a su propia regla",
   /if \(!GF\.objetoPresente\(GF\.COLLISIONS\[i\]/.test(src));
 ok("y objetoPresente ya no confunde 'dónde está' con 'si existe'",
   /return !!\(\(G\.built && G\.built\[c\.tipo\]\) \|\| \(G\.obras && G\.obras\[c\.tipo\]\)\);/.test(srcCfg));
-ok("y al cargar se limpian las posiciones fantasma de guardados viejos",
-  /posiciones fantasma de edificios sin plano/.test(fs.readFileSync("public/game/save.js","utf8")));
+/* ---- C) Y AHORA DE VERDAD: SE CARGA UN GUARDADO VIEJO Y SE MIRA EL RESULTADO ----
+   20/8 — ACÁ ESTABA EL AGUJERO, Y ERA DE ESTE TEST. La comprobación de que "al cargar se limpian
+   los fantasmas" era una BÚSQUEDA DE TEXTO en save.js: mientras el comentario existiera, verde.
+   Y el código existía… cien líneas ANTES de que el cargador copiara `d.layout` del guardado al
+   estado, así que recorría un objeto vacío y no borraba nada. La migración nunca corrió ni una vez.
+   Dirección lo encontró en su partida —"hay zonas oscuras donde no puedo poner la Herrería"— con
+   este test en verde desde hacía dos días.
+   Un test que lee el código en vez de ejecutarlo no prueba nada sobre el juego. Ahora se llama a
+   hydrate(), que es exactamente lo que corre al entrar, con un guardado que trae los tres tipos de
+   fantasma, y se mira el estado que queda. */
+{
+  /* save.js se carga acá y no arriba a propósito: define hydrate() y poco más, pero cargarlo antes
+     del bloque A cambiaría el estado que ese bloque fija a mano. */
+  vm.runInContext(fs.readFileSync("public/game/save.js", "utf8") + "\n;this.hydrate=hydrate;", ctx);
+  ok("save.js expone el cargador de verdad", typeof ctx.hydrate === "function", "hydrate()");
+  const antes = JSON.parse(JSON.stringify(G.layout || {}));
+  /* Un guardado como el de una partida vieja: posiciones de edificios que hoy piden plano, una
+     entrada a un índice que ya no existe (el mundo se reorganizó) y otra fuera del terreno. */
+  const layoutViejo = {};
+  GF.WORLD_OBJECTS.forEach((o, i) => { if (BD[o.type]) layoutViejo[i] = { cx: o.cx, by: o.by }; });
+  const nEdif = Object.keys(layoutViejo).length;
+  layoutViejo[9999] = { cx: 300, by: 300 };                    // índice huérfano
+  const iRoca = GF.WORLD_OBJECTS.findIndex(o => o.type === "rock");
+  layoutViejo[iRoca] = { cx: -500, by: -500 };                 // fuera del terreno
+  /* `built.store: false` explícito y no `{}`: hydrate respeta la Herrería construida a quien ya
+     venía jugando (`d.built.store !== false`), así que con la llave ausente el guardado dice que
+     SÍ existe y su posición no es un fantasma. Acá se prueba al jugador que la tiene sin levantar,
+     que es el caso que reportó dirección. */
+  ctx.hydrate({ expansiones: 0, built: { store: false }, obras: {}, layout: layoutViejo, plotsOwned: 3,
+    treesOpen: [0], rocksOpen: [0], decos: [], chests: [] });
+
+  ok("el guardado viejo traía " + (nEdif + 2) + " posiciones fantasma", nEdif > 0);
+  const quedan = Object.keys(G.layout || {});
+  ok("después de cargar no queda ninguna", !quedan.length, quedan.join(", ") || "limpio");
+  /* Y lo que el jugador ve: al llevar el plano en la mano no puede quedar ni una celda sombreada
+     por un edificio que no existe. */
+  GF.ocupCambio();
+  const m2 = GF.ocupacion();
+  const fantasmas = [...m2.values()].filter(v => BD[v.tipo]).map(v => v.tipo);
+  ok("y ninguna celda queda sombreada por un edificio invisible", !fantasmas.length,
+    [...new Set(fantasmas)].join(", ") || "ninguna");
+  G.layout = antes;
+}
+
+/* Y la trampa que dejó pasar esto: que la limpieza viva DESPUÉS de cargar layout, built y obras.
+   Si alguien la vuelve a subir de sitio, el orden se rompe en silencio. */
+{
+  const SAVE = fs.readFileSync("public/game/save.js", "utf8");
+  const iLayout = SAVE.indexOf("if (d.layout && typeof d.layout");
+  const iObras  = SAVE.indexOf("if (d.obras && typeof d.obras");
+  const iLimpia = SAVE.indexOf("LIMPIEZA DE FANTASMAS DEL GUARDADO");
+  ok("la limpieza corre DESPUÉS de cargar layout y obras", iLimpia > iLayout && iLimpia > iObras,
+    "layout@" + iLayout + " obras@" + iObras + " limpieza@" + iLimpia);
+}
 
 console.log("\n"+(fallos?"FALLOS: "+fallos:"lo que ocupa una celda, se ve"));
 process.exit(fallos?1:0);
