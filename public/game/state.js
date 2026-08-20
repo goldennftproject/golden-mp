@@ -1214,7 +1214,12 @@ function farmUnlockTxt(n) {
   if (typeof FARM_EDIF2 !== "undefined" && FARM_EDIF2[n] && BUILD_DEF[FARM_EDIF2[n]])
     partes.push(BUILD_DEF[FARM_EDIF2[n]].label + " nivel 2");
   if (typeof FARM_COFRE !== "undefined" && FARM_COFRE[n]) partes.push("+" + FARM_COFRE[n] + " de capacidad de cofre");
-  partes.push("+1,5% al precio de venta");     // el bono, que llega en TODOS los niveles
+  /* 19/8 (dirección): el bono también en PLATA/HORA, entre paréntesis, detrás de lo que ya sabe.
+     "+1,5% al precio de venta" no le dice nada a nadie; "+14 plata por hora" sí. Y es lo que hace
+     que el tramo del 20 al 50 se lea como lo que es: entre expansión y expansión el bono aporta
+     cerca de la mitad de lo que crece la granja, pero era invisible. */
+  const bph = typeof fmt === "function" ? fmt(bonoPlataH()) : String(bonoPlataH());
+  partes.push("+1,5% al precio de venta (≈ +" + bph + " de plata por hora)");
   return partes.join(" + ");
 }
 /* 17/8 — EN QUÉ NIVEL CAE CADA UNA DE LAS 16 EXPANSIONES (bloques de 5x5, ver GF.EXPANSIONES).
@@ -1430,6 +1435,15 @@ function recalcFarmLevelInterno() {
    Ahora: al subir de nivel te llega el nodo AL BAÚL como premio y lo reclamás desde ahí.
    Nada se muestra en el mapa hasta que es tuyo. Las tablas de siempre (NIVEL_ARBOLES,
    NIVEL_ROCAS, FARM_PARCELA) pasan a ser el CALENDARIO de entrega. */
+/* CUÁNTO VALE EL BONO DE VENTA, EN PLATA POR HORA (19/8).
+   El bono sube un 1,5% por nivel sobre el MARGEN de lo que vendés, y el margen por celda es
+   justamente el ancla: 20 plata/hora. Así que el bono de un nivel vale el 1,5% de lo que produce
+   tu granja entera — y por eso crece solo a medida que la granja crece.
+   Se mide sobre las celdas que el jugador TIENE (9 de arranque + 3 por expansión comprada), no
+   sobre las que podría tener: el cartel promete lo que va a cobrar, no lo que cobraría otro. */
+function celdasProductivas() { return 9 + 3 * (G.expansiones || 0); }
+function bonoPlataH() { return Math.round(celdasProductivas() * 20 * 0.015); }
+
 function nodosQueTocan(lvl) {
   /* 18/8: tres de cada al arrancar, y una parcela más por cada expansión comprada. Los árboles y
      las rocas de expansión NO pasan por acá: son objetos físicos dentro de su bloque y aparecen

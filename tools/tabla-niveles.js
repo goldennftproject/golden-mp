@@ -22,6 +22,10 @@ for(let n=1;n<=X.FARM_NIVEL_MAX;n++){
   const exps=X.FARM_EXPANSION.filter(v=>v<=n).length;
   /* 18/8: las celdas las reparte SOLO la expansión (3 cada una) sobre las 9 de arranque.
      El nivel de granja ya no da parcelas ni nodos. */
+  /* 19/8: el cartel dice el bono en plata/hora, y eso depende de las celdas que tengas. Para el
+     doc se le pone al juego el número de expansiones de ESE nivel, o toda la tabla saldría con el
+     bono de una granja de arranque. */
+  ctx.G.expansiones = exps;
   filas.push({ n, xp:X.FARM_XP_LVLS[n]||0,
     celdas: 9 + 3*exps,
     gana: n===1 ? "granja de arranque: 3 parcelas, 3 árboles, 3 rocas" : ctx.farmUnlockTxt(n) });
