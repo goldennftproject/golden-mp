@@ -1130,7 +1130,14 @@ class FarmScene extends Phaser.Scene {
       const dleft = (G.dummyUsedAt || 0) + DUMMY_CD_MS - nowMs();
       return dleft > 0 ? "El dummy descansa — vuelve en " + fmtDur(dleft) : "Entrenar espada (+" + DUMMY_XP + " XP)";
     }
-    if (o.type === "fish") return "Pescar (1 lombriz · tenés " + fmt(G.res.lombriz || 0) + ")";
+    if (o.type === "fish") {
+      /* Y que se vea SIN tener que hacer clic: el rótulo del cursor dice el descanso igual que lo
+         dicen el árbol y la roca ("Vuelve en 4:12"). Un nodo que no anuncia su estado obliga al
+         jugador a probar para enterarse. */
+      const esp = (typeof pescaCdLeft === "function") ? pescaCdLeft() : 0;
+      if (esp > 0) return "🌊 La laguna descansa — vuelve en " + fmtDur(esp);
+      return "Pescar (1 lombriz · tenés " + fmt(G.res.lombriz || 0) + ")";
+    }
     return "";
   }
 
@@ -1346,7 +1353,19 @@ class FarmScene extends Phaser.Scene {
       }
       toast("Todavía está creciendo"); return;
     }
-    if (o.type === "fish") { if (toolDur("rod") <= 0) { toast(!G.kitReclamado ? "Tu kit de bienvenida está en el baúl, junto al granero" : "No tenés caña — craftéala en la Herrería"); return; } if ((G.res.lombriz || 0) < 1) { toast("Necesitás lombrices — compralas en la Tienda"); return; } if (!roomForFish()) { bagFull("pescar"); return; } return this.startAction("fish", o); }
+    if (o.type === "fish") {
+      /* 19/8 (dirección) — EL AVISO LLEGABA TARDE. La comprobación del descanso de la laguna vivía
+         dentro de goFishing(), que corre al TERMINAR el lanzamiento: el jugador tiraba la caña,
+         miraba cargar la barra unos segundos y recién ahí le decían que la laguna estaba en reposo.
+         Todos los demás nodos avisan antes de empezar; éste era el único que dejaba gastar el gesto
+         para negárselo después. La comprobación sube acá, junto a las otras tres. */
+      const espera = (typeof pescaCdLeft === "function") ? pescaCdLeft() : 0;
+      if (espera > 0) { toast("La laguna está en reposo — vuelve en " + fmtDur(espera)); return; }
+      if (toolDur("rod") <= 0) { toast(!G.kitReclamado ? "Tu kit de bienvenida está en el baúl, junto al granero" : "No tenés caña — craftéala en la Herrería"); return; }
+      if ((G.res.lombriz || 0) < 1) { toast("Necesitás lombrices — cavá un montículo o compralas en la Tienda"); return; }
+      if (!roomForFish()) { bagFull("pescar"); return; }
+      return this.startAction("fish", o);
+    }
     if (nowMs() < o.readyAt) { toast(this.promptText(o)); return; }
     if (o.type === "ore") {
       const pk = equippedPick();   // el pico sale solo de la bolsa (el equipado define el tier)
