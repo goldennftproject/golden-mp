@@ -1174,7 +1174,11 @@ class FarmScene extends Phaser.Scene {
         /* 18/8 (reporte del diseñador: "es posible entrar a la zona negra sin arma"). No había
            ninguna comprobación: el propio rótulo del portal decía "Teletransportarte a la Zona
            Negra SIN ARMA" — describía el problema y lo dejaba pasar igual. Entrar desarmado es
-           entrar a que te maten, y al morir se pierde lo que llevás encima.
+           entrar a que te maten.
+           (19/8 — CORRECCIÓN: acá decía "y al morir se pierde lo que llevás encima". NO es cierto:
+           zonaSalir(true) te devuelve a la granja con media vida y un enfriamiento antes de poder
+           volver, y el botín se conserva entero. Lo dejo escrito porque un comentario falso sobre
+           un castigo es de lo más caro que hay: alguien diseña encima creyendo que existe.)
            Se pide arma EQUIPADA, no solo tenerla en el cofre: llevarla puesta es la decisión. */
         if (typeof armaEq === "function" && !armaEq()) {
           toast(Object.keys(G.weapons || {}).length
