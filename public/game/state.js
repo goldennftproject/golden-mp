@@ -640,7 +640,11 @@ var TUTO_PERMISOS = {
   expandir:    ["expandir", "chop", "mine", "cultivar", "plant", "harvest", "buyseed", "sell", "cook", "eat", "fish", "portal", "obra", "crafttool"],
   editar:      ["editar", "regalo", "chop", "mine", "cultivar", "plant", "harvest", "buyseed", "sell", "cook", "eat", "fish", "portal", "obra"],
   kill5:       ["portal", "cook", "eat", "crafttool", "craftarm"],
-  fish:        ["fish", "crafttool", "eat"],
+  /* 19/8: pescar necesita comprar carnada, así que el paso TIENE que dejar comprar y vender; y el
+     tablón pide entregar algo que quizá haya que cultivar o talar primero. Los dos son los últimos
+     pasos del tutorial: encerrar la granja acá no tendría ningún sentido. */
+  fish:        ["fish", "crafttool", "eat", "buyseed", "sell", "plant", "harvest", "chop", "mine", "cultivar", "cook", "obra", "portal"],
+  pedido:      ["pedido", "sell", "buyseed", "plant", "harvest", "chop", "mine", "cultivar", "cook", "eat", "fish", "obra", "portal"],
   // Fixes.docx 14/8 #2: la cadena del Altar cruza media economía (oro → Pico de Oro →
   // bronce → barras → Horno…), así que sus 4 pasos dejan el loop ENTERO abierto
   place_altar: ["obra", "chop", "mine", "sell", "plant", "harvest", "buyseed", "crafttool", "craftpick", "mat", "plotunlock"],
@@ -1819,6 +1823,16 @@ const TUTO_STEPS = [
      modo edición es de esas cosas que el jugador no descubre solo y que cambian por completo lo que
      cree que puede hacer con su granja. */
   { id: "editar",   n: 1, txt: "Probá el modo edición: todo lo de tu granja se puede mover", panel: "ov-config", ui: "#cfg-edit" },
+  /* ======= LOS DOS QUE FALTABAN (19/8) =======
+     LA PESCA: la caña viene en el kit de bienvenida con 15 usos y hasta hoy nadie decía para qué
+     sirve — un icono muerto en la bolsa desde el minuto uno. Ojo: pescar pide UNA LOMBRIZ, que se
+     compra en el Mercado a 3 de plata; por eso el paso se enuncia con la carnada por delante, o el
+     jugador llega a la laguna y se come un "necesitás lombrices" sin saber dónde están.
+     EL TABLÓN: es el regulador de la economía y la única fuente de VALES —la moneda que solo sale
+     de ahí y solo se gasta ahí—. Está plantado en la granja como un objeto más, así que el jugador
+     lo ve y le hace clic sin entender qué es. */
+  { id: "fish",     n: 1, txt: "Comprá una lombriz en el Mercado y probá la caña en la laguna", target: "fish" },
+  { id: "pedido",   n: 1, txt: "Entregá un encargo en el tablón de pedidos", target: "tablon_pedidos", panel: "ov-pedidos" },
   // (14/8, reversión del capataz: la cadena TERMINA acá — el tutorial enseña LO BÁSICO de
   //  la granja. Armas, Zona Negra, minería avanzada y Altar se aprenden jugando: sus
   //  planos caen por nivel y cada sistema se presenta solo.)
@@ -1839,6 +1853,7 @@ const TUTO_CAPS = [
   { id: "cocina",   label: "La Cocina",          pasos: ["place_cocina", "woodc", "stonec", "build_cocina", "cook", "eat"] },
   { id: "zona",     label: "La Zona Negra",      pasos: ["portal", "hunt", "estofado"] },
   { id: "crecer",   label: "La granja crece",    pasos: ["expandir", "editar"] },
+  { id: "pueblo",   label: "La laguna y el tablón", pasos: ["fish", "pedido"] },
 ];
 
 function capEstado(cap) {   // "hecho" | "activo" | "pendiente" (por el paso más avanzado de la cadena)
@@ -2015,6 +2030,7 @@ function tutoHecho(st) {
        solo si el jugador ya lo había hecho por su cuenta antes de que el tutorial se lo pidiera. */
     else if (st.id === "expandir")  hecho = (G.expansiones || 0) > 0;
     else if (st.id === "editar")    hecho = !!G.editVisto;
+    else if (st.id === "pedido")    hecho = (typeof statGet === "function" && statGet("pedido") > 0) || (G.vales || 0) > 0;
     else if (st.id === "eat")       hecho = (G.skills && G.skills.cooking > 0) && (G.buffs || []).length > 0;
     else if (st.id === "unlockarm") hecho = !!G.armasUnlocked;
     else if (st.id === "craftarm")  hecho = Object.keys(G.weapons || {}).length > 0;
@@ -4690,6 +4706,9 @@ function pedidoEntregar(i) {
   addXp(skillDeEntrega(p), p.xp);
   log(p.de + " recibió " + p.n + " × " + pedidoLabel(p) + ": +" + p.plata + " plata y +" + vales + (vales > 1 ? " vales" : " vale") + (doble ? " (¡primer pedido del día ×2!)" : "") + ".", "gold");
   toast("🎟 +" + vales + " · 🪙 +" + p.plata);
+  if (typeof statAdd === "function") statAdd("pedido");        // 19/8: contador propio — el detector
+  if (typeof tutoEvent === "function") tutoEvent("pedido");   // del tutorial no puede depender de los
+                                                              // vales, que se gastan y vuelven a cero
   if (window.sfx) sfx("coin");
   refreshHud(); if (typeof refreshPedidos === "function" && isOpen("ov-pedidos")) refreshPedidos();
   if (typeof saveFarm === "function") saveFarm(true);

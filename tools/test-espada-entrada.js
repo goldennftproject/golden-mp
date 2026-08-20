@@ -171,6 +171,26 @@ console.log("\nEL CAMINO DE CRECIMIENTO, QUE ERA EL ÚNICO SIN ENSEÑAR");
   });
 }
 
+console.log("\nLOS DOS SISTEMAS QUE EL TUTORIAL DEJABA SIN NOMBRAR");
+{
+  const ids = X.TUTO_STEPS.map(s2 => s2.id);
+  /* La caña viene en el kit con 15 usos: si nadie dice para qué sirve, es un icono muerto en la
+     bolsa desde el minuto uno. Y el tablón está plantado en la granja como un objeto más. */
+  ok("la pesca es un paso", ids.includes("fish"), "la caña trae " + X.KIT_INICIAL.rod + " usos");
+  ok("el tablón, también", ids.includes("pedido"));
+  /* Pescar pide una LOMBRIZ que se compra en el Mercado: si el paso no dejara comprar, el jugador
+     llegaría a la laguna y se comería un "necesitás lombrices" sin salida. */
+  ok("el paso de pesca deja comprar la carnada", (X.TUTO_PERMISOS.fish || []).includes("buyseed"),
+    "la lombriz cuesta " + ctx.WORM_PRICE + " de plata");
+  ok("y el del tablón deja producir lo que le pidan", (X.TUTO_PERMISOS.pedido || []).includes("chop"));
+  ok("los dos tienen su capítulo", X.TUTO_CAPS.some(c2 => c2.pasos.includes("fish") && c2.pasos.includes("pedido")),
+    X.TUTO_CAPS.map(c2 => c2.label).join(" · "));
+  /* El detector del tablón no puede colgar de los vales: se gastan y vuelven a cero, y entonces el
+     paso reviviría. Por eso lleva su propio contador. */
+  ok("el tablón lleva un contador propio", /statAdd\("pedido"\)/.test(fs.readFileSync("public/game/state.js", "utf8")),
+    "los vales se gastan; el contador no");
+}
+
 console.log("\nY LA CUENTA QUE MOTIVÓ TODO ESTO");
 {
   const antes = X.ARMAS_UNLOCK_PLATA / (3 * (X.CROP_DEF.papa.price - X.CROP_DEF.papa.seedCost) * 3600 / X.CROP_DEF.papa.grow);
