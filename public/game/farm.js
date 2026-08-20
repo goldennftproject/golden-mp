@@ -3263,10 +3263,53 @@ class FarmScene extends Phaser.Scene {
   }
 
   // recalcula las colisiones a partir de las posiciones actuales de los objetos (tras editar)
+  /* ============ AQUÍ ESTABA LA CAUSA DE LAS CELDAS OSCURAS (20/8, dirección, TERCER aviso) ======
+     "Esas celdas oscuras no tienen que estar. Es como que ahí hay mapeado algo más de antes. Te lo
+      pido cada vez y no lo estás arreglando."
+     Lo tenía delante y lo arreglé dos veces al lado. Esta función hacía:
+
+       GF.COLLISIONS = this.objs.filter(o => !o.oculto).map(o => GF.solidRect(o));
+
+     y GF.solidRect devuelve SOLO geometría: {cx, by, hw, dep}. La identidad de cada objeto —su
+     índice, su tipo, su bloque de expansión, su número de orden— la pone GF.rehacerColisiones() en
+     config.js, y esta línea la borraba entera en cada arranque de escena (create la llama siempre).
+     Con eso pasaban dos cosas, y las dos son lo que veía dirección:
+
+       1. GF.ocupacion() pregunta `objetoPresente(GF.COLLISIONS[i])`, y esa función decide mirando
+          `c.tipo`. Sin tipo no reconoce nada y devuelve SIEMPRE presente: los siete edificios sin
+          plano, los árboles todavía no entregados y las rocas bloqueadas volvían a reservar sus
+          celdas de fábrica. Treinta celdas sombreadas sin un solo sprite encima.
+       2. Y como además FILTRABA, la lista quedaba más corta que WORLD_OBJECTS y los índices se
+          corrían: COLLISIONS[i] pasaba a ser la caja de otro objeto. O sea que no era solo
+          permisivo, estaba descolocado.
+
+     Y explica por qué mis dos arreglos anteriores no sirvieron: las posiciones fantasma del
+     guardado y la caja cuadrada de la laguna eran problemas REALES, pero se borraban en cuanto
+     arrancaba la escena y esta línea reescribía el mapa entero.
+     Ahora se rehace desde WORLD_OBJECTS —que es quien sabe qué es cada cosa— y encima se corrigen
+     las posiciones de lo que el jugador movió en modo edición, que es para lo que existía esto.
+     Filtrar lo oculto ya no hace falta: blockedAt pregunta objetoPresente antes de dar una caja
+     por sólida, así que con la identidad puesta lo invisible sigue sin estorbar al caminar. */
   rebuildCollisions() {
-    const T = GF.TILE;
-    GF.COLLISIONS = this.objs.filter(o => o.type !== "fish" && !o.oculto).map(o => GF.solidRect(o));   // los edificios sin plano colocado no estorban (12/8)
-    this.navOf().invalidate();   // la rejilla de pathfinding se rearma sola en el próximo clic
+    GF.rehacerColisiones();                 // identidad: i, tipo, exp y número de orden
+    const extra = [];
+    (this.objs || []).forEach(o => {
+      if (o.type === "fish") return;
+      const r = GF.solidRect(o);
+      if (typeof o.i === "number" && GF.COLLISIONS[o.i]) {
+        /* Objeto del mundo: se le corrige la posición (pudo moverse en modo edición o haberse
+           colocado con su plano), pero NO se le toca la identidad. */
+        const c = GF.COLLISIONS[o.i];
+        c.cx = r.cx; c.by = r.by; c.hw = r.hw; c.dep = r.dep;
+      } else {
+        /* Lo que la escena crea aparte y no está en WORLD_OBJECTS: cofres colocados, montículos
+           del día, el paquete. No tienen nada que ocultar, así que van tal cual y con su tipo. */
+        r.tipo = o.type; extra.push(r);
+      }
+    });
+    GF.COLLISIONS = GF.COLLISIONS.concat(extra);
+    if (GF.ocupCambio) GF.ocupCambio();      // el mapa de ocupación tiene que rehacerse
+    this.navOf().invalidate();               // la rejilla de pathfinding se rearma sola en el próximo clic
   }
   // blueprints (12/8): el cartel de materiales que flota sobre una OBRA colocada
   letreroObra(o) {
