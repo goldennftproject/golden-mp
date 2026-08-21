@@ -3430,7 +3430,7 @@ class FarmScene extends Phaser.Scene {
     const cx = x0 + w / 2, cy = y0 + h / 2;
     const D = 99980;
     this.expCartel = [];   // lo que solo se ve con el cursor encima (o siempre, si ya lo podés pagar)
-    const chapa = this.add.rectangle(cx, cy, 132, 56, 0x1d2a14, 0.86)
+    const chapa = this.add.rectangle(cx, cy, 176, 56, 0x1d2a14, 0.86)
       .setStrokeStyle(2, col, 0.9).setDepth(D).setInteractive({ useHandCursor: true });
     this.expFx.push(chapa); this.expCartel.push(chapa);
     { const t = this.add.text(cx, cy - 18, "EXPANDIR",
@@ -3448,7 +3448,14 @@ class FarmScene extends Phaser.Scene {
           .setOrigin(0.5, 0.5).setDepth(D + 1);
         this.expFx.push(t3); this.expCartel.push(t3);
       });
-      chapa.setSize(132, 34 + partes.length * 12);
+      /* 20/8 (dirección): "en la chapa donde está el costo, abajo debería decir lo que te
+         desbloquea". Una línea, debajo del costo: el premio del bloque. */
+      const premio = this.add.text(cx, cy - 2 + partes.length * 12 + 3,
+        "Trae " + (GF.BLOQUE * GF.BLOQUE) + " celdas · árbol · roca · parcela",
+        { fontFamily: "system-ui", fontSize: "9px", color: "#cfe0c0" })
+        .setOrigin(0.5, 0.5).setDepth(D + 1);
+      this.expFx.push(premio); this.expCartel.push(premio);
+      chapa.setSize(176, 34 + partes.length * 12 + 14);
       if (puede) {   // late suave cuando ya lo podés pagar: el cartel pide que lo toques
         this.tweens.add({ targets: chapa, scaleX: 1.04, scaleY: 1.04, duration: 700,
           yoyo: true, repeat: -1, ease: "Sine.easeInOut" });

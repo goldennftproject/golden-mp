@@ -33,7 +33,9 @@ function stub(tipo, reg) {
 }
 function escenaFalsa(reg) {
   return {
-    add: new Proxy({}, { get: (t, k) => (...a) => stub(k, reg) }),
+    /* los textos guardan su CADENA (tercer argumento de add.text): así se puede preguntar qué
+       dice la chapa, no solo cuántos objetos dibujó */
+    add: new Proxy({}, { get: (t, k) => (...a) => { const s = stub(k, reg); if (k === "text") reg[reg.length - 1].texto = a[2]; return s; } }),
     tweens: { add: () => stub("tween", []) },
   };
 }
@@ -101,6 +103,35 @@ console.log("\nCON EL NIVEL JUSTO: EL LOTE APARECE");
   ok("en reposo el relleno del lote es 0", zona.alfaRelleno === 0, String(zona.alfaRelleno));
   zona.handlers.pointerover();
   ok("y con el cursor encima se ilumina", zona.alfaRelleno > 0, String(zona.alfaRelleno));
+}
+
+console.log("\nLA CHAPA DICE LO QUE DESBLOQUEA, DEBAJO DEL COSTO");
+{
+  /* Dirección, 20/8: "en la chapa donde está el costo, abajo debería decir lo que te desbloquea". */
+  const { reg } = pintar(ex.nivel, {});
+  const textos = reg.filter(o => o.__tipo === "text").map(o => o.texto || "");
+  ok("hay una línea con el premio del bloque", textos.some(t => /Trae 25 celdas · árbol · roca · parcela/.test(t)),
+    textos.filter(t => /Trae/.test(t)).join(" | ") || textos.join(" | "));
+  const iCosto = textos.findIndex(t => /\d+\/\d+/.test(t)), iPremio = textos.findIndex(t => /Trae/.test(t));
+  ok("y va DESPUÉS del costo, como pidió dirección", iCosto >= 0 && iPremio > iCosto);
+}
+
+console.log("\nLAS EXPANSIONES VAN EN ORDEN: NIVEL *Y* LAS ANTERIORES HECHAS");
+{
+  /* Dirección, 20/8: "si soy nivel 5 pero no hice la expansión del nivel 3, no se me tiene que
+     mostrar la del 5 — van por orden". Con nivel de sobra y CERO expansiones hechas, lo único
+     que puede dibujarse es el bloque 1: se comprueba con la geometría, no con la fe. */
+  G.expansiones = 0; G.level = 99; G.res = {};
+  GF.aplicarTerreno(0);
+  const reg = []; const esc = escenaFalsa(reg); esc._expFirma = null; dibujar.call(esc);
+  const ex99 = ctx.expansionSiguiente();
+  ok("con nivel 99 y 0 hechas, la que se ofrece es la n°1", ex99.n === 1 && ex99.bloque === GF.EXPANSIONES[0],
+    "expansión " + ex99.n + " · nivel " + ex99.nivel);
+  ok("y algo se dibuja (el nivel sobra)", reg.length > 0, reg.length + " objetos");
+  /* la compra pasa por la MISMA función: no hay camino para saltarse una */
+  const S = fs.readFileSync("public/game/state.js", "utf8");
+  ok("expansionComprar compra expansionSiguiente(), no un índice suelto",
+    /function expansionComprar\(\) \{\s*\n?\s*const e = expansionSiguiente\(\);/.test(S));
 }
 
 console.log("\nY UNA VEZ QUE SUBÍS, SE REDIBUJA SOLO");
