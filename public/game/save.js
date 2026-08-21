@@ -24,7 +24,7 @@ function snapshot() {
   return { plata: G.plata, golden: G.golden, level: G.level, prestige: G.prestige, iniciado: G.iniciado,
     res: G.res, picks: G.picks, skills: G.skills, fish: G.fish, plots: G.plots, nodos: G.nodos, expansiones: G.expansiones, pescaHasta: G.pescaHasta, runaOro: G.runaOro, buffs: G.buffs, seeds: G.seeds, selSeed: G.selSeed,
     tools: G.tools, sflStock: true, invRows: G.invRows, slots: G.slots, hotbar: G.hotbar, hotSel: G.hotSel, hbInit: G.hbInit, layout: G.layout,
-    daily: G.daily, plotsOwned: G.plotsOwned, plotsCompradas: G.plotsCompradas, seedBuys: G.seedBuys, built: G.built,
+    daily: G.daily, plotsOwned: G.plotsOwned, plotsCompradas: G.plotsCompradas, plotsFicha: G.plotsFicha, seedBuys: G.seedBuys, built: G.built,
     hp: G.hp, hpMax: G.hpMax, combatXp: G.combatXp, stam: G.stam, stamAcc: G.stamAcc, stamRec: G.stamRec, pass: G.pass, tuto: G.tuto, firstSeeds: G.firstSeeds,
     stats: G.stats, statsBase: G.statsBase, chestCap: G.chestCap, edif2: G.edif2, cosmeticos: G.cosmeticos, animals: G.animals, armor: G.armor, armorEq: G.armorEq, ofrendaPts: G.ofrendaPts, ofrendaLog: G.ofrendaLog, nodoUsos: G.nodoUsos, cosEq: G.cosEq, incursion: G.incursion, incDia: G.incDia, zonaCdHasta: G.zonaCdHasta, zonaViaje: G.zonaViaje, decos: G.decos, decoBolsa: G.decoBolsa, godHand: G.godHand, zonasVistas: G.zonasVistas, visto: nowMs(), dummyTrain: G.dummyTrain, swordOwned: G.swordOwned, bowOwned: G.bowOwned, swordWoodOwned: G.swordWoodOwned, gear: G.gear,
     armasUnlocked: G.armasUnlocked, editVisto: G.editVisto, treesOpen: G.treesOpen, rocksOpen: G.rocksOpen, firstCropDone: G.firstCropDone, weapons: G.weapons,
@@ -84,6 +84,7 @@ function hydrate(d) {
   if (d.daily && typeof d.daily === "object") G.daily = { day: d.daily.day || 0, last: d.daily.last || "" };
   if (typeof d.plotsOwned === "number") G.plotsOwned = Math.max(2, Math.min(typeof PLOT_MAX !== "undefined" ? PLOT_MAX : 60, d.plotsOwned));   // fix #18 (11/8): el tope acá seguía en 12 y el F5 te "devolvía" las parcelas compradas
   if (typeof d.plotsCompradas === "number") G.plotsCompradas = Math.max(0, d.plotsCompradas);   // 20/8: el precio de tienda sube solo con éstas
+  G.plotsFicha = Math.max(0, d.plotsFicha || 0);   // 20/8: las de Ficha de parcela (pase) — parte del libro mayor
   if (d.seedBuys && typeof d.seedBuys === "object") G.seedBuys = { date: d.seedBuys.date || "", count: d.seedBuys.count || 0 };
   if (typeof d.hpMax === "number") G.hpMax = d.hpMax;
   G.combatXp = (typeof d.combatXp === "number") ? d.combatXp : 0;
@@ -271,21 +272,40 @@ function migrarGuardado(d) {
      Y no vale dejar que regalosSync se la dé como premio al baúl: dirección fue explícito en que
      dentro del bloque nuevo la parcela tiene que estar YA PUESTA, igual que el árbol y la roca.
      Cuando comprás terreno despejado, lo que hay dentro es tuyo y está en su sitio.
-     La migración es idempotente: si el bloque ya tiene una parcela tuya, no hace nada. Y si la
-     celda reservada quedó ocupada (el jugador construyó encima), busca otra libre del mismo
-     bloque antes que dejarlo sin nada. */
+     20/8, MÁS TARDE — LA IDEMPOTENCIA POSICIONAL ERA UNA FÁBRICA DE PARCELAS. La primera versión
+     preguntaba "¿hay una parcela tuya DENTRO del bloque?". Pero mover la parcela regalada a otro
+     lado es un gesto legítimo (y natural: "esta no la pedí acá") — y en cuanto el jugador la
+     sacaba del bloque, CADA RECARGA regalaba otra. Dirección lo vio en vivo: "están apareciendo
+     parcelas de la nada, cada F5 recibo una".
+     La entrega ahora se decide por CONTABILIDAD, no por posición:
+        esperadas = 3 de nacimiento + 1 por expansión con parcela + las compradas en tienda.
+     Si tenés menos, se entregan las que faltan (dentro de su bloque, como pidió dirección).
+     Si tenés MÁS, sobran fantasmas de este mismo bug: se recortan, borrando sus posiciones.
+     Mover una parcela ya no confunde a nadie, porque la posición dejó de ser el libro mayor. */
   try {
+    G.layoutPlots = G.layoutPlots || {};
     const n = G.expansiones || 0;
-    if (n > 0 && GF.EXPANSIONES) {
-      G.layoutPlots = G.layoutPlots || {};
+    let regalos = 0;
+    for (let i = 0; i < n; i++) if (GF.EXPANSIONES && GF.EXPANSIONES[i] && GF.EXPANSIONES[i].parcela) regalos++;
+    /* el contador de compradas viene del guardado; los guardados de antes de hoy lo deducen UNA
+       vez, ANTES de entregar nada (si se dedujera después, los regalos contarían como compras) */
+    const fichas = Math.max(0, G.plotsFicha || 0);   // las canjeadas con Ficha de parcela (pase)
+    const compradas = (typeof d.plotsCompradas === "number")
+      ? Math.max(0, d.plotsCompradas)
+      : Math.max(0, (G.plotsOwned || 3) - 3 - regalos - fichas);
+    G.plotsCompradas = compradas;
+    const tope = (typeof PLOT_MAX !== "undefined") ? PLOT_MAX : 60;
+    const esperadas = Math.min(tope, 3 + regalos + compradas + fichas);
+    const tiene = G.plotsOwned || 3;
+    if (tiene < esperadas) {
+      /* faltan: se colocan dentro de los bloques que no tengan parcela propia (la celda que el
+         bloque reservó; si está ocupada, la primera libre del bloque) */
       const puestas = Object.keys(G.layoutPlots).map(k => G.layoutPlots[k]);
-      let dadas = 0;
-      for (let i = 0; i < n; i++) {
+      let porDar = esperadas - tiene, dadas = 0;
+      for (let i = 0; i < n && porDar > 0; i++) {
         const b = GF.EXPANSIONES[i]; if (!b || !b.parcela) continue;
         const dentro = (c, r) => c >= b.c0 && c < b.c1 && r >= b.r0 && r < b.r1;
-        /* ¿Ya hay una parcela tuya dentro de este bloque? Entonces no falta nada. */
-        if (puestas.some(p => p && dentro(p.col, p.row))) continue;
-        /* La celda que el bloque reservó; si está ocupada, la primera libre del bloque. */
+        if (puestas.some(p => p && dentro(p.col, p.row))) continue;   // este bloque ya tiene la suya
         let destino = b.parcela;
         if (GF.celdaOcupada && GF.celdaOcupada(destino.col, destino.row)) {
           destino = null;
@@ -298,27 +318,23 @@ function migrarGuardado(d) {
         G.layoutPlots[idx] = { col: destino.col, row: destino.row };
         G.plotsOwned = idx + 1;
         puestas.push(destino);
-        dadas++;
+        porDar--; dadas++;
       }
+      /* si aún faltan (todos los bloques ya tienen la suya), se acreditan igual: quedan
+         pendientes de colocar desde el modo edición, como una comprada */
+      if (porDar > 0) { G.plotsOwned = (G.plotsOwned || 3) + porDar; dadas += porDar; }
       if (dadas) {
-        console.info("[migración] " + dadas + " parcela(s) de expansiones ya compradas, colocadas en su bloque");
+        console.info("[migración] " + dadas + " parcela(s) que faltaban por las expansiones, entregadas");
         if (GF.ocupCambio) GF.ocupCambio();
       }
+    } else if (tiene > esperadas) {
+      /* sobran: los fantasmas del bug del F5 — se recortan las últimas, que son las duplicadas */
+      for (let k = esperadas; k < tiene; k++) delete G.layoutPlots[k];
+      G.plotsOwned = esperadas;
+      console.info("[migración] " + (tiene - esperadas) + " parcela(s) fantasma recortadas (bug del F5)");
+      if (GF.ocupCambio) GF.ocupCambio();
     }
   } catch (e) {}
-
-  /* ============ CUÁNTAS PARCELAS SE COMPRARON EN TIENDA (20/8, dirección) ==========
-     El precio de la tienda pasó a subir SOLO con las compradas: "si yo adquiero una parcela por
-     expansión, que no le afecte al precio de las que se venden". Los guardados viejos no traen
-     ese contador, así que se deduce una única vez: de las que tenés, 3 son de nacimiento y las
-     de expansión son regalo — el resto solo pudo salir de la tienda.
-     Va DESPUÉS de la migración de arriba a propósito: esa suma parcelas de expansión a
-     plotsOwned, y si esto corriera antes las contaría como compradas y encarecería la tienda. */
-  if (typeof d.plotsCompradas !== "number") {
-    let regalo = 0;
-    try { for (let i = 0; i < (G.expansiones || 0); i++) if (GF.EXPANSIONES && GF.EXPANSIONES[i] && GF.EXPANSIONES[i].parcela) regalo++; } catch (e) {}
-    G.plotsCompradas = Math.max(0, (G.plotsOwned || 3) - 3 - regalo);
-  }
 
   /* ============ LIMPIEZA DE FANTASMAS DEL GUARDADO =================================
      18/8 — Los guardados de antes de los planos traen posiciones en G.layout para edificios que
