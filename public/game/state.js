@@ -4965,6 +4965,16 @@ function skillDeEntrega(p) {
   if (typeof MAT_ORDER !== "undefined" && MAT_ORDER.includes(p.key)) return "crafting";
   return "farming";                                    // los cultivos, que es el caso normal
 }
+/* 20/8 — EL CANDADO CIRCULAR DEL TABLÓN. Lo encontró la jugada completa (tools/jugada-completa):
+   el ÚLTIMO paso del tutorial es « Entregá un encargo en el tablón », y el tablón contestaba
+   « abre al terminar el tutorial ». El candado y la meta se apuntaban mutuamente: NINGÚN jugador
+   nuevo podía terminar el tutorial, y se quedaba para siempre dentro del embudo de permisos.
+   La regla correcta es una sola: el tablón abre cuando el tutorial terminó O cuando el paso
+   activo es justamente el que te manda a usarlo. */
+function tablonAbierto() {
+  if (!G.tuto || G.tuto.done) return true;
+  return (TUTO_STEPS[G.tuto.step] || {}).id === "pedido";
+}
 function pedidoEntregar(i) {
   const e = pedidosEstado();
   // 18/8: "S" y "M" son el encargo de la semana y el del mes; los números, los tres diarios
@@ -4974,7 +4984,7 @@ function pedidoEntregar(i) {
      línea devolvía false sin decir una palabra. Un clic siempre tiene que contestar algo. */
   if (!p) { toast("Ese encargo ya no está en el tablón"); return false; }
   if (p.hecho) { toast("Ese encargo ya está entregado"); return false; }
-  if (G.tuto && !G.tuto.done) { toast("El tablón abre al terminar el tutorial"); return false; }
+  if (!tablonAbierto()) { toast("El tablón abre al terminar el tutorial"); return false; }
   if (pedidoStock(p) < p.n) { toast("Te falta " + pedidoLabel(p) + " (" + pedidoStock(p) + "/" + p.n + ")"); return false; }
   if (p.tipo === "res") G.res[p.key] -= p.n;
   else if (p.tipo === "fish") G.fish[p.key] -= p.n;

@@ -1244,8 +1244,10 @@ class FarmScene extends Phaser.Scene {
       const ex = (this.excavObjs || []).indexOf(o); if (ex >= 0) this.excavObjs.splice(ex, 1);
       return;
     }
-    if (o.type === "tablon_pedidos") {   // TABLÓN (16/8): cerrado durante el tutorial
-      if (G.tuto && !G.tuto.done) { toast("El tablón abre cuando termines el tutorial"); return; }
+    if (o.type === "tablon_pedidos") {   // TABLÓN (16/8): cerrado durante el tutorial…
+      // …salvo cuando el paso activo ES el del tablón (20/8): el último paso manda a entregar un
+      // encargo, y con el candado viejo el tutorial no podía terminar nunca (candado circular).
+      if (typeof tablonAbierto === "function" ? !tablonAbierto() : (G.tuto && !G.tuto.done)) { toast("El tablón abre cuando termines el tutorial"); return; }
       return openOv("ov-pedidos");
     }
     if (o.type === "cofre_diario") return openOv("ov-baul");   // 15/8 v3: el baúl tiene su propia pantalla
