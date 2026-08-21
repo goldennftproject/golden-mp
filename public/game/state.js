@@ -70,6 +70,7 @@ const G = {
   plotsOwned: 3,   // 14/8 (dirección): se nace con 3 parcelas — la primera misión planta 3 semillas y tiene que haber 3 celdas donde apuntar
   plotsCompradas: 0,   // 20/8 (dirección): SOLO las compradas en tienda — el precio sube con éstas; las regaladas por expansión no lo tocan
   plotsFicha: 0,       // 20/8: las canjeadas con Ficha de parcela (pase/capítulos) — también cuentan en el libro mayor
+  expParcelasDadas: 0, // 20/8 (dirección): "las expansiones deberían tener guardado lo que entregan" — cuántas ya entregaron SU parcela; la entrega es secuencial, así que basta el número
   decos: [], decoBolsa: {}, godHand: false, zonasVistas: ["pantano"],   // adornos puestos · adornos sin colocar · NFT de siembra automática (10/8)
   daily: { day: 0, last: "" },   // cofre diario: día de racha reclamado (1..7) y fecha del último reclamo
   seedBuys: { date: "", count: 0 },   // cupo diario de semillas (compras + cofre)
@@ -1425,7 +1426,10 @@ function expansionComprar() {
      descubría. Si el jugador la quiere en otro sitio, la arrastra en modo edición.
      El índice es plotsOwned ANTES de sumar (las usables son 0..owned−1), el mismo cuidado que hubo
      que tener en regaloColocar cuando la parcela se plantaba sola en el centro de la granja. */
-  if (e.bloque && e.bloque.parcela) {
+  /* 20/8 (dirección): "una vez que se entrega, una FLAG que diga que ya se entregó, y no vuelve
+     a entregarse por más F5 que hagas". La bandera es expParcelasDadas: la entrega es secuencial
+     (bloque 1, 2, 3…), así que con contar hasta dónde se llegó alcanza. */
+  if (e.bloque && e.bloque.parcela && (G.expParcelasDadas || 0) <= e.i) {
     const tope = typeof PLOT_MAX !== "undefined" ? PLOT_MAX : 60;
     if ((G.plotsOwned || 3) < tope) {
       const idx = G.plotsOwned || 3;
@@ -1435,6 +1439,7 @@ function expansionComprar() {
       if (typeof GF !== "undefined" && GF.ocupCambio) GF.ocupCambio();
       log("La expansión trae una parcela ya arada. Si la querés en otro lado, movela en modo edición.", "gold");
     }
+    G.expParcelasDadas = e.i + 1;   // entregada: quede donde quede la parcela, esto no se repite
   }
   const nuevos = (typeof regalosSync === "function") ? regalosSync() : 0;   // por si quedaba algo atrasado
   if (nuevos) log("La expansión trajo " + nuevos + " premio" + (nuevos > 1 ? "s" : "") + " al baúl.", "gold");

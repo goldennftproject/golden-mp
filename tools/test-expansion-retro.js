@@ -103,7 +103,9 @@ console.log("\nLAS DIECISÉIS, UNA POR UNA: ¿CADA BLOQUE ENTREGA LO SUYO?");
      las parcelas en CADA UNA de las expansiones."
      Comprobar la 1 y la 2 no dice nada de la 16. Se compran las dieciséis en orden, y después de
      cada compra se mira el bloque recién abierto: su árbol, su roca y su parcela. */
-  G.level = 60; G.expansiones = 0; G.plotsOwned = 3; G.treesOpen = [0]; G.rocksOpen = [0];
+  /* 20/8: se reinicia TAMBIÉN la flag de entrega — las secciones de arriba la dejaron en 2, y
+     con la flag adelantada las dos primeras compras (correctamente) no entregan nada */
+  G.level = 60; G.expansiones = 0; G.plotsOwned = 3; G.expParcelasDadas = 0; G.treesOpen = [0]; G.rocksOpen = [0];
   G.built = {}; G.obras = {}; G.layout = {}; G.layoutPlots = {}; G.decos = []; G.chests = [];
   G.regalos = { tree: 0, rock: 0, plot: 0 }; G.cobertizo = { tree: 0, rock: 0, plot: 0 };
   GF.aplicarTerreno(0); GF.ocupCambio();

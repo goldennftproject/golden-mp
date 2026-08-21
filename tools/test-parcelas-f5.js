@@ -99,5 +99,37 @@ console.log("\nY EL GUARDADO SIN CONTADOR (PRE-HOY) DEDUCE SIN CONTAR REGALOS CO
   ok("y no se recorta nada: la cuenta cierra", G.plotsOwned === 6);
 }
 
+console.log("\nLA FLAG DE DIRECCIÓN: « una vez entregado, no se vuelve a entregar »");
+{
+  /* guardado CON flag: la flag manda y la contabilidad ni se mira. plotsOwned puede ser lo que
+     sea (fichas, compras, historia rara): NADA se recorta y NADA se regala. */
+  let d = { level: 9, expansiones: 2, plotsOwned: 11, plotsCompradas: 1, expParcelasDadas: 2,
+    tuto: { done: true }, layoutPlots: { 3: { col: 5, row: 5 }, 4: { col: 6, row: 5 } }, sflStock: true };
+  const hist = [];
+  for (let i = 0; i < 3; i++) { d = f5(d); hist.push(G.plotsOwned + "/" + G.expParcelasDadas); }
+  ok("con la flag al día, el F5 no toca nada", hist.every(h => h === "11/2"), hist.join(" → "));
+
+  /* flag atrasada (compró una expansión en un cliente viejo): se entrega SOLO la pendiente */
+  d = { level: 9, expansiones: 3, plotsOwned: 11, plotsCompradas: 1, expParcelasDadas: 2,
+    tuto: { done: true }, layoutPlots: {}, sflStock: true };
+  d = f5(d);
+  ok("flag 2 con 3 expansiones: entrega LA pendiente y marca", G.plotsOwned === 12 && G.expParcelasDadas === 3,
+    G.plotsOwned + " parcelas · flag " + G.expParcelasDadas);
+  d = f5(d);
+  ok("y el F5 siguiente ya no entrega", G.plotsOwned === 12 && G.expParcelasDadas === 3);
+
+  /* y expansionComprar marca la flag al entregar */
+  G.plata = 0; G.res = Object.assign({}, G.res); G.level = 99;
+  const ex = ctx.expansionSiguiente();
+  Object.keys(ex.costo).forEach(k => { G.res[k] = ex.costo[k] + 5; });
+  const flagAntes = G.expParcelasDadas, ownedAntes = G.plotsOwned;
+  ctx.expansionComprar();
+  ok("expansionComprar entrega y sube la flag", G.expParcelasDadas === flagAntes + 1 && G.plotsOwned === ownedAntes + 1,
+    "flag " + flagAntes + " → " + G.expParcelasDadas);
+  d = JSON.parse(JSON.stringify(ctx.snapshot()));
+  d = f5(d);
+  ok("y tras guardar y volver, sigue todo en su sitio", G.expParcelasDadas === flagAntes + 1 && G.plotsOwned === ownedAntes + 1);
+}
+
 console.log(fallos ? "\n" + fallos + " fallo(s)\n" : "\nTodo en orden: la posición ya no es el libro mayor.\n");
 process.exit(fallos ? 1 : 0);

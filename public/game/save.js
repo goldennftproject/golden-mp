@@ -24,7 +24,7 @@ function snapshot() {
   return { plata: G.plata, golden: G.golden, level: G.level, prestige: G.prestige, iniciado: G.iniciado,
     res: G.res, picks: G.picks, skills: G.skills, fish: G.fish, plots: G.plots, nodos: G.nodos, expansiones: G.expansiones, pescaHasta: G.pescaHasta, runaOro: G.runaOro, buffs: G.buffs, seeds: G.seeds, selSeed: G.selSeed,
     tools: G.tools, sflStock: true, invRows: G.invRows, slots: G.slots, hotbar: G.hotbar, hotSel: G.hotSel, hbInit: G.hbInit, layout: G.layout,
-    daily: G.daily, plotsOwned: G.plotsOwned, plotsCompradas: G.plotsCompradas, plotsFicha: G.plotsFicha, seedBuys: G.seedBuys, built: G.built,
+    daily: G.daily, plotsOwned: G.plotsOwned, plotsCompradas: G.plotsCompradas, plotsFicha: G.plotsFicha, expParcelasDadas: G.expParcelasDadas, seedBuys: G.seedBuys, built: G.built,
     hp: G.hp, hpMax: G.hpMax, combatXp: G.combatXp, stam: G.stam, stamAcc: G.stamAcc, stamRec: G.stamRec, pass: G.pass, tuto: G.tuto, firstSeeds: G.firstSeeds,
     stats: G.stats, statsBase: G.statsBase, chestCap: G.chestCap, edif2: G.edif2, cosmeticos: G.cosmeticos, animals: G.animals, armor: G.armor, armorEq: G.armorEq, ofrendaPts: G.ofrendaPts, ofrendaLog: G.ofrendaLog, nodoUsos: G.nodoUsos, cosEq: G.cosEq, incursion: G.incursion, incDia: G.incDia, zonaCdHasta: G.zonaCdHasta, zonaViaje: G.zonaViaje, decos: G.decos, decoBolsa: G.decoBolsa, godHand: G.godHand, zonasVistas: G.zonasVistas, visto: nowMs(), dummyTrain: G.dummyTrain, swordOwned: G.swordOwned, bowOwned: G.bowOwned, swordWoodOwned: G.swordWoodOwned, gear: G.gear,
     armasUnlocked: G.armasUnlocked, editVisto: G.editVisto, treesOpen: G.treesOpen, rocksOpen: G.rocksOpen, firstCropDone: G.firstCropDone, weapons: G.weapons,
@@ -85,6 +85,7 @@ function hydrate(d) {
   if (typeof d.plotsOwned === "number") G.plotsOwned = Math.max(2, Math.min(typeof PLOT_MAX !== "undefined" ? PLOT_MAX : 60, d.plotsOwned));   // fix #18 (11/8): el tope acá seguía en 12 y el F5 te "devolvía" las parcelas compradas
   if (typeof d.plotsCompradas === "number") G.plotsCompradas = Math.max(0, d.plotsCompradas);   // 20/8: el precio de tienda sube solo con éstas
   G.plotsFicha = Math.max(0, d.plotsFicha || 0);   // 20/8: las de Ficha de parcela (pase) — parte del libro mayor
+  if (typeof d.expParcelasDadas === "number") G.expParcelasDadas = Math.max(0, Math.min(16, d.expParcelasDadas));   // 20/8: la FLAG de dirección — qué expansiones ya entregaron su parcela
   if (d.seedBuys && typeof d.seedBuys === "object") G.seedBuys = { date: d.seedBuys.date || "", count: d.seedBuys.count || 0 };
   if (typeof d.hpMax === "number") G.hpMax = d.hpMax;
   G.combatXp = (typeof d.combatXp === "number") ? d.combatXp : 0;
@@ -277,14 +278,48 @@ function migrarGuardado(d) {
      lado es un gesto legítimo (y natural: "esta no la pedí acá") — y en cuanto el jugador la
      sacaba del bloque, CADA RECARGA regalaba otra. Dirección lo vio en vivo: "están apareciendo
      parcelas de la nada, cada F5 recibo una".
-     La entrega ahora se decide por CONTABILIDAD, no por posición:
-        esperadas = 3 de nacimiento + 1 por expansión con parcela + las compradas en tienda.
-     Si tenés menos, se entregan las que faltan (dentro de su bloque, como pidió dirección).
-     Si tenés MÁS, sobran fantasmas de este mismo bug: se recortan, borrando sus posiciones.
-     Mover una parcela ya no confunde a nadie, porque la posición dejó de ser el libro mayor. */
+     20/8, TERCERA VUELTA — LA FLAG DE DIRECCIÓN. "Las expansiones deberían tener guardado lo que
+     entregan: una flag que diga que ya se entregó, y no vuelve a entregarse por más F5 que hagas."
+     Exacto. La bandera es G.expParcelasDadas (la entrega es secuencial: basta contar hasta dónde
+     se llegó), se guarda con la partida y expansionComprar la marca al entregar. Desde acá:
+       · guardado CON la flag → manda la flag: se entregan solo las pendientes (dadas < compradas
+         de terreno) y NUNCA se recorta ni se vuelve a regalar. La posición no pinta nada.
+       · guardado SIN la flag (de antes de hoy) → UNA sola vez se hace la contabilidad
+         (esperadas = 3 + regalos + compradas + fichas): faltantes se entregan, fantasmas del bug
+         del F5 se recortan — y la flag nace, para que esto no vuelva a decidirse nunca. */
   try {
     G.layoutPlots = G.layoutPlots || {};
     const n = G.expansiones || 0;
+    const tope = (typeof PLOT_MAX !== "undefined") ? PLOT_MAX : 60;
+    /* entregar la parcela del bloque i: en su celda reservada, o la primera libre del bloque */
+    const entregarDe = (i) => {
+      const b = GF.EXPANSIONES && GF.EXPANSIONES[i];
+      if (!b || !b.parcela) return false;
+      if ((G.plotsOwned || 3) >= tope) return false;
+      let destino = b.parcela;
+      if (GF.celdaOcupada && GF.celdaOcupada(destino.col, destino.row)) {
+        destino = null;
+        for (let r = b.r0; r < b.r1 && !destino; r++)
+          for (let c = b.c0; c < b.c1 && !destino; c++)
+            if (GF.tuyo(c, r) && !GF.enCerca(c, r) && !GF.celdaOcupada(c, r)) destino = { col: c, row: r };
+      }
+      const idx = G.plotsOwned || 3;
+      if (destino) G.layoutPlots[idx] = { col: destino.col, row: destino.row };
+      G.plotsOwned = idx + 1;   // sin celda libre en el bloque queda pendiente de colocar, pero es tuya
+      return true;
+    };
+    if (typeof d.expParcelasDadas === "number") {
+      /* ---- LA FLAG MANDA ---- */
+      let dadas = 0;
+      for (let i = G.expParcelasDadas; i < n; i++) { entregarDe(i); dadas++; }
+      if (dadas) {
+        G.expParcelasDadas = n;
+        console.info("[migración] " + dadas + " parcela(s) de expansión pendientes, entregadas (flag)");
+        if (GF.ocupCambio) GF.ocupCambio();
+      }
+      throw { salidaLimpia: true };   // el resto del bloque es solo para guardados sin flag
+    }
+    /* ---- GUARDADO SIN FLAG: la contabilidad, una única vez ---- */
     let regalos = 0;
     for (let i = 0; i < n; i++) if (GF.EXPANSIONES && GF.EXPANSIONES[i] && GF.EXPANSIONES[i].parcela) regalos++;
     /* el contador de compradas viene del guardado; los guardados de antes de hoy lo deducen UNA
@@ -294,7 +329,7 @@ function migrarGuardado(d) {
       ? Math.max(0, d.plotsCompradas)
       : Math.max(0, (G.plotsOwned || 3) - 3 - regalos - fichas);
     G.plotsCompradas = compradas;
-    const tope = (typeof PLOT_MAX !== "undefined") ? PLOT_MAX : 60;
+    G.expParcelasDadas = n;   // la flag NACE: todo lo de los bloques ya comprados queda por entregado
     const esperadas = Math.min(tope, 3 + regalos + compradas + fichas);
     const tiene = G.plotsOwned || 3;
     if (tiene < esperadas) {
