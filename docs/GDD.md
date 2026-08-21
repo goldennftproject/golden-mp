@@ -183,8 +183,8 @@ Las expansiones son estrictamente SECUENCIALES: la única que existe — en el m
 
 | **#** | **Nivel** | **Coste**                                            |
 | ------ | --------- | ---------------------------------------------------- |
-| 1      | 3         | 17 Madera + 11 Piedra                                |
-| 2      | 5         | 49 Madera + 32 Piedra                                |
+| 1 | 3 | 6 Madera + 4 Piedra |
+| 2 | 5 | 22 Madera + 14 Piedra |
 | 3      | 7         | 90 Madera + 59 Piedra                                |
 | 4      | 9         | 77 Madera + 62 Piedra + 8 Bronce                     |
 | 5      | 12        | 110 Madera + 88 Piedra + 11 Bronce                   |
@@ -199,6 +199,8 @@ Las expansiones son estrictamente SECUENCIALES: la única que existe — en el m
 | 14     | 42        | 639 Madera + 511 Piedra + 18 Oro + 14 Diamante       |
 | 15     | 46        | 722 Madera + 578 Piedra + 16 Diamante + 12 Netherita |
 | 16     | 50        | 810 Madera + 648 Piedra + 18 Diamante + 14 Netherita |
+
+*Las expansiones 1 y 2 están abaratadas a mano (0,7 y 2 horas de granja) por decisión de dirección del 20/8: « abaratar solo la 1 y la 2, hasta que el nivel mande ». De la 3 en adelante manda la curva derivada.*
 
 **Las parcelas: tres caminos y un libro mayor**
 
@@ -284,6 +286,10 @@ La Cocina convierte lo recolectado en platos que curan y dan un efecto temporal.
 | Crema de Calabaza     | 5         | 2 Calabaza + 1 Cebolla + 2 Madera            | 25       | Defensa +10%              | 7       |
 | Tortilla de Maíz      | 6         | 2 Maíz + 1 Cebolla + 2 Madera                | 27       | Daño +10%                 | 7       |
 | Aceite de Girasol     | 6         | 3 Girasol + 2 Madera                         | 18       | Suerte +10%               | 7       |
+| Guiso Campestre | 7 | 1 Papa + 1 Zanahoria + 1 Repollo + 1 Cebolla + 3 Madera | 31 | XP de combate +12% · limpia heridas | 8 |
+| Pan de Maíz y Trigo | 8 | 2 Trigo + 2 Maíz + 3 Madera | 34 | +20 de vida máxima · disipa maldiciones | 8 |
+| Estofado de la Cosecha | 9 | 2 Calabaza + 1 Maíz + 1 Papa + 1 Zanahoria + 3 Madera | 37 | Daño +15% · limpia heridas | 9 |
+| Banquete del Bosque | 10 | 1 Papa + 1 Zanahoria + 1 Repollo + 1 Brócoli + 1 Calabaza + 3 Madera | 40 | Daño, defensa y velocidad +20% | 10 |
 | Pescado asado         | 1         | 1 pez común                                  | 30       | Precio de venta +10%      | 4       |
 | Estofado de carne     | 1         | 1 Carne + 1 Papa + 1 Madera                  | 60       | Enfriamientos -15%        | 5       |
 | Banquete del granjero | 6         | 2 Carne + 1 Calabaza + 1 Madera + 1 pez raro | toda     | Precio de venta +20%      | 7       |
