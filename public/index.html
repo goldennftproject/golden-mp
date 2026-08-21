@@ -237,6 +237,10 @@
   .paq-shake{animation:paqshake .8s ease-in 1;cursor:pointer}
   /* buzón escénico (15/8): sobres en abanico, carta papel, pila de leídas */
   #bz-sobres{display:flex;justify-content:center;align-items:flex-end;gap:2px;min-height:86px;margin-top:-6px}
+  /* 20/8 (direccion): "ninguna interfaz cambia de tamano al interactuar". La carta y la pila
+     comparten hueco con los sobres: reservan la MISMA altura minima, y si la pila es larga
+     scrollea por dentro (el patron del Mercado), en vez de estirar la tarjeta. */
+  #bz-carta{min-height:86px;max-height:52vh;overflow:auto}
   .bz-sobre{width:74px;cursor:pointer;position:relative;transition:transform .15s}
   .bz-sobre img{width:100%;image-rendering:pixelated;display:block}
   .bz-sobre .de{font-size:10px;color:#f6ecce;text-shadow:0 1px 0 rgba(40,22,6,.6);margin-top:-4px}
@@ -263,7 +267,9 @@
   .baul-item .cant{position:absolute;right:-8px;bottom:-4px;background:#8a5a2c;color:#fff;font-size:10px;font-weight:800;border-radius:8px;padding:1px 4px}
   .baul-item.vuela{transform:translateY(-70px) scale(.5);opacity:0}
   /* tablón de pedidos (16/8): notas clavadas con chinche — pocas palabras, la imagen manda */
-  #pd-lista{display:flex;flex-direction:column;gap:9px;margin-top:6px}
+  /* 20/8 (direccion): altura fija + scroll interno — asi el tablon mide lo mismo en la vista de
+     pedidos y en la de canje, y entregar o descartar una nota tampoco lo achica */
+  #pd-lista{display:flex;flex-direction:column;gap:9px;margin-top:6px;height:min(380px,55vh);overflow:auto}
   .pd-nota{position:relative;background:#f6efdd;color:#4a3418;border-radius:8px;padding:9px 12px 8px;box-shadow:0 2px 0 rgba(40,22,6,.25);text-align:center}
   .pd-nota:before{content:"";position:absolute;top:-4px;left:50%;width:9px;height:9px;margin-left:-5px;border-radius:50%;background:#a03a2a;box-shadow:0 1px 2px rgba(0,0,0,.4)}
   .pd-nota .de{font-size:12px;color:#7a5a33}
@@ -735,7 +741,7 @@
   <div class="ov" id="ov-baul"><div class="card" style="width:min(340px,90%);text-align:center;min-height:300px">
     <button class="close" data-close="ov-baul">×</button>
     <h3 style="cursor:default">🧰 Baúl</h3>
-    <div class="sub" id="baul-sub"></div>
+    <div class="sub" id="baul-sub" style="min-height:15px"></div>
     <div id="baul-items"></div>
     <img id="baul-img" src="assets/farm/baul_premios.png" alt="" style="height:110px;width:auto;image-rendering:pixelated;margin:2px auto 6px;display:block">
     <div id="baul-nota" style="background:#f6efdd;color:#4a3418;border-radius:9px;padding:9px 12px;margin:6px 4px;font-size:13px;box-shadow:0 2px 0 rgba(40,22,6,.25);transform:rotate(.6deg)"></div>
@@ -766,7 +772,7 @@
   <div class="ov" id="ov-buzon"><div class="card" style="width:min(400px,92%);text-align:center;min-height:330px">
     <button class="close" data-close="ov-buzon">×</button>
     <h3 style="cursor:default">📬 Buzón</h3>
-    <div class="sub" id="bz-estado"></div>
+    <div class="sub" id="bz-estado" style="min-height:15px"></div>
     <img id="bz-img" src="assets/farm/buzon.png" alt="" style="height:96px;width:auto;image-rendering:pixelated;margin:0 auto;display:block">
     <div id="bz-sobres"></div>
     <div id="bz-carta" style="display:none"></div>
