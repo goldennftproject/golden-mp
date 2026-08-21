@@ -657,7 +657,10 @@ function refreshDaily() { /* la recompensa diaria se muestra en la pantalla del 
 /* ---- sembrado rápido: rueda de semillas (clic derecho en parcela seca) ---- */
 function showSeedWheel(px, py, plot) {
   const w = $("seedwheel"); if (!w) return;
-  const opts = CROP_ORDER.filter(k => cropUnlocked(k) && (G.seeds[k] || 0) > 0);
+  /* 21/8: las semillas EN BOLSA pero con el cultivo aun bloqueado (llegan por el pase o cofres)
+     ya no se esconden: se enseñan apagadas con su "Cultivo nivel X". Esconderlas hacia creer que
+     la rueda estaba rota o que la semilla se habia perdido. */
+  const opts = CROP_ORDER.filter(k => (G.seeds[k] || 0) > 0);
   if (!opts.length) { toast("No tenés semillas — comprá en la Tienda"); return; }
   const c = w.querySelector(".swc");
   c.style.left = px + "px"; c.style.top = py + "px";
@@ -665,13 +668,13 @@ function showSeedWheel(px, py, plot) {
   c.innerHTML = opts.map((k, i) => {
     const a = -Math.PI / 2 + i * 2 * Math.PI / opts.length;
     const x = Math.round(Math.cos(a) * R), y = Math.round(Math.sin(a) * R);
-    const cd = CROP_DEF[k];
-    return `<div class="swi" data-k="${k}" title="${cd.label} · crece en ${fmtSecs(cd.grow)}" style="left:${x}px;top:${y}px"><img class="swimg" src="${GF.spr("seed_" + k)}" onerror="this.outerHTML='<span>${cd.emoji}</span>'"><b>×${G.seeds[k]}</b></div>`;
+    const cd = CROP_DEF[k], abierta = cropUnlocked(k);
+    return `<div class="swi${abierta ? "" : " bloq"}" ${abierta ? `data-k="${k}"` : ""} title="${abierta ? cd.label + " · crece en " + fmtSecs(cd.grow) : cd.label + " · se abre con Cultivo nivel " + cd.lvl}" style="left:${x}px;top:${y}px${abierta ? "" : ";filter:grayscale(1) brightness(.6);cursor:not-allowed"}"><img class="swimg" src="${GF.spr("seed_" + k)}" onerror="this.outerHTML='<span>${cd.emoji}</span>'"><b>×${G.seeds[k]}</b></div>`;
   }).join("") + '<div class="swi center" style="left:0;top:0"><span></span></div>';
   w.classList.add("show");
   c.querySelectorAll(".swi[data-k]").forEach(el => el.onclick = (ev) => {
     ev.stopPropagation();
-    G.selSeed = el.dataset.k; hideSeedWheel();
+    G.selSeed = el.dataset.k; G.selSeedElegida = true; hideSeedWheel();   // 21/8: eleccion consciente — el clic izquierdo ya no vuelve a preguntar esta sesion
     if (window.FARM && plot) { FARM.pendingObj = plot; if (FARM.goTo) FARM.goTo(plot.cx, plot.by + 18); else FARM.moveTarget = { x: plot.cx, y: plot.by + 18 }; }
     if (isOpen("ov-inv")) refreshInv();
     if (typeof refreshHotbar === "function") refreshHotbar();
