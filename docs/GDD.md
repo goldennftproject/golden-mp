@@ -255,6 +255,8 @@ Los animales se compran con plata, ocupan sitio y producen material cada ciclo m
 
 **9. Combate: la Zona Negra**
 
+*La XP de combate está anclada por el diseñador (21/8): LA RATA DA 5. La tabla del doc maestro daba 100 y una sola rata regalaba el nivel 3; el bestiario entero se reescaló ÷20 conservando su forma (XP proporcional al peligro del bicho, con premio en jefes y élites).*
+
 La Zona Negra es el único sitio del juego donde se consigue CARNE y piezas de armadura. Se entra por un portal y hace falta un arma equipada.
 
 | **Zona**           | **Nivel** | **Qué es**                                                                 |
@@ -403,7 +405,7 @@ Normas de diseño que vienen de decisiones de dirección y que conviene no reabr
 
 **15. Cómo verificar lo que dice este documento**
 
-El proyecto tiene 51 pruebas automáticas y 15 auditores (90 herramientas en total). No comprueban que el código compile: comprueban que el JUEGO cumpla las reglas de arriba. Los más útiles para el diseñador:
+El proyecto tiene 52 pruebas automáticas y 15 auditores (91 herramientas en total). No comprueban que el código compile: comprueban que el JUEGO cumpla las reglas de arriba. Los más útiles para el diseñador:
 
 | **Herramienta**                 | **Qué contesta**                                            |
 | ------------------------------- | ----------------------------------------------------------- |
