@@ -1477,53 +1477,6 @@ function refreshAltar() {
 }
 
 /* ---- mercado / tienda ---- */
-/* ---- EL PLANO DE LA GRANJA (20/8, dirección) ---------------------------------
-   "Debería mostrar todas las expansiones con lo que se desbloquea en cada una. Pero en el mapa,
-    solo llegado el nivel — tendría que haber otra forma de informárselo al jugador."
-   Esa otra forma es ésta: un plano esquemático con los 16 bloques EN SU POSICIÓN REAL alrededor
-   de la granja. Cada bloque enseña el nivel al que se abre y los iconos de lo que trae (árbol,
-   roca, parcela): se lee de un vistazo, casi sin palabras. Verde lo tuyo, dorado el que ya
-   podés comprar, apagado lo que viene. El MAPA del juego sigue la regla de dirección — el lote
-   no existe hasta el nivel —; planificar se planifica acá. */
-function planoExpansiones() {
-  const CEL = 11;                                     // píxeles por celda del plano
-  const B = GF.BLOQUE * CEL;                          // un bloque: 5 celdas
-  /* el lienzo cubre la base (15×15 en 0,0) más el anillo de bloques: de (−5,−5) a (20,20) */
-  let c0 = 0, r0 = 0, c1 = GF.COLS_BASE, r1 = GF.ROWS_BASE;
-  GF.EXPANSIONES.forEach(e => { c0 = Math.min(c0, e.c0); r0 = Math.min(r0, e.r0); c1 = Math.max(c1, e.c1); r1 = Math.max(r1, e.r1); });
-  const W = (c1 - c0) * CEL, H = (r1 - r0) * CEL;
-  const px = (c) => (c - c0) * CEL, py = (r) => (r - r0) * CEL;
-  const hechas = G.expansiones || 0, nivel = G.level || 1;
-  const ic = (k, tam) => '<img src="' + GF.spr(k) + '" style="width:' + tam + 'px;height:' + tam + 'px;image-rendering:pixelated" onerror="this.remove()">';
-  let h = '<div class="info" style="margin-top:6px">El plano de tu granja: cada bloque marca el nivel al que se abre y lo que trae puesto.</div>';
-  h += '<div style="position:relative;width:' + W + 'px;height:' + H + 'px;margin:8px auto 10px">';
-  /* la granja actual: la base más los bloques ya comprados, en verde */
-  h += '<div style="position:absolute;left:' + px(0) + 'px;top:' + py(0) + 'px;width:' + (GF.COLS_BASE * CEL) +
-    'px;height:' + (GF.ROWS_BASE * CEL) + 'px;background:#3f7a2e;border:1px solid #2b5220;border-radius:3px;' +
-    'display:flex;align-items:center;justify-content:center" title="Tu granja">' + ic("barn", 34) + '</div>';
-  GF.EXPANSIONES.forEach((e, i) => {
-    const req = FARM_EXPANSION[i];
-    const comprada = i < hechas;
-    const siguiente = i === hechas;
-    const abierta = siguiente && nivel >= req;
-    const fondo = comprada ? "#3f7a2e" : abierta ? "#4a3d14" : "#20241c";
-    const borde = comprada ? "#2b5220" : abierta ? "#ffd54a" : "#3a4034";
-    const alfa = comprada || abierta ? 1 : (siguiente ? 0.9 : 0.55);
-    const rot = comprada ? "Expansión " + (i + 1) + " — ya es tuya"
-      : "Expansión " + (i + 1) + " · nivel " + req + " · trae " + (GF.BLOQUE * GF.BLOQUE) + " celdas, 1 árbol, 1 roca y 1 parcela";
-    h += '<div title="' + rot + '" style="position:absolute;left:' + px(e.c0) + 'px;top:' + py(e.r0) +
-      'px;width:' + B + 'px;height:' + B + 'px;background:' + fondo + ';border:1px solid ' + borde +
-      ';border-radius:3px;opacity:' + alfa + ';display:flex;flex-direction:column;align-items:center;justify-content:center;gap:1px;box-sizing:border-box">' +
-      (comprada
-        ? '<span style="color:#9fe07a;font-size:12px">✓</span>'
-        : '<span style="color:' + (abierta ? "#ffe08a" : nivel >= req ? "#cfe0c0" : "#8a927f") + ';font-size:9px;font-weight:bold">Nv ' + req + '</span>' +
-          '<span style="display:flex;gap:1px">' + ic("tree", 11) + ic("node_stone", 11) + ic("plot", 11) + '</span>') +
-      '</div>';
-  });
-  h += '</div>';
-  return h;
-}
-
 /* ---- TIENDA · pestaña de ADORNOS (10/8) --------------------------------------
    Decorar la granja y, más adelante, los eventos de "la más linda". Acá también van las
    parcelas (pagables en plata o en $Golden) y la GOD HAND, porque son las tres compras
@@ -1562,7 +1515,6 @@ function refreshDeco() {
           : '<button class="green sm" ' + (puede ? "" : "disabled") + ' id="exp-comprar">Expandir</button>') +
         '</div></div>';
     }
-    h += planoExpansiones();
   }
   // --- parcelas ---
   const tope = (G.plotsOwned || 2) >= PLOT_MAX;   // 10/8: el diseñador subió el tope de 12 a 60
