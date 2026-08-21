@@ -662,6 +662,11 @@
   <div class="hudbar">
     <div class="brand" style="display:flex;align-items:center;gap:12px"><h1>GOLDEN FARM</h1>
       <div class="pill" title="Ventanas del juego conectadas ahora"><span class="k">Jugadores en línea</span><b id="s-online">1</b></div>
+      <!-- 21/8 (dirección): botón de PRUEBAS para testear los sistemas sin farmear — regala
+           1000 madera + 1000 piedra. SOLO aparece si la URL lleva ?test (initUI lo destapa):
+           los jugadores no lo ven, y aunque lo descubrieran, el juego hoy es cliente-autoridad
+           (el guardado se puede editar igual), así que no abre ninguna puerta que no exista. -->
+      <button id="btn-test-kit" class="pill" style="display:none;cursor:pointer;border:1px dashed #e2b23a;background:transparent;color:#ffe08a" title="Kit de pruebas: +1000 madera y +1000 piedra">🧪 PRUEBAS</button>
     </div>
     <div class="hud">
       <div class="pill"><span class="k">Granja</span><b id="s-level">1</b><span class="k">/50</span></div>

@@ -2350,6 +2350,26 @@ function ponerAdornoElegido() {
   const er = $("edit-reset"); if (er) er.onclick = doFarmReset;
   const dc = $("dy-claim"); if (dc) dc.onclick = () => claimDaily();
   const sw = $("seedwheel"); if (sw) sw.onclick = hideSeedWheel;
+  /* 21/8 (dirección): botón de PRUEBAS junto al contador de jugadores — regala 1000 madera y
+     1000 piedra para testear obras, expansiones y crafteo sin farmear. Solo se DESTAPA si la URL
+     lleva ?test: el jugador normal no lo ve. (El juego hoy es cliente-autoridad, así que esto no
+     abre ninguna puerta que la consola no abriera ya; cuando llegue el servidor-autoridad, este
+     botón se elimina o se protege por cuenta.) */
+  {
+    const bt = $("btn-test-kit");
+    if (bt && typeof location !== "undefined" && /[?&#]test\b/.test(location.search + location.hash)) {
+      bt.style.display = "";
+      bt.onclick = () => {
+        G.res.madera = (G.res.madera || 0) + 1000;
+        G.res.piedra = (G.res.piedra || 0) + 1000;
+        log("🧪 Kit de PRUEBAS: +1000 madera y +1000 piedra.", "gold");
+        toast("🧪 +1000 madera · +1000 piedra");
+        if (canonicalStacks().length > invSlots()) toast("La bolsa queda desbordada hasta que gastes el material");
+        refreshHud(); if (typeof syncSlots === "function") syncSlots(); if (isOpen("ov-inv")) refreshInv();
+        if (typeof saveFarm === "function") saveFarm(true);
+      };
+    }
+  }
   const lm = $("logmin"); if (lm) lm.onclick = () => $("logpanel").classList.toggle("collapsed");
   initUniversalDrag();   // mantener clic sobre cualquier interfaz la mueve (detalles 29/7)
   document.querySelectorAll(".ltab").forEach(b => b.onclick = () => {
