@@ -109,7 +109,12 @@ function semanaActual() {
   const ini = G.iniciado || (G.iniciado = Date.now());
   return 1 + Math.floor((Date.now() - ini) / (7 * 86400000));
 }
-function cdMult() { const t = Date.now(); let m = 1; for (const b of G.buffs) if (b.type === "cd" && b.until > t) m *= b.mult; return m; }
+/* 20/8 (auditoría de dupes) — LOS BUFFS MULTIPLICATIVOS NO SE APILAN. cdMult y ventaMult
+   multiplicaban CADA buff activo del tipo: 10 estofados dejaban los enfriamientos en 0,85^10 = 20%
+   y 30 platos de venta ponían el mercado a ×41,7 — una impresora de plata con costo lineal y
+   ganancia exponencial. Ahora vale EL MEJOR buff activo: comer otro plato del mismo tipo renueva
+   la ventana, no compone. Los buffs aditivos (farm/speed/dmg) ya tenían sus topes y quedan igual. */
+function cdMult() { const t = Date.now(); let m = 1; for (const b of G.buffs) if (b.type === "cd" && b.until > t) m = Math.min(m, b.mult); return m; }
 /* ============ EL BONO DEL GRANERO SE PAGA EN PLATA (18/8, dirección) ===============
    El +1,5% por nivel de granja multiplicaba la CANTIDAD cosechada… y después redondeaba. Como
    todos los cultivos dan 1 unidad, `round(1 × 1,435)` seguía siendo 1: el jugador subía TREINTA Y
@@ -121,7 +126,7 @@ function cdMult() { const t = Date.now(); let m = 1; for (const b of G.buffs) if
    OJO CON EL ANCLA: esto la mueve A PROPÓSITO. Deja de ser "20 plata/hora" y pasa a ser
    "20 plata/hora al nivel 1, creciendo un 1,5% por nivel de granja". Al 50 son 34,7. Está escrito
    así para que ninguna auditoría futura lo marque en rojo creyendo que es un fallo. */
-function ventaMult() { const t = Date.now(); let m = 1 + 0.015 * ((G.level || 1) - 1) + (G.prestige || 0) * 0.015; for (const b of G.buffs) if (b.type === "yield" && b.until > t) m *= b.mult; return m; }
+function ventaMult() { const t = Date.now(); let m = 1 + 0.015 * ((G.level || 1) - 1) + (G.prestige || 0) * 0.015; let mejor = 1; for (const b of G.buffs) if (b.type === "yield" && b.until > t) mejor = Math.max(mejor, b.mult); return m * mejor; }
 function yieldMult() { return 1; }   // legado: la cantidad cosechada ya no se multiplica
 function addBuff(type, label, mult, durSec) { G.buffs.push({ type, label, mult, until: Date.now() + durSec * 1000 }); }
 // buffs de comida (doc maestro 2/8): suma de valores activos por tipo
