@@ -35,12 +35,6 @@ function escenaFalsa(reg) {
   return {
     add: new Proxy({}, { get: (t, k) => (...a) => stub(k, reg) }),
     tweens: { add: () => stub("tween", []) },
-    /* 20/8: dibujarExpansion ahora también dibuja los FANTASMAS del premio, y para eso recorre
-       this.objs (los nodos ocultos del bloque) y this.textures (el arte de la parcela). Esta
-       escena de mentira no arranca create(), así que se los da vacíos: los fantasmas de los
-       nodos tienen su propio test (test-fantasmas-expansion.js), acá se mide el CARTEL. */
-    objs: [],
-    textures: { exists: () => false },
   };
 }
 
