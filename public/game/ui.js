@@ -674,7 +674,7 @@ function showSeedWheel(px, py, plot) {
   w.classList.add("show");
   c.querySelectorAll(".swi[data-k]").forEach(el => el.onclick = (ev) => {
     ev.stopPropagation();
-    G.selSeed = el.dataset.k; G.selSeedElegida = true; hideSeedWheel();   // 21/8: eleccion consciente — el clic izquierdo ya no vuelve a preguntar esta sesion
+    G.selSeed = el.dataset.k; hideSeedWheel();
     if (window.FARM && plot) { FARM.pendingObj = plot; if (FARM.goTo) FARM.goTo(plot.cx, plot.by + 18); else FARM.moveTarget = { x: plot.cx, y: plot.by + 18 }; }
     if (isOpen("ov-inv")) refreshInv();
     if (typeof refreshHotbar === "function") refreshHotbar();

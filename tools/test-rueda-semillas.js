@@ -1,18 +1,18 @@
-/* LA RUEDA DE SEMILLAS: EL CLIC IZQUIERDO PREGUNTA CUANDO HAY QUE ELEGIR (21/8, diseñador)
-   Discord: "¿la función de plantar se la quitaste? Salían las opciones de las semillas al
-   clickear la parcela… ahora planta la que tenga en la bag, y si tenés 2 planta la última.
-   Debería preguntar cuál querés plantar."
+/* LA RUEDA DE SEMILLAS: EL CLIC DERECHO LA ABRE, EL IZQUIERDO PLANTA COMO SIEMPRE (21/8)
+   Reporte del diseñador, aclarado por dirección: "con doce semillas en el inventario, el clic
+   DERECHO plantaba la última de la lista en vez de abrir la ruedita".
 
-   Lo investigado primero: la rueda del CLIC DERECHO nunca se rompió — vive intacta desde el 28/7
-   y este test lo demuestra ejecutándola. Lo que el diseñador pedía es otra cosa, y ahora existe:
+   El bug real, cazado: pt.rightButtonDown() lee pointer.buttons, y según navegador/versión de
+   Phaser ese estado puede llegar SIN ACTUALIZAR durante el propio pointerdown del botón derecho.
+   Cuando pasa, el clic derecho cae en la rama izquierda, arma clickHit + hold, y el disparo del
+   update ("un clic = un golpe, sin esperar a soltar") PLANTA la semilla seleccionada — sin rueda.
+   La armadura: se mira TAMBIÉN el evento nativo del DOM (button === 2), que sí es fiable, en el
+   pointerdown y en el pointerup.
 
-     · Con DOS O MÁS tipos plantables y sin elección hecha, el clic IZQUIERDO en parcela seca
-       abre la rueda en vez de plantar la selección vieja en silencio.
-     · Elegir (en la rueda, la bolsa o la hotbar) vale por la sesión: los clics siguientes
-       plantan directo — sembrar doce parcelas no son veinticuatro clics.
-     · Al recargar se vuelve a preguntar (la queja exacta: "llego y planta la última").
-     · Con UN solo tipo planta directo, sin fricción — el tutorial no cambia.
-     · Y las semillas EN BOLSA con el cultivo bloqueado (pase/cofres) ya no se esconden de la
+   El reparto de clics queda como siempre fue:
+     · clic IZQUIERDO en parcela seca → planta la semilla seleccionada, directo;
+     · clic DERECHO → la rueda para elegir;
+     · y las semillas EN BOLSA con el cultivo bloqueado (pase/cofres) ya no se esconden de la
        rueda: salen apagadas con su « Cultivo nivel X ». Esconderlas parecía un bug.
 
    Escena real + DOM real (jsdom): se clickea de verdad y se mira qué pasa.
@@ -67,9 +67,8 @@ let fallos = 0;
 const ok = (n, c, d) => { if (!c) fallos++; console.log((c ? "  ok   " : "  FALLA") + "  " + n + (d ? "   " + d : "")); };
 
 /* jugador con papa Y zanahoria plantables + repollo EN BOLSA pero bloqueado */
-G.tuto = { done: true }; G.plotsOwned = 6;   // parcelas de sobra: el test planta varias
+G.tuto = { done: true }; G.plotsOwned = 6;
 G.seeds = { papa: 5, zanahoria: 5, repollo: 5 };
-/* XP de Cultivo exacta: el nivel del repollo MENOS UNO — papa y zanahoria abiertas, repollo no */
 const CD = vm.runInContext("CROP_DEF", ctx);
 {
   const objetivo = CD.repollo.lvl - 1;
@@ -98,76 +97,51 @@ esc.sound = { add: () => enc("s") }; esc.physics = { add: { existing() {} } }; e
 esc.create();
 
 const rueda = doc.getElementById("seedwheel");
-const pl = esc.plots.find(p => p.state === "dry");
 const clic = (o) => { avisos.length = 0; esc.interactWith(o); if (esc.action) esc.finishAction(); };
 
-console.log("\nCON DOS TIPOS Y SIN ELECCIÓN: EL CLIC IZQUIERDO PREGUNTA");
+console.log("\nEL CLIC IZQUIERDO PLANTA DIRECTO, COMO SIEMPRE — AUNQUE HAYA VARIOS TIPOS");
 {
-  G.selSeed = "papa"; G.selSeedElegida = false;
+  G.selSeed = "papa";
+  const pl = esc.plots.find(p => p.state === "dry");
+  const papas0 = G.seeds.papa;
   clic(pl);
+  ok("planta la semilla seleccionada sin preguntar", pl.state === "growing" && G.seeds.papa === papas0 - 1,
+    pl.state + " · papas " + G.seeds.papa);
+  ok("y la rueda NO se abre", !rueda.classList.contains("show"));
+}
+
+console.log("\nEL CLIC DERECHO ABRE LA RUEDA (el gesto de siempre, ya blindado)");
+{
+  const pl = esc.plots.find(p => p.state === "dry");
+  const pt = { worldX: pl.cx, worldY: pl.by, x: pl.cx, y: pl.by, isDown: true,
+    rightButtonDown: () => true, rightButtonReleased: () => true, event: { button: 2, buttons: 2, clientX: 200, clientY: 200 } };
+  (oyentes.pointerdown || []).forEach(f => f(pt));
   ok("la rueda se abre", rueda.classList.contains("show"));
-  ok("y NO plantó nada en silencio", pl.state === "dry", "estado: " + pl.state);
+  ok("y no plantó nada", pl.state === "dry", pl.state);
   const activos = rueda.querySelectorAll(".swi[data-k]");
   ok("con las DOS semillas plantables", activos.length === 2, [...activos].map(e => e.dataset.k).join(","));
   const bloqueada = rueda.querySelector(".swi.bloq");
   ok("y el repollo EN BOLSA aparece apagado, con su motivo", !!bloqueada && /Cultivo nivel/.test(bloqueada.title),
     bloqueada ? "« " + bloqueada.title + " »" : "no aparece");
-  ok("apagado de verdad: sin data-k, no elegible", !bloqueada.dataset.k);
-}
-
-console.log("\nELEGIR EN LA RUEDA VALE POR LA SESIÓN");
-{
-  const zana = [...rueda.querySelectorAll(".swi[data-k]")].find(e => e.dataset.k === "zanahoria");
+  ok("apagado de verdad: sin data-k, no elegible", !!bloqueada && !bloqueada.dataset.k);
+  /* elegir en la rueda cambia la selección */
+  const zana = [...activos].find(e => e.dataset.k === "zanahoria");
   zana.onclick({ stopPropagation() {} });
-  ok("eligió zanahoria", G.selSeed === "zanahoria" && G.selSeedElegida === true);
-  ok("la rueda se cierra", !rueda.classList.contains("show"));
+  ok("elegir en la rueda cambia la selección", G.selSeed === "zanahoria");
+  ok("y la rueda se cierra", !rueda.classList.contains("show"));
   const z0 = G.seeds.zanahoria;
   clic(pl);
-  ok("el clic siguiente PLANTA directo (sin volver a preguntar)", pl.state === "growing" && G.seeds.zanahoria === z0 - 1,
-    pl.state + " · semillas " + G.seeds.zanahoria);
-  ok("y la rueda no se reabrió", !rueda.classList.contains("show"));
-  const pl2 = esc.plots.find(p => p.state === "dry");
-  clic(pl2);
-  ok("la segunda parcela también planta directo", pl2.state === "growing");
-}
-
-console.log("\nLA RECARGA VUELVE A PREGUNTAR (la queja exacta)");
-{
-  G.selSeedElegida = false;   // lo que hace un F5: la elección no se guarda
-  const pl3 = esc.plots.find(p => p.state === "dry");
-  clic(pl3);
-  ok("tras 'recargar', el primer clic pregunta otra vez", rueda.classList.contains("show") && pl3.state === "dry");
-  ctx.hideSeedWheel();
-}
-
-console.log("\nCON UN SOLO TIPO: DIRECTO, SIN FRICCIÓN (el tutorial no cambia)");
-{
-  G.seeds = { papa: 2 }; G.selSeed = "papa"; G.selSeedElegida = false;
-  const pl4 = esc.plots.find(p => p.state === "dry");
-  clic(pl4);
-  ok("planta sin rueda", pl4.state === "growing" && !rueda.classList.contains("show"), pl4.state);
-}
-
-console.log("\nY EL CLIC DERECHO SIGUE ABRIENDO LA RUEDA, COMO SIEMPRE");
-{
-  G.seeds = { papa: 2, zanahoria: 2 }; G.selSeedElegida = true;   // aunque ya haya elegido
-  const pl5 = esc.plots.find(p => p.state === "dry");
-  const pt = { worldX: pl5.cx, worldY: pl5.by, x: pl5.cx, y: pl5.by, isDown: true,
-    rightButtonDown: () => true, rightButtonReleased: () => true, event: { clientX: 200, clientY: 200 } };
-  (oyentes.pointerdown || []).forEach(f => f(pt));
-  ok("clic derecho → rueda (para cambiar de cultivo cuando quieras)", rueda.classList.contains("show"));
+  ok("el clic izquierdo siguiente planta la elegida", pl.state === "growing" && G.seeds.zanahoria === z0 - 1);
 }
 
 console.log("\nEL NAVEGADOR TRAICIONERO: rightButtonDown() MIENTE y el evento nativo dice la verdad");
 {
-  /* el bug exacto del diseñador: en algunos navegadores/versiones de Phaser, durante el
-     pointerdown del botón derecho pointer.buttons llega sin actualizar → rightButtonDown() da
-     false. Antes de la armadura, ese clic caía en la rama izquierda, armaba clickHit + hold y el
-     disparo del update PLANTABA la selSeed sin enseñar la rueda. */
+  /* el bug exacto del diseñador: pointer.buttons sin actualizar → rightButtonDown() false en el
+     pointerdown del derecho. Antes de la armadura, ese clic armaba clickHit + hold y el disparo
+     del update PLANTABA la selSeed sin enseñar la rueda: "con 12 semillas planta la última". */
   ctx.hideSeedWheel();
-  G.seeds = { papa: 3, zanahoria: 3 }; G.selSeed = "papa"; G.selSeedElegida = true;   // elegida: el izq plantaría directo
-  const pl6 = esc.plots.find(p => p.state === "dry");
-  const traidor = { worldX: pl6.cx, worldY: pl6.by, x: pl6.cx, y: pl6.by, isDown: true,
+  const pl = esc.plots.find(p => p.state === "dry");
+  const traidor = { worldX: pl.cx, worldY: pl.by, x: pl.cx, y: pl.by, isDown: true,
     rightButtonDown: () => false,               // ← Phaser miente
     rightButtonReleased: () => false,
     event: { button: 2, buttons: 2, clientX: 200, clientY: 200 } };   // ← el DOM no
@@ -175,13 +149,13 @@ console.log("\nEL NAVEGADOR TRAICIONERO: rightButtonDown() MIENTE y el evento na
   ok("el clic derecho 'mentiroso' abre la RUEDA igual", rueda.classList.contains("show"));
   ok("no armó clickHit (el disparo del update no puede plantar)", !esc.clickHit, String(esc.clickHit));
   ok("ni hold (tampoco el golpe-sin-soltar)", !esc.hold);
-  ok("y la parcela sigue seca", pl6.state === "dry", pl6.state);
+  ok("y la parcela sigue seca", pl.state === "dry", pl.state);
   ctx.hideSeedWheel();
   /* y el pointerup del derecho tampoco resuelve un clickHit rancio */
-  esc.clickHit = pl6; esc.hold = { t0: 0, active: false };
+  esc.clickHit = pl; esc.hold = { t0: 0, active: false };
   (oyentes.pointerup || []).forEach(f => { try { f(traidor); } catch (e) {} });
-  ok("el pointerup del derecho no planta un clickHit viejo", pl6.state === "dry", pl6.state);
+  ok("el pointerup del derecho no planta un clickHit viejo", pl.state === "dry", pl.state);
 }
 
-console.log(fallos ? "\n" + fallos + " fallo(s)\n" : "\nTodo en orden: pregunta cuando hay que elegir, y no molesta cuando no.\n");
+console.log(fallos ? "\n" + fallos + " fallo(s)\n" : "\nTodo en orden: izquierdo planta, derecho pregunta — y ningún navegador lo confunde.\n");
 process.exit(fallos ? 1 : 0);

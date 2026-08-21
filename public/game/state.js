@@ -325,11 +325,7 @@ function oreUnlocked(k) { return nivelOficio("mining") >= oreNivelReq(k); }
    mismo, la escalera cambia lo que hacés, no cuánto ganás. */
 function animalNivelReq(k) { const i = ANIMAL_ORDER.indexOf(k); return i <= 0 ? 1 : i * 4; }   // 1, 4, 8, 12
 function animalUnlocked(k) { return nivelOficio("ganaderia") >= animalNivelReq(k); }
-/* 21/8: elegir semilla (hotbar, bolsa o rueda) es una ELECCIÓN CONSCIENTE de la sesión — el clic
-   izquierdo en parcela seca deja de preguntar hasta la próxima recarga. No se guarda a propósito:
-   al volver, con dos o más tipos, la primera siembra pregunta de nuevo (queja del diseñador:
-   "llego y planta la última sin preguntar"). */
-function selectSeed(k) { if (!CROP_DEF[k]) return; G.selSeed = k; G.selSeedElegida = true; if (isOpen("ov-inv")) refreshInv(); }
+function selectSeed(k) { if (!CROP_DEF[k]) return; G.selSeed = k; if (isOpen("ov-inv")) refreshInv(); }
 // cupo diario de semillas (anti-inflación): compras + las del cofre suman al mismo límite
 var SEED_DAILY_BASE = 18, SEED_DAILY_POR_NIVEL = 2;   // (legado: la fórmula vieja, la sigue usando el MODO TESTEO)
 // 16/8 (auditoría A): el cupo viejo (18+2×nivel) alcanzaba para UNA HORA de juego y era la

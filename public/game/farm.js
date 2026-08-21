@@ -1360,20 +1360,10 @@ class FarmScene extends Phaser.Scene {
       }
       // la azada/semilla se usan solas desde la bolsa (la hotbar sigue sirviendo para ELEGIR semilla)
       if (o.state === "dry") {
-        /* 21/8 (diseñador, vía Discord): "si tenés 2 semillas, planta la última — debería
-           preguntar cuál querés plantar". Con DOS O MÁS tipos plantables, el clic izquierdo abre
-           la misma rueda del clic derecho en vez de plantar la selección vieja en silencio. Con
-           un solo tipo (el tutorial entero, por ejemplo) planta directo, sin fricción.
-           Y pregunta UNA vez por sesión: elegir en la rueda (o en la hotbar) marca la elección
-           como consciente y los clics siguientes plantan directo — 12 parcelas no son 24 clics.
-           Al recargar vuelve a preguntar, que es exactamente la queja: "llego y planta la última
-           sin preguntar". El clic derecho sigue abriendo la rueda cuando quieras cambiar. */
-        const plantables = CROP_ORDER.filter(k => cropUnlocked(k) && (G.seeds[k] || 0) > 0);
-        if (plantables.length >= 2 && !G.selSeedElegida && typeof showSeedWheel === "function") {
-          const ev = this.input && this.input.activePointer && this.input.activePointer.event;
-          showSeedWheel(ev ? ev.clientX : this.scale.width / 2, ev ? ev.clientY : this.scale.height / 2, o);
-          return;
-        }
+        /* 21/8: se sopesó abrir la rueda también con clic IZQUIERDO cuando hay varias semillas,
+           pero dirección lo aclaró: el izquierdo planta directo COMO SIEMPRE (la selección de la
+           hotbar/bolsa manda) y la rueda es del clic derecho — que era lo que estaba roto y ya
+           tiene su armadura unas líneas más arriba. */
         let ck = G.selSeed;
         // si la semilla elegida no tiene stock, detectar sola la de la hotbar o la primera disponible
         if (!CROP_DEF[ck] || (G.seeds[ck] || 0) <= 0) {
