@@ -2217,12 +2217,23 @@ function tutoHecho(st) {
 // (14/8, reversión: tutoAdelanto/kits eliminados — el tutorial no regala nada;
 //  el set de arranque de herramientas volvió y el kit de emergencia en $G sigue en la Tienda)
 function tutoAdelanto() {}
+/* EL CIERRE DEL TUTORIAL, UNO SOLO PARA TODOS LOS CAMINOS (21/8, dirección vía Discord):
+   "¿cómo sé que el tutorial ha terminado?" — "¿ya dejó de ponerte objetivos?" — "creo que sí".
+   Eso pasaba porque el tutorial tenía DOS finales: el paso a paso (tutoDone) celebraba con
+   « ¡GRANJA LISTA! », pero el autoskip —cuando los últimos pasos ya estaban cumplidos de antes:
+   expandiste, editaste, pescaste, tenías vales— ponía done=true Y SE CALLABA. Los objetivos
+   desaparecían sin explicación y el jugador se quedaba preguntándose si terminó o se rompió. */
+function tutoTerminar() {
+  log("¡Tutorial completo! Ya sabés lo básico — la granja es toda tuya.", "gold");
+  if (window.celebrate) celebrate({ title: "¡GRANJA LISTA!", sub: "Tutorial completo", big: true });
+  if (typeof refreshHud === "function") refreshHud();
+}
 function tutoAutoSkip() {
   for (let i = 0; i < TUTO_STEPS.length + 2; i++) {
     const st = tutoActivo(); if (!st) return;
     if (!tutoHecho(st)) return;
     G.tuto.step++; G.tuto.n = 0;
-    if (G.tuto.step >= TUTO_STEPS.length) { G.tuto.done = true; return; }
+    if (G.tuto.step >= TUTO_STEPS.length) { G.tuto.done = true; tutoTerminar(); return; }
   }
 }
 // paso de RECURSO: se cumple solo cuando tenés la cantidad que pide la receta siguiente
@@ -2251,9 +2262,7 @@ function tutoDone(st) {
   G.tuto.step++; G.tuto.n = 0;
   if (G.tuto.step >= TUTO_STEPS.length) {
     G.tuto.done = true;
-    log("¡Tutorial completo! Ya sabés lo básico — la granja es toda tuya.", "gold");
-    if (window.celebrate) celebrate({ title: "¡GRANJA LISTA!", sub: "Tutorial completo", big: true });
-    refreshHud();
+    tutoTerminar();   // el mismo cierre que el autoskip: un solo final, siempre visible
   } else {
     tutoAutoSkip();   // si el paso nuevo ya estaba cumplido, no lo pide (9/8)
     if (G.tuto.done) { if (typeof tutoRefresh === "function") tutoRefresh(); return; }
