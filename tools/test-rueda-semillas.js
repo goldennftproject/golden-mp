@@ -158,5 +158,30 @@ console.log("\nY EL CLIC DERECHO SIGUE ABRIENDO LA RUEDA, COMO SIEMPRE");
   ok("clic derecho → rueda (para cambiar de cultivo cuando quieras)", rueda.classList.contains("show"));
 }
 
+console.log("\nEL NAVEGADOR TRAICIONERO: rightButtonDown() MIENTE y el evento nativo dice la verdad");
+{
+  /* el bug exacto del diseñador: en algunos navegadores/versiones de Phaser, durante el
+     pointerdown del botón derecho pointer.buttons llega sin actualizar → rightButtonDown() da
+     false. Antes de la armadura, ese clic caía en la rama izquierda, armaba clickHit + hold y el
+     disparo del update PLANTABA la selSeed sin enseñar la rueda. */
+  ctx.hideSeedWheel();
+  G.seeds = { papa: 3, zanahoria: 3 }; G.selSeed = "papa"; G.selSeedElegida = true;   // elegida: el izq plantaría directo
+  const pl6 = esc.plots.find(p => p.state === "dry");
+  const traidor = { worldX: pl6.cx, worldY: pl6.by, x: pl6.cx, y: pl6.by, isDown: true,
+    rightButtonDown: () => false,               // ← Phaser miente
+    rightButtonReleased: () => false,
+    event: { button: 2, buttons: 2, clientX: 200, clientY: 200 } };   // ← el DOM no
+  (oyentes.pointerdown || []).forEach(f => f(traidor));
+  ok("el clic derecho 'mentiroso' abre la RUEDA igual", rueda.classList.contains("show"));
+  ok("no armó clickHit (el disparo del update no puede plantar)", !esc.clickHit, String(esc.clickHit));
+  ok("ni hold (tampoco el golpe-sin-soltar)", !esc.hold);
+  ok("y la parcela sigue seca", pl6.state === "dry", pl6.state);
+  ctx.hideSeedWheel();
+  /* y el pointerup del derecho tampoco resuelve un clickHit rancio */
+  esc.clickHit = pl6; esc.hold = { t0: 0, active: false };
+  (oyentes.pointerup || []).forEach(f => { try { f(traidor); } catch (e) {} });
+  ok("el pointerup del derecho no planta un clickHit viejo", pl6.state === "dry", pl6.state);
+}
+
 console.log(fallos ? "\n" + fallos + " fallo(s)\n" : "\nTodo en orden: pregunta cuando hay que elegir, y no molesta cuando no.\n");
 process.exit(fallos ? 1 : 0);

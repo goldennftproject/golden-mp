@@ -465,7 +465,15 @@ class FarmScene extends Phaser.Scene {
     // clic: si pegás a un objeto, caminá hacia él e interactuá; si no, movete al punto
     this.input.on("pointerdown", (pt) => {
       this.ultimaAccion = nowMs();   // 14/8: cualquier clic = jugador activo (las mariposas señalan solo al "perdido")
-      if (pt.rightButtonDown()) {
+      /* 21/8 (diseñador: "con doce semillas, el clic derecho planta la última en vez de abrir la
+         rueda"). El culpable: pt.rightButtonDown() lee pointer.buttons, y según la versión de
+         Phaser / el navegador ese estado puede llegar SIN ACTUALIZAR durante el propio pointerdown
+         del botón derecho. Cuando pasa, el clic derecho cae en la rama IZQUIERDA, arma clickHit y
+         hold, y el disparo del update ("un clic = un golpe, sin esperar a soltar") PLANTA la
+         semilla seleccionada a los pocos milisegundos — sin rueda. El evento NATIVO del DOM sí es
+         fiable: button === 2 siempre en el pointerdown del derecho. Se miran los dos. */
+      const clicDerecho = pt.rightButtonDown() || (pt.event && (pt.event.button === 2 || ((pt.event.buttons || 0) & 2) === 2));
+      if (clicDerecho) {
         if (GF.editMode) {
           if (this.placing) { this.cancelarColocar(); return; }   // clic derecho cancela el "colocar con clic"
           // en edición el clic derecho levanta el adorno que haya abajo (vuelve a la bolsa)
@@ -665,7 +673,8 @@ class FarmScene extends Phaser.Scene {
         // SIN COLA (4/8): un clic = un golpe, y se actúa directo sobre lo que tocás.
         // PERO el clic que cae mientras dura el candado NO se tira: se guarda y sale enseguida.
         // Sin esto, tocando rápido (que es como se juega) se perdían golpes y se sentía trabado.
-        if (!arrastro && !pt.rightButtonReleased()) {
+        const soltoDerecho = pt.rightButtonReleased() || (pt.event && pt.event.button === 2);   // 21/8: misma armadura que en pointerdown
+        if (!arrastro && !soltoDerecho) {
           if (this.action) {
             // 16/8 (dirección: "me frena para talar rápido"): con ACT_IMPACTO = 0 el golpe YA
             // pegó en el primer frame — lo que queda de la acción es SOLO animación. Si volvés
