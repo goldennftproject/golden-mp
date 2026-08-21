@@ -1712,7 +1712,7 @@ function refreshPaquete() {
     img.src = "assets/farm/paquete_dia_abierto.png?v=1";
     img.classList.remove("paq-latido"); img.classList.remove("paq-shake"); img.onclick = null; img.onpointerdown = null; img.style.transform = "";
     nota.textContent = "Ya abriste el de hoy.";
-    btn.style.display = "none";
+    btn.style.visibility = "hidden";   // 20/8: sigue ocupando su fila — la tarjeta no cambia de tamaño
     return;
   }
   dia.textContent = "Día " + st.day + " de 7" + (st.day === 7 ? " — ¡el grande!" : "");
@@ -1722,7 +1722,9 @@ function refreshPaquete() {
   img.classList.add("paq-latido");   // late despacito: dan ganas de abrirlo
   img.style.transform = "";
   nota.textContent = "¿Qué habrá hoy? Tocá el paquete…";
-  btn.style.display = "none";   // 15/8: sin botón de abrir — se abre TOCANDO el paquete
+  btn.style.visibility = "hidden";   // 15/8: sin botón de abrir — se abre TOCANDO el paquete
+  // (20/8: se esconde con visibility, no con display — el botón reserva su fila y la tarjeta
+  //  mide lo mismo antes y después de abrir; era el salto de tamaño que reportó dirección)
   let abriendo = false;
   const alTocar = (ev) => {
     if (ev && ev.preventDefault) ev.preventDefault();
@@ -1741,7 +1743,7 @@ function refreshPaquete() {
       img.src = "assets/farm/paquete_dia_abierto.png?v=1";
       img.style.transform = "scale(1.06)";
       btn.textContent = "¡A la bolsa!";
-      btn.style.display = "";
+      btn.style.visibility = "visible";
       btn.onclick = () => {
         closeOv("ov-paquete");
         // el paquete del mundo desaparece solo (tick) — acá solo el festejo
