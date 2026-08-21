@@ -3412,6 +3412,9 @@ class FarmScene extends Phaser.Scene {
       zona.setFillStyle(col, on ? 0.34 : 0);
       zona.setStrokeStyle(on ? 3 : 2, col, on ? 1 : 0);
       estacas.forEach(o => { try { o.setVisible(on); } catch (e) {} });
+      // los fantasmas del premio acompañan al cartel: con el cursor encima, o siempre que ya
+      // puedas pagar — si la chapa dorada te llama, que se vea también QUÉ estás comprando
+      fantasmas.forEach(o => { try { o.setVisible(on || puede); } catch (e) {} });
       if (this.expCartel) this.expCartel.forEach(o => { try { o.setVisible(on || puede); } catch (e) {} });
     };
     zona.on("pointerover", () => resaltar(true));
@@ -3425,6 +3428,30 @@ class FarmScene extends Phaser.Scene {
     for (let x = x0 + paso / 2; x < x0 + w; x += paso) for (const y of [y0, y0 + h]) estaca(x, y);
     for (let y = y0 + paso / 2; y < y0 + h; y += paso) for (const x of [x0, x0 + w]) estaca(x, y);
     estacas.forEach(o => { o.setVisible(false); this.expFx.push(o); });
+
+    /* FANTASMAS DEL PREMIO (20/8, diseñador): "que se muestre de alguna forma lo que se
+       conseguiría con cada expansión" — y sin recurrir a texto. La forma es enseñarlo EN EL
+       SITIO: el árbol, la roca y la parcela que trae el bloque ya existen en la escena (ocultos,
+       esperando la compra) con su posición definitiva. Acá se dibujan semitransparentes ahí
+       mismo, así que al pasar el cursor ves la mercancía donde va a estar — cero palabras.
+       Se apagan y encienden con el cursor, igual que las estacas: en reposo el bosque queda
+       limpio, que fue pedido de dirección. */
+    const fantasmas = [];
+    for (const o of this.objs) {
+      if (o.exp !== ex.i || !o.sprite) continue;   // solo lo de ESTE bloque
+      const g = this.add.image(o.cx, o.by, o.sprite.texture.key)
+        .setOrigin(0.5, 1).setDepth(o.by).setAlpha(0.55);
+      if (g.width) g.setScale((o.rw || o.w || T) / g.width);
+      fantasmas.push(g);
+    }
+    if (b.parcela) {   // la celda reservada de la parcela, con su arte real si está cargado
+      const px = (b.parcela.col + 0.5) * T, py = (b.parcela.row + 0.5) * T;
+      const g = this.textures.exists("plot")
+        ? this.add.image(px, py, "plot").setDisplaySize(T, T)
+        : this.add.rectangle(px, py, T - 6, T - 6, 0x8a6238, 1);
+      fantasmas.push(g.setDepth(-997).setAlpha(0.55));
+    }
+    fantasmas.forEach(o => { o.setVisible(puede); this.expFx.push(o); });   // si ya podés pagar, nacen a la vista, como el cartel
 
     // el cartel del centro: qué cuesta, en verde lo que tenés y en rojo lo que falta
     const cx = x0 + w / 2, cy = y0 + h / 2;
