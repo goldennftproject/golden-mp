@@ -110,8 +110,11 @@ console.log("\nLA CHAPA DICE LO QUE DESBLOQUEA, DEBAJO DEL COSTO");
   /* Dirección, 20/8: "en la chapa donde está el costo, abajo debería decir lo que te desbloquea". */
   const { reg } = pintar(ex.nivel, {});
   const textos = reg.filter(o => o.__tipo === "text").map(o => o.texto || "");
-  ok("hay una línea con el premio del bloque", textos.some(t => /Trae 25 celdas · árbol · roca · parcela/.test(t)),
+  /* Dirección, 2ª pasada: "la información de las celdas no es importante, pero la de los nodos
+     y la parcela sí" — el premio nombra los tres, y a las celdas ni las menciona. */
+  ok("hay una línea con el premio: árbol, roca y parcela", textos.some(t => /Trae árbol · roca · parcela/.test(t)),
     textos.filter(t => /Trae/.test(t)).join(" | ") || textos.join(" | "));
+  ok("y no habla de celdas", !textos.some(t => /celdas/.test(t)), "eso se ve solo al expandir");
   const iCosto = textos.findIndex(t => /\d+\/\d+/.test(t)), iPremio = textos.findIndex(t => /Trae/.test(t));
   ok("y va DESPUÉS del costo, como pidió dirección", iCosto >= 0 && iPremio > iCosto);
 }
