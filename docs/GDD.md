@@ -185,7 +185,7 @@ Las expansiones son estrictamente SECUENCIALES: la única que existe — en el m
 | ------ | --------- | ---------------------------------------------------- |
 | 1 | 3 | 6 Madera + 4 Piedra |
 | 2 | 5 | 22 Madera + 14 Piedra |
-| 3      | 7         | 90 Madera + 59 Piedra                                |
+| 3 | 7 | 61 Madera + 40 Piedra |
 | 4      | 9         | 77 Madera + 62 Piedra + 8 Bronce                     |
 | 5      | 12        | 110 Madera + 88 Piedra + 11 Bronce                   |
 | 6      | 15        | 149 Madera + 119 Piedra + 15 Bronce                  |
@@ -225,10 +225,10 @@ Ningún edificio viene puesto. Todos llegan como PLANO, el plano se guarda en el
 | Herrería          | 2 Piedra + 8 Madera                                            | granja nivel 2    |
 | Horno de Piedra   | 4 Piedra + 11 Madera                                           | Minería nivel 3   |
 | Cocina            | 6 Piedra + 14 Madera                                           | Cultivo nivel 3   |
-| Altar de Runas    | 10 Bloques de piedra + 26 Tablón de madera                     | granja nivel 7    |
-| Establo           | 7 Bloques de piedra + 18 Tablón de madera                      | Cultivo nivel 5   |
-| Curtiduría        | 14 Bloques de piedra + 33 Tablón de madera                     | Ganadería nivel 4 |
-| Altar de Ofrendas | 1 Barra de hierro + 14 Bloques de piedra + 28 Tablón de madera | granja nivel 10   |
+| Altar de Runas    | 10 Bloques de piedra + 13 Tablón de madera                     | granja nivel 7    |
+| Establo           | 7 Bloques de piedra + 9 Tablón de madera                       | Cultivo nivel 5   |
+| Curtiduría        | 14 Bloques de piedra + 17 Tablón de madera                     | Ganadería nivel 4 |
+| Altar de Ofrendas | 1 Barra de hierro + 14 Bloques de piedra + 14 Tablón de madera | granja nivel 10   |
 
 **La regla anti-circular**
 
@@ -405,7 +405,7 @@ Normas de diseño que vienen de decisiones de dirección y que conviene no reabr
 
 **15. Cómo verificar lo que dice este documento**
 
-El proyecto tiene 54 pruebas automáticas y 15 auditores (93 herramientas en total). No comprueban que el código compile: comprueban que el JUEGO cumpla las reglas de arriba. Los más útiles para el diseñador:
+El proyecto tiene 54 pruebas automáticas y 16 auditores (94 herramientas en total). No comprueban que el código compile: comprueban que el JUEGO cumpla las reglas de arriba. Los más útiles para el diseñador:
 
 | **Herramienta**                 | **Qué contesta**                                            |
 | ------------------------------- | ----------------------------------------------------------- |

@@ -513,10 +513,13 @@ const BUILD_DEF = {
   store:  { label: "Herrería",        cost: { piedra: 2, madera: 8 } },   // 10/8: ya no es gratis (pedido del diseñador)
   horno:  { label: "Horno de Piedra", cost: { piedra: 4, madera: 11 },  lvl: 3 },
   cocina: { label: "Cocina",          cost: { piedra: 6, madera: 14 }, lvl: 5 },
-  altar:  { label: "Altar de Runas",  cost: { barra_piedra: 10, tablon: 26 }, lvl: 7 },
-  establo:    { label: "Establo",     cost: { barra_piedra: 7, tablon: 18 }, lvl: 6 },
-  curtiduria: { label: "Curtiduría",  cost: { barra_piedra: 14, tablon: 33 }, lvl: 8 },
-  ofrendas:   { label: "Altar de Ofrendas", cost: { barra_hierro: 1, barra_piedra: 14, tablon: 28 }, lvl: 10 },
+  /* 21/8 (dirección, auditoría de días reales): los cuatro tardíos cobraban 3,6-5,5 días del
+     jugador de tres visitas SOLO en tablones (la madera es el cuello de todo el juego; la piedra
+     sobra). El tablón va ÷2 y la barra de piedra queda: ahora rondan 1,8-2,8 días al abrirse. */
+  altar:  { label: "Altar de Runas",  cost: { barra_piedra: 10, tablon: 13 }, lvl: 7 },
+  establo:    { label: "Establo",     cost: { barra_piedra: 7, tablon: 9 }, lvl: 6 },
+  curtiduria: { label: "Curtiduría",  cost: { barra_piedra: 14, tablon: 17 }, lvl: 8 },
+  ofrendas:   { label: "Altar de Ofrendas", cost: { barra_hierro: 1, barra_piedra: 14, tablon: 14 }, lvl: 10 },
 };
 function buildCostStr(key) { const b = BUILD_DEF[key]; return Object.keys(b.cost).map(k => (b.cost[k]) + " " + (RES_LABEL[k] || k)).join(" + ") + (b.golden ? " + " + b.golden + " $Golden" : ""); }
 
@@ -1373,8 +1376,14 @@ function expansionCostos() {
      Así que estas dos llevan su hora escrita a mano. Es la única excepción a "todo se deriva" del
      modelo, y va con su motivo: las dos primeras no se miden contra el ancla —contra la granja que
      tenés— sino contra el reloj de alguien que empezó hace un rato y a quien el juego ya le
-     prometió terreno. El resto de la tabla no se toca. */
-  const HORAS_ARRANQUE = [0.7, 2.0];
+     prometió terreno. El resto de la tabla no se toca.
+
+     21/8 (dirección, tras la auditoría de días reales) — LA TERCERA ES EL PUENTE. Con las dos
+     primeras abaratadas, la curva derivada saltaba de 2 h a 6,6 h de golpe: la expansión 3 le
+     costaba al jugador de tres visitas SEIS días reales — más que la 4 (4,3) y que la 5. Un muro
+     invertido justo al salir del arranque. La 3 lleva 4,4 h a mano (90→61 maderas) para que la
+     escalera suba pareja: 0,7 → 1,8 → 4 → 4,3 días reales. De la 4 en adelante, la fórmula. */
+  const HORAS_ARRANQUE = [0.7, 2.0, 4.4];
   let celdas = 9;                               // 3 parcelas + 3 árboles + 3 rocas de arranque
   for (let i = 0; i < EXPANSION_MAX; i++) {
     const t = i / (EXPANSION_MAX - 1);
