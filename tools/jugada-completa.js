@@ -262,14 +262,19 @@ invariantes("kit");
       if (G.plata >= 20) { avisos.length = 0; try { ctx.craftTool("axe", 10); } catch (e) {} }
       else cultivarPapasVender(6);
       if ((G.tools.axe || 0) === antes && G.plata < 20) {
-        /* sin hachas, sin plata, y el paso no deja vender: la trampa. La única salida REAL es el
-           kit de emergencia en $Golden — se usa, y queda anotada como hallazgo. */
-        if (!trampaAvisada) {
-          trampaAvisada = true;
-          hallazgo("TRAMPA del embudo en « " + (TUTO[G.tuto.step] || {}).id + " »: el paso solo permite " + JSON.stringify(vm.runInContext("TUTO_PERMISOS", ctx)[(TUTO[G.tuto.step] || {}).id] || []) + " — el hacha cuesta 2 de plata y la plata sale de VENDER papas, que este paso prohíbe. Las 35 hachas del kit dan 35 maderas y el tutorial pide ~40. Salida única: kit de emergencia en $Golden (craftarm tuvo este mismo arreglo el 19/8; wood/stone/woodc/stonec no)");
+        /* ¿es LA TRAMPA (el paso no deja vender) o solo falta farmear otra vuelta? Se mira el
+           permiso real del paso, no el bolsillo del momento. */
+        const stepId = (TUTO[G.tuto.step] || {}).id;
+        const perms = (!G.tuto.done && vm.runInContext("TUTO_PERMISOS", ctx)[stepId]) || null;
+        if (perms && !perms.includes("sell")) {
+          if (!trampaAvisada) {
+            trampaAvisada = true;
+            hallazgo("TRAMPA del embudo en « " + stepId + " »: el paso permite " + JSON.stringify(perms) + " pero NO vender — el hacha cuesta 2 de plata y la plata sale de vender papas. Salida única: kit de emergencia en $Golden");
+          }
+          avisos.length = 0; try { ctx.comprarEmergencia("axe"); } catch (e) {}
+          if (!avisos.some(a => /\+\d+ hachas/.test(a))) break;
         }
-        avisos.length = 0; try { ctx.comprarEmergencia("axe"); } catch (e) {}
-        if (!avisos.some(a => /\+\d+ hachas/.test(a))) { break; }
+        /* con vender permitido no hay trampa: se sigue farmeando (el while da más vueltas) */
       }
     }
     guarda = 0;
@@ -347,7 +352,9 @@ invariantes("kit");
         juntar("madera", 6);
         avisos.length = 0; ctx.craftWeapon("espada_madera");
         if (!(G.weapons || {}).espada_madera && avisos.some(a => /falta plata/i.test(a)) && (G.res.madera || 0) >= 5) {
-          hallazgo("el paso del tutorial dice « Forjá una Espada de Madera (5 de madera) » pero la espada TAMBIÉN pide 10 de plata — el texto no lo cuenta y el jugador choca con « Te falta plata »");
+          const armDef = vm.runInContext("ARM_DEF", ctx).espada_madera || {};
+          if ((armDef.plata || 0) > 0 && !/plata/i.test((TUTO[G.tuto.step] || {}).txt || ""))
+            hallazgo("el paso del tutorial « " + (TUTO[G.tuto.step] || {}).txt + " » no cuenta que la espada TAMBIÉN pide " + armDef.plata + " de plata — el jugador choca con « Te falta plata »");
           let g = 0; while (G.plata < 10 && g++ < 25) { cultivarPapas(3); avisos.length = 0; try { ctx.sellItem("papa"); } catch (e) {} }
           avisos.length = 0; ctx.craftWeapon("espada_madera");
         }

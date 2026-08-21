@@ -622,16 +622,23 @@ var TUTO_PERMISOS = {
   harvest:     ["harvest", "plant", "buyseed"],
   sell:        ["sell", "harvest", "plant", "buyseed"],
   place_store: ["obra"],
-  wood_st:     ["chop", "crafttool", "cultivar"],   // 14/8: cultivar más árboles = juntar en paralelo (anti-tedio)
-  stone_st:    ["mine", "crafttool"],
+  /* 20/8 (la jugada completa encontró la TRAMPA): los cuatro pasos de "juntá material" permitían
+     solo talar/picar/craftear — pero el hacha cuesta 2 DE PLATA y el pico también, y la plata del
+     jugador temprano sale de VENDER papas. Las 35 hachas del kit dan 35 maderas justas y el
+     tutorial pide ~40 entre obras y espada: quien llegaba corto quedaba encerrado (sin hacha, sin
+     plata y sin permiso para vender), con el kit de emergencia en $Golden como única salida.
+     Es EXACTAMENTE el rincón que craftarm arregló el 19/8; se le da la misma red: el bucle
+     completo de la plata (plantar, cosechar, comprar semilla, vender). */
+  wood_st:     ["chop", "crafttool", "cultivar", "plant", "harvest", "buyseed", "sell"],   // 14/8: cultivar más árboles = juntar en paralelo (anti-tedio)
+  stone_st:    ["mine", "crafttool", "plant", "harvest", "buyseed", "sell"],
   build_store: ["obra"],
-  wood:        ["chop", "crafttool", "cultivar"],
-  stone:       ["mine", "crafttool"],
+  wood:        ["chop", "crafttool", "cultivar", "plant", "harvest", "buyseed", "sell"],
+  stone:       ["mine", "crafttool", "plant", "harvest", "buyseed", "sell"],
   place_horno: ["obra"],
   build_horno: ["obra"],
   crafttool:   ["crafttool"],
-  woodc:       ["chop", "crafttool", "cultivar"],
-  stonec:      ["mine", "crafttool"],
+  woodc:       ["chop", "crafttool", "cultivar", "plant", "harvest", "buyseed", "sell"],
+  stonec:      ["mine", "crafttool", "plant", "harvest", "buyseed", "sell"],
   place_cocina: ["obra"],
   build_cocina: ["obra"],
   cook:        ["cook", "plant", "harvest", "buyseed", "chop", "crafttool"],   // 14/8: red por si malgasta el kit de ingredientes
@@ -1892,7 +1899,9 @@ const TUTO_STEPS = [
      que hoy hay que adivinar y que abren el único sistema sin relojes que tiene el juego: forjar un
      arma y ponérsela. Sin ellos, el jugador llega al portal y se come un "equipate un arma" sin
      saber dónde se equipa. */
-  { id: "craftarm", n: 1, txt: "Forjá una Espada de Madera en la Herrería (5 de madera)", target: "store", panel: "ov-forge", ui: "[data-carm='espada_madera']" },
+  // 20/8 (jugada completa): el texto decía "(5 de madera)" y la espada TAMBIÉN pide 10 de plata —
+  // el jugador chocaba con « Te falta plata » sin que nadie se lo hubiera contado.
+  { id: "craftarm", n: 1, txt: "Forjá una Espada de Madera en la Herrería (5 de madera + 10 de plata)", target: "store", panel: "ov-forge", ui: "[data-carm='espada_madera']" },
   { id: "equiparm", n: 1, txt: "Equipate la espada en el panel de Equipo (Menú ☰ → Equipo)", panel: "ov-equip", ui: "#eq-arma" },
   // ——— ETAPA 2: los sistemas nuevos (Cocina, Armas, Zona Negra, Pesca, Altar) ———
   { id: "place_cocina", n: 1, txt: "Colocá el plano de la Cocina (Menú ☰ → Cobertizo)", panel: "ov-cobertizo", ui: ".slot.k-plano" },
