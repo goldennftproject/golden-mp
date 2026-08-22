@@ -1,15 +1,25 @@
 /* EL PORTERO DEL GUARDADO: LAS REGLAS, PROBADAS CON GUARDADOS DE VERDAD (21/8)
-   Las mismas reglas que corre la Edge Function (supabase/functions/guardar/reglas.mjs) se
-   importan acá y se les pasan guardados de jugadores honestos y de tramposos de consola.
+   La Edge Function es UN solo archivo (el editor del dashboard no empaqueta dos), así que
+   este test extrae el bloque === REGLAS === de supabase/functions/guardar/index.ts y lo
+   EJECUTA tal cual: lo que se prueba es exactamente lo que se deploya, sin copia aparte
+   que pueda desviarse. Guardados de jugadores honestos y de tramposos de consola.
    El contrato del modo sombra: al honesto, CERO sospechas (un falso positivo en modo rechazo
    le rompería la partida); al de G.res.madera = 999999, cantarlo con nombre y apellido.
      node tools/test-portero-reglas.js                                                          */
+const fs = require("fs"), vm = require("vm");
 
 let fallos = 0;
 const ok = (n, c, d) => { if (!c) fallos++; console.log((c ? "  ok   " : "  FALLA") + "  " + n + (d ? "   " + d : "")); };
 
 (async () => {
-  const { evaluarGuardado, MODO, VERSION } = await import("../supabase/functions/guardar/reglas.mjs");
+  const fuente = fs.readFileSync("supabase/functions/guardar/index.ts", "utf8");
+  const m = fuente.match(/\/\* === REGLAS ===[\s\S]*?\*\/([\s\S]*?)\/\* === FIN REGLAS === \*\//);
+  ok("(arnés) el bloque === REGLAS === existe en index.ts", !!m);
+  if (!m) { console.log("\n1 fallo(s)\n"); process.exit(1); }
+  const ctx = { Math, isFinite, String, Object, Set, JSON };
+  vm.createContext(ctx);
+  vm.runInContext(m[1] + "\nthis.evaluarGuardado = evaluarGuardado; this.MODO = MODO; this.VERSION = VERSION;", ctx);
+  const { evaluarGuardado, MODO, VERSION } = ctx;
   const HORA = 3600;
 
   console.log("\nEL CONTRATO DEL ESCALÓN 1: MODO SOMBRA, VERSIONADO");

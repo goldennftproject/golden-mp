@@ -15,7 +15,7 @@ techos salen del ancla del juego), y recién entonces escribe.
 
 **Modo sombra:** por ahora el portero anota pero NUNCA rechaza. Nadie puede perder su
 partida por esto. El rechazo se activa más adelante, cuando la bitácora confirme que
-ningún jugador honesto dispara sospechas (se cambia `MODO` en `reglas.mjs` y se
+ningún jugador honesto dispara sospechas (se cambia `MODO` en el propio `index.ts` y se
 re-deploya).
 
 ## Paso 1 — La bitácora (2 minutos, inofensivo)
@@ -28,11 +28,9 @@ re-deploya).
 
 1. Dashboard → **Edge Functions** → **Deploy a new function** → *Via Editor*.
 2. Nombre: `guardar` (exacto, en minúsculas — el juego la llama por ese nombre).
-3. En el editor vas a ver un `index.ts` de ejemplo: borralo y pegá el contenido de
-   `supabase/functions/guardar/index.ts` de este repo.
-4. Agregá un archivo nuevo (botón *Add file*), llamalo `reglas.mjs`, y pegale el
-   contenido de `supabase/functions/guardar/reglas.mjs`.
-5. **Deploy**. Dejá "Verify JWT" como viene (activado).
+3. En el editor vas a ver un `index.ts` de ejemplo: borralo y pegá el contenido COMPLETO de
+   `supabase/functions/guardar/index.ts` de este repo (es UN solo archivo autocontenido).
+4. **Deploy** (no hace falta agregar ningún otro archivo: es autocontenido). Dejá "Verify JWT" como viene (activado).
 
 ### La prueba (no te la saltees)
 
@@ -70,7 +68,7 @@ Vacío = nadie hizo nada raro (o solo el equipo con el botón 🧪, que es esper
 
 ## Lo que queda para después (los otros dos escalones)
 
-- **Escalón 2:** con la bitácora calibrada, `MODO = "rechazo"` en `reglas.mjs` y
+- **Escalón 2:** con la bitácora calibrada, `MODO = "rechazo"` en `index.ts` y
   re-deploy — los guardados imposibles dejan de entrar. Ese día el botón 🧪 muere o se
   protege por cuenta.
 - **Escalón 3 (antes del token):** todo lo que toque valor real ($Golden, retiros,
