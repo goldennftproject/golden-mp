@@ -477,8 +477,22 @@ async function saveFarm(force) {
   // hasta 2 intentos inmediatos; si fallan, lastSavedKey no se actualiza y el autosave reintenta al próximo ciclo
   for (let intento = 0; intento < 2; intento++) {
     try {
-      const { error } = await sb.from("farms").upsert({ user_id: UID, name: (typeof nombreLucido === "function" ? nombreLucido() : (window.NICK || "Granjero")), data: snapshot(), updated_at: new Date().toISOString() }, { onConflict: "user_id" });
-      if (error) throw error;
+      /* 21/8 — EL PORTERO: el guardado entra por la Edge Function "guardar" (la única puerta,
+         con bitácora de deltas — ver supabase/functions/guardar/). Mientras la función no esté
+         deployada, cae al camino viejo (upsert directo) para que nadie se quede sin guardar
+         durante la transición; cuando sql/portero-guardado.sql PARTE 2 cierre ese camino, el
+         único que queda es el portero. */
+      const cuerpo = { name: (typeof nombreLucido === "function" ? nombreLucido() : (window.NICK || "Granjero")), data: snapshot() };
+      let paso = false;
+      try {
+        const { data: r, error: fe } = await sb.functions.invoke("guardar", { body: cuerpo });
+        if (!fe && r && r.ok) paso = true;
+        else if (fe) console.warn("portero:", (fe && fe.message) || fe);
+      } catch (e) { console.warn("portero no disponible aún (va por el camino viejo):", e && e.message); }
+      if (!paso) {
+        const { error } = await sb.from("farms").upsert({ user_id: UID, name: cuerpo.name, data: cuerpo.data, updated_at: new Date().toISOString() }, { onConflict: "user_id" });
+        if (error) throw error;
+      }
       lastSavedKey = key;   // recién ahora quedó persistido
       if (typeof showSaved === "function") showSaved();
       return;

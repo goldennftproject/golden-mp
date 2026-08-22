@@ -387,6 +387,8 @@ Cinco skins del pase de batalla están definidas y no implementadas. No es bloqu
 
 Este es el riesgo estructural serio y hay que mirarlo antes del token, no después. Hoy la partida se calcula en el navegador del jugador y se sube al guardado. Mientras la moneda no tenga valor real, el incentivo para manipularla es bajo. En cuanto lo tenga, deja de serlo.
 
+El 21/8 se construyó el primer escalón: EL PORTERO DEL GUARDADO. Una Edge Function de Supabase (supabase/functions/guardar/) pasa a ser la única puerta de escritura a la granja: compara cada guardado con el anterior, anota el delta y las sospechas en una bitácora (farm_saves_log) usando los techos del ancla, y escribe con la fecha del servidor. Arranca en MODO SOMBRA — anota, nunca rechaza — hasta calibrar con jugadores reales. Falta: deployarla (instrucciones en docs/PORTERO-GUARDADO.md, paso a paso desde el dashboard), y los dos escalones siguientes — activar el rechazo, y que todo lo que toque valor real se calcule solo en el servidor.
+
 **14. Reglas de la casa**
 
 Normas de diseño que vienen de decisiones de dirección y que conviene no reabrir sin motivo.
@@ -409,7 +411,7 @@ Normas de diseño que vienen de decisiones de dirección y que conviene no reabr
 
 **15. Cómo verificar lo que dice este documento**
 
-El proyecto tiene 55 pruebas automáticas y 16 auditores (95 herramientas en total). No comprueban que el código compile: comprueban que el JUEGO cumpla las reglas de arriba. Los más útiles para el diseñador:
+El proyecto tiene 57 pruebas automáticas y 16 auditores (97 herramientas en total). No comprueban que el código compile: comprueban que el JUEGO cumpla las reglas de arriba. Los más útiles para el diseñador:
 
 | **Herramienta**                 | **Qué contesta**                                            |
 | ------------------------------- | ----------------------------------------------------------- |
