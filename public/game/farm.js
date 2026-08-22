@@ -1532,33 +1532,32 @@ class FarmScene extends Phaser.Scene {
     if (window.sfx) sfx({ chop: "chop", mine: "mine", plant: "plant", harvest: "harvest", fish: "splash", water: "splash" }[a.kind] || "click");
     // (la sacudida y las astillas ya salieron en el momento del impacto, no acá al final)
     if (a.kind === "chop") {
-      /* 21/8 (cargas, forma final de dirección): LA ESCALERA DE SPRITES SE ESTIRA CON LAS CARGAS.
-         Con 1 carga el ciclo es el de siempre: entero → primer corte → corte profundo → tocón
-         (+1 madera). Con N cargas, el PRIMER CORTE se repite N veces: cada repetición cobra una
-         carga — su madera, su hacha, su XP — y el árbol sigue en pie en ese primer corte; cuando
-         queda la última, el cierre es el clásico: corte profundo → tocón con la madera final.
-         Árbol lleno = 6 golpes, 4 maderas, 4 hachas, una sola secuencia continua.
-         El truco del contador: los golpes que cobran carga DEJAN o.golpes en 1 (el árbol se queda
-         en la etapa de primer corte); recién con la última carga el contador avanza a 2 y 3. */
-      o.golpes = (o.golpes || 0) + 1;
+      /* 22/8 (cargas, ritmo final de dirección): CON CARGAS, CADA CLIC PAGA — sin golpes gratis.
+         Árbol lleno (4): clic 1 → +1 madera, 1 hacha, corte suave · clic 2 → +1, 1 hacha, sigue
+         en corte suave · clic 3 → +1, 1 hacha, corte PROFUNDO · clic 4 → +1, 1 hacha, TOCÓN.
+         Cuatro clics, cuatro maderas, cuatro hachas. El truco del cierre: al pagar la penúltima
+         (queda 1) se deja o.golpes en 2 — como si los dos golpes clásicos ya estuvieran dados —
+         y el clic siguiente entra a la rama clásica directo al tocón con la madera final.
+         El árbol NORMAL de 1 carga conserva su tanda clásica de 3 golpes de siempre. */
       const cargasArbol = nodoCargas(o, CD.tree);
-      if (o.golpes >= 2 && cargasArbol > 1) {   // repetición del primer corte: este golpe COBRA una carga
+      if (cargasArbol > 1) {   // modo cargas: este clic COBRA una carga, del primero al último
         if (tryAddRes("madera", 1)) {
           useTool("axe"); addXp("tala", xpDeNodo("tree")); nodoSumar(o); statAdd("talar", null, 1);
           const quedan = nodoGastarCarga(o, CD.tree); this.syncNodos();
-          if (this.textures.exists("tree_cut1")) this.setObjTex(o, "tree_cut1", o.rw || o.w);
-          o.golpes = 1;                       // el árbol se queda en la etapa de primer corte
+          const tex = quedan >= 2 ? "tree_cut1" : "tree_cut2";   // con la última por delante, corte profundo
+          if (this.textures.exists(tex)) this.setObjTex(o, tex, o.rw || o.w);
+          o.golpes = quedan >= 2 ? 0 : GOLPES_TALAR - 1;   // penúltima pagada → el próximo clic tumba
           o.golpesAt = nowMs(); this.barraGolpes(o);
           this.premioFx(o.cx, o.by, resSprite("madera"), "+1"); refreshHud();
           log(`+1 Madera — al árbol le quedan ${quedan} carga${quedan === 1 ? "" : "s"}. ${toolDur("axe")}/${TOOL_DEF.axe.max}`, "good");
           if (typeof tutoEvent === "function") tutoEvent("gather");
           if (toolDur("axe") <= 0) { log("¡El hacha se rompió en pedazos! Crafteá otra en la Herrería.", "bad"); toast("¡Hacha rota!"); }
         } else {
-          o.golpes = 1;   // la madera de esta carga no cupo: la carga NO se cobra y el árbol espera
           toast("Bolsa llena — no podés talar"); log("Bolsa llena: liberá espacio para seguir talando.", "bad");
         }
         this.action = null; return;
       }
+      o.golpes = (o.golpes || 0) + 1;
       if (o.golpes < GOLPES_TALAR) {   // golpes intermedios: el árbol se va cortando (el hacha NO se gasta todavía)
         const tex = o.golpes === 1 ? "tree_cut1" : "tree_cut2";
         if (this.textures.exists(tex)) this.setObjTex(o, tex, o.rw || o.w);
@@ -1588,28 +1587,28 @@ class FarmScene extends Phaser.Scene {
         toast("Bolsa llena — no podés talar"); log("Bolsa llena: liberá espacio para seguir talando.", "bad");
       }
     } else if (a.kind === "mine" && o.type === "rock") {
-      /* 21/8 (cargas, forma final): misma escalera estirada que el árbol — la media rota se
-         repite una vez por carga (cada repetición cobra 1 piedra + 1 pico), y el cierre clásico
-         llega con la última: media rota → picada del todo. Roca llena = 6 golpes, 4 piedras. */
-      o.golpes = (o.golpes || 0) + 1;
+      /* 22/8 (cargas, ritmo final): igual que el árbol — con cargas, CADA clic paga una piedra y
+         un pico; media rota mientras queden, picada del todo en la última. Roca llena = 4 clics.
+         La roca normal de 1 carga conserva su tanda clásica de 3 golpes. */
       const cargasRoca = nodoCargas(o, CD.rock);
-      if (o.golpes >= 2 && cargasRoca > 1) {   // repetición de la media rota: este golpe COBRA una carga
+      if (cargasRoca > 1) {   // modo cargas: este clic COBRA una carga
         if (tryAddRes("piedra", 1)) {
           const pk = equippedPick();
           if (pk) { G.picks.dur[pk] = Math.max(0, (G.picks.dur[pk] || 0) - 1); if (G.picks.dur[pk] <= 0) { log("Usaste tu último " + PICK_DEF[pk].label + " — crafteá más en la Herrería.", "bad"); toast("Sin picos — crafteá más"); destroyPick(pk); } }
           addXp("mining", xpDeNodo("rock", "piedra")); statAdd("minar", "piedra", 1); nodoSumar(o);
           const quedan = nodoGastarCarga(o, CD.rock); this.syncNodos();
           if (this.textures.exists(o.baseKey + "_half")) this.setObjTex(o, o.baseKey + "_half", o.rw || o.w);
-          o.golpes = 1; o.golpesAt = nowMs(); this.barraGolpes(o);
+          o.golpes = quedan >= 2 ? 0 : GOLPES_MINAR - 1;   // penúltima pagada → el próximo clic la rompe
+          o.golpesAt = nowMs(); this.barraGolpes(o);
           this.premioFx(o.cx, o.by, resSprite("piedra"), "+1"); refreshHud();
           log(`+1 Piedra — a la roca le quedan ${quedan} carga${quedan === 1 ? "" : "s"}.` + (pk ? ` Quedan ${G.picks.dur[pk]} picos.` : ""), "good");
           if (typeof tutoEvent === "function") tutoEvent("gather");
         } else {
-          o.golpes = 1;   // la piedra no cupo: la carga no se cobra
           toast("Bolsa llena — no podés picar"); log("Bolsa llena: liberá espacio para seguir picando.", "bad");
         }
         this.action = null; return;
       }
+      o.golpes = (o.golpes || 0) + 1;
       if (o.golpes < GOLPES_MINAR) {   // golpes intermedios: el pico NO se gasta todavía
         if (this.textures.exists(o.baseKey + "_half")) this.setObjTex(o, o.baseKey + "_half", o.rw || o.w);
         o.golpesAt = nowMs();   // si no seguís, a los 5 s la piedra vuelve a estar entera
@@ -1628,33 +1627,30 @@ class FarmScene extends Phaser.Scene {
       }
       else { this.setObjTex(o, o.baseKey, o.rw || o.w); toast("Bolsa llena — no podés picar"); log("Bolsa llena: liberá espacio para seguir picando.", "bad"); }   // vuelve entera: los golpes se perdieron
     } else if (a.kind === "mine" && o.type === "ore") {
-      /* 21/8 (cargas, forma final): la veta de PIEDRA va con las rocas — misma escalera estirada.
-         Las vetas de MINERAL quedan APARTADAS de la mecánica (dirección, 21/8, decisión final):
-         reloj simple, una picada y a dormir; sus cargas son siempre 1.
-         LA PICADA DE MINERAL SÍ RINDE od.yield (2) — la decisión del 18/8 que esta rama entregaba
-         en 1 por error: con yield 1 picar daba pérdida en los cinco tiers (el pico cuesta más de
-         lo que saca); el ancla exige (2 × precio − pico) / horas = 20. */
-      o.golpes = (o.golpes || 0) + 1;
+      /* 22/8 (cargas, ritmo final): la veta de PIEDRA va con las rocas — con cargas, cada clic
+         paga. Las vetas de MINERAL siguen APARTADAS (dirección): reloj simple, tanda clásica.
+         LA PICADA DE MINERAL RINDE od.yield (2) — el ancla del 18/8 que esta rama pagaba en 1. */
       const odC = ORE_DEF[o.ore], grVeta = Math.max(1, odC.yield || 1);
       const cargasVeta = o.ore === "piedra" ? nodoCargas(o, CD.rock) : 1;
-      if (o.golpes >= 2 && cargasVeta > 1) {   // repetición de la media rota: este golpe COBRA una carga
+      if (cargasVeta > 1) {   // modo cargas (solo la veta de piedra): este clic COBRA una carga
         if (tryAddRes(o.ore, grVeta)) {
           const pk2 = equippedPick(), pd2 = PICK_DEF[pk2];
           G.picks.dur[pk2] = Math.max(0, (G.picks.dur[pk2] || 0) - 1);
-          addXp("mining", xpDeNodo("ore", o.ore)); statAdd("minar", o.ore, grVeta); nodoSumar(o);
-          const quedan = nodoGastarCarga(o, CD.rock); this.syncNodos();   // solo llega acá la veta de piedra
+          addXp("mining", xpDeNodo("ore", o.ore)); statAdd("minar", o.ore, 1); nodoSumar(o);
+          const quedan = nodoGastarCarga(o, CD.rock); this.syncNodos();
           if (this.textures.exists(o.baseKey + "_half")) this.setObjTex(o, o.baseKey + "_half", o.rw || o.w);
-          o.golpes = 1; o.golpesAt = nowMs(); this.barraGolpes(o);
-          this.premioFx(o.cx, o.by, resSprite(o.ore), "+" + grVeta); refreshHud();
+          o.golpes = quedan >= 2 ? 0 : GOLPES_MINAR - 1;   // penúltima pagada → el próximo clic la agota
+          o.golpesAt = nowMs(); this.barraGolpes(o);
+          this.premioFx(o.cx, o.by, resSprite(o.ore), "+1"); refreshHud();
           log(`${odC.emoji} +${grVeta} ${odC.label} — a la veta le quedan ${quedan} carga${quedan === 1 ? "" : "s"}. Quedan ${G.picks.dur[pk2]} picos.`, "good");
           if (typeof tutoEvent === "function") { tutoEvent("gather"); tutoEvent("mineore"); }
           if (G.picks.dur[pk2] <= 0) { log("Usaste tu último " + pd2.label + " — crafteá más en la Herrería.", "bad"); toast("Sin picos — crafteá más"); destroyPick(pk2); }
         } else {
-          o.golpes = 1;   // no cupo: la carga no se cobra
           toast("Bolsa llena — no podés picar"); log("Bolsa llena: liberá espacio para seguir picando.", "bad");
         }
         this.action = null; return;
       }
+      o.golpes = (o.golpes || 0) + 1;
       if (o.golpes < GOLPES_MINAR) {   // golpes intermedios: el pico NO se gasta todavía
         if (this.textures.exists(o.baseKey + "_half")) this.setObjTex(o, o.baseKey + "_half", o.rw || o.w);
         o.golpesAt = nowMs();   // si no seguís, a los 5 s la veta vuelve a estar entera

@@ -359,13 +359,11 @@ var GOLPES_TALAR = 3, GOLPES_MINAR = 3;   // clics para tumbar un árbol o rompe
    hace guardia sigue exactamente igual; el de tres visitas cobra lo que el nodo le guardó.
    Las vetas de MINERAL quedan APARTADAS de la mecánica (dirección, 21/8, decisión final): se
    probaron con cargas y dirección las quitó el mismo día — reloj simple, una picada y a dormir.
-   Y LA ESCALERA DE SPRITES SE ESTIRA CON LAS CARGAS (21/8, dirección, forma final): "con una
-   carga, el ciclo es el que ya está; con N cargas, el primer corte se repite N veces — cada
-   repetición da su madera — y el cierre es el de siempre". O sea: entero → primer corte →
-   (repetición del primer corte × cargas extra, cobrando 1 madera + 1 hacha + su XP en cada una)
-   → corte profundo → tocón con la madera final. Árbol lleno = 6 golpes, 4 maderas, 4 hachas, en
-   una sola secuencia continua. Tiene que VERSE que das cuatro hachazos y que cada madera paga su
-   hacha — nada cae de golpe. */
+   Y EL RITMO FINAL (22/8, dirección, probado en vivo): CON CARGAS, CADA CLIC PAGA — sin golpes
+   gratis. Árbol lleno: clic 1 → +1 madera y corte suave · clic 2 → +1, sigue el corte suave ·
+   clic 3 → +1, corte PROFUNDO · clic 4 → +1 y TOCÓN. Cuatro clics, cuatro maderas, cuatro
+   hachas, cuatro XP. El árbol NORMAL de una carga conserva su tanda clásica de 3 golpes (la
+   madera cae al final, como siempre). Cada madera paga su hacha — nada cae de golpe. */
 var NODO_CARGAS_MAX = 4;
 function nodoCargas(o, cdBaseSeg) {
   if (!o) return 1;
