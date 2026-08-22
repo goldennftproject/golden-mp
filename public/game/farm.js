@@ -1542,19 +1542,31 @@ class FarmScene extends Phaser.Scene {
       }
       o.golpesAt = 0;
       o.golpes = 0; this.barraGolpes(o);
-      const gr = nodoCargas(o, CD.tree);   // 21/8: el árbol pasado acumula (1 carga por reloj extra, tope 4)
-      if (tryAddRes("madera", gr)) {
-        useTool("axe"); addXp("tala", xpDeNodo("tree"));   /* 18/8: por acción, no por reloj */   /* 18/8: talar es TALA, no Artesanía */ /* 16/8: XP = minutos del reloj (1 h 30 → 90) */ nodoSumar(o); o.cdIni = nowMs(); o.readyAt = nowMs() + nodoCd(o, "tree", CD.tree) * 1000 * cdMult() * (typeof tutoBoost === "function" ? tutoBoost("tree") : 1);
-        o.halfAt = nowMs() + (o.readyAt - nowMs()) / 2; this.syncNodos();   // a mitad del enfriamiento asoma el árbol a medio crecer (doc 4/8)
-        // tocón nuevo con base de tierra y hojas caídas (encuadre del árbol, va a tamaño completo); respaldo: tocón viejo chico
-        // 15/8 (medido en los PNG): el disco del tocón es el 64% de su lienzo y el tronco
-        // del árbol el 23-30% del suyo → a 0.42 del ancho del árbol el corte queda del
-        // MISMO grosor que el tronco que había (antes 0.85: salía el doble de gordo).
-        if (this.textures.exists("tree_stump_leaves")) this.setObjTex(o, "tree_stump_leaves", (o.rw || o.w) * 0.42);
-        else this.setObjTex(o, "tree_stump", (o.rw || o.w) * 0.42);
-        statAdd("talar", null, gr);
-        this.premioFx(o.cx, o.by, resSprite("madera"), "+" + gr);
-        log(`+${gr} Madera. ${toolDur("axe")}/${TOOL_DEF.axe.max}`, "good"); refreshHud();
+      /* 21/8 (cargas): el árbol pasado guarda hasta 4 talados. CADA carga es un talado entero —
+         1 madera, 1 uso de hacha, su XP —; mientras queden, el árbol no cae: se rasga y se puede
+         volver a talar al instante. Recién al vaciarse cae al tocón y arranca su reloj. */
+      const cargas = nodoCargas(o, CD.tree);
+      if (tryAddRes("madera", 1)) {
+        useTool("axe"); addXp("tala", xpDeNodo("tree"));   /* 18/8: por acción, no por reloj */   /* 18/8: talar es TALA, no Artesanía */ /* 16/8: XP = minutos del reloj (1 h 30 → 90) */ nodoSumar(o);
+        if (cargas > 1) {
+          const quedan = nodoGastarCarga(o, CD.tree); this.syncNodos();
+          // rasgado, no tocón: se VE que al árbol le queda madera adentro
+          if (this.textures.exists("tree_cut1")) this.setObjTex(o, "tree_cut1", o.rw || o.w);
+          log(`+1 Madera — al árbol le quedan ${quedan} carga${quedan === 1 ? "" : "s"}. ${toolDur("axe")}/${TOOL_DEF.axe.max}`, "good");
+        } else {
+          o.cdIni = nowMs(); o.readyAt = nowMs() + nodoCd(o, "tree", CD.tree) * 1000 * cdMult() * (typeof tutoBoost === "function" ? tutoBoost("tree") : 1);
+          o.halfAt = nowMs() + (o.readyAt - nowMs()) / 2; this.syncNodos();   // a mitad del enfriamiento asoma el árbol a medio crecer (doc 4/8)
+          // tocón nuevo con base de tierra y hojas caídas (encuadre del árbol, va a tamaño completo); respaldo: tocón viejo chico
+          // 15/8 (medido en los PNG): el disco del tocón es el 64% de su lienzo y el tronco
+          // del árbol el 23-30% del suyo → a 0.42 del ancho del árbol el corte queda del
+          // MISMO grosor que el tronco que había (antes 0.85: salía el doble de gordo).
+          if (this.textures.exists("tree_stump_leaves")) this.setObjTex(o, "tree_stump_leaves", (o.rw || o.w) * 0.42);
+          else this.setObjTex(o, "tree_stump", (o.rw || o.w) * 0.42);
+          log(`+1 Madera. ${toolDur("axe")}/${TOOL_DEF.axe.max}`, "good");
+        }
+        statAdd("talar", null, 1);
+        this.premioFx(o.cx, o.by, resSprite("madera"), "+1");
+        refreshHud();
         if (typeof tutoEvent === "function") tutoEvent("gather");
         if (toolDur("axe") <= 0) { log("¡El hacha se rompió en pedazos! Crafteá otra en la Herrería.", "bad"); toast("¡Hacha rota!"); }
       } else {
@@ -1570,11 +1582,22 @@ class FarmScene extends Phaser.Scene {
         this.action = null; return;
       }
       o.golpes = 0; o.golpesAt = 0; this.barraGolpes(o);
-      const gr = nodoCargas(o, CD.rock);   // 21/8: la roca pasada acumula (1 carga por reloj extra, tope 4)
-      if (tryAddRes("piedra", gr)) {
+      /* 21/8 (cargas): la roca pasada guarda hasta 4 picadas — cada carga es una picada entera
+         (1 piedra, 1 pico, su XP); mientras queden, la roca queda partida y picable al instante */
+      const cargas = nodoCargas(o, CD.rock);
+      if (tryAddRes("piedra", 1)) {
         const pk = equippedPick();   // picar piedra también gasta el pico (bug reportado)
         if (pk) { G.picks.dur[pk] = Math.max(0, (G.picks.dur[pk] || 0) - 1); if (G.picks.dur[pk] <= 0) { log("Usaste tu último " + PICK_DEF[pk].label + " — crafteá más en la Herrería.", "bad"); toast("Sin picos — crafteá más"); destroyPick(pk); } }
-        addXp("mining", xpDeNodo("rock", "piedra")); /* 16/8: XP = minutos del reloj (2 h → 120) */ statAdd("minar", "piedra", gr); nodoSumar(o); o.cdIni = nowMs(); o.readyAt = nowMs() + nodoCd(o, "piedra", CD.rock) * 1000 * cdMult() * (typeof tutoBoost === "function" ? tutoBoost("rock") : 1); o.halfAt = nowMs() + (o.readyAt - nowMs()) / 2; this.syncNodos(); this.setObjTex(o, "node_stone_mined", o.rw || GF.TILE); this.premioFx(o.cx, o.by, resSprite("piedra"), "+" + gr); log(`+${gr} Piedra.` + (pk ? ` Quedan ${G.picks.dur[pk]} picos.` : ""), "good"); refreshHud();
+        addXp("mining", xpDeNodo("rock", "piedra")); /* 16/8: XP = minutos del reloj (2 h → 120) */ statAdd("minar", "piedra", 1); nodoSumar(o);
+        if (cargas > 1) {
+          const quedan = nodoGastarCarga(o, CD.rock); this.syncNodos();
+          if (this.textures.exists(o.baseKey + "_half")) this.setObjTex(o, o.baseKey + "_half", o.rw || o.w);
+          log(`+1 Piedra — a la roca le quedan ${quedan} carga${quedan === 1 ? "" : "s"}.` + (pk ? ` Quedan ${G.picks.dur[pk]} picos.` : ""), "good");
+        } else {
+          o.cdIni = nowMs(); o.readyAt = nowMs() + nodoCd(o, "piedra", CD.rock) * 1000 * cdMult() * (typeof tutoBoost === "function" ? tutoBoost("rock") : 1); o.halfAt = nowMs() + (o.readyAt - nowMs()) / 2; this.syncNodos(); this.setObjTex(o, "node_stone_mined", o.rw || GF.TILE);
+          log(`+1 Piedra.` + (pk ? ` Quedan ${G.picks.dur[pk]} picos.` : ""), "good");
+        }
+        this.premioFx(o.cx, o.by, resSprite("piedra"), "+1"); refreshHud();
         if (typeof tutoEvent === "function") tutoEvent("gather");
       }
       else { this.setObjTex(o, o.baseKey, o.rw || o.w); toast("Bolsa llena — no podés picar"); log("Bolsa llena: liberá espacio para seguir picando.", "bad"); }   // vuelve entera: los golpes se perdieron
@@ -1588,15 +1611,24 @@ class FarmScene extends Phaser.Scene {
       }
       o.golpes = 0; o.golpesAt = 0; this.barraGolpes(o);
       const pk = equippedPick(), pd = PICK_DEF[pk], od = ORE_DEF[o.ore];
-      /* 21/8: la veta de PIEDRA va con las rocas (mismo reloj, mismas cargas); las de mineral no acumulan */
-      const gr = o.ore === "piedra" ? nodoCargas(o, CD.rock) : 1;
-      if (tryAddRes(o.ore, gr)) {
+      /* 21/8: la veta de PIEDRA va con las rocas (mismo reloj, mismas cargas — y cada carga es
+         una picada entera: 1 piedra, 1 pico); las vetas de mineral no acumulan */
+      const cargas = o.ore === "piedra" ? nodoCargas(o, CD.rock) : 1;
+      if (tryAddRes(o.ore, 1)) {
         G.picks.dur[pk] = Math.max(0, (G.picks.dur[pk] || 0) - 1);
-        addXp("mining", xpDeNodo("ore", o.ore)); statAdd("minar", o.ore, gr);   // 16/8: XP = minutos del reloj (bronce 8 h → 480 … oro 14 h → 840)
-        nodoSumar(o); o.cdIni = nowMs(); o.readyAt = nowMs() + nodoCd(o, o.ore, od.cd) * 1000 * cdMult();
-        o.halfAt = nowMs() + (o.readyAt - nowMs()) / 2; this.syncNodos();
-        if (this.textures.exists(o.baseKey + "_mined")) this.setObjTex(o, o.baseKey + "_mined", o.rw || GF.TILE); else o.sprite.setAlpha(0.4);
-        this.premioFx(o.cx, o.by, resSprite(o.ore), "+" + gr); log(`${od.emoji} +${gr} ${od.label}. Quedan ${G.picks.dur[pk]} picos.`, "good"); refreshHud();
+        addXp("mining", xpDeNodo("ore", o.ore)); statAdd("minar", o.ore, 1);   // 16/8: XP = minutos del reloj (bronce 8 h → 480 … oro 14 h → 840)
+        nodoSumar(o);
+        if (cargas > 1) {
+          const quedan = nodoGastarCarga(o, CD.rock); this.syncNodos();
+          if (this.textures.exists(o.baseKey + "_half")) this.setObjTex(o, o.baseKey + "_half", o.rw || o.w);
+          log(`${od.emoji} +1 ${od.label} — a la veta le quedan ${quedan} carga${quedan === 1 ? "" : "s"}. Quedan ${G.picks.dur[pk]} picos.`, "good");
+        } else {
+          o.cdIni = nowMs(); o.readyAt = nowMs() + nodoCd(o, o.ore, od.cd) * 1000 * cdMult();
+          o.halfAt = nowMs() + (o.readyAt - nowMs()) / 2; this.syncNodos();
+          if (this.textures.exists(o.baseKey + "_mined")) this.setObjTex(o, o.baseKey + "_mined", o.rw || GF.TILE); else o.sprite.setAlpha(0.4);
+          log(`${od.emoji} +1 ${od.label}. Quedan ${G.picks.dur[pk]} picos.`, "good");
+        }
+        this.premioFx(o.cx, o.by, resSprite(o.ore), "+1"); refreshHud();
         if (typeof tutoEvent === "function") { tutoEvent("gather"); tutoEvent("mineore"); }
         if (G.picks.dur[pk] <= 0) { log("Usaste tu último " + pd.label + " — crafteá más en la Herrería.", "bad"); toast("Sin picos — crafteá más"); destroyPick(pk); }
       } else { this.setObjTex(o, o.baseKey, o.rw || o.w); toast("Bolsa llena — no podés picar"); log("Bolsa llena: liberá espacio para seguir picando.", "bad"); }

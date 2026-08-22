@@ -132,7 +132,7 @@ La XP sí crece con el escalón (de 10 a 130 por cosecha), y ahí está el incen
 
 **Cargas: el nodo pasado no se desperdicia (21/8)**
 
-Un árbol o roca ya crecido acumula 1 carga por cada reloj propio extra que pase sin cosecharse, hasta llenarse con 4. El árbol se llena a las 2 horas de pasado; la roca y la veta de piedra, a las 2 h 40. Un solo golpe (los 3 clics de siempre) cosecha todo lo acumulado. El que tala cada 30 minutos sigue cobrando 1 por vez, exactamente como antes; el que entra tres veces al día cobra lo que el nodo le guardó. Las vetas de mineral (bronce en adelante) no acumulan: con relojes de 8-24 horas es una decisión aparte. La XP y el desgaste de herramienta van por acción, no por carga.
+Un árbol o roca ya crecido acumula 1 carga por cada reloj propio extra que pase sin cosecharse, hasta llenarse con 4. El árbol se llena a las 2 horas de pasado; la roca y la veta de piedra, a las 2 h 40. Y cada carga es un talado ENTERO: su tanda de 3 golpes, su 1 de madera, su uso de hacha y su XP — nada cae de golpe. Entre carga y carga el nodo queda rasgado y se puede volver a talar al instante; recién al vaciarse cae al tocón y arranca su reloj. Así el hacha sigue pagando 1 por madera, se VE que das cuatro hachazos, y el que tala cada 30 minutos cobra 1 por vez exactamente como antes; el que entra tres veces al día cobra, talado a talado, lo que el nodo le guardó. Las vetas de mineral (bronce en adelante) no acumulan: con relojes de 8-24 horas es una decisión aparte.
 
 **La escalera de minerales**
 

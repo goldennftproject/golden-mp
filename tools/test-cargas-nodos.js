@@ -1,13 +1,16 @@
 /* LAS CARGAS DE LOS NODOS: EL ÁRBOL PASADO NO SE DESPERDICIA (21/8, dirección)
-   "Para los que no pueden hacer guardia: si el árbol se pasa crecido 30 minutos más, al talarlo
-    da 2 maderas en vez de 1. Si se pasa 2 horas, da 4."
+   "Para los que no pueden hacer guardia: si el árbol se pasa crecido 30 minutos más, guarda
+    2 maderas. Si se pasa 2 horas, guarda 4." Y la segunda vuelta, del mismo día: "cortar cuatro
+   cargas de un hachazo está mal — tiene que VERSE que das cuatro hachazos, y consumirte cuatro
+   hachas".
 
-   La regla: 1 carga por cada reloj PROPIO extra vencido, tope 4. Árbol (30 min) lleno a las 2 h;
-   roca y veta de piedra (40 min) llenas a las 2 h 40. Un golpe cosecha todo. Vetas de mineral NO
-   acumulan. XP y desgaste de herramienta van por acción, no por carga.
+   La regla completa: 1 carga por cada reloj PROPIO extra vencido, tope 4 (árbol lleno a las 2 h;
+   roca y veta de piedra a las 2 h 40). CADA carga es un talado entero: su tanda de golpes, su
+   1 de madera, su uso de hacha, su XP. Entre carga y carga el nodo queda rasgado y talable al
+   instante; recién al vaciarse cae al tocón y arranca su reloj. Vetas de mineral NO acumulan.
 
-   Se prueba con la ESCENA REAL y el reloj trucado: se tala de verdad (3 golpes) y se cuenta lo
-   que cae en la bolsa, la XP y el hacha.
+   Se prueba con la ESCENA REAL y el reloj trucado: se tala de verdad (3 golpes por carga) y se
+   cuenta lo que cae en la bolsa, la XP, el hacha y el estado del nodo entre carga y carga.
      node tools/test-cargas-nodos.js                                                              */
 const fs = require("fs"), vm = require("vm");
 
@@ -105,64 +108,87 @@ const vetaBronce = esc.objs.find(o => o.type === "ore" && o.ore === "bronce" && 
 ok("(escenario) árbol, roca, veta de piedra y veta de bronce a mano",
   !!arbol && !!roca && !!vetaPiedra && !!vetaBronce);
 
-console.log("\nEL ÁRBOL QUE SE PASA, ACUMULA — Y A LAS 2 HORAS ESTÁ LLENO");
+/* ¿el nodo se puede talar/picar YA (reloj vencido)? */
+const talable = (o) => (o.readyAt || 0) <= ctx.Date.now();
+
+console.log("\nCADA CARGA ES UN TALADO: EL ÁRBOL LLENO SON 4 HACHAZOS, 4 MADERAS, 4 HACHAS");
 {
   plantar(arbol, CD.tree, 0);
-  ok("recién crecido: 1 madera (el guardián no gana de más)", cosechar(arbol, "madera", "chop") === 1);
+  ok("recién crecido: 1 madera y al tocón (el guardián, como siempre)",
+    cosechar(arbol, "madera", "chop") === 1 && !talable(arbol));
+  plantar(arbol, CD.tree, 120);   // lleno: 4 cargas
+  const ax0 = G.tools.axe;
+  const tandas = [];
+  for (let i = 0; i < 4; i++) tandas.push(cosechar(arbol, "madera", "chop") + (talable(arbol) ? "·sigue" : "·tocón"));
+  ok("cada tanda de golpes da 1 madera, y el árbol AGUANTA hasta la cuarta",
+    tandas.join(" ") === "1·sigue 1·sigue 1·sigue 1·tocón", tandas.join(" "));
+  ok("las 4 maderas costaron 4 hachas (1 por carga, nada gratis)", ax0 - G.tools.axe === 4,
+    ax0 - G.tools.axe + " hachas");
+  ok("y al vaciarse arranca su reloj (ya no se puede talar)", !talable(arbol));
+}
+
+console.log("\nEL TOPE Y EL RELOJ PROPIO");
+{
+  plantar(arbol, CD.tree, 12 * 60);   // 12 h pasado: el tope corta en 4
+  let total = 0; for (let i = 0; i < 9 && talable(arbol); i++) total += cosechar(arbol, "madera", "chop");
+  ok("pasado 12 h: el árbol guarda 4 y ni una más (el tope evita el AFK infinito)", total === 4, total + " maderas");
   plantar(arbol, CD.tree, 30);
-  ok("pasado 30 min (un reloj extra): 2 maderas", cosechar(arbol, "madera", "chop") === 2);
-  plantar(arbol, CD.tree, 60);
-  ok("pasado 1 h: 3 maderas", cosechar(arbol, "madera", "chop") === 3);
-  plantar(arbol, CD.tree, 120);
-  ok("pasado 2 h: 4 maderas — lleno", cosechar(arbol, "madera", "chop") === 4);
-  plantar(arbol, CD.tree, 12 * 60);
-  ok("pasado 12 h: sigue dando 4 (el tope evita el AFK infinito)", cosechar(arbol, "madera", "chop") === 4);
+  let t2 = 0; for (let i = 0; i < 9 && talable(arbol); i++) t2 += cosechar(arbol, "madera", "chop");
+  ok("pasado 30 min (un reloj extra): guarda 2", t2 === 2, t2 + " maderas");
   plantar(arbol, CD.tree, 29);
-  ok("pasado 29 min (reloj extra sin vencer): todavía 1", cosechar(arbol, "madera", "chop") === 1);
+  ok("pasado 29 min (reloj extra sin vencer): 1 y al tocón", cosechar(arbol, "madera", "chop") === 1 && !talable(arbol));
 }
 
-console.log("\nLA XP Y EL HACHA VAN POR ACCIÓN, NO POR CARGA");
+console.log("\nLA XP MIDE GESTOS: CADA CARGA PAGA SU TALADO ENTERO");
 {
   plantar(arbol, CD.tree, 0);
-  let xp0 = G.skills.tala || 0, ax0 = G.tools.axe;
+  let xp0 = G.skills.tala || 0;
   cosechar(arbol, "madera", "chop");
-  const xpJusto = (G.skills.tala || 0) - xp0, axJusto = ax0 - G.tools.axe;
+  const xpJusto = (G.skills.tala || 0) - xp0;
   plantar(arbol, CD.tree, 120);
-  xp0 = G.skills.tala || 0; ax0 = G.tools.axe;
-  cosechar(arbol, "madera", "chop");
-  ok("talar un árbol LLENO da la misma XP que uno recién crecido", (G.skills.tala || 0) - xp0 === xpJusto,
-    ((G.skills.tala || 0) - xp0) + " vs " + xpJusto);
-  ok("y gasta el mismo hacha (1 uso)", ax0 - G.tools.axe === axJusto && axJusto === 1);
+  xp0 = G.skills.tala || 0;
+  for (let i = 0; i < 4; i++) cosechar(arbol, "madera", "chop");
+  ok("vaciar un árbol lleno (4 talados) paga 4 veces la XP de un talado", (G.skills.tala || 0) - xp0 === 4 * xpJusto,
+    ((G.skills.tala || 0) - xp0) + " vs 4×" + xpJusto);
 }
 
-console.log("\nLA ROCA VA A SU RELOJ: +1 CADA 40 MIN, LLENA A LAS 2 H 40");
+console.log("\nLA ROCA VA A SU RELOJ DE 40 MIN — Y CADA CARGA CUESTA UN PICO");
 {
   plantar(roca, CD.rock, 0);
-  ok("recién crecida: 1 piedra", cosechar(roca, "piedra", "mine") === 1);
+  ok("recién crecida: 1 piedra y a dormir", cosechar(roca, "piedra", "mine") === 1 && !talable(roca));
   plantar(roca, CD.rock, 40);
-  ok("pasada 40 min: 2 piedras", cosechar(roca, "piedra", "mine") === 2);
+  let t = 0; for (let i = 0; i < 9 && talable(roca); i++) t += cosechar(roca, "piedra", "mine");
+  ok("pasada 40 min: guarda 2, en dos picadas", t === 2, t + " piedras");
   plantar(roca, CD.rock, 30);
-  ok("pasada 30 min (menos que SU reloj): todavía 1", cosechar(roca, "piedra", "mine") === 1);
+  ok("pasada 30 min (menos que SU reloj): 1 sola", cosechar(roca, "piedra", "mine") === 1 && !talable(roca));
   plantar(roca, CD.rock, 160);
-  ok("pasada 2 h 40: 4 — llena", cosechar(roca, "piedra", "mine") === 4);
+  const pk0 = G.picks.dur.wood;
+  t = 0; for (let i = 0; i < 9 && talable(roca); i++) t += cosechar(roca, "piedra", "mine");
+  ok("pasada 2 h 40: llena — 4 piedras en 4 picadas", t === 4, t + " piedras");
+  ok("que costaron 4 picos", pk0 - G.picks.dur.wood === 4, pk0 - G.picks.dur.wood + " picos");
 }
 
 console.log("\nLA VETA DE PIEDRA VA CON LAS ROCAS; LAS DE MINERAL NO ACUMULAN");
 {
   plantar(vetaPiedra, CD.rock, 160);
-  ok("veta de piedra pasada 2 h 40: 4", cosechar(vetaPiedra, "piedra", "mine") === 4);
+  let t = 0; for (let i = 0; i < 9 && talable(vetaPiedra); i++) t += cosechar(vetaPiedra, "piedra", "mine");
+  ok("veta de piedra pasada 2 h 40: 4, picada a picada", t === 4, t + " piedras");
   const OD = vm.runInContext("ORE_DEF", ctx);
   plantar(vetaBronce, OD.bronce.cd, 24 * 60);
-  ok("veta de bronce pasada 24 h: da lo suyo de siempre (yield fijo, sin cargas)",
-    cosechar(vetaBronce, "bronce", "mine") === 1, "+" + (G.res.bronce || 0));
+  ok("veta de bronce pasada 24 h: da lo suyo de siempre y a dormir (sin cargas)",
+    cosechar(vetaBronce, "bronce", "mine") === 1 && !talable(vetaBronce), "+" + (G.res.bronce || 0));
 }
 
 console.log("\nY LAS CARGAS SOBREVIVEN AL F5 (viven en readyAt, que ya viaja al guardado)");
 {
   plantar(arbol, CD.tree, 120);
+  cosechar(arbol, "madera", "chop");   // gasta 1 de las 4: quedan 3
   const foto = JSON.parse(JSON.stringify(ctx.snapshot()));
-  ctx.hydrate(foto);   // el F5: mismo reloj, misma verdad
-  ok("tras recargar, el árbol lleno sigue dando 4", ctx.nodoCargas(arbol, CD.tree) === 4);
+  ctx.hydrate(foto);   // el F5 a mitad de vaciado: ni regala ni se come cargas
+  ok("tras recargar, al árbol a medio vaciar le quedan 3 exactas", ctx.nodoCargas(arbol, CD.tree) === 3,
+    ctx.nodoCargas(arbol, CD.tree) + "");
+  let t = 0; for (let i = 0; i < 9 && talable(arbol); i++) t += cosechar(arbol, "madera", "chop");
+  ok("y se cobran en 3 talados, ni uno más", t === 3, t + " maderas");
 }
 
 console.log(fallos ? "\n" + fallos + " fallo(s)\n" : "\nTodo en orden: el árbol le guarda la madera al que no pudo venir.\n");

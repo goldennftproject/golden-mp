@@ -354,8 +354,12 @@ var GOLPES_TALAR = 3, GOLPES_MINAR = 3;   // clics para tumbar un árbol o rompe
    golpe cosecha todo. El que hace guardia sigue exactamente igual (tala cada 30 min → 1 por vez);
    el de tres visitas cobra lo que el árbol le guardó. Las vetas de MINERAL quedan fuera: con
    relojes de 8-24 h, acumular 4 serían días — decisión aparte con el diseñador.
-   La XP y el desgaste de herramienta van POR ACCIÓN (18/8), no por carga: talar es un gesto,
-   des lo que dé — si pagaran por carga, dormir daría XP y el hacha se gastaría sola. */
+   Y CADA CARGA ES UN TALADO ENTERO (21/8, dirección, segunda vuelta): "cortar cuatro cargas de
+   un hachazo está mal — te tiene que consumir cuatro hachas, y tiene que VERSE que das cuatro
+   hachazos". Nada cae de golpe: el nodo lleno se cosecha carga por carga — cada una con su tanda
+   de golpes, su 1 de madera, su uso de hacha y su XP —, entre carga y carga queda rasgado y
+   talable al instante, y recién al vaciarse cae al tocón y arranca su reloj. Así el hacha paga
+   1 por madera como siempre y la XP sigue midiendo gestos de verdad. */
 var NODO_CARGAS_MAX = 4;
 function nodoCargas(o, cdBaseSeg) {
   if (!o || !o.readyAt || nowMs() < o.readyAt) return 1;
@@ -364,6 +368,18 @@ function nodoCargas(o, cdBaseSeg) {
   const cdMs = (o.cdIni && o.readyAt > o.cdIni) ? (o.readyAt - o.cdIni) : cdBaseSeg * 1000;
   const extra = Math.floor((nowMs() - o.readyAt) / Math.max(1000, cdMs));
   return Math.min(NODO_CARGAS_MAX, 1 + Math.max(0, extra));
+}
+/* Consume UNA carga de un nodo que tenía 2 o más: mueve readyAt un reloj hacia AHORA, de modo
+   que queden exactamente (cargas − 1) — el backlog por encima del tope se descarta al cobrar.
+   No hay contador nuevo que guardar: las cargas viven en readyAt, que ya viaja al guardado, así
+   que un F5 a mitad de vaciado no puede ni regalar ni comerse cargas. Con la última carga esta
+   función NO se llama: el que tala pone el enfriamiento normal, como siempre. */
+function nodoGastarCarga(o, cdBaseSeg) {
+  const cdMs = Math.max(1000, (o.cdIni && o.readyAt > o.cdIni) ? (o.readyAt - o.cdIni) : cdBaseSeg * 1000);
+  const quedan = nodoCargas(o, cdBaseSeg) - 1;
+  o.readyAt = nowMs() - (quedan - 1) * cdMs;   // quedan≥1 ⇒ readyAt ≤ ahora: sigue talable ya
+  o.cdIni = o.readyAt - cdMs;                  // conserva el largo del reloj para las siguientes
+  return quedan;
 }
 // si dejás un árbol o una piedra a medio golpear y no volvés en este tiempo, se recupera sola
 // y NO se gasta la herramienta: la herramienta solo se descuenta cuando el nodo cae del todo.
