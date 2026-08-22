@@ -22,7 +22,7 @@ vm.runInContext(fs.readFileSync("public/game/config.js", "utf8"), ctx);
 vm.runInContext(fs.readFileSync("public/game/state.js", "utf8") +
   "\n;this.X={CD,CROP_DEF,CROP_ORDER,ORE_DEF,ORE_ORDER,PRICE,MAT_DEF,FARM_XP_LVLS,FARM_NIVEL_MAX," +
   "FARM_EXPANSION,EXPANSION_COSTO,XP_ACCION,XP_ANIMAL,XP_PEZ,ANIMAL_DEF,ANIMAL_ORDER,skillNeed,skillInfo," +
-  "TOOL_CRAFT,GOLPES_TALAR,GOLPES_MINAR};", ctx);
+  "TOOL_CRAFT,GOLPES_TALAR,GOLPES_MINAR,NODO_CARGAS_MAX};", ctx);
 const X = ctx.X, ANCLA = 20;
 const SES = +(process.argv[2] || 3);                 // sesiones por día
 const S_CLIC = 0.8, S_VIAJE = 2, S_PANEL = 4;        // lo que cuesta EN MANO cada gesto
@@ -57,11 +57,12 @@ function simular(sesionesDia, tope, minSesion, cargasTope, loteOn, doma) {
      Se le paga con una parte de lo que junta (doma.corte), que es el sumidero, y no aparece hasta
      cierto nivel de granja (doma.desde), porque al principio rompería el aprendizaje del bucle. */
   const dur = minSesion == null ? MIN_SESION : minSesion;
-  /* CARGAS ACUMULADAS: el "¿y si...?" que se prueba abajo. Con cargasTope=1 el juego es el de hoy —
-     el árbol solo guarda UNA tala por más que tardes en volver. Con un tope mayor, el nodo va
-     juntando cargas mientras no estás, hasta ese máximo. El reloj NO se toca: sigue tardando 30
+  /* CARGAS ACUMULADAS — desde el 21/8 SON EL JUEGO REAL (tope 4, NODO_CARGAS_MAX): el nodo
+     guarda lo que produjo mientras no estabas, hasta el tope, y cada carga se cosecha con su
+     tanda de golpes. Con cargasTope=1 se simula el juego de ANTES (una tala por visita), que
+     abajo se usa como comparación. El reloj NO se toca: sigue tardando 30
      minutos en dar cada una. */
-  const TOPE = cargasTope || 1;
+  const TOPE = cargasTope || X.NODO_CARGAS_MAX || 1;   // por defecto, el juego real de hoy
   /* RECOGER EN LOTE: si el nodo guarda 16 cargas y hay que darle 3 clics a cada una, volver del
      trabajo es un castigo de 300 clics. En lote, un clic se lleva todo lo que el nodo juntó — que
      es como ya funciona "alimentar a todos" en el establo. */
@@ -171,13 +172,13 @@ LOG("\n──── LA GANANCIA CONTRA EL ANCLA ────\n");
 
 LOG("\n──── POR QUÉ LOS NODOS SE QUEDAN CORTOS ────\n");
 {
-  /* Acá está el hallazgo de fondo. El ancla se calculó suponiendo que cada nodo se recoge EN CUANTO
-     está listo. Un cultivo sí se adapta —plantás el que llega justo para tu próxima sesión— pero un
-     árbol tiene un reloj FIJO de 30 minutos: si entrás 3 veces al día, 45 de sus 48 cargas diarias
-     se pierden. No es un número mal puesto: es que el reloj fijo y la sesión larga no encajan. */
+  /* El hallazgo de fondo (19/8): el ancla suponía que cada nodo se recoge EN CUANTO está listo,
+     y el jugador de 3 visitas perdía 45 de las 48 cargas diarias del árbol. Las CARGAS del 21/8
+     son la respuesta: el nodo guarda hasta 4, así que cada visita cobra lo acumulado. */
   const cargasDia = k => 86400 / X.CD[k];
+  const TOPE_HOY = X.NODO_CARGAS_MAX || 4;
   ["tree", "rock"].forEach(k => {
-    const posibles = cargasDia(k), reales = Math.min(posibles, SES);
+    const posibles = cargasDia(k), reales = Math.min(posibles, SES * TOPE_HOY);
     LOG("    " + (k === "tree" ? "árbol" : "roca") + " (" + (X.CD[k] / 60) + " min): " +
       posibles.toFixed(0) + " cargas al día si estás encima · " + reales + " si entrás " + SES + " veces  → " +
       pct(reales, posibles) + " de su ancla");
@@ -200,7 +201,7 @@ LOG("\n──── LA XP, MEDIDA EN LO MISMO ────\n");
   LOG("     mientras las otras dos se quedan atrás)");
 }
 
-LOG("\n──── ¿Y SI LOS NODOS ACUMULARAN CARGAS? ────\n");
+LOG("\n──── EL TOPE DE CARGAS, COMPARADO (4 es el juego de hoy) ────\n");
 {
   /* La propuesta: el reloj se queda EXACTAMENTE como está (30 y 40 minutos, que es lo que pidió
      dirección), pero el nodo guarda lo que produjo mientras no estabas, hasta un tope. Así el
@@ -212,7 +213,7 @@ LOG("\n──── ¿Y SI LOS NODOS ACUMULARAN CARGAS? ────\n");
     const q = simular(SES, 21, null, tp);
     const ql = simular(SES, 21, null, tp, true);
     const real = (q.plata + q.enCofre) / (q.t / 3600);
-    LOG("  " + (tp === 1 ? "1 (hoy)" : String(tp)).padStart(14) + String(real.toFixed(0)).padStart(13) +
+    LOG("  " + (tp === 1 ? "1 (antes)" : tp === (X.NODO_CARGAS_MAX || 4) ? tp + " (hoy)" : String(tp)).padStart(14) + String(real.toFixed(0)).padStart(13) +
       pct(q.plata + q.enCofre, q.ancla).padStart(14) + String((q.t / 86400).toFixed(1)).padStart(19) +
       (String((q.activo / (q.t / 86400) / 60).toFixed(0)) + " / " + (ql.activo / (ql.t / 86400) / 60).toFixed(0)).padStart(18));
   });
@@ -227,7 +228,7 @@ LOG("\n──── ¿Y SI UN BICHO DOMADO ATENDIERA LOS NODOS? ────\n")
      si llega muy pronto, el jugador nunca aprende el bucle a mano — y QUÉ PARTE se queda él. */
   LOG("  aparece en   se queda   plata/hora   % del ancla   días al nivel 20   min/día");
   [[1, 0.3], [5, 0.3], [10, 0.3], [10, 0.5], [15, 0.3], [99, 0]].forEach(([desde, corte]) => {
-    const q = simular(SES, 21, null, 1, false, desde > 50 ? null : { desde, corte });
+    const q = simular(SES, 21, null, null, false, desde > 50 ? null : { desde, corte });
     const real = (q.plata + q.enCofre) / (q.t / 3600);
     LOG("  " + (desde > 50 ? "nunca (hoy)" : "granja " + desde).padStart(12) +
       (desde > 50 ? "—" : Math.round(corte * 100) + "%").padStart(11) +

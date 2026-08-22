@@ -2,9 +2,9 @@
 
 Documento de Diseño de Juego
 
-*Estado real del código · 21 de agosto de 2026 · revisión 2*
+*Estado real del código · 22 de agosto de 2026 · revisión 3*
 
-*Novedades de esta revisión: la cerca de una celda, el libro mayor de parcelas (compra en plata + bandera de entrega por expansión), los buffs de venta y enfriamiento sin apilar, y el tutorial con tablón abierto en su paso y cierre único.*
+*Novedades de esta revisión: las CARGAS de los nodos (el árbol guarda hasta 4 talados; la partida cobra el doble del ancla), la picada de mineral a rendimiento 2, la expansión 3 sin muro y los edificios tardíos abaratados, el establo que crece un lugar por nivel de Ganadería, el techo de oficios derivado del contenido, y el PORTERO del guardado en producción (bitácora + puerta vieja sellada).*
 
 Para el equipo de diseño
 
@@ -347,21 +347,25 @@ La carne cae por azar, y eso el jugador tiene que aprenderlo. Pero en el paso de
 
 Estas cifras salen del simulador (tools/simular-partida.js), no de una estimación. El perfil es el de un jugador que entra tres veces al día.
 
-| **Qué se midió**                             | **Resultado**            |
-| -------------------------------------------- | ------------------------ |
-| Tiempo hasta granja nivel 21 (8 expansiones) | 53 días                  |
-| Con las manos en el juego                    | 4,9 horas (0,4 %)        |
-| Tiempo de reloj corriendo sin el jugador     | 99,6 %                   |
-| Juego real al día                            | ≈ 6 minutos en 3 visitas |
-| Valor producido                              | 104.230                  |
-| Lo que el ancla permitía                     | 591.840                  |
-| Porcentaje del ancla cobrado                 | 17,6 %                   |
+| **Qué se midió**                             | **Resultado**             |
+| -------------------------------------------- | ------------------------- |
+| Tiempo hasta granja nivel 21 (8 expansiones) | 49,3 días                 |
+| Con las manos en el juego                    | 9,6 horas (0,8 %)         |
+| Tiempo de reloj corriendo sin el jugador     | 99,2 %                    |
+| Juego real al día                            | ≈ 12 minutos en 3 visitas |
+| Valor producido                              | 204.727                   |
+| Lo que el ancla permitía                     | 591.840                   |
+| Porcentaje del ancla cobrado                 | 34,6 %                    |
 
-La lectura correcta de ese 17,6 % no es « el juego está roto »: es que un idle avanza sin el jugador y eso es su naturaleza. La cifra que sí señala un problema es el desglose:
+*Re-medido el 22/8 con las cargas de los nodos en el juego: el porcentaje cobrado del ancla se DUPLICÓ (17,6 % → 34,6 %) sin tocar un reloj — el nodo guarda lo que producía y se tiraba.*
 
-  - Cultivos: 73 de plata/h con 11 parcelas. El ancla pedía 220.
+La lectura correcta de ese 34,6 % no es « el juego está roto »: es que un idle avanza sin el jugador y eso es su naturaleza. El desglose, tras las cargas:
 
-  - Árboles y rocas: 9 de plata/h con 22 nodos. El ancla pedía 440. Un árbol de 30 minutos admite 48 recolecciones al día si estás encima y solo 3 si entrás tres veces: cobra el 6 % de su potencial.
+  - Cultivos: 79 de plata/h con 11 parcelas. El ancla pedía 220.
+
+  - Árboles y rocas: 94 de plata/h con 22 nodos (antes de las cargas eran 9). Con el tope de 4 cargas, el jugador de tres visitas cobra 12 de las 48 recolecciones diarias del árbol: el 25 % de su potencial de guardia, contra el 6 % de antes.
+
+  - Observación para el diseñador (22/8): con las cargas, la XP de Tala se adelanta a los demás oficios (Tala 26 · Cultivo 17 · Minería 11 al llegar a granja 21), porque cada carga paga su talado. La Tala no tiene escalera que se rompa, pero si algún día la tiene, revisar su ritmo de XP.
 
 *El cultivo NO tenía ese problema, y esa era la asimetría: el jugador elige el cultivo que dura lo que dura su ausencia, pero no podía elegir la duración de un árbol. Las cargas del capítulo 4 son la respuesta (21/8): el árbol guarda hasta 4 relojes de producción, así que una ausencia de hasta 2 horas ya no pierde nada.*
 
