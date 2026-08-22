@@ -229,5 +229,39 @@ console.log("\nY LAS CARGAS SOBREVIVEN AL F5 (viven en readyAt, que ya viaja al 
   ok("y se cobran las 3, ni una más", r.total === 3, r.patron + " → " + r.total + " maderas");
 }
 
+console.log("\nEL BUG DEL ÁRBOL INFINITO (22/8, dirección en vivo): EL F5 NO RELLENA EL NODO");
+{
+  /* El ciclo COMPLETO del jugador real, con la escena recreada de por medio — que era el agujero:
+     syncNodos descartaba los relojes del pasado (el almacén de las cargas), así que recargar
+     devolvía el nodo VIRGEN — lleno otra vez. Madera infinita a fuerza de F5. */
+  plantar(arbol, CD.tree, 120);          // lleno: 4 cargas
+  golpe(arbol, "madera", "chop");        // corte
+  golpe(arbol, "madera", "chop");        // +1: quedan 3
+  esc.syncNodos();                       // el autosave de verdad pasa por acá
+  const foto = JSON.parse(JSON.stringify(ctx.snapshot()));
+  ctx.hydrate(foto);
+  /* la escena se RECREA (F5 o viaje de zona): los nodos renacen leyendo G.nodos */
+  const esc2 = new ctx.FarmScene();
+  esc2.add = esc.add; esc2.textures = esc.textures; esc2.cameras = esc.cameras; esc2.scale = esc.scale;
+  esc2.tweens = esc.tweens; esc2.input = esc.input; esc2.events = esc.events; esc2.time = esc.time;
+  esc2.anims = esc.anims; esc2.sound = esc.sound; esc2.physics = esc.physics; esc2.game = esc.game;
+  esc2.create();
+  const arbol2 = esc2.objs.find(o => o.i === arbol.i);
+  ok("tras recrear la escena, el árbol drenado NO renace virgen", (arbol2.readyAt || 0) > 0, "readyAt " + arbol2.readyAt);
+  ok("le quedan las 3 cargas exactas, no 4", ctx.nodoCargas(arbol2, CD.tree) === 3, ctx.nodoCargas(arbol2, CD.tree) + "");
+  let total = 0;
+  for (let g = 0; g < 30 && (arbol2.readyAt || 0) <= ctx.Date.now(); g++) {
+    const antes = G.res.madera || 0; esc2.action = { kind: "chop", o: arbol2 }; esc2.finishAction();
+    total += (G.res.madera || 0) - antes;
+  }
+  ok("se cobran las 3 y el árbol CAE (nada de madera infinita)", total === 3 && (arbol2.readyAt || 0) > ctx.Date.now(),
+    total + " maderas · readyAt " + (((arbol2.readyAt || 0) > ctx.Date.now()) ? "en el futuro" : "SIGUE VENCIDO"));
+  /* y el nodo CRECIDO sin drenar tampoco pierde su acumulado al recargar */
+  plantar(roca, CD.rock, 80);            // 2 relojes extra: 3 cargas
+  esc.syncNodos();
+  ok("(bonus) el acumulado sin drenar también viaja al guardado ahora",
+    !!(G.nodos && Object.keys(G.nodos).some(k => /rock/.test(k))), Object.keys(G.nodos || {}).join(" · ").slice(0, 60));
+}
+
 console.log(fallos ? "\n" + fallos + " fallo(s)\n" : "\nTodo en orden: el árbol le guarda la madera al que no pudo venir.\n");
 process.exit(fallos ? 1 : 0);

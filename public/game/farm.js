@@ -3800,7 +3800,13 @@ class FarmScene extends Phaser.Scene {
     this.objs.forEach(o => {
       if (typeof o.i !== "number") return;                       // excavaciones, paquete, cofres: no son nodos
       if (o.type !== "tree" && o.type !== "rock" && o.type !== "ore") return;
-      if (!o.readyAt || o.readyAt <= t) return;                  // ya está listo: nada que recordar
+      /* 22/8 — EL BUG DEL ÁRBOL INFINITO (reporte de dirección, en vivo): esta línea decía
+         « readyAt <= t: ya está listo, nada que recordar », una regla de ANTES de las cargas.
+         Con las cargas, el reloj vencido EN EL PASADO es el almacén: cuánto acumuló el nodo y
+         cuánto se le drenó. Descartarlo hacía que cualquier F5 o viaje de zona recreara el nodo
+         SIN reloj — y sin reloj es VIRGEN, o sea lleno de nuevo: madera infinita a fuerza de
+         recargar. Ahora se recuerda todo reloj que exista, pasado o futuro. */
+      if (!o.readyAt) return;                                    // virgen de verdad: nada que recordar
       const base = GF.WORLD_OBJECTS[o.i];
       if (!base) return;
       n[base.type + ":" + base.leftCol + "," + base.baseRow] = { readyAt: o.readyAt, halfAt: o.halfAt || 0, cdIni: o.cdIni || 0 };
