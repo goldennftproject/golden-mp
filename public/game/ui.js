@@ -1358,6 +1358,10 @@ function refreshCurtiduria() {
 /* ---- Establo: animales, felicidad y producción ("2das mejoras") ---- */
 function refreshEstablo() {
   const box = $("establo-list"); if (!box) return;
+  /* 22/8: el cupo total sale del nivel de Ganadería — el establo lo dice en la cara */
+  const cupoEl = $("establo-cupo");
+  const lleno = animalesTotal() >= establoCupo();
+  if (cupoEl) cupoEl.textContent = "Lugares: " + animalesTotal() + "/" + establoCupo() + " (cada nivel de Ganadería suma uno, hasta " + ESTABLO_CUPO_MAX + ").";
   let h = "";
   ANIMAL_ORDER.forEach(k => {
     const d = ANIMAL_DEF[k], a = animalDe(k), abierto = animalUnlocked(k);
@@ -1369,7 +1373,7 @@ function refreshEstablo() {
         '<div class="fds">Desbloquea la armadura de ' + d.armadura + '</div>' +
         /* 18/8: el establo dice en la cara qué te falta. Si es nivel, no es un botón gris mudo. */
         (abierto ? '' : '<div class="fds" style="color:#8a5a1a">🔒 Ganadería nivel ' + animalNivelReq(k) + ' (tenés ' + nivelOficio("ganaderia") + ')</div>') + '</div>' +
-        '<div class="fbtns"><button class="green sm" ' + (abierto && G.plata >= animalPrecio(k) ? "" : "disabled") + ' data-buyani="' + k + '">' + (abierto ? 'Comprar · ' + coinIc("plata") + fmt(animalPrecio(k)) : 'Nivel ' + animalNivelReq(k)) + '</button></div></div>';
+        '<div class="fbtns"><button class="green sm" ' + (abierto && !lleno && G.plata >= animalPrecio(k) ? "" : "disabled") + ' data-buyani="' + k + '">' + (!abierto ? 'Nivel ' + animalNivelReq(k) : lleno ? 'Establo lleno' : 'Comprar · ' + coinIc("plata") + fmt(animalPrecio(k))) + '</button></div></div>';
       return;
     }
     const f = animalFelicidad(k), listo = animalListo(k);
@@ -1388,7 +1392,7 @@ function refreshEstablo() {
       '<div class="fbtns">' +
         '<button class="green sm" ' + (tieneComida ? "" : "disabled") + ' data-feed="' + k + '">Alimentar</button>' +
         '<button class="green sm" ' + (listo ? "" : "disabled") + ' data-take="' + k + '">Recoger' + (listos > 1 ? ' todo (' + listos + ')' : '') + '</button>' +
-        '<button class="green sm" ' + (!tope && G.plata >= animalPrecio(k) ? "" : "disabled") + ' data-buyani="' + k + '">' + (tope ? 'Tope ' + ANIMAL_MAX : 'Otro · ' + coinIc("plata") + fmt(animalPrecio(k))) + '</button>' +
+        '<button class="green sm" ' + (!tope && !lleno && G.plata >= animalPrecio(k) ? "" : "disabled") + ' data-buyani="' + k + '">' + (tope ? 'Tope ' + ANIMAL_MAX : lleno ? 'Establo lleno' : 'Otro · ' + coinIc("plata") + fmt(animalPrecio(k))) + '</button>' +
       '</div></div>';
   });
   h += '<div class="info">Materiales: ' + ANIMAL_ORDER.map(k => RES_LABEL[ANIMAL_DEF[k].mat] + " <b>" + (G.res[ANIMAL_DEF[k].mat] || 0) + "</b>").join(" · ") + '</div>';

@@ -255,7 +255,7 @@ Los animales se compran con plata, ocupan sitio y producen material cada ciclo m
 
   - La felicidad baja 1,5 por hora si se descuida, y alimentarlo SIEMPRE tiene que salir a cuenta frente a no hacerlo. La felicidad que da cada comida es proporcional al precio del cultivo, así que no hay un cultivo « tonto » con el que alimentar.
 
-  - Tope de 5 animales por especie.
+  - Tope de 5 animales por especie — y un CUPO TOTAL del establo que se deriva del oficio (22/8): 2 lugares al arrancar, +1 por cada nivel de Ganadería, hasta el techo de 20. Así cada nivel del oficio entrega algo tangible y los huecos de la escalera (2-3, 5-7, 9-11) quedaron curados. Los guardados con más animales que cupo no pierden nada: su cupo es lo que ya tienen, y la compra espera a que el nivel lo alcance.
 
 **9. Combate: la Zona Negra**
 
@@ -373,7 +373,7 @@ El problema medido es el del capítulo anterior: los nodos cobran una fracción 
 
 **13.2 El hueco de Ganadería entre los niveles 4 y 8**
 
-El Conejo se abre en Ganadería 4 y el Toro en la 8. Entre medias el oficio no entrega nada nuevo y el jugador sube cuatro niveles a ciegas.
+RESUELTO el 22/8: el cupo del establo crece un lugar por nivel de Ganadería (capítulo 8), así que ya no hay niveles mudos entre el Conejo (4) y el Toro (8) — ni en ningún otro tramo de la escalera. Queda como idea futura sumar un animal intermedio (gallina) cuando haya arte.
 
 **13.3 Qué premia del nivel 20 al 150**
 
@@ -411,7 +411,7 @@ Normas de diseño que vienen de decisiones de dirección y que conviene no reabr
 
 **15. Cómo verificar lo que dice este documento**
 
-El proyecto tiene 57 pruebas automáticas y 16 auditores (97 herramientas en total). No comprueban que el código compile: comprueban que el JUEGO cumpla las reglas de arriba. Los más útiles para el diseñador:
+El proyecto tiene 58 pruebas automáticas y 16 auditores (98 herramientas en total). No comprueban que el código compile: comprueban que el JUEGO cumpla las reglas de arriba. Los más útiles para el diseñador:
 
 | **Herramienta**                 | **Qué contesta**                                            |
 | ------------------------------- | ----------------------------------------------------------- |

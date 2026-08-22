@@ -23,7 +23,7 @@ console.log("\nSE COMPRAN CON PLATA, NO CON $GOLDEN");
 {
   /* El $Golden sigue escrito en ANIMAL_DEF a propósito: cuando salga el token se decidirá la
      equivalencia y volverá a servir. Lo que no puede es COBRARSE hoy. */
-  const comprar = SRC.split("function comprarAnimal")[1].slice(0, 900);
+  const comprar = SRC.split("function comprarAnimal")[1].slice(0, 1600);   // 22/8: el cupo del establo sumó líneas arriba del descuento
   ok("comprar un animal descuenta plata", /G\.plata -= precio/.test(comprar));
   ok("y no toca el $Golden", !/G\.golden/.test(comprar));
   ok("el precio en $Golden sigue anotado para cuando exista el token",

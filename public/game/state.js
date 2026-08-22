@@ -294,7 +294,11 @@ function oficioAbre(sk) {
   const l = [];
   if (sk === "farming") for (const k in CROP_DEF) l.push([CROP_DEF[k].lvl, CROP_DEF[k].label]);
   if (sk === "mining")  for (const k in ORE_DEF)  l.push([oreNivelReq(k), ORE_DEF[k].label]);
-  if (sk === "ganaderia") ANIMAL_ORDER.forEach(k => l.push([animalNivelReq(k), ANIMAL_DEF[k].label]));
+  if (sk === "ganaderia") {
+    ANIMAL_ORDER.forEach(k => l.push([animalNivelReq(k), ANIMAL_DEF[k].label]));
+    /* 22/8: cada nivel suma un lugar en el establo — así NINGÚN nivel del oficio queda mudo */
+    for (let n = 2; n < ESTABLO_CUPO_MAX; n++) l.push([n, "un lugar más en el establo (" + (n + 1) + ")"]);
+  }
   if (sk === "cooking") for (const k in RECIPE_DEF) l.push([RECIPE_DEF[k].lvl || 1, RECIPE_DEF[k].label]);
   for (const t in PLANO_OFICIO) if (PLANO_OFICIO[t][0] === sk && BUILD_DEF[t])
     l.push([PLANO_OFICIO[t][1], "plano de " + BUILD_DEF[t].label]);
@@ -3349,6 +3353,22 @@ var FELIZ_MIN_PROD = 0.5;       // rendimiento mínimo con felicidad 0 (produce 
 // cinco botones separados sería un castigo.
 // Los guardados viejos (objeto suelto) se migran solos en save.js.
 var ANIMAL_MAX = 5;        // cuántos se pueden tener de cada tipo
+/* EL ESTABLO CRECE CON EL OFICIO (22/8, dirección — el hueco de Ganadería 4→8)
+   La escalera abría animales en 1 · 4 · 8 · 12 y los niveles del medio no entregaban NADA:
+   cuatro niveles a ciegas entre el conejo y el toro. La cura es la misma que las expansiones:
+   derivar en vez de regalar. El tope de 5 por especie estaba regalado desde el día uno; ahora
+   el CUPO TOTAL del establo sale del nivel — arrancás con 2 lugares y cada nivel de Ganadería
+   suma uno, hasta el techo de 20 que ya existía (4 especies × 5). Así CADA nivel del oficio
+   paga algo tangible, los tres huecos (2-3, 5-7, 9-11) se curan de un golpe, y el ancla ni se
+   entera: más animales es más renta comprada con plata, igual que comprar parcelas.
+   Nadie pierde lo que ya tenía: si un guardado viejo trae más animales que su cupo, el cupo es
+   esa cantidad (se congela la compra hasta que el nivel lo alcance, no se confisca nada). */
+var ESTABLO_CUPO_MAX = 20;
+function animalesTotal() { let n = 0; for (const k in ANIMAL_DEF) n += animalCant(k); return n; }
+function establoCupo() {
+  const porNivel = Math.min(ESTABLO_CUPO_MAX, (typeof nivelOficio === "function" ? nivelOficio("ganaderia") : 1) + 1);
+  return Math.max(porNivel, animalesTotal());
+}
 var ANIMAL_SUBE = 0.5;     // cada uno extra cuesta un 50% más que el anterior
 
 function animalLista(k) {
@@ -3404,6 +3424,8 @@ function comprarAnimal(k) {
   if (!(G.built && G.built.establo)) { toast("Primero construí el Establo"); return; }
   const tengo = animalCant(k);
   if (tengo >= ANIMAL_MAX) { toast("Ya tenés " + ANIMAL_MAX + " " + d.label.toLowerCase() + " (el tope)"); return; }
+  /* 22/8: el cupo TOTAL sale del nivel de Ganadería (2 al arrancar, +1 por nivel, techo 20) */
+  if (animalesTotal() >= establoCupo()) { toast("El establo está lleno (" + establoCupo() + " lugares) — Ganadería " + (nivelOficio("ganaderia") + 1) + " suma uno más"); return; }
   const precio = animalPrecio(k);
   if (G.plata < precio) { toast("Te falta plata (" + precio + ")"); return; }
   G.plata -= precio;
