@@ -155,6 +155,8 @@ Toda escalera del juego empieza ABIERTA en el nivel 1. La semilla de papa, la pi
 
 Hay once oficios y cada acción da XP al SUYO. Talar sube Tala; pescar sube Pesca. Esto suena obvio y no lo era: hasta el 18/8 pescar daba experiencia de Cocina.
 
+Cada oficio con escalera tiene TECHO, y el techo se deriva de su contenido (22/8, dirección: « capear el crecimiento hasta el nivel donde hay contenido; más adelante se libera más »). Hoy: Cultivo 20 (el maíz), Minería 11 (la netherita), Ganadería 19 (el lugar 20 del establo), Cocina 10 (el Banquete del Bosque). La XP nunca deja de acumularse por debajo: cuando se agregue contenido de nivel más alto, el techo sube solo y los veteranos suben en el acto lo que ya ganaron. Los oficios sin escalera (Tala, Pesca, Artesanía y las armas) y la barra de Combate no se capean. La granja tiene su propio techo de siempre: nivel 50.
+
 La XP no mide relojes, mide PRÁCTICA. Un oficio con acciones lentas no puede pedir la misma cantidad que uno con acciones rápidas, así que cada oficio tiene su propio ritmo derivado de la duración real de su acción. La fórmula es la misma para todos:
 
 **XP para el nivel N = 21 × ritmo del oficio × N^1.7**
@@ -377,7 +379,7 @@ RESUELTO el 22/8: el cupo del establo crece un lugar por nivel de Ganadería (ca
 
 **13.3 Qué premia del nivel 20 al 150**
 
-La curva de granja está definida y probada hasta el 50. Por encima, el contenido que la acompaña no está decidido.
+DECIDIDO el 22/8: el crecimiento se CAPEA donde termina el contenido (capítulo 5) en vez de prometer cien niveles vacíos. La escalera 20-150 pasa a ser el plan de liberación futura: cada vez que se agregue contenido (un cultivo nivel 25, un animal nuevo, la doma), el techo del oficio sube solo, y con él suben los veteranos que ya acumularon la XP. Ideas anotadas para esa escalera: maestrías de oficio, la doma como contenido de veterano, y el prestigio de granja (ya existe en el código, dormido tras el nivel 50).
 
 **13.4 Las skins del pase**
 
@@ -411,7 +413,7 @@ Normas de diseño que vienen de decisiones de dirección y que conviene no reabr
 
 **15. Cómo verificar lo que dice este documento**
 
-El proyecto tiene 58 pruebas automáticas y 16 auditores (98 herramientas en total). No comprueban que el código compile: comprueban que el JUEGO cumpla las reglas de arriba. Los más útiles para el diseñador:
+El proyecto tiene 59 pruebas automáticas y 16 auditores (99 herramientas en total). No comprueban que el código compile: comprueban que el JUEGO cumpla las reglas de arriba. Los más útiles para el diseñador:
 
 | **Herramienta**                 | **Qué contesta**                                            |
 | ------------------------------- | ----------------------------------------------------------- |

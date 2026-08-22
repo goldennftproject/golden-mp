@@ -550,15 +550,20 @@ function refreshSkills() {
     let inf;
     if (k === "cooking") { const l = cookLevel(), xp = G.skills.cooking || 0, nx = COOK_LVLS[l + 1]; inf = { lvl: l, into: xp - COOK_LVLS[l], need: nx != null ? nx - COOK_LVLS[l] : (xp - COOK_LVLS[l] || 1) }; }
     else inf = skillInfo(G.skills[k], k);   // 18/8: cada oficio, su curva
-    const pct = Math.round(inf.into / inf.need * 100); const soon = (k === "range" && G.skills[k] === 0) ? " · próximamente" : "";
+    /* 22/8: el techo derivado del contenido — al tope, la barra llena y el cartel honesto */
+    const techo = (typeof oficioTecho === "function") ? oficioTecho(k) : 150;
+    const alTope = techo < 150 && inf.lvl >= techo;
+    if (alTope) inf.lvl = techo;
+    const pct = alTope ? 100 : Math.round(inf.into / inf.need * 100); const soon = (k === "range" && G.skills[k] === 0) ? " · próximamente" : "";
     /* 19/8: cada oficio dice QUÉ TE ESPERA. Sin esto, subir de Minería o de Ganadería era un número
        que cambiaba y nada más; el jugador no tenía forma de saber que ahí adentro estaban el oro,
        el toro o el plano de la Curtiduría. La Tala no promete nada y lo dice con todas las letras:
        es una decisión de diseño, no un olvido. */
     const prox = (typeof oficioProximo === "function") ? oficioProximo(k) : "";
-    const meta = prox ? `<div class="xp verde">🔓 ${prox}</div>`
+    const meta = alTope ? `<div class="xp">Nivel máximo por ahora — la XP se sigue guardando para cuando el oficio crezca</div>`
+      : prox ? `<div class="xp verde">🔓 ${prox}</div>`
       : (k === "tala" ? `<div class="xp">Mide tu práctica · la madera no tiene escalones</div>` : "");
-    return `<div class="skrow"><span class="ic"><img class="skic" src="${GF.spr("sk_" + k)}" onerror="this.outerHTML='${ic}'"></span><div class="body"><div class="nm"><span>${nm}</span><span class="lv">Nv. ${inf.lvl}</span></div><div class="skbar"><i style="width:${pct}%"></i></div><div class="xp">${fmt(inf.into)}/${fmt(inf.need)} XP${soon}</div>${meta}</div></div>`; }).join("");
+    return `<div class="skrow"><span class="ic"><img class="skic" src="${GF.spr("sk_" + k)}" onerror="this.outerHTML='${ic}'"></span><div class="body"><div class="nm"><span>${nm}</span><span class="lv">Nv. ${inf.lvl}${alTope ? " (MAX)" : ""}</span></div><div class="skbar"><i style="width:${pct}%"></i></div><div class="xp">${alTope ? "Techo del contenido: nivel " + techo : fmt(inf.into) + "/" + fmt(inf.need) + " XP"}${soon}</div>${meta}</div></div>`; }).join("");
 }
 
 /* ---- equipo (slots estilo RPG; armadura/armas llegan con el combate) ---- */

@@ -283,7 +283,8 @@ function cropUnlocked(k) { const cd = CROP_DEF[k]; return !!cd && farmSkillLevel
    del material en SU escalera: el escalón N pide nivel N del oficio, sin tablas a mano.
    La TALA no está: la madera es plana y se decidió que su oficio sea una medida, no una puerta. */
 function nivelOficio(sk) {
-  if (sk === "cooking" && typeof cookLevel === "function") return cookLevel();   // la Cocina tiene su propia tabla
+  if (sk === "cooking" && typeof cookLevel === "function")
+    return Math.min(cookLevel(), (typeof oficioTecho === "function") ? oficioTecho("cooking") : 150);   // la Cocina tiene su propia tabla — mismo techo derivado (22/8)
   return skillInfo((G.skills && G.skills[sk]) || 0, sk).lvl;
 }
 /* TODO LO QUE ABRE UN OFICIO, EN UNA SOLA LISTA (19/8).
@@ -1129,7 +1130,26 @@ function skillNeed(lvl, sk) {
      números quedan limpios. La XP se sigue ganando en enteros: esto solo afecta al listón. */
   return v < 10 ? Math.round(v * 100) / 100 : Math.round(v);
 }
-function skillInfo(xp, sk) { let lvl = 1, acc = 0, need = skillNeed(1, sk); while (xp >= acc + need && lvl < 150) { acc += need; lvl++; need = skillNeed(lvl, sk); } return { lvl, into: xp - acc, need }; }
+/* EL TECHO DE CADA OFICIO SE DERIVA DE SU CONTENIDO (22/8, dirección):
+   "capear el crecimiento hasta el nivel donde HAY contenido; más adelante se libera más".
+   La curva de oficios subía hasta 150 con contenido que se acababa mucho antes (el maíz en
+   Cultivo 20, la netherita en Minería 11...): cien niveles mudos prometiendo nada. Ahora el
+   techo de cada oficio es EL ÚLTIMO NIVEL DE SU LISTA DE CONTENIDO (oficioAbre) — el día que
+   se agregue un cultivo nivel 25, el techo de Cultivo sube solo a 25, sin tocar nada más.
+   Los oficios SIN escalera (tala, pesca, artesanía, armas: su nivel es práctica o bono de
+   daño) quedan como estaban, techo 150. Y la XP NUNCA deja de acumularse: al subir el techo,
+   los veteranos suben en el acto lo que ya ganaron. La granja ya tenía su techo (50). */
+var _OFICIO_TECHO = null;
+function oficioTecho(sk) {
+  if (!_OFICIO_TECHO) _OFICIO_TECHO = {};
+  if (!(sk in _OFICIO_TECHO)) {
+    let l = [];
+    try { l = (typeof oficioAbre === "function") ? oficioAbre(sk) : []; } catch (e) {}
+    _OFICIO_TECHO[sk] = l.length ? Math.max.apply(null, l.map(e => e[0])) : 150;
+  }
+  return _OFICIO_TECHO[sk];
+}
+function skillInfo(xp, sk) { const techo = sk ? oficioTecho(sk) : 150; let lvl = 1, acc = 0, need = skillNeed(1, sk); while (xp >= acc + need && lvl < techo) { acc += need; lvl++; need = skillNeed(lvl, sk); } return { lvl, into: xp - acc, need, techo }; }
 // --- Barra de Combate GLOBAL (doc maestro 2/8): un solo nivel que suma la XP de TODOS los kills.
 //     Convive con las skills por arma (esas siguen dando el +Nivel/2 al daño). Misma curva 1-150.
 var COMBAT_HP5 = 20, COMBAT_HP10 = 40;   // vida máxima extra en los hitos (editables en el panel)
