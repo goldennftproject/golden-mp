@@ -181,7 +181,7 @@ console.log("\nLA ROCA VA A SU RELOJ DE 40 MIN — Y CADA PIEDRA CUESTA UN PICO"
   ok("que costaron 4 picos", pk0 - G.picks.dur.wood === 4, pk0 - G.picks.dur.wood + " picos");
 }
 
-console.log("\nTODAS LAS VETAS ACUMULAN, CADA UNA A SU RELOJ — Y LA PICADA DE MINERAL RINDE 2");
+console.log("\nLA VETA DE PIEDRA VA CON LAS ROCAS; LAS DE MINERAL QUEDAN APARTADAS (dirección, 21/8)");
 {
   plantar(vetaPiedra, CD.rock, 160);
   let r = vaciar(vetaPiedra, "piedra", "mine");
@@ -191,17 +191,12 @@ console.log("\nTODAS LAS VETAS ACUMULAN, CADA UNA A SU RELOJ — Y LA PICADA DE 
   r = vaciar(vetaBronce, "bronce", "mine");
   ok("bronce recién crecido: ciclo clásico con SU rendimiento de 2 (el ancla del 18/8)",
     r.patron === "002" && !talable(vetaBronce), r.patron);
-  plantar(vetaBronce, OD.bronce.cd, 8 * 60);   // un reloj de 8 h extra: 2 cargas
-  r = vaciar(vetaBronce, "bronce", "mine");
-  ok("pasado UN reloj de bronce (8 h): 2 cargas → 4 bronce en 4 golpes", r.total === 4 && r.patron === "0202", r.patron);
-  plantar(vetaBronce, OD.bronce.cd, 7 * 60);
-  r = vaciar(vetaBronce, "bronce", "mine");
-  ok("pasadas 7 h (menos que SU reloj): 1 sola picada", r.patron === "002", r.patron);
-  plantar(vetaBronce, OD.bronce.cd, 5 * 24 * 60);   // 5 días: el tope corta en 4
+  plantar(vetaBronce, OD.bronce.cd, 5 * 24 * 60);   // 5 días pasada: da igual — NO acumula
   const pk0 = G.picks.dur.wood;
   r = vaciar(vetaBronce, "bronce", "mine");
-  ok("pasados 5 días: llena — 8 bronce en 6 golpes (tope 4 cargas)", r.total === 8 && r.patron === "022202", r.patron);
-  ok("que costaron 4 picos (1 por picada, no por mineral)", pk0 - G.picks.dur.wood === 4, pk0 - G.picks.dur.wood + " picos");
+  ok("pasada 5 DÍAS: sigue dando una sola picada de 2 y a dormir (sin cargas, por decisión)",
+    r.patron === "002" && !talable(vetaBronce), r.patron);
+  ok("y costó 1 pico", pk0 - G.picks.dur.wood === 1, pk0 - G.picks.dur.wood + " pico");
 }
 
 console.log("\nY LAS CARGAS SOBREVIVEN AL F5 (viven en readyAt, que ya viaja al guardado)");

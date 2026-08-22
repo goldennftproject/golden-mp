@@ -43,10 +43,10 @@ function porDia(exp) {
   const arboles = 3 + exp, rocas = 3 + exp;
   const p = { madera: arboles * VISITAS * CARGAS, piedra: (rocas + 1 /* veta de piedra */) * VISITAS * CARGAS };
   for (const k of ["bronce", "hierro", "oro", "diamante", "netherita"]) {
-    /* 21/8 — con cargas TAMBIÉN en las vetas, ningún reloj se pierde: la única veta de cada
-       mineral rinde su tasa completa (24 h / su reloj, × su yield de 2), la visite quien la
-       visite. Antes el jugador de 3 visitas perdía los relojes que vencían sin él. */
-    p[k] = (24 / (OD[k].cd / 3600)) * (OD[k].yield || 1);
+    /* las vetas de mineral quedaron APARTADAS de las cargas (dirección, 21/8): reloj simple.
+       El jugador de 3 visitas cosecha los relojes que alcanza a ver vencidos, con yield 2. */
+    const picadas = Math.min(VISITAS, Math.floor(24 / (OD[k].cd / 3600)));
+    p[k] = 1 * Math.max(1, picadas) * (OD[k].yield || 1);   // una única veta de cada mineral
   }
   return p;
 }

@@ -1628,22 +1628,21 @@ class FarmScene extends Phaser.Scene {
       }
       else { this.setObjTex(o, o.baseKey, o.rw || o.w); toast("Bolsa llena — no podés picar"); log("Bolsa llena: liberá espacio para seguir picando.", "bad"); }   // vuelve entera: los golpes se perdieron
     } else if (a.kind === "mine" && o.type === "ore") {
-      /* 21/8 (cargas, forma final): TODAS las vetas van con la misma escalera estirada, cada una
-         a SU reloj (piedra 40 min · bronce 8 h · … · netherita 24 h). La media rota se repite una
-         vez por carga y cada repetición cobra una picada entera. La veta de bronce que venció a
-         las 3 de la mañana ya no pierde la noche: la guarda.
-         Y LA PICADA DE MINERAL RINDE od.yield (2) — la decisión del 18/8 que esta rama entregaba
+      /* 21/8 (cargas, forma final): la veta de PIEDRA va con las rocas — misma escalera estirada.
+         Las vetas de MINERAL quedan APARTADAS de la mecánica (dirección, 21/8, decisión final):
+         reloj simple, una picada y a dormir; sus cargas son siempre 1.
+         LA PICADA DE MINERAL SÍ RINDE od.yield (2) — la decisión del 18/8 que esta rama entregaba
          en 1 por error: con yield 1 picar daba pérdida en los cinco tiers (el pico cuesta más de
          lo que saca); el ancla exige (2 × precio − pico) / horas = 20. */
       o.golpes = (o.golpes || 0) + 1;
       const odC = ORE_DEF[o.ore], grVeta = Math.max(1, odC.yield || 1);
-      const cargasVeta = nodoCargas(o, odC.cd);
+      const cargasVeta = o.ore === "piedra" ? nodoCargas(o, CD.rock) : 1;
       if (o.golpes >= 2 && cargasVeta > 1) {   // repetición de la media rota: este golpe COBRA una carga
         if (tryAddRes(o.ore, grVeta)) {
           const pk2 = equippedPick(), pd2 = PICK_DEF[pk2];
           G.picks.dur[pk2] = Math.max(0, (G.picks.dur[pk2] || 0) - 1);
           addXp("mining", xpDeNodo("ore", o.ore)); statAdd("minar", o.ore, grVeta); nodoSumar(o);
-          const quedan = nodoGastarCarga(o, odC.cd); this.syncNodos();
+          const quedan = nodoGastarCarga(o, CD.rock); this.syncNodos();   // solo llega acá la veta de piedra
           if (this.textures.exists(o.baseKey + "_half")) this.setObjTex(o, o.baseKey + "_half", o.rw || o.w);
           o.golpes = 1; o.golpesAt = nowMs(); this.barraGolpes(o);
           this.premioFx(o.cx, o.by, resSprite(o.ore), "+" + grVeta); refreshHud();

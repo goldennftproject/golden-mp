@@ -350,11 +350,10 @@ var GOLPES_TALAR = 3, GOLPES_MINAR = 3;   // clics para tumbar un árbol o rompe
 /* CARGAS DE LOS NODOS (21/8, dirección): "para los que no pueden hacer guardia: si el árbol se
    pasa crecido 30 minutos más, da 2 maderas; si se pasa 2 horas, da 4".
    El nodo crecido no se desperdicia: acumula 1 carga por cada reloj PROPIO extra que pase, hasta
-   llenarse con 4 (árbol: lleno a las 2 h de pasado; roca y veta de piedra: a las 2 h 40; y desde
-   la segunda vuelta del 21/8 TAMBIÉN las vetas de mineral, cada una a su reloj — el bronce de
-   8 h se llena a las 32 h, la netherita de 24 h aguanta 4 días: la veta que venció de madrugada
-   ya no pierde la noche). El que hace guardia sigue exactamente igual; el de tres visitas cobra
-   lo que el nodo le guardó.
+   llenarse con 4 (árbol: lleno a las 2 h de pasado; roca y veta de piedra: a las 2 h 40). El que
+   hace guardia sigue exactamente igual; el de tres visitas cobra lo que el nodo le guardó.
+   Las vetas de MINERAL quedan APARTADAS de la mecánica (dirección, 21/8, decisión final): se
+   probaron con cargas y dirección las quitó el mismo día — reloj simple, una picada y a dormir.
    Y LA ESCALERA DE SPRITES SE ESTIRA CON LAS CARGAS (21/8, dirección, forma final): "con una
    carga, el ciclo es el que ya está; con N cargas, el primer corte se repite N veces — cada
    repetición da su madera — y el cierre es el de siempre". O sea: entero → primer corte →
