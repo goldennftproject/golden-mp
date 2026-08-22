@@ -359,11 +359,12 @@ var GOLPES_TALAR = 3, GOLPES_MINAR = 3;   // clics para tumbar un árbol o rompe
    hace guardia sigue exactamente igual; el de tres visitas cobra lo que el nodo le guardó.
    Las vetas de MINERAL quedan APARTADAS de la mecánica (dirección, 21/8, decisión final): se
    probaron con cargas y dirección las quitó el mismo día — reloj simple, una picada y a dormir.
-   Y EL RITMO FINAL (22/8, dirección, probado en vivo): CON CARGAS, CADA CLIC PAGA — sin golpes
-   gratis. Árbol lleno: clic 1 → +1 madera y corte suave · clic 2 → +1, sigue el corte suave ·
-   clic 3 → +1, corte PROFUNDO · clic 4 → +1 y TOCÓN. Cuatro clics, cuatro maderas, cuatro
-   hachas, cuatro XP. El árbol NORMAL de una carga conserva su tanda clásica de 3 golpes (la
-   madera cae al final, como siempre). Cada madera paga su hacha — nada cae de golpe. */
+   Y EL RITMO FINAL (22/8, dirección, dictado clic a clic): los CORTES SUAVES pagan una carga
+   cada uno (+1 madera, −1 hacha); el CORTE PROFUNDO no da ni consume NADA; el TOCÓN paga la
+   última. Árbol de 4: suave(+1) · suave(+1) · suave(+1) · profundo(nada) · tocón(+1) — cinco
+   clics, cuatro maderas, cuatro hachas. De 3: suave · suave · profundo · tocón. De 2: suave ·
+   profundo · tocón. Y el árbol NORMAL de una carga, el clásico de siempre: suave(nada) ·
+   profundo(nada) · tocón(+1 madera, −1 hacha). Cada madera paga su hacha, nada cae de golpe. */
 var NODO_CARGAS_MAX = 4;
 function nodoCargas(o, cdBaseSeg) {
   if (!o) return 1;

@@ -4,10 +4,11 @@
    cargas de un hachazo está mal — tiene que VERSE que das cuatro hachazos, y consumirte cuatro
    hachas".
 
-   Y el RITMO FINAL (22/8, probado en vivo): con cargas, CADA CLIC PAGA — sin golpes gratis.
-   Árbol lleno: clic 1 → +1 y corte suave · clic 2 → +1, sigue el corte suave · clic 3 → +1 y
-   corte PROFUNDO · clic 4 → +1 y TOCÓN. Cuatro clics, cuatro maderas, cuatro hachas. El árbol
-   normal de 1 carga conserva su tanda clásica de 3 golpes. Vetas de mineral NO acumulan.
+   Y el RITMO FINAL (22/8, dictado clic a clic por dirección): los CORTES SUAVES pagan una carga
+   cada uno (+1 madera, −1 hacha); el CORTE PROFUNDO no da ni consume nada; el TOCÓN paga la
+   última. Árbol de 4: suave(+1) · suave(+1) · suave(+1) · profundo(nada) · tocón(+1) — 5 clics,
+   4 maderas, 4 hachas. El de 1 carga, el clásico: suave · profundo · tocón(+1). Vetas de
+   mineral NO acumulan.
 
    Se prueba con la ESCENA REAL y el reloj trucado: se golpea de verdad, golpe a golpe, y se mira
    en cuál cae cada madera, cuántas hachas se gastan y cuándo cae el tocón.
@@ -122,19 +123,19 @@ console.log("\nEL NODO VIRGEN NACE LLENO — EL REGALITO DE BIENVENIDA (22/8)");
   /* nunca talados: sin reloj (readyAt 0). Un árbol parado desde siempre tiene su madera adentro */
   ok("(escenario) el árbol y la roca arrancan vírgenes", !arbol.readyAt && !roca.readyAt);
   let r = vaciar(arbol, "madera", "chop");
-  ok("el PRIMER árbol de la partida: 4 clics, 4 maderas — cada clic paga",
-    r.total === 4 && r.patron === "1111", r.patron);
+  ok("el PRIMER árbol de la partida: suave·suave·suave·profundo·tocón — 4 maderas",
+    r.total === 4 && r.patron === "11101", r.patron);
   ok("y el virgen se consume: al caer, el árbol entra al ciclo normal para siempre",
     arbol.readyAt > ctx.Date.now());
   r = vaciar(roca, "piedra", "mine");
-  ok("la roca virgen igual: 4 piedras en 4 clics", r.total === 4 && r.patron === "1111", r.patron);
+  ok("la roca virgen igual: 4 piedras en 5 clics", r.total === 4 && r.patron === "11101", r.patron);
   r = vaciar(vetaBronce, "bronce", "mine");
   ok("la veta de MINERAL virgen NO: una picada de 2 y a dormir (siguen apartadas)",
     r.patron === "002" && !talable(vetaBronce), r.patron);
   vetaBronce.readyAt = 0; vetaBronce.cdIni = 0;   // se re-virginiza solo para no ensuciar la sección de vetas de abajo
 }
 
-console.log("\nEL RITMO FINAL: ÁRBOL LLENO = 4 CLICS, 4 MADERAS, 4 HACHAS");
+console.log("\nEL RITMO FINAL: ÁRBOL LLENO = 5 CLICS, 4 MADERAS, 4 HACHAS (el profundo es mudo)");
 {
   plantar(arbol, CD.tree, 0);
   let r = vaciar(arbol, "madera", "chop");
@@ -142,9 +143,9 @@ console.log("\nEL RITMO FINAL: ÁRBOL LLENO = 4 CLICS, 4 MADERAS, 4 HACHAS");
   plantar(arbol, CD.tree, 120);   // lleno: 4 cargas
   const ax0 = G.tools.axe;
   r = vaciar(arbol, "madera", "chop");
-  ok("con 4 cargas, CADA clic paga su madera desde el primero",
-    r.patron === "1111", "clics: " + r.patron + " (+1 corte suave · +1 corte suave · +1 corte profundo · +1 tocón)");
-  ok("4 clics, 4 maderas", r.golpes === 4 && r.total === 4, r.golpes + " clics, " + r.total + " maderas");
+  ok("con 4 cargas: los suaves pagan, el profundo calla, el tocón cierra",
+    r.patron === "11101", "clics: " + r.patron + " (suave+1 · suave+1 · suave+1 · profundo nada · tocón+1)");
+  ok("5 clics, 4 maderas", r.golpes === 5 && r.total === 4, r.golpes + " clics, " + r.total + " maderas");
   ok("y 4 hachas (1 por madera, nada gratis)", ax0 - G.tools.axe === 4, ax0 - G.tools.axe + " hachas");
   ok("al caer el tocón arranca su reloj", !talable(arbol));
 }
@@ -153,11 +154,11 @@ console.log("\nEL TOPE Y EL RELOJ PROPIO");
 {
   plantar(arbol, CD.tree, 12 * 60);   // 12 h pasado: el tope corta en 4
   let r = vaciar(arbol, "madera", "chop");
-  ok("pasado 12 h: guarda 4 y ni una más (el tope evita el AFK infinito)", r.total === 4 && r.patron === "1111", r.patron);
+  ok("pasado 12 h: guarda 4 y ni una más (el tope evita el AFK infinito)", r.total === 4 && r.patron === "11101", r.patron);
   plantar(arbol, CD.tree, 30);
   r = vaciar(arbol, "madera", "chop");
-  ok("pasado 30 min (un reloj extra): 2 maderas en 2 clics (profundo · tocón)",
-    r.total === 2 && r.patron === "11", r.patron);
+  ok("pasado 30 min (un reloj extra): suave+1 · profundo mudo · tocón+1",
+    r.total === 2 && r.patron === "101", r.patron);
   plantar(arbol, CD.tree, 29);
   r = vaciar(arbol, "madera", "chop");
   ok("pasado 29 min (reloj extra sin vencer): el ciclo clásico de 1", r.patron === "001", r.patron);
@@ -183,14 +184,14 @@ console.log("\nLA ROCA VA A SU RELOJ DE 40 MIN — Y CADA PIEDRA CUESTA UN PICO"
   ok("recién crecida: ciclo clásico y a dormir", r.patron === "001" && !talable(roca), r.patron);
   plantar(roca, CD.rock, 40);
   r = vaciar(roca, "piedra", "mine");
-  ok("pasada 40 min: 2 piedras en 2 clics", r.total === 2 && r.patron === "11", r.patron);
+  ok("pasada 40 min: 2 piedras (paga · mudo · rompe)", r.total === 2 && r.patron === "101", r.patron);
   plantar(roca, CD.rock, 30);
   r = vaciar(roca, "piedra", "mine");
   ok("pasada 30 min (menos que SU reloj): 1 sola", r.patron === "001", r.patron);
   plantar(roca, CD.rock, 160);
   const pk0 = G.picks.dur.wood;
   r = vaciar(roca, "piedra", "mine");
-  ok("pasada 2 h 40: llena — 4 piedras en 4 clics", r.total === 4 && r.patron === "1111", r.patron);
+  ok("pasada 2 h 40: llena — 4 piedras en 5 clics", r.total === 4 && r.patron === "11101", r.patron);
   ok("que costaron 4 picos", pk0 - G.picks.dur.wood === 4, pk0 - G.picks.dur.wood + " picos");
 }
 
@@ -198,7 +199,7 @@ console.log("\nLA VETA DE PIEDRA VA CON LAS ROCAS; LAS DE MINERAL QUEDAN APARTAD
 {
   plantar(vetaPiedra, CD.rock, 160);
   let r = vaciar(vetaPiedra, "piedra", "mine");
-  ok("veta de piedra pasada 2 h 40: 4 piedras en 4 clics", r.total === 4 && r.patron === "1111", r.patron);
+  ok("veta de piedra pasada 2 h 40: 4 piedras en 5 clics", r.total === 4 && r.patron === "11101", r.patron);
   const OD = vm.runInContext("ORE_DEF", ctx);
   plantar(vetaBronce, OD.bronce.cd, 0);
   r = vaciar(vetaBronce, "bronce", "mine");
@@ -221,7 +222,7 @@ console.log("\nY LAS CARGAS SOBREVIVEN AL F5 (viven en readyAt, que ya viaja al 
   ok("tras recargar, al árbol a medio vaciar le quedan 3 exactas", ctx.nodoCargas(arbol, CD.tree) === 3,
     ctx.nodoCargas(arbol, CD.tree) + "");
   const r = vaciar(arbol, "madera", "chop");
-  ok("y se cobran las 3, ni una más", r.total === 3, r.patron + " → " + r.total + " maderas");
+  ok("y se cobran las 3, ni una más (suave·suave·profundo·tocón)", r.total === 3 && r.patron === "1101", r.patron + " → " + r.total + " maderas");
 }
 
 console.log("\nEL BUG DEL ÁRBOL INFINITO (22/8, dirección en vivo): EL F5 NO RELLENA EL NODO");

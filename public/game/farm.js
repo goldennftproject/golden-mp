@@ -1532,21 +1532,20 @@ class FarmScene extends Phaser.Scene {
     if (window.sfx) sfx({ chop: "chop", mine: "mine", plant: "plant", harvest: "harvest", fish: "splash", water: "splash" }[a.kind] || "click");
     // (la sacudida y las astillas ya salieron en el momento del impacto, no acá al final)
     if (a.kind === "chop") {
-      /* 22/8 (cargas, ritmo final de dirección): CON CARGAS, CADA CLIC PAGA — sin golpes gratis.
-         Árbol lleno (4): clic 1 → +1 madera, 1 hacha, corte suave · clic 2 → +1, 1 hacha, sigue
-         en corte suave · clic 3 → +1, 1 hacha, corte PROFUNDO · clic 4 → +1, 1 hacha, TOCÓN.
-         Cuatro clics, cuatro maderas, cuatro hachas. El truco del cierre: al pagar la penúltima
-         (queda 1) se deja o.golpes en 2 — como si los dos golpes clásicos ya estuvieran dados —
-         y el clic siguiente entra a la rama clásica directo al tocón con la madera final.
-         El árbol NORMAL de 1 carga conserva su tanda clásica de 3 golpes de siempre. */
+      /* 22/8 (cargas, ritmo FINAL de dirección, dictado clic a clic): los CORTES SUAVES pagan una
+         carga cada uno (+1 madera, −1 hacha); el CORTE PROFUNDO no da ni consume nada; el TOCÓN
+         paga la última. Árbol de 4: suave(+1) · suave(+1) · suave(+1) · profundo(nada) · tocón(+1)
+         — 5 clics, 4 maderas, 4 hachas. De 2: suave(+1) · profundo · tocón(+1). El árbol NORMAL
+         de 1 carga conserva su tanda clásica: suave(nada) · profundo(nada) · tocón(+1).
+         El truco: cada pago deja o.golpes en 1 — cuando queda la última carga, el clic siguiente
+         entra a la rama clásica en el golpe 2 (profundo, mudo) y el tercero tumba con su madera. */
       const cargasArbol = nodoCargas(o, CD.tree);
-      if (cargasArbol > 1) {   // modo cargas: este clic COBRA una carga, del primero al último
+      if (cargasArbol > 1) {   // corte SUAVE que cobra: paga una carga y el árbol sigue en pie
         if (tryAddRes("madera", 1)) {
           useTool("axe"); addXp("tala", xpDeNodo("tree")); nodoSumar(o); statAdd("talar", null, 1);
           const quedan = nodoGastarCarga(o, CD.tree); this.syncNodos();
-          const tex = quedan >= 2 ? "tree_cut1" : "tree_cut2";   // con la última por delante, corte profundo
-          if (this.textures.exists(tex)) this.setObjTex(o, tex, o.rw || o.w);
-          o.golpes = quedan >= 2 ? 0 : GOLPES_TALAR - 1;   // penúltima pagada → el próximo clic tumba
+          if (this.textures.exists("tree_cut1")) this.setObjTex(o, "tree_cut1", o.rw || o.w);
+          o.golpes = 1;   // el pago vale como primer golpe: el cierre será profundo (mudo) → tocón (paga)
           o.golpesAt = nowMs(); this.barraGolpes(o);
           this.premioFx(o.cx, o.by, resSprite("madera"), "+1"); refreshHud();
           log(`+1 Madera — al árbol le quedan ${quedan} carga${quedan === 1 ? "" : "s"}. ${toolDur("axe")}/${TOOL_DEF.axe.max}`, "good");
@@ -1587,18 +1586,18 @@ class FarmScene extends Phaser.Scene {
         toast("Bolsa llena — no podés talar"); log("Bolsa llena: liberá espacio para seguir talando.", "bad");
       }
     } else if (a.kind === "mine" && o.type === "rock") {
-      /* 22/8 (cargas, ritmo final): igual que el árbol — con cargas, CADA clic paga una piedra y
-         un pico; media rota mientras queden, picada del todo en la última. Roca llena = 4 clics.
-         La roca normal de 1 carga conserva su tanda clásica de 3 golpes. */
+      /* 22/8 (cargas, ritmo FINAL): igual que el árbol — los golpes de media rota PAGAN una
+         piedra y un pico cada uno; el penúltimo clic es mudo y el último rompe pagando la última.
+         Roca de 4 = 5 clics, 4 piedras, 4 picos. La normal de 1 conserva su tanda clásica. */
       const cargasRoca = nodoCargas(o, CD.rock);
-      if (cargasRoca > 1) {   // modo cargas: este clic COBRA una carga
+      if (cargasRoca > 1) {   // golpe que COBRA una carga: paga y la roca sigue ahí
         if (tryAddRes("piedra", 1)) {
           const pk = equippedPick();
           if (pk) { G.picks.dur[pk] = Math.max(0, (G.picks.dur[pk] || 0) - 1); if (G.picks.dur[pk] <= 0) { log("Usaste tu último " + PICK_DEF[pk].label + " — crafteá más en la Herrería.", "bad"); toast("Sin picos — crafteá más"); destroyPick(pk); } }
           addXp("mining", xpDeNodo("rock", "piedra")); statAdd("minar", "piedra", 1); nodoSumar(o);
           const quedan = nodoGastarCarga(o, CD.rock); this.syncNodos();
           if (this.textures.exists(o.baseKey + "_half")) this.setObjTex(o, o.baseKey + "_half", o.rw || o.w);
-          o.golpes = quedan >= 2 ? 0 : GOLPES_MINAR - 1;   // penúltima pagada → el próximo clic la rompe
+          o.golpes = 1;   // el pago vale como primer golpe: el cierre será mudo → rota (paga)
           o.golpesAt = nowMs(); this.barraGolpes(o);
           this.premioFx(o.cx, o.by, resSprite("piedra"), "+1"); refreshHud();
           log(`+1 Piedra — a la roca le quedan ${quedan} carga${quedan === 1 ? "" : "s"}.` + (pk ? ` Quedan ${G.picks.dur[pk]} picos.` : ""), "good");
@@ -1639,7 +1638,7 @@ class FarmScene extends Phaser.Scene {
           addXp("mining", xpDeNodo("ore", o.ore)); statAdd("minar", o.ore, 1); nodoSumar(o);
           const quedan = nodoGastarCarga(o, CD.rock); this.syncNodos();
           if (this.textures.exists(o.baseKey + "_half")) this.setObjTex(o, o.baseKey + "_half", o.rw || o.w);
-          o.golpes = quedan >= 2 ? 0 : GOLPES_MINAR - 1;   // penúltima pagada → el próximo clic la agota
+          o.golpes = 1;   // el pago vale como primer golpe: el cierre será mudo → agotada (paga)
           o.golpesAt = nowMs(); this.barraGolpes(o);
           this.premioFx(o.cx, o.by, resSprite(o.ore), "+1"); refreshHud();
           log(`${odC.emoji} +${grVeta} ${odC.label} — a la veta le quedan ${quedan} carga${quedan === 1 ? "" : "s"}. Quedan ${G.picks.dur[pk2]} picos.`, "good");
