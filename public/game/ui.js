@@ -1713,10 +1713,18 @@ function refreshPaquete() {
     for (let d = 1; d <= 7; d++) {
       const ok = d <= cobrados + (extra || 0);
       const hoy = !extra && st && st.claimable && d === st.day;
+      /* 22/8 (auditoría del arranque): cada paquetito DICE lo que trae — pasás el cursor y el
+         gancho de la semana se ve entero desde el día 1. El día 7 nombra su premio exclusivo. */
+      const premio = (typeof DAILY_REWARDS !== "undefined" && DAILY_REWARDS[d - 1]) ? DAILY_REWARDS[d - 1].label : "";
+      const tip = d === 7 && typeof coleccionableDeLaSemana === "function"
+        ? "Día 7 — " + coleccionableDeLaSemana() + " (exclusivo de esta semana)"
+        : "Día " + d + " — " + premio;
       html += '<img class="paq-mini' + (ok ? " ok" : "") + (hoy ? " hoy" : "") + (d === 7 ? " siete" : "") +
-        '" src="assets/farm/' + (ok ? "paquete_dia_abierto" : "paquete_dia") + '.png?v=1">';
+        '" title="' + escapeHtml(tip) + '" src="assets/farm/' + (ok ? "paquete_dia_abierto" : "paquete_dia") + '.png?v=1">';
     }
     strip.innerHTML = html;
+    const siete = $("paq-siete");
+    if (siete) siete.textContent = "🎁 Día 7: " + (typeof coleccionableDeLaSemana === "function" ? coleccionableDeLaSemana() : "premio exclusivo") + " — solo esta semana";
   };
   pintarRacha(0);
   if (!st || !st.claimable) {   // ya abrió el de hoy: paquete abierto y a esperar
