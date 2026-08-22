@@ -1353,6 +1353,7 @@ function farmUnlockTxt(n) {
   if (typeof FARM_EDIF2 !== "undefined" && FARM_EDIF2[n] && BUILD_DEF[FARM_EDIF2[n]])
     partes.push(BUILD_DEF[FARM_EDIF2[n]].label + " nivel 2");
   if (typeof FARM_COFRE !== "undefined" && FARM_COFRE[n]) partes.push("+" + FARM_COFRE[n] + " de capacidad de cofre");
+  if (typeof FARM_VALES !== "undefined" && FARM_VALES[n]) partes.push("+" + FARM_VALES[n] + " vales del tablón");
   /* 19/8 (dirección): el bono también en PLATA/HORA, entre paréntesis, detrás de lo que ya sabe.
      "+1,5% al precio de venta" no le dice nada a nadie; "+14 plata por hora" sí. Y es lo que hace
      que el tramo del 20 al 50 se lea como lo que es: entre expansión y expansión el bono aporta
@@ -1559,6 +1560,12 @@ function expansionComprar() {
   return true;
 }
 const FARM_COFRE   = { 13:10, 23:10, 33:15 };                                          // nivel → capacidad extra de cofre
+/* 22/8 (dirección, auditoría del arranque — "el acantilado del nivel 4"): el tutorial regala
+   3 niveles en 12 minutos y el nivel 4 —el PRIMERO que el jugador gana solo, a ~8 horas— no
+   abría nada. Ahora premia con vales del tablón: la moneda del bucle que el tutorial acaba de
+   enseñar en su último paso, para empujarlo de vuelta al tablón el día 2. Anclados: el vale
+   vale VALE_EN_PLATA y 3 es la escala del premio de una misión. */
+const FARM_VALES   = { 4: 3 };                                                         // nivel → vales del tablón de regalo
 /* 19/8: misma regla para las mejoras. El Horno lo mejora quien más lo usa (Minería) y la Cocina,
    la Cocina misma —ahí NO es circular: cocinar ya lo sabés, la mejora es al que ya practica—.
    El Altar no cuelga de ningún oficio y se queda en el Granero. */
@@ -1633,6 +1640,7 @@ function recalcFarmLevelInterno() {
     const regalos = (typeof regalosSync === "function") ? regalosSync() : 0;
     if (regalos) { log("Te llegaron " + regalos + " premio" + (regalos > 1 ? "s" : "") + " al baúl.", "gold"); }
     if (FARM_COFRE[G.level]) G.chestCap = (G.chestCap || 0) + FARM_COFRE[G.level];
+    if (typeof FARM_VALES !== "undefined" && FARM_VALES[G.level]) G.vales = (G.vales || 0) + FARM_VALES[G.level];   // 22/8: el nivel 4 ya no es mudo
     if (FARM_EDIF2[G.level]) { G.edif2 = G.edif2 || {}; G.edif2[FARM_EDIF2[G.level]] = true; }
     if (gift && /Título|aura|AURA|Skin|Marco|Emote|Decoración/.test(gift)) { G.cosmeticos = G.cosmeticos || []; G.cosmeticos.push("Nivel " + G.level + ": " + gift); }
     snapshotTareas();   // las tareas del próximo nivel se cuentan desde cero

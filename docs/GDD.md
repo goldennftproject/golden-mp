@@ -421,7 +421,7 @@ Normas de diseño que vienen de decisiones de dirección y que conviene no reabr
 
 **15. Cómo verificar lo que dice este documento**
 
-El proyecto tiene 62 pruebas automáticas y 16 auditores (102 herramientas en total). No comprueban que el código compile: comprueban que el JUEGO cumpla las reglas de arriba. Los más útiles para el diseñador:
+El proyecto tiene 63 pruebas automáticas y 16 auditores (103 herramientas en total). No comprueban que el código compile: comprueban que el JUEGO cumpla las reglas de arriba. Los más útiles para el diseñador:
 
 | **Herramienta**                 | **Qué contesta**                                            |
 | ------------------------------- | ----------------------------------------------------------- |
