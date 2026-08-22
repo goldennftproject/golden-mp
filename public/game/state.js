@@ -368,7 +368,17 @@ var GOLPES_TALAR = 3, GOLPES_MINAR = 3;   // clics para tumbar un árbol o rompe
    hacha — nada cae de golpe. */
 var NODO_CARGAS_MAX = 4;
 function nodoCargas(o, cdBaseSeg) {
-  if (!o || !o.readyAt || nowMs() < o.readyAt) return 1;
+  if (!o) return 1;
+  /* EL NODO VIRGEN NACE LLENO (22/8, dirección: "el regalito de bienvenida del terreno").
+     Un árbol que nunca se taló no tiene reloj corriendo (readyAt 0) — y un árbol parado ahí
+     desde siempre, lógicamente, tiene su madera acumulada: da las 4 cargas. Así la mecánica se
+     VE desde el primer talado del jugador nuevo, y cada expansión entrega su árbol y su roca
+     cargados (4+4 contra costes de 61-810 maderas: bienvenida, no economía). Es un estado que
+     se consume una sola vez — el primer talado le pone reloj y entra al ciclo normal para
+     siempre; el F5 no lo resucita porque el reloj viaja al guardado. Las vetas de MINERAL ni
+     pasan por acá (sus cargas son siempre 1, decisión de dirección). */
+  if (!o.readyAt) return NODO_CARGAS_MAX;
+  if (nowMs() < o.readyAt) return 1;
   /* el reloj del nodo es EL SUYO: el último ciclo que corrió (readyAt - cdIni trae los buffs de
      enfriamiento con los que se cortó); si no hay historia, el reloj base de su especie */
   const cdMs = (o.cdIni && o.readyAt > o.cdIni) ? (o.readyAt - o.cdIni) : cdBaseSeg * 1000;

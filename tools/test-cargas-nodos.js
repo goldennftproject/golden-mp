@@ -121,6 +121,23 @@ ok("(escenario) árbol, roca, veta de piedra y veta de bronce a mano",
 /* ¿el nodo se puede talar/picar YA (reloj vencido)? */
 const talable = (o) => (o.readyAt || 0) <= ctx.Date.now();
 
+console.log("\nEL NODO VIRGEN NACE LLENO — EL REGALITO DE BIENVENIDA (22/8)");
+{
+  /* nunca talados: sin reloj (readyAt 0). Un árbol parado desde siempre tiene su madera adentro */
+  ok("(escenario) el árbol y la roca arrancan vírgenes", !arbol.readyAt && !roca.readyAt);
+  let r = vaciar(arbol, "madera", "chop");
+  ok("el PRIMER talado de la partida ya enseña la escalera completa: 4 maderas",
+    r.total === 4 && r.patron === "011101", r.patron);
+  ok("y el virgen se consume: al caer, el árbol entra al ciclo normal para siempre",
+    arbol.readyAt > ctx.Date.now());
+  r = vaciar(roca, "piedra", "mine");
+  ok("la roca virgen igual: 4 piedras", r.total === 4 && r.patron === "011101", r.patron);
+  r = vaciar(vetaBronce, "bronce", "mine");
+  ok("la veta de MINERAL virgen NO: una picada de 2 y a dormir (siguen apartadas)",
+    r.patron === "002" && !talable(vetaBronce), r.patron);
+  vetaBronce.readyAt = 0; vetaBronce.cdIni = 0;   // se re-virginiza solo para no ensuciar la sección de vetas de abajo
+}
+
 console.log("\nLA ESCALERA SE ESTIRA: ÁRBOL LLENO = 6 GOLPES, 4 MADERAS, 4 HACHAS");
 {
   plantar(arbol, CD.tree, 0);
