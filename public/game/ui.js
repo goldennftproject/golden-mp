@@ -1707,24 +1707,33 @@ function refreshPaquete() {
   let st = null; try { st = dailyState(); } catch (e) {}
   const cobrados = (st && st.claimable) ? st.day - 1 : ((G.daily && G.daily.day) || 0);
   // la RACHA como paquetitos: abiertos los cobrados, latiendo el de hoy (pocas palabras)
+  /* 22/8 (dirección, segunda vuelta): "¿por qué el premio solo con el cursor encima? Mejor una
+     VISTA PREVIA de cada uno, dentro de la propia interfaz: un cuadrito por día". La tira son
+     ahora 7 tarjetitas SIEMPRE visibles: Día N + su paquetito + el premio escrito adentro. El
+     día 7 va en dorado con su coleccionable exclusivo. Estructura y altura fijas (regla de UI). */
+  const PREMIO_CORTO = ["Decoración", "+5% farmeo 1 h", "2 platos", "Emote o marco", "Carnada ×5", "Sorpresa", ""];
   const pintarRacha = (extra) => {
     const strip = $("paq-racha"); if (!strip) return;
+    const col = (typeof coleccionableDeLaSemana === "function") ? coleccionableDeLaSemana() : "Exclusivo";
     let html = "";
     for (let d = 1; d <= 7; d++) {
       const ok = d <= cobrados + (extra || 0);
       const hoy = !extra && st && st.claimable && d === st.day;
-      /* 22/8 (auditoría del arranque): cada paquetito DICE lo que trae — pasás el cursor y el
-         gancho de la semana se ve entero desde el día 1. El día 7 nombra su premio exclusivo. */
-      const premio = (typeof DAILY_REWARDS !== "undefined" && DAILY_REWARDS[d - 1]) ? DAILY_REWARDS[d - 1].label : "";
-      const tip = d === 7 && typeof coleccionableDeLaSemana === "function"
-        ? "Día 7 — " + coleccionableDeLaSemana() + " (exclusivo de esta semana)"
-        : "Día " + d + " — " + premio;
-      html += '<img class="paq-mini' + (ok ? " ok" : "") + (hoy ? " hoy" : "") + (d === 7 ? " siete" : "") +
-        '" title="' + escapeHtml(tip) + '" src="assets/farm/' + (ok ? "paquete_dia_abierto" : "paquete_dia") + '.png?v=1">';
+      const premio = d === 7 ? col.replace(/\s*\(.*$/, "") : PREMIO_CORTO[d - 1];
+      html += '<div class="paq-card' + (ok ? " ok" : "") + (hoy ? " hoy" : "") + (d === 7 ? " siete" : "") + '" style="' +
+          'flex:1;min-width:0;border-radius:8px;padding:3px 1px;text-align:center;' +
+          'border:1px solid ' + (d === 7 ? "#d9a520" : hoy ? "#8fae53" : "#cdb98a") + ';' +
+          'background:' + (d === 7 ? "#fdf3d0" : hoy ? "#eef5da" : ok ? "#efe8d6" : "#f8f2e2") + ';' +
+          (ok ? "opacity:.62;" : "") + (d === 7 ? "box-shadow:0 0 6px rgba(217,165,32,.45);" : "") + '">' +
+        '<div style="font-size:8px;font-weight:bold;color:#6b5322">Día ' + d + (d === 7 ? " ✨" : "") + '</div>' +
+        '<img class="paq-mini' + (ok ? " ok" : "") + (hoy ? " hoy" : "") + '" style="height:20px;width:auto;image-rendering:pixelated;margin:1px 0" ' +
+          'src="assets/farm/' + (ok ? "paquete_dia_abierto" : "paquete_dia") + '.png?v=1">' +
+        '<div style="font-size:7.5px;line-height:1.15;height:18px;overflow:hidden;color:#4a3418">' + escapeHtml(premio) + '</div>' +
+      '</div>';
     }
     strip.innerHTML = html;
     const siete = $("paq-siete");
-    if (siete) siete.textContent = "🎁 Día 7: " + (typeof coleccionableDeLaSemana === "function" ? coleccionableDeLaSemana() : "premio exclusivo") + " — solo esta semana";
+    if (siete) siete.textContent = "🎁 Día 7: " + col + " — solo esta semana";
   };
   pintarRacha(0);
   if (!st || !st.claimable) {   // ya abrió el de hoy: paquete abierto y a esperar

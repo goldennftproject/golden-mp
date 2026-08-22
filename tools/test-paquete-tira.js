@@ -25,19 +25,22 @@ const doc = dom.window.document, G = ctx.G;
 let fallos = 0;
 const ok = (n, c, d) => { if (!c) fallos++; console.log((c ? "  ok   " : "  FALLA") + "  " + n + (d ? "   " + d : "")); };
 
-console.log("\nEL JUGADOR DEL DÍA 1 VE LA SEMANA ENTERA");
+console.log("\nEL JUGADOR DEL DÍA 1 VE LA SEMANA ENTERA — VISTA PREVIA EN CUADRITOS, SIN HOVER");
 {
   G.daily = { day: 0, last: "" };   // día 1, sin cobrar
   ctx.refreshPaquete();
-  const minis = [...doc.querySelectorAll("#paq-racha .paq-mini")];
-  ok("hay 7 paquetitos", minis.length === 7, minis.length + "");
-  const DR = vm.runInContext("DAILY_REWARDS", ctx);
-  const conPremio = minis.filter((m, i) => i < 6 && m.title.includes(DR[i].label));
-  ok("los días 1-6 dicen su premio en el tooltip", conPremio.length === 6, conPremio.length + " de 6");
+  const cards = [...doc.querySelectorAll("#paq-racha .paq-card")];
+  ok("hay 7 cuadritos, uno por día", cards.length === 7, cards.length + "");
+  const numerados = cards.filter((c, i) => c.textContent.includes("Día " + (i + 1)));
+  ok("cada uno dice su día ADENTRO (nada de tooltips)", numerados.length === 7, numerados.length + " de 7");
+  const CORTOS = ["Decoración", "farmeo", "platos", "Emote", "Carnada", "Sorpresa"];
+  const conPremio = cards.filter((c, i) => i < 6 && c.textContent.includes(CORTOS[i]));
+  ok("los días 1-6 muestran su premio a la vista", conPremio.length === 6, conPremio.length + " de 6");
   const col = vm.runInContext("coleccionableDeLaSemana()", ctx);
-  ok("el día 7 nombra el coleccionable EXCLUSIVO de la semana", minis[6].title.includes(col),
-    "« " + minis[6].title + " »");
-  ok("y bajo la tira hay una línea que lo anuncia desde el día 1",
+  const col0 = col.replace(/\s*\(.*$/, "");
+  ok("el día 7 muestra el coleccionable EXCLUSIVO, destacado", cards[6].textContent.includes(col0) && cards[6].textContent.includes("✨"),
+    "« " + cards[6].textContent.trim() + " »");
+  ok("y bajo la tira, la línea con el nombre completo", 
     doc.getElementById("paq-siete") && doc.getElementById("paq-siete").textContent.includes(col),
     "« " + (doc.getElementById("paq-siete") || {}).textContent + " »");
 }
@@ -49,8 +52,8 @@ console.log("\nY LA TARJETA NO CAMBIA DE TAMAÑO (la línea nueva tiene altura f
   /* tras cobrar, la línea sigue ahí — la estructura no se mueve */
   G.daily = { day: 3, last: vm.runInContext("dayStamp(0)", ctx) };   // ya abrió hoy
   ctx.refreshPaquete();
-  ok("con el paquete ya abierto, la tira y la línea siguen presentes",
-    doc.querySelectorAll("#paq-racha .paq-mini").length === 7 && doc.getElementById("paq-siete").textContent.length > 0);
+  ok("con el paquete ya abierto, los 7 cuadritos y la línea siguen presentes",
+    doc.querySelectorAll("#paq-racha .paq-card").length === 7 && doc.getElementById("paq-siete").textContent.length > 0);
 }
 
 console.log(fallos ? "\n" + fallos + " fallo(s)\n" : "\nTodo en orden: el gancho del día 7 se ve desde el día 1.\n");
