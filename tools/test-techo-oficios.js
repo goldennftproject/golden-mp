@@ -29,7 +29,7 @@ const ok = (n, c, d) => { if (!c) fallos++; console.log((c ? "  ok   " : "  FALL
 
 console.log("\nEL TECHO ES EL ÚLTIMO NIVEL DEL CONTENIDO, NO UN NÚMERO A MANO");
 {
-  const esperado = { farming: 20, mining: 11, ganaderia: 19, cooking: 10 };
+  const esperado = { farming: 16, mining: 11, ganaderia: 19, cooking: 10 };   // 22/8: dos carriles — el brócoli (16) es el último
   for (const sk in esperado) {
     const lista = ctx.oficioAbre(sk), maxLista = Math.max(...lista.map(e => e[0]));
     ok(sk + ": techo " + esperado[sk] + " — y es EXACTAMENTE el máximo de su lista",
@@ -45,7 +45,7 @@ console.log("\nCON XP ASTRONÓMICA, EL NIVEL SE PLANTA EN EL TECHO — Y LA XP S
 {
   const XP = 99999999;
   G.skills = Object.assign({}, G.skills, { farming: XP, mining: XP, ganaderia: XP, tala: XP });
-  ok("Cultivo se planta en 20", ctx.nivelOficio("farming") === 20, "nivel " + ctx.nivelOficio("farming"));
+  ok("Cultivo se planta en 16 (su último cultivo, el brócoli)", ctx.nivelOficio("farming") === 16, "nivel " + ctx.nivelOficio("farming"));
   ok("Minería se planta en 11", ctx.nivelOficio("mining") === 11);
   ok("Ganadería se planta en 19", ctx.nivelOficio("ganaderia") === 19);
   ok("la Tala (sin escalera) sube libre por su curva", ctx.nivelOficio("tala") > 19, "nivel " + ctx.nivelOficio("tala"));

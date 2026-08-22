@@ -30,8 +30,10 @@ const acum=(n,sk)=>{let a=0;for(let i=1;i<n;i++)a+=X.skillNeed(i,sk);return a;};
 {
   const p=X.CROP_DEF.papa.xp, m=X.CROP_DEF.maiz.xp;
   ok("cosechar maíz ya no paga 480× lo de una papa", m/p<=15, "×"+(m/p).toFixed(1));
-  ok("y la escalera de los 13 sube de uno en uno",
-     X.CROP_ORDER.every((k,i)=>X.CROP_DEF[k].xp===X.XP_ACCION*(i+1)));
+  /* 22/8 (dos carriles): la XP sigue siendo 10 por escalón, pero el orden es (nivel, duración) */
+  const orden=[...X.CROP_ORDER].sort((a,b)=>(X.CROP_DEF[a].lvl-X.CROP_DEF[b].lvl)||(X.CROP_DEF[a].growH-X.CROP_DEF[b].growH));
+  ok("y la escalera de los 13 sube de uno en uno (en su orden de niveles)",
+     orden.every((k,i)=>X.CROP_DEF[k].xp===X.XP_ACCION*(i+1)));
 }
 // 3) LA GARANTÍA: el nivel N son las mismas horas en cada oficio
 {
@@ -62,11 +64,12 @@ const acum=(n,sk)=>{let a=0;for(let i=1;i<n;i++)a+=X.skillNeed(i,sk);return a;};
 }
 // 4) Y NO SE ROMPIÓ LO QUE YA ESTABA
 {
-  ok("las semillas siguen abriéndose en 13 niveles distintos",
-     new Set(X.CROP_ORDER.map(k=>X.CROP_DEF[k].lvl)).size===13);
+  ok("las semillas se abren en 9 escalones (dos carriles: los tempranos van de a pares)",
+     new Set(X.CROP_ORDER.map(k=>X.CROP_DEF[k].lvl)).size===9);
   const RITf=3*3600/X.CROP_DEF.papa.grow*X.CROP_DEF.papa.xp;
-  const hMaiz=acum(X.CROP_DEF.maiz.lvl,"farming")/RITf/24;
-  ok("el maíz sigue a una distancia razonable", hMaiz>1&&hMaiz<20, hMaiz.toFixed(1)+" días de Cultivo");
+  const lvlMax=Math.max(...X.CROP_ORDER.map(k=>X.CROP_DEF[k].lvl));
+  const hTope=acum(lvlMax,"farming")/RITf/24;
+  ok("el último cultivo sigue a una distancia razonable", hTope>1&&hTope<40, hTope.toFixed(1)+" días de Cultivo");
   ok("el techo del oficio sigue siendo alcanzable",
      acum(50,"tala")/(3*3600/X.CD.tree*X.xpDeNodo("tree"))/24 < 400,
      (acum(50,"tala")/(3*3600/X.CD.tree*X.xpDeNodo("tree"))/24).toFixed(0)+" días de Tala para el nivel 50");

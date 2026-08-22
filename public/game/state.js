@@ -230,24 +230,34 @@ const CROP_DEF = {
   // el ancla (20 plata/h), pero el costo de la SEMILLA es libre — solo hay que subir la venta
   // en la misma cantidad. Así la semilla también escala (1 → 2 → 2 → 3 → 3) y cada escalón se
   // siente como una inversión mayor, sin mover ni un punto el rendimiento por hora.
+  /* 22/8 (dirección) — LA ESCALERA EN DOS CARRILES. La tabla vieja ordenaba por duración:
+     el jugador de nivel 3-5 tenía como cultivo más largo uno de 9-15 MINUTOS y su primera
+     NOCHE producía cero — la promesa del pilar 1 ("plantá lo que dura tu ausencia") no
+     existía justo la noche en que se decide si vuelve. Ahora cada escalón temprano abre un
+     par: un cultivo DE SESIÓN y uno DE AUSENCIA — la calabaza (3 h) llega al nivel 2, en la
+     primera hora de juego; el girasol (10 h) al 4; el maíz (24 h) al 8. La progresión tardía
+     vende el MEDIO fino (30-90 min, las sesiones de sobremesa) y más XP.
+     La PLATA no se movió un centavo: todos rinden 20/h por el ancla. La XP se RE-DERIVÓ del
+     orden nuevo (10 por escalón, la fórmula de siempre): el nocturno de cada par da 10 más
+     que su compañero de sesión. El techo de Cultivo baja solo a 16 (oficioTecho lo deriva). */
   papa:      { label:"Papa",      emoji:"🥔", lvl:1,  seedCost:1,   growH:0.05, yield:1, price:2,    xp:10 },    // 3 min · gana 1 — piso del ancla; el cultivo del tutorial
   ciruela:   { label:"Ciruela",   emoji:"🫐", lvl:2,  seedCost:2,   growH:0.10, yield:1, price:4,    xp:20 },   // 6 min · gana 2  (plum)
-  cereza:    { label:"Cereza",    emoji:"🍒", lvl:3,  seedCost:2,   growH:0.15, yield:1, price:5,    xp:30 },   // 9 min · gana 3  (cherry)
-  remolacha: { label:"Remolacha", emoji:"🟣", lvl:4,  seedCost:3,   growH:0.20, yield:1, price:7,    xp:40 },   // 12 min · gana 4 (beetroot)
-  zanahoria: { label:"Zanahoria", emoji:"🥕", lvl:5,  seedCost:3,   growH:0.25, yield:1, price:8,    xp:50 },  // 15 min (v3 diseñador)
-  cebolla:   { label:"Cebolla",   emoji:"🧅", lvl:6,  seedCost:6,   growH:0.5, yield:1, price:16,   xp:60 },  // 30 min (v3 diseñador)
+  cereza:    { label:"Cereza",    emoji:"🍒", lvl:4,  seedCost:2,   growH:0.15, yield:1, price:5,    xp:40 },   // 9 min · gana 3  (cherry)
+  remolacha: { label:"Remolacha", emoji:"🟣", lvl:6,  seedCost:3,   growH:0.20, yield:1, price:7,    xp:60 },   // 12 min · gana 4 (beetroot)
+  zanahoria: { label:"Zanahoria", emoji:"🥕", lvl:8,  seedCost:3,   growH:0.25, yield:1, price:8,    xp:80 },  // 15 min (v3 diseñador)
+  cebolla:   { label:"Cebolla",   emoji:"🧅", lvl:10, seedCost:6,   growH:0.5, yield:1, price:16,   xp:100 },  // 30 min (v3 diseñador)
   // 16/8: el calabacín era el único de la tabla fuera del ancla — rendía 26,7 plata/h y 120 XP/h
   // contra los 20 y 100 de sus vecinos. Reanclado: ganancia 15 (20/h) y 75 XP (100/h), con la
   // relación venta/semilla en 2,5 como el resto. Era 12 → 32 → 90.
-  calabacin: { label:"Calabacín", emoji:"🥒", lvl:7,  seedCost:10,  growH:0.75, yield:1, price:25,   xp:70 },   // 45 min (v3 diseñador, reanclado 16/8)
-  repollo:   { label:"Repollo",   emoji:"🥬", lvl:9,  seedCost:20,  growH:1.5,  yield:1, price:50,   xp:80 },  // 1 h 30 (v3 diseñador)
-  calabaza:  { label:"Calabaza",  emoji:"🎃", lvl:10,  seedCost:40,  growH:3,    yield:1, price:100,  xp:90 },  // 3 h · 18/8: XP re-anclada (era 270 = 90 XP/h)
+  calabacin: { label:"Calabacín", emoji:"🥒", lvl:12, seedCost:10,  growH:0.75, yield:1, price:25,   xp:110 },   // 45 min (v3 diseñador, reanclado 16/8)
+  repollo:   { label:"Repollo",   emoji:"🥬", lvl:14, seedCost:20,  growH:1.5,  yield:1, price:50,   xp:120 },  // 1 h 30 (v3 diseñador)
+  calabaza:  { label:"Calabaza",  emoji:"🎃", lvl:2,  seedCost:40,  growH:3,    yield:1, price:100,  xp:30 },  // 3 h · 18/8: XP re-anclada (era 270 = 90 XP/h)
   // 16/8 (auditoría C): los cuatro de arriba se corren a la banda 11-50 del nivel de granja
   // (la que además pide TAREAS). Con el gate por nivel, quedarse en 7-10 los volvía casi
   // inmediatos; así el early game no cambia y las anclas largas siguen siendo una meta.
-  brocoli:   { label:"Brócoli",   emoji:"🥦", lvl:12,  seedCost:90,  growH:6,    yield:1, price:210,  xp:100 },  // 6 h · 18/8: XP re-anclada (era 480 = 80 XP/h)
-  girasol:   { label:"Girasol",   emoji:"🌻", lvl:15, seedCost:180, growH:10,    yield:1, price:380,  xp:110 },  // 10 h · 18/8: rendía 24 plata/h y 72 XP/h
-  trigo:     { label:"Trigo",     emoji:"🌾", lvl:17, seedCost:360, growH:16,    yield:1, price:680,  xp:120 }, // 16 h · 18/8: rendía 30 plata/h y 67 XP/h
+  brocoli:   { label:"Brócoli",   emoji:"🥦", lvl:16, seedCost:90,  growH:6,    yield:1, price:210,  xp:130 },  // 6 h · 18/8: XP re-anclada (era 480 = 80 XP/h)
+  girasol:   { label:"Girasol",   emoji:"🌻", lvl:4,  seedCost:180, growH:10,    yield:1, price:380,  xp:50 },  // 10 h · 18/8: rendía 24 plata/h y 72 XP/h
+  trigo:     { label:"Trigo",     emoji:"🌾", lvl:6,  seedCost:360, growH:16,    yield:1, price:680,  xp:70 }, // 16 h · 18/8: rendía 30 plata/h y 67 XP/h
   /* 18/8 (auditoría del ancla) — LOS CINCO CULTIVOS LARGOS ESTABAN FUERA DE LA FÓRMULA, y en las
      DOS direcciones: rendían de más en plata y de menos en XP. El maíz era el caso extremo:
      40 plata/hora contra los 20 de todos los demás (el DOBLE) y 60 XP/hora contra 100.
@@ -255,7 +265,7 @@ const CROP_DEF = {
      cultivo del final del juego rompía el ancla por arriba y por abajo a la vez.
      Re-anclados: la ganancia por hora vuelve a 20 bajando la VENTA (no subiendo la semilla, que
      dejaría una relación venta/semilla absurda), y la XP vuelve a 100 por hora. */
-  maiz:      { label:"Maíz",      emoji:"🌽", lvl:20, seedCost:720, growH:24,   yield:1, price:1200, xp:130 },  // 24 h — el ancla nocturna
+  maiz:      { label:"Maíz",      emoji:"🌽", lvl:8,  seedCost:720, growH:24,   yield:1, price:1200, xp:90 },  // 24 h — el ancla nocturna
 };
 function recomputeCropGrow() { for (const k in CROP_DEF) CROP_DEF[k].grow = Math.round(CROP_DEF[k].growH * 3600 * GROW_SCALE); }
 recomputeCropGrow();   // en segundos, como siempre

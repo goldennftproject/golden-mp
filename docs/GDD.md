@@ -4,7 +4,7 @@ Documento de Diseño de Juego
 
 *Estado real del código · 22 de agosto de 2026 · revisión 3*
 
-*Novedades de esta revisión: las CARGAS de los nodos (el árbol guarda hasta 4 talados; la partida cobra el doble del ancla), la picada de mineral a rendimiento 2, la expansión 3 sin muro y los edificios tardíos abaratados, el establo que crece un lugar por nivel de Ganadería, el techo de oficios derivado del contenido, y el PORTERO del guardado en producción (bitácora + puerta vieja sellada).*
+*Novedades de esta revisión: las CARGAS de los nodos (el árbol guarda hasta 4 talados; la partida cobra el doble del ancla), la picada de mineral a rendimiento 2, la expansión 3 sin muro y los edificios tardíos abaratados, el establo que crece un lugar por nivel de Ganadería, el techo de oficios derivado del contenido, el PORTERO del guardado en producción (bitácora + puerta vieja sellada), la cuenta por email, y la ESCALERA DE CULTIVOS EN DOS CARRILES (nocturnos desde el nivel 2).*
 
 Para el equipo de diseño
 
@@ -102,21 +102,21 @@ Trece cultivos, todos anclados. La columna « plata/h » es la prueba de que la 
 | ----------- | --------- | ----------- | ----------- | ---------- | -------- | ----------- | ------ |
 | Papa        | 1         | 1           | 3           | 2          | 1        | 20          | 10     |
 | Ciruela     | 2         | 2           | 6           | 4          | 2        | 20          | 20     |
-| Cereza      | 3         | 2           | 9           | 5          | 3        | 20          | 30     |
-| Remolacha   | 4         | 3           | 12          | 7          | 4        | 20          | 40     |
-| Zanahoria   | 5         | 3           | 15          | 8          | 5        | 20          | 50     |
-| Cebolla     | 6         | 6           | 30          | 16         | 10       | 20          | 60     |
-| Calabacín   | 7         | 10          | 45          | 25         | 15       | 20          | 70     |
-| Repollo     | 9         | 20          | 90          | 50         | 30       | 20          | 80     |
-| Calabaza    | 10        | 40          | 180         | 100        | 60       | 20          | 90     |
-| Brócoli     | 12        | 90          | 360         | 210        | 120      | 20          | 100    |
-| Girasol     | 15        | 180         | 600         | 380        | 200      | 20          | 110    |
-| Trigo       | 17        | 360         | 960         | 680        | 320      | 20          | 120    |
-| Maíz        | 20        | 720         | 1440        | 1200       | 480      | 20          | 130    |
+| Calabaza    | 2         | 40          | 180         | 100        | 60       | 20          | 30     |
+| Cereza      | 4         | 2           | 9           | 5          | 3        | 20          | 40     |
+| Girasol     | 4         | 180         | 600         | 380        | 200      | 20          | 50     |
+| Remolacha   | 6         | 3           | 12          | 7          | 4        | 20          | 60     |
+| Trigo       | 6         | 360         | 960         | 680        | 320      | 20          | 70     |
+| Zanahoria   | 8         | 3           | 15          | 8          | 5        | 20          | 80     |
+| Maíz        | 8         | 720         | 1440        | 1200       | 480      | 20          | 90     |
+| Cebolla     | 10        | 6           | 30          | 16         | 10       | 20          | 100    |
+| Calabacín   | 12        | 10          | 45          | 25         | 15       | 20          | 110    |
+| Repollo     | 14        | 20          | 90          | 50         | 30       | 20          | 120    |
+| Brócoli     | 16        | 90          | 360         | 210        | 120      | 20          | 130    |
 
-*Lectura de diseño: la escalera no vende « más dinero », vende AUTONOMÍA. La papa obliga a volver en 3 minutos; el maíz aguanta una noche entera. Lo que el jugador compra al subir de nivel es el derecho a desaparecer más tiempo.*
+*Lectura de diseño (22/8 — LA ESCALERA EN DOS CARRILES): la tabla vieja ordenaba por duración y el jugador de nivel 3-5 no tenía NINGÚN cultivo que aguantara su primera noche — la promesa del pilar 1 no existía justo la noche en que se decide si vuelve. Ahora cada escalón temprano abre un PAR: un cultivo de sesión y uno de ausencia — la calabaza (3 h) llega al nivel 2, dentro de la primera hora; el girasol (10 h) al 4; el maíz (24 h) al 8. La progresión tardía vende el MEDIO fino (30-90 min, las sesiones de sobremesa). La plata no se movió: todos rinden 20/h. La XP se re-derivó del orden nuevo (10 por escalón). El techo de Cultivo baja solo a 16.*
 
-La XP sí crece con el escalón (de 10 a 130 por cosecha), y ahí está el incentivo real para pasar a cultivos largos: no dan más plata por hora, dan más XP por hora si estás lejos.
+Consecuencia medida (simulador): la partida a granja 21 pasa de 49 a 63 días — el jugador con nocturnos hace menos gestos por día y sube más lento a cambio de comodidad. La plata por hora es la misma; si el ritmo se quiere de vuelta en ~50 días, la palanca es FARM_XP_LVLS (una pasada).
 
 **4. Nodos: tala, minería y pesca**
 
@@ -155,7 +155,7 @@ Toda escalera del juego empieza ABIERTA en el nivel 1. La semilla de papa, la pi
 
 Hay once oficios y cada acción da XP al SUYO. Talar sube Tala; pescar sube Pesca. Esto suena obvio y no lo era: hasta el 18/8 pescar daba experiencia de Cocina.
 
-Cada oficio con escalera tiene TECHO, y el techo se deriva de su contenido (22/8, dirección: « capear el crecimiento hasta el nivel donde hay contenido; más adelante se libera más »). Hoy: Cultivo 20 (el maíz), Minería 11 (la netherita), Ganadería 19 (el lugar 20 del establo), Cocina 10 (el Banquete del Bosque). La XP nunca deja de acumularse por debajo: cuando se agregue contenido de nivel más alto, el techo sube solo y los veteranos suben en el acto lo que ya ganaron. Los oficios sin escalera (Tala, Pesca, Artesanía y las armas) y la barra de Combate no se capean. La granja tiene su propio techo de siempre: nivel 50.
+Cada oficio con escalera tiene TECHO, y el techo se deriva de su contenido (22/8, dirección: « capear el crecimiento hasta el nivel donde hay contenido; más adelante se libera más »). Hoy: Cultivo 16 (el brócoli, tras la escalera en dos carriles del 22/8), Minería 11 (la netherita), Ganadería 19 (el lugar 20 del establo), Cocina 10 (el Banquete del Bosque). La XP nunca deja de acumularse por debajo: cuando se agregue contenido de nivel más alto, el techo sube solo y los veteranos suben en el acto lo que ya ganaron. Los oficios sin escalera (Tala, Pesca, Artesanía y las armas) y la barra de Combate no se capean. La granja tiene su propio techo de siempre: nivel 50.
 
 La XP no mide relojes, mide PRÁCTICA. Un oficio con acciones lentas no puede pedir la misma cantidad que uno con acciones rápidas, así que cada oficio tiene su propio ritmo derivado de la duración real de su acción. La fórmula es la misma para todos:
 
@@ -349,21 +349,21 @@ Estas cifras salen del simulador (tools/simular-partida.js), no de una estimaci�
 
 | **Qué se midió**                             | **Resultado**             |
 | -------------------------------------------- | ------------------------- |
-| Tiempo hasta granja nivel 21 (8 expansiones) | 49,3 días                 |
-| Con las manos en el juego                    | 9,6 horas (0,8 %)         |
+| Tiempo hasta granja nivel 21 (8 expansiones) | 63 días                   |
+| Con las manos en el juego                    | 12,4 horas (0,8 %)        |
 | Tiempo de reloj corriendo sin el jugador     | 99,2 %                    |
 | Juego real al día                            | ≈ 12 minutos en 3 visitas |
-| Valor producido                              | 204.727                   |
-| Lo que el ancla permitía                     | 591.840                   |
-| Porcentaje del ancla cobrado                 | 34,6 %                    |
+| Valor producido                              | 248.270                   |
+| Lo que el ancla permitía                     | 764.640                   |
+| Porcentaje del ancla cobrado                 | 32,5 %                    |
 
-*Re-medido el 22/8 con las cargas de los nodos en el juego: el porcentaje cobrado del ancla se DUPLICÓ (17,6 % → 34,6 %) sin tocar un reloj — el nodo guarda lo que producía y se tiraba.*
+*Re-medido el 22/8 (cargas + escalera en dos carriles): el porcentaje cobrado del ancla casi se duplicó respecto del original (17,6 % → 32,5 %), y los 63 días a nivel 21 (antes 49) son el precio de que los nocturnos existan desde temprano: menos gestos por día, más comodidad.*
 
-La lectura correcta de ese 34,6 % no es « el juego está roto »: es que un idle avanza sin el jugador y eso es su naturaleza. El desglose, tras las cargas:
+La lectura correcta de ese 32,5 % no es « el juego está roto »: es que un idle avanza sin el jugador y eso es su naturaleza. El desglose, tras las cargas:
 
-  - Cultivos: 79 de plata/h con 11 parcelas. El ancla pedía 220.
+  - Cultivos: 65 de plata/h con 11 parcelas. El ancla pedía 220.
 
-  - Árboles y rocas: 94 de plata/h con 22 nodos (antes de las cargas eran 9). Con el tope de 4 cargas, el jugador de tres visitas cobra 12 de las 48 recolecciones diarias del árbol: el 25 % de su potencial de guardia, contra el 6 % de antes.
+  - Árboles y rocas: 100 de plata/h con 22 nodos (antes de las cargas eran 9). Con el tope de 4 cargas, el jugador de tres visitas cobra 12 de las 48 recolecciones diarias del árbol: el 25 % de su potencial de guardia, contra el 6 % de antes.
 
   - Observación para el diseñador (22/8): con las cargas, la XP de Tala se adelanta a los demás oficios (Tala 26 · Cultivo 17 · Minería 11 al llegar a granja 21), porque cada carga paga su talado. La Tala no tiene escalera que se rompa, pero si algún día la tiene, revisar su ritmo de XP.
 
