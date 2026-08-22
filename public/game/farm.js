@@ -1628,21 +1628,26 @@ class FarmScene extends Phaser.Scene {
       }
       else { this.setObjTex(o, o.baseKey, o.rw || o.w); toast("Bolsa llena — no podés picar"); log("Bolsa llena: liberá espacio para seguir picando.", "bad"); }   // vuelve entera: los golpes se perdieron
     } else if (a.kind === "mine" && o.type === "ore") {
-      /* 21/8 (cargas, forma final): la veta de PIEDRA va con las rocas — la media rota se repite
-         una vez por carga y cada repetición cobra 1 piedra + 1 pico. Las de MINERAL no acumulan:
-         su cargas es siempre 1 y caen por la rama clásica. */
+      /* 21/8 (cargas, forma final): TODAS las vetas van con la misma escalera estirada, cada una
+         a SU reloj (piedra 40 min · bronce 8 h · … · netherita 24 h). La media rota se repite una
+         vez por carga y cada repetición cobra una picada entera. La veta de bronce que venció a
+         las 3 de la mañana ya no pierde la noche: la guarda.
+         Y LA PICADA DE MINERAL RINDE od.yield (2) — la decisión del 18/8 que esta rama entregaba
+         en 1 por error: con yield 1 picar daba pérdida en los cinco tiers (el pico cuesta más de
+         lo que saca); el ancla exige (2 × precio − pico) / horas = 20. */
       o.golpes = (o.golpes || 0) + 1;
-      const cargasVeta = o.ore === "piedra" ? nodoCargas(o, CD.rock) : 1;
+      const odC = ORE_DEF[o.ore], grVeta = Math.max(1, odC.yield || 1);
+      const cargasVeta = nodoCargas(o, odC.cd);
       if (o.golpes >= 2 && cargasVeta > 1) {   // repetición de la media rota: este golpe COBRA una carga
-        if (tryAddRes(o.ore, 1)) {
-          const pk2 = equippedPick(), pd2 = PICK_DEF[pk2], od2 = ORE_DEF[o.ore];
+        if (tryAddRes(o.ore, grVeta)) {
+          const pk2 = equippedPick(), pd2 = PICK_DEF[pk2];
           G.picks.dur[pk2] = Math.max(0, (G.picks.dur[pk2] || 0) - 1);
-          addXp("mining", xpDeNodo("ore", o.ore)); statAdd("minar", o.ore, 1); nodoSumar(o);
-          const quedan = nodoGastarCarga(o, CD.rock); this.syncNodos();
+          addXp("mining", xpDeNodo("ore", o.ore)); statAdd("minar", o.ore, grVeta); nodoSumar(o);
+          const quedan = nodoGastarCarga(o, odC.cd); this.syncNodos();
           if (this.textures.exists(o.baseKey + "_half")) this.setObjTex(o, o.baseKey + "_half", o.rw || o.w);
           o.golpes = 1; o.golpesAt = nowMs(); this.barraGolpes(o);
-          this.premioFx(o.cx, o.by, resSprite(o.ore), "+1"); refreshHud();
-          log(`${od2.emoji} +1 ${od2.label} — a la veta le quedan ${quedan} carga${quedan === 1 ? "" : "s"}. Quedan ${G.picks.dur[pk2]} picos.`, "good");
+          this.premioFx(o.cx, o.by, resSprite(o.ore), "+" + grVeta); refreshHud();
+          log(`${odC.emoji} +${grVeta} ${odC.label} — a la veta le quedan ${quedan} carga${quedan === 1 ? "" : "s"}. Quedan ${G.picks.dur[pk2]} picos.`, "good");
           if (typeof tutoEvent === "function") { tutoEvent("gather"); tutoEvent("mineore"); }
           if (G.picks.dur[pk2] <= 0) { log("Usaste tu último " + pd2.label + " — crafteá más en la Herrería.", "bad"); toast("Sin picos — crafteá más"); destroyPick(pk2); }
         } else {
@@ -1659,15 +1664,15 @@ class FarmScene extends Phaser.Scene {
       }
       o.golpes = 0; o.golpesAt = 0; this.barraGolpes(o);
       const pk = equippedPick(), pd = PICK_DEF[pk], od = ORE_DEF[o.ore];
-      if (tryAddRes(o.ore, 1)) {   // la última carga (o la única, en las vetas de mineral)
+      if (tryAddRes(o.ore, grVeta)) {   // la última carga: la veta se agota y arranca su reloj
         G.picks.dur[pk] = Math.max(0, (G.picks.dur[pk] || 0) - 1);
-        addXp("mining", xpDeNodo("ore", o.ore)); statAdd("minar", o.ore, 1);   // 16/8: XP = minutos del reloj (bronce 8 h → 480 … oro 14 h → 840)
+        addXp("mining", xpDeNodo("ore", o.ore)); statAdd("minar", o.ore, grVeta);   // 16/8: XP = minutos del reloj (bronce 8 h → 480 … oro 14 h → 840)
         nodoSumar(o);
         o.cdIni = nowMs(); o.readyAt = nowMs() + nodoCd(o, o.ore, od.cd) * 1000 * cdMult();
         o.halfAt = nowMs() + (o.readyAt - nowMs()) / 2; this.syncNodos();
         if (this.textures.exists(o.baseKey + "_mined")) this.setObjTex(o, o.baseKey + "_mined", o.rw || GF.TILE); else o.sprite.setAlpha(0.4);
-        log(`${od.emoji} +1 ${od.label}. Quedan ${G.picks.dur[pk]} picos.`, "good");
-        this.premioFx(o.cx, o.by, resSprite(o.ore), "+1"); refreshHud();
+        log(`${od.emoji} +${grVeta} ${od.label}. Quedan ${G.picks.dur[pk]} picos.`, "good");
+        this.premioFx(o.cx, o.by, resSprite(o.ore), "+" + grVeta); refreshHud();
         if (typeof tutoEvent === "function") { tutoEvent("gather"); tutoEvent("mineore"); }
         if (G.picks.dur[pk] <= 0) { log("Usaste tu último " + pd.label + " — crafteá más en la Herrería.", "bad"); toast("Sin picos — crafteá más"); destroyPick(pk); }
       } else { this.setObjTex(o, o.baseKey, o.rw || o.w); toast("Bolsa llena — no podés picar"); log("Bolsa llena: liberá espacio para seguir picando.", "bad"); }

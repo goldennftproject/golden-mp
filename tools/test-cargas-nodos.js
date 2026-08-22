@@ -181,16 +181,27 @@ console.log("\nLA ROCA VA A SU RELOJ DE 40 MIN — Y CADA PIEDRA CUESTA UN PICO"
   ok("que costaron 4 picos", pk0 - G.picks.dur.wood === 4, pk0 - G.picks.dur.wood + " picos");
 }
 
-console.log("\nLA VETA DE PIEDRA VA CON LAS ROCAS; LAS DE MINERAL NO ACUMULAN");
+console.log("\nTODAS LAS VETAS ACUMULAN, CADA UNA A SU RELOJ — Y LA PICADA DE MINERAL RINDE 2");
 {
   plantar(vetaPiedra, CD.rock, 160);
   let r = vaciar(vetaPiedra, "piedra", "mine");
   ok("veta de piedra pasada 2 h 40: 4 piedras, escalera estirada", r.total === 4 && r.patron === "011101", r.patron);
   const OD = vm.runInContext("ORE_DEF", ctx);
-  plantar(vetaBronce, OD.bronce.cd, 24 * 60);
+  plantar(vetaBronce, OD.bronce.cd, 0);
   r = vaciar(vetaBronce, "bronce", "mine");
-  ok("veta de bronce pasada 24 h: ciclo clásico y a dormir (sin cargas)",
-    r.patron === "001" && !talable(vetaBronce), r.patron);
+  ok("bronce recién crecido: ciclo clásico con SU rendimiento de 2 (el ancla del 18/8)",
+    r.patron === "002" && !talable(vetaBronce), r.patron);
+  plantar(vetaBronce, OD.bronce.cd, 8 * 60);   // un reloj de 8 h extra: 2 cargas
+  r = vaciar(vetaBronce, "bronce", "mine");
+  ok("pasado UN reloj de bronce (8 h): 2 cargas → 4 bronce en 4 golpes", r.total === 4 && r.patron === "0202", r.patron);
+  plantar(vetaBronce, OD.bronce.cd, 7 * 60);
+  r = vaciar(vetaBronce, "bronce", "mine");
+  ok("pasadas 7 h (menos que SU reloj): 1 sola picada", r.patron === "002", r.patron);
+  plantar(vetaBronce, OD.bronce.cd, 5 * 24 * 60);   // 5 días: el tope corta en 4
+  const pk0 = G.picks.dur.wood;
+  r = vaciar(vetaBronce, "bronce", "mine");
+  ok("pasados 5 días: llena — 8 bronce en 6 golpes (tope 4 cargas)", r.total === 8 && r.patron === "022202", r.patron);
+  ok("que costaron 4 picos (1 por picada, no por mineral)", pk0 - G.picks.dur.wood === 4, pk0 - G.picks.dur.wood + " picos");
 }
 
 console.log("\nY LAS CARGAS SOBREVIVEN AL F5 (viven en readyAt, que ya viaja al guardado)");
