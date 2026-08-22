@@ -3462,25 +3462,15 @@ class FarmScene extends Phaser.Scene {
     const T = GF.TILE, b = ex.bloque;
     const x0 = b.c0 * T, y0 = b.r0 * T, w = (b.c1 - b.c0) * T, h = (b.r1 - b.r0) * T;
     const falta = (G.level || 1) < ex.nivel;
-    /* 20/8 (dirección) — SIN NIVEL, EL LOTE NO EXISTE.
-       "Lo de expandir a nivel tres sale antes de ser nivel tres. Que se pueda expandir se
-        demuestre cuando sea el nivel que se pueda expandir. Antes no tiene por qué mostrar eso."
-       Tiene razón y es la tercera vuelta de la misma idea: el 18/8 se quitó el lote marcado en
-       reposo (las líneas de estacas grises sobre el bosque) y quedó solo al pasar el cursor. Pero
-       al pasar el cursor seguía apareciendo un cartel gris —"Nivel 3 · terreno bloqueado"— sobre
-       un terreno que no podés tocar. Eso no informa: frustra. Enseñar una puerta cerrada cada vez
-       que rozás el bosque convierte el mapa en una lista de cosas que no podés hacer.
-       A partir de acá el bloque siguiente NO se dibuja, NO es interactivo y NO tiene cartel hasta
-       que tenés el nivel. El día que subís, la firma incluye G.level, así que se redibuja solo y
-       el lote aparece con sus estacas y su chapa dorada — que es cuando la noticia es buena.
-       Lo que se ve por adelantado sigue estando donde no molesta: la ficha del Mercado → Adornos
-       lista la expansión y su nivel, para quien quiera planificar. */
-    if (falta) return;
-    /* De acá para abajo `falta` es siempre false: el nivel ya está. Se quitan las ramas que
-       dependían de él en vez de dejarlas muertas — código que dice "si te falta nivel" en un sitio
-       al que no se llega sin nivel es exactamente lo que hace que un fallo se lea como arreglado. */
-    const puede = typeof canAfford === "function" && canAfford(ex.costo);
-    const col = puede ? 0xffd54a : 0xd8b45a;
+    /* 22/8 (dirección, revierte al 20/8): LA PRÓXIMA EXPANSIÓN SE MUESTRA SIEMPRE, tenga o no el
+       nivel — "si soy nivel 1, al pasar el cursor tiene que verse la del nivel 3, con el nivel
+       requerido y toda la información". El reposo sigue LIMPIO (nada dibujado sobre el bosque);
+       al pasar el cursor aparece el lote con su chapa completa: nivel que pide, costes con lo
+       que tenés, y el premio (árbol · roca · parcela). Sin nivel la chapa sale en PLATA y el
+       clic explica qué falta; con nivel, la dorada de siempre. Los nodos del terreno siguen
+       tapados hasta comprarla, exactamente igual. */
+    const puede = !falta && typeof canAfford === "function" && canAfford(ex.costo);
+    const col = falta ? 0xb9c4c9 : puede ? 0xffd54a : 0xd8b45a;
 
     /* 18/8 (dirección, 2ª pasada): "no quiero que haya líneas de puntos grises... lo de que se
        puede desbloquear el lugar solo debe aparecer cuando pasó el cursor encima".
@@ -3524,12 +3514,21 @@ class FarmScene extends Phaser.Scene {
         .setOrigin(0.5, 0.5).setDepth(D + 1);
       this.expFx.push(t); this.expCartel.push(t); }
     {
+      /* 22/8: sin nivel, la primera línea de la chapa es el REQUISITO — el resto de la info va igual */
+      let fila = 0;
+      if (falta) {
+        const tN = this.add.text(cx, cy - 2, "Granja nivel " + ex.nivel + " (tenés " + (G.level || 1) + ")",
+          { fontFamily: "system-ui", fontSize: "10px", fontStyle: "bold", color: "#ffcf9a" })
+          .setOrigin(0.5, 0.5).setDepth(D + 1);
+        this.expFx.push(tN); this.expCartel.push(tN);
+        fila = 1;
+      }
       const partes = Object.keys(ex.costo).map(k => {
         const tengo = Math.floor((G.res && G.res[k]) || 0);
         return { txt: (RES_LABEL[k] || k) + " " + tengo + "/" + ex.costo[k], ok: tengo >= ex.costo[k] };
       });
       partes.forEach((p, i) => {
-        const t3 = this.add.text(cx, cy - 2 + i * 12, p.txt,
+        const t3 = this.add.text(cx, cy - 2 + (fila + i) * 12, p.txt,
           { fontFamily: "system-ui", fontSize: "10px", fontStyle: "bold", color: p.ok ? "#9fe07a" : "#ff9a8a" })
           .setOrigin(0.5, 0.5).setDepth(D + 1);
         this.expFx.push(t3); this.expCartel.push(t3);
@@ -3537,12 +3536,12 @@ class FarmScene extends Phaser.Scene {
       /* 20/8 (dirección): "en la chapa donde está el costo, abajo debería decir lo que te
          desbloquea". Y segunda pasada: "la información de las celdas no es importante, pero la
          de los nodos y la parcela sí" — las celdas se ven solas al expandir; el premio es esto: */
-      const premio = this.add.text(cx, cy - 2 + partes.length * 12 + 3,
+      const premio = this.add.text(cx, cy - 2 + (fila + partes.length) * 12 + 3,
         "Trae árbol · roca · parcela",
         { fontFamily: "system-ui", fontSize: "9px", color: "#cfe0c0" })
         .setOrigin(0.5, 0.5).setDepth(D + 1);
       this.expFx.push(premio); this.expCartel.push(premio);
-      chapa.setSize(148, 34 + partes.length * 12 + 14);
+      chapa.setSize(148, 34 + (fila + partes.length) * 12 + 14);
       if (puede) {   // late suave cuando ya lo podés pagar: el cartel pide que lo toques
         this.tweens.add({ targets: chapa, scaleX: 1.04, scaleY: 1.04, duration: 700,
           yoyo: true, repeat: -1, ease: "Sine.easeInOut" });
@@ -3556,6 +3555,7 @@ class FarmScene extends Phaser.Scene {
     // la chapa el cartel se escondería justo cuando vas a tocarlo
     chapa.on("pointerover", () => { zona.emit("pointerover"); });
     chapa.on("pointerdown", () => {
+      if (falta) { toast("Necesitás granja nivel " + ex.nivel + " para esta expansión (tenés " + (G.level || 1) + ")"); return; }
       if (!canAfford(ex.costo)) {
         toast("Te falta material: " + Object.keys(ex.costo)
           .filter(k => Math.floor((G.res[k] || 0)) < ex.costo[k])

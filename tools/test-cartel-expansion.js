@@ -76,18 +76,26 @@ function pintar(nivel, recursos) {
 const ex = ctx.expansionSiguiente();
 console.log("\nLA PRIMERA EXPANSIÓN PIDE NIVEL " + ex.nivel);
 
-console.log("\nPOR DEBAJO DEL NIVEL: EL BOSQUE ESTÁ LIMPIO");
+console.log("\nPOR DEBAJO DEL NIVEL: EL LOTE SE MUESTRA IGUAL, CON SU REQUISITO EN LA CHAPA (22/8)");
 {
+  /* 22/8 (dirección, revierte al 20/8): "la próxima expansión se tiene que mostrar aunque el
+     jugador no tenga el nivel — al pasar el cursor, con el nivel requerido y toda la info". */
   for (let lv = 1; lv < ex.nivel; lv++) {
     const { reg } = pintar(lv, {});
-    ok("nivel " + lv + ": no se dibuja nada", reg.length === 0,
-      reg.length ? reg.length + " objetos (" + [...new Set(reg.map(o => o.__tipo))].join(", ") + ")" : "ni zona, ni estacas, ni cartel");
+    ok("nivel " + lv + ": el lote se dibuja (con hover)", reg.length > 0 && reg.some(o => o.handlers && o.handlers.pointerover),
+      reg.length + " objetos");
+    const textos = reg.filter(o => o.__tipo === "text").map(o => o.texto || "");
+    ok("  · la chapa dice el nivel que pide y el que tenés",
+      textos.some(t => new RegExp("Granja nivel " + ex.nivel).test(t) && new RegExp("tenés " + lv).test(t)),
+      "« " + (textos.find(t => /Granja nivel/.test(t)) || "") + " »");
+    ok("  · y conserva el costo y el premio completos",
+      textos.some(t => /Madera/.test(t)) && textos.some(t => /árbol · roca · parcela/.test(t)));
   }
-  /* Y lo que de verdad reportó dirección: que al pasar el cursor NO aparezca el cartel gris de
-     "Nivel 3 · terreno bloqueado". Sin zona interactiva no hay hover que valga. */
+  /* en reposo sigue limpio: la chapa nace oculta (solo hover) porque sin nivel nunca "se puede pagar" */
   const { reg } = pintar(1, {});
-  ok("y no queda ninguna zona que responda al cursor", !reg.some(o => o.handlers && o.handlers.pointerover),
-    "sin hover no hay cartel de puerta cerrada");
+  const chapa = reg.find(o => o.__tipo === "text" && /EXPANDIR/.test(o.texto || ""));
+  ok("en reposo el bosque sigue limpio: la chapa nace oculta y la enciende el cursor",
+    !!chapa && chapa.visible === false);
 }
 
 console.log("\nCON EL NIVEL JUSTO: EL LOTE APARECE");
@@ -156,8 +164,8 @@ console.log("\nY EL CÓDIGO NO SE QUEDÓ CON RAMAS MUERTAS");
   const vivo = cuerpo.replace(/\/\*[\s\S]*?\*\//g, "").replace(/\/\/[^\n]*/g, "");
   ok("no quedan carteles de 'terreno bloqueado'", !/terreno bloqueado/.test(vivo));
   ok("ni el aviso de 'se abre en el nivel' al hacer clic", !/se abre en el nivel/.test(vivo));
-  ok("y el corte está arriba del todo, antes de dibujar", /const falta = \(G\.level \|\| 1\) < ex\.nivel;[\s\S]{0,1800}?if \(falta\) return;/.test(cuerpo));
+  ok("y el clic sin nivel explica en vez de comprar", /if \(falta\) \{ toast\("Necesitás granja nivel/.test(cuerpo));
 }
 
-console.log("\n" + (fallos ? "  ✗ " + fallos + " fallas\n" : "  ✓ el lote no existe hasta que podés tomarlo\n"));
+console.log("\n" + (fallos ? "  ✗ " + fallos + " fallas\n" : "  ✓ la próxima expansión siempre se muestra, y la chapa dice qué le falta\n"));
 process.exit(fallos ? 1 : 0);
