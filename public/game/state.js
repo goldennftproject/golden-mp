@@ -354,12 +354,13 @@ var GOLPES_TALAR = 3, GOLPES_MINAR = 3;   // clics para tumbar un árbol o rompe
    golpe cosecha todo. El que hace guardia sigue exactamente igual (tala cada 30 min → 1 por vez);
    el de tres visitas cobra lo que el árbol le guardó. Las vetas de MINERAL quedan fuera: con
    relojes de 8-24 h, acumular 4 serían días — decisión aparte con el diseñador.
-   Y CADA CARGA ES UN TALADO ENTERO (21/8, dirección, segunda vuelta): "cortar cuatro cargas de
-   un hachazo está mal — te tiene que consumir cuatro hachas, y tiene que VERSE que das cuatro
-   hachazos". Nada cae de golpe: el nodo lleno se cosecha carga por carga — cada una con su tanda
-   de golpes, su 1 de madera, su uso de hacha y su XP —, entre carga y carga queda rasgado y
-   talable al instante, y recién al vaciarse cae al tocón y arranca su reloj. Así el hacha paga
-   1 por madera como siempre y la XP sigue midiendo gestos de verdad. */
+   Y LA ESCALERA DE SPRITES SE ESTIRA CON LAS CARGAS (21/8, dirección, forma final): "con una
+   carga, el ciclo es el que ya está; con N cargas, el primer corte se repite N veces — cada
+   repetición da su madera — y el cierre es el de siempre". O sea: entero → primer corte →
+   (repetición del primer corte × cargas extra, cobrando 1 madera + 1 hacha + su XP en cada una)
+   → corte profundo → tocón con la madera final. Árbol lleno = 6 golpes, 4 maderas, 4 hachas, en
+   una sola secuencia continua. Tiene que VERSE que das cuatro hachazos y que cada madera paga su
+   hacha — nada cae de golpe. */
 var NODO_CARGAS_MAX = 4;
 function nodoCargas(o, cdBaseSeg) {
   if (!o || !o.readyAt || nowMs() < o.readyAt) return 1;
