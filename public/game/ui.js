@@ -2028,8 +2028,47 @@ function refreshBarn() {
 
 /* ---- configuración ---- */
 function refreshConfig() {
-  const st = $("cfg-auth-status"); if (st) st.textContent = "Jugando como: " + (window.NICK || "Granjero") + ". (Cuenta/login llega en otra fase.)";
-  const l = $("cfg-login"); if (l) l.style.display = "none"; const o = $("cfg-logout"); if (o) o.style.display = "none";
+  /* 22/8 — LA CUENTA: estado real (anónima / vinculada) y los dos gestos: guardar la granja
+     de este navegador atándola a un email, o entrar con un email ya vinculado. Enlace mágico,
+     sin contraseñas. La estructura del bloque no cambia con el estado (regla de UI). */
+  const st = $("cfg-auth-status"), nota = $("cfg-auth-nota");
+  const inp = $("cfg-email"), bV = $("cfg-vincular"), bE = $("cfg-entrar");
+  if (st) st.textContent = "Jugando como: " + (window.NICK || "Granjero") + " · consultando cuenta…";
+  if (typeof cuentaEstado === "function") cuentaEstado().then(c => {
+    if (!st) return;
+    if (c.modo === "email") {
+      st.textContent = "Jugando como: " + (window.NICK || "Granjero") + " · cuenta guardada en " + c.email;
+      if (nota) nota.textContent = "Tu granja te sigue a cualquier dispositivo: entrá con ese email.";
+      if (bV) bV.disabled = true;
+    } else if (c.modo === "anonima") {
+      st.textContent = "Jugando como: " + (window.NICK || "Granjero") + " · cuenta anónima (vive solo en este navegador)";
+      if (nota) nota.textContent = "Guardá tu email y tu granja te sigue a cualquier dispositivo.";
+      if (bV) bV.disabled = false;
+    } else {
+      st.textContent = "Sin conexión con la nube.";
+      if (bV) bV.disabled = true; if (bE) bE.disabled = true;
+    }
+  });
+  const emailOk = (v) => /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(String(v || "").trim());
+  if (bV) bV.onclick = async () => {
+    const v = inp && inp.value;
+    if (!emailOk(v)) { toast("Escribí un email válido"); return; }
+    bV.disabled = true;
+    const r = await (typeof vincularEmail === "function" ? vincularEmail(v) : { error: "no disponible" });
+    bV.disabled = false;
+    if (r && r.ok) { toast("📬 Revisá " + v + " y tocá el enlace para confirmar"); log("Te mandamos un correo a " + v + ": tocá el enlace y tu granja queda guardada en esa cuenta.", "gold"); }
+    else toast("No se pudo: " + ((r && r.error) || "error"));
+  };
+  if (bE) bE.onclick = () => {
+    const v = inp && inp.value;
+    if (!emailOk(v)) { toast("Escribí un email válido"); return; }
+    askConfirm("Te mandamos un enlace a " + v + " para entrar con esa cuenta. La granja anónima de este navegador quedará aparte (no se borra). ¿Seguir?",
+      async () => {
+        const r = await (typeof entrarConEmail === "function" ? entrarConEmail(v) : { error: "no disponible" });
+        if (r && r.ok) { toast("📬 Enlace enviado a " + v + " — tocalo y entrás con tu granja"); }
+        else toast("No se pudo: " + ((r && r.error) || "¿ese email tiene cuenta vinculada?"));
+      }, { title: "Entrar con email", yes: "Mandar enlace", yesClass: "green", no: "Cancelar", noClass: "red" });
+  };
 }
 
 /* ---- leaderboard (datos reales desde Supabase) ---- */

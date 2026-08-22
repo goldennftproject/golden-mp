@@ -395,6 +395,10 @@ Este es el riesgo estructural serio y hay que mirarlo antes del token, no despu�
 
 El 21/8 se construyó el primer escalón: EL PORTERO DEL GUARDADO. Una Edge Function de Supabase (supabase/functions/guardar/) pasa a ser la única puerta de escritura a la granja: compara cada guardado con el anterior, anota el delta y las sospechas en una bitácora (farm_saves_log) usando los techos del ancla, y escribe con la fecha del servidor. Arranca en MODO SOMBRA — anota, nunca rechaza — hasta calibrar con jugadores reales. El 22/8 quedó EN PRODUCCIÓN: función deployada, bitácora anotando (vista `bitacora`, con nicks) y la puerta vieja sellada — en `farms` quedó una sola policy (leer lo propio); escribir, únicamente a través del portero, verificado contra pg_policies y con partidas reales guardando. Quedan los dos escalones siguientes: activar el rechazo tras calibrar la bitácora (ese día muere el botón 🧪 y se suma la limpieza de la bitácora a 30 días), y que todo lo que toque valor real se calcule solo en el servidor.
 
+**13.6 La cuenta vive en el navegador**
+
+RESUELTO el 22/8 (a falta de activar el proveedor en Supabase — docs/CUENTA-EMAIL.md): el login anónimo muere con el navegador, y la tabla de granjas juntó más de cien « Granjero » huérfanos solo en el testeo. Ahora Configuración → Cuenta permite GUARDAR la granja atándola a un email (enlace mágico, sin contraseñas) y entrar con ese email desde cualquier dispositivo. El que no vincula sigue anónimo, como siempre. Entrar con un email sin cuenta no fabrica granjas nuevas.
+
 **14. Reglas de la casa**
 
 Normas de diseño que vienen de decisiones de dirección y que conviene no reabrir sin motivo.
@@ -417,7 +421,7 @@ Normas de diseño que vienen de decisiones de dirección y que conviene no reabr
 
 **15. Cómo verificar lo que dice este documento**
 
-El proyecto tiene 60 pruebas automáticas y 16 auditores (100 herramientas en total). No comprueban que el código compile: comprueban que el JUEGO cumpla las reglas de arriba. Los más útiles para el diseñador:
+El proyecto tiene 61 pruebas automáticas y 16 auditores (101 herramientas en total). No comprueban que el código compile: comprueban que el JUEGO cumpla las reglas de arriba. Los más útiles para el diseñador:
 
 | **Herramienta**                 | **Qué contesta**                                            |
 | ------------------------------- | ----------------------------------------------------------- |

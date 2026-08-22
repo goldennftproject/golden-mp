@@ -895,8 +895,15 @@
     <h3>Configuración</h3>
     <div class="cfgsec">
       <h4>Cuenta</h4>
-      <p id="cfg-auth-status">—</p>
-      <div class="row"><button class="green" id="cfg-login" style="display:none">Conectar</button><button class="ghost sm" id="cfg-logout" style="display:none">Cerrar sesión</button></div>
+      <!-- 22/8: la granja sobrevive al navegador — email con enlace mágico, sin contraseñas.
+           El bloque tiene SIEMPRE la misma estructura (regla de UI: nada cambia de tamaño). -->
+      <p id="cfg-auth-status" style="min-height:30px">—</p>
+      <div class="row"><input id="cfg-email" type="email" placeholder="tu@correo.com" style="flex:1;min-width:0;padding:6px 8px;border-radius:8px;border:1px solid #caa96a;background:#fdf6e3;font:inherit"></div>
+      <div class="row">
+        <button class="green sm" id="cfg-vincular">Guardar mi cuenta</button>
+        <button class="ghost sm" id="cfg-entrar">Entrar con mi email</button>
+      </div>
+      <p id="cfg-auth-nota" style="min-height:26px;font-size:11px;opacity:.8">Guardá tu email y tu granja te sigue a cualquier dispositivo.</p>
     </div>
     <div class="cfgsec">
       <h4>Sonido</h4>

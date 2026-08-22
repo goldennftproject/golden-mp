@@ -500,6 +500,50 @@ async function saveFarm(force) {
   }
 }
 
+/* ============ LA CUENTA SOBREVIVE AL NAVEGADOR (22/8, dirección) ==========================
+   El login es anónimo por navegador: borrar datos, cambiar de máquina o abrir incógnito crea
+   una granja nueva de la nada — la tabla farms acumuló 100+ "Granjero" solo en el testeo.
+   La cura, con lo que ya hay: VINCULAR UN EMAIL a la cuenta anónima (enlace mágico, sin
+   contraseñas). La granja queda atada al correo para siempre; en cualquier otro dispositivo
+   se entra con el mismo email y aparece. El que no vincula sigue anónimo, como hoy.
+   Requiere el proveedor Email activado en Supabase (docs/CUENTA-EMAIL.md, dos clics).       */
+
+// ¿cómo está la cuenta de este navegador? → { modo: "sin-nube" | "anonima" | "email", email }
+async function cuentaEstado() {
+  if (!sb || !UID) return { modo: "sin-nube", email: "" };
+  try {
+    const { data: { user } } = await sb.auth.getUser();
+    if (user && user.email) return { modo: "email", email: user.email };
+  } catch (e) {}
+  return { modo: "anonima", email: "" };
+}
+
+// ata el email a LA CUENTA ANÓNIMA ACTUAL (la granja de este navegador pasa a ser tuya para
+// siempre). Supabase manda un correo de confirmación; al tocarlo, el vínculo queda hecho.
+async function vincularEmail(email) {
+  if (!sb) return { error: "sin conexión con la nube" };
+  try {
+    const { error } = await sb.auth.updateUser({ email: String(email || "").trim() });
+    if (error) return { error: error.message };
+    return { ok: true };
+  } catch (e) { return { error: String(e && e.message || e) }; }
+}
+
+// entra con un email YA vinculado (desde cualquier dispositivo): manda el enlace mágico.
+// OJO: al entrar, la granja anónima de este navegador queda aparte (no se pierde: queda
+// atada a su cuenta anónima, pero deja de ser la que se ve). La UI lo avisa antes.
+async function entrarConEmail(email) {
+  if (!sb) return { error: "sin conexión con la nube" };
+  try {
+    const { error } = await sb.auth.signInWithOtp({
+      email: String(email || "").trim(),
+      options: { emailRedirectTo: (typeof location !== "undefined" ? location.origin + location.pathname : undefined), shouldCreateUser: false },
+    });
+    if (error) return { error: error.message };
+    return { ok: true };
+  } catch (e) { return { error: String(e && e.message || e) }; }
+}
+
 // ---- ranking real (lee la vista pública "leaderboard") ----
 async function fetchLeaderboard() {
   if (!sb) return null;
