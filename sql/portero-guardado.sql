@@ -77,3 +77,17 @@ alter table public.farms enable row level security;
 --   for insert with check (auth.uid() = user_id);
 -- create policy farms_actualizar_propia on public.farms
 --   for update using (auth.uid() = user_id) with check (auth.uid() = user_id);
+
+-- ============================================================
+-- PARTE 1b · LA BITÁCORA CON NOMBRES (correr cuando quieras)
+-- Una vista que cruza la bitácora con el nick de cada granja:
+-- en Table Editor aparece como `bitacora` y se lee con nombres.
+-- security_invoker: los jugadores no pueden leerla por la API
+-- (la bitácora sigue sin policies); vos en el dashboard sí.
+-- ============================================================
+create or replace view public.bitacora
+  with (security_invoker = on) as
+select l.id, f.name as nick, l.user_id, l.elapsed_s, l.sospechas, l.delta, l.created_at
+from public.farm_saves_log l
+left join public.farms f on f.user_id = l.user_id
+order by l.created_at desc;
