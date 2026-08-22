@@ -1,9 +1,13 @@
-/* EL BOTÓN DE PRUEBAS: REGALA MATERIAL AL EQUIPO, INVISIBLE PARA EL JUGADOR (21/8, dirección)
-   "Necesitamos probar los demás sistemas — un botón cerca del contador de gente en línea que
-    al presionarlo te regale 1k de piedra y 1k de madera."
-   Reglas: SOLO aparece si la URL lleva ?test (el jugador normal jamás lo ve); regala 1000 madera
-   + 1000 piedra al clic, guarda, y avisa si la bolsa queda desbordada. Cuando llegue el
-   servidor-autoridad, este botón muere o se protege por cuenta — está anotado en el código.
+/* EL BOTÓN DE PRUEBAS: KIT COMPLETO PARA EL EQUIPO, INVISIBLE PARA EL JUGADOR (21-22/8)
+   Primera vuelta: "un botón que regale 1k de piedra y 1k de madera". Segunda vuelta de
+   dirección: "solo recursos no alcanza — para probar expansiones hace falta NIVEL; y 1000 de
+   cada llenaba la bolsa". El contrato de hoy:
+     · SOLO aparece si la URL lleva ?test (el jugador normal jamás lo ve);
+     · cada clic da recursos CON MEDIDA (200 madera · 150 piedra · 20 de cada mineral · 5000
+       plata) y +5 NIVELES DE GRANJA por el camino real (XP acreditada + tareas cumplidas +
+       recalcFarmLevel): los regalos y planos de cada nivel llegan solos;
+     · clic tras clic escala hasta el techo de granja (50) y ahí lo dice sin subir más.
+   Cuando llegue el servidor-autoridad, este botón muere o se protege — anotado en el código.
      node tools/test-boton-pruebas.js                                                             */
 const fs = require("fs"), vm = require("vm");
 const { JSDOM } = require("jsdom");
@@ -39,7 +43,7 @@ console.log("\nSIN ?test EN LA URL: EL JUGADOR NO VE NADA");
   ok("y no tiene clic enganchado", !boton.onclick);
 }
 
-console.log("\nCON ?test: APARECE JUNTO AL CONTADOR Y REGALA DE VERDAD");
+console.log("\nCON ?test: APARECE JUNTO AL CONTADOR Y DA EL KIT COMPLETO");
 {
   const { ctx, dom, boton, guardadas } = armar("?test");
   ok("el botón se destapa", boton.style.display !== "none");
@@ -47,16 +51,23 @@ console.log("\nCON ?test: APARECE JUNTO AL CONTADOR Y REGALA DE VERDAD");
     !!boton.closest && !!dom.window.document.getElementById("s-online") &&
     boton.parentElement === dom.window.document.getElementById("s-online").closest(".brand"));
   const G = ctx.G;
-  const m0 = G.res.madera || 0, p0 = G.res.piedra || 0;
+  const m0 = G.res.madera || 0, p0 = G.res.piedra || 0, $0 = G.plata || 0, nv0 = G.level;
   boton.onclick();
-  ok("+1000 madera", G.res.madera === m0 + 1000, m0 + " → " + G.res.madera);
-  ok("+1000 piedra", G.res.piedra === p0 + 1000, p0 + " → " + G.res.piedra);
-  ok("lo cuenta al equipo", ctx.avisos.some(a => /PRUEBAS/.test(a)) && ctx.avisos.some(a => /\+1000 madera/.test(a)));
-  ok("y avisa que la bolsa queda desbordada", ctx.avisos.some(a => /desbordada/.test(a)),
-    "1000+1000 son " + Math.ceil(2000 / 99) + " pilas contra " + ctx.invSlots() + " casillas");
+  ok("+200 madera y +150 piedra (con medida, no desborda de entrada)",
+    G.res.madera === m0 + 200 && G.res.piedra === p0 + 150, m0 + "→" + G.res.madera + " · " + p0 + "→" + G.res.piedra);
+  ok("+20 de cada mineral", ["bronce", "hierro", "oro", "diamante", "netherita"].every(k => (G.res[k] || 0) >= 20));
+  ok("+5000 de plata", G.plata === $0 + 5000, G.plata + "");
+  ok("+5 niveles de granja POR EL CAMINO REAL", G.level === nv0 + 5, "granja " + nv0 + " → " + G.level);
+  ok("con la XP acreditada de verdad (no un número pintado)",
+    (G.skills.farming || 0) >= vm.runInContext("FARM_XP_LVLS[" + G.level + "]", ctx));
+  ok("lo cuenta al equipo", ctx.avisos.some(a => /PRUEBAS/.test(a)) && ctx.avisos.some(a => /nivel/.test(a)));
   ok("guarda la partida tras el regalo", guardadas() >= 1);
   boton.onclick();
-  ok("cada clic vuelve a regalar (es una herramienta de equipo, sin tope)", G.res.madera === m0 + 2000);
+  ok("cada clic escala 5 niveles más", G.level === nv0 + 10, "granja " + G.level);
+  for (let i = 0; i < 12; i++) boton.onclick();
+  const MAX = vm.runInContext("FARM_NIVEL_MAX", ctx);
+  ok("y se planta en el techo de granja (" + MAX + ") sin romperse", G.level === MAX, "granja " + G.level);
+  ok("al techo lo dice, sin prometer más niveles", ctx.avisos.some(a => /techo/.test(a)));
 }
 
 console.log(fallos ? "\n" + fallos + " fallo(s)\n" : "\nTodo en orden: el equipo prueba, el jugador ni se entera.\n");

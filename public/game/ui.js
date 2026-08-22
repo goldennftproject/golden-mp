@@ -2359,20 +2359,36 @@ function ponerAdornoElegido() {
   const er = $("edit-reset"); if (er) er.onclick = doFarmReset;
   const dc = $("dy-claim"); if (dc) dc.onclick = () => claimDaily();
   const sw = $("seedwheel"); if (sw) sw.onclick = hideSeedWheel;
-  /* 21/8 (dirección): botón de PRUEBAS junto al contador de jugadores — regala 1000 madera y
-     1000 piedra para testear obras, expansiones y crafteo sin farmear. Solo se DESTAPA si la URL
-     lleva ?test: el jugador normal no lo ve. (El juego hoy es cliente-autoridad, así que esto no
-     abre ninguna puerta que la consola no abriera ya; cuando llegue el servidor-autoridad, este
-     botón se elimina o se protege por cuenta.) */
+  /* 21/8 (dirección): botón de PRUEBAS junto al contador de jugadores. Solo se DESTAPA si la
+     URL lleva ?test: el jugador normal no lo ve.
+     22/8 (dirección, segunda vuelta): "solo recursos no alcanza — para probar expansiones hace
+     falta NIVEL; y 1000 de cada llenaba la bolsa". Ahora cada clic da un ESCALÓN DE TESTEO:
+       · recursos con medida (200 madera · 150 piedra · 20 de cada mineral · 5000 de plata);
+       · +5 niveles de granja POR EL CAMINO REAL — se acredita la XP del nivel, se cumplen sus
+         tareas y sube por recalcFarmLevel(): los regalos, planos y cofres de cada nivel llegan
+         solos y la partida de prueba no queda rota ni le falta nada.
+     (El juego hoy es cliente-autoridad, así que esto no abre ninguna puerta que la consola no
+     abriera ya; cuando llegue el servidor-autoridad, este botón se elimina o se protege.) */
   {
     const bt = $("btn-test-kit");
     if (bt && typeof location !== "undefined" && /[?&#]test\b/.test(location.search + location.hash)) {
       bt.style.display = "";
       bt.onclick = () => {
-        G.res.madera = (G.res.madera || 0) + 1000;
-        G.res.piedra = (G.res.piedra || 0) + 1000;
-        log("🧪 Kit de PRUEBAS: +1000 madera y +1000 piedra.", "gold");
-        toast("🧪 +1000 madera · +1000 piedra");
+        const KIT = { madera: 200, piedra: 150, bronce: 20, hierro: 20, oro: 20, diamante: 20, netherita: 20 };
+        for (const k in KIT) G.res[k] = (G.res[k] || 0) + KIT[k];
+        G.plata = (G.plata || 0) + 5000;
+        let subidos = 0;
+        for (let i = 0; i < 5; i++) {
+          const nv = G.level + 1;
+          if (nv > FARM_NIVEL_MAX) break;
+          if ((G.skills.farming || 0) < (FARM_XP_LVLS[nv] || 0)) G.skills.farming = FARM_XP_LVLS[nv];
+          tareasDelNivel(nv).forEach(t => statAdd(t[0], t[1], t[2]));   // las tareas del nivel, cumplidas
+          if (typeof recalcFarmLevel === "function") recalcFarmLevel();
+          if (G.level >= nv) subidos++; else break;
+        }
+        log("🧪 Kit de PRUEBAS: +200 madera · +150 piedra · +20 de cada mineral · +5000 plata" +
+          (subidos ? " · +" + subidos + " nivel" + (subidos > 1 ? "es" : "") + " de granja (ahora " + G.level + ")" : " · granja ya al techo (" + G.level + ")"), "gold");
+        toast("🧪 Kit de pruebas" + (subidos ? " · granja " + G.level : " · granja al techo"));
         if (canonicalStacks().length > invSlots()) toast("La bolsa queda desbordada hasta que gastes el material");
         refreshHud(); if (typeof syncSlots === "function") syncSlots(); if (isOpen("ov-inv")) refreshInv();
         if (typeof saveFarm === "function") saveFarm(true);
