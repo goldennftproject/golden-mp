@@ -1542,7 +1542,7 @@ class FarmScene extends Phaser.Scene {
       }
       o.golpesAt = 0;
       o.golpes = 0; this.barraGolpes(o);
-      const gr = 1;   // viernes (2): todos los recursos dan 1
+      const gr = nodoCargas(o, CD.tree);   // 21/8: el árbol pasado acumula (1 carga por reloj extra, tope 4)
       if (tryAddRes("madera", gr)) {
         useTool("axe"); addXp("tala", xpDeNodo("tree"));   /* 18/8: por acción, no por reloj */   /* 18/8: talar es TALA, no Artesanía */ /* 16/8: XP = minutos del reloj (1 h 30 → 90) */ nodoSumar(o); o.cdIni = nowMs(); o.readyAt = nowMs() + nodoCd(o, "tree", CD.tree) * 1000 * cdMult() * (typeof tutoBoost === "function" ? tutoBoost("tree") : 1);
         o.halfAt = nowMs() + (o.readyAt - nowMs()) / 2; this.syncNodos();   // a mitad del enfriamiento asoma el árbol a medio crecer (doc 4/8)
@@ -1570,7 +1570,7 @@ class FarmScene extends Phaser.Scene {
         this.action = null; return;
       }
       o.golpes = 0; o.golpesAt = 0; this.barraGolpes(o);
-      const gr = 1;   // viernes (2): todos los recursos dan 1
+      const gr = nodoCargas(o, CD.rock);   // 21/8: la roca pasada acumula (1 carga por reloj extra, tope 4)
       if (tryAddRes("piedra", gr)) {
         const pk = equippedPick();   // picar piedra también gasta el pico (bug reportado)
         if (pk) { G.picks.dur[pk] = Math.max(0, (G.picks.dur[pk] || 0) - 1); if (G.picks.dur[pk] <= 0) { log("Usaste tu último " + PICK_DEF[pk].label + " — crafteá más en la Herrería.", "bad"); toast("Sin picos — crafteá más"); destroyPick(pk); } }
@@ -1588,7 +1588,8 @@ class FarmScene extends Phaser.Scene {
       }
       o.golpes = 0; o.golpesAt = 0; this.barraGolpes(o);
       const pk = equippedPick(), pd = PICK_DEF[pk], od = ORE_DEF[o.ore];
-      const gr = 1;   // viernes (2): todos los recursos dan 1
+      /* 21/8: la veta de PIEDRA va con las rocas (mismo reloj, mismas cargas); las de mineral no acumulan */
+      const gr = o.ore === "piedra" ? nodoCargas(o, CD.rock) : 1;
       if (tryAddRes(o.ore, gr)) {
         G.picks.dur[pk] = Math.max(0, (G.picks.dur[pk] || 0) - 1);
         addXp("mining", xpDeNodo("ore", o.ore)); statAdd("minar", o.ore, gr);   // 16/8: XP = minutos del reloj (bronce 8 h → 480 … oro 14 h → 840)

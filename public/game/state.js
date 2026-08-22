@@ -347,6 +347,24 @@ function seedDailyMax() {
 // Doc "Enfriamiento de Árboles y Minerales" (4/8): farmeo chill. Las primeras recolecciones de cada
 // nodo salen en minutos (enganche) y después el nodo pasa a su enfriamiento largo real.
 var GOLPES_TALAR = 3, GOLPES_MINAR = 3;   // clics para tumbar un árbol o romper una roca (lo usa también el panel de balanceo)
+/* CARGAS DE LOS NODOS (21/8, dirección): "para los que no pueden hacer guardia: si el árbol se
+   pasa crecido 30 minutos más, da 2 maderas; si se pasa 2 horas, da 4".
+   El nodo crecido no se desperdicia: acumula 1 carga por cada reloj PROPIO extra que pase, hasta
+   llenarse con 4 (árbol: lleno a las 2 h de pasado; roca y veta de piedra: a las 2 h 40). Un solo
+   golpe cosecha todo. El que hace guardia sigue exactamente igual (tala cada 30 min → 1 por vez);
+   el de tres visitas cobra lo que el árbol le guardó. Las vetas de MINERAL quedan fuera: con
+   relojes de 8-24 h, acumular 4 serían días — decisión aparte con el diseñador.
+   La XP y el desgaste de herramienta van POR ACCIÓN (18/8), no por carga: talar es un gesto,
+   des lo que dé — si pagaran por carga, dormir daría XP y el hacha se gastaría sola. */
+var NODO_CARGAS_MAX = 4;
+function nodoCargas(o, cdBaseSeg) {
+  if (!o || !o.readyAt || nowMs() < o.readyAt) return 1;
+  /* el reloj del nodo es EL SUYO: el último ciclo que corrió (readyAt - cdIni trae los buffs de
+     enfriamiento con los que se cortó); si no hay historia, el reloj base de su especie */
+  const cdMs = (o.cdIni && o.readyAt > o.cdIni) ? (o.readyAt - o.cdIni) : cdBaseSeg * 1000;
+  const extra = Math.floor((nowMs() - o.readyAt) / Math.max(1000, cdMs));
+  return Math.min(NODO_CARGAS_MAX, 1 + Math.max(0, extra));
+}
 // si dejás un árbol o una piedra a medio golpear y no volvés en este tiempo, se recupera sola
 // y NO se gasta la herramienta: la herramienta solo se descuenta cuando el nodo cae del todo.
 var GOLPES_RESET_MS = 5000;

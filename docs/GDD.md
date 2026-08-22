@@ -130,6 +130,10 @@ La XP sí crece con el escalón (de 10 a 130 por cosecha), y ahí está el incen
 
   - Montículos de tierra: 3 por día, sin herramienta y sin enfriamiento. Dan lombriz, que es la carnada de la pesca.
 
+**Cargas: el nodo pasado no se desperdicia (21/8)**
+
+Un árbol o roca ya crecido acumula 1 carga por cada reloj propio extra que pase sin cosecharse, hasta llenarse con 4. El árbol se llena a las 2 horas de pasado; la roca y la veta de piedra, a las 2 h 40. Un solo golpe (los 3 clics de siempre) cosecha todo lo acumulado. El que tala cada 30 minutos sigue cobrando 1 por vez, exactamente como antes; el que entra tres veces al día cobra lo que el nodo le guardó. Las vetas de mineral (bronce en adelante) no acumulan: con relojes de 8-24 horas es una decisión aparte. La XP y el desgaste de herramienta van por acción, no por carga.
+
 **La escalera de minerales**
 
 Cada mineral necesita DOS llaves a la vez: un pico de su categoría (que se compra y se gasta) y un nivel de Minería (que se gana practicando). Las dos, y cada una dice lo suyo cuando falta.
@@ -357,7 +361,7 @@ La lectura correcta de ese 17,6 % no es « el juego está roto »: es que un idl
 
   - Árboles y rocas: 9 de plata/h con 22 nodos. El ancla pedía 440. Un árbol de 30 minutos admite 48 recolecciones al día si estás encima y solo 3 si entrás tres veces: cobra el 6 % de su potencial.
 
-*El cultivo NO tiene ese problema, y ahí está la asimetría de diseño que hay que resolver: el jugador elige el cultivo que dura lo que dura su ausencia, pero no puede elegir la duración de un árbol.*
+*El cultivo NO tenía ese problema, y esa era la asimetría: el jugador elige el cultivo que dura lo que dura su ausencia, pero no podía elegir la duración de un árbol. Las cargas del capítulo 4 son la respuesta (21/8): el árbol guarda hasta 4 relojes de producción, así que una ausencia de hasta 2 horas ya no pierde nada.*
 
 **13. Lo que está abierto**
 
@@ -365,7 +369,7 @@ Capítulo honesto. Todo lo que sigue está medido o decidido, pero no implementa
 
 **13.1 La doma, para el tiempo offline**
 
-El problema medido es el del capítulo anterior: los nodos cobran una fracción de su ancla porque nadie está para recogerlos. La solución descartada fue acumular cargas en los nodos (« eso de las cargas es horrible » — dirección). La solución aprobada es DOMAR MONSTRUOS que atiendan la granja mientras el jugador está desconectado. No debe estar disponible al principio: tener algo así en el arranque rompe la curva.
+El problema medido es el del capítulo anterior: los nodos cobran una fracción de su ancla porque nadie está para recogerlos. Las CARGAS (capítulo 4) ya cubren el primer tramo: el nodo guarda hasta 4 relojes (2 h el árbol, 2 h 40 la roca). Lo que sigue abierto es el tramo largo — la noche, el fin de semana — y para eso la solución aprobada es DOMAR MONSTRUOS que atiendan la granja mientras el jugador está desconectado. No debe estar disponible al principio: tener algo así en el arranque rompe la curva.
 
 **13.2 El hueco de Ganadería entre los niveles 4 y 8**
 
@@ -405,7 +409,7 @@ Normas de diseño que vienen de decisiones de dirección y que conviene no reabr
 
 **15. Cómo verificar lo que dice este documento**
 
-El proyecto tiene 54 pruebas automáticas y 16 auditores (94 herramientas en total). No comprueban que el código compile: comprueban que el JUEGO cumpla las reglas de arriba. Los más útiles para el diseñador:
+El proyecto tiene 55 pruebas automáticas y 16 auditores (95 herramientas en total). No comprueban que el código compile: comprueban que el JUEGO cumpla las reglas de arriba. Los más útiles para el diseñador:
 
 | **Herramienta**                 | **Qué contesta**                                            |
 | ------------------------------- | ----------------------------------------------------------- |

@@ -34,10 +34,14 @@ const NIV = vm.runInContext("FARM_EXPANSION", ctx);
 const costos = ctx.expansionCostos();
 const VISITAS = 3;
 
-/* producción diaria de cada material CRUDO, con `exp` expansiones hechas */
+/* producción diaria de cada material CRUDO, con `exp` expansiones hechas.
+   21/8 — CARGAS: el nodo pasado acumula hasta 4 relojes (NODO_CARGAS_MAX). Con 3 visitas al día
+   los huecos son de ~8 h, mucho más que las 2 h / 2 h 40 que tarda en llenarse: cada visita
+   cosecha el nodo LLENO. Producción por visita = el tope de cargas. */
+const CARGAS = vm.runInContext("NODO_CARGAS_MAX", ctx);
 function porDia(exp) {
   const arboles = 3 + exp, rocas = 3 + exp;
-  const p = { madera: arboles * VISITAS, piedra: rocas * VISITAS + 1 * VISITAS /* veta de piedra */ };
+  const p = { madera: arboles * VISITAS * CARGAS, piedra: (rocas + 1 /* veta de piedra */) * VISITAS * CARGAS };
   for (const k of ["bronce", "hierro", "oro", "diamante", "netherita"]) {
     const picadas = Math.min(VISITAS, Math.floor(24 / (OD[k].cd / 3600)));
     p[k] = 1 * Math.max(1, picadas) * (OD[k].yield || 1);   // una única veta de cada mineral
