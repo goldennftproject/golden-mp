@@ -4417,10 +4417,18 @@ class FarmScene extends Phaser.Scene {
          la escena, y el tick solo la refresca si cambió. Los efectos se disparan con el cambio de
          textura, no con el paso del tiempo, así que siguen viéndose una sola vez. */
       if (o.readyAt && t >= o.readyAt) {
-        o.readyAt = 0; o.halfAt = 0; this.syncNodos();
+        /* 22/8 — EL VERDADERO ÁRBOL INFINITO (cazado con el pipeline de clic completo): esta
+           línea hacía `o.readyAt = 0` al vencer el reloj — regla del 18/8, de cuando un reloj
+           vencido ya no servía para nada. Con las CARGAS, el reloj vencido en el pasado es EL
+           ALMACÉN (cuánto acumuló, cuánto se drenó): pagabas una carga, el drain dejaba readyAt
+           en el pasado, y AL FRAME SIGUIENTE este tick lo borraba a 0 — que desde hoy significa
+           VIRGEN, o sea lleno de nuevo. Resultado: corte suave y madera infinita, clic tras clic.
+           Ahora el reloj NUNCA se borra: el "terminó de crecer" (pop + textura entera) se dispara
+           igual, una sola vez, porque aplicarTexNodo devuelve true solo cuando la textura cambia. */
         if (this.aplicarTexNodo(o, t)) {
           this.popFx(o.sprite, 1);   // TERMINÓ DE CRECER: saltito con resorte + polvillo
           this.puffFx(o.cx, o.by - 3, o.type === "tree" ? 0x97c459 : 0xb4b2a9, o.type === "tree" ? 8 : 6);
+          this.syncNodos();
         }
         if (o.timer) o.timer.setVisible(false);
       } else if (o.readyAt && this.aplicarTexNodo(o, t)) {
