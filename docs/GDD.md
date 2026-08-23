@@ -4,7 +4,7 @@ Documento de Diseño de Juego
 
 *Estado real del código · 22 de agosto de 2026 · revisión 3*
 
-*Novedades de esta revisión: las CARGAS de los nodos (el árbol guarda hasta 4 talados; la partida cobra el doble del ancla), la picada de mineral a rendimiento 2, la expansión 3 sin muro y los edificios tardíos abaratados, el establo que crece un lugar por nivel de Ganadería, el techo de oficios derivado del contenido, el PORTERO del guardado en producción (bitácora + puerta vieja sellada), la cuenta por email, la ESCALERA DE CULTIVOS EN DOS CARRILES (nocturnos desde el nivel 2), el MERCADER GOBLIN (un trueque anclado por día), los LOGROS con premio (pestaña 🏆), y la MISIÓN DE EVENTO del tablón (viernes a domingo), la PESCA v2 con el sistema de Fishing Frenzy (burbujas, anzuelo y zona de captura), el DÍA que cicla a las 00:00 UTC (21:00 Argentina, estándar web3), la noche azulada, y la COCINA re-sincronizada con los dos carriles (auditoría integral del 22/8: regla « ninguna receta pide un cultivo de nivel mayor que el suyo », carta « la granja es tuya » al cerrar el tutorial, y el kit de emergencia dentro del cupo de semillas).*
+*Novedades de esta revisión: las CARGAS de los nodos (el árbol guarda hasta 4 talados; la partida cobra el doble del ancla), la picada de mineral a rendimiento 2, la expansión 3 sin muro y los edificios tardíos abaratados, el establo que crece un lugar por nivel de Ganadería, el techo de oficios derivado del contenido, el PORTERO del guardado en producción (bitácora + puerta vieja sellada), la cuenta por email, la ESCALERA DE CULTIVOS EN DOS CARRILES (nocturnos desde el nivel 2), el MERCADER GOBLIN (un trueque anclado por día), los LOGROS con premio (pestaña 🏆), y la MISIÓN DE EVENTO del tablón (viernes a domingo), la PESCA v2 con el sistema de Fishing Frenzy (burbujas, anzuelo y zona de captura), el DÍA que cicla a las 00:00 UTC (21:00 Argentina, estándar web3), la noche azulada, la COCINA re-sincronizada con los dos carriles (auditoría integral del 22/8), y LA DOMA v1 (un monstruo domado atiende los nodos en tu ausencia, granja 10, comisión 30 %).*
 
 Para el equipo de diseño
 
@@ -393,7 +393,7 @@ Capítulo honesto. Todo lo que sigue está medido o decidido, pero no implementa
 
 **13.1 La doma, para el tiempo offline**
 
-El problema medido es el del capítulo anterior: los nodos cobran una fracción de su ancla porque nadie está para recogerlos. Las CARGAS (capítulo 4) ya cubren el primer tramo: el nodo guarda hasta 4 relojes (2 h el árbol, 2 h 40 la roca). Lo que sigue abierto es el tramo largo — la noche, el fin de semana — y para eso la solución aprobada es DOMAR MONSTRUOS que atiendan la granja mientras el jugador está desconectado. No debe estar disponible al principio: tener algo así en el arranque rompe la curva.
+RESUELTO el 22/8 — la doma v1 está en el juego. Se abre en GRANJA 10 (« no debe estar disponible al principio »): al vencer un monstruo con sprite de granja (rata, larva, orco, lancero, guerrero, trol) hay un 8 % de que te siga a casa — un bicho a la vez, vive junto al establo. Come 1 CARNE por día (la carne por fin tiene gasto diario; panza de hasta 3 días) y con hambre se pone gris y no trabaja. Trabaja SOLO EN TU AUSENCIA: al cargar la partida recoge las cargas de árboles y rocas que maduraron entre tu última visita y ahora, deja siempre una carga esperándote, y SE QUEDA EL 30 % de comisión (el número del simulador: apertura en granja 10 ≈ 60 % del ancla contra el 32,5 % sin bicho). Minerales afuera, bolsa llena no pierde nada, el F5 no duplica (el turno drena el almacén de relojes igual que un talado). Queda para después: elegir a cuál domar, varios bichos, y que el arte de Suren les dé casita.
 
 **13.2 El hueco de Ganadería entre los niveles 4 y 8**
 
@@ -439,7 +439,7 @@ Normas de diseño que vienen de decisiones de dirección y que conviene no reabr
 
 **15. Cómo verificar lo que dice este documento**
 
-El proyecto tiene 69 pruebas automáticas y 16 auditores (109 herramientas en total). No comprueban que el código compile: comprueban que el JUEGO cumpla las reglas de arriba. Los más útiles para el diseñador:
+El proyecto tiene 70 pruebas automáticas y 16 auditores (110 herramientas en total). No comprueban que el código compile: comprueban que el JUEGO cumpla las reglas de arriba. Los más útiles para el diseñador:
 
 | **Herramienta**                 | **Qué contesta**                                            |
 | ------------------------------- | ----------------------------------------------------------- |

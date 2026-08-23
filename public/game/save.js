@@ -31,7 +31,7 @@ function snapshot() {
     dishes: G.dishes, cooking: G.cooking, chests: G.chests, dummyUsedAt: G.dummyUsedAt,
     armCd: G.armCd, mkPend: G.mkPend,
     layoutPlots: G.layoutPlots, layoutPond: G.layoutPond, ghInv: G.ghInv,
-    planos: G.planos, obras: G.obras, obraDep: G.obraDep, emergBuys: G.emergBuys, buzonLeidas: G.buzonLeidas, buzonArchivo: G.buzonArchivo, kitReclamado: G.kitReclamado, excav: G.excav, vales: G.vales, pedidos: G.pedidos, regalos: G.regalos, cobertizo: G.cobertizo, goblin: G.goblin, logros: G.logros };   // 22/8: logros cobrados (🏆)   // 22/8: el Mercader Goblin recuerda su trato del día   // buzón + kit + excavaciones (15/8) · tablón + vales (16/8)   // blueprints (12/8) · capítulos + emergencia (14/8)
+    planos: G.planos, obras: G.obras, obraDep: G.obraDep, emergBuys: G.emergBuys, buzonLeidas: G.buzonLeidas, buzonArchivo: G.buzonArchivo, kitReclamado: G.kitReclamado, excav: G.excav, vales: G.vales, pedidos: G.pedidos, regalos: G.regalos, cobertizo: G.cobertizo, goblin: G.goblin, logros: G.logros, doma: G.doma };   // 22/8: logros cobrados (🏆) + el bicho domado   // 22/8: el Mercader Goblin recuerda su trato del día   // buzón + kit + excavaciones (15/8) · tablón + vales (16/8)   // blueprints (12/8) · capítulos + emergencia (14/8)
 }
 // "huella" del estado guardable (incluye el apodo); si no cambia, no hay nada que guardar
 function snapKey() { return JSON.stringify({ n: (typeof nombreLucido === "function" ? nombreLucido() : (window.NICK || "Granjero")), d: snapshot() }); }
@@ -89,6 +89,7 @@ function hydrate(d) {
   if (d.seedBuys && typeof d.seedBuys === "object") G.seedBuys = { date: d.seedBuys.date || "", count: d.seedBuys.count || 0 };
   if (d.goblin && typeof d.goblin === "object") G.goblin = { date: d.goblin.date || "" };   // 22/8: Mercader Goblin
   if (d.logros && typeof d.logros === "object") G.logros = d.logros;   // 22/8: logros cobrados (🏆) — solo llaves true
+  if (d.doma && typeof d.doma === "object" && d.doma.bicho) G.doma = d.doma;   // 22/8: el bicho domado viaja entero
   if (typeof d.hpMax === "number") G.hpMax = d.hpMax;
   G.combatXp = (typeof d.combatXp === "number") ? d.combatXp : 0;
   G.stats = (d.stats && typeof d.stats === "object") ? d.stats : {};
@@ -225,6 +226,9 @@ function hydrate(d) {
   /* ---- Y las tres fases siguientes, en ORDEN Y SIN EXCEPCIONES ---- */
   migrarGuardado(d);     // arregla lo que traen las partidas viejas
   derivarEstado(d);      // calcula lo que se deduce del estado ya completo
+  /* LA DOMA (22/8): el turno del bicho corre acá, con el estado ENTERO delante (necesita
+     G.nodos, la bolsa y d.visto). Solo recoge lo madurado en tu ausencia. */
+  try { if (typeof domaTrabajar === "function" && typeof d.visto === "number") domaTrabajar(d.visto); } catch (e) {}
 }
 
 /* ============ FASE 2 · MIGRAR (20/8) ================================================

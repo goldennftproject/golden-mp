@@ -1,0 +1,112 @@
+/* LA DOMA v1 (22/8, dirección — GDD §13.1: el tiempo offline)
+   Un monstruo domado atiende los nodos mientras el jugador está desconectado. Contratos:
+     · se abre en granja 10; antes, ningún bicho te sigue (ni con suerte);
+     · un bicho a la vez, solo especies con sprite de granja, chance 8%;
+     · come 1 carne = 24 h de trabajo (panza tope 3 días); con hambre NO trabaja;
+     · SOLO recoge cargas maduradas EN TU AUSENCIA (ventana visto→ahora∩comida) — jamás
+       reemplaza al jugador presente;
+     · se queda el 30% de comisión, determinístico, y el jugador cobra primero;
+     · deja SIEMPRE una carga en el nodo (la del que vuelve) y dren a como nodoGastarCarga:
+       el reloj sigue corriendo, el F5 no duplica;
+     · minerales afuera (sin cargas, 21/8); bolsa llena = para de juntar sin perder nada;
+     · el turno corre en hydrate: cargar la partida ES volver a casa.
+     node tools/test-doma.js                                                                   */
+const fs = require("fs"), vm = require("vm");
+
+const T0 = 1755730800000; let desfase = 0;
+class FakeDate extends Date { constructor(...a) { a.length ? super(...a) : super(T0 + desfase); } static now() { return T0 + desfase; } }
+
+const ctx = { console: { log() {}, warn() {}, error() {}, info() {} }, Math, Date: FakeDate, JSON, Object, Array,
+  Number, String, Boolean, Set, Map, isNaN, isFinite, parseInt, parseFloat,
+  performance: { now: () => 0 }, setTimeout: () => 0, setInterval: () => 0, clearInterval() {} };
+ctx.window = ctx; ctx.globalThis = ctx;
+ctx.localStorage = { getItem: () => null, setItem() {}, removeItem() {} };
+ctx.document = { getElementById: () => null, addEventListener() {}, querySelectorAll: () => [], querySelector: () => null, createElement: () => ({}) };
+vm.createContext(ctx);
+["config", "nav", "state", "save"].forEach(f => vm.runInContext(fs.readFileSync("public/game/" + f + ".js", "utf8"), ctx));
+ctx.toast = () => {}; ctx.log = () => {};
+["isOpen", "refreshInv", "refreshHud", "saveFarm", "syncSlots", "refreshBarn", "recalcFarmLevel"].forEach(f => { if (!ctx[f]) ctx[f] = () => {}; });
+const G = ctx.G, H = 3600000;
+
+let fallos = 0;
+const ok = (n, c, d) => { if (!c) fallos++; console.log((c ? "  ok   " : "  FALLA") + "  " + n + (d ? "   " + d : "")); };
+
+console.log("\nLA PUERTA: GRANJA 10, UNA ESPECIE CON SPRITE, UN BICHO A LA VEZ");
+{
+  G.level = 9; G.doma = null;
+  ok("a granja 9 ni el 0,001 doma", ctx.domaIntentar("rata", () => 0.001) === false);
+  G.level = 10;
+  ok("el dragón no se doma (sin sprite de granja)", ctx.domaIntentar("dragon", () => 0.001) === false);
+  ok("con mala suerte (0,5 > 8%) tampoco", ctx.domaIntentar("rata", () => 0.5) === false);
+  ok("con suerte, la rata te sigue a casa", ctx.domaIntentar("rata", () => 0.001) === true && G.doma.bicho === "rata");
+  ok("y no hay segundo bicho", ctx.domaIntentar("troll", () => 0.001) === false);
+}
+
+console.log("\nLA PANZA: 1 CARNE = 24 H, TOPE 3 DÍAS, SIN CARNE NO HAY TRATO");
+{
+  G.res.carne = 0;
+  ok("sin carne no come", !!ctx.domaAlimentar().error);
+  G.res.carne = 5;
+  ok("come 1 carne", ctx.domaAlimentar().ok === true && Math.floor(G.res.carne) === 4);
+  ok("y trabaja 24 h", Math.abs(G.doma.comidaHasta - (FakeDate.now() + 24 * H)) < 1000);
+  ctx.domaAlimentar(); ctx.domaAlimentar();
+  ok("la panza guarda hasta 3 días", !!ctx.domaAlimentar().error, "carne restante " + G.res.carne);
+}
+
+console.log("\nEL TURNO: SOLO LO MADURADO EN TU AUSENCIA, COMISIÓN 30%, EL NODO SIGUE VIVO");
+{
+  /* un árbol con reloj de 2 h que quedó VACÍO al irte (readyAt = ahora+2h)… y te vas 10 h:
+     maduran 4 relojes (t+2,4,6,8h) pero el tope de cargas es 4 → recoge cargas-1 = 3 */
+  const ahora0 = FakeDate.now();
+  G.doma = { bicho: "rata", desde: ahora0, comidaHasta: ahora0 + 72 * H, cont: 0, ultimo: null };
+  G.nodos = { "tree:10,10": { readyAt: ahora0 + 2 * H, cdIni: ahora0, halfAt: 0 } };
+  G.res.madera = 0;
+  desfase = 10 * H;
+  const parte = ctx.domaTrabajar(ahora0);
+  ok("recogió 3 cargas del árbol (dejó 1 esperándote)", parte && (parte.madera + parte.fee) === 3,
+    JSON.stringify(parte));
+  ok("el jugador cobró primero (comisión al final del ciclo de 10)", parte.madera === 3 && parte.fee === 0);
+  const rec = G.nodos["tree:10,10"];
+  const cargasAhora = Math.min(4, 1 + Math.max(0, Math.floor((FakeDate.now() - rec.readyAt) / (rec.readyAt - rec.cdIni))));
+  ok("el nodo quedó con 1 carga y el reloj corriendo", cargasAhora === 1, cargasAhora + " cargas");
+  const otra = ctx.domaTrabajar(ahora0);
+  ok("correr el turno DOS veces no duplica (ya está drenado)", otra === null);
+}
+
+console.log("\nCON HAMBRE NO TRABAJA — Y CON VOS ADENTRO, TAMPOCO");
+{
+  const ahora0 = FakeDate.now();
+  G.doma.comidaHasta = ahora0 - 1;   // panza vacía desde antes de irte
+  G.nodos = { "tree:11,11": { readyAt: ahora0 + 2 * H, cdIni: ahora0 } };
+  desfase += 10 * H;
+  ok("hambriento: el turno no junta nada", ctx.domaTrabajar(ahora0) === null);
+  ok("y domaHambriento() lo delata para el tinte gris", ctx.domaHambriento() === true);
+  /* cargas maduradas ANTES de irte (visto DESPUÉS de la maduración): no son suyas */
+  const ahora1 = FakeDate.now();
+  G.doma.comidaHasta = ahora1 + 72 * H;
+  G.nodos = { "tree:12,12": { readyAt: ahora1 - 8 * H, cdIni: ahora1 - 10 * H } };   // 4 cargas viejas
+  ok("lo madurado con vos presente no se toca (visto = ahora)", ctx.domaTrabajar(ahora1) === null);
+}
+
+console.log("\nLOS MINERALES QUEDAN AFUERA Y EL TURNO CORRE EN HYDRATE");
+{
+  const ahora0 = FakeDate.now();
+  G.doma = { bicho: "rata", desde: ahora0, comidaHasta: ahora0 + 72 * H, cont: 0, ultimo: null };
+  G.nodos = { "ore:5,5": { readyAt: ahora0 + 2 * H, cdIni: ahora0 } };
+  desfase += 10 * H;
+  ok("una veta jamás entra al turno", ctx.domaTrabajar(ahora0) === null);
+  /* hydrate con visto viejo dispara el turno */
+  const ahora1 = FakeDate.now();
+  G.nodos = { "tree:13,13": { readyAt: ahora1 + 2 * H, cdIni: ahora1 } };
+  G.doma.comidaHasta = ahora1 + 72 * H;
+  const snap = JSON.parse(JSON.stringify(ctx.snapshot()));   // visto = ahora1
+  desfase += 10 * H;
+  const madera0 = Math.floor(G.res.madera || 0);
+  ctx.hydrate(snap);
+  ok("cargar la partida ES volver: el bicho entrega su parte", Math.floor(G.res.madera || 0) > madera0,
+    madera0 + " → " + Math.floor(G.res.madera || 0));
+  ok("y el parte queda anotado para el hover", !!(G.doma.ultimo && G.doma.ultimo.at));
+}
+
+console.log(fallos ? "\n" + fallos + " fallo(s)\n" : "\nTodo en orden: la granja ya no duerme sola.\n");
+process.exit(fallos ? 1 : 0);

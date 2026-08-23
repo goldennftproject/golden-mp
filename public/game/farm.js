@@ -1151,6 +1151,12 @@ class FarmScene extends Phaser.Scene {
       const of = (typeof goblinOfertaHoy === "function") ? goblinOfertaHoy() : null;
       return of ? ("Mercader Goblin — cambia " + of.cant + " " + (RES_LABEL[of.pide] || of.pide) + " por " + of.entrega + " " + (RES_LABEL[of.da] || of.da) + " 🤝") : "Mercader Goblin 🤝";
     }
+    if (o.type === "domabicho") {   // LA DOMA (22/8): el bicho cuenta su estado desde el hover
+      const nom = (typeof MONSTER_DEF !== "undefined" && G.doma && MONSTER_DEF[G.doma.bicho]) ? MONSTER_DEF[G.doma.bicho].label : "Bicho";
+      if (typeof domaHambriento === "function" && domaHambriento()) return nom + " domado — tiene HAMBRE: clic para darle 1 carne 🍖";
+      const u = G.doma && G.doma.ultimo;
+      return nom + " domado — atiende los nodos mientras no estás" + (u ? " (último turno: +" + u.madera + " madera, +" + u.piedra + " piedra)" : "");
+    }
     if (o.type === "cofre_diario") {
       if (!G.kitReclamado) return "¡Abrí tu kit de bienvenida!";
       return "Baúl de premios";
@@ -1271,6 +1277,13 @@ class FarmScene extends Phaser.Scene {
         (tengo < of.cant ? "  (Tenés " + tengo + " — te faltan " + (of.cant - tengo) + ".)" : ""),
         () => { if (typeof goblinAceptar === "function") goblinAceptar(); },
         { title: "Mercader Goblin 🤝", yes: "¡Trato!", yesClass: "green", no: "Hoy no", noClass: "red" });
+      return;
+    }
+    if (o.type === "domabicho") {   // LA DOMA (22/8): el clic lo alimenta (1 carne = 1 día de trabajo)
+      if (typeof domaAlimentar === "function") {
+        const r = domaAlimentar();
+        if (r && r.ok && this.premioFx) this.premioFx(o.cx, o.by - 10, resSprite("carne"), "ñam");
+      }
       return;
     }
     if (o.type === "excav") {   // EXCAVACIÓN (15/8): un clic, puff de tierra y el botín
@@ -3053,6 +3066,29 @@ class FarmScene extends Phaser.Scene {
       this.puffFx(go.cx, go.by - 10, 0x9aa06a, 8);   // se va con su puff de mercader
       if (go.sprite) go.sprite.destroy(); if (go.sombra) go.sombra.destroy();
       const ix = this.objs.indexOf(go); if (ix >= 0) this.objs.splice(ix, 1);
+    }
+
+    /* ---- EL BICHO DOMADO (22/8, la doma v1) — vive cerca del establo/granero.
+       Mismo patrón que el goblin: sprite global, sombra, y el clic lo alimenta. ---- */
+    const hayBicho = !!(G.doma && G.doma.bicho);
+    if (hayBicho && !this.domaObj && this.textures.exists(G.doma.bicho + "_idle_0")) {
+      const casa = (this.objs || []).find(x => x.type === "establo") || (this.objs || []).find(x => x.type === "barn");
+      const dx = casa ? casa.cx + 46 : 300, dy = casa ? casa.by + 6 : 220, dw = GF.TILE * 0.9;
+      const spr = this.add.sprite(dx, dy, G.doma.bicho + "_idle_0").setOrigin(0.5, 1).setDepth(dy);
+      spr.setScale(dw / spr.width);
+      try { if (this.anims.exists(G.doma.bicho + "_idle")) spr.play(G.doma.bicho + "_idle"); } catch (e) {}
+      this.tweens.add({ targets: spr, scaleY: spr.scaleY * 0.96, duration: 900, yoyo: true, repeat: -1, ease: "Sine.easeInOut" });   // respira aunque no tenga anim
+      const sombra = this.add.ellipse(dx, dy + 2, dw * 0.7, 5, 0x000000, 0.22).setDepth(dy - 1);
+      this.domaObj = { i: "domabicho", type: "domabicho", cx: dx, by: dy, w: dw, rw: dw, baseKey: G.doma.bicho + "_idle_0", sprite: spr, sombra, readyAt: 0 };
+      this.objs.push(this.domaObj);
+    } else if (!hayBicho && this.domaObj) {
+      const bo = this.domaObj; this.domaObj = null;
+      if (bo.sprite) bo.sprite.destroy(); if (bo.sombra) bo.sombra.destroy();
+      const ix2 = this.objs.indexOf(bo); if (ix2 >= 0) this.objs.splice(ix2, 1);
+    }
+    if (this.domaObj && this.domaObj.sprite) {   // con hambre se pone gris — se ve desde lejos
+      const gris = (typeof domaHambriento === "function") && domaHambriento();
+      if (gris !== this.domaObj._gris) { this.domaObj._gris = gris; gris ? this.domaObj.sprite.setTint(0x9a9a9a) : this.domaObj.sprite.clearTint(); }
     }
   }
 

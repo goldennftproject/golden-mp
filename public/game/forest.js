@@ -713,6 +713,7 @@ class ForestScene extends Phaser.Scene {
     addCombatXp(m.def.xp);                                   // barra de Combate global (doc maestro)
     if (typeof tutoEvent === "function") { tutoEvent("kill"); tutoEvent("kill5"); }
     if (typeof statAdd === "function") statAdd("matar", m.key);
+    if (typeof domaIntentar === "function") domaIntentar(m.key);   // 22/8: la doma — a veces el vencido te sigue a casa
     this.floatTxt(m, "+" + m.def.xp + " XP", "#ffd75e");     // feedback por kill hacia la barra
     const drops = [];
     // fixs.docx #8 (11/8): los mobs YA NO sueltan piezas de armadura — la armadura sale

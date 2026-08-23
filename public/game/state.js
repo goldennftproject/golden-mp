@@ -5440,6 +5440,97 @@ function goblinAceptar() {
   return { ok: true, of };
 }
 
+/* ================== LA DOMA v1 (22/8, dirección — GDD §13.1) ==================
+   El problema medido: los nodos cobran una fracción de su ancla porque nadie está para
+   recogerlos de noche. La solución aprobada: DOMAR MONSTRUOS que atiendan la granja mientras
+   el jugador está desconectado. Reglas de esta primera versión:
+     · Se abre en GRANJA 10 (dirección: « no debe estar disponible al principio »). El simulador
+       midió esa apertura en 60,5% del ancla contra el 32,5% de hoy.
+     · Al VENCER un monstruo con sprite de granja (rata, larva, orco, lancero, guerrero, troll)
+       hay un 8% de que te siga a casa. UN bicho a la vez.
+     · Come 1 CARNE por día (sumidero: la carne por fin tiene gasto diario). Sin comer, no trabaja.
+     · Trabaja SOLO EN TU AUSENCIA: al cargar la partida recoge las cargas de árboles y rocas que
+       maduraron entre tu última visita (d.visto) y ahora — nunca las que maduran con vos adentro,
+       para que el bicho no reemplace al jugador presente.
+     · SE QUEDA EL 30% como comisión (el número del simulador): 7 de cada 10 cargas van a tu
+       bolsa, 3 se las come. Determinístico por contador, sin azar que discutir.
+     · Las vetas de mineral quedan afuera (sin cargas, decisión del 21/8). El tope natural es el
+       propio reloj de cada nodo: el bicho no imprime, rescata lo que el tope de 4 descartaba.
+     · Si la bolsa se llena, deja de juntar (nada se pierde: el nodo conserva sus cargas). */
+var DOMA_NIVEL = 10, DOMA_CHANCE = 0.08, DOMA_COMISION = 0.30, DOMA_COMIDA_H = 24;
+var DOMA_ESPECIES = ["rata", "larva", "orco", "lancero", "guerrero", "troll"];   // los que tienen sprite cargado en la granja
+function domaAbre() { return (typeof farmLevel === "function" ? farmLevel() : G.level || 1) >= DOMA_NIVEL; }
+function domaIntentar(especie, rnd) {   // lo llama la Zona Negra al vencer
+  if (!domaAbre() || (G.doma && G.doma.bicho)) return false;
+  if (!DOMA_ESPECIES.includes(especie)) return false;
+  if ((rnd || Math.random)() >= DOMA_CHANCE) return false;
+  const nom = (MONSTER_DEF[especie] && MONSTER_DEF[especie].label) || especie;
+  G.doma = { bicho: especie, desde: nowMs(), comidaHasta: 0, cont: 0, ultimo: null };
+  log("🐾 ¡" + nom + " bajó las orejas y te siguió a casa! Vive en tu granja: dale 1 carne por día y atenderá los nodos mientras no estés.", "gold");
+  toast("🐾 ¡Domaste un " + nom + "!");
+  if (typeof saveFarm === "function") saveFarm(true);
+  return true;
+}
+function domaHambriento() { return !!(G.doma && G.doma.bicho) && (G.doma.comidaHasta || 0) < nowMs(); }
+function domaAlimentar() {
+  if (!G.doma || !G.doma.bicho) return { error: "sin bicho" };
+  if (Math.floor(G.res.carne || 0) < 1) { toast("Necesitás 1 carne — la Zona Negra es su despensa"); return { error: "falta carne" }; }
+  const tope = nowMs() + 3 * DOMA_COMIDA_H * 3600000;   // guarda hasta 3 días de comida en la panza
+  if ((G.doma.comidaHasta || 0) >= tope) { toast("Ya está lleno — vuelve a tener hambre en unos días"); return { error: "lleno" }; }
+  G.res.carne -= 1;
+  G.doma.comidaHasta = Math.max(nowMs(), G.doma.comidaHasta || 0) + DOMA_COMIDA_H * 3600000;
+  log("🍖 Tu bicho comió: trabaja hasta " + new Date(G.doma.comidaHasta).toLocaleString() + ".", "good");
+  toast("🍖 Ñam — a trabajar");
+  if (typeof refreshHud === "function") refreshHud();
+  if (typeof saveFarm === "function") saveFarm(true);
+  return { ok: true };
+}
+/* El turno de trabajo: corre UNA vez al cargar la partida, sobre G.nodos (el almacén puro de
+   relojes), con la ventana [visto, min(ahora, comidaHasta)]. Devuelve el parte del turno. */
+function domaTrabajar(visto, ahora) {
+  const d = G.doma; ahora = ahora || nowMs();
+  if (!d || !d.bicho || !visto || visto >= ahora) return null;
+  const hasta = Math.min(ahora, d.comidaHasta || 0);
+  if (hasta <= visto) return null;   // estuvo con hambre toda tu ausencia
+  const parte = { madera: 0, piedra: 0, fee: 0 };
+  const nodos = G.nodos || {};
+  for (const key in nodos) {
+    const rec = nodos[key];
+    const tipo = key.split(":")[0];
+    if (tipo !== "tree" && tipo !== "rock") continue;   // minerales afuera (21/8)
+    if (!rec || !rec.readyAt || !rec.cdIni) continue;
+    const cdMs = rec.readyAt - rec.cdIni; if (!(cdMs > 0)) continue;
+    // cargas de HOY y cuántos relojes maduraron dentro de la ventana atendida
+    const cargas = Math.min(NODO_CARGAS_MAX, 1 + Math.max(0, Math.floor((ahora - rec.readyAt) / cdMs)));
+    if (cargas <= 1) continue;   // una carga la deja siempre: es la del jugador que vuelve
+    let maduradas = 0;
+    for (let k = 0; k < cargas; k++) { const t = rec.readyAt + k * cdMs; if (t > visto && t <= hasta) maduradas++; }
+    let recoger = Math.min(cargas - 1, maduradas);
+    if (recoger <= 0) continue;
+    const recurso = tipo === "tree" ? "madera" : "piedra";
+    let juntadas = 0;
+    for (let k = 0; k < recoger; k++) {
+      d.cont = (d.cont || 0) + 1;
+      if ((d.cont % 10) > 10 - 1 - Math.round(DOMA_COMISION * 10)) { parte.fee++; juntadas++; continue; }   // su comisión, determinística (las 3 de cada 10 ÚLTIMAS: el jugador cobra primero)
+      if (typeof tryAddRes === "function" ? tryAddRes(recurso, 1) : (G.res[recurso] = (G.res[recurso] || 0) + 1, true)) { parte[recurso]++; juntadas++; }
+      else { break; }   // bolsa llena: se para acá y el nodo conserva el resto
+    }
+    if (juntadas > 0) {   // drenar el almacén igual que nodoGastarCarga: el reloj sigue corriendo
+      const quedan = cargas - juntadas;
+      rec.readyAt = ahora - Math.max(0, quedan - 1) * cdMs;
+      rec.cdIni = rec.readyAt - cdMs;
+    }
+  }
+  if (parte.madera || parte.piedra || parte.fee) {
+    d.ultimo = { at: ahora, madera: parte.madera, piedra: parte.piedra, fee: parte.fee };
+    const nom = (MONSTER_DEF[d.bicho] && MONSTER_DEF[d.bicho].label) || "bicho";
+    log("🐾 Tu " + nom + " trabajó mientras no estabas: +" + parte.madera + " madera, +" + parte.piedra +
+      " piedra (se quedó " + parte.fee + " de comisión).", "gold");
+    return parte;
+  }
+  return null;
+}
+
 /* ================== LOGROS (22/8, dirección) ==================
    « Los logros es una idea, exactamente. » Metas por sistema en TRES TIERS (bronce → plata → oro)
    más un puñado de únicos de las primeras horas. Viven en una pestaña 🏆 del menú (decisión de
