@@ -1854,7 +1854,7 @@ document.addEventListener("pointerdown", (e) => {
           después del primer clic fallido la nota quedaba muerta hasta redibujar el panel. Eso es
           lo que hacía que pareciera que "no responde": el temblor sale primero y el fallo no. */
     const raw = ent.getAttribute("data-pd-entregar");
-    const i = /^\d+$/.test(raw) ? +raw : raw;   // los diarios son número; el semanal "S" y el mensual "M"
+    const i = /^\d+$/.test(raw) ? +raw : raw;   // los diarios son número; el semanal "S", el mensual "M" y el evento "E"
     const nota = ent.closest(".pd-nota") || ent;
     if (nota._entregando) return; nota._entregando = true;
     nota.classList.add("shake");
@@ -1897,12 +1897,14 @@ function refreshPedidos() {
   cont.innerHTML = todos.map(({ p, i, escalon }, idx) => {
     const stock = pedidoStock(p), ok = !p.hecho && stock >= p.n;
     const grande = escalon !== "diaria";
+    // 22/8: la misión de EVENTO se ve DISTINTA (pedido de dirección) — violeta y con su cartel
+    const colEsc = escalon === "evento" ? "#b565d8" : escalon === "mensual" ? "#c9a227" : "#7fa356";
+    const titEsc = escalon === "evento" ? "🎪 MISIÓN DE EVENTO · SOLO EL FINDE" : escalon === "mensual" ? "ENCARGO DEL MES" : "ENCARGO DE LA SEMANA";
     const cls = "pd-nota" + (p.hecho ? " hecha" : ok ? " lista" : "");
     const estilo = "transform:rotate(" + rots[idx % 3] + "deg)" +
-      (grande ? ";box-shadow:0 0 0 2px " + (escalon === "mensual" ? "#c9a227" : "#7fa356") + " inset" : "");
+      (grande ? ";box-shadow:0 0 0 2px " + colEsc + " inset" : "");
     return '<div class="' + cls + '" style="' + estilo + '"' + (ok ? ' data-pd-entregar="' + i + '"' : "") + '>' +
-      (grande ? '<div class="de" style="color:' + (escalon === "mensual" ? "#c9a227" : "#7fa356") + '"><b>' +
-        (escalon === "mensual" ? "ENCARGO DEL MES" : "ENCARGO DE LA SEMANA") + '</b></div>' : "") +
+      (grande ? '<div class="de" style="color:' + colEsc + '"><b>' + titEsc + '</b></div>' : "") +
       (!p.hecho && !grande ? '<span class="pd-x" data-pd-desc="' + i + '" title="Descartar">✕</span>' : "") +
       '<div class="de">' + p.de + ' <i>— ' + p.nota + '</i></div>' +
       '<div class="pide">' + pdIcono(p) + '<b>× ' + p.n + '</b>' + (!p.hecho && !ok ? '<span class="falta">(tenés ' + stock + ')</span>' : "") + '</div>' +

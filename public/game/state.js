@@ -5058,6 +5058,46 @@ function pedidoGrande(seed, veces, etiqueta) {
   p.nota = etiqueta === "semanal" ? "el encargo de la semana" : "el gran encargo del mes";
   return p;
 }
+/* ============ LA MISIÓN DE EVENTO (22/8, dirección) ================================
+   « Están las misiones diarias, semanales, mensuales y las de EVENTO. Las de evento también
+   saldrían en el tablón y se verían diferentes a las otras. » Cuarto escalón de la escalera:
+   un encargo TEMÁTICO que solo cuelga del tablón de VIERNES A DOMINGO.
+     · Misma vara que toda la escalera: plata al valor exacto (1,0×), la ganancia en vales.
+       Pide 2 días de producción — entre el semanal (1) y el mensual (3) — porque hay finde
+       entero para juntarlo.
+     · El TEMA rota por semana, determinístico: una semana la Gran Cosecha, otra la Fiebre de
+       la Leña, el Torneo de Pesca… y solo pide lo que el jugador YA produce (la regla Hay Day
+       del tablón: nunca frustrar). Si el tema de la semana no le aplica, pasa al siguiente.
+     · La ventana es real: el lunes desaparece, entregado o no. La escasez es lo que lo hace
+       evento — y el motivo para entrar el finde.
+     · No se descarta ni se rerollea, igual que el semanal y el mensual. */
+var PED_EVENTO_DIAS = 2;
+var EVENTO_TEMAS = [   // el filtro elige del pool de HOY (pedPool): nada fuera de tu alcance
+  { id: "cosecha", label: "La Gran Cosecha",      f: (p) => p.tipo === "res" && !!CROP_DEF[p.key] },
+  { id: "lenia",   label: "Fiebre de la Leña",    f: (p) => p.key === "madera" },
+  { id: "cantera", label: "El Día de la Cantera", f: (p) => p.tipo === "res" && !CROP_DEF[p.key] && p.key !== "madera" },
+  { id: "pesca",   label: "El Torneo de Pesca",   f: (p) => p.tipo === "fish" },
+  { id: "festin",  label: "El Festín del Pueblo", f: (p) => p.tipo === "dish" },
+];
+function findeVentana() { const d = new Date().getDay(); return d === 5 || d === 6 || d === 0; }   // vie · sáb · dom
+function findeStamp() { return "F" + semanaStamp().slice(1); }   // la semana arranca jueves: vie-sáb-dom caen en la MISMA
+function pedidoEvento() {
+  const pool = pedPool(); if (!pool.length) return null;
+  const wk = parseInt(semanaStamp().slice(1), 10) || 0;
+  for (let t = 0; t < EVENTO_TEMAS.length; t++) {
+    const tema = EVENTO_TEMAS[(wk + t) % EVENTO_TEMAS.length];   // rota por semana; si no aplica, el siguiente
+    const sub = pool.filter(tema.f); if (!sub.length) continue;
+    const b = sub[Math.floor(pedAzar(555) * sub.length) % sub.length];
+    const unidad = b.val / b.n, mult = Math.max(2, Math.round(PED_EVENTO_DIAS * 10));   // la diaria es el 10% del día
+    let n = Math.max(2, Math.round(b.n * mult));
+    if (unidad > 0 && n * unidad < VALE_EN_PLATA) n = Math.ceil(VALE_EN_PLATA / unidad);   // piso: nunca menos de un vale
+    const val = Math.round(unidad * n);
+    return { tipo: b.tipo, key: b.key, n: n, plata: Math.max(2, val), xp: Math.max(1, Math.round(val * 0.8)),
+      vales: Math.max(3, Math.round(valesDe(val) * 0.6)),   // misma poda que los otros grandes
+      de: "🎪 " + tema.label, nota: "solo este fin de semana", hecho: false, tipoEncargo: "evento", tema: tema.id };
+  }
+  return null;
+}
 function pedidosEstado() {
   const e = G.pedidos || (G.pedidos = { dia: "", lista: [], reroll: 0, descarteAt: 0, dobles: 0 });
   if (e.dia !== dayStamp(0)) {
@@ -5073,12 +5113,16 @@ function pedidosEstado() {
   // rerollean, y aguantan lo que dure su ventana aunque cambie el día.
   if (e.semana !== semanaStamp()) { e.semana = semanaStamp(); e.pedSemanal = pedidoGrande(7777, PED_SEMANAL_DIAS, "semanal"); }
   if (e.mes !== mesStamp()) { e.mes = mesStamp(); e.pedMensual = pedidoGrande(31313, PED_MENSUAL_DIAS, "mensual"); }
+  // la misión de EVENTO solo existe de viernes a domingo; el lunes se va, entregada o no
+  if (findeVentana()) { if (e.finde !== findeStamp()) { e.finde = findeStamp(); e.pedEvento = pedidoEvento(); } }
+  else if (e.pedEvento) { e.pedEvento = null; }
   return e;
 }
 // los tres escalones, en una sola lista, para la interfaz y para entregar
 function pedidosTodos() {
   const e = pedidosEstado();
   const r = e.lista.map((p, i) => ({ p, i, escalon: "diaria" }));
+  if (findeVentana() && e.pedEvento) r.unshift({ p: e.pedEvento, i: "E", escalon: "evento" });   // 22/8: ARRIBA de todo — es la novedad del finde
   if (e.pedSemanal) r.push({ p: e.pedSemanal, i: "S", escalon: "semanal" });
   if (e.pedMensual) r.push({ p: e.pedMensual, i: "M", escalon: "mensual" });
   return r;
@@ -5126,7 +5170,7 @@ function tablonAbierto() {
 function pedidoEntregar(i) {
   const e = pedidosEstado();
   // 18/8: "S" y "M" son el encargo de la semana y el del mes; los números, los tres diarios
-  const p = i === "S" ? e.pedSemanal : i === "M" ? e.pedMensual : e.lista[i];
+  const p = i === "S" ? e.pedSemanal : i === "M" ? e.pedMensual : i === "E" ? e.pedEvento : e.lista[i];
   /* 18/8: NUNCA salir de aquí en silencio. El fallo que reportó el diseñador ("el papelito se
      mueve y no pasa nada") era exactamente esto: la UI mandaba NaN, `p` quedaba undefined y esta
      línea devolvía false sin decir una palabra. Un clic siempre tiene que contestar algo. */

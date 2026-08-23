@@ -4,7 +4,7 @@ Documento de Diseño de Juego
 
 *Estado real del código · 22 de agosto de 2026 · revisión 3*
 
-*Novedades de esta revisión: las CARGAS de los nodos (el árbol guarda hasta 4 talados; la partida cobra el doble del ancla), la picada de mineral a rendimiento 2, la expansión 3 sin muro y los edificios tardíos abaratados, el establo que crece un lugar por nivel de Ganadería, el techo de oficios derivado del contenido, el PORTERO del guardado en producción (bitácora + puerta vieja sellada), la cuenta por email, la ESCALERA DE CULTIVOS EN DOS CARRILES (nocturnos desde el nivel 2), el MERCADER GOBLIN (un trueque anclado por día), y los LOGROS con premio (pestaña 🏆).*
+*Novedades de esta revisión: las CARGAS de los nodos (el árbol guarda hasta 4 talados; la partida cobra el doble del ancla), la picada de mineral a rendimiento 2, la expansión 3 sin muro y los edificios tardíos abaratados, el establo que crece un lugar por nivel de Ganadería, el techo de oficios derivado del contenido, el PORTERO del guardado en producción (bitácora + puerta vieja sellada), la cuenta por email, la ESCALERA DE CULTIVOS EN DOS CARRILES (nocturnos desde el nivel 2), el MERCADER GOBLIN (un trueque anclado por día), los LOGROS con premio (pestaña 🏆), y la MISIÓN DE EVENTO del tablón (viernes a domingo).*
 
 Para el equipo de diseño
 
@@ -230,6 +230,10 @@ Una parcela llega por tres caminos, y cada camino lleva su cuenta — ese libro 
 
 Cada día aparece un goblin junto al buzón (sprite ya existente, sin arte nuevo) con UNA oferta: pide una cantidad del recurso básico que MÁS tenés (madera o piedra) y entrega el otro a valor de mercado más un 10 % de propina. El valor del día ronda los 40-60 de plata — endulza, no imprime — y la oferta es determinística por fecha: el F5 no la re-sortea. « Hoy no » no quema el día: el goblin espera hasta que aceptes o hasta mañana. Cerrado el trato se va con su humito y vuelve al día siguiente con oferta nueva. El propósito es doble: darle salida al recurso que sobra (el que tala mucho consigue piedra y al revés) y sumar un motivo diario de visita con personaje, no con menú.
 
+**La misión de evento: el cuarto escalón del tablón**
+
+El tablón de pedidos tenía tres escalones — 3 diarios (10 % de la producción del día), el encargo de la semana (un día entero) y el gran encargo del mes (tres días). El 22/8 se sumó el cuarto: la MISIÓN DE EVENTO, que solo cuelga de viernes a domingo, arriba de todo y con cartel violeta propio (« 🎪 MISIÓN DE EVENTO · SOLO EL FINDE »). El tema rota por semana — la Gran Cosecha, la Fiebre de la Leña, el Día de la Cantera, el Torneo de Pesca, el Festín del Pueblo — y solo pide lo que el jugador ya produce; si el tema de la semana no le aplica, pasa al siguiente. Paga con la vara de toda la escalera (plata 1,0×, la ganancia en vales) y pide DOS días de producción, entre el semanal y el mensual, porque hay un finde entero para juntarlo. La ventana es real: el lunes desaparece, entregada o no — la escasez es lo que la hace evento, y el motivo para entrar el fin de semana. No se descarta ni se re-sortea.
+
 **7. Edificios**
 
 Ningún edificio viene puesto. Todos llegan como PLANO, el plano se guarda en el Cobertizo y el jugador elige dónde va. Al colocarlo aparece la obra, y la obra se termina depositando materiales.
@@ -429,7 +433,7 @@ Normas de diseño que vienen de decisiones de dirección y que conviene no reabr
 
 **15. Cómo verificar lo que dice este documento**
 
-El proyecto tiene 65 pruebas automáticas y 16 auditores (105 herramientas en total). No comprueban que el código compile: comprueban que el JUEGO cumpla las reglas de arriba. Los más útiles para el diseñador:
+El proyecto tiene 66 pruebas automáticas y 16 auditores (106 herramientas en total). No comprueban que el código compile: comprueban que el JUEGO cumpla las reglas de arriba. Los más útiles para el diseñador:
 
 | **Herramienta**                 | **Qué contesta**                                            |
 | ------------------------------- | ----------------------------------------------------------- |
