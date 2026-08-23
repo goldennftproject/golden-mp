@@ -308,7 +308,7 @@ La Cocina convierte lo recolectado en platos que curan y dan un efecto temporal.
 | Aceite de Girasol     | 4         | 3 Girasol + 2 Madera                         | 18       | Suerte +10%               | 7       |
 | Banquete del granjero | 5         | 2 Carne + 1 Calabaza + 1 Madera + 1 pez raro | toda     | Precio de venta +20%      | 7       |
 | Pan de Trigo          | 6         | 3 Trigo + 2 Madera                           | 20       | XP de Cocina +10%         | 6       |
-| Bocado del Domador    | 6         | 2 Carne + 1 Calabaza + 1 Madera              | 5        | Ítem de DOMA: se lleva a la Zona Negra | 7 |
+| Costillar Ahumado     | 6         | 2 Carne + 1 Calabaza + 1 Madera              | 5        | El plato de la DOMA: a la rata, la larva, los orcos y el trol les encanta | 7 |
 | Sopa de Zanahoria     | 8         | 2 Zanahoria + 1 Remolacha                    | 15       | Velocidad al andar +8%    | 4       |
 | Tortilla de Maíz      | 9         | 2 Maíz + 1 Zanahoria + 2 Madera              | 27       | Daño +10%                 | 7       |
 | Pan de Maíz y Trigo | 10 | 2 Trigo + 2 Maíz + 3 Madera | 34 | +20 de vida máxima · disipa maldiciones | 8 |

@@ -4022,13 +4022,15 @@ const RECIPE_DEF = {
   estofado: { label:"Estofado de carne", emoji:"🍲", sprite:"dish_estofado", res:{carne:1, papa:1, madera:1}, lvl:1,
     heal:60, buff:{type:"cd",label:"Enfriamientos -15%",mult:0.85,dur:90}, cookS:300, xp:12, plata:30,
     desc:"Cura 60 · Enfriamientos -15% (1 min 30 s)" },
-  /* EL BOCADO DEL DOMADOR (22/8, dirección: « habría que crear un ítem de doma, una comida
-     que les guste, y que así decidan hacerse tus amigos »). No es para el granjero: se lleva
-     a la Zona Negra y, al vencer a un bicho domable, ÉL se lo come — se consume en el intento,
-     acepte o no (1 de cada 4 acepta). Sprite prestado del estofado hasta que Suren le dé cara. */
-  bocado_domador: { label:"Bocado del Domador", emoji:"🍖", sprite:"dish_estofado", res:{carne:2, calabaza:1, madera:1}, lvl:6,
+  /* EL PLATO DE LA DOMA (22/8, dirección — dos vueltas): « habría que crear un ítem de doma,
+     una comida que les guste » y después « Bocado del Domador queda raro: un nombre simple de
+     comida rica, y en la DESCRIPCIÓN que diga a quién le encanta ». Es comida con nombre de
+     comida; que doma se entera el que lee — o el que recibe la pista al vencer un bicho.
+     El id se queda (bocado_domador) para no romper guardados con platos ya cocinados.
+     Sprite prestado del estofado hasta que Suren le dé cara. */
+  bocado_domador: { label:"Costillar Ahumado", emoji:"🍖", sprite:"dish_estofado", res:{carne:2, calabaza:1, madera:1}, lvl:6,
     heal:5, buff:{type:"regen", val:1}, cookS:420, xp:20, plata:35,
-    desc:"No es para vos: llevalo a la Zona Negra. Al vencer a un bicho domable, se lo come — y quizás te siga a casa." },
+    desc:"Carne ahumada a la leña con calabaza dulce. A la rata, la larva, los orcos y el trol les ENCANTA este plato: llevalo a la Zona Negra y, al vencerlos, se lo devoran — con suerte, te siguen a casa." },
   banquete: { label:"Banquete del granjero", emoji:"🍗", sprite:"dish_banquete", fish:{raro:1}, res:{carne:2, calabaza:1, madera:1}, lvl:5,   // 22/8: baja 6→5 — sus ingredientes (carne + calabaza 2) ya están hace rato
     heal:9999, buff:{type:"yield",label:"Precio de venta +20%",mult:1.20,dur:180}, cookS:420, xp:25, plata:60,
     desc:"Cura TODA la vida · Precio de venta +20% (3 min)" },
@@ -5480,13 +5482,13 @@ function domaIntentar(especie, rnd) {   // lo llama la Zona Negra al vencer
   if (Math.floor((G.dishes && G.dishes[DOMA_ITEM]) || 0) < 1) {
     if (G._domaPistaDia !== dayStamp(0)) {
       G._domaPistaDia = dayStamp(0);
-      log("🐾 Ese " + ((MONSTER_DEF[especie] && MONSTER_DEF[especie].label) || "bicho") + " te miró con hambre antes de caer… En la Cocina dicen que el BOCADO DEL DOMADOR (nivel 6) hace amigos.", "info");
+      log("🐾 Ese " + ((MONSTER_DEF[especie] && MONSTER_DEF[especie].label) || "bicho") + " te miró con hambre antes de caer… En la Cocina dicen que el COSTILLAR AHUMADO (nivel 6) hace amigos.", "info");
     }
     return false;
   }
   G.dishes[DOMA_ITEM] -= 1;   // se lo come, acepte o no: ya está servido
   if ((rnd || Math.random)() >= DOMA_CHANCE) {
-    log("🍖 El bicho devoró tu Bocado del Domador… y se fue igual. Grosero. (1 de cada 4 acepta.)", "warn");
+    log("🍖 El bicho devoró tu Costillar Ahumado… y se fue igual. Grosero. (1 de cada 4 acepta.)", "warn");
     toast("Se comió el bocado y se fue");
     if (typeof saveFarm === "function") saveFarm(true);
     return false;
