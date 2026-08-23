@@ -1,6 +1,6 @@
 # GOLDEN FARM — La biblia del lore
 
-*Para dirección · 23 de agosto de 2026 · borrador 1, para aprobar antes de escribir las cartas*
+*Para dirección · 23 de agosto de 2026 · APROBADA («ponemos ese para probar») — las 10 cartas están en el juego (CARTAS_ABUELO, state.js)*
 
 **La regla de esta biblia: el lore no inventa nada nuevo — EXPLICA lo que el juego ya hace.**
 Cada sistema que el jugador toca (la herencia, el Capataz, la Zona Negra, el portal, el goblin,

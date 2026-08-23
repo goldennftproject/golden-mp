@@ -4,7 +4,7 @@ Documento de Diseño de Juego
 
 *Estado real del código · 22 de agosto de 2026 · revisión 3*
 
-*Novedades de esta revisión: las CARGAS de los nodos (el árbol guarda hasta 4 talados; la partida cobra el doble del ancla), la picada de mineral a rendimiento 2, la expansión 3 sin muro y los edificios tardíos abaratados, el establo que crece un lugar por nivel de Ganadería, el techo de oficios derivado del contenido, el PORTERO del guardado en producción (bitácora + puerta vieja sellada), la cuenta por email, la ESCALERA DE CULTIVOS EN DOS CARRILES (nocturnos desde el nivel 2), el MERCADER GOBLIN (un trueque anclado por día), los LOGROS con premio (pestaña 🏆), y la MISIÓN DE EVENTO del tablón (viernes a domingo), la PESCA v2 con el sistema de Fishing Frenzy (burbujas, anzuelo y zona de captura), el DÍA que cicla a las 00:00 UTC (21:00 Argentina, estándar web3), la noche azulada, la COCINA re-sincronizada con los dos carriles (auditoría integral del 22/8), y LA DOMA v1 (un monstruo domado atiende los nodos en tu ausencia, granja 10, comisión 30 %).*
+*Novedades de esta revisión: las CARGAS de los nodos (el árbol guarda hasta 4 talados; la partida cobra el doble del ancla), la picada de mineral a rendimiento 2, la expansión 3 sin muro y los edificios tardíos abaratados, el establo que crece un lugar por nivel de Ganadería, el techo de oficios derivado del contenido, el PORTERO del guardado en producción (bitácora + puerta vieja sellada), la cuenta por email, la ESCALERA DE CULTIVOS EN DOS CARRILES (nocturnos desde el nivel 2), el MERCADER GOBLIN (un trueque anclado por día), los LOGROS con premio (pestaña 🏆), y la MISIÓN DE EVENTO del tablón (viernes a domingo), la PESCA v2 con el sistema de Fishing Frenzy (burbujas, anzuelo y zona de captura), el DÍA que cicla a las 00:00 UTC (21:00 Argentina, estándar web3), la noche azulada, la COCINA re-sincronizada con los dos carriles (auditoría integral del 22/8), LA DOMA (un monstruo domado atiende los nodos en tu ausencia; cada especie con su oficio y su plato), y LAS CARTAS DEL ABUELO — el lore del juego (docs/LORE.md) entregado de a una carta por nivel de granja, del 2 al 20.*
 
 Para el equipo de diseño
 
@@ -442,7 +442,7 @@ Normas de diseño que vienen de decisiones de dirección y que conviene no reabr
 
 **15. Cómo verificar lo que dice este documento**
 
-El proyecto tiene 70 pruebas automáticas y 16 auditores (110 herramientas en total). No comprueban que el código compile: comprueban que el JUEGO cumpla las reglas de arriba. Los más útiles para el diseñador:
+El proyecto tiene 71 pruebas automáticas y 16 auditores (111 herramientas en total). No comprueban que el código compile: comprueban que el JUEGO cumpla las reglas de arriba. Los más útiles para el diseñador:
 
 | **Herramienta**                 | **Qué contesta**                                            |
 | ------------------------------- | ----------------------------------------------------------- |

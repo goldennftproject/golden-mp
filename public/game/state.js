@@ -5037,6 +5037,48 @@ function passPendientes() {
     return n;
   } catch (e) { return 0; }
 }
+/* ============ LAS CARTAS DEL ABUELO (23/8, dirección — docs/LORE.md) ============
+   « Primero pensar un lore, y a partir de ahí el envío de cartas que vaya revelando cosas. »
+   El Abuelo desapareció y dejó las cartas ESCRITAS; el Capataz las entrega « a medida que la
+   granja se lo gane » — por eso llegan por NIVEL DE GRANJA, y la mecánica queda contada desde
+   adentro de la historia. Reglas (de la biblia):
+     · 10 cartas, niveles 2→20, cada una con su revelación y su gancho mecánico;
+     · se entregan DE A UNA: siempre la más vieja sin leer cuyo nivel ya alcanzaste (el que
+       sube rápido no recibe seis sobres juntos — lee una y aparece la siguiente);
+     · una vez leídas viven PARA SIEMPRE en la pila del buzón (la colección de la historia);
+     · 60-90 palabras, voz del Abuelo: práctico, socarrón, una gota de misterio al final. */
+var CARTAS_ABUELO = [
+  { n: 1, nivel: 2, titulo: "Si estás leyendo esto",
+    txt: "Si estás leyendo esto, ya vendiste tus primeras papas y el Capataz decidió que no sos un inútil. Bien. La granja es tuya: la cerca, el baúl, los tres árboles torcidos. No me morí, que conste — me FUI, y hay una diferencia. Construí la herrería primero: acá las herramientas se gastan más rápido de lo que un viejo escribe cartas. Lo demás, a su tiempo. — Tu abuelo" },
+  { n: 2, nivel: 3, titulo: "La cerca",
+    txt: "Ya podés comprar tu primer pedazo de terreno. Hacelo. Pero fijate una cosa: la cerca rodea la granja ENTERA, no solo el corral. La levanté yo, tabla por tabla, el año del agua nueva. El pueblo cree que es para que no se escapen las alpacas. Dejá que lo crean. — Tu abuelo" },
+  { n: 3, nivel: 5, titulo: "Los animales saben",
+    txt: "Comprá animales apenas puedas, y no por la leche. Los animales del valle sienten las cosas antes que nosotros: la tormenta, el lobo, y lo OTRO. La noche que todo cambió, mis alpacas se apretaron contra la cerca del lado oeste dos horas antes. Desde entonces les creo más a ellas que al almanaque. — Tu abuelo" },
+  { n: 4, nivel: 7, titulo: "Las piedras que zumban",
+    txt: "El Capataz ya debe haberte dado el plano del Altar de Runas. Construilo, aunque el pueblo se persigne. No es un adorno místico: es un INSTRUMENTO. Lo armé para escuchar lo que viene del otro lado del valle — las piedras zumban distinto según lo que ande cerca. Si alguna vez zumban todas juntas, meté los animales adentro. — Tu abuelo" },
+  { n: 5, nivel: 9, titulo: "El agua nueva",
+    txt: "Te habrás fijado que la laguna tiene peces que no figuran en ningún libro. Es que esa agua no es de acá: bajó del otro lado del valle la noche del cambio, y se quedó. Los comunes son comunes. Pero los raros pelean como si algo adentro no quisiera volver a la orilla. Pescalos igual. Cocinados son otra cosa. — Tu abuelo" },
+  { n: 6, nivel: 10, titulo: "No todos son monstruos",
+    txt: "A esta altura ya habrás cruzado el portal y repartido espadazos. Escuchame bien: no todos los que viven en la Zona son monstruos. Muchos eran vecinos — gente y bichos del viejo Bosque Claro, cambiados por la Noche. Un plato caliente les recuerda quiénes eran. Probá con comida antes que con hierro. Te vas a sorprender de quién te sigue a casa. — Tu abuelo" },
+  { n: 7, nivel: 12, titulo: "Grjj",
+    txt: "Si un goblin de mala cara aparece junto al buzón ofreciendo trueques, no lo espantes: es Grjj. Le salvé el pellejo dos veces del lado oscuro del valle, y un goblin no se olvida de una deuda — le da vergüenza, que para ellos es peor. Por eso viene todos los días. Regatealé igual: si no regateás, se ofende. — Tu abuelo" },
+  { n: 8, nivel: 14, titulo: "La Noche",
+    txt: "Te debo la historia entera. Una noche, hace años, del otro lado del valle NO amaneció. La oscuridad se quedó quieta, como un animal que se echa. El Bosque Claro quedó adentro, con su gente. Los que salieron ya no eran los mismos; los que no salieron, tampoco. El pueblo decidió olvidar. Yo decidí lo contrario. Todo lo que ves en esta granja lo construí para eso. — Tu abuelo" },
+  { n: 9, nivel: 17, titulo: "El portal no es una salida",
+    txt: "El portal del fondo lo construí yo, y me costó años. El pueblo cree que es una reliquia del valle. No: lo hice para ENTRAR. La Noche tiene un centro, y las cosas con centro se pueden apagar. Cada viaje me traía menos respuestas y más frío en los huesos. Si estás leyendo esto, ya sos más fuerte que yo entonces. Todavía no vayas hondo. — Tu abuelo" },
+  { n: 10, nivel: 20, titulo: "Lo que duerme abajo",
+    txt: "Última carta, nieto. Encontré el centro: algo duerme en la Guarida de las Cavernas, y la Noche es su sueño derramado. Solo no pude — por eso me fui: a ganarle tiempo al valle. Una granja fuerte alimenta a muchos granjeros, y muchos granjeros pueden lo que yo no pude. Juntalos. Y cuando el valle vuelva a brillar, releé la primera carta. Nos vemos. — Tu abuelo" },
+];
+function cartaAbueloPendiente() {   // la más vieja sin leer cuyo nivel ya alcanzaste — de a una
+  const nv = (typeof farmLevel === "function") ? farmLevel() : (G.level || 1);
+  G.buzonLeidas = G.buzonLeidas || {};
+  for (const c of CARTAS_ABUELO) {
+    if (nv < c.nivel) return null;          // las siguientes piden más granja
+    if (!G.buzonLeidas["abuelo" + c.n]) return c;
+  }
+  return null;
+}
+
 function buzonCartas() {
   const cartas = [];
   G.buzonLeidas = G.buzonLeidas || {};
@@ -5056,6 +5098,9 @@ function buzonCartas() {
     leer: true, panel: "ov-pedidos", btn: "Ver el tablón" }); } catch (e) {}
   // LA GRANJA ES TUYA (22/8, auditoría integral): el tutorial enseña el núcleo pero terminaba
   // sin presentar lo que espera afuera. Una sola carta, una sola vez, con las tres novedades.
+  // LAS CARTAS DEL ABUELO (23/8, lore): de a una, por nivel de granja, y solo tras el tutorial
+  try { if (G.tuto && G.tuto.done) { const ca = cartaAbueloPendiente(); if (ca) cartas.push({
+    id: "abuelo" + ca.n, de: "Tu abuelo", titulo: ca.titulo, txt: ca.txt, leer: true }); } } catch (e) {}
   try { if (G.tuto && G.tuto.done && !G.buzonLeidas.granjatuya) cartas.push({
     id: "granjatuya", de: "El Capataz", titulo: "Ahora sí: la granja es tuya",
     txt: "Tres cosas que nadie te contó todavía. En el menú está la pestaña de LOGROS 🏆 — las metas pagan plata, cobralas ahí. Al pie del buzón llega tu PAQUETE del día: si venís siete días seguidos, el séptimo es dorado. Y junto al buzón vas a ver a un GOBLIN de mala fama y buen corazón: hace un trueque por día, y siempre le sobra lo que a vos te falta.",
@@ -5085,7 +5130,11 @@ function buzonArchivar(cartas) {
   }
   const tope = ahora - BUZON_ARCHIVO_DIAS * 86400000;
   const antes = G.buzonArchivo.length;
-  G.buzonArchivo = G.buzonArchivo.filter(a => (a.ts || 0) >= tope).slice(-40);   // 7 días y máx 40 cartas
+  // 23/8 (lore): las cartas del ABUELO no caducan nunca — son la colección de la historia.
+  // El resto sigue con sus 7 días y el tope de 40 (contado solo sobre las que caducan).
+  const abuelo = G.buzonArchivo.filter(a => String(a.id).indexOf("abuelo") === 0);
+  const resto = G.buzonArchivo.filter(a => String(a.id).indexOf("abuelo") !== 0 && (a.ts || 0) >= tope).slice(-40);
+  G.buzonArchivo = abuelo.concat(resto);
   if (G.buzonArchivo.length !== antes && typeof saveFarm === "function") saveFarm(true);
 }
 
