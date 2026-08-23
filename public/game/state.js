@@ -4022,6 +4022,13 @@ const RECIPE_DEF = {
   estofado: { label:"Estofado de carne", emoji:"🍲", sprite:"dish_estofado", res:{carne:1, papa:1, madera:1}, lvl:1,
     heal:60, buff:{type:"cd",label:"Enfriamientos -15%",mult:0.85,dur:90}, cookS:300, xp:12, plata:30,
     desc:"Cura 60 · Enfriamientos -15% (1 min 30 s)" },
+  /* EL BOCADO DEL DOMADOR (22/8, dirección: « habría que crear un ítem de doma, una comida
+     que les guste, y que así decidan hacerse tus amigos »). No es para el granjero: se lleva
+     a la Zona Negra y, al vencer a un bicho domable, ÉL se lo come — se consume en el intento,
+     acepte o no (1 de cada 4 acepta). Sprite prestado del estofado hasta que Suren le dé cara. */
+  bocado_domador: { label:"Bocado del Domador", emoji:"🍖", sprite:"dish_estofado", res:{carne:2, calabaza:1, madera:1}, lvl:6,
+    heal:5, buff:{type:"regen", val:1}, cookS:420, xp:20, plata:35,
+    desc:"No es para vos: llevalo a la Zona Negra. Al vencer a un bicho domable, se lo come — y quizás te siga a casa." },
   banquete: { label:"Banquete del granjero", emoji:"🍗", sprite:"dish_banquete", fish:{raro:1}, res:{carne:2, calabaza:1, madera:1}, lvl:5,   // 22/8: baja 6→5 — sus ingredientes (carne + calabaza 2) ya están hace rato
     heal:9999, buff:{type:"yield",label:"Precio de venta +20%",mult:1.20,dur:180}, cookS:420, xp:25, plata:60,
     desc:"Cura TODA la vida · Precio de venta +20% (3 min)" },
@@ -5457,13 +5464,33 @@ function goblinAceptar() {
      · Las vetas de mineral quedan afuera (sin cargas, decisión del 21/8). El tope natural es el
        propio reloj de cada nodo: el bicho no imprime, rescata lo que el tope de 4 descartaba.
      · Si la bolsa se llena, deja de juntar (nada se pierde: el nodo conserva sus cargas). */
-var DOMA_NIVEL = 10, DOMA_CHANCE = 0.08, DOMA_COMISION = 0.30, DOMA_COMIDA_H = 24;
+/* v2 del mismo día (dirección): « que tenga un 8% al matarlo sin gastar nada está mal — habría
+   que crear un ítem de doma, una comida que les guste ». La doma ahora CUESTA: hace falta llevar
+   un BOCADO DEL DOMADOR (receta de Cocina 6: 2 carne + 1 calabaza + leña). Al vencer a un bicho
+   domable el bocado SE CONSUME —acepte o no, ya se lo comió— y 1 de cada 4 acepta. Costo esperado
+   de una doma: ~4 bocados (~8 carnes), que a cambio de un ayudante permanente es un precio justo
+   y le da a la Cocina su primer ítem de USO, no de buff. */
+var DOMA_NIVEL = 10, DOMA_CHANCE = 0.25, DOMA_COMISION = 0.30, DOMA_COMIDA_H = 24, DOMA_ITEM = "bocado_domador";
 var DOMA_ESPECIES = ["rata", "larva", "orco", "lancero", "guerrero", "troll"];   // los que tienen sprite cargado en la granja
 function domaAbre() { return (typeof farmLevel === "function" ? farmLevel() : G.level || 1) >= DOMA_NIVEL; }
 function domaIntentar(especie, rnd) {   // lo llama la Zona Negra al vencer
   if (!domaAbre() || (G.doma && G.doma.bicho)) return false;
   if (!DOMA_ESPECIES.includes(especie)) return false;
-  if ((rnd || Math.random)() >= DOMA_CHANCE) return false;
+  // sin Bocado no hay doma — y el que no lo conoce recibe la pista (una vez por día)
+  if (Math.floor((G.dishes && G.dishes[DOMA_ITEM]) || 0) < 1) {
+    if (G._domaPistaDia !== dayStamp(0)) {
+      G._domaPistaDia = dayStamp(0);
+      log("🐾 Ese " + ((MONSTER_DEF[especie] && MONSTER_DEF[especie].label) || "bicho") + " te miró con hambre antes de caer… En la Cocina dicen que el BOCADO DEL DOMADOR (nivel 6) hace amigos.", "info");
+    }
+    return false;
+  }
+  G.dishes[DOMA_ITEM] -= 1;   // se lo come, acepte o no: ya está servido
+  if ((rnd || Math.random)() >= DOMA_CHANCE) {
+    log("🍖 El bicho devoró tu Bocado del Domador… y se fue igual. Grosero. (1 de cada 4 acepta.)", "warn");
+    toast("Se comió el bocado y se fue");
+    if (typeof saveFarm === "function") saveFarm(true);
+    return false;
+  }
   const nom = (MONSTER_DEF[especie] && MONSTER_DEF[especie].label) || especie;
   G.doma = { bicho: especie, desde: nowMs(), comidaHasta: 0, cont: 0, ultimo: null };
   log("🐾 ¡" + nom + " bajó las orejas y te siguió a casa! Vive en tu granja: dale 1 carne por día y atenderá los nodos mientras no estés.", "gold");

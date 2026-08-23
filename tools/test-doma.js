@@ -31,15 +31,22 @@ const G = ctx.G, H = 3600000;
 let fallos = 0;
 const ok = (n, c, d) => { if (!c) fallos++; console.log((c ? "  ok   " : "  FALLA") + "  " + n + (d ? "   " + d : "")); };
 
-console.log("\nLA PUERTA: GRANJA 10, UNA ESPECIE CON SPRITE, UN BICHO A LA VEZ");
+console.log("\nLA PUERTA: GRANJA 10, EL BOCADO DEL DOMADOR, Y UN BICHO A LA VEZ");
 {
-  G.level = 9; G.doma = null;
-  ok("a granja 9 ni el 0,001 doma", ctx.domaIntentar("rata", () => 0.001) === false);
+  G.level = 9; G.doma = null; G.dishes = { bocado_domador: 5 };
+  ok("a granja 9 ni el 0,001 doma", ctx.domaIntentar("rata", () => 0.001) === false && G.dishes.bocado_domador === 5);
   G.level = 10;
-  ok("el dragón no se doma (sin sprite de granja)", ctx.domaIntentar("dragon", () => 0.001) === false);
-  ok("con mala suerte (0,5 > 8%) tampoco", ctx.domaIntentar("rata", () => 0.5) === false);
-  ok("con suerte, la rata te sigue a casa", ctx.domaIntentar("rata", () => 0.001) === true && G.doma.bicho === "rata");
-  ok("y no hay segundo bicho", ctx.domaIntentar("troll", () => 0.001) === false);
+  ok("el dragón no se doma (y no gasta bocado)", ctx.domaIntentar("dragon", () => 0.001) === false && G.dishes.bocado_domador === 5);
+  G.dishes.bocado_domador = 0;
+  ok("SIN bocado no hay doma ni con toda la suerte", ctx.domaIntentar("rata", () => 0.001) === false);
+  G.dishes.bocado_domador = 5;
+  ok("con bocado y mala suerte (0,5 ≥ 25%): se lo come y se va", ctx.domaIntentar("rata", () => 0.5) === false && G.dishes.bocado_domador === 4);
+  ok("con bocado y suerte: la rata te sigue a casa", ctx.domaIntentar("rata", () => 0.001) === true && G.doma.bicho === "rata");
+  ok("y ese intento también costó su bocado", G.dishes.bocado_domador === 3);
+  ok("y no hay segundo bicho (ni gasta más bocados)", ctx.domaIntentar("troll", () => 0.001) === false && G.dishes.bocado_domador === 3);
+  const R = vm.runInContext("RECIPE_DEF", ctx);
+  ok("el Bocado es una receta real de Cocina 6 (2 carne + 1 calabaza + leña)",
+    R.bocado_domador && R.bocado_domador.lvl === 6 && R.bocado_domador.res.carne === 2 && R.bocado_domador.res.calabaza === 1);
 }
 
 console.log("\nLA PANZA: 1 CARNE = 24 H, TOPE 3 DÍAS, SIN CARNE NO HAY TRATO");
