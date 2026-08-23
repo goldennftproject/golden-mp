@@ -4196,6 +4196,7 @@ function checkCooking() {
       log(r.emoji + " ¡" + r.label + " listo! Lo tenés en la bolsa.", "gold"); toast(r.emoji + " ¡" + r.label + " listo!");
       if (typeof tutoEvent === "function") tutoEvent("cook");
       statAdd("cocinar");
+      statAdd("cocinar", olla.id);   // 23/8 (álbum): además del total, QUÉ plato — el pedido del tablón ya leía esta llave
     }
     if (!listos) { if (typeof refreshCooking === "function" && isOpen("ov-cocina")) refreshCooking(); return; }
     if (typeof syncSlots === "function") syncSlots(); if (isOpen("ov-inv")) refreshInv();
@@ -4924,7 +4925,7 @@ function goFishing(rarForzada) {
   /* 18/8 (dirección): "pescar tiene su propio skill, ¿por qué le da experiencia a cocinar?".
      Resto de cuando la pesca era "conseguir ingredientes". La Cocina se gana cocinando. */
   G.fish[rar]++; addXp("fishing", XP_PEZ);
-  if (typeof statAdd === "function") statAdd("pescar");
+  if (typeof statAdd === "function") { statAdd("pescar"); statAdd("pescar", rar); }   // 23/8 (álbum): total + QUÉ rareza
   if (typeof tutoEvent === "function") tutoEvent("fish");
   // fixs.docx #16 (11/8): pescar ya NO regala buffs — el pez va a la bolsa y los buffs
   // salen de COCINARLO (los platos con pescado ya los daban). La plata del común y el
@@ -5705,6 +5706,55 @@ function domaTrabajar(visto, ahora) {
     return parte;
   }
   return null;
+}
+
+/* ================== EL ÁLBUM DE LA GRANJA (23/8) ==================
+   Los LOGROS premian volumen (talá 500 árboles); el ÁLBUM premia VARIEDAD: la primera vez
+   de cada cosa. Seis familias — cultivos, peces, platos, minerales, animales y bestiario —
+   con su silueta que se revela al conseguir el primero. No paga plata: paga completismo,
+   y empuja a probar contenido que el jugador saltea (cultivos que nunca planta, recetas que
+   nunca cocina, bichos que esquiva).
+   Se lee TODO de contadores que ya existen (G.stats + el estado): cero estado nuevo que
+   guardar, cero forma de perderlo, y las partidas viejas ya vienen con su álbum medio lleno.
+   A futuro es el MUSEO, hermano de la sala de trofeos, cuando los edificios tengan interior. */
+function albumFamilias() {
+  const vistoRes = (k) => Math.floor((G.res && G.res[k]) || 0) > 0;
+  return [
+    { id: "cultivos", ic: "🌾", label: "Cultivos", orden: CROP_ORDER,
+      nom: (k) => (CROP_DEF[k] && CROP_DEF[k].label) || k,
+      spr: (k) => (typeof resSprite === "function" ? resSprite(k) : null),
+      tiene: (k) => statGet("plantar", k) > 0 || statGet("cosechar", k) > 0 || vistoRes(k) },
+    { id: "peces", ic: "🐟", label: "Peces", orden: FISH_ORDER,
+      nom: (k) => (FISH_DEF[k] && FISH_DEF[k].label) || k,
+      spr: (k) => (FISH_DEF[k] && FISH_DEF[k].sprite) || null,
+      tiene: (k) => statGet("pescar", k) > 0 || Math.floor((G.fish && G.fish[k]) || 0) > 0 },
+    { id: "platos", ic: "🍲", label: "Platos", orden: RECIPE_ORDER,
+      nom: (k) => (RECIPE_DEF[k] && RECIPE_DEF[k].label) || k,
+      spr: (k) => (RECIPE_DEF[k] && RECIPE_DEF[k].sprite) || null,
+      tiene: (k) => statGet("cocinar", k) > 0 || Math.floor((G.dishes && G.dishes[k]) || 0) > 0 },
+    { id: "minerales", ic: "⛏️", label: "Minerales", orden: ORE_ORDER,
+      nom: (k) => RES_LABEL[k] || k,
+      spr: (k) => (typeof resSprite === "function" ? resSprite(k) : null),
+      tiene: (k) => statGet("minar", k) > 0 || vistoRes(k) },
+    { id: "animales", ic: "🐄", label: "Animales", orden: ANIMAL_ORDER,
+      nom: (k) => (ANIMAL_DEF[k] && ANIMAL_DEF[k].label) || k,
+      spr: () => null, emo: (k) => (ANIMAL_DEF[k] && ANIMAL_DEF[k].emoji) || "🐾",
+      tiene: (k) => (typeof animalCant === "function" ? animalCant(k) : 0) > 0 || statGet("alimentar", k) > 0 },
+    { id: "bestiario", ic: "⚔️", label: "Bestiario", orden: (typeof MONSTER_ORDER !== "undefined" ? MONSTER_ORDER : Object.keys(MONSTER_DEF)),
+      nom: (k) => (MONSTER_DEF[k] && MONSTER_DEF[k].label) || k,
+      spr: (k) => (MONSTER_DEF[k] && MONSTER_DEF[k].sprite) ? (MONSTER_DEF[k].sprite + "_idle_0") : null,
+      tiene: (k) => statGet("matar", k) > 0 },
+  ];
+}
+function albumFila(f) {
+  const piezas = (f.orden || []).map(k => ({ k, nom: f.nom(k), spr: f.spr ? f.spr(k) : null, emo: f.emo ? f.emo(k) : null, visto: !!f.tiene(k) }));
+  return { id: f.id, ic: f.ic, label: f.label, piezas, hechas: piezas.filter(p => p.visto).length, total: piezas.length };
+}
+function albumLista() { return albumFamilias().map(albumFila); }
+function albumProgreso() {   // {hechas, total, pct} de TODO el álbum — para el título de la pestaña
+  let h = 0, t = 0;
+  albumLista().forEach(f => { h += f.hechas; t += f.total; });
+  return { hechas: h, total: t, pct: t ? Math.round(h / t * 100) : 0 };
 }
 
 /* ================== LOGROS (22/8, dirección) ==================

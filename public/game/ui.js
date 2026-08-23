@@ -10,7 +10,7 @@ function log(m, k = "") { const b = $("log"); if (!b) return; const d = document
 /* ---- overlays ---- */
 function isOpen(id) { const e = $(id); return !!(e && e.classList.contains("show")); }
 function anyOvOpen() { return !!document.querySelector(".ov.show"); }
-const OV_REFRESH = { "ov-entrenando": () => entrenarSync(), "ov-clan": () => refreshClan(), "ov-misiones": () => refreshMisiones(), "ov-mapa": () => refreshMapa(), "ov-objetivos": () => refreshObjetivos(), "ov-logros": () => refreshLogros(), "ov-inv": () => refreshInv(), "ov-cobertizo": () => refreshCobertizo(), "ov-skills": () => refreshSkills(), "ov-equip": () => refreshEquip(), "ov-godhand": () => refreshGodHand(),
+const OV_REFRESH = { "ov-entrenando": () => entrenarSync(), "ov-clan": () => refreshClan(), "ov-misiones": () => refreshMisiones(), "ov-mapa": () => refreshMapa(), "ov-objetivos": () => refreshObjetivos(), "ov-logros": () => refreshLogros(), "ov-album": () => refreshAlbum(), "ov-inv": () => refreshInv(), "ov-cobertizo": () => refreshCobertizo(), "ov-skills": () => refreshSkills(), "ov-equip": () => refreshEquip(), "ov-godhand": () => refreshGodHand(),
   "ov-forge": () => refreshForge(), "ov-market": () => refreshMarket(), "ov-barn": () => refreshBarn(), "ov-buzon": () => { _bzVista = "sobres"; _bzCartaAbierta = null; refreshBuzon(); }, "ov-paquete": () => refreshPaquete(), "ov-baul": () => refreshBaul(), "ov-pedidos": () => { _pdVista = "pedidos"; refreshPedidos(); },
   "ov-cocina": () => refreshCooking(),
   "ov-horno": () => refreshHorno(),
@@ -160,6 +160,7 @@ function setNum(id, valor) {
 function refreshHud() {
   try { syncMisionesBadge(); } catch (e) {}   // contador de misiones del menú (10/8)
   try { syncLogrosBadge(); } catch (e) {}     // 22/8: cuántos logros hay para cobrar
+  try { syncAlbumBadge(); } catch (e) {}      // 23/8: el % del álbum
   // 18/8: el cartel de expansión del mapa refleja el material que tenés; la firma interna evita
   // que se rehaga si no cambió nada de lo que se ve.
   if (window.FARM && window.FARM.dibujarExpansion) { try { window.FARM.dibujarExpansion(); } catch (e) {} }
@@ -1097,6 +1098,32 @@ function refreshLogros() {
     if (typeof logroCobrar === "function") logroCobrar(b.getAttribute("data-logro"));
     refreshLogros();
   });
+}
+/* ---- EL ÁLBUM (23/8): la colección de primeras veces ----------------------------
+   Seis familias en grilla. La silueta y la lámina revelada miden lo mismo: al conseguir
+   algo no se mueve nada, solo se enciende. Nada que cobrar — se mira. */
+function refreshAlbum() {
+  const box = $("album-list"); if (!box || typeof albumLista !== "function") return;
+  const p = albumProgreso();
+  const cab = $("alb-prog");
+  if (cab) cab.textContent = p.hechas + " de " + p.total + " láminas (" + p.pct + "%)";
+  let h = "";
+  albumLista().forEach(f => {
+    h += '<div class="secc">' + f.ic + ' ' + f.label + ' — ' + f.hechas + '/' + f.total + '</div>';
+    h += '<div class="alb-grid">' + f.piezas.map(pz => {
+      const ic = pz.visto
+        ? (pz.spr ? '<img src="' + GF.spr(pz.spr) + '" draggable="false" onerror="this.outerHTML=\'<span class=&quot;emo&quot;>' + (pz.emo || "❔") + '</span>\'">' : '<span class="emo">' + (pz.emo || "❔") + '</span>')
+        : (pz.spr ? '<img src="' + GF.spr(pz.spr) + '" draggable="false" onerror="this.outerHTML=\'<span class=&quot;emo&quot;>❔</span>\'">' : '<span class="emo">' + (pz.emo || "❔") + '</span>');
+      return '<div class="alb-pieza' + (pz.visto ? '' : ' oculta') + '" title="' + (pz.visto ? pz.nom : "Todavía no lo conseguiste") + '">' +
+        ic + '<span class="nm">' + (pz.visto ? pz.nom : "? ? ?") + '</span></div>';
+    }).join("") + '</div>';
+  });
+  box.innerHTML = h;
+}
+// el contador del menú: el porcentaje del álbum (se mira, no se cobra: no pulsa)
+function syncAlbumBadge() {
+  const b = $("gm-alb"); if (!b || typeof albumProgreso !== "function") return;
+  try { b.textContent = albumProgreso().pct + "%"; } catch (e) {}
 }
 // el contador del menú: cuántos premios hay para cobrar (y el botón pulsa si hay alguno)
 function syncLogrosBadge() {

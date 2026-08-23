@@ -181,6 +181,10 @@ La XP no mide relojes, mide PRÁCTICA. Un oficio con acciones lentas no puede pe
 
 *Regla de salud para el diseñador: los tres oficios de recolección (Cultivo, Tala, Minería) tienen que quedar CERCA entre sí en la partida real. Si uno se dispara, su escalera se abre sola mientras las otras dos se quedan atrás y el jugador percibe el juego como desequilibrado sin saber por qué.*
 
+**El álbum: la colección de primeras veces (23/8)**
+
+Si los LOGROS premian volumen, el ÁLBUM premia VARIEDAD. La pestaña 📖 del menú tiene seis familias — cultivos, peces, platos, minerales, animales y bestiario, 62 láminas en total — y cada una se revela con la PRIMERA vez que conseguís esa cosa: hasta entonces es una silueta apagada con un « ? ? ? ». No paga plata: paga completismo, y empuja a probar el contenido que el jugador saltea (el cultivo que nunca planta, la receta que nunca cocina, el bicho que esquiva). No guarda ni un byte propio: se deriva de los contadores que ya existen y de lo que hay en la bolsa, así que no se puede perder con un guardado y las partidas viejas abren el álbum ya medio lleno. Si mañana se agrega un cultivo o un monstruo, su lámina aparece sola. A futuro, el MUSEO — hermano de la sala de trofeos — cuando los edificios tengan interior.
+
 **Los logros: metas con premio, futura sala de trofeos**
 
 La pestaña 🏆 del menú junta metas de toda la granja en tres tiers — bronce, plata y oro — más un puñado de únicos de las primeras horas (primera cosecha, primer plato, primer animal, tutorial). Los contadores son los que el juego ya llevaba (G.stats): la acción real mueve el logro, nada se cuenta aparte. El premio se cobra a mano en la pestaña y cuelga del ancla: bronce 5 de plata (15 minutos), plata 20 (1 hora), oro 80 (4 horas). El total repartible en toda una partida es ≈965 de plata sobre ~250.000: condimento, no fuente de ingreso. Las metas de bronce llegan en la primera sesión larga — su función es dar SIEMPRE un siguiente paso visible aunque el próximo nivel quede lejos. Decisión de dirección del 22/8: vive en el menú (no en el granero, porque abarca todo el juego), y cuando los edificios tengan interior pasa a ser la SALA DE TROFEOS — lo cobrado se conserva tal cual, la migración es solo visual.
@@ -444,7 +448,7 @@ Normas de diseño que vienen de decisiones de dirección y que conviene no reabr
 
 **15. Cómo verificar lo que dice este documento**
 
-El proyecto tiene 72 pruebas automáticas y 16 auditores (112 herramientas en total). No comprueban que el código compile: comprueban que el JUEGO cumpla las reglas de arriba. Los más útiles para el diseñador:
+El proyecto tiene 73 pruebas automáticas y 16 auditores (113 herramientas en total). No comprueban que el código compile: comprueban que el JUEGO cumpla las reglas de arriba. Los más útiles para el diseñador:
 
 | **Herramienta**                 | **Qué contesta**                                            |
 | ------------------------------- | ----------------------------------------------------------- |

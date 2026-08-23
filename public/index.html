@@ -319,6 +319,17 @@
   .gmi:hover{filter:brightness(1.15)}
   .gmi span.ic{font-size:15px;width:20px;text-align:center}
   .gmi b.key{margin-left:auto;font-size:11px;background:#161f12;border:1px solid #4a5a3a;color:#cbbf9f;border-radius:6px;padding:1px 6px}
+  /* 23/8: EL ÁLBUM — láminas en grilla. La silueta y la revelada MIDEN LO MISMO (regla:
+     ninguna interfaz cambia de tamaño al interactuar); lo único que cambia es el color. */
+  .alb-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(72px,1fr));gap:6px;margin:4px 0 2px}
+  .alb-pieza{background:rgba(20,28,16,.55);border:1px solid #3c4d31;border-radius:8px;padding:6px 4px;text-align:center;min-height:74px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px}
+  .alb-pieza img{width:30px;height:30px;object-fit:contain;image-rendering:pixelated}
+  .alb-pieza .emo{font-size:26px;line-height:30px}
+  .alb-pieza .nm{font-size:10px;color:#cbbf9f;line-height:1.15}
+  .alb-pieza.oculta{opacity:.5}
+  .alb-pieza.oculta img,.alb-pieza.oculta .emo{filter:brightness(0) saturate(0) opacity(.45)}
+  .alb-pieza.oculta .nm{color:#6f7a60}
+  .alb-pieza.nueva{border-color:#c79a2b;box-shadow:0 0 0 1px #c79a2b inset}
   /* 22/8: PESCA v2 — el carrete de Fishing Frenzy. Medidas FIJAS (regla: ninguna interfaz
      cambia de tamaño al interactuar); solo se mueven la zona, el pez y el relleno. */
   #pesca-mini{position:fixed;right:16px;top:50%;transform:translateY(-50%);z-index:6;display:none;flex-direction:column;align-items:center;gap:6px;pointer-events:none}
@@ -978,6 +989,14 @@
     <div class="pm-pie">mantené apretado: la zona sube · soltá: baja</div>
   </div>
 
+  <!-- 23/8: EL ÁLBUM — la colección de primeras veces (variedad, donde los logros premian volumen) -->
+  <div class="ov" id="ov-album"><div class="card" style="width:min(600px,94%)">
+    <button class="close" data-close="ov-album">×</button>
+    <h3>📖 Álbum de la granja</h3>
+    <div class="sub">Cada cosa que conseguís por primera vez revela su lámina. <b id="alb-prog"></b></div>
+    <div class="forge-list" id="album-list" style="max-height:58vh"></div>
+  </div></div>
+
   <div class="ov" id="ov-logros"><div class="card" style="width:min(560px,94%)">
     <button class="close" data-close="ov-logros">×</button>
     <h3>🏆 Logros</h3>
@@ -1075,6 +1094,7 @@
       <button class="gmi" data-panel="ov-mapa"><span class="ic"></span> Mapa <b class="key">N</b></button>
       <button class="gmi" data-panel="ov-objetivos"><span class="ic">🎯</span> Objetivos</button>
       <button class="gmi" data-panel="ov-logros"><span class="ic">🏆</span> Logros <b class="key" id="gm-log"></b></button>
+      <button class="gmi" data-panel="ov-album"><span class="ic">📖</span> Álbum <b class="key" id="gm-alb"></b></button>
       <button class="gmi" data-panel="ov-inv"><span class="ic"></span> Inventario <b class="key">I</b></button>
       <button class="gmi" data-panel="ov-cobertizo"><span class="ic">🏚</span> Cobertizo <b class="key" id="gm-cob"></b></button>
       <button class="gmi" data-panel="ov-skills"><span class="ic"></span> Skills <b class="key">X</b></button>
