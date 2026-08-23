@@ -1132,6 +1132,10 @@ class FarmScene extends Phaser.Scene {
       return n ? ("Tablón de pedidos — " + n + " para entregar") : "Tablón de pedidos del pueblo";
     }
     if (o.type === "paquete") return "Levantar tu paquete del día 📦";
+    if (o.type === "goblinmerc") {
+      const of = (typeof goblinOfertaHoy === "function") ? goblinOfertaHoy() : null;
+      return of ? ("Mercader Goblin — cambia " + of.cant + " " + (RES_LABEL[of.pide] || of.pide) + " por " + of.entrega + " " + (RES_LABEL[of.da] || of.da) + " 🤝") : "Mercader Goblin 🤝";
+    }
     if (o.type === "cofre_diario") {
       if (!G.kitReclamado) return "¡Abrí tu kit de bienvenida!";
       return "Baúl de premios";
@@ -1241,6 +1245,17 @@ class FarmScene extends Phaser.Scene {
     }
     if (o.type === "paquete") {   // EL PAQUETE DE LA MAÑANA (15/8): su propia pantalla
       openOv("ov-paquete");
+      return;
+    }
+    if (o.type === "goblinmerc") {   // EL MERCADER GOBLIN (22/8): un trueque por día
+      const of = (typeof goblinOfertaHoy === "function") ? goblinOfertaHoy() : null;
+      if (!of) return;
+      const tengo = Math.floor(G.res[of.pide] || 0);
+      askConfirm("«Grjj… trato del día: vos me das " + of.cant + " " + (RES_LABEL[of.pide] || of.pide) +
+        " y yo te doy " + of.entrega + " " + (RES_LABEL[of.da] || of.da) + ". ¿Trato?»" +
+        (tengo < of.cant ? "  (Tenés " + tengo + " — te faltan " + (of.cant - tengo) + ".)" : ""),
+        () => { if (typeof goblinAceptar === "function") goblinAceptar(); },
+        { title: "Mercader Goblin 🤝", yes: "¡Trato!", yesClass: "green", no: "Hoy no", noClass: "red" });
       return;
     }
     if (o.type === "excav") {   // EXCAVACIÓN (15/8): un clic, puff de tierra y el botín
@@ -2945,6 +2960,26 @@ class FarmScene extends Phaser.Scene {
       const po = this.paqueteObj; this.paqueteObj = null;
       if (po.sprite) po.sprite.destroy();
       const ix = this.objs.indexOf(po); if (ix >= 0) this.objs.splice(ix, 1);
+    }
+    /* EL MERCADER GOBLIN (22/8): una visita por día, parado junto al buzón con su trato.
+       Aparece con el tutorial terminado; al aceptar el trueque, goblinEstado deja de estar
+       disponible y este mismo tick lo despide con un puff hasta mañana. */
+    let hayGoblin = false;
+    try { hayGoblin = (typeof goblinEstado === "function") && goblinEstado().disponible && (!G.tuto || G.tuto.done); } catch (e) {}
+    if (hayGoblin && !this.goblinObj && this.textures.exists("goblin_idle_0")) {
+      const bz = (this.objs || []).find(x => x.type === "buzon");
+      const gx = bz ? bz.cx - 30 : 600, gy = bz ? bz.by + 8 : 168, gw = GF.TILE * 0.95;
+      const spr = this.add.sprite(gx, gy, "goblin_idle_0").setOrigin(0.5, 1).setDepth(gy);
+      spr.setScale(gw / spr.width); spr.setFlipX(true);   // mirando hacia la granja
+      try { if (this.anims.exists("goblin_idle")) spr.play("goblin_idle"); } catch (e) {}
+      const sombra = this.add.ellipse(gx, gy + 2, gw * 0.7, 5, 0x000000, 0.22).setDepth(gy - 1);
+      this.goblinObj = { i: "goblinmerc", type: "goblinmerc", cx: gx, by: gy, w: gw, rw: gw, baseKey: "goblin_idle_0", sprite: spr, sombra, readyAt: 0 };
+      this.objs.push(this.goblinObj);
+    } else if (!hayGoblin && this.goblinObj) {
+      const go = this.goblinObj; this.goblinObj = null;
+      this.puffFx(go.cx, go.by - 10, 0x9aa06a, 8);   // se va con su puff de mercader
+      if (go.sprite) go.sprite.destroy(); if (go.sombra) go.sombra.destroy();
+      const ix = this.objs.indexOf(go); if (ix >= 0) this.objs.splice(ix, 1);
     }
   }
 

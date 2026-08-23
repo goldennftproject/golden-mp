@@ -4,7 +4,7 @@ Documento de Diseño de Juego
 
 *Estado real del código · 22 de agosto de 2026 · revisión 3*
 
-*Novedades de esta revisión: las CARGAS de los nodos (el árbol guarda hasta 4 talados; la partida cobra el doble del ancla), la picada de mineral a rendimiento 2, la expansión 3 sin muro y los edificios tardíos abaratados, el establo que crece un lugar por nivel de Ganadería, el techo de oficios derivado del contenido, el PORTERO del guardado en producción (bitácora + puerta vieja sellada), la cuenta por email, y la ESCALERA DE CULTIVOS EN DOS CARRILES (nocturnos desde el nivel 2).*
+*Novedades de esta revisión: las CARGAS de los nodos (el árbol guarda hasta 4 talados; la partida cobra el doble del ancla), la picada de mineral a rendimiento 2, la expansión 3 sin muro y los edificios tardíos abaratados, el establo que crece un lugar por nivel de Ganadería, el techo de oficios derivado del contenido, el PORTERO del guardado en producción (bitácora + puerta vieja sellada), la cuenta por email, la ESCALERA DE CULTIVOS EN DOS CARRILES (nocturnos desde el nivel 2), y el MERCADER GOBLIN (un trueque anclado por día).*
 
 Para el equipo de diseño
 
@@ -222,6 +222,10 @@ Una parcela llega por tres caminos, y cada camino lleva su cuenta — ese libro 
 
 *Cada celda sabe qué la ocupa, y esa es la ÚNICA autoridad. La usan el colocador de edificios, el sombreado que se ve al llevar algo en la mano, los mensajes de « aquí no entra » y el buscador de caminos. Cuando esta regla se ha duplicado, el resultado siempre ha sido el mismo: celdas bloqueadas sin nada visible encima. Es la clase de fallo que el jugador no puede diagnosticar y que le hace pensar que el juego está roto.*
 
+**El Mercader Goblin: un trueque por día**
+
+Cada día aparece un goblin junto al buzón (sprite ya existente, sin arte nuevo) con UNA oferta: pide una cantidad del recurso básico que MÁS tenés (madera o piedra) y entrega el otro a valor de mercado más un 10 % de propina. El valor del día ronda los 40-60 de plata — endulza, no imprime — y la oferta es determinística por fecha: el F5 no la re-sortea. « Hoy no » no quema el día: el goblin espera hasta que aceptes o hasta mañana. Cerrado el trato se va con su humito y vuelve al día siguiente con oferta nueva. El propósito es doble: darle salida al recurso que sobra (el que tala mucho consigue piedra y al revés) y sumar un motivo diario de visita con personaje, no con menú.
+
 **7. Edificios**
 
 Ningún edificio viene puesto. Todos llegan como PLANO, el plano se guarda en el Cobertizo y el jugador elige dónde va. Al colocarlo aparece la obra, y la obra se termina depositando materiales.
@@ -421,7 +425,7 @@ Normas de diseño que vienen de decisiones de dirección y que conviene no reabr
 
 **15. Cómo verificar lo que dice este documento**
 
-El proyecto tiene 63 pruebas automáticas y 16 auditores (103 herramientas en total). No comprueban que el código compile: comprueban que el JUEGO cumpla las reglas de arriba. Los más útiles para el diseñador:
+El proyecto tiene 64 pruebas automáticas y 16 auditores (104 herramientas en total). No comprueban que el código compile: comprueban que el JUEGO cumpla las reglas de arriba. Los más útiles para el diseñador:
 
 | **Herramienta**                 | **Qué contesta**                                            |
 | ------------------------------- | ----------------------------------------------------------- |

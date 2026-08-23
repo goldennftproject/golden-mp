@@ -5233,6 +5233,51 @@ function valesCanjear(id) {
   if (typeof saveFarm === "function") saveFarm(true);
 }
 
+/* ============ EL MERCADER GOBLIN (22/8, dirección — auditoría del arranque, propuesta D) ====
+   Un visitante raro con sprite YA EXISTENTE (el goblin del bestiario) que aparece en la granja
+   una vez por día, junto al buzón, con UN trueque: te pide una cantidad del recurso básico que
+   MÁS tenés y te da el otro, al valor de mercado +10% de propina — tope ~40-60 de plata de
+   valor por día, así que no mueve el ancla más que un premio diario. La oferta es
+   DETERMINÍSTICA por fecha (nada de rerolls con F5). Aceptar lo despide hasta mañana; decir
+   "hoy no" lo deja esperando por si cambiás de idea. El día 1 aparece garantizado tras el
+   tutorial: un personaje, una sorpresa y un motivo más para volver mañana. */
+function goblinEstado() {
+  const g = G.goblin || (G.goblin = { date: "" });
+  return { disponible: g.date !== dayStamp(0) };
+}
+function goblinOfertaHoy() {
+  const semilla = parseInt(String(dayStamp(0)).replace(/\D/g, ""), 10) || 1;
+  const rnd = (n) => { const x = Math.abs(Math.sin(semilla * 7919 + n * 104729)) * 10000; return x - Math.floor(x); };
+  let pide = "madera", da = "piedra";
+  if ((G.res.piedra || 0) > (G.res.madera || 0)) { pide = "piedra"; da = "madera"; }   // pide del que te sobra
+  const Pp = PRICE[pide] || 1, Pd = PRICE[da] || 1;
+  const objetivo = 40 + Math.floor(rnd(1) * 21);                      // 40-60 de plata de valor
+  const cant = Math.max(2, Math.round(objetivo / Pp));
+  const entrega = Math.max(1, Math.round(cant * Pp * 1.1 / Pd));     // +10% de propina (redondeada)
+  return { pide, cant, da, entrega };
+}
+function goblinAceptar() {
+  if (!goblinEstado().disponible) return { error: "hoy ya hizo su trato" };
+  const of = goblinOfertaHoy();
+  if (Math.floor(G.res[of.pide] || 0) < of.cant) {
+    toast("Te faltan " + (of.cant - Math.floor(G.res[of.pide] || 0)) + " " + (RES_LABEL[of.pide] || of.pide));
+    return { error: "falta" };
+  }
+  G.res[of.pide] -= of.cant;
+  if (!tryAddRes(of.da, of.entrega)) {
+    G.res[of.pide] += of.cant;   // el trueque no se hace a medias
+    toast("Bolsa llena — hacé lugar para el trato");
+    return { error: "bolsa" };
+  }
+  G.goblin = G.goblin || {}; G.goblin.date = dayStamp(0);
+  log("🤝 Trato con el Mercader Goblin: −" + of.cant + " " + (RES_LABEL[of.pide] || of.pide) +
+    " → +" + of.entrega + " " + (RES_LABEL[of.da] || of.da) + ". «Grjj… buen negocio. Mañana, más.»", "gold");
+  toast("🤝 ¡Trato hecho!");
+  if (typeof refreshHud === "function") refreshHud();
+  if (typeof saveFarm === "function") saveFarm(true);
+  return { ok: true, of };
+}
+
 function dailyState() {
   const dd = G.daily || (G.daily = { day: 0, last: "" });
   if (dd.last === dayStamp(0)) return { claimable: false, day: dd.day, lost: false };
