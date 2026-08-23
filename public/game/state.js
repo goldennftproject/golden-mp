@@ -3493,8 +3493,9 @@ function comprarAnimal(k) {
   if (typeof saveFarm === "function") saveFarm(true);
 }
 // alimenta a TODOS los de ese tipo, uno por cultivo, hasta donde alcance
-function alimentarAnimal(k) {
-  const d = ANIMAL_DEF[k], l = animalLista(k); if (!d || !l.length) return;
+// (silencio: lo usan los botones "todo" del establo — un solo resumen, no diez toasts)
+function alimentarAnimal(k, silencio) {
+  const d = ANIMAL_DEF[k], l = animalLista(k); if (!d || !l.length) return 0;
   let dados = 0, gastado = {};
   for (const a of l) {
     // Fixes.docx 14/8 #1: siempre se puede alimentar — su cultivo PREFERIDO da la felicidad
@@ -3508,13 +3509,16 @@ function alimentarAnimal(k) {
     a.comidoAt = nowMs();
     statAdd("alimentar", k); dados++;
   }
-  if (!dados) { toast("Necesitás algún cultivo — lo preferido de " + d.label + ": " + d.come.map(c => CROP_DEF[c].label).join(" o ")); return; }
+  if (!dados) { if (!silencio) toast("Necesitás algún cultivo — lo preferido de " + d.label + ": " + d.come.map(c => CROP_DEF[c].label).join(" o ")); return 0; }
   const qué = Object.keys(gastado).map(c => gastado[c] + " " + CROP_DEF[c].label).join(" + ");
   log("Alimentaste " + dados + " " + d.label + " con " + qué + ". Felicidad media: " + animalFelicidad(k) + "/100.", "good");
-  toast(d.label + " · felicidad " + animalFelicidad(k));
-  refreshHud(); if (typeof refreshEstablo === "function" && isOpen("ov-establo")) refreshEstablo();
-  if (isOpen("ov-inv")) refreshInv();
-  if (typeof saveFarm === "function") saveFarm();
+  if (!silencio) {
+    toast(d.label + " · felicidad " + animalFelicidad(k));
+    refreshHud(); if (typeof refreshEstablo === "function" && isOpen("ov-establo")) refreshEstablo();
+    if (isOpen("ov-inv")) refreshInv();
+    if (typeof saveFarm === "function") saveFarm();
+  }
+  return dados;
 }
 function animalListo(k) {   // ¿hay AL MENOS uno listo de este tipo?
   const d = ANIMAL_DEF[k]; if (!d) return false;
@@ -3530,10 +3534,10 @@ function animalListos(k) {   // cuántos hay listos para cobrar
   return animalLista(k).filter(a => nowMs() - (a.prodAt || 0) >= d.cicloH * 3600000).length;
 }
 // cobra TODOS los que estén listos de ese tipo
-function recogerAnimal(k) {
-  const d = ANIMAL_DEF[k], l = animalLista(k); if (!d || !l.length) return;
+function recogerAnimal(k, silencio) {
+  const d = ANIMAL_DEF[k], l = animalLista(k); if (!d || !l.length) return 0;
   const listos = l.filter(a => nowMs() - (a.prodAt || 0) >= d.cicloH * 3600000);
-  if (!listos.length) { toast("Todavía no produjo — faltan " + fmtDur(animalFalta(k))); return; }
+  if (!listos.length) { if (!silencio) toast("Todavía no produjo — faltan " + fmtDur(animalFalta(k))); return 0; }
   let total = 0;
   for (const a of listos) {
     const f = animalFelizDe(a);
@@ -3541,14 +3545,49 @@ function recogerAnimal(k) {
     if (!roomForRes(d.mat, total + n)) break;   // lo que no entra queda para el próximo viaje
     total += n; a.prodAt = nowMs();
   }
-  if (!total) { bagFull("recoger " + RES_LABEL[d.mat]); return; }
+  if (!total) { if (!silencio) bagFull("recoger " + RES_LABEL[d.mat]); return 0; }
   G.res[d.mat] = (G.res[d.mat] || 0) + total;
   addXp("ganaderia", XP_ANIMAL * listos.length);   // 18/8: los animales son Ganadería, no Cultivo
   log(d.label + " ×" + listos.length + " produjo " + total + " de " + RES_LABEL[d.mat] + " (felicidad media " + animalFelicidad(k) + "/100).", "gold");
-  toast("+" + total + " " + RES_LABEL[d.mat]);
+  if (!silencio) {
+    toast("+" + total + " " + RES_LABEL[d.mat]);
+    refreshHud(); if (isOpen("ov-inv")) refreshInv();
+    if (typeof refreshEstablo === "function" && isOpen("ov-establo")) refreshEstablo();
+    if (typeof saveFarm === "function") saveFarm(true);
+  }
+  return total;
+}
+/* ---- LOS DOS BOTONES "TODO" DEL ESTABLO (23/8, QoL de la cola corta) ----
+   Con el cupo creciendo a 20 animales, el clic por especie es tedio. Un botón alimenta a
+   TODAS las especies con hambre (se saltea a los que están a felicidad 100: no se desperdicia
+   comida) y otro recoge TODA la producción lista. Un solo resumen, un solo guardado. */
+function establoAlimentarTodo() {
+  let especies = 0, animales = 0;
+  for (const k of ANIMAL_ORDER) {
+    if (!animalCant(k) || animalFelicidad(k) >= 100) continue;   // llenos: ni un cultivo de más
+    const dados = alimentarAnimal(k, true) || 0;
+    if (dados > 0) { especies++; animales += dados; }
+  }
+  if (!animales) { toast("Nadie tiene hambre (o no hay cultivos en la bolsa)"); return { animales: 0 }; }
+  toast("🍽 " + animales + (animales > 1 ? " animales alimentados" : " animal alimentado"));
+  refreshHud(); if (typeof refreshEstablo === "function" && isOpen("ov-establo")) refreshEstablo();
+  if (isOpen("ov-inv")) refreshInv();
+  if (typeof saveFarm === "function") saveFarm();
+  return { animales, especies };
+}
+function establoRecogerTodo() {
+  const partes = [];
+  for (const k of ANIMAL_ORDER) {
+    if (!animalListos(k)) continue;
+    const n = recogerAnimal(k, true) || 0;
+    if (n > 0) partes.push("+" + n + " " + RES_LABEL[ANIMAL_DEF[k].mat]);
+  }
+  if (!partes.length) { toast("Nada listo para recoger todavía"); return { total: 0 }; }
+  toast("🧺 " + partes.join(" · "));
   refreshHud(); if (isOpen("ov-inv")) refreshInv();
   if (typeof refreshEstablo === "function" && isOpen("ov-establo")) refreshEstablo();
   if (typeof saveFarm === "function") saveFarm(true);
+  return { total: partes.length };
 }
 
 // ================= ESTAMINA DE LA ZONA NEGRA ("2das mejoras", 4/8) =================

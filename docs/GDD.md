@@ -275,6 +275,8 @@ Los animales se compran con plata, ocupan sitio y producen material cada ciclo m
 
   - Tope de 5 animales por especie — y un CUPO TOTAL del establo que se deriva del oficio (22/8): 2 lugares al arrancar, +1 por cada nivel de Ganadería, hasta el techo de 20. Así cada nivel del oficio entrega algo tangible y los huecos de la escalera (2-3, 5-7, 9-11) quedaron curados. Los guardados con más animales que cupo no pierden nada: su cupo es lo que ya tienen, y la compra espera a que el nivel lo alcance.
 
+*QoL del 23/8: con el cupo llegando a 20 lugares, el establo tiene dos botones de tanda — ALIMENTAR TODO (salta a los que ya están en felicidad 100: no se desperdicia un solo cultivo) y RECOGER TODO (cobra la producción lista de todas las especies). Un clic, un resumen, un guardado. Los botones por especie siguen donde estaban.*
+
 **9. Combate: la Zona Negra**
 
 *La XP de combate está anclada por el diseñador (21/8): LA RATA DA 5. La tabla del doc maestro daba 100 y una sola rata regalaba el nivel 3; el bestiario entero se reescaló ÷20 conservando su forma (XP proporcional al peligro del bicho, con premio en jefes y élites).*
@@ -442,7 +444,7 @@ Normas de diseño que vienen de decisiones de dirección y que conviene no reabr
 
 **15. Cómo verificar lo que dice este documento**
 
-El proyecto tiene 71 pruebas automáticas y 16 auditores (111 herramientas en total). No comprueban que el código compile: comprueban que el JUEGO cumpla las reglas de arriba. Los más útiles para el diseñador:
+El proyecto tiene 72 pruebas automáticas y 16 auditores (112 herramientas en total). No comprueban que el código compile: comprueban que el JUEGO cumpla las reglas de arriba. Los más útiles para el diseñador:
 
 | **Herramienta**                 | **Qué contesta**                                            |
 | ------------------------------- | ----------------------------------------------------------- |

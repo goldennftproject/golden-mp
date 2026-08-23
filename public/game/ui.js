@@ -1410,6 +1410,14 @@ function refreshEstablo() {
   /* 22/8: el cupo total sale del nivel de Ganadería — el establo lo dice en la cara */
   const cupoEl = $("establo-cupo");
   const lleno = animalesTotal() >= establoCupo();
+  // 23/8 (QoL): los botones "todo" — se atan acá (la ventana puede redibujarse mil veces, el onclick pisa al anterior)
+  const bAli = $("est-alim-todo"), bRec = $("est-rec-todo");
+  if (bAli) { bAli.onclick = () => { if (typeof establoAlimentarTodo === "function") establoAlimentarTodo(); }; bAli.disabled = !animalesTotal(); }
+  if (bRec) {
+    if (typeof establoRecogerTodo === "function") bRec.onclick = () => establoRecogerTodo();
+    const hayListo = ANIMAL_ORDER.some(k => animalListos(k) > 0);
+    bRec.disabled = !hayListo;
+  }
   if (cupoEl) cupoEl.textContent = "Lugares: " + animalesTotal() + "/" + establoCupo() + " (cada nivel de Ganadería suma uno, hasta " + ESTABLO_CUPO_MAX + ").";
   let h = "";
   ANIMAL_ORDER.forEach(k => {
