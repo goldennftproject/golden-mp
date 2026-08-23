@@ -4,7 +4,7 @@ Documento de Diseño de Juego
 
 *Estado real del código · 22 de agosto de 2026 · revisión 3*
 
-*Novedades de esta revisión: las CARGAS de los nodos (el árbol guarda hasta 4 talados; la partida cobra el doble del ancla), la picada de mineral a rendimiento 2, la expansión 3 sin muro y los edificios tardíos abaratados, el establo que crece un lugar por nivel de Ganadería, el techo de oficios derivado del contenido, el PORTERO del guardado en producción (bitácora + puerta vieja sellada), la cuenta por email, la ESCALERA DE CULTIVOS EN DOS CARRILES (nocturnos desde el nivel 2), el MERCADER GOBLIN (un trueque anclado por día), los LOGROS con premio (pestaña 🏆), y la MISIÓN DE EVENTO del tablón (viernes a domingo).*
+*Novedades de esta revisión: las CARGAS de los nodos (el árbol guarda hasta 4 talados; la partida cobra el doble del ancla), la picada de mineral a rendimiento 2, la expansión 3 sin muro y los edificios tardíos abaratados, el establo que crece un lugar por nivel de Ganadería, el techo de oficios derivado del contenido, el PORTERO del guardado en producción (bitácora + puerta vieja sellada), la cuenta por email, la ESCALERA DE CULTIVOS EN DOS CARRILES (nocturnos desde el nivel 2), el MERCADER GOBLIN (un trueque anclado por día), los LOGROS con premio (pestaña 🏆), y la MISIÓN DE EVENTO del tablón (viernes a domingo), y la PESCA v2 con el sistema de Fishing Frenzy (burbujas, anzuelo y zona de captura).*
 
 Para el equipo de diseño
 
@@ -133,6 +133,10 @@ Consecuencia medida (simulador): la partida a granja 21 pasa de 49 a 63 días �
 **Cargas: el nodo pasado no se desperdicia (21/8)**
 
 Un árbol o roca ya crecido acumula 1 carga por cada reloj propio extra que pase sin cosecharse, hasta llenarse con 4. Y el nodo VIRGEN — el que nunca se taló — nace lleno (22/8): el jugador nuevo ve la escalera completa en su primer talado, y cada expansión entrega su árbol y su roca cargados como bienvenida (4+4 recursos contra costes de 61-810: regalo, no economía). El estado virgen se consume una sola vez y el F5 no lo resucita. El árbol se llena a las 2 horas de pasado; la roca y la veta de piedra, a las 2 h 40. Y el ritmo (22/8, dictado clic a clic por dirección): los CORTES SUAVES pagan una carga cada uno (+1 madera, −1 hacha); el CORTE PROFUNDO no da ni consume nada; el TOCÓN paga la última. Árbol de 4 cargas: suave(+1) · suave(+1) · suave(+1) · profundo(nada) · tocón(+1) — cinco clics, cuatro maderas, cuatro hachas. De 2: suave(+1) · profundo · tocón(+1). El árbol normal de una carga conserva su tanda clásica de siempre: suave(nada) · profundo(nada) · tocón(+1). La roca y la veta de piedra, igual con su media rota. Las vetas de mineral (bronce en adelante) quedan APARTADAS de la mecánica por decisión de dirección (21/8): reloj simple, una picada y a dormir. Cada picada de mineral rinde 2 (el ancla del 18/8: con 1 picar daba pérdida, porque el pico cuesta más de lo que saca).
+
+**La pesca v2: el sistema de Fishing Frenzy (22/8)**
+
+La pesca dejó de ser una barra que se mira y pasó a ser el ÚNICO sistema de habilidad activa de la granja, copiado del Fishing Frenzy de Ronin por decisión de dirección — con una poda suya: sin carga de distancia, «con un clic simplemente tirás, porque cada tirada es un gusano». Tres fases: el TIRO (un clic, el corcho al agua), el PIQUE (a los 1,6-4,2 segundos aparecen burbujas y hay 1 segundo para clavar el anzuelo — antes o después, se pierde), y el CARRETE: el pez recorre una barra vertical y el jugador maneja la zona de captura (apretar sube, soltar baja); con el pez adentro el progreso llena, afuera drena. La zona CRECE con el nivel de Pesca (23 % de la barra al nivel 1, techo 40 %) y los peces raros nadan más rápido y cambian de rumbo más seguido, tal cual el original. La economía no se movió un milímetro: el gusano, el uso de caña, el reloj de 15 minutos, el sorteo 60/25/12/3 y la XP se cobran al RESOLVER la captura por la misma función auditada de siempre — un lance fallado cuesta tiempo, no plata, así el minijuego no toca el ancla. La rareza se sortea al armar el lance y el premio coincide con la pelea que diste.
 
 **La escalera de minerales**
 
@@ -433,7 +437,7 @@ Normas de diseño que vienen de decisiones de dirección y que conviene no reabr
 
 **15. Cómo verificar lo que dice este documento**
 
-El proyecto tiene 66 pruebas automáticas y 16 auditores (106 herramientas en total). No comprueban que el código compile: comprueban que el JUEGO cumpla las reglas de arriba. Los más útiles para el diseñador:
+El proyecto tiene 67 pruebas automáticas y 16 auditores (107 herramientas en total). No comprueban que el código compile: comprueban que el JUEGO cumpla las reglas de arriba. Los más útiles para el diseñador:
 
 | **Herramienta**                 | **Qué contesta**                                            |
 | ------------------------------- | ----------------------------------------------------------- |

@@ -4734,7 +4734,93 @@ const FISH_COST = 5;
      · El común paga lo que dice el ancla para el tiempo que ocupa, no un número al azar. */
 var FISH_CD = 900;   // 15 min de laguna: al ancla son 5 de plata por pesca
 function pescaCdLeft() { return Math.max(0, (G.pescaHasta || 0) - nowMs()); }
-function goFishing() {
+
+/* ============ PESCA v2 — EL SISTEMA DE FISHING FRENZY (22/8, dirección) ============
+   « Hay un sistema de pesca que me gusta mucho: Fishing Frenzy. Investígalo y cópialo. Lo único
+   que sacaría es lo de mantener presionado para tirar más lejos: con un clic simplemente tirás,
+   porque cada tirada es un gusano. »  (wiki.fishingfrenzy.co/game/fishing)
+   Las tres fases, adaptadas:
+     1. EL TIRO — un clic (sin carga de distancia). El corcho vuela y la línea queda quieta.
+     2. EL PIQUE — a los 1,6-4,2 s aparecen las BURBUJAS: hay 1 s para clavar el anzuelo.
+        Clavar antes de tiempo espanta al pez; dejar pasar la ventana también lo pierde.
+     3. EL CARRETE — el minijuego: el pez se mueve por una barra vertical y el jugador maneja
+        la ZONA DE CAPTURA (mantener apretado sube, soltar baja). Con el pez adentro la barra
+        de progreso llena; afuera, drena. Llena = pez a la bolsa; vacía o 18 s = se escapó.
+   Lo que se siente del oficio y de la rareza:
+     · la zona de captura CRECE con el nivel de Pesca (el oficio en las manos, no solo números);
+     · los peces raros se mueven más rápido y cambian de rumbo más seguido (Fishing Frenzy:
+       "rarer fish move faster and more erratically").
+   La economía NO se toca: el gusano, el uso de caña, el reloj de 15 min y el sorteo de rareza
+   se cobran al RESOLVER la captura (goFishing, la misma función auditada de siempre). Un lance
+   fallado cuesta el tiempo y la vergüenza, no plata — así el minijuego no mueve el ancla y el
+   que juega bien pesca exactamente lo que el ancla dice. La rareza se sortea al armar el lance
+   (misma tabla 60/25/12/3) y goFishing la respeta para que la dificultad y el premio coincidan.
+   Todo lo de acá es LÓGICA PURA (la dibuja farm.js): así los tests la corren sin navegador. */
+var PESCA2_ESPERA = [1.6, 4.2];   // segundos hasta el pique, al azar del lance
+var PESCA2_VENTANA = 1.0;         // segundos para clavar el anzuelo desde que hay burbujas
+var PESCA2_TIMEOUT = 18;          // segundos máximos del carrete
+var PESCA2_DIF = {   // vel: qué tan rápido persigue su rumbo · nervio: cambios de rumbo por segundo
+  comun:      { vel: 1.6, nervio: 0.9 },
+  raro:       { vel: 2.2, nervio: 1.4 },
+  epico:      { vel: 3.0, nervio: 2.0 },
+  legendario: { vel: 4.0, nervio: 2.8 },
+};
+function pescaZonaAlto(nv) { return Math.min(0.40, 0.22 + 0.012 * Math.max(1, nv || 1)); }   // fracción de la barra
+function pescaLanceNuevo(rnd) {
+  rnd = rnd || Math.random;
+  const r = rnd();   // MISMA tabla que goFishing: la dificultad que jugás es el premio que cobrás
+  const rar = r < 0.60 ? "comun" : r < 0.85 ? "raro" : r < 0.97 ? "epico" : "legendario";
+  return { fase: "espera", rar, t: 0, biteEn: PESCA2_ESPERA[0] + rnd() * (PESCA2_ESPERA[1] - PESCA2_ESPERA[0]) };
+}
+function pescaLanceTick(l, dt) {   // corre en espera y pique; el carrete tiene su propio tick
+  l.t += dt;
+  if (l.fase === "espera" && l.t >= l.biteEn) l.fase = "pique";
+  else if (l.fase === "pique" && l.t >= l.biteEn + PESCA2_VENTANA) { l.fase = "perdido"; l.motivo = "tarde"; }
+  return l.fase;
+}
+function pescaAnzuelo(l, nivel, rnd) {   // el clic del jugador
+  if (l.fase === "pique") { l.fase = "carrete"; pescaReelInit(l, nivel, rnd); return "carrete"; }
+  if (l.fase === "espera") { l.fase = "perdido"; l.motivo = "pronto"; return "perdido"; }
+  return l.fase;
+}
+function pescaReelInit(l, nivel, rnd) {
+  rnd = rnd || Math.random;
+  l.t = 0;
+  l.pez = 0.5; l.rumbo = 0.3 + rnd() * 0.4;              // posición y destino del pez (0 abajo · 1 arriba)
+  l.zona = 0.5; l.zonaV = 0;                              // la zona de captura y su velocidad
+  l.zonaAlto = pescaZonaAlto(nivel);                      // el oficio agranda la zona
+  l.prog = 0.4;                                           // arranca con margen: perdonar el primer tropiezo
+}
+function pescaReelTick(l, dt, hold, rnd) {
+  rnd = rnd || Math.random;
+  const d = PESCA2_DIF[l.rar] || PESCA2_DIF.comun;
+  l.t += dt;
+  // el pez: persigue su rumbo, y cada tanto (su nervio) elige otro
+  if (rnd() < d.nervio * dt) l.rumbo = rnd();
+  l.pez += Math.max(-1, Math.min(1, (l.rumbo - l.pez) * 4)) * d.vel * 0.22 * dt;
+  l.pez = Math.max(0.02, Math.min(0.98, l.pez));
+  // la zona: apretar la empuja para arriba, soltar la deja caer (con inercia, estilo Stardew)
+  l.zonaV += (hold ? 2.6 : -2.2) * dt;
+  l.zonaV = Math.max(-1.6, Math.min(1.6, l.zonaV));
+  l.zona += l.zonaV * dt;
+  const mitad = l.zonaAlto / 2;
+  if (l.zona < mitad) { l.zona = mitad; l.zonaV = Math.max(0, l.zonaV * -0.25); }         // rebote suave abajo
+  if (l.zona > 1 - mitad) { l.zona = 1 - mitad; l.zonaV = Math.min(0, l.zonaV * -0.25); } // y arriba
+  // el progreso: adentro llena, afuera drena
+  l.adentro = Math.abs(l.pez - l.zona) <= mitad;
+  l.prog += (l.adentro ? 0.22 : -0.30) * dt;
+  if (l.prog >= 1) { l.fase = "gana"; return "gana"; }
+  if (l.prog <= 0 || l.t >= PESCA2_TIMEOUT) { l.fase = "perdido"; l.motivo = l.prog <= 0 ? "escapo" : "tiempo"; return "perdido"; }
+  return "sigue";
+}
+var PESCA2_AVISO = {   // qué contesta cada final (un clic siempre contesta algo)
+  pronto: "¡Muy pronto! Esperá las burbujas para clavar el anzuelo",
+  tarde: "El pez se llevó la carnada — había 1 segundo para clavar",
+  escapo: "¡Se escapó! Mantené al pez dentro de la zona",
+  tiempo: "El pez se cansó de pelear… y vos también. Se fue",
+};
+
+function goFishing(rarForzada) {
   /* 20/8 — LA RED, NO LA PUERTA, Y CON LA MISMA REGLA. Las comprobaciones viven en las entradas
      del clic (el objeto pesquero y el agua), así que a esta altura ya nadie debería llegar sin
      caña, sin cebo o con la laguna en reposo. Esto se queda por si mañana aparece una tercera
@@ -4747,6 +4833,9 @@ function goFishing() {
   if (toolDur("rod") <= 0) { log("¡La caña se rompió en pedazos! Crafteá otra en la Herrería.", "bad"); toast("¡Caña rota!"); }
   const r = Math.random();
   let rar; if (r < 0.60) rar = "comun"; else if (r < 0.85) rar = "raro"; else if (r < 0.97) rar = "epico"; else rar = "legendario";
+  // Pesca v2 (22/8): si el lance ya sorteó su pez (misma tabla de arriba), el premio es ESE pez —
+  // la dificultad que el jugador peleó en el carrete y la rareza que cobra tienen que coincidir.
+  if (rarForzada && FISH_DEF[rarForzada]) rar = rarForzada;
   /* 18/8 (dirección): "pescar tiene su propio skill, ¿por qué le da experiencia a cocinar?".
      Resto de cuando la pesca era "conseguir ingredientes". La Cocina se gana cocinando. */
   G.fish[rar]++; addXp("fishing", XP_PEZ);

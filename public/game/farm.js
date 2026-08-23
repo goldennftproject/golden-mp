@@ -495,6 +495,20 @@ class FarmScene extends Phaser.Scene {
         }
         return;
       }
+      /* 22/8 — PESCA v2: mientras hay un lance, el clic izquierdo ES el juego.
+         En la espera/pique clava el anzuelo (con 0,35 s de gracia para no castigar el
+         doble clic del tiro); en el carrete, apretar sube la zona de captura. */
+      if (this.lance) {
+        if (GF.uiOpen) return;
+        const l = this.lance;
+        if (l.fase === "espera" || l.fase === "pique") {
+          if (l.fase === "espera" && l.t < 0.35) return;   // gracia: ese clic era el del tiro
+          pescaAnzuelo(l, (typeof nivelOficio === "function") ? nivelOficio("fishing") : 1);
+          if (l.fase === "carrete") { this.pescaPanel(true); this.lanceHold = true; if (window.sfx) sfx("splash"); }
+          else if (l.fase === "perdido") this.pescaTerminar(null);
+        } else if (l.fase === "carrete") this.lanceHold = true;
+        return;
+      }
       if (GF.editMode && this.placing) {   // 13/8: colocar se resuelve al SOLTAR — así el arrastre panea la cámara
         this.hold = { sx: pt.x, sy: pt.y, px: pt.x, py: pt.y, active: false };
         return;
@@ -658,6 +672,7 @@ class FarmScene extends Phaser.Scene {
     });
     this.input.on("pointerup", (pt) => {
       if (this.editHl) this.editHl.setVisible(false);
+      if (this.lance) { this.lanceHold = false; return; }   // 22/8 PESCA v2: soltar deja caer la zona
       // 13/8: modo COLOCAR — si el clic no fue un paneo, se coloca en la celda al SOLTAR
       if (GF.editMode && this.placing) {
         const fuePan = !!(this.hold && this.hold.active);
@@ -1459,6 +1474,14 @@ class FarmScene extends Phaser.Scene {
       }
     }
     if (kind === "fish") this.castBobber(o.bx != null ? o.bx : o.cx, o.by2 != null ? o.by2 : (GF.POND.row + GF.POND.rows / 2) * GF.TILE);
+    /* 22/8 — PESCA v2 (Fishing Frenzy): en el juego real la pesca la resuelve el LANCE
+       (espera → burbujas → anzuelo → carrete), no el reloj de la barra. El camino clásico
+       (finishAction → goFishing) queda para los tests sin navegador, que no tienen el panel. */
+    if (kind === "fish" && typeof document !== "undefined" && document.getElementById && document.getElementById("pesca-mini") && typeof pescaLanceNuevo === "function") {
+      this.action.dur = Infinity;   // la cierra pescaTerminar, no el update
+      this.lance = pescaLanceNuevo(); this.lanceHold = false;
+      log("🎣 Tiraste la caña — cuando veas las burbujas, ¡CLIC para clavar el anzuelo!", "info");
+    }
     // 16/8 (dirección): duración 0 = se resuelve YA, en el mismo frame del clic. Si se dejaba
     // que lo cerrara el update siguiente, quedaba un frame de candado (~16 ms) que en clics
     // encadenados se notaba. Con esto, un clic es un golpe completo, sin ventana muerta.
@@ -1540,7 +1563,57 @@ class FarmScene extends Phaser.Scene {
       this.tweens.add({ targets: p, x: x + Math.cos(a) * r, y: y + Math.sin(a) * r, alpha: 0, duration: 320, onComplete: () => p.destroy() });
     }
   }
-  cancelFishing() { this.clearBobber(); this.action = null; toast("Pesca interrumpida"); }
+  cancelFishing() {
+    this.clearBobber(); this.action = null;
+    if (this.lance) { this.lance = null; this.lanceHold = false; this.pescaPanel(false); }   // 22/8 PESCA v2
+    toast("Pesca interrumpida");
+  }
+
+  /* ============ PESCA v2 — lo que se VE del lance (22/8) ============
+     La lógica está en state.js; acá solo el teatro: las burbujas del pique,
+     el panel del carrete (DOM, pointer-events:none — el clic sigue siendo del agua)
+     y el cierre con premio o con aviso. */
+  pescaBurbujas() {
+    const b = this.bobber;
+    if (b) {
+      this.tweens.add({ targets: b, y: b.y + 6, duration: 90, yoyo: true, repeat: 3 });
+      this.puffFx(b.x, b.y + 4, 0xa8d8ef, 8);
+      const t = this.add.text(b.x, b.y - 20, "❗", { fontSize: "22px" }).setOrigin(0.5).setDepth(9999);
+      this.tweens.add({ targets: t, y: b.y - 34, alpha: 0, duration: (typeof PESCA2_VENTANA !== "undefined" ? PESCA2_VENTANA : 1) * 1000, onComplete: () => t.destroy() });
+    }
+    if (window.sfx) sfx("splash");
+  }
+  pescaPanel(mostrar) {
+    const el = document.getElementById("pesca-mini"); if (!el) return;
+    el.classList.toggle("show", !!mostrar);
+    if (mostrar && this.lance) {
+      const fd = (typeof FISH_DEF !== "undefined" && FISH_DEF[this.lance.rar]) || null;
+      const pez = document.getElementById("pm-pez");
+      if (pez && fd && fd.sprite) pez.src = GF.spr(fd.sprite);
+      this.pescaPanelSync();
+    }
+  }
+  pescaPanelSync() {
+    const l = this.lance; if (!l || l.fase !== "carrete") return;
+    const zona = document.getElementById("pm-zona"), pez = document.getElementById("pm-pez"),
+      fill = document.getElementById("pm-fill"), txt = document.getElementById("pm-txt");
+    if (!zona || !pez || !fill) return;
+    zona.style.height = (l.zonaAlto * 100) + "%";
+    zona.style.bottom = ((l.zona - l.zonaAlto / 2) * 100) + "%";
+    zona.classList.toggle("ok", !!l.adentro);
+    pez.style.bottom = "calc(" + (l.pez * 100) + "% - 11px)";
+    fill.style.height = Math.round(l.prog * 100) + "%";
+    if (txt) txt.textContent = ((typeof FISH_DEF !== "undefined" && FISH_DEF[l.rar]) ? FISH_DEF[l.rar].label : "Pez") + " — ¡mantenelo en la zona!";
+  }
+  pescaTerminar(rar) {
+    const l = this.lance; this.lance = null; this.lanceHold = false;
+    this.pescaPanel(false); this.clearBobber(); this.action = null;
+    if (rar) { goFishing(rar); }
+    else {
+      const m = (typeof PESCA2_AVISO !== "undefined" && l && PESCA2_AVISO[l.motivo]) || "El pez se fue";
+      toast(m); log("🎣 " + m + ".", "bad");
+    }
+  }
 
   finishAction() {
     const a = this.action, o = a.o;
@@ -4588,6 +4661,21 @@ class FarmScene extends Phaser.Scene {
       }
       if (!this.action) { hero.setDepth(hero.y); this.updatePrompt(); return; }
       this.action.t += dt;
+      /* 22/8 — PESCA v2: el lance vive acá. La física es de state.js (lógica pura, testeable);
+         esto solo la corre con el dt del frame y pinta el panel. */
+      if (this.lance && this.action.kind === "fish") {
+        const l = this.lance, antes = l.fase;
+        if (l.fase === "espera" || l.fase === "pique") {
+          pescaLanceTick(l, dt);
+          if (l.fase === "pique" && antes === "espera") this.pescaBurbujas();
+          if (l.fase === "perdido") { this.pescaTerminar(null); hero.setDepth(hero.y); this.updatePrompt(); return; }
+        } else if (l.fase === "carrete") {
+          const rez = pescaReelTick(l, dt, !!this.lanceHold);
+          this.pescaPanelSync();
+          if (rez === "gana") { this.pescaTerminar(l.rar); hero.setDepth(hero.y); this.updatePrompt(); return; }
+          if (rez === "perdido") { this.pescaTerminar(null); hero.setDepth(hero.y); this.updatePrompt(); return; }
+        }
+      }
       // al picar/talar: a mitad de la acción el nodo pasa al estado dañado (entero → dañado → restos)
       const ao = this.action.o;
       // MOMENTO DEL IMPACTO: con ACT_IMPACTO = 0 el nodo se agrieta en el mismo frame del clic.
