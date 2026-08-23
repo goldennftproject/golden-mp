@@ -1155,7 +1155,12 @@ class FarmScene extends Phaser.Scene {
       const nom = (typeof MONSTER_DEF !== "undefined" && G.doma && MONSTER_DEF[G.doma.bicho]) ? MONSTER_DEF[G.doma.bicho].label : "Bicho";
       if (typeof domaHambriento === "function" && domaHambriento()) return nom + " domado — tiene HAMBRE: clic para darle 1 carne 🍖";
       const u = G.doma && G.doma.ultimo;
-      return nom + " domado — atiende los nodos mientras no estás" + (u ? " (último turno: +" + u.madera + " madera, +" + u.piedra + " piedra)" : "");
+      const oficio = (typeof DOMA_ROL_TXT !== "undefined" && G.doma && DOMA_ROL_TXT[DOMA_ROL[G.doma.bicho]]) || "trabaja";
+      let parte = "";
+      if (u) parte = u.lombriz != null ? " (último turno: +" + u.lombriz + " lombriz)" :
+        u.abonados != null ? " (último turno: " + u.abonados + " cultivos abonados)" :
+        " (último turno: +" + (u.madera || 0) + " madera, +" + (u.piedra || 0) + " piedra)";
+      return nom + " domado — " + oficio + " mientras no estás" + parte;
     }
     if (o.type === "cofre_diario") {
       if (!G.kitReclamado) return "¡Abrí tu kit de bienvenida!";

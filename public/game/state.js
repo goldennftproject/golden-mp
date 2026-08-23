@@ -4028,9 +4028,20 @@ const RECIPE_DEF = {
      comida; que doma se entera el que lee — o el que recibe la pista al vencer un bicho.
      El id se queda (bocado_domador) para no romper guardados con platos ya cocinados.
      Sprite prestado del estofado hasta que Suren le dé cara. */
+  /* v3 (dirección): « ¿por qué no un plato diferente para cada uno? Y que cada bicho haga un
+     trabajo con LÓGICA: la rata y la larva no pueden talar — los humanoides sí. » Tres platos,
+     tres oficios: el Costillar doma a los BRAZOS (orco, lancero, guerrero, trol → nodos), el
+     Bollito a la RATA (escarba → lombrices) y la Papilla a la LARVA (abona → los cultivos
+     avanzan en tu ausencia). Sprites prestados hasta que Suren les dé cara. */
   bocado_domador: { label:"Costillar Ahumado", emoji:"🍖", sprite:"dish_estofado", res:{carne:2, calabaza:1, madera:1}, lvl:6,
     heal:5, buff:{type:"regen", val:1}, cookS:420, xp:20, plata:35,
-    desc:"Carne ahumada a la leña con calabaza dulce. A la rata, la larva, los orcos y el trol les ENCANTA este plato: llevalo a la Zona Negra y, al vencerlos, se lo devoran — con suerte, te siguen a casa." },
+    desc:"Carne ahumada a la leña con calabaza dulce. Al orco, al lancero, al guerrero y al trol les ENCANTA: llevalo a la Zona Negra y, al vencerlos, se lo devoran — con suerte, te siguen a casa y atienden tus árboles y rocas." },
+  bollito_girasol: { label:"Bollito de Girasol", emoji:"🥯", sprite:"dish_pan_trigo", res:{trigo:2, girasol:1}, lvl:6,
+    heal:5, buff:{type:"regen", val:1}, cookS:420, xp:20, plata:30,
+    desc:"Masa de trigo con semillas de girasol tostadas. A la RATA le encanta: vencela en la Zona Negra con uno encima y quizás se mude a tu granja — escarba montículos y te junta lombrices mientras no estás." },
+  papilla_remolacha: { label:"Papilla de Remolacha", emoji:"🥣", sprite:"dish_crema_calabaza", res:{remolacha:2, calabaza:1}, lvl:6,
+    heal:5, buff:{type:"regen", val:1}, cookS:420, xp:20, plata:28,
+    desc:"Dulce, espesa y de un violeta sospechoso. A la LARVA le encanta: vencela en la Zona Negra con una encima y quizás te siga — abona la tierra y tus cultivos avanzan mientras no estás." },
   banquete: { label:"Banquete del granjero", emoji:"🍗", sprite:"dish_banquete", fish:{raro:1}, res:{carne:2, calabaza:1, madera:1}, lvl:5,   // 22/8: baja 6→5 — sus ingredientes (carne + calabaza 2) ya están hace rato
     heal:9999, buff:{type:"yield",label:"Precio de venta +20%",mult:1.20,dur:180}, cookS:420, xp:25, plata:60,
     desc:"Cura TODA la vida · Precio de venta +20% (3 min)" },
@@ -5474,28 +5485,41 @@ function goblinAceptar() {
    y le da a la Cocina su primer ítem de USO, no de buff. */
 var DOMA_NIVEL = 10, DOMA_CHANCE = 0.25, DOMA_COMISION = 0.30, DOMA_COMIDA_H = 24, DOMA_ITEM = "bocado_domador";
 var DOMA_ESPECIES = ["rata", "larva", "orco", "lancero", "guerrero", "troll"];   // los que tienen sprite cargado en la granja
+/* v3 (dirección): cada bicho hace el trabajo que su CUERPO permite — « la rata no va a talar » —
+   y cada rol tiene su plato favorito. */
+var DOMA_ROL = { orco: "brazos", lancero: "brazos", guerrero: "brazos", troll: "brazos", rata: "rata", larva: "larva" };
+var DOMA_PLATO = { brazos: "bocado_domador", rata: "bollito_girasol", larva: "papilla_remolacha" };
+var DOMA_ROL_TXT = {
+  brazos: "atiende tus árboles y rocas",
+  rata: "escarba montículos y junta lombrices",
+  larva: "abona la tierra: los cultivos avanzan",
+};
+var DOMA_RATA_HORAS = 8, DOMA_RATA_TOPE = 3;    // 1 lombriz cada 8 h de ausencia, tope 3 por vuelta (como los montículos: 3/día)
+var DOMA_LARVA_PCT = 0.15;                       // recorta el 15% del tiempo RESTANTE de cada cultivo en crecimiento
 function domaAbre() { return (typeof farmLevel === "function" ? farmLevel() : G.level || 1) >= DOMA_NIVEL; }
 function domaIntentar(especie, rnd) {   // lo llama la Zona Negra al vencer
   if (!domaAbre() || (G.doma && G.doma.bicho)) return false;
   if (!DOMA_ESPECIES.includes(especie)) return false;
-  // sin Bocado no hay doma — y el que no lo conoce recibe la pista (una vez por día)
-  if (Math.floor((G.dishes && G.dishes[DOMA_ITEM]) || 0) < 1) {
+  // cada especie tiene SU plato — sin él no hay doma, y el que no lo conoce recibe la pista (1/día)
+  const plato = DOMA_PLATO[DOMA_ROL[especie]] || DOMA_ITEM;
+  const platoNom = (RECIPE_DEF[plato] && RECIPE_DEF[plato].label) || plato;
+  if (Math.floor((G.dishes && G.dishes[plato]) || 0) < 1) {
     if (G._domaPistaDia !== dayStamp(0)) {
       G._domaPistaDia = dayStamp(0);
-      log("🐾 Ese " + ((MONSTER_DEF[especie] && MONSTER_DEF[especie].label) || "bicho") + " te miró con hambre antes de caer… En la Cocina dicen que el COSTILLAR AHUMADO (nivel 6) hace amigos.", "info");
+      log("🐾 Ese " + ((MONSTER_DEF[especie] && MONSTER_DEF[especie].label) || "bicho") + " te miró con hambre antes de caer… En la Cocina dicen que a los suyos les encanta el " + platoNom.toUpperCase() + " (nivel 6).", "info");
     }
     return false;
   }
-  G.dishes[DOMA_ITEM] -= 1;   // se lo come, acepte o no: ya está servido
+  G.dishes[plato] -= 1;   // se lo come, acepte o no: ya está servido
   if ((rnd || Math.random)() >= DOMA_CHANCE) {
-    log("🍖 El bicho devoró tu Costillar Ahumado… y se fue igual. Grosero. (1 de cada 4 acepta.)", "warn");
-    toast("Se comió el bocado y se fue");
+    log("🍖 El bicho devoró tu " + platoNom + "… y se fue igual. Grosero. (1 de cada 4 acepta.)", "warn");
+    toast("Se comió el plato y se fue");
     if (typeof saveFarm === "function") saveFarm(true);
     return false;
   }
   const nom = (MONSTER_DEF[especie] && MONSTER_DEF[especie].label) || especie;
   G.doma = { bicho: especie, desde: nowMs(), comidaHasta: 0, cont: 0, ultimo: null };
-  log("🐾 ¡" + nom + " bajó las orejas y te siguió a casa! Vive en tu granja: dale 1 carne por día y atenderá los nodos mientras no estés.", "gold");
+  log("🐾 ¡" + nom + " bajó las orejas y te siguió a casa! Vive en tu granja: dale 1 carne por día y " + (DOMA_ROL_TXT[DOMA_ROL[especie]] || "trabaja") + " mientras no estés.", "gold");
   toast("🐾 ¡Domaste un " + nom + "!");
   if (typeof saveFarm === "function") saveFarm(true);
   return true;
@@ -5521,6 +5545,32 @@ function domaTrabajar(visto, ahora) {
   if (!d || !d.bicho || !visto || visto >= ahora) return null;
   const hasta = Math.min(ahora, d.comidaHasta || 0);
   if (hasta <= visto) return null;   // estuvo con hambre toda tu ausencia
+  const rol = DOMA_ROL[d.bicho] || "brazos";
+  const nomBicho = (MONSTER_DEF[d.bicho] && MONSTER_DEF[d.bicho].label) || "bicho";
+  /* --- LA RATA: escarba montículos — 1 lombriz cada 8 h cubiertas, tope 3 por vuelta --- */
+  if (rol === "rata") {
+    const lombrices = Math.min(DOMA_RATA_TOPE, Math.floor((hasta - visto) / (DOMA_RATA_HORAS * 3600000)));
+    let dadas = 0;
+    for (let i = 0; i < lombrices; i++) { if (typeof tryAddRes === "function" ? tryAddRes("lombriz", 1) : (G.res.lombriz = (G.res.lombriz || 0) + 1, true)) dadas++; else break; }
+    if (!dadas) return null;
+    d.ultimo = { at: ahora, lombriz: dadas };
+    log("🐾 Tu " + nomBicho + " escarbó mientras no estabas: +" + dadas + (dadas > 1 ? " lombrices" : " lombriz") + " para la caña.", "gold");
+    return { lombriz: dadas };
+  }
+  /* --- LA LARVA: abona — cada cultivo en crecimiento recorta el 15% de lo que le falta --- */
+  if (rol === "larva") {
+    let abonados = 0;
+    (G.plots || []).forEach(pl => {
+      if (!pl || pl.state !== "growing" || !(pl.readyAt > ahora)) return;
+      pl.readyAt -= Math.round((pl.readyAt - ahora) * DOMA_LARVA_PCT);
+      abonados++;
+    });
+    if (!abonados) return null;
+    d.ultimo = { at: ahora, abonados };
+    log("🐾 Tu " + nomBicho + " abonó la tierra mientras no estabas: " + abonados + (abonados > 1 ? " cultivos avanzan" : " cultivo avanza") + " más rápido.", "gold");
+    return { abonados };
+  }
+  /* --- LOS BRAZOS (orco, lancero, guerrero, trol): árboles y rocas, como siempre --- */
   const parte = { madera: 0, piedra: 0, fee: 0 };
   const nodos = G.nodos || {};
   for (const key in nodos) {

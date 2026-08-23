@@ -31,22 +31,24 @@ const G = ctx.G, H = 3600000;
 let fallos = 0;
 const ok = (n, c, d) => { if (!c) fallos++; console.log((c ? "  ok   " : "  FALLA") + "  " + n + (d ? "   " + d : "")); };
 
-console.log("\nLA PUERTA: GRANJA 10, EL BOCADO DEL DOMADOR, Y UN BICHO A LA VEZ");
+console.log("\nLA PUERTA: GRANJA 10, EL PLATO FAVORITO DE CADA UNO, Y UN BICHO A LA VEZ");
 {
-  G.level = 9; G.doma = null; G.dishes = { bocado_domador: 5 };
-  ok("a granja 9 ni el 0,001 doma", ctx.domaIntentar("rata", () => 0.001) === false && G.dishes.bocado_domador === 5);
+  G.level = 9; G.doma = null; G.dishes = { bocado_domador: 5, bollito_girasol: 5, papilla_remolacha: 5 };
+  ok("a granja 9 ni el 0,001 doma", ctx.domaIntentar("orco", () => 0.001) === false && G.dishes.bocado_domador === 5);
   G.level = 10;
-  ok("el dragón no se doma (y no gasta bocado)", ctx.domaIntentar("dragon", () => 0.001) === false && G.dishes.bocado_domador === 5);
-  G.dishes.bocado_domador = 0;
-  ok("SIN bocado no hay doma ni con toda la suerte", ctx.domaIntentar("rata", () => 0.001) === false);
+  ok("el dragón no se doma (y no gasta plato)", ctx.domaIntentar("dragon", () => 0.001) === false && G.dishes.bocado_domador === 5);
+  ok("al orco NO se lo doma con el bollito de la rata: pide SU Costillar",
+    (G.dishes.bocado_domador = 0, ctx.domaIntentar("orco", () => 0.001) === false && G.dishes.bollito_girasol === 5));
   G.dishes.bocado_domador = 5;
-  ok("con bocado y mala suerte (0,5 ≥ 25%): se lo come y se va", ctx.domaIntentar("rata", () => 0.5) === false && G.dishes.bocado_domador === 4);
-  ok("con bocado y suerte: la rata te sigue a casa", ctx.domaIntentar("rata", () => 0.001) === true && G.doma.bicho === "rata");
-  ok("y ese intento también costó su bocado", G.dishes.bocado_domador === 3);
-  ok("y no hay segundo bicho (ni gasta más bocados)", ctx.domaIntentar("troll", () => 0.001) === false && G.dishes.bocado_domador === 3);
+  ok("con Costillar y mala suerte (0,5 ≥ 25%): se lo come y se va", ctx.domaIntentar("orco", () => 0.5) === false && G.dishes.bocado_domador === 4);
+  ok("con Costillar y suerte: el orco te sigue a casa", ctx.domaIntentar("orco", () => 0.001) === true && G.doma.bicho === "orco");
+  ok("y ese intento también costó su plato", G.dishes.bocado_domador === 3);
+  ok("y no hay segundo bicho (ni gasta más platos)", ctx.domaIntentar("troll", () => 0.001) === false && G.dishes.bocado_domador === 3);
   const R = vm.runInContext("RECIPE_DEF", ctx);
-  ok("el Bocado es una receta real de Cocina 6 (2 carne + 1 calabaza + leña)",
-    R.bocado_domador && R.bocado_domador.lvl === 6 && R.bocado_domador.res.carne === 2 && R.bocado_domador.res.calabaza === 1);
+  ok("los tres platos son recetas reales de Cocina 6",
+    ["bocado_domador", "bollito_girasol", "papilla_remolacha"].every(k => R[k] && R[k].lvl === 6));
+  ok("y cada descripción nombra a su bicho ('le encanta')",
+    /orco/i.test(R.bocado_domador.desc) && /RATA/i.test(R.bollito_girasol.desc) && /LARVA/i.test(R.papilla_remolacha.desc));
 }
 
 console.log("\nLA PANZA: 1 CARNE = 24 H, TOPE 3 DÍAS, SIN CARNE NO HAY TRATO");
@@ -65,7 +67,7 @@ console.log("\nEL TURNO: SOLO LO MADURADO EN TU AUSENCIA, COMISIÓN 30%, EL NODO
   /* un árbol con reloj de 2 h que quedó VACÍO al irte (readyAt = ahora+2h)… y te vas 10 h:
      maduran 4 relojes (t+2,4,6,8h) pero el tope de cargas es 4 → recoge cargas-1 = 3 */
   const ahora0 = FakeDate.now();
-  G.doma = { bicho: "rata", desde: ahora0, comidaHasta: ahora0 + 72 * H, cont: 0, ultimo: null };
+  G.doma = { bicho: "orco", desde: ahora0, comidaHasta: ahora0 + 72 * H, cont: 0, ultimo: null };
   G.nodos = { "tree:10,10": { readyAt: ahora0 + 2 * H, cdIni: ahora0, halfAt: 0 } };
   G.res.madera = 0;
   desfase = 10 * H;
@@ -98,7 +100,7 @@ console.log("\nCON HAMBRE NO TRABAJA — Y CON VOS ADENTRO, TAMPOCO");
 console.log("\nLOS MINERALES QUEDAN AFUERA Y EL TURNO CORRE EN HYDRATE");
 {
   const ahora0 = FakeDate.now();
-  G.doma = { bicho: "rata", desde: ahora0, comidaHasta: ahora0 + 72 * H, cont: 0, ultimo: null };
+  G.doma = { bicho: "orco", desde: ahora0, comidaHasta: ahora0 + 72 * H, cont: 0, ultimo: null };
   G.nodos = { "ore:5,5": { readyAt: ahora0 + 2 * H, cdIni: ahora0 } };
   desfase += 10 * H;
   ok("una veta jamás entra al turno", ctx.domaTrabajar(ahora0) === null);
@@ -113,6 +115,36 @@ console.log("\nLOS MINERALES QUEDAN AFUERA Y EL TURNO CORRE EN HYDRATE");
   ok("cargar la partida ES volver: el bicho entrega su parte", Math.floor(G.res.madera || 0) > madera0,
     madera0 + " → " + Math.floor(G.res.madera || 0));
   ok("y el parte queda anotado para el hover", !!(G.doma.ultimo && G.doma.ultimo.at));
+}
+
+console.log("\nCADA BICHO, SU OFICIO: LA RATA ESCARBA Y LA LARVA ABONA (v3, dirección)");
+{
+  /* la rata: 1 lombriz cada 8 h cubiertas, tope 3 */
+  const ahora0 = FakeDate.now();
+  G.doma = { bicho: "rata", desde: ahora0, comidaHasta: ahora0 + 72 * H, cont: 0, ultimo: null };
+  G.nodos = { "tree:20,20": { readyAt: ahora0 + 2 * H, cdIni: ahora0 } };   // árboles llenos que NO son lo suyo
+  G.res.lombriz = 0; const madera1 = Math.floor(G.res.madera || 0);
+  desfase += 20 * H;
+  const pr = ctx.domaTrabajar(ahora0);
+  ok("20 h afuera: la rata trae 2 lombrices (8 h cada una)", pr && pr.lombriz === 2, JSON.stringify(pr));
+  ok("y NO toca los árboles (no es lo suyo)", Math.floor(G.res.madera || 0) === madera1);
+  const ahora1 = FakeDate.now();
+  G.doma.comidaHasta = ahora1 + 72 * H;
+  desfase += 100 * H;
+  ok("100 h afuera: tope de 3 por vuelta", ctx.domaTrabajar(ahora1).lombriz === 3);
+  /* la larva: recorta el 15% de lo que le falta a cada cultivo creciendo */
+  const ahora2 = FakeDate.now();
+  G.doma = { bicho: "larva", desde: ahora2, comidaHasta: ahora2 + 72 * H, cont: 0, ultimo: null };
+  G.plots = [{ state: "growing", cropKey: "maiz", readyAt: ahora2 + 34 * H, growTotal: 24 * H, witherAt: 0 },
+             { state: "ready", cropKey: "papa", readyAt: 0, witherAt: 0 }];
+  desfase += 10 * H;
+  const antes = G.plots[0].readyAt;
+  const pl = ctx.domaTrabajar(ahora2);
+  ok("la larva abona el cultivo en crecimiento", pl && pl.abonados === 1, JSON.stringify(pl));
+  const recorte = antes - G.plots[0].readyAt, falta = antes - FakeDate.now();
+  ok("y le recorta el 15% de lo que le faltaba", Math.abs(recorte - falta * 0.15) < 2000,
+    (recorte / H).toFixed(1) + " h de " + (falta / H).toFixed(1));
+  ok("el cultivo LISTO no se toca (no hay nada que abonar)", G.plots[1].readyAt === 0);
 }
 
 console.log(fallos ? "\n" + fallos + " fallo(s)\n" : "\nTodo en orden: la granja ya no duerme sola.\n");
