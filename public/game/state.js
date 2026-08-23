@@ -5270,12 +5270,81 @@ function goblinAceptar() {
     return { error: "bolsa" };
   }
   G.goblin = G.goblin || {}; G.goblin.date = dayStamp(0);
+  statAdd("goblin");   // 22/8: cuenta para el logro 🤝
   log("🤝 Trato con el Mercader Goblin: −" + of.cant + " " + (RES_LABEL[of.pide] || of.pide) +
     " → +" + of.entrega + " " + (RES_LABEL[of.da] || of.da) + ". «Grjj… buen negocio. Mañana, más.»", "gold");
   toast("🤝 ¡Trato hecho!");
   if (typeof refreshHud === "function") refreshHud();
   if (typeof saveFarm === "function") saveFarm(true);
   return { ok: true, of };
+}
+
+/* ================== LOGROS (22/8, dirección) ==================
+   « Los logros es una idea, exactamente. » Metas por sistema en TRES TIERS (bronce → plata → oro)
+   más un puñado de únicos de las primeras horas. Viven en una pestaña 🏆 del menú (decisión de
+   dirección: en el menú y no en el granero, porque abarcan todo el juego); a futuro serán la
+   SALA DE TROFEOS cuando los edificios tengan interior (docs/interfaces-escenicas).
+   Reglas:
+     · Los contadores son los que YA existen (G.stats vía statAdd): nada se cuenta dos veces.
+     · El premio se COBRA a mano en la pestaña (motivo extra para abrirla), y cuelga del ancla:
+       bronce 5 (15 min) · plata 20 (1 h) · oro 80 (4 h). Total repartible ≈ 1.000 de plata en
+       toda una partida (~250.000): no mueve la economía, la condimenta.
+     · Nada de duplicados: "tu primer trato con el goblin" ES el bronce del goblin, y "tu
+       primera expansión" ES el bronce de expandir. Los únicos cubren lo que no tiene contador. */
+const LOGRO_TIERS = ["Bronce", "Plata", "Oro"];
+const LOGRO_PREMIO = [5, 20, 80];   // 15 min · 1 h · 4 h del ancla (20 plata/hora)
+function statSum(tipo) { const t = (G.stats && G.stats[tipo]) || {}; let n = 0; for (const k in t) n += t[k] || 0; return Math.floor(n); }
+const LOGRO_DEF = [
+  { id: "cosechar",  ic: "🌾", label: "Cosechar cultivos",            n: () => statSum("cosechar"),  tiers: [10, 100, 500] },
+  { id: "talar",     ic: "🪓", label: "Talar árboles",                n: () => statSum("talar"),     tiers: [10, 100, 500] },
+  { id: "minar",     ic: "⛏️", label: "Picar piedra y mineral",       n: () => statSum("minar"),     tiers: [10, 100, 500] },
+  { id: "pescar",    ic: "🎣", label: "Pescar en la laguna",          n: () => statSum("pescar"),    tiers: [5, 50, 250] },
+  { id: "cocinar",   ic: "🍲", label: "Cocinar platos",               n: () => statSum("cocinar"),   tiers: [5, 25, 100] },
+  { id: "alimentar", ic: "🐄", label: "Alimentar animales",           n: () => statSum("alimentar"), tiers: [10, 100, 500] },
+  { id: "matar",     ic: "⚔️", label: "Vencer monstruos",             n: () => statSum("matar"),     tiers: [10, 100, 500] },
+  { id: "goblin",    ic: "🤝", label: "Tratos con el Mercader Goblin", n: () => statSum("goblin"),   tiers: [1, 7, 30] },
+  { id: "expandir",  ic: "🗺️", label: "Abrir expansiones",            n: () => Math.floor(G.expansiones || 0), tiers: [1, 6, 16] },
+];
+const LOGRO_UNICOS = [   // pagan como un bronce (LOGRO_PREMIO[0])
+  { id: "u_tuto",    ic: "🎓", label: "Terminar el tutorial",  ok: () => !!(G.tuto && G.tuto.done) },
+  { id: "u_cosecha", ic: "🥔", label: "Tu primera cosecha",    ok: () => !!G.firstCropDone },
+  { id: "u_plato",   ic: "🥘", label: "Tu primer plato",       ok: () => statSum("cocinar") >= 1 },
+  { id: "u_animal",  ic: "🐰", label: "Tu primer animal",      ok: () => (typeof animalesTotal === "function" ? animalesTotal() : 0) >= 1 },
+];
+function logroCobrados() { const l = G.logros || (G.logros = {}); return l; }
+/* la lista que pinta la pestaña: una fila por logro, con progreso y qué tier está para cobrar */
+function logroLista() {
+  const cob = logroCobrados();
+  const filas = LOGRO_DEF.map(d => {
+    const n = d.n();
+    const tiers = d.tiers.map((meta, i) => {
+      const key = d.id + ":" + i;
+      return { key, nombre: LOGRO_TIERS[i], meta, premio: LOGRO_PREMIO[i], cobrado: !!cob[key], cobrable: !cob[key] && n >= meta };
+    });
+    return { id: d.id, ic: d.ic, label: d.label, n, tiers, unico: false };
+  });
+  const unicos = LOGRO_UNICOS.map(d => ({
+    id: d.id, ic: d.ic, label: d.label, n: d.ok() ? 1 : 0, unico: true,
+    tiers: [{ key: d.id, nombre: "", meta: 1, premio: LOGRO_PREMIO[0], cobrado: !!cob[d.id], cobrable: !cob[d.id] && d.ok() }],
+  }));
+  return unicos.concat(filas);
+}
+function logroPendientes() {   // para el contador del menú
+  let n = 0; logroLista().forEach(f => f.tiers.forEach(t => { if (t.cobrable) n++; })); return n;
+}
+function logroCobrar(key) {
+  const fila = logroLista().find(f => f.tiers.some(t => t.key === key));
+  const t = fila && fila.tiers.find(t => t.key === key);
+  if (!t) return { error: "no existe" };
+  if (t.cobrado) return { error: "ya cobrado" };
+  if (!t.cobrable) return { error: "todavía no" };
+  logroCobrados()[key] = true;
+  G.plata += t.premio;
+  log("🏆 Logro: " + fila.label + (t.nombre ? " (" + t.nombre + ")" : "") + " — +" + t.premio + " de plata.", "gold");
+  toast("🏆 +" + t.premio + " de plata");
+  if (typeof refreshHud === "function") refreshHud();
+  if (typeof saveFarm === "function") saveFarm(true);
+  return { ok: true, premio: t.premio };
 }
 
 function dailyState() {

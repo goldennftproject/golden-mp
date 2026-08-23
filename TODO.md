@@ -39,6 +39,11 @@
 - [ ] Usos de **tablones y barras**, **cerca premium**, tabla definitiva de **stats del bestiario**.
 - [ ] "#3 Agregar vallas laterales" — pedir aclaración: ¿vallas de la cerca perimetral o poder comprar más vallas de adorno? (único punto ambiguo de fixs.docx)
 
+- [ ] **Sala de trofeos (22/8, dirección)**: cuando los edificios tengan interior accesible, los
+  logros de la pestaña 🏆 pasan a exhibirse como trofeos y medallas en una habitación propia.
+  La pestaña actual es la versión barata aprobada; los logros cobrados se conservan tal cual
+  (G.logros), así que la migración es solo visual. Arte de Suren cuando toque.
+
 ## 🟢 Visual abierto (no bloquea nada — decisión del 11/8: queda TODO así, no tocar salvo pedido nuevo)
 
 - [ ] El **Mercado** quedó chico comparado con los edificios nuevos.

@@ -4,7 +4,7 @@ Documento de Diseño de Juego
 
 *Estado real del código · 22 de agosto de 2026 · revisión 3*
 
-*Novedades de esta revisión: las CARGAS de los nodos (el árbol guarda hasta 4 talados; la partida cobra el doble del ancla), la picada de mineral a rendimiento 2, la expansión 3 sin muro y los edificios tardíos abaratados, el establo que crece un lugar por nivel de Ganadería, el techo de oficios derivado del contenido, el PORTERO del guardado en producción (bitácora + puerta vieja sellada), la cuenta por email, la ESCALERA DE CULTIVOS EN DOS CARRILES (nocturnos desde el nivel 2), y el MERCADER GOBLIN (un trueque anclado por día).*
+*Novedades de esta revisión: las CARGAS de los nodos (el árbol guarda hasta 4 talados; la partida cobra el doble del ancla), la picada de mineral a rendimiento 2, la expansión 3 sin muro y los edificios tardíos abaratados, el establo que crece un lugar por nivel de Ganadería, el techo de oficios derivado del contenido, el PORTERO del guardado en producción (bitácora + puerta vieja sellada), la cuenta por email, la ESCALERA DE CULTIVOS EN DOS CARRILES (nocturnos desde el nivel 2), el MERCADER GOBLIN (un trueque anclado por día), y los LOGROS con premio (pestaña 🏆).*
 
 Para el equipo de diseño
 
@@ -176,6 +176,10 @@ La XP no mide relojes, mide PRÁCTICA. Un oficio con acciones lentas no puede pe
 | Arco            | 68          | 324         | 1052         | 3420         |
 
 *Regla de salud para el diseñador: los tres oficios de recolección (Cultivo, Tala, Minería) tienen que quedar CERCA entre sí en la partida real. Si uno se dispara, su escalera se abre sola mientras las otras dos se quedan atrás y el jugador percibe el juego como desequilibrado sin saber por qué.*
+
+**Los logros: metas con premio, futura sala de trofeos**
+
+La pestaña 🏆 del menú junta metas de toda la granja en tres tiers — bronce, plata y oro — más un puñado de únicos de las primeras horas (primera cosecha, primer plato, primer animal, tutorial). Los contadores son los que el juego ya llevaba (G.stats): la acción real mueve el logro, nada se cuenta aparte. El premio se cobra a mano en la pestaña y cuelga del ancla: bronce 5 de plata (15 minutos), plata 20 (1 hora), oro 80 (4 horas). El total repartible en toda una partida es ≈965 de plata sobre ~250.000: condimento, no fuente de ingreso. Las metas de bronce llegan en la primera sesión larga — su función es dar SIEMPRE un siguiente paso visible aunque el próximo nivel quede lejos. Decisión de dirección del 22/8: vive en el menú (no en el granero, porque abarca todo el juego), y cuando los edificios tengan interior pasa a ser la SALA DE TROFEOS — lo cobrado se conserva tal cual, la migración es solo visual.
 
 **6. La granja y sus expansiones**
 
@@ -425,7 +429,7 @@ Normas de diseño que vienen de decisiones de dirección y que conviene no reabr
 
 **15. Cómo verificar lo que dice este documento**
 
-El proyecto tiene 64 pruebas automáticas y 16 auditores (104 herramientas en total). No comprueban que el código compile: comprueban que el JUEGO cumpla las reglas de arriba. Los más útiles para el diseñador:
+El proyecto tiene 65 pruebas automáticas y 16 auditores (105 herramientas en total). No comprueban que el código compile: comprueban que el JUEGO cumpla las reglas de arriba. Los más útiles para el diseñador:
 
 | **Herramienta**                 | **Qué contesta**                                            |
 | ------------------------------- | ----------------------------------------------------------- |

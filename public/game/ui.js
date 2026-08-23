@@ -10,7 +10,7 @@ function log(m, k = "") { const b = $("log"); if (!b) return; const d = document
 /* ---- overlays ---- */
 function isOpen(id) { const e = $(id); return !!(e && e.classList.contains("show")); }
 function anyOvOpen() { return !!document.querySelector(".ov.show"); }
-const OV_REFRESH = { "ov-entrenando": () => entrenarSync(), "ov-clan": () => refreshClan(), "ov-misiones": () => refreshMisiones(), "ov-mapa": () => refreshMapa(), "ov-objetivos": () => refreshObjetivos(), "ov-inv": () => refreshInv(), "ov-cobertizo": () => refreshCobertizo(), "ov-skills": () => refreshSkills(), "ov-equip": () => refreshEquip(), "ov-godhand": () => refreshGodHand(),
+const OV_REFRESH = { "ov-entrenando": () => entrenarSync(), "ov-clan": () => refreshClan(), "ov-misiones": () => refreshMisiones(), "ov-mapa": () => refreshMapa(), "ov-objetivos": () => refreshObjetivos(), "ov-logros": () => refreshLogros(), "ov-inv": () => refreshInv(), "ov-cobertizo": () => refreshCobertizo(), "ov-skills": () => refreshSkills(), "ov-equip": () => refreshEquip(), "ov-godhand": () => refreshGodHand(),
   "ov-forge": () => refreshForge(), "ov-market": () => refreshMarket(), "ov-barn": () => refreshBarn(), "ov-buzon": () => { _bzVista = "sobres"; _bzCartaAbierta = null; refreshBuzon(); }, "ov-paquete": () => refreshPaquete(), "ov-baul": () => refreshBaul(), "ov-pedidos": () => { _pdVista = "pedidos"; refreshPedidos(); },
   "ov-cocina": () => refreshCooking(),
   "ov-horno": () => refreshHorno(),
@@ -159,6 +159,7 @@ function setNum(id, valor) {
 }
 function refreshHud() {
   try { syncMisionesBadge(); } catch (e) {}   // contador de misiones del menú (10/8)
+  try { syncLogrosBadge(); } catch (e) {}     // 22/8: cuántos logros hay para cobrar
   // 18/8: el cartel de expansión del mapa refleja el material que tenés; la firma interna evita
   // que se rehaga si no cambió nada de lo que se ve.
   if (window.FARM && window.FARM.dibujarExpansion) { try { window.FARM.dibujarExpansion(); } catch (e) {} }
@@ -1063,6 +1064,49 @@ function syncMisionesBadge() {
     const p = passInit(), hechas = p.daily.mis.filter(m => m.ok).length, tot = p.daily.mis.length;
     b.textContent = hechas + "/" + tot;
     const btn = b.closest(".gmi"); if (btn) btn.classList.toggle("listo", hechas < tot);
+  } catch (e) {}
+}
+
+/* ---- LOGROS (22/8) ------------------------------------------------------------
+   La pestaña 🏆: metas de toda la granja en tres tiers + únicos de las primeras horas.
+   El premio se cobra ACÁ (decisión de diseño: motivo extra para abrir la pestaña).
+   La fila usa el mismo esqueleto que misiones (forge-row + durbar): cero CSS nuevo,
+   y la estructura no cambia de tamaño al cobrar — el botón se vuelve etiqueta. */
+function refreshLogros() {
+  const box = $("logros-list"); if (!box || typeof logroLista !== "function") return;
+  const filas = logroLista();
+  const pend = logroPendientes();
+  let h = '<div class="info">' + (pend ? 'Tenés <b>' + pend + '</b> premio' + (pend === 1 ? '' : 's') + ' para cobrar.' :
+    'Todo cobrado por ahora — las metas siguen contando solas.') + '</div>';
+  filas.forEach(f => {
+    // el tier que se muestra: el primero sin cobrar (o el último, si está todo cobrado)
+    const t = f.tiers.find(x => !x.cobrado) || f.tiers[f.tiers.length - 1];
+    const hecho = f.tiers.every(x => x.cobrado);
+    const pct = Math.min(100, Math.round(f.n / t.meta * 100));
+    h += '<div class="forge-row' + (t.cobrable ? ' eq' : '') + '"><div class="finfo">' +
+      '<div class="fnm">' + f.ic + ' ' + f.label + (f.unico ? '' : ' — <span class="tag">' + t.nombre + '</span>') +
+        (hecho ? ' <span style="color:#3f6b2a">✓ completo</span>' : '') + '</div>' +
+      (f.unico ? '' : '<div class="durbar"><i style="width:' + pct + '%"></i></div>') +
+      '<div class="fds">' + (f.unico ? (f.n ? 'Hecho.' : 'Pendiente.') : Math.min(f.n, t.meta) + '/' + t.meta) +
+        ' · premio: ' + t.premio + ' de plata</div></div>' +
+      '<div class="fbtns">' + (t.cobrable ? '<button class="gold sm" data-logro="' + t.key + '">Cobrar</button>' :
+        (hecho ? '' : '<span class="fds">' + (t.cobrado ? '' : 'en camino…') + '</span>')) + '</div></div>';
+  });
+  box.innerHTML = h;
+  box.querySelectorAll("[data-logro]").forEach(b => b.onclick = () => {
+    if (typeof logroCobrar === "function") logroCobrar(b.getAttribute("data-logro"));
+    refreshLogros();
+  });
+}
+// el contador del menú: cuántos premios hay para cobrar (y el botón pulsa si hay alguno)
+function syncLogrosBadge() {
+  const b = $("gm-log"); if (!b || typeof logroPendientes !== "function") return;
+  try {
+    const n = logroPendientes();
+    b.textContent = n ? String(n) : "";
+    const btn = b.closest(".gmi"); if (btn) btn.classList.toggle("listo", n > 0);
+    // OJO: acá NO se repinta la lista aunque esté abierta — refreshHud corre seguido y
+    // redibujar el innerHTML resetearía el scroll de la pestaña (regla: interfaces estables).
   } catch (e) {}
 }
 

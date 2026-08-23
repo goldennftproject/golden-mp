@@ -1707,7 +1707,7 @@ class FarmScene extends Phaser.Scene {
     } else if (a.kind === "harvest") {
       const ck = o.cropKey || "papa", cd = CROP_DEF[ck] || CROP_DEF.papa;
       const gr = Math.max(1, cd.yield || 1);   // 18/8: el bono del Granero se cobra al VENDER, no al cosechar
-      if (tryAddRes(ck, gr)) { o.state = "dry"; o.cropKey = null; o.readyAt = 0; o.witherAt = 0; this.setPlotGlow(o, "off"); this.coinBurst(o.cx, o.by); o.spr.setVisible(false); o.emo.setVisible(false); o.timer.setVisible(false); this.syncPlots(); addXp("farming", (cd && cd.xp) || 2); if (!G.firstCropDone) G.firstCropDone = true; if (typeof tutoEvent === "function") tutoEvent("harvest"); this.premioFx(o.cx, o.by, resSprite(ck), "+" + gr); log(`${cd.emoji} +${gr} ${cd.label}.`, "good"); refreshHud(); }
+      if (tryAddRes(ck, gr)) { o.state = "dry"; o.cropKey = null; o.readyAt = 0; o.witherAt = 0; this.setPlotGlow(o, "off"); this.coinBurst(o.cx, o.by); o.spr.setVisible(false); o.emo.setVisible(false); o.timer.setVisible(false); this.syncPlots(); addXp("farming", (cd && cd.xp) || 2); if (typeof statAdd === "function") statAdd("cosechar", ck, 1); if (!G.firstCropDone) G.firstCropDone = true; if (typeof tutoEvent === "function") tutoEvent("harvest"); this.premioFx(o.cx, o.by, resSprite(ck), "+" + gr); log(`${cd.emoji} +${gr} ${cd.label}.`, "good"); refreshHud(); }
       else { toast("Bolsa llena — no podés cosechar"); log("Bolsa llena: liberá espacio para cosechar.", "bad"); }
     } else if (a.kind === "fish") {
       this.clearBobber();
