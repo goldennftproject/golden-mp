@@ -310,11 +310,14 @@
   .durbar>i{display:block;height:100%;background:linear-gradient(90deg,#8fc46a,#5a9a3a)}
   /* menú plegable */
   .gmenu{position:fixed;right:10px;top:52px;z-index:7;display:flex;flex-direction:column;align-items:flex-end;gap:7px}
-  .gmitems{display:flex;flex-direction:column;gap:0;transition:opacity .15s,transform .15s;transform-origin:top right}   /* 13/8: botones del menú pegados, sin separación */
+  /* 22/8 (dirección): botones más BAJOS — con 16 entradas el menú no entraba en pantallas
+     chicas y había que alejar el zoom. Se recorta el alto (padding 8→4), no el ancho.
+     Red de seguridad: si aun así no entra, la lista scrollea en vez de cortarse. */
+  .gmitems{display:flex;flex-direction:column;gap:0;transition:opacity .15s,transform .15s;transform-origin:top right;max-height:calc(100vh - 70px);overflow-y:auto}   /* 13/8: botones del menú pegados, sin separación */
   .gmenu.collapsed .gmitems{opacity:0;transform:scale(.9);pointer-events:none;height:0;overflow:hidden}
-  .gmi{display:flex;align-items:center;gap:8px;width:190px;text-align:left;background:rgba(38,51,31,.94);border:1px solid #3c4d31;color:#f2ead5;font-weight:700;font-size:13px;border-radius:10px;padding:8px 10px;cursor:pointer}
+  .gmi{display:flex;align-items:center;gap:8px;width:190px;text-align:left;background:rgba(38,51,31,.94);border:1px solid #3c4d31;color:#f2ead5;font-weight:700;font-size:12.5px;border-radius:8px;padding:4px 10px;cursor:pointer}
   .gmi:hover{filter:brightness(1.15)}
-  .gmi span.ic{font-size:17px;width:20px;text-align:center}
+  .gmi span.ic{font-size:15px;width:20px;text-align:center}
   .gmi b.key{margin-left:auto;font-size:11px;background:#161f12;border:1px solid #4a5a3a;color:#cbbf9f;border-radius:6px;padding:1px 6px}
   /* registro */
   .logpanel{position:fixed;left:10px;bottom:10px;z-index:5;width:min(340px,58%);background:rgba(38,51,31,.92);border:1px solid #3c4d31;border-radius:12px;overflow:hidden}
