@@ -511,8 +511,9 @@ function buySeed(k, qty) {
 /* ---- KIT DE EMERGENCIA en $Golden (14/8, pedido del diseñador): "por si se quedan
    atascados" — 5 hachas, 5 usos de pico y 5 semillas de papa POR DÍA, pagando con
    $Golden. Le da utilidad diaria al $Golden y reemplaza a los kits del tutorial como
-   válvula anti-atasco después de la guía temprana. Las semillas de acá NO consumen el
-   cupo diario (son el rescate, no el mercado). Precios tuneables — validar con diseñador. */
+   válvula anti-atasco después de la guía temprana. Las semillas de acá SÍ consumen el
+   cupo diario desde el 22/8 (auditoría integral): fuera del libro eran un agujero de
+   +25 papas/día. Precios tuneables — validar con diseñador. */
 // 16/8 (auditoría F): el kit vendía 1 hacha (6 plata) por 2 $Golden — valoraba el $Golden a
 // 3 plata, mientras comprar parcelas lo valora a cientos. Como es una válvula ANTI-ATASCO,
 // ahora entrega LOTES: 1 $Golden = 10 hachas / 10 picos / 5 semillas. Rescata de verdad y
@@ -538,7 +539,14 @@ function comprarEmergencia(tipo) {
     if (!G.picks.eq || !G.picks.owned[G.picks.eq]) { G.picks.owned.stone = true; G.picks.eq = "stone"; G.picks.dur.stone = 0; }
     G.picks.dur[G.picks.eq] = (G.picks.dur[G.picks.eq] || 0) + n; toast("🆘 +" + n + " picos");   // los picos son apilables como las hachas: 1 pico = 1 picada
   }
-  else if (tipo === "seed") { G.seeds.papa = (G.seeds.papa || 0) + n; toast("🆘 +" + n + " semillas de papa"); }
+  else if (tipo === "seed") {
+    G.seeds.papa = (G.seeds.papa || 0) + n; toast("🆘 +" + n + " semillas de papa");
+    /* 22/8 (auditoría integral): las semillas del kit AHORA cuentan en el cupo diario.
+       Fuera del libro eran +25 papas/día extra vaciándose a propósito — el único agujero
+       que quedaba en la regla "sin excepciones = sin exploit" del 15/8. El rescate sigue
+       funcionando: el atascado de verdad no tiene el cupo gastado. */
+    try { seedBuysToday().count += n; } catch (e) {}
+  }
   log("Kit de emergencia: compraste " + n + " " + (tipo === "axe" ? "hachas" : tipo === "pick" ? "picos" : "semillas de papa") + " por " + precio + " $Golden (" + e[tipo] + "/" + EMERG_MAX + " hoy).", "warn");
   refreshHud(); if (typeof refreshHotbar === "function") refreshHotbar(true);
   if (typeof refreshSeedShop === "function" && isOpen("ov-market")) refreshSeedShop();
@@ -3969,20 +3977,29 @@ const RECIPE_DEF = {
   // producir (más un reloj de 1 h 30) y el plato se vendía a 5: cocinar destruía valor, y el
   // tutorial enseñaba a cocinar con la operación que más plata pierde. Las recetas grandes
   // (nivel 4+) la conservan: ahí el jugador ya tiene excedente y la madera es sumidero sano.
+  /* 22/8 (auditoría integral) — LA COCINA SE RE-SINCRONIZÓ CON LOS DOS CARRILES.
+     Al reasignar los niveles de los cultivos (22/8) las recetas quedaron apuntando a la escalera
+     vieja: el Puré (Cocina 2, 20 minutos de oficio) pedía cebolla, que ahora es Cultivo 10 (dos
+     días y medio) — siete recetas se "abrían" días antes de poderse cocinar. REGLA NUEVA, que el
+     test vigila: ninguna receta pide un cultivo de nivel MAYOR que el suyo (las dos escaleras
+     miden sus niveles en las mismas horas, así que número contra número alcanza). Los ingredientes
+     tempranos usan los cultivos tempranos; el techo de la Cocina sube solo a 16, gemelo del de
+     Cultivo. La ciruela y la cereza quedan como frutas de venta (mermeladas y jugos, cuando haya
+     arte). Los precios se re-derivan solos (COOK_PRICE_AUTO). */
   papa_asada:         { label:"Papa Asada",             emoji:"🥔", sprite:"dish_papa_asada", res:{papa:1},                                                  lvl:1,  heal:10, buff:{type:"farm",    val:5},  cookS:180,  xp:8,  plata:5 },
-  pure_papa:          { label:"Puré de Papa",           emoji:"🥣", sprite:"dish_pure_papa", res:{papa:2, cebolla:1},                                       lvl:2,  heal:13, buff:{type:"regen",   val:2},  cookS:240,  xp:10, plata:12 },
-  sopa_zanahoria:     { label:"Sopa de Zanahoria",      emoji:"🍜", sprite:"dish_sopa_zanahoria", res:{zanahoria:2, cebolla:1},                                  lvl:2,  heal:15, buff:{type:"speed",   val:8},  cookS:240,  xp:10, plata:14 },
-  ensalada_repollo:   { label:"Ensalada de Repollo",    emoji:"🥗", sprite:"dish_ensalada_repollo", res:{repollo:2, zanahoria:1},                                  lvl:3,  heal:17, buff:{type:"def",     val:6},  cookS:300, xp:14, plata:18 },
-  calabacin_salteado: { label:"Calabacín Salteado",     emoji:"🥒", sprite:"dish_calabacin_salteado", res:{calabacin:2, cebolla:1},                                  lvl:3,  heal:18, buff:{type:"dmg",     val:6},  cookS:300, xp:14, plata:20 },
-  pan_trigo:          { label:"Pan de Trigo",           emoji:"🍞", sprite:"dish_pan_trigo", res:{trigo:3, madera:2},                                       lvl:4,  heal:20, buff:{type:"cookxp",  val:10}, cookS:360, xp:18, plata:22 },
-  salteado_brocoli:   { label:"Salteado de Brócoli",    emoji:"🥦", sprite:"dish_salteado_brocoli", res:{brocoli:2, calabacin:1, madera:2},                        lvl:5,  heal:23, buff:{type:"farm",    val:10}, cookS:360, xp:22, plata:28 },
-  crema_calabaza:     { label:"Crema de Calabaza",      emoji:"🎃", sprite:"dish_crema_calabaza", res:{calabaza:2, cebolla:1, madera:2},                         lvl:5,  heal:25, buff:{type:"def",     val:10}, cookS:420, xp:24, plata:32 },
-  tortilla_maiz:      { label:"Tortilla de Maíz",       emoji:"🌽", sprite:"dish_tortilla_maiz", res:{maiz:2, cebolla:1, madera:2},                             lvl:6,  heal:27, buff:{type:"dmg",     val:10}, cookS:420, xp:28, plata:38 },
-  aceite_girasol:     { label:"Aceite de Girasol",      emoji:"🌻", sprite:"dish_aceite_girasol", res:{girasol:3, madera:2},                                     lvl:6,  heal:18, buff:{type:"luck",    val:10}, cookS:420, xp:26, plata:40 },
-  guiso_campestre:    { label:"Guiso Campestre",        emoji:"🍲", sprite:"dish_guiso_campestre", res:{papa:1, zanahoria:1, repollo:1, cebolla:1, madera:3},     lvl:7,  heal:31, buff:{type:"combatxp",val:12}, cookS:480, xp:34, plata:55 },
-  pan_maiz_trigo:     { label:"Pan de Maíz y Trigo",    emoji:"🥖", sprite:"dish_pan_maiz_trigo", res:{trigo:2, maiz:2, madera:3},                               lvl:8,  heal:34, buff:{type:"hpmax",   val:20}, cookS:480, xp:42, plata:80,  goldenP:1 },
-  estofado_cosecha:   { label:"Estofado de la Cosecha", emoji:"🥘", sprite:"dish_estofado_cosecha", res:{calabaza:2, maiz:1, papa:1, zanahoria:1, madera:3},       lvl:9,  heal:37, buff:{type:"dmg",     val:15}, cookS:540, xp:52, plata:110, goldenP:2 },
-  banquete_bosque:    { label:"Banquete del Bosque",    emoji:"🍱", sprite:"dish_banquete_bosque", res:{papa:1, zanahoria:1, repollo:1, brocoli:1, calabaza:1, madera:3}, lvl:10, heal:40, buff:{type:"feast", val:20}, cookS:600, xp:70, plata:180, goldenP:4 },
+  pure_papa:          { label:"Puré de Papa",           emoji:"🥣", sprite:"dish_pure_papa", res:{papa:3},                                                  lvl:2,  heal:13, buff:{type:"regen",   val:2},  cookS:240,  xp:10, plata:12 },
+  crema_calabaza:     { label:"Crema de Calabaza",      emoji:"🎃", sprite:"dish_crema_calabaza", res:{calabaza:2, papa:1},                                      lvl:3,  heal:25, buff:{type:"def",     val:10}, cookS:420, xp:24, plata:32 },
+  aceite_girasol:     { label:"Aceite de Girasol",      emoji:"🌻", sprite:"dish_aceite_girasol", res:{girasol:3, madera:2},                                     lvl:4,  heal:18, buff:{type:"luck",    val:10}, cookS:420, xp:26, plata:40 },
+  pan_trigo:          { label:"Pan de Trigo",           emoji:"🍞", sprite:"dish_pan_trigo", res:{trigo:3, madera:2},                                       lvl:6,  heal:20, buff:{type:"cookxp",  val:10}, cookS:360, xp:18, plata:22 },
+  sopa_zanahoria:     { label:"Sopa de Zanahoria",      emoji:"🍜", sprite:"dish_sopa_zanahoria", res:{zanahoria:2, remolacha:1},                                lvl:8,  heal:15, buff:{type:"speed",   val:8},  cookS:240,  xp:10, plata:14 },
+  tortilla_maiz:      { label:"Tortilla de Maíz",       emoji:"🌽", sprite:"dish_tortilla_maiz", res:{maiz:2, zanahoria:1, madera:2},                           lvl:9,  heal:27, buff:{type:"dmg",     val:10}, cookS:420, xp:28, plata:38 },
+  pan_maiz_trigo:     { label:"Pan de Maíz y Trigo",    emoji:"🥖", sprite:"dish_pan_maiz_trigo", res:{trigo:2, maiz:2, madera:3},                               lvl:10, heal:34, buff:{type:"hpmax",   val:20}, cookS:480, xp:42, plata:80,  goldenP:1 },
+  estofado_cosecha:   { label:"Estofado de la Cosecha", emoji:"🥘", sprite:"dish_estofado_cosecha", res:{calabaza:2, maiz:1, papa:1, zanahoria:1, madera:3},       lvl:11, heal:37, buff:{type:"dmg",     val:15}, cookS:540, xp:52, plata:110, goldenP:2 },
+  calabacin_salteado: { label:"Calabacín Salteado",     emoji:"🥒", sprite:"dish_calabacin_salteado", res:{calabacin:2, cebolla:1},                                  lvl:12, heal:18, buff:{type:"dmg",     val:6},  cookS:300, xp:14, plata:20 },
+  guiso_campestre:    { label:"Guiso Campestre",        emoji:"🍲", sprite:"dish_guiso_campestre", res:{papa:1, zanahoria:1, cebolla:1, remolacha:1, madera:3},   lvl:13, heal:31, buff:{type:"combatxp",val:12}, cookS:480, xp:34, plata:55 },
+  ensalada_repollo:   { label:"Ensalada de Repollo",    emoji:"🥗", sprite:"dish_ensalada_repollo", res:{repollo:2, zanahoria:1},                                  lvl:14, heal:17, buff:{type:"def",     val:6},  cookS:300, xp:14, plata:18 },
+  salteado_brocoli:   { label:"Salteado de Brócoli",    emoji:"🥦", sprite:"dish_salteado_brocoli", res:{brocoli:2, calabacin:1, madera:2},                        lvl:16, heal:23, buff:{type:"farm",    val:10}, cookS:360, xp:22, plata:28 },
+  banquete_bosque:    { label:"Banquete del Bosque",    emoji:"🍱", sprite:"dish_banquete_bosque", res:{papa:1, zanahoria:1, repollo:1, brocoli:1, calabaza:1, madera:3}, lvl:16, heal:40, buff:{type:"feast", val:20}, cookS:600, xp:70, plata:180, goldenP:4 },
   // clásicas (siguen dándole uso al pescado y la carne)
   pescado_asado: { label:"Pescado asado", emoji:"🐟", sprite:"dish_pescado_asado", fish:{comun:1}, res:{}, lvl:1,   // 16/8: sin madera (auditoría E)
     /* 20/8 (dirección: "¿habías especificado que el yield era también al cosechar?"). No, y estos
@@ -4005,7 +4022,7 @@ const RECIPE_DEF = {
   estofado: { label:"Estofado de carne", emoji:"🍲", sprite:"dish_estofado", res:{carne:1, papa:1, madera:1}, lvl:1,
     heal:60, buff:{type:"cd",label:"Enfriamientos -15%",mult:0.85,dur:90}, cookS:300, xp:12, plata:30,
     desc:"Cura 60 · Enfriamientos -15% (1 min 30 s)" },
-  banquete: { label:"Banquete del granjero", emoji:"🍗", sprite:"dish_banquete", fish:{raro:1}, res:{carne:2, calabaza:1, madera:1}, lvl:6,
+  banquete: { label:"Banquete del granjero", emoji:"🍗", sprite:"dish_banquete", fish:{raro:1}, res:{carne:2, calabaza:1, madera:1}, lvl:5,   // 22/8: baja 6→5 — sus ingredientes (carne + calabaza 2) ya están hace rato
     heal:9999, buff:{type:"yield",label:"Precio de venta +20%",mult:1.20,dur:180}, cookS:420, xp:25, plata:60,
     desc:"Cura TODA la vida · Precio de venta +20% (3 min)" },
 };
@@ -5008,6 +5025,12 @@ function buzonCartas() {
     id: "tablon", de: "El pueblo", titulo: "Colgamos nuestros pedidos en el tablón",
     txt: "Cada mañana dejamos tres encargos en el tablón, junto al buzón. Pagamos en plata y en VALES — juntalos: en el mismo tablón se canjean por cosas que la plata no compra. El primer pedido que cumplas cada día paga doble.",
     leer: true, panel: "ov-pedidos", btn: "Ver el tablón" }); } catch (e) {}
+  // LA GRANJA ES TUYA (22/8, auditoría integral): el tutorial enseña el núcleo pero terminaba
+  // sin presentar lo que espera afuera. Una sola carta, una sola vez, con las tres novedades.
+  try { if (G.tuto && G.tuto.done && !G.buzonLeidas.granjatuya) cartas.push({
+    id: "granjatuya", de: "El Capataz", titulo: "Ahora sí: la granja es tuya",
+    txt: "Tres cosas que nadie te contó todavía. En el menú está la pestaña de LOGROS 🏆 — las metas pagan plata, cobralas ahí. Al pie del buzón llega tu PAQUETE del día: si venís siete días seguidos, el séptimo es dorado. Y junto al buzón vas a ver a un GOBLIN de mala fama y buen corazón: hace un trueque por día, y siempre le sobra lo que a vos te falta.",
+    leer: true, panel: "ov-logros", btn: "Ver los logros" }); } catch (e) {}
   try { const n = passPendientes(); if (n > 0 && !G.buzonLeidas["pase|" + hoy]) cartas.push({
     id: "pase", de: "El Pase de Cosecha", titulo: n + (n > 1 ? " niveles" : " nivel") + " sin reclamar",
     txt: "Tus estrellas ya destrabaron premios en el Pase. Pasá a retirarlos cuando quieras.",
@@ -5082,7 +5105,7 @@ function pedPool() {
   }
   if (((G.fish && G.fish.comun) || 0) > 0 || toolCount("rod") > 0)
     pool.push({ tipo: "fish", key: "comun", n: 2, val: 12 });
-  if (G.built && G.built.cocina) for (const id of ["papa_asada", "sopa_zanahoria", "pure_papa"]) {
+  if (G.built && G.built.cocina) for (const id of ["papa_asada", "crema_calabaza", "pure_papa"]) {   // 22/8: la sopa se fue al nivel 8 con su zanahoria
     const r = RECIPE_DEF[id]; if (!r) continue;
     let hecho = false; try { hecho = statGet("cocinar", id) > 0; } catch (e) {}
     if (hecho || ((G.dishes && G.dishes[id]) || 0) > 0) pool.push({ tipo: "dish", key: id, n: 1, val: (r.plata || 8) * 2 });

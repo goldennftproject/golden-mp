@@ -29,7 +29,7 @@ const ok = (n, c, d) => { if (!c) fallos++; console.log((c ? "  ok   " : "  FALL
 
 console.log("\nEL TECHO ES EL ÚLTIMO NIVEL DEL CONTENIDO, NO UN NÚMERO A MANO");
 {
-  const esperado = { farming: 16, mining: 11, ganaderia: 19, cooking: 10 };   // 22/8: dos carriles — el brócoli (16) es el último
+  const esperado = { farming: 16, mining: 11, ganaderia: 19, cooking: 16 };   // 22/8: dos carriles — y la Cocina re-sincronizada llega al Banquete del Bosque (16)
   for (const sk in esperado) {
     const lista = ctx.oficioAbre(sk), maxLista = Math.max(...lista.map(e => e[0]));
     ok(sk + ": techo " + esperado[sk] + " — y es EXACTAMENTE el máximo de su lista",

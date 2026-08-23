@@ -12,7 +12,7 @@ const ctx={console:{log(){},warn(){}},Math,Date,JSON,Object,Array,Number,String,
 ctx.window=ctx;ctx.globalThis=ctx;ctx.setTimeout=()=>0;vm.createContext(ctx);
 vm.runInContext(fs.readFileSync("public/game/config.js","utf8"),ctx);
 vm.runInContext(fs.readFileSync("public/game/state.js","utf8")+
- "\n;this.X={FARM_NIVEL_MAX,FARM_EXPANSION,PLANO_NIVEL,BUILD_DEF,FARM_EDIF2,CROP_ORDER,CROP_DEF,skillNeed,CD,FISH_CD,INV_BASE,SEED_POR_PARCELA,COOK_SLOTS,STAM_RECARGAS_DIA,EXCAV_POR_DIA,PED_POR_DIA,RECIPE_ORDER,RECIPE_DEF,ZONA_ORDER,ZONA_DEF,ANIMAL_ORDER,ANIMAL_DEF};",ctx);
+ "\n;this.X={FARM_NIVEL_MAX,FARM_EXPANSION,PLANO_NIVEL,BUILD_DEF,FARM_EDIF2,CROP_ORDER,CROP_DEF,skillNeed,CD,FISH_CD,INV_BASE,SEED_POR_PARCELA,COOK_SLOTS,STAM_RECARGAS_DIA,EXCAV_POR_DIA,PED_POR_DIA,RECIPE_ORDER,RECIPE_DEF,ZONA_ORDER,ZONA_DEF,ANIMAL_ORDER,ANIMAL_DEF,pescaZonaAlto};",ctx);
 const X=ctx.X;
 
 /* ---------- EL GRANERO: espacio y construcción ---------- */
@@ -62,18 +62,17 @@ const OFICIOS={
 X.CROP_ORDER.forEach(k=>{const c=X.CROP_DEF[k]; if(c.lvl>1)(OFICIOS.farming.prem[c.lvl]=OFICIOS.farming.prem[c.lvl]||[]).push("semilla de "+c.label);});
 [4,8,11,14,18].forEach((n,i)=>(OFICIOS.farming.prem[n]=OFICIOS.farming.prem[n]||[]).push("+8 semillas por parcela y día ("+(X.SEED_POR_PARCELA+8*(i+1))+")"));
 [3,6,9,13,16,19].forEach((n,i)=>(OFICIOS.farming.prem[n]=OFICIOS.farming.prem[n]||[]).push("parcela nº"+(4+i)));
+/* 22/8 (auditoría integral): esta tabla listaba premios que el CÓDIGO no da — % de pez raro,
+   cargas que crecían con la Tala, huecos de establo cada 5 niveles. Ahora solo lo real. */
 // Tala
 [5,8,11].forEach((n,i)=>(OFICIOS.tala.prem[n]=OFICIOS.tala.prem[n]||[]).push("árbol nº"+(4+i)));
-[3,7,12,16].forEach((n,i)=>(OFICIOS.tala.prem[n]=OFICIOS.tala.prem[n]||[]).push("los árboles acumulan hasta "+(2+i)+" cargas sin recoger"));
 // Minería
 [5,8,11].forEach((n,i)=>(OFICIOS.mining.prem[n]=OFICIOS.mining.prem[n]||[]).push("roca/veta nº"+(4+i)));
-[4,9,14].forEach((n,i)=>(OFICIOS.mining.prem[n]=OFICIOS.mining.prem[n]||[]).push("las vetas acumulan hasta "+(2+i)+" cargas"));
-// Pesca
-[3,6,10,15].forEach((n,i)=>(OFICIOS.fishing.prem[n]=OFICIOS.fishing.prem[n]||[]).push(["+5% de pez raro","+4% de pez épico","+2% de legendario","la caña saca 2 peces"][i]));
-[5,12].forEach((n,i)=>(OFICIOS.fishing.prem[n]=OFICIOS.fishing.prem[n]||[]).push("−"+(2+i*2)+" min de enfriamiento de la caña"));
-// Ganadería
+// Pesca (v2, 22/8): CADA nivel agranda la zona de captura del carrete — se muestran los hitos
+[5,10,15].forEach(n=>(OFICIOS.fishing.prem[n]=OFICIOS.fishing.prem[n]||[]).push("zona de captura al "+Math.round(X.pescaZonaAlto(n)*100)+"% de la barra (crece +1,2% por nivel)"));
+// Ganadería: un lugar de establo POR NIVEL (22/8) + los animales
 X.ANIMAL_ORDER.forEach((k,i)=>{const n=[1,4,8,13][i]; if(n>1)(OFICIOS.ganaderia.prem[n]=OFICIOS.ganaderia.prem[n]||[]).push("animal: "+X.ANIMAL_DEF[k].label);});
-[6,11,16].forEach((n,i)=>(OFICIOS.ganaderia.prem[n]=OFICIOS.ganaderia.prem[n]||[]).push("+"+(1+i)+" hueco de establo"));
+for(let n=2;n<=19;n++)(OFICIOS.ganaderia.prem[n]=OFICIOS.ganaderia.prem[n]||[]).push("+1 lugar de establo ("+(n+1)+")");
 // Cocina
 X.RECIPE_ORDER.forEach(k=>{const r=X.RECIPE_DEF[k]; if(r.lvl>1)(OFICIOS.cooking.prem[r.lvl]=OFICIOS.cooking.prem[r.lvl]||[]).push("receta: "+r.label);});
 [4,8,12].forEach((n,i)=>(OFICIOS.cooking.prem[n]=OFICIOS.cooking.prem[n]||[]).push("olla nº"+(X.COOK_SLOTS+1+i)));
@@ -90,7 +89,8 @@ Object.keys(OFICIOS).forEach(sk=>{
         "     "+o.prem[n].join("  +  "));});
   const tope=Math.max(...nivs), sin=[];
   for(let i=2;i<=tope;i++) if(!o.prem[i]) sin.push(i);
-  LOG("   niveles sin nada hasta el "+tope+": "+(sin.length?sin.join(", "):"ninguno"));
+  LOG(sk==="fishing" ? "   niveles sin nada: ninguno — TODOS agrandan la zona de captura (+1,2%/nivel)"
+      : "   niveles sin nada hasta el "+tope+": "+(sin.length?sin.join(", "):"ninguno"));
 });
 LOG("\n\nNi un adorno, ni un título, ni un marco. Todo lo de arriba quita fricción o abre contenido.");
 LOG("Ninguna palanca multiplica la plata por hora: el ancla de 20/h queda intacta.");

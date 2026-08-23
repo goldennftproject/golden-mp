@@ -4,7 +4,7 @@ Documento de Diseño de Juego
 
 *Estado real del código · 22 de agosto de 2026 · revisión 3*
 
-*Novedades de esta revisión: las CARGAS de los nodos (el árbol guarda hasta 4 talados; la partida cobra el doble del ancla), la picada de mineral a rendimiento 2, la expansión 3 sin muro y los edificios tardíos abaratados, el establo que crece un lugar por nivel de Ganadería, el techo de oficios derivado del contenido, el PORTERO del guardado en producción (bitácora + puerta vieja sellada), la cuenta por email, la ESCALERA DE CULTIVOS EN DOS CARRILES (nocturnos desde el nivel 2), el MERCADER GOBLIN (un trueque anclado por día), los LOGROS con premio (pestaña 🏆), y la MISIÓN DE EVENTO del tablón (viernes a domingo), la PESCA v2 con el sistema de Fishing Frenzy (burbujas, anzuelo y zona de captura), el DÍA que cicla a las 00:00 UTC (21:00 Argentina, estándar web3) y la noche azulada.*
+*Novedades de esta revisión: las CARGAS de los nodos (el árbol guarda hasta 4 talados; la partida cobra el doble del ancla), la picada de mineral a rendimiento 2, la expansión 3 sin muro y los edificios tardíos abaratados, el establo que crece un lugar por nivel de Ganadería, el techo de oficios derivado del contenido, el PORTERO del guardado en producción (bitácora + puerta vieja sellada), la cuenta por email, la ESCALERA DE CULTIVOS EN DOS CARRILES (nocturnos desde el nivel 2), el MERCADER GOBLIN (un trueque anclado por día), los LOGROS con premio (pestaña 🏆), y la MISIÓN DE EVENTO del tablón (viernes a domingo), la PESCA v2 con el sistema de Fishing Frenzy (burbujas, anzuelo y zona de captura), el DÍA que cicla a las 00:00 UTC (21:00 Argentina, estándar web3), la noche azulada, y la COCINA re-sincronizada con los dos carriles (auditoría integral del 22/8: regla « ninguna receta pide un cultivo de nivel mayor que el suyo », carta « la granja es tuya » al cerrar el tutorial, y el kit de emergencia dentro del cupo de semillas).*
 
 Para el equipo de diseño
 
@@ -159,7 +159,7 @@ Toda escalera del juego empieza ABIERTA en el nivel 1. La semilla de papa, la pi
 
 Hay once oficios y cada acción da XP al SUYO. Talar sube Tala; pescar sube Pesca. Esto suena obvio y no lo era: hasta el 18/8 pescar daba experiencia de Cocina.
 
-Cada oficio con escalera tiene TECHO, y el techo se deriva de su contenido (22/8, dirección: « capear el crecimiento hasta el nivel donde hay contenido; más adelante se libera más »). Hoy: Cultivo 16 (el brócoli, tras la escalera en dos carriles del 22/8), Minería 11 (la netherita), Ganadería 19 (el lugar 20 del establo), Cocina 10 (el Banquete del Bosque). La XP nunca deja de acumularse por debajo: cuando se agregue contenido de nivel más alto, el techo sube solo y los veteranos suben en el acto lo que ya ganaron. Los oficios sin escalera (Tala, Pesca, Artesanía y las armas) y la barra de Combate no se capean. La granja tiene su propio techo de siempre: nivel 50.
+Cada oficio con escalera tiene TECHO, y el techo se deriva de su contenido (22/8, dirección: « capear el crecimiento hasta el nivel donde hay contenido; más adelante se libera más »). Hoy: Cultivo 16 (el brócoli, tras la escalera en dos carriles del 22/8), Minería 11 (la netherita), Ganadería 19 (el lugar 20 del establo), Cocina 16 (el Banquete del Bosque, tras la re-sincronización del 22/8 — gemelo del de Cultivo). La XP nunca deja de acumularse por debajo: cuando se agregue contenido de nivel más alto, el techo sube solo y los veteranos suben en el acto lo que ya ganaron. Los oficios sin escalera (Tala, Pesca, Artesanía y las armas) y la barra de Combate no se capean. La granja tiene su propio techo de siempre: nivel 50.
 
 La XP no mide relojes, mide PRÁCTICA. Un oficio con acciones lentas no puede pedir la misma cantidad que uno con acciones rápidas, así que cada oficio tiene su propio ritmo derivado de la duración real de su acción. La fórmula es la misma para todos:
 
@@ -301,22 +301,24 @@ La Cocina convierte lo recolectado en platos que curan y dan un efecto temporal.
 | **Plato**             | **Nivel** | **Ingredientes**                             | **Cura** | **Efecto**                | **Min** |
 | --------------------- | --------- | -------------------------------------------- | -------- | ------------------------- | ------- |
 | Papa Asada            | 1         | 1 Papa                                       | 10       | Velocidad de cultivo +5%  | 3       |
-| Puré de Papa          | 2         | 2 Papa + 1 Cebolla                           | 13       | Regeneración +2%          | 4       |
-| Sopa de Zanahoria     | 2         | 2 Zanahoria + 1 Cebolla                      | 15       | Velocidad al andar +8%    | 4       |
-| Ensalada de Repollo   | 3         | 2 Repollo + 1 Zanahoria                      | 17       | Defensa +6%               | 5       |
-| Calabacín Salteado    | 3         | 2 Calabacín + 1 Cebolla                      | 18       | Daño +6%                  | 5       |
-| Pan de Trigo          | 4         | 3 Trigo + 2 Madera                           | 20       | XP de Cocina +10%         | 6       |
-| Salteado de Brócoli   | 5         | 2 Brócoli + 1 Calabacín + 2 Madera           | 23       | Velocidad de cultivo +10% | 6       |
-| Crema de Calabaza     | 5         | 2 Calabaza + 1 Cebolla + 2 Madera            | 25       | Defensa +10%              | 7       |
-| Tortilla de Maíz      | 6         | 2 Maíz + 1 Cebolla + 2 Madera                | 27       | Daño +10%                 | 7       |
-| Aceite de Girasol     | 6         | 3 Girasol + 2 Madera                         | 18       | Suerte +10%               | 7       |
-| Guiso Campestre | 7 | 1 Papa + 1 Zanahoria + 1 Repollo + 1 Cebolla + 3 Madera | 31 | XP de combate +12% · limpia heridas | 8 |
-| Pan de Maíz y Trigo | 8 | 2 Trigo + 2 Maíz + 3 Madera | 34 | +20 de vida máxima · disipa maldiciones | 8 |
-| Estofado de la Cosecha | 9 | 2 Calabaza + 1 Maíz + 1 Papa + 1 Zanahoria + 3 Madera | 37 | Daño +15% · limpia heridas | 9 |
-| Banquete del Bosque | 10 | 1 Papa + 1 Zanahoria + 1 Repollo + 1 Brócoli + 1 Calabaza + 3 Madera | 40 | Daño, defensa y velocidad +20% | 10 |
 | Pescado asado         | 1         | 1 pez común                                  | 30       | Precio de venta +10%      | 4       |
 | Estofado de carne     | 1         | 1 Carne + 1 Papa + 1 Madera                  | 60       | Enfriamientos -15%        | 5       |
-| Banquete del granjero | 6         | 2 Carne + 1 Calabaza + 1 Madera + 1 pez raro | toda     | Precio de venta +20%      | 7       |
+| Puré de Papa          | 2         | 3 Papa                                       | 13       | Regeneración +2%          | 4       |
+| Crema de Calabaza     | 3         | 2 Calabaza + 1 Papa                          | 25       | Defensa +10%              | 7       |
+| Aceite de Girasol     | 4         | 3 Girasol + 2 Madera                         | 18       | Suerte +10%               | 7       |
+| Banquete del granjero | 5         | 2 Carne + 1 Calabaza + 1 Madera + 1 pez raro | toda     | Precio de venta +20%      | 7       |
+| Pan de Trigo          | 6         | 3 Trigo + 2 Madera                           | 20       | XP de Cocina +10%         | 6       |
+| Sopa de Zanahoria     | 8         | 2 Zanahoria + 1 Remolacha                    | 15       | Velocidad al andar +8%    | 4       |
+| Tortilla de Maíz      | 9         | 2 Maíz + 1 Zanahoria + 2 Madera              | 27       | Daño +10%                 | 7       |
+| Pan de Maíz y Trigo | 10 | 2 Trigo + 2 Maíz + 3 Madera | 34 | +20 de vida máxima · disipa maldiciones | 8 |
+| Estofado de la Cosecha | 11 | 2 Calabaza + 1 Maíz + 1 Papa + 1 Zanahoria + 3 Madera | 37 | Daño +15% · limpia heridas | 9 |
+| Calabacín Salteado    | 12        | 2 Calabacín + 1 Cebolla                      | 18       | Daño +6%                  | 5       |
+| Guiso Campestre | 13 | 1 Papa + 1 Zanahoria + 1 Cebolla + 1 Remolacha + 3 Madera | 31 | XP de combate +12% · limpia heridas | 8 |
+| Ensalada de Repollo   | 14        | 2 Repollo + 1 Zanahoria                      | 17       | Defensa +6%               | 5       |
+| Salteado de Brócoli   | 16        | 2 Brócoli + 1 Calabacín + 2 Madera           | 23       | Velocidad de cultivo +10% | 6       |
+| Banquete del Bosque | 16 | 1 Papa + 1 Zanahoria + 1 Repollo + 1 Brócoli + 1 Calabaza + 3 Madera | 40 | Daño, defensa y velocidad +20% | 10 |
+
+*RE-SINCRONIZADA el 22/8 (auditoría integral): al pasar los cultivos a dos carriles, siete recetas quedaron pidiendo ingredientes de la escalera vieja — el Puré (Cocina 2, veinte minutos de oficio) pedía cebolla, que es Cultivo 10 (dos días y medio). Regla nueva, vigilada por test: ninguna receta pide un cultivo de nivel mayor que el suyo. El techo de la Cocina subió solo a 16 y la ciruela y la cereza quedan como frutas de venta hasta que haya arte de mermeladas.*
 
 *Cada fuente de comida tiene su receta de nivel 1: la huerta la Papa Asada, la laguna el Pescado Asado y la caza el Estofado de carne. Sin eso, el jugador mata bichos, trae carne y no puede hacer nada con ella durante días — que es exactamente lo que pasaba hasta el 19/8.*
 
@@ -437,7 +439,7 @@ Normas de diseño que vienen de decisiones de dirección y que conviene no reabr
 
 **15. Cómo verificar lo que dice este documento**
 
-El proyecto tiene 68 pruebas automáticas y 16 auditores (108 herramientas en total). No comprueban que el código compile: comprueban que el JUEGO cumpla las reglas de arriba. Los más útiles para el diseñador:
+El proyecto tiene 69 pruebas automáticas y 16 auditores (109 herramientas en total). No comprueban que el código compile: comprueban que el JUEGO cumpla las reglas de arriba. Los más útiles para el diseñador:
 
 | **Herramienta**                 | **Qué contesta**                                            |
 | ------------------------------- | ----------------------------------------------------------- |
