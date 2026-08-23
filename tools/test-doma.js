@@ -33,22 +33,28 @@ const ok = (n, c, d) => { if (!c) fallos++; console.log((c ? "  ok   " : "  FALL
 
 console.log("\nLA PUERTA: GRANJA 10, EL PLATO FAVORITO DE CADA UNO, Y UN BICHO A LA VEZ");
 {
-  G.level = 9; G.doma = null; G.dishes = { bocado_domador: 5, bollito_girasol: 5, papilla_remolacha: 5 };
+  G.level = 9; G.doma = null; G.dishes = { bocado_domador: 5, galletita_cereza: 5, papilla_remolacha: 5 };
   ok("a granja 9 ni el 0,001 doma", ctx.domaIntentar("orco", () => 0.001) === false && G.dishes.bocado_domador === 5);
   G.level = 10;
   ok("el dragón no se doma (y no gasta plato)", ctx.domaIntentar("dragon", () => 0.001) === false && G.dishes.bocado_domador === 5);
-  ok("al orco NO se lo doma con el bollito de la rata: pide SU Costillar",
-    (G.dishes.bocado_domador = 0, ctx.domaIntentar("orco", () => 0.001) === false && G.dishes.bollito_girasol === 5));
+  ok("al orco NO se lo doma con la galletita de la rata: pide SU Costillar",
+    (G.dishes.bocado_domador = 0, ctx.domaIntentar("orco", () => 0.001) === false && G.dishes.galletita_cereza === 5));
   G.dishes.bocado_domador = 5;
   ok("con Costillar y mala suerte (0,5 ≥ 25%): se lo come y se va", ctx.domaIntentar("orco", () => 0.5) === false && G.dishes.bocado_domador === 4);
   ok("con Costillar y suerte: el orco te sigue a casa", ctx.domaIntentar("orco", () => 0.001) === true && G.doma.bicho === "orco");
   ok("y ese intento también costó su plato", G.dishes.bocado_domador === 3);
   ok("y no hay segundo bicho (ni gasta más platos)", ctx.domaIntentar("troll", () => 0.001) === false && G.dishes.bocado_domador === 3);
   const R = vm.runInContext("RECIPE_DEF", ctx);
-  ok("los tres platos son recetas reales de Cocina 6",
-    ["bocado_domador", "bollito_girasol", "papilla_remolacha"].every(k => R[k] && R[k].lvl === 6));
+  ok("la escalera de platos sigue al valor del ayudante: galletita 4 · papilla 7 · costillar 10",
+    R.galletita_cereza.lvl === 4 && R.papilla_remolacha.lvl === 7 && R.bocado_domador.lvl === 10);
+  /* v4: el COSTO sigue al valor — la fórmula que delató el bollito de 1.740 queda de guardia */
+  const C = vm.runInContext("CROP_DEF", ctx), PR = vm.runInContext("PRICE", ctx);
+  const costo = (res) => Object.keys(res).reduce((a, k) => a + ((C[k] ? C[k].price : PR[k]) || 0) * res[k], 0);
+  const cg = costo(R.galletita_cereza.res), cp = costo(R.papilla_remolacha.res), cc = costo(R.bocado_domador.res);
+  ok("y el costo también: galletita < papilla < costillar", cg < cp && cp < cc, cg + " < " + cp + " < " + cc);
+  ok("la galletita es calderilla (≤ 30) y el costillar pesa (≥ 300)", cg <= 30 && cc >= 300);
   ok("y cada descripción nombra a su bicho ('le encanta')",
-    /orco/i.test(R.bocado_domador.desc) && /RATA/i.test(R.bollito_girasol.desc) && /LARVA/i.test(R.papilla_remolacha.desc));
+    /orco/i.test(R.bocado_domador.desc) && /RATA/i.test(R.galletita_cereza.desc) && /LARVA/i.test(R.papilla_remolacha.desc));
 }
 
 console.log("\nLA PANZA: 1 CARNE = 24 H, TOPE 3 DÍAS, SIN CARNE NO HAY TRATO");

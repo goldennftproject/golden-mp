@@ -4033,13 +4033,22 @@ const RECIPE_DEF = {
      tres oficios: el Costillar doma a los BRAZOS (orco, lancero, guerrero, trol → nodos), el
      Bollito a la RATA (escarba → lombrices) y la Papilla a la LARVA (abona → los cultivos
      avanzan en tu ausencia). Sprites prestados hasta que Suren les dé cara. */
-  bocado_domador: { label:"Costillar Ahumado", emoji:"🍖", sprite:"dish_estofado", res:{carne:2, calabaza:1, madera:1}, lvl:6,
+  /* v4 (dirección: « habría que dispersar el nivel en que se consiguen, estratégicamente —
+     fijate el balance, el ancla, las fórmulas »). La fórmula delató el problema: el bollito de
+     trigo+girasol costaba 1.740 POR INTENTO para domar a la RATA (el ayudante más débil),
+     mientras el Costillar salía 128 para el más fuerte. Regla nueva: EL COSTO DEL PLATO SIGUE
+     AL VALOR DEL AYUDANTE, y el nivel de Cocina acompaña —
+       rata (débil, ~9/día)  → Galletita, nivel 4, ingredientes de carril corto (~7/intento)
+       larva (media)         → Papilla,  nivel 7 (tapa el nivel mudo), ~114/intento
+       brazos (fuerte, ~60% del ancla offline) → Costillar, nivel 10 (gemelo de granja 10),
+              con maíz del carril ancla (~590/intento → ~2.400 la doma: se paga en días, no gratis) */
+  bocado_domador: { label:"Costillar Ahumado", emoji:"🍖", sprite:"dish_estofado", res:{carne:2, maiz:1, madera:1}, lvl:10,
     heal:5, buff:{type:"regen", val:1}, cookS:420, xp:20, plata:35,
-    desc:"Carne ahumada a la leña con calabaza dulce. Al orco, al lancero, al guerrero y al trol les ENCANTA: llevalo a la Zona Negra y, al vencerlos, se lo devoran — con suerte, te siguen a casa y atienden tus árboles y rocas." },
-  bollito_girasol: { label:"Bollito de Girasol", emoji:"🥯", sprite:"dish_pan_trigo", res:{trigo:2, girasol:1}, lvl:6,
-    heal:5, buff:{type:"regen", val:1}, cookS:420, xp:20, plata:30,
-    desc:"Masa de trigo con semillas de girasol tostadas. A la RATA le encanta: vencela en la Zona Negra con uno encima y quizás se mude a tu granja — escarba montículos y te junta lombrices mientras no estás." },
-  papilla_remolacha: { label:"Papilla de Remolacha", emoji:"🥣", sprite:"dish_crema_calabaza", res:{remolacha:2, calabaza:1}, lvl:6,
+    desc:"Carne ahumada a la leña con choclo asado. Al orco, al lancero, al guerrero y al trol les ENCANTA: llevalo a la Zona Negra y, al vencerlos, se lo devoran — con suerte, te siguen a casa y atienden tus árboles y rocas." },
+  galletita_cereza: { label:"Galletita de Cereza", emoji:"🍪", sprite:"dish_pan_trigo", res:{cereza:2, papa:1}, lvl:4,
+    heal:5, buff:{type:"regen", val:1}, cookS:420, xp:20, plata:8,
+    desc:"Masa de papa con cerezas del carril corto. A la RATA le encanta: vencela en la Zona Negra con una encima y quizás se mude a tu granja — escarba montículos y te junta lombrices mientras no estás." },
+  papilla_remolacha: { label:"Papilla de Remolacha", emoji:"🥣", sprite:"dish_crema_calabaza", res:{remolacha:2, calabaza:1}, lvl:7,
     heal:5, buff:{type:"regen", val:1}, cookS:420, xp:20, plata:28,
     desc:"Dulce, espesa y de un violeta sospechoso. A la LARVA le encanta: vencela en la Zona Negra con una encima y quizás te siga — abona la tierra y tus cultivos avanzan mientras no estás." },
   banquete: { label:"Banquete del granjero", emoji:"🍗", sprite:"dish_banquete", fish:{raro:1}, res:{carne:2, calabaza:1, madera:1}, lvl:5,   // 22/8: baja 6→5 — sus ingredientes (carne + calabaza 2) ya están hace rato
@@ -5488,7 +5497,7 @@ var DOMA_ESPECIES = ["rata", "larva", "orco", "lancero", "guerrero", "troll"];  
 /* v3 (dirección): cada bicho hace el trabajo que su CUERPO permite — « la rata no va a talar » —
    y cada rol tiene su plato favorito. */
 var DOMA_ROL = { orco: "brazos", lancero: "brazos", guerrero: "brazos", troll: "brazos", rata: "rata", larva: "larva" };
-var DOMA_PLATO = { brazos: "bocado_domador", rata: "bollito_girasol", larva: "papilla_remolacha" };
+var DOMA_PLATO = { brazos: "bocado_domador", rata: "galletita_cereza", larva: "papilla_remolacha" };   // v4: escalera 4 → 7 → 10, costo según el valor del ayudante
 var DOMA_ROL_TXT = {
   brazos: "atiende tus árboles y rocas",
   rata: "escarba montículos y junta lombrices",
@@ -5506,7 +5515,7 @@ function domaIntentar(especie, rnd) {   // lo llama la Zona Negra al vencer
   if (Math.floor((G.dishes && G.dishes[plato]) || 0) < 1) {
     if (G._domaPistaDia !== dayStamp(0)) {
       G._domaPistaDia = dayStamp(0);
-      log("🐾 Ese " + ((MONSTER_DEF[especie] && MONSTER_DEF[especie].label) || "bicho") + " te miró con hambre antes de caer… En la Cocina dicen que a los suyos les encanta el " + platoNom.toUpperCase() + " (nivel 6).", "info");
+      log("🐾 Ese " + ((MONSTER_DEF[especie] && MONSTER_DEF[especie].label) || "bicho") + " te miró con hambre antes de caer… En la Cocina dicen que a los suyos les encanta el " + platoNom.toUpperCase() + " (Cocina " + ((RECIPE_DEF[plato] && RECIPE_DEF[plato].lvl) || "?") + ").", "info");
     }
     return false;
   }
