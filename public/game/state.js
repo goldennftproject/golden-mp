@@ -2434,7 +2434,7 @@ function passInit() {
   G.pass = G.pass || {};
   const p = G.pass;
   p.stars = p.stars || 0; p.vip = !!p.vip; p.claimF = p.claimF || {}; p.claimV = p.claimV || {}; p.cosmetics = p.cosmetics || [];
-  const hoy = dayStamp(0);   // día LOCAL (antes era UTC: los contadores se reseteaban a las 21 h en Argentina)
+  const hoy = dayStamp(0);   // 22/8 (dirección): día UTC — el reset a las 21 h de Argentina es el estándar web3, a propósito
   if (!p.daily || p.daily.date !== hoy) {   // 3 misiones diarias, una por pilar (rotan con la fecha)
     const pilares = Object.keys(PASS_MISIONES);
     const seed = Number(hoy.replace(/-/g, ""));
@@ -2755,7 +2755,7 @@ function incPoder() {   // poder de combate del jugador con lo que tiene equipad
   return Math.round(p);
 }
 function incCupoHoy() {
-  const hoy = dayStamp(0);   // día LOCAL (antes era UTC: los contadores se reseteaban a las 21 h en Argentina)
+  const hoy = dayStamp(0);   // 22/8 (dirección): día UTC — el reset a las 21 h de Argentina es el estándar web3, a propósito
   if (!G.incDia || G.incDia.date !== hoy) G.incDia = { date: hoy, n: 0 };
   return G.incDia;
 }
@@ -3577,7 +3577,7 @@ function stamGastar(n) {   // devuelve false si no alcanza
   G.stam -= n; refreshHud(); return true;
 }
 function stamRecargasHoy() {
-  const hoy = dayStamp(0);   // día LOCAL (antes era UTC: los contadores se reseteaban a las 21 h en Argentina)
+  const hoy = dayStamp(0);   // 22/8 (dirección): día UTC — el reset a las 21 h de Argentina es el estándar web3, a propósito
   if (!G.stamRec || G.stamRec.date !== hoy) G.stamRec = { date: hoy, n: 0 };
   return G.stamRec;
 }
@@ -4911,7 +4911,12 @@ function darCosmetico(nombre) {
   }
 }
 
-function dayStamp(off) { const d = new Date(Date.now() + (off || 0) * 86400000); return d.getFullYear() + "-" + String(d.getMonth() + 1).padStart(2, "0") + "-" + String(d.getDate()).padStart(2, "0"); }
+/* 22/8 (dirección): el día del juego cicla a las 00:00 UTC — 21:00 en Argentina — que es el
+   reset estándar de los juegos web3. TODO lo diario cuelga de esta función (paquete, tablón,
+   misiones, goblin, excavaciones…), así que todo cierra a la misma hora en todo el mundo y el
+   servidor puede verificarlo sin discutir zonas horarias. (El ciclo VISUAL día/noche es aparte
+   y sigue la hora local del jugador: el cielo es suyo, el calendario es del juego.) */
+function dayStamp(off) { const d = new Date(Date.now() + (off || 0) * 86400000); return d.getUTCFullYear() + "-" + String(d.getUTCMonth() + 1).padStart(2, "0") + "-" + String(d.getUTCDate()).padStart(2, "0"); }
 // estado del cofre: ¿se puede reclamar hoy? ¿qué día de la racha toca? ¿se perdió la racha?
 /* ============ EXCAVACIONES DIARIAS (15/8, idea Stardew aprobada) ==============
    3 montículos de tierra removida por día, en lugares al azar pero FIJOS durante el
@@ -5168,7 +5173,7 @@ var EVENTO_TEMAS = [   // el filtro elige del pool de HOY (pedPool): nada fuera 
   { id: "pesca",   label: "El Torneo de Pesca",   f: (p) => p.tipo === "fish" },
   { id: "festin",  label: "El Festín del Pueblo", f: (p) => p.tipo === "dish" },
 ];
-function findeVentana() { const d = new Date().getDay(); return d === 5 || d === 6 || d === 0; }   // vie · sáb · dom
+function findeVentana() { const d = new Date().getUTCDay(); return d === 5 || d === 6 || d === 0; }   // vie · sáb · dom, en UTC como todo lo diario (22/8)
 function findeStamp() { return "F" + semanaStamp().slice(1); }   // la semana arranca jueves: vie-sáb-dom caen en la MISMA
 function pedidoEvento() {
   const pool = pedPool(); if (!pool.length) return null;

@@ -3107,6 +3107,11 @@ class FarmScene extends Phaser.Scene {
       // mosaico, así que la hora es una sola en toda la pantalla.
       const _c = { x: GF.ORIG_X + GF.WORLD_W / 2, y: GF.ORIG_Y + GF.WORLD_H / 2 }, _lado = 9000;
       this.cielo = this.add.rectangle(_c.x, _c.y, _lado, _lado, 0x0a1030, 0).setDepth(90000);
+      /* 22/8 (dirección): « además de oscurecerlo, ponerle un tono más azulado — no tan oscuro ».
+         Segunda capa en MULTIPLY: no tapa, TIÑE. El color 0x9db2e6 multiplica los rojos y verdes
+         hacia abajo y casi no toca el azul → luz de luna, no telón negro. La capa oscura de arriba
+         baja su fuerza (×0,78) para compensar: la noche queda más azul y MENOS negra que antes. */
+      this.cieloTinte = this.add.rectangle(_c.x, _c.y, _lado, _lado, 0x9db2e6, 0).setDepth(90000).setBlendMode(Phaser.BlendModes.MULTIPLY);
       this.faroles = [];
       this._cieloAt = 0;
     }
@@ -3120,7 +3125,11 @@ class FarmScene extends Phaser.Scene {
       else if (min < 1080) { alpha = 0; }                                                                    // día pleno
       else { const k = (min - 1080) / 210; alpha = lerp(0, 0.38, k); col = k < 0.5 ? 0x803010 : 0x0a1030; }  // atardecer (18:00-21:30)
       this.cielo.fillColor = col;
-      this.tweens.add({ targets: this.cielo, fillAlpha: alpha, duration: 3000 });
+      this.tweens.add({ targets: this.cielo, fillAlpha: alpha * 0.78, duration: 3000 });   // 22/8: menos negro…
+      // …y más luna: el tinte azul acompaña la misma curva, fuerte en la noche azul y tímido
+      // en las medias horas naranjas del amanecer/atardecer (ahí manda el sol, no la luna).
+      const azul = Math.min(0.55, alpha * (col === 0x0a1030 ? 1.45 : 0.5));
+      this.tweens.add({ targets: this.cieloTinte, fillAlpha: azul, duration: 3000 });
       const noche = alpha > 0.12;
       // el relevo mariposas ↔ luciérnagas se engancha al MISMO umbral que enciende los faroles,
       // así que todo lo nocturno pasa a la vez. La primera vez se aplica seco (si entrás de
