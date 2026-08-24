@@ -22,7 +22,7 @@ Dirección: « sigue tardando en entrar a la granja, algo se ha roto ahí en el 
 
   - **Los `.js` iban con `no-cache`**, o sea una ida y vuelta por archivo en cada carga solo para que el servidor contestara « no cambió » — innecesario desde el día que el cargador les puso `?b=GF_BUILD`, que cambia en cada deploy y ya hace imposible reusar código viejo. Ahora se cachean de verdad: la segunda carga de un mismo build no pide nada.
 
-Como el sello del build pasó a ser lo único que avisa que hay código nuevo, ahora lleva **segundos** y no solo minutos: dos deploys dentro del mismo minuto compartían sello y el segundo no le llegaba a quien ya había cargado el primero. Todo esto lo fija `tools/test-arranque-peso.js`, que además **vigila el peso**: el bulto crece solo, un comentario por vez, y si algún día pasa de 460 KB comprimidos, la suite se pone roja antes de que lo note un jugador.
+Como el sello del build pasó a ser lo único que avisa que hay código nuevo, dejó de escribirse a mano: **lo calcula el servidor** a partir de los propios archivos del juego (tamaño y fecha de los doce `.js`) y lo inyecta en el `index.html` al servirlo. La lección la dio el primer deploy después de endurecer la caché — el sello se quedó sin commitear y el servidor siguió anunciando el número viejo, que es exactamente el escenario que rompe. Un sello que hay que acordarse de actualizar es un sello roto: si cambia una coma en cualquier archivo, cambia el número, y nadie tiene que hacer nada. El `deploy.bat` además avisa ahora si quedó algo de `public/` o `src/` sin subir, y si el push falla no finge que deployó. Todo esto lo fija `tools/test-arranque-peso.js`, que además **vigila el peso**: el bulto crece solo, un comentario por vez, y si algún día pasa de 460 KB comprimidos, la suite se pone roja antes de que lo note un jugador.
 
 Para el equipo de diseño
 
@@ -506,7 +506,7 @@ Normas de diseño que vienen de decisiones de dirección y que conviene no reabr
 
 **15. Cómo verificar lo que dice este documento**
 
-El proyecto tiene 84 pruebas automáticas y 18 auditores (128 herramientas en total). No comprueban que el código compile: comprueban que el JUEGO cumpla las reglas de arriba. Los más útiles para el diseñador:
+El proyecto tiene 85 pruebas automáticas y 18 auditores (129 herramientas en total). No comprueban que el código compile: comprueban que el JUEGO cumpla las reglas de arriba. Los más útiles para el diseñador:
 
 | **Herramienta**                 | **Qué contesta**                                            |
 | ------------------------------- | ----------------------------------------------------------- |

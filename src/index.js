@@ -1,5 +1,6 @@
 // Servidor Golden MP: Colyseus (tiempo real) + Express (sirve el cliente).
 const path = require("path");
+const fs = require("fs");
 const http = require("http");
 const express = require("express");
 const { Server } = require("colyseus");
@@ -17,7 +18,43 @@ const app = express();
    hoy state.js solo pesa 432 KB y el bulto se nota.
    Comprimir es una línea y no cambia nada del juego. Va ANTES del static, que es el que sirve
    los archivos: si va después, no lo toca. */
-app.use(require("compression")());
+try { app.use(require("compression")()); }
+catch (e) { console.warn("compression no está instalado: se sirve sin comprimir (npm i compression)"); }
+
+/* ===================== EL SELLO SE CALCULA, NO SE ESCRIBE (24/8) =====================
+   El cargador le pega ?b=GF_BUILD a cada .js, y desde que los servimos con "immutable" ese
+   sello es lo ÚNICO que le avisa al navegador que hay código nuevo. Lo escribía un script en
+   el deploy… y en el primer deploy después de endurecer la caché, el sello se quedó SIN
+   COMMITEAR: el servidor siguió anunciando el número viejo. Con la caché blanda no pasaba
+   nada; con la dura, el jugador se queda un año con el código de ayer.
+   Un sello que hay que acordarse de actualizar es un sello roto. Este se DERIVA de los propios
+   archivos: si cambia una coma en cualquiera de los doce, cambia el número. No hay forma de
+   olvidárselo, porque nadie lo escribe.
+   (El literal del html se deja como está: es el respaldo para abrir el juego sin servidor.) */
+const JUEGO_DIR = path.join(__dirname, "..", "public", "game");
+function selloDelCodigo() {
+  const h = require("crypto").createHash("sha1");
+  for (const f of fs.readdirSync(JUEGO_DIR).sort()) {
+    if (!/\.js$/.test(f)) continue;
+    const st = fs.statSync(path.join(JUEGO_DIR, f));
+    h.update(f + ":" + st.size + ":" + Math.floor(st.mtimeMs) + ";");
+  }
+  return h.digest("hex").slice(0, 12);
+}
+let SELLO = "dev", INDEX_HTML = null;
+function indexConSello() {
+  const s = selloDelCodigo();
+  if (INDEX_HTML && s === SELLO) return INDEX_HTML;   // se rearma solo si cambió el código
+  SELLO = s;
+  const crudo = fs.readFileSync(path.join(__dirname, "..", "public", "index.html"), "utf8");
+  INDEX_HTML = crudo.replace(/const GF_BUILD = "[^"]*";/, 'const GF_BUILD = "' + SELLO + '";');
+  console.log("Sello del código: " + SELLO);
+  return INDEX_HTML;
+}
+app.get(["/", "/index.html"], (req, res) => {
+  res.set("Cache-Control", "no-cache");
+  res.type("html").send(indexConSello());
+});
 
 // CORS: permite que el cliente alojado en Vercel (otro dominio) haga el
 // matchmaking contra este servidor en Render.
