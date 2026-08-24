@@ -91,7 +91,15 @@ function enterGame() {
      tope, el arranque NO sigue de largo —seguir sería jugar sobre una granja vacía y guardarla
      encima de la buena—: cae en la pantalla de "no se pudo cargar", que ya existe y no escribe
      nada. Reintentar es del jugador. */
-  const ESPERA_MAX_S = 30;
+  /* 24/8 v2 — el reloj se estrenó y saltó de verdad, así que hay que apurar dos cosas más.
+     La primera: 30 segundos era corto. La LECTURA de la granja ya reintenta tres veces por su
+     cuenta, con esperas de 1,2 + 2,4 + 3,6 s entre medio, y encima cada intento tiene que ir y
+     volver — o sea que el paso entero puede tardar bastante sin estar roto. 45 s deja pasar el
+     parpadeo de red y sigue cortando el cuelgue de verdad.
+     La segunda: el cartel tiene que decir CUÁL de los dos pasos se colgó. "Login" y "lectura de
+     la granja" son problemas distintos y se arreglan en lados distintos; sin esa palabra, el
+     reporte del jugador no sirve para nada. */
+  const ESPERA_MAX_S = 45;
   let esperando = 0;
   const reloj = setInterval(() => {
     esperando++;
@@ -106,7 +114,8 @@ function enterGame() {
     returning = await conReloj(loadFarm(), "lectura de la granja");
   } catch (e) {
     console.warn(e);
-    if (/sin respuesta/.test(e && e.message || "")) { try { CARGA_FALLO = true; } catch (_) { window.CARGA_FALLO = true; } }
+    const m = /sin respuesta: (.+)$/.exec(e && e.message || "");
+    if (m) { window.CARGA_MOTIVO = m[1]; try { CARGA_FALLO = true; } catch (_) { window.CARGA_FALLO = true; } }
   } finally { clearInterval(reloj); }
   try { if (typeof godHandSembrar === "function") godHandSembrar(G._ausenteMs || 0); } catch (e) { console.warn(e); }   // GOD HAND: siembra lo que quedó vacío
   try { if (typeof testeoDestapar === "function") testeoDestapar(); } catch (e) { console.warn(e); }   // repara bolsas desbordadas por el regalo viejo de testeo
@@ -119,10 +128,18 @@ function enterGame() {
     if (g) { g.style.display = "flex";
       const t = g.querySelector("h1, h2, .tit") || g.firstElementChild;
       if (t) t.textContent = "No se pudo cargar tu granja";
-      /* que la pantalla diga QUÉ pasó: sin esto, "no se pudo" y "se quedó colgado" se ven igual */
+      /* La puerta del apodo y esta pantalla comparten el mismo cartel, así que hay que APAGAR lo
+         que era de la otra: sin esto quedaba "elegí un apodo para entrar a tu granja" debajo de
+         "no se pudo cargar tu granja", con el campo del apodo escondido. Un cartel que se
+         contradice a sí mismo es peor que uno escueto: el jugador no sabe cuál de las dos frases
+         creer. (Lo vio dirección en la primera vez que la pantalla saltó de verdad, el 24/8.) */
+      const vieja = g.querySelector("p"); if (vieja) vieja.style.display = "none";
+      /* y que diga QUÉ pasó: sin esto, "no se pudo" y "se quedó colgado" se ven igual */
       const sub = document.createElement("div");
-      sub.style.cssText = "font-size:13px;color:#cbbf9f;margin:6px 0 10px;max-width:340px;text-align:center";
-      sub.textContent = "El servidor no contestó a tiempo. Tu granja está a salvo: no se tocó nada. " +
+      sub.style.cssText = "font-size:13px;color:#cbbf9f;margin:6px 0 10px;max-width:340px;text-align:center;line-height:1.4";
+      sub.textContent = "Tu granja está a salvo: no se tocó nada. " +
+        (window.CARGA_MOTIVO ? "Se colgó en « " + window.CARGA_MOTIVO + " » y no contestó en " + ESPERA_MAX_S + " s. "
+                             : "El servidor no contestó a tiempo. ") +
         "Suele ser el servidor despertando — probá de nuevo en un minuto.";
       if (t && t.parentNode) t.parentNode.insertBefore(sub, t.nextSibling);
       const b = document.getElementById("enter");
