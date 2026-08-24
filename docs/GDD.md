@@ -138,6 +138,10 @@ Un árbol o roca ya crecido acumula 1 carga por cada reloj propio extra que pase
 
 La pesca dejó de ser una barra que se mira y pasó a ser el ÚNICO sistema de habilidad activa de la granja, copiado del Fishing Frenzy de Ronin por decisión de dirección — con una poda suya: sin carga de distancia, «con un clic simplemente tirás, porque cada tirada es un gusano». Tres fases: el TIRO (un clic, el corcho al agua), el PIQUE (a los 1,6-4,2 segundos aparecen burbujas y hay 1 segundo para clavar el anzuelo — antes o después, se pierde), y el CARRETE: el pez recorre una barra vertical y el jugador maneja la zona de captura (apretar sube, soltar baja); con el pez adentro el progreso llena, afuera drena. La zona CRECE con el nivel de Pesca (23 % de la barra al nivel 1, techo 40 %) y los peces raros nadan más rápido y cambian de rumbo más seguido, tal cual el original. La economía no se movió un milímetro: el gusano, el uso de caña, el reloj de 15 minutos, el sorteo 60/25/12/3 y la XP se cobran al RESOLVER la captura por la misma función auditada de siempre — un lance fallado cuesta tiempo, no plata, así el minijuego no toca el ancla. La rareza se sortea al armar el lance y el premio coincide con la pelea que diste.
 
+**El pico se elige solo (24/8)**
+
+Dirección: « que las herramientas sean únicas —piedra para piedra, oro para oro— y que no haya que señalar el pico a usar, sino que se ajuste con clic en el recurso ». Ahora cada nodo usa el pico MÁS BARATO que pueda con él y del que haya stock: picar una roca jamás gasta el pico de oro (que vale 280 de plata sombra), y clicar una veta de oro agarra el de oro sin equipar nada. Si no tenés ninguno que sirva, el aviso nombra el pico EXACTO que falta en vez de un genérico. Las dos puertas siguen existiendo y cada una dice lo suyo: primero la herramienta (que se craftea ahora) y después la skill (que se sube picando). El pico equipado deja de ser una decisión que se puede olvidar. Y el PICO DE ORO pasa a pedir plata: su presupuesto sigue siendo 280 —lo que el ancla permite para una picada de oro— pero repartido en 1 bronce + 6 piedra (250) y 30 de plata, así que la picada sigue rindiendo 20/h exacto.
+
 **La escalera de minerales**
 
 Cada mineral necesita DOS llaves a la vez: un pico de su categoría (que se compra y se gasta) y un nivel de Minería (que se gana practicando). Las dos, y cada una dice lo suyo cuando falta.
@@ -452,7 +456,7 @@ Normas de diseño que vienen de decisiones de dirección y que conviene no reabr
 
 **15. Cómo verificar lo que dice este documento**
 
-El proyecto tiene 74 pruebas automáticas y 16 auditores (114 herramientas en total). No comprueban que el código compile: comprueban que el JUEGO cumpla las reglas de arriba. Los más útiles para el diseñador:
+El proyecto tiene 75 pruebas automáticas y 16 auditores (115 herramientas en total). No comprueban que el código compile: comprueban que el JUEGO cumpla las reglas de arriba. Los más útiles para el diseñador:
 
 | **Herramienta**                 | **Qué contesta**                                            |
 | ------------------------------- | ----------------------------------------------------------- |

@@ -72,7 +72,10 @@ const ok = (n, c, d) => { if (!c) fallos++; console.log((c ? "  ok   " : "  FALL
 /* jugador armado */
 G.tuto = { done: true };
 G.tools = { axe: 50 };
-G.picks = { eq: "wood", owned: { wood: true }, dur: { wood: 500 } };
+/* 24/8: este arnés usaba un pico "wood" que NO existe en PICK_DEF. Con equippedPick() colaba
+   (bastaba estar en owned); con picoParaNodo() —que solo mira el catálogo real— dejó de colar,
+   y eso está bien: el fantasma era del test. Ahora usa los picos de verdad. */
+G.picks = { eq: "stone", owned: { stone: true, bronze: true }, dur: { stone: 500, bronze: 500 } };
 GF.aplicarTerreno(16); GF.ocupCambio();   // mapa completo: hay vetas de todo
 
 const esc = new ctx.FarmScene();
@@ -189,10 +192,10 @@ console.log("\nLA ROCA VA A SU RELOJ DE 40 MIN — Y CADA PIEDRA CUESTA UN PICO"
   r = vaciar(roca, "piedra", "mine");
   ok("pasada 30 min (menos que SU reloj): 1 sola", r.patron === "001", r.patron);
   plantar(roca, CD.rock, 160);
-  const pk0 = G.picks.dur.wood;
+  const pk0 = G.picks.dur.stone;
   r = vaciar(roca, "piedra", "mine");
   ok("pasada 2 h 40: llena — 4 piedras en 5 clics", r.total === 4 && r.patron === "11101", r.patron);
-  ok("que costaron 4 picos", pk0 - G.picks.dur.wood === 4, pk0 - G.picks.dur.wood + " picos");
+  ok("que costaron 4 picos", pk0 - G.picks.dur.stone === 4, pk0 - G.picks.dur.stone + " picos");
 }
 
 console.log("\nLA VETA DE PIEDRA VA CON LAS ROCAS; LAS DE MINERAL QUEDAN APARTADAS (dirección, 21/8)");
@@ -206,11 +209,11 @@ console.log("\nLA VETA DE PIEDRA VA CON LAS ROCAS; LAS DE MINERAL QUEDAN APARTAD
   ok("bronce recién crecido: ciclo clásico con SU rendimiento de 2 (el ancla del 18/8)",
     r.patron === "002" && !talable(vetaBronce), r.patron);
   plantar(vetaBronce, OD.bronce.cd, 5 * 24 * 60);   // 5 días pasada: da igual — NO acumula
-  const pk0 = G.picks.dur.wood;
+  const pk0 = G.picks.dur.bronze;
   r = vaciar(vetaBronce, "bronce", "mine");
   ok("pasada 5 DÍAS: sigue dando una sola picada de 2 y a dormir (sin cargas, por decisión)",
     r.patron === "002" && !talable(vetaBronce), r.patron);
-  ok("y costó 1 pico", pk0 - G.picks.dur.wood === 1, pk0 - G.picks.dur.wood + " pico");
+  ok("y costó 1 pico", pk0 - G.picks.dur.bronze === 1, pk0 - G.picks.dur.bronze + " pico");
 }
 
 console.log("\nY LAS CARGAS SOBREVIVEN AL F5 (viven en readyAt, que ya viaja al guardado)");

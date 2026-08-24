@@ -1698,7 +1698,7 @@ class FarmScene extends Phaser.Scene {
       const cargasRoca = nodoCargas(o, CD.rock);
       if (cargasRoca > 1) {   // golpe que COBRA una carga: paga y la roca sigue ahí
         if (tryAddRes("piedra", 1)) {
-          const pk = equippedPick();
+          const pk = picoParaNodo(o);   // 24/8: el pico se elige solo — el más barato que sirva
           if (pk) { G.picks.dur[pk] = Math.max(0, (G.picks.dur[pk] || 0) - 1); if (G.picks.dur[pk] <= 0) { log("Usaste tu último " + PICK_DEF[pk].label + " — crafteá más en la Herrería.", "bad"); toast("Sin picos — crafteá más"); destroyPick(pk); } }
           addXp("mining", xpDeNodo("rock", "piedra")); statAdd("minar", "piedra", 1); nodoSumar(o);
           const quedan = nodoGastarCarga(o, CD.rock); this.syncNodos();
@@ -1722,7 +1722,7 @@ class FarmScene extends Phaser.Scene {
       }
       o.golpes = 0; o.golpesAt = 0; this.barraGolpes(o);
       if (tryAddRes("piedra", 1)) {   // la ÚLTIMA carga: la roca se rompe de verdad
-        const pk = equippedPick();   // picar piedra también gasta el pico (bug reportado)
+        const pk = picoParaNodo(o);   // picar piedra también gasta el pico (bug reportado) · 24/8: el pico se elige solo
         if (pk) { G.picks.dur[pk] = Math.max(0, (G.picks.dur[pk] || 0) - 1); if (G.picks.dur[pk] <= 0) { log("Usaste tu último " + PICK_DEF[pk].label + " — crafteá más en la Herrería.", "bad"); toast("Sin picos — crafteá más"); destroyPick(pk); } }
         addXp("mining", xpDeNodo("rock", "piedra")); /* 16/8: XP = minutos del reloj (2 h → 120) */ statAdd("minar", "piedra", 1); nodoSumar(o);
         o.cdIni = nowMs(); o.readyAt = nowMs() + nodoCd(o, "piedra", CD.rock) * 1000 * cdMult() * (typeof tutoBoost === "function" ? tutoBoost("rock") : 1); o.halfAt = nowMs() + (o.readyAt - nowMs()) / 2; this.syncNodos(); this.setObjTex(o, "node_stone_mined", o.rw || GF.TILE);
@@ -1739,8 +1739,8 @@ class FarmScene extends Phaser.Scene {
       const cargasVeta = o.ore === "piedra" ? nodoCargas(o, CD.rock) : 1;
       if (cargasVeta > 1) {   // modo cargas (solo la veta de piedra): este clic COBRA una carga
         if (tryAddRes(o.ore, grVeta)) {
-          const pk2 = equippedPick(), pd2 = PICK_DEF[pk2];
-          G.picks.dur[pk2] = Math.max(0, (G.picks.dur[pk2] || 0) - 1);
+          const pk2 = picoParaNodo(o), pd2 = PICK_DEF[pk2] || { label: "pico" };   // 24/8: el pico se elige solo
+          if (pk2) G.picks.dur[pk2] = Math.max(0, (G.picks.dur[pk2] || 0) - 1);
           addXp("mining", xpDeNodo("ore", o.ore)); statAdd("minar", o.ore, 1); nodoSumar(o);
           const quedan = nodoGastarCarga(o, CD.rock); this.syncNodos();
           if (this.textures.exists(o.baseKey + "_half")) this.setObjTex(o, o.baseKey + "_half", o.rw || o.w);
@@ -1749,7 +1749,7 @@ class FarmScene extends Phaser.Scene {
           this.premioFx(o.cx, o.by, resSprite(o.ore), "+1"); refreshHud();
           log(`${odC.emoji} +${grVeta} ${odC.label} — a la veta le quedan ${quedan} carga${quedan === 1 ? "" : "s"}. Quedan ${G.picks.dur[pk2]} picos.`, "good");
           if (typeof tutoEvent === "function") { tutoEvent("gather"); tutoEvent("mineore"); }
-          if (G.picks.dur[pk2] <= 0) { log("Usaste tu último " + pd2.label + " — crafteá más en la Herrería.", "bad"); toast("Sin picos — crafteá más"); destroyPick(pk2); }
+          if (pk2 && G.picks.dur[pk2] <= 0) { log("Usaste tu último " + pd2.label + " — crafteá más en la Herrería.", "bad"); toast("Sin picos — crafteá más"); destroyPick(pk2); }
         } else {
           toast("Bolsa llena — no podés picar"); log("Bolsa llena: liberá espacio para seguir picando.", "bad");
         }
@@ -1763,18 +1763,21 @@ class FarmScene extends Phaser.Scene {
         this.action = null; return;
       }
       o.golpes = 0; o.golpesAt = 0; this.barraGolpes(o);
-      const pk = equippedPick(), pd = PICK_DEF[pk], od = ORE_DEF[o.ore];
+      /* 24/8: el pico se elige solo. `pk` puede venir NULO si se llega hasta acá sin pico
+         (puedeAccion ya lo filtra en el juego real, pero el arnés de pruebas llama a
+         finishAction directo — y una caja registradora nunca debe reventar por eso). */
+      const pk = picoParaNodo(o), pd = PICK_DEF[pk] || { label: "pico" }, od = ORE_DEF[o.ore];
       if (tryAddRes(o.ore, grVeta)) {   // la última carga: la veta se agota y arranca su reloj
-        G.picks.dur[pk] = Math.max(0, (G.picks.dur[pk] || 0) - 1);
+        if (pk) G.picks.dur[pk] = Math.max(0, (G.picks.dur[pk] || 0) - 1);
         addXp("mining", xpDeNodo("ore", o.ore)); statAdd("minar", o.ore, grVeta);   // 16/8: XP = minutos del reloj (bronce 8 h → 480 … oro 14 h → 840)
         nodoSumar(o);
         o.cdIni = nowMs(); o.readyAt = nowMs() + nodoCd(o, o.ore, od.cd) * 1000 * cdMult();
         o.halfAt = nowMs() + (o.readyAt - nowMs()) / 2; this.syncNodos();
         if (this.textures.exists(o.baseKey + "_mined")) this.setObjTex(o, o.baseKey + "_mined", o.rw || GF.TILE); else o.sprite.setAlpha(0.4);
-        log(`${od.emoji} +${grVeta} ${od.label}. Quedan ${G.picks.dur[pk]} picos.`, "good");
+        log(`${od.emoji} +${grVeta} ${od.label}.` + (pk ? ` Quedan ${G.picks.dur[pk]} picos.` : ""), "good");
         this.premioFx(o.cx, o.by, resSprite(o.ore), "+" + grVeta); refreshHud();
         if (typeof tutoEvent === "function") { tutoEvent("gather"); tutoEvent("mineore"); }
-        if (G.picks.dur[pk] <= 0) { log("Usaste tu último " + pd.label + " — crafteá más en la Herrería.", "bad"); toast("Sin picos — crafteá más"); destroyPick(pk); }
+        if (pk && G.picks.dur[pk] <= 0) { log("Usaste tu último " + pd.label + " — crafteá más en la Herrería.", "bad"); toast("Sin picos — crafteá más"); destroyPick(pk); }
       } else { this.setObjTex(o, o.baseKey, o.rw || o.w); toast("Bolsa llena — no podés picar"); log("Bolsa llena: liberá espacio para seguir picando.", "bad"); }
     } else if (a.kind === "plant") {
       const ck = a.seed || G.selSeed, cd = CROP_DEF[ck];   // la semilla que se validó al hacer clic (cambiarla a mitad de la animación no la cuela)

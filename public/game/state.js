@@ -1941,11 +1941,43 @@ const PICK_DEF = {
      Los precios NO se tocan, así que nada de lo que lee priceOf() se mueve. */
   bronze:   { tier:1, label:"Pico de Bronce",    mineTier:1, dur:1, cost:{madera:7,piedra:5},   plata:1,  sprite:"pick_bronze" },
   iron:     { tier:2, label:"Pico de Hierro",    mineTier:2, dur:1, cost:{madera:8,piedra:8},   plata:24, sprite:"pick_iron" },
-  gold:     { tier:3, label:"Pico de Oro",       mineTier:3, dur:1, cost:{bronce:1,piedra:8},   plata:0,  sprite:"pick_gold" },
+  /* 24/8 (dirección: « agregar que el pico de oro pida plata »). Su presupuesto es 280 —
+     lo que el ancla permite para una picada de oro— y estaba TODO en materiales (1 bronce 160
+     + 8 piedra 120). Se mueven 2 piedras a plata: 1 bronce + 6 piedra = 250, y 30 de plata.
+     Total 280, idéntico: el ancla no se mueve un centavo y el pico ahora cuesta dinero. */
+  gold:     { tier:3, label:"Pico de Oro",       mineTier:3, dur:1, cost:{bronce:1,piedra:6},   plata:30, sprite:"pick_gold" },
   diamond:  { tier:4, label:"Pico de Diamante",  mineTier:4, dur:1, cost:{oro:1,madera:4,piedra:2}, plata:2, sprite:"pick_diamond" },
   netherite:{ tier:5, label:"Pico de Netherita", mineTier:5, dur:1, cost:{diamante:1,piedra:8}, plata:0,  sprite:"pick_netherite" },
 };
 function equippedPick() { return (G.picks.eq && G.picks.owned[G.picks.eq]) ? G.picks.eq : null; }
+/* ============ EL PICO SE ELIGE SOLO (24/8, dirección) ============================
+   « Que las herramientas sean únicas: piedra para piedra, oro para oro, que no haya que
+   señalar el pico a usar, sino que se ajuste con clic en el recurso. Si quiero minar piedra
+   que con el clic en el recurso se pique; si quiero minar oro, que solo clicando en el oro
+   mine oro. »
+   Regla: para cada nodo se usa el pico MÁS BARATO que pueda con él y del que tengas stock.
+   Así picar piedra nunca gasta el pico de oro (que cuesta 280 de plata sombra) y picar oro
+   agarra el de oro sin que el jugador tenga que acordarse de equiparlo. El pico equipado
+   deja de ser una decisión que se puede olvidar; sigue existiendo como respaldo para lo que
+   no es un nodo (y para que la Herrería muestre cuál es el "actual"). */
+function picoParaNodo(o) {
+  if (!G.picks || !G.picks.owned) return null;
+  const tierNecesario = (o && o.type === "ore" && ORE_DEF[o.ore]) ? ORE_DEF[o.ore].tier : 0;
+  let mejor = null;
+  for (const id of PICK_ORDER) {
+    const pd = PICK_DEF[id];
+    if (!pd || pd.mineTier < tierNecesario) continue;      // no alcanza para este mineral
+    if (pickCount(id) <= 0) continue;                       // no tenés de ese
+    if (!mejor || pd.mineTier < PICK_DEF[mejor].mineTier) mejor = id;   // el más barato que sirve
+  }
+  return mejor;
+}
+/* el que MOSTRAMOS cuando falta: el de menor tier que serviría, para que el aviso diga
+   exactamente cuál craftear en vez de un genérico "necesitás un pico mejor". */
+function picoQueHaceFalta(o) {
+  const tierNecesario = (o && o.type === "ore" && ORE_DEF[o.ore]) ? ORE_DEF[o.ore].tier : 0;
+  return PICK_ORDER.find(id => PICK_DEF[id] && PICK_DEF[id].mineTier >= tierNecesario) || null;
+}
 function canAfford(c) { for (const k in c) if ((G.res[k]||0) < c[k]) return false; return true; }
 function payCost(c) { for (const k in c) G.res[k]-=c[k]; }
 // la fragua se enciende un rato cada vez que trabajás en la Herrería (detalles jueves)
@@ -4637,20 +4669,26 @@ function puedeAccion(tipo, o, rotulo) {
   }
 
   if (tipo === "mine") {
-    const pk = equippedPick();
-    if (!pk || (!G.kitReclamado && (G.picks.dur[pk] || 0) <= 0))
-      return { ok: false, toast: sinKitTxt("Necesitás un pico — craftealo en la Herrería") };
+    /* 24/8: el pico ya no se equipa a mano — se elige solo el más barato que pueda con ESTE
+       nodo (picoParaNodo). Si no hay ninguno, el aviso dice CUÁL falta, no un genérico. */
+    const pk = picoParaNodo(o);
+    /* EL PICO PRIMERO, LA SKILL DESPUÉS — el orden de siempre, y por un motivo: el pico se
+       craftea AHORA y la skill se sube picando otras cosas. Cuando faltan los dos, decir el
+       que se puede resolver hoy es más útil. Lo que cambia (24/8) es que el aviso nombra el
+       pico EXACTO que falta en vez de un genérico "necesitás un pico mejor". */
+    if (!pk) {
+      const falta = picoQueHaceFalta(o), fd = falta && PICK_DEF[falta];
+      const nom = fd ? fd.label : "un pico";
+      return { ok: false, toast: sinKitTxt("Necesitás " + nom + " — crafteálo en la Herrería"),
+        log: "Para esto hace falta " + nom + " (Herrería).", logTipo: "bad" };
+    }
     if (o.type === "ore") {
-      /* El PICO decide qué mineral podés tocar; la SKILL decide si ya sabés hacerlo. Las dos, y
-         cada una dice lo suyo: así el pico no pierde su papel y la skill no es decorativa. */
-      const pd = PICK_DEF[pk], od = ORE_DEF[o.ore];
-      if (od.tier > pd.mineTier) return { ok: false, toast: "Tu " + pd.label + " no puede con " + od.label,
-        log: "Necesitás un pico mejor para " + od.label + " (Herrería).", logTipo: "bad" };
+      // La SKILL decide si ya SABÉS hacerlo. Las dos puertas existen y cada una dice lo suyo.
+      const od = ORE_DEF[o.ore];
       if (typeof oreUnlocked === "function" && !oreUnlocked(o.ore))
         return { ok: false, toast: "Necesitás Minería nivel " + oreNivelReq(o.ore) + " para " + od.label,
           log: "El " + od.label + " se aprende a picar con Minería nivel " + oreNivelReq(o.ore) + ".", logTipo: "info" };
     }
-    if ((G.picks.dur[pk] || 0) <= 0) return { ok: false, toast: "No tenés pico útil — craftéalo en la Herrería" };
     const res = o.type === "ore" ? o.ore : "piedra";
     if (!roomForRes(res)) return { ok: false, bag: "picar " + (o.type === "ore" ? ORE_DEF[o.ore].label : "piedra") };
     return OK;

@@ -72,8 +72,11 @@ console.log("\nY TODAS LAS RAZONES VIVEN DENTRO DE ESA FUNCIÓN\n");
     [/lombriz/, "la carnada"],
     [/roomForFish\(\)/, "sitio para el pez"],
     [/toolDur\("axe"\)/, "el hacha"],
-    [/equippedPick\(\)/, "el pico"],
-    [/mineTier/, "la categoría del pico"],
+    /* 24/8: las dos razones del pico —tenerlo y que su categoría alcance— dejaron de estar
+       sueltas en la puerta y viven DENTRO de picoParaNodo(), que además elige cuál usar. Sigue
+       habiendo una sola verdad; ahora tiene nombre. */
+    [/picoParaNodo\(/, "el pico (tenerlo y que alcance)"],
+    [/picoQueHaceFalta\(/, "y decir CUÁL falta"],
     [/oreUnlocked/, "el nivel de Minería"],
     [/roomForRes\(/, "sitio en la bolsa"],
     [/o\.readyAt/, "el enfriamiento del nodo"],
