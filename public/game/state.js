@@ -4006,7 +4006,14 @@ function gainGear(key) {
 // --- COCINA (doc maestro 2/8): 14 recetas de cultivos + las 3 clásicas de pescado/carne ---
 // buff nuevo: { type, val } — val en % (o HP/s en regen, vida plana en hpmax); duración = DISH_BUFF_DUR
 var DISH_BUFF_DUR = 300;   // 5 min (editable en el panel)
-const RECIPE_ORDER = [
+/* 23/8 — ESTA LISTA ES LA QUE DIBUJA LA COCINA, y por eso NO puede escribirse a mano.
+   Bug que reportó dirección («el diseñador no ve los platillos»): los tres platos de doma se
+   agregaron a RECIPE_DEF el 22/8 y nadie los agregó ACÁ, así que existían para el código y no
+   para el jugador. La lista pasa a DERIVARSE del catálogo: el orden curado de siempre primero
+   (que es una decisión de diseño: los de huerta, después los clásicos) y cualquier receta que
+   no esté nombrada se agrega sola al final, ordenada por nivel. Agregar un plato vuelve a ser
+   una línea, no dos — y olvidarse ya no lo esconde. El test lo vigila. */
+const RECIPE_CURADAS = [
   "papa_asada", "pure_papa", "sopa_zanahoria", "ensalada_repollo", "calabacin_salteado",
   "pan_trigo", "salteado_brocoli", "crema_calabaza", "tortilla_maiz", "aceite_girasol",
   "guiso_campestre", "pan_maiz_trigo", "estofado_cosecha", "banquete_bosque",
@@ -4094,6 +4101,11 @@ const RECIPE_DEF = {
     heal:9999, buff:{type:"yield",label:"Precio de venta +20%",mult:1.20,dur:180}, cookS:420, xp:25, plata:60,
     desc:"Cura TODA la vida · Precio de venta +20% (3 min)" },
 };
+/* la lista que ve el jugador = las curadas que existan + TODO lo que quede suelto, por nivel.
+   (Ver el comentario de RECIPE_CURADAS: escribirla a mano ya escondió tres platos una vez.) */
+const RECIPE_ORDER = RECIPE_CURADAS.filter(id => RECIPE_DEF[id])
+  .concat(Object.keys(RECIPE_DEF).filter(id => RECIPE_CURADAS.indexOf(id) < 0)
+    .sort((a, b) => (RECIPE_DEF[a].lvl - RECIPE_DEF[b].lvl) || a.localeCompare(b)));
 // niveles de cocina 1-10 (tabla del doc, XP ACUMULADA por nivel) + maestría
 var COOK_LVLS = [0, 0, 30, 80, 160, 300, 520, 850, 1300, 1900, 2700];
 function cookLevelFromXp(xp) { let l = 1; for (let i = 2; i < COOK_LVLS.length; i++) if (xp >= COOK_LVLS[i]) l = i; return Math.min(10, l); }

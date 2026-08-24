@@ -37,6 +37,20 @@ console.log("\nNINGUNA RECETA PIDE UN CULTIVO QUE TODAVÍA NO EXISTE");
   ok("las " + Object.keys(R).length + " recetas respetan la regla", malas.length === 0, malas.join(" · "));
 }
 
+console.log("\nTODA RECETA SE VE EN LA COCINA (el bug del 23/8)");
+{
+  /* Dirección: «el diseñador no ve los platillos». Los tres platos de doma estaban en
+     RECIPE_DEF y NO en RECIPE_ORDER — la lista que dibuja la ventana —, así que existían
+     para el código y no para el jugador. Ahora la lista se DERIVA; este contrato lo vigila. */
+  const RO = vm.runInContext("RECIPE_ORDER", ctx);
+  const invisibles = Object.keys(R).filter(id => RO.indexOf(id) < 0);
+  ok("ninguna receta queda fuera de la lista que ve el jugador", invisibles.length === 0, invisibles.join(", "));
+  ok("y la lista no inventa recetas que no existen", RO.every(id => !!R[id]));
+  ok("sin repetidos", new Set(RO).size === RO.length);
+  ok("los tres platos de doma están a la vista",
+    ["galletita_cereza", "papilla_remolacha", "bocado_domador"].every(id => RO.indexOf(id) >= 0));
+}
+
 console.log("\nLA ESCALERA DE LA COCINA, ENTERA Y CON EL TECHO GEMELO");
 {
   const lvls = Object.values(R).map(r => r.lvl);
