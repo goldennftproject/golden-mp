@@ -68,7 +68,7 @@ const ok=(n,c,d)=>{if(!c)fallos++;console.log((c?"  ok   ":"  FALLA")+"  "+n+(d?
 {
   const g=juego();
   const conExp=g.GF.WORLD_OBJECTS.filter(o=>o.exp!=null);
-  ok("los nodos de expansión existen en el mapa desde el principio", conExp.length===32, conExp.length+"");
+  ok("los nodos de expansión existen en el mapa desde el principio", conExp.length===46, conExp.length+"");   // 24/8: 32 + 14 vetas (bronce y oro en 3-6-8-10-12-14-16)
   ok("...y no cuentan como regalo pendiente", (g.G.regalos&&g.G.regalos.tree||0)===0);
   ok("nodoIndicePorLock ignora los de expansión",
     g.NIVEL_ARBOLES.every((_,i)=>{const k=g.nodoIndicePorLock("tree",i);return k>=0&&g.GF.WORLD_OBJECTS[k].exp==null;}));

@@ -641,6 +641,22 @@ GF.rehacerColisiones();
       snap("tree", { type: "tree", exp: i }, (arb.c + 1) * T, (arb.r + 1) * T, T * 2)));
     if (roc) GF.WORLD_OBJECTS.push(Object.assign(
       snap("node_stone", { type: "rock", exp: i }, (roc.c + 0.5) * T, (roc.r + 1) * T, T)));
+    /* 24/8 (dirección): « agregar 1 nodo de bronce y oro a la tercera parcela; repetir en la
+       6-8-10-12-14-16 ». Esas siete traen DOS celdas productivas más, y por eso pagan más: la
+       fórmula de costos las cuenta (EXP_CON_VETA en state.js) y la escalera se re-derivó sola.
+       Las vetas se ponen en las libres siguientes, más lejos del centro que el árbol y la roca,
+       para no romper la composición del bloque. */
+    const ocupadas = [arb, roc];   // 24/8: lo que ya está puesto en el bloque — la parcela lo mira
+    if ([3, 6, 8, 10, 12, 14, 16].indexOf(i + 1) >= 0) {
+      const libre = () => libres.find(p => ocupadas.indexOf(p) < 0 &&
+        !(arb && p.c === arb.c + 1 && p.r === arb.r));   // la segunda celda del árbol no cuenta
+      const vb = libre(); if (vb) ocupadas.push(vb);
+      const vo = libre(); if (vo) ocupadas.push(vo);
+      if (vb) GF.WORLD_OBJECTS.push(Object.assign(
+        snap("node_bronze", { type: "ore", ore: "bronce", exp: i }, (vb.c + 0.5) * T, (vb.r + 1) * T, T)));
+      if (vo) GF.WORLD_OBJECTS.push(Object.assign(
+        snap("node_gold", { type: "ore", ore: "oro", exp: i }, (vo.c + 0.5) * T, (vo.r + 1) * T, T)));
+    }
     /* 19/8 (dirección): "cuando uno hace la expansión, los nodos no tienen por qué llegar al baúl:
        tienen que aparecer dentro de la expansión hecha, y desde ahí el jugador decide si los mueve".
        El árbol y la roca ya aparecían colocados; la PARCELA era la excepción —se iba al baúl, había
@@ -648,7 +664,10 @@ GF.rehacerColisiones();
        tres celdas del mismo bloque, dos aparecen y una hay que ir a buscarla.
        Acá se reserva su celda, pegada a las otras dos, y expansionComprar la usa al comprar. Si el
        jugador la quiere en otro lado, la arrastra en modo edición como cualquier otra cosa. */
-    const par = libres.find(p => p !== arb && p !== roc &&
+    /* 24/8: la parcela esquiva TODO lo que ya está puesto en el bloque — antes miraba solo el
+       árbol y la roca, y con las vetas nuevas (bronce y oro) caía encima de una. Lo encontró
+       test-expansion-retro, que es exactamente para lo que existe. */
+    const par = libres.find(p => ocupadas.indexOf(p) < 0 &&
       !(p.c === (arb ? arb.c + 1 : -99) && p.r === (arb ? arb.r : -99)));
     e.parcela = par ? { col: par.c, row: par.r } : null;
   });

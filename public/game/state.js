@@ -1523,18 +1523,34 @@ function expansionCostos() {
     const t = i / (EXPANSION_MAX - 1);
     const horas = (HORAS_ARRANQUE[i] != null) ? HORAS_ARRANQUE[i] : H0 + (HN - H0) * Math.pow(t, 0.9);
     const plata = horas * celdas * ANCLA;
+    /* (el precio se calcula ANTES de sumar las celdas de ESTE bloque: se paga contra la granja
+       que ya tenés, que es la regla de siempre. Las vetas del 24/8 entran abajo, en celdas.) */
     const mins = tramo(t);
     const partes = [["madera", mins.length ? 0.30 : 0.55], ["piedra", mins.length ? 0.30 : 0.45]]
       .concat(mins.map(m => [m, 0.40 / mins.length]));
     const c = {};
     partes.forEach(([k, f]) => { const pr = PRICE[k] || 1; c[k] = Math.max(1, Math.round(plata * f / pr)); });
     EXPANSION_COSTO.push(c);
-    celdas += CELDAS_POR_EXP;
+    celdas += CELDAS_POR_EXP + (expVetas(i + 1) ? 2 : 0);   // 24/8: las que traen vetas suman 2 celdas más
   }
   })();
   return EXPANSION_COSTO;
 }
 var EXPANSION_MAX = 16;
+/* ============ LAS EXPANSIONES CON VETA (24/8, dirección) ==========================
+   « Agregar 1 nodo de bronce y oro a la tercera parcela. Repetir en la 6-8-10-12-14-16. »
+   Siete bloques traen, además de su parcela + árbol + roca, UNA VETA DE BRONCE y UNA DE ORO.
+   Dos consecuencias que hay que sostener para que el ancla no se mueva:
+     · esas expansiones entregan 5 celdas productivas en vez de 3, así que se PAGAN — el precio
+       de las siguientes se calcula sobre una granja que ya vale más (la fórmula usa las celdas
+       acumuladas, así que basta contarlas bien y todo se re-deriva solo);
+     · una veta rinde 20 plata/hora por definición del ancla, igual que una parcela: lo que
+       cambia es la CAPACIDAD de la granja, no el rendimiento por celda.
+   Y una consecuencia de diseño buscada: la veta de oro pide Minería 7 y su pico, así que el que
+   compra la expansión 3 (granja 7) se la encuentra ahí esperándolo. Es contenido que asoma antes
+   de poderse tomar — y desde el 24/8 el aviso dice exactamente qué pico falta. */
+var EXP_CON_VETA = [3, 6, 8, 10, 12, 14, 16];
+function expVetas(n) { return EXP_CON_VETA.indexOf(n) >= 0; }   // n = número de expansión (1..16)
 // La expansión que toca ahora: qué número es, en qué nivel se abre y qué cuesta.
 function expansionSiguiente() {
   const hechas = G.expansiones || 0;

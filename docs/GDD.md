@@ -205,22 +205,24 @@ Las expansiones son estrictamente SECUENCIALES: la única que existe — en el m
 
 | **#** | **Nivel** | **Coste**                                            |
 | ------ | --------- | ---------------------------------------------------- |
-| 1 | 3 | 6 Madera + 4 Piedra |
-| 2 | 5 | 22 Madera + 14 Piedra |
-| 3 | 7 | 61 Madera + 40 Piedra |
-| 4      | 9         | 77 Madera + 62 Piedra + 8 Bronce                     |
-| 5      | 12        | 110 Madera + 88 Piedra + 11 Bronce                   |
-| 6      | 15        | 149 Madera + 119 Piedra + 15 Bronce                  |
-| 7      | 18        | 193 Madera + 154 Piedra + 10 Bronce + 6 Hierro       |
-| 8      | 21        | 242 Madera + 193 Piedra + 12 Bronce + 8 Hierro       |
-| 9      | 24        | 295 Madera + 236 Piedra + 15 Bronce + 10 Hierro      |
-| 10     | 28        | 354 Madera + 283 Piedra + 12 Hierro + 10 Oro         |
-| 11     | 31        | 418 Madera + 334 Piedra + 14 Hierro + 12 Oro         |
-| 12     | 35        | 487 Madera + 389 Piedra + 16 Hierro + 14 Oro         |
-| 13     | 39        | 560 Madera + 448 Piedra + 16 Oro + 12 Diamante       |
-| 14     | 42        | 639 Madera + 511 Piedra + 18 Oro + 14 Diamante       |
-| 15     | 46        | 722 Madera + 578 Piedra + 16 Diamante + 12 Netherita |
-| 16     | 50        | 810 Madera + 648 Piedra + 18 Diamante + 14 Netherita |
+| 1      | 3         | 6 Madera + 4 Piedra                                  |
+| 2      | 5         | 22 Madera + 14 Piedra                                |
+| 3      | 7         | 61 Madera + 40 Piedra                                |
+| 4      | 9         | 86 Madera + 69 Piedra + 9 Bronce                     |
+| 5      | 12        | 121 Madera + 97 Piedra + 12 Bronce                   |
+| 6      | 15        | 161 Madera + 129 Piedra + 16 Bronce                  |
+| 7      | 18        | 221 Madera + 177 Piedra + 11 Bronce + 7 Hierro       |
+| 8      | 21        | 274 Madera + 219 Piedra + 14 Bronce + 9 Hierro       |
+| 9      | 24        | 349 Madera + 279 Piedra + 17 Bronce + 12 Hierro      |
+| 10     | 28        | 413 Madera + 331 Piedra + 14 Hierro + 12 Oro         |
+| 11     | 31        | 504 Madera + 403 Piedra + 17 Hierro + 14 Oro         |
+| 12     | 35        | 580 Madera + 464 Piedra + 19 Hierro + 17 Oro         |
+| 13     | 39        | 685 Madera + 548 Piedra + 20 Oro + 15 Diamante       |
+| 14     | 42        | 772 Madera + 618 Piedra + 22 Oro + 17 Diamante       |
+| 15     | 46        | 892 Madera + 714 Piedra + 20 Diamante + 15 Netherita |
+| 16     | 50        | 990 Madera + 792 Piedra + 22 Diamante + 17 Netherita |
+
+*SIETE BLOQUES TRAEN VETA (24/8, dirección): la 3, la 6, la 8, la 10, la 12, la 14 y la 16 entregan, además de su parcela + árbol + roca, una VETA DE BRONCE y una DE ORO. Como dan 5 celdas productivas en vez de 3, se pagan: la fórmula cuenta las celdas acumuladas, así que el precio de las siguientes sube solo y el ancla no se mueve (una veta rinde 20 plata/hora igual que una parcela). Efecto de diseño buscado: la veta de oro pide Minería 7 y su pico, así que el que compra la expansión 3 se la encuentra ahí esperándolo — contenido que asoma antes de poderse tomar, con el aviso diciendo qué pico falta.*
 
 *Las expansiones 1 y 2 están abaratadas a mano (0,7 y 2 horas de granja) por decisión de dirección del 20/8: « abaratar solo la 1 y la 2, hasta que el nivel mande ». De la 3 en adelante manda la curva derivada.*
 
@@ -458,7 +460,7 @@ Normas de diseño que vienen de decisiones de dirección y que conviene no reabr
 
 **15. Cómo verificar lo que dice este documento**
 
-El proyecto tiene 77 pruebas automáticas y 16 auditores (117 herramientas en total). No comprueban que el código compile: comprueban que el JUEGO cumpla las reglas de arriba. Los más útiles para el diseñador:
+El proyecto tiene 78 pruebas automáticas y 16 auditores (118 herramientas en total). No comprueban que el código compile: comprueban que el JUEGO cumpla las reglas de arriba. Los más útiles para el diseñador:
 
 | **Herramienta**                 | **Qué contesta**                                            |
 | ------------------------------- | ----------------------------------------------------------- |
