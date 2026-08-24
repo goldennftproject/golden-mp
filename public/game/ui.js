@@ -164,7 +164,7 @@ function refreshHud() {
   // 18/8: el cartel de expansión del mapa refleja el material que tenés; la firma interna evita
   // que se rehaga si no cambió nada de lo que se ve.
   if (window.FARM && window.FARM.dibujarExpansion) { try { window.FARM.dibujarExpansion(); } catch (e) {} }
-  refreshStam(); setTxt("s-level", G.level); setTxt("s-prestige", G.prestige); setNum("s-plata", G.plata); setNum("s-golden", G.golden); setTxt("s-week", (typeof semanaActual === "function") ? semanaActual() : G.week); setTxt("s-hp", Math.ceil(G.hp) + "/" + G.hpMax); refreshCombatBar(); if (typeof checkCooking === "function") checkCooking(); if (typeof refreshHotbar === "function") refreshHotbar(); }
+  refreshStam(); setTxt("s-level", G.level); setTxt("s-prestige", G.prestige); setNum("s-plata", G.plata); setNum("s-golden", G.golden); setTxt("s-week", (typeof semanaActual === "function") ? semanaActual() : G.week); setTxt("s-hp", Math.ceil(G.hp) + "/" + G.hpMax); refreshCombatBar(); if (typeof checkCooking === "function") checkCooking(); if (typeof checkHorno === "function") checkHorno(); if (typeof refreshHotbar === "function") refreshHotbar(); }
 // clic en la barra de estamina: ofrece la recarga premium (con su tope diario)
 function bindStamPill() {
   const pill = document.getElementById("stampill"); if (!pill || pill._bound) return;
@@ -814,17 +814,34 @@ function refreshTools() { refreshForge(); }   // compatibilidad con llamadas vie
 /* ---- Horno de Piedra (detalles viernes 1): acá se funden TODOS los lingotes/barras ---- */
 function refreshHorno() {
   const box = $("horno-mats"); if (!box) return;
-  let html = "", anyCooling = false;
+  /* 24/8: el Horno pasó a ser una COLA (como las ollas). Primero lo que está al fuego con su
+     reloj, después la lista de lo que se puede fundir. El tick de arriba entrega lo terminado. */
+  if (typeof checkHorno === "function") checkHorno();
+  const cola = (typeof hornoList === "function") ? hornoList() : [];
+  let html = "";
+  if (cola.length) {
+    html += '<div class="secc">🔥 Al fuego (' + cola.length + '/' + hornoSlots() + ')</div>';
+    html += cola.slice().sort((a, b) => a.listoAt - b.listoAt).map(p => {
+      const md = MAT_DEF[p.id] || { label: p.id, sprite: "res_tablon" }, falta = hornoFalta(p);
+      const tot = matCdMs(p.id) || 1, pct = Math.max(0, Math.min(100, Math.round((1 - falta / tot) * 100)));
+      return '<div class="forge-row eq"><div class="fic"><img src="' + GF.spr(md.sprite) + '"></div><div class="finfo">' +
+        '<div class="fnm">' + md.label + '</div>' +
+        '<div class="durbar"><i style="width:' + pct + '%"></i></div>' +
+        '<div class="fds">' + (falta > 0 ? "listo en " + fmtDur(falta) : "¡listo! entra a la bolsa solo") + '</div>' +
+        '</div><div class="fbtns"></div></div>';
+    }).join("");
+    html += '<div class="secc">Fundir</div>';
+  }
   MAT_ORDER.forEach(id => {
     const md = MAT_DEF[id], cs = Object.keys(md.cost).map(k => resIc(k) + " " + md.cost[k]).join(" · ");
-    const left = matCdLeft(id); if (left > 0) anyCooling = true;
-    const btn = left > 0
-      ? '<button class="green sm" disabled>' + fmtSecs(Math.ceil(left / 1000)) + '</button>'
-      : '<button class="green sm" ' + (canAfford(md.cost) ? "" : "disabled") + ' data-mat="' + id + '">Fundir</button>'
-        + '<button class="green sm" ' + (canAfford(md.cost) ? "" : "disabled") + ' data-mat5="' + id + '" title="Fundir 5 (se van encolando por el enfriamiento)">×5</button>';
-    html += '<div class="forge-row"><div class="fic"><img src="' + GF.spr(md.sprite) + '"></div><div class="finfo"><div class="fnm">' + md.label + '</div><div class="fds">Tenés ' + fmt(G.res[id] || 0) + ' · Costo: ' + cs + '</div></div><div class="fbtns">' + btn + '</div></div>';
+    const puede = canAfford(md.cost) && hornoLibres() > 0;
+    const btn = '<button class="green sm" ' + (puede ? "" : "disabled") + ' data-mat="' + id + '">Fundir</button>'
+      + '<button class="green sm" ' + (puede ? "" : "disabled") + ' data-mat5="' + id + '" title="Poner hasta 5 al fuego (hasta llenar el horno)">×5</button>';
+    html += '<div class="forge-row"><div class="fic"><img src="' + GF.spr(md.sprite) + '"></div><div class="finfo"><div class="fnm">' + md.label + '</div>' +
+      '<div class="fds">Tenés ' + fmt(G.res[id] || 0) + ' · Costo: ' + cs + ' · tarda ' + Math.round(matCdMs(id) / 60000) + ' min</div>' +
+      '</div><div class="fbtns">' + btn + '</div></div>';
   });
-  if (anyCooling && !window._hornoCdTick) { window._hornoCdTick = setTimeout(() => { window._hornoCdTick = null; if (isOpen("ov-horno")) refreshHorno(); }, 1000); }
+  if (cola.length && !window._hornoCdTick) { window._hornoCdTick = setTimeout(() => { window._hornoCdTick = null; if (isOpen("ov-horno")) refreshHorno(); }, 1000); }
   box.innerHTML = html;
   box.querySelectorAll("[data-mat]").forEach(b => b.onclick = () => craftMat(b.dataset.mat));
   box.querySelectorAll("[data-mat5]").forEach(b => b.onclick = () => craftLote(craftMat, b.dataset.mat5, 5));

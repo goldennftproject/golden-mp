@@ -242,6 +242,10 @@ Cada día aparece un goblin junto al buzón (sprite ya existente, sin arte nuevo
 
 El tablón de pedidos tenía tres escalones — 3 diarios (10 % de la producción del día), el encargo de la semana (un día entero) y el gran encargo del mes (tres días). El 22/8 se sumó el cuarto: la MISIÓN DE EVENTO, que solo cuelga de viernes a domingo, arriba de todo y con cartel violeta propio (« 🎪 MISIÓN DE EVENTO · SOLO EL FINDE »). El tema rota por semana — la Gran Cosecha, la Fiebre de la Leña, el Día de la Cantera, el Torneo de Pesca, el Festín del Pueblo — y solo pide lo que el jugador ya produce; si el tema de la semana no le aplica, pasa al siguiente. Paga con la vara de toda la escalera (plata 1,0×, la ganancia en vales) y pide DOS días de producción, entre el semanal y el mensual, porque hay un finde entero para juntarlo. La ventana es real: el lunes desaparece, entregada o no — la escasez es lo que la hace evento, y el motivo para entrar el fin de semana. No se descarta ni se re-sortea.
 
+**El Horno: una cola, no un castigo (24/8)**
+
+Tres reportes de dirección salían del mismo sitio: los tablones aparecían en la bolsa sin esperar, su reloj era ridículo (6 segundos) y el botón ×5 no hacía nada. La causa era una sola — el Horno entregaba el material EN EL ACTO y ponía un enfriamiento para el clic siguiente: el reloj no era una fundición, era un castigo entre clics, y el ×5 moría chocando contra el enfriamiento que acababa de poner él mismo. Ahora el Horno funciona como las ollas de la Cocina: metés la pieza, ocupa uno de sus TRES lugares, y el material entra a la bolsa CUANDO TERMINA. Los tiempos salen del escalón del material — 3 minutos el tablón y el bloque de piedra (el número que pidió dirección), +1 minuto por escalón para las barras: bronce 4, hierro 5, oro 6 — y el Horno nivel 2 sigue recortando su 40 %. La cola viaja en el guardado: se puede poner a fundir y cerrar el navegador. Con la bolsa llena la pieza espera al fuego en vez de perderse.
+
 **7. Edificios**
 
 Ningún edificio viene puesto. Todos llegan como PLANO, el plano se guarda en el Cobertizo y el jugador elige dónde va. Al colocarlo aparece la obra, y la obra se termina depositando materiales.
@@ -448,7 +452,7 @@ Normas de diseño que vienen de decisiones de dirección y que conviene no reabr
 
 **15. Cómo verificar lo que dice este documento**
 
-El proyecto tiene 73 pruebas automáticas y 16 auditores (113 herramientas en total). No comprueban que el código compile: comprueban que el JUEGO cumpla las reglas de arriba. Los más útiles para el diseñador:
+El proyecto tiene 74 pruebas automáticas y 16 auditores (114 herramientas en total). No comprueban que el código compile: comprueban que el JUEGO cumpla las reglas de arriba. Los más útiles para el diseñador:
 
 | **Herramienta**                 | **Qué contesta**                                            |
 | ------------------------------- | ----------------------------------------------------------- |

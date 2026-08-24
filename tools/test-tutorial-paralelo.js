@@ -81,7 +81,12 @@ console.log("\n3. Y EL MUNDO SEÑALA LO QUE SE PUEDE HACER MIENTRAS");
   const UI = fs.readFileSync("public/game/ui.js", "utf8");
   const iman = FARM.split("mariposaAccionables")[1] || "";
 
-  ok("el cartel volvió a ser una línea quieta", !/turno === 0/.test(UI) && !/listo en/.test(UI),
+  /* 24/8: esto barría TODO ui.js buscando "listo en", y saltó en falso cuando la cola del
+     Horno empezó a decir "listo en 3 min" — una cadena legítima que no tiene nada que ver con
+     el cartel del tutorial. Se acota a la función que pinta el cartel, que es lo que se quiso
+     comprobar siempre. */
+  const _cartel = (UI.split("function tutoRefresh")[1] || UI).slice(0, 3000);
+  ok("el cartel volvió a ser una línea quieta", !/turno === 0/.test(_cartel) && !/listo en/.test(_cartel),
     "sin rotación ni cuenta atrás");
   ok("y sin segunda línea", !/tuto-mientras/.test(UI));
   ok("ya no queda código muerto de aquello", typeof ctx.tutoEsperaSeg !== "function" && typeof ctx.tutoMientras !== "function",

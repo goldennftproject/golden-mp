@@ -1023,7 +1023,22 @@ const MAT_DEF = {
   barra_hierro: { label:"Barra de hierro",  sprite:"res_barra_hierro", cost:{ hierro:3 } },
   barra_oro:    { label:"Barra de oro",     sprite:"res_barra_oro",    cost:{ oro:3 } },
 };
-var MAT_CD_MS = 6000;   // detalles viernes: craftear barras tiene enfriamiento
+/* ============ EL HORNO ES UNA COLA, NO UN COOLDOWN (24/8, dirección) ==============
+   Tres reportes del mismo origen: « tablones y bloques aparecen en el inventario sin terminar
+   el cd », « su cd es muy bajo » y « el craft de +5 no funciona ».
+   La causa era una sola: craftMat ENTREGABA el material en el acto y después ponía un
+   enfriamiento para el siguiente. O sea que el reloj no era una fundición: era un castigo
+   entre clics. De ahí salían los tres síntomas —el material aparecía antes de tiempo (nunca
+   hubo espera), 6 segundos era ridículo para lo que representa, y el ×5 moría en el segundo
+   intento porque chocaba contra el enfriamiento que acababa de poner el primero.
+   Ahora el Horno funciona como la Cocina: metés lo que querés fundir, ocupa un lugar del
+   horno, y el material entra a la bolsa CUANDO TERMINA. El ×5 encola de verdad.
+   Los tiempos (dirección: « 3 min por tablón o más, calcular ») salen del ESCALÓN del
+   material, que es como se derivan los precios: 3 min el tablón y el bloque de piedra, y
+   +1 min por escalón para las barras. El Horno nivel 2 sigue recortando su 40 %. */
+var MAT_CD_S = { tablon: 180, barra_piedra: 180, barra_bronce: 240, barra_hierro: 300, barra_oro: 360 };
+var HORNO_SLOTS = 3;    // cuántas piezas puede tener el horno al fuego a la vez
+var MAT_CD_MS = 6000;   // LEGADO: solo lo lee el guardado viejo (matCd) para vaciarlo
 // ---- EDIFICIOS NIVEL 2 (recompensas de granja 17 / 21 / 27) ----
 var EDIF2_HORNO = 40;    // % que se acorta el enfriamiento del Horno
 var EDIF2_COCINA = 30;   // % que se acortan las cocciones
@@ -1038,25 +1053,57 @@ function matCdLeft(id) { G.matCd = G.matCd || {}; return Math.max(0, (G.matCd[id
 function craftLote(fn, id, n) {
   n = Math.max(1, n || 1);
   for (let i = 0; i < n; i++) {
-    const antes = JSON.stringify([G.res, G.plata, G.golden, G.picks && G.picks.dur, G.weapons]);
+    /* 24/8: la huella incluye la COLA DEL HORNO. Antes solo miraba bolsa y monedas, y como
+       encolar no cambia ninguna de las dos, el ×5 se daba por muerto en la primera vuelta.
+       (Con el horno viejo fallaba por otro motivo — el enfriamiento— pero el efecto era el
+       mismo: el botón ×5 fundía uno. Reporte de dirección del 24/8.) */
+    const antes = JSON.stringify([G.res, G.plata, G.golden, G.picks && G.picks.dur, G.weapons, G.horno]);
     fn(id);
-    if (JSON.stringify([G.res, G.plata, G.golden, G.picks && G.picks.dur, G.weapons]) === antes) break;   // no cambió nada: faltan materiales o hay enfriamiento
+    if (JSON.stringify([G.res, G.plata, G.golden, G.picks && G.picks.dur, G.weapons, G.horno]) === antes) break;   // no cambió nada: faltan materiales o no hay lugar
   }
+}
+/* ---- LA COLA DEL HORNO (24/8) — mismo patrón que las ollas de la Cocina ---- */
+function hornoList() { if (!Array.isArray(G.horno)) G.horno = []; return G.horno; }
+function hornoSlots() { return HORNO_SLOTS; }
+function hornoLibres() { return Math.max(0, hornoSlots() - hornoList().length); }
+function matCdMs(id) { return (MAT_CD_S[id] || 180) * 1000 * (edif2("horno") ? 1 - EDIF2_HORNO / 100 : 1); }
+function hornoFalta(p) { return Math.max(0, (p.listoAt || 0) - nowMs()); }
+/* El tick: lo que terminó entra a la bolsa. Lo llama la UI y también el arranque de la
+   partida, así que fundir y cerrar el navegador funciona igual que en la Cocina. */
+function checkHorno() {
+  const l = hornoList(); if (!l.length) return 0;
+  let listos = 0;
+  for (let i = l.length - 1; i >= 0; i--) {
+    const p = l[i]; if (hornoFalta(p) > 0) continue;
+    const md = MAT_DEF[p.id]; if (!md) { l.splice(i, 1); continue; }
+    if (!roomForRes(p.id, 1)) continue;            // bolsa llena: se queda al fuego, no se pierde
+    l.splice(i, 1);
+    G.res[p.id] = (G.res[p.id] || 0) + 1;
+    addXp("crafting", 3);
+    log("🔥 " + md.label + " listo en el Horno.", "good"); toast("+1 " + md.label);
+    if (typeof tutoEvent === "function") tutoEvent("mat");
+    listos++;
+  }
+  if (listos) {
+    if (typeof refreshHorno === "function" && isOpen("ov-horno")) refreshHorno();
+    if (isOpen("ov-inv")) refreshInv(); refreshHud();
+    if (typeof saveFarm === "function") saveFarm(true);
+  }
+  return listos;
 }
 function craftMat(id) {
   const md = MAT_DEF[id]; if (!md) return;
-  const left = matCdLeft(id);
-  if (left > 0) { toast(md.label + " en enfriamiento (" + Math.ceil(left / 1000) + "s)"); return; }
+  if (hornoLibres() <= 0) { toast("El horno está lleno (" + hornoSlots() + " al fuego)"); return; }
   if (!canAfford(md.cost)) { toast("Te faltan materiales"); return; }
-  if (!roomForRes(id, 1)) { bagFull("craftear " + md.label); return; }
   if (typeof tutoPermite === "function" && !tutoPermite("mat")) { tutoAviso(); return; }   // embudo estricto (13/8)
   if (typeof tutoGuardiaCosto === "function" && !tutoGuardiaCosto(md.cost, 0, "fundir " + md.label)) return;   // guardia del tutorial (12/8)
-  payCost(md.cost); G.res[id] = (G.res[id] || 0) + 1;
-  G.matCd[id] = nowMs() + hornoCdMs();   // 14/8 v3: el horno ya no está en la cadena del tutorial — tiempo real siempre
-  addXp("crafting", 3); log("Fundiste 1 " + md.label + " en el Horno.", "good"); toast("+1 " + md.label);
-  if (typeof tutoEvent === "function") tutoEvent("mat");
+  payCost(md.cost);
+  hornoList().push({ id: id, listoAt: nowMs() + matCdMs(id) });
+  log("Pusiste 1 " + md.label + " al fuego (" + Math.round(matCdMs(id) / 60000) + " min).", "good");
+  toast("🔥 " + md.label + " al fuego");
   if (typeof refreshHorno === "function" && isOpen("ov-horno")) refreshHorno();
   if (isOpen("ov-inv")) refreshInv(); refreshHud();
+  if (typeof saveFarm === "function") saveFarm(true);
 }
 
 // --- lombrices (detalles213): carnada de pesca, se compran en la Tienda ---
