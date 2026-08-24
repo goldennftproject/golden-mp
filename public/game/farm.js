@@ -3712,6 +3712,22 @@ class FarmScene extends Phaser.Scene {
     // pagar: ahí el cartel dorado se queda a la vista porque es una llamada a la acción, no un
     // aviso gris. Si te falta nivel o material, el bosque se ve limpio.
     this.expCartel.forEach(o => o.setVisible(puede));
+    /* 24/8 — EL CARTEL DESAPARECÍA Y HABÍA QUE APRETAR F5. Reporte de dirección: « ves la
+       expansión y los recursos que pide y suele desaparecer ». La causa es sutil: la FIRMA
+       incluye cuánto material tenés, así que juntar una madera más mientras mirás el lote
+       cambia la firma → se destruyen los ~40 objetos y se rehacen nacidos OCULTOS. Y como el
+       cursor no se movió, Phaser nunca dispara un pointerover nuevo: el lote queda invisible
+       debajo del puntero hasta salir y volver a entrar… o recargar la página.
+       Arreglo: al rehacer, se pregunta si el puntero YA está dentro del lote y, si lo está, se
+       enciende el resaltado en el acto. El estado visual deja de depender de un evento que no
+       va a volver a llegar. */
+    try {
+      const pt = this.input && this.input.activePointer;
+      if (pt) {
+        const wx = pt.worldX, wy = pt.worldY;
+        if (wx >= x0 && wx <= x0 + w && wy >= y0 && wy <= y0 + h) resaltar(true);
+      }
+    } catch (e) {}
     // que el cartel también cuente como "encima del lote": si no, al mover el cursor del bloque a
     // la chapa el cartel se escondería justo cuando vas a tocarlo
     chapa.on("pointerover", () => { zona.emit("pointerover"); });

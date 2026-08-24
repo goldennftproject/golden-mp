@@ -228,7 +228,15 @@ class ForestScene extends Phaser.Scene {
   drawBar(m) {
     // Solo se redibuja si CAMBIÓ. Antes update() llamaba a drawBar de los 25 mobs en cada
     // frame y cada uno hacía clear() + 2 fillRect aunque no hubiera pasado nada (10/8).
-    const firma = m.dead ? "x" : (Math.round(m.hp) + "/" + m.def.hp);
+    /* 24/8 — LA BARRA SE QUEDABA ATRÁS. Reporte de dirección: « cuando atacas un mob en zona
+       negra y te alejas, la vida queda en un lado y el mob por otro ». La causa: la barra se
+       dibuja en coordenadas ABSOLUTAS (m.cx, m.by) pero la firma solo miraba la VIDA, así que
+       un mob herido que te persigue se movía sin que su barra se enterara. La optimización era
+       correcta; le faltaba la mitad del estado. Ahora la posición entra en la firma —
+       redondeada a 2 px para no redibujar por temblores de subpíxel—, así que se repinta
+       cuando se mueve de verdad y los mobs quietos y sanos siguen sin costar nada. */
+    const px = Math.round(m.cx / 2), py = Math.round(m.by / 2);
+    const firma = m.dead ? "x" : (Math.round(m.hp) + "/" + m.def.hp + "@" + px + "," + py);
     if (m._barFirma === firma) return;
     m._barFirma = firma;
     m.bar.clear();
@@ -991,6 +999,11 @@ class ForestScene extends Phaser.Scene {
         }
       }
       m.spr.setPosition(m.cx, m.by).setDepth(m.by);
+      /* 24/8: la barra viaja CON el mob. Sin esto se quedaba clavada donde recibió el golpe
+         (reporte de dirección: « te alejas y la vida queda en un lado y el mob por otro »).
+         drawBar sale sola si nada cambió, y la firma ya incluye la posición: los mobs sanos
+         o quietos no cuestan un solo fillRect. */
+      if (m.hp < m.def.hp && !m.dead) { m.bar.setDepth(m.by + 1); this.drawBar(m); }
       // MISMA lógica que el granjero: mira según hacia dónde CAMINA, no según dónde estés vos.
       // El arte va al sureste; si se mueve hacia la izquierda (o arriba/abajo-izquierda) se espeja.
       const mdx = m.cx - px0;

@@ -208,6 +208,16 @@ console.log("\nLO ÚNICO QUE SE SIGUE MIRANDO EN EL CÓDIGO (y con motivo)");
     /if \(!GF\.celdaOcupada\(c, r\)\) continue;/.test(src), "una sola verdad");
   ok("y blockedAt ya no decide sobre la rejilla (es para caminar)",
     !/if \(GF\.blockedAt\(x, y, 6\)\) return false;/.test(src));
+
+  /* 24/8 — EL CARTEL DESAPARECÍA BAJO EL CURSOR (reporte de dirección: « ves la expansión y
+     los recursos que pide y suele desaparecer; hay que darle F5 »). La firma del cartel incluye
+     cuánto material tenés, así que juntar una madera más mientras mirás el lote lo destruye y lo
+     rehace OCULTO — y como el puntero no se movió, no llega un pointerover nuevo. */
+  const dib = src.slice(src.indexOf("dibujarExpansion() {"), src.indexOf("dibujarExpansion() {") + 9000);
+  ok("al rehacer el cartel se comprueba si el cursor YA está dentro",
+    /activePointer/.test(dib) && /resaltar\(true\)/.test(dib), "el estado no depende de un evento que no vuelve");
+  ok("y esa comprobación usa coordenadas del MUNDO (no de pantalla)",
+    /worldX/.test(dib) && /worldY/.test(dib));
 }
 
 console.log("\n" + (fallos ? "  ✗ " + fallos + " fallas\n" : "  ✓ el cartel solo sale cuando hay algo que decir, y el « no » viene con su motivo\n"));
