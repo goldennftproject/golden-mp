@@ -4,16 +4,69 @@ const SB_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJ
 
 let sb = null, UID = null, saveTimer = null, lastSavedKey = null;
 
+/* ================= EL LOGIN SE COLGABA (24/8, dirección) =========================
+   El cartel del arranque, ya con nombre: « se colgó en LOGIN y no contestó en 45 s ».
+   O sea getSession(), que ni siquiera es una llamada de red: lee la sesión guardada.
+   Por qué se cuelga: supabase-js v2 envuelve TODA operación de auth en un candado del
+   navegador (navigator.locks) para que dos pestañas no refresquen el token a la vez. Si otra
+   pestaña se quedó con el candado —dormida, colgada, o cerrada de mala manera—, la que abre
+   después espera. Y espera. Para siempre: el candado no tiene vencimiento. Con una sola
+   pestaña no pasa nunca; con el diseñador y yo abriendo diez para probar, pasa todo el rato.
+   Se cambia el candado del navegador por uno de ESTA página: sigue serializando las
+   operaciones de auth (que es para lo que sirve) pero no puede quedar tomado por nadie de
+   afuera. Es el mismo enfoque que la propia librería ofrece como `processLock`. */
+let _authCola = Promise.resolve();
+function candadoDeEstaPagina(name, acquireTimeout, fn) {
+  const corrida = _authCola.then(fn, fn);
+  _authCola = corrida.then(() => {}, () => {});   // la cola nunca se rompe por un error de adentro
+  return corrida;
+}
+/* la sesión guardada, leída A MANO: sin candado, sin red, sin librería. Es la red de seguridad
+   para saber si este navegador YA tiene cuenta cuando getSession no contesta. */
+function sesionGuardada() {
+  try {
+    const ref = (SB_URL.match(/https:\/\/([^.]+)\./) || [])[1];
+    const raw = localStorage.getItem("sb-" + ref + "-auth-token");
+    if (!raw) return null;
+    const s = JSON.parse(raw);
+    return (s && s.user && s.user.id) ? s : (s && s.currentSession && s.currentSession.user ? s.currentSession : null);
+  } catch (e) { return null; }
+}
+const conTope = (p, ms, que) => Promise.race([
+  Promise.resolve(p),
+  new Promise((_, rej) => setTimeout(() => rej(new Error("tardó demasiado: " + que)), ms)),
+]);
+
 async function initSave() {
   try {
     if (!window.supabase || !window.supabase.createClient) return false;
-    sb = window.supabase.createClient(SB_URL, SB_KEY);
-    let { data: { session } } = await sb.auth.getSession();
+    sb = window.supabase.createClient(SB_URL, SB_KEY, { auth: { lock: candadoDeEstaPagina } });
+    let session = null;
+    try {
+      const r = await conTope(sb.auth.getSession(), 8000, "getSession");
+      session = r && r.data ? r.data.session : null;
+    } catch (e) {
+      /* el candado o la red se colgaron. NO se inventa una cuenta nueva acá: si este navegador
+         ya tenía uña, crear otra anónima lo dejaría mirando una granja vacía… y el primer
+         guardado la escribiría encima de la buena. Se mira el guardado local y se decide. */
+      console.warn("getSession:", e.message);
+      const guardada = sesionGuardada();
+      if (guardada) {
+        console.warn("hay sesión guardada: se reintenta una vez antes de rendirse");
+        try {
+          const r2 = await conTope(sb.auth.getSession(), 8000, "getSession (2)");
+          session = r2 && r2.data ? r2.data.session : null;
+        } catch (e2) { console.warn("getSession (2):", e2.message); }
+        if (!session) return false;   // hay cuenta pero no se puede leer: que falle FUERTE y no toque nada
+      }
+      // sin sesión guardada: es un navegador virgen, se puede crear la cuenta con tranquilidad
+    }
     if (!session) {
-      const { data, error } = await sb.auth.signInAnonymously();
+      const { data, error } = await conTope(sb.auth.signInAnonymously(), 15000, "signInAnonymously");
       if (error) { console.warn("Login anónimo falló (¿está habilitado en Supabase?):", error.message); return false; }
       session = data.session;
     }
+    if (!session || !session.user) return false;
     UID = session.user.id;
     return true;
   } catch (e) { console.warn("initSave error:", e); return false; }

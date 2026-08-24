@@ -24,6 +24,20 @@ Dirección: « sigue tardando en entrar a la granja, algo se ha roto ahí en el 
 
 Como el sello del build pasó a ser lo único que avisa que hay código nuevo, dejó de escribirse a mano: **lo calcula el servidor** a partir de los propios archivos del juego (tamaño y fecha de los doce `.js`) y lo inyecta en el `index.html` al servirlo. La lección la dio el primer deploy después de endurecer la caché — el sello se quedó sin commitear y el servidor siguió anunciando el número viejo, que es exactamente el escenario que rompe. Un sello que hay que acordarse de actualizar es un sello roto: si cambia una coma en cualquier archivo, cambia el número, y nadie tiene que hacer nada. El `deploy.bat` además avisa ahora si quedó algo de `public/` o `src/` sin subir, y si el push falla no finge que deployó. Todo esto lo fija `tools/test-arranque-peso.js`, que además **vigila el peso**: el bulto crece solo, un comentario por vez, y si algún día pasa de 460 KB comprimidos, la suite se pone roja antes de que lo note un jugador.
 
+**Y el que de verdad colgaba el arranque: el LOGIN (24/8)**
+
+Con el cartel ya diciendo el paso, el reporte siguiente fue exacto: « se colgó en LOGIN y no contestó en 45 s ». Y *login* es `getSession()`, que ni siquiera es una llamada de red — lee la sesión guardada en el navegador. Se colgaba porque supabase-js envuelve toda operación de autenticación en un **candado del navegador** (`navigator.locks`) para que dos pestañas no refresquen el token a la vez; si otra pestaña se quedó con el candado —dormida, colgada o cerrada de mala manera— la que abre después espera, y el candado no vence nunca. Con una sola pestaña no pasa jamás. Con el diseñador y el programador abriendo diez para probar, pasa todo el rato.
+
+El arreglo tiene tres partes, y la tercera es la que importa a futuro:
+
+  - **El candado pasa a ser de la página**, no del navegador: sigue serializando las operaciones de auth, que es para lo que sirve, pero nadie de afuera puede quedárselo.
+
+  - **Cada paso del login tiene su tope de tiempo**, y si `getSession` no contesta hay una regla dura: si el navegador YA tiene una sesión guardada, se reintenta una vez y, si tampoco, **se falla a propósito**. Nunca se crea una cuenta anónima nueva encima de una granja que existe — eso dejaría al jugador mirando una granja vacía y el primer guardado la escribiría sobre la buena. Solo se crea cuenta si el navegador está virgen, donde no hay nada que pisar.
+
+  - **La versión de la librería quedó clavada.** El juego la cargaba como `@2`, o sea « la última 2.x que haya hoy en el CDN »: la pieza que maneja el login y el guardado se actualizaba sola, de un día para el otro, sin que nadie tocara una línea. Eso es exactamente « algo se ha roto ahí en el inicio » sin culpable posible. Ahora se sube a mano, se prueba, y recién ahí se cambia el número.
+
+Lo fija `tools/test-login-candado.js`, que corre el login de verdad contra un servidor de mentira colgado a propósito y comprueba, entre otras cosas, que en ese caso no aparezca ninguna cuenta nueva.
+
 Para el equipo de diseño
 
 *Todas las cifras de este documento están extraídas del código en ejecución,*
@@ -506,7 +520,7 @@ Normas de diseño que vienen de decisiones de dirección y que conviene no reabr
 
 **15. Cómo verificar lo que dice este documento**
 
-El proyecto tiene 85 pruebas automáticas y 18 auditores (129 herramientas en total). No comprueban que el código compile: comprueban que el JUEGO cumpla las reglas de arriba. Los más útiles para el diseñador:
+El proyecto tiene 86 pruebas automáticas y 18 auditores (130 herramientas en total). No comprueban que el código compile: comprueban que el JUEGO cumpla las reglas de arriba. Los más útiles para el diseñador:
 
 | **Herramienta**                 | **Qué contesta**                                            |
 | ------------------------------- | ----------------------------------------------------------- |
