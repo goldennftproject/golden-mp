@@ -16,6 +16,7 @@ const fs = require("fs"), path = require("path"), os = require("os");
 const SRV = fs.readFileSync("src/index.js", "utf8");
 const HTML = fs.readFileSync("public/index.html", "utf8");
 const BAT = fs.readFileSync("deploy.bat", "utf8");
+const PKG = JSON.parse(fs.readFileSync("package.json", "utf8"));
 
 let fallos = 0;
 const ok = (n, c, d) => { if (!c) fallos++; console.log((c ? "  ok   " : "  FALLA") + "  " + n + (d ? "   " + d : "")); };
@@ -72,6 +73,27 @@ console.log("\nEL DEPLOY AVISA SI QUEDÓ ALGO SIN SUBIR");
   ok("mira public/ y src/ después del push", /git status --porcelain -- public src/.test(BAT));
   ok("y grita si hay algo", /OJO: quedaron cambios SIN SUBIR/.test(BAT));
   ok("si el push falla, lo dice y no finge que deployó", /EL PUSH FALLO/.test(BAT) && /if errorlevel 1 goto :fallo/.test(BAT));
+  /* 24/8 — el que de verdad rompía: `git add -A` abortaba entero por los enlaces simbólicos de
+     node_modules (« Function not implemented » en Windows), no se preparaba NADA, el commit no
+     se hacía, y el push subía solo lo que ya estuviera commiteado. En silencio, durante meses. */
+  ok("y si el ADD falla, se planta (no deploya a medias)",
+    /if errorlevel 1 goto :falloadd/.test(BAT) && /GIT ADD FALLO/.test(BAT));
+}
+
+console.log("\nNODE_MODULES NO SE VERSIONA (era lo que rompía el add)");
+{
+  const IGN = fs.readFileSync(".gitignore", "utf8");
+  ok("está ignorado", /^node_modules\/?$/m.test(IGN));
+  /* la comprobación de verdad: que el índice de git no tenga ni un archivo de ahí */
+  let versionados = 0;
+  try {
+    versionados = require("child_process")
+      .execSync("git ls-files node_modules", { encoding: "utf8" }).split("\n").filter(Boolean).length;
+  } catch (e) { console.log("       (sin git a mano: se salta la comprobación del índice)"); }
+  ok("y no queda ni un archivo suyo en el índice", versionados === 0, versionados + " archivos");
+  ok("las dependencias viven en package.json, que es de donde las instala Render",
+    !!(PKG.dependencies && Object.keys(PKG.dependencies).length >= 3),
+    Object.keys(PKG.dependencies || {}).join(", "));
 }
 
 console.log(fallos ? "\n" + fallos + " fallo(s)\n"

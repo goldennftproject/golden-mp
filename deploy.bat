@@ -12,7 +12,15 @@ powershell -NoProfile -ExecutionPolicy Bypass -File "tools\stamp-build.ps1"
 
 echo.
 echo == Subiendo cambios a GitHub ==
+REM 24/8: git add -A venia FALLANDO EN SILENCIO. node_modules estaba versionado y trae enlaces
+REM simbolicos que Windows no puede escribir ("Function not implemented"): git abortaba el add
+REM ENTERO, no se quedaba nada preparado, y el commit no se hacia. El push subia solo lo que ya
+REM estuviera commiteado de antes, asi que cualquier cambio hecho aca NUNCA llegaba al juego.
+REM node_modules ya no se versiona (Render instala las dependencias solo, desde package.json).
+REM Y si el add vuelve a fallar por lo que sea, esto se planta: mejor no deployar que deployar
+REM la mitad.
 git add -A
+if errorlevel 1 goto :falloadd
 git commit -m "deploy %date% %time%"
 git push
 if errorlevel 1 goto :fallo
@@ -37,6 +45,13 @@ echo Listo. Render va a redeployar automaticamente en 1-2 minutos.
 echo Podes cerrar esta ventana.
 pause
 exit /b 0
+
+:falloadd
+echo.
+echo   !! GIT ADD FALLO: no se preparo nada, asi que no hay nada que subir.
+echo   No se deploya a medias. Mira el error de arriba.
+pause
+exit /b 1
 
 :fallo
 echo.
