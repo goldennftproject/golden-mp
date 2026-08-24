@@ -4932,6 +4932,13 @@ function sellItem(res) {
   else { const g=Math.floor(totalVenta(res,q)/GOLDEN_EN_PLATA); if (g<1){ toast("Muy poca cantidad para $Golden"); return; } G.res[res]-=q; G.golden+=g; log(`Vendiste ${q} ${RES_LABEL[res]} por ${g} $Golden.`,"gold"); toast("+"+g+" $Golden"); }
   if (window.sfx) sfx("coin");
   if (CROP_DEF[res] && typeof tutoEvent === "function") for (let i = 0; i < q; i++) tutoEvent("sell");   // 14/8 v4: un evento POR UNIDAD vendida — el capataz verifica cantidades
+  /* 24/8 (dirección): « cuando vendes un objeto no se quita de la bolsa; hay que darle clic o
+     cerrar y abrir la bolsa para que desaparezca ». Vender refrescaba el MERCADO y el HUD pero
+     no la BOLSA, así que el objeto vendido seguía dibujado hasta el siguiente redibujo por otro
+     motivo. sellDish ya lo hacía bien; sellItem se lo había perdido. */
+  if (typeof syncSlots === "function") syncSlots();
+  if (isOpen("ov-inv")) refreshInv();
+  if (typeof refreshHotbar === "function") refreshHotbar();
   refreshMarket(); refreshHud();
 }
 

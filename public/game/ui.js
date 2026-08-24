@@ -161,6 +161,12 @@ function refreshHud() {
   try { syncMisionesBadge(); } catch (e) {}   // contador de misiones del menú (10/8)
   try { syncLogrosBadge(); } catch (e) {}     // 22/8: cuántos logros hay para cobrar
   try { syncAlbumBadge(); } catch (e) {}      // 23/8: el % del álbum
+  /* 24/8 — LA BOLSA ABIERTA NO PUEDE MENTIR. Dirección reportó que al vender, el objeto seguía
+     ahí hasta cerrar y abrir. La causa concreta era que sellItem no repintaba la bolsa (ya está
+     arreglado), pero el fallo es de una FAMILIA: cualquier función que toque G.res/seeds/fish/
+     dishes y se olvide de avisar deja la bolsa mintiendo. Esta es la red: con la bolsa ABIERTA
+     se compara una firma barata de lo que contiene y solo se repinta si cambió de verdad. */
+  try { syncBolsaAbierta(); } catch (e) {}
   // 18/8: el cartel de expansión del mapa refleja el material que tenés; la firma interna evita
   // que se rehaga si no cambió nada de lo que se ve.
   if (window.FARM && window.FARM.dibujarExpansion) { try { window.FARM.dibujarExpansion(); } catch (e) {} }
@@ -271,7 +277,27 @@ function bindTrash() {
   tr.addEventListener("dragleave", () => tr.classList.remove("hot"));
   tr.addEventListener("drop", e => { e.preventDefault(); tr.classList.remove("hot"); dndActive = false; dndDrop(e.dataTransfer.getData("text/plain"), "trash", 0); });
 }
+/* La firma de lo que hay en la bolsa: barata (una cuenta, sin construir HTML) y suficiente —
+   si cambia cualquier cantidad, cambia la firma. La usa la red de refreshHud. */
+function bolsaFirma() {
+  let s = "";
+  ITEM_RES_ORDER.forEach(r => { const n = Math.floor(G.res[r] || 0); if (n) s += r + n + "|"; });
+  CROP_ORDER.forEach(k => { const n = Math.floor(G.seeds[k] || 0); if (n) s += "s" + k + n + "|"; });
+  FISH_ORDER.forEach(k => { const n = Math.floor((G.fish && G.fish[k]) || 0); if (n) s += "f" + k + n + "|"; });
+  RECIPE_ORDER.forEach(k => { const n = Math.floor((G.dishes && G.dishes[k]) || 0); if (n) s += "d" + k + n + "|"; });
+  s += "a" + toolCount("axe") + "r" + toolCount("rod");
+  PICK_ORDER.forEach(id => { const n = pickCount(id); if (n) s += "p" + id + n + "|"; });
+  return s;
+}
+function syncBolsaAbierta() {
+  if (!isOpen("ov-inv")) { window._bolsaFirma = null; return; }
+  const f = bolsaFirma();
+  if (window._bolsaFirma === f) return;
+  window._bolsaFirma = f;
+  refreshInv();
+}
 function refreshInv() {
+  window._bolsaFirma = (typeof bolsaFirma === "function") ? bolsaFirma() : null;   // 24/8: al repintar, la firma queda al día
   syncSlots();
   bindTrash();
   const cap = invSlots(), rem = {};
