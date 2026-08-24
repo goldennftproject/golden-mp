@@ -10,7 +10,7 @@ const G = {
   treesOpen: [0, 1, 2], rocksOpen: [0, 1, 2],  // 18/8: TRES de cada uno al arrancar. Con 2 el tutorial pedía 33 madera a 1 cada 30 min: 8 h de reloj para 3 min de juego.
   gear: { casco: null, armadura: null, botas: null, escudo: null, arma: null, municion: false },
   weapons: {},                   // doc 2/8: armas nuevas — id ("espada_madera") -> { dur }
-  stam: null, stamAcc: 0, stamRec: null,   // estamina de la Zona Negra ("2das mejoras")
+  stam: null, stamAcc: 0, stamFullAt: 0, stamRec: null,   // estamina de la Zona Negra ("2das mejoras") · stamFullAt: cuándo se llena entera (24/8)
   stats: {}, statsBase: {}, chestCap: 0, edif2: {}, cosmeticos: [],
   animals: {},                   // Establo: animal → { desde, feliz, comidoAt, prodAt }
   armor: {}, armorEq: null,      // Curtiduría: piezas crafteadas y set equipado
@@ -3688,12 +3688,26 @@ const STAM_COSTO = {          // costo por criatura (tabla del doc)
 };
 function stamMax() { return Math.min(STAM_TOPE, STAM_BASE + STAM_POR_NIVEL * (combatInfo().lvl - 1)); }
 function stamCosto(key) { return STAM_COSTO[key] || 5; }
-function stamTick() {   // 1 vez por segundo desde el HUD
+/* ============ LA ESTAMINA SE LLENA ENTERA CADA 4 HORAS (24/8, dirección) ==========
+   « Que la estamina en zona negra se recargue full cada 4 horas. »
+   Antes goteaba 1 punto cada 3 minutos… pero SOLO con el juego abierto: el goteo vivía en el
+   tick del HUD, así que cerrar la pestaña congelaba la barra. En un juego de relojes eso está
+   al revés — el tiempo del jugador cuenta esté o no mirando.
+   Ahora la recarga es de RELOJ REAL: en cuanto la barra baja del máximo se marca la hora de la
+   próxima recarga (4 h), y al llegar se llena ENTERA. Funciona con el navegador cerrado, se
+   puede anunciar ("se llena a las 18:40") y es una sola regla en vez de un goteo invisible. */
+var STAM_FULL_H = 4;
+function stamFullEn() { return Math.max(0, (G.stamFullAt || 0) - nowMs()); }   // ms que faltan (0 = llena o no arrancó)
+function stamTick() {   // 1 vez por segundo desde el HUD, y también al cargar la partida
   const mx = stamMax();
   if (G.stam == null) G.stam = mx;
-  if (G.stam >= mx) { G.stamAcc = 0; return; }
-  G.stamAcc = (G.stamAcc || 0) + 1;
-  if (G.stamAcc >= STAM_REGEN_SEG) { G.stamAcc = 0; G.stam = Math.min(mx, G.stam + 1); }
+  if (G.stam >= mx) { G.stamAcc = 0; G.stamFullAt = 0; return; }
+  if (!G.stamFullAt) { G.stamFullAt = nowMs() + STAM_FULL_H * 3600000; return; }   // arrancó el reloj
+  if (nowMs() >= G.stamFullAt) {
+    G.stam = mx; G.stamAcc = 0; G.stamFullAt = 0;
+    if (typeof log === "function") log("⚡ Estamina recargada al máximo (" + mx + ").", "good");
+    if (typeof saveFarm === "function") saveFarm(true);
+  }
 }
 function stamAdd(n) { const mx = stamMax(); G.stam = Math.max(0, Math.min(mx, (G.stam == null ? mx : G.stam) + n)); refreshHud(); }
 function stamGastar(n) {   // devuelve false si no alcanza

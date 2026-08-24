@@ -295,6 +295,8 @@ Los animales se compran con plata, ocupan sitio y producen material cada ciclo m
 
 La Zona Negra es el único sitio del juego donde se consigue CARNE y piezas de armadura. Se entra por un portal y hace falta un arma equipada.
 
+*LA ESTAMINA SE LLENA ENTERA CADA 4 HORAS (24/8, dirección). Antes goteaba un punto cada tres minutos, pero el goteo vivía en el tick del HUD: con la pestaña cerrada la barra se congelaba, al revés de lo que promete un juego de relojes. Ahora, en cuanto la barra baja del máximo arranca un reloj de 4 horas de tiempo REAL y al vencer la estamina queda entera — funciona con el navegador cerrado, se puede anunciar (« se llena en 1 h 20 », y la píldora lo dice al pasar el cursor) y es una sola regla en vez de un goteo invisible.*
+
 | **Zona**           | **Nivel** | **Qué es**                                                                 |
 | ------------------ | --------- | -------------------------------------------------------------------------- |
 | Pantano            | 1         | Agua estancada y bichos chicos. Por acá se empieza.                        |
@@ -456,7 +458,7 @@ Normas de diseño que vienen de decisiones de dirección y que conviene no reabr
 
 **15. Cómo verificar lo que dice este documento**
 
-El proyecto tiene 75 pruebas automáticas y 16 auditores (115 herramientas en total). No comprueban que el código compile: comprueban que el JUEGO cumpla las reglas de arriba. Los más útiles para el diseñador:
+El proyecto tiene 76 pruebas automáticas y 16 auditores (116 herramientas en total). No comprueban que el código compile: comprueban que el JUEGO cumpla las reglas de arriba. Los más útiles para el diseñador:
 
 | **Herramienta**                 | **Qué contesta**                                            |
 | ------------------------------- | ----------------------------------------------------------- |

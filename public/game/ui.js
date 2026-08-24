@@ -187,6 +187,12 @@ function refreshStam() {
   const mx = stamMax(), v = Math.floor(G.stam == null ? mx : G.stam);
   setTxt("s-stam", v + "/" + mx);
   const f = document.getElementById("stam-fill"); if (f) f.style.width = Math.round(v / mx * 100) + "%";
+  /* 24/8: la barra dice CUÁNDO se llena entera (recarga de 4 h, reloj real) — sin eso, una
+     recarga que no se ve avanzar parece rota. */
+  if (typeof stamFullEn === "function") {
+    const falta = (v < mx) ? stamFullEn() : 0;
+    pill.title = falta > 0 ? "Se llena entera en " + fmtDur(falta) : "Estamina al máximo";
+  }
 }
 function refreshCombatBar() {   // doc maestro 2/8: insignia de nivel + relleno dorado + "XP actual / necesaria"
   const el = document.getElementById("c-lvl"); if (!el || typeof combatInfo !== "function") return;
