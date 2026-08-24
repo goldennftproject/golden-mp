@@ -1033,10 +1033,22 @@ const MAT_DEF = {
    intento porque chocaba contra el enfriamiento que acababa de poner el primero.
    Ahora el Horno funciona como la Cocina: metés lo que querés fundir, ocupa un lugar del
    horno, y el material entra a la bolsa CUANDO TERMINA. El ×5 encola de verdad.
-   Los tiempos (dirección: « 3 min por tablón o más, calcular ») salen del ESCALÓN del
-   material, que es como se derivan los precios: 3 min el tablón y el bloque de piedra, y
-   +1 min por escalón para las barras. El Horno nivel 2 sigue recortando su 40 %. */
-var MAT_CD_S = { tablon: 180, barra_piedra: 180, barra_bronce: 240, barra_hierro: 300, barra_oro: 360 };
+   Los tiempos (dirección: « 3 min por tablón o más, calcular ») salían del ESCALÓN del material.
+
+   24/8 v2 — LOS TIEMPOS, OTRA VEZ (dirección: « esa parte de 3 en 3 me parece bien, pero yo le
+   pondría más CD: puede ser simultáneo pero debería durar mucho más que 2 minutos »).
+   Antes de subirlos hay que decir qué son, porque es lo que decide cuánto pueden subir: el reloj
+   del horno NO es una palanca de economía. La palanca es el mineral. Un tablón se come 3 maderas
+   y un árbol repone 1 cada 30 min: juntar las 9 maderas de una hornada lleva HORAS, contra los
+   minutos que tarda el fuego. El horno va detrás del nodo por un factor de diez, así que puede
+   pesar mucho más sin frenar a nadie — lo único que cambia es lo que se SIENTE al mirarlo.
+   La regla, entonces, se ata a un reloj que el jugador ya conoce: EL RELOJ DE SU NODO, DIVIDIDO
+   POR LAS TRES BOCAS DEL HORNO. Árbol 30 min → tablón 10. Roca 40 min → bloque 13. Las vetas de
+   metal son de horas (el oro, 14 h), así que ahí la regla se corta sola y sigue la escalera de
+   siempre, un escalón por tier: bronce 20, hierro 25, oro 30.
+   El Horno nivel 2 sigue recortando su 40 %, y aun así el más rápido queda en 6 min: el triple
+   de los 2 minutos que la dirección marcó como piso. */
+var MAT_CD_S = { tablon: 600, barra_piedra: 800, barra_bronce: 1200, barra_hierro: 1500, barra_oro: 1800 };
 var HORNO_SLOTS = 3;    // cuántas piezas puede tener el horno al fuego a la vez
 var MAT_CD_MS = 6000;   // LEGADO: solo lo lee el guardado viejo (matCd) para vaciarlo
 // ---- EDIFICIOS NIVEL 2 (recompensas de granja 17 / 21 / 27) ----
@@ -5722,7 +5734,29 @@ function goblinAceptar() {
    domable el bocado SE CONSUME —acepte o no, ya se lo comió— y 1 de cada 4 acepta. Costo esperado
    de una doma: ~4 bocados (~8 carnes), que a cambio de un ayudante permanente es un precio justo
    y le da a la Cocina su primer ítem de USO, no de buff. */
+/* v4 — LA SUERTE SE DERIVA DEL REPAGO (24/8; el diseñador propuso « 1 de cada 100 »).
+   Antes de mover el número hay que ver qué cuesta ya una doma, porque el PLATO es la mitad del
+   precio y no es el mismo para todos: la galletita de la rata sale 12 de plata y el costillar
+   del orco, 1.228 (se lo lleva el maíz). O sea que la escalera de platos ya separa los casos por
+   cien veces. 1 de cada 100 encima de eso serían 122.800 de plata por un orco: ochenta días de
+   su propio trabajo. Ese número no protege la mecánica, la entierra.
+   La regla que sí se sostiene es la del REPAGO —en cuántos días de su propio trabajo se paga el
+   ayudante—, y es una BANDA, no un número: piso de 2 días (menos que eso es regalarlo) y techo
+   de 10 (más que eso, nadie lo doma y la mecánica no existe). Adentro de la banda manda la
+   escalera de platos, que ya separa los casos cien veces.
+     · Rata: 3 lombrices por vuelta ≈ 18 de plata/día, galletita de 12 → 1 de cada 4 se paga en
+       2,7 días. Es el ayudante de entrada y está bien que sea el fácil.
+     · Brazos (orco, lancero, guerrero, trol): juntan lo que el tope de cargas iba a tirar,
+       ≈ 1.247 de plata/día con la granja llena, y su costillar sale 1.228 → 1 de cada 6 se paga
+       en 5,9 días. Eran 1 de cada 4 y quedaba en 3,9: cerca del piso para lo que rinde.
+     · Larva: apura cultivos, que no tiene precio de lista; se queda en 1 de cada 4 hasta que
+       haya con qué medirla.
+   El repago se re-mide en tools/auditar-doma.js: si un ayudante engorda, su suerte tiene que
+   bajar en el mismo commit. */
+var DOMA_CHANCE_ROL = { rata: 0.25, larva: 0.25, brazos: 1 / 6 };
 var DOMA_NIVEL = 10, DOMA_CHANCE = 0.25, DOMA_COMISION = 0.30, DOMA_COMIDA_H = 24, DOMA_ITEM = "bocado_domador";
+function domaChance(especie) { return DOMA_CHANCE_ROL[DOMA_ROL[especie]] || DOMA_CHANCE; }
+function domaChanceTxt(especie) { return "1 de cada " + Math.round(1 / domaChance(especie)); }
 var DOMA_ESPECIES = ["rata", "larva", "orco", "lancero", "guerrero", "troll"];   // los que tienen sprite cargado en la granja
 /* v3 (dirección): cada bicho hace el trabajo que su CUERPO permite — « la rata no va a talar » —
    y cada rol tiene su plato favorito. */
@@ -5771,15 +5805,19 @@ function domaIntentar(especie, rnd) {   // lo llama la Zona Negra al vencer
     return false;   // sin intento, sin cobro
   }
   G.dishes[plato] -= 1;   // se lo come, acepte o no: ya está servido
-  if ((rnd || Math.random)() >= DOMA_CHANCE) {
-    log("🍖 El bicho devoró tu " + platoNom + "… y se fue igual. Grosero. (1 de cada 4 acepta.)", "warn");
+  if ((rnd || Math.random)() >= domaChance(especie)) {
+    log("🍖 El bicho devoró tu " + platoNom + "… y se fue igual. Grosero. (" + domaChanceTxt(especie) + " acepta.)", "warn");
     toast("Se comió el plato y se fue");
     if (typeof saveFarm === "function") saveFarm(true);
     return false;
   }
   const nom = (MONSTER_DEF[especie] && MONSTER_DEF[especie].label) || especie;
-  G.doma = { bicho: especie, desde: nowMs(), comidaHasta: 0, cont: 0, ultimo: null };
-  log("🐾 ¡" + nom + " bajó las orejas y te siguió a casa! Vive en tu granja: dale 1 carne por día y " + (DOMA_ROL_TXT[DOMA_ROL[especie]] || "trabaja") + " mientras no estés.", "gold");
+  /* 24/8 (diseñador: « la domé y tiene hambre · mi dios, pobrecita »). Nacía con comidaHasta 0,
+     o sea HAMBRIENTA desde el primer segundo: el premio llegaba pidiendo. Y era absurdo por
+     partida doble, porque para domarla le acabás de dar un plato de la Cocina. Ese plato cuenta:
+     el bicho entra a la granja con su primer día de trabajo ya pago. */
+  G.doma = { bicho: especie, desde: nowMs(), comidaHasta: nowMs() + DOMA_COMIDA_H * 3600000, cont: 0, ultimo: null };
+  log("🐾 ¡" + nom + " bajó las orejas y te siguió a casa! Vive en tu granja: dale 1 carne por día y " + (DOMA_ROL_TXT[DOMA_ROL[especie]] || "trabaja") + " mientras no estés. El plato que le diste ya le cubre el primer día.", "gold");
   toast("🐾 ¡Domaste un " + nom + "!");
   if (typeof saveFarm === "function") saveFarm(true);
   return true;

@@ -13,7 +13,12 @@
 const fs = require("fs");
 const UI = fs.readFileSync("public/game/ui.js", "utf8");
 const HTML = fs.readFileSync("public/index.html", "utf8");
-const v2 = UI.slice(UI.indexOf("function refreshCookingV2"), UI.indexOf("function refreshCookingV2") + 6000);
+/* la ventana de lectura se corta en la función SIGUIENTE, no a tantos caracteres: cada vez que
+   refreshCookingV2 crecía un comentario, el recorte fijo se comía el final y tres contratos
+   fallaban sin que nadie hubiera roto nada (pasó el 24/8). */
+const _ini = UI.indexOf("function refreshCookingV2");
+const _fin = UI.indexOf("\nfunction ", _ini + 30);
+const v2 = UI.slice(_ini, _fin > 0 ? _fin : _ini + 12000);
 
 let fallos = 0;
 const ok = (n, c, d) => { if (!c) fallos++; console.log((c ? "  ok   " : "  FALLA") + "  " + n + (d ? "   " + d : "")); };
@@ -55,6 +60,19 @@ console.log("\nNO SE PERDIÓ NINGUNA ACCIÓN");
   ok("vender en plata", /data-cksell=/.test(v2) && /sellDish\(b\.dataset\.cksell, false\)/.test(v2));
   ok("vender en $Golden (desde Cocina 8)", /data-cksellg/.test(v2) && /lvl >= 8/.test(v2));
   ok("y el botón dice POR QUÉ no se puede", /Faltan ingredientes/.test(v2) && /Ollas ocupadas/.test(v2) && /Cocina nivel/.test(v2));
+}
+
+console.log("\nLA FLECHA DEL TUTORIAL SIGUE TENIENDO DÓNDE POSARSE");
+{
+  /* 24/8: los pasos "cociná una Papa Asada" apuntan a [data-cook='<id>'], que en la lista vieja
+     era el botón Cocinar. Acá ese botón solo existe para la receta señalada, así que la marca
+     viaja: en el ícono mientras no está elegida, en el botón cuando ya lo está. Sin esto la
+     flecha se apaga sin decir nada — y el jugador nuevo se queda mirando la ventana. */
+  ok("el ícono lleva la marca mientras NO está elegido", /id === _ckSel \? "" : ' data-cook="' \+ id \+ '"'/.test(v2));
+  ok("y el botón Cocinar la lleva cuando sí", /data-ckcook="' \+ _ckSel \+ '" data-cook="' \+ _ckSel \+ '"/.test(v2));
+  const ST = fs.readFileSync("public/game/state.js", "utf8");
+  ["papa_asada", "estofado"].forEach(id =>
+    ok("el paso « " + id + " » del tutorial sigue apuntando ahí", ST.includes("[data-cook='" + id + "']")));
 }
 
 console.log("\nLA VENTANA NO CAMBIA DE TAMAÑO (regla de la casa)");

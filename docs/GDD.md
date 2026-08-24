@@ -250,7 +250,15 @@ El tablón de pedidos tenía tres escalones — 3 diarios (10 % de la producció
 
 **El Horno: una cola, no un castigo (24/8)**
 
-Tres reportes de dirección salían del mismo sitio: los tablones aparecían en la bolsa sin esperar, su reloj era ridículo (6 segundos) y el botón ×5 no hacía nada. La causa era una sola — el Horno entregaba el material EN EL ACTO y ponía un enfriamiento para el clic siguiente: el reloj no era una fundición, era un castigo entre clics, y el ×5 moría chocando contra el enfriamiento que acababa de poner él mismo. Ahora el Horno funciona como las ollas de la Cocina: metés la pieza, ocupa uno de sus TRES lugares, y el material entra a la bolsa CUANDO TERMINA. Los tiempos salen del escalón del material — 3 minutos el tablón y el bloque de piedra (el número que pidió dirección), +1 minuto por escalón para las barras: bronce 4, hierro 5, oro 6 — y el Horno nivel 2 sigue recortando su 40 %. La cola viaja en el guardado: se puede poner a fundir y cerrar el navegador. Con la bolsa llena la pieza espera al fuego en vez de perderse.
+Tres reportes de dirección salían del mismo sitio: los tablones aparecían en la bolsa sin esperar, su reloj era ridículo (6 segundos) y el botón ×5 no hacía nada. La causa era una sola — el Horno entregaba el material EN EL ACTO y ponía un enfriamiento para el clic siguiente: el reloj no era una fundición, era un castigo entre clics, y el ×5 moría chocando contra el enfriamiento que acababa de poner él mismo. Ahora el Horno funciona como las ollas de la Cocina: metés la pieza, ocupa uno de sus TRES lugares, y el material entra a la bolsa CUANDO TERMINA. La cola viaja en el guardado: se puede poner a fundir y cerrar el navegador. Con la bolsa llena la pieza espera al fuego en vez de perderse.
+
+**Los tiempos del Horno, y por qué pueden pesar (24/8 v2)**
+
+Dirección, sobre la primera tanda de tiempos: « esa parte de 3 en 3 me parece bien, pero yo le pondría más CD: puede ser simultáneo, pero debería durar mucho más que 2 minutos ». Antes de subirlos hay que decir qué son, porque es lo que decide cuánto pueden subir: **el reloj del Horno no es una palanca de economía**. La palanca es el mineral. Un tablón se come 3 maderas y un árbol repone 1 cada 30 minutos, así que juntar una hornada lleva HORAS contra los minutos que tarda el fuego: el Horno va detrás del nodo por un factor de diez y puede pesar mucho más sin frenar a nadie. Lo único que cambia es lo que se siente al mirarlo.
+
+La regla, entonces, se ata a un reloj que el jugador ya conoce: **el reloj de su nodo, dividido por las tres bocas del Horno**. Árbol 30 min → tablón 10. Roca 40 min → bloque de piedra 13. Las vetas de metal son de horas (el oro, 14 h), así que ahí la regla se corta sola y sigue la escalera de siempre, un escalón por tier: bronce 20, hierro 25, oro 30. El Horno nivel 2 sigue recortando su 40 %, y aun así el más rápido queda en 6 minutos: el triple del piso que marcó dirección. Lo verifica `tools/test-horno-cola.js`, que además comprueba que el fuego nunca se acerque al reloj del nodo.
+
+Y el botón del lote dice la verdad: contaba « ×5 » y encolaba 3, porque el Horno tiene tres bocas. Ahora cuenta los lugares libres y lo que alcanza con lo que tenés, y escribe ESE número. Un botón que promete cinco y hace tres no es un bug de la cola: es un botón que miente, y el jugador lo descubre después de apretarlo.
 
 **7. Edificios**
 
@@ -414,7 +422,23 @@ Capítulo honesto. Todo lo que sigue está medido o decidido, pero no implementa
 
 **13.1 La doma, para el tiempo offline**
 
-RESUELTO el 22/8 — la doma v1 está en el juego. Se abre en GRANJA 10 (« no debe estar disponible al principio »): al vencer un monstruo con sprite de granja (rata, larva, orco, lancero, guerrero, trol) hay un 8 % de que te siga a casa — un bicho a la vez, vive junto al establo. Come 1 CARNE por día (la carne por fin tiene gasto diario; panza de hasta 3 días) y con hambre se pone gris y no trabaja. Trabaja SOLO EN TU AUSENCIA: al cargar la partida recoge las cargas de árboles y rocas que maduraron entre tu última visita y ahora, deja siempre una carga esperándote, y SE QUEDA EL 30 % de comisión (el número del simulador: apertura en granja 10 ≈ 60 % del ancla contra el 32,5 % sin bicho). Minerales afuera, bolsa llena no pierde nada, el F5 no duplica (el turno drena el almacén de relojes igual que un talado). Queda para después: elegir a cuál domar, varios bichos, y que el arte de Suren les dé casita.
+RESUELTO el 22/8 — la doma v1 está en el juego. Se abre en GRANJA 10 (« no debe estar disponible al principio »): al vencer un monstruo con sprite de granja (rata, larva, orco, lancero, guerrero, trol), si llevás SU PLATO en la bolsa, hay una chance de que te siga a casa — un bicho a la vez, vive junto al establo. Come 1 CARNE por día (la carne por fin tiene gasto diario; panza de hasta 3 días) y con hambre se pone gris y no trabaja. Trabaja SOLO EN TU AUSENCIA: al cargar la partida recoge las cargas de árboles y rocas que maduraron entre tu última visita y ahora, deja siempre una carga esperándote, y SE QUEDA EL 30 % de comisión (el número del simulador: apertura en granja 10 ≈ 60 % del ancla contra el 32,5 % sin bicho). Minerales afuera, bolsa llena no pierde nada, el F5 no duplica (el turno drena el almacén de relojes igual que un talado). Queda para después: elegir a cuál domar, varios bichos, y que el arte de Suren les dé casita.
+
+**La suerte de la doma: el repago (24/8)**
+
+El diseñador propuso « que sea 1 de cada 100 puedes domar ». Antes de mover el número hay que ver lo que una doma YA cuesta, porque el precio son dos cosas y solo una se ve: la suerte y EL PLATO. Y los platos no se parecen — la Galletita de Cereza de la rata sale 12 de plata y el Costillar Ahumado del orco, 1.228. La escalera de platos ya separa los casos CIEN VECES. Un 1 % encima de eso dejaría al orco en 122.800 de plata: noventa y ocho días de su propio trabajo para comprar su propio trabajo. Ese número no protege la mecánica, la entierra.
+
+La regla que sí se sostiene es el REPAGO —en cuántos días de su propio trabajo se paga el ayudante— y es una BANDA, no un punto: **piso de 2 días** (menos que eso es regalarlo) y **techo de 10** (más que eso, nadie lo doma y la mecánica no existe). La primera versión de la regla pedía cinco días parejos para todos y el propio medidor la corrigió: emparejar un ayudante de 18 de plata/día con uno de 1.247 obligaría a hacer la RATA más difícil que el ORCO, al revés de lo que cualquiera espera del juego.
+
+| Bicho | Su plato | Suerte | Doma esperada | Se paga en |
+|---|---|---|---|---|
+| Rata (escarba lombrices) | Galletita de Cereza · 12 | 1 de cada 4 | 48 de plata | 2,7 días |
+| Larva (abona cultivos) | Papilla de Remolacha · 114 | 1 de cada 4 | 456 de plata | sin precio de lista |
+| Orco y los suyos (trabajan tus nodos) | Costillar Ahumado · 1.228 | 1 de cada 6 | 7.368 de plata | 5,9 días |
+
+Los brazos pasaron de 1 de cada 4 a 1 de cada 6 porque a 4 se pagaban en 3,9 días: cerca del piso para lo que rinden. La cuenta entera se re-mide en `tools/auditar-doma.js` — si mañana un ayudante engorda, su suerte tiene que bajar en el mismo commit.
+
+Y un arreglo que el diseñador encontró jugando (« la domé y tiene hambre · mi dios, pobrecita »): el bicho nacía con la panza en cero, o sea hambriento desde el primer segundo, con lo cual el premio llegaba pidiendo. Absurdo por partida doble, porque para domarlo le acababas de dar un plato. Ese plato ahora cuenta: entra a la granja con su primer día de trabajo ya pago.
 
 **13.2 El hueco de Ganadería entre los niveles 4 y 8**
 
@@ -460,9 +484,11 @@ Normas de diseño que vienen de decisiones de dirección y que conviene no reabr
 
 9.  Toda acción que el jugador dispara CONTESTA algo — un aviso, una línea del registro, un efecto o una ventana. Una acción que termina en silencio es el peor fallo posible: el jugador no puede diagnosticarla desde dentro del juego y concluye, con razón, que la mecánica está rota. Lo vigila tools/auditar-silencios.js, y solo se permite el silencio en guardas de catálogo (un id que no existe: bug de programación, no del jugador) que dejen rastro en la consola.
 
+10. Un clic sobre una ventana se queda en la ventana. Phaser engancha el pointerdown en la página entera, no solo en el lienzo, así que sin puerta un botón de la interfaz también pega un golpe en la granja de atrás — y ese golpe repinta la interfaz, que puede rehacerse ENTRE el apretar y el soltar y comerse el clic (así se rompió la Cocina nueva: « no me deja seleccionar · le doy clic y clickea en la grama »). La puerta es `clicDeInterfaz()` en config.js, va PRIMERA en cada escena, y ninguna vista se repinta si su contenido no cambió (patrón de firma). Lo vigila tools/test-clic-interfaz.js.
+
 **15. Cómo verificar lo que dice este documento**
 
-El proyecto tiene 81 pruebas automáticas y 17 auditores (122 herramientas en total). No comprueban que el código compile: comprueban que el JUEGO cumpla las reglas de arriba. Los más útiles para el diseñador:
+El proyecto tiene 82 pruebas automáticas y 18 auditores (126 herramientas en total). No comprueban que el código compile: comprueban que el JUEGO cumpla las reglas de arriba. Los más útiles para el diseñador:
 
 | **Herramienta**                 | **Qué contesta**                                            |
 | ------------------------------- | ----------------------------------------------------------- |

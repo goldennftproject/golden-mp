@@ -81,7 +81,33 @@ function enterGame() {
   // MODO TESTEO: comprime tiempos en memoria, solo cuando se activa a mano.
   try { if (typeof aplicarTesteo === "function") aplicarTesteo(); } catch (e) { console.warn(e); }
   loadPaso(LOAD_ETAPAS.ajustes, "Aplicando ajustes…");
-  try { await window.SAVE_READY; returning = await loadFarm(); } catch (e) { console.warn(e); }
+  /* 24/8 (dirección: « se queda ahí », con la barra clavada en 25 %). Este paso espera dos cosas
+     de RED —el login y la lectura de la granja— y ninguna tenía reloj. Una promesa que nunca se
+     resuelve deja el arranque colgado PARA SIEMPRE: no falla, no avanza, no dice nada. Es la
+     regla 9 aplicada a la puerta de entrada, y es la peor versión de todas, porque el jugador ni
+     siquiera llegó a entrar para poder diagnosticarlo.
+     Ahora la espera tiene reloj y voz: mientras espera, la pantalla cuenta los segundos (el
+     servidor gratis tarda en despertar y eso hay que decirlo, no disimularlo), y si se pasa del
+     tope, el arranque NO sigue de largo —seguir sería jugar sobre una granja vacía y guardarla
+     encima de la buena—: cae en la pantalla de "no se pudo cargar", que ya existe y no escribe
+     nada. Reintentar es del jugador. */
+  const ESPERA_MAX_S = 30;
+  let esperando = 0;
+  const reloj = setInterval(() => {
+    esperando++;
+    if (esperando >= 4) loadPaso(LOAD_ETAPAS.ajustes, "Despertando el servidor… " + esperando + " s");
+  }, 1000);
+  const conReloj = (p, etiqueta) => Promise.race([
+    Promise.resolve(p),
+    new Promise((_, rej) => setTimeout(() => rej(new Error("sin respuesta: " + etiqueta)), ESPERA_MAX_S * 1000)),
+  ]);
+  try {
+    await conReloj(window.SAVE_READY, "login");
+    returning = await conReloj(loadFarm(), "lectura de la granja");
+  } catch (e) {
+    console.warn(e);
+    if (/sin respuesta/.test(e && e.message || "")) { try { CARGA_FALLO = true; } catch (_) { window.CARGA_FALLO = true; } }
+  } finally { clearInterval(reloj); }
   try { if (typeof godHandSembrar === "function") godHandSembrar(G._ausenteMs || 0); } catch (e) { console.warn(e); }   // GOD HAND: siembra lo que quedó vacío
   try { if (typeof testeoDestapar === "function") testeoDestapar(); } catch (e) { console.warn(e); }   // repara bolsas desbordadas por el regalo viejo de testeo
   if (returning && window.NICK) enterGame();
@@ -93,6 +119,12 @@ function enterGame() {
     if (g) { g.style.display = "flex";
       const t = g.querySelector("h1, h2, .tit") || g.firstElementChild;
       if (t) t.textContent = "No se pudo cargar tu granja";
+      /* que la pantalla diga QUÉ pasó: sin esto, "no se pudo" y "se quedó colgado" se ven igual */
+      const sub = document.createElement("div");
+      sub.style.cssText = "font-size:13px;color:#cbbf9f;margin:6px 0 10px;max-width:340px;text-align:center";
+      sub.textContent = "El servidor no contestó a tiempo. Tu granja está a salvo: no se tocó nada. " +
+        "Suele ser el servidor despertando — probá de nuevo en un minuto.";
+      if (t && t.parentNode) t.parentNode.insertBefore(sub, t.nextSibling);
       const b = document.getElementById("enter");
       if (b) { b.textContent = "Reintentar"; b.onclick = () => location.reload(); }
       const n = document.getElementById("nick"); if (n) n.style.display = "none";

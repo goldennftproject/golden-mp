@@ -1,6 +1,20 @@
 /* Golden Farm · configuración compartida (layout en TILES, alineado a la grilla) */
 window.GF = window.GF || {};
 
+/* ¿ESTE CLIC ES DE LA INTERFAZ O DEL MUNDO? (24/8)
+   Phaser engancha el pointerdown en la VENTANA además del canvas, para no perder los clics que
+   empiezan o terminan fuera del lienzo. Efecto colateral: tocar un botón de un panel de HTML
+   también pega un golpe en la granja de atrás. La pregunta se contesta una sola vez y con el
+   evento nativo, que nunca miente: si el clic no nació en el canvas, es de la interfaz.
+   (Sin evento nativo —clics sintéticos de las pruebas— se lo toma como del mundo: es el que
+   estaba antes y así ningún test viejo cambia de significado.) */
+function clicDeInterfaz(pt) {
+  const ev = pt && pt.event; if (!ev) return false;
+  const t = ev.target;
+  return !!(t && t.nodeName && t.nodeName !== "CANVAS");
+}
+window.clicDeInterfaz = clicDeInterfaz;
+
 GF.TILE = 42;
 // 17/8 (dirección): "todo el corral, todos los edificios y todos los nodos deben estar más
 // comprimidos". Era 23x15 = 345 celdas para 73 de contenido: 21% de ocupación, con las filas

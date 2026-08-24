@@ -75,13 +75,48 @@ console.log("\nY CON UN BICHO YA EN CASA, TAMBIÉN LO DICE");
 
 console.log("\nLA PANZA: 1 CARNE = 24 H, TOPE 3 DÍAS, SIN CARNE NO HAY TRATO");
 {
+  /* 24/8 (diseñador: « la domé y tiene hambre · mi dios, pobrecita »): nacía con la panza en
+     cero, o sea hambriento desde el primer segundo — el premio llegaba pidiendo. Y encima
+     acababa de comerse el plato que le diste para domarlo. Ese plato cuenta como su primer día. */
+  ok("no nace con hambre: el plato de la doma le paga el primer día",
+    !ctx.domaHambriento() && Math.abs(G.doma.comidaHasta - (FakeDate.now() + 24 * H)) < 1000);
   G.res.carne = 0;
   ok("sin carne no come", !!ctx.domaAlimentar().error);
   G.res.carne = 5;
+  const antesPanza = G.doma.comidaHasta;
   ok("come 1 carne", ctx.domaAlimentar().ok === true && Math.floor(G.res.carne) === 4);
-  ok("y trabaja 24 h", Math.abs(G.doma.comidaHasta - (FakeDate.now() + 24 * H)) < 1000);
-  ctx.domaAlimentar(); ctx.domaAlimentar();
+  ok("y cada carne suma 24 h a lo que ya tenía", Math.abs(G.doma.comidaHasta - (antesPanza + 24 * H)) < 1000,
+    Math.round((G.doma.comidaHasta - FakeDate.now()) / H) + " h de panza");
+  ctx.domaAlimentar();
   ok("la panza guarda hasta 3 días", !!ctx.domaAlimentar().error, "carne restante " + G.res.carne);
+}
+
+console.log("\nLA SUERTE SE DERIVA DEL REPAGO (24/8; el diseñador proponía 1 de cada 100)");
+{
+  /* Regla: el REPAGO —en cuántos días de su propio trabajo se paga el ayudante— cae en una banda
+     de 2 a 10 días. El plato ya separa los casos cien veces (12 la galletita, 1.228 el costillar)
+     y la suerte termina de acomodar. La cuenta completa vive en tools/auditar-doma.js. */
+  const CH = vm.runInContext("DOMA_CHANCE_ROL", ctx);
+  const R = vm.runInContext("RECIPE_DEF", ctx), C = vm.runInContext("CROP_DEF", ctx), PR = vm.runInContext("PRICE", ctx);
+  const costo = (res) => Object.keys(res).reduce((a, k) => a + ((C[k] ? C[k].price : PR[k]) || 0) * res[k], 0);
+  const RENTA = { rata: 18, brazos: 1247 };   // plata/día de cada ayudante (ver auditar-doma.js)
+  const repago = (rol, plato) => (costo(R[plato].res) / CH[rol]) / RENTA[rol];
+
+  ok("la rata sigue en 1 de cada 4 (es el ayudante de entrada)", CH.rata === 0.25);
+  ok("el orco y los suyos, más difíciles: 1 de cada 6", Math.round(1 / CH.brazos) === 6);
+  ok("el que produce más es el más difícil", CH.brazos < CH.rata);
+  ok("y el aviso dice la suerte de ESE bicho, no una fija",
+    ctx.domaChanceTxt("rata") === "1 de cada 4" && ctx.domaChanceTxt("orco") === "1 de cada 6");
+
+  const rRata = repago("rata", "galletita_cereza"), rOrco = repago("brazos", "bocado_domador");
+  ok("la rata no sale gratis ni es inalcanzable (2-10 días)", rRata >= 2 && rRata <= 10, rRata.toFixed(1) + " días");
+  ok("el orco tampoco", rOrco >= 2 && rOrco <= 10, rOrco.toFixed(1) + " días");
+  ok("y el que más produce tarda más en pagarse", rOrco > rRata,
+    rRata.toFixed(1) + " vs " + rOrco.toFixed(1) + " días");
+  /* y el número que proponía el diseñador, medido: por qué no */
+  const cien = (costo(R.bocado_domador.res) / 0.01) / RENTA.brazos;
+  ok("a 1 de cada 100 el orco tardaría más de 60 días en pagarse (por eso no)", cien > 60,
+    Math.round(cien) + " días · " + Math.round(costo(R.bocado_domador.res) / 0.01) + " de plata");
 }
 
 console.log("\nEL TURNO: SOLO LO MADURADO EN TU AUSENCIA, COMISIÓN 30%, EL NODO SIGUE VIVO");

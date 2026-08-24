@@ -114,6 +114,7 @@ class ForestScene extends Phaser.Scene {
 
     // clic izquierdo: ir hacia el monstruo (y fijarlo) o moverse · clic DERECHO: atacar (detalles 338)
     this.input.on("pointerdown", (pt) => {
+      if (clicDeInterfaz(pt)) return;   // 24/8: un clic sobre un panel no manda al granjero a caminar (ver config.js)
       if (GF.uiOpen) return;
       const wx = pt.worldX, wy = pt.worldY;
       let hit = null, bd = 1e9;

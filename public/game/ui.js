@@ -197,7 +197,15 @@ function refreshStam() {
      recarga que no se ve avanzar parece rota. */
   if (typeof stamFullEn === "function") {
     const falta = (v < mx) ? stamFullEn() : 0;
-    pill.title = falta > 0 ? "Se llena entera en " + fmtDur(falta) : "Estamina al máximo";
+    /* 24/8 (dirección: « ¿le pusiste 1 h o 4 h? »). El cartel decía "se llena entera en 1 h 1 min"
+       con la barra casi vacía, y desde afuera eso parece una recarga de una hora. Son las 4 h:
+       lo que faltaba era decir DE DÓNDE sale ese número. El reloj arranca cuando gastás la
+       primera estamina y, cuatro horas después, la barra vuelve entera de una sola vez — no gotea.
+       El cartel ahora cuenta las dos cosas: cuánto falta y cuál es la regla. */
+    pill.title = falta > 0
+      ? "Vuelve entera (" + mx + ") en " + fmtDur(falta) + " · recarga completa cada " +
+        (typeof STAM_FULL_H !== "undefined" ? STAM_FULL_H : 4) + " h, contadas desde la primera que gastaste"
+      : "Estamina al máximo";
   }
 }
 function refreshCombatBar() {   // doc maestro 2/8: insignia de nivel + relleno dorado + "XP actual / necesaria"
@@ -847,8 +855,19 @@ function refreshTools() { refreshForge(); }   // compatibilidad con llamadas vie
 function refreshHorno() {
   const box = $("horno-mats"); if (!box) return;
   /* 24/8: el Horno pasó a ser una COLA (como las ollas). Primero lo que está al fuego con su
-     reloj, después la lista de lo que se puede fundir. El tick de arriba entrega lo terminado. */
+     reloj, después la lista de lo que se puede fundir. El tick de arriba entrega lo terminado.
+     24/8 v2 — LA VENTANA SE PARTE EN DOS PEDAZOS con su propio repintado, y no es cosmético:
+     el reloj de la cola repinta cada segundo, y rehacer el HTML debajo del cursor MATA el clic
+     en curso (el navegador solo dispara `click` si el apretar y el soltar caen en el mismo
+     elemento). Con todo junto, uno de cada tantos clics en "Fundir" se perdía. Ahora arriba va
+     la cola, que no tiene botones y puede repintarse a gusto, y abajo la lista de fundibles,
+     que solo se rehace cuando CAMBIA de verdad. Mismo patrón de firma que la Cocina. */
   if (typeof checkHorno === "function") checkHorno();
+  let elCola = box.querySelector(".hn-cola"), elLista = box.querySelector(".hn-lista");
+  if (!elCola || !elLista) {
+    box.innerHTML = '<div class="hn-cola"></div><div class="hn-lista"></div>';
+    elCola = box.querySelector(".hn-cola"); elLista = box.querySelector(".hn-lista");
+  }
   const cola = (typeof hornoList === "function") ? hornoList() : [];
   let html = "";
   if (cola.length) {
@@ -864,19 +883,37 @@ function refreshHorno() {
     }).join("");
     html += '<div class="secc">Fundir</div>';
   }
+  elCola.innerHTML = html;
+
+  /* --- lo que se puede fundir. El botón del LOTE dice cuántos van a entrar de verdad --- */
+  /* 24/8 (diseñador: « dice craft 5 y craftea 3; o craftea de 5 en 5 o dice craftear 3 »).
+     Craftear de 5 en 5 querría un horno de 5 bocas, y las tres son a propósito. Así que manda
+     la boca: el botón cuenta los lugares libres y lo que alcanza con lo que tenés, y escribe
+     ESE número. Un botón que promete cinco y hace tres no es un bug de la cola: es un botón
+     que miente, y el jugador lo descubre después de apretarlo. */
+  let lista = "";
   MAT_ORDER.forEach(id => {
     const md = MAT_DEF[id], cs = Object.keys(md.cost).map(k => resIc(k) + " " + md.cost[k]).join(" · ");
-    const puede = canAfford(md.cost) && hornoLibres() > 0;
-    const btn = '<button class="green sm" ' + (puede ? "" : "disabled") + ' data-mat="' + id + '">Fundir</button>'
-      + '<button class="green sm" ' + (puede ? "" : "disabled") + ' data-mat5="' + id + '" title="Poner hasta 5 al fuego (hasta llenar el horno)">×5</button>';
-    html += '<div class="forge-row"><div class="fic"><img src="' + GF.spr(md.sprite) + '"></div><div class="finfo"><div class="fnm">' + md.label + '</div>' +
-      '<div class="fds">Tenés ' + fmt(G.res[id] || 0) + ' · Costo: ' + cs + ' · tarda ' + Math.round(matCdMs(id) / 60000) + ' min</div>' +
+    const libres = (typeof hornoLibres === "function") ? hornoLibres() : 1;
+    const alcanza = Math.min.apply(null, Object.keys(md.cost).map(k => Math.floor((G.res[k] || 0) / md.cost[k])));
+    const lote = Math.max(0, Math.min(libres, alcanza));
+    const puede = lote >= 1;
+    let btn = '<button class="green sm" ' + (puede ? "" : "disabled") + ' data-mat="' + id + '">Fundir</button>';
+    if (lote >= 2) btn += '<button class="green sm" data-mat5="' + id + '" data-lote="' + lote +
+      '" title="Llenar el horno: ' + lote + ' al fuego de una">×' + lote + '</button>';
+    const porqueNo = libres <= 0 ? " · el horno está lleno" : (alcanza < 1 ? " · te faltan materiales" : "");
+    html = '<div class="forge-row"><div class="fic"><img src="' + GF.spr(md.sprite) + '"></div><div class="finfo"><div class="fnm">' + md.label + '</div>' +
+      '<div class="fds">Tenés ' + fmt(G.res[id] || 0) + ' · Costo: ' + cs + ' · tarda ' + Math.round(matCdMs(id) / 60000) + ' min' + porqueNo + '</div>' +
       '</div><div class="fbtns">' + btn + '</div></div>';
+    lista += html;
   });
   if (cola.length && !window._hornoCdTick) { window._hornoCdTick = setTimeout(() => { window._hornoCdTick = null; if (isOpen("ov-horno")) refreshHorno(); }, 1000); }
-  box.innerHTML = html;
-  box.querySelectorAll("[data-mat]").forEach(b => b.onclick = () => craftMat(b.dataset.mat));
-  box.querySelectorAll("[data-mat5]").forEach(b => b.onclick = () => craftLote(craftMat, b.dataset.mat5, 5));
+  if (elLista._firma !== lista) {   // solo se rehace si cambió: así ningún tick se come un clic
+    elLista._firma = lista;
+    elLista.innerHTML = lista;
+    elLista.querySelectorAll("[data-mat]").forEach(b => b.onclick = () => craftMat(b.dataset.mat));
+    elLista.querySelectorAll("[data-mat5]").forEach(b => b.onclick = () => craftLote(craftMat, b.dataset.mat5, +b.dataset.lote || 5));
+  }
 }
 
 /* ---- cofre depósito: guardar/sacar pilas (detalles 29/7) ---- */
@@ -1000,14 +1037,32 @@ function refreshCookingV2() {
   /* --- el recetario: una grilla de íconos, por nivel --- */
   const orden = RECIPE_ORDER.slice().sort((a, b) => (RECIPE_DEF[a].lvl || 1) - (RECIPE_DEF[b].lvl || 1));
   if (!_ckSel || !RECIPE_DEF[_ckSel]) _ckSel = orden[0];
-  grid.innerHTML = orden.map(id => {
-    const r = RECIPE_DEF[id], locked = r.lvl && lvl < r.lvl;
-    const own = Math.floor((G.dishes && G.dishes[id]) || 0);
-    return '<div class="ck-rec' + (locked ? " locked" : "") + (id === _ckSel ? " sel" : "") + '" data-ckrec="' + id + '" title="' + r.label + '">' +
-      ckIcono(r) + (locked ? '<span class="lv">' + r.lvl + '</span>' : "") +
-      (own > 0 ? '<span class="n">' + fmt(own) + '</span>' : "") + '</div>';
-  }).join("");
-  grid.querySelectorAll("[data-ckrec]").forEach(el => el.onclick = () => ckElegir(el.dataset.ckrec));
+  /* 24/8 — la grilla se rehace SOLO si cambió (firma, el patrón de la casa). Motivo doble: el
+     reloj de las ollas repinta cada segundo, y rehacer el HTML debajo del cursor MATA el clic
+     en curso — el navegador solo dispara `click` si el apretar y el soltar caen en el mismo
+     elemento. Con el reloj corriendo, una de cada tantas veces la receta no se dejaba elegir.
+     (El otro lado del mismo bug —el golpe al mundo que provocaba el repintado— se cerró en
+     config.js: clicDeInterfaz.) */
+  const firma = lvl + "|" + _ckSel + "|" + orden.map(id => id + ":" + Math.floor((G.dishes && G.dishes[id]) || 0)).join(",");
+  if (grid._firma !== firma) {
+    grid._firma = firma;
+    grid.innerHTML = orden.map(id => {
+      const r = RECIPE_DEF[id], locked = r.lvl && lvl < r.lvl;
+      const own = Math.floor((G.dishes && G.dishes[id]) || 0);
+      /* 24/8 — LA FLECHA DEL TUTORIAL. Los pasos "cociná una Papa Asada" apuntan a
+         [data-cook='papa_asada'], que en la lista vieja era el botón Cocinar. En la vista de dos
+         paneles ese botón solo existe para la receta SEÑALADA, así que la flecha se quedaba sin
+         destino y desaparecía sin decir nada (lo cazó test-tuto-flecha, no un jugador).
+         La marca ahora viaja con el paso siguiente: mientras la receta no está elegida, vive en
+         su ícono ("tocá esta"); cuando ya lo está, en el botón Cocinar ("dale"). Un solo
+         selector, dos momentos, y la cadena de flechas del tutorial sigue funcionando. */
+      return '<div class="ck-rec' + (locked ? " locked" : "") + (id === _ckSel ? " sel" : "") + '" data-ckrec="' + id + '"' +
+        (id === _ckSel ? "" : ' data-cook="' + id + '"') + ' title="' + r.label + '">' +
+        ckIcono(r) + (locked ? '<span class="lv">' + r.lvl + '</span>' : "") +
+        (own > 0 ? '<span class="n">' + fmt(own) + '</span>' : "") + '</div>';
+    }).join("");
+    grid.querySelectorAll("[data-ckrec]").forEach(el => el.onclick = () => ckElegir(el.dataset.ckrec));
+  }
 
   /* --- el detalle: solo el plato señalado, en columnas de número --- */
   const r = RECIPE_DEF[_ckSel];
@@ -1035,7 +1090,7 @@ function refreshCookingV2() {
   d += '<div class="acc">';
   if (locked) d += '<button class="green sm" disabled>Cocina nivel ' + r.lvl + '</button>';
   else if (cookFree() <= 0) d += '<button class="green sm" disabled>Ollas ocupadas</button>';
-  else d += '<button class="green sm" ' + (canCook(_ckSel) ? "" : "disabled") + ' data-ckcook="' + _ckSel + '">' + (canCook(_ckSel) ? "Cocinar" : "Faltan ingredientes") + '</button>';
+  else d += '<button class="green sm" ' + (canCook(_ckSel) ? "" : "disabled") + ' data-ckcook="' + _ckSel + '" data-cook="' + _ckSel + '">' + (canCook(_ckSel) ? "Cocinar" : "Faltan ingredientes") + '</button>';
   if (own > 0 && r.plata) d += '<button class="sm" data-cksell="' + _ckSel + '">Vender · ' + fmt(vPlata) + '</button>';
   if (own > 0 && r.goldenP && lvl >= 8) d += '<button class="sm" data-cksellg="' + _ckSel + '">Vender · ' + r.goldenP + ' $G</button>';
   d += '</div>';

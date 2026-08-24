@@ -464,6 +464,21 @@ class FarmScene extends Phaser.Scene {
 
     // clic: si pegás a un objeto, caminá hacia él e interactuá; si no, movete al punto
     this.input.on("pointerdown", (pt) => {
+      /* 24/8 (diseñador, sobre la Cocina nueva): « tiene un bug, no me deja seleccionar · le doy
+         clic y clickea en la grama o al edificio detrás ».
+         Y el que atravesaba no era el de la Cocina: era CUALQUIER clic sobre CUALQUIER ventana.
+         Phaser 3 no escucha solo en el canvas — también engancha el pointerdown en la ventana
+         entera, para no perderse los clics que empiezan o terminan fuera del lienzo. Así que un
+         clic sobre un panel de HTML hacía DOS cosas a la vez: lo suyo, y un golpe en el mundo.
+         Casi siempre pasaba desapercibido (el mundo respondía a algo que el panel tapaba), pero
+         en la Cocina se volvió visible y encima se comió el clic: el golpe del mundo repinta la
+         interfaz, la grilla se rehace ENTRE apretar y soltar, y el `click` del navegador —que
+         necesita el mismo elemento en las dos puntas— no llega a existir. De ahí el "no me deja
+         seleccionar" y el "clickea en la grama": el mismo bug, contado por sus dos mitades.
+         El arreglo va en la puerta y no en cada panel: si el evento NATIVO no nació en el
+         lienzo, no es del mundo. Se recuerda para que el soltar siga al apretar. */
+      if (clicDeInterfaz(pt)) { this.downEnUI = true; return; }
+      this.downEnUI = false;
       this.ultimaAccion = nowMs();   // 14/8: cualquier clic = jugador activo (las mariposas señalan solo al "perdido")
       /* 21/8 (diseñador: "con doce semillas, el clic derecho planta la última en vez de abrir la
          rueda"). El culpable: pt.rightButtonDown() lee pointer.buttons, y según la versión de
@@ -671,6 +686,10 @@ class FarmScene extends Phaser.Scene {
       }
     });
     this.input.on("pointerup", (pt) => {
+      /* el soltar sigue al apretar: si el clic empezó en un panel, su final tampoco es del mundo.
+         (Se mira el apretar y no el target del soltar a propósito: un arrastre de cámara que
+         termina con el cursor encima del HUD sí tiene que cerrarse acá.) */
+      if (this.downEnUI) { this.downEnUI = false; return; }
       if (this.editHl) this.editHl.setVisible(false);
       if (this.lance) { this.lanceHold = false; return; }   // 22/8 PESCA v2: soltar deja caer la zona
       // 13/8: modo COLOCAR — si el clic no fue un paneo, se coloca en la celda al SOLTAR
