@@ -9,6 +9,16 @@ const PORT = Number(process.env.PORT) || 2567;
 
 const app = express();
 
+/* ===================== EL ARRANQUE PESA UN MEGA (24/8, dirección) =====================
+   « Sigue tardando en entrar a la granja, algo se ha roto ahí en el inicio. »
+   Y era verdad, aunque no se rompió de golpe: se fue rompiendo. El juego son 1.186 KB de
+   JavaScript y el servidor los mandaba TAL CUAL, sin comprimir. Con gzip son 393: estábamos
+   enviando tres veces lo necesario en cada carga. Mientras el código era chico daba igual;
+   hoy state.js solo pesa 432 KB y el bulto se nota.
+   Comprimir es una línea y no cambia nada del juego. Va ANTES del static, que es el que sirve
+   los archivos: si va después, no lo toca. */
+app.use(require("compression")());
+
 // CORS: permite que el cliente alojado en Vercel (otro dominio) haga el
 // matchmaking contra este servidor en Render.
 app.use((req, res, next) => {
@@ -47,7 +57,16 @@ app.get("/events", (req, res) => {
 app.use(express.static(path.join(__dirname, "..", "public"), {
   etag: true,
   setHeaders: (res, filePath) => {
-    if (/\.(js|html|css)$/.test(filePath)) res.setHeader("Cache-Control", "no-cache");
+    /* 24/8 — el no-cache de los .js costaba una ida y vuelta POR ARCHIVO en cada carga, solo
+       para que el server contestara "no cambió". Doce archivos, doce viajes de saludo antes de
+       que corriera una línea del juego. Y era innecesario desde el día que el cargador les puso
+       ?b=GF_BUILD: la dirección YA cambia en cada deploy, así que el navegador no puede reusar
+       un archivo viejo aunque lo guarde para siempre. Con ?b= presente se cachea de verdad
+       (immutable = ni siquiera pregunta); sin ?b=, se sigue revalidando como antes, que es la
+       red de seguridad para cualquier .js que alguien pida a mano. */
+    const conBuild = !!(res.req && res.req.query && res.req.query.b);
+    if (/\.js$/.test(filePath) && conBuild) res.setHeader("Cache-Control", "public, max-age=31536000, immutable");
+    else if (/\.(js|html|css)$/.test(filePath)) res.setHeader("Cache-Control", "no-cache");
     else if (/\.(png|jpg|gif|webp)$/.test(filePath)) res.setHeader("Cache-Control", "public, max-age=86400");   // imágenes: 1 día de caché (alivia al server free)
   },
 }));

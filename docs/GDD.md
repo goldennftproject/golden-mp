@@ -12,6 +12,18 @@ Documento de Diseño de Juego
 
 *Reglas nuevas de la casa, que son las que evitan que esto se repita:* la **regla 9** (toda acción contesta algo: una acción muda es el peor fallo posible, porque el jugador no puede diagnosticarla desde dentro del juego) y la **regla 10** (un clic sobre una ventana se queda en la ventana). Cada una tiene su medidor: `auditar-silencios.js` y `test-clic-interfaz.js`.
 
+**Entrar a la granja: 1.186 KB → 400 KB (24/8)**
+
+Dirección: « sigue tardando en entrar a la granja, algo se ha roto ahí en el inicio ». No se rompió de golpe — se fue rompiendo, que es peor, porque así no lo cazó nadie. El juego son doce archivos de JavaScript y hoy pesan 1.186 KB entre todos; el arranque llevaba tres impuestos encima, ninguno de ellos del juego:
+
+  - **El servidor los mandaba sin comprimir.** Con gzip son 400 KB: viajaba el triple de lo necesario, en cada carga, para todos.
+
+  - **El cargador los pedía en fila**, cada uno esperando al anterior: doce idas y vueltas al servidor puestas una detrás de otra antes de que corriera la primera línea del juego. Eso no se arregla comprimiendo — son viajes, no bytes. Ahora el navegador se entera de los doce de una y los baja en paralelo; el orden de ejecución sigue siendo uno por vez, porque `config` define lo que `state` usa.
+
+  - **Los `.js` iban con `no-cache`**, o sea una ida y vuelta por archivo en cada carga solo para que el servidor contestara « no cambió » — innecesario desde el día que el cargador les puso `?b=GF_BUILD`, que cambia en cada deploy y ya hace imposible reusar código viejo. Ahora se cachean de verdad: la segunda carga de un mismo build no pide nada.
+
+Como el sello del build pasó a ser lo único que avisa que hay código nuevo, ahora lleva **segundos** y no solo minutos: dos deploys dentro del mismo minuto compartían sello y el segundo no le llegaba a quien ya había cargado el primero. Todo esto lo fija `tools/test-arranque-peso.js`, que además **vigila el peso**: el bulto crece solo, un comentario por vez, y si algún día pasa de 460 KB comprimidos, la suite se pone roja antes de que lo note un jugador.
+
 Para el equipo de diseño
 
 *Todas las cifras de este documento están extraídas del código en ejecución,*
@@ -494,7 +506,7 @@ Normas de diseño que vienen de decisiones de dirección y que conviene no reabr
 
 **15. Cómo verificar lo que dice este documento**
 
-El proyecto tiene 83 pruebas automáticas y 18 auditores (127 herramientas en total). No comprueban que el código compile: comprueban que el JUEGO cumpla las reglas de arriba. Los más útiles para el diseñador:
+El proyecto tiene 84 pruebas automáticas y 18 auditores (128 herramientas en total). No comprueban que el código compile: comprueban que el JUEGO cumpla las reglas de arriba. Los más útiles para el diseñador:
 
 | **Herramienta**                 | **Qué contesta**                                            |
 | ------------------------------- | ----------------------------------------------------------- |

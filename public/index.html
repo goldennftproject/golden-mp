@@ -1277,6 +1277,25 @@
     const GF_BUILD = "20260824-1912";
     const files = ["game/config.js","game/nav.js","game/audio.js","game/state.js","game/save.js","game/ui.js","game/boot.js",
                    "game/farm.js","game/forest.js","game/plaza.js","game/main.js","game/update.js"];
+    /* 24/8 — SE BAJAN TODOS A LA VEZ, SE EJECUTAN EN FILA (dirección: « sigue tardando en
+       entrar »). El cargador de abajo pide un archivo, espera a que llegue, pide el siguiente:
+       doce idas y vueltas al servidor PUESTAS UNA DETRÁS DE OTRA antes de que corra la primera
+       línea del juego. Con el servidor lejos, eso es medio segundo largo de puro saludo, y no se
+       arregla comprimiendo: son viajes, no bytes.
+       El orden de ejecución SÍ importa (config define lo que state usa, y así con todos), y por
+       eso la fila de abajo se queda como está. Lo que cambia es que el navegador se entera de
+       los doce AHORA y los baja en paralelo: cuando el cargador llegue al noveno, ya lo tiene.
+       Es un aviso, no una carga: si el preload no existiera en un navegador viejo, todo sigue
+       funcionando exactamente igual, solo que más lento. */
+    try {
+      const cab = document.head || document.documentElement;
+      files.forEach(f => {
+        const l = document.createElement("link");
+        l.rel = "preload"; l.as = "script"; l.href = f + "?b=" + GF_BUILD;
+        cab.appendChild(l);
+      });
+    } catch (e) {}
+
     let i = 0;
     function next(retry) {
       if (i >= files.length) return;

@@ -10,6 +10,7 @@
   "dependencies": {
     "@colyseus/schema": "^2.0.0",
     "colyseus": "^0.15.17",
+    "compression": "^1.8.1",
     "express": "^4.19.2"
   },
   "devDependencies": {
