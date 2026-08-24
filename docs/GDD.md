@@ -2,9 +2,15 @@
 
 Documento de Diseño de Juego
 
-*Estado real del código · 22 de agosto de 2026 · revisión 3*
+*Estado real del código · 24 de agosto de 2026 · revisión 4*
 
-*Novedades de esta revisión: las CARGAS de los nodos (el árbol guarda hasta 4 talados; la partida cobra el doble del ancla), la picada de mineral a rendimiento 2, la expansión 3 sin muro y los edificios tardíos abaratados, el establo que crece un lugar por nivel de Ganadería, el techo de oficios derivado del contenido, el PORTERO del guardado en producción (bitácora + puerta vieja sellada), la cuenta por email, la ESCALERA DE CULTIVOS EN DOS CARRILES (nocturnos desde el nivel 2), el MERCADER GOBLIN (un trueque anclado por día), los LOGROS con premio (pestaña 🏆), y la MISIÓN DE EVENTO del tablón (viernes a domingo), la PESCA v2 con el sistema de Fishing Frenzy (burbujas, anzuelo y zona de captura), el DÍA que cicla a las 00:00 UTC (21:00 Argentina, estándar web3), la noche azulada, la COCINA re-sincronizada con los dos carriles (auditoría integral del 22/8), LA DOMA (un monstruo domado atiende los nodos en tu ausencia; cada especie con su oficio y su plato), y LAS CARTAS DEL ABUELO — el lore del juego (docs/LORE.md) entregado de a una carta por nivel de granja, del 2 al 20.*
+**Qué cambió desde la revisión 3 (22/8)**
+
+*Cosas nuevas para jugar:* el MERCADER GOBLIN (un trueque anclado por día, aparece al terminar el tutorial), los LOGROS con premio (pestaña 🏆), el ÁLBUM DE LA GRANJA (la colección de primeras veces, pestaña 📖), la MISIÓN DE EVENTO del tablón (viernes a domingo, cartel violeta propio), la PESCA v2 con el sistema de Fishing Frenzy (burbujas, anzuelo a tiempo y zona de captura; un clic tira, cada tirada es un gusano), LA DOMA con su plato por especie y su oficio (« la rata no va a talar »), y LAS CARTAS DEL ABUELO — el lore del juego (docs/LORE.md) entregado de a una carta por nivel de granja, del 2 al 20.
+
+*Cosas que cambiaron de fondo:* el DÍA cicla a las 00:00 UTC (21:00 en Argentina, el estándar web3) y la noche es azulada, no solo oscura; el HORNO pasó de enfriamiento a COLA de tres bocas, con tiempos atados al reloj del nodo que da su ingrediente; los PICOS se eligen solos al clicar el recurso (el de oro nunca se gasta en una roca); la ESTAMINA se recarga entera cada 4 horas por reloj real; las EXPANSIONES 3, 6, 8, 10, 12, 14 y 16 traen veta de bronce o de oro; y la COCINA se rediseñó en dos paneles con recetario de íconos (referencia del diseñador: Sunflower Land) — se elige el plato mirando, no leyendo.
+
+*Reglas nuevas de la casa, que son las que evitan que esto se repita:* la **regla 9** (toda acción contesta algo: una acción muda es el peor fallo posible, porque el jugador no puede diagnosticarla desde dentro del juego) y la **regla 10** (un clic sobre una ventana se queda en la ventana). Cada una tiene su medidor: `auditar-silencios.js` y `test-clic-interfaz.js`.
 
 Para el equipo de diseño
 
