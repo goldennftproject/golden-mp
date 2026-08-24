@@ -24,7 +24,8 @@ ctx.localStorage = { getItem: () => null, setItem() {}, removeItem() {} };
 ctx.document = { getElementById: () => null, addEventListener() {}, querySelectorAll: () => [], querySelector: () => null, createElement: () => ({}) };
 vm.createContext(ctx);
 ["config", "nav", "state", "save"].forEach(f => vm.runInContext(fs.readFileSync("public/game/" + f + ".js", "utf8"), ctx));
-ctx.toast = () => {}; ctx.log = () => {};
+const avisos = [];
+ctx.toast = t => avisos.push(String(t)); ctx.log = t => avisos.push(String(t));
 ["isOpen", "refreshInv", "refreshHud", "saveFarm", "syncSlots", "refreshBarn", "recalcFarmLevel"].forEach(f => { if (!ctx[f]) ctx[f] = () => {}; });
 const G = ctx.G, H = 3600000;
 
@@ -35,6 +36,12 @@ console.log("\nLA PUERTA: GRANJA 10, EL PLATO FAVORITO DE CADA UNO, Y UN BICHO A
 {
   G.level = 9; G.doma = null; G.dishes = { bocado_domador: 5, galletita_cereza: 5, papilla_remolacha: 5 };
   ok("a granja 9 ni el 0,001 doma", ctx.domaIntentar("orco", () => 0.001) === false && G.dishes.bocado_domador === 5);
+  /* 24/8 — EL "NO" TIENE QUE HABLAR. El diseñador reportó: « intento tomar una rata con la
+     Galletita y no sale nada, ni si falla ni si acierta ». Cortaba en silencio por nivel. */
+  ok("y con el plato en la mano, el aviso DICE que falta granja " + 10,
+    avisos.some(a => /granja 10/i.test(a)), avisos.join(" · "));
+  ok("sin gastar el plato (no hubo intento, no se cobra)", G.dishes.bocado_domador === 5);
+  avisos.length = 0;
   G.level = 10;
   ok("el dragón no se doma (y no gasta plato)", ctx.domaIntentar("dragon", () => 0.001) === false && G.dishes.bocado_domador === 5);
   ok("al orco NO se lo doma con la galletita de la rata: pide SU Costillar",
@@ -55,6 +62,15 @@ console.log("\nLA PUERTA: GRANJA 10, EL PLATO FAVORITO DE CADA UNO, Y UN BICHO A
   ok("la galletita es calderilla (≤ 30) y el costillar pesa (≥ 300)", cg <= 30 && cc >= 300);
   ok("y cada descripción nombra a su bicho ('le encanta')",
     /orco/i.test(R.bocado_domador.desc) && /RATA/i.test(R.galletita_cereza.desc) && /LARVA/i.test(R.papilla_remolacha.desc));
+}
+
+console.log("\nY CON UN BICHO YA EN CASA, TAMBIÉN LO DICE");
+{
+  avisos.length = 0;
+  const antes = G.dishes.bocado_domador;
+  ok("no doma un segundo", ctx.domaIntentar("troll", () => 0.001) === false);
+  ok("y avisa que ya tenés uno", avisos.some(a => /ya ten[eé]s/i.test(a)), avisos.join(" · "));
+  ok("sin gastar el plato", G.dishes.bocado_domador === antes);
 }
 
 console.log("\nLA PANZA: 1 CARNE = 24 H, TOPE 3 DÍAS, SIN CARNE NO HAY TRATO");

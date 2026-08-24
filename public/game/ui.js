@@ -908,7 +908,20 @@ function refreshChest() {
 }
 
 /* ---- cocina (en la Granja) ---- */
+/* ============ LA COCINA EN DOS PANELES (24/8, referencia del diseñador) ============
+   « Copiar la cocina del SFL: sin mucha letra, con más imágenes. »
+   Antes era una lista de 20 filas con dos párrafos cada una — para elegir un plato había que
+   LEER. Ahora: a la izquierda el estado (las ollas al fuego con su reloj y el recetario como
+   grilla de íconos, con el stock que tenés en la esquina y el nivel que pide si está cerrada);
+   a la derecha, SOLO el plato señalado, con sus números en columna y el botón de la acción.
+   Los ingredientes que te faltan salen en rojo, así que la decisión se toma mirando, no leyendo.
+   La ventana NO cambia de tamaño al elegir otra receta (regla de la casa): el panel derecho
+   tiene alto mínimo y la grilla scrollea por dentro. */
+var _ckSel = null;   // la receta señalada en el panel derecho
+function ckElegir(id) { _ckSel = id; refreshCooking(); }
 function refreshCooking() {
+  const grid = $("ck-grid");
+  if (grid) return refreshCookingV2();
   const box = $("cook-list"); if (!box) return;
   const lvl = cookLevel(), xp = G.skills.cooking || 0;
   const nxt = COOK_LVLS[lvl + 1];
@@ -953,6 +966,85 @@ function refreshCooking() {
   box.querySelectorAll("[data-cook]").forEach(b => b.onclick = () => cook(b.dataset.cook));
   box.querySelectorAll("[data-selld]").forEach(b => b.onclick = () => sellDish(b.dataset.selld, false));
   box.querySelectorAll("[data-sellg]").forEach(b => b.onclick = () => sellDish(b.dataset.sellg, true));
+}
+
+/* el ícono de una receta: su sprite, y si no hay arte, su emoji (como en toda la casa) */
+function ckIcono(r, cls) {
+  return r.sprite
+    ? '<img src="' + GF.spr(r.sprite) + '" draggable="false" onerror="this.outerHTML=\'<span class=&quot;' + (cls || "emo") + '&quot;>' + (r.emoji || "🍲") + '</span>\'">'
+    : '<span class="' + (cls || "emo") + '">' + (r.emoji || "🍲") + '</span>';
+}
+function refreshCookingV2() {
+  const grid = $("ck-grid"), cola = $("ck-cola"), det = $("ck-detalle"); if (!grid) return;
+  const lvl = cookLevel(), xp = G.skills.cooking || 0, nxt = COOK_LVLS[lvl + 1];
+  const nv = $("ck-nivel");
+  if (nv) nv.textContent = "nivel " + lvl + (nxt != null ? " · " + fmt(xp) + "/" + fmt(nxt) + " XP" : " · maestra");
+  const oll = $("ck-ollas");
+  if (oll) oll.textContent = cookList().length + "/" + cookSlots() + (edif2("cocina") ? " · Cocina nv2: −" + EDIF2_COCINA + "%" : "");
+
+  /* --- las ollas: las llenas con su reloj, las libres como hueco punteado --- */
+  const lista = cookList().slice().sort((a, b) => a.endAt - b.endAt);
+  let h = "";
+  for (let i = 0; i < cookSlots(); i++) {
+    const c = lista[i];
+    if (!c) { h += '<div class="ck-olla"><span class="t">libre</span></div>'; continue; }
+    const r = RECIPE_DEF[c.id] || { emoji: "🍲" };
+    const left = Math.max(0, c.endAt - nowMs());
+    const pct = Math.round((1 - left / (c.total || 1)) * 100);
+    h += '<div class="ck-olla llena" title="' + (r.label || "") + '">' + ckIcono(r, "t") +
+      '<span class="t">' + fmtCorto(Math.ceil(left / 1000)) + '</span>' +
+      '<span class="b"><i style="width:' + pct + '%"></i></span></div>';
+  }
+  cola.innerHTML = h;
+
+  /* --- el recetario: una grilla de íconos, por nivel --- */
+  const orden = RECIPE_ORDER.slice().sort((a, b) => (RECIPE_DEF[a].lvl || 1) - (RECIPE_DEF[b].lvl || 1));
+  if (!_ckSel || !RECIPE_DEF[_ckSel]) _ckSel = orden[0];
+  grid.innerHTML = orden.map(id => {
+    const r = RECIPE_DEF[id], locked = r.lvl && lvl < r.lvl;
+    const own = Math.floor((G.dishes && G.dishes[id]) || 0);
+    return '<div class="ck-rec' + (locked ? " locked" : "") + (id === _ckSel ? " sel" : "") + '" data-ckrec="' + id + '" title="' + r.label + '">' +
+      ckIcono(r) + (locked ? '<span class="lv">' + r.lvl + '</span>' : "") +
+      (own > 0 ? '<span class="n">' + fmt(own) + '</span>' : "") + '</div>';
+  }).join("");
+  grid.querySelectorAll("[data-ckrec]").forEach(el => el.onclick = () => ckElegir(el.dataset.ckrec));
+
+  /* --- el detalle: solo el plato señalado, en columnas de número --- */
+  const r = RECIPE_DEF[_ckSel];
+  if (!r) { det.innerHTML = '<div class="ck-vacio">Elegí una receta</div>'; return; }
+  const locked = r.lvl && lvl < r.lvl;
+  const own = Math.floor((G.dishes && G.dishes[_ckSel]) || 0);
+  const vPlata = Math.round(dishPrice(r) * cookPot(r.lvl));
+  let d = '<div class="big">' + ckIcono(r, "emo") + '</div><div class="nm">' + r.label + '</div>';
+  /* ingredientes: lo que tenés contra lo que pide, y en rojo lo que falta */
+  if (r.fish) for (const k in r.fish) {
+    const t = Math.floor((G.fish && G.fish[k]) || 0), n = r.fish[k];
+    d += '<div class="ck-fila' + (t < n ? " falta" : "") + '"><span>' + fishIc(k) + '</span><b>' + t + "/" + n + '</b></div>';
+  }
+  if (r.res) for (const k in r.res) {
+    const t = Math.floor(G.res[k] || 0), n = r.res[k];
+    d += '<div class="ck-fila' + (t < n ? " falta" : "") + '"><span>' + resIc(k) + '</span><b>' + fmt(t) + "/" + n + '</b></div>';
+  }
+  d += '<div class="ck-fila"><span>⏱</span><b>' + fmtSecs(Math.round((r.cookS || 8) * (typeof cocinaFactor === "function" ? cocinaFactor() : 1))) + '</b></div>';
+  d += '<div class="ck-fila"><span>✨ XP</span><b>' + r.xp + '</b></div>';
+  if (r.heal) d += '<div class="ck-fila"><span>❤️</span><b>' + (r.heal >= 9999 ? "toda" : "+" + r.heal) + '</b></div>';
+  if (r.plata) d += '<div class="ck-fila"><span>' + coinIc("plata") + '</span><b>' + fmt(vPlata) + '</b></div>';
+  d += '<div class="ck-fila"><span>🎒 tenés</span><b>' + fmt(own) + '</b></div>';
+  const efecto = (typeof dishDesc === "function") ? dishDesc(r) : "";
+  if (efecto) d += '<div class="fds" style="font-size:10px;margin-top:4px">' + efecto + '</div>';
+  d += '<div class="acc">';
+  if (locked) d += '<button class="green sm" disabled>Cocina nivel ' + r.lvl + '</button>';
+  else if (cookFree() <= 0) d += '<button class="green sm" disabled>Ollas ocupadas</button>';
+  else d += '<button class="green sm" ' + (canCook(_ckSel) ? "" : "disabled") + ' data-ckcook="' + _ckSel + '">' + (canCook(_ckSel) ? "Cocinar" : "Faltan ingredientes") + '</button>';
+  if (own > 0 && r.plata) d += '<button class="sm" data-cksell="' + _ckSel + '">Vender · ' + fmt(vPlata) + '</button>';
+  if (own > 0 && r.goldenP && lvl >= 8) d += '<button class="sm" data-cksellg="' + _ckSel + '">Vender · ' + r.goldenP + ' $G</button>';
+  d += '</div>';
+  det.innerHTML = d;
+  det.querySelectorAll("[data-ckcook]").forEach(b => b.onclick = () => cook(b.dataset.ckcook));
+  det.querySelectorAll("[data-cksell]").forEach(b => b.onclick = () => sellDish(b.dataset.cksell, false));
+  det.querySelectorAll("[data-cksellg]").forEach(b => b.onclick = () => sellDish(b.dataset.cksellg, true));
+  /* el reloj de las ollas se mueve solo mientras la ventana esté abierta */
+  if (lista.length && !window._ckTick) window._ckTick = setTimeout(() => { window._ckTick = null; if (isOpen("ov-cocina")) refreshCooking(); }, 1000);
 }
 
 

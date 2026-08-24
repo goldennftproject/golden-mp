@@ -5729,18 +5729,39 @@ var DOMA_ROL_TXT = {
 var DOMA_RATA_HORAS = 8, DOMA_RATA_TOPE = 3;    // 1 lombriz cada 8 h de ausencia, tope 3 por vuelta (como los montículos: 3/día)
 var DOMA_LARVA_PCT = 0.15;                       // recorta el 15% del tiempo RESTANTE de cada cultivo en crecimiento
 function domaAbre() { return (typeof farmLevel === "function" ? farmLevel() : G.level || 1) >= DOMA_NIVEL; }
+/* 24/8 — EL INTENTO DE DOMA NO PUEDE SER MUDO. Reporte del diseñador: « estoy intentando tomar
+   una rata con la Galletita de Cereza y no sale nada: ni si falla, ni si acierta ».
+   La causa: la primera línea cortaba EN SILENCIO cuando faltaba el nivel de granja o cuando ya
+   tenías un bicho. El jugador con el plato correcto en la bolsa mataba la rata y no pasaba nada
+   — ni un mensaje —, que es exactamente la clase de fallo que no se puede diagnosticar desde
+   dentro del juego. Regla nueva: SI LLEVÁS EL PLATO CORRECTO, SIEMPRE hay respuesta. Y las dos
+   puertas que no dependen de la suerte (nivel y bicho ocupado) NO consumen el plato: no hubo
+   intento, así que no se cobra. */
 function domaIntentar(especie, rnd) {   // lo llama la Zona Negra al vencer
-  if (!domaAbre() || (G.doma && G.doma.bicho)) return false;
-  if (!DOMA_ESPECIES.includes(especie)) return false;
+  if (!DOMA_ESPECIES.includes(especie)) return false;   // este bicho no se doma: silencio, es lo normal
+  const nomBicho = (MONSTER_DEF[especie] && MONSTER_DEF[especie].label) || "bicho";
   // cada especie tiene SU plato — sin él no hay doma, y el que no lo conoce recibe la pista (1/día)
   const plato = DOMA_PLATO[DOMA_ROL[especie]] || DOMA_ITEM;
   const platoNom = (RECIPE_DEF[plato] && RECIPE_DEF[plato].label) || plato;
   if (Math.floor((G.dishes && G.dishes[plato]) || 0) < 1) {
     if (G._domaPistaDia !== dayStamp(0)) {
       G._domaPistaDia = dayStamp(0);
-      log("🐾 Ese " + ((MONSTER_DEF[especie] && MONSTER_DEF[especie].label) || "bicho") + " te miró con hambre antes de caer… En la Cocina dicen que a los suyos les encanta el " + platoNom.toUpperCase() + " (Cocina " + ((RECIPE_DEF[plato] && RECIPE_DEF[plato].lvl) || "?") + ").", "info");
+      log("🐾 Ese " + nomBicho + " te miró con hambre antes de caer… En la Cocina dicen que a los suyos les encanta el " + platoNom.toUpperCase() + " (Cocina " + ((RECIPE_DEF[plato] && RECIPE_DEF[plato].lvl) || "?") + ").", "info");
+      toast("🐾 Le gustaría un " + platoNom);
     }
     return false;
+  }
+  /* de acá para abajo el jugador SÍ trae el plato: cualquier "no" viene con su motivo */
+  if (G.doma && G.doma.bicho) {
+    const suyo = (MONSTER_DEF[G.doma.bicho] && MONSTER_DEF[G.doma.bicho].label) || "bicho";
+    log("🐾 Ese " + nomBicho + " olfateó tu " + platoNom + "… pero ya tenés un " + suyo + " en la granja. Solo cabe uno.", "warn");
+    toast("Ya tenés un " + suyo + " en casa");
+    return false;   // sin intento, sin cobro
+  }
+  if (!domaAbre()) {
+    log("🐾 Ese " + nomBicho + " se acercó a tu " + platoNom + " y dio media vuelta: tu granja todavía no tiene sitio para él. La doma abre a GRANJA NIVEL " + DOMA_NIVEL + " (tenés " + (typeof farmLevel === "function" ? farmLevel() : G.level || 1) + ").", "warn");
+    toast("La doma abre a granja " + DOMA_NIVEL);
+    return false;   // sin intento, sin cobro
   }
   G.dishes[plato] -= 1;   // se lo come, acepte o no: ya está servido
   if ((rnd || Math.random)() >= DOMA_CHANCE) {

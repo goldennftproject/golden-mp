@@ -319,6 +319,40 @@
   .gmi:hover{filter:brightness(1.15)}
   .gmi span.ic{font-size:15px;width:20px;text-align:center}
   .gmi b.key{margin-left:auto;font-size:11px;background:#161f12;border:1px solid #4a5a3a;color:#cbbf9f;border-radius:6px;padding:1px 6px}
+  /* 24/8: LA COCINA EN DOS PANELES (referencia del diseñador: Sunflower Land).
+     Menos letra, más íconos. Medidas FIJAS: elegir otra receta no mueve nada de sitio —
+     el panel derecho tiene alto mínimo y la grilla no cambia de tamaño (regla de la casa). */
+  .ck-wrap{display:flex;gap:10px;align-items:flex-start}
+  .ck-izq{flex:1 1 auto;min-width:0}
+  .ck-der{width:190px;flex:0 0 190px;background:rgba(20,28,16,.5);border:1px solid #3c4d31;border-radius:10px;padding:8px;min-height:322px;display:flex;flex-direction:column}
+  .ck-nivel{font-size:12px;color:#cbbf9f;font-weight:700}
+  .ck-tit{font-size:11px;color:#a9bd94;font-weight:800;letter-spacing:.5px;text-transform:uppercase;margin:6px 0 4px;display:flex;justify-content:space-between;align-items:center}
+  .ck-tit b{color:#cbbf9f;font-size:11px}
+  .ck-cola{display:flex;gap:6px;min-height:58px}
+  .ck-olla{width:54px;height:54px;border:2px dashed #3c4d31;border-radius:9px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;position:relative;background:rgba(20,28,16,.35)}
+  .ck-olla.llena{border-style:solid;border-color:#7fa356;background:rgba(127,163,86,.14)}
+  .ck-olla img{width:26px;height:26px;object-fit:contain;image-rendering:pixelated}
+  .ck-olla .t{font-size:9px;color:#cbbf9f;line-height:1}
+  .ck-olla .b{position:absolute;left:3px;right:3px;bottom:3px;height:3px;background:#161f12;border-radius:2px;overflow:hidden}
+  .ck-olla .b i{display:block;height:100%;background:#7fa356}
+  .ck-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(50px,1fr));gap:5px;max-height:236px;overflow-y:auto}
+  .ck-rec{position:relative;height:50px;border:1px solid #3c4d31;border-radius:8px;background:rgba(20,28,16,.5);display:flex;align-items:center;justify-content:center;cursor:pointer}
+  .ck-rec img{width:30px;height:30px;object-fit:contain;image-rendering:pixelated}
+  .ck-rec .emo{font-size:24px}
+  .ck-rec.sel{border-color:#ffd54a;box-shadow:0 0 0 1px #ffd54a inset}
+  .ck-rec.locked{opacity:.45}
+  .ck-rec .n{position:absolute;right:2px;bottom:1px;font-size:10px;font-weight:800;color:#f2ead5;text-shadow:0 1px 2px #000}
+  .ck-rec .lv{position:absolute;left:2px;top:1px;font-size:9px;font-weight:800;color:#8a5a1a;background:#e8dcc0;border-radius:4px;padding:0 3px}
+  .ck-der .nm{font-weight:800;font-size:13px;color:#f2ead5;text-align:center;line-height:1.15;min-height:30px}
+  .ck-der .big{text-align:center;margin:2px 0 6px}
+  .ck-der .big img{width:44px;height:44px;object-fit:contain;image-rendering:pixelated}
+  .ck-der .big .emo{font-size:38px}
+  .ck-fila{display:flex;justify-content:space-between;gap:6px;font-size:11px;color:#cbbf9f;padding:2px 0;border-bottom:1px solid rgba(60,77,49,.5)}
+  .ck-fila b{color:#f2ead5;font-weight:700}
+  .ck-fila.falta b{color:#d9534f}
+  .ck-der .acc{margin-top:auto;display:flex;flex-direction:column;gap:5px;padding-top:8px}
+  .ck-der .acc button{width:100%}
+  .ck-vacio{color:#6f7a60;font-size:11px;text-align:center;margin:auto 0}
   /* 23/8: EL ÁLBUM — láminas en grilla. La silueta y la revelada MIDEN LO MISMO (regla:
      ninguna interfaz cambia de tamaño al interactuar); lo único que cambia es el color. */
   .alb-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(72px,1fr));gap:6px;margin:4px 0 2px}
@@ -735,11 +769,21 @@
   </div></div>
 
   <!-- Cocina: edificio propio con las recetas (detalles 29/7) -->
-  <div class="ov" id="ov-cocina"><div class="card" style="width:min(500px,94%)">
+  <!-- 24/8 (diseñador, referencia de Sunflower): la cocina en DOS PANELES, sin párrafos.
+       Izquierda: lo que está al fuego, las ollas y el recetario en grilla de íconos.
+       Derecha: el plato elegido, con sus números en columna y el botón de la acción. -->
+  <div class="ov" id="ov-cocina"><div class="card" style="width:min(620px,96%)">
     <button class="close" data-close="ov-cocina">×</button>
-    <h3>Cocina</h3>
-    <div class="sub">Los platos curan vida y dan buffs. Cada receta tarda varios minutos y podés tener varias ollas al mismo tiempo; cuando termina, el plato va a tu bolsa. Cocinar sube la skill Cocina y la maestría mejora buffs y precios.</div>
-    <div class="forge-list" id="cook-list"></div>
+    <h3>🍳 Cocina <span class="ck-nivel" id="ck-nivel"></span></h3>
+    <div class="ck-wrap">
+      <div class="ck-izq">
+        <div class="ck-tit">🔥 En marcha <b id="ck-ollas"></b></div>
+        <div id="ck-cola" class="ck-cola"></div>
+        <div class="ck-tit">📖 Recetas</div>
+        <div id="ck-grid" class="ck-grid"></div>
+      </div>
+      <div class="ck-der" id="ck-detalle"></div>
+    </div>
   </div></div>
 
   <div class="ov" id="ov-market"><div class="card" style="width:min(520px,94%)">
