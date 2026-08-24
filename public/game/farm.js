@@ -3889,6 +3889,38 @@ class FarmScene extends Phaser.Scene {
   }
   // cultivo (conjunto) cuando está listo; si falta el sprite, cae al emoji
   // `pop` = true solo cuando el cultivo TERMINA de crecer ahora mismo (no al restaurar la partida)
+  /* ============ VISTA PREVIA DE SIEMBRA (24/8, dirección) ==========================
+     « Agregar la función de señalar la parcela y que muestre que se quiere sembrar. »
+     Al apuntar una parcela SECA aparece encima el cultivo seleccionado, en fantasma: el mismo
+     sprite que tendrá cuando esté listo, a media opacidad y latiendo apenas. El cartel ya decía
+     "Plantar Papa"; esto lo hace VER, que es lo que se pide con doce semillas en la barra.
+     Un solo sprite reutilizado (no se crea ni se destruye nada por frame) y solo se toca cuando
+     cambia lo que hay debajo: si el jugador no mueve el cursor, esto no cuesta nada. */
+  previaSiembra(hit) {
+    const esSeca = hit && hit.type === "plot" && hit.state === "dry";
+    const ck = esSeca ? G.selSeed : null;
+    const cd = ck ? CROP_DEF[ck] : null;
+    const firma = esSeca && cd ? (hit.cx + "," + hit.by + "|" + ck) : "";
+    if (this._previaFirma === firma) return;   // nada cambió: ni un draw call
+    this._previaFirma = firma;
+    if (!firma) { if (this.previaSpr) this.previaSpr.setVisible(false); if (this.previaEmo) this.previaEmo.setVisible(false); return; }
+    const key = "cropg_" + ck;
+    if (this.textures.exists(key)) {
+      if (!this.previaSpr) {
+        this.previaSpr = this.add.image(0, 0, key).setOrigin(0.5, 1).setAlpha(0.5);
+        this.tweens.add({ targets: this.previaSpr, alpha: 0.72, duration: 700, yoyo: true, repeat: -1, ease: "Sine.easeInOut" });
+      }
+      this.previaSpr.setTexture(key).setPosition(hit.cx, hit.by + 3).setDepth(hit.by + 2)
+        .setScale((GF.TILE * 1.02) / this.previaSpr.width).setVisible(true);
+      if (this.previaEmo) this.previaEmo.setVisible(false);
+    } else {
+      // sin arte del cultivo: el emoji, que es lo que hace la parcela de verdad
+      if (!this.previaEmo) this.previaEmo = this.add.text(0, 0, "", { fontSize: "20px" }).setOrigin(0.5, 1).setAlpha(0.6);
+      this.previaEmo.setText(cd.emoji || "🌱").setPosition(hit.cx, hit.by + 2).setDepth(hit.by + 2).setVisible(true);
+      if (this.previaSpr) this.previaSpr.setVisible(false);
+    }
+  }
+
   showReadyCrop(pl, pop) {
     const key = "cropg_" + pl.cropKey;
     if (pl.cropKey && this.textures.exists(key)) {
@@ -4903,6 +4935,7 @@ class FarmScene extends Phaser.Scene {
       if (!hit) for (const pl of this.plots) { if (Math.abs(wx - pl.cx) < GF.TILE / 2 && Math.abs(wy - pl.by) < GF.TILE / 2) { hit = pl; break; } }
       if (!hit) { const an = this.animalEnPunto(wx, wy); if (an) hit = { type: "animal", k: an.k }; }
       if (!hit && this.portal && Math.abs(wx - this.portal.cx) < 26 && Math.abs(wy - (this.portal.by - 14)) < 30) hit = this.portal;
+      this.previaSiembra(hit);   // 24/8: la parcela señalada muestra QUÉ se va a sembrar
       // y por si algo más devolviera texto vacío alguna vez: sin texto, no hay cartel
       const txt = hit ? this.promptText(hit) : "";
       if (txt) { el.textContent = txt; el.classList.add("show"); }
