@@ -22,7 +22,19 @@ Dirección: « sigue tardando en entrar a la granja, algo se ha roto ahí en el 
 
   - **Los `.js` iban con `no-cache`**, o sea una ida y vuelta por archivo en cada carga solo para que el servidor contestara « no cambió » — innecesario desde el día que el cargador les puso `?b=GF_BUILD`, que cambia en cada deploy y ya hace imposible reusar código viejo. Ahora se cachean de verdad: la segunda carga de un mismo build no pide nada.
 
-Como el sello del build pasó a ser lo único que avisa que hay código nuevo, dejó de escribirse a mano: **lo calcula el servidor** a partir de los propios archivos del juego (tamaño y fecha de los doce `.js`) y lo inyecta en el `index.html` al servirlo. La lección la dio el primer deploy después de endurecer la caché — el sello se quedó sin commitear y el servidor siguió anunciando el número viejo, que es exactamente el escenario que rompe. Un sello que hay que acordarse de actualizar es un sello roto: si cambia una coma en cualquier archivo, cambia el número, y nadie tiene que hacer nada. El `deploy.bat` además avisa ahora si quedó algo de `public/` o `src/` sin subir, y si el push falla no finge que deployó. Todo esto lo fija `tools/test-arranque-peso.js`, que además **vigila el peso**: el bulto crece solo, un comentario por vez, y si algún día pasa de 460 KB comprimidos, la suite se pone roja antes de que lo note un jugador.
+Como el sello del build pasó a ser lo único que avisa que hay código nuevo, dejó de escribirse a mano: **lo calcula el servidor** a partir de los propios archivos del juego (tamaño y fecha de los doce `.js`) y lo inyecta en el `index.html` al servirlo. Un sello que hay que acordarse de actualizar es un sello roto: si cambia una coma en cualquier archivo, cambia el número, y nadie tiene que hacer nada. Lo fija `tools/test-arranque-peso.js`, que además **vigila el peso**: el bulto crece solo, un comentario por vez, y si algún día pasa de 460 KB comprimidos, la suite se pone roja antes de que lo note un jugador.
+
+**El hallazgo del día: el deploy fallaba en silencio (24/8)**
+
+Esto merece su propio apartado porque no es un detalle de infraestructura: es la razón por la que arreglar cosas no servía de nada. Al endurecer la caché apareció un síntoma raro —el sello nuevo no llegaba al servidor— y al perseguirlo salió el error de verdad, que hasta entonces se perdía entre el ruido del `deploy.bat`:
+
+> `error: open("node_modules/.bin/download-msgpackr-prebuilds"): Function not implemented` · `fatal: updating files failed`
+
+La carpeta `node_modules` estaba versionada —1.957 archivos— y trae **enlaces simbólicos** que Windows no puede escribir. Cuando git se los cruza, aborta el `git add -A` **entero**: no se prepara nada, el commit no se hace, y el `git push` sube solamente lo que ya estuviera commiteado de antes. Sin un solo mensaje que dijera « no subí nada ».
+
+O sea que el deploy venía fallando así desde hacía quién sabe cuánto, y cualquier cambio hecho en la máquina de la dirección nunca llegaba al juego. El sello no era el problema: era el síntoma que por fin lo delató. Ahora `node_modules` no se versiona (Render instala las dependencias solo, desde `package.json` — comprobado, no supuesto), y el `deploy.bat` dejó de ser optimista: si el `git add` falla se planta y lo dice, si el push falla no finge que deployó, y al terminar avisa si quedó algo de `public/` o `src/` sin subir. `tools/test-sello-build.js` comprueba que el índice de git no vuelva a tener ni un archivo de `node_modules`.
+
+La moraleja, que vale para todo el proyecto y no solo para el deploy: **una herramienta que falla sin decirlo es peor que una que no existe**, porque genera confianza donde no la hay. Es la regla 9 —ninguna acción termina en silencio— aplicada fuera del juego.
 
 **Y el que de verdad colgaba el arranque: el LOGIN (24/8)**
 
