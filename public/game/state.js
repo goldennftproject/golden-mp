@@ -467,7 +467,7 @@ function seedBuysToday() {
   return sb;
 }
 function buySeed(k, qty) {
-  const cd = CROP_DEF[k]; if (!cd) return;
+  const cd = CROP_DEF[k]; if (!cd) { console.warn("[buySeed] cultivo inexistente:", k); return; }
   if (!cropUnlocked(k)) { toast("Necesitás Cultivo nivel " + cd.lvl); return; }
   qty = Math.max(1, Math.floor(qty || 1));
   const sb = seedBuysToday();
@@ -527,7 +527,7 @@ function emergBuysToday() {
   return e;
 }
 function comprarEmergencia(tipo) {
-  const precio = EMERG_GOLDEN[tipo]; if (precio == null) return;
+  const precio = EMERG_GOLDEN[tipo]; if (precio == null) { console.warn("[comprarEmergencia] tipo inexistente:", tipo); return; }
   const e = emergBuysToday();
   if ((e[tipo] || 0) >= EMERG_MAX) { toast("Tope diario del kit de emergencia (" + EMERG_MAX + ") — volvé mañana"); return; }
   if (G.golden < precio) { toast("Te faltan $Golden"); return; }
@@ -1092,7 +1092,7 @@ function checkHorno() {
   return listos;
 }
 function craftMat(id) {
-  const md = MAT_DEF[id]; if (!md) return;
+  const md = MAT_DEF[id]; if (!md) { console.warn("[craftMat] material inexistente:", id); return; }
   if (hornoLibres() <= 0) { toast("El horno está lleno (" + hornoSlots() + " al fuego)"); return; }
   if (!canAfford(md.cost)) { toast("Te faltan materiales"); return; }
   if (typeof tutoPermite === "function" && !tutoPermite("mat")) { tutoAviso(); return; }   // embudo estricto (13/8)
@@ -2002,7 +2002,7 @@ function forgeWork() { G.forgeLitUntil = nowMs() + FORGE_LIT_MS; if (window.FARM
 // picos APILABLES: G.picks.dur[id] es la CANTIDAD (1 uso cada uno); craftear suma al stock
 function pickCount(id) { return G.picks.owned[id] ? Math.max(0, Math.floor(G.picks.dur[id] || 0)) : 0; }
 function craftPick(id) {
-  const pd = PICK_DEF[id]; if (!pd) return;
+  const pd = PICK_DEF[id]; if (!pd) { console.warn("[craftPick] pico inexistente:", id); return; }
   if (pickCount(id) >= 99) { toast("Máximo 99 " + pd.label); return; }
   if (typeof tutoPermite === "function" && !tutoPermite("craftpick")) { tutoAviso(); return; }   // embudo estricto (13/8)
   if (typeof tutoGuardiaCosto === "function" && !tutoGuardiaCosto(pd.cost, pd.plata, "craftear " + pd.label)) return;   // guardia del tutorial (12/8)
@@ -3011,7 +3011,7 @@ var DECO_MAX = 40;   // cuántos adornos se pueden tener colocados a la vez
 function decoTengo(id) { G.decoBolsa = G.decoBolsa || {}; return G.decoBolsa[id] || 0; }
 function decoPuestos() { return (G.decos || []).length; }
 function comprarDeco(id) {
-  const d = DECO_DEF[id]; if (!d) return;
+  const d = DECO_DEF[id]; if (!d) { console.warn("[comprarDeco] adorno inexistente:", id); return; }
   if (d.cofre) { toast("Ese solo sale del cofre de login"); return; }   // no tiene precio: no se puede comprar
   if (G.tuto && !G.tuto.done) { toast("🎯 Los adornos se abren al terminar el tutorial — seguí el objetivo de arriba"); return; }   // embudo (13/8)
   if (d.plata && G.plata < d.plata) { toast("Te falta plata (" + fmt(d.plata) + ")"); return; }
@@ -3570,7 +3570,7 @@ function comprarAnimal(k) {
     toast("Necesitás Ganadería nivel " + animalNivelReq(k) + " para " + (ANIMAL_DEF[k] ? ANIMAL_DEF[k].label : k));
     return;
   }
-  const d = ANIMAL_DEF[k]; if (!d) return;
+  const d = ANIMAL_DEF[k]; if (!d) { console.warn("[comprarAnimal] especie inexistente:", k); return; }
   if (!(G.built && G.built.establo)) { toast("Primero construí el Establo"); return; }
   const tengo = animalCant(k);
   if (tengo >= ANIMAL_MAX) { toast("Ya tenés " + ANIMAL_MAX + " " + d.label.toLowerCase() + " (el tope)"); return; }
@@ -4278,7 +4278,7 @@ function cookList() { if (!Array.isArray(G.cooking)) G.cooking = G.cooking ? [G.
 function cookSlots() { return COOK_SLOTS + (edif2("cocina") ? EDIF2_COCINA_OLLA : 0); }
 function cookFree() { return Math.max(0, cookSlots() - cookList().length); }
 function cook(id) {
-  const r = RECIPE_DEF[id]; if (!r) return;
+  const r = RECIPE_DEF[id]; if (!r) { console.warn("[cook] receta inexistente:", id); return; }
   if (typeof tutoPermite === "function" && !tutoPermite("cook")) { tutoAviso(); return; }   // embudo estricto (13/8)
   if (cookFree() <= 0) { toast("Las " + cookSlots() + " ollas están ocupadas"); return; }
   if (!canCook(id)) { toast("Te faltan ingredientes"); return; }
@@ -4347,7 +4347,10 @@ function eatDish(id) {
 
 // vender platos en la Cocina (doc: la maestría sube el precio; nivel 8+ desbloquea venta en $Golden)
 function sellDish(id, gold) {
-  const r = RECIPE_DEF[id]; if (!r || !G.dishes || (G.dishes[id] || 0) <= 0) return;
+  const r = RECIPE_DEF[id];
+  if (!r) { console.warn("[sellDish] receta inexistente:", id); return; }   // bug de catálogo, no del jugador
+  // 24/8 (auditoría de silencios): vender un plato que ya no tenés moría mudo
+  if (!G.dishes || (G.dishes[id] || 0) <= 0) { toast("No te queda ningún " + r.label); return; }
   // 14/8 (playtest: vendió la Papa Asada en pleno "comé un plato" y quedó trabado):
   // vender platos también pasa por el embudo — es una VENTA como cualquier otra
   if (typeof tutoPermite === "function" && !tutoPermite("sell")) { tutoAviso(); return; }
@@ -4581,7 +4584,7 @@ function useTool(id) {
 const TOOL_CRAFT = { axe: { cost:{}, plata:2 }, rod: { cost:{ madera:1 }, plata:0 } };   // 18/8: el hacha baja a 2 con el árbol de 30 min (sigue siendo el 17% de lo que saca)
 function craftTool(id, lote) {
   lote = Math.max(1, lote || 1);
-  const tc = TOOL_CRAFT[id], td = TOOL_DEF[id]; if (!tc || !td) return;
+  const tc = TOOL_CRAFT[id], td = TOOL_DEF[id]; if (!tc || !td) { console.warn("[craftTool] herramienta inexistente:", id); return; }
   if (typeof tutoPermite === "function" && !tutoPermite("crafttool")) { tutoAviso(); return; }   // embudo estricto (13/8)
   if (typeof tutoGuardiaCosto === "function" && !tutoGuardiaCosto(tc.cost, tc.plata, "craftear " + td.label)) return;   // guardia del tutorial (12/8)
   if (lote > 1) {   // doc 2/8: crafteo en lote — la fricción es económica, no de clicks
@@ -5188,7 +5191,9 @@ function excavBotin(i) {   // 15/8 v2 (dirección): tierra removida = LOMBRICES,
 }
 function excavCavar(i) {   // devuelve el botín si se pudo cavar
   const e = excavEstado();
-  if (e.hechos.includes(i)) return null;
+  /* 24/8 (auditoría de silencios): clicar un montículo YA CAVADO devolvía null y el clic
+     moría mudo — el mismo patrón que el intento de doma que reportó el diseñador. */
+  if (e.hechos.includes(i)) { toast("Ese montículo ya lo cavaste — mañana hay " + EXCAV_POR_DIA + " nuevos"); return null; }
   const b = excavBotin(i);
   if (b.res) { if (!tryAddRes(b.res, b.n)) { toast("Bolsa llena — hacé lugar y volvé"); return null; } }
   else if (b.seed) G.seeds[b.seed] = (G.seeds[b.seed] || 0) + b.n;
@@ -5570,7 +5575,9 @@ function pedidoEntregar(i) {
 }
 function pedidoDescartar(i) {
   const e = pedidosEstado(), p = e.lista[i];
-  if (!p || p.hecho) return;
+  // 24/8 (auditoría de silencios): descartar un pedido ya entregado moría mudo
+  if (!p) { toast("Ese encargo ya no está en el tablón"); return; }
+  if (p.hecho) { toast("Ese encargo ya lo entregaste"); return; }
   if (nowMs() < (e.descarteAt || 0)) { toast("El próximo descarte llega en " + Math.ceil(((e.descarteAt || 0) - nowMs()) / 60000) + " min"); return; }
   e.descarteAt = nowMs() + PED_DESCARTE_MIN * 60000;   // el primero del día es gratis; el siguiente, a los 30 min
   e.reroll = (e.reroll || 0) + 1;
@@ -5627,7 +5634,7 @@ var VALES_SHOP = [
   { id: "lombrices", label: "Lata con 6 lombrices", sprite: "res_lombriz", emoji: "🪱" },
   { id: "semillas", label: "Sobre de semillas (tu mejor cultivo)", sprite: null, emoji: "🌱" }];
 function valesCanjear(id) {
-  const it = VALES_SHOP.find(s => s.id === id); if (!it) return;
+  const it = VALES_SHOP.find(s => s.id === id); if (!it) { console.warn("[valesCanjear] premio inexistente:", id); return; }
   const cuesta = valeCosto(id);   // 18/8: sale de lo que entrega, no de una tabla
   if ((G.vales || 0) < cuesta) { toast("Te faltan vales (tenés " + (G.vales || 0) + ", pide " + cuesta + ")"); return; }
   if (id === "semillas") {

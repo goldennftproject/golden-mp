@@ -458,9 +458,11 @@ Normas de diseño que vienen de decisiones de dirección y que conviene no reabr
 
 8.  Ningún número se escribe a mano si se puede derivar del ancla.
 
+9.  Toda acción que el jugador dispara CONTESTA algo — un aviso, una línea del registro, un efecto o una ventana. Una acción que termina en silencio es el peor fallo posible: el jugador no puede diagnosticarla desde dentro del juego y concluye, con razón, que la mecánica está rota. Lo vigila tools/auditar-silencios.js, y solo se permite el silencio en guardas de catálogo (un id que no existe: bug de programación, no del jugador) que dejen rastro en la consola.
+
 **15. Cómo verificar lo que dice este documento**
 
-El proyecto tiene 81 pruebas automáticas y 16 auditores (121 herramientas en total). No comprueban que el código compile: comprueban que el JUEGO cumpla las reglas de arriba. Los más útiles para el diseñador:
+El proyecto tiene 81 pruebas automáticas y 17 auditores (122 herramientas en total). No comprueban que el código compile: comprueban que el JUEGO cumpla las reglas de arriba. Los más útiles para el diseñador:
 
 | **Herramienta**                 | **Qué contesta**                                            |
 | ------------------------------- | ----------------------------------------------------------- |
