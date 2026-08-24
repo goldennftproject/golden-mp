@@ -134,7 +134,11 @@ console.log("\nY LO QUE SIGUE COMPROBÁNDOSE AL FINAL (por diseño)\n");
   ok("la bolsa al final es una red, no la única guardia", /bagFull/.test(STATE),
     "el aviso temprano ya existe; tryAddRes solo evita perder el recurso");
   /* Y goFishing, que es el final de la pesca, pregunta a la misma función en vez de repetirla. */
-  const gf = STATE.slice(STATE.indexOf("function goFishing()"), STATE.indexOf("function goFishing()") + 900);
+  /* 23/8: buscaba la firma EXACTA "function goFishing()", y el 22/8 la pesca v2 le sumó un
+     parámetro (rarForzada). El indexOf devolvía -1, el slice medía el final del archivo y el
+     auditor gritaba en falso. Se busca el nombre, no la firma. */
+  const _gfAt = STATE.indexOf("function goFishing");
+  const gf = _gfAt < 0 ? "" : STATE.slice(_gfAt, _gfAt + 900);
   ok("goFishing usa puedeAccion, no su propia copia", /puedeAccion\("fish"/.test(gf));
 }
 

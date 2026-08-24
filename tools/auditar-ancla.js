@@ -37,11 +37,19 @@ for (const k in X.CROP_DEF) {
    muy abrupta". La XP pasa a medir GESTOS, escalados por el escalón del material. Así que lo que
    hay que comprobar ya no es XP/hora: es que cada cultivo pague su escalón, ni más ni menos.
    Dejo la vara vieja calculada al lado para que se vea qué se cambió y cuánto. */
-console.log("\n=== 1b. LA XP DE LOS CULTIVOS · cada uno paga su ESCALÓN (18/8) ===");
+console.log("\n=== 1b. LA XP DE LOS CULTIVOS · cada uno paga su ESCALÓN (18/8 · vara del 22/8) ===");
 console.log("                                            da          debe   desvío");
-X.CROP_ORDER.forEach((k, i) => {
+/* 23/8 — ESTE AUDITOR MEDÍA CON LA VARA VIEJA Y GRITABA EN FALSO. Usaba el orden del array
+   CROP_ORDER como escalón, pero desde la ESCALERA EN DOS CARRILES (22/8) la XP se re-derivó
+   del orden por (nivel de Cultivo, después reloj): en cada par, el nocturno da 10 más que su
+   compañero de sesión. Con la vara vieja salían 13 desvíos de hasta ±67% que no eran errores
+   del juego sino del medidor — y un auditor que grita en falso es peor que no tenerlo, porque
+   el día que grite de verdad nadie le va a creer. Ahora mide con la escalera real. */
+const _porEscalon = X.CROP_ORDER.slice().sort((a, b) =>
+  (X.CROP_DEF[a].lvl - X.CROP_DEF[b].lvl) || (X.CROP_DEF[a].growH - X.CROP_DEF[b].growH));
+_porEscalon.forEach((k, i) => {
   const c = X.CROP_DEF[k];
-  linea(c.label + " (escalón " + (i + 1) + ")", c.xp, X.XP_ACCION * (i + 1), "XP");
+  linea(c.label + " (escalón " + (i + 1) + ", cultivo " + c.lvl + ")", c.xp, X.XP_ACCION * (i + 1), "XP");
 });
 console.log("   nota: con la vara VIEJA (XP proporcional al reloj) esto daba de 200 a 5 XP/h");
 console.log("         según el cultivo — la dispersión que motivó el cambio.");
@@ -79,7 +87,13 @@ console.log("\n=== 4. LOS EDIFICIOS · días de granja al nivel en que se abren 
     return (p * 2 + a * cos(X.CD.tree) * (X.CD.tree/3600) + r * cos(X.CD.rock) * (X.CD.rock/3600)) * ANCLA; };
   const P = Object.assign({}, X.PRICE);
   for (const m in X.MAT_DEF) { let v = 0; for (const k in X.MAT_DEF[m].cost) v += X.MAT_DEF[m].cost[k] * (P[k] || 0); P[m] = v; }
-  const ESPERADO = { store: 0.4, horno: 0.5, cocina: 0.5, establo: 1.5, altar: 2.0, curtiduria: 2.5, ofrendas: 3.0 };
+  /* 23/8 — LA TABLA DE EXPECTATIVA TAMBIÉN HABÍA QUEDADO VIEJA. Los cuatro edificios tardíos
+     salían un 21-35% "por debajo" y no era un error: el 22/8 dirección aprobó el RETOQUE
+     QUIRÚRGICO que partió sus tablones a la mitad (13/9/17/14) justamente para abaratarlos.
+     El medidor seguía pidiendo el precio de antes de la rebaja. Los números de acá son la
+     decisión de dirección, no una medición: si mañana alguien sube un coste sin que dirección
+     lo pida, este auditor se lo va a cobrar. */
+  const ESPERADO = { store: 0.4, horno: 0.5, cocina: 0.5, establo: 1.0, altar: 1.3, curtiduria: 1.7, ofrendas: 2.4 };
   console.log("                                            días       debe   desvío");
   for (const k in X.BUILD_DEF) {
     const b = X.BUILD_DEF[k]; let v = 0;

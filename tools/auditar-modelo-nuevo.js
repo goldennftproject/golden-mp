@@ -88,12 +88,17 @@ const puertas={
 /* La COCINA no es una escalera sino un RECETARIO: varias recetas comparten nivel y hay dos ramas
    (huerta, y pescado/carne) que empiezan las dos por abajo. Se le pide suelo y que no deje niveles
    muertos, no que suba de uno en uno. */
-const ESCALERA={Cultivo:1,"Minería":1,"Ganadería":1};
+/* 23/8 — CULTIVO YA NO SUBE DE UNO EN UNO, Y ESO ES EL DISEÑO. La ESCALERA EN DOS CARRILES
+   (22/8, decisión de dirección) abre un PAR por escalón: un cultivo de sesión y uno de ausencia
+   comparten nivel (1 · 2,2 · 4,4 · 6,6 · 8,8 · 10 · 12 · 14 · 16). El auditor exigía niveles
+   estrictamente crecientes y marcaba el par como error. Lo que sí hay que exigirle a Cultivo
+   es lo de siempre: que empiece en el nivel 1 y que no deje niveles muertos — eso sigue abajo. */
+const ESCALERA={"Minería":1,"Ganadería":1};
 Object.keys(puertas).forEach(nom=>{
   const [sk,esc]=puertas[nom]; const niv=esc.map(e=>e[1]).slice().sort((a,b)=>a-b);
   const sube=!ESCALERA[nom]||niv.every((v,i)=>i===0||v>niv[i-1]), suelo=niv[0]===1;
   const h=acum(niv[niv.length-1],sk)/(HORAS[sk]||60);
-  ok(nom,sube&&suelo,esc.length+(ESCALERA[nom]?" escalones · nv ":" recetas · nv ")+niv.join(",")+" · el último a "+
+  ok(nom,sube&&suelo,esc.length+(nom==="Cocina"?" recetas · nv ":" escalones · nv ")+niv.join(",")+" · el último a "+
     (h<48?h.toFixed(0)+" h":(h/24).toFixed(0)+" d"));
   if(!suelo) grave(nom+" no tiene ningún escalón abierto en el nivel 1: el jugador abre el panel y lo ve todo gris");
   if(!sube) grave("La escalera de "+nom+" no sube limpia: "+niv.join(","));
