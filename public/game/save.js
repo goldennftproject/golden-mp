@@ -705,6 +705,7 @@ async function loadFarm() {
       if (local && local.data && (!local.uid || local.uid === UID || !UID)) {
         SOLO_LOCAL = true;
         hydrate(local.data);
+        copiaNick(local);          // sin esto, el arranque pide apodo y parece un reseteo
         sesionLog("solo local: hay cuenta pero no se pudo entrar", "nivel " + (local.nivel || 1));
         const mot = (typeof motivoSinNube === "function") ? motivoSinNube() : null;
         if (typeof log === "function") log("💾 No se pudo entrar a tu cuenta, así que se cargó la copia de ESTE navegador (nivel " + (local.nivel || 1) + "). Podés jugar: se guarda acá y NO se toca tu granja de la nube hasta que se pueda leer bien. " + (mot ? mot.largo : ""), "gold");
@@ -724,6 +725,7 @@ async function loadFarm() {
     const local = (typeof copiaLeer === "function") ? copiaLeer() : null;
     if (local && local.data && !local.uid) {
       hydrate(local.data);
+      copiaNick(local);            // el apodo es parte de la partida y vuelve con ella
       sesionLog("sin nube: se cargó la copia local", "nivel " + (local.nivel || 1));
       /* y acá también se nombra la causa, no solo el efecto: es el PRIMER mensaje que el jugador
          ve al entrar, y « sin conexión » a secas lo deja sin saber si tiene que hacer algo. */
@@ -747,7 +749,7 @@ async function loadFarm() {
         const c = copiaLeer();
         if (copiaEsMejor(c)) {
           sesionLog("la nube traía MENOS que la copia local: se restaura", "nube nv" + (G.level || 1) + " · copia nv" + c.nivel);
-          hydrate(c.data);
+          hydrate(c.data); copiaNick(c);
           if (typeof log === "function") log("💾 La nube tenía una versión más vieja de tu granja. Se recuperó la que este navegador tenía guardada (nivel " + c.nivel + ").", "gold");
           if (typeof toast === "function") toast("Granja recuperada del respaldo local");
         }
@@ -767,7 +769,7 @@ async function loadFarm() {
       const huerfana = copiaLeer();
       if (huerfana && huerfana.data && (huerfana.nivel > 1 || (huerfana.plata || 0) > 0)
           && (!huerfana.uid || huerfana.uid === UID)) {
-        hydrate(huerfana.data);
+        hydrate(huerfana.data); copiaNick(huerfana);
         sesionLog("cuenta sin fila + copia local con progreso: se sube la copia", "nivel " + huerfana.nivel);
         if (typeof log === "function") log("💾 Se recuperó la granja que jugaste mientras el servidor estaba caído (nivel " + huerfana.nivel + ") y se subió a tu cuenta.", "gold");
         if (typeof toast === "function") toast("Granja recuperada y subida");
@@ -803,9 +805,21 @@ const GF_COPIA_KEY = "gf-granja-copia";
 function copiaGuardar(snap) {
   try {
     localStorage.setItem(GF_COPIA_KEY, JSON.stringify({
-      uid: UID, at: Date.now(), nivel: G.level || 1, plata: Math.floor(G.plata || 0), data: snap,
+      /* 25/8 — EL APODO VIAJA EN LA COPIA, y esto era el último agujero de la persistencia local.
+         `window.NICK` solo se rellenaba desde la fila de la nube (data.name). Con la base caída
+         eso significa que la granja se hidrataba perfecta… y el arranque igual caía en la puerta
+         del apodo, porque `if (returning && window.NICK)` daba falso por el NOMBRE, no por la
+         granja. Para el jugador eso ES un reseteo: le pide el apodo otra vez, que es literalmente
+         la pantalla de « sos nuevo ».
+         El nombre es parte de la partida, así que va donde va la partida. */
+      uid: UID, nick: (typeof window !== "undefined" && window.NICK) || null,
+      at: Date.now(), nivel: G.level || 1, plata: Math.floor(G.plata || 0), data: snap,
     }));
   } catch (e) { /* sin espacio: la nube sigue siendo la verdad */ }
+}
+/* al restaurar una copia, el apodo vuelve con ella — nunca pisa uno que ya esté puesto */
+function copiaNick(c) {
+  if (c && c.nick && typeof window !== "undefined" && !window.NICK) window.NICK = c.nick;
 }
 function copiaLeer() { try { return JSON.parse(localStorage.getItem(GF_COPIA_KEY) || "null"); } catch (e) { return null; } }
 /* ¿la copia local tiene MÁS progreso que lo que acabamos de cargar? Se compara por lo que el

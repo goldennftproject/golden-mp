@@ -138,6 +138,36 @@ console.log("\nVUELVE EL SERVIDOR: EL PROGRESO DE LA SESIÓN CAÍDA NO SE TIRA")
   ok("si la nube viene más adelantada, manda la nube", ctx.copiaEsMejor(c) === false);
 }
 
+console.log("\nEL APODO VUELVE CON LA GRANJA — si no, el arranque pide apodo y PARECE un reseteo");
+{
+  /* Éste es el que el diseñador ve en la pantalla: « con la base caída, si le doy F5 mi progreso
+     se resetea ». La granja se hidrataba bien, pero window.NICK solo se rellenaba desde la fila
+     de la nube — así que el arranque hacía `if (returning && window.NICK)`, daba falso POR EL
+     NOMBRE, y caía en la puerta del apodo. Para el jugador eso es un reseteo: le está pidiendo
+     el apodo, que es literalmente la pantalla de « sos nuevo ». */
+  const nb = {};
+  let cc = nuevoCtx(nb);
+  vm.runInContext("sb = null; UID = null; CUENTA_PREVIA = false; CARGA_OK = true;", cc);
+  cc.NICK = "Suren"; cc.G.plata = 3000; cc.G.level = 9;
+  cc.saveFarm(true);
+  ok("la copia se lleva el apodo", (cc.copiaLeer() || {}).nick === "Suren", (cc.copiaLeer() || {}).nick);
+
+  cc = nuevoCtx(nb);
+  vm.runInContext("sb = null; UID = null; CUENTA_PREVIA = false;", cc);
+  ok("y al recargar el juego NO sabe todavía cómo te llamás", !cc.NICK);
+  cc.loadFarm();
+  ok("tras cargar la copia, el apodo volvió", cc.NICK === "Suren", cc.NICK || "(vacío)");
+  ok("y la granja también", (cc.G.level || 1) === 9);
+  /* LA CONDICIÓN EXACTA DEL ARRANQUE: main.js hace `if (returning && window.NICK) enterGame()`.
+     Con las dos cosas puestas, entra directo en vez de pedir apodo. */
+  ok("con granja Y apodo, el arranque entra directo — no hay puerta de apodo",
+    !!(cc.G.level > 1) && !!cc.NICK);
+  /* y jamás pisa un apodo ya puesto */
+  cc.NICK = "OtroNombre";
+  cc.copiaNick(cc.copiaLeer());
+  ok("y nunca pisa un apodo que ya esté puesto", cc.NICK === "OtroNombre");
+}
+
 console.log("\nEL QUE JUGÓ SIN CUENTA NO PIERDE LAS HORAS CUANDO VUELVE LA BASE");
 {
   /* El agujero que abrí yo hoy mismo: la copia sin dueño no contaba como « este navegador ya
