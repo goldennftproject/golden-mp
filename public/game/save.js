@@ -37,8 +37,23 @@ const conTope = (p, ms, que) => Promise.race([
   new Promise((_, rej) => setTimeout(() => rej(new Error("tardó demasiado: " + que)), ms)),
 ]);
 
+/* ¿ESTE NAVEGADOR YA TIENE GRANJA? (24/8 — el fallo más caro de la sesión)
+   « Ahora me reinicia el avance… empecé de cero y ahora me manda de cero 3 h después. »
+   La cadena era esta: initSave no podía entrar (candado, red, lo que sea) y devolvía false →
+   loadFarm salía por su primera línea porque no había UID → el arranque no veía ningún fallo y
+   abría LA PUERTA DEL APODO → el jugador escribía su nombre → se creaba una cuenta anónima
+   NUEVA → granja vacía, y la vieja huérfana para siempre bajo el UID anterior.
+   O sea: un problema de UN MINUTO se comía TRES HORAS de juego. Y lo empeoré yo, porque al
+   ponerle topes al login agregué caminos nuevos por los que initSave devuelve false.
+   La regla, de acá en más: LA PUERTA DEL APODO ES SOLO PARA NAVEGADORES VÍRGENES. Si hay una
+   sesión guardada, este navegador YA tiene granja, y entonces no se pide un apodo: se dice que
+   no se pudo entrar y no se toca nada. Perder una sesión de juego es feo; perder la granja
+   entera es imperdonable. */
+var CUENTA_PREVIA = false;
+
 async function initSave() {
   try {
+    CUENTA_PREVIA = !!sesionGuardada();   // se mira ANTES de tocar nada
     if (!window.supabase || !window.supabase.createClient) return false;
     sb = window.supabase.createClient(SB_URL, SB_KEY, { auth: { lock: candadoDeEstaPagina } });
     let session = null;
@@ -499,7 +514,18 @@ const sleepMs = (ms) => new Promise(r => setTimeout(r, ms));
 var CARGA_OK = false;      // ¿se llegó a leer y aplicar el guardado de la nube?
 var CARGA_FALLO = false;   // ¿falló la lectura? (distinto de "no hay fila")
 async function loadFarm() {
-  if (!sb || !UID) { CARGA_OK = true; return false; }   // sin nube no hay nada que pisar
+  /* 24/8 — ACÁ ESTABA LA PUERTA POR LA QUE SE PERDÍA LA GRANJA. "Sin nube no hay nada que
+     pisar" vale cuando el navegador es virgen. Pero si HAY una sesión guardada y aun así no
+     tenemos UID, es exactamente lo contrario: hay una granja y no la pudimos alcanzar. Dar
+     CARGA_OK ahí es autorizar a escribir encima de algo que ni siquiera leímos. */
+  if (!sb || !UID) {
+    if (CUENTA_PREVIA) {
+      CARGA_FALLO = true;
+      console.warn("loadFarm: este navegador tiene cuenta pero no se pudo entrar. Guardado BLOQUEADO.");
+      return false;
+    }
+    CARGA_OK = true; return false;   // navegador virgen: no hay nada que pisar
+  }
   // hasta 3 intentos con espera creciente: la red del jugador puede parpadear justo al entrar
   for (let intento = 0; intento < 3; intento++) {
     try {

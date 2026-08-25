@@ -50,6 +50,18 @@ El arreglo tiene tres partes, y la tercera es la que importa a futuro:
 
 Lo fija `tools/test-login-candado.js`, que corre el login de verdad contra un servidor de mentira colgado a propósito y comprueba, entre otras cosas, que en ese caso no aparezca ninguna cuenta nueva.
 
+**Y lo más caro de todo: la puerta del apodo creaba granjas nuevas (24/8)**
+
+Dirección, a la mañana siguiente: « ahora me reinicia el avance… empecé de cero y ahora me manda de cero 3 h después ». Este es el fallo más grave de la sesión y conviene tener la cadena entera escrita, porque cada eslabón parecía razonable por separado:
+
+> el login no puede entrar → `initSave` devuelve *false* → `loadFarm` sale por su primera línea, « sin nube no hay nada que pisar », y **da el visto bueno para guardar** → el arranque no ve ningún fallo → abre **la puerta del apodo** → el jugador escribe su nombre → se crea una cuenta anónima **nueva** → granja vacía, y la vieja huérfana para siempre bajo el UID anterior.
+
+Un problema de red de un minuto se comía tres horas de juego. Y el arreglo del login lo hizo *más* probable, porque agregó caminos nuevos por los que `initSave` devuelve *false* — un arreglo que empeora otra cosa es parte del trabajo, pero hay que decirlo.
+
+La regla nueva, y es dura: **la puerta del apodo es solo para navegadores vírgenes.** Si hay una sesión guardada, este navegador ya tiene granja, y entonces no se pide apodo: se avisa que no se pudo entrar y no se toca nada. La comprobación está **tres veces** —en `loadFarm`, en el arranque y en el propio botón *Entrar*, que es el que consuma la pérdida— y eso es deliberado: es el único fallo del proyecto que no tiene vuelta atrás, así que no puede depender de una sola línea. El cartel, además, ahora se lo dice al jugador con todas las letras: *« tu granja sigue guardada en tu cuenta · NO empieces una partida nueva »*.
+
+Lo fija `tools/test-no-perder-granja.js`, que cuenta las tres rejas y después corre la cadena completa contra un servidor colgado a propósito, comprobando que al final no aparezca ninguna cuenta nueva.
+
 Para el equipo de diseño
 
 *Todas las cifras de este documento están extraídas del código en ejecución,*
@@ -532,7 +544,7 @@ Normas de diseño que vienen de decisiones de dirección y que conviene no reabr
 
 **15. Cómo verificar lo que dice este documento**
 
-El proyecto tiene 86 pruebas automáticas y 18 auditores (130 herramientas en total). No comprueban que el código compile: comprueban que el JUEGO cumpla las reglas de arriba. Los más útiles para el diseñador:
+El proyecto tiene 87 pruebas automáticas y 18 auditores (131 herramientas en total). No comprueban que el código compile: comprueban que el JUEGO cumpla las reglas de arriba. Los más útiles para el diseñador:
 
 | **Herramienta**                 | **Qué contesta**                                            |
 | ------------------------------- | ----------------------------------------------------------- |

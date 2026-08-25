@@ -70,6 +70,30 @@ function enterGame() {
   cuandoListo(() => { try { if (typeof dummyEntrenando === "function" && dummyEntrenando()) openOv("ov-entrenando"); } catch (e) {} });
 }
 
+/* LA PANTALLA DE "NO SE PUDO", en un solo lugar (24/8). Comparte cartel con la puerta del
+   apodo, así que apaga lo que era de la otra y explica el paso que falló. No escribe NADA:
+   con CARGA_FALLO el guardado queda bloqueado y la granja de la nube no se toca. */
+function pantallaNoSePudo() {
+  hideEl("loading");
+  const g = document.getElementById("gate"); if (!g) return;
+  g.style.display = "flex";
+  const t = g.querySelector("h1, h2, .tit") || g.firstElementChild;
+  if (t) t.textContent = "No se pudo cargar tu granja";
+  const vieja = g.querySelector("p"); if (vieja) vieja.style.display = "none";
+  if (!g.querySelector(".gf-motivo")) {
+    const sub = document.createElement("div");
+    sub.className = "gf-motivo";
+    sub.style.cssText = "font-size:13px;color:#cbbf9f;margin:6px 0 10px;max-width:340px;text-align:center;line-height:1.4";
+    sub.textContent = "Tu granja está a salvo: no se tocó nada, y sigue guardada en tu cuenta. " +
+      (window.CARGA_MOTIVO ? "Se colgó en « " + window.CARGA_MOTIVO + " ». " : "El servidor no contestó a tiempo. ") +
+      "Probá de nuevo en un minuto. NO empieces una partida nueva: tu avance no se perdió.";
+    if (t && t.parentNode) t.parentNode.insertBefore(sub, t.nextSibling);
+  }
+  const b = document.getElementById("enter");
+  if (b) { b.textContent = "Reintentar"; b.onclick = () => location.reload(); }
+  const n = document.getElementById("nick"); if (n) n.style.display = "none";
+}
+
 // al cargar: si ya tenés cuenta + granja guardada, entrás directo (sin pedir apodo otra vez)
 (async function boot() {
   let returning = false;
@@ -123,30 +147,19 @@ function enterGame() {
   else if (typeof CARGA_FALLO !== "undefined" && CARGA_FALLO) {
     // 18/8: no se pudo LEER la granja. Antes esto caía en la puerta del apodo y el jugador
     // terminaba pisando su propia partida con una nueva. Ahora se lo decimos y no se toca nada.
-    hideEl("loading");
-    const g = document.getElementById("gate");
-    if (g) { g.style.display = "flex";
-      const t = g.querySelector("h1, h2, .tit") || g.firstElementChild;
-      if (t) t.textContent = "No se pudo cargar tu granja";
-      /* La puerta del apodo y esta pantalla comparten el mismo cartel, así que hay que APAGAR lo
-         que era de la otra: sin esto quedaba "elegí un apodo para entrar a tu granja" debajo de
-         "no se pudo cargar tu granja", con el campo del apodo escondido. Un cartel que se
-         contradice a sí mismo es peor que uno escueto: el jugador no sabe cuál de las dos frases
-         creer. (Lo vio dirección en la primera vez que la pantalla saltó de verdad, el 24/8.) */
-      const vieja = g.querySelector("p"); if (vieja) vieja.style.display = "none";
-      /* y que diga QUÉ pasó: sin esto, "no se pudo" y "se quedó colgado" se ven igual */
-      const sub = document.createElement("div");
-      sub.style.cssText = "font-size:13px;color:#cbbf9f;margin:6px 0 10px;max-width:340px;text-align:center;line-height:1.4";
-      sub.textContent = "Tu granja está a salvo: no se tocó nada. " +
-        (window.CARGA_MOTIVO ? "Se colgó en « " + window.CARGA_MOTIVO + " » y no contestó en " + ESPERA_MAX_S + " s. "
-                             : "El servidor no contestó a tiempo. ") +
-        "Suele ser el servidor despertando — probá de nuevo en un minuto.";
-      if (t && t.parentNode) t.parentNode.insertBefore(sub, t.nextSibling);
-      const b = document.getElementById("enter");
-      if (b) { b.textContent = "Reintentar"; b.onclick = () => location.reload(); }
-      const n = document.getElementById("nick"); if (n) n.style.display = "none";
-    }
+    pantallaNoSePudo();
   } else {
+    /* 24/8 — ÚLTIMA REJA ANTES DE LA PUERTA DEL APODO. Pedir un apodo significa "sos nuevo", y
+       eso termina creando una cuenta anónima nueva: si el navegador ya tenía granja, queda
+       huérfana bajo el UID viejo y el jugador arranca de cero (pasó, y costó tres horas de
+       juego). Que la reja esté DOS veces —acá y en loadFarm— es a propósito: es el único fallo
+       de la sesión que no tiene vuelta atrás, así que no depende de una sola comprobación. */
+    if (typeof CUENTA_PREVIA !== "undefined" && CUENTA_PREVIA) {
+      console.warn("hay cuenta en este navegador: NO se pide apodo (crearía una granja nueva)");
+      window.CARGA_MOTIVO = window.CARGA_MOTIVO || "login";
+      try { CARGA_FALLO = true; } catch (_) { window.CARGA_FALLO = true; }
+      return pantallaNoSePudo();
+    }
     hideEl("loading");                                            // jugador nuevo: primero el apodo
     document.getElementById("gate").style.display = "flex";
   }
@@ -154,6 +167,14 @@ function enterGame() {
 
 // jugador nuevo: elige apodo y entra
 document.getElementById("enter").addEventListener("click", async () => {
+  /* 24/8 — TERCERA Y ÚLTIMA REJA. Este botón es el que consuma la pérdida: crea la cuenta y
+     escribe la granja nueva. Si el navegador ya tenía una, acá se corta, pase lo que pase más
+     arriba. Tres comprobaciones para el mismo fallo puede parecer mucho; es el único de toda
+     la sesión que no se puede deshacer. */
+  if (typeof CUENTA_PREVIA !== "undefined" && CUENTA_PREVIA && !UID) {
+    console.warn("Entrar bloqueado: este navegador ya tiene granja y no se pudo abrir la sesión");
+    return pantallaNoSePudo();
+  }
   window.NICK = document.getElementById("nick").value.trim() || "Granjero";
   try { await window.SAVE_READY; } catch (e) {}
   if (typeof saveFarm === "function") saveFarm();   // persiste el apodo enseguida
