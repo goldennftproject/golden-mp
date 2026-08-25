@@ -607,3 +607,43 @@ la juega, llega. Con la tanda 3 y sus colosos, esos días bajan solos.
 base y 600 a 5★ — el 2,2 % de la escalera en una sola pelea, no el 6 % que decía el documento ni
 el 0,74 % que daban sus números. Si dirección quiere el 6 %, la palanca sigue siendo una sola y
 está en un solo lugar.*
+
+---
+
+# LA MEDICIÓN DE LA TANDA 1 (25/8)
+
+*El capítulo 14 lo exige antes de pasar a la tanda 2: « el criterio para pasar de una tanda a la
+siguiente no es que esté terminada: es que esté MEDIDA ».*
+
+**La curva de la granja no se movió.** El simulador sigue dando 63 días hasta granja 21, idéntico
+a antes de la tanda 1. Era lo esperado —el precio de cada pez sale del ancla— pero convenía
+comprobarlo en vez de suponerlo.
+
+**Y Pesca NO se dispara**, que era el riesgo que el propio capítulo 13 pedía vigilar. Medido
+contra la granja REAL (11 árboles, 11 rocas, 12 parcelas… y UNA sola laguna), y sorteando 20.000
+señales como las genera el juego para no medir el mejor caso sino el promedio:
+
+| Oficio | XP/hora en la granja llena | Horas hasta el nivel 20 |
+|---|---|---|
+| Cultivo | 2.400 | 113 |
+| Tala | 220 | 123 |
+| Minería | 165 | 123 |
+| **Pesca** (nivel 9, las tres familias) | 201 | **135** |
+| Pesca (recién llegado, solo orilla) | 109 | 248 |
+
+Pesca queda en el mismo grupo que los otros tres, apenas por detrás. Y el que se conforma con la
+orilla tarda el doble que el que va a la superficie — que es exactamente el incentivo que el
+documento quería de la estrella.
+
+## Una corrección a mi propia lectura
+
+La primera medición que hice daba « Pesca 3,3 veces más rápida que los demás » y estuve a punto de
+bajar los multiplicadores por eso. Estaba mal, y el error vale la pena anotarlo porque es fácil de
+repetir: comparaba cada oficio contra la **configuración de referencia** con la que el código
+calibra sus ritmos (1 laguna, 3 rocas, 3 parcelas), no contra la granja que el jugador tiene de
+verdad. Y ahí está la trampa: la granja llena tiene once rocas y doce parcelas, pero **la laguna
+sigue siendo una sola**. Medido contra la referencia, Pesca parece dispararse; medido contra la
+granja real, está alineada.
+
+La lección para las tandas que vienen: los ritmos del código son una calibración relativa, no una
+predicción de la partida. Para decidir sobre balance hay que medir la granja del jugador.
