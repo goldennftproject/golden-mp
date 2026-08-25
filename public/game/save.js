@@ -86,8 +86,30 @@ function marcarCuenta(session) {
     }));
   } catch (e) {}
 }
-/* ¿este navegador tuvo granja alguna vez? (la sesión de supabase O nuestra marca) */
-function huboGranja() { return !!(sesionGuardada() || (marcaCuenta() || {}).uid); }
+/* ¿ESTE NAVEGADOR TUVO GRANJA ALGUNA VEZ?
+   25/8 v2 (dirección: « me he dado cuenta de que cuando hago deploy es cuando le sucede »).
+   Ese dato cerró la cadena: el deploy reinicia el servidor, la pestaña recarga JUSTO en ese
+   momento, y el arranque cae con la red a medio levantar. Si en ese instante no encuentra la
+   sesión, hasta hoy quedaban dos preguntas —la de supabase y nuestra marca— y ambas podían
+   fallar a la vez en un navegador que nunca llegó a guardar la marca (porque su último login
+   bueno fue ANTES de que la marca existiera).
+   Falta la tercera, y es la más fuerte de todas: SI HAY UNA COPIA DE LA GRANJA EN ESTE
+   NAVEGADOR, hubo granja. Una copia con progreso es una prueba mucho mejor que un token, porque
+   sobrevive a que supabase borre lo suyo y a que la marca todavía no existiera.
+   Tres pruebas independientes; alcanza con una para que la puerta del apodo no se abra. */
+function huboGranja() {
+  try { if (sesionGuardada()) return true; } catch (e) {}
+  try { if ((marcaCuenta() || {}).uid) return true; } catch (e) {}
+  /* la tercera prueba se pregunta con typeof: esta función corre muy temprano y no puede
+     depender de en qué orden quedaron declaradas las de abajo. Que una prueba falte no puede
+     hacer caer a las otras dos — es la única función del archivo que decide si el jugador ve la
+     puerta del apodo, y por lo tanto no puede tirar NUNCA. */
+  try {
+    const c = (typeof copiaLeer === "function") ? copiaLeer() : null;
+    if (c && c.uid && (c.nivel > 1 || (c.plata || 0) > 0)) return true;
+  } catch (e) {}
+  return false;
+}
 const conTope = (p, ms, que) => Promise.race([
   Promise.resolve(p),
   new Promise((_, rej) => setTimeout(() => rej(new Error("tardó demasiado: " + que)), ms)),

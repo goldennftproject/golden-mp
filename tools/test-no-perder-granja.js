@@ -62,7 +62,14 @@ console.log("\nNUESTRA PROPIA COPIA DE LA LLAVE (la librería borra la suya sola
      y la reja de arriba no tendría nada que detectar. */
   ok("guardamos una marca con nuestra propia llave", /const GF_CUENTA_KEY = "gf-cuenta";/.test(SAVE));
   ok("con el uid y el refresh token", /uid: session\.user\.id, refresh_token: session\.refresh_token/.test(SAVE));
-  ok("y « hubo granja » mira las DOS cosas", /function huboGranja\(\) \{ return !!\(sesionGuardada\(\) \|\| \(marcaCuenta\(\) \|\| \{\}\)\.uid\); \}/.test(SAVE));
+  /* 25/8 v2: son TRES pruebas — la sesión de supabase, nuestra marca, y la copia de la granja.
+     Alcanza con una para que la puerta del apodo no se abra. */
+  ok("y « hubo granja » mira las TRES pruebas",
+    /if \(sesionGuardada\(\)\) return true;/.test(SAVE) &&
+    /if \(\(marcaCuenta\(\) \|\| \{\}\)\.uid\) return true;/.test(SAVE) &&
+    /typeof copiaLeer === "function"/.test(SAVE));
+  ok("y ninguna prueba que falle puede tirar a las otras", (SAVE.match(/\} catch \(e\) \{\}/g) || []).length >= 3,
+    "cada una en su propio try");
   ok("la reja usa esa pregunta, no solo la sesión de supabase", /CUENTA_PREVIA = huboGranja\(\);/.test(SAVE));
   ok("antes de crear una cuenta, se INTENTA REVIVIR la de siempre", /refreshSession\(\{ refresh_token: marca\.refresh_token \}\)/.test(SAVE));
   ok("y si no se puede revivir, no se crea ninguna", /if \(!session && CUENTA_PREVIA\) \{/.test(SAVE));

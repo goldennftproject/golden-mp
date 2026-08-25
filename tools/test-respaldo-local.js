@@ -83,6 +83,42 @@ console.log("\nLA RESTAURACIÓN AVISA (no se hace a escondidas)");
   ok("y queda anotado en la bitácora", /sesionLog\("la nube traía MENOS que la copia local/.test(bloque));
 }
 
+console.log("\nLA COPIA TAMBIÉN ES PRUEBA DE QUE HUBO GRANJA (25/8 v2)");
+{
+  /* Dirección: « cuando yo hago deploy es cuando le sucede ». El deploy reinicia el servidor, la
+     pestaña recarga en ese hueco, y el arranque cae con la red a medio levantar. Si justo ahí no
+     se encuentra la sesión, hasta hoy quedaban dos pruebas —supabase y nuestra marca— y las dos
+     podían faltar en un navegador cuyo último login bueno fue ANTES de que la marca existiera.
+     La copia de la granja es la tercera prueba, y la más fuerte: sobrevive a las otras dos. */
+  const guardado = {};
+  const ctx2 = { console: { log() {}, warn() {}, error() {} }, Math, Date, JSON, Object, Array, Number, String, Boolean };
+  ctx2.window = ctx2; ctx2.globalThis = ctx2;
+  ctx2.localStorage = { getItem: (k) => (k in guardado ? guardado[k] : null), setItem: (k, v) => { guardado[k] = String(v); }, removeItem: (k) => { delete guardado[k]; } };
+  ctx2.location = { origin: "https://golden.test" };
+  vm.createContext(ctx2);
+  const ini = SAVE.indexOf("/* ================= EL LOGIN SE COLGABA");
+  const fin = SAVE.indexOf("// campos de progreso que guardamos");
+  const copia = SAVE.slice(SAVE.indexOf("const GF_COPIA_KEY"), SAVE.indexOf("async function saveFarm"));
+  vm.runInContext('var SB_URL = "https://ref.supabase.co"; var SB_KEY = "x"; var sb = null, UID = "yo"; var G = { level: 1, plata: 0 };\n'
+    + copia + "\n" + SAVE.slice(ini, fin), ctx2);
+  ok("sin nada guardado, este navegador es virgen", ctx2.huboGranja() === false);
+  guardado["gf-granja-copia"] = JSON.stringify({ uid: "yo", nivel: 7, plata: 900, data: {} });
+  ok("con una copia con progreso, HUBO granja", ctx2.huboGranja() === true,
+    "aunque supabase y la marca falten las dos");
+  guardado["gf-granja-copia"] = JSON.stringify({ uid: "yo", nivel: 1, plata: 0, data: {} });
+  ok("pero una copia recién empezada no cuenta", ctx2.huboGranja() === false,
+    "no bloquea a un jugador que de verdad es nuevo");
+}
+
+console.log("\nY NO SE RECARGA CONTRA UN SERVIDOR QUE SE ESTÁ LEVANTANDO");
+{
+  const UPD = fs.readFileSync("public/game/update.js", "utf8");
+  ok("antes de recargar se espera a que el servidor conteste", /async function servidorListo\(/.test(UPD));
+  ok("preguntando a /version", /fetch\("\/version", \{ cache: "no-store" \}\)/.test(UPD));
+  ok("con un tope (no se queda esperando para siempre)", /servidorListo\(60000\)/.test(UPD));
+  ok("y el cartel lo cuenta mientras espera", /Esperando al servidor…/.test(UPD));
+}
+
 console.log("\nLA BITÁCORA: EL PRÓXIMO REPORTE VA A SER UNA LISTA DE HECHOS");
 {
   for (let i = 0; i < 60; i++) ctx.sesionLog("evento " + i);

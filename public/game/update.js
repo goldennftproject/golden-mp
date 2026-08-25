@@ -86,8 +86,34 @@
     if (btn) btn.onclick = doReload;
   }
 
-  function doReload() {
+  /* ====== NO SE RECARGA CONTRA UN SERVIDOR QUE TODAVÍA SE ESTÁ LEVANTANDO (25/8) ==========
+     Dirección: « me he dado cuenta de que cuando yo hago deploy es cuando le sucede ». Ese dato
+     cerró la cadena, y esta es la otra mitad.
+     Un deploy MATA el servidor viejo y levanta el nuevo. El aviso de versión llega justo en ese
+     hueco —por eso el canal /events muere con ERR_CONNECTION_CLOSED— y hasta hoy recargábamos
+     de inmediato: en el peor segundo posible. La página vuelve a cargar con la red a medio
+     levantar, el arranque no consigue abrir la sesión, y ahí empieza todo lo demás.
+     Ahora, antes de recargar, se ESPERA a que el servidor conteste. Hasta un minuto, preguntando
+     cada segundo y medio. Si no vuelve, se recarga igual —quedarse en un juego viejo tampoco es
+     una respuesta— pero el caso normal, que es un deploy de veinte segundos, deja de caer en el
+     hueco. Y el cartel lo cuenta mientras tanto, porque esperar sin saber por qué es peor. */
+  async function servidorListo(maxMs) {
+    const hasta = Date.now() + (maxMs || 60000);
+    while (Date.now() < hasta) {
+      try {
+        const r = await fetch("/version", { cache: "no-store" });
+        if (r.ok) return true;
+      } catch (e) { /* todavía levantándose */ }
+      await new Promise((res) => setTimeout(res, 1500));
+    }
+    return false;
+  }
+  async function doReload() {
     try { if (typeof saveFarm === "function") saveFarm(); } catch (e) {}
+    const el = document.getElementById("updbanner"), t = el && el.querySelector(".updt");
+    if (t) t.textContent = "Esperando al servidor…";
+    const btn = document.getElementById("updnow"); if (btn) btn.disabled = true;
+    await servidorListo(60000);
     setTimeout(() => location.reload(), 400);   // guarda el progreso antes de recargar
   }
 
