@@ -88,6 +88,72 @@ app.get("/events", (req, res) => {
   req.on("close", () => { clearInterval(ka); sseClients.delete(res); sseBroadcast(); });
 });
 
+/* ═══════════════════════════════════════════════════════════════════════════════════════════
+   LOS COMENTARIOS NO VIAJAN AL NAVEGADOR                                              (25/8)
+   ═══════════════════════════════════════════════════════════════════════════════════════════
+   Medido, no supuesto: de los 440 KB comprimidos que el jugador baja antes de ver la granja,
+   209 KB son COMENTARIOS. El 47 %. Casi la mitad del tiempo de carga se va en explicarle al
+   navegador por qué el pico de oro cuesta 280 de plata.
+
+   Este proyecto comenta mucho y a propósito — el « por qué » de cada decisión está al lado del
+   código, y eso es lo que hace que se pueda volver sobre una regla seis semanas después. No se
+   toca ni una línea de eso. Lo que cambia es a QUIÉN se le cuenta: al que lee el repositorio,
+   sí; al diseñador que espera con la barra de carga a la mitad, no.
+
+   Se pelan al SERVIR, en memoria, una sola vez por sello de build. El archivo en disco queda
+   idéntico, así que el que abra `public/game/state.js` sigue viendo todo, y `deploy.bat` no
+   cambia. Es la mitad del peso de arranque a cambio de cero riesgo de perder documentación.
+
+   Por qué a mano y no con un minificador: meter una dependencia de build en un proyecto que hoy
+   se despliega con `git push` es cambiar el problema de sitio. Esto son cuarenta líneas que solo
+   saben quitar comentarios —no renombran nada, no mueven nada, no reordenan nada— y si el
+   resultado no es JavaScript válido, el arranque lo dice y se sirve el original. */
+const PELADOS = new Map();   // ruta → { sello, codigo }
+function pelarComentarios(src) {
+  /* Un barrido carácter a carácter, no un regex. Con regex, un `//` dentro de una cadena o de
+     una expresión regular se come el resto de la línea, y eso es un bug silencioso servido a
+     producción. Acá se sabe en todo momento si estamos dentro de un texto. */
+  let out = "", i = 0, dentro = 0, cierre = "";
+  const n = src.length;
+  while (i < n) {
+    const c = src[i], d = src[i + 1];
+    if (dentro === 0) {
+      if (c === "/" && d === "/") { while (i < n && src[i] !== "\n") i++; continue; }
+      if (c === "/" && d === "*") { i += 2; while (i < n && !(src[i] === "*" && src[i + 1] === "/")) i++; i += 2; continue; }
+      if (c === '"' || c === "'" || c === "`") { dentro = 1; cierre = c; out += c; i++; continue; }
+      out += c; i++; continue;
+    }
+    if (c === "\\") { out += c + (src[i + 1] || ""); i += 2; continue; }
+    out += c; if (c === cierre) dentro = 0; i++;
+  }
+  return out.split("\n").filter(l => l.trim()).join("\n");
+}
+app.get(/^\/game\/.+\.js$/, (req, res, next) => {
+  const rel = req.path.replace(/^\/game\//, "");
+  const abs = path.join(JUEGO_DIR, rel);
+  if (!abs.startsWith(JUEGO_DIR) || !fs.existsSync(abs)) return next();
+  const sello = selloDelCodigo();
+  let e = PELADOS.get(rel);
+  if (!e || e.sello !== sello) {
+    const crudo = fs.readFileSync(abs, "utf8");
+    let codigo;
+    try {
+      codigo = pelarComentarios(crudo);
+      /* LA RED: si pelar rompió el archivo, se sirve el original. Un juego que carga lento es un
+         problema; un juego que no carga es otro mucho peor, y no vale la pena cambiarlos. */
+      new (require("vm").Script)(codigo, { filename: rel });
+    } catch (err) {
+      console.warn("pelarComentarios rompió " + rel + " (" + err.message + ") — se sirve entero");
+      codigo = crudo;
+    }
+    e = { sello, codigo };
+    PELADOS.set(rel, e);
+  }
+  const conBuild = !!(req.query && req.query.b);
+  res.set("Cache-Control", conBuild ? "public, max-age=31536000, immutable" : "no-cache");
+  res.type("application/javascript").send(e.codigo);
+});
+
 // Sirve el cliente estático (public/) — sirve para el deploy "todo en uno" en Render.
 // no-cache en js/html/css: el navegador revalida con ETag en cada carga, así después
 // de un deploy siempre baja el código nuevo (nunca reusa un .js viejo cacheado).

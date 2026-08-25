@@ -5243,7 +5243,7 @@ function pescaPuedeSenal(s) {
   /* 25/8 (tanda 3) — LA NIEBLA. El día de niebla es el mejor ejemplo de la regla general del
      clima: es el único en que se puede pescar calamar sin quedarse despierto. Eso es un motivo
      para entrar, no un impuesto por haber entrado el día equivocado. */
-  if (ESPECIE_DEF[s.esp].noche && !climaAbreDeDia(s.fam) && typeof esDeNoche === "function" && !esDeNoche())
+  if (ESPECIE_DEF[s.esp].noche && !climaAbreDeDia(s.fam) && !esDeNoche())
     return { ok: false, toast: ESPECIE_DEF[s.esp].label + " solo pica de noche (o con niebla)" };
   /* 25/8 (tanda 2) — LA CAÑA ES UN LÍMITE. Si ninguna aguanta esa talla, el aviso nombra la que
      falta: un « no podés » sin nombre es un « no podés » que el jugador no puede resolver. */
@@ -5935,7 +5935,7 @@ function especiePescable(id) {
   /* si el pez solo pica de noche y hoy no hay niebla que lo saque de día, tampoco cuenta:
      un pedido que solo se puede cumplir despierto a las 3 am es un pedido imposible con otro
      nombre. La niebla es justamente el día en que sí se puede — por eso el clima entra acá. */
-  if (e.noche && !climaAbreDeDia(e.familia) && typeof esDeNoche === "function" && !esDeNoche()) return false;
+  if (e.noche && !climaAbreDeDia(e.familia) && !esDeNoche()) return false;
   return canaMejorAguanta() >= e.estrellas[0];   // si no hay caña que aguante ni la talla mínima, no se puede
 }
 function mareaPedidos(rnd) {

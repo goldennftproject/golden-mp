@@ -876,3 +876,51 @@ GF.blockedAt = function(x, y, pad){
   }
   return false;
 };
+
+/* ═══════════════════════════════════════════════════════════════════════════════════════════
+   EL RELOJ DEL CIELO — UNA SOLA FUENTE PARA LA NOCHE                              (25/8)
+   ═══════════════════════════════════════════════════════════════════════════════════════════
+   ESTO SE ESCRIBE PORQUE UNA AUDITORÍA ENCONTRÓ QUE `esDeNoche` NO EXISTÍA.
+   Pesca v3 tiene dos especies que « solo pican de noche » (calamar y anguila) y las dos puertas
+   que lo comprueban están escritas así:
+
+       if (e.noche && typeof esDeNoche === "function" && !esDeNoche()) …
+
+   El `typeof` era una precaución razonable — y fue exactamente lo que enterró el fallo. La
+   función NUNCA existió: la guarda daba falso, la condición entera se saltaba, y el calamar se
+   pescaba a las tres de la tarde. Un pilar del diseño llevaba días sin ejecutarse ni una vez, y
+   ninguna de las 94 pruebas podía verlo porque todas comprobaban lo que pasa CUANDO es de noche.
+
+   La lección, que es la de siempre en este proyecto: una guarda `typeof` sobre una función
+   PROPIA no es defensa, es un silenciador. Se usa para lo que puede no estar (una escena de
+   Phaser que todavía no cargó), nunca para código nuestro que tiene que existir siempre.
+
+   Y el segundo motivo por el que vive ACÁ, en config.js: el cielo lo pintaba farm.js con su
+   propia cuenta de minutos. Si esta función hubiera copiado esos números, tendríamos dos relojes
+   —el que se ve y el que pesca— y el día que alguien corra el atardecer media hora, el jugador
+   vería la granja oscura con el calamar todavía cerrado. Un solo lugar: farm.js pinta con
+   `cieloDelMomento()` y la pesca pregunta a `esDeNoche()`, que lee lo mismo.
+
+   HORA LOCAL, NO UTC — y a propósito. Todo lo DIARIO de este juego es UTC (el reset, el clima,
+   el Mercader) porque tiene que ser igual para todos. La noche es lo contrario: es lo que el
+   jugador VE en su pantalla. Si el calamar abriera en UTC, el que juega en Argentina vería la
+   granja a oscuras con la laguna todavía diurna, y eso no es una regla: es un bug a los ojos. */
+var CIELO_ALPHA_NOCHE = 0.38;          // cuánto oscurece el filtro en plena noche
+var CIELO_NOCHE_MIN   = 0.12;          // por encima de este tinte, el juego lo considera « de noche »
+var CIELO_TRAMOS = { nocheHasta: 330, amanecerHasta: 510, diaHasta: 1080, atardecerHasta: 1290 };
+/* devuelve { alpha, col } — el tinte del cielo en un minuto del día (0-1439) */
+function cieloDelMomento(min) {
+  if (min == null) { const a = new Date(); min = a.getHours() * 60 + a.getMinutes(); }
+  const T = CIELO_TRAMOS, A = CIELO_ALPHA_NOCHE;
+  const lerp = (a, b, k) => a + (b - a) * k;
+  if (min >= T.atardecerHasta || min < T.nocheHasta) return { alpha: A, col: 0x0a1030 };
+  if (min < T.amanecerHasta) { const k = (min - T.nocheHasta) / (T.amanecerHasta - T.nocheHasta); return { alpha: lerp(A, 0, k), col: k > 0.5 ? 0x803010 : 0x0a1030 }; }
+  if (min < T.diaHasta) return { alpha: 0, col: 0x0a1030 };
+  const k = (min - T.diaHasta) / (T.atardecerHasta - T.diaHasta);
+  return { alpha: lerp(0, A, k), col: k < 0.5 ? 0x803010 : 0x0a1030 };
+}
+/* LA función. El mismo umbral con el que se encienden los faroles y salen las luciérnagas: si la
+   granja se ve de noche, es de noche para el calamar. Nada de dos criterios. */
+function esDeNoche(min) { return cieloDelMomento(min).alpha > CIELO_NOCHE_MIN; }
+window.cieloDelMomento = cieloDelMomento;
+window.esDeNoche = esDeNoche;

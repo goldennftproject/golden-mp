@@ -3473,20 +3473,21 @@ class FarmScene extends Phaser.Scene {
     }
     if (t >= (this._cieloAt || 0)) {
       this._cieloAt = t + 20000;
-      const ahora = new Date(), min = ahora.getHours() * 60 + ahora.getMinutes();
-      const lerp = (a, b, k) => a + (b - a) * k;
-      let col = 0x0a1030, alpha = 0;
-      if (min >= 1290 || min < 330) { alpha = 0.38; }                                                        // noche (21:30-05:30)
-      else if (min < 510) { const k = (min - 330) / 180; alpha = lerp(0.38, 0, k); col = k > 0.5 ? 0x803010 : 0x0a1030; }   // amanecer
-      else if (min < 1080) { alpha = 0; }                                                                    // día pleno
-      else { const k = (min - 1080) / 210; alpha = lerp(0, 0.38, k); col = k < 0.5 ? 0x803010 : 0x0a1030; }  // atardecer (18:00-21:30)
+      /* 25/8 — LA CUENTA SE MUDÓ A config.js Y ACÁ SOLO SE PREGUNTA.
+         Estos siete renglones eran la ÚNICA definición de « es de noche » en todo el juego, y
+         vivían dentro del código que pinta el cielo. Pesca v3 necesitaba la misma respuesta para
+         el calamar y la anguila, no la tenía a mano, y la puerta quedó escrita con un
+         `typeof esDeNoche === "function"` que siempre daba falso: el pez nocturno picaba a las
+         tres de la tarde y nadie se enteró. Ahora hay UNA fuente (cieloDelMomento) y dos lectores
+         —el cielo y la laguna—, así que no pueden discrepar aunque alguien corra el atardecer. */
+      const { alpha, col } = cieloDelMomento();
       this.cielo.fillColor = col;
       this.tweens.add({ targets: this.cielo, fillAlpha: alpha * 0.78, duration: 3000 });   // 22/8: menos negro…
       // …y más luna: el tinte azul acompaña la misma curva, fuerte en la noche azul y tímido
       // en las medias horas naranjas del amanecer/atardecer (ahí manda el sol, no la luna).
       const azul = Math.min(0.55, alpha * (col === 0x0a1030 ? 1.45 : 0.5));
       this.tweens.add({ targets: this.cieloTinte, fillAlpha: azul, duration: 3000 });
-      const noche = alpha > 0.12;
+      const noche = esDeNoche();   // 25/8: el MISMO umbral que la laguna, no una copia del 0.12
       // el relevo mariposas ↔ luciérnagas se engancha al MISMO umbral que enciende los faroles,
       // así que todo lo nocturno pasa a la vez. La primera vez se aplica seco (si entrás de
       // noche, ya hay luciérnagas); después siempre con fundido.

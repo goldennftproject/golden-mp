@@ -60,7 +60,18 @@ console.log("\nTODO LO DIARIO CRUZA JUNTO LA MEDIANOCHE UTC");
 console.log("\nEL CIELO ES DEL JUGADOR, EL CALENDARIO DEL JUEGO");
 {
   const cielo = SRC_FARM.slice(SRC_FARM.indexOf("--- CIELO"), SRC_FARM.indexOf("--- CIELO") + 3000);
-  ok("el ciclo visual día/noche sigue usando la hora LOCAL", /getHours\(\)/.test(cielo));
+  /* 25/8 — LA CUENTA SE MUDÓ, LA REGLA NO. El `getHours()` ya no está en farm.js porque la
+     definición de « es de noche » se centralizó en config.js (cieloDelMomento): había DOS ideas
+     de noche —la del cielo y la que Pesca v3 necesitaba— y la segunda nunca existió, así que el
+     calamar picaba a las tres de la tarde. Lo que este medidor tiene que exigir sigue siendo lo
+     mismo: que el cielo sea del JUGADOR, o sea hora local y no UTC. Solo cambia dónde mirar. */
+  const SRC_CONFIG = fs.readFileSync("public/game/config.js", "utf8");
+  ok("el cielo se pinta desde la fuente única, no con su propia cuenta", /cieloDelMomento\(\)/.test(cielo));
+  ok("y esa fuente sigue usando la hora LOCAL (el cielo es del jugador)",
+    /getHours\(\)/.test(SRC_CONFIG.slice(SRC_CONFIG.indexOf("function cieloDelMomento"))),
+    "config.js · cieloDelMomento");
+  ok("la laguna lee la MISMA noche que el cielo — no puede haber dos",
+    /const noche = esDeNoche\(\)/.test(SRC_FARM));
   ok("la noche tiene su capa de TINTE azul en multiply", /cieloTinte/.test(cielo) && /MULTIPLY/.test(SRC_FARM));
   ok("y la capa oscura bajó de fuerza para compensar (×0,78)", /alpha \* 0\.78/.test(cielo));
   const m = cielo.match(/0x9db2e6/);

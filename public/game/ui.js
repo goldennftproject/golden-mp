@@ -2669,31 +2669,15 @@ function initUI() {
     if (typeof tutoHighlight === "function") tutoHighlight();   // 13/8: al cambiar de pestaña, el brillo salta al botón del objetivo
   });
   // modo edición: cierra las ventanas y deja solo dos botoncitos flotantes sobre la hotbar
-// llena el selector de adornos con lo que tengas sin colocar
-function syncEditDeco() {
-  if (typeof syncCobertizo === "function") syncCobertizo();   // 18/8
-  const sel = $("edit-deco"), lbl = $("edit-decons"); if (!sel) return;
-  const hay = DECO_ORDER.filter(id => decoTengo(id) > 0);
-  sel.innerHTML = hay.length ? hay.map(id => '<option value="' + id + '">' + DECO_DEF[id].label + ' (' + decoTengo(id) + ')</option>').join("")
-                             : '<option value="">— no tenés adornos —</option>';
-  sel.disabled = !hay.length;
-  const bp = $("edit-poner"); if (bp) bp.disabled = !hay.length;
-  // fix #17 (11/8): el botón de parcelas pendientes de colocar
-  const ep = $("edit-parcela");
-  if (ep) {
-    const n = (typeof parcelasPendientes === "function") ? parcelasPendientes() : 0;
-    ep.style.display = n > 0 ? "" : "none";
-    ep.textContent = "Poner parcela (" + n + ")";
-  }
-  if (lbl) lbl.textContent = "Puestos: " + decoPuestos() + "/" + DECO_MAX + " · se compran en la Tienda";
-}
-// fix #14 (11/8): ya no se tira al primer hueco — el jugador hace CLIC en la celda que quiere
-function ponerAdornoElegido() {
-  const sel = $("edit-deco"); if (!sel || !sel.value) return;
-  const sc = window.farmScene;
-  if (!sc || !sc.iniciarColocar) { toast("Entrá a la granja para poner adornos"); return; }
-  sc.iniciarColocar("deco", sel.value);
-}
+  /* 25/8 — `syncEditDeco` y `ponerAdornoElegido` VIVÍAN ACÁ DENTRO, y ése era el problema.
+     Están escritas en la columna cero, así que a simple vista parecen globales — pero estaban
+     dentro de initUI(), o sea que fuera de esta función no existían. Las cinco llamadas de
+     state.js y farm.js estaban todas envueltas en `typeof syncEditDeco === "function"`, así que
+     no fallaban: no hacían NADA. El selector de adornos y el botón « Poner parcela » no se
+     refrescaban al recibir una parcela nueva, y el jugador tenía que salir y entrar del modo
+     edición para verla.
+     Se mudaron al final del archivo, a nivel de archivo de verdad. La lección es la de siempre:
+     una guarda `typeof` sobre código PROPIO no protege, esconde. */
 
   window.setEditMode = (on) => {
     // 13/8: salir de edición con algo "en la mano" lo suelta (queda en la bolsa)
@@ -3128,4 +3112,34 @@ function mostrarEleccion(titulo, opciones, alElegir, alCancelar, avisoCancelar) 
   });
   const fuera = (ev) => { if (c.contains(ev.target)) return; cerrar(); toast(avisoCancelar || "No cavaste nada"); if (alCancelar) alCancelar(); };
   setTimeout(() => document.addEventListener("pointerdown", fuera, true), 0);
+}
+
+/* ═══ EL MODO EDICIÓN — a nivel de archivo (25/8) ══════════════════════════════════════════
+   Ver el aviso dentro de initUI(): esto estaba atrapado ahí y por eso no funcionaba desde
+   fuera. Todo lo que usa ($, DECO_*, decoTengo, parcelasPendientes, toast, farmScene) ya era
+   global, así que el traslado no cambia una sola línea de su cuerpo. */
+// llena el selector de adornos con lo que tengas sin colocar
+function syncEditDeco() {
+  if (typeof syncCobertizo === "function") syncCobertizo();   // 18/8
+  const sel = $("edit-deco"), lbl = $("edit-decons"); if (!sel) return;
+  const hay = DECO_ORDER.filter(id => decoTengo(id) > 0);
+  sel.innerHTML = hay.length ? hay.map(id => '<option value="' + id + '">' + DECO_DEF[id].label + ' (' + decoTengo(id) + ')</option>').join("")
+                             : '<option value="">— no tenés adornos —</option>';
+  sel.disabled = !hay.length;
+  const bp = $("edit-poner"); if (bp) bp.disabled = !hay.length;
+  // fix #17 (11/8): el botón de parcelas pendientes de colocar
+  const ep = $("edit-parcela");
+  if (ep) {
+    const n = (typeof parcelasPendientes === "function") ? parcelasPendientes() : 0;
+    ep.style.display = n > 0 ? "" : "none";
+    ep.textContent = "Poner parcela (" + n + ")";
+  }
+  if (lbl) lbl.textContent = "Puestos: " + decoPuestos() + "/" + DECO_MAX + " · se compran en la Tienda";
+}
+// fix #14 (11/8): ya no se tira al primer hueco — el jugador hace CLIC en la celda que quiere
+function ponerAdornoElegido() {
+  const sel = $("edit-deco"); if (!sel || !sel.value) return;
+  const sc = window.farmScene;
+  if (!sc || !sc.iniciarColocar) { toast("Entrá a la granja para poner adornos"); return; }
+  sc.iniciarColocar("deco", sel.value);
 }
