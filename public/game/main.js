@@ -150,8 +150,12 @@ function pantallaNoSePudo() {
   try {
     if (typeof UID !== "undefined" && !UID && typeof CUENTA_PREVIA !== "undefined" && !CUENTA_PREVIA) {
       cuandoListo(() => {
-        if (typeof log === "function") log("⚠️ No se pudo conectar con el servidor de guardado. Podés mirar el juego, pero NADA de lo que hagas se va a guardar. Probá a recargar en un rato.", "bad");
-        if (typeof toast === "function") toast("⚠️ Sin guardado: no se pudo conectar");
+        /* 25/8 — el mismo cambio que en avisarSinNube, y por el mismo motivo: ya NO es cierto
+           que no se guarde nada. Con la copia local arreglada, sin servidor se juega y se
+           guarda — en este navegador. Decir « nada se va a guardar » sería asustar de más, y
+           una alarma que exagera es una alarma que dejan de leer. */
+        if (typeof log === "function") log("💾 No se pudo conectar con el servidor. Podés jugar igual: tu granja se guarda EN ESTE NAVEGADOR y se sube sola cuando el servidor vuelva. Hasta entonces, no borres la caché ni cambies de dispositivo.", "warn");
+        if (typeof toast === "function") toast("💾 Sin servidor — se guarda en este navegador");
       });
     }
   } catch (e) {}

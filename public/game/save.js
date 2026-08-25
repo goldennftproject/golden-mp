@@ -682,7 +682,20 @@ async function loadFarm() {
       console.warn("loadFarm: este navegador tiene cuenta pero no se pudo entrar. Guardado BLOQUEADO.");
       return false;
     }
-    CARGA_OK = true; return false;   // navegador virgen: no hay nada que pisar
+    /* 25/8 — Y ACÁ LA OTRA MITAD DEL MISMO AGUJERO. « Navegador virgen: no hay nada que pisar »
+       era cierto el día que se escribió, cuando sin nube no se guardaba nada en ningún lado. Con
+       la copia local funcionando ya no lo es: este navegador puede tener una granja entera de una
+       sesión sin conexión, y salir de acá sin mirarla es empezar de cero encima de ella.
+       Se lee la copia SOLO si es de una sesión sin nube (uid nulo) o de esta misma cuenta. Una
+       copia de OTRO usuario no se toca ni de casualidad: sería darle la granja del vecino. */
+    const local = (typeof copiaLeer === "function") ? copiaLeer() : null;
+    if (local && local.data && !local.uid) {
+      hydrate(local.data);
+      sesionLog("sin nube: se cargó la copia local", "nivel " + (local.nivel || 1));
+      if (typeof log === "function") log("💾 Sin conexión con el servidor. Se cargó la granja que este navegador tenía guardada (nivel " + (local.nivel || 1) + "). Se sigue guardando acá.", "gold");
+      CARGA_OK = true; return true;   // SÍ hay granja: el juego no tiene que pedir apodo otra vez
+    }
+    CARGA_OK = true; return false;   // navegador virgen de verdad: no hay nada que pisar
   }
   // hasta 3 intentos con espera creciente: la red del jugador puede parpadear justo al entrar
   for (let intento = 0; intento < 3; intento++) {
@@ -746,7 +759,14 @@ function copiaLeer() { try { return JSON.parse(localStorage.getItem(GF_COPIA_KEY
 /* ¿la copia local tiene MÁS progreso que lo que acabamos de cargar? Se compara por lo que el
    jugador entendería como avanzar: nivel y plata. Sin adivinar: si empatan, manda la nube. */
 function copiaEsMejor(c) {
-  if (!c || !c.data || c.uid !== UID) return false;
+  if (!c || !c.data) return false;
+  /* 25/8 — LA COPIA SIN DUEÑO TAMBIÉN CUENTA. `c.uid !== UID` descartaba las copias hechas
+     mientras NO había nube (uid nulo), que son justamente las que hay que rescatar: son las
+     horas que el jugador jugó con el servidor caído. Sin esto, el progreso de una sesión sin
+     conexión se perdía en el instante en que la conexión volvía — el peor momento posible, y
+     encima con cara de que el juego funcionaba bien.
+     De OTRO usuario no se toca nunca: eso sería darle la granja del vecino. */
+  if (c.uid && c.uid !== UID) return false;
   return (c.nivel || 1) > (G.level || 1) || (c.plata || 0) > Math.floor(G.plata || 0) + 50;
 }
 
@@ -767,19 +787,37 @@ function avisarSinNube() {
   const t = nowMs();
   if (t - _sinNubeAvisado < 120000) return;   // como mucho, uno cada dos minutos
   _sinNubeAvisado = t;
-  sesionLog("SIN NUBE: se está jugando sin guardado");
-  if (typeof log === "function") log("⚠️ SIN CONEXIÓN CON EL SERVIDOR DE GUARDADO: lo que hagas ahora NO se está guardando. Recargá cuando vuelva la conexión.", "bad");
-  if (typeof toast === "function") toast("⚠️ Nada se está guardando");
+  /* 25/8 — EL MENSAJE CAMBIA PORQUE CAMBIÓ EL HECHO. Decía « Nada se está guardando », y era
+     verdad: sin nube se salía de saveFarm antes de tocar la copia local. Arreglado eso, la frase
+     pasó a ser mentira — y una alarma que exagera es una alarma que el jugador aprende a ignorar,
+     que es exactamente lo que no queremos el día que la pérdida sea real.
+     Ahora dice lo que pasa: se guarda acá, no allá. Con la consecuencia dicha (si borrás caché o
+     cambiás de navegador, esto no viaja) y sin dramatizar lo que sí está a salvo. */
+  sesionLog("SIN NUBE: se guarda solo en este navegador");
+  if (typeof log === "function") log("💾 Sin conexión con el servidor. Tu granja se está guardando EN ESTE NAVEGADOR: no la vas a perder al recargar. Lo que no hagas todavía es borrar la caché ni cambiar de dispositivo, porque hasta que vuelva el servidor la copia vive solo acá.", "warn");
+  if (typeof toast === "function") toast("💾 Guardando solo en este navegador");
 }
 
 async function saveFarm(force) {
-  if (!sb || !UID) { avisarSinNube(); return; }
+  /* 25/8 — EL ORDEN DE ESTAS TRES LÍNEAS ERA EL BUG, Y ERA DE LOS CAROS.
+     Antes, la primera línea de esta función era `if (!sb || !UID) { avisarSinNube(); return; }`.
+     O sea: cuando NO había nube, se salía inmediatamente… sin pasar por copiaGuardar, que está
+     doce líneas más abajo y cuyo propio comentario decía « la copia local se deja SIEMPRE ».
+     No era siempre: era solo cuando había nube. La red de seguridad no se desplegaba justo en el
+     único caso para el que se había construido, y el aviso « Nada se está guardando » decía la
+     verdad de la peor manera posible — no se guardaba nada, ni siquiera acá.
+     Ahora la copia local se escribe PRIMERO y la nube después. Es la regla de la casa dicha por
+     el diseñador el 25/8: « el único motivo por el cual se debe resetear una partida es cuando
+     se actualiza borrando caché ». Si el jugador no borra caché, su granja tiene que seguir ahí,
+     haya o no haya servidor. */
   // 18/8: si nunca se llegó a cargar, NO se escribe. Es preferible perder una sesión de juego
-  // antes que pisar la granja buena con los valores por defecto.
+  // antes que pisar la granja buena con los valores por defecto. Vale para la copia local igual:
+  // guardar un estado que nunca se hidrató sería fabricar la pérdida, no evitarla.
   if (!CARGA_OK) { console.warn("saveFarm bloqueado: la granja no se llegó a cargar"); return; }
   const key = snapKey();
   if (!force && key === lastSavedKey) return;   // nada que guardar: ni siquiera muestra el indicador
-  copiaGuardar(snapshot());   // 25/8: la copia local se deja SIEMPRE, aunque la nube después falle
+  copiaGuardar(snapshot());   // la copia local se deja SIEMPRE — y ahora « siempre » es verdad
+  if (!sb || !UID) { avisarSinNube(); return; }
   if (typeof showSaving === "function") showSaving();
   // hasta 2 intentos inmediatos; si fallan, lastSavedKey no se actualiza y el autosave reintenta al próximo ciclo
   for (let intento = 0; intento < 2; intento++) {

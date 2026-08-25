@@ -22,10 +22,20 @@ const ok = (n, c, d) => { if (!c) fallos++; console.log((c ? "  ok   " : "  FALL
 
 console.log("\nREJA 1 · loadFarm NO AUTORIZA A ESCRIBIR SI HAY CUENTA Y NO SE PUDO ENTRAR");
 {
-  const f = SAVE.slice(SAVE.indexOf("async function loadFarm"), SAVE.indexOf("async function loadFarm") + 1200);
+  /* 25/8: la ventana era de 1200 caracteres y la rama « sin nube » creció al mirar la copia
+     local, así que el trozo se cortaba antes de llegar a lo que había que comprobar. Se recorta
+     por donde EMPIEZA lo siguiente, no por un número de caracteres que envejece con el archivo. */
+  const f = SAVE.slice(SAVE.indexOf("async function loadFarm"), SAVE.indexOf("for (let intento", SAVE.indexOf("async function loadFarm")));
   ok("mira si este navegador ya tenía cuenta", /if \(CUENTA_PREVIA\)/.test(f));
   ok("y en ese caso marca FALLO en vez de dar el visto bueno", /CARGA_FALLO = true;/.test(f));
-  ok("el visto bueno queda solo para el navegador virgen", /CARGA_OK = true; return false;\s*\/\/ navegador virgen/.test(f));
+  /* 25/8 (revisión): la rama « sin nube » ya no es una sola línea — antes de rendirse mira la
+     copia local, porque un navegador con granja guardada y sin servidor NO es un navegador
+     virgen. Lo que este medidor tiene que exigir sigue siendo lo mismo: que el `return false`
+     (« no hay granja, pedí apodo ») quede SOLO para el que de verdad no tiene nada. */
+  ok("el visto bueno de « no hay nada » queda solo para el navegador virgen de verdad",
+    /CARGA_OK = true; return false;\s*\/\/ navegador virgen de verdad/.test(f));
+  ok("y antes de rendirse mira si hay copia local — sin servidor no es lo mismo que sin granja",
+    /copiaLeer/.test(f) && /return true;/.test(f));
   ok("y el guardado se bloquea sin CARGA_OK", /if \(!CARGA_OK\) \{ console\.warn\("saveFarm bloqueado/.test(SAVE));
 }
 

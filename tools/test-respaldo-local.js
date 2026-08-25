@@ -46,8 +46,18 @@ console.log("\nCADA GUARDADO DEJA UNA COPIA DE ESTE LADO");
   ok("y guarda con qué progreso se hizo", c.nivel === 9 && c.plata === 4200, "nivel " + c.nivel + " · " + c.plata);
   ok("atada a SU cuenta", c.uid === "el-de-siempre");
   ok("con la granja entera adentro", !!(c.data && c.data.res && c.data.skills));
-  ok("y el guardado la deja siempre, antes de intentar la nube",
-    /copiaGuardar\(snapshot\(\)\);   \/\/ 25\/8: la copia local se deja SIEMPRE/.test(SAVE));
+  /* 25/8 (revisión) — ESTA COMPROBACIÓN ERA UN CARTEL, NO UNA REGLA. Buscaba el COMENTARIO
+     « la copia local se deja SIEMPRE » y lo encontraba… tres líneas por debajo del `return` que
+     hacía que no se dejara nunca cuando no había nube. El comentario decía la verdad que
+     queríamos y el código hacía otra cosa, y el medidor le creyó al comentario.
+     Ahora se comprueba el ORDEN REAL de las instrucciones, con los comentarios fuera. */
+  const cuerpoSave = SAVE.slice(SAVE.indexOf("async function saveFarm"));
+  const soloCodigo = cuerpoSave.replace(/\/\*[\s\S]*?\*\//g, "").replace(/\/\/[^\n]*/g, "");
+  const iCopia = soloCodigo.indexOf("copiaGuardar(snapshot())");
+  const iNube = soloCodigo.indexOf("if (!sb || !UID)");
+  ok("y el guardado la deja siempre — copiaGuardar corre ANTES de mirar si hay nube",
+    iCopia > 0 && iNube > 0 && iCopia < iNube,
+    iCopia < iNube ? "copia primero" : "la nube se comprueba antes: sin servidor no se guarda nada");
 }
 
 console.log("\nSI LA NUBE TRAE MENOS QUE LA COPIA, MANDA LA COPIA");
