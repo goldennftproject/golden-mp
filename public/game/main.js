@@ -143,6 +143,18 @@ function pantallaNoSePudo() {
   } finally { clearInterval(reloj); }
   try { if (typeof godHandSembrar === "function") godHandSembrar(G._ausenteMs || 0); } catch (e) { console.warn(e); }   // GOD HAND: siembra lo que quedó vacío
   try { if (typeof testeoDestapar === "function") testeoDestapar(); } catch (e) { console.warn(e); }   // repara bolsas desbordadas por el regalo viejo de testeo
+  /* 25/8 — SI NO HAY NUBE, SE DICE ANTES DE JUGAR, NO DESPUÉS DE PERDER.
+     La consola del diseñador mostró el caso: signInAnonymously cortado por la red, sin UID, y
+     el juego arrancando igual. Se puede jugar sin nube —a veces es lo único que se puede—, pero
+     el jugador tiene derecho a saberlo ANTES de invertir una tarde. */
+  try {
+    if (typeof UID !== "undefined" && !UID && typeof CUENTA_PREVIA !== "undefined" && !CUENTA_PREVIA) {
+      cuandoListo(() => {
+        if (typeof log === "function") log("⚠️ No se pudo conectar con el servidor de guardado. Podés mirar el juego, pero NADA de lo que hagas se va a guardar. Probá a recargar en un rato.", "bad");
+        if (typeof toast === "function") toast("⚠️ Sin guardado: no se pudo conectar");
+      });
+    }
+  } catch (e) {}
   if (returning && window.NICK) enterGame();
   else if (typeof CARGA_FALLO !== "undefined" && CARGA_FALLO) {
     // 18/8: no se pudo LEER la granja. Antes esto caía en la puerta del apodo y el jugador

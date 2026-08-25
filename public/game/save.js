@@ -701,8 +701,30 @@ function copiaEsMejor(c) {
   return (c.nivel || 1) > (G.level || 1) || (c.plata || 0) > Math.floor(G.plata || 0) + 50;
 }
 
+/* ============ JUGAR AL VACÍO: EL ESTADO QUE HAY QUE DELATAR (25/8) ====================
+   La consola del diseñador trajo por fin los hechos:
+     initSave error: tardó demasiado: signInAnonymously
+     …supabase.co/auth/v1/signup — net::ERR_CONNECTION_CLOSED
+   O sea: este navegador NO PUDO ni siquiera crear una cuenta, porque la conexión con Supabase
+   se cortó. Eso no es un bug del juego: es la red. Pero lo que SÍ es nuestro es lo que pasaba
+   después — el juego arrancaba igual, sin UID, y dejaba jugar. Cada saveFarm salía por esta
+   primera línea sin decir una palabra, así que el jugador podía sembrar dos horas contra un
+   guardado que no existía. Ésa es la forma de perder progreso que más duele, porque no la
+   provoca un fallo: la provoca el silencio.
+   Ahora se avisa. Una vez al entrar, y de nuevo cada vez que el juego intente guardar y no
+   pueda — espaciado, para que sea un recordatorio y no un castigo. */
+var _sinNubeAvisado = 0;
+function avisarSinNube() {
+  const t = nowMs();
+  if (t - _sinNubeAvisado < 120000) return;   // como mucho, uno cada dos minutos
+  _sinNubeAvisado = t;
+  sesionLog("SIN NUBE: se está jugando sin guardado");
+  if (typeof log === "function") log("⚠️ SIN CONEXIÓN CON EL SERVIDOR DE GUARDADO: lo que hagas ahora NO se está guardando. Recargá cuando vuelva la conexión.", "bad");
+  if (typeof toast === "function") toast("⚠️ Nada se está guardando");
+}
+
 async function saveFarm(force) {
-  if (!sb || !UID) return;
+  if (!sb || !UID) { avisarSinNube(); return; }
   // 18/8: si nunca se llegó a cargar, NO se escribe. Es preferible perder una sesión de juego
   // antes que pisar la granja buena con los valores por defecto.
   if (!CARGA_OK) { console.warn("saveFarm bloqueado: la granja no se llegó a cargar"); return; }
