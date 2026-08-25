@@ -106,7 +106,14 @@ function huboGranja() {
      puerta del apodo, y por lo tanto no puede tirar NUNCA. */
   try {
     const c = (typeof copiaLeer === "function") ? copiaLeer() : null;
-    if (c && c.uid && (c.nivel > 1 || (c.plata || 0) > 0)) return true;
+    /* 25/8 — EL `c.uid &&` ERA UN AGUJERO, Y LO ABRÍ YO HOY MISMO. Desde que la copia local se
+       escribe también SIN cuenta (uid nulo), exigir uid aquí significa que las horas jugadas con
+       la base de datos caída no cuentan como « este navegador ya tenía granja ». Consecuencia,
+       comprobada: vuelve la base, el juego pide apodo, crea una cuenta ANÓNIMA NUEVA, la nube
+       viene vacía, y la copia con nivel 11 se queda huérfana. O sea, el mismo desastre del 24/8
+       por la puerta de al lado.
+       Lo que hace de esto una granja no es de quién sea: es que tenga PROGRESO. */
+    if (c && (c.nivel > 1 || (c.plata || 0) > 0)) return true;
   } catch (e) {}
   return false;
 }
@@ -670,6 +677,12 @@ const sleepMs = (ms) => new Promise(r => setTimeout(r, ms));
    quedaba pisada por una partida de nivel 1. Un parpadeo de red al entrar borraba la partida.
    Ahora hay una bandera: hasta que un hydrate() no termine COMPLETO, saveFarm no escribe nada. */
 var CARGA_OK = false;      // ¿se llegó a leer y aplicar el guardado de la nube?
+/* 25/8 — MODO SOLO LOCAL: se pudo hidratar desde la copia de este navegador, pero NO se leyó la
+   nube. Autoriza a guardar acá y prohíbe subir: son dos permisos distintos y hasta hoy eran uno
+   solo, que es lo que dejaba al jugador con cuenta en un callejón sin salida cuando la base de
+   datos se caía. La bandera dura toda la sesión: si la conexión vuelve a mitad de partida, NO se
+   sube nada — se sube en la próxima carga, cuando se haya podido LEER primero. */
+var SOLO_LOCAL = false;
 var CARGA_FALLO = false;   // ¿falló la lectura? (distinto de "no hay fila")
 async function loadFarm() {
   /* 24/8 — ACÁ ESTABA LA PUERTA POR LA QUE SE PERDÍA LA GRANJA. "Sin nube no hay nada que
@@ -678,8 +691,28 @@ async function loadFarm() {
      CARGA_OK ahí es autorizar a escribir encima de algo que ni siquiera leímos. */
   if (!sb || !UID) {
     if (CUENTA_PREVIA) {
+      /* 25/8 — ESTO ERA UN CALLEJÓN SIN SALIDA, y le tocaba justo al que más juega.
+         El que TIENE cuenta y no puede entrar veía « No se pudo cargar tu granja » y se quedaba
+         ahí: no podía jugar. La razón original es buena y no se toca —no escribir en la nube algo
+         que no leímos— pero se estaba usando para prohibir TAMBIÉN lo que no tiene ningún riesgo:
+         jugar contra la copia de este mismo navegador.
+         Ahora, si hay copia local con progreso, se juega en MODO SOLO LOCAL: se hidrata, se sigue
+         guardando acá, y la nube queda BLOQUEADA toda la sesión (CARGA_OK sigue en false, que es
+         lo que le prohíbe a saveFarm subir nada). El día que la base vuelva, la carga de verdad
+         decidirá con copiaEsMejor quién manda. Sin copia, el callejón sigue siendo lo correcto:
+         mejor una pantalla honesta que una granja en blanco. */
+      const local = (typeof copiaLeer === "function") ? copiaLeer() : null;
+      if (local && local.data && (!local.uid || local.uid === UID || !UID)) {
+        SOLO_LOCAL = true;
+        hydrate(local.data);
+        sesionLog("solo local: hay cuenta pero no se pudo entrar", "nivel " + (local.nivel || 1));
+        const mot = (typeof motivoSinNube === "function") ? motivoSinNube() : null;
+        if (typeof log === "function") log("💾 No se pudo entrar a tu cuenta, así que se cargó la copia de ESTE navegador (nivel " + (local.nivel || 1) + "). Podés jugar: se guarda acá y NO se toca tu granja de la nube hasta que se pueda leer bien. " + (mot ? mot.largo : ""), "gold");
+        if (typeof toast === "function") toast("💾 Jugando con la copia de este navegador");
+        return true;
+      }
       CARGA_FALLO = true;
-      console.warn("loadFarm: este navegador tiene cuenta pero no se pudo entrar. Guardado BLOQUEADO.");
+      console.warn("loadFarm: este navegador tiene cuenta, no se pudo entrar y no hay copia local. Guardado BLOQUEADO.");
       return false;
     }
     /* 25/8 — Y ACÁ LA OTRA MITAD DEL MISMO AGUJERO. « Navegador virgen: no hay nada que pisar »
@@ -724,6 +757,22 @@ async function loadFarm() {
         // prefijo por sesión en el ranking, el chat y el mercado (10/8).
         if (data.name && !window.NICK) window.NICK = String(data.name).replace(/^\s*(\[[^\]]*\]\s*)+/, "") || data.name;
         lastSavedKey = snapKey();   // referencia: lo que acabás de cargar ya está guardado
+        return true;
+      }
+      /* 25/8 — « PRIMERA VEZ DE VERDAD » NO SIEMPRE ES VERDAD. Si este navegador jugó con la base
+         de datos caída, tiene una copia local con progreso y una cuenta recién creada cuya fila
+         está vacía. Crear la fila y seguir sería tirar esas horas justo cuando volvió el servicio
+         — el peor momento, y encima con cara de que todo funciona. Si hay copia con progreso, se
+         hidrata ANTES de crear la fila, así lo primero que sube es la granja de verdad. */
+      const huerfana = copiaLeer();
+      if (huerfana && huerfana.data && (huerfana.nivel > 1 || (huerfana.plata || 0) > 0)
+          && (!huerfana.uid || huerfana.uid === UID)) {
+        hydrate(huerfana.data);
+        sesionLog("cuenta sin fila + copia local con progreso: se sube la copia", "nivel " + huerfana.nivel);
+        if (typeof log === "function") log("💾 Se recuperó la granja que jugaste mientras el servidor estaba caído (nivel " + huerfana.nivel + ") y se subió a tu cuenta.", "gold");
+        if (typeof toast === "function") toast("Granja recuperada y subida");
+        CARGA_OK = true;
+        await saveFarm(true);
         return true;
       }
       // primera vez de verdad: no hay fila. Es seguro crearla.
@@ -843,10 +892,16 @@ async function saveFarm(force) {
   // 18/8: si nunca se llegó a cargar, NO se escribe. Es preferible perder una sesión de juego
   // antes que pisar la granja buena con los valores por defecto. Vale para la copia local igual:
   // guardar un estado que nunca se hidrató sería fabricar la pérdida, no evitarla.
-  if (!CARGA_OK) { console.warn("saveFarm bloqueado: la granja no se llegó a cargar"); return; }
+  // 25/8: …salvo en SOLO_LOCAL, donde SÍ hubo hydrate (de la copia de este navegador). Ahí lo
+  // que falta no es el hydrate: es haber leído la nube. Se guarda acá y no se sube — ver abajo.
+  if (!CARGA_OK && !SOLO_LOCAL) { console.warn("saveFarm bloqueado: la granja no se llegó a cargar"); return; }
   const key = snapKey();
   if (!force && key === lastSavedKey) return;   // nada que guardar: ni siquiera muestra el indicador
   copiaGuardar(snapshot());   // la copia local se deja SIEMPRE — y ahora « siempre » es verdad
+  /* la puerta de la NUBE, que es distinta de la de arriba. En SOLO_LOCAL no se sube ni aunque la
+     conexión vuelva a mitad de partida: subir sin haber leído es justo lo que borró una granja
+     el 24/8. Se subirá en la próxima carga, cuando se pueda LEER primero. */
+  if (SOLO_LOCAL) return;
   if (!sb || !UID) { avisarSinNube(); return; }
   if (typeof showSaving === "function") showSaving();
   // hasta 2 intentos inmediatos; si fallan, lastSavedKey no se actualiza y el autosave reintenta al próximo ciclo

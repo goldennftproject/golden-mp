@@ -36,7 +36,17 @@ console.log("\nREJA 1 · loadFarm NO AUTORIZA A ESCRIBIR SI HAY CUENTA Y NO SE P
     /CARGA_OK = true; return false;\s*\/\/ navegador virgen de verdad/.test(f));
   ok("y antes de rendirse mira si hay copia local — sin servidor no es lo mismo que sin granja",
     /copiaLeer/.test(f) && /return true;/.test(f));
-  ok("y el guardado se bloquea sin CARGA_OK", /if \(!CARGA_OK\) \{ console\.warn\("saveFarm bloqueado/.test(SAVE));
+  /* 25/8 — LA REGLA SE PARTIÓ EN DOS PERMISOS, Y ESTÁ BIEN QUE ASÍ SEA. « Sin CARGA_OK no se
+     escribe » mezclaba dos cosas distintas: escribir en la NUBE (que sin haber leído es lo que
+     borró una granja el 24/8) y escribir en ESTE navegador (que no puede pisar nada de nadie).
+     Juntas dejaban al jugador con cuenta en un callejón sin salida cuando la base se caía.
+     Lo que este medidor tiene que seguir exigiendo es lo importante: que a la NUBE no se suba
+     nada sin haber leído primero. */
+  ok("guardar sigue bloqueado si nunca hubo hydrate", /if \(!CARGA_OK && !SOLO_LOCAL\) \{ console\.warn\("saveFarm bloqueado/.test(SAVE));
+  ok("y en modo solo local NO se sube a la nube, ni aunque vuelva la conexión",
+    /if \(SOLO_LOCAL\) return;/.test(SAVE));
+  ok("SOLO_LOCAL solo se enciende habiendo hidratado una copia de verdad",
+    /SOLO_LOCAL = true;\s*\n\s*hydrate\(local\.data\);/.test(SAVE));
 }
 
 console.log("\nREJA 2 · EL ARRANQUE NO PIDE APODO SI YA HAY GRANJA");
