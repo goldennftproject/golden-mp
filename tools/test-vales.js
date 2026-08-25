@@ -42,7 +42,22 @@ for (const lvl of niveles) {
 G.level = 18; G.skills.farming = 999999;
 // el pedido MAS BARATO que el generador puede producir ahora
 let papaVal = 1e9;
-for (let sd = 0; sd < 400; sd++) { const q = X.pedidoGenerar(sd); if (q) papaVal = Math.min(papaVal, q.n * (X.priceOf(q.key) || 1)); }
+/* 25/8 — EL VALOR DEL PEDIDO ES EL QUE EL PEDIDO DECLARA, no uno re-derivado acá.
+   Esta línea calculaba `q.n * (priceOf(q.key) || 1)`, y priceOf() devuelve 0 para CUALQUIER
+   pez —los cuatro viejos y las nueve especies nuevas— porque el pescado no se vende en el
+   mercado: se entrega y se cocina. Su precio vive en especiePrecio(). Así que el `|| 1` hacía
+   que un encargo de dos peces valiera « 2 » y el exploit saltaba a x11.
+   No saltó antes por casualidad: el pool solo ofrecía pescado si el jugador tenía caña, y este
+   test no le pone ninguna. Al abrir el tablón a las nueve especies (25/8) el encargo entró y
+   destapó que la cuenta estaba mal desde siempre.
+   La regla: si el generador ya calculó cuánto vale un pedido, ése es el número. Recalcularlo
+   con otra fórmula es tener dos verdades — que es justo lo que este proyecto no hace. */
+for (let sd = 0; sd < 400; sd++) {
+  const q = X.pedidoGenerar(sd);
+  if (!q) continue;
+  const v = (typeof q.plata === "number" && q.plata > 0) ? q.plata : q.n * (X.priceOf(q.key) || 1);
+  papaVal = Math.min(papaVal, v);
+}
 const valesQueDa = X.valesDe(papaVal) * 2;          // x2 del primero del día
 const cuestaSemillas = X.valeCosto("semillas");
 const sacas = X.valeSemillasN() * X.CROP_DEF[X.valeMejorCultivo()].seedCost;

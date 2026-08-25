@@ -5955,17 +5955,28 @@ function lanceXp(l) {
    jugador deja de leerlo. */
 var MAREA_CADA_H = 6, MAREA_N = 3;
 function mareaTanda(t) { return Math.floor((t != null ? t : nowMs()) / (MAREA_CADA_H * 3600000)); }
-function especiePescable(id) {
+/* ¿ESTÁ AL ALCANCE DEL JUGADOR? — nivel, familia abierta y una caña que aguante su talla mínima.
+   Lo que NO mira es la hora, y ésa es toda la diferencia con la función de abajo. */
+function especieAlcanzable(id) {
   const e = ESPECIE_DEF[id]; if (!e) return false;
   if (e.lvl && nivelOficio("fishing") < e.lvl) return false;
   if (e.familia === "coloso") {
     if (!trampaAbierta("palangre")) return false;
   } else if (!familiaAbierta(e.familia)) return false;
-  /* si el pez solo pica de noche y hoy no hay niebla que lo saque de día, tampoco cuenta:
-     un pedido que solo se puede cumplir despierto a las 3 am es un pedido imposible con otro
-     nombre. La niebla es justamente el día en que sí se puede — por eso el clima entra acá. */
+  return canaMejorAguanta() >= e.estrellas[0];
+}
+/* ¿Y PUEDE PESCARLO AHORA MISMO? — lo de arriba, más la hora.
+   25/8 — LA DISTINCIÓN, que el documento no hacía y hace falta: un encargo del TABLÓN dura un día
+   o una semana, así que pedir calamar es legítimo — el jugador espera a que anochezca y lo pesca.
+   El pedido de MAREA vence en seis horas: ahí no hay tiempo de esperar a la noche, y pedirlo
+   sería justamente el « pedido imposible » que la regla del capítulo 11 prohíbe. Mismo principio
+   —no pidas lo que no se puede dar— aplicado a dos ventanas de duración distinta. */
+function especiePescable(id) {
+  const e = ESPECIE_DEF[id]; if (!e) return false;
+  if (!especieAlcanzable(id)) return false;
+  /* la niebla es justamente el día en que el Fondo se puede pescar sin trasnochar */
   if (e.noche && !climaAbreDeDia(e.familia) && !esDeNoche()) return false;
-  return canaMejorAguanta() >= e.estrellas[0];   // si no hay caña que aguante ni la talla mínima, no se puede
+  return true;
 }
 function mareaPedidos(rnd) {
   const t = mareaTanda();
@@ -6366,8 +6377,28 @@ function pedPool() {
     if (k === "piedra") continue;
     try { if (statGet("minar", k) > 0) pool.push({ tipo: "res", key: k, n: 1, val: (ORE_DEF[k].price || 6) * 2 }); } catch (e) {}
   }
-  if (((G.fish && G.fish.comun) || 0) > 0 || toolCount("rod") > 0)
-    pool.push({ tipo: "fish", key: "comun", n: 2, val: 12 });
+  /* 25/8 (Pesca v3, capítulo 11) — EL TABLÓN PEDÍA UN SOLO PEZ, Y DEL CATÁLOGO VIEJO.
+     Era `{ tipo: "fish", key: "comun", n: 2, val: 12 }`: una línea, una rareza que ya nadie
+     pesca, y un valor escrito a mano que no cuelga del ancla. Con nueve especies, eso significa
+     que el Torneo de Pesca —uno de los cinco temas del fin de semana— repartía siempre el mismo
+     encargo, y encima de algo que el jugador nuevo ya no obtiene nunca.
+     Ahora sale de ESPECIE_ORDER con el precio DERIVADO, como todo lo demás en este juego.
+
+     LA REGLA DURA del capítulo 11: « la Lonja solo pide lo que el jugador YA puede pescar. Un
+     pedido imposible no frustra: enseña que el tablón miente, y a partir de ahí el jugador deja
+     de leerlo. » Por eso pasa por especieAlcanzable — y NO por especiePescable, que además mira
+     la hora: un encargo del tablón dura un día o una semana, así que pedir calamar está bien
+     porque el jugador puede esperar a que anochezca. */
+  if (typeof especieAlcanzable === "function") {
+    for (const esp of ESPECIE_ORDER) {
+      if (!especieAlcanzable(esp)) continue;
+      const e = ESPECIE_DEF[esp];
+      /* la misma vara que los cultivos de arriba: lo que se consigue rápido va en tanda, y el
+         que cuesta una cadena larga se pide suelto. */
+      const n = e.cadena <= 15 ? 2 : 1;
+      pool.push({ tipo: "fish", key: esp, n, val: Math.max(2, Math.round(especiePrecio(esp) * n)) });
+    }
+  }
   if (G.built && G.built.cocina) for (const id of ["papa_asada", "crema_calabaza", "pure_papa"]) {   // 22/8: la sopa se fue al nivel 8 con su zanahoria
     const r = RECIPE_DEF[id]; if (!r) continue;
     let hecho = false; try { hecho = statGet("cocinar", id) > 0; } catch (e) {}
