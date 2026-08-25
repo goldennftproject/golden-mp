@@ -36,7 +36,18 @@ console.log("\nEL TECHO ES EL ÚLTIMO NIVEL DEL CONTENIDO, NO UN NÚMERO A MANO"
       ctx.oficioTecho(sk) === esperado[sk] && maxLista === esperado[sk],
       "techo " + ctx.oficioTecho(sk) + " · lista hasta " + maxLista);
   }
-  for (const sk of ["tala", "fishing", "crafting", "sword", "range"]) {
+  /* 25/8 (Pesca v3, tanda 2) — PESCA YA TIENE ESCALERA, así que sale de esta lista y entra en
+     la de arriba: su techo se deriva del contenido igual que los demás. Hoy es 18 (la Caña del
+     Abuelo); cuando entre el tiburón martillo de la tanda 3 subirá solo a 20, sin que nadie
+     escriba el número. */
+  {
+    const l = ctx.oficioAbre("fishing");
+    const maxP = Math.max.apply(null, l.map(e => e[0]));
+    ok("fishing YA tiene escalera", l.length > 0, l.length + " escalones");
+    ok("y su techo es el máximo de su lista, no un número a mano",
+      ctx.oficioTecho("fishing") === maxP, "techo " + ctx.oficioTecho("fishing"));
+  }
+  for (const sk of ["tala", "crafting", "sword", "range"]) {
     ok(sk + " no tiene escalera: sigue sin techo (150)", ctx.oficioTecho(sk) === 150);
   }
 }

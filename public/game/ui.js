@@ -760,6 +760,30 @@ function refreshForge() {
       + '<button class="green sm" ' + (ok ? "" : "disabled") + ' data-ctool5="' + id + '" title="Craftear 5 de una (doc 2/8: crafteo en lote)">×5</button>';
     craft += '<div class="forge-row"><div class="fic"><img src="' + GF.spr(td.sprite) + '"></div><div class="finfo"><div class="fnm">' + td.label + '</div><div class="fds">1 uso c/u · tenés ' + n + '</div><div class="fds">Costo: ' + cs + '</div></div><div class="fbtns">' + btn + '</div></div>';
   });
+  /* 25/8 (Pesca v3, tanda 2) — LAS CAÑAS, con la misma forma que los picos: cada una dice hasta
+     qué talla aguanta y cuántos usos le quedan. La que todavía no sabés hacer sale a media tinta
+     con el nivel que pide, igual que los minerales: de un golpe se ve qué falta y de qué lado. */
+  if (typeof CANA_ORDER !== "undefined") {
+    craft += '<div class="shophead">Cañas de pescar</div>';
+    const nvP = (typeof nivelOficio === "function") ? nivelOficio("fishing") : 1;
+    CANA_ORDER.forEach(id => {
+      const d = CANA_DEF[id], n = Math.floor((G.canas || {})[id] || 0), abierta = nvP >= (d.lvl || 1);
+      const cs = Object.keys(d.cost).map(k => resIc(k) + " " + d.cost[k]).join(" · ")
+        + (d.plata ? (Object.keys(d.cost).length ? " · " : "") + coinIc("plata") + " " + d.plata : "");
+      const puede = abierta && !d.lonja && canAfford(d.cost) && G.plata >= (d.plata || 0);
+      const btn = d.lonja
+        ? '<button class="ghost sm" disabled title="Se gana en la Lonja">Lonja</button>'
+        : (abierta
+          ? '<button class="green sm" ' + (puede ? "" : "disabled") + ' data-ccana="' + id + '">Craftear</button>'
+          : '<button class="ghost sm" disabled>Pesca ' + d.lvl + '</button>');
+      craft += '<div class="forge-row' + (abierta ? "" : " locked") + '"><div class="fic">' +
+        '<img src="' + GF.spr("res_lombriz") + '" style="opacity:0" alt=""><span style="position:absolute;font-size:20px">🎣</span></div>' +
+        '<div class="finfo"><div class="fnm">' + d.label + ' <span style="color:#ffd75e">' + "★".repeat(d.aguanta) + '</span></div>' +
+        '<div class="fds">aguanta hasta ' + d.aguanta + '★ · ' + d.usos + ' usos · tenés ' + n + '</div>' +
+        '<div class="fds">' + (d.lonja ? "Se gana en la Lonja" : "Costo: " + (cs || "—")) + '</div>' +
+        '</div><div class="fbtns">' + btn + '</div></div>';
+    });
+  }
   // solo las ARMAS se reparan → Reparar
   ARM_ORDER.forEach(id => {   // doc 2/8: las armas nuevas se reparan acá
     if (!G.weapons || !G.weapons[id]) return;
@@ -840,6 +864,7 @@ function refreshForge() {
   card.querySelectorAll("[data-repair]").forEach(b => b.onclick = () => repairPick(b.dataset.repair));
   card.querySelectorAll("[data-rtool]").forEach(b => b.onclick = () => repairTool(b.dataset.rtool));
   card.querySelectorAll("[data-ctool]").forEach(b => b.onclick = () => craftTool(b.dataset.ctool));
+  card.querySelectorAll("[data-ccana]").forEach(b => b.onclick = () => craftCana(b.dataset.ccana));   // 25/8: las cañas
   card.querySelectorAll("[data-ctool5]").forEach(b => b.onclick = () => craftTool(b.dataset.ctool5, 5));
   card.querySelectorAll("[data-carm]").forEach(b => b.onclick = () => craftWeapon(b.dataset.carm));
   card.querySelectorAll("[data-rarm]").forEach(b => b.onclick = () => repairWeapon(b.dataset.rarm));

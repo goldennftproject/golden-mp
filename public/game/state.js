@@ -311,6 +311,16 @@ function oficioAbre(sk) {
     for (let n = 2; n < ESTABLO_CUPO_MAX; n++) l.push([n, "un lugar más en el establo (" + (n + 1) + ")"]);
   }
   if (sk === "cooking") for (const k in RECIPE_DEF) l.push([RECIPE_DEF[k].lvl || 1, RECIPE_DEF[k].label]);
+  /* 25/8 (Pesca v3, tanda 2) — PESCA POR FIN TIENE ESCALERA, y su techo se DERIVA del contenido
+     como el de todos los demás: es el nivel de lo último que abre. Hoy son las cañas (18) y las
+     carnadas; cuando entre el tiburón martillo de la tanda 3, el techo sube solo a 20. Nadie
+     escribe el número: por eso no puede quedar desfasado del contenido que hay. */
+  if (sk === "fishing" && typeof CANA_DEF !== "undefined") {
+    for (const k in CANA_DEF) l.push([CANA_DEF[k].lvl || 1, CANA_DEF[k].label + " (" + CANA_DEF[k].aguanta + "★)"]);
+    for (const k in PESCA_CARNADA) if (PESCA_CARNADA[k].lvl)
+      l.push([PESCA_CARNADA[k].lvl, PESCA_CARNADA[k].label + " · familia " + (PESCA_FAMILIA[PESCA_CARNADA[k].familia] || {}).label]);
+    for (const k in ESPECIE_DEF) if (ESPECIE_DEF[k].lvl) l.push([ESPECIE_DEF[k].lvl, ESPECIE_DEF[k].label]);
+  }
   for (const t in PLANO_OFICIO) if (PLANO_OFICIO[t][0] === sk && BUILD_DEF[t])
     l.push([PLANO_OFICIO[t][1], "plano de " + BUILD_DEF[t].label]);
   for (const t in EDIF2_OFICIO) if (EDIF2_OFICIO[t][0] === sk && BUILD_DEF[t])
@@ -5119,7 +5129,13 @@ function senalNueva(i, rnd) {
   const r = rnd || Math.random;
   const fams = familiasAbiertas();
   if (!fams.length) return { esp: ESPECIE_ORDER[0], fam: ESPECIE_DEF[ESPECIE_ORDER[0]].familia, estrella: 1, i };
-  const fam = fams[Math.floor(r() * fams.length) % fams.length];
+  /* 25/8 (tanda 2) — LA MEMORIA DE LA LAGUNA. La familia no sale de un sorteo parejo: sale de un
+     sorteo PESADO por lo que le sacaste. La que exprimiste aparece menos, la descansada más. Es
+     un contador, no un sistema, y empuja variedad sin que ninguna misión te lo pida. */
+  const pesos = fams.map(f => presionPeso(f));
+  const suma = pesos.reduce((a, b) => a + b, 0);
+  let tiro = r() * suma, fam = fams[fams.length - 1];
+  for (let k = 0; k < fams.length; k++) { tiro -= pesos[k]; if (tiro <= 0) { fam = fams[k]; break; } }
   const cand = especiesDe(fam);
   const esp = cand[Math.floor(r() * cand.length) % cand.length];
   const [lo, hi] = ESPECIE_DEF[esp].estrellas;
@@ -5147,7 +5163,14 @@ function pescaPuedeSenal(s) {
     return { ok: false, toast: "Necesitás el " + c.label };
   if (ESPECIE_DEF[s.esp].noche && typeof esDeNoche === "function" && !esDeNoche())
     return { ok: false, toast: ESPECIE_DEF[s.esp].label + " solo pica de noche" };
-  return { ok: true, carnada: ck };
+  /* 25/8 (tanda 2) — LA CAÑA ES UN LÍMITE. Si ninguna aguanta esa talla, el aviso nombra la que
+     falta: un « no podés » sin nombre es un « no podés » que el jugador no puede resolver. */
+  const cana = canaParaEstrella(s.estrella);
+  if (!cana) {
+    const falta = CANA_DEF[canaQueHaceFalta(s.estrella)];
+    return { ok: false, toast: "Ese pez de " + s.estrella + "★ te corta el hilo — hace falta " + falta.label };
+  }
+  return { ok: true, carnada: ck, cana };
 }
 function pescaSenalGastar(idx) {
   if (!Array.isArray(G.senales)) return null;
@@ -5156,6 +5179,9 @@ function pescaSenalGastar(idx) {
   if (!p.ok) { toast(p.toast); return null; }
   const c = PESCA_CARNADA[p.carnada];
   if (c.gasta) G.res[p.carnada] = Math.max(0, (G.res[p.carnada] || 0) - 1);   // la carnada se cobra al ELEGIR
+  canaGastar(p.cana);            // 25/8 (tanda 2): y un uso de la caña que el juego eligió sola
+  presionSumar(s.fam);           // el agua se acuerda de lo que le sacaste
+  s.cana = p.cana;               // el lance recuerda con qué se peleó
   G.senales.splice(idx, 1);
   pescaGastarCarga();
   /* 25/8 (dirección: « cuando tiro la caña no se gasta el lombriz ») — SÍ SE GASTABA. Lo que no
@@ -5170,6 +5196,109 @@ function pescaSenalGastar(idx) {
   if (typeof isOpen === "function" && isOpen("ov-inv") && typeof refreshInv === "function") refreshInv();
   if (typeof saveFarm === "function") saveFarm(true);
   return s;
+}
+
+/* ================= PESCA v3 · TANDA 2 — EL AGUA SE ACUERDA (25/8) =======================
+   Con la tanda 1 medida y en su sitio (la curva no se movió y Pesca quedó alineada con los otros
+   oficios: 135 horas contra 113-123), entra la segunda. Del documento: las cañas con límite en
+   estrellas, la memoria de la laguna, la escalera de Pesca con su techo y el álbum con estrellas.
+
+   ---- LAS CAÑAS: LA CAÑA ES UN LÍMITE, NO UN PORCENTAJE -------------------------------------
+   Cada caña aguanta hasta cierta talla, y eso está escrito en la propia caña. Si el pez pesa más,
+   el hilo se corta: se pierde la carnada y el lance, NUNCA plata. Es la misma forma que ya tienen
+   los picos con los minerales — dos llaves, ninguna probabilidad.
+   Y se elige sola, igual que los picos desde el 24/8: clicás la señal y el juego agarra la más
+   barata que aguante esa estrella y de la que tengas stock. La Caña del Abuelo jamás se gasta en
+   una carpa de 1★. Si no tenés ninguna que sirva, el aviso NOMBRA la que falta. */
+var CANA_DEF = {
+  junco:  { label: "Caña de junco",   aguanta: 2, lvl: 1,  plata: 2,  usos: 30, cost: {} },
+  roble:  { label: "Caña de roble",   aguanta: 3, lvl: 7,  usos: 30, cost: { tablon: 3, madera: 2 } },
+  hierro: { label: "Caña de hierro",  aguanta: 4, lvl: 12, usos: 25, cost: { barra_hierro: 1, tablon: 4 } },
+  abuelo: { label: "Caña del Abuelo", aguanta: 5, lvl: 18, usos: 20, cost: {}, lonja: true },
+};
+var CANA_ORDER = ["junco", "roble", "hierro", "abuelo"];
+function canaTiene(id) { return Math.floor(((G.canas || {})[id]) || 0) > 0; }
+/* la más barata que aguante esa estrella y de la que haya stock — el orden de la lista ES el de
+   precio, así que la primera que sirva es la correcta. Una sola regla, sin tabla de excepciones. */
+function canaParaEstrella(est) {
+  for (const id of CANA_ORDER) if (CANA_DEF[id].aguanta >= est && canaTiene(id)) return id;
+  return null;
+}
+/* y la que HARÍA FALTA, tengas stock o no: para que el aviso nombre la caña exacta */
+function canaQueHaceFalta(est) {
+  for (const id of CANA_ORDER) if (CANA_DEF[id].aguanta >= est) return id;
+  return CANA_ORDER[CANA_ORDER.length - 1];
+}
+/* craftear una caña: mismas reglas que un pico — nivel del oficio, materiales, y contesta SIEMPRE */
+function craftCana(id) {
+  const d = CANA_DEF[id];
+  if (!d) { console.warn("craftCana: caña desconocida", id); return false; }
+  const nv = (typeof nivelOficio === "function") ? nivelOficio("fishing") : 1;
+  if (nv < (d.lvl || 1)) { toast(d.label + " se abre a Pesca " + d.lvl); return false; }
+  if (d.lonja) { toast(d.label + " no se craftea: se gana en la Lonja"); return false; }
+  if (d.plata && G.plata < d.plata) { toast("Te faltan " + fmt(d.plata - G.plata) + " de plata"); return false; }
+  if (!canAfford(d.cost)) { toast("Te faltan materiales para la " + d.label); return false; }
+  if (d.plata) G.plata -= d.plata;
+  payCost(d.cost);
+  G.canas = G.canas || {};
+  G.canas[id] = (G.canas[id] || 0) + d.usos;
+  log("🎣 " + d.label + " lista: aguanta hasta " + d.aguanta + "★ y trae " + d.usos + " usos.", "good");
+  toast(d.label + " ×" + d.usos);
+  if (typeof refreshHud === "function") refreshHud();
+  if (typeof syncSlots === "function") syncSlots();
+  if (typeof saveFarm === "function") saveFarm(true);
+  return true;
+}
+function canaGastar(id) {
+  if (!id || !CANA_DEF[id]) { console.warn("canaGastar: caña desconocida", id); return false; }
+  G.canas = G.canas || {};
+  if (!(G.canas[id] > 0)) return false;
+  G.canas[id] -= 1;
+  if (G.canas[id] <= 0) {
+    delete G.canas[id];
+    log("🎣 Se te rompió la " + CANA_DEF[id].label + ". Crafteá otra en la Herrería.", "bad");
+    toast("¡Caña rota!");
+  }
+  return true;
+}
+
+/* ---- LA MEMORIA DE LA LAGUNA -------------------------------------------------------------
+   « Lo mejor de esta tanda », dice el documento, y coincido: es lo único del juego que le da
+   MEMORIA a un nodo. El árbol de hoy es idéntico al de hace un mes; la laguna, no.
+   Un contador por familia de lo que le sacaste. Si pescás la orilla toda la semana, la orilla
+   escasea y las otras familias suben — no porque una misión te lo pida, sino porque el agua te lo
+   hace notar. Se recupera sola con el tiempo, como todo en este juego.
+   LO QUE HAY QUE VIGILAR, y está escrito en el documento: la presión NUNCA puede cerrar una
+   familia del todo, porque eso rompería la regla del primer escalón — el que solo pesca en la
+   orilla no puede quedarse sin orilla. El piso es « escasa », nunca « ninguna ». */
+var PRESION_POR_PESCA = 1;        // cada lance suma uno a su familia
+var PRESION_CURA_H = 6;           // y se descuenta uno cada seis horas, sola
+var PRESION_TOPE = 12;            // más allá de esto no sigue subiendo: el castigo tiene fondo
+var PRESION_PESO_MIN = 0.35;      // el piso: una familia agotada sigue apareciendo un tercio
+function presionEstado() {
+  if (!G.presion || typeof G.presion !== "object") G.presion = { v: {}, visto: nowMs() };
+  if (!G.presion.v) G.presion.v = {};
+  /* la cura corre por reloj real, igual que los nodos: no hace falta que estés adentro */
+  const pasadas = Math.floor((nowMs() - (G.presion.visto || nowMs())) / (PRESION_CURA_H * 3600000));
+  if (pasadas > 0) {
+    for (const f in G.presion.v) G.presion.v[f] = Math.max(0, (G.presion.v[f] || 0) - pasadas);
+    G.presion.visto = (G.presion.visto || nowMs()) + pasadas * PRESION_CURA_H * 3600000;
+  }
+  return G.presion;
+}
+function presionDe(fam) { return Math.min(PRESION_TOPE, presionEstado().v[fam] || 0); }
+function presionSumar(fam) {
+  const p = presionEstado();
+  p.v[fam] = Math.min(PRESION_TOPE, (p.v[fam] || 0) + PRESION_POR_PESCA);
+}
+/* el peso de una familia en el sorteo: 1 cuando está descansada, PRESION_PESO_MIN cuando está
+   exprimida. Nunca cero — ese es el piso que protege el primer escalón. */
+function presionPeso(fam) {
+  return 1 - (1 - PRESION_PESO_MIN) * (presionDe(fam) / PRESION_TOPE);
+}
+function presionTxt(fam) {
+  const p = presionDe(fam) / PRESION_TOPE;
+  return p < 0.34 ? "abundante" : (p < 0.67 ? "normal" : "escasa");
 }
 
 /* ---- LA ESCAMA DEL QUE SE FUE ---------------------------------------------------------------
@@ -6179,9 +6308,19 @@ function albumFamilias() {
       nom: (k) => (CROP_DEF[k] && CROP_DEF[k].label) || k,
       spr: (k) => (typeof resSprite === "function" ? resSprite(k) : null),
       tiene: (k) => statGet("plantar", k) > 0 || statGet("cosechar", k) > 0 || vistoRes(k) },
-    { id: "peces", ic: "🐟", label: "Peces", orden: FISH_ORDER,
-      nom: (k) => (FISH_DEF[k] && FISH_DEF[k].label) || k,
-      spr: (k) => (FISH_DEF[k] && FISH_DEF[k].sprite) || null,
+    /* 25/8 (Pesca v3, tanda 2) — EL ÁLBUM CON ESTRELLAS. La lámina deja de ser « lo tenés / no lo
+       tenés » y pasa a ser « cuánto lo dominás »: guarda tu MEJOR talla de cada especie. No ocupa
+       un byte nuevo —se deriva de un contador de máximo que ya llevamos— y las partidas viejas
+       abren el álbum ya medio lleno.
+       Y trae el estado intermedio que faltaba: la escama. « Visto, no cobrado » — el pez que se te
+       escapó ilumina su silueta pero la deja en gris. Si los logros premian volumen y el álbum
+       premia variedad, la fila de estrellas agrega el tercer eje: profundidad. Es el que hace que
+       un jugador vuelva a pescar una carpa que ya tiene. */
+    { id: "peces", ic: "🐟", label: "Peces", orden: ESPECIE_ORDER.concat(FISH_ORDER),
+      nom: (k) => (ESPECIE_DEF[k] && ESPECIE_DEF[k].label) || (FISH_DEF[k] && FISH_DEF[k].label) || k,
+      spr: (k) => (ESPECIE_DEF[k] && ESPECIE_DEF[k].sprite) || (FISH_DEF[k] && FISH_DEF[k].sprite) || null,
+      estrellas: (k) => (ESPECIE_DEF[k] ? { max: (G.estrellaMax || {})[k] || 0, tope: ESPECIE_DEF[k].estrellas[1] } : null),
+      visto: (k) => !!(G.vistos || {})[k],
       tiene: (k) => statGet("pescar", k) > 0 || Math.floor((G.fish && G.fish[k]) || 0) > 0 },
     { id: "platos", ic: "🍲", label: "Platos", orden: RECIPE_ORDER,
       nom: (k) => (RECIPE_DEF[k] && RECIPE_DEF[k].label) || k,
@@ -6202,7 +6341,13 @@ function albumFamilias() {
   ];
 }
 function albumFila(f) {
-  const piezas = (f.orden || []).map(k => ({ k, nom: f.nom(k), spr: f.spr ? f.spr(k) : null, emo: f.emo ? f.emo(k) : null, visto: !!f.tiene(k) }));
+  const piezas = (f.orden || []).map(k => ({
+    k, nom: f.nom(k), spr: f.spr ? f.spr(k) : null, emo: f.emo ? f.emo(k) : null, visto: !!f.tiene(k),
+    /* 25/8 — la fila de estrellas y el estado « visto, no cobrado » de la escama. Solo las
+       familias que lo definen los traen; las demás siguen igual que siempre. */
+    est: f.estrellas ? f.estrellas(k) : null,
+    escapo: f.visto ? (!f.tiene(k) && f.visto(k)) : false,
+  }));
   return { id: f.id, ic: f.ic, label: f.label, piezas, hechas: piezas.filter(p => p.visto).length, total: piezas.length };
 }
 function albumLista() { return albumFamilias().map(albumFila); }

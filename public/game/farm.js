@@ -2053,9 +2053,15 @@ class FarmScene extends Phaser.Scene {
       g.on("pointerover", () => {
         const ck = carnadaDe(s.fam), c = PESCA_CARNADA[ck] || {};
         const puede = pescaPuedeSenal(s);
+        /* 25/8 (tanda 2) — la chapa dice también con QUÉ CAÑA se va a pelear y CÓMO ESTÁ la
+           familia. Lo segundo es lo que hace visible la memoria de la laguna: sin decirlo, el
+           jugador nunca se enteraría de que el agua se acuerda de lo que le sacó. */
+        const cana = puede.ok && typeof CANA_DEF !== "undefined" ? CANA_DEF[puede.cana] : null;
+        const est = (typeof presionTxt === "function") ? presionTxt(s.fam) : "";
         this.senalChapa(p.x, p.y - 30,
-          fam.senal + "\n" + e.emoji + " " + e.label + " " + "★".repeat(s.estrella) + "\n" +
-          (puede.ok ? "con " + c.emoji + " " + c.label : "⚠ " + puede.toast), puede.ok);
+          fam.senal + (est ? " · " + est : "") + "\n" +
+          e.emoji + " " + e.label + " " + "★".repeat(s.estrella) + "\n" +
+          (puede.ok ? "con " + c.emoji + " " + c.label + (cana ? " · " + cana.label : "") : "⚠ " + puede.toast), puede.ok);
       });
       g.on("pointerout", () => this.senalChapa(null));
       g.on("pointerdown", (pt, lx, ly, ev) => { if (ev && ev.stopPropagation) ev.stopPropagation(); this.tirarASenal(i); });

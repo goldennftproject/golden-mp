@@ -212,7 +212,7 @@ function snapshot() {
      vistos y estrellaMax (el álbum con estrellas) y pescaTiene (el señuelo, que no se gasta).
      OJO con los comentarios AL FINAL de una línea de este objeto: se comen lo que sigue. */
   return { plata: G.plata, golden: G.golden, level: G.level, prestige: G.prestige, iniciado: G.iniciado,
-    res: G.res, picks: G.picks, skills: G.skills, fish: G.fish, plots: G.plots, nodos: G.nodos, expansiones: G.expansiones, pescaHasta: G.pescaHasta, pescaDesde: G.pescaDesde, senales: G.senales, escamas: G.escamas, vistos: G.vistos, estrellaMax: G.estrellaMax, pescaTiene: G.pescaTiene, runaOro: G.runaOro, buffs: G.buffs, seeds: G.seeds, selSeed: G.selSeed,
+    res: G.res, picks: G.picks, skills: G.skills, fish: G.fish, plots: G.plots, nodos: G.nodos, expansiones: G.expansiones, pescaHasta: G.pescaHasta, pescaDesde: G.pescaDesde, senales: G.senales, escamas: G.escamas, vistos: G.vistos, estrellaMax: G.estrellaMax, pescaTiene: G.pescaTiene, canas: G.canas, presion: G.presion, runaOro: G.runaOro, buffs: G.buffs, seeds: G.seeds, selSeed: G.selSeed,
     tools: G.tools, sflStock: true, invRows: G.invRows, slots: G.slots, hotbar: G.hotbar, hotSel: G.hotSel, hbInit: G.hbInit, layout: G.layout,
     daily: G.daily, plotsOwned: G.plotsOwned, plotsCompradas: G.plotsCompradas, plotsFicha: G.plotsFicha, expParcelasDadas: G.expParcelasDadas, seedBuys: G.seedBuys, built: G.built,
     hp: G.hp, hpMax: G.hpMax, combatXp: G.combatXp, stam: G.stam, stamAcc: G.stamAcc, stamFullAt: G.stamFullAt, stamRec: G.stamRec, pass: G.pass, tuto: G.tuto, firstSeeds: G.firstSeeds,   // 24/8: stamFullAt — la recarga de 4 h es de reloj real
@@ -260,6 +260,16 @@ function hydrate(d) {
   if (d.vistos && typeof d.vistos === "object") G.vistos = d.vistos;
   if (d.estrellaMax && typeof d.estrellaMax === "object") G.estrellaMax = d.estrellaMax;
   if (d.pescaTiene && typeof d.pescaTiene === "object") G.pescaTiene = d.pescaTiene;
+  if (d.canas && typeof d.canas === "object") G.canas = d.canas;
+  if (d.presion && typeof d.presion === "object") G.presion = d.presion;
+  /* 25/8 (tanda 2) — LA CAÑA DE ARRANQUE. El primer escalón tiene que estar abierto en el minuto
+     uno: un oficio cuyo primer escalón esté cerrado es un oficio que el jugador nunca empieza.
+     Quien llega sin ninguna caña recibe la de junco, que es la que el documento pone en el
+     nivel 1. No es un regalo: es que sin ella la laguna no existiría para él. */
+  if (!G.canas || !Object.keys(G.canas).length) {
+    const vieja = (typeof toolCount === "function") ? toolCount("rod") : 0;
+    G.canas = { junco: Math.max(CANA_DEF.junco.usos, Math.floor(vieja) || 0) };
+  }
   if (d.runaOro && typeof d.runaOro === "object") G.runaOro = d.runaOro;
   if (typeof d.expansiones === "number") G.expansiones = Math.max(0, Math.min(16, d.expansiones));
   // los buffs traen su propio vencimiento: se descartan los que ya caducaron mientras no estabas

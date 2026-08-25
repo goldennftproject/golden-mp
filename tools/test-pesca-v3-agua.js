@@ -41,7 +41,12 @@ console.log("\nLA SEÑAL DICE QUÉ TRAE ANTES DE QUE TIRES (regla 9 en el agua)"
   ok("al pasar por encima aparece una chapa", /g\.on\("pointerover"/.test(FARM) && /senalChapa\(/.test(FARM));
   ok("con la especie y sus estrellas", /e\.emoji \+ " " \+ e\.label \+ " " \+ "★"\.repeat\(s\.estrella\)/.test(FARM));
   ok("y con la carnada que hace falta — o el motivo por el que no podés",
-    /puede\.ok \? "con " \+ c\.emoji \+ " " \+ c\.label : "⚠ " \+ puede\.toast/.test(FARM));
+    /puede\.ok \? "con " \+ c\.emoji \+ " " \+ c\.label/.test(FARM) && /"⚠ " \+ puede\.toast/.test(FARM));
+  /* 25/8 (tanda 2): y además con qué CAÑA se va a pelear y CÓMO ESTÁ la familia — lo segundo es
+     lo que hace visible la memoria de la laguna, que si no el jugador nunca se enteraría. */
+  ok("y con la caña que va a usar", /cana \? " · " \+ cana\.label : ""/.test(FARM));
+  ok("y con cómo está esa familia (la memoria de la laguna, a la vista)",
+    /presionTxt\(s\.fam\)/.test(FARM));
   ok("la chapa NO usa el cartel de abajo (que el update pisa cada cuadro)",
     /No usa el cartel de abajo/.test(FARM));
   ok("y se va al sacar el cursor", /g\.on\("pointerout", \(\) => this\.senalChapa\(null\)\)/.test(FARM));
