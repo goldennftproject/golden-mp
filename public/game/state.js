@@ -4687,8 +4687,11 @@ function roomForRes(key, n) {
   G.res[key] = before;
   return ok;
 }
-function roomForFish() {   // la rareza es al azar: tiene que entrar CUALQUIERA de las cuatro
-  return FISH_ORDER.every(f => {
+function roomForFish() {   // tiene que entrar CUALQUIERA de las especies, no solo las viejas
+  /* 25/8: decía « cualquiera de las cuatro » y recorría FISH_ORDER. Con Pesca v3 son trece
+     posibles y las nueve nuevas ni contaban: la bolsa nunca se daba por llena y el pez entraba
+     igual… a un casillero que no existía. */
+  return pecesDeLaBolsa().every(f => {
     const before = (G.fish && G.fish[f]) || 0;
     G.fish[f] = before + 1;
     const ok = canonicalStacks().length <= invSlots();
@@ -4843,6 +4846,14 @@ const ITEM_RES_ORDER = ["papa","ciruela","cereza","remolacha","zanahoria","cebol
   "tablon","barra_piedra","barra_bronce","barra_hierro","barra_oro",
   "fibra","pelaje","cuero","colmillo","esencia_runica","esencia_oscura"];   // los 3 cultivos nuevos y los materiales de Establo/Curtiduría/Altar también ocupan casilla
 function descKey(d) { return d ? d.kind + ":" + d.key : ""; }
+/* TODO LO QUE PUEDE HABER EN LA BOLSA COMO PESCADO: las nueve especies de Pesca v3 y las cuatro
+   rarezas viejas, que siguen existiendo en partidas anteriores. Una sola lista, derivada, para
+   que la bolsa y el espacio disponible no puedan discrepar. */
+function pecesDeLaBolsa() {
+  const v3 = (typeof ESPECIE_ORDER !== "undefined") ? ESPECIE_ORDER : [];
+  const viejos = (typeof FISH_ORDER !== "undefined") ? FISH_ORDER : [];
+  return v3.concat(viejos.filter(f => v3.indexOf(f) < 0));
+}
 function canonicalStacks() {
   const list = [];
   ["axe", "rod"].forEach(k => { let n = toolCount(k); while (n > 0) { list.push({ kind: "tool", key: k }); n -= 99; } });   // apilables ×99
@@ -4853,9 +4864,26 @@ function canonicalStacks() {
      están acá: viven en el COBERTIZO (cobertizoItems), que es el sitio de lo que se COLOCA.
      La bolsa queda para lo que se GASTA: recursos, semillas, pescado, comida y herramientas. */
   PICK_ORDER.forEach(id => { let n = pickCount(id); while (n > 0) { list.push({ kind: "pick", key: id }); n -= 99; } });   // picos apilables ×99
+  /* 25/8 (diseñador: « la caña nueva se compra pero no aparece en el bag ») — Y NO ERAN SOLO LAS
+     CAÑAS. Esta función es la que decide qué existe dentro de la bolsa, y estaba escrita como una
+     lista de catálogos A MANO. Pesca v3 metió DOS clases de objeto nuevas y ninguna se agregó acá:
+
+       · las cañas (G.canas)  — se craftean, se gastan, y eran invisibles
+       · las NUEVE especies   — la bolsa recorría FISH_ORDER (comun · raro · epico · legendario),
+                                que es el catálogo VIEJO. Todo lo pescado desde la tanda 1 no se
+                                veía, no ocupaba lugar y no se podía vender ni entregar.
+
+     Lo segundo es más grave que lo reportado y nadie lo dijo, porque « no aparece » se confunde
+     con « todavía no pesqué nada ». Un objeto que existe en el estado y no existe en la bolsa es
+     un objeto que el jugador tiene y no puede usar.
+     La forma de que no vuelva a pasar no es agregar dos líneas: es que estas listas se DERIVEN
+     del catálogo en vez de repetirlo. Por eso se recorre `ESPECIE_ORDER.concat(FISH_ORDER)` y
+     `CANA_ORDER`, y por eso hay un auditor nuevo que compara las dos cosas. */
+  if (typeof CANA_ORDER !== "undefined")
+    CANA_ORDER.forEach(id => { if (canaUsos(id) > 0) list.push({ kind: "cana", key: id }); });   // una casilla por caña, con sus usos
   ITEM_RES_ORDER.forEach(r => { let n = Math.floor(G.res[r] || 0); while (n > 0) { list.push({ kind: "res", key: r }); n -= 99; } });
   CROP_ORDER.forEach(s => { let n = Math.floor(G.seeds[s] || 0); while (n > 0) { list.push({ kind: "seed", key: s }); n -= 99; } });
-  FISH_ORDER.forEach(f => { let n = Math.floor((G.fish && G.fish[f]) || 0); while (n > 0) { list.push({ kind: "fish", key: f }); n -= 99; } });
+  pecesDeLaBolsa().forEach(f => { let n = Math.floor((G.fish && G.fish[f]) || 0); while (n > 0) { list.push({ kind: "fish", key: f }); n -= 99; } });
   RECIPE_ORDER.forEach(d => { let n = Math.floor((G.dishes && G.dishes[d]) || 0); while (n > 0) { list.push({ kind: "dish", key: d }); n -= 99; } });
   // (los cofres sin colocar también se mudaron al Cobertizo)
   return list;
@@ -5299,7 +5327,8 @@ var CANA_DEF = {
   abuelo: { label: "Caña del Abuelo", aguanta: 5, lvl: 18, usos: 20, cost: {}, lonja: true },
 };
 var CANA_ORDER = ["junco", "roble", "hierro", "abuelo"];
-function canaTiene(id) { return Math.floor(((G.canas || {})[id]) || 0) > 0; }
+function canaUsos(id) { return Math.max(0, Math.floor(((G.canas || {})[id]) || 0)); }
+function canaTiene(id) { return canaUsos(id) > 0; }
 /* la más barata que aguante esa estrella y de la que haya stock — el orden de la lista ES el de
    precio, así que la primera que sirva es la correcta. Una sola regla, sin tabla de excepciones. */
 function canaParaEstrella(est) {

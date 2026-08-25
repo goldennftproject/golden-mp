@@ -250,7 +250,30 @@ function itemView(d) {
   }
   if (d.kind === "res") return { sprite: resSprite(d.key), emoji: RES_EMOJI[d.key], label: RES_LABEL[d.key], dur: null };
   if (d.kind === "seed") { const cd = CROP_DEF[d.key]; return { sprite: "seed_" + d.key, emoji: cd.emoji, label: cd.label + " (semilla)", dur: null }; }
-  if (d.kind === "fish") { const f = FISH_DEF[d.key]; const glow = { raro: "glow-blue", epico: "glow-purple", legendario: "glow-gold" }[d.key] || ""; return { sprite: f ? f.sprite : null, emoji: f ? f.emoji : "🐟", glow, label: f ? f.label : "Pez", dur: null }; }
+  /* 25/8 — LA CAÑA EN LA BOLSA. Se craftea en la Herrería, se gasta al pescar… y no se veía en
+     ningún lado, porque las cañas viven en G.canas y la bolsa no las conocía. Se muestra como el
+     pico: una casilla con los usos que le quedan y la talla que aguanta, que es lo que hace falta
+     saber para decidir a qué señal tirarle. */
+  if (d.kind === "cana") {
+    const cd = (typeof CANA_DEF !== "undefined") && CANA_DEF[d.key];
+    const usos = (typeof canaUsos === "function") ? canaUsos(d.key) : 0;
+    const glow = d.key === "abuelo" ? "glow-gold" : (d.key === "hierro" ? "glow-blue" : "");
+    return { sprite: null, emoji: "🎣", glow,
+             label: (cd ? cd.label + " · aguanta hasta " + cd.aguanta + "★" : "Caña") + " · " + usos + " usos", dur: null };
+  }
+  /* el pez: ahora puede ser una de las NUEVE especies de Pesca v3 o una de las cuatro rarezas
+     viejas de las partidas anteriores. Se busca en los dos catálogos, en ese orden. */
+  if (d.kind === "fish") {
+    const e = (typeof ESPECIE_DEF !== "undefined") && ESPECIE_DEF[d.key];
+    if (e) {
+      const est = (G.estrellaMax && G.estrellaMax[d.key]) || 0;
+      const glow = e.familia === "coloso" ? "glow-gold" : (e.familia === "fondo" ? "glow-purple" : "");
+      return { sprite: e.sprite || null, emoji: e.emoji || "🐟", glow,
+               label: e.label + " · vale " + especiePrecio(d.key) + " de plata" + (est ? " · tu mejor: " + "★".repeat(est) : ""), dur: null };
+    }
+    const f = FISH_DEF[d.key]; const glow = { raro: "glow-blue", epico: "glow-purple", legendario: "glow-gold" }[d.key] || "";
+    return { sprite: f ? f.sprite : null, emoji: f ? f.emoji : "🐟", glow, label: f ? f.label : "Pez", dur: null };
+  }
   if (d.kind === "dish") { const r = RECIPE_DEF[d.key]; return { sprite: r ? r.sprite : null, emoji: r ? r.emoji : "🍲", label: r ? r.label + " · clic para comer (" + dishDesc(r) + ")" : "Plato", dur: null }; }
   if (d.kind === "chest") return { sprite: "cofre", emoji: "📦", label: "Cofre depósito · clic para colocarlo en la granja", dur: null };
   return { sprite: null, emoji: "?", label: "", dur: null };
@@ -271,7 +294,8 @@ function coinIc(cur) { const nm = cur === "esencia" ? "Esencia" : "Plata"; retur
 function invCellHtml(d, i, rem, zone) {
   if (!d) return `<div class="slot" data-slot="${i}" data-zone="${zone}"></div>`;
   let cnt = "";
-  if (d.kind === "res" || d.kind === "seed" || d.kind === "fish" || d.kind === "dish" || d.kind === "chest" || (d.kind === "tool" && (d.key === "axe" || d.key === "rod")) || d.kind === "pick") { const k = d.kind + ":" + d.key; const n = Math.min(99, rem[k] || 0); rem[k] = (rem[k] || 0) - n; cnt = `<span class="cnt">${fmt(n)}</span>`; }
+  if (d.kind === "cana") { cnt = `<span class="cnt">${fmt((typeof canaUsos === "function") ? canaUsos(d.key) : 0)}</span>`; }
+  else if (d.kind === "res" || d.kind === "seed" || d.kind === "fish" || d.kind === "dish" || d.kind === "chest" || (d.kind === "tool" && (d.key === "axe" || d.key === "rod")) || d.kind === "pick") { const k = d.kind + ":" + d.key; const n = Math.min(99, rem[k] || 0); rem[k] = (rem[k] || 0) - n; cnt = `<span class="cnt">${fmt(n)}</span>`; }
   const v = itemView(d);
   const sel = (d.kind === "seed" && G.selSeed === d.key) ? " sel" : "";
   const eq = pickEqCls(d);
@@ -427,6 +451,7 @@ function hotItemExists(d) {
   if (d.kind === "pick") return !!G.picks.owned[d.key];
   if (d.kind === "res") return (G.res[d.key] || 0) > 0;
   if (d.kind === "seed") return (G.seeds[d.key] || 0) > 0;
+  if (d.kind === "cana") return (typeof canaUsos === "function") && canaUsos(d.key) > 0;
   if (d.kind === "fish") return ((G.fish && G.fish[d.key]) || 0) > 0;
   if (d.kind === "dish") return ((G.dishes && G.dishes[d.key]) || 0) > 0;
   if (d.kind === "plano") return !!(G.planos && G.planos[d.key]);   // 13/8: planos en la barra
@@ -548,7 +573,9 @@ function trashInfo(d) {
   if (d.kind === "arm")  return { n: 1, lbl: (ARM_DEF[d.key] || {}).label || "arma" };
   if (d.kind === "res")  return { n: Math.min(99, Math.floor(G.res[d.key] || 0)), lbl: RES_LABEL[d.key] || d.key };
   if (d.kind === "seed") return { n: Math.min(99, Math.floor(G.seeds[d.key] || 0)), lbl: "semillas de " + (CROP_DEF[d.key] ? CROP_DEF[d.key].label : d.key) };
-  if (d.kind === "fish") return { n: Math.min(99, Math.floor((G.fish && G.fish[d.key]) || 0)), lbl: (FISH_DEF[d.key] ? FISH_DEF[d.key].label : "peces") };
+  if (d.kind === "cana") return { n: (typeof canaUsos === "function") ? canaUsos(d.key) : 0, lbl: (typeof CANA_DEF !== "undefined" && CANA_DEF[d.key]) ? CANA_DEF[d.key].label : "la caña" };
+  if (d.kind === "fish") return { n: Math.min(99, Math.floor((G.fish && G.fish[d.key]) || 0)),
+    lbl: (typeof ESPECIE_DEF !== "undefined" && ESPECIE_DEF[d.key]) ? ESPECIE_DEF[d.key].label : (FISH_DEF[d.key] ? FISH_DEF[d.key].label : "peces") };
   if (d.kind === "dish") return { n: Math.min(99, Math.floor((G.dishes && G.dishes[d.key]) || 0)), lbl: (RECIPE_DEF[d.key] ? RECIPE_DEF[d.key].label : "platos") };
   // herramientas y picos SÍ se tiran (pedido del diseñador 31/7); apilables: se tira la pila
   if (d.kind === "tool") {
