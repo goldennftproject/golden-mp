@@ -144,8 +144,11 @@ async function initSave() {
 
 // campos de progreso que guardamos (no world/cooldowns/buffs, que son de la sesión)
 function snapshot() {
+  /* 25/8 Pesca v3: pescaDesde (el reloj de cargas), senales (las que te esperan), escamas,
+     vistos y estrellaMax (el álbum con estrellas) y pescaTiene (el señuelo, que no se gasta).
+     OJO con los comentarios AL FINAL de una línea de este objeto: se comen lo que sigue. */
   return { plata: G.plata, golden: G.golden, level: G.level, prestige: G.prestige, iniciado: G.iniciado,
-    res: G.res, picks: G.picks, skills: G.skills, fish: G.fish, plots: G.plots, nodos: G.nodos, expansiones: G.expansiones, pescaHasta: G.pescaHasta, runaOro: G.runaOro, buffs: G.buffs, seeds: G.seeds, selSeed: G.selSeed,
+    res: G.res, picks: G.picks, skills: G.skills, fish: G.fish, plots: G.plots, nodos: G.nodos, expansiones: G.expansiones, pescaHasta: G.pescaHasta, pescaDesde: G.pescaDesde, senales: G.senales, escamas: G.escamas, vistos: G.vistos, estrellaMax: G.estrellaMax, pescaTiene: G.pescaTiene, runaOro: G.runaOro, buffs: G.buffs, seeds: G.seeds, selSeed: G.selSeed,
     tools: G.tools, sflStock: true, invRows: G.invRows, slots: G.slots, hotbar: G.hotbar, hotSel: G.hotSel, hbInit: G.hbInit, layout: G.layout,
     daily: G.daily, plotsOwned: G.plotsOwned, plotsCompradas: G.plotsCompradas, plotsFicha: G.plotsFicha, expParcelasDadas: G.expParcelasDadas, seedBuys: G.seedBuys, built: G.built,
     hp: G.hp, hpMax: G.hpMax, combatXp: G.combatXp, stam: G.stam, stamAcc: G.stamAcc, stamFullAt: G.stamFullAt, stamRec: G.stamRec, pass: G.pass, tuto: G.tuto, firstSeeds: G.firstSeeds,   // 24/8: stamFullAt — la recarga de 4 h es de reloj real
@@ -184,6 +187,15 @@ function hydrate(d) {
   // un viaje a la Zona Negra— los dejaba todos listos otra vez, que era barra libre de material.
   if (d.nodos && typeof d.nodos === "object") G.nodos = d.nodos;
   if (typeof d.pescaHasta === "number") G.pescaHasta = d.pescaHasta;
+  /* 25/8 Pesca v3 — el reloj de cargas y lo que el agua te guardó. La migración es sola: quien
+     no tenga pescaDesde arranca su reloj AHORA, sin cargas, que es lo honesto (no se regalan
+     cuatro lances por actualizar, ni se le cobra al que ya venía esperando). */
+  if (typeof d.pescaDesde === "number") G.pescaDesde = d.pescaDesde;
+  if (Array.isArray(d.senales)) G.senales = d.senales;
+  if (d.escamas && typeof d.escamas === "object") G.escamas = d.escamas;
+  if (d.vistos && typeof d.vistos === "object") G.vistos = d.vistos;
+  if (d.estrellaMax && typeof d.estrellaMax === "object") G.estrellaMax = d.estrellaMax;
+  if (d.pescaTiene && typeof d.pescaTiene === "object") G.pescaTiene = d.pescaTiene;
   if (d.runaOro && typeof d.runaOro === "object") G.runaOro = d.runaOro;
   if (typeof d.expansiones === "number") G.expansiones = Math.max(0, Math.min(16, d.expansiones));
   // los buffs traen su propio vencimiento: se descartan los que ya caducaron mientras no estabas

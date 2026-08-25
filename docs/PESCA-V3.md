@@ -539,3 +539,59 @@ La tanda 1 del capítulo 14 es el orden correcto y no depende de ninguna de las 
 observaciones salvo la primera, que solo cambia una cifra. Las otras tres pegan en la tanda 2 y en
 la 3, así que hay tiempo — pero conviene cerrarlas ahora, mientras el código todavía no las tiene
 escritas en ningún lado.
+
+---
+
+# TANDA 1 · LO QUE YA ESTÁ EN EL CÓDIGO (25/8)
+
+*El núcleo de lógica de la tanda 1, con su medidor: `tools/test-pesca-v3.js`. Falta la
+interfaz — las señales todavía no se dibujan en el agua —, así que esto no se juega
+todavía; pero cada regla de abajo ya está escrita y verificada.*
+
+  - **Las cuatro especies**, con el precio DERIVADO de su cadena (`especiePrecio`): pez común
+    5 · carpa dorada 5 · pez mariposa 10 · calamar 5. No hay tabla de precios que se pueda
+    desfasar del ancla, porque no hay tabla: hay una fórmula.
+
+  - **Las cinco estrellas**, con la plata plana y la XP escalada (`especieXp`).
+
+  - **Las señales al llegar** (`pescaCargas`, `pescaSenales`): la laguna guarda hasta 4 lances y
+    reparte una señal por cada uno. Viajan en el guardado y el F5 no las re-sortea.
+
+  - **La carnada elige la familia** (`pescaPuedeSenal`), y el aviso nombra la que falta.
+
+  - **El montículo es una elección**: lombriz o grillo. El grillo existe como ítem de bolsa, con
+    nombre y emoji propios — sin pedirle arte nueva a nadie.
+
+  - **La escama del que se fue** (`pescaPerdido`): el hilo cortado deja escama y marca la lámina
+    como « visto, no cobrado ».
+
+## La corrección que salió de medir: la XP base es la cadena en minutos
+
+La tabla del capítulo 5 traía la XP escrita a mano — 5 · 5 · 10 · 15 · 20. Medida contra la
+escalera real del oficio, esos números dejaban **Pesca 20 a 451 días** para un jugador de orilla,
+y a 1.352 si pescaba a estrella baja. Un techo decorativo: nadie lo alcanza.
+
+La causa no era el tiburón martillo, que era el otro sospechoso. Era que la tabla entera iba a un
+tercio del ritmo con el que el código calibra el oficio. Ese ritmo ya existe y está escrito:
+« una hora de laguna » = 4 lances de 15 min × 15 de XP = **60 de XP/hora**.
+
+De ahí sale la regla, que es la misma forma que la del precio y por eso no hay dos tablas que
+desincronizar: **la XP base de una especie es su cadena en minutos.** Pez común 15 → 15. Mariposa
+30 → 30. Y el pez espada y el tiburón martillo de la tanda 3 caen solos en 45 y 60, sin que nadie
+los escriba. Medido después del cambio:
+
+| Cómo juega | XP/día (3 visitas, laguna a tope) | Días hasta Pesca 20 |
+|---|---|---|
+| Solo orilla, estrellas bajas | 60 | 451 |
+| Orilla a estrella máxima | 210 | 129 |
+| Calamar a estrella máxima | 360 | 75 |
+| Superficie a estrella máxima | 420 | 64 |
+
+Y ahí se ve que el sistema hace lo que el documento quería: **la estrella es lo único que puede
+hacer que Pesca corra por encima de su ritmo.** El que se conforma con la orilla tarda; el que se
+la juega, llega. Con la tanda 3 y sus colosos, esos días bajan solos.
+
+*Queda anotado para cuando entre la tanda 3: con esta regla el tiburón martillo daría 60 de XP
+base y 600 a 5★ — el 2,2 % de la escalera en una sola pelea, no el 6 % que decía el documento ni
+el 0,74 % que daban sus números. Si dirección quiere el 6 %, la palanca sigue siendo una sola y
+está en un solo lugar.*

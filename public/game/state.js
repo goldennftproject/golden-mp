@@ -33,7 +33,7 @@ const G = {
   tuto: { step: 0, n: 0, done: false, v: 2 },   // doc 2/8: tutorial guiado de micro-objetivos (v = versión de la cadena)
   firstSeeds: 3,                 // semillas del starter pack que crecen en 45 s (se descuentan al plantarlas)
   armCd: {}, mkPend: [], testeoDado: false,   // enfriamiento de crafteo por arma · entregas pendientes · (testeoDado quedó del regalo viejo, ya no se usa)   // equipo (armas se equipan en el panel de Equipo — detalles jueves)
-  res: { madera: 0, piedra: 0, bronce: 0, hierro: 0, oro: 0, diamante: 0, netherita: 0, carne: 0, flecha: 0, lombriz: 0,
+  res: { madera: 0, piedra: 0, bronce: 0, hierro: 0, oro: 0, diamante: 0, netherita: 0, carne: 0, flecha: 0, lombriz: 0, grillo: 0,
     tablon: 0, barra_piedra: 0, barra_bronce: 0, barra_hierro: 0, barra_oro: 0,
     papa: 0, ciruela: 0, cereza: 0, remolacha: 0, zanahoria: 0, cebolla: 0, calabacin: 0, repollo: 0, calabaza: 0, brocoli: 0, girasol: 0, trigo: 0, maiz: 0,
     fibra: 0, pelaje: 0, cuero: 0, colmillo: 0, esencia_runica: 0, esencia_oscura: 0 },
@@ -188,9 +188,9 @@ function buffTick() {   // 1 vez por segundo desde el HUD: regeneración y vida 
 }
 
 // --- recursos ---
-const RES_EMOJI = { madera:"", piedra:"", bronce:"", oro:"", diamante:"", netherita:"", carne:"", flecha:"", lombriz:"",
+const RES_EMOJI = { madera:"", piedra:"", bronce:"", oro:"", diamante:"", netherita:"", carne:"", flecha:"", lombriz:"", grillo:"🦗",
   papa:"", ciruela:"", cereza:"", remolacha:"", zanahoria:"", cebolla:"", calabacin:"", repollo:"", calabaza:"", brocoli:"" };
-const RES_LABEL = { madera:"Madera", piedra:"Piedra", bronce:"Bronce", hierro:"Hierro", oro:"Oro", diamante:"Diamante", netherita:"Netherita", carne:"Carne", flecha:"Flecha", lombriz:"Lombriz",
+const RES_LABEL = { madera:"Madera", piedra:"Piedra", bronce:"Bronce", hierro:"Hierro", oro:"Oro", diamante:"Diamante", netherita:"Netherita", carne:"Carne", flecha:"Flecha", lombriz:"Lombriz", grillo:"Grillo",
   tablon:"Tablón de madera", barra_piedra:"Bloques de piedra", barra_bronce:"Barra de bronce", barra_hierro:"Barra de hierro", barra_oro:"Barra de oro",
   papa:"Papa", ciruela:"Ciruela", cereza:"Cereza", remolacha:"Remolacha", zanahoria:"Zanahoria", cebolla:"Cebolla", calabacin:"Calabacín", repollo:"Repollo", calabaza:"Calabaza", brocoli:"Brócoli",
   girasol:"Girasol", trigo:"Trigo", maiz:"Maíz",
@@ -4777,7 +4777,7 @@ function tryAddRes(key, amt) {
 // 16/8 BUG: los tres cultivos nuevos faltaban acá (el comentario decía que estaban, el array no).
 // Lo cosechado entraba a G.res pero NO aparecía en la bolsa ni contaba para el espacio.
 const ITEM_RES_ORDER = ["papa","ciruela","cereza","remolacha","zanahoria","cebolla","calabacin","repollo","calabaza","brocoli","girasol","trigo","maiz",
-  "madera","piedra","bronce","hierro","oro","diamante","netherita","carne","flecha","lombriz",
+  "madera","piedra","bronce","hierro","oro","diamante","netherita","carne","flecha","lombriz","grillo",
   "tablon","barra_piedra","barra_bronce","barra_hierro","barra_oro",
   "fibra","pelaje","cuero","colmillo","esencia_runica","esencia_oscura"];   // los 3 cultivos nuevos y los materiales de Establo/Curtiduría/Altar también ocupan casilla
 function descKey(d) { return d ? d.kind + ":" + d.key : ""; }
@@ -4991,6 +4991,168 @@ function pescaCdLeft() { return Math.max(0, (G.pescaHasta || 0) - nowMs()); }
    que juega bien pesca exactamente lo que el ancla dice. La rareza se sortea al armar el lance
    (misma tabla 60/25/12/3) y goFishing la respeta para que la dificultad y el premio coincidan.
    Todo lo de acá es LÓGICA PURA (la dibuja farm.js): así los tests la corren sin navegador. */
+/* ================= PESCA v3 · TANDA 1 — EL AGUA SE LEE (25/8, dirección) =================
+   Del documento « Golden Farm · Pesca v3, revisión 2 » (docs/PESCA-V3.md). La frase que lo
+   resume: EL PEZ NO SE SORTEA, SE ELIGE. Hasta ahora la rareza se tiraba al armar el lance
+   (60/25/12/3) y el jugador era espectador de su propia suerte. Ahora el agua es un mapa.
+
+   Las dos reglas que mandan sobre todo lo que sigue:
+     1. LA PLATA ES PLANA. Ninguna especie ni ninguna estrella rinde por encima del ancla.
+     2. LA ESTRELLA NO PAGA PLATA: PAGA XP. Es la única moneda que el ancla no gobierna.
+
+   Y por qué la segunda no es un capricho, que es lo que la revisión 1 del documento tuvo que
+   corregir: si el precio escalara con la estrella y se compensara con una probabilidad de cobro
+   inversa, la esperanza quedaría idéntica en todas las estrellas — y entonces lo racional sería
+   pescar SIEMPRE 1★: misma plata, cero riesgo, pelea más corta, menos desgaste de caña. El 5★
+   quedaba estrictamente peor. Matemáticamente honesto y jugablemente suicida. Con la plata
+   plana, el motivo para ir por el coloso es el correcto: XP, lámina y trofeo — las tres monedas
+   que el juego ya usa para el contenido que no debe imprimir plata.
+
+   El PRECIO de cada especie sale de la fórmula de siempre —valor = horas de reloj × 20— con los
+   minutos ACUMULADOS de la cadena activa que hace falta para poder tirarle. Acá abajo se declara
+   la cadena en minutos y el precio se DERIVA: no hay una tabla de precios que se pueda desfasar. */
+/* EL ANCLA, POR FIN CON NOMBRE. Es el número del que cuelga todo el juego —« una celda
+   productiva rinde 20 de plata por hora »— y hasta hoy vivía como un 20 suelto dentro de las
+   funciones que lo usaban. Cada vez que se escribe a mano en un lugar nuevo, nace la posibilidad
+   de que un día alguien cambie uno y no el otro. Ahora se declara una vez. */
+var ANCLA_PLATA_HORA = 20;
+var PESCA_ESTRELLA = { 1: 1, 2: 2, 3: 3.5, 4: 6, 5: 10 };   // multiplicador de XP por talla
+var PESCA_ESTRELLA_NOM = { 1: "Menudo", 2: "Bueno", 3: "Notable", 4: "Trofeo", 5: "Colosal" };
+
+/* LAS FAMILIAS: lo que el agua muestra antes de que tires. Una señal que no dice qué trae es una
+   señal muda — regla 9 aplicada al agua. El jugador tiene que poder equivocarse A PROPÓSITO. */
+var PESCA_FAMILIA = {
+  orilla:     { label: "Orilla",     icono: "〰️", senal: "Rizos en la orilla",  txt: "Ondas chiquitas contra la ribera" },
+  superficie: { label: "Superficie", icono: "✨", senal: "Destello plateado",   txt: "Algo saltó y volvió" },
+  fondo:      { label: "Fondo",      icono: "🫧", senal: "Burbujas gordas",     txt: "Glup glup desde el fondo" },
+};
+/* LAS CARNADAS: cada una HABILITA una familia y deshabilita el resto — la misma lógica de dos
+   llaves que la escalera de minerales. Ninguna carnada da porcentajes. */
+var PESCA_CARNADA = {
+  lombriz: { label: "Lombriz",          emoji: "🪱", familia: "orilla",     gasta: true },
+  grillo:  { label: "Grillo",           emoji: "🦗", familia: "superficie", gasta: true },
+  senuelo: { label: "Señuelo de nácar", emoji: "🐚", familia: "fondo",      gasta: false, lvl: 9 },
+};
+/* LAS ESPECIES DE LA TANDA 1. `cadena` son los minutos acumulados que cuestan poder tirarle:
+   de ahí sale el precio, y de ahí sale que el mariposa valga el doble que la orilla. */
+var ESPECIE_DEF = {
+  pez_comun:    { label: "Pez común",     emoji: "🐟", familia: "orilla",     cadena: 15, estrellas: [1, 2], sprite: "fish_comun" },
+  carpa_dorada: { label: "Carpa dorada",  emoji: "🐠", familia: "orilla",     cadena: 15, estrellas: [1, 3], sprite: "fish_raro" },
+  pez_mariposa: { label: "Pez mariposa",  emoji: "🦋", familia: "superficie", cadena: 30, estrellas: [1, 3], sprite: "fish_epico" },
+  calamar:      { label: "Calamar",       emoji: "🦑", familia: "fondo",      cadena: 15, estrellas: [2, 4], sprite: "fish_legendario", noche: true },
+};
+var ESPECIE_ORDER = ["pez_comun", "carpa_dorada", "pez_mariposa", "calamar"];
+function especiePrecio(id) {   // el ancla, derivada — nunca escrita a mano
+  const e = ESPECIE_DEF[id]; if (!e) return 0;
+  return Math.round(e.cadena / 60 * ANCLA_PLATA_HORA * 10) / 10;
+}
+/* LA XP BASE TAMBIÉN SE DERIVA — y esto corrige el documento con la medición en la mano.
+   La propuesta traía una columna de XP a mano (5 · 5 · 10 · 15 · 20). Medida contra la escalera
+   real del oficio, esos números dejaban Pesca 20 a MIL TRESCIENTOS DÍAS de un jugador de orilla:
+   un techo decorativo, inalcanzable. La causa no era el tiburón martillo —el otro sospechoso—
+   sino que la tabla entera iba a un tercio del ritmo con el que el código calibra el oficio.
+   Ese ritmo ya existe y está escrito: « una hora de laguna » = 4 lances de 15 min × XP_PEZ = 60
+   de XP/hora. O sea que un lance de 15 minutos vale 15 de XP. De ahí sale la regla, que es la
+   misma que la del precio y por eso no hay dos tablas que desincronizar:
+       LA XP BASE DE UNA ESPECIE ES SU CADENA EN MINUTOS.
+   Pez común 15 min → 15 de XP. Mariposa 30 → 30. Y el pez espada y el martillo de la tanda 3
+   caen solos en 45 y 60, sin que nadie los escriba.
+   La estrella, encima, multiplica: ahí está el premio por jugársela, y es lo único que puede
+   hacer que Pesca corra por ENCIMA de su ritmo. Que es exactamente lo que el documento quería. */
+function especieXp(id, estrella) {
+  const e = ESPECIE_DEF[id]; if (!e) return 0;
+  const base = e.xp != null ? e.xp : e.cadena;
+  return Math.round(base * (PESCA_ESTRELLA[Math.max(1, Math.min(5, estrella || 1))] || 1) * 10) / 10;
+}
+function especiesDe(familia) { return ESPECIE_ORDER.filter(k => ESPECIE_DEF[k].familia === familia); }
+/* ¿qué carnada abre esta familia? (la tabla se lee al revés, no se repite) */
+function carnadaDe(familia) { for (const k in PESCA_CARNADA) if (PESCA_CARNADA[k].familia === familia) return k; return null; }
+
+/* ---- LAS SEÑALES: se generan AL LLEGAR, una por carga guardada -------------------------------
+   Ésta es la corrección de fondo de la revisión 2 del documento, y vale más que el arreglo de un
+   bug. La versión anterior generaba señales en tiempo real, con una vida de 3-8 minutos: el
+   jugador que volvía con cuatro lances guardados encontraba solo lo que hubiera EN ESE INSTANTE.
+   Un sistema premiaba la ausencia y el otro la presencia, peleados entre sí.
+   Ahora el agua reparte una señal por cada carga que te guardó. Ver las cuatro JUNTAS convierte
+   la visita en una decisión de tanda —« con estos cuatro lances, ¿qué armo? »— en vez de cuatro
+   decisiones sueltas. Y el que entró tres horas tarde no encuentra agua vacía: encuentra las tres
+   horas que la laguna le estuvo guardando.
+   No vencen mientras tengas cargas; se consumen al tirarles; y el F5 NO las re-sortea, igual que
+   la oferta del Mercader Goblin. */
+var PESCA_CARGAS_MAX = 4;
+function pescaCargas() {   // cuántos lances tenés guardados, por el reloj de la laguna
+  const cd = FISH_CD * 1000 * (typeof cdMult === "function" ? cdMult() : 1);
+  if (!G.pescaDesde) G.pescaDesde = nowMs();
+  const pasado = Math.max(0, nowMs() - G.pescaDesde);
+  return Math.min(PESCA_CARGAS_MAX, Math.floor(pasado / cd));
+}
+function pescaGastarCarga() {   // consumir una carga = correr el reloj de una
+  const cd = FISH_CD * 1000 * (typeof cdMult === "function" ? cdMult() : 1);
+  const c = pescaCargas();
+  G.pescaDesde = Math.min(nowMs(), (G.pescaDesde || nowMs()) + cd);
+  if (c >= PESCA_CARGAS_MAX) G.pescaDesde = nowMs() - (PESCA_CARGAS_MAX - 1) * cd;   // estaba a tope: se destapa
+}
+/* la especie que trae una señal: sale de la familia, y la estrella del rango de esa especie.
+   Determinístico por semilla, así el F5 no cambia lo que ya viste. */
+function senalNueva(i, rnd) {
+  const r = rnd || Math.random;
+  const fams = Object.keys(PESCA_FAMILIA).filter(f => especiesDe(f).length);
+  const fam = fams[Math.floor(r() * fams.length) % fams.length];
+  const cand = especiesDe(fam);
+  const esp = cand[Math.floor(r() * cand.length) % cand.length];
+  const [lo, hi] = ESPECIE_DEF[esp].estrellas;
+  return { esp, fam, estrella: lo + Math.floor(r() * (hi - lo + 1)), i };
+}
+function pescaSenales(rnd) {
+  if (!Array.isArray(G.senales)) G.senales = [];
+  const c = pescaCargas();
+  while (G.senales.length > c) G.senales.pop();          // se gastaron lances: sobran señales
+  while (G.senales.length < c) G.senales.push(senalNueva(G.senales.length, rnd));
+  return G.senales;
+}
+/* ¿puedo tirarle a esta señal? Una sola función contesta, y contesta CON MOTIVO — el aviso
+   nombra la carnada exacta que falta, no un genérico. (Regla 9: el jugador tiene que poder
+   diagnosticar el « no » desde dentro del juego.) */
+function pescaPuedeSenal(s) {
+  if (!s || !ESPECIE_DEF[s.esp]) return { ok: false, toast: "Esa señal ya no está" };
+  const ck = carnadaDe(s.fam), c = PESCA_CARNADA[ck];
+  if (!c) return { ok: false, toast: "Esa familia todavía no se puede pescar" };
+  if (c.lvl && (typeof nivelOficio === "function" ? nivelOficio("fishing") : 1) < c.lvl)
+    return { ok: false, toast: c.label + " se abre a Pesca " + c.lvl };
+  if (c.gasta && Math.floor((G.res[ck] || 0)) < 1)
+    return { ok: false, toast: "Te falta " + c.emoji + " " + c.label + " para tirarle a eso" };
+  if (!c.gasta && !(G.pescaTiene || {})[ck])
+    return { ok: false, toast: "Necesitás el " + c.label };
+  if (ESPECIE_DEF[s.esp].noche && typeof esDeNoche === "function" && !esDeNoche())
+    return { ok: false, toast: ESPECIE_DEF[s.esp].label + " solo pica de noche" };
+  return { ok: true, carnada: ck };
+}
+function pescaSenalGastar(idx) {
+  if (!Array.isArray(G.senales)) return null;
+  const s = G.senales[idx]; if (!s) return null;
+  const p = pescaPuedeSenal(s);
+  if (!p.ok) { toast(p.toast); return null; }
+  const c = PESCA_CARNADA[p.carnada];
+  if (c.gasta) G.res[p.carnada] = Math.max(0, (G.res[p.carnada] || 0) - 1);   // la carnada se cobra al ELEGIR
+  G.senales.splice(idx, 1);
+  pescaGastarCarga();
+  if (typeof saveFarm === "function") saveFarm(true);
+  return s;
+}
+
+/* ---- LA ESCAMA DEL QUE SE FUE ---------------------------------------------------------------
+   Hoy cortar el hilo deja NADA. El arreglo más barato de toda la propuesta —un contador— y el
+   que más se va a sentir, porque actúa exactamente en el peor momento que puede tener un jugador
+   en este sistema. El fracaso deja de ser un cero y pasa a ser progreso lento. */
+function escamaSumar(esp) {
+  if (!ESPECIE_DEF[esp]) { console.warn("escamaSumar: especie desconocida", esp); return 0; }
+  G.escamas = G.escamas || {};
+  G.escamas[esp] = (G.escamas[esp] || 0) + 1;
+  G.vistos = G.vistos || {};
+  G.vistos[esp] = true;   // el álbum lo marca « visto, no cobrado »
+  return G.escamas[esp];
+}
+
 var PESCA2_ESPERA = [1.6, 4.2];   // segundos hasta el pique, al azar del lance
 var PESCA2_VENTANA = 1.0;         // segundos para clavar el anzuelo desde que hay burbujas
 var PESCA2_TIMEOUT = 18;          // segundos máximos del carrete
@@ -5001,8 +5163,19 @@ var PESCA2_DIF = {   // vel: qué tan rápido persigue su rumbo · nervio: cambi
   legendario: { vel: 4.0, nervio: 2.8 },
 };
 function pescaZonaAlto(nv) { return Math.min(0.40, 0.22 + 0.012 * Math.max(1, nv || 1)); }   // fracción de la barra
-function pescaLanceNuevo(rnd) {
+/* 25/8 (v3) — EL LANCE VA A UNA SEÑAL. Antes el lance sorteaba su rareza acá adentro y el
+   jugador se enteraba al final: era espectador de su propia suerte. Ahora recibe la señal que
+   eligió —que ya venía diciendo especie y estrella desde antes de tirar— y el lance solo se
+   ocupa de la pelea. Sin señal (el camino viejo, o una entrada que todavía no se migró) se
+   comporta exactamente como antes, así que nada de lo que ya funcionaba se rompe. */
+function pescaLanceNuevo(rnd, senal) {
   rnd = rnd || Math.random;
+  if (senal && ESPECIE_DEF[senal.esp]) {
+    /* la dificultad sale de la ESTRELLA, no de una rareza sorteada: peleás lo que viste */
+    const dif = ["comun", "comun", "raro", "epico", "legendario"][Math.max(1, Math.min(5, senal.estrella)) - 1];
+    return { fase: "espera", rar: dif, esp: senal.esp, estrella: senal.estrella, t: 0,
+      biteEn: PESCA2_ESPERA[0] + rnd() * (PESCA2_ESPERA[1] - PESCA2_ESPERA[0]) };
+  }
   const r = rnd();   // MISMA tabla que goFishing: la dificultad que jugás es el premio que cobrás
   const rar = r < 0.60 ? "comun" : r < 0.85 ? "raro" : r < 0.97 ? "epico" : "legendario";
   return { fase: "espera", rar, t: 0, biteEn: PESCA2_ESPERA[0] + rnd() * (PESCA2_ESPERA[1] - PESCA2_ESPERA[0]) };
@@ -5055,17 +5228,57 @@ var PESCA2_AVISO = {   // qué contesta cada final (un clic siempre contesta alg
   tiempo: "El pez se cansó de pelear… y vos también. Se fue",
 };
 
+/* 25/8 (v3) — EL PEZ QUE SE FUE DEJA SU ESCAMA. Lo llama el final del carrete cuando se corta.
+   Doce horas de espera que terminan en cero es el peor momento que puede tener un jugador en
+   este sistema, y hasta hoy terminaba en nada. Ahora el fracaso es progreso lento: sabés qué era
+   y cuántas estrellas tenía, y el álbum lo marca « visto, no cobrado ». */
+function pescaPerdido(l) {
+  if (!l || !l.esp) return null;
+  const n = escamaSumar(l.esp), e = ESPECIE_DEF[l.esp];
+  log("🐟 Se cortó el hilo. Era un " + e.label + " de " + l.estrella + "★ — te dejó una escama (" + n + ").", "warn");
+  toast("Escama de " + e.label + " · " + n);
+  if (typeof saveFarm === "function") saveFarm(true);
+  return { esp: l.esp, escamas: n };
+}
+
 function goFishing(rarForzada) {
   /* 20/8 — LA RED, NO LA PUERTA, Y CON LA MISMA REGLA. Las comprobaciones viven en las entradas
      del clic (el objeto pesquero y el agua), así que a esta altura ya nadie debería llegar sin
      caña, sin cebo o con la laguna en reposo. Esto se queda por si mañana aparece una tercera
      entrada — pero preguntando a la MISMA función, no repitiendo la regla. Antes había aquí tres
      comprobaciones copiadas, y ese era exactamente el problema: cada copia envejece por su lado. */
-  const p = puedeAccion("fish", { type: "fish" });
-  if (!p.ok) { avisoAccion(p); return; }
-  G.pescaHasta = nowMs() + FISH_CD * 1000 * (typeof cdMult === "function" ? cdMult() : 1);
-  G.res.lombriz -= 1; useTool("rod");   // detalles viernes: pescar cuesta SOLO 1 lombriz (sin esencia)
+  /* 25/8 (v3) — DOS CAMINOS, UN SOLO COBRO. El camino nuevo llega con una señal: la carga y la
+     carnada YA se cobraron al elegirla (pescaSenalGastar), porque lo que se elige es lo que se
+     paga. El camino viejo sigue cobrando acá, igual que siempre, para que nada de lo que ya
+     funcionaba dependa de la migración. */
+  const v3 = !!(rarForzada && typeof rarForzada === "object" && ESPECIE_DEF[rarForzada.esp]);
+  if (!v3) {
+    const p = puedeAccion("fish", { type: "fish" });
+    if (!p.ok) { avisoAccion(p); return; }
+    G.pescaHasta = nowMs() + FISH_CD * 1000 * (typeof cdMult === "function" ? cdMult() : 1);
+    G.res.lombriz -= 1;   // detalles viernes: pescar cuesta SOLO 1 lombriz (sin esencia)
+  }
+  useTool("rod");
   if (toolDur("rod") <= 0) { log("¡La caña se rompió en pedazos! Crafteá otra en la Herrería.", "bad"); toast("¡Caña rota!"); }
+  /* 25/8 (v3) — SI EL LANCE TRAÍA ESPECIE, SE COBRA ESA. El pez ya no se sortea acá: se eligió
+     al mirar el agua. La plata es la de la especie (plana, del ancla) y la XP escala con la
+     estrella — que es lo único que la estrella mueve. */
+  if (rarForzada && typeof rarForzada === "object" && ESPECIE_DEF[rarForzada.esp]) {
+    const esp = rarForzada.esp, est = Math.max(1, Math.min(5, rarForzada.estrella || 1)), d = ESPECIE_DEF[esp];
+    G.fish = G.fish || {}; G.fish[esp] = (G.fish[esp] || 0) + 1;
+    G.estrellaMax = G.estrellaMax || {};
+    const rec = est > (G.estrellaMax[esp] || 0);
+    if (rec) G.estrellaMax[esp] = est;
+    const xp = especieXp(esp, est);
+    addXp("fishing", xp);
+    if (typeof statAdd === "function") { statAdd("pescar"); statAdd("pescar", esp); }
+    if (typeof tutoEvent === "function") tutoEvent("fish");
+    log("🎣 " + d.label + " de " + est + "★ (" + PESCA_ESTRELLA_NOM[est] + ") — vale " + especiePrecio(esp) +
+      " de plata y te dio " + xp + " de XP de Pesca." + (rec ? " ¡Tu mejor " + d.label + "!" : ""), rec ? "gold" : "good");
+    toast(d.emoji + " " + d.label + " " + "★".repeat(est));
+    refreshHud(); if (typeof syncSlots === "function") syncSlots(); if (isOpen("ov-inv")) refreshInv();
+    return;
+  }
   const r = Math.random();
   let rar; if (r < 0.60) rar = "comun"; else if (r < 0.85) rar = "raro"; else if (r < 0.97) rar = "epico"; else rar = "legendario";
   // Pesca v2 (22/8): si el lance ya sorteó su pez (misma tabla de arriba), el premio es ESE pez —
@@ -5195,18 +5408,26 @@ function granjaAtascada() {
   const min = Math.min.apply(Math, Object.keys(CROP_DEF).map(k => CROP_DEF[k].seedCost || 999));
   return (G.plata || 0) < min;
 }
-function excavBotin(i) {   // 15/8 v2 (dirección): tierra removida = LOMBRICES, siempre — la carnada de la pesca
+/* 25/8 (Pesca v3, tanda 1) — EL MONTÍCULO AHORA ES UNA ELECCIÓN.
+   Los tres montículos del día daban lombriz automáticamente. Ahora, al cavar, elegís LOMBRIZ o
+   GRILLO: cero sistemas nuevos, cero ítems nuevos que inventar, y de golpe la carnada de
+   superficie tiene un precio real en vez de ser un regalo de la tierra. Es también lo que hace
+   que el pez mariposa valga el doble que la orilla: su cadena se come un montículo que no
+   gastaste en lombrices. Sin elección, ese argumento no existiría. */
+function excavBotin(i, carnada) {   // 15/8 v2 (dirección): tierra removida = CARNADA — la de la pesca
   if (granjaAtascada()) return { seed: "papa", n: 1, txt: "+1 Semilla de papa" };
   const r = excavAzar(100 + i);
   const n = r < 0.7 ? 1 : 2;   // a veces la tierra viene generosa
-  return { res: "lombriz", n, txt: "+" + n + (n > 1 ? " Lombrices" : " Lombriz") };
+  const res = (carnada === "grillo") ? "grillo" : "lombriz";
+  const def = PESCA_CARNADA[res] || { label: res };
+  return { res, n, txt: "+" + n + " " + def.label + (n > 1 ? "s" : "") };
 }
-function excavCavar(i) {   // devuelve el botín si se pudo cavar
+function excavCavar(i, carnada) {   // devuelve el botín si se pudo cavar
   const e = excavEstado();
   /* 24/8 (auditoría de silencios): clicar un montículo YA CAVADO devolvía null y el clic
      moría mudo — el mismo patrón que el intento de doma que reportó el diseñador. */
   if (e.hechos.includes(i)) { toast("Ese montículo ya lo cavaste — mañana hay " + EXCAV_POR_DIA + " nuevos"); return null; }
-  const b = excavBotin(i);
+  const b = excavBotin(i, carnada);
   if (b.res) { if (!tryAddRes(b.res, b.n)) { toast("Bolsa llena — hacé lugar y volvé"); return null; } }
   else if (b.seed) G.seeds[b.seed] = (G.seeds[b.seed] || 0) + b.n;
   e.hechos.push(i);
