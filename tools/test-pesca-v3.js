@@ -158,7 +158,7 @@ console.log("\nEL LANCE PELEA LO QUE VISTE (no una rareza sorteada aparte)");
 console.log("\nCOBRAR: PLATA PLANA, XP POR ESTRELLA, Y EL ÁLBUM SE ACUERDA");
 {
   G.tuto = { done: true }; G.fish = {}; G.estrellaMax = {}; G.skills = { fishing: 0 };
-  G.tools = { rod: { dur: 50 } };
+  G.tools = { rod: 50 };   /* las cañas son apilables: G.tools.rod es un NÚMERO, no un objeto */ G.invRows = 20; G.res.lombriz = 9; G.seeds = {}; G.dishes = {};
   ctx.goFishing({ esp: "carpa_dorada", estrella: 3 });
   ok("la carpa entró a la bolsa", Math.floor(G.fish.carpa_dorada || 0) === 1);
   ok("dio la XP de su estrella (15 de cadena × 3,5)", Math.abs((G.skills.fishing || 0) - 52.5) < 0.01, G.skills.fishing + "");

@@ -876,6 +876,9 @@ class FarmScene extends Phaser.Scene {
     // cofres depósito colocados por el jugador (los que están en la bolsa NO se colocan solos)
     (G.chests = G.chests || []).forEach((c, idx) => { if (c.col != null) this.spawnChest(idx); });
     this.crearExcavaciones();   // los 3 montículos del día (15/8)
+    /* 25/8 (Pesca v3): el agua reparte sus señales AL LLEGAR — una por cada lance que te guardó
+       mientras no estabas. Es lo primero que el jugador ve de la laguna al entrar. */
+    try { this.senalesDibujar(); } catch (e) { console.warn("señales:", e); }
     this.dibujarExpansion();     // 18/8: el lote que podés comprar, marcado en el bosque
     // 18/8: repintar TODOS los suelos de parcela al terminar de armar la escena. Es barato y cierra
     // la clase de fallo entera: da igual en qué orden se hayan tocado antes, acá quedan como dice
@@ -1311,7 +1314,21 @@ class FarmScene extends Phaser.Scene {
       return;
     }
     if (o.type === "excav") {   // EXCAVACIÓN (15/8): un clic, puff de tierra y el botín
-      const b = (typeof excavCavar === "function") ? excavCavar(o.idx) : null;
+      /* 25/8 (Pesca v3) — EL MONTÍCULO PREGUNTA. Daba lombriz siempre; ahora la tierra removida
+         puede traer lombriz (orilla) o grillo (superficie), y esa elección es lo que le pone
+         precio real a la carnada de superficie. Se pregunta con la misma rueda de dos opciones
+         que ya usa la siembra rápida: cero interfaces nuevas. */
+      if (!this._excavPide && typeof PESCA_CARNADA !== "undefined" && typeof mostrarEleccion === "function") {
+        this._excavPide = true;
+        mostrarEleccion("¿Qué buscás en la tierra?", [
+          { k: "lombriz", txt: PESCA_CARNADA.lombriz.emoji + " Lombriz", sub: "carnada de ORILLA" },
+          { k: "grillo",  txt: PESCA_CARNADA.grillo.emoji + " Grillo",   sub: "carnada de SUPERFICIE" },
+        ], (k) => { this._excavPide = false; this._excavCarnada = k; this.interactWith(o); },
+           () => { this._excavPide = false; });
+        return;   // ya contestó: mostrarEleccion abrió la rueda
+      }
+      const b = (typeof excavCavar === "function") ? excavCavar(o.idx, this._excavCarnada) : null;
+      this._excavCarnada = null;
       if (!b) return;
       if (this.puffFx) this.puffFx(o.cx, o.by - 4, 0x6b4a2b, 10);
       if (this.premioFx) this.premioFx(o.cx, o.by, b.res ? resSprite(b.res) : "seed_papa", b.txt);
@@ -1516,8 +1533,15 @@ class FarmScene extends Phaser.Scene {
        (finishAction → goFishing) queda para los tests sin navegador, que no tienen el panel. */
     if (kind === "fish" && typeof document !== "undefined" && document.getElementById && document.getElementById("pesca-mini") && typeof pescaLanceNuevo === "function") {
       this.action.dur = Infinity;   // la cierra pescaTerminar, no el update
-      this.lance = pescaLanceNuevo(); this.lanceHold = false;
-      log("🎣 Tiraste la caña — cuando veas las burbujas, ¡CLIC para clavar el anzuelo!", "info");
+      /* 25/8 (v3): si el lance vino de una SEÑAL, el pez ya está elegido — el lance nace
+         sabiendo qué es y de qué talla, y el aviso lo dice para que la promesa del agua y lo
+         que pasa después sean lo mismo. */
+      this.lance = pescaLanceNuevo(null, o && o.senal); this.lanceHold = false;
+      if (o && o.senal && typeof ESPECIE_DEF !== "undefined" && ESPECIE_DEF[o.senal.esp]) {
+        const e = ESPECIE_DEF[o.senal.esp];
+        log("🎣 Le tiraste a " + e.emoji + " " + e.label + " de " + o.senal.estrella +
+          "★ — cuando veas las burbujas, ¡CLIC para clavar el anzuelo!", "info");
+      } else log("🎣 Tiraste la caña — cuando veas las burbujas, ¡CLIC para clavar el anzuelo!", "info");
     }
     // 16/8 (dirección): duración 0 = se resuelve YA, en el mismo frame del clic. Si se dejaba
     // que lo cerrara el update siguiente, quedaba un frame de candado (~16 ms) que en clics
@@ -1645,11 +1669,16 @@ class FarmScene extends Phaser.Scene {
   pescaTerminar(rar) {
     const l = this.lance; this.lance = null; this.lanceHold = false;
     this.pescaPanel(false); this.clearBobber(); this.action = null;
-    if (rar) { goFishing(rar); }
+    /* 25/8 (v3) — SE COBRA LO QUE SE PELEÓ. Si el lance traía especie, se le pasa a goFishing el
+       objeto entero: la plata es la de la especie (plana) y la XP escala con la estrella. Si se
+       cortó el hilo, el pez deja su ESCAMA — el fracaso deja de ser un cero. */
+    if (rar) { goFishing(l && l.esp ? { esp: l.esp, estrella: l.estrella } : rar); }
     else {
       const m = (typeof PESCA2_AVISO !== "undefined" && l && PESCA2_AVISO[l.motivo]) || "El pez se fue";
-      toast(m); log("🎣 " + m + ".", "bad");
+      if (l && l.esp && typeof pescaPerdido === "function") pescaPerdido(l);
+      else { toast(m); log("🎣 " + m + ".", "bad"); }
     }
+    this._senalFirma = null; this.senalesDibujar();   // el agua se repinta: una señal menos
   }
 
   finishAction() {
@@ -1969,6 +1998,93 @@ class FarmScene extends Phaser.Scene {
     return Math.sqrt(dx * dx + dy * dy);
   }
   nearPond() { const d = this.pondDist(this.hero.x, this.hero.y); return d > 0.85 && d < 1.5; }
+
+  /* ======== LAS SEÑALES DEL AGUA (25/8, Pesca v3 · tanda 1) ================================
+     « El agua no es un botón, es un mapa. » La laguna guarda hasta cuatro lances y, al llegar,
+     reparte una señal por cada uno: el jugador ve las cuatro JUNTAS y decide la tanda entera —
+     « con estos cuatro lances, ¿qué armo? »— en vez de tirar cuatro veces a ciegas.
+     Se dibujan con lo que ya hay: un círculo de ondas, el emoji de la familia y las estrellas.
+     NADA de arte nuevo — ni pedido a Suren ni generado por máquina: son formas y texto, que es
+     exactamente lo que una señal en el agua tiene que ser para leerse de un vistazo.
+     El sitio de cada señal es DETERMINÍSTICO por su índice: no bailan entre repintados, y el F5
+     las deja donde estaban (que es la mitad de la promesa — la otra mitad, que no se re-sorteen,
+     vive en state.js). */
+  senalPos(i) {
+    const p = GF.POND, T = GF.TILE;
+    const cx = (p.col + p.cols / 2) * T, cy = (p.row + p.rows / 2) * T;
+    const ang = (i * 2.399) + 0.6;                      // ángulo áureo: cuatro puntos bien repartidos
+    const r = 0.36 + ((i * 37) % 20) / 100;             // y a distintas distancias del centro
+    return { x: cx + Math.cos(ang) * p.cols * T / 2 * r, y: cy + Math.sin(ang) * p.rows * T / 2 * r };
+  }
+  senalesDibujar() {
+    if (typeof pescaSenales !== "function") return;
+    const lista = pescaSenales();
+    this._senales = this._senales || [];
+    /* se rehace solo si CAMBIÓ (firma, el patrón de la casa): estos objetos tienen tweens y
+       eventos, y rehacerlos cada cuadro sería tirar el trabajo del cuadro anterior. */
+    const firma = lista.map(s => s.esp + s.estrella).join(",");
+    if (this._senalFirma === firma) return;
+    this._senalFirma = firma;
+    this._senales.forEach(o => { try { o.destroy(); } catch (e) {} });
+    this._senales = [];
+    lista.forEach((s, i) => {
+      const e = ESPECIE_DEF[s.esp], fam = PESCA_FAMILIA[s.fam]; if (!e || !fam) return;
+      const p = this.senalPos(i);
+      const g = this.add.container(p.x, p.y).setDepth(-500);
+      /* la onda: dos círculos concéntricos que respiran. Es lo que hace que el agua parezca
+         viva sin un solo píxel de arte. */
+      const onda = this.add.circle(0, 0, 15, 0xffffff, 0).setStrokeStyle(2, 0xd9f0ff, 0.75);
+      const onda2 = this.add.circle(0, 0, 9, 0xffffff, 0).setStrokeStyle(1, 0xd9f0ff, 0.45);
+      const cara = this.add.text(0, -2, fam.icono, { fontSize: "16px" }).setOrigin(0.5);
+      const est = this.add.text(0, 13, "★".repeat(s.estrella), {
+        fontSize: "10px", color: "#ffd75e", stroke: "#241505", strokeThickness: 3 }).setOrigin(0.5);
+      g.add([onda, onda2, cara, est]);
+      this.tweens.add({ targets: onda, scale: { from: 0.7, to: 1.25 }, alpha: { from: 0.9, to: 0.15 },
+        duration: 1800, repeat: -1, delay: i * 260 });
+      this.tweens.add({ targets: g, y: p.y - 3, duration: 1400 + i * 90, yoyo: true, repeat: -1, ease: "Sine.easeInOut" });
+      g.setSize(46, 46).setInteractive({ useHandCursor: true });
+      /* al pasar por encima: la chapa dice QUÉ es y QUÉ hace falta. Una señal que no dice lo que
+         trae es una señal muda — regla 9 aplicada al agua. */
+      g.on("pointerover", () => {
+        const ck = carnadaDe(s.fam), c = PESCA_CARNADA[ck] || {};
+        const puede = pescaPuedeSenal(s);
+        this.senalChapa(p.x, p.y - 30,
+          fam.senal + "\n" + e.emoji + " " + e.label + " " + "★".repeat(s.estrella) + "\n" +
+          (puede.ok ? "con " + c.emoji + " " + c.label : "⚠ " + puede.toast), puede.ok);
+      });
+      g.on("pointerout", () => this.senalChapa(null));
+      g.on("pointerdown", (pt, lx, ly, ev) => { if (ev && ev.stopPropagation) ev.stopPropagation(); this.tirarASenal(i); });
+      this._senales.push(g);
+    });
+  }
+  /* la chapa del hover. No usa el cartel de abajo (#prompt) a propósito: ese lo reescribe el
+     update() en cada cuadro y se pisarían. Flota sobre la propia señal, que además es donde el
+     ojo ya está mirando. En verde si podés tirarle; en ámbar con el motivo si no. */
+  senalChapa(x, y, txt, puede) {
+    if (this._chapa) { this._chapa.destroy(); this._chapa = null; }
+    if (x == null) return;
+    this._chapa = this.add.text(x, y, txt, {
+      fontSize: "10px", align: "center", lineSpacing: 2,
+      color: puede ? "#e9ffd6" : "#ffd75e", backgroundColor: "rgba(20,25,15,.88)",
+      padding: { x: 6, y: 4 }, stroke: "#241505", strokeThickness: 2,
+    }).setOrigin(0.5, 1).setDepth(9000);
+  }
+  /* tirarle a una señal: se cobra la carnada y la carga ACÁ (lo que elegís es lo que pagás) y
+     el lance ya nace sabiendo qué pez es. Si no se puede, pescaSenalGastar avisa por qué. */
+  tirarASenal(i) {
+    if (this.action || this.lance) return;
+    /* la puerta ANTES de cobrar nada: si te falta la caña o no hay lugar en la bolsa, enterarse
+       al final del carrete sería lo peor de los dos mundos — perdiste el pez y la carnada por
+       algo que ya se sabía antes de tirar. (Es el contrato que vigila test-herramientas.) */
+    const sn = (typeof pescaSenales === "function") ? (pescaSenales()[i] || null) : null;
+    const pf = puedeAccion("fish", { type: "fish", senal: sn });
+    if (!pf.ok) { avisoAccion(pf); return; }
+    const s = (typeof pescaSenalGastar === "function") ? pescaSenalGastar(i) : null;
+    if (!s) return;
+    this._senalFirma = null; this.senalesDibujar();          // la señal usada desaparece del agua
+    const p = this.senalPos(i);
+    this.startAction("fish", { cx: p.x, bx: p.x, by2: p.y, senal: s });
+  }
   // punto al azar bien adentro de la laguna (para los peces)
   pondPoint() {
     const p = GF.POND, T = GF.TILE;
@@ -3029,6 +3145,13 @@ class FarmScene extends Phaser.Scene {
     if (t < (this._buzonAt || 0)) return;
     // día nuevo → montículos nuevos
     try { if (typeof excavEstado === "function" && this._excavDia !== excavEstado().dia) this.crearExcavaciones(); } catch (e) {}
+    /* la laguna madura sola mientras jugás: cada tanto se mira si hay una carga nueva y, si la
+       hay, aparece su señal. Cada 2 s alcanza — el reloj de la laguna es de 15 minutos — y la
+       firma corta el repintado cuando no cambió nada. */
+    if (!this._senalUltimo || this.time.now - this._senalUltimo > 2000) {
+      this._senalUltimo = this.time.now;
+      try { this.senalesDibujar(); } catch (e) {}
+    }
     this._buzonAt = t + 1200;
     const o = (this.objs || []).find(x => x.type === "buzon");
     if (!o || !o.sprite) return;

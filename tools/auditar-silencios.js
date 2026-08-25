@@ -30,7 +30,7 @@ const ACCIONES = {
   "public/game/farm.js": ["interactWith", "tryFish"],
 };
 /* lo que cuenta como "decir algo" */
-const HABLA = /toast\(|log\(|avisoAccion|bagFull|tutoAviso|askConfirm|celebrate|premioFx|puffFx|console\.warn|openOv|startAction|sfx\(/;
+const HABLA = /toast\(|log\(|avisoAccion|bagFull|tutoAviso|askConfirm|celebrate|premioFx|puffFx|console\.warn|openOv|startAction|sfx\(|mostrarEleccion/;
 /* returns que no son una salida de acción (éxito ya avisado, valores internos, render) */
 const NO_CUENTA = /return \{|return this|return true|return false|return o\b|return \w+\.\w|return dados|return total|return b;|return listos|return mejor|return PICK_ORDER/;
 

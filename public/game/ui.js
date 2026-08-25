@@ -3042,3 +3042,35 @@ function refreshCosmeticos() {
     window[nombre] = g;
   });
 })();
+
+/* ============ UNA ELECCIÓN DE DOS, EN EL LUGAR DONDE HICISTE CLIC (25/8, Pesca v3) ==========
+   El montículo pasó a preguntar « ¿lombriz o grillo? », y esa pregunta no merece una ventana:
+   merece lo mismo que la siembra rápida — dos fichas al lado del cursor, elegís, siguen.
+   Reusa la rueda que ya existe (#seedwheel y sus estilos), así no nace una interfaz nueva ni un
+   estilo nuevo que después haya que mantener. Cerrar sin elegir es una respuesta válida y
+   también avisa: ninguna acción termina en silencio (regla 9). */
+function mostrarEleccion(titulo, opciones, alElegir, alCancelar) {
+  const w = $("seedwheel"); if (!w) { if (alElegir) alElegir(opciones[0].k); return; }
+  const c = w.querySelector(".swc"); if (!c) return;
+  const px = window.innerWidth / 2, py = window.innerHeight / 2;
+  c.style.left = px + "px"; c.style.top = py + "px";
+  const R = 62, n = opciones.length;
+  let h = '<div class="swi center" style="left:0;top:0;width:auto;height:auto;background:none;' +
+    'font-size:12px;font-weight:800;color:#f6e7bd;text-shadow:0 2px 4px #000;white-space:nowrap">' + titulo + '</div>';
+  opciones.forEach((o, i) => {
+    /* en semicírculo: con dos opciones quedan una a cada lado, que es lo que se lee más rápido */
+    const ang = Math.PI * (0.5 + (i + 0.5) / n);
+    const x = Math.cos(ang) * R, y = Math.sin(ang) * R * 0.75 + 26;
+    h += '<div class="swi" data-elec="' + o.k + '" style="left:' + x + 'px;top:' + y + 'px" title="' + (o.sub || "") + '">' +
+      '<span style="font-size:20px;line-height:1">' + (o.txt.split(" ")[0] || "") + '</span>' +
+      '<span style="font-size:8px;color:#e8dcc0;line-height:1.1">' + o.txt.split(" ").slice(1).join(" ") + '</span></div>';
+  });
+  c.innerHTML = h;
+  w.classList.add("show");
+  const cerrar = () => { w.classList.remove("show"); c.innerHTML = ""; document.removeEventListener("pointerdown", fuera, true); };
+  c.querySelectorAll("[data-elec]").forEach(el => el.onclick = (ev) => {
+    ev.stopPropagation(); const k = el.dataset.elec; cerrar(); if (alElegir) alElegir(k);
+  });
+  const fuera = (ev) => { if (c.contains(ev.target)) return; cerrar(); toast("No cavaste nada"); if (alCancelar) alCancelar(); };
+  setTimeout(() => document.addEventListener("pointerdown", fuera, true), 0);
+}

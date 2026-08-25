@@ -4699,10 +4699,18 @@ function puedeAccion(tipo, o, rotulo) {
   }
 
   if (tipo === "fish") {
-    const espera = pescaCdLeft();
-    if (espera > 0) return { ok: false, toast: "La laguna está en reposo — vuelve en " + fmtDur(espera) };
+    /* 25/8 (Pesca v3) — LA PUERTA TIENE DOS CAMINOS, PERO SIGUE SIENDO UNA.
+       Con SEÑAL (o.senal) la carga y la carnada YA se cobraron al elegirla, así que volver a
+       exigirlas acá rebotaría siempre. Lo que NO cambia y se sigue exigiendo en los dos caminos
+       es lo que es del jugador y no del agua: la caña y el lugar en la bolsa. Eso es lo que hace
+       que siga habiendo UNA puerta y no dos reglas que envejecen por su lado. */
+    const conSenal = !!(o && o.senal);
+    if (!conSenal) {
+      const espera = pescaCdLeft();
+      if (espera > 0) return { ok: false, toast: "La laguna está en reposo — vuelve en " + fmtDur(espera) };
+    }
     if (toolDur("rod") <= 0) return { ok: false, toast: sinKitTxt("No tenés caña — craftéala en la Herrería") };
-    if ((G.res.lombriz || 0) < 1) return { ok: false, toast: "Necesitás lombrices — cavá un montículo o compralas en la Tienda" };
+    if (!conSenal && (G.res.lombriz || 0) < 1) return { ok: false, toast: "Necesitás lombrices — cavá un montículo o compralas en la Tienda" };
     if (!roomForFish()) return { ok: false, bag: "pescar" };
     return OK;
   }
@@ -5252,9 +5260,11 @@ function goFishing(rarForzada) {
      paga. El camino viejo sigue cobrando acá, igual que siempre, para que nada de lo que ya
      funcionaba dependa de la migración. */
   const v3 = !!(rarForzada && typeof rarForzada === "object" && ESPECIE_DEF[rarForzada.esp]);
+  /* la puerta se pregunta SIEMPRE, en los dos caminos — es la regla de la casa y no se negocia.
+     Lo que cambia es lo que la puerta exige: con señal, la carga y la carnada ya están pagas. */
+  const pf = puedeAccion("fish", { type: "fish", senal: v3 ? rarForzada : null });
+  if (!pf.ok) { avisoAccion(pf); return; }
   if (!v3) {
-    const p = puedeAccion("fish", { type: "fish" });
-    if (!p.ok) { avisoAccion(p); return; }
     G.pescaHasta = nowMs() + FISH_CD * 1000 * (typeof cdMult === "function" ? cdMult() : 1);
     G.res.lombriz -= 1;   // detalles viernes: pescar cuesta SOLO 1 lombriz (sin esencia)
   }
