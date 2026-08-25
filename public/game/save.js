@@ -212,7 +212,7 @@ function snapshot() {
      vistos y estrellaMax (el álbum con estrellas) y pescaTiene (el señuelo, que no se gasta).
      OJO con los comentarios AL FINAL de una línea de este objeto: se comen lo que sigue. */
   return { plata: G.plata, golden: G.golden, level: G.level, prestige: G.prestige, iniciado: G.iniciado,
-    res: G.res, picks: G.picks, skills: G.skills, fish: G.fish, plots: G.plots, nodos: G.nodos, expansiones: G.expansiones, pescaHasta: G.pescaHasta, pescaDesde: G.pescaDesde, senales: G.senales, escamas: G.escamas, vistos: G.vistos, estrellaMax: G.estrellaMax, pescaTiene: G.pescaTiene, canas: G.canas, presion: G.presion, runaOro: G.runaOro, buffs: G.buffs, seeds: G.seeds, selSeed: G.selSeed,
+    res: G.res, picks: G.picks, skills: G.skills, fish: G.fish, plots: G.plots, nodos: G.nodos, expansiones: G.expansiones, pescaHasta: G.pescaHasta, pescaDesde: G.pescaDesde, senales: G.senales, escamas: G.escamas, vistos: G.vistos, estrellaMax: G.estrellaMax, pescaTiene: G.pescaTiene, canas: G.canas, presion: G.presion, amarres: G.amarres, trampas: G.trampas, marea: G.marea, runaOro: G.runaOro, buffs: G.buffs, seeds: G.seeds, selSeed: G.selSeed,
     tools: G.tools, sflStock: true, invRows: G.invRows, slots: G.slots, hotbar: G.hotbar, hotSel: G.hotSel, hbInit: G.hbInit, layout: G.layout,
     daily: G.daily, plotsOwned: G.plotsOwned, plotsCompradas: G.plotsCompradas, plotsFicha: G.plotsFicha, expParcelasDadas: G.expParcelasDadas, seedBuys: G.seedBuys, built: G.built,
     hp: G.hp, hpMax: G.hpMax, combatXp: G.combatXp, stam: G.stam, stamAcc: G.stamAcc, stamFullAt: G.stamFullAt, stamRec: G.stamRec, pass: G.pass, tuto: G.tuto, firstSeeds: G.firstSeeds,   // 24/8: stamFullAt — la recarga de 4 h es de reloj real
@@ -270,6 +270,14 @@ function hydrate(d) {
     const vieja = (typeof toolCount === "function") ? toolCount("rod") : 0;
     G.canas = { junco: Math.max(CANA_DEF.junco.usos, Math.floor(vieja) || 0) };
   }
+  /* 25/8 (tanda 3) — LAS TRAMPAS Y SUS AMARRES. El amarre guarda SOLO lo que no se puede
+     derivar: qué trampa es, cuándo estará lista, qué cebo se comió y qué enganchó. El ESTADO
+     (guardada · calando · cabeceando · soltada) no se guarda nunca: sale del reloj. Por eso el
+     F5 no resucita una trampa vencida ni reinicia una que estaba corriendo — no hay nada que
+     resucitar. Es la misma decisión que el nodo virgen del 22/8. */
+  if (Array.isArray(d.amarres)) G.amarres = d.amarres.slice(0, 3);
+  if (d.trampas && typeof d.trampas === "object") G.trampas = d.trampas;
+  if (d.marea && typeof d.marea === "object") G.marea = d.marea;
   if (d.runaOro && typeof d.runaOro === "object") G.runaOro = d.runaOro;
   if (typeof d.expansiones === "number") G.expansiones = Math.max(0, Math.min(16, d.expansiones));
   // los buffs traen su propio vencimiento: se descartan los que ya caducaron mientras no estabas
@@ -441,6 +449,15 @@ function hydrate(d) {
   /* LA DOMA (22/8): el turno del bicho corre acá, con el estado ENTERO delante (necesita
      G.nodos, la bolsa y d.visto). Solo recoge lo madurado en tu ausencia. */
   try { if (typeof domaTrabajar === "function" && typeof d.visto === "number") domaTrabajar(d.visto); } catch (e) {}
+  /* LAS TRAMPAS (25/8, tanda 3): el mismo gesto que el parte de la doma, y por la misma razón.
+     « El que entra dos minutos tiene que enterarse ANTES de decidir qué hace con esos dos
+     minutos. » Una boya que cabecea sin decirlo es cebo perdido en silencio — y una trampa que
+     se vacía en silencio entrena al jugador a no confiar en el sistema. */
+  try {
+    if (typeof amarresParte === "function") amarresParte().forEach(p => {
+      log((p.tipo === "cabecea" ? "🎣 " : "💧 ") + p.txt, p.tipo === "cabecea" ? "gold" : "bad");
+    });
+  } catch (e) { console.warn("parte de trampas:", e); }
 }
 
 /* ============ FASE 2 · MIGRAR (20/8) ================================================

@@ -784,6 +784,31 @@ function refreshForge() {
         '</div><div class="fbtns">' + btn + '</div></div>';
     });
   }
+  /* 25/8 (Pesca v3, tanda 3) — LAS TRAMPAS, en la misma repisa que las cañas. Ninguna cuesta
+     plata: se pagan con reloj de nodo, igual que el hacha y el pico. Y cada fila dice las tres
+     cosas que hacen falta para decidir sin abrir nada: cuánto tarda, cuánto dura la ventana y
+     qué entrega — porque una trampa cuya ventana no se conoce de antemano es una trampa que se
+     vence sola la primera vez y no se usa nunca más. */
+  if (typeof TRAMPA_ORDER !== "undefined") {
+    const nvT = (typeof nivelOficio === "function") ? nivelOficio("fishing") : 1;
+    craft += '<div class="shophead">Trampas de la laguna <span class="sub">· ' + amarresCupo() + " de " + AMARRE_LVL.length + ' amarres</span></div>';
+    TRAMPA_ORDER.forEach(id => {
+      const d = TRAMPA_DEF[id], n = trampaUsos(id), abierta = nvT >= d.lvl;
+      const cs = Object.keys(d.cost).map(k => resIc(k) + " " + d.cost[k]).join(" · ");
+      const puede = abierta && canAfford(d.cost);
+      const btn = abierta
+        ? '<button class="green sm" ' + (puede ? "" : "disabled") + ' data-ctrampa="' + id + '">Armar</button>'
+        : '<button class="ghost sm" disabled>Pesca ' + d.lvl + "</button>";
+      const da = d.da === "cebo" ? ("da " + d.cebo[0] + "-" + d.cebo[1] + " de Cebo vivo")
+                                 : ("engancha una cita " + (PESCA_FAMILIA[d.fam] || {}).label + " de " + d.est[0] + "-" + d.est[1] + "★");
+      craft += '<div class="forge-row' + (abierta ? "" : " locked") + '"><div class="fic">' +
+        '<img src="' + GF.spr("res_lombriz") + '" style="opacity:0" alt=""><span style="position:absolute;font-size:20px">' + d.emoji + '</span></div>' +
+        '<div class="finfo"><div class="fnm">' + d.label + '</div>' +
+        '<div class="fds">cala ' + d.cala + " h · ventana " + d.ventana + " h · " + da + '</div>' +
+        '<div class="fds">Costo: ' + (cs || "—") + " · " + d.usos + " usos · tenés " + n + '</div>' +
+        '</div><div class="fbtns">' + btn + "</div></div>";
+    });
+  }
   // solo las ARMAS se reparan → Reparar
   ARM_ORDER.forEach(id => {   // doc 2/8: las armas nuevas se reparan acá
     if (!G.weapons || !G.weapons[id]) return;
@@ -865,6 +890,7 @@ function refreshForge() {
   card.querySelectorAll("[data-rtool]").forEach(b => b.onclick = () => repairTool(b.dataset.rtool));
   card.querySelectorAll("[data-ctool]").forEach(b => b.onclick = () => craftTool(b.dataset.ctool));
   card.querySelectorAll("[data-ccana]").forEach(b => b.onclick = () => craftCana(b.dataset.ccana));   // 25/8: las cañas
+  card.querySelectorAll("[data-ctrampa]").forEach(b => b.onclick = () => trampaCraftear(b.dataset.ctrampa));   // 25/8: las trampas
   card.querySelectorAll("[data-ctool5]").forEach(b => b.onclick = () => craftTool(b.dataset.ctool5, 5));
   card.querySelectorAll("[data-carm]").forEach(b => b.onclick = () => craftWeapon(b.dataset.carm));
   card.querySelectorAll("[data-rarm]").forEach(b => b.onclick = () => repairWeapon(b.dataset.rarm));
@@ -3074,7 +3100,11 @@ function refreshCosmeticos() {
    Reusa la rueda que ya existe (#seedwheel y sus estilos), así no nace una interfaz nueva ni un
    estilo nuevo que después haya que mantener. Cerrar sin elegir es una respuesta válida y
    también avisa: ninguna acción termina en silencio (regla 9). */
-function mostrarEleccion(titulo, opciones, alElegir, alCancelar) {
+/* 25/8 (tanda 3): el aviso de cancelar pasa a ser un PARÁMETRO. Estaba clavado en « No cavaste
+   nada », que es verdad para el montículo y mentira para cualquier otra cosa que use esta rueda
+   — y la tanda 3 la usa para elegir trampa. Un aviso compartido que dice algo que no pasó es
+   peor que no avisar: enseña al jugador a no leer los avisos. */
+function mostrarEleccion(titulo, opciones, alElegir, alCancelar, avisoCancelar) {
   const w = $("seedwheel"); if (!w) { if (alElegir) alElegir(opciones[0].k); return; }
   const c = w.querySelector(".swc"); if (!c) return;
   const px = window.innerWidth / 2, py = window.innerHeight / 2;
@@ -3096,6 +3126,6 @@ function mostrarEleccion(titulo, opciones, alElegir, alCancelar) {
   c.querySelectorAll("[data-elec]").forEach(el => el.onclick = (ev) => {
     ev.stopPropagation(); const k = el.dataset.elec; cerrar(); if (alElegir) alElegir(k);
   });
-  const fuera = (ev) => { if (c.contains(ev.target)) return; cerrar(); toast("No cavaste nada"); if (alCancelar) alCancelar(); };
+  const fuera = (ev) => { if (c.contains(ev.target)) return; cerrar(); toast(avisoCancelar || "No cavaste nada"); if (alCancelar) alCancelar(); };
   setTimeout(() => document.addEventListener("pointerdown", fuera, true), 0);
 }

@@ -61,8 +61,13 @@ console.log("\nEL CIRCUITO ENTERO: CLIC → CARNADA → LANCE → COBRO");
   ok("si la lógica dice que no, no se tira", /if \(!s\) return;/.test(FARM));
   ok("el lance nace con la señal", /pescaLanceNuevo\(null, o && o\.senal\)/.test(FARM));
   ok("y el aviso nombra el pez al que le tiraste", /Le tiraste a " \+ e\.emoji/.test(FARM));
+  /* 25/8 (tanda 3): el objeto que se le pasa a goFishing creció con `cita` — la XP de una cita
+     va a la mitad. Lo que este medidor tiene que exigir no es la forma literal del objeto (que va
+     a seguir creciendo) sino la REGLA: que se cobre la especie del lance y no la rareza vieja. */
   ok("ganar cobra la ESPECIE, no la rareza vieja",
-    /goFishing\(l && l\.esp \? \{ esp: l\.esp, estrella: l\.estrella \} : rar\)/.test(FARM));
+    /goFishing\(l && l\.esp \? \{ esp: l\.esp, estrella: l\.estrella[^}]*\} : rar\)/.test(FARM));
+  ok("y si vino del palangre, se lo dice — para que la XP se pague a la mitad",
+    /cita: l\.cita/.test(FARM));
   ok("perder deja la escama", /if \(l && l\.esp && typeof pescaPerdido === "function"\) pescaPerdido\(l\)/.test(FARM));
   ok("y después de pelear el agua se repinta", /this\._senalFirma = null; this\.senalesDibujar\(\);/.test(FARM));
 }
@@ -82,7 +87,11 @@ console.log("\nEL MONTÍCULO PREGUNTA, CON LA RUEDA QUE YA EXISTÍA");
   ok("y son lombriz o grillo, con su familia dicha", /carnada de ORILLA/.test(FARM) && /carnada de SUPERFICIE/.test(FARM));
   ok("lo elegido llega a la lógica", /excavCavar\(o\.idx, this\._excavCarnada\)/.test(FARM));
   ok("la rueda vive en ui.js y reusa #seedwheel", /function mostrarEleccion\(/.test(UI) && /\$\("seedwheel"\)/.test(UI));
-  ok("cerrar sin elegir también contesta", /toast\("No cavaste nada"\)/.test(UI));
+  /* 25/8 (tanda 3): el aviso de cancelar pasó a ser un parámetro, porque la misma rueda ahora
+     elige trampas y « No cavaste nada » sería mentira. Se sigue exigiendo que CONTESTE algo. */
+  ok("cerrar sin elegir también contesta", /toast\(avisoCancelar \|\| "No cavaste nada"\)/.test(UI));
+  ok("y contesta lo que corresponde a cada rueda, no una frase clavada",
+    /mostrarEleccion\(titulo, opciones, alElegir, alCancelar, avisoCancelar\)/.test(UI));
   ok("y no deja el escuchador colgado", /document\.removeEventListener\("pointerdown", fuera, true\)/.test(UI));
 }
 

@@ -879,6 +879,7 @@ class FarmScene extends Phaser.Scene {
     /* 25/8 (Pesca v3): el agua reparte sus señales AL LLEGAR — una por cada lance que te guardó
        mientras no estabas. Es lo primero que el jugador ve de la laguna al entrar. */
     try { this.senalesDibujar(); } catch (e) { console.warn("señales:", e); }
+    try { this.boyasDibujar(); } catch (e) { console.warn("boyas:", e); }
     this.dibujarExpansion();     // 18/8: el lote que podés comprar, marcado en el bosque
     // 18/8: repintar TODOS los suelos de parcela al terminar de armar la escena. Es barato y cierra
     // la clase de fallo entera: da igual en qué orden se hayan tocado antes, acá quedan como dice
@@ -1669,7 +1670,27 @@ class FarmScene extends Phaser.Scene {
     zona.classList.toggle("ok", !!l.adentro);
     pez.style.bottom = "calc(" + (l.pez * 100) + "% - 11px)";
     fill.style.height = Math.round(l.prog * 100) + "%";
-    if (txt) txt.textContent = ((typeof FISH_DEF !== "undefined" && FISH_DEF[l.rar]) ? FISH_DEF[l.rar].label : "Pez") + " — ¡mantenelo en la zona!";
+    /* 25/8 (tanda 3) — LAS SIETE PELEAS, EN PANTALLA. La física ya está resuelta en state.js;
+       acá solo se PINTA lo que la variación dejó dicho. Tres estados y nada más:
+         · tapa  — la tinta del calamar: se esconde TU ZONA, nunca el pez. Apagar la barra entera
+                   (revisión 1) no medía habilidad, medía suerte.
+         · fuera — el volador en el aire: el pez desaparece de la barra y apretar no hace nada.
+         · mordisco — el camarón: cuántos van de los tres.
+       Y el texto de arriba deja de ser genérico: dice la especie de verdad y la frase de SU
+       variación, porque una pelea distinta que no se anuncia se lee como un bug. */
+    zona.classList.toggle("tinta", !!l.tapa);
+    pez.style.visibility = l.fuera ? "hidden" : "";
+    if (txt) {
+      const e = (typeof ESPECIE_DEF !== "undefined" && l.esp) ? ESPECIE_DEF[l.esp] : null;
+      const nom = e ? (e.emoji + " " + e.label + " " + "★".repeat(l.estrella || 1)) :
+        ((typeof FISH_DEF !== "undefined" && FISH_DEF[l.rar]) ? FISH_DEF[l.rar].label : "Pez");
+      const p = (typeof PELEA_DEF !== "undefined" && PELEA_DEF[l.pelea]) || null;
+      let pista = p && l.pelea !== "normal" ? p.txt : "¡mantenelo en la zona!";
+      if (l.tapa) pista = "¡tinta! — acordate dónde dejaste tu zona";
+      else if (l.fuera) pista = "está en el aire — dejá la zona donde va a caer";
+      else if (l.mordisco) pista = "mordisco " + l.mordisco + " de 3 — clavá en el tercero";
+      txt.textContent = nom + " — " + pista;
+    }
   }
   pescaTerminar(rar) {
     const l = this.lance; this.lance = null; this.lanceHold = false;
@@ -1677,13 +1698,19 @@ class FarmScene extends Phaser.Scene {
     /* 25/8 (v3) — SE COBRA LO QUE SE PELEÓ. Si el lance traía especie, se le pasa a goFishing el
        objeto entero: la plata es la de la especie (plana) y la XP escala con la estrella. Si se
        cortó el hilo, el pez deja su ESCAMA — el fracaso deja de ser un cero. */
-    if (rar) { goFishing(l && l.esp ? { esp: l.esp, estrella: l.estrella } : rar); }
+    if (rar) { goFishing(l && l.esp ? { esp: l.esp, estrella: l.estrella, cita: l.cita } : rar); }
     else {
       const m = (typeof PESCA2_AVISO !== "undefined" && l && PESCA2_AVISO[l.motivo]) || "El pez se fue";
       if (l && l.esp && typeof pescaPerdido === "function") pescaPerdido(l);
       else { toast(m); log("🎣 " + m + ".", "bad"); }
     }
+    /* 25/8 (tanda 3) — Y LA CITA SE RESUELVE, gane o pierda. Si el hilo se cortó, la ventana se
+       descongela con lo que le quedaba: la cita no se regala, pero tampoco se evapora por haber
+       peleado. Si se sacó, el amarre queda libre. Olvidarse de esta línea dejaría el reloj
+       congelado para siempre — una trampa eterna que nadie podría volver a usar. */
+    if (l && l.cita && l.amarre != null && typeof citaResolver === "function") citaResolver(l.amarre, !!rar);
     this._senalFirma = null; this.senalesDibujar();   // el agua se repinta: una señal menos
+    this._boyaFirma = null; try { this.boyasDibujar(); } catch (e) {}   // y las boyas, que cambian de estado con el reloj
   }
 
   finishAction() {
@@ -2067,6 +2094,137 @@ class FarmScene extends Phaser.Scene {
       g.on("pointerdown", (pt, lx, ly, ev) => { if (ev && ev.stopPropagation) ev.stopPropagation(); this.tirarASenal(i); });
       this._senales.push(g);
     });
+  }
+  /* ═══ LAS BOYAS DE LAS TRAMPAS (25/8, tanda 3) ═══════════════════════════════════════════
+     « Desde la granja — el amarre está en el mapa: la boya cabeceando se ve con su ¡! flotante.
+     Nada de menús. » Ése es el capítulo 7.4 y es la razón por la que esto se dibuja acá y no en
+     una ventana: una trampa que solo existe dentro de un panel es una trampa que el jugador se
+     olvida de cobrar, y una trampa olvidada es cebo perdido en silencio.
+     Los cuatro estados se distinguen SIN leer: quieta (calando) · cabeceando (hay algo) · roja y
+     temblando (última llamada) · de costado (soltada).                                        */
+  boyasDibujar() {
+    if (typeof amarres !== "function") return;
+    const lista = amarres();
+    this._boyas = this._boyas || [];
+    /* la FIRMA tiene que incluir TODO lo que cambia el dibujo — el estado y la última llamada,
+       no solo qué trampa hay. Una firma incompleta es un dibujo que se queda viejo, que es el
+       bug que más veces se repitió en este proyecto. */
+    const firma = lista.map((a, i) => a ? (a.id + amarreEstado(a) + (amarreUltimaLlamada(a) ? "!" : "") + (a.esp || "") + (a.estrella || "")) : "-").join(",");
+    if (this._boyaFirma === firma) return;
+    this._boyaFirma = firma;
+    this._boyas.forEach(o => { try { o.destroy(); } catch (e) {} });
+    this._boyas = [];
+    /* EL CLIMA, sobre el agua. Va acá y no en el HUD porque el clima de este juego no es
+       ambientación: es información de pesca — dice QUÉ pica hoy. Ponerlo lejos de la laguna
+       sería esconderlo del único lugar donde se usa. */
+    if (typeof climaDef === "function") {
+      const c = climaDef(), P = GF.POND, T = GF.TILE;
+      const ch = this.add.text((P.x + P.w / 2) * T, (P.y - 0.35) * T, c.emoji + " " + c.label + " · " + c.txt, {
+        fontSize: "9px", color: "#dff1ff", backgroundColor: "rgba(20,25,15,.72)",
+        padding: { x: 5, y: 3 }, stroke: "#241505", strokeThickness: 2,
+      }).setOrigin(0.5, 1).setDepth(-490);
+      this._boyas.push(ch);
+    }
+    lista.forEach((a, i) => {
+      if (!a) {
+        /* EL AMARRE VACÍO. Un amarre que no se ve es un amarre que no se usa: el jugador que
+           armó una nasa en la Herrería tiene que poder ver DÓNDE se cala sin buscar un menú.
+           Se dibuja como un poste con la soga suelta — vacío, pero evidentemente un lugar. */
+        const p = this.boyaPos(i);
+        const g = this.add.container(p.x, p.y).setDepth(-485);
+        const poste = this.add.rectangle(0, -6, 3, 14, 0x6b5433, 0.85).setStrokeStyle(1, 0x241505, 0.7);
+        const soga = this.add.circle(0, 2, 6, 0x000000, 0).setStrokeStyle(1, 0xc9b58a, 0.55);
+        g.add([poste, soga]);
+        g.setSize(28, 30).setInteractive({ useHandCursor: true });
+        g.on("pointerover", () => this.senalChapa(p.x, p.y - 22, "Amarre libre\nclic para calar una trampa", true));
+        g.on("pointerout", () => this.senalChapa(null));
+        g.on("pointerdown", (pt, lx, ly, ev) => { if (ev && ev.stopPropagation) ev.stopPropagation(); this.amarreClic(i); });
+        this._boyas.push(g);
+        return;
+      }
+      const t = TRAMPA_DEF[a.id]; if (!t) return;
+      const est = amarreEstado(a), ultima = amarreUltimaLlamada(a);
+      const p = this.boyaPos(i);
+      const g = this.add.container(p.x, p.y).setDepth(-480);
+      const col = est === "soltada" ? 0x8a7f6d : (ultima ? 0xff6b5e : (est === "cabeceando" ? 0xffd75e : 0xd9f0ff));
+      const cuerpo = this.add.circle(0, 0, 7, col, 1).setStrokeStyle(2, 0x241505, 0.8);
+      const palo = this.add.rectangle(0, -9, 2, 10, 0x241505, 0.8);
+      const ico = this.add.text(0, 12, t.emoji, { fontSize: "13px" }).setOrigin(0.5);
+      g.add([palo, cuerpo, ico]);
+      if (est === "soltada") { cuerpo.setAlpha(0.6); g.setAngle(70); }        // de costado: se soltó
+      else if (est === "cabeceando") {
+        /* cabecea: se mueve. Y en la última llamada, cabecea FUERTE y en rojo — el único momento
+           del juego donde interrumpir está justificado, porque lo que se pierde es de verdad. */
+        const bang = this.add.text(11, -12, "!", { fontSize: ultima ? "16px" : "13px",
+          color: ultima ? "#ff6b5e" : "#ffd75e", stroke: "#241505", strokeThickness: 3 }).setOrigin(0.5);
+        g.add(bang);
+        this.tweens.add({ targets: g, y: p.y + (ultima ? 7 : 4), duration: ultima ? 260 : 620,
+          yoyo: true, repeat: -1, ease: "Sine.easeInOut" });
+        if (ultima) this.tweens.add({ targets: bang, scale: { from: 0.85, to: 1.25 }, duration: 320, yoyo: true, repeat: -1 });
+      } else {
+        this.tweens.add({ targets: g, y: p.y - 2, duration: 2200, yoyo: true, repeat: -1, ease: "Sine.easeInOut" });
+      }
+      g.setSize(34, 40).setInteractive({ useHandCursor: true });
+      /* con el cursor encima, la chapa dice especie, estrellas y tiempo restante — capítulo 7.4.
+         Una boya que no dice qué tiene obliga a levantarla para averiguarlo, y levantarla cuesta. */
+      g.on("pointerover", () => {
+        const b = BOYA_ESTADO[est] || {};
+        const qué = a.esp ? (ESPECIE_DEF[a.esp].emoji + " " + ESPECIE_DEF[a.esp].label + " ★".replace(" ", " ") + "★".repeat(a.estrella))
+                          : (a.cebo_n ? a.cebo_n + " × Cebo vivo" : "—");
+        const reloj = est === "calando" ? "listo en " + fmtDur(amarreRestaMs(a))
+                    : est === "cabeceando" ? "quedan " + fmtDur(amarreRestaMs(a))
+                    : "se soltó";
+        this.senalChapa(p.x, p.y - 26,
+          t.emoji + " " + t.label + " · " + b.label + "\n" + qué + "\n" + reloj,
+          est === "cabeceando");
+      });
+      g.on("pointerout", () => this.senalChapa(null));
+      g.on("pointerdown", (pt, lx, ly, ev) => { if (ev && ev.stopPropagation) ev.stopPropagation(); this.boyaClic(i); });
+      this._boyas.push(g);
+    });
+  }
+  /* los amarres son celdas de la orilla, repartidas a lo largo del borde de la laguna: así la
+     ocupación la resuelve la regla que ya existe en vez de un contador nuevo que se desincroniza */
+  boyaPos(i) {
+    const P = GF.POND, T = GF.TILE;
+    const x = (P.x + 0.9 + i * ((P.w - 1.8) / Math.max(1, 2))) * T;
+    return { x, y: (P.y + P.h - 0.55) * T };
+  }
+  /* clic en un amarre VACÍO: elegir qué calar. Reusa la misma rueda del montículo — el jugador
+     ya aprendió ese gesto y repetirlo cuesta cero. Con una sola trampa disponible no pregunta
+     nada y la cala: preguntar entre una opción es el peor tipo de clic. */
+  amarreClic(i) {
+    if (this.action || this.lance) return;
+    const listas = TRAMPA_ORDER.filter(id => trampaAbierta(id) && trampaUsos(id) > 0);
+    if (!listas.length) {
+      const prox = TRAMPA_ORDER.find(id => !trampaAbierta(id));
+      toast(prox ? "No tenés trampas — armalas en la Herrería (" + TRAMPA_DEF[prox].label + " a Pesca " + TRAMPA_DEF[prox].lvl + ")"
+                 : "No tenés trampas — armalas en la Herrería");
+      return;
+    }
+    const calar = (id) => { trampaCalar(id); this._boyaFirma = null; this.boyasDibujar(); };
+    if (listas.length === 1) { calar(listas[0]); return; }
+    mostrarEleccion("¿Qué calás acá?", listas.map(id => ({
+      k: id, txt: TRAMPA_DEF[id].emoji + " " + TRAMPA_DEF[id].label.split(" ")[0],
+      sub: TRAMPA_DEF[id].cala + " h · quedan " + trampaUsos(id),
+    })), calar, null, "No calaste nada");
+  }
+  boyaClic(i) {
+    if (this.action || this.lance) return;
+    const a = amarres()[i]; if (!a) return;
+    const r = trampaCobrar(i);
+    this._boyaFirma = null; this.boyasDibujar();
+    if (!r || !r.cita) return;
+    /* LA PUERTA ANTES DE TOCAR NADA — la misma que las otras dos entradas al agua, y por el mismo
+       motivo de siempre: la caña, la talla y el lugar en la bolsa se saben ANTES de empezar. Si
+       no da, la cita NO se pierde: sigue cabeceando en la boya hasta que resuelvas lo que falta. */
+    const pf = puedeAccion("fish", { type: "fish", senal: r.cita });
+    if (!pf.ok) { avisoAccion(pf); return; }
+    /* LA CITA: el palangre no saca el tiburón, lo ENGANCHA. La pelea la das vos — y por eso la
+       ventana se congela acá y no un segundo después. */
+    citaCongelar(i);
+    const p = this.boyaPos(i);
+    this.startAction("fish", { cx: p.x, bx: p.x, by2: p.y, senal: r.cita });
   }
   /* la chapa del hover. No usa el cartel de abajo (#prompt) a propósito: ese lo reescribe el
      update() en cada cuadro y se pisarían. Flota sobre la propia señal, que además es donde el
@@ -3162,6 +3320,7 @@ class FarmScene extends Phaser.Scene {
     if (!this._senalUltimo || this.time.now - this._senalUltimo > 2000) {
       this._senalUltimo = this.time.now;
       try { this.senalesDibujar(); } catch (e) {}
+      try { this.boyasDibujar(); } catch (e) {}
     }
     this._buzonAt = t + 1200;
     const o = (this.objs || []).find(x => x.type === "buzon");

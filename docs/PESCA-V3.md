@@ -647,3 +647,105 @@ granja real, está alineada.
 
 La lección para las tandas que vienen: los ritmos del código son una calibración relativa, no una
 predicción de la partida. Para decidir sobre balance hay que medir la granja del jugador.
+
+---
+
+# TANDA 3 · LOS COLOSOS — Y LAS CUATRO OBSERVACIONES, CERRADAS (25/8)
+
+Entró la última tanda: las siete peleas, el clima, las tres trampas con sus citas, el pedido de
+marea y la estrella en la Cocina. Con esto el documento está implementado de punta a punta.
+
+Y como en las dos anteriores, primero se midió (`tools/medir-pesca-tanda3.js`) y después se
+escribió. Fue la vez que más falta hizo.
+
+## El hallazgo grande: dos relojes que no se pueden sumar
+
+Tal como venía propuesto, el palangre dejaba **Pesca 20 en 42 horas activas** contra las 113-135
+de Cultivo, Tala y Minería. Casi tres veces más rápido.
+
+Y la causa **no era que el martillo pagara mucho**. Era estructural:
+
+> Una trampa corre con RELOJ DE PARED. Una escalera se sube con HORAS ACTIVAS.
+> Sobre una partida larga, cualquier canilla de pared aplasta a cualquier escalera activa —
+> le pongas el número que le pongas.
+
+La prueba está en la tabla que imprime el medidor: aun regalando **cero** XP por la cita, el bucle
+seguía dando 88 horas. Bajar el número no era la solución, porque el número no era el problema.
+
+## Las dos reglas que lo cierran, y las dos ya existían
+
+**1 · La cita entregada por trampa paga la MITAD de la XP** (`CITA_XP = 0.5`).
+La mitad de la cadena de una cita son las doce horas de calado, y este juego ya decidió el 22/8
+qué hacer con el tiempo de pared: es *regalo, no economía* — igual que el árbol y la roca que
+vienen con una expansión. El capítulo 7 ya usaba esa frase para la plata (« toda la plata sigue
+pasando por el carrete »); ahora vale también para la otra columna.
+
+**2 · La presión de la tanda 2 es la que sostiene la banda.**
+El que muele calamar para fabricar cebo le clava la presión al fondo y su rinde cae al piso de
+0,35. Castiga exactamente la conducta que rompía el número, y no toca al que juega normal.
+
+Con las dos: **248 XP/hora → Pesca 20 en 109 horas.** En banda.
+
+## Las cuatro observaciones
+
+**1 · « El 6 % de la escalera en una sola pelea » — se cierra sin tocar nada.**
+La corrección de la tanda 1 (XP base = cadena en minutos) ya subió al martillo de 200 a **600** de
+XP. Es el 2,22 % de la escalera y equivale a 20 carpas de un saque. No es el 6 %, pero tampoco el
+0,74 % que daba la tabla a mano, y la frase del capítulo 4 se sostiene.
+
+**2 · « La XP de los colosos va 3,3× por encima del ritmo » — era real.** Cerrada arriba.
+
+**3 · Dos cosas se llamaban « camarón ».** El de la nasa pasó a llamarse **Cebo vivo**; el que se
+pesca se queda con « camarón » porque es el que el jugador ve primero y el que va al álbum. Y su
+imposibilidad de venderse dejó de ser un efecto lateral de « no tiene precio » para ser una lista
+explícita (`NO_VENDIBLE`) que además dice **por qué** — un cero implícito es un cero que mañana
+alguien rellena sin querer.
+
+**4 · La lombriz se compraba y desarmaba el argumento del capítulo 2.** De las dos salidas, elegí
+**vender también el grillo**: sacar la lombriz de la tienda le pegaba al primer escalón, y un
+oficio con el primer escalón cerrado es un oficio que nadie empieza. El precio no se escribe, se
+deriva: `WORM_PRICE × (cadena de su familia ÷ cadena de la orilla)` → grillo a 6. El mariposa
+sigue costando el doble en carnada, como decía el documento, ahora en las dos monedas.
+
+## Lo que la tanda 3 movió sin que nadie lo pidiera
+
+**Pesca pasó de ser el oficio más lento al más rápido de los cuatro** — de 135 h a 106 h — y nadie
+tocó un multiplicador. La causa: el pez volador (2-4★) y la anguila (2-3★) tienen el **piso** de
+estrellas más alto que el pez común (1-2★), y la estrella es lo único que escala la XP. Agregar
+contenido movió el balance solo.
+
+Sigue en banda (el piso declarado es 102 h, con un margen del 10 % que está escrito en el medidor
+y no escondido en un `if` — los tres oficios de referencia ya se llevan un 20 % entre sí). Pero
+queda anotado: **si mañana entra otra especie de piso alto, hay que volver a correr el medidor.**
+
+## Dos cosas que el medidor encontró y que eran diseño, no bugs
+
+**Los eventos de pelea colgaban del reloj.** Los saltos del volador y la tinta del calamar
+salían « cada 2,2 segundos ». Contra un jugador bueno la pelea termina en tres segundos, así que
+la tinta no aparecía **nunca** — el test lo delató con un « 0 cuadros tapados ». Una variación que
+solo se ve si peleás mal no es una variación: es una penalización a los lentos disfrazada de
+mecánica. Ahora cuelgan del **progreso** (entre el 40 % y el 85 % de la barra), así que el buen
+jugador ve *más* contenido en vez de menos.
+
+**La cita entraba al agua por una puerta sin control.** `test-herramientas` lo cazó: había una
+tercera forma de empezar a pescar que no preguntaba a `puedeAccion`. Es exactamente el bug que ya
+volvió dos veces en este proyecto — « había dos puertas al agua y yo miré una ». Ahora la cita
+pasa por la misma puerta, y además pide la caña que aguante su talla *antes* de empezar: enterarse
+en el segundo cero de la pelea sería el peor momento del sistema.
+
+## Lo que queda abierto de verdad
+
+- **El pez único con nombre** (« la Vieja del Fondo »), atado a las Cartas del Abuelo. Sigue
+  pidiendo decidir si se pesca una sola vez o si reaparece.
+- **Arte.** Nueve especies × cinco tallas no son 45 sprites: son 9 sprites con escala y un marco
+  de estrellas. Hoy las cinco nuevas reusan los sprites que ya existen.
+- **El Torneo de Pesca** como tema del tablón: la infraestructura está (`EVENTO_TEMAS` ya lo
+  tiene), falta afinarle los pedidos ahora que hay nueve especies.
+
+## Cómo verificar la tanda 3
+
+| Herramienta | Qué comprueba |
+|---|---|
+| tools/medir-pesca-tanda3.js | La medición de arriba, con la aritmética a la vista. No juzga: mide. |
+| tools/test-pesca-v3-tanda3.js | Las nueve especies · las trampas y los cuatro estados · la ventana que no vence peleando · el clima coprimo · la Lonja posible · la estrella en la Cocina · las observaciones 3 y 4. |
+| tools/test-pesca-peleas.js | Que las siete peleas den siete películas distintas corriendo la física de verdad — que ninguna variación sea decorado. |

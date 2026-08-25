@@ -31,7 +31,13 @@ ctx.refreshHud = () => { pintados.hud++; }; ctx.syncSlots = () => { pintados.slo
 const G = ctx.G, g = (n) => vm.runInContext(n, ctx);
 const ESP = g("ESPECIE_DEF"), ORDER = g("ESPECIE_ORDER"), STAR = g("PESCA_ESTRELLA"),
       FAM = g("PESCA_FAMILIA"), CARN = g("PESCA_CARNADA"), ANCLA = g("ANCLA_PLATA_HORA"),
-      FISH_CD = g("FISH_CD"), MAXC = g("PESCA_CARGAS_MAX");
+      FISH_CD = g("FISH_CD"),
+      /* 25/8 (tanda 3): el tope dejó de ser una constante — la lluvia guarda una carga de más.
+         Y no alcanza con preguntarlo UNA vez al arrancar: este medidor adelanta el reloj, y al
+         cruzar la medianoche UTC el clima cambia. Un medidor que cachea un valor que depende del
+         reloj mientras él mismo mueve el reloj se pone rojo solo — que es exactamente lo que
+         pasó. Se pregunta en cada aserción, que es cuando importa. */
+      MAXC = () => ctx.pescaCargasMax();
 
 let fallos = 0;
 const ok = (n, c, d) => { if (!c) fallos++; console.log((c ? "  ok   " : "  FALLA") + "  " + n + (d ? "   " + d : "")); };
@@ -104,11 +110,11 @@ console.log("\nEL F5 NO LAS RE-SORTEA (como la oferta del Goblin)");
   ok("y vuelven iguales tras el F5", JSON.stringify(G.senales) === antes);
 }
 
-console.log("\nEL TOPE: LA LAGUNA GUARDA " + MAXC + " LANCES, NO MÁS");
+console.log("\nEL TOPE: LA LAGUNA GUARDA " + MAXC() + " LANCES, NO MÁS");
 {
   desfase += FISH_CD * 1000 * 20;   // veinte relojes: mucho más que el tope
-  ok("no pasa de " + MAXC + " por más que te vayas un día", ctx.pescaCargas() === MAXC, ctx.pescaCargas() + "");
-  ok("y hay " + MAXC + " señales esperándote", ctx.pescaSenales().length === MAXC);
+  ok("no pasa de " + MAXC() + " por más que te vayas un día", ctx.pescaCargas() === MAXC(), ctx.pescaCargas() + "");
+  ok("y hay " + MAXC() + " señales esperándote", ctx.pescaSenales().length === MAXC());
 }
 
 console.log("\nLA CARNADA ELIGE LA FAMILIA — Y EL AVISO NOMBRA LA QUE FALTA");
@@ -127,8 +133,13 @@ console.log("\nLA CARNADA ELIGE LA FAMILIA — Y EL AVISO NOMBRA LA QUE FALTA");
   ok("y el aviso nombra el grillo", /Grillo/i.test(p.toast), p.toast);
   G.res.grillo = 1;
   ok("con grillo, la superficie se abre", ctx.pescaPuedeSenal(sup).ok === true);
-  ok("cada familia tiene UNA carnada y no dos", Object.keys(FAM).every(f =>
+  /* 25/8 (tanda 3): « coloso » no tiene carnada A PROPÓSITO — no se pesca, se cita. Y es esa
+     ausencia la que la mantiene fuera del sorteo del agua, sin una sola línea de excepción. */
+  ok("cada familia PESCABLE tiene UNA carnada y no dos", Object.keys(FAM).filter(f => !FAM[f].cita).every(f =>
     Object.keys(CARN).filter(c => CARN[c].familia === f).length === 1));
+  ok("y la de coloso no tiene ninguna: por eso el agua nunca la sortea",
+    !!FAM.coloso.cita && Object.keys(CARN).every(c => CARN[c].familia !== "coloso")
+      && ctx.familiaAbierta("coloso") === false);
 }
 
 console.log("\nTIRARLE A UNA SEÑAL CUESTA LA CARNADA Y LA CARGA");
@@ -202,7 +213,7 @@ console.log("\nLA ESCALERA: EL AGUA NO OFRECE LO QUE TODAVÍA NO PODÉS PESCAR")
   /* y por lo tanto NINGUNA señal puede ser de una familia cerrada */
   G.senales = []; G.pescaDesde = FakeDate.now() - FISH_CD * 1000 * 8;
   const s = ctx.pescaSenales();
-  ok("las 4 señales son todas de orilla", s.length === 4 && s.every(x => x.fam === "orilla"),
+  ok("las señales son todas de orilla", s.length === MAXC() && s.every(x => x.fam === "orilla"),
     s.map(x => x.fam).join(" · "));
   /* al subir a Pesca 5 se abre la superficie */
   G.skills = { fishing: ctx.skillNeed(5, "fishing") * 5 };
@@ -222,11 +233,14 @@ console.log("\nEL MONTÍCULO AHORA ES UNA ELECCIÓN");
   ok("y tiene nombre e ícono propios", g("RES_LABEL").grillo === "Grillo" && g("RES_EMOJI").grillo === "🦗");
 }
 
-console.log("\nLAS CUATRO ESPECIES DE LA TANDA 1, Y EL PRIMER ESCALÓN ABIERTO");
+console.log("\nLAS ESPECIES, Y EL PRIMER ESCALÓN ABIERTO");
 {
-  ok("son cuatro", ORDER.length === 4, ORDER.join(" · "));
-  ok("y son las del documento",
-    ORDER.join(",") === "pez_comun,carpa_dorada,pez_mariposa,calamar");
+  /* 25/8: la tanda 1 traía cuatro y la 3 completó las nueve del documento. Lo que este medidor
+     tiene que vigilar NO es el número —que iba a crecer desde el día uno— sino que las cuatro de
+     la tanda 1 sigan estando y que ninguna se haya caído por el camino. */
+  ok("las cuatro de la tanda 1 siguen ahí",
+    ["pez_comun", "carpa_dorada", "pez_mariposa", "calamar"].every(k => ORDER.indexOf(k) >= 0), ORDER.join(" · "));
+  ok("y ahora son las nueve del documento", ORDER.length === 9, ORDER.length + "");
   /* la regla del primer escalón: un oficio cuyo primer escalón esté cerrado es un oficio que el
      jugador nunca empieza. El pez común con lombriz tiene que estar disponible en el minuto uno. */
   const c = CARN[ctx.carnadaDe("orilla")];

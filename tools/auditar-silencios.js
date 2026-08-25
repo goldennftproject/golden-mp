@@ -26,13 +26,26 @@ const ACCIONES = {
     "establoRecogerTodo", "cook", "sellDish", "craftMat", "craftTool", "craftPick", "buySeed", "buyWorm",
     "sellItem", "expansionComprar", "goFishing", "excavCavar", "pedidoEntregar", "pedidoDescartar",
     "valesCanjear", "comprarEmergencia", "comprarDeco", "domaIntentar", "domaAlimentar", "goblinAceptar",
-    "logroCobrar"],
+    "logroCobrar",
+    /* 25/8 (tanda 3): las acciones nuevas. Y comprarCarnada, que es donde se mudó la respuesta
+       de buyWorm — un auditor al que se le esconde una función delegada no audita nada. */
+    "comprarCarnada", "trampaCalar", "trampaLevantar", "trampaCobrar"],
   "public/game/farm.js": ["interactWith", "tryFish"],
 };
 /* lo que cuenta como "decir algo" */
 const HABLA = /toast\(|log\(|avisoAccion|bagFull|tutoAviso|askConfirm|celebrate|premioFx|puffFx|console\.warn|openOv|startAction|sfx\(|mostrarEleccion/;
 /* returns que no son una salida de acción (éxito ya avisado, valores internos, render) */
 const NO_CUENTA = /return \{|return this|return true|return false|return o\b|return \w+\.\w|return dados|return total|return b;|return listos|return mejor|return PICK_ORDER/;
+/* 25/8 — LA DELEGACIÓN NO ES UN SILENCIO, SIEMPRE QUE EL DELEGADO ESTÉ AUDITADO.
+   `return otraFuncion(args)` no se calla: le pasa la respuesta a otro. El auditor lo daba por
+   mudo y la tentación era subir la línea base — que es exactamente cómo un medidor deja de
+   medir. La regla correcta es la de arriba: se acepta la delegación, PERO el delegado tiene que
+   estar en ACCIONES. Si no está, sigue contando como silencio, porque entonces sí lo es. */
+const AUDITADAS = new Set([].concat.apply([], Object.keys(ACCIONES).map(k => ACCIONES[k])).filter(x => typeof x === "string"));
+function delegaAUnaAuditada(l) {
+  const m = l.match(/return\s+([A-Za-z_$][\w$]*)\s*\(/);
+  return !!(m && AUDITADAS.has(m[1]));
+}
 
 let mudos = [], total = 0;
 for (const arch in ACCIONES) {
@@ -46,7 +59,7 @@ for (const arch in ACCIONES) {
     if (j < 0 || (j2 > 0 && j2 < j)) j = j2;
     const lineas = src.slice(i, j > 0 ? j : i + 5000).split("\n");
     lineas.forEach((l, k) => {
-      if (!/\breturn\b/.test(l) || NO_CUENTA.test(l)) return;
+      if (!/\breturn\b/.test(l) || NO_CUENTA.test(l) || delegaAUnaAuditada(l)) return;
       total++;
       const ventana = lineas.slice(Math.max(0, k - 3), k + 1).join("\n");
       if (!HABLA.test(ventana)) mudos.push(fn + "  ·  " + l.trim().slice(0, 78));

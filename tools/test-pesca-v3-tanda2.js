@@ -149,7 +149,10 @@ console.log("\nLA ESCALERA DE PESCA, CON SU TECHO DERIVADO DEL CONTENIDO");
   const techo = ctx.oficioTecho("fishing");
   ok("el techo sale del último escalón, no de un número a mano", techo === Math.max.apply(null, abre.map(e => e[0])),
     "techo " + techo);
-  ok("y hoy es 18, la Caña del Abuelo", techo === 18);
+  /* 25/8: era 18 (la Caña del Abuelo) hasta que la tanda 3 metió el tiburón martillo en la 20.
+     El punto del medidor nunca fue el número —que sube con el contenido, y por eso está bien que
+     suba— sino que NADIE lo escriba a mano en ningún lado. */
+  ok("y hoy lo pone el tiburón martillo, en la 20", techo === 20, techo + "");
 }
 
 console.log("\nEL ÁLBUM CON ESTRELLAS: « CUÁNTO LO DOMINÁS », NO « LO TENÉS »");
