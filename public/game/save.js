@@ -44,6 +44,36 @@ function sesionGuardada() {
      · sirve de MARCA — este navegador tuvo una granja, aunque supabase ya no lo sepa;
      · y guarda el refresh token, que es lo único con lo que se puede REVIVIR la sesión.
    Es el mismo dato que la librería ya guarda en el mismo lugar: no se expone nada nuevo. */
+/* ============ LA BITÁCORA DE LA SESIÓN (25/8, dirección) ==============================
+   « El único motivo por el que una partida se debe resetear es si el jugador borra la caché.
+   Si no la borra, no tiene por qué resetearse. »
+   Tiene toda la razón, y por eso dejo de teorizar: llevamos tres reportes del mismo síntoma y
+   tres explicaciones distintas mías, ninguna comprobada. El juego tiene que CONTARLO.
+   Esta bitácora anota, en el propio navegador, cada cosa que le pasa a la sesión: cuándo se
+   abrió, cuándo supabase la borró sola, si hubo que revivirla, y desde qué dirección. Cuando
+   vuelva a pasar, el reporte deja de ser « me mandó al login » y pasa a ser una lista de hechos
+   con hora. Es la regla 9 aplicada a lo que el jugador no puede ver.
+   Vive aparte de todo lo demás y se limita sola a 40 líneas: nunca puede crecer sin control. */
+const GF_LOG_KEY = "gf-sesion-log";
+function sesionLog(que, extra) {
+  try {
+    const l = JSON.parse(localStorage.getItem(GF_LOG_KEY) || "[]");
+    l.push({ t: new Date().toISOString().slice(0, 19).replace("T", " "), que: String(que),
+      x: extra == null ? "" : String(extra).slice(0, 120), o: location.origin });
+    while (l.length > 40) l.shift();
+    localStorage.setItem(GF_LOG_KEY, JSON.stringify(l));
+  } catch (e) {}
+}
+/* para pegar en el chat cuando pase: escribí gfSesion() en la consola */
+window.gfSesion = function () {
+  try {
+    const l = JSON.parse(localStorage.getItem(GF_LOG_KEY) || "[]");
+    const txt = l.map(e => e.t + "  " + e.que + (e.x ? "  · " + e.x : "") + "  [" + e.o + "]").join("\n");
+    console.log("=== BITÁCORA DE LA SESIÓN ===\n" + txt + "\n=== fin ===");
+    return txt;
+  } catch (e) { return ""; }
+};
+
 const GF_CUENTA_KEY = "gf-cuenta";
 function marcaCuenta() {
   try { return JSON.parse(localStorage.getItem(GF_CUENTA_KEY) || "null"); } catch (e) { return null; }
@@ -80,6 +110,7 @@ var CUENTA_PREVIA = false;
 async function initSave() {
   try {
     CUENTA_PREVIA = huboGranja();   // se mira ANTES de tocar nada
+    sesionLog("arranque", CUENTA_PREVIA ? "este navegador YA tenía granja" : "navegador virgen");
     if (!window.supabase || !window.supabase.createClient) return false;
     sb = window.supabase.createClient(SB_URL, SB_KEY, { auth: { lock: candadoDeEstaPagina } });
     let session = null;
@@ -91,6 +122,7 @@ async function initSave() {
          ya tenía uña, crear otra anónima lo dejaría mirando una granja vacía… y el primer
          guardado la escribiría encima de la buena. Se mira el guardado local y se decide. */
       console.warn("getSession:", e.message);
+      sesionLog("getSession no contestó", e.message);
       const guardada = sesionGuardada() || (marcaCuenta() || {}).uid;
       if (guardada) {
         console.warn("hay sesión guardada: se reintenta una vez antes de rendirse");
@@ -117,7 +149,8 @@ async function initSave() {
           if (r && r.data && r.data.session) {
             session = r.data.session;
             console.warn("sesión revivida: la granja de siempre sigue siendo tuya");
-          } else if (r && r.error) console.warn("no se pudo revivir:", r.error.message);
+            sesionLog("sesión REVIVIDA con nuestra copia de la llave");
+          } else if (r && r.error) { console.warn("no se pudo revivir:", r.error.message); sesionLog("no se pudo revivir", r.error.message); }
         } catch (e) { console.warn("refreshSession:", e.message); }
       }
     }
@@ -125,11 +158,13 @@ async function initSave() {
        Una granja inalcanzable se puede recuperar mañana; una granja huérfana, nunca. */
     if (!session && CUENTA_PREVIA) {
       console.warn("este navegador tuvo granja y no se pudo abrir la sesión: no se crea ninguna cuenta nueva");
+      sesionLog("SIN SESIÓN pero con granja previa: no se crea cuenta nueva");
       return false;
     }
     if (!session) {
       const { data, error } = await conTope(sb.auth.signInAnonymously(), 15000, "signInAnonymously");
-      if (error) { console.warn("Login anónimo falló (¿está habilitado en Supabase?):", error.message); return false; }
+      if (error) { console.warn("Login anónimo falló (¿está habilitado en Supabase?):", error.message); sesionLog("login anónimo falló", error.message); return false; }
+      sesionLog("cuenta anónima NUEVA creada");
       session = data.session;
     }
     if (!session || !session.user) return false;
@@ -137,7 +172,14 @@ async function initSave() {
     marcarCuenta(session);   // nuestra copia de la llave, para la próxima vez
     /* y se mantiene fresca: cada vez que la librería renueva el token, guardamos el nuevo. Sin
        esto, nuestra copia envejece y el día que haga falta ya no sirve para revivir nada. */
-    try { sb.auth.onAuthStateChange((ev, s) => { if (s && s.user) marcarCuenta(s); }); } catch (e) {}
+    try {
+      sb.auth.onAuthStateChange((ev, s) => {
+        if (s && s.user) marcarCuenta(s);
+        /* SIGNED_OUT sin que nadie apretara nada es EXACTAMENTE el momento que veníamos
+           adivinando: supabase decidió que la sesión no servía. Queda anotado con hora. */
+        if (ev === "SIGNED_OUT" || ev === "TOKEN_REFRESHED" || ev === "USER_UPDATED") sesionLog("auth: " + ev);
+      });
+    } catch (e) {}
     return true;
   } catch (e) { console.warn("initSave error:", e); return false; }
 }
@@ -600,6 +642,17 @@ async function loadFarm() {
       if (error) { console.warn("loadFarm:", error.message); await sleepMs(1200 * (intento + 1)); continue; }
       if (data) {
         if (data.data) hydrate(data.data);
+        /* 25/8 — LA RED, ACÁ. Si la nube trajo una granja con MENOS progreso que la copia que
+           este navegador guardó (nivel más bajo, o mucha menos plata), algo salió mal en algún
+           lado y escribir encima sería consumar la pérdida. Se restaura la copia y se avisa: es
+           la diferencia entre « perdí tres horas » y « el juego las tenía guardadas ». */
+        const c = copiaLeer();
+        if (copiaEsMejor(c)) {
+          sesionLog("la nube traía MENOS que la copia local: se restaura", "nube nv" + (G.level || 1) + " · copia nv" + c.nivel);
+          hydrate(c.data);
+          if (typeof log === "function") log("💾 La nube tenía una versión más vieja de tu granja. Se recuperó la que este navegador tenía guardada (nivel " + c.nivel + ").", "gold");
+          if (typeof toast === "function") toast("Granja recuperada del respaldo local");
+        }
         CARGA_OK = true;   // recién ACÁ, con el hydrate terminado, se puede volver a escribir
         // El guardado trae el nombre CON el título ("[Veterano] Juan"). Si lo metíamos tal cual
         // en NICK, el guardado siguiente escribía "[Veterano] [Veterano] Juan" y crecía un
@@ -621,6 +674,33 @@ async function loadFarm() {
 }
 
 // force=true guarda siempre; sin force, solo si el progreso cambió desde el último guardado
+/* ============ EL RESPALDO LOCAL (25/8, dirección) =====================================
+   « Si el jugador no borra la caché, no tiene por qué resetearse la partida. »
+   La granja vive en la nube y la llave en el navegador. Si la llave se pierde —por lo que sea—
+   hoy la granja queda inalcanzable y el jugador ve una vacía. Eso es lo que hay que volver
+   imposible, y no alcanza con cuidar la llave: hace falta que la GRANJA también tenga una copia
+   de este lado.
+   Cada guardado deja una copia local. No reemplaza a la nube (sigue siendo la verdad, y es la
+   que sobrevive al cambio de máquina): es la red que hace que, si el juego alguna vez arranca
+   con una granja vacía teniendo una copia con progreso, se pueda ver y recuperar en vez de
+   escribir el vacío encima. Y sí: borrar la caché se la lleva. Eso es lo que dice el jugador que
+   quiere, y es lo único que debería llevársela. */
+const GF_COPIA_KEY = "gf-granja-copia";
+function copiaGuardar(snap) {
+  try {
+    localStorage.setItem(GF_COPIA_KEY, JSON.stringify({
+      uid: UID, at: Date.now(), nivel: G.level || 1, plata: Math.floor(G.plata || 0), data: snap,
+    }));
+  } catch (e) { /* sin espacio: la nube sigue siendo la verdad */ }
+}
+function copiaLeer() { try { return JSON.parse(localStorage.getItem(GF_COPIA_KEY) || "null"); } catch (e) { return null; } }
+/* ¿la copia local tiene MÁS progreso que lo que acabamos de cargar? Se compara por lo que el
+   jugador entendería como avanzar: nivel y plata. Sin adivinar: si empatan, manda la nube. */
+function copiaEsMejor(c) {
+  if (!c || !c.data || c.uid !== UID) return false;
+  return (c.nivel || 1) > (G.level || 1) || (c.plata || 0) > Math.floor(G.plata || 0) + 50;
+}
+
 async function saveFarm(force) {
   if (!sb || !UID) return;
   // 18/8: si nunca se llegó a cargar, NO se escribe. Es preferible perder una sesión de juego
@@ -628,6 +708,7 @@ async function saveFarm(force) {
   if (!CARGA_OK) { console.warn("saveFarm bloqueado: la granja no se llegó a cargar"); return; }
   const key = snapKey();
   if (!force && key === lastSavedKey) return;   // nada que guardar: ni siquiera muestra el indicador
+  copiaGuardar(snapshot());   // 25/8: la copia local se deja SIEMPRE, aunque la nube después falle
   if (typeof showSaving === "function") showSaving();
   // hasta 2 intentos inmediatos; si fallan, lastSavedKey no se actualiza y el autosave reintenta al próximo ciclo
   for (let intento = 0; intento < 2; intento++) {

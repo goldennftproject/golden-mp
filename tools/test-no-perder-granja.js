@@ -66,7 +66,8 @@ console.log("\nNUESTRA PROPIA COPIA DE LA LLAVE (la librería borra la suya sola
   ok("la reja usa esa pregunta, no solo la sesión de supabase", /CUENTA_PREVIA = huboGranja\(\);/.test(SAVE));
   ok("antes de crear una cuenta, se INTENTA REVIVIR la de siempre", /refreshSession\(\{ refresh_token: marca\.refresh_token \}\)/.test(SAVE));
   ok("y si no se puede revivir, no se crea ninguna", /if \(!session && CUENTA_PREVIA\) \{/.test(SAVE));
-  ok("la copia se mantiene fresca en cada renovación", /onAuthStateChange\(\(ev, s\) => \{ if \(s && s\.user\) marcarCuenta\(s\); \}\)/.test(SAVE));
+  ok("la copia se mantiene fresca en cada renovación",
+    /onAuthStateChange\(\(ev, s\) => \{[\s\S]{0,400}if \(s && s\.user\) marcarCuenta\(s\);/.test(SAVE));
   ok("y se guarda apenas se entra", /marcarCuenta\(session\);\s*\/\/ nuestra copia de la llave/.test(SAVE));
 }
 
