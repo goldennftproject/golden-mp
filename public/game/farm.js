@@ -492,8 +492,12 @@ class FarmScene extends Phaser.Scene {
         if (GF.editMode) {
           if (this.placing) { this.cancelarColocar(); return; }   // clic derecho cancela el "colocar con clic"
           // en edición el clic derecho levanta el adorno que haya abajo (vuelve a la bolsa)
+          /* 25/8 — la rama no tomada: si no hay adorno ahí, esto se iba en silencio. En modo
+             edición el jugador está justamente probando dónde hay cosas, así que « no hay nada »
+             es información, no ruido. */
           const ad = this.adornoEnPunto(pt.worldX, pt.worldY);
           if (ad) this.levantarAdorno(ad);
+          else toast("Ahí no hay ningún adorno para levantar");
           return;
         }
         /* 25/8 — el otro camino mudo del mismo clic, y el más probable en el caso reportado: el
@@ -523,7 +527,11 @@ class FarmScene extends Phaser.Scene {
                era por el estado de la parcela — y la correlación con la bolsa era casualidad.
                Regla 9: toda acción contesta. Ahora cada estado dice lo suyo. */
             if (pl.state === "dry") {
-              if (typeof showSeedWheel === "function") showSeedWheel(pt.event.clientX, pt.event.clientY, pl);
+              /* 25/8: era `if (typeof showSeedWheel === "function")`. Un typeof sobre código
+                 PROPIO no protege, esconde — es exactamente lo que enterró esDeNoche durante
+                 días. showSeedWheel vive en ui.js y siempre está; si algún día no estuviera,
+                 queremos el error, no un clic mudo. */
+              showSeedWheel(pt.event.clientX, pt.event.clientY, pl);
               return;
             }
             const cd = (typeof CROP_DEF !== "undefined" && pl.cropKey) ? CROP_DEF[pl.cropKey] : null;
@@ -595,7 +603,13 @@ class FarmScene extends Phaser.Scene {
       if (!hit && this.portal && Math.abs(wx - this.portal.cx) < 26 && Math.abs(wy - (this.portal.by - 14)) < 30) hit = this.portal;   // clic en el portal : caminar y teletransportarse
       if (this.action && !GF.NO_WALK) {   // acción en curso: encolar el próximo objetivo (hasta 7) sin esperar la animación
         if (hit && (hit.type === "plot" || hit.type === "tree" || hit.type === "rock" || hit.type === "ore")) {
-          if (!this.queue.includes(hit) && this.queue.length < 7) { this.queue.push(hit); this.markQueued(hit); toast("En cola (" + this.queue.length + ")"); }
+          /* 25/8 — otra rama no tomada, y de las que más molestan: con la cola LLENA (7) o
+             clicando algo que YA está encolado, el clic no hacía nada y no decía nada. El
+             jugador está clicando rápido justo cuando pasa, así que lo lee como « el juego se
+             traba ». Cada caso dice lo suyo. */
+          if (this.queue.includes(hit)) toast("Eso ya está en la cola");
+          else if (this.queue.length >= 7) toast("La cola está llena (7) — esperá a que avance");
+          else { this.queue.push(hit); this.markQueued(hit); toast("En cola (" + this.queue.length + ")"); }
         }
         return;
       }
