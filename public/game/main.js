@@ -52,10 +52,10 @@ function startGame() {
   });
 }
 
-let entered = false;
+let entered = false;   /* 25/8: window.entered lo mira update.js para NO recargar una partida en curso */
 function hideEl(id) { const e = document.getElementById(id); if (e) e.style.display = "none"; }
 function enterGame() {
-  if (entered) return; entered = true;
+  if (entered) return; entered = true; window.entered = true;
   if (typeof initChat === "function") initChat(renderChatMsg);
   if (typeof startAutosave === "function") startAutosave();
   try { if (typeof refreshHud === "function") refreshHud(); } catch (e) { console.error("HUD:", e); }   // pase lo que pase, el juego tiene que arrancar

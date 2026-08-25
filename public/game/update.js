@@ -44,19 +44,44 @@
     timer = setTimeout(() => { check().then(schedule); }, wait);
   }
 
+  /* ========== LA RECARGA DEJA DE SER FORZOSA (25/8, dirección) ==========================
+     « Estaba sembrando, lo dejé sembrando, salí de casa, y cuando llegué estaba en el login. »
+     El culpable: esto. Cada deploy disparaba una cuenta de 5 segundos y RECARGABA la pestaña,
+     mirara alguien o no. La cuenta atrás solo sirve si hay alguien delante; con la pestaña
+     sola, es una recarga a traición. Y una recarga a traición es la que después se encuentra
+     con el login, porque le toca reabrir la sesión sin nadie que pueda reintentar.
+     Hoy deployamos muchas veces al día, así que esto no era un caso raro: era una lotería que
+     el diseñador jugaba cada vez que dejaba el juego abierto.
+     Reglas nuevas:
+       · NUNCA se recarga sola una partida en curso. El cartel avisa y espera al jugador.
+       · Con la pestaña escondida, ni siquiera se muestra: se guarda para cuando vuelva. Un
+         cartel que nadie ve no tiene por qué gastar su cuenta atrás.
+       · Lo único que se recarga solo es lo que no tiene nada que perder: la pantalla de carga
+         o la puerta del apodo, donde el jugador todavía no entró. */
+  let pendiente = false;
+  function juegoEnCurso() {
+    try { return !!(window.entered || (window.G && window.G.iniciado && window.NICK)); } catch (e) { return true; }
+  }
   function showUpdate() {
-    if (shown) return; shown = true;
+    if (shown) return;
+    if (document.hidden) { pendiente = true; return; }   // no está mirando: se lo decimos al volver
+    shown = true;
     const el = document.getElementById("updbanner");
-    if (!el) { doReload(); return; }
+    if (!el) { if (!juegoEnCurso()) doReload(); return; }
     el.style.display = "flex";
-    let n = 5;
     const c = el.querySelector(".updc");
-    const tick = () => {
-      if (c) c.textContent = n;
-      if (n <= 0) { doReload(); return; }
-      n--; setTimeout(tick, 1000);
-    };
-    tick();
+    if (!juegoEnCurso()) {   // nadie está jugando: recarga sola, con su cuenta atrás de siempre
+      let n = 5;
+      const tick = () => { if (c) c.textContent = n; if (n <= 0) { doReload(); return; } n--; setTimeout(tick, 1000); };
+      tick();
+    } else if (c) {
+      /* con la partida en curso el cartel se queda quieto hasta que el jugador quiera. Su
+         progreso está guardado igual (el autosave corre), pero recargarle el juego en medio de
+         una siembra es decidir por él algo que no es nuestro. */
+      c.textContent = "";
+      const t = el.querySelector(".updt");
+      if (t) t.textContent = "Hay una versión nueva del juego.";
+    }
     const btn = document.getElementById("updnow");
     if (btn) btn.onclick = doReload;
   }
@@ -67,7 +92,11 @@
   }
 
   // al volver a la pestaña o recuperar conexión, chequear al instante
-  document.addEventListener("visibilitychange", () => { if (!document.hidden) check(); });
+  document.addEventListener("visibilitychange", () => {
+    if (document.hidden) return;
+    if (pendiente) { pendiente = false; showUpdate(); }   // volvió: ahora sí se le avisa
+    check();
+  });
   window.addEventListener("focus", () => check());
   window.addEventListener("online", () => check());
 
