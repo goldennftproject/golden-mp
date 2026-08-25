@@ -496,7 +496,15 @@ class FarmScene extends Phaser.Scene {
           if (ad) this.levantarAdorno(ad);
           return;
         }
-        if (GF.uiOpen) return;
+        /* 25/8 — el otro camino mudo del mismo clic, y el más probable en el caso reportado: el
+           jugador abre la bolsa para mirar qué semillas tiene y desde ahí le da clic derecho a la
+           parcela. Con una ventana abierta esto salía por un `return` pelado. Y ojo: un clic que
+           NACE dentro de un panel ya lo filtró clicDeInterfaz más arriba, así que si llegó hasta
+           acá es que fue sobre el mundo — o sea, intencional. Merece respuesta. */
+        if (GF.uiOpen) {
+          if (!GF.typing) toast("Cerrá la ventana para sembrar en la parcela");
+          return;
+        }
         const wx = pt.worldX, wy = pt.worldY;
         // fixs.docx #12 (11/8): clic derecho sobre un animal lo ALIMENTA ahí mismo (la función
         // existía pero solo dentro de la ventana del Establo y nadie la encontraba)
@@ -504,7 +512,37 @@ class FarmScene extends Phaser.Scene {
           if (an && typeof alimentarAnimal === "function") { alimentarAnimal(an.k); return; } }
         for (const pl of this.plots) {
           if (Math.abs(wx - pl.cx) < T / 2 && Math.abs(wy - pl.by) < T / 2) {
-            if (pl.state === "dry" && typeof showSeedWheel === "function") showSeedWheel(pt.event.clientX, pt.event.clientY, pl);
+            /* 25/8 (diseñador: « al hacer clic derecho en la parcela no sale el selector de
+               semillas ») — Y EL SELECTOR NO ERA EL PROBLEMA: la rueda se arma bien con una
+               semilla o con nueve. El problema es que este `if` tiene UNA condición
+               (`state === "dry"`) y los otros CUATRO estados —growing, ready, locked,
+               withered— salían por el `return` de abajo SIN DECIR NADA.
+               Desde afuera, « no pasa nada » es indistinguible de « está roto », y el que más
+               parcelas tiene es el que más veces le da clic derecho a una que ya tiene algo
+               plantado. Por eso le pasaba al diseñador y no a mí: no era por las semillas,
+               era por el estado de la parcela — y la correlación con la bolsa era casualidad.
+               Regla 9: toda acción contesta. Ahora cada estado dice lo suyo. */
+            if (pl.state === "dry") {
+              if (typeof showSeedWheel === "function") showSeedWheel(pt.event.clientX, pt.event.clientY, pl);
+              return;
+            }
+            const cd = (typeof CROP_DEF !== "undefined" && pl.cropKey) ? CROP_DEF[pl.cropKey] : null;
+            const nom = cd ? cd.label : "algo";
+            if (pl.state === "growing") {
+              const falta = Math.max(0, (pl.readyAt || 0) - nowMs());
+              toast("🌱 Acá ya está creciendo " + nom + (falta ? " · listo en " + fmtDur(falta) : ""));
+            } else if (pl.state === "ready") {
+              toast("✅ " + nom + " está listo — clic izquierdo para cosechar");
+            } else if (pl.state === "locked") {
+              toast("🔒 Esta parcela todavía no es tuya — se abre subiendo de nivel");
+            } else if (pl.state === "withered") {
+              toast("🥀 Esto se marchitó — clic izquierdo para limpiarlo y volver a sembrar");
+            } else {
+              /* un estado que no conocemos: se delata en vez de morir en silencio, que es
+                 exactamente el fallo que estamos arreglando acá. */
+              console.warn("clic derecho en parcela con estado desconocido:", pl.state);
+              toast("Esa parcela no está libre para sembrar");
+            }
             return;
           }
         }
