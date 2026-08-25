@@ -25,7 +25,9 @@ vm.createContext(ctx);
 ["config", "nav", "state", "save"].forEach(f => vm.runInContext(fs.readFileSync("public/game/" + f + ".js", "utf8"), ctx));
 const avisos = [];
 ctx.toast = t => avisos.push(String(t)); ctx.log = () => {};
-["isOpen", "refreshInv", "refreshHud", "saveFarm", "syncSlots", "recalcFarmLevel", "tutoEvent", "bagFull"].forEach(f => { if (!ctx[f]) ctx[f] = () => {}; });
+["isOpen", "refreshInv", "saveFarm", "recalcFarmLevel", "tutoEvent", "bagFull"].forEach(f => { if (!ctx[f]) ctx[f] = () => {}; });
+const pintados = { hud: 0, slots: 0 };
+ctx.refreshHud = () => { pintados.hud++; }; ctx.syncSlots = () => { pintados.slots++; };
 const G = ctx.G, g = (n) => vm.runInContext(n, ctx);
 const ESP = g("ESPECIE_DEF"), ORDER = g("ESPECIE_ORDER"), STAR = g("PESCA_ESTRELLA"),
       FAM = g("PESCA_FAMILIA"), CARN = g("PESCA_CARNADA"), ANCLA = g("ANCLA_PLATA_HORA"),
@@ -135,11 +137,17 @@ console.log("\nTIRARLE A UNA SEÑAL CUESTA LA CARNADA Y LA CARGA");
   G.pescaDesde = FakeDate.now() - FISH_CD * 1000 * 3;   // tres cargas guardadas
   G.res.lombriz = 2;
   const antesC = ctx.pescaCargas();
+  pintados.hud = 0; pintados.slots = 0;
   const s = ctx.pescaSenalGastar(0);
   ok("devuelve la señal elegida", !!s && s.esp === "pez_comun");
   ok("cobró la lombriz", Math.floor(G.res.lombriz) === 1, G.res.lombriz + "");
   ok("gastó una carga", ctx.pescaCargas() === antesC - 1, antesC + " → " + ctx.pescaCargas());
   ok("y la señal ya no está", G.senales.length === 0);
+  /* 25/8 (dirección: « no se gasta el lombriz ») — SÍ se gastaba; lo que faltaba era AVISAR.
+     Descontar sin repintar deja la bolsa dibujando lo que ya no está, y desde afuera eso es
+     idéntico a no cobrar. Quien descuenta, repinta. */
+  ok("y la bolsa se entera en el acto (HUD y slots)", pintados.hud >= 1 && pintados.slots >= 1,
+    "hud " + pintados.hud + " · slots " + pintados.slots);
   G.res.lombriz = 0;
   G.senales = [{ esp: "pez_comun", fam: "orilla", estrella: 1 }];
   const n = ctx.pescaSenalGastar(0);

@@ -5158,6 +5158,16 @@ function pescaSenalGastar(idx) {
   if (c.gasta) G.res[p.carnada] = Math.max(0, (G.res[p.carnada] || 0) - 1);   // la carnada se cobra al ELEGIR
   G.senales.splice(idx, 1);
   pescaGastarCarga();
+  /* 25/8 (dirección: « cuando tiro la caña no se gasta el lombriz ») — SÍ SE GASTABA. Lo que no
+     pasaba era que la BOLSA se enterara: se descontaba el número y nadie repintaba, así que el
+     jugador seguía viendo el mismo contador. Desde afuera eso es idéntico a que no se cobre, y
+     por lo tanto es igual de grave: el jugador deja de confiar en lo que la interfaz le dice.
+     Es exactamente la familia del bug de vender del 24/8 — cualquier función que toque G.res y
+     no avise deja la bolsa dibujando lo que ya no está. La regla, otra vez: quien descuenta,
+     repinta. */
+  if (typeof refreshHud === "function") refreshHud();
+  if (typeof syncSlots === "function") syncSlots();
+  if (typeof isOpen === "function" && isOpen("ov-inv") && typeof refreshInv === "function") refreshInv();
   if (typeof saveFarm === "function") saveFarm(true);
   return s;
 }
