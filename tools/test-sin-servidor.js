@@ -180,8 +180,14 @@ console.log("\nEL QUE JUGÓ SIN CUENTA NO PIERDE LAS HORAS CUANDO VUELVE LA BASE
   cc.G.plata = 5000; cc.G.level = 11;
   cc.saveFarm(true);
   cc = nuevoCtx(solo);
-  ok("al volver la base, el juego SABE que este navegador ya tenía granja",
-    cc.huboGranja() === true, "si diera false, le pediría apodo y crearía cuenta nueva");
+  /* 25/8 (revisión): esta comprobación estaba escrita CON la confusión que después produjo el
+     bloqueo — le preguntaba a huboGranja() (« ¿tuvo cuenta en la nube? ») algo que le toca a
+     hayGranjaLocal() (« ¿hay partida guardada acá? »). La regla que hay que exigir es que el
+     juego NO le pida el apodo, y eso lo decide la segunda. */
+  ok("al volver la base, el juego SABE que hay una partida en este navegador",
+    cc.hayGranjaLocal() === true, "si diera false, le pediría apodo y crearía cuenta nueva");
+  ok("y NO la confunde con haber tenido cuenta en la nube — ahí estaba el bloqueo",
+    cc.huboGranja() === false);
   ok("y la copia sigue ahí, con su progreso", (cc.copiaLeer() || {}).nivel === 11);
 }
 
@@ -230,6 +236,43 @@ console.log("\nCON CUENTA Y LA BASE CAÍDA: SE JUEGA, PERO NO SE PISA LA NUBE");
   c3.loadFarm();
   ok("sin copia local, con cuenta y sin entrar, SIGUE bloqueando (mejor eso que una granja en blanco)",
     vm.runInContext("CARGA_FALLO", c3) === true);
+}
+
+console.log("\nEL BLOQUEO CIRCULAR: jugó sin cuenta, vuelve la base, y el juego se negaba a entrar");
+{
+  /* EL FALLO QUE ESTO CLAVA, y me lo hice yo mismo esta tarde.
+     Le saqué el `c.uid &&` a huboGranja() para que la copia local sin cuenta contara como granja.
+     Y contaba — pero esa bandera la lee OTRO que decide otra cosa:
+
+         initSave:  if (!session && CUENTA_PREVIA) return false;   // no crear cuenta nueva
+
+     Esa guarda es del 24/8 y está bien. Solo que ahora, el que jugó sin cuenta con la base caída
+     daba CUENTA_PREVIA = true, sin sesión y sin refresh_token que revivir… así que initSave se
+     negaba a crear la cuenta que NUNCA TUVO. UID null → modo solo local → y en el próximo F5 lo
+     mismo. Un bloqueo circular en el que la base online no cambiaba nada.
+     Son dos preguntas distintas y estaban en una sola bandera. */
+  const nb = {};
+  let cc = nuevoCtx(nb);
+  vm.runInContext("sb = null; UID = null; CUENTA_PREVIA = false; CARGA_OK = true;", cc);
+  cc.NICK = "Suren"; cc.G.plata = 3000; cc.G.level = 9;
+  cc.saveFarm(true);
+
+  cc = nuevoCtx(nb);
+  ok("la copia sin dueño NO cuenta como « tuvo cuenta en la nube »",
+    cc.huboGranja() === false, "si diera true, initSave no crearía la cuenta que nunca tuvo");
+  ok("pero SÍ cuenta como « hay una partida en este navegador »",
+    cc.hayGranjaLocal() === true, "que es la otra pregunta, la que decide si se pide apodo");
+  ok("y son dos funciones distintas, no una bandera para dos cosas",
+    typeof cc.huboGranja === "function" && typeof cc.hayGranjaLocal === "function");
+
+  /* con eso, initSave puede crear la cuenta: se simula que la base volvió */
+  vm.runInContext("CUENTA_PREVIA = huboGranja();", cc);
+  ok("CUENTA_PREVIA queda en false, así que initSave NO se bloquea",
+    vm.runInContext("CUENTA_PREVIA", cc) === false);
+
+  /* y al cargar con cuenta nueva, la nube viene vacía: la copia huérfana se sube */
+  vm.runInContext("UID = 'cuenta-nueva'; sb = null;", cc);
+  ok("la copia huérfana sigue disponible para subirse", (cc.copiaLeer() || {}).nivel === 9);
 }
 
 console.log("\nLO QUE NO SE PUEDE ROMPER AL ARREGLAR ESTO");

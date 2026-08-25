@@ -173,6 +173,14 @@ function pantallaNoSePudo() {
        huérfana bajo el UID viejo y el jugador arranca de cero (pasó, y costó tres horas de
        juego). Que la reja esté DOS veces —acá y en loadFarm— es a propósito: es el único fallo
        de la sesión que no tiene vuelta atrás, así que no depende de una sola comprobación. */
+    /* 25/8 — la reja del apodo mira las DOS cosas: si hubo cuenta (no se puede pisar) o si hay
+       una partida guardada acá (no se puede ignorar). Antes era una sola bandera para las dos
+       preguntas y eso produjo un bloqueo: ver el comentario de hayGranjaLocal en save.js. */
+    if (typeof hayGranjaLocal === "function" && hayGranjaLocal() &&
+        !(typeof CUENTA_PREVIA !== "undefined" && CUENTA_PREVIA)) {
+      console.warn("no hay cuenta, pero SÍ hay partida en este navegador: se carga en vez de pedir apodo");
+      if (typeof enterGame === "function") return enterGame();
+    }
     if (typeof CUENTA_PREVIA !== "undefined" && CUENTA_PREVIA) {
       console.warn("hay cuenta en este navegador: NO se pide apodo (crearía una granja nueva)");
       window.CARGA_MOTIVO = window.CARGA_MOTIVO || "login";

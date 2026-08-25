@@ -106,16 +106,33 @@ function huboGranja() {
      puerta del apodo, y por lo tanto no puede tirar NUNCA. */
   try {
     const c = (typeof copiaLeer === "function") ? copiaLeer() : null;
-    /* 25/8 — EL `c.uid &&` ERA UN AGUJERO, Y LO ABRÍ YO HOY MISMO. Desde que la copia local se
-       escribe también SIN cuenta (uid nulo), exigir uid aquí significa que las horas jugadas con
-       la base de datos caída no cuentan como « este navegador ya tenía granja ». Consecuencia,
-       comprobada: vuelve la base, el juego pide apodo, crea una cuenta ANÓNIMA NUEVA, la nube
-       viene vacía, y la copia con nivel 11 se queda huérfana. O sea, el mismo desastre del 24/8
-       por la puerta de al lado.
-       Lo que hace de esto una granja no es de quién sea: es que tenga PROGRESO. */
-    if (c && (c.nivel > 1 || (c.plata || 0) > 0)) return true;
+    if (c && c.uid && (c.nivel > 1 || (c.plata || 0) > 0)) return true;
   } catch (e) {}
   return false;
+}
+/* ── ¿HAY UNA GRANJA EN ESTE NAVEGADOR? — que NO es la misma pregunta ─────────────────────────
+   25/8 · SEGUNDA VERSIÓN, después de romperlo yo mismo esta tarde.
+   Le saqué el `c.uid &&` a huboGranja() para que la copia local sin cuenta contara como granja.
+   Y contaba — pero huboGranja() la lee OTRO que decide otra cosa:
+
+       initSave:  if (!session && CUENTA_PREVIA) return false;   // no crear cuenta nueva
+
+   Esa guarda existe para el desastre del 24/8 y está bien. Solo que ahora, alguien que jugó sin
+   cuenta con la base caída daba CUENTA_PREVIA = true, sin sesión y sin refresh_token que revivir…
+   así que initSave se negaba a crear la cuenta que nunca tuvo. UID null, modo solo local, y en el
+   próximo F5 lo mismo. Un bloqueo circular: la base online no cambiaba nada.
+
+   Son DOS preguntas distintas y las había metido en una sola bandera:
+     · huboGranja()     → « ¿este navegador tuvo una CUENTA en la nube? »   decide si se crea una
+                           cuenta nueva y si se puede escribir en la nube. Exige prueba de cuenta.
+     · hayGranjaLocal() → « ¿hay una partida guardada acá? »                decide si se pide apodo
+                           y si se puede cargar sin nube. No le importa de quién sea.
+   Mezclarlas es lo que produjo el bloqueo. */
+function hayGranjaLocal() {
+  try {
+    const c = (typeof copiaLeer === "function") ? copiaLeer() : null;
+    return !!(c && c.data && ((c.nivel || 1) > 1 || (c.plata || 0) > 0));
+  } catch (e) { return false; }
 }
 const conTope = (p, ms, que) => Promise.race([
   Promise.resolve(p),
@@ -701,6 +718,9 @@ async function loadFarm() {
          lo que le prohíbe a saveFarm subir nada). El día que la base vuelva, la carga de verdad
          decidirá con copiaEsMejor quién manda. Sin copia, el callejón sigue siendo lo correcto:
          mejor una pantalla honesta que una granja en blanco. */
+      /* 25/8 (revisión): esta rama es para el que SÍ tuvo cuenta y no puede alcanzarla. Quien
+         nunca tuvo cuenta ya no llega acá —CUENTA_PREVIA vuelve a exigir prueba de cuenta— y sale
+         por el camino de abajo, que carga la copia y NO bloquea la nube. */
       const local = (typeof copiaLeer === "function") ? copiaLeer() : null;
       if (local && local.data && (!local.uid || local.uid === UID || !UID)) {
         SOLO_LOCAL = true;
@@ -723,7 +743,7 @@ async function loadFarm() {
        Se lee la copia SOLO si es de una sesión sin nube (uid nulo) o de esta misma cuenta. Una
        copia de OTRO usuario no se toca ni de casualidad: sería darle la granja del vecino. */
     const local = (typeof copiaLeer === "function") ? copiaLeer() : null;
-    if (local && local.data && !local.uid) {
+    if (local && local.data && hayGranjaLocal()) {
       hydrate(local.data);
       copiaNick(local);            // el apodo es parte de la partida y vuelve con ella
       sesionLog("sin nube: se cargó la copia local", "nivel " + (local.nivel || 1));
