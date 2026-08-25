@@ -692,7 +692,10 @@ async function loadFarm() {
     if (local && local.data && !local.uid) {
       hydrate(local.data);
       sesionLog("sin nube: se cargó la copia local", "nivel " + (local.nivel || 1));
-      if (typeof log === "function") log("💾 Sin conexión con el servidor. Se cargó la granja que este navegador tenía guardada (nivel " + (local.nivel || 1) + "). Se sigue guardando acá.", "gold");
+      /* y acá también se nombra la causa, no solo el efecto: es el PRIMER mensaje que el jugador
+         ve al entrar, y « sin conexión » a secas lo deja sin saber si tiene que hacer algo. */
+      const mot = (typeof motivoSinNube === "function") ? motivoSinNube() : null;
+      if (typeof log === "function") log("💾 Se cargó la granja que este navegador tenía guardada (nivel " + (local.nivel || 1) + ") y se sigue guardando acá. " + (mot ? mot.largo : "Sin conexión con el servidor."), "gold");
       CARGA_OK = true; return true;   // SÍ hay granja: el juego no tiene que pedir apodo otra vez
     }
     CARGA_OK = true; return false;   // navegador virgen de verdad: no hay nada que pisar
@@ -782,6 +785,32 @@ function copiaEsMejor(c) {
    provoca un fallo: la provoca el silencio.
    Ahora se avisa. Una vez al entrar, y de nuevo cada vez que el juego intente guardar y no
    pueda — espaciado, para que sea un recordatorio y no un castigo. */
+/* ── POR QUÉ NO HAY NUBE — el diagnóstico, no solo el síntoma ────────────────────────────────
+   25/8 (dirección): « cuando no hay nube tiene que avisar también de eso: que diga no se puede
+   conectar a la base de datos, o la base de datos en mantenimiento ».
+   Y tiene razón por una razón concreta: « sin conexión » no le dice al jugador si el problema es
+   SUYO o NUESTRO, y de eso depende lo único que le importa — si puede hacer algo o si solo le
+   toca esperar. Un aviso que no se puede accionar es medio aviso.
+   Las tres causas se distinguen sin pedirle nada al jugador, y cada una manda un mensaje
+   distinto porque cada una tiene una salida distinta:
+     · su internet está caído       → lo arregla él, y en un minuto
+     · la librería no llegó a cargar → un bloqueador o una red que filtra CDNs; lo arregla él
+     · la base de datos no responde  → no lo arregla nadie desde acá: hay que esperar
+   El tercero es el que se vio hoy: el proyecto de Supabase estaba REINICIÁNDOSE, y el juego
+   decía « no se pudo conectar » como si fuera culpa del jugador. */
+function motivoSinNube() {
+  if (typeof navigator !== "undefined" && navigator.onLine === false)
+    return { causa: "internet",
+      corto: "📴 Sin internet — se guarda en este navegador",
+      largo: "📴 TU CONEXIÓN A INTERNET SE CAYÓ. Tu granja se sigue guardando en este navegador, así que podés seguir jugando. Cuando vuelva internet, recargá y se sube sola." };
+  if (typeof sb === "undefined" || !sb)
+    return { causa: "libreria",
+      corto: "🔌 No cargó el guardado — se guarda acá",
+      largo: "🔌 NO SE PUDO CARGAR EL SISTEMA DE GUARDADO. Suele ser un bloqueador de anuncios o una red que filtra. Mientras tanto tu granja se guarda en este navegador; probá a desactivar el bloqueador para este sitio y recargar." };
+  return { causa: "base",
+    corto: "🛠️ Base de datos caída — se guarda acá",
+    largo: "🛠️ NO SE PUEDE CONECTAR CON LA BASE DE DATOS (puede estar en mantenimiento o reiniciándose). No es problema tuyo y no hay nada que puedas hacer más que esperar. Mientras tanto tu granja se guarda EN ESTE NAVEGADOR y se sube sola cuando la base vuelva — no borres la caché ni cambies de dispositivo hasta entonces." };
+}
 var _sinNubeAvisado = 0;
 function avisarSinNube() {
   const t = nowMs();
@@ -793,9 +822,10 @@ function avisarSinNube() {
      que es exactamente lo que no queremos el día que la pérdida sea real.
      Ahora dice lo que pasa: se guarda acá, no allá. Con la consecuencia dicha (si borrás caché o
      cambiás de navegador, esto no viaja) y sin dramatizar lo que sí está a salvo. */
-  sesionLog("SIN NUBE: se guarda solo en este navegador");
-  if (typeof log === "function") log("💾 Sin conexión con el servidor. Tu granja se está guardando EN ESTE NAVEGADOR: no la vas a perder al recargar. Lo que no hagas todavía es borrar la caché ni cambiar de dispositivo, porque hasta que vuelva el servidor la copia vive solo acá.", "warn");
-  if (typeof toast === "function") toast("💾 Guardando solo en este navegador");
+  const m = motivoSinNube();
+  sesionLog("SIN NUBE (" + m.causa + "): se guarda solo en este navegador");
+  if (typeof log === "function") log(m.largo, "warn");
+  if (typeof toast === "function") toast(m.corto);
 }
 
 async function saveFarm(force) {

@@ -69,6 +69,38 @@ let ctx = nuevoCtx(navegador);
   ok("ya no dice « nada se está guardando », porque sería mentira", !dijo(/Nada se está guardando/i));
 }
 
+console.log("\nEL AVISO DICE POR QUÉ, NO SOLO QUÉ   (dirección del 25/8)");
+{
+  /* « que diga no se puede conectar a la base de datos, o la base de datos en mantenimiento ».
+     La razón de fondo: « sin conexión » no le dice al jugador si el problema es SUYO o NUESTRO,
+     y de eso depende lo único que le importa — si puede hacer algo o solo le toca esperar. */
+  /* el caso REAL de hoy: la librería cargó bien desde el CDN, pero el proyecto de Supabase
+     estaba reiniciándose y signInAnonymously no devolvió sesión. O sea sb sí, UID no. */
+  vm.runInContext("sb = { deMentira: true }; UID = null; navigator = { onLine: true };", ctx);
+  const m = ctx.motivoSinNube();
+  ok("con la librería cargada y sin sesión, la causa es la BASE DE DATOS", m.causa === "base", m.causa);
+  ok("y lo dice con esas palabras", /base de datos/i.test(m.largo) && /base de datos/i.test(m.corto), m.corto);
+  ok("nombra el mantenimiento, que es el caso que se vio hoy", /mantenimiento|reinici/i.test(m.largo));
+  ok("y le quita la culpa al jugador en vez de dejarlo adivinando", /no es problema tuyo/i.test(m.largo));
+
+  /* si el que está sin internet es ÉL, el mensaje tiene que ser otro: eso sí lo puede arreglar */
+  ctx.navigator = { onLine: false };
+  vm.runInContext("navigator = { onLine: false };", ctx);
+  const mi = ctx.motivoSinNube();
+  ok("si el que está caído es SU internet, se lo dice a él", mi.causa === "internet", mi.causa);
+  ok("y no lo manda a esperar un mantenimiento que no existe", !/mantenimiento/i.test(mi.largo));
+  vm.runInContext("navigator = { onLine: true };", ctx);
+
+  /* y si ni siquiera cargó la librería, la salida es distinta otra vez */
+  vm.runInContext("sb = null;", ctx);
+  const ml = ctx.motivoSinNube();
+  ok("si no cargó el sistema de guardado, apunta al bloqueador", ml.causa === "libreria", ml.causa);
+  ok("las tres causas dan tres mensajes distintos",
+    new Set([m.largo, mi.largo, ml.largo]).size === 3);
+  ok("y las tres dicen que la granja se guarda igual — nadie se queda sin red",
+    [m, mi, ml].every(x => /este navegador/i.test(x.largo)));
+}
+
 console.log("\nEL JUGADOR RECARGA — Y SU GRANJA SIGUE AHÍ");
 {
   /* navegador NUEVO (contexto nuevo) pero el MISMO localStorage: eso es un F5 */

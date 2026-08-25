@@ -150,12 +150,15 @@ function pantallaNoSePudo() {
   try {
     if (typeof UID !== "undefined" && !UID && typeof CUENTA_PREVIA !== "undefined" && !CUENTA_PREVIA) {
       cuandoListo(() => {
-        /* 25/8 — el mismo cambio que en avisarSinNube, y por el mismo motivo: ya NO es cierto
-           que no se guarde nada. Con la copia local arreglada, sin servidor se juega y se
-           guarda — en este navegador. Decir « nada se va a guardar » sería asustar de más, y
-           una alarma que exagera es una alarma que dejan de leer. */
-        if (typeof log === "function") log("💾 No se pudo conectar con el servidor. Podés jugar igual: tu granja se guarda EN ESTE NAVEGADOR y se sube sola cuando el servidor vuelva. Hasta entonces, no borres la caché ni cambies de dispositivo.", "warn");
-        if (typeof toast === "function") toast("💾 Sin servidor — se guarda en este navegador");
+        /* 25/8 — el mismo texto que avisarSinNube, y salido de la MISMA función a propósito.
+           Dos avisos que dicen lo mismo con palabras distintas son dos avisos que se
+           contradicen en cuanto alguien toca uno; y acá además hace falta que digan la CAUSA
+           (internet del jugador · librería bloqueada · base de datos caída), porque de eso
+           depende si el jugador puede hacer algo o solo le toca esperar. */
+        const m = (typeof motivoSinNube === "function") ? motivoSinNube()
+          : { largo: "Sin conexión con el servidor de guardado. Tu granja se guarda en este navegador.", corto: "Sin servidor — se guarda acá" };
+        if (typeof log === "function") log(m.largo, "warn");
+        if (typeof toast === "function") toast(m.corto);
       });
     }
   } catch (e) {}
