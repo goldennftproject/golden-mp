@@ -32,6 +32,32 @@ function sesionGuardada() {
     return (s && s.user && s.user.id) ? s : (s && s.currentSession && s.currentSession.user ? s.currentSession : null);
   } catch (e) { return null; }
 }
+
+/* ============ NUESTRA PROPIA COPIA DE LA LLAVE (24/8) ==================================
+   Mirar solo la sesión de supabase no alcanza, y esto no es una sospecha: está en el código de
+   la librería. Cuando getSession encuentra una sesión que considera inválida, llama a
+   _removeSession() y BORRA lo guardado. Después de eso el navegador parece recién estrenado —
+   sin cuenta, sin granja, sin rastro— y la puerta del apodo aparece con todo el derecho del
+   mundo. O sea que la reja que pusimos no cubre el caso en que la llave se pierde sola, que es
+   justo el que deja al jugador de cero.
+   Así que guardamos NUESTRA copia, con nuestra llave, que la librería no toca nunca:
+     · sirve de MARCA — este navegador tuvo una granja, aunque supabase ya no lo sepa;
+     · y guarda el refresh token, que es lo único con lo que se puede REVIVIR la sesión.
+   Es el mismo dato que la librería ya guarda en el mismo lugar: no se expone nada nuevo. */
+const GF_CUENTA_KEY = "gf-cuenta";
+function marcaCuenta() {
+  try { return JSON.parse(localStorage.getItem(GF_CUENTA_KEY) || "null"); } catch (e) { return null; }
+}
+function marcarCuenta(session) {
+  try {
+    if (!session || !session.user) return;
+    localStorage.setItem(GF_CUENTA_KEY, JSON.stringify({
+      uid: session.user.id, refresh_token: session.refresh_token || null, at: Date.now(),
+    }));
+  } catch (e) {}
+}
+/* ¿este navegador tuvo granja alguna vez? (la sesión de supabase O nuestra marca) */
+function huboGranja() { return !!(sesionGuardada() || (marcaCuenta() || {}).uid); }
 const conTope = (p, ms, que) => Promise.race([
   Promise.resolve(p),
   new Promise((_, rej) => setTimeout(() => rej(new Error("tardó demasiado: " + que)), ms)),
@@ -53,7 +79,7 @@ var CUENTA_PREVIA = false;
 
 async function initSave() {
   try {
-    CUENTA_PREVIA = !!sesionGuardada();   // se mira ANTES de tocar nada
+    CUENTA_PREVIA = huboGranja();   // se mira ANTES de tocar nada
     if (!window.supabase || !window.supabase.createClient) return false;
     sb = window.supabase.createClient(SB_URL, SB_KEY, { auth: { lock: candadoDeEstaPagina } });
     let session = null;
@@ -65,7 +91,7 @@ async function initSave() {
          ya tenía uña, crear otra anónima lo dejaría mirando una granja vacía… y el primer
          guardado la escribiría encima de la buena. Se mira el guardado local y se decide. */
       console.warn("getSession:", e.message);
-      const guardada = sesionGuardada();
+      const guardada = sesionGuardada() || (marcaCuenta() || {}).uid;
       if (guardada) {
         console.warn("hay sesión guardada: se reintenta una vez antes de rendirse");
         try {
@@ -76,6 +102,31 @@ async function initSave() {
       }
       // sin sesión guardada: es un navegador virgen, se puede crear la cuenta con tranquilidad
     }
+    /* ---- REVIVIR ANTES DE CREAR (24/8) --------------------------------------------------
+       Acá es donde se perdían las granjas: sin sesión, el paso siguiente creaba una cuenta
+       nueva. Pero "sin sesión" no quiere decir "sin cuenta" — la librería borra la suya sola
+       cuando la considera inválida. Si tenemos NUESTRA copia de la llave, primero se intenta
+       revivir la de siempre. Solo si eso falla se considera crear una nueva, y solo si el
+       navegador nunca tuvo granja. */
+    if (!session) {
+      const marca = marcaCuenta();
+      if (marca && marca.refresh_token) {
+        console.warn("supabase no tiene sesión, pero este navegador SÍ tuvo granja: se intenta revivir");
+        try {
+          const r = await conTope(sb.auth.refreshSession({ refresh_token: marca.refresh_token }), 12000, "refreshSession");
+          if (r && r.data && r.data.session) {
+            session = r.data.session;
+            console.warn("sesión revivida: la granja de siempre sigue siendo tuya");
+          } else if (r && r.error) console.warn("no se pudo revivir:", r.error.message);
+        } catch (e) { console.warn("refreshSession:", e.message); }
+      }
+    }
+    /* si hubo granja y no se pudo revivir, NO se crea otra: se falla y el jugador ve el cartel.
+       Una granja inalcanzable se puede recuperar mañana; una granja huérfana, nunca. */
+    if (!session && CUENTA_PREVIA) {
+      console.warn("este navegador tuvo granja y no se pudo abrir la sesión: no se crea ninguna cuenta nueva");
+      return false;
+    }
     if (!session) {
       const { data, error } = await conTope(sb.auth.signInAnonymously(), 15000, "signInAnonymously");
       if (error) { console.warn("Login anónimo falló (¿está habilitado en Supabase?):", error.message); return false; }
@@ -83,6 +134,10 @@ async function initSave() {
     }
     if (!session || !session.user) return false;
     UID = session.user.id;
+    marcarCuenta(session);   // nuestra copia de la llave, para la próxima vez
+    /* y se mantiene fresca: cada vez que la librería renueva el token, guardamos el nuevo. Sin
+       esto, nuestra copia envejece y el día que haga falta ya no sirve para revivir nada. */
+    try { sb.auth.onAuthStateChange((ev, s) => { if (s && s.user) marcarCuenta(s); }); } catch (e) {}
     return true;
   } catch (e) { console.warn("initSave error:", e); return false; }
 }

@@ -55,6 +55,21 @@ console.log("\nY EL CARTEL LE DICE AL JUGADOR QUE NO EMPIECE DE NUEVO");
   ok("y no repite el cartel si se lo llama dos veces", /if \(!g\.querySelector\("\.gf-motivo"\)\)/.test(p));
 }
 
+console.log("\nNUESTRA PROPIA COPIA DE LA LLAVE (la librería borra la suya sola)");
+{
+  /* No es una sospecha: en el código de supabase-js, getSession llama a _removeSession() cuando
+     considera inválida la sesión guardada. Después de eso el navegador PARECE recién estrenado,
+     y la reja de arriba no tendría nada que detectar. */
+  ok("guardamos una marca con nuestra propia llave", /const GF_CUENTA_KEY = "gf-cuenta";/.test(SAVE));
+  ok("con el uid y el refresh token", /uid: session\.user\.id, refresh_token: session\.refresh_token/.test(SAVE));
+  ok("y « hubo granja » mira las DOS cosas", /function huboGranja\(\) \{ return !!\(sesionGuardada\(\) \|\| \(marcaCuenta\(\) \|\| \{\}\)\.uid\); \}/.test(SAVE));
+  ok("la reja usa esa pregunta, no solo la sesión de supabase", /CUENTA_PREVIA = huboGranja\(\);/.test(SAVE));
+  ok("antes de crear una cuenta, se INTENTA REVIVIR la de siempre", /refreshSession\(\{ refresh_token: marca\.refresh_token \}\)/.test(SAVE));
+  ok("y si no se puede revivir, no se crea ninguna", /if \(!session && CUENTA_PREVIA\) \{/.test(SAVE));
+  ok("la copia se mantiene fresca en cada renovación", /onAuthStateChange\(\(ev, s\) => \{ if \(s && s\.user\) marcarCuenta\(s\); \}\)/.test(SAVE));
+  ok("y se guarda apenas se entra", /marcarCuenta\(session\);\s*\/\/ nuestra copia de la llave/.test(SAVE));
+}
+
 console.log("\nLA CADENA COMPLETA, CORRIDA DE VERDAD");
 {
   /* se monta el bloque del login con un supabase colgado y una sesión guardada: el caso exacto
@@ -72,11 +87,40 @@ console.log("\nLA CADENA COMPLETA, CORRIDA DE VERDAD");
   const ini = SAVE.indexOf("/* ================= EL LOGIN SE COLGABA");
   const fin = SAVE.indexOf("// campos de progreso que guardamos");
   vm.runInContext('var SB_URL = "https://ref.supabase.co"; var SB_KEY = "x"; var sb = null, UID = null;\n' + SAVE.slice(ini, fin), ctx);
-  return ctx.initSave().then(r => {
+  return ctx.initSave().then(async (r) => {
     ok("initSave avisa que no pudo", r === false);
     ok("detectó que este navegador YA tenía cuenta", ctx.CUENTA_PREVIA === true);
     ok("y NO creó ninguna cuenta nueva", anons === 0, anons + " cuentas creadas");
     ok("ni se quedó con un UID que no es suyo", !ctx.UID, String(ctx.UID));
+
+    /* --- el caso que la reja sola NO cubría: supabase borró su sesión, pero nosotros tenemos
+       la copia. Tiene que REVIVIR la de siempre, no crear una nueva. --- */
+    console.log("\nEL CASO FEO: SUPABASE BORRÓ SU SESIÓN Y NOSOTROS TENEMOS LA COPIA");
+    const ctx2 = { console: { log() {}, warn() {}, error() {} }, Math, Date, JSON, Object, Array,
+      Number, String, Boolean, Promise, setTimeout, clearTimeout, Error };
+    ctx2.window = ctx2; ctx2.globalThis = ctx2;
+    let anons2 = 0, revividas = 0;
+    const guardado = { "gf-cuenta": JSON.stringify({ uid: "la-de-siempre", refresh_token: "la-llave", at: 1 }) };
+    ctx2.localStorage = { getItem: (k) => guardado[k] || null, setItem(k, v) { guardado[k] = v; }, removeItem(k) { delete guardado[k]; } };
+    ctx2.window.supabase = { createClient: () => ({ auth: {
+      getSession: () => Promise.resolve({ data: { session: null } }),        // la borró la librería
+      refreshSession: ({ refresh_token }) => { revividas++;
+        return Promise.resolve(refresh_token === "la-llave"
+          ? { data: { session: { user: { id: "la-de-siempre" }, refresh_token: "llave-nueva" } }, error: null }
+          : { data: { session: null }, error: { message: "token inválido" } }); },
+      signInAnonymously: () => { anons2++; return Promise.resolve({ data: { session: { user: { id: "nueva" } } }, error: null }); },
+      onAuthStateChange: () => {},
+    } }) };
+    vm.createContext(ctx2);
+    vm.runInContext('var SB_URL = "https://ref.supabase.co"; var SB_KEY = "x"; var sb = null, UID = null;\n' + SAVE.slice(ini, fin), ctx2);
+    const r2 = await ctx2.initSave();
+    ok("entra", r2 === true);
+    ok("intentó revivir la sesión vieja", revividas === 1);
+    ok("y volvió con el UID DE SIEMPRE, no uno nuevo", ctx2.UID === "la-de-siempre", String(ctx2.UID));
+    ok("sin crear ninguna cuenta", anons2 === 0, anons2 + " cuentas creadas");
+    ok("y guardó la llave nueva para la próxima",
+      (JSON.parse(guardado["gf-cuenta"]) || {}).refresh_token === "llave-nueva");
+
     console.log(fallos ? "\n" + fallos + " fallo(s)\n"
       : "\nTodo en orden: si no se puede entrar, se avisa. Nunca se empieza de cero por su cuenta.\n");
     process.exit(fallos ? 1 : 0);
