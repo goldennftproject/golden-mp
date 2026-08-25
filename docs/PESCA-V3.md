@@ -544,6 +544,13 @@ escritas en ningún lado.
 
 # TANDA 1 · LO QUE YA ESTÁ EN EL CÓDIGO (25/8)
 
+*Corregido el mismo día, a partir de una pregunta de dirección — « ¿en qué parte del documento
+se dice que hay que preguntar si grillo o lombriz? ». Estaba en el capítulo 2, pero yo me había
+salteado la escalera del capítulo 13: el grillo y la familia Superficie abren en PESCA 5. Sin
+esa puerta, el juego le cobraba al jugador nuevo una pregunta por cada montículo para darle una
+carnada que no tenía dónde usar, y le enseñaba señales que no podía pescar. Una elección de una
+sola opción no es una elección: es un peaje.*
+
 *El núcleo de lógica de la tanda 1, con su medidor: `tools/test-pesca-v3.js`. Falta la
 interfaz — las señales todavía no se dibujan en el agua —, así que esto no se juega
 todavía; pero cada regla de abajo ya está escrita y verificada.*
@@ -559,8 +566,13 @@ todavía; pero cada regla de abajo ya está escrita y verificada.*
 
   - **La carnada elige la familia** (`pescaPuedeSenal`), y el aviso nombra la que falta.
 
-  - **El montículo es una elección**: lombriz o grillo. El grillo existe como ítem de bolsa, con
-    nombre y emoji propios — sin pedirle arte nueva a nadie.
+  - **El montículo es una elección**: lombriz o grillo — pero SOLO desde Pesca 5, que es donde
+    el capítulo 13 abre la familia Superficie. Antes de eso cava lombriz directo y sin
+    preguntar. El grillo existe como ítem de bolsa, con nombre y emoji propios — sin pedirle
+    arte nueva a nadie.
+
+  - **Y el agua respeta la escalera**: una señal solo puede ser de una familia ABIERTA. El
+    jugador del minuto uno ve cuatro señales de orilla, no cuatro peces que no puede pescar.
 
   - **La escama del que se fue** (`pescaPerdido`): el hilo cortado deja escama y marca la lámina
     como « visto, no cobrado ».

@@ -112,6 +112,7 @@ console.log("\nEL TOPE: LA LAGUNA GUARDA " + MAXC + " LANCES, NO MÁS");
 console.log("\nLA CARNADA ELIGE LA FAMILIA — Y EL AVISO NOMBRA LA QUE FALTA");
 {
   G.res.lombriz = 0; G.res.grillo = 0; G.pescaTiene = {};
+  G.skills = { fishing: 99999 };   // con el oficio hecho: acá se mide la CARNADA, no la escalera
   const orilla = { esp: "pez_comun", fam: "orilla", estrella: 1 };
   let p = ctx.pescaPuedeSenal(orilla);
   ok("sin lombriz, la orilla se niega", !p.ok);
@@ -178,6 +179,27 @@ console.log("\nLA ESCAMA DEL QUE SE FUE: EL FRACASO DEJA DE SER UN CERO");
   ctx.pescaPerdido({ esp: "pez_mariposa", estrella: 2 });
   ok("dos fracasos, dos escamas", G.escamas.pez_mariposa === 2);
   ok("un lance sin especie no inventa nada", ctx.pescaPerdido({ rar: "comun" }) === null);
+}
+
+console.log("\nLA ESCALERA: EL AGUA NO OFRECE LO QUE TODAVÍA NO PODÉS PESCAR");
+{
+  /* 25/8 v2 (dirección: « que no te lo pregunte del minuto uno »). El capítulo 13 abre la
+     familia Superficie en PESCA 5 y el señuelo en la 9. Sin esas puertas, el jugador nuevo veía
+     señales que no podía pescar y le cobrábamos una pregunta por cada montículo del día. */
+  G.skills = { fishing: 0 };
+  ok("de recién llegado, solo la orilla está abierta",
+    ctx.familiasAbiertas().join(",") === "orilla", ctx.familiasAbiertas().join(" · "));
+  ok("la superficie NO", ctx.familiaAbierta("superficie") === false);
+  ok("y el fondo tampoco", ctx.familiaAbierta("fondo") === false);
+  /* y por lo tanto NINGUNA señal puede ser de una familia cerrada */
+  G.senales = []; G.pescaDesde = FakeDate.now() - FISH_CD * 1000 * 8;
+  const s = ctx.pescaSenales();
+  ok("las 4 señales son todas de orilla", s.length === 4 && s.every(x => x.fam === "orilla"),
+    s.map(x => x.fam).join(" · "));
+  /* al subir a Pesca 5 se abre la superficie */
+  G.skills = { fishing: ctx.skillNeed(5, "fishing") * 5 };
+  ok("a Pesca " + ctx.nivelOficio("fishing") + " ya se abre la superficie", ctx.familiaAbierta("superficie") === true);
+  ok("pero el fondo sigue esperando a la 9", ctx.familiaAbierta("fondo") === false);
 }
 
 console.log("\nEL MONTÍCULO AHORA ES UNA ELECCIÓN");

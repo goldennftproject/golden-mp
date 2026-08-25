@@ -1318,7 +1318,12 @@ class FarmScene extends Phaser.Scene {
          puede traer lombriz (orilla) o grillo (superficie), y esa elección es lo que le pone
          precio real a la carnada de superficie. Se pregunta con la misma rueda de dos opciones
          que ya usa la siembra rápida: cero interfaces nuevas. */
-      if (!this._excavPide && typeof PESCA_CARNADA !== "undefined" && typeof mostrarEleccion === "function") {
+      /* 25/8 v2 (dirección) — SOLO PREGUNTA CUANDO HAY ALGO QUE ELEGIR. El grillo se abre en
+         Pesca 5 (capítulo 13 del documento); antes de eso la rueda ofrecía una carnada que el
+         jugador no tenía dónde usar y le cobraba un clic por cada montículo del día. Una
+         elección de una sola opción no es una elección: es un peaje. */
+      const grilloAbierto = (typeof familiaAbierta === "function") && familiaAbierta("superficie");
+      if (grilloAbierto && !this._excavPide && typeof PESCA_CARNADA !== "undefined" && typeof mostrarEleccion === "function") {
         this._excavPide = true;
         mostrarEleccion("¿Qué buscás en la tierra?", [
           { k: "lombriz", txt: PESCA_CARNADA.lombriz.emoji + " Lombriz", sub: "carnada de ORILLA" },

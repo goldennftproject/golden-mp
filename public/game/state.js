@@ -5038,7 +5038,7 @@ var PESCA_FAMILIA = {
    llaves que la escalera de minerales. Ninguna carnada da porcentajes. */
 var PESCA_CARNADA = {
   lombriz: { label: "Lombriz",          emoji: "🪱", familia: "orilla",     gasta: true },
-  grillo:  { label: "Grillo",           emoji: "🦗", familia: "superficie", gasta: true },
+  grillo:  { label: "Grillo",           emoji: "🦗", familia: "superficie", gasta: true, lvl: 5 },
   senuelo: { label: "Señuelo de nácar", emoji: "🐚", familia: "fondo",      gasta: false, lvl: 9 },
 };
 /* LAS ESPECIES DE LA TANDA 1. `cadena` son los minutos acumulados que cuestan poder tirarle:
@@ -5075,6 +5075,19 @@ function especieXp(id, estrella) {
 function especiesDe(familia) { return ESPECIE_ORDER.filter(k => ESPECIE_DEF[k].familia === familia); }
 /* ¿qué carnada abre esta familia? (la tabla se lee al revés, no se repite) */
 function carnadaDe(familia) { for (const k in PESCA_CARNADA) if (PESCA_CARNADA[k].familia === familia) return k; return null; }
+/* 25/8 v2 (dirección: « que no te lo pregunte del minuto uno, nada más entrar ») — LAS PUERTAS
+   DE LA ESCALERA, QUE YA ESTABAN EN EL DOCUMENTO Y YO ME SALTEÉ. El capítulo 13 abre la familia
+   Superficie (y su grillo) en PESCA 5, y el señuelo en la 9. Sin esas puertas, el juego le
+   ofrecía al jugador del minuto uno una carnada que no tenía dónde usar y le cobraba una
+   pregunta por cada montículo. Peor: el agua le enseñaba señales de familias que no podía
+   pescar, que es justo lo contrario de lo que la tanda 1 promete.
+   Una familia está abierta si SU CARNADA lo está. Una regla, un lugar. */
+function familiaAbierta(fam) {
+  const c = PESCA_CARNADA[carnadaDe(fam)]; if (!c) return false;
+  if (!c.lvl) return true;
+  return (typeof nivelOficio === "function" ? nivelOficio("fishing") : 1) >= c.lvl;
+}
+function familiasAbiertas() { return Object.keys(PESCA_FAMILIA).filter(f => familiaAbierta(f) && especiesDe(f).length); }
 
 /* ---- LAS SEÑALES: se generan AL LLEGAR, una por carga guardada -------------------------------
    Ésta es la corrección de fondo de la revisión 2 del documento, y vale más que el arreglo de un
@@ -5104,7 +5117,8 @@ function pescaGastarCarga() {   // consumir una carga = correr el reloj de una
    Determinístico por semilla, así el F5 no cambia lo que ya viste. */
 function senalNueva(i, rnd) {
   const r = rnd || Math.random;
-  const fams = Object.keys(PESCA_FAMILIA).filter(f => especiesDe(f).length);
+  const fams = familiasAbiertas();
+  if (!fams.length) return { esp: ESPECIE_ORDER[0], fam: ESPECIE_DEF[ESPECIE_ORDER[0]].familia, estrella: 1, i };
   const fam = fams[Math.floor(r() * fams.length) % fams.length];
   const cand = especiesDe(fam);
   const esp = cand[Math.floor(r() * cand.length) % cand.length];

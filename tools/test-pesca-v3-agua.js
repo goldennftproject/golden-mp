@@ -72,6 +72,8 @@ console.log("\nEL AGUA SE PONE AL DÍA SOLA");
 console.log("\nEL MONTÍCULO PREGUNTA, CON LA RUEDA QUE YA EXISTÍA");
 {
   ok("el clic en el montículo abre la elección", /mostrarEleccion\("¿Qué buscás en la tierra\?"/.test(FARM));
+  ok("pero SOLO desde que el grillo se abre (Pesca 5)", /const grilloAbierto = \(typeof familiaAbierta === "function"\) && familiaAbierta\("superficie"\);/.test(FARM),
+    "una elección de una sola opción es un peaje, no una elección");
   ok("y son lombriz o grillo, con su familia dicha", /carnada de ORILLA/.test(FARM) && /carnada de SUPERFICIE/.test(FARM));
   ok("lo elegido llega a la lógica", /excavCavar\(o\.idx, this\._excavCarnada\)/.test(FARM));
   ok("la rueda vive en ui.js y reusa #seedwheel", /function mostrarEleccion\(/.test(UI) && /\$\("seedwheel"\)/.test(UI));
