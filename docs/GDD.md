@@ -446,6 +446,17 @@ Mientras crecen las papas, el jugador se va a talar, a picar, a cavar montículo
 
 La carne cae por azar, y eso el jugador tiene que aprenderlo. Pero en el paso de caza del tutorial hay una red: si no ha caído antes, al 4.º bicho cae seguro. Solo en ese paso.
 
+**11.1 Después del tutorial: el camino y la semana**
+
+El tutorial enseña a jugar. Lo que no hacía —y es lo que separa un juego de una colección de sistemas— era contestar las dos preguntas que el jugador se hace apenas lo termina:
+
+- **« ¿A qué estoy jugando? »** → **el camino a la Guarida.** Los diez hitos son las diez cartas del Abuelo (docs/LORE.md, capítulo 6) y el final es bajar a la Guarida con un clan. No es contenido nuevo: es la lista que ya existía, puesta en fila y con una marca de por dónde va. El camino se deriva de `CARTAS_ABUELO`, así que si mañana se escribe una carta más, el camino crece solo. Los hitos se marcan por NIVEL alcanzado, no por carta leída: el que juega y no abre el buzón igual avanzó, y castigarlo sería castigar a la mayoría. El último hito nunca se alcanza en solitario, y el panel lo dice con todas las letras — es lo que convierte el clan de una función del menú en el final de una historia.
+- **« ¿Qué hago hoy? »** → **la meta de esta semana.** Con nombre, barra, cuánto falta y cuánto queda de plazo.
+
+Lo segundo es la lección más barata del proyecto: **el pedido semanal ya existía**, escondido como una línea entre seis dentro del tablón. No hizo falta un sistema nuevo; hizo falta darle una cara. Lo que funciona y nadie ve vale lo mismo que lo que no existe, y sale mucho más barato de arreglar.
+
+Las tres capas viven en la misma pestaña, en este orden: LA SEMANA (lo de hoy), EL CAMINO (lo de siempre) y LA GUÍA (los 29 pasos del tutorial, que bajan al final a propósito: sirven la primera hora y después estorban arriba de lo que el jugador viene a mirar). El botón del menú lleva el marcador de la semana, porque un panel que no se anuncia es un panel que nadie abre. Lo fija `tools/test-el-camino.js`.
+
 **12. La partida medida**
 
 Estas cifras salen del simulador (tools/simular-partida.js), no de una estimación. El perfil es el de un jugador que entra tres veces al día.
@@ -544,7 +555,7 @@ Normas de diseño que vienen de decisiones de dirección y que conviene no reabr
 
 **15. Cómo verificar lo que dice este documento**
 
-El proyecto tiene 99 pruebas automáticas y 30 auditores y medidores (129 herramientas en total). No comprueban que el código compile: comprueban que el JUEGO cumpla las reglas de arriba. Los más útiles para el diseñador:
+El proyecto tiene 99 pruebas automáticas y 21 auditores, más 28 medidores, simuladores y generadores: 148 herramientas en `tools/`. No comprueban que el código compile: comprueban que el JUEGO cumpla las reglas de arriba. Los más útiles para el diseñador:
 
 | **Herramienta**                 | **Qué contesta**                                            |
 | ------------------------------- | ----------------------------------------------------------- |

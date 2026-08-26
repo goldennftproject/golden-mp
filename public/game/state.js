@@ -7208,3 +7208,70 @@ function testeoDestapar() {
   if (tocado && typeof log === "function") log("MODO TESTEO: la bolsa estaba desbordada (" + tocado + " montones de más) y se recortó a 99 por recurso, para que puedas seguir juntando cosas.", "gold");
   return tocado > 0;
 }
+
+/* ═══════════════════════════════════════════════════════════════════════════════════════════
+   EL CAMINO — a qué está jugando el jugador                                          (25/8)
+   ═══════════════════════════════════════════════════════════════════════════════════════════
+   Dirección, después de la auditoría: « ¿cómo lo hacemos cada vez más un juego? ».
+   El hallazgo era que un jugador no podía terminar la frase « estoy jugando para… ». Había
+   cincuenta niveles, diez cartas y un dragón, y ninguna de las tres cosas se veía junta.
+
+   LO QUE ESTO NO ES: un sistema nuevo. Todo lo de abajo YA EXISTE y estaba escondido —
+     · el destino final es el asalto a la Guarida (RAID_HP, 3 del clan, 48 h), que además es lo
+       único del juego que no se puede hacer solo, y que el lore lleva diez cartas preparando;
+     · los hitos del camino son las CARTAS DEL ABUELO, que ya marcan los niveles que importan;
+     · la meta de la semana es `pedSemanal`, que existe desde siempre… como una línea más entre
+       seis del tablón, sin nombre y sin cara.
+   O sea que el trabajo no era inventar: era juntar las tres capas y ponerles nombre. Un juego
+   contesta tres preguntas a la vez —qué hago HOY, qué persigo esta SEMANA, a dónde voy— y este
+   juego tenía las tres respuestas escritas en tres cajones distintos. */
+
+/* LA META DE LA SEMANA: el encargo semanal que ya existe, con su progreso a la vista. */
+function metaSemana() {
+  try {
+    const e = pedidosEstado();
+    const p = e.pedSemanal;
+    if (!p) return null;
+    const tengo = pedidoStock(p), falta = Math.max(0, p.n - tengo);
+    return {
+      p, i: "S",
+      label: pedidoLabel(p),
+      pide: p.n, tengo: Math.min(tengo, p.n), falta,
+      hecho: !!p.hecho,
+      pct: p.hecho ? 1 : Math.max(0, Math.min(1, tengo / p.n)),
+      /* cuánto queda de la semana — el reloj es lo que la convierte en meta y no en lista */
+      cierra: (function () {
+        const d = new Date();
+        const dia = (d.getUTCDay() + 3) % 7;          // la semana arranca el jueves (semanaStamp)
+        const finMs = Date.UTC(d.getUTCFullYear(), d.getUTCMonth(), d.getUTCDate() + (7 - dia));
+        return Math.max(0, finMs - nowMs());
+      })(),
+    };
+  } catch (e) { return null; }
+}
+
+/* EL CAMINO A LA GUARIDA: los hitos, derivados de las cartas y del asalto.
+   Nadie escribe una lista de hitos a mano — si mañana se agrega una carta, aparece sola. */
+function caminoGuarida() {
+  const nv = (typeof farmLevel === "function") ? farmLevel() : (G.level || 1);
+  const hitos = CARTAS_ABUELO.map(c => ({
+    nivel: c.nivel,
+    titulo: c.titulo,
+    hecho: nv >= c.nivel,
+    leida: !!(G.buzonLeidas || {})["abuelo" + c.n],
+  }));
+  /* y el último escalón, que no es de nivel sino de gente: el asalto pide un clan */
+  const enClan = !!(G.clan && G.clan.codigo);
+  hitos.push({
+    nivel: null, titulo: "Bajar a la Guarida", clan: true, hecho: false,
+    nota: enClan ? "Tu clan puede abrir el asalto" : "Hace falta un clan de " + RAID_MIN_MIEMBROS,
+  });
+  const alcanzados = hitos.filter(h => h.hecho).length;
+  return {
+    hitos, alcanzados, total: hitos.length,
+    nv,
+    /* el siguiente hito sin alcanzar: es lo que el panel pone en grande */
+    proximo: hitos.find(h => !h.hecho) || null,
+    enClan,
+  };
+}

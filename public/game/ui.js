@@ -160,6 +160,7 @@ function setNum(id, valor) {
 function refreshHud() {
   try { syncMisionesBadge(); } catch (e) {}   // contador de misiones del menú (10/8)
   try { syncLogrosBadge(); } catch (e) {}     // 22/8: cuántos logros hay para cobrar
+  try { syncCaminoBadge(); } catch (e) {}     // 25/8: cuánto le falta a la meta de la semana
   try { syncAlbumBadge(); } catch (e) {}      // 23/8: el % del álbum
   /* 24/8 — LA BOLSA ABIERTA NO PUEDE MENTIR. Dirección reportó que al vender, el objeto seguía
      ahí hasta cerrar y abrir. La causa concreta era que sellItem no repintaba la bolsa (ya está
@@ -1399,6 +1400,17 @@ function syncAlbumBadge() {
   const b = $("gm-alb"); if (!b || typeof albumProgreso !== "function") return;
   try { b.textContent = albumProgreso().pct + "%"; } catch (e) {}
 }
+/* el contador del CAMINO: cuánto le falta a la meta de la semana. Va al lado del nombre en el
+   menú por la misma razón que el de logros — un panel que no se anuncia es un panel que nadie
+   abre, y la meta de la semana no sirve de nada si hay que ir a buscarla. */
+function syncCaminoBadge() {
+  const b = $("gm-cam"); if (!b || typeof metaSemana !== "function") return;
+  try {
+    const m = metaSemana();
+    b.textContent = m ? (m.hecho ? "✓" : m.tengo + "/" + m.pide) : "";
+    const btn = b.closest(".gmi"); if (btn) btn.classList.toggle("listo", !!(m && !m.hecho && m.falta === 0));
+  } catch (e) {}
+}
 // el contador del menú: cuántos premios hay para cobrar (y el botón pulsa si hay alguno)
 function syncLogrosBadge() {
   const b = $("gm-log"); if (!b || typeof logroPendientes !== "function") return;
@@ -1529,11 +1541,64 @@ function raidBotin(parte) {
 
 /* ---- MAPA (10/8): dónde estás y a dónde podés ir ---- */
 /* ---- OBJETIVOS por capítulos (14/8): la guía opcional con forma de diario ---- */
+/* ═══ EL PANEL DEL CAMINO (25/8) ═══════════════════════════════════════════════════════════
+   Un juego contesta TRES preguntas a la vez: qué hago hoy, qué persigo esta semana, y a dónde
+   voy. Este juego tenía las tres respuestas escritas… en tres cajones distintos: la guía en esta
+   pestaña, el encargo semanal como una línea entre seis del tablón, y el asalto a la Guarida
+   escondido en la ventana del clan (que ni siquiera se abre sin clan).
+   Acá se juntan, de arriba abajo y en ese orden: LA SEMANA · EL CAMINO · LA GUÍA.
+   Ni una mecánica nueva — solo dejar de esconder las que hay. */
 function refreshObjetivos() {
   const box = $("objetivos-list"); if (!box) return;
-  if (typeof TUTO_CAPS === "undefined") { box.innerHTML = ""; return; }
-  const idxActual = (G.tuto && !G.tuto.done) ? (G.tuto.step || 0) : 1e9;
   let h = "";
+
+  /* ── 1 · ESTA SEMANA ──────────────────────────────────────────────────────────────────────
+     El encargo semanal existe desde siempre y nadie lo veía. Con nombre, barra y reloj pasa de
+     ser una fila del tablón a ser « lo que estoy haciendo esta semana ». */
+  try {
+    const m = (typeof metaSemana === "function") ? metaSemana() : null;
+    if (m) {
+      const pct = Math.round(m.pct * 100);
+      h += '<div class="forge-row' + (m.hecho ? " eq" : "") + '"><div class="finfo">' +
+        '<div class="fnm">📅 Esta semana' + (m.hecho ? ' <span class="tag">cumplida</span>' : "") + '</div>' +
+        '<div class="fds" style="font-size:14px;color:#f6e7bd;margin:2px 0 6px">' +
+          (m.hecho ? "Entregaste " + m.pide + " × " + m.label
+                   : "Juntar " + m.pide + " × " + m.label) + '</div>' +
+        '<div style="height:10px;border-radius:5px;background:#241505;overflow:hidden;margin-bottom:4px">' +
+          '<div style="height:100%;width:' + pct + '%;background:' + (m.hecho ? "#63991f" : "#d9a521") + '"></div></div>' +
+        '<div class="fds">' + m.tengo + " / " + m.pide +
+          (m.hecho ? "" : " · te faltan " + m.falta) +
+          " · cierra en " + fmtDur(m.cierra) + '</div>' +
+        '</div><div class="fbtns"><button class="green sm" data-panel="ov-pedidos">Ver el tablón</button></div></div>';
+    }
+  } catch (e) { console.warn("meta de la semana:", e); }
+
+  /* ── 2 · EL CAMINO A LA GUARIDA ───────────────────────────────────────────────────────────
+     La respuesta a « ¿a qué estoy jugando? ». Los hitos salen de las cartas del Abuelo, así que
+     si mañana se agrega una carta el camino crece solo. */
+  try {
+    const c = (typeof caminoGuarida === "function") ? caminoGuarida() : null;
+    if (c) {
+      const filas = c.hitos.map(x => {
+        const marca = x.hecho ? "✅" : (x === c.proximo ? "▶️" : "⬜");
+        const donde = x.clan ? x.nota : ("granja " + x.nivel);
+        const resalta = (x === c.proximo) ? ' style="color:#f6e7bd"' : "";
+        return '<div class="fds"' + resalta + '>' + marca + " " + donde + " · " + x.titulo + "</div>";
+      }).join("");
+      h += '<div class="forge-row"><div class="finfo">' +
+        '<div class="fnm">🐉 El camino a la Guarida <span class="tag">' + c.alcanzados + "/" + c.total + '</span></div>' +
+        '<div class="fds" style="margin-bottom:6px">« Una granja fuerte alimenta a muchos granjeros. ' +
+          'Muchos granjeros pueden lo que yo no pude. » — Tu abuelo</div>' + filas +
+        '</div></div>';
+    }
+  } catch (e) { console.warn("camino:", e); }
+
+  /* ── 3 · LA GUÍA ──────────────────────────────────────────────────────────────────────────
+     Lo que había antes en esta pestaña. Baja al final a propósito: sirve la primera hora, y
+     después estorba arriba de lo que el jugador viene a mirar. */
+  if (typeof TUTO_CAPS === "undefined") { box.innerHTML = h; return; }
+  h += '<div class="shophead">La guía · lo básico de la granja</div>';
+  const idxActual = (G.tuto && !G.tuto.done) ? (G.tuto.step || 0) : 1e9;
   TUTO_CAPS.forEach(cap => {
     const est = capEstado(cap);
     const filas = cap.pasos.map(id => {
