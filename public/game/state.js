@@ -1068,7 +1068,12 @@ var MAT_CD_MS = 6000;   // LEGADO: solo lo lee el guardado viejo (matCd) para va
 // ---- EDIFICIOS NIVEL 2 (recompensas de granja 17 / 21 / 27) ----
 var EDIF2_HORNO = 40;    // % que se acorta el enfriamiento del Horno
 var EDIF2_COCINA = 30;   // % que se acortan las cocciones
-var EDIF2_COCINA_OLLA = 1;   // ollas extra de la Cocina
+/* 26/8 — desde que la Cocina es una FILA, esto NO es un fuego más: es un sitio más donde
+   esperar turno. Dirección lo dejó así a propósito (« para lo único que sirve es para poner en
+   cola diferentes platos »), pero el rótulo del panel se corrigió: decía « +1 olla », que
+   promete un segundo fuego que no existe. Un perk que se anuncia mejor de lo que es se paga
+   con un jugador que se siente estafado, y eso cuesta más que el perk. */
+var EDIF2_COCINA_OLLA = 1;   // un sitio más en la fila de la Cocina (no un fuego más)
 var EDIF2_ALTAR = 5;     // puntos de éxito extra en cada intento del Altar
 function edif2(k) { return !!(G.edif2 && G.edif2[k]); }
 function hornoCdMs() { return MAT_CD_MS * (edif2("horno") ? 1 - EDIF2_HORNO / 100 : 1); }
