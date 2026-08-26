@@ -2695,7 +2695,40 @@ function initOverlayDrag() {
 function initHotbarDrag() {
 }
 
-/* ---- arrastre universal: mantener clic izquierdo sobre una zona libre mueve la interfaz ---- */
+/* ---- ARRASTRE UNIVERSAL: mantener clic izquierdo sobre una zona libre mueve la interfaz ----
+   ═══════════════════════════════════════════════════════════════════════════════════════════
+   26/8 · EL BUG QUE EL DISEÑADOR REPORTÓ DOS VECES Y YO DIAGNOSTIQUÉ MAL LAS DOS.
+
+   « me deja vender la papa pero no me deja seleccionar el estofado ». Y antes, el 24/8, con
+   estas mismas palabras: « no me deja seleccionar · le doy click y clickea en la grama ».
+
+   La causa era esta función. Al APRETAR llamaba a `el.setPointerCapture(...)`, y a partir de
+   ahí el navegador entrega TODOS los eventos del puntero a la ventana, sin importar lo que
+   haya debajo: el `pointerup` y el `click` se disparan sobre la tarjeta, no sobre lo que el
+   jugador tocó. Se ve clarísimo en una traza de navegador de verdad:
+
+       mousedown  destino=IMG        (la celda de la receta)
+       mouseup    destino=DIV.card   (¡la ventana!)  · bajo el cursor seguía estando el IMG
+       click      destino=DIV.card
+
+   Como el `click` nunca llega a la celda, su manejador no corre y para el jugador « no pasa
+   nada ». Lo que salvaba a los botones era DRAG_EXCLUDE, una lista escrita a mano de las cosas
+   que sí se pueden tocar. Por eso « vender » funcionaba —es un <button>— y la rejilla de
+   recetas no: la Cocina de dos paneles del 24/8 estrenó un elemento clicable que no es un botón
+   y nadie se acordó de anotarlo en la lista.
+
+   Y ÉSA es la lección, no el selector que faltaba. Una lista de « lo que sí se puede clicar »
+   mantenida a mano se desactualiza en la primera pantalla nueva, en silencio, y el síntoma
+   —« no me deja seleccionar »— no se parece en nada a la causa. Es la misma forma que las
+   cañas invisibles y que el Estofado: derivar a medias.
+
+   EL ARREGLO NO ES AGREGAR .ck-grid A LA LISTA. Es no capturar el puntero al apretar. La
+   captura hace falta para que el arrastre siga funcionando si el cursor se sale de la ventana,
+   así que se pide cuando el arrastre EMPIEZA DE VERDAD — pasados los 5 px de umbral que esta
+   función ya medía. Un clic quieto nunca captura nada y siempre llega a su destino.
+   DRAG_EXCLUDE se queda: sigue siendo útil para que arrastrar DESDE una lista la scrollee en
+   vez de mover la ventana. Pero ya no es lo único que separa un clic vivo de uno muerto.
+   Lo vigila tools/test-clic-navegador.js, con un Chromium de verdad. */
 const DRAG_EXCLUDE = "button, input, textarea, select, a, [draggable=true], .hcell, .swi, #log, #chatpane, .slots, .forge-list, .mkt-list, .lblist, .curbtn, .shoptab, .lbtab, .ltab, .eqslot";
 function makeHoldDrag(el, saveKey, anchorBottom) {
   if (!el || el._holdDrag) return; el._holdDrag = true;
@@ -2704,14 +2737,21 @@ function makeHoldDrag(el, saveKey, anchorBottom) {
     if (e.button !== 0) return;
     if (e.target.closest(DRAG_EXCLUDE)) return;
     const r = el.getBoundingClientRect();
-    drag = { dx: e.clientX - r.left, dy: e.clientY - r.top, sx: e.clientX, sy: e.clientY };
+    drag = { dx: e.clientX - r.left, dy: e.clientY - r.top, sx: e.clientX, sy: e.clientY, id: e.pointerId };
     started = false;
-    try { el.setPointerCapture(e.pointerId); } catch (er) {}
+    /* 26/8 — ACÁ NO SE CAPTURA EL PUNTERO. Ver el comentario de arriba: capturarlo al APRETAR
+       le roba el clic a todo lo que haya debajo. La captura se pide recién cuando el arrastre
+       empieza de verdad, cinco píxeles más abajo. */
   });
   el.addEventListener("pointermove", (e) => {
     if (!drag) return;
     if (!started && Math.hypot(e.clientX - drag.sx, e.clientY - drag.sy) < 5) return;
-    if (!started) { started = true; el.classList.add("uidrag"); }
+    if (!started) {
+      started = true; el.classList.add("uidrag");
+      /* recién ahora: el jugador está arrastrando, y desde este momento sí queremos todos los
+         eventos aunque el cursor se salga de la ventana. */
+      try { el.setPointerCapture(e.pointerId); } catch (er) {}
+    }
     const w = el.offsetWidth, h = el.offsetHeight;
     const left = Math.max(4, Math.min(e.clientX - drag.dx, window.innerWidth - w - 4));
     const top = Math.max(4, Math.min(e.clientY - drag.dy, window.innerHeight - h - 4));

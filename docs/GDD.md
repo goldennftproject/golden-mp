@@ -561,9 +561,13 @@ Normas de diseño que vienen de decisiones de dirección y que conviene no reabr
 
 10. Un clic sobre una ventana se queda en la ventana. Phaser engancha el pointerdown en la página entera, no solo en el lienzo, así que sin puerta un botón de la interfaz también pega un golpe en la granja de atrás — y ese golpe repinta la interfaz, que puede rehacerse ENTRE el apretar y el soltar y comerse el clic (así se rompió la Cocina nueva: « no me deja seleccionar · le doy clic y clickea en la grama »). La puerta es `clicDeInterfaz()` en config.js, va PRIMERA en cada escena, y ninguna vista se repinta si su contenido no cambió (patrón de firma). Lo vigila tools/test-clic-interfaz.js.
 
+    **26/8 · la otra mitad de la misma regla: un clic sobre una ventana también tiene que llegar a lo que el jugador tocó DENTRO de ella.** El arrastre universal de ventanas (`makeHoldDrag`) capturaba el puntero al APRETAR, así que el navegador le entregaba a la ventana el `mouseup` y el `click` sin importar lo que hubiera debajo: el manejador del elemento tocado nunca corría. Los botones se salvaban por `DRAG_EXCLUDE`, una lista escrita a mano de lo que sí se puede tocar — y la Cocina de dos paneles estrenó un clicable que no es un botón. El arreglo no fue agregarlo a la lista, sino capturar el puntero recién cuando el arrastre empieza de verdad, pasado el umbral de 5 px que la función ya medía. Un clic quieto no captura nada. Lo vigila `tools/test-clic-navegador.js`.
+
 **15. Cómo verificar lo que dice este documento**
 
-El proyecto tiene 101 pruebas automáticas y 21 auditores, más 28 medidores, simuladores y generadores: 150 herramientas en `tools/`. No comprueban que el código compile: comprueban que el JUEGO cumpla las reglas de arriba. Los más útiles para el diseñador:
+El proyecto tiene 102 pruebas automáticas y 21 auditores, más 28 medidores, simuladores y generadores: 151 herramientas en `tools/`.
+
+Una de ellas, `tools/test-clic-navegador.js`, corre en un **Chromium de verdad** (puppeteer). Existe porque el 26/8 el diseñador reportó dos veces que no podía elegir una receta en la Cocina y las dos veces se diagnosticó mal: el arnés de pruebas es jsdom, y jsdom no hace hit-testing ni implementa la captura de puntero, así que NO PODÍA ver el fallo ni en principio. Si no hay Chromium instalado el archivo lo dice y se salta; para instalarlo, una vez: `npx puppeteer browsers install chrome`. No comprueban que el código compile: comprueban que el JUEGO cumpla las reglas de arriba. Los más útiles para el diseñador:
 
 | **Herramienta**                 | **Qué contesta**                                            |
 | ------------------------------- | ----------------------------------------------------------- |
