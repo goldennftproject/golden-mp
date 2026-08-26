@@ -2,17 +2,19 @@
 
 Documento de Diseño de Juego
 
-*Estado real del código · 24 de agosto de 2026 · revisión 4*
+*Estado real del código · 26 de agosto de 2026 · revisión 5*
 
-**Qué cambió desde la revisión 3 (22/8)**
+**Qué cambió desde la revisión 4 (24/8)**
 
-*Cosas nuevas para jugar:* el MERCADER GOBLIN (un trueque anclado por día, aparece al terminar el tutorial), los LOGROS con premio (pestaña 🏆), el ÁLBUM DE LA GRANJA (la colección de primeras veces, pestaña 📖), la MISIÓN DE EVENTO del tablón (viernes a domingo, cartel violeta propio), la PESCA v2 con el sistema de Fishing Frenzy (burbujas, anzuelo a tiempo y zona de captura; un clic tira, cada tirada es un gusano), LA DOMA con su plato por especie y su oficio (« la rata no va a talar »), y LAS CARTAS DEL ABUELO — el lore del juego (docs/LORE.md) entregado de a una carta por nivel de granja, del 2 al 20.
+*Cosas nuevas para jugar:* la **PESCA v3** — nueve especies con su familia, su hora y su clima, cañas que se gastan, peleas con etapas y trampas que trabajan solas mientras no estás (§4.1); **EL CAMINO A LA GUARIDA**, que por primera vez contesta « ¿a qué estoy jugando? » poniendo en fila las diez cartas del Abuelo y el asalto de clan como final; **LA META DE LA SEMANA**, que contesta « ¿qué hago hoy? »; y **EL FLUJO DE LA BOLSA**, los « +1 Piedra · −1 Pico » del margen izquierdo (§13.1).
 
-*Cosas que cambiaron de fondo:* el DÍA cicla a las 00:00 UTC (21:00 en Argentina, el estándar web3) y la noche es azulada, no solo oscura; el HORNO pasó de enfriamiento a COLA de tres bocas, con tiempos atados al reloj del nodo que da su ingrediente; los PICOS se eligen solos al clicar el recurso (el de oro nunca se gasta en una roca); la ESTAMINA se recarga entera cada 4 horas por reloj real; las EXPANSIONES 3, 6, 8, 10, 12, 14 y 16 traen veta de bronce o de oro; y la COCINA se rediseñó en dos paneles con recetario de íconos (referencia del diseñador: Sunflower Land) — se elige el plato mirando, no leyendo.
+*Cosas que cambiaron de fondo:* la **COCINA COCINA DE A UNO** — las tres ollas dejan de ser fuegos en paralelo y pasan a ser una fila (§10); el **TABLÓN** pasa a tener capítulo propio y sus fardos ya pagan lo que un vale vale, que antes era la mitad (§12); las **CARTAS DEL ABUELO** llegan desde el nivel 2 en vez de esperar al final del tutorial; y el juego **no vuelve a pedir el apodo** ni pierde la granja cuando la base de datos está caída — se juega con la copia local y se sube sola al volver.
 
-*Reglas nuevas de la casa, que son las que evitan que esto se repita:* la **regla 9** (toda acción contesta algo: una acción muda es el peor fallo posible, porque el jugador no puede diagnosticarla desde dentro del juego) y la **regla 10** (un clic sobre una ventana se queda en la ventana). Cada una tiene su medidor: `auditar-silencios.js` y `test-clic-interfaz.js`.
+*Reglas nuevas de la casa:* la **regla 10 crece** — un clic sobre una ventana no solo se queda en la ventana: tiene que llegar a lo que el jugador tocó DENTRO de ella. Y una lección que atraviesa toda la semana y ya tiene nombre propio: **derivar a medias es peor que no derivar**. Un número sacado de una fórmula da confianza; si al lado queda una lista escrita a mano, la confianza es la del número y el fallo es el de la lista. Pasó cuatro veces en cinco días — las cañas invisibles, el Estofado imposible, los clics sordos y los fardos del tablón — y las cuatro tienen la misma forma.
 
-**Entrar a la granja: 1.186 KB → 400 KB (24/8)**
+*Cómo se verifica ahora:* la suite pasó de 129 a **154 herramientas**, y estrena algo que no tenía: un arnés con **navegador de verdad** (`test-clic-navegador.js`). Hizo falta porque el resto corre sobre jsdom, que no hace hit-testing ni captura de puntero — o sea que había una familia entera de fallos que las 118 herramientas anteriores no podían ver ni en principio.
+
+**Entrar a la granja: 1.186 KB → 238 KB (24/8, corregido el 26/8)**
 
 Dirección: « sigue tardando en entrar a la granja, algo se ha roto ahí en el inicio ». No se rompió de golpe — se fue rompiendo, que es peor, porque así no lo cazó nadie. El juego son doce archivos de JavaScript y hoy pesan 1.186 KB entre todos; el arranque llevaba tres impuestos encima, ninguno de ellos del juego:
 
@@ -22,7 +24,9 @@ Dirección: « sigue tardando en entrar a la granja, algo se ha roto ahí en el 
 
   - **Los `.js` iban con `no-cache`**, o sea una ida y vuelta por archivo en cada carga solo para que el servidor contestara « no cambió » — innecesario desde el día que el cargador les puso `?b=GF_BUILD`, que cambia en cada deploy y ya hace imposible reusar código viejo. Ahora se cachean de verdad: la segunda carga de un mismo build no pide nada.
 
-Como el sello del build pasó a ser lo único que avisa que hay código nuevo, dejó de escribirse a mano: **lo calcula el servidor** a partir de los propios archivos del juego (tamaño y fecha de los doce `.js`) y lo inyecta en el `index.html` al servirlo. Un sello que hay que acordarse de actualizar es un sello roto: si cambia una coma en cualquier archivo, cambia el número, y nadie tiene que hacer nada. Lo fija `tools/test-arranque-peso.js`, que además **vigila el peso**: el bulto crece solo, un comentario por vez, y si algún día pasa de 460 KB comprimidos, la suite se pone roja antes de que lo note un jugador.
+Como el sello del build pasó a ser lo único que avisa que hay código nuevo, dejó de escribirse a mano: **lo calcula el servidor** a partir de los propios archivos del juego (tamaño y fecha de los doce `.js`) y lo inyecta en el `index.html` al servirlo. Un sello que hay que acordarse de actualizar es un sello roto: si cambia una coma en cualquier archivo, cambia el número, y nadie tiene que hacer nada. Lo fija `tools/test-arranque-peso.js`, que además **vigila el peso**: el bulto crece solo, un comentario por vez, y si pasa del tope la suite se pone roja antes de que lo note un jugador.
+
+*Corrección del 26/8:* desde el 25/8 el servidor **quita los comentarios** de los `.js` antes de mandarlos, pero el medidor seguía pesando los archivos de disco. Llevaba contando 222 KB que ningún jugador baja nunca. Lo que viaja de verdad hoy son **238 KB comprimidos**, no 460, y el tope bajó de 460 a 300 — aplicar la marca vieja a la vara nueva habría dejado pasar el doble del juego en silencio. Cuando se arregla una vara hay que reajustar la marca, o el arreglo se convierte en permiso.
 
 **El hallazgo del día: el deploy fallaba en silencio (24/8)**
 
@@ -92,13 +96,17 @@ Para el equipo de diseño
 > 
 > **11.** Tutorial
 > 
-> **12.** La partida medida
+> **12.** El tablón del pueblo y los vales
 > 
-> **13.** Lo que está abierto
+> **13.** La interfaz que informa
 > 
-> **14.** Reglas de la casa
+> **14.** La partida medida
 > 
-> **15.** Cómo verificar lo que dice este documento
+> **15.** Lo que está abierto
+> 
+> **16.** Reglas de la casa
+> 
+> **17.** Cómo verificar lo que dice este documento
 
 **1. Qué es Golden Farm**
 
@@ -214,6 +222,32 @@ Cada mineral necesita DOS llaves a la vez: un pico de su categoría (que se comp
 **La regla del primer escalón**
 
 Toda escalera del juego empieza ABIERTA en el nivel 1. La semilla de papa, la piedra, el pez común, la alpaca y la Espada de Madera están disponibles desde el primer minuto. Un oficio cuyo primer escalón esté cerrado es un oficio que el jugador nunca empieza.
+
+**4.1 Pesca v3: el agua se lee, se acuerda y pelea (25/8)**
+
+La v2 convirtió la pesca en habilidad (tirar, clavar, carretear). La v3 le da al agua *contenido*: qué hay, cuándo, y con qué se saca.
+
+**Nueve especies, cada una con su puerta.** El catálogo viejo (común · raro · épico · legendario) era una rareza sorteada; ahora cada pez es una cosa concreta con su sitio.
+
+| especie | familia | talla | cuándo | precio |
+| --- | --- | --- | --- | --- |
+| Pez común · Camarón de río · Carpa dorada | Orilla | 1-3★ | siempre | 5 |
+| Anguila · Calamar | Fondo | 2-4★ | **solo de noche** | 5 |
+| Pez mariposa · Pez volador | Superficie | 1-4★ | siempre | 10 |
+| Pez espada (Pesca 15) | Coloso | 3-5★ | siempre | 15 |
+| Tiburón martillo (Pesca 20) | Coloso | 4-5★ | siempre | 20 |
+
+Los precios no están escritos a mano: salen del ancla, `cadena ÷ 60 × 20`. Una especie de cadena 60 vale 20 porque ocupa una hora.
+
+**Las cuatro puertas de un pez** son el nivel de Pesca, la familia, la hora y la **caña**: cada caña aguanta hasta cierta talla, así que un martillo de 5★ no se saca con junco por mucha suerte que se tenga. Las cañas **se gastan** (junco 30 usos, roble 30, hierro 25, la del Abuelo 20), y por eso son objetos de la bolsa, no un botón permanente.
+
+**El clima** (Despejado · Lluvia · Viento · Niebla) rota con el día y mueve qué pica. Son cuatro climas contra siete días: coprimos a propósito, para que la combinación no se repita cada semana y el agua no se vuelva un calendario memorizable.
+
+**Las peleas** dejaron de colgar del reloj y cuelgan del PROGRESO: son siete variaciones (tirones, cambios de rumbo, la tinta del calamar) y cada una se dispara cuando la captura llega a cierto punto. Con el reloj, un jugador bueno terminaba antes de que la tinta apareciera nunca — el contenido existía y no se veía.
+
+**Los colosos citan.** No usan carnada ni sorteo: el agua se abre y el pez ya está clavado. Pagan XP a mitad de tarifa (`CITA_XP = 0.5`) por una razón que conviene tener escrita: una trampa corre en **reloj de pared** y una escalera de oficio en **horas activas**. En una partida larga lo primero aplasta a lo segundo con cualquier número, así que lo que se cobra a mitad no es el pez: es el tiempo que no estuviste.
+
+**Las trampas** (Nasa de camarones, Red de superficie, Palangre de fondo) se calan y trabajan solas: dan cebo o pescado pasadas sus horas, con una ventana para recogerlas antes de que se vacíen. Es el carril offline de la pesca, hermano de la doma.
 
 **5. Oficios y experiencia**
 
@@ -463,17 +497,39 @@ Lo segundo es la lección más barata del proyecto: **el pedido semanal ya exist
 
 Las tres capas viven en la misma pestaña, en este orden: LA SEMANA (lo de hoy), EL CAMINO (lo de siempre) y LA GUÍA (los 29 pasos del tutorial, que bajan al final a propósito: sirven la primera hora y después estorban arriba de lo que el jugador viene a mirar). El botón del menú lleva el marcador de la semana, porque un panel que no se anuncia es un panel que nadie abre. Lo fija `tools/test-el-camino.js`.
 
-**11.2 El flujo de la bolsa**
+**12. El tablón del pueblo y los vales**
 
-Dirección, 26/8: « en Sunflower, cuando algo se te mete al inventario o consumís algo, te aparece en un costado de la pantalla: +1 piedra, −1 pico ». En el margen izquierdo, un chip por objeto que entra o sale, incluidas las monedas (vender cuenta las dos mitades). Los repetidos se agrupan: talar un árbol son cuatro cargas y sale un solo chip que marca +1 → +2 → +3 → +4, no cuatro apilados. Se apagan a los 2,6 s y no pueden robar un clic.
+El tablón es el sitio donde el pueblo le pide cosas al jugador. Abre al terminar el tutorial y es la razón principal para entrar cada día: los encargos caducan.
 
-Lo interesante no es el chip: es de dónde sale. La vía obvia era poner un aviso en cada sitio que toca el inventario —más de doscientos— y esa vía tiene un final conocido en este proyecto: el que se olvide uno queda mudo para siempre (las cañas invisibles del 25/8, el Estofado del 26/8). Así que el flujo **no se avisa, se deduce**: se le saca una foto a la bolsa y se restan las dos fotos. Lo que sale de esa resta es, por definición, todo lo que entró y salió — y sigue funcionando con cualquier objeto que se agregue mañana sin tocar una línea. `tools/test-flujo-bolsa.js` lo comprueba inventando un recurso que el flujo no conoce.
+**Qué hay colgado en cualquier momento**
 
-De paso se partió en dos la lista de « qué hay en la bolsa », que estaba escrita DENTRO de canonicalStacks: ahora `bolsaCuentas()` es la lista y hay dos vistas, casillas de 99 para la rejilla y cantidades para el flujo. Repetir esa lista es exactamente lo que produjo el bug de las cañas.
+| encargo | cada cuánto | ejemplo medido (granja 9) |
+| --- | --- | --- |
+| Tres pedidos **diarios** | se renuevan a las 00:00 UTC | Piedra ×5 → 75 plata · 2 vales · Papa ×20 → 40 plata · 1 vale |
+| Un pedido **semanal** | cierra el domingo | Pescado ×80 → 400 plata · 6 vales |
+| Un pedido **mensual** | el encargo largo | Pescado ×240 → 1.200 plata · 18 vales |
+| Un **tema de fin de semana** | viernes a domingo | La Gran Cosecha · Fiebre de la Leña · El Día de la Cantera · El Torneo de Pesca · El Festín del Pueblo |
 
-**11.3 El tablón y los vales**
+Cada pedido tiene un remitente del pueblo (Doña Rosa, Tomás el panadero, Ramón el pescador…), paga **plata + vales + XP**, y la XP va **a la skill de lo que entregás** — llevar piedra sube Minería, no Cultivo. Un pedido que no te sirve se puede **descartar** y el vecino cuelga otro.
 
-Un vale son **40 de plata** (`VALE_EN_PLATA`, decidido el 18/8). El tablón los emite con esa vara —`valesDe(valor del pedido)`— y la tienda de canje tiene que devolverlos con la misma.
+Dos incentivos deliberados: **el primer pedido del día paga los vales ×2**, y el pedido semanal es lo que el juego usa como « meta de la semana » en el panel de objetivos (ver §11.1). El semanal y el mensual no llevan el ×2 porque ya pagan de más.
+
+**El vale, y por qué tiene un precio**
+
+Un vale son **40 de plata** (`VALE_EN_PLATA`, decidido el 18/8). El tablón los emite con esa vara —`valesDe(valor del pedido)`— y la tienda de canje tiene que devolverlos con la misma. Con el tablón completo entran unos **6 vales al día**: 240 de plata en premios.
+
+Que las dos puntas usen la misma vara no es elegancia, es lo único que cierra las fugas. El 18/8 no la usaban y había una ruta que multiplicaba plata por **×800**: se emitían vales por escalones del valor del pedido y se gastaban a precio fijo, así que entregando tres papas se compraban semillas de maíz. Persiguiendo casos de uno en uno eso no se arregla; atando emisión y gasto al mismo número, se cierra solo.
+
+**Lo que se puede canjear**
+
+| premio | cuesta | entrega |
+| --- | --- | --- |
+| Fardo de 20 hachas | 1 vale | 40 de plata en hachas |
+| Fardo de 20 picos | 1 vale | 40 de plata en picos |
+| Lata con 13 lombrices | 1 vale | 39 de plata en carnada |
+| Sobre de semillas (tu mejor cultivo) | 2 vales | 80 de plata en semillas |
+
+La regla: **lo que la plata no compra, los vales sí.** Nunca madera ni piedra — eso se trabaja.
 
 **26/8 · tres de los cuatro premios cobraban el doble.** Dirección preguntó por el sobre de semillas (« con 1 vale pude obtener 40 semillas de cereza »). Medido, el resultado fue el contrario del sospechado:
 
@@ -490,7 +546,19 @@ Ahora todos los fardos se arman igual: `valeFardoN(id)` elige cuántas unidades 
 
 **Lo que queda abierto: la FORMA del sobre.** Su valor es correcto en todos los niveles, pero su tamaño oscila de 80 semillas a 1, y su precio de 2 a 18 vales, según cuál sea tu mejor cultivo. A Cultivo 8 el premio es *una* semilla de maíz por 18 vales (tres días de tablón). Y en los empates de nivel —cereza y girasol son las dos de Cultivo 4— cuál te toca lo decide el orden de las claves del objeto: 40 semillas por 2 vales, o 1 por 5. Pendiente de decisión de dirección.
 
-**12. La partida medida**
+**13. La interfaz que informa**
+
+Tres reglas de la casa gobiernan la interfaz: una acción siempre contesta (regla 9), un clic sobre una ventana se queda en la ventana Y llega a lo que el jugador tocó dentro de ella (regla 10), y ninguna vista se repinta si su contenido no cambió (patrón de firma). Lo que sigue son las piezas que las cumplen.
+
+**13.1 El flujo de la bolsa**
+
+Dirección, 26/8: « en Sunflower, cuando algo se te mete al inventario o consumís algo, te aparece en un costado de la pantalla: +1 piedra, −1 pico ». En el margen izquierdo, un chip por objeto que entra o sale, incluidas las monedas (vender cuenta las dos mitades). Los repetidos se agrupan: talar un árbol son cuatro cargas y sale un solo chip que marca +1 → +2 → +3 → +4, no cuatro apilados. Se apagan a los 2,6 s y no pueden robar un clic.
+
+Lo interesante no es el chip: es de dónde sale. La vía obvia era poner un aviso en cada sitio que toca el inventario —más de doscientos— y esa vía tiene un final conocido en este proyecto: el que se olvide uno queda mudo para siempre (las cañas invisibles del 25/8, el Estofado del 26/8). Así que el flujo **no se avisa, se deduce**: se le saca una foto a la bolsa y se restan las dos fotos. Lo que sale de esa resta es, por definición, todo lo que entró y salió — y sigue funcionando con cualquier objeto que se agregue mañana sin tocar una línea. `tools/test-flujo-bolsa.js` lo comprueba inventando un recurso que el flujo no conoce.
+
+De paso se partió en dos la lista de « qué hay en la bolsa », que estaba escrita DENTRO de canonicalStacks: ahora `bolsaCuentas()` es la lista y hay dos vistas, casillas de 99 para la rejilla y cantidades para el flujo. Repetir esa lista es exactamente lo que produjo el bug de las cañas.
+
+**14. La partida medida**
 
 Estas cifras salen del simulador (tools/simular-partida.js), no de una estimación. El perfil es el de un jugador que entra tres veces al día.
 
@@ -516,11 +584,11 @@ La lectura correcta de ese 32,5 % no es « el juego está roto »: es que un idl
 
 *El cultivo NO tenía ese problema, y esa era la asimetría: el jugador elige el cultivo que dura lo que dura su ausencia, pero no podía elegir la duración de un árbol. Las cargas del capítulo 4 son la respuesta (21/8): el árbol guarda hasta 4 relojes de producción, así que una ausencia de hasta 2 horas ya no pierde nada.*
 
-**13. Lo que está abierto**
+**15. Lo que está abierto**
 
 Capítulo honesto. Todo lo que sigue está medido o decidido, pero no implementado.
 
-**13.1 La doma, para el tiempo offline**
+**15.1 La doma, para el tiempo offline**
 
 RESUELTO el 22/8 — la doma v1 está en el juego. Se abre en GRANJA 10 (« no debe estar disponible al principio »): al vencer un monstruo con sprite de granja (rata, larva, orco, lancero, guerrero, trol), si llevás SU PLATO en la bolsa, hay una chance de que te siga a casa — un bicho a la vez, vive junto al establo. Come 1 CARNE por día (la carne por fin tiene gasto diario; panza de hasta 3 días) y con hambre se pone gris y no trabaja. Trabaja SOLO EN TU AUSENCIA: al cargar la partida recoge las cargas de árboles y rocas que maduraron entre tu última visita y ahora, deja siempre una carga esperándote, y SE QUEDA EL 30 % de comisión (el número del simulador: apertura en granja 10 ≈ 60 % del ancla contra el 32,5 % sin bicho). Minerales afuera, bolsa llena no pierde nada, el F5 no duplica (el turno drena el almacén de relojes igual que un talado). Queda para después: elegir a cuál domar, varios bichos, y que el arte de Suren les dé casita.
 
@@ -540,29 +608,29 @@ Los brazos pasaron de 1 de cada 4 a 1 de cada 6 porque a 4 se pagaban en 3,9 dí
 
 Y un arreglo que el diseñador encontró jugando (« la domé y tiene hambre · mi dios, pobrecita »): el bicho nacía con la panza en cero, o sea hambriento desde el primer segundo, con lo cual el premio llegaba pidiendo. Absurdo por partida doble, porque para domarlo le acababas de dar un plato. Ese plato ahora cuenta: entra a la granja con su primer día de trabajo ya pago.
 
-**13.2 El hueco de Ganadería entre los niveles 4 y 8**
+**15.2 El hueco de Ganadería entre los niveles 4 y 8**
 
 RESUELTO el 22/8: el cupo del establo crece un lugar por nivel de Ganadería (capítulo 8), así que ya no hay niveles mudos entre el Conejo (4) y el Toro (8) — ni en ningún otro tramo de la escalera. Queda como idea futura sumar un animal intermedio (gallina) cuando haya arte.
 
-**13.3 Qué premia del nivel 20 al 150**
+**15.3 Qué premia del nivel 20 al 150**
 
 DECIDIDO el 22/8: el crecimiento se CAPEA donde termina el contenido (capítulo 5) en vez de prometer cien niveles vacíos. La escalera 20-150 pasa a ser el plan de liberación futura: cada vez que se agregue contenido (un cultivo nivel 25, un animal nuevo, la doma), el techo del oficio sube solo, y con él suben los veteranos que ya acumularon la XP. Ideas anotadas para esa escalera: maestrías de oficio, la doma como contenido de veterano, y el prestigio de granja (ya existe en el código, dormido tras el nivel 50).
 
-**13.4 Las skins del pase**
+**15.4 Las skins del pase**
 
 Cinco skins del pase de batalla están definidas y no implementadas. No es bloqueante para el MVP: hoy no hay pasarela de pago.
 
-**13.5 El estado vive en el cliente**
+**15.5 El estado vive en el cliente**
 
 Este es el riesgo estructural serio y hay que mirarlo antes del token, no después. Hoy la partida se calcula en el navegador del jugador y se sube al guardado. Mientras la moneda no tenga valor real, el incentivo para manipularla es bajo. En cuanto lo tenga, deja de serlo.
 
 El 21/8 se construyó el primer escalón: EL PORTERO DEL GUARDADO. Una Edge Function de Supabase (supabase/functions/guardar/) pasa a ser la única puerta de escritura a la granja: compara cada guardado con el anterior, anota el delta y las sospechas en una bitácora (farm_saves_log) usando los techos del ancla, y escribe con la fecha del servidor. Arranca en MODO SOMBRA — anota, nunca rechaza — hasta calibrar con jugadores reales. El 22/8 quedó EN PRODUCCIÓN: función deployada, bitácora anotando (vista `bitacora`, con nicks) y la puerta vieja sellada — en `farms` quedó una sola policy (leer lo propio); escribir, únicamente a través del portero, verificado contra pg_policies y con partidas reales guardando. Quedan los dos escalones siguientes: activar el rechazo tras calibrar la bitácora (ese día muere el botón 🧪 y se suma la limpieza de la bitácora a 30 días), y que todo lo que toque valor real se calcule solo en el servidor.
 
-**13.6 La cuenta vive en el navegador**
+**15.6 La cuenta vive en el navegador**
 
 RESUELTO el 22/8 (a falta de activar el proveedor en Supabase — docs/CUENTA-EMAIL.md): el login anónimo muere con el navegador, y la tabla de granjas juntó más de cien « Granjero » huérfanos solo en el testeo. Ahora Configuración → Cuenta permite GUARDAR la granja atándola a un email (enlace mágico, sin contraseñas) y entrar con ese email desde cualquier dispositivo. El que no vincula sigue anónimo, como siempre. Entrar con un email sin cuenta no fabrica granjas nuevas.
 
-**14. Reglas de la casa**
+**16. Reglas de la casa**
 
 Normas de diseño que vienen de decisiones de dirección y que conviene no reabrir sin motivo.
 
@@ -588,7 +656,7 @@ Normas de diseño que vienen de decisiones de dirección y que conviene no reabr
 
     **26/8 · la otra mitad de la misma regla: un clic sobre una ventana también tiene que llegar a lo que el jugador tocó DENTRO de ella.** El arrastre universal de ventanas (`makeHoldDrag`) capturaba el puntero al APRETAR, así que el navegador le entregaba a la ventana el `mouseup` y el `click` sin importar lo que hubiera debajo: el manejador del elemento tocado nunca corría. Los botones se salvaban por `DRAG_EXCLUDE`, una lista escrita a mano de lo que sí se puede tocar — y la Cocina de dos paneles estrenó un clicable que no es un botón. El arreglo no fue agregarlo a la lista, sino capturar el puntero recién cuando el arrastre empieza de verdad, pasado el umbral de 5 px que la función ya medía. Un clic quieto no captura nada. Lo vigila `tools/test-clic-navegador.js`.
 
-**15. Cómo verificar lo que dice este documento**
+**17. Cómo verificar lo que dice este documento**
 
 El proyecto tiene 103 pruebas automáticas y 22 auditores, más 28 medidores, simuladores y generadores: 154 herramientas en `tools/`.
 
