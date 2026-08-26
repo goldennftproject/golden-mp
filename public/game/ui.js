@@ -1169,7 +1169,11 @@ function refreshCookingV2() {
   d += '<div class="acc">';
   if (locked) d += '<button class="green sm" disabled>Cocina nivel ' + r.lvl + '</button>';
   else if (cookFree() <= 0) d += '<button class="green sm" disabled>Ollas ocupadas</button>';
-  else d += '<button class="green sm" ' + (canCook(_ckSel) ? "" : "disabled") + ' data-ckcook="' + _ckSel + '" data-cook="' + _ckSel + '">' + (canCook(_ckSel) ? "Cocinar" : "Faltan ingredientes") + '</button>';
+  /* 26/8 — el botón NOMBRA lo que falta. Decía « Faltan ingredientes »: cierto, inútil, y por la
+     regla 9 casi peor que callarse, porque contesta sin informar. Suren se quedó clavado en el
+     paso del Estofado —la flecha se lo señalaba y el botón no le decía que le faltaba una papa. */
+  else d += '<button class="green sm" ' + (canCook(_ckSel) ? "" : "disabled") + ' data-ckcook="' + _ckSel + '" data-cook="' + _ckSel + '">' +
+    (canCook(_ckSel) ? "Cocinar" : ((typeof cookFaltaTxt === "function" && cookFaltaTxt(_ckSel)) || "Faltan ingredientes")) + '</button>';
   if (own > 0 && r.plata) d += '<button class="sm" data-cksell="' + _ckSel + '">Vender · ' + fmt(vPlata) + '</button>';
   if (own > 0 && r.goldenP && lvl >= 8) d += '<button class="sm" data-cksellg="' + _ckSel + '">Vender · ' + r.goldenP + ' $G</button>';
   d += '</div>';

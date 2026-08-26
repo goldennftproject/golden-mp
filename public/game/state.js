@@ -2172,7 +2172,7 @@ const TUTO_STEPS = [
   { id: "stonec", res: "piedra", dep: "cocina", need: () => BUILD_DEF.cocina.cost.piedra || 15,
     txt: "Juntá # de piedra (para la obra de la Cocina)",                          target: "rock" },
   { id: "build_cocina", n: 1, txt: "Depositá los materiales en la obra de la Cocina (clic encima)", target: "cocina" },
-  { id: "cook",     n: 1, txt: "Cociná tu primer plato: Papa Asada",   target: "cocina", panel: "ov-cocina", ui: "[data-cook='papa_asada']" },
+  { id: "cook",     n: 1, txt: "Cociná tu primer plato: Papa Asada",   target: "cocina", panel: "ov-cocina", ui: "[data-cook='papa_asada']", receta: "papa_asada" },
   { id: "eat",      n: 1, txt: "Comé un plato desde la bolsa (te da un buff)" },
   /* EL ÚLTIMO CAPÍTULO, Y EL MÁS IMPORTANTE PARA EL TIEMPO MUERTO (19/8). Medido: en una sesión de
      12 minutos al empezar hay 42 clics — 36 segundos de acción y el 95% mirando crecer una papa.
@@ -2187,7 +2187,7 @@ const TUTO_STEPS = [
      bichos, unos 20 de estamina de los 100 que tiene. */
   { id: "hunt", res: "carne", need: () => (RECIPE_DEF.estofado && RECIPE_DEF.estofado.res.carne) || 1,
     txt: "Cazá en el Pantano hasta traer # de carne" },
-  { id: "estofado", n: 1, txt: "Cociná un Estofado con lo que cazaste", target: "cocina", panel: "ov-cocina", ui: "[data-cook='estofado']" },
+  { id: "estofado", n: 1, txt: "Cociná un Estofado con lo que cazaste", target: "cocina", panel: "ov-cocina", ui: "[data-cook='estofado']", receta: "estofado" },
   /* ======= EL CAMINO DE CRECIMIENTO, QUE ERA EL ÚNICO QUE NO SE ENSEÑABA (19/8, dirección) =======
      Desde el rediseño, las EXPANSIONES son la única fuente de nodos: no hay otra forma de tener una
      parcela, un árbol o una roca más. Y la cadena tiene tres eslabones que el jugador tenía que
@@ -2264,7 +2264,26 @@ function tutoTiene(st) {
   if (st.dep && G.built && G.built[st.dep]) n = Math.max(n, tutoNeed(st));   // construido = todo depositado
   return n;
 }
-function tutoTxt(st) { return st ? String(st.txt).replace("#", tutoNeed(st)) : ""; }
+/* 26/8 — UN PASO QUE PIDE COCINAR TIENE QUE MIRAR LA DESPENSA.
+   El paso del Estofado decía « Cociná un Estofado con lo que cazaste » y señalaba la receta con
+   una flecha. Pero el Estofado pide carne + PAPA + madera, el paso anterior solo garantiza la
+   carne, y CUATRO PASOS ANTES el tutorial le había dicho al jugador « vendé tus 3 papas ».
+   O sea: el tutorial le vació la despensa y después le señaló algo imposible, sin decir por qué.
+   Ahora el propio objetivo lo nombra. Un objetivo que no se puede cumplir y no explica qué le
+   falta es indistinguible de un juego roto — así lo reportó el diseñador. */
+function tutoTxt(st) {
+  if (!st) return "";
+  let t = String(st.txt).replace("#", tutoNeed(st));
+  /* la lista la arma cookFaltaTxt, la MISMA que escribe el botón: dos redacciones del mismo
+     hecho se separan al primer cambio, y entonces el objetivo y el botón se contradicen. */
+  if (st.receta && typeof cookFaltaTxt === "function") {
+    try {
+      const f = cookFaltaTxt(st.receta);
+      if (f) t += " — " + f.charAt(0).toLowerCase() + f.slice(1);
+    } catch (e) {}
+  }
+  return t;
+}
 
 /* ============ GUARDIA DEL TUTORIAL (12/8): que nadie se rompa la cadena =============
    El jugador puede pasear tranquilo, pero NO fundirse lo que el objetivo ACTIVO
@@ -4323,6 +4342,44 @@ function canCook(id) {
   if (r.res) for (const k in r.res) if ((G.res[k] || 0) < r.res[k]) return false;
   if (r.fish) for (const k in r.fish) if ((G.fish[k] || 0) < r.fish[k]) return false;
   return true;
+}
+/* QUÉ FALTA PARA COCINAR ESTO (26/8 — el reporte del diseñador)
+   ═════════════════════════════════════════════════════════════════════════════════════════════
+   « me deja vender la papa pero no me deja seleccionar el estofado q me indica la flecha amarilla »
+
+   El Estofado pide carne + PAPA + madera. El paso anterior del tutorial lo manda a cazar y le
+   garantiza la carne —derivada de la receta, con cuidado— pero nadie se acordó de los otros dos
+   ingredientes. Y cuatro pasos antes el tutorial le dijo « vendé tus 3 papas ». O sea que el
+   tutorial le vació la despensa y después le señaló con una flecha algo que no puede cocinar.
+
+   El botón decía « Faltan ingredientes » — cierto, inútil y, según la regla 9 de la casa, casi
+   peor que no decir nada: contesta sin informar. Con la lista de lo que falta, la flecha deja de
+   ser una promesa rota y pasa a ser una instrucción: « te falta 1 Papa ».
+
+   Devuelve [] si se puede cocinar. Sirve para el botón, para el texto del tutorial y para que un
+   test pueda preguntar « ¿este paso es alcanzable? » sin repetir la lógica. */
+function cookFalta(id) {
+  const r = RECIPE_DEF[id]; if (!r) return [];
+  const out = [];
+  const mirar = (tabla, bolsa) => {
+    for (const k in (tabla || {})) {
+      const tengo = Math.floor((bolsa[k] || 0)), pide = tabla[k];
+      if (tengo < pide) out.push({ k, tengo, pide, falta: pide - tengo,
+        label: (typeof CROP_DEF !== "undefined" && CROP_DEF[k] && CROP_DEF[k].label) ||
+               (typeof ESPECIE_DEF !== "undefined" && ESPECIE_DEF[k] && ESPECIE_DEF[k].label) ||
+               RES_LABEL[k] || k });
+    }
+  };
+  mirar(r.res, G.res || {});
+  mirar(r.fish, G.fish || {});
+  return out;
+}
+/* « te falta 1 Papa » · « te faltan 1 Papa y 2 de Madera ». En una línea, para un botón. */
+function cookFaltaTxt(id) {
+  const f = cookFalta(id); if (!f.length) return "";
+  const trozos = f.map(x => x.falta + " " + x.label);
+  return "Te falta" + (f.length > 1 || f[0].falta > 1 ? "n " : " ") +
+    (trozos.length > 1 ? trozos.slice(0, -1).join(", ") + " y " + trozos[trozos.length - 1] : trozos[0]);
 }
 const COOK_MS = 180000;   // respaldo si una receta no trae tiempo propio (3 min)
 // 3/8 (diseñador): los platos tardan MINUTOS y se pueden cocinar VARIOS a la vez (ollas en paralelo).
