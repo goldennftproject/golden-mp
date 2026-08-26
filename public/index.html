@@ -335,6 +335,14 @@
   .ck-olla .t{font-size:9px;color:#cbbf9f;line-height:1}
   .ck-olla .b{position:absolute;left:3px;right:3px;bottom:3px;height:3px;background:#161f12;border-radius:2px;overflow:hidden}
   .ck-olla .b i{display:block;height:100%;background:#7fa356}
+  /* 26/8 · la fila: la que está AL FUEGO se ve viva; las que esperan turno, apagadas y con un
+     número de orden. La diferencia tiene que leerse de un vistazo, sin contar barras. */
+  .ck-olla.enfila{border-color:#5a6b45;border-style:dashed;background:rgba(20,28,16,.5)}
+  .ck-olla.enfila img{opacity:.5;filter:grayscale(.55)}
+  .ck-olla.enfila .b i{background:#5a6b45}
+  .ck-olla .turno{position:absolute;top:-5px;right:-5px;min-width:15px;height:15px;border-radius:8px;
+    background:#241505;border:1px solid #7fa356;color:#cbbf9f;font-size:9px;font-weight:800;
+    display:flex;align-items:center;justify-content:center;padding:0 3px}
   .ck-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(50px,1fr));gap:5px;max-height:236px;overflow-y:auto}
   .ck-rec{position:relative;height:50px;border:1px solid #3c4d31;border-radius:8px;background:rgba(20,28,16,.5);display:flex;align-items:center;justify-content:center;cursor:pointer}
   .ck-rec img{width:30px;height:30px;object-fit:contain;image-rendering:pixelated}
@@ -802,7 +810,7 @@
     <h3>🍳 Cocina <span class="ck-nivel" id="ck-nivel"></span></h3>
     <div class="ck-wrap">
       <div class="ck-izq">
-        <div class="ck-tit">🔥 En marcha <b id="ck-ollas"></b></div>
+        <div class="ck-tit">🔥 La fila <b id="ck-ollas"></b></div>
         <div id="ck-cola" class="ck-cola"></div>
         <div class="ck-tit">📖 Recetas</div>
         <div id="ck-grid" class="ck-grid"></div>

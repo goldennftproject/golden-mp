@@ -409,6 +409,12 @@ La Cocina convierte lo recolectado en platos que curan y dan un efecto temporal.
 
 *Los efectos de PRECIO DE VENTA y de ENFRIAMIENTOS no se apilan: vale el mejor plato activo, y comer otro solo renueva la ventana. Antes componían — 30 platos ponían el mercado a ×41,7: una impresora de plata con costo lineal y ganancia exponencial, cerrada el 21/8. Los efectos aditivos (velocidad de cultivo, defensa) conservan sus topes de siempre.*
 
+**26/8 · la Cocina cocina DE A UNO.** Dirección: « no se cocina en simultáneo todos a la vez… se cocina solo el primero, al terminar el 2do, y sigue la secuencia ». Las tres ollas dejan de ser tres fuegos en paralelo y pasan a ser una FILA: la primera está al fuego y las otras esperan turno. El reloj que muestra cada una es siempre « cuánto falta para tener ESTE plato en la mano », no cuánto dura su receta — con la fila las dos cosas dejan de coincidir.
+
+Esto revierte la decisión del 3/8 (« se pueden cocinar varios a la vez »), y baja el rendimiento de la Cocina a un tercio. No afecta a la economía: los platos no son un motor de plata — los de nivel alto valen menos que sus ingredientes, o sea que se cocinan para comerlos (curación y buffs), no para venderlos. Lo que sí cambia es el valor del perk de la **Cocina nivel 2**: « +1 olla » ya no es +1 fuego sino +1 sitio en la fila, que es mucho menos.
+
+Cómo está resuelto, porque de eso depende que aguante: no hay estado « cocinando / esperando » ni turno que haya que hacer avanzar. Cada plato guarda su HORA DE FIN, calculada al encolarlo desde la del último de la fila. La fila entera son tres relojes puestos en hora — y un reloj no se olvida de correr. Por eso volver de tres horas es idéntico a haber estado mirando: `checkCooking` recoge todo lo vencido, en orden, en una sola pasada. Lo fija `tools/test-cocina-fila.js`.
+
 **11. Tutorial**
 
 El tutorial son 29 pasos repartidos en 8 capítulos. Cada paso abre las acciones que su objetivo necesita Y el bucle completo de la plata (plantar, cosechar, comprar semilla, vender): quedarse sin herramientas nunca encierra — el hacha cuesta 2 de plata y la plata siempre se puede producir. Los cuatro pasos de « juntá material » habían perdido esa red y encerraban al que llegaba sin hachas; se cerró el 21/8. El paso de la espada declara su costo completo (5 de madera + 10 de plata).
@@ -565,7 +571,7 @@ Normas de diseño que vienen de decisiones de dirección y que conviene no reabr
 
 **15. Cómo verificar lo que dice este documento**
 
-El proyecto tiene 102 pruebas automáticas y 21 auditores, más 28 medidores, simuladores y generadores: 151 herramientas en `tools/`.
+El proyecto tiene 103 pruebas automáticas y 21 auditores, más 28 medidores, simuladores y generadores: 152 herramientas en `tools/`.
 
 Una de ellas, `tools/test-clic-navegador.js`, corre en un **Chromium de verdad** (puppeteer). Existe porque el 26/8 el diseñador reportó dos veces que no podía elegir una receta en la Cocina y las dos veces se diagnosticó mal: el arnés de pruebas es jsdom, y jsdom no hace hit-testing ni implementa la captura de puntero, así que NO PODÍA ver el fallo ni en principio. Si no hay Chromium instalado el archivo lo dice y se salta; para instalarlo, una vez: `npx puppeteer browsers install chrome`. No comprueban que el código compile: comprueban que el JUEGO cumpla las reglas de arriba. Los más útiles para el diseñador:
 

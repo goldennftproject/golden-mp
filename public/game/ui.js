@@ -1164,9 +1164,23 @@ function refreshCookingV2() {
   const nv = $("ck-nivel");
   if (nv) nv.textContent = "nivel " + lvl + (nxt != null ? " · " + fmt(xp) + "/" + fmt(nxt) + " XP" : " · maestra");
   const oll = $("ck-ollas");
-  if (oll) oll.textContent = cookList().length + "/" + cookSlots() + (edif2("cocina") ? " · Cocina nv2: −" + EDIF2_COCINA + "%" : "");
+  /* « 2/3 · lista en 6 min » — con la fila, el dato útil es cuándo estará TODO, no cuántas ollas
+     hay ocupadas. El total es la hora de fin de la última, que ya viene calculada. */
+  if (oll) {
+    const q = cookList();
+    const finTodo = q.reduce((t, c) => Math.max(t, c.endAt || 0), 0);
+    const falta = Math.max(0, finTodo - nowMs());
+    oll.textContent = q.length + "/" + cookSlots() +
+      (q.length ? " · todo listo en " + fmtSecs(Math.ceil(falta / 1000)) : "") +
+      (edif2("cocina") ? " · Cocina nv2: −" + EDIF2_COCINA + "%" : "");
+  }
 
-  /* --- las ollas: las llenas con su reloj, las libres como hueco punteado --- */
+  /* --- LA FILA: solo la primera olla está al fuego; las otras esperan su turno (26/8) ---
+     El reloj que se muestra es SIEMPRE « cuánto falta para tener este plato en la mano », no
+     « cuánto dura la receta ». Es lo único que el jugador quiere saber, y con la fila las dos
+     cosas dejan de coincidir: un plato de 4 minutos detrás de otro de 4 tarda ocho.
+     Las que esperan van apagadas y con la barra vacía — si mostraran barra en movimiento
+     parecería que las tres avanzan a la vez, que es justo lo que se vino a arreglar. */
   const lista = cookList().slice().sort((a, b) => a.endAt - b.endAt);
   let h = "";
   for (let i = 0; i < cookSlots(); i++) {
@@ -1174,8 +1188,11 @@ function refreshCookingV2() {
     if (!c) { h += '<div class="ck-olla"><span class="t">libre</span></div>'; continue; }
     const r = RECIPE_DEF[c.id] || { emoji: "🍲" };
     const left = Math.max(0, c.endAt - nowMs());
-    const pct = Math.round((1 - left / (c.total || 1)) * 100);
-    h += '<div class="ck-olla llena" title="' + (r.label || "") + '">' + ckIcono(r, "t") +
+    const espera = (typeof cookEsperando === "function") && cookEsperando(c);
+    const pct = espera ? 0 : Math.max(0, Math.min(100, Math.round((1 - left / (c.total || 1)) * 100)));
+    h += '<div class="ck-olla llena' + (espera ? " enfila" : "") + '" title="' + (r.label || "") +
+      (espera ? " · en la fila, empieza cuando termine el anterior" : " · al fuego") + '">' + ckIcono(r, "t") +
+      (espera ? '<span class="turno">' + i + '</span>' : "") +
       '<span class="t">' + fmtCorto(Math.ceil(left / 1000)) + '</span>' +
       '<span class="b"><i style="width:' + pct + '%"></i></span></div>';
   }

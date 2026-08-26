@@ -4387,6 +4387,9 @@ var COOK_SLOTS = 3;       // ollas simultáneas de la Cocina (editable en el pan
 function cookList() { if (!Array.isArray(G.cooking)) G.cooking = G.cooking ? [G.cooking] : []; return G.cooking; }
 function cookSlots() { return COOK_SLOTS + (edif2("cocina") ? EDIF2_COCINA_OLLA : 0); }
 function cookFree() { return Math.max(0, cookSlots() - cookList().length); }
+/* cuándo EMPIEZA a cocinarse esta olla (las de la fila empiezan más tarde que ahora) */
+function cookEmpieza(c) { return (c.endAt || 0) - (c.total || 0); }
+function cookEsperando(c) { return nowMs() < cookEmpieza(c); }
 function cook(id) {
   const r = RECIPE_DEF[id]; if (!r) { console.warn("[cook] receta inexistente:", id); return; }
   if (typeof tutoPermite === "function" && !tutoPermite("cook")) { tutoAviso(); return; }   // embudo estricto (13/8)
@@ -4396,8 +4399,23 @@ function cook(id) {
   if (r.res) for (const k in r.res) G.res[k] -= r.res[k];
   if (r.fish) for (const k in r.fish) G.fish[k] -= r.fish[k];
   const ms = Math.max(1000, Math.round((r.cookS ? r.cookS * 1000 : COOK_MS) * cocinaFactor()));
-  cookList().push({ id, endAt: nowMs() + ms, total: ms });
-  log("Cocinando " + r.label + "… (" + fmtSecs(Math.round(ms / 1000)) + ")"); toast("Cocinando " + r.label);
+  /* 26/8 (diseñador) — LA COCINA COCINA DE A UNO.
+     « no se cocina en simultáneo todos a la vez… se cocina solo el primero, al terminar el 2do,
+       y sigue la secuencia ».
+     Toda la mecánica de la fila cabe en esta línea: el plato nuevo no arranca AHORA, arranca
+     cuando termina el último de la fila. Lo bueno de resolverlo con la hora de fin en vez de con
+     un estado « cocinando / esperando » es que no hay nada que hacer avanzar: checkCooking ya
+     recoge todo lo vencido, así que la fila corre igual con el juego cerrado y al volver de tres
+     horas están los tres platos hechos, en orden. Un reloj no se olvida de correr; una máquina
+     de estados con turnos sí, y hay que despertarla. */
+  const ultima = cookList().reduce((t, c) => Math.max(t, c.endAt || 0), 0);
+  const arranca = Math.max(nowMs(), ultima);
+  cookList().push({ id, endAt: arranca + ms, total: ms });
+  const espera = arranca - nowMs();
+  log(espera > 999
+    ? "En la fila: " + r.label + " — empieza en " + fmtSecs(Math.round(espera / 1000)) + " y tarda " + fmtSecs(Math.round(ms / 1000))
+    : "Cocinando " + r.label + "… (" + fmtSecs(Math.round(ms / 1000)) + ")");
+  toast(espera > 999 ? "En la fila: " + r.label : "Cocinando " + r.label);
   refreshHud(); if (typeof syncSlots === "function") syncSlots(); if (isOpen("ov-inv")) refreshInv();
   if (typeof refreshCooking === "function" && isOpen("ov-cocina")) refreshCooking();
   if (typeof saveFarm === "function") saveFarm();
