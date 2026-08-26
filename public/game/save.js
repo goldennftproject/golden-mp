@@ -482,6 +482,13 @@ function hydrate(d) {
       log((p.tipo === "cabecea" ? "🎣 " : "💧 ") + p.txt, p.tipo === "cabecea" ? "gold" : "bad");
     });
   } catch (e) { console.warn("parte de trampas:", e); }
+
+  /* 26/8 — EL FLUJO ARRANCA DE CERO DESPUÉS DE CARGAR.
+     El flujo de la bolsa cuenta lo que el jugador hace con las manos. Cargar una partida cambia
+     el inventario entero de golpe, y sin este olvido el jugador entraría a una lluvia de veinte
+     chips por cosas que hizo ayer — o peor, por cosas que hizo el bicho domado mientras dormía.
+     Lo que pasó durante la ausencia ya lo cuenta el parte de arriba, que para eso está. */
+  try { if (typeof flujoOlvidar === "function") flujoOlvidar(); } catch (e) {}
 }
 
 /* ============ FASE 2 · MIGRAR (20/8) ================================================

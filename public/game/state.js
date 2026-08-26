@@ -4911,38 +4911,85 @@ function pecesDeLaBolsa() {
   const viejos = (typeof FISH_ORDER !== "undefined") ? FISH_ORDER : [];
   return v3.concat(viejos.filter(f => v3.indexOf(f) < 0));
 }
+/* QUÉ HAY EN LA BOLSA, CON SUS CANTIDADES (26/8)
+   ═══════════════════════════════════════════════════════════════════════════════════════════
+   Esta lista es la ÚNICA respuesta a « ¿qué tiene el jugador encima? ». Antes vivía dentro de
+   canonicalStacks() mezclada con el reparto en casillas de 99, y por eso el flujo de la bolsa
+   —que necesita cantidades, no casillas— habría tenido que repetirla. Repetir esta lista es
+   exactamente lo que produjo el bug de las cañas del 25/8: dos inventarios que se separan.
+   Ahora hay una lista y dos vistas: canonicalStacks() la reparte en casillas para la rejilla,
+   y bolsaFoto() la aplana en cantidades para el flujo. Si mañana entra un objeto nuevo, entra
+   en las dos a la vez o en ninguna. */
+function bolsaCuentas() {
+  const out = [];
+  const add = (kind, key, n) => { if (n > 0) out.push({ kind, key, n }); };
+  ["axe", "rod"].forEach(k => add("tool", k, toolCount(k)));
+  for (const id of ARM_ORDER) if (G.weapons && G.weapons[id] && G.gear.arma !== id) add("arm", id, 1);
+  PICK_ORDER.forEach(id => add("pick", id, pickCount(id)));
+  if (typeof CANA_ORDER !== "undefined") CANA_ORDER.forEach(id => add("cana", id, canaUsos(id)));
+  ITEM_RES_ORDER.forEach(r => add("res", r, Math.floor(G.res[r] || 0)));
+  CROP_ORDER.forEach(s => add("seed", s, Math.floor(G.seeds[s] || 0)));
+  pecesDeLaBolsa().forEach(f => add("fish", f, Math.floor((G.fish && G.fish[f]) || 0)));
+  RECIPE_ORDER.forEach(d => add("dish", d, Math.floor((G.dishes && G.dishes[d]) || 0)));
+  return out;
+}
+/* EL FLUJO DE LA BOLSA (26/8, dirección: « como en Sunflower »)
+   ═══════════════════════════════════════════════════════════════════════════════════════════
+   « al picar una piedra gastás un pico y se te suma uno de piedra… la manera de representar eso
+     es +1 piedra, −1 pico, y sale en el margen izquierdo de la pantalla. Y eso con todo lo que
+     consumís y sumás a tu bolsa. »
+
+   La forma OBVIA de hacer esto es ir poniendo un aviso en cada sitio que toca el inventario.
+   Son más de doscientos, y ese camino tiene un final conocido: el que se olvide uno queda mudo
+   para siempre y nadie se entera —es literalmente el bug de las cañas del 25/8 y el del Estofado
+   de hoy, dos veces la misma forma—. Además cada aviso nuevo habría que escribirlo a mano.
+
+   Así que el flujo no se AVISA: se DEDUCE. Se le saca una foto a la bolsa, y cuando algo cambia
+   se restan las dos fotos. Lo que sale de esa resta es, por definición, todo lo que entró y
+   salió — sin excepciones, sin listas que mantener, y funcionando de entrada para cualquier
+   objeto que se agregue en el futuro sin tocar una línea de esto.
+
+   Las monedas van dentro aunque no vivan en la bolsa (dirección: « sí, eso también »): vender es
+   una transacción y contar solo la mitad se lee como un error. */
+function bolsaFoto() {
+  const m = {};
+  bolsaCuentas().forEach(x => { m[x.kind + ":" + x.key] = x.n; });
+  m["moneda:plata"]  = Math.floor(G.plata  || 0);
+  m["moneda:golden"] = Math.floor(G.golden || 0);
+  return m;
+}
+var _flujoFoto = null;
+/* Devuelve lo que cambió desde la última mirada y deja la foto al día.
+   La PRIMERA llamada no devuelve nada a propósito: al entrar solo se toma la foto, para que lo
+   ganado mientras no estabas no desfile en veinte chips encima de la granja recién cargada. */
+function flujoCambios() {
+  const ahora = bolsaFoto(), antes = _flujoFoto;
+  _flujoFoto = ahora;
+  if (!antes) return [];
+  const claves = {}, out = [];
+  for (const k in antes) claves[k] = 1;
+  for (const k in ahora) claves[k] = 1;
+  for (const k in claves) {
+    const d = (ahora[k] || 0) - (antes[k] || 0);
+    if (!d) continue;
+    const i = k.indexOf(":");
+    out.push({ kind: k.slice(0, i), key: k.slice(i + 1), d });
+  }
+  return out;
+}
+/* « olvidate de lo que viste »: se llama al cargar una partida y al volver de un viaje, para que
+   el salto de estado no se cuente como si el jugador lo hubiera hecho con las manos. */
+function flujoOlvidar() { _flujoFoto = null; }
+
+/* UNA CASILLA POR CADA 99 — la vista que pinta la rejilla de la bolsa.
+   Las armas y las cañas son la excepción: ocupan UNA casilla cada una aunque la caña tenga
+   veinte usos dentro, porque lo que se guarda es el objeto, no sus usos. */
 function canonicalStacks() {
   const list = [];
-  ["axe", "rod"].forEach(k => { let n = toolCount(k); while (n > 0) { list.push({ kind: "tool", key: k }); n -= 99; } });   // apilables ×99
-  // fixs.docx #9 (11/8): el arma EQUIPADA ya no ocupa lugar en la bolsa — vive en el panel de Equipo
-  for (const id of ARM_ORDER) if (G.weapons && G.weapons[id] && G.gear.arma !== id) list.push({ kind: "arm", key: id });
-  /* 18/8 (dirección): "la bolsa se llena de recursos farmeables y termina todo mezclado con las
-     herramientas". Los PLANOS, los COFRES sin colocar, los ADORNOS y los regalos del baúl ya no
-     están acá: viven en el COBERTIZO (cobertizoItems), que es el sitio de lo que se COLOCA.
-     La bolsa queda para lo que se GASTA: recursos, semillas, pescado, comida y herramientas. */
-  PICK_ORDER.forEach(id => { let n = pickCount(id); while (n > 0) { list.push({ kind: "pick", key: id }); n -= 99; } });   // picos apilables ×99
-  /* 25/8 (diseñador: « la caña nueva se compra pero no aparece en el bag ») — Y NO ERAN SOLO LAS
-     CAÑAS. Esta función es la que decide qué existe dentro de la bolsa, y estaba escrita como una
-     lista de catálogos A MANO. Pesca v3 metió DOS clases de objeto nuevas y ninguna se agregó acá:
-
-       · las cañas (G.canas)  — se craftean, se gastan, y eran invisibles
-       · las NUEVE especies   — la bolsa recorría FISH_ORDER (comun · raro · epico · legendario),
-                                que es el catálogo VIEJO. Todo lo pescado desde la tanda 1 no se
-                                veía, no ocupaba lugar y no se podía vender ni entregar.
-
-     Lo segundo es más grave que lo reportado y nadie lo dijo, porque « no aparece » se confunde
-     con « todavía no pesqué nada ». Un objeto que existe en el estado y no existe en la bolsa es
-     un objeto que el jugador tiene y no puede usar.
-     La forma de que no vuelva a pasar no es agregar dos líneas: es que estas listas se DERIVEN
-     del catálogo en vez de repetirlo. Por eso se recorre `ESPECIE_ORDER.concat(FISH_ORDER)` y
-     `CANA_ORDER`, y por eso hay un auditor nuevo que compara las dos cosas. */
-  if (typeof CANA_ORDER !== "undefined")
-    CANA_ORDER.forEach(id => { if (canaUsos(id) > 0) list.push({ kind: "cana", key: id }); });   // una casilla por caña, con sus usos
-  ITEM_RES_ORDER.forEach(r => { let n = Math.floor(G.res[r] || 0); while (n > 0) { list.push({ kind: "res", key: r }); n -= 99; } });
-  CROP_ORDER.forEach(s => { let n = Math.floor(G.seeds[s] || 0); while (n > 0) { list.push({ kind: "seed", key: s }); n -= 99; } });
-  pecesDeLaBolsa().forEach(f => { let n = Math.floor((G.fish && G.fish[f]) || 0); while (n > 0) { list.push({ kind: "fish", key: f }); n -= 99; } });
-  RECIPE_ORDER.forEach(d => { let n = Math.floor((G.dishes && G.dishes[d]) || 0); while (n > 0) { list.push({ kind: "dish", key: d }); n -= 99; } });
-  // (los cofres sin colocar también se mudaron al Cobertizo)
+  bolsaCuentas().forEach(x => {
+    if (x.kind === "arm" || x.kind === "cana") { list.push({ kind: x.kind, key: x.key }); return; }
+    let n = x.n; while (n > 0) { list.push({ kind: x.kind, key: x.key }); n -= 99; }
+  });
   return list;
 }
 /* ============ EL COBERTIZO (18/8, dirección) =======================================

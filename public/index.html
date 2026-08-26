@@ -491,6 +491,28 @@
     text-shadow:-2px 0 #241505,2px 0 #241505,0 -2px #241505,0 2px #241505,-1px -1px #241505,1px 1px #241505;
     transform:translate(-50%,-100%);animation:tfui .42s ease-in-out infinite alternate}
   @keyframes tfui{from{margin-top:-12px}to{margin-top:-3px}}
+  /* ---- EL FLUJO DE LA BOLSA (26/8) ----
+     Columna en el margen izquierdo, a la altura de los ojos. pointer-events:none en TODO: es
+     información de paso, y un cartel que se puede clicar por accidente roba clics al mundo
+     (la lección del 24/8 con la Cocina). Lo nuevo entra abajo y la columna crece hacia arriba,
+     que es como se lee un registro: lo último, más cerca. */
+  #flujo{position:fixed;left:10px;top:50%;transform:translateY(-50%);z-index:60;pointer-events:none;
+    display:flex;flex-direction:column-reverse;align-items:flex-start;gap:4px;max-height:52vh;overflow:hidden}
+  .flch{display:flex;align-items:center;gap:6px;padding:3px 9px 3px 4px;border-radius:14px;
+    background:rgba(20,14,5,.82);border:1px solid rgba(255,215,94,.28);
+    font-size:13px;font-weight:800;color:#f2ead5;white-space:nowrap;
+    text-shadow:0 1px 2px #000;animation:flin .22s ease-out both}
+  .flch img{width:20px;height:20px;object-fit:contain;image-rendering:pixelated;flex:0 0 auto}
+  .flch .fe{font-size:16px;width:20px;text-align:center;flex:0 0 auto}
+  .flch b{font-variant-numeric:tabular-nums}
+  .flch.mas b{color:#9ede54}
+  .flch.menos b{color:#ff9d7a}
+  .flch.menos{border-color:rgba(255,157,122,.25)}
+  .flch .fn{font-weight:600;color:#cdbfa1;font-size:12px}
+  .flch.va{animation:flout .5s ease-in forwards}      /* se va: no se borra de golpe */
+  @keyframes flin{from{opacity:0;transform:translateX(-14px)}to{opacity:1;transform:none}}
+  @keyframes flout{to{opacity:0;transform:translateX(-10px)}}
+  @media (max-width:760px){ #flujo{left:6px;max-height:38vh} .flch{font-size:12px;padding:2px 7px 2px 3px} }
   /* pestaña activa fundida con la placa: baja 14px (el grosor del marco) y su interior conecta con el de la tabla */
   .shoptabs,.lbtabs{align-items:flex-end}
   /* 31/7 v2: esquina CERRADA, sin cruces de madera.
@@ -743,6 +765,9 @@
   </div>
 
   <div id="toast"></div>
+  <!-- 26/8 · EL FLUJO DE LA BOLSA (dirección: « como en Sunflower »). Lo llena flujoPintar()
+       desde la RESTA de dos fotos de la bolsa, no desde avisos puestos a mano. -->
+  <div id="flujo" aria-live="polite"></div>
   <div id="prompt"></div>
   <!-- fundido a negro al cambiar de escena (granja <-> Zona Negra <-> plaza) -->
   <div id="fadeblk"></div>

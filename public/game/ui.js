@@ -157,6 +157,74 @@ function setNum(id, valor) {
     if (i >= pasos) { clearInterval(el._tm); el._tm = null; el.textContent = fmt(valor); }
   }, 26);
 }
+/* ═══ EL FLUJO DE LA BOLSA (26/8) ═══════════════════════════════════════════════════════════
+   state.js hace la resta (flujoCambios); esto la pinta. Tres decisiones que valen la pena:
+
+   1 · SE AGRUPA. Talar un árbol son cuatro cargas seguidas: cuatro chips de « +1 Madera » uno
+       encima de otro es peor que uno solo que va marcando +1 → +2 → +3 → +4. Si vuelve a
+       cambiar lo mismo antes de que el chip se vaya, se le suma y se le reinicia el reloj.
+   2 · SE APAGA SOLO. Tope de chips a la vista y salida con desvanecido: un cartel que se borra
+       de golpe se lee como un parpadeo, y el ojo lo persigue.
+   3 · NO SE PUEDE CLICAR (pointer-events:none en el CSS). Es información de paso; si robara un
+       clic estaríamos repitiendo el fallo de la Cocina del 24/8 por el otro lado.               */
+var FLUJO_MS = 2600;     // cuánto vive un chip sin novedades
+var FLUJO_MAX = 7;       // cuántos caben antes de empujar al más viejo
+var _flujoChips = {};    // "kind:key" → { el, d, t } mientras está vivo
+
+function flujoNombre(kind, key) {
+  if (kind === "moneda") return key === "plata" ? "Plata" : "$G";
+  const v = itemView({ kind, key });
+  const l = (v && v.label) || key;
+  return String(l).split("·")[0].trim();     // la etiqueta larga trae detalles que acá sobran
+}
+function flujoIcono(kind, key) {
+  if (kind === "moneda") return typeof coinIc === "function" ? coinIc(key) : "";
+  const v = itemView({ kind, key });
+  if (v && v.sprite) return '<img src="' + GF.spr(v.sprite) + '" draggable="false" onerror="this.outerHTML=\'<span class=&quot;fe&quot;>' + ((v && v.emoji) || "📦") + '</span>\'">';
+  return '<span class="fe">' + ((v && v.emoji) || "📦") + '</span>';
+}
+function flujoChip(kind, key, d) {
+  const caja = $("flujo"); if (!caja || !d) return;
+  const id = kind + ":" + key, vivo = _flujoChips[id];
+  /* mismo objeto y mismo SIGNO: se acumula en el chip que ya está. Signos distintos son dos
+     hechos distintos (vendiste y compraste), y mezclarlos borraría los dos. */
+  if (vivo && (vivo.d > 0) === (d > 0)) {
+    vivo.d += d;
+    clearTimeout(vivo.t);
+    vivo.el.querySelector("b").textContent = (vivo.d > 0 ? "+" : "") + fmt(vivo.d);
+    vivo.t = setTimeout(() => flujoQuitar(id), FLUJO_MS);
+    return;
+  }
+  if (vivo) flujoQuitar(id, true);
+  const el = document.createElement("div");
+  el.className = "flch " + (d > 0 ? "mas" : "menos");
+  el.innerHTML = flujoIcono(kind, key) + '<b>' + (d > 0 ? "+" : "") + fmt(d) + '</b>' +
+    '<span class="fn">' + flujoNombre(kind, key) + '</span>';
+  caja.appendChild(el);
+  _flujoChips[id] = { el, d, t: setTimeout(() => flujoQuitar(id), FLUJO_MS) };
+  while (caja.children.length > FLUJO_MAX) {
+    const viejo = caja.firstChild;
+    for (const k in _flujoChips) if (_flujoChips[k].el === viejo) flujoQuitar(k, true);
+    if (caja.firstChild === viejo) caja.removeChild(viejo);   // por si acaso: nunca se acumula
+  }
+}
+function flujoQuitar(id, yaMismo) {
+  const c = _flujoChips[id]; if (!c) return;
+  delete _flujoChips[id];
+  clearTimeout(c.t);
+  if (yaMismo) { if (c.el.parentNode) c.el.parentNode.removeChild(c.el); return; }
+  c.el.classList.add("va");
+  setTimeout(() => { if (c.el.parentNode) c.el.parentNode.removeChild(c.el); }, 500);
+}
+/* el latido: mira si la bolsa cambió y pinta la diferencia. Barato — una foto es un objeto
+   plano de unas pocas decenas de números. */
+function flujoTick() {
+  if (typeof flujoCambios !== "function") return;
+  let cambios;
+  try { cambios = flujoCambios(); } catch (e) { return; }
+  /* lo que ENTRA primero y lo que sale después: se lee mejor « +1 Piedra · −1 Pico » que al revés */
+  cambios.sort((a, b) => b.d - a.d).forEach(c => flujoChip(c.kind, c.key, c.d));
+}
 function refreshHud() {
   try { syncMisionesBadge(); } catch (e) {}   // contador de misiones del menú (10/8)
   try { syncLogrosBadge(); } catch (e) {}     // 22/8: cuántos logros hay para cobrar
@@ -2894,6 +2962,11 @@ function initUI() {
   refreshHud();
   tutoSync(true);   // cartel + flecha del tutorial guiado
   setInterval(() => { if (typeof buffTick === "function") buffTick(); if (typeof stamTick === "function") stamTick(); if (typeof incTick === "function") incTick(); if (typeof granjaRegen === "function") granjaRegen(); tutoSync(); refreshHud(); }, 1000);
+  /* 26/8 — el flujo de la bolsa late aparte y MÁS RÁPIDO que el HUD. Un segundo de retraso entre
+     el golpe y el « +1 Madera » ya no se siente como respuesta al clic, se siente como otra cosa
+     que pasó después. A 180 ms es indistinguible de instantáneo, y comparar dos objetos planos
+     cinco veces por segundo no le cuesta nada a nadie. */
+  setInterval(() => { try { flujoTick(); } catch (e) {} }, 180);
 }
 initUI();
 

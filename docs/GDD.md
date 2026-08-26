@@ -457,6 +457,14 @@ Lo segundo es la lección más barata del proyecto: **el pedido semanal ya exist
 
 Las tres capas viven en la misma pestaña, en este orden: LA SEMANA (lo de hoy), EL CAMINO (lo de siempre) y LA GUÍA (los 29 pasos del tutorial, que bajan al final a propósito: sirven la primera hora y después estorban arriba de lo que el jugador viene a mirar). El botón del menú lleva el marcador de la semana, porque un panel que no se anuncia es un panel que nadie abre. Lo fija `tools/test-el-camino.js`.
 
+**11.2 El flujo de la bolsa**
+
+Dirección, 26/8: « en Sunflower, cuando algo se te mete al inventario o consumís algo, te aparece en un costado de la pantalla: +1 piedra, −1 pico ». En el margen izquierdo, un chip por objeto que entra o sale, incluidas las monedas (vender cuenta las dos mitades). Los repetidos se agrupan: talar un árbol son cuatro cargas y sale un solo chip que marca +1 → +2 → +3 → +4, no cuatro apilados. Se apagan a los 2,6 s y no pueden robar un clic.
+
+Lo interesante no es el chip: es de dónde sale. La vía obvia era poner un aviso en cada sitio que toca el inventario —más de doscientos— y esa vía tiene un final conocido en este proyecto: el que se olvide uno queda mudo para siempre (las cañas invisibles del 25/8, el Estofado del 26/8). Así que el flujo **no se avisa, se deduce**: se le saca una foto a la bolsa y se restan las dos fotos. Lo que sale de esa resta es, por definición, todo lo que entró y salió — y sigue funcionando con cualquier objeto que se agregue mañana sin tocar una línea. `tools/test-flujo-bolsa.js` lo comprueba inventando un recurso que el flujo no conoce.
+
+De paso se partió en dos la lista de « qué hay en la bolsa », que estaba escrita DENTRO de canonicalStacks: ahora `bolsaCuentas()` es la lista y hay dos vistas, casillas de 99 para la rejilla y cantidades para el flujo. Repetir esa lista es exactamente lo que produjo el bug de las cañas.
+
 **12. La partida medida**
 
 Estas cifras salen del simulador (tools/simular-partida.js), no de una estimación. El perfil es el de un jugador que entra tres veces al día.
@@ -555,7 +563,7 @@ Normas de diseño que vienen de decisiones de dirección y que conviene no reabr
 
 **15. Cómo verificar lo que dice este documento**
 
-El proyecto tiene 100 pruebas automáticas y 21 auditores, más 28 medidores, simuladores y generadores: 149 herramientas en `tools/`. No comprueban que el código compile: comprueban que el JUEGO cumpla las reglas de arriba. Los más útiles para el diseñador:
+El proyecto tiene 101 pruebas automáticas y 21 auditores, más 28 medidores, simuladores y generadores: 150 herramientas en `tools/`. No comprueban que el código compile: comprueban que el JUEGO cumpla las reglas de arriba. Los más útiles para el diseñador:
 
 | **Herramienta**                 | **Qué contesta**                                            |
 | ------------------------------- | ----------------------------------------------------------- |
