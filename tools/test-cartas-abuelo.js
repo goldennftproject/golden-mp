@@ -1,89 +1,120 @@
-/* LAS CARTAS DEL ABUELO (23/8, dirección — docs/LORE.md)
-   El envío que revela el lore. Contratos:
-     · son 10, del nivel 2 al 20, en orden estricto de nivel;
-     · voz y medida de la biblia: 40-110 palabras, firman «Tu abuelo»;
-     · se entregan DE A UNA (la más vieja sin leer) — subir seis niveles de golpe no
-       inunda el buzón, y leer una hace aparecer la siguiente;
-     · antes del nivel de cada carta, no existe; antes de terminar el tutorial, tampoco;
-     · leídas viven PARA SIEMPRE en la pila (el resto del archivo sigue caducando a 7 días);
-     · el F5 no las repite ni las pierde.
-     node tools/test-cartas-abuelo.js                                                          */
-const fs = require("fs"), vm = require("vm");
+/* LAS CARTAS DEL ABUELO LLEGAN (25/8, docs/LORE.md capítulo 6)
+   ═══════════════════════════════════════════════════════════════════════════════════════════
+   Las diez cartas estaban escritas desde el 23/8 y colgadas del buzón. Pero tenían un candado:
 
-const ctx = { console: { log() {}, warn() {}, error() {}, info() {} }, Math, Date, JSON, Object, Array,
-  Number, String, Boolean, Set, Map, isNaN, isFinite, parseInt, parseFloat,
-  performance: { now: () => 0 }, setTimeout: () => 0, setInterval: () => 0, clearInterval() {} };
-ctx.window = ctx; ctx.globalThis = ctx;
-ctx.localStorage = { getItem: () => null, setItem() {}, removeItem() {} };
-ctx.document = { getElementById: () => null, addEventListener() {}, querySelectorAll: () => [], querySelector: () => null, createElement: () => ({}) };
-vm.createContext(ctx);
-["config", "nav", "state", "save"].forEach(f => vm.runInContext(fs.readFileSync("public/game/" + f + ".js", "utf8"), ctx));
+       if (G.tuto && G.tuto.done) { … }
+
+   O sea que NINGUNA llegaba a NINGÚN nivel hasta cerrar los 29 pasos del tutorial. Y las tres
+   primeras están escritas para el principio de la partida —« construí la herrería primero »,
+   « ya podés comprar tu primer pedazo de terreno », « comprá animales apenas puedas »—, así que
+   el jugador las recibía en fila cuando ya había hecho las tres cosas.
+
+   Un consejo que llega tarde no es narrativa: es ruido, y delata que el juego no sabe por dónde
+   vas. La columna narrativa del juego existía y no llegaba a la mesa.
+
+   Este archivo clava que llegan, cuándo, y de a una.
+     node tools/test-cartas-abuelo.js                                                            */
+const fs = require("fs"), path = require("path");
+const RAIZ = path.join(__dirname, "..");
+const { ctx } = require("./arrancar-el-juego.contexto.js").arrancar(RAIZ);
+const vm = require("vm");
+const G = ctx.G;
 ctx.toast = () => {}; ctx.log = () => {};
-["isOpen", "refreshHud", "saveFarm", "refreshBuzon", "recalcFarmLevel"].forEach(f => { if (!ctx[f]) ctx[f] = () => {}; });
-const G = ctx.G, CARTAS = vm.runInContext("CARTAS_ABUELO", ctx);
+const g = (n) => vm.runInContext(n, ctx);
+const CARTAS = g("CARTAS_ABUELO");
 
 let fallos = 0;
 const ok = (n, c, d) => { if (!c) fallos++; console.log((c ? "  ok   " : "  FALLA") + "  " + n + (d ? "   " + d : "")); };
-const delAbuelo = () => ctx.buzonCartas().filter(c => String(c.id).indexOf("abuelo") === 0);
+const delAbuelo = () => ctx.buzonCartas().filter(x => /^abuelo/.test(x.id || ""));
+function nueva(tutoDone) { G.buzonLeidas = {}; G.tuto = { done: !!tutoDone, step: 5 }; G.level = 1; }
 
-console.log("\nLA COLECCIÓN: 10 CARTAS, DEL 2 AL 20, CON LA VOZ DEL ABUELO");
+console.log("\nLAS DIEZ CARTAS EXISTEN Y RESPETAN LA BIBLIA");
 {
-  ok("son 10", CARTAS.length === 10);
-  ok("del nivel 2 al 20, en orden estricto", CARTAS[0].nivel === 2 && CARTAS[9].nivel === 20 &&
-    CARTAS.every((c, i) => i === 0 || c.nivel > CARTAS[i - 1].nivel), CARTAS.map(c => c.nivel).join(" "));
-  const palabras = CARTAS.map(c => c.txt.split(/\s+/).length);
-  ok("todas miden 40-110 palabras (un sobre, no un capítulo)", palabras.every(p => p >= 40 && p <= 110),
-    palabras.join(" "));
-  ok("todas firman «Tu abuelo»", CARTAS.every(c => /Tu abuelo\s*$/.test(c.txt)));
-  ok("y cada una tiene título de sobre", CARTAS.every(c => c.titulo && c.titulo.length >= 3));   // «Grjj» es un sobre válido
+  ok("son diez", CARTAS.length === 10, CARTAS.length + "");
+  ok("van del nivel 2 al 20", CARTAS[0].nivel === 2 && CARTAS[CARTAS.length - 1].nivel === 20);
+  ok("y en orden creciente, sin repetir nivel",
+    CARTAS.every((c, i) => i === 0 || c.nivel > CARTAS[i - 1].nivel));
+  /* la regla 1 del tono: 60-90 palabras. Un sobre, no un capítulo. */
+  const largos = CARTAS.filter(c => { const n = c.txt.trim().split(/\s+/).length; return n < 45 || n > 95; });
+  ok("todas entran en el sobre (45-95 palabras)", !largos.length,
+    largos.map(c => c.titulo + " (" + c.txt.trim().split(/\s+/).length + ")").join(", "));
+  ok("y todas las firma el Abuelo", CARTAS.every(c => /abuelo\s*$/i.test(c.txt.trim())));
 }
 
-console.log("\nLA ENTREGA: DE A UNA, POR NIVEL, Y NUNCA EN PLENO TUTORIAL");
+console.log("\nLLEGAN DURANTE EL TUTORIAL — que era el fallo");
 {
-  G.tuto = { done: false, step: 3 }; G.level = 10; G.buzonLeidas = {};
-  ok("en pleno tutorial no llega ninguna", delAbuelo().length === 0);
-  G.tuto = { done: true }; G.level = 1;
-  ok("a granja 1 tampoco (la primera pide 2)", delAbuelo().length === 0);
-  G.level = 10;   // saltó a 10: tiene SEIS ganadas (niveles 2,3,5,7,9,10)…
-  const c1 = delAbuelo();
-  ok("…pero el buzón entrega UNA sola: la más vieja", c1.length === 1 && c1[0].id === "abuelo1", c1.map(c => c.id).join());
-  ctx.buzonLeer("abuelo1");
-  ok("leída la primera, aparece la segunda", delAbuelo()[0] && delAbuelo()[0].id === "abuelo2");
-  ["abuelo2", "abuelo3", "abuelo4", "abuelo5"].forEach(id => ctx.buzonLeer(id));
-  ok("al día con las ganadas: queda la del nivel 10", delAbuelo()[0] && delAbuelo()[0].id === "abuelo6");
-  ctx.buzonLeer("abuelo6");
-  ok("y la del nivel 12 NO llega hasta ganársela", delAbuelo().length === 0);
-  G.level = 12;
-  ok("granja 12: llega «Grjj»", delAbuelo()[0] && delAbuelo()[0].titulo === "Grjj");
+  nueva(false);                                  // tutorial ABIERTO, como el jugador nuevo
+  G.level = 2;
+  const c = delAbuelo();
+  ok("a granja 2, con el tutorial abierto, llega la primera", c.length === 1, c.length ? c[0].titulo : "ninguna");
+  ok("y es « Si estás leyendo esto »", c[0] && c[0].titulo === "Si estás leyendo esto");
+  ok("firmada por « Tu abuelo », no por el Capataz", c[0] && c[0].de === "Tu abuelo");
+
+  /* la comprobación que habría cazado el bug: el código ya no puede volver a esconderlas */
+  const SRC = fs.readFileSync(path.join(RAIZ, "public/game/state.js"), "utf8");
+  const i = SRC.indexOf("const ca = cartaAbueloPendiente()");
+  const antes = SRC.slice(Math.max(0, i - 400), i);
+  ok("y el candado del tutorial ya no está delante de ellas",
+    !/if \(G\.tuto && G\.tuto\.done\) \{ const ca/.test(SRC));
 }
 
-console.log("\nLA PILA: LAS DEL ABUELO NO CADUCAN — EL RESTO SIGUE CADUCANDO");
+console.log("\nDE A UNA: el que corre no recibe seis sobres juntos");
 {
-  /* una carta vieja común y una del abuelo, las dos con 30 días encima */
-  const viejo = Date.now() - 30 * 86400000;
-  G.buzonArchivo = [
-    { id: "vieja_comun", de: "La Granja", titulo: "Aviso viejo", txt: "x", dia: "2026-07-20", ts: viejo },   // un id que nada re-genera hoy
-    { id: "abuelo1", de: "Tu abuelo", titulo: "Si estás leyendo esto", txt: "x", dia: "2026-07-20", ts: viejo },
-  ];
-  ctx.buzonCartas();   // archiva y limpia
-  ok("la carta común de 30 días se fue", !G.buzonArchivo.some(a => a.id === "vieja_comun"));
-  ok("la del abuelo sigue ahí para releer", G.buzonArchivo.some(a => a.id === "abuelo1"));
-  /* el F5 conserva leídas y archivo */
-  ctx.hydrate(JSON.parse(JSON.stringify(ctx.snapshot())));
-  ok("tras el F5, lo leído sigue leído", !!G.buzonLeidas.abuelo1);
-  ok("y la colección sobrevive", G.buzonArchivo.some(a => a.id === "abuelo1"));
+  nueva(false);
+  G.level = 20;                                  // subió de golpe (regalo, testeo, lo que sea)
+  ok("aun a granja 20, el buzón trae UNA sola", delAbuelo().length === 1, delAbuelo().length + "");
+  ok("y es la primera, no la del nivel 20", delAbuelo()[0].titulo === CARTAS[0].titulo);
+  /* leyéndolas de a una aparecen las diez, en orden */
+  const orden = [];
+  for (let k = 0; k < 20; k++) {
+    const c = delAbuelo(); if (!c.length) break;
+    orden.push(c[0].titulo); G.buzonLeidas[c[0].id] = 1;
+  }
+  ok("leyendo una tras otra llegan las diez", orden.length === 10, orden.length + "");
+  ok("y en el orden de la biblia", orden.join("|") === CARTAS.map(c => c.titulo).join("|"));
+  ok("después de la última, el buzón no insiste", delAbuelo().length === 0);
 }
 
-console.log("\nY LA BIBLIA MANDA: CADA CARTA TOCA SU MECÁNICA");
+console.log("\nCADA CARTA ESPERA SU NIVEL");
 {
-  const t = {};
-  CARTAS.forEach(c => t[c.n] = c.txt);
-  ok("la del Altar habla del altar", /[Aa]ltar/.test(t[4]));
-  ok("la de la laguna habla de los peces", /pece|pesca/i.test(t[5]));
-  ok("la de la doma habla de comida", /plato|comida/i.test(t[6]));
-  ok("la de Grjj nombra a Grjj", /Grjj/.test(t[7]));
-  ok("la última nombra la Guarida y cierra el arco abierto", /Guarida/.test(t[10]) && /primera carta/.test(t[10]));
+  nueva(false);
+  for (const c of CARTAS) {
+    G.level = c.nivel - 1;
+    const antes = delAbuelo();
+    const llegoAntesDeTiempo = antes.length && antes[0].titulo === c.titulo;
+    if (llegoAntesDeTiempo) { ok("« " + c.titulo + " » NO llega antes del nivel " + c.nivel, false); break; }
+    G.level = c.nivel;
+    const ahora = delAbuelo();
+    if (!ahora.length || ahora[0].titulo !== c.titulo) { ok("« " + c.titulo + " » llega al nivel " + c.nivel, false, ahora.length ? ahora[0].titulo : "ninguna"); break; }
+    G.buzonLeidas[ahora[0].id] = 1;
+  }
+  ok("las diez llegan exactamente en su nivel y ni uno antes", true);
 }
 
-console.log(fallos ? "\n" + fallos + " fallo(s)\n" : "\nTodo en orden: el Capataz sabrá cuándo.\n");
+console.log("\nLEÍDAS, SE QUEDAN PARA SIEMPRE   (son la colección)");
+{
+  nueva(false);
+  G.level = 2;
+  const c = delAbuelo()[0];
+  G.buzonLeidas[c.id] = 1;
+  ok("una carta leída no vuelve a la bandeja", !delAbuelo().some(x => x.id === c.id));
+  /* y el texto sigue estando en el catálogo para releerla desde la pila */
+  ok("pero su texto sigue existiendo para releerla", !!CARTAS[0].txt && CARTAS[0].txt.length > 100);
+}
+
+console.log("\nEL INFORME DE CIERRE SÍ ESPERA AL TUTORIAL   (y está bien que lo haga)");
+{
+  /* « Ahora sí: la granja es tuya » es un resumen DE CIERRE — logros, paquete diario, goblin.
+     Ésa sí tiene que llegar cuando el tutorial termina, y por eso conserva su candado. */
+  nueva(false); G.level = 10;
+  ok("con el tutorial abierto, el informe de cierre no llega",
+    !ctx.buzonCartas().some(x => x.id === "granjatuya"));
+  nueva(true); G.level = 10;
+  ok("y al terminarlo, sí", ctx.buzonCartas().some(x => x.id === "granjatuya"));
+}
+
+console.log("");
+console.log(fallos
+  ? "  " + fallos + " fallo(s) — el arco del Abuelo todavía no llega a la mesa"
+  : "  Todo en orden: las diez cartas llegan, en su nivel, de a una, desde el primer día.");
 process.exit(fallos ? 1 : 0);

@@ -6294,9 +6294,31 @@ function buzonCartas() {
     leer: true, panel: "ov-pedidos", btn: "Ver el tablón" }); } catch (e) {}
   // LA GRANJA ES TUYA (22/8, auditoría integral): el tutorial enseña el núcleo pero terminaba
   // sin presentar lo que espera afuera. Una sola carta, una sola vez, con las tres novedades.
-  // LAS CARTAS DEL ABUELO (23/8, lore): de a una, por nivel de granja, y solo tras el tutorial
-  try { if (G.tuto && G.tuto.done) { const ca = cartaAbueloPendiente(); if (ca) cartas.push({
-    id: "abuelo" + ca.n, de: "Tu abuelo", titulo: ca.titulo, txt: ca.txt, leer: true }); } } catch (e) {}
+  /* LAS CARTAS DEL ABUELO (23/8, lore · corregido el 25/8): de a una y por nivel de granja.
+     ═══════════════════════════════════════════════════════════════════════════════════════
+     ACÁ DECÍA `if (G.tuto && G.tuto.done)`, Y ESO ROMPÍA EL ARCO ENTERO.
+     La intención era buena —no abrumar al recién llegado con dos canales de texto a la vez—
+     pero el efecto era que NINGUNA carta llegaba a NINGÚN nivel hasta cerrar los 29 pasos del
+     tutorial. Y las cartas están escritas para el principio:
+
+         #1 · nivel 2  · « construí la herrería primero »
+         #2 · nivel 3  · « ya podés comprar tu primer pedazo de terreno »
+         #3 · nivel 5  · « comprá animales apenas puedas »
+
+     O sea que el jugador recibía, una detrás de otra, consejos para hacer cosas que ya había
+     hecho hacía días. Un consejo que llega tarde no es narrativa: es ruido, y encima delata
+     que el juego no sabe por dónde vas.
+
+     La preocupación original se resuelve sola con dos reglas que YA existen y no hacía falta
+     agregar: llegan DE A UNA (leés una y recién ahí aparece la siguiente) y cada una espera su
+     nivel. Con eso, el que corre no recibe seis sobres juntos y el que va despacio recibe uno
+     cada tanto. El tutorial no necesita protegerse de una carta de 69 palabras cada varios
+     niveles — y menos cuando esa carta dice justo lo que el tutorial está enseñando.
+
+     Se queda con el candado del tutorial la carta « Ahora sí: la granja es tuya », que es de
+     abajo y sí es un informe DE CIERRE: esa tiene que llegar cuando el tutorial termina. */
+  try { const ca = cartaAbueloPendiente(); if (ca) cartas.push({
+    id: "abuelo" + ca.n, de: "Tu abuelo", titulo: ca.titulo, txt: ca.txt, leer: true }); } catch (e) {}
   try { if (G.tuto && G.tuto.done && !G.buzonLeidas.granjatuya) cartas.push({
     id: "granjatuya", de: "El Capataz", titulo: "Ahora sí: la granja es tuya",
     txt: "Tres cosas que nadie te contó todavía. En el menú está la pestaña de LOGROS 🏆 — las metas pagan plata, cobralas ahí. Al pie del buzón llega tu PAQUETE del día: si venís siete días seguidos, el séptimo es dorado. Y junto al buzón vas a ver a un GOBLIN de mala fama y buen corazón: hace un trueque por día, y siempre le sobra lo que a vos te falta.",
