@@ -6787,12 +6787,46 @@ function pedidoDescartar(i) {
    MISMA vara, así que la ruta se cierra sola y no hay que perseguir cada caso. */
 var VALE_EN_PLATA = 40;   // cuánto vale un vale, en plata sombra
 function valesDe(plata) { return Math.max(1, Math.round((plata || 0) / VALE_EN_PLATA)); }
+/* ============ QUÉ ENTRA EN CADA FARDO (26/8) =====================================
+   Dirección: « esto no está balanceado, ¿cierto? con 1 vale pude obtener 40 semillas de cereza ».
+
+   Fui a medirlo y el resultado es el contrario del que se sospechaba. Un vale son 40 de plata
+   (decidido el 18/8) y la EMISIÓN respeta esa vara. Pero al gastarlos:
+
+       Fardo de 10 hachas     1 vale (40 plata)  →  20 de plata en hachas     ← la mitad
+       Fardo de 10 picos      1 vale (40 plata)  →  20 de plata en picos      ← la mitad
+       Lata de 6 lombrices    1 vale (40 plata)  →  18 de plata en lombrices  ← la mitad
+       Sobre de semillas      2 vales (80)       →  80 de plata en semillas   ← correcto
+
+   O sea que el sobre NO era el exploit: era el único premio bien tasado, y al lado de tres malos
+   negocios parecía un chollo. La lección, para la próxima vez que algo « se sienta » roto: lo
+   que llama la atención suele ser lo único que está bien.
+
+   ¿Por qué se torcieron? Porque el 18/8 se derivó el PRECIO de un contenido escrito a mano, y
+   `valesDe` tiene un piso de 1 vale: cualquier fardo que valga menos de 60 de plata redondea a
+   un vale entero. El sobre se salvó porque ahí se derivaron LAS DOS PUNTAS — primero cuántas
+   semillas entran, después qué cuesta esa cantidad.
+
+   Así que ahora todos los fardos se arman igual que el sobre: se elige el número de unidades que
+   llena un vale, y el precio sale de ahí. Y la etiqueta se escribe SOLA a partir de ese número,
+   porque un « Fardo de 10 hachas » escrito a mano miente el día que cambia el precio del hacha —
+   que es exactamente la forma de fallo que perseguimos toda la semana. */
+function valeUnidad(id) {
+  if (id === "hachas") return (TOOL_CRAFT.axe && TOOL_CRAFT.axe.plata) || 6;
+  if (id === "picos") return (PICK_DEF.stone && PICK_DEF.stone.plata) || 6;
+  if (id === "lombrices") return (typeof WORM_PRICE === "number" ? WORM_PRICE : 3);
+  return 0;
+}
+var VALE_FARDO = 1;   // a cuántos vales apunta un fardo de herramientas o carnada
+function valeFardoN(id) {
+  const u = valeUnidad(id); if (!u) return 0;
+  return Math.max(1, Math.round(VALE_FARDO * VALE_EN_PLATA / u));
+}
 // El precio de cada premio sale de lo que ENTREGA, no de una tabla escrita a mano.
 function valeCosto(id) {
   const P = (k) => (typeof priceOf === "function" ? priceOf(k) : 0);
-  if (id === "hachas") return valesDe(10 * ((TOOL_CRAFT.axe && TOOL_CRAFT.axe.plata) || 6));
-  if (id === "picos") return valesDe(10 * ((PICK_DEF.stone && PICK_DEF.stone.plata) || 6));
-  if (id === "lombrices") return valesDe(6 * (typeof WORM_PRICE === "number" ? WORM_PRICE : 3));
+  if (id === "hachas" || id === "picos" || id === "lombrices")
+    return valesDe(valeFardoN(id) * valeUnidad(id));
   // el sobre: se deriva primero CUÁNTAS semillas entra y después qué cuesta ESA cantidad. Las dos
   // puntas con la misma vara. Fijar una sola dejaba la fuga en el redondeo de la otra: con precio
   // fijo, 1 semilla de maíz (720) salía 2 vales (80) — x9.
@@ -6815,10 +6849,20 @@ function valeMejorCultivo() {
   return desb[0] || "papa";
 }
 var VALES_SHOP = [
-  { id: "hachas", label: "Fardo de 10 hachas", sprite: "axe", emoji: "🪓" },
-  { id: "picos", label: "Fardo de 10 picos", sprite: "pick_stone", emoji: "⛏️" },
-  { id: "lombrices", label: "Lata con 6 lombrices", sprite: "res_lombriz", emoji: "🪱" },
-  { id: "semillas", label: "Sobre de semillas (tu mejor cultivo)", sprite: null, emoji: "🌱" }];
+  { id: "hachas", sprite: "axe", emoji: "🪓" },
+  { id: "picos", sprite: "pick_stone", emoji: "⛏️" },
+  { id: "lombrices", sprite: "res_lombriz", emoji: "🪱" },
+  { id: "semillas", sprite: null, emoji: "🌱" }];
+/* la etiqueta la escribe el propio fardo: un « Fardo de 10 hachas » a mano miente el día que
+   cambia el precio del hacha, y nadie se entera hasta que un jugador cuenta las hachas. */
+function valeLabel(id) {
+  if (id === "semillas") return "Sobre de semillas (tu mejor cultivo)";
+  const n = valeFardoN(id);
+  if (id === "hachas") return "Fardo de " + n + " hachas";
+  if (id === "picos") return "Fardo de " + n + " picos";
+  if (id === "lombrices") return "Lata con " + n + " lombrices";
+  return id;
+}
 function valesCanjear(id) {
   const it = VALES_SHOP.find(s => s.id === id); if (!it) { console.warn("[valesCanjear] premio inexistente:", id); return; }
   const cuesta = valeCosto(id);   // 18/8: sale de lo que entrega, no de una tabla
@@ -6826,13 +6870,15 @@ function valesCanjear(id) {
   if (id === "semillas") {
     const k = valeMejorCultivo(), nS = valeSemillasN();
     G.seeds[k] = (G.seeds[k] || 0) + nS; toast("+" + nS + " semillas de " + CROP_DEF[k].label);
-  } else if (id === "hachas") { G.tools.axe = toolCount("axe") + 10; toast("+10 hachas"); }
+  } else if (id === "hachas") { const n = valeFardoN("hachas"); G.tools.axe = toolCount("axe") + n; toast("+" + n + " hachas"); }
   else if (id === "picos") {
+    const n = valeFardoN("picos");
     G.picks.owned.stone = true; if (!G.picks.eq) G.picks.eq = "stone";
-    G.picks.dur[G.picks.eq] = (G.picks.dur[G.picks.eq] || 0) + 10; toast("+10 picos");
-  } else if (id === "lombrices") { if (!tryAddRes("lombriz", 6)) { toast("Bolsa llena — hacé lugar"); return; } toast("+6 lombrices"); }
+    G.picks.dur[G.picks.eq] = (G.picks.dur[G.picks.eq] || 0) + n; toast("+" + n + " picos");
+  } else if (id === "lombrices") { const n = valeFardoN("lombrices");
+    if (!tryAddRes("lombriz", n)) { toast("Bolsa llena — hacé lugar"); return; } toast("+" + n + " lombrices"); }
   G.vales -= cuesta;
-  log("Canjeaste " + cuesta + " vales por " + it.label + ".", "good");
+  log("Canjeaste " + cuesta + " vales por " + valeLabel(id) + ".", "good");
   if (window.sfx) sfx("coin");
   refreshHud(); if (typeof refreshPedidos === "function" && isOpen("ov-pedidos")) refreshPedidos();
   if (typeof syncSlots === "function") syncSlots(); if (typeof refreshHotbar === "function") refreshHotbar();

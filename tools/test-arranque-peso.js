@@ -26,23 +26,37 @@ const ok = (n, c, d) => { if (!c) fallos++; console.log((c ? "  ok   " : "  FALL
 const lista = (HTML.match(/const files = \[([\s\S]*?)\];/) || [])[1] || "";
 const FILES = (lista.match(/"game\/[^"]+"/g) || []).map(s => s.replace(/"/g, ""));
 
+/* 26/8 — SE PESA LO QUE VIAJA, NO LO QUE HAY EN DISCO.
+   Este medidor gzipeaba los archivos CRUDOS. Pero desde el 25/8 el servidor les quita los
+   comentarios antes de mandarlos, así que llevaba contando 222 KB que ningún jugador baja
+   nunca: 460 KB medidos contra 238 KB reales. Hoy la suite se puso roja « por pasarse del
+   tope » cuando lo único que había crecido eran los comentarios de esta misma semana.
+   Un medidor que mide lo que no viaja no mide el arranque: mide cuánto escribimos.
+   Se usa la MISMA función que el servidor (src/pelar-comentarios.js), no una copia. */
+const { pelarComentarios } = require("../src/pelar-comentarios.js");
 console.log("\nEL BULTO DEL ARRANQUE");
-let crudo = 0, comprimido = 0;
+let crudo = 0, comprimido = 0, pelado = 0;
 FILES.forEach(f => {
-  const b = fs.readFileSync(path.join("public", f));
-  crudo += b.length; comprimido += zlib.gzipSync(b).length;
+  const t = fs.readFileSync(path.join("public", f), "utf8");
+  crudo += Buffer.byteLength(t);
+  pelado += Buffer.byteLength(pelarComentarios(t));
+  comprimido += zlib.gzipSync(pelarComentarios(t)).length;
 });
-console.log("  " + FILES.length + " archivos  ·  " + Math.round(crudo / 1024) + " KB crudos  ·  " +
-  Math.round(comprimido / 1024) + " KB comprimidos");
+console.log("  " + FILES.length + " archivos  ·  " + Math.round(crudo / 1024) + " KB en disco  ·  " +
+  Math.round(pelado / 1024) + " KB sin comentarios  ·  " + Math.round(comprimido / 1024) + " KB es lo que VIAJA");
 {
   ok("el cargador tiene su lista de archivos", FILES.length >= 10, FILES.length + " archivos");
-  /* TOPE DE PESO — medido el 24/8 en 400 KB comprimidos. No es una cifra sagrada: es un aviso.
-     Si el juego crece de verdad, se sube el tope A PROPÓSITO y en el mismo commit, que es
-     distinto de que crezca sin que nadie se entere. */
-  const TOPE_KB = 460;
+  /* TOPE DE PESO — no es una cifra sagrada: es un aviso. Si el juego crece de verdad, se sube
+     el tope A PROPÓSITO y en el mismo commit, que es distinto de que crezca sin que nadie se
+     entere.
+     26/8: bajado de 460 a 300 porque ahora se mide lo que VIAJA (238 KB) en vez de los archivos
+     con comentarios (460 KB). El tope viejo, aplicado a la medida nueva, habría dejado pasar el
+     doble del juego sin decir nada. Cuando se arregla una vara hay que reajustar la marca, o el
+     arreglo se convierte en permiso. */
+  const TOPE_KB = 300;
   ok("lo que viaja no pasa del tope", comprimido / 1024 < TOPE_KB,
     Math.round(comprimido / 1024) + " KB de " + TOPE_KB + " KB");
-  ok("y comprimir sigue valiendo la pena (≥ 2,5×)", crudo / comprimido >= 2.5,
+  ok("y comprimir sigue valiendo la pena (≥ 2,5×)", pelado / comprimido >= 2.5,
     (crudo / comprimido).toFixed(2) + "× más chico");
 }
 

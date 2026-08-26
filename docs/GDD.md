@@ -471,6 +471,25 @@ Lo interesante no es el chip: es de dónde sale. La vía obvia era poner un avis
 
 De paso se partió en dos la lista de « qué hay en la bolsa », que estaba escrita DENTRO de canonicalStacks: ahora `bolsaCuentas()` es la lista y hay dos vistas, casillas de 99 para la rejilla y cantidades para el flujo. Repetir esa lista es exactamente lo que produjo el bug de las cañas.
 
+**11.3 El tablón y los vales**
+
+Un vale son **40 de plata** (`VALE_EN_PLATA`, decidido el 18/8). El tablón los emite con esa vara —`valesDe(valor del pedido)`— y la tienda de canje tiene que devolverlos con la misma.
+
+**26/8 · tres de los cuatro premios cobraban el doble.** Dirección preguntó por el sobre de semillas (« con 1 vale pude obtener 40 semillas de cereza »). Medido, el resultado fue el contrario del sospechado:
+
+| premio | cuesta | entregaba | por vale |
+| --- | --- | --- | --- |
+| Fardo de 10 hachas | 1 vale (40) | 20 de plata | 20 |
+| Fardo de 10 picos | 1 vale (40) | 20 de plata | 20 |
+| Lata de 6 lombrices | 1 vale (40) | 18 de plata | 18 |
+| Sobre de semillas | 2 vales (80) | 80 de plata | **40** ✓ |
+
+El sobre no era el exploit: era el único premio bien tasado, y al lado de tres malos negocios parecía un chollo. La causa: el 18/8 se derivó el PRECIO de un contenido escrito a mano (« 10 hachas »), y `valesDe` tiene un piso de un vale, así que todo fardo que valga menos de 60 de plata redondea a un vale entero. El sobre se salvó porque ahí se derivaron LAS DOS PUNTAS.
+
+Ahora todos los fardos se arman igual: `valeFardoN(id)` elige cuántas unidades llenan un vale, y de ahí salen el precio, la entrega **y la etiqueta** — que antes decía « 10 hachas » con un número a mano y habría mentido el día que cambiara el precio del hacha. Hoy dice « Fardo de 20 hachas ». Lo vigila `tools/auditar-vales.js`, que exige que todo premio entregue ~40 de plata por vale en TODOS los niveles de Cultivo.
+
+**Lo que queda abierto: la FORMA del sobre.** Su valor es correcto en todos los niveles, pero su tamaño oscila de 80 semillas a 1, y su precio de 2 a 18 vales, según cuál sea tu mejor cultivo. A Cultivo 8 el premio es *una* semilla de maíz por 18 vales (tres días de tablón). Y en los empates de nivel —cereza y girasol son las dos de Cultivo 4— cuál te toca lo decide el orden de las claves del objeto: 40 semillas por 2 vales, o 1 por 5. Pendiente de decisión de dirección.
+
 **12. La partida medida**
 
 Estas cifras salen del simulador (tools/simular-partida.js), no de una estimación. El perfil es el de un jugador que entra tres veces al día.
@@ -571,7 +590,7 @@ Normas de diseño que vienen de decisiones de dirección y que conviene no reabr
 
 **15. Cómo verificar lo que dice este documento**
 
-El proyecto tiene 103 pruebas automáticas y 21 auditores, más 28 medidores, simuladores y generadores: 152 herramientas en `tools/`.
+El proyecto tiene 103 pruebas automáticas y 22 auditores, más 28 medidores, simuladores y generadores: 154 herramientas en `tools/`.
 
 Una de ellas, `tools/test-clic-navegador.js`, corre en un **Chromium de verdad** (puppeteer). Existe porque el 26/8 el diseñador reportó dos veces que no podía elegir una receta en la Cocina y las dos veces se diagnosticó mal: el arnés de pruebas es jsdom, y jsdom no hace hit-testing ni implementa la captura de puntero, así que NO PODÍA ver el fallo ni en principio. Si no hay Chromium instalado el archivo lo dice y se salta; para instalarlo, una vez: `npx puppeteer browsers install chrome`. No comprueban que el código compile: comprueban que el JUEGO cumpla las reglas de arriba. Los más útiles para el diseñador:
 

@@ -109,25 +109,7 @@ app.get("/events", (req, res) => {
    saben quitar comentarios —no renombran nada, no mueven nada, no reordenan nada— y si el
    resultado no es JavaScript válido, el arranque lo dice y se sirve el original. */
 const PELADOS = new Map();   // ruta → { sello, codigo }
-function pelarComentarios(src) {
-  /* Un barrido carácter a carácter, no un regex. Con regex, un `//` dentro de una cadena o de
-     una expresión regular se come el resto de la línea, y eso es un bug silencioso servido a
-     producción. Acá se sabe en todo momento si estamos dentro de un texto. */
-  let out = "", i = 0, dentro = 0, cierre = "";
-  const n = src.length;
-  while (i < n) {
-    const c = src[i], d = src[i + 1];
-    if (dentro === 0) {
-      if (c === "/" && d === "/") { while (i < n && src[i] !== "\n") i++; continue; }
-      if (c === "/" && d === "*") { i += 2; while (i < n && !(src[i] === "*" && src[i + 1] === "/")) i++; i += 2; continue; }
-      if (c === '"' || c === "'" || c === "`") { dentro = 1; cierre = c; out += c; i++; continue; }
-      out += c; i++; continue;
-    }
-    if (c === "\\") { out += c + (src[i + 1] || ""); i += 2; continue; }
-    out += c; if (c === cierre) dentro = 0; i++;
-  }
-  return out.split("\n").filter(l => l.trim()).join("\n");
-}
+const { pelarComentarios } = require("./pelar-comentarios.js");
 app.get(/^\/game\/.+\.js$/, (req, res, next) => {
   const rel = req.path.replace(/^\/game\//, "");
   const abs = path.join(JUEGO_DIR, rel);

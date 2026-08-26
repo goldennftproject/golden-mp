@@ -10,7 +10,7 @@ const ctx = { console: { log(){}, warn(){} }, Math, Date, JSON, log: noop, toast
 ctx.window = ctx; ctx.window.NICK = "test";
 vm.runInNewContext(fs.readFileSync("public/game/config.js", "utf8"), ctx, { filename: "config.js" });
 vm.runInNewContext(fs.readFileSync("public/game/state.js", "utf8") +
-  "\n;window.__X={G,CROP_DEF,VALES_SHOP,valeCosto,valesDe,VALE_EN_PLATA,priceOf,valeMejorCultivo,valeSemillasN,pedidoGenerar,TOOL_CRAFT,PICK_DEF,WORM_PRICE};",
+  "\n;window.__X={G,CROP_DEF,VALES_SHOP,valeCosto,valesDe,VALE_EN_PLATA,priceOf,valeMejorCultivo,valeSemillasN,pedidoGenerar,TOOL_CRAFT,PICK_DEF,WORM_PRICE,valeFardoN,valeUnidad,valeLabel};",
   ctx, { filename: "state.js" });
 const X = ctx.__X, G = X.G;
 let fallos = 0;
@@ -25,14 +25,15 @@ for (const lvl of niveles) {
   const ratios = [];
   X.VALES_SHOP.forEach(it => {
     const c = X.valeCosto(it.id);
+    /* 26/8 — el contenido de los fardos ya no está escrito acá. Lo decide valeFardoN(), que es
+       la misma función que usan el precio, la entrega y la etiqueta. Cuando este test llevaba el
+       « 10 » a mano, medía el catálogo de ayer: daba verde con los fardos cobrando el doble. */
     let entrega = 0;
-    if (it.id === "hachas") entrega = 10 * (X.TOOL_CRAFT.axe.plata || 6);
-    if (it.id === "picos") entrega = 10 * (X.PICK_DEF.stone.plata || 6);
-    if (it.id === "lombrices") entrega = 6 * X.WORM_PRICE;
     if (it.id === "semillas") entrega = X.valeSemillasN() * X.CROP_DEF[X.valeMejorCultivo()].seedCost;
+    else entrega = X.valeFardoN(it.id) * X.valeUnidad(it.id);
     const r = entrega / c;
     ratios.push(r);
-    console.log("  " + it.label.slice(0, 28).padEnd(30) + String(c).padStart(6) + String(entrega).padStart(16) + r.toFixed(0).padStart(16));
+    console.log("  " + X.valeLabel(it.id).slice(0, 28).padEnd(30) + String(c).padStart(6) + String(entrega).padStart(16) + r.toFixed(0).padStart(16));
   });
   const spread = Math.max(...ratios) / Math.min(...ratios);
   ok("nivel " + lvl + ": el spread de la tienda es razonable", spread < 3, "x" + spread.toFixed(1) + " (antes x133)");

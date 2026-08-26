@@ -2346,7 +2346,7 @@ function refreshPedidos() {
       const cuesta = (typeof valeCosto === "function") ? valeCosto(it.id) : it.vales;
       const puede = (G.vales || 0) >= cuesta;
       const ic = it.sprite ? '<img src="' + GF.spr(it.sprite) + '" draggable="false" onerror="this.outerHTML=\'' + it.emoji + '\'">' : it.emoji;
-      return '<div class="pd-canje' + (puede ? " ok" : "") + '"' + (puede ? ' data-pd-canje="' + it.id + '"' : "") + '><span class="ic">' + ic + '</span><span class="nm">' + it.label + '</span><span class="precio">🎟 ' + cuesta + '</span></div>';
+      return '<div class="pd-canje' + (puede ? " ok" : "") + '"' + (puede ? ' data-pd-canje="' + it.id + '"' : "") + '><span class="ic">' + ic + '</span><span class="nm">' + ((typeof valeLabel === "function") ? valeLabel(it.id) : it.id) + '</span><span class="precio">🎟 ' + cuesta + '</span></div>';
     }).join("") + '<div style="text-align:center;margin-top:8px"><button class="ghost sm" data-pd-vista="pedidos">↩ Volver al tablón</button></div>';
     return;
   }
