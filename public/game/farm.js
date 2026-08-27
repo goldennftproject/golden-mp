@@ -1182,7 +1182,7 @@ class FarmScene extends Phaser.Scene {
     const all = this.objs.concat(this.plots).concat(this.threats); if (this.portal) all.push(this.portal);
     for (const o of all) {
       if (o.type === "plot" && o.state === "locked") continue;   // 18/8: no es tuya, no es objetivo
-      const rad = (o.type === "barn" || o.type === "market" || o.type === "store" || o.type === "cocina" || o.type === "horno" || o.type === "altar" || o.type === "establo" || o.type === "curtiduria" || o.type === "ofrendas" || o.type === "lombricario") ? 72 : (o.type === "plot" ? 26 : (o.type === "boar" ? 55 : (o.type === "portal" ? 50 : 58)));   // plot 26: hay que estar encima de la tierra para plantar/cosechar
+      const rad = (o.type === "barn" || o.type === "market" || o.type === "store" || o.type === "cocina" || o.type === "horno" || o.type === "altar" || o.type === "establo" || o.type === "curtiduria" || o.type === "ofrendas" || o.type === "lombricario" || o.type === "lonja") ? 72 : (o.type === "plot" ? 26 : (o.type === "boar" ? 55 : (o.type === "portal" ? 50 : 58)));   // plot 26: hay que estar encima de la tierra para plantar/cosechar
       const d = Math.hypot(o.cx - this.hero.x, o.by - this.hero.y);
       if (d < rad && d < bd) { bd = d; best = o; }
     }
@@ -1254,6 +1254,7 @@ class FarmScene extends Phaser.Scene {
     if (o.type === "establo") return "Establo";
     if (o.type === "curtiduria") return "Curtiduría";
     if (o.type === "lombricario") return "Lombricario";
+    if (o.type === "lonja") return "La Lonja";
     if (o.type === "ofrendas") return "Altar de Ofrendas";
     if (o.type === "cofre") return "Cofre depósito";
     if (o.type === "dummy") {
@@ -1479,6 +1480,7 @@ class FarmScene extends Phaser.Scene {
     if (o.type === "curtiduria") { if (typeof refreshCurtiduria === "function") refreshCurtiduria(); return openOv("ov-curtiduria"); }
     if (o.type === "ofrendas") { if (typeof refreshOfrendas === "function") refreshOfrendas(); return openOv("ov-ofrendas"); }
     if (o.type === "lombricario") { if (typeof refreshLombricario === "function") refreshLombricario(); return openOv("ov-lombricario"); }
+    if (o.type === "lonja") { if (typeof refreshLonja === "function") refreshLonja(); return openOv("ov-lonja"); }
     if (o.type === "cofre") { window.chestOpen = o.chestIdx; return openOv("ov-cofre"); }
     if (o.type === "dummy") {
       if (typeof dummyEntrenando === "function" && dummyEntrenando()) { dummyCobrar(); return; }   // volviste: cobrás la XP acumulada

@@ -373,6 +373,7 @@ function pescaV4Pintar() {
                      " " + d.label + " · " + (CANA_V4_DEF[P4.cana] || {}).label;
   }
   pescaV4Cebos();
+  pescaV4Canas();
   if (agua) {
     const firma = P4.fase + "|" + P4.sombras.join(",");
     if (agua._firma !== firma) {
@@ -479,6 +480,162 @@ function pescaV4Cebos() {
   });
   const cb = $("p4-comprar-larva");
   if (cb) cb.onclick = () => { if (larvaComprar(1)) { caja._firma = null; pescaV4Cebos(); } };
+}
+
+/* ── LAS CAÑAS, EN UNA FILA ─────────────────────────────────────────────────────────────────
+   Cada una dice lo que MEJORA, no solo lo que cuesta. « Caña de Oro · 2.000 de plata » no le
+   dice a nadie si vale la pena; « rareza ×3,5 · peaje 10 por lance » sí, y de paso enseña la
+   regla que sostiene el sistema entero: ninguna caña corre más rápido que la carnada. */
+function pescaV4Canas() {
+  const caja = $("p4-canas"); if (!caja || typeof CANA_V4_ORDER === "undefined") return;
+  const puesta = pescaV4Cana();
+  const firma = puesta + "|" + CANA_V4_ORDER.map(k => (G.canas || {})[k] ? 1 : 0).join("") +
+    "|" + Math.floor(G.coins || 0) + "|" + nivelOficio("fishing");
+  if (caja._firma === firma) return;
+  caja._firma = firma;
+  const base = CANA_V4_DEF.junco.banda;
+  let h = "";
+  for (const k of CANA_V4_ORDER) {
+    const d = CANA_V4_DEF[k], tengo = !!(G.canas || {})[k], falta = canaV4Falta(k);
+    /* cuánto sube la rareza respecto de la caña de junco: el número que de verdad se compra */
+    const sube = Math.round((d.banda.epico + d.banda.legendario) / (base.epico + base.legendario) * 10) / 10;
+    h += '<div class="p4-cana' + (k === puesta ? " puesta" : "") + (tengo ? " tengo" : "") + '">' +
+      '<span class="cn">' + d.label.replace("Caña de ", "").replace("Caña del ", "") + '</span>' +
+      '<span class="cr">rareza ×' + sube + (d.mant ? ' · peaje ' + d.mant : "") + '</span>' +
+      (tengo ? '<span class="cy">' + (k === puesta ? "en uso" : "tuya") + '</span>'
+             : '<button data-p4cana="' + k + '"' + (falta ? " disabled" : "") + '>' +
+               (d.presupuesto == null ? "Lonja" : d.presupuesto + " plata") + '</button>') +
+      (!tengo && falta ? '<span class="cf">' + falta + '</span>' : "") +
+      '</div>';
+  }
+  caja.innerHTML = h;
+  caja.querySelectorAll("[data-p4cana]").forEach(b => b.onclick = () => {
+    if (canaV4Comprar(b.dataset.p4cana)) { caja._firma = null; pescaV4Canas(); pescaV4Pintar(); }
+  });
+}
+
+/* ── LA LONJA ────────────────────────────────────────────────────────────────────────────────
+   Tres pestañas, y la de « Pedido » manda porque es la única con reloj. La regla de reparto:
+   lo que caduca va primero, lo que espera va detrás. Poner la tienda de Escamas de entrada
+   haría que el jugador de las tres visitas se perdiera la marea por mirar escaparates. */
+var LONJA_TAB = "pedido";
+function refreshLonja() {
+  const caja = $("lonja-cuerpo"); if (!caja) return;
+  const esc = $("lonja-escamas");
+  if (esc) esc.innerHTML = '<b>' + escamasLonja() + '</b> Escamas';
+  const tit = $("lonja-titulo-vig");
+  if (tit) {
+    const v = tituloPescaVigente();
+    tit.textContent = v ? TITULO_PESCA_DEF[v].label : "Sin título todavía";
+  }
+  /* las pestañas se enganchan una sola vez y se repintan siempre: volver a asignar onclick en
+     cada refresco funciona, pero deja el listener viejo colgando si el nodo cambia — y en un
+     panel que se repinta tres veces por minuto eso se acumula. */
+  document.querySelectorAll("#ov-lonja [data-ltab]").forEach(b => {
+    b.classList.toggle("on", b.dataset.ltab === LONJA_TAB);
+    if (!b._lst) { b._lst = 1; b.onclick = () => { LONJA_TAB = b.dataset.ltab; refreshLonja(); }; }
+  });
+  if (LONJA_TAB === "pedido")  return lonjaPintaPedido(caja);
+  if (LONJA_TAB === "tienda")  return lonjaPintaTienda(caja);
+  return lonjaPintaTitulos(caja);
+}
+function lonjaPintaPedido(caja) {
+  const p = lonjaPedido();
+  if (!p) {
+    caja.innerHTML = '<div class="lonja-vacio">La Lonja no tiene nada para vos ahora mismo.<br>' +
+      'Conseguí una caña que llegue a más bandas y volvé en la próxima marea.</div>';
+    return;
+  }
+  const M = LONJA_MAREAS[p.idx], e = PEZ_DEF[p.id];
+  const tengo = Math.floor((G.fish && G.fish[p.id]) || 0);
+  const suelto = lonjaSuelto(p), paga = lonjaPaga("marea", suelto);
+  const falta = lonjaMareaVenceEn();
+  let h = '<div class="lonja-marea"><span>' + M.label + '</span><span>' +
+    (p.cobrado ? "entregado" : "vence en " + fmtDur(falta)) + '</span></div>';
+  h += '<div class="lonja-pide"><b>' + p.n + " " + e.label + '</b>' +
+       '<span class="lonja-banda ' + e.banda + '">' + (PEZ_BANDA[e.banda] || {}).label + '</span></div>';
+  h += '<div class="lonja-tengo">Tenés <b>' + tengo + '</b> de ' + p.n + '</div>';
+  /* LA LECCIÓN ECONÓMICA, escrita: es la razón de ser de todo el sistema y hay que aprenderla
+     una vez, no descubrirla habiendo vendido ya el pez. */
+  h += '<div class="lonja-cuenta">Sueltos en el mercado valen <b>' + suelto + '</b> de plata.<br>' +
+       'La Lonja paga <b>' + paga + '</b> y <b>' + LONJA_ESCALON.marea.escamas + ' Escama</b> — ' +
+       '<span class="lonja-x">×' + lonjaMultiplicador() + '</span></div>';
+  h += '<button class="green" id="lonja-entregar" style="width:100%;margin-top:10px"' +
+       (p.cobrado || tengo < p.n ? " disabled" : "") + '>' +
+       (p.cobrado ? "Ya entregado — volvé en la próxima marea"
+                  : tengo < p.n ? "Te faltan " + (p.n - tengo) + " " + e.label
+                                : "Entregar " + p.n + " " + e.label) + '</button>';
+  /* las tres mareas del día, para que se vea que hay tres y a qué hora */
+  h += '<div class="lonja-horario">';
+  LONJA_MAREAS.forEach((m, i) => {
+    h += '<span class="' + (i === p.idx ? "on" : "") + '">' + m.label.replace("Marea de la ", "").replace("Marea del ", "") +
+         " · " + String(m.h).padStart(2, "0") + ":00</span>";
+  });
+  h += '</div>';
+  caja.innerHTML = h;
+  const b = $("lonja-entregar");
+  if (b) b.onclick = () => { if (lonjaEntregar()) refreshLonja(); };
+}
+function lonjaPintaTienda(caja) {
+  let h = '<div class="lonja-vacio" style="text-align:left;margin-bottom:8px">Las Escamas solo salen ' +
+    'de la Lonja y no se compran ni se venden. Rondan las 139 al mes.</div>';
+  for (const k of LONJA_TIENDA_ORDER) {
+    const d = LONJA_TIENDA[k], falta = lonjaTiendaFalta(k), tengo = lonjaTiendaTengo(k);
+    const mat = d.cost ? " + " + Object.keys(d.cost).map(x => d.cost[x] + " " + (RES_LABEL[x] || x)).join(" + ") : "";
+    h += '<div class="lonja-item' + (tengo ? " tengo" : "") + '">' +
+      '<div class="li-nm">' + d.label + '</div>' +
+      '<div class="li-que">' + d.que + '</div>' +
+      '<button data-lcomp="' + k + '"' + (falta ? " disabled" : "") + '>' +
+      (tengo ? "ya lo tenés" : d.esc + " Escamas" + mat) + '</button>' +
+      /* la regla 9: un botón apagado SIEMPRE dice por qué. Sin esta línea el jugador mira un
+         precio que puede pagar y un botón muerto, y no hay forma de que adivine que le falta
+         haber pescado un legendario. */
+      (falta && !tengo ? '<div class="li-falta">' + falta + '</div>' : "") +
+      '</div>';
+  }
+  caja.innerHTML = h;
+  caja.querySelectorAll("[data-lcomp]").forEach(b => b.onclick = () => {
+    if (lonjaComprar(b.dataset.lcomp)) refreshLonja();
+  });
+}
+function lonjaPintaTitulos(caja) {
+  const vig = tituloPescaVigente();
+  let h = '<div class="lonja-vacio" style="text-align:left;margin-bottom:8px">Los títulos no dan ' +
+    'plata: dan una etiqueta que los demás ven. Tocá uno ganado para llevarlo.</div>';
+  for (const k of TITULO_PESCA_ORDER) {
+    const d = TITULO_PESCA_DEF[k], g = tituloPescaGanado(k);
+    h += '<div class="lonja-tit' + (g ? " ganado" : "") + (k === vig ? " vig" : "") + '"' +
+      (g ? ' data-ltit="' + k + '"' : "") + '>' +
+      '<div class="lt-nm">' + d.label + (k === vig ? " · en uso" : "") + '</div>' +
+      '<div class="lt-pide">' + tituloPescaPideTxt(k) + '</div>' +
+      '<div class="lt-mide">' + d.mide + '</div></div>';
+  }
+  caja.innerHTML = h;
+  caja.querySelectorAll("[data-ltit]").forEach(b => b.onclick = () => {
+    G.tituloPesca = b.dataset.ltit; refreshLonja();
+    toast("Ahora llevás el título de " + TITULO_PESCA_DEF[b.dataset.ltit].label);
+  });
+}
+/* qué le falta a un título, en castellano y CON EL PROGRESO. « Pesca 16 · 3 gigantes » no dice
+   si llevás cero o dos; « Pesca 16 · 3 gigantes (1/3) » convierte un requisito en una meta. */
+function tituloPescaPideTxt(k) {
+  const d = TITULO_PESCA_DEF[k]; if (!d) return "";
+  const st = G.pescaStats || {}, ps = [];
+  ps.push("Pesca " + d.lvl + (nivelOficio("fishing") >= d.lvl ? "" : " (" + nivelOficio("fishing") + "/" + d.lvl + ")"));
+  if (d.capturas) ps.push(d.capturas + " capturas (" + Math.min(st.capturas || 0, d.capturas) + "/" + d.capturas + ")");
+  if (d.nasas)    ps.push(d.nasas + " nasas cobradas (" + Math.min(st.nasas || 0, d.nasas) + "/" + d.nasas + ")");
+  if (d.pedidos)  ps.push(d.pedidos + " pedidos (" + Math.min(G.lonjaEntregados || 0, d.pedidos) + "/" + d.pedidos + ")");
+  if (d.gigantes) ps.push(d.gigantes + " gigantes (" + Math.min(st.gigantes || 0, d.gigantes) + "/" + d.gigantes + ")");
+  if (d.banda)    ps.push("1 " + ((PEZ_BANDA[d.banda] || {}).label || d.banda).toLowerCase());
+  if (d.bandaCompleta) {
+    const p = pecesDeBanda(d.bandaCompleta), n = p.filter(x => (st.vistos || {})[x]).length;
+    ps.push("las " + p.length + " especies poco comunes (" + n + "/" + p.length + ")");
+  }
+  if (d.album) {
+    const n = PEZ_ORDER.filter(x => (st.vistos || {})[x]).length;
+    ps.push("el álbum entero (" + n + "/" + PEZ_ORDER.length + ")");
+  }
+  return ps.join(" · ");
 }
 
 /* ── EL LOMBRICARIO ──────────────────────────────────────────────────────────────────────────
@@ -698,6 +855,20 @@ function itemView(d) {
   /* el pez: ahora puede ser una de las NUEVE especies de Pesca v3 o una de las cuatro rarezas
      viejas de las partidas anteriores. Se busca en los dos catálogos, en ese orden. */
   if (d.kind === "fish") {
+    /* LA v4 PRIMERO. Esto faltaba y no era un detalle del margen: itemView() solo conocía los
+       catálogos de la v3 y de la v2, así que las DIECINUEVE especies nuevas caían al « Pez »
+       genérico del final — sin nombre, sin precio y sin color de rareza, en la bolsa, en el
+       flujo y en cada tooltip del juego. Se veía en una captura como « +4 Pez ».
+       Un catálogo nuevo no sirve de nada si el sitio que pinta los objetos no sabe que existe. */
+    const p4 = (typeof PEZ_DEF !== "undefined") && PEZ_DEF[d.key];
+    if (p4) {
+      const st = G.pescaStats || {}, rec = (st.record || {})[d.key] || 0;
+      const glow = { raro: "glow-blue", epico: "glow-purple", legendario: "glow-gold", mitico: "glow-gold" }[p4.banda] || "";
+      return { sprite: p4.sprite || null, emoji: p4.emoji || "🐟", glow,
+               label: p4.label + " · " + ((PEZ_BANDA[p4.banda] || {}).label || p4.banda) +
+                      " · vale " + p4.precio + " de plata" +
+                      (rec ? " · tu récord: " + rec.toFixed(2) + " kg" : ""), dur: null };
+    }
     const e = (typeof ESPECIE_DEF !== "undefined") && ESPECIE_DEF[d.key];
     if (e) {
       const est = (G.estrellaMax && G.estrellaMax[d.key]) || 0;

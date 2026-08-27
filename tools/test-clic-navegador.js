@@ -46,7 +46,7 @@ if (!puppeteer) {
    barren igual, que es lo único que importa: un botón nuevo es un botón nuevo que puede quedar
    sordo, sin que le importe en qué clase de ventana vive. */
 const PANELES = ["ov-cocina", "ov-inv", "ov-shop", "ov-forge", "ov-objetivos", "ov-pedidos",
-                 "ov-lombricario", "pesca4"];
+                 "ov-lombricario", "ov-lonja", "pesca4"];
 
 (async () => {
   let fallos = 0, srv = null, browser = null;
@@ -152,6 +152,11 @@ const PANELES = ["ov-cocina", "ov-inv", "ov-shop", "ov-forge", "ov-objetivos", "
         G.skills = Object.assign({}, G.skills, { fishing: acc, farming: acc });
         G.nasas = []; nasaCalar("mimbre");
         if (typeof refreshLombricario === "function") refreshLombricario();
+        G.escamasLonja = 60; G.lonjaEntregados = 20;
+        G.pescaStats = { capturas: 40, nasas: 25, gigantes: 2, vistos: { merluza: 1, atun: 1 } };
+        G.fish = { merluza: 9, atun: 6, lubina: 8 };
+        G.lonja = null;
+        if (typeof refreshLonja === "function") refreshLonja();
         return "listo";
       });
       await new Promise(r => setTimeout(r, 400));
@@ -207,11 +212,53 @@ const PANELES = ["ov-cocina", "ov-inv", "ov-shop", "ov-forge", "ov-objetivos", "
       /* y que los DOS NUEVOS estén de verdad entre los barridos. Sin esta línea, el barrido puede
          dar verde habiendo tocado solo las sombras del agua, y yo me quedaría creyendo que probé
          las nasas. Contar 38 no sirve de nada si no sé QUÉ conté. */
+      /* las tres pestañas de la Lonja, una por una: barrer solo la que está abierta dejaría la
+         tienda y los títulos sin probar, que son los dos sitios con más botones del panel. */
+      for (const tab of ["tienda", "titulos"]) {
+        await pg.evaluate((t) => { try { openOv("ov-lonja"); LONJA_TAB = t; refreshLonja(); } catch (e) {} }, tab);
+        await new Promise(r => setTimeout(r, 250));
+        const puntos = await pg.evaluate(() => {
+          const cont = document.getElementById("lonja-cuerpo"); if (!cont) return [];
+          const out = [];
+          cont.querySelectorAll("*").forEach(e => {
+            if (!e.onclick) return;
+            const r = e.getBoundingClientRect();
+            if (r.width < 6 || r.height < 6 || e.offsetParent === null) return;
+            e.dataset.__barrido = "t" + out.length;
+            out.push('[data-__barrido="t' + out.length + '"]');
+          });
+          return out.slice(0, 8);
+        });
+        for (const sel of puntos) {
+          const pt = await centro(sel); if (!pt) continue;
+          /* y que el punto SIGA siendo suyo. Sin esto el barrido de las pestañas daba « NADIE »
+             de vez en cuando: la lista de títulos se repinta y el elemento medido ya no está
+             donde estaba. Un fallo intermitente en un test es peor que no tenerlo — enseña a
+             volver a correrlo hasta que salga verde. */
+          const sigue = await pg.evaluate((P) => {
+            const e = document.elementFromPoint(P.x, P.y);
+            return !!(e && e.closest("#lonja-cuerpo"));
+          }, pt);
+          if (!sigue) continue;
+          await pg.evaluate(() => { window.__ultimo = null; });
+          await pg.mouse.click(pt.x, pt.y);
+          await new Promise(r => setTimeout(r, 45));
+          const llego = await pg.evaluate((P) => {
+            const t = window.__ultimo; if (!t) return "NADIE";
+            return (t === document.elementFromPoint(P.x, P.y)) ? "OK" : (t.tagName + "." + (t.className || ""));
+          }, pt);
+          probados++;
+          if (llego !== "OK") sordos.push("lonja/" + tab + " → se lo quedó " + llego);
+        }
+      }
       const nuevos = await pg.evaluate(() => ({
         nasa: !!document.querySelector("#p4-nasas [data-p4nx], #p4-nasas [data-p4nc]"),
-        lom:  !!(document.getElementById("lom-echar") && document.getElementById("lom-echar").onclick)
+        lom:  !!(document.getElementById("lom-echar") && document.getElementById("lom-echar").onclick),
+        lonja: document.querySelectorAll("#ov-lonja [data-ltab]").length === 3,
+        lonjaTxt: Array.from(document.querySelectorAll("#ov-lonja [data-ltab]")).map(b => b.textContent).join(" · ")
       }));
       ok("entre ellos, los botones de las nasas", nuevos.nasa);
+      ok("y las tres pestañas de la Lonja", nuevos.lonja, nuevos.lonjaTxt);
       ok("y el de echar en el Lombricario", nuevos.lom);
       ok("todos reciben su propio clic", !sordos.length, sordos.slice(0, 6).join("\n           "));
     }

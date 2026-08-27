@@ -5487,6 +5487,31 @@ function lanceValorEsperado(cana, opciones) {
   }
   return Math.round(v * 100) / 100;
 }
+/* COMPRAR UNA CAÑA. Las cuatro de plata cuestan su « presupuesto », que no es un precio elegido
+   sino el que sale de la tabla: es lo que el jugador recupera en el plazo que la caña promete.
+   Y no se gastan — el peaje de cada lance (mant) ya es su coste de uso, así que una caña
+   comprada es tuya. Cobrar dos veces por lo mismo, con usos Y peaje, es cómo se consigue que
+   nadie mejore nunca.
+   La del Abuelo NO se compra con plata: se gana en la Lonja, y por eso tiene presupuesto null. */
+function canaV4Precio(id) { const d = CANA_V4_DEF[id]; return d && d.presupuesto ? d.presupuesto : null; }
+function canaV4Falta(id) {
+  const d = CANA_V4_DEF[id]; if (!d) return "no existe";
+  if ((G.canas || {})[id]) return "ya la tenés";
+  if (d.presupuesto == null) return "se gana en la Lonja, no se compra";
+  if (nivelOficio("fishing") < d.lvl) return "se abre en Pesca " + d.lvl;
+  if ((G.coins || 0) < d.presupuesto) return "te faltan " + (d.presupuesto - Math.floor(G.coins || 0)) + " de plata";
+  return null;
+}
+function canaV4Comprar(id) {
+  const d = CANA_V4_DEF[id]; if (!d) return false;
+  const falta = canaV4Falta(id);
+  if (falta) { toast(d.label + ": " + falta); return false; }
+  G.coins -= d.presupuesto;
+  G.canas = G.canas || {}; G.canas[id] = 1;
+  if (typeof flujoAnotar === "function") flujoAnotar("coins", "coins", -d.presupuesto);
+  log("Compraste la " + d.label + " por " + d.presupuesto + " de plata. Es tuya para siempre.", "gold");
+  return true;
+}
 function lanceNeto(cana, opciones) {   // lo que queda después del peaje de la caña
   const c = CANA_V4_DEF[cana]; if (!c) return 0;
   return Math.round((lanceValorEsperado(cana, opciones) - (c.mant || 0)) * 100) / 100;
@@ -5552,10 +5577,24 @@ var NASA_TABLA = {
    nasas —doscientas horas de reloj— para ver un solo mítico. La lectura correcta de ese 1 % es la
    del pez TOPE: el calamar sale un 3 % de los ciclos con la nasa de mimbre ». El azar tiene que
    doler, no bloquear. */
-function nasaCupo() { return Math.min(NASA_CUPO_MAX, 1 + Math.floor(nivelOficio("fishing") / NASA_CUPO_CADA)); }
+function nasaCupo() {
+  /* un hueco de base, uno más cada cuatro niveles, y el que suma el Farol de la Laguna. El tope
+     se mueve con el Farol también: si no, las 60 Escamas comprarían un hueco que el tope ya te
+     estaba quitando, que es la peor compra posible — la que no hace nada y no lo dice. */
+  const tope = NASA_CUPO_MAX + (farolLaguna() ? 1 : 0);
+  return Math.min(tope, 1 + Math.floor(nivelOficio("fishing") / NASA_CUPO_CADA) + (farolLaguna() ? 1 : 0));
+}
 function nasas() { if (!Array.isArray(G.nasas)) G.nasas = []; return G.nasas; }
 function nasaLibres() { return Math.max(0, nasaCupo() - nasas().length); }
-function nasaAbierta(id) { const d = NASA_DEF[id]; return !!d && nivelOficio("fishing") >= d.lvl; }
+function nasaAbierta(id) {
+  const d = NASA_DEF[id]; if (!d) return false;
+  if (nivelOficio("fishing") < d.lvl) return false;
+  /* la de mimbre se sabe hacer sola; las otras dos piden el PLANO de la tienda de la Lonja. El
+     nivel es el suelo, el plano es la llave: así las Escamas compran progresión de verdad y no
+     un adorno, y el jugador que sube de nivel sin pisar la Lonja ve claramente qué le falta. */
+  if (id === "mimbre") return true;
+  return !!(G.nasaPlanos || {})[id];
+}
 /* LA PASIVA PAGA TU AUSENCIA, LA ACTIVA PAGA TUS MANOS.
    Sin este factor, una nasa rinde exactamente lo mismo que la caña de junco —2 h × 20 repartido
    entre 4 lombrices son 10,00 clavados, la misma cifra— y entonces nadie tocaría el minijuego,
@@ -5662,6 +5701,11 @@ function nasaCobrar(i) {
     }
     const kg = pesoSortear(elegido);
     G.fish = G.fish || {}; G.fish[elegido] = (G.fish[elegido] || 0) + 1;
+    /* el mismo registro que el lance, con deNasa=true — es lo que cuenta para el título de
+       Nasero. Un mítico que entra a la bolsa sin pasar por acá sería una captura que el juego
+       no vio, y entonces el título no se dispararía jamás. */
+    pescaAnotar(elegido, kg, true);
+    torneoAnotar(elegido, kg);
     if (typeof addXp === "function") addXp("fishing", pezXp(elegido, kg));
     if (typeof statAdd === "function") { statAdd("pescar"); statAdd("pescar", elegido); }
     const e = PEZ_DEF[elegido];
@@ -5774,10 +5818,19 @@ function pescaEstado() {
   G.pescaV4 = G.pescaV4 || { racha: 0, sinEpico: 0, primeroDelDia: 0, records: {} };
   return G.pescaV4;
 }
-function esDeNocheAhora() {
-  /* la noche de la laguna es la franja 00:00–06:00, distinta del ciclo visual del cielo */
-  const h = new Date().getHours();
-  return h >= 0 && h < 6;
+var NOCHE_DESDE = 0, NOCHE_HASTA = 6;
+var FAROL_NOCHE_EXTRA_H = 1;
+function esDeNocheAhora(t) {
+  /* La noche de la laguna es la franja 00:00–06:00 UTC, distinta del ciclo visual del cielo.
+     EN UTC, y esto era un bug: estaba con getHours(), o sea la hora LOCAL, mientras el reset
+     diario del juego, las mareas de la Lonja y el torneo van todos en UTC. Con la hora local,
+     un jugador en Tokio tenía su noche de laguna nueve horas antes que la « Marea de la noche »
+     de las 22:00 UTC, y el pedido nocturno le pedía un pez gato que no podía picar. Dos relojes
+     en el mismo juego obligan al jugador a saber en qué huso vive cada cosa.
+     El Farol de la Laguna estira la franja una hora — es lo que se compra con las 60 Escamas. */
+  const h = new Date(t != null ? t : nowMs()).getUTCHours();
+  const hasta = NOCHE_HASTA + (farolLaguna() ? FAROL_NOCHE_EXTRA_H : 0);
+  return h >= NOCHE_DESDE && h < hasta;
 }
 /* la tabla de la caña, con la noche aplicada: de 00 a 06 la banda legendaria se DUPLICA, y lo
    que sube sale de la común — la misma regla que usan las cañas, para no tener dos maneras. */
@@ -6023,6 +6076,11 @@ function lanceCerrar(L) {
   e.sinEpico = (L.banda === "epico" || L.banda === "legendario") ? 0 : e.sinEpico + 1;
   const rec = e.records[L.id] || 0, esRecord = L.kg > rec;
   if (esRecord) e.records[L.id] = L.kg;
+  /* TODO lo que un título, un récord o el torneo puedan preguntar se anota AQUÍ, en el único
+     sitio por el que pasa toda captura de caña. Repartir estos contadores por la interfaz es
+     cómo se consigue que un título no se dispare nunca y nadie sepa por qué. */
+  pescaAnotar(L.id, L.kg, false);
+  torneoAnotar(L.id, L.kg);
   return { id: L.id, kg: L.kg, banda: L.banda, gigante: pezGigante(L.id, L.kg),
     plata: pezPrecio(L.id, L.kg), xp: pezXp(L.id, L.kg), record: esRecord, recordAnterior: rec };
 }
@@ -7203,6 +7261,390 @@ function lombricesPorDia() {
   const bocas = lombricarioAbierto() ? lombricarioBocas() * 2 * LOMBRICARIO_DA : 0;   // dos tandas por boca y día
   return Math.round((monticulos + bocas) * 10) / 10;
 }
+
+/* ═══════════════════════════════════════════════════════════════════════════════════════════
+   LA LONJA · el tablón de la pesca                          (27/8, Pesca v4 tanda 3)
+   ═══════════════════════════════════════════════════════════════════════════════════════════
+   El tablón de la granja se queda como está. La pesca tiene el suyo, en el muelle, con otra
+   cadencia: TRES MAREAS AL DÍA —el alba a las 06:00, la siesta a las 14:00 y la noche a las
+   22:00 UTC— y un pedido en cada una, que desaparece cuando entra la siguiente.
+
+   Por qué tres y no una: el simulador dice que el jugador tipo entra tres veces al día. La
+   Lonja está construida sobre ese dato. No es un castigo que el pedido caduque; es la razón de
+   que las tres visitas tengan cada una su propia cosa que hacer.
+
+   LA REGLA DURA, heredada del tablón: la Lonja solo pide lo que el jugador YA puede pescar. Un
+   pedido imposible no frustra — enseña que el tablón miente, y a partir de ahí deja de leerse.
+   Con una vuelta de tuerca que el documento no hacía: el pedido de marea dura 8 horas, así que
+   tampoco puede pedir un pez que solo pica de noche si la marea es diurna. Mismo principio,
+   aplicado a la duración de cada ventana.
+
+   Y LA REGLA ECONÓMICA: la Lonja NO es una fuente nueva de plata. Es el mismo grifo con otra
+   llave, medido en días de granja, y por eso todos sus pagos cuelgan de diaDeGranja(). Lo único
+   que agrega de verdad son las Escamas — la moneda que compra lo que la plata no compra. */
+
+/* UN DÍA DE GRANJA, en plata.
+   La casa ya tenía su convención y no hacía falta inventar otra: los precios de las expansiones
+   se fijan en HORAS de granja, y una hora de granja son sus celdas productivas por el ancla
+   (línea ~1583: « const plata = horas * celdas * ANCLA »). Un día son esas horas por LONJA_H_DIA.
+
+   LONJA_H_DIA = 2 y no 3, aunque el jugador entre tres veces. Contrastado contra las cuatro
+   referencias del documento (450 · 1.200 · 2.100 · 3.940 de plata al día), esto da 480 · 960 ·
+   1.440 · 2.280: clava el arranque y se queda corto en el veterano. Es la equivocación correcta
+   de las dos posibles. El documento dice que « la pesca es el INGRESO del jugador de la primera
+   semana y el CONDIMENTO del veterano »: pasarse de generoso a granja 21 rompería justamente eso,
+   y quedarse corto no rompe nada. */
+var LONJA_H_DIA = 2;
+function diaDeGranja() { return celdasProductivas() * ANCLA_PLATA_HORA * LONJA_H_DIA; }
+
+/* LAS TRES MAREAS. Se guardan en horas UTC porque el reset diario del juego ya es a las 00:00
+   UTC: dos relojes distintos en el mismo juego obligarían al jugador a saber en qué huso vive
+   cada cosa. */
+var LONJA_MAREAS = [
+  { h: 6,  label: "Marea del alba",   noche: false },
+  { h: 14, label: "Marea de la siesta", noche: false },
+  { h: 22, label: "Marea de la noche", noche: true },
+];
+var LONJA_MAREA_DUR_H = 8;
+
+/* LOS CUATRO ESCALONES. Lo que paga cada uno sale de diaDeGranja(); las Escamas son fijas,
+   porque no compran plata: compran cosas que no tienen precio en plata. */
+var LONJA_ESCALON = {
+  marea:   { label: "Pedido de marea",    dias: 0.033, escamas: 1  },
+  capitan: { label: "Encargo del Capitán", dias: 1,    escamas: 6  },
+  mes:     { label: "Captura del mes",     dias: 3,    escamas: 25 },
+  torneo:  { label: "Torneo de Pesca",     dias: 2,    escamas: 12 },
+};
+/* EL PAGO TIENE UN SUELO, Y ES POR UN FALLO QUE MEDÍ ANTES DE QUE SALIERA
+   Derivé el pago del pedido de marea de « 3,3 % de un día de granja » y el CONTENIDO del pedido
+   de una lista aparte, y las dos cosas nunca se hablaron. La primera tirada de prueba pidió « 1
+   Pez gota » —un legendario de 700 de plata— y la Lonja pagaba 32. O sea que entregar un
+   legendario costaba 668 de plata: exactamente la lección contraria a la que el sistema quiere
+   enseñar. Y no era un caso raro: la mitad de los pedidos pagaban menos de ×2.
+
+   Ahora el pago es el MAYOR de las dos cuentas: el escalón en días de granja, y lo que valen
+   los peces sueltos por LONJA_MULT_MIN. Así « los peces sueltos se venden, los peces raros se
+   entregan » es verdad SIEMPRE y no solo de media. El ×2 sale de los ejemplos del propio
+   documento (×2,5 y ×1,7 en sus dos pedidos de marea). */
+var LONJA_MULT_MIN = 2;
+function lonjaPaga(escalon, suelto) {
+  const e = LONJA_ESCALON[escalon]; if (!e) return 0;
+  const porDias = Math.round(diaDeGranja() * e.dias);
+  const porValor = Math.round((suelto || 0) * LONJA_MULT_MIN);
+  return Math.max(1, porDias, porValor);
+}
+function lonjaSuelto(p) { return p ? (PEZ_DEF[p.id] || {}).precio * p.n : 0; }
+
+/* ── LAS ESCAMAS ─────────────────────────────────────────────────────────────────────────────
+   Salen SOLO de la Lonja y no se compran ni se venden. Unas 139 al mes: ~3 por día de mareas,
+   6 por semana del Capitán, 25 al mes y 12 por torneo.
+
+   Ojo con el nombre: la Pesca v3 tenía otra cosa llamada « escama » (el recuerdo del pez que se
+   te escapó, en G.escamas, un objeto por especie). Ésta es una MONEDA y vive en G.escamasLonja,
+   un número. Dos cosas distintas no pueden compartir campo aunque compartan palabra — es el
+   mismo fallo que ceboBolsa(), pero en los datos en vez de en las funciones. */
+function escamasLonja() { return Math.floor(G.escamasLonja || 0); }
+function escamasDar(n, motivo) {
+  if (!(n > 0)) return 0;
+  G.escamasLonja = escamasLonja() + n;
+  if (typeof flujoAnotar === "function") flujoAnotar("escamasLonja", "escamasLonja", n);
+  log("Ganaste " + n + " Escama" + (n > 1 ? "s" : "") + (motivo ? " · " + motivo : "") + ".", "gold");
+  return G.escamasLonja;
+}
+function escamasGastar(n) {
+  if (escamasLonja() < n) return false;
+  G.escamasLonja = escamasLonja() - n;
+  if (typeof flujoAnotar === "function") flujoAnotar("escamasLonja", "escamasLonja", -n);
+  return true;
+}
+
+/* ── QUÉ PUEDE PEDIR ─────────────────────────────────────────────────────────────────────────
+   Un pez es pedible si el jugador puede sacarlo HOY: su banda tiene probabilidad con alguna caña
+   que tenga, y si es de noche, que la ventana del pedido llegue a la noche. */
+function pezPedible(id, ventanaLlegaDeNoche) {
+  const e = PEZ_DEF[id]; if (!e || e.banda === "mitico") return false;
+  if (e.noche && !ventanaLlegaDeNoche) return false;
+  const canas = Object.keys(G.canas || { junco: 1 });
+  return canas.some(c => {
+    const d = CANA_V4_DEF[c]; if (!d) return false;
+    return (d.banda[e.banda] || 0) > 0;
+  });
+}
+function bandasPedibles(ventanaLlegaDeNoche) {
+  return PEZ_BANDA_ORDER.filter(b => b !== "mitico" &&
+    pecesDeBanda(b).some(k => pezPedible(k, ventanaLlegaDeNoche)));
+}
+
+/* ── EL PEDIDO DE MAREA ──────────────────────────────────────────────────────────────────────
+   Determinístico por marea: apretar F5 no re-sortea el pedido, igual que el Mercader Goblin. */
+function lonjaMareaIdx(t) {
+  const d = new Date(t != null ? t : nowMs());
+  const h = d.getUTCHours();
+  let idx = 0;
+  for (let i = 0; i < LONJA_MAREAS.length; i++) if (h >= LONJA_MAREAS[i].h) idx = i;
+  /* antes de las 06:00 todavía corre la marea de la noche del día anterior */
+  if (h < LONJA_MAREAS[0].h) idx = LONJA_MAREAS.length - 1;
+  return idx;
+}
+function lonjaMareaSello(t) {
+  const ms = t != null ? t : nowMs(), d = new Date(ms), idx = lonjaMareaIdx(ms);
+  let dia = Math.floor(ms / 86400000);
+  if (d.getUTCHours() < LONJA_MAREAS[0].h) dia -= 1;   // la marea de la noche cruza la medianoche
+  return dia + ":" + idx;
+}
+function lonjaMareaVenceEn(t) {
+  const ms = t != null ? t : nowMs(), idx = lonjaMareaIdx(ms), d = new Date(ms);
+  const inicio = Date.UTC(d.getUTCFullYear(), d.getUTCMonth(), d.getUTCDate(), LONJA_MAREAS[idx].h);
+  const real = d.getUTCHours() < LONJA_MAREAS[0].h ? inicio - 86400000 : inicio;
+  return real + LONJA_MAREA_DUR_H * 3600000 - ms;
+}
+function lonjaPedido() {
+  const sello = lonjaMareaSello();
+  if (!G.lonja || G.lonja.sello !== sello) {
+    const idx = lonjaMareaIdx();
+    const r = rndSemilla(hashCadena(sello));
+    const bandas = bandasPedibles(LONJA_MAREAS[idx].noche);
+    if (!bandas.length) return null;
+    /* el sesgo hacia las bandas bajas es el que hace que el pedido sea CUMPLIBLE: pedir 4 raros
+       a un jugador que saca uno cada diez lances no es un reto, es una pared. */
+    /* LA MAREA NO PIDE ÉPICOS NI LEGENDARIOS. Vence en ocho horas, y un legendario sale una vez
+       cada mil lances: pedirlo no es un reto, es una pared con premio detrás. Para eso están el
+       Encargo del Capitán (una semana) y la Captura del mes (un mes), que es justamente por qué
+       el documento pone cuatro escalones y no uno. */
+    const peso = { comun: 50, poco_comun: 32, raro: 14 };
+    const bajas = bandas.filter(b => peso[b]);
+    if (!bajas.length) return null;
+    let acc = 0, tot = bajas.reduce((s, b) => s + peso[b], 0), u = r() * tot, banda = bajas[0];
+    const _b = bajas;
+    for (const b of _b) { acc += peso[b]; if (u <= acc) { banda = b; break; } }
+    const lista = pecesDeBanda(banda).filter(k => pezPedible(k, LONJA_MAREAS[idx].noche));
+    const id = lista[Math.floor(r() * lista.length)] || lista[0];
+    /* 2 a 5 peces, menos cuanto más rara la banda */
+    const techo = { comun: 5, poco_comun: 4, raro: 3 }[banda] || 3;
+    const n = Math.max(1, Math.min(techo, 2 + Math.floor(r() * (techo - 1))));
+    G.lonja = { sello, idx, id, n, hechos: 0, cobrado: false };
+  }
+  return G.lonja;
+}
+function hashCadena(s) { let h = 0; for (let i = 0; i < s.length; i++) h = (h * 31 + s.charCodeAt(i)) | 0; return h || 1; }
+
+function lonjaEntregar() {
+  const p = lonjaPedido();
+  if (!p) { toast("La Lonja no tiene pedido ahora mismo"); return false; }
+  if (p.cobrado) { toast("Ya entregaste el pedido de esta marea"); return false; }
+  const tengo = Math.floor((G.fish && G.fish[p.id]) || 0);
+  if (tengo < p.n) {
+    toast("Te faltan " + (p.n - tengo) + " " + (PEZ_DEF[p.id] || {}).label);
+    return false;
+  }
+  G.fish[p.id] -= p.n;
+  const plata = lonjaPaga("marea", lonjaSuelto(p)), esc = LONJA_ESCALON.marea.escamas;
+  G.coins = (G.coins || 0) + plata;
+  p.cobrado = true;
+  p.hechos = p.n;
+  if (typeof flujoAnotar === "function") { flujoAnotar("fish", p.id, -p.n); flujoAnotar("coins", "coins", plata); }
+  escamasDar(esc, LONJA_MAREAS[p.idx].label);
+  addXp("fishing", Math.round(PEZ_DEF[p.id].xp * p.n * 0.5));
+  log("Entregaste " + p.n + " " + PEZ_DEF[p.id].label + " en la Lonja: " + plata + " de plata.", "gold");
+  G.lonjaEntregados = (G.lonjaEntregados || 0) + 1;
+  return true;
+}
+/* lo que el jugador tira si vende suelto en vez de entregar. Está a la vista en el panel a
+   propósito: « los peces sueltos se venden, los peces RAROS se entregan » es la lección
+   económica del sistema, y hay que aprenderla UNA vez, no descubrirla por accidente. */
+function lonjaMultiplicador() {
+  const p = lonjaPedido(); if (!p) return 0;
+  const suelto = lonjaSuelto(p);
+  return suelto > 0 ? Math.round(lonjaPaga("marea", suelto) / suelto * 10) / 10 : 0;
+}
+
+/* ═══════════════════════════════════════════════════════════════════════════════════════════
+   LOS TÍTULOS DE PESCADOR, EL RANKING Y LA TIENDA DE LA LONJA   (27/8, Pesca v4 tanda 3)
+   ═══════════════════════════════════════════════════════════════════════════════════════════
+   Diez títulos. NO DAN PLATA: dan una etiqueta que los demás ven, que es exactamente lo que hace
+   que se persigan. El día que un título pague algo, deja de ser un título y pasa a ser una
+   recompensa con nombre bonito — y entonces el jugador lo calcula en vez de quererlo.
+
+   Cada uno pide dos cosas a la vez: un nivel de Pesca Y un hecho. El nivel solo sería tiempo; el
+   hecho solo sería suerte. Juntos miden lo que dice la columna de la derecha. */
+var TITULO_PESCA_ORDER = ["pies_mojados", "cebador", "anzuelo_firme", "lector", "nasero",
+                          "cazador_sombras", "rompeolas", "maestro_lonja", "domador", "senor_laguna"];
+var TITULO_PESCA_DEF = {
+  pies_mojados:    { label: "Pies Mojados",       lvl: 1,  mide: "Entraste al agua." },
+  cebador:         { label: "Cebador",            lvl: 3,  capturas: 25,
+                     mide: "Volumen: sabés cómo se tira." },
+  anzuelo_firme:   { label: "Anzuelo Firme",      lvl: 5,  bandaCompleta: "poco_comun",
+                     mide: "Variedad: entraste al álbum." },
+  lector:          { label: "Lector de Aguas",    lvl: 8,  banda: "raro",
+                     mide: "Aprendiste a leer los tirones." },
+  nasero:          { label: "Nasero",             lvl: 10, nasas: 20,
+                     mide: "Jugás también la mitad pasiva." },
+  cazador_sombras: { label: "Cazador de Sombras", lvl: 13, banda: "epico",
+                     mide: "Aguantaste una pulseada larga." },
+  rompeolas:       { label: "Rompeolas",          lvl: 16, gigantes: 3,
+                     mide: "Peso: cazás récords, no cantidad." },
+  maestro_lonja:   { label: "Maestro de la Lonja", lvl: 18, pedidos: 50,
+                     mide: "Constancia: tres visitas al día." },
+  domador:         { label: "Domador de Colosos", lvl: 20, banda: "legendario",
+                     mide: "La cima del azar y de la mano." },
+  senor_laguna:    { label: "Señor de la Laguna", lvl: 20, album: true,
+                     mide: "Completismo total. El título raro de verdad." },
+};
+/* ¿está ganado? Una sola función, y la interfaz pregunta — nunca al revés. Que el panel decida
+   si un título está ganado es cómo se acaba con dos respuestas distintas a la misma pregunta. */
+function tituloPescaGanado(k) {
+  const d = TITULO_PESCA_DEF[k]; if (!d) return false;
+  if (nivelOficio("fishing") < d.lvl) return false;
+  const st = G.pescaStats || {};
+  if (d.capturas && (st.capturas || 0) < d.capturas) return false;
+  if (d.nasas && (st.nasas || 0) < d.nasas) return false;
+  if (d.pedidos && (G.lonjaEntregados || 0) < d.pedidos) return false;
+  if (d.gigantes && (st.gigantes || 0) < d.gigantes) return false;
+  if (d.banda && !pecesDeBanda(d.banda).some(x => (st.vistos || {})[x])) return false;
+  if (d.bandaCompleta && !pecesDeBanda(d.bandaCompleta).every(x => (st.vistos || {})[x])) return false;
+  if (d.album && !PEZ_ORDER.every(x => (st.vistos || {})[x])) return false;
+  return true;
+}
+function titulosPescaGanados() { return TITULO_PESCA_ORDER.filter(tituloPescaGanado); }
+/* el vigente: el último de la lista que esté ganado, salvo que el jugador elija otro a mano */
+function tituloPescaVigente() {
+  const g = titulosPescaGanados();
+  if (G.tituloPesca && g.indexOf(G.tituloPesca) >= 0) return G.tituloPesca;
+  return g.length ? g[g.length - 1] : null;
+}
+/* se anota TODO lo que un título pueda pedir, en un solo sitio y en el momento de la captura.
+   Repartir estos contadores por la interfaz es cómo se consigue que un título no se dispare
+   nunca y nadie sepa por qué. */
+function pescaAnotar(id, kg, deNasa) {
+  const st = G.pescaStats = G.pescaStats || {};
+  st.capturas = (st.capturas || 0) + 1;
+  st.vistos = st.vistos || {};
+  st.vistos[id] = (st.vistos[id] || 0) + 1;
+  if (deNasa) st.nasas = (st.nasas || 0) + 1;
+  if (kg != null && pezGigante(id, kg)) st.gigantes = (st.gigantes || 0) + 1;
+  /* el récord por especie: el gancho que no se agota nunca */
+  st.record = st.record || {};
+  if (kg != null && kg > (st.record[id] || 0)) {
+    const previo = st.record[id] || 0;
+    st.record[id] = kg;
+    if (previo > 0) log("¡Récord! " + PEZ_DEF[id].label + " de " + kg.toFixed(2) + " kg (antes " + previo.toFixed(2) + ").", "gold");
+  }
+  return st;
+}
+
+/* ── EL RANKING SEMANAL ──────────────────────────────────────────────────────────────────────
+   De viernes a domingo el Torneo deja de ser una entrega y pasa a ser una tabla. Se puntúa por
+   peso RELATIVO, nunca absoluto:
+
+       puntos = (peso de la captura ÷ peso máximo de su especie) × multiplicador de banda
+
+   La consecuencia buscada: una merluza descomunal puntúa más que un pez espada raquítico. El
+   jugador de nivel 4 puede aparecer en la tabla la semana que tiene suerte, y ésa es la única
+   forma de que un ranking en un juego de granja no sea un muro donde siempre ganan los mismos. */
+var TORNEO_MULT = { comun: 1, poco_comun: 1.5, raro: 2.5, epico: 4, legendario: 6, mitico: 3 };
+/* « PESO RELATIVO » ES RELATIVO A SU PROPIO RANGO, no a su máximo — y esto corrige al documento.
+
+   El documento da la fórmula como « peso ÷ peso máximo de su especie » y, tres líneas después,
+   la consecuencia que busca: « una merluza descomunal puntúe más que un pez espada raquítico ».
+   Las dos cosas no pueden ser verdad a la vez, y lo vi al medirlo, no al leerlo.
+
+   El pez espada pesa de 20 a 30 kg: su MÍNIMO ya es el 68 % de su máximo. Dividiendo por el
+   máximo, el espada más raquítico que existe puntúa 0,68 × 2,5 = 1,70, y la merluza más
+   descomunal que existe puntúa 1,00 × 1 = 1,00. El raquítico gana siempre. Con esa fórmula la
+   frase del documento es literalmente imposible para cualquier par de especies de bandas
+   distintas, y el ranking vuelve a ser lo que el propio documento dice que no puede ser: un muro
+   donde siempre ganan los mismos.
+
+   Midiendo contra el RANGO —(peso − mínimo) ÷ (máximo − mínimo)— « raquítico » pasa a significar
+   raquítico de verdad: ese mismo espada saca 0,02 × 2,5 = 0,05 y la merluza al tope saca 1,00.
+   Los multiplicadores del documento se quedan tal cual, y su frase pasa a ser cierta.
+
+   Y de paso es lo que un récord significa en cualquier pesquería del mundo: no cuánto pesa el
+   bicho, sino cuánto pesa PARA SU ESPECIE. */
+function torneoPuntos(id, kg) {
+  const e = PEZ_DEF[id]; if (!e || !e.peso || !(kg > 0)) return 0;
+  const min = e.peso[0], rango = e.peso[1] - e.peso[0];
+  const rel = rango > 0 ? Math.max(0, Math.min(1, (kg - min) / rango)) : 1;
+  return Math.round(rel * (TORNEO_MULT[e.banda] || 1) * 1000) / 1000;
+}
+function torneoAbierto(t) {
+  const d = new Date(t != null ? t : nowMs()).getUTCDay();   // 0 dom · 5 vie · 6 sáb
+  return d === 5 || d === 6 || d === 0;
+}
+function torneoSemana(t) { return Math.floor(((t != null ? t : nowMs()) - 345600000) / 604800000); }
+/* la mejor captura de la semana, que es lo que puntúa: se guarda UNA, no la suma. Sumar premiaría
+   al que más tiempo tiene; guardar la mejor premia al que tuvo la mejor tarde. */
+function torneoAnotar(id, kg) {
+  if (!torneoAbierto()) return null;
+  const sem = torneoSemana();
+  const t = G.torneo = (G.torneo && G.torneo.sem === sem) ? G.torneo : { sem, pts: 0, id: null, kg: 0 };
+  const p = torneoPuntos(id, kg);
+  if (p > t.pts) { t.pts = p; t.id = id; t.kg = kg;
+    log("Nueva mejor del torneo: " + PEZ_DEF[id].label + " de " + kg.toFixed(2) + " kg · " + p.toFixed(2) + " puntos.", "gold"); }
+  return t;
+}
+/* los diez primeros cobran Escamas en escalera, 25 al 1.º y 3 al 10.º */
+var TORNEO_PREMIO = [25, 18, 14, 11, 9, 7, 6, 5, 4, 3];
+function torneoPremio(puesto) { return TORNEO_PREMIO[puesto - 1] || 0; }
+
+/* ── LA TIENDA DE LA LONJA ───────────────────────────────────────────────────────────────────
+   Lo que las Escamas compran, y que la plata no puede: cebo de control, planos de nasa, dos
+   decoraciones y la caña sin usos. A ~139 Escamas al mes, la Caña del Abuelo es un mes de Lonja
+   bien jugada — que es exactamente lo que el documento quiere que sea. */
+var LONJA_TIENDA_ORDER = ["larva", "plano_reforzada", "plano_hierro", "boya", "farol", "cana_abuelo"];
+var LONJA_TIENDA = {
+  larva:           { label: "Larva de luz",        esc: 2,   que: "El cebo que borra la banda común.",
+                     dar: () => { G.res.larva_luz = (G.res.larva_luz || 0) + 1; } },
+  plano_reforzada: { label: "Plano: Nasa reforzada", esc: 15, unaVez: true,
+                     que: "Sube el éxito de la nasa del 60 al 75 %.",
+                     dar: () => { G.nasaPlanos = G.nasaPlanos || {}; G.nasaPlanos.reforzada = true; } },
+  plano_hierro:    { label: "Plano: Nasa de hierro", esc: 40, unaVez: true,
+                     que: "El 88 %, y la langosta y el calamar pasan a ser lo normal.",
+                     dar: () => { G.nasaPlanos = G.nasaPlanos || {}; G.nasaPlanos.hierro = true; } },
+  boya:            { label: "Boya de trofeos",     esc: 30, unaVez: true,
+                     que: "Flota en la laguna y muestra tu récord vigente.",
+                     dar: () => { G.built = G.built || {}; G.built.boya_trofeos = true; } },
+  farol:           { label: "Farol de la Laguna",  esc: 60, unaVez: true,
+                     cost: { tablon: 20, barra_piedra: 10 },
+                     que: "Un hueco de nasa extra y una hora más de noche.",
+                     dar: () => { G.built = G.built || {}; G.built.farol_laguna = true; } },
+  cana_abuelo:     { label: "Caña del Abuelo",     esc: 120, unaVez: true, pideLegendario: true,
+                     que: "La caña sin usos. Un mes de Lonja bien jugada.",
+                     dar: () => { G.canas = G.canas || {}; G.canas.abuelo = 1; } },
+};
+function lonjaTiendaTengo(k) {
+  const d = LONJA_TIENDA[k]; if (!d || !d.unaVez) return false;
+  if (k === "plano_reforzada") return !!(G.nasaPlanos || {}).reforzada;
+  if (k === "plano_hierro")    return !!(G.nasaPlanos || {}).hierro;
+  if (k === "boya")            return !!(G.built || {}).boya_trofeos;
+  if (k === "farol")           return !!(G.built || {}).farol_laguna;
+  if (k === "cana_abuelo")     return !!(G.canas || {}).abuelo;
+  return false;
+}
+/* UNA SOLA función contesta « ¿puedo comprarlo? », y devuelve el MOTIVO cuando no. Un botón
+   apagado sin motivo es la regla 9 rota: el jugador se queda mirando algo que no responde. */
+function lonjaTiendaFalta(k) {
+  const d = LONJA_TIENDA[k]; if (!d) return "no existe";
+  if (lonjaTiendaTengo(k)) return "ya lo tenés";
+  if (escamasLonja() < d.esc) return "te faltan " + (d.esc - escamasLonja()) + " Escamas";
+  if (d.cost && !canAfford(d.cost)) return "te falta material";
+  if (d.pideLegendario && !pecesDeBanda("legendario").some(x => ((G.pescaStats || {}).vistos || {})[x]))
+    return "hace falta haber pescado un legendario";
+  return null;
+}
+function lonjaComprar(k) {
+  const d = LONJA_TIENDA[k]; if (!d) return false;
+  const falta = lonjaTiendaFalta(k);
+  if (falta) { toast(d.label + ": " + falta); return false; }
+  escamasGastar(d.esc);
+  if (d.cost) payCost(d.cost);
+  d.dar();
+  log("Compraste " + d.label + " en la Lonja.", "gold");
+  return true;
+}
+/* el Farol suma un hueco de nasa y alarga la noche: se consultan desde donde vive cada regla,
+   no se copian. */
+function farolLaguna() { return !!(G.built || {}).farol_laguna; }
 
 /* ================= BUZÓN (15/8, idea Stardew) ==================================
    Las noticias llegan como CARTAS a un buzón físico en la granja. La banderita se

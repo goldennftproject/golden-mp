@@ -449,6 +449,18 @@ GF.WORLD_OBJECTS.push(snap("ofrendas", {type:"ofrendas"}, 294, 168, T*2));      
 // y vea el cajon en el mismo golpe de vista es la mitad del sistema. Separarlos convierte la
 // decision del dia en un tramite de memoria.
 GF.WORLD_OBJECTS.push(snap("lombricario", {type:"lombricario"}, 252, 462, T*1.4));
+// LA LONJA, al este de la laguna y justo despues del Lombricario. Los tres en fila —el agua, de
+// donde sale la carnada, adonde va el pescado— para que el jugador que mira la laguna vea el
+// ciclo entero sin moverse. Eso es media explicacion que no hay que escribir en ningun lado.
+//
+// Le costo tres intentos y los tres los cazaron los tests de terreno, ninguno una pantalla:
+//   · columna 0 (el oeste de la laguna) pisaba la CERCA — mide 2 celdas y eso se cuenta desde
+//     el borde izquierdo, no desde el centro;
+//   · fila 13 (la orilla sur) se metia en la ELIPSE de la laguna por abajo, y dejaba dos celdas
+//     de agua caminables;
+//   · fila 14 volvia a pisar la cerca, que es donde termina el claro de arranque.
+// Tres auditores distintos, tres razones distintas, y ni una sola vuelta de « lo pruebo a ver ».
+GF.WORLD_OBJECTS.push(snap("lonja", {type:"lonja"}, 336, 462, T*1.5));
 
 // CHIMENEAS (9/8). Dónde sale el humo en cada edificio, medido sobre el arte nuevo y no
 // a ojo: dx es el corrimiento respecto del CENTRO del sprite (en anchos de sprite) y dy es
@@ -568,7 +580,8 @@ GF.SOLID = {
   altar:  { hw: 0.42, dep: 0.5 },
   establo:    { hw: 0.46, dep: 0.58 },
   curtiduria: { hw: 0.44, dep: 0.54 },
-  lombricario: { hw: 0.40, dep: 0.34 },   // un cajon, no una casa: ocupa poco y no tiene tejado que pise nada
+  lombricario: { hw: 0.40, dep: 0.34 },
+  lonja:       { hw: 0.42, dep: 0.30 },   // un cartel: ancho y poco fondo   // un cajon, no una casa: ocupa poco y no tiene tejado que pise nada
   ofrendas:   { hw: 0.44, dep: 0.54 },
   dummy:  { hw: 0.24, dep: 0.26 },
   cofre:  { hw: 0.34, dep: 0.30 },
