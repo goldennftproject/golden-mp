@@ -499,6 +499,45 @@
     text-shadow:-2px 0 #241505,2px 0 #241505,0 -2px #241505,0 2px #241505,-1px -1px #241505,1px 1px #241505;
     transform:translate(-50%,-100%);animation:tfui .42s ease-in-out infinite alternate}
   @keyframes tfui{from{margin-top:-12px}to{margin-top:-3px}}
+  /* ---- PESCA v4 ----
+     Dos barras y un botón. Nada más en pantalla: si hubiera un tercer indicador, el jugador
+     tendría que elegir cuál mirar durante un tirón de medio segundo, y ahí se pierde el pez por
+     interfaz y no por decisión. */
+  #pesca4{position:fixed;left:50%;bottom:16px;transform:translateX(-50%);z-index:70;width:min(430px,94vw);
+    display:none;flex-direction:column;gap:7px;padding:11px 13px 13px;border-radius:13px;
+    background:rgba(20,28,16,.94);border:2px solid #3c4d31;box-shadow:0 8px 26px rgba(0,0,0,.45)}
+  #pesca4.show{display:flex}
+  .p4-cab{display:flex;justify-content:space-between;align-items:center;font-size:13px;color:#f2ead5}
+  .p4-cab #p4-cebo{font-size:12px;color:#cbbf9f}
+  .p4-agua{display:flex;gap:8px;justify-content:center;min-height:56px;align-items:center;flex-wrap:wrap}
+  .p4-sombra{width:78px;height:52px;border-radius:26px/18px;border:2px solid #4d6b7a;cursor:pointer;
+    background:radial-gradient(ellipse at 50% 55%,rgba(30,60,80,.95),rgba(18,34,46,.9));
+    display:flex;flex-direction:column;align-items:center;justify-content:center;gap:1px;
+    color:#bcd6e4;font-size:10px;font-weight:800;transition:transform .12s,border-color .12s}
+  .p4-sombra:hover{transform:translateY(-3px);border-color:#8fc4dd}
+  .p4-sombra .em{font-size:17px;line-height:1}
+  .p4-sombra.chica .em{font-size:12px}
+  .p4-sombra.grande{width:96px;height:60px}
+  .p4-sombra.grande .em{font-size:23px}
+  .p4-pelea{display:none;flex-direction:column;gap:5px}
+  #pesca4.peleando .p4-pelea{display:flex}
+  #pesca4.peleando .p4-agua{display:none}
+  .p4-quien{display:flex;align-items:center;gap:7px;font-size:13px;font-weight:800;color:#f2ead5}
+  .p4-quien img{width:26px;height:26px;object-fit:contain;image-rendering:pixelated}
+  .p4-bar{height:15px;border-radius:8px;overflow:hidden;position:relative}
+  .p4-bar i{display:block;height:100%;width:0%;transition:width .05s linear}
+  .p4-prog{background:#1b2714;border:1px solid #3c4d31}
+  .p4-prog i{background:linear-gradient(90deg,#63991f,#9ede54)}
+  .p4-tens{background:#2a1410;border:1px solid #5a3128;height:11px}
+  .p4-tens i{background:linear-gradient(90deg,#d9a521,#e2553a)}
+  .p4-aviso{height:17px;font-size:12px;font-weight:800;text-align:center;color:#ffd75e;letter-spacing:.5px}
+  .p4-aviso.tiron{color:#ff7a5c;animation:p4sac .18s linear infinite alternate}
+  @keyframes p4sac{from{transform:translateX(-3px)}to{transform:translateX(3px)}}
+  .p4-btn{width:100%;padding:11px;border-radius:10px;border:2px solid #7fa356;background:#3d5a24;
+    color:#f2ead5;font-size:14px;font-weight:800;cursor:pointer;user-select:none;-webkit-user-select:none;touch-action:none}
+  .p4-btn.hold{background:#63991f;border-color:#9ede54}
+  .p4-btn:disabled{opacity:.5;cursor:default}
+  .p4-pie{font-size:11px;color:#cbbf9f;text-align:center;min-height:14px}
   /* ---- EL FLUJO DE LA BOLSA (26/8) ----
      Columna en el margen izquierdo, a la altura de los ojos. pointer-events:none en TODO: es
      información de paso, y un cartel que se puede clicar por accidente roba clics al mundo
@@ -1057,6 +1096,25 @@
 
   <!-- 22/8: LOGROS con premio — pestaña del menú; a futuro, la sala de trofeos de un edificio -->
   <!-- 22/8: PESCA v2 (Fishing Frenzy) — el carrete. pointer-events:none: el clic sigue siendo del agua -->
+  <!-- ═══ PESCA v4 · EL LANCE (27/8) ═══════════════════════════════════════════════════════
+       Toda la pesca cabe en un botón: mantener o soltar. Tres fases en el mismo panel —elegir
+       sombra, esperar el pique, y la pulseada— porque cambiar de ventana entre fases rompe el
+       hilo de la atención justo cuando hace falta.
+       La barra de PROGRESO va arriba y la de TENSIÓN abajo, separadas y con colores distintos:
+       son las dos únicas cosas que el jugador tiene que leer, y confundirlas es perder el pez. -->
+  <div id="pesca4">
+    <div class="p4-cab"><b id="p4-tit">La laguna</b><span id="p4-cebo"></span></div>
+    <div class="p4-agua" id="p4-agua"></div>
+    <div class="p4-pelea" id="p4-pelea">
+      <div class="p4-quien"><img id="p4-img" draggable="false" alt=""><span id="p4-nom"></span></div>
+      <div class="p4-bar p4-prog"><i id="p4-prog"></i></div>
+      <div class="p4-bar p4-tens"><i id="p4-tens"></i></div>
+      <div class="p4-aviso" id="p4-aviso"></div>
+    </div>
+    <button class="p4-btn" id="p4-btn">Mantené apretado</button>
+    <div class="p4-pie" id="p4-pie"></div>
+  </div>
+
   <div id="pesca-mini">
     <div class="pm-cabeza" id="pm-txt">…</div>
     <div class="pm-cuerpo">

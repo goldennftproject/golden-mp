@@ -225,6 +225,207 @@ function flujoTick() {
   /* lo que ENTRA primero y lo que sale después: se lee mejor « +1 Piedra · −1 Pico » que al revés */
   cambios.sort((a, b) => b.d - a.d).forEach(c => flujoChip(c.kind, c.key, c.d));
 }
+/* ═══════════════════════════════════════════════════════════════════════════════════════════
+   PESCA v4 · EL PANEL DEL LANCE                                                        (27/8)
+   ═══════════════════════════════════════════════════════════════════════════════════════════
+   La lógica vive en state.js y no sabe que existe una pantalla. Esto es solo la mano: lee el
+   estado, lo pinta y le pasa si el botón está hundido.
+
+   TRES FASES EN LA MISMA VENTANA — elegir sombra, esperar el pique y pelear. Cambiar de ventana
+   entre fases rompe el hilo de la atención justo cuando hace falta, y la fase de pique dura dos
+   segundos y medio: no da tiempo a reorientarse.
+
+   Y UNA DECISIÓN QUE PARECE MENOR Y NO LO ES: el botón se atiende con pointerdown/pointerup y
+   NO con click. Un click solo existe cuando el apretar y el soltar caen en el mismo elemento —
+   que es exactamente el fallo que nos costó dos días con la rejilla de la Cocina— y acá el
+   jugador va a arrastrar el dedo mientras aguanta. Con pointerdown y pointerup sueltos, salir
+   del botón sin levantar el dedo NO suelta el hilo, que es lo que uno espera de una caña. */
+var P4 = null;                 // el lance en curso, o null
+var _p4Raf = 0, _p4Ultimo = 0, _p4Hold = false;
+
+function pescaV4Abrir() {
+  const el = $("pesca4"); if (!el) return;
+  P4 = { fase: "sombras", sombras: sombrasNuevas(), L: null, espera: 0, ventana: 0, cana: pescaV4Cana() };
+  el.classList.add("show"); el.classList.remove("peleando");
+  pescaV4Pintar();
+  pescaV4Bucle();
+}
+function pescaV4Cerrar() {
+  const el = $("pesca4"); if (el) { el.classList.remove("show"); el.classList.remove("peleando"); }
+  P4 = null; _p4Hold = false;
+  if (_p4Raf) { cancelAnimationFrame(_p4Raf); _p4Raf = 0; }
+}
+/* qué caña usa: la mejor que tenga, que es lo que el jugador espera sin tener que elegirla —
+   la misma decisión que ya se tomó con los picos el 24/8. */
+function pescaV4Cana() {
+  const tengo = (G.canas || {});
+  for (let i = CANA_V4_ORDER.length - 1; i >= 0; i--) { const k = CANA_V4_ORDER[i]; if (tengo[k]) return k; }
+  return "junco";
+}
+
+/* ── EL BUCLE ───────────────────────────────────────────────────────────────────────────────
+   Un requestAnimationFrame con el delta REAL. No un setInterval de 30 ms: en una pestaña que
+   pierde el foco, un interval se acumula y devuelve el tiempo de golpe — y una pulseada que
+   avanza dos segundos en un cuadro es un pez perdido que el jugador no vio venir. */
+function pescaV4Bucle() {
+  if (_p4Raf) cancelAnimationFrame(_p4Raf);
+  _p4Ultimo = (typeof performance !== "undefined" ? performance.now() : Date.now());
+  const paso = () => {
+    if (!P4) { _p4Raf = 0; return; }
+    const t = (typeof performance !== "undefined" ? performance.now() : Date.now());
+    const dt = Math.min(0.1, (t - _p4Ultimo) / 1000);   // tope de 0,1 s: nunca un salto grande
+    _p4Ultimo = t;
+    pescaV4Paso(dt);
+    _p4Raf = requestAnimationFrame(paso);
+  };
+  _p4Raf = requestAnimationFrame(paso);
+}
+function pescaV4Paso(dt) {
+  if (!P4) return;
+  if (P4.fase === "espera") {
+    P4.espera -= dt;
+    if (P4.espera <= 0) { P4.fase = "pique"; P4.ventana = PIQUE_VENTANA; if (window.sfx) sfx("splash"); }
+  } else if (P4.fase === "pique") {
+    P4.ventana -= dt;
+    /* PERDER EL PIQUE NO GASTA LA LOMBRIZ. Fallar la entrada no puede costar dinero: el corcho
+       vuelve solo y se tira de nuevo. (Documento, §3.) */
+    if (P4.ventana <= 0) { P4.fase = "sombras"; P4.sombras = sombrasNuevas(); toast("Se soltó — volvé a tirar"); }
+  } else if (P4.fase === "pelea" && P4.L) {
+    peleaTick(P4.L, dt, _p4Hold);
+    if (P4.L.roto || P4.L.listo) pescaV4Resolver();
+  }
+  pescaV4Pintar();
+}
+
+/* ── TIRAR A UNA SOMBRA ─────────────────────────────────────────────────────────────────────
+   ACÁ NO SE COBRA LA LOMBRIZ: se cobra al CLAVAR. El documento es explícito —« perder el pique
+   no gasta la lombriz: el corcho vuelve solo y se tira de nuevo »— y la razón es buena: fallar
+   la ENTRADA no puede costar dinero, o el jugador deja de tirar por miedo.
+   Se comprueba que haya al menos una antes de tirar, eso sí: prometer un lance que no se puede
+   pagar es una acción muda de las que persigue la regla 9.
+
+   (El comentario que había acá decía lo contrario que el código de abajo —« se cobra al tirar »—
+   y lo escribí yo hace diez minutos. Es exactamente la forma de fallo que nos costó dos días con
+   test-respaldo-local: un comentario que se contradice con la línea siguiente, y que se cree
+   antes que al código porque está escrito en castellano.) */
+function pescaV4Tirar(sombra) {
+  if (!P4 || P4.fase !== "sombras") return;
+  if ((G.res.lombriz || 0) < PESCA_V4_LANCE_CEBO) { toast("Te faltan lombrices — cavá un montículo"); return; }
+  P4.sombra = sombra;
+  P4.fase = "espera";
+  P4.espera = PIQUE_ESPERA[0] + Math.random() * (PIQUE_ESPERA[1] - PIQUE_ESPERA[0]);
+  pescaV4Pintar();
+}
+function pescaV4Clavar() {
+  if (!P4 || P4.fase !== "pique") return;
+  G.res.lombriz = Math.max(0, (G.res.lombriz || 0) - PESCA_V4_LANCE_CEBO);
+  P4.L = lanceArmar(P4.cana, P4.sombra);
+  P4.fase = "pelea";
+  const el = $("pesca4"); if (el) el.classList.add("peleando");
+  if (typeof refreshHud === "function") refreshHud();
+}
+function pescaV4Resolver() {
+  const r = lanceCerrar(P4.L), el = $("pesca4");
+  if (el) el.classList.remove("peleando");
+  if (r && r.roto) {
+    log("🎣 Se cortó el hilo. La racha vuelve a cero.", "bad");
+    toast("¡Se cortó el hilo!");
+  } else if (r) {
+    G.fish = G.fish || {}; G.fish[r.id] = (G.fish[r.id] || 0) + 1;
+    if (typeof addXp === "function") addXp("fishing", r.xp);
+    const e = PEZ_DEF[r.id];
+    let txt = e.emoji + " ¡" + e.label + " de " + r.kg + " kg!";
+    if (r.gigante) txt += " — ¡GIGANTE!";
+    if (r.record) txt += r.recordAnterior ? " — récord nuevo" : " — primera vez";
+    log("🎣 " + txt + " (+" + r.xp + " XP)", r.gigante || r.record ? "gold" : "good");
+    toast(txt);
+    if ((r.gigante || r.record) && window.celebrate) celebrate({ title: r.gigante ? "¡PEZ GIGANTE!" : "¡RÉCORD!", sub: e.label + " · " + r.kg + " kg" });
+    if (typeof statAdd === "function") { statAdd("pescar"); statAdd("pescar", r.id); }
+  }
+  P4.L = null; P4.fase = "sombras"; P4.sombras = sombrasNuevas();
+  if (typeof refreshHud === "function") refreshHud();
+  if (typeof syncSlots === "function") syncSlots();
+  if (typeof saveFarm === "function") saveFarm();
+}
+
+/* ── PINTAR ─────────────────────────────────────────────────────────────────────────────────
+   Patrón de firma, como el resto de la casa: la fila de sombras solo se rehace si cambió. Las
+   barras sí se escriben en cada cuadro, pero eso es un ancho, no un innerHTML — no destruye
+   nodos y no le roba el clic a nadie. */
+function pescaV4Pintar() {
+  if (!P4) return;
+  const agua = $("p4-agua"), pelea = $("p4-pelea"), btn = $("p4-btn"),
+        pie = $("p4-pie"), cebo = $("p4-cebo"), tit = $("p4-tit");
+  if (cebo) cebo.textContent = "🪱 " + Math.floor(G.res.lombriz || 0) + " · " + (CANA_V4_DEF[P4.cana] || {}).label;
+  if (agua) {
+    const firma = P4.fase + "|" + P4.sombras.join(",");
+    if (agua._firma !== firma) {
+      agua._firma = firma;
+      if (P4.fase === "sombras") {
+        agua.innerHTML = P4.sombras.map((s, i) => {
+          const d = SOMBRA_DEF[s];
+          return '<div class="p4-sombra ' + s + '" data-p4s="' + i + '" title="' + d.txt + '">' +
+                 '<span class="em">🐟</span>' + d.label.replace("Sombra ", "") + '</div>';
+        }).join("");
+        agua.querySelectorAll("[data-p4s]").forEach(el =>
+          el.onclick = () => pescaV4Tirar(P4.sombras[Number(el.dataset.p4s)]));
+      } else {
+        agua.innerHTML = '<div style="font-size:34px">🎣</div>';
+      }
+    }
+  }
+  if (tit) tit.textContent = P4.fase === "pelea" ? "¡Enganchado!" : "La laguna";
+  if (btn) {
+    btn.disabled = P4.fase === "sombras";
+    btn.textContent = P4.fase === "pique" ? "¡CLAVÁ!" : (P4.fase === "pelea" ? "Mantené apretado" : "Elegí una sombra");
+    btn.classList.toggle("hold", _p4Hold && P4.fase === "pelea");
+  }
+  if (pie) {
+    pie.textContent = P4.fase === "sombras" ? "La grande promete más y pelea más duro"
+      : P4.fase === "espera" ? "…"
+      : P4.fase === "pique" ? "¡ahora! (fallar no gasta la lombriz)"
+      : "soltá en el tirón · el progreso no se pierde nunca";
+  }
+  const L = P4.L;
+  if (L && P4.fase === "pelea") {
+    const e = PEZ_DEF[L.id];
+    const img = $("p4-img"), nom = $("p4-nom"), pr = $("p4-prog"), te = $("p4-tens"), av = $("p4-aviso");
+    if (img && img._id !== L.id) { img._id = L.id; img.src = GF.spr(e.sprite); }
+    /* el NOMBRE no se dice hasta que el pez está en la mano: la sombra prometía una banda, no
+       una especie, y adelantarlo mataría la sorpresa que sostiene todo el sistema del peso. */
+    if (nom) nom.textContent = (PEZ_BANDA[L.banda] || {}).label || "";
+    if (pr) pr.style.width = Math.round(L.progreso * 100) + "%";
+    if (te) te.style.width = Math.round(L.tension) + "%";
+    if (av) {
+      av.textContent = L.tirando ? "¡TIRÓN! — soltá" : (L.avisando ? "se está preparando…" : "");
+      av.classList.toggle("tiron", !!L.tirando);
+    }
+  }
+}
+/* el botón: pointerdown/pointerup y NADA de click (ver la cabecera). El pointerup se escucha en
+   la VENTANA, no en el botón: si el jugador arrastra el dedo fuera mientras aguanta y suelta
+   afuera, el hilo tiene que soltarse igual — si no, la caña se queda tirando sola. */
+function pescaV4Botones() {
+  const btn = $("p4-btn"); if (!btn || btn._p4) return; btn._p4 = true;
+  btn.addEventListener("pointerdown", (e) => {
+    e.preventDefault();
+    if (!P4) return;
+    if (P4.fase === "pique") { pescaV4Clavar(); _p4Hold = true; return; }
+    if (P4.fase === "pelea") _p4Hold = true;
+  });
+  window.addEventListener("pointerup", () => { _p4Hold = false; });
+  window.addEventListener("pointercancel", () => { _p4Hold = false; });
+  /* y la barra espaciadora hace lo mismo, para quien juegue con teclado */
+  window.addEventListener("keydown", (e) => {
+    if (e.code !== "Space" || !P4 || e.repeat) return;
+    if (typeof GF !== "undefined" && GF.typing) return;      // escribiendo en el chat, no
+    e.preventDefault();
+    if (P4.fase === "pique") pescaV4Clavar();
+    _p4Hold = true;
+  });
+  window.addEventListener("keyup", (e) => { if (e.code === "Space") _p4Hold = false; });
+}
+
 function refreshHud() {
   try { syncMisionesBadge(); } catch (e) {}   // contador de misiones del menú (10/8)
   try { syncLogrosBadge(); } catch (e) {}     // 22/8: cuántos logros hay para cobrar
@@ -3024,6 +3225,7 @@ function initUI() {
      que pasó después. A 180 ms es indistinguible de instantáneo, y comparar dos objetos planos
      cinco veces por segundo no le cuesta nada a nadie. */
   setInterval(() => { try { flujoTick(); } catch (e) {} }, 180);
+  try { pescaV4Botones(); } catch (e) {}   // 27/8: el botón del lance de la Pesca v4
 }
 initUI();
 
