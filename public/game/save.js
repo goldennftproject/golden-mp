@@ -685,6 +685,10 @@ function migrarGuardado(d) {
    misma razón que la fase 2 — necesita el estado entero delante — y se separa de ella porque son
    cosas distintas: migrar arregla el pasado, derivar calcula el presente.                      */
 function derivarEstado(d) {
+  /* 27/8 — LA MUDANZA DE LA PESCA. Va acá, con el estado entero ya cargado: convierte a plata
+     los peces del sistema anterior antes de que nadie mire la bolsa. Es idempotente —al segundo
+     arranque no queda ninguno— así que no hace falta ninguna bandera de « ya migrado ». */
+  try { if (typeof mudanzaPescaV4 === "function") mudanzaPescaV4(); } catch (e) { console.warn("mudanza de pesca:", e); }
   try { if (typeof regalosSync === "function") regalosSync(); } catch (e) {}   // guardados viejos: recalcula lo que le corresponde por su nivel
   if (typeof applyCombatHp === "function") applyCombatHp();   // vida máxima: ahora sí ve gear y weapons
   if (typeof d.hp === "number") G.hp = Math.max(1, Math.min(G.hpMax, d.hp));

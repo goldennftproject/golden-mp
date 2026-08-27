@@ -666,7 +666,7 @@ Normas de diseño que vienen de decisiones de dirección y que conviene no reabr
 
 **17. Cómo verificar lo que dice este documento**
 
-El proyecto tiene 107 pruebas automáticas y 23 auditores, más 28 medidores, simuladores y generadores: 159 herramientas en `tools/`.
+El proyecto tiene 102 pruebas automáticas y 23 auditores, más 27 medidores, simuladores y generadores: 153 herramientas en `tools/`.
 
 Una de ellas, `tools/test-clic-navegador.js`, corre en un **Chromium de verdad** (puppeteer). Existe porque el 26/8 el diseñador reportó dos veces que no podía elegir una receta en la Cocina y las dos veces se diagnosticó mal: el arnés de pruebas es jsdom, y jsdom no hace hit-testing ni implementa la captura de puntero, así que NO PODÍA ver el fallo ni en principio. Si no hay Chromium instalado el archivo lo dice y se salta; para instalarlo, una vez: `npx puppeteer browsers install chrome`. No comprueban que el código compile: comprueban que el JUEGO cumpla las reglas de arriba. Los más útiles para el diseñador:
 

@@ -2872,7 +2872,7 @@ function mkEntregar(kind, key, n, payload) { if (!mkPoner(kind, key, n, payload)
 function mkNombre(kind, key) {
   if (kind === "arm") return (ARM_DEF[key] && ARM_DEF[key].label) || key;
   if (kind === "dish") return (RECIPE_DEF[key] && RECIPE_DEF[key].label) || key;
-  if (kind === "fish") return (FISH_DEF[key] && FISH_DEF[key].label) || key;
+  if (kind === "fish") return (PEZ_DEF[key] && PEZ_DEF[key].label) || key;
   if (kind === "seed") return "Semilla de " + ((CROP_DEF[key] && CROP_DEF[key].label) || key);
   return (CROP_DEF[key] && CROP_DEF[key].label) || RES_LABEL[key] || key;
 }
@@ -4955,10 +4955,71 @@ function descKey(d) { return d ? d.kind + ":" + d.key : ""; }
 /* TODO LO QUE PUEDE HABER EN LA BOLSA COMO PESCADO: las nueve especies de Pesca v3 y las cuatro
    rarezas viejas, que siguen existiendo en partidas anteriores. Una sola lista, derivada, para
    que la bolsa y el espacio disponible no puedan discrepar. */
-function pecesDeLaBolsa() {
-  const v3 = (typeof ESPECIE_ORDER !== "undefined") ? ESPECIE_ORDER : [];
-  const viejos = (typeof FISH_ORDER !== "undefined") ? FISH_ORDER : [];
-  return v3.concat(viejos.filter(f => v3.indexOf(f) < 0));
+/* 27/8 — LA BOLSA MUESTRA EL CATÁLOGO DE LA v4. Sigue siendo UNA función porque el bug de las
+   cañas del 25/8 nació justo de tener dos listas de « qué peces existen ». */
+function pecesDeLaBolsa() { return PEZ_ORDER.slice(); }
+
+/* ═══════════════════════════════════════════════════════════════════════════════════════════
+   LA MUDANZA DE LA PESCA v3 → v4                                                       (27/8)
+   ═══════════════════════════════════════════════════════════════════════════════════════════
+   La v4 estrena diecinueve especies y jubila las trece de antes. Un jugador con partida en curso
+   puede tener anguilas, calamares y « peces épicos » en la bolsa, y esos objetos dejan de existir.
+
+   NO SE INVENTA UNA EQUIVALENCIA. Mapear « anguila → pez gato » sería una mentira cómoda: son
+   peces distintos, con otro precio y otra banda, y el jugador vería cambiar su bolsa sin entender
+   por qué. Lo que se hace es lo honesto y lo que no puede perder valor:
+
+       los peces viejos se VENDEN SOLOS, al precio que tenían, y la plata entra en la cuenta.
+
+   Queda escrito en el registro con su número, no depende de ninguna tabla de correspondencias que
+   mantener, y sobre todo: nadie pierde nada. Un cambio de sistema que le cuesta plata al jugador
+   se vive como un robo, por muy justificado que esté en el documento de diseño. */
+var PESCA_V3_PRECIO = { comun: 5, raro: 10, epico: 15, legendario: 20,
+  pez_comun: 5, camaron_rio: 5, carpa_dorada: 5, anguila: 5, calamar: 5,
+  pez_mariposa: 10, pez_volador: 10, tiburon: 20 };
+function mudanzaPescaV4() {
+  if (!G.fish) return { cuantos: 0, plata: 0 };
+  let plata = 0, cuantos = 0; const detalle = [];
+  for (const k in PESCA_V3_PRECIO) {
+    const n = Math.floor(G.fish[k] || 0);
+    if (n <= 0) { delete G.fish[k]; continue; }
+    plata += n * PESCA_V3_PRECIO[k]; cuantos += n;
+    detalle.push(n + " × " + k);
+    delete G.fish[k];
+  }
+  /* las cañas viejas se gastaban por usos; las de la v4 se compran una vez. Lo que el jugador
+     tenía se convierte en el ACCESO, que es lo único que puede seguir usando. */
+  if (G.canas && Object.keys(G.canas).length) G.canas = { junco: 1 };
+
+  /* LOS AMARRES DE LA v3 SE LEVANTAN, CON DEVOLUCIÓN.
+     Ésta es la parte urgente y la razón de que la mudanza no pudiera esperar. Las trampas de la
+     v3 siguen su reloj aunque el jugador no esté, y al cobrarlas depositan especies del catálogo
+     viejo — que la bolsa ya no lista. Un objeto que existe en el estado y no existe en la bolsa
+     es un objeto que el jugador tiene y no puede usar: EXACTAMENTE el bug de las cañas del 25/8,
+     que tardamos días en ver porque « no aparece » se confunde con « todavía no pesqué nada ».
+     Así que se levantan ahora, antes de que ninguna pueda cobrarse, y se devuelven enteros los
+     materiales de las que estaban caladas. La pesca pasiva vuelve con las NASAS de la tanda 2:
+     una semana sin ella es un precio razonable; un jugador con peces fantasma en la bolsa, no. */
+  const cal = Array.isArray(G.amarres) ? G.amarres.length : 0;
+  if (cal && typeof TRAMPA_DEF !== "undefined") {
+    const dev = {};
+    for (const a of G.amarres) {
+      const t = TRAMPA_DEF[a && a.tipo]; if (!t || !t.cost) continue;
+      for (const k in t.cost) { dev[k] = (dev[k] || 0) + t.cost[k]; G.res[k] = (G.res[k] || 0) + t.cost[k]; }
+    }
+    const txt = Object.keys(dev).map(k => dev[k] + " " + ((typeof RES_LABEL !== "undefined" && RES_LABEL[k]) || k)).join(", ");
+    if (typeof log === "function")
+      log("🎣 Se levantaron tus " + cal + " trampa" + (cal > 1 ? "s" : "") + " del sistema anterior y se te devolvió el material" +
+          (txt ? " (" + txt + ")" : "") + ". La pesca pasiva vuelve con las nasas.", "info");
+  }
+  G.amarres = [];
+  if (cuantos) {
+    G.plata = (G.plata || 0) + plata;
+    if (typeof log === "function")
+      log("🎣 La laguna cambió de sistema: tus " + cuantos + " peces anteriores se vendieron por " +
+          plata + " de plata (" + detalle.join(", ") + ").", "gold");
+  }
+  return { cuantos, plata };
 }
 /* QUÉ HAY EN LA BOLSA, CON SUS CANTIDADES (26/8)
    ═══════════════════════════════════════════════════════════════════════════════════════════
@@ -6955,15 +7016,20 @@ function pedPool() {
      de leerlo. » Por eso pasa por especieAlcanzable — y NO por especiePescable, que además mira
      la hora: un encargo del tablón dura un día o una semana, así que pedir calamar está bien
      porque el jugador puede esperar a que anochezca. */
-  if (typeof especieAlcanzable === "function") {
-    for (const esp of ESPECIE_ORDER) {
-      if (!especieAlcanzable(esp)) continue;
-      const e = ESPECIE_DEF[esp];
-      /* la misma vara que los cultivos de arriba: lo que se consigue rápido va en tanda, y el
-         que cuesta una cadena larga se pide suelto. */
-      const n = e.cadena <= 15 ? 2 : 1;
-      pool.push({ tipo: "fish", key: esp, n, val: Math.max(2, Math.round(especiePrecio(esp) * n)) });
-    }
+  /* 27/8 (Pesca v4) — el tablón pide del catálogo NUEVO, y solo de las bandas que el jugador
+     puede sacar con la caña que tiene. La regla dura del capítulo 11 no cambia: el tablón solo
+     pide lo que el jugador YA puede pescar. Lo que cambia es cómo se decide « puede »: en la v4
+     no hay familias ni carnadas que abran especies, hay BANDAS, y la caña es la que las mueve.
+     Se piden las tres bandas bajas —común, poco común y raro— porque un épico al 0,75 % no es
+     un encargo, es una lotería, y un pedido que no se puede cumplir enseña que el tablón miente.
+     Los míticos tampoco: salen de nasa, y las nasas son de la tanda 2. */
+  for (const id of PEZ_ORDER) {
+    const e = PEZ_DEF[id];
+    if (["comun", "poco_comun", "raro"].indexOf(e.banda) < 0) continue;
+    if (e.noche && !esDeNocheAhora()) { /* se pide igual: el encargo dura un día y la noche llega */ }
+    /* lo barato se pide en tanda y lo caro suelto, la misma vara que los cultivos de arriba */
+    const n = e.precio <= 5 ? 3 : (e.precio <= 12 ? 2 : 1);
+    pool.push({ tipo: "fish", key: id, n, val: Math.max(2, Math.round(e.precio * n)) });
   }
   if (G.built && G.built.cocina) for (const id of ["papa_asada", "crema_calabaza", "pure_papa"]) {   // 22/8: la sopa se fue al nivel 8 con su zanahoria
     const r = RECIPE_DEF[id]; if (!r) continue;
@@ -7111,12 +7177,15 @@ function pedidoStock(p) {
   return 0;
 }
 function pedidoLabel(p) {
-  if (p.tipo === "fish") return (typeof FISH_DEF !== "undefined" && FISH_DEF[p.key]) ? FISH_DEF[p.key].label : "Pescado";
+  /* 27/8 — el nombre sale del catálogo v4. Antes iba a FISH_DEF, que solo conocía las cuatro
+     rarezas de la v2, así que TODOS los pedidos de pez se llamaban « Pescado ». Un tablón que
+     pide « 3 Pescado » no dice nada: el jugador no sabe si tiene que ir de noche ni con qué caña. */
+  if (p.tipo === "fish") return (typeof PEZ_DEF !== "undefined" && PEZ_DEF[p.key]) ? PEZ_DEF[p.key].label : "Pescado";
   if (p.tipo === "dish") return (RECIPE_DEF[p.key] && RECIPE_DEF[p.key].label) || p.key;
   return (CROP_DEF[p.key] && CROP_DEF[p.key].label) || RES_LABEL[p.key] || p.key;
 }
 function pedidoSprite(p) {
-  if (p.tipo === "fish") return (typeof FISH_DEF !== "undefined" && FISH_DEF[p.key] && FISH_DEF[p.key].sprite) || null;
+  if (p.tipo === "fish") return (typeof PEZ_DEF !== "undefined" && PEZ_DEF[p.key] && PEZ_DEF[p.key].sprite) || null;
   if (p.tipo === "dish") return (RECIPE_DEF[p.key] && RECIPE_DEF[p.key].sprite) || null;
   return resSprite(p.key);
 }
@@ -7569,10 +7638,15 @@ function albumFamilias() {
        escapó ilumina su silueta pero la deja en gris. Si los logros premian volumen y el álbum
        premia variedad, la fila de estrellas agrega el tercer eje: profundidad. Es el que hace que
        un jugador vuelva a pescar una carpa que ya tiene. */
-    { id: "peces", ic: "🐟", label: "Peces", orden: ESPECIE_ORDER.concat(FISH_ORDER),
-      nom: (k) => (ESPECIE_DEF[k] && ESPECIE_DEF[k].label) || (FISH_DEF[k] && FISH_DEF[k].label) || k,
-      spr: (k) => (ESPECIE_DEF[k] && ESPECIE_DEF[k].sprite) || (FISH_DEF[k] && FISH_DEF[k].sprite) || null,
-      estrellas: (k) => (ESPECIE_DEF[k] ? { max: (G.estrellaMax || {})[k] || 0, tope: ESPECIE_DEF[k].estrellas[1] } : null),
+    /* 27/8 (Pesca v4) — el álbum de peces pasa al catálogo nuevo, y su tercer eje deja de ser la
+       ESTRELLA y pasa a ser el PESO. Es mejor gancho por una razón concreta: una estrella tiene
+       cinco escalones y se agota; un récord de peso no se agota nunca y está siempre a un lance
+       de distancia. Es lo que hace que el pez común de 3 de plata siga valiendo un clic el día 60. */
+    { id: "peces", ic: "🐟", label: "Peces", orden: PEZ_ORDER.slice(),
+      nom: (k) => (PEZ_DEF[k] && PEZ_DEF[k].label) || k,
+      spr: (k) => (PEZ_DEF[k] && PEZ_DEF[k].sprite) || null,
+      record: (k) => { const r = ((G.pescaV4 || {}).records || {})[k] || 0;
+                       return r ? { kg: r, tope: PEZ_DEF[k] ? PEZ_DEF[k].peso[1] : 0 } : null; },
       visto: (k) => !!(G.vistos || {})[k],
       tiene: (k) => statGet("pescar", k) > 0 || Math.floor((G.fish && G.fish[k]) || 0) > 0 },
     { id: "platos", ic: "🍲", label: "Platos", orden: RECIPE_ORDER,

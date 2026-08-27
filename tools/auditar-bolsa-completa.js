@@ -65,8 +65,8 @@ function pruebaClase(nombre, claves, poner, quitar) {
 const ORD = (n) => g(n) || [];
 pruebaClase("recursos", ORD("ITEM_RES_ORDER"), (k) => { G.res[k] = 5; });
 pruebaClase("semillas", ORD("CROP_ORDER"), (k) => { G.seeds[k] = 5; });
-pruebaClase("peces (Pesca v3)", ORD("ESPECIE_ORDER"), (k) => { G.fish[k] = 3; });
-pruebaClase("peces (rarezas viejas)", ORD("FISH_ORDER"), (k) => { G.fish[k] = 3; });
+/* 27/8: la Pesca v4 jubiló ESPECIE_ORDER y las cuatro rarezas de la v2. Una sola lista. */
+pruebaClase("peces (Pesca v4)", ORD("PEZ_ORDER"), (k) => { G.fish[k] = 3; });
 pruebaClase("platos", ORD("RECIPE_ORDER"), (k) => { G.dishes[k] = 2; });
 pruebaClase("picos", ORD("PICK_ORDER"), (k) => { G.picks.owned[k] = true; G.picks.dur[k] = 4; });
 pruebaClase("cañas de pescar", ORD("CANA_ORDER"), (k) => { G.canas[k] = 10; });
@@ -84,7 +84,7 @@ linea();
   vaciar();
   G.invRows = 1;   // una bolsa chiquita, para que se llene rápido
   const cupo = ctx.invSlots();
-  ORD("ESPECIE_ORDER").forEach(k => { G.fish[k] = 99; });
+  ORD("PEZ_ORDER").forEach(k => { G.fish[k] = 99; });
   const ocupa = ctx.canonicalStacks().length;
   console.log("  con las nueve especies a tope: " + ocupa + " casilleros, cupo " + cupo);
   const hayLugar = ctx.roomForFish();

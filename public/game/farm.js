@@ -1589,6 +1589,16 @@ class FarmScene extends Phaser.Scene {
     /* 22/8 — PESCA v2 (Fishing Frenzy): en el juego real la pesca la resuelve el LANCE
        (espera → burbujas → anzuelo → carrete), no el reloj de la barra. El camino clásico
        (finishAction → goFishing) queda para los tests sin navegador, que no tienen el panel. */
+    /* 27/8 — LA LAGUNA ABRE LA PESCA v4. Tocar el agua ya no arranca un lance con reloj: abre el
+       panel del lance nuevo, que ofrece sombras y espera a que el jugador elija. El camino viejo
+       (finishAction → goFishing) queda para los tests sin navegador, que no tienen panel. */
+    if (kind === "fish" && typeof document !== "undefined" && document.getElementById &&
+        document.getElementById("pesca4") && typeof pescaV4Abrir === "function") {
+      this.action = null;
+      this.clearBobber && this.clearBobber();
+      pescaV4Abrir();
+      return;
+    }
     if (kind === "fish" && typeof document !== "undefined" && document.getElementById && document.getElementById("pesca-mini") && typeof pescaLanceNuevo === "function") {
       this.action.dur = Infinity;   // la cierra pescaTerminar, no el update
       /* 25/8 (v3): si el lance vino de una SEÑAL, el pez ya está elegido — el lance nace
