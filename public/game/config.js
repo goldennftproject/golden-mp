@@ -444,6 +444,11 @@ GF.WORLD_OBJECTS.push(snap("altar", {type:"altar"}, 378, 336, T*2));
 GF.WORLD_OBJECTS.push(snap("establo", {type:"establo"}, 105, 378, T*2.5));   // 17/8: baja a la fila 9 — con la grilla de parcelas de pie (3x4) su tejado las pisaba, y mide 2,5 celdas de alto
 GF.WORLD_OBJECTS.push(snap("curtiduria", {type:"curtiduria"}, 378, 420, T*2));   // al lado del Establo, como pide el doc
 GF.WORLD_OBJECTS.push(snap("ofrendas", {type:"ofrendas"}, 294, 168, T*2));      // Altar de Ofrendas, columnas 6-7
+// EL LOMBRICARIO, pegado a la laguna (que empieza en la columna 1, fila 10, y mide 4x3). Es el
+// grifo de la carnada y tiene que verse desde el agua: que el jugador lea "me quedé sin lombrices"
+// y vea el cajon en el mismo golpe de vista es la mitad del sistema. Separarlos convierte la
+// decision del dia en un tramite de memoria.
+GF.WORLD_OBJECTS.push(snap("lombricario", {type:"lombricario"}, 252, 462, T*1.4));
 
 // CHIMENEAS (9/8). Dónde sale el humo en cada edificio, medido sobre el arte nuevo y no
 // a ojo: dx es el corrimiento respecto del CENTRO del sprite (en anchos de sprite) y dy es
@@ -563,6 +568,7 @@ GF.SOLID = {
   altar:  { hw: 0.42, dep: 0.5 },
   establo:    { hw: 0.46, dep: 0.58 },
   curtiduria: { hw: 0.44, dep: 0.54 },
+  lombricario: { hw: 0.40, dep: 0.34 },   // un cajon, no una casa: ocupa poco y no tiene tejado que pise nada
   ofrendas:   { hw: 0.44, dep: 0.54 },
   dummy:  { hw: 0.24, dep: 0.26 },
   cofre:  { hw: 0.34, dep: 0.30 },

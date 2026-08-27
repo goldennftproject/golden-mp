@@ -5483,6 +5483,188 @@ var PESCA_V4_LANCE_CEBO = 1;
 var PESCA_V4_NASA_CEBO = 4;
 
 /* ═══════════════════════════════════════════════════════════════════════════════════════════
+   LAS NASAS · LA MITAD PASIVA DE LA LAGUNA               (27/8, tanda 2 — el carril offline)
+   ═══════════════════════════════════════════════════════════════════════════════════════════
+   « Se tira, se cierra el navegador, se vuelve. Dos horas por ciclo, y el reloj corre con la
+     pestaña cerrada. »
+
+   EL TRATO, que es lo que la hace interesante y no un grifo:
+     · armarla cuesta CUATRO LOMBRICES — la misma bolsa que los lances. De ahí sale la decisión
+       que ordena el día: ¿mis lombrices van a lances o a nasas? Activo contra pasivo.
+     · si PESCA, entrega un mítico y SIGUE PUESTA: se vuelve a cobrar a las dos horas.
+     · si NO pesca, se ROMPE, y al levantarla trae basura del mar: piedra y madera.
+
+   Sin el coste en lombrices la nasa no tendría candado ninguno: cinco nasas cobradas tres veces
+   al día son unas 675 de plata diarias sin tocar el juego, seis veces lo que da la caña. Con el
+   coste, la laguna entera se paga en la misma unidad y no puede haber una ruta rota.
+
+   EL ANCLA DE UN CICLO es 2 h × 20 + el coste de la nasa repartido entre sus ciclos de vida, y
+   las tres filas cierran con menos de un 3 %.
+
+   OJO — LOS MATERIALES SON PROVISIONALES. El documento pedía fibra y cuero, pero la auditoría del
+   27/8 (docs/PESCA-V4-AUDITORIA.md) encontró que valen 300 y 340 en este juego, no 25 y 55: son
+   productos de Alpaca y de Toro, de doce y dieciséis horas. Con ellos, la nasa de mimbre —que el
+   documento quiere REGALAR en el tutorial— costaría 348. Acá van mezclas que cierran con el ancla
+   usando materiales del primer día; cuando dirección decida los presupuestos, se recalculan
+   contra el ancla, que es el número que no se toca. */
+/* EL VALOR DE UN MATERIAL, EN UN SOLO SITIO. Los brutos vienen de PRICE; los fabricados —tablón,
+   barras— de su propia receta. Hasta hoy esta cuenta se hacía suelta en cada auditor que la
+   necesitaba, o sea que había tres copias que se podían separar. Una. */
+function matValor(k) {
+  if (typeof PRICE !== "undefined" && PRICE[k] != null) return PRICE[k];
+  const m = (typeof MAT_DEF !== "undefined") ? MAT_DEF[k] : null;
+  if (!m || !m.cost) return 0;
+  return Object.keys(m.cost).reduce((s, x) => s + matValor(x) * m.cost[x], 0);
+}
+var NASA_ORDER = ["mimbre", "reforzada", "hierro"];
+var NASA_DEF = {
+  mimbre:    { label: "Nasa de mimbre",  mat: "madera", emoji: "🧺", lvl: 1,  cost: { madera: 2 },             exito: 0.60, ciclos: 2.5 },
+  reforzada: { label: "Nasa reforzada",  mat: "piedra", emoji: "🪢", lvl: 6,  cost: { madera: 4, piedra: 1 },  exito: 0.75, ciclos: 4.0 },
+  hierro:    { label: "Nasa de hierro",  mat: "tablon", emoji: "⚙️", lvl: 12, cost: { tablon: 8, madera: 2 },  exito: 0.88, ciclos: 8.3 },
+};
+var NASA_HORAS = 2;                 // lo que tarda un ciclo
+var NASA_CUPO_CADA = 4;             // +1 hueco cada cuatro niveles de Pesca
+var NASA_CUPO_MAX = 5;
+/* QUÉ SACA CADA UNA. Las probabilidades son sobre el ciclo ENTERO y ya cuentan la rotura, así
+   que cada fila suma 100 — si no sumaran, habría un caso silencioso que no devuelve nada, que es
+   la peor forma de que una mecánica falle. */
+var NASA_TABLA = {
+  mimbre:    { camaron: 27.0, cangrejo: 18.0, langosta: 12.0, calamar_v4: 3.0,  rota: 40.0 },
+  reforzada: { camaron: 22.5, cangrejo: 22.5, langosta: 21.0, calamar_v4: 9.0,  rota: 25.0 },
+  hierro:    { camaron: 13.2, cangrejo: 22.0, langosta: 30.8, calamar_v4: 22.0, rota: 12.0 },
+};
+/* la corrección al pedido, del propio documento: « con 1 % de éxito por ciclo harían falta cien
+   nasas —doscientas horas de reloj— para ver un solo mítico. La lectura correcta de ese 1 % es la
+   del pez TOPE: el calamar sale un 3 % de los ciclos con la nasa de mimbre ». El azar tiene que
+   doler, no bloquear. */
+function nasaCupo() { return Math.min(NASA_CUPO_MAX, 1 + Math.floor(nivelOficio("fishing") / NASA_CUPO_CADA)); }
+function nasas() { if (!Array.isArray(G.nasas)) G.nasas = []; return G.nasas; }
+function nasaLibres() { return Math.max(0, nasaCupo() - nasas().length); }
+function nasaAbierta(id) { const d = NASA_DEF[id]; return !!d && nivelOficio("fishing") >= d.lvl; }
+/* LA PASIVA PAGA TU AUSENCIA, LA ACTIVA PAGA TUS MANOS.
+   Sin este factor, una nasa rinde exactamente lo mismo que la caña de junco —2 h × 20 repartido
+   entre 4 lombrices son 10,00 clavados, la misma cifra— y entonces nadie tocaría el minijuego,
+   que es el corazón del sistema. El documento lo pide en su capítulo 9 y le pone número: sus
+   nasas pagan entre 9,29 y 10,27 por lombriz contra los 10,00-11,34 de las cañas.
+   0,93 deja la nasa en 9,30 por lombriz: por debajo de la caña más barata, y por poco. Que la
+   ruta cómoda pague un 7 % menos es suficiente para que la incómoda tenga sentido, y no tanto
+   como para que dejar una nasa antes de dormir se sienta un castigo. */
+var NASA_PASIVA = 0.93;
+/* el ancla de un ciclo, DERIVADA — nunca escrita a mano */
+function nasaAncla(id) {
+  const d = NASA_DEF[id]; if (!d) return 0;
+  const coste = Object.keys(d.cost).reduce((s, k) => s + (typeof matValor === "function" ? matValor(k) : 0) * d.cost[k], 0);
+  return Math.round((NASA_PASIVA * NASA_HORAS * ANCLA_PLATA_HORA + coste / d.ciclos) * 100) / 100;
+}
+/* lo que paga una nasa por lombriz gastada — el número que tiene que caer por debajo de la caña */
+function nasaPorLombriz(id) {
+  const d = NASA_DEF[id]; if (!d) return 0;
+  const coste = Object.keys(d.cost).reduce((s, k) => s + matValor(k) * d.cost[k], 0);
+  return Math.round((nasaValorCiclo(id) - coste / d.ciclos) / PESCA_V4_NASA_CEBO * 100) / 100;
+}
+/* lo que vale un ciclo de verdad: la esperanza de su tabla, contando la rotura y la basura */
+function nasaValorCiclo(id) {
+  const t = NASA_TABLA[id]; if (!t) return 0;
+  let v = 0;
+  for (const k in t) {
+    if (k === "rota") { v += (t[k] / 100) * nasaBasuraValor(id); continue; }
+    v += (t[k] / 100) * (PEZ_DEF[k] ? PEZ_DEF[k].precio : 0);
+  }
+  return Math.round(v * 100) / 100;
+}
+/* LA BASURA DEL MAR TAMBIÉN SE DERIVA. El documento dice « 2-4 piedra y 2-4 madera », que con
+   SUS precios de material valía unos 30 y cerraba el ciclo. Con los precios reales (piedra 15,
+   madera 12) esos mismos números valen 81, y las tres nasas pasaban a rendir entre un 10 y un
+   32 % por encima de su ancla — una fuga que nadie vería, porque « me trajo madera » no suena a
+   exploit. Así que no se escribe cuánta basura: se calcula la que hace falta para que el ciclo
+   cierre, y de ahí sale cuántas piedras y maderas son.
+   Es la misma regla que el resto del juego: el ancla manda, el contenido se acomoda. */
+function nasaBasuraValor(id) {
+  const t = NASA_TABLA[id]; if (!t || !t.rota) return 0;
+  const pez = Object.keys(t).filter(k => k !== "rota")
+    .reduce((s, k) => s + (t[k] / 100) * (PEZ_DEF[k] ? PEZ_DEF[k].precio : 0), 0);
+  return Math.max(0, (nasaAncla(id) - pez) / (t.rota / 100));
+}
+/* y de ese valor salen las unidades: mitad en piedra y mitad en madera, redondeando a favor del
+   jugador cuando no da entero (nunca vuelve con las manos vacías). */
+function nasaBasura(id) {
+  const v = nasaBasuraValor(id);
+  const piedra = Math.max(1, Math.round(v / 2 / matValor("piedra")));
+  const madera = Math.max(1, Math.round(v / 2 / matValor("madera")));
+  return { piedra, madera };
+}
+
+function nasaCalar(id) {
+  if (!nasaAbierta(id)) { toast("La " + (NASA_DEF[id] || {}).label + " se abre en Pesca " + (NASA_DEF[id] || {}).lvl); return false; }
+  if (nasaLibres() <= 0) { toast("Ya tenés " + nasaCupo() + " nasas caladas — cobrá alguna"); return false; }
+  if ((G.res.lombriz || 0) < PESCA_V4_NASA_CEBO) { toast("Una nasa pide " + PESCA_V4_NASA_CEBO + " lombrices (tenés " + Math.floor(G.res.lombriz || 0) + ")"); return false; }
+  const d = NASA_DEF[id];
+  if (!canAfford(d.cost)) { toast("Te falta material para la " + d.label); return false; }
+  payCost(d.cost);
+  G.res.lombriz -= PESCA_V4_NASA_CEBO;
+  nasas().push({ tipo: id, cala: nowMs(), listaEn: nowMs() + NASA_HORAS * 3600e3 });
+  log("🧺 Calaste una " + d.label + " (" + PESCA_V4_NASA_CEBO + " lombrices). Vuelve en " + NASA_HORAS + " h.", "good");
+  toast("Nasa calada");
+  if (typeof refreshHud === "function") refreshHud();
+  if (typeof saveFarm === "function") saveFarm();
+  return true;
+}
+function nasaLista(n) { return nowMs() >= n.listaEn; }
+/* COBRAR. El sorteo se hace ACÁ, al levantarla, y no al calarla: si se decidiera al calar, un
+   jugador podría mirar el guardado y saber qué le va a tocar. */
+function nasaCobrar(i) {
+  const n = nasas()[i]; if (!n) return null;
+  if (!nasaLista(n)) { toast("Todavía no — le faltan " + fmtDur(n.listaEn - nowMs())); return null; }
+  const t = NASA_TABLA[n.tipo], d = NASA_DEF[n.tipo];
+  let u = Math.random() * 100, elegido = "rota";
+  for (const k in t) { u -= t[k]; if (u < 0) { elegido = k; break; } }
+  if (elegido === "rota") {
+    nasas().splice(i, 1);
+    const dio = [], bas = nasaBasura(n.tipo);
+    for (const k in bas) {
+      const q = bas[k];
+      G.res[k] = (G.res[k] || 0) + q; dio.push(q + " " + (RES_LABEL[k] || k));
+    }
+    log("🧺 La " + d.label + " volvió vacía y se rompió. Trajo " + dio.join(" y ") + ".", "bad");
+    toast("La nasa se rompió");
+  } else {
+    /* SIGUE PUESTA — PERO SE VUELVE A CEBAR, Y ESO CUESTA OTRAS CUATRO LOMBRICES.
+       Ésta es la línea que sostiene el invariante entero, y casi la escribo mal. Leyendo « si
+       pesca, sigue puesta » puse el cebo como un pago único al calarla: entonces una nasa de
+       hierro rendía 177 de plata por lombriz en vez de 9,92, porque producía para siempre con un
+       solo pago. Una trampa así ES la ruta rota que el capítulo 9 existe para impedir.
+       La tabla 12 del documento lo dice sin ambigüedad: divide el valor de UN CICLO entre cuatro
+       lombrices. Se paga por ciclo. */
+    if ((G.res.lombriz || 0) < PESCA_V4_NASA_CEBO) {
+      nasas().splice(i, 1);
+      /* y se dice POR QUÉ se levantó: una nasa que desaparece sin explicación se lee como un bug */
+      log("🧺 La " + d.label + " pescó, pero no te quedan lombrices para volver a cebarla, así que " +
+          "se levantó. El material vuelve a la bolsa.", "info");
+      for (const k in d.cost) G.res[k] = (G.res[k] || 0) + d.cost[k];
+    } else {
+      G.res.lombriz -= PESCA_V4_NASA_CEBO;
+      n.cala = nowMs(); n.listaEn = nowMs() + NASA_HORAS * 3600e3;
+    }
+    const kg = pesoSortear(elegido);
+    G.fish = G.fish || {}; G.fish[elegido] = (G.fish[elegido] || 0) + 1;
+    if (typeof addXp === "function") addXp("fishing", pezXp(elegido, kg));
+    if (typeof statAdd === "function") { statAdd("pescar"); statAdd("pescar", elegido); }
+    const e = PEZ_DEF[elegido];
+    log("🧺 " + e.emoji + " ¡" + e.label + " de " + kg + " kg en la " + d.label + "! Sigue calada.", "gold");
+    toast(e.emoji + " ¡" + e.label + "!");
+  }
+  if (typeof refreshHud === "function") refreshHud();
+  if (typeof syncSlots === "function") syncSlots();
+  if (typeof saveFarm === "function") saveFarm();
+  return elegido;
+}
+/* el parte de las nasas al volver: lo que espera, sin cobrarlo solo — cobrar por el jugador le
+   quita la única decisión que tiene la mecánica. */
+function nasasParte() {
+  return nasas().map((n, i) => ({ i, tipo: n.tipo, lista: nasaLista(n), falta: Math.max(0, n.listaEn - nowMs()) }));
+}
+
+/* ═══════════════════════════════════════════════════════════════════════════════════════════
    EL LANCE                                              (27/8, tanda 1b — el corazón del sistema)
    ═══════════════════════════════════════════════════════════════════════════════════════════
    « Toda la pesca cabe en un botón. Mantener o soltar. No hay nada más que aprender, y aun así
@@ -6759,7 +6941,13 @@ function dayStamp(off) { const d = new Date(Date.now() + (off || 0) * 86400000);
    3 montículos de tierra removida por día, en lugares al azar pero FIJOS durante el
    día (semilla = fecha + apodo: recargar no los mueve). Se cavan con un clic, sin
    herramienta: sale un insumo chico. Insumos, nunca plata — cero riesgo económico. */
-var EXCAV_POR_DIA = 3;
+/* 27/8 (Pesca v4, §2) — « Montículos de tierra: 3 por día, MÁS 1 POR CADA 4 EXPANSIONES ».
+   La carnada es el reloj de la laguna entera, así que su producción tiene que crecer con la
+   granja o la pesca se queda quieta mientras todo lo demás avanza. El terreno es la vara: más
+   tierra, más montículos. */
+var EXCAV_BASE = 3, EXCAV_POR_EXPANSIONES = 4;
+function excavPorDia() { return EXCAV_BASE + Math.floor((G.expansiones || 0) / EXCAV_POR_EXPANSIONES); }
+var EXCAV_POR_DIA = 3;   // el suelo; lo que manda es excavPorDia()
 function excavEstado() {
   const e = G.excav || (G.excav = { dia: "", hechos: [] });
   if (e.dia !== dayStamp(0)) { e.dia = dayStamp(0); e.hechos = []; }
@@ -6815,7 +7003,7 @@ function excavCavar(i, carnada) {   // devuelve el botín si se pudo cavar
   const e = excavEstado();
   /* 24/8 (auditoría de silencios): clicar un montículo YA CAVADO devolvía null y el clic
      moría mudo — el mismo patrón que el intento de doma que reportó el diseñador. */
-  if (e.hechos.includes(i)) { toast("Ese montículo ya lo cavaste — mañana hay " + EXCAV_POR_DIA + " nuevos"); return null; }
+  if (e.hechos.includes(i)) { toast("Ese montículo ya lo cavaste — mañana hay " + excavPorDia() + " nuevos"); return null; }
   const b = excavBotin(i, carnada);
   if (b.res) { if (!tryAddRes(b.res, b.n)) { toast("Bolsa llena — hacé lugar y volvé"); return null; } }
   else if (b.seed) G.seeds[b.seed] = (G.seeds[b.seed] || 0) + b.n;
@@ -6825,6 +7013,73 @@ function excavCavar(i, carnada) {   // devuelve el botín si se pudo cavar
   refreshHud(); if (typeof syncSlots === "function") syncSlots();
   if (typeof saveFarm === "function") saveFarm(true);
   return b;
+}
+
+/* ═══════════════════════════════════════════════════════════════════════════════════════════
+   EL LOMBRICARIO                                          (27/8, Pesca v4 §2 — el otro grifo)
+   ═══════════════════════════════════════════════════════════════════════════════════════════
+   « Se abre con Cultivo 5. Las bocas son 1 + el nivel de Cultivo dividido por 5, hasta 4. Cada
+     boca convierte 2 de cualquier cultivo en 3 lombrices con una cola de 8 horas, así que un
+     jugador de tres visitas cobra dos tandas por boca y día. »
+
+   Por qué existe: los montículos solos no alcanzan para sostener la laguna de una granja grande,
+   y sin carnada la pesca se queda quieta mientras el resto avanza. El Lombricario ata la pesca a
+   la AGRICULTURA — se paga con cultivos, cualquiera— y por eso el jugador que quiere pescar más
+   tiene que plantar más, en vez de pescar más. Esa es la diferencia entre un grifo y un bucle.
+
+   La cola de 8 horas usa la misma forma que la Cocina: HORA DE FIN por boca, no una máquina de
+   turnos. Un reloj corre con el juego cerrado; una máquina de turnos hay que despertarla. */
+var LOMBRICARIO_LVL = 5;              // Cultivo 5
+var LOMBRICARIO_BOCAS_MAX = 4;
+var LOMBRICARIO_HORAS = 8;
+var LOMBRICARIO_PIDE = 2;             // cultivos, cualquiera
+var LOMBRICARIO_DA = 3;               // lombrices
+function lombricarioAbierto() { return nivelOficio("farming") >= LOMBRICARIO_LVL && !!(G.built && G.built.lombricario); }
+function lombricarioBocas() { return Math.min(LOMBRICARIO_BOCAS_MAX, 1 + Math.floor(nivelOficio("farming") / 5)); }
+function lombricario() { if (!Array.isArray(G.lombricario)) G.lombricario = []; return G.lombricario; }
+function lombricarioLibres() { return Math.max(0, lombricarioBocas() - lombricario().length); }
+/* qué cultivos puede echar: los que tenga, el más barato primero — el jugador no tiene por qué
+   elegir cuál quemar, y quemar el caro por descuido sería un castigo silencioso. */
+function lombricarioCultivo() {
+  const tengo = CROP_ORDER.filter(k => Math.floor(G.res[k] || 0) >= LOMBRICARIO_PIDE);
+  if (!tengo.length) return null;
+  return tengo.sort((a, b) => (CROP_DEF[a].price || 0) - (CROP_DEF[b].price || 0))[0];
+}
+function lombricarioEchar() {
+  if (!lombricarioAbierto()) { toast("El Lombricario se abre con Cultivo " + LOMBRICARIO_LVL); return false; }
+  if (lombricarioLibres() <= 0) { toast("Las " + lombricarioBocas() + " bocas están llenas"); return false; }
+  const k = lombricarioCultivo();
+  if (!k) { toast("Hace falta " + LOMBRICARIO_PIDE + " de cualquier cultivo"); return false; }
+  G.res[k] -= LOMBRICARIO_PIDE;
+  lombricario().push({ cultivo: k, listaEn: nowMs() + LOMBRICARIO_HORAS * 3600e3 });
+  log("🪱 Echaste " + LOMBRICARIO_PIDE + " " + (CROP_DEF[k].label || k) + " al Lombricario. " +
+      LOMBRICARIO_DA + " lombrices en " + LOMBRICARIO_HORAS + " h.", "good");
+  toast("Al Lombricario");
+  refreshHud(); if (typeof saveFarm === "function") saveFarm();
+  return true;
+}
+/* se cobra solo al mirar, como la Cocina: lo vencido se entrega y la boca queda libre */
+function lombricarioCheck() {
+  const l = lombricario(); let dio = 0;
+  for (let i = l.length - 1; i >= 0; i--) {
+    if (nowMs() < l[i].listaEn) continue;
+    l.splice(i, 1); dio += LOMBRICARIO_DA;
+  }
+  if (dio) {
+    G.res.lombriz = (G.res.lombriz || 0) + dio;
+    log("🪱 El Lombricario dio " + dio + " lombrices.", "good");
+    if (typeof refreshHud === "function") refreshHud();
+    if (typeof saveFarm === "function") saveFarm();
+  }
+  return dio;
+}
+/* LA ÚNICA PALANCA DEL SISTEMA, para poder comprobarla: « lombrices por día = producción diaria
+   de la granja ÷ 100 ». Si algún día la pesca se dispara o se queda corta, se toca la carnada y
+   ninguna otra tabla se mueve — ni los precios de los peces, ni las cañas, ni las nasas. */
+function lombricesPorDia() {
+  const monticulos = excavPorDia() * 1.5;                     // 1-2 por montículo
+  const bocas = lombricarioAbierto() ? lombricarioBocas() * 2 * LOMBRICARIO_DA : 0;   // dos tandas por boca y día
+  return Math.round((monticulos + bocas) * 10) / 10;
 }
 
 /* ================= BUZÓN (15/8, idea Stardew) ==================================

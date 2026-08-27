@@ -538,6 +538,28 @@
   .p4-btn.hold{background:#63991f;border-color:#9ede54}
   .p4-btn:disabled{opacity:.5;cursor:default}
   .p4-pie{font-size:11px;color:#cbbf9f;text-align:center;min-height:14px}
+  .p4-oval{display:inline-block;border-radius:50%;background:#0d2436;border:1px solid #7fb6d8;
+    box-shadow:0 0 5px rgba(127,182,216,.5);margin-right:6px;vertical-align:middle}
+  .lom-bocas{display:flex;flex-direction:column;gap:6px;margin-top:8px}
+  .lom-boca{display:flex;align-items:center;gap:9px;padding:8px 10px;border-radius:10px;
+    background:rgba(28,22,14,.6);border:1px solid #5a4327;font-size:13px;color:#cbbf9f}
+  .lom-boca .em{font-size:19px}
+  .lom-boca .nm{flex:1;color:#f2ead5;font-weight:700}
+  .lom-boca.lista{border-color:#ffd75e;background:rgba(70,56,20,.55)}
+  .lom-boca.vacia{opacity:.55;border-style:dashed}
+  .lom-dia{margin-top:10px;padding:9px 11px;border-radius:10px;background:rgba(20,28,16,.55);
+    border:1px solid #3c4d31;font-size:12px;color:#cbbf9f;line-height:1.6}
+  .lom-dia b{color:#ffd75e}
+  .p4-nasas{border-top:1px solid #3c4d31;padding-top:8px;display:flex;flex-direction:column;gap:5px}
+  .p4-nasas .tit{font-size:12px;font-weight:800;color:#f2ead5;display:flex;justify-content:space-between}
+  .p4-nasa{display:flex;align-items:center;gap:7px;padding:5px 8px;border-radius:9px;
+    background:rgba(20,28,16,.6);border:1px solid #3c4d31;font-size:12px;color:#cbbf9f}
+  .p4-nasa .em{font-size:16px}
+  .p4-nasa .nm{flex:1;color:#f2ead5;font-weight:700}
+  .p4-nasa button{padding:4px 9px;border-radius:7px;border:1px solid #7fa356;background:#3d5a24;
+    color:#f2ead5;font-size:11px;font-weight:800;cursor:pointer}
+  .p4-nasa button:disabled{opacity:.45;cursor:default}
+  .p4-nasa.lista{border-color:#ffd75e}
   /* ---- EL FLUJO DE LA BOLSA (26/8) ----
      Columna en el margen izquierdo, a la altura de los ojos. pointer-events:none en TODO: es
      información de paso, y un cartel que se puede clicar por accidente roba clics al mundo
@@ -1113,6 +1135,9 @@
     </div>
     <button class="p4-btn" id="p4-btn">Mantené apretado</button>
     <div class="p4-pie" id="p4-pie"></div>
+    <!-- LAS NASAS: la mitad pasiva, en el mismo panel. Separarlas en otra ventana escondería la
+         decisión que ordena el día (¿mis lombrices van a lances o a nasas?) justo cuando se toma. -->
+    <div class="p4-nasas" id="p4-nasas"></div>
   </div>
 
   <div id="pesca-mini">
@@ -1191,6 +1216,18 @@
     <h3>✋ GOD HAND</h3>
     <div class="sub">Cargale semillas (6 espacios · 50 c/u · 300 en total) y mientras no estás hace el ciclo entero: siembra, cosecha y resiembra tus parcelas vacías. Al volver te entrega todo junto. Cobra 100 de plata la primera hora y cada hora sale 10% más — trabaja hasta 24 h por ausencia.</div>
     <div class="forge-list" id="godhand-list" style="max-height:62vh"></div>
+  </div></div>
+
+  <!-- EL LOMBRICARIO (27/8) — la carnada es el reloj de toda la pesca, asi que este panel tiene
+       un unico trabajo: decir cuanta carnada entra por dia y de donde. Sin eso, el jugador que se
+       queda seco no sabe si le falta un edificio, un nivel o paciencia. -->
+  <div class="ov" id="ov-lombricario"><div class="card" style="width:min(560px,94%)">
+    <button class="close" data-close="ov-lombricario">×</button>
+    <h3>Lombricario</h3>
+    <div class="sub">Echale restos de cultivo y en <b id="lom-horas"></b> te devuelve lombrices. Es la carnada de la laguna: cada lance pide 1 y cada nasa, 4.</div>
+    <div class="lom-bocas" id="lom-bocas"></div>
+    <button class="green" id="lom-echar" style="width:100%;margin-top:8px"></button>
+    <div class="lom-dia" id="lom-dia"></div>
   </div></div>
 
   <div class="ov" id="ov-establo"><div class="card" style="width:min(620px,94%)">

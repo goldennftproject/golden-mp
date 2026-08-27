@@ -41,7 +41,12 @@ if (!puppeteer) {
 
 /* los paneles que se barren y cómo dejarlos listos. La partida se prepara desde adentro para no
    depender de ninguna nube: este archivo mide el ENRUTADO del clic, no la economía. */
-const PANELES = ["ov-cocina", "ov-inv", "ov-shop", "ov-forge", "ov-objetivos", "ov-pedidos"];
+/* 27/8: entran los dos paneles de la Pesca v4. El de las nasas no es un "ov-" sino una sección
+   dentro del panel de pesca, y por eso PREPARAR lo abre aparte más abajo — pero sus botones se
+   barren igual, que es lo único que importa: un botón nuevo es un botón nuevo que puede quedar
+   sordo, sin que le importe en qué clase de ventana vive. */
+const PANELES = ["ov-cocina", "ov-inv", "ov-shop", "ov-forge", "ov-objetivos", "ov-pedidos",
+                 "ov-lombricario", "pesca4"];
 
 (async () => {
   let fallos = 0, srv = null, browser = null;
@@ -137,9 +142,26 @@ const PANELES = ["ov-cocina", "ov-inv", "ov-shop", "ov-forge", "ov-objetivos", "
           e.stopPropagation(); e.preventDefault();
         }, true);
       });
+      /* los dos paneles nuevos hay que ARMARLOS antes de barrerlos: sin lombrices no hay botón
+         de calar, sin Lombricario abierto no hay bocas, y un panel vacío se barre en verde sin
+         haber probado nada. Un barrido que no encuentra nada no es un barrido: es un silencio. */
+      await pg.evaluate(() => {
+        G.res.lombriz = 40; G.res.madera = 60; G.res.piedra = 30; G.res.tablon = 40; G.res.papa = 10;
+        G.level = 14; G.built = Object.assign({}, G.built, { lombricario: true });
+        let acc = 0; for (let k = 2; k <= 12; k++) acc += skillNeed(k, "fishing");
+        G.skills = Object.assign({}, G.skills, { fishing: acc, farming: acc });
+        G.nasas = []; nasaCalar("mimbre");
+        if (typeof refreshLombricario === "function") refreshLombricario();
+        return "listo";
+      });
+      await new Promise(r => setTimeout(r, 400));
       let probados = 0; const sordos = [];
       for (const panel of PANELES) {
-        const hay = await pg.evaluate((p) => { try { openOv(p); } catch (e) { return false; }
+        const hay = await pg.evaluate((p) => {
+          /* el panel de pesca no es un "ov-": se abre por su propia puerta */
+          if (p === "pesca4") { try { pescaV4Abrir(); } catch (e) { return false; }
+            const el = document.getElementById(p); return !!el && el.classList.contains("show"); }
+          try { openOv(p); } catch (e) { return false; }
           return !!document.getElementById(p) && !document.getElementById(p).classList.contains("hidden"); }, panel);
         if (!hay) continue;
         await new Promise(r => setTimeout(r, 350));
@@ -158,6 +180,7 @@ const PANELES = ["ov-cocina", "ov-inv", "ov-shop", "ov-forge", "ov-objetivos", "
           });
           return out.slice(0, 14);
         }, panel);
+        const antes = probados;
         for (const marca of puntos) {
           const pt = Object.assign({ que: marca.que }, await centro(marca.sel) || {});
           if (pt.x == null) continue;                 // se fue de la vista mientras tanto: no es un sordo
@@ -180,7 +203,16 @@ const PANELES = ["ov-cocina", "ov-inv", "ov-shop", "ov-forge", "ov-objetivos", "
           if (llego !== "OK") sordos.push(panel + " · " + pt.que + " → el clic se lo quedó " + llego);
         }
       }
-      ok("hay clicables que probar", probados >= 12, probados + " probados");
+      ok("hay clicables que probar", probados >= 20, probados + " probados");
+      /* y que los DOS NUEVOS estén de verdad entre los barridos. Sin esta línea, el barrido puede
+         dar verde habiendo tocado solo las sombras del agua, y yo me quedaría creyendo que probé
+         las nasas. Contar 38 no sirve de nada si no sé QUÉ conté. */
+      const nuevos = await pg.evaluate(() => ({
+        nasa: !!document.querySelector("#p4-nasas [data-p4nx], #p4-nasas [data-p4nc]"),
+        lom:  !!(document.getElementById("lom-echar") && document.getElementById("lom-echar").onclick)
+      }));
+      ok("entre ellos, los botones de las nasas", nuevos.nasa);
+      ok("y el de echar en el Lombricario", nuevos.lom);
       ok("todos reciben su propio clic", !sordos.length, sordos.slice(0, 6).join("\n           "));
     }
 

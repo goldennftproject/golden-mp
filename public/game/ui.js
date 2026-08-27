@@ -356,7 +356,7 @@ function pescaV4Pintar() {
   if (!P4) return;
   const agua = $("p4-agua"), pelea = $("p4-pelea"), btn = $("p4-btn"),
         pie = $("p4-pie"), cebo = $("p4-cebo"), tit = $("p4-tit");
-  if (cebo) cebo.textContent = "🪱 " + Math.floor(G.res.lombriz || 0) + " · " + (CANA_V4_DEF[P4.cana] || {}).label;
+  if (cebo) cebo.innerHTML = iconRes("lombriz") + " " + Math.floor(G.res.lombriz || 0) + " · " + (CANA_V4_DEF[P4.cana] || {}).label;
   if (agua) {
     const firma = P4.fase + "|" + P4.sombras.join(",");
     if (agua._firma !== firma) {
@@ -365,7 +365,12 @@ function pescaV4Pintar() {
         agua.innerHTML = P4.sombras.map((s, i) => {
           const d = SOMBRA_DEF[s];
           return '<div class="p4-sombra ' + s + '" data-p4s="' + i + '" title="' + d.txt + '">' +
-                 '<span class="em">🐟</span>' + d.label.replace("Sombra ", "") + '</div>';
+                 /* la sombra se DIBUJA, no se escribe. Antes las tres llevaban el MISMO 🐟, así
+                    que el tamaño —lo único que distingue una sombra de otra— solo estaba en la
+                    palabra. Un óvalo que crece dice lo mismo de un vistazo, que es como se elige
+                    una sombra: mirando el agua, no leyendo. */
+                 '<span class="p4-oval" style="width:' + (10 + d.sesgo * 5 + 5) + 'px;height:' +
+                 (6 + d.sesgo * 3 + 3) + 'px"></span>' + d.label.replace("Sombra ", "") + '</div>';
         }).join("");
         agua.querySelectorAll("[data-p4s]").forEach(el =>
           el.onclick = () => pescaV4Tirar(P4.sombras[Number(el.dataset.p4s)]));
@@ -386,6 +391,7 @@ function pescaV4Pintar() {
       : P4.fase === "pique" ? "¡ahora! (fallar no gasta la lombriz)"
       : "soltá en el tirón · el progreso no se pierde nunca";
   }
+  pescaV4Nasas();
   const L = P4.L;
   if (L && P4.fase === "pelea") {
     const e = PEZ_DEF[L.id];
@@ -402,6 +408,109 @@ function pescaV4Pintar() {
     }
   }
 }
+/* CÓMO SE PINTA UN RECURSO EN UN PANEL (y una corrección que me hago a mí mismo)
+   En la primera captura del panel del Lombricario los emoji salían como cuadraditos, y escribí
+   aquí que « la fuente del juego no los tiene ». Era falso: medí los ocho emoji contra la fuente
+   y TODOS daban el mismo ancho, que es la firma del cuadradito genérico. Lo que no tiene fuente
+   de emoji es el Linux headless donde saco las capturas. En Windows, en Mac y en el móvil se ven
+   perfectos, y las capturas del diseñador siempre lo mostraron.
+   Una captura del contenedor NO es una captura de la pantalla de un jugador. Vale para el
+   enrutado, para las medidas y para el texto; no vale para juzgar tipografía ni color.
+   Dicho eso, el cambio se queda, por un motivo distinto del que me lo hizo hacer: la bolsa y los
+   chips del flujo ya pintan los recursos con SU sprite (GF.spr + RES_SPRITE), y que el mismo
+   recurso se vea igual en todas partes vale más que un emoji. */
+function iconRes(k, px) {
+  const s = (typeof RES_SPRITE !== "undefined" && RES_SPRITE[k]) || null;
+  if (!s) return (typeof RES_EMOJI !== "undefined" && RES_EMOJI[k]) || "";
+  return '<img src="' + GF.spr(s) + '" alt="' + ((typeof RES_LABEL !== "undefined" && RES_LABEL[k]) || k) +
+    '" style="width:' + (px || 15) + 'px;height:' + (px || 15) + 'px;vertical-align:-2px;image-rendering:pixelated">';
+}
+
+/* ── EL LOMBRICARIO ──────────────────────────────────────────────────────────────────────────
+   El panel dice tres cosas y nada mas: que hay en cada boca, que cuesta echar, y cuanta carnada
+   entra por dia CONTANDO los monticulos. Esa ultima linea es la que evita la pregunta que si no
+   no tiene respuesta en ningun lado del juego: « ¿por que me quedo sin lombrices? ». */
+function refreshLombricario() {
+  const caja = $("lom-bocas"); if (!caja) return;
+  const h = $("lom-horas"); if (h) h.textContent = LOMBRICARIO_HORAS + " h";
+  const bocas = lombricarioBocas();
+  lombricarioCheck();                       // por si volvio con tandas cumplidas
+  const puestas = lombricario();
+  let x = "";
+  for (let i = 0; i < bocas; i++) {
+    const t = puestas[i];
+    if (!t) { x += '<div class="lom-boca vacia"><span class="em">' + iconRes("madera", 18) + '</span><span class="nm">Boca libre</span><span>vacía</span></div>'; continue; }
+    const falta = t.listaEn - nowMs();
+    x += '<div class="lom-boca' + (falta <= 0 ? " lista" : "") + '"><span class="em">' + iconRes("lombriz", 18) + '</span>' +
+      '<span class="nm">' + LOMBRICARIO_DA + ' lombrices</span>' +
+      '<span>' + (falta <= 0 ? "listas" : fmtDur(falta)) + '</span></div>';
+  }
+  caja.innerHTML = x;
+
+  const b = $("lom-echar");
+  if (b) {
+    const cult = lombricarioCultivo();
+    const libre = puestas.length < bocas;
+    /* la regla 9 en el propio boton: NUNCA dice solo « Echar ». Si no se puede, dice por que. */
+    if (!libre)      { b.textContent = "Las " + bocas + " bocas estan ocupadas"; b.disabled = true; }
+    else if (!cult)  { b.textContent = "No tenes cultivos que echar"; b.disabled = true; }
+    else             { b.innerHTML = "Echar " + LOMBRICARIO_PIDE + " " + (RES_LABEL[cult] || cult) + " → " + LOMBRICARIO_DA + " " + iconRes("lombriz"); b.disabled = false; }
+    b.onclick = () => { if (lombricarioEchar()) refreshLombricario(); };
+  }
+
+  const d = $("lom-dia");
+  if (d) {
+    const porMont = excavPorDia(), total = lombricesPorDia();
+    /* redondeado hacia abajo: prometer 22 y dar 22,5 se perdona; prometer 23 y dar 22,5 se lee
+       como que el juego miente. Al jugador se le dice el piso, nunca el techo. */
+    const ent = Math.floor(total);
+    d.innerHTML = "Por día entran <b>" + ent + " lombrices</b>: " +
+      porMont + " de los montículos de la granja" +
+      (lombricarioAbierto() ? " y " + Math.floor(total - porMont) + " de este Lombricario (" + bocas + " boca" + (bocas > 1 ? "s" : "") + ")" : "") +
+      ".<br>Alcanzan para <b>" + ent + " lances</b> o <b>" + Math.floor(total / PESCA_V4_NASA_CEBO) + " nasas</b>.";
+  }
+}
+
+/* ── LAS NASAS, EN EL MISMO PANEL ────────────────────────────────────────────────────────────
+   Se pintan debajo del lance a propósito. La decisión que el documento pone en el centro del
+   sistema —« ¿mis lombrices van a lances o a nasas? »— solo es una decisión si las dos opciones
+   se ven a la vez; en dos ventanas distintas deja de existir y pasa a ser « lo que me acuerde ».
+   Firma, como el resto de la casa: solo se rehace si cambió algo. */
+function pescaV4Nasas() {
+  const caja = $("p4-nasas"); if (!caja || typeof nasas !== "function") return;
+  const puestas = nasas(), cupo = nasaCupo();
+  const abiertas = NASA_ORDER.filter(nasaAbierta);
+  const firma = cupo + "|" + Math.floor((G.res.lombriz || 0)) + "|" +
+    puestas.map(n => n.tipo + ":" + (nasaLista(n) ? "L" : Math.round((n.listaEn - nowMs()) / 30000))).join(",") +
+    "|" + abiertas.join(",");
+  if (caja._firma === firma) return;
+  caja._firma = firma;
+  let h = '<div class="tit"><span>Nasas</span><span>' + puestas.length + "/" + cupo + '</span></div>';
+  puestas.forEach((n, i) => {
+    const d = NASA_DEF[n.tipo], lista = nasaLista(n);
+    h += '<div class="p4-nasa' + (lista ? " lista" : "") + '"><span class="em">' + iconRes(d.mat, 17) + '</span>' +
+      '<span class="nm">' + d.label + '</span>' +
+      '<span>' + (lista ? "¡lista!" : fmtDur(n.listaEn - nowMs())) + '</span>' +
+      '<button data-p4nc="' + i + '"' + (lista ? "" : " disabled") + '>Levantar</button></div>';
+  });
+  /* y las que se pueden calar, con su precio a la vista: el jugador tiene que poder decidir sin
+     abrir nada más. Una nasa que no dice lo que cuesta obliga a probar, y probar gasta lombrices. */
+  if (nasaLibres() > 0) {
+    abiertas.forEach(k => {
+      const d = NASA_DEF[k];
+      const mat = Object.keys(d.cost).map(x => d.cost[x] + " " + (RES_LABEL[x] || x)).join(" + ");
+      const puede = (G.res.lombriz || 0) >= PESCA_V4_NASA_CEBO && canAfford(d.cost);
+      h += '<div class="p4-nasa"><span class="em">' + iconRes(d.mat, 17) + '</span>' +
+        '<span class="nm">' + d.label + '</span>' +
+        '<span>' + PESCA_V4_NASA_CEBO + " " + iconRes("lombriz", 13) + ' + ' + mat + '</span>' +
+        '<button data-p4nx="' + k + '"' + (puede ? "" : " disabled") + '>Calar</button></div>';
+    });
+  }
+  caja.innerHTML = h;
+  caja.querySelectorAll("[data-p4nc]").forEach(b => b.onclick = () => { nasaCobrar(Number(b.dataset.p4nc)); caja._firma = null; pescaV4Nasas(); });
+  caja.querySelectorAll("[data-p4nx]").forEach(b => b.onclick = () => { nasaCalar(b.dataset.p4nx); caja._firma = null; pescaV4Nasas(); });
+}
+
 /* el botón: pointerdown/pointerup y NADA de click (ver la cabecera). El pointerup se escucha en
    la VENTANA, no en el botón: si el jugador arrastra el dedo fuera mientras aguanta y suelta
    afuera, el hilo tiene que soltarse igual — si no, la caña se queda tirando sola. */

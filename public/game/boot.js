@@ -77,9 +77,9 @@ class BootScene extends Phaser.Scene {
     L.push(["skin_sombrero", P + "skin_sombrero.png"]);   // Sombrero de paja brillante (skin del cofre 10/8); si falta, hay respaldo por código
     L.push(["godhand", P + "godhand.png"]);   // GOD HAND 2.0 (11/8): el arte NFT del cropper
     // edificios EN OBRA (12/8): lo que se ve antes de construirlos (chau edificio gris)
-    ["market","barn","store","cocina","establo","curtiduria","ofrendas","horno","altar"].forEach(k => L.push(["build_" + k, P + "build_" + k + ".png"]));
+    ["market","barn","store","cocina","establo","curtiduria","ofrendas","horno","altar","lombricario"].forEach(k => L.push(["build_" + k, P + "build_" + k + ".png"]));
     // PLANOS de construcción (12/8): el pergamino que ganás al subir de nivel
-    ["store","horno","cocina","altar","establo","curtiduria","ofrendas"].forEach(k => L.push(["plano_" + k, P + "plano_" + k + ".png"]));
+    ["store","horno","cocina","altar","establo","curtiduria","ofrendas","lombricario"].forEach(k => L.push(["plano_" + k, P + "plano_" + k + ".png"]));
     L.push(["tree_sapling", P + "tree_sapling.png"]);   // árbol bloqueado = retoño (12/8)
     L.push(["plot_wild", P + "plot_wild.png"]);   // parcela bloqueada = terreno silvestre por desbrozar (13/8)
     // (las "rock_buried_*" por mineral se descartaron: las vetas van todas a la vista con gate de NIVEL — 12/8)
@@ -114,6 +114,7 @@ class BootScene extends Phaser.Scene {
     L.push(["altar", P + "altar.png?v=2"]);   // Altar de Runas (doc maestro 2/8)
     L.push(["establo", P + "establo.png?v=3"]);         // "2das mejoras": animales
     L.push(["curtiduria", P + "curtiduria.png?v=3"]);   // "2das mejoras": armaduras
+    L.push(["lombricario", P + "lombricario.png"]);      // Pesca v4: el grifo de la carnada
     L.push(["ofrendas", P + "ofrendas.png?v=3"]);       // "2das mejoras": Altar de Ofrendas
     // armas por tipo y rareza (se distinguen a simple vista): 4 tipos × 5 rarezas
     ["espada","hacha","mazo","arco"].forEach(t => ["madera","piedra","bronce","oro","diamante"].forEach(r => L.push(["arm_" + t + "_" + r, P + "arm_" + t + "_" + r + ".png?v=1"])));
