@@ -5272,6 +5272,155 @@ function pescaCdLeft() { return Math.max(0, (G.pescaHasta || 0) - nowMs()); }
    funciones que lo usaban. Cada vez que se escribe a mano en un lugar nuevo, nace la posibilidad
    de que un día alguien cambie uno y no el otro. Ahora se declara una vez. */
 var ANCLA_PLATA_HORA = 20;
+/* ═══════════════════════════════════════════════════════════════════════════════════════════
+   PESCA v4 · LA CAPA DE DATOS               (27/8 — docs/PESCA-V4-propuesta.docx, tanda 1)
+   ═══════════════════════════════════════════════════════════════════════════════════════════
+   Esto ENTRA junto a la v3, no encima. La v4 la reemplaza —está decidido— pero arrancar
+   borrando deja el juego roto durante días y la suite en rojo, que es el peor sitio desde el
+   que trabajar. Primero se construye y se mide lo nuevo; el cambio se hace de una vez, cuando
+   el lance esté armado. Los nombres llevan PEZ_ / CANA_V4_ para que no haya confusión posible
+   con ESPECIE_DEF, que es lo viejo y se va.
+
+   QUÉ CAMBIA RESPECTO DE LA v3, EN UNA LÍNEA CADA COSA
+     · el reloj de 15 minutos por lance se va; el candado pasa a ser la CARNADA
+     · la dificultad se muda de los reflejos a la decisión: el progreso nunca retrocede
+     · cada captura trae un PESO, y el peso mueve el precio sin mover el ancla
+     · la rareza la mueve la CAÑA que pagaste, nunca el nivel de Pesca
+
+   DOS COSAS QUE CORRIJO DEL DOCUMENTO, con el motivo escrito para que se puedan discutir:
+
+   1 · EL DIVISOR DEL PESO. El documento pide « precio × (peso ÷ peso medio) » y, dos líneas más
+       abajo, « la curva cargada hacia abajo para que los grandes sean raros ». Las dos cosas
+       juntas no cuadran: con la curva cargada abajo la MEDIA de los sorteos queda un 21 % por
+       debajo del PUNTO MEDIO del rango. Si se divide por el punto medio, cada pez paga un 21 %
+       menos de lo que dice su tabla y la pesca entera cobra de menos sin que se vea en ningún
+       lado. Acá se divide por la media de la curva, que es lo que hace cierta la promesa del
+       propio documento: « el promedio da exactamente 1,00 ».
+
+   2 · LA CUENTA DE ESPECIES. El documento se titula « las dieciséis especies » y su texto dice
+       « doce se pescan con caña, cuatro solo caen en la nasa ». Pero sus tablas listan TRES por
+       banda en cinco bandas: quince de caña, más cuatro de nasa, diecinueve. Mandan las tablas,
+       que son la sustancia; el titular es un descuido de redacción.
+
+   LOS PRECIOS NO SE DERIVAN ACÁ, Y ESTÁ BIEN. Son contenido: se eligieron para que el valor
+   esperado de un lance sea ~10,30, o sea lo que vale la lombriz que lo paga. Lo derivado —y lo
+   que un test tiene que vigilar— es esa igualdad, no cada precio suelto. Verificado: con la
+   tabla de la caña de junco da 10,303. */
+var PEZ_BANDA_ORDER = ["comun", "poco_comun", "raro", "epico", "legendario", "mitico"];
+var PEZ_BANDA = {
+  comun:      { label: "Común",       color: "#cfe0c0" },
+  poco_comun: { label: "Poco común",  color: "#9ede54" },
+  raro:       { label: "Raro",        color: "#85b7eb" },
+  epico:      { label: "Épico",       color: "#af9fec" },
+  legendario: { label: "Legendario",  color: "#ffd75e" },
+  mitico:     { label: "Mítico",      color: "#f0997b", soloNasa: true },
+};
+/* Las diecinueve. `peso` es [mínimo, máximo] en kilos; el sorteo carga hacia abajo. */
+var PEZ_DEF = {
+  /* --- comunes: 62 % de base. El pez de todos los días. --- */
+  merluza:      { label: "Merluza",       emoji: "🐟", banda: "comun",      precio: 3,   xp: 3,   peso: [0.4, 1.8],  sprite: "fish_comun" },
+  lubina:       { label: "Lubina",        emoji: "🐟", banda: "comun",      precio: 4,   xp: 4,   peso: [0.5, 2.5],  sprite: "fish_comun" },
+  atun:         { label: "Atún",          emoji: "🐠", banda: "comun",      precio: 5,   xp: 5,   peso: [2.0, 9.0],  sprite: "fish_comun" },
+  /* --- poco comunes: 27 %. El suelo estable de la economía: esta banda NUNCA se mueve. --- */
+  robalo:       { label: "Róbalo",        emoji: "🐠", banda: "poco_comun", precio: 10,  xp: 9,   peso: [0.8, 4.0],  sprite: "fish_raro" },
+  pargo:        { label: "Pargo",         emoji: "🐠", banda: "poco_comun", precio: 11,  xp: 10,  peso: [0.7, 3.5],  sprite: "fish_raro" },
+  salmon:       { label: "Salmón",        emoji: "🐟", banda: "poco_comun", precio: 12,  xp: 11,  peso: [1.2, 6.0],  sprite: "fish_raro" },
+  /* --- raros: 10,1 % --- */
+  pez_gato:     { label: "Pez gato",      emoji: "🐱", banda: "raro",       precio: 26,  xp: 20,  peso: [1.5, 8.0],  sprite: "fish_epico", noche: true },
+  pez_sapo:     { label: "Pez sapo",      emoji: "🐸", banda: "raro",       precio: 28,  xp: 22,  peso: [0.3, 1.6],  sprite: "fish_epico" },
+  pez_globo:    { label: "Pez globo",     emoji: "🐡", banda: "raro",       precio: 30,  xp: 24,  peso: [0.4, 2.2],  sprite: "fish_epico" },
+  /* --- épicos: 0,75 % --- */
+  pez_loro:     { label: "Pez loro",      emoji: "🦜", banda: "epico",      precio: 120, xp: 70,  peso: [1.0, 5.0],  sprite: "fish_legendario" },
+  pez_guitarra: { label: "Pez guitarra",  emoji: "🎸", banda: "epico",      precio: 130, xp: 75,  peso: [3.0, 14.0], sprite: "fish_legendario" },
+  pez_linterna: { label: "Pez linterna",  emoji: "🏮", banda: "epico",      precio: 140, xp: 80,  peso: [0.2, 1.2],  sprite: "fish_legendario" },
+  /* --- legendarios: 0,15 % --- */
+  pez_espada:   { label: "Pez espada",    emoji: "🗡️", banda: "legendario", precio: 500, xp: 240, peso: [20, 90],    sprite: "fish_legendario" },
+  pez_gota:     { label: "Pez gota",      emoji: "🫠", banda: "legendario", precio: 700, xp: 300, peso: [0.5, 3.0],  sprite: "fish_legendario" },
+  pez_dragon:   { label: "Pez dragón",    emoji: "🐉", banda: "legendario", precio: 900, xp: 400, peso: [10, 45],    sprite: "fish_legendario", noche: true },
+  /* --- míticos: SOLO de nasa. No entran en ninguna tabla de caña. --- */
+  camaron:      { label: "Camarón",       emoji: "🦐", banda: "mitico",     precio: 30,  xp: 25,  peso: [0.05, 0.3], sprite: "fish_comun" },
+  cangrejo:     { label: "Cangrejo",      emoji: "🦀", banda: "mitico",     precio: 55,  xp: 40,  peso: [0.3, 1.5],  sprite: "fish_raro" },
+  langosta:     { label: "Langosta",      emoji: "🦞", banda: "mitico",     precio: 90,  xp: 60,  peso: [0.5, 3.0],  sprite: "fish_epico" },
+  calamar_v4:   { label: "Calamar",       emoji: "🦑", banda: "mitico",     precio: 145, xp: 90,  peso: [1.0, 8.0],  sprite: "fish_legendario" },
+};
+var PEZ_ORDER = ["merluza", "lubina", "atun", "robalo", "pargo", "salmon",
+                 "pez_gato", "pez_sapo", "pez_globo", "pez_loro", "pez_guitarra", "pez_linterna",
+                 "pez_espada", "pez_gota", "pez_dragon",
+                 "camaron", "cangrejo", "langosta", "calamar_v4"];
+function pecesDeBanda(b) { return PEZ_ORDER.filter(k => PEZ_DEF[k].banda === b); }
+
+/* ── EL PESO ─────────────────────────────────────────────────────────────────────────────────
+   El sorteo carga hacia abajo: w = min + (max − min) · u², con u uniforme. Los grandes son
+   raros de verdad y no hace falta ninguna tabla para conseguirlo.
+   Y ACÁ ESTÁ LA CORRECCIÓN QUE IMPORTA: la media de esa curva NO es el punto medio del rango,
+   es min + (max − min)/3. Dividir por ella es lo único que hace que el factor promedie 1,00 y
+   que el peso reparta sin mover el ancla — que es lo que el documento promete y lo que su
+   fórmula, tal como estaba escrita, no cumplía. */
+var PEZ_GIGANTE = 0.90;          // por encima del 90 % del máximo, el pez es GIGANTE
+function pesoMedia(id) { const e = PEZ_DEF[id]; if (!e) return 1; return e.peso[0] + (e.peso[1] - e.peso[0]) / 3; }
+function pesoSortear(id, u) {
+  const e = PEZ_DEF[id]; if (!e) return 0;
+  const r = (u == null) ? Math.random() : u;
+  return Math.round((e.peso[0] + (e.peso[1] - e.peso[0]) * r * r) * 100) / 100;
+}
+function pesoFactor(id, kg) { const m = pesoMedia(id); return m > 0 ? kg / m : 1; }
+function pezGigante(id, kg) { const e = PEZ_DEF[id]; return !!e && kg >= e.peso[0] + (e.peso[1] - e.peso[0]) * PEZ_GIGANTE; }
+function pezPrecio(id, kg) {
+  const e = PEZ_DEF[id]; if (!e) return 0;
+  if (kg == null) return e.precio;                       // sin peso: el precio de tabla
+  return Math.round(e.precio * pesoFactor(id, kg) * 10) / 10;
+}
+function pezXp(id, kg) {
+  const e = PEZ_DEF[id]; if (!e) return 0;
+  return Math.round(e.xp * (pezGigante(id, kg) ? 2 : 1));   // un gigante paga el doble de XP
+}
+
+/* ── LAS CAÑAS: una puerta y un peaje ────────────────────────────────────────────────────────
+   Sin usos. El documento tiene razón en esto y conviene dejar escrito por qué: una durabilidad
+   es un número inventado —lo único que el ancla exige es el cociente precio ÷ usos, así que
+   cualquier par con el mismo cociente es idéntico— y encima obliga a recomprar en mitad de una
+   sesión. La caña se compra UNA VEZ (la puerta) y cada lance cobra su mantenimiento en plata
+   (el peaje). Un número, a la vista, imposible de desajustar.
+
+   OJO, PENDIENTE DE DIRECCIÓN: las MEZCLAS de estas recetas están sin decidir. La auditoría del
+   27/8 (docs/PESCA-V4-AUDITORIA.md) encontró que las del documento cuestan de tres a cuatro
+   veces su presupuesto, porque suponía fibra 25 y cuero 55 cuando el código dice 300 y 340.
+   Acá va el PRESUPUESTO, que es el número que no se toca; la mezcla se decide aparte. */
+var CANA_V4_ORDER = ["junco", "bambu", "hierro", "oro", "abuelo"];
+var CANA_V4_DEF = {
+  junco:  { label: "Caña de Junco",   lvl: 1,  presupuesto: 30,   mant: 0.30, banda: { comun: 62.00, poco_comun: 27.00, raro: 10.10, epico: 0.750, legendario: 0.150 } },
+  bambu:  { label: "Caña de Bambú",   lvl: 4,  presupuesto: 400,  mant: 2.50, banda: { comun: 55.40, poco_comun: 27.00, raro: 16.16, epico: 1.200, legendario: 0.240 } },
+  hierro: { label: "Caña de Hierro",  lvl: 8,  presupuesto: 1000, mant: 5.50, banda: { comun: 46.60, poco_comun: 27.00, raro: 24.24, epico: 1.800, legendario: 0.360 } },
+  oro:    { label: "Caña de Oro",     lvl: 12, presupuesto: 2000, mant: 10.00, banda: { comun: 34.50, poco_comun: 27.00, raro: 35.35, epico: 2.625, legendario: 0.525 } },
+  /* la única que no cobra peaje, y la única que rompe el ancla a propósito: es el premio de
+     final de escalera y cuesta un mes de Lonja bien jugada. +10 % al peso de todo lo que saca. */
+  abuelo: { label: "Caña del Abuelo", lvl: 18, presupuesto: null, mant: 0, pesoBonus: 0.10, escamas: 120,
+            banda: { comun: 34.50, poco_comun: 27.00, raro: 35.35, epico: 2.625, legendario: 0.525 } },
+};
+/* EL VALOR ESPERADO DE UN LANCE, DERIVADO. Éste es el número que ata la pesca al resto del
+   juego: tiene que dar ~10,30 con la caña de junco, o sea lo que vale la lombriz que lo paga.
+   No se escribe a mano en ningún sitio — se calcula de la tabla de bandas y de los precios. */
+function lanceValorEsperado(cana) {
+  const c = CANA_V4_DEF[cana]; if (!c) return 0;
+  let v = 0;
+  for (const b in c.banda) {
+    const peces = pecesDeBanda(b);
+    if (!peces.length) continue;
+    const medio = peces.reduce((s, k) => s + PEZ_DEF[k].precio, 0) / peces.length;
+    v += (c.banda[b] / 100) * medio;
+  }
+  return Math.round(v * 100) / 100;
+}
+function lanceNeto(cana) {   // lo que queda después del peaje de la caña
+  const c = CANA_V4_DEF[cana]; if (!c) return 0;
+  return Math.round((lanceValorEsperado(cana) - (c.mant || 0)) * 100) / 100;
+}
+/* LA CARNADA ES EL RELOJ. Un lance, una lombriz; una nasa, cuatro. Toda la laguna se paga en la
+   misma unidad, y por eso no puede haber una ruta rota: no hay forma de convertir tiempo en
+   peces sin gastar carnada, y la carnada tiene techo. */
+var PESCA_V4_LANCE_CEBO = 1;
+var PESCA_V4_NASA_CEBO = 4;
+
 var PESCA_ESTRELLA = { 1: 1, 2: 2, 3: 3.5, 4: 6, 5: 10 };   // multiplicador de XP por talla
 var PESCA_ESTRELLA_NOM = { 1: "Menudo", 2: "Bueno", 3: "Notable", 4: "Trofeo", 5: "Colosal" };
 
