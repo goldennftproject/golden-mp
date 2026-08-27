@@ -550,6 +550,14 @@
   .lom-dia{margin-top:10px;padding:9px 11px;border-radius:10px;background:rgba(20,28,16,.55);
     border:1px solid #3c4d31;font-size:12px;color:#cbbf9f;line-height:1.6}
   .lom-dia b{color:#ffd75e}
+  .p4-cebos{display:flex;gap:6px;flex-wrap:wrap;justify-content:center;margin-top:2px}
+  .p4-cebo{padding:5px 9px;border-radius:9px;border:1px solid #3c4d31;background:rgba(20,28,16,.6);
+    color:#cbbf9f;font-size:11px;font-weight:700;cursor:pointer;display:flex;align-items:center;gap:5px}
+  .p4-cebo .n{color:#f2ead5;font-weight:800}
+  .p4-cebo.puesto{border-color:#ffd75e;background:rgba(70,56,20,.55);color:#f2ead5}
+  .p4-cebo.sin{opacity:.42;cursor:default}
+  .p4-cebo.comprar{border-color:#7fa356;color:#cfe3b0}
+  .p4-cebo:disabled{opacity:.4;cursor:default}
   .p4-nasas{border-top:1px solid #3c4d31;padding-top:8px;display:flex;flex-direction:column;gap:5px}
   .p4-nasas .tit{font-size:12px;font-weight:800;color:#f2ead5;display:flex;justify-content:space-between}
   .p4-nasa{display:flex;align-items:center;gap:7px;padding:5px 8px;border-radius:9px;
@@ -1137,6 +1145,7 @@
     <div class="p4-pie" id="p4-pie"></div>
     <!-- LAS NASAS: la mitad pasiva, en el mismo panel. Separarlas en otra ventana escondería la
          decisión que ordena el día (¿mis lombrices van a lances o a nasas?) justo cuando se toma. -->
+    <div class="p4-cebos" id="p4-cebos"></div>
     <div class="p4-nasas" id="p4-nasas"></div>
   </div>
 

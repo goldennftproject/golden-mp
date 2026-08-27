@@ -33,7 +33,7 @@ const G = {
   tuto: { step: 0, n: 0, done: false, v: 2 },   // doc 2/8: tutorial guiado de micro-objetivos (v = versión de la cadena)
   firstSeeds: 3,                 // semillas del starter pack que crecen en 45 s (se descuentan al plantarlas)
   armCd: {}, mkPend: [], testeoDado: false,   // enfriamiento de crafteo por arma · entregas pendientes · (testeoDado quedó del regalo viejo, ya no se usa)   // equipo (armas se equipan en el panel de Equipo — detalles jueves)
-  res: { madera: 0, piedra: 0, bronce: 0, hierro: 0, oro: 0, diamante: 0, netherita: 0, carne: 0, flecha: 0, lombriz: 0, grillo: 0, cebo_vivo: 0,
+  res: { madera: 0, piedra: 0, bronce: 0, hierro: 0, oro: 0, diamante: 0, netherita: 0, carne: 0, flecha: 0, lombriz: 0, grillo: 0, cebo_vivo: 0, larva_luz: 0,
     tablon: 0, barra_piedra: 0, barra_bronce: 0, barra_hierro: 0, barra_oro: 0,
     papa: 0, ciruela: 0, cereza: 0, remolacha: 0, zanahoria: 0, cebolla: 0, calabacin: 0, repollo: 0, calabaza: 0, brocoli: 0, girasol: 0, trigo: 0, maiz: 0,
     fibra: 0, pelaje: 0, cuero: 0, colmillo: 0, esencia_runica: 0, esencia_oscura: 0 },
@@ -188,15 +188,15 @@ function buffTick() {   // 1 vez por segundo desde el HUD: regeneración y vida 
 }
 
 // --- recursos ---
-const RES_EMOJI = { madera:"", piedra:"", bronce:"", oro:"", diamante:"", netherita:"", carne:"", flecha:"", lombriz:"", grillo:"🦗", cebo_vivo:"🪰",
+const RES_EMOJI = { madera:"", piedra:"", bronce:"", oro:"", diamante:"", netherita:"", carne:"", flecha:"", lombriz:"", grillo:"🦗", cebo_vivo:"🪰", larva_luz:"✨",
   papa:"", ciruela:"", cereza:"", remolacha:"", zanahoria:"", cebolla:"", calabacin:"", repollo:"", calabaza:"", brocoli:"" };
-const RES_LABEL = { madera:"Madera", piedra:"Piedra", bronce:"Bronce", hierro:"Hierro", oro:"Oro", diamante:"Diamante", netherita:"Netherita", carne:"Carne", flecha:"Flecha", lombriz:"Lombriz", grillo:"Grillo", cebo_vivo:"Cebo vivo",
+const RES_LABEL = { madera:"Madera", piedra:"Piedra", bronce:"Bronce", hierro:"Hierro", oro:"Oro", diamante:"Diamante", netherita:"Netherita", carne:"Carne", flecha:"Flecha", lombriz:"Lombriz", grillo:"Grillo", cebo_vivo:"Cebo vivo", larva_luz:"Larva de luz",
   tablon:"Tablón de madera", barra_piedra:"Bloques de piedra", barra_bronce:"Barra de bronce", barra_hierro:"Barra de hierro", barra_oro:"Barra de oro",
   papa:"Papa", ciruela:"Ciruela", cereza:"Cereza", remolacha:"Remolacha", zanahoria:"Zanahoria", cebolla:"Cebolla", calabacin:"Calabacín", repollo:"Repollo", calabaza:"Calabaza", brocoli:"Brócoli",
   girasol:"Girasol", trigo:"Trigo", maiz:"Maíz",
   fibra:"Fibra", pelaje:"Pelaje", cuero:"Cuero", colmillo:"Colmillo", esencia_runica:"Esencia rúnica" };
 // íconos cozy de recursos (los cultivos usan crop_<key>)
-const RES_SPRITE = { madera:"res_madera", piedra:"res_piedra", bronce:"res_bronce", hierro:"res_hierro", oro:"res_oro", diamante:"res_diamante", netherita:"res_netherita", carne:"res_carne", flecha:"res_flecha", lombriz:"res_lombriz", cebo_vivo:"res_lombriz",
+const RES_SPRITE = { madera:"res_madera", piedra:"res_piedra", bronce:"res_bronce", hierro:"res_hierro", oro:"res_oro", diamante:"res_diamante", netherita:"res_netherita", carne:"res_carne", flecha:"res_flecha", lombriz:"res_lombriz", cebo_vivo:"res_lombriz", larva_luz:"res_lombriz",
   tablon:"res_tablon", barra_piedra:"res_barra_piedra", barra_bronce:"res_barra_bronce", barra_hierro:"res_barra_hierro", barra_oro:"res_barra_oro",
   // 10/8: materiales del Establo, la Curtiduría, el Altar y las incursiones. Eran los últimos
   // ítems de la bolsa que salían con emoji en vez de ícono.
@@ -1594,7 +1594,12 @@ function expansionCostos() {
   })();
   return EXPANSION_COSTO;
 }
-var EXPANSION_MAX = 16;
+/* (aquí había una SEGUNDA « var EXPANSION_MAX = 16 ». Las dos valían lo mismo, así que no había
+   ningún bug vivo — pero var se pisa sin avisar y ésta corre DESPUÉS de que FARM_EXPANSION ya
+   se calculó con la de arriba. El día que alguien subiera la primera a 20, la tabla de
+   expansiones tendría 20 entradas y todo lo demás seguiría creyendo que hay 16: un juego con
+   dos economías, y ni un error en consola. La encontró test-nombres-unicos.js el mismo día que
+   se escribió, buscando otra cosa.) */
 /* ============ LAS EXPANSIONES CON VETA (24/8, dirección) ==========================
    « Agregar 1 nodo de bronce y oro a la tercera parcela. Repetir en la 6-8-10-12-14-16. »
    Siete bloques traen, además de su parcela + árbol + roca, UNA VETA DE BRONCE y UNA DE ORO.
@@ -5461,20 +5466,30 @@ var CANA_V4_DEF = {
 /* EL VALOR ESPERADO DE UN LANCE, DERIVADO. Éste es el número que ata la pesca al resto del
    juego: tiene que dar ~10,30 con la caña de junco, o sea lo que vale la lombriz que lo paga.
    No se escribe a mano en ningún sitio — se calcula de la tabla de bandas y de los precios. */
-function lanceValorEsperado(cana) {
+/* El valor esperado de UN lance. Lee la tabla que de verdad se va a usar —bandaTabla(), con su
+   noche y su cebo— y no la tabla base de la caña. Leerla directa fue un error mío de diez
+   minutos: los tres cebos cambiaban la tabla y el valor esperado seguía dando exactamente lo
+   mismo para los tres. « Derivar a medias es peor que no derivar »: el número tenía toda la
+   autoridad de una fórmula y toda la ceguera de una constante. */
+function lanceValorEsperado(cana, opciones) {
   const c = CANA_V4_DEF[cana]; if (!c) return 0;
+  const o = opciones || {};
+  const t = bandaTabla(cana, o.noche || false, o.cebo || "lombriz");
   let v = 0;
-  for (const b in c.banda) {
+  for (const b in t) {
     const peces = pecesDeBanda(b);
     if (!peces.length) continue;
-    const medio = peces.reduce((s, k) => s + PEZ_DEF[k].precio, 0) / peces.length;
-    v += (c.banda[b] / 100) * medio;
+    /* el precio de cada especie va POR SU PESO esperado, no por el de tabla: con el camarón es
+       de ahí de donde sale casi todo lo que aporta el cebo. */
+    const cebo = o.cebo || "lombriz";
+    const medio = peces.reduce((s, k) => s + PEZ_DEF[k].precio * pesoFactorEsperado(k, cebo), 0) / peces.length;
+    v += (t[b] / 100) * medio;
   }
   return Math.round(v * 100) / 100;
 }
-function lanceNeto(cana) {   // lo que queda después del peaje de la caña
+function lanceNeto(cana, opciones) {   // lo que queda después del peaje de la caña
   const c = CANA_V4_DEF[cana]; if (!c) return 0;
-  return Math.round((lanceValorEsperado(cana) - (c.mant || 0)) * 100) / 100;
+  return Math.round((lanceValorEsperado(cana, opciones) - (c.mant || 0)) * 100) / 100;
 }
 /* LA CARNADA ES EL RELOJ. Un lance, una lombriz; una nasa, cuatro. Toda la laguna se paga en la
    misma unidad, y por eso no puede haber una ruta rota: no hay forma de convertir tiempo en
@@ -5766,18 +5781,96 @@ function esDeNocheAhora() {
 }
 /* la tabla de la caña, con la noche aplicada: de 00 a 06 la banda legendaria se DUPLICA, y lo
    que sube sale de la común — la misma regla que usan las cañas, para no tener dos maneras. */
-function bandaTabla(cana, deNoche) {
+/* ── LOS TRES CEBOS (27/8, tanda 2b) ─────────────────────────────────────────────────────────
+   La lombriz es la unidad de cuenta del sistema entero; los otros dos NO son mejoras que se
+   compran para ganar más, y ahí está la gracia:
+
+     · LA LARVA DE LUZ borra la banda común. Cuesta 10 de plata, que es exactamente lo que sube
+       el valor esperado del lance. Está anclada a propósito: no da beneficio, da CONTROL. Se
+       quema cuando falta un pez concreto para un pedido, no todo el rato.
+     · EL CAMARÓN directamente PIERDE plata: vale 30 y aporta unos 5 de valor esperado. Es el
+       cebo de los récords —duplica la legendaria y garantiza peso alto—, y quemarlo es una
+       decisión de orgullo, no de contabilidad.
+
+   Un cebo que siempre conviene no es una decisión: es un impuesto por no usarlo. Estos dos solo
+   convienen cuando el jugador quiere algo que la plata no compra. */
+var CEBO_V4_ORDER = ["lombriz", "larva_luz", "camaron"];
+var CEBO_V4_DEF = {
+  lombriz:   { label: "Lombriz",      bolsa: "res",  k: "lombriz",   n: 1,
+               txt: "El cebo de siempre. Un lance, una lombriz." },
+  larva_luz: { label: "Larva de luz", bolsa: "res",  k: "larva_luz", n: 1, plata: 10,
+               txt: "Borra la banda común: no puede salir peor que poco común." },
+  /* el camarón sale de la BOLSA DE PECES, no de la de recursos: es un mítico que además decide
+     tu próximo lance. « Un mítico que solo se vende es un número; un mítico que además decide
+     tu próximo lance es una elección. » */
+  camaron:   { label: "Camarón",      bolsa: "fish", k: "camaron",   n: 1,
+               txt: "Duplica la legendaria y garantiza peso alto. El cebo de los récords." },
+};
+/* el peso que « garantiza » el camarón: se sortean dos y se queda el mayor. No se fuerza el
+   máximo —eso mataría el récord, que es justo lo que el cebo persigue— pero corre la curva
+   entera hacia arriba sin tocar ni el mínimo ni el máximo de la especie. */
+var CEBO_CAMARON_TIRADAS = 2;
+
+function bandaTabla(cana, deNoche, cebo) {
   const c = CANA_V4_DEF[cana] || CANA_V4_DEF.junco;
   const t = Object.assign({}, c.banda);
   if (deNoche) { const extra = t.legendario; t.legendario += extra; t.comun -= extra; }
+  /* LA LARVA borra la banda común y su 62 % se reparte PROPORCIONALMENTE entre las que quedan.
+     Mi primera versión lo mandaba todo a « poco común », que suena razonable y da 14,64 — el
+     documento dice 20,60. La diferencia no es un decimal: con 14,64 la larva PIERDE 5,66 por
+     lance y nadie la usaría nunca, o sea que el cebo existiría sin existir. Con el reparto
+     proporcional sube exactamente 10,30, que es lo que cuesta, y ahí está la gracia: la larva no
+     da beneficio, da CONTROL. Se compra cuando falta un pez concreto, no para ganar plata. */
+  if (cebo === "larva_luz" && t.comun > 0) {
+    const resto = 100 - t.comun;
+    if (resto > 0) { for (const b in t) if (b !== "comun") t[b] = t[b] * 100 / resto; }
+    t.comun = 0;
+  }
+  /* EL CAMARÓN duplica la legendaria, y lo que eso cuesta sale del resto en la misma proporción
+     —la misma regla que la larva, para que un cebo no pueda vaciar una banda de golpe. */
+  if (cebo === "camaron" && t.legendario > 0) {
+    const extra = t.legendario, resto = 100 - t.legendario;
+    if (resto > extra) { for (const b in t) if (b !== "legendario") t[b] -= extra * (t[b] / resto); }
+    t.legendario += extra;
+  }
   return t;
+}
+function ceboPuesto() { return (G.pescaV4 && G.pescaV4.cebo) || "lombriz"; }
+/* ceboV4Bolsa, no ceboBolsa: ese nombre YA EXISTE, en el sistema de cebos que quedó de la v3
+   (línea ~6670), y usa otra forma de decir lo mismo (c.donde en vez de d.bolsa). Las
+   declaraciones de función se izan, así que la SEGUNDA gana en silencio: mi camarón se cobraba
+   de G.res.camaron —que no existe— en vez de G.fish.camaron, o sea que era gratis. Para siempre.
+   Sin error, sin aviso y sin forma de que el jugador lo reportara.
+   Lo cazó el test al pedir la bolsa correcta. Y para que no vuelva, test-nombres-unicos.js barre
+   ahora los cinco archivos buscando funciones repetidas. */
+function ceboV4Bolsa(d) { return d.bolsa === "fish" ? (G.fish || (G.fish = {})) : G.res; }
+function ceboTengo(k) {
+  const d = CEBO_V4_DEF[k]; if (!d) return false;
+  return (ceboV4Bolsa(d)[d.k] || 0) >= d.n;
+}
+/* se cobra al CLAVAR, igual que la lombriz: el cebo que no llegó a pez no se paga. */
+function ceboCobrar(k) {
+  const d = CEBO_V4_DEF[k] || CEBO_V4_DEF.lombriz;
+  const b = ceboV4Bolsa(d);
+  b[d.k] = (b[d.k] || 0) - d.n;
+  if (typeof flujoAnotar === "function") flujoAnotar(d.bolsa === "fish" ? "fish" : "res", d.k, -d.n);
+}
+/* comprar larvas: el único cebo que se compra, y a un precio que NO deja beneficio (ver arriba) */
+function larvaComprar(n) {
+  const cuantas = n || 1, coste = CEBO_V4_DEF.larva_luz.plata * cuantas;
+  if ((G.coins || 0) < coste) { toast("Te faltan " + (coste - Math.floor(G.coins || 0)) + " de plata"); return false; }
+  G.coins -= coste;
+  G.res.larva_luz = (G.res.larva_luz || 0) + cuantas;
+  if (typeof flujoAnotar === "function") { flujoAnotar("coins", "coins", -coste); flujoAnotar("res", "larva_luz", cuantas); }
+  log("Compraste " + cuantas + " larva" + (cuantas > 1 ? "s" : "") + " de luz por " + coste + " de plata.", "good");
+  return true;
 }
 /* SUBIR UNA BANDA: lo que paga la racha. Nunca paga en plata — la habilidad mueve lo que
    ENCONTRÁS, no lo que vale, que es la misma regla que ya rigen la cocina y el combate. */
 var BANDA_SUBE = { comun: "poco_comun", poco_comun: "raro", raro: "epico", epico: "legendario", legendario: "legendario" };
 function bandaSortear(cana, opciones) {
   const o = opciones || {}, e = pescaEstado();
-  const t = bandaTabla(cana, o.noche != null ? o.noche : esDeNocheAhora());
+  const t = bandaTabla(cana, o.noche != null ? o.noche : esDeNocheAhora(), o.cebo || ceboPuesto());
   let banda = null;
   const u = (o.u != null ? o.u : Math.random()) * 100;
   let acc = 0;
@@ -5825,6 +5918,35 @@ function bandaConSombra(banda, sombra) {
    Devuelve el estado completo de la pulseada. El pez y su peso se sortean ACÁ, al clavar, y no
    al final: así la pelea que das es la del pez que te vas a llevar, y no hay forma de que el
    premio y el esfuerzo no coincidan. (En la v2 eso ya se hacía bien; se conserva.) */
+/* EL FACTOR DE PESO QUE HAY QUE ESPERAR según el cebo, POR ESPECIE.
+   Con w = min + (max−min)·u², el peso medio es min + R/3 y el factor sale 1,00 por construcción
+   (ver test-pesca-v4-datos). Quedarse con el mayor de DOS sorteos cambia la distribución de u
+   —densidad 2u— y E[u²] sube de 1/3 a 1/2, así que el peso medio pasa a min + R/2.
+
+   Y AQUÍ ESTÁ EL DETALLE QUE ME COMÍ: escribí que eso daba 1,5. Daría 1,5 si el mínimo de la
+   especie fuera cero. Como no lo es, el factor real es (min + R/2) ÷ (min + R/3), que depende de
+   cada especie: 1,28 en el atún, distinto en la merluza. Lo medí y me salió 1,276 contra el 1,5
+   que yo había escrito diez minutos antes con toda confianza.
+
+   Así que no hay constante: se calcula por especie, exacto, sin simular. Que un número se pueda
+   derivar y aun así uno lo escriba a mano es exactamente el fallo que este proyecto lleva toda
+   la semana repitiendo. */
+function pesoFactorEsperado(id, cebo) {
+  if (cebo !== "camaron") return 1;
+  const e = PEZ_DEF[id]; if (!e || !e.peso) return 1;
+  const min = e.peso[0], R = e.peso[1] - e.peso[0];
+  if (R <= 0) return 1;
+  return (min + R / 2) / (min + R / 3);
+}
+
+/* el peso de ESTE lance: normalmente un sorteo, y con camarón el mayor de dos. */
+function pesoDelLance(id, o) {
+  const cebo = o.cebo || ceboPuesto();
+  if (cebo !== "camaron") return pesoSortear(id, o.uPeso);
+  let mejor = 0;
+  for (let i = 0; i < CEBO_CAMARON_TIRADAS; i++) mejor = Math.max(mejor, pesoSortear(id, o.uPeso));
+  return mejor;
+}
 function lanceArmar(cana, sombra, opciones) {
   const o = opciones || {};
   let banda = o.banda || bandaSortear(cana, o);
@@ -5842,7 +5964,7 @@ function lanceArmar(cana, sombra, opciones) {
   const dur = rnd(p.dur[0], p.dur[1], o.uDur);
   return {
     cana, banda, id, sombra: sombra || null,
-    kg: Math.round(pesoSortear(id, o.uPeso) * (1 + bonus) * 100) / 100,
+    kg: Math.round(pesoDelLance(id, o) * (1 + bonus) * 100) / 100,
     progreso: 0, tension: 0, t: 0,
     dur: dur,                                      // segundos de pulseada bien jugada
     tiraEn: rnd(p.tiraCada[0], p.tiraCada[1], o.uTira),

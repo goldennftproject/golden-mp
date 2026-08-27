@@ -310,7 +310,13 @@ function pescaV4Paso(dt) {
    antes que al código porque está escrito en castellano.) */
 function pescaV4Tirar(sombra) {
   if (!P4 || P4.fase !== "sombras") return;
-  if ((G.res.lombriz || 0) < PESCA_V4_LANCE_CEBO) { toast("Te faltan lombrices — cavá un montículo"); return; }
+  /* el cebo puesto, sea el que sea. Si se acabó se vuelve a la lombriz sin drama y se avisa:
+     quedarse sin larvas no puede dejar la laguna inservible. */
+  let ceb = ceboPuesto();
+  if (!ceboTengo(ceb)) {
+    if (ceb !== "lombriz") { toast("Te quedaste sin " + CEBO_V4_DEF[ceb].label + " — volvés a la lombriz"); ceb = "lombriz"; G.pescaV4.cebo = "lombriz"; }
+    if (!ceboTengo("lombriz")) { toast("Te faltan lombrices — cavá un montículo"); return; }
+  }
   P4.sombra = sombra;
   P4.fase = "espera";
   P4.espera = PIQUE_ESPERA[0] + Math.random() * (PIQUE_ESPERA[1] - PIQUE_ESPERA[0]);
@@ -318,8 +324,12 @@ function pescaV4Tirar(sombra) {
 }
 function pescaV4Clavar() {
   if (!P4 || P4.fase !== "pique") return;
-  G.res.lombriz = Math.max(0, (G.res.lombriz || 0) - PESCA_V4_LANCE_CEBO);
-  P4.L = lanceArmar(P4.cana, P4.sombra);
+  /* se cobra el cebo PUESTO, y el lance se arma con ESE cebo. Los dos tienen que ser el mismo:
+     cobrar una larva y sortear con la tabla de la lombriz sería robar en silencio, que es la
+     peor clase de bug porque el jugador no puede ni reportarlo. */
+  const ceb = ceboPuesto();
+  ceboCobrar(ceb);
+  P4.L = lanceArmar(P4.cana, P4.sombra, { cebo: ceb });
   P4.fase = "pelea";
   const el = $("pesca4"); if (el) el.classList.add("peleando");
   if (typeof refreshHud === "function") refreshHud();
@@ -356,7 +366,13 @@ function pescaV4Pintar() {
   if (!P4) return;
   const agua = $("p4-agua"), pelea = $("p4-pelea"), btn = $("p4-btn"),
         pie = $("p4-pie"), cebo = $("p4-cebo"), tit = $("p4-tit");
-  if (cebo) cebo.innerHTML = iconRes("lombriz") + " " + Math.floor(G.res.lombriz || 0) + " · " + (CANA_V4_DEF[P4.cana] || {}).label;
+  if (cebo) {
+    const d = CEBO_V4_DEF[ceboPuesto()] || CEBO_V4_DEF.lombriz;
+    const b = d.bolsa === "fish" ? (G.fish || {}) : G.res;
+    cebo.innerHTML = iconRes(d.bolsa === "fish" ? "lombriz" : d.k) + " " + Math.floor(b[d.k] || 0) +
+                     " " + d.label + " · " + (CANA_V4_DEF[P4.cana] || {}).label;
+  }
+  pescaV4Cebos();
   if (agua) {
     const firma = P4.fase + "|" + P4.sombras.join(",");
     if (agua._firma !== firma) {
@@ -424,6 +440,45 @@ function iconRes(k, px) {
   if (!s) return (typeof RES_EMOJI !== "undefined" && RES_EMOJI[k]) || "";
   return '<img src="' + GF.spr(s) + '" alt="' + ((typeof RES_LABEL !== "undefined" && RES_LABEL[k]) || k) +
     '" style="width:' + (px || 15) + 'px;height:' + (px || 15) + 'px;vertical-align:-2px;image-rendering:pixelated">';
+}
+
+/* ── LOS TRES CEBOS, EN UNA FILA ────────────────────────────────────────────────────────────
+   Se pintan CON SU EFECTO ESCRITO, no solo con su nombre. Un cebo que dice « Larva de luz » y
+   nada más obliga a probarlo para saber qué hace, y probarlo cuesta una larva: el jugador paga
+   por leer la documentación. Cada chip dice qué hace y cuánto queda. */
+function pescaV4Cebos() {
+  const caja = $("p4-cebos"); if (!caja) return;
+  const puesto = ceboPuesto();
+  const firma = puesto + "|" + CEBO_V4_ORDER.map(k => {
+    const d = CEBO_V4_DEF[k], b = d.bolsa === "fish" ? (G.fish || {}) : G.res;
+    return Math.floor(b[d.k] || 0);
+  }).join(",") + "|" + Math.floor(G.coins || 0);
+  if (caja._firma === firma) return;
+  caja._firma = firma;
+  let h = "";
+  for (const k of CEBO_V4_ORDER) {
+    const d = CEBO_V4_DEF[k], b = d.bolsa === "fish" ? (G.fish || {}) : G.res;
+    const n = Math.floor(b[d.k] || 0);
+    h += '<button class="p4-cebo' + (k === puesto ? " puesto" : "") + (n <= 0 ? " sin" : "") +
+      '" data-p4cebo="' + k + '" title="' + d.txt + '">' +
+      '<span class="n">' + n + '</span>' + d.label + '</button>';
+  }
+  /* y la larva se compra desde acá mismo: mandar al jugador al Mercado a buscar el cebo que está
+     mirando es pedirle que se acuerde de por qué había ido. */
+  if ((G.res.larva_luz || 0) < 3) {
+    h += '<button class="p4-cebo comprar" id="p4-comprar-larva"' +
+      ((G.coins || 0) < CEBO_V4_DEF.larva_luz.plata ? " disabled" : "") +
+      '>+1 Larva · ' + CEBO_V4_DEF.larva_luz.plata + ' plata</button>';
+  }
+  caja.innerHTML = h;
+  caja.querySelectorAll("[data-p4cebo]").forEach(b => b.onclick = () => {
+    const k = b.dataset.p4cebo;
+    if (!ceboTengo(k)) { toast("No te queda " + CEBO_V4_DEF[k].label); return; }
+    G.pescaV4 = G.pescaV4 || {}; G.pescaV4.cebo = k;
+    caja._firma = null; pescaV4Cebos(); pescaV4Pintar();
+  });
+  const cb = $("p4-comprar-larva");
+  if (cb) cb.onclick = () => { if (larvaComprar(1)) { caja._firma = null; pescaV4Cebos(); } };
 }
 
 /* ── EL LOMBRICARIO ──────────────────────────────────────────────────────────────────────────
