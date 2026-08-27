@@ -461,6 +461,10 @@ GF.WORLD_OBJECTS.push(snap("lombricario", {type:"lombricario"}, 252, 462, T*1.4)
 //   · fila 14 volvia a pisar la cerca, que es donde termina el claro de arranque.
 // Tres auditores distintos, tres razones distintas, y ni una sola vuelta de « lo pruebo a ver ».
 GF.WORLD_OBJECTS.push(snap("lonja", {type:"lonja"}, 336, 462, T*1.5));
+// LA BOYA DE TROFEOS, en la orilla de la laguna. No se ve hasta comprarla en la Lonja (30
+// Escamas), pero se declara aca con todo lo demas: un objeto del mundo que vive en un caso
+// especial del renderizador es un objeto que nadie encuentra cuando hay que moverlo.
+GF.WORLD_OBJECTS.push(snap("boya", {type:"boya"}, 231, 546, T*1.1));
 
 // CHIMENEAS (9/8). Dónde sale el humo en cada edificio, medido sobre el arte nuevo y no
 // a ojo: dx es el corrimiento respecto del CENTRO del sprite (en anchos de sprite) y dy es
@@ -581,7 +585,8 @@ GF.SOLID = {
   establo:    { hw: 0.46, dep: 0.58 },
   curtiduria: { hw: 0.44, dep: 0.54 },
   lombricario: { hw: 0.40, dep: 0.34 },
-  lonja:       { hw: 0.42, dep: 0.30 },   // un cartel: ancho y poco fondo   // un cajon, no una casa: ocupa poco y no tiene tejado que pise nada
+  lonja:       { hw: 0.42, dep: 0.30 },   // un cartel: ancho y poco fondo
+  boya:        { hw: 0.20, dep: 0.18 },   // flota: casi no ocupa   // un cajon, no una casa: ocupa poco y no tiene tejado que pise nada
   ofrendas:   { hw: 0.44, dep: 0.54 },
   dummy:  { hw: 0.24, dep: 0.26 },
   cofre:  { hw: 0.34, dep: 0.30 },

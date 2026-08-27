@@ -7429,25 +7429,10 @@ function lonjaPedido() {
 function hashCadena(s) { let h = 0; for (let i = 0; i < s.length; i++) h = (h * 31 + s.charCodeAt(i)) | 0; return h || 1; }
 
 function lonjaEntregar() {
-  const p = lonjaPedido();
-  if (!p) { toast("La Lonja no tiene pedido ahora mismo"); return false; }
-  if (p.cobrado) { toast("Ya entregaste el pedido de esta marea"); return false; }
-  const tengo = Math.floor((G.fish && G.fish[p.id]) || 0);
-  if (tengo < p.n) {
-    toast("Te faltan " + (p.n - tengo) + " " + (PEZ_DEF[p.id] || {}).label);
-    return false;
-  }
-  G.fish[p.id] -= p.n;
-  const plata = lonjaPaga("marea", lonjaSuelto(p)), esc = LONJA_ESCALON.marea.escamas;
-  G.coins = (G.coins || 0) + plata;
-  p.cobrado = true;
-  p.hechos = p.n;
-  if (typeof flujoAnotar === "function") { flujoAnotar("fish", p.id, -p.n); flujoAnotar("coins", "coins", plata); }
-  escamasDar(esc, LONJA_MAREAS[p.idx].label);
-  addXp("fishing", Math.round(PEZ_DEF[p.id].xp * p.n * 0.5));
-  log("Entregaste " + p.n + " " + PEZ_DEF[p.id].label + " en la Lonja: " + plata + " de plata.", "gold");
-  G.lonjaEntregados = (G.lonjaEntregados || 0) + 1;
-  return true;
+  /* queda como atajo del pedido de marea, que es el que usa el tutorial y el botón grande.
+     TODO lo que hace de verdad vive en lonjaEntregarEscalon(): tener dos caminos para la misma
+     acción es cómo se consigue que uno de los dos se olvide de una línea. */
+  return lonjaEntregarEscalon("marea");
 }
 /* lo que el jugador tira si vende suelto en vez de entregar. Está a la vista en el panel a
    propósito: « los peces sueltos se venden, los peces RAROS se entregan » es la lección
@@ -7456,6 +7441,185 @@ function lonjaMultiplicador() {
   const p = lonjaPedido(); if (!p) return 0;
   const suelto = lonjaSuelto(p);
   return suelto > 0 ? Math.round(lonjaPaga("marea", suelto) / suelto * 10) / 10 : 0;
+}
+
+/* ── LOS OTROS TRES ESCALONES ────────────────────────────────────────────────────────────────
+   Hasta ahora la Lonja tenía cuatro tarifas y UNA sola puerta: solo el pedido de marea se podía
+   entregar. Las otras tres eran precios sin nada detrás — el jugador leía « Encargo del Capitán:
+   un día entero de granja » y no había forma de cobrarlo. Peor que no tenerlo, porque promete.
+
+   Los tres comparten la misma maquinaria que la marea, y a propósito: un sello determinístico
+   (el F5 no re-sortea), una ventana con su reloj, el mismo suelo de pago —nunca menos que vender
+   suelto por dos— y la misma regla dura de que solo se pide lo que el jugador YA puede pescar.
+   Lo único que cambia entre ellos es el reloj y lo que piden.
+
+       marea     8 h        2-5 peces de una banda baja
+       Capitán   1 semana   dos bandas a la vez
+       mes       1 mes      UN épico o legendario, con nombre
+       torneo    vie-dom    peso, no cantidad                                                  */
+
+function lonjaSemana(t) { return Math.floor(((t != null ? t : nowMs()) - 345600000) / 604800000); }
+function lonjaMes(t) { const d = new Date(t != null ? t : nowMs()); return d.getUTCFullYear() + "-" + d.getUTCMonth(); }
+
+/* EL ENCARGO DEL CAPITÁN · una semana, dos bandas.
+   Pedir dos bandas y no una es lo que lo hace distinto de tres mareas seguidas: obliga a pescar
+   con criterio en vez de a repetir el lance que salga. */
+function lonjaCapitan() {
+  const sem = lonjaSemana();
+  if (!G.lonjaCap || G.lonjaCap.sem !== sem) {
+    const r = rndSemilla(hashCadena("cap" + sem));
+    /* la ventana dura una semana, así que SÍ puede pedir peces de noche: hay tiempo de esperar
+       a que anochezca. Es la misma distinción que separa el tablón del pedido de marea. */
+    const bandas = bandasPedibles(true).filter(b => b !== "legendario");
+    if (bandas.length < 2) return null;
+    /* la baja lleva el volumen y la alta lleva la gracia: 1-2 de la rara y 4-7 de la común */
+    const alta = bandas[bandas.length - 1], baja = bandas[0];
+    const pickAlta = pecesDeBanda(alta).filter(k => pezPedible(k, true));
+    const pickBaja = pecesDeBanda(baja).filter(k => pezPedible(k, true));
+    if (!pickAlta.length || !pickBaja.length) return null;
+    G.lonjaCap = { sem, cobrado: false,
+      a: { id: pickAlta[Math.floor(r() * pickAlta.length)], n: 1 + Math.floor(r() * 2) },
+      b: { id: pickBaja[Math.floor(r() * pickBaja.length)], n: 4 + Math.floor(r() * 4) } };
+  }
+  return G.lonjaCap;
+}
+function lonjaCapitanVenceEn(t) {
+  const ms = t != null ? t : nowMs();
+  return (lonjaSemana(ms) + 1) * 604800000 + 345600000 - ms;
+}
+
+/* LA CAPTURA DEL MES · un mes, UN pez con nombre y apellido.
+   Solo épicos y legendarios. Es el único escalón que puede pedir un legendario, porque es el
+   único con un mes por delante — y de ahí sale el multiplicador que enseña la lección del
+   sistema: un pez que suelto vale 140 y entregado vale miles. */
+function lonjaMesPedido() {
+  const mes = lonjaMes();
+  if (!G.lonjaMes || G.lonjaMes.mes !== mes) {
+    const r = rndSemilla(hashCadena("mes" + mes));
+    const pool = pecesDeBanda("epico").concat(pecesDeBanda("legendario")).filter(k => pezPedible(k, true));
+    if (!pool.length) return null;
+    G.lonjaMes = { mes, id: pool[Math.floor(r() * pool.length)], n: 1, cobrado: false };
+  }
+  return G.lonjaMes;
+}
+function lonjaMesVenceEn(t) {
+  const ms = t != null ? t : nowMs(), d = new Date(ms);
+  return Date.UTC(d.getUTCFullYear(), d.getUTCMonth() + 1, 1) - ms;
+}
+
+/* EL TORNEO · viernes a domingo, y aquí NO se pide un pez: se presenta el que ya pescaste.
+   « Peso, no cantidad ». La báscula paga si tu mejor captura del fin de semana llega a la barra.
+
+   LA BARRA ES 1,00 PUNTO Y ESO NO ES CASUALIDAD: es exactamente un pez común en su peso máximo,
+   o un raro al 40 % de su rango. Un jugador de nivel 4 la alcanza la tarde que tiene suerte, y
+   ésa es la única forma de que un torneo en un juego de granja no sea un muro — es la misma
+   razón por la que se puntúa por peso relativo y no absoluto.
+
+   (La tabla COMPARATIVA entre jugadores, con el reparto de Escamas del 1.º al 10.º, todavía no
+   existe: hace falta backend. Hasta que llegue, la báscula paga por llegar a la barra, que es
+   una promesa que el juego SÍ puede cumplir hoy. Prometer un puesto en una tabla que no existe
+   sería la misma falta que este bloque vino a arreglar.) */
+var TORNEO_BARRA = 1.0;
+function lonjaTorneo() {
+  if (!torneoAbierto()) return null;
+  const sem = torneoSemana();
+  const t = (G.torneo && G.torneo.sem === sem) ? G.torneo : { sem, pts: 0, id: null, kg: 0 };
+  return { sem, pts: t.pts, id: t.id, kg: t.kg, barra: TORNEO_BARRA,
+           llega: t.pts >= TORNEO_BARRA, cobrado: !!(G.torneoCobrado === sem) };
+}
+function lonjaTorneoVenceEn(t) {
+  const ms = t != null ? t : nowMs(), d = new Date(ms);
+  const finDomingo = Date.UTC(d.getUTCFullYear(), d.getUTCMonth(), d.getUTCDate() + (7 - d.getUTCDay()) % 7);
+  return finDomingo + 86400000 - ms;
+}
+
+/* ── ENTREGAR CUALQUIERA DE LOS CUATRO ───────────────────────────────────────────────────────
+   Una sola función. Tener cuatro copias de « comprobar, descontar, pagar, dar Escamas, anotar »
+   es cómo se consigue que tres de ellas se olviden de una línea distinta cada una. */
+function lonjaPiezas(escalon) {
+  if (escalon === "marea")   { const p = lonjaPedido();     return p ? [{ id: p.id, n: p.n }] : null; }
+  if (escalon === "capitan") { const p = lonjaCapitan();    return p ? [p.a, p.b] : null; }
+  if (escalon === "mes")     { const p = lonjaMesPedido();  return p ? [{ id: p.id, n: p.n }] : null; }
+  return null;   // el torneo no pide peces: se presenta lo ya pescado
+}
+function lonjaCobrado(escalon) {
+  if (escalon === "marea")   { const p = lonjaPedido();    return !!(p && p.cobrado); }
+  if (escalon === "capitan") { const p = lonjaCapitan();   return !!(p && p.cobrado); }
+  if (escalon === "mes")     { const p = lonjaMesPedido(); return !!(p && p.cobrado); }
+  if (escalon === "torneo")  { const t = lonjaTorneo();    return !!(t && t.cobrado); }
+  return false;
+}
+function lonjaVenceEn(escalon) {
+  if (escalon === "marea")   return lonjaMareaVenceEn();
+  if (escalon === "capitan") return lonjaCapitanVenceEn();
+  if (escalon === "mes")     return lonjaMesVenceEn();
+  if (escalon === "torneo")  return lonjaTorneoVenceEn();
+  return 0;
+}
+function lonjaSueltoDe(escalon) {
+  const pz = lonjaPiezas(escalon);
+  if (!pz) return 0;
+  return pz.reduce((s, x) => s + ((PEZ_DEF[x.id] || {}).precio || 0) * x.n, 0);
+}
+/* qué falta para poder entregar, EN CASTELLANO. La misma regla que la tienda: un botón apagado
+   sin motivo obliga al jugador a adivinar, y adivinar en la Lonja cuesta peces. */
+function lonjaFalta(escalon) {
+  if (lonjaCobrado(escalon)) return "ya lo entregaste";
+  if (escalon === "torneo") {
+    const t = lonjaTorneo();
+    if (!t) return "el Torneo abre el viernes";
+    if (!t.id) return "todavía no pescaste nada este fin de semana";
+    if (!t.llega) return "tu mejor captura da " + t.pts.toFixed(2) + " de los " + TORNEO_BARRA.toFixed(2) + " que pide la báscula";
+    return null;
+  }
+  const pz = lonjaPiezas(escalon);
+  if (!pz) return "no hay encargo ahora mismo";
+  const faltan = pz.filter(x => Math.floor((G.fish && G.fish[x.id]) || 0) < x.n);
+  if (faltan.length) {
+    return "te faltan " + faltan.map(x =>
+      (x.n - Math.floor((G.fish && G.fish[x.id]) || 0)) + " " + (PEZ_DEF[x.id] || {}).label).join(" y ");
+  }
+  return null;
+}
+function lonjaEntregarEscalon(escalon) {
+  const d = LONJA_ESCALON[escalon];
+  if (!d) return false;
+  const falta = lonjaFalta(escalon);
+  if (falta) { toast(d.label + ": " + falta); return false; }
+
+  const pz = lonjaPiezas(escalon) || [];
+  for (const x of pz) {
+    G.fish[x.id] -= x.n;
+    if (typeof flujoAnotar === "function") flujoAnotar("fish", x.id, -x.n);
+  }
+  const plata = lonjaPaga(escalon, lonjaSueltoDe(escalon));
+  G.coins = (G.coins || 0) + plata;
+  if (typeof flujoAnotar === "function") flujoAnotar("coins", "coins", plata);
+  escamasDar(d.escamas, d.label);
+  /* la XP: la mitad de lo que valdría pescar esos peces otra vez. Un encargo no puede pagar más
+     XP que hacer el trabajo, o el tablón se convierte en la forma rápida de subir Pesca. */
+  const xp = pz.reduce((s, x) => s + ((PEZ_DEF[x.id] || {}).xp || 0) * x.n, 0);
+  if (xp > 0) addXp("fishing", Math.round(xp * 0.5));
+
+  if (escalon === "marea")   { const p = lonjaPedido();    if (p) { p.cobrado = true; p.hechos = p.n; } }
+  if (escalon === "capitan") { const p = lonjaCapitan();   if (p) p.cobrado = true; }
+  if (escalon === "mes")     { const p = lonjaMesPedido(); if (p) p.cobrado = true; }
+  if (escalon === "torneo")  { G.torneoCobrado = torneoSemana(); }
+
+  G.lonjaEntregados = (G.lonjaEntregados || 0) + 1;
+  log("Entregaste el " + d.label.toLowerCase() + ": " + plata + " de plata y " + d.escamas +
+      " Escama" + (d.escamas > 1 ? "s" : "") + ".", "gold");
+  return true;
+}
+/* los escalones ACTIVOS ahora mismo, en el orden que manda: lo que caduca antes, primero. */
+function lonjaActivos() {
+  const out = [];
+  for (const k of ["marea", "capitan", "mes", "torneo"]) {
+    if (k === "torneo" && !torneoAbierto()) continue;
+    if (k !== "torneo" && !lonjaPiezas(k)) continue;
+    out.push(k);
+  }
+  return out.sort((a, b) => lonjaVenceEn(a) - lonjaVenceEn(b));
 }
 
 /* ═══════════════════════════════════════════════════════════════════════════════════════════

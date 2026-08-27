@@ -260,7 +260,11 @@ class FarmScene extends Phaser.Scene {
       // pasan por el baúl ni por la escalera de niveles: vienen CON el terreno, que es lo que hace
       // que la compra se sienta. Su freno es haber comprado el bloque, y nada más.
       const sinExpansion = o.exp != null && (G.expansiones || 0) <= o.exp;
-      if (locked || rocaBloq || sinExpansion) { s.setVisible(false); oculto = true; }
+      /* LA BOYA DE TROFEOS no está hasta que se compra en la Lonja por 30 Escamas. Se declara
+         en el mundo como todo lo demás —así vive en el mismo sitio y no en un caso especial del
+         renderizador— y sencillamente no se dibuja hasta entonces. */
+      const sinComprar = o.type === "boya" && !(G.built && G.built.boya_trofeos);
+      if (locked || rocaBloq || sinExpansion || sinComprar) { s.setVisible(false); oculto = true; }
       const rw = (o.type === "ore" || o.type === "rock") ? o.w * (typeof NODO_ESCALA === "number" ? NODO_ESCALA : 0.67)   // 9/8: 0.90 — al 0.67 las pepitas no se leían
         : (o.type === "tree") ? o.w * 0.8                                   // árboles −20%
         : (o.type === "market" || o.type === "store") ? o.w * 0.8           // tiendas −20%
@@ -1255,6 +1259,7 @@ class FarmScene extends Phaser.Scene {
     if (o.type === "curtiduria") return "Curtiduría";
     if (o.type === "lombricario") return "Lombricario";
     if (o.type === "lonja") return "La Lonja";
+    if (o.type === "boya") return "Boya de trofeos";
     if (o.type === "ofrendas") return "Altar de Ofrendas";
     if (o.type === "cofre") return "Cofre depósito";
     if (o.type === "dummy") {
@@ -1481,6 +1486,7 @@ class FarmScene extends Phaser.Scene {
     if (o.type === "ofrendas") { if (typeof refreshOfrendas === "function") refreshOfrendas(); return openOv("ov-ofrendas"); }
     if (o.type === "lombricario") { if (typeof refreshLombricario === "function") refreshLombricario(); return openOv("ov-lombricario"); }
     if (o.type === "lonja") { if (typeof refreshLonja === "function") refreshLonja(); return openOv("ov-lonja"); }
+    if (o.type === "boya") { if (typeof refreshBoya === "function") refreshBoya(); return openOv("ov-boya"); }
     if (o.type === "cofre") { window.chestOpen = o.chestIdx; return openOv("ov-cofre"); }
     if (o.type === "dummy") {
       if (typeof dummyEntrenando === "function" && dummyEntrenando()) { dummyCobrar(); return; }   // volviste: cobrás la XP acumulada

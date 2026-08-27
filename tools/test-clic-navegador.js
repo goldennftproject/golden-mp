@@ -46,7 +46,7 @@ if (!puppeteer) {
    barren igual, que es lo único que importa: un botón nuevo es un botón nuevo que puede quedar
    sordo, sin que le importe en qué clase de ventana vive. */
 const PANELES = ["ov-cocina", "ov-inv", "ov-shop", "ov-forge", "ov-objetivos", "ov-pedidos",
-                 "ov-lombricario", "ov-lonja", "pesca4"];
+                 "ov-lombricario", "ov-lonja", "ov-boya", "pesca4"];
 
 (async () => {
   let fallos = 0, srv = null, browser = null;
@@ -156,7 +156,10 @@ const PANELES = ["ov-cocina", "ov-inv", "ov-shop", "ov-forge", "ov-objetivos", "
         G.pescaStats = { capturas: 40, nasas: 25, gigantes: 2, vistos: { merluza: 1, atun: 1 } };
         G.fish = { merluza: 9, atun: 6, lubina: 8 };
         G.lonja = null;
+        G.built.boya_trofeos = true;
+        G.pescaStats.record = { merluza: 1.5, atun: 7 };
         if (typeof refreshLonja === "function") refreshLonja();
+        if (typeof refreshBoya === "function") refreshBoya();
         return "listo";
       });
       await new Promise(r => setTimeout(r, 400));

@@ -565,6 +565,31 @@
   .lonja-x{color:#ffd75e;font-weight:800}
   .lonja-horario{display:flex;gap:6px;justify-content:center;margin-top:10px;font-size:11px;color:#7d8f6e}
   .lonja-horario span.on{color:#9fd8f0;font-weight:800}
+  .boya-cuerpo{max-height:60vh;overflow:auto;margin-top:8px}
+  .boya-banda{font-size:11px;font-weight:800;color:#9fd8f0;margin:9px 0 4px;
+    border-bottom:1px solid #3c5568;padding-bottom:3px}
+  .boya-fila{display:grid;grid-template-columns:1fr auto 92px;gap:8px;align-items:center;
+    font-size:12px;color:#f2ead5;padding:3px 2px}
+  .boya-fila.sin{opacity:.42}
+  .boya-fila .bk{color:#ffd75e;font-weight:800;font-size:12px}
+  .boya-fila .bp{font-size:10px;color:#cbbf9f;text-align:right}
+  .boya-fila .bb{grid-column:1/-1;height:4px;border-radius:3px;background:rgba(0,0,0,.35);
+    overflow:hidden;margin-top:-2px}
+  .boya-fila .bb i{display:block;height:100%;background:linear-gradient(90deg,#7fb6d8,#ffd75e)}
+  .lonja-esc{padding:9px 11px;border-radius:11px;border:1px solid #3c5568;margin-bottom:7px;
+    background:rgba(24,44,60,.42)}
+  .lonja-esc.listo{border-color:#7fa356;background:rgba(34,58,30,.5)}
+  .le-cab{display:flex;justify-content:space-between;font-size:11px;font-weight:800;color:#9fd8f0;
+    margin-bottom:4px}
+  .le-pide{font-size:15px;color:#cbbf9f;line-height:1.4}
+  .le-pide b{color:#f2ead5}
+  .le-extra{font-size:11px;color:#7d8f6e;margin-top:2px}
+  .le-paga{font-size:11px;color:#cbbf9f;margin:6px 0 7px;line-height:1.6}
+  .le-paga b{color:#f2ead5}
+  .lonja-esc button{width:100%;padding:7px;border-radius:9px;border:1px solid #7fa356;
+    background:#3d5a24;color:#f2ead5;font-size:12px;font-weight:800;cursor:pointer}
+  .lonja-esc button:disabled{opacity:.5;cursor:default;background:rgba(20,28,16,.6);
+    border-color:#3c4d31;color:#a09578}
   .lonja-item{padding:8px 10px;border-radius:10px;border:1px solid #3c4d31;
     background:rgba(20,28,16,.55);margin-bottom:6px}
   .lonja-item.tengo{opacity:.6;border-style:dashed}
@@ -1298,6 +1323,13 @@
       <button data-ltab="titulos">Títulos</button>
     </div>
     <div class="lonja-cuerpo" id="lonja-cuerpo"></div>
+  </div></div>
+
+  <div class="ov" id="ov-boya"><div class="card" style="width:min(560px,94%)">
+    <button class="close" data-close="ov-boya">×</button>
+    <h3>Boya de trofeos</h3>
+    <div class="sub" id="boya-cab"></div>
+    <div class="boya-cuerpo" id="boya-cuerpo"></div>
   </div></div>
 
   <div class="ov" id="ov-lombricario"><div class="card" style="width:min(560px,94%)">

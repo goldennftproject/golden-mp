@@ -482,6 +482,43 @@ function pescaV4Cebos() {
   if (cb) cb.onclick = () => { if (larvaComprar(1)) { caja._firma = null; pescaV4Cebos(); } };
 }
 
+/* ── LA BOYA DE TROFEOS ──────────────────────────────────────────────────────────────────────
+   Treinta Escamas, casi una semana de Lonja, y hasta hoy no hacía nada: se compraba y no
+   aparecía en ninguna parte. Un jugador pagaba y no pasaba nada — peor que no haberla puesto,
+   porque la tienda la promete.
+
+   Lo que muestra es la tabla de récords, que el documento llama « el único gancho que no se
+   agota nunca ». Y muestra las DIECINUEVE especies, no solo las que pescaste: los huecos son la
+   mitad de la gracia de una tabla de récords. */
+function refreshBoya() {
+  const caja = $("boya-cuerpo"); if (!caja) return;
+  const st = G.pescaStats || {}, rec = st.record || {};
+  const hechos = PEZ_ORDER.filter(k => rec[k] > 0).length;
+  const cab = $("boya-cab");
+  if (cab) cab.innerHTML = "<b>" + hechos + "</b> de " + PEZ_ORDER.length + " especies con récord";
+  let h = "";
+  for (const b of PEZ_BANDA_ORDER) {
+    const peces = pecesDeBanda(b);
+    if (!peces.length) continue;
+    h += '<div class="boya-banda">' + ((PEZ_BANDA[b] || {}).label || b) + '</div>';
+    for (const k of peces) {
+      const e = PEZ_DEF[k], r = rec[k] || 0;
+      const pct = r > 0 ? Math.round(Math.min(1, (r - e.peso[0]) / (e.peso[1] - e.peso[0])) * 100) : 0;
+      h += '<div class="boya-fila' + (r > 0 ? "" : " sin") + '">' +
+        '<span class="bn">' + e.label + '</span>' +
+        (r > 0
+          ? '<span class="bk">' + r.toFixed(2) + ' kg</span>' +
+            /* el porcentaje del rango, que es lo que de verdad mide un récord: no cuánto pesa,
+               sino cuánto pesa PARA SU ESPECIE. Es la misma cuenta que puntúa el torneo. */
+            '<span class="bp">' + pct + ' % de su tope</span>' +
+            '<span class="bb"><i style="width:' + pct + '%"></i></span>'
+          : '<span class="bk">—</span><span class="bp">sin pescar</span><span class="bb"></span>') +
+        '</div>';
+    }
+  }
+  caja.innerHTML = h;
+}
+
 /* ── LAS CAÑAS, EN UNA FILA ─────────────────────────────────────────────────────────────────
    Cada una dice lo que MEJORA, no solo lo que cuesta. « Caña de Oro · 2.000 de plata » no le
    dice a nadie si vale la pena; « rareza ×3,5 · peaje 10 por lance » sí, y de paso enseña la
@@ -540,42 +577,59 @@ function refreshLonja() {
   return lonjaPintaTitulos(caja);
 }
 function lonjaPintaPedido(caja) {
-  const p = lonjaPedido();
-  if (!p) {
+  const act = lonjaActivos();
+  if (!act.length) {
     caja.innerHTML = '<div class="lonja-vacio">La Lonja no tiene nada para vos ahora mismo.<br>' +
       'Conseguí una caña que llegue a más bandas y volvé en la próxima marea.</div>';
     return;
   }
-  const M = LONJA_MAREAS[p.idx], e = PEZ_DEF[p.id];
-  const tengo = Math.floor((G.fish && G.fish[p.id]) || 0);
-  const suelto = lonjaSuelto(p), paga = lonjaPaga("marea", suelto);
-  const falta = lonjaMareaVenceEn();
-  let h = '<div class="lonja-marea"><span>' + M.label + '</span><span>' +
-    (p.cobrado ? "entregado" : "vence en " + fmtDur(falta)) + '</span></div>';
-  h += '<div class="lonja-pide"><b>' + p.n + " " + e.label + '</b>' +
-       '<span class="lonja-banda ' + e.banda + '">' + (PEZ_BANDA[e.banda] || {}).label + '</span></div>';
-  h += '<div class="lonja-tengo">Tenés <b>' + tengo + '</b> de ' + p.n + '</div>';
-  /* LA LECCIÓN ECONÓMICA, escrita: es la razón de ser de todo el sistema y hay que aprenderla
-     una vez, no descubrirla habiendo vendido ya el pez. */
-  h += '<div class="lonja-cuenta">Sueltos en el mercado valen <b>' + suelto + '</b> de plata.<br>' +
-       'La Lonja paga <b>' + paga + '</b> y <b>' + LONJA_ESCALON.marea.escamas + ' Escama</b> — ' +
-       '<span class="lonja-x">×' + lonjaMultiplicador() + '</span></div>';
-  h += '<button class="green" id="lonja-entregar" style="width:100%;margin-top:10px"' +
-       (p.cobrado || tengo < p.n ? " disabled" : "") + '>' +
-       (p.cobrado ? "Ya entregado — volvé en la próxima marea"
-                  : tengo < p.n ? "Te faltan " + (p.n - tengo) + " " + e.label
-                                : "Entregar " + p.n + " " + e.label) + '</button>';
-  /* las tres mareas del día, para que se vea que hay tres y a qué hora */
-  h += '<div class="lonja-horario">';
-  LONJA_MAREAS.forEach((m, i) => {
-    h += '<span class="' + (i === p.idx ? "on" : "") + '">' + m.label.replace("Marea de la ", "").replace("Marea del ", "") +
-         " · " + String(m.h).padStart(2, "0") + ":00</span>";
+  /* los cuatro escalones, ordenados por lo que caduca antes. El de marea vence en horas y el de
+     la captura del mes en semanas: mostrarlos al revés haría que el jugador de tres visitas se
+     perdiera la marea por leer primero lo que puede esperar. */
+  caja.innerHTML = act.map(lonjaFilaEscalon).join("");
+  caja.querySelectorAll("[data-lent]").forEach(b => b.onclick = () => {
+    if (lonjaEntregarEscalon(b.dataset.lent)) refreshLonja();
   });
-  h += '</div>';
-  caja.innerHTML = h;
-  const b = $("lonja-entregar");
-  if (b) b.onclick = () => { if (lonjaEntregar()) refreshLonja(); };
 }
+/* una fila por escalón. Todas dicen lo mismo en el mismo orden —qué pide, cuánto te queda, qué
+   vale suelto y qué paga la Lonja— porque la lección económica del sistema solo se aprende si
+   la comparación está siempre en el mismo sitio. */
+function lonjaFilaEscalon(k) {
+  const d = LONJA_ESCALON[k], falta = lonjaFalta(k), listo = !falta;
+  let pide = "", extra = "";
+  if (k === "torneo") {
+    const t = lonjaTorneo();
+    pide = t && t.id
+      ? '<b>' + PEZ_DEF[t.id].label + " de " + t.kg.toFixed(2) + ' kg</b>'
+      : "<b>tu mejor captura del fin de semana</b>";
+    extra = t ? "Da <b>" + (t.pts || 0).toFixed(2) + "</b> puntos · la báscula pide <b>" +
+                TORNEO_BARRA.toFixed(2) + "</b>" : "";
+  } else {
+    const pz = lonjaPiezas(k) || [];
+    pide = "<b>" + pz.map(x => x.n + " " + (PEZ_DEF[x.id] || {}).label).join("</b> + <b>") + "</b>";
+    /* « tenés 3 de 2 » se lee como un error de cuentas. Cuando ya está, se dice que está. */
+    extra = pz.map(x => {
+      const t = Math.floor((G.fish && G.fish[x.id]) || 0);
+      return t >= x.n ? "listos los " + x.n + " " + (PEZ_DEF[x.id] || {}).label
+                      : "tenés " + t + " de " + x.n + " " + (PEZ_DEF[x.id] || {}).label;
+    }).join(" · ");
+  }
+  const suelto = lonjaSueltoDe(k), paga = lonjaPaga(k, suelto);
+  const x = suelto > 0 ? Math.round(paga / suelto * 10) / 10 : null;
+  return '<div class="lonja-esc' + (listo ? " listo" : "") + '">' +
+    '<div class="le-cab"><span>' + d.label + '</span><span>' +
+      (lonjaCobrado(k) ? "entregado" : "vence en " + fmtDur(lonjaVenceEn(k))) + '</span></div>' +
+    '<div class="le-pide">' + pide + '</div>' +
+    (extra ? '<div class="le-extra">' + extra + '</div>' : "") +
+    '<div class="le-paga">Paga <b>' + paga + '</b> de plata y <b>' + d.escamas + ' Escama' +
+      (d.escamas > 1 ? "s" : "") + '</b>' +
+      (x ? ' — sueltos valen ' + suelto + ', o sea <span class="lonja-x">×' + x + '</span>' : "") +
+    '</div>' +
+    '<button data-lent="' + k + '"' + (listo ? "" : " disabled") + '>' +
+      (listo ? "Entregar" : falta) + '</button>' +
+    '</div>';
+}
+
 function lonjaPintaTienda(caja) {
   let h = '<div class="lonja-vacio" style="text-align:left;margin-bottom:8px">Las Escamas solo salen ' +
     'de la Lonja y no se compran ni se venden. Rondan las 139 al mes.</div>';

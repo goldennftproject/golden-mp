@@ -116,6 +116,7 @@ class BootScene extends Phaser.Scene {
     L.push(["curtiduria", P + "curtiduria.png?v=3"]);   // "2das mejoras": armaduras
     L.push(["lombricario", P + "lombricario.png"]);      // Pesca v4: el grifo de la carnada
     L.push(["lonja", P + "lonja.png"]);                  // Pesca v4: el tablon del muelle
+    L.push(["boya", P + "boya_trofeos.png"]);            // Pesca v4: el record, a la vista
     L.push(["ofrendas", P + "ofrendas.png?v=3"]);       // "2das mejoras": Altar de Ofrendas
     // armas por tipo y rareza (se distinguen a simple vista): 4 tipos × 5 rarezas
     ["espada","hacha","mazo","arco"].forEach(t => ["madera","piedra","bronce","oro","diamante"].forEach(r => L.push(["arm_" + t + "_" + r, P + "arm_" + t + "_" + r + ".png?v=1"])));

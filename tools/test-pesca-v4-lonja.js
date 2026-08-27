@@ -26,6 +26,7 @@ ctx.toast = () => {}; ctx.log = () => {}; ctx.celebrate = () => {};
 vm.runInContext("celebrate = window.celebrate; toast = window.toast; log = window.log;", ctx);
 const PEZ = g("PEZ_DEF"), MAREAS = g("LONJA_MAREAS"), TIENDA = g("LONJA_TIENDA");
 const T_ORDER = g("TITULO_PESCA_ORDER"), T_DEF = g("TITULO_PESCA_DEF");
+const LONJA_ESCALON = g("LONJA_ESCALON");
 
 let fallos = 0;
 const ok = (n, c, d) => { if (!c) fallos++; console.log((c ? "  ok   " : "  FALLA") + "  " + n + (d ? "   " + d : "")); };
@@ -299,8 +300,95 @@ console.log("\nLO QUE SE ANOTA AL PESCAR   (si no se anota, ningún título se d
     "un atún al 95 % de su rango sí; dos merluzas normales, no");
 }
 
+console.log("\nLOS CUATRO ESCALONES, NO UNO   (tres eran tarifas sin puerta detrás)");
+{
+  pescador(14, 9, { junco: 1, bambu: 1, hierro: 1 });
+  enTiempo(Date.UTC(2026, 7, 28, 15));   // viernes: el torneo abierto
+  G.lonjaCap = null; G.lonjaMes = null; G.torneo = null; G.torneoCobrado = null;
+  ctx.torneoAnotar("atun", PEZ.atun.peso[1]);
+  const act = ctx.lonjaActivos();
+  console.log("\n    escalón      vence en     pide                             suelto    paga      ×");
+  for (const k of act) {
+    const su = ctx.lonjaSueltoDe(k), pg = ctx.lonjaPaga(k, su), pz = ctx.lonjaPiezas(k);
+    const txt = pz ? pz.map(x => x.n + " " + PEZ[x.id].label).join(" + ") : "tu mejor captura";
+    console.log("    " + k.padEnd(12) + ctx.fmtDur(ctx.lonjaVenceEn(k)).padStart(9) + "   " +
+      txt.padEnd(32) + String(su).padStart(6) + String(pg).padStart(8) +
+      (su ? ("×" + Math.round(pg / su * 10) / 10) : "—").padStart(8));
+  }
+  console.log("");
+  ok("los cuatro escalones están activos un viernes", act.length === 4, act.join(", "));
+  ok("y salen ordenados por lo que caduca ANTES", act[0] === "marea",
+    "el de marea vence en horas; la captura del mes, en semanas");
+  console.log("       → mostrarlos al revés haría que el jugador de tres visitas se perdiera la");
+  console.log("         marea por leer primero lo que puede esperar.");
+  /* la propiedad que faltaba: los tres nuevos SE PUEDEN ENTREGAR */
+  for (const k of ["capitan", "mes"]) {
+    const pz = ctx.lonjaPiezas(k);
+    ok("el " + LONJA_ESCALON[k].label + " pide algo concreto", !!pz && pz.length > 0,
+      pz ? pz.map(x => x.n + " " + PEZ[x.id].label).join(" + ") : "NADA");
+  }
+  ok("el Capitán pide DOS bandas, no una",
+    (() => { const p = ctx.lonjaCapitan(); return p && PEZ[p.a.id].banda !== PEZ[p.b.id].banda; })(),
+    "pedir dos obliga a pescar con criterio en vez de repetir el lance que salga");
+  ok("la captura del mes solo pide épicos o legendarios",
+    ["epico", "legendario"].indexOf(PEZ[ctx.lonjaMesPedido().id].banda) >= 0,
+    PEZ[ctx.lonjaMesPedido().id].label + " · " + PEZ[ctx.lonjaMesPedido().id].banda);
+  console.log("       → es el único con un mes por delante, así que es el único que puede pedir");
+  console.log("         un legendario sin que sea una pared.");
+
+  /* entregar el Capitán, que es el que tiene dos piezas */
+  const cap = ctx.lonjaCapitan();
+  G.fish[cap.a.id] = cap.a.n; G.fish[cap.b.id] = cap.b.n + 3;
+  const mon = G.coins, esc = ctx.escamasLonja(), paga = ctx.lonjaPaga("capitan", ctx.lonjaSueltoDe("capitan"));
+  ok("con las dos piezas, se entrega", ctx.lonjaEntregarEscalon("capitan") === true);
+  ok("se cobran las dos", (G.fish[cap.a.id] || 0) === 0 && (G.fish[cap.b.id] || 0) === 3);
+  ok("paga lo que dice el panel", G.coins === mon + paga, "+" + paga);
+  ok("y sus 6 Escamas", ctx.escamasLonja() === esc + 6);
+  ok("no se entrega dos veces en la misma semana", ctx.lonjaEntregarEscalon("capitan") === false);
+
+  /* el torneo: no pide peces, se presenta lo pescado */
+  ok("el torneo no pide peces: se presenta el que ya sacaste", ctx.lonjaPiezas("torneo") === null);
+  ok("y con una captura por encima de la barra, la báscula paga",
+    ctx.lonjaFalta("torneo") === null, "un atún en su tope da " + ctx.torneoPuntos("atun", PEZ.atun.peso[1]).toFixed(2) + " puntos");
+  ok("se cobra una vez por semana", ctx.lonjaEntregarEscalon("torneo") === true &&
+    ctx.lonjaEntregarEscalon("torneo") === false);
+  /* y con una captura floja, dice CUÁNTO le falta — no solo que no */
+  G.torneo = null; G.torneoCobrado = null;
+  ctx.torneoAnotar("merluza", PEZ.merluza.peso[0] * 1.05);
+  ok("con una captura floja dice cuánto le falta a la báscula",
+    /da .* de los/.test(ctx.lonjaFalta("torneo") || ""), ctx.lonjaFalta("torneo"));
+
+  /* fuera del fin de semana el torneo no está */
+  enTiempo(Date.UTC(2026, 7, 26, 15));
+  ok("de lunes a jueves el torneo no aparece", ctx.lonjaActivos().indexOf("torneo") < 0,
+    ctx.lonjaActivos().join(", "));
+
+  /* NINGUNO puede pagar menos que vender suelto: el mismo suelo que la marea */
+  enTiempo(Date.UTC(2026, 7, 28, 15));
+  const flojos = ["marea", "capitan", "mes"].filter(k => {
+    const su = ctx.lonjaSueltoDe(k); return su > 0 && ctx.lonjaPaga(k, su) < su * 2;
+  });
+  ok("los tres que piden peces respetan el suelo de ×2", !flojos.length, flojos.join(", "));
+}
+
+console.log("\nLA BOYA DE TROFEOS: 30 ESCAMAS QUE AHORA HACEN ALGO");
+{
+  pescador(14, 9);
+  G.escamasLonja = 40;
+  ok("se compra por 30 Escamas", ctx.lonjaComprar("boya") === true);
+  ok("y a partir de ahí existe en la granja", !!(G.built || {}).boya_trofeos);
+  const enMundo = (g("GF").WORLD_OBJECTS || []).filter(o => o.type === "boya").length;
+  ok("está declarada en el mundo, no en un caso especial del renderizador", enMundo === 1, enMundo + "");
+  console.log("       → antes se compraba y no aparecía en ninguna parte. Un jugador pagaba casi");
+  console.log("         una semana de Lonja y no pasaba nada: peor que no haberla puesto, porque");
+  console.log("         la tienda la promete.");
+  /* la tabla que muestra */
+  ctx.pescaAnotar("merluza", PEZ.merluza.peso[1], false);
+  ok("guarda el récord que va a enseñar", (G.pescaStats.record || {}).merluza === PEZ.merluza.peso[1]);
+}
+
 console.log("");
 console.log(fallos
   ? "  " + fallos + " fallo(s) — la Lonja todavía no cierra"
-  : "  Todo en orden: entregar siempre gana, y los títulos no pagan nada.");
+  : "  Todo en orden: los cuatro escalones se pueden cobrar, y entregar siempre gana.");
 process.exit(fallos ? 1 : 0);
