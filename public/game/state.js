@@ -5421,6 +5421,248 @@ function lanceNeto(cana) {   // lo que queda después del peaje de la caña
 var PESCA_V4_LANCE_CEBO = 1;
 var PESCA_V4_NASA_CEBO = 4;
 
+/* ═══════════════════════════════════════════════════════════════════════════════════════════
+   EL LANCE                                              (27/8, tanda 1b — el corazón del sistema)
+   ═══════════════════════════════════════════════════════════════════════════════════════════
+   « Toda la pesca cabe en un botón. Mantener o soltar. No hay nada más que aprender, y aun así
+     no se domina en un día. »
+
+   TRES FASES: el tiro (elegís sombra), el pique (2,5 s para clavar) y la PULSEADA.
+
+   LA REGLA QUE SEPARA ESTO DE LA v2, y es toda la diferencia:
+       EL PROGRESO NUNCA RETROCEDE. Se puede estancar, nunca vaciarse.
+   En la v2, con el pez fuera de la zona la barra drenaba: un mal tramo borraba lo bueno del
+   tramo anterior. Perder terreno ya ganado es la forma más rápida de que alguien deje de
+   intentarlo. Acá cada segundo bien jugado queda ganado para siempre, y el pez solo se pierde
+   por CODICIA PROPIA —por haber apretado un segundo de más—, nunca por haber reaccionado tarde.
+   Es la diferencia entre « casi lo tenía » y « esto no es para mí ».
+
+   Y LA OTRA REGLA, la que mantiene el juego fiel a su pilar 1 (« el tiempo es el recurso, nada
+   se gana pulsando más rápido »): el aviso del tirón NUNCA baja de 0,3 segundos. Por debajo de
+   eso deja de ser una decisión y vuelve a ser un test de reflejos, que es justo lo que la v2
+   hacía mal y lo que este rediseño vino a quitar.
+
+   TODO ESTO ES LÓGICA PURA. No dibuja nada, no toca Phaser y no mira el reloj de pared: recibe
+   el tiempo que pasó y devuelve el estado nuevo. Así se puede simular una pulseada entera en un
+   test, mil veces, sin abrir un navegador — que es la única forma de medir de verdad si el
+   sistema es jugable o si el legendario es imposible. */
+
+/* ── LAS PERILLAS DE LA DIFICULTAD, DERIVADAS DE LA BANDA ────────────────────────────────────
+   El documento las declara por banda: cada cuánto tira, cuánto avisa, cuánto sube la tensión y
+   cuánto dura. Se escriben una vez acá y de ahí las lee todo lo demás. */
+var PELEA_V4 = {
+  comun:      { tiraCada: [2.6, 3.4], aviso: 0.50, dur: [6, 9] },
+  poco_comun: { tiraCada: [2.3, 3.1], aviso: 0.46, dur: [7, 10] },
+  raro:       { tiraCada: [2.0, 2.8], aviso: 0.42, dur: [8, 12] },
+  epico:      { tiraCada: [1.7, 2.4], aviso: 0.36, dur: [11, 17] },
+  legendario: { tiraCada: [1.5, 2.0], aviso: 0.30, dur: [16, 25] },
+  mitico:     { tiraCada: [2.0, 2.8], aviso: 0.42, dur: [8, 12] },   // no se pelea: cae en nasa
+};
+var PELEA_AVISO_MIN = 0.30;   // por debajo de esto vuelve a ser un test de reflejos. No se toca.
+var PELEA_TENSION_MAX = 100;
+/* LA TENSIÓN POR SEGUNDO NO SE ESCRIBE: SE DERIVA DE LA DURACIÓN.
+   Mi primera versión le puso un número a cada banda —12, 15, 19, 24, 30— y la simulación la
+   destrozó: el legendario quedaba imposible para todo el mundo y el jugador que soltaba al azar
+   ganaba el 100 % de los raros. El error era de bulto y solo se ve escribiéndolo:
+
+       una pelea LARGA con la misma tensión por segundo es estrictamente más difícil.
+
+   Subir la tensión CON la duración, como hacía yo, multiplica las dos dificultades una por otra.
+   Lo que tiene que ser igual en todas las bandas es la RELACIÓN: apretar sin soltar nunca puede
+   alcanzar, y por poco. De ahí sale la fórmula, que además explica el juego en una línea:
+
+       el hilo aguanta el 85 % de la pelea apretando. El 15 % restante hay que cederlo.
+
+   Así la dificultad de un legendario no viene de que su tensión suba más rápido, sino de dónde
+   la propuesta dice que tiene que venir: TIRA MÁS SEGUIDO Y AVISA MENOS. Que es lo que se puede
+   leer en la pantalla, y por eso es una decisión y no una lotería. */
+var PELEA_AGUANTE = 0.85;
+function peleaTension(dur) { return PELEA_TENSION_MAX / (PELEA_AGUANTE * dur); }
+/* ceder recupera más rápido de lo que sube, pero NO es gratis: si lo fuera, la estrategia
+   óptima sería soltar todo el rato y el botón sobraría. Ése fue el otro hallazgo de la
+   simulación — con el ceder que puse primero, el jugador que soltaba al azar ganaba siempre. */
+/* EL CASTIGO VA CONCENTRADO EN EL TIRÓN, NO REPARTIDO. Ésta es la tercera versión de estos
+   números y las dos anteriores las tiró la simulación, así que vale la pena dejar por qué:
+
+     · 1ª — tensión fija por banda: el legendario quedaba imposible para todos. Una pelea larga
+            con la misma tensión por segundo es estrictamente más difícil; subir las dos cosas a
+            la vez multiplica dificultades.
+     · 2ª — tensión derivada de la duración, pero cobrando por apretar SIEMPRE: entonces el
+            jugador que soltaba al azar ganaba el 100 % y el que soltaba en el tirón exacto
+            perdía. Si apretar cuesta en todo momento, la precisión no compra nada: lo único
+            que importa es la FRACCIÓN de tiempo apretada, y eso lo consigue cualquiera.
+
+   La conclusión, que es lo que hace de esto un juego y no una lotería:
+
+       apretar fuera del tirón tiene que ser casi gratis, y durante el tirón, carísimo.
+
+   Así el jugador no está administrando un porcentaje: está mirando la pantalla y decidiendo en
+   momentos concretos. Y la dificultad de un legendario sale de donde el documento quiere —tira
+   más seguido y avisa menos—, no de que su barra suba más rápido. */
+var PELEA_SUELTO_X = 0.35;    // lo que cuesta apretar FUERA del tirón: casi nada
+var PELEA_TIRON_X  = 7.0;     // lo que cuesta apretar DURANTE el tirón: carísimo
+var PELEA_CEDE_X   = 1.6;     // lo que se recupera cediendo fuera del tirón
+var PELEA_TIRON_CEDE = 0;     // cediendo durante el tirón no sube ni baja: le das línea y ya
+var PIQUE_ESPERA = [1.2, 3.5];   // cuánto tarda en picar
+var PIQUE_VENTANA = 2.5;         // cuánto hay para clavar (la v2 daba 1 segundo)
+
+/* ── EL SORTEO DE BANDA ──────────────────────────────────────────────────────────────────────
+   Cuatro cosas lo mueven, y NINGUNA es el nivel de Pesca — ésa es la regla dura del documento:
+   si el nivel subiera la rareza subiría la plata por hora y el ancla se rompería. Lo que mueve
+   la rareza es lo que PAGÁS (la caña) y lo que HACÉS (la racha, la hora, la constancia). */
+var RACHA_PARA_SUBIR = 5;     // cinco capturas seguidas sin cortar el hilo
+var PIEDAD_LANCES = 80;       // lances sin épico o mejor antes de garantizar uno
+function pescaEstado() {
+  G.pescaV4 = G.pescaV4 || { racha: 0, sinEpico: 0, primeroDelDia: 0, records: {} };
+  return G.pescaV4;
+}
+function esDeNocheAhora() {
+  /* la noche de la laguna es la franja 00:00–06:00, distinta del ciclo visual del cielo */
+  const h = new Date().getHours();
+  return h >= 0 && h < 6;
+}
+/* la tabla de la caña, con la noche aplicada: de 00 a 06 la banda legendaria se DUPLICA, y lo
+   que sube sale de la común — la misma regla que usan las cañas, para no tener dos maneras. */
+function bandaTabla(cana, deNoche) {
+  const c = CANA_V4_DEF[cana] || CANA_V4_DEF.junco;
+  const t = Object.assign({}, c.banda);
+  if (deNoche) { const extra = t.legendario; t.legendario += extra; t.comun -= extra; }
+  return t;
+}
+/* SUBIR UNA BANDA: lo que paga la racha. Nunca paga en plata — la habilidad mueve lo que
+   ENCONTRÁS, no lo que vale, que es la misma regla que ya rigen la cocina y el combate. */
+var BANDA_SUBE = { comun: "poco_comun", poco_comun: "raro", raro: "epico", epico: "legendario", legendario: "legendario" };
+function bandaSortear(cana, opciones) {
+  const o = opciones || {}, e = pescaEstado();
+  const t = bandaTabla(cana, o.noche != null ? o.noche : esDeNocheAhora());
+  let banda = null;
+  const u = (o.u != null ? o.u : Math.random()) * 100;
+  let acc = 0;
+  for (const b of PEZ_BANDA_ORDER) {
+    if (t[b] == null) continue;
+    acc += t[b];
+    if (u < acc) { banda = b; break; }
+  }
+  if (!banda) banda = "comun";
+  /* LA MEMORIA DE LA LAGUNA. Ochenta lances sin un épico y el siguiente lo es, seguro. No se
+     anuncia en ninguna parte — se nota. Un jugador con mala suerte no puede quedar fuera del
+     contenido alto para siempre solo porque el azar no lo quiso. */
+  if (!o.sinPiedad && e.sinEpico >= PIEDAD_LANCES && banda !== "epico" && banda !== "legendario") banda = "epico";
+  /* EL PRIMER LANCE DEL DÍA: garantizado poco común o mejor. Nunca se abre el juego para que no
+     pase nada — es el mismo principio del pity del tutorial. */
+  if (!o.sinPiedad && e.primeroDelDia !== hoyClave() && banda === "comun") banda = "poco_comun";
+  /* LA RACHA: cinco seguidas sin cortar el hilo suben una banda. */
+  if (e.racha >= RACHA_PARA_SUBIR) banda = BANDA_SUBE[banda] || banda;
+  return banda;
+}
+function hoyClave() { const d = new Date(); return d.getUTCFullYear() + "-" + (d.getUTCMonth() + 1) + "-" + d.getUTCDate(); }
+
+/* ── LAS SOMBRAS: la única decisión que se toma antes de mojar el hilo ────────────────────────
+   « la sombra grande promete banda alta y pelea más dura, la chica promete poco y sale sola ».
+   Es lo que convierte el lance en una elección y no en un botón. La sombra no MIENTE: sesga. */
+var SOMBRA_DEF = {
+  chica:   { label: "Sombra chica",   sesgo: -1, txt: "Algo pequeño se mueve" },
+  mediana: { label: "Sombra mediana", sesgo: 0,  txt: "Una sombra tranquila" },
+  grande:  { label: "Sombra grande",  sesgo: 1,  txt: "Algo grande, y no tiene apuro" },
+};
+function sombrasNuevas(n) {
+  const tipos = ["chica", "mediana", "grande"];
+  const cuantas = n || (1 + Math.floor(Math.random() * 3));
+  const out = [];
+  for (let i = 0; i < cuantas; i++) out.push(tipos[Math.floor(Math.random() * 3)]);
+  return out;
+}
+var BANDA_BAJA = { legendario: "epico", epico: "raro", raro: "poco_comun", poco_comun: "comun", comun: "comun" };
+function bandaConSombra(banda, sombra) {
+  const s = SOMBRA_DEF[sombra]; if (!s || !s.sesgo) return banda;
+  return s.sesgo > 0 ? (BANDA_SUBE[banda] || banda) : (BANDA_BAJA[banda] || banda);
+}
+
+/* ── ARMAR UN LANCE ──────────────────────────────────────────────────────────────────────────
+   Devuelve el estado completo de la pulseada. El pez y su peso se sortean ACÁ, al clavar, y no
+   al final: así la pelea que das es la del pez que te vas a llevar, y no hay forma de que el
+   premio y el esfuerzo no coincidan. (En la v2 eso ya se hacía bien; se conserva.) */
+function lanceArmar(cana, sombra, opciones) {
+  const o = opciones || {};
+  let banda = o.banda || bandaSortear(cana, o);
+  if (sombra) banda = bandaConSombra(banda, sombra);
+  const peces = pecesDeBanda(banda).filter(k => {
+    const e = PEZ_DEF[k];
+    if (!e.noche) return true;
+    return (o.noche != null ? o.noche : esDeNocheAhora());   // el pez gato y el dragón solo de noche
+  });
+  const lista = peces.length ? peces : pecesDeBanda(banda);
+  const id = lista[Math.floor((o.uPez != null ? o.uPez : Math.random()) * lista.length)] || lista[0];
+  const p = PELEA_V4[banda] || PELEA_V4.comun;
+  const rnd = (a, b, u) => a + (b - a) * (u != null ? u : Math.random());
+  const bonus = (CANA_V4_DEF[cana] || {}).pesoBonus || 0;
+  const dur = rnd(p.dur[0], p.dur[1], o.uDur);
+  return {
+    cana, banda, id, sombra: sombra || null,
+    kg: Math.round(pesoSortear(id, o.uPeso) * (1 + bonus) * 100) / 100,
+    progreso: 0, tension: 0, t: 0,
+    dur: dur,                                      // segundos de pulseada bien jugada
+    tiraEn: rnd(p.tiraCada[0], p.tiraCada[1], o.uTira),
+    aviso: Math.max(PELEA_AVISO_MIN, p.aviso),
+    tensionSeg: peleaTension(dur),
+    tirando: false, roto: false, listo: false,
+  };
+}
+
+/* ── LA PULSEADA, UN TICK ────────────────────────────────────────────────────────────────────
+   `dt` en segundos, `apretando` si el jugador tiene el botón hundido. Devuelve el mismo objeto
+   con los eventos de este tick, para que la escena solo tenga que dibujar lo que pasó. */
+function peleaTick(L, dt, apretando) {
+  if (!L || L.roto || L.listo) return L;
+  L.t += dt;
+  /* el pez tira cada tantos segundos, y avisa un poco antes */
+  L.tiraEn -= dt;
+  const p = PELEA_V4[L.banda] || PELEA_V4.comun;
+  L.avisando = L.tiraEn <= L.aviso && L.tiraEn > 0;
+  L.tirando = L.tiraEn <= 0;
+  if (L.tiraEn <= -0.6) {                       // el tirón dura 0,6 s y después se reordena
+    L.tirando = false;
+    const rnd = (a, b) => a + (b - a) * Math.random();
+    L.tiraEn = rnd(p.tiraCada[0], p.tiraCada[1]);
+  }
+  if (apretando) {
+    /* recoger avanza SIEMPRE — el progreso nunca retrocede, ni durante un tirón */
+    L.progreso = Math.min(1, L.progreso + dt / L.dur);
+    /* …pero durante el tirón la tensión sube al doble: ahí está la decisión */
+    L.tension = Math.min(PELEA_TENSION_MAX + 1, L.tension + L.tensionSeg * dt * (L.tirando ? PELEA_TIRON_X : PELEA_SUELTO_X));
+  } else if (L.tirando) {
+    /* CEDER DURANTE EL TIRÓN NO RECUPERA: el pez tira igual, y lo único que consigue soltar es
+       que tire de la caña y no de tus manos. Sin esto, la frecuencia de los tirones no significa
+       nada —soltar en el momento justo cancelaba el tirón entero— y todas las bandas se ganaban
+       el 100 % de las veces. Lo cazó la simulación: con el ceder libre, el legendario y el común
+       eran el mismo pez con otro nombre. Ahora tirar más seguido SÍ aprieta, que es de donde el
+       documento quiere que venga la dificultad. */
+    L.tension = Math.min(PELEA_TENSION_MAX + 1, L.tension + L.tensionSeg * PELEA_TIRON_CEDE * dt);
+  } else {
+    L.tension = Math.max(0, L.tension - L.tensionSeg * PELEA_CEDE_X * dt);
+    /* ceder NO borra nada: el progreso se queda quieto. Ésta es la línea que define el sistema. */
+  }
+  if (L.tension > PELEA_TENSION_MAX) { L.roto = true; L.tension = PELEA_TENSION_MAX; }
+  if (L.progreso >= 1) { L.listo = true; L.progreso = 1; }
+  return L;
+}
+/* ── CERRAR EL LANCE: la racha, la piedad y el récord ────────────────────────────────────────
+   Lo que se cobra en plata y XP lo resuelve quien llame a esto; acá se lleva la MEMORIA, que es
+   lo que hace que dos lances seguidos no sean independientes. */
+function lanceCerrar(L) {
+  const e = pescaEstado();
+  if (!L) return null;
+  if (L.roto) { e.racha = 0; e.sinEpico++; return { roto: true }; }
+  e.racha = (e.racha + 1) % (RACHA_PARA_SUBIR + 1);       // al cobrarla, vuelve a empezar
+  e.primeroDelDia = hoyClave();
+  e.sinEpico = (L.banda === "epico" || L.banda === "legendario") ? 0 : e.sinEpico + 1;
+  const rec = e.records[L.id] || 0, esRecord = L.kg > rec;
+  if (esRecord) e.records[L.id] = L.kg;
+  return { id: L.id, kg: L.kg, banda: L.banda, gigante: pezGigante(L.id, L.kg),
+    plata: pezPrecio(L.id, L.kg), xp: pezXp(L.id, L.kg), record: esRecord, recordAnterior: rec };
+}
+
+
 var PESCA_ESTRELLA = { 1: 1, 2: 2, 3: 3.5, 4: 6, 5: 10 };   // multiplicador de XP por talla
 var PESCA_ESTRELLA_NOM = { 1: "Menudo", 2: "Bueno", 3: "Notable", 4: "Trofeo", 5: "Colosal" };
 
