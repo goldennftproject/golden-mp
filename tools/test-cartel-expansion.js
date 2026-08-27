@@ -88,8 +88,15 @@ console.log("\nPOR DEBAJO DEL NIVEL: EL LOTE SE MUESTRA IGUAL, CON SU REQUISITO 
     ok("  · la chapa dice el nivel que pide y el que tenés",
       textos.some(t => new RegExp("Granja nivel " + ex.nivel).test(t) && new RegExp("tenés " + lv).test(t)),
       "« " + (textos.find(t => /Granja nivel/.test(t)) || "") + " »");
+    /* 26/8: el premio ya no es una cadena fija. El cartel lo DERIVA de lo que la expansión trae
+       de verdad (expansionTraeTxt), porque siete de las dieciséis traen además vetas de bronce y
+       oro y el texto a mano se las comía. Así que acá se contrasta contra la misma función, no
+       contra tres palabras escritas: si se clavan las palabras, se vuelve a medir el catálogo de
+       ayer — que es como este mismo test daba verde mientras el cartel mentía. */
     ok("  · y conserva el costo y el premio completos",
-      textos.some(t => /Madera/.test(t)) && textos.some(t => /árbol · roca · parcela/.test(t)));
+      textos.some(t => /Madera/.test(t)) &&
+      textos.some(t => t === (ctx.expansionTraeTxt ? ctx.expansionTraeTxt(ex.n) : "")),
+      textos.filter(t => /Trae/.test(t)).join(" | "));
   }
   /* en reposo sigue limpio: la chapa nace oculta (solo hover) porque sin nivel nunca "se puede pagar" */
   const { reg } = pintar(1, {});
@@ -120,7 +127,8 @@ console.log("\nLA CHAPA DICE LO QUE DESBLOQUEA, DEBAJO DEL COSTO");
   const textos = reg.filter(o => o.__tipo === "text").map(o => o.texto || "");
   /* Dirección, 2ª pasada: "la información de las celdas no es importante, pero la de los nodos
      y la parcela sí" — el premio nombra los tres, y a las celdas ni las menciona. */
-  ok("hay una línea con el premio: árbol, roca y parcela", textos.some(t => /Trae árbol · roca · parcela/.test(t)),
+  ok("hay una línea con lo que trae, derivada de la expansión que toca",
+    textos.some(t => /^Trae /.test(t) && /parcela/.test(t) && /árbol/.test(t) && /roca/.test(t)),
     textos.filter(t => /Trae/.test(t)).join(" | ") || textos.join(" | "));
   ok("y no habla de celdas", !textos.some(t => /celdas/.test(t)), "eso se ve solo al expandir");
   const iCosto = textos.findIndex(t => /\d+\/\d+/.test(t)), iPremio = textos.findIndex(t => /Trae/.test(t));

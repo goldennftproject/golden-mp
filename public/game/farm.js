@@ -4062,9 +4062,15 @@ class FarmScene extends Phaser.Scene {
       /* 20/8 (dirección): "en la chapa donde está el costo, abajo debería decir lo que te
          desbloquea". Y segunda pasada: "la información de las celdas no es importante, pero la
          de los nodos y la parcela sí" — las celdas se ven solas al expandir; el premio es esto: */
+      /* 26/8 (diseñador): el texto se DERIVA de lo que la expansión trae de verdad. Estaba escrito
+         a mano y se comía las vetas de bronce y oro de siete de las dieciséis — justo el dato que
+         decide si vale la pena pagarla. Las que traen veta se pintan en dorado, para que se vean
+         distintas de un vistazo sin tener que leer. */
+      const conVeta = (typeof expVetas === "function") && expVetas(ex.n);
       const premio = this.add.text(cx, cy - 2 + (fila + partes.length) * 12 + 3,
-        "Trae árbol · roca · parcela",
-        { fontFamily: "system-ui", fontSize: "9px", color: "#cfe0c0" })
+        (typeof expansionTraeTxt === "function") ? expansionTraeTxt(ex.n) : "Trae árbol · roca · parcela",
+        { fontFamily: "system-ui", fontSize: "9px", fontStyle: conVeta ? "bold" : "normal",
+          color: conVeta ? "#ffd75e" : "#cfe0c0", align: "center", wordWrap: { width: 140 } })
         .setOrigin(0.5, 0.5).setDepth(D + 1);
       this.expFx.push(premio); this.expCartel.push(premio);
       chapa.setSize(148, 34 + (fila + partes.length) * 12 + 14);

@@ -1607,8 +1607,34 @@ var EXPANSION_MAX = 16;
    Y una consecuencia de diseño buscada: la veta de oro pide Minería 7 y su pico, así que el que
    compra la expansión 3 (granja 7) se la encuentra ahí esperándolo. Es contenido que asoma antes
    de poderse tomar — y desde el 24/8 el aviso dice exactamente qué pico falta. */
-var EXP_CON_VETA = [3, 6, 8, 10, 12, 14, 16];
+/* 26/8: la lista vive en config.js (GF.EXP_CON_VETA) — el mismo sitio del que la lee el mundo
+   al colocar las vetas. Antes había una copia acá y otra allá: si alguien agregaba la 18 en un
+   lado, el otro seguía cobrando barato o poniendo de más, en silencio. */
+/* SIN RESPALDO A PROPÓSITO. Escribí primero `GF.EXP_CON_VETA || [3,6,8,...]` y mi propio test lo
+   cazó: ese respaldo ES la segunda copia, la misma que vine a eliminar, solo que escondida detrás
+   de un `||` que casi nunca se ejecuta. Y una copia que casi nunca se usa es peor que una que se
+   usa siempre, porque cuando por fin entra en juego ya está desactualizada.
+   Si config.js no cargó, eso es un fallo de orden de carga y tiene que doler, no taparse. */
+var EXP_CON_VETA = GF.EXP_CON_VETA;
 function expVetas(n) { return EXP_CON_VETA.indexOf(n) >= 0; }   // n = número de expansión (1..16)
+/* QUÉ TRAE UNA EXPANSIÓN (26/8, diseñador)
+   ═══════════════════════════════════════════════════════════════════════════════════════════
+   « la parcela 2 está bien, pero debe decir lo que trae: solo se puede leer árbol, roca. En ésta
+     debería decir parcela, árbol, roca, oro, bronce… lo digo para que la gente calcule el costo
+     y si vale la pena, y como aún no tenemos wiki pues toca hacer[lo así]. »
+
+   El cartel decía « Trae árbol · roca · parcela » con las tres palabras escritas a mano, mientras
+   siete de las dieciséis expansiones traen ADEMÁS una veta de bronce y una de oro — que es
+   justamente lo que decide si vale la pena pagarla. El jugador no tenía cómo saberlo salvo
+   comprando, y ésa es la peor forma de enterarse.
+   Ahora el cartel se deriva de la misma lista que pone las vetas en el mundo y que las cobra en
+   el precio: si mañana la 18 lleva veta, el cartel lo dice sin que nadie lo escriba. */
+function expansionTrae(n) {
+  const out = [{ k: "parcela", txt: "parcela" }, { k: "arbol", txt: "árbol" }, { k: "roca", txt: "roca" }];
+  if (expVetas(n)) { out.push({ k: "bronce", txt: "veta de bronce" }); out.push({ k: "oro", txt: "veta de oro" }); }
+  return out;
+}
+function expansionTraeTxt(n) { return "Trae " + expansionTrae(n).map(x => x.txt).join(" · "); }
 // La expansión que toca ahora: qué número es, en qué nivel se abre y qué cuesta.
 function expansionSiguiente() {
   const hechas = G.expansiones || 0;

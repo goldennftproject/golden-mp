@@ -24,6 +24,12 @@ GF.TILE = 42;
 // ser el mismo de largo que de ancho, y el rectángulo que forma el bosque también, y el conjunto
 // entero también, que es 1600". 17x12 no cumplía nada de eso. 15x15 es el único cuadrado que
 // además se parte en 3 partes iguales de 5, que es lo que pide el anillo de expansiones.
+/* 26/8 — QUÉ EXPANSIONES TRAEN VETA, EN UN SOLO SITIO.
+   Esta lista estaba escrita DOS VECES: acá, para poner las vetas en el mundo, y en state.js
+   (EXP_CON_VETA) para cobrarlas más caras. Dos copias de la misma decisión, en dos archivos, sin
+   nada que las ate — la forma exacta de fallo que nos costó las cañas invisibles y los fardos del
+   tablón. Vive acá porque config.js carga primero; state.js la lee. */
+GF.EXP_CON_VETA = [3, 6, 8, 10, 12, 14, 16];
 GF.COLS_BASE = 15; GF.ROWS_BASE = 15;       // el claro con el que arranca la partida
 GF.COLS = GF.COLS_BASE; GF.ROWS = GF.ROWS_BASE;   // mundo en celdas enteras (crece con las expansiones)
 GF.WORLD_W = GF.COLS * GF.TILE;             // 630
@@ -661,7 +667,7 @@ GF.rehacerColisiones();
        Las vetas se ponen en las libres siguientes, más lejos del centro que el árbol y la roca,
        para no romper la composición del bloque. */
     const ocupadas = [arb, roc];   // 24/8: lo que ya está puesto en el bloque — la parcela lo mira
-    if ([3, 6, 8, 10, 12, 14, 16].indexOf(i + 1) >= 0) {
+    if (GF.EXP_CON_VETA.indexOf(i + 1) >= 0) {
       const libre = () => libres.find(p => ocupadas.indexOf(p) < 0 &&
         !(arb && p.c === arb.c + 1 && p.r === arb.r));   // la segunda celda del árbol no cuenta
       const vb = libre(); if (vb) ocupadas.push(vb);

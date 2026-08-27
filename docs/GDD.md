@@ -8,7 +8,7 @@ Documento de Diseño de Juego
 
 *Cosas nuevas para jugar:* la **PESCA v3** — nueve especies con su familia, su hora y su clima, cañas que se gastan, peleas con etapas y trampas que trabajan solas mientras no estás (§4.1); **EL CAMINO A LA GUARIDA**, que por primera vez contesta « ¿a qué estoy jugando? » poniendo en fila las diez cartas del Abuelo y el asalto de clan como final; **LA META DE LA SEMANA**, que contesta « ¿qué hago hoy? »; y **EL FLUJO DE LA BOLSA**, los « +1 Piedra · −1 Pico » del margen izquierdo (§13.1).
 
-*Cosas que cambiaron de fondo:* la **COCINA COCINA DE A UNO** — las tres ollas dejan de ser fuegos en paralelo y pasan a ser una fila (§10); el **TABLÓN** pasa a tener capítulo propio y sus fardos ya pagan lo que un vale vale, que antes era la mitad (§12); las **CARTAS DEL ABUELO** llegan desde el nivel 2 en vez de esperar al final del tutorial; y el juego **no vuelve a pedir el apodo** ni pierde la granja cuando la base de datos está caída — se juega con la copia local y se sube sola al volver.
+*Cosas que cambiaron de fondo:* el cartel de la **EXPANSIÓN** dice ahora todo lo que trae, vetas de bronce y oro incluidas — antes se comía justo el dato que decide la compra (§6.1); la **COCINA COCINA DE A UNO** — las tres ollas dejan de ser fuegos en paralelo y pasan a ser una fila (§10); el **TABLÓN** pasa a tener capítulo propio y sus fardos ya pagan lo que un vale vale, que antes era la mitad (§12); las **CARTAS DEL ABUELO** llegan desde el nivel 2 en vez de esperar al final del tutorial; y el juego **no vuelve a pedir el apodo** ni pierde la granja cuando la base de datos está caída — se juega con la copia local y se sube sola al volver.
 
 *Reglas nuevas de la casa:* la **regla 10 crece** — un clic sobre una ventana no solo se queda en la ventana: tiene que llegar a lo que el jugador tocó DENTRO de ella. Y una lección que atraviesa toda la semana y ya tiene nombre propio: **derivar a medias es peor que no derivar**. Un número sacado de una fórmula da confianza; si al lado queda una lista escrita a mano, la confianza es la del número y el fallo es el de la lista. Pasó cuatro veces en cinco días — las cañas invisibles, el Estofado imposible, los clics sordos y los fardos del tablón — y las cuatro tienen la misma forma.
 
@@ -350,6 +350,14 @@ La regla, entonces, se ata a un reloj que el jugador ya conoce: **el reloj de su
 
 Y el botón del lote dice la verdad: contaba « ×5 » y encolaba 3, porque el Horno tiene tres bocas. Ahora cuenta los lugares libres y lo que alcanza con lo que tenés, y escribe ESE número. Un botón que promete cinco y hace tres no es un bug de la cola: es un botón que miente, y el jugador lo descubre después de apretarlo.
 
+**6.1 Qué trae cada expansión (26/8)**
+
+Cada expansión entrega **parcela + árbol + roca**. Y siete de las dieciséis —la **3, 6, 8, 10, 12, 14 y 16**— traen además una **veta de bronce** y una **de oro**: cinco celdas productivas en vez de tres, y por eso su precio es mayor (la fórmula cuenta las celdas acumuladas, así que la escalera entera se re-deriva sola).
+
+El diseñador lo pidió así: « debe decir lo que trae… lo digo para que la gente calcule el costo y si vale la pena, y como aún no tenemos wiki pues toca hacer[lo así] ». El cartel del mundo decía « Trae árbol · roca · parcela » con las tres palabras escritas a mano, y se comía justamente el dato que decide la compra. Ahora el texto se **deriva** de la misma lista que pone las vetas en el terreno y que las cobra en el precio, y las expansiones con veta se pintan en dorado para que se distingan sin leer.
+
+Al arreglarlo apareció el fallo de fondo: esa lista estaba escrita **dos veces**, en `config.js` para poner las vetas en el terreno y en `state.js` para cobrarlas más caras. Dos copias de la misma decisión, en dos archivos, sin nada que las ate: quien le agregara veta a la 18 en un lado dejaba al otro cobrando barato, en silencio. Ahora vive una sola vez (`GF.EXP_CON_VETA`) y `tools/test-expansion-trae.js` comprueba, bloque por bloque, que lo que el cartel promete es exactamente lo que el mundo pone.
+
 **7. Edificios**
 
 Ningún edificio viene puesto. Todos llegan como PLANO, el plano se guarda en el Cobertizo y el jugador elige dónde va. Al colocarlo aparece la obra, y la obra se termina depositando materiales.
@@ -658,7 +666,7 @@ Normas de diseño que vienen de decisiones de dirección y que conviene no reabr
 
 **17. Cómo verificar lo que dice este documento**
 
-El proyecto tiene 103 pruebas automáticas y 22 auditores, más 28 medidores, simuladores y generadores: 154 herramientas en `tools/`.
+El proyecto tiene 104 pruebas automáticas y 22 auditores, más 28 medidores, simuladores y generadores: 155 herramientas en `tools/`.
 
 Una de ellas, `tools/test-clic-navegador.js`, corre en un **Chromium de verdad** (puppeteer). Existe porque el 26/8 el diseñador reportó dos veces que no podía elegir una receta en la Cocina y las dos veces se diagnosticó mal: el arnés de pruebas es jsdom, y jsdom no hace hit-testing ni implementa la captura de puntero, así que NO PODÍA ver el fallo ni en principio. Si no hay Chromium instalado el archivo lo dice y se salta; para instalarlo, una vez: `npx puppeteer browsers install chrome`. No comprueban que el código compile: comprueban que el JUEGO cumpla las reglas de arriba. Los más útiles para el diseñador:
 
