@@ -6037,6 +6037,14 @@ function pesoFactorEsperado(id, cebo) {
 /* el peso de ESTE lance: normalmente un sorteo, y con camarón el mayor de dos. */
 function pesoDelLance(id, o) {
   const cebo = o.cebo || ceboPuesto();
+  /* LA LUBINA « sube al doble de peso de noche » (tabla 1). Es el único truco que vive en el
+     sorteo y no en la pelea, así que va acá y no en trucoTick — y se topa al máximo de la
+     especie, porque un pez fuera de su rango rompería el récord, el torneo y el álbum a la vez. */
+  const t = trucoDe(id);
+  if (t && t.fase === "peso" && (o.noche != null ? o.noche : esDeNocheAhora())) {
+    const e = PEZ_DEF[id];
+    return Math.min(e.peso[1], pesoSortear(id, o.uPeso) * 2);
+  }
   if (cebo !== "camaron") return pesoSortear(id, o.uPeso);
   let mejor = 0;
   for (let i = 0; i < CEBO_CAMARON_TIRADAS; i++) mejor = Math.max(mejor, pesoSortear(id, o.uPeso));
@@ -6057,7 +6065,7 @@ function lanceArmar(cana, sombra, opciones) {
   const rnd = (a, b, u) => a + (b - a) * (u != null ? u : Math.random());
   const bonus = (CANA_V4_DEF[cana] || {}).pesoBonus || 0;
   const dur = rnd(p.dur[0], p.dur[1], o.uDur);
-  return {
+  const L = {
     cana, banda, id, sombra: sombra || null,
     kg: Math.round(pesoDelLance(id, o) * (1 + bonus) * 100) / 100,
     progreso: 0, tension: 0, t: 0,
@@ -6067,11 +6075,152 @@ function lanceArmar(cana, sombra, opciones) {
     tensionSeg: peleaTension(dur),
     tirando: false, roto: false, listo: false,
   };
+  return trucoArmar(L);
 }
 
 /* ── LA PULSEADA, UN TICK ────────────────────────────────────────────────────────────────────
    `dt` en segundos, `apretando` si el jugador tiene el botón hundido. Devuelve el mismo objeto
    con los eventos de este tick, para que la escena solo tenga que dibujar lo que pasó. */
+/* ═══════════════════════════════════════════════════════════════════════════════════════════
+   EL TRUCO DE CADA ESPECIE                                       (27/8, lo último del documento)
+   ═══════════════════════════════════════════════════════════════════════════════════════════
+   En las tablas 1 a 5 del documento, la última columna de cada especie no es sabor: es una
+   MECÁNICA. « Se infla: la tensión sube el doble mientras está inflado. » « Apaga la luz:
+   durante un segundo no se ve la barra. » « Corta el hilo si aguantás más de 2 s seguidos. »
+   Yo las había leído como notas de ambientación y las diecinueve especies peleaban igual.
+
+   Es la diferencia entre un minijuego con diecinueve peces y un minijuego con un pez y
+   diecinueve nombres. Y es barato: la pulseada ya tiene sus perillas, y cada truco es una
+   línea que mueve una de ellas.
+
+   LA REGLA QUE LOS ORDENA A TODOS: ningún truco puede quitar progreso.
+   El capítulo 3 lo dice en mayúsculas —« EL PROGRESO NUNCA RETROCEDE »— y es lo que separa esta
+   versión de la v2. Así que un truco puede subir la tensión, esconder la barra, cambiar el ritmo
+   o cortar el hilo de golpe; lo que NO puede hacer, ninguno, es borrar lo que ya ganaste. Un
+   pez que te quita terreno es la forma más rápida de que alguien deje de intentarlo.
+
+   Y la segunda: todos AVISAN. Un truco que no se ve en pantalla no es dificultad, es una
+   trampa — el jugador tiene que poder decir « ah, se infló » y no « no sé qué pasó ». */
+var TRUCO_DEF = {
+  /* ── comunes: uno solo, y suave. Son el banco de pruebas de la pulseada ──────────────────── */
+  lubina: { fase: "peso", txt: "De noche pesa el doble",
+            /* « Sube al doble de peso de noche. » Se aplica en el sorteo, no en la pelea. */ },
+
+  /* ── poco comunes y raros: el ritmo ───────────────────────────────────────────────────────── */
+  robalo:  { fase: "ritmo", tiraX: 0.7, avisoX: 1.6, txt: "Tira seguido, pero avisa mucho" },
+  salmon:  { fase: "ritmo", tiraX: 1.15, txt: "Corre largo entre tirón y tirón" },
+  pez_sapo: { fase: "salva", salva: 3, txt: "Se queda quieto y de golpe tira tres veces",
+    /* la salva: tres tirones pegados con medio segundo entre ellos, y después una espera larga.
+       El pez sapo no es más duro que otro raro — es más IRREGULAR, que es otra cosa. */ },
+  pez_globo: { fase: "infla", cada: [3.5, 6], dura: 2.2, tensionX: 2,
+    txt: "Se infla: mientras esté inflado, la tensión sube el doble" },
+
+  /* ── épicos ───────────────────────────────────────────────────────────────────────────────── */
+  pez_loro: { fase: "color", cada: [2.5, 4], txt: "Cambia de color, y con él cambia el ritmo",
+    /* al cambiar de color se re-sortea el intervalo entre tirones dentro de su banda: no es más
+       duro, es imposible de anticipar. Contra el pez loro no sirve contar. */ },
+  pez_guitarra: { fase: "ritmo", tiraX: 1.5, avisoX: 1.3, durX: 1.15,
+    txt: "Tirones largos y espaciados: perdona al paciente" },
+  pez_linterna: { fase: "apaga", cada: [3, 5], dura: 1.0,
+    txt: "Apaga la luz: durante un segundo no se ve la barra",
+    /* el único truco que toca la INFORMACIÓN y no los números. Y por eso es el que más se nota:
+       la barra se apaga, no se congela — por debajo el lance sigue corriendo igual. */ },
+
+  /* ── legendarios: los tres tienen su propia manera de matarte ─────────────────────────────── */
+  pez_espada: { fase: "aguante", maxSeguido: 2.0,
+    txt: "Corta el hilo si aguantás más de 2 s seguidos",
+    /* el reloj se reinicia al soltar, así que no pide reflejos: pide ritmo. Es el pez que enseña
+       que « mantener apretado » no es una estrategia. */ },
+  pez_gota: { fase: "hunde", sube: 0.55, txt: "No tira: se hunde. La tensión sube sola",
+    /* al revés que todos: soltar NO baja la tensión hasta cero, porque el peso del bicho sigue
+       ahí. Hay que recoger igual, y el que espera pierde. */ },
+  pez_dragon: { fase: "fases", txt: "Tres fases: cada tercio del progreso cambia de pez",
+    /* tercio 1: tirones lentos y largos. Tercio 2: rápidos. Tercio 3: los dos a la vez y la
+       tensión sube más. No hay una forma de jugarlo: hay tres, y hay que cambiar dos veces. */
+    fases: [ { tiraX: 1.4, tensionX: 0.85 }, { tiraX: 0.55, tensionX: 1.0 }, { tiraX: 0.7, tensionX: 1.35 } ] },
+};
+function trucoDe(id) { return TRUCO_DEF[id] || null; }
+/* el texto para la pantalla: el jugador tiene que saber contra qué pelea ANTES de perder. */
+function trucoTxt(id) { const t = trucoDe(id); return t ? t.txt : ""; }
+
+/* ARMAR el truco dentro del lance. Se hace acá y no en peleaTick para que todo lo que un truco
+   necesita recordar nazca con el pez, y no aparezca a mitad de la pelea. */
+function trucoArmar(L) {
+  const t = trucoDe(L.id); if (!t) return L;
+  const rnd = (a, b) => a + (b - a) * Math.random();
+  L.truco = t.fase;
+  if (t.tiraX)  L.tiraEn *= t.tiraX;
+  if (t.avisoX) L.aviso = Math.max(PELEA_AVISO_MIN, L.aviso * t.avisoX);
+  if (t.durX)   { L.dur *= t.durX; L.tensionSeg = peleaTension(L.dur); }
+  if (t.fase === "infla" || t.fase === "apaga") { L.trEn = rnd(t.cada[0], t.cada[1]); L.trDura = 0; }
+  if (t.fase === "color") L.trEn = rnd(t.cada[0], t.cada[1]);
+  if (t.fase === "salva") L.trSalva = 0;
+  if (t.fase === "aguante") L.trSeguido = 0;
+  if (t.fase === "fases") L.trFase = 0;
+  return L;
+}
+
+/* APLICAR el truco en cada cuadro. Devuelve los multiplicadores que peleaTick va a usar, y
+   ninguno de ellos puede tocar el progreso: eso lo garantiza la firma, no la buena voluntad. */
+function trucoTick(L, dt, apretando) {
+  const t = trucoDe(L.id);
+  const r = { tensionX: 1, oculta: false, aviso: null };
+  if (!t) return r;
+  const rnd = (a, b) => a + (b - a) * Math.random();
+  const p = PELEA_V4[L.banda] || PELEA_V4.comun;
+
+  if (t.fase === "infla") {
+    L.trEn -= dt;
+    if (L.trDura > 0) {
+      L.trDura -= dt; r.tensionX = t.tensionX; r.aviso = "inflado";
+      if (L.trDura <= 0) L.trEn = rnd(t.cada[0], t.cada[1]);
+    } else if (L.trEn <= 0) { L.trDura = t.dura; }
+  } else if (t.fase === "apaga") {
+    L.trEn -= dt;
+    if (L.trDura > 0) {
+      L.trDura -= dt; r.oculta = true; r.aviso = "a oscuras";
+      if (L.trDura <= 0) L.trEn = rnd(t.cada[0], t.cada[1]);
+    } else if (L.trEn <= 0) { L.trDura = t.dura; }
+  } else if (t.fase === "color") {
+    L.trEn -= dt;
+    if (L.trEn <= 0) {
+      /* se re-sortea el ritmo DENTRO de su banda: cambia lo que hace, no lo fuerte que es */
+      L.tiraEn = rnd(p.tiraCada[0], p.tiraCada[1]);
+      L.trEn = rnd(t.cada[0], t.cada[1]);
+      L.trColor = ((L.trColor || 0) + 1) % 4;
+      r.aviso = "cambió de color";
+    }
+  } else if (t.fase === "salva") {
+    /* después de un tirón, si quedan de la salva, el siguiente llega en medio segundo */
+    if (L.tirando && !L.trEnSalva) { L.trEnSalva = true; L.trSalva = (L.trSalva || 0) + 1; }
+    if (!L.tirando && L.trEnSalva) {
+      L.trEnSalva = false;
+      if (L.trSalva < t.salva) L.tiraEn = 0.5;
+      else { L.trSalva = 0; L.tiraEn = rnd(p.tiraCada[1], p.tiraCada[1] * 1.8); }
+    }
+    if (L.trSalva > 0) r.aviso = "salva " + L.trSalva + "/" + t.salva;
+  } else if (t.fase === "aguante") {
+    /* el reloj del aguante: se reinicia al soltar, así que pide RITMO y no reflejos */
+    L.trSeguido = apretando ? (L.trSeguido || 0) + dt : 0;
+    if (L.trSeguido > t.maxSeguido) { L.roto = true; r.aviso = "¡se cortó!"; }
+    else if (L.trSeguido > t.maxSeguido * 0.6) r.aviso = "¡soltá!";
+  } else if (t.fase === "hunde") {
+    /* no tira nunca, pero la tensión sube sola: el que espera, pierde */
+    L.tirando = false; L.avisando = false;
+    L.tension = Math.min(PELEA_TENSION_MAX + 1, L.tension + L.tensionSeg * t.sube * dt);
+    r.aviso = "se hunde";
+  } else if (t.fase === "fases") {
+    const f = Math.min(2, Math.floor(L.progreso * 3));
+    if (f !== L.trFase) {
+      L.trFase = f;
+      L.tiraEn = rnd(p.tiraCada[0], p.tiraCada[1]) * t.fases[f].tiraX;
+      r.aviso = "fase " + (f + 1) + " de 3";
+    }
+    r.tensionX = t.fases[L.trFase || 0].tensionX;
+  }
+  return r;
+}
+
 function peleaTick(L, dt, apretando) {
   if (!L || L.roto || L.listo) return L;
   L.t += dt;
@@ -6085,11 +6234,16 @@ function peleaTick(L, dt, apretando) {
     const rnd = (a, b) => a + (b - a) * Math.random();
     L.tiraEn = rnd(p.tiraCada[0], p.tiraCada[1]);
   }
+  /* EL TRUCO DE LA ESPECIE, antes de resolver la tensión. Devuelve multiplicadores y avisos;
+     por diseño no puede tocar L.progreso, que es la regla dura del capítulo 3. */
+  const tr = trucoTick(L, dt, apretando);
+  L.trAviso = tr.aviso || null;
+  L.oculta = !!tr.oculta;
   if (apretando) {
     /* recoger avanza SIEMPRE — el progreso nunca retrocede, ni durante un tirón */
     L.progreso = Math.min(1, L.progreso + dt / L.dur);
     /* …pero durante el tirón la tensión sube al doble: ahí está la decisión */
-    L.tension = Math.min(PELEA_TENSION_MAX + 1, L.tension + L.tensionSeg * dt * (L.tirando ? PELEA_TIRON_X : PELEA_SUELTO_X));
+    L.tension = Math.min(PELEA_TENSION_MAX + 1, L.tension + L.tensionSeg * dt * (L.tirando ? PELEA_TIRON_X : PELEA_SUELTO_X) * tr.tensionX);
   } else if (L.tirando) {
     /* CEDER DURANTE EL TIRÓN NO RECUPERA: el pez tira igual, y lo único que consigue soltar es
        que tire de la caña y no de tus manos. Sin esto, la frecuencia de los tirones no significa
@@ -6097,7 +6251,7 @@ function peleaTick(L, dt, apretando) {
        el 100 % de las veces. Lo cazó la simulación: con el ceder libre, el legendario y el común
        eran el mismo pez con otro nombre. Ahora tirar más seguido SÍ aprieta, que es de donde el
        documento quiere que venga la dificultad. */
-    L.tension = Math.min(PELEA_TENSION_MAX + 1, L.tension + L.tensionSeg * PELEA_TIRON_CEDE * dt);
+    L.tension = Math.min(PELEA_TENSION_MAX + 1, L.tension + L.tensionSeg * PELEA_TIRON_CEDE * dt * tr.tensionX);
   } else {
     L.tension = Math.max(0, L.tension - L.tensionSeg * PELEA_CEDE_X * dt);
     /* ceder NO borra nada: el progreso se queda quieto. Ésta es la línea que define el sistema. */

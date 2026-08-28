@@ -538,6 +538,11 @@
   .p4-btn.hold{background:#63991f;border-color:#9ede54}
   .p4-btn:disabled{opacity:.5;cursor:default}
   .p4-pie{font-size:11px;color:#cbbf9f;text-align:center;min-height:14px}
+  .p4-aviso.truco{color:#ffd75e;font-weight:800;text-shadow:0 0 8px rgba(255,215,94,.5)}
+  /* el pez linterna: la barra se APAGA, no se congela. Debajo el lance sigue corriendo igual, y
+     eso es justo lo que la vuelve incómoda — no sabés dónde estás, pero seguís avanzando. */
+  #pesca4.aoscuras .p4-bar{filter:brightness(.12);transition:filter .1s}
+  #pesca4.aoscuras .p4-bar i{opacity:.05}
   .p4-oval{display:inline-block;border-radius:50%;background:#0d2436;border:1px solid #7fb6d8;
     box-shadow:0 0 5px rgba(127,182,216,.5);margin-right:6px;vertical-align:middle}
   .lonja-cab{display:flex;justify-content:space-between;align-items:center;font-size:12px;

@@ -409,7 +409,7 @@ function pescaV4Pintar() {
     pie.textContent = P4.fase === "sombras" ? "La grande promete más y pelea más duro"
       : P4.fase === "espera" ? "…"
       : P4.fase === "pique" ? "¡ahora! (fallar no gasta la lombriz)"
-      : "soltá en el tirón · el progreso no se pierde nunca";
+      : (P4.L && trucoTxt(P4.L.id)) || "soltá en el tirón · el progreso no se pierde nunca";
   }
   pescaV4Nasas();
   const L = P4.L;
@@ -423,9 +423,19 @@ function pescaV4Pintar() {
     if (pr) pr.style.width = Math.round(L.progreso * 100) + "%";
     if (te) te.style.width = Math.round(L.tension) + "%";
     if (av) {
-      av.textContent = L.tirando ? "¡TIRÓN! — soltá" : (L.avisando ? "se está preparando…" : "");
-      av.classList.toggle("tiron", !!L.tirando);
+      /* EL TRUCO MANDA sobre el aviso normal: cuando el pez globo se infla o el espada te pide
+         que sueltes, eso es lo urgente. Un truco que no se ve en pantalla no es dificultad, es
+         una trampa — el jugador tiene que poder decir « ah, se infló » y no « no sé qué pasó ». */
+      av.textContent = L.trAviso ? L.trAviso
+        : L.tirando ? "¡TIRÓN! — soltá"
+        : (L.avisando ? "se está preparando…" : "");
+      av.classList.toggle("tiron", !!L.tirando || L.trAviso === "¡soltá!");
+      av.classList.toggle("truco", !!L.trAviso);
     }
+    /* el pez linterna apaga la barra un segundo. Se OCULTA, no se congela: por debajo el lance
+       sigue corriendo, y eso es justo lo que lo vuelve incómodo. */
+    const caja = $("pesca4");
+    if (caja) caja.classList.toggle("aoscuras", !!L.oculta);
   }
 }
 /* CÓMO SE PINTA UN RECURSO EN UN PANEL (y una corrección que me hago a mí mismo)

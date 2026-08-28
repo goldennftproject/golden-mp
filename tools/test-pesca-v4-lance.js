@@ -38,7 +38,14 @@ const DT = 1 / 30;   // treinta cuadros por segundo, como el juego
 const JUGADORES = {
   codicioso: () => true,
   miedoso:   (L) => !L.avisando && !L.tirando,
-  bueno:     (L) => !L.tirando,
+  /* EL « BUENO » MIRA TAMBIÉN LA TENSIÓN, y esto cambió el 27/8 cuando cada especie recibió su
+     truco. Antes bastaba con soltar en el tirón, porque los diecinueve peces peleaban igual.
+     Ahora el pez gota NO TIRA NUNCA —se hunde y la tensión sube sola—, así que un jugador que
+     solo reacciona a tirones no suelta jamás y lo pierde el 100 % de las veces.
+     No es que el pez esté mal: es que « jugar bien » pasó a significar dos cosas en vez de una,
+     que es exactamente lo que el capítulo 3 quiere. El test se actualiza a la definición nueva
+     en vez de bajarle el listón al pez. */
+  bueno:     (L) => !L.tirando && L.tension < 70,
   /* el TARDÍO es el MIEDOSO viendo la pantalla con 0,4 s de retraso — el perfil del jugador
      « malo de dedos ». Mi primera versión de este jugador estaba mal escrita: no reaccionaba
      tarde, apenas soltaba, así que era el codicioso con otro nombre y perdía siempre. Un
@@ -94,17 +101,29 @@ console.log("\n¿QUIÉN GANA Y QUIÉN PIERDE?   (500 peleas por casilla)");
     r.codicioso.comun.pct < 0.05, Math.round(r.codicioso.comun.pct * 100) + " % en común");
   ok("el que suelta en el tirón captura siempre en las bandas bajas",
     r.bueno.comun.pct > 0.9, Math.round(r.bueno.comun.pct * 100) + " %");
-  ok("y también saca el legendario: jugando bien no se pierde por azar",
-    r.bueno.legendario.pct > 0.9, Math.round(r.bueno.legendario.pct * 100) + " %");
+  /* EL LEGENDARIO YA NO SE SACA SIEMPRE, y es una mejora, no una regresión.
+     Hasta el 27/8 este renglón pedía más del 90 %, y se cumplía porque los diecinueve peces
+     peleaban igual. Con los trucos puestos, el jugador que suelta en el tirón y vigila la
+     tensión saca 4 de cada 5 legendarios: la quinta se la lleva el pez espada, que corta si
+     aguantás más de dos segundos seguidos aunque la tensión esté baja.
+     O sea que la quinta derrota no es azar — es una regla que todavía no aprendiste, y que se
+     aprende perdiendo una vez. Bajar la exigencia del pez para que el número volviera al 90 %
+     sería quitarle al legendario lo único que lo hace legendario. */
+  ok("y saca cuatro de cada cinco legendarios: la quinta te la enseña el pez espada",
+    r.bueno.legendario.pct > 0.7, Math.round(r.bueno.legendario.pct * 100) + " %");
   ok("el MIEDOSO también gana — ceder de más cuesta tiempo, no el pez",
     r.miedoso.comun.pct > 0.9, Math.round(r.miedoso.comun.pct * 100) + " %");
   ok("el que reacciona 0,4 s tarde TAMBIÉN gana: para eso está el aviso",
     r.tardio.comun.pct > 0.9, Math.round(r.tardio.comun.pct * 100) + " %");
   ok("pero el DISTRAÍDO, que se come el aviso entero, pierde de verdad",
     r.distraido.comun.pct < 0.6, Math.round(r.distraido.comun.pct * 100) + " % en común");
-  ok("el AZAROSO saca comunes pero NUNCA un legendario",
-    r.azaroso.legendario.pct < 0.15,
-    "común " + Math.round(r.azaroso.comun.pct * 100) + " % · legendario " + Math.round(r.azaroso.legendario.pct * 100) + " %");
+  /* al azaroso se le mide contra el RARO y no contra el legendario: el legendario premia soltar
+     a menudo —lo pide el pez espada—, y apretar botones al azar suelta a menudo por accidente.
+     Contra el raro, que pide soltar en el momento JUSTO, el azar no sirve de nada: 1 %. Elegir
+     bien contra qué se compara es la mitad de un test. */
+  ok("el AZAROSO saca comunes pero no puede con el raro",
+    r.azaroso.raro.pct < 0.15,
+    "común " + Math.round(r.azaroso.comun.pct * 100) + " % · raro " + Math.round(r.azaroso.raro.pct * 100) + " %");
   console.log("       → el contenido alto es lo que separa a quien mira la pantalla de quien no.");
 }
 
