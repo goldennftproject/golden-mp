@@ -914,11 +914,18 @@ function itemView(d) {
      pico: una casilla con los usos que le quedan y la talla que aguanta, que es lo que hace falta
      saber para decidir a qué señal tirarle. */
   if (d.kind === "cana") {
-    const cd = (typeof CANA_DEF !== "undefined") && CANA_DEF[d.key];
-    const usos = (typeof canaUsos === "function") ? canaUsos(d.key) : 0;
-    const glow = d.key === "abuelo" ? "glow-gold" : (d.key === "hierro" ? "glow-blue" : "");
+    /* LAS CAÑAS DE LA v4 NO SE GASTAN. El documento dedica un párrafo entero a por qué —« una
+       durabilidad es un número inventado »— y lo que cobra el uso es el PEAJE de cada lance.
+       Así que la etiqueta dice lo que de verdad importa para decidir: cuánta rareza da y cuánto
+       cuesta tirar con ella. « 25 usos » no ayudaba a elegir nada. */
+    const cd = (typeof CANA_V4_DEF !== "undefined") && CANA_V4_DEF[d.key];
+    const glow = d.key === "abuelo" ? "glow-gold" : (d.key === "oro" ? "glow-gold" : (d.key === "hierro" ? "glow-blue" : ""));
+    if (!cd) return { sprite: null, emoji: "🎣", glow, label: "Caña", dur: null };
+    const base = CANA_V4_DEF.junco.banda;
+    const sube = Math.round((cd.banda.epico + cd.banda.legendario) / (base.epico + base.legendario) * 10) / 10;
     return { sprite: null, emoji: "🎣", glow,
-             label: (cd ? cd.label + " · aguanta hasta " + cd.aguanta + "★" : "Caña") + " · " + usos + " usos", dur: null };
+             label: cd.label + " · rareza ×" + sube + (cd.mant ? " · peaje " + cd.mant + " por lance" : " · sin peaje"),
+             dur: null };
   }
   /* el pez: ahora puede ser una de las NUEVE especies de Pesca v3 o una de las cuatro rarezas
      viejas de las partidas anteriores. Se busca en los dos catálogos, en ese orden. */
@@ -937,13 +944,9 @@ function itemView(d) {
                       " · vale " + p4.precio + " de plata" +
                       (rec ? " · tu récord: " + rec.toFixed(2) + " kg" : ""), dur: null };
     }
-    const e = (typeof ESPECIE_DEF !== "undefined") && ESPECIE_DEF[d.key];
-    if (e) {
-      const est = (G.estrellaMax && G.estrellaMax[d.key]) || 0;
-      const glow = e.familia === "coloso" ? "glow-gold" : (e.familia === "fondo" ? "glow-purple" : "");
-      return { sprite: e.sprite || null, emoji: e.emoji || "🐟", glow,
-               label: e.label + " · vale " + especiePrecio(d.key) + " de plata" + (est ? " · tu mejor: " + "★".repeat(est) : ""), dur: null };
-    }
+    /* el fósil de la v2: cuatro « rarezas » sin especie, de partidas de antes de agosto. Se
+       siguen pintando porque pueden estar en una bolsa vieja, y un objeto que existe y no se
+       ve es un objeto que el jugador tiene y no puede usar. */
     const f = FISH_DEF[d.key]; const glow = { raro: "glow-blue", epico: "glow-purple", legendario: "glow-gold" }[d.key] || "";
     return { sprite: f ? f.sprite : null, emoji: f ? f.emoji : "🐟", glow, label: f ? f.label : "Pez", dur: null };
   }
@@ -967,7 +970,9 @@ function coinIc(cur) { const nm = cur === "esencia" ? "Esencia" : "Plata"; retur
 function invCellHtml(d, i, rem, zone) {
   if (!d) return `<div class="slot" data-slot="${i}" data-zone="${zone}"></div>`;
   let cnt = "";
-  if (d.kind === "cana") { cnt = `<span class="cnt">${fmt((typeof canaUsos === "function") ? canaUsos(d.key) : 0)}</span>`; }
+  /* sin contador: las cañas de la v4 se tienen o no se tienen, y un « 1 » en cada casilla es
+     ruido que compite con los números que sí dicen algo. */
+  if (d.kind === "cana") { cnt = ""; }
   else if (d.kind === "res" || d.kind === "seed" || d.kind === "fish" || d.kind === "dish" || d.kind === "chest" || (d.kind === "tool" && (d.key === "axe" || d.key === "rod")) || d.kind === "pick") { const k = d.kind + ":" + d.key; const n = Math.min(99, rem[k] || 0); rem[k] = (rem[k] || 0) - n; cnt = `<span class="cnt">${fmt(n)}</span>`; }
   const v = itemView(d);
   const sel = (d.kind === "seed" && G.selSeed === d.key) ? " sel" : "";
@@ -1124,7 +1129,7 @@ function hotItemExists(d) {
   if (d.kind === "pick") return !!G.picks.owned[d.key];
   if (d.kind === "res") return (G.res[d.key] || 0) > 0;
   if (d.kind === "seed") return (G.seeds[d.key] || 0) > 0;
-  if (d.kind === "cana") return (typeof canaUsos === "function") && canaUsos(d.key) > 0;
+  if (d.kind === "cana") return !!((G.canas || {})[d.key]);
   if (d.kind === "fish") return ((G.fish && G.fish[d.key]) || 0) > 0;
   if (d.kind === "dish") return ((G.dishes && G.dishes[d.key]) || 0) > 0;
   if (d.kind === "plano") return !!(G.planos && G.planos[d.key]);   // 13/8: planos en la barra
@@ -1246,9 +1251,9 @@ function trashInfo(d) {
   if (d.kind === "arm")  return { n: 1, lbl: (ARM_DEF[d.key] || {}).label || "arma" };
   if (d.kind === "res")  return { n: Math.min(99, Math.floor(G.res[d.key] || 0)), lbl: RES_LABEL[d.key] || d.key };
   if (d.kind === "seed") return { n: Math.min(99, Math.floor(G.seeds[d.key] || 0)), lbl: "semillas de " + (CROP_DEF[d.key] ? CROP_DEF[d.key].label : d.key) };
-  if (d.kind === "cana") return { n: (typeof canaUsos === "function") ? canaUsos(d.key) : 0, lbl: (typeof CANA_DEF !== "undefined" && CANA_DEF[d.key]) ? CANA_DEF[d.key].label : "la caña" };
+  if (d.kind === "cana") return { n: ((G.canas || {})[d.key] ? 1 : 0), lbl: (typeof CANA_V4_DEF !== "undefined" && CANA_V4_DEF[d.key]) ? CANA_V4_DEF[d.key].label : "la caña" };
   if (d.kind === "fish") return { n: Math.min(99, Math.floor((G.fish && G.fish[d.key]) || 0)),
-    lbl: (typeof ESPECIE_DEF !== "undefined" && ESPECIE_DEF[d.key]) ? ESPECIE_DEF[d.key].label : (FISH_DEF[d.key] ? FISH_DEF[d.key].label : "peces") };
+    lbl: (typeof PEZ_DEF !== "undefined" && PEZ_DEF[d.key]) ? PEZ_DEF[d.key].label : (FISH_DEF[d.key] ? FISH_DEF[d.key].label : "peces") };
   if (d.kind === "dish") return { n: Math.min(99, Math.floor((G.dishes && G.dishes[d.key]) || 0)), lbl: (RECIPE_DEF[d.key] ? RECIPE_DEF[d.key].label : "platos") };
   // herramientas y picos SÍ se tiran (pedido del diseñador 31/7); apilables: se tira la pila
   if (d.kind === "tool") {
@@ -1460,55 +1465,45 @@ function refreshForge() {
       + '<button class="green sm" ' + (ok ? "" : "disabled") + ' data-ctool5="' + id + '" title="Craftear 5 de una (doc 2/8: crafteo en lote)">×5</button>';
     craft += '<div class="forge-row"><div class="fic"><img src="' + GF.spr(td.sprite) + '"></div><div class="finfo"><div class="fnm">' + td.label + '</div><div class="fds">1 uso c/u · tenés ' + n + '</div><div class="fds">Costo: ' + cs + '</div></div><div class="fbtns">' + btn + '</div></div>';
   });
-  /* 25/8 (Pesca v3, tanda 2) — LAS CAÑAS, con la misma forma que los picos: cada una dice hasta
-     qué talla aguanta y cuántos usos le quedan. La que todavía no sabés hacer sale a media tinta
-     con el nivel que pide, igual que los minerales: de un golpe se ve qué falta y de qué lado. */
-  if (typeof CANA_ORDER !== "undefined") {
+  /* LAS CAÑAS DE LA v4 SE ARMAN AQUÍ, y esto arregla el fallo más caro que encontré en toda la
+     limpieza: la Herrería vendía las cañas de la v3, que escriben en el MISMO G.canas que las de
+     la v4. Los ids coincidían en tres —junco, hierro y abuelo—, así que craftear la « caña de
+     hierro » vieja por 1 barra de hierro + 4 tablón te daba la Caña de Hierro de la v4, cuyo
+     precio del documento es 6 tablón + 4 barra de hierro + 3 cuero + 105 de plata. Un 85 % de
+     descuento, en producción, y sin que nada lo delatara: las dos tablas eran correctas por
+     separado y ninguna sabía de la otra.
+     Cada fila dice lo que MEJORA y lo que PEAJEA, no cuántos usos trae: las de la v4 no se
+     gastan, y « 25 usos » no ayudaba a elegir nada. */
+  if (typeof CANA_V4_ORDER !== "undefined") {
     craft += '<div class="shophead">Cañas de pescar</div>';
     const nvP = (typeof nivelOficio === "function") ? nivelOficio("fishing") : 1;
-    CANA_ORDER.forEach(id => {
-      const d = CANA_DEF[id], n = Math.floor((G.canas || {})[id] || 0), abierta = nvP >= (d.lvl || 1);
-      const cs = Object.keys(d.cost).map(k => resIc(k) + " " + d.cost[k]).join(" · ")
-        + (d.plata ? (Object.keys(d.cost).length ? " · " : "") + coinIc("plata") + " " + d.plata : "");
-      const puede = abierta && !d.lonja && canAfford(d.cost) && G.plata >= (d.plata || 0);
-      const btn = d.lonja
-        ? '<button class="ghost sm" disabled title="Se gana en la Lonja">Lonja</button>'
-        : (abierta
-          ? '<button class="green sm" ' + (puede ? "" : "disabled") + ' data-ccana="' + id + '">Craftear</button>'
-          : '<button class="ghost sm" disabled>Pesca ' + d.lvl + '</button>');
+    const base = CANA_V4_DEF.junco.banda;
+    CANA_V4_ORDER.forEach(id => {
+      const d = CANA_V4_DEF[id], tengo = !!(G.canas || {})[id], abierta = nvP >= (d.lvl || 1);
+      const falta = (typeof canaV4Falta === "function") ? canaV4Falta(id) : null;
+      const sube = Math.round((d.banda.epico + d.banda.legendario) / (base.epico + base.legendario) * 10) / 10;
+      const btn = tengo
+        ? '<button class="ghost sm" disabled>ya la tenés</button>'
+        : (d.presupuesto == null
+          ? '<button class="ghost sm" disabled title="Se gana en la Lonja">Lonja</button>'
+          : (abierta
+            ? '<button class="green sm" ' + (falta ? "disabled" : "") + ' data-ccana="' + id + '">Armar</button>'
+            : '<button class="ghost sm" disabled>Pesca ' + d.lvl + '</button>'));
       craft += '<div class="forge-row' + (abierta ? "" : " locked") + '"><div class="fic">' +
         '<img src="' + GF.spr("res_lombriz") + '" style="opacity:0" alt=""><span style="position:absolute;font-size:20px">🎣</span></div>' +
-        '<div class="finfo"><div class="fnm">' + d.label + ' <span style="color:#ffd75e">' + "★".repeat(d.aguanta) + '</span></div>' +
-        '<div class="fds">aguanta hasta ' + d.aguanta + '★ · ' + d.usos + ' usos · tenés ' + n + '</div>' +
-        '<div class="fds">' + (d.lonja ? "Se gana en la Lonja" : "Costo: " + (cs || "—")) + '</div>' +
+        '<div class="finfo"><div class="fnm">' + d.label + ' <span style="color:#ffd75e">rareza ×' + sube + '</span></div>' +
+        '<div class="fds">' + (d.mant ? "peaje de " + d.mant + " por lance" : "sin peaje — la única") + '</div>' +
+        '<div class="fds">' + (d.presupuesto == null ? "Se gana en la Lonja"
+          : "Costo: " + ((typeof canaV4Costo === "function") ? canaV4Costo(id) : "—")) + '</div>' +
+        /* la regla 9: si el botón está apagado, la fila dice por qué */
+        (falta && !tengo && abierta && d.presupuesto != null ? '<div class="fds" style="color:#e0a06a">' + falta + '</div>' : "") +
         '</div><div class="fbtns">' + btn + '</div></div>';
     });
   }
-  /* 25/8 (Pesca v3, tanda 3) — LAS TRAMPAS, en la misma repisa que las cañas. Ninguna cuesta
-     plata: se pagan con reloj de nodo, igual que el hacha y el pico. Y cada fila dice las tres
-     cosas que hacen falta para decidir sin abrir nada: cuánto tarda, cuánto dura la ventana y
-     qué entrega — porque una trampa cuya ventana no se conoce de antemano es una trampa que se
-     vence sola la primera vez y no se usa nunca más. */
-  if (typeof TRAMPA_ORDER !== "undefined") {
-    const nvT = (typeof nivelOficio === "function") ? nivelOficio("fishing") : 1;
-    craft += '<div class="shophead">Trampas de la laguna <span class="sub">· ' + amarresCupo() + " de " + AMARRE_LVL.length + ' amarres</span></div>';
-    TRAMPA_ORDER.forEach(id => {
-      const d = TRAMPA_DEF[id], n = trampaUsos(id), abierta = nvT >= d.lvl;
-      const cs = Object.keys(d.cost).map(k => resIc(k) + " " + d.cost[k]).join(" · ");
-      const puede = abierta && canAfford(d.cost);
-      const btn = abierta
-        ? '<button class="green sm" ' + (puede ? "" : "disabled") + ' data-ctrampa="' + id + '">Armar</button>'
-        : '<button class="ghost sm" disabled>Pesca ' + d.lvl + "</button>";
-      const da = d.da === "cebo" ? ("da " + d.cebo[0] + "-" + d.cebo[1] + " de Cebo vivo")
-                                 : ("engancha una cita " + (PESCA_FAMILIA[d.fam] || {}).label + " de " + d.est[0] + "-" + d.est[1] + "★");
-      craft += '<div class="forge-row' + (abierta ? "" : " locked") + '"><div class="fic">' +
-        '<img src="' + GF.spr("res_lombriz") + '" style="opacity:0" alt=""><span style="position:absolute;font-size:20px">' + d.emoji + '</span></div>' +
-        '<div class="finfo"><div class="fnm">' + d.label + '</div>' +
-        '<div class="fds">cala ' + d.cala + " h · ventana " + d.ventana + " h · " + da + '</div>' +
-        '<div class="fds">Costo: ' + (cs || "—") + " · " + d.usos + " usos · tenés " + n + '</div>' +
-        '</div><div class="fbtns">' + btn + "</div></div>";
-    });
-  }
+  /* (la repisa de TRAMPAS de la v3 estaba aquí. Las nasas de la v4 no se craftean en la
+     Herrería: se calan desde el panel de la laguna, con la carnada a la vista, porque la
+     decisión que ordenan —« ¿mis lombrices van a lances o a nasas? »— solo existe si las dos
+     opciones se ven a la vez.) */
   // solo las ARMAS se reparan → Reparar
   ARM_ORDER.forEach(id => {   // doc 2/8: las armas nuevas se reparan acá
     if (!G.weapons || !G.weapons[id]) return;
@@ -1589,8 +1584,7 @@ function refreshForge() {
   card.querySelectorAll("[data-repair]").forEach(b => b.onclick = () => repairPick(b.dataset.repair));
   card.querySelectorAll("[data-rtool]").forEach(b => b.onclick = () => repairTool(b.dataset.rtool));
   card.querySelectorAll("[data-ctool]").forEach(b => b.onclick = () => craftTool(b.dataset.ctool));
-  card.querySelectorAll("[data-ccana]").forEach(b => b.onclick = () => craftCana(b.dataset.ccana));   // 25/8: las cañas
-  card.querySelectorAll("[data-ctrampa]").forEach(b => b.onclick = () => trampaCraftear(b.dataset.ctrampa));   // 25/8: las trampas
+  card.querySelectorAll("[data-ccana]").forEach(b => b.onclick = () => { if (canaV4Comprar(b.dataset.ccana)) refreshForge(); });
   card.querySelectorAll("[data-ctool5]").forEach(b => b.onclick = () => craftTool(b.dataset.ctool5, 5));
   card.querySelectorAll("[data-carm]").forEach(b => b.onclick = () => craftWeapon(b.dataset.carm));
   card.querySelectorAll("[data-rarm]").forEach(b => b.onclick = () => repairWeapon(b.dataset.rarm));

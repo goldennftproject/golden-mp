@@ -290,10 +290,9 @@ function hydrate(d) {
      uno: un oficio cuyo primer escalón esté cerrado es un oficio que el jugador nunca empieza.
      Quien llega sin ninguna caña recibe la de junco, que es la que el documento pone en el
      nivel 1. No es un regalo: es que sin ella la laguna no existiría para él. */
-  if (!G.canas || !Object.keys(G.canas).length) {
-    const vieja = (typeof toolCount === "function") ? toolCount("rod") : 0;
-    G.canas = { junco: Math.max(CANA_DEF.junco.usos, Math.floor(vieja) || 0) };
-  }
+  /* la de junco es « la tenés o no la tenés » — las cañas de la v4 no llevan usos, así que el
+     valor es 1 y no un contador. Antes leía CANA_DEF.junco.usos, que ya no existe. */
+  if (!G.canas || !Object.keys(G.canas).length) G.canas = { junco: 1 };
   /* 25/8 (tanda 3) — LAS TRAMPAS Y SUS AMARRES. El amarre guarda SOLO lo que no se puede
      derivar: qué trampa es, cuándo estará lista, qué cebo se comió y qué enganchó. El ESTADO
      (guardada · calando · cabeceando · soltada) no se guarda nunca: sale del reloj. Por eso el
@@ -478,9 +477,7 @@ function hydrate(d) {
      minutos. » Una boya que cabecea sin decirlo es cebo perdido en silencio — y una trampa que
      se vacía en silencio entrena al jugador a no confiar en el sistema. */
   try {
-    if (typeof amarresParte === "function") amarresParte().forEach(p => {
-      log((p.tipo === "cabecea" ? "🎣 " : "💧 ") + p.txt, p.tipo === "cabecea" ? "gold" : "bad");
-    });
+    /* (los amarres de la v3 se reportaban acá. Los levantó la mudanza.) */
   } catch (e) { console.warn("parte de trampas:", e); }
 
   /* 26/8 — EL FLUJO ARRANCA DE CERO DESPUÉS DE CARGAR.

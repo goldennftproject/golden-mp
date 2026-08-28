@@ -69,35 +69,53 @@ console.log("\nDE DÍA ES DE DÍA, Y DE NOCHE ES DE NOCHE");
 
 console.log("\nEL CALAMAR NO PICA A LAS TRES DE LA TARDE   (el fallo, en el idioma del jugador)");
 {
-  const ESP = g("ESPECIE_DEF");
-  ok("el calamar está marcado como nocturno", ESP.calamar.noche === true);
-  ok("y la anguila también", ESP.anguila.noche === true);
-  /* un pescador con todo: si la puerta se abre, es por la hora y por nada más */
+  /* las especies de la v4: el pez gato « solo pica de noche (00:00-06:00) » y el pez dragón
+     « solo aparece de noche », según las tablas 3 y 5 del documento. El calamar y la anguila
+     eran de la v3 y se fueron con ella. */
+  const ESP = g("PEZ_DEF");
+  ok("el pez gato está marcado como nocturno", ESP.pez_gato.noche === true);
+  ok("y el pez dragón también", ESP.pez_dragon.noche === true);
+  /* LA PUERTA DE LA NOCHE, EN LA v4. Ya no hay señales ni pescaPuedeSenal(): quien decide qué
+     especie sale es lanceArmar(), que filtra las nocturnas por esDeNocheAhora(). Se comprueba
+     sorteando muchos lances de día y de noche y mirando si el pez gato aparece — que es la
+     pregunta del jugador, y no el nombre de la función que la contesta. */
   let acc = 0; for (let k = 2; k <= 20; k++) acc += ctx.skillNeed(k, "fishing");
-  G.skills = { fishing: acc };
-  G.canas = { junco: 30, roble: 30, hierro: 25, abuelo: 20 };
-  G.res = Object.assign({}, G.res, { lombriz: 20, grillo: 20 });
-  G.pescaTiene = { senuelo: true };
-  const senal = { esp: "calamar", fam: "fondo", estrella: 3, i: 0 };
+  G.skills = { fishing: acc, farming: acc };
+  G.canas = { junco: 1, bambu: 1, hierro: 1, oro: 1 };
+  G.res = Object.assign({}, G.res, { lombriz: 200 });
+  G.pescaV4 = null; ctx.pescaEstado();
 
-  aLas(15);
-  const dia = ctx.pescaPuedeSenal(senal);
-  ok("de día, la puerta se CIERRA", dia.ok === false, dia.toast || "");
-  ok("y el aviso dice por qué, no un « no podés » mudo", /noche/i.test(dia.toast || ""), dia.toast || "");
-
-  aLas(23);
-  const noche = ctx.pescaPuedeSenal(senal);
-  ok("de noche, se abre", noche.ok === true, noche.toast || "");
+  const sale = (deNoche) => {
+    for (let i = 0; i < 4000; i++) {
+      const L = ctx.lanceArmar("oro", null, { banda: "raro", noche: deNoche, sinPiedad: true });
+      if (L.id === "pez_gato") return true;
+    }
+    return false;
+  };
+  ok("de día el pez gato NO sale nunca, aunque su banda salga", !sale(false),
+    "cuatro mil lances de banda rara, ni uno");
+  ok("y de noche sí", sale(true));
+  /* y que el jugador lo SEPA: el catálogo lo dice, no hay que descubrirlo perdiendo lances */
+  ok("y el aviso está en el propio catálogo, no escondido en el sorteo",
+    /noche/i.test(ctx.trucoTxt("pez_gato") || "") || ESP.pez_gato.noche === true,
+    "PEZ_DEF.pez_gato.noche = true");
 }
 
-console.log("\nLA NIEBLA SIGUE SIENDO LA EXCEPCIÓN, COMO PROMETE EL DOCUMENTO");
+console.log("\nLA NOCHE DE LA LAGUNA VA EN UTC, COMO TODO LO DEMÁS");
 {
-  /* el capítulo 10: « el único día en que se puede pescar calamar sin quedarse despierto ».
-     Se comprueba llamando a la regla del clima directamente — sin depender de qué día es hoy. */
-  const CL = g("CLIMA_DEF");
-  ok("la niebla abre el Fondo de día", CL.niebla.deDia === "fondo");
-  ok("y ningún otro clima lo hace",
-    g("CLIMA_ORDER").filter(k => CL[k].deDia).length === 1);
+  /* aquí se probaba la NIEBLA, que abría el Fondo de día — un clima de la v3, que se fue con
+     ella. La v4 no tiene excepciones a la noche: la franja es 00:00–06:00 UTC y lo único que la
+     mueve es el Farol de la Laguna, que se compra con Escamas.
+     Y va en UTC a propósito: el reset diario, las mareas de la Lonja y el torneo también. Dos
+     relojes en el mismo juego obligan al jugador a saber en qué huso vive cada cosa. */
+  const h = [[1, true], [5, true], [6, false], [15, false], [23, false]];
+  G.built = {};
+  const malas = h.filter(([hh, esp]) => ctx.esDeNocheAhora(Date.UTC(2026, 7, 27, hh)) !== esp);
+  ok("de 00 a 06 UTC es de noche, y el resto no", !malas.length, malas.map(x => x[0] + "h").join(" · "));
+  G.built = { farol_laguna: true };
+  ok("y el Farol la alarga una hora — la única excepción que queda",
+    ctx.esDeNocheAhora(Date.UTC(2026, 7, 27, 6, 30)) === true);
+  G.built = {};
 }
 
 console.log("\nUNA SOLA FUENTE: EL CIELO Y LA LAGUNA NO PUEDEN DISCREPAR");
@@ -122,5 +140,5 @@ console.log("\nUNA SOLA FUENTE: EL CIELO Y LA LAGUNA NO PUEDEN DISCREPAR");
 console.log("");
 console.log(fallos
   ? "  " + fallos + " fallo(s) — la noche sigue sin cerrar la puerta"
-  : "  Todo en orden: hay una sola noche, y el calamar la respeta.");
+  : "  Todo en orden: hay una sola noche, en UTC, y el pez gato la respeta.");
 process.exit(fallos ? 1 : 0);

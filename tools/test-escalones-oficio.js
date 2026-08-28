@@ -62,8 +62,14 @@ console.log("\nLA TALA Y LA PESCA NO SON PUERTAS");
     typeof ctx.maderaUnlocked !== "function");
   ok("ni ninguna que cierre peces por nivel de pesca",
     typeof ctx.pezUnlocked !== "function" && typeof ctx.pezNivelReq !== "function");
-  ok("y el sorteo de la laguna no mira ninguna skill",
-    !/pezUnlocked|nivelOficio\("fishing"\)/.test(require("fs").readFileSync("public/game/state.js", "utf8").split("function goFishing")[1].slice(0, 2000)));
+  /* la misma afirmación, contra el sorteo de la v4. goFishing() era el lance de la v3 y se fue
+     con ella; quien decide la rareza ahora es bandaSortear(), y la regla del documento es la
+     misma y más explícita: « el nivel de Pesca NO toca esta tabla — quien mueve la rareza es lo
+     que PAGÁS, no lo que subiste ». */
+  ok("y el sorteo de la banda no mira el nivel de Pesca",
+    !/nivelOficio\("fishing"\)/.test(
+      require("fs").readFileSync("public/game/state.js", "utf8")
+        .split("function bandaSortear")[1].slice(0, 1800)));
 }
 
 console.log("\nLOS OFICIOS QUE ABREN ALGO SIGUEN SIENDO ALCANZABLES");

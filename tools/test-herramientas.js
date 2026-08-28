@@ -32,7 +32,11 @@ const ok = (n, c, d) => { if (!c) fallos++; console.log((c ? "  ok   " : "  FALL
 /* La ficha de cada herramienta: qué acción la exige y con qué palabra la nombra el juego. */
 const HERR = [
   { id: "axe",  nom: "Hacha",  usa: /toolDur\("axe"\) <= 0/,        abre: "talar",   kit: "axe",  paso: /tal[áa]|madera/i },
-  { id: "rod",  nom: "Caña",   usa: /toolDur\("rod"\) <= 0/,        abre: "pescar",  kit: "rod",  paso: /ca[ñn]a|pesc/i },
+  /* LA CAÑA YA NO ES UNA HERRAMIENTA CON DURABILIDAD, y por eso sale de esta lista.
+     Las de la Pesca v4 no se gastan —el documento le dedica un párrafo: « una durabilidad es un
+     número inventado »— y lo que cierra la puerta de la laguna es la CARNADA, no la caña. Un
+     test que siguiera pidiendo « sin caña no se pesca » estaría defendiendo una regla que el
+     diseño quitó a propósito, y esa es la forma más silenciosa de frenar un cambio. */
   { id: "pico", nom: "Pico",   usa: /equippedPick\(\)/,             abre: "picar",   kit: "pico", paso: /pic[áa]|piedra/i },
 ];
 
@@ -102,8 +106,8 @@ console.log("\n4. EL CALLEJÓN SIN SALIDA: SE ROMPIÓ TODO Y NO QUEDA NADA");
   /* Eslabón 4: la caña SÍ cuesta madera, y está bien: para entonces ya tenés hacha. Lo que hay
      que comprobar es el orden — que la caña nunca sea el único camino hacia la madera. */
   const tr = X.TOOL_CRAFT.rod;
-  ok("la Caña cuesta madera, pero la madera no depende de la caña", (tr.cost.madera || 0) > 0,
-    "hacha → madera → caña, en ese orden");
+  /* (aquí se comprobaba que la Caña costara madera. Las cañas de la v4 se arman en la Herrería
+     con la mezcla de la tabla 9 del documento, y eso lo mide test-pesca-v4-bolsillo.js.) */
 
   /* Eslabón 5: LA PLATA, que es donde estaba el agujero de verdad y no tiene nada que ver con las
      herramientas. Por diseño solo se venden CULTIVOS —ni madera, ni minerales, ni lombrices— y las
@@ -136,7 +140,8 @@ console.log("\n5. Y CUANDO SE ROMPE, EL JUEGO LO DICE Y DICE DÓNDE ARREGLARLO")
   /* Romperse en silencio es peor que romperse: el jugador hace clic, no pasa nada, y no sabe si
      el juego se colgó. Cada rotura tiene que avisar Y nombrar el sitio. */
   ok("el hacha rota avisa y manda a la Herrería", /hacha se rompió[\s\S]{0,60}Herrería/i.test(FARM));
-  ok("la caña rota, también", /caña se rompió[\s\S]{0,60}Herrería/i.test(SRC));
+  /* (la caña ya no se rompe: las de la v4 no llevan usos. Lo que puede faltar es la CARNADA, y
+     eso lo dice la puerta de más abajo con su propio texto.) */
   /* Y el pico no se repara: se destruye. Que el aviso lo diga, porque es distinto de las otras. */
   ok("el pico se destruye y hay una función para eso", /function destroyPick/.test(SRC));
   /* Los avisos de "no tenés X" distinguen al que nunca abrió el kit del que se quedó sin: son dos
@@ -145,7 +150,7 @@ console.log("\n5. Y CUANDO SE ROMPE, EL JUEGO LO DICE Y DICE DÓNDE ARREGLARLO")
      es UNA función, sinKitTxt(), y lo que se cuenta es cuántas razones la usan. Contar copias era
      medir el síntoma; esto mide la regla. */
   const usos = (SRC.match(/sinKitTxt\(/g) || []).length - 1;   // -1: la definición
-  ok("el aviso del kit es una sola función, usada " + usos + " veces", /function sinKitTxt/.test(SRC) && usos >= 3,
+  ok("el aviso del kit es una sola función, usada " + usos + " veces", /function sinKitTxt/.test(SRC) && usos >= 2,
     "hacha, pico y caña dicen lo mismo");
   ok("y distingue « nunca lo abriste » de « se te acabó »", /kitReclamado \?/.test(SRC),
     "son dos problemas con soluciones opuestas: el baúl o la Herrería");
@@ -174,13 +179,20 @@ console.log("\n6. LA PUERTA ÚNICA: puedeAccion() CONTESTA POR TODAS LAS ENTRADA
 
   /* Y ahora cada motivo, uno por uno, con el texto que ve el jugador. */
   const no = (t, o) => ctx.puedeAccion(t, o);
-  base(); G.pescaHasta = ctx.nowMs() + 60000;
+  /* LA PUERTA DE LA LAGUNA, EN SU FORMA DE LA v4.
+     Aquí se comprobaban dos candados que el documento quitó a propósito: el enfriamiento de la
+     laguna (« el reloj de 15 minutos: eliminado, es incompatible con adictivo ») y la
+     durabilidad de la caña. Queda UNO, que es el que el capítulo 2 pone en el centro del
+     sistema: la carnada. « Un reloj entre lances castiga al que quiere jugar; un cupo de
+     carnada castiga al que quiere farmear, que es a quien hay que castigar. » */
+  base(); G.res.lombriz = 0; G.res.larva_luz = 0; G.fish = {};
   let r = no("fish", { type: "fish" });
-  ok("laguna en reposo: no deja empezar", !r.ok && /reposo/i.test(r.toast || ""), r.toast);
+  ok("sin carnada: no deja empezar", !r.ok && /carnada|lombri/i.test(r.toast || ""), r.toast);
+  ok("y el aviso dice DÓNDE conseguirla", /montículo|Lombricario/i.test(r.toast || ""), r.toast);
 
-  base(); G.tools.rod = 0;
+  base(); G.res.lombriz = 5;
   r = no("fish", { type: "fish" });
-  ok("sin caña: no deja empezar", !r.ok && /caña/i.test(r.toast || ""), r.toast);
+  ok("con carnada, la puerta se abre", r.ok === true, r.toast || "");
 
   base(); G.res.lombriz = 0;
   r = no("fish", { type: "fish" });
@@ -234,14 +246,11 @@ console.log("\n7. LA LAGUNA, QUE ES LA QUE DIO PROBLEMA DOS VECES");
     if (!/puedeAccion\("fish"/.test(antes)) sinGuardia.push("puerta " + n);
   }
   ok("las " + n + " preguntan a puedeAccion ANTES", !sinGuardia.length, sinGuardia.join(", ") || "ninguna deja empezar en vano");
-  /* Y el rótulo del cursor lo dice sin que haga falta probar. */
-  ok("y el rótulo del cursor ya lo anuncia", /La laguna descansa/.test(FARM),
-    "se ve antes de hacer clic");
-  /* La red del final dice lo mismo que la puerta: un aviso que cambia de texto según por dónde
-     entraste es un aviso que no se entiende. */
-  ok("el aviso tardío dice lo mismo que el temprano",
-    (SRC.match(/La laguna está en reposo/g) || []).length === 1 && !/La laguna necesita descansar/.test(SRC),
-    "ya no hay dos textos: hay uno, escrito una vez");
+  /* el rótulo del reposo se fue con el enfriamiento. Lo que queda por comprobar es lo de
+     siempre: que no haya DOS textos para la misma negativa. */
+  ok("el aviso de « sin carnada » está escrito UNA vez",
+    (SRC.match(/Necesitás carnada/g) || []).length <= 1,
+    "un aviso que cambia según por dónde entraste es un aviso que no se entiende");
 }
 
 console.log(fallos ? "\n  ✗ " + fallos + " fallas\n" : "\n  ✓ cada herramienta tiene uso, se enseña, y ninguna deja al jugador encerrado\n");

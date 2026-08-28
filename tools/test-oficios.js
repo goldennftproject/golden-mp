@@ -26,7 +26,16 @@ ok("talar paga a Tala", /addXp\("tala", xpDeNodo\("tree"\)\)/.test(SRC));
 ok("…y ya no paga a Artesanía", !/addXp\("crafting", (nodoXpMin|xpDeNodo)/.test(SRC));
 
 // 3) PESCAR YA NO PAGA A COCINA
-ok("pescar paga solo a Pesca", /addXp\("fishing", XP_PEZ\);/.test(SRC) && !/addXp\("fishing", XP_PEZ\); addXp\("cooking"/.test(SRC));
+/* la XP de pesca la paga ahora el panel de la v4 con pezXp(), que sube con la banda Y con el
+   peso — un gigante paga el doble. XP_PEZ era la constante plana de la v2. */
+/* y la parte negativa se mide DENTRO de donde se cobra una captura, no en todo el archivo:
+   « addXp("cooking", r.xp) » existe en la Cocina, con su propia r que es una receta. Buscarlo
+   en los cinco archivos juntos hace que el test hable de otra cosa y dé rojo por un homónimo. */
+const RESOLVER = (SRC.split("function pescaV4Resolver")[1] || "").slice(0, 1500);
+const CERRAR   = (SRC.split("function lanceCerrar")[1] || "").slice(0, 1500);
+ok("pescar paga a Pesca y a nadie más",
+  /addXp\("fishing", *(r\.xp|pezXp\()/.test(SRC) &&
+  !/addXp\("(cooking|farming|mining|ganaderia)"/.test(RESOLVER + CERRAR));
 
 // 4) LOS ANIMALES SON GANADERÍA
 ok("recoger de los animales paga a Ganadería", /addXp\("ganaderia", XP_ANIMAL \* listos\.length\)/.test(SRC));
