@@ -2049,8 +2049,16 @@ const PICK_DEF = {
   // costaba 18 plata efectivas contra 6 de la madera (el triple) y una parcela financiaba
   // 2,2 rocas en vez de 6,7. La cadena madera→pico sigue viva en los picos de tier alto.
   stone:    { tier:0, label:"Pico de Piedra",    mineTier:0, dur:1, cost:{},                    plata:2,   sprite:"pick_stone" },   // 18/8: baja a 2 con la roca de 40 min (13% de lo que saca)
-  /* 17-18/8 — LA ESCALERA DE PICOS, PENDIENTE DE ARREGLO.
-     El problema medido (tools/auditar-precio-sombra.js) es REAL y sigue abierto: con un uso por
+  /* 17-18/8 — LA ESCALERA DE PICOS: EL PROBLEMA (resuelto el 18/8 por el bloque de abajo).
+     Este comentario decía « PENDIENTE DE ARREGLO » con su propio arreglo escrito quince líneas
+     más abajo. Lo encontré el 27/8 buscando trabajo pendiente, y estuve a punto de « arreglar »
+     algo que ya estaba resuelto — que es exactamente el daño que hace un comentario caducado:
+     no confunde al que no sabe, confunde al que viene a ayudar.
+     Se queda porque explica POR QUÉ el rendimiento es 2, que es una pregunta que ya volvió una
+     vez (informe del diseñador, 27/8: « los nodos de bronce deben dar 1 »). Pero se queda
+     marcado como historia, no como tarea.
+
+     El problema medido (tools/auditar-precio-sombra.js) era REAL: con un uso por
      pico, y como cada pico se craftea con el mineral de abajo, el coste se compone hacia arriba
      hasta que picar DA PÉRDIDA — bronce −90, oro −288, diamante −573 por picada. Toda la escalera
      de minería está por debajo del ancla y no se ve, porque los materiales no se venden.
@@ -2063,6 +2071,7 @@ const PICK_DEF = {
      renuncia a que el pico pida el mineral de abajo, o hacen falta CANTIDADES DECIMALES
      (0,9 bronce · 1,34 oro · 0,77 diamante), que es la vía que pidió dirección.
      Hasta que eso esté, las recetas quedan COMO ESTABAN. */
+  /* ⬆ HASTA AQUÍ EL PROBLEMA. ⬇ ABAJO, LA SOLUCIÓN QUE SÍ ENTRÓ. */
   /* 18/8 — LA MINERÍA VUELVE AL ANCLA, SIN TOCAR NINGUNA MECÁNICA.
      El problema medido: picar CUALQUIER mineral daba pérdida — bronce −90, oro −288, diamante
      −573 por picada — porque el pico se craftea con el mineral de abajo y el coste se compone
@@ -2072,9 +2081,29 @@ const PICK_DEF = {
      herramientas tienen un uso, esa es una norma") y cantidades decimales (más profundo que el
      problema que arregla). La que cierra sin tocar nada:
         LA PICADA RINDE 2, y el pico cuesta lo que el ancla permite para esa picada.
+
+     Y POR ESO EL RENDIMIENTO DE 2 NO SE PUEDE BAJAR (27/8, informe del diseñador: « los nodos de
+     bronce deben dar 1, están dando 2 »). En la vara que de verdad mide un mineral —el precio
+     SOMBRA, lo que vale por lo que desbloquea, no lo que se saca vendiéndolo— una veta de bronce
+     tarda 8 h y vale 160, y el pico de bronce cuesta exactamente 160. Con rendimiento 2 la
+     picada deja 2×160 − 160 = 160 netos, o sea 20 por hora: el ancla clavada. Con rendimiento 1
+     dejaría 160 − 160 = CERO, y picar bronce pasaría a no pagar nada.
      Un uso por pico, cantidades enteras, la escalera intacta (cada pico sigue pidiendo el mineral
-     de abajo) y (2 x precio − costo del pico) / horas = 20 EXACTO en los cinco tiers.
-     Los precios NO se tocan, así que nada de lo que lee priceOf() se mueve. */
+     de abajo) y (2 × precio SOMBRA − costo del pico) / horas = 20 EXACTO en los cinco tiers.
+     Los precios NO se tocan, así que nada de lo que lee priceOf() se mueve.
+
+     Y POR ESO EL RENDIMIENTO DE 2 NO SE PUEDE BAJAR (27/8, informe del diseñador: « los nodos de
+     bronce deben dar 1, están dando 2 »). Ojo con la vara: medido por el PRICE de venta, el
+     bronce parece rendir 3 de plata por hora y bajarlo a 1 parece inocuo. Pero un mineral no se
+     vende: se gasta. La vara que lo mide es el precio SOMBRA —lo que vale por lo que desbloquea—
+     y ahí una veta de bronce tarda 8 h, vale 160, y el pico de bronce cuesta exactamente 160.
+
+         rindiendo 2:  2×160 − 160 = 160 netos  →  20,0 por hora   (el ancla clavada)
+         rindiendo 1:  1×160 − 160 =   0 netos  →   0,0 por hora   (picar no paga NADA)
+
+     El 2 no es generosidad: es el numerador de la única cuenta que cierra con un uso por pico y
+     cantidades enteras, que son las dos normas que dirección puso el 18/8.
+     Lo comprueba tools/auditar-precio-sombra.js, que es de donde salen estos números. */
   bronze:   { tier:1, label:"Pico de Bronce",    mineTier:1, dur:1, cost:{madera:7,piedra:5},   plata:1,  sprite:"pick_bronze" },
   iron:     { tier:2, label:"Pico de Hierro",    mineTier:2, dur:1, cost:{madera:8,piedra:8},   plata:24, sprite:"pick_iron" },
   /* 24/8 (dirección: « agregar que el pico de oro pida plata »). Su presupuesto es 280 —
