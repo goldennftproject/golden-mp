@@ -314,7 +314,7 @@ function pescaV4Tirar(sombra) {
      quedarse sin larvas no puede dejar la laguna inservible. */
   let ceb = ceboPuesto();
   if (!ceboTengo(ceb)) {
-    if (ceb !== "lombriz") { toast("Te quedaste sin " + CEBO_V4_DEF[ceb].label + " — volvés a la lombriz"); ceb = "lombriz"; G.pescaV4.cebo = "lombriz"; }
+    if (ceb !== "lombriz") { toast("Te quedaste sin " + CEBO_V4_DEF[ceb].label + " — volvés a la lombriz"); ceb = "lombriz"; pescaEstado().cebo = "lombriz"; }
     if (!ceboTengo("lombriz")) { toast("Te faltan lombrices — cavá un montículo"); return; }
   }
   P4.sombra = sombra;
@@ -347,7 +347,10 @@ function pescaV4Resolver() {
     let txt = e.emoji + " ¡" + e.label + " de " + r.kg + " kg!";
     if (r.gigante) txt += " — ¡GIGANTE!";
     if (r.record) txt += r.recordAnterior ? " — récord nuevo" : " — primera vez";
-    log("🎣 " + txt + " (+" + r.xp + " XP)", r.gigante || r.record ? "gold" : "good");
+    /* el peaje, dicho. Un descuento automático que el jugador no ve es la regla 9 rota por el
+       lado del dinero: sabe que le falta plata y no sabe por qué. */
+    const pj = r.peaje ? " · peaje de la caña −" + r.peaje.toFixed(2) : "";
+    log("🎣 " + txt + " (+" + r.xp + " XP" + pj + ")", r.gigante || r.record ? "gold" : "good");
     toast(txt);
     if ((r.gigante || r.record) && window.celebrate) celebrate({ title: r.gigante ? "¡PEZ GIGANTE!" : "¡RÉCORD!", sub: e.label + " · " + r.kg + " kg" });
     if (typeof statAdd === "function") { statAdd("pescar"); statAdd("pescar", r.id); }
@@ -453,7 +456,7 @@ function pescaV4Cebos() {
   const firma = puesto + "|" + CEBO_V4_ORDER.map(k => {
     const d = CEBO_V4_DEF[k], b = d.bolsa === "fish" ? (G.fish || {}) : G.res;
     return Math.floor(b[d.k] || 0);
-  }).join(",") + "|" + Math.floor(G.coins || 0);
+  }).join(",") + "|" + Math.floor(G.plata || 0);
   if (caja._firma === firma) return;
   caja._firma = firma;
   let h = "";
@@ -468,14 +471,14 @@ function pescaV4Cebos() {
      mirando es pedirle que se acuerde de por qué había ido. */
   if ((G.res.larva_luz || 0) < 3) {
     h += '<button class="p4-cebo comprar" id="p4-comprar-larva"' +
-      ((G.coins || 0) < CEBO_V4_DEF.larva_luz.plata ? " disabled" : "") +
+      ((G.plata || 0) < CEBO_V4_DEF.larva_luz.plata ? " disabled" : "") +
       '>+1 Larva · ' + CEBO_V4_DEF.larva_luz.plata + ' plata</button>';
   }
   caja.innerHTML = h;
   caja.querySelectorAll("[data-p4cebo]").forEach(b => b.onclick = () => {
     const k = b.dataset.p4cebo;
     if (!ceboTengo(k)) { toast("No te queda " + CEBO_V4_DEF[k].label); return; }
-    G.pescaV4 = G.pescaV4 || {}; G.pescaV4.cebo = k;
+    pescaEstado().cebo = k;   /* por la misma puerta que todo lo demás: crear el objeto a mano acá dejaba una partida sin records */
     caja._firma = null; pescaV4Cebos(); pescaV4Pintar();
   });
   const cb = $("p4-comprar-larva");
@@ -527,7 +530,7 @@ function pescaV4Canas() {
   const caja = $("p4-canas"); if (!caja || typeof CANA_V4_ORDER === "undefined") return;
   const puesta = pescaV4Cana();
   const firma = puesta + "|" + CANA_V4_ORDER.map(k => (G.canas || {})[k] ? 1 : 0).join("") +
-    "|" + Math.floor(G.coins || 0) + "|" + nivelOficio("fishing");
+    "|" + Math.floor(G.plata || 0) + "|" + nivelOficio("fishing");
   if (caja._firma === firma) return;
   caja._firma = firma;
   const base = CANA_V4_DEF.junco.banda;
@@ -538,10 +541,11 @@ function pescaV4Canas() {
     const sube = Math.round((d.banda.epico + d.banda.legendario) / (base.epico + base.legendario) * 10) / 10;
     h += '<div class="p4-cana' + (k === puesta ? " puesta" : "") + (tengo ? " tengo" : "") + '">' +
       '<span class="cn">' + d.label.replace("Caña de ", "").replace("Caña del ", "") + '</span>' +
-      '<span class="cr">rareza ×' + sube + (d.mant ? ' · peaje ' + d.mant : "") + '</span>' +
+      '<span class="cr">rareza ×' + sube + (d.mant ? ' · peaje ' + d.mant : "") +
+        (tengo ? "" : '<br><span class="cc">' + canaV4Costo(k) + '</span>') + '</span>' +
       (tengo ? '<span class="cy">' + (k === puesta ? "en uso" : "tuya") + '</span>'
              : '<button data-p4cana="' + k + '"' + (falta ? " disabled" : "") + '>' +
-               (d.presupuesto == null ? "Lonja" : d.presupuesto + " plata") + '</button>') +
+               (d.presupuesto == null ? "Lonja" : "Armar") + '</button>') +
       (!tengo && falta ? '<span class="cf">' + falta + '</span>' : "") +
       '</div>';
   }

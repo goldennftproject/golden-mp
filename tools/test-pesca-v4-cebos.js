@@ -140,7 +140,7 @@ console.log("\nEL INVARIANTE DE LA LOMBRIZ SIGUE INTACTO   (los cebos no lo toca
 
 console.log("\nPONER, COBRAR Y QUEDARSE SIN");
 {
-  G.res = { lombriz: 5, larva_luz: 2 }; G.fish = { camaron: 1 }; G.coins = 100; G.pescaV4 = {};
+  G.res = { lombriz: 5, larva_luz: 2 }; G.fish = { camaron: 1 }; G.plata = 100; G.pescaV4 = {};
   ok("sin elegir nada, el cebo es la lombriz", ctx.ceboPuesto() === "lombriz");
   ok("tengo las tres cosas", ORDEN.every(ctx.ceboTengo), ORDEN.filter(k => !ctx.ceboTengo(k)).join(","));
   G.pescaV4.cebo = "larva_luz";
@@ -150,11 +150,11 @@ console.log("\nPONER, COBRAR Y QUEDARSE SIN");
   ok("y cobrar el camarón lo saca de la bolsa de PECES", (G.fish.camaron || 0) === 0);
   ok("con la bolsa vacía, el camarón deja de estar disponible", !ctx.ceboTengo("camaron"));
   /* comprar larvas: el único cebo que se compra */
-  const antes = G.coins, larvas = G.res.larva_luz;
+  const antes = G.plata, larvas = G.res.larva_luz;
   ok("una larva cuesta 10 de plata", ctx.larvaComprar(1) === true);
-  ok("se cobra", G.coins === antes - 10, antes + " → " + G.coins);
+  ok("se cobra", G.plata === antes - 10, antes + " → " + G.plata);
   ok("y entra en la bolsa", G.res.larva_luz === larvas + 1);
-  G.coins = 3;
+  G.plata = 3;
   ok("sin plata no se compra, y se dice por qué", ctx.larvaComprar(1) === false);
 }
 

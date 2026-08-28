@@ -5453,11 +5453,31 @@ function pezXp(id, kg) {
    veces su presupuesto, porque suponía fibra 25 y cuero 55 cuando el código dice 300 y 340.
    Acá va el PRESUPUESTO, que es el número que no se toca; la mezcla se decide aparte. */
 var CANA_V4_ORDER = ["junco", "bambu", "hierro", "oro", "abuelo"];
+/* CÓMO SE PAGA UNA CAÑA (tabla 9 del documento, 27/8).
+   El presupuesto es PLATA SOMBRA: la vara con la que se mide la caña, no la etiqueta del precio.
+   Se cobra como todas las herramientas del juego —el grueso en materiales y una cola de plata que
+   ajusta lo que los materiales no llegan a cubrir—, y el motivo lo da el propio documento:
+   « si la caña de oro costara 2.000 de plata a secas, mejorar la pesca sería ahorrar. Pagándola
+   con tablón, oro y cuero, mejorar la pesca obliga a talar, picar y criar. »
+
+   Yo había puesto plata pelada, que es exactamente lo que ese párrafo prohíbe — y encima tenía
+   las mezclas anotadas como « pendiente de decisión de dirección » cuando estaban en la tabla 9.
+   Lo que SÍ queda pendiente es otra cosa distinta: el aviso honesto del capítulo 7 dice que los
+   valores con los que se armaron esas mezclas (madera 10, tablón 35, barra de hierro 130, barra
+   de oro 280, cuero 55, fibra 25) están derivados del ancla y no leídos del juego. Ésos hay que
+   contrastarlos contra los reales, y para eso está el test.
+
+   El Junco copia a la Espada de Madera a propósito: los dos son el primer escalón de su oficio y
+   los dos tienen que caber en el primer día. */
 var CANA_V4_DEF = {
-  junco:  { label: "Caña de Junco",   lvl: 1,  presupuesto: 30,   mant: 0.30, banda: { comun: 62.00, poco_comun: 27.00, raro: 10.10, epico: 0.750, legendario: 0.150 } },
-  bambu:  { label: "Caña de Bambú",   lvl: 4,  presupuesto: 400,  mant: 2.50, banda: { comun: 55.40, poco_comun: 27.00, raro: 16.16, epico: 1.200, legendario: 0.240 } },
-  hierro: { label: "Caña de Hierro",  lvl: 8,  presupuesto: 1000, mant: 5.50, banda: { comun: 46.60, poco_comun: 27.00, raro: 24.24, epico: 1.800, legendario: 0.360 } },
-  oro:    { label: "Caña de Oro",     lvl: 12, presupuesto: 2000, mant: 10.00, banda: { comun: 34.50, poco_comun: 27.00, raro: 35.35, epico: 2.625, legendario: 0.525 } },
+  junco:  { label: "Caña de Junco",   lvl: 1,  presupuesto: 30,   mant: 0.30,
+            cost: { madera: 3 }, colaPlata: 5, banda: { comun: 62.00, poco_comun: 27.00, raro: 10.10, epico: 0.750, legendario: 0.150 } },
+  bambu:  { label: "Caña de Bambú",   lvl: 4,  presupuesto: 400,  mant: 2.50,
+            cost: { madera: 24, fibra: 4 }, colaPlata: 60, banda: { comun: 55.40, poco_comun: 27.00, raro: 16.16, epico: 1.200, legendario: 0.240 } },
+  hierro: { label: "Caña de Hierro",  lvl: 8,  presupuesto: 1000, mant: 5.50,
+            cost: { tablon: 6, barra_hierro: 4, cuero: 3 }, colaPlata: 105, banda: { comun: 46.60, poco_comun: 27.00, raro: 24.24, epico: 1.800, legendario: 0.360 } },
+  oro:    { label: "Caña de Oro",     lvl: 12, presupuesto: 2000, mant: 10.00,
+            cost: { tablon: 10, barra_oro: 4, cuero: 6 }, colaPlata: 200, banda: { comun: 34.50, poco_comun: 27.00, raro: 35.35, epico: 2.625, legendario: 0.525 } },
   /* la única que no cobra peaje, y la única que rompe el ancla a propósito: es el premio de
      final de escalera y cuesta un mes de Lonja bien jugada. +10 % al peso de todo lo que saca. */
   abuelo: { label: "Caña del Abuelo", lvl: 18, presupuesto: null, mant: 0, pesoBonus: 0.10, escamas: 120,
@@ -5494,22 +5514,33 @@ function lanceValorEsperado(cana, opciones) {
    nadie mejore nunca.
    La del Abuelo NO se compra con plata: se gana en la Lonja, y por eso tiene presupuesto null. */
 function canaV4Precio(id) { const d = CANA_V4_DEF[id]; return d && d.presupuesto ? d.presupuesto : null; }
+function canaV4Costo(id) {
+  const d = CANA_V4_DEF[id]; if (!d || !d.cost) return "";
+  return Object.keys(d.cost).map(k => d.cost[k] + " " + (RES_LABEL[k] || k))
+    .concat(d.colaPlata ? [d.colaPlata + " de plata"] : []).join(" + ");
+}
 function canaV4Falta(id) {
   const d = CANA_V4_DEF[id]; if (!d) return "no existe";
   if ((G.canas || {})[id]) return "ya la tenés";
   if (d.presupuesto == null) return "se gana en la Lonja, no se compra";
   if (nivelOficio("fishing") < d.lvl) return "se abre en Pesca " + d.lvl;
-  if ((G.coins || 0) < d.presupuesto) return "te faltan " + (d.presupuesto - Math.floor(G.coins || 0)) + " de plata";
-  return null;
+  /* qué falta, POR NOMBRE Y CANTIDAD. « Te falta material » obliga al jugador a ir a la bolsa a
+     comparar una lista de cuatro cosas contra otra, que es un trabajo que la ventana puede hacer
+     sola y que si no hace, hace mal. */
+  const faltan = Object.keys(d.cost || {})
+    .filter(k => (G.res[k] || 0) < d.cost[k])
+    .map(k => (d.cost[k] - Math.floor(G.res[k] || 0)) + " " + (RES_LABEL[k] || k));
+  if ((G.plata || 0) < (d.colaPlata || 0)) faltan.push(((d.colaPlata || 0) - Math.floor(G.plata || 0)) + " de plata");
+  return faltan.length ? "te falta " + faltan.join(" y ") : null;
 }
 function canaV4Comprar(id) {
   const d = CANA_V4_DEF[id]; if (!d) return false;
   const falta = canaV4Falta(id);
   if (falta) { toast(d.label + ": " + falta); return false; }
-  G.coins -= d.presupuesto;
+  if (d.cost) payCost(d.cost);
+  if (d.colaPlata) G.plata -= d.colaPlata;
   G.canas = G.canas || {}; G.canas[id] = 1;
-  if (typeof flujoAnotar === "function") flujoAnotar("coins", "coins", -d.presupuesto);
-  log("Compraste la " + d.label + " por " + d.presupuesto + " de plata. Es tuya para siempre.", "gold");
+  log("Armaste la " + d.label + " (" + canaV4Costo(id) + "). Es tuya para siempre — lo que cuesta usarla es el peaje de cada lance.", "gold");
   return true;
 }
 function lanceNeto(cana, opciones) {   // lo que queda después del peaje de la caña
@@ -5558,9 +5589,9 @@ function matValor(k) {
 }
 var NASA_ORDER = ["mimbre", "reforzada", "hierro"];
 var NASA_DEF = {
-  mimbre:    { label: "Nasa de mimbre",  mat: "madera", emoji: "🧺", lvl: 1,  cost: { madera: 2 },             exito: 0.60, ciclos: 2.5 },
-  reforzada: { label: "Nasa reforzada",  mat: "piedra", emoji: "🪢", lvl: 6,  cost: { madera: 4, piedra: 1 },  exito: 0.75, ciclos: 4.0 },
-  hierro:    { label: "Nasa de hierro",  mat: "tablon", emoji: "⚙️", lvl: 12, cost: { tablon: 8, madera: 2 },  exito: 0.88, ciclos: 8.3 },
+  mimbre:    { label: "Nasa de mimbre",  mat: "madera", emoji: "🧺", lvl: 1,  cost: { madera: 4, fibra: 1 },   exito: 0.60, ciclos: 2.5 },
+  reforzada: { label: "Nasa reforzada",  mat: "madera", emoji: "🪢", lvl: 6,  cost: { madera: 6, fibra: 2, barra_bronce: 1 }, exito: 0.75, ciclos: 4.0 },
+  hierro:    { label: "Nasa de hierro",  mat: "tablon", emoji: "⚙️", lvl: 12, cost: { tablon: 8, cuero: 2, barra_hierro: 2 }, exito: 0.88, ciclos: 8.3 },
 };
 var NASA_HORAS = 2;                 // lo que tarda un ciclo
 var NASA_CUPO_CADA = 4;             // +1 hueco cada cuatro niveles de Pesca
@@ -5815,8 +5846,21 @@ var PIQUE_VENTANA = 2.5;         // cuánto hay para clavar (la v2 daba 1 segund
 var RACHA_PARA_SUBIR = 5;     // cinco capturas seguidas sin cortar el hilo
 var PIEDAD_LANCES = 80;       // lances sin épico o mejor antes de garantizar uno
 function pescaEstado() {
-  G.pescaV4 = G.pescaV4 || { racha: 0, sinEpico: 0, primeroDelDia: 0, records: {} };
-  return G.pescaV4;
+  /* CAMPO POR CAMPO, no « el objeto entero o ninguno ».
+     Estaba como « G.pescaV4 = G.pescaV4 || {...todo} », y eso se rompe en cuanto CUALQUIER otro
+     sitio crea el objeto a medias. Y hay uno: el selector de cebo hace « G.pescaV4 = G.pescaV4
+     || {} » para guardar la elección. Un jugador que elige la larva ANTES de su primer lance se
+     queda con un objeto sin records, pescaEstado() lo ve lleno y no lo completa, y la primera
+     captura revienta con « Cannot read properties of undefined ».
+     Lo encontró el test del bolsillo al armar una partida desde cero, no una pantalla: es un
+     camino que solo se recorre en la primera sesión de un jugador nuevo. */
+  const e = G.pescaV4 = G.pescaV4 || {};
+  if (typeof e.racha !== "number") e.racha = 0;
+  if (typeof e.sinEpico !== "number") e.sinEpico = 0;
+  if (!e.primeroDelDia) e.primeroDelDia = 0;
+  if (!e.records || typeof e.records !== "object") e.records = {};
+  if (!e.cebo) e.cebo = "lombriz";
+  return e;
 }
 var NOCHE_DESDE = 0, NOCHE_HASTA = 6;
 var FAROL_NOCHE_EXTRA_H = 1;
@@ -5888,7 +5932,7 @@ function bandaTabla(cana, deNoche, cebo) {
   }
   return t;
 }
-function ceboPuesto() { return (G.pescaV4 && G.pescaV4.cebo) || "lombriz"; }
+function ceboPuesto() { return pescaEstado().cebo || "lombriz"; }
 /* ceboV4Bolsa, no ceboBolsa: ese nombre YA EXISTE, en el sistema de cebos que quedó de la v3
    (línea ~6670), y usa otra forma de decir lo mismo (c.donde en vez de d.bolsa). Las
    declaraciones de función se izan, así que la SEGUNDA gana en silencio: mi camarón se cobraba
@@ -5906,15 +5950,13 @@ function ceboCobrar(k) {
   const d = CEBO_V4_DEF[k] || CEBO_V4_DEF.lombriz;
   const b = ceboV4Bolsa(d);
   b[d.k] = (b[d.k] || 0) - d.n;
-  if (typeof flujoAnotar === "function") flujoAnotar(d.bolsa === "fish" ? "fish" : "res", d.k, -d.n);
 }
 /* comprar larvas: el único cebo que se compra, y a un precio que NO deja beneficio (ver arriba) */
 function larvaComprar(n) {
   const cuantas = n || 1, coste = CEBO_V4_DEF.larva_luz.plata * cuantas;
-  if ((G.coins || 0) < coste) { toast("Te faltan " + (coste - Math.floor(G.coins || 0)) + " de plata"); return false; }
-  G.coins -= coste;
+  if ((G.plata || 0) < coste) { toast("Te faltan " + (coste - Math.floor(G.plata || 0)) + " de plata"); return false; }
+  G.plata -= coste;
   G.res.larva_luz = (G.res.larva_luz || 0) + cuantas;
-  if (typeof flujoAnotar === "function") { flujoAnotar("coins", "coins", -coste); flujoAnotar("res", "larva_luz", cuantas); }
   log("Compraste " + cuantas + " larva" + (cuantas > 1 ? "s" : "") + " de luz por " + coste + " de plata.", "good");
   return true;
 }
@@ -6076,13 +6118,38 @@ function lanceCerrar(L) {
   e.sinEpico = (L.banda === "epico" || L.banda === "legendario") ? 0 : e.sinEpico + 1;
   const rec = e.records[L.id] || 0, esRecord = L.kg > rec;
   if (esRecord) e.records[L.id] = L.kg;
+  /* ── EL PEAJE DE LA CAÑA ────────────────────────────────────────────────────────────────
+     « El mantenimiento es plata pura y siempre, y tiene que salir automático al resolver la
+     captura. »  Faltaba, y era el fallo más caro de toda la semana: mant vivía SOLO dentro de
+     lanceNeto() —la cuenta del invariante— y en el texto del panel. El juego nunca lo cobraba.
+
+     Sin peaje, la caña de oro rinde 21,34 de plata por lombriz contra los 10,30 de la de junco:
+     un 107 % de dispersión, cuando el documento promete un 13 % y llama a esa promesa « el
+     seguro contra la sobreproducción ». El invariante que este proyecto lleva toda la semana
+     defendiendo estaba roto por un factor de ocho.
+
+     Y MI TEST ESTABA EN VERDE, porque medía lanceNeto() —que resta el peaje en la fórmula— en
+     vez de contar la plata de una partida. Un test que mide la fórmula en vez del juego no
+     comprueba nada: comprueba que sé restar.
+
+     Se cobra al CAPTURAR y no al fallar: perder el pez ya cuesta la lombriz, y cobrar dos veces
+     por un fallo castiga el aprendizaje, que es lo contrario de lo que quiere este diseño.
+     Lleva decimales —0,30 en la de junco—, así que se acumula y se cobra en unidades enteras:
+     restar 0,30 de una plata que se muestra redondeada perdería el peaje entero. */
+  const peaje = (CANA_V4_DEF[L.cana] || {}).mant || 0;
+  if (peaje > 0) {
+    G.peajeCana = (G.peajeCana || 0) + peaje;
+    const cobra = Math.floor(G.peajeCana);
+    if (cobra > 0) { G.plata = Math.max(0, (G.plata || 0) - cobra); G.peajeCana -= cobra; }
+  }
   /* TODO lo que un título, un récord o el torneo puedan preguntar se anota AQUÍ, en el único
      sitio por el que pasa toda captura de caña. Repartir estos contadores por la interfaz es
      cómo se consigue que un título no se dispare nunca y nadie sepa por qué. */
   pescaAnotar(L.id, L.kg, false);
   torneoAnotar(L.id, L.kg);
   return { id: L.id, kg: L.kg, banda: L.banda, gigante: pezGigante(L.id, L.kg),
-    plata: pezPrecio(L.id, L.kg), xp: pezXp(L.id, L.kg), record: esRecord, recordAnterior: rec };
+    plata: pezPrecio(L.id, L.kg), xp: pezXp(L.id, L.kg), record: esRecord, recordAnterior: rec,
+    peaje: peaje };
 }
 
 
@@ -7347,14 +7414,12 @@ function escamasLonja() { return Math.floor(G.escamasLonja || 0); }
 function escamasDar(n, motivo) {
   if (!(n > 0)) return 0;
   G.escamasLonja = escamasLonja() + n;
-  if (typeof flujoAnotar === "function") flujoAnotar("escamasLonja", "escamasLonja", n);
   log("Ganaste " + n + " Escama" + (n > 1 ? "s" : "") + (motivo ? " · " + motivo : "") + ".", "gold");
   return G.escamasLonja;
 }
 function escamasGastar(n) {
   if (escamasLonja() < n) return false;
   G.escamasLonja = escamasLonja() - n;
-  if (typeof flujoAnotar === "function") flujoAnotar("escamasLonja", "escamasLonja", -n);
   return true;
 }
 
@@ -7590,11 +7655,9 @@ function lonjaEntregarEscalon(escalon) {
   const pz = lonjaPiezas(escalon) || [];
   for (const x of pz) {
     G.fish[x.id] -= x.n;
-    if (typeof flujoAnotar === "function") flujoAnotar("fish", x.id, -x.n);
   }
   const plata = lonjaPaga(escalon, lonjaSueltoDe(escalon));
-  G.coins = (G.coins || 0) + plata;
-  if (typeof flujoAnotar === "function") flujoAnotar("coins", "coins", plata);
+  G.plata = (G.plata || 0) + plata;
   escamasDar(d.escamas, d.label);
   /* la XP: la mitad de lo que valdría pescar esos peces otra vez. Un encargo no puede pagar más
      XP que hacer el trabajo, o el tablón se convierte en la forma rápida de subir Pesca. */

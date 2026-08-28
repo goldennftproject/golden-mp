@@ -35,7 +35,11 @@ function pescador(nv) {
   desfase = 0;
   let acc = 0; for (let k = 2; k <= nv; k++) acc += ctx.skillNeed(k, "fishing");
   G.skills = { fishing: acc, farming: acc }; G.level = 9; G.tuto = { done: true };
-  G.nasas = []; G.fish = {}; G.res = { lombriz: 40, madera: 40, piedra: 20, tablon: 30 };
+  /* la bolsa se llena con lo que las nasas de la tabla 10 piden de verdad: fibra, bronce y
+     cuero entraron cuando las mezclas pasaron a ser las del documento. */
+  G.nasas = []; G.fish = {};
+  G.res = { lombriz: 40, madera: 40, piedra: 20, tablon: 30, fibra: 20,
+            barra_bronce: 10, barra_hierro: 10, cuero: 20 };
 }
 
 console.log("\nEL INVARIANTE DE LA LOMBRIZ, CON LAS NASAS DENTRO");
@@ -109,7 +113,7 @@ console.log("\nCALAR, ESPERAR Y LEVANTAR");
   const lomb = G.res.lombriz, mad = G.res.madera;
   ok("calar una cuesta " + CEBO + " lombrices y su material", ctx.nasaCalar("mimbre") === true);
   ok("se cobraron las lombrices", G.res.lombriz === lomb - CEBO, lomb + " → " + G.res.lombriz);
-  ok("y el material", G.res.madera === mad - DEF.mimbre.cost.madera);
+  ok("y el material", G.res.madera === mad - DEF.mimbre.cost.madera, mad + " → " + G.res.madera);
   ok("no se puede levantar antes de tiempo", ctx.nasaCobrar(0) === null);
   ok("con el hueco ocupado no entra otra", ctx.nasaCalar("mimbre") === false);
 

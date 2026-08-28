@@ -40,7 +40,7 @@ function pescador(nv, exp, canas) {
   G.level = Math.max(nv, 5); G.expansiones = exp || 0;
   G.canas = canas || { junco: 1 };
   G.fish = {}; G.res = { lombriz: 20, tablon: 40, barra_piedra: 20 };
-  G.coins = 500; G.escamasLonja = 0; G.lonja = null; G.nasaPlanos = {}; G.built = {};
+  G.plata = 500; G.escamasLonja = 0; G.lonja = null; G.nasaPlanos = {}; G.built = {};
   G.pescaStats = {}; G.lonjaEntregados = 0; G.torneo = null; G.tituloPesca = null;
 }
 
@@ -127,10 +127,10 @@ console.log("\nENTREGAR");
   ok("hay pedido", !!p, p ? p.n + " " + PEZ[p.id].label : "");
   ok("sin los peces no se entrega, y se dice cuántos faltan", ctx.lonjaEntregar() === false);
   G.fish[p.id] = p.n + 2;
-  const monedas = G.coins, esc = ctx.escamasLonja(), suelto = ctx.lonjaSuelto(p), paga = ctx.lonjaPaga("marea", suelto);
+  const monedas = G.plata, esc = ctx.escamasLonja(), suelto = ctx.lonjaSuelto(p), paga = ctx.lonjaPaga("marea", suelto);
   ok("con los peces, se entrega", ctx.lonjaEntregar() === true);
   ok("se cobran EXACTAMENTE los pedidos, no los que tengas", G.fish[p.id] === 2, G.fish[p.id] + " de sobra");
-  ok("paga la plata que dice el panel", G.coins === monedas + paga, "+" + paga);
+  ok("paga la plata que dice el panel", G.plata === monedas + paga, "+" + paga);
   ok("y una Escama", ctx.escamasLonja() === esc + 1);
   ok("no se puede entregar dos veces la misma marea", ctx.lonjaEntregar() === false);
   ok("y queda contado para el título de Maestro de la Lonja", G.lonjaEntregados === 1);
@@ -339,10 +339,10 @@ console.log("\nLOS CUATRO ESCALONES, NO UNO   (tres eran tarifas sin puerta detr
   /* entregar el Capitán, que es el que tiene dos piezas */
   const cap = ctx.lonjaCapitan();
   G.fish[cap.a.id] = cap.a.n; G.fish[cap.b.id] = cap.b.n + 3;
-  const mon = G.coins, esc = ctx.escamasLonja(), paga = ctx.lonjaPaga("capitan", ctx.lonjaSueltoDe("capitan"));
+  const mon = G.plata, esc = ctx.escamasLonja(), paga = ctx.lonjaPaga("capitan", ctx.lonjaSueltoDe("capitan"));
   ok("con las dos piezas, se entrega", ctx.lonjaEntregarEscalon("capitan") === true);
   ok("se cobran las dos", (G.fish[cap.a.id] || 0) === 0 && (G.fish[cap.b.id] || 0) === 3);
-  ok("paga lo que dice el panel", G.coins === mon + paga, "+" + paga);
+  ok("paga lo que dice el panel", G.plata === mon + paga, "+" + paga);
   ok("y sus 6 Escamas", ctx.escamasLonja() === esc + 6);
   ok("no se entrega dos veces en la misma semana", ctx.lonjaEntregarEscalon("capitan") === false);
 
