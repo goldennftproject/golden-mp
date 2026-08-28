@@ -226,34 +226,67 @@ function flujoTick() {
   cambios.sort((a, b) => b.d - a.d).forEach(c => flujoChip(c.kind, c.key, c.d));
 }
 /* ═══════════════════════════════════════════════════════════════════════════════════════════
-   PESCA v4 · EL PANEL DEL LANCE                                                        (27/8)
+   PESCA v4 · LA PULSEADA PASA EN EL AGUA, NO EN UNA VENTANA                            (28/8)
    ═══════════════════════════════════════════════════════════════════════════════════════════
-   La lógica vive en state.js y no sabe que existe una pantalla. Esto es solo la mano: lee el
-   estado, lo pinta y le pasa si el botón está hundido.
+   ESTO ES UNA CORRECCIÓN DE RUMBO, Y LA PIDIÓ LA DIRECCIÓN CON UNA FRASE EXACTA:
+   « la pesca está hecha con texto, en vez de un minijuego como antes… no tiene que ser un juego
+   textual, tiene que ser algo escénico ».
 
-   TRES FASES EN LA MISMA VENTANA — elegir sombra, esperar el pique y pelear. Cambiar de ventana
-   entre fases rompe el hilo de la atención justo cuando hace falta, y la fase de pique dura dos
-   segundos y medio: no da tiempo a reorientarse.
+   Tenía razón, y el error fue mío y de una clase concreta: al cambiar la MECÁNICA (de la v3 a la
+   pulseada del documento) me llevé puesta también la PUESTA EN ESCENA, que nadie había pedido
+   cambiar. La v3 pasaba en el mundo —el granjero, el corcho volando, el hilo, el chapuzón—. La
+   v4 pasaba en un rectángulo de HTML pegado abajo de la pantalla, con dos barras y tres óvalos
+   grises. El diseñador lo resumió mejor que yo: « es una pesca rara ».
 
-   Y UNA DECISIÓN QUE PARECE MENOR Y NO LO ES: el botón se atiende con pointerdown/pointerup y
-   NO con click. Un click solo existe cuando el apretar y el soltar caen en el mismo elemento —
-   que es exactamente el fallo que nos costó dos días con la rejilla de la Cocina— y acá el
-   jugador va a arrastrar el dedo mientras aguanta. Con pointerdown y pointerup sueltos, salir
-   del botón sin levantar el dedo NO suelta el hilo, que es lo que uno espera de una caña. */
+   Las LEYES no cambian ni una coma: el sorteo, el peso, la tensión, los trucos y el peaje siguen
+   en state.js, que no sabe que existe una pantalla, y su suite sigue midiéndolos igual. Lo que
+   cambia es dónde se MIRAN:
+
+     la tensión  →  la panza del hilo. Flojo cuelga; tenso se estira recto, se pone rojo y vibra.
+     el progreso →  el corcho, que se va acercando a la orilla.
+     el tirón    →  el corcho pegando un salto y el hilo tensándose de golpe.
+     las sombras →  tres siluetas moviéndose en la laguna, que se eligen tocándolas.
+
+   Y CON ESO NO QUEDA NADA QUE LEER. Era el objetivo: en una pulseada de doce segundos, cualquier
+   cosa escrita es una cosa que el jugador no va a mirar.
+
+   El estado de la partida vive acá (P4, las fases); el DIBUJO vive en la escena de Phaser
+   (farm.js). Esta separación es a propósito: si un día hay otra escena con agua, la pulseada ya
+   sabe jugarse sola y solo hace falta que alguien la dibuje. */
 var P4 = null;                 // el lance en curso, o null
-var _p4Raf = 0, _p4Ultimo = 0, _p4Hold = false;
+var _p4Hold = false;
+
+/* la escena que está dibujando el agua. Se pide cada vez y no se guarda: entre lance y lance el
+   jugador puede haberse ido al bosque y vuelto, y una referencia vieja apunta a una escena
+   muerta —que es el fallo que dejaba la barra de pesca colgada al volver (10/8)—. */
+function pescaEscena() {
+  return (typeof window !== "undefined" && window.farmScene) || null;
+}
+/* LAS TRES SOMBRAS, SIEMPRE LAS TRES Y SIEMPRE DISTINTAS.
+   sombrasNuevas() sortea entre una y tres CON repetición, así que la mitad de las veces el agua
+   ofrecía una sola sombra —o tres iguales—. Elegir la sombra es LA decisión de entrada de todo
+   el sistema (es lo que inclina la banda, capítulo 3), y una decisión entre tres cosas idénticas
+   no es una decisión: es un trámite. Se ofrecen las tres, en orden sorteado. */
+function sombrasOfrecidas() {
+  const t = ["chica", "mediana", "grande"];
+  for (let i = t.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1)), x = t[i]; t[i] = t[j]; t[j] = x;
+  }
+  return t;
+}
 
 function pescaV4Abrir() {
-  const el = $("pesca4"); if (!el) return;
-  P4 = { fase: "sombras", sombras: sombrasNuevas(), L: null, espera: 0, ventana: 0, cana: pescaV4Cana() };
-  el.classList.add("show"); el.classList.remove("peleando");
-  pescaV4Pintar();
-  pescaV4Bucle();
+  P4 = { fase: "sombras", sombras: sombrasOfrecidas(), L: null, espera: 0, ventana: 0,
+         cana: pescaV4Cana(), sombra: null };
+  _p4Hold = false;
+  const sc = pescaEscena();
+  if (sc && sc.pescaOfrecerSombras) sc.pescaOfrecerSombras(P4.sombras);
 }
 function pescaV4Cerrar() {
-  const el = $("pesca4"); if (el) { el.classList.remove("show"); el.classList.remove("peleando"); }
   P4 = null; _p4Hold = false;
-  if (_p4Raf) { cancelAnimationFrame(_p4Raf); _p4Raf = 0; }
+  const sc = pescaEscena();
+  if (sc && sc.pescaLimpiar) sc.pescaLimpiar();
+  if (sc && sc.action && sc.action.v4) sc.action = null;
 }
 /* qué caña usa: la mejor que tenga, que es lo que el jugador espera sin tener que elegirla —
    la misma decisión que ya se tomó con los picos el 24/8. */
@@ -263,38 +296,41 @@ function pescaV4Cana() {
   return "junco";
 }
 
-/* ── EL BUCLE ───────────────────────────────────────────────────────────────────────────────
-   Un requestAnimationFrame con el delta REAL. No un setInterval de 30 ms: en una pestaña que
-   pierde el foco, un interval se acumula y devuelve el tiempo de golpe — y una pulseada que
-   avanza dos segundos en un cuadro es un pez perdido que el jugador no vio venir. */
-function pescaV4Bucle() {
-  if (_p4Raf) cancelAnimationFrame(_p4Raf);
-  _p4Ultimo = (typeof performance !== "undefined" ? performance.now() : Date.now());
-  const paso = () => {
-    if (!P4) { _p4Raf = 0; return; }
-    const t = (typeof performance !== "undefined" ? performance.now() : Date.now());
-    const dt = Math.min(0.1, (t - _p4Ultimo) / 1000);   // tope de 0,1 s: nunca un salto grande
-    _p4Ultimo = t;
-    pescaV4Paso(dt);
-    _p4Raf = requestAnimationFrame(paso);
-  };
-  _p4Raf = requestAnimationFrame(paso);
-}
+/* ── EL RELOJ ───────────────────────────────────────────────────────────────────────────────
+   Ya NO hay un requestAnimationFrame propio: la pulseada corre con el reloj de la escena, desde
+   el update() de Phaser. Y no es una simplificación cosmética, arregla dos cosas de verdad:
+
+     · UN SOLO RELOJ. Con dos bucles, el pez avanzaba en el suyo y el corcho se dibujaba en el
+       otro; en un cuadro lento eso se ve como que la imagen va atrasada respecto al resultado.
+     · SE PAUSA CUANDO EL JUEGO SE PAUSA. Phaser frena su update con la pestaña oculta. El rAF
+       suelto también frenaba, pero el día que alguien lo cambiara por un setInterval —que es la
+       tentación evidente— la pulseada habría seguido corriendo con el juego de fondo.
+
+   El tope del delta se mantiene, y ahora lo pone la escena: una pulseada que avanza medio
+   segundo en un cuadro es un pez perdido que el jugador no vio venir. */
 function pescaV4Paso(dt) {
   if (!P4) return;
+  const sc = pescaEscena();
   if (P4.fase === "espera") {
     P4.espera -= dt;
-    if (P4.espera <= 0) { P4.fase = "pique"; P4.ventana = PIQUE_VENTANA; if (window.sfx) sfx("splash"); }
+    if (P4.espera <= 0) {
+      P4.fase = "pique"; P4.ventana = PIQUE_VENTANA;
+      if (sc && sc.pescaPique) sc.pescaPique();
+      if (window.sfx) sfx("splash");
+    }
   } else if (P4.fase === "pique") {
     P4.ventana -= dt;
     /* PERDER EL PIQUE NO GASTA LA LOMBRIZ. Fallar la entrada no puede costar dinero: el corcho
        vuelve solo y se tira de nuevo. (Documento, §3.) */
-    if (P4.ventana <= 0) { P4.fase = "sombras"; P4.sombras = sombrasNuevas(); toast("Se soltó — volvé a tirar"); }
+    if (P4.ventana <= 0) {
+      P4.fase = "sombras"; P4.sombra = null; P4.sombras = sombrasOfrecidas();
+      if (sc && sc.pescaOfrecerSombras) sc.pescaOfrecerSombras(P4.sombras);
+      toast("Se soltó — volvé a tirar");
+    }
   } else if (P4.fase === "pelea" && P4.L) {
     peleaTick(P4.L, dt, _p4Hold);
     if (P4.L.roto || P4.L.listo) pescaV4Resolver();
   }
-  pescaV4Pintar();
 }
 
 /* ── TIRAR A UNA SOMBRA ─────────────────────────────────────────────────────────────────────
@@ -320,7 +356,8 @@ function pescaV4Tirar(sombra) {
   P4.sombra = sombra;
   P4.fase = "espera";
   P4.espera = PIQUE_ESPERA[0] + Math.random() * (PIQUE_ESPERA[1] - PIQUE_ESPERA[0]);
-  pescaV4Pintar();
+  const sc = pescaEscena();
+  if (sc && sc.pescaTirarA) sc.pescaTirarA(sombra);
 }
 function pescaV4Clavar() {
   if (!P4 || P4.fase !== "pique") return;
@@ -331,16 +368,19 @@ function pescaV4Clavar() {
   ceboCobrar(ceb);
   P4.L = lanceArmar(P4.cana, P4.sombra, { cebo: ceb });
   P4.fase = "pelea";
-  const el = $("pesca4"); if (el) el.classList.add("peleando");
+  const sc = pescaEscena();
+  if (sc && sc.pescaEnganchado) sc.pescaEnganchado(P4.L);
   if (typeof refreshHud === "function") refreshHud();
 }
 function pescaV4Resolver() {
-  const r = lanceCerrar(P4.L), el = $("pesca4");
-  if (el) el.classList.remove("peleando");
+  const r = lanceCerrar(P4.L), sc = pescaEscena();
   if (r && r.roto) {
+    /* el hilo se va con el corcho: es la única forma de que « se cortó » se entienda sin leerlo */
+    if (sc && sc.pescaCorte) sc.pescaCorte();
     log("🎣 Se cortó el hilo. La racha vuelve a cero.", "bad");
     toast("¡Se cortó el hilo!");
   } else if (r) {
+    if (sc && sc.pescaCaptura) sc.pescaCaptura(r);
     G.fish = G.fish || {}; G.fish[r.id] = (G.fish[r.id] || 0) + 1;
     if (typeof addXp === "function") addXp("fishing", r.xp);
     const e = PEZ_DEF[r.id];
@@ -355,88 +395,50 @@ function pescaV4Resolver() {
     if ((r.gigante || r.record) && window.celebrate) celebrate({ title: r.gigante ? "¡PEZ GIGANTE!" : "¡RÉCORD!", sub: e.label + " · " + r.kg + " kg" });
     if (typeof statAdd === "function") { statAdd("pescar"); statAdd("pescar", r.id); }
   }
-  P4.L = null; P4.fase = "sombras"; P4.sombras = sombrasNuevas();
+  /* y el agua vuelve a ofrecer. Las sombras nuevas salen con un respiro para que el pez que
+     acaba de saltar a la mano se vea llegar: si aparecieran en el mismo cuadro, la captura y la
+     oferta siguiente se pisarían y ninguna de las dos se leería. */
+  P4.L = null; P4.fase = "sombras"; P4.sombra = null; P4.sombras = sombrasOfrecidas();
+  if (sc && sc.pescaOfrecerSombras) sc.pescaOfrecerSombras(P4.sombras, 700);
   if (typeof refreshHud === "function") refreshHud();
   if (typeof syncSlots === "function") syncSlots();
   if (typeof saveFarm === "function") saveFarm();
 }
 
-/* ── PINTAR ─────────────────────────────────────────────────────────────────────────────────
-   Patrón de firma, como el resto de la casa: la fila de sombras solo se rehace si cambió. Las
-   barras sí se escriben en cada cuadro, pero eso es un ancho, no un innerHTML — no destruye
-   nodos y no le roba el clic a nadie. */
+/* ── LOS APAREJOS ───────────────────────────────────────────────────────────────────────────
+   Lo único que sigue siendo una ventana, y a propósito: el cebo que llevás puesto, las cañas y
+   las nasas caladas son GESTIÓN —se mira una vez, se decide y se cierra—, no pulseada. Meterlo
+   en el agua obligaría a leer mientras pelea un pez, que es justo lo que veníamos a sacar.
+
+   Lo que NO puede volver a pasar: que esto salte solo al tocar el agua. Antes se abría con el
+   lance y tapaba media pantalla; ahora se pide, y se cierra con Escape como cualquier ventana
+   del juego, porque ahora es una `.ov` de verdad. */
 function pescaV4Pintar() {
-  if (!P4) return;
-  const agua = $("p4-agua"), pelea = $("p4-pelea"), btn = $("p4-btn"),
-        pie = $("p4-pie"), cebo = $("p4-cebo"), tit = $("p4-tit");
-  if (cebo) {
+  const cab = $("p4-cebo");
+  if (cab) {
     const d = CEBO_V4_DEF[ceboPuesto()] || CEBO_V4_DEF.lombriz;
     const b = d.bolsa === "fish" ? (G.fish || {}) : G.res;
-    cebo.innerHTML = iconRes(d.bolsa === "fish" ? "lombriz" : d.k) + " " + Math.floor(b[d.k] || 0) +
-                     " " + d.label + " · " + (CANA_V4_DEF[P4.cana] || {}).label;
+    cab.innerHTML = iconRes(d.bolsa === "fish" ? "lombriz" : d.k) + " " + Math.floor(b[d.k] || 0) +
+                    " " + d.label + " · " + (CANA_V4_DEF[pescaV4Cana()] || {}).label;
   }
   pescaV4Cebos();
   pescaV4Canas();
-  if (agua) {
-    const firma = P4.fase + "|" + P4.sombras.join(",");
-    if (agua._firma !== firma) {
-      agua._firma = firma;
-      if (P4.fase === "sombras") {
-        agua.innerHTML = P4.sombras.map((s, i) => {
-          const d = SOMBRA_DEF[s];
-          return '<div class="p4-sombra ' + s + '" data-p4s="' + i + '" title="' + d.txt + '">' +
-                 /* la sombra se DIBUJA, no se escribe. Antes las tres llevaban el MISMO 🐟, así
-                    que el tamaño —lo único que distingue una sombra de otra— solo estaba en la
-                    palabra. Un óvalo que crece dice lo mismo de un vistazo, que es como se elige
-                    una sombra: mirando el agua, no leyendo. */
-                 '<span class="p4-oval" style="width:' + (10 + d.sesgo * 5 + 5) + 'px;height:' +
-                 (6 + d.sesgo * 3 + 3) + 'px"></span>' + d.label.replace("Sombra ", "") + '</div>';
-        }).join("");
-        agua.querySelectorAll("[data-p4s]").forEach(el =>
-          el.onclick = () => pescaV4Tirar(P4.sombras[Number(el.dataset.p4s)]));
-      } else {
-        agua.innerHTML = '<div style="font-size:34px">🎣</div>';
-      }
-    }
-  }
-  if (tit) tit.textContent = P4.fase === "pelea" ? "¡Enganchado!" : "La laguna";
-  if (btn) {
-    btn.disabled = P4.fase === "sombras";
-    btn.textContent = P4.fase === "pique" ? "¡CLAVÁ!" : (P4.fase === "pelea" ? "Mantené apretado" : "Elegí una sombra");
-    btn.classList.toggle("hold", _p4Hold && P4.fase === "pelea");
-  }
-  if (pie) {
-    pie.textContent = P4.fase === "sombras" ? "La grande promete más y pelea más duro"
-      : P4.fase === "espera" ? "…"
-      : P4.fase === "pique" ? "¡ahora! (fallar no gasta la lombriz)"
-      : (P4.L && trucoTxt(P4.L.id)) || "soltá en el tirón · el progreso no se pierde nunca";
-  }
   pescaV4Nasas();
-  const L = P4.L;
-  if (L && P4.fase === "pelea") {
-    const e = PEZ_DEF[L.id];
-    const img = $("p4-img"), nom = $("p4-nom"), pr = $("p4-prog"), te = $("p4-tens"), av = $("p4-aviso");
-    if (img && img._id !== L.id) { img._id = L.id; img.src = GF.spr(e.sprite); }
-    /* el NOMBRE no se dice hasta que el pez está en la mano: la sombra prometía una banda, no
-       una especie, y adelantarlo mataría la sorpresa que sostiene todo el sistema del peso. */
-    if (nom) nom.textContent = (PEZ_BANDA[L.banda] || {}).label || "";
-    if (pr) pr.style.width = Math.round(L.progreso * 100) + "%";
-    if (te) te.style.width = Math.round(L.tension) + "%";
-    if (av) {
-      /* EL TRUCO MANDA sobre el aviso normal: cuando el pez globo se infla o el espada te pide
-         que sueltes, eso es lo urgente. Un truco que no se ve en pantalla no es dificultad, es
-         una trampa — el jugador tiene que poder decir « ah, se infló » y no « no sé qué pasó ». */
-      av.textContent = L.trAviso ? L.trAviso
-        : L.tirando ? "¡TIRÓN! — soltá"
-        : (L.avisando ? "se está preparando…" : "");
-      av.classList.toggle("tiron", !!L.tirando || L.trAviso === "¡soltá!");
-      av.classList.toggle("truco", !!L.trAviso);
-    }
-    /* el pez linterna apaga la barra un segundo. Se OCULTA, no se congela: por debajo el lance
-       sigue corriendo, y eso es justo lo que lo vuelve incómodo. */
-    const caja = $("pesca4");
-    if (caja) caja.classList.toggle("aoscuras", !!L.oculta);
-  }
+}
+function pescaAparejosAbrir() {
+  const el = $("pesca4"); if (!el) return;
+  pescaV4Pintar();
+  el.classList.add("show");
+  if (typeof GF !== "undefined") GF.uiOpen = true;
+  const x = $("p4-cerrar"); if (x) x.onclick = pescaAparejosCerrar;
+}
+function pescaAparejosCerrar() {
+  const el = $("pesca4"); if (el) el.classList.remove("show");
+  if (typeof GF !== "undefined") GF.uiOpen = false;
+}
+function pescaAparejosAbierto() {
+  const el = $("pesca4");
+  return !!(el && el.classList.contains("show"));
 }
 /* CÓMO SE PINTA UN RECURSO EN UN PANEL (y una corrección que me hago a mí mismo)
    En la primera captura del panel del Lombricario los emoji salían como cuadraditos, y escribí
@@ -791,17 +793,16 @@ function pescaV4Nasas() {
   caja.querySelectorAll("[data-p4nx]").forEach(b => b.onclick = () => { nasaCalar(b.dataset.p4nx); caja._firma = null; pescaV4Nasas(); });
 }
 
-/* el botón: pointerdown/pointerup y NADA de click (ver la cabecera). El pointerup se escucha en
-   la VENTANA, no en el botón: si el jugador arrastra el dedo fuera mientras aguanta y suelta
-   afuera, el hilo tiene que soltarse igual — si no, la caña se queda tirando sola. */
+/* AGUANTAR LA CAÑA. Ya no hay botón: se aguanta sobre el mundo —tocando donde sea— y el apretar
+   lo recoge la escena, que es la que sabe distinguir un clic del juego de un clic sobre un panel
+   (ese filtro nos costó dos días con la Cocina, y no vale la pena tenerlo dos veces).
+
+   Lo que SÍ vive acá es el SOLTAR, y se escucha en la ventana entera a propósito: si el jugador
+   arrastra el dedo fuera del lienzo mientras aguanta y suelta afuera, el hilo tiene que soltarse
+   igual. Si no, la caña se queda tirando sola y el pez se pierde sin que nadie haya hecho nada
+   — un final que el jugador no puede explicarse, que es la peor clase de final. */
 function pescaV4Botones() {
-  const btn = $("p4-btn"); if (!btn || btn._p4) return; btn._p4 = true;
-  btn.addEventListener("pointerdown", (e) => {
-    e.preventDefault();
-    if (!P4) return;
-    if (P4.fase === "pique") { pescaV4Clavar(); _p4Hold = true; return; }
-    if (P4.fase === "pelea") _p4Hold = true;
-  });
+  if (window._p4Teclas) return; window._p4Teclas = true;
   window.addEventListener("pointerup", () => { _p4Hold = false; });
   window.addEventListener("pointercancel", () => { _p4Hold = false; });
   /* y la barra espaciadora hace lo mismo, para quien juegue con teclado */
@@ -3650,7 +3651,16 @@ function initUI() {
   window.addEventListener("keydown", (e) => {
     if (e.target && (e.target.tagName === "INPUT" || e.target.tagName === "TEXTAREA")) return;
     const key = e.key.toLowerCase();
-    if (key === "escape") { closeAllOv(); if (typeof hideSeedWheel === "function") hideSeedWheel(); return; }
+    /* 28/8 — ESCAPE TAMBIÉN SACA DE LA LAGUNA. El panel de la pesca no era una `.ov`, así que
+       closeAllOv() no lo veía y no había NINGUNA manera de cerrarlo: se abría al tocar el agua y
+       se quedaba puesto encima del juego para siempre. Es lo que el director reportó como « le
+       das click y sale un cuadro ». Ahora la pesca se deja con Escape, moviéndose, o sacando el
+       pez — tres salidas, que para una ventana sin salida es el arreglo honesto. */
+    if (key === "escape") {
+      if (typeof P4 !== "undefined" && P4) { pescaV4Cerrar(); return; }
+      if (typeof pescaAparejosAbierto === "function" && pescaAparejosAbierto()) { pescaAparejosCerrar(); return; }
+      closeAllOv(); if (typeof hideSeedWheel === "function") hideSeedWheel(); return;
+    }
     if (key === "m") { toggleMenu(); e.preventDefault(); return; }   // M: desplegar/plegar el menú (detalles 29/7)
     if (key >= "1" && key <= "9") { hotSelect(+key - 1); e.preventDefault(); return; }
     if (key === "0") { hotSelect(9); e.preventDefault(); return; }
