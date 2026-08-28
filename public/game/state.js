@@ -1106,20 +1106,26 @@ function hornoSlots() { return HORNO_SLOTS; }
 function hornoLibres() { return Math.max(0, hornoSlots() - hornoList().length); }
 function matCdMs(id) { return (MAT_CD_S[id] || 180) * 1000 * (edif2("horno") ? 1 - EDIF2_HORNO / 100 : 1); }
 function hornoFalta(p) { return Math.max(0, (p.listoAt || 0) - nowMs()); }
+/* cuándo EMPIEZA una pieza y si todavía está esperando su turno — lo mismo que en la Cocina, y
+   con los mismos nombres, para que quien lea una entienda la otra sin volver a pensar. */
+function hornoEmpieza(p) { return (p.listoAt || 0) - (p.total || 0); }
+function hornoEsperando(p) { return nowMs() < hornoEmpieza(p); }
 /* El tick: lo que terminó entra a la bolsa. Lo llama la UI y también el arranque de la
    partida, así que fundir y cerrar el navegador funciona igual que en la Cocina. */
 function checkHorno() {
   const l = hornoList(); if (!l.length) return 0;
   let listos = 0;
   for (let i = l.length - 1; i >= 0; i--) {
-    const p = l[i]; if (hornoFalta(p) > 0) continue;
+    const p = l[i]; if (p.listo || hornoFalta(p) > 0) continue;
     const md = MAT_DEF[p.id]; if (!md) { l.splice(i, 1); continue; }
-    if (!roomForRes(p.id, 1)) continue;            // bolsa llena: se queda al fuego, no se pierde
-    l.splice(i, 1);
-    G.res[p.id] = (G.res[p.id] || 0) + 1;
-    addXp("crafting", 3);
-    log("🔥 " + md.label + " listo en el Horno.", "good"); toast("+1 " + md.label);
-    if (typeof tutoEvent === "function") tutoEvent("mat");
+    /* 27/8 (diseñador) — LO FUNDIDO ESPERA EN EL HORNO.
+       « cuando se crafteen deben reclamarse en el edificio, no ir directo a la bag ».
+       Ya no se deposita solo: la pieza pasa a « listo » y se queda ahí hasta que el jugador la
+       recoge. Es un cambio chico con dos efectos grandes: el edificio vuelve a ser un sitio al
+       que hay que ir —con su signo de exclamación encima, que es el punto 2 del mismo informe—
+       y desaparece el caso raro de « bolsa llena » resolviéndose en silencio a espaldas del
+       jugador, que era la otra mitad de este bloque. */
+    p.listo = true;
     listos++;
   }
   if (listos) {
@@ -1129,6 +1135,43 @@ function checkHorno() {
   }
   return listos;
 }
+/* RECOGER lo que está listo en el horno. Devuelve cuántas piezas entraron a la bolsa; si no
+   entra ninguna porque la bolsa está llena, LO DICE — un botón que no hace nada es la regla 9
+   rota, y en un edificio con un signo de exclamación encima es peor todavía, porque el aviso
+   sigue ahí y el jugador ya lo tocó. */
+function hornoRecoger() {
+  const l = hornoList();
+  const listas = l.filter(p => p.listo);
+  if (!listas.length) { toast("No hay nada listo en el Horno"); return 0; }
+  let n = 0, lleno = false;
+  for (let i = l.length - 1; i >= 0; i--) {
+    const p = l[i]; if (!p.listo) continue;
+    const md = MAT_DEF[p.id]; if (!md) { l.splice(i, 1); continue; }
+    if (!roomForRes(p.id, 1)) { lleno = true; continue; }
+    l.splice(i, 1);
+    G.res[p.id] = (G.res[p.id] || 0) + 1;
+    addXp("crafting", 3);
+    if (typeof tutoEvent === "function") tutoEvent("mat");
+    if (typeof statAdd === "function") statAdd("fundir", p.id, 1);
+    n++;
+  }
+  if (n) { log("🔥 Recogiste " + n + " del Horno.", "good"); toast("+" + n + " del Horno"); }
+  if (lleno) { toast("Bolsa llena — el resto queda en el Horno"); }
+  if (typeof refreshHud === "function") refreshHud();
+  if (typeof saveFarm === "function") saveFarm(true);
+  return n;
+}
+/* CUÁNTO HAY ESPERANDO EN CADA EDIFICIO — una sola función, y de acá sale el signo de
+   exclamación del mundo. Que el aviso y el panel lean lo MISMO es lo que impide que el edificio
+   diga « hay algo » y adentro no haya nada, que es el bug que un badge inventa con más
+   facilidad que cualquier otra cosa. */
+function pendienteDe(tipo) {
+  if (tipo === "horno")  return hornoList().filter(p => p.listo).length;
+  if (tipo === "cocina") return cookList().filter(c => c.listo).length;
+  return 0;
+}
+function hayPendientes() { return pendienteDe("horno") + pendienteDe("cocina"); }
+
 function craftMat(id) {
   const md = MAT_DEF[id]; if (!md) { console.warn("[craftMat] material inexistente:", id); return; }
   if (hornoLibres() <= 0) { toast("El horno está lleno (" + hornoSlots() + " al fuego)"); return; }
@@ -1136,9 +1179,23 @@ function craftMat(id) {
   if (typeof tutoPermite === "function" && !tutoPermite("mat")) { tutoAviso(); return; }   // embudo estricto (13/8)
   if (typeof tutoGuardiaCosto === "function" && !tutoGuardiaCosto(md.cost, 0, "fundir " + md.label)) return;   // guardia del tutorial (12/8)
   payCost(md.cost);
-  hornoList().push({ id: id, listoAt: nowMs() + matCdMs(id) });
-  log("Pusiste 1 " + md.label + " al fuego (" + Math.round(matCdMs(id) / 60000) + " min).", "good");
-  toast("🔥 " + md.label + " al fuego");
+  /* 27/8 (diseñador) — EL HORNO FUNDE DE A UNO, igual que la Cocina desde el 26/8.
+     « el horno de piedra craftea simultáneo, debe hacerse como en la cocina: crear el primero y
+       que los que estén en cola esperen ».
+     Tenía el mismo fallo que las ollas y por la misma razón: cada pieza nacía con
+     « listoAt = ahora + su reloj », así que cinco piezas puestas juntas terminaban juntas y el
+     horno era una fábrica gratis con cinco bocas.
+     La fila entera cabe en estas dos líneas: la pieza nueva no arranca AHORA, arranca cuando
+     termina la última de la fila. Y se resuelve con HORAS DE FIN y no con una máquina de turnos,
+     porque un reloj no se olvida de correr: el jugador cierra el navegador, vuelve a las tres
+     horas y encuentra las cinco hechas, en orden. Una máquina de turnos hay que despertarla. */
+  const ultimaH = hornoList().reduce((t, x) => Math.max(t, x.listoAt || 0), 0);
+  const arrancaH = Math.max(nowMs(), ultimaH);
+  hornoList().push({ id: id, listoAt: arrancaH + matCdMs(id), total: matCdMs(id) });
+  const esperaH = arrancaH - nowMs();
+  log("Pusiste 1 " + md.label + " al fuego (" + Math.round(matCdMs(id) / 60000) + " min" +
+      (esperaH > 1000 ? ", empieza en " + fmtDur(esperaH) : "") + ").", "good");
+  toast(esperaH > 1000 ? "🔥 " + md.label + " en la fila" : "🔥 " + md.label + " al fuego");
   if (typeof refreshHorno === "function" && isOpen("ov-horno")) refreshHorno();
   if (isOpen("ov-inv")) refreshInv(); refreshHud();
   if (typeof saveFarm === "function") saveFarm(true);
@@ -4400,6 +4457,33 @@ function cookFree() { return Math.max(0, cookSlots() - cookList().length); }
 /* cuándo EMPIEZA a cocinarse esta olla (las de la fila empiezan más tarde que ahora) */
 function cookEmpieza(c) { return (c.endAt || 0) - (c.total || 0); }
 function cookEsperando(c) { return nowMs() < cookEmpieza(c); }
+/* RECOGER LOS PLATOS de las ollas listas. Espejo exacto de hornoRecoger(): mismas reglas, mismos
+   avisos y el mismo comportamiento con la bolsa llena. Dos edificios que hacen lo mismo tienen
+   que hacerlo IGUAL, o el jugador aprende dos veces. */
+function cocinaRecoger() {
+  const l = cookList();
+  if (!l.filter(c => c.listo).length) { toast("No hay platos listos"); return 0; }
+  let n = 0, lleno = false;
+  for (let i = l.length - 1; i >= 0; i--) {
+    const c = l[i]; if (!c.listo) continue;
+    const r = RECIPE_DEF[c.id]; if (!r) { l.splice(i, 1); continue; }
+    if (typeof roomForDish === "function" && !roomForDish(c.id)) { lleno = true; continue; }
+    l.splice(i, 1);
+    G.dishes = G.dishes || {};
+    G.dishes[c.id] = (G.dishes[c.id] || 0) + 1;
+    addXp("cooking", r.xp);
+    if (typeof tutoEvent === "function") tutoEvent("cook");
+    if (typeof statAdd === "function") { statAdd("cocinar"); statAdd("cocinar", c.id); }
+    n++;
+  }
+  if (n) { log("🍲 Recogiste " + n + " plato" + (n > 1 ? "s" : "") + " de la Cocina.", "gold"); toast("+" + n + " plato" + (n > 1 ? "s" : "")); }
+  if (lleno) toast("Bolsa llena — el resto queda en la Cocina");
+  if (typeof syncSlots === "function") syncSlots();
+  if (typeof refreshHud === "function") refreshHud();
+  if (typeof saveFarm === "function") saveFarm(true);
+  return n;
+}
+
 function cook(id) {
   const r = RECIPE_DEF[id]; if (!r) { console.warn("[cook] receta inexistente:", id); return; }
   if (typeof tutoPermite === "function" && !tutoPermite("cook")) { tutoAviso(); return; }   // embudo estricto (13/8)
@@ -4443,19 +4527,20 @@ function checkCooking() {
   try {
     const t = nowMs(); let listos = 0;
     for (let i = lista.length - 1; i >= 0; i--) {
-      if (t < lista[i].endAt) continue;
+      if (lista[i].listo || t < lista[i].endAt) continue;
       const olla = lista[i];
-      lista.splice(i, 1);          // PRIMERO se saca la olla, DESPUÉS se entrega: si algo vuelve
-      listos++;                    // a entrar acá, esta olla ya no está y no se puede duplicar
       const r = RECIPE_DEF[olla.id];
-      if (!r) continue;
-      G.dishes = G.dishes || {};
-      G.dishes[olla.id] = (G.dishes[olla.id] || 0) + 1;
-      addXp("cooking", r.xp);
-      log(r.emoji + " ¡" + r.label + " listo! Lo tenés en la bolsa.", "gold"); toast(r.emoji + " ¡" + r.label + " listo!");
-      if (typeof tutoEvent === "function") tutoEvent("cook");
-      statAdd("cocinar");
-      statAdd("cocinar", olla.id);   // 23/8 (álbum): además del total, QUÉ plato — el pedido del tablón ya leía esta llave
+      if (!r) { lista.splice(i, 1); continue; }
+      /* 27/8 (diseñador) — EL PLATO ESPERA EN LA OLLA hasta que lo recogen. Igual que el Horno.
+         Ojo con el candado de arriba: antes se sacaba la olla ANTES de entregar, para que un
+         reentre no pudiera duplicar el plato. Ahora no se saca nada acá —solo se marca— así que
+         la protección la da la propia marca: una olla ya marcada se saltea en la primera línea
+         del bucle y no vuelve a contarse. */
+      olla.listo = true;
+      listos++;
+      /* la XP, el álbum y el tutorial se cobran al RECOGER, no al estar listo: si se dispararan
+         acá, el tutorial avanzaría con el jugador en otra pantalla y su flecha señalaría un paso
+         que él no vio pasar. */
     }
     if (!listos) { if (typeof refreshCooking === "function" && isOpen("ov-cocina")) refreshCooking(); return; }
     if (typeof syncSlots === "function") syncSlots(); if (isOpen("ov-inv")) refreshInv();
@@ -4464,8 +4549,21 @@ function checkCooking() {
   } finally { _cocinando = false; }
 }
 // comer un plato de la bolsa (clic sobre el ítem)
+/* 27/8 (diseñador) — DOS SEGUNDOS ENTRE PLATO Y PLATO.
+   « cuando usas un plato para curarte tiene 2 segundos CD entre comidas ».
+   Sin esto, un clic sostenido sobre la pila vacía la despensa en un segundo y cura de golpe: no
+   es una decisión, es un accidente con forma de botón. Y en combate convierte la comida en un
+   escudo continuo, que es lo que hace que la vida deje de importar.
+   El aviso dice CUÁNTO falta y no solo « esperá »: un candado con reloj a la vista se entiende;
+   uno mudo se lee como que el clic no funcionó — que es el bug que estuvimos persiguiendo toda
+   la semana con otras caras. */
+var COMER_CD_MS = 2000;
+function comerFalta() { return Math.max(0, (G.comerHasta || 0) - nowMs()); }
 function eatDish(id) {
   const r = RECIPE_DEF[id]; if (!r || !G.dishes || (G.dishes[id] || 0) <= 0) return;
+  const falta = comerFalta();
+  if (falta > 0) { toast("Esperá " + (falta / 1000).toFixed(1) + " s para comer otra vez"); return; }
+  G.comerHasta = nowMs() + COMER_CD_MS;
   G.dishes[id]--;
   if (window.sfx) sfx("eat");
   G.hp = Math.min(G.hpMax, G.hp + r.heal);

@@ -924,6 +924,15 @@ class FarmScene extends Phaser.Scene {
        mientras no estabas. Es lo primero que el jugador ve de la laguna al entrar. */
     /* las señales del agua y las boyas de las trampas se fueron con la v3: la laguna de la v4
        muestra sus sombras dentro del panel, no en el mundo. */
+    try { this.avisosDibujar(); } catch (e) { console.warn("avisos:", e); }
+    /* y se repasa cada segundo: lo que hace aparecer el aviso es un RELOJ —una pieza que termina
+       de fundirse— y no un clic del jugador, así que no hay ningún evento al que colgarse. La
+       firma de avisosDibujar() hace que repasar sea barato: si el número no cambió, no toca nada. */
+    this.time.addEvent({ delay: 1000, loop: true, callback: () => {
+      try { if (typeof checkHorno === "function") checkHorno(); } catch (e) {}
+      try { if (typeof checkCooking === "function") checkCooking(); } catch (e) {}
+      try { this.avisosDibujar(); } catch (e) {}
+    } });
     this.dibujarExpansion();     // 18/8: el lote que podés comprar, marcado en el bosque
     // 18/8: repintar TODOS los suelos de parcela al terminar de armar la escena. Es barato y cierra
     // la clase de fallo entera: da igual en qué orden se hayan tocado antes, acá quedan como dice
@@ -3713,6 +3722,41 @@ class FarmScene extends Phaser.Scene {
     o.letrero = this.add.text(o.cx, o.by - (o.sprite.displayHeight || 60) - 6, "🔨 " + partes.join("  ·  "),
       { fontFamily: "system-ui", fontSize: "11px", fontStyle: "bold", color: "#fff3cf", stroke: "#241505", strokeThickness: 4, align: "center" })
       .setOrigin(0.5, 1).setDepth(99990).setVisible(false);   // 13/8: aparece solo con el cursor encima (lo maneja update)
+  }
+
+  /* ============ EL SIGNO DE EXCLAMACIÓN (27/8, diseñador) ==========================
+     « colocar a los edificios un signo de exclamación cuando se tenga algo pendiente ».
+     Un edificio con algo dentro tiene que llamarte desde el otro lado de la granja: si no, el
+     jugador tiene que abrir cada ventana para averiguar si hay algo, y eso convierte un juego de
+     mirar en un juego de comprobar.
+
+     LO QUE PIDE Y LO QUE NO: el aviso se DERIVA de pendienteDe(), la misma función que llena el
+     panel. Un badge con su propia cuenta es un badge que un día dice « hay algo » y adentro no
+     hay nada, y a partir de ese día el jugador deja de creerle. Un aviso en el que no se confía
+     es peor que ninguno.
+
+     Y se pinta con FIRMA, como todo lo demás: solo se rehace si cambió el número. */
+  avisosDibujar() {
+    if (typeof pendienteDe !== "function") return;
+    const firma = this.objs.map(o => (o && o.type) ? pendienteDe(o.type) : 0).join(",");
+    if (this._avisoFirma === firma) return;
+    this._avisoFirma = firma;
+    for (const o of this.objs) {
+      const n = (o && o.type) ? pendienteDe(o.type) : 0;
+      if (!n) { if (o._aviso) { o._aviso.destroy(); o._aviso = null; } continue; }
+      if (!o._aviso) {
+        const alto = (o.sprite && o.sprite.displayHeight) || 60;
+        o._aviso = this.add.text(o.cx + 2, o.by - alto - 10, "!",
+          { fontFamily: "system-ui", fontSize: "26px", fontStyle: "bold",
+            color: "#ffd75e", stroke: "#3a2408", strokeThickness: 5 })
+          .setOrigin(0.5, 1).setDepth(99991);
+        /* el rebote: un signo quieto se confunde con parte del edificio. Que se mueva es lo que
+           lo hace un AVISO y no una decoración. */
+        this.tweens.add({ targets: o._aviso, y: o._aviso.y - 6, duration: 520,
+                          yoyo: true, repeat: -1, ease: "Sine.easeInOut" });
+      }
+      o._aviso.setVisible(!o.oculto);
+    }
   }
 
   /* ============ EL CARTEL DE EXPANSIÓN, SOBRE EL MAPA (18/8) ========================

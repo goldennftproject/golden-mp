@@ -26,6 +26,13 @@ vm.createContext(ctx);
 ctx.saveFarm = () => {};
 const G = ctx.G;
 
+/* COMER EN CADENA, saltándose el enfriamiento de dos segundos del 27/8.
+   Este archivo mide cómo APILAN los buffs, no cuántos platos entran por minuto: si respetara el
+   CD haría falta simular veinte segundos de reloj para una pregunta que no tiene que ver con el
+   tiempo. Se limpia la marca antes de cada bocado y se deja la del CD probada en su propio sitio
+   —test-comer-cd.js—, que es donde de verdad importa. */
+const comer = (id, n) => { for (let i = 0; i < (n || 1); i++) { ctx.G.comerHasta = 0; ctx.eatDish(id); } };
+
 let fallos = 0;
 const ok = (n, c, d) => { if (!c) fallos++; console.log((c ? "  ok   " : "  FALLA") + "  " + n + (d ? "   " + d : "")); };
 
@@ -35,13 +42,13 @@ G.dishes = { pescado_asado: 20, banquete: 10, estofado: 10 };
 console.log("\nEL PRECIO DE VENTA: COMER MÁS NO COMPONE");
 {
   const base = ctx.ventaMult();
-  ctx.eatDish("pescado_asado");
+  comer("pescado_asado");
   const con1 = ctx.ventaMult();
   ok("un Pescado asado da su +10%", Math.abs(con1 / base - 1.10) < 0.001, "×" + (con1 / base).toFixed(3));
-  for (let i = 0; i < 19; i++) ctx.eatDish("pescado_asado");
+  comer("pescado_asado", 19);
   ok("VEINTE pescados asados siguen dando +10%, no ×6,7", Math.abs(ctx.ventaMult() / base - 1.10) < 0.001,
     "×" + (ctx.ventaMult() / base).toFixed(3) + " (antes del arreglo: ×6,73)");
-  for (let i = 0; i < 10; i++) ctx.eatDish("banquete");
+  comer("banquete", 10);
   ok("y con 10 Banquetes encima manda EL MEJOR: +20%, no ×41", Math.abs(ctx.ventaMult() / base - 1.20) < 0.001,
     "×" + (ctx.ventaMult() / base).toFixed(3) + " (antes: ×41,7)");
   ok("la venta real usa ese multiplicador", (() => {
@@ -54,7 +61,7 @@ console.log("\nEL PRECIO DE VENTA: COMER MÁS NO COMPONE");
 console.log("\nLOS ENFRIAMIENTOS: EL MEJOR BUFF, NO EL PRODUCTO");
 {
   ok("sin buffs de cd, ×1", ctx.cdMult() === 1);
-  for (let i = 0; i < 10; i++) ctx.eatDish("estofado");
+  comer("estofado", 10);
   ok("DIEZ estofados dejan el cd en 0,85 — no en 0,20", Math.abs(ctx.cdMult() - 0.85) < 0.001,
     "×" + ctx.cdMult().toFixed(3) + " (antes del arreglo: ×" + Math.pow(0.85, 10).toFixed(2) + ")");
 }
@@ -77,8 +84,7 @@ console.log("\nY LA VENTANA SE RENUEVA: comer otro plato NO desperdicia el anter
      cobertura mientras VIVA alguno de los dos — el mejor activo manda en cada momento */
   G.buffs = [];
   G.dishes.pescado_asado = 2;
-  ctx.eatDish("pescado_asado");
-  ctx.eatDish("pescado_asado");
+  comer("pescado_asado", 2);
   const activos = G.buffs.filter(b => b.type === "yield").length;
   ok("los dos buffs conviven en la lista (vencimientos propios)", activos === 2, activos + " activos");
   ok("pero el multiplicador sigue siendo UNO solo", Math.abs(ctx.ventaMult() - 1.10) < 0.001, "×" + ctx.ventaMult().toFixed(3));

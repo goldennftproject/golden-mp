@@ -71,15 +71,21 @@ console.log("\nY SE ENTREGAN DE A UNO, EN ORDEN");
   ctx.checkCooking();
   ok("recién encolados no hay ningún plato hecho", !Object.keys(G.dishes).length, JSON.stringify(G.dishes));
 
+  /* 27/8 (diseñador) — EL PLATO YA NO CAE SOLO EN LA BOLSA: espera en la olla hasta que lo
+     recogen. « cuando se crafteen deben reclamarse en el edificio, no ir directo a la bag ».
+     El reloj sigue corriendo con el juego cerrado; lo que cambió es quién lo levanta. */
   adelantar(dur1 + 1000); ctx.checkCooking();
-  ok("pasada la primera receta, hay UN plato", (G.dishes.papa_asada || 0) === 1, JSON.stringify(G.dishes));
+  ok("pasada la primera receta hay UN plato listo, esperando", ctx.pendienteDe("cocina") === 1,
+    ctx.pendienteDe("cocina") + " listo(s)");
+  ok("y todavía NO está en la bolsa", !(G.dishes.papa_asada > 0), JSON.stringify(G.dishes));
+  ok("recogerlo lo pone en la bolsa", ctx.cocinaRecoger() === 1 && (G.dishes.papa_asada || 0) === 1);
   ok("y quedan dos en la fila", ctx.cookList().length === 2, ctx.cookList().length + "");
   ok("la que ahora está al fuego es el Estofado", !ctx.cookEsperando(ctx.cookList()[0]));
   ok("y el tercero sigue esperando", ctx.cookEsperando(ctx.cookList()[1]));
 
-  adelantar(REC.estofado.cookS * 1000 + 1000); ctx.checkCooking();
+  adelantar(REC.estofado.cookS * 1000 + 1000); ctx.checkCooking(); ctx.cocinaRecoger();
   ok("después llega el Estofado", (G.dishes.estofado || 0) === 1, JSON.stringify(G.dishes));
-  adelantar(dur1 + 1000); ctx.checkCooking();
+  adelantar(dur1 + 1000); ctx.checkCooking(); ctx.cocinaRecoger();
   ok("y al final la segunda Papa Asada", (G.dishes.papa_asada || 0) === 2, JSON.stringify(G.dishes));
   ok("la fila queda vacía", ctx.cookList().length === 0);
 }
@@ -93,7 +99,10 @@ console.log("\nLA FILA CORRE CON EL JUEGO CERRADO   (esto es lo que sostiene tod
      entera. Si hiciera falta un tick por turno, acá saldrían uno o dos platos y no tres. */
   adelantar(3 * 3600e3);
   ctx.checkCooking();
-  ok("al volver de tres horas están los TRES platos", (G.dishes.papa_asada || 0) === 3, JSON.stringify(G.dishes));
+  ok("al volver de tres horas los TRES están listos", ctx.pendienteDe("cocina") === 3,
+    ctx.pendienteDe("cocina") + " listos");
+  ok("y una sola recogida se los lleva todos", ctx.cocinaRecoger() === 3 && (G.dishes.papa_asada || 0) === 3,
+    JSON.stringify(G.dishes));
   ok("y la fila quedó vacía", ctx.cookList().length === 0);
   ok("sin haber tenido que despertar la fila paso a paso", true, "una sola pasada de checkCooking");
 
@@ -102,7 +111,10 @@ console.log("\nLA FILA CORRE CON EL JUEGO CERRADO   (esto es lo que sostiene tod
   ctx.cook("papa_asada"); ctx.cook("papa_asada"); ctx.cook("papa_asada");
   adelantar(ctx.cookList()[1].endAt - ctx.nowMs() + 1000);
   ctx.checkCooking();
-  ok("volviendo a mitad de fila salen exactamente los cumplidos", (G.dishes.papa_asada || 0) === 2, JSON.stringify(G.dishes));
+  ok("volviendo a mitad de fila quedan listos exactamente los cumplidos",
+    ctx.pendienteDe("cocina") === 2, ctx.pendienteDe("cocina") + " listos de 3");
+  ctx.cocinaRecoger();
+  ok("y salen los dos", (G.dishes.papa_asada || 0) === 2, JSON.stringify(G.dishes));
   ok("y el que faltaba sigue al fuego, no se pierde", ctx.cookList().length === 1);
   ok("y ese último ya arrancó (no quedó esperando a un plato que ya salió)",
     !ctx.cookEsperando(ctx.cookList()[0]));

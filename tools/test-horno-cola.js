@@ -85,7 +85,13 @@ console.log("\nFUNDIR COBRA Y NO ENTREGA: LA PIEZA VA AL FUEGO");
   ok("a diez segundos del final sigue al fuego (no entrega antes de tiempo)", !(G.res.tablon > 0) && ctx.hornoList().length === 1);
   desfase += 15000;
   ctx.checkHorno();
-  ok("vencido el reloj, el tablón entra a la bolsa", Math.floor(G.res.tablon || 0) === 1);
+  /* 27/8 (diseñador) — LO FUNDIDO ESPERA EN EL HORNO. El contrato del 24/8 sigue entero: la
+     pieza no aparece antes de que venza su reloj. Lo que se agrega es un paso más: vencido el
+     reloj queda LISTA, y entra a la bolsa cuando el jugador va a buscarla. */
+  ok("vencido el reloj la pieza queda LISTA, no en la bolsa",
+    ctx.pendienteDe("horno") === 1 && !(G.res.tablon > 0));
+  ok("y el edificio lo anuncia hacia afuera", ctx.hayPendientes() === 1);
+  ok("recogerla la pone en la bolsa", ctx.hornoRecoger() === 1 && Math.floor(G.res.tablon || 0) === 1);
   ok("y el horno queda libre", ctx.hornoList().length === 0);
 }
 
@@ -112,7 +118,10 @@ console.log("\nFUNDIR Y CERRAR EL NAVEGADOR: LA COLA VIAJA Y SE COBRA AL VOLVER"
   ctx.hydrate(snap);
   ok("tras el F5 la cola sigue ahí", ctx.hornoList().length === 1 || Math.floor(G.res.barra_bronce || 0) === 1);
   ctx.checkHorno();
-  ok("y el tick la cobra al volver", Math.floor(G.res.barra_bronce || 0) === 1, "bronce: " + (G.res.barra_bronce || 0));
+  /* el reloj corrió con el navegador cerrado —que es lo que este bloque defiende— y al volver la
+     pieza está LISTA. Recogerla es un gesto del jugador, no del reloj. */
+  ctx.hornoRecoger();
+  ok("y al volver está lista para recoger", Math.floor(G.res.barra_bronce || 0) === 1, "bronce: " + (G.res.barra_bronce || 0));
 }
 
 console.log("\nCON LA BOLSA LLENA LA PIEZA ESPERA — NO SE PIERDE");
@@ -130,10 +139,15 @@ console.log("\nCON LA BOLSA LLENA LA PIEZA ESPERA — NO SE PIERDE");
   ok("(la bolsa quedó llena para la prueba)", !ctx.roomForRes("tablon", 1),
     ctx.canonicalStacks().length + " pilas para " + ctx.invSlots() + " espacios");
   ctx.checkHorno();
-  ok("no entrega y la deja al fuego", ctx.hornoList().length === 1 && !(G.res.tablon > 0));
+  /* con la bolsa llena, la pieza queda LISTA igual —el reloj no espera a que hagas sitio— y lo
+     que no se puede es RECOGERLA. El aviso lo dice al tocar el botón, que es cuando el jugador
+     está mirando. */
+  ok("la marca lista igual, pero recogerla no entrega nada",
+    ctx.hornoRecoger() === 0 && ctx.hornoList().length === 1 && !(G.res.tablon > 0));
   G.seeds = {}; vm.runInContext("ITEM_RES_ORDER", ctx).forEach(k => { if (k !== "madera") G.res[k] = 0; }); G.invRows = 20;
   ctx.checkHorno();
-  ok("con lugar otra vez, la entrega", Math.floor(G.res.tablon || 0) === 1 && ctx.hornoList().length === 0);
+  ok("con lugar otra vez, la entrega", ctx.hornoRecoger() === 1 &&
+    Math.floor(G.res.tablon || 0) === 1 && ctx.hornoList().length === 0);
 }
 
 console.log(fallos ? "\n" + fallos + " fallo(s)\n" : "\nTodo en orden: el horno cocina, no castiga.\n");

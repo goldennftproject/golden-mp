@@ -303,6 +303,18 @@
   .forge-row .fnm{font-weight:800;font-size:13px}
   .forge-row .fnm .tag{font-size:10px;color:#3f6b2a;border:1px solid #3f6b2a;border-radius:6px;padding:0 5px;margin-left:6px}
   .forge-row .fds{font-size:11px;color:var(--muted);margin-top:2px}
+  /* 27/8 (diseñador) — « modificar el color de letra de la cocina, la descripción de los platos
+     no se lee ». Iba con .fds a 10 px sobre el panel oscuro: el gris apagado de var(--muted) es
+     legible en una fila de la Herrería, que es corta, pero no en un párrafo de efecto que es lo
+     único que dice para qué sirve el plato. Sube de tamaño y de contraste, y se separa en su
+     propia clase para que retocar la Cocina no cambie la Herrería. */
+  .ck-efecto{font-size:11.5px;line-height:1.55;color:#e8dfc6;margin-top:6px;
+    padding:6px 8px;border-radius:8px;background:rgba(0,0,0,.22);border:1px solid #3c4d31}
+  /* LA GRIETA DEL ARMA ROTA, encima del icono y con la casilla apagada */
+  .slot .rota, .hcell .rota{filter:grayscale(1) brightness(.55)}
+  .slot:has(.rota)::after, .hcell:has(.rota)::after{
+    content:"";position:absolute;inset:0;background:url("assets/farm/arma_rota.png") center/72% no-repeat;
+    image-rendering:pixelated;pointer-events:none}
   .forge-row .fds.vip{color:#8a6413;font-weight:700}   /* Pase de Batalla: carril VIP legible sobre el panel claro */
   .forge-row .fds.free{color:#3f6b2a;font-weight:700}  /* carril gratuito */
   .forge-row .fbtns{display:flex;flex-direction:column;gap:5px;flex:0 0 auto}
@@ -328,7 +340,11 @@
   .ck-nivel{font-size:12px;color:#cbbf9f;font-weight:700}
   .ck-tit{font-size:11px;color:#a9bd94;font-weight:800;letter-spacing:.5px;text-transform:uppercase;margin:6px 0 4px;display:flex;justify-content:space-between;align-items:center}
   .ck-tit b{color:#cbbf9f;font-size:11px}
-  .ck-cola{display:flex;gap:6px;min-height:58px}
+  .ck-cola{display:flex;gap:6px;min-height:58px;flex-wrap:wrap}
+  .ck-olla.listo{border-style:solid;border-color:#ffd75e;background:rgba(70,56,20,.5);
+    animation:ckLatido 1.4s ease-in-out infinite}
+  @keyframes ckLatido{0%,100%{box-shadow:0 0 0 rgba(255,215,94,0)}50%{box-shadow:0 0 12px rgba(255,215,94,.55)}}
+  .hn-listo{border-color:#ffd75e !important;background:rgba(70,56,20,.35)}
   .ck-olla{width:54px;height:54px;border:2px dashed #3c4d31;border-radius:9px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;position:relative;background:rgba(20,28,16,.35)}
   .ck-olla.llena{border-style:solid;border-color:#7fa356;background:rgba(127,163,86,.14)}
   .ck-olla img{width:26px;height:26px;object-fit:contain;image-rendering:pixelated}

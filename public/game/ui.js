@@ -891,8 +891,24 @@ function itemView(d) {
   if (d.kind === "arm") {
     const w = ARM_DEF[d.key], own = G.weapons && G.weapons[d.key];
     if (!w || !own) return null;
-    return { sprite: w.sprite || ARM_TIPO_DEF[w.tipo].sprite, emoji: "⚔️", label: w.label + " · daño " + w.min + "–" + w.max + " · durabilidad " + own.dur + "/" + w.dur, dur: Math.round(own.dur / w.dur * 100) };
+    /* 27/8 (diseñador) — UN ARMA ROTA TIENE QUE VERSE ROTA.
+       « agregar un icono de espada arma rota cuando se rompa el arma ».
+       Con durabilidad 0 el arma seguía dibujándose igual que nueva: solo cambiaba un número en
+       el tooltip, que es donde nadie mira hasta que ya se murió. Ahora la casilla se apaga y
+       lleva su grieta encima, y la etiqueta dice qué hacer — un aviso que no dice el remedio es
+       medio aviso.
+       La grieta es UNA pieza para las veinte armas. Veinte sprites rotos serían veinte sitios
+       donde el arte se puede desincronizar del catálogo, y el arma nueva de mañana nacería sin
+       el suyo. */
+    const rota = (own.dur || 0) <= 0;
+    return { sprite: w.sprite || ARM_TIPO_DEF[w.tipo].sprite, emoji: "⚔️",
+             glow: rota ? "rota" : undefined,
+             label: w.label + (rota
+               ? " · ROTA — reparala en la Herrería"
+               : " · daño " + w.min + "–" + w.max + " · durabilidad " + own.dur + "/" + w.dur),
+             dur: rota ? 0 : Math.round(own.dur / w.dur * 100) };
   }
+
   if (d.kind === "pick") { const pd = PICK_DEF[d.key]; const glow = d.key === "diamond" ? "glow-cyan" : (d.key === "netherite" ? "glow-fire" : (d.key === "gold" ? "glow-gold" : "")); return { sprite: pd.sprite, emoji: "⛏️", glow, label: pd.label + " · 1 uso cada uno · tenés " + pickCount(d.key), dur: null }; }
   if (d.kind === "plano") { const b = (typeof BUILD_DEF !== "undefined") && BUILD_DEF[d.key]; return { sprite: "plano_" + d.key, emoji: "📜", glow: "glow-gold", label: "Plano: " + (b ? b.label : d.key) + " · clic para colocar la obra", dur: null }; }   // blueprints (12/8)
   /* 18/8: los regalos del baúl (parcela, árbol, roca) viven en la bolsa hasta que el jugador
@@ -1616,19 +1632,39 @@ function refreshHorno() {
   const cola = (typeof hornoList === "function") ? hornoList() : [];
   let html = "";
   if (cola.length) {
-    html += '<div class="secc">🔥 Al fuego (' + cola.length + '/' + hornoSlots() + ')</div>';
+    /* « Al fuego » era verdad cuando las tres se fundían a la vez. Con la fila, solo UNA está al
+       fuego y las otras esperan — una cabecera que dice lo contrario de lo que dicen las filas de
+       abajo es peor que ninguna cabecera. */
+    const alFuego = cola.filter(p => !p.listo && !(typeof hornoEsperando === "function" && hornoEsperando(p))).length;
+    html += '<div class="secc">🔥 En el horno (' + cola.length + '/' + hornoSlots() + ')' +
+      (alFuego ? ' · 1 al fuego' : '') + '</div>';
     html += cola.slice().sort((a, b) => a.listoAt - b.listoAt).map(p => {
       const md = MAT_DEF[p.id] || { label: p.id, sprite: "res_tablon" }, falta = hornoFalta(p);
-      const tot = matCdMs(p.id) || 1, pct = Math.max(0, Math.min(100, Math.round((1 - falta / tot) * 100)));
-      return '<div class="forge-row eq"><div class="fic"><img src="' + GF.spr(md.sprite) + '"></div><div class="finfo">' +
+      const tot = p.total || matCdMs(p.id) || 1;
+      const pct = Math.max(0, Math.min(100, Math.round((1 - falta / tot) * 100)));
+      /* tres estados y no dos, porque ahora la fila los tiene: esperando turno · al fuego ·
+         listo para recoger. Que el jugador vea el ORDEN es la mitad de para qué sirve una cola:
+         si todas dijeran « al fuego » volveríamos a la simultaneidad, esta vez solo en la
+         apariencia — y eso es peor, porque el número sería falso y el reloj verdadero. */
+      const esperando = (typeof hornoEsperando === "function") && hornoEsperando(p);
+      const txt = p.listo ? "¡listo! tocá « Recoger »"
+        : esperando ? "espera su turno · empieza en " + fmtDur(hornoEmpieza(p) - nowMs())
+        : "al fuego · listo en " + fmtDur(falta);
+      return '<div class="forge-row eq' + (p.listo ? " hn-listo" : "") + '"><div class="fic"><img src="' + GF.spr(md.sprite) + '"></div><div class="finfo">' +
         '<div class="fnm">' + md.label + '</div>' +
-        '<div class="durbar"><i style="width:' + pct + '%"></i></div>' +
-        '<div class="fds">' + (falta > 0 ? "listo en " + fmtDur(falta) : "¡listo! entra a la bolsa solo") + '</div>' +
+        '<div class="durbar"><i style="width:' + (esperando ? 0 : pct) + '%"></i></div>' +
+        '<div class="fds">' + txt + '</div>' +
         '</div><div class="fbtns"></div></div>';
     }).join("");
+    /* el botón de recoger, con el número: « Recoger » a secas obliga a contar las filas. */
+    const listasH = cola.filter(p => p.listo).length;
+    if (listasH) html += '<button class="gold" id="hn-recoger" style="width:100%;margin:6px 0">' +
+      "Recoger " + listasH + (listasH > 1 ? " piezas" : " pieza") + '</button>';
     html += '<div class="secc">Fundir</div>';
   }
   elCola.innerHTML = html;
+  const bRec = $("hn-recoger");
+  if (bRec) bRec.onclick = () => { hornoRecoger(); refreshHorno(); if (isOpen("ov-inv")) refreshInv(); };
 
   /* --- lo que se puede fundir. El botón del LOTE dice cuántos van a entrar de verdad --- */
   /* 24/8 (diseñador: « dice craft 5 y craftea 3; o craftea de 5 en 5 o dice craftear 3 »).
@@ -1788,13 +1824,20 @@ function refreshCookingV2() {
     const left = Math.max(0, c.endAt - nowMs());
     const espera = (typeof cookEsperando === "function") && cookEsperando(c);
     const pct = espera ? 0 : Math.max(0, Math.min(100, Math.round((1 - left / (c.total || 1)) * 100)));
-    h += '<div class="ck-olla llena' + (espera ? " enfila" : "") + '" title="' + (r.label || "") +
-      (espera ? " · en la fila, empieza cuando termine el anterior" : " · al fuego") + '">' + ckIcono(r, "t") +
+    h += '<div class="ck-olla llena' + (espera ? " enfila" : "") + (c.listo ? " listo" : "") + '" title="' + (r.label || "") +
+      (c.listo ? " · listo, tocá Recoger" : espera ? " · en la fila, empieza cuando termine el anterior" : " · al fuego") + '">' + ckIcono(r, "t") +
       (espera ? '<span class="turno">' + i + '</span>' : "") +
-      '<span class="t">' + fmtCorto(Math.ceil(left / 1000)) + '</span>' +
-      '<span class="b"><i style="width:' + pct + '%"></i></span></div>';
+      '<span class="t">' + (c.listo ? "¡listo!" : fmtCorto(Math.ceil(left / 1000))) + '</span>' +
+      '<span class="b"><i style="width:' + (c.listo ? 100 : pct) + '%"></i></span></div>';
   }
+  /* el botón de recoger, igual que el del Horno y con el mismo texto: dos edificios que hacen lo
+     mismo tienen que decirlo con las mismas palabras, o el jugador aprende dos veces. */
+  const listasC = cookList().filter(c => c.listo).length;
+  if (listasC) h += '<button class="gold" id="ck-recoger" style="flex:1 0 100%;margin-top:6px">' +
+    "Recoger " + listasC + (listasC > 1 ? " platos" : " plato") + '</button>';
   cola.innerHTML = h;
+  const bRecC = $("ck-recoger");
+  if (bRecC) bRecC.onclick = () => { cocinaRecoger(); refreshCooking(); if (isOpen("ov-inv")) refreshInv(); };
 
   /* --- el recetario: una grilla de íconos, por nivel --- */
   const orden = RECIPE_ORDER.slice().sort((a, b) => (RECIPE_DEF[a].lvl || 1) - (RECIPE_DEF[b].lvl || 1));
@@ -1848,7 +1891,7 @@ function refreshCookingV2() {
   if (r.plata) d += '<div class="ck-fila"><span>' + coinIc("plata") + '</span><b>' + fmt(vPlata) + '</b></div>';
   d += '<div class="ck-fila"><span>🎒 tenés</span><b>' + fmt(own) + '</b></div>';
   const efecto = (typeof dishDesc === "function") ? dishDesc(r) : "";
-  if (efecto) d += '<div class="fds" style="font-size:10px;margin-top:4px">' + efecto + '</div>';
+  if (efecto) d += '<div class="ck-efecto">' + efecto + '</div>';
   d += '<div class="acc">';
   if (locked) d += '<button class="green sm" disabled>Cocina nivel ' + r.lvl + '</button>';
   else if (cookFree() <= 0) d += '<button class="green sm" disabled>Ollas ocupadas</button>';
