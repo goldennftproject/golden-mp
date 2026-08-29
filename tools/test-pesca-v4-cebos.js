@@ -85,9 +85,25 @@ console.log("\nEL PESO QUE GARANTIZA EL CAMARÓN   (derivado y medido, para que 
   }
   console.log("");
   ok("la fórmula coincide con el sorteo en todas las especies", !malas.length, malas.join(" · "));
-  ok("y NO es el 1,5 que yo había escrito a mano",
-    Math.abs(ctx.pesoFactorEsperado("atun", "camaron") - 1.5) > 0.15,
-    ctx.pesoFactorEsperado("atun", "camaron").toFixed(3) + ", porque el peso mínimo no es cero");
+  /* 28/8 — ACÁ DECÍA « y NO es el 1,5 que yo había escrito a mano », y la comprobación era que
+     el número se apartara de 1,5. Con el factor de peso al cuadrado el valor real subió a 1,48 y
+     esto se puso rojo… por acercarse a la cifra equivocada por el motivo correcto. Casualidad
+     pura: el 1,5 de entonces salía de suponer que el peso mínimo era cero, y este 1,48 sale de
+     elevar al cuadrado. Dos cuentas distintas que dan casi lo mismo.
+     Que un test dependa de que dos números NO coincidan es frágil por definición. Lo que hay que
+     defender es lo de siempre: que la fórmula y el sorteo digan lo mismo —eso ya está arriba— y
+     que el factor no sea una constante disfrazada, o sea que cambie de especie a especie.
+
+     Y AL ESCRIBIRLO APRENDÍ ALGO QUE NO SABÍA: el factor no depende del tamaño del pez, sino de
+     la PROPORCIÓN entre su peso mínimo y su rango. Merluza (0,4–1,8), atún (2–9) y pez espada
+     (20–90) dan los tres exactamente 1,484 porque los tres tienen min/rango = 0,286 — cosa del
+     documento, que armó los rangos con la misma proporción sin proponérselo. Elegí esas tres
+     para demostrar que el factor variaba y demostré lo contrario.
+     Así que se comparan especies con proporciones DISTINTAS, que es lo que había que hacer. */
+  const porEspecie = ["merluza", "pez_linterna", "pez_globo"].map(k => ctx.pesoFactorEsperado(k, "camaron"));
+  ok("y no es una constante: depende de cada rango de peso",
+    Math.max(...porEspecie) - Math.min(...porEspecie) > 0.02,
+    porEspecie.map(x => x.toFixed(3)).join(" · ") + " — manda la proporción mínimo/rango");
   ok("sin camarón, el peso no se toca", ctx.pesoFactorEsperado("atun", "lombriz") === 1);
   /* y lo que hace que el récord siga siendo un récord: el cebo corre la curva, no pone el techo */
   let topes = 0;
@@ -108,13 +124,19 @@ console.log("\nLO QUE DEFIENDE ESTE ARCHIVO: QUE DOS DE LOS TRES NO CONVENGAN");
       (v - base).toFixed(2).padStart(9) + netos[k].toFixed(2).padStart(9));
   }
   console.log("");
-  ok("la lombriz es la base", Math.abs(base - 10.30) < 0.05, base.toFixed(2));
-  ok("la larva sube el lance a los 20,60 que dice el documento",
-    Math.abs(VE("larva_luz") - 20.60) < 0.10, VE("larva_luz").toFixed(2));
-  ok("y queda ANCLADA: lo que sube es lo que cuesta",
+  /* 28/8 — los dos números clavados de acá (10,30 la base y 20,60 la larva) eran del documento y
+     valían mientras TODA caña pudiera sacar TODA especie. Con la escalera de especies que pidió
+     el diseñador, la de junco ya no llega a siete de ellas y su base cae a 9,59; la larva, que
+     borra la banda común repartiendo proporcionalmente, la sigue hasta 18,71.
+     Lo que hay que defender no era el 20,60: era que la larva SUBA CASI EXACTAMENTE LO QUE
+     CUESTA, o sea que no dé beneficio sino control. Eso se comprueba abajo y sigue en pie. */
+  ok("la larva casi dobla el lance: borra la banda común",
+    VE("larva_luz") > base * 1.8, base.toFixed(2) + " → " + VE("larva_luz").toFixed(2));
+  ok("y queda ANCLADA: lo que sube es casi exactamente lo que cuesta",
     Math.abs(netos.larva_luz) < 1, netos.larva_luz.toFixed(2) + " de neto");
-  console.log("       → si el reparto fuera « todo a poco común » daría 14,64 y la larva perdería");
-  console.log("         5,66 por lance: un cebo que existe sin existir.");
+  console.log("       → si el reparto fuera « todo a poco común » la larva perdería más de 5 por");
+  console.log("         lance: un cebo que existe sin existir. El reparto proporcional es lo que");
+  console.log("         la convierte en una decisión — se usa cuando falta un pez, no para ganar.");
   ok("el camarón aporta unos 5, como dice el documento",
     VE("camaron") - base > 3 && VE("camaron") - base < 7, (VE("camaron") - base).toFixed(2));
   ok("y PIERDE plata, que es exactamente lo que tiene que hacer",
@@ -131,9 +153,9 @@ console.log("\nEL INVARIANTE DE LA LOMBRIZ SIGUE INTACTO   (los cebos no lo toca
   const nasas = g("NASA_ORDER").map(k => ctx.nasaPorLombriz(k));
   const todos = netos.concat(nasas);
   const disp = (Math.max(...todos) / Math.min(...todos) - 1) * 100;
-  ok("las siete rutas siguen entre 9 y 12", Math.min(...todos) > 9 && Math.max(...todos) < 12,
+  ok("las siete rutas siguen entre 8,5 y 12", Math.min(...todos) > 8.5 && Math.max(...todos) < 12,
     Math.min(...todos).toFixed(2) + " a " + Math.max(...todos).toFixed(2));
-  ok("y la dispersión sigue en el 22 %", Math.abs(disp - 22) < 4, disp.toFixed(0) + " %");
+  ok("y ninguna se despega: menos de un 25 % entre la mejor y la peor", disp < 25, disp.toFixed(0) + " %");
   console.log("       → los cebos son decisiones DENTRO del lance; el ancla la sigue fijando");
   console.log("         la lombriz, y por eso sigue siendo la única palanca que hay que tocar.");
 }

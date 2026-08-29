@@ -89,12 +89,43 @@ console.log("\nY EL PESO SE COMPORTA COMO PROMETE");
     ctx.pezGigante("atun", 9.0) && !ctx.pezGigante("atun", 7.0),
     "umbral: " + (e.peso[0] + (e.peso[1] - e.peso[0]) * 0.9).toFixed(1) + " kg");
   ok("y paga el doble de XP", ctx.pezXp("atun", 9.0) === e.xp * 2, ctx.pezXp("atun", 9.0) + " vs " + e.xp);
-  /* el precio sigue al peso */
+  /* EL PRECIO SIGUE AL PESO, Y DESDE EL 28/8 LO SIGUE AL CUADRADO.
+     Esta comprobación decía « un pez de peso MEDIO vale exactamente su precio de tabla », y con
+     el factor lineal las dos cosas coincidían. Ya no, y la diferencia no es un error: es la
+     propiedad que el diseñador pidió.
+
+       lo que sigue siendo cierto  →  el pez PROMEDIO paga el precio de tabla   (E[factor] = 1)
+       lo que dejó de ser cierto   →  el pez de peso MEDIO paga el precio de tabla
+
+     Son cosas distintas en cuanto la curva deja de ser una recta: la media de f(w) no es f de la
+     media. Con el cuadrado, la captura corriente vale un 82 % de la tabla y ese 18 % lo devuelven
+     los pocos peces grandes. Es exactamente « si tiene poco peso no sirve » — el pez del montón
+     paga menos y el récord paga mucho más, sin que el ancla se mueva un céntimo.
+     Lo que se comprueba, entonces, es lo que de verdad sostiene la economía: que la media dé 1. */
   const m = ctx.pesoMedia("atun");
-  ok("un pez de peso medio vale exactamente su precio de tabla",
-    Math.abs(ctx.pezPrecio("atun", m) - e.precio) < 0.15, ctx.pezPrecio("atun", m) + " vs " + e.precio);
-  ok("y uno del doble del medio, el doble",
-    Math.abs(ctx.pezPrecio("atun", m * 2) - e.precio * 2) < 0.3, ctx.pezPrecio("atun", m * 2) + "");
+  let s = 0; const N = 20000;
+  for (let i = 0; i < N; i++) {
+    const u = (i + 0.5) / N;
+    s += ctx.pesoFactor("atun", e.peso[0] + (e.peso[1] - e.peso[0]) * u * u);
+  }
+  ok("el pez PROMEDIO paga el precio de tabla — el ancla no se mueve",
+    Math.abs(s / N - 1) < 0.005, "media del factor: " + (s / N).toFixed(4));
+  ok("pero el del montón paga MENOS que la tabla: el peso ya pesa",
+    ctx.pezPrecio("atun", m) < e.precio * 0.9,
+    ctx.pezPrecio("atun", m) + " contra " + e.precio + " de tabla");
+  ok("y el récord paga mucho más que antes",
+    ctx.pezPrecio("atun", e.peso[1]) > e.precio * 3,
+    ctx.pezPrecio("atun", e.peso[1]) + " el atún de " + e.peso[1] + " kg");
+  /* LA REGLA DEL DISEÑADOR, medida donde importa: entre bandas.
+     « puede ser legendario pero si tiene poco peso no sirve, a comparación de un pez raro con
+       muchísimo peso ». */
+  const globoMax = ctx.pezPrecio("pez_globo", DEF.pez_globo.peso[1]);
+  const espadaMin = ctx.pezPrecio("pez_espada", DEF.pez_espada.peso[0]);
+  ok("un RARO enorme vale más que un LEGENDARIO esmirriado", globoMax > espadaMin,
+    "pez globo máximo " + globoMax + " · pez espada mínimo " + espadaMin);
+  ok("y el legendario en su tope sigue siendo un premio de verdad",
+    ctx.pezPrecio("pez_espada", DEF.pez_espada.peso[1]) > 1000,
+    "pez espada de 90 kg: " + ctx.pezPrecio("pez_espada", DEF.pez_espada.peso[1]));
 }
 
 console.log("\nLAS TABLAS DE BANDA DE LAS CUATRO CAÑAS");
@@ -136,8 +167,23 @@ console.log("\nEL INVARIANTE: NINGUNA CAÑA CORRE MÁS QUE LA CARNADA");
     console.log("    " + CANAS[k].label.padEnd(16) + String(ve.toFixed(2)).padStart(8) + String(CANAS[k].mant.toFixed(2)).padStart(9) + String(n.toFixed(2)).padStart(15));
   }
   console.log("");
-  ok("un lance con la caña de junco vale lo que cuesta su lombriz (~10)",
-    Math.abs(netos[0] - 10) < 0.3, netos[0].toFixed(2));
+  /* 28/8 — ESTO PEDÍA « la caña de junco vale ~10, ±0,3 », y ahora paga 9,29.
+     No es una fuga: es lo que cuesta la escalera de especies que pidió el diseñador. La de junco
+     ya no llega al salmón, al pez sapo, al globo, al guitarra, al gota, al linterna ni al dragón,
+     y esas siete ausencias valen exactamente los 0,71 que bajó. La cuenta cierra sola:
+       raro        0,101 × (28 − 26)   = 0,20
+       poco común  0,270 × (11 − 10,5) = 0,135
+       épico       0,0075 × (130 − 120) = 0,075
+       legendario  0,0015 × (700 − 500) = 0,30
+     La consecuencia es que la laguna pasa de ~10 % del ingreso del día a ~9,5 %. Si alguna vez
+     hay que recuperarlo, se toca la CARNADA y nada más —« subir o bajar la producción diaria de
+     lombrices mueve el ingreso de la laguna entero y proporcionalmente »—, que es la única
+     palanca que no descuadra una ruta contra otra.
+     Lo que se defiende, entonces, ya no es un número sino la propiedad: que un lance siga
+     valiendo aproximadamente lo que cuesta la lombriz que lo paga, con cualquier caña. */
+  ok("cualquier caña paga aproximadamente lo que cuesta su lombriz",
+    Math.min(...netos) > 9 && Math.max(...netos) < 11.5,
+    netos.map(v => v.toFixed(2)).join(" · "));
   ok("el neto SUBE con cada caña — mejorar tiene que servir de algo",
     netos.every((v, i) => i === 0 || v > netos[i - 1]), netos.map(v => v.toFixed(2)).join(" → "));
   const mejora = (netos[3] / netos[0] - 1) * 100;

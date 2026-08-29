@@ -66,9 +66,18 @@ const JUGADORES = {
   },
   azaroso:   () => Math.random() < 0.6,
 };
+/* 28/8 — SE PELEA CON LA CAÑA DE ORO, y antes era con la de junco.
+   Desde que la caña ABRE ESPECIES (pedido del diseñador: « según la caña tienes varias opciones
+   de peces »), la de junco solo alcanza UNA especie de cada banda alta. Este archivo no mide una
+   caña: mide si la PULSEADA distingue a los cinco jugadores, y para eso tiene que ver las
+   diecinueve especies. Con la de junco medía otra cosa —lo duro que es el pez espada, que es el
+   único legendario a su alcance— y por eso el 80 % de capturas cayó a 46 sin que nadie hubiera
+   tocado la pelea.
+   Que el jugador del primer día se cruce SOLO con el pez espada es un dato interesante y va
+   medido aparte, más abajo. */
 function pelear(banda, jugador, semilla) {
   G.pescaV4 = { racha: 0, sinEpico: 0, primeroDelDia: ctx.hoyClave(), records: {} };
-  const L = ctx.lanceArmar("junco", null, { banda, sinPiedad: true, noche: banda === "legendario" });
+  const L = ctx.lanceArmar("oro", null, { banda, sinPiedad: true, noche: banda === "legendario" });
   const mem = {};
   let t = 0;
   while (!L.listo && !L.roto && t < 90) { ctx.peleaTick(L, DT, JUGADORES[jugador](L, mem)); t += DT; }
@@ -125,6 +134,27 @@ console.log("\n¿QUIÉN GANA Y QUIÉN PIERDE?   (500 peleas por casilla)");
     r.azaroso.raro.pct < 0.15,
     "común " + Math.round(r.azaroso.comun.pct * 100) + " % · raro " + Math.round(r.azaroso.raro.pct * 100) + " %");
   console.log("       → el contenido alto es lo que separa a quien mira la pantalla de quien no.");
+}
+
+console.log("\nY CON QUÉ SE CRUZA EL JUGADOR DEL PRIMER DÍA   (la caña de junco, aparte)");
+{
+  /* la escalera de especies tiene una consecuencia que no busqué y que vale la pena dejar
+     medida: con la caña de junco, el ÚNICO legendario alcanzable es el pez espada — o sea que
+     el primer legendario de la partida de cualquier jugador es, siempre, el que corta el hilo si
+     aguantás más de dos segundos.
+     Eso es bueno y es gratis: la regla más importante de la pulseada se aprende en el momento de
+     más adrenalina, perdiendo una vez, y no leyéndola en un panel. Pero si un día alguien cambia
+     CANA_ABRE sin pensarlo, esto cambia con él y nadie se enteraría. */
+  const legJunco = ctx.pecesDeCana("junco", "legendario");
+  ok("con la caña de junco el único legendario posible es el pez espada",
+    legJunco.length === 1 && legJunco[0] === "pez_espada", legJunco.join(", "));
+  /* se comprueba contra el TEXTO que ve el jugador y no contra el nombre interno del campo: el
+     campo puede renombrarse mañana, y lo que este renglón defiende es que el pez que le toca
+     enseñe esa regla concreta — que es lo que el jugador lee cuando la aprende. */
+  ok("y es justo el que enseña la regla de no aguantar de más",
+    /corta el hilo/i.test(ctx.trucoTxt("pez_espada") || ""), ctx.trucoTxt("pez_espada"));
+  console.log("       → el primer legendario de la partida es siempre el más exigente, y eso");
+  console.log("         convierte la primera derrota en la lección en vez de en mala suerte.");
 }
 
 console.log("\nSE PIERDE POR CODICIA, NO POR REFLEJOS   (la promesa del documento)");

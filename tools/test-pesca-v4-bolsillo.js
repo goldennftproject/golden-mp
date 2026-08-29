@@ -47,7 +47,7 @@ function jugar(cana, n, opciones) {
   let acc = 0; for (let k = 2; k <= 20; k++) acc += ctx.skillNeed(k, "fishing");
   G.skills = { fishing: acc, farming: acc };
   const antes = G.plata;
-  let lombrices = 0, vendido = 0;
+  let lombrices = 0, vendido = 0, s2 = 0;
   for (let i = 0; i < n; i++) {
     /* LA RACHA Y LA PIEDAD SE APAGAN salvo que se pidan, y la razón importa: un simulador que
        gana SIEMPRE mantiene la racha de cinco encendida para siempre, y entonces mide a un
@@ -60,20 +60,26 @@ function jugar(cana, n, opciones) {
     const L = ctx.lanceArmar(cana, null, { noche: o.noche || false, cebo: o.cebo || "lombriz",
                                            sinPiedad: !o.racha });
     const r = ctx.lanceCerrar(L);                       // ← acá cobra el peaje el juego
-    if (r && !r.roto) vendido += ctx.pezPrecio(r.id, r.kg);
+    const v = (r && !r.roto) ? ctx.pezPrecio(r.id, r.kg) : 0;
+    vendido += v; s2 += v * v;                          // para la desviación típica, ver abajo
   }
   G.plata += vendido;                                    // se vende todo lo pescado
-  return { neto: (G.plata - antes) / lombrices, lombrices, vendido };
+  /* LA DESVIACIÓN TÍPICA SE MIDE, NO SE ESTIMA. La tolerancia de más abajo sale de acá: si un
+     día la economía se vuelve más azarosa —y el 28/8 se volvió, al pasar el peso al cuadrado—,
+     la tolerancia se ensancha sola en vez de ponerse roja por un motivo que no es un fallo. */
+  const media = vendido / lombrices;
+  const sigma = Math.sqrt(Math.max(0, s2 / lombrices - media * media));
+  return { neto: (G.plata - antes) / lombrices, lombrices, vendido, sigma };
 }
 
 console.log("\nEL INVARIANTE, CONTANDO LA PLATA DE LA BOLSA");
 {
   const N = 40000;
   console.log("\n    caña             lances   plata neta por lombriz   lo que promete la tabla");
-  const netos = [];
+  const netos = [], sigmas = [];
   for (const k of ["junco", "bambu", "hierro", "oro"]) {
     const r = jugar(k, N);
-    netos.push(r.neto); MEDIDO[k] = r.neto;
+    netos.push(r.neto); sigmas.push(r.sigma); MEDIDO[k] = r.neto;
     console.log("    " + CANAS[k].label.padEnd(17) + String(N).padStart(6) +
       r.neto.toFixed(2).padStart(22) + ctx.lanceNeto(k).toFixed(2).padStart(24));
   }
@@ -92,12 +98,20 @@ console.log("\nEL INVARIANTE, CONTANDO LA PLATA DE LA BOLSA");
      la media de 40.000. Pedir menos de 0,35 haría que el test fallara una de cada tres veces por
      azar puro — y un test intermitente es peor que no tenerlo, porque enseña a volver a correrlo
      hasta que salga verde. Tres desviaciones típicas: 0,7. */
-  const TOLERANCIA = 0.7;
+  /* 28/8 — LA TOLERANCIA SE DERIVA DE LA MEDIDA, y ya no es el 0,7 escrito a mano de arriba.
+     Ese 0,7 eran tres desviaciones típicas de la economía de entonces. Al pasar el factor de peso
+     al cuadrado, la cola de los legendarios engordó y la desviación típica de un lance subió: el
+     mismo juego, igual de correcto, empezó a fallar este test por azar.
+     Una tolerancia clavada a mano envejece con la economía que la produjo. Ahora sale de la sigma
+     que la propia simulación acaba de medir — tres sigmas del error de la media, 3σ/√N —, así que
+     lo que se comprueba es lo que importa: que la diferencia entre la bolsa y la tabla sea ruido
+     y no un sesgo. */
   const malas = ["junco", "bambu", "hierro", "oro"]
-    .map((k, i) => ({ k, d: netos[i] - ctx.lanceNeto(k) }))
-    .filter(x => Math.abs(x.d) > TOLERANCIA);
-  ok("la bolsa coincide con la tabla en las cuatro cañas (±" + TOLERANCIA + ")", !malas.length,
-    malas.map(x => x.k + " " + x.d.toFixed(2)).join(", "));
+    .map((k, i) => ({ k, d: netos[i] - ctx.lanceNeto(k), tol: 3 * sigmas[i] / Math.sqrt(N) }))
+    .filter(x => Math.abs(x.d) > x.tol);
+  const tolMax = Math.max(...sigmas.map(s => 3 * s / Math.sqrt(N)));
+  ok("la bolsa coincide con la tabla en las cuatro cañas (±3σ, hoy ±" + tolMax.toFixed(2) + ")",
+    !malas.length, malas.map(x => x.k + " " + x.d.toFixed(2) + " sobre " + x.tol.toFixed(2)).join(", "));
 }
 
 console.log("\nEL PEAJE SE COBRA DE VERDAD, Y NO SE PIERDE POR REDONDEO");

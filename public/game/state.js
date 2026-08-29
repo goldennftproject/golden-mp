@@ -5518,16 +5518,68 @@ var PEZ_DEF = {
   pez_gota:     { label: "Pez gota",      emoji: "🫠", banda: "legendario", precio: 700, xp: 300, peso: [0.5, 3.0],  sprite: "fish_legendario" },
   pez_dragon:   { label: "Pez dragón",    emoji: "🐉", banda: "legendario", precio: 900, xp: 400, peso: [10, 45],    sprite: "fish_legendario", noche: true },
   /* --- míticos: SOLO de nasa. No entran en ninguna tabla de caña. --- */
-  camaron:      { label: "Camarón",       emoji: "🦐", banda: "mitico",     precio: 30,  xp: 25,  peso: [0.05, 0.3], sprite: "fish_comun" },
-  cangrejo:     { label: "Cangrejo",      emoji: "🦀", banda: "mitico",     precio: 55,  xp: 40,  peso: [0.3, 1.5],  sprite: "fish_raro" },
-  langosta:     { label: "Langosta",      emoji: "🦞", banda: "mitico",     precio: 90,  xp: 60,  peso: [0.5, 3.0],  sprite: "fish_epico" },
-  calamar_v4:   { label: "Calamar",       emoji: "🦑", banda: "mitico",     precio: 145, xp: 90,  peso: [1.0, 8.0],  sprite: "fish_legendario" },
+  /* 28/8 — LOS MÍTICOS VALÍAN MENOS QUE LA BASURA, y hubo que subirlos ×5.
+     Suren fijó la consolación de la nasa: « si no caza nada obtendrá basura… 2-5 de piedra al
+     igual que la madera ». En su cabeza eso es chatarra, y en cualquier otro juego lo sería. En
+     éste no: la piedra vale 15 y la madera 12 porque los dos precios cuelgan del ancla de 20 por
+     hora, así que 3,5 de cada una son 94,5 de plata — más que las dos horas que la nasa tardó
+     (37,2) y TRIPLE que un camarón de 30.
+     O sea que, con los precios viejos, la nasa pagaba mejor cuando FALLABA. Una mecánica en la
+     que el fracaso es el buen resultado no es difícil: está rota.
+     De las dos salidas posibles —bajar la basura o subir los míticos— subo los míticos, porque
+     el 2-5 lo pidió él y estos precios los puse yo. Y de paso arregla algo que ya estaba mal
+     desde antes: un camarón no puede valer menos que tres troncos. */
+  camaron:      { label: "Camarón",       emoji: "🦐", banda: "mitico",     precio: 150, xp: 25,  peso: [0.05, 0.3], sprite: "fish_comun" },
+  cangrejo:     { label: "Cangrejo",      emoji: "🦀", banda: "mitico",     precio: 275, xp: 40,  peso: [0.3, 1.5],  sprite: "fish_raro" },
+  langosta:     { label: "Langosta",      emoji: "🦞", banda: "mitico",     precio: 450, xp: 60,  peso: [0.5, 3.0],  sprite: "fish_epico" },
+  calamar_v4:   { label: "Calamar",       emoji: "🦑", banda: "mitico",     precio: 725, xp: 90,  peso: [1.0, 8.0],  sprite: "fish_legendario" },
 };
 var PEZ_ORDER = ["merluza", "lubina", "atun", "robalo", "pargo", "salmon",
                  "pez_gato", "pez_sapo", "pez_globo", "pez_loro", "pez_guitarra", "pez_linterna",
                  "pez_espada", "pez_gota", "pez_dragon",
                  "camaron", "cangrejo", "langosta", "calamar_v4"];
 function pecesDeBanda(b) { return PEZ_ORDER.filter(k => PEZ_DEF[k].banda === b); }
+/* ── QUÉ PECES ABRE CADA CAÑA ────────────────────────────────────────────────────────────────
+   28/8, pedido del diseñador: « según la caña tienes varias opciones de peces ».
+   Hasta hoy la caña solo movía PORCENTAJES: todas podían sacar todo y la buena sacaba raros más
+   seguido. Es más fino y es invisible — nadie nota que su probabilidad de épico pasó del 0,75 al
+   1,8 %. Que la caña abra ESPECIES sí se nota: cambiás de caña y aparecen peces que no habías
+   visto nunca, que es de lo que hablaba.
+
+   POR QUÉ POR ESPECIES Y NO POR BANDAS. Lo primero que probé fue un techo de banda —la de junco
+   no llega a legendario, la de oro sí—. Rompe el invariante de cuajo: la caña de junco caía a
+   6,13 de plata por lombriz contra los 10 que tiene que pagar, y no hay peaje negativo con el
+   que devolvérselo. Cortando DENTRO de cada banda, en cambio, toda caña conserva su lotería
+   —hasta la de junco puede sacar un legendario— y lo que crece es el catálogo.
+
+   El orden es el de PEZ_ORDER, que va de más barato a más caro dentro de cada banda: así lo que
+   abre una caña nueva es siempre lo mejor de su banda, y la escalera se lee sola. */
+var CANA_ABRE = {
+  junco:  { comun: 3, poco_comun: 2, raro: 1, epico: 1, legendario: 1 },
+  bambu:  { comun: 3, poco_comun: 3, raro: 2, epico: 1, legendario: 1 },
+  hierro: { comun: 3, poco_comun: 3, raro: 3, epico: 2, legendario: 2 },
+  oro:    { comun: 3, poco_comun: 3, raro: 3, epico: 3, legendario: 3 },
+  abuelo: { comun: 3, poco_comun: 3, raro: 3, epico: 3, legendario: 3 },
+};
+function pecesDeCana(cana, banda) {
+  const todos = pecesDeBanda(banda);
+  const n = ((CANA_ABRE[cana] || CANA_ABRE.junco)[banda]);
+  if (n == null) return todos;                       // los míticos no salen de caña: no se tocan
+  return todos.slice(0, Math.max(1, Math.min(todos.length, n)));
+}
+/* cuántas especies NUEVAS trae una caña respecto de la anterior — para que la tienda pueda
+   decirlo en vez de que el jugador lo descubra por accidente (regla 9). */
+function canaPecesNuevos(cana) {
+  const i = CANA_V4_ORDER.indexOf(cana);
+  if (i <= 0) return [];
+  const antes = CANA_V4_ORDER[i - 1];
+  const out = [];
+  for (const b in (CANA_ABRE[cana] || {})) {
+    const nuevos = pecesDeCana(cana, b).filter(k => pecesDeCana(antes, b).indexOf(k) < 0);
+    for (const k of nuevos) out.push(k);
+  }
+  return out;
+}
 
 /* ── EL PESO ─────────────────────────────────────────────────────────────────────────────────
    El sorteo carga hacia abajo: w = min + (max − min) · u², con u uniforme. Los grandes son
@@ -5543,7 +5595,46 @@ function pesoSortear(id, u) {
   const r = (u == null) ? Math.random() : u;
   return Math.round((e.peso[0] + (e.peso[1] - e.peso[0]) * r * r) * 100) / 100;
 }
-function pesoFactor(id, kg) { const m = pesoMedia(id); return m > 0 ? kg / m : 1; }
+/* ── EL PESO PESA MÁS QUE LA BANDA ───────────────────────────────────────────────────────────
+   28/8, y es una corrección de diseño pedida por Suren con una frase que vale más que todo mi
+   capítulo 4: « puede ser legendario pero si tiene poco peso no sirve, a comparación de un pez
+   raro con muchísimo peso ».
+
+   Con el factor LINEAL eso no pasaba ni de lejos. La banda aplastaba al peso:
+     pez espada mínimo   [legendario]   231 de plata
+     pez globo máximo    [raro]          66
+   El legendario más esmirriado valía 3,5 veces el mejor raro del juego, así que sacar un
+   legendario chico seguía siendo la lotería y el récord de un raro no significaba nada al lado.
+
+   La solución NO es tocar los precios de tabla —eso descuadraría el invariante y obligaría a
+   recalcular las cuatro cañas y las tres nasas—: es hacer el factor SUPERLINEAL y volver a
+   normalizarlo. Al cuadrado, el mismo par queda:
+     pez espada mínimo    86        pez globo máximo   113
+   y el espada máximo pasa a valer 1.751, o sea que arriba el legendario sigue siendo un premio.
+
+   Y EL ANCLA NO SE MUEVE, que es la parte que hace que esto sea barato. Se divide por la media
+   del propio factor, así que E[factor] = 1,00 por construcción y cada especie sigue valiendo su
+   precio de tabla en promedio. El peso reparte más fuerte; no imprime ni un céntimo de más.
+
+   La normalización se CALCULA, no se escribe: cuadratura determinista de 2.000 puntos sobre la
+   misma curva del sorteo. Un número a mano al lado de una fórmula que puede producirlo es el
+   fallo que este proyecto lleva toda la semana repitiendo. */
+var PESO_EXP = 2;
+var _pesoZ = {};
+function pesoNorm(id) {
+  if (_pesoZ[id] != null) return _pesoZ[id];
+  const e = PEZ_DEF[id];
+  if (!e || !e.peso) return (_pesoZ[id] = 1);
+  const m = pesoMedia(id), min = e.peso[0], R = e.peso[1] - e.peso[0];
+  if (!(m > 0)) return (_pesoZ[id] = 1);
+  const N = 2000; let s = 0;
+  for (let i = 0; i < N; i++) { const u = (i + 0.5) / N; s += Math.pow((min + R * u * u) / m, PESO_EXP); }
+  return (_pesoZ[id] = s / N);
+}
+function pesoFactor(id, kg) {
+  const m = pesoMedia(id); if (!(m > 0)) return 1;
+  return Math.pow(kg / m, PESO_EXP) / pesoNorm(id);
+}
 function pezGigante(id, kg) { const e = PEZ_DEF[id]; return !!e && kg >= e.peso[0] + (e.peso[1] - e.peso[0]) * PEZ_GIGANTE; }
 function pezPrecio(id, kg) {
   const e = PEZ_DEF[id]; if (!e) return 0;
@@ -5588,9 +5679,9 @@ var CANA_V4_DEF = {
             cost: { madera: 3 }, colaPlata: 5, banda: { comun: 62.00, poco_comun: 27.00, raro: 10.10, epico: 0.750, legendario: 0.150 } },
   bambu:  { label: "Caña de Bambú",   lvl: 4,  presupuesto: 400,  mant: 2.50,
             cost: { madera: 24, fibra: 4 }, colaPlata: 60, banda: { comun: 55.40, poco_comun: 27.00, raro: 16.16, epico: 1.200, legendario: 0.240 } },
-  hierro: { label: "Caña de Hierro",  lvl: 8,  presupuesto: 1000, mant: 5.50,
+  hierro: { label: "Caña de Hierro",  lvl: 8,  presupuesto: 1000, mant: 5.93,
             cost: { tablon: 6, barra_hierro: 4, cuero: 3 }, colaPlata: 105, banda: { comun: 46.60, poco_comun: 27.00, raro: 24.24, epico: 1.800, legendario: 0.360 } },
-  oro:    { label: "Caña de Oro",     lvl: 12, presupuesto: 2000, mant: 10.00,
+  oro:    { label: "Caña de Oro",     lvl: 12, presupuesto: 2000, mant: 10.84,
             cost: { tablon: 10, barra_oro: 4, cuero: 6 }, colaPlata: 200, banda: { comun: 34.50, poco_comun: 27.00, raro: 35.35, epico: 2.625, legendario: 0.525 } },
   /* la única que no cobra peaje, y la única que rompe el ancla a propósito: es el premio de
      final de escalera y cuesta un mes de Lonja bien jugada. +10 % al peso de todo lo que saca. */
@@ -5611,7 +5702,7 @@ function lanceValorEsperado(cana, opciones) {
   const t = bandaTabla(cana, o.noche || false, o.cebo || "lombriz");
   let v = 0;
   for (const b in t) {
-    const peces = pecesDeBanda(b);
+    const peces = pecesDeCana(cana, b);     // solo las especies que ESTA caña abre
     if (!peces.length) continue;
     /* el precio de cada especie va POR SU PESO esperado, no por el de tabla: con el camarón es
        de ahí de donde sale casi todo lo que aporta el cebo. */
@@ -5701,12 +5792,31 @@ function matValor(k) {
   if (!m || !m.cost) return 0;
   return Object.keys(m.cost).reduce((s, x) => s + matValor(x) * m.cost[x], 0);
 }
+/* 28/8 — LA NASA ES DE UN SOLO USO, Y ASÍ LO PIDIÓ EL DISEÑADOR:
+     « se le pone la carnada a ver qué caza en 2 horas de CD… si caza algo se rompe, si no caza
+       nada obtendrá basura, y la basura es piedra y madera, en un margen de 2-5 de piedra al
+       igual que la madera ».
+   Estaba implementada AL REVÉS: si pescaba seguía puesta y se recebaba, y si volvía vacía se
+   rompía. Eso venía de mi documento, no de él. Ahora la nasa se consume siempre; lo que cambia
+   es qué te llevás.
+   Y eso cambia su economía de raíz: el material ya no se reparte entre varios ciclos, se paga
+   ENTERO cada vez. Por eso desaparece `ciclos` —una nasa vive uno— y por eso las recetas suben:
+   el coste de cada nasa es ahora su presupuesto de un ciclo, derivado del ancla. */
 var NASA_ORDER = ["mimbre", "reforzada", "hierro"];
 var NASA_DEF = {
-  mimbre:    { label: "Nasa de mimbre",  mat: "madera", emoji: "🧺", lvl: 1,  cost: { madera: 4, fibra: 1 },   exito: 0.60, ciclos: 2.5 },
-  reforzada: { label: "Nasa reforzada",  mat: "madera", emoji: "🪢", lvl: 6,  cost: { madera: 6, fibra: 2, barra_bronce: 1 }, exito: 0.75, ciclos: 4.0 },
-  hierro:    { label: "Nasa de hierro",  mat: "tablon", emoji: "⚙️", lvl: 12, cost: { tablon: 8, cuero: 2, barra_hierro: 2 }, exito: 0.88, ciclos: 8.3 },
+  /* las mezclas salen del presupuesto de UN ciclo, no al revés: coste = valor del ciclo − las
+     cuatro lombrices a su precio. Y quedan justo por debajo de la caña más barata a propósito
+     (9,6-9,8 contra 10,00), porque la ruta pasiva paga tu ausencia y la activa paga tus manos.
+     Si la nasa pagara más, nadie tocaría el minijuego, que es el corazón del sistema. */
+  mimbre:    { label: "Nasa de mimbre",  mat: "madera", emoji: "🧺", lvl: 1,  cost: { madera: 9, piedra: 4 } },
+  reforzada: { label: "Nasa reforzada",  mat: "madera", emoji: "🪢", lvl: 6,  cost: { tablon: 3, piedra: 9 } },
+  hierro:    { label: "Nasa de hierro",  mat: "tablon", emoji: "⚙️", lvl: 12, cost: { tablon: 9, piedra: 2 } },
 };
+function nasaExito(id) { const t = NASA_TABLA[id]; return t ? (100 - (t.rota || 0)) / 100 : 0; }
+function nasaCoste(id) {
+  const d = NASA_DEF[id]; if (!d) return 0;
+  return Object.keys(d.cost).reduce((s, k) => s + (typeof matValor === "function" ? matValor(k) : 0) * d.cost[k], 0);
+}
 var NASA_HORAS = 2;                 // lo que tarda un ciclo
 var NASA_CUPO_CADA = 4;             // +1 hueco cada cuatro niveles de Pesca
 var NASA_CUPO_MAX = 5;
@@ -5749,48 +5859,44 @@ function nasaAbierta(id) {
    ruta cómoda pague un 7 % menos es suficiente para que la incómoda tenga sentido, y no tanto
    como para que dejar una nasa antes de dormir se sienta un castigo. */
 var NASA_PASIVA = 0.93;
-/* el ancla de un ciclo, DERIVADA — nunca escrita a mano */
+/* el ancla de un ciclo, DERIVADA — nunca escrita a mano. Con la nasa de un solo uso el material
+   entero pertenece a ESTE ciclo: no hay vida útil entre la que repartirlo. */
 function nasaAncla(id) {
-  const d = NASA_DEF[id]; if (!d) return 0;
-  const coste = Object.keys(d.cost).reduce((s, k) => s + (typeof matValor === "function" ? matValor(k) : 0) * d.cost[k], 0);
-  return Math.round((NASA_PASIVA * NASA_HORAS * ANCLA_PLATA_HORA + coste / d.ciclos) * 100) / 100;
+  if (!NASA_DEF[id]) return 0;
+  return Math.round((NASA_PASIVA * NASA_HORAS * ANCLA_PLATA_HORA + nasaCoste(id)) * 100) / 100;
 }
 /* lo que paga una nasa por lombriz gastada — el número que tiene que caer por debajo de la caña */
 function nasaPorLombriz(id) {
-  const d = NASA_DEF[id]; if (!d) return 0;
-  const coste = Object.keys(d.cost).reduce((s, k) => s + matValor(k) * d.cost[k], 0);
-  return Math.round((nasaValorCiclo(id) - coste / d.ciclos) / PESCA_V4_NASA_CEBO * 100) / 100;
+  if (!NASA_DEF[id]) return 0;
+  return Math.round((nasaValorCiclo(id) - nasaCoste(id)) / PESCA_V4_NASA_CEBO * 100) / 100;
 }
 /* lo que vale un ciclo de verdad: la esperanza de su tabla, contando la rotura y la basura */
 function nasaValorCiclo(id) {
   const t = NASA_TABLA[id]; if (!t) return 0;
   let v = 0;
   for (const k in t) {
-    if (k === "rota") { v += (t[k] / 100) * nasaBasuraValor(id); continue; }
+    if (k === "rota") { v += (t[k] / 100) * nasaBasuraValor(); continue; }
     v += (t[k] / 100) * (PEZ_DEF[k] ? PEZ_DEF[k].precio : 0);
   }
   return Math.round(v * 100) / 100;
 }
-/* LA BASURA DEL MAR TAMBIÉN SE DERIVA. El documento dice « 2-4 piedra y 2-4 madera », que con
-   SUS precios de material valía unos 30 y cerraba el ciclo. Con los precios reales (piedra 15,
-   madera 12) esos mismos números valen 81, y las tres nasas pasaban a rendir entre un 10 y un
-   32 % por encima de su ancla — una fuga que nadie vería, porque « me trajo madera » no suena a
-   exploit. Así que no se escribe cuánta basura: se calcula la que hace falta para que el ciclo
-   cierre, y de ahí sale cuántas piedras y maderas son.
-   Es la misma regla que el resto del juego: el ancla manda, el contenido se acomoda. */
-function nasaBasuraValor(id) {
-  const t = NASA_TABLA[id]; if (!t || !t.rota) return 0;
-  const pez = Object.keys(t).filter(k => k !== "rota")
-    .reduce((s, k) => s + (t[k] / 100) * (PEZ_DEF[k] ? PEZ_DEF[k].precio : 0), 0);
-  return Math.max(0, (nasaAncla(id) - pez) / (t.rota / 100));
+/* LA BASURA LA FIJÓ EL DISEÑADOR y es el único número de esta mecánica que NO se deriva:
+   « la basura es piedra y madera, en un margen de 2-5 de piedra al igual que la madera ».
+   Antes la calculaba yo, para que el ciclo cerrara contra el ancla. Ahora va al revés: la basura
+   es dato de entrada y lo que se acomoda es el resto —los precios de los míticos y el coste de
+   la nasa—, que son números míos. Cuando el diseñador pone un número concreto, ese número manda
+   y el sistema se mueve alrededor; es lo contrario de lo que vengo haciendo esta semana. */
+var NASA_BASURA_MIN = 2, NASA_BASURA_MAX = 5;
+function nasaBasuraValor() {
+  const media = (NASA_BASURA_MIN + NASA_BASURA_MAX) / 2;
+  return media * (matValor("piedra") + matValor("madera"));
 }
-/* y de ese valor salen las unidades: mitad en piedra y mitad en madera, redondeando a favor del
-   jugador cuando no da entero (nunca vuelve con las manos vacías). */
-function nasaBasura(id) {
-  const v = nasaBasuraValor(id);
-  const piedra = Math.max(1, Math.round(v / 2 / matValor("piedra")));
-  const madera = Math.max(1, Math.round(v / 2 / matValor("madera")));
-  return { piedra, madera };
+/* 2-5 de cada una, sorteadas por separado: si salieran las dos del mismo dado, « 5 y 5 » y
+   « 2 y 2 » serían los únicos resultados frecuentes y la basura se leería como dos escalones en
+   vez de un puñado. */
+function nasaBasura() {
+  const d = () => NASA_BASURA_MIN + Math.floor(Math.random() * (NASA_BASURA_MAX - NASA_BASURA_MIN + 1));
+  return { piedra: d(), madera: d() };
 }
 
 function nasaCalar(id) {
@@ -5817,33 +5923,19 @@ function nasaCobrar(i) {
   const t = NASA_TABLA[n.tipo], d = NASA_DEF[n.tipo];
   let u = Math.random() * 100, elegido = "rota";
   for (const k in t) { u -= t[k]; if (u < 0) { elegido = k; break; } }
+  /* LA NASA SE LEVANTA SIEMPRE, pesque o no. Lo que cambia es qué te llevás, y esa es la regla
+     entera tal como la dio el diseñador. (Estaba al revés: si pescaba seguía puesta y se
+     recebaba, si volvía vacía se rompía. Eso era mío.) */
+  nasas().splice(i, 1);
   if (elegido === "rota") {
-    nasas().splice(i, 1);
-    const dio = [], bas = nasaBasura(n.tipo);
+    const dio = [], bas = nasaBasura();
     for (const k in bas) {
       const q = bas[k];
       G.res[k] = (G.res[k] || 0) + q; dio.push(q + " " + (RES_LABEL[k] || k));
     }
-    log("🧺 La " + d.label + " volvió vacía y se rompió. Trajo " + dio.join(" y ") + ".", "bad");
-    toast("La nasa se rompió");
+    log("🧺 La " + d.label + " volvió vacía. Trajo " + dio.join(" y ") + " del fondo.", "info");
+    toast("La nasa volvió vacía");
   } else {
-    /* SIGUE PUESTA — PERO SE VUELVE A CEBAR, Y ESO CUESTA OTRAS CUATRO LOMBRICES.
-       Ésta es la línea que sostiene el invariante entero, y casi la escribo mal. Leyendo « si
-       pesca, sigue puesta » puse el cebo como un pago único al calarla: entonces una nasa de
-       hierro rendía 177 de plata por lombriz en vez de 9,92, porque producía para siempre con un
-       solo pago. Una trampa así ES la ruta rota que el capítulo 9 existe para impedir.
-       La tabla 12 del documento lo dice sin ambigüedad: divide el valor de UN CICLO entre cuatro
-       lombrices. Se paga por ciclo. */
-    if ((G.res.lombriz || 0) < PESCA_V4_NASA_CEBO) {
-      nasas().splice(i, 1);
-      /* y se dice POR QUÉ se levantó: una nasa que desaparece sin explicación se lee como un bug */
-      log("🧺 La " + d.label + " pescó, pero no te quedan lombrices para volver a cebarla, así que " +
-          "se levantó. El material vuelve a la bolsa.", "info");
-      for (const k in d.cost) G.res[k] = (G.res[k] || 0) + d.cost[k];
-    } else {
-      G.res.lombriz -= PESCA_V4_NASA_CEBO;
-      n.cala = nowMs(); n.listaEn = nowMs() + NASA_HORAS * 3600e3;
-    }
     const kg = pesoSortear(elegido);
     G.fish = G.fish || {}; G.fish[elegido] = (G.fish[elegido] || 0) + 1;
     /* el mismo registro que el lance, con deNasa=true — es lo que cuenta para el título de
@@ -5854,8 +5946,11 @@ function nasaCobrar(i) {
     if (typeof addXp === "function") addXp("fishing", pezXp(elegido, kg));
     if (typeof statAdd === "function") { statAdd("pescar"); statAdd("pescar", elegido); }
     const e = PEZ_DEF[elegido];
-    log("🧺 " + e.emoji + " ¡" + e.label + " de " + kg + " kg en la " + d.label + "! Sigue calada.", "gold");
-    toast(e.emoji + " ¡" + e.label + "!");
+    /* y se dice que la nasa se fue, en la misma línea del premio: una nasa que desaparece sin
+       explicación se lee como un bug, y encima es la mitad del trato. */
+    log("🧺 " + e.emoji + " ¡" + e.label + " de " + kg + " kg en la " + d.label + "! " +
+        "La nasa se rompió al sacarlo.", "gold");
+    toast(e.emoji + " ¡" + e.label + "! — la nasa se rompió");
   }
   if (typeof refreshHud === "function") refreshHud();
   if (typeof syncSlots === "function") syncSlots();
@@ -6140,12 +6235,24 @@ function bandaConSombra(banda, sombra) {
    Así que no hay constante: se calcula por especie, exacto, sin simular. Que un número se pueda
    derivar y aun así uno lo escriba a mano es exactamente el fallo que este proyecto lleva toda
    la semana repitiendo. */
+/* 28/8 — Y AHORA TAMPOCO SIRVE LA FÓRMULA CERRADA. Con el factor al cuadrado, lo que hay que
+   promediar es (w/m)^2 y no w, así que « (min + R/2) ÷ (min + R/3) » se queda corta: mide la
+   media del PESO cuando lo que se cobra es la media del FACTOR, y con un exponente de por medio
+   esas dos cosas dejaron de ser la misma.
+   Misma cuadratura determinista que pesoNorm, con la densidad del máximo de n sorteos (n·u^(n−1)),
+   dividida por la normalización de la especie. Sin simular y sin constantes a mano. */
 function pesoFactorEsperado(id, cebo) {
   if (cebo !== "camaron") return 1;
   const e = PEZ_DEF[id]; if (!e || !e.peso) return 1;
-  const min = e.peso[0], R = e.peso[1] - e.peso[0];
-  if (R <= 0) return 1;
-  return (min + R / 2) / (min + R / 3);
+  const m = pesoMedia(id), min = e.peso[0], R = e.peso[1] - e.peso[0];
+  if (R <= 0 || !(m > 0)) return 1;
+  const n = CEBO_CAMARON_TIRADAS, N = 2000;
+  let s = 0;
+  for (let i = 0; i < N; i++) {
+    const u = (i + 0.5) / N;
+    s += Math.pow((min + R * u * u) / m, PESO_EXP) * n * Math.pow(u, n - 1);
+  }
+  return (s / N) / pesoNorm(id);
 }
 
 /* el peso de ESTE lance: normalmente un sorteo, y con camarón el mayor de dos. */
@@ -6168,12 +6275,16 @@ function lanceArmar(cana, sombra, opciones) {
   const o = opciones || {};
   let banda = o.banda || bandaSortear(cana, o);
   if (sombra) banda = bandaConSombra(banda, sombra);
-  const peces = pecesDeBanda(banda).filter(k => {
+  /* LAS ESPECIES QUE ESTA CAÑA ABRE, y no todas las de la banda: es lo que hace que cambiar de
+     caña se note. El respaldo de abajo usa el mismo conjunto — si cayera a pecesDeBanda, una
+     banda entera de noche devolvería peces que esta caña no debería poder sacar. */
+  const delaCana = pecesDeCana(cana, banda);
+  const peces = delaCana.filter(k => {
     const e = PEZ_DEF[k];
     if (!e.noche) return true;
     return (o.noche != null ? o.noche : esDeNocheAhora());   // el pez gato y el dragón solo de noche
   });
-  const lista = peces.length ? peces : pecesDeBanda(banda);
+  const lista = peces.length ? peces : delaCana;
   const id = lista[Math.floor((o.uPez != null ? o.uPez : Math.random()) * lista.length)] || lista[0];
   const p = PELEA_V4[banda] || PELEA_V4.comun;
   const rnd = (a, b, u) => a + (b - a) * (u != null ? u : Math.random());

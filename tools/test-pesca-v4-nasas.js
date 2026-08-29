@@ -58,17 +58,21 @@ console.log("\nEL INVARIANTE DE LA LOMBRIZ, CON LAS NASAS DENTRO");
   console.log("");
   const todos = netos.concat(nasas);
   const disp = (Math.max(...todos) / Math.min(...todos) - 1) * 100;
-  ok("toda ruta de la laguna paga entre 9 y 12 por lombriz",
-    Math.min(...todos) > 9 && Math.max(...todos) < 12,
+  ok("toda ruta de la laguna paga entre 8,5 y 12 por lombriz",
+    Math.min(...todos) > 8.5 && Math.max(...todos) < 12,
     Math.min(...todos).toFixed(2) + " a " + Math.max(...todos).toFixed(2));
-  ok("la dispersión es la que promete el documento (22 %)", Math.abs(disp - 22) < 4, disp.toFixed(0) + " %");
+  /* 28/8: era « la dispersión que promete el documento (22 %) », con una ventana de ±4 alrededor.
+     Un test que exige un número EXACTO en un indicador de calidad castiga las mejoras: al pasar
+     las nasas a un solo uso la dispersión bajó a 18 % —las siete rutas más juntas que antes— y
+     esto se ponía rojo por haber apretado el sistema. Lo que hay que defender es el techo. */
+  ok("y ninguna se despega: menos de un 25 % entre la mejor y la peor", disp < 25, disp.toFixed(0) + " %");
   ok("las nasas pagan MENOS que cualquier caña — la pasiva paga tu ausencia, no tus manos",
     Math.max(...nasas) < Math.min(...netos), Math.max(...nasas).toFixed(2) + " < " + Math.min(...netos).toFixed(2));
   console.log("       → si la nasa pagara más, nadie tocaría el minijuego, que es el corazón");
   console.log("         del sistema. El 7 % de diferencia es justo el que hace falta.");
 }
 
-console.log("\nCADA CICLO CIERRA CON SU ANCLA   (2 h × 20 × pasiva + coste ÷ ciclos de vida)");
+console.log("\nCADA CICLO CIERRA CON SU ANCLA   (2 h × 20 × pasiva + el coste ENTERO de la nasa)");
 {
   console.log("\n    nasa               ancla   valor/ciclo   desvío");
   const malas = [];
@@ -79,17 +83,24 @@ console.log("\nCADA CICLO CIERRA CON SU ANCLA   (2 h × 20 × pasiva + coste ÷ 
   }
   console.log("");
   ok("las tres cierran con menos de un 3 %", !malas.length, malas.join(" · "));
-  /* la basura del mar se DERIVA: es lo que hace falta para que el ciclo cierre. En la de hierro
-     esa cuenta da cero —su ancla ya cierra con los peces solos— y ahí manda la regla 9 por encima
-     de la aritmética: una nasa que se rompe y no devuelve NADA es una acción muda. Se le da el
-     mínimo de todos modos, y el 1 % que eso desvía es el precio de que el jugador sepa qué pasó. */
-  ok("ninguna nasa rota deja al jugador con las manos vacías",
-    ORDEN.every(k => { const b = ctx.nasaBasura(k); return b.piedra >= 1 && b.madera >= 1; }),
-    ORDEN.map(k => { const b = ctx.nasaBasura(k); return k + " " + b.piedra + "🪨+" + b.madera + "🪵"; }).join(" · "));
-  console.log("       → el documento decía « 2-4 piedra y 2-4 madera », que con SUS precios valía");
-  console.log("         30 y cerraba. Con los reales vale 81, y las tres nasas rendían de un 10 a");
-  console.log("         un 32 % de más. Una fuga que nadie ve, porque « me trajo madera » no suena");
-  console.log("         a exploit.");
+  /* LA BASURA YA NO SE DERIVA: LA FIJÓ EL DISEÑADOR.
+     « la basura es piedra y madera, en un margen de 2-5 de piedra al igual que la madera ».
+     Antes la calculaba yo para que el ciclo cerrara; ahora es dato de entrada y lo que se acomoda
+     es el coste de la nasa, que es número mío. Cuando el diseñador pone un número concreto, ese
+     número manda y el sistema se mueve alrededor. */
+  const tiradas = Array.from({ length: 400 }, () => ctx.nasaBasura());
+  const min = Math.min(...tiradas.map(b => Math.min(b.piedra, b.madera)));
+  const max = Math.max(...tiradas.map(b => Math.max(b.piedra, b.madera)));
+  ok("la basura es 2-5 de piedra y 2-5 de madera, como se pidió", min === 2 && max === 5,
+    "medido en 400 tiradas: " + min + " a " + max);
+  ok("y las dos se sortean por separado",
+    tiradas.some(b => b.piedra !== b.madera),
+    "si salieran del mismo dado, la basura se leería como dos escalones y no como un puñado");
+  console.log("       → y eso obligó a subir los míticos ×5: con la piedra a 15 y la madera a 12,");
+  console.log("         3,5 de cada una son 94,5 de plata — MÁS que las dos horas que la nasa tardó");
+  console.log("         y triple que un camarón de 30. Tal cual estaba, la nasa pagaba mejor cuando");
+  console.log("         FALLABA, y una mecánica en la que el fracaso es el buen resultado no es");
+  console.log("         difícil: está rota.");
 }
 
 console.log("\nLAS TABLAS SUMAN 100 — ningún ciclo puede terminar en silencio");
@@ -121,37 +132,60 @@ console.log("\nCALAR, ESPERAR Y LEVANTAR");
   ok("pasadas las " + g("NASA_HORAS") + " h está lista", ctx.nasasParte()[0].lista === true);
   const r = ctx.nasaCobrar(0);
   ok("y levantarla resuelve el ciclo", !!r, r);
-  if (r !== "rota") {
-    ok("si pescó, el mítico entra en la bolsa", (G.fish[r] || 0) === 1, r);
-    ok("y la nasa SIGUE puesta", ctx.nasas().length === 1);
-  } else {
-    ok("si no pescó, la nasa se rompe y deja basura", ctx.nasas().length === 0 && G.res.piedra > 20 - 1);
-  }
+  /* pesque o no, el hueco queda libre: la nasa es de un solo uso. Las dos ramas por separado se
+     miden abajo, forzando la tabla; acá lo que se comprueba es lo que TIENEN EN COMÚN. */
+  ok("el hueco vuelve a quedar libre, haya pescado o no", ctx.nasas().length === 0, r);
+  if (r !== "rota") ok("si pescó, el mítico entra en la bolsa", (G.fish[r] || 0) === 1, r);
+  else ok("si no pescó, deja basura del fondo", (G.res.piedra || 0) >= 2);
 }
 
-console.log("\nY VOLVER A CEBAR CUESTA OTRAS CUATRO   (la línea que sostiene el invariante)");
+console.log("\nLA NASA ES DE UN SOLO USO   (la regla, tal como la dio el diseñador)");
 {
-  /* se fuerza una nasa que SIEMPRE pesca, para medir el rearme sin depender del azar */
-  pescador(12);
-  const orig = TABLA.mimbre.rota; TABLA.mimbre.rota = 0;
-  TABLA.mimbre.camaron = 100; TABLA.mimbre.cangrejo = 0; TABLA.mimbre.langosta = 0; TABLA.mimbre.calamar_v4 = 0;
+  /* « se le pone la carnada a ver qué caza en 2 horas de CD… si caza algo se rompe, si no caza
+       nada obtendrá basura, y la basura es piedra y madera, en un margen de 2-5 »
+
+     ESTABA AL REVÉS. Si pescaba seguía puesta y se recebaba; si volvía vacía, se rompía. Eso
+     venía de mi documento y no de él, y este bloque lo comprobaba con toda confianza — lo cual
+     dice algo incómodo sobre para qué sirve un test: fijaba mi interpretación, no su pedido.
+     Se fuerza la tabla a los dos extremos para medir cada rama sin depender del azar. */
+  const orig = { r: TABLA.mimbre.rota, c: TABLA.mimbre.camaron, g: TABLA.mimbre.cangrejo,
+                 l: TABLA.mimbre.langosta, q: TABLA.mimbre.calamar_v4 };
+  const forzar = (pesca) => {
+    TABLA.mimbre.rota = pesca ? 0 : 100;
+    TABLA.mimbre.camaron = pesca ? 100 : 0;
+    TABLA.mimbre.cangrejo = 0; TABLA.mimbre.langosta = 0; TABLA.mimbre.calamar_v4 = 0;
+  };
   try {
-    G.res.lombriz = CEBO * 2;
+    /* RAMA 1 — PESCA: entrega el mítico y la nasa se rompe */
+    pescador(12); G.res.lombriz = CEBO * 4;
+    forzar(true);
     ctx.nasaCalar("mimbre");
-    ok("quedan " + CEBO + " lombrices para el rearme", G.res.lombriz === CEBO, G.res.lombriz + "");
+    ok("calar cobra las " + CEBO + " lombrices", G.res.lombriz === CEBO * 3, G.res.lombriz + "");
+    adelantar(g("NASA_HORAS") * 3600e3 + 1000);
+    const antesPez = (G.fish || {}).camaron || 0;
+    ctx.nasaCobrar(0);
+    ok("al pescar, el mítico entra en la bolsa", ((G.fish || {}).camaron || 0) === antesPez + 1);
+    ok("Y LA NASA SE ROMPE — ya no está calada", ctx.nasas().length === 0);
+    ok("no se cobran lombrices de más: no hay rearme", G.res.lombriz === CEBO * 3, G.res.lombriz + "");
+    console.log("       → « si caza algo se rompe ». Antes seguía puesta y se recebaba sola, que");
+    console.log("         es lo que decía mi capítulo 8 y no lo que él pidió.");
+
+    /* RAMA 2 — VUELVE VACÍA: basura y también se levanta */
+    forzar(false);
+    pescador(12); G.res.lombriz = CEBO * 2;
+    ok("se cala una segunda nasa", ctx.nasaCalar("mimbre") === true);
+    /* la bolsa se vacía DESPUÉS de calar: si se vaciara antes, calar fallaría por falta de
+       material y este bloque mediría una nasa que nunca existió — que es exactamente lo que hizo
+       la primera versión, y daba « 0 piedra » con el juego funcionando bien. */
+    G.res.piedra = 0; G.res.madera = 0;
     adelantar(g("NASA_HORAS") * 3600e3 + 1000);
     ctx.nasaCobrar(0);
-    ok("al pescar se vuelve a cebar y se cobran otras " + CEBO, G.res.lombriz === 0, G.res.lombriz + "");
-    ok("y la nasa sigue calada", ctx.nasas().length === 1);
-    /* y sin lombrices, se levanta sola y lo DICE — una nasa que desaparece sin explicación es un bug */
-    adelantar(g("NASA_HORAS") * 3600e3 + 1000);
-    const mad = G.res.madera;
-    ctx.nasaCobrar(0);
-    ok("sin lombrices para cebar, la nasa se levanta", ctx.nasas().length === 0);
-    ok("y devuelve su material", G.res.madera === mad + DEF.mimbre.cost.madera, mad + " → " + G.res.madera);
+    ok("volviendo vacía trae piedra", G.res.piedra >= 2 && G.res.piedra <= 5, G.res.piedra + " piedra");
+    ok("y madera", G.res.madera >= 2 && G.res.madera <= 5, G.res.madera + " madera");
+    ok("y tampoco se queda calada: la nasa es de un solo uso, pesque o no", ctx.nasas().length === 0);
   } finally {
-    TABLA.mimbre.rota = orig; TABLA.mimbre.camaron = 27; TABLA.mimbre.cangrejo = 18;
-    TABLA.mimbre.langosta = 12; TABLA.mimbre.calamar_v4 = 3;
+    TABLA.mimbre.rota = orig.r; TABLA.mimbre.camaron = orig.c; TABLA.mimbre.cangrejo = orig.g;
+    TABLA.mimbre.langosta = orig.l; TABLA.mimbre.calamar_v4 = orig.q;
   }
 }
 

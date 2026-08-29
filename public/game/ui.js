@@ -551,9 +551,15 @@ function pescaV4Canas() {
     const d = CANA_V4_DEF[k], tengo = !!(G.canas || {})[k], falta = canaV4Falta(k);
     /* cuánto sube la rareza respecto de la caña de junco: el número que de verdad se compra */
     const sube = Math.round((d.banda.epico + d.banda.legendario) / (base.epico + base.legendario) * 10) / 10;
+    /* 28/8 — QUÉ PECES ABRE, dicho. La caña dejó de mover solo porcentajes y ahora abre especies,
+       y una puerta que no se anuncia es una puerta que no existe: sin esta línea, el jugador
+       compraría la de bambú y descubriría el salmón por accidente tres días después. */
+    const nuevos = (typeof canaPecesNuevos === "function" ? canaPecesNuevos(k) : [])
+      .map(x => PEZ_DEF[x].emoji + " " + PEZ_DEF[x].label);
     h += '<div class="p4-cana' + (k === puesta ? " puesta" : "") + (tengo ? " tengo" : "") + '">' +
       '<span class="cn">' + d.label.replace("Caña de ", "").replace("Caña del ", "") + '</span>' +
       '<span class="cr">rareza ×' + sube + (d.mant ? ' · peaje ' + d.mant : "") +
+        (nuevos.length ? '<br><span class="cabre">abre ' + nuevos.join(" · ") + '</span>' : "") +
         (tengo ? "" : '<br><span class="cc">' + canaV4Costo(k) + '</span>') + '</span>' +
       (tengo ? '<span class="cy">' + (k === puesta ? "en uso" : "tuya") + '</span>'
              : '<button data-p4cana="' + k + '"' + (falta ? " disabled" : "") + '>' +
