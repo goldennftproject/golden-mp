@@ -5499,7 +5499,9 @@ var PEZ_BANDA = {
 var PEZ_DEF = {
   /* --- comunes: 62 % de base. El pez de todos los días. --- */
   merluza:      { label: "Merluza",       emoji: "🐟", banda: "comun",      precio: 3,   xp: 3,   peso: [0.4, 1.8],  sprite: "fish_comun" },
-  lubina:       { label: "Lubina",        emoji: "🐟", banda: "comun",      precio: 4,   xp: 4,   peso: [0.5, 2.5],  sprite: "fish_comun" },
+  /* pesoNocheX: « sube al doble de peso de noche » (tabla 1). Es la única especie con una
+     propiedad propia que sobrevive a la retirada del minijuego, porque no era del minijuego. */
+  lubina:       { label: "Lubina", pesoNocheX: 2,        emoji: "🐟", banda: "comun",      precio: 4,   xp: 4,   peso: [0.5, 2.5],  sprite: "fish_comun" },
   atun:         { label: "Atún",          emoji: "🐠", banda: "comun",      precio: 5,   xp: 5,   peso: [2.0, 9.0],  sprite: "fish_comun" },
   /* --- poco comunes: 27 %. El suelo estable de la economía: esta banda NUNCA se mueve. --- */
   robalo:       { label: "Róbalo",        emoji: "🐠", banda: "poco_comun", precio: 10,  xp: 9,   peso: [0.8, 4.0],  sprite: "fish_raro" },
@@ -5989,70 +5991,13 @@ function nasasParte() {
    test, mil veces, sin abrir un navegador — que es la única forma de medir de verdad si el
    sistema es jugable o si el legendario es imposible. */
 
-/* ── LAS PERILLAS DE LA DIFICULTAD, DERIVADAS DE LA BANDA ────────────────────────────────────
-   El documento las declara por banda: cada cuánto tira, cuánto avisa, cuánto sube la tensión y
-   cuánto dura. Se escriben una vez acá y de ahí las lee todo lo demás. */
-var PELEA_V4 = {
-  comun:      { tiraCada: [2.6, 3.4], aviso: 0.50, dur: [6, 9] },
-  poco_comun: { tiraCada: [2.3, 3.1], aviso: 0.46, dur: [7, 10] },
-  raro:       { tiraCada: [2.0, 2.8], aviso: 0.42, dur: [8, 12] },
-  epico:      { tiraCada: [1.7, 2.4], aviso: 0.36, dur: [11, 17] },
-  legendario: { tiraCada: [1.5, 2.0], aviso: 0.30, dur: [16, 25] },
-  mitico:     { tiraCada: [2.0, 2.8], aviso: 0.42, dur: [8, 12] },   // no se pelea: cae en nasa
-};
-var PELEA_AVISO_MIN = 0.30;   // por debajo de esto vuelve a ser un test de reflejos. No se toca.
-var PELEA_TENSION_MAX = 100;
-/* LA TENSIÓN POR SEGUNDO NO SE ESCRIBE: SE DERIVA DE LA DURACIÓN.
-   Mi primera versión le puso un número a cada banda —12, 15, 19, 24, 30— y la simulación la
-   destrozó: el legendario quedaba imposible para todo el mundo y el jugador que soltaba al azar
-   ganaba el 100 % de los raros. El error era de bulto y solo se ve escribiéndolo:
+;
 
-       una pelea LARGA con la misma tensión por segundo es estrictamente más difícil.
 
-   Subir la tensión CON la duración, como hacía yo, multiplica las dos dificultades una por otra.
-   Lo que tiene que ser igual en todas las bandas es la RELACIÓN: apretar sin soltar nunca puede
-   alcanzar, y por poco. De ahí sale la fórmula, que además explica el juego en una línea:
 
-       el hilo aguanta el 85 % de la pelea apretando. El 15 % restante hay que cederlo.
+         // cuánto hay para clavar (la v2 daba 1 segundo)
 
-   Así la dificultad de un legendario no viene de que su tensión suba más rápido, sino de dónde
-   la propuesta dice que tiene que venir: TIRA MÁS SEGUIDO Y AVISA MENOS. Que es lo que se puede
-   leer en la pantalla, y por eso es una decisión y no una lotería. */
-var PELEA_AGUANTE = 0.85;
-function peleaTension(dur) { return PELEA_TENSION_MAX / (PELEA_AGUANTE * dur); }
-/* ceder recupera más rápido de lo que sube, pero NO es gratis: si lo fuera, la estrategia
-   óptima sería soltar todo el rato y el botón sobraría. Ése fue el otro hallazgo de la
-   simulación — con el ceder que puse primero, el jugador que soltaba al azar ganaba siempre. */
-/* EL CASTIGO VA CONCENTRADO EN EL TIRÓN, NO REPARTIDO. Ésta es la tercera versión de estos
-   números y las dos anteriores las tiró la simulación, así que vale la pena dejar por qué:
-
-     · 1ª — tensión fija por banda: el legendario quedaba imposible para todos. Una pelea larga
-            con la misma tensión por segundo es estrictamente más difícil; subir las dos cosas a
-            la vez multiplica dificultades.
-     · 2ª — tensión derivada de la duración, pero cobrando por apretar SIEMPRE: entonces el
-            jugador que soltaba al azar ganaba el 100 % y el que soltaba en el tirón exacto
-            perdía. Si apretar cuesta en todo momento, la precisión no compra nada: lo único
-            que importa es la FRACCIÓN de tiempo apretada, y eso lo consigue cualquiera.
-
-   La conclusión, que es lo que hace de esto un juego y no una lotería:
-
-       apretar fuera del tirón tiene que ser casi gratis, y durante el tirón, carísimo.
-
-   Así el jugador no está administrando un porcentaje: está mirando la pantalla y decidiendo en
-   momentos concretos. Y la dificultad de un legendario sale de donde el documento quiere —tira
-   más seguido y avisa menos—, no de que su barra suba más rápido. */
-var PELEA_SUELTO_X = 0.35;    // lo que cuesta apretar FUERA del tirón: casi nada
-var PELEA_TIRON_X  = 7.0;     // lo que cuesta apretar DURANTE el tirón: carísimo
-var PELEA_CEDE_X   = 1.6;     // lo que se recupera cediendo fuera del tirón
-var PELEA_TIRON_CEDE = 0;     // cediendo durante el tirón no sube ni baja: le das línea y ya
-var PIQUE_ESPERA = [1.2, 3.5];   // cuánto tarda en picar
-var PIQUE_VENTANA = 2.5;         // cuánto hay para clavar (la v2 daba 1 segundo)
-
-/* ── EL SORTEO DE BANDA ──────────────────────────────────────────────────────────────────────
-   Cuatro cosas lo mueven, y NINGUNA es el nivel de Pesca — ésa es la regla dura del documento:
-   si el nivel subiera la rareza subiría la plata por hora y el ancla se rompería. Lo que mueve
-   la rareza es lo que PAGÁS (la caña) y lo que HACÉS (la racha, la hora, la constancia). */
-var RACHA_PARA_SUBIR = 5;     // cinco capturas seguidas sin cortar el hilo
+     // cinco capturas seguidas sin cortar el hilo
 var PIEDAD_LANCES = 80;       // lances sin épico o mejor antes de garantizar uno
 function pescaEstado() {
   /* CAMPO POR CAMPO, no « el objeto entero o ninguno ».
@@ -6064,7 +6009,9 @@ function pescaEstado() {
      Lo encontró el test del bolsillo al armar una partida desde cero, no una pantalla: es un
      camino que solo se recorre en la primera sesión de un jugador nuevo. */
   const e = G.pescaV4 = G.pescaV4 || {};
-  if (typeof e.racha !== "number") e.racha = 0;
+  /* (e.racha vivía acá y contaba capturas seguidas sin cortar el hilo. Se fue con la pulseada el
+     28/8. No se borra del guardado de nadie: un campo de más en una partida vieja no molesta, y
+     borrarlo sería tocar el estado de un jugador por limpieza, que es cómo se pierden partidas.) */
   if (typeof e.sinEpico !== "number") e.sinEpico = 0;
   if (!e.primeroDelDia) e.primeroDelDia = 0;
   if (!e.records || typeof e.records !== "object") e.records = {};
@@ -6169,9 +6116,7 @@ function larvaComprar(n) {
   log("Compraste " + cuantas + " larva" + (cuantas > 1 ? "s" : "") + " de luz por " + coste + " de plata.", "good");
   return true;
 }
-/* SUBIR UNA BANDA: lo que paga la racha. Nunca paga en plata — la habilidad mueve lo que
-   ENCONTRÁS, no lo que vale, que es la misma regla que ya rigen la cocina y el combate. */
-var BANDA_SUBE = { comun: "poco_comun", poco_comun: "raro", raro: "epico", epico: "legendario", legendario: "legendario" };
+;
 function bandaSortear(cana, opciones) {
   const o = opciones || {}, e = pescaEstado();
   const t = bandaTabla(cana, o.noche != null ? o.noche : esDeNocheAhora(), o.cebo || ceboPuesto());
@@ -6191,37 +6136,86 @@ function bandaSortear(cana, opciones) {
   /* EL PRIMER LANCE DEL DÍA: garantizado poco común o mejor. Nunca se abre el juego para que no
      pase nada — es el mismo principio del pity del tutorial. */
   if (!o.sinPiedad && e.primeroDelDia !== hoyClave() && banda === "comun") banda = "poco_comun";
-  /* LA RACHA: cinco seguidas sin cortar el hilo suben una banda. */
-  if (e.racha >= RACHA_PARA_SUBIR) banda = BANDA_SUBE[banda] || banda;
+  /* (LA RACHA vivía acá: cinco capturas seguidas sin cortar el hilo subían una banda. Se fue con
+     la pulseada el 28/8 — sin nada que jugar no hay pericia que premiar, y una racha que no se
+     puede romper es un multiplicador permanente disfrazado de recompensa.
+     Las dos piedades de arriba SÍ se quedan: no premian pericia, protegen del azar.) */
   return banda;
 }
 function hoyClave() { const d = new Date(); return d.getUTCFullYear() + "-" + (d.getUTCMonth() + 1) + "-" + d.getUTCDate(); }
 
-/* ── LAS SOMBRAS: la única decisión que se toma antes de mojar el hilo ────────────────────────
-   « la sombra grande promete banda alta y pelea más dura, la chica promete poco y sale sola ».
-   Es lo que convierte el lance en una elección y no en un botón. La sombra no MIENTE: sesga. */
-var SOMBRA_DEF = {
-  chica:   { label: "Sombra chica",   sesgo: -1, txt: "Algo pequeño se mueve" },
-  mediana: { label: "Sombra mediana", sesgo: 0,  txt: "Una sombra tranquila" },
-  grande:  { label: "Sombra grande",  sesgo: 1,  txt: "Algo grande, y no tiene apuro" },
-};
-function sombrasNuevas(n) {
-  const tipos = ["chica", "mediana", "grande"];
-  const cuantas = n || (1 + Math.floor(Math.random() * 3));
-  const out = [];
-  for (let i = 0; i < cuantas; i++) out.push(tipos[Math.floor(Math.random() * 3)]);
-  return out;
-}
-var BANDA_BAJA = { legendario: "epico", epico: "raro", raro: "poco_comun", poco_comun: "comun", comun: "comun" };
-function bandaConSombra(banda, sombra) {
-  const s = SOMBRA_DEF[sombra]; if (!s || !s.sesgo) return banda;
-  return s.sesgo > 0 ? (BANDA_SUBE[banda] || banda) : (BANDA_BAJA[banda] || banda);
+;
+
+;
+
+/* ── UN LANCE ────────────────────────────────────────────────────────────────────────────────
+   28/8 — SE TIRA LA CAÑA Y SALE LO QUE SALGA. La dirección lo pidió sin rodeos:
+
+     « el sistema de la sombra, de jalar del hilo cuando el pez no tira, de esperar para que el
+       hilo no se corte cuando el pez tira, todo ese minijuego, hay que quitarlo, porque eso me
+       lo inventé yo y no estaba en el documento. Que simplemente se tire la caña y suceda lo
+       que tenga que suceder. »
+
+   Y la otra mitad de la corrección, que es la que más cambia: « cuando habla de caña por pez, se
+   refiere a que LA CAÑA PERMITE SACAR ESOS PECES. No es que tengas que seleccionar el pez. » Las
+   sombras no eran una lectura suave del encargo: eran un menú que yo había puesto en el agua.
+
+   Así que aquí no hay fases, ni tensión, ni progreso, ni trucos de especie, ni racha. Un lance es
+   una función que se llama una vez y devuelve un pez. Lo que decide qué sale sigue siendo lo de
+   siempre y no se toca: la tabla de bandas de la caña, el conjunto de especies que esa caña abre,
+   y el sorteo de peso.
+
+   EL ANCLA NO SE MUEVE AL QUITAR LA PELEA, y conviene decir por qué no es casualidad: la economía
+   ya se calculaba suponiendo que el pez SIEMPRE se saca —el simulador del bolsillo ganaba todas
+   las pulseadas a propósito, « lo que se mide es la economía, no la habilidad »—. La pelea nunca
+   estuvo en la cuenta. Lo único que sí estaba y se va es la racha, que ya se medía aparte. */
+function lanceSacar(cana, opciones) {
+  const o = opciones || {}, e = pescaEstado();
+  const banda = o.banda || bandaSortear(cana, o);
+  /* LAS ESPECIES QUE ESTA CAÑA ABRE, y no todas las de la banda: es lo único que hace que
+     cambiar de caña se note, y es literalmente lo que pidió el diseñador. El respaldo usa el
+     mismo conjunto — si cayera a pecesDeBanda, una banda sin peces de día devolvería un pez que
+     esta caña no debería poder sacar nunca. */
+  const delaCana = pecesDeCana(cana, banda);
+  const peces = delaCana.filter(k => {
+    const d = PEZ_DEF[k];
+    if (!d.noche) return true;
+    return (o.noche != null ? o.noche : esDeNocheAhora());   // el pez gato y el dragón solo de noche
+  });
+  const lista = peces.length ? peces : delaCana;
+  const id = lista[Math.floor((o.uPez != null ? o.uPez : Math.random()) * lista.length)] || lista[0];
+  const bonus = (CANA_V4_DEF[cana] || {}).pesoBonus || 0;
+  const kg = Math.round(pesoDelLance(id, o) * (1 + bonus) * 100) / 100;
+
+  /* LA MEMORIA: lo que hace que dos lances seguidos no sean independientes. */
+  e.primeroDelDia = hoyClave();
+  e.sinEpico = (banda === "epico" || banda === "legendario") ? 0 : (e.sinEpico || 0) + 1;
+  const rec = (e.records || {})[id] || 0, esRecord = kg > rec;
+  if (esRecord) { e.records = e.records || {}; e.records[id] = kg; }
+
+  /* ── EL PEAJE DE LA CAÑA ──────────────────────────────────────────────────────────────────
+     « El mantenimiento es plata pura y siempre, y sale automático al resolver la captura. »
+     Faltaba, y fue el fallo más caro de la semana: mant vivía SOLO dentro de lanceNeto() —la
+     cuenta del invariante— y en el texto del panel. El juego nunca lo cobraba, así que la caña
+     de oro rendía un 107 % más que la de junco contra el 13 % prometido.
+     Lleva decimales, así que se acumula y se cobra en unidades enteras: restar 0,30 de una plata
+     que se muestra redondeada perdería el peaje entero. */
+  const peaje = (CANA_V4_DEF[cana] || {}).mant || 0;
+  if (peaje > 0) {
+    G.peajeCana = (G.peajeCana || 0) + peaje;
+    const cobra = Math.floor(G.peajeCana);
+    if (cobra > 0) { G.plata = Math.max(0, (G.plata || 0) - cobra); G.peajeCana -= cobra; }
+  }
+  /* TODO lo que un título, un récord o el torneo puedan preguntar se anota AQUÍ, en el único
+     sitio por el que pasa toda captura de caña. Repartir estos contadores por la interfaz es
+     cómo se consigue que un título no se dispare nunca y nadie sepa por qué. */
+  pescaAnotar(id, kg, false);
+  torneoAnotar(id, kg);
+  return { id: id, kg: kg, banda: banda, cana: cana, gigante: pezGigante(id, kg),
+    plata: pezPrecio(id, kg), xp: pezXp(id, kg), record: esRecord, recordAnterior: rec,
+    peaje: peaje };
 }
 
-/* ── ARMAR UN LANCE ──────────────────────────────────────────────────────────────────────────
-   Devuelve el estado completo de la pulseada. El pez y su peso se sortean ACÁ, al clavar, y no
-   al final: así la pelea que das es la del pez que te vas a llevar, y no hay forma de que el
-   premio y el esfuerzo no coincidan. (En la v2 eso ya se hacía bien; se conserva.) */
 /* EL FACTOR DE PESO QUE HAY QUE ESPERAR según el cebo, POR ESPECIE.
    Con w = min + (max−min)·u², el peso medio es min + R/3 y el factor sale 1,00 por construcción
    (ver test-pesca-v4-datos). Quedarse con el mayor de DOS sorteos cambia la distribución de u
@@ -6258,278 +6252,28 @@ function pesoFactorEsperado(id, cebo) {
 /* el peso de ESTE lance: normalmente un sorteo, y con camarón el mayor de dos. */
 function pesoDelLance(id, o) {
   const cebo = o.cebo || ceboPuesto();
-  /* LA LUBINA « sube al doble de peso de noche » (tabla 1). Es el único truco que vive en el
-     sorteo y no en la pelea, así que va acá y no en trucoTick — y se topa al máximo de la
-     especie, porque un pez fuera de su rango rompería el récord, el torneo y el álbum a la vez. */
-  const t = trucoDe(id);
-  if (t && t.fase === "peso" && (o.noche != null ? o.noche : esDeNocheAhora())) {
-    const e = PEZ_DEF[id];
-    return Math.min(e.peso[1], pesoSortear(id, o.uPeso) * 2);
+  /* LA LUBINA « sube al doble de peso de noche » (tabla 1 del documento).
+     28/8 — esto vivía en TRUCO_DEF, que se fue entero con la pulseada. Pero no era un truco de
+     pelea: es una propiedad de la ESPECIE, y de las que sí se notan sin minijuego —de noche la
+     lubina pesa y vale el doble—. Así que se muda a la tabla de peces, que es donde tenía que
+     haber estado siempre.
+     Se topa al máximo de la especie: un pez fuera de su rango rompería el récord, el torneo y el
+     álbum a la vez. */
+  const dn = PEZ_DEF[id];
+  if (dn && dn.pesoNocheX && (o.noche != null ? o.noche : esDeNocheAhora())) {
+    return Math.min(dn.peso[1], pesoSortear(id, o.uPeso) * dn.pesoNocheX);
   }
   if (cebo !== "camaron") return pesoSortear(id, o.uPeso);
   let mejor = 0;
   for (let i = 0; i < CEBO_CAMARON_TIRADAS; i++) mejor = Math.max(mejor, pesoSortear(id, o.uPeso));
   return mejor;
 }
-function lanceArmar(cana, sombra, opciones) {
-  const o = opciones || {};
-  let banda = o.banda || bandaSortear(cana, o);
-  if (sombra) banda = bandaConSombra(banda, sombra);
-  /* LAS ESPECIES QUE ESTA CAÑA ABRE, y no todas las de la banda: es lo que hace que cambiar de
-     caña se note. El respaldo de abajo usa el mismo conjunto — si cayera a pecesDeBanda, una
-     banda entera de noche devolvería peces que esta caña no debería poder sacar. */
-  const delaCana = pecesDeCana(cana, banda);
-  const peces = delaCana.filter(k => {
-    const e = PEZ_DEF[k];
-    if (!e.noche) return true;
-    return (o.noche != null ? o.noche : esDeNocheAhora());   // el pez gato y el dragón solo de noche
-  });
-  const lista = peces.length ? peces : delaCana;
-  const id = lista[Math.floor((o.uPez != null ? o.uPez : Math.random()) * lista.length)] || lista[0];
-  const p = PELEA_V4[banda] || PELEA_V4.comun;
-  const rnd = (a, b, u) => a + (b - a) * (u != null ? u : Math.random());
-  const bonus = (CANA_V4_DEF[cana] || {}).pesoBonus || 0;
-  const dur = rnd(p.dur[0], p.dur[1], o.uDur);
-  const L = {
-    cana, banda, id, sombra: sombra || null,
-    kg: Math.round(pesoDelLance(id, o) * (1 + bonus) * 100) / 100,
-    progreso: 0, tension: 0, t: 0,
-    dur: dur,                                      // segundos de pulseada bien jugada
-    tiraEn: rnd(p.tiraCada[0], p.tiraCada[1], o.uTira),
-    aviso: Math.max(PELEA_AVISO_MIN, p.aviso),
-    tensionSeg: peleaTension(dur),
-    tirando: false, roto: false, listo: false,
-  };
-  return trucoArmar(L);
-}
 
-/* ── LA PULSEADA, UN TICK ────────────────────────────────────────────────────────────────────
-   `dt` en segundos, `apretando` si el jugador tiene el botón hundido. Devuelve el mismo objeto
-   con los eventos de este tick, para que la escena solo tenga que dibujar lo que pasó. */
-/* ═══════════════════════════════════════════════════════════════════════════════════════════
-   EL TRUCO DE CADA ESPECIE                                       (27/8, lo último del documento)
-   ═══════════════════════════════════════════════════════════════════════════════════════════
-   En las tablas 1 a 5 del documento, la última columna de cada especie no es sabor: es una
-   MECÁNICA. « Se infla: la tensión sube el doble mientras está inflado. » « Apaga la luz:
-   durante un segundo no se ve la barra. » « Corta el hilo si aguantás más de 2 s seguidos. »
-   Yo las había leído como notas de ambientación y las diecinueve especies peleaban igual.
+;
 
-   Es la diferencia entre un minijuego con diecinueve peces y un minijuego con un pez y
-   diecinueve nombres. Y es barato: la pulseada ya tiene sus perillas, y cada truco es una
-   línea que mueve una de ellas.
 
-   LA REGLA QUE LOS ORDENA A TODOS: ningún truco puede quitar progreso.
-   El capítulo 3 lo dice en mayúsculas —« EL PROGRESO NUNCA RETROCEDE »— y es lo que separa esta
-   versión de la v2. Así que un truco puede subir la tensión, esconder la barra, cambiar el ritmo
-   o cortar el hilo de golpe; lo que NO puede hacer, ninguno, es borrar lo que ya ganaste. Un
-   pez que te quita terreno es la forma más rápida de que alguien deje de intentarlo.
 
-   Y la segunda: todos AVISAN. Un truco que no se ve en pantalla no es dificultad, es una
-   trampa — el jugador tiene que poder decir « ah, se infló » y no « no sé qué pasó ». */
-var TRUCO_DEF = {
-  /* ── comunes: uno solo, y suave. Son el banco de pruebas de la pulseada ──────────────────── */
-  lubina: { fase: "peso", txt: "De noche pesa el doble",
-            /* « Sube al doble de peso de noche. » Se aplica en el sorteo, no en la pelea. */ },
 
-  /* ── poco comunes y raros: el ritmo ───────────────────────────────────────────────────────── */
-  robalo:  { fase: "ritmo", tiraX: 0.7, avisoX: 1.6, txt: "Tira seguido, pero avisa mucho" },
-  salmon:  { fase: "ritmo", tiraX: 1.15, txt: "Corre largo entre tirón y tirón" },
-  pez_sapo: { fase: "salva", salva: 3, txt: "Se queda quieto y de golpe tira tres veces",
-    /* la salva: tres tirones pegados con medio segundo entre ellos, y después una espera larga.
-       El pez sapo no es más duro que otro raro — es más IRREGULAR, que es otra cosa. */ },
-  pez_globo: { fase: "infla", cada: [3.5, 6], dura: 2.2, tensionX: 2,
-    txt: "Se infla: mientras esté inflado, la tensión sube el doble" },
-
-  /* ── épicos ───────────────────────────────────────────────────────────────────────────────── */
-  pez_loro: { fase: "color", cada: [2.5, 4], txt: "Cambia de color, y con él cambia el ritmo",
-    /* al cambiar de color se re-sortea el intervalo entre tirones dentro de su banda: no es más
-       duro, es imposible de anticipar. Contra el pez loro no sirve contar. */ },
-  pez_guitarra: { fase: "ritmo", tiraX: 1.5, avisoX: 1.3, durX: 1.15,
-    txt: "Tirones largos y espaciados: perdona al paciente" },
-  pez_linterna: { fase: "apaga", cada: [3, 5], dura: 1.0,
-    txt: "Apaga la luz: durante un segundo no se ve la barra",
-    /* el único truco que toca la INFORMACIÓN y no los números. Y por eso es el que más se nota:
-       la barra se apaga, no se congela — por debajo el lance sigue corriendo igual. */ },
-
-  /* ── legendarios: los tres tienen su propia manera de matarte ─────────────────────────────── */
-  pez_espada: { fase: "aguante", maxSeguido: 2.0,
-    txt: "Corta el hilo si aguantás más de 2 s seguidos",
-    /* el reloj se reinicia al soltar, así que no pide reflejos: pide ritmo. Es el pez que enseña
-       que « mantener apretado » no es una estrategia. */ },
-  pez_gota: { fase: "hunde", sube: 0.55, txt: "No tira: se hunde. La tensión sube sola",
-    /* al revés que todos: soltar NO baja la tensión hasta cero, porque el peso del bicho sigue
-       ahí. Hay que recoger igual, y el que espera pierde. */ },
-  pez_dragon: { fase: "fases", txt: "Tres fases: cada tercio del progreso cambia de pez",
-    /* tercio 1: tirones lentos y largos. Tercio 2: rápidos. Tercio 3: los dos a la vez y la
-       tensión sube más. No hay una forma de jugarlo: hay tres, y hay que cambiar dos veces. */
-    fases: [ { tiraX: 1.4, tensionX: 0.85 }, { tiraX: 0.55, tensionX: 1.0 }, { tiraX: 0.7, tensionX: 1.35 } ] },
-};
-function trucoDe(id) { return TRUCO_DEF[id] || null; }
-/* el texto para la pantalla: el jugador tiene que saber contra qué pelea ANTES de perder. */
-function trucoTxt(id) { const t = trucoDe(id); return t ? t.txt : ""; }
-
-/* ARMAR el truco dentro del lance. Se hace acá y no en peleaTick para que todo lo que un truco
-   necesita recordar nazca con el pez, y no aparezca a mitad de la pelea. */
-function trucoArmar(L) {
-  const t = trucoDe(L.id); if (!t) return L;
-  const rnd = (a, b) => a + (b - a) * Math.random();
-  L.truco = t.fase;
-  if (t.tiraX)  L.tiraEn *= t.tiraX;
-  if (t.avisoX) L.aviso = Math.max(PELEA_AVISO_MIN, L.aviso * t.avisoX);
-  if (t.durX)   { L.dur *= t.durX; L.tensionSeg = peleaTension(L.dur); }
-  if (t.fase === "infla" || t.fase === "apaga") { L.trEn = rnd(t.cada[0], t.cada[1]); L.trDura = 0; }
-  if (t.fase === "color") L.trEn = rnd(t.cada[0], t.cada[1]);
-  if (t.fase === "salva") L.trSalva = 0;
-  if (t.fase === "aguante") L.trSeguido = 0;
-  if (t.fase === "fases") L.trFase = 0;
-  return L;
-}
-
-/* APLICAR el truco en cada cuadro. Devuelve los multiplicadores que peleaTick va a usar, y
-   ninguno de ellos puede tocar el progreso: eso lo garantiza la firma, no la buena voluntad. */
-function trucoTick(L, dt, apretando) {
-  const t = trucoDe(L.id);
-  const r = { tensionX: 1, oculta: false, aviso: null };
-  if (!t) return r;
-  const rnd = (a, b) => a + (b - a) * Math.random();
-  const p = PELEA_V4[L.banda] || PELEA_V4.comun;
-
-  if (t.fase === "infla") {
-    L.trEn -= dt;
-    if (L.trDura > 0) {
-      L.trDura -= dt; r.tensionX = t.tensionX; r.aviso = "inflado";
-      if (L.trDura <= 0) L.trEn = rnd(t.cada[0], t.cada[1]);
-    } else if (L.trEn <= 0) { L.trDura = t.dura; }
-  } else if (t.fase === "apaga") {
-    L.trEn -= dt;
-    if (L.trDura > 0) {
-      L.trDura -= dt; r.oculta = true; r.aviso = "a oscuras";
-      if (L.trDura <= 0) L.trEn = rnd(t.cada[0], t.cada[1]);
-    } else if (L.trEn <= 0) { L.trDura = t.dura; }
-  } else if (t.fase === "color") {
-    L.trEn -= dt;
-    if (L.trEn <= 0) {
-      /* se re-sortea el ritmo DENTRO de su banda: cambia lo que hace, no lo fuerte que es */
-      L.tiraEn = rnd(p.tiraCada[0], p.tiraCada[1]);
-      L.trEn = rnd(t.cada[0], t.cada[1]);
-      L.trColor = ((L.trColor || 0) + 1) % 4;
-      r.aviso = "cambió de color";
-    }
-  } else if (t.fase === "salva") {
-    /* después de un tirón, si quedan de la salva, el siguiente llega en medio segundo */
-    if (L.tirando && !L.trEnSalva) { L.trEnSalva = true; L.trSalva = (L.trSalva || 0) + 1; }
-    if (!L.tirando && L.trEnSalva) {
-      L.trEnSalva = false;
-      if (L.trSalva < t.salva) L.tiraEn = 0.5;
-      else { L.trSalva = 0; L.tiraEn = rnd(p.tiraCada[1], p.tiraCada[1] * 1.8); }
-    }
-    if (L.trSalva > 0) r.aviso = "salva " + L.trSalva + "/" + t.salva;
-  } else if (t.fase === "aguante") {
-    /* el reloj del aguante: se reinicia al soltar, así que pide RITMO y no reflejos */
-    L.trSeguido = apretando ? (L.trSeguido || 0) + dt : 0;
-    if (L.trSeguido > t.maxSeguido) { L.roto = true; r.aviso = "¡se cortó!"; }
-    else if (L.trSeguido > t.maxSeguido * 0.6) r.aviso = "¡soltá!";
-  } else if (t.fase === "hunde") {
-    /* no tira nunca, pero la tensión sube sola: el que espera, pierde */
-    L.tirando = false; L.avisando = false;
-    L.tension = Math.min(PELEA_TENSION_MAX + 1, L.tension + L.tensionSeg * t.sube * dt);
-    r.aviso = "se hunde";
-  } else if (t.fase === "fases") {
-    const f = Math.min(2, Math.floor(L.progreso * 3));
-    if (f !== L.trFase) {
-      L.trFase = f;
-      L.tiraEn = rnd(p.tiraCada[0], p.tiraCada[1]) * t.fases[f].tiraX;
-      r.aviso = "fase " + (f + 1) + " de 3";
-    }
-    r.tensionX = t.fases[L.trFase || 0].tensionX;
-  }
-  return r;
-}
-
-function peleaTick(L, dt, apretando) {
-  if (!L || L.roto || L.listo) return L;
-  L.t += dt;
-  /* el pez tira cada tantos segundos, y avisa un poco antes */
-  L.tiraEn -= dt;
-  const p = PELEA_V4[L.banda] || PELEA_V4.comun;
-  L.avisando = L.tiraEn <= L.aviso && L.tiraEn > 0;
-  L.tirando = L.tiraEn <= 0;
-  if (L.tiraEn <= -0.6) {                       // el tirón dura 0,6 s y después se reordena
-    L.tirando = false;
-    const rnd = (a, b) => a + (b - a) * Math.random();
-    L.tiraEn = rnd(p.tiraCada[0], p.tiraCada[1]);
-  }
-  /* EL TRUCO DE LA ESPECIE, antes de resolver la tensión. Devuelve multiplicadores y avisos;
-     por diseño no puede tocar L.progreso, que es la regla dura del capítulo 3. */
-  const tr = trucoTick(L, dt, apretando);
-  L.trAviso = tr.aviso || null;
-  L.oculta = !!tr.oculta;
-  if (apretando) {
-    /* recoger avanza SIEMPRE — el progreso nunca retrocede, ni durante un tirón */
-    L.progreso = Math.min(1, L.progreso + dt / L.dur);
-    /* …pero durante el tirón la tensión sube al doble: ahí está la decisión */
-    L.tension = Math.min(PELEA_TENSION_MAX + 1, L.tension + L.tensionSeg * dt * (L.tirando ? PELEA_TIRON_X : PELEA_SUELTO_X) * tr.tensionX);
-  } else if (L.tirando) {
-    /* CEDER DURANTE EL TIRÓN NO RECUPERA: el pez tira igual, y lo único que consigue soltar es
-       que tire de la caña y no de tus manos. Sin esto, la frecuencia de los tirones no significa
-       nada —soltar en el momento justo cancelaba el tirón entero— y todas las bandas se ganaban
-       el 100 % de las veces. Lo cazó la simulación: con el ceder libre, el legendario y el común
-       eran el mismo pez con otro nombre. Ahora tirar más seguido SÍ aprieta, que es de donde el
-       documento quiere que venga la dificultad. */
-    L.tension = Math.min(PELEA_TENSION_MAX + 1, L.tension + L.tensionSeg * PELEA_TIRON_CEDE * dt * tr.tensionX);
-  } else {
-    L.tension = Math.max(0, L.tension - L.tensionSeg * PELEA_CEDE_X * dt);
-    /* ceder NO borra nada: el progreso se queda quieto. Ésta es la línea que define el sistema. */
-  }
-  if (L.tension > PELEA_TENSION_MAX) { L.roto = true; L.tension = PELEA_TENSION_MAX; }
-  if (L.progreso >= 1) { L.listo = true; L.progreso = 1; }
-  return L;
-}
-/* ── CERRAR EL LANCE: la racha, la piedad y el récord ────────────────────────────────────────
-   Lo que se cobra en plata y XP lo resuelve quien llame a esto; acá se lleva la MEMORIA, que es
-   lo que hace que dos lances seguidos no sean independientes. */
-function lanceCerrar(L) {
-  const e = pescaEstado();
-  if (!L) return null;
-  if (L.roto) { e.racha = 0; e.sinEpico++; return { roto: true }; }
-  e.racha = (e.racha + 1) % (RACHA_PARA_SUBIR + 1);       // al cobrarla, vuelve a empezar
-  e.primeroDelDia = hoyClave();
-  e.sinEpico = (L.banda === "epico" || L.banda === "legendario") ? 0 : e.sinEpico + 1;
-  const rec = e.records[L.id] || 0, esRecord = L.kg > rec;
-  if (esRecord) e.records[L.id] = L.kg;
-  /* ── EL PEAJE DE LA CAÑA ────────────────────────────────────────────────────────────────
-     « El mantenimiento es plata pura y siempre, y tiene que salir automático al resolver la
-     captura. »  Faltaba, y era el fallo más caro de toda la semana: mant vivía SOLO dentro de
-     lanceNeto() —la cuenta del invariante— y en el texto del panel. El juego nunca lo cobraba.
-
-     Sin peaje, la caña de oro rinde 21,34 de plata por lombriz contra los 10,30 de la de junco:
-     un 107 % de dispersión, cuando el documento promete un 13 % y llama a esa promesa « el
-     seguro contra la sobreproducción ». El invariante que este proyecto lleva toda la semana
-     defendiendo estaba roto por un factor de ocho.
-
-     Y MI TEST ESTABA EN VERDE, porque medía lanceNeto() —que resta el peaje en la fórmula— en
-     vez de contar la plata de una partida. Un test que mide la fórmula en vez del juego no
-     comprueba nada: comprueba que sé restar.
-
-     Se cobra al CAPTURAR y no al fallar: perder el pez ya cuesta la lombriz, y cobrar dos veces
-     por un fallo castiga el aprendizaje, que es lo contrario de lo que quiere este diseño.
-     Lleva decimales —0,30 en la de junco—, así que se acumula y se cobra en unidades enteras:
-     restar 0,30 de una plata que se muestra redondeada perdería el peaje entero. */
-  const peaje = (CANA_V4_DEF[L.cana] || {}).mant || 0;
-  if (peaje > 0) {
-    G.peajeCana = (G.peajeCana || 0) + peaje;
-    const cobra = Math.floor(G.peajeCana);
-    if (cobra > 0) { G.plata = Math.max(0, (G.plata || 0) - cobra); G.peajeCana -= cobra; }
-  }
-  /* TODO lo que un título, un récord o el torneo puedan preguntar se anota AQUÍ, en el único
-     sitio por el que pasa toda captura de caña. Repartir estos contadores por la interfaz es
-     cómo se consigue que un título no se dispare nunca y nadie sepa por qué. */
-  pescaAnotar(L.id, L.kg, false);
-  torneoAnotar(L.id, L.kg);
-  return { id: L.id, kg: L.kg, banda: L.banda, gigante: pezGigante(L.id, L.kg),
-    plata: pezPrecio(L.id, L.kg), xp: pezXp(L.id, L.kg), record: esRecord, recordAnterior: rec,
-    peaje: peaje };
-}
 
 
 ;   // multiplicador de XP por talla
@@ -6600,23 +6344,6 @@ var PESCA2_DIF = {   // vel: qué tan rápido persigue su rumbo · nervio: cambi
 
 
 
-
-/* EN QUÉ ETAPA DE LA PELEA ESTAMOS — y ésta es una corrección que salió de medir, no de leer.
-   Los saltos y las tintas colgaban de un reloj: « uno cada 2,2 segundos ». Contra un jugador
-   bueno la pelea termina en tres segundos, así que la tinta del calamar no aparecía NUNCA — y el
-   test lo delató con un « 0 cuadros tapados ». Una variación que solo se ve si peleás mal no es
-   una variación: es una penalización a los lentos disfrazada de mecánica.
-   Los eventos cuelgan ahora del PROGRESO, que es donde vive la pelea de verdad. Así el calamar
-   tira su tinta las dos veces, la pelee quien la pelee, y el buen jugador ve MÁS contenido en vez
-   de menos. La misma idea que las cargas de un nodo: el hito es el avance, no el reloj. */
-function peleaEtapa(l, n) {
-  /* n eventos repartidos entre el 40 % y el 85 % de la barra: ni en el primer cuadro (no daría
-     tiempo a entender qué pasó) ni sobre el final (sería robar una pelea ya ganada). */
-  const desde = 0.40, hasta = 0.85;
-  if (l.prog < desde) return 0;
-  const t = Math.min(1, (l.prog - desde) / (hasta - desde));
-  return Math.min(n, Math.floor(t * n) + 1);
-}
 
 
 var PESCA2_AVISO = {   // qué contesta cada final (un clic siempre contesta algo)

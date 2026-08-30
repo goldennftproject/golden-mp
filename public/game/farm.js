@@ -484,16 +484,11 @@ class FarmScene extends Phaser.Scene {
       if (clicDeInterfaz(pt)) { this.downEnUI = true; return; }
       this.downEnUI = false;
       this.ultimaAccion = nowMs();   // 14/8: cualquier clic = jugador activo (las mariposas señalan solo al "perdido")
-      /* 28/8 — CON LA CAÑA EN EL AGUA, EL CLIC ES LA CAÑA.
-         Aguantar ya no se hace sobre un botón sino sobre el mundo, así que mientras dura un lance
-         el mundo no recibe clics de ninguna otra clase: ni caminar, ni talar, ni volver a tocar
-         el agua. Las SOMBRAS siguen respondiendo igual — son objetos interactivos de Phaser y
-         reciben su propio pointerdown, que este `return` no toca. */
-      if (typeof P4 !== "undefined" && P4) {
-        if (P4.fase === "pique") { pescaV4Clavar(); _p4Hold = true; }
-        else if (P4.fase === "pelea") { _p4Hold = true; }
-        return;
-      }
+      /* 28/8 — MIENTRAS EL CORCHO ESTÁ EN EL AGUA, EL MUNDO NO RECIBE CLICS.
+         No es para proteger un minijuego —ya no hay ninguno— sino para que un segundo clic no
+         empiece otro lance encima del primero: se pagarían dos lombrices y se vería un solo pez.
+         Moverse sí cancela, que es la salida de siempre. */
+      if (typeof P4 !== "undefined" && P4) return;
       /* 21/8 (diseñador: "con doce semillas, el clic derecho planta la última en vez de abrir la
          rueda"). El culpable: pt.rightButtonDown() lee pointer.buttons, y según la versión de
          Phaser / el navegador ese estado puede llegar SIN ACTUALIZAR durante el propio pointerdown
@@ -1760,55 +1755,30 @@ class FarmScene extends Phaser.Scene {
     return { x1: (GF.POND.col + 0.55) * T, x2: (GF.POND.col + GF.POND.cols - 0.55) * T,
              y1: (GF.POND.row + 0.65) * T, y2: (GF.POND.row + GF.POND.rows - 0.75) * T };
   }
-  /* TRES SOMBRAS EN EL AGUA. El tamaño es la única diferencia que importa —es lo que inclina la
-     banda— así que es lo único que las distingue: no llevan etiqueta. Una sombra con la palabra
-     "grande" al lado es una lista disfrazada de laguna. */
-  pescaOfrecerSombras(tipos, demoraMs) {
-    if (demoraMs) {
-      this.time.delayedCall(demoraMs, () => {
-        if (typeof P4 !== "undefined" && P4 && P4.fase === "sombras") this.pescaOfrecerSombras(tipos);
-      });
-      return;
-    }
-    this.pescaQuitarSombras();
-    this.clearBobber();
-    const R = this.pescaRect(), n = Math.max(1, tipos.length);
-    this.sombrasEl = tipos.map((t, i) => {
-      const sesgo = ((typeof SOMBRA_DEF !== "undefined" && SOMBRA_DEF[t]) || {}).sesgo || 0;
-      const rx = 9 + (sesgo + 1) * 5;                          // chica 14 · mediana 19 · grande 24 de ancho
-      const bx = R.x1 + (R.x2 - R.x1) * ((i + 0.5) / n);
-      const by = R.y1 + (R.y2 - R.y1) * (0.25 + Math.random() * 0.5);
-      const el = this.add.ellipse(bx, by, rx * 2, rx * 1.15, 0x0b2536, 0.55).setDepth(-990);
-      /* el clic va en una ZONA aparte y no en la elipse: una zona es un rectángulo de input sin
-         dibujo, así que se le puede dar margen para el dedo sin agrandar la sombra que se ve. */
-      const zn = this.add.zone(bx, by, rx * 2 + 18, rx * 1.15 + 18).setInteractive({ useHandCursor: true });
-      zn.on("pointerdown", () => { if (typeof pescaV4Tirar === "function") pescaV4Tirar(t); });
-      zn.on("pointerover", () => el.setFillStyle(0x14415e, 0.8));
-      zn.on("pointerout", () => el.setFillStyle(0x0b2536, 0.55));
-      return { t, el, zn, bx, by, f: 0.3 + Math.random() * 0.3, ph: Math.random() * 6.28,
-               amp: 5 + Math.random() * 6 };
-    });
-  }
-  pescaQuitarSombras() {
-    (this.sombrasEl || []).forEach(s => { s.zn.destroy(); s.el.destroy(); });
-    this.sombrasEl = [];
-  }
-  /* TIRAR A UNA SOMBRA: el corcho vuela hasta ella y las otras se van. El pez elegido se queda
-     debajo del corcho como una sombra tenue — durante la pulseada es lo que da la sensación de
-     estar peleando con ALGO y no con una barra. */
-  pescaTirarA(tipo) {
-    const s = (this.sombrasEl || []).find(x => x.t === tipo);
+  /* TIRAR. El corcho vuela a un punto cualquiera del agua y se queda flotando. No hay nada que
+     elegir y no hay nada que tocar: el pez ya está decidido desde que se pagó la lombriz, y esto
+     es lo que el jugador ve mientras tanto.
+     (Aquí vivían las TRES SOMBRAS y el lance dirigido a una de ellas. Se fueron el 28/8: eran un
+     menú que yo había puesto en el agua, y el encargo decía otra cosa — « la caña permite sacar
+     esos peces, no es que tengas que seleccionar el pez ».) */
+  pescaTirar() {
     const R = this.pescaRect();
-    const x = s ? s.el.x : (R.x1 + R.x2) / 2, y = s ? s.el.y : (R.y1 + R.y2) / 2;
-    const rx = s ? s.el.width / 2 : 14;
-    this.pescaQuitarSombras();
+    const x = R.x1 + (R.x2 - R.x1) * (0.2 + Math.random() * 0.6);
+    const y = R.y1 + (R.y2 - R.y1) * (0.2 + Math.random() * 0.6);
     this.pescaP0 = { x, y };
+    this.pescaPicado = false;
     this.castBobber(x, y);
-    if (this.pescaPez) this.pescaPez.destroy();
-    this.pescaPez = this.add.ellipse(x, y + 5, rx * 2, rx * 1.15, 0x0b2536, 0).setDepth(-991);
-    this.pescaRx = rx;
-    if (this.hero && this.anims.exists("fish_cast")) { this.hero.play("fish_cast"); }
+    if (this.hero && this.anims.exists("fish_cast")) this.hero.play("fish_cast");
     if (this.action) this.action.phase = "cast";
+  }
+  /* y el final del lance: el granjero suelta la pose y el mundo vuelve a aceptar clics. Un clic
+     en el agua es UN lance — para volver a tirar hay que volver a tocarla. */
+  pescaTerminar() {
+    this.time.delayedCall(600, () => {
+      if (typeof P4 !== "undefined" && P4) return;      // ya empezó otro lance: no lo pisamos
+      this.pescaLimpiar();
+      if (this.action && this.action.v4) this.action = null;
+    });
   }
   /* EL PIQUE: el corcho se hunde a golpes. Es la señal, y tiene que poder verse de reojo — el
      jugador está mirando el agua, no un contador. */
@@ -1820,38 +1790,16 @@ class FarmScene extends Phaser.Scene {
     this.pescaOndas(b.x, b.y);
     this.bobberTween = this.tweens.add({ targets: b, y: y0 + 6, duration: 105,
       yoyo: true, repeat: -1, ease: "Quad.easeInOut" });
-    if (this.pescaPez) this.pescaPez.setFillStyle(0x0b2536, 0.3);
-  }
-  pescaEnganchado() {
-    if (this.bobberTween) { this.bobberTween.stop(); this.bobberTween = null; }
-    if (this.pescaPez) this.pescaPez.setFillStyle(0x0b2536, 0.5);
-    if (this.hero) { this.hero.anims.stop(); if (this.textures.exists("hero_fish_3")) this.hero.setTexture("hero_fish_3"); }
-    if (this.action) this.action.phase = "pelea";
-    this.cameras.main.shake(130, 0.0035);
-    if (window.sfx) sfx("splash");
   }
   pescaCaptura() {
     this.catchFx();
     this.clearFishLine();
-    if (this.pescaPez) { this.pescaPez.destroy(); this.pescaPez = null; }
     if (this.bobberTween) { this.bobberTween.stop(); this.bobberTween = null; }
     if (this.hero && this.anims.exists("fish_yank")) this.hero.play("fish_yank");
     if (this.action) this.action.phase = "yank";
   }
-  /* EL CORTE: el hilo desaparece y el corcho se hunde. Que las dos cosas pasen a la vez es el
-     punto — « se cortó el hilo » no se entiende si el corcho sigue flotando tan campante. */
-  pescaCorte() {
-    this.clearFishLine();
-    if (this.bobberTween) { this.bobberTween.stop(); this.bobberTween = null; }
-    if (this.pescaPez) { this.pescaPez.destroy(); this.pescaPez = null; }
-    if (this.bobber) {
-      const b = this.bobber; this.bobber = null;
-      this.splashAt(b.x, b.y);
-      this.tweens.add({ targets: b, alpha: 0, y: b.y + 12, duration: 420, onComplete: () => b.destroy() });
-    }
-    this.cameras.main.shake(220, 0.0065);
-    if (this.action) this.action.phase = "yank";
-  }
+  /* (EL CORTE del hilo vivía acá. Se fue con la pulseada: sin nada que aguantar no hay forma de
+     perder un pez, y un lance pagado siempre entrega. La lombriz es el único coste.) */
   pescaOndas(x, y) {
     for (let i = 0; i < 2; i++) {
       const c = this.add.ellipse(x, y, 8, 4, 0x000000, 0).setStrokeStyle(1, 0xbfe8ff, 0.75).setDepth(-989);
@@ -1860,62 +1808,25 @@ class FarmScene extends Phaser.Scene {
     }
   }
   pescaLimpiar() {
-    this.pescaQuitarSombras();
     this.clearBobber();
-    if (this.pescaPez) { this.pescaPez.destroy(); this.pescaPez = null; }
     this.pescaP0 = null;
   }
   /* ── EL CUADRO ──────────────────────────────────────────────────────────────────────────────
-     Todo lo que el panel decía con texto, dicho con posiciones:
-       progreso → cuánto se acercó el corcho a la orilla
-       tensión  → cuánta panza le queda al hilo   (la pinta drawFishLine)
-       tirón    → el corcho pega un salto hacia el agua y el hilo se va tenso
-       « se está preparando » → el corcho vibra un instante antes
-     Y los trucos de las especies, que eran texto amarillo y ahora se ven:
-       el globo se infla    → la sombra de abajo crece
-       el linterna la apaga → se apagan el hilo y el corcho, y el lance sigue corriendo debajo */
+     Ya no hay nada que leer NI nada que hacer: el corcho flota, el hilo cuelga, y medio segundo
+     antes del final el corcho se hunde a golpes para que la captura no salga de la nada.
+     (Aquí vivía la pulseada entera dibujada: el corcho acercándose con el progreso, el hilo
+     tensándose, el tirón, el globo inflándose y el linterna apagando la luz. La escribí ayer y
+     la borro hoy — no estaba en el encargo.) */
   pescaDibujar(dt, sign) {
-    if (typeof P4 === "undefined" || !P4) return;
-    this._pescaT = (this._pescaT || 0) + dt;
-    const T = this._pescaT;
-    if (P4.fase === "sombras") {
-      (this.sombrasEl || []).forEach(s => {
-        const x = s.bx + Math.sin(T * s.f + s.ph) * s.amp;
-        const y = s.by + Math.cos(T * s.f * 0.7 + s.ph) * s.amp * 0.35;
-        s.el.setPosition(x, y); s.zn.setPosition(x, y);
-      });
-      this.clearFishLine();
-      return;
+    if (typeof P4 === "undefined" || !P4 || !this.bobber) return;
+    /* EL PIQUE, medio segundo antes de sacarlo. Es lo único que pasa en todo el lance, y pasa
+       para que el pez no aparezca en la mano sin aviso: un premio sin antesala se lee como que
+       el juego se saltó un paso. */
+    if (!this.pescaPicado && P4.t >= P4.dur - 0.5) {
+      this.pescaPicado = true;
+      this.pescaPique();
     }
-    if (!this.bobber) return;
-    const L = P4.L;
-    if (!L || P4.fase !== "pelea") { this.drawFishLine(sign, 0); return; }
-
-    const p0 = this.pescaP0 || { x: this.bobber.x, y: this.bobber.y };
-    const hx = this.hero.x, hy = this.hero.y - 10;
-    /* el corcho recorre como mucho el 62 % del camino a la orilla: el último tramo lo hace el pez
-       saltando a la mano (catchFx). Si llegara al 100 % el salto final no tendría de dónde salir. */
-    const a = Math.max(0, Math.min(1, L.progreso)) * 0.62;
-    let bx = p0.x + (hx - p0.x) * a, by = p0.y + (hy - p0.y) * a;
-    if (L.tirando) {
-      bx += (p0.x - hx) * 0.06 + (Math.random() - 0.5) * 3.5;
-      by += (p0.y - hy) * 0.04 + (Math.random() - 0.5) * 3.5;
-    } else if (L.avisando) {
-      bx += Math.sin(T * 34) * 1.4;
-    }
-    this.bobber.setPosition(bx, by);
-    /* el pez linterna apaga la luz un segundo. Se APAGA, no se congela: por debajo el lance sigue
-       corriendo, y eso es justo lo que lo vuelve incómodo — no sabés dónde estás y seguís. */
-    const apagado = !!L.oculta;
-    this.bobber.setAlpha(apagado ? 0.1 : 1);
-    if (this.pescaPez) {
-      const inflado = L.trAviso === "inflado";
-      const rx = (this.pescaRx || 14) * (inflado ? 1.75 : 1);
-      this.pescaPez.setPosition(bx + Math.sin(T * 2.2) * 3, by + 7);
-      this.pescaPez.setSize(rx * 2, rx * 1.15);
-      this.pescaPez.setFillStyle(inflado ? 0x123a52 : 0x0b2536, apagado ? 0.05 : (inflado ? 0.72 : 0.5));
-    }
-    this.drawFishLine(sign, L.tension, apagado ? 0.07 : 0.8);
+    this.drawFishLine(sign, 0);
   }
   cancelFishing() {
     /* la pesca v4 se cierra por su puerta: si se limpiara solo la escena, P4 quedaría vivo en
@@ -5167,15 +5078,21 @@ class FarmScene extends Phaser.Scene {
       }
       if (!this.action) { hero.setDepth(hero.y); this.updatePrompt(); return; }
       this.action.t += dt;
-      /* 28/8 — LA PULSEADA CORRE ACÁ, con el reloj de la escena y no con uno propio.
-         Tenía su requestAnimationFrame dentro del panel; con dos relojes, el pez avanzaba en uno
-         y el corcho se dibujaba en el otro, y en un cuadro lento eso se ve como que la imagen va
-         atrasada respecto al resultado. Un solo reloj, y se pausa cuando el juego se pausa.
-         El tope de 0,1 s se mantiene: una pulseada que avanza medio segundo en un cuadro es un
-         pez perdido que el jugador no vio venir. */
+      /* 28/8 — EL LANCE CORRE ACÁ, con el reloj de la escena y no con uno propio: un solo reloj,
+         y se pausa cuando el juego se pausa.
+         CUANDO EL LANCE TERMINA, LA ACCIÓN NO SE CIERRA EN EL ACTO. El pez tarda medio segundo
+         en saltar del agua a la mano (catchFx), y si acá se limpiara todo en el mismo cuadro en
+         que P4 se vuelve nulo, el corcho y el hilo desaparecerían antes de que el salto empiece:
+         el jugador vería el aviso del pez y ningún pez. Así que se deja correr un momento y lo
+         cierra pescaTerminar(); el contador de abajo es el cinturón por si esa llamada no llega
+         —una acción que no se cierra sola deja al granjero clavado para siempre—. */
       if (this.action.v4) {
         if (typeof pescaV4Paso === "function") pescaV4Paso(Math.min(0.1, dt));
-        if (typeof P4 === "undefined" || !P4) { this.pescaLimpiar(); this.action = null; hero.setDepth(hero.y); this.updatePrompt(); return; }
+        if (typeof P4 === "undefined" || !P4) {
+          this.action.fin = (this.action.fin || 0) + dt;
+          if (this.action.fin > 2) { this.pescaLimpiar(); this.action = null; }
+          hero.setDepth(hero.y); this.updatePrompt(); return;
+        }
       }
       // al picar/talar: a mitad de la acción el nodo pasa al estado dañado (entero → dañado → restos)
       const ao = this.action.o;

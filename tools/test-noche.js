@@ -87,7 +87,7 @@ console.log("\nEL CALAMAR NO PICA A LAS TRES DE LA TARDE   (el fallo, en el idio
 
   const sale = (deNoche) => {
     for (let i = 0; i < 4000; i++) {
-      const L = ctx.lanceArmar("oro", null, { banda: "raro", noche: deNoche, sinPiedad: true });
+      const L = ctx.lanceSacar("oro", { banda: "raro", noche: deNoche, sinPiedad: true });
       if (L.id === "pez_gato") return true;
     }
     return false;
@@ -97,7 +97,7 @@ console.log("\nEL CALAMAR NO PICA A LAS TRES DE LA TARDE   (el fallo, en el idio
   ok("y de noche sí", sale(true));
   /* y que el jugador lo SEPA: el catálogo lo dice, no hay que descubrirlo perdiendo lances */
   ok("y el aviso está en el propio catálogo, no escondido en el sorteo",
-    /noche/i.test(ctx.trucoTxt("pez_gato") || "") || ESP.pez_gato.noche === true,
+    ESP.pez_gato.noche === true,
     "PEZ_DEF.pez_gato.noche = true");
 }
 

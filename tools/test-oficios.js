@@ -32,7 +32,7 @@ ok("…y ya no paga a Artesanía", !/addXp\("crafting", (nodoXpMin|xpDeNodo)/.te
    « addXp("cooking", r.xp) » existe en la Cocina, con su propia r que es una receta. Buscarlo
    en los cinco archivos juntos hace que el test hable de otra cosa y dé rojo por un homónimo. */
 const RESOLVER = (SRC.split("function pescaV4Resolver")[1] || "").slice(0, 1500);
-const CERRAR   = (SRC.split("function lanceCerrar")[1] || "").slice(0, 1500);
+const CERRAR   = (SRC.split("function lanceSacar")[1] || "").slice(0, 3000);
 ok("pescar paga a Pesca y a nadie más",
   /addXp\("fishing", *(r\.xp|pezXp\()/.test(SRC) &&
   !/addXp\("(cooking|farming|mining|ganaderia)"/.test(RESOLVER + CERRAR));

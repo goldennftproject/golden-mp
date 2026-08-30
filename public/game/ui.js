@@ -254,7 +254,6 @@ function flujoTick() {
    (farm.js). Esta separación es a propósito: si un día hay otra escena con agua, la pulseada ya
    sabe jugarse sola y solo hace falta que alguien la dibuje. */
 var P4 = null;                 // el lance en curso, o null
-var _p4Hold = false;
 
 /* la escena que está dibujando el agua. Se pide cada vez y no se guarda: entre lance y lance el
    jugador puede haberse ido al bosque y vuelto, y una referencia vieja apunta a una escena
@@ -262,28 +261,37 @@ var _p4Hold = false;
 function pescaEscena() {
   return (typeof window !== "undefined" && window.farmScene) || null;
 }
-/* LAS TRES SOMBRAS, SIEMPRE LAS TRES Y SIEMPRE DISTINTAS.
-   sombrasNuevas() sortea entre una y tres CON repetición, así que la mitad de las veces el agua
-   ofrecía una sola sombra —o tres iguales—. Elegir la sombra es LA decisión de entrada de todo
-   el sistema (es lo que inclina la banda, capítulo 3), y una decisión entre tres cosas idénticas
-   no es una decisión: es un trámite. Se ofrecen las tres, en orden sorteado. */
-function sombrasOfrecidas() {
-  const t = ["chica", "mediana", "grande"];
-  for (let i = t.length - 1; i > 0; i--) {
-    const j = Math.floor(Math.random() * (i + 1)), x = t[i]; t[i] = t[j]; t[j] = x;
-  }
-  return t;
-}
+
+/* CUÁNTO DURA UN LANCE. No es un reloj de espera como el de la v3 —aquello eran quince minutos
+   entre lance y lance y mataba la sesión—: son los segundos que tarda el corcho en volar, flotar
+   y hundirse. Se sortean para que dos lances seguidos no se sientan iguales, y nada más: no hay
+   nada que hacer mientras tanto, ni nada que se pueda hacer mal. */
+var LANCE_ESPERA = [1.4, 3.0];
 
 function pescaV4Abrir() {
-  P4 = { fase: "sombras", sombras: sombrasOfrecidas(), L: null, espera: 0, ventana: 0,
-         cana: pescaV4Cana(), sombra: null };
-  _p4Hold = false;
+  /* el cebo puesto, sea el que sea. Si se acabó se vuelve a la lombriz sin drama y se avisa:
+     quedarse sin larvas no puede dejar la laguna inservible. */
+  let ceb = ceboPuesto();
+  if (!ceboTengo(ceb)) {
+    if (ceb !== "lombriz") { toast("Te quedaste sin " + CEBO_V4_DEF[ceb].label + " — volvés a la lombriz"); ceb = "lombriz"; pescaEstado().cebo = "lombriz"; }
+    if (!ceboTengo("lombriz")) { toast("Te faltan lombrices — cavá un montículo"); return false; }
+  }
+  /* SE COBRA AL TIRAR, y ya no hay dónde fallar: antes se cobraba al clavar porque perder el
+     pique no podía costar dinero. Sin pique, tirar y pescar son el mismo gesto. */
+  ceboCobrar(ceb);
+  /* EL PEZ SE SORTEA AHORA, aunque se enseñe al final. No es un detalle: si se sorteara al
+     terminar la animación, un jugador podría cerrar la pestaña al ver algo que no le gusta y
+     volver a tirar con la misma lombriz. Decidido al pagar, el resultado ya es suyo. */
+  P4 = { cana: pescaV4Cana(), cebo: ceb, t: 0,
+         dur: LANCE_ESPERA[0] + Math.random() * (LANCE_ESPERA[1] - LANCE_ESPERA[0]),
+         r: lanceSacar(pescaV4Cana(), { cebo: ceb }) };
   const sc = pescaEscena();
-  if (sc && sc.pescaOfrecerSombras) sc.pescaOfrecerSombras(P4.sombras);
+  if (sc && sc.pescaTirar) sc.pescaTirar();
+  if (typeof refreshHud === "function") refreshHud();
+  return true;
 }
 function pescaV4Cerrar() {
-  P4 = null; _p4Hold = false;
+  P4 = null;
   const sc = pescaEscena();
   if (sc && sc.pescaLimpiar) sc.pescaLimpiar();
   if (sc && sc.action && sc.action.v4) sc.action = null;
@@ -297,89 +305,20 @@ function pescaV4Cana() {
 }
 
 /* ── EL RELOJ ───────────────────────────────────────────────────────────────────────────────
-   Ya NO hay un requestAnimationFrame propio: la pulseada corre con el reloj de la escena, desde
-   el update() de Phaser. Y no es una simplificación cosmética, arregla dos cosas de verdad:
-
-     · UN SOLO RELOJ. Con dos bucles, el pez avanzaba en el suyo y el corcho se dibujaba en el
-       otro; en un cuadro lento eso se ve como que la imagen va atrasada respecto al resultado.
-     · SE PAUSA CUANDO EL JUEGO SE PAUSA. Phaser frena su update con la pestaña oculta. El rAF
-       suelto también frenaba, pero el día que alguien lo cambiara por un setInterval —que es la
-       tentación evidente— la pulseada habría seguido corriendo con el juego de fondo.
-
-   El tope del delta se mantiene, y ahora lo pone la escena: una pulseada que avanza medio
-   segundo en un cuadro es un pez perdido que el jugador no vio venir. */
+   La cuenta atrás del lance corre con el reloj de la escena, desde el update() de Phaser, y no
+   con un requestAnimationFrame propio: un solo reloj, y se pausa cuando el juego se pausa. */
 function pescaV4Paso(dt) {
   if (!P4) return;
-  const sc = pescaEscena();
-  if (P4.fase === "espera") {
-    P4.espera -= dt;
-    if (P4.espera <= 0) {
-      P4.fase = "pique"; P4.ventana = PIQUE_VENTANA;
-      if (sc && sc.pescaPique) sc.pescaPique();
-      if (window.sfx) sfx("splash");
-    }
-  } else if (P4.fase === "pique") {
-    P4.ventana -= dt;
-    /* PERDER EL PIQUE NO GASTA LA LOMBRIZ. Fallar la entrada no puede costar dinero: el corcho
-       vuelve solo y se tira de nuevo. (Documento, §3.) */
-    if (P4.ventana <= 0) {
-      P4.fase = "sombras"; P4.sombra = null; P4.sombras = sombrasOfrecidas();
-      if (sc && sc.pescaOfrecerSombras) sc.pescaOfrecerSombras(P4.sombras);
-      toast("Se soltó — volvé a tirar");
-    }
-  } else if (P4.fase === "pelea" && P4.L) {
-    peleaTick(P4.L, dt, _p4Hold);
-    if (P4.L.roto || P4.L.listo) pescaV4Resolver();
-  }
+  P4.t += dt;
+  if (P4.t >= P4.dur) pescaV4Resolver();
 }
 
-/* ── TIRAR A UNA SOMBRA ─────────────────────────────────────────────────────────────────────
-   ACÁ NO SE COBRA LA LOMBRIZ: se cobra al CLAVAR. El documento es explícito —« perder el pique
-   no gasta la lombriz: el corcho vuelve solo y se tira de nuevo »— y la razón es buena: fallar
-   la ENTRADA no puede costar dinero, o el jugador deja de tirar por miedo.
-   Se comprueba que haya al menos una antes de tirar, eso sí: prometer un lance que no se puede
-   pagar es una acción muda de las que persigue la regla 9.
-
-   (El comentario que había acá decía lo contrario que el código de abajo —« se cobra al tirar »—
-   y lo escribí yo hace diez minutos. Es exactamente la forma de fallo que nos costó dos días con
-   test-respaldo-local: un comentario que se contradice con la línea siguiente, y que se cree
-   antes que al código porque está escrito en castellano.) */
-function pescaV4Tirar(sombra) {
-  if (!P4 || P4.fase !== "sombras") return;
-  /* el cebo puesto, sea el que sea. Si se acabó se vuelve a la lombriz sin drama y se avisa:
-     quedarse sin larvas no puede dejar la laguna inservible. */
-  let ceb = ceboPuesto();
-  if (!ceboTengo(ceb)) {
-    if (ceb !== "lombriz") { toast("Te quedaste sin " + CEBO_V4_DEF[ceb].label + " — volvés a la lombriz"); ceb = "lombriz"; pescaEstado().cebo = "lombriz"; }
-    if (!ceboTengo("lombriz")) { toast("Te faltan lombrices — cavá un montículo"); return; }
-  }
-  P4.sombra = sombra;
-  P4.fase = "espera";
-  P4.espera = PIQUE_ESPERA[0] + Math.random() * (PIQUE_ESPERA[1] - PIQUE_ESPERA[0]);
-  const sc = pescaEscena();
-  if (sc && sc.pescaTirarA) sc.pescaTirarA(sombra);
-}
-function pescaV4Clavar() {
-  if (!P4 || P4.fase !== "pique") return;
-  /* se cobra el cebo PUESTO, y el lance se arma con ESE cebo. Los dos tienen que ser el mismo:
-     cobrar una larva y sortear con la tabla de la lombriz sería robar en silencio, que es la
-     peor clase de bug porque el jugador no puede ni reportarlo. */
-  const ceb = ceboPuesto();
-  ceboCobrar(ceb);
-  P4.L = lanceArmar(P4.cana, P4.sombra, { cebo: ceb });
-  P4.fase = "pelea";
-  const sc = pescaEscena();
-  if (sc && sc.pescaEnganchado) sc.pescaEnganchado(P4.L);
-  if (typeof refreshHud === "function") refreshHud();
-}
+/* ── SACAR EL PEZ ────────────────────────────────────────────────────────────────────────────
+   El resultado ya estaba decidido desde que se pagó la lombriz; esto solo lo entrega. */
 function pescaV4Resolver() {
-  const r = lanceCerrar(P4.L), sc = pescaEscena();
-  if (r && r.roto) {
-    /* el hilo se va con el corcho: es la única forma de que « se cortó » se entienda sin leerlo */
-    if (sc && sc.pescaCorte) sc.pescaCorte();
-    log("🎣 Se cortó el hilo. La racha vuelve a cero.", "bad");
-    toast("¡Se cortó el hilo!");
-  } else if (r) {
+  const r = P4 && P4.r, sc = pescaEscena();
+  P4 = null;
+  if (r) {
     if (sc && sc.pescaCaptura) sc.pescaCaptura(r);
     G.fish = G.fish || {}; G.fish[r.id] = (G.fish[r.id] || 0) + 1;
     if (typeof addXp === "function") addXp("fishing", r.xp);
@@ -395,11 +334,10 @@ function pescaV4Resolver() {
     if ((r.gigante || r.record) && window.celebrate) celebrate({ title: r.gigante ? "¡PEZ GIGANTE!" : "¡RÉCORD!", sub: e.label + " · " + r.kg + " kg" });
     if (typeof statAdd === "function") { statAdd("pescar"); statAdd("pescar", r.id); }
   }
-  /* y el agua vuelve a ofrecer. Las sombras nuevas salen con un respiro para que el pez que
-     acaba de saltar a la mano se vea llegar: si aparecieran en el mismo cuadro, la captura y la
-     oferta siguiente se pisarían y ninguna de las dos se leería. */
-  P4.L = null; P4.fase = "sombras"; P4.sombra = null; P4.sombras = sombrasOfrecidas();
-  if (sc && sc.pescaOfrecerSombras) sc.pescaOfrecerSombras(P4.sombras, 700);
+  /* y la acción del mundo se cierra: un clic en el agua es UN lance. Volver a tirar es volver a
+     tocar el agua, que es como se pesca en cualquier juego y es lo que pidió la dirección —
+     « que simplemente se tire la caña y suceda lo que tenga que suceder ». */
+  if (sc && sc.pescaTerminar) sc.pescaTerminar();
   if (typeof refreshHud === "function") refreshHud();
   if (typeof syncSlots === "function") syncSlots();
   if (typeof saveFarm === "function") saveFarm();
@@ -799,28 +737,6 @@ function pescaV4Nasas() {
   caja.querySelectorAll("[data-p4nx]").forEach(b => b.onclick = () => { nasaCalar(b.dataset.p4nx); caja._firma = null; pescaV4Nasas(); });
 }
 
-/* AGUANTAR LA CAÑA. Ya no hay botón: se aguanta sobre el mundo —tocando donde sea— y el apretar
-   lo recoge la escena, que es la que sabe distinguir un clic del juego de un clic sobre un panel
-   (ese filtro nos costó dos días con la Cocina, y no vale la pena tenerlo dos veces).
-
-   Lo que SÍ vive acá es el SOLTAR, y se escucha en la ventana entera a propósito: si el jugador
-   arrastra el dedo fuera del lienzo mientras aguanta y suelta afuera, el hilo tiene que soltarse
-   igual. Si no, la caña se queda tirando sola y el pez se pierde sin que nadie haya hecho nada
-   — un final que el jugador no puede explicarse, que es la peor clase de final. */
-function pescaV4Botones() {
-  if (window._p4Teclas) return; window._p4Teclas = true;
-  window.addEventListener("pointerup", () => { _p4Hold = false; });
-  window.addEventListener("pointercancel", () => { _p4Hold = false; });
-  /* y la barra espaciadora hace lo mismo, para quien juegue con teclado */
-  window.addEventListener("keydown", (e) => {
-    if (e.code !== "Space" || !P4 || e.repeat) return;
-    if (typeof GF !== "undefined" && GF.typing) return;      // escribiendo en el chat, no
-    e.preventDefault();
-    if (P4.fase === "pique") pescaV4Clavar();
-    _p4Hold = true;
-  });
-  window.addEventListener("keyup", (e) => { if (e.code === "Space") _p4Hold = false; });
-}
 
 function refreshHud() {
   try { syncMisionesBadge(); } catch (e) {}   // contador de misiones del menú (10/8)
@@ -3681,7 +3597,8 @@ function initUI() {
      que pasó después. A 180 ms es indistinguible de instantáneo, y comparar dos objetos planos
      cinco veces por segundo no le cuesta nada a nadie. */
   setInterval(() => { try { flujoTick(); } catch (e) {} }, 180);
-  try { pescaV4Botones(); } catch (e) {}   // 27/8: el botón del lance de la Pesca v4
+  /* (aquí se enganchaban las teclas de la pulseada: aguantar con la barra espaciadora y soltar.
+     Se fueron el 28/8 con el minijuego — no hay nada que aguantar.) */
 }
 initUI();
 

@@ -55,11 +55,16 @@ function jugar(cana, n, opciones) {
        economía esté rota, sino porque el simulador es sobrehumano.
        Se mide primero la economía BASE, que es la que promete la tabla del capítulo 9, y aparte
        lo que la habilidad le suma encima, que es una pregunta distinta y también interesante. */
-    if (!o.racha) { const e = ctx.pescaEstado(); e.racha = 0; e.sinEpico = 0; }
+    /* 28/8 — LA RACHA SE FUE CON LA PULSEADA. Este bucle apagaba la racha a mano en cada lance,
+       porque un simulador que gana SIEMPRE la mantenía encendida para siempre y medía a un
+       jugador que no existe. Ya no hace falta: sin minijuego no hay pericia que premiar, así que
+       no hay racha que apagar. Lo que sí se mantiene es sinPiedad, que apaga las dos garantías
+       —la del primer lance del día y la de los 80 sin épico—: son suelos para el jugador, no
+       parte de la economía media, y dejarlas encendidas inflaría la medición. */
+    { const e = ctx.pescaEstado(); e.sinEpico = 0; }
     G.res.lombriz -= 1; lombrices += 1;
-    const L = ctx.lanceArmar(cana, null, { noche: o.noche || false, cebo: o.cebo || "lombriz",
-                                           sinPiedad: !o.racha });
-    const r = ctx.lanceCerrar(L);                       // ← acá cobra el peaje el juego
+    const r = ctx.lanceSacar(cana, { noche: o.noche || false, cebo: o.cebo || "lombriz",
+                                     sinPiedad: true });   // ← acá cobra el peaje el juego
     const v = (r && !r.roto) ? ctx.pezPrecio(r.id, r.kg) : 0;
     vendido += v; s2 += v * v;                          // para la desviación típica, ver abajo
   }
@@ -122,7 +127,7 @@ console.log("\nEL PEAJE SE COBRA DE VERDAD, Y NO SE PIERDE POR REDONDEO");
   let acc = 0; for (let k = 2; k <= 20; k++) acc += ctx.skillNeed(k, "fishing");
   G.skills = { fishing: acc }; G.pescaV4 = null; ctx.pescaEstado();
   const N = 1000, esperado = N * CANAS.junco.mant;
-  for (let i = 0; i < N; i++) ctx.lanceCerrar(ctx.lanceArmar("junco", null, {}));
+  for (let i = 0; i < N; i++) ctx.lanceSacar("junco", {});
   const pagado = 1000 - G.plata + (G.peajeCana || 0);
   console.log("");
   console.log("    " + N + " lances con la caña de junco (0,30 de peaje cada uno)");
@@ -134,7 +139,7 @@ console.log("\nEL PEAJE SE COBRA DE VERDAD, Y NO SE PIERDE POR REDONDEO");
     (G.peajeCana || 0) >= 0 && (G.peajeCana || 0) < 1, (G.peajeCana || 0).toFixed(2) + " pendiente");
   /* la del Abuelo no cobra peaje: es la única que rompe el ancla a propósito */
   G.canas = { abuelo: 1 }; G.plata = 1000; G.peajeCana = 0;
-  for (let i = 0; i < 100; i++) ctx.lanceCerrar(ctx.lanceArmar("abuelo", null, {}));
+  for (let i = 0; i < 100; i++) ctx.lanceSacar("abuelo", {});
   ok("la Caña del Abuelo no cobra peaje — la única que rompe el ancla a propósito",
     G.plata === 1000 && !(G.peajeCana > 0), "cien lances y ni una plata");
 }
@@ -212,25 +217,26 @@ console.log("\nLA CARNADA SIGUE SIENDO EL TECHO");
   console.log("         contra la sobreproducción. »  Ahora el juego lo cumple, no solo la hoja.");
 }
 
-console.log("\nY LO QUE LA HABILIDAD SUMA ENCIMA   (la racha, medida aparte)");
+console.log("\nY UN JUGADOR VALE LO MISMO QUE OTRO   (no hay habilidad que medir)");
 {
-  /* « La racha paga en RAREZA, nunca en plata » dice el documento. Es media verdad: la rareza ES
-     plata, porque un raro vale más que un común. Lo que la frase quiere decir —y lo que importa—
-     es que la racha no imprime plata POR SÍ MISMA, sino que mejora lo que encontrás. Vale la
-     pena tener el número, porque es el techo teórico de un jugador que no falla nunca. */
+  /* ACÁ SE MEDÍA EL TECHO DEL JUGADOR PERFECTO: el que encadenaba cinco capturas sin cortar el
+     hilo subía una banda y sacaba un 47 % más que el de tabla. Era el número más interesante del
+     archivo y ya no existe — sin pulseada no hay quien falle, así que no hay dos jugadores.
+
+     Lo que queda por comprobar es lo contrario, y no es menos importante: que dos partidas
+     distintas con la misma caña paguen lo mismo. Si dieran distinto, sería que quedó viva alguna
+     memoria entre lances que nadie puso ahí a propósito. */
   const N = 30000;
-  const base = jugar("junco", N).neto;
-  const perf = jugar("junco", N, { racha: true }).neto;
-  const sube = (perf / base - 1) * 100;
+  const a = jugar("junco", N).neto, b = jugar("junco", N).neto;
   console.log("");
-  console.log("    jugador de tabla (sin racha) ....... " + base.toFixed(2) + " por lombriz");
-  console.log("    jugador que NUNCA corta el hilo .... " + perf.toFixed(2) + " por lombriz   (+" + sube.toFixed(0) + " %)");
+  console.log("    dos partidas de " + N + " lances con la misma caña:");
+  console.log("      " + a.toFixed(2) + " y " + b.toFixed(2) + " de plata por lombriz");
   console.log("");
-  ok("la racha premia, pero no descuadra la economía", sube > 5 && sube < 60,
-    "+" + sube.toFixed(0) + " % para el que no falla nunca");
-  console.log("       → un jugador humano corta el hilo, así que el número real vive entre los");
-  console.log("         dos. Que el techo del perfecto sea " + perf.toFixed(1) + " y no 40 es lo que hace que");
-  console.log("         la habilidad valga la pena sin volverse la única forma de jugar.");
+  ok("dos partidas iguales pagan lo mismo: no queda memoria escondida entre lances",
+    Math.abs(a - b) < 0.5, "diferencia de " + Math.abs(a - b).toFixed(3));
+  console.log("       → la única memoria que SÍ queda es la deliberada: el récord por especie, las");
+  console.log("         dos garantías (primer lance del día y ochenta sin épico) y la presión de");
+  console.log("         la laguna. Todas ésas se apagan arriba con sinPiedad para medir la base.");
 }
 
 console.log("");

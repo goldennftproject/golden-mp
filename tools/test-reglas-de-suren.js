@@ -75,7 +75,7 @@ console.log("\n« SEGÚN LA CAÑA TIENES VARIAS OPCIONES DE PECES »");
   /* y que no sea solo una tabla: que el juego DE VERDAD no los saque */
   const salieron = {};
   for (let i = 0; i < 30000; i++) {
-    const L = ctx.lanceArmar("junco", null, { noche: true });
+    const L = ctx.lanceSacar("junco", { noche: true });
     salieron[L.id] = true;
   }
   const prohibidos = ctx.pecesDeBanda("epico").concat(ctx.pecesDeBanda("legendario"))

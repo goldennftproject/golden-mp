@@ -41,7 +41,7 @@ console.log("\nNINGÚN CATÁLOGO DE LA v3 SIGUE EN PIE");
   const vivos = CATALOGOS.filter(g);
   ok("ninguno de los " + CATALOGOS.length + " catálogos de la v3 existe", !vivos.length, vivos.join(", "));
   /* y los de la v4 SÍ: un test que solo comprueba ausencias pasaría con el juego entero borrado */
-  const V4 = ["PEZ_DEF", "PEZ_ORDER", "CANA_V4_DEF", "NASA_DEF", "CEBO_V4_DEF", "TRUCO_DEF",
+  const V4 = ["PEZ_DEF", "PEZ_ORDER", "CANA_V4_DEF", "NASA_DEF", "CEBO_V4_DEF",
               "LONJA_ESCALON", "TITULO_PESCA_DEF"];
   const faltan = V4.filter(k => !g(k));
   ok("y los " + V4.length + " de la v4 están todos", !faltan.length, faltan.join(", "));
