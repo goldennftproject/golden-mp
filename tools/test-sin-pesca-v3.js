@@ -85,16 +85,20 @@ console.log("\nUNA SOLA PUERTA AL AGUA");
   /* sin comentarios, por la misma razón de siempre: los que quedaron dicen QUÉ vivía ahí y por
      qué se fue, y esa es justamente la información que un lector futuro va a necesitar. */
   const farm = (SRC["farm.js"] || "").replace(/\/\*[\s\S]*?\*\//g, "").replace(/\/\/[^\n]*/g, "");
+  /* 31/8 — #pesca-mini VOLVIÓ, y no es la v3: es el carrete de la v2 que Suren pidió de vuelta
+     (today.docx). Lo que este renglón defendía no era el nombre del panel sino la puerta única,
+     y eso sigue: quien lo abre es pescaPanel(), llamado desde el flujo de pescaV4Paso — la
+     laguna sigue teniendo UNA entrada. */
   ok("la laguna abre pescaV4Abrir() y nada más",
-    /pescaV4Abrir\(\)/.test(farm) && !/pesca-mini/.test(farm),
-    "el panel #pesca-mini de la v3 ya no se busca");
+    /pescaV4Abrir\(\)/.test(farm),
+    "el carrete (#pesca-mini) lo abre pescaPanel desde ese mismo flujo");
   ok("y el mundo no tiene su propio bucle de lance", !/this\.lance\b/.test(farm),
-    "la pulseada vive en el panel, con su requestAnimationFrame");
-  /* y el HTML tampoco lo lleva: un panel que existe en el marcado y nadie abre es peso muerto
-     que el navegador descarga en cada visita. */
+    "el carrete corre en pescaV4Paso, con el reloj de la escena — no un rAF propio");
+  /* el HTML lleva el panel del carrete y NADA del marcado de la v3 (sus ids eran otros) */
   const html = require("fs").readFileSync(require("path").join(RAIZ, "public/index.html"), "utf8")
     .replace(/<!--[\s\S]*?-->/g, "");
-  ok("y el marcado del panel viejo no está en index.html", !/pesca-mini/.test(html));
+  ok("y el marcado del panel de la v3 no está en index.html",
+    !["fp-tension", "fp-linea", "fp-pelea", "fp-trampa"].some(k => html.indexOf(k) >= 0));
 }
 
 console.log("\nUN SOLO NOMBRE PARA CADA COSA   (la enfermedad de fondo)");

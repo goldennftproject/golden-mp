@@ -1,22 +1,18 @@
-/* LA PESCA PASA EN EL AGUA, Y NO HAY NADA QUE TOCAR                                    (28/8)
+/* LA PESCA PASA EN EL AGUA — Y LO ÚNICO QUE SE TOCA ES EL CARRETE                (28/8 · 31/8)
    ═══════════════════════════════════════════════════════════════════════════════════════════
-   Este archivo se escribió ayer para defender una pulseada escénica —el hilo como tensión, el
-   corcho como progreso, los trucos de cada especie— y hoy la defiende al revés: comprueba que
-   nada de eso exista.
+   La historia de este archivo en tres días, porque explica exactamente qué defiende hoy:
+     · 27/8 — defendía una pulseada escénica (el hilo como tensión, los trucos de especie).
+     · 28/8 — la dirección la cortó: « todo ese minijuego hay que quitarlo, porque eso me lo
+       inventé yo y no estaba en el documento », « la caña PERMITE SACAR esos peces. No es que
+       tengas que seleccionar el pez, nada ». El archivo pasó a comprobar que nada de eso exista.
+     · 31/8 — Suren pidió « agregar el mini juego de la pesca », y la dirección precisó cuál:
+       EL CARRETE de la Pesca v2 del 22/8 (la barra vertical, el pez arriba y abajo, la zona que
+       se mantiene apretando) — no la pulseada, que sigue enterrada.
 
-   La dirección lo cortó en dos frases:
-     « todo ese minijuego hay que quitarlo, porque eso me lo inventé yo y no estaba en el
-       documento. Que simplemente se tire la caña y suceda lo que tenga que suceder. »
-     « cuando habla de caña por pez, se refiere a que la caña PERMITE SACAR esos peces. No es que
-       tengas que seleccionar el pez, nada. »
-
-   Las dos me señalan lo mismo desde dos lados: las sombras no eran una lectura suave del
-   encargo, eran un menú que yo había puesto en el agua, y la pulseada era un juego entero que
-   nadie pidió. Los borré y este archivo pasa a ser el que impide que vuelvan.
-
-   LO QUE SÍ SE CONSERVA es la puesta en escena, que es lo único que la dirección sí había
-   pedido: el corcho vuela, flota, se hunde, y el pez salta en arco a la mano. Eso es animación,
-   no minijuego — la diferencia es que no hay nada que se pueda hacer bien ni mal.
+   Así que hoy este archivo defiende las TRES cosas a la vez: que la escena siga entera (corcho,
+   hilo, salto a la mano), que el carrete esté enchufado entre el pique y la captura, y que ni un
+   símbolo de la pulseada haya vuelto. La física del carrete y la contabilidad del pez escapado
+   tienen su propio archivo: test-carrete.js.
      node tools/test-pesca-escena.js                                                             */
 const fs = require("fs"), path = require("path"), vm = require("vm");
 const RAIZ = path.join(__dirname, "..");
@@ -68,6 +64,7 @@ function nuevaEscena() {
       circle: (x, y, r) => nuevo("circle", x, y, r * 2, r * 2),
       image: (x, y, k) => Object.assign(nuevo("image", x, y, 8, 8), { textura: k }),
       zone: (x, y, w, h) => nuevo("zone", x, y, w, h),
+      text: (x, y, t) => Object.assign(nuevo("text", x, y, 8, 8), { texto: t }),   // 31/8: el ❗ del pique
       graphics: () => graficos,
     },
     make: { graphics: () => objBase({ tipo: "g2", fillStyle() { return this; }, fillCircle() { return this; },
@@ -143,12 +140,17 @@ console.log("\nY MIENTRAS TANTO NO PASA NADA   (que es exactamente lo que se pid
   console.log("         de la nada: un premio sin antesala se lee como un paso que el juego se saltó.");
 }
 
-console.log("\nEL PEZ SALTA A LA MANO Y EL LANCE SE CIERRA");
+console.log("\nEL PIQUE ABRE EL CARRETE, Y GANARLO CIERRA EL LANCE   (31/8)");
 {
   const idEsperado = g("P4").r.id;
   let vueltas = 0;
-  while (g("P4") && vueltas++ < 400) { ctx.pescaV4Paso(0.05); esc.pescaDibujar(0.05, 1); }
-  ok("pasado su tiempo, el lance se resuelve solo", !g("P4"));
+  while (g("P4") && !g("P4").carrete && vueltas++ < 400) { ctx.pescaV4Paso(0.05); esc.pescaDibujar(0.05, 1); }
+  ok("hundido el corcho, arranca el carrete — no la entrega directa", !!(g("P4") && g("P4").carrete));
+  console.log("       → el pez sigue decidido desde que se pagó: el carrete elige CUÁNDO se");
+  console.log("         cobra, nunca QUÉ sale. La pelea en sí la mide test-carrete.js.");
+  vm.runInContext("P4.carrete.prog = 0.999", ctx);   // acá se mide el CIERRE, así que se gana ya
+  ctx.pescaV4Paso(0.05, true);
+  ok("ganado el carrete, el lance se resuelve", !g("P4"));
   ok("y el pez entra en la bolsa", (G.fish[idEsperado] || 0) === 1, g("PEZ_DEF")[idEsperado].label);
   ok("con su salto en arco hasta el granjero",
     esc.dibujados.some(o => o.tipo === "image" && String(o.textura || "").indexOf("fish") === 0),
@@ -170,13 +172,16 @@ console.log("\nUN CLIC ES UN LANCE   (y no se pueden encadenar dos por accidente
   const lomb = G.res.lombriz;
   const fuente = fs.readFileSync(path.join(RAIZ, "public/game/farm.js"), "utf8")
     .replace(/\/\*[\s\S]*?\*\//g, "").replace(/\/\/[^\n]*/g, "");
+  /* 31/8: el bloque cambió de forma — con el carrete de vuelta, durante la pelea el clic ES el
+     juego (mantener sube la zona). Pero el `return` sigue: ningún clic con P4 vivo llega al
+     mundo, que es lo que este renglón defiende. */
   ok("con un lance en curso, el mundo no acepta más clics",
-    /if \(typeof P4 !== "undefined" && P4\) return;/.test(fuente),
+    /if \(typeof P4 !== "undefined" && P4\) \{\s*if \(P4\.carrete\) this\.lanceHold = true;\s*return;/.test(fuente),
     "si no, dos clics pagarían dos lombrices y enseñarían un solo pez");
   ok("y la lombriz no se cobró dos veces", G.res.lombriz === lomb);
 }
 
-console.log("\nY NO QUEDA MINIJUEGO EN NINGUNA PARTE");
+console.log("\nY LA PULSEADA NO VOLVIÓ CON EL CARRETE");
 {
   const codigo = ["state.js", "ui.js", "farm.js"].map(f =>
     fs.readFileSync(path.join(RAIZ, "public/game", f), "utf8")
@@ -205,5 +210,5 @@ console.log("\nY NO QUEDA MINIJUEGO EN NINGUNA PARTE");
 console.log("");
 console.log(fallos
   ? "  " + fallos + " fallo(s) — todavía queda algo que el jugador tiene que jugar"
-  : "  Todo en orden: se tira la caña y sucede lo que tenga que suceder.");
+  : "  Todo en orden: se tira la caña, pelea el carrete, y la pulseada sigue enterrada.");
 process.exit(fallos ? 1 : 0);

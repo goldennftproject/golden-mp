@@ -484,11 +484,14 @@ class FarmScene extends Phaser.Scene {
       if (clicDeInterfaz(pt)) { this.downEnUI = true; return; }
       this.downEnUI = false;
       this.ultimaAccion = nowMs();   // 14/8: cualquier clic = jugador activo (las mariposas señalan solo al "perdido")
-      /* 28/8 — MIENTRAS EL CORCHO ESTÁ EN EL AGUA, EL MUNDO NO RECIBE CLICS.
-         No es para proteger un minijuego —ya no hay ninguno— sino para que un segundo clic no
-         empiece otro lance encima del primero: se pagarían dos lombrices y se vería un solo pez.
-         Moverse sí cancela, que es la salida de siempre. */
-      if (typeof P4 !== "undefined" && P4) return;
+      /* 28/8 — MIENTRAS EL CORCHO ESTÁ EN EL AGUA, EL MUNDO NO RECIBE CLICS: un segundo clic
+         no empieza otro lance encima del primero. Moverse sí cancela, la salida de siempre.
+         31/8 — Y CON EL CARRETE DE VUELTA (today.docx), durante la pelea el clic ES el juego:
+         mantener apretado sube la zona de captura, soltar la deja caer. */
+      if (typeof P4 !== "undefined" && P4) {
+        if (P4.carrete) this.lanceHold = true;
+        return;
+      }
       /* 21/8 (diseñador: "con doce semillas, el clic derecho planta la última en vez de abrir la
          rueda"). El culpable: pt.rightButtonDown() lee pointer.buttons, y según la versión de
          Phaser / el navegador ese estado puede llegar SIN ACTUALIZAR durante el propio pointerdown
@@ -745,6 +748,7 @@ class FarmScene extends Phaser.Scene {
       }
     });
     this.input.on("pointerup", (pt) => {
+      this.lanceHold = false;   // 31/8: soltar deja caer la zona de captura del carrete
       /* el soltar sigue al apretar: si el clic empezó en un panel, su final tampoco es del mundo.
          (Se mira el apretar y no el target del soltar a propósito: un arrastre de cámara que
          termina con el cursor encima del HUD sí tiene que cerrarse acá.) */
@@ -1814,6 +1818,8 @@ class FarmScene extends Phaser.Scene {
   pescaLimpiar() {
     this.clearBobber();
     this.pescaP0 = null;
+    this.lanceHold = false;
+    if (this.pescaPanel) this.pescaPanel(false);   // 31/8: el carrete no sobrevive a la escena
   }
   /* ── EL CUADRO ──────────────────────────────────────────────────────────────────────────────
      Ya no hay nada que leer NI nada que hacer: el corcho flota, el hilo cuelga, y medio segundo
@@ -1842,19 +1848,44 @@ class FarmScene extends Phaser.Scene {
     toast("Pesca interrumpida");
   }
 
-  /* ============ PESCA v2 — lo que se VE del lance (22/8) ============
-     La lógica está en state.js; acá solo el teatro: las burbujas del pique,
-     el panel del carrete (DOM, pointer-events:none — el clic sigue siendo del agua)
-     y el cierre con premio o con aviso. */
+  /* ============ EL CARRETE — lo que se VE de la pelea (31/8, de vuelta de la v2) ============
+     La lógica está en state.js (carreteTick) y la corre ui.js (pescaV4Paso); acá solo el
+     teatro: el ❗ de las burbujas, el panel de la barra (DOM, pointer-events:none — el clic
+     sigue siendo del agua) y su sincronía cuadro a cuadro. */
   pescaBurbujas() {
     const b = this.bobber;
     if (b) {
       this.tweens.add({ targets: b, y: b.y + 6, duration: 90, yoyo: true, repeat: 3 });
       this.puffFx(b.x, b.y + 4, 0xa8d8ef, 8);
       const t = this.add.text(b.x, b.y - 20, "❗", { fontSize: "22px" }).setOrigin(0.5).setDepth(9999);
-      this.tweens.add({ targets: t, y: b.y - 34, alpha: 0, duration: (typeof PESCA2_VENTANA !== "undefined" ? PESCA2_VENTANA : 1) * 1000, onComplete: () => t.destroy() });
+      this.tweens.add({ targets: t, y: b.y - 34, alpha: 0, duration: 900, onComplete: () => t.destroy() });
     }
     if (window.sfx) sfx("splash");
+  }
+  pescaPanel(mostrar) {
+    const el = document.getElementById("pesca-mini"); if (!el) return;
+    el.classList.toggle("show", !!mostrar);
+    if (mostrar && typeof P4 !== "undefined" && P4 && P4.r) {
+      const fd = (typeof PEZ_DEF !== "undefined" && PEZ_DEF[P4.r.id]) || null;
+      const pez = document.getElementById("pm-pez");
+      if (pez && fd && fd.sprite) pez.src = GF.spr(fd.sprite);
+      this.pescaPanelSync();
+    }
+  }
+  pescaPanelSync() {
+    if (typeof P4 === "undefined" || !P4 || !P4.carrete) return;
+    const l = P4.carrete;
+    const zona = document.getElementById("pm-zona"), pez = document.getElementById("pm-pez"),
+      fill = document.getElementById("pm-fill"), txt = document.getElementById("pm-txt");
+    if (!zona || !pez || !fill) return;
+    zona.style.height = (l.zonaAlto * 100) + "%";
+    zona.style.bottom = ((l.zona - l.zonaAlto / 2) * 100) + "%";
+    zona.classList.toggle("ok", !!l.adentro);
+    pez.style.bottom = "calc(" + (l.pez * 100) + "% - 11px)";
+    fill.style.height = Math.round(l.prog * 100) + "%";
+    /* el rótulo no nombra la especie a propósito: el pez se enseña al sacarlo, como siempre.
+       Lo que sí se dice es lo que la barra ya insinúa — qué tan brava es la pelea. */
+    if (txt) txt.textContent = "¡Mantenelo en la zona!";
   }
 
   finishAction() {
@@ -5091,7 +5122,7 @@ class FarmScene extends Phaser.Scene {
          cierra pescaTerminar(); el contador de abajo es el cinturón por si esa llamada no llega
          —una acción que no se cierra sola deja al granjero clavado para siempre—. */
       if (this.action.v4) {
-        if (typeof pescaV4Paso === "function") pescaV4Paso(Math.min(0.1, dt));
+        if (typeof pescaV4Paso === "function") pescaV4Paso(Math.min(0.1, dt), !!this.lanceHold);
         if (typeof P4 === "undefined" || !P4) {
           this.action.fin = (this.action.fin || 0) + dt;
           if (this.action.fin > 2) { this.pescaLimpiar(); this.action = null; }

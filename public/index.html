@@ -343,6 +343,19 @@
   .gmi:hover{filter:brightness(1.15)}
   .gmi span.ic{font-size:15px;width:20px;text-align:center}
   .gmi b.key{margin-left:auto;font-size:11px;background:#161f12;border:1px solid #4a5a3a;color:#cbbf9f;border-radius:6px;padding:1px 6px}
+  /* 31/8: EL CARRETE, de vuelta (today.docx) — la barra de la Pesca v2. Medidas FIJAS (regla:
+     ninguna interfaz cambia de tamaño al interactuar); solo se mueven la zona, el pez y el relleno. */
+  #pesca-mini{position:fixed;right:16px;top:50%;transform:translateY(-50%);z-index:6;display:none;flex-direction:column;align-items:center;gap:6px;pointer-events:none}
+  #pesca-mini.show{display:flex}
+  #pesca-mini .pm-cabeza{background:rgba(38,51,31,.94);border:1px solid #3c4d31;color:#f2ead5;font-weight:700;font-size:12px;border-radius:8px;padding:4px 10px;width:170px;text-align:center}
+  #pesca-mini .pm-cuerpo{display:flex;gap:8px;align-items:stretch}
+  #pesca-mini .pm-pista{position:relative;width:38px;height:190px;background:rgba(20,34,48,.88);border:2px solid #3c4d31;border-radius:10px;overflow:hidden}
+  #pesca-mini .pm-zona{position:absolute;left:0;right:0;background:rgba(127,163,86,.40);border-top:2px solid #7fa356;border-bottom:2px solid #7fa356}
+  #pesca-mini .pm-zona.ok{background:rgba(127,163,86,.75)}
+  #pesca-mini .pm-pez{position:absolute;left:50%;transform:translateX(-50%);width:24px;image-rendering:pixelated;filter:drop-shadow(0 1px 2px rgba(0,0,0,.5))}
+  #pesca-mini .pm-prog{position:relative;width:10px;height:190px;background:rgba(38,51,31,.88);border:2px solid #3c4d31;border-radius:6px;overflow:hidden}
+  #pesca-mini .pm-prog i{position:absolute;left:0;right:0;bottom:0;height:40%;background:linear-gradient(180deg,#ffd76a,#c79a2b)}
+  #pesca-mini .pm-pie{background:rgba(38,51,31,.85);border-radius:6px;color:#cbbf9f;font-size:10px;padding:2px 8px;width:170px;text-align:center}
   /* 24/8: LA COCINA EN DOS PANELES (referencia del diseñador: Sunflower Land).
      Menos letra, más íconos. Medidas FIJAS: elegir otra receta no mueve nada de sitio —
      el panel derecho tiene alto mínimo y la grilla no cambia de tamaño (regla de la casa). */
@@ -1265,6 +1278,16 @@
     <div class="sub">Cada cosa que conseguís por primera vez revela su lámina. <b id="alb-prog"></b></div>
     <div class="forge-list" id="album-list" style="max-height:58vh"></div>
   </div></div>
+
+  <!-- 31/8: el carrete de la pesca (today.docx) — la barra vertical de la v2, de vuelta -->
+  <div id="pesca-mini">
+    <div class="pm-cabeza" id="pm-txt">…</div>
+    <div class="pm-cuerpo">
+      <div class="pm-pista"><div class="pm-zona" id="pm-zona"></div><img class="pm-pez" id="pm-pez" src="assets/farm/fish_comun.png?a=7" draggable="false" alt=""></div>
+      <div class="pm-prog"><i id="pm-fill"></i></div>
+    </div>
+    <div class="pm-pie">mantené apretado: la zona sube · soltá: baja</div>
+  </div>
 
   <div class="ov" id="ov-logros"><div class="card" style="width:min(560px,94%)">
     <button class="close" data-close="ov-logros">×</button>

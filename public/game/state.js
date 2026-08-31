@@ -6242,6 +6242,72 @@ function lanceSacar(cana, opciones) {
     peaje: peaje };
 }
 
+/* ── EL CARRETE, DE VUELTA (31/8, today.docx de Suren: « Agregar el mini juego de la pesca ») ──
+   No la pulseada del 28/8 —esa me la inventé yo y sigue enterrada—, sino el carrete que el juego
+   YA TUVO con la Pesca v2 del 22/8 (commit f08dd43, calcado de Fishing Frenzy): una barra
+   vertical donde el pez nada arriba y abajo, y el jugador maneja la ZONA DE CAPTURA — mantener
+   apretado la sube, soltar la deja caer. Con el pez adentro el progreso llena; afuera, drena.
+   Llena = pez a la bolsa; vacía o 18 s = se escapó.
+
+   CÓMO CONVIVE CON LA v4, que es la parte que había que pensar:
+     · el pez ya está SORTEADO al pagar la lombriz (lanceSacar, anti-scumming del 28/8) — el
+       carrete no decide QUÉ sale, decide si lo cobrás YA. Las reglas de Suren no se tocan:
+       la caña sigue abriendo sus especies y el peso sigue mandando.
+     · si el pez se escapa, cuesta TIEMPO y no plata — regla de dirección de la propia v2:
+       « un lance fallado cuesta el tiempo y la vergüenza, no plata ». El pez queda PENDIENTE
+       en el estado de pesca (pescaEstado().pendiente) y el próximo tiro lo reusa sin cobrar
+       lombriz. Como es EL MISMO pez, escapar no re-sortea nada: el invariante del bolsillo
+       queda exacto y no hay scumming posible ni con F5.
+     · la dificultad la pone la BANDA del pez sorteado (los raros nadan más rápido y cambian de
+       rumbo más seguido, como en el original) y la zona crece con el nivel de Pesca: el oficio
+       en las manos, no solo en los números.
+   Lógica PURA — la dibuja farm.js y la corre ui.js; los tests la juegan sin navegador. */
+var CARRETE_TIMEOUT = 18;          // segundos máximos de pelea
+var CARRETE_DIF = {   // vel: qué tan rápido persigue su rumbo · nervio: cambios de rumbo por segundo
+  comun:      { vel: 1.6, nervio: 0.9 },
+  poco_comun: { vel: 2.1, nervio: 1.3 },
+  raro:       { vel: 2.6, nervio: 1.8 },
+  epico:      { vel: 3.3, nervio: 2.3 },
+  legendario: { vel: 4.0, nervio: 2.8 },
+};
+function pescaZonaAlto(nv) { return Math.min(0.40, 0.22 + 0.012 * Math.max(1, nv || 1)); }   // fracción de la barra
+function carreteNuevo(banda, nivel, rnd) {
+  rnd = rnd || Math.random;
+  return {
+    banda: CARRETE_DIF[banda] ? banda : "comun", t: 0,
+    pez: 0.5, rumbo: 0.3 + rnd() * 0.4,          // posición y destino del pez (0 abajo · 1 arriba)
+    zona: 0.5, zonaV: 0,                          // la zona de captura y su velocidad
+    zonaAlto: pescaZonaAlto(nivel),               // el oficio agranda la zona (22 % → 40 %)
+    prog: 0.4,                                    // arranca con margen: perdonar el primer tropiezo
+  };
+}
+function carreteTick(l, dt, hold, rnd) {
+  rnd = rnd || Math.random;
+  const d = CARRETE_DIF[l.banda] || CARRETE_DIF.comun;
+  l.t += dt;
+  // el pez: persigue su rumbo, y cada tanto (su nervio) elige otro
+  if (rnd() < d.nervio * dt) l.rumbo = rnd();
+  l.pez += Math.max(-1, Math.min(1, (l.rumbo - l.pez) * 4)) * d.vel * 0.22 * dt;
+  l.pez = Math.max(0.02, Math.min(0.98, l.pez));
+  // la zona: apretar la empuja para arriba, soltar la deja caer (con inercia, estilo Stardew)
+  l.zonaV += (hold ? 2.6 : -2.2) * dt;
+  l.zonaV = Math.max(-1.6, Math.min(1.6, l.zonaV));
+  l.zona += l.zonaV * dt;
+  const mitad = l.zonaAlto / 2;
+  if (l.zona < mitad) { l.zona = mitad; l.zonaV = Math.max(0, l.zonaV * -0.25); }         // rebote suave abajo
+  if (l.zona > 1 - mitad) { l.zona = 1 - mitad; l.zonaV = Math.min(0, l.zonaV * -0.25); } // y arriba
+  // el progreso: adentro llena, afuera drena
+  l.adentro = Math.abs(l.pez - l.zona) <= mitad;
+  l.prog += (l.adentro ? 0.22 : -0.30) * dt;
+  if (l.prog >= 1) return "gana";
+  if (l.prog <= 0 || l.t >= CARRETE_TIMEOUT) { l.motivo = l.prog <= 0 ? "escapo" : "tiempo"; return "perdido"; }
+  return "sigue";
+}
+var CARRETE_AVISO = {   // qué contesta cada final (regla 9: toda acción contesta)
+  escapo: "¡Se escapó! Mantené al pez dentro de la zona — sigue en el anzuelo, volvé a tirar",
+  tiempo: "El pez se cansó de pelear… pero sigue en el anzuelo. Volvé a tirar",
+};
+
 /* EL FACTOR DE PESO QUE HAY QUE ESPERAR según el cebo, POR ESPECIE.
    Con w = min + (max−min)·u², el peso medio es min + R/3 y el factor sale 1,00 por construcción
    (ver test-pesca-v4-datos). Quedarse con el mayor de DOS sorteos cambia la distribución de u
