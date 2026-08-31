@@ -752,7 +752,7 @@ function refreshHud() {
   // 18/8: el cartel de expansión del mapa refleja el material que tenés; la firma interna evita
   // que se rehaga si no cambió nada de lo que se ve.
   if (window.FARM && window.FARM.dibujarExpansion) { try { window.FARM.dibujarExpansion(); } catch (e) {} }
-  refreshStam(); setTxt("s-level", G.level); setTxt("s-prestige", G.prestige); setNum("s-plata", G.plata); setNum("s-golden", G.golden); setTxt("s-week", (typeof semanaActual === "function") ? semanaActual() : G.week); setTxt("s-hp", Math.ceil(G.hp) + "/" + G.hpMax); refreshCombatBar(); refreshFarmBar(); bindFarmPill(); if (typeof checkCooking === "function") checkCooking(); if (typeof checkHorno === "function") checkHorno(); if (typeof refreshHotbar === "function") refreshHotbar(); }
+  refreshStam(); setTxt("s-level", G.level); setTxt("s-prestige", G.prestige); setNum("s-plata", G.plata); setNum("s-golden", G.golden); setTxt("s-week", (typeof semanaActual === "function") ? semanaActual() : G.week); setTxt("s-hp", Math.ceil(G.hp) + "/" + G.hpMax); refreshCombatBar(); refreshFarmBar(); bindFarmPill(); refreshBuffsPill(); if (typeof checkCooking === "function") checkCooking(); if (typeof checkHorno === "function") checkHorno(); if (typeof refreshHotbar === "function") refreshHotbar(); }
 // clic en la barra de estamina: ofrece la recarga premium (con su tope diario)
 function bindStamPill() {
   const pill = document.getElementById("stampill"); if (!pill || pill._bound) return;
@@ -770,10 +770,19 @@ function refreshStam() {
   bindStamPill();
   const pill = document.getElementById("stampill"); if (!pill || typeof stamMax !== "function") return;
   const enZN = window.GF && GF.scene === "forest";
-  pill.style.display = enZN ? "" : "none";
-  if (!enZN) return;
+  /* 31/8 — LA PÍLDORA TAMBIÉN SE VE EN LA GRANJA MIENTRAS LA ESTAMINA NO ESTÁ LLENA.
+     Antes solo existía dentro de la Zona Negra, así que el reloj de las 4 horas corría en un
+     sitio donde no se podía mirar: para saber si ya podías volver a pelear había que ENTRAR a
+     la Zona Negra — usar la puerta como termómetro. Un reloj que corre escondido no ordena nada.
+     Llena y fuera de la Zona Negra sí se esconde: una barra llena no dice nada que un HUD ya
+     apretado tenga que decir. */
   const mx = stamMax(), v = Math.floor(G.stam == null ? mx : G.stam);
-  setTxt("s-stam", v + "/" + mx);
+  pill.style.display = (enZN || v < mx) ? "" : "none";
+  if (!enZN && v >= mx) return;
+  /* el reloj VISIBLE, no solo en el tooltip (los vídeos de referencia: « Stamina 42:00 »).
+     En el móvil no hay hover, así que un dato que solo vive en el title no existe. */
+  const falta = (v < mx && typeof stamFullEn === "function") ? stamFullEn() : 0;
+  setTxt("s-stam", v + "/" + mx + (falta > 0 ? " · ⏱" + fmtDur(falta) : ""));
   const f = document.getElementById("stam-fill"); if (f) f.style.width = Math.round(v / mx * 100) + "%";
   /* 24/8: la barra dice CUÁNDO se llena entera (recarga de 4 h, reloj real) — sin eso, una
      recarga que no se ve avanzar parece rota. */
@@ -847,6 +856,44 @@ function bindFarmPill() {
   const pill = document.getElementById("lvlpill"); if (!pill || pill._bound) return;
   pill._bound = true;
   pill.onclick = () => { if (typeof openOv === "function") openOv("ov-barn"); };
+}
+/* LOS EFECTOS DE LA COMIDA, CON SU RELOJ   (31/8, de los vídeos de referencia: « Food 00:00 »)
+   Los platos dan buffs con vencimiento desde el doc maestro del 2/8, y hasta hoy no se enseñaban
+   EN NINGÚN SITIO: comías un guiso de +10 % de daño y el juego no decía ni que estaba activo ni
+   cuánto le quedaba. La consecuencia práctica era que comer antes de entrar a la Zona Negra —la
+   jugada para la que los buffs existen— era un acto de fe: ni sabías si seguía puesto al llegar.
+
+   Un chip por buff activo, con su etiqueta corta y su cuenta atrás. En ámbar los últimos 30
+   segundos: es el momento de decidir si volvés a comer antes de pelear. Se agrupan por etiqueta
+   —dos guisos iguales son « ×2 » con el vencimiento del que más dura, no dos chips clavados—.
+   PATRÓN DE FIRMA para los nodos y texto suelto para los relojes: la estructura solo se rehace
+   si cambió QUÉ buffs hay; lo que corre cada segundo solo escribe números. */
+function refreshBuffsPill() {
+  const pill = document.getElementById("buffpill"); if (!pill) return;
+  const t = Date.now();
+  const vivos = (G.buffs || []).filter(b => b.until > t && b.label);
+  if (!vivos.length) { pill.style.display = "none"; pill._firma = ""; return; }
+  pill.style.display = "";
+  /* agrupar por etiqueta: el mismo plato dos veces es un chip con ×2 */
+  const porLabel = {};
+  for (const b of vivos) {
+    const g0 = porLabel[b.label] || (porLabel[b.label] = { n: 0, until: 0 });
+    g0.n++; g0.until = Math.max(g0.until, b.until);
+  }
+  const claves = Object.keys(porLabel);
+  const firma = claves.map(k => k + porLabel[k].n).join("|");
+  if (pill._firma !== firma) {
+    pill._firma = firma;
+    pill.innerHTML = claves.map((k, i) =>
+      '<span class="bff" data-bff="' + i + '"><b>' + k + (porLabel[k].n > 1 ? " ×" + porLabel[k].n : "") +
+      '</b><span class="bt"></span></span>').join("");
+  }
+  claves.forEach((k, i) => {
+    const el = pill.querySelector('[data-bff="' + i + '"]'); if (!el) return;
+    const resta = porLabel[k].until - t;
+    const bt = el.querySelector(".bt"); if (bt) bt.textContent = fmtDur(resta);
+    el.classList.toggle("porirse", resta < 30000);
+  });
 }
 
 /* ---- inventario por casillas (todo es ítem; arrastrar para reordenar) ---- */
