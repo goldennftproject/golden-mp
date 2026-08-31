@@ -1408,8 +1408,13 @@ function refreshEquip() {
         el.classList.remove("ghost");
         el.title = ARMOR_SLOT_LABEL[pz] + " · " + sd.label + " · defensa +" + sd.piezas[pz].def;
         el.innerHTML = spIc("armor_" + setEq + "_" + pz, "🛡️");
-      } else if (!slotViejo) {   // guantes/pantalones vacíos: silueta genérica
-        el.classList.add("ghost"); el.title = ARMOR_SLOT_LABEL[pz]; el.innerHTML = '<span class="sil"></span>';
+      } else if (!slotViejo) {
+        /* 31/8 — guantes/pantalones vacíos: SU silueta, no un span vacío. El span venía de
+           cuando lo llenaba un emoji; el emoji se fue en una limpieza y el hueco quedó mudo —
+           justo lo que los vídeos de referencia muestran que no debe pasar: un hueco vacío
+           enseña, opacado, lo que va ahí. */
+        el.classList.add("ghost"); el.title = ARMOR_SLOT_LABEL[pz];
+        el.innerHTML = '<img class="eqsil" src="' + GF.spr(pz === "guantes" ? "sil_guantes" : "sil_pantalones") + '" onerror="this.remove()">';
       }
     }
   }
