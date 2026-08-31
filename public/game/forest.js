@@ -110,6 +110,10 @@ class ForestScene extends Phaser.Scene {
     // el botín tirado sobrevive mientras dure la sesión: si volvés al Bosque, sigue ahí
     GF.forestDrops = GF.forestDrops || [];
     GF.forestDrops.forEach(g => { g.spr = this.dropSprite(g); });
+    /* los CUERPOS también sobreviven al ir y volver: los que aún guardan botín (o nadie revisó)
+       se redibujan con sus brillos; los revisados y vacíos no vuelven — ya se estaban yendo */
+    GF.forestCuerpos = (GF.forestCuerpos || []).filter(c => !c.revisado || c.drops.length);
+    GF.forestCuerpos.forEach(c => this.dibujarCuerpo(c));
     this.input.mouse.disableContextMenu();
 
     // clic izquierdo: ir hacia el monstruo (y fijarlo) o moverse · clic DERECHO: atacar (detalles 338)
@@ -126,6 +130,10 @@ class ForestScene extends Phaser.Scene {
         else if (this.target) this.clearTarget();   // la respuesta es visible: el recuadro se va
         return;
       }
+      /* 31/8 — CLIC SOBRE UN CUERPO: revisarlo (con la regla del cuadro de distancia adentro).
+         Va antes que el caminar: un cuerpo es un destino en sí mismo, no un punto del piso. */
+      { const c = this.cuerpoEnPunto(wx, wy);
+        if (c) { this.revisarCuerpo(c); return; } }
       if (this.action) return;
       this.hold = { sx: pt.x, sy: pt.y, active: false };
       // clic izquierdo (Discord 1/8): si cliqueás un bicho que tenés CERCA, un espadazo suelto —
@@ -323,6 +331,129 @@ class ForestScene extends Phaser.Scene {
       };
       g.spr = this.dropSprite(g);
       GF.forestDrops.push(g);
+    });
+  }
+  /* ═══ LOS CUERPOS (31/8, dirección con los vídeos de Tibia) ═════════════════════════════════
+     « cuando se mata un bicho queda el cuerpo, y le salen brillos avisando de que no se ha
+       revisado. Solo se puede recoger a un cuadro de distancia — tu celda y las ocho de
+       alrededor. Al revisar: si hay ítems, una ventanita con lo que tiene y un botón de recoger;
+       si está vacío, un mensaje en la interfaz y desaparecen los brillos. »
+     Contrastado con TibiaWiki: el rango real de Tibia son exactamente esos 9 campos.
+
+     El botín se sortea al MORIR (rollLoot, como siempre — la economía no se mueve un céntimo);
+     lo que cambia es la entrega: vive en el cuerpo hasta que alguien lo revisa. Los cuerpos
+     sobreviven al ir y volver de escena igual que lo hacían los drops (GF.forestCuerpos), y los
+     ya revisados se van solos a los 90 segundos — un cadáver eterno es basura visual. */
+  crearCuerpo(m, drops) {
+    GF.forestCuerpos = GF.forestCuerpos || [];
+    const c = { x: m.cx, y: m.by, key: m.key, label: m.def.label, sprite: m.def.sprite || null,
+                drops: drops.slice(), revisado: false };
+    this.dibujarCuerpo(c);
+    GF.forestCuerpos.push(c);
+  }
+  dibujarCuerpo(c) {
+    /* el mismo bicho, tumbado y gris: se lee como « esto ESTUVO vivo » sin arte nuevo */
+    const tex = c.sprite && this.textures.exists(c.sprite + "_idle_0") ? c.sprite + "_idle_0" : null;
+    if (tex) {
+      c.spr = this.add.image(c.x, c.y - 4, tex).setOrigin(0.5, 0.5).setAngle(90)
+        .setTint(0x8f8f8f).setAlpha(0.95).setDepth(c.y - 1);
+      c.spr.setScale(Math.min(1, 36 / Math.max(c.spr.width, 1)));
+    } else {
+      c.spr = this.add.text(c.x, c.y, "💀", { fontSize: "15px" }).setOrigin(0.5, 1).setDepth(c.y - 1);
+    }
+    if (!c.revisado) this.brillosDe(c);
+  }
+  /* los brillitos: tres destellos titilando a destiempo. Son EL aviso — sin texto — de que el
+     cuerpo todavía no se revisó, y por eso mueren en el momento exacto en que se revisa. */
+  brillosDe(c) {
+    c.fx = [];
+    for (let i = 0; i < 3; i++) {
+      const b = this.add.text(c.x + (i - 1) * 10 + (Math.random() - 0.5) * 6,
+                              c.y - 8 - Math.random() * 10, "✦",
+        { fontSize: "9px", color: "#ffe9a0" }).setOrigin(0.5).setDepth(c.y + 1).setAlpha(0);
+      this.tweens.add({ targets: b, alpha: { from: 0.15, to: 1 }, y: b.y - 3,
+        duration: 520 + Math.random() * 260, yoyo: true, repeat: -1, delay: i * 240 });
+      c.fx.push(b);
+    }
+  }
+  apagarBrillos(c) {
+    (c.fx || []).forEach(b => { this.tweens.killTweensOf(b); b.destroy(); });
+    c.fx = null;
+  }
+  /* ¿está el cuerpo en tu celda o en las ocho de alrededor? El radio 1,6 celdas cubre la esquina
+     (diagonal de una celda = 1,41) con margen para los tamaños de sprite. */
+  cuerpoAlAlcance(c) {
+    return Math.hypot(c.x - this.hero.x, c.y - this.hero.y) <= GF.TILE * 1.6;
+  }
+  cuerpoEnPunto(wx, wy) {
+    let mejor = null, bd = 22;
+    for (const c of (GF.forestCuerpos || [])) {
+      const d = Math.hypot(c.x - wx, c.y - wy);
+      if (d < bd) { bd = d; mejor = c; }
+    }
+    return mejor;
+  }
+  revisarCuerpo(c) {
+    if (!this.cuerpoAlAlcance(c)) { toast("Estás demasiado lejos"); return; }   // la regla de Tibia, con sus palabras
+    if (!c.revisado) { c.revisado = true; this.apagarBrillos(c); }
+    if (!c.drops.length) {
+      /* el aviso va en la interfaz, no flotando sobre el bicho — es lo pedido */
+      toast("El cuerpo de " + c.label + " está vacío");
+      this.despedirCuerpo(c);
+      return;
+    }
+    this.abrirCuerpo(c);
+  }
+  /* la ventanita del cuerpo: qué tiene y el botón de recogerlo. HTML y no escena, porque es
+     GESTIÓN (mirar y decidir), no acción — la misma línea que separó los aparejos de la pesca. */
+  abrirCuerpo(c) {
+    const el = document.getElementById("cuerpo-panel"); if (!el) return;
+    this._cuerpoAbierto = c;
+    const tit = document.getElementById("cuerpo-tit");
+    if (tit) tit.textContent = "Cuerpo de " + c.label;
+    const lista = document.getElementById("cuerpo-items");
+    if (lista) lista.innerHTML = c.drops.map(d => {
+      const nom = d.kind === "gear" ? ((GEAR_DEF[d.k] && GEAR_DEF[d.k].label) || d.k)
+        : (d.k === "plata" ? "Plata" : (RES_LABEL[d.k] || d.k));
+      const sk = d.kind === "gear" ? (GEAR_DEF[d.k] && GEAR_DEF[d.k].sprite)
+        : (d.k === "plata" ? "coin_plata" : (typeof resSprite === "function" ? resSprite(d.k) : null));
+      return '<div class="cp-item">' + (sk ? '<img src="' + GF.spr(sk) + '" onerror="this.remove()">' : "") +
+        '<span>' + d.n + " × " + nom + '</span></div>';
+    }).join("");
+    el.classList.add("show");
+    const btn = document.getElementById("cuerpo-recoger");
+    if (btn) btn.onclick = () => this.recogerCuerpo(c);
+    const x = document.getElementById("cuerpo-cerrar");
+    if (x) x.onclick = () => this.cerrarCuerpo();
+  }
+  cerrarCuerpo() {
+    const el = document.getElementById("cuerpo-panel");
+    if (el) el.classList.remove("show");
+    this._cuerpoAbierto = null;
+  }
+  recogerCuerpo(c) {
+    if (!this.cuerpoAlAlcance(c)) { toast("Estás demasiado lejos"); this.cerrarCuerpo(); return; }
+    const quedan = [];
+    for (const d of c.drops) {
+      let ok = false;
+      if (d.kind === "gear") { gainGear(d.k); ok = true; }
+      else if (d.k === "plata") { G.plata += d.n; ok = true; }
+      else ok = tryAddRes(d.k, d.n);
+      if (!ok) quedan.push(d);   // bolsa llena: lo que no cupo SE QUEDA en el cuerpo, no se pierde
+    }
+    c.drops = quedan;
+    if (window.sfx) sfx("coin");
+    refreshHud(); if (typeof syncSlots === "function") syncSlots(); if (isOpen("ov-inv")) refreshInv();
+    if (quedan.length) { toast("Bolsa llena — el resto queda en el cuerpo"); this.abrirCuerpo(c); return; }
+    this.cerrarCuerpo();
+    this.despedirCuerpo(c);
+  }
+  /* revisado y sin nada dentro: el cuerpo se va solo a los 90 segundos */
+  despedirCuerpo(c) {
+    this.time.delayedCall(90000, () => {
+      const i = (GF.forestCuerpos || []).indexOf(c);
+      if (i >= 0) GF.forestCuerpos.splice(i, 1);
+      if (c.spr) this.tweens.add({ targets: c.spr, alpha: 0, duration: 600, onComplete: () => c.spr.destroy() });
     });
   }
   tryPickup(x, y, rad) {
@@ -807,11 +938,12 @@ class ForestScene extends Phaser.Scene {
         G.golden += 1; G.runaOro.n++;
         this.floatTxt(m, "+1 $Golden" + (G.runaOro.n >= RUNA_ORO_TOPE ? " (tope del día)" : ""), "#ffe08a");
       } }
-    const parts = drops.map(d => d.kind === "gear" ? ((GEAR_DEF[d.k] && GEAR_DEF[d.k].label) || d.k)
-      : "+" + d.n + " " + (d.k === "plata" ? "plata" : (RES_LABEL[d.k] || d.k)));
-    this.dropLoot(m, drops);   // todo el botín cae al piso, armaduras incluidas (detalles 338)
-    log("Venciste a " + m.def.label + (parts.length ? ". Soltó: " + parts.join(" · ") : ". No soltó nada."), "gold");
-    toast(m.def.label + " derrotado" + (parts.length ? ": " + parts.join(" · ") : ""));
+    /* 31/8 — EL BOTÍN YA NO EXPLOTA POR EL SUELO: QUEDA DENTRO DEL CUERPO (dirección, con los
+       vídeos de referencia de Tibia). El cuerpo se queda donde cayó, con brillitos mientras
+       nadie lo haya revisado, y el botín se DESCUBRE revisándolo — por eso el aviso del kill ya
+       no dice qué soltó: decirlo acá mataría la única sorpresa que el cuerpo guarda. */
+    this.crearCuerpo(m, drops);
+    log("Venciste a " + m.def.label + ".", "gold");
     refreshHud();
     this.tweens.add({ targets: m.spr, alpha: 0, y: m.by - 12, duration: 400, onComplete: () => m.spr.setVisible(false) });
     // las que no reaparecen (babitas) se sacan de la lista y se destruyen: si no, se acumulan sin techo

@@ -537,6 +537,19 @@
   .p4-x{width:26px;height:26px;flex:none;border-radius:7px;border:1px solid #3c4d31;background:#26331c;
     color:#cbbf9f;font-size:13px;font-weight:800;cursor:pointer;line-height:1}
   .p4-x:hover{background:#334426;color:#f2ead5}
+  /* la ventanita del cuerpo (botín de Tibia, 31/8): chica y abajo, que no tape la pelea */
+  #cuerpo-panel{position:fixed;left:50%;bottom:16px;transform:translateX(-50%);z-index:70;
+    width:min(280px,90vw);display:none;flex-direction:column;gap:7px;padding:10px 12px 12px;
+    border-radius:12px;background:rgba(28,22,14,.95);border:2px solid #4a3a24;
+    box-shadow:0 8px 26px rgba(0,0,0,.45)}
+  #cuerpo-panel.show{display:flex}
+  .cp-cab{display:flex;justify-content:space-between;align-items:center;font-size:13px;color:#f2ead5}
+  .cp-item{display:flex;align-items:center;gap:8px;font-size:12px;color:#e8dfc6;
+    padding:4px 6px;border-radius:8px;background:rgba(0,0,0,.25)}
+  .cp-item img{width:20px;height:20px;object-fit:contain;image-rendering:pixelated}
+  #cuerpo-recoger{padding:9px;border-radius:9px;border:2px solid #7fa356;background:#3d5a24;
+    color:#f2ead5;font-size:13px;font-weight:800;cursor:pointer}
+  #cuerpo-recoger:hover{background:#4a6b2e}
   .lonja-cab{display:flex;justify-content:space-between;align-items:center;font-size:12px;
     color:#cbbf9f;padding:6px 2px 8px;border-bottom:1px solid #3c4d31}
   .lonja-cab b{color:#9fd8f0}
@@ -1235,6 +1248,15 @@
 
   <!-- (el panel del minijuego de la Pesca v3 vivía aquí, y después el de la v4. Los dos se
        fueron al mundo: la laguna es un sitio, no una ventana.) -->
+
+  <!-- ═══ EL CUERPO DEL BICHO (31/8, vídeos de referencia: el botín de Tibia) ════════════════
+       La ventanita de revisar un cuerpo: qué tiene dentro y el botón de recogerlo. Es HTML y no
+       escena porque es GESTIÓN — mirar y decidir — igual que los aparejos de la pesca. -->
+  <div id="cuerpo-panel">
+    <div class="cp-cab"><b id="cuerpo-tit">Cuerpo</b><button class="p4-x" id="cuerpo-cerrar" title="Cerrar">✕</button></div>
+    <div id="cuerpo-items"></div>
+    <button id="cuerpo-recoger">Recoger todo</button>
+  </div>
 
   <!-- 23/8: EL ÁLBUM — la colección de primeras veces (variedad, donde los logros premian volumen) -->
   <div class="ov" id="ov-album"><div class="card" style="width:min(600px,94%)">
