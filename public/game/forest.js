@@ -119,7 +119,13 @@ class ForestScene extends Phaser.Scene {
       const wx = pt.worldX, wy = pt.worldY;
       let hit = null, bd = 1e9;
       for (const m of this.monsters) { if (m.dead) continue; const b = m.spr.getBounds(); if (Phaser.Geom.Rectangle.Contains(b, wx, wy)) { const d = Math.hypot(m.cx - wx, m.by - wy); if (d < bd) { bd = d; hit = m; } } }
-      if (pt.rightButtonDown()) { if (hit) { if (!this.hasWeapon()) { toast("Necesitás un arma equipada para atacar"); return; } this.setTarget(hit); this.autoOn = true; } return; }   // clic DERECHO: fijar y AUTO-atacar (detalles viernes)
+      /* clic DERECHO: fijar y AUTO-atacar (detalles viernes). Y 31/8: derecho al VACÍO suelta el
+         objetivo — antes no había ninguna forma de desmarcar sin marcar otra cosa. */
+      if (pt.rightButtonDown()) {
+        if (hit) { if (!this.hasWeapon()) { toast("Necesitás un arma equipada para atacar"); return; } this.setTarget(hit); this.autoOn = true; }
+        else if (this.target) this.clearTarget();   // la respuesta es visible: el recuadro se va
+        return;
+      }
       if (this.action) return;
       this.hold = { sx: pt.x, sy: pt.y, active: false };
       // clic izquierdo (Discord 1/8): si cliqueás un bicho que tenés CERCA, un espadazo suelto —
@@ -135,7 +141,15 @@ class ForestScene extends Phaser.Scene {
           return;                            // no toca el destino actual: sigue caminando si venía caminando
         }
       }
-      this.clearTarget(); this.goTo(wx, wy); this.tryPickup(wx, wy, 20);
+      /* 31/8 — CAMINAR YA NO SUELTA EL OBJETIVO. Acá había un clearTarget(), y hacía que el
+         gesto de ACERCARTE al bicho marcado te lo desmarcara: clic derecho para fijar, clic para
+         caminar hacia él, y el recuadro rojo se iba con el auto-ataque apagado. Con teclado el
+         objetivo sobrevivía y con clic no — el mismo jugador, dos reglas, y la rota era la del
+         móvil, donde el clic es la única forma de moverse.
+         Ahora el objetivo aguanta mientras te movés y el auto-ataque retoma solo al volver a
+         estar a distancia (autoAttack ya medía la distancia en cada tick: no hay que tocarlo).
+         Soltar es un gesto aparte y deliberado: clic derecho al vacío. */
+      this.goTo(wx, wy); this.tryPickup(wx, wy, 20);
     });
     // clic sostenido: el granjero sigue el cursor (igual que en la granja)
     this.input.on("pointermove", (pt) => {
