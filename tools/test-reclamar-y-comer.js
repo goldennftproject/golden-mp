@@ -66,13 +66,14 @@ console.log("\nY LO FUNDIDO ESPERA A QUE LO BUSQUEN");
   ctx.checkHorno();
   ok("vencido el reloj, la pieza queda LISTA", ctx.pendienteDe("horno") === 1);
   ok("pero NO está en la bolsa", !(G.res.tablon > 0), "tablones: " + (G.res.tablon || 0));
-  ok("el edificio lo anuncia hacia afuera", ctx.hayPendientes() === 1);
+  /* 31/8: hayPendientes() suma también el buzón (today.docx); lo que se defiende es el horno */
+  ok("el edificio lo anuncia hacia afuera", ctx.pendienteDe("horno") === 1);
   console.log("       → de acá sale el signo de exclamación del mundo, y de acá SOLO: si el badge");
   console.log("         llevara su propia cuenta, un día diría « hay algo » con el horno vacío, y");
   console.log("         a partir de ese día el jugador deja de creerle.");
   const antes = G.res.tablon || 0;
   ok("recogerla la pone en la bolsa", ctx.hornoRecoger() === 1 && (G.res.tablon || 0) === antes + 1);
-  ok("y ya no hay nada pendiente", ctx.hayPendientes() === 0);
+  ok("y ya no hay nada pendiente en el horno", ctx.pendienteDe("horno") === 0);
   avisos.length = 0;
   ok("recoger con el horno vacío avisa, no calla", ctx.hornoRecoger() === 0 && avisos.length > 0, avisos[0]);
 }

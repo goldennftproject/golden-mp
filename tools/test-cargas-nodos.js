@@ -133,8 +133,10 @@ console.log("\nEL NODO VIRGEN NACE LLENO — EL REGALITO DE BIENVENIDA (22/8)");
   r = vaciar(roca, "piedra", "mine");
   ok("la roca virgen igual: 4 piedras en 5 clics", r.total === 4 && r.patron === "11101", r.patron);
   r = vaciar(vetaBronce, "bronce", "mine");
-  ok("la veta de MINERAL virgen NO: una picada de 2 y a dormir (siguen apartadas)",
-    r.patron === "002" && !talable(vetaBronce), r.patron);
+  /* 31/8 (today.docx): el rendimiento bajó de 2 a 1 — con su reloj y su pico a la mitad, para
+     que el ancla no se mueva (la cuenta vive junto a PICK_DEF y en auditar-precio-sombra). */
+  ok("la veta de MINERAL virgen NO: una picada de 1 y a dormir (siguen apartadas)",
+    r.patron === "001" && !talable(vetaBronce), r.patron);
   vetaBronce.readyAt = 0; vetaBronce.cdIni = 0;   // se re-virginiza solo para no ensuciar la sección de vetas de abajo
 }
 
@@ -206,13 +208,13 @@ console.log("\nLA VETA DE PIEDRA VA CON LAS ROCAS; LAS DE MINERAL QUEDAN APARTAD
   const OD = vm.runInContext("ORE_DEF", ctx);
   plantar(vetaBronce, OD.bronce.cd, 0);
   r = vaciar(vetaBronce, "bronce", "mine");
-  ok("bronce recién crecido: ciclo clásico con SU rendimiento de 2 (el ancla del 18/8)",
-    r.patron === "002" && !talable(vetaBronce), r.patron);
+  ok("bronce recién crecido: ciclo clásico con SU rendimiento de 1 (today.docx 31/8, ancla re-derivada)",
+    r.patron === "001" && !talable(vetaBronce), r.patron);
   plantar(vetaBronce, OD.bronce.cd, 5 * 24 * 60);   // 5 días pasada: da igual — NO acumula
   const pk0 = G.picks.dur.bronze;
   r = vaciar(vetaBronce, "bronce", "mine");
-  ok("pasada 5 DÍAS: sigue dando una sola picada de 2 y a dormir (sin cargas, por decisión)",
-    r.patron === "002" && !talable(vetaBronce), r.patron);
+  ok("pasada 5 DÍAS: sigue dando una sola picada de 1 y a dormir (sin cargas, por decisión)",
+    r.patron === "001" && !talable(vetaBronce), r.patron);
   ok("y costó 1 pico", pk0 - G.picks.dur.bronze === 1, pk0 - G.picks.dur.bronze + " pico");
 }
 

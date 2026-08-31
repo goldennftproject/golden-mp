@@ -84,7 +84,7 @@ console.log("\nLA FIRMA VE TODO LO QUE PUEDE ESTAR EN LA BOLSA");
   G.seeds.papa = (G.seeds.papa || 0) + 1;
   ok("las semillas cuentan", ctx.bolsaFirma() !== f0);
   const f1 = ctx.bolsaFirma();
-  G.fish = G.fish || {}; G.fish.comun = (G.fish.comun || 0) + 1;
+  G.fish = G.fish || {}; G.fish.merluza = (G.fish.merluza || 0) + 1;   /* 31/8: el pez de prueba es uno del catálogo v4 — "comun" era una clave de la pesca v1 que la bolsa ya no conoce */
   ok("los peces cuentan", ctx.bolsaFirma() !== f1);
   const f2 = ctx.bolsaFirma();
   G.dishes = G.dishes || {}; G.dishes.papa_asada = (G.dishes.papa_asada || 0) + 1;

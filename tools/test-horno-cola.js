@@ -90,7 +90,9 @@ console.log("\nFUNDIR COBRA Y NO ENTREGA: LA PIEZA VA AL FUEGO");
      reloj queda LISTA, y entra a la bolsa cuando el jugador va a buscarla. */
   ok("vencido el reloj la pieza queda LISTA, no en la bolsa",
     ctx.pendienteDe("horno") === 1 && !(G.res.tablon > 0));
-  ok("y el edificio lo anuncia hacia afuera", ctx.hayPendientes() === 1);
+  /* 31/8: hayPendientes() ahora suma también las cartas del buzón (today.docx), así que el
+     total puede ser mayor. Lo que este renglón defiende es que el HORNO anuncie lo suyo. */
+  ok("y el edificio lo anuncia hacia afuera", ctx.pendienteDe("horno") === 1 && ctx.hayPendientes() >= 1);
   ok("recogerla la pone en la bolsa", ctx.hornoRecoger() === 1 && Math.floor(G.res.tablon || 0) === 1);
   ok("y el horno queda libre", ctx.hornoList().length === 0);
 }

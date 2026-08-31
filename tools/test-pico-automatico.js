@@ -1,14 +1,14 @@
 /* EL PICO SE ELIGE SOLO (24/8, dirección)
    « Que las herramientas sean únicas: piedra para piedra, oro para oro, que no haya que
    señalar el pico a usar sino que se ajuste con clic en el recurso. » Contratos:
-     · para cada nodo se usa el pico MÁS BARATO que pueda con él y del que tengas stock —
-       picar piedra jamás gasta el pico de oro (que vale 280 de plata sombra);
+     · cada nodo usa SU pico exacto — « El pico pica lo que su nombre indica » (Suren, 31/8):
+       ya no hay fallback, picar piedra jamás gasta el pico de oro (140 de plata sombra);
      · clicar oro agarra el de oro sin equipar nada; si no lo tenés, el aviso dice CUÁL falta;
      · el nivel de Minería se comprueba ANTES que la herramienta (si no sabés, no importa
        qué pico tengas);
      · lo que se GASTA es el pico elegido, no el "equipado" — la caja registradora y la
        puerta miran lo mismo;
-     · y el pico de oro pide PLATA sin mover el ancla (su presupuesto sigue siendo 280).
+     · y el pico de oro pide PLATA sin mover el ancla (presupuesto 140 desde el +1 de los nodos).
      node tools/test-pico-automatico.js                                                        */
 const fs = require("fs"), vm = require("vm");
 
@@ -43,9 +43,12 @@ console.log("\nEL MÁS BARATO QUE SIRVA — NUNCA EL CARO");
     ctx.picoParaNodo(roca) === "stone", ctx.picoParaNodo(roca) + " · equipado: " + G.picks.eq);
   ok("para el oro elige el de oro", ctx.picoParaNodo(vetaOro) === "gold");
   ok("para el bronce elige el de bronce, no el de oro", ctx.picoParaNodo(vetaBronce) === "bronze");
-  /* sin el de piedra, la roca usa el siguiente que sirva */
+  /* 31/8 (today.docx de Suren): « El pico pica lo que su nombre indica ». Antes había un
+     fallback —sin el de piedra, la roca usaba el siguiente que sirviera— y eso permitía
+     gastar el pico de oro en una roca de 20. Ahora el match es EXACTO: cada pico pica
+     solo lo suyo, y si no tenés el que toca, no se pica. */
   conPicos(["gold"]);
-  ok("si solo tenés el de oro, con eso pica la roca", ctx.picoParaNodo(roca) === "gold");
+  ok("el de oro NO pica la roca: cada pico pica solo lo suyo (Suren 31/8)", ctx.picoParaNodo(roca) === null);
   conPicos([]);
   ok("sin picos, no hay ninguno", ctx.picoParaNodo(roca) === null);
 }
@@ -91,7 +94,10 @@ console.log("\nEL PICO DE ORO PIDE PLATA — Y EL ANCLA NO SE MUEVE");
   const total = mats + gd.plata;
   const od = ORE_DEF.oro, h = (od.cd || CD.rock) / 3600, yld = od.yield || 1;
   const neto = (yld * PRICE.oro - total) / h;
-  ok("y su presupuesto sigue siendo el mismo (280)", total === 280, mats + " en materiales + " + gd.plata + " de plata = " + total);
+  /* 31/8: los nodos pasaron a +1 (today.docx) y para que picar no rindiera CERO se bajaron
+     las TRES patas a la vez: yield, cd y pico, todo a la mitad. El presupuesto del pico de
+     oro es ahora 140 —la mitad del 280 de antes— y el neto sigue clavado en su ancla. */
+  ok("y su presupuesto es la mitad del de antes (140, por el +1 de los nodos)", total === 140, mats + " en materiales + " + gd.plata + " de plata = " + total);
   ok("así que la picada de oro sigue rindiendo 20/h EXACTO", Math.abs(neto - 20) < 0.5, neto.toFixed(1) + " plata/h");
 }
 

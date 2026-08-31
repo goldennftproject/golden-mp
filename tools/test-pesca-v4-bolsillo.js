@@ -153,7 +153,10 @@ console.log("\nEL DINERO DE LA PESCA VA A LA BOLSA DE VERDAD   (G.plata, no una 
      bolsa que la del juego. */
   const fs = require("fs");
   const src = ["state.js", "ui.js"].map(f => fs.readFileSync(path.join(RAIZ, "public/game", f), "utf8")).join("\n");
-  ok("ninguna función usa G.coins", src.indexOf("G.coins") < 0);
+  /* 31/8 — SIN COMENTARIOS: nombrar a G.coins para contar su historia es exactamente lo que hay
+     que hacer, y no debe poner esto en rojo. La misma lección que test-sin-pesca-v3 con TRAMPA_DEF. */
+  const srcCodigo = src.replace(/\/\*[\s\S]*?\*\//g, "").replace(/\/\/[^\n]*/g, "");
+  ok("ninguna función usa G.coins", srcCodigo.indexOf("G.coins") < 0);
   ok("ni llama a un flujoAnotar() que no existe", src.indexOf("flujoAnotar") < 0);
   console.log("       → las dos estaban guardadas con typeof, así que no rompían nada: solo no");
   console.log("         hacían nada. Un error que no da error es el que más tarda en verse.");

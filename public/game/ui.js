@@ -564,6 +564,13 @@ function lonjaFilaEscalon(k) {
       : "<b>tu mejor captura del fin de semana</b>";
     extra = t ? "Da <b>" + (t.pts || 0).toFixed(2) + "</b> puntos · la báscula pide <b>" +
                 TORNEO_BARRA.toFixed(2) + "</b>" : "";
+  } else if (k === "marea" && (lonjaPedido() || {}).tipo === "peso") {
+    /* la marea de PESO (31/8, today.docx): pide capturas por encima de un umbral, y se cumple
+       PESCANDO — el progreso es de la caña, no de la bolsa */
+    const p = lonjaPedido();
+    pide = "<b>" + p.n + " " + (PEZ_DEF[p.id] || {}).label + " de más de " + p.kgMin + " kg</b>";
+    extra = (p.hechos || 0) >= p.n ? "¡los pescaste todos!"
+      : "pescaste " + (p.hechos || 0) + " de " + p.n + " — se cuentan al sacarlos, no hace falta guardarlos";
   } else {
     const pz = lonjaPiezas(k) || [];
     pide = "<b>" + pz.map(x => x.n + " " + (PEZ_DEF[x.id] || {}).label).join("</b> + <b>") + "</b>";
@@ -574,7 +581,9 @@ function lonjaFilaEscalon(k) {
                       : "tenés " + t + " de " + x.n + " " + (PEZ_DEF[x.id] || {}).label;
     }).join(" · ");
   }
-  const suelto = lonjaSueltoDe(k), paga = lonjaPaga(k, suelto);
+  const pesoM = (k === "marea" && (lonjaPedido() || {}).tipo === "peso") ? lonjaPedido() : null;
+  const suelto = pesoM ? pesoM.n * pezPrecio(pesoM.id, pesoM.kgMin) : lonjaSueltoDe(k);
+  const paga = lonjaPaga(k, suelto);
   const x = suelto > 0 ? Math.round(paga / suelto * 10) / 10 : null;
   return '<div class="lonja-esc' + (listo ? " listo" : "") + '">' +
     '<div class="le-cab"><span>' + d.label + '</span><span>' +
@@ -3162,9 +3171,13 @@ function refreshSeedShop() {
       : `<button class="ghost sm" disabled title="Se abre con la skill de Cultivo">Cultivo nv ${cd.lvl}</button>`;
     return `<div class="mkt-row"><span class="mimg">${itemIcon({ sprite: "seed_" + k, emoji: cd.emoji })}</span><div class="minfo"><div class="mnm">${cd.label} <span class="seedlv">nv ${cd.lvl}</span></div><div class="mds">Semilla · crece en ${fmtSecs(cd.grow)} · tenés ${fmt(G.seeds[k] || 0)}</div></div>${controls}</div>`;
   }).join("")
-  // carnada (detalles213): lombrices para pescar — fuera del cupo diario de semillas
+  /* 31/8 (today.docx: « quitar que la tienda venda lombrices — solo se obtienen en el mapa o en
+     el lombricero ») — la fila de venta se fue. Si volviera, la lombriz dejaría de ser el reloj
+     de la laguna: con lombrices por plata, el capítulo del cebo se compra en vez de jugarse.
+     La fila queda como CARTEL que dice a dónde ir, porque quitar el producto sin decir el camino
+     dejaría al jugador nuevo sin saber de dónde sale la carnada (regla 9). */
   + '<div class="shophead">Carnada</div>'
-  + `<div class="mkt-row"><span class="mimg">${itemIcon({ sprite: "res_lombriz", emoji: "" })}</span><div class="minfo"><div class="mnm">Lombriz</div><div class="mds">Carnada de pesca · 1 por lanzamiento · tenés ${fmt(G.res.lombriz || 0)}</div></div><input id="sq-lombriz" type="number" min="1" value="10"><button class="green sm" id="buy-lombriz" ${G.plata >= WORM_PRICE ? "" : "disabled"}>Comprar · ${coinIc("plata")}${WORM_PRICE} c/u</button></div>`
+  + `<div class="mkt-row"><span class="mimg">${itemIcon({ sprite: "res_lombriz", emoji: "" })}</span><div class="minfo"><div class="mnm">Lombriz</div><div class="mds">No se vende: cavá los montículos de tierra o echá cultivos al Lombricario (junto a la laguna) · tenés ${fmt(G.res.lombriz || 0)}</div></div></div>`
   // 🆘 KIT DE EMERGENCIA (14/8, diseñador): 5 diarias de cada uno con $Golden, por si te atascás
   + (function () {
     if (typeof emergBuysToday !== "function") return "";
@@ -3182,7 +3195,7 @@ function refreshSeedShop() {
   box.querySelectorAll("[data-buy]").forEach(b => b.onclick = () => { const inp = $("sq-" + b.dataset.buy); buySeed(b.dataset.buy, inp ? +inp.value : 1); });
   box.querySelectorAll("[data-emerg]").forEach(b => b.onclick = () => { comprarEmergencia(b.dataset.emerg); refreshSeedShop(); });
   if (typeof tutoHighlight === "function") tutoHighlight();
-  const wb = $("buy-lombriz"); if (wb) wb.onclick = () => { const inp = $("sq-lombriz"); buyWorm(inp ? +inp.value : 1); };
+  /* (el botón de comprar lombrices vivía acá — 31/8: la tienda ya no las vende) */
 }
 
 /* ---- granja (nivel) ---- */

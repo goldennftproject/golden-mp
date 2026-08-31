@@ -270,8 +270,16 @@ const CROP_DEF = {
 function recomputeCropGrow() { for (const k in CROP_DEF) CROP_DEF[k].grow = Math.round(CROP_DEF[k].growH * 3600 * GROW_SCALE); }
 recomputeCropGrow();   // en segundos, como siempre
 // --- peces (ítems del inventario) ---
-const FISH_ORDER = ["comun", "raro", "epico", "legendario"];
-const FISH_DEF = { comun: { label: "Pez común", emoji: "🐟", sprite: "fish_comun" }, raro: { label: "Pez raro", emoji: "🐠", sprite: "fish_raro" }, epico: { label: "Pez épico", emoji: "🐡", sprite: "fish_epico" }, legendario: { label: "Pez legendario", emoji: "🐋", sprite: "fish_legendario" } };
+/* 31/8 (today.docx: « los peces aparecen en 0 en el bag aunque tengas varios ») — ESTE PAR ERA
+   EL CATÁLOGO DE LA PESCA v1: cuatro claves genéricas (comun/raro/epico/legendario) que ya no
+   nombran a ningún pez. Los de la v4 viven en G.fish bajo merluza, lubina, atún… y el
+   solapamiento entre los dos juegos de claves es CERO: la bolsa contaba pilas de peces que no
+   existen y mostraba 0 en los que sí. Dos catálogos para la misma bolsa es la enfermedad de
+   nombres de siempre (ceboBolsa, G.coins) con otra cara.
+   Ahora son cascarones que se RELLENAN desde PEZ_DEF en cuanto ese catálogo se define, unas
+   líneas más abajo — una sola fuente, y la bolsa cuenta los peces que el juego de verdad da. */
+const FISH_ORDER = [];
+const FISH_DEF = {};
 
 // 16/8 (auditoría C): los cultivos se desbloquean por NIVEL DE GRANJA, no por el skill de
 // Farmeo. Las dos curvas se alimentan de la MISMA XP con varas incompatibles: la granja
@@ -1168,9 +1176,13 @@ function hornoRecoger() {
 function pendienteDe(tipo) {
   if (tipo === "horno")  return hornoList().filter(p => p.listo).length;
   if (tipo === "cocina") return cookList().filter(c => c.listo).length;
+  /* 31/8 (today.docx: « al buzón no le sale el signo ») — el buzón cambiaba su SPRITE con cartas
+     dentro pero no estaba acá, así que el « ! » del mundo nunca le salía. El mismo dato que ya
+     lee el rótulo del cursor y el cambio de sprite: una sola fuente para las tres caras. */
+  if (tipo === "buzon")  { try { return buzonCartas().length; } catch (e) { return 0; } }
   return 0;
 }
-function hayPendientes() { return pendienteDe("horno") + pendienteDe("cocina"); }
+function hayPendientes() { return pendienteDe("horno") + pendienteDe("cocina") + pendienteDe("buzon"); }
 
 function craftMat(id) {
   const md = MAT_DEF[id]; if (!md) { console.warn("[craftMat] material inexistente:", id); return; }
@@ -2032,14 +2044,21 @@ const ORE_DEF = {   // 15/8 EN PRUEBA: enfriamientos largos del doc 4/8 del dise
      No se borra el objeto porque G.layout indexa WORLD_OBJECTS por posición (ver el aviso de
      config.js); se iguala su definición, que es lo que se veía roto. */
   piedra:   { tier:0, label:"Piedra",    emoji:"🪨", sprite:"node_stone",     cd:2400,  yield:1, price:15 },   // = CD.rock y PRICE.piedra; se re-atan más abajo para que no puedan separarse
-  bronce:   { tier:1, label:"Bronce",    emoji:"🟫", sprite:"node_bronze",    cd:28800, yield:2, price:12 },
-  hierro:   { tier:2, label:"Hierro",    emoji:"⛓️", sprite:"node_iron",      cd:43200, yield:2, price:15 },   // viernes (2): lo mina el Pico de Hierro
+  /* 31/8 (today.docx: « los nodos deben dar +1; el hierro y el bronce están dando +2 por minada;
+     todos dan +1 ») — YIELD 1 CON EL RELOJ A LA MITAD, no yield 1 a secas. La mitad del cambio
+     que no se ve: el 2 no era un capricho, era la pata del ancla — con yield 1 y el reloj viejo,
+     picar bronce pagaba exactamente CERO (2×160−160 = 160 netos por hora → 1×160−160 = 0, ver
+     tools/auditar-precio-sombra.js). Partiendo el reloj en dos, cada picada da +1 como pide el
+     diseñador, la producción POR HORA es idéntica, y ni un precio ni una receta se mueve.
+     La escalera de relojes conserva su forma (4 → 6 → 7 → 9 → 12 h). */
+  bronce:   { tier:1, label:"Bronce",    emoji:"🟫", sprite:"node_bronze",    cd:14400, yield:1, price:12 },   // 4 h (era 8 con +2)
+  hierro:   { tier:2, label:"Hierro",    emoji:"⛓️", sprite:"node_iron",      cd:21600, yield:1, price:15 },   // 6 h (era 12 con +2) · lo mina el Pico de Hierro
   // 16/8 (auditoría G): oro, diamante y netherita compartían enfriamiento (14 h) pero valen
   // 30, 80 y 200. Con el ancla de tiempo, una hora de nodo es una hora de nodo: si el valor
-  // sube, el reloj tiene que subir. Ahora la escalera se lee sola: 14 h → 18 h → 24 h.
-  oro:      { tier:3, label:"Oro",       emoji:"🟡", sprite:"node_gold",      cd:50400, yield:2, price:30 },   // 14 h
-  diamante: { tier:4, label:"Diamante",  emoji:"💎", sprite:"node_diamond",   cd:64800, yield:2, price:80 },   // 18 h (era 14)
-  netherita:{ tier:5, label:"Netherita", emoji:"🔶", sprite:"node_netherite", cd:86400, yield:2, price:200 },  // 24 h (era 14) — el ancla diaria de la minería
+  // sube, el reloj tiene que subir. La escalera se lee sola (los relojes de la nota del 31/8).
+  oro:      { tier:3, label:"Oro",       emoji:"🟡", sprite:"node_gold",      cd:25200, yield:1, price:30 },   // 7 h (era 14 con +2)
+  diamante: { tier:4, label:"Diamante",  emoji:"💎", sprite:"node_diamond",   cd:32400, yield:1, price:80 },   // 9 h (era 18 con +2)
+  netherita:{ tier:5, label:"Netherita", emoji:"🔶", sprite:"node_netherite", cd:43200, yield:1, price:200 },  // 12 h (era 24 con +2) — el ancla diaria de la minería
 };
 const PICK_ORDER = ["stone","bronze","iron","gold","diamond","netherite"];
 const PICK_DEF = {
@@ -2092,27 +2111,28 @@ const PICK_DEF = {
      de abajo) y (2 × precio SOMBRA − costo del pico) / horas = 20 EXACTO en los cinco tiers.
      Los precios NO se tocan, así que nada de lo que lee priceOf() se mueve.
 
-     Y POR ESO EL RENDIMIENTO DE 2 NO SE PUEDE BAJAR (27/8, informe del diseñador: « los nodos de
-     bronce deben dar 1, están dando 2 »). Ojo con la vara: medido por el PRICE de venta, el
-     bronce parece rendir 3 de plata por hora y bajarlo a 1 parece inocuo. Pero un mineral no se
-     vende: se gasta. La vara que lo mide es el precio SOMBRA —lo que vale por lo que desbloquea—
-     y ahí una veta de bronce tarda 8 h, vale 160, y el pico de bronce cuesta exactamente 160.
+     31/8 (today.docx: « los nodos deben dar +1, todos ») — EL 2 BAJÓ A 1, Y LA CUENTA ENTERA
+     BAJÓ CON ÉL. La nota que había acá explicaba por qué el 2 no se podía bajar solo: con
+     rendimiento 1 y el pico a precio entero, picar pagaba CERO (1×160 − 160). Dirección insistió
+     en el +1, así que se bajan las TRES patas juntas y el ancla ni se entera:
 
-         rindiendo 2:  2×160 − 160 = 160 netos  →  20,0 por hora   (el ancla clavada)
-         rindiendo 1:  1×160 − 160 =   0 netos  →   0,0 por hora   (picar no paga NADA)
+         el nodo rinde 1 (la mitad)  ·  su reloj dura la mitad  ·  su pico cuesta la mitad
 
-     El 2 no es generosidad: es el numerador de la única cuenta que cierra con un uso por pico y
-     cantidades enteras, que son las dos normas que dirección puso el 18/8.
+         antes:  2×160 − 160 = 160 netos en 8 h  →  20,0 por hora
+         ahora:  1×160 −  80 =  80 netos en 4 h  →  20,0 por hora   (el ancla clavada)
+
+     LO QUE SE PIERDE, dicho: el pico de oro pedía 1 bronce y el de diamante 1 oro — la cadena de
+     « mejorar la mina arrastra la mina anterior ». Con presupuestos a la mitad, un solo bronce
+     (160) ya no cabe en un pico de 140. La cadena de minerales sigue viva en el HORNO (las
+     barras) y en las recetas que las piden; los picos pasan a pagarse con madera, piedra y
+     plata. Es el costo de un pedido de dirección repetido dos veces — y está a la vista, no
+     escondido en una resta.
      Lo comprueba tools/auditar-precio-sombra.js, que es de donde salen estos números. */
-  bronze:   { tier:1, label:"Pico de Bronce",    mineTier:1, dur:1, cost:{madera:7,piedra:5},   plata:1,  sprite:"pick_bronze" },
-  iron:     { tier:2, label:"Pico de Hierro",    mineTier:2, dur:1, cost:{madera:8,piedra:8},   plata:24, sprite:"pick_iron" },
-  /* 24/8 (dirección: « agregar que el pico de oro pida plata »). Su presupuesto es 280 —
-     lo que el ancla permite para una picada de oro— y estaba TODO en materiales (1 bronce 160
-     + 8 piedra 120). Se mueven 2 piedras a plata: 1 bronce + 6 piedra = 250, y 30 de plata.
-     Total 280, idéntico: el ancla no se mueve un centavo y el pico ahora cuesta dinero. */
-  gold:     { tier:3, label:"Pico de Oro",       mineTier:3, dur:1, cost:{bronce:1,piedra:6},   plata:30, sprite:"pick_gold" },
-  diamond:  { tier:4, label:"Pico de Diamante",  mineTier:4, dur:1, cost:{oro:1,madera:4,piedra:2}, plata:2, sprite:"pick_diamond" },
-  netherite:{ tier:5, label:"Pico de Netherita", mineTier:5, dur:1, cost:{diamante:1,piedra:8}, plata:0,  sprite:"pick_netherite" },
+  bronze:   { tier:1, label:"Pico de Bronce",    mineTier:1, dur:1, cost:{madera:3,piedra:2},   plata:14, sprite:"pick_bronze" },   // 80  (mitad de 160)
+  iron:     { tier:2, label:"Pico de Hierro",    mineTier:2, dur:1, cost:{madera:4,piedra:4},   plata:12, sprite:"pick_iron" },     // 120 (mitad de 240)
+  gold:     { tier:3, label:"Pico de Oro",       mineTier:3, dur:1, cost:{madera:3,piedra:4},   plata:44, sprite:"pick_gold" },     // 140 (mitad de 280) · sigue pidiendo plata (24/8)
+  diamond:  { tier:4, label:"Pico de Diamante",  mineTier:4, dur:1, cost:{madera:5,piedra:6},   plata:30, sprite:"pick_diamond" },  // 180 (mitad de 360)
+  netherite:{ tier:5, label:"Pico de Netherita", mineTier:5, dur:1, cost:{madera:5,piedra:10},  plata:30, sprite:"pick_netherite" },// 240 (mitad de 480)
 };
 function equippedPick() { return (G.picks.eq && G.picks.owned[G.picks.eq]) ? G.picks.eq : null; }
 /* ============ EL PICO SE ELIGE SOLO (24/8, dirección) ============================
@@ -2125,23 +2145,26 @@ function equippedPick() { return (G.picks.eq && G.picks.owned[G.picks.eq]) ? G.p
    agarra el de oro sin que el jugador tenga que acordarse de equiparlo. El pico equipado
    deja de ser una decisión que se puede olvidar; sigue existiendo como respaldo para lo que
    no es un nodo (y para que la Herrería muestre cuál es el "actual"). */
+/* 31/8 (today.docx: « el pico de oro no debe picar hierro, debe solo picar oro. El pico pica lo
+   que su nombre indica ») — LA CORRESPONDENCIA ES EXACTA, ya no « el más barato que alcance ».
+   Antes, sin pico de hierro pero con uno de oro, el clic en el hierro gastaba el de oro (280 de
+   plata sombra por una picada de 15): legal según la regla vieja y absurdo según el nombre.
+   Ahora cada pico abre SOLO su mineral: piedra↔piedra, bronce↔bronce, oro↔oro. Es además la
+   lectura literal del pedido original del 24/8 (« piedra para piedra, oro para oro ») que yo
+   había suavizado a « el más barato que sirva » creyendo que ayudaba. */
 function picoParaNodo(o) {
   if (!G.picks || !G.picks.owned) return null;
   const tierNecesario = (o && o.type === "ore" && ORE_DEF[o.ore]) ? ORE_DEF[o.ore].tier : 0;
-  let mejor = null;
   for (const id of PICK_ORDER) {
     const pd = PICK_DEF[id];
-    if (!pd || pd.mineTier < tierNecesario) continue;      // no alcanza para este mineral
-    if (pickCount(id) <= 0) continue;                       // no tenés de ese
-    if (!mejor || pd.mineTier < PICK_DEF[mejor].mineTier) mejor = id;   // el más barato que sirve
+    if (pd && pd.mineTier === tierNecesario && pickCount(id) > 0) return id;
   }
-  return mejor;
+  return null;
 }
-/* el que MOSTRAMOS cuando falta: el de menor tier que serviría, para que el aviso diga
-   exactamente cuál craftear en vez de un genérico "necesitás un pico mejor". */
+/* el que MOSTRAMOS cuando falta: EL SUYO, con nombre — el aviso dice exactamente cuál craftear */
 function picoQueHaceFalta(o) {
   const tierNecesario = (o && o.type === "ore" && ORE_DEF[o.ore]) ? ORE_DEF[o.ore].tier : 0;
-  return PICK_ORDER.find(id => PICK_DEF[id] && PICK_DEF[id].mineTier >= tierNecesario) || null;
+  return PICK_ORDER.find(id => PICK_DEF[id] && PICK_DEF[id].mineTier === tierNecesario) || null;
 }
 function canAfford(c) { for (const k in c) if ((G.res[k]||0) < c[k]) return false; return true; }
 function payCost(c) { for (const k in c) G.res[k]-=c[k]; }
@@ -5540,6 +5563,9 @@ var PEZ_ORDER = ["merluza", "lubina", "atun", "robalo", "pargo", "salmon",
                  "pez_gato", "pez_sapo", "pez_globo", "pez_loro", "pez_guitarra", "pez_linterna",
                  "pez_espada", "pez_gota", "pez_dragon",
                  "camaron", "cangrejo", "langosta", "calamar_v4"];
+/* el catálogo de la BOLSA se rellena de acá (ver la nota junto a FISH_ORDER, arriba): los peces
+   del inventario son exactamente los peces del juego, sin segunda lista que envejezca aparte */
+PEZ_ORDER.forEach(k => { FISH_ORDER.push(k); FISH_DEF[k] = { label: PEZ_DEF[k].label, emoji: PEZ_DEF[k].emoji, sprite: PEZ_DEF[k].sprite }; });
 function pecesDeBanda(b) { return PEZ_ORDER.filter(k => PEZ_DEF[k].banda === b); }
 /* ── QUÉ PECES ABRE CADA CAÑA ────────────────────────────────────────────────────────────────
    28/8, pedido del diseñador: « según la caña tienes varias opciones de peces ».
@@ -6602,7 +6628,13 @@ var LOMBRICARIO_BOCAS_MAX = 4;
 var LOMBRICARIO_HORAS = 8;
 var LOMBRICARIO_PIDE = 2;             // cultivos, cualquiera
 var LOMBRICARIO_DA = 3;               // lombrices
-function lombricarioAbierto() { return nivelOficio("farming") >= LOMBRICARIO_LVL && !!(G.built && G.built.lombricario); }
+/* 31/8 (today.docx: « dice que funciona con Cultivo 5, lo tengo en 6 y no funciona ») — la
+   condición pedía además G.built.lombricario, y ESE FLAG NO LO PONE NADIE: el Lombricario no
+   está en BUILD_DEF, no se construye ni se restaura — está plantado en el mundo desde siempre,
+   junto a la laguna. Una cuenta fantasma, la misma enfermedad que G.coins: una condición que
+   suena razonable, que nada alimenta, y que encima hacía MENTIR al aviso — decía « se abre con
+   Cultivo 5 » cuando lo que faltaba era un edificio inconstruible. La puerta es el nivel y ya. */
+function lombricarioAbierto() { return nivelOficio("farming") >= LOMBRICARIO_LVL; }
 function lombricarioBocas() { return Math.min(LOMBRICARIO_BOCAS_MAX, 1 + Math.floor(nivelOficio("farming") / 5)); }
 function lombricario() { if (!Array.isArray(G.lombricario)) G.lombricario = []; return G.lombricario; }
 function lombricarioLibres() { return Math.max(0, lombricarioBocas() - lombricario().length); }
@@ -6808,7 +6840,21 @@ function lonjaPedido() {
     /* 2 a 5 peces, menos cuanto más rara la banda */
     const techo = { comun: 5, poco_comun: 4, raro: 3 }[banda] || 3;
     const n = Math.max(1, Math.min(techo, 2 + Math.floor(r() * (techo - 1))));
-    G.lonja = { sello, idx, id, n, hechos: 0, cobrado: false };
+    /* 31/8 (today.docx: « que el tablero pida misiones de peces con peso — 3 salmones de más de
+       1 kg »). Una marea de cada tres pide PESO en vez de cantidad, y el progreso se cuenta AL
+       PESCAR, no al entregar de la bolsa — porque la bolsa guarda cuántos peces tenés, no cuánto
+       pesa cada uno: el peso solo existe en el momento de la captura. Lo anota pescaAnotar(),
+       el único sitio por el que pasa toda captura.
+       El umbral es el PESO MEDIO de la especie redondeado hacia arriba: por construcción de la
+       curva (cargada hacia abajo) lo supera ~1 de cada 3 capturas — un reto de varias visitas,
+       no una pared. Determinístico por marea, como todo lo demás: F5 no re-sortea. */
+    if (r() < 0.34) {
+      const kgMin = Math.ceil(pesoMedia(id) * 10) / 10;
+      const nP = 2 + Math.floor(r() * 2);   // 2 o 3 piezas
+      G.lonja = { sello, idx, tipo: "peso", id, kgMin, n: nP, hechos: 0, cobrado: false };
+    } else {
+      G.lonja = { sello, idx, id, n, hechos: 0, cobrado: false };
+    }
   }
   return G.lonja;
 }
@@ -6958,6 +7004,15 @@ function lonjaFalta(escalon) {
     if (!t.llega) return "tu mejor captura da " + t.pts.toFixed(2) + " de los " + TORNEO_BARRA.toFixed(2) + " que pide la báscula";
     return null;
   }
+  /* la marea de PESO (31/8): se cumple pescando, no juntando en la bolsa */
+  if (escalon === "marea") {
+    const p = lonjaPedido();
+    if (p && p.tipo === "peso") {
+      if ((p.hechos || 0) >= p.n) return null;
+      return "pescaste " + (p.hechos || 0) + " de " + p.n + " " + ((PEZ_DEF[p.id] || {}).label || "") +
+             " de más de " + p.kgMin + " kg";
+    }
+  }
   const pz = lonjaPiezas(escalon);
   if (!pz) return "no hay encargo ahora mismo";
   const faltan = pz.filter(x => Math.floor((G.fish && G.fish[x.id]) || 0) < x.n);
@@ -6973,16 +7028,23 @@ function lonjaEntregarEscalon(escalon) {
   const falta = lonjaFalta(escalon);
   if (falta) { toast(d.label + ": " + falta); return false; }
 
-  const pz = lonjaPiezas(escalon) || [];
+  /* la marea de PESO no descuenta peces de la bolsa: el trabajo fue pescarlos, y ya está hecho.
+     El suelto de referencia para la paga es lo que valen n piezas AL UMBRAL — la vara honesta,
+     porque eso es lo mínimo que el jugador demostró saber sacar. */
+  const pM = escalon === "marea" ? lonjaPedido() : null;
+  const esPeso = !!(pM && pM.tipo === "peso");
+  const pz = esPeso ? [] : (lonjaPiezas(escalon) || []);
   for (const x of pz) {
     G.fish[x.id] -= x.n;
   }
-  const plata = lonjaPaga(escalon, lonjaSueltoDe(escalon));
+  const suelto = esPeso ? pM.n * pezPrecio(pM.id, pM.kgMin) : lonjaSueltoDe(escalon);
+  const plata = lonjaPaga(escalon, suelto);
   G.plata = (G.plata || 0) + plata;
   escamasDar(d.escamas, d.label);
   /* la XP: la mitad de lo que valdría pescar esos peces otra vez. Un encargo no puede pagar más
      XP que hacer el trabajo, o el tablón se convierte en la forma rápida de subir Pesca. */
-  const xp = pz.reduce((s, x) => s + ((PEZ_DEF[x.id] || {}).xp || 0) * x.n, 0);
+  const xp = esPeso ? ((PEZ_DEF[pM.id] || {}).xp || 0) * pM.n
+                    : pz.reduce((s, x) => s + ((PEZ_DEF[x.id] || {}).xp || 0) * x.n, 0);
   if (xp > 0) addXp("fishing", Math.round(xp * 0.5));
 
   if (escalon === "marea")   { const p = lonjaPedido();    if (p) { p.cobrado = true; p.hechos = p.n; } }
@@ -7066,6 +7128,16 @@ function tituloPescaVigente() {
 function pescaAnotar(id, kg, deNasa) {
   const st = G.pescaStats = G.pescaStats || {};
   st.capturas = (st.capturas || 0) + 1;
+  /* la marea de PESO (31/8) avanza acá, en el único sitio por el que pasa toda captura: si el
+     pez es de la especie pedida y supera el umbral, cuenta. La nasa también cuenta — el pedido
+     dice « conseguí », no « conseguí con caña ». */
+  { const p = G.lonja;
+    if (p && p.tipo === "peso" && !p.cobrado && p.sello === lonjaMareaSello() &&
+        id === p.id && kg != null && kg >= p.kgMin && (p.hechos || 0) < p.n) {
+      p.hechos = (p.hechos || 0) + 1;
+      if (typeof toast === "function") toast("Marea: " + p.hechos + "/" + p.n + " " +
+        (PEZ_DEF[id] || {}).label + " de +" + p.kgMin + " kg");
+    } }
   st.vistos = st.vistos || {};
   st.vistos[id] = (st.vistos[id] || 0) + 1;
   if (deNasa) st.nasas = (st.nasas || 0) + 1;
