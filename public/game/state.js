@@ -7559,7 +7559,9 @@ function pedidoGenerar(seed) {
   // mayor — que además suena mejor ("Doña Rosa necesita 20 papas", no 3). Sin esto el suelo de
   // "mínimo 1 vale" convertía un pedido de 6 de plata en un premio de 40, y por ahí se colaba x13.
   const unidad = p.val / p.n;
-  if (unidad > 0 && n * unidad < VALE_EN_PLATA) n = Math.ceil(VALE_EN_PLATA / unidad);
+  /* 31/8: el piso sube con la emisión — todo pedido tiene que RESPALDAR el vale que emite
+     (160 de plata), o el mínimo de 1 vale vuelve a ser un regalo en los pedidos baratos. */
+  if (unidad > 0 && n * unidad < VALE_EMISION) n = Math.ceil(VALE_EMISION / unidad);
   const val = Math.round(unidad * n);
   const rem = PED_REMITENTES[Math.floor(pedAzar(seed + 7) * PED_REMITENTES.length) % PED_REMITENTES.length];
   /* 18/8 — EL TABLÓN NO PUEDE PAGAR POR ENCIMA DEL ANCLA.
@@ -7573,7 +7575,7 @@ function pedidoGenerar(seed) {
      Los vales suben para compensar: la ganancia sigue existiendo, pero en una moneda que solo
      sale del tablón y solo se gasta en el tablón. */
   return { tipo: p.tipo, key: p.key, n: n, plata: Math.max(2, Math.round(val)), xp: Math.max(1, Math.round(val * 0.8)),
-    vales: valesDe(val), de: rem[0], nota: rem[1], hecho: false };   // 18/8: MISMA vara que el canje
+    vales: valesPremio(val), de: rem[0], nota: rem[1], hecho: false };   // 31/8: la EMISIÓN tiene su propia vara (prima 25 %, ver VALE_EMISION)
 }
 /* ============ LA ESCALERA DEL TABLÓN (18/8, dirección) =============================
    "podemos regularlo con las misiones del tablón, que sean misiones diarias, semanales, mensuales".
@@ -7647,10 +7649,10 @@ function pedidoEvento() {
     const b = sub[Math.floor(pedAzar(555) * sub.length) % sub.length];
     const unidad = b.val / b.n, mult = Math.max(2, Math.round(PED_EVENTO_DIAS * 10));   // la diaria es el 10% del día
     let n = Math.max(2, Math.round(b.n * mult));
-    if (unidad > 0 && n * unidad < VALE_EN_PLATA) n = Math.ceil(VALE_EN_PLATA / unidad);   // piso: nunca menos de un vale
+    if (unidad > 0 && n * unidad < VALE_EMISION) n = Math.ceil(VALE_EMISION / unidad);   // 31/8: el piso respalda el vale que emite
     const val = Math.round(unidad * n);
     return { tipo: b.tipo, key: b.key, n: n, plata: Math.max(2, val), xp: Math.max(1, Math.round(val * 0.8)),
-      vales: Math.max(3, Math.round(valesDe(val) * 0.6)),   // misma poda que los otros grandes
+      vales: Math.max(3, Math.round(valesPremio(val) * 0.6)),   // 31/8: emisión con su vara (VALE_EMISION), misma poda que los grandes
       de: "🎪 " + tema.label, nota: "solo este fin de semana", hecho: false, tipoEncargo: "evento", tema: tema.id };
   }
   return null;
@@ -7785,8 +7787,23 @@ function pedidoDescartar(i) {
 
    ARREGLO: el vale deja de ser un número suelto y pasa a valer algo. Se emite y se cobra con la
    MISMA vara, así que la ruta se cierra sola y no hay que perseguir cada caso. */
-var VALE_EN_PLATA = 40;   // cuánto vale un vale, en plata sombra
+var VALE_EN_PLATA = 40;   // cuánto vale un vale AL GASTARLO, en plata sombra
 function valesDe(plata) { return Math.max(1, Math.round((plata || 0) / VALE_EN_PLATA)); }
+/* ── LA EMISIÓN ES MÁS CARA QUE EL GASTO (31/8, reporte de dirección) ───────────────────────
+   « pude completar 12… y 12×20 hachas son 240 de madera… y no costó mucho, solo pocos
+   recursos ». Medido: el pedido pagaba el valor EXACTO en plata (bien, 18/8) MÁS 1 vale por
+   cada 40 entregados — y desde que los fardos entregan valor pleno (26/8), un vale ES 40 de
+   plata líquida (20 hachas a 2). O sea el tablón devolvía el DOSCIENTOS por ciento de lo
+   entregado: de sumidero pasó a imprenta, y dirección lo encontró en una tarde.
+   La ironía completa: los fardos a media tasa de antes del 26/8 —lo que parecía un precio
+   roto— eran el sumidero funcionando. Al « arreglarlos », la fuga se movió a la emisión.
+   El arreglo elegido (dirección, 31/8): el fardo queda honesto y transparente — 1 vale compra
+   40 de plata en mercadería, sin letra chica — pero GANARLO cuesta 160 de plata entregada.
+   Prima del tablón: 25 % (50 % el primero del día, que paga doble), que premia entregar sin
+   duplicar. Emisión y gasto son ahora DOS varas a propósito: la del gasto fija qué es un
+   vale; la de la emisión fija cuánto regala el tablón. Una sola vara era el bug. */
+var VALE_EMISION = VALE_EN_PLATA * 4;   // 160: plata entregada que gana 1 vale (prima 25 %)
+function valesPremio(plata) { return Math.max(1, Math.round((plata || 0) / VALE_EMISION)); }
 /* ============ QUÉ ENTRA EN CADA FARDO (26/8) =====================================
    Dirección: « esto no está balanceado, ¿cierto? con 1 vale pude obtener 40 semillas de cereza ».
 
