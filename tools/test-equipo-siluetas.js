@@ -50,11 +50,16 @@ console.log("\nY LOS DIEZ SPRITES EXISTEN EN DISCO   (un src que 404ea es un hue
   ok("los diez sil_*.png están en assets/farm", !faltan.length, faltan.join(", ") || "10 de 10");
 }
 
-console.log("\nLAS SILUETAS NUEVAS RESPETAN EL ESTILO DE LAS VIEJAS");
+console.log("\nLAS SILUETAS SON PLANAS, TRANSLÚCIDAS Y — SOBRE TODO — VISIBLES");
 {
-  /* el estilo es UN color plano translúcido — (41,34,25) al alfa 140, medido de sil_casco. Si
-     una silueta nueva viniera a todo color, se leería como « esto tenés » en vez de « esto
-     falta », que es exactamente la confusión que la opacidad evita.
+  /* 31/8, segunda vuelta, y con reporte de dirección adjunto: la primera tanda de siluetas era
+     (41,34,25) al alfa 140 — «el color de la casa» — y este test la bendecía. Pero el SLOT
+     también es marrón oscuro (#3a2b1c): la silueta era del color del fondo sobre el fondo, y
+     dirección mandó el screenshot con los diez huecos pelados: «debes crear las siluetas de lo
+     que va en cada hueco». Ya EXISTÍAN — eran invisibles, que para el jugador es lo mismo.
+     Un test que fija un color sin mirar sobre qué fondo se pinta mide pintura, no contraste.
+     Ahora el color es el beige claro del panel (242,234,213) en alfa translúcido: plano para
+     leerse como « esto falta » y claro para leerse, a secas.
 
      El PNG se lee a mano, CON SUS FILTROS. La primera versión asumía filtro 0 en todas las filas
      « porque lo escribió PIL » — y PIL elige el filtro POR FILA. Leí bytes filtrados como si
@@ -95,11 +100,21 @@ console.log("\nLAS SILUETAS NUEVAS RESPETAN EL ESTILO DE LAS VIEJAS");
       if (img[i + 3] > 0) colores.add(img[i] + "," + img[i + 1] + "," + img[i + 2] + "," + img[i + 3]);
     return colores;
   };
-  for (const s of ["sil_collar", "sil_guantes", "sil_anillo", "sil_pantalones"]) {
+  /* las DIEZ, ya no cuatro: ahora todas salen del mismo molino (los sprites reales de cada
+     pieza, recoloreados). Un solo RGB —el claro— y alfas translúcidos: los bordes suavizados
+     del sprite fuente dejan varios alfas, y eso está bien; lo que no puede haber es ni un
+     píxel de otro color (sería el sprite a medio recolorear) ni un alfa opaco (se leería
+     como « esto tenés »). */
+  const DIEZ = ["sil_collar", "sil_guantes", "sil_anillo", "sil_pantalones",
+                "sil_casco", "sil_armadura", "sil_botas", "sil_escudo", "sil_arma", "sil_municion"];
+  for (const s of DIEZ) {
     let cs;
     try { cs = paleta(s); } catch (e) { ok(s + " se puede leer", false, e.message); continue; }
-    ok(s + " es silueta de verdad: un solo color, y es el de la casa",
-      cs.size === 1 && cs.has("41,34,25,140"), [...cs].join(" · "));
+    const malRGB = [...cs].filter(c => !c.startsWith("242,234,213,"));
+    const alfas = [...cs].map(c => +c.split(",")[3]);
+    ok(s + ": un solo color, el CLARO del panel, y translúcido",
+      !malRGB.length && Math.max(...alfas) <= 160 && Math.min(...alfas) >= 60,
+      malRGB.length ? malRGB.slice(0, 2).join(" · ") : "alfa " + Math.min(...alfas) + "–" + Math.max(...alfas));
   }
 }
 
