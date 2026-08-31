@@ -276,37 +276,32 @@ function pescaV4Abrir() {
     if (ceb !== "lombriz") { toast("Te quedaste sin " + CEBO_V4_DEF[ceb].label + " — volvés a la lombriz"); ceb = "lombriz"; pescaEstado().cebo = "lombriz"; }
     if (!ceboTengo("lombriz")) { toast("Te faltan lombrices — cavá un montículo"); return false; }
   }
-  /* EL PEZ QUE SE ESCAPÓ SIGUE EN EL ANZUELO (31/8, con el carrete de vuelta): si el carrete
-     anterior falló, este tiro NO cobra lombriz y pelea EL MISMO pez — « un lance fallado cuesta
-     el tiempo y la vergüenza, no plata » (regla de dirección de la v2). Como no se re-sortea,
-     no hay scumming posible y el invariante del bolsillo queda exacto. */
-  const est = pescaEstado();
-  let r;
-  if (est.pendiente && est.pendiente.id) {
-    r = est.pendiente; est.pendiente = null;
-    toast("El pez sigue en el anzuelo — este lance no gasta lombriz");
-  } else {
-    /* SE COBRA AL TIRAR, y ya no hay dónde fallar el pique: antes se cobraba al clavar porque
-       perder el pique no podía costar dinero. Sin pique, tirar y pescar son el mismo gesto. */
-    ceboCobrar(ceb);
-    /* EL PEZ SE SORTEA AHORA, aunque se pelee y se enseñe al final. No es un detalle: si se
-       sorteara al terminar, un jugador podría cerrar la pestaña al ver algo que no le gusta y
-       volver a tirar con la misma lombriz. Decidido al pagar, el resultado ya es suyo. */
-    r = lanceSacar(pescaV4Cana(), { cebo: ceb });
-  }
+  /* SE COBRA AL TIRAR, y con el carrete de vuelta la lombriz JUEGA: si el pez se escapa, se va
+     con ella — dirección, 31/8: « el pez se te escapa, que cueste una lombriz: ¿por qué tiene
+     que ser gratis? ». (La primera versión del carrete guardaba el pez escapado como pendiente
+     y el retiro salía gratis, regla heredada de la v2; la dirección la tumbó el mismo día.
+     El campo `pendiente` puede quedar en guardados de esas horas: nadie lo lee y no molesta —
+     borrar campos de una partida ajena por limpieza es como se pierden partidas.) */
+  ceboCobrar(ceb);
+  /* EL PEZ SE SORTEA AHORA, aunque se pelee y se enseñe al final. No es un detalle: si se
+     sorteara al terminar, un jugador podría cerrar la pestaña al ver algo que no le gusta y
+     volver a tirar con la misma lombriz. Decidido al pagar, el resultado ya es suyo…
+     …si lo saca: el carrete decide si este pez llega a la mano, nunca cuál es. */
   P4 = { cana: pescaV4Cana(), cebo: ceb, t: 0,
          dur: LANCE_ESPERA[0] + Math.random() * (LANCE_ESPERA[1] - LANCE_ESPERA[0]),
-         r: r };
+         r: lanceSacar(pescaV4Cana(), { cebo: ceb }) };
   const sc = pescaEscena();
   if (sc && sc.pescaTirar) sc.pescaTirar();
   if (typeof refreshHud === "function") refreshHud();
   return true;
 }
 function pescaV4Cerrar() {
-  /* irse a mitad del carrete no pierde el pez: queda pendiente, igual que si se escapara.
-     Cerrar la laguna es una salida, no un castigo. */
-  if (P4 && P4.carrete && P4.r) pescaEstado().pendiente = P4.r;
+  /* irse a mitad del carrete es soltar la caña: el pez se va con la lombriz, igual que si
+     escapara. Si abandonar guardara el pez, cancelar a punto de perder sería un truco para
+     no perder nunca — la salida existe, pero no es gratis. */
+  const abandono = !!(P4 && P4.carrete);
   P4 = null;
+  if (abandono) { toast("Soltaste la caña — el pez se fue con tu lombriz"); log("🎣 Soltaste la caña a mitad de la pelea: el pez se fue con tu lombriz.", "bad"); }
   const sc = pescaEscena();
   if (sc && sc.pescaLimpiar) sc.pescaLimpiar();
   if (sc && sc.action && sc.action.v4) sc.action = null;
@@ -346,11 +341,11 @@ function pescaV4Paso(dt, hold) {
   else if (rez === "perdido") pescaV4Escapar();
 }
 
-/* el pez ganó la pelea: no se entrega, pero tampoco se pierde — queda en el anzuelo. */
+/* el pez ganó la pelea: se fue, y la lombriz con él (dirección, 31/8). No se anota nada —
+   récord, torneo y mareas son de las capturas, y esto no fue una. */
 function pescaV4Escapar() {
-  const r = P4 && P4.r, c = P4 && P4.carrete, sc = pescaEscena();
+  const c = P4 && P4.carrete, sc = pescaEscena();
   P4 = null;
-  if (r) pescaEstado().pendiente = r;
   const m = (c && CARRETE_AVISO[c.motivo]) || "El pez se fue";
   toast(m); log("🎣 " + m + ".", "bad");
   if (sc && sc.pescaPanel) sc.pescaPanel(false);
@@ -365,6 +360,7 @@ function pescaV4Resolver() {
   P4 = null;
   if (sc && sc.pescaPanel) sc.pescaPanel(false);   // 31/8: el carrete se cierra con la captura
   if (r) {
+    if (typeof capturaAnotar === "function") capturaAnotar(r);   // récord, torneo y mareas: SOLO de lo capturado
     if (sc && sc.pescaCaptura) sc.pescaCaptura(r);
     G.fish = G.fish || {}; G.fish[r.id] = (G.fish[r.id] || 0) + 1;
     if (typeof addXp === "function") addXp("fishing", r.xp);

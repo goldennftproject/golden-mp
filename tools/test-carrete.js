@@ -69,14 +69,18 @@ console.log("\nEL OFICIO EN LAS MANOS, LA BANDA EN EL PEZ");
     DIF.comun.vel + " → " + DIF.legendario.vel);
 }
 
-console.log("\nEL PEZ ESCAPADO QUEDA EN EL ANZUELO   (cuesta tiempo, no plata)");
+console.log("\nEL PEZ QUE SE ESCAPA SE VA CON LA LOMBRIZ   (dirección, 31/8: nada es gratis)");
 {
+  /* La primera versión del carrete guardaba el pez escapado y el retiro salía gratis — regla
+     heredada de la v2. La dirección la tumbó el mismo día: « el pez se te escapa, que cueste
+     una lombriz: ¿por qué tiene que ser gratis? ». Este bloque mide ESA regla, y su sombra:
+     lo que se escapa tampoco puede contar para récords, torneo ni mareas. */
   G.canas = { junco: 1 }; G.plata = 1000; G.res = { lombriz: 10 }; G.fish = {};
+  G.pescaStats = {}; G.torneo = null;
   G.pescaV4 = null; ctx.pescaEstado().cebo = "lombriz";
   let acc = 0; for (let k = 2; k <= 20; k++) acc += ctx.skillNeed(k, "fishing");
   G.skills = { fishing: acc, farming: acc };
 
-  ok("arranca sin nada pendiente", !ctx.pescaEstado().pendiente);
   ctx.pescaV4Abrir();
   ok("el tiro cobra su lombriz", G.res.lombriz === 9);
   const pezSorteado = g("P4").r.id;
@@ -84,39 +88,45 @@ console.log("\nEL PEZ ESCAPADO QUEDA EN EL ANZUELO   (cuesta tiempo, no plata)")
   let vueltas = 0;
   while (g("P4") && !g("P4").carrete && vueltas++ < 200) ctx.pescaV4Paso(0.05, false);
   ok("al hundirse el corcho arranca el carrete", !!(g("P4") && g("P4").carrete));
+  /* LA DERROTA SE FUERZA, NO SE ESPERA: con el nivel de Pesca al techo la zona es tan grande
+     que el pez, merodeando, a veces GANA solo aunque nadie apriete — y este test salía verde
+     o rojo según el humor del pez (5 de 30 corridas). Lo que se mide acá no es la pelea (eso
+     ya se midió arriba, con azar fijo) sino la CONTABILIDAD del escape, así que el escape se
+     produce a mano: pez arriba, zona abajo, progreso al borde. */
+  vm.runInContext("P4.carrete.pez = 0.98; P4.carrete.rumbo = 0.98; P4.carrete.zona = P4.carrete.zonaAlto / 2; P4.carrete.zonaV = 0; P4.carrete.prog = 0.001", ctx);
   vueltas = 0;
   while (g("P4") && vueltas++ < 400) ctx.pescaV4Paso(0.05, false);
   ok("abandonado, el pez se escapa y el lance se cierra", !g("P4"));
   ok("no entró nada a la bolsa", Object.keys(G.fish).every(k => !G.fish[k]));
-  const pend = ctx.pescaEstado().pendiente;
-  ok("pero el pez quedó EN EL ANZUELO", !!pend && pend.id === pezSorteado,
-    pend && g("PEZ_DEF")[pend.id].label);
+  ok("la lombriz NO vuelve: se fue con el pez", G.res.lombriz === 9);
+  ok("y nada quedó guardado para reintentar gratis", !ctx.pescaEstado().pendiente);
+  ok("ni récord del pez que se fue", !((ctx.pescaEstado().records || {})[pezSorteado]),
+    "un récord de un pez que se escapó sería mentirle al álbum");
+  ok("ni contó para las estadísticas de pesca", !Object.keys(G.pescaStats || {}).length);
 
-  /* el segundo tiro: mismo pez, lombriz gratis */
+  /* el segundo tiro empieza de cero: otra lombriz, otro sorteo */
   ctx.pescaV4Abrir();
-  ok("el segundo tiro NO cobra lombriz", G.res.lombriz === 9, "sigue en " + G.res.lombriz);
-  ok("y pelea EXACTAMENTE el mismo pez — sin re-sorteo, sin scumming",
-    g("P4").r.id === pezSorteado && !ctx.pescaEstado().pendiente);
-  /* esta vez se gana: el carrete decide CUÁNDO se cobra, nunca QUÉ sale */
+  ok("el segundo tiro cobra su propia lombriz", G.res.lombriz === 8);
+  const segundo = g("P4").r.id;
   vueltas = 0;
   while (g("P4") && !g("P4").carrete && vueltas++ < 200) ctx.pescaV4Paso(0.05, false);
   vm.runInContext("P4.carrete.prog = 0.999", ctx);   // la pelea en sí ya se midió arriba
   ctx.pescaV4Paso(0.05, true);
-  ok("ganado el carrete, el pez entra a la bolsa", (G.fish[pezSorteado] || 0) === 1);
-  ok("y el anzuelo queda limpio para el próximo", !ctx.pescaEstado().pendiente);
+  ok("ganado el carrete, el pez entra a la bolsa", (G.fish[segundo] || 0) === 1);
+  ok("y AHORA sí se anota: récord…", (ctx.pescaEstado().records || {})[segundo] > 0);
+  ok("…y estadísticas — todo lo anotado es de capturas de verdad",
+    Object.keys(G.pescaStats || {}).length > 0);
 
-  /* la tercera salida: irse a MITAD de la pelea tampoco pierde el pez */
+  /* la tercera salida: soltar la caña a mitad de pelea es perder el pez, no esquivarlo */
   ctx.pescaV4Abrir();
-  ok("(este tiro sí cobra: no había nada pendiente)", G.res.lombriz === 8);
-  const otro = g("P4").r.id;
+  ok("el tercer tiro cobra la suya", G.res.lombriz === 7);
   vueltas = 0;
   while (g("P4") && !g("P4").carrete && vueltas++ < 200) ctx.pescaV4Paso(0.05, false);
   ctx.pescaV4Cerrar();   // Escape, o moverse
-  ok("cerrar a mitad del carrete guarda el pez, no lo mata",
-    ctx.pescaEstado().pendiente && ctx.pescaEstado().pendiente.id === otro);
-  console.log("       → cerrar la laguna es una salida, no un castigo. Y como el pendiente vive");
-  console.log("         en el estado que se guarda, ni el F5 re-sortea: es el MISMO pez.");
+  ok("cerrar a mitad del carrete NO guarda el pez", !ctx.pescaEstado().pendiente && !g("P4"));
+  console.log("       → si abandonar guardara el pez, cancelar a punto de perder sería el truco");
+  console.log("         para no perder nunca. La salida existe, pero cuesta lo mismo que perder.");
 }
 
-console.log(fallos ? "\n" + fallos + " fallo(s)\n" : "\nTodo en orden: la barra pelea, y perder cuesta tiempo, no plata.\n");
+console.log(fallos ? "\n" + fallos + " fallo(s)\n" : "\nTodo en orden: la barra pelea, y el pez que se escapa se va con la lombriz.\n");
 process.exit(fallos ? 1 : 0);

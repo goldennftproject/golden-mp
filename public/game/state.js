@@ -6217,7 +6217,8 @@ function lanceSacar(cana, opciones) {
   e.primeroDelDia = hoyClave();
   e.sinEpico = (banda === "epico" || banda === "legendario") ? 0 : (e.sinEpico || 0) + 1;
   const rec = (e.records || {})[id] || 0, esRecord = kg > rec;
-  if (esRecord) { e.records = e.records || {}; e.records[id] = kg; }
+  /* (el récord se ESCRIBE al capturar, no acá: con el carrete de por medio este pez todavía
+     puede escaparse, y un récord de un pez que se fue sería mentirle al álbum. capturaAnotar.) */
 
   /* ── EL PEAJE DE LA CAÑA ──────────────────────────────────────────────────────────────────
      « El mantenimiento es plata pura y siempre, y sale automático al resolver la captura. »
@@ -6232,14 +6233,25 @@ function lanceSacar(cana, opciones) {
     const cobra = Math.floor(G.peajeCana);
     if (cobra > 0) { G.plata = Math.max(0, (G.plata || 0) - cobra); G.peajeCana -= cobra; }
   }
-  /* TODO lo que un título, un récord o el torneo puedan preguntar se anota AQUÍ, en el único
-     sitio por el que pasa toda captura de caña. Repartir estos contadores por la interfaz es
-     cómo se consigue que un título no se dispare nunca y nadie sepa por qué. */
-  pescaAnotar(id, kg, false);
-  torneoAnotar(id, kg);
+  /* (pescaAnotar y torneoAnotar vivían acá, «el único sitio por el que pasa toda captura de
+     caña». Con el carrete de vuelta este ya no es el sitio de la CAPTURA sino el del SORTEO, y
+     un pez que puede escaparse no puede contar para el torneo ni para las mareas antes de estar
+     en la mano. Se mudaron a capturaAnotar(), que llama pescaV4Resolver al cobrarlo — y sigue
+     siendo UN solo sitio, que es lo que el comentario original defendía.) */
   return { id: id, kg: kg, banda: banda, cana: cana, gigante: pezGigante(id, kg),
     plata: pezPrecio(id, kg), xp: pezXp(id, kg), record: esRecord, recordAnterior: rec,
     peaje: peaje };
+}
+
+/* LA CAPTURA, ANOTADA — el único sitio por el que pasa todo pez de caña que SÍ llegó a la mano.
+   Todo lo que un título, un récord, el torneo o una marea de peso puedan preguntar se anota
+   acá, y solo acá. (La nasa anota por su lado: su captura es pasiva y no pasa por el carrete.) */
+function capturaAnotar(r) {
+  if (!r || !r.id) return;
+  const e = pescaEstado();
+  if (r.record) { e.records = e.records || {}; e.records[r.id] = Math.max(e.records[r.id] || 0, r.kg); }
+  pescaAnotar(r.id, r.kg, false);
+  torneoAnotar(r.id, r.kg);
 }
 
 /* ── EL CARRETE, DE VUELTA (31/8, today.docx de Suren: « Agregar el mini juego de la pesca ») ──
@@ -6253,11 +6265,13 @@ function lanceSacar(cana, opciones) {
      · el pez ya está SORTEADO al pagar la lombriz (lanceSacar, anti-scumming del 28/8) — el
        carrete no decide QUÉ sale, decide si lo cobrás YA. Las reglas de Suren no se tocan:
        la caña sigue abriendo sus especies y el peso sigue mandando.
-     · si el pez se escapa, cuesta TIEMPO y no plata — regla de dirección de la propia v2:
-       « un lance fallado cuesta el tiempo y la vergüenza, no plata ». El pez queda PENDIENTE
-       en el estado de pesca (pescaEstado().pendiente) y el próximo tiro lo reusa sin cobrar
-       lombriz. Como es EL MISMO pez, escapar no re-sortea nada: el invariante del bolsillo
-       queda exacto y no hay scumming posible ni con F5.
+     · si el pez se escapa, SE PIERDE CON SU LOMBRIZ — dirección, 31/8: « el pez se te escapa,
+       que cueste una lombriz: ¿por qué tiene que ser gratis? ». (La v2 original decía lo
+       contrario y así se recuperó primero; la dirección lo corrigió el mismo día.) Por eso las
+       anotaciones —récord, torneo, mareas— se mudaron del sorteo a la captura (capturaAnotar):
+       un pez que puede escaparse no puede contar antes de estar en la mano. Y por eso el
+       invariante del bolsillo pasa a ser un TECHO: mide al jugador que siempre gana, y lo que
+       la habilidad le quite a cada uno es suyo — igual que se midió siempre.
      · la dificultad la pone la BANDA del pez sorteado (los raros nadan más rápido y cambian de
        rumbo más seguido, como en el original) y la zona crece con el nivel de Pesca: el oficio
        en las manos, no solo en los números.
@@ -6304,8 +6318,8 @@ function carreteTick(l, dt, hold, rnd) {
   return "sigue";
 }
 var CARRETE_AVISO = {   // qué contesta cada final (regla 9: toda acción contesta)
-  escapo: "¡Se escapó! Mantené al pez dentro de la zona — sigue en el anzuelo, volvé a tirar",
-  tiempo: "El pez se cansó de pelear… pero sigue en el anzuelo. Volvé a tirar",
+  escapo: "¡Se escapó con tu lombriz! Mantené al pez dentro de la zona",
+  tiempo: "El pez se cansó de pelear y se fue — con tu lombriz",
 };
 
 /* EL FACTOR DE PESO QUE HAY QUE ESPERAR según el cebo, POR ESPECIE.
