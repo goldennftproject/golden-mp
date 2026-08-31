@@ -7535,21 +7535,14 @@ function pedPool() {
      de leerlo. » Por eso pasa por especieAlcanzable — y NO por especiePescable, que además mira
      la hora: un encargo del tablón dura un día o una semana, así que pedir calamar está bien
      porque el jugador puede esperar a que anochezca. */
-  /* 27/8 (Pesca v4) — el tablón pide del catálogo NUEVO, y solo de las bandas que el jugador
-     puede sacar con la caña que tiene. La regla dura del capítulo 11 no cambia: el tablón solo
-     pide lo que el jugador YA puede pescar. Lo que cambia es cómo se decide « puede »: en la v4
-     no hay familias ni carnadas que abran especies, hay BANDAS, y la caña es la que las mueve.
-     Se piden las tres bandas bajas —común, poco común y raro— porque un épico al 0,75 % no es
-     un encargo, es una lotería, y un pedido que no se puede cumplir enseña que el tablón miente.
-     Los míticos tampoco: salen de nasa, y las nasas son de la tanda 2. */
-  for (const id of PEZ_ORDER) {
-    const e = PEZ_DEF[id];
-    if (["comun", "poco_comun", "raro"].indexOf(e.banda) < 0) continue;
-    if (e.noche && !esDeNocheAhora()) { /* se pide igual: el encargo dura un día y la noche llega */ }
-    /* lo barato se pide en tanda y lo caro suelto, la misma vara que los cultivos de arriba */
-    const n = e.precio <= 5 ? 3 : (e.precio <= 12 ? 2 : 1);
-    pool.push({ tipo: "fish", key: id, n, val: Math.max(2, Math.round(e.precio * n)) });
-  }
+  /* 31/8 — EL TABLÓN DEL PUEBLO YA NO PIDE PECES. Acá vivía el bloque que metía las tres
+     bandas bajas del catálogo v4 al pool (27/8). Dirección, tras probar la mudanza de los
+     pedidos de pesca a este tablón, decidió lo contrario y lo dijo entero: « que sea solo de
+     pesca [la Lonja] y en el tablero del pueblo solo se pidan cosechas, maderas y minerales ».
+     Cada tablero con su oficio: los peces se piden en la Lonja (marea, Capitán, mes, torneo),
+     que ya pide con criterio de pesca — bandas alcanzables, umbrales de peso, ventanas.
+     (Los PLATOS de la cocina siguen en el pool de abajo: la frase de dirección no los nombró
+     y el Festín del Pueblo del finde vive de ellos. Si también sobran, es una línea.) */
   if (G.built && G.built.cocina) for (const id of ["papa_asada", "crema_calabaza", "pure_papa"]) {   // 22/8: la sopa se fue al nivel 8 con su zanahoria
     const r = RECIPE_DEF[id]; if (!r) continue;
     let hecho = false; try { hecho = statGet("cocinar", id) > 0; } catch (e) {}
@@ -7638,7 +7631,9 @@ var EVENTO_TEMAS = [   // el filtro elige del pool de HOY (pedPool): nada fuera 
   { id: "cosecha", label: "La Gran Cosecha",      f: (p) => p.tipo === "res" && !!CROP_DEF[p.key] },
   { id: "lenia",   label: "Fiebre de la Leña",    f: (p) => p.key === "madera" },
   { id: "cantera", label: "El Día de la Cantera", f: (p) => p.tipo === "res" && !CROP_DEF[p.key] && p.key !== "madera" },
-  { id: "pesca",   label: "El Torneo de Pesca",   f: (p) => p.tipo === "fish" },
+  /* (el tema "El Torneo de Pesca" vivía acá y filtraba p.tipo === "fish". Se fue el 31/8 con
+     los peces del pool — cada tablero con su oficio — y además era un doble: el torneo DE
+     VERDAD, con báscula y Escamas, ya corre el finde en la Lonja.) */
   { id: "festin",  label: "El Festín del Pueblo", f: (p) => p.tipo === "dish" },
 ];
 function findeVentana() { const d = new Date().getUTCDay(); return d === 5 || d === 6 || d === 0; }   // vie · sáb · dom, en UTC como todo lo diario (22/8)

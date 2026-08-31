@@ -601,14 +601,8 @@
   .boya-fila .bb i{display:block;height:100%;background:linear-gradient(90deg,#7fb6d8,#ffd75e)}
   .lonja-esc{padding:9px 11px;border-radius:11px;border:1px solid #3c5568;margin-bottom:7px;
     background:rgba(24,44,60,.42)}
-  /* 31/8: los pedidos de pesca cuelgan del tablón del pueblo («las escamas se obtienen en el
-     tablero» — Suren). Cabecera de la sección + las filas .lonja-esc alineadas a la izquierda,
-     porque el tablón centra todo y un pedido centrado se lee como un cartel, no como una lista. */
-  .pd-pesca-cab{display:flex;justify-content:space-between;align-items:baseline;gap:8px;
-    font-size:12px;font-weight:800;color:#9fd8f0;text-align:left;margin:12px 0 6px;
-    border-top:1px dashed #3c5568;padding-top:10px}
-  .pd-pesca-esc{font-size:10px;font-weight:400;color:#7d8f6e}
-  #ov-pedidos .lonja-esc{text-align:left}
+  /* (el CSS de la sección de pesca del tablón vivió acá unas horas del 31/8 — dirección
+     decidió que cada tablero tenga su oficio y la pesca volvió a la Lonja) */
   .lonja-esc.listo{border-color:#7fa356;background:rgba(34,58,30,.5)}
   .le-cab{display:flex;justify-content:space-between;font-size:11px;font-weight:800;color:#9fd8f0;
     margin-bottom:4px}
@@ -1370,10 +1364,14 @@
       <span id="lonja-escamas"></span>
       <span class="lonja-vig">🎖 <b id="lonja-titulo-vig"></b></span>
     </div>
-    <!-- 31/8: la pestaña "Pedido" se mudó al tablón del pueblo — Suren: «las escamas se
-         obtienen en el tablero». La Lonja queda como tienda de canje y vitrina de títulos. -->
+    <!-- 31/8, ida y VUELTA en el mismo día: la pestaña Pedido se mudó al tablón del pueblo
+         («las escamas se obtienen en el tablero» — Suren) y dirección, al verlo, decidió lo
+         contrario: «en el tablón de pesca quedan mejores… que sea solo de pesca y en el
+         tablero del pueblo solo se pidan cosechas, maderas y minerales». Así que la Lonja ES
+         el tablero de la pesca — su pestaña vuelve — y el del pueblo dejó de pedir peces. -->
     <div class="lonja-tabs">
-      <button data-ltab="tienda" class="on">Tienda</button>
+      <button data-ltab="pedido" class="on">Pedido</button>
+      <button data-ltab="tienda">Tienda</button>
       <button data-ltab="titulos">Títulos</button>
     </div>
     <div class="lonja-cuerpo" id="lonja-cuerpo"></div>

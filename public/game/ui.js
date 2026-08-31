@@ -557,7 +557,7 @@ function pescaV4Canas() {
    Tres pestañas, y la de « Pedido » manda porque es la única con reloj. La regla de reparto:
    lo que caduca va primero, lo que espera va detrás. Poner la tienda de Escamas de entrada
    haría que el jugador de las tres visitas se perdiera la marea por mirar escaparates. */
-var LONJA_TAB = "tienda";   // 31/8: los pedidos se mudaron al tablón («las escamas se obtienen en el tablero» — Suren)
+var LONJA_TAB = "pedido";   // 31/8: la pestaña se fue al tablón del pueblo y VOLVIÓ el mismo día — dirección: «en el tablón de pesca quedan mejores»
 function refreshLonja() {
   const caja = $("lonja-cuerpo"); if (!caja) return;
   const esc = $("lonja-escamas");
@@ -574,14 +574,32 @@ function refreshLonja() {
     b.classList.toggle("on", b.dataset.ltab === LONJA_TAB);
     if (!b._lst) { b._lst = 1; b.onclick = () => { LONJA_TAB = b.dataset.ltab; refreshLonja(); }; }
   });
+  if (LONJA_TAB === "pedido")  return lonjaPintaPedido(caja);
   if (LONJA_TAB === "tienda")  return lonjaPintaTienda(caja);
   return lonjaPintaTitulos(caja);
 }
-/* (lonjaPintaPedido vivía acá y pintaba los cuatro escalones DENTRO de la Lonja. Se mudó al
-   tablón del pueblo el 31/8 — Suren: « las escamas se obtienen en el tablero » — porque la
-   Lonja como tablón aparte era invento mío: dos tableros de pedidos en un juego es uno de más.
-   La maquinaria (lonjaPedido, lonjaCapitan, lonjaEntregarEscalon…) no se movió de state.js:
-   sigue siendo LA fuente; lo único que cambió es de qué pared cuelgan los papelitos.) */
+/* 31/8, la ida y la vuelta en el mismo día — y vale la pena dejar el porqué de las dos:
+   · IDA: Suren dijo « las escamas se obtienen en el tablero » y esto se mudó al tablón del
+     pueblo, bajo la lógica de que dos tableros de pedidos es uno de más.
+   · VUELTA: dirección lo vio andando y decidió lo contrario — « en el tablón de pesca quedan
+     mejores… que sea solo de pesca y en el tablero del pueblo solo se pidan cosechas, maderas
+     y minerales ». O sea: no un tablón único, sino CADA TABLERO CON SU OFICIO. La Lonja es el
+     tablero de la pesca; el del pueblo, el de la granja — y dejó de pedir peces (pedPool). */
+function lonjaPintaPedido(caja) {
+  const act = lonjaActivos();
+  if (!act.length) {
+    caja.innerHTML = '<div class="lonja-vacio">La Lonja no tiene nada para vos ahora mismo.<br>' +
+      'Conseguí una caña que llegue a más bandas y volvé en la próxima marea.</div>';
+    return;
+  }
+  /* los cuatro escalones, ordenados por lo que caduca antes. El de marea vence en horas y el de
+     la captura del mes en semanas: mostrarlos al revés haría que el jugador de tres visitas se
+     perdiera la marea por leer primero lo que puede esperar. */
+  caja.innerHTML = act.map(lonjaFilaEscalon).join("");
+  caja.querySelectorAll("[data-lent]").forEach(b => b.onclick = () => {
+    if (lonjaEntregarEscalon(b.dataset.lent)) refreshLonja();
+  });
+}
 /* una fila por escalón. Todas dicen lo mismo en el mismo orden —qué pide, cuánto te queda, qué
    vale suelto y qué paga la Lonja— porque la lección económica del sistema solo se aprende si
    la comparación está siempre en el mismo sitio. */
@@ -631,8 +649,8 @@ function lonjaFilaEscalon(k) {
 }
 
 function lonjaPintaTienda(caja) {
-  let h = '<div class="lonja-vacio" style="text-align:left;margin-bottom:8px">Las Escamas salen de los ' +
-    'pedidos de pesca del tablón del pueblo y no se compran ni se venden. Rondan las 139 al mes.</div>';
+  let h = '<div class="lonja-vacio" style="text-align:left;margin-bottom:8px">Las Escamas salen ' +
+    'de los pedidos de esta Lonja y no se compran ni se venden. Rondan las 139 al mes.</div>';
   for (const k of LONJA_TIENDA_ORDER) {
     const d = LONJA_TIENDA[k], falta = lonjaTiendaFalta(k), tengo = lonjaTiendaTengo(k);
     const mat = d.cost ? " + " + Object.keys(d.cost).map(x => d.cost[x] + " " + (RES_LABEL[x] || x)).join(" + ") : "";
@@ -3010,10 +3028,8 @@ document.addEventListener("pointerdown", (e) => {
   const des = e.target.closest("[data-pd-desc]");
   const can = e.target.closest("[data-pd-canje]");
   const vis = e.target.closest("[data-pd-vista]");
-  const lent = e.target.closest("[data-lent]");   // 31/8: los pedidos de pesca cuelgan de este tablón
-  if (!ent && !des && !can && !vis && !lent) return;
+  if (!ent && !des && !can && !vis) return;
   e.preventDefault(); e.stopPropagation();
-  if (lent) { if (lonjaEntregarEscalon(lent.dataset.lent)) refreshPedidos(); return; }
   if (des) { const i = +des.getAttribute("data-pd-desc"); askConfirm("¿Descartar este pedido? Otro vecino colgará el suyo.", () => pedidoDescartar(i)); return; }
   if (vis) { _pdVista = vis.getAttribute("data-pd-vista"); refreshPedidos(); return; }
   if (ent) {   // temblor corto y a entregar (la gramática del rincón)
@@ -3083,23 +3099,12 @@ function refreshPedidos() {
       (p.hecho ? '<div class="sello">✓ ENTREGADO</div>'
         : '<div class="paga">🪙 ' + p.plata + ' · 🎟 ' + p.vales + (ok ? '<div class="toca">tocá la nota para entregar</div>' : "") + '</div>') +
       '</div>';
-  }).join("") + pdSeccionPesca() +
+  }).join("") +
   '<div style="text-align:center;margin-top:6px"><button class="ghost sm" data-pd-vista="canje">🎟 Canjear vales</button></div>';
 }
-/* ── LOS PEDIDOS DE PESCA, COLGADOS DEL MISMO TABLÓN (31/8) ─────────────────────────────────
-   Suren: « las escamas se obtienen en el tablero ». La Lonja como tablón aparte era invento
-   mío — el pueblo tiene UN tablón, y los encargos de la pesca cuelgan de él como los demás.
-   Las filas son las mismas que pintaba la Lonja (lonjaFilaEscalon) y la maquinaria no se
-   movió de state.js: marea de 8 h, Capitán semanal, captura del mes y báscula del torneo,
-   cada uno pagando su plata y sus Escamas. La Lonja queda como tienda de canje. */
-function pdSeccionPesca() {
-  if (typeof lonjaActivos !== "function") return "";
-  const act = lonjaActivos();
-  if (!act.length) return "";
-  return '<div class="pd-pesca-cab">🐟 Pedidos de pesca <span class="pd-pesca-esc">' +
-    escamasLonja() + ' Escamas · se canjean en la Lonja</span></div>' +
-    act.map(lonjaFilaEscalon).join("");
-}
+/* (pdSeccionPesca vivió acá unas horas del 31/8: los pedidos de pesca colgados de este tablón.
+   Dirección lo vio y mandó lo contrario — cada tablero con su oficio: la pesca en la Lonja,
+   y este tablón pidiendo solo lo de la granja. El porqué completo, sobre refreshLonja.) */
 
 /* ---- BUZÓN (15/8): las cartas se dibujan como sobres de papel ---- */
 /* ---- BUZÓN ESCÉNICO (15/8): el buzón grande, sobres en abanico que se abren como
