@@ -5156,31 +5156,37 @@ class FarmScene extends Phaser.Scene {
       if (!GF.NO_WALK) {   // sin granjero en la granja, WASD/flechas no mueven nada
         if (k.left.isDown || k.aleft.isDown) vx = -1; else if (k.right.isDown || k.aright.isDown) vx = 1;
         if (k.up.isDown || k.aup.isDown) vy = -1; else if (k.down.isDown || k.adown.isDown) vy = 1;
+        /* 31/8 — SIN DIAGONALES (dirección, con los vídeos): con dos ejes apretados gana el que
+           se apretó último, que es lo que hace natural doblar sin soltar la tecla vieja. */
+        ({ vx, vy } = sinDiagonal(this, vx, vy));
       }
-      if (vx || vy) { this.moveTarget = null; this.path = null; this.pendingObj = null; }   // el teclado manda: cancela la ruta
+      if (vx || vy) { this.moveTarget = null; this.path = null; this.pendingObj = null; this._eje4 = null; }   // el teclado manda: cancela la ruta
       else if (this.moveTarget) {
-        const dx = this.moveTarget.x - hero.x, dy = this.moveTarget.y - hero.y, d = Math.hypot(dx, dy);
+        let dx = this.moveTarget.x - hero.x, dy = this.moveTarget.y - hero.y, d = Math.hypot(dx, dy);
         if (d < 5) {   // waypoint alcanzado: seguir con el próximo tramo de la ruta
           this.moveTarget = (this.path && this.path.length) ? this.path.shift() : null;
-          if (this.moveTarget) { const dx2 = this.moveTarget.x - hero.x, dy2 = this.moveTarget.y - hero.y, d2 = Math.hypot(dx2, dy2) || 1; vx = dx2 / d2; vy = dy2 / d2; }
-        } else { vx = dx / d; vy = dy / d; }
+          this._eje4 = null;   // tramo nuevo: el eje se elige de cero
+          if (this.moveTarget) { dx = this.moveTarget.x - hero.x; dy = this.moveTarget.y - hero.y; }
+        }
+        /* hacia el waypoint EJE POR EJE: primero el que tiene más distancia, y se termina un eje
+           antes de empezar el otro (la histéresis vive en eje4). Los caminos del A* ya vienen en
+           eles; esto cubre además el tramo del héroe al primer nodo y del último al destino. */
+        if (this.moveTarget) { const e = eje4(dx, dy, this._eje4); vx = e.vx; vy = e.vy; this._eje4 = e.eje; this._ejeResta = e.resta; }
       }
     }
     const moving = !!(vx || vy);
     if (moving) {
-      const m = Math.hypot(vx, vy); vx /= m; vy /= m;
-      const step = GF.SPEED * speedMult() * dt, nx = hero.x + vx * step, ny = hero.y + vy * step;
+      /* el paso no se pasa del codo: sin el tope, en la esquina de una ele el sobrante del paso
+         doblaba en diagonal durante un cuadro */
+      let step = GF.SPEED * speedMult() * dt;
+      if (this.moveTarget && this._ejeResta) step = Math.min(step, this._ejeResta);
+      const nx = hero.x + vx * step, ny = hero.y + vy * step;
       let moved = false;
       if (!GF.blockedAt(nx, ny, 6)) { hero.x = nx; hero.y = ny; moved = true; }
       else { if (vx && !GF.blockedAt(nx, hero.y, 6)) { hero.x = nx; moved = true; } if (vy && !GF.blockedAt(hero.x, ny, 6)) { hero.y = ny; moved = true; } }
-      // esquiva suave (teclado o roce contra una pared): probá ángulos a los lados del rumbo
-      if (!moved) {
-        const base = Math.atan2(vy, vx);
-        for (const off of [0.5, -0.5, 1.0, -1.0, 1.571, -1.571, 2.1, -2.1]) {   // hasta perpendicular y algo hacia atrás: bordea la pared
-          const a = base + off, sx = hero.x + Math.cos(a) * step, sy = hero.y + Math.sin(a) * step;
-          if (!GF.blockedAt(sx, sy, 6)) { hero.x = sx; hero.y = sy; moved = true; break; }
-        }
-      }
+      /* (la « esquiva suave » que probaba ángulos intermedios vivía acá. Se fue el 31/8 con las
+         diagonales: bordear una pared en ángulo es exactamente el movimiento que la dirección
+         pidió quitar. Ahora un tramo bloqueado se resuelve re-planificando la ruta, abajo.) */
       // sin acercarse al destino en ~2s: cortar (no hay forma de llegar más cerca)
       if (this.moveTarget) {
         const dst = (this.path && this.path.length) ? this.path[this.path.length - 1] : this.moveTarget;

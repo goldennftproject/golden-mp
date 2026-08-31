@@ -926,29 +926,28 @@ class ForestScene extends Phaser.Scene {
     if (!GF.uiOpen) {
       if (k.left.isDown || k.aleft.isDown) vx = -1; else if (k.right.isDown || k.aright.isDown) vx = 1;
       if (k.up.isDown || k.aup.isDown) vy = -1; else if (k.down.isDown || k.adown.isDown) vy = 1;
-      if (vx || vy) { this.moveTarget = null; this.path = null; }
+      /* 31/8 — SIN DIAGONALES (misma regla que la granja; el porqué vive en config.js) */
+      ({ vx, vy } = sinDiagonal(this, vx, vy));
+      if (vx || vy) { this.moveTarget = null; this.path = null; this._eje4 = null; }
       else if (this.moveTarget) {
-        const dx = this.moveTarget.x - hero.x, dy = this.moveTarget.y - hero.y, d = Math.hypot(dx, dy);
+        let dx = this.moveTarget.x - hero.x, dy = this.moveTarget.y - hero.y, d = Math.hypot(dx, dy);
         if (d < 5) {
           this.moveTarget = (this.path && this.path.length) ? this.path.shift() : null;
-          if (this.moveTarget) { const dx2 = this.moveTarget.x - hero.x, dy2 = this.moveTarget.y - hero.y, d2 = Math.hypot(dx2, dy2) || 1; vx = dx2 / d2; vy = dy2 / d2; }
-        } else { vx = dx / d; vy = dy / d; }
+          this._eje4 = null;
+          if (this.moveTarget) { dx = this.moveTarget.x - hero.x; dy = this.moveTarget.y - hero.y; }
+        }
+        if (this.moveTarget) { const e = eje4(dx, dy, this._eje4); vx = e.vx; vy = e.vy; this._eje4 = e.eje; this._ejeResta = e.resta; }
       }
     }
     const moving = !!(vx || vy);
     if (moving) {
-      const m = Math.hypot(vx, vy); vx /= m; vy /= m;
-      const step = GF.SPEED * ZONA_NEGRA_VEL * speedMult() * playerSlowMult() * dt, nx = hero.x + vx * step, ny = hero.y + vy * step;   // detallitos: más lento en la Zona Negra
+      let step = GF.SPEED * ZONA_NEGRA_VEL * speedMult() * playerSlowMult() * dt;   // detallitos: más lento en la Zona Negra
+      if (this.moveTarget && this._ejeResta) step = Math.min(step, this._ejeResta);
+      const nx = hero.x + vx * step, ny = hero.y + vy * step;
       let moved = false;
       if (!this.blockedAt(nx, ny, 6)) { hero.x = nx; hero.y = ny; moved = true; }
       else { if (vx && !this.blockedAt(nx, hero.y, 6)) { hero.x = nx; moved = true; } if (vy && !this.blockedAt(hero.x, ny, 6)) { hero.y = ny; moved = true; } }
-      if (!moved) {
-        const base = Math.atan2(vy, vx);
-        for (const off of [0.5, -0.5, 1.0, -1.0, 1.571, -1.571, 2.1, -2.1]) {
-          const a = base + off, sx = hero.x + Math.cos(a) * step, sy = hero.y + Math.sin(a) * step;
-          if (!this.blockedAt(sx, sy, 6)) { hero.x = sx; hero.y = sy; moved = true; break; }
-        }
-      }
+      /* (la esquiva en ángulo se fue el 31/8 con las diagonales — ver farm.js) */
       if (moved) this.pathStuck = 0;
       else if (this.moveTarget) {
         this.pathStuck = (this.pathStuck || 0) + 1;
@@ -1013,20 +1012,39 @@ class ForestScene extends Phaser.Scene {
       const dHero = Math.hypot(hero.x - m.cx, hero.y - m.by);
       const aggro = m.hp < m.def.hp || dHero < 110;   // te vio o lo golpeaste
       let moved = false;
+      /* 31/8 — LOS BICHOS TAMBIÉN CAMINAN EN CUATRO DIRECCIONES (« y los bichos igual »), con la
+         misma eje4 del héroe: un eje por vez, con histéresis para que salgan eles y no escaleras.
+         Y de paso dejan de ATRAVESAR COSAS: cada paso consulta blockedAt, con el eje contrario
+         de respaldo — un bicho que persigue en línea recta a través de una roca era el « hay que
+         hacer bien el pathfinding para no colisionar » del reporte, versión monstruo. */
+      const pasoMob = (dx, dy, sp) => {
+        const e = eje4(dx, dy, m._eje4); m._eje4 = e.eje;
+        if (!e.vx && !e.vy) return false;
+        const paso = Math.min(sp, e.resta);
+        let nx = m.cx + e.vx * paso, ny = m.by + e.vy * paso;
+        if (!this.blockedAt(nx, ny, 6)) { m.cx = nx; m.by = ny; return true; }
+        /* bloqueado en su eje: prueba el otro para bordear (sigue siendo 4-dir: un eje por cuadro) */
+        const ax = e.vx ? 0 : Math.sign(dx), ay = e.vx ? Math.sign(dy) : 0;
+        if (ax || ay) {
+          nx = m.cx + ax * sp; ny = m.by + ay * sp;
+          if (!this.blockedAt(nx, ny, 6)) { m._eje4 = ax ? "h" : "v"; m.cx = nx; m.by = ny; return true; }
+        }
+        return false;
+      };
       const stopD = m.def.range ? Math.max(36, m.def.range - 40) : 36;   // el arquero pelea a distancia
       if (aggro && dHero > stopD) {
         const dx = hero.x - m.cx, dy = hero.y - m.by, d = Math.hypot(dx, dy) || 1;
         const sp = Math.min(m.def.spd * dt, d - stopD);   // viernes (2): frena al borde de tu celda, nunca la pisa
-        m.cx += dx / d * sp; m.by += dy / d * sp; moved = true;
+        moved = pasoMob(dx, dy, sp);
       } else if (aggro && dHero < 28) {
         // quedó encima (spawn/empuje): se corre hacia atrás hasta dejar tu celda
-        const dx = m.cx - hero.x, dy = m.by - hero.y, d = Math.hypot(dx, dy) || 1;
-        const sp = m.def.spd * 0.8 * dt;
-        m.cx += dx / d * sp; m.by += dy / d * sp; moved = true;
+        moved = pasoMob(m.cx - hero.x, m.by - hero.y, m.def.spd * 0.8 * dt);
       } else if (!aggro) {
         // deambular cerca de casa
         if (t > (m.wanderAt || 0)) { m.wanderAt = t + 2500 + Math.random() * 3000; m.wtgt = { x: m.home.x + (Math.random() - 0.5) * 120, y: m.home.y + (Math.random() - 0.5) * 90 }; }
-        if (m.wtgt) { const dx = m.wtgt.x - m.cx, dy = m.wtgt.y - m.by, d = Math.hypot(dx, dy); if (d > 3) { const sp = m.def.spd * 0.35 * dt; m.cx += dx / d * sp; m.by += dy / d * sp; moved = true; } }
+        if (m.wtgt && Math.hypot(m.wtgt.x - m.cx, m.wtgt.y - m.by) > 3) {
+          moved = pasoMob(m.wtgt.x - m.cx, m.wtgt.y - m.by, m.def.spd * 0.35 * dt);
+        }
       }
       // sangrado del arco (doc 2/8): tic por segundo mientras dure
       if (m.bleed && t < m.bleed.until) {

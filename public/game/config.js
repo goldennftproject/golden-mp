@@ -954,3 +954,40 @@ function cieloDelMomento(min) {
 function esDeNoche(min) { return cieloDelMomento(min).alpha > CIELO_NOCHE_MIN; }
 window.cieloDelMomento = cieloDelMomento;
 window.esDeNoche = esDeNoche;
+
+/* ═══ EL MOVIMIENTO ES EN CUATRO DIRECCIONES (31/8, dirección, con los vídeos de referencia) ═══
+   « Las únicas direcciones a las que se debe mover es arriba, abajo, izquierda, derecha. Las
+     esquinas deberían estar bloqueadas: para cruzar por un lugar te movés con esas cuatro
+     direcciones. Y los bichos igual. »
+   Dos ayudantes compartidos, porque hay TRES escenas que mueven cosas (granja, Zona Negra,
+   plaza) y tres copias de la misma regla son tres reglas que envejecen distinto.
+
+   sinDiagonal: para el TECLADO. Con dos ejes apretados gana el que se apretó ÚLTIMO — es lo que
+   hace natural doblar una esquina sin soltar la tecla vieja, y es como lo resuelven los juegos
+   de grilla desde siempre. El estado del "último eje" vive en la escena que lo llama.
+
+   eje4: para SEGUIR UN DESTINO (waypoints del A*, persecución, mobs). Se camina un eje por vez
+   —primero el que tiene más distancia— y salen las eles que se ven en los vídeos. El umbral de
+   3 px evita el zigzag en la punta: por debajo de un paso de cuadro no se cambia de eje. */
+function sinDiagonal(esc, vx, vy) {
+  const hor = !!vx, ver = !!vy;
+  if (hor && !esc._t4h) esc._ejeUlt = "h";
+  if (ver && !esc._t4v) esc._ejeUlt = "v";
+  esc._t4h = hor; esc._t4v = ver;
+  if (vx && vy) { if (esc._ejeUlt === "h") vy = 0; else vx = 0; }
+  return { vx, vy };
+}
+/* `pref` es el eje que se venía usando: SE TERMINA UN EJE ANTES DE EMPEZAR EL OTRO. Sin esta
+   histéresis, un destino en diagonal perfecta alternaría eje en cada cuadro y el resultado sería
+   una escalerita de 2 px — o sea, la diagonal de siempre disfrazada. Con ella salen eles. */
+function eje4(dx, dy, pref) {
+  const ax = Math.abs(dx), ay = Math.abs(dy);
+  if (pref === "h" && ax > 3) return { vx: Math.sign(dx), vy: 0, eje: "h", resta: ax };
+  if (pref === "v" && ay > 3) return { vx: 0, vy: Math.sign(dy), eje: "v", resta: ay };
+  if (ax > 3 && ax >= ay) return { vx: Math.sign(dx), vy: 0, eje: "h", resta: ax };
+  if (ay > 3) return { vx: 0, vy: Math.sign(dy), eje: "v", resta: ay };
+  if (ax > 3) return { vx: Math.sign(dx), vy: 0, eje: "h", resta: ax };
+  return { vx: 0, vy: 0, eje: null, resta: 0 };
+}
+window.sinDiagonal = sinDiagonal;
+window.eje4 = eje4;

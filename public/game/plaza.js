@@ -127,8 +127,11 @@ class PlazaScene extends Phaser.Scene {
       if (k.left.isDown || k.aleft.isDown) vx = -1; else if (k.right.isDown || k.aright.isDown) vx = 1;
       if (k.up.isDown || k.aup.isDown) vy = -1; else if (k.down.isDown || k.adown.isDown) vy = 1;
     }
+    /* 31/8 — SIN DIAGONALES, la misma regla que la granja y la Zona Negra (config.js). La plaza
+       es donde te ven los demás: si acá quedara la diagonal vieja, tu granjero caminaría de una
+       forma en tu granja y de otra delante de todo el mundo. */
+    ({ vx, vy } = sinDiagonal(this, vx, vy));
     const moving = !!(vx || vy);
-    if (vx && vy) { vx *= 0.7071; vy *= 0.7071; }
     if (moving) {
       const step = GF.SPEED * speedMult() * dt;
       this.me.x = Phaser.Math.Clamp(this.me.x + vx * step, 16, this.pW - 16);

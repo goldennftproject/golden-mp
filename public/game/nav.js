@@ -44,10 +44,22 @@ GF.Nav = class {
     for (let k = 1; k <= n; k++) { const t = k / n; if (this.blocked(x0 + (x1 - x0) * t, y0 + (y1 - y0) * t, 6)) return false; }
     return true;
   }
-  // devuelve una lista de waypoints hasta el destino, o null si no hay camino
+  /* devuelve una lista de waypoints hasta el destino, o null si no hay camino.
+
+     31/8 — EL CAMINO ES EN CUATRO DIRECCIONES (dirección, con los vídeos de referencia): « las
+     esquinas deberían estar bloqueadas; para cruzar por un lugar te movés con esas cuatro
+     direcciones ». Tres cosas cambiaron acá, y las tres eran fuentes de diagonales:
+       · los OCHO vecinos del A* pasan a ser CUATRO — antes el camino salía en diagonal de fábrica;
+       · el atajo « ¿hay línea recta al destino? » solo vale si esa recta es horizontal o
+         vertical — antes cualquier destino a la vista se iba en diagonal pura sin pisar el A*;
+       · el suavizado ya no se salta waypoints por línea libre (esa línea era diagonal): ahora
+         solo COMPRIME tramos colineales, así el camino queda hecho de eles.
+     Quien recorre el camino (eje4 en cada escena) hace la parte que falta: el tramo del héroe al
+     primer nodo y del último al destino exacto también se caminan eje por eje. */
   find(sx, sy, tx, ty) {
     if (!this.grid) this.build();
-    if (this.lineFree(sx, sy, tx, ty)) return [{ x: tx, y: ty }];
+    const recta = (Math.abs(tx - sx) < 6 || Math.abs(ty - sy) < 6);
+    if (recta && this.lineFree(sx, sy, tx, ty)) return [{ x: tx, y: ty }];
     const W = this.cols, N = this.cols * this.rows;
     const a0 = this.nearestFree(sx, sy), b0 = this.nearestFree(tx, ty);
     if (!a0 || !b0) return null;
@@ -55,33 +67,52 @@ GF.Nav = class {
     const start = a0.j * W + a0.i, end = b0.j * W + b0.i;
     const gsc = new Float32Array(N).fill(Infinity), fsc = new Float32Array(N).fill(Infinity), prev = new Int32Array(N).fill(-1);
     const open = [start], inOpen = new Uint8Array(N), done = new Uint8Array(N);
-    const h = (n) => { const i = n % W, j = (n - i) / W; return Math.hypot(i - b0.i, j - b0.j); };
+    /* la heurística acompaña: Manhattan, que es la distancia real cuando solo hay cuatro rumbos */
+    const h = (n) => { const i = n % W, j = (n - i) / W; return Math.abs(i - b0.i) + Math.abs(j - b0.j); };
     gsc[start] = 0; fsc[start] = h(start); inOpen[start] = 1;
-    const DIRS = [[1,0,1],[-1,0,1],[0,1,1],[0,-1,1],[1,1,1.414],[1,-1,1.414],[-1,1,1.414],[-1,-1,1.414]];
+    const DIRS = [[1, 0], [-1, 0], [0, 1], [0, -1]];
     while (open.length) {
       let b = 0; for (let a = 1; a < open.length; a++) if (fsc[open[a]] < fsc[open[b]]) b = a;
       const cur = open.splice(b, 1)[0]; inOpen[cur] = 0; done[cur] = 1;
       if (cur === end) break;
       const ci = cur % W, cj = (cur - ci) / W;
-      for (const [di, dj, w] of DIRS) {
+      for (const [di, dj] of DIRS) {
         const ni = ci + di, nj = cj + dj;
         if (!this.free(ni, nj)) continue;
-        if (di && dj && (!this.free(ci + di, cj) || !this.free(ci, cj + dj))) continue;   // no cortar esquinas
         const nn = nj * W + ni; if (done[nn]) continue;
-        const ng = gsc[cur] + w;
+        const ng = gsc[cur] + 1;
         if (ng < gsc[nn]) { gsc[nn] = ng; fsc[nn] = ng + h(nn); prev[nn] = cur; if (!inOpen[nn]) { open.push(nn); inOpen[nn] = 1; } }
       }
     }
     if (prev[end] < 0 && end !== start) return null;
     const nodes = []; for (let n = end; n >= 0; n = prev[n]) { nodes.unshift(n); if (n === start) break; }
-    // suavizado: saltarse waypoints mientras haya línea recta libre
     const pts = nodes.map(n => this.pt(n % W, (n - n % W) / W));
     if (tgtFree) pts.push({ x: tx, y: ty });
-    const out = []; let cx = sx, cy = sy, idx = 0;
-    while (idx < pts.length) {
-      let far = idx;
-      for (let a = pts.length - 1; a >= idx; a--) if (this.lineFree(cx, cy, pts[a].x, pts[a].y)) { far = a; break; }
-      out.push(pts[far]); cx = pts[far].x; cy = pts[far].y; idx = far + 1;
+    /* LOS MUÑONES TAMBIÉN VAN EN ELES. Los nodos de la grilla ya son axiales entre sí, pero el
+       tramo del héroe al PRIMER nodo y el del último nodo al DESTINO exacto salían oblicuos —
+       cortos (media celda), pero diagonales al fin. Se les mete su esquina, eligiendo de los dos
+       codos posibles el que no esté bloqueado. */
+    const linea = [];
+    let ant = { x: sx, y: sy };
+    for (const p of pts) {
+      if (Math.abs(p.x - ant.x) > 1 && Math.abs(p.y - ant.y) > 1) {
+        const c1 = { x: p.x, y: ant.y }, c2 = { x: ant.x, y: p.y };
+        if (!this.blocked(c1.x, c1.y, 6)) linea.push(c1);
+        else if (!this.blocked(c2.x, c2.y, 6)) linea.push(c2);
+      }
+      linea.push(p); ant = p;
+    }
+    /* compresión colineal: de una fila de veinte nodos hacia el este queda solo el último. El
+       camino resultante son las ESQUINAS de las eles, que es lo único que hace falta seguir. */
+    const out = [];
+    for (let i = 0; i < linea.length; i++) {
+      if (out.length >= 2) {
+        const a = out[out.length - 2], b = out[out.length - 1], c = linea[i];
+        const mismaX = Math.abs(a.x - b.x) < 1 && Math.abs(b.x - c.x) < 1;
+        const mismaY = Math.abs(a.y - b.y) < 1 && Math.abs(b.y - c.y) < 1;
+        if (mismaX || mismaY) { out[out.length - 1] = c; continue; }
+      }
+      out.push(linea[i]);
     }
     return out.length ? out : null;
   }
