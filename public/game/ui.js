@@ -752,7 +752,7 @@ function refreshHud() {
   // 18/8: el cartel de expansión del mapa refleja el material que tenés; la firma interna evita
   // que se rehaga si no cambió nada de lo que se ve.
   if (window.FARM && window.FARM.dibujarExpansion) { try { window.FARM.dibujarExpansion(); } catch (e) {} }
-  refreshStam(); setTxt("s-level", G.level); setTxt("s-prestige", G.prestige); setNum("s-plata", G.plata); setNum("s-golden", G.golden); setTxt("s-week", (typeof semanaActual === "function") ? semanaActual() : G.week); setTxt("s-hp", Math.ceil(G.hp) + "/" + G.hpMax); refreshCombatBar(); if (typeof checkCooking === "function") checkCooking(); if (typeof checkHorno === "function") checkHorno(); if (typeof refreshHotbar === "function") refreshHotbar(); }
+  refreshStam(); setTxt("s-level", G.level); setTxt("s-prestige", G.prestige); setNum("s-plata", G.plata); setNum("s-golden", G.golden); setTxt("s-week", (typeof semanaActual === "function") ? semanaActual() : G.week); setTxt("s-hp", Math.ceil(G.hp) + "/" + G.hpMax); refreshCombatBar(); refreshFarmBar(); bindFarmPill(); if (typeof checkCooking === "function") checkCooking(); if (typeof checkHorno === "function") checkHorno(); if (typeof refreshHotbar === "function") refreshHotbar(); }
 // clic en la barra de estamina: ofrece la recarga premium (con su tope diario)
 function bindStamPill() {
   const pill = document.getElementById("stampill"); if (!pill || pill._bound) return;
@@ -796,6 +796,57 @@ function refreshCombatBar() {   // doc maestro 2/8: insignia de nivel + relleno 
   el.textContent = ci.lvl;
   setTxt("c-xp", fmt(ci.into) + "/" + fmt(ci.need));
   const f = document.getElementById("c-fill"); if (f) f.style.width = Math.min(100, ci.into / ci.need * 100).toFixed(1) + "%";
+}
+/* LA BARRA DE LA GRANJA EN EL HUD   (31/8, de los vídeos de referencia de dirección)
+   El nivel de granja era el único sin barra a la vista — el de Combate, a dos centímetros, la
+   tiene desde el 2/8—. Y del nivel 11 en adelante subir pide DOS cosas, XP y tareas, así que un
+   solo número engaña doble: podés tener la XP completa y estar « al 100 % » sin subir nunca.
+
+   La barra cuenta las dos mitades: mientras falta XP, mide XP en verde; con la XP completa y
+   tareas pendientes, se queda llena y pasa a ámbar con el texto « tareas » — no esperes más
+   cosecha, andá a mirar qué te piden. El tooltip lo dice con números, y el clic abre la ventana
+   de la Granja, que es donde las tareas viven desde siempre. La barra no REEMPLAZA esa ventana:
+   es el cartel que avisa de que existe. */
+function refreshFarmBar() {
+  const f = document.getElementById("lvl-fill"), t = document.getElementById("lvl-txt"),
+        pill = document.getElementById("lvlpill");
+  if (!f || typeof FARM_XP_LVLS === "undefined") return;
+  const sig = G.level + 1;
+  if (sig > FARM_NIVEL_MAX) {
+    f.style.width = "100%"; f.classList.remove("tareas");
+    if (t) t.textContent = "MAX";
+    if (pill) pill.title = "Nivel máximo de granja";
+    return;
+  }
+  const desde = FARM_XP_LVLS[G.level] || 0, hasta = FARM_XP_LVLS[sig] || (desde + 1);
+  const xp = Math.floor(G.skills.farming || 0);
+  const pctXp = Math.max(0, Math.min(100, (xp - desde) / Math.max(1, hasta - desde) * 100));
+  const tareas = (typeof tareasDelNivel === "function") ? tareasDelNivel(sig) : [];
+  const hechas = tareas.filter(x => tareaProgreso(x) >= x[2]).length;
+  const soloTareas = pctXp >= 100 && hechas < tareas.length;
+  f.style.width = pctXp.toFixed(1) + "%";
+  f.classList.toggle("tareas", soloTareas);
+  if (t) t.textContent = soloTareas ? "tareas " + hechas + "/" + tareas.length
+    : fmt(Math.max(0, xp - desde)) + "/" + fmt(hasta - desde);
+  if (pill) {
+    /* el tooltip dice TODO lo que falta, porque es lo que uno viene a preguntarle a la barra.
+       La XP se TOPA a la necesaria: con la XP de sobra y tareas pendientes, « 8k / 7.5k » se lee
+       como un error de cuenta cuando en realidad es « esta parte ya está ». */
+    let tip = "Nivel " + sig + ": " + fmt(Math.min(hasta - desde, Math.max(0, xp - desde))) + " / " + fmt(hasta - desde) + " XP de cosecha";
+    if (tareas.length) {
+      tip += " · tareas " + hechas + "/" + tareas.length;
+      const pend = tareas.filter(x => tareaProgreso(x) < x[2]).slice(0, 2)
+        .map(x => tareaLabel(x) + " (" + Math.min(tareaProgreso(x), x[2]) + "/" + x[2] + ")");
+      if (pend.length) tip += " — " + pend.join(" · ");
+    }
+    pill.title = tip + " · clic para ver la Granja";
+  }
+}
+/* el clic en la píldora abre la ventana de la Granja — la barra avisa, la ventana explica */
+function bindFarmPill() {
+  const pill = document.getElementById("lvlpill"); if (!pill || pill._bound) return;
+  pill._bound = true;
+  pill.onclick = () => { if (typeof openOv === "function") openOv("ov-barn"); };
 }
 
 /* ---- inventario por casillas (todo es ítem; arrastrar para reordenar) ---- */

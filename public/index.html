@@ -35,6 +35,11 @@
   .cbarw{width:78px;height:9px;background:rgba(0,0,0,.5);border:1px solid #241505;overflow:hidden;display:inline-block;image-rendering:pixelated}
   .cfill{display:block;height:100%;width:0%;background:linear-gradient(180deg,#ffe08a,#e0a63c 55%,#b97c17);transition:width .35s ease}
   .cfill.stamf{background:linear-gradient(180deg,#a8e6ff,#4aa8d8 55%,#1d6f9c)}   /* estamina: celeste */
+  .cfill.lvlf{background:linear-gradient(180deg,#c8e89a,#8fd06a 55%,#4f8f2f)}    /* granja: verde, como las barras de oficio */
+  /* cuando la XP ya está y lo que falta son TAREAS, la barra se queda llena y ámbar: « no esperes
+     más cosecha — andá a mirar qué te piden ». El color solo no alcanza, por eso el texto de al
+     lado también cambia a « tareas », pero el color es lo que se ve de reojo. */
+  .cfill.lvlf.tareas{background:linear-gradient(180deg,#ffe08a,#e0a63c 55%,#b97c17)}
   #cbar.fight .cfill{animation:cpulse 1s infinite}
   @keyframes cpulse{0%,100%{filter:brightness(1)}50%{filter:brightness(1.4)}}
   .coin{display:inline-block;width:14px;height:14px;border-radius:50%;flex:0 0 auto}
@@ -895,7 +900,12 @@
       <button id="btn-test-kit" class="pill" style="display:none;cursor:pointer;border:1px dashed #e2b23a;background:transparent;color:#ffe08a" title="Kit de pruebas: +1000 madera y +1000 piedra">🧪 PRUEBAS</button>
     </div>
     <div class="hud">
-      <div class="pill"><span class="k">Granja</span><b id="s-level">1</b><span class="k">/50</span></div>
+      <!-- 31/8 (de los vídeos de referencia de dirección, el panel de Skills de Tibia): el nivel
+           de granja lleva su barra EN el HUD, como ya la lleva el de Combate al lado. Era el
+           único nivel del juego sin barra a la vista: la ventana de la Granja la tiene desde
+           siempre, pero había que saber que existía para ir a buscarla. Clic: abre esa ventana,
+           que es donde viven las tareas. -->
+      <div class="pill cpill" id="lvlpill" style="cursor:pointer"><span class="k">Granja</span><b id="s-level">1</b><span class="k">/50</span><span class="cbarw"><span class="cfill lvlf" id="lvl-fill"></span></span><span class="k" id="lvl-txt"></span></div>
       <div class="pill"><span class="k">Prestigio</span><b id="s-prestige">0</b></div>
       <div class="pill" title="Plata — la moneda del juego"><img class="ric" src="assets/farm/coin_plata.png?a=4" onerror="this.outerHTML='<span class=&quot;coin silver&quot;></span>'"><b id="s-plata">0</b></div>
       <div class="pill" title="Esencia $Golden — se usa para pescar"><img class="ric" src="assets/farm/coin_esencia.png?a=4" onerror="this.outerHTML='✨'"><b id="s-golden">20</b></div>
