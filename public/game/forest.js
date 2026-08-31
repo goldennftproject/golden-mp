@@ -364,6 +364,49 @@ class ForestScene extends Phaser.Scene {
     const near = this.nearestMonster(MELEE_RANGE) || (canShoot() ? this.nearestMonster(BOW_RANGE) : null);
     if (near) { this.setTarget(near); this.autoOn = true; }   // E/espacio ataca, como el clic derecho
   }
+  /* ── LA PERSECUCIÓN (Chase Opponent de Tibia, 31/8) ─────────────────────────────────────────
+     Dirección pidió mirar cómo es el combate de Tibia, y esta era la pieza que faltaba: con un
+     objetivo fijado, el personaje CAMINA SOLO hasta ponerse a distancia de su arma y ahí el
+     auto-ataque hace el resto. Sin esto, fijar un bicho lejano era mirar cómo no pasaba nada.
+
+     LAS REGLAS, en orden de quién manda:
+     · el jugador SIEMPRE manda: si está moviéndose (teclas o clic sostenido), la persecución no
+       toca nada, y retoma sola al soltar — es el « Auto Chase » de Tibia, sin la opción de
+       apagarlo porque la versión que molesta es la otra.
+     · se persigue hasta la distancia del ARMA: con espada, al cuerpo; con arco (y flechas), se
+       planta a distancia de tiro — el arquero de Tibia pelea en « Stand », y acá eso sale solo
+       de no acercarse más de lo que hace falta.
+     · el destino se re-planifica con el reloj del holdSeek (~cada 300 ms), no cada cuadro: el
+       A* no es gratis y el bicho no se teletransporta. */
+  autoChase(t) {
+    if (!this.autoOn || this.action) return;
+    const m = this.target;
+    if (!m || m.dead) return;
+    const k = this.keys;
+    const manual = k.left.isDown || k.right.isDown || k.up.isDown || k.down.isDown ||
+                   k.aleft.isDown || k.aright.isDown || k.aup.isDown || k.adown.isDown ||
+                   (this.hold && this.hold.active);
+    if (manual) { this._chaseTo = null; return; }
+    /* la distancia a la que este arma pelea. El margen (0,8) evita el borde exacto del rango,
+       donde un paso del bicho te saca y te mete dos veces por segundo. */
+    const alcance = (swordDmg() > 0) ? MELEE_RANGE * 0.8 : (canShoot() ? BOW_RANGE * 0.8 : 0);
+    if (!alcance) return;                       // sin arma útil no se persigue: no habría golpe al llegar
+    const d = Math.hypot(m.cx - this.hero.x, m.by - this.hero.y);
+    if (d <= alcance) {
+      /* ya está a tiro: si la persecución era dueña del movimiento, frena. Un destino viejo
+         seguiría arrastrando al granjero hasta encimarse con el bicho. */
+      if (this._chaseTo) { this.moveTarget = null; this.path = null; this._chaseTo = null; }
+      return;
+    }
+    /* re-planificar como mucho cada 300 ms, y antes de eso solo si el destino sigue valiendo:
+       si el bicho se apartó más de 14 px de donde íbamos, el próximo intervalo lo corrige */
+    if (t - (this._chaseAt || 0) < 300) return;
+    if (this._chaseTo && Math.hypot(m.cx - this._chaseTo.x, m.by - this._chaseTo.y) < 14 && this.moveTarget) return;
+    this._chaseAt = t;
+    this._chaseTo = { x: m.cx, y: m.by };
+    if (this.navOf().lineFree(this.hero.x, this.hero.y, m.cx, m.by)) { this.path = null; this.moveTarget = { x: m.cx, y: m.by }; }
+    else this.goTo(m.cx, m.by, true);           // silencioso: si no hay camino, el ataque espera igual
+  }
   // auto-ataque: un golpe cada 2s mientras el objetivo esté vivo y a distancia (detalles 338)
   autoAttack(t) {
     if (!this.autoOn) return;   // detalles viernes: el auto-ataque es SOLO con clic derecho
@@ -840,6 +883,7 @@ class ForestScene extends Phaser.Scene {
     if (this.target && this.target.dead) this.clearTarget();
     this.updateTargetFx();
     this.autoAttack(t);
+    this.autoChase(t);   // 31/8: con objetivo fijado, el granjero camina solo hasta su distancia de arma
     if (t > (this._stAt || 0)) { this._stAt = t + 300; this.tickStates(); }
     this.tryPickup(hero.x, hero.y, 24);   // recoger el loot del piso al pasar por encima
     if (this.hold && this.hold.active && this.holdPend && t - (this.holdAt || 0) > 130) { const hp = this.holdPend; this.holdPend = null; this.holdSeek(hp.x, hp.y); }

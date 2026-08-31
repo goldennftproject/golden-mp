@@ -85,6 +85,48 @@ console.log("\nEL CICLO DEL OBJETIVO   (con los métodos reales de la escena)");
   ok("muerto el bicho, la marca y el auto-ataque se apagan", !esc.target && !esc.autoOn);
 }
 
+console.log("\nLA PERSECUCIÓN   (Chase Opponent: el granjero camina solo hasta su distancia de arma)");
+{
+  const esc = escena(), m = mob(MELEE * 4, 0);
+  esc.keys = { left: {}, right: {}, up: {}, down: {}, aleft: {}, aright: {}, aup: {}, adown: {} };
+  esc.navOf = () => ({ lineFree: () => true, find: () => null });
+  esc.setTarget(m); esc.autoOn = true;
+
+  /* lejos y sin tocar nada: el granjero sale solo hacia el bicho */
+  esc.autoChase(1000);
+  ok("con el objetivo lejos, camina solo hacia él", !!esc.moveTarget,
+    esc.moveTarget && "(" + esc.moveTarget.x + ", " + esc.moveTarget.y + ")");
+  console.log("       → era la pieza de Tibia que faltaba: fijar un bicho lejano era mirar cómo");
+  console.log("         no pasaba nada. El auto-ataque esperaba a que TE acercaras vos.");
+
+  /* el bicho se corre un poco: no re-planifica cada cuadro */
+  m.cx += 5;
+  esc.autoChase(1100);
+  ok("un pasito del bicho no re-planifica la ruta (A* con reloj, no por cuadro)",
+    esc.moveTarget && esc.moveTarget.x === MELEE * 4, "el destino viejo sigue valiendo");
+
+  /* llega a distancia: frena — no se encima con el bicho */
+  esc.hero.x = m.cx - MELEE * 0.5;
+  esc.autoChase(1500);
+  ok("al llegar a distancia de espada, FRENA", !esc.moveTarget,
+    "sin esto seguiría hasta encimarse con el bicho");
+
+  /* el jugador toca una tecla: su movimiento manda */
+  esc.hero.x = 0; esc.keys.left.isDown = true;
+  esc.autoChase(2000);
+  ok("si el jugador se mueve, su movimiento MANDA: la persecución no toca nada", !esc.moveTarget);
+  esc.keys.left.isDown = false;
+  esc.autoChase(2400);
+  ok("y al soltar la tecla, retoma sola", !!esc.moveTarget, "el Auto Chase de Tibia");
+
+  /* sin arma útil no se persigue: no habría golpe al llegar */
+  const armaAntes = G.gear.arma; G.gear.arma = null;
+  esc.moveTarget = null; esc._chaseTo = null; esc._chaseAt = 0;
+  esc.autoChase(3000);
+  ok("sin arma no persigue: no habría golpe al llegar", !esc.moveTarget);
+  G.gear.arma = armaAntes;
+}
+
 console.log("\nEL CABLEADO DEL CLIC   (fijado con fuente: los handlers viven dentro de create)");
 {
   const src = fs.readFileSync(path.join(RAIZ, "public/game/forest.js"), "utf8");
