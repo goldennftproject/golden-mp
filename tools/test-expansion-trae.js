@@ -87,11 +87,18 @@ console.log("\nY EL PRECIO USA LA MISMA LISTA QUE EL MUNDO");
     copias.length + " copias — el fallo del 26/8 fue tenerla en config.js y en state.js");
 }
 
-console.log("\nEL CARTEL NO ESTÁ ESCRITO A MANO EN LA ESCENA");
+console.log("\nEL «TRAE…» SE DERIVA — Y DESDE EL 1/9 LO PINTA EL RECUADRO, NO LA CHAPA");
 {
+  /* 1/9 (dirección): la chapa del mundo quedó como invitación y toda la información se mudó
+     al recuadro de expansión. Lo que este bloque defendía —que el premio se DERIVE de
+     expansionTrae y no de una cadena a mano— sigue en pie, solo que ahora el consumidor es
+     refreshExpandir en ui.js (test-expansion-recuadro.js mide el recuadro entero). */
+  const UI = fs.readFileSync(path.join(RAIZ, "public/game/ui.js"), "utf8")
+    .replace(/\/\*[\s\S]*?\*\//g, "").replace(/(^|[^:])\/\/[^\n]*/g, "$1");
+  ok("el recuadro pide el premio a expansionTrae()", /expansionTrae\(ex\.n\)/.test(UI));
   const FARM = fs.readFileSync(path.join(RAIZ, "public/game/farm.js"), "utf8")
     .replace(/\/\*[\s\S]*?\*\//g, "").replace(/(^|[^:])\/\/[^\n]*/g, "$1");
-  ok("farm.js pide el texto a expansionTraeTxt()", /expansionTraeTxt\(/.test(FARM));
+  ok("y la chapa del mundo ya no lo duplica", !/expansionTraeTxt\(/.test(FARM));
   /* que quede el respaldo por si la función no existe está BIEN; lo que no puede es ser la única
      fuente. Se comprueba que la llamada esté, no que la cadena no aparezca. */
   const suelto = FARM.match(/"Trae [^"]*"/g) || [];

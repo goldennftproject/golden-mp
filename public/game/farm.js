@@ -3960,11 +3960,11 @@ class FarmScene extends Phaser.Scene {
      el centro que dice qué cuesta. Se ve el terreno antes de pagarlo, que es de lo que se trata. */
   dibujarExpansion() {
     const ex = (typeof expansionSiguiente === "function") ? expansionSiguiente() : null;
-    // FIRMA: el cartel se redibuja solo si cambió algo que se VE (el bloque, el nivel, o cuánto
-    // material tenés de lo que pide). Sin esto habría que destruir y rehacer ~40 objetos en cada
-    // refresco del HUD, o sea varias veces por segundo.
-    const firma = !ex ? "-" : [ex.n, G.level, Object.keys(ex.costo)
-      .map(k => k + Math.min(Math.floor((G.res && G.res[k]) || 0), ex.costo[k])).join("|")].join("/");
+    // FIRMA: el cartel se redibuja solo si cambió algo que se VE. Desde el 1/9 la chapa ya no
+    // enseña materiales (eso es del recuadro), así que la firma se queda con lo que sí pinta:
+    // el bloque, el nivel, y si el jugador ya puede pagar (el color y el latido).
+    const firma = !ex ? "-" : [ex.n, G.level,
+      ((G.level || 1) >= ex.nivel && typeof canAfford === "function" && canAfford(ex.costo)) ? 1 : 0].join("/");
     if (this.expFx && this._expFirma === firma) return;
     this._expFirma = firma;
     if (this.expFx) { this.expFx.forEach(o => { try { o.destroy(); } catch (e) {} }); }
@@ -4013,56 +4013,31 @@ class FarmScene extends Phaser.Scene {
     for (let y = y0 + paso / 2; y < y0 + h; y += paso) for (const x of [x0, x0 + w]) estaca(x, y);
     estacas.forEach(o => { o.setVisible(false); this.expFx.push(o); });
 
-    // el cartel del centro: qué cuesta, en verde lo que tenés y en rojo lo que falta
+    /* 1/9 (dirección, tras ver el recuadro): « habría que quitar la información que hay al
+       pasar el cursor… al cliquear te muestra la interfaz con todo, así que los datos del
+       hover no tienen sentido ». La chapa deja de ser un resumen de costos —eso ahora es el
+       trabajo del recuadro— y pasa a ser una INVITACIÓN: EXPANDIR, la manito, y nada más.
+       Se conserva la señal de color (dorado = ya podés pagar, plata = todavía no) y el latido
+       del cartel dorado, que son lectura de un vistazo, no información duplicada.
+       (Acá vivían el nivel requerido, cada material en verde/rojo y el « Trae… » derivado —
+       tres iteraciones de dirección del 20-26/8 que hoy se mudan enteras al recuadro.) */
     const cx = x0 + w / 2, cy = y0 + h / 2;
     const D = 99980;
     this.expCartel = [];   // lo que solo se ve con el cursor encima (o siempre, si ya lo podés pagar)
-    const chapa = this.add.rectangle(cx, cy, 148, 56, 0x1d2a14, 0.86)
+    const chapa = this.add.rectangle(cx, cy, 132, 44, 0x1d2a14, 0.86)
       .setStrokeStyle(2, col, 0.9).setDepth(D).setInteractive({ useHandCursor: true });
     this.expFx.push(chapa); this.expCartel.push(chapa);
-    { const t = this.add.text(cx, cy - 18, "EXPANDIR",
+    { const t = this.add.text(cx, cy - 8, "EXPANDIR",
         { fontFamily: "system-ui", fontSize: "12px", fontStyle: "bold", color: "#ffe08a" })
         .setOrigin(0.5, 0.5).setDepth(D + 1);
       this.expFx.push(t); this.expCartel.push(t); }
-    {
-      /* 22/8: sin nivel, la primera línea de la chapa es el REQUISITO — el resto de la info va igual */
-      let fila = 0;
-      if (falta) {
-        const tN = this.add.text(cx, cy - 2, "Granja nivel " + ex.nivel + " (tenés " + (G.level || 1) + ")",
-          { fontFamily: "system-ui", fontSize: "10px", fontStyle: "bold", color: "#ffcf9a" })
-          .setOrigin(0.5, 0.5).setDepth(D + 1);
-        this.expFx.push(tN); this.expCartel.push(tN);
-        fila = 1;
-      }
-      const partes = Object.keys(ex.costo).map(k => {
-        const tengo = Math.floor((G.res && G.res[k]) || 0);
-        return { txt: (RES_LABEL[k] || k) + " " + tengo + "/" + ex.costo[k], ok: tengo >= ex.costo[k] };
-      });
-      partes.forEach((p, i) => {
-        const t3 = this.add.text(cx, cy - 2 + (fila + i) * 12, p.txt,
-          { fontFamily: "system-ui", fontSize: "10px", fontStyle: "bold", color: p.ok ? "#9fe07a" : "#ff9a8a" })
-          .setOrigin(0.5, 0.5).setDepth(D + 1);
-        this.expFx.push(t3); this.expCartel.push(t3);
-      });
-      /* 20/8 (dirección): "en la chapa donde está el costo, abajo debería decir lo que te
-         desbloquea". Y segunda pasada: "la información de las celdas no es importante, pero la
-         de los nodos y la parcela sí" — las celdas se ven solas al expandir; el premio es esto: */
-      /* 26/8 (diseñador): el texto se DERIVA de lo que la expansión trae de verdad. Estaba escrito
-         a mano y se comía las vetas de bronce y oro de siete de las dieciséis — justo el dato que
-         decide si vale la pena pagarla. Las que traen veta se pintan en dorado, para que se vean
-         distintas de un vistazo sin tener que leer. */
-      const conVeta = (typeof expVetas === "function") && expVetas(ex.n);
-      const premio = this.add.text(cx, cy - 2 + (fila + partes.length) * 12 + 3,
-        (typeof expansionTraeTxt === "function") ? expansionTraeTxt(ex.n) : "Trae árbol · roca · parcela",
-        { fontFamily: "system-ui", fontSize: "9px", fontStyle: conVeta ? "bold" : "normal",
-          color: conVeta ? "#ffd75e" : "#cfe0c0", align: "center", wordWrap: { width: 140 } })
+    { const t2 = this.add.text(cx, cy + 9, "👆 clic para los detalles",
+        { fontFamily: "system-ui", fontSize: "9px", color: "#cfe0c0" })
         .setOrigin(0.5, 0.5).setDepth(D + 1);
-      this.expFx.push(premio); this.expCartel.push(premio);
-      chapa.setSize(148, 34 + (fila + partes.length) * 12 + 14);
-      if (puede) {   // late suave cuando ya lo podés pagar: el cartel pide que lo toques
-        this.tweens.add({ targets: chapa, scaleX: 1.04, scaleY: 1.04, duration: 700,
-          yoyo: true, repeat: -1, ease: "Sine.easeInOut" });
-      }
+      this.expFx.push(t2); this.expCartel.push(t2); }
+    if (puede) {   // late suave cuando ya lo podés pagar: el cartel pide que lo toques
+      this.tweens.add({ targets: chapa, scaleX: 1.04, scaleY: 1.04, duration: 700,
+        yoyo: true, repeat: -1, ease: "Sine.easeInOut" });
     }
     // arranca OCULTO: solo se ve con el cursor encima. La ÚNICA excepción es cuando ya lo podés
     // pagar: ahí el cartel dorado se queda a la vista porque es una llamada a la acción, no un

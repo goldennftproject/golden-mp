@@ -76,27 +76,24 @@ function pintar(nivel, recursos) {
 const ex = ctx.expansionSiguiente();
 console.log("\nLA PRIMERA EXPANSIÓN PIDE NIVEL " + ex.nivel);
 
-console.log("\nPOR DEBAJO DEL NIVEL: EL LOTE SE MUESTRA IGUAL, CON SU REQUISITO EN LA CHAPA (22/8)");
+console.log("\nPOR DEBAJO DEL NIVEL: EL LOTE SE MUESTRA IGUAL, Y LA CHAPA SOLO INVITA (1/9)");
 {
-  /* 22/8 (dirección, revierte al 20/8): "la próxima expansión se tiene que mostrar aunque el
-     jugador no tenga el nivel — al pasar el cursor, con el nivel requerido y toda la info". */
+  /* La historia completa de esta chapa, porque son tres órdenes de dirección encadenadas:
+       20-22/8 — «que se muestre siempre, con el nivel y toda la info» → la chapa era un resumen.
+       1/9 — llegó el RECUADRO («un recuadro, bien especificado») y dirección cerró el círculo:
+       «habría que quitar la información del cursor… al cliquear te muestra la interfaz con
+       todo, los datos del hover no tienen sentido». La chapa queda como INVITACIÓN — EXPANDIR
+       y la manito — y toda la información vive en el recuadro (test-expansion-recuadro.js). */
   for (let lv = 1; lv < ex.nivel; lv++) {
     const { reg } = pintar(lv, {});
     ok("nivel " + lv + ": el lote se dibuja (con hover)", reg.length > 0 && reg.some(o => o.handlers && o.handlers.pointerover),
       reg.length + " objetos");
     const textos = reg.filter(o => o.__tipo === "text").map(o => o.texto || "");
-    ok("  · la chapa dice el nivel que pide y el que tenés",
-      textos.some(t => new RegExp("Granja nivel " + ex.nivel).test(t) && new RegExp("tenés " + lv).test(t)),
-      "« " + (textos.find(t => /Granja nivel/.test(t)) || "") + " »");
-    /* 26/8: el premio ya no es una cadena fija. El cartel lo DERIVA de lo que la expansión trae
-       de verdad (expansionTraeTxt), porque siete de las dieciséis traen además vetas de bronce y
-       oro y el texto a mano se las comía. Así que acá se contrasta contra la misma función, no
-       contra tres palabras escritas: si se clavan las palabras, se vuelve a medir el catálogo de
-       ayer — que es como este mismo test daba verde mientras el cartel mentía. */
-    ok("  · y conserva el costo y el premio completos",
-      textos.some(t => /Madera/.test(t)) &&
-      textos.some(t => t === (ctx.expansionTraeTxt ? ctx.expansionTraeTxt(ex.n) : "")),
-      textos.filter(t => /Trae/.test(t)).join(" | "));
+    ok("  · la chapa invita: EXPANDIR + la manito del clic",
+      textos.some(t => /EXPANDIR/.test(t)) && textos.some(t => /clic/.test(t)),
+      textos.join(" | "));
+    ok("  · y NO duplica lo que el recuadro cuenta (ni costos, ni nivel, ni el Trae)",
+      !textos.some(t => /Granja nivel|\d+\/\d+|^Trae /.test(t)), textos.join(" | "));
   }
   /* en reposo sigue limpio: la chapa nace oculta (solo hover) porque sin nivel nunca "se puede pagar" */
   const { reg } = pintar(1, {});
@@ -120,19 +117,16 @@ console.log("\nCON EL NIVEL JUSTO: EL LOTE APARECE");
   ok("y con el cursor encima se ilumina", zona.alfaRelleno > 0, String(zona.alfaRelleno));
 }
 
-console.log("\nLA CHAPA DICE LO QUE DESBLOQUEA, DEBAJO DEL COSTO");
+console.log("\nEL «TRAE…» VIVE EN EL RECUADRO, NO EN LA CHAPA   (1/9)");
 {
-  /* Dirección, 20/8: "en la chapa donde está el costo, abajo debería decir lo que te desbloquea". */
+  /* El pedido del 20/8 («abajo del costo debería decir lo que desbloquea») sigue vivo — pero
+     mudado: el recuadro lista los nodos con su lámina (test-expansion-recuadro.js lo mide).
+     Acá solo se defiende que la chapa no lo duplique. */
   const { reg } = pintar(ex.nivel, {});
   const textos = reg.filter(o => o.__tipo === "text").map(o => o.texto || "");
-  /* Dirección, 2ª pasada: "la información de las celdas no es importante, pero la de los nodos
-     y la parcela sí" — el premio nombra los tres, y a las celdas ni las menciona. */
-  ok("hay una línea con lo que trae, derivada de la expansión que toca",
-    textos.some(t => /^Trae /.test(t) && /parcela/.test(t) && /árbol/.test(t) && /roca/.test(t)),
-    textos.filter(t => /Trae/.test(t)).join(" | ") || textos.join(" | "));
-  ok("y no habla de celdas", !textos.some(t => /celdas/.test(t)), "eso se ve solo al expandir");
-  const iCosto = textos.findIndex(t => /\d+\/\d+/.test(t)), iPremio = textos.findIndex(t => /Trae/.test(t));
-  ok("y va DESPUÉS del costo, como pidió dirección", iCosto >= 0 && iPremio > iCosto);
+  ok("la chapa no lleva el Trae ni las celdas", !textos.some(t => /^Trae |celdas/.test(t)), textos.join(" | "));
+  ok("expansionTrae sigue derivando el premio para el recuadro",
+    ctx.expansionTrae(ex.n).some(x => x.k === "parcela"));
 }
 
 console.log("\nLAS EXPANSIONES VAN EN ORDEN: NIVEL *Y* LAS ANTERIORES HECHAS");
@@ -177,5 +171,5 @@ console.log("\nY EL CÓDIGO NO SE QUEDÓ CON RAMAS MUERTAS");
   ok("y el clic abre el recuadro, que es quien explica", /openOv\("ov-expandir"\)/.test(cuerpo));
 }
 
-console.log("\n" + (fallos ? "  ✗ " + fallos + " fallas\n" : "  ✓ la próxima expansión siempre se muestra, y la chapa dice qué le falta\n"));
+console.log("\n" + (fallos ? "  ✗ " + fallos + " fallas\n" : "  ✓ la próxima expansión siempre se muestra, y la chapa invita — el recuadro cuenta\n"));
 process.exit(fallos ? 1 : 0);
