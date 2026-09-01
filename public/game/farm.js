@@ -331,15 +331,16 @@ class FarmScene extends Phaser.Scene {
       /* 1/9 (reporte de dirección con captura: « la puerta de la Zona Negra se movió sola al
          bosque »). La fórmula vieja usaba la esquina inferior-derecha del RECTÁNGULO envolvente
          (ORIG + WORLD), y ese rectángulo crece con cada expansión aunque la esquina misma sea
-         bosque sin comprar: el claro es una L, no un rectángulo, y el portal quedaba plantado
-         en terreno ajeno, fuera de la cerca. Ahora se busca la celda TUYA más al sur, y de esa
-         fila la más al este — la esquina inferior-derecha del claro REAL, que es lo que la
-         fórmula del 12/8 siempre quiso decir con « dentro de la cerca ». */
+         bosque sin comprar — el portal se mudaba solo. Regla de dirección: « lo que está dentro
+         de la granja se queda en su posición hasta que el jugador decida moverlo ». Así que el
+         portal vive en una celda FIJA: la esquina inferior-derecha del claro INICIAL — donde
+         estuvo siempre antes de la primera expansión. Como las expansiones solo AGREGAN tierra,
+         esa celda es del jugador para siempre, compre lo que compre. */
       let pc = GF.C1 - 1, pr = GF.R1 - 1;
       fuera:
       for (let r = GF.R1 - 1; r >= GF.R0; r--)
         for (let c = GF.C1 - 1; c >= GF.C0; c--)
-          if (GF.tuyo(c, r, G.expansiones)) { pc = c; pr = r; break fuera; }
+          if (GF.tuyo(c, r, 0)) { pc = c; pr = r; break fuera; }
       const px = (pc + 1) * T - 90, py = (pr + 1) * T - 52;
       let pspr = null;
       if (this.textures.exists("portal")) {
