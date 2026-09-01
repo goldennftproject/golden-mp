@@ -245,7 +245,16 @@ function snapshot() {
     dishes: G.dishes, cooking: G.cooking, horno: G.horno, chests: G.chests, dummyUsedAt: G.dummyUsedAt,   // 24/8: la cola del Horno
     armCd: G.armCd, mkPend: G.mkPend,
     layoutPlots: G.layoutPlots, layoutPond: G.layoutPond, ghInv: G.ghInv,
-    planos: G.planos, obras: G.obras, obraDep: G.obraDep, emergBuys: G.emergBuys, buzonLeidas: G.buzonLeidas, buzonArchivo: G.buzonArchivo, kitReclamado: G.kitReclamado, excav: G.excav, vales: G.vales, pedidos: G.pedidos, regalos: G.regalos, cobertizo: G.cobertizo, goblin: G.goblin, logros: G.logros, doma: G.doma };   // 22/8: logros cobrados (🏆) + el bicho domado   // 22/8: el Mercader Goblin recuerda su trato del día   // buzón + kit + excavaciones (15/8) · tablón + vales (16/8)   // blueprints (12/8) · capítulos + emergencia (14/8)
+    planos: G.planos, obras: G.obras, obraDep: G.obraDep, emergBuys: G.emergBuys, buzonLeidas: G.buzonLeidas, buzonArchivo: G.buzonArchivo, kitReclamado: G.kitReclamado, excav: G.excav, vales: G.vales, pedidos: G.pedidos, regalos: G.regalos, cobertizo: G.cobertizo, goblin: G.goblin, logros: G.logros, doma: G.doma,   // 22/8: logros cobrados (🏆) + el bicho domado   // 22/8: el Mercader Goblin recuerda su trato del día   // buzón + kit + excavaciones (15/8) · tablón + vales (16/8)   // blueprints (12/8) · capítulos + emergencia (14/8)
+    /* 1/9 — LA PESCA v4 ENTERA NO SE GUARDABA, y lo encontró dirección con el Lombricario:
+       « no dura las 8 horas y no da las lombrices ». Las bocas, las Escamas, los récords, las
+       nasas caladas, el torneo, la marea en curso: TODO moría con un F5. La v4 nació el 27/8
+       y nadie agregó sus campos acá — el snapshot es una lista a mano, y una lista a mano
+       envejece en silencio. Van los catorce juntos, con el porqué al lado. */
+    pescaV4: G.pescaV4, pescaStats: G.pescaStats, nasas: G.nasas, nasaPlanos: G.nasaPlanos,
+    escamasLonja: G.escamasLonja, lonja: G.lonja, lonjaCap: G.lonjaCap, lonjaMes: G.lonjaMes,
+    lonjaEntregados: G.lonjaEntregados, torneo: G.torneo, torneoCobrado: G.torneoCobrado,
+    torneoPodioCobrado: G.torneoPodioCobrado, tituloPesca: G.tituloPesca, lombricario: G.lombricario };
 }
 // "huella" del estado guardable (incluye el apodo); si no cambia, no hay nada que guardar
 function snapKey() { return JSON.stringify({ n: (typeof nombreLucido === "function" ? nombreLucido() : (window.NICK || "Granjero")), d: snapshot() }); }
@@ -279,6 +288,22 @@ function hydrate(d) {
      no tenga pescaDesde arranca su reloj AHORA, sin cargas, que es lo honesto (no se regalan
      cuatro lances por actualizar, ni se le cobra al que ya venía esperando). */
   if (typeof d.pescaDesde === "number") G.pescaDesde = d.pescaDesde;
+  /* 1/9 — la Pesca v4 entera (el hallazgo del Lombricario que se vaciaba solo): los mismos
+     catorce campos del snapshot, aplicados con su tipo. pescaEstado() completa lo que falte. */
+  if (d.pescaV4 && typeof d.pescaV4 === "object") G.pescaV4 = d.pescaV4;
+  if (d.pescaStats && typeof d.pescaStats === "object") G.pescaStats = d.pescaStats;
+  if (Array.isArray(d.nasas)) G.nasas = d.nasas;
+  if (d.nasaPlanos && typeof d.nasaPlanos === "object") G.nasaPlanos = d.nasaPlanos;
+  if (typeof d.escamasLonja === "number") G.escamasLonja = d.escamasLonja;
+  if (d.lonja && typeof d.lonja === "object") G.lonja = d.lonja;
+  if (d.lonjaCap && typeof d.lonjaCap === "object") G.lonjaCap = d.lonjaCap;
+  if (d.lonjaMes && typeof d.lonjaMes === "object") G.lonjaMes = d.lonjaMes;
+  if (typeof d.lonjaEntregados === "number") G.lonjaEntregados = d.lonjaEntregados;
+  if (d.torneo && typeof d.torneo === "object") G.torneo = d.torneo;
+  if (typeof d.torneoCobrado === "number") G.torneoCobrado = d.torneoCobrado;
+  if (typeof d.torneoPodioCobrado === "number") G.torneoPodioCobrado = d.torneoPodioCobrado;
+  if (typeof d.tituloPesca === "string") G.tituloPesca = d.tituloPesca;
+  if (Array.isArray(d.lombricario)) G.lombricario = d.lombricario;
   if (Array.isArray(d.senales)) G.senales = d.senales;
   if (d.escamas && typeof d.escamas === "object") G.escamas = d.escamas;
   if (d.vistos && typeof d.vistos === "object") G.vistos = d.vistos;
