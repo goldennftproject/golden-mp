@@ -718,27 +718,37 @@ function refreshLombricario() {
   const caja = $("lom-bocas"); if (!caja) return;
   const h = $("lom-horas"); if (h) h.textContent = LOMBRICARIO_HORAS + " h";
   const bocas = lombricarioBocas();
-  lombricarioCheck();                       // por si volvio con tandas cumplidas
   const puestas = lombricario();
+  const listas = lombricarioListas();       // 1/9: lo listo YA NO cae solo — se recoge acá
   let x = "";
   for (let i = 0; i < bocas; i++) {
     const t = puestas[i];
     if (!t) { x += '<div class="lom-boca vacia"><span class="em">' + iconRes("madera", 18) + '</span><span class="nm">Boca libre</span><span>vacía</span></div>'; continue; }
     const falta = t.listaEn - nowMs();
+    const n = (t.n != null ? t.n : LOMBRICARIO_DA);   // tandas de antes del 1/9: las 3 de la regla vieja
     x += '<div class="lom-boca' + (falta <= 0 ? " lista" : "") + '"><span class="em">' + iconRes("lombriz", 18) + '</span>' +
-      '<span class="nm">' + LOMBRICARIO_DA + ' lombrices</span>' +
-      '<span>' + (falta <= 0 ? "listas" : fmtDur(falta)) + '</span></div>';
+      '<span class="nm">' + n + ' lombri' + (n === 1 ? "z" : "ces") + '</span>' +
+      '<span>' + (falta <= 0 ? "¡listas!" : fmtDur(falta)) + '</span></div>';
   }
   caja.innerHTML = x;
+
+  /* 1/9 (dirección): « el lombricero debe tener listas las lombrices, no mandarlas al bag ».
+     El botón de recoger va PRIMERO cuando hay algo listo — es a lo que el jugador vino. */
+  const rec = $("lom-recoger");
+  if (rec) {
+    rec.style.display = listas ? "" : "none";
+    rec.textContent = "Recoger las lombrices de " + listas + " boca" + (listas === 1 ? "" : "s");
+    rec.onclick = () => { if (lombricarioReclamar()) refreshLombricario(); };
+  }
 
   const b = $("lom-echar");
   if (b) {
     const cult = lombricarioCultivo();
     const libre = puestas.length < bocas;
     /* la regla 9 en el propio boton: NUNCA dice solo « Echar ». Si no se puede, dice por que. */
-    if (!libre)      { b.textContent = "Las " + bocas + " bocas estan ocupadas"; b.disabled = true; }
+    if (!libre)      { b.textContent = listas ? "Recogé para liberar bocas" : "Las " + bocas + " bocas estan ocupadas"; b.disabled = true; }
     else if (!cult)  { b.textContent = "No tenes cultivos que echar"; b.disabled = true; }
-    else             { b.innerHTML = "Echar " + LOMBRICARIO_PIDE + " " + (RES_LABEL[cult] || cult) + " → " + LOMBRICARIO_DA + " " + iconRes("lombriz"); b.disabled = false; }
+    else             { b.innerHTML = "Echar " + LOMBRICARIO_PIDE + " " + (RES_LABEL[cult] || cult) + " → " + lombricarioDa(cult) + " " + iconRes("lombriz"); b.disabled = false; }
     b.onclick = () => { if (lombricarioEchar()) refreshLombricario(); };
   }
 

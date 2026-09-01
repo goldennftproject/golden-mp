@@ -212,15 +212,20 @@ console.log("\nDE DÓNDE SALEN LAS LOMBRICES");
   ok("y tiene 1 boca + una cada 5 de Cultivo, tope " + g("LOMBRICARIO_BOCAS_MAX"),
     ctx.lombricarioBocas() === 3, ctx.lombricarioBocas() + " bocas a Cultivo 10");
   G.res = { papa: 10, maiz: 4, lombriz: 0 };
-  ok("echa el cultivo MÁS BARATO que tengas — quemar el caro por descuido sería un castigo mudo",
-    ctx.lombricarioCultivo() === "papa", ctx.lombricarioCultivo());
-  const papas = G.res.papa;
+  /* 1/9 (dirección): « mientras más alto sea el cultivo da más lombrices » — el compost paga
+     por VALOR y el botón echa el MÁS CARO. La regla vieja (el más barato, para no castigar)
+     tenía sentido cuando toda tanda daba 3; con la ratio constante ya no hay castigo posible
+     y el caro aprovecha mejor las bocas. Lo mide entero test-lombriz-tierra.js. */
+  ok("echa el cultivo MÁS CARO que tengas — paga por valor, y las bocas son lo escaso",
+    ctx.lombricarioCultivo() === "maiz", ctx.lombricarioCultivo());
+  const maices = G.res.maiz, dara = ctx.lombricarioDa("maiz");
   ok("echar cuesta " + g("LOMBRICARIO_PIDE") + " cultivos", ctx.lombricarioEchar() === true);
-  ok("y se cobran", G.res.papa === papas - g("LOMBRICARIO_PIDE"), papas + " → " + G.res.papa);
-  ok("no da nada antes de las " + g("LOMBRICARIO_HORAS") + " h", ctx.lombricarioCheck() === 0);
+  ok("y se cobran", G.res.maiz === maices - g("LOMBRICARIO_PIDE"), maices + " → " + G.res.maiz);
+  ok("no hay nada listo antes de las " + g("LOMBRICARIO_HORAS") + " h", ctx.lombricarioListas() === 0);
   adelantar(g("LOMBRICARIO_HORAS") * 3600e3 + 1000);
-  ok("y después da " + g("LOMBRICARIO_DA") + " lombrices", ctx.lombricarioCheck() === g("LOMBRICARIO_DA"));
-  ok("que entran en la bolsa", G.res.lombriz === g("LOMBRICARIO_DA"), G.res.lombriz + "");
+  /* 1/9: « no mandarlas al bag » — lo listo espera en el edificio hasta que se recoge */
+  ok("después queda LISTO en el edificio, no en la bolsa", ctx.lombricarioListas() === 1 && G.res.lombriz === 0);
+  ok("y recoger entrega lo del cultivo quemado (" + dara + ")", ctx.lombricarioReclamar() === dara && G.res.lombriz === dara);
 }
 
 console.log("\nLA CURVA DE LA LAGUNA: SUBE Y DESPUÉS BAJA, Y ASÍ HAY QUE DEJARLA");

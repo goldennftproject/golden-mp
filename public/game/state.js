@@ -1180,9 +1180,12 @@ function pendienteDe(tipo) {
      dentro pero no estaba acá, así que el « ! » del mundo nunca le salía. El mismo dato que ya
      lee el rótulo del cursor y el cambio de sprite: una sola fuente para las tres caras. */
   if (tipo === "buzon")  { try { return buzonCartas().length; } catch (e) { return 0; } }
+  /* 1/9 (dirección): las lombrices quedan LISTAS en el Lombricario y se reclaman ahí — el
+     edificio lo anuncia con el mismo « ! » que el Horno y la Cocina. */
+  if (tipo === "lombricario") { try { return lombricarioListas(); } catch (e) { return 0; } }
   return 0;
 }
-function hayPendientes() { return pendienteDe("horno") + pendienteDe("cocina") + pendienteDe("buzon"); }
+function hayPendientes() { return pendienteDe("horno") + pendienteDe("cocina") + pendienteDe("buzon") + pendienteDe("lombricario"); }
 
 function craftMat(id) {
   const md = MAT_DEF[id]; if (!md) { console.warn("[craftMat] material inexistente:", id); return; }
@@ -1213,11 +1216,12 @@ function craftMat(id) {
   if (typeof saveFarm === "function") saveFarm(true);
 }
 
-// --- lombrices (detalles213): carnada de pesca, se compran en la Tienda ---
+// --- lombrices: carnada de pesca. WORM_PRICE es su precio SOMBRA (tasa el compost y las
+// cuentas de la pesca) — desde el 1/9 la lombriz NO SE COMPRA en ninguna parte: dirección,
+// « solo quisiera que se obtengan por los montículos que salen en la granja y quemando
+// cultivos ». (Acá vivía buyWorm, un puente a una comprarCarnada que ya no existía: un camino
+// muerto que igual apuntaba a la puerta que el diseño acaba de cerrar.) ---
 var WORM_PRICE = 3;
-
-
-function buyWorm(qty) { return comprarCarnada("lombriz", qty); }   // el camino viejo, intacto
 
 // --- skills ---
 /* ============ LOS OFICIOS (18/8, dirección) ========================================
@@ -2678,7 +2682,7 @@ var PASS_VIP_BOOST = 1.2;     // perk VIP: +20% de estrellas (conveniencia, no p
 // Los valores reemplazan cada fila de plata por insumos de valor equivalente.
 const PASS_FREE = [   // índice = nivel-1 (tabla del doc, plata→insumos 14/8)
   { res:["madera",20] }, { seed:["papa",5] }, { res:["madera",20] }, { seed:["zanahoria",8] }, { seed:["zanahoria",5] },
-  { res:["piedra",25] }, { dish:["pan_trigo",3] }, { res:["lombriz",15] }, { seed:["cebolla",5] }, { pick:"bronze" },
+  { res:["piedra",25] }, { dish:["pan_trigo",3] }, { res:["piedra",3] } /* 1/9: eran 15 lombrices (45 de plata) — la lombriz solo nace de la tierra; mismo valor en piedra */, { seed:["cebolla",5] }, { pick:"bronze" },
   { res:["barra_piedra",3] }, { res:["madera",30] }, { seed:["repollo",5] }, { dish:["papa_asada",5] }, { ficha:1 },
   { res:["piedra",30] }, { seed:["calabacin",5] }, { res:["flecha",40] }, { dish:["estofado",1] }, { pick:"gold" },
   { res:["carne",10] }, { res:["madera",40] }, { seed:["brocoli",5] }, { res:["bronce",8] }, { ficha:1 },
@@ -6718,39 +6722,64 @@ function lombricarioAbierto() { return nivelOficio("farming") >= LOMBRICARIO_LVL
 function lombricarioBocas() { return Math.min(LOMBRICARIO_BOCAS_MAX, 1 + Math.floor(nivelOficio("farming") / 5)); }
 function lombricario() { if (!Array.isArray(G.lombricario)) G.lombricario = []; return G.lombricario; }
 function lombricarioLibres() { return Math.max(0, lombricarioBocas() - lombricario().length); }
-/* qué cultivos puede echar: los que tenga, el más barato primero — el jugador no tiene por qué
-   elegir cuál quemar, y quemar el caro por descuido sería un castigo silencioso. */
+/* ── EL COMPOST POR VALOR (1/9, dirección) ───────────────────────────────────────────────────
+   « buscar una dinámica que mientras más alto sea el cultivo da más lombrices ». La dinámica
+   es la del precio sombra: una tanda de compost da lombrices = valor del cultivo quemado ÷ lo
+   que vale una lombriz (WORM_PRICE, 3). Dos papas (4 de plata) dan 1; dos cebollas (32) dan
+   11. La RATIO es constante —siempre ~3 de plata por lombriz— así que ningún cultivo es « el
+   truco »: el caro no rinde más por plata, rinde más POR BOCA, que es exactamente lo que pide
+   la frase. Y el ancla no se mueve: quemar valor para pescar valor ya estaba en la cuenta. */
+function lombricarioDa(k) {
+  const p = (CROP_DEF[k] && CROP_DEF[k].price) || 1;
+  return Math.max(1, Math.round(LOMBRICARIO_PIDE * p / (typeof WORM_PRICE === "number" ? WORM_PRICE : 3)));
+}
+/* qué cultivo echa el botón: el MÁS CARO con stock. Antes elegía el más barato — « quemar el
+   caro por descuido sería un castigo » — pero con la ratio constante ya no hay castigo posible:
+   el caro da proporcionalmente lo mismo, y elegirlo aprovecha mejor las bocas, que son lo
+   escaso. La regla vieja, con la dinámica nueva, habría sido la trampa silenciosa contraria. */
 function lombricarioCultivo() {
   const tengo = CROP_ORDER.filter(k => Math.floor(G.res[k] || 0) >= LOMBRICARIO_PIDE);
   if (!tengo.length) return null;
-  return tengo.sort((a, b) => (CROP_DEF[a].price || 0) - (CROP_DEF[b].price || 0))[0];
+  return tengo.sort((a, b) => (CROP_DEF[b].price || 0) - (CROP_DEF[a].price || 0))[0];
 }
 function lombricarioEchar() {
   if (!lombricarioAbierto()) { toast("El Lombricario se abre con Cultivo " + LOMBRICARIO_LVL); return false; }
   if (lombricarioLibres() <= 0) { toast("Las " + lombricarioBocas() + " bocas están llenas"); return false; }
   const k = lombricarioCultivo();
   if (!k) { toast("Hace falta " + LOMBRICARIO_PIDE + " de cualquier cultivo"); return false; }
+  const da = lombricarioDa(k);
   G.res[k] -= LOMBRICARIO_PIDE;
-  lombricario().push({ cultivo: k, listaEn: nowMs() + LOMBRICARIO_HORAS * 3600e3 });
+  /* lo prometido se guarda EN LA BOCA: si mañana cambia el precio del cultivo, esta tanda paga
+     lo que dijo al echarse — la misma regla que los pedidos deterministas. */
+  lombricario().push({ cultivo: k, n: da, listaEn: nowMs() + LOMBRICARIO_HORAS * 3600e3 });
   log("🪱 Echaste " + LOMBRICARIO_PIDE + " " + (CROP_DEF[k].label || k) + " al Lombricario. " +
-      LOMBRICARIO_DA + " lombrices en " + LOMBRICARIO_HORAS + " h.", "good");
+      da + " lombri" + (da === 1 ? "z" : "ces") + " en " + LOMBRICARIO_HORAS + " h.", "good");
   toast("Al Lombricario");
   refreshHud(); if (typeof saveFarm === "function") saveFarm();
   return true;
 }
-/* se cobra solo al mirar, como la Cocina: lo vencido se entrega y la boca queda libre */
-function lombricarioCheck() {
+/* 1/9 (dirección): « el lombricero debe tener listas las lombrices, no mandarlas al bag ».
+   Es la regla que el Horno y la Cocina ya aprendieron (#127): lo producido se RECLAMA en el
+   edificio. lombricarioCheck ya no entrega — solo cuenta lo vencido, y la boca sigue ocupada
+   hasta que el jugador pase a recoger: la visita al edificio es parte del oficio. */
+function lombricarioListas() {
+  return lombricario().filter(t => nowMs() >= t.listaEn).length;
+}
+function lombricarioCheck() { return lombricarioListas(); }   // la firma vieja, sin el efecto
+function lombricarioReclamar() {
   const l = lombricario(); let dio = 0;
   for (let i = l.length - 1; i >= 0; i--) {
     if (nowMs() < l[i].listaEn) continue;
-    l.splice(i, 1); dio += LOMBRICARIO_DA;
+    /* las tandas de antes del 1/9 no traen n: pagan las 3 de la regla vieja, no se resetea nada */
+    dio += (l[i].n != null ? l[i].n : LOMBRICARIO_DA);
+    l.splice(i, 1);
   }
-  if (dio) {
-    G.res.lombriz = (G.res.lombriz || 0) + dio;
-    log("🪱 El Lombricario dio " + dio + " lombrices.", "good");
-    if (typeof refreshHud === "function") refreshHud();
-    if (typeof saveFarm === "function") saveFarm();
-  }
+  if (!dio) { toast("No hay lombrices listas todavía"); return 0; }
+  G.res.lombriz = (G.res.lombriz || 0) + dio;
+  log("🪱 Recogiste " + dio + " lombri" + (dio === 1 ? "z" : "ces") + " del Lombricario.", "good");
+  toast("+" + dio + " 🪱");
+  if (typeof refreshHud === "function") refreshHud();
+  if (typeof saveFarm === "function") saveFarm();
   return dio;
 }
 /* LA ÚNICA PALANCA DEL SISTEMA, para poder comprobarla: « lombrices por día = producción diaria
@@ -6758,7 +6787,12 @@ function lombricarioCheck() {
    ninguna otra tabla se mueve — ni los precios de los peces, ni las cañas, ni las nasas. */
 function lombricesPorDia() {
   const monticulos = excavPorDia() * 1.5;                     // 1-2 por montículo
-  const bocas = lombricarioAbierto() ? lombricarioBocas() * 2 * LOMBRICARIO_DA : 0;   // dos tandas por boca y día
+  /* 1/9: el compost paga por VALOR, así que el rinde diario depende de qué queme el jugador.
+     Se estima con el cultivo que el botón echaría hoy (el más caro con stock) o, sin stock,
+     con la regla vieja de 3 — al jugador se le promete el piso, nunca el techo. */
+  const k = lombricarioAbierto() ? lombricarioCultivo() : null;
+  const porTanda = k ? lombricarioDa(k) : LOMBRICARIO_DA;
+  const bocas = lombricarioAbierto() ? lombricarioBocas() * 2 * porTanda : 0;   // dos tandas por boca y día
   return Math.round((monticulos + bocas) * 10) / 10;
 }
 
@@ -7843,7 +7877,6 @@ function valesPremio(plata) { return Math.max(1, Math.round((plata || 0) / VALE_
 function valeUnidad(id) {
   if (id === "hachas") return (TOOL_CRAFT.axe && TOOL_CRAFT.axe.plata) || 6;
   if (id === "picos") return (PICK_DEF.stone && PICK_DEF.stone.plata) || 6;
-  if (id === "lombrices") return (typeof WORM_PRICE === "number" ? WORM_PRICE : 3);
   return 0;
 }
 var VALE_FARDO = 1;   // a cuántos vales apunta un fardo de herramientas o carnada
@@ -7854,7 +7887,7 @@ function valeFardoN(id) {
 // El precio de cada premio sale de lo que ENTREGA, no de una tabla escrita a mano.
 function valeCosto(id) {
   const P = (k) => (typeof priceOf === "function" ? priceOf(k) : 0);
-  if (id === "hachas" || id === "picos" || id === "lombrices")
+  if (id === "hachas" || id === "picos")
     return valesDe(valeFardoN(id) * valeUnidad(id));
   // el sobre: se deriva primero CUÁNTAS semillas entra y después qué cuesta ESA cantidad. Las dos
   // puntas con la misma vara. Fijar una sola dejaba la fuga en el redondeo de la otra: con precio
@@ -7880,7 +7913,10 @@ function valeMejorCultivo() {
 var VALES_SHOP = [
   { id: "hachas", sprite: "axe", emoji: "🪓" },
   { id: "picos", sprite: "pick_stone", emoji: "⛏️" },
-  { id: "lombrices", sprite: "res_lombriz", emoji: "🪱" },
+  /* (la Lata de lombrices vivió acá hasta el 1/9. Dirección: « solo quisiera que se obtengan
+     por los montículos que salen en la granja y quemando cultivos ». La lombriz es carnada que
+     nace de la tierra, no mercadería de canje — comprarla con vales era la tercera puerta que
+     el diseño no quería tener abierta.) */
   { id: "semillas", sprite: null, emoji: "🌱" }];
 /* la etiqueta la escribe el propio fardo: un « Fardo de 10 hachas » a mano miente el día que
    cambia el precio del hacha, y nadie se entera hasta que un jugador cuenta las hachas. */
@@ -7889,7 +7925,6 @@ function valeLabel(id) {
   const n = valeFardoN(id);
   if (id === "hachas") return "Fardo de " + n + " hachas";
   if (id === "picos") return "Fardo de " + n + " picos";
-  if (id === "lombrices") return "Lata con " + n + " lombrices";
   return id;
 }
 function valesCanjear(id) {
@@ -7904,8 +7939,7 @@ function valesCanjear(id) {
     const n = valeFardoN("picos");
     G.picks.owned.stone = true; if (!G.picks.eq) G.picks.eq = "stone";
     G.picks.dur[G.picks.eq] = (G.picks.dur[G.picks.eq] || 0) + n; toast("+" + n + " picos");
-  } else if (id === "lombrices") { const n = valeFardoN("lombrices");
-    if (!tryAddRes("lombriz", n)) { toast("Bolsa llena — hacé lugar"); return; } toast("+" + n + " lombrices"); }
+  }
   G.vales -= cuesta;
   log("Canjeaste " + cuesta + " vales por " + valeLabel(id) + ".", "good");
   if (window.sfx) sfx("coin");
