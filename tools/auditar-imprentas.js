@@ -146,22 +146,27 @@ linea(); console.log("6) PLATOS — el único canal de venta es el tablón, y es
   const ventaLibre = /sellItem\([^)]*dish|dishes[^\n]*totalVenta|venderPlato/.test(src);
   if (ventaLibre) grave("apareció una venta libre de platos — revisar su precio contra insumos");
   else okk("los platos no tienen venta libre: se comen (buff/vida) o se entregan al tablón");
-  /* el canal real: el pedido de dish del tablón usa val = r.plata × 2. Ese ×2 es una prima
-     específica de los platos — se mide qué deja el mejor pedido posible de platos del día. */
+  /* el canal real: el pedido de dish del tablón. Se lee del POOL DEL JUEGO, no de una cuenta
+     propia — la primera versión recalculaba el val a mano (con el ×2 de entonces) y habría
+     seguido avisando por un número que el juego ya no usa. Un auditor que copia la fórmula
+     en vez de leerla audita su copia. */
   const R = g("RECIPE_DEF");
+  G.built = G.built || {}; G.built.cocina = true;
+  G.dishes = { papa_asada: 1, crema_calabaza: 1, pure_papa: 1 };
   let peor = null;
-  for (const id of ["papa_asada", "crema_calabaza", "pure_papa"]) {
-    const r = R[id]; if (!r) continue;
+  for (const p of ctx.pedPool().filter(x => x.tipo === "dish")) {
+    const r = R[p.key]; if (!r) continue;
     let insumos = 0; for (const m in r.res) insumos += (ctx.priceOf(m) || 0) * r.res[m];
-    const val = (r.plata || 8) * 2;                          // lo que paga el tablón por unidad
-    const n = Math.ceil(g("VALE_EMISION") / val);            // el piso agranda el pedido
-    const margen = (val - insumos) * n;
-    if (!peor || margen > peor.margen) peor = { id, label: r.label, n, margen };
+    const unidad = p.val / p.n;
+    const n = Math.max(p.n, Math.ceil(g("VALE_EMISION") / unidad));   // el piso agranda el pedido
+    const margen = (unidad - insumos) * n;
+    if (unidad > (r.plata || 8) + 0.5) grave(r.label + ": el tablón paga " + unidad + " por un plato de " + r.plata + " — volvió una prima escondida");
+    if (!peor || margen > peor.margen) peor = { label: r.label, n, margen };
   }
-  if (peor && peor.margen > ctx.diaDeGranja() * 0.25)
-    menor("el pedido de platos puede dejar " + Math.round(peor.margen) + " (" + peor.n + " " + peor.label + ") — cotejar el ×2 del tablón con Suren");
+  if (peor && peor.margen > ctx.diaDeGranja() * 0.3)
+    menor("el pedido de platos puede dejar " + Math.round(peor.margen) + " (" + peor.n + " " + peor.label + ") — mirar con Suren");
   else if (peor)
-    okk("el mejor pedido de platos deja ~" + Math.round(peor.margen) + " de margen (" + peor.n + " " + peor.label + ") — 1 pedido/día como mucho, es un premio, no un ciclo");
+    okk("el mejor pedido de platos deja ~" + Math.round(peor.margen) + " de margen (" + peor.n + " " + peor.label + ") — el pago del oficio cocina, 1 pedido/día como mucho");
 }
 
 linea();

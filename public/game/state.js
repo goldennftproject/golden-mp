@@ -6813,7 +6813,14 @@ var LONJA_ESCALON = {
   marea:   { label: "Pedido de marea",    dias: 0.033, escamas: 1  },
   capitan: { label: "Encargo del Capitán", dias: 1,    escamas: 6  },
   mes:     { label: "Captura del mes",     dias: 3,    escamas: 25 },
-  torneo:  { label: "Torneo de Pesca",     dias: 2,    escamas: 12 },
+  /* 31/8 (barrido de imprentas, decisión delegada por dirección): los 2 días del documento
+     eran el premio del PODIO —el ranking 1º-10º— y sin backend de tabla se le estaban pagando
+     enteros a todo el que llegara a la barra de 1,00, que es un pez común en su peso máximo.
+     Un premio de podio pagado a todos los que terminan la carrera era el escalón más generoso
+     de la Lonja por lejos (28 % de un día de granja, cada semana). Hasta que exista la tabla,
+     llegar a la barra paga PARTICIPACIÓN: medio día, en línea con los otros escalones (7 %
+     diario contra el 8-12 % de marea/Capitán/mes). Los 2 días vuelven con el ranking real. */
+  torneo:  { label: "Torneo de Pesca",     dias: 0.5,  escamas: 12 },
 };
 /* EL PAGO TIENE UN SUELO, Y ES POR UN FALLO QUE MEDÍ ANTES DE QUE SALIERA
    Derivé el pago del pedido de marea de « 3,3 % de un día de granja » y el CONTENIDO del pedido
@@ -7546,7 +7553,12 @@ function pedPool() {
   if (G.built && G.built.cocina) for (const id of ["papa_asada", "crema_calabaza", "pure_papa"]) {   // 22/8: la sopa se fue al nivel 8 con su zanahoria
     const r = RECIPE_DEF[id]; if (!r) continue;
     let hecho = false; try { hecho = statGet("cocinar", id) > 0; } catch (e) {}
-    if (hecho || ((G.dishes && G.dishes[id]) || 0) > 0) pool.push({ tipo: "dish", key: id, n: 1, val: (r.plata || 8) * 2 });
+    /* 31/8 (barrido de imprentas): acá decía « (r.plata || 8) * 2 » — los platos eran lo único
+       que el tablón pagaba al DOBLE, una excepción sin porqué escrito que violaba la regla del
+       18/8 (« paga el valor EXACTO, 1,0× »). El margen del cocinero no desaparece: r.plata ya
+       paga por encima de los insumos, que es el pago del trabajo de la olla. Se va la prima
+       duplicada, no la ganancia. */
+    if (hecho || ((G.dishes && G.dishes[id]) || 0) > 0) pool.push({ tipo: "dish", key: id, n: 1, val: (r.plata || 8) });
   }
   return pool;
 }

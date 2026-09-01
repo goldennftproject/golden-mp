@@ -58,7 +58,11 @@ console.log("\nUN DÍA DE GRANJA, Y LOS CUATRO ESCALONES");
   pescador(10, 5);
   ok("el Capitán paga un día entero", ctx.lonjaPaga("capitan") === ctx.diaDeGranja());
   ok("la captura del mes, tres días", ctx.lonjaPaga("mes") === ctx.diaDeGranja() * 3);
-  ok("y el torneo, dos", ctx.lonjaPaga("torneo") === ctx.diaDeGranja() * 2);
+  /* 31/8: los 2 días del documento eran el premio del PODIO, y sin tabla comparativa se le
+     pagaban a todo el que llegara a la barra. Hasta que el ranking exista, la báscula paga
+     PARTICIPACIÓN: medio día. Cuando el backend llegue, esto vuelve a 2 — con tabla. */
+  ok("y el torneo, medio día (participación hasta que exista el ranking)",
+    ctx.lonjaPaga("torneo") === Math.round(ctx.diaDeGranja() * 0.5));
   /* la propiedad que importa: la Lonja NO es un grifo nuevo, es el mismo con otra llave */
   const suben = [[5, 1], [10, 5], [14, 9], [21, 16]].map(([nv, e]) => { pescador(nv, e); return ctx.diaDeGranja(); });
   ok("y todo sube con la granja: la Lonja no es una fuente nueva de plata",
