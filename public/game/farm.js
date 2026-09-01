@@ -328,7 +328,19 @@ class FarmScene extends Phaser.Scene {
 
     // portal al Bosque — ahora con su sprite cozy (arco de piedra con vórtice)
     if (window.ForestScene !== undefined || typeof ForestScene !== "undefined") {
-      const px = GF.ORIG_X + GF.WORLD_W - 90, py = GF.ORIG_Y + GF.WORLD_H - 52;   // 12/8: DENTRO de la cerca · 18/8: sigue al terreno
+      /* 1/9 (reporte de dirección con captura: « la puerta de la Zona Negra se movió sola al
+         bosque »). La fórmula vieja usaba la esquina inferior-derecha del RECTÁNGULO envolvente
+         (ORIG + WORLD), y ese rectángulo crece con cada expansión aunque la esquina misma sea
+         bosque sin comprar: el claro es una L, no un rectángulo, y el portal quedaba plantado
+         en terreno ajeno, fuera de la cerca. Ahora se busca la celda TUYA más al sur, y de esa
+         fila la más al este — la esquina inferior-derecha del claro REAL, que es lo que la
+         fórmula del 12/8 siempre quiso decir con « dentro de la cerca ». */
+      let pc = GF.C1 - 1, pr = GF.R1 - 1;
+      fuera:
+      for (let r = GF.R1 - 1; r >= GF.R0; r--)
+        for (let c = GF.C1 - 1; c >= GF.C0; c--)
+          if (GF.tuyo(c, r, G.expansiones)) { pc = c; pr = r; break fuera; }
+      const px = (pc + 1) * T - 90, py = (pr + 1) * T - 52;
       let pspr = null;
       if (this.textures.exists("portal")) {
         // sprite (no imagen) para que el espiral gire 360° en loop; el latido sutil se mantiene
