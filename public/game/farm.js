@@ -1883,9 +1883,14 @@ class FarmScene extends Phaser.Scene {
     zona.classList.toggle("ok", !!l.adentro);
     pez.style.bottom = "calc(" + (l.pez * 100) + "% - 11px)";
     fill.style.height = Math.round(l.prog * 100) + "%";
-    /* el rótulo no nombra la especie a propósito: el pez se enseña al sacarlo, como siempre.
-       Lo que sí se dice es lo que la barra ya insinúa — qué tan brava es la pelea. */
-    if (txt) txt.textContent = "¡Mantenelo en la zona!";
+    /* 1/9 (dirección): EL CRONÓMETRO A LA VISTA — « tienes 15 segundos para llenar la barra;
+       si no, pierdes la lombriz ». El timeout siempre existió pero era invisible, y un reloj
+       que nadie ve no castiga: sorprende. En rojo los últimos 5 segundos. */
+    if (txt) {
+      const quedan = Math.max(0, Math.ceil((typeof CARRETE_TIMEOUT !== "undefined" ? CARRETE_TIMEOUT : 15) - l.t));
+      txt.textContent = "¡Mantenelo en la zona! · ⏱ " + quedan + " s";
+      txt.style.color = quedan <= 5 ? "#ff9a8a" : "";
+    }
   }
 
   finishAction() {

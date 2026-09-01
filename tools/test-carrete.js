@@ -49,6 +49,11 @@ console.log("\nLA FÍSICA DE LA BARRA");
     rez + " · " + l3.motivo);
   ok("y todo final tiene su aviso (regla 9)",
     !!g("CARRETE_AVISO").escapo && !!g("CARRETE_AVISO").tiempo);
+  /* 1/9 (dirección): « tienes 15 segundos… si no, pierdes la lombriz ». El reloj bajó de 18 y
+     el panel lo MUESTRA en cuenta regresiva (pescaPanelSync) — un reloj invisible no castiga. */
+  ok("el cronómetro del castigo es de 15 segundos", g("CARRETE_TIMEOUT") === 15);
+  const fsx = require("fs").readFileSync(path.join(RAIZ, "public/game/farm.js"), "utf8");
+  ok("y el panel lo enseña en cuenta regresiva", /CARRETE_TIMEOUT[^\n]*- l\.t/.test(fsx));
 }
 
 console.log("\nEL OFICIO EN LAS MANOS, LA BANDA EN EL PEZ");

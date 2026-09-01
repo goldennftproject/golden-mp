@@ -6313,7 +6313,11 @@ function capturaAnotar(r) {
        rumbo más seguido, como en el original) y la zona crece con el nivel de Pesca: el oficio
        en las manos, no solo en los números.
    Lógica PURA — la dibuja farm.js y la corre ui.js; los tests la juegan sin navegador. */
-var CARRETE_TIMEOUT = 18;          // segundos máximos de pelea
+/* 1/9 (dirección): « tienes 30 o 15 segundos para llenar la barra amarilla; si no la llenas
+   en ese tiempo pierdes la lombriz… ese juego está eterno, necesitamos castigar ». El timeout
+   YA existía (18 s) pero era invisible — un reloj que nadie ve no castiga: solo sorprende.
+   Baja a 15 y el panel lo muestra en cuenta regresiva (pescaPanelSync), en rojo al final. */
+var CARRETE_TIMEOUT = 15;          // segundos máximos de pelea — el cronómetro del castigo
 var CARRETE_DIF = {   // vel: qué tan rápido persigue su rumbo · nervio: cambios de rumbo por segundo
   comun:      { vel: 1.6, nervio: 0.9 },
   poco_comun: { vel: 2.1, nervio: 1.3 },

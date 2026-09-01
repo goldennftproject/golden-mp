@@ -3188,7 +3188,11 @@ function refreshPedidos() {
       (grande ? '<div class="de" style="color:' + colEsc + '"><b>' + titEsc + '</b></div>' : "") +
       (!p.hecho && !grande ? '<span class="pd-x" data-pd-desc="' + i + '" title="Descartar">✕</span>' : "") +
       '<div class="de">' + p.de + ' <i>— ' + p.nota + '</i></div>' +
-      '<div class="pide">' + pdIcono(p) + '<b>× ' + p.n + '</b>' + (!p.hecho && !ok ? '<span class="falta">(tenés ' + stock + ')</span>' : "") + '</div>' +
+      /* 1/9 (dirección, con captura: « es un pez azul pero ¿cómo sabremos qué pez es? sería
+         bueno que dijera qué pez »): la nota dice el NOMBRE, no solo la lámina — pedidoLabel
+         ya existía para esto y la nota no lo usaba. Vale para todo: peces, cultivos, platos. */
+      '<div class="pide">' + pdIcono(p) + '<b>× ' + p.n + '</b> <span class="pd-nom">' + pedidoLabel(p) + '</span>' +
+      (!p.hecho && !ok ? '<span class="falta">(tenés ' + stock + ')</span>' : "") + '</div>' +
       (p.hecho ? '<div class="sello">✓ ENTREGADO</div>'
         : '<div class="paga">🪙 ' + p.plata + ' · 🎟 ' + p.vales + (ok ? '<div class="toca">tocá la nota para entregar</div>' : "") + '</div>') +
       '</div>';
