@@ -632,6 +632,14 @@
   .lt-pide{font-size:11px;color:#9fd8f0;margin:2px 0}
   .lt-mide{font-size:11px;color:#7d8f6e;font-style:italic}
   .lom-bocas{display:flex;flex-direction:column;gap:6px;margin-top:8px}
+  /* 1/9: la lista para elegir qué quemar — cada fila con su cuenta de lombrices */
+  #lom-lista{display:flex;flex-direction:column;gap:5px;margin-top:8px}
+  .lom-cult{display:flex;align-items:center;gap:8px;width:100%;padding:7px 10px;border-radius:9px;
+    border:1px solid #3c4d31;background:rgba(20,28,16,.55);color:#cbbf9f;font-size:12px;cursor:pointer;text-align:left}
+  .lom-cult:hover{border-color:#7fa356;background:rgba(34,58,30,.5)}
+  .lom-cult .nm{flex:1;color:#f2ead5;font-weight:700}
+  .lom-cult .st{font-size:10px;color:#7d8f6e}
+  .lom-cult .da b{color:#ffd76a}
   .lom-boca{display:flex;align-items:center;gap:9px;padding:8px 10px;border-radius:10px;
     background:rgba(28,22,14,.6);border:1px solid #5a4327;font-size:13px;color:#cbbf9f}
   .lom-boca .em{font-size:19px}
@@ -1392,6 +1400,8 @@
     <!-- 1/9 (dirección): «el lombricero debe tener listas las lombrices, no mandarlas al bag» -->
     <button class="green" id="lom-recoger" style="width:100%;margin-top:8px;display:none"></button>
     <button class="green" id="lom-echar" style="width:100%;margin-top:8px"></button>
+    <!-- 1/9, segunda vuelta: el jugador elige QUÉ quemar, con la cuenta de lombrices a la vista -->
+    <div id="lom-lista" style="display:none"></div>
     <div class="lom-dia" id="lom-dia"></div>
   </div></div>
 

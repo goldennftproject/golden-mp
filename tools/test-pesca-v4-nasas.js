@@ -216,10 +216,12 @@ console.log("\nDE DÓNDE SALEN LAS LOMBRICES");
      por VALOR y el botón echa el MÁS CARO. La regla vieja (el más barato, para no castigar)
      tenía sentido cuando toda tanda daba 3; con la ratio constante ya no hay castigo posible
      y el caro aprovecha mejor las bocas. Lo mide entero test-lombriz-tierra.js. */
-  ok("echa el cultivo MÁS CARO que tengas — paga por valor, y las bocas son lo escaso",
-    ctx.lombricarioCultivo() === "maiz", ctx.lombricarioCultivo());
+  /* segunda vuelta del mismo día: el jugador ELIGE de la lista — «quizás quiera vender el
+     más caro en otro lugar». La cuenta de cada cultivo la mide test-lombriz-tierra.js. */
+  ok("la lista ofrece lo que tengas — el jugador elige, no el juego",
+    ctx.lombricarioCultivos().length === 2, ctx.lombricarioCultivos().join(" · "));
   const maices = G.res.maiz, dara = ctx.lombricarioDa("maiz");
-  ok("echar cuesta " + g("LOMBRICARIO_PIDE") + " cultivos", ctx.lombricarioEchar() === true);
+  ok("echar cuesta " + g("LOMBRICARIO_PIDE") + " cultivos", ctx.lombricarioEchar("maiz") === true);
   ok("y se cobran", G.res.maiz === maices - g("LOMBRICARIO_PIDE"), maices + " → " + G.res.maiz);
   ok("no hay nada listo antes de las " + g("LOMBRICARIO_HORAS") + " h", ctx.lombricarioListas() === 0);
   adelantar(g("LOMBRICARIO_HORAS") * 3600e3 + 1000);
@@ -228,9 +230,15 @@ console.log("\nDE DÓNDE SALEN LAS LOMBRICES");
   ok("y recoger entrega lo del cultivo quemado (" + dara + ")", ctx.lombricarioReclamar() === dara && G.res.lombriz === dara);
 }
 
-console.log("\nLA CURVA DE LA LAGUNA: SUBE Y DESPUÉS BAJA, Y ASÍ HAY QUE DEJARLA");
+console.log("\nLA CURVA DE LA LAGUNA, RE-MEDIDA PARA EL COMPOST POR VALOR   (1/9)");
 {
-  console.log("\n    granja   lombrices/día   la laguna da   % del ingreso del día");
+  /* La curva vieja medía lombrices × 10 como si toda la pesca fuera ingreso NUEVO, y con el
+     compost por valor eso dejó de ser verdad: las lombrices del Lombricario se pagan quemando
+     cosecha a ~3 de plata cada una, así que esa parte de la pesca es PRODUCCIÓN RE-RUTADA con
+     margen, no un grifo aparte. Lo que hay que acotar es el MARGEN (≈7 por lombriz: los ~10
+     que paga el lance menos los ~3 que costó criarla) — y el tope de 12 por boca es el que
+     evita que un veterano queme el granero entero y la laguna domine el día. */
+  console.log("\n    granja   lombrices/día   margen de la laguna   % del ingreso del día");
   const filas = [[5, 1, 450], [10, 5, 1200], [14, 9, 2100], [21, 16, 3940]];
   const pcts = [];
   for (const [nv, exp, prod] of filas) {
@@ -238,16 +246,20 @@ console.log("\nLA CURVA DE LA LAGUNA: SUBE Y DESPUÉS BAJA, Y ASÍ HAY QUE DEJAR
     let acc = 0; for (let k = 2; k <= cult; k++) acc += ctx.skillNeed(k, "farming");
     G.level = nv; G.expansiones = exp; G.skills = { farming: acc, fishing: acc };
     G.built = { lombricario: cult >= g("LOMBRICARIO_LVL") };
-    const l = ctx.lombricesPorDia(), plata = l * 10, pct = plata / prod * 100;
+    const l = ctx.lombricesPorDia(), margen = l * 7, pct = margen / prod * 100;
     pcts.push(pct);
-    console.log("    " + String(nv).padStart(5) + String(l).padStart(14) + String(Math.round(plata)).padStart(15) + (pct.toFixed(1) + " %").padStart(22));
+    console.log("    " + String(nv).padStart(5) + String(l).padStart(14) + String(Math.round(margen)).padStart(18) + (pct.toFixed(1) + " %").padStart(22));
   }
   console.log("");
-  ok("la laguna es en torno al 10 % del ingreso al empezar", Math.abs(pcts[0] - 10) < 3, pcts[0].toFixed(1) + " %");
-  ok("pica cuando se abre el Lombricario", pcts[1] > pcts[0], pcts[1].toFixed(1) + " %");
-  ok("y baja en el veterano — condimento, no ingreso", pcts[3] < pcts[1] * 0.65, pcts[3].toFixed(1) + " %");
-  console.log("       → « la pesca es el INGRESO del jugador de la primera semana y el CONDIMENTO");
-  console.log("         del veterano ». La curva del documento, reproducida.");
+  ok("la laguna ronda el 10 % del ingreso al empezar", Math.abs(pcts[0] - 10) < 4, pcts[0].toFixed(1) + " %");
+  ok("PICA cuando abre el Lombricario — la semana dorada de la pesca del documento",
+    pcts[1] > pcts[0] * 2, pcts[1].toFixed(1) + " %");
+  ok("baja en el veterano — condimento, no ingreso", pcts[3] < pcts[1] * 0.6, pcts[3].toFixed(1) + " %");
+  ok("y ni en el pico pasa del 35 % — el tope de la boca la sujeta",
+    Math.max(...pcts) < 35, "máximo " + Math.max(...pcts).toFixed(1) + " %");
+  console.log("       → sin el tope de " + g("LOMBRICARIO_TANDA_MAX") + " por boca, el veterano quemando su cultivo caro");
+  console.log("         llevaba esta columna a más del 1000 %: la laguna dejaba de ser un oficio");
+  console.log("         y pasaba a ser EL juego. El tope es la diferencia entre las dos cosas.");
 }
 
 console.log("");

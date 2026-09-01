@@ -6729,24 +6729,42 @@ function lombricarioLibres() { return Math.max(0, lombricarioBocas() - lombricar
    11. La RATIO es constante —siempre ~3 de plata por lombriz— así que ningún cultivo es « el
    truco »: el caro no rinde más por plata, rinde más POR BOCA, que es exactamente lo que pide
    la frase. Y el ancla no se mueve: quemar valor para pescar valor ya estaba en la cuenta. */
+/* EL TOPE DE LA BOCA: una tanda nunca da más de 12. Sin esto, el compost por valor tenía una
+   fuga que la curva del test encontró antes que nadie: un veterano quemando su cultivo más
+   caro sacaba CIENTOS de lombrices por boca y la laguna pasaba de condimento a ruta dominante
+   (el margen de pescar es ~7 por lombriz, y sin tope ese margen escala con el granero entero).
+   Doce porque es lo que una boca de 8 h alimenta con sentido: 12 lances o 3 ciclos de nasa.
+   « Más alto el cultivo, más lombrices » sigue siendo verdad en toda la escalera normal —
+   papa 1, cereza 3, remolacha 5, cebolla 11 — y los cultivos nocturnos caros llenan la boca
+   entera de un golpe, que ES su ventaja: la boca llena, no la boca elástica. */
+var LOMBRICARIO_TANDA_MAX = 12;
 function lombricarioDa(k) {
   const p = (CROP_DEF[k] && CROP_DEF[k].price) || 1;
-  return Math.max(1, Math.round(LOMBRICARIO_PIDE * p / (typeof WORM_PRICE === "number" ? WORM_PRICE : 3)));
+  const porValor = Math.max(1, Math.round(LOMBRICARIO_PIDE * p / (typeof WORM_PRICE === "number" ? WORM_PRICE : 3)));
+  return Math.min(LOMBRICARIO_TANDA_MAX, porValor);
 }
-/* qué cultivo echa el botón: el MÁS CARO con stock. Antes elegía el más barato — « quemar el
-   caro por descuido sería un castigo » — pero con la ratio constante ya no hay castigo posible:
-   el caro da proporcionalmente lo mismo, y elegirlo aprovecha mejor las bocas, que son lo
-   escaso. La regla vieja, con la dinámica nueva, habría sido la trampa silenciosa contraria. */
+/* QUIÉN ELIGE QUÉ QUEMAR: EL JUGADOR (1/9, dirección, segunda vuelta). La primera versión
+   elegía sola el más caro — con la ratio constante parecía lo óptimo — y dirección la tumbó
+   en la misma tarde: « es mejor darle la oportunidad al jugador de decidir qué cultivo usar…
+   quizás quiera vender el cultivo más caro en otro lugar ». Tiene razón dos veces: el cultivo
+   caro puede estar reservado para un pedido del tablón o una receta, y una máquina que decide
+   por vos qué quemar de tu granero no es una comodidad, es una mano en tu bolsillo.
+   El botón abre la LISTA de cultivos con stock y cada fila dice qué daría; elegir es echar. */
+function lombricarioCultivos() {
+  return CROP_ORDER.filter(k => Math.floor(G.res[k] || 0) >= LOMBRICARIO_PIDE);
+}
+/* (queda solo para ESTIMAR el rinde diario del panel: el más barato con stock — al jugador
+   se le promete el piso, nunca el techo) */
 function lombricarioCultivo() {
-  const tengo = CROP_ORDER.filter(k => Math.floor(G.res[k] || 0) >= LOMBRICARIO_PIDE);
+  const tengo = lombricarioCultivos();
   if (!tengo.length) return null;
-  return tengo.sort((a, b) => (CROP_DEF[b].price || 0) - (CROP_DEF[a].price || 0))[0];
+  return tengo.sort((a, b) => (CROP_DEF[a].price || 0) - (CROP_DEF[b].price || 0))[0];
 }
-function lombricarioEchar() {
+function lombricarioEchar(k) {
   if (!lombricarioAbierto()) { toast("El Lombricario se abre con Cultivo " + LOMBRICARIO_LVL); return false; }
   if (lombricarioLibres() <= 0) { toast("Las " + lombricarioBocas() + " bocas están llenas"); return false; }
-  const k = lombricarioCultivo();
-  if (!k) { toast("Hace falta " + LOMBRICARIO_PIDE + " de cualquier cultivo"); return false; }
+  if (!k || !CROP_DEF[k]) { toast("Elegí qué cultivo echar"); return false; }
+  if (Math.floor(G.res[k] || 0) < LOMBRICARIO_PIDE) { toast("Hace falta " + LOMBRICARIO_PIDE + " " + (CROP_DEF[k].label || k)); return false; }
   const da = lombricarioDa(k);
   G.res[k] -= LOMBRICARIO_PIDE;
   /* lo prometido se guarda EN LA BOCA: si mañana cambia el precio del cultivo, esta tanda paga
@@ -6787,11 +6805,13 @@ function lombricarioReclamar() {
    ninguna otra tabla se mueve — ni los precios de los peces, ni las cañas, ni las nasas. */
 function lombricesPorDia() {
   const monticulos = excavPorDia() * 1.5;                     // 1-2 por montículo
-  /* 1/9: el compost paga por VALOR, así que el rinde diario depende de qué queme el jugador.
-     Se estima con el cultivo que el botón echaría hoy (el más caro con stock) o, sin stock,
-     con la regla vieja de 3 — al jugador se le promete el piso, nunca el techo. */
-  const k = lombricarioAbierto() ? lombricarioCultivo() : null;
-  const porTanda = k ? lombricarioDa(k) : LOMBRICARIO_DA;
+  /* 1/9: el compost paga por VALOR y el jugador elige qué quemar, así que el rinde diario ya
+     no es un número: es una CAPACIDAD. Se estima con el mejor cultivo DESBLOQUEADO — lo que
+     el jugador puede sacar si dedica su cultivo top al compost — y el panel lo dice como
+     « hasta », que es lo que un techo declarado como techo tiene de honesto. */
+  const desb = CROP_ORDER.filter(k => (typeof cropUnlocked === "function" ? cropUnlocked(k) : true));
+  const top = desb.sort((a, b) => (CROP_DEF[b].price || 0) - (CROP_DEF[a].price || 0))[0];
+  const porTanda = top ? lombricarioDa(top) : LOMBRICARIO_DA;
   const bocas = lombricarioAbierto() ? lombricarioBocas() * 2 * porTanda : 0;   // dos tandas por boca y día
   return Math.round((monticulos + bocas) * 10) / 10;
 }

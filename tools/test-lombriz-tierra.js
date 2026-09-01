@@ -41,24 +41,39 @@ console.log("\nEL COMPOST PAGA POR VALOR — MÁS ALTO EL CULTIVO, MÁS LOMBRICE
   for (let i = 1; i < orden.length; i++)
     if (ctx.lombricarioDa(orden[i]) < ctx.lombricarioDa(orden[i - 1])) monotona = false;
   ok("« mientras más alto sea el cultivo, da más lombrices » — en toda la escalera", monotona);
-  /* y la ratio es constante: quemar vale lo mismo por plata quemes lo que quemes (±redondeo).
-     Sin esto, un cultivo sería « el truco » y los demás, decorado. */
+  /* la ratio: hasta el tope de la boca, quemar vale ~lo mismo por plata (±redondeo) — ningún
+     cultivo es « el truco ». POR ENCIMA del tope la ratio EMPEORA a propósito: la boca de 8 h
+     no se agranda porque le eches un maíz entero (LOMBRICARIO_TANDA_MAX, el freno que evita
+     que el veterano queme el granero y la laguna pase de oficio a imprenta). Lo que no puede
+     pasar NUNCA es una ratio mejor que el precio sombra: eso sí sería fabricar lombrices. */
+  const TOPE = g("LOMBRICARIO_TANDA_MAX");
   const ratios = orden.map(k => (PIDE * CROP[k].price) / ctx.lombricarioDa(k));
-  ok("la ratio queda cerca del precio sombra de la lombriz (" + WP + ") en todos",
-    ratios.every(r => r >= WP * 0.6 && r <= WP * 1.4),
-    ratios.map(r => r.toFixed(1)).join(" · "));
-  /* el botón elige el MÁS CARO: con ratio constante no hay castigo posible, y las bocas son
-     lo escaso. (La regla vieja —el más barato— con la dinámica nueva sería la trampa.) */
+  ok("ninguna ratio baja del precio sombra (" + WP + ") — no se fabrican lombrices baratas",
+    ratios.every(r => r >= WP * 0.6), ratios.map(r => r.toFixed(1)).join(" · "));
+  const sinTope = orden.filter(k => (PIDE * CROP[k].price) / WP < TOPE);
+  ok("y hasta el tope de la boca la ratio es pareja (~" + WP + ")",
+    sinTope.every(k => { const r = (PIDE * CROP[k].price) / ctx.lombricarioDa(k); return r >= WP * 0.6 && r <= WP * 1.4; }));
+  ok("el tope existe y una boca jamás da más de " + TOPE,
+    orden.every(k => ctx.lombricarioDa(k) <= TOPE));
+  /* QUIÉN ELIGE: EL JUGADOR (dirección, segunda vuelta del mismo día): « quizás quiera vender
+     el cultivo más caro en otro lugar ». El juego ofrece la lista con la cuenta a la vista;
+     echar sin decir cuál es un error, no un default. */
   let acc = 0; for (let k = 2; k <= 20; k++) acc += ctx.skillNeed(k, "farming");
   G.skills = { farming: acc, fishing: acc };
   G.res.papa = 10; G.res.cebolla = 10;
-  ok("el botón echa el más caro que tengas", ctx.lombricarioCultivo() === "cebolla");
+  const lista = ctx.lombricarioCultivos();
+  ok("la lista ofrece TODO lo que tenga stock, no una elección hecha",
+    lista.indexOf("papa") >= 0 && lista.indexOf("cebolla") >= 0);
+  ok("echar sin elegir cultivo no echa nada", ctx.lombricarioEchar() === false);
+  G.lombricario = [];
+  ok("y el jugador puede quemar el BARATO aunque tenga el caro — la elección es suya",
+    ctx.lombricarioEchar("papa") === true && ctx.lombricario()[0].cultivo === "papa");
 }
 
 console.log("\nLO LISTO ESPERA EN EL EDIFICIO   (« no mandarlas al bag »)");
 {
   G.lombricario = []; G.res.lombriz = 0; G.res.cebolla = 10;
-  ok("se echa una tanda", ctx.lombricarioEchar() === true);
+  ok("se echa una tanda", ctx.lombricarioEchar("cebolla") === true);
   const antes = G.res.lombriz;
   AHORA += (g("LOMBRICARIO_HORAS") + 1) * 3600e3;   // pasa el reloj
   ctx.lombricarioCheck();                             // el mirón viejo, que ANTES entregaba solo

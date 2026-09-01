@@ -741,15 +741,39 @@ function refreshLombricario() {
     rec.onclick = () => { if (lombricarioReclamar()) refreshLombricario(); };
   }
 
-  const b = $("lom-echar");
+  /* 1/9, segunda vuelta (dirección): « es mejor darle la oportunidad al jugador de decidir qué
+     cultivo usar… quizás quiera vender el más caro en otro lugar ». El botón ya no decide: abre
+     la LISTA de cultivos con stock, y cada fila dice EXACTAMENTE cuántas lombrices daría —
+     elegir con la cuenta a la vista es la única forma de que la decisión sea de verdad. */
+  const b = $("lom-echar"), lista = $("lom-lista");
   if (b) {
-    const cult = lombricarioCultivo();
+    const cults = lombricarioCultivos();
     const libre = puestas.length < bocas;
     /* la regla 9 en el propio boton: NUNCA dice solo « Echar ». Si no se puede, dice por que. */
-    if (!libre)      { b.textContent = listas ? "Recogé para liberar bocas" : "Las " + bocas + " bocas estan ocupadas"; b.disabled = true; }
-    else if (!cult)  { b.textContent = "No tenes cultivos que echar"; b.disabled = true; }
-    else             { b.innerHTML = "Echar " + LOMBRICARIO_PIDE + " " + (RES_LABEL[cult] || cult) + " → " + lombricarioDa(cult) + " " + iconRes("lombriz"); b.disabled = false; }
-    b.onclick = () => { if (lombricarioEchar()) refreshLombricario(); };
+    if (!libre)            { b.textContent = listas ? "Recogé para liberar bocas" : "Las " + bocas + " bocas estan ocupadas"; b.disabled = true; if (lista) lista.style.display = "none"; }
+    else if (!cults.length) { b.textContent = "No tenes cultivos que echar (piden " + LOMBRICARIO_PIDE + " de uno)"; b.disabled = true; if (lista) lista.style.display = "none"; }
+    else {
+      b.textContent = (lista && lista.style.display !== "none") ? "Cerrar la lista" : "Echar cultivos… (elegí cuál)";
+      b.disabled = false;
+    }
+    b.onclick = () => {
+      if (!lista) return;
+      lista.style.display = lista.style.display === "none" ? "" : "none";
+      refreshLombricario();
+    };
+    if (lista && lista.style.display !== "none" && libre && cults.length) {
+      lista.innerHTML = cults.map(k => {
+        const da = lombricarioDa(k), stock = Math.floor(G.res[k] || 0);
+        return '<button class="lom-cult" data-lom-cult="' + k + '">' +
+          '<span class="nm">' + (CROP_DEF[k].emoji || "🌱") + ' ' + (CROP_DEF[k].label || k) + '</span>' +
+          '<span class="st">tenés ' + stock + '</span>' +
+          '<span class="da">' + LOMBRICARIO_PIDE + ' → <b>' + da + ' 🪱</b></span></button>';
+      }).join("");
+      lista.querySelectorAll("[data-lom-cult]").forEach(el => el.onclick = (e) => {
+        e.stopPropagation();
+        if (lombricarioEchar(el.dataset.lomCult)) { lista.style.display = "none"; refreshLombricario(); }
+      });
+    } else if (lista && lista.style.display !== "none") lista.innerHTML = "";
   }
 
   const d = $("lom-dia");
@@ -758,9 +782,10 @@ function refreshLombricario() {
     /* redondeado hacia abajo: prometer 22 y dar 22,5 se perdona; prometer 23 y dar 22,5 se lee
        como que el juego miente. Al jugador se le dice el piso, nunca el techo. */
     const ent = Math.floor(total);
-    d.innerHTML = "Por día entran <b>" + ent + " lombrices</b>: " +
-      porMont + " de los montículos de la granja" +
-      (lombricarioAbierto() ? " y " + Math.floor(total - porMont) + " de este Lombricario (" + bocas + " boca" + (bocas > 1 ? "s" : "") + ")" : "") +
+    /* 1/9: el compost paga por valor, así que lo del Lombricario es un HASTA — depende de qué
+       quemes. Un techo declarado como techo no es una promesa rota. */
+    d.innerHTML = "Por día: <b>" + porMont + " lombrices</b> de los montículos" +
+      (lombricarioAbierto() ? " y hasta <b>" + Math.floor(total - porMont) + "</b> de este Lombricario (" + bocas + " boca" + (bocas > 1 ? "s" : "") + ", según qué quemes)" : "") +
       ".<br>Alcanzan para <b>" + ent + " lances</b> o <b>" + Math.floor(total / PESCA_V4_NASA_CEBO) + " nasas</b>.";
   }
 }
