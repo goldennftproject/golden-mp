@@ -167,7 +167,9 @@ console.log("\nEL DINERO DE LA PESCA VA A LA BOLSA DE VERDAD   (G.plata, no una 
   G.canas = { junco: 1, bambu: 1 }; G.plata = 100; G.escamasLonja = 0; G.lonja = null;
   G.fish = {}; G.lonjaEntregados = 0;
   const p = ctx.lonjaPedido();
-  G.fish[p.id] = p.n;
+  /* 1/9 (Suren): toda marea pide PESO y se cumple pescando — las capturas se marcan hechas
+     directo (la mecánica fina la mide test-pesca-v4-lonja; acá solo se cuenta la plata) */
+  p.hechos = p.n;
   const antes = G.plata;
   ctx.lonjaEntregar();
   ok("entregar en la Lonja sube la plata del jugador", G.plata > antes,

@@ -99,28 +99,31 @@ console.log("\nLA LÍNEA QUE ESTE ARCHIVO EXISTE PARA DEFENDER");
   console.log("         escalones y no uno.");
 }
 
-console.log("\nLAS TRES MAREAS Y SU RELOJ   (todo en UTC, como el reset diario)");
+console.log("\nLAS SEIS MAREAS DE CUATRO HORAS Y SU RELOJ   (1/9, Suren — todo en UTC)");
 {
-  const casos = [[5, 2, "la noche de ayer sigue corriendo antes de las 06"],
-                 [7, 0, "el alba"], [13, 0, "el alba, hasta las 14"],
-                 [15, 1, "la siesta"], [21, 1, "la siesta, hasta las 22"], [23, 2, "la noche"]];
+  /* « podríamos poner cada 4 horas: si me piden los que no tengo, a las 4 h regreso y veo qué
+     salió ». Seis franjas: madrugada 02 · alba 06 · mañana 10 · siesta 14 · tarde 18 · noche 22.
+     Antes de las 02, la marea de la noche de AYER sigue corriendo (cruza la medianoche). */
+  const casos = [[1, 5, "la noche de ayer sigue antes de las 02"],
+                 [3, 0, "la madrugada"], [7, 1, "el alba"], [11, 2, "la mañana"],
+                 [15, 3, "la siesta"], [19, 4, "la tarde"], [23, 5, "la noche"]];
   const malas = casos.filter(([h, idx]) => ctx.lonjaMareaIdx(Date.UTC(2026, 7, 27, h)) !== idx);
   ok("cada hora del día cae en su marea", !malas.length,
     malas.map(c => c[0] + "h → " + ctx.lonjaMareaIdx(Date.UTC(2026, 7, 27, c[0])) + " (esperaba " + c[1] + ")").join(" · "));
   /* el sello cambia con la marea y NO con el F5: apretar recargar no re-sortea el pedido */
-  const s1 = ctx.lonjaMareaSello(Date.UTC(2026, 7, 27, 7)), s2 = ctx.lonjaMareaSello(Date.UTC(2026, 7, 27, 13, 59));
+  const s1 = ctx.lonjaMareaSello(Date.UTC(2026, 7, 27, 14, 5)), s2 = ctx.lonjaMareaSello(Date.UTC(2026, 7, 27, 17, 59));
   ok("dentro de una marea el sello no cambia", s1 === s2, s1);
   ok("y cambia al entrar la siguiente",
-    ctx.lonjaMareaSello(Date.UTC(2026, 7, 27, 14, 1)) !== s1);
+    ctx.lonjaMareaSello(Date.UTC(2026, 7, 27, 18, 1)) !== s1);
   ok("la marea de la noche no se parte en la medianoche",
-    ctx.lonjaMareaSello(Date.UTC(2026, 7, 27, 23)) === ctx.lonjaMareaSello(Date.UTC(2026, 7, 28, 3)),
-    "23:00 y 03:00 son la misma marea");
+    ctx.lonjaMareaSello(Date.UTC(2026, 7, 27, 23)) === ctx.lonjaMareaSello(Date.UTC(2026, 7, 28, 1)),
+    "23:00 y 01:00 son la misma marea");
   const dur = ctx.lonjaMareaVenceEn(Date.UTC(2026, 7, 27, 15));
   ok("dura " + g("LONJA_MAREA_DUR_H") + " h desde que entra",
-    Math.abs(dur - 7 * 3600e3) < 1000, Math.round(dur / 3600e3 * 10) / 10 + " h a la hora de haber entrado");
-  /* la marea de la noche llega a la noche de la laguna; las otras dos, no */
-  ok("solo la marea de la noche puede pedir peces nocturnos",
-    !MAREAS[0].noche && !MAREAS[1].noche && MAREAS[2].noche);
+    Math.abs(dur - 3 * 3600e3) < 1000, Math.round(dur / 3600e3 * 10) / 10 + " h a la hora de haber entrado");
+  /* las mareas nocturnas llegan a la noche de la laguna (00-06 UTC); las de día, no */
+  ok("solo la madrugada y la noche pueden pedir peces nocturnos",
+    MAREAS[0].noche && !MAREAS[1].noche && !MAREAS[2].noche && !MAREAS[3].noche && !MAREAS[4].noche && MAREAS[5].noche);
 }
 
 console.log("\nENTREGAR");
@@ -128,12 +131,21 @@ console.log("\nENTREGAR");
   pescador(12, 5, { junco: 1, bambu: 1 });
   enTiempo(Date.UTC(2026, 7, 27, 15));
   const p = ctx.lonjaPedido();
-  ok("hay pedido", !!p, p ? p.n + " " + PEZ[p.id].label : "");
-  ok("sin los peces no se entrega, y se dice cuántos faltan", ctx.lonjaEntregar() === false);
-  G.fish[p.id] = p.n + 2;
-  const monedas = G.plata, esc = ctx.escamasLonja(), suelto = ctx.lonjaSuelto(p), paga = ctx.lonjaPaga("marea", suelto);
-  ok("con los peces, se entrega", ctx.lonjaEntregar() === true);
-  ok("se cobran EXACTAMENTE los pedidos, no los que tengas", G.fish[p.id] === 2, G.fish[p.id] + " de sobra");
+  /* 1/9 (Suren): TODA marea pide PESO — « el tablero de peces debe pedir peces con peso…
+     queremos un poco de enganche ». Ya no se junta en la bolsa: se cumple PESCANDO capturas
+     por encima del umbral (percentil 80 de la especie, ~1 de cada 5), y la bolsa no se toca. */
+  ok("hay pedido, y es de PESO", !!p && p.tipo === "peso",
+    p ? p.n + " " + PEZ[p.id].label + " de más de " + p.kgMin + " kg" : "");
+  ok("sin las capturas no se entrega, y se dice cuántas van", ctx.lonjaEntregar() === false);
+  G.fish[p.id] = 2;                                  // peces en bolsa NO cuentan: el peso es de la caña
+  ok("los peces de la bolsa no lo cumplen — el peso solo existe al pescar", ctx.lonjaEntregar() === false);
+  p.hechos = p.n;                                    // las capturas al umbral, anotadas por capturaAnotar
+  const monedas = G.plata, esc = ctx.escamasLonja();
+  /* 1/9: la marea de peso paga su ESCALÓN, sin el suelo ×2 de las ventas — no entrega
+     mercadería (los peces gordos quedan en la bolsa), así que no hay venta que comparar */
+  const paga = ctx.lonjaPaga("marea", 0);
+  ok("con las capturas hechas, se entrega", ctx.lonjaEntregar() === true);
+  ok("y la bolsa NO se descuenta: el trabajo fue pescarlos", G.fish[p.id] === 2, G.fish[p.id] + " siguen ahí");
   ok("paga la plata que dice el panel", G.plata === monedas + paga, "+" + paga);
   ok("y una Escama", ctx.escamasLonja() === esc + 1);
   ok("no se puede entregar dos veces la misma marea", ctx.lonjaEntregar() === false);

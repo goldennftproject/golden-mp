@@ -5713,19 +5713,33 @@ var CANA_V4_ORDER = ["junco", "bambu", "hierro", "oro", "abuelo"];
 
    El Junco copia a la Espada de Madera a propósito: los dos son el primer escalón de su oficio y
    los dos tienen que caber en el primer día. */
+/* 1/9 — LAS BANDAS SE RE-DERIVARON POR PEDIDO DE SUREN: « el legendario con 667 es demasiado,
+   son muchos días ». El legendario pasa de 1/667→1/250 en junco y de 1/190→1/80 en oro (unas
+   2,5 veces más frecuente en toda la escalera), y la orden de dirección fue balancear SIN
+   romper la economía — así que el neto por lombriz quedó CLAVADO al invariante: 9,29 · 9,70 ·
+   10,34 · 10,56 — los tres primeros son los de la BOLSA de siempre; el de oro sube un pelo a
+   propósito: la corrección del sesgo reveló que la caña de oro NUNCA pagó más que la de hierro
+   en la bolsa real (10,32 contra 10,34 — la fórmula sesgada decía 10,50 y nadie lo veía), y
+   mejorar tiene que servir de algo. (El sesgo nocturno de
+   lanceValorEsperado, cazada por el bolsillo en esta misma tanda, reveló que el neto real de
+   la caña de oro siempre fue ~10,3 y no el 10,50 de la fórmula sesgada). Bisección sobre el
+   reparto común/raro con la fórmula corregida como juez; el bolsillo re-midió 160.000 lances.
+   EL PRECIO, dicho de frente: los legendarios extra se pagan con RAROS más escasos (junco
+   10,1 % → 4,5 %). Es la única moneda de cambio que deja el ancla — la alternativa era subir
+   el neto de todas las cañas o abaratar los legendarios, y las dos rompen más de lo que dan. */
 var CANA_V4_DEF = {
   junco:  { label: "Caña de Junco",   lvl: 1,  presupuesto: 30,   mant: 0.30,
-            cost: { madera: 3 }, colaPlata: 5, banda: { comun: 62.00, poco_comun: 27.00, raro: 10.10, epico: 0.750, legendario: 0.150 } },
+            cost: { madera: 3 }, colaPlata: 5, banda: { comun: 67.368, poco_comun: 27.00, raro: 4.482, epico: 0.750, legendario: 0.400 } },
   bambu:  { label: "Caña de Bambú",   lvl: 4,  presupuesto: 400,  mant: 2.50,
-            cost: { madera: 24, fibra: 4 }, colaPlata: 60, banda: { comun: 55.40, poco_comun: 27.00, raro: 16.16, epico: 1.200, legendario: 0.240 } },
+            cost: { madera: 24, fibra: 4 }, colaPlata: 60, banda: { comun: 60.496, poco_comun: 27.00, raro: 10.804, epico: 1.200, legendario: 0.500 } },
   hierro: { label: "Caña de Hierro",  lvl: 8,  presupuesto: 1000, mant: 5.93,
-            cost: { tablon: 6, barra_hierro: 4, cuero: 3 }, colaPlata: 105, banda: { comun: 46.60, poco_comun: 27.00, raro: 24.24, epico: 1.800, legendario: 0.360 } },
+            cost: { tablon: 6, barra_hierro: 4, cuero: 3 }, colaPlata: 105, banda: { comun: 56.644, poco_comun: 27.00, raro: 13.756, epico: 1.800, legendario: 0.800 } },
   oro:    { label: "Caña de Oro",     lvl: 12, presupuesto: 2000, mant: 10.84,
-            cost: { tablon: 10, barra_oro: 4, cuero: 6 }, colaPlata: 200, banda: { comun: 34.50, poco_comun: 27.00, raro: 35.35, epico: 2.625, legendario: 0.525 } },
+            cost: { tablon: 10, barra_oro: 4, cuero: 6 }, colaPlata: 200, banda: { comun: 50.135, poco_comun: 27.00, raro: 18.990, epico: 2.625, legendario: 1.250 } },
   /* la única que no cobra peaje, y la única que rompe el ancla a propósito: es el premio de
      final de escalera y cuesta un mes de Lonja bien jugada. +10 % al peso de todo lo que saca. */
   abuelo: { label: "Caña del Abuelo", lvl: 18, presupuesto: null, mant: 0, pesoBonus: 0.10, escamas: 120,
-            banda: { comun: 34.50, poco_comun: 27.00, raro: 35.35, epico: 2.625, legendario: 0.525 } },
+            banda: { comun: 50.135, poco_comun: 27.00, raro: 18.990, epico: 2.625, legendario: 1.250 } },
 };
 /* EL VALOR ESPERADO DE UN LANCE, DERIVADO. Éste es el número que ata la pesca al resto del
    juego: tiene que dar ~10,30 con la caña de junco, o sea lo que vale la lombriz que lo paga.
@@ -5741,7 +5755,16 @@ function lanceValorEsperado(cana, opciones) {
   const t = bandaTabla(cana, o.noche || false, o.cebo || "lombriz");
   let v = 0;
   for (const b in t) {
-    const peces = pecesDeCana(cana, b);     // solo las especies que ESTA caña abre
+    /* 1/9 — LOS NOCTURNOS SOLO CUENTAN DE NOCHE, igual que en el sorteo — CON EL MISMO RESPALDO
+       que el sorteo: si la banda entera es nocturna (el raro de junco es solo el pez gato), el
+       juego lo saca igual de día, y la fórmula tiene que contarlo igual. La primera corrección
+       filtró a secas y dejó esa banda en cero: el neto de junco caía a 6,67 cuando la bolsa
+       paga 9,3 — cambié un sesgo por el contrario. La fórmula copia al sorteo LÍNEA A LÍNEA
+       o miente: promediaba al pez gato también de día y el bolsillo lo cazó en la caña de oro
+       (−1,8 por lance) recién cuando las bandas nuevas amplificaron el error. */
+    const todos = pecesDeCana(cana, b);
+    const deDia = todos.filter(k => !PEZ_DEF[k].noche || o.noche);
+    const peces = deDia.length ? deDia : todos;
     if (!peces.length) continue;
     /* el precio de cada especie va POR SU PESO esperado, no por el de tabla: con el camarón es
        de ahí de donde sale casi todo lo que aporta el cebo. */
@@ -6088,7 +6111,10 @@ var CEBO_V4_ORDER = ["lombriz", "larva_luz", "camaron"];
 var CEBO_V4_DEF = {
   lombriz:   { label: "Lombriz",      bolsa: "res",  k: "lombriz",   n: 1,
                txt: "El cebo de siempre. Un lance, una lombriz." },
-  larva_luz: { label: "Larva de luz", bolsa: "res",  k: "larva_luz", n: 1, plata: 10,
+  /* 1/9: la larva se RE-ANCLÓ con las bandas nuevas (los legendarios ×2,5 del pedido de Suren
+     hicieron que borrar el común aporte 11,56 en junco, no 10). Su precio sigue la misma regla
+     de siempre: sube casi exactamente lo que cuesta — control, no beneficio. */
+  larva_luz: { label: "Larva de luz", bolsa: "res",  k: "larva_luz", n: 1, plata: 12,
                txt: "Borra la banda común: no puede salir peor que poco común." },
   /* el camarón sale de la BOLSA DE PECES, no de la de recursos: es un mítico que además decide
      tu próximo lance. « Un mítico que solo se vende es un número; un mítico que además decide
@@ -6861,17 +6887,26 @@ function diaDeGranja() { return celdasProductivas() * ANCLA_PLATA_HORA * LONJA_H
 /* LAS TRES MAREAS. Se guardan en horas UTC porque el reset diario del juego ya es a las 00:00
    UTC: dos relojes distintos en el mismo juego obligarían al jugador a saber en qué huso vive
    cada cosa. */
+/* 1/9 (Suren): « podríamos poner cada 4 horas: si me piden los que no tengo, a las 4 h regreso
+   y veo qué salió ». Seis mareas de cuatro horas — el doble de visitas posibles, y una marea
+   incumplible ya no bloquea el día: rota en cuatro horas. La PLATA por marea baja a la mitad
+   (LONJA_ESCALON.marea.dias) para que la prima diaria quede idéntica; las Escamas sí suben
+   (~280/mes contra ~139) y eso es a sabiendas: « el ritmo de escamas bien… ya vemos si lo
+   nerfeamos » — la palanca es una constante y el cartel de la tienda dice el número real. */
 var LONJA_MAREAS = [
-  { h: 6,  label: "Marea del alba",   noche: false },
+  { h: 2,  label: "Marea de la madrugada", noche: true },
+  { h: 6,  label: "Marea del alba",    noche: false },
+  { h: 10, label: "Marea de la mañana", noche: false },
   { h: 14, label: "Marea de la siesta", noche: false },
-  { h: 22, label: "Marea de la noche", noche: true },
+  { h: 18, label: "Marea de la tarde",  noche: false },
+  { h: 22, label: "Marea de la noche",  noche: true },
 ];
-var LONJA_MAREA_DUR_H = 8;
+var LONJA_MAREA_DUR_H = 4;
 
 /* LOS CUATRO ESCALONES. Lo que paga cada uno sale de diaDeGranja(); las Escamas son fijas,
    porque no compran plata: compran cosas que no tienen precio en plata. */
 var LONJA_ESCALON = {
-  marea:   { label: "Pedido de marea",    dias: 0.033, escamas: 1  },
+  marea:   { label: "Pedido de marea",    dias: 0.017, escamas: 1  },   // 1/9: 6 mareas de 4 h — plata a la mitad, prima diaria idéntica
   capitan: { label: "Encargo del Capitán", dias: 1,    escamas: 6  },
   mes:     { label: "Captura del mes",     dias: 3,    escamas: 25 },
   /* 31/8 (barrido de imprentas, decisión delegada por dirección): los 2 días del documento
@@ -6904,7 +6939,8 @@ function lonjaPaga(escalon, suelto) {
 function lonjaSuelto(p) { return p ? (PEZ_DEF[p.id] || {}).precio * p.n : 0; }
 
 /* ── LAS ESCAMAS ─────────────────────────────────────────────────────────────────────────────
-   Salen SOLO de la Lonja y no se compran ni se venden. Unas 139 al mes: ~3 por día de mareas,
+   Salen SOLO de la Lonja y no se compran ni se venden. Unas 280 al mes desde el 1/9 (seis
+   mareas de 4 h por día — antes eran tres de 8 h y rondaban las 139): ~6 por día de mareas,
    6 por semana del Capitán, 25 al mes y 12 por torneo.
 
    Ojo con el nombre: la Pesca v3 tenía otra cosa llamada « escama » (el recuerdo del pez que se
@@ -6988,20 +7024,20 @@ function lonjaPedido() {
     /* 2 a 5 peces, menos cuanto más rara la banda */
     const techo = { comun: 5, poco_comun: 4, raro: 3 }[banda] || 3;
     const n = Math.max(1, Math.min(techo, 2 + Math.floor(r() * (techo - 1))));
-    /* 31/8 (today.docx: « que el tablero pida misiones de peces con peso — 3 salmones de más de
-       1 kg »). Una marea de cada tres pide PESO en vez de cantidad, y el progreso se cuenta AL
-       PESCAR, no al entregar de la bolsa — porque la bolsa guarda cuántos peces tenés, no cuánto
-       pesa cada uno: el peso solo existe en el momento de la captura. Lo anota pescaAnotar(),
-       el único sitio por el que pasa toda captura.
-       El umbral es el PESO MEDIO de la especie redondeado hacia arriba: por construcción de la
-       curva (cargada hacia abajo) lo supera ~1 de cada 3 capturas — un reto de varias visitas,
-       no una pared. Determinístico por marea, como todo lo demás: F5 no re-sortea. */
-    if (r() < 0.34) {
-      const kgMin = Math.ceil(pesoMedia(id) * 10) / 10;
+    /* 31/8 (today.docx) · 1/9 (Suren, segunda vuelta): « el tablero de peces debe pedir peces
+       CON peso, y si salen pronto se hará muy rápido la misión… queremos un poco de enganche ».
+       Así que TODA marea pide peso — ya no una de cada tres — y el umbral subió del peso medio
+       (lo superaba 1 de cada 3 capturas) al percentil 80 de la especie: lo supera ~1 de cada 5.
+       Dos o tres piezas así son 10-15 lances dentro de una ventana de cuatro horas — enganche,
+       no pared, y la que no salga rota en la marea siguiente (« a las 4 h regreso y veo qué
+       salió »). El progreso se cuenta AL PESCAR (capturaAnotar), no al entregar de la bolsa,
+       porque el peso solo existe en el momento de la captura. Determinístico por marea: F5 no
+       re-sortea. Con la curva de peso w = min + R·u², P(w > min + 0,64·R) = 1 − √0,64 = 20 %. */
+    {
+      const e = PEZ_DEF[id];
+      const kgMin = Math.ceil((e.peso[0] + 0.64 * (e.peso[1] - e.peso[0])) * 10) / 10;
       const nP = 2 + Math.floor(r() * 2);   // 2 o 3 piezas
       G.lonja = { sello, idx, tipo: "peso", id, kgMin, n: nP, hechos: 0, cobrado: false };
-    } else {
-      G.lonja = { sello, idx, id, n, hechos: 0, cobrado: false };
     }
   }
   return G.lonja;
@@ -7185,7 +7221,13 @@ function lonjaEntregarEscalon(escalon) {
   for (const x of pz) {
     G.fish[x.id] -= x.n;
   }
-  const suelto = esPeso ? pM.n * pezPrecio(pM.id, pM.kgMin) : lonjaSueltoDe(escalon);
+  /* 1/9 — LA MAREA DE PESO NO ENTREGA MERCADERÍA, así que no puede cobrar como una venta.
+     El suelo del ×2 (« nunca menos que vender suelto ») es la lección de los escalones que SÍ
+     descuentan peces (Capitán, mes): comparan entregar contra vender. La marea de peso te deja
+     los peces EN LA BOLSA — pagarle además el doble de su valor era cobrar dos veces, y con
+     seis mareas al día el auditor de imprentas lo midió en el 90 % de un día de granja. La
+     marea paga su escalón (porDias) y su Escama: es un premio de misión, no una compra. */
+  const suelto = esPeso ? 0 : lonjaSueltoDe(escalon);
   const plata = lonjaPaga(escalon, suelto);
   G.plata = (G.plata || 0) + plata;
   escamasDar(d.escamas, d.label);
@@ -7357,7 +7399,7 @@ function torneoPremio(puesto) { return TORNEO_PREMIO[puesto - 1] || 0; }
 
 /* ── LA TIENDA DE LA LONJA ───────────────────────────────────────────────────────────────────
    Lo que las Escamas compran, y que la plata no puede: cebo de control, planos de nasa, dos
-   decoraciones y la caña sin usos. A ~139 Escamas al mes, la Caña del Abuelo es un mes de Lonja
+   decoraciones y la caña sin usos. A ~280 Escamas al mes (1/9), la Caña del Abuelo es medio mes
    bien jugada — que es exactamente lo que el documento quiere que sea. */
 var LONJA_TIENDA_ORDER = ["larva", "plano_reforzada", "plano_hierro", "boya", "farol", "cana_abuelo"];
 var LONJA_TIENDA = {

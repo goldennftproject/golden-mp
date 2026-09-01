@@ -137,8 +137,11 @@ console.log("\nLO QUE DEFIENDE ESTE ARCHIVO: QUE DOS DE LOS TRES NO CONVENGAN");
   console.log("       → si el reparto fuera « todo a poco común » la larva perdería más de 5 por");
   console.log("         lance: un cebo que existe sin existir. El reparto proporcional es lo que");
   console.log("         la convierte en una decisión — se usa cuando falta un pez, no para ganar.");
-  ok("el camarón aporta unos 5, como dice el documento",
-    VE("camaron") - base > 3 && VE("camaron") - base < 7, (VE("camaron") - base).toFixed(2));
+  /* 1/9: el « unos 5 » era con las bandas del documento; con los legendarios ×2,5 del pedido
+     de Suren el mismo mejor-de-dos-pesos vale más (7,7). Lo que se defiende no es el 5: es que
+     el camarón PIERDA plata — se quema por el récord, no por la contabilidad. */
+  ok("el camarón aporta peso, no negocio (3-10 de valor esperado)",
+    VE("camaron") - base > 3 && VE("camaron") - base < 10, (VE("camaron") - base).toFixed(2));
   ok("y PIERDE plata, que es exactamente lo que tiene que hacer",
     netos.camaron < -20, netos.camaron.toFixed(2) + " de neto");
   console.log("       → « el camarón se quema cuando vas por el récord de pez espada, y esa es");
@@ -173,8 +176,9 @@ console.log("\nPONER, COBRAR Y QUEDARSE SIN");
   ok("con la bolsa vacía, el camarón deja de estar disponible", !ctx.ceboTengo("camaron"));
   /* comprar larvas: el único cebo que se compra */
   const antes = G.plata, larvas = G.res.larva_luz;
-  ok("una larva cuesta 10 de plata", ctx.larvaComprar(1) === true);
-  ok("se cobra", G.plata === antes - 10, antes + " → " + G.plata);
+  const pl = DEF.larva_luz.plata;   // 1/9: el precio se re-ancló con las bandas nuevas (12)
+  ok("una larva cuesta " + pl + " de plata", ctx.larvaComprar(1) === true);
+  ok("se cobra", G.plata === antes - pl, antes + " → " + G.plata);
   ok("y entra en la bolsa", G.res.larva_luz === larvas + 1);
   G.plata = 3;
   ok("sin plata no se compra, y se dice por qué", ctx.larvaComprar(1) === false);

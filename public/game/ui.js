@@ -630,8 +630,10 @@ function lonjaFilaEscalon(k) {
                       : "tenés " + t + " de " + x.n + " " + (PEZ_DEF[x.id] || {}).label;
     }).join(" · ");
   }
+  /* 1/9: la marea de peso no entrega mercadería — paga su escalón, sin el ×2 de las ventas
+     (los peces gordos quedan en tu bolsa, y venderlos es tu negocio aparte) */
   const pesoM = (k === "marea" && (lonjaPedido() || {}).tipo === "peso") ? lonjaPedido() : null;
-  const suelto = pesoM ? pesoM.n * pezPrecio(pesoM.id, pesoM.kgMin) : lonjaSueltoDe(k);
+  const suelto = pesoM ? 0 : lonjaSueltoDe(k);
   const paga = lonjaPaga(k, suelto);
   const x = suelto > 0 ? Math.round(paga / suelto * 10) / 10 : null;
   return '<div class="lonja-esc' + (listo ? " listo" : "") + '">' +
@@ -650,7 +652,7 @@ function lonjaFilaEscalon(k) {
 
 function lonjaPintaTienda(caja) {
   let h = '<div class="lonja-vacio" style="text-align:left;margin-bottom:8px">Las Escamas salen ' +
-    'de los pedidos de esta Lonja y no se compran ni se venden. Rondan las 139 al mes.</div>';
+    'de los pedidos de esta Lonja y no se compran ni se venden. Rondan las 280 al mes.</div>';
   for (const k of LONJA_TIENDA_ORDER) {
     const d = LONJA_TIENDA[k], falta = lonjaTiendaFalta(k), tengo = lonjaTiendaTengo(k);
     const mat = d.cost ? " + " + Object.keys(d.cost).map(x => d.cost[x] + " " + (RES_LABEL[x] || x)).join(" + ") : "";

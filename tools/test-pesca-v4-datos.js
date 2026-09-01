@@ -141,8 +141,11 @@ console.log("\nLAS TABLAS DE BANDA DE LAS CUATRO CAÑAS");
   ok("la banda POCO COMÚN no se mueve nunca (el suelo de la economía)",
     suelo.every(x => x === suelo[0]), suelo.join(" · "));
   const base = CANAS.junco.banda;
-  ok("la caña de junco respeta el 0,9 % de épico+legendario que pidió dirección",
-    Math.abs(base.epico + base.legendario - 0.9) < 0.001, (base.epico + base.legendario).toFixed(3) + " %");
+  /* 1/9 — el 0,9 % era el pedido VIEJO. Suren: « el legendario con 667 es demasiado, son
+     muchos días » → el legendario de junco subió a 0,4 % (1/250) con el neto CLAVADO
+     (se pagó con raros más escasos; ver la nota sobre CANA_V4_DEF). Épico 0,75 + leg 0,40. */
+  ok("la caña de junco lleva el 1,15 % de épico+legendario del pedido del 1/9",
+    Math.abs(base.epico + base.legendario - 1.15) < 0.001, (base.epico + base.legendario).toFixed(3) + " %");
   const fugas = [];
   for (const k of ["bambu", "hierro", "oro"]) {
     const b = CANAS[k].banda;

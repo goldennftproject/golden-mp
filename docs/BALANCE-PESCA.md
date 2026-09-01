@@ -39,12 +39,29 @@ Regla dura vigente: solo se pide lo que el jugador YA puede pescar con su caña.
 baja de ×2 sobre venderlos sueltos («los sueltos se venden, los raros se entregan»).
 Escamas: ~139 al mes si se juega todo.
 
-## Las preguntas para Suren (una frase cada una alcanza)
+## Las respuestas de Suren (1/9) y lo aplicado — sin mover el ancla
 
-1. ¿Qué se siente mal de los %? ¿Salen demasiados comunes al principio, o los legendarios
-   tardan demasiado (667 lances con junco)?
-2. Del tablero: ¿los pedidos piden demasiados peces, pagan poco, o el ritmo de Escamas
-   (~139/mes, caña del Abuelo = 120) va bien?
-3. ¿La marea de peso (1 de cada 3 pedidos) aparece demasiado o demasiado poco?
+1. **«El legendario con 667 es demasiado»** → legendarios ~2,5× más frecuentes en toda la
+   escalera: junco 1/250, bambú 1/200, hierro 1/125, oro 1/80. Las bandas se RE-DERIVARON con
+   el neto por lombriz clavado a la bolsa real (9,30 · 9,85 · 10,35 · 10,56): los legendarios
+   extra se pagan con raros más escasos — la única moneda de cambio que deja el ancla.
+   De paso, el bolsillo cazó un sesgo viejo de la fórmula (contaba peces nocturnos de día):
+   corregido, la dispersión entre cañas bajó del 16 % al 9 %, y la caña de oro — que en la
+   bolsa real nunca había pagado más que la de hierro — ahora sube de verdad.
 
-Con cualquiera de esas respuestas, el ajuste se deriva del ancla y se mide antes de commitear.
+2. **«Cada 4 horas»** → seis mareas diarias (madrugada 02 · alba 06 · mañana 10 · siesta 14 ·
+   tarde 18 · noche 22), cada una con su Escama. La plata por marea bajó a la mitad para que la
+   prima diaria quede idéntica. Las Escamas suben a ~280/mes («el ritmo bien… ya vemos si lo
+   nerfeamos» — la palanca es una constante).
+
+3. **«Debe pedir peces con peso… queremos enganche»** → TODA marea pide peso, y el umbral subió
+   del peso medio (1 de cada 3 capturas) al percentil 80 (1 de cada 5): 2-3 piezas son 10-15
+   lances por ventana de 4 h. La que no salga rota en la marea siguiente.
+   Y el auditor de imprentas cazó al vuelo la trampa de esta combinación: la marea de peso no
+   entrega mercadería (los peces quedan en tu bolsa), así que ya no cobra el ×2 de las ventas —
+   paga su escalón y su Escama, como el premio de misión que es. Sin ese freno, seis mareas
+   diarias pagaban el 90 % de un día de granja por pescar lo que ibas a pescar igual.
+
+Prima total de la Lonja tras todo esto: ~37 % de un día de granja para quien cumple TODAS las
+ventanas — el premio del oficio, acotado por lombrices y relojes. Invariante re-medido con
+160.000 lances: 9,70-10,56 por lombriz en la bolsa, dispersión 9 %.

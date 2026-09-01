@@ -79,12 +79,15 @@ linea(); console.log("3) PLATA DE LA LONJA — la PRIMA de entregar (pago menos 
      ventana (la marea 3/día, el Capitán y el torneo 1/semana, el mes 1/mes). */
   const E = g("LONJA_ESCALON"), dia = ctx.diaDeGranja();
   G.canas = { oro: 1 }; G.lonja = null; G.lonjaCap = null; G.lonjaMes = null;
-  const ritmo = { marea: 3, capitan: 1 / 7, mes: 1 / 30, torneo: 1 / 7 };
+  const ritmo = { marea: 6, capitan: 1 / 7, mes: 1 / 30, torneo: 1 / 7 };   // 1/9: seis mareas de 4 h
   let primaDia = 0;
   for (const k of ["marea", "capitan", "mes", "torneo"]) {
+    /* 1/9: la marea de peso no entrega mercadería — su pago ENTERO es prima (los peces quedan
+       en la bolsa), y por eso paga solo su escalón, sin el suelo ×2 de las ventas. Este mismo
+       auditor cazó la versión anterior pagando ×2 sobre peces no entregados: 90 % del día. */
     const p = k === "marea" ? ctx.lonjaPedido() : null;
-    const suelto = (k === "marea" && p && p.tipo === "peso")
-      ? p.n * ctx.pezPrecio(p.id, p.kgMin) : ctx.lonjaSueltoDe(k);
+    const esPeso = k === "marea" && p && p.tipo === "peso";
+    const suelto = esPeso ? 0 : ctx.lonjaSueltoDe(k);
     const paga = ctx.lonjaPaga(k, suelto);
     const prima = (paga - suelto) * ritmo[k];
     primaDia += prima;
