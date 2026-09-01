@@ -172,7 +172,9 @@ console.log("\nY EL CÓDIGO NO SE QUEDÓ CON RAMAS MUERTAS");
   const vivo = cuerpo.replace(/\/\*[\s\S]*?\*\//g, "").replace(/\/\/[^\n]*/g, "");
   ok("no quedan carteles de 'terreno bloqueado'", !/terreno bloqueado/.test(vivo));
   ok("ni el aviso de 'se abre en el nivel' al hacer clic", !/se abre en el nivel/.test(vivo));
-  ok("y el clic sin nivel explica en vez de comprar", /if \(falta\) \{ toast\("Necesitás granja nivel/.test(cuerpo));
+  /* 1/9: el clic ya no compra NI avisa por toast — abre el recuadro de expansión (dirección,
+     con captura de Sunflower), que es quien explica el nivel, los costos y los nodos. */
+  ok("y el clic abre el recuadro, que es quien explica", /openOv\("ov-expandir"\)/.test(cuerpo));
 }
 
 console.log("\n" + (fallos ? "  ✗ " + fallos + " fallas\n" : "  ✓ la próxima expansión siempre se muestra, y la chapa dice qué le falta\n"));

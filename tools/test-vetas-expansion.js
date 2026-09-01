@@ -31,12 +31,24 @@ console.log("\nLAS SIETE QUE PIDIÓ DIRECCIÓN, Y SOLO ESAS");
   ok("la lista es 3, 6, 8, 10, 12, 14 y 16", EXP_CON_VETA.join(",") === "3,6,8,10,12,14,16", EXP_CON_VETA.join(","));
   const conVeta = [], sinVeta = [];
   for (let i = 0; i < 16; i++) (EXP_CON_VETA.indexOf(i + 1) >= 0 ? conVeta : sinVeta).push(i);
-  ok("las siete traen bronce Y oro además del árbol y la roca",
-    conVeta.every(i => tipos(i) === "bronce,oro,rock,tree"), conVeta.map(i => (i + 1) + ":" + tipos(i)).join(" · "));
-  ok("las otras nueve siguen con árbol y roca, sin vetas coladas",
-    sinVeta.every(i => tipos(i) === "rock,tree"), sinVeta.map(i => i + 1).join(","));
+  /* 1/9 — LAS ÚLTIMAS SEIS TRAEN ADEMÁS SU NODO EXTRA (dirección: « vamos a agregar más
+     nodos… a las últimas 6. Nodos de oro, hierro y bronce »). El esperado de cada bloque se
+     arma con las DOS listas — EXP_CON_VETA y EXP_NODOS_EXTRA — porque el mundo se arma con
+     las dos. Los detalles del extra los mide test-expansion-recuadro.js. */
+  const EXTRA = GF.EXP_NODOS_EXTRA || {};
+  const esperadoDe = (n) => {
+    const t = ["rock", "tree"];
+    if (EXP_CON_VETA.indexOf(n) >= 0) t.push("bronce", "oro");
+    if (EXTRA[n]) t.push(EXTRA[n]);
+    return t.sort().join(",");
+  };
+  ok("cada bloque trae EXACTO lo que sus dos listas dicen",
+    Array.from({ length: 16 }, (_, i) => i).every(i => tipos(i) === esperadoDe(i + 1)),
+    Array.from({ length: 16 }, (_, i) => (i + 1) + ":" + tipos(i)).filter((_, i) => tipos(i) !== esperadoDe(i + 1)).join(" · "));
+  ok("las que no están en ninguna lista siguen con árbol y roca pelados",
+    sinVeta.filter(i => !EXTRA[i + 1]).every(i => tipos(i) === "rock,tree"));
   const totalVetas = GF.WORLD_OBJECTS.filter(o => o.exp != null && o.type === "ore").length;
-  ok("son 14 vetas nuevas en total", totalVetas === 14, totalVetas + " vetas");
+  ok("son 20 vetas en total (14 de las siete + 6 extras)", totalVetas === 20, totalVetas + " vetas");
 }
 
 console.log("\nCADA VETA EN SU SITIO: DENTRO DEL BLOQUE Y SIN PISARSE");
@@ -78,7 +90,7 @@ console.log("\nSE PAGAN: MÁS CELDAS, MÁS PRECIO (y el ancla intacta)");
 console.log("\nY LA GRANJA TERMINADA CRECE LO QUE TIENE QUE CRECER");
 {
   const nodos = GF.WORLD_OBJECTS.filter(o => o.exp != null).length;
-  ok("las 16 expansiones entregan 46 nodos (32 + 14 vetas)", nodos === 46, nodos + " nodos");
+  ok("las 16 expansiones entregan 52 nodos (32 + 14 vetas + 6 extras)", nodos === 52, nodos + " nodos");
 }
 
 console.log(fallos ? "\n" + fallos + " fallo(s)\n" : "\nTodo en orden: siete bloques con veta, y cada uno pagando lo suyo.\n");

@@ -30,6 +30,12 @@ GF.TILE = 42;
    nada que las ate — la forma exacta de fallo que nos costó las cañas invisibles y los fardos del
    tablón. Vive acá porque config.js carga primero; state.js la lee. */
 GF.EXP_CON_VETA = [3, 6, 8, 10, 12, 14, 16];
+/* 1/9 (dirección, con captura de Sunflower): « vamos a agregar más nodos… a las últimas 6.
+   Nodos de oro, hierro y bronce. » Cada una de las expansiones 11-16 trae UN nodo mineral
+   EXTRA, ciclando bronce → hierro → oro dos veces: los tres metales, en escalera, y el hierro
+   —que hasta hoy no se regalaba en ninguna expansión— entra al mapa. Vive acá por la misma
+   razón que EXP_CON_VETA: config coloca, state cobra, y una sola lista ata las dos cosas. */
+GF.EXP_NODOS_EXTRA = { 11: "bronce", 12: "hierro", 13: "oro", 14: "bronce", 15: "hierro", 16: "oro" };
 GF.COLS_BASE = 15; GF.ROWS_BASE = 15;       // el claro con el que arranca la partida
 GF.COLS = GF.COLS_BASE; GF.ROWS = GF.ROWS_BASE;   // mundo en celdas enteras (crece con las expansiones)
 GF.WORLD_W = GF.COLS * GF.TILE;             // 630
@@ -700,6 +706,20 @@ GF.rehacerColisiones();
         snap("node_bronze", { type: "ore", ore: "bronce", exp: i }, (vb.c + 0.5) * T, (vb.r + 1) * T, T)));
       if (vo) GF.WORLD_OBJECTS.push(Object.assign(
         snap("node_gold", { type: "ore", ore: "oro", exp: i }, (vo.c + 0.5) * T, (vo.r + 1) * T, T)));
+    }
+    /* 1/9: el nodo mineral EXTRA de las últimas seis (GF.EXP_NODOS_EXTRA). Misma mecánica que
+       las vetas del 24/8: celda libre lejos del centro, cuenta como celda productiva en el
+       precio (state la suma), y el recuadro de expansión lo anuncia antes de pagar. */
+    const extra = GF.EXP_NODOS_EXTRA[i + 1];
+    if (extra) {
+      const SPRITE = { bronce: "node_bronze", hierro: "node_iron", oro: "node_gold" };
+      const ve = libres.find(p => ocupadas.indexOf(p) < 0 &&
+        !(arb && p.c === arb.c + 1 && p.r === arb.r));
+      if (ve) {
+        ocupadas.push(ve);
+        GF.WORLD_OBJECTS.push(Object.assign(
+          snap(SPRITE[extra] || "node_bronze", { type: "ore", ore: extra, exp: i }, (ve.c + 0.5) * T, (ve.r + 1) * T, T)));
+      }
     }
     /* 19/8 (dirección): "cuando uno hace la expansión, los nodos no tienen por qué llegar al baúl:
        tienen que aparecer dentro de la expansión hecha, y desde ahí el jugador decide si los mueve".

@@ -631,6 +631,21 @@
   .lt-nm{font-size:13px;font-weight:800;color:#f2ead5}
   .lt-pide{font-size:11px;color:#9fd8f0;margin:2px 0}
   .lt-mide{font-size:11px;color:#7d8f6e;font-style:italic}
+  /* 1/9: el recuadro de expansión (referencia: el diálogo de Grimbly de Sunflower Land) */
+  .exd-secc{font-size:11px;font-weight:800;letter-spacing:.5px;text-transform:uppercase;
+    color:#ffe08a;background:rgba(47,61,38,.85);border:1px solid #3c4d31;border-radius:7px;
+    padding:4px 10px;margin:10px 0 6px;display:flex;justify-content:space-between;align-items:baseline}
+  .exd-secc-nodos{color:#9fd8f0}
+  .exd-req{display:flex;align-items:center;gap:8px;padding:4px 6px;font-size:12.5px;color:#cbbf9f}
+  .exd-req img{width:20px;height:20px;object-fit:contain;image-rendering:pixelated}
+  .exd-req .nm{flex:1;color:#f2ead5}
+  .exd-req .cant{font-weight:800}
+  .exd-req .cant.ok{color:#9fe07a}
+  .exd-req .cant.falta{color:#ff9a8a}
+  .exd-trae-fila{display:flex;align-items:center;gap:8px;padding:3px 6px;font-size:12.5px;color:#f2ead5}
+  .exd-trae-fila img{width:20px;height:20px;object-fit:contain;image-rendering:pixelated}
+  .exd-trae-fila.veta{color:#ffd75e;font-weight:700}
+  #exd-btn:disabled{opacity:.6;cursor:default}
   .lom-bocas{display:flex;flex-direction:column;gap:6px;margin-top:8px}
   /* 1/9: la lista para elegir qué quemar — cada fila con su cuenta de lombrices */
   #lom-lista{display:flex;flex-direction:column;gap:5px;margin-top:8px}
@@ -1390,6 +1405,20 @@
     <h3>Boya de trofeos</h3>
     <div class="sub" id="boya-cab"></div>
     <div class="boya-cuerpo" id="boya-cuerpo"></div>
+  </div></div>
+
+  <!-- 1/9 (dirección, con captura de Sunflower): «vamos a poner las expansiones así, un
+       recuadro, bien especificado». El lote del mundo abre ESTE recuadro: requisitos con
+       tenés/pide, los nodos que trae, y el botón que dice por qué no, cuando no. -->
+  <div class="ov" id="ov-expandir"><div class="card" style="width:min(420px,94%)">
+    <button class="close" data-close="ov-expandir">×</button>
+    <h3 id="exd-titulo">Expandir la granja</h3>
+    <div class="sub" id="exd-sub"></div>
+    <div class="exd-secc">Requisitos</div>
+    <div id="exd-reqs"></div>
+    <div class="exd-secc exd-secc-nodos">Nodos en esta expansión</div>
+    <div id="exd-trae"></div>
+    <button class="green" id="exd-btn" style="width:100%;margin-top:10px"></button>
   </div></div>
 
   <div class="ov" id="ov-lombricario"><div class="card" style="width:min(560px,94%)">

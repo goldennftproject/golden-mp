@@ -11,7 +11,7 @@ function log(m, k = "") { const b = $("log"); if (!b) return; const d = document
 function isOpen(id) { const e = $(id); return !!(e && e.classList.contains("show")); }
 function anyOvOpen() { return !!document.querySelector(".ov.show"); }
 const OV_REFRESH = { "ov-entrenando": () => entrenarSync(), "ov-clan": () => refreshClan(), "ov-misiones": () => refreshMisiones(), "ov-mapa": () => refreshMapa(), "ov-objetivos": () => refreshObjetivos(), "ov-logros": () => refreshLogros(), "ov-album": () => refreshAlbum(), "ov-inv": () => refreshInv(), "ov-cobertizo": () => refreshCobertizo(), "ov-skills": () => refreshSkills(), "ov-equip": () => refreshEquip(), "ov-godhand": () => refreshGodHand(),
-  "ov-forge": () => refreshForge(), "ov-market": () => refreshMarket(), "ov-barn": () => refreshBarn(), "ov-buzon": () => { _bzVista = "sobres"; _bzCartaAbierta = null; refreshBuzon(); }, "ov-paquete": () => refreshPaquete(), "ov-baul": () => refreshBaul(), "ov-pedidos": () => { _pdVista = "pedidos"; refreshPedidos(); },
+  "ov-forge": () => refreshForge(), "ov-market": () => refreshMarket(), "ov-barn": () => refreshBarn(), "ov-buzon": () => { _bzVista = "sobres"; _bzCartaAbierta = null; refreshBuzon(); }, "ov-paquete": () => refreshPaquete(), "ov-baul": () => refreshBaul(), "ov-pedidos": () => { _pdVista = "pedidos"; refreshPedidos(); }, "ov-expandir": () => refreshExpandir(),
   "ov-cocina": () => refreshCooking(),
   "ov-horno": () => refreshHorno(),
   "ov-altar": () => refreshAltar(),
@@ -708,6 +708,62 @@ function tituloPescaPideTxt(k) {
     ps.push("el álbum entero (" + n + "/" + PEZ_ORDER.length + ")");
   }
   return ps.join(" · ");
+}
+
+/* ── EL RECUADRO DE EXPANSIÓN (1/9, dirección, con captura de Sunflower) ─────────────────────
+   « Vamos a poner las expansiones así, un recuadro. Bien especificado. » El lote del mundo
+   abre esto: los requisitos con tenés/pide en color, los nodos que trae — que es el dato que
+   decide si vale la pena pagarla — y el botón que, cuando no puede, dice exactamente por qué. */
+function refreshExpandir() {
+  const ex = (typeof expansionSiguiente === "function") ? expansionSiguiente() : null;
+  const reqs = $("exd-reqs"), trae = $("exd-trae"), btn = $("exd-btn"),
+        tit = $("exd-titulo"), sub = $("exd-sub");
+  if (!reqs || !btn) return;
+  if (!ex) {
+    if (tit) tit.textContent = "La granja está completa";
+    if (sub) sub.textContent = "Tenés las " + (typeof EXPANSION_MAX !== "undefined" ? EXPANSION_MAX : 16) + " expansiones.";
+    reqs.innerHTML = ""; if (trae) trae.innerHTML = "";
+    btn.textContent = "No queda terreno por abrir"; btn.disabled = true;
+    return;
+  }
+  if (tit) tit.textContent = "Expansión " + ex.n + " de " + EXPANSION_MAX;
+  if (sub) sub.textContent = "El terreno crece " + (GF.BLOQUE * GF.BLOQUE) + " celdas y destapa lo que hay debajo.";
+  const faltaNivel = (G.level || 1) < ex.nivel;
+  /* los requisitos: el NIVEL primero (es el que más suele cortar) y los materiales después,
+     cada fila con su icono y su tenés/pide en verde o rojo — la gramática de la referencia */
+  let h = '<div class="exd-req"><img src="' + GF.spr("sk_farming") + '" onerror="this.outerHTML=\'⭐\'">' +
+    '<span class="nm">Nivel de granja</span><span class="cant ' + (faltaNivel ? "falta" : "ok") + '">' +
+    (G.level || 1) + "/" + ex.nivel + "</span></div>";
+  const faltantes = [];
+  for (const k in ex.costo) {
+    const tengo = Math.floor((G.res && G.res[k]) || 0), pide = ex.costo[k], ok = tengo >= pide;
+    if (!ok) faltantes.push((pide - tengo) + " " + (RES_LABEL[k] || k));
+    h += '<div class="exd-req">' + iconRes(k, 20) +
+      '<span class="nm">' + (RES_LABEL[k] || k) + '</span>' +
+      '<span class="cant ' + (ok ? "ok" : "falta") + '">' + fmt(tengo) + "/" + fmt(pide) + "</span></div>";
+  }
+  reqs.innerHTML = h;
+  /* lo que trae, con su lámina: las vetas en dorado — son el dato que decide */
+  if (trae) {
+    const SPR = { parcela: "plot", arbol: "tree", roca: "node_stone",
+                  bronce: "node_bronze", hierro: "node_iron", oro: "node_gold" };
+    trae.innerHTML = expansionTrae(ex.n).map(x => {
+      const veta = x.txt.indexOf("veta") >= 0;
+      return '<div class="exd-trae-fila' + (veta ? " veta" : "") + '">' +
+        '<img src="' + GF.spr(SPR[x.k] || "plot") + '" onerror="this.remove()">' +
+        "+1 " + x.txt.charAt(0).toUpperCase() + x.txt.slice(1) + "</div>";
+    }).join("");
+  }
+  /* la regla 9 en el botón: nunca un « no » sin su porqué */
+  const puede = !faltaNivel && (typeof canAfford === "function") && canAfford(ex.costo);
+  btn.disabled = !puede;
+  btn.textContent = puede ? "Expandir"
+    : faltaNivel ? "Necesitás granja nivel " + ex.nivel + " (tenés " + (G.level || 1) + ")"
+    : "Te falta: " + faltantes.join(" · ");
+  btn.onclick = () => {
+    if (!puede) return;
+    if (typeof expansionComprar === "function" && expansionComprar()) closeOv("ov-expandir");
+  };
 }
 
 /* ── EL LOMBRICARIO ──────────────────────────────────────────────────────────────────────────

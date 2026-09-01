@@ -4082,18 +4082,14 @@ class FarmScene extends Phaser.Scene {
     // que el cartel también cuente como "encima del lote": si no, al mover el cursor del bloque a
     // la chapa el cartel se escondería justo cuando vas a tocarlo
     chapa.on("pointerover", () => { zona.emit("pointerover"); });
+    /* 1/9 (dirección, con captura de Sunflower): el clic abre EL RECUADRO — « vamos a poner las
+       expansiones así, un recuadro, bien especificado ». Se abre SIEMPRE, tenga o no el nivel o
+       el material: el recuadro es quien explica qué falta y qué trae, que es su trabajo.
+       (Antes acá vivía un askConfirm con el costo en una línea, y sin nivel el clic era solo un
+       toast: la información completa no estaba en ninguna parte tocable.) */
     chapa.on("pointerdown", () => {
-      if (falta) { toast("Necesitás granja nivel " + ex.nivel + " para esta expansión (tenés " + (G.level || 1) + ")"); return; }
-      if (!canAfford(ex.costo)) {
-        toast("Te falta material: " + Object.keys(ex.costo)
-          .filter(k => Math.floor((G.res[k] || 0)) < ex.costo[k])
-          .map(k => (ex.costo[k] - Math.floor(G.res[k] || 0)) + " " + (RES_LABEL[k] || k)).join(" · "));
-        return;
-      }
-      const lista = Object.keys(ex.costo).map(k => ex.costo[k] + " " + (RES_LABEL[k] || k)).join(" + ");
-      askConfirm("Expandir la granja " + (GF.BLOQUE * GF.BLOQUE) + " celdas por " + lista + "?",
-        () => { if (typeof expansionComprar === "function") expansionComprar(); },
-        { title: "Expansión " + ex.n + " de " + EXPANSION_MAX, yes: "Expandir", yesClass: "green", no: "Ahora no" });
+      if (typeof refreshExpandir === "function") refreshExpandir();
+      if (typeof openOv === "function") openOv("ov-expandir");
     });
   }
 

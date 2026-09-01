@@ -1636,7 +1636,8 @@ function expansionCostos() {
     const c = {};
     partes.forEach(([k, f]) => { const pr = PRICE[k] || 1; c[k] = Math.max(1, Math.round(plata * f / pr)); });
     EXPANSION_COSTO.push(c);
-    celdas += CELDAS_POR_EXP + (expVetas(i + 1) ? 2 : 0);   // 24/8: las que traen vetas suman 2 celdas más
+    celdas += CELDAS_POR_EXP + (expVetas(i + 1) ? 2 : 0)    // 24/8: las que traen vetas suman 2 celdas más
+            + (expNodoExtra(i + 1) ? 1 : 0);                // 1/9: el nodo extra de las últimas 6 también se paga
   }
   })();
   return EXPANSION_COSTO;
@@ -1669,6 +1670,10 @@ function expansionCostos() {
    Si config.js no cargó, eso es un fallo de orden de carga y tiene que doler, no taparse. */
 var EXP_CON_VETA = GF.EXP_CON_VETA;
 function expVetas(n) { return EXP_CON_VETA.indexOf(n) >= 0; }   // n = número de expansión (1..16)
+/* 1/9 (dirección): las últimas seis traen además UN nodo mineral extra — bronce → hierro → oro,
+   dos vueltas. La lista vive en config (GF.EXP_NODOS_EXTRA), que es quien lo coloca; acá solo
+   se lee para cobrarlo y anunciarlo. Misma regla que EXP_CON_VETA: una lista, tres caras. */
+function expNodoExtra(n) { return (GF.EXP_NODOS_EXTRA || {})[n] || null; }
 /* QUÉ TRAE UNA EXPANSIÓN (26/8, diseñador)
    ═══════════════════════════════════════════════════════════════════════════════════════════
    « la parcela 2 está bien, pero debe decir lo que trae: solo se puede leer árbol, roca. En ésta
@@ -1684,6 +1689,8 @@ function expVetas(n) { return EXP_CON_VETA.indexOf(n) >= 0; }   // n = número d
 function expansionTrae(n) {
   const out = [{ k: "parcela", txt: "parcela" }, { k: "arbol", txt: "árbol" }, { k: "roca", txt: "roca" }];
   if (expVetas(n)) { out.push({ k: "bronce", txt: "veta de bronce" }); out.push({ k: "oro", txt: "veta de oro" }); }
+  const ex = expNodoExtra(n);
+  if (ex) out.push({ k: ex, txt: "veta de " + ex });   // 1/9: el nodo extra de las últimas 6
   return out;
 }
 function expansionTraeTxt(n) { return "Trae " + expansionTrae(n).map(x => x.txt).join(" · "); }

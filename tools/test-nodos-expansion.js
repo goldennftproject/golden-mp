@@ -17,13 +17,15 @@ const nuevos = G.WORLD_OBJECTS.filter(o => o.exp != null);
    expansión: 9 de arranque + 16×3 = 57, el techo de siempre. */
 /* 24/8 (dirección): siete bloques —3, 6, 8, 10, 12, 14 y 16— traen ADEMÁS una veta de bronce
    y una de oro, y se pagan (la fórmula de costos cuenta esas dos celdas de más). O sea:
-   16×2 nodos base + 7×2 vetas = 46. Ver tools/test-vetas-expansion.js. */
+   16×2 nodos base + 7×2 vetas = 46… hasta el 1/9, cuando dirección sumó UN nodo mineral extra
+   a cada una de las últimas seis (bronce/hierro/oro, ver test-expansion-recuadro.js): 52. */
 const CON_VETA = [3, 6, 8, 10, 12, 14, 16];
-ok("hay 46 nodos de expansión (16×2 + 7×2 vetas)", nuevos.length === 46, nuevos.length);
-ok("cada bloque trae su árbol y su roca (y las siete, sus vetas)",
+const EXTRA = (G.GF && G.GF.EXP_NODOS_EXTRA) || { 11: 1, 12: 1, 13: 1, 14: 1, 15: 1, 16: 1 };
+ok("hay 52 nodos de expansión (16×2 + 7×2 vetas + 6 extras)", nuevos.length === 52, nuevos.length);
+ok("cada bloque trae su árbol y su roca (más vetas y extra donde tocan)",
   G.EXPANSIONES.every((e, i) => {
     const d = nuevos.filter(o => o.exp === i);
-    const esperado = CON_VETA.indexOf(i + 1) >= 0 ? 4 : 2;
+    const esperado = 2 + (CON_VETA.indexOf(i + 1) >= 0 ? 2 : 0) + (EXTRA[i + 1] ? 1 : 0);
     return d.length === esperado && d.some(o => o.type === "tree") && d.some(o => o.type === "rock");
   }));
 ok("salen 16 árboles y 16 rocas",
