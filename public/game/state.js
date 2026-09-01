@@ -7394,7 +7394,11 @@ function torneoAnotar(id, kg) {
   const t = G.torneo = (G.torneo && G.torneo.sem === sem) ? G.torneo : { sem, pts: 0, id: null, kg: 0 };
   const p = torneoPuntos(id, kg);
   if (p > t.pts) { t.pts = p; t.id = id; t.kg = kg;
-    log("Nueva mejor del torneo: " + PEZ_DEF[id].label + " de " + kg.toFixed(2) + " kg · " + p.toFixed(2) + " puntos.", "gold"); }
+    log("Nueva mejor del torneo: " + PEZ_DEF[id].label + " de " + kg.toFixed(2) + " kg · " + p.toFixed(2) + " puntos.", "gold");
+    /* 1/9: la marca nueva se reporta al ranking (save.js → Edge Function). Si no hay red o la
+       función no está deployada, es un no-op: la báscula local sigue mandando. */
+    if (typeof torneoReportar === "function") torneoReportar();
+  }
   return t;
 }
 /* los diez primeros cobran Escamas en escalera, 25 al 1.º y 3 al 10.º */

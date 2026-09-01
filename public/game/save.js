@@ -787,6 +787,9 @@ async function loadFarm() {
         // prefijo por sesión en el ranking, el chat y el mercado (10/8).
         if (data.name && !window.NICK) window.NICK = String(data.name).replace(/^\s*(\[[^\]]*\]\s*)+/, "") || data.name;
         lastSavedKey = snapKey();   // referencia: lo que acabás de cargar ya está guardado
+        /* 1/9: con la granja cargada, se liquida el podio del torneo de la semana pasada si
+           quedó pendiente — con un respiro, para no competir con el arranque */
+        setTimeout(() => { if (typeof torneoPodioCheck === "function") torneoPodioCheck(); }, 4000);
         return true;
       }
       /* 25/8 — « PRIMERA VEZ DE VERDAD » NO SIEMPRE ES VERDAD. Si este navegador jugó con la base
@@ -971,6 +974,72 @@ async function saveFarm(force) {
     } catch (e) { if (intento === 0) await sleepMs(1500); else console.warn("saveFarm sin conexión (reintenta solo):", e && e.message); }
   }
 }
+
+/* ============ EL RANKING DEL TORNEO · el puente con la Edge Function (1/9) ==================
+   La tabla comparativa 1º-10º vive en Supabase (sql/torneo-ranking.sql) detrás de la función
+   "torneo" (supabase/functions/torneo/), que calcula los puntos EN EL SERVIDOR: acá solo se
+   propone la captura y se lee la tabla. Sin conexión o sin la función deployada, todo esto es
+   un no-op silencioso — el torneo local (la báscula de participación) sigue andando igual. */
+async function torneoInvoke(body) {
+  try {
+    if (!sb || !sb.functions) return null;
+    const { data, error } = await sb.functions.invoke("torneo", { body });
+    if (error) { console.warn("torneo:", (error && error.message) || error); return null; }
+    return data && data.ok ? data : null;
+  } catch (e) { console.warn("torneo no disponible:", e && e.message); return null; }
+}
+/* reportar la mejor captura del finde — lo llama torneoAnotar cuando la marca mejora */
+window.torneoReportar = async function () {
+  const t = G && G.torneo;
+  if (!t || !t.id || !(t.pts > 0)) return;
+  const r = await torneoInvoke({ accion: "reportar", pez: t.id, kg: t.kg,
+    nick: (typeof nombreLucido === "function" ? nombreLucido() : (window.NICK || "granjero")) });
+  if (r && r.puesto) {
+    t.puesto = r.puesto;   // informativo: la Lonja lo pinta si está
+    if (typeof window._torneoTopCache !== "undefined") window._torneoTopCache = null;   // el top cambió
+  }
+};
+/* el top 10 de una semana, con caché de 60 s: la Lonja repinta seguido y la función no
+   tiene por qué enterarse de cada repintada */
+window._torneoTopCache = null;
+window.torneoTop = async function (sem) {
+  const c = window._torneoTopCache;
+  if (c && c.sem === sem && Date.now() - c.at < 60000) return c;
+  const r = await torneoInvoke({ accion: "top", sem });
+  if (!r) return null;
+  window._torneoTopCache = { sem: r.sem, top: r.top || [], puesto: r.puesto, mio: r.mio, at: Date.now() };
+  return window._torneoTopCache;
+};
+/* EL COBRO DEL PODIO, al cierre: si quedó un torneo de una semana PASADA sin liquidar, se le
+   pregunta a la tabla congelada qué puesto sacó y se paga el bono. Idempotente y paciente:
+   si la función no contesta hoy, se reintenta en la próxima carga — nunca se pierde. */
+window.torneoPodioCheck = async function () {
+  try {
+    const t = G && G.torneo;
+    if (!t || !(t.pts > 0) || typeof torneoSemana !== "function") return;
+    const semAhora = torneoSemana();
+    if (t.sem >= semAhora) return;                      // el torneo sigue abierto o es de hoy
+    if (G.torneoPodioCobrado === t.sem) return;         // ya liquidado
+    const r = await torneoInvoke({ accion: "top", sem: t.sem });
+    if (!r) return;                                     // sin backend: se reintenta otro día
+    G.torneoPodioCobrado = t.sem;                       // liquidado, haya podio o no
+    if (r.puesto && r.puesto <= 10 && typeof torneoPremio === "function") {
+      const esc = torneoPremio(r.puesto);
+      /* el bono de plata sigue la MISMA escalera que las Escamas (25→3): el 1.º cobra los
+         2 días del documento enteros, el 10.º su proporción. Una sola escalera manda. */
+      const plata = Math.round(diaDeGranja() * 2 * esc / torneoPremio(1));
+      G.plata = (G.plata || 0) + plata;
+      if (typeof escamasDar === "function") escamasDar(esc, "podio del Torneo");
+      log("🏆 ¡Puesto " + r.puesto + " en el Torneo de Pesca de la semana! +" + plata +
+          " de plata y +" + esc + " Escamas.", "gold");
+      if (typeof celebrate === "function") celebrate({ title: "¡PODIO DEL TORNEO!", sub: "Puesto " + r.puesto + " · +" + plata + " de plata" });
+    } else if (r.puesto) {
+      log("El Torneo de la semana cerró: quedaste " + r.puesto + "º. El podio paga hasta el 10.º — ¡la próxima!", "info");
+    }
+    if (typeof refreshHud === "function") refreshHud();
+    if (typeof saveFarm === "function") saveFarm();
+  } catch (e) { console.warn("podio:", e && e.message); }
+};
 
 /* ============ LA CUENTA SOBREVIVE AL NAVEGADOR (22/8, dirección) ==========================
    El login es anónimo por navegador: borrar datos, cambiar de máquina o abrir incógnito crea

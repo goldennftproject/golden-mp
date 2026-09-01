@@ -613,6 +613,26 @@ function lonjaFilaEscalon(k) {
       : "<b>tu mejor captura del fin de semana</b>";
     extra = t ? "Da <b>" + (t.pts || 0).toFixed(2) + "</b> puntos · la báscula pide <b>" +
                 TORNEO_BARRA.toFixed(2) + "</b>" : "";
+    /* 1/9 — EL RANKING DE VERDAD: el top 10 de la semana, leído de la tabla del servidor.
+       El fetch es asíncrono y este pintor no: se pinta lo cacheado y, si el caché venció,
+       se pide y se repinta al llegar. Sin backend deployado no sale nada — la báscula de
+       participación no depende de la tabla. El podio (2 días escalonados + Escamas 25→3)
+       se liquida al cierre, en torneoPodioCheck. */
+    if (typeof torneoTop === "function" && typeof torneoSemana === "function") {
+      const c = window._torneoTopCache;
+      const semHoy = torneoSemana();
+      if (c && c.sem === semHoy && c.top && c.top.length) {
+        extra += '<div class="torneo-top">' + c.top.map((f, i) =>
+          '<div class="tt-fila' + (c.puesto === i + 1 ? " yo" : "") + '"><span class="p">' + (i + 1) + 'º</span>' +
+          '<span class="n">' + String(f.nick || "granjero").slice(0, 18) + '</span>' +
+          '<span class="pz">' + ((PEZ_DEF[f.pez] || {}).emoji || "🐟") + ' ' + Number(f.kg).toFixed(1) + ' kg</span>' +
+          '<span class="pt">' + Number(f.pts).toFixed(2) + '</span></div>').join("") +
+          (c.puesto ? '<div class="tt-mio">Vas ' + c.puesto + 'º esta semana</div>' : "") + '</div>';
+      } else {
+        torneoTop(semHoy).then(r => { if (r && isOpen("ov-lonja")) refreshLonja(); });
+        extra += '<div class="torneo-top tt-cargando">buscando la tabla de la semana…</div>';
+      }
+    }
   } else if (k === "marea" && (lonjaPedido() || {}).tipo === "peso") {
     /* la marea de PESO (31/8, today.docx): pide capturas por encima de un umbral, y se cumple
        PESCANDO — el progreso es de la caña, no de la bolsa */
