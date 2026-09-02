@@ -3145,6 +3145,8 @@ class FarmScene extends Phaser.Scene {
     const objRes = st ? st.res : null;   // madera/piedra → árboles/rocas del objetivo
     const objPlots = st && (st.id === "plant" || st.id === "harvest");
     const lista = [];
+    let yaHayExcav = false;                              // 2/9: un montículo por vez, no el desfile
+    const excavPausa = this._excavPausa || {};           // los ya señalados 20 s descansan 45
     for (const p of (this.plots || [])) {
       if (p.state !== "ready" || t - (p.readyAt || 0) < MADURO) continue;
       lista.push({ x: p.cx, y: p.by - 14, k: "listo" + p.i, prio: objPlots ? 0 : 1, edad: t - (p.readyAt || 0), o: p });
@@ -3168,8 +3170,19 @@ class FarmScene extends Phaser.Scene {
          de las papas, a los dos minutos de empezar. Estaban en la lista de objetos desde el 15/8
          pero este imán no tenía su caso, así que el jugador los veía sin que nada se los señalara.
          Van con prioridad 0 mientras el objetivo espera un reloj: es cuando más falta hacen. */
-      if (o.type === "excav")
-        lista.push({ x: o.cx, y: o.by - 12, k: "excav" + o.idx, prio: objPlots ? 0 : 1, edad, o });
+      /* 2/9 (reporte de dirección: « las mariposas se quedan roboteando los montículos y no van
+         a otro lugar »). Los montículos tenían dos ventajas desleales en este imán: su readyAt
+         es 0, así que su "edad" era t entero — para el ordenador llevaban esperando desde el
+         origen de los tiempos y le ganaban el turno a cualquier cultivo — y con las expansiones
+         ya hay más montículos que mariposas, así que las TRES quedaban en órbita perpetua.
+         Ahora tienen modales: la edad se mide desde que el montículo nació HOY (o.nace), entra
+         UNO solo a la lista por vez, y el que ya fue señalado 20 s descansa 45 (el turno lo
+         cierra tickMariposas). Se siguen señalando — son el aviso de la lombriz gratis — pero
+         por turnos, no en monopolio. */
+      if (o.type === "excav" && !yaHayExcav && (excavPausa["excav" + o.idx] || 0) <= t) {
+        yaHayExcav = true;
+        lista.push({ x: o.cx, y: o.by - 12, k: "excav" + o.idx, prio: objPlots ? 0 : 1, edad: t - (o.nace || 0), o });
+      }
     }
     if (perdido) {
       const haySemillas = Object.keys(G.seeds || {}).some(k => (G.seeds[k] || 0) > 0);
@@ -3194,9 +3207,20 @@ class FarmScene extends Phaser.Scene {
       this.maripos.forEach((m, i) => {
         if (perdido && i === 0 && this.guiaTarget) { m.ancla = { x: this.guiaTarget.x, y: this.guiaTarget.y + 26 }; tomados.add("guia"); return; }
         const libre = accion.find(a => !tomados.has(a.k));
-        if (libre) { tomados.add(libre.k); m.ancla = { x: libre.x, y: libre.y, o: libre.o }; return; }
+        if (libre) { tomados.add(libre.k); m.ancla = { x: libre.x, y: libre.y, o: libre.o, k: libre.k }; return; }
         m.ancla = null;   // nada maduro que señalar: mariposa libre
       });
+    }
+    // 2/9: el TURNO de los montículos — 20 s de señal y a otra cosa, con 45 s de descanso
+    // para ese montículo (« las mariposas se quedan roboteando los montículos »). El reloj
+    // arranca cuando el ancla cambia de destino, así que sobrevive a las reasignaciones.
+    for (const m of this.maripos) {
+      const k = m.ancla && m.ancla.k;
+      if (k !== m.anclaK) { m.anclaK = k || null; m.anclaDesde = t; }
+      if (m.ancla && m.ancla.o && m.ancla.o.type === "excav" && t - (m.anclaDesde || t) > 20000) {
+        (this._excavPausa = this._excavPausa || {})[k] = t + 45000;
+        m.ancla = null; m.anclaK = null; m.percha = null; m.posadaHasta = 0;
+      }
     }
     for (const m of this.maripos) {
       // 15/8: si el recurso que señalaba entró en enfriamiento, lo suelta YA (sin esperar
@@ -3320,7 +3344,7 @@ class FarmScene extends Phaser.Scene {
       const w = T * 0.55;
       const spr = this.add.image(px, py, "monticulo").setOrigin(0.5, 1).setDepth(py);
       spr.setScale(w / spr.width);
-      const o = { i: "excav" + i, type: "excav", idx: i, cx: px, by: py, w, rw: w, baseKey: "monticulo", sprite: spr, readyAt: 0 };
+      const o = { i: "excav" + i, type: "excav", idx: i, cx: px, by: py, w, rw: w, baseKey: "monticulo", sprite: spr, readyAt: 0, nace: this.time.now };   // 2/9: nace = su edad real para el imán de mariposas (readyAt 0 lo hacía "eterno")
       this.objs.push(o); this.excavObjs.push(o);
     }
   }
