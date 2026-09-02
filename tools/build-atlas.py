@@ -41,7 +41,16 @@ EXTRA = ["res_", "crop_", "cropm_", "cropg_", "fish_", "coin_", "animal_", "deco
 SUELTOS = ["establo", "curtiduria", "ofrendas", "mazo", "pet_gallina", "skin_sombrero", "godhand", "tree_sapling", "plot_wild",
            # 17/8: mobiliario de la granja que se fue sumando después del último atlas
            "buzon", "buzon_full", "baul_premios", "baul_premios_lleno", "paquete_dia", "paquete_dia_abierto",
-           "monticulo", "tablon_pedidos", "tablon_pedidos_full", "sobre_carta", "papel_carta"]
+           "monticulo", "tablon_pedidos", "tablon_pedidos_full", "sobre_carta", "papel_carta",
+           # 2/9: el muelle de la Pesca v4 (27/8) nunca entró al atlas — eran los 3 pedidos
+           # sueltos que disparaban la segunda pasada de descarga en CADA carga del juego
+           # ("la barra retrocede y vuelve a cargar", reporte de dirección)
+           "lombricario", "lonja", "boya_trofeos"]
+
+# 2/9: el juego pide algunas claves con otro nombre que el archivo (boot.js: ["boya",
+# "boya_trofeos.png"]). Sin este renombre el atlas guardaba "boya_trofeos", boot no la
+# encontraba como "boya", y la bajaba suelta igual — el atlas cargado en vano.
+RENOMBRES = {"boya_trofeos": "boya"}
 # 17/8: "isla" FUERA del atlas. La metí buscando "cero pedidos sueltos" y fue un error: mide
 # 1190x854, o sea que ella sola empuja el lienzo del atlas a 4096 de ancho y reordena TODO el
 # empaquetado. boot.js ya lo decía en un comentario —"imagen grande y aparte, NO va al atlas"—
@@ -75,7 +84,7 @@ def archivos():
         if clave in EXCLUIR:
             continue
         if clave in pedidos or clave in SUELTOS or any(clave.startswith(p) for p in EXTRA + BESTIARIO):
-            todos[clave] = os.path.join(FARM, nombre)
+            todos[RENOMBRES.get(clave, clave)] = os.path.join(FARM, nombre)
     faltan = [k for k in pedidos if k not in todos]
     return todos, faltan
 

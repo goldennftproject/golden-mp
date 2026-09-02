@@ -141,12 +141,23 @@ class BootScene extends Phaser.Scene {
   preload() {
     // ATLAS: todos los sprites del mundo en 2 archivos (mucho más liviano para el server free).
     // Si el atlas no llega, ensureAll() baja los archivos sueltos como respaldo.
-    this.load.image("__atlas", "assets/atlas.png?v=48");
-    this.load.json("__atlasmap", "assets/atlas.json?v=48");
+    this.load.image("__atlas", "assets/atlas.png?v=49");
+    this.load.json("__atlasmap", "assets/atlas.json?v=49");
+    // 2/9: la isla viaja en la PRIMERA pasada (es la única imagen que no cabe en el atlas:
+    // 1190x854). Antes quedaba para los reintentos y era ella sola la que disparaba una
+    // segunda vuelta de descarga en cada carga del juego.
+    this.load.image("isla", "assets/farm/isla.png?v=1");
 
     // No hay barra propia: la pantalla de carga es UNA sola, la del HTML, y le pasamos el avance.
     // (Antes había dos barras seguidas y el juego "aparecía" antes de estar listo.)
-    this.paso = (v, txt) => { if (typeof loadPaso === "function") loadPaso(0.40 + 0.50 * Math.max(0, Math.min(1, v)), txt); };
+    // 2/9 (reporte de dirección: « la barra carga, retrocede y vuelve a cargar »): cada pasada
+    // de reintentos reinicia el progress de Phaser en 0 y la barra volvía al 40%. Ahora la
+    // barra es MONOTÓNICA — recuerda su máximo y nunca retrocede; las pasadas extra solo
+    // cambian el texto.
+    this.paso = (v, txt) => {
+      this._maxV = Math.max(this._maxV || 0, Math.max(0, Math.min(1, v)));
+      if (typeof loadPaso === "function") loadPaso(0.40 + 0.50 * this._maxV, txt);
+    };
     this.msg = { setText: (t) => this.paso(this._ult || 0, t) };
     this.load.on("progress", v => { this._ult = v; this.paso(v, "Cargando el arte de la granja…"); });
   }
