@@ -27,6 +27,10 @@
   .hudbar>*{pointer-events:auto}
   .brand h1{margin:0;font-size:20px;letter-spacing:2px;color:var(--gold);font-weight:800}
   .hud{display:flex;gap:7px;flex-wrap:wrap;align-items:center}
+  /* 2/9: la repisa de las píldoras que van y vienen (estamina, buffs de comida). Es ABSOLUTA
+     bajo la barra: aparecer o desaparecer no cambia la forma de la barra (« lo que pasa en el
+     juego no mueve los menúes »). top:100% sigue el alto real de la barra aunque envuelva. */
+  #hud-flot{position:absolute;top:100%;right:12px;margin-top:3px;display:flex;gap:7px;align-items:center;justify-content:flex-end;flex-wrap:wrap;pointer-events:auto}
   .pill{background:rgba(38,51,31,.92);border:1px solid #3c4d31;border-radius:999px;padding:5px 11px;font-size:13px;font-weight:700;display:flex;align-items:center;gap:5px;white-space:nowrap;color:#f2ead5;cursor:default}
   .pill .k{color:#a9bd94;font-weight:600;font-size:12px}
   /* barra de Combate global (doc maestro 2/8): insignia + relleno dorado + XP */
@@ -980,15 +984,23 @@
       <div class="pill" title="Plata — la moneda del juego"><img class="ric" src="assets/farm/coin_plata.png?a=4" onerror="this.outerHTML='<span class=&quot;coin silver&quot;></span>'"><b id="s-plata">0</b></div>
       <div class="pill" title="Esencia $Golden — se usa para pescar"><img class="ric" src="assets/farm/coin_esencia.png?a=4" onerror="this.outerHTML='✨'"><b id="s-golden">20</b></div>
       <div class="pill" title="Vida — cuidado en la Zona Negra"><span></span><b id="s-hp">100/100</b></div>
+      <div class="pill cpill" id="cbar" title="Nivel de Combate — suma la XP de todos los kills, sin importar el arma"><b id="c-lvl">1</b><span class="k">Combate</span><span class="cbarw"><span class="cfill" id="c-fill"></span></span><span class="k" id="c-xp">0/100</span></div>
+      <div class="pill"><span class="k">Semana</span><b id="s-week">1</b></div>
+      <button class="btnpill" id="menu-btn">☰ Menú</button>
+    </div>
+    <!-- 2/9 (reporte de dirección: « al abrir el paquete del daily se movió la barra de arriba »).
+         La estamina y los buffs de comida APARECEN Y DESAPARECEN según lo que hagas en el juego,
+         y vivían dentro de la barra: al cobrar la Bendición del Granjero el chip nacía, la barra
+         ya no entraba y envolvía una fila hacia abajo. Regla: lo que pasa en el juego no mueve
+         los menúes. Estas dos píldoras viven ahora en una REPISA flotante pegada bajo la barra,
+         fuera de su flujo — vengan o se vayan, la barra no se entera. -->
+    <div id="hud-flot">
       <div class="pill cpill" id="stampill" style="display:none" title="Estamina de combate — solo se gasta en la Zona Negra. Se recupera sola, comiendo guisos o con una recarga."><span class="k">Estamina</span><span class="cbarw"><span class="cfill stamf" id="stam-fill"></span></span><span class="k" id="s-stam">100/100</span></div>
       <!-- 31/8 (de los vídeos de referencia: « Food 00:00 » — la comida es un RELOJ). Los platos
            llevaban buffs con vencimiento desde el doc maestro del 2/8 y no se enseñaban en ningún
            sitio: comías un guiso de +10 % de daño y el juego no decía ni que estaba activo ni
            cuánto le quedaba. Lo llena refreshBuffsPill() en el tick de 1 s del HUD. -->
       <div class="pill" id="buffpill" style="display:none" title="Efectos de la comida — lo que te queda de cada plato"></div>
-      <div class="pill cpill" id="cbar" title="Nivel de Combate — suma la XP de todos los kills, sin importar el arma"><b id="c-lvl">1</b><span class="k">Combate</span><span class="cbarw"><span class="cfill" id="c-fill"></span></span><span class="k" id="c-xp">0/100</span></div>
-      <div class="pill"><span class="k">Semana</span><b id="s-week">1</b></div>
-      <button class="btnpill" id="menu-btn">☰ Menú</button>
     </div>
   </div>
 
