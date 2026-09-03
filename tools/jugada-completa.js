@@ -155,12 +155,33 @@ function tocar(o) {
   }
   return _gateOK;
 }
-function pescar() {   // la laguna no es un objeto: se pesca con tryFish, como el clic real
-  avisos.length = 0; _gateOK = false;
-  const p = GF.POND, cx = (p.col + p.cols / 2) * T, cy = (p.row + p.rows / 2) * T;
-  try { esc.tryFish(cx, cy); } catch (e) { falla("tryFish reventó: " + e.message); return false; }
-  if (esc.action) { try { esc.finishAction(); } catch (e) { falla("finishAction(fish) reventó: " + e.message); esc.action = null; return false; } }
-  return _gateOK;
+function pescar() {
+  /* 2/9 — LA PESCA SE JUEGA COMO ES HOY: la v4 con el carrete (pagar la lombriz al tirar,
+     esperar el pique, pelear la barra). La versión vieja de esta función pescaba por
+     tryFish/finishAction — el camino de la v3, que ya no entrega peces — y sus tres "fallos"
+     eran el simulador midiendo un juego que ya no existe. La pelea se juega con la táctica
+     obvia (apretar cuando la zona está debajo del pez): con eso el común sale casi siempre. */
+  avisos.length = 0;
+  /* el conductor vive en ui.js (que esta simulación no carga: es puro DOM); acá se conducen
+     las MISMAS piezas de state.js en el MISMO orden que pescaV4Abrir/Paso/Resolver:
+     cobrar el cebo → sortear el pez → pelear el carrete → entregar o perder. */
+  try {
+    if (!ctx.ceboTengo("lombriz")) return false;
+    ctx.ceboCobrar("lombriz");
+    const cana = (() => { const t = G.canas || {}; const O = vm.runInContext("CANA_V4_ORDER", ctx); for (let i = O.length - 1; i >= 0; i--) if (t[O[i]]) return O[i]; return "junco"; })();
+    const r = ctx.lanceSacar(cana, { cebo: "lombriz" });
+    const l = ctx.carreteNuevo(r.banda, ctx.nivelOficio("fishing"));
+    let rez = null, guard = 0;
+    while (guard++ < 3000 && !(rez === "gana" || rez === "perdido"))
+      rez = ctx.carreteTick(l, 0.05, l.zona < l.pez);
+    if (guard >= 3000) { falla("el carrete no terminó nunca (ni captura ni escape)"); return false; }
+    if (rez === "gana") {
+      ctx.capturaAnotar(r);
+      G.fish = G.fish || {}; G.fish[r.id] = (G.fish[r.id] || 0) + 1;
+      ctx.addXp("fishing", r.xp);
+    }
+  } catch (e) { falla("el lance v4 reventó: " + e.message); return false; }
+  return true;
 }
 const arboles = () => esc.objs.filter(o => o.type === "tree" && !o.oculto && !o.locked);
 const rocas = () => esc.objs.filter(o => (o.type === "rock" || o.type === "ore") && !o.oculto && !o.locked);
@@ -232,13 +253,14 @@ invariantes("kit");
   for (const m of monticulos().slice(0, 3)) tocar(m);   // las lombrices de la carnada salen de acá
   anota("Cavó montículos: lombrices " + (G.res.lombriz || 0) + " · " + avisos.slice(-1).join(""));
   const peces0 = Object.keys(G.fish || {}).reduce((s, k) => s + (G.fish[k] || 0), 0);
+  const lom0 = G.res.lombriz || 0;
   if (pescar()) {
     const peces1 = Object.keys(G.fish || {}).reduce((s, k) => s + (G.fish[k] || 0), 0);
-    if (peces1 > peces0) anota("Pescó: " + JSON.stringify(G.fish));
-    else falla("la pesca terminó sin pez y sin aviso claro  avisos: " + avisos.join(" · "));
-    if (!(G.pescaHasta > FakeDate.now())) falla("tras pescar, la laguna NO quedó en reposo");
-    if (pescar()) falla("pudo pescar DE NUEVO con la laguna en reposo");
-    else anota("La laguna en reposo rechazó el segundo intento: « " + avisos.join(" · ") + " »");
+    if ((G.res.lombriz || 0) !== lom0 - 1) falla("el lance no cobró SU lombriz (tenía " + lom0 + ", quedan " + (G.res.lombriz || 0) + ") — nada es gratis");
+    if (peces1 > peces0) { anota("Pescó (carrete ganado): " + JSON.stringify(G.fish)); if (!(G.skills.fishing > 0)) falla("la captura no dio XP de pesca"); }
+    else anota("El pez ganó el carrete y se llevó la lombriz — resultado legítimo: " + avisos.slice(-1).join(""));
+    const lom1 = G.res.lombriz || 0;
+    if (lom1 > 0) { pescar(); if ((G.res.lombriz || 0) !== lom1 - 1) falla("el SEGUNDO lance no cobró su lombriz — el peaje solo funcionó una vez"); }
   } else anota("La pesca no arrancó: « " + avisos.join(" · ") + " »");
   invariantes("pesca");
 }
@@ -361,9 +383,9 @@ invariantes("kit");
         if (!(G.weapons || {}).espada_madera) falla("craftWeapon(espada_madera) no forjó ni con plata  avisos: " + avisos.join(" · "));
       }
       else if (st.id === "equiparm") { G.gear.arma = "espada_madera"; ctx.tutoEvent("equiparm"); }   // el gesto del panel de Equipo
-      else if (st.id === "cook") { cultivarPapas(2); avisos.length = 0; ctx.cook("papa_asada"); avanzar(30); ctx.checkCooking(); if (!(G.skills.cooking > 0)) { falla("cocinar la Papa Asada no dio XP de cocina  avisos: " + avisos.join(" · "));
+      else if (st.id === "cook") { cultivarPapas(2); avisos.length = 0; ctx.cook("papa_asada"); avanzar(30); ctx.checkCooking(); ctx.cocinaRecoger(); /* 27/8: el plato espera en la olla — recoger da XP y paso */ if (!(G.skills.cooking > 0)) { falla("cocinar la Papa Asada no dio XP de cocina  avisos: " + avisos.join(" · "));
           console.log("      [sonda] papa=" + (G.res.papa||0) + " seeds=" + (G.seeds.papa||0) + " plata=" + G.plata + " secas=" + parcelasSecas().length + " listas=" + parcelasListas().length + " estados=" + esc.plots.map(x=>x.state).join(",") + " stacks=" + ctx.canonicalStacks().length + "/" + ctx.invSlots() + " ollas=" + JSON.stringify(ctx.cookList())); } }
-      else if (st.id === "eat") { if (!((G.dishes || {}).papa_asada > 0)) { cultivarPapas(2); ctx.cook("papa_asada"); avanzar(30); ctx.checkCooking(); } avisos.length = 0; ctx.eatDish("papa_asada"); }
+      else if (st.id === "eat") { if (!((G.dishes || {}).papa_asada > 0)) { cultivarPapas(2); ctx.cook("papa_asada"); avanzar(30); ctx.checkCooking(); ctx.cocinaRecoger(); } avisos.length = 0; ctx.eatDish("papa_asada"); }
       else if (st.id === "portal") { const po = esc.objs.find(o => o.type === "portal"); if (po) { if (!tocar(po)) { anota("El portal rechazó el cruce: « " + avisos.join(" · ") + " »"); ctx.tutoEvent("portal"); } } else { anota("(el portal vive en otra escena: se cruza simulado)"); ctx.tutoEvent("portal"); } }
       else if (st.id === "hunt") { const n = (typeof st.need === "function") ? st.need() : 1; G.res.carne = Math.max(G.res.carne || 0, n); anota("(caza simulada: la Zona es otra escena — +" + n + " carne)"); ctx.tutoCheckRes(); }
       else if (st.id === "estofado") {
@@ -374,7 +396,7 @@ invariantes("kit");
           else if (CROP_DEF[k]) cultivarPapas(rec[k]);
           else juntar(k, rec[k]);
         }
-        avisos.length = 0; ctx.cook("estofado"); avanzar(45); ctx.checkCooking();
+        avisos.length = 0; ctx.cook("estofado"); avanzar(45); ctx.checkCooking(); ctx.cocinaRecoger();
       }
       else if (st.id === "expandir") {
         let guarda = 0;
@@ -432,7 +454,7 @@ invariantes("kit");
     for (const a of arboles()) if (FakeDate.now() >= (a.readyAt || 0)) { for (let g = 0; g < 4; g++) if (!tocar(a)) break; }
     for (const r of rocas()) if (FakeDate.now() >= (r.readyAt || 0)) { for (let g = 0; g < 4; g++) if (!tocar(r)) break; }
     for (const m of monticulos()) tocar(m);
-    if (!(G.pescaHasta > FakeDate.now())) pescar();
+    if ((G.res.lombriz || 0) > 0) pescar();   // v4: un lance por lombriz, sin reposo de laguna
     for (const k in G.res) if (CROP_DEF[k] && G.res[k] > 0) try { ctx.sellItem(k); } catch (e) { falla("sellItem(" + k + ") reventó: " + e.message); }
     /* la expansión, en cuanto el nivel y el material lo permitan */
     const ex = ctx.expansionSiguiente();
