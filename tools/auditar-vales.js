@@ -74,20 +74,27 @@ console.log("\nY EN TODOS LOS NIVELES DE CULTIVO   (el sobre cambia con tu mejor
     !malos.length, malos.slice(0, 6).join("\n           "));
 }
 
-console.log("\nLA EMISIÓN USA LA MISMA VARA QUE EL GASTO   (era el agujero del 18/8)");
+console.log("\nEMISIÓN Y GASTO SON DOS VARAS A PROPÓSITO   (la ley del 31/8 — prima, no paridad)");
 {
-  /* el tablón paga `valesDe(valor del pedido)`. Si emitiera con una vara y cobrara con otra,
-     la fuga vuelve sola: da igual cuántos casos se persigan de a uno. */
+  /* HISTORIA DE ESTA SECCIÓN: la versión anterior exigía emisión = gasto (valesDe para las dos
+     cosas), que era la ley del 18/8. El 31/8 dirección reportó el exploit real — 12 pedidos de
+     hachas devolvían el 200 % — y la paridad RESULTÓ SER el agujero: con emisión 1:1 el vale es
+     plata líquida y el tablón, una imprenta. La ley vigente: se emite con VALE_EMISION (1/160) y
+     se gasta con VALE_EN_PLATA (40), o sea prima ~25 % por entregar. test-prima-tablon custodia
+     la cuenta fina; acá se vigila que las dos varas sigan separadas y la prima acotada. */
   const SRC = require("fs").readFileSync(path.join(RAIZ, "public/game/state.js"), "utf8")
     .replace(/\/\*[\s\S]*?\*\//g, "").replace(/(^|[^:])\/\/[^\n]*/g, "$1");
-  ok("el pedido emite sus vales con valesDe()", /vales:\s*valesDe\(/.test(SRC));
+  ok("el pedido emite sus vales con valesPremio() — la vara de emisión", /vales:\s*(valesPremio\(|Math\.max\(3, Math\.round\(valesPremio\()/.test(SRC));
   ok("y no hay ningún premio con su precio escrito a mano",
     !/valeCosto[\s\S]{0,400}?return\s+[2-9]\s*;/.test(SRC));
-  /* la comprobación redonda: emitir y gastar tienen que cancelarse */
-  const val = 200;
-  const emite = ctx.valesDe(val);
-  ok("un pedido de " + val + " de plata paga " + emite + " vales, que son " + (emite * VALE) + " de plata",
-    Math.abs(emite * VALE - val) / val <= TOL, emite + " vales");
+  const EMI = vm.runInContext("VALE_EMISION", ctx), GASTO = vm.runInContext("VALE_EN_PLATA", ctx);
+  ok("las varas están separadas: emisión 1/" + EMI + " · gasto " + GASTO, EMI > GASTO);
+  const prima = GASTO / EMI;
+  ok("la prima por entregar queda entre el 15 % y el 35 % (hoy " + Math.round(prima * 100) + " %)",
+    prima >= 0.15 && prima <= 0.35);
+  const val = 200, emite = ctx.valesPremio(val);
+  ok("un pedido de " + val + " de plata emite " + emite + " vale(s) = " + (emite * GASTO) + " de plata de prima — no una imprenta",
+    emite * GASTO < val);
 }
 
 console.log("\nLAS ETIQUETAS NO MIENTEN   (decían « 10 hachas » con un número a mano)");
