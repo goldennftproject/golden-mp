@@ -1240,16 +1240,18 @@ class FarmScene extends Phaser.Scene {
       ? "Zona Negra — hace falta un arma equipada"
       : "Teletransportarte a la Zona Negra";
     const secs = cd ? Math.ceil((o.readyAt - nowMs()) / 1000) : 0;
-    // cuántos clics faltan: un clic = un golpe, y si parás 5 s los golpes dados se pierden
-    const gp = (tot) => " (" + ((o.golpes || 0) + 1) + "/" + tot + ")";
     /* 31/8 (today.docx: « agregar las cargas a los árboles y nodos para saber cuánto dan ») —
-       el rótulo del cursor dice las CARGAS que esperan y qué da cada una. La mecánica existía
-       desde el 22/8 y era invisible: el jugador la descubría talando dos veces seguidas por
-       accidente. Un sistema que solo se descubre por accidente es un sistema que no existe. */
-    if (o.type === "tree") { if (o.locked) { if (typeof arbolBloqueado === "function" && arbolBloqueado(o)) return "🔒 Retoño — se habilita a granja nivel " + arbolNivelReq(o); return "Cultivar árbol (" + treeUnlockCost() + " madera)"; } if (cd) return "Vuelve en " + fmtSecs(secs); const nC = (typeof nodoCargas === "function") ? nodoCargas(o, CD.tree) : 1; return "Talar madera" + gp(GOLPES_TALAR) + " · ⏱ " + nC + (nC > 1 ? " cargas" : " carga") + " (+1 madera c/u)"; }
+       el rótulo del cursor dice las CARGAS que esperan. La mecánica existía desde el 22/8 y era
+       invisible: el jugador la descubría talando dos veces seguidas por accidente. Un sistema
+       que solo se descubre por accidente es un sistema que no existe.
+       2/9 (dirección): el rótulo con cargas es SOLO el relojito y el número — « no tiene por
+       qué decir talar madera… el relojito y un número, yo entiendo ». El verbo lo pone el
+       sprite; el cartel largo vuelve únicamente en los estados que sí necesitan palabras
+       (bloqueado, agotado con su cuenta atrás). */
+    if (o.type === "tree") { if (o.locked) { if (typeof arbolBloqueado === "function" && arbolBloqueado(o)) return "🔒 Retoño — se habilita a granja nivel " + arbolNivelReq(o); return "Cultivar árbol (" + treeUnlockCost() + " madera)"; } if (cd) return "Vuelve en " + fmtSecs(secs); const nC = (typeof nodoCargas === "function") ? nodoCargas(o, CD.tree) : 1; return "⏱ " + nC; }
     // 18/8: "veta" se reserva para los minerales — esto da piedra, o sea que es una ROCA
-    if (o.type === "rock") { if (typeof nodoBloqueado === "function" && nodoBloqueado(o)) return "🔒 Roca — se habilita a granja nivel " + nodoNivelReq(o); if (cd) return "Vuelve en " + fmtSecs(secs); const nC = (typeof nodoCargas === "function") ? nodoCargas(o, CD.rock) : 1; return "Picar piedra" + gp(GOLPES_MINAR) + " · ⏱ " + nC + (nC > 1 ? " cargas" : " carga") + " (+1 piedra c/u)"; }
-    if (o.type === "ore") { const od = ORE_DEF[o.ore]; if (!od) return "Minar"; if (cd) return od.emoji + " Vuelve en " + fmtSecs(secs); const nC = (o.ore === "piedra" && typeof nodoCargas === "function") ? nodoCargas(o, CD.rock) : 1; return "Minar " + od.label + gp(GOLPES_MINAR) + " · ⏱ " + nC + (nC > 1 ? " cargas" : " carga") + " (+" + (od.yield || 1) + " " + od.label.toLowerCase() + " c/u)"; }
+    if (o.type === "rock") { if (typeof nodoBloqueado === "function" && nodoBloqueado(o)) return "🔒 Roca — se habilita a granja nivel " + nodoNivelReq(o); if (cd) return "Vuelve en " + fmtSecs(secs); const nC = (typeof nodoCargas === "function") ? nodoCargas(o, CD.rock) : 1; return "⏱ " + nC; }
+    if (o.type === "ore") { const od = ORE_DEF[o.ore]; if (!od) return "Minar"; if (cd) return od.emoji + " Vuelve en " + fmtSecs(secs); const nC = (o.ore === "piedra" && typeof nodoCargas === "function") ? nodoCargas(o, CD.rock) : 1; return "⏱ " + nC; }
     if (o.type === "buzon") { const n = (typeof buzonCartas === "function") ? buzonCartas().length : 0; return n ? ("Leer el correo (" + n + (n > 1 ? " cartas" : " carta") + ")") : "Buzón — sin cartas"; }
     if (o.type === "excav") return "Cavar el montículo";
     if (o.type === "tablon_pedidos") {
