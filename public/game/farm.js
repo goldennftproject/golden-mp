@@ -1240,18 +1240,18 @@ class FarmScene extends Phaser.Scene {
       ? "Zona Negra — hace falta un arma equipada"
       : "Teletransportarte a la Zona Negra";
     const secs = cd ? Math.ceil((o.readyAt - nowMs()) / 1000) : 0;
+    // cuántos clics faltan: un clic = un golpe, y si parás 5 s los golpes dados se pierden
+    const gp = (tot) => " (" + ((o.golpes || 0) + 1) + "/" + tot + ")";
     /* 31/8 (today.docx: « agregar las cargas a los árboles y nodos para saber cuánto dan ») —
-       el rótulo del cursor dice las CARGAS que esperan. La mecánica existía desde el 22/8 y era
-       invisible: el jugador la descubría talando dos veces seguidas por accidente. Un sistema
-       que solo se descubre por accidente es un sistema que no existe.
-       2/9 (dirección): el rótulo con cargas es SOLO el relojito y el número — « no tiene por
-       qué decir talar madera… el relojito y un número, yo entiendo ». El verbo lo pone el
-       sprite; el cartel largo vuelve únicamente en los estados que sí necesitan palabras
-       (bloqueado, agotado con su cuenta atrás). */
-    if (o.type === "tree") { if (o.locked) { if (typeof arbolBloqueado === "function" && arbolBloqueado(o)) return "🔒 Retoño — se habilita a granja nivel " + arbolNivelReq(o); return "Cultivar árbol (" + treeUnlockCost() + " madera)"; } if (cd) return "Vuelve en " + fmtSecs(secs); const nC = (typeof nodoCargas === "function") ? nodoCargas(o, CD.tree) : 1; return "⏱ " + nC; }
+       el rótulo del cursor dice las CARGAS que esperan y qué da cada una. La mecánica existía
+       desde el 22/8 y era invisible: el jugador la descubría talando dos veces seguidas por
+       accidente. Un sistema que solo se descubre por accidente es un sistema que no existe.
+       (2/9: el « ⏱ N » pelado que probé acá abajo se revirtió el mismo día — dirección lo
+       quería EN el mundo, sobre el sprite: eso es cargasBadge(). Este cartel describe.) */
+    if (o.type === "tree") { if (o.locked) { if (typeof arbolBloqueado === "function" && arbolBloqueado(o)) return "🔒 Retoño — se habilita a granja nivel " + arbolNivelReq(o); return "Cultivar árbol (" + treeUnlockCost() + " madera)"; } if (cd) return "Vuelve en " + fmtSecs(secs); const nC = (typeof nodoCargas === "function") ? nodoCargas(o, CD.tree) : 1; return "Talar madera" + gp(GOLPES_TALAR) + " · ⏱ " + nC + (nC > 1 ? " cargas" : " carga") + " (+1 madera c/u)"; }
     // 18/8: "veta" se reserva para los minerales — esto da piedra, o sea que es una ROCA
-    if (o.type === "rock") { if (typeof nodoBloqueado === "function" && nodoBloqueado(o)) return "🔒 Roca — se habilita a granja nivel " + nodoNivelReq(o); if (cd) return "Vuelve en " + fmtSecs(secs); const nC = (typeof nodoCargas === "function") ? nodoCargas(o, CD.rock) : 1; return "⏱ " + nC; }
-    if (o.type === "ore") { const od = ORE_DEF[o.ore]; if (!od) return "Minar"; if (cd) return od.emoji + " Vuelve en " + fmtSecs(secs); const nC = (o.ore === "piedra" && typeof nodoCargas === "function") ? nodoCargas(o, CD.rock) : 1; return "⏱ " + nC; }
+    if (o.type === "rock") { if (typeof nodoBloqueado === "function" && nodoBloqueado(o)) return "🔒 Roca — se habilita a granja nivel " + nodoNivelReq(o); if (cd) return "Vuelve en " + fmtSecs(secs); const nC = (typeof nodoCargas === "function") ? nodoCargas(o, CD.rock) : 1; return "Picar piedra" + gp(GOLPES_MINAR) + " · ⏱ " + nC + (nC > 1 ? " cargas" : " carga") + " (+1 piedra c/u)"; }
+    if (o.type === "ore") { const od = ORE_DEF[o.ore]; if (!od) return "Minar"; if (cd) return od.emoji + " Vuelve en " + fmtSecs(secs); const nC = (o.ore === "piedra" && typeof nodoCargas === "function") ? nodoCargas(o, CD.rock) : 1; return "Minar " + od.label + gp(GOLPES_MINAR) + " · ⏱ " + nC + (nC > 1 ? " cargas" : " carga") + " (+" + (od.yield || 1) + " " + od.label.toLowerCase() + " c/u)"; }
     if (o.type === "buzon") { const n = (typeof buzonCartas === "function") ? buzonCartas().length : 0; return n ? ("Leer el correo (" + n + (n > 1 ? " cartas" : " carta") + ")") : "Buzón — sin cartas"; }
     if (o.type === "excav") return "Cavar el montículo";
     if (o.type === "tablon_pedidos") {
@@ -2268,6 +2268,28 @@ class FarmScene extends Phaser.Scene {
       color: puede ? "#e9ffd6" : "#ffd75e", backgroundColor: "rgba(20,25,15,.88)",
       padding: { x: 6, y: 4 }, stroke: "#241505", strokeThickness: 2,
     }).setOrigin(0.5, 1).setDepth(9000);
+  }
+
+  /* 2/9 (dirección): las cargas se ven EN EL MUNDO — « el número con el relojito por encima
+     del sprite que vas a talar o tocar… que sea parte del juego ». La primera versión puso el
+     ⏱ en el cartel de abajo y dirección no lo encontró: el dato del nodo vive sobre el nodo.
+     Una sola chapita reutilizada (no una por nodo): sigue al objeto que el cartel ya señala,
+     así cursor y cercanía —PC y móvil— quedan cubiertos por el mismo camino. */
+  cargasBadge(o) {
+    const es = o && (o.type === "tree" || o.type === "rock" || o.type === "ore");
+    let n = 0;
+    if (es && !o.locked && !(o.readyAt && o.readyAt > nowMs()) &&
+        !(typeof nodoBloqueado === "function" && o.type !== "tree" && nodoBloqueado(o)) &&
+        !(o.type === "tree" && typeof arbolBloqueado === "function" && arbolBloqueado(o)) &&
+        typeof nodoCargas === "function")
+      n = (o.type === "tree") ? nodoCargas(o, CD.tree)
+        : (o.type === "rock" || (o.type === "ore" && o.ore === "piedra")) ? nodoCargas(o, CD.rock) : 1;
+    if (!n) { if (this._cargasTxt) this._cargasTxt.setVisible(false); return; }
+    if (!this._cargasTxt) this._cargasTxt = this.add.text(0, 0, "", {
+      fontSize: "11px", fontStyle: "bold", color: "#ffe08a", backgroundColor: "rgba(20,25,15,.85)",
+      padding: { x: 5, y: 2 }, stroke: "#241505", strokeThickness: 2,
+    }).setOrigin(0.5, 1).setDepth(99990);
+    this._cargasTxt.setText("⏱ " + n).setPosition(o.cx, this.topY(o, 4)).setVisible(true);
   }
 
   // punto al azar bien adentro de la laguna (para los peces)
@@ -5302,6 +5324,7 @@ class FarmScene extends Phaser.Scene {
        así que veías rojo y ninguna explicación. Mientras llevás algo en la mano, el cartel dice si
        cabe o POR QUÉ no. Un rectángulo rojo mudo es un bug de información. */
     if (this.placing) {
+      this.cargasBadge(null);   // 2/9: colocando algo, la chapita del nodo no pinta nada
       const pt = this.input.activePointer;
       const col = Math.floor(pt.worldX / GF.TILE), row = Math.floor(pt.worldY / GF.TILE);
       const hu = this.huellaColocar(col, row);
@@ -5311,7 +5334,7 @@ class FarmScene extends Phaser.Scene {
       el.classList.add("show");
       return;
     }
-    if (GF.uiOpen || this.action || GF.editMode) { el.classList.remove("show"); return; }
+    if (GF.uiOpen || this.action || GF.editMode) { el.classList.remove("show"); this.cargasBadge(null); return; }
     if (GF.NO_WALK) {   // granja de un clic: el cartel describe lo que hay BAJO EL CURSOR
       const pt = this.input.activePointer, wx = pt.worldX, wy = pt.worldY;
       let hit = null, bd = 1e9;
@@ -5320,6 +5343,7 @@ class FarmScene extends Phaser.Scene {
       if (!hit) { const an = this.animalEnPunto(wx, wy); if (an) hit = { type: "animal", k: an.k }; }
       if (!hit && this.portal && Math.abs(wx - this.portal.cx) < 26 && Math.abs(wy - (this.portal.by - 14)) < 30) hit = this.portal;
       this.previaSiembra(hit);   // 24/8: la parcela señalada muestra QUÉ se va a sembrar
+      this.cargasBadge(hit);     // 2/9: y el nodo señalado muestra su ⏱ de cargas ENCIMA
       // y por si algo más devolviera texto vacío alguna vez: sin texto, no hay cartel
       const txt = hit ? this.promptText(hit) : "";
       if (txt) { el.textContent = txt; el.classList.add("show"); }
@@ -5328,6 +5352,7 @@ class FarmScene extends Phaser.Scene {
       return;
     }
     const o = this.nearestInteract();
+    this.cargasBadge(o);         // 2/9: mismo ⏱ sobre el nodo en el modo caminado
     const t2 = o ? this.promptText(o) : "";
     if (t2) { el.textContent = t2 + "  ·  [E]"; el.classList.add("show"); }
     else if (!o && this.nearPond()) { el.textContent = "Pescar (1 lombriz · tenés " + fmt(G.res.lombriz || 0) + ") · [E]"; el.classList.add("show"); }
