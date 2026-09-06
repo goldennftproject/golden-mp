@@ -5732,18 +5732,25 @@ var CANA_V4_ORDER = ["junco", "bambu", "hierro", "oro", "abuelo"];
    10,1 % → 4,5 %). Es la única moneda de cambio que deja el ancla — la alternativa era subir
    el neto de todas las cañas o abaratar los legendarios, y las dos rompen más de lo que dan. */
 var CANA_V4_DEF = {
-  junco:  { label: "Caña de Junco",   lvl: 1,  presupuesto: 30,   mant: 0.30,
-            cost: { madera: 3 }, colaPlata: 5, banda: { comun: 67.368, poco_comun: 27.00, raro: 4.482, epico: 0.750, legendario: 0.400 } },
-  bambu:  { label: "Caña de Bambú",   lvl: 4,  presupuesto: 400,  mant: 2.50,
-            cost: { madera: 24, fibra: 4 }, colaPlata: 60, banda: { comun: 60.496, poco_comun: 27.00, raro: 10.804, epico: 1.200, legendario: 0.500 } },
-  hierro: { label: "Caña de Hierro",  lvl: 8,  presupuesto: 1000, mant: 5.93,
-            cost: { tablon: 6, barra_hierro: 4, cuero: 3 }, colaPlata: 105, banda: { comun: 56.644, poco_comun: 27.00, raro: 13.756, epico: 1.800, legendario: 0.800 } },
-  oro:    { label: "Caña de Oro",     lvl: 12, presupuesto: 2000, mant: 10.84,
-            cost: { tablon: 10, barra_oro: 4, cuero: 6 }, colaPlata: 200, banda: { comun: 50.135, poco_comun: 27.00, raro: 18.990, epico: 2.625, legendario: 1.250 } },
+  /* 2/9 (dirección, mirando el contador: « todos los peces deben pedir dinero cuando se
+     pescan… estaba viendo y no me quitan plata »). Tenía razón a medias: el peaje SÍ se
+     cobraba, pero con decimales — el junco pagaba 0,30 por lance, acumulado en silencio, y
+     recién cada 3-4 lances se iba 1 de plata. Un cobro que no se ve no educa nada. Ahora los
+     mants son ENTEROS por lance (1 · 3 · 6 · 11): la plata baja A LA VISTA en cada tiro. Las
+     bandas se re-derivaron por bisección (más raros pagan el peaje extra) con el lanceNeto de
+     ese día como ley: los netos por lombriz quedaron clavados en 9,30 · 9,85 · 10,35 · 10,56. */
+  junco:  { label: "Caña de Junco",   lvl: 1,  presupuesto: 30,   mant: 1,
+            cost: { madera: 3 }, colaPlata: 5, banda: { comun: 64.186, poco_comun: 27.00, raro: 7.664, epico: 0.750, legendario: 0.400 } },
+  bambu:  { label: "Caña de Bambú",   lvl: 4,  presupuesto: 400,  mant: 3,
+            cost: { madera: 24, fibra: 4 }, colaPlata: 60, banda: { comun: 58.454, poco_comun: 27.00, raro: 12.846, epico: 1.200, legendario: 0.500 } },
+  hierro: { label: "Caña de Hierro",  lvl: 8,  presupuesto: 1000, mant: 6,
+            cost: { tablon: 6, barra_hierro: 4, cuero: 3 }, colaPlata: 105, banda: { comun: 56.364, poco_comun: 27.00, raro: 14.036, epico: 1.800, legendario: 0.800 } },
+  oro:    { label: "Caña de Oro",     lvl: 12, presupuesto: 2000, mant: 11,
+            cost: { tablon: 10, barra_oro: 4, cuero: 6 }, colaPlata: 200, banda: { comun: 49.495, poco_comun: 27.00, raro: 19.630, epico: 2.625, legendario: 1.250 } },
   /* la única que no cobra peaje, y la única que rompe el ancla a propósito: es el premio de
      final de escalera y cuesta un mes de Lonja bien jugada. +10 % al peso de todo lo que saca. */
   abuelo: { label: "Caña del Abuelo", lvl: 18, presupuesto: null, mant: 0, pesoBonus: 0.10, escamas: 120,
-            banda: { comun: 50.135, poco_comun: 27.00, raro: 18.990, epico: 2.625, legendario: 1.250 } },
+            banda: { comun: 49.495, poco_comun: 27.00, raro: 19.630, epico: 2.625, legendario: 1.250 } },
 };
 /* EL VALOR ESPERADO DE UN LANCE, DERIVADO. Éste es el número que ata la pesca al resto del
    juego: tiene que dar ~10,30 con la caña de junco, o sea lo que vale la lombriz que lo paga.

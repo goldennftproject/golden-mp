@@ -370,7 +370,7 @@ function pescaV4Resolver() {
     if (r.record) txt += r.recordAnterior ? " — récord nuevo" : " — primera vez";
     /* el peaje, dicho. Un descuento automático que el jugador no ve es la regla 9 rota por el
        lado del dinero: sabe que le falta plata y no sabe por qué. */
-    const pj = r.peaje ? " · peaje de la caña −" + r.peaje.toFixed(2) : "";
+    const pj = r.peaje ? " · peaje de la caña −" + (r.peaje % 1 ? r.peaje.toFixed(2) : r.peaje) : "";   // 2/9: mants enteros — sin decimales fantasma
     log("🎣 " + txt + " (+" + r.xp + " XP" + pj + ")", r.gigante || r.record ? "gold" : "good");
     toast(txt);
     if ((r.gigante || r.record) && window.celebrate) celebrate({ title: r.gigante ? "¡PEZ GIGANTE!" : "¡RÉCORD!", sub: e.label + " · " + r.kg + " kg" });
