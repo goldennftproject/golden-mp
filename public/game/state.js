@@ -4906,7 +4906,11 @@ function craftTool(id, lote) {
 function repairTool(id) { const td = TOOL_DEF[id]; if (!td) return; if (toolLost(id)) { toast("No tenés esa herramienta — la tiraste"); return; } if (toolDur(id) >= td.max) { toast("Ya está al 100%"); return; } if (!canAfford(td.repair)) { toast("Te faltan materiales para reparar"); return; } payCost(td.repair); G.tools[id] = td.max; log("Reparaste " + td.label + " (100%).", "good"); toast("Reparado"); forgeWork(); refreshForge(); if (isOpen("ov-equip")) refreshEquip(); if (isOpen("ov-inv")) refreshInv(); }
 
 // --- inventario (base + filas extra) ---
-var INV_BASE = 20, INV_MAX_ROWS = 6;   // 20 base (4 filas de 5, pedido del diseñador 30/7), ampliable +5 por fila hasta 50
+/* 2/9 (dirección, con el visto de Suren): « agregar 15 espacios al bag — 20 son muy pocos,
+   total 35 ». La base sube 20→35 (7 filas de 5); las filas COMPRABLES bajan 6→3 para que el
+   techo siga en 50, que es el número que toda la casa conoce. Quien ya compró más de 3 filas
+   las conserva (los espacios comprados no se confiscan): su techo personal queda más alto. */
+var INV_BASE = 35, INV_MAX_ROWS = 3;   // 35 base (7 filas de 5), ampliable +5 por fila hasta 50
 // (es `var` y no `const` porque el MODO TESTEO la agranda: con la bolsa llena no se puede probar nada)
 function invSlots() { return INV_BASE + (G.invRows || 0) * 5; }
 function nextInvCost() {
