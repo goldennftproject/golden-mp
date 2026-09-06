@@ -4470,7 +4470,7 @@ function canCook(id) {
   const r = RECIPE_DEF[id]; if (!r) return false;
   if (r.lvl && cookLevel() < r.lvl) return false;   // receta bloqueada por nivel de cocina
   if (r.res) for (const k in r.res) if ((G.res[k] || 0) < r.res[k]) return false;
-  if (r.fish) for (const k in r.fish) if ((G.fish[k] || 0) < r.fish[k]) return false;
+  if (r.fish) for (const k in r.fish) if (pezCuenta(k) < r.fish[k]) return false;   // 2/9: por banda o especie, sumando las pilas con peso
   return true;
 }
 /* QUÉ FALTA PARA COCINAR ESTO (26/8 — el reporte del diseñador)
@@ -4554,7 +4554,7 @@ function cook(id) {
   if (!canCook(id)) { toast("Te faltan ingredientes"); return; }
   if (!roomForDish(id)) { bagFull("cocinar " + r.label); return; }
   if (r.res) for (const k in r.res) G.res[k] -= r.res[k];
-  if (r.fish) for (const k in r.fish) G.fish[k] -= r.fish[k];
+  if (r.fish) for (const k in r.fish) pezSacar(k, r.fish[k]);   // 2/9: se cocinan los más livianos primero
   const ms = Math.max(1000, Math.round((r.cookS ? r.cookS * 1000 : COOK_MS) * cocinaFactor()));
   /* 26/8 (diseñador) — LA COCINA COCINA DE A UNO.
      « no se cocina en simultáneo todos a la vez… se cocina solo el primero, al terminar el 2do,
@@ -4937,17 +4937,16 @@ function roomForRes(key, n) {
   G.res[key] = before;
   return ok;
 }
-function roomForFish() {   // tiene que entrar CUALQUIERA de las especies, no solo las viejas
-  /* 25/8: decía « cualquiera de las cuatro » y recorría FISH_ORDER. Con Pesca v3 son trece
-     posibles y las nueve nuevas ni contaban: la bolsa nunca se daba por llena y el pez entraba
-     igual… a un casillero que no existía. */
-  return pecesDeLaBolsa().every(f => {
-    const before = (G.fish && G.fish[f]) || 0;
-    G.fish[f] = before + 1;
-    const ok = canonicalStacks().length <= invSlots();
-    G.fish[f] = before;
-    return ok;
-  });
+function roomForFish() {
+  /* 2/9 (peces por peso): cada captura puede ser una pila NUEVA — dos merluzas de distinto
+     kg no se apilan. Así que la pregunta honesta es « ¿entra una pila más? », y se contesta
+     con una pila fantasma que se borra al salir. */
+  G.fish = G.fish || {};
+  const fantasma = "__prueba@0.01";
+  G.fish[fantasma] = 1;
+  const ok = canonicalStacks().length <= invSlots();
+  delete G.fish[fantasma];
+  return ok;
 }
 function roomForDish(id) {
   const before = (G.dishes && G.dishes[id]) || 0;
@@ -5098,7 +5097,16 @@ function descKey(d) { return d ? d.kind + ":" + d.key : ""; }
    que la bolsa y el espacio disponible no puedan discrepar. */
 /* 27/8 — LA BOLSA MUESTRA EL CATÁLOGO DE LA v4. Sigue siendo UNA función porque el bug de las
    cañas del 25/8 nació justo de tener dos listas de « qué peces existen ». */
-function pecesDeLaBolsa() { return PEZ_ORDER.slice(); }
+function pecesDeLaBolsa() {
+  /* 2/9: ya no devuelve el catálogo — devuelve LO QUE HAY, con su peso en la clave. Especies
+     en el orden del catálogo y de liviano a pesado; los fósiles de la v2, al final. */
+  const orden = {}; PEZ_ORDER.forEach((id, i) => orden[id] = i);
+  return Object.keys(G.fish || {}).filter(k => Math.floor(G.fish[k] || 0) > 0).sort((a, b) => {
+    const A = pezDeClave(a), B = pezDeClave(b);
+    const oa = orden[A.id] != null ? orden[A.id] : 999, ob = orden[B.id] != null ? orden[B.id] : 999;
+    return oa - ob || (A.kg || 0) - (B.kg || 0);
+  });
+}
 
 /* ═══════════════════════════════════════════════════════════════════════════════════════════
    LA MUDANZA DE LA PESCA v3 → v4                                                       (27/8)
@@ -5684,6 +5692,78 @@ function pezPrecio(id, kg) {
   if (kg == null) return e.precio;                       // sin peso: el precio de tabla
   return Math.round(e.precio * pesoFactor(id, kg) * 10) / 10;
 }
+/* ═══ EL PEZ CON SU PESO EN LA BOLSA ═══════════════════════════════════════ (2/9, Discord)
+   Dirección, con el « perfect » de Suren: « los peces en el bag deben dividirse por peso
+   aunque sean de la misma especie ». La clave de la bolsa deja de ser la especie pelada: es
+   « especie@kg » ("merluza@2.35"), así dos merluzas de distinto porte son dos pilas — y el
+   precio de cada pila es el de SU peso, que pezPrecio() siempre supo calcular y la bolsa
+   tiraba a la basura. Los fósiles de la v2 (comun/raro/…, sin especie) siguen siendo claves
+   válidas: para las recetas cuentan como « un pez de esa banda » y se cocinan primero. */
+function pezClave(id, kg) { return id + "@" + (Math.round(kg * 100) / 100).toFixed(2); }
+function pezDeClave(k) { const i = String(k).indexOf("@"); return i < 0 ? { id: k, kg: null } : { id: k.slice(0, i), kg: parseFloat(k.slice(i + 1)) }; }
+function pezPesoMedio(id) { const e = PEZ_DEF[id]; return e && e.peso ? Math.round((e.peso[0] + e.peso[1]) / 2 * 100) / 100 : 1; }
+function pezGuardar(id, kg) { G.fish = G.fish || {}; const k = pezClave(id, kg); G.fish[k] = (G.fish[k] || 0) + 1; return k; }
+/* las claves de la bolsa que son ESTE pez — o esta BANDA (recetas: fish:{comun:1} pide « un
+   pez común », el que sea) — de la más liviana a la más pesada: el orden en que se gastan.
+   Lo grande se guarda para la balanza del mostrador, no se cocina por accidente. */
+function pezClavesDe(cual) {
+  const esBanda = !PEZ_DEF[cual];
+  return Object.keys(G.fish || {}).filter(k => {
+    if (Math.floor(G.fish[k] || 0) <= 0) return false;
+    const id = pezDeClave(k).id;
+    if (!esBanda) return id === cual;
+    if (k === cual) return true;                              // el fósil de la v2 ES su banda
+    const d = PEZ_DEF[id]; return !!d && d.banda === cual;
+  }).sort((a, b) => (pezDeClave(a).kg || 0) - (pezDeClave(b).kg || 0));
+}
+function pezCuenta(cual) { return pezClavesDe(cual).reduce((t, k) => t + Math.floor(G.fish[k] || 0), 0); }
+function pezSacar(cual, n) {
+  let falta = n;
+  for (const k of pezClavesDe(cual)) {
+    if (falta <= 0) break;
+    const q = Math.min(falta, Math.floor(G.fish[k] || 0));
+    G.fish[k] -= q; if (G.fish[k] <= 0) delete G.fish[k];
+    falta -= q;
+  }
+  return falta <= 0;
+}
+/* EL MOSTRADOR DE SUELTOS — lo que faltaba (2/9, dirección: « los peces dicen se venden por
+   x cantidad de plata… ¿pero dónde se venden? »). En la Lonja, que es el tablero del oficio.
+   Paga pezPrecio(id, kg) SIN ventaMult: el invariante de la lombriz se midió contra ese
+   precio pelado, y un multiplicador de nivel acá sería un grifo nuevo sin auditar. */
+function pezVender(clave, n) {
+  const t = Math.floor((G.fish || {})[clave] || 0);
+  if (t <= 0) { toast("No tenés ese pez"); return 0; }
+  n = Math.max(1, Math.min(n || 1, t));
+  const pc = pezDeClave(clave), d = PEZ_DEF[pc.id];
+  if (!d) { toast("Ese pez no se vende acá"); return 0; }
+  const u = pezPrecio(pc.id, pc.kg == null ? undefined : pc.kg);
+  const plata = Math.round(u * n * 10) / 10;
+  G.fish[clave] -= n; if (G.fish[clave] <= 0) delete G.fish[clave];
+  G.plata = (G.plata || 0) + plata;
+  log("🐟 Vendiste " + n + " " + d.label + (pc.kg ? " de " + pc.kg.toFixed(2) + " kg" : "") + " por " + plata + " de plata.", "good");
+  toast("+" + plata + " plata");
+  if (window.sfx) sfx("coin");
+  if (typeof refreshHud === "function") refreshHud();
+  if (typeof syncSlots === "function") syncSlots();
+  if (typeof saveFarm === "function") saveFarm();
+  return plata;
+}
+/* la mudanza: los contadores por especie de antes del 2/9 pasan a pilas con el peso MEDIO de
+   su especie — no se regala ni se quita nada, solo se les pone la balanza que no tenían.
+   Idempotente: una clave con @ ya no es un id del catálogo y no se vuelve a tocar. */
+function pezMigrarPesos() {
+  if (!G.fish) return 0;
+  let n = 0;
+  for (const k of Object.keys(G.fish)) {
+    if (!PEZ_DEF[k]) continue;                                // fósiles v2 y claves con @, quietos
+    const q = Math.floor(G.fish[k] || 0);
+    delete G.fish[k];
+    if (q > 0) { const nk = pezClave(k, pezPesoMedio(k)); G.fish[nk] = (G.fish[nk] || 0) + q; n += q; }
+  }
+  return n;
+}
+
 function pezXp(id, kg) {
   const e = PEZ_DEF[id]; if (!e) return 0;
   return Math.round(e.xp * (pezGigante(id, kg) ? 2 : 1));   // un gigante paga el doble de XP
@@ -6010,7 +6090,7 @@ function nasaCobrar(i) {
     toast("La nasa volvió vacía");
   } else {
     const kg = pesoSortear(elegido);
-    G.fish = G.fish || {}; G.fish[elegido] = (G.fish[elegido] || 0) + 1;
+    pezGuardar(elegido, kg);   // 2/9: a la bolsa CON su peso — la clave es especie@kg
     /* el mismo registro que el lance, con deNasa=true — es lo que cuenta para el título de
        Nasero. Un mítico que entra a la bolsa sin pasar por acá sería una captura que el juego
        no vio, y entonces el título no se dispararía jamás. */
@@ -7214,10 +7294,10 @@ function lonjaFalta(escalon) {
   }
   const pz = lonjaPiezas(escalon);
   if (!pz) return "no hay encargo ahora mismo";
-  const faltan = pz.filter(x => Math.floor((G.fish && G.fish[x.id]) || 0) < x.n);
+  const faltan = pz.filter(x => pezCuenta(x.id) < x.n);
   if (faltan.length) {
     return "te faltan " + faltan.map(x =>
-      (x.n - Math.floor((G.fish && G.fish[x.id]) || 0)) + " " + (PEZ_DEF[x.id] || {}).label).join(" y ");
+      (x.n - pezCuenta(x.id)) + " " + (PEZ_DEF[x.id] || {}).label).join(" y ");
   }
   return null;
 }
@@ -7234,7 +7314,7 @@ function lonjaEntregarEscalon(escalon) {
   const esPeso = !!(pM && pM.tipo === "peso");
   const pz = esPeso ? [] : (lonjaPiezas(escalon) || []);
   for (const x of pz) {
-    G.fish[x.id] -= x.n;
+    pezSacar(x.id, x.n);   // 2/9: pilas con peso — se entregan los más livianos primero
   }
   /* 1/9 — LA MAREA DE PESO NO ENTREGA MERCADERÍA, así que no puede cobrar como una venta.
      El suelo del ×2 (« nunca menos que vender suelto ») es la lección de los escalones que SÍ

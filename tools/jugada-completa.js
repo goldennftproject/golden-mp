@@ -177,7 +177,7 @@ function pescar() {
     if (guard >= 3000) { falla("el carrete no terminó nunca (ni captura ni escape)"); return false; }
     if (rez === "gana") {
       ctx.capturaAnotar(r);
-      G.fish = G.fish || {}; G.fish[r.id] = (G.fish[r.id] || 0) + 1;
+      ctx.pezGuardar(r.id, r.kg);   // 2/9: a la bolsa con su peso, como el juego real
       ctx.addXp("fishing", r.xp);
     }
   } catch (e) { falla("el lance v4 reventó: " + e.message); return false; }

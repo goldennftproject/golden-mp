@@ -117,7 +117,7 @@ console.log("\nEL PEZ QUE SE ESCAPA SE VA CON LA LOMBRIZ   (dirección, 31/8: na
   while (g("P4") && !g("P4").carrete && vueltas++ < 200) ctx.pescaV4Paso(0.05, false);
   vm.runInContext("P4.carrete.prog = 0.999", ctx);   // la pelea en sí ya se midió arriba
   ctx.pescaV4Paso(0.05, true);
-  ok("ganado el carrete, el pez entra a la bolsa", (G.fish[segundo] || 0) === 1);
+  ok("ganado el carrete, el pez entra a la bolsa", ctx.pezCuenta(segundo) === 1);   // 2/9: la clave lleva el peso
   ok("y AHORA sí se anota: récord…", (ctx.pescaEstado().records || {})[segundo] > 0);
   ok("…y estadísticas — todo lo anotado es de capturas de verdad",
     Object.keys(G.pescaStats || {}).length > 0);

@@ -151,7 +151,7 @@ console.log("\nEL PIQUE ABRE EL CARRETE, Y GANARLO CIERRA EL LANCE   (31/8)");
   vm.runInContext("P4.carrete.prog = 0.999", ctx);   // acá se mide el CIERRE, así que se gana ya
   ctx.pescaV4Paso(0.05, true);
   ok("ganado el carrete, el lance se resuelve", !g("P4"));
-  ok("y el pez entra en la bolsa", (G.fish[idEsperado] || 0) === 1, g("PEZ_DEF")[idEsperado].label);
+  ok("y el pez entra en la bolsa", ctx.pezCuenta(idEsperado) === 1, g("PEZ_DEF")[idEsperado].label);   // 2/9: la clave lleva el peso
   ok("con su salto en arco hasta el granjero",
     esc.dibujados.some(o => o.tipo === "image" && String(o.textura || "").indexOf("fish") === 0),
     "catchFx");

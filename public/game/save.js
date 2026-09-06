@@ -711,6 +711,10 @@ function derivarEstado(d) {
      los peces del sistema anterior antes de que nadie mire la bolsa. Es idempotente —al segundo
      arranque no queda ninguno— así que no hace falta ninguna bandera de « ya migrado ». */
   try { if (typeof mudanzaPescaV4 === "function") mudanzaPescaV4(); } catch (e) { console.warn("mudanza de pesca:", e); }
+  /* 2/9 — peces por peso: los contadores por especie de guardados anteriores pasan a pilas
+     « especie@kg » con el peso medio de su especie. Ni se regala ni se quita: se les pone la
+     balanza que no tenían. Idempotente, así que corre en cada carga sin drama. */
+  try { if (typeof pezMigrarPesos === "function") pezMigrarPesos(); } catch (e) { console.warn("mudanza de pesos:", e); }
   try { if (typeof regalosSync === "function") regalosSync(); } catch (e) {}   // guardados viejos: recalcula lo que le corresponde por su nivel
   if (typeof applyCombatHp === "function") applyCombatHp();   // vida máxima: ahora sí ve gear y weapons
   if (typeof d.hp === "number") G.hp = Math.max(1, Math.min(G.hpMax, d.hp));

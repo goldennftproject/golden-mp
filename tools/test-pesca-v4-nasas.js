@@ -135,7 +135,7 @@ console.log("\nCALAR, ESPERAR Y LEVANTAR");
   /* pesque o no, el hueco queda libre: la nasa es de un solo uso. Las dos ramas por separado se
      miden abajo, forzando la tabla; acá lo que se comprueba es lo que TIENEN EN COMÚN. */
   ok("el hueco vuelve a quedar libre, haya pescado o no", ctx.nasas().length === 0, r);
-  if (r !== "rota") ok("si pescó, el mítico entra en la bolsa", (G.fish[r] || 0) === 1, r);
+  if (r !== "rota") ok("si pescó, el mítico entra en la bolsa", ctx.pezCuenta(r) === 1, r);   // 2/9: la clave lleva el peso — se pregunta por especie
   else ok("si no pescó, deja basura del fondo", (G.res.piedra || 0) >= 2);
 }
 
@@ -164,7 +164,7 @@ console.log("\nLA NASA ES DE UN SOLO USO   (la regla, tal como la dio el diseña
     adelantar(g("NASA_HORAS") * 3600e3 + 1000);
     const antesPez = (G.fish || {}).camaron || 0;
     ctx.nasaCobrar(0);
-    ok("al pescar, el mítico entra en la bolsa", ((G.fish || {}).camaron || 0) === antesPez + 1);
+    ok("al pescar, el mítico entra en la bolsa", ctx.pezCuenta("camaron") === antesPez + 1);   // 2/9: pilas con peso
     ok("Y LA NASA SE ROMPE — ya no está calada", ctx.nasas().length === 0);
     ok("no se cobran lombrices de más: no hay rearme", G.res.lombriz === CEBO * 3, G.res.lombriz + "");
     console.log("       → « si caza algo se rompe ». Antes seguía puesta y se recebaba sola, que");

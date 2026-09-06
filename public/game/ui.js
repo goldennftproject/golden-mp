@@ -362,7 +362,7 @@ function pescaV4Resolver() {
   if (r) {
     if (typeof capturaAnotar === "function") capturaAnotar(r);   // récord, torneo y mareas: SOLO de lo capturado
     if (sc && sc.pescaCaptura) sc.pescaCaptura(r);
-    G.fish = G.fish || {}; G.fish[r.id] = (G.fish[r.id] || 0) + 1;
+    pezGuardar(r.id, r.kg);   // 2/9: a la bolsa CON su peso — dos merluzas de distinto kg son dos pilas
     if (typeof addXp === "function") addXp("fishing", r.xp);
     const e = PEZ_DEF[r.id];
     let txt = e.emoji + " ¡" + e.label + " de " + r.kg + " kg!";
@@ -576,7 +576,25 @@ function refreshLonja() {
   });
   if (LONJA_TAB === "pedido")  return lonjaPintaPedido(caja);
   if (LONJA_TAB === "tienda")  return lonjaPintaTienda(caja);
+  if (LONJA_TAB === "vender")  return lonjaPintaVender(caja);
   return lonjaPintaTitulos(caja);
+}
+/* EL MOSTRADOR DE SUELTOS (2/9 — dirección: « los peces dicen se venden por x cantidad de
+   plata… ¿pero dónde se venden? ». Acá: en la Lonja, que es el tablero del oficio. Cada pila
+   con su peso y su precio real — la balanza no miente. Un clic vende UNA pieza: los sueltos
+   se despachan de a uno, lo grande se piensa dos veces.) */
+function lonjaPintaVender(caja) {
+  const claves = pecesDeLaBolsa().filter(k => (typeof PEZ_DEF !== "undefined") && PEZ_DEF[pezDeClave(k).id]);
+  if (!claves.length) { caja.innerHTML = '<div class="sub">No tenés peces en la bolsa — la laguna te espera.</div>'; return; }
+  caja.innerHTML = '<div class="sub" style="margin-bottom:6px">Cada pieza vale según su peso.</div>' + claves.map(k => {
+    const pc = pezDeClave(k), d = PEZ_DEF[pc.id], n = Math.floor(G.fish[k] || 0);
+    const u = pezPrecio(pc.id, pc.kg == null ? undefined : pc.kg);
+    return '<div class="mkt-row"><span class="mimg">' + itemIcon(itemView({ kind: "fish", key: k })) + '</span>' +
+      '<div class="minfo"><div class="mnm">' + d.label + (pc.kg ? " · " + pc.kg.toFixed(2) + " kg" : "") + '</div>' +
+      '<div class="mds">Tenés ' + n + " · " + u + ' de plata c/u</div></div>' +
+      '<button class="vbtn" data-pvend="' + k + '">Vender 1</button></div>';
+  }).join("");
+  caja.querySelectorAll("[data-pvend]").forEach(b => b.onclick = () => { pezVender(b.dataset.pvend, 1); refreshLonja(); });
 }
 /* 31/8, la ida y la vuelta en el mismo día — y vale la pena dejar el porqué de las dos:
    · IDA: Suren dijo « las escamas se obtienen en el tablero » y esto se mudó al tablón del
@@ -645,7 +663,7 @@ function lonjaFilaEscalon(k) {
     pide = "<b>" + pz.map(x => x.n + " " + (PEZ_DEF[x.id] || {}).label).join("</b> + <b>") + "</b>";
     /* « tenés 3 de 2 » se lee como un error de cuentas. Cuando ya está, se dice que está. */
     extra = pz.map(x => {
-      const t = Math.floor((G.fish && G.fish[x.id]) || 0);
+      const t = (typeof pezCuenta === "function") ? pezCuenta(x.id) : Math.floor((G.fish && G.fish[x.id]) || 0);   // 2/9: suma las pilas con peso
       return t >= x.n ? "listos los " + x.n + " " + (PEZ_DEF[x.id] || {}).label
                       : "tenés " + t + " de " + x.n + " " + (PEZ_DEF[x.id] || {}).label;
     }).join(" · ");
@@ -1143,13 +1161,19 @@ function itemView(d) {
        genérico del final — sin nombre, sin precio y sin color de rareza, en la bolsa, en el
        flujo y en cada tooltip del juego. Se veía en una captura como « +4 Pez ».
        Un catálogo nuevo no sirve de nada si el sitio que pinta los objetos no sabe que existe. */
-    const p4 = (typeof PEZ_DEF !== "undefined") && PEZ_DEF[d.key];
+    /* 2/9 (peces por peso): la clave puede venir como « especie@kg » — se parte, y el precio
+       que se enseña es el de ESTE peso, no el de la tabla. Y se dice DÓNDE se vende, que fue
+       literalmente la pregunta de dirección (« ¿pero dónde se venden? »): en la Lonja. */
+    const pc = (typeof pezDeClave === "function") ? pezDeClave(d.key) : { id: d.key, kg: null };
+    const p4 = (typeof PEZ_DEF !== "undefined") && PEZ_DEF[pc.id];
     if (p4) {
-      const st = G.pescaStats || {}, rec = (st.record || {})[d.key] || 0;
+      const st = G.pescaStats || {}, rec = (st.record || {})[pc.id] || 0;
       const glow = { raro: "glow-blue", epico: "glow-purple", legendario: "glow-gold", mitico: "glow-gold" }[p4.banda] || "";
+      const precio = (typeof pezPrecio === "function") ? pezPrecio(pc.id, pc.kg == null ? undefined : pc.kg) : p4.precio;
       return { sprite: p4.sprite || null, emoji: p4.emoji || "🐟", glow,
-               label: p4.label + " · " + ((PEZ_BANDA[p4.banda] || {}).label || p4.banda) +
-                      " · vale " + p4.precio + " de plata" +
+               label: p4.label + (pc.kg ? " de " + pc.kg.toFixed(2) + " kg" : "") +
+                      " · " + ((PEZ_BANDA[p4.banda] || {}).label || p4.banda) +
+                      " · se vende por " + precio + " de plata en la Lonja" +
                       (rec ? " · tu récord: " + rec.toFixed(2) + " kg" : ""), dur: null };
     }
     /* el fósil de la v2: cuatro « rarezas » sin especie, de partidas de antes de agosto. Se
@@ -1201,7 +1225,7 @@ function bolsaFirma() {
   let s = "";
   ITEM_RES_ORDER.forEach(r => { const n = Math.floor(G.res[r] || 0); if (n) s += r + n + "|"; });
   CROP_ORDER.forEach(k => { const n = Math.floor(G.seeds[k] || 0); if (n) s += "s" + k + n + "|"; });
-  FISH_ORDER.forEach(k => { const n = Math.floor((G.fish && G.fish[k]) || 0); if (n) s += "f" + k + n + "|"; });
+  pecesDeLaBolsa().forEach(k => { s += "f" + k + Math.floor(G.fish[k]) + "|"; });   // 2/9: pilas con peso
   RECIPE_ORDER.forEach(k => { const n = Math.floor((G.dishes && G.dishes[k]) || 0); if (n) s += "d" + k + n + "|"; });
   s += "a" + toolCount("axe") + "r" + toolCount("rod");
   PICK_ORDER.forEach(id => { const n = pickCount(id); if (n) s += "p" + id + n + "|"; });
@@ -1221,7 +1245,7 @@ function refreshInv() {
   const cap = invSlots(), rem = {};
   ITEM_RES_ORDER.forEach(r => rem["res:" + r] = Math.floor(G.res[r] || 0));
   CROP_ORDER.forEach(s => rem["seed:" + s] = Math.floor(G.seeds[s] || 0));
-  FISH_ORDER.forEach(f => rem["fish:" + f] = Math.floor((G.fish && G.fish[f]) || 0));
+  pecesDeLaBolsa().forEach(f => rem["fish:" + f] = Math.floor((G.fish && G.fish[f]) || 0));   // 2/9: pilas con peso
   RECIPE_ORDER.forEach(d => rem["dish:" + d] = Math.floor((G.dishes && G.dishes[d]) || 0));
   rem["chest:cofre"] = (typeof chestsInBag === "function") ? chestsInBag() : 0;
   // (18/8: los regalos ya no están en la bolsa — viven en el Cobertizo)
@@ -1460,8 +1484,9 @@ function trashInfo(d) {
   if (d.kind === "res")  return { n: Math.min(99, Math.floor(G.res[d.key] || 0)), lbl: RES_LABEL[d.key] || d.key };
   if (d.kind === "seed") return { n: Math.min(99, Math.floor(G.seeds[d.key] || 0)), lbl: "semillas de " + (CROP_DEF[d.key] ? CROP_DEF[d.key].label : d.key) };
   if (d.kind === "cana") return { n: ((G.canas || {})[d.key] ? 1 : 0), lbl: (typeof CANA_V4_DEF !== "undefined" && CANA_V4_DEF[d.key]) ? CANA_V4_DEF[d.key].label : "la caña" };
-  if (d.kind === "fish") return { n: Math.min(99, Math.floor((G.fish && G.fish[d.key]) || 0)),
-    lbl: (typeof PEZ_DEF !== "undefined" && PEZ_DEF[d.key]) ? PEZ_DEF[d.key].label : (FISH_DEF[d.key] ? FISH_DEF[d.key].label : "peces") };
+  if (d.kind === "fish") { const pid = (typeof pezDeClave === "function") ? pezDeClave(d.key).id : d.key;
+    return { n: Math.min(99, Math.floor((G.fish && G.fish[d.key]) || 0)),
+      lbl: (typeof PEZ_DEF !== "undefined" && PEZ_DEF[pid]) ? PEZ_DEF[pid].label : (FISH_DEF[d.key] ? FISH_DEF[d.key].label : "peces") }; }
   if (d.kind === "dish") return { n: Math.min(99, Math.floor((G.dishes && G.dishes[d.key]) || 0)), lbl: (RECIPE_DEF[d.key] ? RECIPE_DEF[d.key].label : "platos") };
   // herramientas y picos SÍ se tiran (pedido del diseñador 31/7); apilables: se tira la pila
   if (d.kind === "tool") {
@@ -1910,7 +1935,7 @@ function refreshChest() {
   const stacks = [];
   ITEM_RES_ORDER.forEach(k => { const n = Math.floor(G.res[k] || 0); if (n > 0) stacks.push({ kind: "res", key: k, n }); });
   CROP_ORDER.forEach(k => { const n = Math.floor(G.seeds[k] || 0); if (n > 0) stacks.push({ kind: "seed", key: k, n }); });
-  FISH_ORDER.forEach(k => { const n = Math.floor((G.fish && G.fish[k]) || 0); if (n > 0) stacks.push({ kind: "fish", key: k, n }); });
+  pecesDeLaBolsa().forEach(k => { const n = Math.floor((G.fish && G.fish[k]) || 0); if (n > 0) stacks.push({ kind: "fish", key: k, n }); });   // 2/9: pilas con peso
   RECIPE_ORDER.forEach(k => { const n = Math.floor((G.dishes && G.dishes[k]) || 0); if (n > 0) stacks.push({ kind: "dish", key: k, n }); });
   inv.innerHTML = stacks.map((s, i) => {
     const v = itemView({ kind: s.kind, key: s.key });
@@ -2075,7 +2100,7 @@ function refreshCookingV2() {
   let d = '<div class="big">' + ckIcono(r, "emo") + '</div><div class="nm">' + r.label + '</div>';
   /* ingredientes: lo que tenés contra lo que pide, y en rojo lo que falta */
   if (r.fish) for (const k in r.fish) {
-    const t = Math.floor((G.fish && G.fish[k]) || 0), n = r.fish[k];
+    const t = (typeof pezCuenta === "function") ? pezCuenta(k) : Math.floor((G.fish && G.fish[k]) || 0), n = r.fish[k];   // 2/9: suma las pilas con peso
     d += '<div class="ck-fila' + (t < n ? " falta" : "") + '"><span>' + fishIc(k) + '</span><b>' + t + "/" + n + '</b></div>';
   }
   if (r.res) for (const k in r.res) {
