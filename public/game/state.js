@@ -5553,6 +5553,38 @@ var PEZ_BANDA = {
   legendario: { label: "Legendario",  color: "#ffd75e" },
   mitico:     { label: "Mítico",      color: "#f0997b", soloNasa: true },
 };
+/* ═══ LA RAREZA, UNA SOLA ESCALERA PARA TODO EL JUEGO ═══════════ (2/9, dirección con la
+   captura de Tibia: « cuando un ítem tiene una rareza en particular, sale recuadro coloreado »).
+   La escalera ya existía y estaba bien —son las seis bandas de arriba, con su nombre y su
+   color—; lo que faltaba era que el RESTO del juego la usara. Armas, picos y cañas llevaban su
+   rareza en la cabeza del diseñador y en ningún sitio del código: el jugador tenía que saberse
+   de memoria que el de diamante pega más que el de oro.
+   rarezaDe() la DERIVA del material, que es la escalera que el juego ya sube — madera y piedra
+   son lo de todos los días, la netherita es el final. Una sola tabla: si mañana entra un
+   material nuevo se agrega acá, y la bolsa entera se entera sola. */
+var RAREZA_MAT = { madera: "comun", piedra: "comun", bronce: "poco_comun", hierro: "raro",
+                   oro: "epico", diamante: "legendario", netherita: "mitico" };
+var RAREZA_PICK = { stone: "comun", bronze: "poco_comun", iron: "raro", gold: "epico",
+                    diamond: "legendario", netherite: "mitico" };
+var RAREZA_CANA = { junco: "comun", bambu: "poco_comun", hierro: "raro", oro: "epico", abuelo: "legendario" };
+function rarezaDe(kind, key) {
+  if (!key) return null;
+  if (kind === "fish") {
+    /* la clave de la bolsa puede venir como especie@kg (2/9) — y los fósiles de la v2 SON su
+       banda, que es justamente cómo se llamaban. */
+    const id = (typeof pezDeClave === "function") ? pezDeClave(key).id : key;
+    const d = PEZ_DEF[id];
+    if (d) return d.banda;
+    return PEZ_BANDA[id] ? id : null;
+  }
+  if (kind === "pick") return RAREZA_PICK[key] || null;
+  if (kind === "cana") return RAREZA_CANA[key] || null;
+  if (kind === "arm")  return RAREZA_MAT[String(key).split("_").pop()] || null;
+  /* los materiales y las barras también: una netherita en la bolsa tiene que verse como lo que
+     es, no como una piedra más. */
+  if (kind === "res") return RAREZA_MAT[String(key).replace(/^barra_/, "")] || null;
+  return null;
+}
 /* Las diecinueve. `peso` es [mínimo, máximo] en kilos; el sorteo carga hacia abajo. */
 var PEZ_DEF = {
   /* --- comunes: 62 % de base. El pez de todos los días. --- */

@@ -1222,7 +1222,14 @@ function invCellHtml(d, i, rem, zone) {
   const eq = pickEqCls(d);
   // 10/8: cada familia lleva su color de borde (k-res, k-seed, k-fish, k-dish, k-tool…), para
   // reconocer de qué es una casilla sin tener que leer el tooltip.
-  return `<div class="slot filled k-${d.kind}${sel}${eq}" draggable="true" data-slot="${i}" data-zone="${zone}" title="${v.label}">${itemIcon(v)}${cnt}${durBar(v)}</div>`;
+  /* 2/9 (dirección, con la captura de Tibia: « cuando un ítem tiene una rareza en particular,
+     sale recuadro coloreado »). El fondo de la casilla lo pinta la RAREZA, que sale de la
+     escalera única de state.js — no de un color escrito acá ni, mucho menos, del sprite: un
+     mismo pico de diamante tiene que verse legendario esté donde esté, y si mañana cambia la
+     escalera cambia sola. Lo común no se pinta: si todo brilla, no brilla nada. */
+  const rar = (typeof rarezaDe === "function") ? rarezaDe(d.kind, d.key) : null;
+  const rc = (rar && rar !== "comun") ? " r-" + rar : "";
+  return `<div class="slot filled k-${d.kind}${rc}${sel}${eq}" draggable="true" data-slot="${i}" data-zone="${zone}" title="${v.label}">${itemIcon(v)}${cnt}${durBar(v)}</div>`;
 }
 function bindTrash() {
   const tr = $("inv-trash"); if (!tr || tr._bound) return; tr._bound = true;

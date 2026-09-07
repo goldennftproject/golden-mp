@@ -127,6 +127,29 @@
   .slot.k-fish{border-color:#4f93b8}
   .slot.k-dish{border-color:#c07a3c}
   .slot.k-tool,.slot.k-pick,.slot.k-chest{border-color:#8d8f96}
+  /* ═══ EL RECUADRO DE RAREZA ═════════════ (2/9, dirección con la captura de Tibia)
+     « cuando un ítem tiene una rareza en particular, sale recuadro coloreado ». Los colores
+     salen de la escalera única (PEZ_BANDA en state.js); acá solo se pintan. Va con
+     .slot.filled.r-* —tres clases— a propósito: así gana al degradé de .filled, al color de
+     familia y al tema de madera sin depender de en qué línea del archivo esté escrito.
+     Lo COMÚN no lleva recuadro: si todo brilla, no brilla nada, y lo que se busca es que el
+     ojo caiga solo en lo bueno. El tinte va del color al fondo de siempre para que el sprite
+     se siga leyendo encima — un color plano y saturado se come al icono. */
+  .slot.filled.r-poco_comun{border-color:#6faf3e;
+    background:radial-gradient(circle at 50% 38%,#f4fbe9 0%,#e3f2cf 62%,#cfe3b2 100%);
+    box-shadow:inset 0 0 0 1px rgba(111,175,62,.55),inset 0 -3px 6px rgba(60,90,26,.16)}
+  .slot.filled.r-raro{border-color:#4f8fd6;
+    background:radial-gradient(circle at 50% 38%,#eef7ff 0%,#dbeaf9 62%,#c2d9ef 100%);
+    box-shadow:inset 0 0 0 1px rgba(79,143,214,.55),inset 0 -3px 6px rgba(26,60,90,.16)}
+  .slot.filled.r-epico{border-color:#9068dc;
+    background:radial-gradient(circle at 50% 38%,#f6f1ff 0%,#e7dcfa 62%,#d3c2f0 100%);
+    box-shadow:inset 0 0 0 1px rgba(144,104,220,.55),inset 0 -3px 6px rgba(60,26,90,.16)}
+  .slot.filled.r-legendario{border-color:#e0ae2c;
+    background:radial-gradient(circle at 50% 38%,#fffaea 0%,#fdf0cd 62%,#f4e0a4 100%);
+    box-shadow:inset 0 0 0 1px rgba(224,174,44,.7),inset 0 0 10px rgba(224,174,44,.35)}
+  .slot.filled.r-mitico{border-color:#e86f3e;
+    background:radial-gradient(circle at 50% 38%,#fff2ec 0%,#fbdfd2 62%,#f4c3ad 100%);
+    box-shadow:inset 0 0 0 1px rgba(232,111,62,.7),inset 0 0 10px rgba(232,111,62,.38)}
   .slot[draggable=true]{cursor:grab}
   .slot.sel{outline:2px solid #e2b23a;outline-offset:-2px}
   .slot.eq{box-shadow:inset 0 0 0 2px #6aa9e0}
