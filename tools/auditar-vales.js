@@ -90,8 +90,8 @@ console.log("\nEMISIÓN Y GASTO SON DOS VARAS A PROPÓSITO   (la ley del 31/8 �
   const EMI = vm.runInContext("VALE_EMISION", ctx), GASTO = vm.runInContext("VALE_EN_PLATA", ctx);
   ok("las varas están separadas: emisión 1/" + EMI + " · gasto " + GASTO, EMI > GASTO);
   const prima = GASTO / EMI;
-  ok("la prima por entregar queda entre el 15 % y el 35 % (hoy " + Math.round(prima * 100) + " %)",
-    prima >= 0.15 && prima <= 0.35);
+  ok("la prima por entregar queda entre el 10 % y el 35 % (hoy " + Math.round(prima * 100) + " %)",
+    prima >= 0.10 && prima <= 0.35);   // 2/9: dirección la bajó a 12,5 % (« las misiones no son tan complicadas »)
   const val = 200, emite = ctx.valesPremio(val);
   ok("un pedido de " + val + " de plata emite " + emite + " vale(s) = " + (emite * GASTO) + " de plata de prima — no una imprenta",
     emite * GASTO < val);

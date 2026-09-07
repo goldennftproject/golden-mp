@@ -28,11 +28,15 @@ const ok = (n, c, d) => { if (!c) fallos++; console.log((c ? "  ok   " : "  FALL
 
 console.log("\nLAS DOS VARAS EXISTEN Y NO SON LA MISMA");
 {
-  ok("un vale gastado vale 40", g("VALE_EN_PLATA") === 40);
-  ok("y ganarlo cuesta 160 de mercadería — cuatro veces más", g("VALE_EMISION") === 160);
+  /* 2/9 (dirección, la captura del fardo de 20): el vale baja a 20 de plata sombra y la
+     emisión queda en 160 — misma cantidad de vales por misión, cada vale rinde la mitad.
+     La prima real del tablón pasa del 25 % al 12,5 %. */
+  ok("un vale gastado vale 20", g("VALE_EN_PLATA") === 20);
+  ok("y ganarlo cuesta 160 de mercadería — ocho veces más", g("VALE_EMISION") === 160);
   /* el fardo sigue honesto: si esto baja, volvemos al « precio roto » del 26/8 */
   const fardo = ctx.valeFardoN("hachas") * ctx.valeUnidad("hachas");
-  ok("el fardo de hachas entrega el valor entero del vale", fardo === 40, fardo + " de plata en hachas");
+  ok("el fardo de hachas entrega el valor entero del vale", fardo === 20, fardo + " de plata en hachas");
+  ok("o sea 10 hachas, no 20 — lo que pidió dirección", ctx.valeFardoN("hachas") === 10);
 }
 
 console.log("\nLA PRIMA, MEDIDA EN CADA PEDIDO DEL DÍA");
@@ -46,8 +50,8 @@ console.log("\nLA PRIMA, MEDIDA EN CADA PEDIDO DEL DÍA");
     /* la prima es TODO lo que devuelve por encima del valor entregado: la plata paga 1,0×
        (neutral), así que la prima entera son los vales, contados a su valor líquido de 40 */
     const prima = p.vales * g("VALE_EN_PLATA") / p.plata;
-    ok(p.n + " " + p.key + " paga prima del " + Math.round(prima * 100) + " % (tope 34 %)",
-      prima > 0 && prima <= 0.34, p.plata + " de plata + " + p.vales + " vale(s)");
+    ok(p.n + " " + p.key + " paga prima del " + Math.round(prima * 100) + " % (tope 17 %)",
+      prima > 0 && prima <= 0.17, p.plata + " de plata + " + p.vales + " vale(s)");
   }
   /* y ningún pedido queda por debajo del respaldo de su vale: el mínimo de 1 vale sobre un
      pedido chico era la otra puerta de la imprenta (un pedido de 40 con vale de 40 = 100 %) */
@@ -58,12 +62,12 @@ console.log("\nLA PRIMA, MEDIDA EN CADA PEDIDO DEL DÍA");
 console.log("\nY EL BUCLE DE LAS HACHAS, CERRADO");
 {
   /* el ciclo del reporte: entregar madera → vales → fardos de hachas → talar → re-entregar.
-     Con la emisión a 160, cada vuelta del ciclo devuelve 160 (plata) + 40 (fardo) = 200 por
-     200 entregados en mercadería + trabajo de talar con reloj de cargas. Sin imprenta. */
+     2/9: con el vale a 20, cada vuelta devuelve 160 (plata) + 20 (fardo) = 180 por 160
+     entregados en mercadería + trabajo de talar con reloj de cargas. Prima 12,5 %. */
   const porVale = g("VALE_EMISION");
   const devuelve = porVale + g("VALE_EN_PLATA");
-  ok("cada 160 entregados devuelven 200 — prima 25 %, no 200 %",
-    Math.round((devuelve / porVale - 1) * 100) === 25, devuelve + " por " + porVale);
+  ok("cada 160 entregados devuelven 180 — prima 12,5 %, no 200 %",
+    Math.round((devuelve / porVale - 1) * 1000) === 125, devuelve + " por " + porVale);
 }
 
 console.log(fallos ? "\n" + fallos + " fallo(s)\n" : "\nTodo en orden: el tablón premia entregar, pero ya no imprime.\n");

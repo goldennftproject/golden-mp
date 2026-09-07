@@ -8013,7 +8013,14 @@ function pedidoDescartar(i) {
 
    ARREGLO: el vale deja de ser un número suelto y pasa a valer algo. Se emite y se cobra con la
    MISMA vara, así que la ruta se cierra sola y no hay que perseguir cada caso. */
-var VALE_EN_PLATA = 40;   // cuánto vale un vale AL GASTARLO, en plata sombra
+/* 2/9 (dirección, con la captura del tablón: « Fardo de 20 hachas — 1 vale… esto hay que
+   bajarlo sí o sí… o subimos los vales que pida o bajamos la cantidad que da. Para mí está
+   roto y las misiones no son tan complicadas »). Se mueven LAS DOS puntas con una palanca:
+   el vale pasa a comprar la mitad (40 → 20 de plata sombra: fardo de 10 hachas, no de 20) y
+   la emisión queda donde estaba (×8 = 160), así que las misiones pagan los MISMOS vales de
+   siempre pero cada vale rinde la mitad — la prima real del tablón baja del 25 % al 12,5 %.
+   Todos los fardos, sobres y etiquetas se re-derivan solos de esta constante. */
+var VALE_EN_PLATA = 20;   // cuánto vale un vale AL GASTARLO, en plata sombra
 function valesDe(plata) { return Math.max(1, Math.round((plata || 0) / VALE_EN_PLATA)); }
 /* ── LA EMISIÓN ES MÁS CARA QUE EL GASTO (31/8, reporte de dirección) ───────────────────────
    « pude completar 12… y 12×20 hachas son 240 de madera… y no costó mucho, solo pocos
@@ -8028,7 +8035,7 @@ function valesDe(plata) { return Math.max(1, Math.round((plata || 0) / VALE_EN_P
    Prima del tablón: 25 % (50 % el primero del día, que paga doble), que premia entregar sin
    duplicar. Emisión y gasto son ahora DOS varas a propósito: la del gasto fija qué es un
    vale; la de la emisión fija cuánto regala el tablón. Una sola vara era el bug. */
-var VALE_EMISION = VALE_EN_PLATA * 4;   // 160: plata entregada que gana 1 vale (prima 25 %)
+var VALE_EMISION = VALE_EN_PLATA * 8;   // 160: plata entregada que gana 1 vale (prima 12,5 % — 2/9, dirección: « las misiones no son tan complicadas »)
 function valesPremio(plata) { return Math.max(1, Math.round((plata || 0) / VALE_EMISION)); }
 /* ============ QUÉ ENTRA EN CADA FARDO (26/8) =====================================
    Dirección: « esto no está balanceado, ¿cierto? con 1 vale pude obtener 40 semillas de cereza ».
