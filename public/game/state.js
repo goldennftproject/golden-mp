@@ -6907,12 +6907,23 @@ function lombricarioEchar(k) {
   if (Math.floor(G.res[k] || 0) < LOMBRICARIO_PIDE) { toast("Hace falta " + LOMBRICARIO_PIDE + " " + (CROP_DEF[k].label || k)); return false; }
   const da = lombricarioDa(k);
   G.res[k] -= LOMBRICARIO_PIDE;
-  /* lo prometido se guarda EN LA BOCA: si mañana cambia el precio del cultivo, esta tanda paga
-     lo que dijo al echarse — la misma regla que los pedidos deterministas. */
-  lombricario().push({ cultivo: k, n: da, listaEn: nowMs() + LOMBRICARIO_HORAS * 3600e3 });
+  /* 2/9 (dirección, con la captura de las tres bocas contando a la vez): « esto no debe correr
+     simultáneo, debe correr 1 x 1 como los hornos ». Es la misma mecánica que la Cocina aprendió
+     el 26/8 y el Horno el 27/8, y cabe en una línea: la tanda nueva no arranca AHORA, arranca
+     cuando termina la última de la fila. Resolverlo con la HORA DE FIN en vez de con un estado
+     « compostando / esperando » es lo que hace que la fila corra con el juego cerrado: un reloj
+     no se olvida de correr, y al volver de un día están las tres tandas hechas, en orden.
+     Las bocas dejan de ser tres máquinas en paralelo y pasan a ser la PROFUNDIDAD de la cola:
+     cuántas tandas podés dejar encargadas antes de irte. */
+  const ultima = lombricario().reduce((t, c) => Math.max(t, c.listaEn || 0), 0);
+  const arranca = Math.max(nowMs(), ultima);
+  lombricario().push({ cultivo: k, n: da, listaEn: arranca + LOMBRICARIO_HORAS * 3600e3 });
+  const espera = arranca - nowMs();
   log("🪱 Echaste " + LOMBRICARIO_PIDE + " " + (CROP_DEF[k].label || k) + " al Lombricario. " +
-      da + " lombri" + (da === 1 ? "z" : "ces") + " en " + LOMBRICARIO_HORAS + " h.", "good");
-  toast("Al Lombricario");
+      (espera > 999
+        ? "En la fila: empieza en " + fmtDur(espera) + " y tarda " + LOMBRICARIO_HORAS + " h."
+        : da + " lombri" + (da === 1 ? "z" : "ces") + " en " + LOMBRICARIO_HORAS + " h."), "good");
+  toast(espera > 999 ? "En la fila del Lombricario" : "Al Lombricario");
   refreshHud(); if (typeof saveFarm === "function") saveFarm();
   return true;
 }
@@ -6952,8 +6963,14 @@ function lombricesPorDia() {
   const desb = CROP_ORDER.filter(k => (typeof cropUnlocked === "function" ? cropUnlocked(k) : true));
   const top = desb.sort((a, b) => (CROP_DEF[b].price || 0) - (CROP_DEF[a].price || 0))[0];
   const porTanda = top ? lombricarioDa(top) : LOMBRICARIO_DA;
-  const bocas = lombricarioAbierto() ? lombricarioBocas() * 2 * porTanda : 0;   // dos tandas por boca y día
-  return Math.round((monticulos + bocas) * 10) / 10;
+  /* 2/9 — CON LA COLA, EL TECHO LO PONE EL RELOJ, no la cantidad de bocas. Antes eran tres
+     máquinas en paralelo (bocas × 2 tandas al día); ahora es una sola fila que corre 1×1, así
+     que en 24 h entran 24/8 = 3 tandas y punto. Las bocas siguen importando, pero como
+     AUTONOMÍA: con 3 encargadas el Lombricario trabaja el día entero sin vos. Con una sola
+     boca no se puede encolar, así que el rinde real es lo que alcances a recargar. */
+  const porReloj = Math.floor(24 / LOMBRICARIO_HORAS);
+  const tandas = lombricarioAbierto() ? Math.min(lombricarioBocas(), porReloj) : 0;
+  return Math.round((monticulos + tandas * porTanda) * 10) / 10;
 }
 
 /* ═══════════════════════════════════════════════════════════════════════════════════════════

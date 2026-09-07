@@ -822,9 +822,14 @@ function refreshLombricario() {
     if (!t) { x += '<div class="lom-boca vacia"><span class="em">' + iconRes("madera", 18) + '</span><span class="nm">Boca libre</span><span>vacía</span></div>'; continue; }
     const falta = t.listaEn - nowMs();
     const n = (t.n != null ? t.n : LOMBRICARIO_DA);   // tandas de antes del 1/9: las 3 de la regla vieja
-    x += '<div class="lom-boca' + (falta <= 0 ? " lista" : "") + '"><span class="em">' + iconRes("lombriz", 18) + '</span>' +
-      '<span class="nm">' + n + ' lombri' + (n === 1 ? "z" : "ces") + '</span>' +
-      '<span>' + (falta <= 0 ? "¡listas!" : fmtDur(falta)) + '</span></div>';
+    /* 2/9 (dirección: « debe correr 1x1 como los hornos »): con la fila, las tandas de atrás
+       todavía no arrancaron — y decirlo es la mitad del arreglo. Si su comienzo está en el
+       futuro, la boca dice CUÁNDO le toca en vez de fingir que ya está trabajando. */
+    const empieza = t.listaEn - LOMBRICARIO_HORAS * 3600e3;
+    const enFila = empieza > nowMs();
+    x += '<div class="lom-boca' + (falta <= 0 ? " lista" : (enFila ? " enfila" : "")) + '"><span class="em">' + iconRes("lombriz", 18) + '</span>' +
+      '<span class="nm">' + n + ' lombri' + (n === 1 ? "z" : "ces") + (enFila ? " · en la fila" : "") + '</span>' +
+      '<span>' + (falta <= 0 ? "¡listas!" : (enFila ? "empieza en " + fmtDur(empieza - nowMs()) : fmtDur(falta))) + '</span></div>';
   }
   caja.innerHTML = x;
 
@@ -846,7 +851,7 @@ function refreshLombricario() {
     const cults = lombricarioCultivos();
     const libre = puestas.length < bocas;
     /* la regla 9 en el propio boton: NUNCA dice solo « Echar ». Si no se puede, dice por que. */
-    if (!libre)            { b.textContent = listas ? "Recogé para liberar bocas" : "Las " + bocas + " bocas estan ocupadas"; b.disabled = true; if (lista) lista.style.display = "none"; }
+    if (!libre)            { b.textContent = listas ? "Recogé para liberar la fila" : "La fila está llena (" + bocas + " tanda" + (bocas > 1 ? "s" : "") + " encargada" + (bocas > 1 ? "s" : "") + ")"; b.disabled = true; if (lista) lista.style.display = "none"; }
     else if (!cults.length) { b.textContent = "No tenes cultivos que echar (piden " + LOMBRICARIO_PIDE + " de uno)"; b.disabled = true; if (lista) lista.style.display = "none"; }
     else {
       b.textContent = (lista && lista.style.display !== "none") ? "Cerrar la lista" : "Echar cultivos… (elegí cuál)";
@@ -880,9 +885,15 @@ function refreshLombricario() {
     const ent = Math.floor(total);
     /* 1/9: el compost paga por valor, así que lo del Lombricario es un HASTA — depende de qué
        quemes. Un techo declarado como techo no es una promesa rota. */
+    /* 2/9: con la fila, las bocas no multiplican la producción — dan AUTONOMÍA. El pie lo
+       dice con esas palabras para que nadie compre bocas esperando el doble de lombrices. */
+    const porReloj = Math.floor(24 / LOMBRICARIO_HORAS);
+    const tandas = Math.min(bocas, porReloj);
     d.innerHTML = "Por día: <b>" + porMont + " lombrices</b> de los montículos" +
-      (lombricarioAbierto() ? " y hasta <b>" + Math.floor(total - porMont) + "</b> de este Lombricario (" + bocas + " boca" + (bocas > 1 ? "s" : "") + ", según qué quemes)" : "") +
-      ".<br>Alcanzan para <b>" + ent + " lances</b> o <b>" + Math.floor(total / PESCA_V4_NASA_CEBO) + " nasas</b>.";
+      (lombricarioAbierto() ? " y hasta <b>" + Math.floor(total - porMont) + "</b> de este Lombricario (" +
+        tandas + " tanda" + (tandas > 1 ? "s" : "") + " de " + LOMBRICARIO_HORAS + " h, una detrás de otra, según qué quemes)" : "") +
+      ".<br>Alcanzan para <b>" + ent + " lances</b> o <b>" + Math.floor(total / PESCA_V4_NASA_CEBO) + " nasas</b>." +
+      (lombricarioAbierto() && bocas > 1 ? "<br><span class=\"sub\">Las " + bocas + " bocas son la FILA: dejás " + bocas + " tandas encargadas y el Lombricario trabaja " + (bocas * LOMBRICARIO_HORAS) + " h sin vos.</span>" : "");
   }
 }
 

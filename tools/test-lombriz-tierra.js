@@ -90,6 +90,47 @@ console.log("\nLO LISTO ESPERA EN EL EDIFICIO   (« no mandarlas al bag »)");
   ok("una tanda vieja (sin n guardado) paga las 3 de su época", ctx.lombricarioReclamar() === 3);
 }
 
+console.log("\nLA FILA: 1 × 1 COMO LOS HORNOS   (2/9, dirección)");
+{
+  /* « esto no debe correr simultáneo, debe correr 1 x 1 como los hornos ». Las bocas dejan de
+     ser máquinas en paralelo y pasan a ser la PROFUNDIDAD de la fila: cuántas tandas podés
+     dejar encargadas. El techo diario ya no lo ponen las bocas, lo pone el reloj. */
+  G.lombricario = []; G.res.cebolla = 20; G.res.lombriz = 0;
+  const H = g("LOMBRICARIO_HORAS") * 3600e3;
+  ctx.lombricarioEchar("cebolla"); ctx.lombricarioEchar("cebolla"); ctx.lombricarioEchar("cebolla");
+  const l = ctx.lombricario();
+  ok("tres tandas encargadas, tres relojes DISTINTOS", l.length === 3 && l[0].listaEn !== l[1].listaEn);
+  ok("la 1ª termina a las " + g("LOMBRICARIO_HORAS") + " h", Math.round((l[0].listaEn - AHORA) / 3600e3) === g("LOMBRICARIO_HORAS"));
+  ok("la 2ª arranca cuando termina la 1ª, no ahora", Math.round((l[1].listaEn - l[0].listaEn) / 3600e3) === g("LOMBRICARIO_HORAS"));
+  ok("y la 3ª detrás de la 2ª", Math.round((l[2].listaEn - l[1].listaEn) / 3600e3) === g("LOMBRICARIO_HORAS"));
+
+  /* la prueba que importa: a las 8 h hay UNA lista, no tres */
+  AHORA += H + 1000;
+  ok("cumplidas las primeras " + g("LOMBRICARIO_HORAS") + " h, hay UNA sola lista", ctx.lombricarioListas() === 1);
+  const dio = ctx.lombricarioReclamar();
+  ok("y recoger paga solo esa tanda", dio === ctx.lombricarioDa("cebolla"), "+" + dio);
+  ok("las otras dos siguen en la fila", ctx.lombricario().length === 2);
+  AHORA += H * 2 + 1000;
+  ok("pasado el turno de las dos, las dos están listas", ctx.lombricarioListas() === 2);
+  ctx.lombricarioReclamar();
+
+  /* y la fila corre con el juego CERRADO: un reloj no se olvida de correr */
+  G.lombricario = []; G.res.cebolla = 20;
+  ctx.lombricarioEchar("cebolla"); ctx.lombricarioEchar("cebolla");
+  AHORA += H * 2 + 1000;
+  ok("al volver de un día, la fila entera está hecha (corre sin el jugador)", ctx.lombricarioListas() === 2);
+  ctx.lombricarioReclamar();
+
+  /* el techo del día lo pone el RELOJ, no la cantidad de bocas */
+  const porReloj = Math.floor(24 / g("LOMBRICARIO_HORAS"));
+  const mont = ctx.excavPorDia() * 1.5;
+  const delEdificio = ctx.lombricesPorDia() - mont;
+  const tandas = Math.min(ctx.lombricarioBocas(), porReloj);
+  ok("la cuenta del día ya no multiplica por boca — cabe lo que entra en 24 h",
+    Math.abs(delEdificio - tandas * g("LOMBRICARIO_TANDA_MAX")) <= tandas,
+    tandas + " tandas de hasta " + g("LOMBRICARIO_TANDA_MAX") + " → " + Math.round(delEdificio));
+}
+
 console.log("\nLAS OTRAS PUERTAS, CERRADAS   (montículos y compost, nada más)");
 {
   ok("la tienda de vales ya no tiene Lata de lombrices",
