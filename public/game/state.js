@@ -3774,6 +3774,16 @@ function comprarAnimal(k) {
   }
   const d = ANIMAL_DEF[k]; if (!d) { console.warn("[comprarAnimal] especie inexistente:", k); return; }
   if (!(G.built && G.built.establo)) { toast("Primero construí el Establo"); return; }
+  /* 2/9 — LA OTRA MITAD de la dieta estricta: un animal cuya comida no podés cultivar es una
+     trampa (la alpaca se abre a Ganadería 1 y el trigo pide Cultivo 6 — ese era el agujero que
+     la regla genérica del 14/8 tapaba con parche). Ahora la tienda es honesta: si no podés
+     producir NINGUNO de sus cultivos ni tenés existencias, no te lo vende, y te dice qué falta. */
+  const puedeComer = d.come.some(c => (G.res[c] || 0) > 0 || (typeof cropUnlocked === "function" && cropUnlocked(c)));
+  if (!puedeComer) {
+    toast(d.label + " solo come " + d.come.map(c => CROP_DEF[c].label).join(" o ") + " — necesitás Cultivo nivel " +
+      Math.min.apply(null, d.come.map(c => CROP_DEF[c].lvl || 1)) + " para alimentarla");
+    return;
+  }
   const tengo = animalCant(k);
   if (tengo >= ANIMAL_MAX) { toast("Ya tenés " + ANIMAL_MAX + " " + d.label.toLowerCase() + " (el tope)"); return; }
   /* 22/8: el cupo TOTAL sale del nivel de Ganadería (2 al arrancar, +1 por nivel, techo 20) */
@@ -3795,18 +3805,20 @@ function alimentarAnimal(k, silencio) {
   const d = ANIMAL_DEF[k], l = animalLista(k); if (!d || !l.length) return 0;
   let dados = 0, gastado = {};
   for (const a of l) {
-    // Fixes.docx 14/8 #1: siempre se puede alimentar — su cultivo PREFERIDO da la felicidad
-    // entera; si no hay, aceptan CUALQUIER cultivo por un poco menos (antes la alpaca solo
-    // comía trigo, que es de nivel alto, y los bichos se morían de hambre sin remedio)
-    let cultivo = d.come.find(c => (G.res[c] || 0) > 0), preferido = true;
-    if (!cultivo) { cultivo = Object.keys(CROP_DEF).find(c => (G.res[c] || 0) > 0); preferido = false; }
+    /* 2/9 (dirección, viendo comer a la alpaca): « dice que se alimenta con trigo… y comió
+       calabaza. Debería ser solo trigo, los demás cultivos no ». Se deroga la regla genérica
+       del 14/8 (« cualquier cultivo alimenta, un poco peor »), que nació para que la alpaca no
+       muriera de hambre — esa trampa hoy se cierra por el otro lado: comprarAnimal ya no vende
+       un animal cuya comida no podés cultivar. Cada especie come SU lista y nada más: el
+       cartel del establo vuelve a decir la verdad. */
+    const cultivo = d.come.find(c => (G.res[c] || 0) > 0);
     if (!cultivo) break;
     G.res[cultivo] -= 1; gastado[cultivo] = (gastado[cultivo] || 0) + 1;
-    a.feliz = Math.min(100, animalFelizDe(a) + felizDeComida(k, cultivo, preferido));
+    a.feliz = Math.min(100, animalFelizDe(a) + felizDeComida(k, cultivo, true));
     a.comidoAt = nowMs();
     statAdd("alimentar", k); dados++;
   }
-  if (!dados) { if (!silencio) toast("Necesitás algún cultivo — lo preferido de " + d.label + ": " + d.come.map(c => CROP_DEF[c].label).join(" o ")); return 0; }
+  if (!dados) { if (!silencio) toast(d.label + " solo come " + d.come.map(c => CROP_DEF[c].label).join(" o ") + " — no tenés en la bolsa"); return 0; }
   const qué = Object.keys(gastado).map(c => gastado[c] + " " + CROP_DEF[c].label).join(" + ");
   log("Alimentaste " + dados + " " + d.label + " con " + qué + ". Felicidad media: " + animalFelicidad(k) + "/100.", "good");
   if (!silencio) {

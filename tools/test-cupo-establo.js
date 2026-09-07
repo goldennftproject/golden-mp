@@ -37,6 +37,9 @@ const compra = (k) => { avisos.length = 0; ctx.comprarAnimal(k); return avisos.j
 
 /* jugador con establo construido y plata de sobra */
 G.tuto = { done: true }; G.built = Object.assign({}, G.built, { establo: true }); G.plata = 999999;
+/* 2/9 — dieta estricta: la tienda ya no vende un animal cuya comida no podés producir.
+   Este test mide el CUPO, no la dieta, así que la despensa va llena. */
+["trigo","zanahoria","repollo","maiz","calabaza"].forEach(c => G.res[c] = 999);
 
 console.log("\nEL JUGADOR NUEVO ARRANCA CON 2 LUGARES");
 {
@@ -81,6 +84,7 @@ console.log("\nEL GUARDADO VIEJO NO PIERDE NADA");
     skills: {}, animals: { alpaca: [{}, {}, {}, {}], conejo: [{}, {}, {}, {}] } };
   ctx.hydrate(JSON.parse(JSON.stringify(d)));
   G.plata = 999999; G.built.establo = true;
+  ["trigo","zanahoria","repollo","maiz","calabaza"].forEach(c => G.res[c] = 999);
   ganaderiaA(4);
   ok("sus 8 animales siguen todos ahí", ctx.animalesTotal() === 8, ctx.animalesTotal() + "");
   ok("el cupo se estira a lo que ya tenía (8), no confisca", ctx.establoCupo() === 8);

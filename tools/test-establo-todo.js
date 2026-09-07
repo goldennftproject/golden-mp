@@ -72,8 +72,16 @@ console.log("\nNO DESPERDICIA: AL LLENO NO SE LE DA DE COMER");
   ok("y no gasta un solo cultivo", Math.floor(G.res.papa) === 10);
   void dos;
   ok("pero avisa (un clic nunca es mudo)", avisos.some(a => /hambre|cultivos/i.test(a)), avisos.join(" · "));
-  /* uno lleno y otro con hambre: alimenta SOLO al que la necesita */
+  /* 2/9 — DIETA ESTRICTA (dirección: « le acabo de dar alimentar todo y comió calabaza…
+     debería ser solo trigo »): con hambre pero SOLO papa en la bolsa, NO come, y la papa
+     queda intacta. La regla genérica del 14/8 quedó derogada. */
   G.animals[dos[1]].forEach(a => { a.feliz = 20; a.comidoAt = FakeDate.now(); });
+  avisos.length = 0;
+  const rEstricta = ctx.establoAlimentarTodo();
+  ok("con hambre y solo papa en la bolsa, NO come (dieta estricta)",
+    rEstricta.animales === 0 && Math.floor(G.res.papa) === 10, JSON.stringify(rEstricta));
+  /* uno lleno y otro con hambre: alimenta SOLO al que la necesita — con SU comida */
+  G.res[ANIMAL_DEF[dos[1]].come[0]] = 5;
   avisos.length = 0;
   const r2 = ctx.establoAlimentarTodo();
   ok("con uno lleno y otro con hambre, come solo el hambriento", r2.animales === 2 && r2.especies === 1,
