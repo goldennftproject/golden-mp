@@ -60,6 +60,30 @@ Trece referencias, todas de forma:
 
 ---
 
+## 2b. LA DECISIÓN DE LA SILUETA (7/9) — se cambia el idioma de los picos
+
+Trabajando el pico de oro salió el choque que este documento no había visto. Hay DOS idiomas
+de silueta y no pueden convivir:
+
+| | Cabeza | Mango | Lectura |
+|---|---|---|---|
+| **El del juego** (sprites actuales) | cruzada, puntas hacia ABAJO | grueso, en diagonal | cava — es un pico |
+| **El de las referencias de Suren** | media luna, puntas hacia ARRIBA | fino, casi vertical | épico, de RPG |
+
+Medido a 40 px —el tamaño real en la bolsa— el idioma del juego gana con claridad: sigue
+leyéndose como un pico cuando el de la referencia ya es una mancha. Eso no es opinión, está
+en `docs/…/comparar-oro.png` y `siluetas.png`.
+
+**Dirección eligió igualmente el idioma de Suren, y se rehacen los SEIS picos.** Queda escrito
+que el coste aceptado es la legibilidad a tamaño chico, y que el juego gana un aire más épico
+y menos cozy. La única enmienda que se aplica sin discutir: **el mango va más grueso que en la
+referencia** — engrosarlo no toca el estilo y es lo primero que se pierde al reducir.
+
+Nota de método, para que no se repita: los primeros prompts los escribí desde una escalera
+propia sin estudiar las siluetas de las referencias, y cuando el resultado salió « raro » lo
+atribuí al prompt. Estaba mal: PixelLab había reproducido la referencia con fidelidad. Mirar
+la referencia ANTES de escribir el prompt, y a su tamaño final, no al tamaño del render.
+
 ## 3. La cola, en orden de lo que más se ve
 
 1. **Los cinco picos.** Es la escalera más visible del juego y la referencia viene rotulada.
