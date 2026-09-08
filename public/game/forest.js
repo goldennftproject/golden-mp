@@ -114,6 +114,11 @@ class ForestScene extends Phaser.Scene {
        se redibujan con sus brillos; los revisados y vacíos no vuelven — ya se estaban yendo */
     GF.forestCuerpos = (GF.forestCuerpos || []).filter(c => !c.revisado || c.drops.length);
     GF.forestCuerpos.forEach(c => this.dibujarCuerpo(c));
+    /* 8/9: TU cuerpo, si moriste acá y todavía estás a tiempo. Se re-crea como un cuerpo más
+       —así hereda los brillos, el clic, el alcance y el panel sin una línea de código nuevo—
+       pero su contenido vive en G.tumba, porque los diez minutos son de reloj real y tienen que
+       correr con el juego cerrado. */
+    this.montarTumba();
     this.input.mouse.disableContextMenu();
 
     // clic izquierdo: ir hacia el monstruo (y fijarlo) o moverse · clic DERECHO: atacar (detalles 338)
@@ -344,6 +349,29 @@ class ForestScene extends Phaser.Scene {
      lo que cambia es la entrega: vive en el cuerpo hasta que alguien lo revisa. Los cuerpos
      sobreviven al ir y volver de escena igual que lo hacían los drops (GF.forestCuerpos), y los
      ya revisados se van solos a los 90 segundos — un cadáver eterno es basura visual. */
+  /* TU tumba: se dibuja como un cuerpo cualquiera, pero con la marca `mia` — el botín no sale
+     de sus drops sino de G.tumba, y al vaciarse la tumba se borra del estado, no solo de la
+     pantalla. Si se venció mientras no estabas, se limpia sola y se avisa: enterarse de que se
+     perdió es parte del trato. */
+  montarTumba() {
+    if (typeof tumba !== "function") return;
+    const t = tumba();
+    if (!t) return;
+    if (t.zona && t.zona !== this.zonaKey) return;          // moriste en otra zona: allá te espera
+    if (!tumbaViva()) {
+      if (t.items && t.items.length) { log("☠️ Tu cuerpo se deshizo: perdiste lo que llevabas en el morral.", "bad"); toast("Perdiste el morral"); }
+      tumbaLimpiar();
+      return;
+    }
+    GF.forestCuerpos = GF.forestCuerpos || [];
+    const c = { x: t.x, y: t.y, key: "__tumba", label: "tu cuerpo", sprite: null,
+                drops: t.items.slice(), revisado: false, mia: true };
+    this.dibujarCuerpo(c);
+    GF.forestCuerpos.push(c);
+    this._tumbaCuerpo = c;
+    const min = Math.ceil(tumbaQueda() / 60000);
+    log("☠️ Tu cuerpo sigue ahí con " + t.items.length + " cosa(s). Te quedan ~" + min + " min para recuperarlo.", "info");
+  }
   crearCuerpo(m, drops) {
     GF.forestCuerpos = GF.forestCuerpos || [];
     const c = { x: m.cx, y: m.by, key: m.key, label: m.def.label, sprite: m.def.sprite || null,
@@ -445,6 +473,14 @@ class ForestScene extends Phaser.Scene {
       if (!ok) quedan.push(d);   // morral lleno: lo que no cupo SE QUEDA en el cuerpo, no se pierde
     }
     c.drops = quedan;
+    /* 8/9 — si es TU cuerpo, el estado manda: lo que quedó vuelve a G.tumba y, si se vació, la
+       tumba desaparece del guardado. Dejarla viva con la lista en cero sería una tumba fantasma
+       que reaparece cada vez que entrás a la zona. */
+    if (c.mia && typeof tumba === "function") {
+      const t = tumba();
+      if (t) { t.items = quedan.slice(); if (!quedan.length) tumbaLimpiar(); }
+      if (!quedan.length) this._tumbaCuerpo = null;
+    }
     if (window.sfx) sfx("coin");
     refreshHud(); if (typeof syncSlots === "function") syncSlots(); if (isOpen("ov-inv")) refreshInv();
     if (typeof refreshMorral === "function") refreshMorral();
@@ -992,8 +1028,23 @@ class ForestScene extends Phaser.Scene {
     this.drawHeroBar();
     refreshHud();
     if (G.hp <= 0) {
-      log("Te derrotaron en la Zona Negra. Despertás en la granja.", "bad");
-      toast("Te llevaron de vuelta a la granja");
+      /* 8/9 (dirección) — LA MUERTE POR FIN CUESTA ALGO, y es recuperable: « si te matan se te
+         cae la bag, pero tu cuerpo queda en el piso por 10 minutos donde puedes recoger todo ».
+         ORDEN CRÍTICO: la tumba se queda con el morral ANTES de zonaSalir, porque zonaSalir lo
+         descarga a la bolsa (8/9) — al revés, morirse sería la forma más cómoda de cobrar el
+         botín, que es exactamente lo contrario de lo que esta mecánica quiere. */
+      const teniaTumba = (typeof tumbaViva === "function") && !!tumbaViva();
+      const cayeron = (typeof tumbaCaer === "function")
+        ? tumbaCaer(this.zonaKey, this.hero ? this.hero.x : 0, this.hero ? this.hero.y : 0) : 0;
+      if (cayeron) {
+        log("☠️ Te derrotaron. Se te cayó el morral con " + cayeron + " cosa(s): tu cuerpo queda " +
+            TUMBA_MIN + " minutos en la zona" + (teniaTumba ? " — y pisó al cuerpo anterior, que se perdió" : "") +
+            ". Volvé a buscarlo.", "bad");
+        toast("Se te cayó el morral — tu cuerpo dura " + TUMBA_MIN + " min");
+      } else {
+        log("Te derrotaron en la Zona Negra. Despertás en la granja — no llevabas nada en el morral.", "bad");
+        toast("Te llevaron de vuelta a la granja");
+      }
       G.hp = Math.ceil(G.hpMax / 2);
       if (typeof zonaSalir === "function" && typeof mostrarResumenZona === "function") mostrarResumenZona(zonaSalir(true));
       if (typeof saveFarm === "function") saveFarm(true);

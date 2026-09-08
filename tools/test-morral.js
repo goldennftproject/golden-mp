@@ -88,5 +88,51 @@ console.log("\nLA VUELTA A LA GRANJA LO DESCARGA — sin tarea extra para el jug
   ok("el panel solo se ve DENTRO de la zona", /GF\.scene === "forest"/.test(UI) && /function refreshMorral/.test(UI));
 }
 
-console.log(fallos ? "\n" + fallos + " fallo(s)\n" : "\nTodo en orden: el botín viaja en el morral, y el morral es lo que está en juego.\n");
+console.log("\nY SI TE MATAN: EL MORRAL CAE, PERO TU CUERPO ESPERA " + g("TUMBA_MIN") + " MINUTOS");
+{
+  /* « si te matan se te cae la bag, pero tu cuerpo queda en el piso por 10 minutos donde puedes
+     recoger todo ». El equilibrio entero está ahí: la muerte por fin cuesta —hasta hoy no
+     costaba NADA— pero es recuperable. Castigo con salida. */
+  G.morral = []; G.tumba = null;
+  ctx.morralMeter("res", "colmillo", 3);
+  ctx.morralMeter("res", "plata", 80);
+  const cayeron = ctx.tumbaCaer("guarida", 100, 200);
+  ok("al morir, el morral entero cae al cuerpo", cayeron === 2 && ctx.morralVacio(), cayeron + " pila(s)");
+  ok("y la tumba queda viva, con su reloj", !!ctx.tumbaViva() && ctx.tumbaQueda() > 0,
+    Math.ceil(ctx.tumbaQueda() / 60000) + " min");
+  ok("recuerda en qué zona moriste", ctx.tumba().zona === "guarida");
+
+  /* recuperarla devuelve al MORRAL, no a la bolsa: seguís en la zona */
+  const n = ctx.tumbaRecoger();
+  ok("volver a buscarla devuelve todo al morral", n === 2 && ctx.morralPilas() === 2);
+  ok("y la tumba desaparece del estado — nada de tumbas fantasma", ctx.tumbaViva() === null && ctx.tumba() === null);
+
+  /* el reloj es de verdad: una tumba vencida ya no se puede cobrar */
+  G.morral = []; ctx.morralMeter("res", "cuero", 1);
+  ctx.tumbaCaer("guarida", 0, 0);
+  G.tumba.hasta = Date.now() - 1;
+  ok("una tumba vencida no se puede recuperar", ctx.tumbaViva() === null && ctx.tumbaRecoger() === 0);
+
+  /* morir con el morral vacío no crea tumba: un cuerpo sin nada sería una promesa vacía */
+  G.morral = []; G.tumba = null;
+  ok("morir sin nada en el morral no deja cuerpo", ctx.tumbaCaer("guarida", 0, 0) === 0 && !ctx.tumba());
+}
+
+console.log("\nEL ORDEN QUE HACE QUE LA MECÁNICA NO SE DÉ VUELTA");
+{
+  const FOREST = fs.readFileSync(path.join(RAIZ, "public/game/forest.js"), "utf8");
+  /* zonaSalir descarga el morral a la bolsa. Si la muerte llamara a zonaSalir ANTES de tirar el
+     morral, morirse sería la forma más cómoda de cobrar el botín — lo contrario de la idea. */
+  const iCae = FOREST.indexOf("tumbaCaer(this.zonaKey");
+  const iSale = FOREST.indexOf("mostrarResumenZona(zonaSalir(true))");
+  ok("la tumba se queda con el morral ANTES de que zonaSalir lo descargue", iCae > 0 && iSale > iCae,
+    "caer@" + iCae + " · salir@" + iSale);
+  ok("y la muerte avisa cuántas cosas se cayeron y cuánto dura el cuerpo",
+    /Se te cayó el morral con " \+ cayeron \+ " cosa\(s\)/.test(FOREST) && /TUMBA_MIN \+\n?\s*" minutos en la zona/.test(FOREST.replace(/\s+/g, " ")) || /tu cuerpo queda/.test(FOREST));
+  ok("morir de nuevo pisa el cuerpo anterior, y SE DICE", /pisó al cuerpo anterior, que se perdió/.test(FOREST));
+  ok("al entrar a la zona se monta tu cuerpo si sigue a tiempo", /this\.montarTumba\(\);/.test(FOREST));
+  ok("y si venció mientras no estabas, se limpia y se avisa", /Tu cuerpo se deshizo/.test(FOREST));
+}
+
+console.log(fallos ? "\n" + fallos + " fallo(s)\n" : "\nTodo en orden: el botín viaja en el morral, y morir te lo tira sin quitártelo del todo.\n");
 process.exit(fallos ? 1 : 0);

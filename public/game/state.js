@@ -46,7 +46,7 @@ const G = {
      nada y hacía que la bolsa y la barra enseñaran un pico que el jugador no tiene. Llega con el
      kit del baúl, igual que el hacha y la caña. */
   picks: { owned: {}, dur: {}, eq: null },
-  tools: { axe: 0, rod: 0 }, recientes: [], morral: [],
+  tools: { axe: 0, rod: 0 }, recientes: [], morral: [], tumba: null,
   kitReclamado: false,
   toolsLost: {},                 // herramientas tiradas a la papelera (31/7: el diseñador pidió que se puedan tirar)
   invRows: 0,                    // filas extra de inventario compradas
@@ -3564,6 +3564,48 @@ function morralDescargar(silencio) {
   if (!silencio && movidas) log("🎒 Vaciaste el morral de caza: " + detalle.join(" · ") + ".", "gold");
   if (!silencio && quedan.length) toast("Bolsa llena — " + quedan.length + " cosa(s) siguen en el morral");
   return { movidas: movidas, quedan: quedan.length };
+}
+
+/* ═══ TU CUERPO EN EL PISO ═══════════════════════════════ (8/9, dirección: « si te matan se
+   te cae la bag, pero tu cuerpo queda en el piso por 10 minutos donde puedes recoger todo »).
+   El equilibrio entero de la idea está ahí: la muerte por fin cuesta algo —hasta hoy no costaba
+   NADA, despertabas en la granja con media vida y todo tu botín— pero es recuperable si volvés
+   a tiempo. Castigo con salida, que es lo que hace que valga la pena arriesgarse.
+
+   Vive en G y no en la escena porque los diez minutos son de RELOJ REAL: tienen que correr
+   aunque cierres el juego, y la tumba tiene que seguir ahí al volver. Es una sola: morirte otra
+   vez antes de recuperarla te la pisa, y el aviso de la muerte lo dice con todas las letras —
+   perder algo sin enterarse es lo único que esta mecánica no puede permitirse. */
+var TUMBA_MIN = 10;
+function tumba() { return (G.tumba && Array.isArray(G.tumba.items)) ? G.tumba : null; }
+function tumbaViva() { const t = tumba(); return (t && t.items.length && t.hasta > nowMs()) ? t : null; }
+function tumbaQueda() { const t = tumbaViva(); return t ? Math.max(0, t.hasta - nowMs()) : 0; }
+function tumbaCrear(zona, x, y, items) {
+  if (!items || !items.length) return null;
+  G.tumba = { zona: zona || null, x: x || 0, y: y || 0, hasta: nowMs() + TUMBA_MIN * 60000, items: items.slice() };
+  return G.tumba;
+}
+function tumbaLimpiar() { G.tumba = null; }
+/* la caída: el morral entero pasa a la tumba y el jugador queda sin él. Devuelve cuántas pilas
+   cayeron, que es lo que el aviso de la muerte necesita para no ser genérico. */
+function tumbaCaer(zona, x, y) {
+  const l = morral();
+  if (!l.length) return 0;
+  const n = l.length;
+  tumbaCrear(zona, x, y, l);
+  G.morral = [];
+  return n;
+}
+/* recuperar: vuelve al MORRAL, no a la bolsa — seguís en la zona y el morral es la mochila del
+   campo. Lo que no entre queda en la tumba, que es la misma regla del cuerpo de un bicho. */
+function tumbaRecoger() {
+  const t = tumbaViva(); if (!t) return 0;
+  const quedan = [];
+  let n = 0;
+  for (const e of t.items) { if (morralMeter(e.kind || "res", e.k, e.n)) n++; else quedan.push(e); }
+  t.items = quedan;
+  if (!quedan.length) tumbaLimpiar();
+  return n;
 }
 
 function zonaSalir(derrotado) {
