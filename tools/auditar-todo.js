@@ -141,12 +141,17 @@ for (let n = 2; n <= 20; n++) {
 LOG("     * con las 3 parcelas de arranque, plantando sin parar. Con más parcelas, proporcional.");
 LOG("\n   NIVELES SIN NADA QUE DAR (el jugador sube y no pasa nada):");
 const vacios = [];
+/* 8/9 — SE LE PREGUNTA AL CARTEL QUE VE EL JUGADOR, no a las tablas.
+   Esta cuenta miraba FARM_UNLOCK y le salían CERO niveles vacíos. Pero FARM_UNLOCK no la lee el
+   juego: el cartel lo escribe farmUnlockTxt(), que deriva lo que el nivel entrega de verdad. La
+   tabla es el plan cosmético sin implementar, y encima promete diez parcelas que desde el 18/8
+   las da la expansión. Un auditor que le cree tapa justo lo que tendría que enseñar.
+   Preguntando a farmUnlockTxt salen 26 de 49. El bono de venta lo tienen TODOS los niveles, así
+   que no cuenta como « algo que dar »: si es lo único, el nivel está vacío. */
 for (let n = 2; n <= X.FARM_NIVEL_MAX; n++) {
-  if (X.FARM_UNLOCK[n] || X.FARM_COFRE[n] || X.FARM_EDIF2[n] || X.FARM_EXPANSION.includes(n)) continue;
-  let par = 3; for (const k in X.FARM_PARCELA) if (n >= +k) par = X.FARM_PARCELA[k];
-  let parAnt = 3; for (const k in X.FARM_PARCELA) if (n - 1 >= +k) parAnt = X.FARM_PARCELA[k];
-  const arb = X.NIVEL_ARBOLES.filter(v => v === n).length, roc = X.NIVEL_ROCAS.filter(v => v === n).length;
-  if (par === parAnt && !arb && !roc) vacios.push(n);
+  const cartel = ctx.farmUnlockTxt(n) || "";
+  if (cartel.indexOf("+1,5%") !== 0) continue;      // tiene algo delante del bono → algo da
+  vacios.push(n);
 }
 LOG("     " + (vacios.length ? vacios.join(", ") : "ninguno"));
 if (vacios.length) nota(2, "Hay " + vacios.length + " niveles de granja que no entregan NADA: " + vacios.slice(0, 20).join(", ") + (vacios.length > 20 ? "…" : ""));

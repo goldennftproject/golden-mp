@@ -1587,7 +1587,27 @@ const FARM_TAREAS = {
   49: [["plantar","maiz",20],["matar","demonio",15],["matar","dragon",5]],
   50: [["matar","dragon",5],["minar","netherita",25],["plantar","maiz",25]],
 };
-// recompensas: parcela (nº), cofre (+capacidad), edificio nivel 2, y cosméticos (título/decoración/emote/marco/skin/aura)
+/* ============ ESTO ES UN PLAN, NO UN PREMIO (8/9) ==================================
+   ATENCIÓN antes de creerle una palabra a esta tabla: EL JUGADOR NO LA VE NUNCA.
+   El cartel del nivel lo escribe farmUnlockTxt(), que deriva lo que el nivel entrega de verdad
+   —expansión, plano, edificio nivel 2, cofre, vales y el bono de venta— y no lee FARM_UNLOCK ni
+   una vez. Comprobado hoy leyendo ui.js:3944: la tabla solo aparece como respaldo de un `typeof
+   farmUnlockTxt === "function"` que siempre es cierto.
+
+   O sea que los títulos, las decoraciones, los emotes, los marcos, las skins y el aura dorada que
+   hay escritos acá NO SE ENTREGAN. Son el plan cosmético, pendiente de implementar.
+   Y las diez « Nª parcela » son directamente falsas desde el 18/8, cuando dirección decidió que
+   las parcelas vienen con la expansión: nodosQueTocan() da 3 + una por expansión, y nada por
+   nivel. La tabla se quedó con la promesa vieja.
+
+   Por qué no la borro: es la única constancia que queda de qué cosmético iba en cada nivel, y
+   tirarla sería perder el plan. Lo que sí se arregla es que un MEDIDOR la creyera: auditar-todo
+   contaba « niveles sin nada que dar » preguntándole a esta tabla y le salían CERO. Preguntándole
+   a farmUnlockTxt —lo que el jugador ve— salen 26 de 49, entre ellos el 6, el 8, el 11, el 14,
+   el 16, el 17, el 19 y el 20. Eso es un hueco de contenido real y ahora está a la vista.
+
+   Décimo medidor del día que creía una tabla que el juego dejó de leer. La regla, otra vez: si
+   una tabla no la lee el juego, no puede ser la fuente de un auditor. */
 const FARM_UNLOCK = {
   2: "4ª parcela GRATIS", 3: "Horno básico disponible", 4: "5ª parcela GRATIS", 5: "Cocina disponible",
   6: "6ª parcela GRATIS", 7: "7ª parcela GRATIS", 8: "Cultivo Girasol", 9: "Cultivo Trigo", 10: "Cultivo Maíz",
