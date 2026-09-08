@@ -243,6 +243,7 @@ function snapshot() {
     recientes: G.recientes,   /* 8/9: los tres últimos usados sobreviven al F5 */
     morral: G.morral,         /* 8/9: el morral de caza — se pierde al morir, no al recargar */
     tumba: G.tumba,           /* 8/9: tu cuerpo en la zona — sus 10 min son de reloj real */
+    modoPelea: G.modoPelea,   /* 8/9: perseguir o parado — es preferencia, no estado del viaje */
     stats: G.stats, statsBase: G.statsBase, chestCap: G.chestCap, edif2: G.edif2, cosmeticos: G.cosmeticos, animals: G.animals, armor: G.armor, armorEq: G.armorEq, ofrendaPts: G.ofrendaPts, ofrendaLog: G.ofrendaLog, nodoUsos: G.nodoUsos, cosEq: G.cosEq, incursion: G.incursion, incDia: G.incDia, zonaCdHasta: G.zonaCdHasta, zonaViaje: G.zonaViaje, decos: G.decos, decoBolsa: G.decoBolsa, godHand: G.godHand, zonasVistas: G.zonasVistas, visto: nowMs(), dummyTrain: G.dummyTrain, swordOwned: G.swordOwned, bowOwned: G.bowOwned, swordWoodOwned: G.swordWoodOwned, gear: G.gear,
     armasUnlocked: G.armasUnlocked, editVisto: G.editVisto, treesOpen: G.treesOpen, rocksOpen: G.rocksOpen, firstCropDone: G.firstCropDone, weapons: G.weapons,
     dishes: G.dishes, cooking: G.cooking, horno: G.horno, chests: G.chests, dummyUsedAt: G.dummyUsedAt,   // 24/8: la cola del Horno
@@ -392,6 +393,7 @@ function hydrate(d) {
   G.morral = Array.isArray(d.morral) ? d.morral.filter(e => e && e.k && e.n > 0).slice(0, 20) : [];
   /* 8/9 — la tumba viaja con su hora de vencimiento: los diez minutos corren con el juego
      cerrado, así que volver al día siguiente encuentra el cuerpo deshecho, como debe ser. */
+  G.modoPelea = (d.modoPelea === "parado") ? "parado" : "perseguir";   // 8/9
   G.tumba = (d.tumba && Array.isArray(d.tumba.items) && d.tumba.hasta > 0)
     ? { zona: d.tumba.zona || null, x: +d.tumba.x || 0, y: +d.tumba.y || 0,
         hasta: +d.tumba.hasta || 0, items: d.tumba.items.filter(e => e && e.k && e.n > 0).slice(0, 20) }

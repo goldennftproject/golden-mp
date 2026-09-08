@@ -554,6 +554,11 @@ class ForestScene extends Phaser.Scene {
        A* no es gratis y el bicho no se teletransporta. */
   autoChase(t) {
     if (!this.autoOn || this.action) return;
+    /* 8/9 (dirección) — EL MODO « PARADO »: se ataca, pero no se camina. Es el Stand de Tibia y
+       existe sobre todo para el arquero, que quiere pelear a distancia y no ser arrastrado al
+       cuerpo a cuerpo por su propia persecución. El auto-ataque no se toca: lo único que se
+       apaga es el ir a buscarlo. */
+    if (typeof modoPelea === "function" && modoPelea() === "parado") { this._chaseTo = null; return; }
     const m = this.target;
     if (!m || m.dead) return;
     const k = this.keys;

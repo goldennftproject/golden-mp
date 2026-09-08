@@ -237,6 +237,57 @@ function flujoTick() {
 /* ═══ EL MORRAL DE CAZA, A LA VISTA ═══════════ (8/9). Solo se ve EN LA ZONA: en la granja no
    existe porque se vacía al volver, y una mochila vacía permanente sería ruido. Muestra sus
    huecos ocupados y lo que lleva — la cuenta que decide si seguís cazando o volvés. */
+/* ═══ EL MUELLE DE COMBATE ═══════════════════════ (8/9, dirección, con la captura de Tibia:
+   « que se active la parte de equipo a mano derecha, y que tenga el botón de perseguir a mob o
+   el de parado »). Solo aparece dentro de la Zona Negra.
+
+   Es un MUELLE, no una copia del panel de Equipo: muestra lo que llevás puesto y al tocarlo
+   abre el panel de verdad. Duplicar las ranuras con su lógica de equipar habría creado un
+   segundo sitio que envejece por su lado — el día que se agregue una pieza, una de las dos
+   pantallas se olvidaría. Acá se lee de G.gear, que es la única verdad. */
+function refreshCombate() {
+  const caja = $("combate"); if (!caja) return;
+  if (!(window.GF && GF.scene === "forest")) { caja.style.display = "none"; caja._firma = ""; return; }
+  const gr = G.gear || {};
+  const modo = (typeof modoPelea === "function") ? modoPelea() : "perseguir";
+  const fl = (G.res && G.res.flecha) || 0;
+  const firma = [gr.casco, gr.armadura, gr.botas, gr.escudo, gr.arma, gr.municion ? fl : 0, modo].join("|");
+  if (caja._firma === firma) return;
+  caja._firma = firma;
+  caja.style.display = "";
+
+  const pieza = (slot, sil) => {
+    const g = gr[slot], gd = g && typeof GEAR_DEF !== "undefined" && GEAR_DEF[g];
+    return '<div class="cbq' + (gd ? "" : " vacio") + '" title="' + (gd ? gd.label + " · defensa +" + gd.def : slot) + '">' +
+      (gd ? '<img src="' + GF.spr(gd.sprite) + '" onerror="this.remove()">'
+          : '<img class="sil" src="' + GF.spr(sil) + '" onerror="this.remove()">') + '</div>';
+  };
+  const armaDef = gr.arma && typeof ARM_DEF !== "undefined" && ARM_DEF[gr.arma];
+  const armaHtml = '<div class="cbq' + (armaDef ? "" : " vacio") + '" title="' +
+    (armaDef ? armaDef.label + " · daño " + armaDef.min + "–" + armaDef.max : "Sin arma") + '">' +
+    (armaDef ? '<img src="' + GF.spr(armaDef.sprite || ARM_TIPO_DEF[armaDef.tipo].sprite) + '" onerror="this.remove()">'
+             : '<img class="sil" src="' + GF.spr("sil_arma") + '" onerror="this.remove()">') + '</div>';
+  const munHtml = '<div class="cbq' + (gr.municion && fl > 0 ? "" : " vacio") + '" title="' +
+    (gr.municion && fl > 0 ? fl + " flechas" : "Sin munición") + '">' +
+    '<img class="' + (gr.municion && fl > 0 ? "" : "sil") + '" src="' + GF.spr("res_flecha") + '" onerror="this.remove()">' +
+    (gr.municion && fl > 0 ? '<span class="cbn">' + fmt(fl) + '</span>' : '') + '</div>';
+
+  caja.innerHTML =
+    '<div class="cb-eq" id="cb-eq" title="Tocá para abrir el Equipo">' +
+      pieza("casco", "sil_casco") + armaHtml + pieza("escudo", "sil_escudo") +
+      pieza("armadura", "sil_armadura") + pieza("botas", "sil_botas") + munHtml +
+    '</div>' +
+    '<div class="cb-modos">' +
+      '<button class="cb-m' + (modo === "perseguir" ? " on" : "") + '" data-modo="perseguir" title="Vas hacia el objetivo hasta la distancia de tu arma">👣 Perseguir</button>' +
+      '<button class="cb-m' + (modo === "parado" ? " on" : "") + '" data-modo="parado" title="Atacás sin moverte — para pelear con arco">🛑 Parado</button>' +
+    '</div>';
+  const eq = $("cb-eq");
+  if (eq) eq.onclick = () => { if (typeof openOv === "function") openOv("ov-equip"); };
+  caja.querySelectorAll("[data-modo]").forEach(b => b.onclick = (e) => {
+    e.stopPropagation();
+    if (typeof modoPeleaSet === "function") modoPeleaSet(b.dataset.modo);
+  });
+}
 function refreshMorral() {
   const caja = $("morral"); if (!caja) return;
   const enZona = !!(window.GF && GF.scene === "forest");
@@ -4001,7 +4052,7 @@ function initUI() {
   tutoSync(true);   // cartel + flecha del tutorial guiado
   /* 8/9: la tira también se repinta en el latido — los números suben al craftear o al cobrar,
      no solo al gastar, y con la firma no cuesta nada si no cambió nada. */
-  setInterval(() => { try { refreshRecientes(); refreshMorral(); } catch (e) {} }, 1000);
+  setInterval(() => { try { refreshRecientes(); refreshMorral(); refreshCombate(); } catch (e) {} }, 1000);
   setInterval(() => { if (typeof buffTick === "function") buffTick(); if (typeof stamTick === "function") stamTick(); if (typeof incTick === "function") incTick(); if (typeof granjaRegen === "function") granjaRegen(); tutoSync(); refreshHud(); }, 1000);
   /* 26/8 — el flujo de la bolsa late aparte y MÁS RÁPIDO que el HUD. Un segundo de retraso entre
      el golpe y el « +1 Madera » ya no se siente como respuesta al clic, se siente como otra cosa

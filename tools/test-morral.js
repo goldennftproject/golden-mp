@@ -134,5 +134,50 @@ console.log("\nEL ORDEN QUE HACE QUE LA MECÁNICA NO SE DÉ VUELTA");
   ok("y si venció mientras no estabas, se limpia y se avisa", /Tu cuerpo se deshizo/.test(FOREST));
 }
 
+console.log("\nEL MUELLE DE COMBATE: EQUIPO Y MODO DE PELEA A LA DERECHA");
+{
+  /* « que se active la parte de equipo a mano derecha, y que tenga el botón de perseguir a mob
+     o el de parado ». Lo que este test protege no es el CSS sino la decisión: el muelle LEE de
+     G.gear y abre el panel real — no es una segunda copia de las ranuras con su propia lógica
+     de equipar, que es como se terminan teniendo dos pantallas que se contradicen. */
+  const UI = fs.readFileSync(path.join(RAIZ, "public/game/ui.js"), "utf8");
+  const HTML = fs.readFileSync(path.join(RAIZ, "public/index.html"), "utf8");
+  const FOREST = fs.readFileSync(path.join(RAIZ, "public/game/forest.js"), "utf8");
+
+  ok("el muelle existe y solo se ve en la Zona Negra",
+    /function refreshCombate/.test(UI) && /GF\.scene === "forest"[\s\S]{0,120}caja\.style\.display = "none"/.test(UI));
+  ok("lee el equipo de G.gear — no guarda una copia", /const gr = G\.gear \|\| \{\}/.test(UI));
+  ok("y tocarlo abre el panel de Equipo de verdad", /openOv\("ov-equip"\)/.test(UI));
+  /* lo que importa: que el MUELLE no escriba en G.gear. Equipar tiene sus sitios (la bolsa, la
+     Herrería, el panel) y este no es uno — si lo fuera, sería una cuarta puerta que mantener. */
+  const cuerpoMuelle = UI.slice(UI.indexOf("function refreshCombate"), UI.indexOf("function refreshMorral"));
+  ok("el muelle NO escribe el equipo — solo lo muestra", !/G\.gear\s*(\.\w+)?\s*=/.test(cuerpoMuelle));
+  ok("los dos modos están, y el activo se distingue", /data-modo="perseguir"/.test(UI) && /data-modo="parado"/.test(UI) && /\.cb-m\.on\{/.test(HTML));
+
+  /* la mecánica del modo, que es lo que de verdad cambia el juego */
+  G.modoPelea = "perseguir";
+  ok("por defecto se persigue", ctx.modoPelea() === "perseguir");
+  ctx.modoPeleaSet("parado");
+  ok("y se puede quedar parado", ctx.modoPelea() === "parado");
+  ctx.modoPeleaSet("cualquier_cosa");
+  ok("un modo inventado no lo rompe", ctx.modoPelea() === "parado");
+  /* el freno tiene que estar DENTRO de autoChase (el caminar) y NO en autoAtacar: « parado »
+     significa pelear sin moverse, no dejar de pelear. Se comprueba por posición, que es lo
+     único que distingue « está en la función correcta » de « está en el archivo ». */
+  const iChase = FOREST.indexOf("autoChase(t) {");
+  const iFreno = FOREST.indexOf('modoPelea() === "parado"');
+  const iFinChase = FOREST.indexOf("\n  }", iChase);
+  ok("« parado » frena el caminar, y el freno vive DENTRO de autoChase",
+    iChase > 0 && iFreno > iChase && iFreno < iFinChase, "chase@" + iChase + " freno@" + iFreno);
+  ok("y no toca el auto-ataque: seguís peleando parado",
+    !/autoAtacar[\s\S]{0,300}modoPelea/.test(FOREST));
+
+  /* es preferencia, no estado del viaje: tiene que sobrevivir */
+  G.modoPelea = "parado";
+  const snap = JSON.parse(JSON.stringify(ctx.snapshot()));
+  G.modoPelea = undefined; ctx.hydrate(snap);
+  ok("el modo sobrevive al F5 — no se re-elige en cada entrada", ctx.modoPelea() === "parado");
+}
+
 console.log(fallos ? "\n" + fallos + " fallo(s)\n" : "\nTodo en orden: el botín viaja en el morral, y morir te lo tira sin quitártelo del todo.\n");
 process.exit(fallos ? 1 : 0);

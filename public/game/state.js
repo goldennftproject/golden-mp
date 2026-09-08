@@ -46,7 +46,7 @@ const G = {
      nada y hacía que la bolsa y la barra enseñaran un pico que el jugador no tiene. Llega con el
      kit del baúl, igual que el hacha y la caña. */
   picks: { owned: {}, dur: {}, eq: null },
-  tools: { axe: 0, rod: 0 }, recientes: [], morral: [], tumba: null,
+  tools: { axe: 0, rod: 0 }, recientes: [], morral: [], tumba: null, modoPelea: "perseguir",
   kitReclamado: false,
   toolsLost: {},                 // herramientas tiradas a la papelera (31/7: el diseñador pidió que se puedan tirar)
   invRows: 0,                    // filas extra de inventario compradas
@@ -3564,6 +3564,24 @@ function morralDescargar(silencio) {
   if (!silencio && movidas) log("🎒 Vaciaste el morral de caza: " + detalle.join(" · ") + ".", "gold");
   if (!silencio && quedan.length) toast("Bolsa llena — " + quedan.length + " cosa(s) siguen en el morral");
   return { movidas: movidas, quedan: quedan.length };
+}
+
+/* ═══ PERSEGUIR O QUEDARSE PARADO ═══════════════════════ (8/9, dirección: « que tenga el botón
+   de perseguir a mob o el de parado »). Es el Chase/Stand de Tibia, y tiene su ironía: el 31/8
+   escribí la persecución SIN interruptor, con el argumento de que « la versión que molesta es la
+   otra ». Me faltaba el caso del arquero — plantarse a distancia y disparar es una táctica, no un
+   descuido, y hoy la persecución te arrastra al cuerpo a cuerpo aunque no quieras.
+   El modo vive en G porque es una PREFERENCIA del jugador: elegirlo en cada entrada a la zona
+   sería pedirle que repita una decisión que ya tomó. */
+var MODO_PELEA = ["perseguir", "parado"];
+function modoPelea() { return MODO_PELEA.indexOf(G.modoPelea) >= 0 ? G.modoPelea : "perseguir"; }
+function modoPeleaSet(m) {
+  if (MODO_PELEA.indexOf(m) < 0) return modoPelea();
+  G.modoPelea = m;
+  toast(m === "perseguir" ? "Perseguir: vas hacia el objetivo" : "Parado: atacás sin moverte");
+  if (typeof refreshCombate === "function") refreshCombate();
+  if (typeof saveFarm === "function") saveFarm();
+  return m;
 }
 
 /* ═══ TU CUERPO EN EL PISO ═══════════════════════════════ (8/9, dirección: « si te matan se
