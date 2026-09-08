@@ -1385,14 +1385,48 @@ function skillNeed(lvl, sk) {
    daño) quedan como estaban, techo 150. Y la XP NUNCA deja de acumularse: al subir el techo,
    los veteranos suben en el acto lo que ya ganaron. La granja ya tenía su techo (50). */
 var _OFICIO_TECHO = null;
+/* 8/9 — EL 150 NO LO ELIGIÓ NADIE, y estaba en SIETE oficios.
+   Este respaldo se escribió para que la función no petara con un oficio nuevo, y acabó siendo el
+   techo real de Tala, Artesanía, Espada, Hacha, Mazo y Arco: nada en el juego pide el nivel de
+   ninguno de esos seis, así que oficioAbre() les devuelve la lista vacía y se llevaban el 150.
+   Medido: 5.786.062 de XP, o 203 días de Tala. Los cinco que SÍ tienen contenido detrás topan
+   entre 11 y 20. O sea que el jugador ve seis barras que prometen 150 niveles y no entregan uno.
+   Ese es un hueco de CONTENIDO y no lo tapo inventando desbloqueos. Lo que sí se arregla acá es
+   la mentira: un oficio sin nada detrás no puede prometer más escalera que el que más tiene. El
+   respaldo pasa a ser el techo más alto de los oficios que sí se derivan — hoy 20 — y así el
+   jugador llega a « máximo alcanzado » en vez de perseguir un número que no existe.
+   Cuando alguno de los seis reciba contenido de verdad, su techo subirá solo, como los demás. */
 function oficioTecho(sk) {
   if (!_OFICIO_TECHO) _OFICIO_TECHO = {};
   if (!(sk in _OFICIO_TECHO)) {
     let l = [];
     try { l = (typeof oficioAbre === "function") ? oficioAbre(sk) : []; } catch (e) {}
-    _OFICIO_TECHO[sk] = l.length ? Math.max.apply(null, l.map(e => e[0])) : 150;
+    _OFICIO_TECHO[sk] = l.length ? Math.max.apply(null, l.map(e => e[0])) : oficioTechoSinContenido();
   }
   return _OFICIO_TECHO[sk];
+}
+/* el techo de los que no tienen nada detrás: el más alto de los que sí. Se calcula una vez y se
+   guarda, y NO llama a oficioTecho para no morderse la cola. */
+var _TECHO_HUERFANO = 0;
+function oficioTechoSinContenido() {
+  if (_TECHO_HUERFANO) return _TECHO_HUERFANO;
+  _TECHO_HUERFANO = 20;   // respaldo del respaldo, por si SKILL_DEFS todavía no existe
+  try {
+    let m = 0;
+    SKILL_DEFS.forEach(d => {
+      let l = []; try { l = oficioAbre(d[0]); } catch (e) {}
+      if (l.length) m = Math.max(m, Math.max.apply(null, l.map(e => e[0])));
+    });
+    if (m > 0) _TECHO_HUERFANO = m;
+  } catch (e) {}
+  return _TECHO_HUERFANO;
+}
+/* qué oficios no tienen NADA que dar. Lo usa el auditor: es un hueco de contenido, y mientras
+   exista tiene que estar a la vista y no escondido detrás de un número por defecto. */
+function oficiosSinContenido() {
+  const v = [];
+  try { SKILL_DEFS.forEach(d => { let l = []; try { l = oficioAbre(d[0]); } catch (e) {} if (!l.length) v.push(d[0]); }); } catch (e) {}
+  return v;
 }
 function skillInfo(xp, sk) { const techo = sk ? oficioTecho(sk) : 150; let lvl = 1, acc = 0, need = skillNeed(1, sk); while (xp >= acc + need && lvl < techo) { acc += need; lvl++; need = skillNeed(lvl, sk); } return { lvl, into: xp - acc, need, techo }; }
 // --- Barra de Combate GLOBAL (doc maestro 2/8): un solo nivel que suma la XP de TODOS los kills.

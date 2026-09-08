@@ -11,7 +11,7 @@ const ctx={console:{log(){},warn(){}},Math,Date,JSON,Object,Array,Number,String,
 ctx.window=ctx;ctx.globalThis=ctx;ctx.setTimeout=()=>0;vm.createContext(ctx);
 vm.runInContext(fs.readFileSync("public/game/config.js","utf8"),ctx);
 vm.runInContext(fs.readFileSync("public/game/state.js","utf8")+
- "\n;this.X={CD,ORE_DEF,ORE_ORDER,CROP_DEF,CROP_ORDER,FISH_CD,skillNeed,skillInfo,xpDeNodo,xpDeCultivo,XP_ACCION,XP_PEZ,XP_ANIMAL,ANIMAL_DEF};",ctx);
+ "\n;this.X={CD,ORE_DEF,ORE_ORDER,CROP_DEF,CROP_ORDER,FISH_CD,skillNeed,skillInfo,xpDeNodo,xpDeCultivo,oficioTecho,oficiosSinContenido,SKILL_DEFS,XP_ACCION,XP_PEZ,XP_ANIMAL,ANIMAL_DEF};",ctx);
 const X=ctx.X;
 let fallos=0;
 const ok=(n,c,d)=>{if(!c)fallos++;console.log((c?"  ok   ":"  FALLA")+"  "+n+(d?"   "+d:""));};
@@ -70,9 +70,24 @@ const acum=(n,sk)=>{let a=0;for(let i=1;i<n;i++)a+=X.skillNeed(i,sk);return a;};
   const lvlMax=Math.max(...X.CROP_ORDER.map(k=>X.CROP_DEF[k].lvl));
   const hTope=acum(lvlMax,"farming")/RITf/24;
   ok("el último cultivo sigue a una distancia razonable", hTope>1&&hTope<40, hTope.toFixed(1)+" días de Cultivo");
-  ok("el techo del oficio sigue siendo alcanzable",
-     acum(50,"tala")/(3*3600/X.CD.tree*X.xpDeNodo("tree"))/24 < 400,
-     (acum(50,"tala")/(3*3600/X.CD.tree*X.xpDeNodo("tree"))/24).toFixed(0)+" días de Tala para el nivel 50");
+  /* 8/9 — ESTE 50 ESTABA CLAVADO, y era el último sitio donde el techo de un oficio se escribía
+     a mano. Medía « cuánto cuesta llegar al 50 de Tala » cuando el techo real es oficioTecho(),
+     así que aprobaba 203 días de una escalera que ni siquiera existe: nada en el juego pedía
+     nivel de Tala, y por eso su techo era el respaldo de 150. Ahora lee el techo de verdad. */
+  const TT = X.oficioTecho("tala");
+  const dTala = acum(TT,"tala")/(3*3600/X.CD.tree*X.xpDeNodo("tree"))/24;
+  ok("el techo de Tala se alcanza dentro de la partida", dTala < 60,
+     dTala.toFixed(1)+" días de Tala para el nivel "+TT+" (su techo real)");
+  /* Y EL HUECO QUE DESTAPÓ, a la vista para que no se vuelva a esconder detrás de un número por
+     defecto: un oficio sin nada detrás es una barra que sube y no entrega nunca. Hoy son seis.
+     Este test NO falla por ello —es contenido que falta, no un bug— pero lo dice cada vez. */
+  const huerfanos = X.oficiosSinContenido();
+  ok("los oficios sin contenido están contados (no es un fallo, es un hueco a la vista)",
+     Array.isArray(huerfanos),
+     huerfanos.length ? huerfanos.length+" sin nada que dar: "+huerfanos.join(", ") : "ninguno");
+  ok("y ninguno promete más escalera que el que más contenido tiene",
+     huerfanos.every(k => X.oficioTecho(k) <= Math.max.apply(null,
+       X.SKILL_DEFS.map(d => X.oficioTecho(d[0])))), "techo huérfano "+X.oficioTecho("tala"));
 }
 console.log("\n"+(fallos?"FALLOS: "+fallos:"la XP mide gestos, y un nivel significa lo mismo en todos los oficios"));
 process.exit(fallos?1:0);
