@@ -93,9 +93,15 @@ function simular(sesionesDia, tope, minSesion, cargasTope, loteOn, doma) {
      doce veces más que el de una y la curva salía más rápida de lo que el juego permite: el cupo
      real es SEED_POR_PARCELA (40) por parcela y día, y existe justamente para que la hiperactividad
      no compre niveles. Sin modelarlo, « 63 días al nivel 20 » era optimista.
-     Lo descubrí porque sim-progresion.js —que sí lo modela— daba nivel 8-9 a los 30 días contra
+     Lo descubrí porque sim-progresion.js —que sí lo modelaba— daba nivel 8-9 a los 30 días contra
      el 20 de acá. Cuando dos medidores no coinciden, uno miente; hay que averiguar cuál antes de
-     mover un número del juego con lo que dicen. */
+     mover un número del juego con lo que dicen.
+     EPÍLOGO (8/9, mismo día): se averiguó, y mentía el otro. sim-progresion leía FARM_PARCELA
+     para saber cuántas parcelas tiene el jugador, y esa tabla está VACÍA a propósito desde el
+     18/8 —las parcelas vienen con la expansión, no con el nivel—, así que simulaba una granja de
+     DOS parcelas durante treinta días mientras el jugador real llega a once. Encima elegía el
+     cultivo por margen absoluto, que siempre es el maíz: el peor del juego en XP por hora. Con
+     esos dos sesgos no podía dar otra cosa. Se jubiló; este archivo queda como el único. */
   let sembradasHoy = 0, diaCupo = -1;
   const cupoDia = () => X.SEED_POR_PARCELA * Math.max(3, parcelas);
   const cosechar = ahora => {
@@ -105,7 +111,11 @@ function simular(sesionesDia, tope, minSesion, cargasTope, loteOn, doma) {
        parcelas que de verdad se sembraron, no por las que el jugador tiene: si el cupo o la plata
        le alcanzaron para tres de diez, cosecha tres. */
     plata += sembradas * c.price * (c.yield || 1);
-    xpFarm += sembradas * c.xp; cosechas++; plantadoEn = -1; sembradas = 0;
+    /* 8/9 — UN CICLO DE CULTIVO PAGA DOS VECES: farm.js da XP_PLANTAR al sembrar y cd.xp al
+       cosechar. Acá se contaba solo la segunda, así que la papa salía 10 en vez de 15 — un 33 %
+       de menos, y justo en los cultivos cortos, que son los del jugador activo. xpDeCultivo()
+       suma las dos y es ahora la única que lo sabe. */
+    xpFarm += sembradas * ctx.xpDeCultivo(cultivo); cosechas++; plantadoEn = -1; sembradas = 0;
     return parcelas;
   };
   const plantar = (ahora, ventana) => {

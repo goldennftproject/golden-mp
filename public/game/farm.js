@@ -2085,7 +2085,7 @@ class FarmScene extends Phaser.Scene {
         o.readyAt = nowMs() + (starter ? Math.min(FIRST_GROW_MS, real) : real);   // nunca más lento que el tiempo real del cultivo
         o.growTotal = o.readyAt - nowMs();
         this.showGrowing(o, true);   // recién plantado: el brote asoma con un saltito
-        this.syncPlots(); addXp("farming", 5); statAdd("plantar", ck); log(`Plantaste ${cd.label}.`, "good"); toast("" + cd.label);
+        this.syncPlots(); addXp("farming", (typeof XP_PLANTAR === "number" ? XP_PLANTAR : 5)); statAdd("plantar", ck); log(`Plantaste ${cd.label}.`, "good"); toast("" + cd.label);
         if (typeof tutoEvent === "function") tutoEvent("plant");
         if (isOpen("ov-inv")) refreshInv();
       }

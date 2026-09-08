@@ -1315,9 +1315,18 @@ function xpDeNodo(tipo, key) {
   if (tipo === "tree") return XP_ACCION * porCarga;
   return XP_ACCION * (XP_ESCALON[key] || 1) * (key === "piedra" ? porCarga : 1);
 }
-function xpDeCultivo(k) {              // escalón 1..13 en la escalera de cultivos
-  const i = (typeof CROP_ORDER !== "undefined") ? CROP_ORDER.indexOf(k) : -1;
-  return XP_ACCION * (i >= 0 ? i + 1 : 1);
+/* 8/9 — ESTA FUNCIÓN ESTABA MUERTA Y ADEMÁS MENTÍA. Devolvía XP_ACCION × (escalón), o sea
+   10-20-30-40…, mientras el juego cosecha con CROP_DEF[k].xp, que dice 10-20-40-60-80-100…
+   Coincidían en dos cultivos de trece. Nadie lo notó porque el juego no la llama nunca: los
+   únicos que la llamaban eran dos medidores, y uno de ellos es test-xp-oficios — justo el que
+   guarda la regla « el nivel N son las mismas horas en cualquier oficio ». Llevaba semanas
+   validando una función que el jugador no toca.
+   Ahora devuelve LO QUE EL JUEGO DA: la XP de la tabla más los 5 de plantar (farm.js cobra
+   addXp("farming", 5) al sembrar y (cd.xp) al cosechar; un ciclo de cultivo son los dos). */
+var XP_PLANTAR = 5;
+function xpDeCultivo(k) {
+  const c = (typeof CROP_DEF !== "undefined") ? CROP_DEF[k] : null;
+  return XP_PLANTAR + (c && c.xp != null ? c.xp : XP_ACCION);
 }
 /* EL RITMO DE CADA OFICIO — cuánta XP paga por hora, comparado con la Tala (19/8, derivado).
    La regla aprobada es "el nivel N son las mismas horas en cualquier oficio". Para que eso sea
