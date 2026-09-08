@@ -433,18 +433,25 @@ class ForestScene extends Phaser.Scene {
   }
   recogerCuerpo(c) {
     if (!this.cuerpoAlAlcance(c)) { toast("Estás demasiado lejos"); this.cerrarCuerpo(); return; }
+    /* 8/9 (dirección) — EL BOTÍN VA AL MORRAL DE CAZA, no a la bolsa. Es el modelo de Tibia,
+       investigado antes de escribirlo: lo que sacás del CADÁVER entra al contenedor de botín.
+       Acá se ve por qué el trabajo del 31/8 valió la pena — el cuerpo que hay que revisar ya
+       existía, así que la hunting bag entera cabe en cambiar el destino de estas tres líneas.
+       La plata también entra al morral: si fuera directa a la billetera sería imposible de
+       perder, y perder el botín es justamente la apuesta que la mecánica propone. */
     const quedan = [];
     for (const d of c.drops) {
-      let ok = false;
-      if (d.kind === "gear") { gainGear(d.k); ok = true; }
-      else if (d.k === "plata") { G.plata += d.n; ok = true; }
-      else ok = tryAddRes(d.k, d.n);
-      if (!ok) quedan.push(d);   // bolsa llena: lo que no cupo SE QUEDA en el cuerpo, no se pierde
+      const ok = morralMeter(d.kind || "res", d.k, d.n);
+      if (!ok) quedan.push(d);   // morral lleno: lo que no cupo SE QUEDA en el cuerpo, no se pierde
     }
     c.drops = quedan;
     if (window.sfx) sfx("coin");
     refreshHud(); if (typeof syncSlots === "function") syncSlots(); if (isOpen("ov-inv")) refreshInv();
-    if (quedan.length) { toast("Bolsa llena — el resto queda en el cuerpo"); this.abrirCuerpo(c); return; }
+    if (typeof refreshMorral === "function") refreshMorral();
+    if (quedan.length) {
+      toast("Morral lleno (" + MORRAL_CUPO + ") — el resto queda en el cuerpo");
+      this.abrirCuerpo(c); return;
+    }
     this.cerrarCuerpo();
     this.despedirCuerpo(c);
   }

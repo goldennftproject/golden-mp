@@ -46,7 +46,7 @@ const G = {
      nada y hacía que la bolsa y la barra enseñaran un pico que el jugador no tiene. Llega con el
      kit del baúl, igual que el hacha y la caña. */
   picks: { owned: {}, dur: {}, eq: null },
-  tools: { axe: 0, rod: 0 }, recientes: [],
+  tools: { axe: 0, rod: 0 }, recientes: [], morral: [],
   kitReclamado: false,
   toolsLost: {},                 // herramientas tiradas a la papelera (31/7: el diseñador pidió que se puedan tirar)
   invRows: 0,                    // filas extra de inventario compradas
@@ -3516,9 +3516,64 @@ function zonaEntrar() {
                   combatXp: G.combatXp || 0, matados: zonaMatados(), hp: G.hp };
 }
 // devuelve el resumen del viaje (y lo cierra). null si no había viaje abierto.
+/* ═══ EL MORRAL DE CAZA ═══════════════════════════════════ (8/9, dirección: « nos vamos a
+   crear unas hunting bag — esa hunting bag es la que vamos a perder, no lo que carguemos en el
+   inventario »). Investigado en Tibia antes de escribirlo: allí designás una mochila como
+   contenedor de botín y lo que sacás del CADÁVER va ahí, no al bolso general.
+
+   Acá el enganche era casi gratis porque la mitad ya estaba: desde el 31/8 el bicho muerto deja
+   un cuerpo con brillo que hay que revisar y saquear a mano (revisarCuerpo). Lo único que cambia
+   es el destino: lo que sale del cuerpo entra al MORRAL, no a la bolsa.
+
+   Y el cupo chico es la decisión de diseño, no una limitación técnica: con ocho huecos, llenarlo
+   te obliga a elegir entre volver a descargar o seguir cazando dejando botín en el piso. Esa es
+   la tensión que hace que uno diga « una más » — y que la muerte duela justo cuando más tenías.
+
+   Se DESCARGA SOLO al volver a la granja: el morral es para el campo, no una tarea extra. */
+var MORRAL_CUPO = 8;              // huecos (pilas distintas), no unidades
+function morral() { if (!Array.isArray(G.morral)) G.morral = []; return G.morral; }
+function morralPilas() { return morral().length; }
+function morralLleno() { return morralPilas() >= MORRAL_CUPO; }
+/* mete algo al morral. Devuelve false si no entra — y entonces el botín SE QUEDA en el cuerpo,
+   que es la misma regla que ya tenía la bolsa llena: lo que no cabe no se evapora. */
+function morralMeter(kind, k, n) {
+  const l = morral();
+  const hay = l.find(e => e.kind === kind && e.k === k);
+  if (hay) { hay.n += n; return true; }        // apilar en lo que ya está no ocupa hueco nuevo
+  if (morralLleno()) return false;
+  l.push({ kind: kind, k: k, n: n });
+  return true;
+}
+function morralVacio() { return !morralPilas(); }
+/* al volver a la granja se vuelca a la bolsa. Lo que no entre se queda en el morral —nunca se
+   borra— y el jugador se entera: es la regla 9 aplicada a un traspaso que puede fallar. */
+function morralDescargar(silencio) {
+  const l = morral();
+  if (!l.length) return { movidas: 0, quedan: 0 };
+  const quedan = [];
+  let movidas = 0, detalle = [];
+  for (const e of l) {
+    let ok = false;
+    if (e.kind === "gear") { if (typeof gainGear === "function") { gainGear(e.k); ok = true; } }
+    else if (e.k === "plata") { G.plata = (G.plata || 0) + e.n; ok = true; }
+    else ok = (typeof tryAddRes === "function") ? tryAddRes(e.k, e.n) : false;
+    if (ok) { movidas++; detalle.push(e.n + " " + (RES_LABEL[e.k] || e.k)); }
+    else quedan.push(e);
+  }
+  G.morral = quedan;
+  if (!silencio && movidas) log("🎒 Vaciaste el morral de caza: " + detalle.join(" · ") + ".", "gold");
+  if (!silencio && quedan.length) toast("Bolsa llena — " + quedan.length + " cosa(s) siguen en el morral");
+  return { movidas: movidas, quedan: quedan.length };
+}
+
 function zonaSalir(derrotado) {
   const v = G.zonaViaje; G.zonaViaje = null;
   G.zonaCdHasta = nowMs() + ZONA_CD_MIN * 60000;
+  /* 8/9: el morral se vuelca A LA VUELTA, no en la zona — es la mochila del campo. Ojo con el
+     orden: la foto del viaje (v.res) se tomó al ENTRAR, así que descargar antes de calcular la
+     ganancia es lo que hace que el resumen cuente el botín del morral como ganado. */
+  const morralIba = morralPilas();
+  if (morralIba) morralDescargar(true);
   if (!v) return null;
   const gan = {};
   for (const k in G.res) { const d = (G.res[k] || 0) - (v.res[k] || 0); if (d > 0) gan[k] = d; }
@@ -3529,6 +3584,7 @@ function zonaSalir(derrotado) {
     golden: Math.max(0, (G.golden || 0) - v.golden),
     xp: Math.max(0, (G.combatXp || 0) - v.combatXp),
     matados: Math.max(0, zonaMatados() - v.matados),
+    morral: morralIba,                 // cuántas pilas traía el morral (para el resumen)
     derrotado: !!derrotado,
   };
 }

@@ -234,6 +234,35 @@ function flujoTick() {
 /* la tira lateral: tres casillas al borde derecho, con el ícono y CUÁNTO QUEDA — que es la
    pregunta que evita abrir la bolsa. Se repinta con firma, como el resto de la casa: solo se
    rehace el HTML si cambió qué hay o cuánto queda. */
+/* ═══ EL MORRAL DE CAZA, A LA VISTA ═══════════ (8/9). Solo se ve EN LA ZONA: en la granja no
+   existe porque se vacía al volver, y una mochila vacía permanente sería ruido. Muestra sus
+   huecos ocupados y lo que lleva — la cuenta que decide si seguís cazando o volvés. */
+function refreshMorral() {
+  const caja = $("morral"); if (!caja) return;
+  const enZona = !!(window.GF && GF.scene === "forest");
+  if (!enZona) { caja.style.display = "none"; caja._firma = ""; return; }
+  const l = (typeof morral === "function") ? morral() : [];
+  const firma = l.map(e => e.kind + ":" + e.k + "=" + e.n).join("|") + "/" + l.length;
+  if (caja._firma === firma) return;
+  caja._firma = firma;
+  caja.style.display = "";
+  const lleno = l.length >= MORRAL_CUPO;
+  let h = '<div class="mor-tit' + (lleno ? " lleno" : "") + '">🎒 Morral ' + l.length + '/' + MORRAL_CUPO +
+    (lleno ? ' · LLENO' : '') + '</div><div class="mor-huecos">';
+  for (let i = 0; i < MORRAL_CUPO; i++) {
+    const e = l[i];
+    if (!e) { h += '<div class="mor-h"></div>'; continue; }
+    const nom = e.kind === "gear" ? ((typeof GEAR_DEF !== "undefined" && GEAR_DEF[e.k] && GEAR_DEF[e.k].label) || e.k)
+      : (e.k === "plata" ? "Plata" : (RES_LABEL[e.k] || e.k));
+    const spr = e.kind === "gear" ? (typeof GEAR_DEF !== "undefined" && GEAR_DEF[e.k] && GEAR_DEF[e.k].sprite)
+      : (e.k === "plata" ? "coin_plata" : (typeof resSprite === "function" ? resSprite(e.k) : null));
+    h += '<div class="mor-h lleno" title="' + nom + '">' +
+      (spr ? '<img src="' + GF.spr(spr) + '" onerror="this.remove()">' : '<span class="em">📦</span>') +
+      '<span class="mn">' + fmt(e.n) + '</span></div>';
+  }
+  h += '</div><div class="mor-pie">Se vacía solo al volver a la granja</div>';
+  caja.innerHTML = h;
+}
 function refreshRecientes() {
   const caja = $("recientes"); if (!caja) return;
   const l = (typeof recientes === "function") ? recientes() : [];
@@ -3972,7 +4001,7 @@ function initUI() {
   tutoSync(true);   // cartel + flecha del tutorial guiado
   /* 8/9: la tira también se repinta en el latido — los números suben al craftear o al cobrar,
      no solo al gastar, y con la firma no cuesta nada si no cambió nada. */
-  setInterval(() => { try { refreshRecientes(); } catch (e) {} }, 1000);
+  setInterval(() => { try { refreshRecientes(); refreshMorral(); } catch (e) {} }, 1000);
   setInterval(() => { if (typeof buffTick === "function") buffTick(); if (typeof stamTick === "function") stamTick(); if (typeof incTick === "function") incTick(); if (typeof granjaRegen === "function") granjaRegen(); tutoSync(); refreshHud(); }, 1000);
   /* 26/8 — el flujo de la bolsa late aparte y MÁS RÁPIDO que el HUD. Un segundo de retraso entre
      el golpe y el « +1 Madera » ya no se siente como respuesta al clic, se siente como otra cosa
