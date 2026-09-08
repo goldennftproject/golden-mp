@@ -72,7 +72,9 @@ function simular(sesionesDia, tope, minSesion, cargasTope, loteOn, doma) {
      es como ya funciona "alimentar a todos" en el establo. */
   const lote = !!loteOn;
   const hueco = 86400 / sesionesDia;
-  let t = 0, activo = 0, plata = 0, cosechas = 0;
+  /* se nace con 3 de plata (G.plata en state.js), y el primer objetivo del juego es comprar
+     semillas con ellas. Arrancar en 0 hacía que el primer día fuera imposible de simular. */
+  let t = 0, activo = 0, plata = 3, cosechas = 0, sembradas = 0;
   /* El ancla no es un número fijo: son 20 plata/hora POR CELDA, y las celdas van creciendo. Compararse
      contra el promedio final infla el techo y hace parecer peor de lo que es. Se acumula hora a hora
      con las celdas que el jugador tenía en ese momento. */
@@ -82,7 +84,7 @@ function simular(sesionesDia, tope, minSesion, cargasTope, loteOn, doma) {
   let parcelas = 3, arboles = 3, rocas = 3;
   const res = { madera: 0, piedra: 0 };
   let libreArb = 0, libreRoc = 0;
-  let plantadoEn = -1, cultivo = null;
+  let plantadoEn = -1, cultivo = X.CROP_ORDER[0];
   const hitos = [];
   const nivelDe = xp => { let n = 1; while (X.FARM_XP_LVLS[n + 1] != null && xp >= X.FARM_XP_LVLS[n + 1]) n++; return n; };
   const nivelCultivo = () => X.skillInfo(xpFarm, "farming").lvl;
@@ -99,8 +101,11 @@ function simular(sesionesDia, tope, minSesion, cargasTope, loteOn, doma) {
   const cosechar = ahora => {
     if (plantadoEn < 0 || ahora < plantadoEn + X.CROP_DEF[cultivo].grow) return 0;
     const c = X.CROP_DEF[cultivo];
-    plata += parcelas * (c.price * (c.yield || 1) - c.seedCost);
-    xpFarm += parcelas * c.xp; cosechas++; plantadoEn = -1;
+    /* la semilla YA SE PAGÓ al sembrar (ver plantar): acá solo entra la venta. Y entra por las
+       parcelas que de verdad se sembraron, no por las que el jugador tiene: si el cupo o la plata
+       le alcanzaron para tres de diez, cosecha tres. */
+    plata += sembradas * c.price * (c.yield || 1);
+    xpFarm += sembradas * c.xp; cosechas++; plantadoEn = -1; sembradas = 0;
     return parcelas;
   };
   const plantar = (ahora, ventana) => {
@@ -109,9 +114,18 @@ function simular(sesionesDia, tope, minSesion, cargasTope, loteOn, doma) {
     if (dia !== diaCupo) { diaCupo = dia; sembradasHoy = 0; }
     const puedo = Math.max(0, cupoDia() - sembradasHoy);
     if (puedo <= 0) return 0;                      // sin cupo no se siembra: el día se acabó
-    const n = Math.min(parcelas, puedo);
-    sembradasHoy += n;
+    /* 8/9 — LA SEMILLA SE PAGA ANTES. Este simulador cobraba la semilla al COSECHAR, así que un
+       jugador con cero plata sembraba igual: la única fuente de dinero del juego no podía
+       agotarse nunca. Es el agujero que sim-progresion.js sí tapaba, y la única razón por la que
+       aquel medidor merecía existir. Importa de verdad en dos sitios: el minuto uno (se nace con
+       3 de plata y la papa cuesta 1) y justo después de pagar una expansión, que deja la
+       billetera en el hueso. Si no se puede pagar la semilla, se siembra lo que alcance. */
     cultivo = cultivoPara(ventana, nivelCultivo());
+    const precio = X.CROP_DEF[cultivo].seedCost;
+    const n = Math.min(parcelas, puedo, precio > 0 ? Math.floor(plata / precio) : parcelas);
+    if (n <= 0) return 0;                          // sin plata no hay semilla, y sin semilla no hay día
+    plata -= n * precio;
+    sembradasHoy += n; sembradas = n;
     plantadoEn = ahora; return n;
   };
 
