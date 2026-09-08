@@ -3875,28 +3875,61 @@ function animalFaltaDe(k, i) {
   if (!d || !a) return 0;
   return Math.max(0, d.cicloH * 3600000 - (nowMs() - (a.prodAt || 0)));
 }
-function animalRinde(k, i) {   // lo que daría ESE animal con SU felicidad, no con la media
+/* ═══ EL RINDE CON DECIMALES ═══════════════════ (8/9, dirección: « podemos agregar decimales,
+   ¿no? Que un infeliz dé 0,5 del material… o un animal con hambre 0,3. Y como alimentarlo es
+   re caro, sería bien »). Es la cura exacta del hallazgo de ayer: la fórmula de felicidad
+   existía desde el 19/8 —« alimentar siempre gana, descuidarlo nunca »— y el REDONDEO la
+   anulaba. Con porCiclo 1, max(1, round(1 × 0,5)) sigue siendo 1: la alpaca, el toro y el
+   jabalí producían lo mismo muertos de hambre que a tope.
+   Ahora el rinde es el número honesto, con sus decimales. No mueve el ancla ni un pelo —es la
+   MISMA fórmula sin el redondeo que la rompía—; lo que cambia es que descuidar por fin cuesta.
+   La fracción no ensucia la bolsa: se acumula en el animal, igual que el peaje de la caña
+   acumula sus décimas de plata y cobra en unidades enteras. */
+function animalRinde(k, i) {   // lo que da ESE animal con SU felicidad — con decimales
   const a = animalLista(k)[i]; if (!a) return 0;
   const f = animalFelizDe(a);
-  return Math.max(1, Math.round(animalPorCiclo(k) * (FELIZ_MIN_PROD + (1 - FELIZ_MIN_PROD) * f / 100)));
+  return Math.round(animalPorCiclo(k) * (FELIZ_MIN_PROD + (1 - FELIZ_MIN_PROD) * f / 100) * 100) / 100;
+}
+function animalGuardado(k, i) {   // la fracción que el animal lleva a cuestas de ciclos anteriores
+  const a = animalLista(k)[i];
+  return a ? Math.round((a.pend || 0) * 100) / 100 : 0;
 }
 function recogerUno(k, i, silencio) {
   const d = ANIMAL_DEF[k], a = animalLista(k)[i];
   if (!d || !a) return 0;
   if (animalFaltaDe(k, i) > 0) { if (!silencio) toast("Todavía no — faltan " + fmtDur(animalFaltaDe(k, i))); return 0; }
-  const n = animalRinde(k, i);
-  if (!roomForRes(d.mat, n)) { if (!silencio) bagFull("recoger " + RES_LABEL[d.mat]); return 0; }
-  G.res[d.mat] = (G.res[d.mat] || 0) + n;
+  /* 8/9 — LA FRACCIÓN SE ACUMULA EN EL ANIMAL, la bolsa cobra en enteros. Mismo mecanismo que
+     el peaje de la caña con sus décimas de plata: si redondeáramos acá, el decimal se perdería
+     en cada ciclo y volveríamos al problema que este cambio vino a arreglar. */
+  const gana = animalRinde(k, i);
+  const acum = Math.round(((a.pend || 0) + gana) * 100) / 100;
+  const entero = Math.floor(acum + 1e-9);
+  if (entero > 0 && !roomForRes(d.mat, entero)) { if (!silencio) bagFull("recoger " + RES_LABEL[d.mat]); return 0; }
+  a.pend = Math.round((acum - entero) * 100) / 100;
+  if (entero > 0) G.res[d.mat] = (G.res[d.mat] || 0) + entero;
   a.prodAt = nowMs();
   addXp("ganaderia", XP_ANIMAL);   // 18/8: los animales son Ganadería, no Cultivo
   if (!silencio) {
-    log(d.label + " " + (i + 1) + " produjo " + n + " de " + RES_LABEL[d.mat] + " (felicidad " + animalFelizDe(a) + "/100).", "gold");
-    toast("+" + n + " " + RES_LABEL[d.mat]);
+    /* y si esta vuelta no llegó a una unidad entera, SE DICE — la regla 9 de la casa: nunca un
+       clic mudo. Un « no pasó nada » sin explicación se lee como que el juego está roto, y acá
+       la explicación es justamente la lección: el animal descuidado rinde menos. */
+    const falta = Math.round((1 - a.pend) * 100) / 100;
+    if (entero > 0) {
+      log(d.label + " " + (i + 1) + " produjo " + gana + " de " + RES_LABEL[d.mat] + " → +" + entero +
+          " a la bolsa" + (a.pend ? " (le quedan " + a.pend + " guardados)" : "") +
+          " · felicidad " + animalFelizDe(a) + "/100.", "gold");
+      toast("+" + entero + " " + RES_LABEL[d.mat]);
+    } else {
+      log(d.label + " " + (i + 1) + " rindió solo " + gana + " de " + RES_LABEL[d.mat] +
+          " por su felicidad (" + animalFelizDe(a) + "/100). Guardado: " + a.pend +
+          " — le falta " + falta + " para una unidad. Alimentalo y rendirá el doble.", "bad");
+      toast("Rindió " + gana + " · guardado " + a.pend + "/1");
+    }
     refreshHud(); if (isOpen("ov-inv")) refreshInv();
     if (typeof refreshEstablo === "function" && isOpen("ov-establo")) refreshEstablo();
     if (typeof saveFarm === "function") saveFarm(true);
   }
-  return n;
+  return entero;
 }
 // cobra TODOS los que estén listos de ese tipo (atajo; el trabajo lo hace recogerUno)
 function recogerAnimal(k, silencio) {

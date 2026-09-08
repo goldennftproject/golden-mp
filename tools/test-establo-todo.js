@@ -26,6 +26,7 @@ ctx.toast = t => avisos.push(String(t)); ctx.log = () => {};
 const G = ctx.G, H = 3600000;
 const ANIMAL_DEF = vm.runInContext("ANIMAL_DEF", ctx), ANIMAL_ORDER = vm.runInContext("ANIMAL_ORDER", ctx);
 
+const RES_LABEL_TEST = (m) => m;
 let fallos = 0;
 const ok = (n, c, d) => { if (!c) fallos++; console.log((c ? "  ok   " : "  FALLA") + "  " + n + (d ? "   " + d : "")); };
 
@@ -91,7 +92,11 @@ console.log("\nNO DESPERDICIA: AL LLENO NO SE LE DA DE COMER");
 console.log("\nRECOGER TODO: LA PRODUCCIÓN DE TODAS LAS ESPECIES");
 {
   avisos.length = 0;
-  const dos = poblar(80);            // producción vencida en las dos
+  /* 8/9: a felicidad 100 — con el rinde decimal, un animal al 80 % da 0,9 y su PRIMERA
+     recogida no llena una unidad entera (se le acumula). Esta sección mide el botón « recoger
+     todo », no la fracción, así que se prueba con los animales a tope; la fracción tiene su
+     propia comprobación más arriba. */
+  const dos = poblar(100);           // producción vencida en las dos, y a tope de felicidad
   dos.forEach(k => G.res[ANIMAL_DEF[k].mat] = 0);
   G.invRows = 20;                    // bolsa amplia: que no corte el reparto
   const r = ctx.establoRecogerTodo();
@@ -130,28 +135,41 @@ console.log("\nCADA ANIMAL ES UNO   (8/9, dirección: « se alimentan por separa
   ok("y su reloj vuelve a empezar", ctx.animalFaltaDe(k, 0) > 0);
   ok("mientras el del otro sigue listo — relojes separados", ctx.animalFaltaDe(k, 1) <= 0);
 
-  /* el rinde es el de SU felicidad, no el de la media: es lo que la pantalla vieja escondía.
-     OJO con qué especie se mide: con porCiclo 1 la felicidad NO PUEDE cambiar el rinde —
-     max(1, round(1 × 0,5)) sigue siendo 1—, así que hay que probarlo en una que dé más de una
-     unidad por ciclo. Ese hallazgo tiene su propia comprobación abajo. */
-  const kMulti = ANIMAL_ORDER.find(x => ctx.animalPorCiclo(x) > 1);
-  if (kMulti) {
-    G.animals[kMulti] = [0, 1].map(() => ({ desde: T0, feliz: 0, comidoAt: FakeDate.now(), prodAt: T0 }));
-    G.animals[kMulti][0].feliz = 100;
-    ok("un animal feliz rinde más que uno descuidado, aunque sean de la misma especie",
-      ctx.animalRinde(kMulti, 0) > ctx.animalRinde(kMulti, 1),
-      kMulti + ": " + ctx.animalRinde(kMulti, 0) + " vs " + ctx.animalRinde(kMulti, 1));
-  }
+  /* ── EL RINDE CON DECIMALES (8/9, dirección: « podemos agregar decimales… que un infeliz dé
+     0,5 del material ») ─────────────────────────────────────────────────────────────────────
+     Esta sección nació AYER como un aviso: con porCiclo 1 el redondeo anulaba la felicidad y
+     alpaca, toro y jabalí producían lo mismo muertos de hambre que a tope. Hoy es una
+     comprobación: ninguna especie puede volver a ser sorda a la felicidad. */
+  const sordas = [];
+  ANIMAL_ORDER.forEach(x => {
+    G.animals[x] = [{ desde: T0, feliz: 100, comidoAt: FakeDate.now(), prodAt: T0 },
+                    { desde: T0, feliz: 0,   comidoAt: FakeDate.now(), prodAt: T0 }];
+    if (!(ctx.animalRinde(x, 0) > ctx.animalRinde(x, 1))) sordas.push(x);
+  });
+  ok("TODAS las especies rinden menos si están descuidadas", !sordas.length,
+    sordas.length ? "sordas: " + sordas.join(", ") : ANIMAL_ORDER.map(x => x + " " + ctx.animalRinde(x, 1) + "→" + ctx.animalRinde(x, 0)).join(" · "));
+  ok("y el descuidado rinde justo la mitad (FELIZ_MIN_PROD)", ANIMAL_ORDER.every(x =>
+    Math.abs(ctx.animalRinde(x, 1) - ctx.animalRinde(x, 0) * 0.5) < 0.01));
 
-  /* ── EL HALLAZGO DEL 8/9, dejado a la vista para que se decida y no se olvide ──────────
-     Con porCiclo = 1 la felicidad no mueve el rinde: FELIZ_MIN_PROD (0,5) sobre una unidad
-     redondea a 1 igual que la unidad entera. O sea que en TRES de las cuatro especies
-     alimentar no cambia lo que producen — y el ancla del 19/8 se escribió justamente para
-     que « alimentar siempre gane y descuidarlo nunca ». Este test no lo arregla (mover
-     rindes es decisión de dirección y del diseñador): lo DELATA, con nombre y apellido. */
-  const inertes = ANIMAL_ORDER.filter(x => ctx.animalPorCiclo(x) === 1);
-  ok("AVISO — especies donde la felicidad no cambia el rinde (porCiclo 1)", true,
-    inertes.length ? inertes.join(", ") + " → alimentarlas no altera lo que producen" : "ninguna");
+  /* la fracción NO se pierde: se acumula en el animal y la bolsa cobra en enteros, igual que
+     el peaje de la caña. Dos ciclos de medio dan uno entero — ni más ni menos. */
+  {
+    const kSolo = ANIMAL_ORDER.find(x => ctx.animalRinde(x, 1) < 1);
+    if (kSolo) {
+      const d2 = ANIMAL_DEF[kSolo];
+      const vencido = () => FakeDate.now() - (d2.cicloH + 1) * H;   // producción cumplida
+      G.animals[kSolo] = [{ desde: T0, feliz: 0, comidoAt: FakeDate.now(), prodAt: vencido() }];
+      G.res[d2.mat] = 0; G.invRows = 6;
+      const e1 = ctx.recogerUno(kSolo, 0, true);
+      ok("el primer ciclo del descuidado no llena una unidad, pero NO se pierde",
+        e1 === 0 && ctx.animalGuardado(kSolo, 0) === 0.5, "guardado " + ctx.animalGuardado(kSolo, 0));
+      G.animals[kSolo][0].prodAt = vencido();
+      const e2 = ctx.recogerUno(kSolo, 0, true);
+      ok("y el segundo la completa — media más media es una", e2 === 1 && ctx.animalGuardado(kSolo, 0) === 0,
+        "+1 " + RES_LABEL_TEST(d2.mat));
+      ok("la bolsa nunca ve decimales", Number.isInteger(G.res[d2.mat]), String(G.res[d2.mat]));
+    }
+  }
 
   /* y la pantalla los pinta de a uno */
   const fs = require("fs");

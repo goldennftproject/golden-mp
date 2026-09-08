@@ -2781,14 +2781,21 @@ function refreshEstablo() {
     for (let i = 0; i < cant; i++) {
       const bicho = animalLista(k)[i];
       const fi = animalFelizDe(bicho), faltaI = animalFaltaDe(k, i), listoI = faltaI <= 0;
-      const rindeI = animalRinde(k, i);
+      const rindeI = animalRinde(k, i), guardI = animalGuardado(k, i);
+      /* 8/9: el rinde lleva decimales (« que un infeliz dé 0,5 del material »), así que se
+         escribe con coma y sin ceros de relleno — « 0,5 » y « 1 », no « 0,50 » ni « 1,00 ». */
+      const dec = (v) => String(Math.round(v * 100) / 100).replace(".", ",");
       h += '<div class="forge-row' + (listoI ? ' eq' : '') + '"><div class="fic">' + d.emoji + '</div><div class="finfo">' +
         '<div class="fnm">' + d.label + (cant > 1 ? ' ' + (i + 1) : '') +
           ' <span class="tag">felicidad ' + fi + '/100</span></div>' +
         '<div class="durbar"><i style="width:' + fi + '%"></i></div>' +
         '<div class="fds">' + (listoI
-          ? '<b style="color:#3f6b2a">¡Listo! · da ' + rindeI + ' de ' + RES_LABEL[d.mat] + '</b>'
-          : 'Produce en ' + fmtDur(faltaI) + ' · rendirá ' + rindeI + ' de ' + RES_LABEL[d.mat]) + '</div>' +
+          ? '<b style="color:#3f6b2a">¡Listo! · da ' + dec(rindeI) + ' de ' + RES_LABEL[d.mat] + '</b>'
+          : 'Produce en ' + fmtDur(faltaI) + ' · rendirá ' + dec(rindeI) + ' de ' + RES_LABEL[d.mat]) +
+          /* la fracción que lleva guardada, dicha en la cara: sin esto, recoger y no ver nada en
+             la bolsa se lee como que el juego se comió el premio. */
+          (guardI > 0 ? ' · lleva <b>' + dec(guardI) + '</b> guardado de 1' : '') +
+          (rindeI < 1 ? ' <span style="color:#a5621a">— está flojo, alimentalo</span>' : '') + '</div>' +
         /* 19/8: la felicidad que da un cultivo es proporcional a lo que vale, así que el cartel
            muestra lo que da EL SUYO. */
         '<div class="fds">Alimentalo con ' + come + ' (+' + Math.round(felizDeComida(k, d.come[0], true)) + ' de felicidad) · pierde ' + FELIZ_BAJA_H + '/hora si lo descuidás</div></div>' +
