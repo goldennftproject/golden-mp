@@ -3693,6 +3693,11 @@ function viajeSacar(kind, key, n) {
   return (typeof mkSacar === "function") ? mkSacar(kind, key, n) : false;
 }
 function viajePoner(kind, key, n) {
+  /* el equipo suelto no se apila en ningún sitio: gainGear decide si mejora lo puesto o se vende.
+     Está acá y no solo en contDescargar porque llevoMeter también puede llegar con kind "gear"
+     estando en la granja, y sin esta rama mkPoner devolvería true sin hacer nada — un objeto que
+     desaparece contestando que sí es la peor forma de fallar. */
+  if (kind === "gear") { if (typeof gainGear === "function") { for (let i = 0; i < n; i++) gainGear(key); return true; } return false; }
   if (kind === "tool") { G.tools[key] = (G.tools[key] || 0) + n; return true; }
   if (kind === "pick") { G.picks.owned[key] = true; G.picks.dur[key] = (G.picks.dur[key] || 0) + n; return true; }
   if (kind === "cana") { G.canas = G.canas || {}; G.canas[key] = true; return true; }
@@ -3757,6 +3762,41 @@ function viajeBajarBolsa(idx) {
   raiz.items.splice(idx, 1);
   contsSumar(b.c, 1);
   return true;
+}
+
+/* ═══ LA CUARENTENA: LO QUE LLEVÁS ENCIMA, Y NADA MÁS ════════════════════════════════════════
+   (8/9, dirección) « una vez en zona negra, lo único que se puede ver es lo que tenemos en esa
+   bag o backpack. No se puede trasladar nada de la bag al inventario de la granja — porque si
+   cogemos algo valioso que no queremos perder, sin morir, pues lo pasamos y ya. Pero nop. Es
+   más, no se puede ni ver lo que teníamos: eso solo es para granja ».
+
+   La auditoría encontró OCHO sitios por los que la Zona metía o sacaba mano de la bolsa de la
+   granja: las flechas, los platos, lo que se levanta del suelo, la Runa Dorada, el equipo, las
+   semillas, la papelera y la foto del flujo. Taparlos uno a uno con un `if (enZona())` en cada
+   sitio es exactamente la forma de fallar que ya conocemos: el noveno que aparezca mañana nacerá
+   sin candado y nadie se va a acordar. Es el bug de las cañas del 25/8 otra vez.
+
+   Así que hay UNA sola puerta. Estas tres funciones contestan « qué tenés, gastalo, guardalo » y
+   miran solas dónde estás parado: en la granja, la bolsa; en la Zona, el contenedor. Quien las
+   use no necesita saber de escenas, y el consumible que se agregue mañana entra por acá o no
+   entra. Es la misma decisión que puedeAccion() para las acciones y bolsaCuentas() para la
+   bolsa: una verdad, dos vistas. */
+function enZona() { return !!(window.GF && GF.scene === "forest"); }
+function llevoTengo(kind, key) {
+  if (enZona()) { const r = contLlevado(); return r ? contContar(r, kind, key) : 0; }
+  return viajeTengo(kind, key);
+}
+function llevoGastar(kind, key, n) {
+  n = Math.max(1, Math.floor(n || 1));
+  if (enZona()) { const r = contLlevado(); return r ? contGastar(r, kind, key, n) : false; }
+  return viajeSacar(kind, key, n);
+}
+/* y lo que se GANA: en la Zona entra al contenedor —y puede no entrar, que es la mitad de la
+   mecánica—; en la granja, a la bolsa de siempre. */
+function llevoMeter(kind, key, n) {
+  if (enZona()) { const r = contLlevado(); return r ? contMeter(r, kind, key, n) : false; }
+  if (kind === "res" && (key === "plata" || key === "golden")) { G[key] = (G[key] || 0) + n; return true; }
+  return viajePoner(kind, key, n);
 }
 
 /* ─── EL MORRAL, AHORA ALIAS DEL CONTENEDOR ──────────────────────────────────────────────────
@@ -4706,7 +4746,9 @@ function nodoBloqueado(o) {
   if (o.exp != null) return false;
   return !(G.rocksOpen || [0]).includes(o.lockIdx);
 }
-function canShoot() { const id = armaEq(); return !!(id && ARM_DEF[id].tipo === "arco" && G.gear.municion && (G.res.flecha || 0) > 0); }   // arco nuevo + flechas equipadas
+/* 8/9: las flechas salen de LO QUE LLEVÁS. En la granja eso es la bolsa y en la Zona el
+   contenedor, y quien dispara no tiene por qué saber en cuál de las dos está. */
+function canShoot() { const id = armaEq(); return !!(id && ARM_DEF[id].tipo === "arco" && G.gear.municion && llevoTengo("res", "flecha") > 0); }
 
 // --- armaduras (dropean de los monstruos del Bosque; reducen el daño recibido) ---
 const GEAR_DEF = {
@@ -5043,11 +5085,14 @@ function checkCooking() {
 var COMER_CD_MS = 2000;
 function comerFalta() { return Math.max(0, (G.comerHasta || 0) - nowMs()); }
 function eatDish(id) {
-  const r = RECIPE_DEF[id]; if (!r || !G.dishes || (G.dishes[id] || 0) <= 0) return;
+  /* 8/9: comer también pasa por la puerta única. Adentro de la Zona el plato tiene que estar
+     EN EL CONTENEDOR: curarse con la despensa de la granja desde el otro lado del portal era
+     la fuga más cómoda de todas, y la que volvía inofensiva a la muerte. */
+  const r = RECIPE_DEF[id]; if (!r || llevoTengo("dish", id) <= 0) return;
   const falta = comerFalta();
   if (falta > 0) { toast("Esperá " + (falta / 1000).toFixed(1) + " s para comer otra vez"); return; }
   G.comerHasta = nowMs() + COMER_CD_MS;
-  G.dishes[id]--;
+  llevoGastar("dish", id, 1);
   if (window.sfx) sfx("eat");
   G.hp = Math.min(G.hpMax, G.hp + r.heal);
   if (r.buff && r.buff.val != null) {   // recetas del doc: el buff escala con la maestría del cocinero
@@ -5669,6 +5714,16 @@ function bolsaCuentas() {
    una transacción y contar solo la mitad se lee como un error. */
 function bolsaFoto() {
   const m = {};
+  /* 8/9 — DENTRO DE LA ZONA EL FLUJO MIDE EL CONTENEDOR. Si siguiera mirando la bolsa de la
+     granja, el margen izquierdo se quedaría mudo toda la cacería (allá nada de la granja se
+     mueve) y volvería a hablar de golpe al volver, escupiendo el viaje entero en veinte chips.
+     Es la octava y última fuga de la auditoría, y es la más silenciosa: no rompe nada, solo
+     hace que el juego deje de contarte lo que está pasando justo cuando más importa. */
+  if (typeof enZona === "function" && enZona()) {
+    const r = contLlevado();
+    if (r) contAplanar(r).forEach(e => { const k = e.kind + ":" + e.k; m[k] = (m[k] || 0) + e.n; });
+    return m;
+  }
   bolsaCuentas().forEach(x => { m[x.kind + ":" + x.key] = x.n; });
   m["moneda:plata"]  = Math.floor(G.plata  || 0);
   m["moneda:golden"] = Math.floor(G.golden || 0);

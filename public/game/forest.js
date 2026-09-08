@@ -505,15 +505,21 @@ class ForestScene extends Phaser.Scene {
     for (let i = gd.length - 1; i >= 0; i--) {
       const g = gd[i];
       if (Math.hypot(g.x - x, g.y - y) > rad) continue;
+      /* 8/9 — ÉSTA ERA LA FUGA MÁS GRANDE: lo que se levanta del suelo de la Zona entraba derecho
+         a la bolsa de la granja (tryAddRes / gainGear / G.plata), esquivando el contenedor y por
+         tanto la muerte. Ahora todo pasa por la puerta única, y el equipo viaja como pila
+         {kind:"gear"} igual que el botín del cuerpo — que ya lo hacía bien desde el 31/8. */
       let ok = false, label = "";
-      if (g.kind === "gear") { gainGear(g.k); ok = true; label = (GEAR_DEF[g.k] && GEAR_DEF[g.k].label) || "equipo"; }
-      else if (g.k === "plata") { G.plata += g.n; ok = true; label = g.n + " "; }
-      else { ok = tryAddRes(g.k, g.n); label = g.n + " " + (RES_EMOJI[g.k] || ""); }
+      if (g.kind === "gear") { ok = llevoMeter("gear", g.k, 1); label = (GEAR_DEF[g.k] && GEAR_DEF[g.k].label) || "equipo"; }
+      else { ok = llevoMeter("res", g.k, g.n); label = g.n + " " + (g.k === "plata" ? "" : (RES_EMOJI[g.k] || "")); }
       if (!ok) {
         // tryPickup corre en CADA frame: sin este freno, pararse encima de un drop con la
         // bolsa llena disparaba el toast 60 veces por segundo, el cartel quedaba clavado
         // para siempre y tapaba cualquier otro aviso (10/8).
-        if (nowMs() - (this._avisoLleno || 0) > 2500) { this._avisoLleno = nowMs(); toast("Bolsa llena — liberá espacio para recoger"); }
+        if (nowMs() - (this._avisoLleno || 0) > 2500) {
+          this._avisoLleno = nowMs();
+          toast(enZona() ? "Contenedor lleno — no te entra nada más" : "Bolsa llena — liberá espacio para recoger");
+        }
         continue;
       }
       if (window.sfx) sfx("coin");
@@ -603,10 +609,13 @@ class ForestScene extends Phaser.Scene {
 
   // disparo: proyectil que viaja hasta el monstruo y pega al llegar
   shootArrow(m) {
-    if (!canShoot()) { toast("Sin flechas — crafteá en la Herrería"); return; }
+    /* 8/9: el aviso cambia según dónde estés. Adentro de la Zona « crafteá en la Herrería » no
+       sirve de nada: la Herrería está a un portal de distancia y el jugador necesita saber que
+       el problema es la carga, no el stock. */
+    if (!canShoot()) { toast(enZona() ? "Sin flechas en el contenedor — las que dejaste en la granja no cuentan acá" : "Sin flechas — crafteá en la Herrería"); return; }
     if (!this.cobrarEstamina(m)) return;   // la estamina se cobra ANTES: sin ella no se gasta ni la flecha ni la durabilidad
     const aid = armaEq();
-    G.res.flecha--;
+    llevoGastar("res", "flecha", 1);
     if (aid) { useWeapon(aid); if (G.weapons[aid].dur <= 0) { log("¡" + ARM_DEF[aid].label + " roto! Reparalo en la Herrería.", "bad"); toast("¡Arco roto!"); } }
     if (typeof syncSlots === "function") syncSlots(); if (isOpen("ov-inv")) refreshInv();
     const a = this.add.text(this.hero.x, this.hero.y - 22, "", { fontSize: "16px", color: "#e8d3a8" }).setOrigin(0.5).setDepth(99999);
@@ -983,8 +992,15 @@ class ForestScene extends Phaser.Scene {
       const hoy = (typeof dayStamp === "function") ? dayStamp(0) : "";
       if (!G.runaOro || G.runaOro.dia !== hoy) G.runaOro = { dia: hoy, n: 0 };
       if (dg && G.runaOro.n < RUNA_ORO_TOPE && Math.random() * 100 < dg) {
-        G.golden += 1; G.runaOro.n++;
-        this.floatTxt(m, "+1 $Golden" + (G.runaOro.n >= RUNA_ORO_TOPE ? " (tope del día)" : ""), "#ffe08a");
+        /* 8/9 (dirección: « sí, entran al contenedor »): el $Golden de la runa se gana acá y se
+           pierde acá. Acreditarlo a la cuenta al instante dejaba la última grieta abierta — la
+           moneda premium era lo único que la muerte no podía tocar, y encima es lo más valioso.
+           Si no entra —contenedor lleno— NO se cuenta contra el tope del día: cobrarte el tope
+           por un golpe que no te pagó sería robarte dos veces. */
+        if (llevoMeter("res", "golden", 1)) {
+          G.runaOro.n++;
+          this.floatTxt(m, "+1 $Golden" + (G.runaOro.n >= RUNA_ORO_TOPE ? " (tope del día)" : ""), "#ffe08a");
+        } else this.floatTxt(m, "$Golden perdido: sin hueco", "#ffb4ab");
       } }
     /* 31/8 — EL BOTÍN YA NO EXPLOTA POR EL SUELO: QUEDA DENTRO DEL CUERPO (dirección, con los
        vídeos de referencia de Tibia). El cuerpo se queda donde cayó, con brillitos mientras
@@ -1300,7 +1316,7 @@ class ForestScene extends Phaser.Scene {
     const m = this.nearestMonster(60);
     const far = !m && canShoot() ? this.nearestMonster(190) : null;
     if (m) { el.textContent = "Atacar " + m.def.label + " (" + Math.ceil(m.hp) + " de vida) · [E]"; el.classList.add("show"); }
-    else if (far) { el.textContent = "Disparar a " + far.def.label + " (" + (G.res.flecha || 0) + ") · [E]"; el.classList.add("show"); }
+    else if (far) { el.textContent = "Disparar a " + far.def.label + " (" + llevoTengo("res", "flecha") + ") · [E]"; el.classList.add("show"); }
     else if (this.hero.x < 90) { el.textContent = "Volver a la granja"; el.classList.add("show"); }
     else el.classList.remove("show");
   }

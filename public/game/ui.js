@@ -32,6 +32,11 @@ function openOv(id) { const e = $(id); if (!e) return; e.classList.add("show"); 
 
 // FUNDIDO A NEGRO al cambiar de escena (granja <-> Zona Negra <-> plaza). Antes era un corte seco.
 function irAEscena(sc, destino) {
+  /* 8/9: cruzar el portal cambia QUÉ mide el flujo (la bolsa de la granja o el contenedor), así
+     que la foto vieja no se puede restar contra la nueva: la resta de dos universos distintos
+     escupiría el inventario entero en chips. Se olvida y se vuelve a tomar del otro lado — el
+     mismo motivo por el que loadFarm la olvida desde el 26/8. */
+  if (typeof flujoOlvidar === "function") flujoOlvidar();
   const el = $("fadeblk"), ms = (typeof FX_FADE_MS === "number") ? FX_FADE_MS : 0;
   if (!el || ms <= 0) { sc.scene.start(destino); return; }
   el.style.transitionDuration = ms + "ms";
@@ -1475,6 +1480,12 @@ function bindTrash() {
 /* La firma de lo que hay en la bolsa: barata (una cuenta, sin construir HTML) y suficiente —
    si cambia cualquier cantidad, cambia la firma. La usa la red de refreshHud. */
 function bolsaFirma() {
+  /* 8/9: dentro de la Zona la firma tiene que seguir al CONTENEDOR, o el panel se quedaría
+     congelado con la foto de la granja mientras el botín entra y la comida se gasta. */
+  if (typeof enZona === "function" && enZona()) {
+    const r = contLlevado();
+    return r ? "z" + r.c + contAplanar(r).map(e => e.kind + e.k + e.n).join("|") : "z0";
+  }
   let s = "";
   ITEM_RES_ORDER.forEach(r => { const n = Math.floor(G.res[r] || 0); if (n) s += r + n + "|"; });
   CROP_ORDER.forEach(k => { const n = Math.floor(G.seeds[k] || 0); if (n) s += "s" + k + n + "|"; });
@@ -1491,8 +1502,58 @@ function syncBolsaAbierta() {
   window._bolsaFirma = f;
   refreshInv();
 }
+/* ═══ LA BOLSA DENTRO DE LA ZONA ═════════════════════════ (8/9, dirección: « una vez en zona
+   negra lo único que se puede ver es lo que tenemos en esa bag o backpack… es más, no se puede
+   ni ver lo que teníamos: eso solo es para granja »).
+
+   Es la misma ventana, con otra verdad detrás. Podría haber sido un panel aparte, y habría sido
+   peor: dos rejillas de inventario que mantener, y el jugador aprendiendo dos sitios para lo
+   mismo. Acá la tecla I abre « tu bolsa » siempre; lo que cambia es qué es tu bolsa según de qué
+   lado del portal estés.
+
+   Y de yapa cierra tres fugas de un saque: sembrar, equipar picos y tirar a la papelera colgaban
+   de los clics de ESTA rejilla, y allá dentro ya no hay rejilla de la granja donde hacerlos. */
+function refreshInvZona() {
+  const raiz = (typeof contLlevado === "function") ? contLlevado() : null;
+  const cont = $("inv-slots"); if (!cont) return;
+  const cap = raiz ? CONT_DEF[raiz.c].huecos : 0;
+  const pilas = [];
+  if (raiz) raiz.items.forEach((e, i) => pilas.push(esCont(e) ? { bolsa: e, i } : { e }));
+  let html = "";
+  pilas.forEach(p => {
+    if (p.bolsa) {
+      html += '<div class="slot filled" title="' + CONT_DEF[p.bolsa.c].label + ' · ' + contPilas(p.bolsa) + '/' + CONT_DEF[p.bolsa.c].huecos + ' — lo de adentro se ve abajo">' +
+        '<span class="em">' + CONT_DEF[p.bolsa.c].emoji + '</span><span class="cnt">' + contPilas(p.bolsa) + '</span></div>';
+      return;
+    }
+    const e = p.e, v = itemView({ kind: e.kind, key: e.k });
+    html += '<div class="slot filled" data-czona="' + e.kind + "|" + e.k + '" title="' + ((v && v.label) || e.k).replace(/"/g, "") + '">' +
+      (v ? itemIcon(v) : '<span class="em">📦</span>') + '<span class="cnt">' + fmt(e.n) + '</span></div>';
+  });
+  /* lo de las bolsas anidadas, detrás y en su orden */
+  if (raiz) raiz.items.forEach(b => { if (!esCont(b)) return; b.items.forEach(e => {
+    const v = itemView({ kind: e.kind, key: e.k });
+    html += '<div class="slot filled" data-czona="' + e.kind + "|" + e.k + '" title="Dentro de la bolsa · ' + ((v && v.label) || e.k).replace(/"/g, "") + '">' +
+      (v ? itemIcon(v) : '<span class="em">📦</span>') + '<span class="cnt">' + fmt(e.n) + '</span></div>';
+  }); });
+  for (let i = pilas.length; i < cap; i++) html += '<div class="slot"></div>';
+  cont.innerHTML = html || '<div class="sub" style="grid-column:1/-1;text-align:center;padding:16px 6px">No llevás contenedor.</div>';
+  const c2 = $("inv-cap");
+  if (c2) c2.textContent = raiz
+    ? CONT_DEF[raiz.c].label + ": " + contPilas(raiz) + " cosa(s) · " + contLibres(raiz) + " hueco(s) libre(s) · lo de la granja no se ve ni se toca desde acá"
+    : "Sin contenedor";
+  const ss = $("inv-selseed"); if (ss) ss.innerHTML = "";
+  /* el único clic que sigue vivo: comer. Equipar, sembrar y tirar son cosas de la granja. */
+  cont.querySelectorAll("[data-czona]").forEach(c => c.addEventListener("click", () => {
+    const [kind, key] = c.dataset.czona.split("|");
+    if (kind === "dish") { eatDish(key); refreshInv(); return; }
+    if (kind === "arm") { if (G.weapons && G.weapons[key]) { G.gear.arma = key; toast("Equipaste " + (ARM_DEF[key] ? ARM_DEF[key].label : key)); refreshInv(); if (typeof refreshCombate === "function") refreshCombate(); } return; }
+    toast("Acá solo podés comer y cambiar de arma — el resto se hace en la granja");
+  }));
+}
 function refreshInv() {
   window._bolsaFirma = (typeof bolsaFirma === "function") ? bolsaFirma() : null;   // 24/8: al repintar, la firma queda al día
+  if (typeof enZona === "function" && enZona()) { refreshInvZona(); refreshHotbar(); return; }
   syncSlots();
   bindTrash();
   const cap = invSlots(), rem = {};
@@ -1670,6 +1731,15 @@ function hotSelect(i) {
   G.hotSel = i;
   const d = G.hotbar[i];
   if (d) {
+    /* 8/9 — LA BARRA RÁPIDA ES LA PUERTA DE ATRÁS. Las teclas 1-0 están enganchadas global, así
+       que sin este candado se podía sembrar, equipar picos y —sobre todo— comer de la despensa de
+       la granja desde adentro de la Zona sin abrir ninguna ventana. Comer sigue permitido porque
+       eatDish ya pasa por la puerta única y saca del contenedor; el resto son cosas de la granja
+       y allá no tienen dónde ocurrir. */
+    if (typeof enZona === "function" && enZona() && d.kind !== "dish" && d.kind !== "arm") {
+      toast("Eso es de la granja — acá solo tenés lo que cargaste en el contenedor");
+      refreshHotbar(); return;
+    }
     if (d.kind === "pick" && G.picks.owned[d.key]) equipPick(d.key);
     else if (d.kind === "seed" && cropUnlocked(d.key)) selectSeed(d.key);
     else if (d.kind === "dish") eatDish(d.key);
