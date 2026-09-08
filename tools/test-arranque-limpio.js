@@ -37,13 +37,27 @@ const ok=(n,c,d)=>{if(!c)fallos++;console.log((c?"  ok   ":"  FALLA")+"  "+n+(d?
   g.kitReclamar();
   ok("reclamar el kit llena la barra", g.G.hotbar.filter(Boolean).length>antes,
      antes+" → "+g.G.hotbar.filter(Boolean).length);
-  ok("...con hacha, pico, caña y semilla",
-     ["tool:axe","pick:stone","tool:rod","seed:papa"].every(k=>
+  /* 8/9: la caña CONSUMIBLE de la v2 se jubiló — las de la v4 se tienen, no se gastan, y por
+     eso salieron del kit. Este test la seguía pidiendo. Lo que hay que proteger no era la caña:
+     era « el baúl llena la barra con herramientas de verdad ». */
+  ok("...con hacha, pico y semilla",
+     ["tool:axe","pick:stone","seed:papa"].every(k=>
        g.G.hotbar.some(h=>h&&h.kind+":"+h.key===k)),
      g.G.hotbar.filter(Boolean).map(h=>h.kind+":"+h.key).join(" · "));
+  ok("y la caña consumible NO vuelve a colarse en la barra",
+     !g.G.hotbar.some(h=>h&&h.key==="rod") && g.KIT_INICIAL.rod===undefined);
   ok("y ahora sí hay herramientas de verdad (no opacas)",
-     g.toolCount("axe")===g.KIT_INICIAL.axe && g.toolCount("rod")===g.KIT_INICIAL.rod,
-     g.toolCount("axe")+" hachas · "+g.toolCount("rod")+" cañas");
+     g.toolCount("axe")===g.KIT_INICIAL.axe && g.pickCount("stone")===g.KIT_INICIAL.pico,
+     g.toolCount("axe")+" hachas · "+g.pickCount("stone")+" picos");
+  /* 8/9 (tarde): el contenedor es la pieza nueva del kit y sin ella la Zona Negra queda
+     cerrada — es la válvula de Tibia, y nadie la estaba protegiendo. */
+  ok("y la bolsa de caza viene en el kit: sin contenedor no se cruza el portal",
+     g.contsTengo("bag")===g.KIT_INICIAL.bag, g.contsTengo("bag")+" bolsa(s)");
+  /* 8/9: y la caña de junco, que es lo que evita que el paso de la laguna sea un callejón.
+     Vivía en tres fallbacks y en ninguno para el jugador realmente nuevo; ahora entra por acá,
+     que es el único sitio donde se puede comprobar que LLEGA y no solo que está en la tabla. */
+  ok("y la caña de junco también: el paso de la laguna no es un callejón",
+     !!(g.G.canas||{})[g.KIT_INICIAL.cana], JSON.stringify(g.G.canas));
   ok("el pico ya es tuyo", g.G.picks.owned.stone===true && g.pickCount("stone")===g.KIT_INICIAL.pico);
   ok("la bolsa ya no está vacía", g.canonicalStacks().length>0,
      g.canonicalStacks().length+" pilas");

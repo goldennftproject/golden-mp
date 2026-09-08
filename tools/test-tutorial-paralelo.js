@@ -93,10 +93,16 @@ console.log("\n3. Y EL MUNDO SEÑALA LO QUE SE PUEDE HACER MIENTRAS");
     "los dos intentos se fueron enteros");
 
   /* Lo que sí tiene que estar: el imán, y que los montículos entren en él. */
-  ok("el imán señala las parcelas listas", /listo" \+ p\.i/.test(iman.slice(0, 2500)));
-  ok("los árboles con hacha", /arbol" \+ o\.i/.test(iman.slice(0, 2500)));
-  ok("las rocas con pico", /roca" \+ o\.i/.test(iman.slice(0, 2500)));
-  ok("y ahora también los montículos", /excav" \+ o\.idx/.test(iman.slice(0, 2500)),
+  /* 8/9 — el slice(0,2500) era una bomba de relojería y explotó sola: el 2/9 se documentó el
+     arreglo de « las mariposas se quedan roboteando los montículos » con un bloque de comentario
+     de novecientos caracteres JUSTO ANTES del push de los montículos, y eso empujó el código
+     fuera de la ventana. O sea: el test se rompió por documentar el arreglo, no por romperlo.
+     Es el mismo pecado que este archivo se reprocha dos veces más arriba. Se busca en la
+     función ENTERA: el recorte no protegía de nada que el split por nombre no proteja ya. */
+  ok("el imán señala las parcelas listas", /listo" \+ p\.i/.test(iman));
+  ok("los árboles con hacha", /arbol" \+ o\.i/.test(iman));
+  ok("las rocas con pico", /roca" \+ o\.i/.test(iman));
+  ok("y ahora también los montículos", /excav" \+ o\.idx/.test(iman),
     "lo único gratis y disponible desde el primer segundo");
 
   /* Y siguen siendo tres por día y siempre carnada: si eso cambiara, dejarían de ser el relleno

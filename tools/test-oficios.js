@@ -38,8 +38,34 @@ ok("pescar paga a Pesca y a nadie más",
   !/addXp\("(cooking|farming|mining|ganaderia)"/.test(RESOLVER + CERRAR));
 
 // 4) LOS ANIMALES SON GANADERÍA
-ok("recoger de los animales paga a Ganadería", /addXp\("ganaderia", XP_ANIMAL \* listos\.length\)/.test(SRC));
-ok("…y ya no a Cultivo", !/addXp\("farming", (20|XP_ANIMAL) \* listos\.length\)/.test(SRC));
+/* 8/9 — esto medía una FORMA DE CÓDIGO: el batch `XP_ANIMAL * listos.length`. Cuando el 8/9 se
+   partió el establo en « cada animal es uno, con su reloj y sus botones », la XP pasó a pagarse
+   por animal dentro de recogerUno y el regex se quedó en rojo sin que nada estuviera mal.
+   Un test que mide la forma del código se rompe con cada refactor y no protege nada; se mide el
+   COMPORTAMIENTO, que es lo que la decisión dice de verdad. De paso cubre un caso que el regex
+   nunca vio: que la XP se pague también cuando el rinde decimal no llega a una unidad entera. */
+{
+  /* los catálogos de este archivo viven en X (se exportan al final del runInContext), no como
+     globales del contexto: ANIMAL_DEF suelto revienta con ReferenceError. */
+  const k = X.ANIMAL_ORDER[0];
+  const XP_ANIMAL = vm.runInContext("XP_ANIMAL", ctx);
+  /* este archivo monta un contexto MÍNIMO a propósito (solo config + state), así que recogerAnimal
+     se cae al llamar a la interfaz. Se tapan las justas y en el propio contexto: no se puede
+     asignar `isOpen = ...` desde fuera porque son declaraciones del script, no propiedades. */
+  vm.runInContext(
+    "var isOpen = () => false, toast = () => {}, log = () => {}, celebrate = () => {}," +
+    " refreshHud = () => {}, refreshInv = () => {}, refreshEstablo = () => {}," +
+    " syncSlots = () => {}, refreshHotbar = () => {}, saveFarm = () => {}, sfx = () => {}," +
+    " tutoEvent = () => {}, albumMirar = () => {};", ctx);
+  G.animals = {}; G.skills = Object.assign({}, G.skills, { ganaderia: 0, farming: 0 });
+  G.animals[k] = [{ desde: 0, feliz: 100, comidoAt: vm.runInContext("nowMs()", ctx), prodAt: 0 }];
+  const gan0 = G.skills.ganaderia || 0, far0 = G.skills.farming || 0;
+  vm.runInContext("recogerAnimal(" + JSON.stringify(k) + ")", ctx);
+  ok("recoger de los animales paga a Ganadería",
+    (G.skills.ganaderia || 0) - gan0 === XP_ANIMAL,
+    "+" + ((G.skills.ganaderia || 0) - gan0) + " XP (esperado " + XP_ANIMAL + ")");
+  ok("…y ya no a Cultivo", (G.skills.farming || 0) - far0 === 0);
+}
 
 // 5) EL TABLÓN PAGA A LA SKILL DE LO QUE ENTREGÁS
 {

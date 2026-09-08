@@ -89,7 +89,16 @@ console.log("\nLO QUE PIDE CADA PASO ESTÁ AL ALCANCE");
   ok("la carnada sale de la tierra, gratis", ctx.excavBotin(0).res === "lombriz",
     X.EXCAV_POR_DIA + " montículos por día, sin herramienta");
   /* Y el kit trae la caña con la que se pesca: si no, el paso de la laguna sería un callejón. */
-  ok("y la caña viene en el kit", (X.KIT_INICIAL.rod || 0) > 0, X.KIT_INICIAL.rod + " usos");
+  /* 8/9: la caña consumible de la v2 se jubiló, así que « X usos » dejó de tener sentido — las
+     de la v4 se TIENEN, no se gastan. La promesa que este test cuida es la misma de siempre
+     (« el paso de la laguna no es un callejón ») y hoy la sostiene el junco, que entra por el
+     kit junto al hacha, el pico y la bolsa de caza. */
+  ok("y la caña de junco viene en el kit", X.KIT_INICIAL.cana === "junco", String(X.KIT_INICIAL.cana));
+  /* que la caña LLEGUE de verdad a la mano al reclamar el kit se mide en test-arranque-limpio,
+     que es el que tiene el arnés para correr kitReclamar(). Acá el contexto es mínimo y no
+     tiene interfaz: llamarlo revienta con « log is not defined », y rellenar de tapones un
+     test para comprobar algo que ya se comprueba al lado es duplicar sin ganar nada. */
+  ok("y la caña consumible no reaparece", X.KIT_INICIAL.rod === undefined);
 }
 
 console.log("\nLOS PLANOS DE LA CADENA SIGUEN CAYENDO POR PASO");

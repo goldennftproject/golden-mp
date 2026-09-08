@@ -117,7 +117,10 @@ console.log("\n« SI CAZA ALGO SE ROMPE · SI NO CAZA NADA OBTENDRÁ BASURA »")
     T += 3 * 3600e3;
     ctx.nasaCobrar(0);
     ok("cazando algo, la nasa SE ROMPE", ctx.nasas().length === 0);
-    ok("y el pez entra en la bolsa", (G.fish.camaron || 0) === 1);
+    /* 8/9: desde el 2/9 el pez guarda su peso EN LA CLAVE ("camaron@1.23"), así que G.fish.camaron
+     es undefined. pezCuenta suma todas las pilas de la especie, que es lo que este test quiso
+     decir siempre: « la nasa cobró y el pez es tuyo ». */
+  ok("y el pez entra en la bolsa", ctx.pezCuenta("camaron") === 1, JSON.stringify(G.fish));
     console.log("       → estaba al revés: si pescaba seguía puesta y se recebaba sola. Eso era de");
     console.log("         mi documento, y sus tests lo daban por bueno con toda confianza.");
 

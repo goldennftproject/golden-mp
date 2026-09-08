@@ -9049,7 +9049,14 @@ function albumFamilias() {
       record: (k) => { const r = ((G.pescaV4 || {}).records || {})[k] || 0;
                        return r ? { kg: r, tope: PEZ_DEF[k] ? PEZ_DEF[k].peso[1] : 0 } : null; },
       visto: (k) => !!(G.vistos || {})[k],
-      tiene: (k) => statGet("pescar", k) > 0 || Math.floor((G.fish && G.fish[k]) || 0) > 0 },
+      /* 8/9 (tarde) — REGRESIÓN DEL 2/9, encontrada por test-album: acá se leía `G.fish[k]`, y
+         desde que el pez guarda su peso en la clave ("merluza@2.35") esa lectura no encuentra
+         NADA. La mitad « lo que tenés en la bolsa ya cuenta » del álbum de peces llevaba seis
+         días muerta y no se notaba, porque la otra mitad —el contador statGet("pescar")— tapaba
+         el síntoma en el caso normal. Solo se caía el pez que entra a la bolsa SIN pasar por el
+         contador: una migración, un premio, una compra en el Mercado.
+         pezCuenta() existe justo para esto y entiende las dos formas de clave. */
+      tiene: (k) => statGet("pescar", k) > 0 || (typeof pezCuenta === "function" ? pezCuenta(k) : 0) > 0 },
     { id: "platos", ic: "🍲", label: "Platos", orden: RECIPE_ORDER,
       nom: (k) => (RECIPE_DEF[k] && RECIPE_DEF[k].label) || k,
       spr: (k) => (RECIPE_DEF[k] && RECIPE_DEF[k].sprite) || null,
@@ -9162,7 +9169,17 @@ function dailyState() {
 }
 const STREAK_RECOVER_COST = 0;   // legado: ya no hay racha que perder ni que recuperar
 // KIT DE BIENVENIDA (15/8): se entrega al abrir el BAÚL por primera vez
-var KIT_INICIAL = { axe: 35, pico: 20, bag: 1 };   // 8/9: sin cañas (la v2 se jubiló) y CON bolsa de caza
+/* 8/9 (tarde) — LA CAÑA DE JUNCO ENTRA AL KIT. Estaba replicada en tres fallbacks (save.js al
+   hidratar, pescaV4Cana() como último recurso y pezPedible con un `||`) y en ninguno de ellos
+   para el jugador REALMENTE nuevo: loadFarm tiene dos ramas que salen sin hidratar —navegador
+   virgen y cuenta sin fila— y ahí G.canas quedaba undefined. Los tres fallbacks se tapaban entre
+   sí, así que no se notaba; el día que alguien lea G.canas.junco derecho, la cuenta nueva se
+   queda sin caña y el paso de la laguna es un callejón.
+   Mi primer intento fue ponerla en el estado inicial, y test-arranque-limpio lo tumbó con razón:
+   eso mete un objeto en la bolsa ANTES de que el jugador abra el baúl, y « la bolsa arranca
+   vacía » es una decisión de diseño, no un detalle. El sitio correcto es el kit, junto al hacha,
+   el pico y la bolsa de caza. */
+var KIT_INICIAL = { axe: 35, pico: 20, bag: 1, cana: "junco" };   // 8/9: sin caña consumible (la v2 se jubiló)
 function kitReclamar() {
   if (G.kitReclamado) return false;
   G.kitReclamado = true;
@@ -9173,7 +9190,8 @@ function kitReclamar() {
   /* 8/9 (tarde): la bolsa de caza entra al kit. Es la válvula de Tibia — sin contenedor no se
      cruza el portal, así que el juego no puede permitirse que la primera muerte te deje a pie. */
   if (typeof contsSumar === "function") contsSumar("bag", KIT_INICIAL.bag || 1);
-  log("Kit de bienvenida: " + KIT_INICIAL.axe + " hachas, " + KIT_INICIAL.pico + " picos y una bolsa de caza.", "gold");
+  if (KIT_INICIAL.cana) { G.canas = G.canas || {}; G.canas[KIT_INICIAL.cana] = 1; }
+  log("Kit de bienvenida: " + KIT_INICIAL.axe + " hachas, " + KIT_INICIAL.pico + " picos, una caña de junco y una bolsa de caza.", "gold");
   toast("¡Tu kit de bienvenida! 🪓⛏🎣");
   if (window.celebrate) celebrate({ title: "¡KIT DE BIENVENIDA!", sub: "Hachas, picos y cañas para arrancar", big: false, reward: "Ya podés talar, picar y pescar" });
   if (typeof tutoEvent === "function") tutoEvent("kit");

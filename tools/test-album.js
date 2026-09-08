@@ -81,8 +81,14 @@ console.log("\nSIN ESTADO NUEVO: LO QUE TENÉS EN LA BOLSA YA CUENTA");
   G.res.diamante = 3;
   ok("un diamante en la bolsa revela el diamante (aunque el contador esté en cero)",
     fam("minerales").piezas.find(p => p.k === "diamante").visto);
-  G.fish.pez_dragon = 1;
-  ok("un pez dragón en la bolsa revela su lámina", fam("peces").piezas.find(p => p.k === "pez_dragon").visto);
+  /* 8/9: se guarda por pezGuardar, que es como entra un pez de verdad desde el 2/9 — la clave
+     lleva el peso ("pez_dragon@27.50"). Escribir G.fish.pez_dragon = 1 a mano dejaba el formato
+     PRE-2/9, y entonces pezMigrarPesos lo convertía dentro del hydrate: por eso este bloque
+     delataba la regresión del álbum de casualidad, en la línea del F5 y no en la suya. Con la
+     clave de hoy el fallo sale donde tiene que salir. */
+  ctx.pezGuardar("pez_dragon", 27.5);
+  ok("un pez dragón en la bolsa revela su lámina (con su peso en la clave, como entra de verdad)",
+    fam("peces").piezas.find(p => p.k === "pez_dragon").visto, JSON.stringify(G.fish));
   G.dishes[RECIPE_ORDER[0]] = 1;
   ok("un plato en la bolsa revela su receta", fam("platos").piezas.find(p => p.k === RECIPE_ORDER[0]).visto);
   /* y sobrevive al F5 sin guardar nada propio */
