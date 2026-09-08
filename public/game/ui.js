@@ -159,19 +159,20 @@ window.celebrate = celebrate;
 // CONTADOR ANIMADO: los números del HUD "corren" hasta el valor nuevo en vez de saltar de golpe.
 // Solo cuando la diferencia se nota (más de 4): para +1 de madera no vale la pena.
 const _cnt = {};
-function setNum(id, valor) {
+function setNum(id, valor, fn) {
+  fn = fn || fmt;
   const el = document.getElementById(id); if (!el) return;
   const anterior = _cnt[id] == null ? valor : _cnt[id];
   _cnt[id] = valor;
   if (el._tm) { clearInterval(el._tm); el._tm = null; }
   const dif = valor - anterior;
-  if (Math.abs(dif) <= 4) { el.textContent = fmt(valor); return; }
+  if (Math.abs(dif) <= 4) { el.textContent = fn(valor); return; }
   const pasos = 14; let i = 0;
   el._tm = setInterval(() => {
     i++;
     const k = 1 - Math.pow(1 - i / pasos, 3);   // arranca rápido y frena al final
-    el.textContent = fmt(Math.round(anterior + dif * k));
-    if (i >= pasos) { clearInterval(el._tm); el._tm = null; el.textContent = fmt(valor); }
+    el.textContent = fn(Math.round(anterior + dif * k));
+    if (i >= pasos) { clearInterval(el._tm); el._tm = null; el.textContent = fn(valor); }
   }, 26);
 }
 /* ═══ EL FLUJO DE LA BOLSA (26/8) ═══════════════════════════════════════════════════════════
@@ -188,14 +189,23 @@ var FLUJO_MS = 2600;     // cuánto vive un chip sin novedades
 var FLUJO_MAX = 7;       // cuántos caben antes de empujar al más viejo
 var _flujoChips = {};    // "kind:key" → { el, d, t } mientras está vivo
 
+/* 8/9 (Suren) — « la plata ya no es una moneda sino una caja xD ». Dentro de la Zona el flujo
+   mide el CONTENEDOR, y ahí la plata no es la billetera: es una pila más, {kind:"res", k:"plata"},
+   porque se gana allá y se pierde allá. Pero el margen la miraba como a un recurso cualquiera,
+   no encontraba sprite de « res_plata » y caía al 📦 genérico. Las monedas son monedas vengan por
+   donde vengan, así que se reconocen por la CLAVE y no por la familia. */
+function esMoneda(kind, key) { return kind === "moneda" || ((kind === "res" || !kind) && (key === "plata" || key === "golden")); }
 function flujoNombre(kind, key) {
-  if (kind === "moneda") return key === "plata" ? "Plata" : "$G";
+  if (esMoneda(kind, key)) return key === "plata" ? "Plata" : "$G";
   const v = itemView({ kind, key });
   const l = (v && v.label) || key;
   return String(l).split("·")[0].trim();     // la etiqueta larga trae detalles que acá sobran
 }
+/* 8/9 (Suren): la plata es la única familia con céntimos; el resto son enteros y meterles
+   decimales sería ruido. Un solo sitio decide, para que el chip y el HUD no se contradigan. */
+function flujoNum(kind, d, key) { return esMoneda(kind, key) ? fmtPlata(d) : fmt(d); }
 function flujoIcono(kind, key) {
-  if (kind === "moneda") return typeof coinIc === "function" ? coinIc(key) : "";
+  if (esMoneda(kind, key)) return typeof coinIc === "function" ? coinIc(key === "golden" ? "esencia" : "plata") : "";
   const v = itemView({ kind, key });
   if (v && v.sprite) return '<img src="' + GF.spr(v.sprite) + '" draggable="false" onerror="this.outerHTML=\'<span class=&quot;fe&quot;>' + ((v && v.emoji) || "📦") + '</span>\'">';
   return '<span class="fe">' + ((v && v.emoji) || "📦") + '</span>';
@@ -208,14 +218,14 @@ function flujoChip(kind, key, d) {
   if (vivo && (vivo.d > 0) === (d > 0)) {
     vivo.d += d;
     clearTimeout(vivo.t);
-    vivo.el.querySelector("b").textContent = (vivo.d > 0 ? "+" : "") + fmt(vivo.d);
+    vivo.el.querySelector("b").textContent = (vivo.d > 0 ? "+" : "") + flujoNum(kind, vivo.d, key);
     vivo.t = setTimeout(() => flujoQuitar(id), FLUJO_MS);
     return;
   }
   if (vivo) flujoQuitar(id, true);
   const el = document.createElement("div");
   el.className = "flch " + (d > 0 ? "mas" : "menos");
-  el.innerHTML = flujoIcono(kind, key) + '<b>' + (d > 0 ? "+" : "") + fmt(d) + '</b>' +
+  el.innerHTML = flujoIcono(kind, key) + '<b>' + (d > 0 ? "+" : "") + flujoNum(kind, d, key) + '</b>' +
     '<span class="fn">' + flujoNombre(kind, key) + '</span>';
   caja.appendChild(el);
   _flujoChips[id] = { el, d, t: setTimeout(() => flujoQuitar(id), FLUJO_MS) };
@@ -396,7 +406,7 @@ function refreshViaje() {
         '<span class="em">' + CONT_DEF[e.c].emoji + '</span><span class="n">' + contPilas(e) + '/' + CONT_DEF[e.c].huecos + '</span></div>';
       return;
     }
-    const v = itemView({ kind: e.kind, key: e.k });
+    const v = vistaDeCarga(e);
     h += '<div class="vj-s" data-vbaja="' + e.kind + "|" + e.k + '" title="' + viajeNombre(v, e.k) + ' — clic para dejarlo">' +
       (v ? itemIcon(v) : '<span class="em">📦</span>') + '<span class="n">' + fmt(e.n) + '</span></div>';
   });
@@ -404,7 +414,7 @@ function refreshViaje() {
   raiz.items.forEach((b) => {
     if (!esCont(b)) return;
     b.items.forEach(e => {
-      const v = itemView({ kind: e.kind, key: e.k });
+      const v = vistaDeCarga(e);
       h += '<div class="vj-s" data-vbaja="' + e.kind + "|" + e.k + '" title="Dentro de la bolsa · ' + viajeNombre(v, e.k) + ' — clic para dejarlo">' +
         (v ? itemIcon(v) : '<span class="em">📦</span>') + '<span class="n">' + fmt(e.n) + '</span></div>';
     });
@@ -423,6 +433,24 @@ function refreshViaje() {
    ("clic para comer") que acá contradicen a la de la puerta ("clic para dejarlo"): dos órdenes
    distintas en el mismo tooltip es peor que ninguna. */
 function viajeNombre(v, k) { return String((v && v.label) || k).split(" · ")[0].replace(/"/g, ""); }
+/* 8/9 (Suren) — LA VISTA DE ALGO QUE YA NO ESTÁ EN LA GRANJA. itemView valida contra el estado:
+   para un arma mira G.weapons, y en cuanto el arma se carga al contenedor deja de estar ahí, así
+   que devolvía null y la casilla salía como un cuadro en blanco. Lo mismo pasaría con una caña o
+   un pico. La pila del contenedor ya trae todo lo que hace falta para dibujarla —su familia y su
+   clave—, así que acá se resuelve contra el CATÁLOGO y no contra el inventario. */
+function vistaDeCarga(e) {
+  const v = itemView({ kind: e.kind, key: e.k });
+  if (v) return v;
+  if (e.kind === "arm" && typeof ARM_DEF !== "undefined" && ARM_DEF[e.k]) {
+    const w = ARM_DEF[e.k];
+    return { sprite: w.sprite || (ARM_TIPO_DEF[w.tipo] || {}).sprite, emoji: "⚔️", label: w.label, dur: null };
+  }
+  if (e.kind === "cana" && typeof CANA_V4_DEF !== "undefined" && CANA_V4_DEF[e.k])
+    return { sprite: CANA_V4_DEF[e.k].sprite || "fishing_rod", emoji: "🎣", label: CANA_V4_DEF[e.k].label, dur: null };
+  if (e.kind === "pick" && typeof PICK_DEF !== "undefined" && PICK_DEF[e.k])
+    return { sprite: PICK_DEF[e.k].sprite, emoji: "⛏️", label: PICK_DEF[e.k].label, dur: null };
+  return null;
+}
 function engancharViaje(caja) {
   const rep = () => { refreshViaje(); if (typeof refreshHud === "function") refreshHud(); if (typeof syncSlots === "function") syncSlots(); };
   caja.querySelectorAll("[data-vcont]").forEach(b => b.onclick = () => { if (viajeElegir(b.dataset.vcont)) rep(); });
@@ -1195,7 +1223,7 @@ function refreshHud() {
   // 18/8: el cartel de expansión del mapa refleja el material que tenés; la firma interna evita
   // que se rehaga si no cambió nada de lo que se ve.
   if (window.FARM && window.FARM.dibujarExpansion) { try { window.FARM.dibujarExpansion(); } catch (e) {} }
-  refreshStam(); setTxt("s-level", G.level); setTxt("s-prestige", G.prestige); setNum("s-plata", G.plata); setNum("s-golden", G.golden); setTxt("s-week", (typeof semanaActual === "function") ? semanaActual() : G.week); setTxt("s-hp", Math.ceil(G.hp) + "/" + G.hpMax); refreshCombatBar(); refreshFarmBar(); bindFarmPill(); refreshBuffsPill(); if (typeof checkCooking === "function") checkCooking(); if (typeof checkHorno === "function") checkHorno(); if (typeof refreshHotbar === "function") refreshHotbar(); }
+  refreshStam(); setTxt("s-level", G.level); setTxt("s-prestige", G.prestige); setNum("s-plata", G.plata, fmtPlata); setNum("s-golden", G.golden); setTxt("s-week", (typeof semanaActual === "function") ? semanaActual() : G.week); setTxt("s-hp", Math.ceil(G.hp) + "/" + G.hpMax); refreshCombatBar(); refreshFarmBar(); bindFarmPill(); refreshBuffsPill(); if (typeof checkCooking === "function") checkCooking(); if (typeof checkHorno === "function") checkHorno(); if (typeof refreshHotbar === "function") refreshHotbar(); }
 // clic en la barra de estamina: ofrece la recarga premium (con su tope diario)
 function bindStamPill() {
   const pill = document.getElementById("stampill"); if (!pill || pill._bound) return;
@@ -1537,13 +1565,13 @@ function refreshInvZona() {
         '<span class="em">' + CONT_DEF[p.bolsa.c].emoji + '</span><span class="cnt">' + contPilas(p.bolsa) + '</span></div>';
       return;
     }
-    const e = p.e, v = itemView({ kind: e.kind, key: e.k });
+    const e = p.e, v = vistaDeCarga(e);
     html += '<div class="slot filled" data-czona="' + e.kind + "|" + e.k + '" title="' + ((v && v.label) || e.k).replace(/"/g, "") + '">' +
       (v ? itemIcon(v) : '<span class="em">📦</span>') + '<span class="cnt">' + fmt(e.n) + '</span></div>';
   });
   /* lo de las bolsas anidadas, detrás y en su orden */
   if (raiz) raiz.items.forEach(b => { if (!esCont(b)) return; b.items.forEach(e => {
-    const v = itemView({ kind: e.kind, key: e.k });
+    const v = vistaDeCarga(e);
     html += '<div class="slot filled" data-czona="' + e.kind + "|" + e.k + '" title="Dentro de la bolsa · ' + ((v && v.label) || e.k).replace(/"/g, "") + '">' +
       (v ? itemIcon(v) : '<span class="em">📦</span>') + '<span class="cnt">' + fmt(e.n) + '</span></div>';
   }); });

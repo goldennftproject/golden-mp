@@ -91,6 +91,25 @@ window.G = G;
 
 // --- utilidades ---
 function fmt(n) { n = Math.floor(n); return n >= 1000 ? (n / 1000).toFixed(n % 1000 < 100 ? 0 : 1).replace(".0", "") + "k" : "" + n; }
+/* ═══ LA PLATA SE ENSEÑA CON SUS CÉNTIMOS ═══ (8/9, Suren: « necesitamos agregar decimales a la
+   plata, porque algunos peces se venden en 0.6-0.5 y cuando la suma suma +1, y no es castigo
+   sino premio »).
+
+   El diagnóstico es al revés de lo que parece, y por eso vale la pena escribirlo: la plata YA
+   tiene decimales desde la Pesca v4 —pezVender guarda al décimo— y el juego los suma bien. Quien
+   miente es el CONTADOR: fmt() hace Math.floor, así que vender un pez de 0,6 no movía el número,
+   vender el segundo lo movía a 1, y el jugador veía aparecer un entero de la nada. De ahí la
+   lectura de « premio »: no se regala nada, se estaba escondiendo el primer medio pez.
+
+   Así que no se toca la moneda —eso sería un refactor enorme para arreglar una impresión— se
+   toca cómo se imprime. fmt() sigue siendo entero porque lo usan los recursos, que SON enteros;
+   la plata tiene el suyo. El décimo es el átomo: es la precisión con la que pezVender ya
+   redondea, y ponerle más decimales sería inventar una exactitud que la economía no tiene. */
+function fmtPlata(n) {
+  n = Math.round((Number(n) || 0) * 10) / 10;
+  if (Math.abs(n) >= 1000) return fmt(n);
+  return (n % 1 === 0) ? "" + n : n.toFixed(1);
+}
 /* 20/8 (dirección: "¿están bien estos decimales?" — 25.450000000000003 en la lista del Mercado).
    No estaban, y no es un error de cálculo sino de IMPRESIÓN. Los precios salen de multiplicar por
    el bono de venta (1,135…) y en coma flotante 25,45 se guarda como 25,450000000000003. El número
@@ -3675,7 +3694,7 @@ function contDescargar(nodo, silencio) {
        usuario decida ». La puerta aprendió a mover las nueve familias y esta función se quedó
        con la de una: dos sitios que hacen lo mismo y se separan, otra vez.
        Ahora sale por viajePoner, que es el que ya sabe dónde vive cada familia. */
-    else ok = (typeof viajePoner === "function") ? viajePoner(e.kind || "res", e.k, e.n) : false;
+    else ok = (typeof viajePoner === "function") ? viajePoner(e.kind || "res", e.k, e.n, e.w) : false;
     if (ok) { movidas++; detalle.push(e.n + " " + ((typeof RES_LABEL !== "undefined" && RES_LABEL[e.k]) || e.k)); }
     else quedan.push(e);
   }
@@ -3729,7 +3748,7 @@ function viajeSacar(kind, key, n) {
   if (kind === "cont") { contsSumar(key, -n); return true; }
   return (typeof mkSacar === "function") ? mkSacar(kind, key, n) : false;
 }
-function viajePoner(kind, key, n) {
+function viajePoner(kind, key, n, payload) {
   /* el equipo suelto no se apila en ningún sitio: gainGear decide si mejora lo puesto o se vende.
      Está acá y no solo en contDescargar porque llevoMeter también puede llegar con kind "gear"
      estando en la granja, y sin esta rama mkPoner devolvería true sin hacer nada — un objeto que
@@ -3739,7 +3758,7 @@ function viajePoner(kind, key, n) {
   if (kind === "pick") { G.picks.owned[key] = true; G.picks.dur[key] = (G.picks.dur[key] || 0) + n; return true; }
   if (kind === "cana") { G.canas = G.canas || {}; G.canas[key] = true; return true; }
   if (kind === "cont") { contsSumar(key, n); return true; }
-  return (typeof mkPoner === "function") ? mkPoner(kind, key, n) : false;
+  return (typeof mkPoner === "function") ? mkPoner(kind, key, n, payload) : false;
 }
 /* elegir el contenedor raíz. Sale de los guardados y vuelve a ellos si te arrepentís */
 function viajeElegir(c) {
@@ -3778,7 +3797,17 @@ function viajeCargar(kind, key, n) {
     if (!puestas) toast("No queda hueco en la mochila");
     return puestas;
   }
-  if (!contMeter(raiz, kind, key, n)) { toast("El contenedor está lleno"); return 0; }
+  /* 8/9 (Suren, en vivo) — « el arco de piedra cuando pasa a la mochila se pone como cuadra ».
+     El cuadro en blanco era el síntoma; debajo había una pérdida de datos. El arma se guarda en
+     G.weapons con su durabilidad, su +N y sus runas, y viajeSacar la BORRA de ahí (mkSacar hace
+     delete G.weapons[key]). Sin llevarse ese objeto, la pila que entraba al contenedor era un
+     {kind:"arm"} pelado: al volver, contDescargar recreaba un arma NUEVA y el +2 y las runas se
+     habían ido. Y de paso itemView devolvía null —porque valida contra G.weapons, que ya no la
+     tenía— y por eso se dibujaba el cuadrito vacío.
+     Es exactamente el mismo fallo que arreglé esta tarde en la muerte (tumbaCaer lleva `w` desde
+     la tanda 4) y que no traje hasta acá: dos caminos que mueven lo mismo y solo uno aprendió. */
+  const carga = (kind === "arm" && G.weapons && G.weapons[key]) ? { w: G.weapons[key] } : null;
+  if (!contMeter(raiz, kind, key, n, carga)) { toast("El contenedor está lleno"); return 0; }
   viajeSacar(kind, key, n);
   return n;
 }
@@ -3787,7 +3816,9 @@ function viajeBajar(kind, key, n) {
   const raiz = contLlevado(); if (!raiz) return 0;
   n = Math.min(Math.max(1, Math.floor(n || 1)), contContar(raiz, kind, key));
   if (n <= 0) return 0;
-  if (!viajePoner(kind, key, n)) { toast("No entra en la bolsa — hacé lugar"); return 0; }
+  /* y de vuelta: el arma tiene que volver con lo suyo, o bajarla de la mochila la degradaría */
+  const pila = contAplanar(raiz).find(e => e.kind === kind && e.k === key);
+  if (!viajePoner(kind, key, n, pila && pila.w)) { toast("No entra en la bolsa — hacé lugar"); return 0; }
   contGastar(raiz, kind, key, n);
   return n;
 }
@@ -5822,7 +5853,10 @@ function bolsaFoto() {
     return m;
   }
   bolsaCuentas().forEach(x => { m[x.kind + ":" + x.key] = x.n; });
-  m["moneda:plata"]  = Math.floor(G.plata  || 0);
+  /* 8/9 (Suren): al décimo, no al entero. Con Math.floor, vender un pez de 0,6 no producía
+     ningún chip —la resta daba cero— y el segundo escupía « +1 » de golpe: el margen contaba
+     una historia falsa sobre lo que acababa de pasar. */
+  m["moneda:plata"]  = Math.round((G.plata || 0) * 10) / 10;
   m["moneda:golden"] = Math.floor(G.golden || 0);
   return m;
 }
