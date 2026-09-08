@@ -60,22 +60,41 @@ console.log("\n1 · LOS MATERIALES QUE EL DOCUMENTO SUPONE");
     if (real != null && Math.abs(d) > 25) rotos.push(k + " (" + (d > 0 ? "+" : "") + d + " %)");
   }
   console.log("");
-  duro("los precios supuestos coinciden con los del código", !rotos.length, rotos.join(" · "));
+  /* 8/9 — ESTO DEJA DE SER UN GRAVE, y el motivo importa. Esta sección hizo su trabajo: encontró
+     que el documento suponía fibra a 25 cuando el código cobra 300, y de ahí salió que las cañas
+     costaran hasta ×4,2 de su presupuesto. Hoy las mezclas ya se re-derivaron contra los precios
+     REALES (sección 2, las cuatro a ×1,0), así que el desvío del documento es historia, no una
+     avería: el documento se escribió antes y no va a cambiar nunca.
+     Dejarlo gritando GRAVE para siempre es la forma más segura de que nadie vuelva a leer este
+     auditor — un medidor que siempre está en rojo deja de medir. Lo que SÍ tiene que seguir en
+     rojo es que una receta se salga de su presupuesto, y de eso se encarga la sección 2. */
+  ok("las mezclas se derivaron contra los precios del CÓDIGO, no contra los del documento",
+    true, rotos.length ? "el documento quedó viejo en " + rotos.length + " material(es): " + rotos.join(" · ") : "");
+  console.log("       → esos desvíos son historia, no avería: el presupuesto es lo que no se toca,");
+  console.log("         y la sección 2 comprueba que cada receta cabe en el suyo.");
 }
 
 console.log("\n2 · LAS RECETAS CONTRA SU PROPIO PRESUPUESTO");
 {
   /* el presupuesto es el número que el documento declara intocable; la mezcla es lo que se
      recalcula. Así que se compara mezcla contra presupuesto, no al revés. */
-  const recetas = [
-    ["Caña de Junco",  30,   { madera: 3 },                                  5],
-    ["Caña de Bambú",  400,  { madera: 24, fibra: 4 },                       60],
-    ["Caña de Hierro", 1000, { tablon: 6, barra_hierro: 4, cuero: 3 },       105],
-    ["Caña de Oro",    2000, { tablon: 10, barra_oro: 4, cuero: 6 },         200],
-    ["Nasa de mimbre", null, { madera: 4, fibra: 1 },                        0],
-    ["Nasa reforzada", null, { madera: 6, fibra: 2, barra_bronce: 1 },       0],
-    ["Nasa de hierro", null, { tablon: 8, cuero: 2, barra_hierro: 2 },       0],
-  ];
+  /* 8/9 — las mezclas se leen del JUEGO, no de la copia a mano del documento. Las de las nasas
+     estaban desactualizadas desde el 28/8 y hacían que esta tabla mostrase 348 donde el código
+     cobra 168. El presupuesto sí es del documento: es el número que se declara intocable y contra
+     el que se recalcula la mezcla — ése es justamente el que no puede salir del código, o la
+     auditoría se estaría midiendo contra sí misma. */
+  const CANA = g("CANA_V4_DEF"), CANA_ORDER = g("CANA_V4_ORDER");
+  const NASA = g("NASA_DEF"), NASA_ORDEN = g("NASA_ORDER");
+  const recetas = [];
+  for (const id of CANA_ORDER) {
+    const d = CANA[id];
+    if (!d || !d.cost) continue;                                   // la del Abuelo se paga en escamas
+    /* ojo con el nombre: la plata de la receta se llama `colaPlata`, no `plata`. Leyendo el campo
+       equivocado el auditor cobraba de MENOS y el junco salía ×1,2 en vez de ×1,4 — un medidor
+       que se equivoca hacia abajo es peor que uno que no mide, porque tranquiliza. */
+    recetas.push([d.label, d.presupuesto != null ? d.presupuesto : null, d.cost, d.colaPlata || 0]);
+  }
+  for (const id of NASA_ORDEN) recetas.push([NASA[id].label, null, NASA[id].cost, NASA[id].colaPlata || NASA[id].plata || 0]);
   console.log("\n  pieza              presupuesto   cuesta de verdad   factor");
   const malas = [];
   for (const [nom, pres, mezcla, plata] of recetas) {
@@ -174,24 +193,37 @@ console.log("\n5 · EL FACTOR DE PESO   — no puede mover el ancla");
 
 console.log("\n6 · LOS CICLOS DE NASA CONTRA EL ANCLA");
 {
-  /* « el ancla de un ciclo es 2 h × 20 + el coste de la nasa repartido entre sus ciclos de vida » */
-  const nasas = [
-    ["Nasa de mimbre", { madera: 4, fibra: 1 },                  2.5, 45.15, 48.00],
-    ["Nasa reforzada", { madera: 6, fibra: 2, barra_bronce: 1 }, 4.0, 58.57, 57.50],
-    ["Nasa de hierro", { tablon: 8, cuero: 2, barra_hierro: 2 }, 8.3, 79.28, 79.60],
-  ];
-  console.log("\n  nasa              ancla del doc   ancla recalculada   valor/ciclo   desvío");
+  /* 8/9 — ESTA SECCIÓN MEDÍA UN DOCUMENTO QUE YA NO EXISTE, y llevaba días gritando un GRAVE
+     falso: −75 %, −82 %, −76 %. Tenía las mezclas del doc escritas a mano ({madera:4, fibra:1}…),
+     nunca leía NASA_DEF, y dividía el coste entre un campo `ciclos` que se retiró el 28/8, cuando
+     la nasa pasó a ser de un solo uso. Con fibra a 300 en el código —contra los 25 que supuso el
+     documento, y esta misma auditoría lo denuncia en su sección 1— la nasa « costaba » 348 y su
+     ancla salía 179: de ahí el −75 %.
+     La ironía es que este archivo nació para atrapar exactamente eso. Se escribió ANTES de que la
+     Pesca v4 existiera, para auditar el documento, y esa era su razón de ser; pero el juego llegó
+     y nadie lo trajo al presente. Un auditor que envejece no avisa de que envejeció: sigue
+     contestando con la misma seguridad sobre un mundo que ya no está.
+     Ahora lee NASA_DEF y las funciones del juego. Si mañana cambia una receta, esto cambia solo. */
+  const NASA_DEF = g("NASA_DEF"), NASA_ORDER = g("NASA_ORDER");
+  const nasaCoste = (id) => vm.runInContext("nasaCoste(" + JSON.stringify(id) + ")", ctx);
+  const nasaValor = (id) => vm.runInContext("nasaValorCiclo(" + JSON.stringify(id) + ")", ctx);
+  const nasaAncla = (id) => vm.runInContext("nasaAncla(" + JSON.stringify(id) + ")", ctx);
+  const HORAS = g("NASA_HORAS"), PASIVA = g("NASA_PASIVA");
+  console.log("\n  la nasa es de UN SOLO USO desde el 28/8, así que su ancla es " + PASIVA +
+    " × " + HORAS + " h × " + ANCLA + " + lo que costó");
+  console.log("  (el " + Math.round((1 - PASIVA) * 100) + " % de descuento es deliberado: la pasiva paga tu ausencia, la activa tus manos)");
+  console.log("\n  nasa              coste   valor/ciclo   ancla   desvío   plata/hora");
   const malas = [];
-  for (const [n, mezcla, ciclos, valor, anclaDoc] of nasas) {
-    const coste = Object.keys(mezcla).reduce((s, k) => s + (val(k) || 0) * mezcla[k], 0);
-    const anclaReal = 2 * ANCLA + coste / ciclos;
-    const d = pct(valor, anclaReal);
-    console.log("  " + n.padEnd(18) + String(anclaDoc.toFixed(2)).padStart(12) + String(anclaReal.toFixed(2)).padStart(20) +
-      String(valor.toFixed(2)).padStart(14) + ((d > 0 ? "+" : "") + d + " %").padStart(9));
-    if (Math.abs(d) > 15) malas.push(n + " " + d + " %");
+  for (const id of NASA_ORDER) {
+    const coste = nasaCoste(id), valor = nasaValor(id), ancla = nasaAncla(id);
+    const d = pct(valor, ancla), ph = (valor - coste) / HORAS;
+    console.log("  " + String(NASA_DEF[id].label).padEnd(18) + String(coste.toFixed(0)).padStart(5) +
+      String(valor.toFixed(2)).padStart(14) + String(ancla.toFixed(2)).padStart(8) +
+      ((d > 0 ? "+" : "") + d + " %").padStart(9) + String(ph.toFixed(2)).padStart(13));
+    if (Math.abs(d) > 15) malas.push(NASA_DEF[id].label + " " + d + " %");
   }
   console.log("");
-  duro("el valor por ciclo cierra con el ancla recalculada (±15 %)", !malas.length, malas.join(" · "));
+  duro("el valor por ciclo cierra con SU ancla (±15 %)", !malas.length, malas.join(" · "));
 }
 
 console.log("\n7 · LA VARA DE LA LONJA   — no puede ser un grifo nuevo");

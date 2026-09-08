@@ -6508,14 +6508,25 @@ var CANA_V4_DEF = {
      mants son ENTEROS por lance (1 · 3 · 6 · 11): la plata baja A LA VISTA en cada tiro. Las
      bandas se re-derivaron por bisección (más raros pagan el peaje extra) con el lanceNeto de
      ese día como ley: los netos por lombriz quedaron clavados en 9,30 · 9,85 · 10,35 · 10,56. */
+  /* 8/9 — LAS MEZCLAS RE-DERIVADAS CONTRA EL PRESUPUESTO, con los precios REALES del código.
+     Costaban ×1,37 · ×3,87 · ×4,22 · ×2,98 de lo presupuestado, y la causa no eran las cañas:
+     eran cuatro materiales que el documento supuso baratos y el código cobra caros —fibra 25→300
+     (+1100 %), cuero 55→340 (+518 %), barra_hierro 130→720, barra_oro 280→840—. Son productos de
+     Alpaca y Toro, con ciclos de 12-16 h. Con esas mezclas, subir de bambú a hierro amortizaba en
+     372 días de reloj; con el presupuesto, en 83.
+     El presupuesto es el número que no se toca (lo dice el propio documento) y la mezcla es lo que
+     se recalcula: eso es lo que se hizo. La regla nueva es « una identidad por caña » — el bambú
+     lleva fibra, el oro cuero, el hierro su barra — en vez de dos o tres materiales caros
+     apilados. Así sobrevive el gancho de « criar animales para pescar mejor » sin que la escalera
+     cueste cuatro veces lo que rinde. */
   junco:  { label: "Caña de Junco",   lvl: 1,  presupuesto: 30,   mant: 1,
-            cost: { madera: 3 }, colaPlata: 5, banda: { comun: 64.186, poco_comun: 27.00, raro: 7.664, epico: 0.750, legendario: 0.400 } },
+            cost: { madera: 2 }, colaPlata: 5, banda: { comun: 64.186, poco_comun: 27.00, raro: 7.664, epico: 0.750, legendario: 0.400 } },
   bambu:  { label: "Caña de Bambú",   lvl: 4,  presupuesto: 400,  mant: 3,
-            cost: { madera: 24, fibra: 4 }, colaPlata: 60, banda: { comun: 58.454, poco_comun: 27.00, raro: 12.846, epico: 1.200, legendario: 0.500 } },
+            cost: { madera: 5, fibra: 1 }, colaPlata: 40, banda: { comun: 58.454, poco_comun: 27.00, raro: 12.846, epico: 1.200, legendario: 0.500 } },
   hierro: { label: "Caña de Hierro",  lvl: 8,  presupuesto: 1000, mant: 6,
-            cost: { tablon: 6, barra_hierro: 4, cuero: 3 }, colaPlata: 105, banda: { comun: 56.364, poco_comun: 27.00, raro: 14.036, epico: 1.800, legendario: 0.800 } },
+            cost: { tablon: 5, barra_hierro: 1 }, colaPlata: 100, banda: { comun: 56.364, poco_comun: 27.00, raro: 14.036, epico: 1.800, legendario: 0.800 } },
   oro:    { label: "Caña de Oro",     lvl: 12, presupuesto: 2000, mant: 11,
-            cost: { tablon: 10, barra_oro: 4, cuero: 6 }, colaPlata: 200, banda: { comun: 49.495, poco_comun: 27.00, raro: 19.630, epico: 2.625, legendario: 1.250 } },
+            cost: { tablon: 17, barra_oro: 1, cuero: 1 }, colaPlata: 200, banda: { comun: 49.495, poco_comun: 27.00, raro: 19.630, epico: 2.625, legendario: 1.250 } },
   /* la única que no cobra peaje, y la única que rompe el ancla a propósito: es el premio de
      final de escalera y cuesta un mes de Lonja bien jugada. +10 % al peso de todo lo que saca. */
   abuelo: { label: "Caña del Abuelo", lvl: 18, presupuesto: null, mant: 0, pesoBonus: 0.10, escamas: 120,

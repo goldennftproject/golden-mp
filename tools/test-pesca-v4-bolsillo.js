@@ -33,6 +33,30 @@ let AHORA = Date.UTC(2026, 7, 27, 15);
 ctx.nowMs = () => AHORA;
 vm.runInContext("nowMs = window.nowMs;", ctx);
 
+/* ═══ EL AZAR, CON SEMILLA ═══════════════════════════════ (8/9). Este archivo era INESTABLE: tres
+   corridas seguidas daban 19 %, 24 % y 8 % de dispersión sin que nada hubiera cambiado, y la
+   aserción pedía « menos de 20 ». O sea que el mismo código pasaba o fallaba según el humor del
+   generador. Un test que a veces está en rojo es peor que ninguno: enseña a ignorar el rojo, y hoy
+   ya vimos a dónde lleva eso —cinco tests en rojo heredados que tapaban una regresión real.
+
+   Lo más incómodo es que el propio archivo se quejaba de esto en la línea 214 y creía haberlo
+   arreglado reusando la misma muestra para las dos aserciones. No alcanzaba: la muestra ENTERA
+   cambia en cada corrida. Cuarenta mil tiradas suenan a muchas, pero el pez legendario sale una
+   vez cada 250 lances y su precio es cien veces el del común: la cola pesa tanto que la media
+   sigue bailando.
+   Con semilla fija, dos corridas del mismo código dan el mismo número y la banda puede ser
+   estrecha de verdad. El azar del JUEGO no se toca — se toca el del laboratorio. */
+let _semilla = 20260908;
+ctx.Math = Object.create(Math);
+ctx.Math.random = () => {                       // xorshift32: barato, reproducible y suficiente
+  _semilla ^= _semilla << 13; _semilla ^= _semilla >>> 17; _semilla ^= _semilla << 5;
+  /* dividir por 2^32, NO tomar módulo 1e9: 2^32 no es múltiplo de 1e9, así que el módulo hace que
+     el 30 % más bajo del rango salga cinco veces por cada cuatro del resto. Con eso el sorteo se
+     cargaba hacia los peces comunes y el neto medía 8,25 en vez de 9,3 — un generador sesgado es
+     un laboratorio que miente, y yo lo había escrito así hace cinco minutos. */
+  return (_semilla >>> 0) / 4294967296;
+};
+
 /* UNA PARTIDA DE VERDAD: N lances con la caña puesta, resueltos como los resuelve el juego, y la
    plata contada de la bolsa. Se gana siempre la pulseada a propósito —lo que se mide es la
    ECONOMÍA, no la habilidad—, y el pez se vende al precio que le toca por su peso. */
