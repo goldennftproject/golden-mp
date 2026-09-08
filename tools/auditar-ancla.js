@@ -106,16 +106,17 @@ console.log("\n=== 4. LOS EDIFICIOS · días de granja al nivel en que se abren 
      El medidor seguía pidiendo el precio de antes de la rebaja. Los números de acá son la
      decisión de dirección, no una medición: si mañana alguien sube un coste sin que dirección
      lo pida, este auditor se lo va a cobrar. */
-  /* 8/9 — ESTA TABLA SE MUEVE, Y ES LA ÚNICA VEZ QUE ESO ESTÁ BIEN. Contiene la decisión de
-     dirección sobre cuántos días de producción debe costar cada edificio, y hoy cambió el
-     DENOMINADOR: al pasar el árbol a 60 min con 2 por carga, cuatro cargas cubren cuatro horas de
-     ausencia en vez de dos, y el jugador de tres sesiones captura el doble de horas-nodo. Los
-     edificios no se abarataron —cuestan lo mismo— es que ahora se pagan en un 36-40 % menos de
-     tiempo. Bajar la vara para que no suene la alarma es lo que este auditor prohíbe en su propio
-     texto; actualizarla cuando el mundo cambió por una decisión aprobada es lo contrario, y por
-     eso queda escrito de dónde salió cada número nuevo (medido, no elegido).
-     Si mañana alguien sube un coste sin que dirección lo pida, esto se lo sigue cobrando. */
-  const ESPERADO = { store: 0.26, horno: 0.3, cocina: 0.3, establo: 0.6, altar: 0.8, curtiduria: 1.0, ofrendas: 1.4 };
+  /* 8/9 — ESTA TABLA VOLVIÓ A SU SITIO, Y LA HISTORIA VALE MÁS QUE LOS NÚMEROS.
+     Por la mañana la bajé a 0,26 / 0,3 / 0,3 / 0,6 / 0,8 / 1,0 / 1,4 porque había alargado el
+     reloj de los nodos y el jugador capturaba el doble de horas-nodo: los edificios se pagaban en
+     un 36-40 % menos de tiempo, así que « actualicé la vara al mundo nuevo ». El razonamiento era
+     correcto DADO ese mundo. El problema es que ese mundo lo había decidido yo: dirección revirtió
+     el reloj a 30/40 min esa misma tarde («eso es una ley»), y con él vuelven estos siete números.
+     La moraleja queda escrita acá porque es donde va a hacer falta: cuando un auditor empieza a
+     sonar, la tentación es mover su vara, y mover la vara es exactamente lo que este archivo
+     prohíbe. Se mueve solo detrás de una decisión de dirección — y entonces se mueve con ella,
+     en los dos sentidos. */
+  const ESPERADO = { store: 0.4, horno: 0.5, cocina: 0.5, establo: 1.0, altar: 1.3, curtiduria: 1.7, ofrendas: 2.4 };
   console.log("                                            días       debe   desvío");
   for (const k in X.BUILD_DEF) {
     const b = X.BUILD_DEF[k]; let v = 0;

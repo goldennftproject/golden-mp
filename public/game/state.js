@@ -428,19 +428,20 @@ var GOLPES_TALAR = 3, GOLPES_MINAR = 3;   // clics para tumbar un árbol o rompe
    profundo · tocón. Y el árbol NORMAL de una carga, el clásico de siempre: suave(nada) ·
    profundo(nada) · tocón(+1 madera, −1 hacha). Cada madera paga su hacha, nada cae de golpe. */
 var NODO_CARGAS_MAX = 4;
-/* 8/9 — CUÁNTO PAGA UNA CARGA. Era 1, implícito y repetido en seis sitios de farm.js; ahora es
-   UN número, porque acaba de dejar de ser 1 y va a volver a moverse.
-   El motivo (medido hoy): el reloj de 30 min estaba calibrado para un jugador que no existe. El
-   simulador dice que hasta el más dedicado tiene las manos en el juego el 0,8 % del tiempo, así
-   que el tope de 4 cargas muerde el 75 % de lo que el árbol produjo — y el que entra una vez al
-   día pierde el 92 %.
-   Se alarga el reloj en vez de subir el tope, y el ancla obliga a lo demás: si el árbol tarda el
-   doble tiene que rendir el doble, o deja de pagar sus 20 plata la hora. Resultado: el mismo
-   ingreso diario para el que hace guardia, el DOBLE para el que entra una o dos veces, y LA MITAD
-   de clics para todos. Cuatro cargas ahora cubren cuatro horas de ausencia, no dos.
-   Lo que esto cambia del ritual del 22/8 —« cada madera paga su hacha », dictado clic a clic— es
-   solo la escala: cada corte suave paga 2 maderas y gasta 2 hachas. La relación se conserva. */
-var NODO_POR_CARGA = 2;
+/* CUÁNTO PAGA UNA CARGA — es 1, y por LEY de dirección (8/9, por voz):
+   « Los árboles tienen que tener cuatro cargas a las dos horas, cada treinta minutos una carga, y
+     la piedra cada cuarenta minutos, cuatro cargas, como estaba antes. A partir de ahí hacé el
+     ancla para lo que se te antoje, pero eso es una ley. »
+   Esa mañana yo había puesto el reloj en 60/80 min y esta constante en 2, razonando desde el
+   ancla: el tope de 4 cargas muerde lo que el nodo produce mientras no estás, así que alargar el
+   ciclo captura más horas de ausencia con los mismos clics. El razonamiento no era falso, pero el
+   ritmo de talar y picar NO es una variable de balance que se despeja: es lo que el jugador
+   SIENTE cada vez que toca un árbol, y eso lo decide dirección. Se revierte a 30/40 min y 1 por
+   carga. El ancla se ajusta alrededor de estos números, no al revés.
+   La constante se queda —aunque hoy valga 1— porque este « 1 » estaba implícito y repetido en
+   seis sitios de farm.js, y mientras estuvo escrito a mano nadie podía moverlo sin romper cinco
+   medidores en silencio. Ahora todos lo leen de acá. */
+var NODO_POR_CARGA = 1;
 function nodoCargas(o, cdBaseSeg) {
   if (!o) return 1;
   /* EL NODO VIRGEN NACE LLENO (22/8, dirección: "el regalito de bienvenida del terreno").
@@ -484,11 +485,12 @@ var GOLPES_RESET_MS = 5000;
    re-derivó entero (precios, herramientas, picos, edificios, expansiones, botín y armas).
    Las VETAS de mineral NO se tocan: 8 a 24 h es el ritmo diario, no el momento a momento, y
    dividirlas aplastaba la escalera de la minería. */
-/* 8/9: 60 y 80 minutos. Iban en 30 y 40 desde el 18/8, cuando se acortaron de 90 y 120 porque en
-   la primera hora NINGÚN nodo llegaba a completarse. Ese arreglo sigue en pie: el nodo virgen
-   nace lleno (4 cargas), así que el jugador nuevo abre con 8 maderas de golpe y ve la mecánica en
-   su primer clic. Lo que se alarga es el CICLO, no la bienvenida. */
-var CD = { tree: 3600, rock: 4800 };            // 60 min árbol · 80 min piedra
+/* 8/9 — ESTE RELOJ ES LEY DE DIRECCIÓN, no un número derivable. Textual: « los árboles tienen que
+   tener cuatro cargas a las dos horas, cada treinta minutos una carga, y la piedra cada cuarenta
+   minutos, cuatro cargas ». Yo lo había movido a 60/80 esa misma mañana razonando desde el ancla
+   y se revirtió: el ancla se acomoda a estos dos números, nunca al revés. Si algún día vuelve a
+   parecer que el ciclo debería alargarse, es una conversación con dirección, no un cálculo. */
+var CD = { tree: 1800, rock: 2400 };            // 30 min árbol · 40 min piedra — 4 cargas en 2 h y 2 h 40
 var CD_RAPIDO = {};   // 15/8 (dirección, FINAL): SIN arranque rápido — el timer es UNO desde el primer golpe ("el tutorial no es otro juego")
 // cuántas veces se recogió YA de ese nodo (por nodo, no global)
 function nodoUsos(o) { G.nodoUsos = G.nodoUsos || {}; return G.nodoUsos[o.i] || 0; }
