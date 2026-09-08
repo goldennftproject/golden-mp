@@ -1351,6 +1351,10 @@ class FarmScene extends Phaser.Scene {
       // 10/8: descanso entre viajes, y se abre el "viaje" para poder resumirlo al volver
       const espera = (typeof zonaCdLeft === "function") ? zonaCdLeft() : 0;
       if (espera > 0) { toast("El granjero está descansando — podés volver en " + fmtDur(espera)); return; }
+      /* 8/9 (dirección) — EL PORTAL YA NO ES UN BOTÓN, ES UN UMBRAL. Antes confirmabas y estabas
+         adentro con todo tu patrimonio encima sin haberlo decidido. Ahora se abre la puerta
+         (refreshViaje) y ahí elegís contenedor y carga; entrar de verdad es viajeEntrar(), que
+         vive en window porque lo dispara un botón del panel, no la escena. */
       const entrar = () => {
         /* 18/8 (reporte del diseñador: "es posible entrar a la zona negra sin arma"). No había
            ninguna comprobación: el propio rótulo del portal decía "Teletransportarte a la Zona
@@ -1368,13 +1372,17 @@ class FarmScene extends Phaser.Scene {
           return;
         }
         if (typeof tutoEvent === "function") tutoEvent("portal");
-        GF.zona = "pantano";   // desde la granja siempre se entra por el primer mapa (10/8)
-        if (typeof zonaEntrar === "function") zonaEntrar();
-        if (typeof saveFarm === "function") saveFarm();
-        this.leaving = true; irAEscena(this, "forest");
+        /* sin contenedor no se cruza: allá adentro no habría dónde meter el botín, y el jugador
+           se enteraría al matar al primer bicho. Se dice acá, con el remedio (regla 9). */
+        if (typeof contsTengo === "function" && !contsTengo("bag") && !contsTengo("backpack") && !contLlevado()) {
+          toast("Necesitás una bolsa o una mochila para entrar — se compran en la Tienda");
+          return;
+        }
+        if (typeof refreshViaje === "function") refreshViaje();
+        openOv("ov-viaje");
       };
       askConfirm("¿Entrás vos a pelear a la Zona Negra o mandás una incursión de un clic?", entrar,
-        { title: "Zona Negra", yes: "Entrar a pelear", yesClass: "green", no: "Incursión (un clic)", noClass: "gold",
+        { title: "Zona Negra", yes: "Preparar el viaje", yesClass: "green", no: "Incursión (un clic)", noClass: "gold",
           onNo: () => { if (typeof refreshIncursion === "function") refreshIncursion(); openOv("ov-incursion"); } });
       return;
     }
@@ -5362,4 +5370,28 @@ class FarmScene extends Phaser.Scene {
     else if (!o && this.nearPond()) { el.textContent = "Pescar (1 lombriz · tenés " + fmt(G.res.lombriz || 0) + ") · [E]"; el.classList.add("show"); }
     else el.classList.remove("show");
   }
+}
+
+/* ═══ CRUZAR EL PORTAL, YA CON EL CONTENEDOR CARGADO ═════════ (8/9, tanda 2 de los contenedores)
+   Vive en window y no dentro de la escena porque quien lo dispara es un botón de la puerta
+   (ui.js · refreshViaje), no un clic sobre el mundo. Las tres comprobaciones se repiten acá a
+   propósito: entre que se abrió el panel y que se apretó el botón pudo pasar cualquier cosa —
+   se acabó el enfriamiento, se desequipó el arma— y una puerta que confía en lo que comprobó
+   hace un minuto no es una puerta. */
+function viajeEntrar() {
+  const sc = window.farmScene;
+  if (!sc) { toast("Volvé a la granja para entrar a la Zona"); return false; }
+  const espera = (typeof zonaCdLeft === "function") ? zonaCdLeft() : 0;
+  if (espera > 0) { toast("El granjero está descansando — podés volver en " + fmtDur(espera)); return false; }
+  if (typeof armaEq === "function" && !armaEq()) { toast("Equipate un arma antes de entrar"); return false; }
+  const raiz = (typeof contLlevado === "function") ? contLlevado() : null;
+  if (!raiz) { toast("Elegí con qué contenedor salís"); return false; }
+  /* salir con el contenedor vacío se permite —es tu decisión, y hay quien caza a pelo— pero se
+     dice, porque casi siempre es un olvido: sin comida no hay con qué curarse. */
+  if (!contPilas(raiz)) log("Salís con " + CONT_DEF[raiz.c].label.toLowerCase() + " vacía: sin comida no vas a poder curarte allá.", "bad");
+  GF.zona = "pantano";   // desde la granja siempre se entra por el primer mapa (10/8)
+  if (typeof zonaEntrar === "function") zonaEntrar();
+  if (typeof saveFarm === "function") saveFarm();
+  sc.leaving = true; irAEscena(sc, "forest");
+  return true;
 }

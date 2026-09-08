@@ -115,6 +115,33 @@
   .mor-h .mn{position:absolute;right:-2px;bottom:-3px;font-size:9px;font-weight:800;color:#ffeaa7;
     background:rgba(36,21,5,.92);border-radius:5px;padding:0 3px;line-height:12px}
   .mor-pie{font-size:9px;color:#a3936f;text-align:center;margin-top:5px;line-height:1.25}
+  /* ═══ LA PUERTA DE LA ZONA (8/9) ═══ dos columnas: la granja y lo que te llevás. La flecha del
+     medio se lee sola y no hace falta explicar el gesto: clic en algo de la izquierda, se pasa. */
+  .vj-conts{display:flex;gap:8px;margin:8px 0 4px}
+  .vj-cont{flex:1;display:flex;align-items:center;gap:8px;padding:8px 10px;border-radius:10px;cursor:pointer;
+    background:rgba(0,0,0,.28);border:2px solid #4a3a1e;color:#e8dcc0;text-align:left}
+  .vj-cont:hover{border-color:#8a6f34}
+  .vj-cont.on{border-color:#c9a227;background:rgba(201,162,39,.16)}
+  .vj-cont.no{opacity:.42;cursor:default}
+  .vj-cont .em{font-size:22px}
+  .vj-cont b{display:block;font-size:12px}
+  .vj-cont span.d{font-size:10px;color:#a3936f}
+  .vj-cols{display:flex;gap:10px;align-items:stretch}
+  .vj-col{flex:1;min-width:0;background:rgba(0,0,0,.22);border:1px solid #3d3018;border-radius:10px;padding:7px}
+  .vj-col h4{margin:0 0 6px;font-size:11px;color:#c9b070;font-weight:800;text-align:center}
+  .vj-lista{display:grid;grid-template-columns:repeat(5,1fr);gap:4px;max-height:38vh;overflow:auto}
+  .vj-s{position:relative;aspect-ratio:1;border-radius:7px;cursor:pointer;
+    background:radial-gradient(circle at 50% 38%,#fff 0%,#f6efdd 62%,#e8dcc0 100%);border:1px solid #c9b070}
+  .vj-s:hover{outline:2px solid #ffd766}
+  .vj-s.vacia{background:rgba(0,0,0,.3);border:1px dashed #4a3a1e;cursor:default}
+  .vj-s.bolsa{background:radial-gradient(circle at 50% 38%,#fff4cf 0%,#e9cf86 70%,#c9a227 100%)}
+  .vj-s img{width:84%;height:84%;object-fit:contain;margin:8%}
+  .vj-s .em{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;font-size:17px}
+  .vj-s .n{position:absolute;right:-2px;bottom:-3px;font-size:9px;font-weight:800;color:#ffeaa7;
+    background:rgba(36,21,5,.92);border-radius:5px;padding:0 3px;line-height:12px}
+  .vj-pie{display:flex;justify-content:space-between;align-items:center;gap:8px;margin-top:9px}
+  .vj-aviso{font-size:10px;color:#a3936f;line-height:1.3;flex:1}
+  .vj-aviso b{color:#ffb4ab}
   #recientes{position:fixed;right:8px;top:50%;transform:translateY(-50%);z-index:6;
     display:flex;flex-direction:column;gap:6px;pointer-events:none}
   .rec{position:relative;width:46px;height:46px;border-radius:9px;
@@ -1455,6 +1482,17 @@
       <button class="shoptab" data-p2p="mias">Mis publicaciones</button>
     </div>
     <div class="forge-list" id="p2p-list" style="max-height:58vh"></div>
+  </div></div>
+
+  <!-- 8/9 (dirección) · LA PUERTA DE LA ZONA NEGRA. « esa bag es la que vamos a llenar para ir a
+       zona negra: comidas, runas, flechas, espadas, lo que el usuario decida ». Dos columnas: a
+       la izquierda la granja, a la derecha lo que te llevás. Lo de la derecha es lo único que va
+       a existir allá adentro — y lo único que podés perder. -->
+  <div class="ov" id="ov-viaje"><div class="card" style="width:min(720px,96%)">
+    <button class="close" data-close="ov-viaje">×</button>
+    <h3>Preparar el viaje</h3>
+    <div class="sub">Lo que metas en el contenedor es <b>todo lo que vas a tener</b> en la Zona Negra: allá no se ve ni se toca la bolsa de la granja. Y si te matan, se pierde entero.</div>
+    <div id="viaje-cuerpo"></div>
   </div></div>
 
   <div class="ov" id="ov-incursion"><div class="card" style="width:min(600px,94%)">

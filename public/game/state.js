@@ -3662,6 +3662,103 @@ function comprarCont(c) {
   return true;
 }
 
+/* ═══ LA PUERTA DE LA ZONA: CARGAR ANTES DE SALIR ════════════════════════════════════════════
+   (8/9, dirección: « esa bag es la que vamos a llenar para ir a zona negra — comidas, runas,
+   flechas, espadas, lo que el usuario decida »). Hasta hoy el portal era un botón: confirmabas y
+   ya estabas adentro con TODO tu patrimonio encima sin haberlo decidido. Ahora hay un umbral, y
+   el umbral es la mecánica entera — es donde el jugador elige cuánto está dispuesto a perder.
+
+   Se puede llevar CUALQUIER COSA de la bolsa, sin lista blanca: dirección dijo « lo que el
+   usuario decida » y una lista blanca envejece sola (el objeto que se agregue mañana nacería
+   prohibido y nadie se acordaría de por qué). Llevarse las semillas a una cacería es una mala
+   idea, pero es SU mala idea, y el aviso del panel la dice con todas las letras.
+
+   Las dos funciones de abajo son el traspaso en los dos sentidos. Se apoyan en las del Mercado
+   (mkTengo/mkSacar/mkPoner), que ya sabían mover res, semillas, platos, peces y armas, y las
+   estiran a las cuatro familias que faltaban. Reusar en vez de repetir: si mañana cambia cómo se
+   guarda un pico, cambia en un sitio y el Mercado y el portal se enteran los dos. */
+function viajeTengo(kind, key) {
+  if (kind === "tool") return (typeof toolCount === "function") ? toolCount(key) : 0;
+  if (kind === "pick") return (typeof pickCount === "function") ? pickCount(key) : 0;
+  if (kind === "cana") return ((G.canas || {})[key] ? 1 : 0);
+  if (kind === "cont") return contsTengo(key);
+  return (typeof mkTengo === "function") ? mkTengo(kind, key) : 0;
+}
+function viajeSacar(kind, key, n) {
+  if (viajeTengo(kind, key) < n) return false;
+  if (kind === "tool") { G.tools[key] = (G.tools[key] || 0) - n; return true; }
+  if (kind === "pick") { G.picks.dur[key] = (G.picks.dur[key] || 0) - n; if (G.picks.dur[key] <= 0 && G.picks.eq === key) G.picks.eq = null; return true; }
+  if (kind === "cana") { G.canas[key] = false; return true; }
+  if (kind === "cont") { contsSumar(key, -n); return true; }
+  return (typeof mkSacar === "function") ? mkSacar(kind, key, n) : false;
+}
+function viajePoner(kind, key, n) {
+  if (kind === "tool") { G.tools[key] = (G.tools[key] || 0) + n; return true; }
+  if (kind === "pick") { G.picks.owned[key] = true; G.picks.dur[key] = (G.picks.dur[key] || 0) + n; return true; }
+  if (kind === "cana") { G.canas = G.canas || {}; G.canas[key] = true; return true; }
+  if (kind === "cont") { contsSumar(key, n); return true; }
+  return (typeof mkPoner === "function") ? mkPoner(kind, key, n) : false;
+}
+/* elegir el contenedor raíz. Sale de los guardados y vuelve a ellos si te arrepentís */
+function viajeElegir(c) {
+  if (!CONT_DEF[c]) return false;
+  const puesto = contLlevado();
+  if (puesto && puesto.c === c) return true;                 // ya lo llevás: no hay nada que hacer
+  /* el que ya tenías vuelve a la granja ANTES de contar, o cambiar de mochila a bolsa fallaría
+     por no ver la que acabás de soltar */
+  if (puesto) viajeSoltar();
+  if (contsTengo(c) < 1) { toast("No tenés " + (c === "bag" ? "ninguna bolsa" : "ninguna mochila")); return false; }
+  contsSumar(c, -1);
+  G.cont = contCrear(c);
+  return true;
+}
+/* arrepentirse: todo vuelve a la granja, contenedor incluido. Cancelar el viaje no puede costar
+   nada — si costara, sería una trampa escondida en un botón que dice « atrás ». */
+function viajeSoltar() {
+  const raiz = contLlevado(); if (!raiz) return false;
+  for (const e of contAplanar(raiz)) viajePoner(e.kind || "res", e.k, e.n);
+  for (const b of raiz.items) if (esCont(b)) contsSumar(b.c, 1);
+  contsSumar(raiz.c, 1);
+  G.cont = null;
+  return true;
+}
+/* meter algo de la bolsa al contenedor. Devuelve cuántas unidades entraron de verdad: puede ser
+   menos de las pedidas, y quien llame tiene que poder decirlo (regla 9). */
+function viajeCargar(kind, key, n) {
+  const raiz = contLlevado(); if (!raiz) return 0;
+  n = Math.min(Math.max(1, Math.floor(n || 1)), viajeTengo(kind, key));
+  if (n <= 0) return 0;
+  /* las bolsas vacías no son carga: se ENGANCHAN a la mochila y suman huecos */
+  if (kind === "cont") {
+    if (key !== "bag" || raiz.c !== "backpack") { toast("Solo las bolsas entran dentro de la mochila"); return 0; }
+    let puestas = 0;
+    for (let i = 0; i < n; i++) { if (!contMeterBolsa(raiz, contCrear("bag"))) break; viajeSacar("cont", key, 1); puestas++; }
+    if (!puestas) toast("No queda hueco en la mochila");
+    return puestas;
+  }
+  if (!contMeter(raiz, kind, key, n)) { toast("El contenedor está lleno"); return 0; }
+  viajeSacar(kind, key, n);
+  return n;
+}
+/* y devolverlo a la granja antes de salir */
+function viajeBajar(kind, key, n) {
+  const raiz = contLlevado(); if (!raiz) return 0;
+  n = Math.min(Math.max(1, Math.floor(n || 1)), contContar(raiz, kind, key));
+  if (n <= 0) return 0;
+  if (!viajePoner(kind, key, n)) { toast("No entra en la bolsa — hacé lugar"); return 0; }
+  contGastar(raiz, kind, key, n);
+  return n;
+}
+/* sacar una bolsa anidada de la mochila (con lo que tenga adentro, que vuelve a la granja) */
+function viajeBajarBolsa(idx) {
+  const raiz = contLlevado(); if (!raiz) return false;
+  const b = raiz.items[idx]; if (!esCont(b)) return false;
+  for (const e of contAplanar(b)) viajePoner(e.kind || "res", e.k, e.n);
+  raiz.items.splice(idx, 1);
+  contsSumar(b.c, 1);
+  return true;
+}
+
 /* ─── EL MORRAL, AHORA ALIAS DEL CONTENEDOR ──────────────────────────────────────────────────
    El morral del 8/9 a la mañana era el contenedor sin ser objeto. En vez de tocar de una los
    nueve sitios que lo llaman (forest.js, ui.js, save.js, tests) y quedarme con el juego roto a
@@ -3738,11 +3835,16 @@ function tumbaRecoger() {
 function zonaSalir(derrotado) {
   const v = G.zonaViaje; G.zonaViaje = null;
   G.zonaCdHasta = nowMs() + ZONA_CD_MIN * 60000;
-  /* 8/9: el morral se vuelca A LA VUELTA, no en la zona — es la mochila del campo. Ojo con el
-     orden: la foto del viaje (v.res) se tomó al ENTRAR, así que descargar antes de calcular la
-     ganancia es lo que hace que el resumen cuente el botín del morral como ganado. */
+  /* 8/9: el contenedor se vuelca A LA VUELTA, no en la zona — es la mochila del campo. Ojo con
+     el orden: la foto del viaje (v.res) se tomó al ENTRAR, así que descargar antes de calcular la
+     ganancia es lo que hace que el resumen cuente el botín como ganado.
+     Y después el contenedor VUELVE A LA GRANJA (tanda 2): en la granja no se lleva nada puesto,
+     o quedaría un objeto tuyo guardado en un sitio que la bolsa no muestra. Si te derrotaron ya
+     no hay nada que devolver — tumbaCaer se lo llevó antes de llegar acá, y ese orden es la
+     mecánica entera. */
   const morralIba = morralPilas();
   if (morralIba) morralDescargar(true);
+  if (contLlevado()) viajeSoltar();
   if (!v) return null;
   const gan = {};
   for (const k in G.res) { const d = (G.res[k] || 0) - (v.res[k] || 0); if (d > 0) gan[k] = d; }

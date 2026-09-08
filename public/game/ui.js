@@ -19,6 +19,7 @@ const OV_REFRESH = { "ov-entrenando": () => entrenarSync(), "ov-clan": () => ref
   "ov-curtiduria": () => refreshCurtiduria(),
   "ov-ofrendas": () => refreshOfrendas(),
   "ov-incursion": () => refreshIncursion(),
+  "ov-viaje": () => refreshViaje(),   // 8/9: la puerta de la Zona Negra
   "ov-p2p": () => refreshP2P(),
   "ov-cos": () => refreshCosmeticos(),
   "ov-pass": () => refreshPass(),
@@ -46,7 +47,18 @@ function noNo(el) {
   el.classList.remove("nono"); void el.offsetWidth; el.classList.add("nono");
   setTimeout(() => el.classList.remove("nono"), 320);
 }
-function closeOv(id) { const e = $(id); if (e) e.classList.remove("show"); }
+function closeOv(id) {
+  /* 8/9: cerrar la puerta de la Zona por la × devuelve todo a la granja, igual que « Volver ».
+     Dejar el contenedor cargado sería más « fiel » (en Tibia preparás la mochila y te vas cuando
+     querés), pero acá el jugador vería desaparecer media bolsa sin entender a dónde fue. Una sola
+     salida, y nada se queda guardado en un sitio que no se ve. */
+  if (id === "ov-viaje" && typeof viajeSoltar === "function" && typeof contLlevado === "function" && contLlevado()) {
+    viajeSoltar();
+    if (typeof syncSlots === "function") syncSlots();
+    if (typeof refreshHud === "function") refreshHud();
+  }
+  const e = $(id); if (e) e.classList.remove("show");
+}
 
 /* ---- RESUMEN DEL VIAJE A LA ZONA NEGRA (10/8) --------------------------------
    Al volver, un cuadro con lo que trajiste. Antes el botín se diluía en la bolsa y no
@@ -313,6 +325,110 @@ function refreshMorral() {
   }
   h += '</div><div class="mor-pie">Se vacía solo al volver a la granja</div>';
   caja.innerHTML = h;
+}
+/* ═══ LA PUERTA DE LA ZONA NEGRA ═══════════════════════════ (8/9, dirección: « esa bag es la
+   que vamos a llenar para ir a zona negra: comidas, runas, flechas, espadas, lo que el usuario
+   decida »). Dos columnas y ningún tutorial: a la izquierda la granja, a la derecha lo que te
+   llevás, y un clic pasa una cosa de un lado al otro. El gesto se entiende sin leer.
+
+   Lo que sí hay que decir con letras es el precio, y por eso el aviso del pie está en rojo: en un
+   juego que hasta ayer no castigaba la muerte, que ahora se pierda todo lo cargado es información
+   que el jugador NO puede descubrir muriéndose. Es la regla 9 aplicada a una decisión, no a una
+   acción: avisar antes, no explicar después.
+
+   Un detalle de mecánica que vive acá y no en state: se llevan DE A UNO por clic y de a diez con
+   shift. Un botón de « pasar todo » sería cómodo dos segundos y catastrófico el día que alguien
+   lo apriete con la bolsa entera. */
+function refreshViaje() {
+  const caja = $("viaje-cuerpo"); if (!caja) return;
+  const raiz = (typeof contLlevado === "function") ? contLlevado() : null;
+  let h = "";
+
+  /* 1) qué contenedor llevás */
+  h += '<div class="vj-conts">';
+  CONT_ORDER.forEach(c => {
+    const d = CONT_DEF[c], tengo = contsTengo(c), puesto = raiz && raiz.c === c;
+    const hay = tengo > 0 || puesto;
+    h += '<div class="vj-cont' + (puesto ? " on" : "") + (hay ? "" : " no") + '"' + (hay ? ' data-vcont="' + c + '"' : "") + '>' +
+      '<span class="em">' + d.emoji + '</span><div><b>' + d.label + (puesto ? " · puesta" : "") + '</b>' +
+      '<span class="d">' + d.huecos + ' huecos · ' + (hay ? "tenés " + (tengo + (puesto ? 1 : 0)) : "no tenés — se compra en la Tienda") + '</span></div></div>';
+  });
+  h += '</div>';
+
+  if (!raiz) {
+    h += '<div class="info">Elegí con qué salís. Sin contenedor no se cruza el portal: allá adentro no vas a tener dónde meter el botín.</div>' +
+      '<div class="vj-pie"><div class="vj-aviso"></div><button class="ghost sm" id="vj-cerrar">Volver</button></div>';
+    caja.innerHTML = h;
+    engancharViaje(caja);
+    return;
+  }
+
+  /* 2) las dos columnas */
+  const libres = contLibres(raiz);
+  h += '<div class="vj-cols"><div class="vj-col"><h4>En la granja (se queda)</h4><div class="vj-lista">';
+  const bolsa = (typeof bolsaCuentas === "function") ? bolsaCuentas() : [];
+  if (!bolsa.length) h += '<div class="vj-s vacia"></div>';
+  bolsa.forEach(x => {
+    const v = itemView({ kind: x.kind, key: x.key }); if (!v) return;
+    h += '<div class="vj-s" data-vsube="' + x.kind + "|" + x.key + '" title="' + viajeNombre(v, x.key) + ' — clic para llevarlo">' +
+      itemIcon(v) + '<span class="n">' + fmt(x.n) + '</span></div>';
+  });
+  h += '</div></div><div class="vj-col"><h4>' + CONT_DEF[raiz.c].label + ' — te lo llevás (' + libres + ' libres)</h4><div class="vj-lista">';
+  raiz.items.forEach((e, i) => {
+    if (esCont(e)) {
+      h += '<div class="vj-s bolsa" data-vbolsa="' + i + '" title="Bolsa · ' + contPilas(e) + ' cosa(s) dentro — clic para sacarla">' +
+        '<span class="em">' + CONT_DEF[e.c].emoji + '</span><span class="n">' + contPilas(e) + '/' + CONT_DEF[e.c].huecos + '</span></div>';
+      return;
+    }
+    const v = itemView({ kind: e.kind, key: e.k });
+    h += '<div class="vj-s" data-vbaja="' + e.kind + "|" + e.k + '" title="' + viajeNombre(v, e.k) + ' — clic para dejarlo">' +
+      (v ? itemIcon(v) : '<span class="em">📦</span>') + '<span class="n">' + fmt(e.n) + '</span></div>';
+  });
+  /* lo que hay dentro de las bolsas anidadas, sangrado detrás de su bolsa */
+  raiz.items.forEach((b) => {
+    if (!esCont(b)) return;
+    b.items.forEach(e => {
+      const v = itemView({ kind: e.kind, key: e.k });
+      h += '<div class="vj-s" data-vbaja="' + e.kind + "|" + e.k + '" title="Dentro de la bolsa · ' + viajeNombre(v, e.k) + ' — clic para dejarlo">' +
+        (v ? itemIcon(v) : '<span class="em">📦</span>') + '<span class="n">' + fmt(e.n) + '</span></div>';
+    });
+  });
+  for (let i = raiz.items.length; i < CONT_DEF[raiz.c].huecos; i++) h += '<div class="vj-s vacia"></div>';
+  h += '</div></div></div>';
+
+  h += '<div class="vj-pie"><div class="vj-aviso">Clic para pasar de a uno · shift para diez. ' +
+    '<b>Si te matan allá, se pierde todo lo que lleves acá dentro</b> — el equipo puesto casi siempre se salva.</div>' +
+    '<button class="ghost sm" id="vj-cerrar">Volver</button>' +
+    '<button class="green sm" id="vj-entrar">Entrar a la Zona</button></div>';
+  caja.innerHTML = h;
+  engancharViaje(caja);
+}
+/* el nombre pelado, sin la coletilla de la bolsa. Las etiquetas de itemView traen instrucciones
+   ("clic para comer") que acá contradicen a la de la puerta ("clic para dejarlo"): dos órdenes
+   distintas en el mismo tooltip es peor que ninguna. */
+function viajeNombre(v, k) { return String((v && v.label) || k).split(" · ")[0].replace(/"/g, ""); }
+function engancharViaje(caja) {
+  const rep = () => { refreshViaje(); if (typeof refreshHud === "function") refreshHud(); if (typeof syncSlots === "function") syncSlots(); };
+  caja.querySelectorAll("[data-vcont]").forEach(b => b.onclick = () => { if (viajeElegir(b.dataset.vcont)) rep(); });
+  caja.querySelectorAll("[data-vsube]").forEach(b => b.onclick = (ev) => {
+    const [kind, key] = b.dataset.vsube.split("|");
+    if (viajeCargar(kind, key, ev.shiftKey ? 10 : 1)) rep();
+  });
+  caja.querySelectorAll("[data-vbaja]").forEach(b => b.onclick = (ev) => {
+    const [kind, key] = b.dataset.vbaja.split("|");
+    if (viajeBajar(kind, key, ev.shiftKey ? 10 : 1)) rep();
+  });
+  caja.querySelectorAll("[data-vbolsa]").forEach(b => b.onclick = () => { if (viajeBajarBolsa(+b.dataset.vbolsa)) rep(); });
+  const cerrar = $("vj-cerrar");
+  /* « Volver » devuelve TODO, contenedor incluido: cancelar no puede costar nada */
+  if (cerrar) cerrar.onclick = () => { if (typeof viajeSoltar === "function") viajeSoltar(); closeOv("ov-viaje"); if (typeof syncSlots === "function") syncSlots(); if (typeof refreshHud === "function") refreshHud(); };
+  const ent = $("vj-entrar");
+  /* OJO: no se cierra con closeOv, que devolvería la carga a la granja (ver el comentario de
+     closeOv). Acá el contenedor tiene que salir cargado — es todo el punto de la ventana. */
+  if (ent) ent.onclick = () => {
+    const el = $("ov-viaje"); if (el) el.classList.remove("show");
+    if (typeof viajeEntrar === "function") viajeEntrar();
+  };
 }
 function refreshRecientes() {
   const caja = $("recientes"); if (!caja) return;
