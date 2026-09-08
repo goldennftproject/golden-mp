@@ -46,7 +46,11 @@ const G = {
      nada y hacía que la bolsa y la barra enseñaran un pico que el jugador no tiene. Llega con el
      kit del baúl, igual que el hacha y la caña. */
   picks: { owned: {}, dur: {}, eq: null },
-  tools: { axe: 0, rod: 0 }, recientes: [], morral: [], tumba: null, modoPelea: "perseguir",
+  tools: { axe: 0, rod: 0 }, recientes: [], tumba: null, modoPelea: "perseguir",
+  /* 8/9 (tarde) — LOS CONTENEDORES. `conts` son los que tenés guardados en la granja (bolsa de
+     la granja: "bag" → 2, "backpack" → 1) y `cont` es el ÁRBOL que llevás puesto, que existe
+     solo mientras estás de viaje. El morral plano de la mañana se jubiló: ver CONT_DEF. */
+  conts: {}, cont: null,
   kitReclamado: false,
   toolsLost: {},                 // herramientas tiradas a la papelera (31/7: el diseñador pidió que se puedan tirar)
   invRows: 0,                    // filas extra de inventario compradas
@@ -3516,55 +3520,160 @@ function zonaEntrar() {
                   combatXp: G.combatXp || 0, matados: zonaMatados(), hp: G.hp };
 }
 // devuelve el resumen del viaje (y lo cierra). null si no había viaje abierto.
-/* ═══ EL MORRAL DE CAZA ═══════════════════════════════════ (8/9, dirección: « nos vamos a
-   crear unas hunting bag — esa hunting bag es la que vamos a perder, no lo que carguemos en el
-   inventario »). Investigado en Tibia antes de escribirlo: allí designás una mochila como
-   contenedor de botín y lo que sacás del CADÁVER va ahí, no al bolso general.
+/* ═══ LOS CONTENEDORES ═══════════════════════════════════════════════════════════════════════
+   (8/9, dirección, corrigiéndome: « el morral es solo un objeto, una bolsa de ocho huecos. En
+   cambio la bolsa sería el inventario de por sí »). Y tenía razón: el 8/9 a la mañana escribí el
+   morral como un COMPARTIMENTO que aparecía por arte de magia al cruzar el portal. En Tibia no
+   es eso. Ahí hay dos contenedores ANIDADOS —la Backpack de 20 huecos que llevás puesta, y la
+   Bag de 8 que va DENTRO de ella y que el jugador usa para el botín—, y los dos son objetos:
+   se compran, se llevan, se pierden.
 
-   Acá el enganche era casi gratis porque la mitad ya estaba: desde el 31/8 el bicho muerto deja
-   un cuerpo con brillo que hay que revisar y saquear a mano (revisarCuerpo). Lo único que cambia
-   es el destino: lo que sale del cuerpo entra al MORRAL, no a la bolsa.
+   De ahí sale la regla entera que pidió dirección:
+     · Cargás el contenedor EN LA GRANJA con lo que decidas llevar.
+     · Dentro de la Zona no existe nada más: la bolsa de la granja no se ve ni se toca, y no hay
+       pasaje en ninguna dirección — nada de guardar el legendario en casa a mitad de la cacería.
+     · Al morir cae entero y no vuelve nada.
 
-   Y el cupo chico es la decisión de diseño, no una limitación técnica: con ocho huecos, llenarlo
-   te obliga a elegir entre volver a descargar o seguir cazando dejando botín en el piso. Esa es
-   la tensión que hace que uno diga « una más » — y que la muerte duela justo cuando más tenías.
+   EL ÁRBOL. La raíz es el contenedor que llevás; sus huecos guardan pilas normales
+   ({kind,k,n}) o BOLSAS ({c:"bag",items:[…]}), que suman sus propios huecos. La profundidad se
+   corta en 2 a propósito: en Tibia podés anidar sin fin y termina en una muñeca rusa que nadie
+   sabe leer a la hora de vaciarla. Con dos niveles ya tenés la matemática que importa —mochila
+   de 20 + dos bolsas = 20−2+16 = 34 huecos— y un panel que entra en pantalla.
 
-   Se DESCARGA SOLO al volver a la granja: el morral es para el campo, no una tarea extra. */
-var MORRAL_CUPO = 8;              // huecos (pilas distintas), no unidades
-function morral() { if (!Array.isArray(G.morral)) G.morral = []; return G.morral; }
-function morralPilas() { return morral().length; }
-function morralLleno() { return morralPilas() >= MORRAL_CUPO; }
-/* mete algo al morral. Devuelve false si no entra — y entonces el botín SE QUEDA en el cuerpo,
-   que es la misma regla que ya tenía la bolsa llena: lo que no cabe no se evapora. */
-function morralMeter(kind, k, n) {
-  const l = morral();
-  const hay = l.find(e => e.kind === kind && e.k === k);
-  if (hay) { hay.n += n; return true; }        // apilar en lo que ya está no ocupa hueco nuevo
-  if (morralLleno()) return false;
-  l.push({ kind: kind, k: k, n: n });
+   LOS PRECIOS CUELGAN DEL ANCLA, como todo: la bolsa vale 20 plata (una hora-parcela: un viaje
+   malo la paga, y por eso perderla nunca te deja a pie) y la mochila 200 (diez horas-parcela: es
+   una inversión, y duele). El kit de bienvenida trae una bolsa, que es la válvula de Tibia —
+   « si perdés la mochila recibís una vacía »: sin contenedor no se entra, así que el juego no
+   puede permitirse dejarte sin ninguno. */
+var CONT_ORDER = ["bag", "backpack"];
+var CONT_DEF = {
+  bag:      { label: "Bolsa",   emoji: "👝", huecos: 8,  plata: 20,  ds: "Ocho huecos. Va suelta o dentro de una mochila, y es lo que se lleva el botín de la Zona Negra." },
+  backpack: { label: "Mochila", emoji: "🎒", huecos: 20, plata: 200, ds: "Veinte huecos, y adentro le caben bolsas que suman los suyos. Lo que llevás puesto al morir se pierde entero." },
+};
+var CONT_PROF_MAX = 2;            // raíz + un nivel de bolsas adentro. No hay muñeca rusa.
+function contDef(c) { return CONT_DEF[c] || null; }
+function esCont(e) { return !!(e && e.c && CONT_DEF[e.c]); }
+function contCrear(c) { return CONT_DEF[c] ? { c: c, items: [] } : null; }
+/* los que TENÉS y no estás llevando puesto. Viven en la bolsa de la granja como un objeto más */
+function contsTengo(c) { return Math.max(0, Math.floor(((G.conts || {})[c]) || 0)); }
+function contsSumar(c, n) { if (!CONT_DEF[c]) return; G.conts = G.conts || {}; G.conts[c] = Math.max(0, contsTengo(c) + n); }
+/* el que llevás encima. null = no llevás nada, y sin contenedor no se cruza el portal */
+function contLlevado() { return esCont(G.cont) ? G.cont : null; }
+function contHuecos(nodo) { const d = contDef(nodo && nodo.c); return d ? d.huecos : 0; }
+function contUsados(nodo) { return (nodo && Array.isArray(nodo.items)) ? nodo.items.length : 0; }
+function contLleno(nodo) { return contUsados(nodo) >= contHuecos(nodo); }
+/* huecos libres de TODO el árbol, que es lo que el jugador lee como « me entra o no me entra » */
+function contLibres(nodo) {
+  if (!esCont(nodo)) return 0;
+  let n = contHuecos(nodo) - contUsados(nodo);
+  for (const e of nodo.items) if (esCont(e)) n += contLibres(e);
+  return n;
+}
+/* todas las pilas del árbol, aplanadas y en orden de lectura. Las bolsas anidadas NO aparecen
+   como pila: aparecen sus contenidos, porque para vaciar o para perder lo que importa es la
+   hoja. Quien necesite las bolsas en sí (la muerte) mira el árbol. */
+function contAplanar(nodo, out) {
+  out = out || [];
+  if (!esCont(nodo)) return out;
+  for (const e of nodo.items) { if (esCont(e)) contAplanar(e, out); else out.push(e); }
+  return out;
+}
+function contPilas(nodo) { return contAplanar(nodo).length; }
+/* cuántas unidades de algo llevás, sumando todas sus pilas estén donde estén */
+function contContar(nodo, kind, k) {
+  return contAplanar(nodo).reduce((s, e) => s + ((e.kind === kind && e.k === k) ? e.n : 0), 0);
+}
+/* METER. Primero apila sobre lo que ya está (apilar no gasta hueco nuevo, en cualquier nivel),
+   después abre hueco en la raíz, y recién al final baja a las bolsas. Ese orden es el que hace
+   que las bolsas anidadas se sientan como un desborde y no como un agujero negro donde las cosas
+   desaparecen. Devuelve false si no entró — y entonces el botín SE QUEDA donde estaba: lo que no
+   cabe no se evapora, que es la misma regla que ya tenía la bolsa llena. */
+function contMeter(nodo, kind, k, n, prof) {
+  if (!esCont(nodo) || !(n > 0)) return false;
+  prof = prof || 1;
+  const hay = contAplanar(nodo).find(e => e.kind === kind && e.k === k);
+  if (hay) { hay.n += n; return true; }
+  if (!contLleno(nodo)) { nodo.items.push({ kind: kind, k: k, n: n }); return true; }
+  if (prof < CONT_PROF_MAX)
+    for (const e of nodo.items) if (esCont(e) && contMeter(e, kind, k, n, prof + 1)) return true;
+  return false;
+}
+/* meter una BOLSA vacía o llena dentro de la raíz. Solo en la raíz: es el corte de profundidad */
+function contMeterBolsa(nodo, bolsa) {
+  if (!esCont(nodo) || !esCont(bolsa) || contLleno(nodo)) return false;
+  if (bolsa.items.some(esCont)) return false;      // una bolsa con bolsas adentro no entra
+  nodo.items.push(bolsa);
   return true;
 }
-function morralVacio() { return !morralPilas(); }
-/* al volver a la granja se vuelca a la bolsa. Lo que no entre se queda en el morral —nunca se
-   borra— y el jugador se entera: es la regla 9 aplicada a un traspaso que puede fallar. */
-function morralDescargar(silencio) {
-  const l = morral();
-  if (!l.length) return { movidas: 0, quedan: 0 };
+/* GASTAR de lo que llevás — flechas, comida, cebo. Es la única puerta: dentro de la Zona nada
+   sale de G.res ni de G.dishes, sale de acá. Vacía las pilas que quedan en cero para que el
+   hueco se libere de verdad. */
+function contGastar(nodo, kind, k, n) {
+  if (!esCont(nodo) || !(n > 0) || contContar(nodo, kind, k) < n) return false;
+  let queda = n;
+  const barrer = (nd) => {
+    for (let i = nd.items.length - 1; i >= 0 && queda > 0; i--) {
+      const e = nd.items[i];
+      if (esCont(e)) { barrer(e); continue; }
+      if (e.kind !== kind || e.k !== k) continue;
+      const usa = Math.min(e.n, queda);
+      e.n -= usa; queda -= usa;
+      if (e.n <= 0) nd.items.splice(i, 1);
+    }
+  };
+  barrer(nodo);
+  return queda === 0;
+}
+/* VACIAR a la bolsa de la granja, al volver. Lo que no entre se queda dentro del contenedor —
+   nunca se borra— y el jugador se entera: regla 9 aplicada a un traspaso que puede fallar. */
+function contDescargar(nodo, silencio) {
+  if (!esCont(nodo)) return { movidas: 0, quedan: 0 };
+  const pilas = contAplanar(nodo);
+  if (!pilas.length) return { movidas: 0, quedan: 0 };
   const quedan = [];
   let movidas = 0, detalle = [];
-  for (const e of l) {
+  for (const e of pilas) {
     let ok = false;
     if (e.kind === "gear") { if (typeof gainGear === "function") { gainGear(e.k); ok = true; } }
-    else if (e.k === "plata") { G.plata = (G.plata || 0) + e.n; ok = true; }
+    else if (e.kind === "cont") { contsSumar(e.k, e.n); ok = true; }
+    else if (e.k === "plata")  { G.plata  = (G.plata  || 0) + e.n; ok = true; }
+    else if (e.k === "golden") { G.golden = (G.golden || 0) + e.n; ok = true; }
     else ok = (typeof tryAddRes === "function") ? tryAddRes(e.k, e.n) : false;
-    if (ok) { movidas++; detalle.push(e.n + " " + (RES_LABEL[e.k] || e.k)); }
+    if (ok) { movidas++; detalle.push(e.n + " " + ((typeof RES_LABEL !== "undefined" && RES_LABEL[e.k]) || e.k)); }
     else quedan.push(e);
   }
-  G.morral = quedan;
-  if (!silencio && movidas) log("🎒 Vaciaste el morral de caza: " + detalle.join(" · ") + ".", "gold");
-  if (!silencio && quedan.length) toast("Bolsa llena — " + quedan.length + " cosa(s) siguen en el morral");
+  /* las bolsas anidadas sobreviven vacías: son objetos tuyos, no envoltorio descartable */
+  const bolsas = nodo.items.filter(esCont);
+  nodo.items = quedan;
+  for (const b of bolsas) { b.items = []; nodo.items.push(b); }
+  if (!silencio && movidas) log("🎒 Vaciaste el contenedor: " + detalle.join(" · ") + ".", "gold");
+  if (!silencio && quedan.length) toast("Bolsa llena — " + quedan.length + " cosa(s) siguen en el contenedor");
   return { movidas: movidas, quedan: quedan.length };
 }
+/* comprar en el pueblo. Barato a propósito: ver el comentario de los precios más arriba */
+function comprarCont(c) {
+  const d = contDef(c); if (!d) return false;
+  if ((G.plata || 0) < d.plata) { toast("Te falta plata"); return false; }
+  G.plata -= d.plata;
+  contsSumar(c, 1);
+  log("Compraste una " + d.label.toLowerCase() + " por " + d.plata + " plata.", "gold");
+  toast(d.emoji + " " + d.label + " a la bolsa");
+  if (typeof saveFarm === "function") saveFarm();
+  return true;
+}
+
+/* ─── EL MORRAL, AHORA ALIAS DEL CONTENEDOR ──────────────────────────────────────────────────
+   El morral del 8/9 a la mañana era el contenedor sin ser objeto. En vez de tocar de una los
+   nueve sitios que lo llaman (forest.js, ui.js, save.js, tests) y quedarme con el juego roto a
+   mitad de camino, estas cuatro funciones lo hacen pasar por encima del árbol nuevo. Se jubilan
+   en la tanda de la cuarentena, cuando la Zona ya lea el contenedor directamente. */
+var MORRAL_CUPO = 8;              // el cupo de la Bolsa, que es el contenedor mínimo
+function morral() { return contAplanar(contLlevado()); }
+function morralPilas() { return morral().length; }
+function morralLleno() { const n = contLlevado(); return !n || !contLibres(n); }
+function morralVacio() { return !morralPilas(); }
+function morralMeter(kind, k, n) { return contMeter(contLlevado(), kind, k, n); }
+function morralDescargar(silencio) { return contDescargar(contLlevado(), silencio); }
 
 /* ═══ PERSEGUIR O QUEDARSE PARADO ═══════════════════════ (8/9, dirección: « que tenga el botón
    de perseguir a mob o el de parado »). Es el Chase/Stand de Tibia, y tiene su ironía: el 31/8
@@ -5429,6 +5538,9 @@ function bolsaCuentas() {
      la bolsa las muestra sin número — un contador que siempre dice 1 es ruido. */
   if (typeof CANA_V4_ORDER !== "undefined")
     CANA_V4_ORDER.forEach(id => add("cana", id, ((G.canas || {})[id] ? 1 : 0)));
+  /* 8/9 (tarde): los contenedores son objetos, así que viven en la bolsa como cualquier otro.
+     Solo los que NO llevás puestos: el que está de viaje no está en la granja. */
+  if (typeof CONT_ORDER !== "undefined") CONT_ORDER.forEach(c => add("cont", c, contsTengo(c)));
   ITEM_RES_ORDER.forEach(r => add("res", r, Math.floor(G.res[r] || 0)));
   CROP_ORDER.forEach(s => add("seed", s, Math.floor(G.seeds[s] || 0)));
   pecesDeLaBolsa().forEach(f => add("fish", f, Math.floor((G.fish && G.fish[f]) || 0)));
@@ -8819,7 +8931,7 @@ function dailyState() {
 }
 const STREAK_RECOVER_COST = 0;   // legado: ya no hay racha que perder ni que recuperar
 // KIT DE BIENVENIDA (15/8): se entrega al abrir el BAÚL por primera vez
-var KIT_INICIAL = { axe: 35, pico: 20 };   // 8/9: sin cañas — la de la v2 se jubiló (ver TOOL_CRAFT)
+var KIT_INICIAL = { axe: 35, pico: 20, bag: 1 };   // 8/9: sin cañas (la v2 se jubiló) y CON bolsa de caza
 function kitReclamar() {
   if (G.kitReclamado) return false;
   G.kitReclamado = true;
@@ -8827,7 +8939,10 @@ function kitReclamar() {
   G.picks.owned.stone = true;
   G.picks.dur.stone = (G.picks.dur.stone || 0) + KIT_INICIAL.pico;
   if (!G.picks.eq) G.picks.eq = "stone";
-  log("Kit de bienvenida: " + KIT_INICIAL.axe + " hachas y " + KIT_INICIAL.pico + " picos.", "gold");
+  /* 8/9 (tarde): la bolsa de caza entra al kit. Es la válvula de Tibia — sin contenedor no se
+     cruza el portal, así que el juego no puede permitirse que la primera muerte te deje a pie. */
+  if (typeof contsSumar === "function") contsSumar("bag", KIT_INICIAL.bag || 1);
+  log("Kit de bienvenida: " + KIT_INICIAL.axe + " hachas, " + KIT_INICIAL.pico + " picos y una bolsa de caza.", "gold");
   toast("¡Tu kit de bienvenida! 🪓⛏🎣");
   if (window.celebrate) celebrate({ title: "¡KIT DE BIENVENIDA!", sub: "Hachas, picos y cañas para arrancar", big: false, reward: "Ya podés talar, picar y pescar" });
   if (typeof tutoEvent === "function") tutoEvent("kit");

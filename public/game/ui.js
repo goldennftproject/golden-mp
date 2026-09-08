@@ -1255,6 +1255,14 @@ function itemView(d) {
     return { sprite: spr, emoji: emo, glow: "glow-gold",
              label: (REGALO_LABEL[d.key] || d.key) + " ×" + nq + " · clic para elegir dónde va", dur: null, n: nq };
   }
+  /* 8/9 (tarde): los contenedores. Se ven en la bolsa como cualquier objeto y desde acá no se
+     hace nada con ellos — se cargan en la puerta de la Zona, que es donde la decisión importa. */
+  if (d.kind === "cont") { const cd = (typeof CONT_DEF !== "undefined") && CONT_DEF[d.key];
+    if (!cd) return null;
+    /* sin sprite todavía: van al final de la cola de arte (docs/ARTE-ITEMS.md). Pedir un
+       "cont_bag.png" que no existe sería una imagen rota por cada repintado de la bolsa. */
+    return { sprite: null, emoji: cd.emoji, glow: d.key === "backpack" ? "glow-gold" : "",
+             label: cd.label + " · " + cd.huecos + " huecos · se carga en el portal de la Zona Negra", dur: null }; }
   if (d.kind === "res") return { sprite: resSprite(d.key), emoji: RES_EMOJI[d.key], label: RES_LABEL[d.key], dur: null };
   if (d.kind === "seed") { const cd = CROP_DEF[d.key]; return { sprite: "seed_" + d.key, emoji: cd.emoji, label: cd.label + " (semilla)", dur: null }; }
   /* 25/8 — LA CAÑA EN LA BOLSA. Se craftea en la Herrería, se gasta al pescar… y no se veía en
@@ -3539,9 +3547,25 @@ function refreshSeedShop() {
       + fila("axe", "axe", "🪓", "Hacha", "1 uso · para cuando no te queda ni para talar")
       + fila("pick", "pick_stone", "⛏️", "Pico de Piedra", "1 picada · se suma a tu pila (como las hachas)")
       + fila("seed", "seed_papa", "🥔", "Semilla de papa", "no gasta el cupo diario · para replantar de cero");
+  })()
+  /* 8/9 (tarde, dirección) — LOS CONTENEDORES DE CAZA. Se venden acá y no en la Herrería a
+     propósito: son de reponer, no de fabricar, y quien acaba de perder la mochila tiene que poder
+     salir otra vez hoy, no cuando termine una cola. Los precios cuelgan del ancla (20 plata la
+     hora-parcela): la bolsa vale una hora, la mochila diez. */
+  + (function () {
+    if (typeof CONT_ORDER === "undefined") return "";
+    return '<div class="shophead">🎒 Contenedores de caza (es lo que se pierde al morir en la Zona Negra)</div>'
+      + CONT_ORDER.map(c => {
+        const d = CONT_DEF[c], tengo = contsTengo(c), aff = (G.plata || 0) >= d.plata;
+        return `<div class="mkt-row"><span class="mimg"><span class="em">${d.emoji}</span></span>` +
+          `<div class="minfo"><div class="mnm">${d.label} <span class="seedlv">${d.huecos} huecos</span></div>` +
+          `<div class="mds">${d.ds} · tenés ${tengo}</div></div>` +
+          `<button class="green sm" data-cont="${c}" ${aff ? "" : "disabled"}>Comprar · ${coinIc("plata")}${d.plata}</button></div>`;
+      }).join("");
   })();
   box.querySelectorAll("[data-buy]").forEach(b => b.onclick = () => { const inp = $("sq-" + b.dataset.buy); buySeed(b.dataset.buy, inp ? +inp.value : 1); });
   box.querySelectorAll("[data-emerg]").forEach(b => b.onclick = () => { comprarEmergencia(b.dataset.emerg); refreshSeedShop(); });
+  box.querySelectorAll("[data-cont]").forEach(b => b.onclick = () => { comprarCont(b.dataset.cont); refreshSeedShop(); refreshHud(); });
   if (typeof tutoHighlight === "function") tutoHighlight();
   /* (el botón de comprar lombrices vivía acá — 31/8: la tienda ya no las vende) */
 }

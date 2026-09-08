@@ -241,7 +241,8 @@ function snapshot() {
     daily: G.daily, plotsOwned: G.plotsOwned, plotsCompradas: G.plotsCompradas, plotsFicha: G.plotsFicha, expParcelasDadas: G.expParcelasDadas, seedBuys: G.seedBuys, built: G.built,
     hp: G.hp, hpMax: G.hpMax, combatXp: G.combatXp, stam: G.stam, stamAcc: G.stamAcc, stamFullAt: G.stamFullAt, stamRec: G.stamRec, pass: G.pass, tuto: G.tuto, firstSeeds: G.firstSeeds,   // 24/8: stamFullAt — la recarga de 4 h es de reloj real
     recientes: G.recientes,   /* 8/9: los tres últimos usados sobreviven al F5 */
-    morral: G.morral,         /* 8/9: el morral de caza — se pierde al morir, no al recargar */
+    conts: G.conts,           /* 8/9 t: los contenedores que tenés guardados en la granja */
+    cont: G.cont,             /* 8/9 t: el árbol que llevás puesto — se pierde al morir, no al recargar */
     tumba: G.tumba,           /* 8/9: tu cuerpo en la zona — sus 10 min son de reloj real */
     modoPelea: G.modoPelea,   /* 8/9: perseguir o parado — es preferencia, no estado del viaje */
     stats: G.stats, statsBase: G.statsBase, chestCap: G.chestCap, edif2: G.edif2, cosmeticos: G.cosmeticos, animals: G.animals, armor: G.armor, armorEq: G.armorEq, ofrendaPts: G.ofrendaPts, ofrendaLog: G.ofrendaLog, nodoUsos: G.nodoUsos, cosEq: G.cosEq, incursion: G.incursion, incDia: G.incDia, zonaCdHasta: G.zonaCdHasta, zonaViaje: G.zonaViaje, decos: G.decos, decoBolsa: G.decoBolsa, godHand: G.godHand, zonasVistas: G.zonasVistas, visto: nowMs(), dummyTrain: G.dummyTrain, swordOwned: G.swordOwned, bowOwned: G.bowOwned, swordWoodOwned: G.swordWoodOwned, gear: G.gear,
@@ -388,9 +389,27 @@ function hydrate(d) {
     }
   }
   G.recientes = Array.isArray(d.recientes) ? d.recientes.slice(0, 3) : [];   // 8/9: la tira lateral
-  /* 8/9 — el morral viaja entero. Un F5 no es morir: la regla de la casa dice que solo se
-     resetea borrando caché, y el morral es de las cosas que más dolería perder por un refresco. */
-  G.morral = Array.isArray(d.morral) ? d.morral.filter(e => e && e.k && e.n > 0).slice(0, 20) : [];
+  /* 8/9 (tarde) — LOS CONTENEDORES viajan enteros. Un F5 no es morir: la regla de la casa dice
+     que solo se resetea borrando caché, y el contenedor cargado es de las cosas que más dolería
+     perder por un refresco. El saneado es recursivo porque el árbol lo es: una bolsa dentro de
+     la mochila es un hueco que guarda más huecos, y un guardado corrupto no puede dejar dentro
+     ni una bolsa que no exista en el catálogo ni una muñeca rusa de profundidad infinita. */
+  G.conts = {};
+  if (d.conts && typeof d.conts === "object")
+    for (const c in d.conts) if (typeof CONT_DEF !== "undefined" && CONT_DEF[c]) G.conts[c] = Math.max(0, Math.floor(d.conts[c]) || 0);
+  const sanearCont = (nd, prof) => {
+    if (!nd || typeof nd !== "object" || typeof CONT_DEF === "undefined" || !CONT_DEF[nd.c]) return null;
+    const items = Array.isArray(nd.items) ? nd.items : [];
+    const out = { c: nd.c, items: [] };
+    const tope = CONT_DEF[nd.c].huecos;
+    for (const e of items) {
+      if (out.items.length >= tope) break;
+      if (e && e.c) { const hijo = (prof < 2) ? sanearCont(e, prof + 1) : null; if (hijo) out.items.push(hijo); }
+      else if (e && e.k && e.n > 0) out.items.push({ kind: e.kind || "res", k: e.k, n: e.n });
+    }
+    return out;
+  };
+  G.cont = sanearCont(d.cont, 1);
   /* 8/9 — la tumba viaja con su hora de vencimiento: los diez minutos corren con el juego
      cerrado, así que volver al día siguiente encuentra el cuerpo deshecho, como debe ser. */
   G.modoPelea = (d.modoPelea === "parado") ? "parado" : "perseguir";   // 8/9
@@ -538,6 +557,26 @@ function hydrate(d) {
    Con las migraciones en su propia función, llamada al final, ese error no se puede repetir: para
    cometerlo habría que mover la llamada, no una línea suelta en medio de doscientas.           */
 function migrarGuardado(d) {
+  /* 8/9 (tarde) — LA MUDANZA DEL MORRAL. El morral de la mañana era una lista plana que aparecía
+     sola al cruzar el portal; ahora el contenedor es un objeto que se compra y se lleva. A quien
+     ya jugó con la versión de la mañana le devolvemos las dos cosas por separado: lo que tenía
+     dentro va a la bolsa de la granja (es botín ya ganado, y perdérselo por una actualización
+     sería exactamente lo que la regla de la casa prohíbe), y una bolsa vacía de regalo, para que
+     el portal no se le cierre de golpe por no tener contenedor. */
+  if (Array.isArray(d.morral) && !d.conts) {
+    for (const e of d.morral) {
+      if (!e || !e.k || !(e.n > 0)) continue;
+      if (e.kind === "gear") { if (typeof gainGear === "function") gainGear(e.k); }
+      else if (e.k === "plata") G.plata = (G.plata || 0) + e.n;
+      else if (typeof tryAddRes === "function") tryAddRes(e.k, e.n);
+    }
+    if (typeof contsSumar === "function") contsSumar("bag", 1);
+    G._avisoContenedor = d.morral.length;   // ui.js lo cuenta una vez y lo borra
+  }
+  /* y a quien nunca vio el morral pero ya tiene el kit reclamado, también: el kit ya no se le va
+     a volver a dar, y sin contenedor la Zona Negra queda cerrada para siempre. */
+  if (!d.conts && d.kitReclamado && typeof contsSumar === "function" && !contsTengo("bag")) contsSumar("bag", 1);
+
   // la azada se retiró del juego (pedido del diseñador 31/7): se limpia de hotbar y bolsa guardadas
   G.hotbar = (G.hotbar || []).map(h => (h && h.kind === "tool" && h.key === "hoe") ? null : h);
   if (Array.isArray(G.slots)) G.slots = G.slots.map(sl => (sl && sl.kind === "tool" && sl.key === "hoe") ? null : sl);

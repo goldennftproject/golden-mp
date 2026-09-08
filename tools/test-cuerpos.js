@@ -100,10 +100,15 @@ console.log("\nCON ÍTEMS: LA VENTANITA, Y RECOGER TODO");
   ok("y la lista de lo que tiene dentro",
     /2 × Carne/.test(items.innerHTML || "") && /8 × Plata/.test(items.innerHTML || ""));
   ok("los brillos ya murieron: el cuerpo quedó revisado", !c.fx || c.fx.every(b => b.muerto));
-  /* recoger todo */
+  /* recoger todo. 8/9: el botín NO va a la bolsa de la granja — va al contenedor que llevás
+     puesto, que es lo que se pierde al morir. Este archivo se quedó sin actualizar en el lote de
+     la mañana (llevaba tres fallos heredados) y por eso seguía midiendo G.res. */
+  G.cont = { c: "backpack", items: [] };
   esc.recogerCuerpo(c);
-  ok("recoger mete la carne en la bolsa", (G.res.carne || 0) === 2, G.res.carne + "");
-  ok("y la plata en la plata", G.plata === 8, G.plata + "");
+  ok("recoger mete la carne en el CONTENEDOR, no en la bolsa de la granja",
+    ctx.contContar(G.cont, "res", "carne") === 2 && !(G.res.carne > 0), JSON.stringify(G.cont.items));
+  ok("y la plata también — si fuera a la billetera sería imposible de perder",
+    ctx.contContar(G.cont, "res", "plata") === 8 && G.plata === 0, G.plata + "");
   ok("el cuerpo queda sin nada y la ventanita se cierra", c.drops.length === 0 && !panel._clases.has("show"));
   ok("y el cuerpo vacío ya tiene programada su despedida", (esc._despidos || []).length > 0,
     "se va solo a los " + (esc._despidos[0].ms / 1000) + " s");
@@ -123,29 +128,27 @@ console.log("\nVACÍO DESDE EL PRINCIPIO: EL MENSAJE EN LA INTERFAZ");
   ok("y no se abre ninguna ventanita para enseñar nada", !panel._clases.has("show"));
 }
 
-console.log("\nLA BOLSA LLENA: LO QUE NO CABE SE QUEDA EN EL CUERPO");
+console.log("\nEL CONTENEDOR LLENO: LO QUE NO CABE SE QUEDA EN EL CUERPO");
 {
   limpio(); esc = escena();
   esc.crearCuerpo(mob(140, 100), [{ k: "carne", n: 3, kind: "res" }, { k: "plata", n: 5, kind: "res" }]);
   const c = g("GF").forestCuerpos[0];
   esc.hero.x = c.x; esc.hero.y = c.y;
-  /* LA BOLSA SE LLENA DE VERDAD: 20 pilas distintas (la base es 20 casillas y no baja de ahí —
-     mi primera versión ponía invRows=0 creyendo que eso era « sin bolsa », y la carne entraba
-     tan campante porque la base son 20 aunque no compres ninguna fila). La carne no está entre
-     ellas, así que necesitaría casilla nueva y no la hay. */
-  G.invRows = 0; G.slots = []; G.res = {};
-  ["papa","ciruela","cereza","remolacha","zanahoria","cebolla","calabacin","repollo","calabaza","brocoli",
-   "girasol","trigo","maiz","madera","piedra","bronce","hierro","oro","tablon","fibra"]
-    .forEach(k => G.res[k] = 5);
+  /* 8/9: quien decide si el botín entra ya no es la bolsa de la granja —que allá dentro no
+     existe— sino el contenedor que llevás. Se llena de verdad: ocho pilas distintas en una
+     bolsa de ocho huecos, y ni la carne ni la plata están entre ellas. */
+  G.cont = { c: "bag", items: [] };
+  for (let i = 0; i < 8; i++) ctx.contMeter(G.cont, "res", "relleno" + i, 1);
   esc.revisarCuerpo(c);
   avisos.length = 0;
   esc.recogerCuerpo(c);
-  ok("la plata entra igual (no ocupa lugar)", G.plata === 5);
-  ok("la carne que no cupo SE QUEDA en el cuerpo — no se pierde",
-    c.drops.length === 1 && c.drops[0].k === "carne", JSON.stringify(c.drops));
-  ok("y se avisa por qué", avisos.some(a => /Bolsa llena/i.test(a)), avisos.join(" · "));
-  console.log("       → perder botín por bolsa llena sería cobrarle al jugador el orden de su");
-  console.log("         inventario. El cuerpo hace de depósito hasta que haga lugar.");
+  ok("con el contenedor lleno no entra NADA, ni la plata",
+    ctx.contContar(G.cont, "res", "plata") === 0 && G.plata === 0);
+  ok("y las dos cosas SE QUEDAN en el cuerpo — no se pierde nada",
+    c.drops.length === 2, JSON.stringify(c.drops));
+  ok("y se avisa por qué", avisos.some(a => /lleno/i.test(a)), avisos.join(" · "));
+  console.log("       → perder botín por contenedor lleno sería cobrarle al jugador el orden de");
+  console.log("         su mochila. El cuerpo hace de depósito hasta que haga lugar.");
 }
 
 console.log("\nY LOS CUERPOS SOBREVIVEN AL IR Y VOLVER DE ESCENA");
