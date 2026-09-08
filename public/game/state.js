@@ -3588,14 +3588,19 @@ function contContar(nodo, kind, k) {
    que las bolsas anidadas se sientan como un desborde y no como un agujero negro donde las cosas
    desaparecen. Devuelve false si no entró — y entonces el botín SE QUEDA donde estaba: lo que no
    cabe no se evapora, que es la misma regla que ya tenía la bolsa llena. */
-function contMeter(nodo, kind, k, n, prof) {
+function contMeter(nodo, kind, k, n, extra, prof) {
   if (!esCont(nodo) || !(n > 0)) return false;
   prof = prof || 1;
-  const hay = contAplanar(nodo).find(e => e.kind === kind && e.k === k);
-  if (hay) { hay.n += n; return true; }
-  if (!contLleno(nodo)) { nodo.items.push({ kind: kind, k: k, n: n }); return true; }
+  /* las armas NO apilan aunque se llamen igual: cada una lleva su durabilidad, su +N y sus runas
+     (el campo `w`). Apilar dos espadas de bronce sería fundir dos objetos distintos en uno y
+     perder las mejoras de una — el mismo error que mkPoner ya evita desde el Mercado. */
+  if (kind !== "arm") {
+    const hay = contAplanar(nodo).find(e => e.kind === kind && e.k === k);
+    if (hay) { hay.n += n; return true; }
+  }
+  if (!contLleno(nodo)) { nodo.items.push(Object.assign({ kind: kind, k: k, n: n }, extra || null)); return true; }
   if (prof < CONT_PROF_MAX)
-    for (const e of nodo.items) if (esCont(e) && contMeter(e, kind, k, n, prof + 1)) return true;
+    for (const e of nodo.items) if (esCont(e) && contMeter(e, kind, k, n, extra, prof + 1)) return true;
   return false;
 }
 /* meter una BOLSA vacía o llena dentro de la raíz. Solo en la raíz: es el corte de profundidad */
@@ -3636,6 +3641,15 @@ function contDescargar(nodo, silencio) {
     let ok = false;
     if (e.kind === "gear") { if (typeof gainGear === "function") { gainGear(e.k); ok = true; } }
     else if (e.kind === "cont") { contsSumar(e.k, e.n); ok = true; }
+    /* 8/9 (tanda 4): lo que se recuperó del propio cuerpo. El arma vuelve CON su durabilidad,
+       su +N y sus runas —el campo `w`—, que es lo que la hacía valiosa; devolverla en cero sería
+       devolver otra arma. Y si ya tenés una igual, no se pisa: se queda en el contenedor y el
+       jugador se entera (misma regla que mkPoner desde el Mercado). */
+    else if (e.kind === "arm") {
+      G.weapons = G.weapons || {};
+      if (!G.weapons[e.k]) { G.weapons[e.k] = e.w || { dur: (typeof ARM_DEF !== "undefined" && ARM_DEF[e.k] ? ARM_DEF[e.k].dur : 40) }; ok = true; }
+    }
+    else if (e.kind === "armorset") { G.armor = G.armor || {}; if (!G.armorEq) G.armorEq = e.k; ok = true; }
     else if (e.k === "plata")  { G.plata  = (G.plata  || 0) + e.n; ok = true; }
     else if (e.k === "golden") { G.golden = (G.golden || 0) + e.n; ok = true; }
     else ok = (typeof tryAddRes === "function") ? tryAddRes(e.k, e.n) : false;
@@ -3850,23 +3864,87 @@ function tumbaCrear(zona, x, y, items) {
   return G.tumba;
 }
 function tumbaLimpiar() { G.tumba = null; }
-/* la caída: el morral entero pasa a la tumba y el jugador queda sin él. Devuelve cuántas pilas
-   cayeron, que es lo que el aviso de la muerte necesita para no ser genérico. */
-function tumbaCaer(zona, x, y) {
-  const l = morral();
-  if (!l.length) return 0;
-  const n = l.length;
-  tumbaCrear(zona, x, y, l);
-  G.morral = [];
-  return n;
+/* ═══ LA CAÍDA ═══════════════════════════════════════════ (8/9 tarde, dirección: « al morir se
+   cae la bag o backpack y no queda nada, solo el equipamiento — si es que no se cae. Y vamos a
+   poner un porcentaje del 5% donde se puede caer parte de lo que tenemos montado en armadura, y
+   cuando eso se caiga estará fuera de la bag »).
+
+   Dos cosas caen, y caen distinto, que es justo lo que hace legible el castigo:
+     · EL CONTENEDOR ENTERO, con todo lo que llevabas. Sin porcentajes ni suerte: cargaste, te
+       mataron, se fue. Eso es lo que el jugador decidió arriesgar en la puerta.
+     · CADA PIEZA PUESTA tira su propio 5%, independiente. Van SUELTAS en el cuerpo y no dentro
+       del contenedor — dirección lo pidió así y además es lo correcto: si fueran adentro, el
+       contenedor lleno podría hacerlas desaparecer, y el equipo perdido tiene que poder
+       recuperarse siempre.
+
+   El 5% POR PIEZA y no un 5% global: con seis ranuras, la probabilidad de perder algo es del 26%
+   —una de cada cuatro muertes duele de verdad— pero perderlo TODO es una entre catorce millones.
+   Un 5% global sería una moneda al aire que se lleva el equipo entero, y eso no es un castigo:
+   es una lotería, y las loterías no enseñan a jugar mejor. */
+var EQUIPO_CAE_PCT = 5;
+/* qué piezas están puestas, en el orden en que se leen en el muelle. El set de la Curtiduría
+   cuenta como UNA pieza: se equipa entero, así que partirlo al caer inventaría un estado que el
+   resto del juego no sabe representar. */
+function equipoPuesto() {
+  const out = [];
+  for (const slot of ["casco", "armadura", "botas", "escudo"]) {
+    const k = G.gear && G.gear[slot];
+    if (k && typeof GEAR_DEF !== "undefined" && GEAR_DEF[k]) out.push({ slot: slot, kind: "gear", k: k });
+  }
+  if (G.gear && G.gear.arma && G.weapons && G.weapons[G.gear.arma]) out.push({ slot: "arma", kind: "arm", k: G.gear.arma });
+  if (G.armorEq && typeof ARMOR_SETS !== "undefined" && ARMOR_SETS[G.armorEq]) out.push({ slot: "set", kind: "armorset", k: G.armorEq });
+  return out;
+}
+/* tira el 5% de cada pieza y devuelve las que se cayeron, ya desequipadas */
+function equipoCaido(azar) {
+  const rnd = azar || Math.random;
+  const caen = [];
+  for (const p of equipoPuesto()) {
+    if (rnd() * 100 >= EQUIPO_CAE_PCT) continue;
+    if (p.kind === "gear") { G.gear[p.slot] = null; caen.push({ kind: "gear", k: p.k, n: 1 }); }
+    else if (p.kind === "arm") {
+      /* el arma viaja con su durabilidad, su +N y sus runas: perder el objeto es una cosa y
+         perder las mejoras que le metiste otra muy distinta. */
+      const w = G.weapons[p.k];
+      G.gear.arma = null; delete G.weapons[p.k];
+      caen.push({ kind: "arm", k: p.k, n: 1, w: w });
+    } else { G.armorEq = null; caen.push({ kind: "armorset", k: p.k, n: 1 }); }
+  }
+  return caen;
+}
+/* la caída completa. Devuelve el desglose que el aviso de la muerte necesita para no ser
+   genérico: un « perdiste cosas » no le enseña nada a nadie. */
+function tumbaCaer(zona, x, y, azar) {
+  const raiz = contLlevado();
+  const dentro = raiz ? contAplanar(raiz).map(e => ({ kind: e.kind || "res", k: e.k, n: e.n })) : [];
+  const bolsas = raiz ? raiz.items.filter(esCont).map(b => ({ kind: "cont", k: b.c, n: 1 })) : [];
+  const piezas = equipoCaido(azar);
+  const items = dentro.concat(bolsas);
+  /* el contenedor raíz también cae: es un objeto, y era tuyo */
+  if (raiz) items.push({ kind: "cont", k: raiz.c, n: 1 });
+  const todo = items.concat(piezas);
+  G.cont = null;
+  if (!todo.length) return { pilas: 0, piezas: 0, cont: null };
+  tumbaCrear(zona, x, y, todo);
+  return { pilas: dentro.length, piezas: piezas.length, cont: raiz ? raiz.c : null,
+           piezasLabel: piezas.map(p => p.k) };
 }
 /* recuperar: vuelve al MORRAL, no a la bolsa — seguís en la zona y el morral es la mochila del
    campo. Lo que no entre queda en la tumba, que es la misma regla del cuerpo de un bicho. */
 function tumbaRecoger() {
   const t = tumbaViva(); if (!t) return 0;
+  const raiz = contLlevado();
+  if (!raiz) return 0;                 // sin contenedor nuevo no hay dónde meterlo
   const quedan = [];
   let n = 0;
-  for (const e of t.items) { if (morralMeter(e.kind || "res", e.k, e.n)) n++; else quedan.push(e); }
+  for (const e of t.items) {
+    /* el contenedor viejo y las piezas de equipo vuelven como PILAS, ocupando un hueco cada una.
+       No se re-equipan acá: estás en medio de la Zona con otra mochila puesta, y ponerte solo el
+       casco viejo en mitad de una pelea es una decisión del jugador, no del código. Se resuelven
+       al volver, en contDescargar. */
+    if (contMeter(raiz, e.kind || "res", e.k, e.n, e.w ? { w: e.w } : null)) n++;
+    else quedan.push(e);
+  }
   t.items = quedan;
   if (!quedan.length) tumbaLimpiar();
   return n;

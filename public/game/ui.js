@@ -309,15 +309,22 @@ function refreshMorral() {
   const caja = $("morral"); if (!caja) return;
   const enZona = !!(window.GF && GF.scene === "forest");
   if (!enZona) { caja.style.display = "none"; caja._firma = ""; return; }
-  const l = (typeof morral === "function") ? morral() : [];
-  const firma = l.map(e => e.kind + ":" + e.k + "=" + e.n).join("|") + "/" + l.length;
+  /* 8/9 (tarde): el panel dejó de ser « el morral » y es EL CONTENEDOR que llevás puesto — el
+     objeto de verdad, con su nombre y su cupo. Sigue siendo de solo lectura y sigue viviendo en
+     el costado: es el recordatorio de cuánto te queda por llenar antes de tener que volver, que
+     es la decisión que esta mecánica propone cada dos minutos. */
+  const raiz = (typeof contLlevado === "function") ? contLlevado() : null;
+  const l = raiz ? contAplanar(raiz) : [];
+  const cupo = raiz ? CONT_DEF[raiz.c].huecos : 0;
+  const firma = (raiz ? raiz.c : "-") + l.map(e => e.kind + ":" + e.k + "=" + e.n).join("|") + "/" + l.length;
   if (caja._firma === firma) return;
   caja._firma = firma;
   caja.style.display = "";
-  const lleno = l.length >= MORRAL_CUPO;
-  let h = '<div class="mor-tit' + (lleno ? " lleno" : "") + '">🎒 Morral ' + l.length + '/' + MORRAL_CUPO +
-    (lleno ? ' · LLENO' : '') + '</div><div class="mor-huecos">';
-  for (let i = 0; i < MORRAL_CUPO; i++) {
+  const lleno = raiz ? !contLibres(raiz) : true;
+  let h = '<div class="mor-tit' + (lleno ? " lleno" : "") + '">' +
+    (raiz ? CONT_DEF[raiz.c].emoji + ' ' + CONT_DEF[raiz.c].label + ' ' + l.length + '/' + cupo + (lleno ? ' · LLENO' : '')
+          : '👝 Sin contenedor') + '</div><div class="mor-huecos">';
+  for (let i = 0; i < Math.max(cupo, 8); i++) {
     const e = l[i];
     if (!e) { h += '<div class="mor-h"></div>'; continue; }
     const nom = e.kind === "gear" ? ((typeof GEAR_DEF !== "undefined" && GEAR_DEF[e.k] && GEAR_DEF[e.k].label) || e.k)
@@ -328,7 +335,7 @@ function refreshMorral() {
       (spr ? '<img src="' + GF.spr(spr) + '" onerror="this.remove()">' : '<span class="em">📦</span>') +
       '<span class="mn">' + fmt(e.n) + '</span></div>';
   }
-  h += '</div><div class="mor-pie">Se vacía solo al volver a la granja</div>';
+  h += '</div><div class="mor-pie">' + (raiz ? 'Se vacía solo al volver — y se pierde entero si te matan' : 'Volvé a la granja') + '</div>';
   caja.innerHTML = h;
 }
 /* ═══ LA PUERTA DE LA ZONA NEGRA ═══════════════════════════ (8/9, dirección: « esa bag es la

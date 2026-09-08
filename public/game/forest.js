@@ -359,7 +359,15 @@ class ForestScene extends Phaser.Scene {
     if (!t) return;
     if (t.zona && t.zona !== this.zonaKey) return;          // moriste en otra zona: allá te espera
     if (!tumbaViva()) {
-      if (t.items && t.items.length) { log("☠️ Tu cuerpo se deshizo: perdiste lo que llevabas en el morral.", "bad"); toast("Perdiste el morral"); }
+      if (t.items && t.items.length) {
+        /* 8/9: se dice QUÉ se deshizo con el cuerpo. Enterarse de que perdiste la mochila es una
+           cosa; enterarse de que perdiste además el casco es otra, y el jugador tiene que poder
+           reconstruir por qué su equipo está incompleto sin adivinarlo. */
+        const eq = t.items.filter(e => e.kind === "gear" || e.kind === "arm" || e.kind === "armorset").length;
+        log("☠️ Tu cuerpo se deshizo: perdiste " + t.items.length + " cosa(s)" +
+            (eq ? ", " + eq + " de ellas equipo que llevabas puesto" : "") + ". Los " + TUMBA_MIN + " minutos se acabaron.", "bad");
+        toast("Tu cuerpo se deshizo — perdiste lo que tenía");
+      }
       tumbaLimpiar();
       return;
     }
@@ -468,9 +476,12 @@ class ForestScene extends Phaser.Scene {
        La plata también entra al morral: si fuera directa a la billetera sería imposible de
        perder, y perder el botín es justamente la apuesta que la mecánica propone. */
     const quedan = [];
+    const raiz = (typeof contLlevado === "function") ? contLlevado() : null;
     for (const d of c.drops) {
-      const ok = morralMeter(d.kind || "res", d.k, d.n);
-      if (!ok) quedan.push(d);   // morral lleno: lo que no cupo SE QUEDA en el cuerpo, no se pierde
+      /* 8/9 (tanda 4): el `w` viaja. Si el cuerpo es el TUYO puede tener un arma con su
+         durabilidad, su +N y sus runas; recogerla en cero sería recoger otra arma. */
+      const ok = raiz && contMeter(raiz, d.kind || "res", d.k, d.n, d.w ? { w: d.w } : null);
+      if (!ok) quedan.push(d);   // contenedor lleno: lo que no cupo SE QUEDA en el cuerpo, no se pierde
     }
     c.drops = quedan;
     /* 8/9 — si es TU cuerpo, el estado manda: lo que quedó vuelve a G.tumba y, si se vació, la
@@ -485,7 +496,7 @@ class ForestScene extends Phaser.Scene {
     refreshHud(); if (typeof syncSlots === "function") syncSlots(); if (isOpen("ov-inv")) refreshInv();
     if (typeof refreshMorral === "function") refreshMorral();
     if (quedan.length) {
-      toast("Morral lleno (" + MORRAL_CUPO + ") — el resto queda en el cuerpo");
+      toast(raiz ? "Contenedor lleno — el resto queda en el cuerpo" : "No llevás contenedor — el botín queda en el cuerpo");
       this.abrirCuerpo(c); return;
     }
     this.cerrarCuerpo();
@@ -1055,15 +1066,25 @@ class ForestScene extends Phaser.Scene {
          descarga a la bolsa (8/9) — al revés, morirse sería la forma más cómoda de cobrar el
          botín, que es exactamente lo contrario de lo que esta mecánica quiere. */
       const teniaTumba = (typeof tumbaViva === "function") && !!tumbaViva();
-      const cayeron = (typeof tumbaCaer === "function")
-        ? tumbaCaer(this.zonaKey, this.hero ? this.hero.x : 0, this.hero ? this.hero.y : 0) : 0;
-      if (cayeron) {
-        log("☠️ Te derrotaron. Se te cayó el morral con " + cayeron + " cosa(s): tu cuerpo queda " +
-            TUMBA_MIN + " minutos en la zona" + (teniaTumba ? " — y pisó al cuerpo anterior, que se perdió" : "") +
-            ". Volvé a buscarlo.", "bad");
-        toast("Se te cayó el morral — tu cuerpo dura " + TUMBA_MIN + " min");
+      const c = (typeof tumbaCaer === "function")
+        ? tumbaCaer(this.zonaKey, this.hero ? this.hero.x : 0, this.hero ? this.hero.y : 0)
+        : { pilas: 0, piezas: 0, cont: null };
+      /* 8/9 (tanda 4) — EL AVISO DICE EXACTAMENTE QUÉ SE PERDIÓ, y en dos frases separadas,
+         porque son dos castigos distintos: el contenedor cae SIEMPRE (fue tu decisión al
+         cargarlo) y el equipo cae por azar (5% por pieza). Mezclarlos en un « perdiste cosas »
+         dejaría al jugador sin saber cuál de las dos cosas puede controlar. */
+      if (c.pilas || c.piezas || c.cont) {
+        const partes = [];
+        if (c.cont) partes.push("tu " + (CONT_DEF[c.cont] ? CONT_DEF[c.cont].label.toLowerCase() : "contenedor") +
+          (c.pilas ? " con " + c.pilas + " cosa(s) dentro" : " vacía"));
+        if (c.piezas) partes.push(c.piezas + " pieza(s) de equipo que llevabas puesta(s)");
+        log("☠️ Te derrotaron. Se te cayó " + partes.join(" y ") + ". Tu cuerpo queda " + TUMBA_MIN +
+            " minutos donde caíste" + (teniaTumba ? " — y pisó al cuerpo anterior, que se perdió" : "") +
+            ": volvé con otro contenedor a buscarlo.", "bad");
+        toast(c.piezas ? "Perdiste el contenedor y " + c.piezas + " pieza(s) de equipo — " + TUMBA_MIN + " min para recuperarlo"
+                       : "Se te cayó el contenedor — tu cuerpo dura " + TUMBA_MIN + " min");
       } else {
-        log("Te derrotaron en la Zona Negra. Despertás en la granja — no llevabas nada en el morral.", "bad");
+        log("Te derrotaron en la Zona Negra. Despertás en la granja — no llevabas nada encima.", "bad");
         toast("Te llevaron de vuelta a la granja");
       }
       G.hp = Math.ceil(G.hpMax / 2);
