@@ -3813,18 +3813,13 @@ function llevoMeter(kind, key, n) {
   return viajePoner(kind, key, n);
 }
 
-/* ─── EL MORRAL, AHORA ALIAS DEL CONTENEDOR ──────────────────────────────────────────────────
-   El morral del 8/9 a la mañana era el contenedor sin ser objeto. En vez de tocar de una los
-   nueve sitios que lo llaman (forest.js, ui.js, save.js, tests) y quedarme con el juego roto a
-   mitad de camino, estas cuatro funciones lo hacen pasar por encima del árbol nuevo. Se jubilan
-   en la tanda de la cuarentena, cuando la Zona ya lea el contenedor directamente. */
-var MORRAL_CUPO = 8;              // el cupo de la Bolsa, que es el contenedor mínimo
-function morral() { return contAplanar(contLlevado()); }
-function morralPilas() { return morral().length; }
-function morralLleno() { const n = contLlevado(); return !n || !contLibres(n); }
-function morralVacio() { return !morralPilas(); }
-function morralMeter(kind, k, n) { return contMeter(contLlevado(), kind, k, n); }
-function morralDescargar(silencio) { return contDescargar(contLlevado(), silencio); }
+/* (Acá vivieron los alias del morral entre las tandas 1 y 4. El morral del 8/9 a la mañana era
+   el contenedor sin ser objeto; para no dejar el juego roto a mitad de mudanza, seis funciones
+   lo hicieron pasar por encima del árbol nuevo mientras forest.js, ui.js y los tests migraban.
+   Ya no los llama nadie —comprobado con grep antes de borrarlos— así que se van: un alias que
+   sobrevive a su mudanza es una segunda forma de hacer lo mismo, y de esas ya sabemos cómo
+   terminan. Lo único que queda del morral es el nombre de un par de clases CSS del panel del
+   costado, que no vale la pena tocar.) */
 
 /* ═══ PERSEGUIR O QUEDARSE PARADO ═══════════════════════ (8/9, dirección: « que tenga el botón
    de perseguir a mob o el de parado »). Es el Chase/Stand de Tibia, y tiene su ironía: el 31/8
@@ -3960,9 +3955,10 @@ function zonaSalir(derrotado) {
      o quedaría un objeto tuyo guardado en un sitio que la bolsa no muestra. Si te derrotaron ya
      no hay nada que devolver — tumbaCaer se lo llevó antes de llegar acá, y ese orden es la
      mecánica entera. */
-  const morralIba = morralPilas();
-  if (morralIba) morralDescargar(true);
-  if (contLlevado()) viajeSoltar();
+  const raiz = contLlevado();
+  const traia = raiz ? contPilas(raiz) : 0;
+  if (traia) contDescargar(raiz, true);
+  if (raiz) viajeSoltar();
   if (!v) return null;
   const gan = {};
   for (const k in G.res) { const d = (G.res[k] || 0) - (v.res[k] || 0); if (d > 0) gan[k] = d; }
@@ -3973,7 +3969,7 @@ function zonaSalir(derrotado) {
     golden: Math.max(0, (G.golden || 0) - v.golden),
     xp: Math.max(0, (G.combatXp || 0) - v.combatXp),
     matados: Math.max(0, zonaMatados() - v.matados),
-    morral: morralIba,                 // cuántas pilas traía el morral (para el resumen)
+    morral: traia,                     // cuántas pilas traía el contenedor (para el resumen)
     derrotado: !!derrotado,
   };
 }

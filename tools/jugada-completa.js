@@ -510,6 +510,76 @@ invariantes("kit");
   invariantes("buzón");
 }
 
+/* 8b — LA ZONA NEGRA, DE PUNTA A PUNTA                        (8/9 tarde, tandas 1-4)
+   ═══════════════════════════════════════════════════════════════════════════════════════════
+   Este simulador nunca había cruzado el portal: jugaba la granja entera y dejaba la mitad
+   arriesgada del juego sin pisar. Con los contenedores eso pasó de ser una laguna a ser un
+   agujero — la puerta, la cuarentena y la muerte son exactamente el código nuevo, y el que se
+   simula es el único que se prueba de verdad end to end.
+   Se recorre el viaje completo: comprar el contenedor, cargarlo, entrar, gastar allá dentro,
+   morir, y volver a buscar el cuerpo. */
+{
+  const GFo = ctx.GF;
+  G.plata = Math.max(G.plata, 400);
+  const plata0 = Math.floor(G.plata);
+  if (!ctx.comprarCont("bag")) falla("no se pudo comprar la bolsa de caza en la Tienda");
+  else anota("Compró una bolsa de caza (" + (plata0 - Math.floor(G.plata)) + " plata)");
+
+  /* cargar la bolsa en la puerta */
+  G.res.flecha = Math.max(G.res.flecha || 0, 12);
+  G.dishes = G.dishes || {}; G.dishes.papa_asada = Math.max(G.dishes.papa_asada || 0, 3);
+  const flechasGranja = Math.floor(G.res.flecha), platosGranja = G.dishes.papa_asada;
+  if (!ctx.viajeElegir("bag")) falla("viajeElegir('bag') no pudo poner la bolsa");
+  const llevaF = ctx.viajeCargar("res", "flecha", 6);
+  const llevaP = ctx.viajeCargar("dish", "papa_asada", 2);
+  if (llevaF !== 6 || llevaP !== 2) falla("la puerta no cargó lo pedido: " + llevaF + " flechas, " + llevaP + " platos");
+  if (Math.floor(G.res.flecha) !== flechasGranja - 6) falla("cargar no descontó de la granja: quedan " + G.res.flecha);
+  if (G.dishes.papa_asada !== platosGranja - 2) falla("cargar platos no descontó de la granja");
+  anota("Cargó la bolsa: 6 flechas y 2 platos · quedan " + Math.floor(G.res.flecha) + " flechas en la granja");
+
+  /* adentro */
+  GFo.scene = "forest";
+  if (ctx.llevoTengo("res", "flecha") !== 6) falla("dentro de la Zona no ve sus flechas cargadas");
+  if (ctx.llevoTengo("dish", "papa_asada") !== 2) falla("dentro de la Zona no ve sus platos cargados");
+  /* la cuarentena: lo de la granja no existe acá */
+  const antesGranja = Math.floor(G.res.flecha);
+  ctx.llevoGastar("res", "flecha", 6);
+  if (Math.floor(G.res.flecha) !== antesGranja) falla("gastar en la Zona tocó la bolsa de la granja");
+  if (ctx.llevoTengo("res", "flecha") !== 0) falla("gastar no vació el contenedor");
+  /* botín */
+  ctx.llevoMeter("res", "colmillo", 3);
+  ctx.llevoMeter("res", "plata", 60);
+  if (Math.floor(G.plata) !== Math.floor(plata0 - 20)) falla("la plata del botín se acreditó a la billetera en vez del contenedor");
+  anota("Cazó: 3 colmillos y 60 de plata en la bolsa (la billetera sigue en " + Math.floor(G.plata) + ")");
+
+  /* la muerte, con dados cargados para que el 5% no haga aleatorio al simulador */
+  const eqAntes = ctx.equipoPuesto().length;
+  const caida = ctx.tumbaCaer("pantano", 50, 50, () => 0.99);
+  if (ctx.contLlevado()) falla("después de morir seguía llevando contenedor");
+  if (!caida.cont) falla("la muerte no se llevó el contenedor");
+  if (caida.piezas !== 0) falla("con los dados en contra cayó equipo igual");
+  if (ctx.equipoPuesto().length !== eqAntes) falla("la muerte desequipó algo que no debía");
+  anota("Lo mataron: cayeron " + caida.pilas + " pila(s) y su " + caida.cont);
+
+  /* volver con otra bolsa y rescatar */
+  if (!ctx.comprarCont("bag")) falla("no pudo comprar otra bolsa para volver");
+  ctx.viajeElegir("bag");
+  const rescatadas = ctx.tumbaRecoger();
+  if (!rescatadas) falla("volvió al cuerpo y no rescató nada");
+  anota("Volvió al cuerpo y rescató " + rescatadas + " cosa(s)");
+
+  /* y de vuelta en la granja: todo se deshace donde corresponde */
+  GFo.scene = "farm";
+  const plataAntesVolver = Math.floor(G.plata), colmillosAntes = Math.floor(G.res.colmillo || 0);
+  const r = ctx.zonaSalir(false);
+  if (Math.floor(G.plata) !== plataAntesVolver + 60) falla("la plata rescatada no llegó a la billetera: " + G.plata);
+  if (Math.floor(G.res.colmillo || 0) !== colmillosAntes + 3) falla("los colmillos rescatados no llegaron a la bolsa");
+  if (ctx.contLlevado()) falla("volvió a la granja llevando el contenedor puesto");
+  if (ctx.contsTengo("bag") < 1) falla("la bolsa no volvió a los contenedores guardados");
+  anota("De vuelta en la granja: " + Math.floor(G.plata) + " plata, la bolsa guardada" + (r ? " y el resumen del viaje" : ""));
+  invariantes("zona negra");
+}
+
 /* 9 — GUARDAR Y VOLVER: el viaje completo del guardado */
 {
   const antes = { plata: Math.floor(G.plata), level: G.level, exp: G.expansiones, plots: G.plotsOwned, compradas: G.plotsCompradas, golden: G.golden };
@@ -526,7 +596,7 @@ invariantes("kit");
 
 /* ---------- el parte final ---------- */
 console.log("\n=== CRÓNICA (" + cronica.length + " entradas" + (VERBOSE ? "" : " — las claves") + ") ===");
-(VERBOSE ? cronica : cronica.filter((c, i) => i < 8 || /TUTORIAL|EXPANSIÓN|GRIND|Hitos|Guardar|Construyó|encargo|Parcela comprada/.test(c))).forEach(c => console.log("  " + c));
+(VERBOSE ? cronica : cronica.filter((c, i) => i < 8 || /TUTORIAL|EXPANSIÓN|GRIND|Hitos|Guardar|Construyó|encargo|Parcela comprada|bolsa de caza|Cargó|Cazó|mataron|rescató|De vuelta/.test(c))).forEach(c => console.log("  " + c));
 if (hallazgos.length) { console.log("\n=== HALLAZGOS (para dirección y el diseñador) ==="); hallazgos.forEach(h => console.log("  " + h)); }
 console.log("\n=== FALLOS ===");
 if (!fallos.length) console.log("  ninguno: la partida entera se jugó sin romper nada");
