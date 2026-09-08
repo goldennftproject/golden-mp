@@ -62,6 +62,12 @@ console.log("\nLA LISTA SALE DEL USO REAL — no de llamadas puestas a mano");
     (UI.match(/recientesUsar\(/g) || []).length === 1);
   const HTML = fs.readFileSync(path.join(RAIZ, "public/index.html"), "utf8");
   ok("la tira vive al borde derecho, a media altura", /#recientes\{[^}]*right:8px[^}]*top:50%/.test(HTML));
+  /* 8/9 (dirección): « que esto aparezca solo en la granja, no en zona negra » — ese costado,
+     dentro de la Zona, ya lo ocupan el morral y el muelle de combate. */
+  const iRec = UI.indexOf("function refreshRecientes");
+  const cuerpoTira = UI.slice(iRec, iRec + 1400);   // el cuerpo de la función, no todo el archivo
+  ok("y NO se ve en la Zona Negra: ahí manda el morral",
+    /GF\.scene === "forest"\) \{ caja\.style\.display = "none"/.test(cuerpoTira));
   ok("y no se le puede hacer clic — es un recordatorio, no un control", /#recientes\{[^}]*pointer-events:none/.test(HTML));
   ok("en cero se apaga y avisa en rojo", /\.rec\.vacio\{/.test(HTML) && /\.rec\.vacio \.rn\{/.test(HTML));
 }

@@ -316,6 +316,11 @@ function refreshMorral() {
 }
 function refreshRecientes() {
   const caja = $("recientes"); if (!caja) return;
+  /* 8/9 (dirección): « que esto aparezca solo en la granja, no en zona negra ». En la Zona ese
+     costado ya lo ocupan el morral y el muelle de combate, y tres paneles apilados dejan de
+     ser un recordatorio para ser una pared. Además la tira habla de herramientas y semillas:
+     de lo que se gasta cazando ya avisa el morral. */
+  if (window.GF && GF.scene === "forest") { caja.style.display = "none"; caja._firma = ""; return; }
   const l = (typeof recientes === "function") ? recientes() : [];
   const firma = l.map(id => { const i = id.indexOf(":"); return id + "=" + recientesCant(id.slice(0, i), id.slice(i + 1)); }).join("|");
   if (caja._firma === firma) return;
