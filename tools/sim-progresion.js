@@ -13,35 +13,54 @@
    - No modela: combate, pesca, animales, pase, cofre diario (suman por encima de esto).
 */
 
-// ---- números del código (copiar de state.js si cambian) ----
-const CROPS = [
-  { k: "papa", lvl: 1, seed: 1, price: 3, growH: 0.15, xp: 9 },
-  { k: "zanahoria", lvl: 2, seed: 3, price: 8, growH: 0.4167, xp: 25 },
-  { k: "cebolla", lvl: 3, seed: 6, price: 16, growH: 0.8333, xp: 50 },
-  { k: "calabacin", lvl: 4, seed: 12, price: 32, growH: 1.5, xp: 90 },
-  { k: "repollo", lvl: 5, seed: 20, price: 50, growH: 2.5, xp: 150 },
-  { k: "calabaza", lvl: 6, seed: 40, price: 100, growH: 4.5, xp: 270 },
-  { k: "brocoli", lvl: 7, seed: 90, price: 210, growH: 8, xp: 480 },
-  { k: "girasol", lvl: 8, seed: 180, price: 420, growH: 12, xp: 720 },
-  { k: "trigo", lvl: 9, seed: 360, price: 840, growH: 18, xp: 1080 },
-  { k: "maiz", lvl: 10, seed: 720, price: 1680, growH: 24, xp: 1440 },
-];
-const FARM_XP_LVLS = [0, 0, 25, 90, 225, 550, 1250, 2750, 5500, 9000, 14000, 17600, 25100];
-const FARM_PARCELA = { 1: 3, 2: 3, 4: 4, 6: 5, 7: 6, 12: 7 };   // 14/8: se nace con 3 parcelas
-const SEED_DAILY = (lvl) => 18 + 2 * lvl;
-const XP_BASE = 100, XP_EXP = 2.7;   // curva de skills (Cultivo)
-const CD = { tree: 5400, rock: 7200 }, CD_FAST = { tree: 180, rock: 240 }, FAST_USES = 10;
-const AXE = 10, PICK = { madera: 3, plata: 10 };           // hacha 10 plata · pico 3 madera + 10 plata (1 uso c/u)
-const BUILDS = [
-  { k: "store", lvl: 2, madera: 5, piedra: 2 },
-  { k: "horno", lvl: 3, madera: 10, piedra: 8 },
-  { k: "cocina", lvl: 5, madera: 20, piedra: 15 },
-  { k: "altar", lvl: 7, madera: 40, piedra: 60, oro: 20, golden: 30 },
-];
-const ARMAS_PLATA = 1000;
-const XPQ = [45, 45];  // las 3 primeras semillas crecen en 45 s (se ignora el detalle, ruido)
+/* ═══ LOS NÚMEROS SALEN DEL JUEGO, NO DE UNA COPIA ═══ (8/9)
+   Acá arriba decía « números del código (copiar de state.js si cambian) ». Ese comentario ERA el
+   fallo: una herramienta que le pide a un humano mantenerla al día se desincroniza, y lo hace en
+   silencio. Cuando la miré hoy tenía los relojes de 90 y 120 minutos —los de ANTES del 18/8—, un
+   cupo de semillas de « 18 + 2×nivel » cuando el juego usa 40 por parcela, y otra curva de XP de
+   oficios. O sea que llevaba tres semanas simulando un juego que ya no existe.
+   Y no era inofensivo: de acá salió « casual, medio y hardcore terminan los 30 días los tres en
+   nivel 12 », que reporté a dirección como el hallazgo más grave de la auditoría. Era falso.
+   Ahora lee state.js. Si mañana cambia un reloj, este simulador cambia con él. */
+const path = require("path"), vm = require("vm"), fs = require("fs");
+const RAIZ = path.join(__dirname, "..");
+const { ctx } = require("./arrancar-el-juego.contexto.js").arrancar(RAIZ);
+const g = (n) => vm.runInContext(n, ctx);
+ctx.toast = () => {}; ctx.log = () => {}; ctx.celebrate = () => {};
 
-function skillLvl(xp) { let l = 1, acc = 0, need = Math.round(XP_BASE * Math.pow(1, XP_EXP)); while (xp >= acc + need && l < 150) { acc += need; l++; need = Math.round(XP_BASE * Math.pow(l, XP_EXP)); } return l; }
+const CROP_DEF = g("CROP_DEF"), CROP_ORDER = g("CROP_ORDER");
+const CROPS = CROP_ORDER.map(k => {
+  const c = CROP_DEF[k];
+  return { k, lvl: c.lvl, seed: c.seedCost, price: c.price * (c.yield || 1),
+           growH: c.growH != null ? c.growH : (c.grow / 3600),
+           xp: vm.runInContext("xpDeCultivo(" + JSON.stringify(k) + ")", ctx) };
+});
+const FARM_XP_LVLS = g("FARM_XP_LVLS");
+const FARM_PARCELA = g("FARM_PARCELA");
+/* el cupo REAL: 40 por parcela (SEED_POR_PARCELA), no una recta inventada */
+const SEED_POR_PARCELA = g("SEED_POR_PARCELA");
+const SEED_DAILY = (lvl) => SEED_POR_PARCELA * Math.max(3, plots(lvl));
+const CD = g("CD");
+/* el arranque rápido de los nodos se ELIMINÓ el 15/8 (dirección: « el tutorial no es otro
+   juego »), así que el reloj es UNO desde el primer golpe. Se deja la forma por si vuelve. */
+const CD_FAST = { tree: CD.tree, rock: CD.rock }, FAST_USES = 0;
+const POR_CARGA = g("NODO_POR_CARGA") || 1;
+const TOOL_CRAFT = g("TOOL_CRAFT"), PICK_DEF = g("PICK_DEF");
+const AXE = (TOOL_CRAFT.axe && TOOL_CRAFT.axe.plata) || 2;
+const PICK = { madera: 0, plata: (PICK_DEF.stone && PICK_DEF.stone.plata) || 2 };
+const BUILD_DEF = g("BUILD_DEF");
+const BUILDS = Object.keys(BUILD_DEF).map(k => Object.assign(
+  { k, lvl: BUILD_DEF[k].lvl || 1 }, BUILD_DEF[k].cost || {}))
+  .sort((a, b) => a.lvl - b.lvl);
+const ARMAS_PLATA = 1000;
+/* la XP de un oficio sale de skillNeed, que es la curva del juego (XP_BASE 21, exp 1,70 y el
+   ritmo por oficio). Antes acá había un XP_BASE 100 con exponente 2,7: otra curva entera. */
+function skillLvl(xp) {
+  let l = 1, acc = 0;
+  while (l < 150) { const need = vm.runInContext("skillNeed(" + l + ', "farming")', ctx);
+    if (xp < acc + need) break; acc += need; l++; }
+  return l;
+}
 function granjaLvl(xp) { let l = 1; while (FARM_XP_LVLS[l + 1] != null && xp >= FARM_XP_LVLS[l + 1]) l++; return l; }
 function plots(lvl) { let p = 2; for (const n in FARM_PARCELA) if (lvl >= +n) p = Math.max(p, FARM_PARCELA[n]); return p; }
 

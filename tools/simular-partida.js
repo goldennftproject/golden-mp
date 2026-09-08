@@ -20,11 +20,15 @@ const ctx = { console: { log() {}, warn() {} }, Math, Date, JSON, Object, Array,
 ctx.window = ctx; ctx.globalThis = ctx; ctx.setTimeout = () => 0; vm.createContext(ctx);
 vm.runInContext(fs.readFileSync("public/game/config.js", "utf8"), ctx);
 vm.runInContext(fs.readFileSync("public/game/state.js", "utf8") +
-  "\n;this.X={CD,CROP_DEF,CROP_ORDER,ORE_DEF,ORE_ORDER,PRICE,MAT_DEF,FARM_XP_LVLS,FARM_NIVEL_MAX," +
+  "\n;this.X={CD,SEED_POR_PARCELA,NODO_POR_CARGA,CROP_DEF,CROP_ORDER,ORE_DEF,ORE_ORDER,PRICE,MAT_DEF,FARM_XP_LVLS,FARM_NIVEL_MAX," +
   "FARM_EXPANSION,EXPANSION_COSTO,XP_ACCION,XP_ANIMAL,XP_PEZ,ANIMAL_DEF,ANIMAL_ORDER,skillNeed,skillInfo," +
   "TOOL_CRAFT,GOLPES_TALAR,GOLPES_MINAR,NODO_CARGAS_MAX};", ctx);
 const X = ctx.X, ANCLA = 20;
 const SES = +(process.argv[2] || 3);                 // sesiones por día
+/* 8/9: el nivel al que se simula, por argumento. Estaba clavado en 21 porque era el techo del
+   contenido de entonces; para mirar el desierto del 21 al 50 hace falta poder pedirle que siga.
+   `node tools/simular-partida.js 3 50` */
+const TOPE_NIVEL = +(process.argv[3] || 21);
 const S_CLIC = 0.8, S_VIAJE = 2, S_PANEL = 4;        // lo que cuesta EN MANO cada gesto
 
 const val = k => { if (X.PRICE[k] != null) return X.PRICE[k]; const m = (X.MAT_DEF || {})[k];
@@ -82,6 +86,16 @@ function simular(sesionesDia, tope, minSesion, cargasTope, loteOn, doma) {
   const hitos = [];
   const nivelDe = xp => { let n = 1; while (X.FARM_XP_LVLS[n + 1] != null && xp >= X.FARM_XP_LVLS[n + 1]) n++; return n; };
   const nivelCultivo = () => X.skillInfo(xpFarm, "farming").lvl;
+  /* 8/9 — ESTE SIMULADOR IGNORABA EL CUPO DIARIO DE SEMILLAS, y es el que informa cada decisión
+     de economía que tomamos. Sembraba sin techo, así que el jugador de doce sesiones plantaba
+     doce veces más que el de una y la curva salía más rápida de lo que el juego permite: el cupo
+     real es SEED_POR_PARCELA (40) por parcela y día, y existe justamente para que la hiperactividad
+     no compre niveles. Sin modelarlo, « 63 días al nivel 20 » era optimista.
+     Lo descubrí porque sim-progresion.js —que sí lo modela— daba nivel 8-9 a los 30 días contra
+     el 20 de acá. Cuando dos medidores no coinciden, uno miente; hay que averiguar cuál antes de
+     mover un número del juego con lo que dicen. */
+  let sembradasHoy = 0, diaCupo = -1;
+  const cupoDia = () => X.SEED_POR_PARCELA * Math.max(3, parcelas);
   const cosechar = ahora => {
     if (plantadoEn < 0 || ahora < plantadoEn + X.CROP_DEF[cultivo].grow) return 0;
     const c = X.CROP_DEF[cultivo];
@@ -90,8 +104,15 @@ function simular(sesionesDia, tope, minSesion, cargasTope, loteOn, doma) {
     return parcelas;
   };
   const plantar = (ahora, ventana) => {
+    /* el cupo se cuenta por DÍA de reloj, como en el juego (se reinicia a las 00:00 UTC) */
+    const dia = Math.floor(ahora / 86400);
+    if (dia !== diaCupo) { diaCupo = dia; sembradasHoy = 0; }
+    const puedo = Math.max(0, cupoDia() - sembradasHoy);
+    if (puedo <= 0) return 0;                      // sin cupo no se siembra: el día se acabó
+    const n = Math.min(parcelas, puedo);
+    sembradasHoy += n;
     cultivo = cultivoPara(ventana, nivelCultivo());
-    plantadoEn = ahora; return parcelas;
+    plantadoEn = ahora; return n;
   };
 
   for (let s = 0; s < sesionesDia * 400 && nivel < tope; s++) {
@@ -147,7 +168,7 @@ function simular(sesionesDia, tope, minSesion, cargasTope, loteOn, doma) {
 }
 
 LOG("\n════ LA PARTIDA ENTERA · " + SES + " sesiones al día ════\n");
-const r = simular(SES, 21);
+const r = simular(SES, TOPE_NIVEL);
 const dias = r.t / 86400;
 LOG("  hasta granja nivel " + r.nivel + " (" + r.exps + " expansiones, " + r.celdas + " celdas)");
 LOG("  tiempo real .............. " + fmtH(r.t) + "  (" + dias.toFixed(1) + " días)");
