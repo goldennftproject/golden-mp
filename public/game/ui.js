@@ -391,15 +391,15 @@ function refreshViaje() {
 
   /* 2) las dos columnas */
   const libres = contLibres(raiz);
-  h += '<div class="vj-cols"><div class="vj-col"><h4>En la granja (se queda)</h4><div class="vj-lista">';
+  h += '<div class="vj-cols"><div class="vj-col" data-vzona="granja"><h4>En la granja (se queda)</h4><div class="vj-lista">';
   const bolsa = (typeof bolsaCuentas === "function") ? bolsaCuentas() : [];
   if (!bolsa.length) h += '<div class="vj-s vacia"></div>';
   bolsa.forEach(x => {
     const v = itemView({ kind: x.kind, key: x.key }); if (!v) return;
-    h += '<div class="vj-s" data-vsube="' + x.kind + "|" + x.key + '" title="' + viajeNombre(v, x.key) + ' — clic para llevarlo">' +
+    h += '<div class="vj-s" draggable="true" data-vsube="' + x.kind + "|" + x.key + '" title="' + viajeNombre(v, x.key) + ' — clic o arrastrá a la derecha">' +
       itemIcon(v) + '<span class="n">' + fmt(x.n) + '</span></div>';
   });
-  h += '</div></div><div class="vj-col"><h4>' + CONT_DEF[raiz.c].label + ' — te lo llevás (' + libres + ' libres)</h4><div class="vj-lista">';
+  h += '</div></div><div class="vj-col" data-vzona="cont"><h4>' + CONT_DEF[raiz.c].label + ' — te lo llevás (' + libres + ' libres)</h4><div class="vj-lista">';
   raiz.items.forEach((e, i) => {
     if (esCont(e)) {
       h += '<div class="vj-s bolsa" data-vbolsa="' + i + '" title="Bolsa · ' + contPilas(e) + ' cosa(s) dentro — clic para sacarla">' +
@@ -407,7 +407,7 @@ function refreshViaje() {
       return;
     }
     const v = vistaDeCarga(e);
-    h += '<div class="vj-s" data-vbaja="' + e.kind + "|" + e.k + '" title="' + viajeNombre(v, e.k) + ' — clic para dejarlo">' +
+    h += '<div class="vj-s" draggable="true" data-vbaja="' + e.kind + "|" + e.k + '" title="' + viajeNombre(v, e.k) + ' — clic o arrastrá a la izquierda">' +
       (v ? itemIcon(v) : '<span class="em">📦</span>') + '<span class="n">' + fmt(e.n) + '</span></div>';
   });
   /* lo que hay dentro de las bolsas anidadas, sangrado detrás de su bolsa */
@@ -415,14 +415,14 @@ function refreshViaje() {
     if (!esCont(b)) return;
     b.items.forEach(e => {
       const v = vistaDeCarga(e);
-      h += '<div class="vj-s" data-vbaja="' + e.kind + "|" + e.k + '" title="Dentro de la bolsa · ' + viajeNombre(v, e.k) + ' — clic para dejarlo">' +
+      h += '<div class="vj-s" draggable="true" data-vbaja="' + e.kind + "|" + e.k + '" title="Dentro de la bolsa · ' + viajeNombre(v, e.k) + ' — clic o arrastrá a la izquierda">' +
         (v ? itemIcon(v) : '<span class="em">📦</span>') + '<span class="n">' + fmt(e.n) + '</span></div>';
     });
   });
   for (let i = raiz.items.length; i < CONT_DEF[raiz.c].huecos; i++) h += '<div class="vj-s vacia"></div>';
   h += '</div></div></div>';
 
-  h += '<div class="vj-pie"><div class="vj-aviso">Clic para pasar de a uno · shift para diez. ' +
+  h += '<div class="vj-pie"><div class="vj-aviso">Arrastrá de una columna a la otra (o hacé clic) y decís cuántas · shift pasa todo de una. ' +
     '<b>Si te matan allá, se pierde todo lo que lleves acá dentro</b> — el equipo puesto casi siempre se salva.</div>' +
     '<button class="ghost sm" id="vj-cerrar">Volver</button>' +
     '<button class="green sm" id="vj-entrar">Entrar a la Zona</button></div>';
@@ -433,6 +433,41 @@ function refreshViaje() {
    ("clic para comer") que acá contradicen a la de la puerta ("clic para dejarlo"): dos órdenes
    distintas en el mismo tooltip es peor que ninguna. */
 function viajeNombre(v, k) { return String((v && v.label) || k).split(" · ")[0].replace(/"/g, ""); }
+/* ═══ ¿CUÁNTAS? ═══════════════════════════════════════════ (8/9, Suren: « debería permitir
+   arrastrarlo todo y al ponerlo preguntar cuántas quieres montar »).
+
+   Tres decisiones que valen la pena:
+   · Si solo hay UNA, no se pregunta. Un diálogo cuya única respuesta posible es « 1 » no es una
+     pregunta, es un trámite — y el jugador que carga cinco cosas de una lo pagaría cinco veces.
+   · El valor por defecto es TODO. En la puerta de la Zona, la intención normal es « me llevo mis
+     flechas », no « me llevo una flecha »; y equivocarse hacia arriba se deshace con un clic,
+     porque bajar es tan barato como subir.
+   · Y hay barra ADEMÁS de número. La barra es para tantear « más o menos la mitad » sin pensar;
+     el número, para cuando sabés que querés 12. Cada una sirve para algo que la otra hace mal. */
+/* qué significa cada atajo. Es una función y no tres líneas dentro del onclick porque es LA
+   decisión —« 1 / la mitad / todo » cubre casi todos los casos sin tocar la barra— y una decisión
+   enterrada en un manejador de eventos no se puede medir sin un navegador. */
+function cuantoAtajo(q, max) { return q === "todo" ? max : q === "mitad" ? Math.ceil(max / 2) : 1; }
+function pedirCuanto(max, titulo, sub, onOk) {
+  max = Math.max(1, Math.floor(max || 1));
+  if (max === 1) { onOk(1); return; }
+  const ov = $("ov-cuanto"); if (!ov) { onOk(max); return; }
+  const rango = $("cu-rango"), num = $("cu-num");
+  $("cu-title").textContent = titulo;
+  $("cu-sub").textContent = sub || "";
+  rango.max = num.max = max;
+  const set = (v) => { v = Math.max(1, Math.min(max, Math.floor(v) || 1)); rango.value = v; num.value = v; };
+  set(max);
+  rango.oninput = () => set(rango.value);
+  num.oninput = () => set(num.value);
+  ov.querySelectorAll("[data-cu]").forEach(b => b.onclick = () => {
+    set(cuantoAtajo(b.dataset.cu, max));
+  });
+  ov.classList.add("show");
+  const cerrar = () => { ov.classList.remove("show"); };
+  $("cu-ok").onclick = () => { cerrar(); onOk(Math.max(1, Math.min(max, +num.value || 1))); };
+  $("cu-no").onclick = cerrar;
+}
 /* 8/9 (Suren) — LA VISTA DE ALGO QUE YA NO ESTÁ EN LA GRANJA. itemView valida contra el estado:
    para un arma mira G.weapons, y en cuanto el arma se carga al contenedor deja de estar ahí, así
    que devolvía null y la casilla salía como un cuadro en blanco. Lo mismo pasaría con una caña o
@@ -454,13 +489,52 @@ function vistaDeCarga(e) {
 function engancharViaje(caja) {
   const rep = () => { refreshViaje(); if (typeof refreshHud === "function") refreshHud(); if (typeof syncSlots === "function") syncSlots(); };
   caja.querySelectorAll("[data-vcont]").forEach(b => b.onclick = () => { if (viajeElegir(b.dataset.vcont)) rep(); });
+
+  /* 8/9 (Suren) — SUBIR Y BAJAR SON LA MISMA OPERACIÓN con distinto sentido, así que una sola
+     función las hace. `todo` es el shift: pasa la pila entera sin preguntar, que es el atajo del
+     que ya sabe lo que quiere. */
+  const mover = (dir, kind, key, todo) => {
+    const hay = dir === "sube" ? viajeTengo(kind, key) : contContar(contLlevado(), kind, key);
+    if (hay <= 0) return;
+    const hacer = (n) => { if (dir === "sube" ? viajeCargar(kind, key, n) : viajeBajar(kind, key, n)) rep(); };
+    if (todo) { hacer(hay); return; }
+    const v = itemView({ kind: kind, key: key });
+    pedirCuanto(hay, dir === "sube" ? "¿Cuántas te llevás?" : "¿Cuántas dejás en la granja?",
+      viajeNombre(v, key) + " · tenés " + hay, hacer);
+  };
   caja.querySelectorAll("[data-vsube]").forEach(b => b.onclick = (ev) => {
-    const [kind, key] = b.dataset.vsube.split("|");
-    if (viajeCargar(kind, key, ev.shiftKey ? 10 : 1)) rep();
+    const [kind, key] = b.dataset.vsube.split("|"); mover("sube", kind, key, ev.shiftKey);
   });
   caja.querySelectorAll("[data-vbaja]").forEach(b => b.onclick = (ev) => {
-    const [kind, key] = b.dataset.vbaja.split("|");
-    if (viajeBajar(kind, key, ev.shiftKey ? 10 : 1)) rep();
+    const [kind, key] = b.dataset.vbaja.split("|"); mover("baja", kind, key, ev.shiftKey);
+  });
+
+  /* EL ARRASTRE. Nada de librerías: el drag nativo del navegador ya sabe hacer esto y lo hace
+     igual en todos lados. Lo que se lleva en el dataTransfer es « de dónde sale · qué es », y el
+     destino decide el sentido — así arrastrar a la columna de la que ya venía no hace nada, en
+     vez de convertirse en un movimiento sorpresa. */
+  caja.querySelectorAll(".vj-s[draggable]").forEach(cel => {
+    cel.addEventListener("dragstart", (e) => {
+      const d = cel.dataset.vsube ? "sube|" + cel.dataset.vsube : cel.dataset.vbaja ? "baja|" + cel.dataset.vbaja : "";
+      if (!d) { e.preventDefault(); return; }
+      dndActive = true; cel.classList.add("arrastrando");
+      e.dataTransfer.setData("text/plain", d); e.dataTransfer.effectAllowed = "move";
+    });
+    cel.addEventListener("dragend", () => { dndActive = false; cel.classList.remove("arrastrando"); });
+  });
+  caja.querySelectorAll("[data-vzona]").forEach(col => {
+    col.addEventListener("dragover", (e) => { e.preventDefault(); e.dataTransfer.dropEffect = "move"; col.classList.add("recibe"); });
+    col.addEventListener("dragleave", () => col.classList.remove("recibe"));
+    col.addEventListener("drop", (e) => {
+      e.preventDefault(); dndActive = false; col.classList.remove("recibe");
+      const [origen, kind, key] = String(e.dataTransfer.getData("text/plain")).split("|");
+      if (!kind || !key) return;
+      const destino = col.dataset.vzona;
+      /* soltar en la columna de la que salió: no es un error del jugador, es un « me arrepentí »
+         a mitad de gesto. Se ignora en silencio, que es lo que espera. */
+      if ((origen === "sube" && destino !== "cont") || (origen === "baja" && destino !== "granja")) return;
+      mover(origen, kind, key, e.shiftKey);
+    });
   });
   caja.querySelectorAll("[data-vbolsa]").forEach(b => b.onclick = () => { if (viajeBajarBolsa(+b.dataset.vbolsa)) rep(); });
   const cerrar = $("vj-cerrar");
@@ -1566,13 +1640,13 @@ function refreshInvZona() {
       return;
     }
     const e = p.e, v = vistaDeCarga(e);
-    html += '<div class="slot filled" data-czona="' + e.kind + "|" + e.k + '" title="' + ((v && v.label) || e.k).replace(/"/g, "") + '">' +
+    html += '<div class="slot filled" draggable="true" data-czona="' + e.kind + "|" + e.k + '" title="' + ((v && v.label) || e.k).replace(/"/g, "") + ' — arrastralo a la barra para usarlo con su número">' +
       (v ? itemIcon(v) : '<span class="em">📦</span>') + '<span class="cnt">' + fmt(e.n) + '</span></div>';
   });
   /* lo de las bolsas anidadas, detrás y en su orden */
   if (raiz) raiz.items.forEach(b => { if (!esCont(b)) return; b.items.forEach(e => {
     const v = vistaDeCarga(e);
-    html += '<div class="slot filled" data-czona="' + e.kind + "|" + e.k + '" title="Dentro de la bolsa · ' + ((v && v.label) || e.k).replace(/"/g, "") + '">' +
+    html += '<div class="slot filled" draggable="true" data-czona="' + e.kind + "|" + e.k + '" title="Dentro de la bolsa · ' + ((v && v.label) || e.k).replace(/"/g, "") + '">' +
       (v ? itemIcon(v) : '<span class="em">📦</span>') + '<span class="cnt">' + fmt(e.n) + '</span></div>';
   }); });
   for (let i = pilas.length; i < cap; i++) html += '<div class="slot"></div>';
@@ -1583,6 +1657,18 @@ function refreshInvZona() {
     : "Sin contenedor";
   const ss = $("inv-selseed"); if (ss) ss.innerHTML = "";
   /* el único clic que sigue vivo: comer. Equipar, sembrar y tirar son cosas de la granja. */
+  /* 8/9 (Suren) — « debe dejarme mover o arrastrar objetos, especialmente la comida a la barra
+     rápida para usarla con números ». Se arrastra al hueco de la barra y ya: la barra guarda una
+     REFERENCIA (familia + clave), no el objeto, así que apuntar a algo del contenedor no mueve
+     nada — y al apretar el número, eatDish sale por la puerta única y come del contenedor. */
+  cont.querySelectorAll("[data-czona]").forEach(c => {
+    c.addEventListener("dragstart", (e) => {
+      dndActive = true;
+      e.dataTransfer.setData("text/plain", "cont:" + c.dataset.czona);
+      e.dataTransfer.effectAllowed = "copy";
+    });
+    c.addEventListener("dragend", () => { dndActive = false; });
+  });
   cont.querySelectorAll("[data-czona]").forEach(c => c.addEventListener("click", () => {
     const [kind, key] = c.dataset.czona.split("|");
     if (kind === "dish") { eatDish(key); refreshInv(); return; }
@@ -1724,11 +1810,12 @@ function hotItemExists(d) {
   if (!d) return false;
   if (d.kind === "tool") { if (d.key === "sword") return G.swordOwned; if (d.key === "bow") return G.bowOwned; return !toolLost(d.key); }
   if (d.kind === "pick") return !!G.picks.owned[d.key];
-  if (d.kind === "res") return (G.res[d.key] || 0) > 0;
-  if (d.kind === "seed") return (G.seeds[d.key] || 0) > 0;
+  /* mismo motivo: en la Zona « existe » es « lo llevo encima », y lo que no llevás sale opaco */
+  if (d.kind === "res") return llevoTengo("res", d.key) > 0;
+  if (d.kind === "seed") return llevoTengo("seed", d.key) > 0;
   if (d.kind === "cana") return !!((G.canas || {})[d.key]);
-  if (d.kind === "fish") return ((G.fish && G.fish[d.key]) || 0) > 0;
-  if (d.kind === "dish") return ((G.dishes && G.dishes[d.key]) || 0) > 0;
+  if (d.kind === "fish") return llevoTengo("fish", d.key) > 0;
+  if (d.kind === "dish") return llevoTengo("dish", d.key) > 0;
   if (d.kind === "plano") return !!(G.planos && G.planos[d.key]);   // 13/8: planos en la barra
   if (d.kind === "regalo") return ((typeof cobertizoBolsa === "function" ? cobertizoBolsa()[d.key] : 0) || 0) > 0;   // 18/8: el cobertizo
   return true;   // herramientas siempre están
@@ -1745,7 +1832,12 @@ function hotCellHtml(d, i) {
   const on = (G.hotSel === i) ? " on" : "";
   if (!d) return `<div class="hcell${on}" data-slot="${i}" data-zone="hot">${num}</div>`;
   const v = itemView(d);
-  let cnt = ""; if (d.kind === "res") cnt = `<span class="cnt">${fmt(G.res[d.key] || 0)}</span>`; if (d.kind === "seed") cnt = `<span class="cnt">${fmt(G.seeds[d.key] || 0)}</span>`; if (d.kind === "fish") cnt = `<span class="cnt">${fmt((G.fish && G.fish[d.key]) || 0)}</span>`; if (d.kind === "dish") cnt = `<span class="cnt">${fmt((G.dishes && G.dishes[d.key]) || 0)}</span>`;
+  /* 8/9 (Suren: « especialmente la comida a la barra rápida para usarla con números ») — dentro
+     de la Zona la barra tiene que contar lo que llevás en el contenedor, no lo que dejaste en la
+     granja. Una barra que dice « 4 guisos » cuando no llevás ninguno es peor que no decir nada:
+     el jugador aprieta la tecla en mitad de una pelea y no pasa nada. */
+  let cnt = "";
+  if (["res", "seed", "fish", "dish"].includes(d.kind)) cnt = `<span class="cnt">${fmt(llevoTengo(d.kind, d.key))}</span>`;
   const sel = (d.kind === "seed" && G.selSeed === d.key) ? " sel" : "";
   const eq = pickEqCls(d);
   const ghost = hotItemExists(d) ? "" : " ghost";
@@ -1761,7 +1853,11 @@ function refreshHotbar(forzar) {
   while (G.hotbar.length < 10) G.hotbar.push(null);
   // 13/8 (playtest): los CONSUMIBLES agotados salen solos de la barra (la bolsita de semillas
   // en 0 quedaba muerta ocupando lugar). Al recomprar semillas, buySeed la vuelve a poner.
-  G.hotbar = G.hotbar.map(h => (h && ["res", "seed", "fish", "dish"].includes(h.kind) && !hotItemExists(h)) ? null : h);
+  /* 8/9: esa limpieza es de la GRANJA. Dentro de la Zona vaciaría la barra entera al cruzar el
+     portal —allá casi nada de la granja « existe »— y al volver el jugador se encontraría la
+     barra en blanco sin haber tocado nada. Allá se dibujan opacos y listo. */
+  if (!(typeof enZona === "function" && enZona()))
+    G.hotbar = G.hotbar.map(h => (h && ["res", "seed", "fish", "dish"].includes(h.kind) && !hotItemExists(h)) ? null : h);
   let html = ""; for (let i = 0; i < 10; i++) html += hotCellHtml(G.hotbar[i], i);
   // La llama refreshHud, o sea el tick de 1 segundo: si no comparamos, la barra se reconstruye
   // entera 60 veces por minuto y se recuelgan sus 20 listeners aunque no haya cambiado nada.
@@ -1826,6 +1922,15 @@ function bindZoneDnD(container, zone) {
 }
 function dndDrop(src, tz, ti) {
   if (!src) return; const ci = src.indexOf(":"), sz = src.slice(0, ci), si = +src.slice(ci + 1);
+  /* 8/9: arrastrar desde el contenedor (dentro de la Zona) a la barra rápida. Solo APUNTA: la
+     barra nunca movió objetos, guarda a qué apunta cada hueco, y por eso esto es de una línea. */
+  if (sz === "cont") {
+    if (tz !== "hot") return;
+    const [kind, key] = src.slice(ci + 1).split("|");
+    if (kind && key) { G.hotbar[ti] = { kind: kind, key: key }; toast("En la barra — apretá " + (ti === 9 ? 0 : ti + 1)); }
+    refreshHotbar(true);
+    return;
+  }
   if (sz === "inv" && tz === "inv") { const a = G.slots[si]; G.slots[si] = G.slots[ti]; G.slots[ti] = a; }
   else if (sz === "inv" && tz === "hot") { const d = G.slots[si]; if (d) G.hotbar[ti] = { kind: d.kind, key: d.key }; }
   else if (sz === "hot" && tz === "hot") { const a = G.hotbar[si]; G.hotbar[si] = G.hotbar[ti]; G.hotbar[ti] = a; }
