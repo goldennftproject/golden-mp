@@ -131,7 +131,7 @@ class ForestScene extends Phaser.Scene {
       /* clic DERECHO: fijar y AUTO-atacar (detalles viernes). Y 31/8: derecho al VACÍO suelta el
          objetivo — antes no había ninguna forma de desmarcar sin marcar otra cosa. */
       if (pt.rightButtonDown()) {
-        if (hit) { if (!this.hasWeapon()) { toast("Necesitás un arma equipada para atacar"); return; } this.setTarget(hit); this.autoOn = true; }
+        if (hit) { const no = this.porQueNoAtaca(); if (no) { toast(no); return; } this.setTarget(hit); this.autoOn = true; }
         else if (this.target) this.clearTarget();   // la respuesta es visible: el recuadro se va
         return;
       }
@@ -549,9 +549,33 @@ class ForestScene extends Phaser.Scene {
   }
 
   // E / espacio: fija el monstruo más cercano (el auto-ataque hace el resto)
-  hasWeapon() { return swordDmg() > 0 || canShoot(); }   // viernes (2): solo se ataca CON arma equipada
+  /* 8/9 (Suren, en vivo) — « arco equipado y no ataca », con el cartel « Necesitás un arma
+     equipada para atacar ». El cartel MENTÍA, y la culpa es del cambio de esta tarde: hasWeapon()
+     colgaba de canShoot(), y canShoot() pasó a exigir las flechas EN EL CONTENEDOR. O sea que un
+     arquero con el arco puesto y las flechas en la granja recibía un diagnóstico falso sobre el
+     arma, sin una palabra de las flechas — y eso es lo peor que puede hacer un aviso: mandar al
+     jugador a revisar la cosa que está bien.
+     Se separan las dos preguntas, que nunca fueron la misma: « ¿llevás arma? » y « ¿podés
+     disparar AHORA? ». La primera es hasWeapon; la segunda la contesta porQueNoAtaca con el
+     motivo exacto y el remedio. */
+  hasWeapon() { return !!armaEq(); }
+  /* null si podés atacar; si no, la frase que explica qué falta y cómo se arregla */
+  porQueNoAtaca() {
+    const id = armaEq();
+    if (!id) return Object.keys(G.weapons || {}).length
+      ? "Equipate un arma — la tenés en la bolsa"
+      : "Necesitás un arma. Se craftean en la Herrería";
+    if (ARM_DEF[id] && ARM_DEF[id].tipo === "arco") {
+      if (!G.gear.municion) return "El arco está puesto pero la munición no: equipá las flechas en el panel de Equipo";
+      if (llevoTengo("res", "flecha") <= 0) return enZona()
+        ? "Sin flechas en el contenedor — las que dejaste en la granja no cuentan acá"
+        : "Sin flechas — crafteálas en la Herrería";
+    }
+    return null;
+  }
   tryAttack() {
-    if (!this.hasWeapon()) { toast("Necesitás un arma equipada para atacar"); return; }
+    const no = this.porQueNoAtaca();
+    if (no) { toast(no); return; }
     const near = this.nearestMonster(MELEE_RANGE) || (canShoot() ? this.nearestMonster(BOW_RANGE) : null);
     if (near) { this.setTarget(near); this.autoOn = true; }   // E/espacio ataca, como el clic derecho
   }
@@ -1080,7 +1104,8 @@ class ForestScene extends Phaser.Scene {
         if (c.piezas) partes.push(c.piezas + " pieza(s) de equipo que llevabas puesta(s)");
         log("☠️ Te derrotaron. Se te cayó " + partes.join(" y ") + ". Tu cuerpo queda " + TUMBA_MIN +
             " minutos donde caíste" + (teniaTumba ? " — y pisó al cuerpo anterior, que se perdió" : "") +
-            ": volvé con otro contenedor a buscarlo.", "bad");
+            ": volvé YA con otro contenedor a buscarlo. No hay que esperar el descanso — " +
+            "mientras tu cuerpo esté ahí, el portal queda abierto.", "bad");
         toast(c.piezas ? "Perdiste el contenedor y " + c.piezas + " pieza(s) de equipo — " + TUMBA_MIN + " min para recuperarlo"
                        : "Se te cayó el contenedor — tu cuerpo dura " + TUMBA_MIN + " min");
       } else {

@@ -148,7 +148,11 @@ console.log("\nEL AVISO DICE QUÉ SE PERDIÓ — un « perdiste cosas » no ense
   const FOREST = fs.readFileSync(path.join(RAIZ, "public/game/forest.js"), "utf8");
   ok("el aviso separa el contenedor del equipo: son dos castigos distintos",
     /pieza\(s\) de equipo que llevabas puesta/.test(FOREST) && /con " \+ c\.pilas \+ " cosa\(s\) dentro/.test(FOREST));
-  ok("y dice que hay que volver CON OTRO contenedor", /volvé con otro contenedor a buscarlo/.test(FOREST));
+  ok("y dice que hay que volver CON OTRO contenedor", /volvé YA con otro contenedor a buscarlo/.test(FOREST));
+  /* 8/9 (Suren, en vivo): « hay que quitar el CD de regresar porque acabo de morir y no puedo
+     esperar, se pudre y no puedo recuperar ». El enfriamiento existe para pausar el farmeo, no
+     para separarte de tu cuerpo — y si el aviso no lo dice, el jugador igual se queda esperando. */
+  ok("y avisa que NO hay que esperar el descanso", /No hay que esperar el descanso/.test(FOREST));
   ok("y si el cuerpo se deshace, también se dice cuánto equipo se fue con él",
     /de ellas equipo que llevabas puesto/.test(FOREST));
   /* el orden es la mecánica: si zonaSalir corriera antes, la muerte sería la forma más cómoda de
@@ -159,5 +163,22 @@ console.log("\nEL AVISO DICE QUÉ SE PERDIÓ — un « perdiste cosas » no ense
     cuerpo.indexOf("tumbaCaer") < cuerpo.indexOf("zonaSalir(true)"));
 }
 
-console.log(fallos ? "\n" + fallos + " fallo(s)\n" : "\nTodo en orden: cae lo que cargaste, y el equipo solo a veces.\n");
+console.log("\nEL ENFRIAMIENTO NO SE INTERPONE ENTRE VOS Y TU CUERPO   (Suren, en vivo, 8/9)");
+{
+  /* « hay que quitar el CD de regresar a zona negra porque acabo de morir y no puedo esperar
+     porque se pudre y no puedo recuperar ». El enfriamiento se diseñó cuando morir no costaba
+     nada; esta tarde le pusimos encima un cuerpo con diez minutos de reloj real, y sumados el
+     castigo pasó a ser otro. No se borra el enfriamiento: se le pone su sitio. */
+  conCarga();
+  G.zonaCdHasta = ctx.nowMs() + 3 * 60000;
+  ok("sin cuerpo esperando, el descanso manda como siempre", ctx.zonaCdLeft() > 0,
+    Math.round(ctx.zonaCdLeft() / 1000) + " s");
+  ctx.tumbaCaer("pantano", 5, 5, NUNCA);
+  ok("pero con tu cuerpo allá, el portal queda abierto YA", ctx.zonaCdLeft() === 0);
+  ctx.tumbaLimpiar();
+  ok("y en cuanto lo recuperás (o se deshace), el ritmo vuelve solo", ctx.zonaCdLeft() > 0,
+    Math.round(ctx.zonaCdLeft() / 1000) + " s");
+}
+
+console.log(fallos ? "\n" + fallos + " fallo(s)\n" : "\nTodo en orden: cae lo que cargaste, el equipo solo a veces, y podés ir a buscarlo.\n");
 process.exit(fallos ? 1 : 0);

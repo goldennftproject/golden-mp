@@ -267,7 +267,11 @@ function refreshCombate() {
   if (!(window.GF && GF.scene === "forest")) { caja.style.display = "none"; caja._firma = ""; return; }
   const gr = G.gear || {};
   const modo = (typeof modoPelea === "function") ? modoPelea() : "perseguir";
-  const fl = (G.res && G.res.flecha) || 0;
+  /* 8/9 (Suren) — este muelle solo se ve DENTRO de la Zona, así que las flechas que cuenta tienen
+     que ser las que llevás en el contenedor. Leyendo G.res.flecha mostraba las sesenta que
+     dejaste en la granja mientras el arco no podía disparar ni una: el peor cartel posible,
+     porque no solo no ayuda, convence al jugador de que el problema está en otro lado. */
+  const fl = (typeof llevoTengo === "function") ? llevoTengo("res", "flecha") : ((G.res && G.res.flecha) || 0);
   const firma = [gr.casco, gr.armadura, gr.botas, gr.escudo, gr.arma, gr.municion ? fl : 0, modo].join("|");
   if (caja._firma === firma) return;
   caja._firma = firma;
@@ -1646,6 +1650,18 @@ function invCellClick(i) {
     if (typeof saveFarm === "function") saveFarm();
   }
   else if (d.kind === "pick") { if (G.picks.owned[d.key]) equipPick(d.key); }
+  /* 8/9 (Suren, en vivo) — « las flechas no se equipan con clic: hay que ir al Equipo para poder
+     equiparlas ». Tenía razón y era una incoherencia vieja: el arma se equipa con un clic desde
+     la bolsa, el pico también, y la munición era la única que obligaba a abrir otro panel. Ahora
+     la flecha se comporta como sus vecinas. */
+  else if (d.kind === "res" && d.key === "flecha") {
+    if (!(G.res.flecha > 0)) { toast("No te quedan flechas"); return; }
+    G.gear.municion = !G.gear.municion;
+    toast(G.gear.municion ? "Flechas equipadas — el arco ya puede disparar" : "Flechas guardadas");
+    refreshHud(); if (isOpen("ov-equip")) refreshEquip();
+    if (typeof refreshCombate === "function") refreshCombate();
+    if (typeof saveFarm === "function") saveFarm();
+  }
   else if (d.kind === "dish") eatDish(d.key);
   else if (d.kind === "chest") { if (window.FARM && FARM.placeChestFromBag) FARM.placeChestFromBag(); }
   // blueprints (12/8): clic en el plano → cerrar ventanas y elegir dónde levantar la obra
@@ -1910,7 +1926,12 @@ function refreshEquip() {
   const fl = (G.res && G.res.flecha) || 0;
   const munOn = !!G.gear.municion && fl > 0;
   fill("eq-municion", munOn, spIc("res_flecha", "") + '<b class="eqcnt">' + fmt(fl) + "</b>",
-    munOn ? fl + " flechas equipadas · clic para desequipar" : (fl > 0 ? "Munición · clic para equipar tus " + fl + " flechas" : "Munición (crafteá flechas en la Herrería)"));
+    /* 8/9 (Suren) — « y luego las equipa y no las quita de la bolsa ». Es correcto y es de Tibia:
+       la munición no se MUEVE a otro sitio, la ranura es una VISTA de la pila de flechas que
+       llevás, porque se gastan de a una al disparar. Pero si el rótulo no lo dice, se lee como
+       un duplicado o como un bug — así que lo dice. */
+    munOn ? fl + " flechas listas · siguen en tu bolsa (se gastan al disparar) · clic para guardarlas"
+          : (fl > 0 ? "Munición · clic para usar tus " + fl + " flechas (no salen de la bolsa)" : "Munición (crafteá flechas en la Herrería)"));
   const munEl = $("eq-municion");
   if (munEl) munEl.onclick = () => {
     if (fl <= 0) { toast("No tenés flechas — crafteálas en la Herrería"); return; }

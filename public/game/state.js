@@ -3501,7 +3501,21 @@ function rollEsencia(zona, esBoss, lvlMob) {
 //   · al volver se compara contra esa foto y sale un cuadro con lo que trajiste
 //   · y arranca un enfriamiento antes de poder volver a entrar
 var ZONA_CD_MIN = 3;          // minutos de descanso entre viaje y viaje
-function zonaCdLeft() { return Math.max(0, (G.zonaCdHasta || 0) - nowMs()); }
+/* 8/9 (Suren, en vivo) — « hay que quitar el CD de regresar a la Zona Negra porque acabo de morir
+   y no puedo esperar, porque se pudre y no puedo recuperar ».
+   Tenía toda la razón, y el fallo es mío: el enfriamiento se diseñó cuando morir no costaba NADA
+   —era solo un ritmo entre viajes de farmeo— y esta tarde le puse encima un cuerpo con diez
+   minutos de reloj real. Sumados, el castigo se volvió otro: tres de esos diez minutos se iban
+   en una pared, más lo que tardás en cruzar y caminar hasta donde caíste. Y si el contenedor era
+   la mochila, perderla por no llegar a tiempo no es « la muerte cuesta algo », es « la muerte te
+   cobra dos veces por el mismo error ».
+   La regla nueva no borra el enfriamiento, lo pone en su sitio: EXISTE PARA PAUSAR EL FARMEO, NO
+   PARA SEPARARTE DE TU CUERPO. Mientras tengas un cuerpo vivo esperándote, la puerta está
+   abierta. En cuanto lo recuperás (o se deshace), el ritmo de siempre vuelve solo. */
+function zonaCdLeft() {
+  if (typeof tumbaViva === "function" && tumbaViva()) return 0;
+  return Math.max(0, (G.zonaCdHasta || 0) - nowMs());
+}
 function zonaMatados() {
   const m = (G.stats && G.stats.matar) || {};
   return Object.keys(m).reduce((s, k) => s + (m[k] || 0), 0);
@@ -3652,7 +3666,16 @@ function contDescargar(nodo, silencio) {
     else if (e.kind === "armorset") { G.armor = G.armor || {}; if (!G.armorEq) G.armorEq = e.k; ok = true; }
     else if (e.k === "plata")  { G.plata  = (G.plata  || 0) + e.n; ok = true; }
     else if (e.k === "golden") { G.golden = (G.golden || 0) + e.n; ok = true; }
-    else ok = (typeof tryAddRes === "function") ? tryAddRes(e.k, e.n) : false;
+    /* 8/9 (Suren, en vivo) — « me morí, recuperé todo y al regresar no tenía nada en el bag,
+       perdí mis comidas ». GRAVE, y mío: acá había un `tryAddRes(e.k, e.n)` para TODO lo que no
+       fuera equipo o monedas. tryAddRes solo sabe de recursos, así que un plato volvía como un
+       G.res.papa_asada que la bolsa no lista y nadie puede comer — se evaporaba en silencio. Lo
+       mismo las semillas, los peces, las herramientas, los picos y las cañas: todo lo que la
+       puerta del portal SÍ deja cargar desde la tanda 2, porque dirección pidió « lo que el
+       usuario decida ». La puerta aprendió a mover las nueve familias y esta función se quedó
+       con la de una: dos sitios que hacen lo mismo y se separan, otra vez.
+       Ahora sale por viajePoner, que es el que ya sabe dónde vive cada familia. */
+    else ok = (typeof viajePoner === "function") ? viajePoner(e.kind || "res", e.k, e.n) : false;
     if (ok) { movidas++; detalle.push(e.n + " " + ((typeof RES_LABEL !== "undefined" && RES_LABEL[e.k]) || e.k)); }
     else quedan.push(e);
   }

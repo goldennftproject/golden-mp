@@ -140,6 +140,43 @@ console.log("\nEL PORTAL ABRE LA PUERTA, Y NO DEJA ENTRAR DE CUALQUIER FORMA");
     /!contPilas\(raiz\)\) log\([\s\S]{0,90}curarte/.test(FARM));
 }
 
+console.log("\nY AL VOLVER, CADA FAMILIA ATERRIZA DONDE VIVE   (Suren, en vivo, 8/9)");
+{
+  /* « me morí, recuperé todo y al regresar no tenía nada en el bag: perdí mis comidas ». GRAVE.
+     contDescargar mandaba TODO lo que no fuera equipo o monedas por tryAddRes, que solo sabe de
+     recursos: un plato volvía como un G.res.papa_asada que la bolsa no lista y nadie puede comer.
+     Se evaporaba en silencio, y con él las semillas, los peces, las herramientas, los picos y las
+     cañas — o sea todo lo que la puerta SÍ deja cargar desde la tanda 2.
+     La lección de fondo: la puerta aprendió a mover nueve familias y el descargue se quedó con
+     una. Dos sitios que hacen lo mismo terminan separándose SIEMPRE; por eso ahora los dos salen
+     por viajePoner, y por eso este test recorre las nueve y no solo la que falló. */
+  limpio();
+  G.res = {}; G.seeds = { papa: 0 }; G.dishes = {}; G.fish = {}; G.tools = { axe: 0 };
+  G.picks = { owned: {}, dur: {} }; G.canas = {}; G.weapons = {}; G.plata = 0; G.golden = 0;
+  ctx.viajeElegir("bag");
+  const r = ctx.contLlevado();
+  ctx.pezGuardar("merluza", 2.5);
+  const clavePez = Object.keys(G.fish)[0];
+  G.fish = {};
+  ctx.contMeter(r, "dish", "papa_asada", 3);
+  ctx.contMeter(r, "seed", "papa", 5);
+  ctx.contMeter(r, "tool", "axe", 7);
+  ctx.contMeter(r, "pick", "stone", 4);
+  ctx.contMeter(r, "fish", clavePez, 1);
+  ctx.contMeter(r, "res", "carne", 6);
+  ctx.contMeter(r, "res", "plata", 90);
+  ctx.contDescargar(r, true);
+  ok("los platos vuelven a la cocina, no a G.res", (G.dishes.papa_asada || 0) === 3 && !(G.res.papa_asada > 0),
+    "platos " + G.dishes.papa_asada + " · basura en res: " + JSON.stringify(G.res.papa_asada));
+  ok("las semillas al sembradero", Math.floor(G.seeds.papa || 0) === 5, "semillas " + G.seeds.papa);
+  ok("las herramientas a su pila", ctx.toolCount("axe") === 7, "hachas " + ctx.toolCount("axe"));
+  ok("los picos a su durabilidad", ctx.pickCount("stone") === 4, "picos " + ctx.pickCount("stone"));
+  ok("el pez con su peso en la clave", ctx.pezCuenta("merluza") === 1, JSON.stringify(G.fish));
+  ok("los recursos donde siempre", Math.floor(G.res.carne || 0) === 6);
+  ok("y la plata a la billetera", G.plata === 90);
+  ok("el contenedor queda limpio", ctx.contPilas(r) === 0);
+}
+
 console.log("\nAL VOLVER, EL CONTENEDOR VUELVE A LA GRANJA");
 {
   limpio();
