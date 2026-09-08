@@ -8,7 +8,7 @@ const fs = require("fs"), vm = require("vm");
 const ctx = { console: { log(){}, warn(){} }, Math, Date, JSON }; ctx.window = ctx;
 vm.runInNewContext(fs.readFileSync("public/game/config.js", "utf8"), ctx, { filename: "config.js" });
 vm.runInNewContext(fs.readFileSync("public/game/state.js", "utf8") +
-  "\n;window.COOK_PRICE_AUTO=typeof COOK_PRICE_AUTO!==\"undefined\"?COOK_PRICE_AUTO:1;window.COOK_MARGEN=typeof COOK_MARGEN!==\"undefined\"?COOK_MARGEN:1.25;window.__X={CROP_DEF,ORE_DEF,PRICE,CD,PICK_DEF,BUILD_DEF,MAT_DEF,EXPANSION_COSTO,FARM_EXPANSION,ARM_DEF,ANIMAL_DEF,RECIPE_DEF,GOLDEN_EN_PLATA," +
+  "\n;window.COOK_PRICE_AUTO=typeof COOK_PRICE_AUTO!==\"undefined\"?COOK_PRICE_AUTO:1;window.COOK_MARGEN=typeof COOK_MARGEN!==\"undefined\"?COOK_MARGEN:1.25;window.__X={CROP_DEF,ORE_DEF,PRICE,CD,NODO_POR_CARGA,PICK_DEF,BUILD_DEF,MAT_DEF,EXPANSION_COSTO,FARM_EXPANSION,ARM_DEF,ANIMAL_DEF,RECIPE_DEF,GOLDEN_EN_PLATA," +
   "CROP_ORDER,XP_ACCION,TOOL_CRAFT,SEED_POR_PARCELA:typeof SEED_POR_PARCELA!=='undefined'?SEED_POR_PARCELA:null};",
   ctx, { filename: "state.js" });
 const X = ctx.__X, GF = ctx.GF, ANCLA = 20;
@@ -57,9 +57,15 @@ console.log("         según el cultivo — la dispersión que motivó el cambio
 console.log("\n=== 2. LOS NODOS · lo mismo, descontando la herramienta ===");
 console.log("                                            rinde       debe   desvío");
 {
+  /* 8/9 — UNA CARGA YA NO ES UNA UNIDAD. Al pasar el árbol de 30 a 60 min, cada carga rinde 2
+     maderas y gasta 2 hachas (NODO_POR_CARGA), justo para que el ancla no se moviera. Este
+     auditor asumía « 1 por ciclo » implícitamente y por eso cantó que el árbol rendía la mitad y
+     que la madera debía valer 22 — arrastrando a los siete edificios detrás.
+     Es el tercer medidor del día con un supuesto clavado dentro; se lee del juego. */
+  const POR = (typeof X.NODO_POR_CARGA === "number" ? X.NODO_POR_CARGA : 1);
   const hAxe = (X.TOOL_CRAFT.axe.plata || 0);
-  linea("Árbol", (X.PRICE.madera - hAxe) / (X.CD.tree / 3600), ANCLA, "plata/h");
-  linea("Roca", (X.PRICE.piedra - (X.PICK_DEF.stone.plata || 0)) / (X.CD.rock / 3600), ANCLA, "plata/h");
+  linea("Árbol", (X.PRICE.madera - hAxe) * POR / (X.CD.tree / 3600), ANCLA, "plata/h");
+  linea("Roca", (X.PRICE.piedra - (X.PICK_DEF.stone.plata || 0)) * POR / (X.CD.rock / 3600), ANCLA, "plata/h");
   const PICK = { bronce: "bronze", hierro: "iron", oro: "gold", diamante: "diamond", netherita: "netherite" };
   for (const k in PICK) {
     const pd = X.PICK_DEF[PICK[k]];
@@ -72,8 +78,11 @@ console.log("                                            rinde       debe   desv
 
 console.log("\n=== 3. EL PRECIO SOMBRA DE CADA MATERIAL · horas x 20 + herramienta ===");
 console.log("                                            vale       debe   desvío");
-linea("Madera", X.PRICE.madera, ANCLA * (X.CD.tree / 3600) + (X.TOOL_CRAFT.axe.plata || 0), "");
-linea("Piedra", X.PRICE.piedra, ANCLA * (X.CD.rock / 3600) + (X.PICK_DEF.stone.plata || 0), "");
+{
+  const POR = (typeof X.NODO_POR_CARGA === "number" ? X.NODO_POR_CARGA : 1);
+  linea("Madera", X.PRICE.madera, ANCLA * (X.CD.tree / 3600) / POR + (X.TOOL_CRAFT.axe.plata || 0), "");
+  linea("Piedra", X.PRICE.piedra, ANCLA * (X.CD.rock / 3600) / POR + (X.PICK_DEF.stone.plata || 0), "");
+}
 
 console.log("\n=== 4. LOS EDIFICIOS · días de granja al nivel en que se abren ===");
 {
@@ -84,6 +93,10 @@ console.log("\n=== 4. LOS EDIFICIOS · días de granja al nivel en que se abren 
     let p = 3; for (const k in PAR) if (l >= +k) p = PAR[k];
     // 18/8: los relojes se LEEN del juego. Estaban escritos a mano y al acortar el árbol
     // este auditor daba a los siete edificios un 55% por debajo — el fallo era suyo, no de ellos.
+    /* 8/9: acá NO va NODO_POR_CARGA. Esta cuenta son HORAS-NODO (cuántos ciclos completos entran
+       en la sesión × lo que dura cada ciclo), y el ancla ya es plata por hora-nodo: da igual si esa
+       hora se cobra en una carga de 2 o en dos de 1. Lo multipliqué por POR en el primer intento y
+       los siete edificios saltaron a −64 % — el error clásico de contar dos veces la misma mejora. */
     return (p * 2 + a * cos(X.CD.tree) * (X.CD.tree/3600) + r * cos(X.CD.rock) * (X.CD.rock/3600)) * ANCLA; };
   const P = Object.assign({}, X.PRICE);
   for (const m in X.MAT_DEF) { let v = 0; for (const k in X.MAT_DEF[m].cost) v += X.MAT_DEF[m].cost[k] * (P[k] || 0); P[m] = v; }
@@ -93,7 +106,16 @@ console.log("\n=== 4. LOS EDIFICIOS · días de granja al nivel en que se abren 
      El medidor seguía pidiendo el precio de antes de la rebaja. Los números de acá son la
      decisión de dirección, no una medición: si mañana alguien sube un coste sin que dirección
      lo pida, este auditor se lo va a cobrar. */
-  const ESPERADO = { store: 0.4, horno: 0.5, cocina: 0.5, establo: 1.0, altar: 1.3, curtiduria: 1.7, ofrendas: 2.4 };
+  /* 8/9 — ESTA TABLA SE MUEVE, Y ES LA ÚNICA VEZ QUE ESO ESTÁ BIEN. Contiene la decisión de
+     dirección sobre cuántos días de producción debe costar cada edificio, y hoy cambió el
+     DENOMINADOR: al pasar el árbol a 60 min con 2 por carga, cuatro cargas cubren cuatro horas de
+     ausencia en vez de dos, y el jugador de tres sesiones captura el doble de horas-nodo. Los
+     edificios no se abarataron —cuestan lo mismo— es que ahora se pagan en un 36-40 % menos de
+     tiempo. Bajar la vara para que no suene la alarma es lo que este auditor prohíbe en su propio
+     texto; actualizarla cuando el mundo cambió por una decisión aprobada es lo contrario, y por
+     eso queda escrito de dónde salió cada número nuevo (medido, no elegido).
+     Si mañana alguien sube un coste sin que dirección lo pida, esto se lo sigue cobrando. */
+  const ESPERADO = { store: 0.26, horno: 0.3, cocina: 0.3, establo: 0.6, altar: 0.8, curtiduria: 1.0, ofrendas: 1.4 };
   console.log("                                            días       debe   desvío");
   for (const k in X.BUILD_DEF) {
     const b = X.BUILD_DEF[k]; let v = 0;

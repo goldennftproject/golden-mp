@@ -1930,14 +1930,15 @@ class FarmScene extends Phaser.Scene {
          entra a la rama clásica en el golpe 2 (profundo, mudo) y el tercero tumba con su madera. */
       const cargasArbol = nodoCargas(o, CD.tree);
       if (cargasArbol > 1) {   // corte SUAVE que cobra: paga una carga y el árbol sigue en pie
-        if (tryAddRes("madera", 1)) {
-          useTool("axe"); addXp("tala", xpDeNodo("tree")); nodoSumar(o); statAdd("talar", null, 1);
+        const gr = (typeof NODO_POR_CARGA === "number" ? NODO_POR_CARGA : 1);
+        if (tryAddRes("madera", gr)) {
+          for (let u = 0; u < gr; u++) useTool("axe"); addXp("tala", xpDeNodo("tree")); nodoSumar(o); statAdd("talar", null, 1);
           const quedan = nodoGastarCarga(o, CD.tree); this.syncNodos();
           if (this.textures.exists("tree_cut1")) this.setObjTex(o, "tree_cut1", o.rw || o.w);
           o.golpes = 1;   // el pago vale como primer golpe: el cierre será profundo (mudo) → tocón (paga)
           o.golpesAt = nowMs(); this.barraGolpes(o);
-          this.premioFx(o.cx, o.by, resSprite("madera"), "+1"); refreshHud();
-          log(`+1 Madera — al árbol le quedan ${quedan} carga${quedan === 1 ? "" : "s"}. ${toolDur("axe")}/${TOOL_DEF.axe.max}`, "good");
+          this.premioFx(o.cx, o.by, resSprite("madera"), "+" + gr); refreshHud();
+          log(`+${gr} Madera — al árbol le quedan ${quedan} carga${quedan === 1 ? "" : "s"}. ${toolDur("axe")}/${TOOL_DEF.axe.max}`, "good");
           if (typeof tutoEvent === "function") tutoEvent("gather");
           if (toolDur("axe") <= 0) { log("¡El hacha se rompió en pedazos! Crafteá otra en la Herrería.", "bad"); toast("¡Hacha rota!"); }
         } else {
@@ -1955,8 +1956,9 @@ class FarmScene extends Phaser.Scene {
       }
       o.golpesAt = 0;
       o.golpes = 0; this.barraGolpes(o);
-      if (tryAddRes("madera", 1)) {   // la ÚLTIMA carga: el árbol cae de verdad
-        useTool("axe"); addXp("tala", xpDeNodo("tree"));   /* 18/8: por acción, no por reloj */   /* 18/8: talar es TALA, no Artesanía */ /* 16/8: XP = minutos del reloj (1 h 30 → 90) */ nodoSumar(o);
+      const grF = (typeof NODO_POR_CARGA === "number" ? NODO_POR_CARGA : 1);
+      if (tryAddRes("madera", grF)) {   // la ÚLTIMA carga: el árbol cae de verdad
+        for (let u = 0; u < grF; u++) useTool("axe"); addXp("tala", xpDeNodo("tree"));   /* 18/8: por acción, no por reloj */   /* 18/8: talar es TALA, no Artesanía */ /* 16/8: XP = minutos del reloj (1 h 30 → 90) */ nodoSumar(o);
         o.cdIni = nowMs(); o.readyAt = nowMs() + nodoCd(o, "tree", CD.tree) * 1000 * cdMult() * (typeof tutoBoost === "function" ? tutoBoost("tree") : 1);
         o.halfAt = nowMs() + (o.readyAt - nowMs()) / 2; this.syncNodos();   // a mitad del enfriamiento asoma el árbol a medio crecer (doc 4/8)
         // tocón nuevo con base de tierra y hojas caídas (encuadre del árbol, va a tamaño completo); respaldo: tocón viejo chico
@@ -1966,8 +1968,8 @@ class FarmScene extends Phaser.Scene {
         if (this.textures.exists("tree_stump_leaves")) this.setObjTex(o, "tree_stump_leaves", (o.rw || o.w) * 0.42);
         else this.setObjTex(o, "tree_stump", (o.rw || o.w) * 0.42);
         statAdd("talar", null, 1);
-        this.premioFx(o.cx, o.by, resSprite("madera"), "+1");
-        log(`+1 Madera. ${toolDur("axe")}/${TOOL_DEF.axe.max}`, "good"); refreshHud();
+        this.premioFx(o.cx, o.by, resSprite("madera"), "+" + grF);
+        log(`+${grF} Madera. ${toolDur("axe")}/${TOOL_DEF.axe.max}`, "good"); refreshHud();
         if (typeof tutoEvent === "function") tutoEvent("gather");
         if (toolDur("axe") <= 0) { log("¡El hacha se rompió en pedazos! Crafteá otra en la Herrería.", "bad"); toast("¡Hacha rota!"); }
       } else {
@@ -1980,7 +1982,8 @@ class FarmScene extends Phaser.Scene {
          Roca de 4 = 5 clics, 4 piedras, 4 picos. La normal de 1 conserva su tanda clásica. */
       const cargasRoca = nodoCargas(o, CD.rock);
       if (cargasRoca > 1) {   // golpe que COBRA una carga: paga y la roca sigue ahí
-        if (tryAddRes("piedra", 1)) {
+        const gr = (typeof NODO_POR_CARGA === "number" ? NODO_POR_CARGA : 1);
+        if (tryAddRes("piedra", gr)) {
           const pk = picoParaNodo(o);   // 24/8: el pico se elige solo — el más barato que sirva
           if (pk) { G.picks.dur[pk] = Math.max(0, (G.picks.dur[pk] || 0) - 1); if (G.picks.dur[pk] <= 0) { log("Usaste tu último " + PICK_DEF[pk].label + " — crafteá más en la Herrería.", "bad"); toast("Sin picos — crafteá más"); destroyPick(pk); } }
           addXp("mining", xpDeNodo("rock", "piedra")); statAdd("minar", "piedra", 1); nodoSumar(o);
@@ -1988,8 +1991,8 @@ class FarmScene extends Phaser.Scene {
           if (this.textures.exists(o.baseKey + "_half")) this.setObjTex(o, o.baseKey + "_half", o.rw || o.w);
           o.golpes = 1;   // el pago vale como primer golpe: el cierre será mudo → rota (paga)
           o.golpesAt = nowMs(); this.barraGolpes(o);
-          this.premioFx(o.cx, o.by, resSprite("piedra"), "+1"); refreshHud();
-          log(`+1 Piedra — a la roca le quedan ${quedan} carga${quedan === 1 ? "" : "s"}.` + (pk ? ` Quedan ${G.picks.dur[pk]} picos.` : ""), "good");
+          this.premioFx(o.cx, o.by, resSprite("piedra"), "+" + gr); refreshHud();
+          log(`+${gr} Piedra — a la roca le quedan ${quedan} carga${quedan === 1 ? "" : "s"}.` + (pk ? ` Quedan ${G.picks.dur[pk]} picos.` : ""), "good");
           if (typeof tutoEvent === "function") tutoEvent("gather");
         } else {
           toast("Bolsa llena — no podés picar"); log("Bolsa llena: liberá espacio para seguir picando.", "bad");
@@ -2004,13 +2007,14 @@ class FarmScene extends Phaser.Scene {
         this.action = null; return;
       }
       o.golpes = 0; o.golpesAt = 0; this.barraGolpes(o);
-      if (tryAddRes("piedra", 1)) {   // la ÚLTIMA carga: la roca se rompe de verdad
+      const grF = (typeof NODO_POR_CARGA === "number" ? NODO_POR_CARGA : 1);
+      if (tryAddRes("piedra", grF)) {   // la ÚLTIMA carga: la roca se rompe de verdad
         const pk = picoParaNodo(o);   // picar piedra también gasta el pico (bug reportado) · 24/8: el pico se elige solo
         if (pk) { G.picks.dur[pk] = Math.max(0, (G.picks.dur[pk] || 0) - 1); if (G.picks.dur[pk] <= 0) { log("Usaste tu último " + PICK_DEF[pk].label + " — crafteá más en la Herrería.", "bad"); toast("Sin picos — crafteá más"); destroyPick(pk); } }
         addXp("mining", xpDeNodo("rock", "piedra")); /* 16/8: XP = minutos del reloj (2 h → 120) */ statAdd("minar", "piedra", 1); nodoSumar(o);
         o.cdIni = nowMs(); o.readyAt = nowMs() + nodoCd(o, "piedra", CD.rock) * 1000 * cdMult() * (typeof tutoBoost === "function" ? tutoBoost("rock") : 1); o.halfAt = nowMs() + (o.readyAt - nowMs()) / 2; this.syncNodos(); this.setObjTex(o, "node_stone_mined", o.rw || GF.TILE);
-        log(`+1 Piedra.` + (pk ? ` Quedan ${G.picks.dur[pk]} picos.` : ""), "good");
-        this.premioFx(o.cx, o.by, resSprite("piedra"), "+1"); refreshHud();
+        log(`+${grF} Piedra.` + (pk ? ` Quedan ${G.picks.dur[pk]} picos.` : ""), "good");
+        this.premioFx(o.cx, o.by, resSprite("piedra"), "+" + grF); refreshHud();
         if (typeof tutoEvent === "function") tutoEvent("gather");
       }
       else { this.setObjTex(o, o.baseKey, o.rw || o.w); toast("Bolsa llena — no podés picar"); log("Bolsa llena: liberá espacio para seguir picando.", "bad"); }   // vuelve entera: los golpes se perdieron
@@ -2018,7 +2022,11 @@ class FarmScene extends Phaser.Scene {
       /* 22/8 (cargas, ritmo final): la veta de PIEDRA va con las rocas — con cargas, cada clic
          paga. Las vetas de MINERAL siguen APARTADAS (dirección): reloj simple, tanda clásica.
          LA PICADA DE MINERAL RINDE od.yield (2) — el ancla del 18/8 que esta rama pagaba en 1. */
-      const odC = ORE_DEF[o.ore], grVeta = Math.max(1, odC.yield || 1);
+      /* 8/9: la veta de PIEDRA comparte el reloj de la roca (CD.rock), así que comparte también
+         lo que paga una carga. Las de mineral no: están apartadas de la mecánica desde el 21/8 y
+         siguen con su rinde propio, que es justo lo que distingue una rama de la otra. */
+      const odC = ORE_DEF[o.ore];
+      const grVeta = Math.max(1, (odC.yield || 1) * (o.ore === "piedra" ? (typeof NODO_POR_CARGA === "number" ? NODO_POR_CARGA : 1) : 1));
       const cargasVeta = o.ore === "piedra" ? nodoCargas(o, CD.rock) : 1;
       if (cargasVeta > 1) {   // modo cargas (solo la veta de piedra): este clic COBRA una carga
         if (tryAddRes(o.ore, grVeta)) {

@@ -141,8 +141,13 @@ console.log("\nEL CABLEADO DEL CLIC   (fijado con fuente: los handlers viven den
     /else if \(this\.target\) this\.clearTarget\(\)/.test(codigo),
     "antes no había ninguna: solo se podía cambiar de objetivo, nunca quedarse sin él");
   ok("el recuadro del objetivo es ROJO", /0xe23a2a/.test(src), "0xe23a2a, pulsando");
-  ok("y sin arma no se fija nada — el aviso ya existía",
-    /Necesitás un arma equipada/.test(src));
+  /* 8/9 (Suren, en vivo) — el cartel « Necesitás un arma equipada » MENTÍA cuando llevabas el
+     arco puesto y las flechas en la granja, así que se partió en dos preguntas: hasWeapon dice si
+     llevás arma y porQueNoAtaca contesta por qué no podés atacar AHORA, con el remedio. Lo que
+     este test cuida sigue siendo lo mismo —que sin poder atacar no se fije objetivo— pero ahora
+     se comprueba contra la puerta, no contra una frase que ya no siempre es cierta. */
+  ok("y si no podés atacar no se fija nada, con el motivo exacto",
+    /porQueNoAtaca\(\)/.test(src) && /const no = this\.porQueNoAtaca\(\); if \(no\) \{ toast\(no\); return; \}/.test(src));
 }
 
 console.log("");

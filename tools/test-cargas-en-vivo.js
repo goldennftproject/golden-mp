@@ -66,16 +66,27 @@ console.log("\nEL ÁRBOL VIRGEN, CLIC A CLIC POR EL PIPELINE REAL");
   for (let i = 0; i < 12 && (arbol.readyAt || 0) <= FakeDate.now(); i++) {
     const antes = G.res.madera || 0; clicFisico(); patron.push((G.res.madera || 0) - antes);
   }
-  ok("el ritmo dictado: suave+1 · suave+1 · suave+1 · profundo mudo · tocón+1",
-    patron.join("") === "11101", patron.join(""));
-  ok("4 maderas en total, ni una más (el tick del update ya no lo rellena)",
-    patron.reduce((a, b) => a + b, 0) === 4);
+  /* 8/9 — el RITMO es lo que dictó dirección clic a clic el 22/8 y no se toca: paga, paga, paga,
+     mudo, paga. Lo que cambió es cuánto paga cada uno: al alargar el reloj del árbol a 60 min,
+     una carga rinde NODO_POR_CARGA maderas para que el ancla no se moviera. El test se escribe
+     contra la constante, no contra el « 1 », para que el patrón siga protegido si mañana vuelve
+     a moverse. */
+  const POR = ctx.NODO_POR_CARGA || 1;
+  ok("el ritmo dictado: paga · paga · paga · profundo mudo · paga",
+    patron.join("") === [POR, POR, POR, 0, POR].join(""), patron.join("") + "  (por carga: " + POR + ")");
+  ok(4 * POR + " maderas en total, ni una más (el tick del update ya no lo rellena)",
+    patron.reduce((a, b) => a + b, 0) === 4 * POR);
   ok("y el árbol CAYÓ: reloj corriendo a futuro", (arbol.readyAt || 0) > FakeDate.now());
 }
 
 console.log("\nY EL CICLO SIGUIENTE, TAMBIÉN POR EL PIPELINE REAL");
 {
-  desfase += (CD.tree * 1000) + 31 * 60000;   // crece y se pasa 31 min: 2 cargas
+  /* DOS relojes enteros y un poco: el primero devuelve el árbol a « 1 carga » (readyAt) y el
+     segundo suma la segunda. Iba clavado en « CD + 31 min », que con el árbol a 30 min daba
+     justo — y al pasarlo a 60 min dejó de dar. El avance se deriva del reloj, no de un número
+     que solo funcionaba con el valor de aquel día. */
+  const POR2 = ctx.NODO_POR_CARGA || 1;
+  desfase += 2 * (CD.tree * 1000) + 60000;   // dos relojes y un minuto: 2 cargas
   for (let f = 0; f < 4; f++) { desfase += 50; try { esc.update(FakeDate.now(), 50); } catch (e) {} }
   ok("(escenario) pasado un reloj extra: 2 cargas — y el tick NO se las comió",
     ctx.nodoCargas(arbol, CD.tree) === 2, ctx.nodoCargas(arbol, CD.tree) + "");
@@ -83,7 +94,8 @@ console.log("\nY EL CICLO SIGUIENTE, TAMBIÉN POR EL PIPELINE REAL");
   for (let i = 0; i < 8 && (arbol.readyAt || 0) <= FakeDate.now(); i++) {
     const antes = G.res.madera || 0; clicFisico(); patron.push((G.res.madera || 0) - antes);
   }
-  ok("con 2 cargas: suave+1 · profundo mudo · tocón+1", patron.join("") === "101", patron.join(""));
+  ok("con 2 cargas: paga · profundo mudo · paga",
+    patron.join("") === [POR2, 0, POR2].join(""), patron.join("") + "  (por carga: " + POR2 + ")");
 }
 
 console.log(fallos ? "\n" + fallos + " fallo(s)\n" : "\nTodo en orden: el ritmo del clic aguanta con el juego entero corriendo.\n");

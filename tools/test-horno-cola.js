@@ -43,9 +43,14 @@ console.log("\nLOS TIEMPOS SALEN DEL RELOJ DE SU NODO, DIVIDIDO POR LAS TRES BOC
      Árbol 30 min → tablón 10. Roca 40 min → bloque 13. Las vetas de metal son de horas, así que
      ahí se corta y sigue la escalera de siempre, un escalón por tier. */
   const CD = vm.runInContext("CD", ctx);
-  ok("el tablón sale del reloj del árbol ÷ 3", MAT_CD_S.tablon === Math.round(CD.tree / 3 / 10) * 10,
+  /* 8/9 — la vara es « lo que tarda la madera que consume », no « el reloj del árbol ». Eran lo
+     mismo mientras una carga rendía 1; al pasar el árbol a 60 min con 2 por carga, la madera sigue
+     llegando al mismo ritmo y el tablón no tiene por qué tardar el doble. Se divide también por
+     NODO_POR_CARGA, que es lo que convierte reloj-de-nodo en reloj-de-material. */
+  const POR = ctx.NODO_POR_CARGA || 1;
+  ok("el tablón sale del reloj de la MADERA (árbol ÷ carga ÷ 3)", MAT_CD_S.tablon === Math.round(CD.tree / POR / 3 / 10) * 10,
     MAT_CD_S.tablon + " s (árbol " + CD.tree + " s)");
-  ok("el bloque de piedra, del reloj de la roca ÷ 3", MAT_CD_S.barra_piedra === Math.round(CD.rock / 3 / 10) * 10,
+  ok("el bloque de piedra, del reloj de la PIEDRA (roca ÷ carga ÷ 3)", MAT_CD_S.barra_piedra === Math.round(CD.rock / POR / 3 / 10) * 10,
     MAT_CD_S.barra_piedra + " s (roca " + CD.rock + " s)");
   ok("y las barras suben con su escalón", MAT_CD_S.barra_bronce > MAT_CD_S.barra_piedra &&
     MAT_CD_S.barra_hierro > MAT_CD_S.barra_bronce && MAT_CD_S.barra_oro > MAT_CD_S.barra_hierro,

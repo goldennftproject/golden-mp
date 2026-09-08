@@ -10,7 +10,7 @@ const fs = require("fs"), vm = require("vm");
 const ctx = { console: { log(){}, warn(){} }, Math, Date, JSON }; ctx.window = ctx;
 vm.runInNewContext(fs.readFileSync("public/game/config.js", "utf8"), ctx);
 vm.runInNewContext(fs.readFileSync("public/game/state.js", "utf8") +
-  "\n;window.__X={FARM_PARCELA,NIVEL_ARBOLES,NIVEL_ROCAS,CROP_DEF,CD,PRICE,FARM_EXPANSION,PLOT_MAX,G,nodosQueTocan};", ctx);
+  "\n;window.__X={FARM_PARCELA,NIVEL_ARBOLES,NIVEL_ROCAS,CROP_DEF,CD,NODO_POR_CARGA,PRICE,FARM_EXPANSION,PLOT_MAX,G,nodosQueTocan};", ctx);
 const X = ctx.__X, GF = ctx.GF;
 let fallos = 0;
 const ok = (n, c, d) => { if (!c) fallos++; console.log((c ? "  ok   " : "  FALLA") + "  " + n + (d ? "   " + d : "")); };
@@ -19,8 +19,12 @@ const ok = (n, c, d) => { if (!c) fallos++; console.log((c ? "  ok   " : "  FALL
 {
   const p = X.CROP_DEF.papa;
   const parc = (p.price * p.yield - p.seedCost) * (3600 / p.grow);
-  const arb = (X.PRICE.madera - 2) * (3600 / X.CD.tree);     // −2: el hacha
-  const roc = (X.PRICE.piedra - 2) * (3600 / X.CD.rock);     // −2: el pico
+  /* 8/9: una carga rinde NODO_POR_CARGA y gasta otras tantas herramientas. Iba implícito en « 1 »
+     y al alargar el reloj este test cantó que el árbol pagaba la mitad — medía su propio supuesto,
+     no el juego. Cuarto medidor del día con la misma forma de fallo. */
+  const POR = (typeof X.NODO_POR_CARGA === "number" ? X.NODO_POR_CARGA : 1);
+  const arb = (X.PRICE.madera - 2) * POR * (3600 / X.CD.tree);     // −2 por hacha, POR por carga
+  const roc = (X.PRICE.piedra - 2) * POR * (3600 / X.CD.rock);     // −2 por pico
   const dentro = v => Math.abs(v - 20) <= 1;
   ok("parcela = 20 plata/h", dentro(parc), parc.toFixed(1));
   ok("árbol   = 20 plata/h", dentro(arb), arb.toFixed(1));

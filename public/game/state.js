@@ -428,6 +428,19 @@ var GOLPES_TALAR = 3, GOLPES_MINAR = 3;   // clics para tumbar un árbol o rompe
    profundo · tocón. Y el árbol NORMAL de una carga, el clásico de siempre: suave(nada) ·
    profundo(nada) · tocón(+1 madera, −1 hacha). Cada madera paga su hacha, nada cae de golpe. */
 var NODO_CARGAS_MAX = 4;
+/* 8/9 — CUÁNTO PAGA UNA CARGA. Era 1, implícito y repetido en seis sitios de farm.js; ahora es
+   UN número, porque acaba de dejar de ser 1 y va a volver a moverse.
+   El motivo (medido hoy): el reloj de 30 min estaba calibrado para un jugador que no existe. El
+   simulador dice que hasta el más dedicado tiene las manos en el juego el 0,8 % del tiempo, así
+   que el tope de 4 cargas muerde el 75 % de lo que el árbol produjo — y el que entra una vez al
+   día pierde el 92 %.
+   Se alarga el reloj en vez de subir el tope, y el ancla obliga a lo demás: si el árbol tarda el
+   doble tiene que rendir el doble, o deja de pagar sus 20 plata la hora. Resultado: el mismo
+   ingreso diario para el que hace guardia, el DOBLE para el que entra una o dos veces, y LA MITAD
+   de clics para todos. Cuatro cargas ahora cubren cuatro horas de ausencia, no dos.
+   Lo que esto cambia del ritual del 22/8 —« cada madera paga su hacha », dictado clic a clic— es
+   solo la escala: cada corte suave paga 2 maderas y gasta 2 hachas. La relación se conserva. */
+var NODO_POR_CARGA = 2;
 function nodoCargas(o, cdBaseSeg) {
   if (!o) return 1;
   /* EL NODO VIRGEN NACE LLENO (22/8, dirección: "el regalito de bienvenida del terreno").
@@ -471,7 +484,11 @@ var GOLPES_RESET_MS = 5000;
    re-derivó entero (precios, herramientas, picos, edificios, expansiones, botín y armas).
    Las VETAS de mineral NO se tocan: 8 a 24 h es el ritmo diario, no el momento a momento, y
    dividirlas aplastaba la escalera de la minería. */
-var CD = { tree: 1800, rock: 2400 };            // 30 min árbol · 40 min piedra
+/* 8/9: 60 y 80 minutos. Iban en 30 y 40 desde el 18/8, cuando se acortaron de 90 y 120 porque en
+   la primera hora NINGÚN nodo llegaba a completarse. Ese arreglo sigue en pie: el nodo virgen
+   nace lleno (4 cargas), así que el jugador nuevo abre con 8 maderas de golpe y ve la mecánica en
+   su primer clic. Lo que se alarga es el CICLO, no la bienvenida. */
+var CD = { tree: 3600, rock: 4800 };            // 60 min árbol · 80 min piedra
 var CD_RAPIDO = {};   // 15/8 (dirección, FINAL): SIN arranque rápido — el timer es UNO desde el primer golpe ("el tutorial no es otro juego")
 // cuántas veces se recogió YA de ese nodo (por nodo, no global)
 function nodoUsos(o) { G.nodoUsos = G.nodoUsos || {}; return G.nodoUsos[o.i] || 0; }
@@ -1286,9 +1303,15 @@ const SKILL_NAME = {}; SKILL_DEFS.forEach(([k,,nm]) => SKILL_NAME[k] = nm);
 var XP_ACCION = 10;                    // una extracción del primer escalón
 var XP_ESCALON = { piedra:1, bronce:2, hierro:3, oro:4, diamante:5, netherita:6 };
 var XP_PEZ = 15, XP_ANIMAL = 20;
+/* 8/9 — LA XP SIGUE AL RELOJ, igual que el rinde. Al pasar el árbol de 30 a 60 min, una carga
+   pasó a valer dos maderas; si la XP se hubiera quedado en una acción, talar pagaría LA MITAD de
+   XP por hora que antes y la Tala se habría desincronizado de los otros diez oficios sin que nada
+   lo dijera. La regla de la casa —« el nivel N son las mismas horas en cualquier oficio »— vive
+   en RITMO_OFICIO y se apoya justo en esto. */
 function xpDeNodo(tipo, key) {
-  if (tipo === "tree") return XP_ACCION;
-  return XP_ACCION * (XP_ESCALON[key] || 1);
+  const porCarga = (typeof NODO_POR_CARGA === "number" ? NODO_POR_CARGA : 1);
+  if (tipo === "tree") return XP_ACCION * porCarga;
+  return XP_ACCION * (XP_ESCALON[key] || 1) * (key === "piedra" ? porCarga : 1);
 }
 function xpDeCultivo(k) {              // escalón 1..13 en la escalera de cultivos
   const i = (typeof CROP_ORDER !== "undefined") ? CROP_ORDER.indexOf(k) : -1;
@@ -1306,10 +1329,19 @@ function xpDeCultivo(k) {              // escalón 1..13 en la escalera de culti
 var SKILL_RITMO = null;
 function skillRitmo(sk) {
   if (!SKILL_RITMO) {
-    const REF = 3 * 3600 / CD.tree * XP_ACCION;                     // la vara: 3 árboles, 10 XP cada uno
+    /* 8/9 — LA VARA TAMBIÉN SIGUE AL RELOJ. Esto deriva « cuánta XP paga cada oficio por hora »
+       tomando la Tala como referencia, y lo hacía suponiendo una unidad por ciclo. Al pasar el
+       árbol a 60 min con 2 por carga, la Tala paga LO MISMO por hora —ése era el punto— pero esta
+       cuenta veía la mitad, y como es un cociente, TODOS los demás oficios se duplicaron: el
+       jabalí pasó de abrirse a las 94 h a las 190. Un fallo silencioso y a distancia, del que solo
+       se enteró test-establo.
+       Es la quinta vez hoy que un número implícito « 1 » se despierta al cambiar un reloj. Va con
+       la constante, como el resto. */
+    const POR = (typeof NODO_POR_CARGA === "number" ? NODO_POR_CARGA : 1);
+    const REF = 3 * 3600 / CD.tree * XP_ACCION * POR;               // la vara: los árboles de una hora
     const xpH = {
       tala:      REF,
-      mining:    3 * 3600 / CD.rock * XP_ACCION,                    // 3 rocas
+      mining:    3 * 3600 / CD.rock * XP_ACCION * POR,              // las rocas de una hora
       farming:   3 * 3600 / CROP_DEF.papa.grow * XP_ACCION,         // 3 parcelas de papa
       fishing:   3600 / FISH_CD * XP_PEZ,                           // 1 laguna
       ganaderia: 3 * XP_ANIMAL / ANIMAL_DEF.alpaca.cicloH           // 3 alpacas, 1 recogida por ciclo
@@ -6518,13 +6550,20 @@ var CANA_V4_DEF = {
      se recalcula: eso es lo que se hizo. La regla nueva es « una identidad por caña » — el bambú
      lleva fibra, el oro cuero, el hierro su barra — en vez de dos o tres materiales caros
      apilados. Así sobrevive el gancho de « criar animales para pescar mejor » sin que la escalera
-     cueste cuatro veces lo que rinde. */
+     cueste cuatro veces lo que rinde.
+     Y una regla de Suren que casi me llevo por delante: « las dos de arriba piden CUERO — mejorar
+     la caña obliga a criar ». Mi primer reparto le quitaba el cuero a la de hierro, y su test lo
+     cazó. Hay un choque de verdad ahí: 1 cuero (340) + 1 barra de hierro (720) ya son 1.060 sobre
+     un presupuesto de 1.000. Se resuelve gastando la tolerancia (±15 %) en vez de la regla: la de
+     hierro queda en ×1,10, que es caro pero honesto, y sigue obligando a criar. Un presupuesto es
+     una vara, no una ley física; una regla de diseño de quien juega, sí es lo que hay que
+     defender. */
   junco:  { label: "Caña de Junco",   lvl: 1,  presupuesto: 30,   mant: 1,
             cost: { madera: 2 }, colaPlata: 5, banda: { comun: 64.186, poco_comun: 27.00, raro: 7.664, epico: 0.750, legendario: 0.400 } },
   bambu:  { label: "Caña de Bambú",   lvl: 4,  presupuesto: 400,  mant: 3,
             cost: { madera: 5, fibra: 1 }, colaPlata: 40, banda: { comun: 58.454, poco_comun: 27.00, raro: 12.846, epico: 1.200, legendario: 0.500 } },
   hierro: { label: "Caña de Hierro",  lvl: 8,  presupuesto: 1000, mant: 6,
-            cost: { tablon: 5, barra_hierro: 1 }, colaPlata: 100, banda: { comun: 56.364, poco_comun: 27.00, raro: 14.036, epico: 1.800, legendario: 0.800 } },
+            cost: { cuero: 1, barra_hierro: 1 }, colaPlata: 40, banda: { comun: 56.364, poco_comun: 27.00, raro: 14.036, epico: 1.800, legendario: 0.800 } },
   oro:    { label: "Caña de Oro",     lvl: 12, presupuesto: 2000, mant: 11,
             cost: { tablon: 17, barra_oro: 1, cuero: 1 }, colaPlata: 200, banda: { comun: 49.495, poco_comun: 27.00, raro: 19.630, epico: 2.625, legendario: 1.250 } },
   /* la única que no cobra peaje, y la única que rompe el ancla a propósito: es el premio de
