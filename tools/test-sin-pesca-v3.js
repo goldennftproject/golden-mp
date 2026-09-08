@@ -157,6 +157,34 @@ console.log("\nLA MUDANZA SOBREVIVE A LO QUE MUDA");
 }
 
 console.log("");
+console.log("\nY LA CAÑA CONSUMIBLE DE LA v2, JUBILADA   (8/9, dirección: « esta caña hay que quitarla »)");
+{
+  const fs = require("fs"), path = require("path");
+  const RAIZ2 = path.join(__dirname, "..");
+  const ST = fs.readFileSync(path.join(RAIZ2, "public/game/state.js"), "utf8");
+  const UI2 = fs.readFileSync(path.join(RAIZ2, "public/game/ui.js"), "utf8");
+  const FARM2 = fs.readFileSync(path.join(RAIZ2, "public/game/farm.js"), "utf8");
+
+  ok("no se craftea más en la Herrería", !/TOOL_CRAFT = \{[^}]*rod:/.test(ST) && !/\["axe", "rod"\]\.forEach/.test(UI2));
+  ok("el kit de bienvenida ya no reparte cañas", !/KIT_INICIAL = \{[^}]*rod:/.test(ST));
+  ok("la barra rápida ya no le reserva un hueco", !/hotbar\[2\] = \{ kind: "tool", key: "rod" \}/.test(ST));
+  ok("la laguna invita por CARNADA, no por caña", !/toolDur\("rod"\)/.test(FARM2) && /ceboTengo/.test(FARM2));
+
+  /* lo que importa de verdad: que la v4 nunca la haya necesitado, y siga sin necesitarla */
+  const G2 = ctx.G;
+  G2.tools = G2.tools || {}; G2.tools.rod = 0;
+  G2.res.lombriz = 5; G2.fish = {};
+  const p2 = ctx.puedeAccion("fish", { type: "fish" });
+  ok("SIN caña y CON carnada, la puerta del agua se abre", p2.ok === true, JSON.stringify(p2));
+
+  /* y la mudanza paga lo que retira: quince cañas son quince maderas */
+  G2.tools.rod = 15; const m0 = Math.floor(G2.res.madera || 0);
+  const dio = ctx.mudanzaCanaVieja();
+  ok("las cañas que quedaban se devuelven en madera", dio === 15 && Math.floor(G2.res.madera) === m0 + 15, "+" + dio);
+  ok("y el contador queda en cero", Math.floor(G2.tools.rod) === 0);
+  ok("correrla otra vez no regala nada (idempotente)", ctx.mudanzaCanaVieja() === 0);
+}
+
 console.log(fallos
   ? "  " + fallos + " fallo(s) — todavía queda algo de la v3 que puede volver a chocar"
   : "  Todo en orden: una sola pesca, un solo nombre para cada cosa.");

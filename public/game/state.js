@@ -2229,7 +2229,11 @@ function equipPick(id) { if (!G.picks.owned[id]){ toast("No lo tenés"); return;
 // --- herramientas (hacha + caña con durabilidad; el pico se maneja aparte) ---
 const TOOL_DEF = {
   axe:   { label:"Hacha",            emoji:"🪓", sprite:"axe",         max:1, repair:{madera:6} },   // SFL puro: 1 uso = 1 talada
-  rod:   { label:"Caña",             emoji:"🎣", sprite:"fishing_rod", max:1, repair:{madera:4} },   // SFL puro: 1 uso = 1 pesca
+  /* 8/9: JUBILADA. Se deja la ficha para que un guardado viejo que todavía traiga cañas no
+     reviente al pintarse; la mudanza de abajo las convierte en madera y deja el contador en 0,
+     así que en la práctica no se ve más. Borrar la ficha y dejar el dato es como se pierden
+     partidas: el objeto existiría en el estado y no existiría en el catálogo. */
+  rod:   { label:"Caña (vieja)",     emoji:"🎣", sprite:"fishing_rod", max:1, repair:{madera:4} },
   sword: { label:"Espada de Hierro", emoji:"⚔️", sprite:"sword",       max:80, repair:{bronce:2} },
   sword_wood: { label:"Espada de Madera", emoji:"🗡️", sprite:"sword_wood", max:40, repair:{madera:2} },   // viernes (2): arma inicial
   bow:   { label:"Arco",             emoji:"🏹", sprite:"bow",         max:60, repair:{madera:5} },
@@ -4918,13 +4922,13 @@ function tutoPity(def, out) {
 function toolCount(id) { return Math.max(0, Math.floor((G.tools && G.tools[id]) || 0)); }
 function toolLost(id) { return toolCount(id) <= 0; }
 function toolDur(id) {
-  if (id === "axe" || id === "rod") return toolCount(id);   // apilables: el chequeo es tener stock
+  if (id === "axe") return toolCount(id);   // apilable: el chequeo es tener stock
   return (G.tools && G.tools[id] != null) ? G.tools[id] : (TOOL_DEF[id] ? TOOL_DEF[id].max : 0);
 }
 function useTool(id) {
   const d = toolDur(id); if (d <= 0) return false;
   G.tools[id] = d - 1;
-  if ((id === "axe" || id === "rod") && G.tools[id] <= 0) {
+  if (id === "axe" && G.tools[id] <= 0) {
     G.hotbar = G.hotbar.map(h => (h && h.kind === "tool" && h.key === id) ? null : h);
     syncSlots(); if (typeof refreshHotbar === "function") refreshHotbar();
     uiRefreshAfterBreak();   // 31/7: que el ícono desaparezca AL INSTANTE también en bolsa/equipo/herrería abiertas
@@ -4936,7 +4940,13 @@ function useTool(id) {
 // efectivas POR PESCA. El kit regala 15 y el tutorial enseña a pescar: al gastarlas, la pesca
 // se terminaba para siempre. Ahora cuesta 1 madera: quien limita la pesca es la CARNADA
 // (las lombrices de los montículos diarios), que es el freno que el diseño ya tenía puesto.
-const TOOL_CRAFT = { axe: { cost:{}, plata:2 }, rod: { cost:{ madera:1 }, plata:0 } };   // 18/8: el hacha baja a 2 con el árbol de 30 min (sigue siendo el 17% de lo que saca)
+/* 8/9 (dirección, con la captura de la Herrería: « y esta caña hay que quitarla »). La caña
+   consumible es el último fósil vivo de la Pesca v2: costaba 1 madera, decía « 1 uso c/u » y no
+   la usaba NADIE — la puerta de la v4 (puedeAccion « fish ») solo pregunta por carnada y por
+   lugar en la bolsa, porque las cañas de verdad son las de CANA_V4_DEF, que se tienen y no se
+   gastan. Se quedaba ocupando una línea de la Herrería, quince unidades del kit de bienvenida,
+   una casilla de la barra rápida y un hueco de la bolsa, a cambio de nada. */
+const TOOL_CRAFT = { axe: { cost:{}, plata:2 } };   // 18/8: el hacha baja a 2 con el árbol de 30 min (sigue siendo el 17% de lo que saca)
 function craftTool(id, lote) {
   lote = Math.max(1, lote || 1);
   const tc = TOOL_CRAFT[id], td = TOOL_DEF[id]; if (!tc || !td) { console.warn("[craftTool] herramienta inexistente:", id); return; }
@@ -5182,6 +5192,18 @@ function pecesDeLaBolsa() {
 var PESCA_V3_PRECIO = { comun: 5, raro: 10, epico: 15, legendario: 20,
   pez_comun: 5, camaron_rio: 5, carpa_dorada: 5, anguila: 5, calamar: 5,
   pez_mariposa: 10, pez_volador: 10, tiburon: 20 };
+/* 8/9 — LAS CAÑAS VIEJAS SE DEVUELVEN EN MADERA, no se confiscan. Costaban 1 madera cada una;
+   el jugador que tenía quince se queda con quince maderas. Es el mismo criterio que la mudanza
+   de la v3 (los peces del catálogo viejo se liquidaron a plata): un objeto que el juego retira
+   se paga, no se borra. Idempotente — con el contador en 0 no hace nada. */
+function mudanzaCanaVieja() {
+  const n = Math.floor((G.tools && G.tools.rod) || 0);
+  if (n <= 0) return 0;
+  G.tools.rod = 0;
+  G.res.madera = (G.res.madera || 0) + n;
+  log("La caña vieja se jubiló: te devolvimos " + n + " de madera. Para pescar ahora usás la caña de la Herrería y una lombriz.", "gold");
+  return n;
+}
 function mudanzaPescaV4() {
   if (!G.fish) return { cuantos: 0, plata: 0 };
   let plata = 0, cuantos = 0; const detalle = [];
@@ -5251,7 +5273,7 @@ function mudanzaPescaV4() {
 function bolsaCuentas() {
   const out = [];
   const add = (kind, key, n) => { if (n > 0) out.push({ kind, key, n }); };
-  ["axe", "rod"].forEach(k => add("tool", k, toolCount(k)));
+  add("tool", "axe", toolCount("axe"));   // 8/9: la caña de la v2 se jubiló
   for (const id of ARM_ORDER) if (G.weapons && G.weapons[id] && G.gear.arma !== id) add("arm", id, 1);
   PICK_ORDER.forEach(id => add("pick", id, pickCount(id)));
   /* las cañas de la v4 no se gastan: se TIENEN. Por eso la cuenta es 1 y no « usos », y por eso
@@ -5387,8 +5409,7 @@ function ensureHotbarDefaults() {
   if (!G.hotbar.some(Boolean)) {          // 14/8 (reversión): vuelven los accesos de arranque
     G.hotbar[0] = { kind: "tool", key: "axe" };
     G.hotbar[1] = { kind: "pick", key: (G.picks && G.picks.eq) || "stone" };
-    G.hotbar[2] = { kind: "tool", key: "rod" };
-    G.hotbar[3] = { kind: "seed", key: G.selSeed || "papa" };
+    G.hotbar[2] = { kind: "seed", key: G.selSeed || "papa" };   // 8/9: el hueco de la caña vieja lo toma la semilla
   }
   G.hbInit = true;
 }
@@ -8618,16 +8639,15 @@ function dailyState() {
 }
 const STREAK_RECOVER_COST = 0;   // legado: ya no hay racha que perder ni que recuperar
 // KIT DE BIENVENIDA (15/8): se entrega al abrir el BAÚL por primera vez
-var KIT_INICIAL = { axe: 35, rod: 15, pico: 20 };
+var KIT_INICIAL = { axe: 35, pico: 20 };   // 8/9: sin cañas — la de la v2 se jubiló (ver TOOL_CRAFT)
 function kitReclamar() {
   if (G.kitReclamado) return false;
   G.kitReclamado = true;
   G.tools.axe = (G.tools.axe || 0) + KIT_INICIAL.axe;
-  G.tools.rod = (G.tools.rod || 0) + KIT_INICIAL.rod;
   G.picks.owned.stone = true;
   G.picks.dur.stone = (G.picks.dur.stone || 0) + KIT_INICIAL.pico;
   if (!G.picks.eq) G.picks.eq = "stone";
-  log("Kit de bienvenida: " + KIT_INICIAL.axe + " hachas, " + KIT_INICIAL.pico + " picos y " + KIT_INICIAL.rod + " cañas.", "gold");
+  log("Kit de bienvenida: " + KIT_INICIAL.axe + " hachas y " + KIT_INICIAL.pico + " picos.", "gold");
   toast("¡Tu kit de bienvenida! 🪓⛏🎣");
   if (window.celebrate) celebrate({ title: "¡KIT DE BIENVENIDA!", sub: "Hachas, picos y cañas para arrancar", big: false, reward: "Ya podés talar, picar y pescar" });
   if (typeof tutoEvent === "function") tutoEvent("kit");

@@ -715,6 +715,8 @@ function derivarEstado(d) {
      « especie@kg » con el peso medio de su especie. Ni se regala ni se quita: se les pone la
      balanza que no tenían. Idempotente, así que corre en cada carga sin drama. */
   try { if (typeof pezMigrarPesos === "function") pezMigrarPesos(); } catch (e) { console.warn("mudanza de pesos:", e); }
+  /* 8/9 — la caña consumible de la v2 se jubiló; lo que quede se devuelve en madera. */
+  try { if (typeof mudanzaCanaVieja === "function") mudanzaCanaVieja(); } catch (e) { console.warn("mudanza de la caña:", e); }
   try { if (typeof regalosSync === "function") regalosSync(); } catch (e) {}   // guardados viejos: recalcula lo que le corresponde por su nivel
   if (typeof applyCombatHp === "function") applyCombatHp();   // vida máxima: ahora sí ve gear y weapons
   if (typeof d.hp === "number") G.hp = Math.max(1, Math.min(G.hpMax, d.hp));

@@ -3505,7 +3505,11 @@ class FarmScene extends Phaser.Scene {
     }
     // --- PECES: chapoteo con ondas — la laguna invita más cuando PODÉS pescar
     if (t >= (this._pezAt || 0)) {
-      const invita = (typeof toolDur === "function" && toolDur("rod") > 0 && (G.res.lombriz || 0) > 0);
+      /* 8/9: la laguna invita cuando PODÉS pescar, y con la v4 eso es tener CARNADA — la caña
+         consumible se jubiló y preguntar por ella dejaba el agua muda para siempre. */
+      const invita = (typeof ceboTengo === "function")
+        ? (ceboTengo(typeof ceboPuesto === "function" ? ceboPuesto() : "lombriz") || ceboTengo("lombriz"))
+        : (G.res.lombriz || 0) > 0;
       this._pezAt = t + (invita ? 5000 + Math.random() * 6000 : 16000 + Math.random() * 14000);
       const p = this.pondPoint();
       if (this.pidoPart(2)) {

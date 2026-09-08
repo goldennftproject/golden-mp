@@ -1216,7 +1216,7 @@ function invCellHtml(d, i, rem, zone) {
   /* sin contador: las cañas de la v4 se tienen o no se tienen, y un « 1 » en cada casilla es
      ruido que compite con los números que sí dicen algo. */
   if (d.kind === "cana") { cnt = ""; }
-  else if (d.kind === "res" || d.kind === "seed" || d.kind === "fish" || d.kind === "dish" || d.kind === "chest" || (d.kind === "tool" && (d.key === "axe" || d.key === "rod")) || d.kind === "pick") { const k = d.kind + ":" + d.key; const n = Math.min(99, rem[k] || 0); rem[k] = (rem[k] || 0) - n; cnt = `<span class="cnt">${fmt(n)}</span>`; }
+  else if (d.kind === "res" || d.kind === "seed" || d.kind === "fish" || d.kind === "dish" || d.kind === "chest" || (d.kind === "tool" && d.key === "axe") || d.kind === "pick") { const k = d.kind + ":" + d.key; const n = Math.min(99, rem[k] || 0); rem[k] = (rem[k] || 0) - n; cnt = `<span class="cnt">${fmt(n)}</span>`; }
   const v = itemView(d);
   const sel = (d.kind === "seed" && G.selSeed === d.key) ? " sel" : "";
   const eq = pickEqCls(d);
@@ -1245,7 +1245,7 @@ function bolsaFirma() {
   CROP_ORDER.forEach(k => { const n = Math.floor(G.seeds[k] || 0); if (n) s += "s" + k + n + "|"; });
   pecesDeLaBolsa().forEach(k => { s += "f" + k + Math.floor(G.fish[k]) + "|"; });   // 2/9: pilas con peso
   RECIPE_ORDER.forEach(k => { const n = Math.floor((G.dishes && G.dishes[k]) || 0); if (n) s += "d" + k + n + "|"; });
-  s += "a" + toolCount("axe") + "r" + toolCount("rod");
+  s += "a" + toolCount("axe");
   PICK_ORDER.forEach(id => { const n = pickCount(id); if (n) s += "p" + id + n + "|"; });
   return s;
 }
@@ -1267,7 +1267,7 @@ function refreshInv() {
   RECIPE_ORDER.forEach(d => rem["dish:" + d] = Math.floor((G.dishes && G.dishes[d]) || 0));
   rem["chest:cofre"] = (typeof chestsInBag === "function") ? chestsInBag() : 0;
   // (18/8: los regalos ya no están en la bolsa — viven en el Cobertizo)
-  rem["tool:axe"] = toolCount("axe"); rem["tool:rod"] = toolCount("rod");   // herramientas apilables
+  rem["tool:axe"] = toolCount("axe");   // herramientas apilables
   PICK_ORDER.forEach(id => rem["pick:" + id] = pickCount(id));
   let html = "";
   for (let i = 0; i < cap; i++) html += invCellHtml(G.slots[i], i, rem, "inv");
@@ -1508,7 +1508,7 @@ function trashInfo(d) {
   if (d.kind === "dish") return { n: Math.min(99, Math.floor((G.dishes && G.dishes[d.key]) || 0)), lbl: (RECIPE_DEF[d.key] ? RECIPE_DEF[d.key].label : "platos") };
   // herramientas y picos SÍ se tiran (pedido del diseñador 31/7); apilables: se tira la pila
   if (d.kind === "tool") {
-    if (d.key === "axe" || d.key === "rod") return { n: Math.min(99, toolCount(d.key)), lbl: TOOL_DEF[d.key].label };
+    if (d.key === "axe" || d.key === "rod") return { n: Math.min(99, toolCount(d.key)), lbl: TOOL_DEF[d.key].label };   // rod: solo por si un guardado viejo la trae antes de la mudanza
     return { n: 1, lbl: TOOL_DEF[d.key] ? TOOL_DEF[d.key].label : "la herramienta" };
   }
   if (d.kind === "pick") return { n: Math.min(99, pickCount(d.key)), lbl: PICK_DEF[d.key] ? PICK_DEF[d.key].label : "el pico" };
@@ -1711,9 +1711,10 @@ function refreshForge() {
     if (n > 0 && !isEq) btns += '<button class="ghost sm" data-equip="' + id + '">Equipar</button>';
     craft += '<div class="forge-row ' + (isEq ? "eq" : "") + '"><div class="fic">' + img + '</div><div class="finfo"><div class="fnm">' + pd.label + (isEq ? ' <span class="tag">equipado</span>' : "") + '</div><div class="fds">Mina: ' + mineEmo + ' · 1 uso c/u · tenés ' + n + '</div><div class="fds">Costo: ' + costStr + '</div></div><div class="fbtns">' + btns + "</div></div>";
   });
-  // herramientas consumibles (modelo SFL 31/7): hacha y caña se craftean baratas y se rompen (sin reparación)
+  // herramientas consumibles (modelo SFL 31/7): el hacha se craftea barata y se rompe (sin reparación)
+  // 8/9 (dirección): la caña salió de acá — era el fósil de la Pesca v2 y no la usaba nadie
   craft += '<div class="shophead">Herramientas</div>';
-  ["axe", "rod"].forEach(id => {
+  ["axe"].forEach(id => {
     const td = TOOL_DEF[id], tc = TOOL_CRAFT[id], n = toolCount(id);
     const cs = Object.keys(tc.cost).map(k => resIc(k) + " " + tc.cost[k]).join(" · ") + (tc.plata ? (Object.keys(tc.cost).length ? " · " : "") + coinIc("plata") + " " + tc.plata : "");
     const ok = canAfford(tc.cost) && G.plata >= tc.plata;
@@ -3079,9 +3080,9 @@ function refreshBaul() {
   img.style.cursor = "pointer";
   sub.textContent = "Tu kit de bienvenida";
   nota.textContent = "Tocá el baúl y es todo tuyo.";
-  const K = (typeof KIT_INICIAL !== "undefined") ? KIT_INICIAL : { axe: 35, rod: 15, pico: 20 };
+  const K = (typeof KIT_INICIAL !== "undefined") ? KIT_INICIAL : { axe: 35, pico: 20 };
   const item = (spr, n) => '<div class="baul-item"><img src="' + GF.spr(spr) + '" draggable="false"><span class="cant">×' + n + '</span></div>';
-  items.innerHTML = item("axe", K.axe) + item("pick_stone", K.pico) + item("fishing_rod", K.rod);
+  items.innerHTML = item("axe", K.axe) + item("pick_stone", K.pico);   // 8/9: sin cañas — la de la v2 se jubiló
   let abriendo = false;
   const alTocar = (ev) => {
     if (ev && ev.preventDefault) ev.preventDefault();
