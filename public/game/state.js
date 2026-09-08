@@ -3801,26 +3801,48 @@ function comprarAnimal(k) {
 }
 // alimenta a TODOS los de ese tipo, uno por cultivo, hasta donde alcance
 // (silencio: lo usan los botones "todo" del establo — un solo resumen, no diez toasts)
+/* ═══ CADA ANIMAL ES UNO ═══════════════════════════════ (8/9, dirección, con la captura del
+   establo: « los animales se alimentan por separado, y el tiempo de la fibra es por separado
+   — no juntás cada animal con su CD »). Tenía razón, y el diagnóstico es corto: los DATOS
+   siempre fueron por animal —desde el 10/8 cada bicho tiene su felicidad, su comidoAt y su
+   prodAt— y era la INTERFAZ la que los promediaba, los alimentaba en bloque y mostraba un
+   solo reloj por especie. Con dos alpacas de 30 y 94 de felicidad, « media 62 » no describe
+   a ninguna de las dos.
+   Estas dos funciones son las de siempre apuntando a UNO, y las de grupo pasan a apoyarse en
+   ellas: una sola verdad, y los botones « todo » siguen existiendo como atajo. */
+function alimentarUno(k, i, silencio) {
+  const d = ANIMAL_DEF[k], a = animalLista(k)[i];
+  if (!d || !a) return 0;
+  /* 2/9 (dirección, viendo comer a la alpaca): « dice que se alimenta con trigo… y comió
+     calabaza. Debería ser solo trigo ». Cada especie come SU lista y nada más. */
+  const cultivo = d.come.find(c => (G.res[c] || 0) > 0);
+  if (!cultivo) {
+    if (!silencio) toast(d.label + " solo come " + d.come.map(c => CROP_DEF[c].label).join(" o ") + " — no tenés en la bolsa");
+    return 0;
+  }
+  if (animalFelizDe(a) >= 100) { if (!silencio) toast("Ese " + d.label + " ya está a tope"); return 0; }
+  G.res[cultivo] -= 1;
+  a.feliz = Math.min(100, animalFelizDe(a) + felizDeComida(k, cultivo, true));
+  a.comidoAt = nowMs();
+  statAdd("alimentar", k);
+  if (!silencio) {
+    log("Alimentaste " + d.label + " " + (i + 1) + " con 1 " + (CROP_DEF[cultivo].label || cultivo) +
+        ". Su felicidad: " + animalFelizDe(a) + "/100.", "good");
+    toast(d.label + " " + (i + 1) + " · felicidad " + animalFelizDe(a));
+    refreshHud(); if (typeof refreshEstablo === "function" && isOpen("ov-establo")) refreshEstablo();
+    if (isOpen("ov-inv")) refreshInv();
+    if (typeof saveFarm === "function") saveFarm();
+  }
+  return 1;
+}
+// alimenta a TODOS los de ese tipo que tengan hambre, uno por uno, hasta donde alcance la comida
+// (silencio: lo usan los botones "todo" del establo — un solo resumen, no diez toasts)
 function alimentarAnimal(k, silencio) {
   const d = ANIMAL_DEF[k], l = animalLista(k); if (!d || !l.length) return 0;
-  let dados = 0, gastado = {};
-  for (const a of l) {
-    /* 2/9 (dirección, viendo comer a la alpaca): « dice que se alimenta con trigo… y comió
-       calabaza. Debería ser solo trigo, los demás cultivos no ». Se deroga la regla genérica
-       del 14/8 (« cualquier cultivo alimenta, un poco peor »), que nació para que la alpaca no
-       muriera de hambre — esa trampa hoy se cierra por el otro lado: comprarAnimal ya no vende
-       un animal cuya comida no podés cultivar. Cada especie come SU lista y nada más: el
-       cartel del establo vuelve a decir la verdad. */
-    const cultivo = d.come.find(c => (G.res[c] || 0) > 0);
-    if (!cultivo) break;
-    G.res[cultivo] -= 1; gastado[cultivo] = (gastado[cultivo] || 0) + 1;
-    a.feliz = Math.min(100, animalFelizDe(a) + felizDeComida(k, cultivo, true));
-    a.comidoAt = nowMs();
-    statAdd("alimentar", k); dados++;
-  }
-  if (!dados) { if (!silencio) toast(d.label + " solo come " + d.come.map(c => CROP_DEF[c].label).join(" o ") + " — no tenés en la bolsa"); return 0; }
-  const qué = Object.keys(gastado).map(c => gastado[c] + " " + CROP_DEF[c].label).join(" + ");
-  log("Alimentaste " + dados + " " + d.label + " con " + qué + ". Felicidad media: " + animalFelicidad(k) + "/100.", "good");
+  let dados = 0;
+  for (let i = 0; i < l.length; i++) dados += alimentarUno(k, i, true);
+  if (!dados) { if (!silencio) toast(d.label + " solo come " + d.come.map(c => CROP_DEF[c].label).join(" o ") + " — no tenés en la bolsa (o ya están llenos)"); return 0; }
+  log("Alimentaste " + dados + " " + d.label + ". Felicidad media: " + animalFelicidad(k) + "/100.", "good");
   if (!silencio) {
     toast(d.label + " · felicidad " + animalFelicidad(k));
     refreshHud(); if (typeof refreshEstablo === "function" && isOpen("ov-establo")) refreshEstablo();
@@ -3842,22 +3864,44 @@ function animalListos(k) {   // cuántos hay listos para cobrar
   const d = ANIMAL_DEF[k]; if (!d) return 0;
   return animalLista(k).filter(a => nowMs() - (a.prodAt || 0) >= d.cicloH * 3600000).length;
 }
-// cobra TODOS los que estén listos de ese tipo
+/* 8/9: el reloj de UNO. « el tiempo de la fibra es por separado » — cada animal tiene su
+   prodAt desde el 10/8, así que esto solo lo estaba escondiendo la interfaz. */
+function animalFaltaDe(k, i) {
+  const d = ANIMAL_DEF[k], a = animalLista(k)[i];
+  if (!d || !a) return 0;
+  return Math.max(0, d.cicloH * 3600000 - (nowMs() - (a.prodAt || 0)));
+}
+function animalRinde(k, i) {   // lo que daría ESE animal con SU felicidad, no con la media
+  const a = animalLista(k)[i]; if (!a) return 0;
+  const f = animalFelizDe(a);
+  return Math.max(1, Math.round(animalPorCiclo(k) * (FELIZ_MIN_PROD + (1 - FELIZ_MIN_PROD) * f / 100)));
+}
+function recogerUno(k, i, silencio) {
+  const d = ANIMAL_DEF[k], a = animalLista(k)[i];
+  if (!d || !a) return 0;
+  if (animalFaltaDe(k, i) > 0) { if (!silencio) toast("Todavía no — faltan " + fmtDur(animalFaltaDe(k, i))); return 0; }
+  const n = animalRinde(k, i);
+  if (!roomForRes(d.mat, n)) { if (!silencio) bagFull("recoger " + RES_LABEL[d.mat]); return 0; }
+  G.res[d.mat] = (G.res[d.mat] || 0) + n;
+  a.prodAt = nowMs();
+  addXp("ganaderia", XP_ANIMAL);   // 18/8: los animales son Ganadería, no Cultivo
+  if (!silencio) {
+    log(d.label + " " + (i + 1) + " produjo " + n + " de " + RES_LABEL[d.mat] + " (felicidad " + animalFelizDe(a) + "/100).", "gold");
+    toast("+" + n + " " + RES_LABEL[d.mat]);
+    refreshHud(); if (isOpen("ov-inv")) refreshInv();
+    if (typeof refreshEstablo === "function" && isOpen("ov-establo")) refreshEstablo();
+    if (typeof saveFarm === "function") saveFarm(true);
+  }
+  return n;
+}
+// cobra TODOS los que estén listos de ese tipo (atajo; el trabajo lo hace recogerUno)
 function recogerAnimal(k, silencio) {
   const d = ANIMAL_DEF[k], l = animalLista(k); if (!d || !l.length) return 0;
-  const listos = l.filter(a => nowMs() - (a.prodAt || 0) >= d.cicloH * 3600000);
-  if (!listos.length) { if (!silencio) toast("Todavía no produjo — faltan " + fmtDur(animalFalta(k))); return 0; }
-  let total = 0;
-  for (const a of listos) {
-    const f = animalFelizDe(a);
-    const n = Math.max(1, Math.round(animalPorCiclo(k) * (FELIZ_MIN_PROD + (1 - FELIZ_MIN_PROD) * f / 100)));   // feliz = ciclo completo
-    if (!roomForRes(d.mat, total + n)) break;   // lo que no entra queda para el próximo viaje
-    total += n; a.prodAt = nowMs();
-  }
+  if (!animalListos(k)) { if (!silencio) toast("Todavía no produjo — faltan " + fmtDur(animalFalta(k))); return 0; }
+  let total = 0, cuantos = 0;
+  for (let i = 0; i < l.length; i++) { const n = recogerUno(k, i, true); if (n) { total += n; cuantos++; } }
   if (!total) { if (!silencio) bagFull("recoger " + RES_LABEL[d.mat]); return 0; }
-  G.res[d.mat] = (G.res[d.mat] || 0) + total;
-  addXp("ganaderia", XP_ANIMAL * listos.length);   // 18/8: los animales son Ganadería, no Cultivo
-  log(d.label + " ×" + listos.length + " produjo " + total + " de " + RES_LABEL[d.mat] + " (felicidad media " + animalFelicidad(k) + "/100).", "gold");
+  log(d.label + " ×" + cuantos + " produjo " + total + " de " + RES_LABEL[d.mat] + " (felicidad media " + animalFelicidad(k) + "/100).", "gold");
   if (!silencio) {
     toast("+" + total + " " + RES_LABEL[d.mat]);
     refreshHud(); if (isOpen("ov-inv")) refreshInv();

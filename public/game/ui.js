@@ -2769,25 +2769,40 @@ function refreshEstablo() {
         '<div class="fbtns"><button class="green sm" ' + (abierto && !lleno && G.plata >= animalPrecio(k) ? "" : "disabled") + ' data-buyani="' + k + '">' + (!abierto ? 'Nivel ' + animalNivelReq(k) : lleno ? 'Establo lleno' : 'Comprar · ' + coinIc("plata") + fmt(animalPrecio(k))) + '</button></div></div>';
       return;
     }
-    const f = animalFelicidad(k), listo = animalListo(k);
-    // 10/8: ahora se puede tener más de uno por tipo. Alimentar y recoger actúan sobre TODOS
-    // los de ese tipo de una sola vez: con 5 alpacas, cinco botones sueltos sería un castigo.
-    const cant = animalCant(k), listos = animalListos(k), tope = cant >= ANIMAL_MAX;
+    /* 8/9 (dirección, con la captura del establo: « los animales se alimentan por separado, y
+       el tiempo de la fibra es por separado — no juntás cada animal con su CD »). Una fila POR
+       ANIMAL, no por especie. Los datos ya eran individuales desde el 10/8; lo que agrupaba
+       —y por lo tanto mentía— era esta pantalla: con dos alpacas de 30 y 94, « media 62 » no
+       describía a ninguna, y un solo reloj escondía que una estaba lista y la otra recién
+       empezaba. Los botones « todo » de arriba siguen ahí como atajo para el establo grande. */
+    const cant = animalCant(k), tope = cant >= ANIMAL_MAX;
     const tieneComida = d.come.some(c => (G.res[c] || 0) > 0);
-    const rinde = Math.max(1, Math.round(animalPorCiclo(k) * (FELIZ_MIN_PROD + (1 - FELIZ_MIN_PROD) * f / 100)));
-    h += '<div class="forge-row' + (listo ? ' eq' : '') + '"><div class="fic">' + d.emoji + '</div><div class="finfo">' +
-      '<div class="fnm">' + d.label + (cant > 1 ? ' ×' + cant : '') + ' <span class="tag">felicidad ' + f + '/100' + (cant > 1 ? ' (media)' : '') + '</span></div>' +
-      '<div class="durbar"><i style="width:' + f + '%"></i></div>' +
-      '<div class="fds">' + (listo ? '<b style="color:#3f6b2a">' + (listos > 1 ? listos + ' listos' : '¡Listo!') + ' · dan ' + (rinde * listos) + ' de ' + RES_LABEL[d.mat] + '</b>' : 'El próximo produce en ' + fmtDur(animalFalta(k)) + ' · rendiría ' + rinde + ' de ' + RES_LABEL[d.mat]) + '</div>' +
-      /* 19/8: la felicidad que da un cultivo es proporcional a lo que vale, así que el cartel muestra
-       lo que da EL SUYO. Con cualquier otro cuesta lo mismo por hora: no hay un truco que buscar. */
-      '<div class="fds">Alimentalo con ' + come + ' (+' + Math.round(felizDeComida(k, d.come[0], true)) + ' de felicidad) · pierde ' + FELIZ_BAJA_H + '/hora si lo descuidás</div></div>' +
-      '<div class="fbtns">' +
-        '<button class="green sm" ' + (tieneComida ? "" : "disabled") + ' data-feed="' + k + '">Alimentar</button>' +
-        '<button class="green sm" ' + (listo ? "" : "disabled") + ' data-take="' + k + '">Recoger' + (listos > 1 ? ' todo (' + listos + ')' : '') + '</button>' +
-        '<button class="green sm" ' + (!tope && !lleno && G.plata >= animalPrecio(k) ? "" : "disabled") + ' data-buyani="' + k + '">' + (tope ? 'Tope ' + ANIMAL_MAX : lleno ? 'Establo lleno' : 'Otro · ' + coinIc("plata") + fmt(animalPrecio(k))) + '</button>' +
-      '</div></div>';
+    for (let i = 0; i < cant; i++) {
+      const bicho = animalLista(k)[i];
+      const fi = animalFelizDe(bicho), faltaI = animalFaltaDe(k, i), listoI = faltaI <= 0;
+      const rindeI = animalRinde(k, i);
+      h += '<div class="forge-row' + (listoI ? ' eq' : '') + '"><div class="fic">' + d.emoji + '</div><div class="finfo">' +
+        '<div class="fnm">' + d.label + (cant > 1 ? ' ' + (i + 1) : '') +
+          ' <span class="tag">felicidad ' + fi + '/100</span></div>' +
+        '<div class="durbar"><i style="width:' + fi + '%"></i></div>' +
+        '<div class="fds">' + (listoI
+          ? '<b style="color:#3f6b2a">¡Listo! · da ' + rindeI + ' de ' + RES_LABEL[d.mat] + '</b>'
+          : 'Produce en ' + fmtDur(faltaI) + ' · rendirá ' + rindeI + ' de ' + RES_LABEL[d.mat]) + '</div>' +
+        /* 19/8: la felicidad que da un cultivo es proporcional a lo que vale, así que el cartel
+           muestra lo que da EL SUYO. */
+        '<div class="fds">Alimentalo con ' + come + ' (+' + Math.round(felizDeComida(k, d.come[0], true)) + ' de felicidad) · pierde ' + FELIZ_BAJA_H + '/hora si lo descuidás</div></div>' +
+        '<div class="fbtns">' +
+          '<button class="green sm" ' + (tieneComida && fi < 100 ? "" : "disabled") + ' data-feed1="' + k + '" data-idx="' + i + '">' + (fi >= 100 ? 'A tope' : 'Alimentar') + '</button>' +
+          '<button class="green sm" ' + (listoI ? "" : "disabled") + ' data-take1="' + k + '" data-idx="' + i + '">Recoger</button>' +
+        '</div></div>';
+    }
+    /* la compra vive en su propia fila al pie de la especie: es del ESTABLO, no de un bicho */
+    h += '<div class="forge-row"><div class="fic">' + d.emoji + '</div><div class="finfo">' +
+      '<div class="fds">' + d.label + ' ×' + cant + ' · produce ' + RES_LABEL[d.mat] + ' (' + animalPorCiclo(k) + ' cada ' + fmtSecs(d.cicloH * 3600) + ' por animal)</div></div>' +
+      '<div class="fbtns"><button class="green sm" ' + (!tope && !lleno && G.plata >= animalPrecio(k) ? "" : "disabled") + ' data-buyani="' + k + '">' +
+        (tope ? 'Tope ' + ANIMAL_MAX : lleno ? 'Establo lleno' : 'Otro · ' + coinIc("plata") + fmt(animalPrecio(k))) + '</button></div></div>';
   });
+
   h += '<div class="info">Materiales: ' + ANIMAL_ORDER.map(k => RES_LABEL[ANIMAL_DEF[k].mat] + " <b>" + (G.res[ANIMAL_DEF[k].mat] || 0) + "</b>").join(" · ") + '</div>';
   box.innerHTML = h;
   box.querySelectorAll("[data-buyani]").forEach(b => b.onclick = () => {
@@ -2795,8 +2810,9 @@ function refreshEstablo() {
     askConfirm("Comprar " + d.label + " cuesta " + d.golden + " $Golden. Después hay que alimentarlo para que produzca " + RES_LABEL[d.mat] + ". ¿Comprar?",
       () => comprarAnimal(k), { title: "Comprar " + d.label, yes: "Comprar", yesClass: "green", no: "Cancelar", noClass: "red" });
   });
-  box.querySelectorAll("[data-feed]").forEach(b => b.onclick = () => alimentarAnimal(b.dataset.feed));
-  box.querySelectorAll("[data-take]").forEach(b => b.onclick = () => recogerAnimal(b.dataset.take));
+  /* 8/9: los botones son de UN animal — llevan su especie y su índice */
+  box.querySelectorAll("[data-feed1]").forEach(b => b.onclick = () => alimentarUno(b.dataset.feed1, +b.dataset.idx));
+  box.querySelectorAll("[data-take1]").forEach(b => b.onclick = () => recogerUno(b.dataset.take1, +b.dataset.idx));
 }
 
 /* ---- Altar de Runas (doc maestro 2/8) ---- */

@@ -106,6 +106,61 @@ console.log("\nRECOGER TODO: LA PRODUCCIÓN DE TODAS LAS ESPECIES");
   ok("y lo dice", avisos.some(a => /listo/i.test(a)), avisos.join(" · "));
 }
 
+console.log("\nCADA ANIMAL ES UNO   (8/9, dirección: « se alimentan por separado »)");
+{
+  /* « los animales se alimentan por separado, y el tiempo de la fibra es por separado — no
+     juntás cada animal con su CD ». Los datos ya eran individuales; lo que agrupaba era la
+     pantalla. Estas comprobaciones son las que atrapan una vuelta atrás. */
+  const dos = poblar(50);
+  const k = dos[0], d = ANIMAL_DEF[k];
+  G.res[d.come[0]] = 10;
+  const f0 = [ctx.animalFelizDe(G.animals[k][0]), ctx.animalFelizDe(G.animals[k][1])];
+
+  ok("alimentar a UNO no toca al otro", (() => {
+    ctx.alimentarUno(k, 0);
+    return ctx.animalFelizDe(G.animals[k][0]) > f0[0] && ctx.animalFelizDe(G.animals[k][1]) === f0[1];
+  })());
+  ok("y gasta un solo cultivo", Math.floor(G.res[d.come[0]]) === 9);
+
+  /* el reloj: cobrarle a uno reinicia SU ciclo y deja el del otro donde estaba */
+  const listo0 = ctx.animalFaltaDe(k, 0) <= 0, listo1 = ctx.animalFaltaDe(k, 1) <= 0;
+  ok("los dos arrancan listos (producción vencida)", listo0 && listo1);
+  const dio = ctx.recogerUno(k, 0);
+  ok("recoger a UNO paga lo suyo", dio > 0, "+" + dio);
+  ok("y su reloj vuelve a empezar", ctx.animalFaltaDe(k, 0) > 0);
+  ok("mientras el del otro sigue listo — relojes separados", ctx.animalFaltaDe(k, 1) <= 0);
+
+  /* el rinde es el de SU felicidad, no el de la media: es lo que la pantalla vieja escondía.
+     OJO con qué especie se mide: con porCiclo 1 la felicidad NO PUEDE cambiar el rinde —
+     max(1, round(1 × 0,5)) sigue siendo 1—, así que hay que probarlo en una que dé más de una
+     unidad por ciclo. Ese hallazgo tiene su propia comprobación abajo. */
+  const kMulti = ANIMAL_ORDER.find(x => ctx.animalPorCiclo(x) > 1);
+  if (kMulti) {
+    G.animals[kMulti] = [0, 1].map(() => ({ desde: T0, feliz: 0, comidoAt: FakeDate.now(), prodAt: T0 }));
+    G.animals[kMulti][0].feliz = 100;
+    ok("un animal feliz rinde más que uno descuidado, aunque sean de la misma especie",
+      ctx.animalRinde(kMulti, 0) > ctx.animalRinde(kMulti, 1),
+      kMulti + ": " + ctx.animalRinde(kMulti, 0) + " vs " + ctx.animalRinde(kMulti, 1));
+  }
+
+  /* ── EL HALLAZGO DEL 8/9, dejado a la vista para que se decida y no se olvide ──────────
+     Con porCiclo = 1 la felicidad no mueve el rinde: FELIZ_MIN_PROD (0,5) sobre una unidad
+     redondea a 1 igual que la unidad entera. O sea que en TRES de las cuatro especies
+     alimentar no cambia lo que producen — y el ancla del 19/8 se escribió justamente para
+     que « alimentar siempre gane y descuidarlo nunca ». Este test no lo arregla (mover
+     rindes es decisión de dirección y del diseñador): lo DELATA, con nombre y apellido. */
+  const inertes = ANIMAL_ORDER.filter(x => ctx.animalPorCiclo(x) === 1);
+  ok("AVISO — especies donde la felicidad no cambia el rinde (porCiclo 1)", true,
+    inertes.length ? inertes.join(", ") + " → alimentarlas no altera lo que producen" : "ninguna");
+
+  /* y la pantalla los pinta de a uno */
+  const fs = require("fs");
+  const UI = fs.readFileSync(require("path").join(__dirname, "..", "public/game/ui.js"), "utf8");
+  ok("el establo pinta una fila POR ANIMAL", /for \(let i = 0; i < cant; i\+\+\)/.test(UI));
+  ok("con el botón de ese animal, no el de la especie", /data-feed1=/.test(UI) && /data-take1=/.test(UI));
+  ok("y ya no dice « media » en la felicidad de la fila", !/\(media\)/.test(UI));
+}
+
 console.log("\nY LOS BOTONES POR ESPECIE SIGUEN INTACTOS");
 {
   avisos.length = 0;
