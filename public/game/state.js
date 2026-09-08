@@ -1467,61 +1467,91 @@ function addCookXp(amt) {
 }
 
 // --- niveles de granja ---
-// DOC MAESTRO 2/8: el nivel de granja sube SOLO con XP de Farmeo (curva front-loaded 1-10) y regala desbloqueos
-// DOC "2das mejoras" (4/8): la granja llega a NIVEL 50. Del 1 al 10 se sube solo con XP de cosecha;
-// del 11 al 50 hace falta la XP Y cumplir TAREAS (plantar, talar, minar, matar, pescar, cocinar).
-// 14/8 (dirección): los primeros 10 niveles ~2.5× más lentos — con la curva vieja el nivel
+// DOC MAESTRO 2/8: el nivel de granja sube SOLO con XP de Farmeo y regala desbloqueos.
+// Del 1 al 10 se sube solo con XP de cosecha; del 11 al 50 hace falta la XP Y cumplir TAREAS.
+// 14/8 (dirección): los primeros 10 niveles ~2.5x más lentos — con la curva vieja el nivel
 // 3 eran 4 papas y el 5 eran 24: los PLANOS llovían a la barra en los primeros 5 minutos.
-// Ahora nivel 2 = 3 papas, nivel 3 = 10, nivel 5 = ~60 (o menos con cultivos mejores).
-// Del 11 en adelante la tabla original del diseñador sigue igual.
-var FARM_XP_LVLS = [0, 0, 25, 90, 225, 550, 1250, 2750, 5500, 9000, 14000,
-  17600, 25100, 33600, 43300, 54200, 66500, 80400, 96000, 114000, 134000,
-  156000, 180000, 207000, 237000, 270000, 307000, 348000, 393000, 442000, 496000,
-  555000, 619000, 689000, 765000, 848000, 938000, 1030000, 1130000, 1240000, 1360000,
-  1490000, 1630000, 1780000, 1940000, 2110000, 2290000, 2480000, 2680000, 2890000, 3110000];
+/* ============ 8/9 — LA COLA SE APLANA: EL TOPE EN UN MES ==========================
+   Dirección: « todo el contenido tiene que ser posible ir desbloqueándolo con mucho un mes ».
+   Lo medido antes de tocar: el nivel 50 estaba a 372 días del jugador de tres sesiones, y el
+   contenido que cambia CÓMO se juega —los 13 cultivos, los 7 edificios, las recetas— se acaba
+   en el 21. Del 22 al 50 hay 29 niveles cuyo premio es casi todo decoración, emotes, marcos y
+   títulos: se llevaban el 95 % de la XP del juego y el 5 % de lo jugable. El techo pasa de
+   3.110.000 de XP a 100.000.
+
+   LOS DIEZ PRIMEROS NO SE TOCAN. Son la decisión que dirección afinó a mano el 14/8 midiendo en
+   papas, y el arranque es lo único de esta curva que alguien ha jugado de verdad. Del 11 al 50
+   la cola se deriva: crece geométrica desde los 14.000 del nivel 10 hasta los 100.000 del 50, así
+   que cada nivel sigue costando más que el anterior y ninguno es un salto.
+
+   NO ERA EL ÚNICO MURO, y conviene que quede escrito porque yo mismo creí que sí. Para que el
+   mes se cumpla hicieron falta tres cosas, no una: esta curva, las horas que cuesta una expansión
+   (HN, que estaba en 65 días de producción para las dieciséis) y las TAREAS del 11 al 50, que
+   sumaban 68 días solo en minar. Mover una sola de las tres no habría movido el resultado.
+   Medido con el reloj de dirección (árbol 30 min, roca 40) y el cupo de semillas:
+     1 sesión/día → 154 días   ·   2 → 37   ·   3 → 30   ·   6 → 15
+   El jugador de una sesión sigue lejos, y no lo arregla la curva: toca el juego 3 minutos al día
+   y cobra una sola cosecha y cuatro cargas por nodo. Es una decisión aparte, si se quiere tomar. */
+var FARM_XP_LVLS = [
+  0, 0, 25, 90, 225, 550, 1250, 2750, 5500, 9000,
+  14000, 14700, 15400, 16200, 17000, 17900, 18800, 19700, 20700, 21800,
+  22900, 24000, 25300, 26500, 27900, 29300, 30700, 32300, 33900, 35600,
+  37400, 39300, 41300, 43400, 45500, 47800, 50300, 52800, 55400, 58200,
+  61200, 64300, 67500, 70900, 74500, 78200, 82200, 86300, 90600, 95200,
+  100000];
 const FARM_NIVEL_MAX = 50;
 // tareas por nivel: [tipo, clave, cantidad] · tipos: plantar/talar/minar/matar/pescar/cocinar
+/* 8/9 — DIVIDIDAS POR TRES. Sumadas, las tareas del 11 al 50 pedían 815 minados, 701 muertes,
+   670 siembras, 630 talas, 215 cocinados y 150 pescas. Al ritmo real del jugador de tres sesiones
+   —12 cargas de árbol y 12 de roca al día, que es lo que el reloj de dirección permite— eso son
+   68 DÍAS solo en minar, y las tareas se hacen en paralelo así que manda la más lenta. Con el
+   objetivo del mes encima, era la pared más alta de las tres y la que ningún simulador veía,
+   porque simular-partida modela cosechas y nodos pero no tareas.
+   Se dividen por tres y quedan en ~23 días de minado, que sí cabe debajo del techo del mes. La
+   FORMA no se toca: cada nivel sigue pidiendo lo mismo, de los mismos oficios y en el mismo orden.
+   Si mañana vuelve a apretar, el número que hay que mirar es cuántas cargas da un nodo al día —
+   pero eso es el reloj, y el reloj es ley. */
 const FARM_TAREAS = {
-  11: [["plantar","repollo",20],["talar",null,30]],
-  12: [["minar","bronce",25],["matar","rata",25]],
-  13: [["plantar","calabaza",25],["matar","larva",20]],
-  14: [["talar",null,40],["matar","murcielago",20]],
-  15: [["plantar","brocoli",30],["minar","hierro",30]],
-  16: [["matar","baba",30],["pescar",null,20]],
-  17: [["plantar","calabaza",35],["minar","bronce",35]],
-  18: [["matar","arana",25],["matar","goblin",25],["talar",null,50]],
-  19: [["cocinar",null,20],["minar","hierro",40]],
-  20: [["plantar","calabaza",40],["matar","orco",30],["matar","rata",20]],
-  21: [["plantar","girasol",30],["minar","oro",40]],
-  22: [["matar","lancero",30],["talar",null,60]],
-  23: [["matar","esqueleto",25],["pescar",null,30]],
-  24: [["plantar","girasol",35],["minar","oro",30]],
-  25: [["matar","golem",20],["cocinar",null,25]],
-  26: [["plantar","trigo",25],["minar","oro",45]],
-  27: [["matar","hombre_lobo",25],["talar",null,80]],
-  28: [["minar","diamante",30],["matar","guerrero",30]],
-  29: [["plantar","trigo",30],["pescar",null,40]],
-  30: [["matar","troll",30],["matar","ogro",20],["minar","diamante",35]],
-  31: [["plantar","trigo",35],["minar","diamante",40]],
-  32: [["matar","ogro",30],["talar",null,100]],
-  33: [["cocinar",null,40],["minar","diamante",45]],
-  34: [["matar","espectro",25],["plantar","trigo",30]],
-  35: [["minar","diamante",50],["matar","ogro",30]],
-  36: [["plantar","maiz",30],["matar","espectro",30]],
-  37: [["minar","netherita",20],["talar",null,120]],
-  38: [["matar","demonio",25],["cocinar",null,50]],
-  39: [["plantar","maiz",35],["minar","netherita",25]],
-  40: [["matar","demonio",30],["minar","netherita",30]],
-  41: [["plantar","maiz",40],["pescar",null,60]],
-  42: [["matar","espectro",40],["matar","demonio",20],["minar","netherita",35]],
-  43: [["minar","netherita",40],["talar",null,150]],
-  44: [["matar","dragon",1],["plantar","maiz",40]],
-  45: [["minar","netherita",45],["matar","demonio",30]],
-  46: [["plantar","maiz",50],["matar","dragon",2]],
-  47: [["minar","netherita",50],["cocinar",null,80]],
-  48: [["matar","dragon",3],["minar","netherita",55]],
-  49: [["plantar","maiz",60],["matar","demonio",50],["matar","dragon",5]],
-  50: [["matar","dragon",5],["minar","netherita",70],["plantar","maiz",80]],
+  11: [["plantar","repollo",5],["talar",null,10]],
+  12: [["minar","bronce",10],["matar","rata",10]],
+  13: [["plantar","calabaza",10],["matar","larva",5]],
+  14: [["talar",null,15],["matar","murcielago",5]],
+  15: [["plantar","brocoli",10],["minar","hierro",10]],
+  16: [["matar","baba",10],["pescar",null,5]],
+  17: [["plantar","calabaza",10],["minar","bronce",10]],
+  18: [["matar","arana",10],["matar","goblin",10],["talar",null,15]],
+  19: [["cocinar",null,5],["minar","hierro",15]],
+  20: [["plantar","calabaza",15],["matar","orco",10],["matar","rata",5]],
+  21: [["plantar","girasol",10],["minar","oro",15]],
+  22: [["matar","lancero",10],["talar",null,20]],
+  23: [["matar","esqueleto",10],["pescar",null,10]],
+  24: [["plantar","girasol",10],["minar","oro",10]],
+  25: [["matar","golem",5],["cocinar",null,10]],
+  26: [["plantar","trigo",10],["minar","oro",15]],
+  27: [["matar","hombre_lobo",10],["talar",null,25]],
+  28: [["minar","diamante",10],["matar","guerrero",10]],
+  29: [["plantar","trigo",10],["pescar",null,15]],
+  30: [["matar","troll",10],["matar","ogro",5],["minar","diamante",10]],
+  31: [["plantar","trigo",10],["minar","diamante",15]],
+  32: [["matar","ogro",10],["talar",null,35]],
+  33: [["cocinar",null,15],["minar","diamante",15]],
+  34: [["matar","espectro",10],["plantar","trigo",10]],
+  35: [["minar","diamante",15],["matar","ogro",10]],
+  36: [["plantar","maiz",10],["matar","espectro",10]],
+  37: [["minar","netherita",5],["talar",null,40]],
+  38: [["matar","demonio",10],["cocinar",null,15]],
+  39: [["plantar","maiz",10],["minar","netherita",10]],
+  40: [["matar","demonio",10],["minar","netherita",10]],
+  41: [["plantar","maiz",15],["pescar",null,20]],
+  42: [["matar","espectro",15],["matar","demonio",5],["minar","netherita",10]],
+  43: [["minar","netherita",15],["talar",null,50]],
+  44: [["matar","dragon",5],["plantar","maiz",15]],
+  45: [["minar","netherita",15],["matar","demonio",10]],
+  46: [["plantar","maiz",15],["matar","dragon",5]],
+  47: [["minar","netherita",15],["cocinar",null,25]],
+  48: [["matar","dragon",5],["minar","netherita",20]],
+  49: [["plantar","maiz",20],["matar","demonio",15],["matar","dragon",5]],
+  50: [["matar","dragon",5],["minar","netherita",25],["plantar","maiz",25]],
 };
 // recompensas: parcela (nº), cofre (+capacidad), edificio nivel 2, y cosméticos (título/decoración/emote/marco/skin/aura)
 const FARM_UNLOCK = {
@@ -1655,7 +1685,15 @@ function expansionCostos() {
   if (EXPANSION_COSTO.length) return EXPANSION_COSTO;
   (function () {
   const ANCLA = 20, CELDAS_POR_EXP = 3;        // cada expansión trae 1 parcela + 1 árbol + 1 roca
-  const H0 = 2, HN = 30;                        // horas de granja que cuesta la 1ª y la última
+  /* 8/9 — DE 30 A 6 HORAS LA ÚLTIMA. Objetivo de dirección: « todo el contenido tiene que ser
+     posible ir desbloqueándolo con mucho un mes ». Medido, las 16 expansiones costaban 252.525 de
+     plata equivalente = 65 DÍAS de producción del jugador de tres sesiones, y eso calculado con la
+     granja ya terminada; al principio produce mucho menos. Ninguna curva de XP arregla eso.
+     Estas dos horas NO son el ancla y conviene no confundirlas, que yo lo hice esta mañana: el
+     ancla dice cuánto PRODUCE una celda (20 plata/hora, intocable). H0 y HN dicen cuántas horas de
+     esa producción vale una expansión, y eso siempre fue una elección de dirección. Se elige otra.
+     Las 16 pasan a costar ~13 días de producción en vez de 65, y siguen subiendo siempre. */
+  const H0 = 2, HN = 6;                         // horas de granja que cuesta la 1ª y la última
   const tramo = t => t < 0.20 ? [] : t < 0.40 ? ["bronce"] : t < 0.60 ? ["bronce", "hierro"]
     : t < 0.75 ? ["hierro", "oro"] : t < 0.90 ? ["oro", "diamante"] : ["diamante", "netherita"];
   /* ============ LAS DOS PRIMERAS SE MIDEN CONTRA OTRO RELOJ (20/8, dirección) =========
@@ -1688,7 +1726,13 @@ function expansionCostos() {
      costaba al jugador de tres visitas SEIS días reales — más que la 4 (4,3) y que la 5. Un muro
      invertido justo al salir del arranque. La 3 lleva 4,4 h a mano (90→61 maderas) para que la
      escalera suba pareja: 0,7 → 1,8 → 4 → 4,3 días reales. De la 4 en adelante, la fórmula. */
-  const HORAS_ARRANQUE = [0.7, 2.0, 4.4];
+  /* 8/9 — RE-DERIVADAS. Estos tres valores estaban calibrados contra la curva de HN=30, donde la
+     fórmula daba 2,0 / 4,4 / 6,6 y había que bajarlos para que el arranque no fuera un muro. Con
+     HN=6 la fórmula da 2,0 / 2,4 / 2,7 / 2,9: dejar el 4,4 habría puesto la TERCERA expansión más
+     cara que la cuarta y la quinta — exactamente el muro invertido que el 21/8 se arregló. Se
+     mantiene el motivo (la 1ª se promete a los 12 minutos y tiene que poder tomarse) y se sube
+     parejo hasta empalmar con la fórmula en la cuarta. */
+  const HORAS_ARRANQUE = [0.7, 1.4, 2.1];
   let celdas = 9;                               // 3 parcelas + 3 árboles + 3 rocas de arranque
   for (let i = 0; i < EXPANSION_MAX; i++) {
     const t = i / (EXPANSION_MAX - 1);
