@@ -76,6 +76,24 @@
   .nono{animation:nono .3s}
   /* el botón bloqueado deja pasar el clic al contenedor: así se puede detectar y sacudirlo */
   .card button[disabled]{pointer-events:none}
+  /* ═══ LOS TRES ÚLTIMOS USADOS (8/9) ═══ tira al borde derecho, a media altura. Va por fuera
+     de la barra y de la hotbar a propósito: es un recordatorio, no un control — no se le hace
+     clic, solo se mira de reojo mientras jugás. */
+  #recientes{position:fixed;right:8px;top:50%;transform:translateY(-50%);z-index:6;
+    display:flex;flex-direction:column;gap:6px;pointer-events:none}
+  .rec{position:relative;width:46px;height:46px;border-radius:9px;
+    background:radial-gradient(circle at 50% 38%,#fff 0%,#f6efdd 62%,#e8dcc0 100%);
+    border:2px solid #c9b070;display:flex;align-items:center;justify-content:center;
+    box-shadow:0 2px 6px rgba(0,0,0,.35)}
+  .rec img{width:88%;height:88%;object-fit:contain}
+  .rec .em{font-size:22px;line-height:1}
+  .rec .rn{position:absolute;right:-3px;bottom:-4px;font-size:11px;font-weight:800;color:#ffeaa7;
+    background:rgba(36,21,5,.92);border-radius:7px;padding:0 5px;line-height:16px;
+    box-shadow:0 1px 0 rgba(0,0,0,.35)}
+  /* en cero: apagado y con el número en rojo — enterarse de que NO tenés es la mitad del punto */
+  .rec.vacio{opacity:.5;border-color:#a8453a}
+  .rec.vacio .rn{color:#ffb4ab;background:rgba(70,14,10,.92)}
+  @media(max-width:640px){ .rec{width:38px;height:38px} }
   #toast{position:fixed;left:50%;top:60px;transform:translateX(-50%);z-index:200;background:rgba(20,25,15,.92);color:#fff;padding:8px 16px;border-radius:10px;font-size:14px;font-weight:600;opacity:0;transition:opacity .2s;pointer-events:none;border:1px solid #4a5340}
   #toast.show{opacity:1}
   #prompt{position:fixed;left:50%;bottom:156px;transform:translateX(-50%);z-index:7;background:rgba(20,25,15,.82);color:#ffe9a8;padding:1px 10px;border-radius:9px;font-size:13px;font-weight:700;opacity:0;transition:opacity .15s;pointer-events:none;border:1px solid #6a5a2a}
@@ -1029,6 +1047,10 @@
     </div>
   </div>
 
+  <!-- 8/9 (dirección): « agregar a mano derecha medio, los últimos 3 ítems que se usen — así
+       se puede ver cuántos quedan y no hay que ir a la bolsa a revisar si tengo o no ». La lista
+       la deriva el flujo de la bolsa (lo que bajó, se usó); acá solo vive el hueco. -->
+  <div id="recientes" style="display:none"></div>
   <div id="toast"></div>
   <!-- 26/8 · EL FLUJO DE LA BOLSA (dirección: « como en Sunflower »). Lo llena flujoPintar()
        desde la RESTA de dos fotos de la bolsa, no desde avisos puestos a mano. -->

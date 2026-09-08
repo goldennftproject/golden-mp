@@ -46,7 +46,7 @@ const G = {
      nada y hacía que la bolsa y la barra enseñaran un pico que el jugador no tiene. Llega con el
      kit del baúl, igual que el hacha y la caña. */
   picks: { owned: {}, dur: {}, eq: null },
-  tools: { axe: 0, rod: 0 },
+  tools: { axe: 0, rod: 0 }, recientes: [],
   kitReclamado: false,
   toolsLost: {},                 // herramientas tiradas a la papelera (31/7: el diseñador pidió que se puedan tirar)
   invRows: 0,                    // filas extra de inventario compradas
@@ -5366,6 +5366,37 @@ function flujoCambios() {
 /* « olvidate de lo que viste »: se llama al cargar una partida y al volver de un viaje, para que
    el salto de estado no se cuente como si el jugador lo hubiera hecho con las manos. */
 function flujoOlvidar() { _flujoFoto = null; }
+
+/* ═══ LOS TRES ÚLTIMOS USADOS ═══════════════════════ (8/9, dirección, con la captura de la
+   tira lateral: « agregar a mano derecha medio, los últimos 3 ítems que se usen — así se puede
+   ver cuántos quedan y no hay que ir a la bolsa a revisar si tengo o no »).
+   De dónde sale la lista es la parte que importa: NO de llamadas puestas a mano en cada acción
+   —eso envejece y el día que alguien agregue una acción nueva se olvida de avisar—, sino de la
+   MISMA foto de la bolsa que alimenta el flujo desde el 26/8. Lo que BAJÓ, se usó. Una sola
+   regla, y cualquier consumo futuro entra solo.
+   Vive en G para que sobreviva al F5: volver y encontrar tus tres herramientas de siempre es
+   la mitad de la comodidad que pidió dirección. */
+var RECIENTES_MAX = 3;
+function recientes() { if (!Array.isArray(G.recientes)) G.recientes = []; return G.recientes; }
+function recientesUsar(kind, key) {
+  /* las armas y las cañas no se cuentan: se tienen o no se tienen, y un « 1 » fijo en la tira
+     es una casilla gastada en algo que nunca se agota. */
+  if (kind === "arm" || kind === "cana") return;
+  const l = recientes(), id = kind + ":" + key, i = l.indexOf(id);
+  if (i >= 0) l.splice(i, 1);
+  l.unshift(id);
+  if (l.length > RECIENTES_MAX) l.length = RECIENTES_MAX;
+}
+// cuántos quedan de algo, sea de la familia que sea — la pregunta que la tira viene a contestar
+function recientesCant(kind, key) {
+  if (kind === "res")  return Math.floor(G.res[key] || 0);
+  if (kind === "seed") return Math.floor(G.seeds[key] || 0);
+  if (kind === "dish") return Math.floor((G.dishes && G.dishes[key]) || 0);
+  if (kind === "fish") return (typeof pezCuenta === "function") ? pezCuenta(key) : Math.floor((G.fish && G.fish[key]) || 0);
+  if (kind === "tool") return (typeof toolCount === "function") ? toolCount(key) : 0;
+  if (kind === "pick") return (typeof pickCount === "function") ? pickCount(key) : 0;
+  return 0;
+}
 
 /* UNA CASILLA POR CADA 99 — la vista que pinta la rejilla de la bolsa.
    Las armas y las cañas son la excepción: ocupan UNA casilla cada una aunque la caña tenga

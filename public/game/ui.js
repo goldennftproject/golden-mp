@@ -224,6 +224,32 @@ function flujoTick() {
   try { cambios = flujoCambios(); } catch (e) { return; }
   /* lo que ENTRA primero y lo que sale después: se lee mejor « +1 Piedra · −1 Pico » que al revés */
   cambios.sort((a, b) => b.d - a.d).forEach(c => flujoChip(c.kind, c.key, c.d));
+  /* 8/9 — LA TIRA DE LOS TRES ÚLTIMOS USADOS se alimenta de la misma foto: lo que BAJÓ, se usó.
+     Derivarlo de acá y no de llamadas en cada acción es lo que hace que un consumo nuevo entre
+     solo el día que exista, sin que nadie se acuerde de avisar. */
+  let usó = false;
+  cambios.forEach(c => { if (c.d < 0 && typeof recientesUsar === "function") { recientesUsar(c.kind, c.key); usó = true; } });
+  if (usó) refreshRecientes();
+}
+/* la tira lateral: tres casillas al borde derecho, con el ícono y CUÁNTO QUEDA — que es la
+   pregunta que evita abrir la bolsa. Se repinta con firma, como el resto de la casa: solo se
+   rehace el HTML si cambió qué hay o cuánto queda. */
+function refreshRecientes() {
+  const caja = $("recientes"); if (!caja) return;
+  const l = (typeof recientes === "function") ? recientes() : [];
+  const firma = l.map(id => { const i = id.indexOf(":"); return id + "=" + recientesCant(id.slice(0, i), id.slice(i + 1)); }).join("|");
+  if (caja._firma === firma) return;
+  caja._firma = firma;
+  if (!l.length) { caja.style.display = "none"; caja.innerHTML = ""; return; }
+  caja.style.display = "";
+  caja.innerHTML = l.map(id => {
+    const i = id.indexOf(":"), kind = id.slice(0, i), key = id.slice(i + 1);
+    const n = recientesCant(kind, key), v = itemView({ kind, key });
+    /* en cero se apaga y se pone rojo: « no hay que ir a la bolsa a revisar si tengo o no »
+       incluye, sobre todo, enterarse de que NO tenés. */
+    return '<div class="rec' + (n <= 0 ? " vacio" : "") + '" title="' + v.label + '">' +
+      itemIcon(v) + '<span class="rn">' + fmt(n) + '</span></div>';
+  }).join("");
 }
 /* ═══════════════════════════════════════════════════════════════════════════════════════════
    PESCA v4 · LA PULSEADA PASA EN EL AGUA, NO EN UNA VENTANA                            (28/8)
@@ -3944,6 +3970,9 @@ function initUI() {
 
   refreshHud();
   tutoSync(true);   // cartel + flecha del tutorial guiado
+  /* 8/9: la tira también se repinta en el latido — los números suben al craftear o al cobrar,
+     no solo al gastar, y con la firma no cuesta nada si no cambió nada. */
+  setInterval(() => { try { refreshRecientes(); } catch (e) {} }, 1000);
   setInterval(() => { if (typeof buffTick === "function") buffTick(); if (typeof stamTick === "function") stamTick(); if (typeof incTick === "function") incTick(); if (typeof granjaRegen === "function") granjaRegen(); tutoSync(); refreshHud(); }, 1000);
   /* 26/8 — el flujo de la bolsa late aparte y MÁS RÁPIDO que el HUD. Un segundo de retraso entre
      el golpe y el « +1 Madera » ya no se siente como respuesta al clic, se siente como otra cosa
