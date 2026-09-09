@@ -83,7 +83,11 @@ function mostrarResumenZona(r) {
     " · <b>+" + fmt(r.xp) + "</b> XP de Combate</div>" +
     (filas.length ? "<div style=\"margin-top:6px\">" + filas.join(" · ") + "</div>"
                   : "<div style=\"margin-top:6px\">No trajiste materiales.</div>");
-  if (cd) cd.textContent = "El granjero descansa " + ZONA_CD_MIN + " min antes de poder volver a entrar.";
+  /* 9/9: sin enfriamiento no hay nada que anunciar. Dejar « el granjero descansa 0 min » sería
+     el cartel más tonto del juego, así que la línea desaparece cuando el CD es cero. */
+  if (cd) cd.textContent = ZONA_CD_MIN > 0
+    ? "El granjero descansa " + ZONA_CD_MIN + " min antes de poder volver a entrar."
+    : "Podés volver a entrar cuando quieras.";
   cuandoListo(() => openOv("ov-zonares"));
 }
 

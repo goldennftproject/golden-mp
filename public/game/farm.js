@@ -1405,9 +1405,16 @@ class FarmScene extends Phaser.Scene {
       const tengo = Math.floor(G.res[of.pide] || 0);
       askConfirm("«Grjj… trato del día: vos me das " + of.cant + " " + (RES_LABEL[of.pide] || of.pide) +
         " y yo te doy " + of.entrega + " " + (RES_LABEL[of.da] || of.da) + ". ¿Trato?»" +
-        (tengo < of.cant ? "  (Tenés " + tengo + " — te faltan " + (of.cant - tengo) + ".)" : ""),
+        (tengo < of.cant ? "  (Tenés " + tengo + " — te faltan " + (of.cant - tengo) + ".)" : "") +
+        " (Si le decís que no, se va y vuelve mañana con otro trato.)",
         () => { if (typeof goblinAceptar === "function") goblinAceptar(); },
-        { title: "Mercader Goblin 🤝", yes: "¡Trato!", yesClass: "green", no: "Hoy no", noClass: "red" });
+        { title: "Mercader Goblin 🤝", yes: "¡Trato!", yesClass: "green", no: "Hoy no", noClass: "red",
+          /* 9/9 — EL « NO » AHORA HACE ALGO. Antes solo cerraba el cartel y el goblin seguía
+             plantado en la granja, porque el único sitio que gastaba el trato del día era
+             goblinAceptar. No hace falta despedirlo a mano: tickBuzon ya mira goblinEstado() en
+             cada tick y lo despide con su puff en cuanto deja de estar disponible — el mismo
+             camino que usa al aceptar. */
+          onNo: () => { if (typeof goblinRechazar === "function") goblinRechazar(); } });
       return;
     }
     if (o.type === "domabicho") {   // LA DOMA (22/8): el clic lo alimenta (1 carne = 1 día de trabajo)

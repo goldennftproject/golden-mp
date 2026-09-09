@@ -3701,7 +3701,15 @@ function rollEsencia(zona, esBoss, lvlMob) {
 //   · al entrar se saca una FOTO del estado (recursos, plata, XP de combate, muertes)
 //   · al volver se compara contra esa foto y sale un cuadro con lo que trajiste
 //   · y arranca un enfriamiento antes de poder volver a entrar
-var ZONA_CD_MIN = 3;          // minutos de descanso entre viaje y viaje
+/* 9/9 (dirección) — « no olvides quitar el CD de volver a Zona negra, ya se puede entrar sin
+   problemas cada vez que uno quiera ». Se pone en CERO, no se borra la maquinaria: la puerta
+   sigue preguntando por zonaCdLeft(), y si mañana hace falta un ritmo entre viajes se sube este
+   número y vuelve entero. Borrar la función obligaría a reescribir los cuatro sitios que la
+   consultan, y ya sabemos cómo termina eso.
+   Con el enfriamiento en cero, el arreglo de ayer —« la puerta está abierta mientras tengas un
+   cuerpo esperándote »— deja de hacer falta, pero se queda igual: cuesta una comparación y sigue
+   siendo verdad. */
+var ZONA_CD_MIN = 0;          // minutos de descanso entre viaje y viaje (0 = se entra cuando querés)
 /* 8/9 (Suren, en vivo) — « hay que quitar el CD de regresar a la Zona Negra porque acabo de morir
    y no puedo esperar, porque se pudre y no puedo recuperar ».
    Tenía toda la razón, y el fallo es mío: el enfriamiento se diseñó cuando morir no costaba NADA
@@ -9278,6 +9286,22 @@ function goblinOfertaHoy() {
   const cant = Math.max(2, Math.round(objetivo / Pp));
   const entrega = Math.max(1, Math.round(cant * Pp * 1.1 / Pd));     // +10% de propina (redondeada)
   return { pide, cant, da, entrega };
+}
+/* 9/9 (dirección) — « sabías que tu Goblin mercader no acepta un no como respuesta? tienes que
+   decirle sí o sí al trato para desaparecer ». Cierto, y de las que dan vergüenza: el goblin se
+   plantaba en la granja hasta que cerrabas el trato, porque el ÚNICO sitio que marcaba el día
+   como usado era goblinAceptar. El botón « Hoy no » cerraba el cartel y el bicho seguía ahí,
+   ofreciéndote lo mismo cada vez que lo tocabas.
+   Un no tiene que ser una respuesta válida: se va, y vuelve mañana con otro trato. Es la misma
+   consecuencia que aceptar —el trueque del día se gasta—, que es lo que lo convierte en una
+   DECISIÓN y no en un cartel que hay que esquivar. El aviso lo dice antes de que elijas. */
+function goblinRechazar() {
+  if (!goblinEstado().disponible) return { error: "hoy ya se fue" };
+  G.goblin = G.goblin || {}; G.goblin.date = dayStamp(0);
+  log("🤝 Le dijiste que no al Mercader Goblin. «Grjj… vos te lo perdés. Mañana vuelvo con otra cosa.»", "info");
+  toast("El Goblin se fue — vuelve mañana");
+  if (typeof saveFarm === "function") saveFarm(true);
+  return { ok: true };
 }
 function goblinAceptar() {
   if (!goblinEstado().disponible) return { error: "hoy ya hizo su trato" };
