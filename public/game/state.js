@@ -363,6 +363,14 @@ function oficioAbre(sk) {
       if (1 + Math.floor(n / NASA_CUPO_CADA) <= NASA_CUPO_MAX) l.push([n, "un hueco de nasa más"]);
     for (const k of TITULO_PESCA_ORDER) l.push([TITULO_PESCA_DEF[k].lvl, "Título: " + TITULO_PESCA_DEF[k].label]);
   }
+  /* 9/9 — ESPADA, HACHA, MAZO Y ARCO: el contenido ya existía, solo estaba suelto. Las veinte
+     armas declaran su skill en ARM_TIPO_DEF; acá se leen de ahí, así que si mañana entra una
+     rareza nueva aparece sola y el techo del oficio sube con ella. Nadie escribe el número. */
+  if (typeof ARM_DEF !== "undefined" && typeof ARM_ORDER !== "undefined")
+    for (const id of ARM_ORDER) {
+      const w = ARM_DEF[id];
+      if (armSkillKey(w.tipo) === sk) l.push([w.lvl || 1, w.label]);
+    }
   for (const t in PLANO_OFICIO) if (PLANO_OFICIO[t][0] === sk && BUILD_DEF[t])
     l.push([PLANO_OFICIO[t][1], "plano de " + BUILD_DEF[t].label]);
   for (const t in EDIF2_OFICIO) if (EDIF2_OFICIO[t][0] === sk && BUILD_DEF[t])
@@ -1789,7 +1797,36 @@ function farmUnlockTxt(n) {
      cerca de la mitad de lo que crece la granja, pero era invisible. */
   const bph = typeof fmt === "function" ? fmt(bonoPlataH()) : String(bonoPlataH());
   partes.push("+1,5% al precio de venta (≈ +" + bph + " de plata por hora)");
+  const cos = farmCosmetico(n); if (cos) partes.push(cos);
   return partes.join(" + ");
+}
+/* ============ 9/9 — EL PLAN COSMÉTICO SE ENTREGA   (recomendación 9) =======================
+   FARM_UNLOCK tenía escrito qué cosmético iba en cada nivel y el jugador no lo recibía nunca.
+   No por olvido: recalcFarmLevelInterno preguntaba « ¿el premio de este nivel nombra un Título,
+   un Marco, un Emote…? » sobre el texto que devuelve farmUnlockTxt() — que es derivado y NUNCA
+   nombra un cosmético. La condición era imposible de cumplir, así que la línea que reparte
+   cosméticos por nivel llevaba semanas sin repartir uno solo. Un `if` que nunca es cierto no da
+   error, no aparece en ningún log y no lo ve nadie.
+   Con esto, 26 de los 49 niveles dejan de ser mudos: el cosmético entra en la colección
+   (G.cosmeticos, que el panel ya pinta) y el cartel del nivel lo anuncia.
+
+   Y DE PASO SE LIMPIAN LAS PROMESAS FALSAS. Diez entradas prometían « Nª parcela », cosa que
+   dejó de ser verdad el 18/8 cuando dirección decidió que las parcelas vienen con la expansión.
+   El cartel del nivel deriva lo que de verdad entrega y no las nombra, pero seguían escritas ahí
+   y cualquiera que leyera la tabla se las creía — yo el primero. Se leen SOLO los cosméticos.
+
+   LO QUE SIGUE PENDIENTE Y NO ES ESTO: que el sprite del granjero, la herramienta o el arma
+   cambien de verdad. Eso es la cola de arte. Un cosmético ganado y coleccionable es más de lo
+   que había —que era nada—, pero no es la skin puesta. Queda dicho para que nadie lo dé por
+   cerrado leyendo este commit. */
+function farmCosmetico(n) {
+  const txt = (typeof FARM_UNLOCK !== "undefined" && FARM_UNLOCK[n]) || "";
+  if (!txt) return "";
+  return txt.split(" + ")
+    /* fuera las promesas que ya no cumple el nivel: las parcelas las trae la expansión, y los
+       edificios de nivel 2, los cultivos, el cofre y los planos los deriva farmUnlockTxt(). */
+    .filter(p => /Título|aura|AURA|Skin|Marco|Emote|Decoración/i.test(p))
+    .join(" + ");
 }
 /* 17/8 — EN QUÉ NIVEL CAE CADA UNA DE LAS 16 EXPANSIONES (bloques de 5x5, ver GF.EXPANSIONES).
    El hueco se abre solo: 2 niveles entre las cinco primeras, 3 entre las cinco siguientes y 4
@@ -2140,7 +2177,13 @@ function recalcFarmLevelInterno() {
     if (FARM_COFRE[G.level]) G.chestCap = (G.chestCap || 0) + FARM_COFRE[G.level];
     if (typeof FARM_VALES !== "undefined" && FARM_VALES[G.level]) G.vales = (G.vales || 0) + FARM_VALES[G.level];   // 22/8: el nivel 4 ya no es mudo
     if (FARM_EDIF2[G.level]) { G.edif2 = G.edif2 || {}; G.edif2[FARM_EDIF2[G.level]] = true; }
-    if (gift && /Título|aura|AURA|Skin|Marco|Emote|Decoración/.test(gift)) { G.cosmeticos = G.cosmeticos || []; G.cosmeticos.push("Nivel " + G.level + ": " + gift); }
+    /* 9/9 — se pregunta por el COSMÉTICO del nivel, no por el texto derivado. Antes esto miraba
+       `gift`, que sale de farmUnlockTxt() y nunca nombra un cosmético: la condición no podía ser
+       cierta y la línea llevaba semanas sin entregar nada, en silencio. */
+    {
+      const cos = farmCosmetico(G.level);
+      if (cos) { G.cosmeticos = G.cosmeticos || []; G.cosmeticos.push("Nivel " + G.level + ": " + cos); }
+    }
     snapshotTareas();   // las tareas del próximo nivel se cuentan desde cero
     log(`¡GRANJA NIVEL ${G.level}!` + (gift ? " Desbloqueaste: " + gift + "." : ""), "gold");
     if (window.celebrate) celebrate({ title: "¡NIVEL " + G.level + "!", sub: "Granja", big: true, reward: gift || "" });
@@ -5185,6 +5228,24 @@ const ARM_MAT_FORJA = { madera: "madera", piedra: "piedra", bronce: "barra_bronc
 // es el que tiene el arma de entrada: así subir de arma nunca es peor que quedarse.
 const ARM_REP_MULT = [2, 3, 1, 1, 1];
 const ARM_RAR_LABEL = { madera: "de Madera", piedra: "de Piedra", bronce: "de Bronce", oro: "de Oro", diamante: "de Diamante" };
+/* ============ 9/9 — LAS CUATRO ARMAS ABREN SUS OFICIOS   (recomendación 9) =================
+   Espada, Hacha, Mazo y Arco eran cuatro oficios HUÉRFANOS: subían de nivel, pero no abrían
+   absolutamente nada. Y como oficioTecho() deriva el techo de lo último que el oficio abre, los
+   cuatro caían al 150 de reserva — un número que no significa nada, en un panel que le promete
+   al jugador ciento cincuenta niveles de los que ciento cuarenta y ocho están vacíos.
+   El contenido ya existía y estaba suelto: veinte armas, cuatro tipos por cinco rarezas, cada una
+   con su tipo de skill ya declarado en ARM_TIPO_DEF. Lo único que faltaba era ATARLAS al oficio
+   que las usa. Ahora cada rareza pide su nivel — 1 · 4 · 8 · 12 · 16, la misma escalera que las
+   cañas (1 · 4 · 8 · 12 · 18), porque son la misma clase de cosa: la herramienta de un oficio.
+   Con eso el techo de los cuatro se DERIVA solo y baja de 150 a 16, que es donde están farming
+   (16), cooking (16) y fishing (20).
+   SE CIERRA LA FORJA, NO EL ARMA. El nivel hace falta para FORJARLA; lo que ya tenés puesto
+   sigue siendo tuyo, se equipa y se repara igual. La ley de la casa es que una partida solo se
+   resetea borrando caché, y un gate retroactivo sobre lo ya comprado sería justo eso.
+   QUEDAN DOS HUÉRFANOS: Tala y Artesanía. Ahí no hay contenido que atar —hay UNA hacha y UN
+   catálogo de materiales sin escalera—, así que siguen apareciendo en oficiosSinContenido() y
+   van a la lista del diseñador en vez de taparse con un número inventado. */
+const ARM_LVL = [1, 4, 8, 12, 16];
 const ARM_DEF = {};
 ARM_TIPOS.forEach(tipo => ARM_RAREZAS.forEach((rar, i) => {
   const td = ARM_TIPO_DEF[tipo], cost = {};
@@ -5195,7 +5256,7 @@ ARM_TIPOS.forEach(tipo => ARM_RAREZAS.forEach((rar, i) => {
   const repair = {}; repair[ARM_MAT[rar]] = td.repQ * (ARM_REP_MULT[i] || 1);
   ARM_DEF[tipo + "_" + rar] = { tipo, rareza: rar, ri: i, sprite: "arm_" + tipo + "_" + rar, label: td.label + " " + ARM_RAR_LABEL[rar],
     min: ARM_MINMAX[tipo][i][0], max: ARM_MINMAX[tipo][i][1], buffVal: ARM_BUFFVAL[tipo][i],
-    dur: ARM_DUR[i], cost, plata: td.plata[i], cd: ARM_CDS[i], repair };
+    dur: ARM_DUR[i], cost, plata: td.plata[i], cd: ARM_CDS[i], repair, lvl: ARM_LVL[i] };
 }));
 const ARM_ORDER = [];
 ARM_TIPOS.forEach(t => ARM_RAREZAS.forEach(r => ARM_ORDER.push(t + "_" + r)));
@@ -5272,6 +5333,19 @@ function craftWeapon(id) {
   if (typeof tutoPermite === "function" && !tutoPermite("craftarm")) { tutoAviso(); return; }   // embudo estricto (13/8)
   if (typeof tutoGuardiaCosto === "function" && !tutoGuardiaCosto(w.cost, w.plata, "forjar " + w.label)) return;   // guardia del tutorial (12/8)
   if (G.weapons[id]) { toast("Ya tenés " + w.label); return; }
+  /* 9/9 — LA RAREZA PIDE SU NIVEL DE OFICIO (ver « LAS CUATRO ARMAS ABREN SUS OFICIOS »).
+     Se cierra la FORJA y nada más: lo que ya tenías se equipa y se repara igual, porque un gate
+     retroactivo sobre lo comprado es un reseteo con otro nombre. Y se dice por qué y cuánto
+     falta — regla 9 de la casa: ninguna acción falla en silencio. */
+  {
+    const sk = armSkillKey(w.tipo), nv = nivelOficio(sk);
+    if (nv < (w.lvl || 1)) {
+      toast("Te falta " + SKILL_NAME[sk] + " nivel " + w.lvl + " (tenés " + nv + ")");
+      log("Para forjar " + w.label + " hace falta " + SKILL_NAME[sk] + " nivel " + w.lvl +
+          " — vas por el " + nv + ". Se sube peleando con " + ARM_TIPO_DEF[w.tipo].label.toLowerCase() + ".", "bad");
+      return;
+    }
+  }
   if (armCdLeft(id) > 0) { toast("La forja se enfría — " + fmtSecs(Math.ceil(armCdLeft(id) / 1000))); return; }
   if (!canAfford(w.cost)) { toast("Te faltan materiales"); return; }
   if (G.plata < w.plata) { toast("Te falta plata"); return; }

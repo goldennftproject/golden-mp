@@ -47,9 +47,32 @@ console.log("\nEL TECHO ES EL ÚLTIMO NIVEL DEL CONTENIDO, NO UN NÚMERO A MANO"
     ok("y su techo es el máximo de su lista, no un número a mano",
       ctx.oficioTecho("fishing") === maxP, "techo " + ctx.oficioTecho("fishing"));
   }
-  for (const sk of ["tala", "crafting", "sword", "range"]) {
+  /* 9/9 — SWORD Y RANGE SALEN DE ESTA LISTA, y con ellos hacha y mazo. Las veinte armas (cuatro
+     tipos × cinco rarezas) ya existían con su skill declarada; lo único que faltaba era pedir
+     nivel para forjarlas (1 · 4 · 8 · 12 · 16, la escalera de las cañas). Ahora los cuatro
+     oficios de combate derivan su techo del contenido, como todos los demás.
+     Esta línea pedía lo contrario, y tenía razón el día que se escribió: registraba una AUSENCIA
+     como si fuera un contrato. Cuando la ausencia se llena, el que está viejo es el test — es la
+     tercera vez esta semana que me pasa, y por eso queda escrito acá.
+     QUEDAN DOS DE VERDAD: Tala y Artesanía. No hay contenido que atarles (una sola hacha, un
+     catálogo de materiales sin escalera), así que siguen en 150 y en oficiosSinContenido(). */
+  for (const sk of ["tala", "crafting"]) {
     ok(sk + " no tiene escalera: sigue sin techo (150)", ctx.oficioTecho(sk) === 150);
   }
+  for (const sk of ["sword", "hacha", "mazo", "range"]) {
+    const l = ctx.oficioAbre(sk);
+    ok(sk + " abre sus cinco rarezas y su techo se deriva",
+      l.length === 5 && ctx.oficioTecho(sk) === 16,
+      "techo " + ctx.oficioTecho(sk) + " · " + l.map(e => e[0]).join("·"));
+  }
+  /* y el arma de entrada tiene que caber en el nivel 1, o el jugador nuevo se queda sin nada
+     con que pegar — que sería cerrar el juego con la llave puesta por dentro. */
+  /* ARM_DEF es `const` dentro del vm, así que no aparece en el sandbox: se pregunta EJECUTANDO
+     en el contexto, no leyendo la propiedad. La primera versión de esta línea leía ctx.ARM_DEF,
+     daba undefined y el test se ponía en rojo culpando al juego de un fallo del arnés. */
+  const entrada = vm.runInContext("ARM_DEF[ARMA_ENTRADA] || {}", ctx);
+  ok("el arma de entrada no pide nivel", entrada.lvl === 1,
+    vm.runInContext("ARMA_ENTRADA", ctx) + " pide nivel " + entrada.lvl);
 }
 
 console.log("\nCON XP ASTRONÓMICA, EL NIVEL SE PLANTA EN EL TECHO — Y LA XP SE GUARDA");
