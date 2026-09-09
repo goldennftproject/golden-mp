@@ -3864,7 +3864,17 @@ function contDescargar(nodo, silencio) {
       G.weapons = G.weapons || {};
       if (!G.weapons[e.k]) { G.weapons[e.k] = e.w || { dur: (typeof ARM_DEF !== "undefined" && ARM_DEF[e.k] ? ARM_DEF[e.k].dur : 40) }; ok = true; }
     }
-    else if (e.kind === "armorset") { G.armor = G.armor || {}; if (!G.armorEq) G.armorEq = e.k; ok = true; }
+    /* 8/9 — RECUPERAR EL SET DEVUELVE LAS PIEZAS. Acá se hacía `if (!G.armorEq) G.armorEq = e.k`
+       y nada más: como equipoCaido tampoco las quitaba, la línea « funcionaba » sin hacer nada y
+       con otro set puesto devolvía ok = true sin devolver el set. Ahora que la caída se lleva las
+       piezas de verdad, esta es la puerta por la que vuelven. Equiparlo o no lo decide el jugador
+       —pisarle el set que lleve puesto sería decidir por él—, pero el objeto vuelve siempre. */
+    else if (e.kind === "armorset") {
+      G.armor = G.armor || {};
+      if (ARMOR_SETS[e.k]) ARMOR_SLOTS.forEach(pz => { G.armor[armorKey(e.k, pz)] = true; });
+      if (!G.armorEq) G.armorEq = e.k;
+      ok = true;
+    }
     else if (e.k === "plata")  { G.plata  = (G.plata  || 0) + e.n; ok = true; }
     else if (e.k === "golden") { G.golden = (G.golden || 0) + e.n; ok = true; }
     /* 8/9 (Suren, en vivo) — « me morí, recuperé todo y al regresar no tenía nada en el bag,
@@ -4158,7 +4168,17 @@ function equipoCaido(azar) {
       const w = G.weapons[p.k];
       G.gear.arma = null; delete G.weapons[p.k];
       caen.push({ kind: "arm", k: p.k, n: 1, w: w });
-    } else { G.armorEq = null; caen.push({ kind: "armorset", k: p.k, n: 1 }); }
+    } else {
+      /* 8/9 — EL SET CAÍA DE MENTIRA. Acá solo se hacía `G.armorEq = null`, y G.armor —donde
+         viven las piezas— no se tocaba: tras la caída, y aunque el cuerpo se deshiciera, bastaba
+         pulsar « Equipar » en el panel para recuperar los 15 de defensa gratis. Mientras tanto el
+         aviso de la muerte te lo contaba como perdido y ocupaba un hueco del cuerpo.
+         O caía de verdad o no caía; lo que no puede es caer en el log y no en el estado. Se
+         llevan las PIEZAS, que son el objeto; el set vuelve entero al recuperar el cuerpo. */
+      ARMOR_SLOTS.forEach(pz => { if (G.armor) delete G.armor[armorKey(p.k, pz)]; });
+      G.armorEq = null;
+      caen.push({ kind: "armorset", k: p.k, n: 1 });
+    }
   }
   return caen;
 }
@@ -4951,6 +4971,56 @@ const ARM_ORDER = [];
 ARM_TIPOS.forEach(t => ARM_RAREZAS.forEach(r => ARM_ORDER.push(t + "_" + r)));
 
 function armaEq() { const id = G.gear.arma; return (id && ARM_DEF[id] && G.weapons[id] && G.weapons[id].dur > 0) ? id : null; }
+/* ═══ QUÉ ARMAS TENÉS A MANO, SEGÚN DÓNDE ESTÉS (8/9, auditoría general) ═══════════════════
+   El panel de Equipo era un agujero en la cuarentena, y en los DOS sentidos: dentro de la Zona
+   recorría G.weapons —el arsenal de la GRANJA—, así que podías equiparte a mitad de cacería la
+   espada que habías dejado en casa; y al revés, un arma de repuesto que sí habías cargado en el
+   contenedor no aparecía por ningún lado, imposible de equipar.
+   Peor todavía: cargar tu ÚNICA arma al contenedor la sacaba de G.weapons (mkSacar), así que
+   armaEq() daba null, la puerta contestaba « equipate un arma antes de entrar », y el arma estaba
+   ahí dentro, a la vista, sin forma de ponérsela.
+   La regla de la Zona es la de siempre: solo existe lo que llevás. Así que la lista sale del
+   contenedor cuando estás dentro, y de la granja cuando estás fuera. */
+function armasAMano() {
+  const puesta = G.gear.arma && G.weapons && G.weapons[G.gear.arma] ? [G.gear.arma] : [];
+  if (!enZona()) {
+    const l = [];
+    ARM_ORDER.forEach(id => { if (G.weapons && G.weapons[id]) l.push(id); });
+    return l;
+  }
+  const raiz = contLlevado();
+  const dentro = raiz ? contAplanar(raiz).filter(e => e.kind === "arm" && ARM_DEF[e.k]).map(e => e.k) : [];
+  return puesta.concat(dentro.filter(k => k !== G.gear.arma));
+}
+/* CAMBIAR DE ARMA DENTRO DE LA ZONA. No es « equipar »: es un INTERCAMBIO, porque las dos armas
+   tienen que seguir existiendo en algún sitio. La que llevabas puesta baja al contenedor con su
+   ficha entera (durabilidad, +N, runas) y la elegida sube a la mano. Si el contenedor está lleno
+   no se hace nada y se dice — dejar caer un arma al suelo por cambiarla sería perderla. */
+function armaCambiarLlevada(key) {
+  if (!enZona()) return false;
+  const raiz = contLlevado();
+  if (!raiz) return false;
+  const previa = G.gear.arma;
+  if (key === previa) return true;
+  if (key) {
+    const pila = contAplanar(raiz).find(e => e.kind === "arm" && e.k === key);
+    if (!pila) return false;
+    if (previa && G.weapons[previa] && !contMeter(raiz, "arm", previa, 1, { w: G.weapons[previa] })) return false;
+    contGastar(raiz, "arm", key, 1);
+    G.weapons = G.weapons || {};
+    G.weapons[key] = pila.w || { dur: (ARM_DEF[key] ? ARM_DEF[key].dur : 40) };
+    if (previa && previa !== key) delete G.weapons[previa];
+    G.gear.arma = key;
+    return true;
+  }
+  /* guardar la que llevás: baja al contenedor y quedás desarmado a propósito */
+  if (previa && G.weapons[previa]) {
+    if (!contMeter(raiz, "arm", previa, 1, { w: G.weapons[previa] })) return false;
+    delete G.weapons[previa];
+  }
+  G.gear.arma = null;
+  return true;
+}
 function armSkillKey(tipo) { return ARM_TIPO_DEF[tipo].skill; }
 function armCdLeft(id) { return Math.max(0, ((G.armCd && G.armCd[id]) || 0) - nowMs()); }
 /* EL PRIMER ESCALÓN DE UNA ESCALERA SIEMPRE ESTÁ ABIERTO (19/8, dirección).

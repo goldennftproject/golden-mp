@@ -782,6 +782,27 @@ function derivarEstado(d) {
   try { if (typeof pezMigrarPesos === "function") pezMigrarPesos(); } catch (e) { console.warn("mudanza de pesos:", e); }
   /* 8/9 — la caña consumible de la v2 se jubiló; lo que quede se devuelve en madera. */
   try { if (typeof mudanzaCanaVieja === "function") mudanzaCanaVieja(); } catch (e) { console.warn("mudanza de la caña:", e); }
+  /* 8/9 — EL VIAJE A LA ZONA SE CIERRA AL VOLVER, PASE LO QUE PASE.
+     La partida siempre arranca en la granja, pero G.zonaViaje y G.cont sobreviven al guardado. Un
+     F5 dentro de la Zona —o un cierre del navegador, o una caída de la conexión— dejaba el viaje
+     ABIERTO: el contenedor no se volcaba nunca, así que el botín quedaba invisible para la bolsa
+     hasta que el jugador adivinara que tenía que ir a la puerta del portal; y el resumen del viaje
+     siguiente se calculaba contra la foto vieja, así que mentía sobre lo ganado.
+     Ahora se liquida acá, que es donde se sabe que estamos en la granja con un viaje sin cerrar.
+     zonaSalir hace lo suyo entero: vuelca el contenedor (dejando dentro lo que no quepa, y
+     diciéndolo), cobra el enfriamiento desde AHORA y borra la foto.
+
+     LO QUE ESTO NO ARREGLA, y hay que decirlo en vez de fingir que sí: recargar sigue siendo una
+     forma de esquivar la muerte. Si estás por caer, el F5 te devuelve a la granja con todo. Para
+     cerrar eso hace falta decidir una política de desconexión —¿morís si te cae la conexión?—, y
+     esa es una decisión de dirección, no un arreglo. Lo que NO se puede hacer es matar al jugador
+     por una caída de red: sería perder progreso sin borrar caché, justo lo que la ley prohíbe. */
+  try {
+    if (G.zonaViaje && !(typeof enZona === "function" && enZona()) && typeof zonaSalir === "function") {
+      zonaSalir(false);
+      if (typeof log === "function") log("Volviste de la Zona Negra con la partida cerrada — tu viaje se cerró solo y lo que llevabas está en la bolsa.", "info");
+    }
+  } catch (e) { console.warn("cierre del viaje a la zona:", e); }
   try { if (typeof regalosSync === "function") regalosSync(); } catch (e) {}   // guardados viejos: recalcula lo que le corresponde por su nivel
   if (typeof applyCombatHp === "function") applyCombatHp();   // vida máxima: ahora sí ve gear y weapons
   if (typeof d.hp === "number") G.hp = Math.max(1, Math.min(G.hpMax, d.hp));

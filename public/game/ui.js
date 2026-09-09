@@ -2045,9 +2045,17 @@ function refreshEquip() {
     armaDef ? armaDef.label + " equipada · clic para cambiar" : "Arma · clic para equipar");
   const armaEl = $("eq-arma");
   if (armaEl) armaEl.onclick = () => {
-    const opts = [null]; ARM_ORDER.forEach(id => { if (G.weapons && G.weapons[id]) opts.push(id); });
-    if (opts.length === 1) { toast("No tenés armas — crafteálas en la Herrería"); return; }
-    G.gear.arma = opts[(opts.indexOf(G.gear.arma) + 1) % opts.length];
+    /* 8/9 — LA LISTA SALE DE DONDE ESTÉS. Acá se recorría G.weapons siempre, o sea el arsenal de
+       la GRANJA: dentro de la Zona te dejaba equiparte la espada que dejaste en casa, y no te
+       dejaba equiparte la que sí habías cargado. armasAMano() responde según enZona(). */
+    const opts = [null].concat(armasAMano());
+    if (opts.length === 1) { toast(enZona() ? "No llevás armas en el contenedor" : "No tenés armas — crafteálas en la Herrería"); return; }
+    const sig = opts[(opts.indexOf(G.gear.arma) + 1) % opts.length];
+    /* dentro de la Zona cambiar de arma es un INTERCAMBIO con el contenedor, no un simple
+       « ponete ésta »: la que llevabas tiene que bajar al contenedor con su ficha o se perdería. */
+    if (enZona()) {
+      if (!armaCambiarLlevada(sig)) { toast("El contenedor está lleno — no hay dónde guardar la que llevás"); return; }
+    } else G.gear.arma = sig;
     toast(G.gear.arma ? ARM_DEF[G.gear.arma].label + " equipada" : "Arma desequipada");
     /* 19/8: el tutorial señala ESTE slot para el paso "equipate la espada", así que la tercera vía
        de equipar también tiene que avisarle. Las otras dos (la bolsa y la Herrería) ya lo hacían;
@@ -2056,7 +2064,11 @@ function refreshEquip() {
     refreshEquip(); if (typeof syncSlots === "function") syncSlots(); if (typeof saveFarm === "function") saveFarm();
   };
   // munición: las flechas se equipan a mano con clic (ya no se autoequipan al craftear)
-  const fl = (G.res && G.res.flecha) || 0;
+  /* 8/9 — LAS FLECHAS SE CUENTAN DONDE ESTÁS. Esto leía G.res.flecha —la bolsa de la granja—,
+     así que dentro de la Zona, con 200 flechas en el contenedor y 0 en casa, el panel decía « No
+     tenés flechas » y NO dejaba equiparlas… mientras porQueNoAtaca() mandaba al jugador justo a
+     este panel. La barra rápida ya preguntaba bien (llevoTengo); esta ranura no. */
+  const fl = llevoTengo("res", "flecha");
   const munOn = !!G.gear.municion && fl > 0;
   fill("eq-municion", munOn, spIc("res_flecha", "") + '<b class="eqcnt">' + fmt(fl) + "</b>",
     /* 8/9 (Suren) — « y luego las equipa y no las quita de la bolsa ». Es correcto y es de Tibia:

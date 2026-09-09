@@ -12,6 +12,28 @@ Cuando un hallazgo se apoya solo en lectura, se dice.
 
 ---
 
+## Estado: qué queda vivo
+
+Todo lo de las secciones GRAVE y los cuatro de la cuarentena está **arreglado y verificado
+ejecutando** (commits `d3ec652`, `7dd5fb5` y el de los graves restantes). Lo que sigue abierto,
+y por qué:
+
+| # | qué | por qué sigue abierto |
+|---|---|---|
+| 8 | La Cocina paga 25-47 % sobre el ancla | es una decisión de diseño, no un bug: hay que decidir si la olla debe ser una imprenta |
+| 9 | El Lombricario recomienda el peor trato | el panel es un bug, la escalera de precios es diseño — van juntos |
+| 15 | El valle del nivel 11 | consecuencia de aplanar la cola; mover los diez primeros es decisión de dirección |
+| 16 | La alpaca domina el establo | los cuatro animales rinden 20/h y el precio sube por posición: es diseño |
+| 17 | Premios sin escala (pase, logros) | diseño |
+| 18 | El portero no es la única puerta | necesita aplicar `sql/portero-guardado.sql` PARTE 2 y salir de modo sombra — es tuyo |
+
+Y una que NO se cierra con código: **recargar sigue siendo una forma de esquivar la muerte** en
+la Zona. Para cerrarla hace falta una política de desconexión, y matar al jugador por una caída
+de red sería perder progreso sin borrar caché — justo lo que la ley prohíbe. Decisión de
+dirección.
+
+---
+
 ## Ya arreglado esta noche (commit `d3ec652`)
 
 **El muro de la netherita — y me corregía a mí.** Las tareas del nivel 11 al 50 pedían 125 de

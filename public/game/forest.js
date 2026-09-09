@@ -108,12 +108,19 @@ class ForestScene extends Phaser.Scene {
     this._nav = null; this.holdLast = null; this.holdPend = null; this.pathStuck = 0; this.leaving = false;
     this.target = null; this.nextAuto = 0; this.path = null; this.hold = null; this.autoOn = false;
     // el botín tirado sobrevive mientras dure la sesión: si volvés al Bosque, sigue ahí
+    /* 8/9 — CADA COSA EN SU MAPA. Ni los drops ni los cuerpos guardaban a qué zona pertenecían,
+       así que al entrar a cualquier otra se redibujaban TODOS y se podían recoger allí: el botín
+       que dejaste en el pantano aparecía en la guarida. Ahora cada uno nace con su zona (las
+       partidas viejas, sin el campo, se adoptan la primera vez para no perder nada) y solo se
+       dibuja lo de acá. Lo de las otras zonas no se borra: sigue esperando donde lo dejaste. */
     GF.forestDrops = GF.forestDrops || [];
-    GF.forestDrops.forEach(g => { g.spr = this.dropSprite(g); });
+    GF.forestDrops.forEach(g => { if (g.zona == null) g.zona = this.zonaKey; });
+    GF.forestDrops.filter(g => g.zona === this.zonaKey).forEach(g => { g.spr = this.dropSprite(g); });
     /* los CUERPOS también sobreviven al ir y volver: los que aún guardan botín (o nadie revisó)
        se redibujan con sus brillos; los revisados y vacíos no vuelven — ya se estaban yendo */
     GF.forestCuerpos = (GF.forestCuerpos || []).filter(c => !c.revisado || c.drops.length);
-    GF.forestCuerpos.forEach(c => this.dibujarCuerpo(c));
+    GF.forestCuerpos.forEach(c => { if (c.zona == null) c.zona = this.zonaKey; });
+    GF.forestCuerpos.filter(c => c.zona === this.zonaKey).forEach(c => this.dibujarCuerpo(c));
     /* 8/9: TU cuerpo, si moriste acá y todavía estás a tiempo. Se re-crea como un cuerpo más
        —así hereda los brillos, el clic, el alcance y el panel sin una línea de código nuevo—
        pero su contenido vive en G.tumba, porque los diez minutos son de reloj real y tienen que
@@ -333,6 +340,7 @@ class ForestScene extends Phaser.Scene {
         x: Phaser.Math.Clamp(m.cx + Math.cos(ang) * (10 + Math.random() * 14), 20, this.W - 20),
         y: Phaser.Math.Clamp(m.by + Math.sin(ang) * (7 + Math.random() * 10), 30, this.H - 20),
         k: e.k, n: e.n, kind: e.kind || "res",
+        zona: this.zonaKey,   /* 8/9: el botín tirado también sabe en qué mapa cayó */
       };
       g.spr = this.dropSprite(g);
       GF.forestDrops.push(g);
@@ -372,7 +380,22 @@ class ForestScene extends Phaser.Scene {
       return;
     }
     GF.forestCuerpos = GF.forestCuerpos || [];
-    const c = { x: t.x, y: t.y, key: "__tumba", label: "tu cuerpo", sprite: null,
+    /* 8/9 — TU CUERPO ES UNO SOLO, y esto duplicaba objetos. Esta función corre en CADA create()
+       de la escena, y empujaba un cuerpo nuevo con una copia entera de G.tumba.items; el filtro
+       de arriba conservaba el anterior porque nadie lo había revisado. Entrabas, salías sin
+       recogerlo —la puerta está abierta: zonaCdLeft() da 0 mientras haya tumba viva— y volvías a
+       entrar: dos cuerpos tuyos, cada uno con tu contenedor y tu equipo completos. Vaciar el
+       primero limpiaba G.tumba, y el segundo seguía entregando su copia porque tumba() ya era
+       null. Duplicación limpia de todo lo que llevabas puesto.
+       La tumba vive en G.tumba, que es UNA. El cuerpo dibujado es su reflejo, así que antes de
+       montar el reflejo nuevo se retira cualquiera anterior. */
+    GF.forestCuerpos = GF.forestCuerpos.filter(c0 => {
+      if (!c0.mia) return true;
+      if (c0.spr) { try { c0.spr.destroy(); } catch (e) {} }
+      if (c0.brillo) { try { c0.brillo.destroy(); } catch (e) {} }
+      return false;
+    });
+    const c = { x: t.x, y: t.y, key: "__tumba", label: "tu cuerpo", sprite: null, zona: this.zonaKey,
                 drops: t.items.slice(), revisado: false, mia: true };
     this.dibujarCuerpo(c);
     GF.forestCuerpos.push(c);
@@ -383,6 +406,7 @@ class ForestScene extends Phaser.Scene {
   crearCuerpo(m, drops) {
     GF.forestCuerpos = GF.forestCuerpos || [];
     const c = { x: m.cx, y: m.by, key: m.key, label: m.def.label, sprite: m.def.sprite || null,
+                zona: this.zonaKey,   /* 8/9: cada cuerpo sabe en qué mapa quedó */
                 drops: drops.slice(), revisado: false };
     this.dibujarCuerpo(c);
     GF.forestCuerpos.push(c);
@@ -515,6 +539,7 @@ class ForestScene extends Phaser.Scene {
     if (!gd || !gd.length) return;
     for (let i = gd.length - 1; i >= 0; i--) {
       const g = gd[i];
+      if (g.zona != null && g.zona !== this.zonaKey) continue;   /* 8/9: solo lo de ESTE mapa */
       if (Math.hypot(g.x - x, g.y - y) > rad) continue;
       /* 8/9 — ÉSTA ERA LA FUGA MÁS GRANDE: lo que se levanta del suelo de la Zona entraba derecho
          a la bolsa de la granja (tryAddRes / gainGear / G.plata), esquivando el contenedor y por
@@ -562,9 +587,25 @@ class ForestScene extends Phaser.Scene {
   /* null si podés atacar; si no, la frase que explica qué falta y cómo se arregla */
   porQueNoAtaca() {
     const id = armaEq();
-    if (!id) return Object.keys(G.weapons || {}).length
-      ? "Equipate un arma — la tenés en la bolsa"
-      : "Necesitás un arma. Se craftean en la Herrería";
+    if (!id) {
+      /* 8/9 — EL ARMA ROTA MANDABA A ARREGLAR LO QUE YA ESTABA BIEN. armaEq() exige dur > 0, así
+         que al romperse el arma devuelve null y esta rama contestaba « equipate un arma — la
+         tenés en la bolsa »… con el arma equipada, y hablando de una bolsa que dentro de la Zona
+         no existe. Es el mismo fallo que esta misma tarde se arregló para el arco, entrando por
+         otra puerta: un aviso que manda a revisar la cosa correcta. */
+      const puesta = G.gear.arma;
+      if (puesta && G.weapons && G.weapons[puesta] && !(G.weapons[puesta].dur > 0))
+        return "Tu " + ((ARM_DEF[puesta] && ARM_DEF[puesta].label) || "arma") + " está rota — no se repara acá, volvé a la Herrería";
+      /* y « la tenés en la bolsa » solo es cierto en la granja: en la Zona lo que hay es lo que
+         llevás en el contenedor, y si hay un arma ahí se dice dónde buscarla. */
+      const guardadas = armasAMano().length;
+      if (guardadas) return enZona()
+        ? "Llevás un arma en el contenedor — equipala en el panel de Equipo"
+        : "Equipate un arma — la tenés en la bolsa";
+      return enZona()
+        ? "No llevás ningún arma — se cargan en la puerta del portal antes de entrar"
+        : "Necesitás un arma. Se craftean en la Herrería";
+    }
     if (ARM_DEF[id] && ARM_DEF[id].tipo === "arco") {
       if (!G.gear.municion) return "El arco está puesto pero la munición no: equipá las flechas en el panel de Equipo";
       if (llevoTengo("res", "flecha") <= 0) return enZona()
@@ -1239,7 +1280,9 @@ class ForestScene extends Phaser.Scene {
       irAEscena(this, "forest"); return;
     }
     if (hero.x < 40) {
-      const left = (GF.forestDrops || []).length;
+      /* 8/9: la cuenta es de ESTA zona. Antes sumaba el suelo de las cuatro, así que salir del
+         pantano avisaba de objetos que estaban en la guarida. */
+      const left = (GF.forestDrops || []).filter(g => g.zona == null || g.zona === this.zonaKey).length;
       if (left) { log("Dejaste " + left + " objeto(s) en el suelo de la Zona Negra — siguen ahí si volvés.", "bad"); toast("Dejaste " + left + " objeto(s) en el suelo"); }
       if (typeof zonaSalir === "function" && typeof mostrarResumenZona === "function") mostrarResumenZona(zonaSalir(false));
       if (typeof saveFarm === "function") saveFarm();
