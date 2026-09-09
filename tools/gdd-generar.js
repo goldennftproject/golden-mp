@@ -13,7 +13,32 @@ const {
 
 const FUENTE = path.join(__dirname, "..", "docs", "GDD.md");
 const SALIDA = path.join(__dirname, "..", "..", "Golden_Farm_GDD.docx");
-const md = fs.readFileSync(FUENTE, "utf8").split("\n");
+
+/* ---- 9/9: LOS PÁRRAFOS PARTIDOS SE JUNTAN ANTES DE NADA ----------------------------------
+   Este generador trataba CADA LÍNEA como un párrafo. Funcionaba porque el documento estaba
+   escrito con un párrafo por línea larga, sin cortar — o sea que la regla no era del generador,
+   era una costumbre del que escribía. La revisión 6 llegó con párrafos cortados a 100 columnas
+   (que es como se escribe markdown en cualquier editor) y el Word salió con « **LA ZONA » en una
+   línea y « NEGRA CON CONTENEDORES** » en la siguiente: los asteriscos a la vista, porque el
+   patrón de negrita no puede cruzar un salto.
+   En markdown, dos líneas seguidas sin blanco entre medias SON el mismo párrafo. Así que se
+   juntan aquí, que es lo que el formato dice, y de paso el documento deja de depender de cómo
+   teclee el que lo edite. Tablas, títulos, viñetas, numeradas y citas se quedan como están. */
+const md = (function unirParrafos(lineas) {
+  const suelta = (l) => {
+    const t = l.trim();
+    return !t || /^\|/.test(t) || /^-\s+/.test(t) || /^\d+\.\s/.test(t) || /^>/.test(t)
+      || (/^\*\*.+\*\*$/.test(t) && !/^\|/.test(t)) || /^---+$/.test(t);
+  };
+  const out = [];
+  for (let i = 0; i < lineas.length; i++) {
+    if (suelta(lineas[i])) { out.push(lineas[i]); continue; }
+    let p = lineas[i].trim();
+    while (i + 1 < lineas.length && !suelta(lineas[i + 1])) p += " " + lineas[++i].trim();
+    out.push(p);
+  }
+  return out;
+})(fs.readFileSync(FUENTE, "utf8").split("\n"));
 
 /* ---- inline: **negrita**, *cursiva*, `codigo` ---- */
 function runs(txt, extra) {
@@ -100,6 +125,13 @@ for (; i < md.length; i++) {
 
   /* cita del índice */
   if (/^>/.test(t)) { P({ children: runs(t.replace(/^>\s?/, "")), indent: { left: 400 }, spacing: { after: 30 } }); continue; }
+
+  /* la raya separadora del markdown, que salía impresa como tres guiones (9/9) */
+  if (/^---+$/.test(t)) {
+    P({ children: [], spacing: { before: 100, after: 160 },
+      border: { bottom: { style: BorderStyle.SINGLE, size: 6, color: LINEA } } });
+    continue;
+  }
 
   /* párrafo normal (los enteramente en cursiva son las notas del documento) */
   P({ children: runs(t), spacing: { after: 110 } });

@@ -2,9 +2,50 @@
 
 Documento de Diseño de Juego
 
-*Estado real del código · 26 de agosto de 2026 · revisión 5*
+*Estado real del código · 9 de septiembre de 2026 · revisión 6*
 
-**Qué cambió desde la revisión 4 (24/8)**
+> **Las tres leyes están en `docs/LEYES.md` y este documento se les somete.** El progreso no se
+> resetea, el ritmo de los nodos no se toca, y lo cosmético no cuenta como contenido. Si algo de
+> lo que sigue choca con una de ellas, el que está mal es este documento.
+>
+> **Y todas las tablas de aquí salen de `tools/gdd-cifras.js`**, que las imprime EJECUTANDO el
+> juego. Hasta la revisión 5 se copiaban a mano leyendo el código, que es exactamente el fallo
+> que llevamos dos semanas persiguiendo en otros sitios: un número escrito a mano envejece en
+> silencio. Si una cifra de aquí no coincide con esa herramienta, manda la herramienta.
+
+**Qué cambió desde la revisión 5 (26/8)**
+
+*Cosas nuevas para jugar:* la **PESCA v4** entera, que jubila a la v3 — diecinueve especies con
+peso real en kilos, cañas que se compran una vez y cobran peaje por lance, nasas que trabajan
+solas, la Lonja con sus Escamas y títulos, y el Torneo con ranking de servidor (§4.1); **LA ZONA
+NEGRA CON CONTENEDORES**, que convierte una excursión en una decisión — se carga una bolsa antes
+de entrar, dentro solo existe lo que llevás, y al morir cae todo y queda tu cuerpo diez minutos
+(§9); y **EL MERCADER GOBLIN**, que ya no obliga a aceptar el trato para irse.
+
+*Cosas que cambiaron de fondo:* **todo el contenido cabe en un mes** — las dieciséis expansiones,
+la curva de niveles y las tareas del 11 al 50 se re-derivaron a la vez, y la partida al nivel 50
+pasó de 372 días a **29,7** (§14); los **ANIMALES son de 24 horas y dan +1 de material**, estilo
+Sunflower, con decimales cuando están mal alimentados (§8); **los platos salieron de la economía
+de plata** — se comen o se comercian entre jugadores, no se venden al mercado (§10); **el
+Lombricario tiene tope de 15 lombrices al día**; y **el enfriamiento de la Zona desapareció**.
+
+*Lo que se derivó y antes estaba escrito a mano:* la **cola de niveles del 11 al 50** (cada nivel
+cuesta las mismas horas de granja que el anterior, §5), los **premios del pase** (cada escalón
+paga una hora de la granja que tenés a esa altura, §12.1) y las **mezclas de las cañas** contra
+su presupuesto con los precios reales.
+
+*La ley nueva, y lo que corrige:* **lo cosmético es terciario** (ley 3). Un título, un marco o un
+aura no cuentan como contenido, y un nivel que sólo entrega adorno sigue siendo un nivel vacío.
+Se dictó al descubrir que este documento iba a contar 26 niveles como resueltos porque les
+llegaba un cosmético. La cuenta honesta está en §14.1: **de 49 niveles, 23 entregan algo jugable**.
+
+*Cómo se verifica ahora:* la suite pasó de 153 a **193 herramientas** (139 pruebas, 24 auditores,
+30 medidores y simuladores), y estrena `tools/gdd-cifras.js`, que es la que sostiene la promesa
+del subtítulo de este documento.
+
+---
+
+**Qué cambió en la revisión 5 (26/8), para el que venga de la 4**
 
 *Cosas nuevas para jugar:* la **PESCA v3** — nueve especies con su familia, su hora y su clima, cañas que se gastan, peleas con etapas y trampas que trabajan solas mientras no estás (§4.1); **EL CAMINO A LA GUARIDA**, que por primera vez contesta « ¿a qué estoy jugando? » poniendo en fila las diez cartas del Abuelo y el asalto de clan como final; **LA META DE LA SEMANA**, que contesta « ¿qué hago hoy? »; y **EL FLUJO DE LA BOLSA**, los « +1 Piedra · −1 Pico » del margen izquierdo (§13.1).
 
@@ -180,7 +221,7 @@ Trece cultivos, todos anclados. La columna « plata/h » es la prueba de que la 
 
 *Lectura de diseño (22/8 — LA ESCALERA EN DOS CARRILES): la tabla vieja ordenaba por duración y el jugador de nivel 3-5 no tenía NINGÚN cultivo que aguantara su primera noche — la promesa del pilar 1 no existía justo la noche en que se decide si vuelve. Ahora cada escalón temprano abre un PAR: un cultivo de sesión y uno de ausencia — la calabaza (3 h) llega al nivel 2, dentro de la primera hora; el girasol (10 h) al 4; el maíz (24 h) al 8. La progresión tardía vende el MEDIO fino (30-90 min, las sesiones de sobremesa). La plata no se movió: todos rinden 20/h. La XP se re-derivó del orden nuevo (10 por escalón). El techo de Cultivo baja solo a 16.*
 
-Consecuencia medida (simulador): la partida a granja 21 pasa de 49 a 63 días — el jugador con nocturnos hace menos gestos por día y sube más lento a cambio de comodidad. La plata por hora es la misma; si el ritmo se quiere de vuelta en ~50 días, la palanca es FARM_XP_LVLS (una pasada).
+*(La lectura del 22/8 decía que esto llevaba la partida a granja 21 de 49 a 63 días. Esa cifra ya no vale: el 8-9/9 se re-derivaron a la vez la curva de niveles, el coste de las expansiones y las tareas, y hoy el nivel 50 entero está a 29,7 días. Las cifras vivas están en §14.)*
 
 **4. Nodos: tala, minería y pesca**
 
@@ -190,17 +231,13 @@ Consecuencia medida (simulador): la partida a granja 21 pasa de 49 a 63 días �
 
   - Roca y veta de mineral: 40 minutos.
 
-  - Laguna: 15 minutos entre lanzamientos.
+  - Laguna: sin reloj propio. Lo que la limita es la CARNADA (ver §4.1).
 
-  - Montículos de tierra: 3 por día, sin herramienta y sin enfriamiento. Dan lombriz, que es la carnada de la pesca.
+  - Montículos de tierra y Lombricario: la lombriz es la carnada de la pesca y **el techo de toda la laguna**. Desde el 9/9 hay un tope duro de **15 lombrices al día** (decisión de dirección), y el Lombricario rechaza la tanda entera si no cabe, en vez de recortarla en silencio.
 
 **Cargas: el nodo pasado no se desperdicia (21/8)**
 
 Un árbol o roca ya crecido acumula 1 carga por cada reloj propio extra que pase sin cosecharse, hasta llenarse con 4. Y el nodo VIRGEN — el que nunca se taló — nace lleno (22/8): el jugador nuevo ve la escalera completa en su primer talado, y cada expansión entrega su árbol y su roca cargados como bienvenida (4+4 recursos contra costes de 61-810: regalo, no economía). El estado virgen se consume una sola vez y el F5 no lo resucita. El árbol se llena a las 2 horas de pasado; la roca y la veta de piedra, a las 2 h 40. Y el ritmo (22/8, dictado clic a clic por dirección): los CORTES SUAVES pagan una carga cada uno (+1 madera, −1 hacha); el CORTE PROFUNDO no da ni consume nada; el TOCÓN paga la última. Árbol de 4 cargas: suave(+1) · suave(+1) · suave(+1) · profundo(nada) · tocón(+1) — cinco clics, cuatro maderas, cuatro hachas. De 2: suave(+1) · profundo · tocón(+1). El árbol normal de una carga conserva su tanda clásica de siempre: suave(nada) · profundo(nada) · tocón(+1). La roca y la veta de piedra, igual con su media rota. Las vetas de mineral (bronce en adelante) quedan APARTADAS de la mecánica por decisión de dirección (21/8): reloj simple, una picada y a dormir. Cada picada de mineral rinde 2 (el ancla del 18/8: con 1 picar daba pérdida, porque el pico cuesta más de lo que saca).
-
-**La pesca v2: el sistema de Fishing Frenzy (22/8)**
-
-La pesca dejó de ser una barra que se mira y pasó a ser el ÚNICO sistema de habilidad activa de la granja, copiado del Fishing Frenzy de Ronin por decisión de dirección — con una poda suya: sin carga de distancia, «con un clic simplemente tirás, porque cada tirada es un gusano». Tres fases: el TIRO (un clic, el corcho al agua), el PIQUE (a los 1,6-4,2 segundos aparecen burbujas y hay 1 segundo para clavar el anzuelo — antes o después, se pierde), y el CARRETE: el pez recorre una barra vertical y el jugador maneja la zona de captura (apretar sube, soltar baja); con el pez adentro el progreso llena, afuera drena. La zona CRECE con el nivel de Pesca (23 % de la barra al nivel 1, techo 40 %) y los peces raros nadan más rápido y cambian de rumbo más seguido, tal cual el original. La economía no se movió un milímetro: el gusano, el uso de caña, el reloj de 15 minutos, el sorteo 60/25/12/3 y la XP se cobran al RESOLVER la captura por la misma función auditada de siempre — un lance fallado cuesta tiempo, no plata, así el minijuego no toca el ancla. La rareza se sortea al armar el lance y el premio coincide con la pelea que diste.
 
 **El pico se elige solo (24/8)**
 
@@ -223,37 +260,82 @@ Cada mineral necesita DOS llaves a la vez: un pico de su categoría (que se comp
 
 Toda escalera del juego empieza ABIERTA en el nivel 1. La semilla de papa, la piedra, el pez común, la alpaca y la Espada de Madera están disponibles desde el primer minuto. Un oficio cuyo primer escalón esté cerrado es un oficio que el jugador nunca empieza.
 
-**4.1 Pesca v3: el agua se lee, se acuerda y pelea (25/8)**
+**4.1 Pesca v4: el peso manda y la lombriz es el techo (1-9/9)**
 
-La v2 convirtió la pesca en habilidad (tirar, clavar, carretear). La v3 le da al agua *contenido*: qué hay, cuándo, y con qué se saca.
+La v4 jubila a la v3 entera. Lo que cambia no es el minijuego —tirar, esperar el pique, carretear— sino **de qué está hecho un pez** y **qué limita la laguna**.
 
-**Nueve especies, cada una con su puerta.** El catálogo viejo (común · raro · épico · legendario) era una rareza sorteada; ahora cada pez es una cosa concreta con su sitio.
+**El peso, no la rareza.** Cada captura sale con sus kilos, sorteados dentro del rango de su especie, y el peso es lo que la hace valer: un raro enorme puede pagar más que un legendario mínimo, y en la bolsa cada pez ocupa su propia pila con su kg. Diecinueve especies. Eso es lo que hace que valga la pena mirar lo que sacaste en vez de leer una etiqueta de color.
 
-| especie | familia | talla | cuándo | precio |
-| --- | --- | --- | --- | --- |
-| Pez común · Camarón de río · Carpa dorada | Orilla | 1-3★ | siempre | 5 |
-| Anguila · Calamar | Fondo | 2-4★ | **solo de noche** | 5 |
-| Pez mariposa · Pez volador | Superficie | 1-4★ | siempre | 10 |
-| Pez espada (Pesca 15) | Coloso | 3-5★ | siempre | 15 |
-| Tiburón martillo (Pesca 20) | Coloso | 4-5★ | siempre | 20 |
+**La lombriz es el invariante que sostiene todo.** Ésta es la decisión central del capítulo y conviene tenerla escrita como se tiene el ancla:
 
-Los precios no están escritos a mano: salen del ancla, `cadena ÷ 60 × 20`. Una especie de cadena 60 vale 20 porque ocupa una hora.
+> *Toda ruta de la laguna paga entre 9 y 11,5 de plata por lombriz.*
 
-**Las cuatro puertas de un pez** son el nivel de Pesca, la familia, la hora y la **caña**: cada caña aguanta hasta cierta talla, así que un martillo de 5★ no se saca con junco por mucha suerte que se tenga. Las cañas **se gastan** (junco 30 usos, roble 30, hierro 25, la del Abuelo 20), y por eso son objetos de la bolsa, no un botón permanente.
+Cañas, nasas, cebos, noche o día: todas las rutas pagan casi lo mismo por carnada. Con eso, **la carnada es la única palanca de la laguna** — subir el tope de lombrices sube la pesca de forma predecible, y ninguna ruta se puede romper por su cuenta. Se re-mide en `tools/test-pesca-v4-bolsillo.js`, que juega 160.000 lances de verdad en vez de creerle a la fórmula.
 
-**El clima** (Despejado · Lluvia · Viento · Niebla) rota con el día y mueve qué pica. Son cuatro climas contra siete días: coprimos a propósito, para que la combinación no se repita cada semana y el agua no se vuelva un calendario memorizable.
+**Las cañas: una puerta y un peaje.** No tienen usos. Una durabilidad es un número inventado —lo único que el ancla exige es el cociente precio ÷ usos— y encima obliga a recomprar a mitad de sesión. La caña se compra **una vez** (la puerta: abre su escalón de peces) y cada lance cobra su **mantenimiento en plata**, entero y a la vista.
 
-**Las peleas** dejaron de colgar del reloj y cuelgan del PROGRESO: son siete variaciones (tirones, cambios de rumbo, la tinta del calamar) y cada una se dispara cuando la captura llega a cierto punto. Con el reloj, un jugador bueno terminaba antes de que la tinta apareciera nunca — el contenido existía y no se veía.
+| Caña | Nivel | Presupuesto | Se paga con | Peaje por lance | Neto por lombriz |
+| --- | --- | --- | --- | --- | --- |
+| Caña de Junco | 1 | 30 | 2 Madera + 5 de plata | 1 | 9,30 |
+| Caña de Bambú | 4 | 400 | 20 Madera + 3 Tablón + 40 de plata | 3 | 9,85 |
+| Caña de Hierro | 8 | 1.500 | 1 Cuero + 1 Barra de hierro + 3 Tablón + 40 | 6 | 10,35 |
+| Caña de Oro | 12 | 2.000 | 1 Cuero + 1 Barra de oro + 6 Tablón + 200 | 11 | 10,56 |
+| Caña del Abuelo | 18 | — | 120 Escamas de la Lonja | 0 | rompe el ancla a propósito |
 
-**Los colosos citan.** No usan carnada ni sorteo: el agua se abre y el pez ya está clavado. Pagan XP a mitad de tarifa (`CITA_XP = 0.5`) por una razón que conviene tener escrita: una trampa corre en **reloj de pared** y una escalera de oficio en **horas activas**. En una partida larga lo primero aplasta a lo segundo con cualquier número, así que lo que se cobra a mitad no es el pez: es el tiempo que no estuviste.
+*Regla de Suren que gobierna esta tabla: **las dos de arriba piden CUERO**, así que mejorar la pesca obliga a criar. Si la caña de oro costara plata pelada, mejorar la pesca sería ahorrar. Y de la caña de junco a la de oro se mejora un 13 %, no un 107 %: ninguna caña puede correr más rápido que la carnada, que es el seguro contra la sobreproducción.*
 
-**Las trampas** (Nasa de camarones, Red de superficie, Palangre de fondo) se calan y trabajan solas: dan cebo o pescado pasadas sus horas, con una ventana para recogerlas antes de que se vacíen. Es el carril offline de la pesca, hermano de la doma.
+*El 9/9 la Caña de Hierro recuperó su barra de hierro. Se había quedado sin ella porque no cabía en un presupuesto de 1.000 escrito cuando el cuero valía 55; hoy vale 742, porque un cuero es un día entero de Toro. Se movió el presupuesto a 1.500 — un presupuesto es una vara, no una ley física.*
+
+**Las nasas: el carril que trabaja solo.** Se calan y dan pescado o cebo pasadas sus 2 horas. Pagan MENOS que la caña (la mejor nasa 9,00 contra la peor caña 9,30) y eso es deliberado: si la pasiva le ganara a las manos, nadie tocaría el minijuego.
+
+| Nasa | Nivel | Coste |
+| --- | --- | --- |
+| Nasa de mimbre | 1 | 9 Madera + 4 Piedra |
+| Nasa reforzada | 6 | 3 Tablón + 9 Piedra |
+| Nasa de hierro | 12 | 9 Tablón + 2 Piedra |
+
+**La Lonja, las Escamas y el Torneo.** La Lonja es el tablón de la pesca: pide especies concretas y paga en **Escamas**, la moneda que compra lo que la plata no —la Caña del Abuelo, los títulos, la Boya—. Y el Torneo tiene ranking de servidor con cobro por puesto. Las Escamas se emiten sólo ahí, que es lo que impide que la pesca se convierta en una segunda economía paralela.
 
 **5. Oficios y experiencia**
 
 Hay once oficios y cada acción da XP al SUYO. Talar sube Tala; pescar sube Pesca. Esto suena obvio y no lo era: hasta el 18/8 pescar daba experiencia de Cocina.
 
-Cada oficio con escalera tiene TECHO, y el techo se deriva de su contenido (22/8, dirección: « capear el crecimiento hasta el nivel donde hay contenido; más adelante se libera más »). Hoy: Cultivo 16 (el brócoli, tras la escalera en dos carriles del 22/8), Minería 11 (la netherita), Ganadería 19 (el lugar 20 del establo), Cocina 16 (el Banquete del Bosque, tras la re-sincronización del 22/8 — gemelo del de Cultivo). La XP nunca deja de acumularse por debajo: cuando se agregue contenido de nivel más alto, el techo sube solo y los veteranos suben en el acto lo que ya ganaron. Los oficios sin escalera (Tala, Pesca, Artesanía y las armas) y la barra de Combate no se capean. La granja tiene su propio techo de siempre: nivel 50.
+Cada oficio con escalera tiene TECHO, y el techo se deriva de su contenido (22/8, dirección: « capear el crecimiento hasta el nivel donde hay contenido; más adelante se libera más »). Nadie escribe el número: es el nivel de lo último que el oficio abre, así que cuando entre contenido nuevo el techo sube solo y los veteranos cobran en el acto la XP que ya tenían guardada.
+
+| Oficio | Techo | Escalones | Lo último que abre |
+| --- | --- | --- | --- |
+| Cultivo | 16 | 15 | Brócoli |
+| Pesca | 20 | 22 | Título: Señor de la Laguna |
+| Ganadería | 19 | 23 | el lugar 20 del establo |
+| Cocina | 16 | 21 | Banquete del Bosque |
+| Minería | 11 | 8 | Netherita |
+| **Tala · Artesanía · Espada · Hacha · Mazo · Arco** | **150** | **0** | **— nada —** |
+
+**Los seis oficios huérfanos: un hueco de contenido, no un descuido.** Esos seis suben de nivel y no desbloquean absolutamente nada, así que caen al 150 de reserva — un panel que le promete al jugador ciento cincuenta niveles con ciento cuarenta y ocho vacíos. `oficiosSinContenido()` los cuenta en cada ejecución del auditor justamente para que el hueco esté a la vista y no escondido detrás de un número por defecto.
+
+*El 9/9 se probó cerrarlo atándole a Espada, Hacha, Mazo y Arco las veinte armas que ya existen (cuatro tipos × cinco rarezas) con la escalera de las cañas. Se midió y se descartó: Espada nivel 4 son 85 ratas, el 9 son 674 y el 14 son 2.120, mientras el material de esas mismas armas se junta en días. El nivel no acompañaba al material — lo tapaba —, y la XP de combate es opcional, así que un jugador de granja se quedaba con la espada de madera sin entender por qué. Tampoco se dejaron listadas « de adorno »: un panel que anuncia « nivel 4: Espada de Piedra » cuando se forja al 1 miente, y mentir en el catálogo es peor que el hueco. **Decisión pendiente de dirección:** o los cuatro oficios de combate reciben algo que abrir, o se acepta que su nivel es un número de daño y se les da un techo honesto.*
+
+La granja tiene su propio techo de siempre: nivel 50.
+
+**La curva de granja: los diez primeros a mano, la cola derivada (9/9)**
+
+Los niveles 1 al 10 son la decisión que dirección afinó midiendo en papas el 14/8 y **no se tocan**. Del 11 al 50 la cola se DERIVA, y lo que se iguala no es la XP sino el TIEMPO: cada nivel cuesta las mismas horas-celda que el anterior, o sea que su escalón es proporcional a las celdas productivas que tenés a esa altura.
+
+| Nivel | XP acumulada | Escalón | Celdas | XP por celda |
+| --- | --- | --- | --- | --- |
+| 5 | 550 | 325 | 15 | 21,7 |
+| 10 | 14.000 | 5.000 | 21 | 238,1 |
+| 11 | 15.100 | 1.100 | 21 | 52,4 |
+| 20 | 27.400 | 1.500 | 30 | 50,0 |
+| 30 | 45.700 | 2.000 | 39 | 51,3 |
+| 40 | 68.100 | 2.400 | 48 | 50,0 |
+| 50 | 94.600 | 2.900 | 57 | 50,9 |
+
+*Por qué importa la última columna: antes iba de 33 (nivel 11) a 84 (nivel 50) — dos niveles y medio de diferencia en cuánto tarda cada uno, escondidos en una tabla que parecía suave. Ahora los cuarenta cuestan lo mismo.*
+
+*Y el escalón del 10 al 11 sigue siendo un escalón (5.000 → 1.100), a la vista y sin disimular. No se puede quitar con aritmética: quedan 81.000 de XP para cuarenta niveles, así que ninguno puede costar 5.000 sin robarle a los demás. Lo alto que es lo deciden los diez primeros niveles, que son de dirección.*
+
+*El techo cede ante el mes, no al revés. Cambiar la forma de la cola cambia el reloj aunque la XP total no se mueva —adelantar puntos los cobra cuando la granja produce poco—, así que se re-midió: 100.000 daban 31,3 días, 95.000 dan 30,0. El objetivo es 95.000 y el techo real que sale de los redondeos es 94.600. El número que manda es el mes.*
 
 La XP no mide relojes, mide PRÁCTICA. Un oficio con acciones lentas no puede pedir la misma cantidad que uno con acciones rápidas, así que cada oficio tiene su propio ritmo derivado de la duración real de su acción. La fórmula es la misma para todos:
 
@@ -293,24 +375,26 @@ Ni los niveles ni los costes de las expansiones están escritos a mano: se deriv
 
 Las expansiones son estrictamente SECUENCIALES: la única que existe — en el mapa y en la tienda — es la siguiente en el orden, y el requisito es doble: el nivel Y haber hecho las anteriores. El lote no se dibuja hasta tener el nivel; con el cursor encima aparece la chapa de EXPANDIR, que muestra el costo y, debajo, lo que trae: « árbol · roca · parcela » (las celdas no se anuncian: se ven al expandir).
 
-| **#** | **Nivel** | **Coste**                                            |
-| ------ | --------- | ---------------------------------------------------- |
-| 1      | 3         | 6 Madera + 4 Piedra                                  |
-| 2      | 5         | 22 Madera + 14 Piedra                                |
-| 3      | 7         | 61 Madera + 40 Piedra                                |
-| 4      | 9         | 86 Madera + 69 Piedra + 9 Bronce                     |
-| 5      | 12        | 121 Madera + 97 Piedra + 12 Bronce                   |
-| 6      | 15        | 161 Madera + 129 Piedra + 16 Bronce                  |
-| 7      | 18        | 221 Madera + 177 Piedra + 11 Bronce + 7 Hierro       |
-| 8      | 21        | 274 Madera + 219 Piedra + 14 Bronce + 9 Hierro       |
-| 9      | 24        | 349 Madera + 279 Piedra + 17 Bronce + 12 Hierro      |
-| 10     | 28        | 413 Madera + 331 Piedra + 14 Hierro + 12 Oro         |
-| 11     | 31        | 504 Madera + 403 Piedra + 17 Hierro + 14 Oro         |
-| 12     | 35        | 580 Madera + 464 Piedra + 19 Hierro + 17 Oro         |
-| 13     | 39        | 685 Madera + 548 Piedra + 20 Oro + 15 Diamante       |
-| 14     | 42        | 772 Madera + 618 Piedra + 22 Oro + 17 Diamante       |
-| 15     | 46        | 892 Madera + 714 Piedra + 20 Diamante + 15 Netherita |
-| 16     | 50        | 990 Madera + 792 Piedra + 22 Diamante + 17 Netherita |
+| **#** | **Nivel** | **Coste**                                            | **¿veta?** |
+| ------ | --------- | ---------------------------------------------------- | ---------- |
+| 1      | 3         | 6 Madera + 4 Piedra                                  |            |
+| 2      | 5         | 15 Madera + 10 Piedra                                |            |
+| 3      | 7         | 29 Madera + 19 Piedra                                | bronce + oro |
+| 4      | 9         | 29 Madera + 24 Piedra + 3 Bronce                     |            |
+| 5      | 12        | 37 Madera + 30 Piedra + 4 Bronce                     |            |
+| 6      | 15        | 45 Madera + 36 Piedra + 5 Bronce                     | bronce + oro |
+| 7      | 18        | 58 Madera + 47 Piedra + 3 Bronce + 2 Hierro          |            |
+| 8      | 21        | 68 Madera + 55 Piedra + 3 Bronce + 2 Hierro          | bronce + oro |
+| 9      | 24        | 83 Madera + 67 Piedra + 4 Bronce + 3 Hierro          |            |
+| 10     | 28        | 95 Madera + 76 Piedra + 3 Hierro + 3 Oro             | bronce + oro |
+| 11     | 31        | 112 Madera + 90 Piedra + 4 Hierro + 3 Oro            |            |
+| 12     | 35        | 128 Madera + 103 Piedra + 4 Hierro + 4 Oro           | bronce + oro |
+| 13     | 39        | 150 Madera + 120 Piedra + 4 Oro + 3 Diamante         |            |
+| 14     | 42        | 168 Madera + 135 Piedra + 5 Oro + 4 Diamante         | bronce + oro |
+| 15     | 46        | 193 Madera + 154 Piedra + 4 Diamante + 3 Netherita   |            |
+| 16     | 50        | 213 Madera + 170 Piedra + 5 Diamante + 4 Netherita   | bronce + oro |
+
+*ABARATADAS EL 8/9 PARA QUE EL MES SE CUMPLA. Con la tabla anterior las dieciséis costaban 252.525 de plata equivalente — **65 días** de producción del jugador de tres sesiones, y eso calculado con la granja ya terminada. Ninguna curva de XP arregla eso: el muro no era el nivel, era el material. Lo que se movió son las HORAS de granja que vale una expansión (de 2 a 6, antes de 2 a 30), que nunca fueron el ancla sino una elección de dirección. El ancla no se tocó: una celda sigue rindiendo 20 de plata por hora.*
 
 *SIETE BLOQUES TRAEN VETA (24/8, dirección): la 3, la 6, la 8, la 10, la 12, la 14 y la 16 entregan, además de su parcela + árbol + roca, una VETA DE BRONCE y una DE ORO. Como dan 5 celdas productivas en vez de 3, se pagan: la fórmula cuenta las celdas acumuladas, así que el precio de las siguientes sube solo y el ancla no se mueve (una veta rinde 20 plata/hora igual que una parcela). Efecto de diseño buscado: la veta de oro pide Minería 7 y su pico, así que el que compra la expansión 3 se la encuentra ahí esperándolo — contenido que asoma antes de poderse tomar, con el aviso diciendo qué pico falta.*
 
@@ -380,18 +464,24 @@ Un edificio que ABRE un oficio no puede exigir ese oficio para conseguirse. Un e
 
 Los animales se compran con plata, ocupan sitio y producen material cada ciclo mientras el jugador no está. Es el sistema que más se parece a una renta pasiva, y por eso es el que más cuidado necesita.
 
-| **Animal** | **Nivel** | **Precio** | **Material** | **Come**            | **Bruto/h** | **Ciclo (h)** |
-| ---------- | --------- | ---------- | ------------ | ------------------- | ----------- | ------------- |
-| Alpaca     | 1         | 480        | Fibra        | Trigo               | 25          | 12            |
-| Conejo     | 4         | 960        | Pelaje       | Zanahoria o Repollo | 20,3        | 12            |
-| Toro       | 8         | 1440       | Cuero        | Trigo o Maíz        | 21,3        | 16            |
-| Jabalí     | 12        | 1920       | Colmillo     | Calabaza o Maíz     | 22          | 20            |
+**24 HORAS Y +1 DE MATERIAL (9/9, dirección: « quiero que sean como en SFL »).** Los cuatro animales comparten reloj y rinde: un ciclo de 24 horas y **una unidad** de su material. Ni ciclos distintos ni cantidades distintas — lo que separa a un jabalí de una alpaca es el nivel al que se abre y lo que come, no una tabla de rendimientos que nadie puede tener en la cabeza.
 
-  - Cada animal se paga solo en 24 horas de producción.
+| **Animal** | **Nivel** | **Cuesta el 1.º** | **Material** | **Vale** | **Ciclo** | **Por ciclo** | **Come**            |
+| ---------- | --------- | ----------------- | ------------ | -------- | --------- | ------------- | ------------------- |
+| Alpaca     | 1         | 480               | Fibra        | 742      | 24 h      | 1             | Trigo               |
+| Conejo     | 4         | 960               | Pelaje       | 742      | 24 h      | 1             | Zanahoria o Repollo |
+| Toro       | 8         | 1.440             | Cuero        | 742      | 24 h      | 1             | Trigo o Maíz        |
+| Jabalí     | 12        | 1.920             | Colmillo     | 742      | 24 h      | 1             | Calabaza o Maíz     |
 
-  - Rinde alrededor de 25 de plata por hora en bruto, del que hay que descontar la comida.
+  - **Cada animal comprado encarece al siguiente de su especie un 50 %.** El precio de la tabla es el del primero.
 
-  - La felicidad baja 1,5 por hora si se descuida, y alimentarlo SIEMPRE tiene que salir a cuenta frente a no hacerlo. La felicidad que da cada comida es proporcional al precio del cultivo, así que no hay un cultivo « tonto » con el que alimentar.
+  - **Los cuatro materiales valen 742 de plata**, y no es un número a ojo: es lo que el ancla dice que vale un día entero de animal más su ración (`24 × (20 + coste de la ración por hora)`). Dirección lo eligió explícitamente frente a la alternativa — *« subir el precio de los materiales »* — cuando el ciclo pasó a 24 h. Consecuencia que hay que tener presente: **un cuero es un día de Toro**, y por eso la Caña de Hierro tuvo que subir su presupuesto (§4.1).
+
+  - **Los cuatro materiales NO se venden.** Salen del establo y entran a la Curtiduría, a las cañas y a las armaduras. Si se pudieran vender, el establo sería una imprenta de plata con reloj de pared.
+
+  - **Si están mal alimentados, el material lleva decimales.** Suren lo reportó: *« dice que dará 0,5 de fibra y me da 1 »*. Ahora un animal a media felicidad rinde 0,5-0,6 y lo que sobra se guarda: el registro dice « produjo 0,5 + 0,5 que llevaba guardado = 1 », que es la única forma de que el jugador entienda por qué su animal rinde menos.
+
+  - **Una ración cuesta 240 de plata y da 33 de felicidad** — o sea que llenar la barra son tres raciones. Dirección lo fijó midiendo con la zanahoria: *« la zanahoria es muy económica; en 16 h obtengo 64 »*, y de ahí salió la ración de 30 zanahorias. La felicidad que da cada comida es proporcional al precio del cultivo, así que no hay un cultivo « tonto » con el que alimentar.
 
   - Tope de 5 animales por especie — y un CUPO TOTAL del establo que se deriva del oficio (22/8): 2 lugares al arrancar, +1 por cada nivel de Ganadería, hasta el techo de 20. Así cada nivel del oficio entrega algo tangible y los huecos de la escalera (2-3, 5-7, 9-11) quedaron curados. Los guardados con más animales que cupo no pierden nada: su cupo es lo que ya tienen, y la compra espera a que el nivel lo alcance.
 
@@ -416,11 +506,32 @@ La escalera de armas empieza con la Espada de Madera (5 Madera + 10 de plata), q
 
 La defensa de cada monstruo es el 30 % del daño del arma de su tramo, así que nunca lo supera y el arma que te toca siempre sirve. El botín está derivado para que cada muerte cubra el desgaste del arma MÁS 20 de plata por la hora que lleva.
 
-Morir cuesta la mitad de la vida y tres minutos de espera. No se pierde el botín.
+**9.1 El contenedor: la Zona en cuarentena (1-9/9)**
+
+Éste es el cambio que convierte una excursión en una DECISIÓN, y la regla que lo gobierna la dictó dirección en una frase: *« una vez en zona negra lo único que se puede ver es lo que tenemos en esa bag o backpack »*.
+
+**Se carga antes de entrar.** En la puerta del portal el jugador elige un contenedor y mete lo que se lleva: flechas, platos, un arma de repuesto. Hay dos, y las mochilas admiten bolsas dentro:
+
+| Contenedor | Huecos | Cuesta |
+| --- | --- | --- |
+| Bolsa | 8 | 20 de plata |
+| Mochila | 20 (y le caben bolsas que suman los suyos) | 200 de plata |
+
+**Dentro, la granja no existe.** Todas las preguntas sobre lo que tenés se le hacen al contenedor: el panel de Equipo, la barra rápida, el contador de flechas, la lista de armas. No es un detalle de interfaz — es lo que hace que llevar poco duela y llevar mucho sea arriesgado. Cerrar esa cuarentena costó **diez fugas** en dos tandas, y las dos últimas estaban en el sitio donde el jugador va cuando algo no funciona: el panel de Equipo dejaba equiparte la espada que habías dejado en casa y NO dejaba equipar la de repuesto que sí habías cargado.
+
+**Morir cuesta de verdad.** Cae el contenedor entero y un 5 % por cada pieza de armadura puesta, y queda **tu cuerpo diez minutos** en el sitio donde caíste, con todo dentro. Volver a por él es la segunda mitad de la mecánica. El cuerpo es UNO —vive en `G.tumba`, y lo que se dibuja es su reflejo, no una copia con vida propia— y cada cuerpo y cada montón de botín sabe **a qué mapa pertenece**: lo que dejaste en el pantano no aparece en la guarida.
+
+**Y no se pierde nada en silencio.** Al volver a la granja, lo que no cabe en la bolsa se queda en el contenedor en vez de evaporarse. Es la ley 1 aplicada al detalle más pequeño: el jugador solo pierde lo que el juego le dijo que iba a perder.
+
+**Sin enfriamiento (9/9).** Se entra a la Zona cuando se quiera. Dirección: *« ya se puede entrar sin problemas cada vez que uno quiera »*. Y el enfriamiento no bastaba con bajarlo a cero: era una HORA GUARDADA en la partida, así que hubo que recortar también las que los jugadores ya tenían escritas — cambiar una regla no borra el estado que esa regla dejó.
 
 **10. Cocina**
 
 La Cocina convierte lo recolectado en platos que curan y dan un efecto temporal. Es el sumidero que le da sentido al pescado y a la carne.
+
+**9/9 · LOS PLATOS SALIERON DE LA ECONOMÍA DE PLATA.** Dirección: *« los platos son solo para curarse en zona negra; no se venden a menos que se les vendan a los players por plata… la cocina no es una imprenta »*. Ya no hay botón de venta ni en la Cocina ni en la tienda. Un plato se **come** (curación y buff) o se **comercia entre jugadores**; el único canal contra el juego es el tablón, que está acotado a un pedido al día.
+
+Esto cierra sola la que era la mayor imprenta abierta del juego: `dishPrice = valor de los ingredientes × 1,25`, multiplicado otra vez por la maestría de Cocina — o sea que cualquier cultivo que pasara por la olla valía entre 1,25 y 1,48 veces lo que vale crudo, **sin ocupar una celda**, y la olla nunca se saturaba. Vender crudo era siempre el juego mal jugado. La decisión de dirección lo resolvió sin tocar un solo número: si el plato no se vende, la prima no existe.
 
 | **Plato**             | **Nivel** | **Ingredientes**                             | **Cura** | **Efecto**                | **Min** |
 | --------------------- | --------- | -------------------------------------------- | -------- | ------------------------- | ------- |
@@ -522,9 +633,30 @@ Cada pedido tiene un remitente del pueblo (Doña Rosa, Tomás el panadero, Ramó
 
 Dos incentivos deliberados: **el primer pedido del día paga los vales ×2**, y el pedido semanal es lo que el juego usa como « meta de la semana » en el panel de objetivos (ver §11.1). El semanal y el mensual no llevan el ×2 porque ya pagan de más.
 
+**8/9 · el tablón compraba minerales al 12,5 % de su valor.** Tasaba con una tabla vieja —bronce 12, hierro 15, oro 30— mientras el juego VENDE con la de verdad —160, 240, 280—. Seis Hierro pagaban 180 por 1.440 de valor. Los cultivos, la madera y la piedra estaban perfectos, y por el mismo motivo por el que los otros estaban rotos: ésos sí preguntaban el precio en vez de copiarlo. La regla que custodia el arreglo cabe en una frase: **el tablón no inventa precios, los pregunta.**
+
+**12.1 El pase de batalla: cada escalón paga una hora de tu granja (9/9)**
+
+Treinta escalones, carril gratuito y carril VIP. Lo que cambió el 9/9 no es el contenido sino **quién decide las cantidades**.
+
+Los escalones pagaban 10 de plata en el 2, 7.740 en el 7 y 15 en el 14: ×774 entre el más flojo y el más rico, y **sin ningún orden** — el escalón 7 pagaba más que los otros veintinueve juntos. La causa no eran los números: la tabla fijaba CANTIDADES a mano (« 3 Pan de Trigo ») en una economía donde los precios se derivan. Tres panes eran baratos el día que se escribió esa fila; hoy un pan cuesta 2.580.
+
+Ahora **la tabla dice QUÉ y el código dice CUÁNTO**: cada escalón paga UNA HORA de la granja que el jugador tiene a esa altura, la misma vara de las expansiones. Y « esa altura » no se estima — se deriva del reloj de la propia curva de niveles, porque el tiempo de un nivel es su XP dividida por las celdas que la producen.
+
+| Escalón del pase | Granja a esa altura | Celdas | Lo que paga |
+| --- | --- | --- | --- |
+| 1 | 6 | 15 | 300 |
+| 10 | 13 | 24 | 480 |
+| 20 | 31 | 42 | 840 |
+| 30 | 50 | 57 | 1.140 |
+
+El carril entero cuesta 17.814 de plata sombra contra los ~20.300 de antes: **redistribuye, no infla.** El $Golden queda fuera de la derivación a propósito — la auditoría del 18/8 lo dejó clavado en 60 de devolución para que el VIP no se autofinanciara, y derivarlo reabriría ese agujero por la puerta de atrás.
+
+*Lo que queda abierto, dicho en voz alta: cuatro escalones (el 2, el 7, el 14 y el 18) dan un objeto cuya unidad vale 2 o vale 2.580, y no hay cantidad legible que dé su altura. La cantidad se recorta a lo que se lee de un vistazo —200 en pilas, 60 en semillas y platos— y `paseDesviados()` los enumera en vez de taparlos con un recorte silencioso. El arreglo es cambiar el OBJETO, y eso lo decide el diseñador.*
+
 **El vale, y por qué tiene un precio**
 
-Un vale son **40 de plata** (`VALE_EN_PLATA`, decidido el 18/8). El tablón los emite con esa vara —`valesDe(valor del pedido)`— y la tienda de canje tiene que devolverlos con la misma. Con el tablón completo entran unos **6 vales al día**: 240 de plata en premios.
+Un vale son **20 de plata** al gastarlo (`VALE_EN_PLATA`) y se emite uno por cada **160 de plata** entregada (`VALE_EMISION`): una prima del 12,5 % sobre lo que el pedido paga en plata. Dirección fijó esa prima el 2/9 — *« las misiones no son tan complicadas »*. El tablón los emite con esa vara y la tienda de canje tiene que devolverlos con la misma.
 
 Que las dos puntas usen la misma vara no es elegancia, es lo único que cierra las fugas. El 18/8 no la usaban y había una ruta que multiplicaba plata por **×800**: se emitían vales por escalones del valor del pedido y se gastaban a precio fijo, así que entregando tres papas se compraban semillas de maíz. Persiguiendo casos de uno en uno eso no se arregla; atando emisión y gasto al mismo número, se cierra solo.
 
@@ -570,31 +702,55 @@ De paso se partió en dos la lista de « qué hay en la bolsa », que estaba esc
 
 Estas cifras salen del simulador (tools/simular-partida.js), no de una estimación. El perfil es el de un jugador que entra tres veces al día.
 
-| **Qué se midió**                             | **Resultado**             |
+**TODO EL CONTENIDO EN UN MES (8-9/9).** Dirección: *« todo el contenido tiene que ser posible ir desbloqueándolo con mucho un mes »*. Antes de esa orden, el nivel 50 estaba a **372 días** del jugador de tres sesiones. Hoy:
+
+| **Qué se midió** (3 sesiones/día, hasta granja 50) | **Resultado**             |
 | -------------------------------------------- | ------------------------- |
-| Tiempo hasta granja nivel 21 (8 expansiones) | 63 días                   |
-| Con las manos en el juego                    | 12,4 horas (0,8 %)        |
-| Tiempo de reloj corriendo sin el jugador     | 99,2 %                    |
-| Juego real al día                            | ≈ 12 minutos en 3 visitas |
-| Valor producido                              | 248.270                   |
-| Lo que el ancla permitía                     | 764.640                   |
-| Porcentaje del ancla cobrado                 | 32,5 %                    |
+| Tiempo hasta granja nivel 50 (16 expansiones, 57 celdas) | **29,7 días**  |
+| Con las manos en el juego                    | 7,2 horas (1,0 %)         |
+| Tiempo de reloj corriendo sin el jugador     | 99,0 %                    |
+| Juego real al día                            | ≈ 15 minutos en 3 visitas |
+| Valor producido                              | 106.755                   |
+| Lo que el ancla permitía                     | 470.880                   |
+| Porcentaje del ancla cobrado                 | 22,7 %                    |
 
-*Re-medido el 22/8 (cargas + escalera en dos carriles): el porcentaje cobrado del ancla casi se duplicó respecto del original (17,6 % → 32,5 %), y los 63 días a nivel 21 (antes 49) son el precio de que los nocturnos existan desde temprano: menos gestos por día, más comodidad.*
+*Hicieron falta TRES palancas a la vez y conviene que quede escrito, porque yo mismo creí que bastaba con una: la curva de XP, las horas que cuesta una expansión (que estaban en 65 días de producción para las dieciséis) y las TAREAS del 11 al 50, que sumaban 68 días solo en minar. Mover una sola no habría movido el resultado.*
 
-La lectura correcta de ese 32,5 % no es « el juego está roto »: es que un idle avanza sin el jugador y eso es su naturaleza. El desglose, tras las cargas:
+*Y una corrección que se pagó publicando un número falso: el « todo en un mes » se reportó como hecho antes de comprobar que en todo el mapa hay UN nodo de netherita con reloj de 12 horas, y las tareas pedían 125. Eran 62,5 días mínimos con el jugador conectado las veinticuatro horas. Las cantidades se derivan ahora de lo que el mineral puede dar de verdad.*
 
-  - Cultivos: 65 de plata/h con 11 parcelas. El ancla pedía 220.
+La lectura correcta de ese 22,7 % no es « el juego está roto »: es que un idle avanza sin el jugador y eso es su naturaleza. El desglose:
 
-  - Árboles y rocas: 100 de plata/h con 22 nodos (antes de las cargas eran 9). Con el tope de 4 cargas, el jugador de tres visitas cobra 12 de las 48 recolecciones diarias del árbol: el 25 % de su potencial de guardia, contra el 6 % de antes.
+  - Cultivos: 52 de plata/h con 19 parcelas. El ancla pedía 380.
 
-  - Observación para el diseñador (22/8): con las cargas, la XP de Tala se adelanta a los demás oficios (Tala 26 · Cultivo 17 · Minería 11 al llegar a granja 21), porque cada carga paga su talado. La Tala no tiene escalera que se rompa, pero si algún día la tiene, revisar su ritmo de XP.
+  - Árboles y rocas: 98 de plata/h con 38 nodos. Con el tope de 4 cargas, el jugador de tres visitas cobra 12 de las 48 recolecciones diarias del árbol: el 25 % de su potencial de guardia.
+
+  - El otro perfil, para tenerlo a mano: **1 sesión/día tarda 37 días en llegar al 20** y eso la curva no lo arregla — toca el juego tres minutos y cobra una cosecha y cuatro cargas por nodo. Es una decisión aparte, si se quiere tomar.
+
+**14.1 Qué entrega cada nivel de granja (ley 3)**
+
+De los 49 niveles, **23 entregan algo jugable** — una expansión, un plano, un edificio de nivel 2, capacidad de cofre o vales del tablón. Los otros **26** entregan el bono de venta (+1,5 %, unas 3 de plata por hora, invisible) y un cosmético.
+
+Los 26: 6, 8, 11, 14, 16, 17, 19, 20, 22, 25, 26, 29, 30, 32, 34, 36, 37, 38, 40, 41, 43, 44, 45, 47, 48 y 49.
+
+*Esta cuenta es la ley 3 aplicada a este documento, y nació de un error mío: el 9/9 iba a escribir aquí que « 26 niveles mudos pasaron a 3 » porque el plan cosmético por fin se entregaba. Dirección lo paró en el acto — para que a alguien le importe un adorno, primero le tiene que gustar el juego. Un cosmético no cierra un hueco de progresión; sólo lo tapa. **Qué se entrega en esos 26 niveles es la decisión de contenido más grande que este documento tiene abierta.***
+
+*(El hallazgo técnico de aquel día sí vale y queda: el plan cosmético llevaba semanas sin repartir nada porque la línea que lo entregaba preguntaba por un texto que jamás nombra un cosmético. Un `if` que nunca es cierto no da error, no deja log y no lo ve nadie.)*
 
 *El cultivo NO tenía ese problema, y esa era la asimetría: el jugador elige el cultivo que dura lo que dura su ausencia, pero no podía elegir la duración de un árbol. Las cargas del capítulo 4 son la respuesta (21/8): el árbol guarda hasta 4 relojes de producción, así que una ausencia de hasta 2 horas ya no pierde nada.*
 
 **15. Lo que está abierto**
 
 Capítulo honesto. Todo lo que sigue está medido o decidido, pero no implementado.
+
+**15.0 Lo que la revisión 6 deja sobre la mesa**
+
+Las cinco decisiones abiertas, ordenadas por lo que pesan:
+
+1. **Qué entrega los 26 niveles sin recompensa jugable** (§14.1). Es la más grande. El material para elegir ya existe: nodos sueltos, lugares de establo, huecos de nasa, semillas de escalón alto, vales, capacidad de bolsa o cofre.
+2. **Los seis oficios huérfanos** (§5): o reciben algo que abrir, o se acepta que su nivel es un número de daño y se les da un techo honesto.
+3. **Los cuatro escalones del pase** cuyo objeto no da su altura (§12.1). Se arregla cambiando el objeto, no la cantidad.
+4. **La escalera de cañas se aplanó arriba** (§4.1): al subir la de Hierro a 1.500, la de Oro (2.000) queda a ×1,33. Lo que de verdad cobra la de oro es su barra, no su plata — pero si el último escalón tiene que sentirse, hay que subirlo.
+5. **Recargar dentro de la Zona sigue esquivando la muerte.** Cerrarlo pide una política de desconexión, y matar a alguien por una caída de red sería perder progreso sin borrar caché: justo lo que la ley 1 prohíbe. Decisión de dirección.
 
 **15.1 La doma, para el tiempo offline**
 
@@ -640,7 +796,24 @@ RESUELTO el 22/8 (a falta de activar el proveedor en Supabase — docs/CUENTA-EM
 
 **16. Reglas de la casa**
 
-Normas de diseño que vienen de decisiones de dirección y que conviene no reabrir sin motivo.
+> **Las tres LEYES viven en `docs/LEYES.md`, no aquí.** Una ley no se discute, no se optimiza y no
+> se « mejora » con buen criterio propio; si una tarea choca con una, la que cede es la tarea.
+> Hasta el 9/9 estaban sueltas en comentarios de código, y eso ya falló una vez — se cambió el
+> ritmo de los nodos porque no había dónde mirar antes de tocar. En resumen:
+>
+> **Ley 1 · El progreso no se resetea.** Sólo borrando caché. Ninguna migración corre dos veces,
+> nada de lo ya comprado se cierra por una regla nueva, y un guardado viejo se recorta, no se
+> borra. Y una constante que cambia no basta si esa constante ya dejó estado escrito.
+>
+> **Ley 2 · El ritmo de los nodos no se toca.** Árbol 30 min, roca y veta de piedra 40, tope 4.
+> El ancla se acomoda a este reloj, nunca al revés: el ritmo de talar y picar es lo que el
+> jugador SIENTE.
+>
+> **Ley 3 · Lo cosmético es terciario.** Un título, un marco, un emote o una skin no cuentan como
+> contenido. Un nivel que sólo entrega adorno sigue siendo un nivel vacío. Para que a alguien le
+> importe un cosmético, primero le tiene que gustar el juego.
+
+Y debajo de las leyes, las normas de diseño que vienen de decisiones de dirección y que conviene no reabrir sin motivo.
 
 1.  Toda herramienta tiene un uso. Si algo está en el juego y no sirve para nada, sobra.
 
@@ -666,7 +839,9 @@ Normas de diseño que vienen de decisiones de dirección y que conviene no reabr
 
 **17. Cómo verificar lo que dice este documento**
 
-El proyecto tiene 102 pruebas automáticas y 23 auditores, más 27 medidores, simuladores y generadores: 153 herramientas en `tools/`.
+El proyecto tiene **139 pruebas automáticas y 24 auditores**, más 30 medidores, simuladores y generadores: **193 herramientas** en `tools/`.
+
+**La primera de todas, para este documento:** `tools/gdd-cifras.js` imprime EJECUTANDO el juego todas las tablas que estas páginas afirman — el ancla, los cultivos, los minerales, los techos de oficio, la curva de granja, las expansiones, la ganadería, las cañas, el pase y la cuenta de niveles con recompensa jugable. Existe porque hasta la revisión 5 las tablas se copiaban a mano leyendo el código, y un número copiado a mano envejece en silencio: es literalmente el fallo que este proyecto lleva dos semanas persiguiendo en el tablón, en las cañas, en el pase y en la tabla de cosméticos. Un documento que se llama « estado real del código » y no se puede re-ejecutar es una promesa sin respaldo.
 
 Una de ellas, `tools/test-clic-navegador.js`, corre en un **Chromium de verdad** (puppeteer). Existe porque el 26/8 el diseñador reportó dos veces que no podía elegir una receta en la Cocina y las dos veces se diagnosticó mal: el arnés de pruebas es jsdom, y jsdom no hace hit-testing ni implementa la captura de puntero, así que NO PODÍA ver el fallo ni en principio. Si no hay Chromium instalado el archivo lo dice y se salta; para instalarlo, una vez: `npx puppeteer browsers install chrome`. No comprueban que el código compile: comprueban que el JUEGO cumpla las reglas de arriba. Los más útiles para el diseñador:
 
