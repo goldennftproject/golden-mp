@@ -4393,10 +4393,16 @@ RES_LABEL.cuero = "Cuero";       RES_EMOJI.cuero = "🟫";
 RES_LABEL.colmillo = "Colmillo"; RES_EMOJI.colmillo = "🦷";
 const ANIMAL_ORDER = ["alpaca", "conejo", "toro", "jabali"];
 const ANIMAL_DEF = {
-  alpaca: { label:"Alpaca", emoji:"🦙", golden:40,  mat:"fibra",    come:["trigo"],              cicloH:12, porCiclo:2, armadura:"fibra" },
-  conejo: { label:"Conejo", emoji:"🐰", golden:40,  mat:"pelaje",   come:["zanahoria","repollo"], cicloH:12, porCiclo:2, armadura:"piel" },
-  toro:   { label:"Toro",   emoji:"🐂", golden:60,  mat:"cuero",    come:["trigo","maiz"],        cicloH:16, porCiclo:2, armadura:"cuero" },
-  jabali: { label:"Jabalí", emoji:"🐗", golden:100, mat:"colmillo", come:["calabaza","maiz"],     cicloH:20, porCiclo:1, armadura:"colmillo" },
+  /* 9/9 (dirección) — « los animales quiero que sean como en SFL: cada 24 h dan +1 de material.
+     Y si no se alimentan bien entran los decimales, y rendiría 0,5-0,6 y así. »
+     Un reloj para los cuatro y una unidad por vuelta. Los decimales ya existen desde ayer
+     (animalRinde multiplica por la felicidad, con FELIZ_MIN_PROD 0,5 de piso), así que la
+     segunda mitad de la frase sale gratis: el bicho descuidado da 0,5 y la fracción se le
+     guarda hasta completar una unidad. */
+  alpaca: { label:"Alpaca", emoji:"🦙", golden:40,  mat:"fibra",    come:["trigo"],              cicloH:24, porCiclo:1, armadura:"fibra" },
+  conejo: { label:"Conejo", emoji:"🐰", golden:40,  mat:"pelaje",   come:["zanahoria","repollo"], cicloH:24, porCiclo:1, armadura:"piel" },
+  toro:   { label:"Toro",   emoji:"🐂", golden:60,  mat:"cuero",    come:["trigo","maiz"],        cicloH:24, porCiclo:1, armadura:"cuero" },
+  jabali: { label:"Jabalí", emoji:"🐗", golden:100, mat:"colmillo", come:["calabaza","maiz"],     cicloH:24, porCiclo:1, armadura:"colmillo" },
 };
 var ESTABLO_COST = { madera: 50, piedra: 30, oro: 10 };   // edificio (doc)
 var FELIZ_POR_COMIDA = 15;      // (legado) lo que daba una ración antes de que la comida se anclara
@@ -4422,21 +4428,53 @@ function animalValorMat(k) {
   const d = ANIMAL_DEF[k]; if (!d) return 0;
   return (typeof priceOf === "function" ? priceOf(d.mat) : (PRICE[d.mat] || 0)) || 0;
 }
+/* 9/9 — LA CANTIDAD DEJA DE DERIVARSE. Esta función despejaba cuántas unidades hacían falta para
+   que el animal rindiera ANIMAL_BRUTO_H por hora, y así el establo colgaba del ancla como todo lo
+   demás. Dirección la cambia por la regla de SFL: 24 h, +1, y punto. Se respeta el porCiclo de la
+   tabla y la derivación se guarda al lado, porque el número que deja de mandar no se borra: sirve
+   para saber CUÁNTO nos separamos del ancla, que es lo que auditar-ancla informa ahora. */
 function animalPorCiclo(k) {
   const d = ANIMAL_DEF[k]; if (!d) return 1;
+  return d.porCiclo || 1;
+}
+/* lo que el animal DEBERÍA dar por ciclo para colgar del ancla — ya no manda, pero se mide */
+function animalPorCicloAncla(k) {
+  const d = ANIMAL_DEF[k]; if (!d) return 1;
   const v = animalValorMat(k); if (!v) return d.porCiclo || 1;
-  return Math.max(1, Math.round(ANIMAL_BRUTO_H * d.cicloH / v));
+  return ANIMAL_BRUTO_H * d.cicloH / v;
 }
 function animalBrutoH(k) {
   const d = ANIMAL_DEF[k]; if (!d) return 0;
   return animalValorMat(k) * animalPorCiclo(k) / d.cicloH;
 }
 // lo que cuesta por hora tenerlo a 100 de felicidad: justo lo que produce por encima del ancla
+// (9/9: queda para auditar-ancla y test-establo, que miden el modelo VIEJO contra el nuevo)
 function animalRacionH(k) { return Math.max(0.2, animalBrutoH(k) - 20); }
+/* ═══ LA RACIÓN, ANCLADA AL CULTIVO Y NO AL ANIMAL ═══ (9/9, dirección) ══════════════════════
+   « la zanahoria es muy económica… si la comparamos con el trigo, que dura 16 h: en 16 h obtengo
+   64 zanahorias. 1 zanahoria para alimentar, pff, muy poco… pues a 30, que es el cálculo exacto,
+   que cada alimentada de 30 zanahorias dé un % de felicidad. »
+
+   Tenía razón por partida doble. Medido antes de tocar: alimentar al conejo costaba 1 zanahoria
+   (8 de plata) y valía hasta 244 — un margen de ×30,5. Al toro, en cambio, le costaba 1 trigo
+   (680) para un beneficio de 708: ×1,0, o sea que ya no compensaba. La comida estaba descalibrada
+   en los dos extremos, y por el mismo motivo: se derivaba de lo que el ANIMAL gana por encima del
+   ancla (animalRacionH), así que dependía del bicho y no de lo que le ponés en el plato. Con el
+   cambio a 24 h esa cuenta se rompía del todo — tres de los cuatro animales pasan a ganar POR
+   DEBAJO de 20/h, la resta se iba a cero y el clamp de 0,2 convertía una zanahoria en +60 de
+   felicidad. Habría quedado veinte veces peor que antes.
+
+   La regla nueva es la de dirección y se lee de un vistazo: UNA RACIÓN VALE LO QUE VALEN 30
+   ZANAHORIAS, y da un tercio de la felicidad. Tres raciones llenan al animal, sea cual sea el
+   cultivo, porque lo que cuenta es el VALOR que le das de comer. Un trigo (680) es casi tres
+   raciones de golpe; una calabaza (100) es media. Es la equivalencia que planteó dirección con
+   sus 64 zanahorias, aplicada a los trece cultivos sin escribir ninguna tabla. */
+var RACION_PLATA = 240;         // 30 zanahorias × 8 de plata — el « cálculo exacto » de dirección
+var FELIZ_POR_RACION = 33;      // tres raciones llenan al animal
 // cuánta felicidad da UNA unidad de un cultivo: proporcional a lo que vale ese cultivo
 function felizDeComida(k, crop, preferido) {
   const cd = CROP_DEF[crop]; if (!cd) return FELIZ_COMIDA_GENERICA;
-  const f = FELIZ_BAJA_H * cd.price / animalRacionH(k);
+  const f = FELIZ_POR_RACION * (cd.price || 0) / RACION_PLATA;
   /* Sin redondear: si esto devolviera enteros, una papa daría "1" en vez de 0,6 y alimentar con lo
      más barato saldría un 40% más barato que con lo bueno — el hueco por el que se cuelan los
      exploits. La felicidad se guarda con decimales y se REDONDEA AL MOSTRARLA. */
@@ -6367,6 +6405,16 @@ function ensureHotbarDefaults() {
      La oscura cae solo de los de nivel 10-12 y más rara, así que va al doble: 330.
      Las runas y el polvo salen de fusionar esencias, con lo que su precio se deriva de ellas. */
 const PRICE = { madera:12, piedra:15, bronce:160, hierro:240, oro:280, diamante:360, netherita:480, carne:8, flecha:2,
+  /* 9/9 — LOS CUATRO MATERIALES DEL ESTABLO SE DERIVAN, y valen lo mismo. Antes eran 300, 122,
+     340 y 440 escritos a mano, y el rinde del animal se ajustaba cambiando CUÁNTAS unidades daba
+     por ciclo. Dirección invirtió la relación: « cada 24 h dan +1 de material », así que ahora la
+     cantidad es fija y lo que tiene que ajustarse es el PRECIO.
+     La cuenta, entera y sin magia: un animal ocupa su sitio 24 h y tiene que dejar los 20 de
+     plata del ancla MÁS lo que cuesta darle de comer. La comida cuesta lo que dirección fijó —una
+     ración vale 30 zanahorias (RACION_PLATA) y da un tercio de la felicidad (FELIZ_POR_RACION),
+     que a FELIZ_BAJA_H por hora son 10,9 de plata la hora—. O sea 24 × (20 + 10,9) ≈ 742.
+     Se re-ata más abajo, cuando esas tres constantes ya existen: acá quedan los valores viejos
+     como respaldo por si algo lee PRICE antes de tiempo. */
   fibra:300, pelaje:122, cuero:340, colmillo:440,
   esencia_runica:165, esencia_oscura:330, runa_poder:495, polvo_suerte:165, runa_proteccion:495 };
 
@@ -6376,6 +6424,24 @@ const PRICE = { madera:12, piedra:15, bronce:160, hierro:240, oro:280, diamante:
    relojes o precios distintos, que es justo lo que estaba pasando (2 h contra 40 min, 6 contra 15). */
 ORE_DEF.piedra.cd = CD.rock;
 ORE_DEF.piedra.price = PRICE.piedra;
+
+/* ═══ EL ESTABLO, RE-ANCLADO A LA REGLA DE SFL (9/9, dirección) ═══════════════════════════════
+   Los cuatro materiales valen lo mismo, y ese "lo mismo" no se escribe: se despeja.
+     precio = 24 h × (20 del ancla + lo que cuesta la comida por hora)
+   Que los cuatro coincidan NO es una casualidad ni una pereza: es la consecuencia directa de
+   « cada 24 h dan +1 ». Si los cuatro entregan una unidad en el mismo tiempo, sus unidades tienen
+   que valer lo mismo, o el establo dejaría de estar anclado en cuanto elijas un animal u otro.
+   Lo que distingue a los cuatro deja de ser el precio y pasa a ser CUÁNTAS unidades pide su
+   armadura (12 · 15 · 16 · 9) y qué bono da — que es donde la escalera de Ganadería tiene que
+   vivir, no en un precio inventado.
+   Efecto medido en las armaduras: Fibra ×2,5 · Piel ×5,6 · Cuero ×2,2 · Colmillo ×1,5. La de
+   Piel era la barata por accidente (el pelaje valía 122, un tercio que el resto) y es la que más
+   se mueve. Reportado a dirección con los números. */
+(function anclarMaterialesDelEstablo() {
+  const racionH = (FELIZ_BAJA_H / FELIZ_POR_RACION) * RACION_PLATA;   // 10,9 de plata la hora
+  const precio = Math.round(24 * (20 + racionH));
+  ["fibra", "pelaje", "cuero", "colmillo"].forEach(k => { PRICE[k] = precio; });
+})();
 
 // 1/8: los CULTIVOS venden según CROP_DEF.price — PRICE quedó solo para lo demás.
 //      Antes el mercado usaba una copia vieja acá y los cambios del panel no se veían (bug reportado por el diseñador).
@@ -6874,11 +6940,11 @@ var CANA_V4_DEF = {
   junco:  { label: "Caña de Junco",   lvl: 1,  presupuesto: 30,   mant: 1,
             cost: { madera: 2 }, colaPlata: 5, banda: { comun: 64.186, poco_comun: 27.00, raro: 7.664, epico: 0.750, legendario: 0.400 } },
   bambu:  { label: "Caña de Bambú",   lvl: 4,  presupuesto: 400,  mant: 3,
-            cost: { madera: 5, fibra: 1 }, colaPlata: 40, banda: { comun: 58.454, poco_comun: 27.00, raro: 12.846, epico: 1.200, legendario: 0.500 } },
+            cost: { madera: 20, tablon: 3 }, colaPlata: 40,   /* 9/9: ver « LAS CAÑAS, RE-DERIVADAS » */ banda: { comun: 58.454, poco_comun: 27.00, raro: 12.846, epico: 1.200, legendario: 0.500 } },
   hierro: { label: "Caña de Hierro",  lvl: 8,  presupuesto: 1000, mant: 6,
-            cost: { cuero: 1, barra_hierro: 1 }, colaPlata: 40, banda: { comun: 56.364, poco_comun: 27.00, raro: 14.036, epico: 1.800, legendario: 0.800 } },
+            cost: { cuero: 1, tablon: 6 }, colaPlata: 40,   /* 9/9 */ banda: { comun: 56.364, poco_comun: 27.00, raro: 14.036, epico: 1.800, legendario: 0.800 } },
   oro:    { label: "Caña de Oro",     lvl: 12, presupuesto: 2000, mant: 11,
-            cost: { tablon: 17, barra_oro: 1, cuero: 1 }, colaPlata: 200, banda: { comun: 49.495, poco_comun: 27.00, raro: 19.630, epico: 2.625, legendario: 1.250 } },
+            cost: { cuero: 1, barra_oro: 1, tablon: 6 }, colaPlata: 200,   /* 9/9 */ banda: { comun: 49.495, poco_comun: 27.00, raro: 19.630, epico: 2.625, legendario: 1.250 } },
   /* la única que no cobra peaje, y la única que rompe el ancla a propósito: es el premio de
      final de escalera y cuesta un mes de Lonja bien jugada. +10 % al peso de todo lo que saca. */
   abuelo: { label: "Caña del Abuelo", lvl: 18, presupuesto: null, mant: 0, pesoBonus: 0.10, escamas: 120,

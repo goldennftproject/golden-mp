@@ -147,17 +147,41 @@ console.log("\n=== 5b. LOS ANIMALES · el establo también rinde 20 plata/hora =
      que estaba rota — fibra, pelaje, cuero y colmillo no tenían precio sombra, así que valían 0.
      19/8: ya lo tienen y el establo está anclado de verdad, así que ahora SÍ se mide. Lo que se
      comprueba es lo mismo que en todo lo demás: producción menos comida = 20 plata/hora. */
+  /* ═══ 9/9 — EL ESTABLO SE DESCUELGA DEL ANCLA, POR DECISIÓN ═══════════════════════════════
+     Dirección: « los animales quiero que sean como en SFL: cada 24 h dan +1 de material ». Eso
+     deja de ser una cantidad derivada y pasa a ser una regla fija, así que el rinde ya no puede
+     dar 20 plata/hora: sale del precio del material dividido por 24, y los cuatro materiales
+     valen cosas distintas. Medido: alpaca 63 %, conejo 25 %, toro 71 %, jabalí 92 % del ancla.
+
+     ESTO NO SE TAPA NI SE APRUEBA EN SILENCIO. La regla de este archivo es que bajar una vara
+     para que no suene la alarma está prohibido; la excepción es cuando el mundo cambió por una
+     decisión tomada, y entonces la vara se mueve CON ella y queda escrito de dónde sale.
+     Así que el establo ya no se compara contra 20, se compara contra LO QUE DIRECCIÓN DECIDIÓ —
+     el material a 24 h— y lo que se vigila es que nadie lo mueva sin querer: si mañana alguien
+     toca un precio o un reloj, el % cambia y esto suena.
+     El número que perdió el mando (animalPorCicloAncla) se sigue midiendo abajo, para saber
+     SIEMPRE cuánto nos separamos del ancla. Un desvío que se conoce no es una deuda escondida. */
+  /* Y SIGUE COLGANDO DEL ANCLA, aunque por otro camino (9/9).
+     Durante veinte minutos de esta misma tarde esta sección tuvo una tabla ESPERADO_ANIMAL con
+     los porcentajes bajos (63 / 25 / 71 / 92), porque la regla de SFL —24 h y +1— dejaba el
+     rinde a merced del precio del material. Dirección eligió la otra salida: si la cantidad es
+     fija, lo que se ajusta es el PRECIO. Los cuatro materiales pasaron a valer 742, que es
+     24 × (20 del ancla + 10,9 de comida), y los cuatro animales volvieron a los 20 netos.
+     Se borra aquella tabla porque ya no describe nada: una vara que sobra es una mentira futura.
+     Queda dicho el orden de los hechos, que es la parte que sirve — el mismo cambio puede
+     descolgar o re-anclar según qué lado de la ecuación se mueva. */
   console.log("                                            rinde       debe   desvío");
+  const racionH = (ctx.FELIZ_BAJA_H / ctx.FELIZ_POR_RACION) * ctx.RACION_PLATA;
   for (const k in X.ANIMAL_DEF) {
     const a = X.ANIMAL_DEF[k];
-    const neto = ctx.animalBrutoH(k) - ctx.animalRacionH(k);
+    const neto = ctx.animalBrutoH(k) - racionH;
     linea(a.label + " (" + ctx.animalPorCiclo(k) + " cada " + a.cicloH + " h)", neto, ANCLA, "plata/h");
   }
   /* Y la regla que no se ve en el número: cuidarlo tiene que ganarle a abandonarlo. Con felicidad 0
      el animal produce la mitad y no come nada, así que si la comida costara más que esa mitad, el
      juego estaría premiando el maltrato. Pasó: la alpaca y el toro comían trigo. */
   for (const k in X.ANIMAL_DEF) {
-    const cuidado = ctx.animalBrutoH(k) - ctx.animalRacionH(k);
+    const cuidado = ctx.animalBrutoH(k) - racionH;   /* 9/9: la ración sale de la comida, no del animal */
     const abandonado = ctx.animalBrutoH(k) * 0.5;
     filas++; if (cuidado <= abandonado) avisos++;
     console.log((cuidado > abandonado ? "  ok " : "  !! ") +

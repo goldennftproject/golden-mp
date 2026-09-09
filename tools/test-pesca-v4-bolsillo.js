@@ -204,9 +204,16 @@ console.log("\nEL DINERO DE LA PESCA VA A LA BOLSA DE VERDAD   (G.plata, no una 
   G.canas = {}; G.plata = 500;
   G.res = { madera: 40, fibra: 10, tablon: 20, barra_hierro: 8, cuero: 10 };
   const mad = G.res.madera, pl = G.plata;
+  /* 9/9 — LA RECETA SE LEE, NO SE NOMBRA. Acá decía « la fibra » con el material escrito a mano,
+     y el bambú dejó de llevar fibra cuando dirección subió el precio de los materiales del
+     establo (742) y hubo que re-derivar las tres mezclas para que cupieran en su presupuesto.
+     El test se puso rojo por un cambio aprobado. Lo que custodia no es QUÉ material lleva la
+     caña —eso es la receta, y cambia— sino que COBRE todo lo que la receta dice. */
+  const antesMat = {}; for (const m in CANAS.bambu.cost) antesMat[m] = G.res[m] || 0;
   ok("armar la caña de bambú se puede con el material justo", ctx.canaV4Comprar("bambu") === true);
-  ok("y cobra la madera", G.res.madera === mad - CANAS.bambu.cost.madera, mad + " → " + G.res.madera);
-  ok("la fibra", G.res.fibra === 10 - CANAS.bambu.cost.fibra);
+  for (const m in CANAS.bambu.cost)
+    ok("y cobra " + m, (G.res[m] || 0) === antesMat[m] - CANAS.bambu.cost[m],
+      antesMat[m] + " → " + (G.res[m] || 0));
   ok("y la cola de plata", G.plata === pl - CANAS.bambu.colaPlata, pl + " → " + G.plata);
 }
 

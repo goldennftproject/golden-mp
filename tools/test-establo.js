@@ -43,22 +43,40 @@ console.log("\nSE COMPRAN CON PLATA, NO CON $GOLDEN");
   G.animals = {};
 }
 
-console.log("\nCADA ANIMAL RINDE EL ANCLA");
+console.log("\nLA REGLA DE SFL: 24 h Y +1   (9/9, dirección — ya NO es el ancla)");
 {
+  /* Este bloque comprobaba « cada animal rinde 20 plata/hora ». Dirección lo cambió el 9/9:
+     « los animales quiero que sean como en SFL: cada 24 h dan +1 de material ». Con esa regla el
+     rinde deja de poder ser 20 —sale del precio del material entre 24, y los cuatro materiales
+     valen distinto—, así que la vara vieja gritaría para siempre por una decisión tomada.
+     Lo que se comprueba ahora es la REGLA, que es más estricta que el número que reemplaza: los
+     cuatro relojes en 24 h y la cantidad en 1, exactamente. Si alguien toca uno, esto suena.
+     El desvío contra el ancla no se esconde: se mide abajo y se imprime en cada ejecución, y
+     auditar-ancla lo dice también. Un desvío conocido no es una deuda escondida. */
   X.ANIMAL_ORDER.forEach(k => {
-    const neto = ctx.animalBrutoH(k) - ctx.animalRacionH(k);
-    ok(X.ANIMAL_DEF[k].label + " a felicidad plena", Math.abs(neto - ANCLA) <= 1,
-      neto.toFixed(1) + " plata/h");
+    const d = X.ANIMAL_DEF[k];
+    ok(d.label + ": 24 h y +1", d.cicloH === 24 && ctx.animalPorCiclo(k) === 1,
+      d.cicloH + " h · " + ctx.animalPorCiclo(k) + " por ciclo");
   });
-  ok("lo que produce por ciclo se DERIVA, no está escrito a mano",
-    X.ANIMAL_ORDER.every(k => ctx.animalPorCiclo(k) >= 1),
-    X.ANIMAL_ORDER.map(k => X.ANIMAL_DEF[k].label + " " + ctx.animalPorCiclo(k)).join(" · "));
+  const pcts = X.ANIMAL_ORDER.map(k => ctx.animalBrutoH(k) / ANCLA * 100);
+  console.log("       → el establo rinde entre el " + Math.round(Math.min.apply(null, pcts)) + " % y el " +
+    Math.round(Math.max.apply(null, pcts)) + " % del ancla. Es la regla de SFL, no un desvío accidental.");
+  /* y el número que PERDIÓ el mando se sigue midiendo: cuánto daría cada uno si colgara del ancla */
+  console.log("       → si colgara del ancla, cada ciclo debería dar: " +
+    X.ANIMAL_ORDER.map(k => X.ANIMAL_DEF[k].label + " " + ctx.animalPorCicloAncla(k).toFixed(1)).join(" · "));
 }
 
 console.log("\nALIMENTARLO SIEMPRE GANA (y descuidarlo, nunca)");
 {
+  /* 9/9 — LA COMIDA YA NO SE DERIVA DEL ANIMAL, SE DERIVA DEL PLATO. Antes el coste por hora
+     salía de animalRacionH (lo que el bicho gana POR ENCIMA del ancla), y con la regla de 24 h
+     tres de los cuatro ganan por debajo: la resta daba cero, el clamp la ponía en 0,2 y una
+     zanahoria pasaba a valer +60 de felicidad. La cuenta nueva es la de dirección — una ración
+     vale lo que 30 zanahorias y da un tercio de la felicidad— así que el coste por hora se mide
+     con el reloj de la felicidad, no con el del animal. */
+  const racionH = () => (X.FELIZ_BAJA_H / ctx.FELIZ_POR_RACION) * ctx.RACION_PLATA;
   X.ANIMAL_ORDER.forEach(k => {
-    const cuidado = ctx.animalBrutoH(k) - ctx.animalRacionH(k);
+    const cuidado = ctx.animalBrutoH(k) - racionH();
     const descuidado = ctx.animalBrutoH(k) * X.FELIZ_MIN_PROD;      // felicidad 0: la mitad, y comida gratis
     ok("a la " + X.ANIMAL_DEF[k].label + " le conviene comer", cuidado > descuidado,
       cuidado.toFixed(1) + " contra " + descuidado.toFixed(1) + " descuidada");
