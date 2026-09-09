@@ -3004,6 +3004,108 @@ const PASS_VIP = [
   { res:["bronce",12] }, { golden:8 }, { cos:"Color de nombre Oro" }, { seed:["brocoli",6] }, { golden:8, cos:"Skin de Espada Filo Solar" },
   { res:["esencia_runica",3] }, { golden:10 }, { cos:"Decoración: Fuente Dorada" }, { ficha:1 }, { golden:0, cos:"Skin LEGENDARIA Monarca Dorado + Aura" },
 ];
+/* ============ 9/9 — LOS PREMIOS DEL PASE, DERIVADOS   (recomendación 6) ====================
+   LO QUE HABÍA. Medidos los treinta escalones del carril gratuito en plata sombra:
+       nivel  2 →     10        nivel  7 →  7.740        nivel 14 →     15
+       nivel 27 →  6.000        el más flojo 10, el más rico 7.740:  ×774 de diferencia
+   Y no es que subiera: no había NINGÚN orden. El 7 pagaba más que los otros veintinueve juntos,
+   el 14 pagaba quince, y el 22 pagaba menos que el 6. Un pase es una escalera —lo único que le
+   pide el jugador es que subir valga más que no subir— y ésta era una bolsa de números sueltos.
+
+   POR QUÉ PASA, que es lo que hay que arreglar y no los números: la tabla escribía CANTIDADES a
+   mano (« 3 Pan de Trigo », « 5 semillas de maíz ») en una economía donde los precios se derivan
+   y se mueven. Tres panes eran baratos cuando se escribió la fila; hoy un pan cuesta 2.580 porque
+   dishPrice se deriva de sus ingredientes. La fila no cambió, el mundo debajo sí.
+
+   LA REGLA NUEVA: LA TABLA DICE QUÉ, EL CÓDIGO DICE CUÁNTO. Cada escalón paga UNA HORA de la
+   granja que el jugador tiene A ESA ALTURA — la misma vara con la que se cobran las expansiones.
+   Las celdas salen del nivel de granja al que llega en ese punto de la temporada, y ese punto se
+   deriva del reloj de la propia curva de niveles: el tiempo de un nivel es su XP dividida por lo
+   que la granja produce, o sea sus celdas. No hace falta el simulador para saberlo, pero coincide
+   con él —nivel 10 al 26 % del mes (el simulador da 29 %), nivel 21 al 47 % (él da 51 %)—, que es
+   la comprobación de que la cuenta mira al mismo juego.
+     ESPERADO   pase 1 → granja 6 (15 celdas) → 300 de plata
+                pase 30 → granja 50 (57 celdas) → 1.140
+   El total del carril apenas se mueve: ~22.000 contra los ~20.300 de la tabla vieja. Esto NO es
+   un aumento, es el mismo dinero repartido en orden.
+
+   LO QUE NO SE DERIVA, Y POR QUÉ:
+     · el $GOLDEN, quieto. La auditoría del 18/8 dejó la devolución del VIP clavada en 60 $G para
+       que el pase no se autofinanciara; derivar esas cifras la reabriría por la puerta de atrás.
+     · las FICHAS de parcela, los PICOS y los COSMÉTICOS no tienen cantidad: son la cosa. Un
+       escalón de ficha ya es el premio gordo de su tramo y no lleva relleno.
+     · los PLATOS pagan a lo sumo el escalón, con piso de 1: un plato entero puede valerlo todo
+       (el Pan de Trigo vale 2.580) y no se puede regalar medio. Se acepta el desvío hacia arriba
+       en esos escalones, que además ya no es plata —los platos dejaron de venderse el 8/9—: es
+       comida para la Zona, no emisión. */
+var PASE_HORAS = 1;                 // horas-celda que paga cada escalón del pase
+var PASE_NIVELES = 30;
+/* el reloj de la partida, derivado de la propia curva: cuánto TIEMPO cuesta cada nivel de granja
+   (su XP dividida por las celdas que la producen), normalizado a la temporada entera. */
+function paseNivelDeGranja(n) {
+  const celdas = (l) => 9 + 3 * FARM_EXPANSION.filter(x => x <= l).length;
+  const reloj = [0, 0];
+  for (let l = 2; l <= FARM_NIVEL_MAX; l++) reloj[l] = reloj[l - 1] + (FARM_XP_LVLS[l] - FARM_XP_LVLS[l - 1]) / celdas(l);
+  const meta = reloj[FARM_NIVEL_MAX] * n / PASE_NIVELES;
+  let lvl = 1;
+  for (let l = 2; l <= FARM_NIVEL_MAX; l++) if (reloj[l] <= meta) lvl = l;
+  return lvl;
+}
+function paseCeldas(n) { return 9 + 3 * FARM_EXPANSION.filter(x => x <= paseNivelDeGranja(n)).length; }
+function paseValorDelEscalon(n) { return Math.round(ANCLA_PLATA_HORA * paseCeldas(n) * PASE_HORAS); }
+/* Se llama al final del archivo: necesita PRICE, CROP_DEF, RECIPE_DEF y dishPrice, que viven
+   miles de líneas más abajo. Misma disciplina que derivarTareasDeMinado(), y por el mismo susto. */
+function derivarPremiosDelPase() {
+  const unidad = (r) => {
+    if (r.res) return { k: "res", v: CROP_DEF[r.res[0]] ? CROP_DEF[r.res[0]].price : (PRICE[r.res[0]] != null ? PRICE[r.res[0]] : matValor(r.res[0])) };
+    if (r.seed) return { k: "seed", v: (CROP_DEF[r.seed[0]] || {}).seed || (CROP_DEF[r.seed[0]] || {}).price || 0 };
+    if (r.dish) return { k: "dish", v: dishPrice(RECIPE_DEF[r.dish[0]]) };
+    return null;
+  };
+  for (const tabla of [PASS_FREE, PASS_VIP]) {
+    tabla.forEach((r, i) => {
+      const u = unidad(r); if (!u || !u.v) return;
+      let n = Math.round(paseValorDelEscalon(i + 1) / u.v);
+      /* LA BANDA LEGIBLE, Y LO QUE CUESTA. Igualar el valor a secas da cantidades que nadie
+         escribiría a mano: 180 semillas de papa en el escalón 2, 200 Papas Asadas en el 14, 390
+         flechas en el 18 — y del otro lado « 1 semilla de maíz », que como premio de un pase es
+         un chiste. Pasa porque el precio unitario va de 2 (una flecha) a 2.580 (un Pan de Trigo)
+         y ningún premio cabe bien en los dos extremos.
+         Se recorta a 1..60, que es lo que un jugador lee de un vistazo, y el recorte SE DECLARA:
+         paseDesviados() enumera los escalones donde la banda mordió, o sea donde el objeto que
+         la tabla eligió no da la altura de su nivel. Ésa es la lista que va al diseñador —el
+         arreglo de verdad no es la cantidad, es cambiar el objeto por otro de su familia—, y no
+         quiero que un clamp la esconda: un recorte silencioso es exactamente el fallo que esta
+         auditoría vino a cazar. */
+      /* el techo no es el mismo para todo: una PILA de recurso se mira de un vistazo aunque sean
+         doscientas flechas, y en cambio sesenta semillas o sesenta platos son sesenta gestos —
+         se plantan y se comen de a uno. La carne queda exacta gracias a esto (105 unidades). */
+      n = Math.min(u.k === "res" ? 200 : 60, Math.max(1, n));
+      r[u.k][1] = n;
+    });
+  }
+}
+/* Los escalones donde el objeto elegido no llega (o se pasa) de su altura, con el desvío medido.
+   No es un error del código: es una decisión de diseño pendiente, dicha en voz alta. */
+function paseDesviados(tol) {
+  tol = tol || 0.35;
+  const fuera = [];
+  const uni = (r) => r.res ? (CROP_DEF[r.res[0]] ? CROP_DEF[r.res[0]].price : (PRICE[r.res[0]] != null ? PRICE[r.res[0]] : matValor(r.res[0])))
+    : r.seed ? ((CROP_DEF[r.seed[0]] || {}).seed || (CROP_DEF[r.seed[0]] || {}).price || 0)
+    : r.dish ? dishPrice(RECIPE_DEF[r.dish[0]]) : 0;
+  PASS_FREE.forEach((r, i) => {
+    const v = uni(r); if (!v) return;                                   // fichas, picos y cosméticos no llevan cantidad
+    const meta = paseValorDelEscalon(i + 1), paga = v * (r.res || r.seed || r.dish)[1];
+    if (Math.abs(paga - meta) / meta > tol)
+      fuera.push({ nivel: i + 1, paga: Math.round(paga), meta, factor: +(paga / meta).toFixed(2), que: passRewardStr(r) });
+  });
+  return fuera;
+}
+/* (acá había escrito un matValor() « un fabricado vale lo que valen sus ingredientes ». Ya existe
+   uno idéntico más abajo, y como las declaraciones se izan, la segunda pisaba a la primera: dos
+   funciones con el mismo nombre haciendo lo mismo, y solo una viva. Es el fallo que este proyecto
+   persigue —escribir en vez de derivar— cometido por mí mientras arreglaba otro igual. Se usa el
+   que ya estaba.) */
 const PASS_HITOS = { 1:"★", 5:"★", 10:"★★", 15:"★", 20:"★★", 25:"★", 30:"★★" };
 const PASS_MISIONES = {   // una por pilar del juego (doc)
   cosechar: { label: "Cosechá # cultivos",        goals: [6, 10, 15] },
@@ -10028,3 +10130,5 @@ function caminoGuarida() {
 
 /* las tareas de minado, ya con ORE_DEF y el mapa cargados (ver « EL MURO DE LA NETHERITA ») */
 derivarTareasDeMinado();
+/* y las cantidades del pase, ya con PRICE, CROP_DEF, RECIPE_DEF y dishPrice en pie */
+derivarPremiosDelPase();
