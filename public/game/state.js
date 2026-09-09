@@ -363,14 +363,12 @@ function oficioAbre(sk) {
       if (1 + Math.floor(n / NASA_CUPO_CADA) <= NASA_CUPO_MAX) l.push([n, "un hueco de nasa más"]);
     for (const k of TITULO_PESCA_ORDER) l.push([TITULO_PESCA_DEF[k].lvl, "Título: " + TITULO_PESCA_DEF[k].label]);
   }
-  /* 9/9 — ESPADA, HACHA, MAZO Y ARCO: el contenido ya existía, solo estaba suelto. Las veinte
-     armas declaran su skill en ARM_TIPO_DEF; acá se leen de ahí, así que si mañana entra una
-     rareza nueva aparece sola y el techo del oficio sube con ella. Nadie escribe el número. */
-  if (typeof ARM_DEF !== "undefined" && typeof ARM_ORDER !== "undefined")
-    for (const id of ARM_ORDER) {
-      const w = ARM_DEF[id];
-      if (armSkillKey(w.tipo) === sk) l.push([w.lvl || 1, w.label]);
-    }
+  /* 9/9 — LAS ARMAS NO SE LISTAN ACÁ, y es a propósito. Probé colgarlas de su oficio de combate
+     para que los cuatro huérfanos tuvieran escalera; al medirlo, la puerta de nivel salía un muro
+     (ver craftWeapon) y la saqué. Listarlas SIN que el nivel haga falta sería peor que el hueco:
+     el panel diría « nivel 4: Espada de Piedra » cuando se forja al 1. Un catálogo que promete
+     puertas que no existen es la clase de mentira que llevo toda la semana persiguiendo.
+     Así que los cuatro siguen apareciendo en oficiosSinContenido(), que es la verdad. */
   for (const t in PLANO_OFICIO) if (PLANO_OFICIO[t][0] === sk && BUILD_DEF[t])
     l.push([PLANO_OFICIO[t][1], "plano de " + BUILD_DEF[t].label]);
   for (const t in EDIF2_OFICIO) if (EDIF2_OFICIO[t][0] === sk && BUILD_DEF[t])
@@ -5333,19 +5331,21 @@ function craftWeapon(id) {
   if (typeof tutoPermite === "function" && !tutoPermite("craftarm")) { tutoAviso(); return; }   // embudo estricto (13/8)
   if (typeof tutoGuardiaCosto === "function" && !tutoGuardiaCosto(w.cost, w.plata, "forjar " + w.label)) return;   // guardia del tutorial (12/8)
   if (G.weapons[id]) { toast("Ya tenés " + w.label); return; }
-  /* 9/9 — LA RAREZA PIDE SU NIVEL DE OFICIO (ver « LAS CUATRO ARMAS ABREN SUS OFICIOS »).
-     Se cierra la FORJA y nada más: lo que ya tenías se equipa y se repara igual, porque un gate
-     retroactivo sobre lo comprado es un reseteo con otro nombre. Y se dice por qué y cuánto
-     falta — regla 9 de la casa: ninguna acción falla en silencio. */
-  {
-    const sk = armSkillKey(w.tipo), nv = nivelOficio(sk);
-    if (nv < (w.lvl || 1)) {
-      toast("Te falta " + SKILL_NAME[sk] + " nivel " + w.lvl + " (tenés " + nv + ")");
-      log("Para forjar " + w.label + " hace falta " + SKILL_NAME[sk] + " nivel " + w.lvl +
-          " — vas por el " + nv + ". Se sube peleando con " + ARM_TIPO_DEF[w.tipo].label.toLowerCase() + ".", "bad");
-      return;
-    }
-  }
+  /* 9/9 — ACÁ HABÍA PUESTO UNA PUERTA DE NIVEL DE OFICIO, Y LA SAQUÉ DESPUÉS DE MEDIRLA.
+     La idea era buena y el hueco es real (ver oficiosSinContenido): Espada, Hacha, Mazo y Arco
+     suben de nivel sin abrir nada. Atarles las cinco rarezas parecía la forma obvia de darles
+     escalera. Pero antes de dejarlo puesto medí lo que costaba, y lo que costaba era un muro:
+         Espada nivel 4 = 426 XP = 85 ratas      nivel 9 = 674 ratas      nivel 14 = 2.120
+     mientras que el MATERIAL de esas mismas armas se consigue en días —la piedra el primer día,
+     el bronce con un nodo de 14 h—. O sea que el nivel no acompañaba al material: lo tapaba, y
+     pasaba a ser la única puerta que manda. Peor todavía, la XP de combate es OPCIONAL: la Zona
+     no hay que pisarla, así que un jugador de granja se quedaba con la espada de madera para
+     siempre sin entender por qué.
+     No lo dejo « suavizado » con otra escalera inventada, porque cualquier número que ponga acá
+     es una adivinanza sobre un ritmo que no sé medir, y poner muros a ojo es exactamente el
+     error que esta auditoría vino a cazar. Va al informe como decisión de diseño: o los cuatro
+     oficios de combate reciben algo que abrir, o se acepta que su nivel es un número de daño y
+     se les da un techo honesto. Lo que NO puede seguir es el 150 de reserva. */
   if (armCdLeft(id) > 0) { toast("La forja se enfría — " + fmtSecs(Math.ceil(armCdLeft(id) / 1000))); return; }
   if (!canAfford(w.cost)) { toast("Te faltan materiales"); return; }
   if (G.plata < w.plata) { toast("Te falta plata"); return; }
