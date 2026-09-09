@@ -72,8 +72,15 @@ console.log("\nESTADO 2 · LA XP ESTÁ, FALTAN LAS TAREAS   (niveles 11+: el cas
   ok("la barra está llena: la cosecha ya hizo su parte", fill.style.width === "100.0%", fill.style.width);
   ok("pero en ÁMBAR: lo que falta no es más cosecha", fill._clases.has("tareas"));
   ok("y el texto dice cuántas tareas van", /^tareas 1\/2$/.test(txt.textContent), txt.textContent);
+  /* 8/9 — LA CANTIDAD SE LEE DE LA TABLA. Acá estaban « 25 » y « (1/25) » escritos a mano, de
+     cuando el nivel 12 pedía 25 de bronce; al dividir FARM_TAREAS por tres el juego pide 10 y el
+     test se puso rojo acusando al juego de un fallo que era suyo. Lo que este test custodia no es
+     la cifra, es que el cartel NOMBRE la tarea y enseñe el progreso. */
+  const T12 = (vm.runInContext("FARM_TAREAS", ctx) || {})[12] || [];
+  const min = T12.find(t => t[0] === "minar") || ["minar", "bronce", 0];
   ok("el tooltip nombra la tarea pendiente con su progreso",
-    /Minar 25 de/.test(pill.title) && /\(1\/25\)/.test(pill.title), pill.title);
+    new RegExp("Minar " + min[2] + " de", "i").test(pill.title) &&
+    pill.title.indexOf("(1/" + min[2] + ")") > 0, pill.title);
   console.log("       → sin esto, « Granja 11/50 » con la XP completa era un número congelado sin");
   console.log("         ninguna pista. La ventana de la Granja SIEMPRE lo explicó — pero había que");
   console.log("         saber que existía. La barra es el cartel que avisa de que existe.");

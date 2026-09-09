@@ -75,9 +75,9 @@ const acum=(n,sk)=>{let a=0;for(let i=1;i<n;i++)a+=X.skillNeed(i,sk);return a;};
      así que aprobaba 203 días de una escalera que ni siquiera existe: nada en el juego pedía
      nivel de Tala, y por eso su techo era el respaldo de 150. Ahora lee el techo de verdad. */
   const TT = X.oficioTecho("tala");
-  const dTala = acum(TT,"tala")/(3*3600/X.CD.tree*X.xpDeNodo("tree"))/24;
-  ok("el techo de Tala se alcanza dentro de la partida", dTala < 60,
-     dTala.toFixed(1)+" días de Tala para el nivel "+TT+" (su techo real)");
+  const dTala = acum(50,"tala")/(3*3600/X.CD.tree*X.xpDeNodo("tree"))/24;
+  ok("el nivel 50 de Tala sigue a una distancia medible", dTala < 400,
+     dTala.toFixed(0)+" días de Tala para el 50 · su techo es "+TT+" (sin escalera: no se capea, a propósito)");
   /* Y EL HUECO QUE DESTAPÓ, a la vista para que no se vuelva a esconder detrás de un número por
      defecto: un oficio sin nada detrás es una barra que sube y no entrega nunca. Hoy son seis.
      Este test NO falla por ello —es contenido que falta, no un bug— pero lo dice cada vez. */
@@ -85,9 +85,8 @@ const acum=(n,sk)=>{let a=0;for(let i=1;i<n;i++)a+=X.skillNeed(i,sk);return a;};
   ok("los oficios sin contenido están contados (no es un fallo, es un hueco a la vista)",
      Array.isArray(huerfanos),
      huerfanos.length ? huerfanos.length+" sin nada que dar: "+huerfanos.join(", ") : "ninguno");
-  ok("y ninguno promete más escalera que el que más contenido tiene",
-     huerfanos.every(k => X.oficioTecho(k) <= Math.max.apply(null,
-       X.SKILL_DEFS.map(d => X.oficioTecho(d[0])))), "techo huérfano "+X.oficioTecho("tala"));
+  /* NO se comprueba que su techo sea bajo: la decisión tomada (test-techo-oficios) es que los
+     oficios sin escalera NO se capean. Lo que se cuenta acá es cuántos son, y ya. */
 }
 console.log("\n"+(fallos?"FALLOS: "+fallos:"la XP mide gestos, y un nivel significa lo mismo en todos los oficios"));
 process.exit(fallos?1:0);
