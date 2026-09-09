@@ -4637,7 +4637,8 @@ function recogerUno(k, i, silencio) {
      el peaje de la caña con sus décimas de plata: si redondeáramos acá, el decimal se perdería
      en cada ciclo y volveríamos al problema que este cambio vino a arreglar. */
   const gana = animalRinde(k, i);
-  const acum = Math.round(((a.pend || 0) + gana) * 100) / 100;
+  const traia = Math.round((a.pend || 0) * 100) / 100;   // lo que YA llevaba guardado, para poder contarlo
+  const acum = Math.round((traia + gana) * 100) / 100;
   const entero = Math.floor(acum + 1e-9);
   if (entero > 0 && !roomForRes(d.mat, entero)) { if (!silencio) bagFull("recoger " + RES_LABEL[d.mat]); return 0; }
   a.pend = Math.round((acum - entero) * 100) / 100;
@@ -4648,17 +4649,29 @@ function recogerUno(k, i, silencio) {
     /* y si esta vuelta no llegó a una unidad entera, SE DICE — la regla 9 de la casa: nunca un
        clic mudo. Un « no pasó nada » sin explicación se lee como que el juego está roto, y acá
        la explicación es justamente la lección: el animal descuidado rinde menos. */
+    /* 9/9 (Suren) — « dice que dará 0.5 de fibra y me da 1 ».
+       La cuenta estaba bien y la frase estaba mal, que es la peor combinación porque nadie la
+       cree. El mensaje contaba lo que el animal produjo ESTA vuelta y lo que le SOBRA para la
+       próxima, pero jamás lo que TRAÍA guardado de antes — así que « produjo 0,5 → +1 a la
+       bolsa » se lee como un juego que no sabe sumar. Ahora se escribe la cuenta entera, de
+       izquierda a derecha, y solo se nombra lo que existe: sin fracción anterior no se menciona.
+       Y con coma, como el resto del panel: acá se escapaban « 0.5 » con punto. */
+    const dec = (v) => String(Math.round(v * 100) / 100).replace(".", ",");
     const falta = Math.round((1 - a.pend) * 100) / 100;
     if (entero > 0) {
-      log(d.label + " " + (i + 1) + " produjo " + gana + " de " + RES_LABEL[d.mat] + " → +" + entero +
-          " a la bolsa" + (a.pend ? " (le quedan " + a.pend + " guardados)" : "") +
+      const cuenta = traia > 0
+        ? dec(gana) + " + " + dec(traia) + " que llevaba guardado = " + dec(acum)
+        : dec(gana);
+      log(d.label + " " + (i + 1) + " produjo " + cuenta + " de " + RES_LABEL[d.mat] + " → +" + entero +
+          " a la bolsa" + (a.pend ? " (le quedan " + dec(a.pend) + " guardados)" : "") +
           " · felicidad " + animalFelizDe(a) + "/100.", "gold");
-      toast("+" + entero + " " + RES_LABEL[d.mat]);
+      toast("+" + entero + " " + RES_LABEL[d.mat] + (traia > 0 ? " (con lo guardado)" : ""));
     } else {
-      log(d.label + " " + (i + 1) + " rindió solo " + gana + " de " + RES_LABEL[d.mat] +
-          " por su felicidad (" + animalFelizDe(a) + "/100). Guardado: " + a.pend +
-          " — le falta " + falta + " para una unidad. Alimentalo y rendirá el doble.", "bad");
-      toast("Rindió " + gana + " · guardado " + a.pend + "/1");
+      log(d.label + " " + (i + 1) + " rindió solo " + dec(gana) + " de " + RES_LABEL[d.mat] +
+          " por su felicidad (" + animalFelizDe(a) + "/100)." +
+          (traia > 0 ? " Con los " + dec(traia) + " que ya llevaba, guarda " + dec(a.pend) + "." : " Guardado: " + dec(a.pend) + ".") +
+          " Le falta " + dec(falta) + " para una unidad. Alimentalo y rendirá el doble.", "bad");
+      toast("Rindió " + dec(gana) + " · guardado " + dec(a.pend) + "/1");
     }
     refreshHud(); if (isOpen("ov-inv")) refreshInv();
     if (typeof refreshEstablo === "function" && isOpen("ov-establo")) refreshEstablo();
