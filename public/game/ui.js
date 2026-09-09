@@ -2468,7 +2468,10 @@ function refreshCooking() {
   const nxt = COOK_LVLS[lvl + 1];
   let head = '<div class="forge-row"><div class="finfo"><div class="fnm">Cocina nivel ' + lvl + (lvl >= 10 ? ' — Cocina maestra' : '') + '</div>' +
     (nxt != null ? '<div class="durbar"><i style="width:' + Math.round((xp - COOK_LVLS[lvl]) / (nxt - COOK_LVLS[lvl]) * 100) + '%"></i></div><div class="fds">' + fmt(xp) + '/' + fmt(nxt) + ' XP para el nivel ' + (lvl + 1) + '</div>' : '') +
-    (lvl > 1 ? '<div class="fds">Maestría: buffs y precios de venta +' + Math.round((cookPot(1) - 1) * 100) + '% en las recetas de nivel 1 (2% por nivel sobre la receta, tope +50%)</div>' : '') +
+    /* 9/9 — ESTE CARTEL SE QUEDÓ MINTIENDO. Decía « buffs y precios de venta », y los precios de
+       venta se fueron hoy con la venta de platos. La maestría sigue subiendo el BUFF, que es lo
+       único que le queda y ahora es lo único que promete. */
+    (lvl > 1 ? '<div class="fds">Maestría: los buffs de tus platos rinden +' + Math.round((cookPot(1) - 1) * 100) + '% en las recetas de nivel 1 (2% por nivel sobre la receta, tope +50%)</div>' : '') +
     '</div></div>';
   { // ollas en paralelo (3/8: se cocinan varios platos a la vez)
     const lista = cookList();
