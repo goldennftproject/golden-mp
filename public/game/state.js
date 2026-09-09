@@ -1514,14 +1514,82 @@ function addCookXp(amt) {
      1 sesión/día → 154 días   ·   2 → 37   ·   3 → 30   ·   6 → 15
    El jugador de una sesión sigue lejos, y no lo arregla la curva: toca el juego 3 minutos al día
    y cobra una sola cosecha y cuatro cargas por nodo. Es una decisión aparte, si se quiere tomar. */
+/* ============ 9/9 — EL VALLE DEL NIVEL 11, Y POR QUÉ MI PROPIA RECETA ERA MALA ============
+   La cola aplanada del 8/9 dejó un escalón que no se ve en la tabla pero se siente jugando:
+     nivel 10 → 5.000 de XP      nivel 11 → 700
+   El jugador paga el escalón más caro de su vida y el siguiente le sale al 14 %. Medido con el
+   simulador (3 sesiones/día): el nivel 10 cuesta 2,4 DÍAS y el 11 cuesta 0,3. El juego se pone
+   ocho veces más fácil de golpe, una sola vez, justo ahí.
+
+   YO HABÍA RECOMENDADO arrancar la cola en 5.000 y dejarla decaer hasta que cerrara en 100.000.
+   Antes de escribirlo lo medí, y la recomendación era mala: la razón que cierra la cuenta es
+   0,949, o sea 5.000 en el nivel 11 y 650 en el 50 — mientras la granja TRIPLICA su producción.
+   El nivel 50 acabaría costando el 5 % del tiempo que cuesta el 11. Cambiar un precipicio al
+   principio por un derrumbe al final no es arreglarlo.
+
+   EL ERROR DE FONDO ERA MEDIR EN XP. Un escalón no se siente en puntos, se siente en TIEMPO, y
+   el tiempo es el escalón dividido por lo que tu granja produce por hora — que crece con las
+   celdas. Así que la cola se DERIVA igual que las expansiones: cada nivel cuesta las mismas
+   horas-celda que el anterior, o sea paso ∝ celdas productivas de ese nivel, y el total se clava
+   en 100.000 para que el mes no se mueva ni un día.
+     ESPERADO   nivel 11: 1.100 · nivel 30: 2.100 · nivel 50: 3.000 · total 100.000
+     y el ritmo, que es lo que importa:  52 XP por celda en el 11  ·  53 en el 50
+
+   LO QUE ESTO NO ARREGLA, DICHO DE FRENTE: el escalón 5.000 → 1.100 sigue siendo un escalón.
+   No se puede quitar con aritmética: quedan 86.000 de XP para 40 niveles (2.150 de media), así
+   que ninguno puede costar 5.000 sin robarle a los otros. El precipicio no lo hace la cola, lo
+   hacen los diez primeros niveles, que dirección afinó a mano el 14/8 y pidió no tocar. Si
+   alguna vez se quiere alisar del todo, el número a mirar es el escalón del nivel 10.
+
+   LOS DIEZ PRIMEROS NO SE TOCAN, y por eso siguen escritos a mano acá.
+   ------------------------------------------------------------------------------------------
+   8/9 — LA COLA SE APLANA: EL TOPE EN UN MES. Dirección: « todo el contenido tiene que ser
+   posible ir desbloqueándolo con mucho un mes ». El nivel 50 estaba a 372 días del jugador de
+   tres sesiones, y el contenido que cambia CÓMO se juega se acaba en el 21. El techo pasó de
+   3.110.000 de XP a 100.000. No era el único muro: hicieron falta esta curva, las horas que
+   cuesta una expansión (HN) y las tareas del 11 al 50. Mover una sola no habría movido nada. */
 var FARM_XP_LVLS = [
-  0, 0, 25, 90, 225, 550, 1250, 2750, 5500, 9000,
-  14000, 14700, 15400, 16200, 17000, 17900, 18800, 19700, 20700, 21800,
-  22900, 24000, 25300, 26500, 27900, 29300, 30700, 32300, 33900, 35600,
-  37400, 39300, 41300, 43400, 45500, 47800, 50300, 52800, 55400, 58200,
-  61200, 64300, 67500, 70900, 74500, 78200, 82200, 86300, 90600, 95200,
-  100000];
+  0, 0, 25, 90, 225, 550, 1250, 2750, 5500, 9000, 14000,
+];
 const FARM_NIVEL_MAX = 50;
+/* EL TECHO SE RE-DERIVA CON LA FORMA, PORQUE LA LEY ES EL MES Y NO EL NÚMERO.
+   Cambiar la forma de la cola cambia el reloj aunque la XP total no se mueva: adelantar puntos a
+   los niveles bajos los cobra cuando la granja produce POCO, así que la misma cifra cuesta más
+   días. Medido con el simulador, 3 sesiones/día, hasta el nivel 50:
+       100.000 → 31,3 días        95.000 → 30,0 días        92.000 → 29,0 días
+   Los 100.000 del 8/9 nunca fueron el objetivo: eran el número que daba el mes con la forma de
+   entonces. Con la forma nueva, el mismo mes cuesta 95.000. Se mueve el número y se deja quieta
+   la ley, que es el orden correcto — al revés tendríamos una curva bonita y un mes de 31 días. */
+var FARM_XP_TECHO = 95000;       // lo que cuesta el nivel 50 en total — el mes de dirección, medido
+/* Se llama ABAJO, en cuanto FARM_EXPANSION existe. No es una IIFE acá arriba a propósito: el 8/9
+   escribí derivarTareasDeMinado() pegada a su tabla, ORE_DEF se definía 4.500 líneas más abajo,
+   el catch se comió el ReferenceError y los números quedaron idénticos a los de antes sin que
+   nada se pusiera en rojo. Si esto se llama antes de tiempo, revienta a la vista. */
+function derivarColaDeXp() {
+  if (typeof FARM_EXPANSION === "undefined" || !FARM_EXPANSION.length)
+    throw new Error("derivarColaDeXp() corrió antes que FARM_EXPANSION — la cola de niveles quedaría sin derivar");
+  const celdas = (lvl) => 9 + 3 * FARM_EXPANSION.filter(n => n <= lvl).length;   // == celdasProductivas()
+  const desde = FARM_XP_LVLS.length - 1;                                          // el 10, escrito a mano
+  const resto = FARM_XP_TECHO - FARM_XP_LVLS[desde];
+  let suma = 0;
+  for (let l = desde + 1; l <= FARM_NIVEL_MAX; l++) suma += celdas(l);
+  /* EL REDONDEO SE COBRA EN EL TECHO, NO EN UN NIVEL. Probé las otras dos formas y las dos
+     ensucian la tabla:
+       · redondear el escalón y cobrarle el resto al último deja el nivel 50 en 3.300 donde le
+         tocaban 2.900 — un pico del 13 % que no lo eligió nadie, lo eligió la aritmética;
+       · redondear el ACUMULADO reparte bien el error pero rompe la monotonía en ocho sitios
+         (el 17 cuesta 1.300 después de que el 16 costara 1.400), y « cada nivel cuesta más que
+         el anterior » es una promesa escrita.
+     Redondeando el ESCALÓN y no tocando nada más, la monotonía sale GRATIS: los escalones son
+     proporcionales a las celdas, las celdas no bajan nunca, y todos los niveles que comparten
+     celdas comparten escalón exacto. Lo que sobra o falta se lo lleva el techo, que es el número
+     con derecho a moverse: FARM_XP_TECHO es el OBJETIVO del que sale la proporción, y el techo
+     de verdad es lo que la suma dé. Un mes no se mide con cuatro cifras significativas. */
+  for (let l = desde + 1; l <= FARM_NIVEL_MAX; l++) {
+    const paso = Math.max(100, Math.round(resto * celdas(l) / suma / 100) * 100);
+    FARM_XP_LVLS.push(FARM_XP_LVLS[FARM_XP_LVLS.length - 1] + paso);
+  }
+}
 // tareas por nivel: [tipo, clave, cantidad] · tipos: plantar/talar/minar/matar/pescar/cocinar
 /* 8/9 — DIVIDIDAS POR TRES. Sumadas, las tareas del 11 al 50 pedían 815 minados, 701 muertes,
    670 siembras, 630 talas, 215 cocinados y 150 pescas. Al ritmo real del jugador de tres sesiones
@@ -1754,6 +1822,7 @@ const FARM_EXPANSION = (function () {
   return a;
 })();
 function expansionesQueTocan(lvl) { return FARM_EXPANSION.filter(n => n <= (lvl || 1)).length; }
+derivarColaDeXp();   // ← acá, y no allá arriba: la cola de niveles necesita la tabla de expansiones
 /* COSTE DE CADA EXPANSIÓN. No son números a ojo: se elige cuántos DÍAS DE GRANJA debe costar cada
    una —de 1,5 la primera a 6 la última— y se traducen a unidades con la producción REAL que tenés
    en ese nivel, con los nodos que el nivel y las expansiones anteriores ya te dieron.
