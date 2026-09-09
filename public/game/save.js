@@ -405,7 +405,18 @@ function hydrate(d) {
     for (const e of items) {
       if (out.items.length >= tope) break;
       if (e && e.c) { const hijo = (prof < 2) ? sanearCont(e, prof + 1) : null; if (hijo) out.items.push(hijo); }
-      else if (e && e.k && e.n > 0) out.items.push({ kind: e.kind || "res", k: e.k, n: e.n });
+      /* 8/9 — EL `w` SE COPIA. Acá se reconstruía la pila como {kind, k, n} a secas y se tiraba
+         el payload: la durabilidad, el +N y las runas del arma, y los kg del pez. Medido: una
+         espada {dur:60, mas:2, runas:["fuego"]} volvía del F5 sin el +2 y sin las runas — y de
+         regalo reparada. Es el tercer sitio del mismo camino que aprende esto: contMeter lo
+         guarda, tumbaCaer lo tiraba (arreglado hoy también) y el saneado lo tiraba.
+         Se copia el objeto, no la referencia, para que un guardado corrupto no comparta estado. */
+      else if (e && e.k && e.n > 0) {
+        const pila = { kind: e.kind || "res", k: e.k, n: e.n };
+        if (e.w && typeof e.w === "object") pila.w = JSON.parse(JSON.stringify(e.w));
+        else if (typeof e.w === "number" && isFinite(e.w)) pila.w = e.w;   // los peces llevan kg
+        out.items.push(pila);
+      }
     }
     return out;
   };

@@ -3957,9 +3957,28 @@ function viajeElegir(c) {
 }
 /* arrepentirse: todo vuelve a la granja, contenedor incluido. Cancelar el viaje no puede costar
    nada — si costara, sería una trampa escondida en un botón que dice « atrás ». */
+/* 8/9 — LO QUE NO ENTRA NO SE TIRA, y esta era la peor fuga del juego.
+   Acá se llamaba a viajePoner ignorando lo que devuelve y después se hacía G.cont = null. O sea
+   que con la bolsa llena, todo lo que no cupo desaparecía: medido, volví de la Zona con 17
+   esencias oscuras y salí con 0, sin un toast, sin una línea de log y sin quedar en ninguna
+   parte. El recurso más caro del juego, evaporado en silencio — la regla 9 al revés.
+   Ahora el contenedor SOBREVIVE con lo que no entró: sigue siendo tuyo, se ve en la puerta del
+   portal, y el jugador decide qué hace con ello cuando haga sitio. Devuelve cuántas pilas
+   quedaron sin sitio para que quien llame pueda decirlo. */
 function viajeSoltar() {
   const raiz = contLlevado(); if (!raiz) return false;
-  for (const e of contAplanar(raiz)) viajePoner(e.kind || "res", e.k, e.n);
+  const quedan = [];
+  for (const e of contAplanar(raiz)) {
+    const ok = viajePoner(e.kind || "res", e.k, e.n, e.w);
+    if (!ok) quedan.push(e);
+  }
+  if (quedan.length) {
+    /* se vacía y se vuelve a llenar SOLO con lo que no entró: así el contenedor no duplica lo que
+       sí pasó a la bolsa, y las bolsas anidadas se conservan como huecos vivos. */
+    raiz.items = raiz.items.filter(esCont);
+    for (const e of quedan) contMeter(raiz, e.kind || "res", e.k, e.n, e.w, 1);
+    return quedan.length;
+  }
   for (const b of raiz.items) if (esCont(b)) contsSumar(b.c, 1);
   contsSumar(raiz.c, 1);
   G.cont = null;
@@ -4147,7 +4166,15 @@ function equipoCaido(azar) {
    genérico: un « perdiste cosas » no le enseña nada a nadie. */
 function tumbaCaer(zona, x, y, azar) {
   const raiz = contLlevado();
-  const dentro = raiz ? contAplanar(raiz).map(e => ({ kind: e.kind || "res", k: e.k, n: e.n })) : [];
+  /* 8/9 — el `w` VIAJA. Este map lo tiraba, así que lo que llevabas PUESTO conservaba su
+     durabilidad, su +N y sus runas (equipoCaido sí lo lleva) y lo que llevabas GUARDADO volvía
+     del cuerpo como un arma de fábrica, reparada y sin mejoras. El comentario de más abajo
+     afirmaba desde la tanda 4 que esto ya se hacía; no se hacía. */
+  const dentro = raiz ? contAplanar(raiz).map(e => {
+    const p = { kind: e.kind || "res", k: e.k, n: e.n };
+    if (e.w != null) p.w = e.w;
+    return p;
+  }) : [];
   const bolsas = raiz ? raiz.items.filter(esCont).map(b => ({ kind: "cont", k: b.c, n: 1 })) : [];
   const piezas = equipoCaido(azar);
   const items = dentro.concat(bolsas);
@@ -4194,7 +4221,18 @@ function zonaSalir(derrotado) {
   const raiz = contLlevado();
   const traia = raiz ? contPilas(raiz) : 0;
   if (traia) contDescargar(raiz, true);
-  if (raiz) viajeSoltar();
+  /* 8/9 — Y SI NO ENTRA TODO, SE DICE. El `true` de arriba silencia el aviso de contDescargar, y
+     viajeSoltar tiraba lo que no cabía: el jugador volvía de la Zona con la bolsa llena y perdía
+     el botín sin enterarse. Ahora viajeSoltar deja lo que no entró DENTRO del contenedor —sigue
+     siendo tuyo, y se ve en la puerta del portal— y acá se cuenta. Es lo que pide la regla 9: la
+     mecánica dice qué pasó y por qué, y sobre todo dice que no se perdió nada. */
+  const sobran = raiz ? viajeSoltar() : true;
+  if (typeof sobran === "number" && sobran > 0) {
+    const q = sobran + " cosa" + (sobran === 1 ? "" : "s");
+    if (typeof toast === "function") toast("Bolsa llena — " + q + " te espera" + (sobran === 1 ? "" : "n") + " en el contenedor");
+    if (typeof log === "function") log("La bolsa no daba para todo: " + q + " sigue" + (sobran === 1 ? "" : "n") +
+      " en tu " + ((CONT_DEF[raiz.c] || {}).label || "contenedor") + ". Hacé sitio y vaciálo desde la puerta del portal.", "bad");
+  }
   if (!v) return null;
   const gan = {};
   for (const k in G.res) { const d = (G.res[k] || 0) - (v.res[k] || 0); if (d > 0) gan[k] = d; }
@@ -5930,8 +5968,16 @@ function mudanzaPescaV4() {
     delete G.fish[k];
   }
   /* las cañas viejas se gastaban por usos; las de la v4 se compran una vez. Lo que el jugador
-     tenía se convierte en el ACCESO, que es lo único que puede seguir usando. */
-  if (G.canas && Object.keys(G.canas).length) G.canas = { junco: 1 };
+     tenía se convierte en el ACCESO, que es lo único que puede seguir usando.
+     8/9 — ESTA LÍNEA BORRABA LAS CAÑAS EN CADA CARGA, y era la peor pérdida del juego.
+     No tenía guardia: el único `return` temprano de la función es `if (!G.fish)`, y `G.fish`
+     siempre existe. Así que corría en TODOS los hydrate, no solo en la mudanza: el jugador
+     compraba la Caña de Oro (presupuesto 2.000), recargaba, y volvía a tener el junco. En
+     silencio, sin haber tocado la caché — que es exactamente lo que la regla de la casa prohíbe.
+     Ahora solo actúa cuando de verdad hay algo que mudar: una caña del catálogo VIEJO. Si todas
+     las que tiene son de la v4, no hay mudanza que hacer y no se toca nada. */
+  if (G.canas && Object.keys(G.canas).some(k => typeof CANA_V4_DEF === "undefined" || !CANA_V4_DEF[k]))
+    G.canas = { junco: 1 };
 
   /* LOS AMARRES DE LA v3 SE LEVANTAN, CON DEVOLUCIÓN.
      Ésta es la parte urgente y la razón de que la mudanza no pudiera esperar. Las trampas de la
@@ -8634,9 +8680,23 @@ function pedPool() {
   }
   pool.push({ tipo: "res", key: "madera", n: 3, val: (priceOf("madera") || 2) * 3 });
   pool.push({ tipo: "res", key: "piedra", n: 3, val: (priceOf("piedra") || 3) * 3 });
+  /* 8/9 — EL TABLÓN COMPRABA LOS MINERALES AL 12,5 % DE SU VALOR.
+     Acá se tasaba con ORE_DEF[k].price —{bronce:12, hierro:15, oro:30, diamante:80, netherita:200}—
+     mientras el juego VENDE con PRICE: {160, 240, 280, 360, 480}. La piedra se reató en su día y
+     los otros cinco se quedaron con la tabla vieja. Medido sobre 3.000 pedidos generados: seis
+     Hierro pagaban 180 por 1.440 de valor real. Setenta y dos horas-celda de ancla a cambio de
+     nada. Los trece cultivos, la madera y la piedra estaban perfectos (ratio 1,000) — justamente
+     porque esos sí preguntan a priceOf.
+     Ahora los minerales pasan por la MISMA puerta que todo lo demás. Es la regla de siempre: un
+     precio se pregunta, no se copia. */
   for (const k in ORE_DEF) {
     if (k === "piedra") continue;
-    try { if (statGet("minar", k) > 0) pool.push({ tipo: "res", key: k, n: 1, val: (ORE_DEF[k].price || 6) * 2 }); } catch (e) {}
+    /* y se va también el « × 2 », que era el otro lado del mismo error: compensaba a ojo un precio
+       demasiado barato. Al atar el precio a priceOf, ese factor pasó a pagar el DOBLE del valor
+       real (medido: ratio 2,000 en los cinco minerales) — el tablón regalando en vez de robando.
+       Es la excepción que el barrido de imprentas del 31/8 ya le quitó a los platos con su motivo
+       escrito: « paga el valor EXACTO, 1,0× ». Los minerales se quedaron con la suya. */
+    try { if (statGet("minar", k) > 0) pool.push({ tipo: "res", key: k, n: 1, val: (priceOf(k) || ORE_DEF[k].price || 6) }); } catch (e) {}
   }
   /* 25/8 (Pesca v3, capítulo 11) — EL TABLÓN PEDÍA UN SOLO PEZ, Y DEL CATÁLOGO VIEJO.
      Era `{ tipo: "fish", key: "comun", n: 2, val: 12 }`: una línea, una rareza que ya nadie
@@ -8666,7 +8726,14 @@ function pedPool() {
        18/8 (« paga el valor EXACTO, 1,0× »). El margen del cocinero no desaparece: r.plata ya
        paga por encima de los insumos, que es el pago del trabajo de la olla. Se va la prima
        duplicada, no la ganancia. */
-    if (hecho || ((G.dishes && G.dishes[id]) || 0) > 0) pool.push({ tipo: "dish", key: id, n: 1, val: (r.plata || 8) });
+    /* 8/9 — MISMO FALLO QUE LOS MINERALES, un piso más abajo. `r.plata` es la planilla escrita a
+       mano; el juego vende con dishPrice(r), que se DERIVA de los ingredientes. Coinciden en los
+       dos platos más baratos y se separan hasta ×110 en los caros: medido, el pan de trigo vale
+       2.580 y su r.plata dice 22 — ratio 0,009. Y al revés, la papa asada pagaba 5 por 3 de
+       valor: 1,667, o sea el tablón regalando. Los dos sentidos del mismo error.
+       Se pregunta a la función que cobra, como hacen los cultivos. */
+    if (hecho || ((G.dishes && G.dishes[id]) || 0) > 0)
+      pool.push({ tipo: "dish", key: id, n: 1, val: (typeof dishPrice === "function" ? dishPrice(r) : (r.plata || 8)) });
   }
   return pool;
 }

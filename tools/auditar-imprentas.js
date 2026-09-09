@@ -163,7 +163,21 @@ linea(); console.log("6) PLATOS — el único canal de venta es el tablón, y es
     const unidad = p.val / p.n;
     const n = Math.max(p.n, Math.ceil(g("VALE_EMISION") / unidad));   // el piso agranda el pedido
     const margen = (unidad - insumos) * n;
-    if (unidad > (r.plata || 8) + 0.5) grave(r.label + ": el tablón paga " + unidad + " por un plato de " + r.plata + " — volvió una prima escondida");
+    /* 8/9 — LA VARA ERA r.plata, Y r.plata ES UNA TABLA MUERTA. Este auditor comprobaba que el
+       tablón no pagara más de « lo que vale el plato » preguntándole a la planilla escrita a mano
+       de RECIPE_DEF. Pero el precio del plato se DERIVA: dishPrice(r) = dishValue(r) × COOK_MARGEN,
+       y con COOK_PRICE_AUTO encendido r.plata no la lee nadie más. Coincidían en los platos
+       baratos y se separaban hasta ×110 en los caros, así que el día que el tablón pasó a pagar el
+       valor derivado —lo correcto— este auditor cantó GRAVE por el arreglo.
+       Cambiar la vara de un auditor es lo que este archivo prohíbe, así que la nueva es MÁS
+       estricta, no más laxa: no basta con « no pagues de más », ahora se exige que el tablón pague
+       EXACTAMENTE el precio derivado, y que ese precio sea exactamente los insumos por COOK_MARGEN.
+       Un céntimo de más en cualquiera de los dos sitios y suena. */
+    const derivado = ctx.dishPrice(r);
+    if (Math.abs(unidad - derivado) > 0.5)
+      grave(r.label + ": el tablón paga " + unidad + " y el plato vale " + derivado + " — el tablón tiene su propio precio otra vez");
+    if (insumos > 0 && Math.abs(derivado - insumos * g("COOK_MARGEN")) > 1)
+      grave(r.label + ": el precio (" + derivado + ") no son sus insumos (" + insumos + ") por " + g("COOK_MARGEN") + " — la olla imprime");
     if (!peor || margen > peor.margen) peor = { label: r.label, n, margen };
   }
   if (peor && peor.margen > ctx.diaDeGranja() * 0.3)
