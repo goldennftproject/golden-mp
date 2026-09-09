@@ -6941,8 +6941,30 @@ var CANA_V4_DEF = {
             cost: { madera: 2 }, colaPlata: 5, banda: { comun: 64.186, poco_comun: 27.00, raro: 7.664, epico: 0.750, legendario: 0.400 } },
   bambu:  { label: "Caña de Bambú",   lvl: 4,  presupuesto: 400,  mant: 3,
             cost: { madera: 20, tablon: 3 }, colaPlata: 40,   /* 9/9: ver « LAS CAÑAS, RE-DERIVADAS » */ banda: { comun: 58.454, poco_comun: 27.00, raro: 12.846, epico: 1.200, legendario: 0.500 } },
-  hierro: { label: "Caña de Hierro",  lvl: 8,  presupuesto: 1000, mant: 6,
-            cost: { cuero: 1, tablon: 6 }, colaPlata: 40,   /* 9/9 */ banda: { comun: 56.364, poco_comun: 27.00, raro: 14.036, epico: 1.800, legendario: 0.800 } },
+  /* 9/9 — LA CAÑA DE HIERRO RECUPERA SU HIERRO, Y EL PRESUPUESTO CEDE.
+     La mezcla del 8/9 la dejó en { cuero, tablón }: una Caña de Hierro sin una sola barra de
+     hierro. No fue un descuido, fue una cuenta que no daba — 1 cuero (742) + 1 barra (720) son
+     1.462 sobre un presupuesto de 1.000, así que para que entrara había que sacrificar una de
+     las dos, y la regla de Suren (« las dos de arriba piden CUERO ») protegía al cuero.
+     Lo que hay que preguntarse es POR QUÉ no daba. El presupuesto de 1.000 se escribió con los
+     precios del documento: cuero 55, barra de hierro 130 — o sea 185 de material y el resto en
+     cola de plata. Hoy el cuero vale 742 porque dirección puso los animales a ciclo de 24 h y un
+     cuero pasó a ser UN DÍA de Toro. El presupuesto no envejeció por la caña: envejeció porque el
+     suelo sobre el que estaba parado subió ×13.
+     El propio comentario de abajo ya había dictado la jerarquía cuando este choque apareció la
+     primera vez: « un presupuesto es una vara, no una ley física; una regla de diseño de quien
+     juega, sí es lo que hay que defender ». Aquella vez se pagó con tolerancia (×1,10); esta vez
+     se paga donde corresponde, moviendo la vara a 1.500, que es lo que la mezcla honesta cuesta.
+       ESPERADO   cuero 742 + barra_hierro 720 + tablón 3×36 (108) + cola 40 = 1.610   ×1,073
+     Y de paso el nivel cuadra solo: la Curtiduría se levanta al 8, que es el nivel de esta caña.
+     El primer cuero que salga de ella tiene adónde ir.
+     QUEDA DICHO PARA EL DISEÑADOR: la escalera de presupuestos pasa a ser 30 · 400 · 1.500 ·
+     2.000, así que el último escalón —el de oro— cae de ×2 a ×1,33. Al nivel 12 esos 500 de
+     diferencia no frenan a nadie: lo que de verdad cobra la caña de oro es su barra (21 h de
+     veta), no su plata. No lo toco por mi cuenta porque subir el precio del premio final de la
+     escalera es algo que se SIENTE, y eso lo decide quien juega. */
+  hierro: { label: "Caña de Hierro",  lvl: 8,  presupuesto: 1500, mant: 6,
+            cost: { cuero: 1, barra_hierro: 1, tablon: 3 }, colaPlata: 40,   /* 9/9 */ banda: { comun: 56.364, poco_comun: 27.00, raro: 14.036, epico: 1.800, legendario: 0.800 } },
   oro:    { label: "Caña de Oro",     lvl: 12, presupuesto: 2000, mant: 11,
             cost: { cuero: 1, barra_oro: 1, tablon: 6 }, colaPlata: 200,   /* 9/9 */ banda: { comun: 49.495, poco_comun: 27.00, raro: 19.630, epico: 2.625, legendario: 1.250 } },
   /* la única que no cobra peaje, y la única que rompe el ancla a propósito: es el premio de
