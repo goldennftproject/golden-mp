@@ -5540,10 +5540,36 @@ function eatDish(id) {
   refreshHud(); if (typeof syncSlots === "function") syncSlots(); if (isOpen("ov-inv")) refreshInv();
 }
 
+/* ═══ LOS PLATOS YA NO SE VENDEN POR PLATA ═══ (9/9, dirección) ══════════════════════════════
+   Textual: « los platos son solo para curarse en zona negra, no se venden a menos que se le
+   vendan a los players por plata… los platos pueden venderse en el market, no en la cocina ni en
+   la tienda. Eso debemos quitarlo, porque no es una imprenta. »
+
+   Y era una imprenta de manual. Un plato se vende por sus ingredientes × 1,25 (COOK_MARGEN) y la
+   maestría multiplica otra vez hasta ×1,18: pasar un cultivo por la olla valía entre un 25 % y un
+   48 % más que venderlo crudo, SIN ocupar una celda y sin techo, porque la olla nunca se satura.
+   Vender crudo era siempre el juego mal jugado.
+
+   La puerta se cierra ACÁ, en la función, y no escondiendo los botones: un canal de plata que
+   sigue existiendo y solo está sin dibujar vuelve a la vida en cuanto alguien reponga un botón.
+   El precio derivado (dishPrice) se queda, porque lo usan el tablón —que sí es un encargo con
+   tope diario, no una venta libre— y cualquier mercado entre jugadores que venga después.
+
+   QUÉ PIERDE EL JUGADOR: nada que tuviera. Lo que pierde es el atajo. El plato sigue curando en
+   la Zona, sigue dando su buff, y sigue entregándose en el tablón. */
+var DISH_VENTA_LIBRE = false;   // ← el día que exista el mercado entre jugadores, se abre acá
 // vender platos en la Cocina (doc: la maestría sube el precio; nivel 8+ desbloquea venta en $Golden)
 function sellDish(id, gold) {
   const r = RECIPE_DEF[id];
   if (!r) { console.warn("[sellDish] receta inexistente:", id); return; }   // bug de catálogo, no del jugador
+  if (!DISH_VENTA_LIBRE) {
+    /* regla 9: no se puede callar. Si alguien llega hasta acá —un botón viejo, un atajo, una
+       partida con la interfaz cacheada— tiene que entender por qué no pasa nada. */
+    toast("Los platos no se venden: son para comer");
+    log(r.label + " no se vende por plata. Los platos se comen (curan y dan su buff en la Zona Negra) " +
+        "o se entregan en el tablón. Entre jugadores sí se podrán comerciar.", "info");
+    return;
+  }
   // 24/8 (auditoría de silencios): vender un plato que ya no tenés moría mudo
   if (!G.dishes || (G.dishes[id] || 0) <= 0) { toast("No te queda ningún " + r.label); return; }
   // 14/8 (playtest: vendió la Papa Asada en pleno "comé un plato" y quedó trabado):
@@ -7884,6 +7910,29 @@ function lombricarioLibres() { return Math.max(0, lombricarioBocas() - lombricar
    papa 1, cereza 3, remolacha 5, cebolla 11 — y los cultivos nocturnos caros llenan la boca
    entera de un golpe, que ES su ventaja: la boca llena, no la boca elástica. */
 var LOMBRICARIO_TANDA_MAX = 12;
+/* ═══ EL CUPO DIARIO ═══ (9/9, dirección) ════════════════════════════════════════════════════
+   Textual: « vamos a poner que se saquen 15 lombrices diarias… así hacemos mercado con los
+   players que no quieran pescar ».
+
+   El tope de tanda (12) frenaba una boca; no frenaba el DÍA. Con cuatro bocas y cultivos caros
+   el granero se convertía en lombrices sin techo, y una lombriz es la entrada a toda la pesca:
+   sin límite diario no hay escasez, y sin escasez no hay nada que comerciar. Quince al día es
+   lo que convierte la lombriz en moneda entre jugadores en vez de en un grifo abierto.
+
+   SE COBRA AL ECHAR, no al cobrar la tanda. Es la diferencia entre « hoy ya encargaste tus 15 »
+   y « quemaste dos maíces y el cupo se comió diez lombrices »: lo segundo le quita al jugador
+   algo que ya había pagado, y eso no se hace. Por el mismo motivo, si la tanda no ENTRA entera
+   en lo que queda del cupo se rechaza y se dice cuánto queda, en vez de recortarla — así el
+   jugador puede elegir un cultivo más barato, que es justo la decisión que dirección quiso
+   dejarle el 1/9 (« quizás quiera vender el cultivo más caro en otro lugar »). */
+var LOMBRICES_POR_DIA = 15;
+function lombricesHoy() {
+  const hoy = hoyClave();
+  if (!G.lombDia || G.lombDia.dia !== hoy) G.lombDia = { dia: hoy, n: 0 };
+  return G.lombDia.n;
+}
+function lombricesCupoLibre() { return Math.max(0, LOMBRICES_POR_DIA - lombricesHoy()); }
+function lombricesSumarHoy(n) { lombricesHoy(); G.lombDia.n += n; }
 function lombricarioDa(k) {
   const p = (CROP_DEF[k] && CROP_DEF[k].price) || 1;
   const porValor = Math.max(1, Math.round(LOMBRICARIO_PIDE * p / (typeof WORM_PRICE === "number" ? WORM_PRICE : 3)));
@@ -7912,6 +7961,22 @@ function lombricarioEchar(k) {
   if (!k || !CROP_DEF[k]) { toast("Elegí qué cultivo echar"); return false; }
   if (Math.floor(G.res[k] || 0) < LOMBRICARIO_PIDE) { toast("Hace falta " + LOMBRICARIO_PIDE + " " + (CROP_DEF[k].label || k)); return false; }
   const da = lombricarioDa(k);
+  /* el cupo del día (ver LOMBRICES_POR_DIA). Se rechaza entero en vez de recortar: recortar le
+     cobraría al jugador dos cultivos por menos lombrices de las que el panel le prometió. */
+  const libre = lombricesCupoLibre();
+  if (libre <= 0) {
+    toast("Cupo de lombrices agotado por hoy");
+    log("El Lombricario ya sacó las " + LOMBRICES_POR_DIA + " lombrices de hoy. Vuelve a abrir a las 00:00 UTC — " +
+        "mientras tanto, se pueden comprar a otros jugadores.", "bad");
+    return false;
+  }
+  if (da > libre) {
+    toast("Te quedan " + libre + " del cupo de hoy");
+    log((CROP_DEF[k].label || k) + " daría " + da + " lombrices y hoy te quedan " + libre + " de las " +
+        LOMBRICES_POR_DIA + ". Echá un cultivo más barato o esperá al reset de las 00:00 UTC.", "bad");
+    return false;
+  }
+  lombricesSumarHoy(da);
   G.res[k] -= LOMBRICARIO_PIDE;
   /* 2/9 (dirección, con la captura de las tres bocas contando a la vez): « esto no debe correr
      simultáneo, debe correr 1 x 1 como los hornos ». Es la misma mecánica que la Cocina aprendió
@@ -7976,7 +8041,19 @@ function lombricesPorDia() {
      boca no se puede encolar, así que el rinde real es lo que alcances a recargar. */
   const porReloj = Math.floor(24 / LOMBRICARIO_HORAS);
   const tandas = lombricarioAbierto() ? Math.min(lombricarioBocas(), porReloj) : 0;
-  return Math.round((monticulos + tandas * porTanda) * 10) / 10;
+  /* 9/9 — Y AHORA MANDA EL CUPO. Dos cosas se arreglan de un tirón:
+     · el techo real del compost son las LOMBRICES_POR_DIA que puso dirección, no lo que las
+       bocas y el reloj permitirían;
+     · y con eso muere el peor consejo del juego. Esta estimación elegía « el mejor cultivo
+       desbloqueado » y con el tope de tanda eso era siempre el maíz: prometía 40,5 lombrices al
+       día que solo se alcanzaban quemando 7.200 de plata de maíz para sacar ~350 pescando —
+       una pérdida del 95 %. El panel recomendaba activamente la peor operación del juego.
+       Con el cupo, quemar maíz ya no compra más lombrices que quemar ciruela: compra las mismas
+       15 por mucho más dinero, así que la estimación deja de premiar al cultivo caro.
+     Los montículos NO entran en el cupo: son del suelo, no del compost, y son el piso que
+     garantiza que nadie se quede sin cebo. */
+  const delCompost = Math.min(LOMBRICES_POR_DIA, tandas * porTanda);
+  return Math.round((monticulos + delCompost) * 10) / 10;
 }
 
 /* ═══════════════════════════════════════════════════════════════════════════════════════════

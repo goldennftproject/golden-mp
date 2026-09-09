@@ -245,7 +245,7 @@ function snapshot() {
     cont: G.cont,             /* 8/9 t: el árbol que llevás puesto — se pierde al morir, no al recargar */
     tumba: G.tumba,           /* 8/9: tu cuerpo en la zona — sus 10 min son de reloj real */
     modoPelea: G.modoPelea,   /* 8/9: perseguir o parado — es preferencia, no estado del viaje */
-    stats: G.stats, statsBase: G.statsBase, chestCap: G.chestCap, edif2: G.edif2, cosmeticos: G.cosmeticos, animals: G.animals, armor: G.armor, armorEq: G.armorEq, ofrendaPts: G.ofrendaPts, ofrendaLog: G.ofrendaLog, nodoUsos: G.nodoUsos, cosEq: G.cosEq, incursion: G.incursion, incDia: G.incDia, zonaCdHasta: G.zonaCdHasta, zonaViaje: G.zonaViaje, decos: G.decos, decoBolsa: G.decoBolsa, godHand: G.godHand, zonasVistas: G.zonasVistas, visto: nowMs(), dummyTrain: G.dummyTrain, swordOwned: G.swordOwned, bowOwned: G.bowOwned, swordWoodOwned: G.swordWoodOwned, gear: G.gear,
+    stats: G.stats, statsBase: G.statsBase, chestCap: G.chestCap, edif2: G.edif2, cosmeticos: G.cosmeticos, animals: G.animals, armor: G.armor, armorEq: G.armorEq, ofrendaPts: G.ofrendaPts, ofrendaLog: G.ofrendaLog, nodoUsos: G.nodoUsos, cosEq: G.cosEq, incursion: G.incursion, incDia: G.incDia, zonaCdHasta: G.zonaCdHasta, zonaViaje: G.zonaViaje, lombDia: G.lombDia, decos: G.decos, decoBolsa: G.decoBolsa, godHand: G.godHand, zonasVistas: G.zonasVistas, visto: nowMs(), dummyTrain: G.dummyTrain, swordOwned: G.swordOwned, bowOwned: G.bowOwned, swordWoodOwned: G.swordWoodOwned, gear: G.gear,
     armasUnlocked: G.armasUnlocked, editVisto: G.editVisto, treesOpen: G.treesOpen, rocksOpen: G.rocksOpen, firstCropDone: G.firstCropDone, weapons: G.weapons,
     dishes: G.dishes, cooking: G.cooking, horno: G.horno, chests: G.chests, dummyUsedAt: G.dummyUsedAt,   // 24/8: la cola del Horno
     armCd: G.armCd, mkPend: G.mkPend,
@@ -380,6 +380,12 @@ function hydrate(d) {
   G.godHand = d.godHand === true;
   G.zonaCdHasta = typeof d.zonaCdHasta === "number" ? d.zonaCdHasta : 0;
   G.zonaViaje = (d.zonaViaje && typeof d.zonaViaje === "object") ? d.zonaViaje : null;
+  /* 9/9 — EL CUPO DIARIO DE LOMBRICES VIAJA EN EL GUARDADO. Sin esto, un F5 lo reiniciaba y el
+     tope de 15 no existía: exactamente el patrón de « campo que el snapshot olvida » que la
+     auditoría de ayer encontró cuatro veces. La clave del día se guarda con él, así que un
+     guardado de anteayer no arrastra su cuenta. */
+  G.lombDia = (d.lombDia && typeof d.lombDia === "object" && typeof d.lombDia.dia === "string")
+    ? { dia: d.lombDia.dia, n: Math.max(0, Math.floor(d.lombDia.n) || 0) } : null;
   G.animals = {};
   if (d.animals && typeof d.animals === "object") {
     for (const k in d.animals) {

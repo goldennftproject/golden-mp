@@ -95,9 +95,17 @@ console.log("\nLA FILA: 1 × 1 COMO LOS HORNOS   (2/9, dirección)");
   /* « esto no debe correr simultáneo, debe correr 1 x 1 como los hornos ». Las bocas dejan de
      ser máquinas en paralelo y pasan a ser la PROFUNDIDAD de la fila: cuántas tandas podés
      dejar encargadas. El techo diario ya no lo ponen las bocas, lo pone el reloj. */
-  G.lombricario = []; G.res.cebolla = 20; G.res.lombriz = 0;
+  /* 9/9 — ESTE BLOQUE USABA CEBOLLA Y AHORA NO CABE. Dirección puso hoy un cupo de 15 lombrices
+     al día (LOMBRICES_POR_DIA) y una tanda de cebolla son 11: tres seguidas son 33. La autonomía
+     de « dejar tres tandas encargadas antes de irte », que es lo que este bloque custodia desde
+     el 2/9, sigue existiendo — pero ahora depende de QUÉ eches, y con los cultivos caros el cupo
+     llega antes que las bocas. Es una consecuencia real de la decisión de hoy, no un fallo, y
+     está reportada a dirección. El bloque pasa a la ciruela (3 por tanda: tres tandas son 9 y
+     entran), que es donde la mecánica de la FILA —lo que este test mide— se ve igual de bien.
+     El cupo tiene su propio test; acá no se prueba el cupo, se prueba el orden de la cola. */
+  G.lombricario = []; G.res.ciruela = 20; G.res.lombriz = 0; G.lombDia = null;
   const H = g("LOMBRICARIO_HORAS") * 3600e3;
-  ctx.lombricarioEchar("cebolla"); ctx.lombricarioEchar("cebolla"); ctx.lombricarioEchar("cebolla");
+  ctx.lombricarioEchar("ciruela"); ctx.lombricarioEchar("ciruela"); ctx.lombricarioEchar("ciruela");
   const l = ctx.lombricario();
   ok("tres tandas encargadas, tres relojes DISTINTOS", l.length === 3 && l[0].listaEn !== l[1].listaEn);
   ok("la 1ª termina a las " + g("LOMBRICARIO_HORAS") + " h", Math.round((l[0].listaEn - AHORA) / 3600e3) === g("LOMBRICARIO_HORAS"));
@@ -108,15 +116,15 @@ console.log("\nLA FILA: 1 × 1 COMO LOS HORNOS   (2/9, dirección)");
   AHORA += H + 1000;
   ok("cumplidas las primeras " + g("LOMBRICARIO_HORAS") + " h, hay UNA sola lista", ctx.lombricarioListas() === 1);
   const dio = ctx.lombricarioReclamar();
-  ok("y recoger paga solo esa tanda", dio === ctx.lombricarioDa("cebolla"), "+" + dio);
+  ok("y recoger paga solo esa tanda", dio === ctx.lombricarioDa("ciruela"), "+" + dio);
   ok("las otras dos siguen en la fila", ctx.lombricario().length === 2);
   AHORA += H * 2 + 1000;
   ok("pasado el turno de las dos, las dos están listas", ctx.lombricarioListas() === 2);
   ctx.lombricarioReclamar();
 
   /* y la fila corre con el juego CERRADO: un reloj no se olvida de correr */
-  G.lombricario = []; G.res.cebolla = 20;
-  ctx.lombricarioEchar("cebolla"); ctx.lombricarioEchar("cebolla");
+  G.lombricario = []; G.res.ciruela = 20; G.lombDia = null;   /* día nuevo: el cupo se renueva */
+  ctx.lombricarioEchar("ciruela"); ctx.lombricarioEchar("ciruela");
   AHORA += H * 2 + 1000;
   ok("al volver de un día, la fila entera está hecha (corre sin el jugador)", ctx.lombricarioListas() === 2);
   ctx.lombricarioReclamar();
@@ -126,9 +134,20 @@ console.log("\nLA FILA: 1 × 1 COMO LOS HORNOS   (2/9, dirección)");
   const mont = ctx.excavPorDia() * 1.5;
   const delEdificio = ctx.lombricesPorDia() - mont;
   const tandas = Math.min(ctx.lombricarioBocas(), porReloj);
-  ok("la cuenta del día ya no multiplica por boca — cabe lo que entra en 24 h",
-    Math.abs(delEdificio - tandas * g("LOMBRICARIO_TANDA_MAX")) <= tandas,
-    tandas + " tandas de hasta " + g("LOMBRICARIO_TANDA_MAX") + " → " + Math.round(delEdificio));
+  /* 9/9 — Y AHORA EL TECHO LO PONE EL CUPO, no el reloj. Dirección: « vamos a poner que se
+     saquen 15 lombrices diarias ». El reloj dejaría pasar 3 tandas de hasta 12 —36— y el cupo
+     corta en 15. Este renglón afirmaba lo de antes; se actualiza porque el mundo cambió por una
+     decisión tomada, no porque el número molestara: la cuenta sigue siendo la del juego, y si
+     mañana el cupo sube, sube sola. */
+  const techoReloj = tandas * g("LOMBRICARIO_TANDA_MAX");
+  ok("la cuenta del día la corta el CUPO diario, no las bocas ni el reloj",
+    Math.abs(delEdificio - Math.min(g("LOMBRICES_POR_DIA"), techoReloj)) <= 1,
+    tandas + " tandas de hasta " + g("LOMBRICARIO_TANDA_MAX") + " = " + techoReloj +
+    " · cupo " + g("LOMBRICES_POR_DIA") + " → " + Math.round(delEdificio));
+  /* y la promesa del panel deja de premiar al caro: con el cupo, quemar maíz no compra más
+     lombrices que quemar ciruela — compra las mismas por mucho más dinero. */
+  ok("el panel ya no promete más por quemar el cultivo caro",
+    ctx.lombricesPorDia() - mont <= g("LOMBRICES_POR_DIA"), Math.round(delEdificio) + " del compost");
 }
 
 console.log("\nLAS OTRAS PUERTAS, CERRADAS   (montículos y compost, nada más)");

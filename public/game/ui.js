@@ -2495,9 +2495,13 @@ function refreshCooking() {
     let btns = '<button class="green sm" ' + ((!locked && canCook(id) && cookFree() > 0) ? "" : "disabled") + ' data-cook="' + id + '">' + (locked ? "Nivel " + r.lvl : "Cocinar") + '</button>';
     // el tiempo que se muestra tiene que ser el que de verdad va a tardar: la Cocina nivel 2
     // descuenta un % y el panel prometía el tiempo sin descuento (10/8)
-    if (own > 0 && r.plata) btns += '<button class="sm" data-selld="' + id + '">Vender (' + own + ') · ' + vPlata + ' plata</button>';
-    if (own > 0 && r.goldenP && lvl >= 8) btns += '<button class="sm" data-sellg="' + id + '">Vender · ' + r.goldenP + ' $G</button>';
-    return '<div class="forge-row' + (locked ? ' locked' : '') + '"><div class="fic">' + fic + '</div><div class="finfo"><div class="fnm">' + r.label + (locked ? ' · se desbloquea a nivel ' + r.lvl : '') + '</div><div class="fds">' + dishDesc(r) + ' · cocción ' + fmtSecs(Math.round((r.cookS || 8) * (typeof cocinaFactor === "function" ? cocinaFactor() : 1))) + ' · +' + r.xp + ' XP</div><div class="fds">Ingredientes: ' + parts.join(" · ") + (r.plata ? ' · Venta: ' + vPlata + ' plata' + (r.goldenP ? ' o ' + r.goldenP + ' $Golden (Nv 8)' : '') : '') + '</div></div><div class="fbtns">' + btns + '</div></div>';
+    /* 9/9 (dirección): los platos no se venden por plata ni por $Golden — se comen o se entregan
+       en el tablón. Los botones se van con la puerta; la puerta la cierra sellDish. */
+    if (typeof DISH_VENTA_LIBRE !== "undefined" && DISH_VENTA_LIBRE) {
+      if (own > 0 && r.plata) btns += '<button class="sm" data-selld="' + id + '">Vender (' + own + ') · ' + vPlata + ' plata</button>';
+      if (own > 0 && r.goldenP && lvl >= 8) btns += '<button class="sm" data-sellg="' + id + '">Vender · ' + r.goldenP + ' $G</button>';
+    }
+    return '<div class="forge-row' + (locked ? ' locked' : '') + '"><div class="fic">' + fic + '</div><div class="finfo"><div class="fnm">' + r.label + (locked ? ' · se desbloquea a nivel ' + r.lvl : '') + '</div><div class="fds">' + dishDesc(r) + ' · cocción ' + fmtSecs(Math.round((r.cookS || 8) * (typeof cocinaFactor === "function" ? cocinaFactor() : 1))) + ' · +' + r.xp + ' XP</div><div class="fds">Ingredientes: ' + parts.join(" · ") + ((typeof DISH_VENTA_LIBRE !== "undefined" && DISH_VENTA_LIBRE && r.plata) ? ' · Venta: ' + vPlata + ' plata' + (r.goldenP ? ' o ' + r.goldenP + ' $Golden (Nv 8)' : '') : ' · se come o se entrega en el tablón') + '</div></div><div class="fbtns">' + btns + '</div></div>';
    } catch (e) { console.warn("receta con problema:", id, e); return ""; }
   }).join("");
   box.querySelectorAll("[data-cook]").forEach(b => b.onclick = () => cook(b.dataset.cook));
@@ -2619,8 +2623,10 @@ function refreshCookingV2() {
      paso del Estofado —la flecha se lo señalaba y el botón no le decía que le faltaba una papa. */
   else d += '<button class="green sm" ' + (canCook(_ckSel) ? "" : "disabled") + ' data-ckcook="' + _ckSel + '" data-cook="' + _ckSel + '">' +
     (canCook(_ckSel) ? "Cocinar" : ((typeof cookFaltaTxt === "function" && cookFaltaTxt(_ckSel)) || "Faltan ingredientes")) + '</button>';
-  if (own > 0 && r.plata) d += '<button class="sm" data-cksell="' + _ckSel + '">Vender · ' + fmt(vPlata) + '</button>';
-  if (own > 0 && r.goldenP && lvl >= 8) d += '<button class="sm" data-cksellg="' + _ckSel + '">Vender · ' + r.goldenP + ' $G</button>';
+  if (typeof DISH_VENTA_LIBRE !== "undefined" && DISH_VENTA_LIBRE) {
+    if (own > 0 && r.plata) d += '<button class="sm" data-cksell="' + _ckSel + '">Vender · ' + fmt(vPlata) + '</button>';
+    if (own > 0 && r.goldenP && lvl >= 8) d += '<button class="sm" data-cksellg="' + _ckSel + '">Vender · ' + r.goldenP + ' $G</button>';
+  }
   d += '</div>';
   det.innerHTML = d;
   det.querySelectorAll("[data-ckcook]").forEach(b => b.onclick = () => cook(b.dataset.ckcook));
