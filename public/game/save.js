@@ -378,7 +378,19 @@ function hydrate(d) {
   G.decos = Array.isArray(d.decos) ? d.decos.slice(0, 200) : [];
   G.decoBolsa = (d.decoBolsa && typeof d.decoBolsa === "object") ? d.decoBolsa : {};
   G.godHand = d.godHand === true;
-  G.zonaCdHasta = typeof d.zonaCdHasta === "number" ? d.zonaCdHasta : 0;
+  /* 9/9 (Suren: « el CD de volver a zona negra no se quitó ») — Y TENÍA RAZÓN, Y ERA MÍO.
+     Bajé ZONA_CD_MIN a 0 pero el enfriamiento YA ESCRITO sobrevive: G.zonaCdHasta es una hora
+     guardada, así que quien salió de la Zona antes del despliegue arrastra un timestamp futuro
+     y el juego lo sigue respetando aunque la regla que lo creó ya no exista. Cambiar la
+     constante no basta: hay que limpiar el estado que esa constante dejó atrás.
+     No se pone a cero a lo bruto: se RECORTA a lo que la regla de hoy permitiría como máximo.
+     Con ZONA_CD_MIN en 0 eso es « ahora » —el CD desaparece para todos, incluidos los guardados
+     viejos— y si mañana vuelve a subir, el recorte sigue siendo correcto solo. */
+  {
+    const guardado = typeof d.zonaCdHasta === "number" ? d.zonaCdHasta : 0;
+    const tope = nowMs() + (typeof ZONA_CD_MIN === "number" ? ZONA_CD_MIN : 0) * 60000;
+    G.zonaCdHasta = Math.min(guardado, tope);
+  }
   G.zonaViaje = (d.zonaViaje && typeof d.zonaViaje === "object") ? d.zonaViaje : null;
   /* 9/9 — EL CUPO DIARIO DE LOMBRICES VIAJA EN EL GUARDADO. Sin esto, un F5 lo reiniciaba y el
      tope de 15 no existía: exactamente el patrón de « campo que el snapshot olvida » que la
