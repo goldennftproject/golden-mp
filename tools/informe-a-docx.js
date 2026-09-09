@@ -118,16 +118,26 @@ hijos.push(parr("El escalón 2 pagaba 10 de plata y el 7 pagaba 7.740 — más q
 hijos.push(h2("La Caña de Hierro vuelve a tener hierro"));
 hijos.push(parr("Se había quedado en { cuero, tablón } — una caña de hierro sin una sola barra. No fue descuido: con los precios de hoy no entraba en su presupuesto, porque el cuero pasó a valer 742 cuando los animales se fueron a 24 h. Se movió el presupuesto a 1.500, que es lo que la mezcla honesta cuesta. Y el nivel cuadra solo: la Curtiduría se levanta al 8, que es el nivel de esta caña."));
 
-hijos.push(h2("26 niveles mudos pasaron a 3"));
-hijos.push(parr("El plan cosmético estaba escrito y **no se entregaba nunca**. La línea que lo repartía preguntaba « ¿el premio de este nivel nombra un Título, un Marco…? » sobre un texto que se genera solo y jamás nombra un cosmético: la condición era imposible de cumplir. Un if que nunca es cierto no da error, no deja log y no lo ve nadie."));
+hijos.push(h2("Un if que nunca era cierto, encontrado"));
+hijos.push(parr("El plan cosmético estaba escrito y **no se entregaba nunca**: la línea que lo repartía preguntaba « ¿el premio de este nivel nombra un Título, un Marco…? » sobre un texto que se genera solo y jamás nombra un cosmético. La condición era imposible de cumplir. Un if que nunca es cierto no da error, no deja log y no lo ve nadie — llevaba semanas sin repartir uno solo. Eso es lo que vale de este hallazgo: el bug, no el premio."));
+hijos.push(new Paragraph({
+  children: rico("**Aviso, y es mío:** en la primera versión de este informe puse esto arriba como « 26 niveles mudos pasaron a 3 ». Es engañoso y va contra la ley 3 (docs/LEYES.md, dictada por Golden el 9/9): **un cosmético no es contenido**. Los 26 niveles que « se llenaron » siguen sin darle al jugador nada que pueda usar. Lo correcto está abajo, en « Qué está mal ».", { size: 20, italics: true }),
+  spacing: { after: 160, before: 60 },
+  indent: { left: 360 },
+  border: { left: { style: BorderStyle.SINGLE, size: 12, color: ROJO, space: 12 } },
+}));
 
 /* ── lo que está mal ───────────────────────────────────────────────────────────────────── */
 hijos.push(h1("Qué está mal — y necesita que decidas vos"));
 
-hijos.push(h2("1 · Los diez primeros niveles no dan ningún cosmético"));
-hijos.push(parr("Los cosméticos empiezan en el 11. O sea que los primeros **ocho días** —el tramo donde se decide si alguien se queda— no tienen ni un título ni un marco. Es donde más falta hace y es donde no hay nada."));
+hijos.push(h2("1 · 26 de los 49 niveles no le dan al jugador nada que pueda usar"));
+hijos.push(parr("Éste es el hallazgo de verdad, y en la primera versión de este informe lo tenía tapado."));
+hijos.push(parr("Medido: de los 49 niveles de granja, sólo 23 entregan algo **jugable** — una expansión, un plano, un edificio de nivel 2, capacidad de cofre o vales del tablón. Los otros 26 entregan el bono de venta (+1,5 %, unas 3 de plata por hora, invisible) y un cosmético."));
+hijos.push(parr("Yo había contado esos 26 como resueltos porque el cosmético por fin se entrega. Bajo la ley 3 eso no cuenta: **un título no es una recompensa**. Así que el hueco sigue entero, y está sobre todo en el tramo medio, entre expansión y expansión."));
+hijos.push(parr("Los 26: **6, 8, 11, 14, 16, 17, 19, 20, 22, 25, 26, 29, 30, 32, 34, 36, 37, 38, 40, 41, 43, 44, 45, 47, 48, 49.**"));
+hijos.push(parr("Lo que hay que decidir es **qué se entrega ahí** que el jugador pueda usar. No lo propongo yo porque es tuyo, pero el material para elegir ya existe en el juego: nodos sueltos, lugares de establo, huecos de nasa, semillas de escalón alto, vales del tablón, capacidad de bolsa o cofre."));
 
-hijos.push(h2("2 · Tres niveles siguen mudos, y los tres por promesas viejas"));
+hijos.push(h2("2 · Tres niveles no entregan ni siquiera eso, y los tres por promesas viejas"));
 hijos.push(tabla(
   [{ t: "nivel", w: 900 }, { t: "lo que la tabla prometía", w: 3200 }, { t: "por qué ya no es suyo", w: 5260 }],
   [["6", "6ª parcela GRATIS", "las parcelas las trae la expansión desde el 18/8"],
@@ -175,6 +185,7 @@ hijos.push(punto("« que la cola de niveles arranque en 5.000 y decaiga » → e
 hijos.push(punto("« atar las armas a su oficio de combate » → un muro de 2.120 ratas."));
 hijos.push(punto("y escribí un matValor() que ya existía 4.000 líneas más abajo — escribir en vez de derivar, mientras arreglaba exactamente ese fallo."));
 hijos.push(parr("El patrón de toda la semana es siempre el mismo: **un número escrito a mano que envejece en silencio debajo de una economía que sí se deriva.** El tablón con los minerales, la caña con su presupuesto, el pase con sus cantidades, la tabla de cosméticos que nadie leía. Ninguno estaba en rojo. Por eso ahora casi todo se deriva y hay un test que lo custodia."));
+hijos.push(parr("Y una cuarta, que llegó después de escribir la primera versión de esto: **conté 26 niveles como resueltos porque les llegaba un cosmético.** Golden lo paró en el acto y dictó la ley 3 — *para que a alguien le importe un adorno, primero le tiene que gustar el juego*. Tenía razón y el error era de los que peor envejecen: no es un número mal medido, es haber medido lo que no importa. Las tres leyes están ahora en docs/LEYES.md, que antes no existía — vivían sueltas en comentarios de código, y por eso me llevé por delante la de los nodos hace dos días."));
 
 const doc = new Document({
   creator: "Golden",

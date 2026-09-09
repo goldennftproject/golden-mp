@@ -54,20 +54,40 @@ porque el cuero pasó a valer 742 cuando los animales se fueron a 24 h. Se movi�
 1.500, que es lo que la mezcla honesta cuesta. Y el nivel cuadra solo: la Curtiduría se levanta
 al 8, que es el nivel de esta caña.
 
-**26 niveles mudos pasaron a 3.** El plan cosmético estaba escrito y **no se entregaba nunca**.
-La línea que lo repartía preguntaba « ¿el premio de este nivel nombra un Título, un Marco…? »
-sobre un texto que se genera solo y jamás nombra un cosmético: la condición era imposible de
-cumplir. Un `if` que nunca es cierto no da error, no deja log y no lo ve nadie.
+**Un `if` que nunca era cierto, encontrado.** El plan cosmético estaba escrito y **no se
+entregaba nunca**: la línea que lo repartía preguntaba « ¿el premio de este nivel nombra un
+Título, un Marco…? » sobre un texto que se genera solo y jamás nombra un cosmético. La condición
+era imposible de cumplir. Un `if` que nunca es cierto no da error, no deja log y no lo ve nadie —
+llevaba semanas sin repartir uno solo. Eso es lo que vale de este hallazgo: el bug, no el premio.
+
+> **Aviso, y es mío:** en la primera versión de este informe puse esto arriba como « 26 niveles
+> mudos pasaron a 3 ». Es engañoso y va contra la ley 3 (ver `docs/LEYES.md`, dictada por Golden
+> el 9/9): **un cosmético no es contenido**. Los 26 niveles que "se llenaron" siguen sin darle al
+> jugador nada que pueda usar. Lo correcto está abajo, en « Qué está mal ».
 
 ---
 
 ## QUÉ ESTÁ MAL — y necesita que decidas vos
 
-**1 · Los diez primeros niveles no dan ningún cosmético.** Los cosméticos empiezan en el 11.
-O sea que los primeros **ocho días** —el tramo donde se decide si alguien se queda— no tienen ni
-un título ni un marco. Es donde más falta hace y es donde no hay nada.
+**1 · 26 de los 49 niveles no le dan al jugador nada que pueda usar.** Éste es el hallazgo de
+verdad, y en la primera versión de este informe lo tenía tapado.
 
-**2 · Tres niveles siguen mudos, y los tres por promesas viejas.**
+Medido: de los 49 niveles de granja, sólo 23 entregan algo **jugable** — una expansión, un plano,
+un edificio de nivel 2, capacidad de cofre o vales del tablón. Los otros 26 entregan el bono de
+venta (+1,5 %, unas 3 de plata por hora, invisible) y un cosmético.
+
+Yo había contado esos 26 como resueltos porque el cosmético por fin se entrega. Bajo la ley 3 eso
+no cuenta: **un título no es una recompensa**. Así que el hueco sigue entero, y está sobre todo en
+el tramo medio, entre expansión y expansión.
+
+Los 26: **6, 8, 11, 14, 16, 17, 19, 20, 22, 25, 26, 29, 30, 32, 34, 36, 37, 38, 40, 41, 43, 44,
+45, 47, 48, 49.**
+
+Lo que hay que decidir es **qué se entrega ahí** que el jugador pueda usar. No lo propongo yo
+porque es tuyo, pero el material para elegir ya existe en el juego: nodos sueltos, lugares de
+establo, huecos de nasa, semillas de escalón alto, vales del tablón, capacidad de bolsa o cofre.
+
+**2 · Tres niveles no entregan ni siquiera eso, y los tres por promesas viejas.**
 
 | nivel | lo que la tabla prometía | por qué ya no es suyo |
 |---|---|---|
@@ -152,3 +172,10 @@ El patrón de toda la semana es siempre el mismo: **un número escrito a mano qu
 silencio debajo de una economía que sí se deriva.** El tablón con los minerales, la caña con su
 presupuesto, el pase con sus cantidades, la tabla de cosméticos que nadie leía. Ninguno estaba
 en rojo. Por eso ahora casi todo se deriva y hay un test que lo custodia.
+
+Y una cuarta, que llegó después de escribir la primera versión de esto: **conté 26 niveles como
+resueltos porque les llegaba un cosmético.** Golden lo paró en el acto y dictó la ley 3 — *para
+que a alguien le importe un adorno, primero le tiene que gustar el juego*. Tenía razón y el error
+era de los que peor envejecen: no es un número mal medido, es haber medido lo que no importa.
+Las tres leyes están ahora en `docs/LEYES.md`, que antes no existía — vivían sueltas en
+comentarios de código, y por eso me llevé por delante la de los nodos hace dos días.

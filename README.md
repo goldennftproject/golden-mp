@@ -1,5 +1,12 @@
 # Golden Farm · Zona compartida (POC multijugador)
 
+> ## ⚖️ Antes de tocar nada: [`docs/LEYES.md`](docs/LEYES.md)
+>
+> Tres leyes de dirección que no se discuten ni se optimizan: el progreso no se resetea, el
+> ritmo de los nodos no se toca, y lo cosmético no cuenta como contenido. Si una tarea choca
+> con una de ellas, la que cede es la tarea.
+
+
 Prueba de concepto de la **zona compartida** en tiempo real, con la misma tecnología que Sunflower Land:
 
 - **Cliente:** Phaser 3 (mundo, movimiento libre con diagonal, cámara que sigue al jugador).
