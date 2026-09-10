@@ -19,6 +19,15 @@ REM estuviera commiteado de antes, asi que cualquier cambio hecho aca NUNCA lleg
 REM node_modules ya no se versiona (Render instala las dependencias solo, desde package.json).
 REM Y si el add vuelve a fallar por lo que sea, esto se planta: mejor no deployar que deployar
 REM la mitad.
+REM 9/9: Y LO PRIMERO, ESTAR EN UNA RAMA. El deploy del 9/9 a las 21:54 commiteo bien y murio
+REM en el push con "You are not currently on a branch": el repo estaba en HEAD DESPRENDIDO
+REM porque una sesion de diagnostico hizo `git checkout <sha>` para comparar commits y no
+REM volvio. Los ocho commits del dia estaban ahi, sanos, pero colgando fuera de main — y el
+REM push no tiene adonde ir. Se comprueba ANTES de tocar nada: es un segundo, y el sintoma sin
+REM el aviso parece que el deploy esta roto cuando lo que esta mal es donde esta parado el repo.
+git symbolic-ref -q HEAD >nul
+if errorlevel 1 goto :fallorama
+
 git add -A
 if errorlevel 1 goto :falloadd
 git commit -m "deploy %date% %time%"
@@ -45,6 +54,22 @@ echo Listo. Render va a redeployar automaticamente en 1-2 minutos.
 echo Podes cerrar esta ventana.
 pause
 exit /b 0
+
+:fallorama
+echo.
+echo   !! EL REPO NO ESTA EN UNA RAMA (HEAD desprendido). No se commiteo nada.
+echo.
+echo   Los commits que hagas asi quedan colgando y el push no tiene adonde ir.
+echo   No se pierde nada: estan todos guardados. Para volver a la rama y llevarte
+echo   lo que quedo suelto, en esta misma carpeta:
+echo.
+echo       git branch -f main HEAD
+echo       git checkout main
+echo.
+echo   (comproba antes con  git log --oneline -3  que lo de arriba es tuyo)
+echo   Y despues volve a correr este deploy.
+pause
+exit /b 1
 
 :falloadd
 echo.
