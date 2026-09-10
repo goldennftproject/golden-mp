@@ -24,6 +24,9 @@ ctx.localStorage = { getItem: () => null, setItem() {}, removeItem() {} };
 ctx.document = { getElementById: () => null, addEventListener() {}, querySelectorAll: () => [], querySelector: () => null, createElement: () => ({}) };
 vm.createContext(ctx);
 ["config", "nav", "state", "save"].forEach(f => vm.runInContext(fs.readFileSync("public/game/" + f + ".js", "utf8"), ctx));
+/* 10/9: con GF.MVP = 1 la doma no se dispara (está escondida, no borrada). Este archivo custodia el
+   sistema que vuelve con GF.MVP = 0, así que se prueba con la bandera apagada. */
+vm.runInContext("GF.MVP = 0;", ctx);
 const avisos = [];
 ctx.toast = t => avisos.push(String(t)); ctx.log = t => avisos.push(String(t));
 ["isOpen", "refreshInv", "refreshHud", "saveFarm", "syncSlots", "refreshBarn", "recalcFarmLevel"].forEach(f => { if (!ctx[f]) ctx[f] = () => {}; });

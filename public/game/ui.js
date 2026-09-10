@@ -28,7 +28,19 @@ const OV_REFRESH = { "ov-entrenando": () => entrenarSync(), "ov-clan": () => ref
 // los overlays NO bloquean el juego: podés seguir moviéndote/interactuando con la ventana abierta
 // sonido propio de cada edificio al abrir su ventana (pedido del diseñador)
 const OV_SFX = { "ov-pedidos": "shop", "ov-market": "shop", "ov-forge": "forge", "ov-barn": "door", "ov-cocina": "door", "ov-cofre": "door", "ov-paquete": "coin", "ov-altar": "forge", "ov-establo": "door", "ov-curtiduria": "forge" };
-function openOv(id) { const e = $(id); if (!e) return; e.classList.add("show"); if (window.sfx) sfx(OV_SFX[id] || "click"); if (OV_REFRESH[id]) OV_REFRESH[id](); if (typeof tutoHighlight === "function") tutoHighlight(); }   // 13/8: al abrir un panel, el botón del objetivo se resalta al instante
+function openOv(id) {
+  /* 10/9 — LA PUERTA ÚNICA DEL MVP. Todo panel entra por acá: el menú, los atajos de teclado,
+     las cartas del buzón, los botones « Ver el Pase ». Cerrando acá se cierra en todos a la vez,
+     que es la única forma de que un panel escondido no se cuele por una puerta que nadie
+     recordaba (cf. « una puerta por acción », 20/8). Y contesta, por la regla 9: si alguien
+     llega hasta acá con un id oculto —una carta vieja del buzón, un atajo— se le dice que en
+     esta versión no está, en vez de un clic que no hace nada. */
+  if (typeof GF !== "undefined" && GF.esOcultoMvp && GF.esOcultoMvp(id)) {
+    if (typeof toast === "function") toast("Eso no está en esta versión de prueba");
+    return;
+  }
+  const e = $(id); if (!e) return; e.classList.add("show"); if (window.sfx) sfx(OV_SFX[id] || "click"); if (OV_REFRESH[id]) OV_REFRESH[id](); if (typeof tutoHighlight === "function") tutoHighlight();   // 13/8: al abrir un panel, el botón del objetivo se resalta al instante
+}
 
 // FUNDIDO A NEGRO al cambiar de escena (granja <-> Zona Negra <-> plaza). Antes era un corte seco.
 function irAEscena(sc, destino) {
@@ -4279,7 +4291,13 @@ function initUI() {
   if (gmFijar) { gmFijarTxt(); gmFijar.onclick = () => { try { localStorage.setItem("gmenuFijo", menuFijo() ? "0" : "1"); } catch (e) {} gmFijarTxt(); toast(menuFijo() ? "El menú queda desplegado" : "El menú se recoge solo"); }; }
   if (menuFijo()) gmenu.classList.remove("collapsed");
   // multiventana: abrir un panel ya no cierra los demás (detalles 29/7)
-  document.querySelectorAll(".gmi[data-panel]").forEach(b => b.onclick = () => { openOv(b.dataset.panel); if (!menuFijo()) gmenu.classList.add("collapsed"); });
+  document.querySelectorAll(".gmi[data-panel]").forEach(b => {
+    /* 10/9 — MVP: lo escondido no aparece en el menú. openOv ya lo rechaza si alguien llega por
+       otra puerta; esto es para que ni siquiera se vea el botón — un botón que contesta « no
+       está » es mejor que uno mudo, pero uno que no existe es mejor que los dos. */
+    if (typeof GF !== "undefined" && GF.esOcultoMvp && GF.esOcultoMvp(b.dataset.panel)) { b.style.display = "none"; return; }
+    b.onclick = () => { openOv(b.dataset.panel); if (!menuFijo()) gmenu.classList.add("collapsed"); };
+  });
   document.querySelectorAll("[data-close]").forEach(b => b.onclick = () => closeOv(b.dataset.close));
   // entrenamiento: el botón y también un clic en cualquier lado de la capa oscura
   { const b = $("entr-fin"); if (b) b.onclick = entrenarFin;

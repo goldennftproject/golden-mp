@@ -22,16 +22,30 @@ en `docs/LEYES.md`.
 
 **El camino al MVP, en orden:**
 
-- [ ] **1 · Tapar el hueco de las 8 horas.** Del tutorial al nivel 3 hay 12 minutos; del 3 al 4,
-  8,2 horas. Es lo único de toda la lista que puede cambiar el resultado por sí solo. Hace falta
-  algo a los 20 minutos, a la hora y a las tres horas.
-- [ ] **2 · Bajar el techo de granja** a donde de verdad se llega, y derivarlo en vez de tenerlo
-  escrito a mano — es el único techo del juego que no se calcula solo. Las 16 expansiones se
-  re-reparten (no se quita ninguna) y caen más seguido, que para el MVP es mejor.
-- [ ] **3 · Esconder tras bandera** lo que no contesta la pregunta: pase, logros, álbum, doma,
-  torneo, asalto de clan, títulos de la Lonja. Esconder, no borrar.
+- [x] ~~**1 · Tapar el hueco de las 8 horas.**~~ **NO EXISTÍA.** El 8,2 h era el simulador con
+  perfil de tres sesiones diarias: mide que el jugador se fue a dormir, no que el juego lo
+  frene. Calculado sobre las tablas, quien se queda jugando llega al nivel 4 en ~15 minutos y
+  al 6 en ~1 h 25 (ver LEYES.md). Lo que queda es otra pregunta —*¿el juego le da un motivo
+  para quedarse?*— y ésa va al playtest.
+- [ ] **2 · Bajar el techo de granja.** Contado: 24 premios jugables sobre 23 niveles → techo
+  honesto 24-25. **Queda a UN número:** `FARM_NIVEL_MAX` en state.js:1565. Todo lo que colgaba
+  del 50 a mano ya cuelga del techo: las 16 expansiones (fórmula), la cola de XP (`FARM_XP_TECHO`
+  es el mes, no cambia), el cofre y el altar nivel 2 (`nivelEscalado`), y las tareas del 11-50,
+  que ahora son una escalera de 40 peldaños repartida entre el 11 y el techo (con 50 sale
+  idéntica a la tabla vieja — identidad aritmética, comprobable leyendo). Lo que falta es
+  **medir**: poner 25, correr `simular-partida.js 3 25` y la suite, mirar que el mes siga en ~30
+  días y que ningún nivel se quede mudo. *La suite (141) y `test-techo-a-un-numero` pasaron en
+  verde el 10/9; `simular-partida 3 50` sigue dando el mes en 29,7 días. Falta medir con 25.* Por la
+  regla del MVP esto NO cambia el día siete (el 1-10 no se toca): es honestidad de la promesa,
+  no retención.
+- [x] **3 · Esconder tras bandera** — `GF.MVP = 1` en config.js. Desaparecen del menú y de toda
+  puerta (atajos, buzón) Pase, Misiones del pase, Logros, Álbum, Clan, Cosméticos y
+  Leaderboard; la doma no se dispara; el torneo no cuelga en la Lonja; los títulos no se
+  anuncian como premio; el cartel de nivel no vende el cosmético. Esconder, no borrar: todo
+  vuelve con `GF.MVP = 0`. *Suite en verde el 10/9: doma, Lonja y carta del tutorial se prueban con
+  la bandera apagada, que es lo que custodian. Sin Chromium todavía.*
 - [ ] **4 · Decidir el mercado P2P** durante la prueba. Si va abierto, el portero sube antes (ver
-  LEYES.md: no es seguridad, es validez del experimento).
+  LEYES.md: no es seguridad, es validez del experimento). **Es la siguiente decisión.**
 - [ ] **5 · Que alguien lo juegue una semana** sin saber cómo está hecho. Ni Golden, ni Suren,
   ni yo.
 

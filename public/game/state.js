@@ -361,7 +361,12 @@ function oficioAbre(sk) {
        reparte, para que no puedan decir cosas distintas. */
     for (let n = NASA_CUPO_CADA; n <= 20; n += NASA_CUPO_CADA)
       if (1 + Math.floor(n / NASA_CUPO_CADA) <= NASA_CUPO_MAX) l.push([n, "un hueco de nasa más"]);
-    for (const k of TITULO_PESCA_ORDER) l.push([TITULO_PESCA_DEF[k].lvl, "Título: " + TITULO_PESCA_DEF[k].label]);
+    /* 10/9 — MVP y ley 3: un título no es un premio, así que el panel de Pesca no lo anuncia como
+       « lo que te da subir de nivel ». El techo del oficio no se mueve: el último hueco de nasa
+       cae en el 20, igual que el último título. Los títulos siguen existiendo por debajo —se
+       ganan y se guardan— y vuelven al panel apagando la bandera. */
+    if (!(typeof GF !== "undefined" && GF.MVP))
+      for (const k of TITULO_PESCA_ORDER) l.push([TITULO_PESCA_DEF[k].lvl, "Título: " + TITULO_PESCA_DEF[k].label]);
   }
   /* 9/9 — LAS ARMAS NO SE LISTAN ACÁ, y es a propósito. Probé colgarlas de su oficio de combate
      para que los cuatro huérfanos tuvieran escalera; al medirlo, la puerta de nivel salía un muro
@@ -1607,48 +1612,76 @@ function derivarColaDeXp() {
    FORMA no se toca: cada nivel sigue pidiendo lo mismo, de los mismos oficios y en el mismo orden.
    Si mañana vuelve a apretar, el número que hay que mirar es cuántas cargas da un nodo al día —
    pero eso es el reloj, y el reloj es ley. */
-const FARM_TAREAS = {
-  11: [["plantar","repollo",5],["talar",null,10]],
-  12: [["minar","bronce",10],["matar","rata",10]],
-  13: [["plantar","calabaza",10],["matar","larva",5]],
-  14: [["talar",null,15],["matar","murcielago",5]],
-  15: [["plantar","brocoli",10],["minar","hierro",10]],
-  16: [["matar","baba",10],["pescar",null,5]],
-  17: [["plantar","calabaza",10],["minar","bronce",10]],
-  18: [["matar","arana",10],["matar","goblin",10],["talar",null,15]],
-  19: [["cocinar",null,5],["minar","hierro",15]],
-  20: [["plantar","calabaza",15],["matar","orco",10],["matar","rata",5]],
-  21: [["plantar","girasol",10],["minar","oro",15]],
-  22: [["matar","lancero",10],["talar",null,20]],
-  23: [["matar","esqueleto",10],["pescar",null,10]],
-  24: [["plantar","girasol",10],["minar","oro",10]],
-  25: [["matar","golem",5],["cocinar",null,10]],
-  26: [["plantar","trigo",10],["minar","oro",15]],
-  27: [["matar","hombre_lobo",10],["talar",null,25]],
-  28: [["minar","diamante",10],["matar","guerrero",10]],
-  29: [["plantar","trigo",10],["pescar",null,15]],
-  30: [["matar","troll",10],["matar","ogro",5],["minar","diamante",10]],
-  31: [["plantar","trigo",10],["minar","diamante",15]],
-  32: [["matar","ogro",10],["talar",null,35]],
-  33: [["cocinar",null,15],["minar","diamante",15]],
-  34: [["matar","espectro",10],["plantar","trigo",10]],
-  35: [["minar","diamante",15],["matar","ogro",10]],
-  36: [["plantar","maiz",10],["matar","espectro",10]],
-  37: [["minar","netherita",5],["talar",null,40]],
-  38: [["matar","demonio",10],["cocinar",null,15]],
-  39: [["plantar","maiz",10],["minar","netherita",10]],
-  40: [["matar","demonio",10],["minar","netherita",10]],
-  41: [["plantar","maiz",15],["pescar",null,20]],
-  42: [["matar","espectro",15],["matar","demonio",5],["minar","netherita",10]],
-  43: [["minar","netherita",15],["talar",null,50]],
-  44: [["matar","dragon",5],["plantar","maiz",15]],
-  45: [["minar","netherita",15],["matar","demonio",10]],
-  46: [["plantar","maiz",15],["matar","dragon",5]],
-  47: [["minar","netherita",15],["cocinar",null,25]],
-  48: [["matar","dragon",5],["minar","netherita",20]],
-  49: [["plantar","maiz",20],["matar","demonio",15],["matar","dragon",5]],
-  50: [["matar","dragon",5],["minar","netherita",25],["plantar","maiz",25]],
-};
+/* ============ 10/9 — LAS TAREAS SON UNA ESCALERA, NO UNA TABLA POR NIVEL ================
+   Hasta hoy esto era `FARM_TAREAS = { 11: …, 12: …, …, 50: … }`: cuarenta filas atadas a un
+   número de nivel escrito a mano. Funcionaba porque el techo era 50 y las filas eran 40. El día
+   que el techo baje —que es lo que el MVP pide— la tabla se quedaría con filas huérfanas por
+   encima del techo y el jugador del último nivel nunca vería la netherita ni el dragón.
+   Lo que dirección diseñó es el ORDEN: repollo antes que calabaza, bronce antes que hierro, rata
+   antes que dragón. Eso es la escalera y no se toca. A qué NIVEL cae cada peldaño es derivado:
+   se reparten los cuarenta a lo largo de los niveles que haya entre el 11 y el techo, a espacios
+   iguales. Con techo 50 sale IDÉNTICO a la tabla vieja (cuarenta peldaños en cuarenta niveles,
+   uno a uno). Con techo 25 se usan quince, tomados a saltos parejos, y el arco entero —hasta el
+   dragón— sigue estando. Ningún número nuevo: la escalera es la de siempre y el techo ya existe.
+   NO MEDIDO con el simulador (sandbox caído al escribirlo): la identidad con techo 50 es
+   aritmética —(L−11)/(50−11)×39 = L−11— y se puede comprobar leyendo; lo que da con techo 25 hay
+   que medirlo antes de bajarlo. */
+const FARM_TAREAS_ESCALERA = [
+  /* 11 */ [["plantar","repollo",5],["talar",null,10]],
+  /* 12 */ [["minar","bronce",10],["matar","rata",10]],
+  /* 13 */ [["plantar","calabaza",10],["matar","larva",5]],
+  /* 14 */ [["talar",null,15],["matar","murcielago",5]],
+  /* 15 */ [["plantar","brocoli",10],["minar","hierro",10]],
+  /* 16 */ [["matar","baba",10],["pescar",null,5]],
+  /* 17 */ [["plantar","calabaza",10],["minar","bronce",10]],
+  /* 18 */ [["matar","arana",10],["matar","goblin",10],["talar",null,15]],
+  /* 19 */ [["cocinar",null,5],["minar","hierro",15]],
+  /* 20 */ [["plantar","calabaza",15],["matar","orco",10],["matar","rata",5]],
+  /* 21 */ [["plantar","girasol",10],["minar","oro",15]],
+  /* 22 */ [["matar","lancero",10],["talar",null,20]],
+  /* 23 */ [["matar","esqueleto",10],["pescar",null,10]],
+  /* 24 */ [["plantar","girasol",10],["minar","oro",10]],
+  /* 25 */ [["matar","golem",5],["cocinar",null,10]],
+  /* 26 */ [["plantar","trigo",10],["minar","oro",15]],
+  /* 27 */ [["matar","hombre_lobo",10],["talar",null,25]],
+  /* 28 */ [["minar","diamante",10],["matar","guerrero",10]],
+  /* 29 */ [["plantar","trigo",10],["pescar",null,15]],
+  /* 30 */ [["matar","troll",10],["matar","ogro",5],["minar","diamante",10]],
+  /* 31 */ [["plantar","trigo",10],["minar","diamante",15]],
+  /* 32 */ [["matar","ogro",10],["talar",null,35]],
+  /* 33 */ [["cocinar",null,15],["minar","diamante",15]],
+  /* 34 */ [["matar","espectro",10],["plantar","trigo",10]],
+  /* 35 */ [["minar","diamante",15],["matar","ogro",10]],
+  /* 36 */ [["plantar","maiz",10],["matar","espectro",10]],
+  /* 37 */ [["minar","netherita",5],["talar",null,40]],
+  /* 38 */ [["matar","demonio",10],["cocinar",null,15]],
+  /* 39 */ [["plantar","maiz",10],["minar","netherita",10]],
+  /* 40 */ [["matar","demonio",10],["minar","netherita",10]],
+  /* 41 */ [["plantar","maiz",15],["pescar",null,20]],
+  /* 42 */ [["matar","espectro",15],["matar","demonio",5],["minar","netherita",10]],
+  /* 43 */ [["minar","netherita",15],["talar",null,50]],
+  /* 44 */ [["matar","dragon",5],["plantar","maiz",15]],
+  /* 45 */ [["minar","netherita",15],["matar","demonio",10]],
+  /* 46 */ [["plantar","maiz",15],["matar","dragon",5]],
+  /* 47 */ [["minar","netherita",15],["cocinar",null,25]],
+  /* 48 */ [["matar","dragon",5],["minar","netherita",20]],
+  /* 49 */ [["plantar","maiz",20],["matar","demonio",15],["matar","dragon",5]],
+  /* 50 */ [["matar","dragon",5],["minar","netherita",25],["plantar","maiz",25]],
+];
+/* Las tareas empiezan en el nivel 11 porque el 1-10 es el tutorial (FARM_TUTORIAL_HASTA). */
+var TAREA_NIVEL_DESDE = 11;
+const FARM_TAREAS = (function () {
+  const desde = TAREA_NIVEL_DESDE;
+  const techo = (typeof FARM_NIVEL_MAX === "number" ? FARM_NIVEL_MAX : 50);
+  const pasos = FARM_TAREAS_ESCALERA.length - 1;           // 39
+  const niveles = Math.max(1, techo - desde);              // 39 con techo 50
+  const t = {};
+  for (let L = desde; L <= techo; L++) {
+    const i = Math.round((L - desde) / niveles * pasos);   // peldaño a espacio parejo
+    t[L] = FARM_TAREAS_ESCALERA[i].map(function (x) { return x.slice(); });
+  }
+  return t;
+})();
 
 /* ============ EL MURO DE LA NETHERITA (8/9) ========================================
    La tabla de arriba la escribió una persona mirando la forma de la escalera, no el reloj de los
@@ -1795,7 +1828,11 @@ function farmUnlockTxt(n) {
      cerca de la mitad de lo que crece la granja, pero era invisible. */
   const bph = typeof fmt === "function" ? fmt(bonoPlataH()) : String(bonoPlataH());
   partes.push("+1,5% al precio de venta (≈ +" + bph + " de plata por hora)");
-  const cos = farmCosmetico(n); if (cos) partes.push(cos);
+  /* 10/9 — MVP y ley 3: el cartel del nivel no anuncia el cosmético como premio. Se sigue
+     ENTREGANDO por debajo (es un texto en G.cosmeticos, y esconder no es borrar), pero un nivel
+     que solo trae adorno tiene que verse como lo que es: un nivel que solo trae el bono. Anunciar
+     « Título 'Veterano' » en grande sería vender como recompensa lo que la ley dice que no lo es. */
+  const cos = (typeof GF !== "undefined" && GF.MVP) ? "" : farmCosmetico(n); if (cos) partes.push(cos);
   return partes.join(" + ");
 }
 /* ============ 9/9 — EL PLAN COSMÉTICO SE ENTREGA   (recomendación 9) =======================
@@ -1847,8 +1884,18 @@ function farmCosmetico(n) {
    cada una (de 2 a 30) y se traduce a material con la producción real de ese momento. Así el
    precio sube solo cuando la granja crece y ninguna expansión es un muro. */
 var EXPANSION_MAX = 16;                        // ← cambiar SOLO esto para tener más
+/* 10/9 — LA ÚLTIMA EXPANSIÓN CAE EN EL TECHO, y el techo se pregunta en vez de copiarse.
+   Acá había `max = 50` escrito a mano. Daba lo mismo mientras el techo de granja fuera 50, y por
+   eso nadie lo vio: es un número correcto por coincidencia. El día que el techo baje —que es
+   justo lo que estamos por hacer— la fórmula seguiría repartiendo las dieciséis hasta un nivel 50
+   que ya no existe, y las últimas quedarían fuera del juego sin que nada se pusiera en rojo.
+   El techo de granja es hoy el ÚNICO del proyecto que no se deriva: Cultivo lo saca de su último
+   cultivo, Minería de la netherita, Pesca de su último título, Ganadería del último lugar del
+   establo. Éste era un número suelto sostenido por otro número suelto.
+   Con esto, cambiar FARM_NIVEL_MAX re-reparte las dieciséis solo. Ninguna se quita —regla de
+   dirección: las dieciséis no se tocan— y ninguna se cae del mapa. */
 const FARM_EXPANSION = (function () {
-  const a = [], min = 3, max = 50;
+  const a = [], min = 3, max = (typeof FARM_NIVEL_MAX === "number" ? FARM_NIVEL_MAX : 50);
   for (let i = 0; i < EXPANSION_MAX; i++) {
     let n = Math.round(min + (max - min) * Math.pow(i / (EXPANSION_MAX - 1), 1.25));
     if (i && n <= a[i - 1]) n = a[i - 1] + 1;
@@ -2092,7 +2139,19 @@ function expansionComprar() {
   }
   return true;
 }
-const FARM_COFRE   = { 13:10, 23:10, 33:15 };                                          // nivel → capacidad extra de cofre
+/* 10/9 — los niveles a mano del tramo 11-50 se ESCALAN al techo. `nivelEscalado(33)` es « el
+   nivel que en la escala de 50 era el 33 »: con FARM_NIVEL_MAX = 50 devuelve 33 (identidad); con
+   techo 25 devuelve 11 + round(22/39 × 14) = 19. Así el cofre, el altar y las tareas se mueven
+   solos cuando baje el techo y ninguna recompensa queda huérfana por encima de él. El tutorial
+   (1-10) no se escala: FARM_VALES en 4 y los planos en 2/7/10 son del arranque y quedan fijos. */
+function nivelEscalado(n50) {
+  const desde = (typeof TAREA_NIVEL_DESDE === "number" ? TAREA_NIVEL_DESDE : 11);
+  const techo = (typeof FARM_NIVEL_MAX === "number" ? FARM_NIVEL_MAX : 50);
+  if (n50 <= desde || techo === 50) return n50;
+  return desde + Math.round((n50 - desde) / (50 - desde) * (techo - desde));
+}
+function tablaEscalada(t50) { const t = {}; for (const k in t50) t[nivelEscalado(+k)] = t50[k]; return t; }
+const FARM_COFRE   = tablaEscalada({ 13:10, 23:10, 33:15 });                           // nivel → capacidad extra de cofre
 /* 22/8 (dirección, auditoría del arranque — "el acantilado del nivel 4"): el tutorial regala
    3 niveles en 12 minutos y el nivel 4 —el PRIMERO que el jugador gana solo, a ~8 horas— no
    abría nada. Ahora premia con vales del tablón: la moneda del bucle que el tutorial acaba de
@@ -2102,7 +2161,7 @@ const FARM_VALES   = { 4: 3 };                                                  
 /* 19/8: misma regla para las mejoras. El Horno lo mejora quien más lo usa (Minería) y la Cocina,
    la Cocina misma —ahí NO es circular: cocinar ya lo sabés, la mejora es al que ya practica—.
    El Altar no cuelga de ningún oficio y se queda en el Granero. */
-const FARM_EDIF2   = { 27:"altar" };                          // nivel de granja → edificio que sube a nivel 2
+const FARM_EDIF2   = tablaEscalada({ 27:"altar" });           // nivel de granja → edificio que sube a nivel 2
 const EDIF2_OFICIO = { horno: ["mining", 6], cocina: ["cooking", 5] };
 function edif2Sync(silencioso) {
   for (const t in EDIF2_OFICIO) {
@@ -3222,6 +3281,11 @@ function passAddStars(n) {
   if (typeof refreshPass === "function" && isOpen("ov-pass")) refreshPass();
 }
 function passEvent(sk) {   // se dispara con cada acción que da XP: alimenta las misiones
+  /* 10/9 — MVP: con el Pase escondido, sus misiones no se cuentan ni gritan « misión cumplida:
+     +10 estrellas » en la cara de un jugador que no tiene dónde gastarlas. Se corta en la
+     entrada, no en el toast: si contáramos y calláramos, las estrellas se acumularían en
+     silencio y el día que se encienda el Pase habría gente en el nivel 30 sin haberlo visto. */
+  if (typeof GF !== "undefined" && GF.esOcultoMvp && GF.esOcultoMvp("ov-pass")) return;
   const pilar = PASS_PILAR[sk]; if (!pilar) return;
   const p = passInit(); let dirty = false;
   [...p.daily.mis, ...p.weekly.mis].forEach(m => {
@@ -8898,6 +8962,11 @@ function lonjaEntregarEscalon(escalon) {
 function lonjaActivos() {
   const out = [];
   for (const k of ["marea", "capitan", "mes", "torneo"]) {
+    /* 10/9 — MVP: el torneo no cuelga. Es el único escalón de la Lonja que mira a OTROS jugadores
+       y el ranking de servidor no está encendido; para la prueba de los siete días es superficie
+       sin bucle. Los otros tres escalones (marea, Capitán, mes) se quedan: son el « qué hago hoy »
+       de la pesca, y eso sí es retención. */
+    if (k === "torneo" && typeof GF !== "undefined" && GF.MVP) continue;
     if (k === "torneo" && !torneoAbierto()) continue;
     if (k !== "torneo" && !lonjaPiezas(k)) continue;
     out.push(k);
@@ -9204,11 +9273,20 @@ function buzonCartas() {
      abajo y sí es un informe DE CIERRE: esa tiene que llegar cuando el tutorial termina. */
   try { const ca = cartaAbueloPendiente(); if (ca) cartas.push({
     id: "abuelo" + ca.n, de: "Tu abuelo", titulo: ca.titulo, txt: ca.txt, leer: true }); } catch (e) {}
-  try { if (G.tuto && G.tuto.done && !G.buzonLeidas.granjatuya) cartas.push({
+  /* 10/9 — MVP: las cartas no mandan a paneles que no existen en esta versión. La del Capataz
+     se reescribe sin los logros (el paquete y el goblin SÍ están, y son justo los ganchos de
+     vuelta diaria que la prueba quiere medir); la del Pase no se manda. Una carta que apunta a
+     un panel escondido termina en un « eso no está » — y una promesa que se rompe en el buzón el
+     primer día es lo último que un test de retención necesita. */
+  const mvp = (typeof GF !== "undefined" && GF.esOcultoMvp) ? GF.esOcultoMvp : (() => false);
+  try { if (G.tuto && G.tuto.done && !G.buzonLeidas.granjatuya) cartas.push(mvp("ov-logros") ? {
+    id: "granjatuya", de: "El Capataz", titulo: "Ahora sí: la granja es tuya",
+    txt: "Dos cosas que nadie te contó todavía. Al pie del buzón llega tu PAQUETE del día: si venís siete días seguidos, el séptimo es dorado. Y junto al buzón vas a ver a un GOBLIN de mala fama y buen corazón: hace un trueque por día, y siempre le sobra lo que a vos te falta.",
+    leer: true } : {
     id: "granjatuya", de: "El Capataz", titulo: "Ahora sí: la granja es tuya",
     txt: "Tres cosas que nadie te contó todavía. En el menú está la pestaña de LOGROS 🏆 — las metas pagan plata, cobralas ahí. Al pie del buzón llega tu PAQUETE del día: si venís siete días seguidos, el séptimo es dorado. Y junto al buzón vas a ver a un GOBLIN de mala fama y buen corazón: hace un trueque por día, y siempre le sobra lo que a vos te falta.",
     leer: true, panel: "ov-logros", btn: "Ver los logros" }); } catch (e) {}
-  try { const n = passPendientes(); if (n > 0 && !G.buzonLeidas["pase|" + hoy]) cartas.push({
+  try { const n = passPendientes(); if (!mvp("ov-pass") && n > 0 && !G.buzonLeidas["pase|" + hoy]) cartas.push({
     id: "pase", de: "El Pase de Cosecha", titulo: n + (n > 1 ? " niveles" : " nivel") + " sin reclamar",
     txt: "Tus estrellas ya destrabaron premios en el Pase. Pasá a retirarlos cuando quieras.",
     panel: "ov-pass", btn: "Ver el Pase" }); } catch (e) {}
@@ -9826,6 +9904,11 @@ function domaAbre() { return (typeof farmLevel === "function" ? farmLevel() : G.
    puertas que no dependen de la suerte (nivel y bicho ocupado) NO consumen el plato: no hubo
    intento, así que no se cobra. */
 function domaIntentar(especie, rnd) {   // lo llama la Zona Negra al vencer
+  /* 10/9 — MVP: la doma no existe en esta versión. Se corta ANTES de la pista, porque la pista
+     es justamente lo que molesta: mata una rata el día 2, sin el plato, y el juego le habla de
+     un sistema que abre en el nivel 10 y que en la prueba no va a ver. Es el mismo silencio que
+     la línea de abajo declara normal para los bichos que no se doman — acá ninguno se doma. */
+  if (typeof GF !== "undefined" && GF.MVP) return false;
   if (!DOMA_ESPECIES.includes(especie)) return false;   // este bicho no se doma: silencio, es lo normal
   const nomBicho = (MONSTER_DEF[especie] && MONSTER_DEF[especie].label) || "bicho";
   // cada especie tiene SU plato — sin él no hay doma, y el que no lo conoce recibe la pista (1/día)

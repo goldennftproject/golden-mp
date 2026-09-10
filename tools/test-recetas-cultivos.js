@@ -20,6 +20,9 @@ ctx.localStorage = { getItem: () => null, setItem() {}, removeItem() {} };
 ctx.document = { getElementById: () => null, addEventListener() {}, querySelectorAll: () => [], querySelector: () => null, createElement: () => ({}) };
 vm.createContext(ctx);
 ["config", "nav", "state", "save"].forEach(f => vm.runInContext(fs.readFileSync("public/game/" + f + ".js", "utf8"), ctx));
+/* 10/9: con GF.MVP = 1 la carta del final del tutorial no presenta logros ni paquete (escondidos, no
+   borrados). Se prueba con la bandera apagada para custodiar el texto completo. */
+vm.runInContext("GF.MVP = 0;", ctx);
 ctx.toast = () => {}; ctx.log = () => {};
 ["isOpen", "refreshHud", "saveFarm", "refreshBuzon"].forEach(f => { if (!ctx[f]) ctx[f] = () => {}; });
 const G = ctx.G, R = vm.runInContext("RECIPE_DEF", ctx), C = vm.runInContext("CROP_DEF", ctx);

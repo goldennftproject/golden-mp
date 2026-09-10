@@ -91,15 +91,35 @@ Consecuencias que ya se siguen de esto, para no tener que rediscutirlas:
 
 - **Los niveles 21 al 50 no son un problema del MVP.** Nadie llega. El techo se baja a donde de
   verdad se llega, y las 16 expansiones se re-reparten solas — no se quita ninguna (ley de
-  dirección: las dieciséis no se tocan).
+  dirección: las dieciséis no se tocan). Desde el 10/9 el techo es **un solo número**
+  (`FARM_NIVEL_MAX`): expansiones, cola de XP, cofre, altar y la escalera de tareas cuelgan de
+  él. Bajarlo no borra contenido: el mes de XP se reparte entre menos niveles, así que cada
+  nivel es más gordo y cada uno entrega algo. Lo custodia `tools/test-techo-a-un-numero.js`.
 - **Lo que suma superficie sin sumar bucle se ESCONDE, no se borra**: el pase, los logros, el
   álbum, la doma, el torneo, el asalto de clan, los títulos de la Lonja. Detrás de una bandera,
   vuelven el día que se quiera. Cada panel de más es algo que puede confundir y algo que puede
   romperse, y ninguno contesta la pregunta.
-- **El hueco de las 8 horas es lo más urgente del proyecto.** Del tutorial al nivel 3 hay 12
-  minutos; del 3 al 4, **8,2 horas**. El jugador termina de aprender, siente que arrancó, y la
-  próxima cosa que pasa está a ocho horas. En retención de día 1 ahí es donde se pierde a la
-  mayoría.
+- **El « hueco de las 8 horas » NO existe, y conviene que quede escrito por qué.** Estuvo aquí
+  media hora como « lo más urgente del proyecto », y era falso. El 8,2 h sale del simulador con
+  perfil de **tres sesiones al día**: mide reloj de pared incluyendo la ausencia, no esfuerzo —
+  o sea que dice « el jugador plantó y se fue a dormir », no « el juego lo frena ».
+  Calculado sobre las tablas, con papa (3 min, 15 XP por ciclo) y las 3 parcelas de arranque:
+
+  | nivel | XP | papas | si te quedás jugando |
+  |---|---|---|---|
+  | 3 | 90 | 6 | ~6 min |
+  | 4 | 225 | 15 | **~15 min** |
+  | 5 | 550 | 37 | ~40 min |
+  | 6 | 1.250 | 84 | ~1 h 25 |
+
+  Y el cupo de semillas tampoco frena: es `40 × parcelas` = **120 siembras al día** con tres.
+  Un jugador de día 1 que se sienta veinte minutos llega al 4 y roza el 5.
+
+  Lo que sí queda, y es otra pregunta: *puede* seguir jugando — ¿el juego le da un motivo? Eso no
+  se contesta con una tabla, se ve en el playtest. Va ahí, no aquí.
+
+  **La lección, que es lo que justifica el párrafo:** un número de simulador no significa nada sin
+  saber qué perfil simula. Éste llegó a escribirse como ley antes de que nadie lo comprobara.
 - **Si el mercado entre jugadores está abierto durante la prueba, el portero de guardado tiene
   que salir de modo sombra antes.** No por seguridad —eso puede esperar— sino porque un solo
   jugador duplicando envenena todos los números que la prueba iba a dar. O el P2P se apaga, o el

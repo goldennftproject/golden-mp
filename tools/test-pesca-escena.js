@@ -174,9 +174,10 @@ console.log("\nUN CLIC ES UN LANCE   (y no se pueden encadenar dos por accidente
     .replace(/\/\*[\s\S]*?\*\//g, "").replace(/\/\/[^\n]*/g, "");
   /* 31/8: el bloque cambió de forma — con el carrete de vuelta, durante la pelea el clic ES el
      juego (mantener sube la zona). Pero el `return` sigue: ningún clic con P4 vivo llega al
-     mundo, que es lo que este renglón defiende. */
+     mundo, que es lo que este renglón defiende. 9/9: entre medio puede haber un `else toast(...)`
+     (regla 9, el corcho avisa que ya está en el agua); el `return` sigue siendo lo que se custodia. */
   ok("con un lance en curso, el mundo no acepta más clics",
-    /if \(typeof P4 !== "undefined" && P4\) \{\s*if \(P4\.carrete\) this\.lanceHold = true;\s*return;/.test(fuente),
+    /if \(typeof P4 !== "undefined" && P4\) \{\s*if \(P4\.carrete\) this\.lanceHold = true;\s*(else toast\([^)]*\);\s*)?return;/.test(fuente),
     "si no, dos clics pagarían dos lombrices y enseñarían un solo pez");
   ok("y la lombriz no se cobró dos veces", G.res.lombriz === lomb);
 }

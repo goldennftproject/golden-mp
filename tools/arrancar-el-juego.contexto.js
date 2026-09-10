@@ -126,7 +126,11 @@ function construir(problemas, elementos) {
   return { ctx, elemento };
 }
 
-function arrancar(RAIZ) {
+/* `reemplazos` (opcional): { "game/state.js": textoAlternativo }. Sirve para preguntar « ¿qué
+   pasaría si esta constante valiera otra cosa? » sin tocar el disco — test-techo-a-un-numero.js
+   arranca el juego con FARM_NIVEL_MAX en 25 para comprobar que nada queda huérfano. */
+function arrancar(RAIZ, reemplazos) {
+  reemplazos = reemplazos || {};
   const HTML = fs.readFileSync(path.join(RAIZ, "public/index.html"), "utf8");
   const m = HTML.match(/const files = \[([^\]]+)\]/);
   if (!m) throw new Error("no encontré la lista de scripts en index.html");
@@ -141,7 +145,7 @@ function arrancar(RAIZ) {
   for (const rel of ARCHIVOS) {
     const abs = path.join(RAIZ, "public", rel);
     if (!fs.existsSync(abs)) { problemas.push({ grave: true, quien: rel, "qué": "index.html lo pide y no está en disco" }); continue; }
-    const src = fs.readFileSync(abs, "utf8");
+    const src = (rel in reemplazos) ? reemplazos[rel] : fs.readFileSync(abs, "utf8");
     try { vm.runInContext(src, ctx, { filename: rel }); cargados.push({ rel, lineas: src.split("\n").length }); }
     catch (e) { problemas.push({ grave: true, quien: rel, "qué": e.message }); }
   }

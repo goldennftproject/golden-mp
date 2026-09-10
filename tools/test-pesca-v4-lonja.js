@@ -21,6 +21,9 @@
 const path = require("path"), vm = require("vm");
 const RAIZ = path.join(__dirname, "..");
 const { ctx } = require("./arrancar-el-juego.contexto.js").arrancar(RAIZ);
+/* 10/9: con GF.MVP = 1 los títulos de torneo no se anuncian y el torneo no cuelga en la Lonja
+   (escondidos, no borrados). Se prueba con la bandera apagada para custodiar la Lonja completa. */
+vm.runInContext("GF.MVP = 0;", ctx);
 const G = ctx.G, g = (n) => vm.runInContext(n, ctx);
 ctx.toast = () => {}; ctx.log = () => {}; ctx.celebrate = () => {};
 vm.runInContext("celebrate = window.celebrate; toast = window.toast; log = window.log;", ctx);

@@ -372,6 +372,22 @@ var TEST_DIV = 60;       // los tiempos largos se dividen por esto (1 h → 1 mi
 var TEST_TOPE = 40;      // …y además ninguna espera pasa de estos segundos
 var TEST_MIN = 4;        // …ni baja de estos (si no, no se llega a ver el estado intermedio)
 
+// ================= MODO MVP (10/9, dirección) ==========================================
+// La pregunta que el MVP contesta es UNA: « ¿alguien vuelve a jugar siete días seguidos? »
+// (docs/LEYES.md). Delante de cada sistema, la prueba es « ¿esto cambia si alguien vuelve el
+// día siete? ». Lo que no la pasa se ESCONDE — no se borra: cada panel de más es algo que puede
+// confundir y algo que puede romperse, y ninguno de éstos contesta la pregunta.
+//   Con GF.MVP = 1 desaparecen del menú y no se pueden abrir por atajo ni por carta del buzón:
+//     Pase de Batalla · Misiones del pase · Logros · Álbum · Clan · Cosméticos · Leaderboard
+//   Lo que SÍ queda es el bucle: parcelas, nodos, edificios, pesca, establo, cocina, tablón,
+//   Zona Negra, el camino, el paquete del día, la Lonja sin títulos.
+//   El Mercado de jugadores NO está en esta lista a propósito: es la decisión 4 del camino al
+//   MVP (P2P sí/no) y va aparte, porque si va abierto el portero de guardado tiene que subir
+//   antes. Apagar la bandera devuelve todo tal cual estaba: no se toca ni un dato guardado.
+GF.MVP = 1;
+GF.MVP_OCULTOS = ["ov-pass", "ov-misiones", "ov-logros", "ov-album", "ov-clan", "ov-cos", "ov-lb"];
+GF.esOcultoMvp = function (id) { return !!(GF.MVP && GF.MVP_OCULTOS.indexOf(id) >= 0); };
+
 GF.ZOOM = 1.35;
 GF.editMode = false;   // modo edición de la granja (arrastrar objetos)
 
