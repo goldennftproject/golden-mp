@@ -62,6 +62,51 @@ cosmético no es lo segundo, es lo tercero o más abajo.
 
 ---
 
+# La pregunta del MVP
+
+*Esto NO es una ley: es una decisión con fecha de caducidad. Vive aquí porque es lo que arbitra
+cada recorte mientras dure el MVP, y el sitio donde se miran las leyes tiene que ser el mismo
+donde se mira esto. El día que se conteste, se borra.*
+
+> **¿Alguien vuelve a jugar siete días seguidos?**
+
+Dictada por dirección el 9/9. De las tres preguntas que un MVP podía contestar, es la única que
+hoy vale algo: la de la economía con valor real no se puede probar sin token ni pasarela, y
+« ¿es divertido? » es demasiado vago para decidir nada con ella. La retención es lo que mata a
+los juegos de granja, es barata de medir y no necesita nada que todavía no exista.
+
+## Cómo se usa para decidir
+
+Medido con el simulador, a tres sesiones diarias el jugador llega al **nivel 10 a los 8,7 días**.
+De ahí sale la regla práctica:
+
+> **El MVP vive entre el nivel 1 y el 12. Todo lo que un jugador no ve en su primera semana no
+> es parte de esta prueba.**
+
+Delante de cualquier propuesta, la pregunta es una sola: *¿esto cambia si alguien vuelve el día
+siete?* Si la respuesta es no, no entra en el MVP — y da igual lo terminado que esté, lo caro
+que haya salido o las ganas que dé de enseñarlo.
+
+Consecuencias que ya se siguen de esto, para no tener que rediscutirlas:
+
+- **Los niveles 21 al 50 no son un problema del MVP.** Nadie llega. El techo se baja a donde de
+  verdad se llega, y las 16 expansiones se re-reparten solas — no se quita ninguna (ley de
+  dirección: las dieciséis no se tocan).
+- **Lo que suma superficie sin sumar bucle se ESCONDE, no se borra**: el pase, los logros, el
+  álbum, la doma, el torneo, el asalto de clan, los títulos de la Lonja. Detrás de una bandera,
+  vuelven el día que se quiera. Cada panel de más es algo que puede confundir y algo que puede
+  romperse, y ninguno contesta la pregunta.
+- **El hueco de las 8 horas es lo más urgente del proyecto.** Del tutorial al nivel 3 hay 12
+  minutos; del 3 al 4, **8,2 horas**. El jugador termina de aprender, siente que arrancó, y la
+  próxima cosa que pasa está a ocho horas. En retención de día 1 ahí es donde se pierde a la
+  mayoría.
+- **Si el mercado entre jugadores está abierto durante la prueba, el portero de guardado tiene
+  que salir de modo sombra antes.** No por seguridad —eso puede esperar— sino porque un solo
+  jugador duplicando envenena todos los números que la prueba iba a dar. O el P2P se apaga, o el
+  portero sube. Abierto y en sombra a la vez, no.
+
+---
+
 ## Cómo se usa este archivo
 
 Antes de tocar un reloj, una curva, una recompensa o una puerta: leerlo. Antes de proponerle algo

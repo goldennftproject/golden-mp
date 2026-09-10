@@ -11,7 +11,33 @@ de los nodos no se toca, y lo cosmético no cuenta como contenido.
 
 ---
 
-## 🔴 Decisiones de dirección — nada avanza sin esto
+## 🎯 La pregunta del MVP (9/9, dirección)
+
+> **¿Alguien vuelve a jugar siete días seguidos?**
+
+Todo lo de abajo se ordena por eso. A tres sesiones diarias el jugador llega al nivel 10 a los
+8,7 días, así que **el MVP vive entre el nivel 1 y el 12**. Delante de cualquier tarea, la
+pregunta es: *¿esto cambia si alguien vuelve el día siete?* Si no, no entra. Está desarrollado
+en `docs/LEYES.md`.
+
+**El camino al MVP, en orden:**
+
+- [ ] **1 · Tapar el hueco de las 8 horas.** Del tutorial al nivel 3 hay 12 minutos; del 3 al 4,
+  8,2 horas. Es lo único de toda la lista que puede cambiar el resultado por sí solo. Hace falta
+  algo a los 20 minutos, a la hora y a las tres horas.
+- [ ] **2 · Bajar el techo de granja** a donde de verdad se llega, y derivarlo en vez de tenerlo
+  escrito a mano — es el único techo del juego que no se calcula solo. Las 16 expansiones se
+  re-reparten (no se quita ninguna) y caen más seguido, que para el MVP es mejor.
+- [ ] **3 · Esconder tras bandera** lo que no contesta la pregunta: pase, logros, álbum, doma,
+  torneo, asalto de clan, títulos de la Lonja. Esconder, no borrar.
+- [ ] **4 · Decidir el mercado P2P** durante la prueba. Si va abierto, el portero sube antes (ver
+  LEYES.md: no es seguridad, es validez del experimento).
+- [ ] **5 · Que alguien lo juegue una semana** sin saber cómo está hecho. Ni Golden, ni Suren,
+  ni yo.
+
+---
+
+## 🔴 Decisiones de dirección — fuera del MVP, para después
 
 Están desarrolladas en el GDD §15.0, con sus números medidos. Aquí solo el titular:
 

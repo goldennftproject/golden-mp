@@ -4827,7 +4827,7 @@ function comprarAnimal(k) {
   log("Compraste " + d.label + " por " + precio + " de plata (ahora tenés " + animalCant(k) + "). Alimentalo con " + d.come.map(c => CROP_DEF[c].label).join(" o ") + ".", "gold");
   toast("¡" + d.label + " en el Establo!");
   if (!tengo && window.celebrate) celebrate({ title: "¡" + d.label.toUpperCase() + "!", sub: "Establo", reward: "Desbloquea la armadura de " + d.mat });
-  refreshHud(); if (typeof refreshEstablo === "function" && isOpen("ov-establo")) refreshEstablo();
+  refreshHud(); establoRepintar();   // 10/9: aplazado (ver « EL ESTABLO SE REPINTA DESPUÉS DEL CLIC »)
   if (window.farmScene && window.farmScene.syncAnimales) { try { window.farmScene.syncAnimales(); } catch (e) {} }   // aparece en la granja en el acto
   if (typeof saveFarm === "function") saveFarm(true);
 }
@@ -4861,7 +4861,7 @@ function alimentarUno(k, i, silencio) {
     log("Alimentaste " + d.label + " " + (i + 1) + " con 1 " + (CROP_DEF[cultivo].label || cultivo) +
         ". Su felicidad: " + animalFelizDe(a) + "/100.", "good");
     toast(d.label + " " + (i + 1) + " · felicidad " + animalFelizDe(a));
-    refreshHud(); if (typeof refreshEstablo === "function" && isOpen("ov-establo")) refreshEstablo();
+    refreshHud(); establoRepintar();   // 10/9: aplazado (ver « EL ESTABLO SE REPINTA DESPUÉS DEL CLIC »)
     if (isOpen("ov-inv")) refreshInv();
     if (typeof saveFarm === "function") saveFarm();
   }
@@ -4877,7 +4877,7 @@ function alimentarAnimal(k, silencio) {
   log("Alimentaste " + dados + " " + d.label + ". Felicidad media: " + animalFelicidad(k) + "/100.", "good");
   if (!silencio) {
     toast(d.label + " · felicidad " + animalFelicidad(k));
-    refreshHud(); if (typeof refreshEstablo === "function" && isOpen("ov-establo")) refreshEstablo();
+    refreshHud(); establoRepintar();   // 10/9: aplazado (ver « EL ESTABLO SE REPINTA DESPUÉS DEL CLIC »)
     if (isOpen("ov-inv")) refreshInv();
     if (typeof saveFarm === "function") saveFarm();
   }
@@ -4921,6 +4921,31 @@ function animalRinde(k, i) {   // lo que da ESE animal con SU felicidad — con 
 function animalGuardado(k, i) {   // la fracción que el animal lleva a cuestas de ciclos anteriores
   const a = animalLista(k)[i];
   return a ? Math.round((a.pend || 0) * 100) / 100 : 0;
+}
+/* ═══ EL ESTABLO SE REPINTA DESPUÉS DEL CLIC, NUNCA DURANTE ═══════════ (10/9, Suren)
+   « si tienes 2, ejemplo Alpaca y conejo, y ambos tienen material y le das click para recoger,
+   no recoge los 2, solo recoge 1: el otro no se guarda en el inventario. »
+
+   No es del modelo de datos: cada animal tiene su propio prodAt y su propio pend desde el 8/9, y
+   recogerUno sólo toca al que le pasás. Tampoco es la bolsa llena — ese camino avisa con un toast
+   y con una línea del registro, y Suren no ve ningún mensaje. Lo que hay es un clic que no llega.
+
+   El mecanismo es la regla 10 de la casa, la misma que nos mordió con la Cocina: refreshEstablo()
+   hace `box.innerHTML = h`, o sea DESTRUYE y reconstruye todos los botones de las filas. Cuando
+   eso corre dentro del manejador del primer clic, el botón del segundo animal deja de ser el
+   mismo nodo entre el apretar y el soltar, y el navegador no dispara su `click`. La prueba está
+   en cuál sí funciona: RECOGER TODO vive FUERA de ese cuadro y por eso nunca falla.
+
+   El arreglo es de una línea y no toca la economía: el repintado se aplaza al siguiente turno del
+   navegador, así que el gesto en curso termina contra el DOM que ya estaba. Vale para recoger y
+   para alimentar, que comparten la misma forma.
+
+   NO PUDE CORRERLO: el entorno de ejecución lleva la tarde caído, así que esto va sin la suite y
+   sin el arnés de Chromium — que es justamente el único que ve esta familia de fallos. Queda
+   pendiente `test-clic-navegador` con dos animales de especies distintas. */
+function establoRepintar() {
+  if (typeof refreshEstablo !== "function" || !isOpen("ov-establo")) return;
+  setTimeout(() => { try { refreshEstablo(); } catch (e) { console.warn("[establoRepintar]", e); } }, 0);
 }
 function recogerUno(k, i, silencio) {
   const d = ANIMAL_DEF[k], a = animalLista(k)[i];
@@ -4967,7 +4992,7 @@ function recogerUno(k, i, silencio) {
       toast("Rindió " + dec(gana) + " · guardado " + dec(a.pend) + "/1");
     }
     refreshHud(); if (isOpen("ov-inv")) refreshInv();
-    if (typeof refreshEstablo === "function" && isOpen("ov-establo")) refreshEstablo();
+    establoRepintar();   // 10/9: aplazado — reconstruir el panel aquí se come el clic siguiente
     if (typeof saveFarm === "function") saveFarm(true);
   }
   return entero;
@@ -4983,7 +5008,7 @@ function recogerAnimal(k, silencio) {
   if (!silencio) {
     toast("+" + total + " " + RES_LABEL[d.mat]);
     refreshHud(); if (isOpen("ov-inv")) refreshInv();
-    if (typeof refreshEstablo === "function" && isOpen("ov-establo")) refreshEstablo();
+    establoRepintar();   // 10/9: aplazado — reconstruir el panel aquí se come el clic siguiente
     if (typeof saveFarm === "function") saveFarm(true);
   }
   return total;
@@ -5001,7 +5026,7 @@ function establoAlimentarTodo() {
   }
   if (!animales) { toast("Nadie tiene hambre (o no hay cultivos en la bolsa)"); return { animales: 0 }; }
   toast("🍽 " + animales + (animales > 1 ? " animales alimentados" : " animal alimentado"));
-  refreshHud(); if (typeof refreshEstablo === "function" && isOpen("ov-establo")) refreshEstablo();
+  refreshHud(); establoRepintar();   // 10/9: aplazado (ver « EL ESTABLO SE REPINTA DESPUÉS DEL CLIC »)
   if (isOpen("ov-inv")) refreshInv();
   if (typeof saveFarm === "function") saveFarm();
   return { animales, especies };
@@ -5016,7 +5041,10 @@ function establoRecogerTodo() {
   if (!partes.length) { toast("Nada listo para recoger todavía"); return { total: 0 }; }
   toast("🧺 " + partes.join(" · "));
   refreshHud(); if (isOpen("ov-inv")) refreshInv();
-  if (typeof refreshEstablo === "function" && isOpen("ov-establo")) refreshEstablo();
+  /* éste NO tenía el problema —su botón vive fuera del cuadro que se reconstruye— pero se pasa
+     igual a la puerta aplazada: una sola forma de repintar el establo es más fácil de defender
+     que dos parecidas, y la segunda es la que alguien copia sin saber cuál era la buena. */
+  establoRepintar();
   if (typeof saveFarm === "function") saveFarm(true);
   return { total: partes.length };
 }
