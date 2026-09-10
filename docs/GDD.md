@@ -280,11 +280,17 @@ Cañas, nasas, cebos, noche o día: todas las rutas pagan casi lo mismo por carn
 | Caña de Bambú | 4 | 400 | 20 Madera + 3 Tablón + 40 de plata | 3 | 9,85 |
 | Caña de Hierro | 8 | 1.500 | 1 Cuero + 1 Barra de hierro + 3 Tablón + 40 | 6 | 10,35 |
 | Caña de Oro | 12 | 2.000 | 1 Cuero + 1 Barra de oro + 6 Tablón + 200 | 11 | 10,56 |
-| Caña del Abuelo | 18 | — | 120 Escamas de la Lonja | 0 | rompe el ancla a propósito |
+| Caña del Abuelo | 18 | — | 120 Escamas de la Lonja | 15 | 11,46 |
 
 *Regla de Suren que gobierna esta tabla: **las dos de arriba piden CUERO**, así que mejorar la pesca obliga a criar. Si la caña de oro costara plata pelada, mejorar la pesca sería ahorrar. Y de la caña de junco a la de oro se mejora un 13 %, no un 107 %: ninguna caña puede correr más rápido que la carnada, que es el seguro contra la sobreproducción.*
 
 *El 9/9 la Caña de Hierro recuperó su barra de hierro. Se había quedado sin ella porque no cabía en un presupuesto de 1.000 escrito cuando el cuero valía 55; hoy vale 742, porque un cuero es un día entero de Toro. Se movió el presupuesto a 1.500 — un presupuesto es una vara, no una ley física.*
+
+*Y el mismo día la **Caña del Abuelo entró al invariante**. Estaba exenta de peaje y pagaba **25,46 por lombriz — ×2,44 sobre la de oro**: no lo decidió nadie, salió de ponerle mant 0 al construir la v4. Sobrevivió dos semanas porque **los dos guardianes del invariante no la miraban**: el test del bolsillo recorría solo las cuatro cañas de plata, y el auditor comparaba una tabla de netos escrita a mano contra sí misma — un auditor que no puede ponerse rojo ocupa el sitio del que sí lo haría. Ahora las rutas se leen del catálogo y el neto se le pregunta al juego.*
+
+*Por qué cede el peaje y no otra cosa: esta caña comparte las bandas de la de oro y esas bandas solas producen 26,08 de bruto, así que « no cobrar peaje » y « pagar 9-12 por lombriz » son incompatibles por aritmética. De las dos, la que sostiene la economía es el peaje — es lo que hace que la carnada sea la única palanca. La ventaja de la caña pasa a ser el **+10 % de peso**, que además es lo que el jugador ve. De paso se arregló que `lanceValorEsperado` —la función con la que se balancean las cañas— **no contaba el bono de peso**: por eso la fórmula decía ×2,04 y la bolsa daba ×2,44.*
+
+*Y una promesa que el código hacía y no cumplía: decía que la caña « cuesta un mes de Lonja bien jugada ». Medido, la Lonja entera da 14,5 escamas al día y la caña vale 120 — **8 días haciéndolo todo, 10 a tres sesiones diarias**.*
 
 **Las nasas: el carril que trabaja solo.** Se calan y dan pescado o cebo pasadas sus 2 horas. Pagan MENOS que la caña (la mejor nasa 9,00 contra la peor caña 9,30) y eso es deliberado: si la pasiva le ganara a las manos, nadie tocaría el minijuego.
 

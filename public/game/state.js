@@ -7212,9 +7212,36 @@ var CANA_V4_DEF = {
             cost: { cuero: 1, barra_hierro: 1, tablon: 3 }, colaPlata: 40,   /* 9/9 */ banda: { comun: 56.364, poco_comun: 27.00, raro: 14.036, epico: 1.800, legendario: 0.800 } },
   oro:    { label: "Caña de Oro",     lvl: 12, presupuesto: 2000, mant: 11,
             cost: { cuero: 1, barra_oro: 1, tablon: 6 }, colaPlata: 200,   /* 9/9 */ banda: { comun: 49.495, poco_comun: 27.00, raro: 19.630, epico: 2.625, legendario: 1.250 } },
-  /* la única que no cobra peaje, y la única que rompe el ancla a propósito: es el premio de
-     final de escalera y cuesta un mes de Lonja bien jugada. +10 % al peso de todo lo que saca. */
-  abuelo: { label: "Caña del Abuelo", lvl: 18, presupuesto: null, mant: 0, pesoBonus: 0.10, escamas: 120,
+  /* ══ 9/9 — LA CAÑA DEL ABUELO ENTRA AL INVARIANTE. Antes decía « la única que no cobra peaje,
+     y la única que rompe el ancla a propósito… cuesta un mes de Lonja bien jugada ». Las tres
+     afirmaciones eran mías y las tres estaban mal:
+
+       · « rompe el ancla a propósito » — nadie lo decidió. Salió de poner mant 0 en la tanda 1a
+         de la v4, y contradice lo que el propio proyecto escribió en docs/BALANCE-PESCA.md:
+         « TODA caña paga 9-11 de plata por lombriz… subir una sin tocar otra pata rompe esa
+         igualdad y una caña pasa a imprimir plata ».
+       · « cuesta un mes de Lonja » — medido, la Lonja entera da 14,5 escamas al día y esto vale
+         120: son 8 días haciéndolo todo, 10 a tres sesiones diarias.
+       · y el desvío real era mayor que el que yo creía, porque lanceValorEsperado no contaba el
+         pesoBonus: la fórmula decía ×2,04 sobre la de oro y la bolsa daba ×2,44 (25,46 por
+         lombriz contra 10,60).
+
+     POR QUÉ CEDE EL PEAJE Y NO EL RESTO, que es una cuenta y no una opinión: esta caña comparte
+     las bandas de la de oro, y esas bandas solas producen 26,08 de bruto. « No cobrar peaje » y
+     « pagar 9-11 por lombriz » son incompatibles por aritmética — no hay reparto posible. Y de
+     las dos, la que sostiene la economía entera es el peaje: es lo que hace que la CARNADA sea
+     la única palanca de la laguna, que es la promesa del capítulo 9. Que una caña quede exenta
+     del mecanismo que balancea a todas las demás no es un premio, es un agujero.
+     La ventaja de verdad pasa a ser el +10 % de peso, que además es lo que el jugador VE — el
+     peso es de lo que trata la v4 entera.
+
+       ESPERADO   bruto 26,08 − peaje 15 = 11,08 en la fórmula · 11,46 medido en la bolsa
+                  la mejor caña del juego (oro 10,60) y dentro de la banda 9-12.
+
+     Y EL MOTIVO POR EL QUE ESTO SOBREVIVIÓ TANTO: los dos guardianes del invariante no la
+     miraban. test-pesca-v4-bolsillo recorría solo las cuatro de plata, y auditar-pesca-v4 §3
+     comparaba una tabla de netos ESCRITA A MANO contra sí misma. Los dos arreglados. */
+  abuelo: { label: "Caña del Abuelo", lvl: 18, presupuesto: null, mant: 15, pesoBonus: 0.10, escamas: 120,
             banda: { comun: 49.495, poco_comun: 27.00, raro: 19.630, epico: 2.625, legendario: 1.250 } },
 };
 /* EL VALOR ESPERADO DE UN LANCE, DERIVADO. Éste es el número que ata la pesca al resto del
@@ -7248,6 +7275,15 @@ function lanceValorEsperado(cana, opciones) {
     const medio = peces.reduce((s, k) => s + PEZ_DEF[k].precio * pesoFactorEsperado(k, cebo), 0) / peces.length;
     v += (t[b] / 100) * medio;
   }
+  /* 9/9 — EL BONO DE PESO DE LA CAÑA, QUE ESTA FÓRMULA NO VEÍA.
+     lanceSacar multiplica los kilos por (1 + pesoBonus) y el precio va por el peso ELEVADO a
+     PESO_EXP, así que un +10 % de kilos es un +21 % de plata. Esta función lo ignoraba, y como
+     es LA función con la que se balancean las cañas, la única que lo tiene —la del Abuelo—
+     estaba balanceada a ciegas: la fórmula decía ×2,04 sobre la de oro y la bolsa daba ×2,44.
+     Un medidor que no ve una pata entera del juego es peor que no tener medidor, porque da
+     confianza. Si mañana entra otra caña con bono de peso, ahora se ve. */
+  const bonus = c.pesoBonus || 0;
+  if (bonus) v *= Math.pow(1 + bonus, PESO_EXP);
   return Math.round(v * 100) / 100;
 }
 /* COMPRAR UNA CAÑA. Las cuatro de plata cuestan su « presupuesto », que no es un precio elegido

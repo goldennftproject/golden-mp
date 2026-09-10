@@ -252,8 +252,18 @@ console.log("\nLA CURVA DE LA LAGUNA, RE-MEDIDA PARA EL COMPOST POR VALOR   (1/9
   }
   console.log("");
   ok("la laguna ronda el 10 % del ingreso al empezar", Math.abs(pcts[0] - 10) < 4, pcts[0].toFixed(1) + " %");
-  ok("PICA cuando abre el Lombricario — la semana dorada de la pesca del documento",
-    pcts[1] > pcts[0] * 2, pcts[1].toFixed(1) + " %");
+  /* 9/9 — LA « SEMANA DORADA » LA RETIRÓ EL TOPE DE DIRECCIÓN, y este test llevaba desde
+     entonces en rojo pidiendo una promesa que ya no existe.
+     Pedía que el Lombricario DUPLICARA la parte del día que aporta la laguna (7,0 → más de 14).
+     Eso era verdad cuando el compost no tenía techo; el 9/9 dirección puso 15 lombrices al día
+     —« vamos a poner que se saquen 15 lombrices diarias »— y ese tope muerde exactamente en el
+     nivel donde la semana dorada ocurría. O sea que la promesa del documento y la orden de
+     dirección son incompatibles, y manda la orden.
+     Lo que el tope SÍ garantiza, y es lo que ahora se comprueba: la laguna sigue picando cuando
+     abre el Lombricario, el pico está acotado, y a partir de ahí baja sola conforme la granja
+     crece — de condimento no pasa. La forma medida es 7,0 → 12,3 → 7,5 → 4,5. */
+  ok("PICA cuando abre el Lombricario, aunque el tope de dirección le recorta el pico",
+    pcts[1] > pcts[0] * 1.4, pcts[0].toFixed(1) + " % → " + pcts[1].toFixed(1) + " %  (×" + (pcts[1] / pcts[0]).toFixed(2) + ")");
   ok("baja en el veterano — condimento, no ingreso", pcts[3] < pcts[1] * 0.6, pcts[3].toFixed(1) + " %");
   ok("y ni en el pico pasa del 35 % — el tope de la boca la sujeta",
     Math.max(...pcts) < 35, "máximo " + Math.max(...pcts).toFixed(1) + " %");

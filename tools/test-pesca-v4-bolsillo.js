@@ -106,7 +106,12 @@ console.log("\nEL INVARIANTE, CONTANDO LA PLATA DE LA BOLSA");
   const N = 40000;
   console.log("\n    caña             lances   plata neta por lombriz   lo que promete la tabla");
   const netos = [], sigmas = [];
-  for (const k of ["junco", "bambu", "hierro", "oro"]) {
+  /* 9/9 — LA DEL ABUELO ENTRA A ESTA LISTA. Estaba fuera, y por eso pudo pasar dos semanas
+     pagando 25,46 por lombriz —×2,44 sobre la de oro— con este test en verde todos los días.
+     El invariante no es « las cuatro de plata pagan lo mismo »: es « TODA ruta de la laguna »,
+     y una lista escrita a mano que se olvida una ruta es un invariante que no se comprueba.
+     Se recorre CANA_V4_ORDER entero: si mañana entra una caña nueva, entra sola a este test. */
+  for (const k of g("CANA_V4_ORDER")) {
     const r = jugar(k, N);
     netos.push(r.neto); sigmas.push(r.sigma); MEDIDO[k] = r.neto;
     console.log("    " + CANAS[k].label.padEnd(17) + String(N).padStart(6) +
@@ -117,7 +122,15 @@ console.log("\nEL INVARIANTE, CONTANDO LA PLATA DE LA BOLSA");
   ok("toda caña paga entre 9 y 12 de plata por lombriz, EN LA BOLSA",
     Math.min(...netos) > 9 && Math.max(...netos) < 12,
     Math.min(...netos).toFixed(2) + " a " + Math.max(...netos).toFixed(2));
-  ok("y la dispersión real es la que promete el capítulo 9", disp < 20, disp.toFixed(0) + " %");
+  /* 9/9 — LA BANDA ES LA LEY; LA DISPERSIÓN ES LO QUE LA BANDA IMPLICA. El umbral estaba en
+     20 % porque era lo que daban las CUATRO de plata, o sea una foto, no una regla. Al entrar
+     la del Abuelo —que es la mejor caña del juego y tiene que serlo— la foto cambia sola.
+     Lo que no puede cambiar es la banda 9-12, que es lo que docs/BALANCE-PESCA.md declara y lo
+     que hace que la carnada siga siendo la única palanca. Así que el tope se DERIVA de la banda
+     (12 ÷ 9 − 1 = 33 %) en vez de escribirse a mano: si mañana la banda se estrecha, esto se
+     estrecha con ella, y si alguien la ensancha tiene que decirlo ahí y no aquí. */
+  ok("y la dispersión cabe en lo que la banda 9-12 permite", disp < 34,
+    disp.toFixed(0) + " % (la banda permite hasta 33 %)");
   console.log("       → sin cobrar el peaje esta misma cuenta daba 107 %. La fórmula estaba");
   console.log("         bien y el juego no la aplicaba, que es la peor combinación posible:");
   console.log("         un número correcto que nadie usa.");
@@ -161,11 +174,19 @@ console.log("\nEL PEAJE SE COBRA DE VERDAD, Y NO SE PIERDE POR REDONDEO");
     Math.abs(pagado - esperado) < 1, pagado.toFixed(2) + " vs " + esperado.toFixed(0));
   ok("y lo que queda por debajo de 1 se guarda, no se tira",
     (G.peajeCana || 0) >= 0 && (G.peajeCana || 0) < 1, (G.peajeCana || 0).toFixed(2) + " pendiente");
-  /* la del Abuelo no cobra peaje: es la única que rompe el ancla a propósito */
-  G.canas = { abuelo: 1 }; G.plata = 1000; G.peajeCana = 0;
-  for (let i = 0; i < 100; i++) ctx.lanceSacar("abuelo", {});
-  ok("la Caña del Abuelo no cobra peaje — la única que rompe el ancla a propósito",
-    G.plata === 1000 && !(G.peajeCana > 0), "cien lances y ni una plata");
+  /* 9/9 — ESTA COMPROBACIÓN PEDÍA LO CONTRARIO, y era el candado que dejaba el agujero abierto.
+     Decía « la del Abuelo no cobra peaje: es la única que rompe el ancla a propósito », o sea
+     que registraba una EXENCIÓN como si fuera un contrato de diseño. Nadie la decidió: salió de
+     poner mant 0 en la tanda 1a de la v4. Mientras esta línea estuviera en verde, la caña podía
+     pagar ×2,44 y el test daba el visto bueno todos los días.
+     Ahora se pide lo que la economía necesita: que TODA caña cobre su peaje, incluida ésta. */
+  {
+    G.canas = { abuelo: 1 }; G.plata = 1000; G.peajeCana = 0;
+    for (let i = 0; i < 100; i++) ctx.lanceSacar("abuelo", {});
+    const cobrado = 1000 - G.plata + (G.peajeCana || 0);
+    ok("la Caña del Abuelo TAMBIÉN cobra peaje: ninguna caña queda fuera del invariante",
+      cobrado > 0, "cien lances cobraron " + cobrado.toFixed(0) + " de plata");
+  }
 }
 
 console.log("\nEL DINERO DE LA PESCA VA A LA BOLSA DE VERDAD   (G.plata, no una cuenta inventada)");

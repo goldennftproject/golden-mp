@@ -14,7 +14,7 @@ el arreglo. Mover números sin saber qué molesta es como afinar una guitarra si
 | hierro | 46,6  | 27,0       | 24,2 | 1,8   | 0,4        | 4 / 56 / 278                           |
 | oro    | 34,5  | 27,0       | 35,4 | 2,6   | 0,5        | 3 / 38 / 190                           |
 
-La del Abuelo iguala a la de oro en bandas (+10 % al peso, sin peaje). Cada caña abre además
+La del Abuelo iguala a la de oro en bandas y le suma +10 % al peso. Desde el 9/9 TAMBIÉN COBRA PEAJE (15): estaba exenta y pagaba 25,46 por lombriz — ×2,44 sobre la de oro — porque los dos guardianes del invariante no la miraban. Cada caña abre además
 más ESPECIES dentro de cada banda (junco: 1 sola legendaria; oro: las 3), que es la regla de
 Suren «según la caña tienes varias opciones de peces».
 
@@ -22,7 +22,7 @@ Dos piedades ya activas que suavizan estos números: el primer lance del día nu
 tras 80 lances sin épico el siguiente lo garantiza.
 
 **Importante:** estos % no son estéticos — están derivados para que TODA caña pague 9–11 de
-plata por lombriz (el invariante del capítulo 9, medido en test-pesca-v4-bolsillo con 160.000
+plata por lombriz (el invariante del capítulo 9, medido en test-pesca-v4-bolsillo, que desde el 9/9 recorre CANA_V4_ORDER entero y no una lista escrita a mano, con 160.000
 lances). Subir el % de legendarios de una caña sin tocar otra pata rompe esa igualdad y una
 caña pasa a imprimir plata.
 

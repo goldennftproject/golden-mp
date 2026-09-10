@@ -112,12 +112,30 @@ console.log("\n2 · LAS RECETAS CONTRA SU PROPIO PRESUPUESTO");
 
 console.log("\n3 · EL INVARIANTE DE LA LOMBRIZ   — el capítulo 9, que sostiene todo");
 {
-  /* « Toda ruta de la laguna paga entre 9,29 y 11,34 de plata por lombriz. » */
-  const rutas = [
-    ["Caña de Junco", 1, 10.00], ["Caña de Bambú", 1, 10.45],
-    ["Caña de Hierro", 1, 10.98], ["Caña de Oro", 1, 11.34],
-    ["Nasa de mimbre", 4, 37.15], ["Nasa reforzada", 4, 41.07], ["Nasa de hierro", 4, 39.68],
-  ];
+  /* « Toda ruta de la laguna paga entre 9 y 12 de plata por lombriz. »
+
+     9/9 — ESTA SECCIÓN NO AUDITABA NADA. Las siete rutas venían con su neto ESCRITO A MANO
+     (10.00, 10.45, 10.98, 11.34…), así que comparaba una tabla copiada contra sí misma: pasara
+     lo que pasara en el juego, salía verde. Y los números estaban viejos —el juego daba 9,30 /
+     9,85 / 10,35 / 10,56— y encima faltaba una ruta entera, la Caña del Abuelo, que llevaba dos
+     semanas pagando 25,46 por lombriz sin que ni este auditor ni el test del bolsillo la
+     miraran. Un auditor que no puede ponerse rojo es peor que no tener auditor: ocupa el sitio
+     del que sí lo haría.
+     Ahora las rutas se leen del CATÁLOGO y el neto se le pregunta al JUEGO. Si mañana entra una
+     caña o una nasa, entra sola. */
+  const CANA = g("CANA_V4_DEF"), CANA_ORDER = g("CANA_V4_ORDER");
+  const NASA = g("NASA_DEF"), NASA_ORDEN = g("NASA_ORDER");
+  const rutas = [];
+  for (const id of CANA_ORDER) rutas.push([CANA[id].label, 1, ctx.lanceNeto(id)]);
+  /* las nasas se piden EJECUTANDO en el contexto, como ya hace la sección 6 — son `function`
+     dentro del vm y no aparecen como propiedades de ctx. Mi primer intento las leyó con
+     `ctx.nasaValor` (que además no existe: se llama nasaValorCiclo), el guard devolvió null y
+     las tres rutas desaparecieron de la tabla EN SILENCIO. Justo el fallo que esta sección
+     estaba arreglando, cometido dentro del arreglo. */
+  const call = (fn, id) => vm.runInContext(fn + "(" + JSON.stringify(id) + ")", ctx);
+  const CEBO = g("PESCA_V4_NASA_CEBO");
+  for (const id of NASA_ORDEN)
+    rutas.push([NASA[id].label, CEBO, call("nasaValorCiclo", id) - call("nasaCoste", id)]);
   console.log("\n  ruta               lombrices    neto    por lombriz");
   const porLombriz = rutas.map(([n, l, neto]) => {
     const v = neto / l;
@@ -127,11 +145,20 @@ console.log("\n3 · EL INVARIANTE DE LA LOMBRIZ   — el capítulo 9, que sostie
   const min = Math.min(...porLombriz), max = Math.max(...porLombriz);
   const disp = (max / min - 1) * 100;
   console.log("");
-  ok("la dispersión entre rutas es la que promete el documento (22 %)",
-    Math.abs(disp - 22) < 4, "medida: " + disp.toFixed(0) + " %  (" + min.toFixed(2) + " a " + max.toFixed(2) + ")");
+  /* la BANDA es la ley (docs/BALANCE-PESCA.md: « toda caña paga 9-12 por lombriz ») y la
+     dispersión es lo que la banda implica. Antes esto pedía « 22 % ±4 », que era la foto de las
+     siete rutas de aquel día: cada vez que entra una ruta nueva, una foto se rompe sola. */
+  ok("toda ruta cae dentro de la banda 9-12 por lombriz", min >= 8.5 && max <= 12,
+    min.toFixed(2) + " a " + max.toFixed(2));
   ok("ninguna ruta se dispara respecto de la más floja", max / min < 1.35, "×" + (max / min).toFixed(2));
+  /* y las nasas se separan POR NOMBRE, no por índice: la lista de rutas ahora se deriva del
+     catálogo, así que cualquier caña nueva corría los índices y esta línea pasaba a comparar
+     otra cosa sin avisar. */
+  const cañas = rutas.slice(0, CANA_ORDER.length).map((r, i) => porLombriz[i]);
+  const nasas = rutas.slice(CANA_ORDER.length).map((r, i) => porLombriz[CANA_ORDER.length + i]);
   ok("las nasas pagan MENOS que la caña (la pasiva no puede ganarle a las manos)",
-    Math.max(porLombriz[4], porLombriz[5], porLombriz[6]) < Math.max(porLombriz[0], porLombriz[1], porLombriz[2], porLombriz[3]));
+    Math.max.apply(null, nasas) < Math.max.apply(null, cañas),
+    "mejor nasa " + Math.max.apply(null, nasas).toFixed(2) + " · mejor caña " + Math.max.apply(null, cañas).toFixed(2));
 }
 
 console.log("\n4 · LAS TABLAS DE RAREZA");
