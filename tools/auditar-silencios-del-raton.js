@@ -49,7 +49,19 @@ const ARCHIVOS = ["public/game/farm.js", "public/game/ui.js", "public/game/fores
 const HABLA = new RegExp([
   /* 1 · con palabras */      "toast\\(|log\\(|avisoAccion|bagFull|tutoAviso|askConfirm|console\\.warn",
   /* 2 · con un efecto */     "celebrate|premioFx|puffFx|sfx\\(|senalChapa|barraGolpes|destelloFx|golpeFx",
-  /* 3 · con una ventana */   "openOv|mostrarEleccion|showSeedWheel|pantallaNoSePudo|pescaPanel",
+  /* 3 · con una ventana — ABRIRLA O CERRARLA. Esta lista solo sabía ABRIR, y por eso cantaba
+         dos falsos positivos que llevaban semanas: el Escape que cierra todas las ventanas
+         (ui.js) y el clic derecho sobre el agua que abre los aparejos (farm.js, 28/8).
+         Cerrar una ventana es una respuesta tan visible como abrirla — de hecho la regla 9 de
+         la casa lista « una ventana » sin distinguir — y la lista se escribió cuando lo único
+         que hacían estos manejadores era abrir. Cada vez que el juego estrenó una forma nueva
+         de contestar, este auditor se quedó llamándola silencio.
+         Y ese es el fallo de fondo, no los dos nombres: un medidor con una lista de nombres
+         escrita a mano envejece cada vez que el juego crece, y su rojo pasa a significar « la
+         lista está vieja » en vez de « hay un clic mudo ». Cuando eso pasa, el auditor deja de
+         leerse. 9/9 */
+  /* 3 · con una ventana */   "openOv|mostrarEleccion|showSeedWheel|pantallaNoSePudo|pescaPanel" +
+                              "|closeAllOv|hideSeedWheel|pescaV4Cerrar|pescaAparejos(Abrir|Cerrar)|cerrarOv",
   /* 4 · con el MUNDO, que es la que faltaba: la cámara se mueve, el objeto se coloca, el
          granjero camina. El clic se ve, aunque nadie escriba una línea de texto. */
   "startAction|interactWith|colocarEn|holdSeek|levantarAdorno|cancelarColocar|dibujarOcupadas" +

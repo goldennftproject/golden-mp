@@ -1,74 +1,73 @@
 # Golden Farm — TO-DO
 
-*Actualizado el 11/08/2026. El detalle histórico vive en los "Pendientes conocidos" del CHANGELOG.md — esta es la vista corta.*
+*Actualizado el 9 de septiembre de 2026. La versión anterior era del 11 de AGOSTO y estaba
+podrida: la mitad de sus puntos los habían resuelto rebalances posteriores sin que nadie los
+tachara, y otros hablaban de sistemas que ya no existen (la pesca v2, el pase con `usos` de caña,
+el `GF.TESTEO` que lleva semanas en 0). Una lista que hay que leer con desconfianza no es una
+lista: es ruido con formato. Esta empieza limpia.*
 
-## 🔴 Inmediato
+**Antes de tocar nada:** [`docs/LEYES.md`](docs/LEYES.md) — el progreso no se resetea, el ritmo
+de los nodos no se toca, y lo cosmético no cuenta como contenido.
 
-- [x] ~~BALANCE del paso 16~~ RESUELTO por el rebalance integral (cocina 15+8, pico 2 mad+6) — ver manifiesto en CHANGELOG. Queda: guardar 1 papa para la receta del paso 18. Original: "juntá 15 de piedra" con
-  el pico de 1 uso encadena 10 picos → 30 maderas → 30 hachas → **~400 de plata** por 10
-  piedras. Opciones para el diseñador: pico de arranque con más usos (15→35), pedir menos
-  piedra en la Cocina (15→8), o pico de piedra más barato. También: guardar 1 papa para
-  la receta del paso 18 (el jugador la vende sin saber que la necesita).
-- [ ] **⚠ Estacionamiento en el tutorial acelerado (14/8)**: con TODAS las esperas en 3 s
-  durante la guía completa, un jugador podría no cumplir a propósito un paso tardío de
-  acción (p.ej. quedarse antes de "socketeá la runa") y farmear acelerado sin límite.
-  Vigilar en playtests; mitigación fácil si pasa: acelerar solo hasta cierto capítulo, o
-  límite de días con tutorial abierto.
-- [ ] **Ojo con los KITS ahora que la guía es opcional (14/8)**: el kit entrega "lo que
-  falte" al entrar a cada paso — un jugador astuto podría vaciarse a propósito (vender
-  madera antes de llegar al paso de madera) para inflar el kit. Es una vez por paso y
-  chico, pero si molesta: topear el kit al costo de receta del paso, o darlo fijo.
+---
 
-- [ ] **Deploy** (`deploy.bat`): atlas `?v=42` — set "mercadillo", árbol + talado, obras, pasto y cerca al tono, y la MECÁNICA DE BLUEPRINTS completa (plano al subir de nivel → colocar → depositar → construir). Listo para subir.
-- [ ] **Reorganizar la escalera de objetivos nivel a nivel** (idea aprobada 12/8): ajustar XP y orden de TUTO_STEPS para que cada nivel desbloquee y haga probar su sistema justo a tiempo. `PLANO_NIVEL` ya marca el esqueleto.
-- [ ] **Hojas caídas / suelo del talado** como piezas sueltas reutilizables (decisión 12/8: separadas del árbol).
-- [x] ~~Set de edificios estilo mercadillo~~ integrado (12/8) — ver CHANGELOG Día 17.
-- [x] ~~Mazos + God Hand~~ integrados (11/8).
-- [ ] **`GF.TESTEO = 1` → 0** en `config.js` antes de abrir al público.
+## 🔴 Decisiones de dirección — nada avanza sin esto
 
-## 🟡 Esperando al diseñador
+Están desarrolladas en el GDD §15.0, con sus números medidos. Aquí solo el titular:
 
-- [ ] **Outfit del granjero** (Fixes.docx 14/8 #4): pedir referencia/estilo — ¿outfit fijo nuevo o sistema de outfits como cosmético? Arte por PixelLab cuando se defina.
-- [ ] **Alimentar animales** (Fixes.docx 14/8 #1 "Comida>material"): implementado como "preferido +15 / cualquier cultivo +8" — confirmar si era esto o alimentar con PLATOS cocinados.
-- [ ] Que pruebe los 19 fixes de fixs.docx (todos implementados, ver CHANGELOG Día 16).
-- [ ] Números tuneables por si quiere ajustar: `DROP_CHANCE_MULT` (0.6), `PLOT_MAX` (60), `PLOT_EXTRA_SUBA` (1.12), `GODHAND_PLATA_HORA` (100), `GODHAND_SUBA_HORA` (1.10).
-- [x] ~~BALANCE con tedio medido~~ RESUELTO por el rebalance integral (Armas 300, Altar 8 de oro + picos baratos). Original:
-  - `ARMAS_UNLOCK_PLATA` = **1000**: incluso con boost y 8 parcelas son ~100 min y 61 ciclos de papa dentro del tutorial. Sugerencia: 150–250, o que cuente plata GANADA acumulada en vez de plata en mano.
-  - **Altar: 20 de ORO**: cada oro pide 1 uso de Pico de Oro (35 plata + 5 bronce c/u) y el bronce pide picos de bronce → cadena de ~700+ plata y decenas de crafteos. Sugerencia: bajar a 5-8 de oro o cambiar oro por bronce.
+- [ ] **Qué entregan los 26 niveles sin recompensa jugable.** La más grande de todas. De 49
+  niveles de granja, 23 dan algo que el jugador pueda usar; los otros 26 dan el bono de venta
+  (invisible) y adorno. El material para elegir ya existe: nodos sueltos, lugares de establo,
+  huecos de nasa, semillas de escalón alto, vales, capacidad de bolsa o cofre.
+- [ ] **Los seis oficios huérfanos** (Espada, Hacha, Mazo, Arco, Tala, Artesanía). O reciben algo
+  que abrir, o se acepta que su nivel es un número de daño y se les da un techo honesto. Lo que
+  no puede seguir es el 150 de reserva. *(Se probó atarles las armas y se midió que era un muro:
+  85 ratas para la espada de piedra. Descartado y explicado en el código.)*
+- [ ] **La escalera de cañas, aplanada arriba.** Al subir la de Hierro a 1.500, la de Oro (2.000)
+  queda a ×1,33. Lo que de verdad cobra la de oro es su barra (21 h de veta), no su plata — pero
+  si el último escalón tiene que sentirse, hay que subirlo.
+- [ ] **Recargar dentro de la Zona sigue esquivando la muerte.** Cerrarlo pide una política de
+  desconexión, y matar a alguien por una caída de red sería perder progreso sin borrar caché:
+  justo lo que la ley 1 prohíbe.
+
+## 🟠 Tuyo (Golden) — fuera de mi alcance
+
+- [ ] **Portero de guardado, PARTE 2**: aplicar `sql/portero-guardado.sql` y sacarlo de modo
+  sombra (hoy anota, nunca rechaza). Ese día muere el botón 🧪 y entra la limpieza de la bitácora
+  a 30 días.
+- [ ] **La cola de arte** (PixelLab): que el sprite del granjero, la herramienta y el arma cambien
+  de verdad. Hoy los cosméticos se coleccionan pero no se ponen. Ojo con la ley 3: esto va
+  DESPUÉS de lo jugable, no antes.
+- [ ] **El torneo**: el ranking de servidor está construido; falta abrirlo.
+
+## 🟡 Esperando a Suren
+
+- [ ] **Outfit del granjero**: ¿outfit fijo nuevo o sistema de outfits? Arte cuando se defina.
 - [ ] Aprobación de los **12 edificios nuevos** (si aprueba → re-animar el portal).
 - [ ] Usos de **tablones y barras**, **cerca premium**, tabla definitiva de **stats del bestiario**.
-- [ ] "#3 Agregar vallas laterales" — pedir aclaración: ¿vallas de la cerca perimetral o poder comprar más vallas de adorno? (único punto ambiguo de fixs.docx)
+- [ ] **Sala de trofeos**: cuando los edificios tengan interior, los logros de la pestaña 🏆 pasan
+  a exhibirse ahí. Lo cobrado se conserva (`G.logros`), la migración es solo visual.
 
-- [ ] **Sala de trofeos (22/8, dirección)**: cuando los edificios tengan interior accesible, los
-  logros de la pestaña 🏆 pasan a exhibirse como trofeos y medallas en una habitación propia.
-  La pestaña actual es la versión barata aprobada; los logros cobrados se conservan tal cual
-  (G.logros), así que la migración es solo visual. Arte de Suren cuando toque.
+## 🟢 Vigilar en playtest — no bloquea
 
-## 🟢 Visual abierto (no bloquea nada — decisión del 11/8: queda TODO así, no tocar salvo pedido nuevo)
+- [ ] **Estacionamiento en el tutorial acelerado**: con las esperas en 3 s, alguien podría no
+  cumplir a propósito un paso tardío y farmear acelerado. Mitigación si aparece: acelerar solo
+  hasta cierto capítulo, o limitar los días con tutorial abierto.
+- [ ] **Los kits**: entregan « lo que falte » al entrar a cada paso, así que vaciarse a propósito
+  los infla. Es una vez por paso y chico. Si molesta: topear al costo de receta del paso.
+- [ ] **Un medidor en rojo con motivo**: ninguno hoy. Si alguno aparece, mirarlo antes de subirle
+  la línea base — la semana del 8 al 9/9 encontró **trece** medidores que mentían, todos por un
+  supuesto escrito a mano que envejeció en silencio, y ninguno estaba en rojo.
 
-- [ ] El **Mercado** quedó chico comparado con los edificios nuevos.
+## ⚪ Visual abierto (decisión del 11/8: queda así salvo pedido nuevo)
+
+- [ ] El **Mercado** quedó chico al lado de los edificios nuevos.
 - [ ] **Árboles, piedras y parcelas**: siguen siendo el set viejo con el color calmado.
-- [ ] **Piedra vs hierro** se parecen — pide siluetas distintas (arte nuevo).
-- [ ] **Animaciones de ataque propias por arma** (hoy todos usan el espadazo; el efecto visual ya diferencia).
+- [ ] **Piedra vs hierro** se parecen — piden siluetas distintas.
+- [ ] **Animaciones de ataque propias por arma** (hoy todos usan el espadazo).
 
-## ⚪ Opcionales ofrecidos
+## ⚫ Ofrecido y sin pedir
 
 - [ ] Suelo nuevo y costa en la plaza y la Zona Negra.
 - [ ] Kick por AFK en la plaza.
 - [ ] Pulido tipo Sunflower Land: cursor de mano, resaltado al pasar.
-- [ ] Simulación completa del balance económico de punta a punta.
-
-## 🔵 Pilares futuros
-
-- [ ] **Granjas visitables** (idea aprobada el 11/8, sin fecha): V1 snapshot de la granja en Supabase + "modo visita" de solo lectura desde la plaza y el leaderboard · V2 me-gusta y cortesía diaria (regar) con tope · V3 presencia real con room de Colyseus por granja. Da sentido social a adornos, skins y las 60 parcelas.
-- [ ] Login por email multi-dispositivo · PvP/endgame de netherita · referidos · token $Golden · audio · granja distinta por nivel (quinta.docx).
-
-## ✅ Cerrado el 11/8 (fixs.docx, 19 puntos)
-
-Bug F5-parcelas · colocar con clic (parcelas y adornos) · esencia oscura solo nv 10-12 · drops −40% · sin drops de armadura · fuente/farol +40% · Reclamar todo en el pase · armadura visible en Equipo · equipado fuera de la bolsa · menú fijo · estrellas al recoger · alimentar con clic derecho · vallas frenan animales · flecha del tutorial · peces sin buff al pescar · GOD HAND 2.0 (inventario 6×50, ciclo completo, tarifa por hora) · mazos y arte NFT generados.
-
-## ✅ Cerrado el 10/8
-
-Bestiario (11 criaturas) · 8 adornos + 2 del cofre · mascota Pinta · 3 skins · efectos por arma · íconos de espada y pico · parcelas 12→60 · Tienda con bolsa visible · God Hand aclarado.
-
-- [ ] FUTURO (dirección 15/8): rendimiento por golpe (2-5 maderas por tala) como ÍTEMS y rama de SKILLS de granja (tala / minería / cosecha) — no como base del balance.

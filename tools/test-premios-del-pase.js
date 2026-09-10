@@ -105,13 +105,17 @@ console.log("\nY LO QUE NO CUADRA, SE DICE EN VOZ ALTA");
   for (const x of fuera) console.log("    nivel " + String(x.nivel).padStart(2) + "  paga " + String(x.paga).padStart(5) +
     " de " + String(x.meta).padStart(5) + "  (×" + x.factor + ")   " + x.que);
   console.log("");
-  ok("la mayoría de los escalones cae en su altura", fuera.length <= 6,
+  /* 9/9 — ESTO PEDÍA « seis o menos », y era lo correcto MIENTRAS la decisión estuviera abierta:
+     cuatro escalones daban un objeto que valía 2 o valía 2.580, y ninguna cantidad legible daba
+     su altura. Se cambió el OBJETO en tres (papa→calabaza, pan de trigo→sopa, papa asada→guiso)
+     y en el cuarto —las flechas, que son de un escalón de combate— se subió el tope de la pila.
+     Ya no queda ninguno, así que el test pide lo que hay: CERO. Dejarlo en « seis o menos »
+     sería guardar sitio para seis fallos futuros. */
+  ok("todos los escalones caen en su altura", !fuera.length,
     fuera.length + " de " + NIV + " fuera del ±35 %");
-  console.log("       → los que quedan NO son un error de código: la cantidad se recorta a lo que");
-  console.log("         un jugador lee de un vistazo (200 en pilas, 60 en semillas y platos), y");
-  console.log("         cuando el objeto vale 2 o vale 2.580 no hay cantidad legible que dé la");
-  console.log("         altura. El arreglo es cambiar el OBJETO por otro de su familia, y eso lo");
-  console.log("         decide el diseñador. Esta lista es justamente lo que hay que pasarle.");
+  console.log("       → si esto vuelve a subir, es que un objeto nuevo del pase vale demasiado");
+  console.log("         poco o demasiado para su escalón. El arreglo es cambiar el OBJETO por");
+  console.log("         otro de su familia, no la cantidad: la cantidad ya la deriva el código.");
 }
 
 console.log(fallos ? "\n" + fallos + " fallo(s)\n" : "\nTodo en orden: el pase sube, no imprime, y dice dónde no llega.\n");

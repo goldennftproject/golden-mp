@@ -3006,10 +3006,24 @@ var PASS_STAR_DAILY = 10, PASS_STAR_BONUS = 5, PASS_STAR_WEEKLY = 40;
 var PASS_VIP_BOOST = 1.2;     // perk VIP: +20% de estrellas (conveniencia, no poder)
 // 14/8 (web3): el track FREE paga INSUMOS, no plata — cada plata regalada es emisión.
 // Los valores reemplazan cada fila de plata por insumos de valor equivalente.
+/* 9/9 — TRES OBJETOS CAMBIADOS, y no es lo mismo que cambiar una cantidad.
+   La derivación del 9/9 puso al código a decidir CUÁNTO da cada escalón, y con eso quedaron a
+   la vista cuatro donde ninguna cantidad legible daba la altura del escalón: el objeto que la
+   tabla eligió vale 2 o vale 2.580, y no hay número intermedio. paseDesviados() los enumeraba en
+   vez de taparlos, que era lo correcto mientras la decisión no estuviera tomada.
+     · el 2 daba 60 semillas de PAPA (1 de plata cada una): ni llegando al tope de la banda
+       alcanzaba su altura. Pasa a CALABAZA, que es de Cultivo 2 —o sea plantable ya— y cuya
+       semilla vale 40: nueve semillas, 360 exactos.
+     · el 7 daba UN Pan de Trigo, que vale 2.580 y se pasaba ×6 él solo. Pasa a SOPA DE
+       ZANAHORIA (29): catorce platos, 406 sobre un objetivo de 420.
+     · el 14 daba 60 Papas Asadas (3 de plata): sesenta gestos para 180. Pasa a GUISO CAMPESTRE
+       (86): siete platos, 602 sobre 600.
+   El 18 —las flechas— NO cambia de objeto: es un escalón de combate y la flecha es lo que se
+   gasta ahí. Lo que se movió es el tope de la banda (ver derivarPremiosDelPase). */
 const PASS_FREE = [   // índice = nivel-1 (tabla del doc, plata→insumos 14/8)
-  { res:["madera",20] }, { seed:["papa",5] }, { res:["madera",20] }, { seed:["zanahoria",8] }, { seed:["zanahoria",5] },
-  { res:["piedra",25] }, { dish:["pan_trigo",3] }, { res:["piedra",3] } /* 1/9: eran 15 lombrices (45 de plata) — la lombriz solo nace de la tierra; mismo valor en piedra */, { seed:["cebolla",5] }, { pick:"bronze" },
-  { res:["barra_piedra",3] }, { res:["madera",30] }, { seed:["repollo",5] }, { dish:["papa_asada",5] }, { ficha:1 },
+  { res:["madera",20] }, { seed:["calabaza",5] }, { res:["madera",20] }, { seed:["zanahoria",8] }, { seed:["zanahoria",5] },
+  { res:["piedra",25] }, { dish:["sopa_zanahoria",3] }, { res:["piedra",3] } /* 1/9: eran 15 lombrices (45 de plata) — la lombriz solo nace de la tierra; mismo valor en piedra */, { seed:["cebolla",5] }, { pick:"bronze" },
+  { res:["barra_piedra",3] }, { res:["madera",30] }, { seed:["repollo",5] }, { dish:["guiso_campestre",5] }, { ficha:1 },
   { res:["piedra",30] }, { seed:["calabacin",5] }, { res:["flecha",40] }, { dish:["estofado",1] }, { pick:"gold" },
   { res:["carne",10] }, { res:["madera",40] }, { seed:["brocoli",5] }, { res:["bronce",8] }, { ficha:1 },
   { res:["piedra",40] }, { seed:["maiz",5] }, { res:["esencia_runica",2] }, { dish:["banquete",1] }, { ficha:1, cos:"Título de Cosecha" },
@@ -3097,12 +3111,21 @@ function paseValorDelEscalon(n) { return Math.round(ANCLA_PLATA_HORA * paseCelda
 /* Se llama al final del archivo: necesita PRICE, CROP_DEF, RECIPE_DEF y dishPrice, que viven
    miles de líneas más abajo. Misma disciplina que derivarTareasDeMinado(), y por el mismo susto. */
 function derivarPremiosDelPase() {
+  /* 9/9 — EL CAMPO SE LLAMA seedCost, NO seed. Esta función leía `.seed`, que no existe en
+     CROP_DEF, y caía al `|| .price` — o sea que tasaba cada semilla al precio de la COSECHA en
+     vez de al de la semilla. Una semilla de calabaza vale 40 y se estaba contando a 100.
+     Lo que hace que esto pase inadvertido es que paseDesviados() copiaba la misma expresión: dos
+     funciones con el mismo supuesto equivocado se dan la razón entre ellas, y el auditor decía
+     « ninguno fuera de su altura » mientras el jugador recibía menos de la mitad de las semillas
+     que le tocaban. Es literalmente el fallo del auditor de la pesca, cometido el mismo día y en
+     el mismo archivo. Ahora la valoración vive en UN sitio y las dos preguntan acá. */
   const unidad = (r) => {
     if (r.res) return { k: "res", v: CROP_DEF[r.res[0]] ? CROP_DEF[r.res[0]].price : (PRICE[r.res[0]] != null ? PRICE[r.res[0]] : matValor(r.res[0])) };
-    if (r.seed) return { k: "seed", v: (CROP_DEF[r.seed[0]] || {}).seed || (CROP_DEF[r.seed[0]] || {}).price || 0 };
+    if (r.seed) { const c = CROP_DEF[r.seed[0]] || {}; return { k: "seed", v: c.seedCost || c.price || 0 }; }
     if (r.dish) return { k: "dish", v: dishPrice(RECIPE_DEF[r.dish[0]]) };
     return null;
   };
+  paseUnidad = unidad;   // ← una sola valoración, compartida con paseDesviados()
   for (const tabla of [PASS_FREE, PASS_VIP]) {
     tabla.forEach((r, i) => {
       const u = unidad(r); if (!u || !u.v) return;
@@ -3118,22 +3141,34 @@ function derivarPremiosDelPase() {
          arreglo de verdad no es la cantidad, es cambiar el objeto por otro de su familia—, y no
          quiero que un clamp la esconda: un recorte silencioso es exactamente el fallo que esta
          auditoría vino a cazar. */
-      /* el techo no es el mismo para todo: una PILA de recurso se mira de un vistazo aunque sean
-         doscientas flechas, y en cambio sesenta semillas o sesenta platos son sesenta gestos —
-         se plantan y se comen de a uno. La carne queda exacta gracias a esto (105 unidades). */
-      n = Math.min(u.k === "res" ? 200 : 60, Math.max(1, n));
+      /* UN TECHO POR FAMILIA, Y CADA UNO CON SU MOTIVO (9/9). Antes había dos —200 para pilas y
+         60 para todo lo demás— y ese « todo lo demás » metía semillas y platos en la misma bolsa
+         siendo cosas distintas:
+           · RECURSO (400): es una pila. Trescientas noventa flechas se leen igual que doscientas
+             — el ojo ve el montón, no cuenta. Subió de 200 porque el escalón 18 son FLECHAS, que
+             valen 2, y con el tope viejo pagaba la mitad de su altura; cambiarle el objeto habría
+             sido peor, porque es un escalón de combate y la flecha es lo que se gasta ahí.
+           · SEMILLA (120): también es una pila, y se planta a lo largo de DÍAS como parte de
+             jugar. Ciento veinte semillas de zanahoria no son ciento veinte tareas: son la huerta
+             de la semana. Subió de 60 porque los escalones 4 y 5 pagaban la mitad.
+           · PLATO (60): éste sí se usa de a uno y en el momento — sesenta platos son sesenta
+             gestos seguidos, y ahí el número sí cansa. Se queda donde estaba. */
+      const TECHO = { res: 400, seed: 120, dish: 60 };
+      n = Math.min(TECHO[u.k] || 60, Math.max(1, n));
       r[u.k][1] = n;
     });
   }
 }
 /* Los escalones donde el objeto elegido no llega (o se pasa) de su altura, con el desvío medido.
    No es un error del código: es una decisión de diseño pendiente, dicha en voz alta. */
+var paseUnidad = null;   // lo rellena derivarPremiosDelPase: la MISMA valoración, no una copia
 function paseDesviados(tol) {
   tol = tol || 0.35;
   const fuera = [];
-  const uni = (r) => r.res ? (CROP_DEF[r.res[0]] ? CROP_DEF[r.res[0]].price : (PRICE[r.res[0]] != null ? PRICE[r.res[0]] : matValor(r.res[0])))
-    : r.seed ? ((CROP_DEF[r.seed[0]] || {}).seed || (CROP_DEF[r.seed[0]] || {}).price || 0)
-    : r.dish ? dishPrice(RECIPE_DEF[r.dish[0]]) : 0;
+  /* 9/9 — antes acá vivía una COPIA de la expresión de arriba, y las dos compartían el mismo
+     error (`.seed` por `seedCost`). Un auditor que repite el supuesto de lo que audita no puede
+     encontrar nada: se confirma a sí mismo. Ahora pregunta por la misma función. */
+  const uni = (r) => { const u = paseUnidad && paseUnidad(r); return u ? u.v : 0; };
   PASS_FREE.forEach((r, i) => {
     const v = uni(r); if (!v) return;                                   // fichas, picos y cosméticos no llevan cantidad
     const meta = paseValorDelEscalon(i + 1), paga = v * (r.res || r.seed || r.dish)[1];

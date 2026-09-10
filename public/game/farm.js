@@ -501,8 +501,19 @@ class FarmScene extends Phaser.Scene {
          no empieza otro lance encima del primero. Moverse sí cancela, la salida de siempre.
          31/8 — Y CON EL CARRETE DE VUELTA (today.docx), durante la pelea el clic ES el juego:
          mantener apretado sube la zona de captura, soltar la deja caer. */
+      /* 9/9 — Y EL CAMINO MUDO DE ESTE MISMO BLOQUE, que llevaba desde el 28/8 sin contestar.
+         Con el carrete en marcha el clic ES el juego y contesta solo (lanceHold sube la zona de
+         captura, y eso se ve). Pero con el corcho en el agua ESPERANDO EL PIQUE, un clic no
+         hacía absolutamente nada: ni movía al granjero, ni tiraba otra vez, ni decía por qué.
+         Y es justo el momento en que el jugador vuelve a hacer clic — porque cree que el primero
+         no entró. Un clic que no contesta es indistinguible de un clic roto.
+         Se pensó primero en subir este filtro a la cabecera del manejador, que es lo que pide el
+         auditor. No se puede: tiene que ir DESPUÉS de clicDeInterfaz, o un clic sobre un panel
+         durante la pelea se comería el carrete. Así que se arregla por donde había que
+         arreglarlo — dándole voz, que es la regla 9 y no una concesión al medidor. */
       if (typeof P4 !== "undefined" && P4) {
         if (P4.carrete) this.lanceHold = true;
+        else toast("El corcho ya está en el agua — esperá el pique");
         return;
       }
       /* 21/8 (diseñador: "con doce semillas, el clic derecho planta la última en vez de abrir la
