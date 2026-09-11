@@ -66,6 +66,10 @@ Están desarrolladas en el GDD §15.0, con sus números medidos. Aquí solo el t
   armas pasaron a subir por INTENTOS con la fórmula de Tibia del diseñador (`docs/SKILLS-TIBIA.md`,
   `test-skills-tibia.js`): arrancan en 10, cada golpe cuenta, matar no entrena. Eso les da un
   ritmo con sentido, pero NO les da nada que abrir — siguen sin contenido y el 150 sigue ahí.
+  Misma tarde, segundo doc (`Defensa de los mobs de Tibia`): parada + armadura + cargas de
+  bloqueo en cada bicho, daño del jugador con la fórmula de TFS, el mob pega normal(0, máx) y
+  pasa por tu parada. **Vigilar en playtest:** lo que te pegan a golpes cayó mucho (trol 18 → 5
+  por golpe); si la Zona queda blanda, la perilla es `MOB_DMG_MULT`, no las fórmulas.
 - [ ] **La escalera de cañas, aplanada arriba.** Al subir la de Hierro a 1.500, la de Oro (2.000)
   queda a ×1,33. Lo que de verdad cobra la de oro es su barra (21 h de veta), no su plata — pero
   si el último escalón tiene que sentirse, hay que subirlo.

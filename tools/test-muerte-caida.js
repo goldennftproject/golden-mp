@@ -157,8 +157,8 @@ console.log("\nEL AVISO DICE QUÉ SE PERDIÓ — un « perdiste cosas » no ense
     /de ellas equipo que llevabas puesto/.test(FOREST));
   /* el orden es la mecánica: si zonaSalir corriera antes, la muerte sería la forma más cómoda de
      cobrar el botín — exactamente lo contrario de lo que esto quiere */
-  const iH = FOREST.indexOf("hurtHero(dmg)");
-  const cuerpo = FOREST.slice(iH, iH + 4200);   // el bloque creció con los avisos de la tanda 4
+  const iH = FOREST.indexOf("hurtHero(dmg, fisico)");   // 11/9: el golpe físico pasa por la parada (doc de Tibia)
+  const cuerpo = FOREST.slice(iH, iH + 5200);   // el bloque creció con los avisos de la tanda 4 y la parada del 11/9
   ok("y la tumba se llena ANTES de zonaSalir, que descarga a la bolsa",
     cuerpo.indexOf("tumbaCaer") < cuerpo.indexOf("zonaSalir(true)"));
 }

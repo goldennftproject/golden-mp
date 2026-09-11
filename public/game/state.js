@@ -1449,9 +1449,9 @@ function skillInfo(xp, sk) { return (sk && esOficioTries(sk)) ? triesInfo(xp, sk
      · Offline training (§6): el dummy sigue siendo el entrenamiento offline, a DUMMY_OFF_XP_H
        intentos por hora (uno por minuto) con el mismo tope de horas.
    Lo que NO se adopta, y por qué (decidido con Golden el 11/9):
-     · §4, la fórmula de ataque ⌊(W+S)·0.2⌋: TibiaWiki la marca desactualizada. El daño sigue
-       siendo tirada del arma + nivel/2 — y como el nivel ahora arranca en 10, el bono se calcula
-       sobre (nivel − 9) para que un jugador migrado pegue EXACTAMENTE lo que pegaba ayer.
+     · §4, la fórmula de ataque ⌊(W+S)·0.2⌋: TibiaWiki la marca desactualizada. El daño lo fija el
+       SEGUNDO documento (« Defensa de los mobs de Tibia », misma tarde): la fórmula de TFS, con el
+       skill entrando directo — ver el bloque « LA DEFENSA DE LOS MOBS » más abajo.
      · §5, perder el 10 % de los intentos al morir: va contra la decisión del 28/7 (morir no quita
        nada) y roza la ley 1. Queda fuera.
      · Shielding y Magic Level: Golden no tiene esos oficios. Pesca sigue con su curva de XP.
@@ -1470,9 +1470,6 @@ function triesInfo(tries, sk) {
   while (tries >= acc + need && lvl < techo) { acc += need; lvl++; need = triesNeed(lvl, sk); }
   return { lvl, into: tries - acc, need, techo, tries: true };
 }
-/* el nivel « de daño » de un arma: el que entra en tirada + nivel/2. Con el arranque en 10, se
-   resta 9 para que el nivel 10 pegue como pegaba el 1 (daño como hoy — decisión del 11/9). */
-function nivelArmaDmg(sk) { return skillInfo(G.skills[sk] || 0, sk).lvl - (esOficioTries(sk) ? TRIES_C - 1 : 0); }
 /* un intento: cada golpe que das cuenta, acierte o no. n > 1 solo lo usa el dummy. */
 function addTries(sk, n) {
   if (!esOficioTries(sk) || !(sk in G.skills)) return;
@@ -3647,8 +3644,7 @@ const INCURSIONES = {
 const INC_ORDER = ["zn1", "zn2", "zn3", "guarida"];
 function incPoder() {   // poder de combate del jugador con lo que tiene equipado
   const id = armaEq(); if (!id) return 0;
-  const w = ARM_DEF[id], lvl = nivelArmaDmg(armSkillKey(w.tipo));   // 11/9: nivel − 9 con el arranque en 10
-  let p = (w.min + w.max) / 2 + Math.floor(lvl / 2);
+  let p = playerMaxDamage(id) / 2;                     // 11/9: la media de la tirada de Tibia
   p *= 1 + upgDmg(armPlus(id)) / 100;
   p *= dmgMult();
   return Math.round(p);
@@ -5568,22 +5564,110 @@ function repairWeapon(id) {
   if (isOpen("ov-equip")) refreshEquip(); if (isOpen("ov-inv")) refreshInv();
 }
 function useWeapon(id) { if (G.weapons[id] && G.weapons[id].dur > 0) G.weapons[id].dur--; return G.weapons[id] ? G.weapons[id].dur : 0; }
-// la tirada de un golpe (doc: Daño = máx(1; Ataque − Def efectiva); Ataque = tirada aleatoria + nivel de la skill del arma / 2)
-function rollWeaponHit(defensa) {
+/* ============ 11/9 — LA DEFENSA DE LOS MOBS Y EL DAÑO DEL JUGADOR, COMO TIBIA (TFS) ===========
+   Segundo documento del diseñador, « Defensa de los mobs de Tibia » (fuente: The Forgotten
+   Server). Sustituye a la tirada « min–max + nivel/2 − def » del doc 2/8. Lo que se adopta:
+   · DAÑO MÁXIMO DEL JUGADOR (§3.1, Weapons::getMaxWeaponDamage):
+       máx = round( nivel/5 + ((skill/4 + 1) · (atk/3) · 1,03) / factor )
+     nivel = la barra de Combate global (el « level » del jugador en Golden); skill = el oficio del
+     arma (arranca en 10, ver el bloque de intentos); factor = 1,0 — Golden no tiene modos de
+     combate, así que siempre es « ofensivo ». El golpe real es normal_random(0, máx): centrado en
+     la mitad, los máximos son raros. Con arco contra un mob el mínimo es ceil(nivel · 0,2).
+   · CADA MOB TIENE DOS NÚMEROS (§1): defense (la parada, que puede anular el golpe entero y solo
+     actúa si le quedan cargas de bloqueo) y armor (reducción fija, siempre). Orden (§2,
+     Creature::blockHit): parada si blockCount > 0 → armadura → lo que queda. Las cargas se gastan
+     por golpe recibido y se regeneran 1 por segundo hasta 2 (§2.1).
+   · EL MOB PEGA (§4) normal_random(0, máx) y pasa por la MISMA secuencia del lado del jugador:
+     defensa = (skill/4 + 2,23) · defArma · 0,15 · factorDefensa; Golden no tiene Shielding, así
+     que el skill es siempre el del arma y la defensa la del arma (el escudo suma a la ARMADURA,
+     como el resto de las piezas). factorDefensa = 0,5 si está atacando (ofensivo), 1,0 si no.
+   LO QUE ES DE GOLDEN Y NO DEL DOCUMENTO — dos escalas que el doc no fija:
+   · ATK DEL ARMA: Golden guarda min–max por rareza (compendio 15-18); Tibia usa un « Atk » único.
+     Se toma atk = min + max de la tabla (el doble de la media), calibrado para que la Espada de
+     Madera a skill 10 pegue de media lo mismo que ayer (~4,8 contra ~4). Def del arma = 0,8 · atk,
+     la proporción de las espadas de Tibia (24/21, 40/30).
+   · ARMOR y DEFENSE de cada bicho: el doc trae la tabla de TFS y la regla « armor ≈ defense,
+     proporcional al HP ». Sus números literales (Rotworm 8 para la Larva de 22 de HP) son de la
+     escala de Tibia, cinco veces más grande que la de Golden: aplicados tal cual, la Larva
+     absorbía cada golpe de la espada de madera. Se deriva armor = defense = 6 % del HP (la mediana
+     de la tabla TFS: rata 5 %, orco 6 %, cíclope 6,5 %), con mínimo 1, salvo que el bicho traiga
+     armor/defense escritos. El campo `def` viejo queda en la tabla sin efecto.
+   Lo custodia tools/test-defensa-mobs.js.                                                       */
+const TIBIA_FACTOR_ATK = 1.0;                  // « ofensivo »: Golden no tiene modos de combate
+const TIBIA_FACTOR_DEF_ATACANDO = 0.5;         // ofensivo y atacando (§4)
+const TIBIA_ATACANDO_MS = 2000;                // « atacando » = pegó hace menos de esto
+const TIBIA_BLOCK_MAX = 2;                     // cargas de bloqueo (§2.1)
+const MOB_ARMOR_PCT = 0.06;                    // armor = defense = 6 % del HP cuando el bicho no lo trae escrito
+const ARM_ATK = {};                            // atk = min + max del compendio
+ARM_TIPOS.forEach(t => { ARM_ATK[t] = ARM_MINMAX[t].map(mm => mm[0] + mm[1]); });
+function armAtk(id) { const w = ARM_DEF[id]; return ARM_ATK[w.tipo][w.ri]; }
+function armDefV(id) { return Math.round(armAtk(id) * 0.8); }
+/* normal_random de TFS: gaussiana centrada en la mitad (media 0,5, desvío 0,25), recortada a [0,1] */
+function normalRandom(min, max) {
+  let u = 0, v = 0; while (u === 0) u = Math.random(); while (v === 0) v = Math.random();
+  let z = 0.5 + 0.25 * Math.sqrt(-2 * Math.log(u)) * Math.cos(2 * Math.PI * v);
+  z = Math.max(0, Math.min(1, z));
+  return Math.round(min + z * (max - min));
+}
+function randIntIncl(a, b) { a = Math.floor(a); b = Math.floor(b); if (b < a) return a; return a + Math.floor(Math.random() * (b - a + 1)); }
+function playerMaxDamage(id) {
+  const w = ARM_DEF[id]; if (!w) return 0;
+  const sk = armSkillKey(w.tipo), skill = skillInfo(G.skills[sk] || 0, sk).lvl, level = combatInfo().lvl;
+  return Math.round(level / 5 + ((skill / 4 + 1) * (armAtk(id) / 3) * 1.03) / TIBIA_FACTOR_ATK);
+}
+function mobArmor(def) { return def.armor != null ? def.armor : Math.max(1, Math.round((def.hp || 0) * MOB_ARMOR_PCT)); }
+function mobDefense(def) { return def.defense != null ? def.defense : Math.max(1, Math.round((def.hp || 0) * MOB_ARMOR_PCT)); }
+/* Creature::blockHit — devuelve { dmg, parado, absorbido }. blk es quien recibe ({ blockCount }) o null. */
+function blockHit(dmg, armor, defense, blk) {
+  dmg = Math.max(0, Math.round(dmg));
+  if (blk && (blk.blockCount == null || blk.blockCount > 0) && defense > 0) {
+    blk.blockCount = (blk.blockCount == null ? TIBIA_BLOCK_MAX : blk.blockCount) - 1;
+    dmg -= randIntIncl(defense / 2, defense);
+    if (dmg <= 0) return { dmg: 0, parado: true, absorbido: false };
+  }
+  armor = Math.floor(armor);
+  if (armor > 3) dmg -= randIntIncl(armor / 2, armor - (armor % 2 === 0 ? 2 : 1));
+  else if (armor >= 1) dmg -= 1;
+  if (dmg <= 0) return { dmg: 0, parado: false, absorbido: true };
+  return { dmg, parado: false, absorbido: false };
+}
+/* §2.1: cada tick, una carga por segundo hasta el tope */
+function tickBlock(blk, dtMs) {
+  if (!blk) return;
+  if (blk.blockCount == null) blk.blockCount = TIBIA_BLOCK_MAX;
+  blk.blockTicks = (blk.blockTicks || 0) + dtMs;
+  if (blk.blockTicks >= 1000) { blk.blockCount = Math.min(blk.blockCount + 1, TIBIA_BLOCK_MAX); blk.blockTicks = 0; }
+}
+/* la defensa (parada) del jugador — §4 */
+function heroDefensa(atacando) {
+  const id = armaEq(); if (!id) return 0;
+  const sk = armSkillKey(ARM_DEF[id].tipo), skill = skillInfo(G.skills[sk] || 0, sk).lvl;
+  return (skill / 4 + 2.23) * armDefV(id) * 0.15 * (atacando ? TIBIA_FACTOR_DEF_ATACANDO : 1);
+}
+/* la tirada de un golpe del jugador — §3.1 y luego §2 del lado del mob.
+   `mob` es { armor, defense, blk } (lo arma forest.mobDef); un número suelto se toma como armor
+   sin parada (herramientas viejas). */
+function rollWeaponHit(mob) {
   const id = armaEq(); if (!id) return null;
-  const w = ARM_DEF[id], lvl = nivelArmaDmg(armSkillKey(w.tipo));   // 11/9: nivel − 9 con el arranque en 10
-  let atk = w.min + Math.floor(Math.random() * (w.max - w.min + 1)) + Math.floor(lvl / 2);
+  const w = ARM_DEF[id], level = combatInfo().lvl;
+  const max = playerMaxDamage(id);
+  let atk = normalRandom(0, max);
+  if (w.tipo === "arco") atk = Math.max(atk, Math.ceil(level * 0.2));   // mínimo a distancia contra un mob
   atk *= 1 + upgDmg(armPlus(id)) / 100;                       // Altar: mejora +1..+15 (daño acumulado)
-  let defEf = defensa || 0;
-  const out = { id, tipo: w.tipo, crit: false, stun: false, bleed: 0, vamp: eqRunaVal("vamp") };
-  if (w.tipo === "hacha") defEf = defEf * (1 - w.buffVal / 100);
-  defEf = defEf * (1 - eqRunaVal("perfo") / 100);             // Runa de Perforación
+  const out = { id, tipo: w.tipo, crit: false, stun: false, bleed: 0, vamp: eqRunaVal("vamp"), max };
   const critCh = (w.tipo === "espada" ? w.buffVal : 0) + eqRunaVal("furia");   // Runa de Furia: crítico en cualquier arma
   if (critCh && Math.random() * 100 < critCh) { atk *= 2; out.crit = true; }
   if (w.tipo === "mazo" && Math.random() * 100 < w.buffVal) out.stun = true;
   if (w.tipo === "arco") out.bleed = w.buffVal;
   out.bleed = Math.max(out.bleed, eqRunaVal("sangrante"));    // Runa Sangrante: sangrado en cualquier arma
-  out.dmg = Math.max(1, Math.round((atk - defEf) * dmgMult() * playerDmgOutMult()));   // buff de comida y maldición de Flaqueza
+  atk = atk * dmgMult() * playerDmgOutMult();                  // buff de comida y maldición de Flaqueza
+  let armor = 0, defense = 0, blk = null;
+  if (typeof mob === "number") armor = mob;
+  else if (mob) { armor = mob.armor || 0; defense = mob.defense || 0; blk = mob.blk || null; }
+  const perf = (w.tipo === "hacha" ? w.buffVal : 0) + eqRunaVal("perfo");   // Perforación: le baja la defensa al bicho
+  if (perf) { armor *= 1 - perf / 100; defense *= 1 - perf / 100; }
+  const r = blockHit(atk, armor, defense, blk);
+  out.dmg = r.dmg; out.parado = r.parado; out.absorbido = r.absorbido;
   return out;
 }
 
@@ -5594,7 +5678,7 @@ const SWORD_WOOD_COST = { madera: 5 };
 function swordDmg() {   // legado: >0 si hay un arma CUERPO A CUERPO equipada y sana (el daño real sale de rollWeaponHit)
   const id = armaEq(); if (!id) return 0;
   const w = ARM_DEF[id]; if (w.tipo === "arco") return 0;
-  return Math.round((w.min + w.max) / 2) + Math.floor(nivelArmaDmg(armSkillKey(w.tipo)) / 2);
+  return Math.round(playerMaxDamage(id) / 2);   // 11/9: la media de la tirada de Tibia
 }
 
 // --- arco y flechas (combate a distancia; usa la skill Arco) ---

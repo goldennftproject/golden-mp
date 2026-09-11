@@ -5,7 +5,7 @@
    Lo que este archivo custodia:
      1 · los ejemplos NUMÉRICOS del documento salen exactos con la fórmula del juego;
      2 · un golpe = un intento (melee al pegar, arco al disparar), y matar NO entrena el arma;
-     3 · el daño no cambió: nivel 10 pega como pegaba el 1 (nivel − 9 en tirada + nivel/2);
+     3 · el skill entra directo en el daño (segundo doc; el detalle en test-defensa-mobs.js);
      4 · la migración (ley 1): la XP vieja conserva el nivel y la fracción de barra, y corre UNA vez;
      5 · el dummy sigue siendo entrenamiento offline, en intentos;
      6 · lo que se decidió NO adoptar sigue fuera: sin pérdida al morir, Pesca por XP.
@@ -48,12 +48,12 @@ ok("pero Cultivo sigue subiendo por XP", G.skills.farming === 5);
 for (let i = 0; i < 49; i++) g('addTries("sword")');
 ok("a los 50 golpes, Espada 11", g('skillInfo(G.skills.sword, "sword").lvl') === 11);
 
-console.log("\n3 · EL DAÑO NO CAMBIÓ\n");
-G.skills.sword = 0;
-ok("nivel 10 recién arrancado pega como el 1 de antes (bono 0)", g('nivelArmaDmg("sword")') === 1 && Math.floor(g('nivelArmaDmg("sword")') / 2) === 0);
-G.skills.sword = g('triesTotal(13, "sword")');
-ok("nivel 13 = el viejo 4: bono +2", g('skillInfo(G.skills.sword, "sword").lvl') === 13 && Math.floor(g('nivelArmaDmg("sword")') / 2) === 2);
-ok("Cultivo no lleva ese corrimiento", g('nivelArmaDmg("farming")') === g('skillInfo(G.skills.farming, "farming").lvl'));
+console.log("\n3 · EL SKILL ENTRA DIRECTO EN EL DAÑO (segundo doc: la fórmula de TFS)\n");
+G.skills.sword = 0; G.weapons = { espada_madera: { dur: 99 } }; G.gear = G.gear || {}; G.gear.arma = "espada_madera";
+ok("a skill 10 la Espada de Madera pega máximo 10", g('playerMaxDamage("espada_madera")') === 10, g('playerMaxDamage("espada_madera")'));
+G.skills.sword = g('triesTotal(30, "sword")');
+ok("y a skill 30, máximo 24: subir el skill se nota (doc §3.3)", g('playerMaxDamage("espada_madera")') === 24, g('playerMaxDamage("espada_madera")'));
+ok("el detalle vive en test-defensa-mobs.js", require("fs").existsSync(path.join(RAIZ, "tools/test-defensa-mobs.js")));
 
 console.log("\n4 · LA MIGRACIÓN (ley 1): nadie baja de nivel\n");
 {

@@ -704,7 +704,12 @@ class ForestScene extends Phaser.Scene {
     });
   }
 
-  mobDef(m) { return Math.round((m.def.def || 0) * (m.shellUntil && nowMs() < m.shellUntil ? 1.6 : 1)); }   // Caparazón del Golem
+  /* 11/9: los dos números del bicho (doc « Defensa de los mobs »): armor y defense, más sus cargas
+     de bloqueo (viven en el mob). El Caparazón del Golem multiplica los dos. */
+  mobDef(m) {
+    const k = (m.shellUntil && nowMs() < m.shellUntil ? 1.6 : 1);
+    return { armor: Math.round(mobArmor(m.def) * k), defense: Math.round(mobDefense(m.def) * k), blk: m };
+  }
 
   // la primera vez que golpeás a una criatura se paga su estamina (doc "2das mejoras")
   cobrarEstamina(m) {
@@ -735,7 +740,16 @@ class ForestScene extends Phaser.Scene {
       /* 11/9: cada golpe cuerpo a cuerpo es un INTENTO del arma (doc de Tibia) — acierte o no, así
          que se cuenta ANTES del esquive. La flecha ya se contó al disparar (shootArrow). */
       if (ARM_DEF[roll.id].tipo !== "arco" && typeof addTries === "function") addTries(armSkillKey(ARM_DEF[roll.id].tipo), 1);
+      this.heroAtacoEn = tn;   // §4: atacando → la defensa propia baja a la mitad durante un rato
       if (m.def.evade && ARM_DEF[roll.id].tipo !== "arco" && Math.random() < m.def.evade) { this.floatTxt(m, "Esquivó", "#a8d8ff"); return; }   // Vuelo evasivo (solo cuerpo a cuerpo)
+      /* 11/9 (doc, §6): « Parado » cuando la defense anuló el golpe, « Absorbido » cuando fue la
+         armadura — que el jugador entienda la diferencia. El arma se gasta igual: el golpe se dio. */
+      if (roll.parado || roll.absorbido) {
+        if (ARM_DEF[roll.id].tipo !== "arco") { useWeapon(roll.id); if (G.weapons[roll.id].dur <= 0) { log("¡" + ARM_DEF[roll.id].label + " rota! Reparala en la Herrería.", "bad"); toast("¡Arma rota!"); } }
+        this.floatTxt(m, roll.parado ? "Parado" : "Absorbido", roll.parado ? "#a8d8ff" : "#c9c9c9");
+        m.tgt = "hero"; this.updateTargetFx();
+        return;
+      }
       dmg = roll.dmg; crit = roll.crit; vamp = roll.vamp || 0;
       tipoFx = ARM_DEF[roll.id].tipo;   // efecto visual propio de cada tipo de arma (pendiente del 10/8)
       skill = armSkillKey(tipoFx);
@@ -975,7 +989,7 @@ class ForestScene extends Phaser.Scene {
       case "charge":   // Ogro: embestida telegrafiada (x2 daño + sangrado fuerte)
         if (m.chargeAt && t >= m.chargeAt) {
           m.chargeAt = 0; if (m.spr.clearTint) m.spr.clearTint();
-          if (d < 95) { this.hurtHero(m.def.dmg * 2); this.applyState("sangrado", 5, 4, "Sangrado"); this.floatTxt(m, "¡Embestida!", "#ff5544"); }
+          if (d < 95) { this.hurtHero(normalRandom(0, m.def.dmg * 2), true); this.applyState("sangrado", 5, 4, "Sangrado"); this.floatTxt(m, "¡Embestida!", "#ff5544"); }
         } else if (!m.chargeAt && d > 60 && d < 220 && t > (m.abAt || 0)) {
           m.abAt = t + 10000; m.chargeAt = t + 600;
           if (m.spr.setTint) m.spr.setTint(0xffaa66);
@@ -1106,7 +1120,7 @@ class ForestScene extends Phaser.Scene {
       m.hp = m.def.hp; m.dead = false; m.pagado = false; m.cx = m.home.x; m.by = m.home.y;
       m.spr.setPosition(m.cx, m.by).setAlpha(1).setVisible(true).setDepth(m.by); m.tgt = null;
       // reaparece LIMPIO: si no, el Orco/Dragón volvía con la furia puesta para siempre y el Espectro intangible
-      m.enraged = false; m.dmgMult = 1; m.bleed = null;
+      m.enraged = false; m.dmgMult = 1; m.bleed = null; m.blockCount = TIBIA_BLOCK_MAX; m.blockTicks = 0;
       m.shellUntil = 0; m.phaseUntil = 0; m.blinkUntil = 0; m.stunUntil = 0;
       m.abAt = 0; m.shellAt = 0; m.stompAt = 0; m.chargeAt = 0; m.flameAt = 0; m.curseAt = 0;
       m.blinkAt = 0; m.breathAt = 0; m.roarAt = 0; m.tailAt = 0; m.nextHit = 0;
@@ -1119,10 +1133,22 @@ class ForestScene extends Phaser.Scene {
     });
   }
 
-  hurtHero(dmg) {
+  hurtHero(dmg, fisico) {
     // set de Fibra completo: % de evasión (el golpe pasa de largo)
     if (typeof evadeChance === "function" && Math.random() < evadeChance()) { this.floatHero("Esquivaste", "#a8d8ff"); return; }
-    dmg = Math.max(1, Math.round((dmg - gearDefTotal() * (1 - playerDefLossMult())) * dmgTakenMult()));   // armadura (menos Fragilidad) + buff de comida
+    if (fisico && typeof blockHit === "function") {
+      /* 11/9 (doc, §4): el golpe físico del mob pasa por la MISMA secuencia — parada (con las cargas
+         del héroe) y armadura (la suma de las piezas, menos Fragilidad). Las habilidades (pisotón,
+         llamarada, aliento…) no son físicas y siguen por el camino de siempre. */
+      if (!this.heroBlk) this.heroBlk = { blockCount: TIBIA_BLOCK_MAX, blockTicks: 0 };
+      const atacando = this.heroAtacoEn && nowMs() - this.heroAtacoEn < TIBIA_ATACANDO_MS;
+      const r = blockHit(dmg, gearDefTotal() * (1 - playerDefLossMult()), heroDefensa(atacando), this.heroBlk);
+      if (r.parado) { this.floatHero("Parada", "#a8d8ff"); return; }
+      if (r.absorbido) { this.floatHero("Absorbido", "#c9c9c9"); return; }
+      dmg = Math.max(1, Math.round(r.dmg * dmgTakenMult()));
+    } else {
+      dmg = Math.max(1, Math.round((dmg - gearDefTotal() * (1 - playerDefLossMult())) * dmgTakenMult()));   // armadura (menos Fragilidad) + buff de comida
+    }
     G.hp = Math.max(0, G.hp - dmg);
     this.hurtFx = 0.18;
     if (dmg > 0) this.floatHero("-" + dmg, "#ff5544");   // el golpe del mob se ve (pedido del diseñador)
@@ -1170,6 +1196,12 @@ class ForestScene extends Phaser.Scene {
     const dt = deltaMs / 1000, k = this.keys, hero = this.hero, t = nowMs();
 
     // detalles viernes (1): la vida SOLO se regenera con comida (sin regeneración pasiva)
+    // 11/9 (doc « Defensa de los mobs », §2.1): las cargas de bloqueo vuelven 1 por segundo, hasta 2 — las del héroe y las de cada bicho
+    if (typeof tickBlock === "function") {
+      if (!this.heroBlk) this.heroBlk = { blockCount: TIBIA_BLOCK_MAX, blockTicks: 0 };
+      tickBlock(this.heroBlk, deltaMs);
+      for (const m of this.monsters) if (!m.dead) tickBlock(m, deltaMs);
+    }
 
     // tinte de daño
     if (this.hurtFx > 0) { this.hurtFx -= dt; hero.setTint(0xff6b5a); } else hero.clearTint();
@@ -1371,7 +1403,7 @@ class ForestScene extends Phaser.Scene {
         const atkRange = (m.def.range || 40);
         if (dHero < atkRange && t > m.nextHit && !(m.blinkUntil && t < m.blinkUntil)) {
           m.nextHit = t + 2000; m.face = hero.x < m.cx ? -1 : 1;   // detalles viernes (1): los mobs atacan cada 2 segundos
-          this.hurtHero(Math.round(m.def.dmg * (m.dmgMult || 1)));
+          this.hurtHero(normalRandom(0, Math.round(m.def.dmg * (m.dmgMult || 1))), true);   // 11/9: normal_random(0, máx) y golpe FÍSICO (parada + armadura)
           if (m.def.hab === "bleedhit" && Math.random() < 0.4) this.applyState("sangrado", 3, 3, "Sangrado");   // Corte sucio
           if (m.def.hab === "phase") this.applyState("ralen", 30, 3, "Ralentización");                          // toque espectral
           if (m.def.hab === "curseArrow" && t > (m.abAt || 0)) { m.abAt = t + 10000; this.applyState("fragilidad", 25, 6, "Maldición de Fragilidad"); this.floatTxt(m, "Flecha maldita", "#bfa8ff"); }
