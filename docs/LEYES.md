@@ -60,6 +60,22 @@ puede quedarse. Lo que no puede es contar como respuesta a "¿qué gana el jugad
 El orden de prioridad, dicho por dirección: **jugable primero, todo lo demás después** — y lo
 cosmético no es lo segundo, es lo tercero o más abajo.
 
+## Ley 4 — El animal que no come no da
+
+> *« Le da hambre cada 24h. Si tienes la comida se la das, sino triste. El animal no come y no
+> da nada y sigue el CD de 24h. No come = \*\*\* »*
+
+Dictada por dirección en Discord el 11/9 a las 17:55. Reemplaza el rinde con decimales del 8/9.
+
+- Cada ciclo (24 h) el animal tiene hambre **una** vez. Una comida por ciclo; la segunda no se
+  acepta.
+- Si comió en el ciclo, al cumplirse da su unidad **entera**. Si no comió, da **nada**.
+- El reloj de 24 h **no se detiene ni se reinicia** porque el animal no haya comido.
+- No hay fracciones, ni « guardado », ni « rinde 0,5 »: o da, o no da. Lo que un guardado viejo
+  llevaba guardado se redondeó a una unidad a favor del jugador, una sola vez (ley 1).
+
+Lo custodia `tools/test-establo-hambre.js`.
+
 ---
 
 # La pregunta del MVP

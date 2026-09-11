@@ -236,7 +236,7 @@ function snapshot() {
      vistos y estrellaMax (el álbum con estrellas) y pescaTiene (el señuelo, que no se gasta).
      OJO con los comentarios AL FINAL de una línea de este objeto: se comen lo que sigue. */
   return { plata: G.plata, golden: G.golden, level: G.level, prestige: G.prestige, iniciado: G.iniciado,
-    res: G.res, picks: G.picks, skills: G.skills, triesV: G.triesV, fish: G.fish, plots: G.plots, nodos: G.nodos, expansiones: G.expansiones, pescaHasta: G.pescaHasta, pescaDesde: G.pescaDesde, senales: G.senales, escamas: G.escamas, vistos: G.vistos, estrellaMax: G.estrellaMax, pescaTiene: G.pescaTiene, canas: G.canas, presion: G.presion, amarres: G.amarres, trampas: G.trampas, marea: G.marea, runaOro: G.runaOro, buffs: G.buffs, seeds: G.seeds, selSeed: G.selSeed,
+    res: G.res, picks: G.picks, skills: G.skills, triesV: G.triesV, establoV: G.establoV, fish: G.fish, plots: G.plots, nodos: G.nodos, expansiones: G.expansiones, pescaHasta: G.pescaHasta, pescaDesde: G.pescaDesde, senales: G.senales, escamas: G.escamas, vistos: G.vistos, estrellaMax: G.estrellaMax, pescaTiene: G.pescaTiene, canas: G.canas, presion: G.presion, amarres: G.amarres, trampas: G.trampas, marea: G.marea, runaOro: G.runaOro, buffs: G.buffs, seeds: G.seeds, selSeed: G.selSeed,
     tools: G.tools, sflStock: true, invRows: G.invRows, slots: G.slots, hotbar: G.hotbar, hotSel: G.hotSel, hbInit: G.hbInit, layout: G.layout,
     daily: G.daily, plotsOwned: G.plotsOwned, plotsCompradas: G.plotsCompradas, plotsFicha: G.plotsFicha, expParcelasDadas: G.expParcelasDadas, seedBuys: G.seedBuys, built: G.built,
     hp: G.hp, hpMax: G.hpMax, combatXp: G.combatXp, stam: G.stam, stamAcc: G.stamAcc, stamFullAt: G.stamFullAt, stamRec: G.stamRec, pass: G.pass, tuto: G.tuto, firstSeeds: G.firstSeeds,   // 24/8: stamFullAt — la recarga de 4 h es de reloj real
@@ -590,6 +590,16 @@ function migrarGuardado(d) {
      triesV trae XP de Espada/Hacha/Mazo/Arco: se convierte UNA vez al nivel equivalente (el viejo
      nivel 1 es el nuevo 10) con sus intentos exactos, y se marca. Nadie baja de nivel. */
   if (!d.triesV && typeof migrarSkillsATries === "function") { G.triesV = 0; migrarSkillsATries(); }
+  /* 11/9 — EL ANIMAL QUE NO COME NO DA (dirección). El rinde con decimales del 8/9 dejaba una
+     fracción « guardada » en cada animal. Con la regla binaria esa fracción no puede completarse
+     nunca, y borrarla sería perder progreso (ley 1): se redondea a favor del jugador, una vez —
+     cualquier fracción pendiente pasa a ser una unidad entera que cae en la próxima recogida. */
+  if (!d.establoV) {
+    G.establoV = 0;
+    for (const k in (G.animals || {})) for (const a of (Array.isArray(G.animals[k]) ? G.animals[k] : []))
+      if (a && a.pend > 0 && a.pend < 1) a.pend = 1;
+    G.establoV = 1;
+  }
   /* 8/9 (tarde) — LA MUDANZA DEL MORRAL. El morral de la mañana era una lista plana que aparecía
      sola al cruzar el portal; ahora el contenedor es un objeto que se compra y se lleva. A quien
      ya jugó con la versión de la mañana le devolvemos las dos cosas por separado: lo que tenía

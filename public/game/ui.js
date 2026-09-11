@@ -3285,41 +3285,23 @@ function refreshEstablo() {
     for (let i = 0; i < cant; i++) {
       const bicho = animalLista(k)[i];
       const fi = animalFelizDe(bicho), faltaI = animalFaltaDe(k, i), listoI = faltaI <= 0;
-      const rindeI = animalRinde(k, i), guardI = animalGuardado(k, i);
-      /* 8/9: el rinde lleva decimales (« que un infeliz dé 0,5 del material »), así que se
-         escribe con coma y sin ceros de relleno — « 0,5 » y « 1 », no « 0,50 » ni « 1,00 ». */
-      const dec = (v) => String(Math.round(v * 100) / 100).replace(".", ",");
+      const rindeI = animalRinde(k, i), guardI = animalGuardado(k, i), comio = animalComioEsteCiclo(bicho);
+      /* 11/9 (dirección): « le da hambre cada 24h; si no come no da nada y sigue el CD ». La fila
+         dice las dos cosas que importan y nada más: si comió este ciclo, y qué va a dar. */
+      const totalI = Math.floor(rindeI + guardI + 1e-9);
       h += '<div class="forge-row' + (listoI ? ' eq' : '') + '"><div class="fic">' + d.emoji + '</div><div class="finfo">' +
         '<div class="fnm">' + d.label + (cant > 1 ? ' ' + (i + 1) : '') +
-          ' <span class="tag">felicidad ' + fi + '/100</span></div>' +
-        '<div class="durbar"><i style="width:' + fi + '%"></i></div>' +
-        /* 9/9 (Suren) — « dice que dará 0.5 de fibra y me da 1 ». El panel enseñaba el rinde de
-           ESTA vuelta y, aparte, la fracción guardada, y dejaba la suma para el jugador. Nadie
-           suma: se lee el primer número y el segundo parece un error del juego. Lo que se anuncia
-           ahora es LO QUE VA A CAER EN LA BOLSA, y la cuenta detrás para quien quiera mirarla. */
-        '<div class="fds">' + (() => {
-          const totalI = Math.round((rindeI + guardI) * 100) / 100;
-          const enteroI = Math.floor(totalI + 1e-9);
-          const cuenta = guardI > 0 ? ' (' + dec(rindeI) + ' + ' + dec(guardI) + ' guardado)' : '';
-          if (listoI) {
-            return enteroI > 0
-              ? '<b style="color:#3f6b2a">¡Listo! · +' + enteroI + ' ' + RES_LABEL[d.mat] + '</b>' + cuenta
-              : '<b style="color:#a5621a">¡Listo! · da ' + dec(rindeI) + ' de ' + RES_LABEL[d.mat] +
-                ' — no llega a 1, se guarda</b>' + cuenta;
-          }
-          return 'Produce en ' + fmtDur(faltaI) + ' · ' + (enteroI > 0
-            ? 'dará <b>+' + enteroI + '</b> ' + RES_LABEL[d.mat]
-            : 'rendirá ' + dec(rindeI) + ' de ' + RES_LABEL[d.mat] + ', que se guarda') + cuenta;
-        })() +
-          /* la fracción que lleva guardada, dicha también en su forma cruda: sin esto, recoger y
-             no ver nada en la bolsa se lee como que el juego se comió el premio. */
-          (guardI > 0 ? ' · lleva <b>' + dec(guardI) + '</b> guardado de 1' : '') +
-          (rindeI < 1 ? ' <span style="color:#a5621a">— está flojo, alimentalo</span>' : '') + '</div>' +
-        /* 19/8: la felicidad que da un cultivo es proporcional a lo que vale, así que el cartel
-           muestra lo que da EL SUYO. */
-        '<div class="fds">Alimentalo con ' + come + ' (+' + Math.round(felizDeComida(k, d.come[0], true)) + ' de felicidad) · pierde ' + FELIZ_BAJA_H + '/hora si lo descuidás</div></div>' +
+          ' <span class="tag"' + (comio ? '' : ' style="color:#a5621a"') + '>' + (comio ? 'comió ✓' : 'con hambre') + '</span></div>' +
+        '<div class="fds">' + (listoI
+          ? (totalI > 0
+              ? '<b style="color:#3f6b2a">¡Listo! · +' + totalI + ' ' + RES_LABEL[d.mat] + '</b>'
+              : '<b style="color:#a5621a">¡Listo! · no comió: no da nada</b>')
+          : 'Produce en ' + fmtDur(faltaI) + ' · ' + (totalI > 0
+              ? 'dará <b>+' + totalI + '</b> ' + RES_LABEL[d.mat]
+              : '<span style="color:#a5621a">si no come, no dará nada</span>')) + '</div>' +
+        '<div class="fds">Come ' + come + ' una vez por ciclo' + (comio ? '' : ' — <b>dale de comer ahora</b>') + '</div></div>' +
         '<div class="fbtns">' +
-          '<button class="green sm" ' + (tieneComida && fi < 100 ? "" : "disabled") + ' data-feed1="' + k + '" data-idx="' + i + '">' + (fi >= 100 ? 'A tope' : 'Alimentar') + '</button>' +
+          '<button class="green sm" ' + (tieneComida && !comio ? "" : "disabled") + ' data-feed1="' + k + '" data-idx="' + i + '">' + (comio ? 'Ya comió' : 'Alimentar') + '</button>' +
           '<button class="green sm" ' + (listoI ? "" : "disabled") + ' data-take1="' + k + '" data-idx="' + i + '">Recoger</button>' +
         '</div></div>';
     }

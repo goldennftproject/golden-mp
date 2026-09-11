@@ -97,6 +97,11 @@ Están desarrolladas en el GDD §15.0, con sus números medidos. Aquí solo el t
 
 ## 🟢 Vigilar en playtest — no bloquea
 
+- [ ] **Ley 4 (11/9): el animal que no come no da.** Reemplazó el rinde con decimales del 8/9 que
+  Suren leyó dos veces como « me tenía que dar 0,1 y no me dio nada ». Ahora es binario: comió →
+  su unidad, no comió → nada, el reloj sigue. Mirar que el « con hambre / comió ✓ » del establo
+  se entienda solo. La felicidad (`feliz`) sigue en el guardado pero ya no manda nada.
+
 - [ ] **Estacionamiento en el tutorial acelerado**: con las esperas en 3 s, alguien podría no
   cumplir a propósito un paso tardío y farmear acelerado. Mitigación si aparece: acelerar solo
   hasta cierto capítulo, o limitar los días con tutorial abierto.

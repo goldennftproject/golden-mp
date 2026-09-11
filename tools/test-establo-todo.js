@@ -2,7 +2,7 @@
    Con el cupo creciendo hasta 20 animales, alimentar y recoger especie por especie era un
    castigo. Contratos:
      · «Alimentar todo» alimenta a TODAS las especies con hambre, de una;
-     · NO desperdicia: al que ya está en felicidad 100 no le da de comer;
+     · NO desperdicia: al que ya comió este ciclo no le da de comer (ley 4, 11/9);
      · «Recoger todo» cobra la producción lista de todas las especies a la vez;
      · sin hambrientos / sin nada listo, contestan (un clic nunca es mudo) y no tocan nada;
      · las funciones de una especie siguen intactas (los botones por fila no cambian).
@@ -31,14 +31,17 @@ let fallos = 0;
 const ok = (n, c, d) => { if (!c) fallos++; console.log((c ? "  ok   " : "  FALLA") + "  " + n + (d ? "   " + d : "")); };
 
 /* dos especies con dos animales cada una, hambrientos y con la producción vencida */
+/* 11/9 (ley 4): « con hambre » = no comió desde su última producción (comidoAt < prodAt);
+   « lleno » (antes felicidad 100) = ya comió este ciclo (comidoAt >= prodAt). */
 function poblar(feliz, prodHaceH) {
   G.animals = {};
   const dos = ANIMAL_ORDER.slice(0, 2);
   dos.forEach(k => {
     const d = ANIMAL_DEF[k];
+    const prodAt = FakeDate.now() - (prodHaceH != null ? prodHaceH : d.cicloH + 1) * H;
     G.animals[k] = [0, 1].map(() => ({
-      desde: T0, feliz: feliz, comidoAt: FakeDate.now(),
-      prodAt: FakeDate.now() - (prodHaceH != null ? prodHaceH : d.cicloH + 1) * H,
+      desde: T0, feliz: feliz, comidoAt: feliz >= 100 ? FakeDate.now() : prodAt - H,
+      prodAt,
     }));
   });
   return dos;
@@ -52,11 +55,9 @@ console.log("\nALIMENTAR TODO: TODAS LAS ESPECIES DE UN CLIC");
   // el PREFERIDO de cada especie, 2 de cada uno (con "cualquier cultivo" la alpaca sube 0,45:
   // la felicidad es proporcional al valor de lo que come, y eso ya lo cubre test-establo)
   dos.forEach(k => G.res[ANIMAL_DEF[k].come[0]] = 2);
-  const f0 = dos.map(k => ctx.animalFelicidad(k));
   const r = ctx.establoAlimentarTodo();
   ok("alimentó a los 4 animales de las 2 especies", r.animales === 4, JSON.stringify(r));
-  const f1 = dos.map(k => ctx.animalFelicidad(k));
-  ok("y la felicidad subió en las dos", f1[0] > f0[0] && f1[1] > f0[1], f0.join("/") + " → " + f1.join("/"));
+  ok("y los cuatro comieron este ciclo (ley 4)", dos.every(k => G.animals[k].every(a => ctx.animalComioEsteCiclo(a))));
   ok("gastó justo lo que comieron, ni una unidad más",
     dos.every(k => Math.floor(G.res[ANIMAL_DEF[k].come[0]] || 0) === 0),
     dos.map(k => ANIMAL_DEF[k].come[0] + ":" + Math.floor(G.res[ANIMAL_DEF[k].come[0]] || 0)).join(" "));
@@ -76,7 +77,7 @@ console.log("\nNO DESPERDICIA: AL LLENO NO SE LE DA DE COMER");
   /* 2/9 — DIETA ESTRICTA (dirección: « le acabo de dar alimentar todo y comió calabaza…
      debería ser solo trigo »): con hambre pero SOLO papa en la bolsa, NO come, y la papa
      queda intacta. La regla genérica del 14/8 quedó derogada. */
-  G.animals[dos[1]].forEach(a => { a.feliz = 20; a.comidoAt = FakeDate.now(); });
+  G.animals[dos[1]].forEach(a => { a.feliz = 20; a.comidoAt = a.prodAt - H; });   // 11/9: con hambre = no comió desde que produjo
   avisos.length = 0;
   const rEstricta = ctx.establoAlimentarTodo();
   ok("con hambre y solo papa en la bolsa, NO come (dieta estricta)",
@@ -119,11 +120,9 @@ console.log("\nCADA ANIMAL ES UNO   (8/9, dirección: « se alimentan por separa
   const dos = poblar(50);
   const k = dos[0], d = ANIMAL_DEF[k];
   G.res[d.come[0]] = 10;
-  const f0 = [ctx.animalFelizDe(G.animals[k][0]), ctx.animalFelizDe(G.animals[k][1])];
-
   ok("alimentar a UNO no toca al otro", (() => {
     ctx.alimentarUno(k, 0);
-    return ctx.animalFelizDe(G.animals[k][0]) > f0[0] && ctx.animalFelizDe(G.animals[k][1]) === f0[1];
+    return ctx.animalComioEsteCiclo(G.animals[k][0]) && !ctx.animalComioEsteCiclo(G.animals[k][1]);
   })());
   ok("y gasta un solo cultivo", Math.floor(G.res[d.come[0]]) === 9);
 
@@ -135,40 +134,29 @@ console.log("\nCADA ANIMAL ES UNO   (8/9, dirección: « se alimentan por separa
   ok("y su reloj vuelve a empezar", ctx.animalFaltaDe(k, 0) > 0);
   ok("mientras el del otro sigue listo — relojes separados", ctx.animalFaltaDe(k, 1) <= 0);
 
-  /* ── EL RINDE CON DECIMALES (8/9, dirección: « podemos agregar decimales… que un infeliz dé
-     0,5 del material ») ─────────────────────────────────────────────────────────────────────
-     Esta sección nació AYER como un aviso: con porCiclo 1 el redondeo anulaba la felicidad y
-     alpaca, toro y jabalí producían lo mismo muertos de hambre que a tope. Hoy es una
-     comprobación: ninguna especie puede volver a ser sorda a la felicidad. */
+  /* ── EL ANIMAL QUE NO COME NO DA (11/9, ley 4 — reemplaza el rinde con decimales del 8/9)
+     « El animal no come y no da nada y sigue el CD de 24h ». Binario, en todas las especies. */
   const sordas = [];
   ANIMAL_ORDER.forEach(x => {
     G.animals[x] = [{ desde: T0, feliz: 100, comidoAt: FakeDate.now(), prodAt: T0 },
-                    { desde: T0, feliz: 0,   comidoAt: FakeDate.now(), prodAt: T0 }];
-    if (!(ctx.animalRinde(x, 0) > ctx.animalRinde(x, 1))) sordas.push(x);
+                    { desde: T0, feliz: 0,   comidoAt: T0 - H,         prodAt: T0 }];
+    if (!(ctx.animalRinde(x, 0) === ANIMAL_DEF[x].porCiclo && ctx.animalRinde(x, 1) === 0)) sordas.push(x);
   });
-  ok("TODAS las especies rinden menos si están descuidadas", !sordas.length,
-    sordas.length ? "sordas: " + sordas.join(", ") : ANIMAL_ORDER.map(x => x + " " + ctx.animalRinde(x, 1) + "→" + ctx.animalRinde(x, 0)).join(" · "));
-  ok("y el descuidado rinde justo la mitad (FELIZ_MIN_PROD)", ANIMAL_ORDER.every(x =>
-    Math.abs(ctx.animalRinde(x, 1) - ctx.animalRinde(x, 0) * 0.5) < 0.01));
-
-  /* la fracción NO se pierde: se acumula en el animal y la bolsa cobra en enteros, igual que
-     el peaje de la caña. Dos ciclos de medio dan uno entero — ni más ni menos. */
+  ok("TODAS las especies: comió → su unidad entera, no comió → nada", !sordas.length,
+    sordas.length ? "fallan: " + sordas.join(", ") : ANIMAL_ORDER.map(x => x + " " + ctx.animalRinde(x, 1) + "/" + ctx.animalRinde(x, 0)).join(" · "));
+  ok("y ninguna deja fracción guardada", ANIMAL_ORDER.every(x => ctx.animalGuardado(x, 0) === 0 && ctx.animalGuardado(x, 1) === 0));
   {
-    const kSolo = ANIMAL_ORDER.find(x => ctx.animalRinde(x, 1) < 1);
-    if (kSolo) {
-      const d2 = ANIMAL_DEF[kSolo];
-      const vencido = () => FakeDate.now() - (d2.cicloH + 1) * H;   // producción cumplida
-      G.animals[kSolo] = [{ desde: T0, feliz: 0, comidoAt: FakeDate.now(), prodAt: vencido() }];
-      G.res[d2.mat] = 0; G.invRows = 6;
-      const e1 = ctx.recogerUno(kSolo, 0, true);
-      ok("el primer ciclo del descuidado no llena una unidad, pero NO se pierde",
-        e1 === 0 && ctx.animalGuardado(kSolo, 0) === 0.5, "guardado " + ctx.animalGuardado(kSolo, 0));
-      G.animals[kSolo][0].prodAt = vencido();
-      const e2 = ctx.recogerUno(kSolo, 0, true);
-      ok("y el segundo la completa — media más media es una", e2 === 1 && ctx.animalGuardado(kSolo, 0) === 0,
-        "+1 " + RES_LABEL_TEST(d2.mat));
-      ok("la bolsa nunca ve decimales", Number.isInteger(G.res[d2.mat]), String(G.res[d2.mat]));
-    }
+    const kSolo = ANIMAL_ORDER[0], d2 = ANIMAL_DEF[kSolo];
+    const vencido = () => FakeDate.now() - (d2.cicloH + 1) * H;   // producción cumplida
+    G.animals[kSolo] = [{ desde: T0, feliz: 0, comidoAt: 0, prodAt: vencido() }];
+    G.res[d2.mat] = 0; G.invRows = 6;
+    const e1 = ctx.recogerUno(kSolo, 0, true);
+    ok("el que no comió no da nada al recoger, y el reloj arranca de nuevo igual", e1 === 0 && ctx.animalFaltaDe(kSolo, 0) > 0);
+    G.res[d2.come[0]] = 3; ctx.alimentarUno(kSolo, 0, true);
+    G.animals[kSolo][0].prodAt = vencido();
+    const e2 = ctx.recogerUno(kSolo, 0, true);
+    ok("y el que comió da su unidad entera", e2 === d2.porCiclo, "+" + e2 + " " + RES_LABEL_TEST(d2.mat));
+    ok("la bolsa nunca ve decimales", Number.isInteger(G.res[d2.mat]), String(G.res[d2.mat]));
   }
 
   /* y la pantalla los pinta de a uno */

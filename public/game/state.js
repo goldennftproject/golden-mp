@@ -17,6 +17,7 @@ const G = {
   ofrendaPts: 0, ofrendaLog: 0,  // Altar de Ofrendas: puntos acumulados y recursos quemados
   nodoUsos: {},                  // cuántas veces se recogió de cada nodo (para el arranque rápido)
   cosEq: null,                   // cosmético lucido: título, color de nombre, marco y aura
+  establoV: 1,                   // 11/9: el animal que no come no da (0/ausente = guardado del rinde con decimales, se migra una vez)
   triesV: 1,                     // 11/9: las armas suben por INTENTOS (Tibia); 0/ausente = guardado viejo con XP, se migra una vez
   incursion: null, incDia: null, dummyTrain: null,   // incursiones de un clic y entrenamiento offline   // tareas de nivel 11-50, mejoras y cosméticos
   vales: 0, pedidos: null,   // 16/8: TABLÓN DE PEDIDOS — vales (moneda del tablón) + estado diario
@@ -4986,15 +4987,15 @@ function alimentarUno(k, i, silencio) {
     if (!silencio) toast(d.label + " solo come " + d.come.map(c => CROP_DEF[c].label).join(" o ") + " — no tenés en la bolsa");
     return 0;
   }
-  if (animalFelizDe(a) >= 100) { if (!silencio) toast("Ese " + d.label + " ya está a tope"); return 0; }
+  if (animalComioEsteCiclo(a)) { if (!silencio) toast("Ese " + d.label + " ya comió — le vuelve a dar hambre cuando produzca"); return 0; }   // 11/9: una comida por ciclo
   G.res[cultivo] -= 1;
   a.feliz = Math.min(100, animalFelizDe(a) + felizDeComida(k, cultivo, true));
   a.comidoAt = nowMs();
   statAdd("alimentar", k);
   if (!silencio) {
     log("Alimentaste " + d.label + " " + (i + 1) + " con 1 " + (CROP_DEF[cultivo].label || cultivo) +
-        ". Su felicidad: " + animalFelizDe(a) + "/100.", "good");
-    toast(d.label + " " + (i + 1) + " · felicidad " + animalFelizDe(a));
+        ". Comió: cuando cumpla el ciclo da " + animalPorCiclo(k) + " de " + RES_LABEL[d.mat] + ".", "good");
+    toast(d.label + " " + (i + 1) + " · comió");
     refreshHud(); establoRepintar();   // 10/9: aplazado (ver « EL ESTABLO SE REPINTA DESPUÉS DEL CLIC »)
     if (isOpen("ov-inv")) refreshInv();
     if (typeof saveFarm === "function") saveFarm();
@@ -5007,10 +5008,10 @@ function alimentarAnimal(k, silencio) {
   const d = ANIMAL_DEF[k], l = animalLista(k); if (!d || !l.length) return 0;
   let dados = 0;
   for (let i = 0; i < l.length; i++) dados += alimentarUno(k, i, true);
-  if (!dados) { if (!silencio) toast(d.label + " solo come " + d.come.map(c => CROP_DEF[c].label).join(" o ") + " — no tenés en la bolsa (o ya están llenos)"); return 0; }
-  log("Alimentaste " + dados + " " + d.label + ". Felicidad media: " + animalFelicidad(k) + "/100.", "good");
+  if (!dados) { if (!silencio) toast(d.label + " solo come " + d.come.map(c => CROP_DEF[c].label).join(" o ") + " — no tenés en la bolsa (o ya comieron)"); return 0; }
+  log("Alimentaste " + dados + " " + d.label + ": comieron, y al cumplir el ciclo dan su " + RES_LABEL[d.mat] + ".", "good");
   if (!silencio) {
-    toast(d.label + " · felicidad " + animalFelicidad(k));
+    toast(d.label + " · " + dados + " comieron");
     refreshHud(); establoRepintar();   // 10/9: aplazado (ver « EL ESTABLO SE REPINTA DESPUÉS DEL CLIC »)
     if (isOpen("ov-inv")) refreshInv();
     if (typeof saveFarm === "function") saveFarm();
@@ -5047,10 +5048,21 @@ function animalFaltaDe(k, i) {
    MISMA fórmula sin el redondeo que la rompía—; lo que cambia es que descuidar por fin cuesta.
    La fracción no ensucia la bolsa: se acumula en el animal, igual que el peaje de la caña
    acumula sus décimas de plata y cobra en unidades enteras. */
-function animalRinde(k, i) {   // lo que da ESE animal con SU felicidad — con decimales
+/* ═══ 11/9 — EL ANIMAL QUE NO COME NO DA (dirección, Discord 17:55) ═══════════════════════
+   « Le da hambre cada 24h. Si tienes la comida se la das, sino triste. El animal no come y no
+     da nada y sigue el CD de 24h. No come = *** »
+   Esto REEMPLAZA el rinde con decimales del 8/9 (y sus 0,1 guardados, que Suren leyó como una
+   promesa incumplida — dos veces). La regla nueva es binaria y se cuenta en una línea: cada
+   ciclo de 24 h el animal tiene hambre UNA vez; si le das su comida, al cumplirse el ciclo da su
+   unidad entera; si no comió, no da NADA — y el reloj no se detiene ni se reinicia por eso.
+   « Comió este ciclo » = comió DESPUÉS de la última recogida (comidoAt > prodAt). Así una sola
+   comida por ciclo alcanza y una segunda no se acepta: « ya comió, le vuelve a dar hambre cuando
+   produzca ». Escrito en docs/LEYES.md como ley 4. Lo custodia tools/test-establo-hambre.js. */
+function animalComioEsteCiclo(a) { return !!a && (a.comidoAt || 0) >= (a.prodAt || 0) && (a.comidoAt || 0) > 0; }
+function animalHambriento(a) { return !animalComioEsteCiclo(a); }
+function animalRinde(k, i) {   // lo que da ESE animal: su unidad si comió este ciclo, nada si no
   const a = animalLista(k)[i]; if (!a) return 0;
-  const f = animalFelizDe(a);
-  return Math.round(animalPorCiclo(k) * (FELIZ_MIN_PROD + (1 - FELIZ_MIN_PROD) * f / 100) * 100) / 100;
+  return animalComioEsteCiclo(a) ? animalPorCiclo(k) : 0;
 }
 function animalGuardado(k, i) {   // la fracción que el animal lleva a cuestas de ciclos anteriores
   const a = animalLista(k)[i];
@@ -5108,22 +5120,16 @@ function recogerUno(k, i, silencio) {
        bolsa » se lee como un juego que no sabe sumar. Ahora se escribe la cuenta entera, de
        izquierda a derecha, y solo se nombra lo que existe: sin fracción anterior no se menciona.
        Y con coma, como el resto del panel: acá se escapaban « 0.5 » con punto. */
-    const dec = (v) => String(Math.round(v * 100) / 100).replace(".", ",");
-    const falta = Math.round((1 - a.pend) * 100) / 100;
+    /* 11/9 (dirección): binario. Comió → su unidad; no comió → nada, y se dice por qué (regla 9:
+       nunca un clic mudo). Lo « guardado » solo existe en partidas migradas del modelo del 8/9. */
     if (entero > 0) {
-      const cuenta = traia > 0
-        ? dec(gana) + " + " + dec(traia) + " que llevaba guardado = " + dec(acum)
-        : dec(gana);
-      log(d.label + " " + (i + 1) + " produjo " + cuenta + " de " + RES_LABEL[d.mat] + " → +" + entero +
-          " a la bolsa" + (a.pend ? " (le quedan " + dec(a.pend) + " guardados)" : "") +
-          " · felicidad " + animalFelizDe(a) + "/100.", "gold");
-      toast("+" + entero + " " + RES_LABEL[d.mat] + (traia > 0 ? " (con lo guardado)" : ""));
+      log(d.label + " " + (i + 1) + " produjo " + entero + " de " + RES_LABEL[d.mat] +
+          (traia > 0 ? " (con lo que llevaba guardado)" : "") + " → +" + entero + " a la bolsa. Tiene hambre otra vez.", "gold");
+      toast("+" + entero + " " + RES_LABEL[d.mat]);
     } else {
-      log(d.label + " " + (i + 1) + " rindió solo " + dec(gana) + " de " + RES_LABEL[d.mat] +
-          " por su felicidad (" + animalFelizDe(a) + "/100)." +
-          (traia > 0 ? " Con los " + dec(traia) + " que ya llevaba, guarda " + dec(a.pend) + "." : " Guardado: " + dec(a.pend) + ".") +
-          " Le falta " + dec(falta) + " para una unidad. Alimentalo y rendirá el doble.", "bad");
-      toast("Rindió " + dec(gana) + " · guardado " + dec(a.pend) + "/1");
+      log(d.label + " " + (i + 1) + " no comió este ciclo: no dio nada. El reloj de " + fmtSecs(d.cicloH * 3600) +
+          " sigue — alimentalo ahora y la próxima vuelta da su " + RES_LABEL[d.mat] + ".", "bad");
+      toast(d.label + " no comió — no dio nada");
     }
     refreshHud(); if (isOpen("ov-inv")) refreshInv();
     establoRepintar();   // 10/9: aplazado — reconstruir el panel aquí se come el clic siguiente
@@ -5154,7 +5160,7 @@ function recogerAnimal(k, silencio) {
 function establoAlimentarTodo() {
   let especies = 0, animales = 0;
   for (const k of ANIMAL_ORDER) {
-    if (!animalCant(k) || animalFelicidad(k) >= 100) continue;   // llenos: ni un cultivo de más
+    if (!animalCant(k) || animalLista(k).every(animalComioEsteCiclo)) continue;   // 11/9: ya comieron este ciclo — ni un cultivo de más
     const dados = alimentarAnimal(k, true) || 0;
     if (dados > 0) { especies++; animales += dados; }
   }
