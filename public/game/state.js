@@ -17,6 +17,7 @@ const G = {
   ofrendaPts: 0, ofrendaLog: 0,  // Altar de Ofrendas: puntos acumulados y recursos quemados
   nodoUsos: {},                  // cuántas veces se recogió de cada nodo (para el arranque rápido)
   cosEq: null,                   // cosmético lucido: título, color de nombre, marco y aura
+  triesV: 1,                     // 11/9: las armas suben por INTENTOS (Tibia); 0/ausente = guardado viejo con XP, se migra una vez
   incursion: null, incDia: null, dummyTrain: null,   // incursiones de un clic y entrenamiento offline   // tareas de nivel 11-50, mejoras y cosméticos
   vales: 0, pedidos: null,   // 16/8: TABLÓN DE PEDIDOS — vales (moneda del tablón) + estado diario
   /* DOS BOLSAS, NO UNA (18/8) — el fallo que reportó dirección: "aparece que me dan un nodo de
@@ -1427,7 +1428,79 @@ function oficiosSinContenido() {
   try { SKILL_DEFS.forEach(d => { let l = []; try { l = oficioAbre(d[0]); } catch (e) {} if (!l.length) v.push(d[0]); }); } catch (e) {}
   return v;
 }
-function skillInfo(xp, sk) { const techo = sk ? oficioTecho(sk) : 150; let lvl = 1, acc = 0, need = skillNeed(1, sk); while (xp >= acc + need && lvl < techo) { acc += need; lvl++; need = skillNeed(lvl, sk); } return { lvl, into: xp - acc, need, techo }; }
+function skillInfoXp(xp, sk) { const techo = sk ? oficioTecho(sk) : 150; let lvl = 1, acc = 0, need = skillNeed(1, sk); while (xp >= acc + need && lvl < techo) { acc += need; lvl++; need = skillNeed(lvl, sk); } return { lvl, into: xp - acc, need, techo }; }
+function skillInfo(xp, sk) { return (sk && esOficioTries(sk)) ? triesInfo(xp, sk) : skillInfoXp(xp, sk); }
+
+/* ============ 11/9 — LAS ARMAS SUBEN POR INTENTOS, CON LA FÓRMULA DE TIBIA (diseñador) ===========
+   Documento del diseñador « Fórmula de skills de Tibia » (11/9). Lo que se adopta, tal cual:
+     · No hay « XP de skill »: cada GOLPE que das, acierte o no, es un intento (try) del arma que
+       llevás. Matar no entrena el arma — entrenar es pegar.
+     · Todos los oficios de arma arrancan en 10.
+     · Intentos para pasar de x a x+1:   Tries(x → x+1) = A · b^(x − c)
+         A = 50 para Espada / Hacha / Mazo (Fist/Club/Sword/Axe), 25 para Arco (Distance);
+         c = 10 (el offset de todo lo que no es Magic Level);
+         b = 1.1, la constante de vocación « natural » (Knight/Paladin) — Golden no tiene clases,
+             y con la fila « sin vocación » (b = 2) el 20 → 21 pedía 51.200 golpes: un muro.
+       Ejemplos del documento, que test-skills-tibia.js clava: 10→11 = 50 golpes, 50→51 ≈ 2.263,
+       Arco 80→81 ≈ 19.700.
+     · El total acumulado se obtiene SUMANDO los escalones (A·(b^(S−c) − 1)/(b − 1)); la línea
+       « Tp = A·b^(Skill−c) − A » del documento omite el /(b−1) y no cuadra con sus propios
+       ejemplos, así que manda la fórmula por escalón.
+     · Offline training (§6): el dummy sigue siendo el entrenamiento offline, a DUMMY_OFF_XP_H
+       intentos por hora (uno por minuto) con el mismo tope de horas.
+   Lo que NO se adopta, y por qué (decidido con Golden el 11/9):
+     · §4, la fórmula de ataque ⌊(W+S)·0.2⌋: TibiaWiki la marca desactualizada. El daño sigue
+       siendo tirada del arma + nivel/2 — y como el nivel ahora arranca en 10, el bono se calcula
+       sobre (nivel − 9) para que un jugador migrado pegue EXACTAMENTE lo que pegaba ayer.
+     · §5, perder el 10 % de los intentos al morir: va contra la decisión del 28/7 (morir no quita
+       nada) y roza la ley 1. Queda fuera.
+     · Shielding y Magic Level: Golden no tiene esos oficios. Pesca sigue con su curva de XP.
+   Ley 1: los guardados con XP de arma se MIGRAN una vez (save.js, triesV): el nivel viejo L pasa
+   a ser el 10 + (L − 1) y se le dan los intentos exactos de ese nivel, con la fracción de barra
+   que llevaba. Nadie baja de nivel ni pierde daño.                                              */
+const TRIES_DEF = { sword: { A: 50 }, hacha: { A: 50 }, mazo: { A: 50 }, range: { A: 25 } };
+const TRIES_B = 1.1;        // constante de vocación
+const TRIES_C = 10;         // offset: los oficios de arma arrancan en 10
+function esOficioTries(sk) { return !!TRIES_DEF[sk]; }
+function triesNeed(x, sk) { return Math.round(TRIES_DEF[sk].A * Math.pow(TRIES_B, x - TRIES_C)); }   // de x a x+1
+function triesTotal(lvl, sk) { let t = 0; for (let x = TRIES_C; x < lvl; x++) t += triesNeed(x, sk); return t; }   // para ESTAR en lvl
+function triesInfo(tries, sk) {
+  const techo = oficioTecho(sk); let lvl = TRIES_C, acc = 0, need = triesNeed(lvl, sk);
+  tries = Math.max(0, Math.floor(tries || 0));
+  while (tries >= acc + need && lvl < techo) { acc += need; lvl++; need = triesNeed(lvl, sk); }
+  return { lvl, into: tries - acc, need, techo, tries: true };
+}
+/* el nivel « de daño » de un arma: el que entra en tirada + nivel/2. Con el arranque en 10, se
+   resta 9 para que el nivel 10 pegue como pegaba el 1 (daño como hoy — decisión del 11/9). */
+function nivelArmaDmg(sk) { return skillInfo(G.skills[sk] || 0, sk).lvl - (esOficioTries(sk) ? TRIES_C - 1 : 0); }
+/* un intento: cada golpe que das cuenta, acierte o no. n > 1 solo lo usa el dummy. */
+function addTries(sk, n) {
+  if (!esOficioTries(sk) || !(sk in G.skills)) return;
+  n = Math.max(0, Math.round(n == null ? 1 : n)); if (!n) return;
+  const before = triesInfo(G.skills[sk], sk).lvl;
+  G.skills[sk] = (G.skills[sk] || 0) + n;
+  const after = triesInfo(G.skills[sk], sk).lvl;
+  if (after > before) {
+    log(`${SKILL_NAME[sk]} subió a nivel ${after}.`, "good");
+    if (window.celebrate) celebrate({ title: "¡NIVEL " + after + "!" + (after - before > 1 ? " (+" + (after - before) + ")" : ""), sub: SKILL_NAME[sk] });
+    else { toast("" + SKILL_NAME[sk] + " nivel " + after); if (window.sfx) sfx("level"); }
+    if (typeof oficiosSync === "function") oficiosSync(false);
+  }
+  if (typeof passEvent === "function") passEvent(sk);
+  if (isOpen("ov-skills")) refreshSkills();
+}
+/* migración ÚNICA (ley 1): XP vieja → intentos, conservando el nivel y la fracción de barra */
+function migrarSkillsATries() {
+  if (G.triesV) return;                                       // ya migrado: los números YA son intentos
+  for (const sk in TRIES_DEF) {
+    const xp = G.skills[sk] || 0; if (!(sk in G.skills)) continue;
+    const viejo = skillInfoXp(xp, sk);                       // con la curva de XP de antes
+    const lvl = TRIES_C + (viejo.lvl - 1);
+    const frac = viejo.need > 0 ? Math.min(0.999, viejo.into / viejo.need) : 0;
+    G.skills[sk] = triesTotal(lvl, sk) + Math.floor(frac * triesNeed(lvl, sk));
+  }
+  G.triesV = 1;
+}
 // --- Barra de Combate GLOBAL (doc maestro 2/8): un solo nivel que suma la XP de TODOS los kills.
 //     Convive con las skills por arma (esas siguen dando el +Nivel/2 al daño). Misma curva 1-150.
 var COMBAT_HP5 = 20, COMBAT_HP10 = 40;   // vida máxima extra en los hitos (editables en el panel)
@@ -1467,6 +1540,7 @@ function addCombatXp(xp) {
 function avgSkillLevel() { let s=0,n=0; for (const k in G.skills){ s+=skillInfo(G.skills[k], k).lvl; n++; } return n ? s/n : 1; }
 function addXp(sk, amt) {
   if (!(sk in G.skills)) return;
+  if (esOficioTries(sk)) return;                 // 11/9: las armas no suben por XP — suben por golpes (addTries)
   if (sk === "cooking") return addCookXp(amt);   // la cocina tiene SU tabla 1-10 (doc maestro 2/8)
   const before = skillInfo(G.skills[sk], sk).lvl;
   G.skills[sk] += amt;
@@ -3573,7 +3647,7 @@ const INCURSIONES = {
 const INC_ORDER = ["zn1", "zn2", "zn3", "guarida"];
 function incPoder() {   // poder de combate del jugador con lo que tiene equipado
   const id = armaEq(); if (!id) return 0;
-  const w = ARM_DEF[id], lvl = skillInfo(G.skills[armSkillKey(w.tipo)] || 0, armSkillKey(w.tipo)).lvl;
+  const w = ARM_DEF[id], lvl = nivelArmaDmg(armSkillKey(w.tipo));   // 11/9: nivel − 9 con el arranque en 10
   let p = (w.min + w.max) / 2 + Math.floor(lvl / 2);
   p *= 1 + upgDmg(armPlus(id)) / 100;
   p *= dmgMult();
@@ -3666,7 +3740,7 @@ function incTick() { if (incActiva() && nowMs() >= G.incursion.endAt) incResolve
 
 // ---- ENTRENAMIENTO OFFLINE DEL DUMMY ("detallitos (1)" punto 9) ----
 // Dejás al granjero entrenando y al volver se cuenta el tiempo que pasó: XP del arma equipada.
-var DUMMY_OFF_XP_H = 60;      // XP por hora de entrenamiento
+var DUMMY_OFF_XP_H = 60;      // 11/9: INTENTOS por hora de entrenamiento (uno por minuto) — el offline training del doc de Tibia
 var DUMMY_OFF_MAX_H = 8;      // tope de horas que acumula
 // El primer MINUTO no cuenta (9/8). Antes el entrenamiento arrancaba a contar en el instante
 // del clic, así que se podía clic → salir → cobrar → repetir, y sacar XP a puñados sin esperar
@@ -3695,9 +3769,9 @@ function dummyCobrar() {
   if (!aid || horas <= 0) { toast("Tiene que entrenar al menos un minuto"); return null; }
   const xp = Math.round(horas * DUMMY_OFF_XP_H);
   const sk = armSkillKey(ARM_DEF[aid].tipo);
-  addXp(sk, xp);
-  log("Entrenamiento terminado: " + fmtDur(horas * 3600000) + " → +" + fmt(xp) + " XP de " + SKILL_NAME[sk] + ".", "gold");
-  toast("+" + fmt(xp) + " XP de " + SKILL_NAME[sk]);
+  addTries(sk, xp);
+  log("Entrenamiento terminado: " + fmtDur(horas * 3600000) + " → +" + fmt(xp) + " golpes de " + SKILL_NAME[sk] + ".", "gold");
+  toast("+" + fmt(xp) + " golpes de " + SKILL_NAME[sk]);
   if (typeof saveFarm === "function") saveFarm(true);
   return xp;
 }
@@ -5497,7 +5571,7 @@ function useWeapon(id) { if (G.weapons[id] && G.weapons[id].dur > 0) G.weapons[i
 // la tirada de un golpe (doc: Daño = máx(1; Ataque − Def efectiva); Ataque = tirada aleatoria + nivel de la skill del arma / 2)
 function rollWeaponHit(defensa) {
   const id = armaEq(); if (!id) return null;
-  const w = ARM_DEF[id], lvl = skillInfo(G.skills[armSkillKey(w.tipo)] || 0, armSkillKey(w.tipo)).lvl;
+  const w = ARM_DEF[id], lvl = nivelArmaDmg(armSkillKey(w.tipo));   // 11/9: nivel − 9 con el arranque en 10
   let atk = w.min + Math.floor(Math.random() * (w.max - w.min + 1)) + Math.floor(lvl / 2);
   atk *= 1 + upgDmg(armPlus(id)) / 100;                       // Altar: mejora +1..+15 (daño acumulado)
   let defEf = defensa || 0;
@@ -5520,7 +5594,7 @@ const SWORD_WOOD_COST = { madera: 5 };
 function swordDmg() {   // legado: >0 si hay un arma CUERPO A CUERPO equipada y sana (el daño real sale de rollWeaponHit)
   const id = armaEq(); if (!id) return 0;
   const w = ARM_DEF[id]; if (w.tipo === "arco") return 0;
-  return Math.round((w.min + w.max) / 2) + Math.floor(skillInfo(G.skills[armSkillKey(w.tipo)] || 0, armSkillKey(w.tipo)).lvl / 2);
+  return Math.round((w.min + w.max) / 2) + Math.floor(nivelArmaDmg(armSkillKey(w.tipo)) / 2);
 }
 
 // --- arco y flechas (combate a distancia; usa la skill Arco) ---

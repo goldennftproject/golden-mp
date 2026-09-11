@@ -692,6 +692,7 @@ class ForestScene extends Phaser.Scene {
     if (!this.cobrarEstamina(m)) return;   // la estamina se cobra ANTES: sin ella no se gasta ni la flecha ni la durabilidad
     const aid = armaEq();
     llevoGastar("res", "flecha", 1);
+    if (typeof addTries === "function") addTries("range", 1);   // 11/9: cada disparo es un intento de Arco, acierte o no
     if (aid) { useWeapon(aid); if (G.weapons[aid].dur <= 0) { log("¡" + ARM_DEF[aid].label + " roto! Reparalo en la Herrería.", "bad"); toast("¡Arco roto!"); } }
     if (typeof syncSlots === "function") syncSlots(); if (isOpen("ov-inv")) refreshInv();
     const a = this.add.text(this.hero.x, this.hero.y - 22, "", { fontSize: "16px", color: "#e8d3a8" }).setOrigin(0.5).setDepth(99999);
@@ -731,6 +732,9 @@ class ForestScene extends Phaser.Scene {
     if (dmg == null) {   // doc 2/8: Daño = máx(1; tirada del arma + nivel/2 − defensa efectiva) + buff del tipo
       const roll = rollWeaponHit(this.mobDef(m));
       if (!roll) return;
+      /* 11/9: cada golpe cuerpo a cuerpo es un INTENTO del arma (doc de Tibia) — acierte o no, así
+         que se cuenta ANTES del esquive. La flecha ya se contó al disparar (shootArrow). */
+      if (ARM_DEF[roll.id].tipo !== "arco" && typeof addTries === "function") addTries(armSkillKey(ARM_DEF[roll.id].tipo), 1);
       if (m.def.evade && ARM_DEF[roll.id].tipo !== "arco" && Math.random() < m.def.evade) { this.floatTxt(m, "Esquivó", "#a8d8ff"); return; }   // Vuelo evasivo (solo cuerpo a cuerpo)
       dmg = roll.dmg; crit = roll.crit; vamp = roll.vamp || 0;
       tipoFx = ARM_DEF[roll.id].tipo;   // efecto visual propio de cada tipo de arma (pendiente del 10/8)

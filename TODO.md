@@ -62,7 +62,10 @@ Están desarrolladas en el GDD §15.0, con sus números medidos. Aquí solo el t
 - [ ] **Los seis oficios huérfanos** (Espada, Hacha, Mazo, Arco, Tala, Artesanía). O reciben algo
   que abrir, o se acepta que su nivel es un número de daño y se les da un techo honesto. Lo que
   no puede seguir es el 150 de reserva. *(Se probó atarles las armas y se midió que era un muro:
-  85 ratas para la espada de piedra. Descartado y explicado en el código.)*
+  85 ratas para la espada de piedra. Descartado y explicado en el código.)* **11/9:** las cuatro
+  armas pasaron a subir por INTENTOS con la fórmula de Tibia del diseñador (`docs/SKILLS-TIBIA.md`,
+  `test-skills-tibia.js`): arrancan en 10, cada golpe cuenta, matar no entrena. Eso les da un
+  ritmo con sentido, pero NO les da nada que abrir — siguen sin contenido y el 150 sigue ahí.
 - [ ] **La escalera de cañas, aplanada arriba.** Al subir la de Hierro a 1.500, la de Oro (2.000)
   queda a ×1,33. Lo que de verdad cobra la de oro es su barra (21 h de veta), no su plata — pero
   si el último escalón tiene que sentirse, hay que subirlo.

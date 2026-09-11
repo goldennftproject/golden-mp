@@ -236,7 +236,7 @@ function snapshot() {
      vistos y estrellaMax (el álbum con estrellas) y pescaTiene (el señuelo, que no se gasta).
      OJO con los comentarios AL FINAL de una línea de este objeto: se comen lo que sigue. */
   return { plata: G.plata, golden: G.golden, level: G.level, prestige: G.prestige, iniciado: G.iniciado,
-    res: G.res, picks: G.picks, skills: G.skills, fish: G.fish, plots: G.plots, nodos: G.nodos, expansiones: G.expansiones, pescaHasta: G.pescaHasta, pescaDesde: G.pescaDesde, senales: G.senales, escamas: G.escamas, vistos: G.vistos, estrellaMax: G.estrellaMax, pescaTiene: G.pescaTiene, canas: G.canas, presion: G.presion, amarres: G.amarres, trampas: G.trampas, marea: G.marea, runaOro: G.runaOro, buffs: G.buffs, seeds: G.seeds, selSeed: G.selSeed,
+    res: G.res, picks: G.picks, skills: G.skills, triesV: G.triesV, fish: G.fish, plots: G.plots, nodos: G.nodos, expansiones: G.expansiones, pescaHasta: G.pescaHasta, pescaDesde: G.pescaDesde, senales: G.senales, escamas: G.escamas, vistos: G.vistos, estrellaMax: G.estrellaMax, pescaTiene: G.pescaTiene, canas: G.canas, presion: G.presion, amarres: G.amarres, trampas: G.trampas, marea: G.marea, runaOro: G.runaOro, buffs: G.buffs, seeds: G.seeds, selSeed: G.selSeed,
     tools: G.tools, sflStock: true, invRows: G.invRows, slots: G.slots, hotbar: G.hotbar, hotSel: G.hotSel, hbInit: G.hbInit, layout: G.layout,
     daily: G.daily, plotsOwned: G.plotsOwned, plotsCompradas: G.plotsCompradas, plotsFicha: G.plotsFicha, expParcelasDadas: G.expParcelasDadas, seedBuys: G.seedBuys, built: G.built,
     hp: G.hp, hpMax: G.hpMax, combatXp: G.combatXp, stam: G.stam, stamAcc: G.stamAcc, stamFullAt: G.stamFullAt, stamRec: G.stamRec, pass: G.pass, tuto: G.tuto, firstSeeds: G.firstSeeds,   // 24/8: stamFullAt — la recarga de 4 h es de reloj real
@@ -586,6 +586,10 @@ function hydrate(d) {
    Con las migraciones en su propia función, llamada al final, ese error no se puede repetir: para
    cometerlo habría que mover la llamada, no una línea suelta en medio de doscientas.           */
 function migrarGuardado(d) {
+  /* 11/9 — LAS ARMAS PASAN DE XP A INTENTOS (doc del diseñador, fórmula de Tibia). Un guardado sin
+     triesV trae XP de Espada/Hacha/Mazo/Arco: se convierte UNA vez al nivel equivalente (el viejo
+     nivel 1 es el nuevo 10) con sus intentos exactos, y se marca. Nadie baja de nivel. */
+  if (!d.triesV && typeof migrarSkillsATries === "function") { G.triesV = 0; migrarSkillsATries(); }
   /* 8/9 (tarde) — LA MUDANZA DEL MORRAL. El morral de la mañana era una lista plana que aparecía
      sola al cruzar el portal; ahora el contenedor es un objeto que se compra y se lleva. A quien
      ya jugó con la versión de la mañana le devolvemos las dos cosas por separado: lo que tenía

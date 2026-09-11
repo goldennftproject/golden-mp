@@ -2037,8 +2037,9 @@ function refreshSkills() {
     const prox = (typeof oficioProximo === "function") ? oficioProximo(k) : "";
     const meta = alTope ? `<div class="xp">Nivel máximo por ahora — la XP se sigue guardando para cuando el oficio crezca</div>`
       : prox ? `<div class="xp verde">🔓 ${prox}</div>`
-      : (k === "tala" ? `<div class="xp">Mide tu práctica · la madera no tiene escalones</div>` : "");
-    return `<div class="skrow"><span class="ic"><img class="skic" src="${GF.spr("sk_" + k)}" onerror="this.outerHTML='${ic}'"></span><div class="body"><div class="nm"><span>${nm}</span><span class="lv">Nv. ${inf.lvl}${alTope ? " (MAX)" : ""}</span></div><div class="skbar"><i style="width:${pct}%"></i></div><div class="xp">${alTope ? "Techo del contenido: nivel " + techo : fmt(inf.into) + "/" + fmt(inf.need) + " XP"}${soon}</div>${meta}</div></div>`; }).join("");
+      : (k === "tala" ? `<div class="xp">Mide tu práctica · la madera no tiene escalones</div>`
+      : inf.tries ? `<div class="xp">Sube pegando: cada golpe cuenta, acierte o no · matar no entrena</div>` : "");
+    return `<div class="skrow"><span class="ic"><img class="skic" src="${GF.spr("sk_" + k)}" onerror="this.outerHTML='${ic}'"></span><div class="body"><div class="nm"><span>${nm}</span><span class="lv">Nv. ${inf.lvl}${alTope ? " (MAX)" : ""}</span></div><div class="skbar"><i style="width:${pct}%"></i></div><div class="xp">${alTope ? "Techo del contenido: nivel " + techo : fmt(inf.into) + "/" + fmt(inf.need) + (inf.tries ? " golpes" : " XP")}${soon}</div>${meta}</div></div>`; }).join("");
 }
 
 /* ---- equipo (slots estilo RPG; armadura/armas llegan con el combate) ---- */
