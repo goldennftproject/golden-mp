@@ -3,8 +3,8 @@
    (docs/MUDANZA-SUPABASE.md). Todo lo que este navegador guarda por su cuenta —la marca de cuenta y la copia
    local de la granja— va con el nombre del proyecto (SB_REF) en la llave: una copia del proyecto viejo NO
    puede reaparecer en el nuevo ni hacerle creer al arranque que « acá hubo granja » y dejarlo sin cuenta. */
-const SB_URL = "https://eusxpsmqczmczgyhndtd.supabase.co";
-const SB_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImV1c3hwc21xY3ptY3pneWhuZHRkIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODUxNzU2OTMsImV4cCI6MjEwMDc1MTY5M30.ko-XxFFjf_YnBsnBvrSCOsMLTQ285G51r-UPLYZIDJ8";
+const SB_URL = "https://ulspkdaljeuleqqdokfk.supabase.co";
+const SB_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InVsc3BrZGFsamV1bGVxcWRva2ZrIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODk0MDk5NTMsImV4cCI6MjEwNDk4NTk1M30.HRtJ0kEX6kxAZl2uUhNur2czVmbwCl2jtEcM50p0EsA";
 const SB_REF = (SB_URL.match(/https:\/\/([^.]+)\./) || [])[1] || "sb";
 
 let sb = null, UID = null, saveTimer = null, lastSavedKey = null;
