@@ -3231,14 +3231,25 @@ function refreshCurtiduria() {
     ARMOR_SLOTS.forEach(pz => {
       const p = sd.piezas[pz], tiene = armorTiene(set, pz);
       const costo = p.mat + " " + RES_LABEL[sd.mat] + (p.hierro ? " · " + p.hierro + " Hierro" : "") + " · " + p.plata + " plata";
+      /* 14/9 — la pieza que ya tenés deja de decir « Ya la tenés » y pasa a decir cómo está.
+         Es la información que hace falta para decidir si volvés a la Zona o pasás por acá. */
+      const dur = tiene ? armorDur(set, pz) : 0, rep = tiene ? armorReparaCosto(set, pz) : null;
+      const puedeRep = rep && (G.res[sd.mat] || 0) >= rep.mat && (!rep.hierro || (G.res.hierro || 0) >= rep.hierro) &&
+        G.plata >= rep.plata && (G.built && G.built.curtiduria);
       const puede = (G.res[sd.mat] || 0) >= p.mat && (!p.hierro || (G.res.hierro || 0) >= p.hierro) && G.plata >= p.plata && (G.built && G.built.curtiduria);
       // 10/8: cada pieza con su ícono (antes la lista era puro texto y las 20 filas se veían iguales)
       h += '<div class="forge-row' + (tiene ? ' eq' : '') + '">' +
         '<div class="fic"><img src="' + GF.spr("armor_" + set + "_" + pz) + '" onerror="this.remove()"></div>' +
         '<div class="finfo">' +
-        '<div class="fnm">' + ARMOR_SLOT_LABEL[pz] + ' <span class="tag">+' + p.def + ' def</span>' + (tiene ? ' ✓' : '') + '</div>' +
-        '<div class="fds">' + (tiene ? "Ya la tenés" : "Costo: " + costo) + '</div></div>' +
-        '<div class="fbtns">' + (tiene ? '<button class="ghost sm" disabled>Lista</button>'
+        '<div class="fnm">' + ARMOR_SLOT_LABEL[pz] + ' <span class="tag">+' + p.def + ' def</span>' +
+          (tiene ? (dur > 0 ? ' ✓' : ' <span class="tag" style="background:#8a3c3c">gastada</span>') : '') + '</div>' +
+        '<div class="fds">' + (tiene
+          ? ("Estado: " + dur + "/" + ARMOR_DUR_MAX + (dur <= 0 ? " — no da defensa hasta repararla" : "") +
+             (rep ? " · reparar: " + rep.mat + " " + RES_LABEL[sd.mat] + (rep.hierro ? " · " + rep.hierro + " Hierro" : "") + " · " + rep.plata + " plata" : ""))
+          : ("Costo: " + costo)) + '</div></div>' +
+        '<div class="fbtns">' + (tiene
+          ? (rep ? '<button class="green sm" ' + (puedeRep ? "" : "disabled") + ' data-rarmor="' + set + ':' + pz + '">Reparar</button>'
+                 : '<button class="ghost sm" disabled>Entera</button>')
           : '<button class="green sm" ' + (puede ? "" : "disabled") + ' data-carmor="' + set + ':' + pz + '">Craftear</button>') + '</div></div>';
     });
     if (n) h += '<div class="fbtns" style="margin-top:4px">' + (eq ? '<button class="ghost sm" disabled>Puesta</button>'
@@ -3246,6 +3257,7 @@ function refreshCurtiduria() {
   });
   box.innerHTML = h;
   box.querySelectorAll("[data-carmor]").forEach(b => b.onclick = () => { const [s2, p2] = b.dataset.carmor.split(":"); craftArmor(s2, p2); });
+  box.querySelectorAll("[data-rarmor]").forEach(b => b.onclick = () => { const [s2, p2] = b.dataset.rarmor.split(":"); repararArmor(s2, p2); refreshCurtiduria(); });
   box.querySelectorAll("[data-eqset]").forEach(b => b.onclick = () => equiparSet(b.dataset.eqset));
 }
 

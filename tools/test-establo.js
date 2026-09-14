@@ -78,7 +78,9 @@ console.log("\nALIMENTARLO SIEMPRE GANA (y descuidarlo, nunca)");
   const ANCLA_DIA = 24 * 20;
   X.ANIMAL_ORDER.forEach(k => {
     const d = X.ANIMAL_DEF[k];
-    const comida = d.come.map(c => X.CROP_DEF[c].price).sort((a, b) => a - b)[0];
+    /* 14/9 (tarde) — la RACIÓN: el conejo come 20 zanahorias, no una. El día del animal cuesta
+       su ración entera, que es justo lo que el precio del material tiene adentro. */
+    const comida = d.come.map(c => X.CROP_DEF[c].price).sort((a, b) => a - b)[0] * (d.racion || 1);
     const cuidado = (X.PRICE[d.mat] * ctx.animalPorCiclo(k)) - comida;   // un ciclo entero: 24 h
     const descuidado = 0;                                                  // ley 4: no come, no da
     ok("a la " + d.label + " le conviene comer", cuidado > descuidado,

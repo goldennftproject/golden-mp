@@ -74,14 +74,22 @@ console.log("\nQUÉ LE HACE CADA CEBO A LA TABLA DE RAREZA");
 
 console.log("\nEL PESO QUE GARANTIZA EL CAMARÓN   (derivado y medido, para que no puedan discrepar)");
 {
-  console.log("\n    especie        derivado   sorteado (20.000 lances)");
+  /* 14/9 — LA TOLERANCIA SE DERIVA, NO SE ESCRIBE. Acá había un « 0,02 » a mano sobre 20.000
+     lances, y fallaba una vez de cada tres con el Pez linterna: su peso se reparte mucho más que
+     el de los otros, así que el mismo margen que le sobra a la merluza le queda corto a él. Un
+     test que salta solo una de cada tres veces es peor que no tener test — el equipo aprende a
+     ignorarlo. Ahora el margen sale del error estándar DE ESA especie (3σ, el mismo criterio que
+     usa test-pesca-v4-bolsillo), así que cada una se mide con la vara que le corresponde. */
+  const N = 20000;
+  console.log("\n    especie        derivado   sorteado (" + N.toLocaleString("es") + " lances)   margen 3σ");
   const malas = [];
   for (const k of ["merluza", "atun", "pez_espada", "pez_linterna"]) {
     const der = ctx.pesoFactorEsperado(k, "camaron");
-    let s = 0; for (let i = 0; i < 20000; i++) s += ctx.pesoFactor(k, ctx.pesoDelLance(k, { cebo: "camaron" }));
-    const med = s / 20000;
-    console.log("    " + PEZ[k].label.padEnd(16) + der.toFixed(3).padStart(8) + med.toFixed(3).padStart(14));
-    if (Math.abs(der - med) > 0.02) malas.push(PEZ[k].label);
+    let s = 0, s2 = 0;
+    for (let i = 0; i < N; i++) { const v = ctx.pesoFactor(k, ctx.pesoDelLance(k, { cebo: "camaron" })); s += v; s2 += v * v; }
+    const med = s / N, sigma = Math.sqrt(Math.max(0, s2 / N - med * med)) / Math.sqrt(N), margen = 3 * sigma;
+    console.log("    " + PEZ[k].label.padEnd(16) + der.toFixed(3).padStart(8) + med.toFixed(3).padStart(14) + ("±" + margen.toFixed(4)).padStart(13));
+    if (Math.abs(der - med) > margen) malas.push(PEZ[k].label + " (" + Math.abs(der - med).toFixed(4) + " > " + margen.toFixed(4) + ")");
   }
   console.log("");
   ok("la fórmula coincide con el sorteo en todas las especies", !malas.length, malas.join(" · "));

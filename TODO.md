@@ -47,6 +47,13 @@ en `docs/LEYES.md`.
   la bandera apagada, que es lo que custodian. Sin Chromium todavía.*
 - [x] ~~**4 · Decidir el mercado P2P**~~ **Abierto** (dirección, 14/9), y el portero subió antes:
   modo rechazo en el proyecto nuevo desde el 14/9.
+- [ ] **La rejilla de movimiento de Tibia, sin adoptar (14/9).** Del tercer documento
+  (« Velocidad de movimiento ») se tomó el TERRENO y no la rejilla, y el motivo está medido: con
+  el preset GOLDEN, del nivel 1 al 25 el paso va de 300 ms a 250 ms — **un solo breakpoint en toda
+  la partida** — y el héroe quedaría más lento que hoy (3,33 celdas/s contra 4,17). La parte de
+  « el nivel te hace más rápido » no tiene dónde pasar con 25 niveles. Si algún día el techo sube
+  mucho, o hay botas y monturas que sumen speed, vale la pena volver a mirarlo: la curva y los
+  breakpoints están descritos en `GF.SUELO` (config.js).
 - [ ] **La vida del héroe no sube nunca, y eso ata el combate.** `G.hpMax` es 100 desde el nivel
   1 hasta el techo. Medido el 14/9 (`tools/medir-combate.js`): con la armadura REAL de la primera
   semana (0-1 de defensa; las siete piezas del juego suman 8 y salen de drops de bichos de nivel
@@ -137,8 +144,15 @@ Están desarrolladas en el GDD §15.0, con sus números medidos. Aquí solo el t
   su unidad, no comió → nada, el reloj sigue. Mirar que el « con hambre / comió ✓ » del establo
   se entienda solo. La felicidad (`feliz`) sigue en el guardado pero ya no manda nada.
   **14/9 — el precio se re-ancló a la ley 4** (dirección): cada material vale 480 del ancla más
-  su comida más barata (fibra y cuero 1.160, colmillo 580, pelaje 488) en vez de 742 para los
-  cuatro. El precio único venía del modelo de raciones del 9/9, que la ley dejó sin premisa: con
+  su RACIÓN de la comida más barata (fibra y cuero 1.160, pelaje 640, colmillo 580) en vez de 742
+  para los cuatro. *Misma tarde, por Discord:* cada animal come `racion` unidades y el conejo pasó
+  a 20 zanahorias («ya luego vemos si 20 es poco o mucho»), porque comiendo una sola su día
+  costaba 85 veces menos que el de la alpaca por el mismo rinde; ahora son 4,3 veces.
+  Y **la armadura dejó de ser eterna**: cada golpe recibido gasta una pieza, a cero deja de dar
+  defensa pero no se rompe (ley 1), reparar cuesta la mitad del material proporcional a lo que
+  falte, y crear cuesta ×1,5 para que esa mitad sea la mitad de algo. Era el pedido de dirección
+  —« sino los animales tienen 1 solo uso y ya no tiene sentido »— y con esto el material del
+  establo hace falta para siempre. Lo custodia `tools/test-armadura-y-raciones.js`. El precio único venía del modelo de raciones del 9/9, que la ley dejó sin premisa: con
   él, el conejo rendía +734 al día y el toro con maíz **perdía 458**. Ahora los cuatro caen
   exactamente en el ancla del día (+480). Se mide con `tools/medir-establo.js`.
 

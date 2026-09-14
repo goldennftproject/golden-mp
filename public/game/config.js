@@ -261,7 +261,37 @@ try {
 GF.ISLA_ORIGEN = 112;
 // En qué mapa de la Zona Negra estás. Lo setea el portal de la granja y los teleports (10/8).
 GF.zona = "pantano";
-var ZONA_NEGRA_VEL = 0.75;   // "detallitos (1)" punto 7: el granjero camina 25% más lento en la Zona Negra
+/* ═══ EL SUELO PESA — la mitad del documento de velocidad que sí entra acá   (14/9, dirección) ══
+   Tercer documento de la serie de Tibia: « Velocidad de movimiento ». Tibia mueve al personaje en
+   pasos de celda y calcula cuántos ms tarda CADA paso con una curva logarítmica sobre el nivel y
+   el suelo, redondeada a múltiplos de 50 — de ahí sus famosos breakpoints.
+
+   SE ADOPTA EL SUELO, NO LA REJILLA. La razón es de escala, y está medida:
+     · Golden Farm llega a nivel 25; Tibia, a 500. Con el preset GOLDEN del documento (base 300),
+       del nivel 1 al 25 el paso va de 300 ms a 250 ms: UN solo breakpoint en toda la partida.
+       La parte de « el nivel te hace más rápido » no tiene dónde pasar en 25 niveles.
+     · Y el héroe quedaría MÁS LENTO que hoy: 3,33 celdas/s contra las 4,17 de ahora
+       (GF.SPEED 175 px/s sobre celdas de 42 px).
+     · La rejilla, además, cambia cómo se siente caminar en las tres escenas, y el playtest está
+       por arrancar.
+   Lo que sí vale y es barato: EL TERRENO. En el documento pesa tanto como el nivel — a nivel 8,
+   arenisca 250 ms contra nieve 700 ms. Eso es lo que hace que un camino empedrado se note.
+
+   Cómo se traduce sin rejilla: `groundSpeed` es el número del documento, donde MÁS ALTO = MÁS
+   LENTO, y el suelo normal (la granja) es 100. El multiplicador es 100/groundSpeed, así que la
+   granja queda EXACTAMENTE como hoy y las zonas se diferencian entre sí.
+   Los valores se eligieron para que el promedio de las cuatro zonas caiga cerca del 0,75 plano
+   que había antes: el cambio es que ahora unas pesan más que otras, no que todo sea más lento. */
+GF.SUELO = {
+  granja:  100,   // hierba y tierra: la referencia. ×1,00 — nada cambia respecto de hoy
+  pantano: 160,   // barro: se camina pesado. ×0,63 (antes 0,75) — es la zona de nivel 1
+  piedra:  100,   // roca limpia del cañón: ×1,00, la zona donde mejor se corre
+  fuego:   120,   // grietas y ceniza: ×0,83
+  guarida: 140,   // suelo irregular de la guarida: ×0,71
+};
+GF.sueloMult = function (clave) { return 100 / (GF.SUELO[clave] || 100); };
+/* se conserva el nombre viejo para lo que todavía lo lea, pero ya no es la perilla: el suelo sí. */
+var ZONA_NEGRA_VEL = 1;   // (14/9) el 0,75 plano lo reemplazó GF.SUELO, zona por zona
 
 // RESPUESTA AL CLIC (4/8). Cuánto dura cada acción en la granja. En el modo de un clic el granjero
 // no se ve, así que esta duración NO es una animación: es solo el candado que separa un golpe del

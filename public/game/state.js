@@ -13,7 +13,7 @@ const G = {
   stam: null, stamAcc: 0, stamFullAt: 0, stamRec: null,   // estamina de la Zona Negra ("2das mejoras") · stamFullAt: cuándo se llena entera (24/8)
   stats: {}, statsBase: {}, chestCap: 0, edif2: {}, cosmeticos: [],
   animals: {},                   // Establo: animal → { desde, feliz, comidoAt, prodAt }
-  armor: {}, armorEq: null,      // Curtiduría: piezas crafteadas y set equipado
+  armor: {}, armorDur: {}, armorEq: null,   // Curtiduría: piezas crafteadas, su durabilidad y el set equipado
   ofrendaPts: 0, ofrendaLog: 0,  // Altar de Ofrendas: puntos acumulados y recursos quemados
   nodoUsos: {},                  // cuántas veces se recogió de cada nodo (para el arranque rápido)
   cosEq: null,                   // cosmético lucido: título, color de nombre, marco y aura
@@ -4754,19 +4754,116 @@ const ARMOR_SETS = {
     piezas:{ yelmo:{mat:2,hierro:5,plata:120,def:8}, pecho:{mat:3,hierro:8,plata:200,def:12}, pantalones:{mat:2,hierro:6,plata:150,def:9}, botas:{mat:1,hierro:4,plata:80,def:5}, guantes:{mat:1,hierro:3,plata:70,def:4} } },
 };
 const ARMOR_ORDER = ["fibra", "piel", "cuero", "colmillo"];
+/* ═══ LA ARMADURA SE GASTA Y SE REPARA   (14/9, dirección, Discord) ═══════════════════════════
+   « hay q crear una mecanica de la armadura… la armadura no puede ser eterna… debe repararse con
+     materiales de animales… habría q subir el costo de creado para poder implementar tipo un 50 %
+     repararla… porque sino los animales tienen 1 solo uso y ya no tiene sentido »
+
+   Ése es el problema real: hasta hoy craftear el set era el ÚLTIMO uso del animal. Una vez hechas
+   las cinco piezas, el establo dejaba de tener sentido para siempre y el material sobrante no
+   servía para nada. La durabilidad convierte al animal en una fuente permanente.
+
+   Cómo queda:
+     · cada pieza nace con ARMOR_DUR_MAX de durabilidad;
+     · cada golpe que te pega un bicho gasta UNO (dirección eligió « con los golpes recibidos »:
+       la armadura se gasta usando la armadura, y el que no pelea no repara);
+     · a cero NO se rompe: deja de dar defensa hasta que la repares. Romperla sería perder
+       progreso, y eso lo prohíbe la ley 1;
+     · reparar cuesta la mitad del material de crearla, PROPORCIONAL a lo que le falta — rellenar
+       media barra cuesta la mitad de esa mitad, así que nadie paga de más por reparar temprano;
+     · y para que la mitad sea una mitad de algo, el coste de crear sube ×ARMOR_COSTE_MULT, como
+       pidió dirección. No se reescribe la tabla de las veinte piezas: se escala acá, en un solo
+       lugar, igual que el precio de los materiales del establo. */
+var ARMOR_DUR_MAX    = 100;    // golpes que aguanta una pieza antes de quedar inerte
+var ARMOR_REPARA_PCT = 0.50;   // reparar la barra entera cuesta esto del material de crearla
+var ARMOR_COSTE_MULT = 1.50;   // crear cuesta esto de lo que costaba antes de que hubiera reparación
+(function encarecerPorLaReparacion() {
+  for (const set in ARMOR_SETS) for (const pz in ARMOR_SETS[set].piezas) {
+    const p = ARMOR_SETS[set].piezas[pz];
+    p.mat = Math.ceil(p.mat * ARMOR_COSTE_MULT);
+    if (p.hierro) p.hierro = Math.ceil(p.hierro * ARMOR_COSTE_MULT);
+    p.plata = Math.round(p.plata * ARMOR_COSTE_MULT);
+  }
+})();
 function armorKey(set, pieza) { return "arm_" + set + "_" + pieza; }
+/* la durabilidad vive aparte de G.armor para que los guardados viejos sigan valiendo: una pieza
+   sin entrada en G.armorDur es una pieza entera, no una pieza rota. */
+function armorDur(set, pieza) {
+  if (!armorTiene(set, pieza)) return 0;
+  const v = (G.armorDur || {})[armorKey(set, pieza)];
+  return (typeof v === "number") ? Math.max(0, Math.min(ARMOR_DUR_MAX, v)) : ARMOR_DUR_MAX;
+}
+function armorDurSet(set) { return ARMOR_SLOTS.filter(pz => armorTiene(set, pz)).map(pz => armorDur(set, pz)); }
+function armorRota(set, pieza) { return armorTiene(set, pieza) && armorDur(set, pieza) <= 0; }
+/* lo que cuesta dejar una pieza como nueva: la mitad del material, por la fracción que le falta */
+function armorReparaCosto(set, pieza) {
+  const sd = ARMOR_SETS[set]; if (!sd) return null;
+  const p = sd.piezas[pieza]; if (!p) return null;
+  const falta = (ARMOR_DUR_MAX - armorDur(set, pieza)) / ARMOR_DUR_MAX;
+  if (falta <= 0) return null;
+  return {
+    falta: falta,
+    mat: Math.max(1, Math.ceil(p.mat * ARMOR_REPARA_PCT * falta)),
+    hierro: p.hierro ? Math.max(1, Math.ceil(p.hierro * ARMOR_REPARA_PCT * falta)) : 0,
+    plata: Math.round(p.plata * ARMOR_REPARA_PCT * falta),
+  };
+}
+function repararArmor(set, pieza) {
+  const sd = ARMOR_SETS[set]; if (!sd) return 0;
+  if (!(G.built && G.built.curtiduria)) { toast("Necesitás la Curtiduría para reparar"); return 0; }
+  if (!armorTiene(set, pieza)) { toast("No tenés esa pieza"); return 0; }
+  const c = armorReparaCosto(set, pieza);
+  if (!c) { toast(ARMOR_SLOT_LABEL[pieza] + " está entera"); return 0; }
+  const falta = [];
+  if ((G.res[sd.mat] || 0) < c.mat) falta.push(c.mat + " " + RES_LABEL[sd.mat]);
+  if (c.hierro && (G.res.hierro || 0) < c.hierro) falta.push(c.hierro + " Hierro");
+  if (G.plata < c.plata) falta.push(c.plata + " de plata");
+  if (falta.length) { toast("Para repararla te falta: " + falta.join(" · ")); return 0; }
+  G.res[sd.mat] -= c.mat;
+  if (c.hierro) G.res.hierro -= c.hierro;
+  G.plata -= c.plata;
+  G.armorDur = G.armorDur || {};
+  G.armorDur[armorKey(set, pieza)] = ARMOR_DUR_MAX;
+  if (typeof addXp === "function") addXp("crafting", 4);
+  log("Reparaste " + ARMOR_SLOT_LABEL[pieza] + " de " + sd.label + " con " + c.mat + " " + RES_LABEL[sd.mat] + ".", "good");
+  toast(ARMOR_SLOT_LABEL[pieza] + " como nueva");
+  if (typeof applyCombatHp === "function") applyCombatHp();
+  refreshHud();
+  if (typeof refreshCurtiduria === "function" && isOpen("ov-curtiduria")) refreshCurtiduria();
+  if (typeof saveFarm === "function") saveFarm(true);
+  return 1;
+}
+/* un golpe recibido gasta una pieza del set puesto. Se elige la que MÁS durabilidad tiene, para
+   que el set se gaste parejo en vez de dejar cuatro enteras y una en cero. Devuelve la pieza que
+   acaba de quedar inerte, si alguna, para que la escena lo pueda avisar. */
+function armorGastar(n) {
+  const set = G.armorEq; if (!set || !ARMOR_SETS[set]) return null;
+  const puestas = ARMOR_SLOTS.filter(pz => armorTiene(set, pz) && armorDur(set, pz) > 0);
+  if (!puestas.length) return null;
+  const pz = puestas.sort((a, b) => armorDur(set, b) - armorDur(set, a))[0];
+  G.armorDur = G.armorDur || {};
+  G.armorDur[armorKey(set, pz)] = Math.max(0, armorDur(set, pz) - (n || 1));
+  return G.armorDur[armorKey(set, pz)] <= 0 ? pz : null;
+}
 function armorTiene(set, pieza) { return !!(G.armor && G.armor[armorKey(set, pieza)]); }
 function armorPuestas(set) { return ARMOR_SLOTS.filter(pz => armorTiene(set, pz)).length; }
 function armorSetCompleto(set) { return armorPuestas(set) === ARMOR_SLOTS.length; }
+/* 14/9 — el BONO del set pide las cinco piezas y además que estén sanas: si una está gastada, el
+   set no está completo de verdad. Se separa de armorSetCompleto porque « tenerlas » y « que
+   funcionen » dejaron de ser lo mismo, y confundirlas haría que el bono siguiera activo con la
+   armadura deshecha. */
+function armorSetSano(set) { return ARMOR_SLOTS.every(pz => armorTiene(set, pz) && armorDur(set, pz) > 0); }
 function armorEquipado(set) { return G.armorEq === set; }
 // defensa: suma de las piezas del set EQUIPADO (más las piezas viejas de loot, que siguen valiendo)
 function armorDefensa() {
   const set = G.armorEq; if (!set || !ARMOR_SETS[set]) return 0;
   let d = 0;
-  ARMOR_SLOTS.forEach(pz => { if (armorTiene(set, pz)) d += ARMOR_SETS[set].piezas[pz].def; });
+  /* 14/9 — una pieza a cero de durabilidad no suma defensa. No está rota ni perdida: está
+     gastada, y vuelve entera en cuanto la reparás. */
+  ARMOR_SLOTS.forEach(pz => { if (armorTiene(set, pz) && armorDur(set, pz) > 0) d += ARMOR_SETS[set].piezas[pz].def; });
   return d;
 }
-function armorBono() { const set = G.armorEq; return (set && armorSetCompleto(set)) ? ARMOR_SETS[set].bono : null; }
+function armorBono() { const set = G.armorEq; return (set && armorSetSano(set)) ? ARMOR_SETS[set].bono : null; }
 function armorBonoVal(campo) { const b = armorBono(); return (b && b[campo]) || 0; }
 // set de Fibra completo: velocidad de ataque y evasión (antes el set entero no hacía nada)
 function atkSpdMult() { return 1 + ((typeof eqRunaVal === "function" ? eqRunaVal("veloz") : 0) + armorBonoVal("atkSpd")) / 100; }
@@ -4786,6 +4883,8 @@ function craftArmor(set, pieza) {
   G.plata -= p.plata;
   G.armor = G.armor || {};
   G.armor[armorKey(set, pieza)] = true;
+  G.armorDur = G.armorDur || {};
+  G.armorDur[armorKey(set, pieza)] = ARMOR_DUR_MAX;   // nace entera
   if (!G.armorEq) G.armorEq = set;
   addXp("crafting", 12);
   const completo = armorSetCompleto(set);
@@ -4823,10 +4922,19 @@ const ANIMAL_DEF = {
      (animalRinde multiplica por la felicidad, con FELIZ_MIN_PROD 0,5 de piso), así que la
      segunda mitad de la frase sale gratis: el bicho descuidado da 0,5 y la fracción se le
      guarda hasta completar una unidad. */
-  alpaca: { label:"Alpaca", emoji:"🦙", golden:40,  mat:"fibra",    come:["trigo"],              cicloH:24, porCiclo:1, armadura:"fibra" },
-  conejo: { label:"Conejo", emoji:"🐰", golden:40,  mat:"pelaje",   come:["zanahoria","repollo"], cicloH:24, porCiclo:1, armadura:"piel" },
-  toro:   { label:"Toro",   emoji:"🐂", golden:60,  mat:"cuero",    come:["trigo","maiz"],        cicloH:24, porCiclo:1, armadura:"cuero" },
-  jabali: { label:"Jabalí", emoji:"🐗", golden:100, mat:"colmillo", come:["calabaza","maiz"],     cicloH:24, porCiclo:1, armadura:"colmillo" },
+  /* ═══ LA RACIÓN: CUÁNTAS UNIDADES COME CADA UNO   (14/9, dirección, Discord) ═══════════════
+     « el conejo es la más basica porque el conejo solo come zanahorias.. y es muy baratoooo […]
+       y alimentar el conejo debería pedir 20 zanahorias en vez de 1 cada 24h… ya luego vemos si
+       20 es poco o mucho »
+     Hasta hoy los cuatro comían UNA unidad, y como la zanahoria vale 8 de plata y el trigo 680,
+     el conejo costaba 85 veces menos que la alpaca por el mismo rinde. La ración arregla eso sin
+     tocar qué come cada uno: el que come barato, come mucho.
+     `racion` entra en el precio del material (ver anclarMaterialesDelEstablo) y en alimentarUno.
+     El 20 es el número que puso dirección para empezar a mirarlo, no una constante sagrada. */
+  alpaca: { label:"Alpaca", emoji:"🦙", golden:40,  mat:"fibra",    come:["trigo"],              racion:1,  cicloH:24, porCiclo:1, armadura:"fibra" },
+  conejo: { label:"Conejo", emoji:"🐰", golden:40,  mat:"pelaje",   come:["zanahoria","repollo"], racion:20, cicloH:24, porCiclo:1, armadura:"piel" },
+  toro:   { label:"Toro",   emoji:"🐂", golden:60,  mat:"cuero",    come:["trigo","maiz"],        racion:1,  cicloH:24, porCiclo:1, armadura:"cuero" },
+  jabali: { label:"Jabalí", emoji:"🐗", golden:100, mat:"colmillo", come:["calabaza","maiz"],     racion:1,  cicloH:24, porCiclo:1, armadura:"colmillo" },
 };
 var ESTABLO_COST = { madera: 50, piedra: 30, oro: 10 };   // edificio (doc)
 var FELIZ_POR_COMIDA = 15;      // (legado) lo que daba una ración antes de que la comida se anclara
@@ -5028,25 +5136,33 @@ function alimentarUno(k, i, silencio) {
      (las listas están escritas de barato a caro) y dependía del orden en que alguien las tipeó.
      Ahora elige el MÁS BARATO que tenga: el animal rinde lo mismo coma lo que coma, así que darle
      el caro es tirar plata, y eso no puede depender de cómo esté ordenado un array. */
-  const cultivo = d.come.filter(c => (G.res[c] || 0) > 0)
+  /* 14/9 (tarde) — LA RACIÓN. No alcanza con tener UNA: hay que tener las `racion` que come ese
+     animal (el conejo, 20 zanahorias). Se busca el cultivo más barato del que haya ración entera;
+     si de ninguno hay suficiente, no come y el aviso dice cuánto le falta — que es la pregunta
+     que se va a hacer el jugador mirando el establo. */
+  const racion = d.racion || 1;
+  const cultivo = d.come.filter(c => (G.res[c] || 0) >= racion)
     .sort((x, y) => ((CROP_DEF[x] || {}).price || 0) - ((CROP_DEF[y] || {}).price || 0))[0];
   if (!cultivo) {
-    if (!silencio) toast(d.label + " solo come " + d.come.map(c => CROP_DEF[c].label).join(" o ") + " — no tenés en la bolsa");
+    if (!silencio) {
+      const opciones = d.come.map(c => racion + " " + (CROP_DEF[c].label || c) + " (tenés " + Math.floor(G.res[c] || 0) + ")").join(" o ");
+      toast(d.label + " come " + opciones + " — no te alcanza");
+    }
     return 0;
   }
   if (animalComioEsteCiclo(a)) { if (!silencio) toast("Ese " + d.label + " ya comió — le vuelve a dar hambre cuando produzca"); return 0; }   // 11/9: una comida por ciclo
   /* Y si lo único que le queda vale MÁS que lo que el animal rinde, se lo avisa. No se le
      prohíbe: puede necesitar el material para una armadura y no para venderlo. Pero que lo sepa,
      porque es la única acción del juego que puede dejarlo con menos plata que si no hace nada. */
-  const valeComida = (CROP_DEF[cultivo] || {}).price || 0, valeRinde = (PRICE[d.mat] || 0) * animalPorCiclo(k);
+  const valeComida = ((CROP_DEF[cultivo] || {}).price || 0) * racion, valeRinde = (PRICE[d.mat] || 0) * animalPorCiclo(k);
   if (!silencio && valeComida > valeRinde)
     toast("Ojo: 1 " + (CROP_DEF[cultivo].label || cultivo) + " vale " + valeComida + " y el ciclo rinde " + valeRinde + " — le estás dando de comer a pérdida");
-  G.res[cultivo] -= 1;
+  G.res[cultivo] -= racion;
   a.feliz = Math.min(100, animalFelizDe(a) + felizDeComida(k, cultivo, true));
   a.comidoAt = nowMs();
   statAdd("alimentar", k);
   if (!silencio) {
-    log("Alimentaste " + d.label + " " + (i + 1) + " con 1 " + (CROP_DEF[cultivo].label || cultivo) +
+    log("Alimentaste " + d.label + " " + (i + 1) + " con " + racion + " " + (CROP_DEF[cultivo].label || cultivo) +
         ". Comió: cuando cumpla el ciclo da " + animalPorCiclo(k) + " de " + RES_LABEL[d.mat] + ".", "good");
     toast(d.label + " " + (i + 1) + " · comió");
     refreshHud(); establoRepintar();   // 10/9: aplazado (ver « EL ESTABLO SE REPINTA DESPUÉS DEL CLIC »)
@@ -7043,7 +7159,10 @@ ORE_DEF.piedra.price = PRICE.piedra;
     const comidaMasBarata = a.come
       .map(function (c) { return CROP_DEF[c] ? CROP_DEF[c].price : 0; })
       .sort(function (x, y) { return x - y; })[0] || 0;
-    PRICE[a.mat] = Math.round(anclaDia + comidaMasBarata);
+    /* 14/9 (tarde) — la RACIÓN entra acá: el conejo come 20 zanahorias, no una, así que su día
+       cuesta 160 y no 8. Sin esto el precio del pelaje seguiría anclado a una sola zanahoria y
+       el conejo volvería a ser el chollo que la ración vino a cerrar. */
+    PRICE[a.mat] = Math.round(anclaDia + comidaMasBarata * (a.racion || 1));
   }
 })();
 

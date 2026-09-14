@@ -1149,6 +1149,14 @@ class ForestScene extends Phaser.Scene {
     } else {
       dmg = Math.max(1, Math.round((dmg - gearDefTotal() * (1 - playerDefLossMult())) * dmgTakenMult()));   // armadura (menos Fragilidad) + buff de comida
     }
+    /* 14/9 (dirección) — EL GOLPE RECIBIDO GASTA LA ARMADURA. « la armadura no puede ser eterna…
+       debe repararse con materiales de animales », y dirección eligió que se gaste con los golpes
+       que te pegan: la armadura se gasta usando la armadura, y el que no pelea no repara nunca.
+       Se gasta siempre que el bicho te haya llegado a pegar, aunque la armadura te lo haya
+       absorbido casi entero — justamente porque absorberlo es su trabajo. */
+    const gastada = (typeof armorGastar === "function") ? armorGastar(1) : null;
+    if (gastada && typeof toast === "function")
+      toast((typeof ARMOR_SLOT_LABEL !== "undefined" ? ARMOR_SLOT_LABEL[gastada] : "Una pieza") + " se gastó — repárala en la Curtiduría");
     G.hp = Math.max(0, G.hp - dmg);
     this.hurtFx = 0.18;
     if (dmg > 0) this.floatHero("-" + dmg, "#ff5544");   // el golpe del mob se ve (pedido del diseñador)
@@ -1290,7 +1298,10 @@ class ForestScene extends Phaser.Scene {
     }
     const moving = !!(vx || vy);
     if (moving) {
-      let step = GF.SPEED * ZONA_NEGRA_VEL * speedMult() * playerSlowMult() * dt;   // detallitos: más lento en la Zona Negra
+      /* 14/9 — el suelo de ESTA zona, no un 0,75 para las cuatro (ver GF.SUELO en config.js):
+         el pantano se camina pesado y el cañón de piedra se corre. */
+      const suelo = (typeof GF.sueloMult === "function") ? GF.sueloMult(this.zonaKey) : 1;
+      let step = GF.SPEED * suelo * ZONA_NEGRA_VEL * speedMult() * playerSlowMult() * dt;
       if (this.moveTarget && this._ejeResta) step = Math.min(step, this._ejeResta);
       const nx = hero.x + vx * step, ny = hero.y + vy * step;
       let moved = false;

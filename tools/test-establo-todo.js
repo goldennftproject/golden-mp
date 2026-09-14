@@ -52,9 +52,13 @@ console.log("\nALIMENTAR TODO: TODAS LAS ESPECIES DE UN CLIC");
   G.tuto = { done: true }; G.res = G.res || {};
   const dos = poblar(30);
   Object.keys(vm.runInContext("CROP_DEF", ctx)).forEach(c => G.res[c] = 0);
-  // el PREFERIDO de cada especie, 2 de cada uno (con "cualquier cultivo" la alpaca sube 0,45:
-  // la felicidad es proporcional al valor de lo que come, y eso ya lo cubre test-establo)
-  dos.forEach(k => G.res[ANIMAL_DEF[k].come[0]] = 2);
+  /* el PREFERIDO de cada especie, 2 RACIONES de cada uno — dos animales por especie (con
+     "cualquier cultivo" la alpaca sube 0,45: la felicidad es proporcional al valor de lo que
+     come, y eso ya lo cubre test-establo).
+     14/9 — antes acá había un 2 pelado, que valía mientras todos comieran UNA unidad. Desde la
+     ración de dirección el conejo come 20 por cabeza, así que la cuenta tiene que salir de
+     ANIMAL_DEF y no de un número escrito a mano. */
+  dos.forEach(k => G.res[ANIMAL_DEF[k].come[0]] = 2 * (ANIMAL_DEF[k].racion || 1));
   const r = ctx.establoAlimentarTodo();
   ok("alimentó a los 4 animales de las 2 especies", r.animales === 4, JSON.stringify(r));
   ok("y los cuatro comieron este ciclo (ley 4)", dos.every(k => G.animals[k].every(a => ctx.animalComioEsteCiclo(a))));
@@ -83,7 +87,7 @@ console.log("\nNO DESPERDICIA: AL LLENO NO SE LE DA DE COMER");
   ok("con hambre y solo papa en la bolsa, NO come (dieta estricta)",
     rEstricta.animales === 0 && Math.floor(G.res.papa) === 10, JSON.stringify(rEstricta));
   /* uno lleno y otro con hambre: alimenta SOLO al que la necesita — con SU comida */
-  G.res[ANIMAL_DEF[dos[1]].come[0]] = 5;
+  G.res[ANIMAL_DEF[dos[1]].come[0]] = 5 * (ANIMAL_DEF[dos[1]].racion || 1);   // 14/9: 5 raciones, no 5 unidades
   avisos.length = 0;
   const r2 = ctx.establoAlimentarTodo();
   ok("con uno lleno y otro con hambre, come solo el hambriento", r2.animales === 2 && r2.especies === 1,
