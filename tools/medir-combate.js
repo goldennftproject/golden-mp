@@ -23,11 +23,19 @@ const TIRADAS = 1000;
 
 /* El perfil del jugador en cada momento de la primera semana. El skill de arma sale de los
    intentos: a los golpes que de verdad habrá dado a esa altura, no a los que podría dar. */
+/* CORRECCIÓN (14/9, el mismo día): la primera versión de este archivo puso armadura 7 al día 7 y
+   14 al día 20, y con esos números el jugador salía prácticamente inmortal. Estaban inventados.
+   La armadura del juego son SIETE piezas que suman 8 de defensa en total, y todas salen de
+   drops de bichos tardíos: las botas de la larva (lvl 5), el casco y el escudo de madera del
+   orco (15), la pechera de cuero del lancero (16), el casco y el escudo de hierro del guerrero
+   (20), la pechera de hierro del trol (30). Al día 7 el jugador anda por la araña y el goblin:
+   tiene las botas y poco más. Con la armadura de verdad el combate se ve muy distinto — y el
+   « no hay riesgo » que reporté salía de mi número inventado, no del juego. */
 const PERFILES = [
   { nombre: "día 1 · recién salido del tutorial", nivel: 2, skill: 10, arma: "espada_madera", armadura: 0 },
-  { nombre: "día 3 · con lo del herrero puesto", nivel: 5, skill: 14, arma: "espada_piedra", armadura: 3 },
-  { nombre: "día 7 · el final de la prueba", nivel: 10, skill: 20, arma: "espada_bronce", armadura: 7 },
-  { nombre: "día 20 · el que sigue jugando", nivel: 18, skill: 30, arma: "espada_oro", armadura: 14 },
+  { nombre: "día 3 · con lo del herrero puesto", nivel: 5, skill: 14, arma: "espada_piedra", armadura: 1 },
+  { nombre: "día 7 · el final de la prueba", nivel: 10, skill: 20, arma: "espada_bronce", armadura: 1 },
+  { nombre: "día 20 · el que sigue jugando", nivel: 18, skill: 30, arma: "espada_oro", armadura: 5 },
 ];
 
 function golpesParaMatar(p, m) {
@@ -80,3 +88,12 @@ for (const p of PERFILES) {
 }
 console.log("\nUn bicho sano mata en 3-10 golpes y te mata a vos en 6-25. Fuera de esa banda, o es");
 console.log("un saco de arena o es un muro — y en el MVP solo importan los siete de arriba.\n");
+console.log("LO QUE ESTE ARCHIVO APRENDIÓ EL 14/9, DESPUÉS DE EQUIVOCARSE:");
+console.log("  Con la armadura de verdad (0-1 en la primera semana) el combate del MVP está SANO:");
+console.log("  la araña y el goblin matan en 3-5 golpes y te matan en 29-34. El « no hay riesgo »");
+console.log("  del primer informe salía de suponer armadura 7 al día 7, que el jugador no tiene.");
+console.log("  Se probó además reescalar el daño bicho por bicho para que todos maten en ~18");
+console.log("  golpes: la cuenta aplanaba el bestiario entero (la rata pegando 12 y el trol 20),");
+console.log("  porque la vida del héroe es 100 y NO SUBE NUNCA. Esa es la restricción de fondo;");
+console.log("  mientras la vida sea fija, el daño de los bichos no puede escalar mucho sin que");
+console.log("  los tempranos se vuelvan letales. No se tocó nada: queda anotado en TODO.md.\n");

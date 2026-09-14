@@ -2235,6 +2235,33 @@ const FARM_VALES   = { 4: 3 };                                                  
    El Altar no cuelga de ningún oficio y se queda en el Granero. */
 const FARM_EDIF2   = tablaEscalada({ 27:"altar" });           // nivel de granja → edificio que sube a nivel 2
 const EDIF2_OFICIO = { horno: ["mining", 6], cocina: ["cooking", 5] };
+
+/* ═══ NINGÚN NIVEL SE QUEDA SOLO CON EL BONO (14/9, dirección) ════════════════════════════════
+   Con el techo en 50, « qué entregan los 26 niveles sin recompensa jugable » era la decisión más
+   grande del TODO. Bajar el techo a 25 la achicó sola: de los 24 niveles, 20 ya dan algo que el
+   jugador puede usar (expansión, plano, edificio de nivel 2, cofre o vales) y ninguno queda mudo
+   del todo. Quedaban CUATRO —el 8, el 14, el 22 y el 24— con nada más que el bono de venta, que
+   es invisible, y un cosmético, que en MVP está escondido y que por la ley 3 no cuenta como
+   contenido. Para el jugador del playtest esos cuatro niveles no entregan nada.
+
+   Dirección eligió taparlos con capacidad de cofre: es la palanca más barata, ya existe (había
+   tres escalones) y no toca ni el ritmo de los nodos (ley 2) ni la cuenta de plata por hora.
+
+   No se escriben a mano los cuatro números. Se PREGUNTA qué niveles quedaron callados y se les
+   pone un escalón — igual que el cofre y el altar cuelgan del techo desde el 10/9. Si mañana el
+   techo se mueve otra vez, o una expansión cambia de nivel, los callados vuelven a calcularse
+   solos y ninguno queda sin premio. Lo custodia test-techo-a-un-numero.js. */
+const COFRE_RELLENO = 5;   // cuánto da un escalón de relleno (los de a mano dan 10 y 15)
+(function ningunNivelCallado() {
+  for (let n = 2; n <= FARM_NIVEL_MAX; n++) {
+    if (FARM_EXPANSION.indexOf(n) >= 0) continue;
+    if (FARM_COFRE[n] || FARM_VALES[n] || FARM_EDIF2[n]) continue;
+    let tienePlano = false;
+    for (const t in PLANO_NIVEL) if (PLANO_NIVEL[t] === n && BUILD_DEF[t]) tienePlano = true;
+    if (tienePlano) continue;
+    FARM_COFRE[n] = COFRE_RELLENO;
+  }
+})();
 function edif2Sync(silencioso) {
   for (const t in EDIF2_OFICIO) {
     const g = EDIF2_OFICIO[t];
@@ -4102,6 +4129,11 @@ function rollEsencia(zona, esBoss, lvlMob) {
    cuerpo esperándote »— deja de hacer falta, pero se queda igual: cuesta una comparación y sigue
    siendo verdad. */
 var ZONA_CD_MIN = 0;          // minutos de descanso entre viaje y viaje (0 = se entra cuando querés)
+/* 14/9 — cada cuántos segundos viaja la vida al guardado mientras peleás en la Zona. Es el
+   throttle del arreglo del F5 (ver hurtHero en forest.js): bastante seguido como para que
+   recargar no devuelva la barra llena, bastante espaciado como para no castigar al portero.
+   A 10 s, una pelea larga son tres o cuatro guardados. */
+var ZONA_HP_GUARDA_S = 10;
 /* 8/9 (Suren, en vivo) — « hay que quitar el CD de regresar a la Zona Negra porque acabo de morir
    y no puedo esperar, porque se pudre y no puedo recuperar ».
    Tenía toda la razón, y el fallo es mío: el enfriamiento se diseñó cuando morir no costaba NADA
@@ -4992,12 +5024,23 @@ function alimentarUno(k, i, silencio) {
   if (!d || !a) return 0;
   /* 2/9 (dirección, viendo comer a la alpaca): « dice que se alimenta con trigo… y comió
      calabaza. Debería ser solo trigo ». Cada especie come SU lista y nada más. */
-  const cultivo = d.come.find(c => (G.res[c] || 0) > 0);
+  /* 14/9 — antes agarraba el PRIMERO de la lista que hubiera en la bolsa. Funcionaba de casualidad
+     (las listas están escritas de barato a caro) y dependía del orden en que alguien las tipeó.
+     Ahora elige el MÁS BARATO que tenga: el animal rinde lo mismo coma lo que coma, así que darle
+     el caro es tirar plata, y eso no puede depender de cómo esté ordenado un array. */
+  const cultivo = d.come.filter(c => (G.res[c] || 0) > 0)
+    .sort((x, y) => ((CROP_DEF[x] || {}).price || 0) - ((CROP_DEF[y] || {}).price || 0))[0];
   if (!cultivo) {
     if (!silencio) toast(d.label + " solo come " + d.come.map(c => CROP_DEF[c].label).join(" o ") + " — no tenés en la bolsa");
     return 0;
   }
   if (animalComioEsteCiclo(a)) { if (!silencio) toast("Ese " + d.label + " ya comió — le vuelve a dar hambre cuando produzca"); return 0; }   // 11/9: una comida por ciclo
+  /* Y si lo único que le queda vale MÁS que lo que el animal rinde, se lo avisa. No se le
+     prohíbe: puede necesitar el material para una armadura y no para venderlo. Pero que lo sepa,
+     porque es la única acción del juego que puede dejarlo con menos plata que si no hace nada. */
+  const valeComida = (CROP_DEF[cultivo] || {}).price || 0, valeRinde = (PRICE[d.mat] || 0) * animalPorCiclo(k);
+  if (!silencio && valeComida > valeRinde)
+    toast("Ojo: 1 " + (CROP_DEF[cultivo].label || cultivo) + " vale " + valeComida + " y el ciclo rinde " + valeRinde + " — le estás dando de comer a pérdida");
   G.res[cultivo] -= 1;
   a.feliz = Math.min(100, animalFelizDe(a) + felizDeComida(k, cultivo, true));
   a.comidoAt = nowMs();
@@ -6971,22 +7014,37 @@ const PRICE = { madera:12, piedra:15, bronce:160, hierro:240, oro:280, diamante:
 ORE_DEF.piedra.cd = CD.rock;
 ORE_DEF.piedra.price = PRICE.piedra;
 
-/* ═══ EL ESTABLO, RE-ANCLADO A LA REGLA DE SFL (9/9, dirección) ═══════════════════════════════
-   Los cuatro materiales valen lo mismo, y ese "lo mismo" no se escribe: se despeja.
-     precio = 24 h × (20 del ancla + lo que cuesta la comida por hora)
-   Que los cuatro coincidan NO es una casualidad ni una pereza: es la consecuencia directa de
-   « cada 24 h dan +1 ». Si los cuatro entregan una unidad en el mismo tiempo, sus unidades tienen
-   que valer lo mismo, o el establo dejaría de estar anclado en cuanto elijas un animal u otro.
-   Lo que distingue a los cuatro deja de ser el precio y pasa a ser CUÁNTAS unidades pide su
-   armadura (12 · 15 · 16 · 9) y qué bono da — que es donde la escalera de Ganadería tiene que
-   vivir, no en un precio inventado.
-   Efecto medido en las armaduras: Fibra ×2,5 · Piel ×5,6 · Cuero ×2,2 · Colmillo ×1,5. La de
-   Piel era la barata por accidente (el pelaje valía 122, un tercio que el resto) y es la que más
-   se mueve. Reportado a dirección con los números. */
+/* ═══ EL ESTABLO, RE-ANCLADO A LA LEY 4 (14/9, dirección) ═════════════════════════════════════
+   El 9/9 los cuatro materiales valían lo mismo, y con razón: la comida era una RACIÓN genérica
+   que costaba igual para todos, así que « cada 24 h dan +1 » obligaba a que las cuatro unidades
+   valieran lo mismo.
+     precio = 24 h × (20 del ancla + lo que cuesta la ración por hora) = 742 para los cuatro
+
+   La ley 4 (11/9) rompió esa premisa sin que nos diéramos cuenta: la comida dejó de ser una
+   ración y pasó a ser UN CULTIVO CONCRETO, el de cada animal. Y los cultivos no valen lo mismo:
+   la zanahoria del conejo vale 8 de plata y el maíz del toro vale 1.200. Con el precio único,
+   medido el 14/9 (tools/medir-establo.js):
+       conejo con zanahoria .... +734 al día   (153 % del ancla)
+       toro con trigo ..........  +62 al día   (13 %)
+       toro o jabalí con maíz ... −458 al día  ← el juego pedía un gesto que empobrecía
+   Entre el mejor y el peor trato había 1.192 de plata POR EL MISMO GESTO.
+
+   Dirección decidió (14/9) que cada material valga SU comida:
+     precio = 24 h × 20 del ancla + lo que cuesta el cultivo más barato que ese animal acepta
+   Los cuatro dejan de coincidir, y esa diferencia ya no es un precio inventado: es exactamente
+   lo que cuesta mantener a ese animal un día. Lo que distingue a los cuatro sigue siendo, además,
+   cuántas unidades pide su armadura (12 · 15 · 16 · 9) y qué bono da.
+   Se despeja de ANIMAL_DEF y CROP_DEF: si mañana el conejo come otra cosa, el precio se mueve
+   solo. Lo custodia tools/medir-establo.js. */
 (function anclarMaterialesDelEstablo() {
-  const racionH = (FELIZ_BAJA_H / FELIZ_POR_RACION) * RACION_PLATA;   // 10,9 de plata la hora
-  const precio = Math.round(24 * (20 + racionH));
-  ["fibra", "pelaje", "cuero", "colmillo"].forEach(k => { PRICE[k] = precio; });
+  const anclaDia = 24 * 20;
+  for (const k in ANIMAL_DEF) {
+    const a = ANIMAL_DEF[k]; if (!a || !a.mat || !a.come) continue;
+    const comidaMasBarata = a.come
+      .map(function (c) { return CROP_DEF[c] ? CROP_DEF[c].price : 0; })
+      .sort(function (x, y) { return x - y; })[0] || 0;
+    PRICE[a.mat] = Math.round(anclaDia + comidaMasBarata);
+  }
 })();
 
 // 1/8: los CULTIVOS venden según CROP_DEF.price — PRICE quedó solo para lo demás.
@@ -7542,6 +7600,22 @@ var CANA_V4_DEF = {
      Y EL MOTIVO POR EL QUE ESTO SOBREVIVIÓ TANTO: los dos guardianes del invariante no la
      miraban. test-pesca-v4-bolsillo recorría solo las cuatro de plata, y auditar-pesca-v4 §3
      comparaba una tabla de netos ESCRITA A MANO contra sí misma. Los dos arreglados. */
+  /* 14/9 — SE INTENTÓ DARLE COLA PROPIA Y EL INVARIANTE LO RECHAZÓ. Queda escrito para que nadie
+     lo vuelva a intentar sin leer esto primero.
+     El punto de partida era real: la tabla de bandas del Abuelo es una COPIA LITERAL de la de Oro,
+     cinco cifras idénticas hasta el tercer decimal, así que el último peldaño de la escalera —el
+     que no se fabrica, el que pide 120 escamas y un legendario, el que llega a Pesca 18— pesca la
+     misma mezcla que una caña que se compra en Pesca 12. El TODO lo anotaba como « la escalera,
+     aplanada arriba ».
+     Se probó subirle raro/épico/legendario y bajarle el común: quedaba en 39,8 de valor esperado
+     por pez contra 29,6 de la de Oro, un paso igual de grande que los otros tres. Y
+     test-pesca-v4-bolsillo lo cazó en el acto: **toda caña tiene que pagar entre 9 y 12 de plata
+     por lombriz**, y con la cola nueva el Abuelo pagaba 20,14. La escalera de cañas NO progresa
+     en plata por lance — progresa en QUÉ especies abre (CANA_ABRE), en el peso de lo que sacás y
+     en los récords. Que dos cañas paguen parecido por lombriz no es el bug: es la regla.
+     Conclusión: lo que le falta al Abuelo no es plata, es IDENTIDAD — especies propias, un récord
+     que solo él consiga, algo que no se pueda sacar con la de Oro. Eso es contenido de pesca, no
+     un número, y no entra en el MVP. Queda en el TODO con esta medición adentro. */
   abuelo: { label: "Caña del Abuelo", lvl: 18, presupuesto: null, mant: 15, pesoBonus: 0.10, escamas: 120,
             banda: { comun: 49.495, poco_comun: 27.00, raro: 19.630, epico: 2.625, legendario: 1.250 } },
 };

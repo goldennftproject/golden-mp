@@ -109,7 +109,12 @@ for (const techo of [20, 25, 30, 50]) {
   const arriba = Object.keys(s.cofre).concat(Object.keys(s.edif2)).map(Number).filter(n => n > techo);
   ok("  ni cofre ni altar por encima del techo", arriba.length === 0, arriba.join(","));
   ok("  el altar sigue existiendo", Object.values(s.edif2).indexOf("altar") >= 0, JSON.stringify(s.edif2));
-  ok("  3 escalones de cofre, distintos entre sí", Object.keys(s.cofre).length === 3, JSON.stringify(s.cofre));
+  /* 14/9 — antes esto exigía EXACTAMENTE 3 escalones. Desde hoy el cofre tiene dos orígenes: los
+     tres de a mano (10, 10 y 15, escalados con el techo) y los de relleno que tapan los niveles
+     que quedarían con solo el bono de venta. Lo que hay que custodiar es que los tres grandes
+     sigan estando, no que no haya ninguno más. */
+  const grandes = Object.keys(s.cofre).filter(n => s.cofre[n] >= 10);
+  ok("  siguen los 3 escalones grandes de cofre (10 · 10 · 15)", grandes.length === 3, JSON.stringify(s.cofre));
   const mudos = []; for (let L = 11; L <= techo; L++) if (!s.tareas[L] || !s.tareas[L].length) mudos.push(L);
   ok("  ningún nivel del 11 al techo sin tarea", mudos.length === 0, mudos.join(","));
   ok("  nada por encima del techo en tareas", Object.keys(s.tareas).map(Number).every(n => n <= techo));

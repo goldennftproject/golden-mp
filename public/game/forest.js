@@ -1154,6 +1154,21 @@ class ForestScene extends Phaser.Scene {
     if (dmg > 0) this.floatHero("-" + dmg, "#ff5544");   // el golpe del mob se ve (pedido del diseñador)
     this.drawHeroBar();
     refreshHud();
+    /* 14/9 (dirección) — LA VIDA SE GUARDA MIENTRAS PELEÁS, y por eso el F5 deja de deshacer la
+       pelea. Dentro de la Zona solo se guardaba AL ENTRAR y al salir, así que recargar te
+       devolvía la vida que tenías al cruzar el portal: estabas a 3 de vida, apretabas F5 y
+       volvías a la granja con la barra llena y todo el botín. Era la forma más barata de esquivar
+       la muerte, y estaba anotada en el código desde el 8/9 como « lo que esto no arregla ».
+       Ahora la vida viaja al guardado cada ZONA_HP_GUARDA_S segundos. El F5 pasa a ser
+       exactamente lo mismo que salir caminando —que ya es una jugada legal—: volvés a la granja
+       con la vida que de verdad te quedaba y el viaje se cierra solo (ver save.js).
+       Y NO castiga una caída de red, que es lo que la ley 1 prohíbe: al que se le corta el
+       internet no le pasa nada que no le pasara ya. Lo único que se pierde es la curación gratis.
+       Con throttle, porque esto corre en cada golpe y el portero no está para eso. */
+    if (dmg > 0 && nowMs() - (this._hpGuardadaEn || 0) > ZONA_HP_GUARDA_S * 1000) {
+      this._hpGuardadaEn = nowMs();
+      if (typeof saveFarm === "function") saveFarm();
+    }
     if (G.hp <= 0) {
       /* 8/9 (dirección) — LA MUERTE POR FIN CUESTA ALGO, y es recuperable: « si te matan se te
          cae la bag, pero tu cuerpo queda en el piso por 10 minutos donde puedes recoger todo ».

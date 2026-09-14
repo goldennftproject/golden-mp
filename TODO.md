@@ -16,7 +16,8 @@ de los nodos no se toca, y lo cosmético no cuenta como contenido.
 > **¿Alguien vuelve a jugar siete días seguidos?**
 
 Todo lo de abajo se ordena por eso. A tres sesiones diarias el jugador llega al nivel 10 a los
-8,7 días, así que **el MVP vive entre el nivel 1 y el 12**. Delante de cualquier tarea, la
+**7,0 días** (eran 8,7 hasta que el 14/9 bajó el techo a 25), así que **el MVP vive entre el
+nivel 1 y el 12**. Delante de cualquier tarea, la
 pregunta es: *¿esto cambia si alguien vuelve el día siete?* Si no, no entra. Está desarrollado
 en `docs/LEYES.md`.
 
@@ -46,6 +47,14 @@ en `docs/LEYES.md`.
   la bandera apagada, que es lo que custodian. Sin Chromium todavía.*
 - [x] ~~**4 · Decidir el mercado P2P**~~ **Abierto** (dirección, 14/9), y el portero subió antes:
   modo rechazo en el proyecto nuevo desde el 14/9.
+- [ ] **La vida del héroe no sube nunca, y eso ata el combate.** `G.hpMax` es 100 desde el nivel
+  1 hasta el techo. Medido el 14/9 (`tools/medir-combate.js`): con la armadura REAL de la primera
+  semana (0-1 de defensa; las siete piezas del juego suman 8 y salen de drops de bichos de nivel
+  15+) el combate del MVP está sano — la araña y el goblin matan en 3-5 golpes y te matan en
+  29-34. Pero como la vida es fija, el daño de los bichos no puede escalar: se probó reescalarlos
+  para que todos maten en ~18 golpes y la cuenta aplanaba el bestiario entero (la rata pegando 12
+  y el trol 20). Mientras la vida no crezca con el nivel, subir el daño vuelve letales a los
+  bichos tempranos. No es urgente para el MVP; es la restricción a levantar después.
 - [ ] **5 · Que alguien lo juegue una semana** sin saber cómo está hecho. Ni Golden, ni Suren,
   ni yo.
 
@@ -55,10 +64,14 @@ en `docs/LEYES.md`.
 
 Están desarrolladas en el GDD §15.0, con sus números medidos. Aquí solo el titular:
 
-- [ ] **Qué entregan los 26 niveles sin recompensa jugable.** La más grande de todas. De 49
-  niveles de granja, 23 dan algo que el jugador pueda usar; los otros 26 dan el bono de venta
-  (invisible) y adorno. El material para elegir ya existe: nodos sueltos, lugares de establo,
-  huecos de nasa, semillas de escalón alto, vales, capacidad de bolsa o cofre.
+- [x] ~~**Qué entregan los 26 niveles sin recompensa jugable.**~~ **Resuelto el 14/9, y en buena
+  parte se resolvió solo.** Con el techo en 50 eran 26 de 49 niveles con nada más que el bono.
+  Bajarlo a 25 dejó la cuenta en 20 de 24 niveles entregando algo jugable y ninguno del todo mudo:
+  solo cuatro (8, 14, 22 y 24) traían el bono invisible más un cosmético, que la ley 3 no cuenta
+  como contenido y que en MVP está escondido. Dirección eligió taparlos con capacidad de cofre
+  (+5), y NO se escribieron los cuatro números: se pregunta qué niveles quedaron callados, así que
+  si el techo se vuelve a mover se recalculan solos. Lo custodia `tools/test-nivel-callado.js`,
+  que además lo comprueba con techo 20, 30 y 50.
 - [ ] **Los seis oficios huérfanos** (Espada, Hacha, Mazo, Arco, Tala, Artesanía). O reciben algo
   que abrir, o se acepta que su nivel es un número de daño y se les da un techo honesto. Lo que
   no puede seguir es el 150 de reserva. *(Se probó atarles las armas y se midió que era un muro:
@@ -68,14 +81,29 @@ Están desarrolladas en el GDD §15.0, con sus números medidos. Aquí solo el t
   ritmo con sentido, pero NO les da nada que abrir — siguen sin contenido y el 150 sigue ahí.
   Misma tarde, segundo doc (`Defensa de los mobs de Tibia`): parada + armadura + cargas de
   bloqueo en cada bicho, daño del jugador con la fórmula de TFS, el mob pega normal(0, máx) y
-  pasa por tu parada. **Vigilar en playtest:** lo que te pegan a golpes cayó mucho (trol 18 → 5
-  por golpe); si la Zona queda blanda, la perilla es `MOB_DMG_MULT`, no las fórmulas.
-- [ ] **La escalera de cañas, aplanada arriba.** Al subir la de Hierro a 1.500, la de Oro (2.000)
-  queda a ×1,33. Lo que de verdad cobra la de oro es su barra (21 h de veta), no su plata — pero
-  si el último escalón tiene que sentirse, hay que subirlo.
-- [ ] **Recargar dentro de la Zona sigue esquivando la muerte.** Cerrarlo pide una política de
-  desconexión, y matar a alguien por una caída de red sería perder progreso sin borrar caché:
-  justo lo que la ley 1 prohíbe.
+  pasa por tu parada. **Corregido el 14/9:** se midió con la armadura REAL de la primera semana
+  (0-1; las siete piezas suman 8 y caen de bichos de nivel 15+) y la Zona NO queda blanda — araña
+  y goblin matan en 3-5 golpes y te matan en 29-34. `MOB_DMG_MULT` tampoco es la perilla: subirlo
+  aplana el bestiario, porque la vida del héroe es 100 y no sube nunca. Medirlo con
+  `tools/medir-combate.js` antes de tocar nada.
+- [ ] **La escalera de cañas, aplanada arriba — pero NO se arregla con plata.** Al subir la de
+  Hierro a 1.500, la de Oro (2.000) queda a ×1,33. Y la Caña del Abuelo tiene la tabla de bandas
+  **copiada literal** de la de Oro, cinco cifras idénticas hasta el tercer decimal: el peldaño que
+  pide 120 escamas y un legendario pesca la misma mezcla que una caña de Pesca 12. *Medido el
+  14/9: el valor esperado por pez va 15,0 → 18,3 → 22,4 → 29,6 → 29,6.* **Se intentó darle cola
+  propia (más raro/épico/legendario) y `test-pesca-v4-bolsillo` lo rechazó**: toda caña tiene que
+  pagar entre 9 y 12 de plata por lombriz, y con la cola nueva pagaba 20,14. La escalera NO
+  progresa en plata por lance — progresa en qué especies abre, en el peso y en los récords. Lo
+  que le falta al Abuelo es IDENTIDAD (especies propias, un récord que solo él consiga), que es
+  contenido de pesca y no un número. Revertido, con la medición escrita en el código.
+- [x] ~~**Recargar dentro de la Zona sigue esquivando la muerte.**~~ **Cerrado el 14/9 sin tocar
+  la ley 1.** No hacía falta una política de desconexión: el agujero era que la vida se guardaba
+  solo AL ENTRAR a la Zona, así que el F5 te devolvía la barra llena del portal. Ahora viaja al
+  guardado cada `ZONA_HP_GUARDA_S` (10 s) mientras te pegan, con throttle. El F5 pasa a ser lo
+  mismo que salir caminando —que ya era legal—: volvés a la granja con la vida que te quedaba y
+  el viaje se cierra solo. Al que se le corta el internet no le pasa nada que no le pasara antes;
+  lo único que se pierde es la curación gratis. `tools/test-nivel-callado.js` §2 lo custodia,
+  incluida la parte de la ley 1.
 
 ## 🟠 Tuyo (Golden) — fuera de mi alcance
 
@@ -108,6 +136,11 @@ Están desarrolladas en el GDD §15.0, con sus números medidos. Aquí solo el t
   Suren leyó dos veces como « me tenía que dar 0,1 y no me dio nada ». Ahora es binario: comió →
   su unidad, no comió → nada, el reloj sigue. Mirar que el « con hambre / comió ✓ » del establo
   se entienda solo. La felicidad (`feliz`) sigue en el guardado pero ya no manda nada.
+  **14/9 — el precio se re-ancló a la ley 4** (dirección): cada material vale 480 del ancla más
+  su comida más barata (fibra y cuero 1.160, colmillo 580, pelaje 488) en vez de 742 para los
+  cuatro. El precio único venía del modelo de raciones del 9/9, que la ley dejó sin premisa: con
+  él, el conejo rendía +734 al día y el toro con maíz **perdía 458**. Ahora los cuatro caen
+  exactamente en el ancla del día (+480). Se mide con `tools/medir-establo.js`.
 
 - [ ] **Estacionamiento en el tutorial acelerado**: con las esperas en 3 s, alguien podría no
   cumplir a propósito un paso tardío y farmear acelerado. Mitigación si aparece: acelerar solo

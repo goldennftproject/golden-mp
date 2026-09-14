@@ -13,7 +13,7 @@ const ctx = { console: { log() {}, warn() {} }, Math, Date, JSON, Object, Array,
 ctx.window = ctx; ctx.globalThis = ctx; ctx.setTimeout = () => 0; vm.createContext(ctx);
 vm.runInContext(fs.readFileSync("public/game/config.js", "utf8"), ctx);
 vm.runInContext(fs.readFileSync("public/game/state.js", "utf8") +
-  "\n;this.X={ANIMAL_ORDER,ANIMAL_DEF,CROP_DEF,CROP_ORDER,FELIZ_MIN_PROD,FELIZ_BAJA_H,ANIMAL_SUBE,ANIMAL_MAX,ANIMAL_BRUTO_H};", ctx);
+  "\n;this.X={ANIMAL_ORDER,ANIMAL_DEF,CROP_DEF,CROP_ORDER,FELIZ_MIN_PROD,FELIZ_BAJA_H,ANIMAL_SUBE,ANIMAL_MAX,ANIMAL_BRUTO_H,PRICE};", ctx);
 const X = ctx.X, G = ctx.G, SRC = fs.readFileSync("public/game/state.js", "utf8");
 const ANCLA = 20;
 let fallos = 0;
@@ -68,18 +68,22 @@ console.log("\nLA REGLA DE SFL: 24 h Y +1   (9/9, dirección — ya NO es el anc
 
 console.log("\nALIMENTARLO SIEMPRE GANA (y descuidarlo, nunca)");
 {
-  /* 9/9 — LA COMIDA YA NO SE DERIVA DEL ANIMAL, SE DERIVA DEL PLATO. Antes el coste por hora
-     salía de animalRacionH (lo que el bicho gana POR ENCIMA del ancla), y con la regla de 24 h
-     tres de los cuatro ganan por debajo: la resta daba cero, el clamp la ponía en 0,2 y una
-     zanahoria pasaba a valer +60 de felicidad. La cuenta nueva es la de dirección — una ración
-     vale lo que 30 zanahorias y da un tercio de la felicidad— así que el coste por hora se mide
-     con el reloj de la felicidad, no con el del animal. */
-  const racionH = () => (X.FELIZ_BAJA_H / ctx.FELIZ_POR_RACION) * ctx.RACION_PLATA;
+  /* 14/9 — REESCRITO PARA LA LEY 4. Hasta hoy esta cuenta usaba el modelo de raciones del 9/9:
+     la comida costaba `racionH` (un goteo por hora, igual para los cuatro) y el animal descuidado
+     rendía la MITAD (FELIZ_MIN_PROD). La ley 4 cambió las dos cosas: se come UNA VEZ cada 24 h,
+     la comida es su cultivo — que cuesta lo que cuesta ese cultivo, no una ración promedio — y
+     el que no come NO DA NADA, no da la mitad.
+     Con el precio re-anclado del 14/9 (cada material vale 480 del ancla + su comida más barata),
+     esto tiene que dar exactamente el ancla de un día para los cuatro: 480. */
+  const ANCLA_DIA = 24 * 20;
   X.ANIMAL_ORDER.forEach(k => {
-    const cuidado = ctx.animalBrutoH(k) - racionH();
-    const descuidado = ctx.animalBrutoH(k) * X.FELIZ_MIN_PROD;      // felicidad 0: la mitad, y comida gratis
-    ok("a la " + X.ANIMAL_DEF[k].label + " le conviene comer", cuidado > descuidado,
-      cuidado.toFixed(1) + " contra " + descuidado.toFixed(1) + " descuidada");
+    const d = X.ANIMAL_DEF[k];
+    const comida = d.come.map(c => X.CROP_DEF[c].price).sort((a, b) => a - b)[0];
+    const cuidado = (X.PRICE[d.mat] * ctx.animalPorCiclo(k)) - comida;   // un ciclo entero: 24 h
+    const descuidado = 0;                                                  // ley 4: no come, no da
+    ok("a la " + d.label + " le conviene comer", cuidado > descuidado,
+      "+" + cuidado + " el día contra " + descuidado + " si no come");
+    ok("  y con su comida más barata cae en el ancla del día (" + ANCLA_DIA + ")", cuidado === ANCLA_DIA, String(cuidado));
   });
 }
 
