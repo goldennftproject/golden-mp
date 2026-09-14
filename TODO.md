@@ -27,17 +27,17 @@ en `docs/LEYES.md`.
   frene. Calculado sobre las tablas, quien se queda jugando llega al nivel 4 en ~15 minutos y
   al 6 en ~1 h 25 (ver LEYES.md). Lo que queda es otra pregunta —*¿el juego le da un motivo
   para quedarse?*— y ésa va al playtest.
-- [ ] **2 · Bajar el techo de granja.** Contado: 24 premios jugables sobre 23 niveles → techo
-  honesto 24-25. **Queda a UN número:** `FARM_NIVEL_MAX` en state.js:1565. Todo lo que colgaba
-  del 50 a mano ya cuelga del techo: las 16 expansiones (fórmula), la cola de XP (`FARM_XP_TECHO`
-  es el mes, no cambia), el cofre y el altar nivel 2 (`nivelEscalado`), y las tareas del 11-50,
-  que ahora son una escalera de 40 peldaños repartida entre el 11 y el techo (con 50 sale
-  idéntica a la tabla vieja — identidad aritmética, comprobable leyendo). Lo que falta es
-  **medir**: poner 25, correr `simular-partida.js 3 25` y la suite, mirar que el mes siga en ~30
-  días y que ningún nivel se quede mudo. *La suite (141) y `test-techo-a-un-numero` pasaron en
-  verde el 10/9; `simular-partida 3 50` sigue dando el mes en 29,7 días. Falta medir con 25.* Por la
-  regla del MVP esto NO cambia el día siete (el 1-10 no se toca): es honestidad de la promesa,
-  no retención.
+- [x] **2 · Bajar el techo de granja** — `FARM_NIVEL_MAX = 25` (14/9). Se cambió UN número y el
+  resto se acomodó solo, que era el trabajo del 10/9: las 16 expansiones caen en
+  3,4,5,6,7,9,10,11,13,15,16,18,20,21,23,25; el cofre pasa de 13/23/33 a **12/15/19**; el altar
+  nivel 2, del 27 al **17**; las tareas siguen siendo los mismos 40 peldaños, ahora repartidos
+  entre el 11 y el 25 (ninguno se pierde, ninguno se repite); la cola de XP sigue costando el mes
+  (`FARM_XP_TECHO`, 95.000). *Medido: `simular-partida 3 25` da la partida entera en **26,3 días**
+  (con 50 eran 29,7) y ningún nivel queda mudo. Suite 143/143 en verde.* Efecto secundario que sí
+  toca el día siete: con menos escalones cada uno rinde más, así que el **nivel 10 llega a los 7,0
+  días** (antes 8,7) — el jugador que aguanta la semana la termina con la granja más grande, no
+  más chica. Los premios del pase se re-midieron contra el techo nuevo (el nivel 10 cae al 23 % del
+  mes, el 21 al 79 %).
 - [x] **3 · Esconder tras bandera** — `GF.MVP = 1` en config.js. Desaparecen del menú y de toda
   puerta (atajos, buzón) Pase, Misiones del pase, Logros, Álbum, Clan, Cosméticos y
   Leaderboard; la doma no se dispara; el torneo no cuelga en la Lonja; los títulos no se

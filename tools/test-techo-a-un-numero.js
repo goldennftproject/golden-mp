@@ -12,8 +12,11 @@
      · FARM_COFRE y FARM_EDIF2 escalan sus niveles con nivelEscalado();
      · FARM_TAREAS es una escalera de 40 peldaños repartida entre el 11 y el techo.
 
+   El 14/9 Dirección bajó el número: FARM_NIVEL_MAX = 25. No se tocó nada más — cofre, altar,
+   expansiones y tareas se acomodaron solos, que era justo lo que este archivo custodiaba.
+
    LO QUE ESTE ARCHIVO CUSTODIA:
-     1 · con techo 50 todo sale IDÉNTICO a las tablas viejas (identidad: nada cambió hoy);
+     1 · con el techo de hoy (25) las tablas derivadas caen donde tienen que caer;
      2 · con cualquier techo entre 20 y 50, ningún premio queda por encima del techo, ningún
          nivel del 11 al techo se queda sin tarea, las 16 expansiones siguen siendo 16, la
          escalera de tareas conserva el orden (el dragón sigue siendo lo último) y el techo de
@@ -29,28 +32,32 @@ const g = (n) => vm.runInContext(n, ctx);
 let fallos = 0;
 const ok = (n, c, d) => { if (!c) fallos++; console.log((c ? "  ok   " : "  FALLA") + "  " + n + (d ? "   " + d : "")); };
 
-console.log("\n1 · IDENTIDAD CON TECHO 50 — nada cambió hoy\n");
-ok("FARM_NIVEL_MAX sigue en 50 (esto es preparación, la bajada la mide el simulador)", g("FARM_NIVEL_MAX") === 50);
+console.log("\n1 · EL TECHO DE HOY: 25 (bajado el 14/9, MVP punto 3)\n");
+ok("FARM_NIVEL_MAX es 25", g("FARM_NIVEL_MAX") === 25, g("FARM_NIVEL_MAX"));
 const COFRE = g("FARM_COFRE"), EDIF2 = g("FARM_EDIF2"), TAR = g("FARM_TAREAS"), ESC = g("FARM_TAREAS_ESCALERA");
-ok("cofre en 13 / 23 / 33", COFRE[13] === 10 && COFRE[23] === 10 && COFRE[33] === 15, JSON.stringify(COFRE));
-ok("altar nivel 2 en el 27", EDIF2[27] === "altar", JSON.stringify(EDIF2));
-ok("la escalera tiene 40 peldaños (11..50)", ESC.length === 40, ESC.length);
-let identica = true;
-for (let L = 11; L <= 50; L++) {
-  const a = JSON.stringify(TAR[L].map(t => [t[0], t[1]]));          // sin la cantidad: el minado se re-deriva
-  const b = JSON.stringify(ESC[L - 11].map(t => [t[0], t[1]]));
-  if (a !== b) { identica = false; console.log("      nivel " + L + ": " + a + " ≠ " + b); }
+ok("el cofre bajó con el techo: 12 / 15 / 19 (era 13 / 23 / 33)", COFRE[12] === 10 && COFRE[15] === 10 && COFRE[19] === 15, JSON.stringify(COFRE));
+ok("el altar bajó al 17 (era el 27)", EDIF2[17] === "altar" && Object.keys(EDIF2).length === 1, JSON.stringify(EDIF2));
+ok("la escalera sigue teniendo 40 peldaños — el contenido no se tocó, se reparte", ESC.length === 40, ESC.length);
+ok("nivelEscalado lleva el tramo 11-50 al 11-25", g("nivelEscalado(11)") === 11 && g("nivelEscalado(13)") === 12
+  && g("nivelEscalado(27)") === 17 && g("nivelEscalado(33)") === 19 && g("nivelEscalado(50)") === 25);
+ok("el primer nivel con tarea es el 11 y el último es el techo",
+  JSON.stringify(TAR[11].map(t => [t[0], t[1]])) === JSON.stringify(ESC[0].map(t => [t[0], t[1]]))
+  && JSON.stringify(TAR[25].map(t => [t[0], t[1]])) === JSON.stringify(ESC[39].map(t => [t[0], t[1]])));
+let subenSolas = true, ultimo = -1;
+for (let L = 11; L <= 25; L++) {
+  const i = ESC.findIndex(p => JSON.stringify(p.map(t => [t[0], t[1]])) === JSON.stringify(TAR[L].map(t => [t[0], t[1]])));
+  if (i <= ultimo) { subenSolas = false; console.log("      nivel " + L + ": peldaño " + i + " (el anterior era " + ultimo + ")"); }
+  ultimo = i;
 }
-ok("FARM_TAREAS[L] es el peldaño L-11 en los cuarenta niveles", identica);
-ok("nivelEscalado es identidad con techo 50", [11, 13, 27, 33, 50].every(n => g("nivelEscalado(" + n + ")") === n));
+ok("los quince niveles toman peldaños en orden, sin repetir ni retroceder", subenSolas);
 
 console.log("\n2 · CON OTRO TECHO — se re-evalúa state.js con el número cambiado\n");
 const STATE = fs.readFileSync(path.join(RAIZ, "public/game/state.js"), "utf8");
-ok("el 50 está una sola vez como FARM_NIVEL_MAX", (STATE.match(/const FARM_NIVEL_MAX = 50;/g) || []).length === 1);
+ok("el techo está una sola vez escrito a mano, como FARM_NIVEL_MAX", (STATE.match(/const FARM_NIVEL_MAX = 25;/g) || []).length === 1);
 
 function conTecho(techo) {
   const { ctx: c2, problemas } = require("./arrancar-el-juego.contexto.js").arrancar(RAIZ, {
-    "game/state.js": STATE.replace("const FARM_NIVEL_MAX = 50;", "const FARM_NIVEL_MAX = " + techo + ";"),
+    "game/state.js": STATE.replace("const FARM_NIVEL_MAX = 25;", "const FARM_NIVEL_MAX = " + techo + ";"),
   });
   const grave = problemas.filter(p => p.grave);
   if (grave.length) throw new Error(grave.map(p => p.quien + ": " + p["qué"]).join(" · "));

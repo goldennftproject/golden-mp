@@ -1634,7 +1634,7 @@ function addCookXp(amt) {
 var FARM_XP_LVLS = [
   0, 0, 25, 90, 225, 550, 1250, 2750, 5500, 9000, 14000,
 ];
-const FARM_NIVEL_MAX = 50;
+const FARM_NIVEL_MAX = 25;
 /* EL TECHO SE RE-DERIVA CON LA FORMA, PORQUE LA LEY ES EL MES Y NO EL NÚMERO.
    Cambiar la forma de la cola cambia el reloj aunque la XP total no se mueva: adelantar puntos a
    los niveles bajos los cobra cuando la granja produce POCO, así que la misma cifra cuesta más

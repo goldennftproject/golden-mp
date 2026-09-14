@@ -51,7 +51,10 @@ console.log("\nLA ESCALERA SUBE: CADA ESCALÓN VALE MÁS QUE EL ANTERIOR");
     String(ctx.paseCeldas(n)).padStart(9) + String(ctx.paseValorDelEscalon(n)).padStart(25));
   console.log("");
   ok("la vara del pase nunca baja", !baja, baja ? "baja en el " + baja : metas[0] + " → " + metas[metas.length - 1]);
-  ok("y sube de verdad de punta a punta", metas[NIV - 1] / metas[0] > 3,
+  /* 14/9 — con el techo en 25 la vara sube ×2.7 en vez de ×3,4: el pase reparte los mismos 30
+     escalones sobre la mitad de niveles de granja, así que el primero arranca más arriba. Sigue
+     siendo una escalera que sube casi el triple de punta a punta. */
+  ok("y sube de verdad de punta a punta", metas[NIV - 1] / metas[0] > 2.5,
     "×" + (metas[NIV - 1] / metas[0]).toFixed(1) + " del primero al último");
 }
 
@@ -59,7 +62,8 @@ console.log("\nEL RELOJ QUE USA ES EL DEL JUEGO, NO UNO INVENTADO");
 {
   /* si esto se descuelga, la altura del pase deja de tener que ver con la granja del jugador y
      todo lo demás de este archivo mide una escalera que no está apoyada en ningún lado.
-     Contraste con el simulador del día: nivel 10 al 29 % del mes, nivel 21 al 51 %. */
+     Contraste con el simulador del 14/9 (techo 25): nivel 10 al 23 % del mes, nivel 21 al 79 %.
+     Con techo 50 eran 29 % y 51 %: bajar el techo corrió los niveles altos hacia el final del mes. */
   const frac = (l) => {
     const XP = g("FARM_XP_LVLS"), FE = g("FARM_EXPANSION"), MAX = g("FARM_NIVEL_MAX");
     const celdas = (x) => 9 + 3 * FE.filter(y => y <= x).length;
@@ -67,9 +71,10 @@ console.log("\nEL RELOJ QUE USA ES EL DEL JUEGO, NO UNO INVENTADO");
     for (let x = 2; x <= MAX; x++) { t += (XP[x] - XP[x - 1]) / celdas(x); if (x === l) hasta = t; }
     return hasta / t;
   };
-  ok("el nivel 10 de granja cae cerca del 29 % del mes que midió el simulador",
-    Math.abs(frac(10) - 0.29) < 0.06, (frac(10) * 100).toFixed(0) + " %");
-  ok("y el 21, cerca del 51 %", Math.abs(frac(21) - 0.51) < 0.08, (frac(21) * 100).toFixed(0) + " %");
+  ok("el nivel 10 de granja cae cerca del 23 % del mes que midió el simulador",
+    Math.abs(frac(10) - 0.23) < 0.06, (frac(10) * 100).toFixed(0) + " %");
+  ok("y el 21, cerca del 79 % (con el techo en 25, el 21 ya es recta final)",
+    Math.abs(frac(21) - 0.79) < 0.08, (frac(21) * 100).toFixed(0) + " %");
   ok("el pase arranca en una granja chica y termina en la grande",
     ctx.paseNivelDeGranja(1) < 10 && ctx.paseNivelDeGranja(NIV) === g("FARM_NIVEL_MAX"),
     "granja " + ctx.paseNivelDeGranja(1) + " → " + ctx.paseNivelDeGranja(NIV));

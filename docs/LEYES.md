@@ -93,8 +93,9 @@ los juegos de granja, es barata de medir y no necesita nada que todavía no exis
 
 ## Cómo se usa para decidir
 
-Medido con el simulador, a tres sesiones diarias el jugador llega al **nivel 10 a los 8,7 días**.
-De ahí sale la regla práctica:
+Medido con el simulador, a tres sesiones diarias el jugador llega al **nivel 10 a los 7,0 días**
+(eran 8,7 hasta el 14/9: al bajar el techo a 25, el mismo mes de XP se reparte entre menos
+niveles y cada uno rinde más). De ahí sale la regla práctica:
 
 > **El MVP vive entre el nivel 1 y el 12. Todo lo que un jugador no ve en su primera semana no
 > es parte de esta prueba.**
@@ -110,7 +111,9 @@ Consecuencias que ya se siguen de esto, para no tener que rediscutirlas:
   dirección: las dieciséis no se tocan). Desde el 10/9 el techo es **un solo número**
   (`FARM_NIVEL_MAX`): expansiones, cola de XP, cofre, altar y la escalera de tareas cuelgan de
   él. Bajarlo no borra contenido: el mes de XP se reparte entre menos niveles, así que cada
-  nivel es más gordo y cada uno entrega algo. Lo custodia `tools/test-techo-a-un-numero.js`.
+  nivel es más gordo y cada uno entrega algo. **El 14/9 se bajó a 25**: la partida entera pasa de
+  29,7 a 26,3 días, el cofre queda en 12/15/19 y el altar en el 17. Lo custodia
+  `tools/test-techo-a-un-numero.js`.
 - **Lo que suma superficie sin sumar bucle se ESCONDE, no se borra**: el pase, los logros, el
   álbum, la doma, el torneo, el asalto de clan, los títulos de la Lonja. Detrás de una bandera,
   vuelven el día que se quiera. Cada panel de más es algo que puede confundir y algo que puede

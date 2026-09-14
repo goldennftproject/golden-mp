@@ -94,7 +94,7 @@ console.log("\nLAS MEJORAS DE NIVEL 2");
   G.skills.cooking = ctx.COOK_LVLS[X.EDIF2_OFICIO.cocina[1]]; ctx.edif2Sync(true);
   ok("Cocina nivel 2 con Cocina " + X.EDIF2_OFICIO.cocina[1], !!G.edif2.cocina,
     "leyendo la tabla propia de la Cocina");
-  ok("el Altar sigue colgando del Granero", X.FARM_EDIF2[27] === "altar");
+  ok("el Altar sigue colgando del Granero", X.FARM_EDIF2[ctx.nivelEscalado(27)] === "altar", JSON.stringify(X.FARM_EDIF2));
 }
 
 console.log("\nEL PANEL DE OFICIOS DICE QUÉ ESPERA");

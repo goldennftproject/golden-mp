@@ -91,10 +91,10 @@ console.log("\nLAS PUERTAS FUNCIONAN JUSTAS AL TECHO");
 console.log("\nLA GRANJA CONSERVA SU PROPIO TECHO DE SIEMPRE");
 {
   const MAX = vm.runInContext("FARM_NIVEL_MAX", ctx);
-  ok("FARM_NIVEL_MAX sigue en 50", MAX === 50, MAX + "");
-  G.level = 50; G.skills.farming = 99999999;
+  ok("FARM_NIVEL_MAX es 25 (bajado el 14/9)", MAX === 25, MAX + "");
+  G.level = MAX; G.skills.farming = 99999999;
   ctx.recalcFarmLevel();
-  ok("con XP infinita, la granja no pasa de 50", G.level === 50, "nivel " + G.level);
+  ok("con XP infinita, la granja no pasa del techo", G.level === MAX, "nivel " + G.level);
 }
 
 console.log(fallos ? "\n" + fallos + " fallo(s)\n" : "\nTodo en orden: el techo es donde termina el contenido, y sube solo cuando el contenido crezca.\n");

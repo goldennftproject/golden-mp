@@ -61,33 +61,31 @@ console.log("\nESTADO 1 · SUBIENDO CON LA COSECHA   (niveles 1-10: solo XP)");
 
 console.log("\nESTADO 2 · LA XP ESTÁ, FALTAN LAS TAREAS   (niveles 11+: el caso que engañaba)");
 {
-  /* nivel 11→12 pide « minar 25 de bronce » y « matar 25 ratas ». Se le da la XP entera y solo
-     una tarea cumplida — el jugador que veía el número quieto sin saber por qué. */
+  /* 14/9 — LAS TAREAS SE LEEN DE LA TABLA, no se escriben acá. Con el techo en 25 (MVP punto 3)
+     la escalera se re-reparte y el nivel 12 ya no pide bronce y ratas: pide lo que diga
+     FARM_TAREAS[12] hoy. El test cumple todas menos la PRIMERA y custodia lo de siempre: barra
+     llena y ámbar, « tareas (n−1)/n », y el tooltip nombrando la pendiente con su progreso. */
   G.level = 11;
   G.skills.farming = XPL[12] + 500;
   G.stats = {};
-  ctx.statAdd("minar", "bronce"); // 1 de 25: pendiente
-  for (let i = 0; i < 30; i++) ctx.statAdd("matar", "rata"); // cumplida
+  const T12 = (vm.runInContext("FARM_TAREAS", ctx) || {})[12] || [];
+  ok("el nivel 12 tiene al menos dos tareas en la tabla", T12.length >= 2, JSON.stringify(T12));
+  const pend = T12[0];
+  ctx.statAdd(pend[0], pend[1], 1);                                   // 1 de N: pendiente
+  T12.slice(1).forEach(t => ctx.statAdd(t[0], t[1], t[2] + 5));       // las demás, cumplidas de sobra
   ctx.refreshFarmBar();
   ok("la barra está llena: la cosecha ya hizo su parte", fill.style.width === "100.0%", fill.style.width);
   ok("pero en ÁMBAR: lo que falta no es más cosecha", fill._clases.has("tareas"));
-  ok("y el texto dice cuántas tareas van", /^tareas 1\/2$/.test(txt.textContent), txt.textContent);
-  /* 8/9 — LA CANTIDAD SE LEE DE LA TABLA. Acá estaban « 25 » y « (1/25) » escritos a mano, de
-     cuando el nivel 12 pedía 25 de bronce; al dividir FARM_TAREAS por tres el juego pide 10 y el
-     test se puso rojo acusando al juego de un fallo que era suyo. Lo que este test custodia no es
-     la cifra, es que el cartel NOMBRE la tarea y enseñe el progreso. */
-  const T12 = (vm.runInContext("FARM_TAREAS", ctx) || {})[12] || [];
-  const min = T12.find(t => t[0] === "minar") || ["minar", "bronce", 0];
+  ok("y el texto dice cuántas tareas van", new RegExp("^tareas " + (T12.length - 1) + "/" + T12.length + "$").test(txt.textContent), txt.textContent);
   ok("el tooltip nombra la tarea pendiente con su progreso",
-    new RegExp("Minar " + min[2] + " de", "i").test(pill.title) &&
-    pill.title.indexOf("(1/" + min[2] + ")") > 0, pill.title);
+    pill.title.indexOf("(1/" + pend[2] + ")") > 0, pill.title);
   console.log("       → sin esto, « Granja 11/50 » con la XP completa era un número congelado sin");
   console.log("         ninguna pista. La ventana de la Granja SIEMPRE lo explicó — pero había que");
   console.log("         saber que existía. La barra es el cartel que avisa de que existe.");
 
   /* y al cumplir la tarea que faltaba, el juego sube de nivel él solo — la barra no inventa un
      estado « listo para subir » porque ese estado no existe: recalcFarmLevel sube en el acto */
-  for (let i = 0; i < 25; i++) ctx.statAdd("minar", "bronce");
+  ctx.statAdd(pend[0], pend[1], pend[2]);
   ctx.recalcFarmLevel();
   ok("cumplida la tarea, el nivel sube solo — no hay botón de reclamar", G.level >= 12, "nivel " + G.level);
 }
