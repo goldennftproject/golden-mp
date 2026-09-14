@@ -50,7 +50,7 @@ function montar({ getSessionCuelga, hayGuardada, anonCuelga }) {
   const fin = SAVE.indexOf("// campos de progreso que guardamos");
   /* var y no let: con `let` la variable no queda colgada del objeto global y la prueba no
      podría mirar UID desde afuera (el juego las declara con let, pero acá se necesita ver). */
-  vm.runInContext('var SB_URL = "https://eusxpsmqczmczgyhndtd.supabase.co"; var SB_KEY = "x"; var sb = null, UID = null;\n'
+  vm.runInContext('var SB_URL = "https://eusxpsmqczmczgyhndtd.supabase.co"; var SB_KEY = "x"; var SB_REF = "eusxpsmqczmczgyhndtd"; var sb = null, UID = null;\n'
     + SAVE.slice(ini, fin), ctx);
   return { ctx, llamadas };
 }

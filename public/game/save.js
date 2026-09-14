@@ -1,6 +1,11 @@
 /* Golden Farm · persistencia por cuenta (login anónimo de Supabase) */
+/* 14/9 — MUDANZA DE PROYECTO. Estas dos líneas las reescribe `node tools/cambiar-supabase.js <url> <anon key>`
+   (docs/MUDANZA-SUPABASE.md). Todo lo que este navegador guarda por su cuenta —la marca de cuenta y la copia
+   local de la granja— va con el nombre del proyecto (SB_REF) en la llave: una copia del proyecto viejo NO
+   puede reaparecer en el nuevo ni hacerle creer al arranque que « acá hubo granja » y dejarlo sin cuenta. */
 const SB_URL = "https://eusxpsmqczmczgyhndtd.supabase.co";
 const SB_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImV1c3hwc21xY3ptY3pneWhuZHRkIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODUxNzU2OTMsImV4cCI6MjEwMDc1MTY5M30.ko-XxFFjf_YnBsnBvrSCOsMLTQ285G51r-UPLYZIDJ8";
+const SB_REF = (SB_URL.match(/https:\/\/([^.]+)\./) || [])[1] || "sb";
 
 let sb = null, UID = null, saveTimer = null, lastSavedKey = null;
 
@@ -74,7 +79,7 @@ window.gfSesion = function () {
   } catch (e) { return ""; }
 };
 
-const GF_CUENTA_KEY = "gf-cuenta";
+const GF_CUENTA_KEY = "gf-cuenta-" + SB_REF;   // 14/9: por proyecto
 function marcaCuenta() {
   try { return JSON.parse(localStorage.getItem(GF_CUENTA_KEY) || "null"); } catch (e) { return null; }
 }
@@ -981,7 +986,7 @@ async function loadFarm() {
    con una granja vacía teniendo una copia con progreso, se pueda ver y recuperar en vez de
    escribir el vacío encima. Y sí: borrar la caché se la lleva. Eso es lo que dice el jugador que
    quiere, y es lo único que debería llevársela. */
-const GF_COPIA_KEY = "gf-granja-copia";
+const GF_COPIA_KEY = "gf-granja-copia-" + SB_REF;   // 14/9: por proyecto — la copia del proyecto viejo no cruza
 function copiaGuardar(snap) {
   try {
     localStorage.setItem(GF_COPIA_KEY, JSON.stringify({

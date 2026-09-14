@@ -80,7 +80,7 @@ console.log("\nNUESTRA PROPIA COPIA DE LA LLAVE (la librería borra la suya sola
   /* No es una sospecha: en el código de supabase-js, getSession llama a _removeSession() cuando
      considera inválida la sesión guardada. Después de eso el navegador PARECE recién estrenado,
      y la reja de arriba no tendría nada que detectar. */
-  ok("guardamos una marca con nuestra propia llave", /const GF_CUENTA_KEY = "gf-cuenta";/.test(SAVE));
+  ok("guardamos una marca con nuestra propia llave (por proyecto desde el 14/9)", /const GF_CUENTA_KEY = "gf-cuenta-" \+ SB_REF;/.test(SAVE));
   ok("con el uid y el refresh token", /uid: session\.user\.id, refresh_token: session\.refresh_token/.test(SAVE));
   /* 25/8 v2: son TRES pruebas — la sesión de supabase, nuestra marca, y la copia de la granja.
      Alcanza con una para que la puerta del apodo no se abra. */
@@ -114,7 +114,7 @@ console.log("\nLA CADENA COMPLETA, CORRIDA DE VERDAD");
   vm.createContext(ctx);
   const ini = SAVE.indexOf("/* ================= EL LOGIN SE COLGABA");
   const fin = SAVE.indexOf("// campos de progreso que guardamos");
-  vm.runInContext('var SB_URL = "https://ref.supabase.co"; var SB_KEY = "x"; var sb = null, UID = null;\n' + SAVE.slice(ini, fin), ctx);
+  vm.runInContext('var SB_URL = "https://ref.supabase.co"; var SB_KEY = "x"; var SB_REF = "ref"; var sb = null, UID = null;\n' + SAVE.slice(ini, fin), ctx);
   return ctx.initSave().then(async (r) => {
     ok("initSave avisa que no pudo", r === false);
     ok("detectó que este navegador YA tenía cuenta", ctx.CUENTA_PREVIA === true);
@@ -128,7 +128,7 @@ console.log("\nLA CADENA COMPLETA, CORRIDA DE VERDAD");
       Number, String, Boolean, Promise, setTimeout, clearTimeout, Error };
     ctx2.window = ctx2; ctx2.globalThis = ctx2;
     let anons2 = 0, revividas = 0;
-    const guardado = { "gf-cuenta": JSON.stringify({ uid: "la-de-siempre", refresh_token: "la-llave", at: 1 }) };
+    const guardado = { "gf-cuenta-ref": JSON.stringify({ uid: "la-de-siempre", refresh_token: "la-llave", at: 1 }) };
     ctx2.localStorage = { getItem: (k) => guardado[k] || null, setItem(k, v) { guardado[k] = v; }, removeItem(k) { delete guardado[k]; } };
     ctx2.window.supabase = { createClient: () => ({ auth: {
       getSession: () => Promise.resolve({ data: { session: null } }),        // la borró la librería
@@ -140,14 +140,14 @@ console.log("\nLA CADENA COMPLETA, CORRIDA DE VERDAD");
       onAuthStateChange: () => {},
     } }) };
     vm.createContext(ctx2);
-    vm.runInContext('var SB_URL = "https://ref.supabase.co"; var SB_KEY = "x"; var sb = null, UID = null;\n' + SAVE.slice(ini, fin), ctx2);
+    vm.runInContext('var SB_URL = "https://ref.supabase.co"; var SB_KEY = "x"; var SB_REF = "ref"; var sb = null, UID = null;\n' + SAVE.slice(ini, fin), ctx2);
     const r2 = await ctx2.initSave();
     ok("entra", r2 === true);
     ok("intentó revivir la sesión vieja", revividas === 1);
     ok("y volvió con el UID DE SIEMPRE, no uno nuevo", ctx2.UID === "la-de-siempre", String(ctx2.UID));
     ok("sin crear ninguna cuenta", anons2 === 0, anons2 + " cuentas creadas");
     ok("y guardó la llave nueva para la próxima",
-      (JSON.parse(guardado["gf-cuenta"]) || {}).refresh_token === "llave-nueva");
+      (JSON.parse(guardado["gf-cuenta-ref"]) || {}).refresh_token === "llave-nueva");
 
     console.log(fallos ? "\n" + fallos + " fallo(s)\n"
       : "\nTodo en orden: si no se puede entrar, se avisa. Nunca se empieza de cero por su cuenta.\n");

@@ -79,6 +79,10 @@ Están desarrolladas en el GDD §15.0, con sus números medidos. Aquí solo el t
 
 ## 🟠 Tuyo (Golden) — fuera de mi alcance
 
+- [ ] **Mudanza a un proyecto nuevo de Supabase** (14/9, dirección: arrancamos de cero). Ocho pasos
+  en `docs/MUDANZA-SUPABASE.md`: proyecto nuevo, login anónimo, `sql/instalar-proyecto-nuevo.sql`,
+  función `guardar`, `node tools/cambiar-supabase.js <url> <anon>` + deploy, prueba, PARTE 2, rechazo.
+  Y un backup apenas haya partidas: es lo que faltó esta semana.
 - [ ] **Portero de guardado, PARTE 2**: aplicar `sql/portero-guardado.sql` y sacarlo de modo
   sombra (hoy anota, nunca rechaza). Ese día muere el botón 🧪 y entra la limpieza de la bitácora
   a 30 días.

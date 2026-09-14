@@ -109,13 +109,13 @@ console.log("\nLA COPIA TAMBIÉN ES PRUEBA DE QUE HUBO GRANJA (25/8 v2)");
   const ini = SAVE.indexOf("/* ================= EL LOGIN SE COLGABA");
   const fin = SAVE.indexOf("// campos de progreso que guardamos");
   const copia = SAVE.slice(SAVE.indexOf("const GF_COPIA_KEY"), SAVE.indexOf("async function saveFarm"));
-  vm.runInContext('var SB_URL = "https://ref.supabase.co"; var SB_KEY = "x"; var sb = null, UID = "yo"; var G = { level: 1, plata: 0 };\n'
+  vm.runInContext('var SB_URL = "https://ref.supabase.co"; var SB_KEY = "x"; var SB_REF = "ref"; var sb = null, UID = "yo"; var G = { level: 1, plata: 0 };\n'
     + copia + "\n" + SAVE.slice(ini, fin), ctx2);
   ok("sin nada guardado, este navegador es virgen", ctx2.huboGranja() === false);
-  guardado["gf-granja-copia"] = JSON.stringify({ uid: "yo", nivel: 7, plata: 900, data: {} });
+  guardado["gf-granja-copia-ref"] = JSON.stringify({ uid: "yo", nivel: 7, plata: 900, data: {} });
   ok("con una copia con progreso, HUBO granja", ctx2.huboGranja() === true,
     "aunque supabase y la marca falten las dos");
-  guardado["gf-granja-copia"] = JSON.stringify({ uid: "yo", nivel: 1, plata: 0, data: {} });
+  guardado["gf-granja-copia-ref"] = JSON.stringify({ uid: "yo", nivel: 1, plata: 0, data: {} });
   ok("pero una copia recién empezada no cuenta", ctx2.huboGranja() === false,
     "no bloquea a un jugador que de verdad es nuevo");
 }
