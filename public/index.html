@@ -1080,10 +1080,7 @@
   <div class="hudbar">
     <div class="brand" style="display:flex;align-items:center;gap:12px"><h1>GOLDEN FARM</h1>
       <div class="pill" title="Ventanas del juego conectadas ahora"><span class="k">Jugadores en línea</span><b id="s-online">1</b></div>
-      <!-- 21/8 (dirección): botón de PRUEBAS para testear los sistemas sin farmear — regala
-           1000 madera + 1000 piedra. SOLO aparece si la URL lleva ?test (initUI lo destapa):
-           los jugadores no lo ven, y aunque lo descubrieran, el juego hoy es cliente-autoridad
-           (el guardado se puede editar igual), así que no abre ninguna puerta que no exista. -->
+      <!-- 14/9: el botón de PRUEBAS y el modo testeo se eliminaron (portero en modo rechazo) -->
     </div>
     <div class="hud">
       <!-- 31/8 (de los vídeos de referencia de dirección, el panel de Skills de Tibia): el nivel
@@ -1787,7 +1784,7 @@
     // 15/8: VERSIÓN DE BUILD — rompe la caché del navegador en cada deploy (sin esto, el
     // jugador seguía corriendo el state.js viejo aunque el servidor tuviera el nuevo).
     // deploy.bat la actualiza sola (busca GF_BUILD y pone la fecha/hora del deploy).
-    const GF_BUILD = "20260914-170737";
+    const GF_BUILD = "20260914-172404";
     const files = ["game/config.js","game/nav.js","game/audio.js","game/state.js","game/save.js","game/ui.js","game/boot.js",
                    "game/farm.js","game/forest.js","game/plaza.js","game/main.js","game/update.js"];
     /* 24/8 — SE BAJAN TODOS A LA VEZ, SE EJECUTAN EN FILA (dirección: « sigue tardando en

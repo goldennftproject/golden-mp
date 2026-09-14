@@ -232,8 +232,8 @@ function resSprite(k) { return CROP_DEF[k] ? "crop_" + k : (RES_SPRITE[k] || nul
 // --- cultivos (semillas compradas en la Tienda; se desbloquean por nivel de Cultivo) ---
 const CROP_ORDER = ["papa","ciruela","cereza","remolacha","zanahoria","cebolla","calabacin","repollo","calabaza","brocoli","girasol","trigo","maiz"];
 // TABLA DE PRECIOS del diseñador (31/7): Ganancia = Tiempo × Riesgo × Nivel. Papa base: compra 1 / venta 3 / 1h.
-// growH = horas reales de la tabla. En TESTEO corre comprimido: 1h → 1min (GROW_SCALE). Para pasar a real: GROW_SCALE = 1.
-var GROW_SCALE = 1;   // 2/8: FUERA la compresión de testeo — el tiempo que se escribe acá es el tiempo real del juego
+// growH = horas reales de la tabla. GROW_SCALE = 1 siempre: el tiempo que se escribe acá es el tiempo real del juego (el modo testeo se eliminó el 14/9).
+var GROW_SCALE = 1;
 // Tabla oficial de "2das mejoras" (4/8/2026): compra/venta con ganancia que dobla por tier y
 // ratio ~2,33; tiempos de 9 min (Papa) a 24 h (Maíz). XP por cosecha = minutos de crecimiento.
 const CROP_DEF = {
@@ -407,7 +407,7 @@ function animalNivelReq(k) { const i = ANIMAL_ORDER.indexOf(k); return i <= 0 ? 
 function animalUnlocked(k) { return nivelOficio("ganaderia") >= animalNivelReq(k); }
 function selectSeed(k) { if (!CROP_DEF[k]) return; G.selSeed = k; if (isOpen("ov-inv")) refreshInv(); }
 // cupo diario de semillas (anti-inflación): compras + las del cofre suman al mismo límite
-var SEED_DAILY_BASE = 18, SEED_DAILY_POR_NIVEL = 2;   // (legado: la fórmula vieja, la sigue usando el MODO TESTEO)
+var SEED_DAILY_BASE = 18, SEED_DAILY_POR_NIVEL = 2;   // (legado: la fórmula vieja)
 // 16/8 (auditoría A): el cupo viejo (18+2×nivel) alcanzaba para UNA HORA de juego y era la
 // pieza que apagaba el día entero: sin semillas no hay plata, sin plata no hay herramientas,
 // sin herramientas los nodos quedan parados. Ahora el cupo se ata a las PARCELAS —
@@ -6421,7 +6421,7 @@ function repairTool(id) { const td = TOOL_DEF[id]; if (!td) return; if (toolLost
    techo siga en 50, que es el número que toda la casa conoce. Quien ya compró más de 3 filas
    las conserva (los espacios comprados no se confiscan): su techo personal queda más alto. */
 var INV_BASE = 35, INV_MAX_ROWS = 3;   // 35 base (7 filas de 5), ampliable +5 por fila hasta 50
-// (es `var` y no `const` porque el MODO TESTEO la agranda: con la bolsa llena no se puede probar nada)
+// (queda `var` por historia: el modo testeo, ya eliminado, la agrandaba)
 function invSlots() { return INV_BASE + (G.invRows || 0) * 5; }
 function nextInvCost() {
   const r = G.invRows || 0;
@@ -10407,79 +10407,12 @@ function claimDaily() {
 }
 
 
-/* ================= MODO TESTEO (SOLO TIEMPOS) =====================================
-   Comprime TODAS las esperas del juego a segundos y abre los cupos diarios, para que el
-   diseñador pueda recorrer el juego entero (cultivos, cocina, animales, armaduras, pase,
-   incursiones) sin esperar horas.
-
-   10/8: ACÁ NO SE REGALA NADA. Antes también daba materiales, herramientas, picos, plata,
-   $Golden, edificios, parcelas y nodos desbloqueados, y eso hacía imposible probar la
-   progresión de verdad: no se sentía cuánto cuesta nada. Ahora el juego se juega igual que
-   en la versión final y lo único distinto es que no hay que esperar.
-
-   Importante: esto NO pisa la tabla del diseñador. Los valores reales siguen guardados en
-   Supabase; acá solo se cambian los números EN MEMORIA, después de que el juego cargó los
-   ajustes. Se apaga con GF.TESTEO = 0 en config.js y todo vuelve a los tiempos reales.
-
-   Lo llama main.js, nunca balance.html: así el panel de balanceo sigue mostrando y guardando
-   los valores REALES, y no hay forma de guardar sin querer los de testeo.                  */
-function testSeg(seg) {
-  const v = Math.round((seg || 0) / Math.max(1, TEST_DIV));
-  return Math.max(TEST_MIN, Math.min(TEST_TOPE, v || TEST_MIN));
-}
-function aplicarTesteo() {
-  if (!(window.GF && GF.TESTEO)) return false;
-
-  // --- CULTIVOS: de 9 min / 24 h a unos segundos, respetando el orden entre ellos
-  for (const k in CROP_DEF) CROP_DEF[k].growH = testSeg(CROP_DEF[k].growH * 3600) / 3600;
-  if (typeof recomputeCropGrow === "function") recomputeCropGrow();
-  FIRST_GROW_MS = 3000;                       // las 3 semillas del arranque, casi instantáneas
-  SEED_DAILY_BASE = 999; SEED_DAILY_POR_NIVEL = 0;   // sin cupo diario de semillas
-
-  // --- ÁRBOLES, PIEDRAS Y VETAS
-  CD.tree = testSeg(CD.tree); CD.rock = testSeg(CD.rock);
-  for (const k in ORE_DEF) ORE_DEF[k].cd = testSeg(ORE_DEF[k].cd);
-  for (const k in CD_RAPIDO) CD_RAPIDO[k].seg = Math.max(2, Math.round(CD_RAPIDO[k].seg / TEST_DIV));
-
-  // --- HERRERÍA, HORNO Y ALTAR
-  MAT_CD_MS = 1000;
-  for (let i = 0; i < ARM_CDS.length; i++) ARM_CDS[i] = 1;
-  for (const id in ARM_DEF) ARM_DEF[id].cd = 1;
-  DUMMY_CD_MS = 15000;
-
-  // --- COCINA: las 14 recetas
-  for (const k in RECIPE_DEF) RECIPE_DEF[k].cookS = testSeg(RECIPE_DEF[k].cookS);
-
-  // --- ESTABLO: el ciclo de producción de cada animal
-  for (const k in ANIMAL_DEF) ANIMAL_DEF[k].cicloH = testSeg(ANIMAL_DEF[k].cicloH * 3600) / 3600;
-  FELIZ_BAJA_H = 0;   // no se ponen tristes mientras se prueba
-
-  // --- COMBATE E INCURSIONES
-  for (const k in INCURSIONES) INCURSIONES[k].min = 1;   // vuelven en 1 minuto
-  INC_CUPO_DIA = 0;                                       // sin tope diario
-  STAM_REGEN_SEG = 2;                                     // la estamina se llena sola enseguida
-  STAM_RECARGAS_DIA = 99;
-
-  // --- PASE DE BATALLA: para poder ver los 30 niveles
-  PASS_STARS_LVL = 2;
-
-  console.info("[Golden Farm] MODO TESTEO activo: SOLO tiempos comprimidos, no se regala nada. Poner GF.TESTEO = 0 para la versión final.");
-  return true;
-}
-// DESTAPA-BOLSA: si una partida vieja quedó con más stacks de los que entran (le pasaba con el
-// regalo de testeo, que ya no existe), lo que sobra queda ESCONDIDO: tirás algo y aparece el
-// stack de atrás, como si el juego siguiera dando cosas. Esto lo recorta y solo actúa si de
-// verdad no entra. Se deja para reparar los guardados que arrastran el problema.
-function testeoDestapar() {
-  if (!(window.GF && GF.TESTEO)) return false;
-  if (typeof canonicalStacks !== "function" || canonicalStacks().length <= invSlots()) return false;
-  let tocado = 0;
-  for (const k in G.res) if (G.res[k] > 99) { G.res[k] = 99; tocado++; }
-  CROP_ORDER.forEach(k => { if (G.seeds[k] > 50) { G.seeds[k] = 50; tocado++; } });
-  if (typeof syncSlots === "function") syncSlots();
-  if (tocado && typeof log === "function") log("MODO TESTEO: la bolsa estaba desbordada (" + tocado + " montones de más) y se recortó a 99 por recurso, para que puedas seguir juntando cosas.", "gold");
-  return tocado > 0;
-}
+/* ================= MODO TESTEO: ELIMINADO (14/9, dirección) ===============================
+   Vivió del 10/8 al 14/9: comprimía todas las esperas a segundos y abría los cupos diarios
+   (aplicarTesteo), y recortaba bolsas desbordadas por el regalo viejo (testeoDestapar). Con el
+   portero en modo rechazo dejó de tener sentido: un cliente que produce a otro ritmo que el
+   real es un cliente al que el servidor le dice que no. Lo que haga falta probar se hace en la
+   base, no en el cliente. */
 
 /* ═══════════════════════════════════════════════════════════════════════════════════════════
    EL CAMINO — a qué está jugando el jugador                                          (25/8)

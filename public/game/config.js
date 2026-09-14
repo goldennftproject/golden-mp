@@ -359,18 +359,11 @@ var FX_MARIPOSAS = 3;      // 14/8: las 3 mariposas son la GUÍA VIVA — la 1ª
 var FX_VAPOR = 1;          // vapor de la Cocina mientras hay ollas y chispas del Altar mejorado
 var FX_FADE_MS = 260;      // fundido a negro al cambiar de escena (0 = corte seco)
 var FX_PART_MAX = 40;      // tope de partículas vivas a la vez (cuida el rendimiento en móvil)
-// ================= MODO TESTEO =====================================================
-// Con esto en 1, TODAS las esperas largas del juego pasan a segundos, los cupos diarios se
-// abren y la partida arranca con materiales, para poder probar el juego entero sin esperar
-// horas ni farmear. NO toca la tabla del diseñador: los valores reales siguen guardados en
-// Supabase y vuelven solos al poner 0 acá y deployar.
-//
-//   PARA LA VERSIÓN FINAL: poner GF.TESTEO = 0
-//
-GF.TESTEO = 0;   // 14/8: el diseñador pidió probar con TIEMPOS REALES y cupo de semillas real
-var TEST_DIV = 60;       // los tiempos largos se dividen por esto (1 h → 1 min)
-var TEST_TOPE = 40;      // …y además ninguna espera pasa de estos segundos
-var TEST_MIN = 4;        // …ni baja de estos (si no, no se llega a ver el estado intermedio)
+// ================= MODO TESTEO: ELIMINADO (14/9, dirección) ================================
+// « Ya no habrá modo testeo. » Con el portero en modo rechazo, cualquier atajo del cliente —
+// tiempos comprimidos, cupos abiertos, recursos regalados— es exactamente lo que el servidor no
+// acepta. Lo que haga falta probar se hace del lado de la base (Table Editor → farms.data), que
+// es la única verdad. GF.TESTEO, TEST_DIV, TEST_TOPE y TEST_MIN ya no existen.
 
 // ================= MODO MVP (10/9, dirección) ==========================================
 // La pregunta que el MVP contesta es UNA: « ¿alguien vuelve a jugar siete días seguidos? »

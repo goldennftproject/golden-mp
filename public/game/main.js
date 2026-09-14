@@ -102,8 +102,7 @@ function pantallaNoSePudo() {
   // pisaban al código y nos costó tres problemas seguidos (timers fantasma, la respuesta
   // al clic "que volvía sola" y un arranque trabado). Ahora manda el código y punto:
   // los números viven en state.js y config.js, y lo que se ve es lo que está escrito.
-  // MODO TESTEO: comprime tiempos en memoria, solo cuando se activa a mano.
-  try { if (typeof aplicarTesteo === "function") aplicarTesteo(); } catch (e) { console.warn(e); }
+  // 14/9: el MODO TESTEO se eliminó (dirección). Los tiempos son los reales, siempre.
   loadPaso(LOAD_ETAPAS.ajustes, "Aplicando ajustes…");
   /* 24/8 (dirección: « se queda ahí », con la barra clavada en 25 %). Este paso espera dos cosas
      de RED —el login y la lectura de la granja— y ninguna tenía reloj. Una promesa que nunca se
@@ -142,7 +141,6 @@ function pantallaNoSePudo() {
     if (m) { window.CARGA_MOTIVO = m[1]; try { CARGA_FALLO = true; } catch (_) { window.CARGA_FALLO = true; } }
   } finally { clearInterval(reloj); }
   try { if (typeof godHandSembrar === "function") godHandSembrar(G._ausenteMs || 0); } catch (e) { console.warn(e); }   // GOD HAND: siembra lo que quedó vacío
-  try { if (typeof testeoDestapar === "function") testeoDestapar(); } catch (e) { console.warn(e); }   // repara bolsas desbordadas por el regalo viejo de testeo
   /* 25/8 — SI NO HAY NUBE, SE DICE ANTES DE JUGAR, NO DESPUÉS DE PERDER.
      La consola del diseñador mostró el caso: signInAnonymously cortado por la red, sin UID, y
      el juego arrancando igual. Se puede jugar sin nube —a veces es lo único que se puede—, pero

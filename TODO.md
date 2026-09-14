@@ -101,6 +101,9 @@ Están desarrolladas en el GDD §15.0, con sus números medidos. Aquí solo el t
 
 ## 🟢 Vigilar en playtest — no bloquea
 
+- [x] ~~Modo testeo~~ **Eliminado el 14/9** (dirección: « ya no habrá modo testeo »). Ni GF.TESTEO, ni
+  tiempos comprimidos, ni botón 🧪. Probar cosas de nivel alto = editar `farms.data` en la base.
+
 - [ ] **Ley 4 (11/9): el animal que no come no da.** Reemplazó el rinde con decimales del 8/9 que
   Suren leyó dos veces como « me tenía que dar 0,1 y no me dio nada ». Ahora es binario: comió →
   su unidad, no comió → nada, el reloj sigue. Mirar que el « con hambre / comió ✓ » del establo
