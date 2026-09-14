@@ -54,14 +54,18 @@ en `docs/LEYES.md`.
   « el nivel te hace más rápido » no tiene dónde pasar con 25 niveles. Si algún día el techo sube
   mucho, o hay botas y monturas que sumen speed, vale la pena volver a mirarlo: la curva y los
   breakpoints están descritos en `GF.SUELO` (config.js).
-- [ ] **La vida del héroe no sube nunca, y eso ata el combate.** `G.hpMax` es 100 desde el nivel
-  1 hasta el techo. Medido el 14/9 (`tools/medir-combate.js`): con la armadura REAL de la primera
-  semana (0-1 de defensa; las siete piezas del juego suman 8 y salen de drops de bichos de nivel
-  15+) el combate del MVP está sano — la araña y el goblin matan en 3-5 golpes y te matan en
-  29-34. Pero como la vida es fija, el daño de los bichos no puede escalar: se probó reescalarlos
-  para que todos maten en ~18 golpes y la cuenta aplanaba el bestiario entero (la rata pegando 12
-  y el trol 20). Mientras la vida no crezca con el nivel, subir el daño vuelve letales a los
-  bichos tempranos. No es urgente para el MVP; es la restricción a levantar después.
+- [ ] **La vida del héroe se planta en 160 al Combate 10, y eso ata el combate.** Sube en dos
+  hitos (100 → +20 al Combate 5 → +40 al Combate 10) y del 11 en adelante **no sube nunca más**.
+  O sea que el Combate alto no entrega nada: es el mismo problema que los seis oficios huérfanos,
+  con otro nombre.
+  *Medido el 14/9 con `tools/medir-combate.js` — y hizo falta medirlo tres veces, corrigiendo dos
+  supuestos escritos a mano (una armadura que el jugador no tiene y una vida que sí crece).* Con
+  los números de verdad, al día 7 (Combate 10, 160 de vida, armadura 1) la araña y el goblin se
+  matan en 3-4 golpes y te matan en 46-53: **el combate está blando, no roto**. Subir el daño de
+  los bichos no es la salida — se probó reescalarlos para que todos maten en ~18 golpes y la
+  cuenta aplanaba el bestiario entero (la rata pegando 12 y el trol 20), justamente porque la
+  vida se planta temprano. La salida es dar vida (o defensa) más allá del Combate 10, y eso es
+  contenido, no una perilla. **No bloquea el MVP: se mira jugando la semana.**
 - [ ] **5 · Que alguien lo juegue una semana** sin saber cómo está hecho. Ni Golden, ni Suren,
   ni yo.
 
@@ -86,6 +90,15 @@ Están desarrolladas en el GDD §15.0, con sus números medidos. Aquí solo el t
   armas pasaron a subir por INTENTOS con la fórmula de Tibia del diseñador (`docs/SKILLS-TIBIA.md`,
   `test-skills-tibia.js`): arrancan en 10, cada golpe cuenta, matar no entrena. Eso les da un
   ritmo con sentido, pero NO les da nada que abrir — siguen sin contenido y el 150 sigue ahí.
+  **Medido el 14/9 (`tools/medir-oficios-huerfanos.js`), y el 150 es peor de lo que parecía:**
+  llegar al nivel 150 de un arma pide **311.849.631 golpes** — a un golpe por segundo sin parar
+  nunca, 3.609 días de reloj CONTINUOS, contra los 26,3 días que tarda la partida entera. El
+  escalón 149→150 solo cuesta 28 millones de golpes. No es una meta lejana: es decoración. El
+  jugador del día 7 anda por Espada 20 (798 golpes) y el que sigue semanas, por 30 (2.867).
+  Y hay una distinción que conviene no perder: las cuatro ARMAS sí hacen algo (entran en el daño
+  por la fórmula de Tibia), mientras que **Tala y Artesanía no hacen absolutamente nada** — el
+  juego no pregunta su nivel ni una sola vez en todo el código. Son dos problemas distintos con
+  la misma etiqueta.
   Misma tarde, segundo doc (`Defensa de los mobs de Tibia`): parada + armadura + cargas de
   bloqueo en cada bicho, daño del jugador con la fórmula de TFS, el mob pega normal(0, máx) y
   pasa por tu parada. **Corregido el 14/9:** se midió con la armadura REAL de la primera semana

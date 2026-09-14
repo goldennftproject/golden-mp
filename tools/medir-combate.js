@@ -31,12 +31,18 @@ const TIRADAS = 1000;
    (20), la pechera de hierro del trol (30). Al día 7 el jugador anda por la araña y el goblin:
    tiene las botas y poco más. Con la armadura de verdad el combate se ve muy distinto — y el
    « no hay riesgo » que reporté salía de mi número inventado, no del juego. */
+/* SEGUNDA CORRECCIÓN (14/9, tarde): acá se daba por sentado que la vida era 100 siempre. No lo
+   es — sube en DOS hitos de Combate y ahí se planta: nivel 5 suma 20 y nivel 10 suma 40, o sea
+   100 → 120 → 160, y del Combate 11 en adelante no sube nunca más. El techo llega temprano, así
+   que la conclusión de fondo no cambia (el daño de los bichos no puede escalar mucho), pero el
+   número que se escriba en el TODO tiene que ser el de verdad. La vida sale de combatHpBonus. */
 const PERFILES = [
-  { nombre: "día 1 · recién salido del tutorial", nivel: 2, skill: 10, arma: "espada_madera", armadura: 0 },
-  { nombre: "día 3 · con lo del herrero puesto", nivel: 5, skill: 14, arma: "espada_piedra", armadura: 1 },
-  { nombre: "día 7 · el final de la prueba", nivel: 10, skill: 20, arma: "espada_bronce", armadura: 1 },
-  { nombre: "día 20 · el que sigue jugando", nivel: 18, skill: 30, arma: "espada_oro", armadura: 5 },
+  { nombre: "día 1 · recién salido del tutorial", nivel: 2, skill: 10, combate: 1, arma: "espada_madera", armadura: 0 },
+  { nombre: "día 3 · con lo del herrero puesto", nivel: 5, skill: 14, combate: 5, arma: "espada_piedra", armadura: 1 },
+  { nombre: "día 7 · el final de la prueba", nivel: 10, skill: 20, combate: 10, arma: "espada_bronce", armadura: 1 },
+  { nombre: "día 20 · el que sigue jugando", nivel: 18, skill: 30, combate: 16, arma: "espada_oro", armadura: 5 },
 ];
+const vidaDe = (p) => 100 + g("combatHpBonus(" + p.combate + ")");
 
 function golpesParaMatar(p, m) {
   G.level = p.nivel; G.skills.sword = g('triesTotal(' + p.skill + ', "sword")');
@@ -54,8 +60,9 @@ function golpesParaMatar(p, m) {
 function golpesParaMorir(p, m) {
   G.level = p.nivel; G.skills.sword = g('triesTotal(' + p.skill + ', "sword")');
   let total = 0;
+  const vida = vidaDe(p);
   for (let t = 0; t < TIRADAS; t++) {
-    let hp = 100, n = 0;
+    let hp = vida, n = 0;
     while (hp > 0 && n < 400) {
       const crudo = g("normalRandom(0, " + m.dmg + ")");
       /* el héroe para con el escudo y absorbe con la armadura: la misma cuenta que hurtHero */
@@ -72,7 +79,8 @@ const DEL_MVP = ["rata", "murcielago", "larva", "baba", "arana", "goblin", "orco
 for (const p of PERFILES) {
   console.log("\n──── " + p.nombre + " ────");
   const pr = golpesParaMatar(p, MON.rata);
-  console.log("   nivel " + p.nivel + " · Espada " + p.skill + " · " + p.arma + " (pega hasta " + pr.max + ") · armadura " + p.armadura);
+  console.log("   nivel " + p.nivel + " · Combate " + p.combate + " (" + vidaDe(p) + " de vida) · Espada " + p.skill +
+    " · " + p.arma + " (pega hasta " + pr.max + ") · armadura " + p.armadura);
   console.log("   bicho          vida   golpes para matar    golpes para morir    veredicto");
   for (const k of DEL_MVP) {
     const m = MON[k]; if (!m) continue;
@@ -94,6 +102,7 @@ console.log("  la araña y el goblin matan en 3-5 golpes y te matan en 29-34. El
 console.log("  del primer informe salía de suponer armadura 7 al día 7, que el jugador no tiene.");
 console.log("  Se probó además reescalar el daño bicho por bicho para que todos maten en ~18");
 console.log("  golpes: la cuenta aplanaba el bestiario entero (la rata pegando 12 y el trol 20),");
-console.log("  porque la vida del héroe es 100 y NO SUBE NUNCA. Esa es la restricción de fondo;");
-console.log("  mientras la vida sea fija, el daño de los bichos no puede escalar mucho sin que");
-console.log("  los tempranos se vuelvan letales. No se tocó nada: queda anotado en TODO.md.\n");
+console.log("  porque la vida del héroe deja de crecer muy temprano: 100 · +20 al Combate 5 ·");
+console.log("  +40 al Combate 10 = 160, y del 11 en adelante NUNCA MÁS. Ésa es la restricción de");
+console.log("  fondo, y de paso el Combate del 11 para arriba no entrega vida ni ninguna otra");
+console.log("  cosa — el mismo problema que los seis oficios huérfanos. No se tocó nada.\n");
