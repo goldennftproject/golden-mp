@@ -85,12 +85,25 @@ const xpGranja10 = S.FARM_XP_LVLS[10];
 out.curvas.comparacion = { xpParaGranja10: xpGranja10, skillFarmeoConEsaXp: S.skillInfo(xpGranja10).lvl,
   xpParaMaiz: acumSkill(S.CROP_DEF.maiz.lvl), vecesMas: r2(acumSkill(S.CROP_DEF.maiz.lvl) / xpGranja10) };
 
-// ---------- 5) LA CAÑA Y LA PESCA ----------
-const rod = S.TOOL_CRAFT.rod;
-let cañaPlata = rod.plata, cañaHoras = 0, cañaDet = [];
-for (const m in rod.cost) { cañaPlata += rod.cost[m] * (costoMat[m] || 0); cañaHoras += rod.cost[m] * (horasNodo[m] || 0); cañaDet.push(rod.cost[m] + " " + m); }
-out.caña = { pide: cañaDet.join(" + ") + (rod.plata ? " + " + rod.plata + " plata" : ""),
-  plataEfectiva: Math.round(cañaPlata), horasDeNodo: Math.round(cañaHoras), kitInicial: S.KIT_INICIAL.rod };
+/* ---------- 5) LAS CAÑAS Y LA PESCA ----------
+   14/9 — esto leía `TOOL_CRAFT.rod`, que dejó de existir con Pesca v3 (25/8): ahora la caña no
+   es UNA herramienta sino una escalera de cinco (CANA_V4_DEF / CANA_V4_ORDER). El auditor venía
+   reventando desde entonces sin que nadie lo notara, así que además de arreglarlo mide la
+   escalera entera: qué pide cada peldaño y cuántas horas de nodo son. */
+out.cañas = (S.CANA_V4_ORDER || []).map(function (id) {
+  const c = S.CANA_V4_DEF[id] || {}, cost = c.cost || {};
+  let plata = c.plata || 0, horas = 0, det = [], sinPrecio = [];
+  for (const m in cost) {
+    if (costoMat[m] == null) sinPrecio.push(m);
+    plata += cost[m] * (costoMat[m] || 0); horas += cost[m] * (horasNodo[m] || 0); det.push(cost[m] + " " + m);
+  }
+  /* los materiales manufacturados (tablón, barras, cuero) no están en costoMat: esta auditoría
+     solo sabe poner precio a lo que sale de un nodo. Se dice, no se inventa un número. */
+  return { cana: id, pescaLvl: c.lvl, pide: det.length ? det.join(" + ") : "(no se fabrica: es premio)",
+    plataEfectiva: sinPrecio.length ? "≥" + Math.round(plata) + " (sin precio: " + sinPrecio.join("/") + ")" : Math.round(plata),
+    horasDeNodo: sinPrecio.length ? "≥" + r2(horas) : r2(horas) };
+});
+out.caña = { kitInicial: S.KIT_INICIAL.cana, escalera: out.cañas.map(c => c.cana + " (Pesca " + c.pescaLvl + ")").join(" → ") };
 
 // ---------- 6) TIPOS DE CAMBIO DE $GOLDEN ----------
 out.golden = [
@@ -107,7 +120,15 @@ for (const id of ["papa_asada", "pure_papa", "sopa_zanahoria", "pescado_asado"])
   const rc = S.RECIPE_DEF[id]; if (!rc) continue;
   let ins = 0, det = [];
   for (const m in (rc.res || {})) { const v = S.CROP_DEF[m] ? S.CROP_DEF[m].price : (costoMat[m] || 0); ins += rc.res[m] * v; det.push(rc.res[m] + " " + m); }
-  for (const f in (rc.fish || {})) { det.push(rc.fish[f] + " pez " + f); ins += Math.round(cañaPlata); }
+  /* 14/9 — antes el pez se valuaba con el coste de la caña (un disparate heredado: la caña se
+     compra una vez y pesca para siempre). Ahora vale lo que el jugador cobraría por el pez MÁS
+     BARATO de esa banda a peso medio, que es el coste de oportunidad real de tirarlo a la olla. */
+  for (const f in (rc.fish || {})) {
+    const deLaBanda = Object.keys(S.PEZ_DEF).filter(id => S.PEZ_DEF[id].banda === f);
+    const precios = deLaBanda.map(id => ctx.pezPrecio(id, ctx.pezPesoMedio(id)));
+    const v = precios.length ? Math.min.apply(null, precios) : 0;
+    det.push(rc.fish[f] + " pez " + f); ins += rc.fish[f] * v;
+  }
   // OJO (16/8): el precio REAL de venta lo calcula dishPrice() = ingredientes × COOK_MARGEN
   // cuando COOK_PRICE_AUTO=1. El campo `plata` de la tabla es legado y engaña.
   const venta = ctx.dishPrice(rc);
@@ -176,7 +197,10 @@ L("cultivo".padEnd(12) + "skill".padStart(6) + "XP acumulada".padStart(14));
 for (const c of out.curvas.cultivos) L(c.cultivo.padEnd(12) + String(c.skillLvl).padStart(6) + String(c.xpNecesaria).padStart(14));
 
 L("\n=== LA CAÑA ===");
-L("Cuesta " + out.caña.pide + " = " + out.caña.plataEfectiva + " plata efectivas = " + out.caña.horasDeNodo + " horas de nodo. El kit regala " + out.caña.kitInicial + ".");
+L("El kit regala la de " + out.caña.kitInicial + ". La escalera: " + out.caña.escalera);
+L("caña        Pesca   pide                                    plata efectiva   horas de nodo");
+out.cañas.forEach(c => L("  " + c.cana.padEnd(10) + String(c.pescaLvl).padStart(5) + "   " +
+  c.pide.padEnd(38) + String(c.plataEfectiva).padStart(10) + String(c.horasDeNodo).padStart(15)));
 
 L("\n=== $GOLDEN: un tipo de cambio por sistema ===");
 for (const g of out.golden) L("  " + g.sistema.padEnd(32) + g.ratio);

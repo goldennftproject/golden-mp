@@ -3448,22 +3448,28 @@ const COS_MARCOS = { brote: "Marco Brote", hoja: "Marco de Hoja", dorado: "Marco
 function cosTengo(txt) { return (G.cosmeticos || []).some(c => String(c).toLowerCase().includes(String(txt).toLowerCase())); }
 // títulos disponibles: los que ganaste (por texto del cosmético) 
 function cosTitulosDisponibles() { return Object.keys(COS_TITULOS).filter(t => cosTengo(t)); }
+/* 14/9 — LOS COSMÉTICOS TAMBIÉN CUELGAN DEL TECHO.
+   Estos niveles estaban escritos a mano sobre el techo viejo (30, 42, 50). Al bajarlo a 25 se
+   volvieron inalcanzables: premios huérfanos, exactamente lo que el trabajo del 10/9 quería
+   evitar — solo que aquel día se revisaron el cofre, el altar y las tareas, y los cosméticos se
+   pasaron por alto. `nivelEscalado` es la misma regla que usan los otros: 20→14, 24→16, 30→18,
+   42→22, 50→25. Lo custodia test-techo-a-un-numero.js. */
 function cosColoresDisponibles() {
   const out = ["blanco"];
   if (cosTengo("color de nombre oro")) out.push("oro");     // el oro sale SOLO del pase VIP (antes cualquier "color de nombre" lo habilitaba)
   if (cosTengo("color de nombre verde") || cosTengo("Madrugador")) out.push("verde");
-  if (G.level >= 30) out.push("violeta");
-  if (G.level >= 20) out.push("celeste");
+  if (G.level >= nivelEscalado(30)) out.push("violeta");
+  if (G.level >= nivelEscalado(20)) out.push("celeste");
   return [...new Set(out)];
 }
 function cosMarcosDisponibles() {
   const out = ["ninguno"];
   if (cosTengo("Marco")) out.push("brote");
-  if (G.level >= 24) out.push("hoja");
-  if (G.level >= 42) out.push("dorado");
+  if (G.level >= nivelEscalado(24)) out.push("hoja");
+  if (G.level >= nivelEscalado(42)) out.push("dorado");
   return out;
 }
-function cosAuraDisponible() { return cosTengo("aura") || G.level >= 30; }
+function cosAuraDisponible() { return cosTengo("aura") || G.level >= nivelEscalado(30); }
 // MASCOTA (10/8): la gallina "Pinta" que entrega el cofre de login. Es puro adorno —
 // no produce nada ni se le puede dar de comer: pasea por la granja y te acompaña.
 const COS_MASCOTAS = { gallina: { label: 'Gallina "Pinta"', sprite: "pet_gallina" } };
@@ -3478,7 +3484,11 @@ function cosMascotasDisponibles() {
 //   granjaOro -> Granja legendaria: valla dorada + chispas de oro flotando (nivel 50)
 function cosSombreroDisponible() { return cosTengo("sombrero de paja"); }
 function cosPetalosDisponible() { return cosTengo("pétalos") || cosTengo("petalos"); }
-function cosGranjaOroDisponible() { return cosTengo("granja legendaria") || G.level >= 50; }
+/* 14/9 — decía `G.level >= 50`. Con el techo en 25 eso era INALCANZABLE: la skin quedó de
+   premio huérfano por encima del techo, que es justo lo que el 10/9 se trabajó para que no
+   pasara. El cartel del panel prometía « llega con el nivel 50 » y era mentira. Ahora cuelga
+   del techo, como el cofre y el altar. */
+function cosGranjaOroDisponible() { return cosTengo("granja legendaria") || G.level >= FARM_NIVEL_MAX; }
 function cosElegido() {
   G.cosEq = G.cosEq || { titulo: "", color: "blanco", marco: "ninguno", aura: false };
   if (!G.cosEq.mascota) G.cosEq.mascota = "ninguna";   // guardados viejos no la traen

@@ -1088,7 +1088,7 @@
            único nivel del juego sin barra a la vista: la ventana de la Granja la tiene desde
            siempre, pero había que saber que existía para ir a buscarla. Clic: abre esa ventana,
            que es donde viven las tareas. -->
-      <div class="pill cpill" id="lvlpill" style="cursor:pointer"><span class="k">Granja</span><b id="s-level">1</b><span class="k">/50</span><span class="cbarw"><span class="cfill lvlf" id="lvl-fill"></span></span><span class="k" id="lvl-txt"></span></div>
+      <div class="pill cpill" id="lvlpill" style="cursor:pointer"><span class="k">Granja</span><b id="s-level">1</b><span class="k" id="s-level-max">/50</span><span class="cbarw"><span class="cfill lvlf" id="lvl-fill"></span></span><span class="k" id="lvl-txt"></span></div>
       <div class="pill"><span class="k">Prestigio</span><b id="s-prestige">0</b></div>
       <div class="pill" title="Plata — la moneda del juego"><img class="ric" src="assets/farm/coin_plata.png?a=4" onerror="this.outerHTML='<span class=&quot;coin silver&quot;></span>'"><b id="s-plata">0</b></div>
       <div class="pill" title="Esencia $Golden — se usa para pescar"><img class="ric" src="assets/farm/coin_esencia.png?a=4" onerror="this.outerHTML='✨'"><b id="s-golden">20</b></div>
@@ -1784,7 +1784,7 @@
     // 15/8: VERSIÓN DE BUILD — rompe la caché del navegador en cada deploy (sin esto, el
     // jugador seguía corriendo el state.js viejo aunque el servidor tuviera el nuevo).
     // deploy.bat la actualiza sola (busca GF_BUILD y pone la fecha/hora del deploy).
-    const GF_BUILD = "20260914-173631";
+    const GF_BUILD = "20260914-180018";
     const files = ["game/config.js","game/nav.js","game/audio.js","game/state.js","game/save.js","game/ui.js","game/boot.js",
                    "game/farm.js","game/forest.js","game/plaza.js","game/main.js","game/update.js"];
     /* 24/8 — SE BAJAN TODOS A LA VEZ, SE EJECUTAN EN FILA (dirección: « sigue tardando en

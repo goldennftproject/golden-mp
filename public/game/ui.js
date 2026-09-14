@@ -1313,7 +1313,11 @@ function refreshHud() {
   // 18/8: el cartel de expansión del mapa refleja el material que tenés; la firma interna evita
   // que se rehaga si no cambió nada de lo que se ve.
   if (window.FARM && window.FARM.dibujarExpansion) { try { window.FARM.dibujarExpansion(); } catch (e) {} }
-  refreshStam(); setTxt("s-level", G.level); setTxt("s-prestige", G.prestige); setNum("s-plata", G.plata, fmtPlata); setNum("s-golden", G.golden); setTxt("s-week", (typeof semanaActual === "function") ? semanaActual() : G.week); setTxt("s-hp", Math.ceil(G.hp) + "/" + G.hpMax); refreshCombatBar(); refreshFarmBar(); bindFarmPill(); refreshBuffsPill(); if (typeof checkCooking === "function") checkCooking(); if (typeof checkHorno === "function") checkHorno(); if (typeof refreshHotbar === "function") refreshHotbar(); }
+  refreshStam(); setTxt("s-level", G.level);
+  /* 14/9 — el techo lo escribe el código, no el HTML. Estaba « /50 » a mano en index.html y
+     siguió diciendo 50 cuando dirección bajó el techo a 25: el HUD le mentía al jugador sobre
+     cuánto le falta. Ningún test lo vio porque vive en el DOM. */
+  setTxt("s-level-max", "/" + (typeof FARM_NIVEL_MAX !== "undefined" ? FARM_NIVEL_MAX : "")); setTxt("s-prestige", G.prestige); setNum("s-plata", G.plata, fmtPlata); setNum("s-golden", G.golden); setTxt("s-week", (typeof semanaActual === "function") ? semanaActual() : G.week); setTxt("s-hp", Math.ceil(G.hp) + "/" + G.hpMax); refreshCombatBar(); refreshFarmBar(); bindFarmPill(); refreshBuffsPill(); if (typeof checkCooking === "function") checkCooking(); if (typeof checkHorno === "function") checkHorno(); if (typeof refreshHotbar === "function") refreshHotbar(); }
 // clic en la barra de estamina: ofrece la recarga premium (con su tope diario)
 function bindStamPill() {
   const pill = document.getElementById("stampill"); if (!pill || pill._bound) return;
@@ -4688,7 +4692,7 @@ function refreshCosmeticos() {
   h += '<div class="secc">Granja</div><div class="forge-row"><div class="finfo"><div class="fds">' +
     (cosGranjaOroDisponible()
       ? skinBtns("granjaOro", c.granjaOro) + ' <span class="fds">Legendaria: valla dorada y chispas de oro.</span>'
-      : 'La skin de Granja Legendaria llega con el nivel 50.') + '</div></div></div>';
+      : 'La skin de Granja Legendaria llega con el nivel ' + FARM_NIVEL_MAX + '.') + '</div></div></div>';
   if ((G.cosmeticos || []).length) {
     h += '<div class="secc">Todo lo que ganaste (' + G.cosmeticos.length + ')</div>';
     h += '<div class="info">' + G.cosmeticos.map(x => escapeHtml(String(x))).join(" · ") + '</div>';

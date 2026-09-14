@@ -51,6 +51,38 @@ for (let L = 11; L <= 25; L++) {
 }
 ok("los quince niveles toman peldaños en orden, sin repetir ni retroceder", subenSolas);
 
+/* 14/9 — esto se agrega DESPUÉS de encontrarlo roto abriendo el juego en el navegador. El 10/9
+   se revisaron el cofre, el altar y las tareas, pero nadie miró los cosméticos: la skin de
+   Granja Legendaria pedía nivel 50, el aura y el color violeta pedían 30 y el marco dorado 42.
+   Con el techo en 25 los cuatro quedaron colgados en un nivel que ya no existe — premios que el
+   juego promete y no puede entregar nunca. Es el mismo error que este archivo existe para
+   atajar, así que a partir de hoy también lo cubre: NADA que el jugador pueda ganar puede pedir
+   un nivel por encima del techo. */
+console.log("\n1b · NINGÚN PREMIO PIDE UN NIVEL QUE NO EXISTE\n");
+{
+  const MAX = g("FARM_NIVEL_MAX");
+  ctx.G.cosmeticos = [];
+  ctx.G.level = MAX;
+  const alTecho = {
+    "color violeta": g("cosColoresDisponibles()").indexOf("violeta") >= 0,
+    "color celeste": g("cosColoresDisponibles()").indexOf("celeste") >= 0,
+    "marco hoja": g("cosMarcosDisponibles()").indexOf("hoja") >= 0,
+    "marco dorado": g("cosMarcosDisponibles()").indexOf("dorado") >= 0,
+    "aura": g("cosAuraDisponible()"),
+    "skin Granja Legendaria": g("cosGranjaOroDisponible()"),
+  };
+  for (const k in alTecho) ok("en el techo (" + MAX + ") se puede tener: " + k, alTecho[k]);
+  ctx.G.level = 1;
+  ok("y a nivel 1 todavía no (siguen siendo premios, no regalos)",
+    !g("cosAuraDisponible()") && !g("cosGranjaOroDisponible()") && g("cosMarcosDisponibles()").indexOf("dorado") < 0);
+  /* sin los comentarios: los de arriba CUENTAN la historia del bug y nombran el `>= 50` viejo */
+  const STATE0 = fs.readFileSync(path.join(RAIZ, "public/game/state.js"), "utf8")
+    .replace(/\/\*[\s\S]*?\*\//g, "").replace(/\/\/[^\n]*/g, "");
+  ok("ninguna puerta de cosmético tiene el nivel escrito a mano",
+    !/G\.level >= (2[6-9]|[3-9][0-9]|\d{3,})\b/.test(STATE0),
+    (STATE0.match(/G\.level >= (2[6-9]|[3-9][0-9]|\d{3,})\b/g) || []).join(", "));
+}
+
 console.log("\n2 · CON OTRO TECHO — se re-evalúa state.js con el número cambiado\n");
 const STATE = fs.readFileSync(path.join(RAIZ, "public/game/state.js"), "utf8");
 ok("el techo está una sola vez escrito a mano, como FARM_NIVEL_MAX", (STATE.match(/const FARM_NIVEL_MAX = 25;/g) || []).length === 1);
