@@ -19,7 +19,7 @@ import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
    ancla del juego (20 plata/celda-hora) con margen ×3 y colchones: generosos a
    propósito — acá un falso positivo es peor que un tramposo sin cazar. */
 const VERSION = 1;
-const MODO = "sombra";
+const MODO = "rechazo";   // 14/9: fuera de sombra en el proyecto nuevo (P2P abierto → el portero rechaza)
 
 const ANCLA = 20;          // plata por celda-hora
 const CELDAS_MAX = 169;    // celdas útiles con TODO expandido

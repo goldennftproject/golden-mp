@@ -23,7 +23,7 @@ const ok = (n, c, d) => { if (!c) fallos++; console.log((c ? "  ok   " : "  FALL
   const HORA = 3600;
 
   console.log("\nEL CONTRATO DEL ESCALÓN 1: MODO SOMBRA, VERSIONADO");
-  ok("las reglas arrancan en modo sombra (mirar sin rechazar)", MODO === "sombra", MODO);
+  ok("las reglas están en modo RECHAZO desde el 14/9 (proyecto nuevo, P2P abierto)", MODO === "rechazo", MODO);
   ok("y llevan versión (la bitácora anota cuál evaluó)", VERSION >= 1, "v" + VERSION);
 
   console.log("\nEL JUGADOR HONESTO PASA LIMPIO");

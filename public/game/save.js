@@ -1116,7 +1116,20 @@ async function saveFarm(force) {
       try {
         const { data: r, error: fe } = await sb.functions.invoke("guardar", { body: cuerpo });
         if (!fe && r && r.ok) paso = true;
-        else if (fe) console.warn("portero:", (fe && fe.message) || fe);
+        else if (fe) {
+          /* 14/9 — EL PORTERO EN MODO RECHAZO. Un 422 no es « portero caído »: es el portero
+             diciendo que NO. Hasta hoy caía al camino viejo (que la PARTE 2 ya cerró: 403) y el
+             autosave reintentaba cada minuto para siempre, con la partida local cada vez más
+             lejos de la aceptada. Ahora: se vuelve a la última granja que el portero aceptó, se
+             dice por qué, y el guardado deja de intentar hasta que algo cambie de verdad. */
+          const st = fe.context && fe.context.status;
+          if (st === 422) {
+            let det = null; try { det = await fe.context.json(); } catch (e) {}
+            await porteroRechazo(det);
+            return;
+          }
+          console.warn("portero:", (fe && fe.message) || fe);
+        }
       } catch (e) { console.warn("portero no disponible aún (va por el camino viejo):", e && e.message); }
       if (!paso) {
         const { error } = await sb.from("farms").upsert({ user_id: UID, name: cuerpo.name, data: cuerpo.data, updated_at: new Date().toISOString() }, { onConflict: "user_id" });
@@ -1127,6 +1140,33 @@ async function saveFarm(force) {
       return;
     } catch (e) { if (intento === 0) await sleepMs(1500); else console.warn("saveFarm sin conexión (reintenta solo):", e && e.message); }
   }
+}
+
+/* ============ EL PORTERO DIJO QUE NO (14/9) ================================================
+   La regla de la casa es « el juego se queda con el anterior »: la granja que el portero aceptó
+   es la verdad, y lo que este navegador tiene de más no existe. Se recarga esa granja, se pisa
+   la copia local con ella (si no, copiaEsMejor la resucitaría en la próxima carga) y se le dice
+   al jugador qué vio el portero — con nombres, no con un « error » mudo. Lo que se pierde es lo
+   jugado desde el último guardado aceptado: un minuto, por el autosave. */
+async function porteroRechazo(det) {
+  const sosp = (det && Array.isArray(det.sospechas)) ? det.sospechas : [];
+  const lista = sosp.map(x => (x && x.que) || (x && x.recurso) || (typeof x === "string" ? x : JSON.stringify(x))).join(" · ");
+  console.warn("portero: guardado RECHAZADO", sosp);
+  sesionLog("guardado rechazado por el portero", lista || "(sin detalle)");
+  try {
+    const { data } = await sb.from("farms").select("data,name").eq("user_id", UID).maybeSingle();
+    if (data && data.data) {
+      hydrate(data.data);
+      copiaGuardar(snapshot());                 // la copia local también vuelve a la aceptada
+      lastSavedKey = snapKey();                 // nada pendiente: lo de más ya no está
+      if (typeof refreshHud === "function") refreshHud();
+      if (typeof syncSlots === "function") syncSlots();
+      if (typeof isOpen === "function" && isOpen("ov-inv") && typeof refreshInv === "function") refreshInv();
+    }
+  } catch (e) { console.warn("porteroRechazo: no se pudo recargar la granja aceptada", e && e.message); }
+  if (typeof showSaveError === "function") showSaveError();
+  if (typeof log === "function") log("🚫 El servidor rechazó el guardado" + (lista ? " (" + lista + ")" : "") + ". Se volvió a la última granja aceptada.", "bad");
+  if (typeof toast === "function") toast("Guardado rechazado — se volvió a la última granja aceptada");
 }
 
 /* ============ EL RANKING DEL TORNEO · el puente con la Edge Function (1/9) ==================

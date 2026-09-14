@@ -44,8 +44,8 @@ en `docs/LEYES.md`.
   anuncian como premio; el cartel de nivel no vende el cosmético. Esconder, no borrar: todo
   vuelve con `GF.MVP = 0`. *Suite en verde el 10/9: doma, Lonja y carta del tutorial se prueban con
   la bandera apagada, que es lo que custodian. Sin Chromium todavía.*
-- [ ] **4 · Decidir el mercado P2P** durante la prueba. Si va abierto, el portero sube antes (ver
-  LEYES.md: no es seguridad, es validez del experimento). **Es la siguiente decisión.**
+- [x] ~~**4 · Decidir el mercado P2P**~~ **Abierto** (dirección, 14/9), y el portero subió antes:
+  modo rechazo en el proyecto nuevo desde el 14/9.
 - [ ] **5 · Que alguien lo juegue una semana** sin saber cómo está hecho. Ni Golden, ni Suren,
   ni yo.
 
@@ -83,9 +83,9 @@ Están desarrolladas en el GDD §15.0, con sus números medidos. Aquí solo el t
   en `docs/MUDANZA-SUPABASE.md`: proyecto nuevo, login anónimo, `sql/instalar-proyecto-nuevo.sql`,
   función `guardar`, `node tools/cambiar-supabase.js <url> <anon>` + deploy, prueba, PARTE 2, rechazo.
   Y un backup apenas haya partidas: es lo que faltó esta semana.
-- [ ] **Portero de guardado, PARTE 2**: aplicar `sql/portero-guardado.sql` y sacarlo de modo
-  sombra (hoy anota, nunca rechaza). Ese día muere el botón 🧪 y entra la limpieza de la bitácora
-  a 30 días.
+- [x] ~~**Portero de guardado, PARTE 2**~~ **Hecho el 14/9** en el proyecto nuevo: PARTE 2 aplicada,
+  `MODO = "rechazo"`, el botón 🧪 muerto y el cliente volviendo a la granja aceptada ante un 422.
+  Queda la limpieza de la bitácora a 30 días (un `delete` mensual, o cuando moleste).
 - [ ] **La cola de arte** (PixelLab): que el sprite del granjero, la herramienta y el arma cambien
   de verdad. Hoy los cosméticos se coleccionan pero no se ponen. Ojo con la ley 3: esto va
   DESPUÉS de lo jugable, no antes.

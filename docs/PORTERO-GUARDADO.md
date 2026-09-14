@@ -1,5 +1,9 @@
 # El portero del guardado — cómo encenderlo (paso a paso, sin herramientas)
 
+*14/9: ENCENDIDO y en modo RECHAZO en el proyecto nuevo (`ulspkdaljeuleqqdokfk`). Lo de abajo queda
+como receta por si hay que volver a montarlo. Con el rechazo, el botón 🧪 murió (ver ui.js) y el
+cliente, ante un 422, vuelve a la última granja aceptada (`porteroRechazo` en save.js).*
+
 Todo se hace desde el navegador, en el dashboard de Supabase del proyecto
 (`https://supabase.com/dashboard` → proyecto **eusxpsmqczmczgyhndtd**). Son tres pasos,
 en este orden, y entre el 2 y el 3 hay una prueba. **El orden importa**: si cerrás la
