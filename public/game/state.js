@@ -5961,7 +5961,17 @@ const MOB_ARMOR_PCT = 0.06;                    // armor = defense = 6 % del HP c
 const ARM_ATK = {};                            // atk = min + max del compendio
 ARM_TIPOS.forEach(t => { ARM_ATK[t] = ARM_MINMAX[t].map(mm => mm[0] + mm[1]); });
 function armAtk(id) { const w = ARM_DEF[id]; return ARM_ATK[w.tipo][w.ri]; }
-function armDefV(id) { return Math.round(armAtk(id) * 0.8); }
+/* 15/9 (dirección): « si la de madera no debería tener parada xD ». Y tiene razón: la parada es
+   desviar el golpe con el arma, y el primer escalón —el palo que te dan en el tutorial— no puede
+   hacer eso. Además arreglaba un desajuste medido esa misma tarde: con la espada de madera el
+   jugador del día 1 ya paraba el 17 % de los golpes de la rata, justo cuando el pedido era que
+   hiciera falta comer.
+   La excepción NO se escribe con el nombre del arma, se DERIVA del escalón: no para el que está
+   en el primer peldaño de su tipo (`ri === 0`, la madera). Si mañana se agrega un escalón por
+   debajo, la regla lo encuentra sola — y si el diseñador quiere que el arco tampoco pare, se
+   toca acá y no en cinco sitios. */
+function armaPara(id) { const w = ARM_DEF[id]; return !!w && w.ri > 0; }
+function armDefV(id) { return armaPara(id) ? Math.round(armAtk(id) * 0.8) : 0; }
 /* normal_random de TFS: gaussiana centrada en la mitad (media 0,5, desvío 0,25), recortada a [0,1] */
 function normalRandom(min, max) {
   let u = 0, v = 0; while (u === 0) u = Math.random(); while (v === 0) v = Math.random();

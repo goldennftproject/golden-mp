@@ -82,7 +82,13 @@ console.log("\n3 · EL DAÑO MÁXIMO DEL JUGADOR (§3.1)\n");
   ok("subir el skill se nota: a skill 30 la misma espada pega máximo 24 (8,5 · 2,667 · 1,03)", g('playerMaxDamage("espada_madera")') === 24);
   ok("el factor es 1,0 (Golden no tiene modos: siempre ofensivo)", g("TIBIA_FACTOR_ATK") === 1);
   ok("atk del arma = min + max de la tabla del compendio", g("ARM_ATK.espada").join() === "8,12,18,28,42" && g("ARM_ATK.arco").join() === "6,8,14,20,32");
-  ok("y la defensa del arma es 0,8 · atk", g('armDefV("espada_madera")') === 6 && g('armDefV("espada_diamante")') === 34);
+  /* 15/9 (dirección): « si la de madera no debería tener parada xD ». El primer escalón de cada
+     tipo dejó de parar, así que su defensa de arma es 0 a propósito. La fórmula 0,8 · atk sigue
+     rigiendo para todo lo que SÍ para — que es lo que este renglón custodia. */
+  ok("la defensa del arma es 0,8 · atk en las que paran", g('armDefV("espada_piedra")') === 10 && g('armDefV("espada_diamante")') === 34);
+  ok("y el primer escalón (madera) no para: defensa de arma 0",
+    g('armDefV("espada_madera")') === 0 && g('armDefV("hacha_madera")') === 0 && !g('armaPara("espada_madera")'));
+  ok("pero el segundo sí (la regla es el escalón, no el nombre del arma)", g('armaPara("espada_piedra")'));
 }
 
 console.log("\n4 · LA TIRADA REAL: NORMAL, CENTRADA, MÁXIMOS RAROS\n");
@@ -101,10 +107,16 @@ console.log("\n4 · LA TIRADA REAL: NORMAL, CENTRADA, MÁXIMOS RAROS\n");
 
 console.log("\n5 · CÓMO PEGA EL MOB Y CÓMO PARA EL HÉROE (§4)\n");
 {
-  G.gear.arma = "espada_madera"; G.skills.sword = 0;
+  /* 15/9: el ejemplo pasa de la Espada de Madera a la de Piedra — la de madera ya no para, así
+     que con ella la cuenta daría 0 y no probaría la fórmula, que es lo que hay que custodiar. */
+  G.weapons.espada_piedra = { dur: 99 };
+  G.gear.arma = "espada_piedra"; G.skills.sword = 0;
   const d = ctx.heroDefensa(false);
-  ok("defensa del héroe con Espada de Madera a skill 10: (2,5 + 2,23) · 6 · 0,15 = 4,26", Math.abs(d - 4.257) < 0.01, d.toFixed(3));
+  ok("defensa del héroe con Espada de Piedra a skill 10: (2,5 + 2,23) · 10 · 0,15 = 7,10", Math.abs(d - 7.095) < 0.01, d.toFixed(3));
+  ok("y con la de madera es 0: no para, no se esquiva nada", (G.gear.arma = "espada_madera", ctx.heroDefensa(false) === 0));
+  G.gear.arma = "espada_piedra";
   ok("atacando (ofensivo) la mitad", Math.abs(ctx.heroDefensa(true) - d / 2) < 0.001);
+  G.gear.arma = "espada_madera";
   const forest = fs.readFileSync(path.join(RAIZ, "public/game/forest.js"), "utf8");
   ok("el golpe básico del mob es normal_random(0, máx) y FÍSICO", /this\.hurtHero\(normalRandom\(0, Math\.round\(m\.def\.dmg \* \(m\.dmgMult \|\| 1\)\)\), true\)/.test(forest));
   ok("y pasa por blockHit del lado del héroe (parada con sus cargas + armadura de las piezas)", /blockHit\(dmg, gearDefTotal\(\) \* \(1 - playerDefLossMult\(\)\), heroDefensa\(atacando\), this\.heroBlk\)/.test(forest));

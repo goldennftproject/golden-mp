@@ -53,8 +53,16 @@ console.log("\n1 · EL DÍA 1 SE PUEDE ENTRAR (el techo del pedido)\n");
 {
   const rata = bichosPorVida(DIA1, "rata", 300), murci = bichosPorVida(DIA1, "murcielago", 300);
   console.log("   el jugador del día 1 mata " + rata.toFixed(1) + " ratas o " + murci.toFixed(1) + " murciélagos con la vida llena");
-  ok("la primera franja del pantano (4 ratas) se puede limpiar sin morir", rata >= 3.5, rata.toFixed(1));
-  ok("y un murciélago no te mata de una pelea: se pelea, se come y se sigue", murci >= 1.3, murci.toFixed(1));
+  /* 15/9 (tarde) — el suelo BAJÓ a propósito. Pedía 3,5 ratas, o sea « la primera franja del
+     pantano se limpia de un tirón »; esa tarde dirección quitó la parada a las armas de madera
+     (« si la de madera no debería tener parada xD ») y con eso la cuenta cayó a 2,8. No es una
+     regresión: es exactamente lo que se pidió dos mensajes antes —« que yo deba usar comidas
+     para curarme »—, y limpiar cuatro ratas sin comer era justo lo contrario.
+     Lo que el suelo custodia ahora es que la pelea no sea una moneda al aire: con la vida llena
+     tienen que entrar DOS bichos de entrada, para que morir sea siempre consecuencia de seguir
+     peleando y nunca de haber entrado. */
+  ok("con la vida llena entran al menos dos ratas: la pelea no es una moneda al aire", rata >= 2, rata.toFixed(1));
+  ok("y un murciélago no te mata de una sola pelea (entrar no puede ser mortal)", murci > 1.15, murci.toFixed(1));
 }
 
 console.log("\n2 · Y COMER HACE FALTA (el piso del pedido)\n");

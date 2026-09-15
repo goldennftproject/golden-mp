@@ -1693,7 +1693,7 @@ function invCellHtml(d, i, rem, zone) {
      escalera cambia sola. Lo común no se pinta: si todo brilla, no brilla nada. */
   const rar = (typeof rarezaDe === "function") ? rarezaDe(d.kind, d.key) : null;
   const rc = (rar && rar !== "comun") ? " r-" + rar : "";
-  return `<div class="slot filled k-${d.kind}${rc}${sel}${eq}" draggable="true" data-slot="${i}" data-zone="${zone}" title="${v.label}">${itemIcon(v)}${cnt}${durBar(v)}</div>`;
+  return `<div class="slot filled k-${d.kind}${rc}${sel}${eq}" draggable="true" data-slot="${i}" data-zone="${zone}" title="${v.label}${d.kind === "dish" || d.kind === "res" || d.kind === "seed" || d.kind === "fish" ? " — clic derecho (o dedo apretado) lo manda a la barra" : ""}">${itemIcon(v)}${cnt}${durBar(v)}</div>`;
 }
 function bindTrash() {
   const tr = $("inv-trash"); if (!tr || tr._bound) return; tr._bound = true;
@@ -1751,7 +1751,7 @@ function refreshInvZona() {
       return;
     }
     const e = p.e, v = vistaDeCarga(e);
-    html += '<div class="slot filled" draggable="true" data-czona="' + e.kind + "|" + e.k + '" title="' + ((v && v.label) || e.k).replace(/"/g, "") + ' — arrastralo a la barra para usarlo con su número">' +
+    html += '<div class="slot filled" draggable="true" data-czona="' + e.kind + "|" + e.k + '" title="' + ((v && v.label) || e.k).replace(/"/g, "") + ' — arrastralo a la barra, o clic derecho (dedo apretado) para mandarlo solo">' +
       (v ? itemIcon(v) : '<span class="em">📦</span>') + '<span class="cnt">' + fmt(e.n) + '</span></div>';
   });
   /* lo de las bolsas anidadas, detrás y en su orden */
@@ -1780,6 +1780,9 @@ function refreshInvZona() {
     });
     c.addEventListener("dragend", () => { dndActive = false; });
   });
+  cont.querySelectorAll("[data-czona]").forEach(c => bindALaBarra(c, () => {
+    const [kind, key] = c.dataset.czona.split("|"); return { kind, key };
+  }));
   cont.querySelectorAll("[data-czona]").forEach(c => c.addEventListener("click", () => {
     const [kind, key] = c.dataset.czona.split("|");
     if (kind === "dish") { eatDish(key); refreshInv(); return; }
@@ -1808,7 +1811,10 @@ function refreshInv() {
   const ss = $("inv-selseed"); if (ss && CROP_DEF[G.selSeed]) ss.innerHTML = `Plantando: <img class="ric" src="${GF.spr("seed_" + G.selSeed)}" onerror="this.outerHTML='${CROP_DEF[G.selSeed].emoji}'"> ` + CROP_DEF[G.selSeed].label + " · clic una semilla para cambiar";
   renderInvExpand();
   bindZoneDnD($("inv-slots"), "inv");
-  $("inv-slots").querySelectorAll("[data-slot]").forEach(c => c.addEventListener("click", () => invCellClick(+c.dataset.slot)));
+  $("inv-slots").querySelectorAll("[data-slot]").forEach(c => {
+    c.addEventListener("click", () => invCellClick(+c.dataset.slot));
+    bindALaBarra(c, () => G.slots[+c.dataset.slot]);   // clic derecho o dedo apretado → a la barra
+  });
   refreshHotbar();
 }
 /* ============ EL COBERTIZO (18/8) =================================================
@@ -2019,6 +2025,45 @@ function hotSelect(i) {
   const v = d ? itemView(d) : null;
   toast(v ? "" + v.label : "Hueco " + (i === 9 ? 0 : i + 1) + " vacío");
   refreshHotbar();
+}
+
+/* ═══ « AÚN NO SE PUEDE PONER LA COMIDA EN LA BARRA »   (15/9, dirección) ═══════════════════
+   Sí se podía… arrastrando. Y ahí estaba el problema: arrastrar es el ÚNICO gesto que había, y
+   es justo el que no existe en una pantalla táctil (el drag & drop de HTML5 no dispara con el
+   dedo) ni se le ocurre a nadie mirando la bolsa. Peor todavía: en la granja, el clic en un
+   plato lo COME, así que el que lo intentaba veía desaparecer la comida y concluía, con razón,
+   que no se podía.
+   Ahora hay un segundo camino que no pide arrastrar: clic derecho —o dedo apretado— sobre
+   cualquier cosa de la bolsa o del contenedor y va al primer hueco libre de la barra. Es el
+   mismo gesto que ya SACABA de la barra, así que poner y quitar son el mismo dedo. */
+function aLaBarra(kind, key) {
+  if (!kind || !key) return false;
+  if (!Array.isArray(G.hotbar)) G.hotbar = [];
+  while (G.hotbar.length < 10) G.hotbar.push(null);
+  const ya = G.hotbar.findIndex(h => h && h.kind === kind && h.key === key);
+  if (ya >= 0) { toast("Ya está en la barra — apretá " + (ya === 9 ? 0 : ya + 1)); return false; }
+  let i = G.hotbar.indexOf(null);
+  if (i < 0) i = Math.max(0, Math.min(9, G.hotSel || 0));   // sin huecos: reemplaza el seleccionado
+  G.hotbar[i] = { kind: kind, key: key };
+  const v = (typeof itemView === "function") ? itemView({ kind, key }) : null;
+  toast(((v && v.label) || "En la barra") + " — apretá " + (i === 9 ? 0 : i + 1));
+  refreshHotbar(true);
+  if (typeof saveFarm === "function") saveFarm();
+  return true;
+}
+/* el gesto, en los dos idiomas: clic derecho en el ratón, dedo apretado en el táctil */
+function bindALaBarra(cell, dame) {
+  if (!cell) return;
+  cell.addEventListener("contextmenu", (e) => { e.preventDefault(); const d = dame(); if (d) aLaBarra(d.kind, d.key); });
+  let t = null, movido = false;
+  const suelta = () => { if (t) { clearTimeout(t); t = null; } };
+  cell.addEventListener("touchstart", () => {
+    movido = false;
+    t = setTimeout(() => { t = null; if (!movido) { const d = dame(); if (d) aLaBarra(d.kind, d.key); } }, 500);
+  }, { passive: true });
+  cell.addEventListener("touchmove", () => { movido = true; suelta(); }, { passive: true });
+  cell.addEventListener("touchend", suelta);
+  cell.addEventListener("touchcancel", suelta);
 }
 
 /* ---- drag & drop de casillas (bolsa ↔ hotbar) ---- */
