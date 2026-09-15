@@ -106,15 +106,24 @@ Están desarrolladas en el GDD §15.0, con sus números medidos. Aquí solo el t
     son 245 golpes/día (4,1 min) y con A=20, 164 (2,7 min). **Ojo: la A es un número del
     documento del diseñador**, así que bajarla es cambiar el documento, no ajustarlo — hay que
     decidirlo explícitamente.
-  · **TALA: que su nivel sirva para subir la granja, como recurso en los últimos niveles.** Falta
-    definir la forma exacta (¿requisito de nivel de granja? ¿la madera de los últimos niveles
-    pide Tala N?).
-  · **ARTESANÍA: se elimina por ahora**, vuelve en la próxima actualización de contenido.
-  · **COMBATE anclado a las armas**: el nivel de Combate abre el arma (ej. 1-5 madera, 6-9
-    piedra, luego bronce y escalando). *Hallazgo:* `ARM_DEF[x].lvl` YA EXISTE con la escalera
-    puesta (madera 1 · piedra 4 · bronce 8 · oro 12 · diamante 16) pero **no lo lee nadie**: es
-    un campo muerto. O sea que es menos trabajo del que parecía — hay que enchufarlo y ajustar
-    los cortes a los que quiere dirección.
+  · **TALA: requisito para subir de nivel la granja en los últimos niveles** (15/9: « ejemplo
+    para subir a nivel 30 que pida nivel 35 de tala »). **PENDIENTE, y el ejemplo no se puede
+    aplicar tal cual:** el techo de granja es 25, no 30, y —medido con el simulador— al final de
+    la partida ENTERA el jugador llega a **Tala 24**. Tala 35 son 11.038 talas, unas tres veces
+    todo lo que se tala en la partida: sería un muro, exactamente el error de « 85 ratas para la
+    espada de piedra ». Hace falta que dirección confirme los números sobre la escala real.
+  · [x] **ARTESANÍA: escondida, no borrada** (15/9: « hazla intacta y la dejamos para la próxima
+    actualización »). Sale del panel de oficios y nada más: la XP se sigue sumando con cada forja
+    y cada reparación, el guardado la sigue llevando. `SKILLS_ESCONDIDOS` en state.js; el día que
+    reciba contenido, se saca de esa lista y vuelve con todo lo acumulado.
+  · [x] **COMBATE anclado a las armas** (15/9: « deja los que hay en el código 1/4/8 »). Hecho.
+    `ARM_DEF[x].lvl` ya tenía la escalera escrita —madera 1 · piedra 4 · bronce 8 · oro 12 ·
+    diamante 16— y **no la leía nadie**: era un campo muerto. Ahora la Herrería la exige. Ojo con
+    la diferencia respecto de la puerta que se sacó el 9/9: aquella pedía el OFICIO DEL ARMA y se
+    mordía la cola (para forjar la espada de piedra había que dar 85 ratas con una espada, y la
+    que tenías era la de madera); ésta pide el NIVEL DE COMBATE, que sube matando con cualquier
+    cosa. **Vigilar en el playtest:** la XP de combate es opcional, así que un jugador de pura
+    granja se queda con la espada de madera — ahora por decisión, no por accidente.
 - [ ] *(texto viejo, para contexto)* **Los seis oficios huérfanos** (Espada, Hacha, Mazo, Arco, Tala, Artesanía). O reciben algo
   que abrir, o se acepta que su nivel es un número de daño y se les da un techo honesto. Lo que
   no puede seguir es el 150 de reserva. *(Se probó atarles las armas y se midió que era un muro:

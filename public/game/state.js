@@ -1291,6 +1291,17 @@ const SKILL_DEFS = [["farming","","Cultivo"],["tala","","Tala"],["mining","","Mi
   ["fishing","","Pesca"],["ganaderia","","Ganadería"],["cooking","","Cocina"],["crafting","","Artesanía"],
   ["sword","","Espada"],["hacha","","Hacha (combate)"],["mazo","","Mazo"],["range","","Arco"]];
 const SKILL_NAME = {}; SKILL_DEFS.forEach(([k,,nm]) => SKILL_NAME[k] = nm);
+/* ═══ ARTESANÍA: ESCONDIDA, NO BORRADA   (15/9, dirección) ═══════════════════════════════════
+   « Artesanía la vamos a eliminar por ahora, la sacamos en la próxima actualización de
+     contenido » → y al preguntarle si guardaba la XP por debajo: « hazla intacta y la dejamos
+     para la próxima actualización ».
+   Así que se esconde del panel de oficios y NADA MÁS. La XP se sigue sumando con cada forja y
+   cada reparación, el guardado la sigue llevando y `SKILL_DEFS` la sigue conociendo — lo único
+   que cambia es que el jugador no ve una barra que no abre nada. El día que Artesanía reciba
+   contenido, se saca de esta lista y vuelve con todo lo que el jugador acumuló mientras tanto.
+   Borrarla habría sido tirar la práctica de todos: es exactamente lo que la ley 1 no quiere. */
+const SKILLS_ESCONDIDOS = ["crafting"];
+function oficioVisible(k) { return SKILLS_ESCONDIDOS.indexOf(k) < 0; }
 /* ============ LA CURVA DE HABILIDAD (18/8, dirección) ==============================
    "Las semillas se bloquean con la skill de Cultivo, no con el nivel de granja."
    Para que eso sea jugable la curva tenía que cambiar. Con 100/2,7 la skill no servía de puerta:
@@ -5751,7 +5762,28 @@ function craftWeapon(id) {
      es una adivinanza sobre un ritmo que no sé medir, y poner muros a ojo es exactamente el
      error que esta auditoría vino a cazar. Va al informe como decisión de diseño: o los cuatro
      oficios de combate reciben algo que abrir, o se acepta que su nivel es un número de daño y
-     se les da un techo honesto. Lo que NO puede seguir es el 150 de reserva. */
+     se les da un techo honesto. Lo que NO puede seguir es el 150 de reserva.
+
+     15/9 — DIRECCIÓN CONTESTÓ, Y LA PUERTA VUELVE, PERO POR OTRA LLAVE.
+     « El combate lo vamos a anclar a las armas… ejemplo nivel de combate 1-5 arma de madera y
+       piedra, 6-9 piedra, luego bronce y va escalando con los niveles » — y después, mirando el
+       código: « deja los que hay en el código 1/4/8 ».
+     La diferencia con lo del 9/9 es cuál es la llave. Aquella puerta pedía el OFICIO DEL ARMA
+     (Espada, Hacha…), que es lo que la volvía un muro: para forjar una espada de piedra había
+     que haber dado 85 ratas CON una espada, y la espada que tenías era la de madera. Ésta pide
+     el NIVEL DE COMBATE, que sube matando con cualquier cosa, así que no se muerde la cola.
+     Los cortes son los que `ARM_DEF[x].lvl` ya tenía escritos desde siempre — madera 1, piedra 4,
+     bronce 8, oro 12, diamante 16 — y que hasta hoy NO LEÍA NADIE: era un campo muerto.
+     Lo que esto le da al Combate es un trabajo: hasta hoy, del nivel 11 para arriba no entregaba
+     absolutamente nada (ver medir-combate.js). Ahora cada tramo abre una rareza de arma.
+     VIGILAR EN EL PLAYTEST: la XP de combate es OPCIONAL —la Zona no hay que pisarla—, así que
+     un jugador de pura granja se queda con la espada de madera. Eso ahora es una decisión suya y
+     no un accidente, pero si en la semana alguien se queda trabado sin entender por qué, la
+     puerta es el primer sospechoso. */
+  if (typeof combatInfo === "function" && w.lvl && combatInfo().lvl < w.lvl) {
+    toast(w.label + " pide Combate " + w.lvl + " — tenés " + combatInfo().lvl + " (subís matando en la Zona Negra)");
+    return;
+  }
   if (armCdLeft(id) > 0) { toast("La forja se enfría — " + fmtSecs(Math.ceil(armCdLeft(id) / 1000))); return; }
   if (!canAfford(w.cost)) { toast("Te faltan materiales"); return; }
   if (G.plata < w.plata) { toast("Te falta plata"); return; }

@@ -2031,7 +2031,9 @@ function trashStack(d) {
 /* ---- skills ---- */
 function refreshSkills() {
   $("sk-avg").innerHTML = "Nivel medio: <b>" + avgSkillLevel().toFixed(1) + "</b>";
-  $("sk-grid").innerHTML = SKILL_DEFS.map(([k, ic, nm]) => {
+  /* 15/9 — Artesanía se esconde acá y en ningún otro lado (ver SKILLS_ESCONDIDOS en state.js):
+     el oficio sigue existiendo y sumando XP, solo deja de ocupar una fila que no abre nada. */
+  $("sk-grid").innerHTML = SKILL_DEFS.filter(([k]) => typeof oficioVisible !== "function" || oficioVisible(k)).map(([k, ic, nm]) => {
     let inf;
     if (k === "cooking") { const l = cookLevel(), xp = G.skills.cooking || 0, nx = COOK_LVLS[l + 1]; inf = { lvl: l, into: xp - COOK_LVLS[l], need: nx != null ? nx - COOK_LVLS[l] : (xp - COOK_LVLS[l] || 1) }; }
     else inf = skillInfo(G.skills[k], k);   // 18/8: cada oficio, su curva

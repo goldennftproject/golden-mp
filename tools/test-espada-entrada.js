@@ -36,9 +36,21 @@ console.log("\nLA ESPADA DE ENTRADA NO PAGA PEAJE");
   const otra = X.ARM_ORDER.find(id => id !== X.ARMA_ENTRADA);
   ctx.craftWeapon(otra);
   ok("pero la siguiente sigue pidiendo el desbloqueo", !G.weapons[otra], X.ARM_DEF[otra].label);
-  G.armasUnlocked = true; G.armCd = {};
+  /* 15/9 — Y AHORA TAMBIÉN PIDE NIVEL DE COMBATE (dirección: « el combate lo vamos a anclar a
+     las armas… deja los que hay en el código 1/4/8 »). Son dos puertas distintas y conviene que
+     este archivo las distinga: la pestaña se PAGA una vez, el nivel de Combate se SUBE matando.
+     Con la pestaña pagada pero sin nivel, la segunda espada sigue sin forjarse. */
+  G.armasUnlocked = true; G.armCd = {}; G.combatXp = 0;
   ctx.craftWeapon(otra);
-  ok("y con la pestaña pagada, se forja", !!G.weapons[otra]);
+  ok("con la pestaña pagada pero sin Combate, todavía no se forja", !G.weapons[otra],
+    X.ARM_DEF[otra].label + " pide Combate " + X.ARM_DEF[otra].lvl);
+  /* la XP de combate que hace falta para el nivel que pide esa arma */
+  G.combatXp = (function () { let t = 0; for (let i = 1; i < X.ARM_DEF[otra].lvl; i++) t += ctx.skillNeed(i); return t; })();
+  G.armCd = {};
+  ctx.craftWeapon(otra);
+  ok("y con la pestaña pagada Y el Combate en " + X.ARM_DEF[otra].lvl + ", se forja", !!G.weapons[otra]);
+  ok("la de entrada no pide Combate: se forja desde el minuto uno", X.ARM_DEF[X.ARMA_ENTRADA].lvl <= 1,
+    "pide " + X.ARM_DEF[X.ARMA_ENTRADA].lvl);
 }
 
 console.log("\nLA HERRERÍA LA ENSEÑA AUNQUE ESTÉ CERRADA");
