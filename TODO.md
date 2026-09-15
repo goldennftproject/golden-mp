@@ -107,7 +107,7 @@ Están desarrolladas en el GDD §15.0, con sus números medidos. Aquí solo el t
   (+5), y NO se escribieron los cuatro números: se pregunta qué niveles quedaron callados, así que
   si el techo se vuelve a mover se recalculan solos. Lo custodia `tools/test-nivel-callado.js`,
   que además lo comprueba con techo 20, 30 y 50.
-- [ ] **Los seis oficios huérfanos — CONTESTADO POR EL DISEÑADOR (15/9), falta implementar.**
+- [x] ~~**Los seis oficios huérfanos**~~ **CERRADO el 15/9.** Las cuatro respuestas del diseñador, implementadas.
   Cuatro respuestas, cada una con su trabajo:
   · **ARMAS: « que al día 7 estén en 30 ».** Hoy el día 7 cae en 20. **Re-medido el 15/9, y las dos
     cuentas anteriores estaban mal:**
@@ -122,9 +122,11 @@ Están desarrolladas en el GDD §15.0, con sus números medidos. Aquí solo el t
     La palanca sigue siendo la **A** del documento (hoy 50), y ahora se puede elegir por lo que se
     espera que el jugador pelee:
       3 min/día → A ≈ 11 · **5 min/día → A ≈ 18** · 8 min/día → A ≈ 29 · 14 min/día → A ≈ 51 (hoy)
-    Con A=20 el 30 cuesta 1.145 golpes (unos 5,5 min/día, un tercio de la sesión). **La A es un
-    número del documento del diseñador**, así que bajarla es cambiarlo, no ajustarlo: queda a la
-    espera de esa decisión.
+    **[x] DECIDIDO el 15/9: A = 20** (y 10 en el Arco, conservando la proporción 2:1 del
+    documento). Con eso Espada 30 cuesta 1.145 golpes y cae en el día 7 con unos 5,5 min de bosque
+    diarios, un tercio de la sesión. La forma de la curva no se tocó, y el test sigue custodiando
+    los ejemplos del documento alimentándole la A del documento. **Con esto la lista del diseñador
+    queda cerrada.**
   · [x] **TALA: requisito para subir de nivel la granja en los últimos niveles** (15/9: « ejemplo
     para subir a nivel 30 que pida nivel 35 de tala… es un número de ejemplo, no tiene que ser así
     estrictamente »). Hecho. Del nivel **18** en adelante —que es `nivelEscalado(30)`, o sea el
@@ -147,29 +149,12 @@ Están desarrolladas en el GDD §15.0, con sus números medidos. Aquí solo el t
     que tenías era la de madera); ésta pide el NIVEL DE COMBATE, que sube matando con cualquier
     cosa. **Vigilar en el playtest:** la XP de combate es opcional, así que un jugador de pura
     granja se queda con la espada de madera — ahora por decisión, no por accidente.
-- [ ] *(texto viejo, para contexto)* **Los seis oficios huérfanos** (Espada, Hacha, Mazo, Arco, Tala, Artesanía). O reciben algo
-  que abrir, o se acepta que su nivel es un número de daño y se les da un techo honesto. Lo que
-  no puede seguir es el 150 de reserva. *(Se probó atarles las armas y se midió que era un muro:
-  85 ratas para la espada de piedra. Descartado y explicado en el código.)* **11/9:** las cuatro
-  armas pasaron a subir por INTENTOS con la fórmula de Tibia del diseñador (`docs/SKILLS-TIBIA.md`,
-  `test-skills-tibia.js`): arrancan en 10, cada golpe cuenta, matar no entrena. Eso les da un
-  ritmo con sentido, pero NO les da nada que abrir — siguen sin contenido y el 150 sigue ahí.
-  **Medido el 14/9 (`tools/medir-oficios-huerfanos.js`), y el 150 es peor de lo que parecía:**
-  llegar al nivel 150 de un arma pide **311.849.631 golpes** — a un golpe por segundo sin parar
-  nunca, 3.609 días de reloj CONTINUOS, contra los 26,3 días que tarda la partida entera. El
-  escalón 149→150 solo cuesta 28 millones de golpes. No es una meta lejana: es decoración. El
-  jugador del día 7 anda por Espada 20 (798 golpes) y el que sigue semanas, por 30 (2.867).
-  Y hay una distinción que conviene no perder: las cuatro ARMAS sí hacen algo (entran en el daño
-  por la fórmula de Tibia), mientras que **Tala y Artesanía no hacen absolutamente nada** — el
-  juego no pregunta su nivel ni una sola vez en todo el código. Son dos problemas distintos con
-  la misma etiqueta.
-  Misma tarde, segundo doc (`Defensa de los mobs de Tibia`): parada + armadura + cargas de
-  bloqueo en cada bicho, daño del jugador con la fórmula de TFS, el mob pega normal(0, máx) y
-  pasa por tu parada. **Corregido el 14/9:** se midió con la armadura REAL de la primera semana
-  (0-1; las siete piezas suman 8 y caen de bichos de nivel 15+) y la Zona NO queda blanda — araña
-  y goblin matan en 3-5 golpes y te matan en 29-34. `MOB_DMG_MULT` tampoco es la perilla: subirlo
-  aplana el bestiario, porque la vida del héroe es 100 y no sube nunca. Medirlo con
-  `tools/medir-combate.js` antes de tocar nada.
+> *Historia del punto, para no perderla: el 9/9 se probó atarles las armas y se midió que era un
+> muro (85 ratas para la espada de piedra) — descartado y explicado en el código. El 11/9 pasaron
+> a subir por INTENTOS con la fórmula de Tibia del diseñador (`docs/SKILLS-TIBIA.md`,
+> `test-skills-tibia.js`): arrancan en 10, cada golpe cuenta, matar no entrena. El 15/9 el
+> diseñador contestó las cuatro preguntas y quedó hecho todo salvo la A (arriba).*
+
 - [ ] **EN STANDBY hasta la segunda parte** (dirección, 15/9): « la caña del abuelo espera a la
   segunda parte porque no hemos agregado las trampas ». Lo medido queda abajo para cuando se
   retome.
@@ -194,10 +179,15 @@ Están desarrolladas en el GDD §15.0, con sus números medidos. Aquí solo el t
 
 ## 🟠 Tuyo (Golden) — fuera de mi alcance
 
-- [ ] **Mudanza a un proyecto nuevo de Supabase** (14/9, dirección: arrancamos de cero). Ocho pasos
-  en `docs/MUDANZA-SUPABASE.md`: proyecto nuevo, login anónimo, `sql/instalar-proyecto-nuevo.sql`,
-  función `guardar`, `node tools/cambiar-supabase.js <url> <anon>` + deploy, prueba, PARTE 2, rechazo.
-  Y un backup apenas haya partidas: es lo que faltó esta semana.
+- [x] ~~**Mudanza a un proyecto nuevo de Supabase**~~ **Hecha el 14/9**: los ocho pasos de
+  `docs/MUDANZA-SUPABASE.md` están aplicados y verificados en vivo (proyecto `ulspkdaljeuleqqdokfk`,
+  login anónimo, tablas, portero en rechazo, el juego apuntando ahí).
+- [ ] **El backup de Supabase**, apenas haya partidas que valgan algo. Database → Backups, o
+  `pg_dump` con la contraseña del paso 1, y guardarlo aparte. **Es lo único que nos faltó la
+  semana del incidente**, así que es lo primero que no hay que volver a olvidar.
+- [ ] **Site URL en Supabase** para que el login por email funcione: Authentication → URL
+  Configuration → `https://golden-mp.onrender.com`. Es el único paso que le falta a la cuenta por
+  email, que ya está escrita y en vivo (ver arriba).
 - [x] ~~**Portero de guardado, PARTE 2**~~ **Hecho el 14/9** en el proyecto nuevo: PARTE 2 aplicada,
   `MODO = "rechazo"`, el botón 🧪 muerto y el cliente volviendo a la granja aceptada ante un 422.
   Queda la limpieza de la bitácora a 30 días (un `delete` mensual, o cuando moleste).

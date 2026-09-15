@@ -20,19 +20,49 @@ vm.runInContext("celebrate = window.celebrate; toast = window.toast; log = windo
 let fallos = 0;
 const ok = (n, c, d) => { if (!c) fallos++; console.log((c ? "  ok   " : "  FALLA") + "  " + n + (d != null ? "   " + d : "")); };
 
-console.log("\n1 · LOS EJEMPLOS DEL DOCUMENTO, EXACTOS\n");
-ok("Espada 10 → 11 = 50 golpes", g('triesNeed(10, "sword")') === 50);
-ok("Espada 50 → 51 ≈ 2.263", g('triesNeed(50, "sword")') === 2263, g('triesNeed(50, "sword")'));
-ok("Espada 100 → 101 ≈ 267.000 (el doc redondea; 50·1,1⁹⁰ = 265.651)", Math.abs(g('triesNeed(100, "sword")') - 267000) / 267000 < 0.01, g('triesNeed(100, "sword")'));
-ok("Arco 80 → 81 ≈ 19.700", Math.abs(g('triesNeed(80, "range")') - 19700) < 100, g('triesNeed(80, "range")'));
-ok("A = 50 en Espada, Hacha y Mazo; 25 en Arco", ["sword", "hacha", "mazo"].every(k => g('TRIES_DEF.' + k + '.A') === 50) && g("TRIES_DEF.range.A") === 25);
-ok("b = 1.1 y c = 10", g("TRIES_B") === 1.1 && g("TRIES_C") === 10);
+console.log("\n1 · LOS EJEMPLOS DEL DOCUMENTO, EXACTOS — CON LA A DEL DOCUMENTO\n");
+/* 15/9 — dirección bajó la A de 50 a 20 (el motivo, medido, está en state.js junto a TRIES_DEF:
+   con 50, llegar a Espada 30 el día 7 pedía 13,7 min de pelea PURA por día contra 16 min/día de
+   juego total). Eso cambia la ESCALA, no la FÓRMULA — y este bloque existe para custodiar la
+   fórmula, así que se le sigue preguntando por los ejemplos del documento alimentándole la A del
+   documento. Si alguien rompe la curva, esto salta igual que antes; si dirección vuelve a mover
+   la A, esto ni se entera, que es exactamente como tiene que ser. */
+const conA = (A, x) => Math.round(A * Math.pow(g("TRIES_B"), x - g("TRIES_C")));
+ok("Espada 10 → 11 = 50 golpes (con la A del doc)", conA(50, 10) === 50);
+ok("Espada 50 → 51 ≈ 2.263", conA(50, 50) === 2263, conA(50, 50));
+ok("Espada 100 → 101 ≈ 267.000 (el doc redondea; 50·1,1⁹⁰ = 265.651)", Math.abs(conA(50, 100) - 267000) / 267000 < 0.01, conA(50, 100));
+ok("Arco 80 → 81 ≈ 19.700", Math.abs(conA(25, 80) - 19700) < 100, conA(25, 80));
+ok("y la fórmula del juego es LA MISMA, solo con otra A", g('triesNeed(50, "sword")') === conA(g("TRIES_DEF.sword.A"), 50));
+ok("b = 1.1 y c = 10 — la forma de la curva no se tocó", g("TRIES_B") === 1.1 && g("TRIES_C") === 10);
+
+console.log("\n1b · LA A QUE USA EL JUEGO, Y LO QUE COMPRA   (decisión del 15/9)\n");
+{
+  const A = g("TRIES_DEF.sword.A"), ATK = g("ATTACK_MS") / 1000;
+  ok("A = 20 en Espada, Hacha y Mazo; 10 en Arco", ["sword", "hacha", "mazo"].every(k => g('TRIES_DEF.' + k + '.A') === 20) && g("TRIES_DEF.range.A") === 10);
+  ok("y se conserva la proporción melee/arco del documento (era 50/25)", A / g("TRIES_DEF.range.A") === 2);
+  /* el pedido de dirección: « que al día 7 estén en 30 ». Esto lo comprueba en minutos de bosque
+     por día, que es la unidad en la que se tomó la decisión. */
+  const min = g('triesTotal(30, "sword")') / 7 * ATK / 60;
+  ok("llegar a Espada 30 en 7 días pide unos 5,5 min de pelea por día (el simulador da 16 de juego)",
+    min > 4 && min < 7, min.toFixed(1) + " min/día");
+}
 ok("los cuatro oficios de arma son de intentos, y ningún otro",
   ["sword", "hacha", "mazo", "range"].every(k => g('esOficioTries("' + k + '")')) &&
   ["farming", "tala", "mining", "fishing", "ganaderia", "cooking", "crafting"].every(k => !g('esOficioTries("' + k + '")')));
 ok("con 0 intentos el arma está en nivel 10", g('skillInfo(0, "sword").lvl') === 10);
-ok("con 49 sigue en 10 y con 50 pasa al 11", g('skillInfo(49, "sword").lvl') === 10 && g('skillInfo(50, "sword").lvl') === 11);
-ok("el total para ESTAR en 12 es 50 + 55 (la suma de escalones, no el atajo del doc)", g('triesTotal(12, "sword")') === 105);
+/* 15/9 — estos dos estaban escritos con la A de 50 metida a mano (« 49 / 50 » y « 50 + 55 »).
+   Lo que custodian no es el número sino la REGLA: se sube al juntar el escalón entero, y el total
+   para estar en un nivel es la SUMA de los escalones y no el atajo del documento. Ahora lo
+   preguntan en función de la A que haya, así que sobreviven a la próxima vez que se mueva. */
+{
+  const primero = g('triesNeed(10, "sword")');
+  ok("con un golpe menos que el primer escalón sigue en 10, y al completarlo pasa al 11",
+    g('skillInfo(' + (primero - 1) + ', "sword").lvl') === 10 && g('skillInfo(' + primero + ', "sword").lvl') === 11,
+    "el escalón 10→11 son " + primero + " golpes");
+  const suma = g('triesNeed(10, "sword")') + g('triesNeed(11, "sword")');
+  ok("el total para ESTAR en 12 es la SUMA de los dos escalones, no el atajo del doc",
+    g('triesTotal(12, "sword")') === suma, suma + "");
+}
 ok("la barra del panel se mide en golpes", g('skillInfo(0, "sword").tries') === true && g('skillInfo(0, "farming").tries') == null);
 
 console.log("\n2 · UN GOLPE ES UN INTENTO — Y MATAR NO ENTRENA\n");
@@ -45,8 +75,14 @@ g('addXp("range", 500)');
 ok("ni el Arco", G.skills.range === 0);
 g('addXp("farming", 5)');
 ok("pero Cultivo sigue subiendo por XP", G.skills.farming === 5);
-for (let i = 0; i < 49; i++) g('addTries("sword")');
-ok("a los 50 golpes, Espada 11", g('skillInfo(G.skills.sword, "sword").lvl') === 11);
+{
+  /* 15/9 — también estaba con el 50 a mano. Lo que importa es que al completar el primer escalón
+     se sube, sea cual sea la A. */
+  const primero = g('triesNeed(10, "sword")');
+  for (let i = 1; i < primero; i++) g('addTries("sword")');
+  ok("al completar el primer escalón (" + primero + " golpes), Espada 11",
+    g('skillInfo(G.skills.sword, "sword").lvl') === 11, G.skills.sword + " intentos");
+}
 
 console.log("\n3 · EL SKILL ENTRA DIRECTO EN EL DAÑO (segundo doc: la fórmula de TFS)\n");
 G.skills.sword = 0; G.weapons = { espada_madera: { dur: 99 } }; G.gear = G.gear || {}; G.gear.arma = "espada_madera";

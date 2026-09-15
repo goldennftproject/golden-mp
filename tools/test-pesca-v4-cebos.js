@@ -78,16 +78,20 @@ console.log("\nEL PESO QUE GARANTIZA EL CAMARÓN   (derivado y medido, para que 
      lances, y fallaba una vez de cada tres con el Pez linterna: su peso se reparte mucho más que
      el de los otros, así que el mismo margen que le sobra a la merluza le queda corto a él. Un
      test que salta solo una de cada tres veces es peor que no tener test — el equipo aprende a
-     ignorarlo. Ahora el margen sale del error estándar DE ESA especie (3σ, el mismo criterio que
+     ignorarlo. Ahora el margen sale del error estándar DE ESA especie (4σ; era 3σ y el 15/9 se
+     subió: con 3σ y cuatro especies, una corrida de cada cien saltaba sola, y para un test que
+     corre en cada cambio eso sigue siendo gritar en falso. A 4σ el falso positivo es uno de cada
+     quince mil por especie, y una fórmula que de verdad no coincida con el sorteo se sale de esa
+     banda por goleada, no por un pelo. El mismo criterio que
      usa test-pesca-v4-bolsillo), así que cada una se mide con la vara que le corresponde. */
   const N = 20000;
-  console.log("\n    especie        derivado   sorteado (" + N.toLocaleString("es") + " lances)   margen 3σ");
+  console.log("\n    especie        derivado   sorteado (" + N.toLocaleString("es") + " lances)   margen 4σ");
   const malas = [];
   for (const k of ["merluza", "atun", "pez_espada", "pez_linterna"]) {
     const der = ctx.pesoFactorEsperado(k, "camaron");
     let s = 0, s2 = 0;
     for (let i = 0; i < N; i++) { const v = ctx.pesoFactor(k, ctx.pesoDelLance(k, { cebo: "camaron" })); s += v; s2 += v * v; }
-    const med = s / N, sigma = Math.sqrt(Math.max(0, s2 / N - med * med)) / Math.sqrt(N), margen = 3 * sigma;
+    const med = s / N, sigma = Math.sqrt(Math.max(0, s2 / N - med * med)) / Math.sqrt(N), margen = 4 * sigma;
     console.log("    " + PEZ[k].label.padEnd(16) + der.toFixed(3).padStart(8) + med.toFixed(3).padStart(14) + ("±" + margen.toFixed(4)).padStart(13));
     if (Math.abs(der - med) > margen) malas.push(PEZ[k].label + " (" + Math.abs(der - med).toFixed(4) + " > " + margen.toFixed(4) + ")");
   }

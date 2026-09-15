@@ -1470,7 +1470,30 @@ function skillInfo(xp, sk) { return (sk && esOficioTries(sk)) ? triesInfo(xp, sk
    Ley 1: los guardados con XP de arma se MIGRAN una vez (save.js, triesV): el nivel viejo L pasa
    a ser el 10 + (L − 1) y se le dan los intentos exactos de ese nivel, con la fracción de barra
    que llevaba. Nadie baja de nivel ni pierde daño.                                              */
-const TRIES_DEF = { sword: { A: 50 }, hacha: { A: 50 }, mazo: { A: 50 }, range: { A: 25 } };
+/* ═══ LA « A » BAJA DE 50 A 20   (15/9, dirección) ══════════════════════════════════════════
+   Esto CAMBIA un número del documento del diseñador, así que queda dicho en grande y con el
+   motivo medido — no es un ajuste, es una decisión.
+
+   Dirección pidió que al día 7 el jugador esté en Espada 30. Con A = 50 eso cuesta 2.867 golpes,
+   y como el auto-ataque sale cada 2 s (`ATTACK_MS`) son **13,7 minutos de pelea PURA por día**
+   durante la semana — contra los 16 min/día de manos en el juego que mide el simulador contando
+   TODO: cosechar, talar, minar, pescar. O sea que la A de 50 da por sentado que pelear ES el
+   juego, y en Golden Farm el bosque es una parte.
+
+   Y una salida que se probó y NO servía: subirle la vida a los bichos no mueve esta aguja. El
+   intento se cuenta POR GOLPE (addTries en cada ataque, acierte o no) y el golpe sale cada 2 s
+   pase lo que pase — más vida es matar menos bichos en el mismo rato, no dar más golpes. Lo que
+   manda es el TIEMPO peleando.
+
+   Así que elegir la A es, en el fondo, elegir cuántos minutos por día se espera que pelee:
+       3 min/día → A ≈ 11 · 5 min/día → A ≈ 18 · 8 min/día → A ≈ 29 · 14 min/día → A ≈ 51
+   Dirección eligió la recomendación: **5 minutos, o sea A = 20** — el bosque ocupando un tercio
+   de la sesión. Con eso el 30 cuesta 1.145 golpes y cae en el día 7, que era el pedido.
+
+   LO QUE NO SE TOCA: la forma de la curva es la del documento (b = 1,1, arranque en 10, un golpe
+   un intento, matar no entrena). Lo único que se movió es la escala, y la proporción melee/arco
+   del documento se conserva (era 50/25, queda 20/10). */
+const TRIES_DEF = { sword: { A: 20 }, hacha: { A: 20 }, mazo: { A: 20 }, range: { A: 10 } };
 const TRIES_B = 1.1;        // constante de vocación
 const TRIES_C = 10;         // offset: los oficios de arma arrancan en 10
 function esOficioTries(sk) { return !!TRIES_DEF[sk]; }
