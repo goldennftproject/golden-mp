@@ -160,6 +160,20 @@ console.log("\n4 · LOS PANELES NO MIENTEN (bugs encontrados abriendo el juego)\
   ok("el cartel del bono pregunta por el set SANO, no por tener las cinco piezas",
     /armorSetSano\(set\) : completo/.test(UI) && /sano \? ' — ACTIVO'/.test(UI));
   ok("y cuando está apagado lo dice en vez de callarse", /apagado: repará las piezas gastadas/.test(UI));
+
+  /* 15/9 (dirección: « esta esencia golden hay que quitarla ») — el tooltip de la moneda del HUD
+     decía « Esencia $Golden — se usa para pescar »: la llamaba Esencia, que no se llama así en
+     ningún otro lado, y le inventaba un uso que no tiene. El $Golden va a los animales del
+     establo, al kit de emergencia, a los adornos y al pase; a la pesca, nunca. */
+  const HTML = require("fs").readFileSync(path.join(RAIZ, "public/index.html"), "utf8");
+  ok("la moneda del HUD se llama $Golden y no « Esencia »", !/title="Esencia \$Golden/.test(HTML));
+  ok("y su cartel no le inventa un uso que no tiene", !/se usa para pescar/.test(HTML));
+  ok("el ícono de la moneda tampoco dice Esencia", !/cur === "esencia" \? "Esencia"/.test(UI));
+  /* y que de verdad NO se use para pescar, no solo que no lo diga */
+  const ST = require("fs").readFileSync(path.join(RAIZ, "public/game/state.js"), "utf8");
+  const canas = (g("CANA_V4_ORDER") || []).map(k => g("CANA_V4_DEF")[k] || {});
+  ok("ninguna caña se paga con $Golden", canas.every(c => !c.golden), JSON.stringify(canas.map(c => c.golden)));
+  void ST;
 }
 
 console.log("\n" + (fallos ? fallos + " fallo(s)" : "TODO EN VERDE") + "\n");

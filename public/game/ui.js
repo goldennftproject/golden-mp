@@ -1582,7 +1582,13 @@ function durBar(v) { return (v.dur != null && v.dur < 100) ? `<span class="durb"
 // 31/7: title = leyenda al pasar el cursor (los iconitos son muy chicos para reconocerlos a ojo)
 function resIc(k) { const s = resSprite(k), nm = (CROP_DEF[k] && CROP_DEF[k].label) || RES_LABEL[k] || k; return s ? `<img class="ric" title="${nm}" src="${GF.spr(s)}" onerror="this.outerHTML='${RES_EMOJI[k] || "?"}'">` : `<span title="${nm}">${RES_EMOJI[k] || "?"}</span>`; }
 function fishIc(k) { const f = FISH_DEF[k], nm = f ? f.label : "Pez"; return f && f.sprite ? `<img class="ric" title="${nm}" src="${GF.spr(f.sprite)}" onerror="this.outerHTML='${f.emoji}'">` : `<span title="${nm}">${f ? f.emoji : "🐟"}</span>`; }
-function coinIc(cur) { const nm = cur === "esencia" ? "Esencia" : "Plata"; return `<img class="ric" title="${nm}" src="${GF.spr(cur === "esencia" ? "coin_esencia" : "coin_plata")}" onerror="this.outerHTML='${cur === "esencia" ? "✨" : "🪙"}'">`; }
+/* 15/9 (dirección: « esta esencia golden hay que quitarla ») — LA MONEDA SE LLAMA $GOLDEN.
+   El sprite se llama coin_esencia y de ahí se coló el nombre « Esencia » en el tooltip de la
+   moneda, que además decía que servía PARA PESCAR — y no se usa para pescar en ningún lado: va
+   a los animales del establo, al kit de emergencia, a los adornos y al pase. Dos mentiras en
+   siete palabras, en la esquina de la pantalla que el jugador mira todo el tiempo.
+   El nombre del archivo del sprite se deja como está: renombrarlo es tocar el arte por un texto. */
+function coinIc(cur) { const nm = cur === "esencia" ? "$Golden" : "Plata"; return `<img class="ric" title="${nm}" src="${GF.spr(cur === "esencia" ? "coin_esencia" : "coin_plata")}" onerror="this.outerHTML='${cur === "esencia" ? "✨" : "🪙"}'">`; }
 function invCellHtml(d, i, rem, zone) {
   if (!d) return `<div class="slot" data-slot="${i}" data-zone="${zone}"></div>`;
   let cnt = "";
