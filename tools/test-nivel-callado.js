@@ -73,7 +73,7 @@ console.log("\n2 · EL F5 DENTRO DE LA ZONA NO DEVUELVE LA VIDA\n");
   /* LEY 1 — esto es lo que no se puede romper arreglando lo de arriba. Perder la conexión no
      puede matar a nadie ni quitarle nada: el arreglo solo saca la curación gratis. */
   ok("nadie muere ni pierde el contenedor por recargar: la tumba solo se llena si la vida llega a 0",
-    /if \(G\.hp <= 0\) \{[\s\S]{0,900}?tumbaCaer/.test(FOREST));
+    /if \(G\.hp <= 0\) \{[\s\S]{0,2200}?tumbaCaer/.test(FOREST));   // 15/9: el bloque creció con la rotura de armadura
   const SAVE = fs.readFileSync(path.join(RAIZ, "public/game/save.js"), "utf8");
   ok("y al volver, el viaje se cierra solo y el botín se vuelca (no se pierde por recargar)",
     /zonaViaje && !\(typeof enZona === "function" && enZona\(\)\)[\s\S]{0,120}?zonaSalir\(false\)/.test(SAVE));

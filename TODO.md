@@ -66,6 +66,19 @@ en `docs/LEYES.md`.
   cuenta aplanaba el bestiario entero (la rata pegando 12 y el trol 20), justamente porque la
   vida se planta temprano. La salida es dar vida (o defensa) más allá del Combate 10, y eso es
   contenido, no una perilla. **No bloquea el MVP: se mira jugando la semana.**
+- [ ] **La cuenta por email — para después del playtest** (dirección, 15/9: « esto lo pasamos
+  para luego »). Hoy la cuenta es ANÓNIMA y vive en el localStorage del navegador: si alguien
+  limpia la caché o cambia de máquina, pierde la granja. **El panel ya está escrito y en vivo**
+  (Configuración → Cuenta): enlace mágico sin contraseñas, « Guardar mi cuenta » ata el email a
+  la cuenta anónima actual —mismo `user_id`, la granja no se toca— y « Entrar con mi email » la
+  trae a cualquier dispositivo con `shouldCreateUser: false`, así que un email sin cuenta no
+  fabrica un Granjero nuevo. *Verificado el 15/9: el proveedor Email ya está ACTIVO en el
+  proyecto nuevo y el portero no tiene nada atado a lo anónimo.* Falta UNA cosa, y es del
+  dashboard: **Authentication → URL Configuration → Site URL = `https://golden-mp.onrender.com`**
+  (la mudanza del 14/9 no cubrió ese campo; si quedó en localhost el enlace del correo abre una
+  página que no existe y parece que el login está roto). Entrar con Google es trabajo aparte
+  (proyecto en Google Cloud, consentimiento, client ID) y no cambia lo que se busca, que es que
+  la cuenta persista: el enlace mágico a una dirección de Gmail ya lo resuelve.
 - [ ] **5 · Que alguien lo juegue una semana** sin saber cómo está hecho. Ni Golden, ni Suren,
   ni yo.
 
@@ -83,7 +96,26 @@ Están desarrolladas en el GDD §15.0, con sus números medidos. Aquí solo el t
   (+5), y NO se escribieron los cuatro números: se pregunta qué niveles quedaron callados, así que
   si el techo se vuelve a mover se recalculan solos. Lo custodia `tools/test-nivel-callado.js`,
   que además lo comprueba con techo 20, 30 y 50.
-- [ ] **Los seis oficios huérfanos** (Espada, Hacha, Mazo, Arco, Tala, Artesanía). O reciben algo
+- [ ] **Los seis oficios huérfanos — CONTESTADO POR EL DISEÑADOR (15/9), falta implementar.**
+  Cuatro respuestas, cada una con su trabajo:
+  · **ARMAS: « que al día 7 estén en 30 ».** Hoy el día 7 cae en 20. *Medido:* estar en Espada 30
+    pide 2.867 golpes, o sea **410 golpes por día** durante la semana = ~6,8 min de pelea PURA
+    diaria, contra los 16 min/día de manos en el juego que da el simulador con TODO incluido. O
+    sea: es alcanzable solo para quien dedique casi la mitad de su tiempo de juego a pelear. Si
+    se quiere que llegue el jugador normal, la palanca es la A del documento (hoy 50): con A=30
+    son 245 golpes/día (4,1 min) y con A=20, 164 (2,7 min). **Ojo: la A es un número del
+    documento del diseñador**, así que bajarla es cambiar el documento, no ajustarlo — hay que
+    decidirlo explícitamente.
+  · **TALA: que su nivel sirva para subir la granja, como recurso en los últimos niveles.** Falta
+    definir la forma exacta (¿requisito de nivel de granja? ¿la madera de los últimos niveles
+    pide Tala N?).
+  · **ARTESANÍA: se elimina por ahora**, vuelve en la próxima actualización de contenido.
+  · **COMBATE anclado a las armas**: el nivel de Combate abre el arma (ej. 1-5 madera, 6-9
+    piedra, luego bronce y escalando). *Hallazgo:* `ARM_DEF[x].lvl` YA EXISTE con la escalera
+    puesta (madera 1 · piedra 4 · bronce 8 · oro 12 · diamante 16) pero **no lo lee nadie**: es
+    un campo muerto. O sea que es menos trabajo del que parecía — hay que enchufarlo y ajustar
+    los cortes a los que quiere dirección.
+- [ ] *(texto viejo, para contexto)* **Los seis oficios huérfanos** (Espada, Hacha, Mazo, Arco, Tala, Artesanía). O reciben algo
   que abrir, o se acepta que su nivel es un número de daño y se les da un techo honesto. Lo que
   no puede seguir es el 150 de reserva. *(Se probó atarles las armas y se midió que era un muro:
   85 ratas para la espada de piedra. Descartado y explicado en el código.)* **11/9:** las cuatro
@@ -106,6 +138,9 @@ Están desarrolladas en el GDD §15.0, con sus números medidos. Aquí solo el t
   y goblin matan en 3-5 golpes y te matan en 29-34. `MOB_DMG_MULT` tampoco es la perilla: subirlo
   aplana el bestiario, porque la vida del héroe es 100 y no sube nunca. Medirlo con
   `tools/medir-combate.js` antes de tocar nada.
+- [ ] **EN STANDBY hasta la segunda parte** (dirección, 15/9): « la caña del abuelo espera a la
+  segunda parte porque no hemos agregado las trampas ». Lo medido queda abajo para cuando se
+  retome.
 - [ ] **La escalera de cañas, aplanada arriba — pero NO se arregla con plata.** Al subir la de
   Hierro a 1.500, la de Oro (2.000) queda a ×1,33. Y la Caña del Abuelo tiene la tabla de bandas
   **copiada literal** de la de Oro, cinco cifras idénticas hasta el tercer decimal: el peldaño que
@@ -161,9 +196,14 @@ Están desarrolladas en el GDD §15.0, con sus números medidos. Aquí solo el t
   para los cuatro. *Misma tarde, por Discord:* cada animal come `racion` unidades y el conejo pasó
   a 20 zanahorias («ya luego vemos si 20 es poco o mucho»), porque comiendo una sola su día
   costaba 85 veces menos que el de la alpaca por el mismo rinde; ahora son 4,3 veces.
-  Y **la armadura dejó de ser eterna**: cada golpe recibido gasta una pieza, a cero deja de dar
-  defensa pero no se rompe (ley 1), reparar cuesta la mitad del material proporcional a lo que
-  falte, y crear cuesta ×1,5 para que esa mitad sea la mitad de algo. Era el pedido de dirección
+  Y **la armadura dejó de ser eterna**: reparar cuesta la mitad del material proporcional a lo
+  que falte, y crear cuesta ×1,5 para que esa mitad sea la mitad de algo. **15/9, dirección
+  afinó la mecánica:** el golpe gasta **las cinco piezas a la vez** (« -1 por golpe simultánea »,
+  o sea que el set aguanta 100 golpes y no 500, que es lo que el 14/9 había hecho mal), y
+  **morir se lleva el 5 % de la durabilidad total con riesgo de romper la pieza**: lo que está en
+  cero tiene un 10 % de romperse y DESAPARECER en cada muerte. No choca con la ley 1 porque
+  morir en la Zona ya podía costarte equipo desde el 8/9 (5 % por pieza en la tumba); y la
+  rotura solo alcanza a lo que ya está gastado, nunca a una pieza sana. Era el pedido de dirección
   —« sino los animales tienen 1 solo uso y ya no tiene sentido »— y con esto el material del
   establo hace falta para siempre. Lo custodia `tools/test-armadura-y-raciones.js`. El precio único venía del modelo de raciones del 9/9, que la ley dejó sin premisa: con
   él, el conejo rendía +734 al día y el toro con maíz **perdía 458**. Ahora los cuatro caen

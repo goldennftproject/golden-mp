@@ -4833,17 +4833,51 @@ function repararArmor(set, pieza) {
   if (typeof saveFarm === "function") saveFarm(true);
   return 1;
 }
-/* un golpe recibido gasta una pieza del set puesto. Se elige la que MÁS durabilidad tiene, para
-   que el set se gaste parejo en vez de dejar cuatro enteras y una en cero. Devuelve la pieza que
-   acaba de quedar inerte, si alguna, para que la escena lo pueda avisar. */
+/* UN GOLPE GASTA TODAS LAS PIEZAS A LA VEZ   (15/9, dirección: « durabilidad 100, -1 por golpe
+   simultánea »). El 14/9 esto gastaba UNA pieza por golpe —la más entera, para que el set bajara
+   parejo— y dirección lo corrigió: el golpe te lo llevás puesto con la armadura entera, así que
+   se gasta entera. El efecto práctico es que el set dura cinco veces menos: 100 golpes en vez de
+   500, que es lo que la mecánica quería decir desde el principio.
+   Devuelve la lista de piezas que acaban de quedar inertes, para que la escena lo avise. */
 function armorGastar(n) {
-  const set = G.armorEq; if (!set || !ARMOR_SETS[set]) return null;
-  const puestas = ARMOR_SLOTS.filter(pz => armorTiene(set, pz) && armorDur(set, pz) > 0);
-  if (!puestas.length) return null;
-  const pz = puestas.sort((a, b) => armorDur(set, b) - armorDur(set, a))[0];
+  const set = G.armorEq; if (!set || !ARMOR_SETS[set]) return [];
   G.armorDur = G.armorDur || {};
-  G.armorDur[armorKey(set, pz)] = Math.max(0, armorDur(set, pz) - (n || 1));
-  return G.armorDur[armorKey(set, pz)] <= 0 ? pz : null;
+  const secas = [];
+  ARMOR_SLOTS.forEach(pz => {
+    if (!armorTiene(set, pz) || armorDur(set, pz) <= 0) return;
+    G.armorDur[armorKey(set, pz)] = Math.max(0, armorDur(set, pz) - (n || 1));
+    if (G.armorDur[armorKey(set, pz)] <= 0) secas.push(pz);
+  });
+  return secas;
+}
+/* MORIR CUESTA DURABILIDAD, Y PUEDE ROMPER LA PIEZA   (15/9, dirección: « si muere reduce un 5 %
+   de su durabilidad total con riesgo a romperse y desaparecer »).
+   Dos castigos distintos, como la muerte en la Zona: el 5 % es seguro y lo controlás (no te
+   mueras); la rotura es azar. Una pieza que se rompe DESAPARECE — es la misma regla que ya rige
+   el equipo en la tumba desde el 8/9, donde cada pieza puesta tira su 5 % de caerse, así que no
+   es una excepción nueva: morir en la Zona Negra siempre pudo costarte equipo.
+   La rotura solo puede tocar a una pieza que ya está EN CERO. Romper una pieza sana por morir
+   sería quitarle al jugador algo que todavía funcionaba sin avisarle nunca. */
+var ARMOR_MUERTE_PCT = 0.05;   // lo que se lleva cada muerte, sobre la durabilidad TOTAL
+var ARMOR_ROTURA_PCT = 10;     // % de que una pieza YA gastada se rompa y desaparezca al morir
+function armorAlMorir() {
+  const set = G.armorEq; if (!set || !ARMOR_SETS[set]) return { gastadas: [], rotas: [] };
+  G.armorDur = G.armorDur || {};
+  const gastadas = [], rotas = [];
+  ARMOR_SLOTS.forEach(pz => {
+    if (!armorTiene(set, pz)) return;
+    const antes = armorDur(set, pz);
+    if (antes > 0) {
+      G.armorDur[armorKey(set, pz)] = Math.max(0, antes - Math.round(ARMOR_DUR_MAX * ARMOR_MUERTE_PCT));
+      gastadas.push(pz);
+    } else if (Math.random() * 100 < ARMOR_ROTURA_PCT) {
+      /* estaba en cero y la suerte no acompañó: se rompe y se va */
+      delete G.armor[armorKey(set, pz)];
+      delete G.armorDur[armorKey(set, pz)];
+      rotas.push(pz);
+    }
+  });
+  return { gastadas: gastadas, rotas: rotas };
 }
 function armorTiene(set, pieza) { return !!(G.armor && G.armor[armorKey(set, pieza)]); }
 function armorPuestas(set) { return ARMOR_SLOTS.filter(pz => armorTiene(set, pz)).length; }

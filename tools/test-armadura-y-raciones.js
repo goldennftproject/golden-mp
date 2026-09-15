@@ -61,11 +61,37 @@ console.log("\n2 · LA ARMADURA SE GASTA Y SE REPARA\n");
   const defLlena = g("armorDefensa()");
   ok("y el set completo da su defensa y su bono", defLlena > 0 && !!g("armorBono()"), defLlena + " de defensa");
 
-  /* gastar: cada golpe consume uno, y se gasta la pieza MÁS entera para que el set baje parejo */
-  for (let i = 0; i < 5; i++) g("armorGastar(1)");
-  ok("cinco golpes gastan una de cada pieza, no cinco de la misma",
+  /* 15/9 (dirección, corrigiendo lo de ayer): « -1 por golpe SIMULTÁNEA ». El 14/9 un golpe
+     gastaba UNA pieza (la más entera), así que el set aguantaba 500 golpes en vez de 100. Ahora
+     el golpe se lo lleva la armadura entera, que es lo que la mecánica quería decir. */
+  g("armorGastar(1)");
+  ok("UN golpe gasta las cinco piezas a la vez, no una",
     SLOTS.every(pz => g('armorDur("piel", "' + pz + '")') === MAX - 1),
     SLOTS.map(pz => g('armorDur("piel", "' + pz + '")')).join("/"));
+  ok("o sea que el set entero aguanta " + MAX + " golpes, no " + (MAX * SLOTS.length), true);
+
+  /* 15/9 — MORIR: « reduce un 5 % de su durabilidad total con riesgo a romperse y desaparecer ».
+     Dos castigos distintos: el 5 % es seguro, la rotura es azar y solo alcanza a lo que ya está
+     en cero — romper una pieza sana sin aviso sería quitarle algo que todavía funcionaba. */
+  {
+    const antes = g('armorDur("piel", "pecho")');
+    const r = g("armorAlMorir()");
+    ok("morir se lleva el 5 % de la durabilidad total de cada pieza",
+      g('armorDur("piel", "pecho")') === antes - Math.round(MAX * g("ARMOR_MUERTE_PCT")),
+      antes + " → " + g('armorDur("piel", "pecho")'));
+    ok("y con las piezas sanas no rompe ninguna", r.rotas.length === 0);
+    /* con todo en cero, la rotura sí puede pasar — y lo que se rompe DESAPARECE */
+    SLOTS.forEach(pz => { G.armorDur[g('armorKey("piel", "' + pz + '")')] = 0; });
+    let rotas = 0, vueltas = 0;
+    while (Object.keys(G.armor).length && vueltas++ < 500) rotas += g("armorAlMorir()").rotas.length;
+    ok("con la armadura en cero, morir termina rompiéndola y la pieza se va", rotas === SLOTS.length,
+      rotas + " piezas rotas en " + vueltas + " muertes");
+    ok("y la probabilidad está escrita una sola vez", g("ARMOR_ROTURA_PCT") > 0 && g("ARMOR_ROTURA_PCT") <= 100, g("ARMOR_ROTURA_PCT") + " %");
+  }
+
+  /* se rehace el set para lo que sigue */
+  G.armor = {}; G.armorDur = {}; G.res = { pelaje: 999, hierro: 999 }; G.plata = 99999;
+  SLOTS.forEach(pz => g('craftArmor("piel", "' + pz + '")'));
 
   /* una pieza en cero: sin defensa, sin bono de set, pero SIGUE SIENDO TUYA (ley 1) */
   G.armorDur[g('armorKey("piel", "pecho")')] = 0;

@@ -1154,9 +1154,10 @@ class ForestScene extends Phaser.Scene {
        que te pegan: la armadura se gasta usando la armadura, y el que no pelea no repara nunca.
        Se gasta siempre que el bicho te haya llegado a pegar, aunque la armadura te lo haya
        absorbido casi entero — justamente porque absorberlo es su trabajo. */
-    const gastada = (typeof armorGastar === "function") ? armorGastar(1) : null;
-    if (gastada && typeof toast === "function")
-      toast((typeof ARMOR_SLOT_LABEL !== "undefined" ? ARMOR_SLOT_LABEL[gastada] : "Una pieza") + " se gastó — repárala en la Curtiduría");
+    const secas = (typeof armorGastar === "function") ? (armorGastar(1) || []) : [];
+    if (secas.length && typeof toast === "function")
+      toast(secas.map(pz => (typeof ARMOR_SLOT_LABEL !== "undefined" ? ARMOR_SLOT_LABEL[pz] : "Una pieza")).join(" y ") +
+        " se gastó — reparala en la Curtiduría antes de que se rompa");
     G.hp = Math.max(0, G.hp - dmg);
     this.hurtFx = 0.18;
     if (dmg > 0) this.floatHero("-" + dmg, "#ff5544");   // el golpe del mob se ve (pedido del diseñador)
@@ -1183,6 +1184,19 @@ class ForestScene extends Phaser.Scene {
          ORDEN CRÍTICO: la tumba se queda con el morral ANTES de zonaSalir, porque zonaSalir lo
          descarga a la bolsa (8/9) — al revés, morirse sería la forma más cómoda de cobrar el
          botín, que es exactamente lo contrario de lo que esta mecánica quiere. */
+      /* 15/9 (dirección) — MORIR CASTIGA LA ARMADURA. « si muere reduce un 5 % de su durabilidad
+         total con riesgo a romperse y desaparecer ». Va ANTES de la tumba: lo que se rompe ya no
+         existe, así que no puede caer al suelo ni recuperarse. */
+      if (typeof armorAlMorir === "function") {
+        const arm = armorAlMorir();
+        if (arm.rotas.length) {
+          log("💥 Se te ROMPIÓ " + arm.rotas.map(pz => ARMOR_SLOT_LABEL[pz]).join(" y ") +
+              ": estaba gastada del todo y la muerte la terminó. Esa pieza ya no existe — hay que volver a craftearla.", "bad");
+          toast("Se rompió " + arm.rotas.map(pz => ARMOR_SLOT_LABEL[pz]).join(" y "));
+        } else if (arm.gastadas.length) {
+          log("Tu armadura perdió durabilidad al caer. Pasá por la Curtiduría: una pieza en cero se puede romper en la próxima muerte.", "bad");
+        }
+      }
       const teniaTumba = (typeof tumbaViva === "function") && !!tumbaViva();
       const c = (typeof tumbaCaer === "function")
         ? tumbaCaer(this.zonaKey, this.hero ? this.hero.x : 0, this.hero ? this.hero.y : 0)
