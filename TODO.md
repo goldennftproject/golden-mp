@@ -47,6 +47,17 @@ en `docs/LEYES.md`.
   la bandera apagada, que es lo que custodian. Sin Chromium todavía.*
 - [x] ~~**4 · Decidir el mercado P2P**~~ **Abierto** (dirección, 14/9), y el portero subió antes:
   modo rechazo en el proyecto nuevo desde el 14/9.
+- [x] ~~El suelo del pantano~~ **queda como está** (dirección, 15/9: « déjalo como está, al menos
+  por ahora »). Pantano ×0,63 · cañón de piedra ×1,00 · grietas ×0,83 · guarida ×0,71.
+- [x] ~~El $Golden como sistema~~ **se queda** (dirección, 15/9: « me parece que no era eso a lo
+  que se refería »). Lo que había que quitar era el nombre « Esencia » y el « se usa para pescar »,
+  que ya está hecho. La moneda sigue: animales del establo, kit de emergencia, adornos y pase.
+- [x] ~~La rotura de la armadura~~ **confirmada** (dirección, 15/9: « es cuando se gasta por
+  completo la durabilidad… eso es lo correcto »). Solo se rompe lo que ya está en cero, con un
+  10 % por muerte. Una pieza abandonada en cero aguanta unas diez muertes antes de irse.
+- [ ] **La larva a 22 segundos** (15/9). Con el refuerzo de los bichos pasó de 12 a 22 s de pelea:
+  es la más larga de las tres de entrada. Dirección la mira jugando — « ya veremos qué dice el
+  diseñador si siguen muriendo muy pronto los bichos o no ». Se baja con `MOB_REFUERZO_LVL1`.
 - [ ] **La rejilla de movimiento de Tibia, sin adoptar (14/9).** Del tercer documento
   (« Velocidad de movimiento ») se tomó el TERRENO y no la rejilla, y el motivo está medido: con
   el preset GOLDEN, del nivel 1 al 25 el paso va de 300 ms a 250 ms — **un solo breakpoint en toda
@@ -98,14 +109,22 @@ Están desarrolladas en el GDD §15.0, con sus números medidos. Aquí solo el t
   que además lo comprueba con techo 20, 30 y 50.
 - [ ] **Los seis oficios huérfanos — CONTESTADO POR EL DISEÑADOR (15/9), falta implementar.**
   Cuatro respuestas, cada una con su trabajo:
-  · **ARMAS: « que al día 7 estén en 30 ».** Hoy el día 7 cae en 20. *Medido:* estar en Espada 30
-    pide 2.867 golpes, o sea **410 golpes por día** durante la semana = ~6,8 min de pelea PURA
-    diaria, contra los 16 min/día de manos en el juego que da el simulador con TODO incluido. O
-    sea: es alcanzable solo para quien dedique casi la mitad de su tiempo de juego a pelear. Si
-    se quiere que llegue el jugador normal, la palanca es la A del documento (hoy 50): con A=30
-    son 245 golpes/día (4,1 min) y con A=20, 164 (2,7 min). **Ojo: la A es un número del
-    documento del diseñador**, así que bajarla es cambiar el documento, no ajustarlo — hay que
-    decidirlo explícitamente.
+  · **ARMAS: « que al día 7 estén en 30 ».** Hoy el día 7 cae en 20. **Re-medido el 15/9, y las dos
+    cuentas anteriores estaban mal:**
+      · el auto-ataque es cada **2 s** (`ATTACK_MS`), no cada segundo. Estar en Espada 30 pide
+        2.867 golpes = 410 por día = **13,7 minutos de pelea PURA diaria**, contra los 16 min/día
+        de manos en el juego que da el simulador con TODO incluido (cosechar, talar, minar,
+        pescar). O sea que la curva de hoy da por sentado que pelear ES el juego.
+      · y **subirle la vida a los bichos NO mueve esta aguja**, contra lo que anoté el 15/9 por la
+        mañana: el intento se cuenta POR GOLPE (`addTries` en cada ataque, acierte o no) y el
+        golpe sale cada 2 s pase lo que pase. Más vida = matás menos bichos en el mismo rato, no
+        das más golpes. Lo que manda es el TIEMPO peleando, no cuántos bichos caen.
+    La palanca sigue siendo la **A** del documento (hoy 50), y ahora se puede elegir por lo que se
+    espera que el jugador pelee:
+      3 min/día → A ≈ 11 · **5 min/día → A ≈ 18** · 8 min/día → A ≈ 29 · 14 min/día → A ≈ 51 (hoy)
+    Con A=20 el 30 cuesta 1.145 golpes (unos 5,5 min/día, un tercio de la sesión). **La A es un
+    número del documento del diseñador**, así que bajarla es cambiarlo, no ajustarlo: queda a la
+    espera de esa decisión.
   · [x] **TALA: requisito para subir de nivel la granja en los últimos niveles** (15/9: « ejemplo
     para subir a nivel 30 que pida nivel 35 de tala… es un número de ejemplo, no tiene que ser así
     estrictamente »). Hecho. Del nivel **18** en adelante —que es `nivelEscalado(30)`, o sea el

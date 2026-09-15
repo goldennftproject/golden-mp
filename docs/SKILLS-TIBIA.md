@@ -13,6 +13,18 @@ INTENTOS ») y los golpes se cuentan en `forest.js`.*
 - **Intentos para pasar de x a x+1:** `A · b^(x − 10)`, con `A = 50` (Espada/Hacha/Mazo, el
   Fist/Club/Sword/Axe del doc) y `A = 25` (Arco, Distance); `b = 1,1`.
   10→11 = 50 golpes · 20→21 = 130 · 50→51 ≈ 2.263 · Arco 80→81 ≈ 19.700.
+
+  > **Lo que la A de 50 da por sentado (medido el 15/9).** Dirección pidió que al día 7 el jugador
+  > esté en Espada 30. Con A = 50 eso cuesta **2.867 golpes**, y como el auto-ataque sale cada 2 s
+  > (`ATTACK_MS`), son **13,7 minutos de pelea pura por día** durante la semana — contra los 16
+  > min/día de manos en el juego que mide el simulador con todo incluido. O sea que la curva del
+  > documento da por sentado que pelear ES el juego, y en Golden Farm el bosque es una parte.
+  > Y ojo con una intuición que resultó falsa: **subirle la vida a los bichos no cambia nada acá**.
+  > El intento se cuenta por GOLPE y el golpe sale cada 2 s, así que más vida significa matar menos
+  > bichos en el mismo rato, no dar más golpes. Lo que manda es el tiempo peleando.
+  > La A elegida es, en el fondo, cuántos minutos se espera que el jugador pelee por día:
+  > 3 min → A ≈ 11 · 5 min → A ≈ 18 · 8 min → A ≈ 29 · 14 min → A ≈ 51 (la de hoy).
+  > Bajarla es cambiar este documento, así que queda a la espera de una decisión explícita.
 - **El dummy sigue siendo el « offline training » del doc**: 60 intentos por hora (uno por
   minuto), tope 8 h, como estaba.
 
