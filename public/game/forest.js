@@ -77,7 +77,9 @@ class ForestScene extends Phaser.Scene {
 
     // monstruos: los del mapa en el que estás, en su franja de profundidad
     this.monsters = [];
-    const zones = Z ? Z.mobs : [["rata", 0.08, 0.40, 4], ["murcielago", 0.20, 0.62, 4], ["larva", 0.35, 0.90, 4]];
+    /* el respaldo sale de la tabla, NO de una copia a mano: la lista del pantano vivía escrita
+       dos veces y al separar las franjas el 15/9 la de acá se habría quedado con las viejas */
+    const zones = (Z && Z.mobs) || (typeof ZONA_DEF !== "undefined" && ZONA_DEF.pantano && ZONA_DEF.pantano.mobs) || [];
     zones.forEach(([key, x0, x1, n]) => { for (let i = 0; i < n; i++) this.spawnMonster(key, x0, x1); });
     // Guarida: la vida del Dragón es la del asalto del clan, así que se trae de Supabase
     if (this.zonaKey === "guarida" && typeof raidActivo === "function") {

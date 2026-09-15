@@ -18,13 +18,93 @@ const ok = (n, c, d) => { if (!c) fallos++; console.log((c ? "  ok   " : "  FALL
   if (!m) { console.log("\n1 fallo(s)\n"); process.exit(1); }
   const ctx = { Math, isFinite, String, Object, Set, JSON };
   vm.createContext(ctx);
-  vm.runInContext(m[1] + "\nthis.evaluarGuardado = evaluarGuardado; this.MODO = MODO; this.VERSION = VERSION;", ctx);
-  const { evaluarGuardado, MODO, VERSION } = ctx;
+  vm.runInContext(m[1] + "\nthis.evaluarGuardado = evaluarGuardado; this.MODO = MODO; this.VERSION = VERSION; this.mercadoPermiso = mercadoPermiso;", ctx);
+  const { evaluarGuardado, MODO, VERSION, mercadoPermiso } = ctx;
   const HORA = 3600;
 
   console.log("\nEL CONTRATO DEL ESCALÓN 1: MODO SOMBRA, VERSIONADO");
   ok("las reglas están en modo RECHAZO desde el 14/9 (proyecto nuevo, P2P abierto)", MODO === "rechazo", MODO);
-  ok("y llevan versión (la bitácora anota cuál evaluó)", VERSION >= 1, "v" + VERSION);
+  ok("y llevan versión (la bitácora anota cuál evaluó)", VERSION >= 2, "v" + VERSION);
+
+  /* ═══ EL MERCADO, QUE EL PORTERO NO CONOCÍA HASTA EL 15/9 ════════════════════════════
+     El P2P se abrió el 14/9 y el portero pasó a "rechazo" el MISMO día: nunca habían
+     corrido juntos. Un maíz del mercado vale 1.200 de plata y el techo de un guardado
+     rápido es ~2.084, así que cobrar DOS ventas rechazaba el guardado y porteroRechazo()
+     devolvía la granja al estado anterior — con el ítem ya entregado al comprador. Ley 1.
+     Estos casos son la partida de verdad, no el caso feliz. */
+  console.log("\nEL MERCADO NO LE HACE PERDER LA PARTIDA A NADIE");
+  const YO = "uid-yo", OTRO = "uid-otro";
+  const permisoDe = (filas, ack, prev, next) => mercadoPermiso(YO, filas, ack, prev, next).permiso;
+  {
+    /* vendió un maíz y un cuero, y los cobra los dos seguidos: +2.360 en un minuto */
+    const filas = [
+      { seller: YO, sold_to: OTRO, kind: "res", item: "maiz", qty: 1, price: 1200, paid: true },
+      { seller: YO, sold_to: OTRO, kind: "res", item: "cuero", qty: 1, price: 1160, paid: true },
+    ];
+    const antes = { plata: 300, res: {} }, despues = { plata: 2660, res: {} };
+    const sinMercado = evaluarGuardado(antes, despues, 60);
+    ok("(el agujero) sin mirar el mercado, cobrar dos ventas se rechazaba",
+      sinMercado.sospechas.some(s => /plata imposible/.test(s)), sinMercado.sospechas.join(" · "));
+    const r = evaluarGuardado(antes, despues, 60, permisoDe(filas, null, antes, despues));
+    ok("mirando el mercado, el vendedor cobra tranquilo", r.sospechas.length === 0, r.sospechas.join(" · ") || "limpio");
+  }
+  {
+    /* el MISMO permiso no se gasta dos veces: cobró ayer, hoy inventa la misma plata */
+    const filas = [{ seller: YO, sold_to: OTRO, kind: "res", item: "maiz", qty: 9, price: 9000, paid: true }];
+    const ack = mercadoPermiso(YO, filas, null, null, {}).ack;
+    const r = evaluarGuardado({ plata: 1500, res: {} }, { plata: 10500, res: {} }, 60, permisoDe(filas, ack, null, null));
+    ok("y la venta ya contada NO vuelve a dar permiso", r.sospechas.some(s => /plata imposible/.test(s)),
+      r.sospechas.join(" · "));
+  }
+  {
+    /* comprar 300 de madera: el techo de madera de un guardado rápido es ~102 */
+    const filas = [{ seller: OTRO, sold_to: YO, kind: "res", item: "madera", qty: 300, price: 900, paid: false }];
+    const antes = { plata: 2000, res: { madera: 20 } }, despues = { plata: 1100, res: { madera: 320 } };
+    ok("(el agujero) comprar 300 de madera se rechazaba",
+      evaluarGuardado(antes, despues, 60).sospechas.some(s => /madera imposible/.test(s)));
+    const r = evaluarGuardado(antes, despues, 60, permisoDe(filas, null, antes, despues));
+    ok("el comprador recibe su madera sin sospecha", r.sospechas.length === 0, r.sospechas.join(" · ") || "limpio");
+  }
+  {
+    /* RETIRAR lo publicado: la fila se BORRA, así que el permiso sale de comparar con lo
+       que el portero tenía anotado como « en venta » en el guardado anterior */
+    const antes = [{ seller: YO, sold_to: null, kind: "res", item: "piedra", qty: 400, price: 800, paid: false }];
+    const ack = mercadoPermiso(YO, antes, null, null, {}).ack;
+    const a = { plata: 10, res: { piedra: 5 } }, d = { plata: 10, res: { piedra: 405 } };
+    ok("(el agujero) retirar tu propia publicación se rechazaba",
+      evaluarGuardado(a, d, 60).sospechas.some(s => /piedra imposible/.test(s)));
+    const r = evaluarGuardado(a, d, 60, permisoDe([], ack, a, d));
+    ok("retirar lo tuyo te lo devuelve sin sospecha", r.sospechas.length === 0, r.sospechas.join(" · ") || "limpio");
+  }
+  {
+    /* la compra que no entró en la bolsa y quedó en pendientes: entra días después */
+    const a = { plata: 10, res: { madera: 0 }, mkPend: [{ kind: "res", item: "madera", qty: 250 }] };
+    const d = { plata: 10, res: { madera: 250 }, mkPend: [] };
+    const r = evaluarGuardado(a, d, 60, permisoDe([], { ventas: 0, compras: { madera: 250 }, abiertas: {} }, a, d));
+    ok("y reclamar una entrega pendiente tampoco dispara nada", r.sospechas.length === 0, r.sospechas.join(" · ") || "limpio");
+  }
+  {
+    /* el tramposo sigue cantando: sin filas en el mercado no hay permiso que valga */
+    const r = evaluarGuardado({ plata: 500, res: {} }, { plata: 5000000, res: {} }, 600, permisoDe([], null, null, null));
+    ok("sin ventas de verdad, la plata inventada sigue cantando", r.sospechas.some(s => /plata imposible/.test(s)));
+    const r2 = evaluarGuardado({ res: { madera: 10 }, plata: 0 }, { res: { madera: 999999 }, plata: 0 }, 60,
+      permisoDe([{ seller: OTRO, sold_to: YO, kind: "res", item: "madera", qty: 20, price: 50, paid: false }], null, null, null));
+    ok("y una compra chica no tapa un 999.999 de madera", r2.sospechas.some(s => /madera imposible/.test(s)));
+  }
+  {
+    /* el permiso mira DE QUIÉN es cada fila: las ventas ajenas no acreditan nada */
+    const filas = [{ seller: OTRO, sold_to: "uid-tercero", kind: "res", item: "maiz", qty: 1, price: 9000, paid: true }];
+    ok("las ventas de otro no me dan permiso a mí", permisoDe(filas, null, null, null).plata === 0);
+    const soloVendida = [{ seller: YO, sold_to: OTRO, kind: "res", item: "maiz", qty: 1, price: 1200, paid: false }];
+    ok("y una venta vendida pero SIN cobrar tampoco (la plata entra al cobrar)",
+      permisoDe(soloVendida, null, null, null).plata === 0);
+  }
+  {
+    /* el arnés de la migración: si falta correr el SQL, el portero es MÁS permisivo, no menos */
+    const filas = [{ seller: YO, sold_to: OTRO, kind: "res", item: "maiz", qty: 1, price: 1200, paid: true }];
+    ok("sin cuaderno (ack null) el permiso existe igual: estrenar el sistema no rechaza a nadie",
+      permisoDe(filas, null, null, null).plata === 1200);
+  }
 
   console.log("\nEL JUGADOR HONESTO PASA LIMPIO");
   {

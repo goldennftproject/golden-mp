@@ -32,8 +32,98 @@ function juegoListo() {
   }, 120);
 }
 
+/* ═══ LA PANTALLA CONGELADA AL VOLVER DE OTRA PESTAÑA   (15/9, reportado jugando) ═══════════
+   « Se queda pegado, freezz, tengo que darle F5 para poder volver… puedo hacer click, se
+   realiza la acción con el sonido, pero no da vídeo… cuando duro mucho sin estar en la pantalla
+   del juego se freezea ».
+
+   Ese síntoma —los clics funcionan y suenan, la imagen no— dice exactamente qué pasó: el bucle
+   del juego sigue vivo y lo que se murió es el CONTEXTO WEBGL. Chrome se lo lleva a las pestañas
+   que llevan mucho rato en segundo plano para recuperar memoria, y sin nadie escuchando queda un
+   canvas congelado para siempre. El F5 lo arregla porque crea un contexto nuevo.
+
+   Lo que se hace acá es el F5, pero solo, y con la partida guardada antes — la ley 1 primero:
+     1 · `preventDefault()` en `webglcontextlost`, que es lo ÚNICO que deja al navegador
+         devolverlo después (sin eso, no hay restauración posible);
+     2 · se guarda la granja y se avisa en pantalla, para que nadie crea que se colgó;
+     3 · y se vuelve a entrar SOLO CUANDO EL JUGADOR ESTÁ MIRANDO. Rehacer a mano cada textura
+         del atlas es mucho más frágil que volver a entrar —la partida está en el servidor—, y
+         recargar una pestaña que sigue en segundo plano no arregla nada: el navegador le
+         volvería a quitar el contexto al rato, y el jugador se encontraría lo mismo.
+   Además, al volver a la pestaña se pregunta si el contexto está caído, por si el aviso se
+   perdió mientras nadie miraba. */
+/* ═══ Y EL MISMO SÍNTOMA POR OTRO CAMINO: EL BUCLE PARADO   (15/9, medido en el navegador) ═══
+   Reproduciéndolo con la pestaña en segundo plano apareció un segundo caso, con el mismo aspecto
+   para el jugador y otra causa: el bucle de Phaser se queda clavado —`loop.running` dice que sí,
+   el contador de fotogramas no se mueve— porque el navegador deja de dar `requestAnimationFrame`
+   a las pestañas que no se ven y no siempre lo devuelve al volver. El contexto WebGL está sano;
+   lo que no vuelve es el reloj.
+   Así que además del contexto se vigila EL PULSO: si la pestaña está a la vista y el contador de
+   fotogramas no se movió en LOOP_MUERTO_MS, primero se intenta despertarlo (que es gratis y no
+   interrumpe nada) y solo si sigue clavado se guarda y se vuelve a entrar. Nunca se hace nada
+   con la pestaña escondida: ahí que el bucle esté parado es lo NORMAL. */
+var LOOP_MUERTO_MS = 4000;   // sin un solo fotograma, estando a la vista
+var LOOP_MIRA_MS = 2000;     // cada cuánto se le toma el pulso
+var CTX_RECARGA_MS = 600;   // lo que se le da al guardado para salir antes de recargar
+function vigilarElContexto(game) {
+  const lienzo = game && game.canvas; if (!lienzo) return;
+  let cayendo = false;
+  const volverAEntrar = () => {
+    try { if (typeof saveFarm === "function") saveFarm(true); } catch (e) {}   // ley 1: primero se guarda
+    const recargar = () => setTimeout(() => { try { location.reload(); } catch (e) {} }, CTX_RECARGA_MS);
+    if (document.visibilityState === "visible") recargar();
+    else document.addEventListener("visibilitychange", function alVolver() {
+      if (document.visibilityState !== "visible") return;
+      document.removeEventListener("visibilitychange", alVolver); recargar();
+    });
+  };
+  lienzo.addEventListener("webglcontextlost", (ev) => {
+    ev.preventDefault();                       // sin esto el contexto no vuelve NUNCA
+    if (cayendo) return; cayendo = true;
+    console.warn("WebGL: el navegador se llevó el contexto (pestaña en segundo plano)");
+    try { if (typeof sesionLog === "function") sesionLog("WebGL perdido", "pestaña en segundo plano"); } catch (e) {}
+    const aviso = document.getElementById("ctx-perdido");
+    if (aviso) aviso.style.display = "flex";
+    volverAEntrar();
+  }, false);
+  lienzo.addEventListener("webglcontextrestored", () => { if (cayendo) volverAEntrar(); }, false);
+  const rendirse = () => {
+    cayendo = true;
+    const aviso = document.getElementById("ctx-perdido");
+    if (aviso) aviso.style.display = "flex";
+    volverAEntrar();
+  };
+  document.addEventListener("visibilitychange", () => {
+    if (document.visibilityState !== "visible" || cayendo) return;
+    try {
+      const gl = game.renderer && game.renderer.gl;
+      if (gl && gl.isContextLost()) rendirse();   // el aviso se perdió mientras nadie miraba
+    } catch (e) {}
+  });
+
+  /* el pulso: el contador de fotogramas tiene que moverse mientras la pestaña se ve */
+  let ultimoFrame = -1, quietoDesde = 0, despertado = 0;
+  setInterval(() => {
+    if (cayendo) return;
+    if (document.visibilityState !== "visible") { ultimoFrame = -1; return; }   // escondida: parado es normal
+    const loop = game.loop; if (!loop) return;
+    if (loop.frame !== ultimoFrame) { ultimoFrame = loop.frame; quietoDesde = Date.now(); despertado = 0; return; }
+    if (!quietoDesde) { quietoDesde = Date.now(); return; }
+    if (Date.now() - quietoDesde < LOOP_MUERTO_MS) return;
+    if (!despertado) {                       // primero, lo barato: pedirle al bucle que despierte
+      despertado = Date.now();
+      console.warn("El bucle del juego lleva " + Math.round((Date.now() - quietoDesde) / 1000) + " s sin fotogramas: despertando");
+      try { if (typeof loop.wake === "function") loop.wake(); else if (typeof loop.resume === "function") loop.resume(); } catch (e) {}
+      quietoDesde = Date.now();
+      return;
+    }
+    try { if (typeof sesionLog === "function") sesionLog("bucle parado", "no volvió ni despertándolo"); } catch (e) {}
+    rendirse();                              // no despertó: se guarda y se vuelve a entrar
+  }, LOOP_MIRA_MS);
+}
+
 function startGame() {
-  new Phaser.Game({
+  window.GAME = new Phaser.Game({
     type: Phaser.AUTO,
     parent: "game",
     // 31/7: suavizado activado — casi todos los sprites se muestran REDUCIDOS y con nearest quedaban serruchados
@@ -50,6 +140,9 @@ function startGame() {
     },
     scene: [BootScene, FarmScene, PlazaScene, ForestScene],
   });
+  /* el canvas nace con el juego, así que la vigilancia se engancha en cuanto existe */
+  window.GAME.events.once("ready", () => vigilarElContexto(window.GAME));
+  return window.GAME;
 }
 
 let entered = false;   /* 25/8: window.entered lo mira update.js para NO recargar una partida en curso */

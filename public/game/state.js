@@ -1535,9 +1535,22 @@ function migrarSkillsATries() {
 }
 // --- Barra de Combate GLOBAL (doc maestro 2/8): un solo nivel que suma la XP de TODOS los kills.
 //     Convive con las skills por arma (esas siguen dando el +Nivel/2 al daño). Misma curva 1-150.
-var COMBAT_HP5 = 20, COMBAT_HP10 = 40;   // vida máxima extra en los hitos (editables en el panel)
+var COMBAT_HP5 = 20, COMBAT_HP10 = 40;   // los dos hitos viejos: siguen acá porque de ellos sale la pendiente
+/* 15/9 (diseñador): « ¿agregamos vida por nivel? ». Sí, y era el agujero más grande del combate
+   a largo plazo: la vida subía en el Combate 5 (+20) y en el 10 (+40) y DESPUÉS NUNCA MÁS. Se
+   quedaba en 160 para siempre mientras el bestiario seguía subiendo, así que el riesgo tenía que
+   salir entero del daño de los bichos — que es justo lo que no puede escalar mucho sin volverse
+   injusto. Lo midió tools/medir-combate.js el 14/9 y quedó anotado como « la restricción de fondo ».
+
+   La pendiente NO se inventa: es la que los dos hitos ya implicaban. Daban 60 de vida repartidos
+   entre el nivel 1 y el 10, o sea 60/9 por nivel. Se sigue esa misma recta sin que se corte, así
+   que el ritmo que el diseñador ya había aprobado se respeta y solo deja de frenarse.
+   LEY 1: nadie pierde vida con el cambio — la recta va por encima de los dos escalones en TODOS
+   los niveles (al 4 daba 0 y ahora da 21; al 10 daba 60 y ahora 63). Lo custodia
+   tools/test-vida-por-nivel.js. */
+var COMBAT_HP_NIVEL = Math.round((COMBAT_HP5 + COMBAT_HP10) / 9);   // = 7 de vida por nivel de Combate
 function combatInfo() { return skillInfo(G.combatXp || 0); }
-function combatHpBonus(lvl) { return (lvl >= 5 ? COMBAT_HP5 : 0) + (lvl >= 10 ? COMBAT_HP10 : 0); }
+function combatHpBonus(lvl) { return Math.max(0, Math.round((Math.max(1, lvl || 1) - 1) * COMBAT_HP_NIVEL)); }
 // CURAR NO ES GRATIS (10/8). Antes, cada vez que la vida MÁXIMA subía se regalaba la
 // diferencia como vida actual. Como se llama al equipar, alcanzaba con desequipar y volver a
 // equipar un arma con Runa Guardiana (+120 de vida máx.) para curarse 120 de golpe, cuantas
@@ -4106,7 +4119,11 @@ const ZONA_DEF = {
     ds: "Agua estancada y bichos chicos. Por acá se empieza.",
     piso: [0x2f4a20, 0x2a431c], mata: 0x223a16, hierba: 0x3a5527,
     arboles: 28,
-    mobs: [["rata", 0.08, 0.40, 4], ["murcielago", 0.20, 0.62, 4], ["larva", 0.35, 0.90, 4]],
+    /* 15/9 (dirección): « que los primeros mobs sean solo ratas… inicio ratas, medio vampiros
+       y de último las larvas ». Antes las tres franjas se pisaban —en x = 0,35 podían salir los
+       tres a la vez— y el que recién entraba se encontraba una larva de 42 de vida en la cara.
+       Ahora no se tocan: cada bicho tiene su tercio y entre uno y otro queda un respiro. */
+    mobs: [["rata", 0.06, 0.34, 4], ["murcielago", 0.40, 0.64, 4], ["larva", 0.70, 0.94, 4]],
   },
   piedra: {
     label: "Cañón de Piedra", lvl: 10,
@@ -5779,6 +5796,44 @@ function armaCambiarLlevada(key) {
   G.gear.arma = null;
   return true;
 }
+/* ═══ QUITARSE Y PONERSE LAS PIEZAS DENTRO DE LA ZONA   (15/9, dirección) ═══════════════════
+   « Que todo sea equipable… desde el equipo a la bolsa y viceversa ». El arma ya sabía hacerlo
+   —armaCambiarLlevada, acá arriba— y las piezas de loot no: entraban por gainGear cuando caían
+   de un bicho y se quedaban puestas para siempre. Si caía un casco peor que el tuyo, se vendía
+   solo; si caía uno mejor, no había forma de guardar el viejo. Ahora el viaje es de ida y vuelta,
+   con la misma regla que el arma: lo que sale del cuerpo BAJA AL CONTENEDOR, y si el contenedor
+   está lleno no se hace nada — nunca se tira nada al aire.
+   Solo dentro de la Zona: en la granja una pieza no puede estar en la bolsa (tryAddRes la equipa
+   o la vende), así que allá « guardarla » no tendría dónde. */
+function gearGuardar(slot) {
+  if (!enZona()) return false;
+  const raiz = contLlevado(); if (!raiz) return false;
+  const k = G.gear && G.gear[slot]; if (!k || !GEAR_DEF[k]) return false;
+  if (!contMeter(raiz, "gear", k, 1)) return false;      // lleno: no se toca nada
+  G.gear[slot] = null;
+  return true;
+}
+function gearPonerse(key) {
+  if (!enZona()) return false;
+  const raiz = contLlevado(); if (!raiz) return false;
+  const gd = GEAR_DEF[key]; if (!gd) return false;
+  const pila = contAplanar(raiz).find(e => e.kind === "gear" && e.k === key);
+  if (!pila) return false;
+  const previa = G.gear[gd.slot];
+  /* la que llevabas baja ANTES de sacar la nueva: si no entra, se cancela entero */
+  if (previa && previa !== key && !contMeter(raiz, "gear", previa, 1)) return false;
+  contGastar(raiz, "gear", key, 1);
+  G.gear[gd.slot] = key;
+  return true;
+}
+/* las piezas de ese hueco que llevás en el contenedor — lo que se puede poner sin volver */
+function gearAMano(slot) {
+  const raiz = enZona() ? contLlevado() : null; if (!raiz) return [];
+  const vistos = [];
+  for (const e of contAplanar(raiz))
+    if (e.kind === "gear" && GEAR_DEF[e.k] && GEAR_DEF[e.k].slot === slot && vistos.indexOf(e.k) < 0) vistos.push(e.k);
+  return vistos;
+}
 function armSkillKey(tipo) { return ARM_TIPO_DEF[tipo].skill; }
 function armCdLeft(id) { return Math.max(0, ((G.armCd && G.armCd[id]) || 0) - nowMs()); }
 /* EL PRIMER ESCALÓN DE UNA ESCALERA SIEMPRE ESTÁ ABIERTO (19/8, dirección).
@@ -5889,7 +5944,19 @@ function useWeapon(id) { if (G.weapons[id] && G.weapons[id].dur > 0) G.weapons[i
 const TIBIA_FACTOR_ATK = 1.0;                  // « ofensivo »: Golden no tiene modos de combate
 const TIBIA_FACTOR_DEF_ATACANDO = 0.5;         // ofensivo y atacando (§4)
 const TIBIA_ATACANDO_MS = 2000;                // « atacando » = pegó hace menos de esto
-const TIBIA_BLOCK_MAX = 2;                     // cargas de bloqueo (§2.1)
+/* 15/9 (diseñador): « las cargas de bloqueo… bajarlas a 1 hace que contra un bicho rápido no
+   siempre haya parada disponible. Tomemos ese camino ». El camino es el bueno; el número, no:
+   bajarlas a 1 NO cambia absolutamente nada, y se ve al medirlo (4,2 bichos por vida llena
+   antes, 4,1 después). El motivo es que las cargas vuelven a 1 POR SEGUNDO y los bichos pegan
+   cada 2 segundos: con una sola carga y esa recuperación, siempre hay carga cuando llega el
+   golpe. El tope nunca fue el cuello de botella — lo es la recuperación.
+   Así que se toma el camino pedido por donde de verdad muerde: 1 carga que tarda 3 segundos en
+   volver. Medido: al día 3 el murciélago pasa de 9,3 a 7,2 bichos por vida llena y al día 7 de
+   41 a 23, mientras que el jugador del día 1 casi no lo nota (4,2 → 3,7) porque a esa altura
+   casi no paraba nada. Que es justo la forma que se buscaba: apretar donde la parada era gratis.
+   Se mide con `node tools/medir-comida.js`. */
+const TIBIA_BLOCK_MAX = 1;                     // cargas de bloqueo (§2.1)
+const TIBIA_BLOCK_REGEN_MS = 3000;             // …y lo que tarda en volver una
 const MOB_ARMOR_PCT = 0.06;                    // armor = defense = 6 % del HP cuando el bicho no lo trae escrito
 const ARM_ATK = {};                            // atk = min + max del compendio
 ARM_TIPOS.forEach(t => { ARM_ATK[t] = ARM_MINMAX[t].map(mm => mm[0] + mm[1]); });
@@ -5933,7 +6000,7 @@ function tickBlock(blk, dtMs) {
   if (!blk) return;
   if (blk.blockCount == null) blk.blockCount = TIBIA_BLOCK_MAX;
   blk.blockTicks = (blk.blockTicks || 0) + dtMs;
-  if (blk.blockTicks >= 1000) { blk.blockCount = Math.min(blk.blockCount + 1, TIBIA_BLOCK_MAX); blk.blockTicks = 0; }
+  if (blk.blockTicks >= TIBIA_BLOCK_REGEN_MS) { blk.blockCount = Math.min(blk.blockCount + 1, TIBIA_BLOCK_MAX); blk.blockTicks = 0; }
 }
 /* la defensa (parada) del jugador — §4 */
 function heroDefensa(atacando) {
@@ -6626,7 +6693,14 @@ var MOB_DMG_MULT = 1.3, MOB_DEF_MULT = 1;
    Y al día 7, con bronce: la rata vuelve a ser trivial (1,9) pero la araña y el goblin piden 5-7
    golpes y te matan en 16-17.
    Se mide con `node tools/medir-combate.js`. */
-var MOB_REFUERZO_LVL1 = 3;    // cuánto se refuerza el daño del bicho más chico
+/* 15/9 (diseñador, segunda pasada): « el vampiro pega duro, yo le subiría unos porcentajes más,
+   y le subiría a la rata unos porcentajes también, que yo deba usar comidas para curarme… que
+   sea más necesario, así sea en los primeros niveles ». De 3 a 3,4 (+13 % al bicho de nivel 1,
+   apagándose igual hacia arriba). Se frenó ahí por lo que midió tools/medir-comida.js: a ×4,5
+   el murciélago mata al jugador del día 1 en UNA pelea (1,1 bichos con la vida llena), y eso ya
+   no es « comer para seguir », es no poder entrar. Con 3,4 quedan 4,2 ratas o 1,8 murciélagos
+   por vida llena el día 1, y 9,3 murciélagos el día 3 (antes 13,5). */
+var MOB_REFUERZO_LVL1 = 3.4;  // cuánto se refuerza el daño del bicho más chico
 var MOB_REFUERZO_LVL50 = 1;   // …y del más grande: 1 es « no se toca »
 var MOB_REFUERZO_HP_LVL1 = 2; // la vida del bicho más chico se duplica; la del más grande, ni se toca
 function mobRefuerzoDmg(lvl) {
@@ -6638,6 +6712,7 @@ function mobRefuerzoHp(lvl) {
   return MOB_REFUERZO_HP_LVL1 + (1 - MOB_REFUERZO_HP_LVL1) * (l - 1) / 49;
 }
 MONSTER_ORDER.forEach(k => { const m = MONSTER_DEF[k];
+  m.dmgBase = m.dmg;                       // el daño de la tabla, antes del refuerzo (lo usa elMapaNoSeInvierte)
   m.dmg = Math.max(1, Math.round(m.dmg * MOB_DMG_MULT * mobRefuerzoDmg(m.lvl)));
   /* `hpArmor` es la vida ANTES del refuerzo, y existe por algo que apareció al medirlo: la
      armadura y la parada del bicho son el 6 % de su VIDA (mobArmor/mobDefense), así que subirle
@@ -6648,6 +6723,29 @@ MONSTER_ORDER.forEach(k => { const m = MONSTER_DEF[k];
   m.hp = Math.max(1, Math.round(m.hp * mobRefuerzoHp(m.lvl)));
   m.def = Math.round((m.def || 0) * MOB_DEF_MULT);
 });
+/* 15/9 — EL REFUERZO NO PUEDE INVERTIR UN MAPA. Como se apaga con el nivel del bicho, dos
+   bichos que en la tabla pegaban lo mismo salen distintos al redondear: el murciélago (nivel 3)
+   quedaba en 13 y la larva (nivel 5, que está MÁS ADENTRO del pantano) en 12. Es el mismo error
+   que invirtió goblin y orco con el corte seco de vida, y se nota apenas en un punto — que es
+   justo por lo que nadie lo ve. Así que al final se recorre cada mapa en orden de profundidad y
+   se empuja hacia arriba lo que hubiera quedado por debajo de lo anterior: caminar hacia el
+   fondo nunca puede ser más fácil. Solo deshace el redondeo: si la TABLA ya decía que el de
+   adentro pega menos —la guardia de la Guarida, donde el guerrero va delante del orco a
+   propósito— no se toca nada. */
+(function elMapaNoSeInvierte() {
+  for (const z in ZONA_DEF) {
+    const lista = (ZONA_DEF[z].mobs || []).slice().sort((a, b) => a[1] - b[1]);
+    let ant = null;
+    for (const [k] of lista) {
+      const m = MONSTER_DEF[k]; if (!m || m.boss) continue;
+      if (ant) {
+        if (m.dmgBase >= ant.dmgBase) m.dmg = Math.max(m.dmg, ant.dmg);
+        if (mobHpArmor(m) >= mobHpArmor(ant)) m.hp = Math.max(m.hp, ant.hp);
+      }
+      ant = m;
+    }
+  }
+})();
 // combate (detalles 338): auto-ataque cada 2s, alcance del arco 4 celdas
 const ATTACK_MS = 2000;
 const MELEE_RANGE = GF.TILE * 1.35;

@@ -38,6 +38,14 @@
   .cpill #c-lvl{min-width:14px;text-align:center}
   .cbarw{width:78px;height:9px;background:rgba(0,0,0,.5);border:1px solid #241505;overflow:hidden;display:inline-block;image-rendering:pixelated}
   .cfill{display:block;height:100%;width:0%;background:linear-gradient(180deg,#ffe08a,#e0a63c 55%,#b97c17);transition:width .35s ease}
+  /* barra de vida (15/9): corazón + relleno rojo + número, como pidió el diseñador */
+  .hppill{gap:6px}
+  .hpcor{font-size:13px;line-height:1;filter:drop-shadow(0 1px 0 rgba(0,0,0,.45))}
+  .hpbarw{width:78px;height:9px;background:rgba(0,0,0,.5);border:1px solid #241505;overflow:hidden;display:inline-block;image-rendering:pixelated}
+  .hpfill{display:block;height:100%;width:100%;background:linear-gradient(180deg,#ff8a7a,#e03a3a 55%,#a01414);transition:width .35s ease}
+  /* por debajo de un cuarto late: el aviso tiene que verse sin mirar el número */
+  .hpfill.bajo{animation:hplat 1s ease-in-out infinite}
+  @keyframes hplat{0%,100%{filter:none}50%{filter:brightness(1.6)}}
   .cfill.stamf{background:linear-gradient(180deg,#a8e6ff,#4aa8d8 55%,#1d6f9c)}   /* estamina: celeste */
   .cfill.lvlf{background:linear-gradient(180deg,#c8e89a,#8fd06a 55%,#4f8f2f)}    /* granja: verde, como las barras de oficio */
   /* cuando la XP ya está y lo que falta son TAREAS, la barra se queda llena y ámbar: « no esperes
@@ -86,6 +94,17 @@
     background:rgba(20,14,8,.9);border:2px solid #6b5327;border-radius:10px;padding:6px 7px;
     box-shadow:0 4px 14px rgba(0,0,0,.45)}
   .cb-eq{display:grid;grid-template-columns:repeat(3,1fr);gap:4px;cursor:pointer}
+  /* 15/9: el muñeco completo — tres columnas que no tienen la misma cantidad de huecos (el set
+     son cinco piezas y los otros dos lados tres), así que van como columnas y no como rejilla:
+     con grid, las filas cortas dejaban huecos fantasma en el medio. */
+  .cb-doll{display:flex;gap:4px;cursor:pointer;align-items:flex-start}
+  .cb-col{flex:1;display:flex;flex-direction:column;gap:4px;min-width:0}
+  .cb-set .cbq{border-color:#8a6f34}
+  .cbq-mov{cursor:pointer}
+  .cbq-mov:hover{border-color:#c9a227;background:rgba(201,162,39,.16)}
+  .cbq.seca{border-color:#b4553f;background:rgba(120,40,28,.35)}
+  .cbq.seca img{filter:grayscale(.7) brightness(.7)}
+  .cb-def{font-size:9px;color:#a3936f;text-align:center;margin-top:5px}
   .cbq{position:relative;aspect-ratio:1;border-radius:6px;background:rgba(0,0,0,.35);
     border:1px solid #4a3a1e;display:flex;align-items:center;justify-content:center}
   .cbq img{width:80%;height:80%;object-fit:contain;image-rendering:pixelated}
@@ -1092,7 +1111,10 @@
       <div class="pill"><span class="k">Prestigio</span><b id="s-prestige">0</b></div>
       <div class="pill" title="Plata — la moneda del juego"><img class="ric" src="assets/farm/coin_plata.png?a=4" onerror="this.outerHTML='<span class=&quot;coin silver&quot;></span>'"><b id="s-plata">0</b></div>
       <div class="pill" title="$Golden — la moneda premium: animales del establo, kit de emergencia y adornos"><img class="ric" src="assets/farm/coin_esencia.png?a=4" onerror="this.outerHTML='✨'"><b id="s-golden">20</b></div>
-      <div class="pill" title="Vida — cuidado en la Zona Negra"><span></span><b id="s-hp">100/100</b></div>
+      <!-- 15/9 (diseñador): « y la ponemos como barra roja ». El corazón y el relleno se leen de
+           un vistazo mientras peleás; el número sigue estando porque saber que te faltan 12 para
+           llenarte es lo que decide si comés ahora o después. -->
+      <div class="pill hppill" title="Vida — cuidado en la Zona Negra"><span class="hpcor">❤</span><span class="hpbarw"><span class="hpfill" id="hp-fill"></span></span><b id="s-hp">100/100</b></div>
       <div class="pill cpill" id="cbar" title="Nivel de Combate — suma la XP de todos los kills, sin importar el arma"><b id="c-lvl">1</b><span class="k">Combate</span><span class="cbarw"><span class="cfill" id="c-fill"></span></span><span class="k" id="c-xp">0/100</span></div>
       <div class="pill"><span class="k">Semana</span><b id="s-week">1</b></div>
       <button class="btnpill" id="menu-btn">☰ Menú</button>
@@ -1713,6 +1735,14 @@
     <div id="ldmsg" style="font:600 13px/1 system-ui,sans-serif;letter-spacing:.5px;color:#c9b98a">Preparando tu granja…</div>
   </div>
 
+  <!-- 15/9: el navegador se lleva el contexto WebGL de las pestañas que llevan rato en segundo
+       plano y el canvas queda congelado (los clics suenan, la imagen no). main.js guarda y vuelve
+       a entrar solo; esto es para que el jugador sepa qué está pasando en ese segundo y medio. -->
+  <div id="ctx-perdido" style="display:none;position:fixed;inset:0;z-index:130;flex-direction:column;align-items:center;justify-content:center;gap:14px;background:rgba(36,51,24,.96);color:#e2b23a;font:800 18px/1.3 system-ui,sans-serif;text-align:center;padding:24px">
+    <div>VOLVIENDO A LA GRANJA…</div>
+    <div style="font:600 13px/1.5 system-ui,sans-serif;color:#c9b98a;max-width:420px">La pestaña estuvo mucho rato en segundo plano y el navegador soltó el dibujo. Tu partida ya quedó guardada.</div>
+  </div>
+
   <!-- gate de apodo (oculto hasta saber si sos jugador nuevo) -->
   <div id="gate" style="display:none">
     <div class="gcard">
@@ -1784,7 +1814,7 @@
     // 15/8: VERSIÓN DE BUILD — rompe la caché del navegador en cada deploy (sin esto, el
     // jugador seguía corriendo el state.js viejo aunque el servidor tuviera el nuevo).
     // deploy.bat la actualiza sola (busca GF_BUILD y pone la fecha/hora del deploy).
-    const GF_BUILD = "20260915-163612";
+    const GF_BUILD = "20260915-170446";
     const files = ["game/config.js","game/nav.js","game/audio.js","game/state.js","game/save.js","game/ui.js","game/boot.js",
                    "game/farm.js","game/forest.js","game/plaza.js","game/main.js","game/update.js"];
     /* 24/8 — SE BAJAN TODOS A LA VEZ, SE EJECUTAN EN FILA (dirección: « sigue tardando en

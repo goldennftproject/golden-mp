@@ -70,6 +70,30 @@ SQL Editor:
 
 Vacío = nadie hizo nada raro (o solo el equipo con el botón 🧪, que es esperable).
 
+## El mercado (15/9 · reglas v2) — HAY QUE CORRER UN SQL
+
+El P2P se abrió el 14/9 y el portero pasó a `rechazo` el mismo día: nunca habían corrido
+juntos. El portero tiene un techo de plata por hora —con dos guardados pegados, ~2.084— y
+en el mercado un maíz vale 1.200 y un cuero 1.160. Cobrar dos ventas seguidas disparaba
+«plata imposible», el guardado se rechazaba y el juego volvía a la granja anterior **con el
+ítem ya entregado al comprador**. Comprar 300 de madera o retirar tu propia publicación
+rompían igual, por el techo de recursos. Eso es perder progreso por jugar bien: ley 1.
+
+Desde las reglas v2 el portero **lee la tabla `market` con la llave de servicio** y levanta
+el techo justo por lo que el mercado dice que pasó: lo cobrado (`paid = true`), lo comprado
+(`sold_to = yo`) y lo retirado (las filas libres mías que desaparecieron). Lo ya contado
+queda anotado en `farms.mercado_ack`, así que un permiso no se gasta dos veces. Nada de
+esto se le cree al navegador.
+
+**Pasos:** SQL Editor → pegar `sql/mercado-portero.sql` → **Run**. Después, Edge Functions
+→ `guardar` → pegar `supabase/functions/guardar/index.ts` → **Deploy**.
+
+Ese SQL además cierra el mercado con llave: hoy el vendedor puede editar su propia fila
+(incluido el `price`), y con el portero leyendo precios eso sería imprimir plata. Después
+de correrlo el cliente solo puede tocar `sold_to`, `sold_at` y `paid`, y nadie puede
+venderse a sí mismo. Si el SQL no se corre, el portero sigue funcionando y siendo **más**
+permisivo, nunca menos — pero el mercado se queda sin esa llave.
+
 ## Lo que queda para después (los otros dos escalones)
 
 - **Escalón 2:** con la bitácora calibrada, `MODO = "rechazo"` en `index.ts` y

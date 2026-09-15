@@ -47,6 +47,18 @@ en `docs/LEYES.md`.
   la bandera apagada, que es lo que custodian. Sin Chromium todavía.*
 - [x] ~~**4 · Decidir el mercado P2P**~~ **Abierto** (dirección, 14/9), y el portero subió antes:
   modo rechazo en el proyecto nuevo desde el 14/9.
+- [x] ~~**El mercado contra el portero**~~ **arreglado en el código (15/9), FALTA UN SQL Y EL DEPLOY.**
+  El P2P se abrió el 14/9 y el portero pasó a rechazo el mismo día: nunca habían corrido juntos.
+  El techo de plata de un guardado rápido es ~2.084 y un maíz del mercado vale 1.200; cobrar dos
+  ventas, comprar 300 de madera o retirar tu propia publicación se rechazaba, y `porteroRechazo()`
+  devolvía la granja **con el ítem ya entregado**. Ley 1. Reglas v2: el portero lee `market` con
+  la llave de servicio y levanta el techo por lo cobrado, lo comprado y lo retirado, anotando en
+  `farms.mercado_ack` lo ya contado para que un permiso no se gaste dos veces. Nueve casos nuevos
+  en `test-portero-reglas.js`, incluidos los tres «agujeros» de antes.
+  → **De tu mano:** SQL Editor → `sql/mercado-portero.sql` → Run; después Edge Functions →
+  `guardar` → pegar `supabase/functions/guardar/index.ts` → Deploy. Ese SQL además le pone llave
+  al mercado (hoy el vendedor puede editar el `price` de su propia fila, y con el portero leyendo
+  precios eso sería imprimir plata).
 - [x] ~~El suelo del pantano~~ **queda como está** (dirección, 15/9: « déjalo como está, al menos
   por ahora »). Pantano ×0,63 · cañón de piedra ×1,00 · grietas ×0,83 · guarida ×0,71.
 - [x] ~~El $Golden como sistema~~ **se queda** (dirección, 15/9: « me parece que no era eso a lo

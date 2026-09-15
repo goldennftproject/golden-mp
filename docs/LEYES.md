@@ -78,6 +78,39 @@ Lo custodia `tools/test-establo-hambre.js`.
 
 ---
 
+## Ley 5 — Lo que no está en su PC, no existe
+
+> *« Todo lo que hagas, e incluso lo que hagas en tu sandbox, y que yo lo apruebe como un
+> cambio, lo pondrás para que yo pueda hacerle deploy. »*
+
+Dictada por dirección el 15/9, después de perder una tarde entera: ocho commits —el portero del
+mercado, el orden del pantano, el combate, el freeze de la pestaña, el muñeco de la Zona y la
+vida por nivel— se quedaron en el contenedor de la nube. Golden hizo el deploy y Render publicó
+los archivos de la noche anterior, sin una sola línea de lo de ese día. El diseñador probó el
+juego y dijo, con razón, que no estaba implementado.
+
+El repo vive en **dos copias**, y solo una se publica:
+
+| | dónde | qué es |
+|---|---|---|
+| la mía | el contenedor de la nube | donde trabajo y corro la suite. Su `git` es un cuaderno: **no llega a ningún lado solo** |
+| la suya | `C:\Users\pauli\Desktop\golden\golden-mp` | la que `deploy.bat` sube y Render publica |
+
+- **Un cambio aprobado termina copiado a su PC, en el mismo turno.** Commitear en el contenedor
+  no es entregar: es tomar nota. Si no se copió, para el juego no existe.
+- Nunca se escribe encima a ciegas: él también toca su copia (el arte, sobre todo). Primero se
+  lee su archivo, se compara con mi versión de antes del cambio, y solo si coinciden se pisa.
+- `public/index.html` conserva **su** sello `GF_BUILD`: lo reescribe `deploy.bat` en cada deploy,
+  y pisarlo llena el diff de ruido.
+- Y después se comprueba: se vuelve a leer el archivo desde su disco y se busca dentro lo que
+  acabo de agregar. Que el commit diga OK no es que haya llegado.
+- Vale para todo lo aprobado, no solo para el código del juego: el SQL, la Edge Function, los
+  documentos para el diseñador y las herramientas de medición van por el mismo camino.
+
+El cómo está en `CLAUDE.md`, en la raíz del repo.
+
+---
+
 # La pregunta del MVP
 
 *Esto NO es una ley: es una decisión con fecha de caducidad. Vive aquí porque es lo que arbitra

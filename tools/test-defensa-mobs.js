@@ -46,16 +46,27 @@ console.log("\n1 · CREATURE::BLOCKHIT — PARADA, DESPUÉS ARMADURA\n");
 
 console.log("\n2 · LAS CARGAS DE BLOQUEO (§2.1)\n");
 {
-  const m = { blockCount: 2, blockTicks: 0 };
-  ctx.blockHit(100, 0, 6, m); ctx.blockHit(100, 0, 6, m);
-  ok("dos golpes gastan las dos cargas", m.blockCount === 0);
+  /* 15/9 — los dos números salen de las constantes, no escritos a mano: el diseñador los movió
+     (1 carga que tarda 3 s en volver, en vez de 2 que volvían a 1 por segundo) y este bloque
+     tiene que seguir probando la MECÁNICA, no los valores de ayer. */
+  const MAX = g("TIBIA_BLOCK_MAX"), REGEN = g("TIBIA_BLOCK_REGEN_MS");
+  console.log("   (hoy: " + MAX + " carga(s), una cada " + (REGEN / 1000) + " s)");
+  const m = { blockCount: MAX, blockTicks: 0 };
+  for (let i = 0; i < MAX; i++) ctx.blockHit(100, 0, 6, m);
+  ok("tantos golpes como cargas las gastan todas", m.blockCount === 0);
   const r = ctx.blockHit(100, 0, 6, m);
-  ok("el tercero no se para (solo armadura)", !r.parado && r.dmg === 100 && m.blockCount === 0);
-  ctx.tickBlock(m, 400); ok("a los 400 ms no vuelve ninguna", m.blockCount === 0);
-  ctx.tickBlock(m, 600); ok("al segundo vuelve una", m.blockCount === 1);
-  ctx.tickBlock(m, 1000); ctx.tickBlock(m, 1000); ctx.tickBlock(m, 1000);
-  ok("y nunca pasa de 2", m.blockCount === 2);
-  ok("un mob nuevo arranca con 2 (blockCount ausente = lleno)", (() => { const n = {}; ctx.blockHit(1, 0, 6, n); return n.blockCount === 1; })());
+  ok("el siguiente ya no se para (solo armadura)", !r.parado && r.dmg === 100 && m.blockCount === 0);
+  ctx.tickBlock(m, REGEN - 100); ok("justo antes de tiempo no vuelve ninguna", m.blockCount === 0);
+  ctx.tickBlock(m, 100); ok("y cumplido el tiempo vuelve una", m.blockCount === 1);
+  for (let i = 0; i < MAX + 3; i++) ctx.tickBlock(m, REGEN);
+  ok("y nunca pasa del tope", m.blockCount === MAX, m.blockCount + "/" + MAX);
+  ok("un mob nuevo arranca lleno (blockCount ausente = tope)",
+    (() => { const n = {}; ctx.blockHit(1, 0, 6, n); return n.blockCount === MAX - 1; })());
+  /* lo que se aprendió el 15/9 al medirlo: con el tope a 1 y la recuperación a 1 por segundo,
+     un bicho que pega cada 2 s SIEMPRE se encuentra la carga puesta — bajar el tope no cambiaba
+     nada. Lo que hace que la parada falle alguna vez es que tarde más que el ritmo de golpeo. */
+  ok("la recuperación es más lenta que el ritmo de golpeo de un bicho (si no, la parada es gratis)",
+    REGEN > g("typeof ATTACK_MS !== 'undefined' ? ATTACK_MS : 2000"), REGEN + " ms contra 2000 ms");
 }
 
 console.log("\n3 · EL DAÑO MÁXIMO DEL JUGADOR (§3.1)\n");

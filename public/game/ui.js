@@ -298,14 +298,31 @@ function refreshCombate() {
      dejaste en la granja mientras el arco no podía disparar ni una: el peor cartel posible,
      porque no solo no ayuda, convence al jugador de que el problema está en otro lado. */
   const fl = (typeof llevoTengo === "function") ? llevoTengo("res", "flecha") : ((G.res && G.res.flecha) || 0);
-  const firma = [gr.casco, gr.armadura, gr.botas, gr.escudo, gr.arma, gr.municion ? fl : 0, modo].join("|");
+  /* 15/9: la firma también lleva el set y la durabilidad de cada pieza — si no, el muñeco nuevo
+     se dibujaría una vez y se quedaría mintiendo mientras la armadura se gasta a golpes. */
+  const setFirma = (typeof G.armorEq === "string" && typeof ARMOR_SLOTS !== "undefined")
+    ? G.armorEq + ":" + ARMOR_SLOTS.map(pz => (typeof armorDur === "function" ? armorDur(G.armorEq, pz) : 0)).join(",")
+    : "-";
+  /* …y lo que llevás PARA cada hueco: si no, al lootear un casco el hueco vacío seguiría
+     diciendo « no llevás nada » hasta que cambiara otra cosa */
+  const aManoFirma = (typeof gearAMano === "function")
+    ? ["casco", "armadura", "botas", "escudo"].map(s => gearAMano(s).join(",")).join(";") : "";
+  const firma = [gr.casco, gr.armadura, gr.botas, gr.escudo, gr.arma, gr.municion ? fl : 0, modo, setFirma, aManoFirma].join("|");
   if (caja._firma === firma) return;
   caja._firma = firma;
   caja.style.display = "";
 
+  /* 15/9 (dirección): « que todo sea equipable… desde el equipo a la bolsa y viceversa ». Cada
+     hueco de loot es ahora un botón de ida y vuelta: con pieza puesta la baja al contenedor, y
+     vacío se pone la que lleves. El rótulo lo dice, porque un clic que mueve cosas sin avisar es
+     la clase de gesto que el jugador descubre cuando ya pasó. */
   const pieza = (slot, sil) => {
     const g = gr[slot], gd = g && typeof GEAR_DEF !== "undefined" && GEAR_DEF[g];
-    return '<div class="cbq' + (gd ? "" : " vacio") + '" title="' + (gd ? gd.label + " · defensa +" + gd.def : slot) + '">' +
+    const aMano = (typeof gearAMano === "function") ? gearAMano(slot) : [];
+    const tip = gd ? gd.label + " · defensa +" + gd.def + " · clic para guardarla en el contenedor"
+                   : (aMano.length ? "Vacío · clic para ponerte " + GEAR_DEF[aMano[0]].label : slot);
+    return '<div class="cbq' + (gd ? "" : " vacio") + (gd || aMano.length ? " cbq-mov" : "") +
+      '" data-gslot="' + slot + '" title="' + tip + '">' +
       (gd ? '<img src="' + GF.spr(gd.sprite) + '" onerror="this.remove()">'
           : '<img class="sil" src="' + GF.spr(sil) + '" onerror="this.remove()">') + '</div>';
   };
@@ -319,17 +336,63 @@ function refreshCombate() {
     '<img class="' + (gr.municion && fl > 0 ? "" : "sil") + '" src="' + GF.spr("res_flecha") + '" onerror="this.remove()">' +
     (gr.municion && fl > 0 ? '<span class="cbn">' + fmt(fl) + '</span>' : '') + '</div>';
 
+  /* 15/9 (dirección): « quiero que aparezca esto cuando pases a la Zona Negra… como la bolsa,
+     aparece abierto ». El muelle mostraba seis huecos de los diez que el jugador tiene puestos:
+     faltaba el set de la Curtiduría entero, que es el que de verdad para los golpes. Ahora el
+     muñeco está completo y se ve solo al entrar, sin abrir nada — la columna del medio es el set
+     (lo que se craftea), la de la izquierda lo que cae de los bichos y la derecha con qué peleás.
+     El hueco de una pieza GASTADA se marca: sigue puesta pero no defiende, y eso, en la Zona y
+     sin poder repararla, es exactamente lo que hay que ver antes de seguir metiéndose. */
+  const setEq = (typeof G.armorEq === "string") ? G.armorEq : null;
+  const setDef = setEq && typeof ARMOR_SETS !== "undefined" ? ARMOR_SETS[setEq] : null;
+  const piezaSet = (pz) => {
+    const tiene = setDef && typeof armorTiene === "function" && armorTiene(setEq, pz);
+    const dur = tiene && typeof armorDur === "function" ? armorDur(setEq, pz) : 0;
+    const max = (typeof ARMOR_DUR_MAX === "number") ? ARMOR_DUR_MAX : 100;
+    const lbl = (typeof ARMOR_SLOT_LABEL !== "undefined" && ARMOR_SLOT_LABEL[pz]) || pz;
+    /* las siluetas que EXISTEN son las del panel de Equipo: cada pieza del set toma la suya */
+    const SIL_SET = { yelmo: "sil_casco", pecho: "sil_armadura", pantalones: "sil_pantalones",
+      botas: "sil_botas", guantes: "sil_guantes" };
+    if (!tiene) return '<div class="cbq vacio" title="' + lbl + ' — sin pieza"><img class="sil" src="' +
+      GF.spr(SIL_SET[pz] || "sil_armadura") + '" onerror="this.remove()"></div>';
+    return '<div class="cbq' + (dur > 0 ? "" : " seca") + '" title="' + lbl + " de " + setDef.label +
+      (dur > 0 ? " · defensa +" + setDef.piezas[pz].def + " · durabilidad " + dur + "/" + max
+               : " · GASTADA: no defiende hasta que la repares") + '">' +
+      '<img src="' + GF.spr("armor_" + setEq + "_" + pz) + '" onerror="this.outerHTML=\'🛡️\'">' +
+      (dur > 0 && dur <= max / 4 ? '<span class="cbn">' + dur + '</span>' : '') + '</div>';
+  };
+  const SLOTS = (typeof ARMOR_SLOTS !== "undefined") ? ARMOR_SLOTS : [];
   caja.innerHTML =
-    '<div class="cb-eq" id="cb-eq" title="Tocá para abrir el Equipo">' +
-      pieza("casco", "sil_casco") + armaHtml + pieza("escudo", "sil_escudo") +
-      pieza("armadura", "sil_armadura") + pieza("botas", "sil_botas") + munHtml +
+    '<div class="cb-doll" id="cb-eq" title="Tocá para abrir el Equipo">' +
+      '<div class="cb-col">' + pieza("casco", "sil_casco") + pieza("armadura", "sil_armadura") + pieza("botas", "sil_botas") + '</div>' +
+      '<div class="cb-col cb-set">' + SLOTS.map(piezaSet).join("") + '</div>' +
+      '<div class="cb-col">' + armaHtml + pieza("escudo", "sil_escudo") + munHtml + '</div>' +
     '</div>' +
+    '<div class="cb-def">Defensa ' + (typeof gearDefTotal === "function" ? gearDefTotal() : 0) + '</div>' +
     '<div class="cb-modos">' +
       '<button class="cb-m' + (modo === "perseguir" ? " on" : "") + '" data-modo="perseguir" title="Vas hacia el objetivo hasta la distancia de tu arma">👣 Perseguir</button>' +
       '<button class="cb-m' + (modo === "parado" ? " on" : "") + '" data-modo="parado" title="Atacás sin moverte — para pelear con arco">🛑 Parado</button>' +
     '</div>';
   const eq = $("cb-eq");
   if (eq) eq.onclick = () => { if (typeof openOv === "function") openOv("ov-equip"); };
+  /* los huecos de loot mueven la pieza; el resto del muñeco sigue abriendo el panel de Equipo */
+  caja.querySelectorAll("[data-gslot]").forEach(b => b.onclick = (e) => {
+    e.stopPropagation();
+    const slot = b.dataset.gslot, puesta = (G.gear || {})[slot];
+    if (puesta) {
+      if (typeof gearGuardar !== "function" || !gearGuardar(slot)) { toast("El contenedor está lleno — no hay dónde guardarla"); return; }
+      toast(GEAR_DEF[puesta].label + " al contenedor");
+    } else {
+      const aMano = (typeof gearAMano === "function") ? gearAMano(slot) : [];
+      if (!aMano.length) { toast("No llevás nada para ese hueco"); return; }
+      if (typeof gearPonerse !== "function" || !gearPonerse(aMano[0])) { toast("No se pudo equipar"); return; }
+      toast(GEAR_DEF[aMano[0]].label + " equipada");
+    }
+    refreshCombate(); if (typeof refreshMorral === "function") refreshMorral();
+    if (typeof refreshHud === "function") refreshHud();
+    if (typeof isOpen === "function" && isOpen("ov-equip") && typeof refreshEquip === "function") refreshEquip();
+    if (typeof saveFarm === "function") saveFarm();
+  });
   caja.querySelectorAll("[data-modo]").forEach(b => b.onclick = (e) => {
     e.stopPropagation();
     if (typeof modoPeleaSet === "function") modoPeleaSet(b.dataset.modo);
@@ -1317,7 +1380,7 @@ function refreshHud() {
   /* 14/9 — el techo lo escribe el código, no el HTML. Estaba « /50 » a mano en index.html y
      siguió diciendo 50 cuando dirección bajó el techo a 25: el HUD le mentía al jugador sobre
      cuánto le falta. Ningún test lo vio porque vive en el DOM. */
-  setTxt("s-level-max", "/" + (typeof FARM_NIVEL_MAX !== "undefined" ? FARM_NIVEL_MAX : "")); setTxt("s-prestige", G.prestige); setNum("s-plata", G.plata, fmtPlata); setNum("s-golden", G.golden); setTxt("s-week", (typeof semanaActual === "function") ? semanaActual() : G.week); setTxt("s-hp", Math.ceil(G.hp) + "/" + G.hpMax); refreshCombatBar(); refreshFarmBar(); bindFarmPill(); refreshBuffsPill(); if (typeof checkCooking === "function") checkCooking(); if (typeof checkHorno === "function") checkHorno(); if (typeof refreshHotbar === "function") refreshHotbar(); }
+  setTxt("s-level-max", "/" + (typeof FARM_NIVEL_MAX !== "undefined" ? FARM_NIVEL_MAX : "")); setTxt("s-prestige", G.prestige); setNum("s-plata", G.plata, fmtPlata); setNum("s-golden", G.golden); setTxt("s-week", (typeof semanaActual === "function") ? semanaActual() : G.week); setTxt("s-hp", Math.ceil(G.hp) + "/" + G.hpMax); refreshVidaBarra(); refreshCombatBar(); refreshFarmBar(); bindFarmPill(); refreshBuffsPill(); if (typeof checkCooking === "function") checkCooking(); if (typeof checkHorno === "function") checkHorno(); if (typeof refreshHotbar === "function") refreshHotbar(); }
 // clic en la barra de estamina: ofrece la recarga premium (con su tope diario)
 function bindStamPill() {
   const pill = document.getElementById("stampill"); if (!pill || pill._bound) return;
@@ -1363,6 +1426,16 @@ function refreshStam() {
         (typeof STAM_FULL_H !== "undefined" ? STAM_FULL_H : 4) + " h, contadas desde la primera que gastaste"
       : "Estamina al máximo";
   }
+}
+/* 15/9 (diseñador): la vida como BARRA ROJA. El relleno es el único sitio del HUD que hay que
+   poder leer de reojo mientras te pegan, así que va con el número al lado y late por debajo de
+   un cuarto — el mismo umbral con el que la barra de encima del granjero ya se pone roja. */
+function refreshVidaBarra() {
+  const f = $("hp-fill"); if (!f) return;
+  const max = Math.max(1, G.hpMax || 100);
+  const pct = Math.max(0, Math.min(1, (G.hp || 0) / max));
+  f.style.width = (pct * 100).toFixed(1) + "%";
+  f.classList.toggle("bajo", pct > 0 && pct <= 0.25);
 }
 function refreshCombatBar() {   // doc maestro 2/8: insignia de nivel + relleno dorado + "XP actual / necesaria"
   const el = document.getElementById("c-lvl"); if (!el || typeof combatInfo !== "function") return;
