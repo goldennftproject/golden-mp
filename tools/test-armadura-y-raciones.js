@@ -116,5 +116,25 @@ console.log("\n3 · EL SUELO PESA, Y LA GRANJA NO CAMBIÓ\n");
   ok("no se adoptó la rejilla: nadie encoló pasos de celda", !/TileWalker|stepDuration|ceil50/.test(forest));
 }
 
+/* ═══ 4 · LO QUE SOLO SE VE ABRIENDO EL JUEGO ════════════════════════════════════════════════
+   ui.js necesita un DOM de verdad, así que la suite no lo ejecuta. Estos tres bugs aparecieron
+   abriendo el juego en el navegador después de dar las tres mecánicas por terminadas — el mismo
+   camino por el que ayer aparecieron el « /50 » del HUD y los cosméticos huérfanos. Se custodian
+   leyendo el archivo, que es lo que se puede hacer sin DOM, pero se custodian. */
+console.log("\n4 · LOS PANELES NO MIENTEN (bugs encontrados abriendo el juego)\n");
+{
+  const UI = require("fs").readFileSync(path.join(RAIZ, "public/game/ui.js"), "utf8");
+  /* el botón « Alimentar » se habilitaba con UNA unidad: con 7 zanahorias de 20 se veía verde,
+     el jugador lo apretaba y le saltaba un aviso de que no le alcanza */
+  ok("el botón de alimentar pide la ración entera, no una unidad suelta",
+    /const tieneComida = d\.come\.some\(c => \(G\.res\[c\] \|\| 0\) >= racionDe\)/.test(UI));
+  ok("y la fila del establo dice cuántas unidades come", /const come = d\.come\.map\(c => racion \+ " "/.test(UI));
+  ok("y cuántas le faltan cuando no alcanza", /te faltan <b>' \+ faltan/.test(UI));
+  /* el panel decía « ACTIVO » del bono con una pieza en cero, mientras armorBono() devolvía null */
+  ok("el cartel del bono pregunta por el set SANO, no por tener las cinco piezas",
+    /armorSetSano\(set\) : completo/.test(UI) && /sano \? ' — ACTIVO'/.test(UI));
+  ok("y cuando está apagado lo dice en vez de callarse", /apagado: repará las piezas gastadas/.test(UI));
+}
+
 console.log("\n" + (fallos ? fallos + " fallo(s)" : "TODO EN VERDE") + "\n");
 process.exit(fallos ? 1 : 0);

@@ -3224,10 +3224,16 @@ function refreshCurtiduria() {
   let h = '<div class="info">Equipada: <b>' + (G.armorEq && ARMOR_SETS[G.armorEq] ? ARMOR_SETS[G.armorEq].label + " · " + armorDefensa() + " de defensa" : "ninguna") + '</b></div>';
   ARMOR_ORDER.forEach(set => {
     const sd = ARMOR_SETS[set], eq = armorEquipado(set), n = armorPuestas(set), completo = armorSetCompleto(set);
+    /* 14/9 — TENER LAS CINCO Y QUE FUNCIONEN DEJARON DE SER LO MISMO. Con la durabilidad, el
+       panel decía « ACTIVO » del bono mientras una pieza estaba en cero y armorBono() devolvía
+       null: el jugador leía que tenía el bono y no lo tenía. El cartel pasa a preguntar por el
+       set SANO, que es lo que de verdad enciende el bono. */
+    const sano = (typeof armorSetSano === "function") ? armorSetSano(set) : completo;
     const defTotal = ARMOR_SLOTS.reduce((a, pz) => a + sd.piezas[pz].def, 0);
     h += '<div class="secc">' + sd.label + ' <span class="fds">(' + sd.tipo + ' · ' + n + '/5 piezas · ' + defTotal + ' de defensa el set)</span></div>';
     h += '<div class="info"><div>Material: <b>' + RES_LABEL[sd.mat] + '</b> (tenés ' + (G.res[sd.mat] || 0) + ') · del ' + ANIMAL_DEF[sd.animal].label + '</div>' +
-      '<div class="oro">Bono del set completo: ' + sd.bono.txt + (completo ? ' — ACTIVO' : '') + '</div></div>';
+      '<div class="oro">Bono del set completo: ' + sd.bono.txt +
+        (sano ? ' — ACTIVO' : (completo ? ' — <b>apagado: repará las piezas gastadas</b>' : '')) + '</div></div>';
     ARMOR_SLOTS.forEach(pz => {
       const p = sd.piezas[pz], tiene = armorTiene(set, pz);
       const costo = p.mat + " " + RES_LABEL[sd.mat] + (p.hierro ? " · " + p.hierro + " Hierro" : "") + " · " + p.plata + " plata";
@@ -3279,7 +3285,12 @@ function refreshEstablo() {
   let h = "";
   ANIMAL_ORDER.forEach(k => {
     const d = ANIMAL_DEF[k], a = animalDe(k), abierto = animalUnlocked(k);
-    const come = d.come.map(c => (CROP_DEF[c] ? CROP_DEF[c].label : c)).join(" o ");
+    /* 14/9 — LA RACIÓN SE DICE EN LA FILA. Con « Come Zanahoria » alcanzaba mientras todos
+       comieran una unidad; desde la ración de dirección el conejo come 20 y el jugador no tiene
+       cómo saberlo mirando el establo. Ahora la fila dice la cantidad, y más abajo dice cuántas
+       le faltan cuando no alcanza. */
+    const racion = d.racion || 1;
+    const come = d.come.map(c => racion + " " + (CROP_DEF[c] ? CROP_DEF[c].label : c)).join(" o ");
     if (!a) {
       h += '<div class="forge-row"><div class="fic">' + d.emoji + '</div><div class="finfo">' +
         '<div class="fnm">' + d.label + '</div>' +
@@ -3297,7 +3308,14 @@ function refreshEstablo() {
        describía a ninguna, y un solo reloj escondía que una estaba lista y la otra recién
        empezaba. Los botones « todo » de arriba siguen ahí como atajo para el establo grande. */
     const cant = animalCant(k), tope = cant >= ANIMAL_MAX;
-    const tieneComida = d.come.some(c => (G.res[c] || 0) > 0);
+    /* 14/9 — y el botón se habilita con la RACIÓN ENTERA, no con una unidad suelta. Con el
+       `> 0` de antes, el jugador con 7 zanahorias veía « Alimentar » en verde, lo apretaba y le
+       saltaba un aviso de que no le alcanza: un botón que miente es peor que un botón apagado. */
+    const racionDe = d.racion || 1;
+    const tieneComida = d.come.some(c => (G.res[c] || 0) >= racionDe);
+    /* lo que le falta del cultivo que más cerca tiene, para que el aviso sea accionable */
+    const masCerca = d.come.slice().sort((x, y) => (G.res[y] || 0) - (G.res[x] || 0))[0];
+    const faltan = Math.max(0, racionDe - Math.floor(G.res[masCerca] || 0));
     for (let i = 0; i < cant; i++) {
       const bicho = animalLista(k)[i];
       const fi = animalFelizDe(bicho), faltaI = animalFaltaDe(k, i), listoI = faltaI <= 0;
@@ -3315,7 +3333,10 @@ function refreshEstablo() {
           : 'Produce en ' + fmtDur(faltaI) + ' · ' + (totalI > 0
               ? 'dará <b>+' + totalI + '</b> ' + RES_LABEL[d.mat]
               : '<span style="color:#a5621a">si no come, no dará nada</span>')) + '</div>' +
-        '<div class="fds">Come ' + come + ' una vez por ciclo' + (comio ? '' : ' — <b>dale de comer ahora</b>') + '</div></div>' +
+        '<div class="fds">Come ' + come + ' una vez por ciclo' +
+          (comio ? '' : (tieneComida
+            ? ' — <b>dale de comer ahora</b>'
+            : ' — te faltan <b>' + faltan + '</b> ' + (CROP_DEF[masCerca] ? CROP_DEF[masCerca].label : masCerca))) + '</div></div>' +
         '<div class="fbtns">' +
           '<button class="green sm" ' + (tieneComida && !comio ? "" : "disabled") + ' data-feed1="' + k + '" data-idx="' + i + '">' + (comio ? 'Ya comió' : 'Alimentar') + '</button>' +
           '<button class="green sm" ' + (listoI ? "" : "disabled") + ' data-take1="' + k + '" data-idx="' + i + '">Recoger</button>' +
