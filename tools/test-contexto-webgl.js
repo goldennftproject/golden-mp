@@ -56,7 +56,7 @@ console.log("\n3 · EL PULSO DEL BUCLE (el mismo síntoma por otro camino)\n");
     /document\.visibilityState !== "visible"\) \{ ultimoFrame = -1; return; \}/.test(MAIN));
   ok("primero se intenta despertarlo, que no interrumpe nada", /loop\.wake === "function"/.test(MAIN));
   ok("y solo si no despierta se guarda y se vuelve a entrar",
-    /despertado[\s\S]{0,500}?rendirse\(\)/.test(MAIN));
+    /despertado[\s\S]{0,500}?rendirse\(/.test(MAIN));
   const muerto = (MAIN.match(/var LOOP_MUERTO_MS = (\d+);/) || [])[1];
   const mira = (MAIN.match(/var LOOP_MIRA_MS = (\d+);/) || [])[1];
   ok("los dos tiempos están en constantes y son de segundos", muerto && mira &&
@@ -64,7 +64,22 @@ console.log("\n3 · EL PULSO DEL BUCLE (el mismo síntoma por otro camino)\n");
     "muerto a los " + muerto + " ms, se mira cada " + mira + " ms");
 }
 
-console.log("\n4 · Y EL JUGADOR SE ENTERA DE QUÉ PASÓ\n");
+console.log("\n4 · Y SI REVIENTA, SE SABE POR QUÉ\n");
+{
+  ok("se atrapan los errores sueltos del juego", /window\.addEventListener\("error"/.test(MAIN) &&
+    /function atraparLosErrores/.test(MAIN));
+  ok("y las promesas rotas, que no salen por window.onerror", /unhandledrejection/.test(MAIN));
+  ok("se engancha al arrancar, antes de crear las escenas", /atraparLosErrores\(\);[\s\S]{0,200}?events\.once\("ready"/.test(MAIN));
+  ok("un error suelto NO recarga la partida (solo se anota)",
+    !/addEventListener\("error"[\s\S]{0,400}?location\.reload/.test(MAIN));
+  ok("el que decide seguir siendo el pulso: rendirse se llama con un motivo",
+    /rendirse\("el bucle del juego se detuvo"\)/.test(MAIN) && /rendirse\("contexto WebGL perdido"\)/.test(MAIN));
+  ok("y el cartel enseña el nombre del error", /ctx-detalle/.test(MAIN) && /id="ctx-detalle"/.test(HTML));
+  ok("se recuerdan unos pocos, no todos (una fuga de memoria por un bug sería el colmo)",
+    /__gfErr\.length > ERR_RECUERDA/.test(MAIN));
+}
+
+console.log("\n5 · Y EL JUGADOR SE ENTERA DE QUÉ PASÓ\n");
 ok("hay un cartel para el momento en que se recarga sola", /id="ctx-perdido"/.test(HTML));
 ok("que arranca oculto (no se ve en una partida normal)", /id="ctx-perdido"[^>]*display:none/.test(HTML));
 ok("y main.js lo enciende cuando pasa", /getElementById\("ctx-perdido"\)/.test(MAIN));

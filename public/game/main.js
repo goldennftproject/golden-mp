@@ -62,6 +62,37 @@ function juegoListo() {
    fotogramas no se movió en LOOP_MUERTO_MS, primero se intenta despertarlo (que es gratis y no
    interrumpe nada) y solo si sigue clavado se guarda y se vuelve a entrar. Nunca se hace nada
    con la pestaña escondida: ahí que el bucle esté parado es lo NORMAL. */
+/* ═══ Y LA TERCERA CAUSA, QUE ES LA QUE FALTABA NOMBRAR   (15/9, tarde) ═══════════════════════
+   « He regresado de zona negra y se quedó pegada ». El contexto WebGL estaba sano y la pestaña
+   estaba a la vista, así que no era ninguno de los dos casos de arriba: lo que mata el bucle de
+   Phaser es UNA EXCEPCIÓN dentro del paso. El error sale por `window.onerror`, el
+   requestAnimationFrame no se vuelve a pedir y la pantalla queda congelada en el último
+   fotograma — mientras el DOM, los clics y el sonido siguen vivos, que es exactamente el
+   síntoma reportado las tres veces.
+   Lo que no había era el NOMBRE del error: sin él, cada congelada es una adivinanza. Así que
+   ahora se atrapa, se anota en la bitácora de sesión y se guarda para enseñarlo en el cartel si
+   el bucle de verdad se muere. Un error suelto que no mata nada NO interrumpe la partida: se
+   anota y ya. El que decide si hay que volver a entrar sigue siendo el pulso. */
+var ERR_RECUERDA = 3;        // cuántos errores se recuerdan para el cartel
+function atraparLosErrores() {
+  window.__gfErr = [];
+  const anota = (txt) => {
+    if (!txt) return;
+    window.__gfErr.push(txt);
+    if (window.__gfErr.length > ERR_RECUERDA) window.__gfErr.shift();
+    try { if (typeof sesionLog === "function") sesionLog("error suelto", txt); } catch (e) {}
+  };
+  window.addEventListener("error", (e) => {
+    const d = (e && e.filename ? String(e.filename).split("/").pop() + ":" + e.lineno + " " : "");
+    anota(d + ((e && e.message) || "error sin mensaje"));
+  });
+  window.addEventListener("unhandledrejection", (e) => {
+    const r = e && e.reason;
+    anota("promesa: " + ((r && r.message) || String(r)));
+  });
+}
+function ultimoError() { return (window.__gfErr && window.__gfErr.length) ? window.__gfErr[window.__gfErr.length - 1] : ""; }
+
 var LOOP_MUERTO_MS = 4000;   // sin un solo fotograma, estando a la vista
 var LOOP_MIRA_MS = 2000;     // cada cuánto se le toma el pulso
 var CTX_RECARGA_MS = 600;   // lo que se le da al guardado para salir antes de recargar
@@ -87,17 +118,22 @@ function vigilarElContexto(game) {
     volverAEntrar();
   }, false);
   lienzo.addEventListener("webglcontextrestored", () => { if (cayendo) volverAEntrar(); }, false);
-  const rendirse = () => {
+  const rendirse = (porque) => {
     cayendo = true;
     const aviso = document.getElementById("ctx-perdido");
     if (aviso) aviso.style.display = "flex";
+    /* el cartel dice POR QUÉ: sin el nombre del error, cada congelada vuelve a ser una adivinanza
+       y el que la sufre no puede contarnos nada más que « se quedó pegada » */
+    const det = document.getElementById("ctx-detalle"), e = (typeof ultimoError === "function") ? ultimoError() : "";
+    if (det) det.textContent = e ? "(" + (porque || "se detuvo") + " · " + e + ")" : (porque ? "(" + porque + ")" : "");
+    try { if (typeof sesionLog === "function") sesionLog("se volvió a entrar", (porque || "") + " " + e); } catch (x) {}
     volverAEntrar();
   };
   document.addEventListener("visibilitychange", () => {
     if (document.visibilityState !== "visible" || cayendo) return;
     try {
       const gl = game.renderer && game.renderer.gl;
-      if (gl && gl.isContextLost()) rendirse();   // el aviso se perdió mientras nadie miraba
+      if (gl && gl.isContextLost()) rendirse("contexto WebGL perdido");   // el aviso se perdió mientras nadie miraba
     } catch (e) {}
   });
 
@@ -117,8 +153,7 @@ function vigilarElContexto(game) {
       quietoDesde = Date.now();
       return;
     }
-    try { if (typeof sesionLog === "function") sesionLog("bucle parado", "no volvió ni despertándolo"); } catch (e) {}
-    rendirse();                              // no despertó: se guarda y se vuelve a entrar
+    rendirse("el bucle del juego se detuvo");                              // no despertó: se guarda y se vuelve a entrar
   }, LOOP_MIRA_MS);
 }
 
@@ -141,6 +176,7 @@ function startGame() {
     scene: [BootScene, FarmScene, PlazaScene, ForestScene],
   });
   /* el canvas nace con el juego, así que la vigilancia se engancha en cuanto existe */
+  atraparLosErrores();   // antes que nada: si la escena revienta al crearse, queremos el nombre
   window.GAME.events.once("ready", () => vigilarElContexto(window.GAME));
   return window.GAME;
 }
