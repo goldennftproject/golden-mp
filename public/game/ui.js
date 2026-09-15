@@ -288,6 +288,32 @@ function flujoTick() {
    abre el panel de verdad. Duplicar las ranuras con su lógica de equipar habría creado un
    segundo sitio que envejece por su lado — el día que se agregue una pieza, una de las dos
    pantallas se olvidaría. Acá se lee de G.gear, que es la única verdad. */
+/* ═══ LA DURABILIDAD DEL ARMA, DENTRO DE LA ZONA   (15/9, dirección) ═══════════════════════
+   « Necesitamos la durabilidad del arma en zona negra en un espacio… abajo… y que aparezca un
+   icono en rojo con la espada avisando que le queda poca durabilidad ».
+
+   Hasta hoy el número vivía en la Herrería —o sea en la granja—, justo donde ya no te sirve: el
+   arma se gasta peleando y quedarse sin ella a mitad de la Zona significa volver caminando. Va
+   debajo del muñeco, que es el sitio que el jugador ya mira para ver con qué pelea.
+
+   El umbral del aviso NO es un número suelto: es el mismo cuarto con el que se pone roja la
+   barra de vida y con el que se marca una pieza de armadura gastada. Un juego con tres umbrales
+   distintos para decir « ojo » enseña a no mirarlos. */
+var ARMA_DUR_AVISO = 0.25;
+function durArmaHtml(id) {
+  const w = (typeof ARM_DEF !== "undefined") && ARM_DEF[id], own = G.weapons && G.weapons[id];
+  if (!w || !own) return '<div class="cb-dur vacia">Sin arma</div>';
+  const max = w.dur || 1, dur = Math.max(0, own.dur || 0), pct = Math.max(0, Math.min(1, dur / max));
+  const rota = dur <= 0, poca = !rota && pct <= ARMA_DUR_AVISO;
+  const cls = "cb-dur" + (rota ? " rota" : (poca ? " poca" : ""));
+  const tip = rota ? w.label + " ROTA — no pega: volvé y reparala en la Herrería"
+    : (poca ? w.label + ": te queda poca durabilidad (" + dur + "/" + max + ") — volvé antes de que se rompa"
+            : w.label + " · durabilidad " + dur + "/" + max);
+  return '<div class="' + cls + '" title="' + tip + '">' +
+    '<img class="cb-durIc" src="' + GF.spr(w.sprite || ARM_TIPO_DEF[w.tipo].sprite) + '" onerror="this.outerHTML=\'⚔️\'">' +
+    '<span class="cb-durBar"><i style="width:' + (pct * 100).toFixed(0) + '%"></i></span>' +
+    '<b>' + dur + '</b></div>';
+}
 function refreshCombate() {
   const caja = $("combate"); if (!caja) return;
   if (!(window.GF && GF.scene === "forest")) { caja.style.display = "none"; caja._firma = ""; return; }
@@ -307,7 +333,10 @@ function refreshCombate() {
      diciendo « no llevás nada » hasta que cambiara otra cosa */
   const aManoFirma = (typeof gearAMano === "function")
     ? ["casco", "armadura", "botas", "escudo"].map(s => gearAMano(s).join(",")).join(";") : "";
-  const firma = [gr.casco, gr.armadura, gr.botas, gr.escudo, gr.arma, gr.municion ? fl : 0, modo, setFirma, aManoFirma].join("|");
+  /* …y la durabilidad del arma: es lo que más cambia mientras peleás y, si no entra en la firma,
+     el muelle enseñaría el número del momento en que entraste a la Zona */
+  const durArma = (gr.arma && G.weapons && G.weapons[gr.arma]) ? G.weapons[gr.arma].dur : "-";
+  const firma = [gr.casco, gr.armadura, gr.botas, gr.escudo, gr.arma, gr.municion ? fl : 0, modo, setFirma, aManoFirma, durArma].join("|");
   if (caja._firma === firma) return;
   caja._firma = firma;
   caja.style.display = "";
@@ -368,6 +397,7 @@ function refreshCombate() {
       '<div class="cb-col cb-set">' + SLOTS.map(piezaSet).join("") + '</div>' +
       '<div class="cb-col">' + armaHtml + pieza("escudo", "sil_escudo") + munHtml + '</div>' +
     '</div>' +
+    durArmaHtml(gr.arma) +
     '<div class="cb-def">Defensa ' + (typeof gearDefTotal === "function" ? gearDefTotal() : 0) + '</div>' +
     '<div class="cb-modos">' +
       '<button class="cb-m' + (modo === "perseguir" ? " on" : "") + '" data-modo="perseguir" title="Vas hacia el objetivo hasta la distancia de tu arma">👣 Perseguir</button>' +

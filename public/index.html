@@ -105,6 +105,21 @@
   .cbq.seca{border-color:#b4553f;background:rgba(120,40,28,.35)}
   .cbq.seca img{filter:grayscale(.7) brightness(.7)}
   .cb-def{font-size:9px;color:#a3936f;text-align:center;margin-top:5px}
+  /* 15/9: la durabilidad del arma, debajo del muñeco. El aviso es el MISMO cuarto que pone roja
+     la vida y marca una pieza gastada — tres umbrales distintos para decir « ojo » enseñan a no
+     mirar ninguno. */
+  .cb-dur{display:flex;align-items:center;gap:4px;margin-top:6px;padding:3px 4px;border-radius:6px;
+    background:rgba(0,0,0,.3);border:1px solid #4a3a1e;font-size:10px;font-weight:800;color:#e8dcc0}
+  .cb-dur.vacia{justify-content:center;color:#8e8261;font-weight:600}
+  .cb-durIc{width:14px;height:14px;object-fit:contain;image-rendering:pixelated;flex:none}
+  .cb-durBar{flex:1;height:6px;min-width:0;background:rgba(0,0,0,.5);border:1px solid #241505;overflow:hidden}
+  .cb-durBar i{display:block;height:100%;background:#8fd06a}
+  .cb-dur.poca{border-color:#e0705a;color:#ffb4ab;animation:cbdur 1s ease-in-out infinite}
+  .cb-dur.poca .cb-durBar i{background:#e0705a}
+  .cb-dur.poca .cb-durIc{filter:drop-shadow(0 0 3px #e0705a)}
+  .cb-dur.rota{border-color:#b4553f;background:rgba(120,40,28,.45);color:#ffb4ab}
+  .cb-dur.rota .cb-durIc{filter:grayscale(1) brightness(.7)}
+  @keyframes cbdur{0%,100%{filter:none}50%{filter:brightness(1.5)}}
   .cbq{position:relative;aspect-ratio:1;border-radius:6px;background:rgba(0,0,0,.35);
     border:1px solid #4a3a1e;display:flex;align-items:center;justify-content:center}
   .cbq img{width:80%;height:80%;object-fit:contain;image-rendering:pixelated}
@@ -1817,7 +1832,7 @@
     // 15/8: VERSIÓN DE BUILD — rompe la caché del navegador en cada deploy (sin esto, el
     // jugador seguía corriendo el state.js viejo aunque el servidor tuviera el nuevo).
     // deploy.bat la actualiza sola (busca GF_BUILD y pone la fecha/hora del deploy).
-    const GF_BUILD = "20260915-183736";
+    const GF_BUILD = "20260915-184247";
     const files = ["game/config.js","game/nav.js","game/audio.js","game/state.js","game/save.js","game/ui.js","game/boot.js",
                    "game/farm.js","game/forest.js","game/plaza.js","game/main.js","game/update.js"];
     /* 24/8 — SE BAJAN TODOS A LA VEZ, SE EJECUTAN EN FILA (dirección: « sigue tardando en
