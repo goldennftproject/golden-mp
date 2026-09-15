@@ -5856,8 +5856,12 @@ function playerMaxDamage(id) {
   const sk = armSkillKey(w.tipo), skill = skillInfo(G.skills[sk] || 0, sk).lvl, level = combatInfo().lvl;
   return Math.round(level / 5 + ((skill / 4 + 1) * (armAtk(id) / 3) * 1.03) / TIBIA_FACTOR_ATK);
 }
-function mobArmor(def) { return def.armor != null ? def.armor : Math.max(1, Math.round((def.hp || 0) * MOB_ARMOR_PCT)); }
-function mobDefense(def) { return def.defense != null ? def.defense : Math.max(1, Math.round((def.hp || 0) * MOB_ARMOR_PCT)); }
+/* 15/9 — el 6 % se saca de `hpArmor` (la vida antes del refuerzo del 15/9) y no de `hp`, para que
+   subirle la vida a un bicho no le suba también la armadura. Los que no tienen hpArmor —un objeto
+   armado a mano en un test, un bicho nuevo— caen en `hp` como siempre. */
+function mobHpArmor(def) { return def.hpArmor != null ? def.hpArmor : (def.hp || 0); }
+function mobArmor(def) { return def.armor != null ? def.armor : Math.max(1, Math.round(mobHpArmor(def) * MOB_ARMOR_PCT)); }
+function mobDefense(def) { return def.defense != null ? def.defense : Math.max(1, Math.round(mobHpArmor(def) * MOB_ARMOR_PCT)); }
 /* Creature::blockHit — devuelve { dmg, parado, absorbido }. blk es quien recibe ({ blockCount }) o null. */
 function blockHit(dmg, armor, defense, blk) {
   dmg = Math.max(0, Math.round(dmg));
@@ -6547,8 +6551,49 @@ const MONSTER_DEF = {
    Me costó dos vueltas encontrarlo, porque multiplica DESPUÉS de la tabla y ninguna medición
    sobre MONSTER_DEF lo veía. MOB_DMG_MULT se queda: lo que ELLOS te pegan es otro eje. */
 var MOB_DMG_MULT = 1.3, MOB_DEF_MULT = 1;
+/* ═══ EL REFUERZO SE APAGA SOLO   (15/9, dirección, jugando) ═════════════════════════════════
+   « he matado una rata muy rápido […] pega muy poco para no tener armadura ni skills […] debemos
+     hacer que peguen mucho más, que se pierda tiempo en el combate y no se avance tan rápido »
+
+   Medido con SU perfil exacto (nivel 2, Combate 1, espada de madera, sin armadura): la rata moría
+   en 2,9 golpes —tres segundos— y necesitaba pegarle 67 veces para matarlo. El murciélago 3,7 y
+   50; la larva 4,9 y 50. Tenía razón en las dos mitades.
+
+   POR QUÉ NO ES UN MULTIPLICADOR GLOBAL, que era lo obvio: probado, con ×3 a todo el bestiario
+   el dragón mata en 3 golpes y el ogro en 5. Los de arriba YA están al límite, porque la vida del
+   héroe va de 100 a 160 y el daño de los bichos va de 3 a 55: los de abajo no hacen cosquillas y
+   los de arriba ya cortan. Multiplicar parejo arregla una punta y rompe la otra.
+
+   Así que el refuerzo es una CURVA que se apaga sola: ×3 en el bicho de nivel 1 y ×1 en el de
+   nivel 50. Fuerte donde el jugador está desnudo, nulo donde el bicho ya era un jefe. Y la vida
+   ×2 con la MISMA curva, por un motivo que apareció al probarlo: con la vida duplicada solo hasta
+   el nivel 12, el goblin quedaba con 104 de vida y el orco —que va DESPUÉS— con 60. Un corte seco
+   invierte la escalera. Apagándose igual que el daño, el bestiario sigue subiendo parejo.
+   Queda, con el jugador del día 1: rata 5,3 golpes para matarla y 23 para que te mate; murciélago
+   6,9 y 17; larva 9,3 y 19. Tres o cuatro bichos seguidos sin curarte y te matan.
+   Y al día 7, con bronce: la rata vuelve a ser trivial (1,9) pero la araña y el goblin piden 5-7
+   golpes y te matan en 16-17.
+   Se mide con `node tools/medir-combate.js`. */
+var MOB_REFUERZO_LVL1 = 3;    // cuánto se refuerza el daño del bicho más chico
+var MOB_REFUERZO_LVL50 = 1;   // …y del más grande: 1 es « no se toca »
+var MOB_REFUERZO_HP_LVL1 = 2; // la vida del bicho más chico se duplica; la del más grande, ni se toca
+function mobRefuerzoDmg(lvl) {
+  const l = Math.min(50, Math.max(1, lvl || 1));
+  return MOB_REFUERZO_LVL1 + (MOB_REFUERZO_LVL50 - MOB_REFUERZO_LVL1) * (l - 1) / 49;
+}
+function mobRefuerzoHp(lvl) {
+  const l = Math.min(50, Math.max(1, lvl || 1));
+  return MOB_REFUERZO_HP_LVL1 + (1 - MOB_REFUERZO_HP_LVL1) * (l - 1) / 49;
+}
 MONSTER_ORDER.forEach(k => { const m = MONSTER_DEF[k];
-  m.dmg = Math.max(1, Math.round(m.dmg * MOB_DMG_MULT));
+  m.dmg = Math.max(1, Math.round(m.dmg * MOB_DMG_MULT * mobRefuerzoDmg(m.lvl)));
+  /* `hpArmor` es la vida ANTES del refuerzo, y existe por algo que apareció al medirlo: la
+     armadura y la parada del bicho son el 6 % de su VIDA (mobArmor/mobDefense), así que subirle
+     la vida le subía la armadura de regalo y el refuerzo pegaba dos veces. Medido: la rata pasaba
+     a 6,5 golpes en vez de los 5,3 que dice la cuenta de arriba, y la larva a 11,3, que ya es un
+     muro. El refuerzo tiene que hacer UNA cosa: más vida, no más vida Y más armadura. */
+  m.hpArmor = m.hp;
+  m.hp = Math.max(1, Math.round(m.hp * mobRefuerzoHp(m.lvl)));
   m.def = Math.round((m.def || 0) * MOB_DEF_MULT);
 });
 // combate (detalles 338): auto-ataque cada 2s, alcance del arco 4 celdas

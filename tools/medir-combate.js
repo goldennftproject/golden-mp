@@ -44,14 +44,20 @@ const PERFILES = [
 ];
 const vidaDe = (p) => 100 + g("combatHpBonus(" + p.combate + ")");
 
+/* TERCERA CORRECCIÓN (15/9): esto restaba `m.def` —el campo viejo de la tabla— cuando el combate
+   de verdad pasa por `rollWeaponHit` contra `mobArmor`/`mobDefense`, que son el 6 % de la VIDA del
+   bicho y sus cargas de parada. O sea que medía contra una armadura que no es la que tiene.
+   Saltó al subirle la vida a los bichos el 15/9: como la armadura se deriva de la vida, subirla
+   los hizo además más duros, y esta función no lo veía. Ahora usa el camino real. */
 function golpesParaMatar(p, m) {
   G.level = p.nivel; G.skills.sword = g('triesTotal(' + p.skill + ', "sword")');
   G.weapons = {}; G.weapons[p.arma] = { dur: 999 }; G.gear = G.gear || {}; G.gear.arma = p.arma;
   const max = g('playerMaxDamage("' + p.arma + '")');
+  const armor = ctx.mobArmor(m), defense = ctx.mobDefense(m);
   let total = 0;
   for (let t = 0; t < TIRADAS; t++) {
-    let hp = m.hp, n = 0;
-    while (hp > 0 && n < 400) { hp -= Math.max(1, Math.round(g("normalRandom(0, " + max + ")")) - (m.def || 0)); n++; }
+    let hp = m.hp, n = 0, blk = { blockCount: 2 };
+    while (hp > 0 && n < 600) { n++; hp -= ctx.rollWeaponHit({ armor: armor, defense: defense, blk: blk }).dmg; }
     total += n;
   }
   return { golpes: total / TIRADAS, max: max };

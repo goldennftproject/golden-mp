@@ -114,7 +114,12 @@ console.log("\n6 · LO QUE ES DE GOLDEN: LA ESCALA\n");
   ok("la Espada de Madera a skill 10 pega de media ~5 (ayer, 4): la escala no se movió", s / N > 4 && s / N < 6, (s / N).toFixed(2));
   let golpes = 0;
   for (let i = 0; i < 300; i++) { let hp = M.rata.hp, m = { blockCount: 2 }; let n = 0; while (hp > 0 && n < 99) { n++; hp -= ctx.rollWeaponHit({ armor: ctx.mobArmor(M.rata), defense: ctx.mobDefense(M.rata), blk: m }).dmg; ctx.tickBlock(m, 2000); } golpes += n; }
-  ok("una rata cae en ~4 golpes (ayer 3,3)", golpes / 300 > 3 && golpes / 300 < 5, (golpes / 300).toFixed(1));
+  /* 15/9 — era « ~4 golpes ». Dirección jugó y pidió que la pelea cueste tiempo (« he matado una
+     rata muy rápido… debemos hacer que peguen mucho más, que se pierda tiempo en el combate »),
+     así que el refuerzo del 15/9 le duplicó la vida a los bichos chicos: la rata pasó de 12 a 24.
+     Con el auto-ataque de 2 s, 7 golpes son unos 14 segundos de pelea contra los 7 de antes. */
+  ok("una rata cae en ~7 golpes (el 14/9 eran 3,7: el refuerzo del 15/9 le duplicó la vida)",
+    golpes / 300 > 6 && golpes / 300 < 9, (golpes / 300).toFixed(1));
 }
 
 console.log("\n" + (fallos ? fallos + " fallo(s)" : "TODO EN VERDE") + "\n");
