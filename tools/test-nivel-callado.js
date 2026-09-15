@@ -59,6 +59,43 @@ console.log("\n1 · TODOS LOS NIVELES ENTREGAN ALGO QUE SE PUEDA USAR\n");
   }
 }
 
+/* ═══ 1c · LA TALA ES UNA LLAVE, NO UN MURO   (15/9, dirección) ══════════════════════════════
+   « Tala, que sea un requisito para subir de nivel la granja ». La mecánica es fácil; lo que hay
+   que custodiar es que no se vuelva el muro de « 85 ratas para la espada de piedra »: el requisito
+   tiene que quedar POR DEBAJO de lo que el jugador tiene naturalmente a esa altura. Los números de
+   la columna « tiene » salen del simulador (3 sesiones al día, techo 25) y son los que hacen que
+   esto sea una llave y no un candado. */
+console.log("\n1c · LA TALA FRENA AL QUE NO TALÓ, NO AL QUE TALÓ\n");
+{
+  const G = ctx.G, MAX = g("FARM_NIVEL_MAX");
+  /* lo que el jugador de tres sesiones tiene de Tala al llegar a cada nivel de granja */
+  const natural = { 18: 19, 19: 20, 20: 20, 21: 21, 22: 21, 23: 22, 24: 23, 25: 24 };
+  ok("el tramo empieza donde dice el ejemplo de dirección, traducido a esta escala",
+    g("farmTalaDesde()") === g("nivelEscalado(30)"), "granja " + g("farmTalaDesde()"));
+  let antes = [], holguraMin = 99;
+  for (let L = 2; L < g("farmTalaDesde()"); L++) if (g("farmTalaReq(" + L + ")")) antes.push(L);
+  ok("antes del tramo final no pide Tala a nadie", antes.length === 0, antes.join(","));
+  for (const L in natural) {
+    const req = g("farmTalaReq(" + L + ")");
+    holguraMin = Math.min(holguraMin, natural[L] - req);
+  }
+  ok("y en el tramo final SIEMPRE queda por debajo de lo que el jugador ya tiene",
+    holguraMin > 0, "la holgura más chica es de " + holguraMin + " niveles");
+  ok("con holgura de sobra: al menos 2 niveles en todo el tramo", holguraMin >= 2, holguraMin + "");
+
+  /* y que de verdad frene al que no taló */
+  G.level = MAX - 1; G.skills.farming = 1e12; G.skills.tala = 0; G.tareasHechas = null;
+  ok("el que nunca taló no puede subir el último nivel", !g("farmTalaCumple(" + MAX + ")"));
+  G.skills.tala = (function () { let t = 0; for (let i = 1; i < g("farmTalaReq(" + MAX + ")"); i++) t += g("skillNeed(" + i + ")"); return t; })();
+  ok("y con la Tala pedida, sí", g("farmTalaCumple(" + MAX + ")"),
+    "pide Tala " + g("farmTalaReq(" + MAX + ")"));
+
+  /* el muro mudo es el peligro de verdad: si frena, la barra tiene que decir por qué */
+  const UI = fs.readFileSync(path.join(RAIZ, "public/game/ui.js"), "utf8");
+  ok("y si frena, la barra de granja lo dice (no es un muro mudo)",
+    /soloTala \? "Tala " \+ skillInfo/.test(UI) && /te falta talar/.test(UI));
+}
+
 console.log("\n2 · EL F5 DENTRO DE LA ZONA NO DEVUELVE LA VIDA\n");
 {
   const FOREST = fs.readFileSync(path.join(RAIZ, "public/game/forest.js"), "utf8");

@@ -1398,9 +1398,13 @@ function refreshFarmBar() {
   const tareas = (typeof tareasDelNivel === "function") ? tareasDelNivel(sig) : [];
   const hechas = tareas.filter(x => tareaProgreso(x) >= x[2]).length;
   const soloTareas = pctXp >= 100 && hechas < tareas.length;
+  /* 15/9 — el caso « todo listo menos la Tala »: la barra lo dice en vez de quedarse llena y muda */
+  const faltaTala = typeof farmTalaCumple === "function" && !farmTalaCumple(sig);
+  const soloTala = pctXp >= 100 && hechas >= tareas.length && faltaTala;
   f.style.width = pctXp.toFixed(1) + "%";
-  f.classList.toggle("tareas", soloTareas);
-  if (t) t.textContent = soloTareas ? "tareas " + hechas + "/" + tareas.length
+  f.classList.toggle("tareas", soloTareas || soloTala);
+  if (t) t.textContent = soloTala ? "Tala " + skillInfo(G.skills.tala || 0, "tala").lvl + "/" + farmTalaReq(sig)
+    : soloTareas ? "tareas " + hechas + "/" + tareas.length
     : fmt(Math.max(0, xp - desde)) + "/" + fmt(hasta - desde);
   if (pill) {
     /* el tooltip dice TODO lo que falta, porque es lo que uno viene a preguntarle a la barra.
@@ -1412,6 +1416,14 @@ function refreshFarmBar() {
       const pend = tareas.filter(x => tareaProgreso(x) < x[2]).slice(0, 2)
         .map(x => tareaLabel(x) + " (" + Math.min(tareaProgreso(x), x[2]) + "/" + x[2] + ")");
       if (pend.length) tip += " — " + pend.join(" · ");
+    }
+    /* 15/9 — LA TALA TAMBIÉN FRENA, Y TIENE QUE DECIRLO. Del tramo final en adelante el nivel
+       pide Tala (ver farmTalaReq en state.js). Un requisito que frena sin explicarse es un muro
+       mudo: el jugador ve la barra llena, las tareas hechas, y no sube — y no tiene forma de
+       adivinar que le falta ir al bosque. */
+    if (typeof farmTalaReq === "function" && farmTalaReq(sig)) {
+      const req = farmTalaReq(sig), tengo = skillInfo(G.skills.tala || 0, "tala").lvl;
+      tip += " · Tala " + tengo + "/" + req + (tengo < req ? " — te falta talar" : " ✓");
     }
     pill.title = tip + " · clic para ver la Granja";
   }

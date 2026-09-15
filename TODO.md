@@ -106,12 +106,16 @@ Están desarrolladas en el GDD §15.0, con sus números medidos. Aquí solo el t
     son 245 golpes/día (4,1 min) y con A=20, 164 (2,7 min). **Ojo: la A es un número del
     documento del diseñador**, así que bajarla es cambiar el documento, no ajustarlo — hay que
     decidirlo explícitamente.
-  · **TALA: requisito para subir de nivel la granja en los últimos niveles** (15/9: « ejemplo
-    para subir a nivel 30 que pida nivel 35 de tala »). **PENDIENTE, y el ejemplo no se puede
-    aplicar tal cual:** el techo de granja es 25, no 30, y —medido con el simulador— al final de
-    la partida ENTERA el jugador llega a **Tala 24**. Tala 35 son 11.038 talas, unas tres veces
-    todo lo que se tala en la partida: sería un muro, exactamente el error de « 85 ratas para la
-    espada de piedra ». Hace falta que dirección confirme los números sobre la escala real.
+  · [x] **TALA: requisito para subir de nivel la granja en los últimos niveles** (15/9: « ejemplo
+    para subir a nivel 30 que pida nivel 35 de tala… es un número de ejemplo, no tiene que ser así
+    estrictamente »). Hecho. Del nivel **18** en adelante —que es `nivelEscalado(30)`, o sea el
+    « nivel 30 » del ejemplo traducido a nuestro techo— la granja pide **Tala = nivel − 4**.
+    Los números salen de la partida, no del ejemplo: medida la curva real con el simulador
+    (granja 18 → Tala 19 · 20 → 20 · 22 → 21 · 25 → 24), el requisito queda **3 a 5 niveles por
+    debajo** de lo que el jugador ya tiene. El que taló como cualquiera ni se entera; el que
+    ignoró el bosque se frena. Y si frena, la barra de granja lo dice (« Tala 17/21 — te falta
+    talar »): un requisito que para sin explicarse es un muro mudo. Lo custodia
+    `test-nivel-callado.js` §1c, que comprueba la holgura contra la curva medida.
   · [x] **ARTESANÍA: escondida, no borrada** (15/9: « hazla intacta y la dejamos para la próxima
     actualización »). Sale del panel de oficios y nada más: la XP se sigue sumando con cada forja
     y cada reparación, el guardado la sigue llevando. `SKILLS_ESCONDIDOS` en state.js; el día que

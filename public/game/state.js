@@ -2320,10 +2320,39 @@ function tareaLabel(t) {
   if (tipo === "cocinar") return "Cocinar " + n + " platos";
   return tipo + " " + n;
 }
+/* ═══ LA TALA ES UNA LLAVE EN LOS ÚLTIMOS NIVELES   (15/9, dirección) ════════════════════════
+   « Tala, que sea un requisito para subir de nivel la granja; por ejemplo, para subir a nivel 30
+     que pida nivel 35 de Tala. Es un número de ejemplo, no tiene que ser así estrictamente. »
+
+   El para qué: hasta hoy la Tala era un contador. Nadie preguntaba su nivel en todo el código
+   (medido en medir-oficios-huerfanos.js), así que talar subía un número y nada más. Con esto
+   pasa a ser una llave: en el último tramo la granja ya no sube solo con XP de Cultivo — hay que
+   haber ido al bosque.
+
+   LOS NÚMEROS SALEN DE LA PARTIDA, NO DEL EJEMPLO. El ejemplo no se puede copiar tal cual porque
+   habla de otra escala: el techo es 25, no 30, y al final de la partida ENTERA el jugador llega a
+   Tala 24 — pedirle 35 serían 11.038 talas, tres veces todo lo que se tala en 26 días. Sería el
+   muro de « 85 ratas para la espada de piedra » otra vez.
+   Así que se midió la curva real con el simulador (3 sesiones al día, techo 25):
+       granja 18 → Tala 19 · granja 20 → Tala 20 · granja 22 → Tala 21 · granja 25 → Tala 24
+   y el requisito se pone CUATRO por debajo de esa curva. El que taló como cualquiera ni se entera;
+   el que ignoró el bosque se frena y tiene que ir. Que es exactamente lo que se pidió.
+
+   DESDE DÓNDE: `nivelEscalado(30)`, que en el techo de hoy cae justo en el 18 — o sea que el
+   « para subir a nivel 30 » del ejemplo se respeta, traducido a la escala que existe. Si el techo
+   se mueve, el tramo se mueve con él. */
+var FARM_TALA_MARGEN = 4;   // cuánto por debajo de lo que el jugador tiene naturalmente
+function farmTalaDesde() { return nivelEscalado(30); }
+function farmTalaReq(nv) { return nv >= farmTalaDesde() ? Math.max(1, nv - FARM_TALA_MARGEN) : 0; }
+function farmTalaCumple(nv) {
+  const req = farmTalaReq(nv);
+  return !req || skillInfo(G.skills.tala || 0, "tala").lvl >= req;
+}
 function farmPuedeSubir() {   // ¿se puede pasar al nivel siguiente ahora mismo?
   const nv = G.level + 1;
   if (nv > FARM_NIVEL_MAX) return false;
   if ((G.skills.farming || 0) < (FARM_XP_LVLS[nv] || Infinity)) return false;
+  if (!farmTalaCumple(nv)) return false;   // 15/9: la Tala, del tramo final en adelante
   return tareasCumplidas(nv);   // del 11 en adelante hay tareas; del 1 al 10 la lista está vacía
 }
 var _recalcFarm = false;
