@@ -77,7 +77,12 @@ en `docs/LEYES.md`.
   « el nivel te hace más rápido » no tiene dónde pasar con 25 niveles. Si algún día el techo sube
   mucho, o hay botas y monturas que sumen speed, vale la pena volver a mirarlo: la curva y los
   breakpoints están descritos en `GF.SUELO` (config.js).
-- [ ] **La vida del héroe se planta en 160 al Combate 10, y eso ata el combate.** Sube en dos
+- [x] ~~**La vida del héroe se planta en 160 al Combate 10**~~ **resuelto el 15/9** (diseñador: « ¿agregamos
+  vida por nivel? »). Ahora sube 7 por nivel de Combate y no se corta: 163 al 10, 233 al 20, 443 al
+  50. La pendiente sale de los dos hitos viejos (60 de vida del nivel 1 al 10), y la recta va por
+  encima de los escalones en todos los niveles, así que nadie perdió vida (ley 1). Lo custodia
+  `tools/test-vida-por-nivel.js`.
+  *El diagnóstico que llevó hasta acá, que vale conservar:* la vida subía en dos
   hitos (100 → +20 al Combate 5 → +40 al Combate 10) y del 11 en adelante **no sube nunca más**.
   O sea que el Combate alto no entrega nada: es el mismo problema que los seis oficios huérfanos,
   con otro nombre.
@@ -89,6 +94,13 @@ en `docs/LEYES.md`.
   cuenta aplanaba el bestiario entero (la rata pegando 12 y el trol 20), justamente porque la
   vida se planta temprano. La salida es dar vida (o defensa) más allá del Combate 10, y eso es
   contenido, no una perilla. **No bloquea el MVP: se mira jugando la semana.**
+- [x] ~~**¿La parada tiene techo?**~~ **contestado el 15/9**: « si la de madera no debería tener parada
+  xD ». El primer escalón de cada tipo dejó de parar (se deriva de `ri === 0`, no del nombre del
+  arma), y de la piedra para arriba la fórmula sigue igual. Medido: el jugador del día 1 pasó de
+  3,7 a 2,8 ratas con la vida llena. Queda mirar JUGANDO si allá arriba la parada se vuelve
+  demasiado generosa — con espada de oro y Espada 30 sube para todo el bestiario, no solo para la
+  rata. Si se nota, las perillas están en el documento: `TIBIA_BLOCK_MAX`, la recuperación de las
+  cargas y el 0,15 de `heroDefensa`.
 - [ ] **La cuenta por email — para después del playtest** (dirección, 15/9: « esto lo pasamos
   para luego »). Hoy la cuenta es ANÓNIMA y vive en el localStorage del navegador: si alguien
   limpia la caché o cambia de máquina, pierde la granja. **El panel ya está escrito y en vivo**
