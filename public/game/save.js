@@ -838,10 +838,26 @@ function derivarEstado(d) {
      cerrar eso hace falta decidir una política de desconexión —¿morís si te cae la conexión?—, y
      esa es una decisión de dirección, no un arreglo. Lo que NO se puede hacer es matar al jugador
      por una caída de red: sería perder progreso sin borrar caché, justo lo que la ley prohíbe. */
+  /* 16/9 (diseñador, detall.docx punto 4): « si estás en zona negra y das F5 aparece en la
+     granja, debe aparecer justo donde quedó ». Hasta hoy el viaje se LIQUIDABA acá: era lo
+     correcto mientras no hubiera forma de volver, porque dejarlo abierto escondía el botín en un
+     contenedor que la bolsa no muestra. Ahora hay forma, así que el viaje se queda abierto y el
+     juego entra solo a la Zona en cuanto la granja está lista (main.js).
+     LEY 1, que es lo que no puede romperse al hacer esto: si por lo que sea NO se puede volver
+     —la zona guardada ya no existe, el mapa no arranca— el viaje se cierra como antes y el botín
+     se vuelca. Perder la partida por no poder recrear una escena sería el peor cambio posible. */
   try {
-    if (G.zonaViaje && !(typeof enZona === "function" && enZona()) && typeof zonaSalir === "function") {
-      zonaSalir(false);
-      if (typeof log === "function") log("Volviste de la Zona Negra con la partida cerrada — tu viaje se cerró solo y lo que llevabas está en la bolsa.", "info");
+    if (G.zonaViaje && !(typeof enZona === "function" && enZona())) {
+      const z = (G.zonaViaje.pos && G.zonaViaje.pos.zona) || (window.GF && GF.zona);
+      const existe = z && typeof ZONA_DEF !== "undefined" && ZONA_DEF[z];
+      if (existe) {
+        GF.zona = z;
+        window.__volverALaZona = z;   // lo recoge main.js cuando el juego está listo
+        if (typeof log === "function") log("Seguís en la Zona Negra: te dejamos donde estabas.", "info");
+      } else if (typeof zonaSalir === "function") {
+        zonaSalir(false);
+        if (typeof log === "function") log("Volviste de la Zona Negra con la partida cerrada — tu viaje se cerró solo y lo que llevabas está en la bolsa.", "info");
+      }
     }
   } catch (e) { console.warn("cierre del viaje a la zona:", e); }
   try { if (typeof regalosSync === "function") regalosSync(); } catch (e) {}   // guardados viejos: recalcula lo que le corresponde por su nivel

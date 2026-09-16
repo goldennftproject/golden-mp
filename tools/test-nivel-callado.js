@@ -100,7 +100,7 @@ console.log("\n2 · EL F5 DENTRO DE LA ZONA NO DEVUELVE LA VIDA\n");
 {
   const FOREST = fs.readFileSync(path.join(RAIZ, "public/game/forest.js"), "utf8");
   ok("la vida se guarda cuando te pegan, no solo al entrar",
-    /G\.hp = Math\.max\(0, G\.hp - dmg\)[\s\S]{0,1600}?_hpGuardadaEn[\s\S]{0,200}?saveFarm\(\)/.test(FOREST));
+    /G\.hp = Math\.max\(0, G\.hp - dmg\)[\s\S]{0,1800}?_hpGuardadaEn[\s\S]{0,400}?saveFarm\(\)/.test(FOREST));
   ok("con throttle, para no castigar al portero en cada golpe",
     /nowMs\(\) - \(this\._hpGuardadaEn \|\| 0\) > ZONA_HP_GUARDA_S \* 1000/.test(FOREST));
   ok("el intervalo está en una constante y es de segundos, no de minutos",
@@ -112,8 +112,21 @@ console.log("\n2 · EL F5 DENTRO DE LA ZONA NO DEVUELVE LA VIDA\n");
   ok("nadie muere ni pierde el contenedor por recargar: la tumba solo se llena si la vida llega a 0",
     /if \(G\.hp <= 0\) \{[\s\S]{0,2200}?tumbaCaer/.test(FOREST));   // 15/9: el bloque creció con la rotura de armadura
   const SAVE = fs.readFileSync(path.join(RAIZ, "public/game/save.js"), "utf8");
-  ok("y al volver, el viaje se cierra solo y el botín se vuelca (no se pierde por recargar)",
-    /zonaViaje && !\(typeof enZona === "function" && enZona\(\)\)[\s\S]{0,120}?zonaSalir\(false\)/.test(SAVE));
+  /* 16/9 — ESTO CAMBIÓ DE CONTRATO, por pedido del diseñador: « si estás en zona negra y das F5
+     aparece en la granja, debe aparecer justo donde quedó ». Antes recargar LIQUIDABA el viaje y
+     volcaba el botín; ahora el viaje se queda abierto y el juego vuelve a entrar solo. Lo que
+     sigue siendo ley 1 —y es lo único que este renglón custodia— es que si NO se puede volver,
+     el viaje se cierre igual y el botín aparezca en la bolsa: quedarse sin poder entrar ni salir,
+     con el morral escondido, sería perder progreso. */
+  ok("recargar dentro de la Zona te deja dentro, no te devuelve a la granja",
+    /window\.__volverALaZona = z/.test(SAVE) && /GF\.zona = z;/.test(SAVE));
+  ok("y solo si la zona guardada existe (si no, no habría mapa al que volver)",
+    /const existe = z && typeof ZONA_DEF/.test(SAVE));
+  ok("si no se puede volver, el viaje se cierra y el botín se vuelca (ley 1)",
+    /\} else if \(typeof zonaSalir === "function"\) \{[\s\S]{0,120}?zonaSalir\(false\)/.test(SAVE));
+  const MAIN = fs.readFileSync(path.join(RAIZ, "public/game/main.js"), "utf8");
+  ok("y el que cruza el portal tiene su propia red: si la escena no arranca, también se cierra",
+    /no se pudo volver a la Zona[\s\S]{0,400}?zonaSalir\(false\)/.test(MAIN));
 }
 
 console.log("\n" + (fallos ? fallos + " fallo(s)" : "TODO EN VERDE") + "\n");

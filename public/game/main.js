@@ -29,7 +29,37 @@ function juegoListo() {
     const l = document.getElementById("loading");
     if (l) { l.style.transition = "opacity .35s"; l.style.opacity = "0"; setTimeout(() => { l.style.display = "none"; }, 360); }
     correrAlEntrar();   // ahora sí: cofre diario y demás, con el juego ya a la vista
+    volverALaZonaSiHabiaViaje();
   }, 120);
+}
+
+/* ═══ RECARGAR DENTRO DE LA ZONA TE DEJA DENTRO   (16/9, diseñador · detall.docx punto 4) ════
+   « Si estás en zona negra y das F5 aparece en la granja, debe aparecer justo donde quedó ».
+   La partida siempre ARRANCA en la granja —ahí está el arte, el HUD y todo lo que el juego da
+   por montado—, así que el camino honesto no es arrancar en el bosque sino cruzar el portal solo
+   en cuanto la granja está lista. El jugador ve el fundido de siempre, el mismo que si hubiera
+   caminado. save.js deja la bandera cuando encuentra un viaje abierto y comprueba que la zona
+   exista; acá solo se cruza.
+   Si la escena no arranca, NO se deja al jugador en el limbo: se cierra el viaje como antes y el
+   botín se vuelca, que es lo que manda la ley 1. */
+function volverALaZonaSiHabiaViaje() {
+  const z = window.__volverALaZona; if (!z) return;
+  window.__volverALaZona = null;
+  const sc = window.farmScene;
+  try {
+    if (!sc || !sc.scene || typeof irAEscena !== "function") throw new Error("la granja no está montada");
+    GF.zona = z;
+    sc.leaving = true;
+    irAEscena(sc, "forest");
+    if (typeof toast === "function") toast("Seguías en la Zona Negra");
+  } catch (e) {
+    console.warn("no se pudo volver a la Zona:", e && e.message);
+    try {
+      if (typeof zonaSalir === "function" && typeof mostrarResumenZona === "function") mostrarResumenZona(zonaSalir(false));
+      if (typeof log === "function") log("No se pudo volver a la Zona Negra: tu viaje se cerró y lo que llevabas está en la bolsa.", "bad");
+      if (typeof saveFarm === "function") saveFarm(true);
+    } catch (x) {}
+  }
 }
 
 /* ═══ LA PANTALLA CONGELADA AL VOLVER DE OTRA PESTAÑA   (15/9, reportado jugando) ═══════════

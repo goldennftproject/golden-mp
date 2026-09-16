@@ -158,7 +158,17 @@ function addBuff(type, label, mult, durSec) { G.buffs.push({ type, label, mult, 
 function buffTotal(type) { const t = Date.now(); let s = 0; for (const b of G.buffs) if (b.type === type && b.until > t) s += b.mult; return s; }
 function dmgMult() { return 1 + (buffTotal("dmg") + buffTotal("feast") + (typeof armorBonoVal === "function" ? armorBonoVal("dmgPct") : 0)) / 100; }
 function dmgTakenMult() { return Math.max(0.2, 1 - (buffTotal("def") + buffTotal("feast") + (typeof armorBonoVal === "function" ? armorBonoVal("defPct") : 0)) / 100); }
-function speedMult() { return 1 + (buffTotal("speed") + buffTotal("feast") + (typeof armorBonoVal === "function" ? armorBonoVal("spd") : 0)) / 100; }
+/* 16/9 (diseñador): « que suba a medida que suba de nivel ». La recta va del nivel 1 al techo de
+   granja y devuelve GF.SPEED_NIVEL_MAX; se deriva de FARM_NIVEL_MAX, así que si el techo se
+   vuelve a mover —ya pasó una vez, de 50 a 25— la curva se reparte sola en vez de quedarse
+   apuntando a un nivel que no existe. */
+function speedNivelMult() {
+  const max = (typeof FARM_NIVEL_MAX === "number") ? FARM_NIVEL_MAX : 25;
+  const tope = (window.GF && typeof GF.SPEED_NIVEL_MAX === "number") ? GF.SPEED_NIVEL_MAX : 0;
+  const nv = Math.max(1, Math.min(max, (G && G.level) || 1));
+  return 1 + tope * (nv - 1) / Math.max(1, max - 1);
+}
+function speedMult() { return speedNivelMult() * (1 + (buffTotal("speed") + buffTotal("feast") + (typeof armorBonoVal === "function" ? armorBonoVal("spd") : 0)) / 100); }
 function farmSpeedMult() { return Math.max(0.4, 1 - (buffTotal("farm") + (typeof armorBonoVal === "function" ? armorBonoVal("farm") : 0)) / 100); }   // acorta las acciones de cultivo
 function luckMult() { return 1 + buffTotal("luck") / 100 + (typeof eqRunaVal === "function" && typeof armaEq === "function" ? eqRunaVal("fortuna") / 100 : 0); }
 function combatXpMult() { return 1 + buffTotal("combatxp") / 100; }
@@ -190,11 +200,33 @@ function cleanseStates(tipos) {
   return antes - G.states.length;
 }
 
-var GRANJA_REGEN = 1;   // "detallitos (1)" punto 3: en la granja la vida se recupera sola (puntos por segundo)
+/* ═══ CURARSE SOLO CUESTA TIEMPO   (16/9, diseñador · « detall.docx » punto 1) ═══════════════
+   « Corregir que la vida saliendo y entrando de zona negra se cargue toda, agregar timer de 2 h
+   o menos, preguntar a la IA qué conviene ».
+
+   El diagnóstico: no había ningún « curar al entrar » escondido. Era esto — la granja curaba a
+   1 punto POR SEGUNDO, así que la barra entera volvía en menos de tres minutos, gratis y sin
+   pedir nada. Con eso, ningún número de daño podía obligar a comer: la comida solo decidía si
+   volvías caminando a casa o no.
+
+   Qué conviene, y por qué NO el temporizador en la puerta: el enfriamiento de entrada existe
+   (`ZONA_CD_MIN`) y ponerlo en 2 h cerraría la Zona casi todo el día. El combate es lo ÚNICO del
+   juego sin enfriamiento, y por eso es lo único que llena el tiempo muerto entre cosechas — es
+   la razón por la que la Espada de Madera se abrió el día uno. Un candado de 2 h ahí no hace que
+   la comida importe: hace que no haya nada que hacer.
+
+   Así que el temporizador va donde está el problema: en la CURA. La barra entera sigue
+   volviendo sola —la granja no deja de ser el sitio seguro, la ley 1 no se toca— pero tarda
+   GRANJA_CURA_MIN. Comer deja de ser un lujo y pasa a ser la forma rápida.
+   Y el ritmo se DERIVA de la vida máxima: « la barra llena tarda una hora » sigue siendo verdad
+   al Combate 1 (100 de vida) y al 50 (443), sin tocar nada. Un punto por segundo no lo era. */
+var GRANJA_REGEN = 1;        // interruptor: 0 apaga la cura sola de la granja
+var GRANJA_CURA_MIN = 60;    // lo que tarda la BARRA ENTERA en volver sola (el « timer » del pedido)
+function granjaCuraPorSeg() { return Math.max(0, G.hpMax || 100) / Math.max(1, GRANJA_CURA_MIN * 60); }
 function granjaRegen() {   // solo fuera de la Zona Negra
   if (!GRANJA_REGEN || G.hp >= G.hpMax) return;
   if (window.GF && GF.scene === "forest") return;
-  G.hp = Math.min(G.hpMax, G.hp + GRANJA_REGEN);
+  G.hp = Math.min(G.hpMax, G.hp + granjaCuraPorSeg());
 }
 function buffTick() {   // 1 vez por segundo desde el HUD: regeneración y vida máxima temporal
   const t = Date.now(); let dirty = false;
@@ -4246,6 +4278,19 @@ function zonaEntrar() {
   G.zonaViaje = { t: nowMs(), res, plata: G.plata || 0, golden: G.golden || 0,
                   combatXp: G.combatXp || 0, matados: zonaMatados(), hp: G.hp };
 }
+/* ═══ DÓNDE QUEDÓ EL GRANJERO   (16/9, diseñador · detall.docx punto 4) ══════════════════════
+   « Si estás en zona negra y das F5, aparece en la granja; debe aparecer justo donde quedó ».
+   La posición viaja DENTRO de `G.zonaViaje`, que es la foto del viaje: si el viaje se cierra —al
+   salir o al morir— la posición se va con él y no queda un punto huérfano al que volver. */
+function zonaGuardarPos(x, y) {
+  if (!G.zonaViaje) return;
+  G.zonaViaje.pos = { x: Math.round(x), y: Math.round(y), zona: (window.GF && GF.zona) || "pantano" };
+}
+function zonaPosGuardada() {
+  const p = G.zonaViaje && G.zonaViaje.pos;
+  if (!p || typeof p.x !== "number" || typeof p.y !== "number") return null;
+  return p;
+}
 // devuelve el resumen del viaje (y lo cierra). null si no había viaje abierto.
 /* ═══ LOS CONTENEDORES ═══════════════════════════════════════════════════════════════════════
    (8/9, dirección, corrigiéndome: « el morral es solo un objeto, una bolsa de ocho huecos. En
@@ -5955,8 +6000,20 @@ const TIBIA_ATACANDO_MS = 2000;                // « atacando » = pegó hace me
    41 a 23, mientras que el jugador del día 1 casi no lo nota (4,2 → 3,7) porque a esa altura
    casi no paraba nada. Que es justo la forma que se buscaba: apretar donde la parada era gratis.
    Se mide con `node tools/medir-comida.js`. */
-const TIBIA_BLOCK_MAX = 1;                     // cargas de bloqueo (§2.1)
+const TIBIA_BLOCK_MAX = 1;                     // cargas de bloqueo del HÉROE (§2.1)
 const TIBIA_BLOCK_REGEN_MS = 3000;             // …y lo que tarda en volver una
+/* 16/9 (diseñador): « los mobs deben aguantar más, subir defensa o bajar el daño del personaje ».
+   Antes de tocar ningún número se midió de dónde venía, y venía de MÍ: el 15/9 bajé las cargas de
+   bloqueo a 1 con recuperación de 3 s para que la parada del jugador dejara de ser gratis… y esa
+   constante la compartían los bichos. O sea que de paso los dejé parando mucho menos, y murieron
+   más rápido sin que nadie lo pidiera. No hacía falta un ajuste nuevo: hacía falta separar las
+   dos cosas, que nunca debieron ser una. Los bichos vuelven al §2.1 del documento —dos cargas,
+   una por segundo— y el héroe se queda con lo que dirección pidió ayer. */
+const MOB_BLOCK_MAX = 2;                       // los bichos, como el documento (§2.1)
+const MOB_BLOCK_REGEN_MS = 1000;
+function blkMax(blk) { return (blk && blk.max != null) ? blk.max : TIBIA_BLOCK_MAX; }
+function blkRegen(blk) { return (blk && blk.regen != null) ? blk.regen : TIBIA_BLOCK_REGEN_MS; }
+function blkDeMob() { return { blockCount: MOB_BLOCK_MAX, blockTicks: 0, max: MOB_BLOCK_MAX, regen: MOB_BLOCK_REGEN_MS }; }
 const MOB_ARMOR_PCT = 0.06;                    // armor = defense = 6 % del HP cuando el bicho no lo trae escrito
 const ARM_ATK = {};                            // atk = min + max del compendio
 ARM_TIPOS.forEach(t => { ARM_ATK[t] = ARM_MINMAX[t].map(mm => mm[0] + mm[1]); });
@@ -5995,7 +6052,7 @@ function mobDefense(def) { return def.defense != null ? def.defense : Math.max(1
 function blockHit(dmg, armor, defense, blk) {
   dmg = Math.max(0, Math.round(dmg));
   if (blk && (blk.blockCount == null || blk.blockCount > 0) && defense > 0) {
-    blk.blockCount = (blk.blockCount == null ? TIBIA_BLOCK_MAX : blk.blockCount) - 1;
+    blk.blockCount = (blk.blockCount == null ? blkMax(blk) : blk.blockCount) - 1;
     dmg -= randIntIncl(defense / 2, defense);
     if (dmg <= 0) return { dmg: 0, parado: true, absorbido: false };
   }
@@ -6008,9 +6065,9 @@ function blockHit(dmg, armor, defense, blk) {
 /* §2.1: cada tick, una carga por segundo hasta el tope */
 function tickBlock(blk, dtMs) {
   if (!blk) return;
-  if (blk.blockCount == null) blk.blockCount = TIBIA_BLOCK_MAX;
+  if (blk.blockCount == null) blk.blockCount = blkMax(blk);
   blk.blockTicks = (blk.blockTicks || 0) + dtMs;
-  if (blk.blockTicks >= TIBIA_BLOCK_REGEN_MS) { blk.blockCount = Math.min(blk.blockCount + 1, TIBIA_BLOCK_MAX); blk.blockTicks = 0; }
+  if (blk.blockTicks >= blkRegen(blk)) { blk.blockCount = Math.min(blk.blockCount + 1, blkMax(blk)); blk.blockTicks = 0; }
 }
 /* la defensa (parada) del jugador — §4 */
 function heroDefensa(atacando) {

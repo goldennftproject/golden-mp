@@ -34,7 +34,7 @@ function bichosPorVida(perfil, key, tiradas) {
   for (let t = 0; t < tiradas; t++) {
     let hp = vida, n = 0; const blk = { blockCount: 2, blockTicks: 0 };
     while (hp > 0 && n < 300) {
-      let mhp = m.hp; const bm = { blockCount: 2, blockTicks: 0 };
+      let mhp = m.hp; const bm = ctx.blkDeMob();   // 16/9: los bichos tienen sus propias cargas
       while (mhp > 0) {
         for (let f = 0; f < 125; f++) { ctx.tickBlock(bm, 16); ctx.tickBlock(blk, 16); }   // 2 s de frames
         mhp -= ctx.rollWeaponHit({ armor: armor, defense: defense, blk: bm }).dmg;

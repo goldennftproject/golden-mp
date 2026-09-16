@@ -42,7 +42,23 @@ GF.WORLD_W = GF.COLS * GF.TILE;             // 630
 GF.ORIG_X = 0; GF.ORIG_Y = 0;               // esquina del mundo: se vuelve NEGATIVA al expandir
 GF.C0 = 0; GF.R0 = 0; GF.C1 = GF.COLS_BASE; GF.R1 = GF.ROWS_BASE;
 GF.WORLD_H = GF.ROWS * GF.TILE;             // 504
-GF.SPEED = 175;
+/* ═══ LA VELOCIDAD, Y LO QUE EL NIVEL PUEDE HACER CON ELLA   (16/9, diseñador) ═══════════════
+   « Bajar un poco más la velocidad del personaje y que suba a medida que suba de nivel ».
+
+   Las dos mitades no cuestan lo mismo, y conviene decirlo antes de que se juegue:
+     · BAJARLA es un número. 175 → 158 px/s (−10 %), que sobre celdas de 42 px son 3,76
+       celdas por segundo en vez de 4,17.
+     · QUE SUBA CON EL NIVEL tiene poco sitio donde pasar, y está medido desde el 14/9: con la
+       curva del documento de Tibia y un techo de 25 niveles, todo el recorrido del jugador cabe
+       en UN escalón (300 ms → 250 ms por celda). Tibia llega a 500 niveles; nosotros a 25.
+   Así que la subida se hace acá con lo que sí tenemos: una recta corta y honesta que devuelve
+   ese 10 % a lo largo de la partida. El jugador del día uno camina más lento que ayer; el que
+   llega al techo camina como caminaba antes de este cambio, y lo habrá ganado. Ni un truco de
+   movimiento nuevo ni una promesa que 25 niveles no pueden pagar.
+   La velocidad final se arma en `speedMult()` (state.js), que es por donde ya pasaban los buffs
+   y el bono del set — un solo sitio para todo lo que mueve al granjero. */
+GF.SPEED = 158;              // base: −10 % sobre los 175 de siempre
+GF.SPEED_NIVEL_MAX = 0.10;   // cuánto devuelve el techo de granja (0,10 = el 10 % que se bajó)
 
 /* ============ EL ANILLO DE 16 EXPANSIONES (17/8, dirección) =======================
    Idea de dirección, tomada de Sunflower Land: la granja no crece como un anillo que se

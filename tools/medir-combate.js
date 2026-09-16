@@ -56,8 +56,8 @@ function golpesParaMatar(p, m) {
   const armor = ctx.mobArmor(m), defense = ctx.mobDefense(m);
   let total = 0;
   for (let t = 0; t < TIRADAS; t++) {
-    let hp = m.hp, n = 0, blk = { blockCount: 2 };
-    while (hp > 0 && n < 600) { n++; hp -= ctx.rollWeaponHit({ armor: armor, defense: defense, blk: blk }).dmg; }
+    let hp = m.hp, n = 0, blk = ctx.blkDeMob();   // 16/9: las cargas de los BICHOS, que ya no son las del héroe
+    while (hp > 0 && n < 600) { n++; for (let f = 0; f < 125; f++) ctx.tickBlock(blk, 16); hp -= ctx.rollWeaponHit({ armor: armor, defense: defense, blk: blk }).dmg; }
     total += n;
   }
   return { golpes: total / TIRADAS, max: max };

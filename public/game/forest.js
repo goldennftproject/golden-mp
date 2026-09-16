@@ -95,7 +95,17 @@ class ForestScene extends Phaser.Scene {
     }
 
     // héroe
-    const hero = this.add.sprite(90, this.H / 2, "hero_idle_0").setOrigin(0.5, 1);
+    /* 16/9 (diseñador): « debe aparecer justo donde quedó ». La posición viene de la foto del
+       viaje y solo si es de ESTA zona — volver de la guarida al pantano por la puerta de al lado
+       dejaría al granjero en un punto que en este mapa puede ser una roca o el vacío. Y se
+       encierra entre los bordes: un guardado viejo con otra resolución no puede escupirlo fuera. */
+    let hx = 90, hy = this.H / 2;
+    { const p = (typeof zonaPosGuardada === "function") ? zonaPosGuardada() : null;
+      if (p && p.zona === this.zonaKey) {
+        hx = Math.max(60, Math.min(this.W - 60, p.x));
+        hy = Math.max(70, Math.min(this.H - 50, p.y));
+      } }
+    const hero = this.add.sprite(hx, hy, "hero_idle_0").setOrigin(0.5, 1);
     this.idleScale = GF.SIZE.hero / hero.height;
     this.actScale = this.idleScale;   // granjero definitivo: misma escala de cuerpo en quieto y acciones
     hero.setScale(this.idleScale); hero.play("idle");
@@ -1122,7 +1132,7 @@ class ForestScene extends Phaser.Scene {
       m.hp = m.def.hp; m.dead = false; m.pagado = false; m.cx = m.home.x; m.by = m.home.y;
       m.spr.setPosition(m.cx, m.by).setAlpha(1).setVisible(true).setDepth(m.by); m.tgt = null;
       // reaparece LIMPIO: si no, el Orco/Dragón volvía con la furia puesta para siempre y el Espectro intangible
-      m.enraged = false; m.dmgMult = 1; m.bleed = null; m.blockCount = TIBIA_BLOCK_MAX; m.blockTicks = 0;
+      m.enraged = false; m.dmgMult = 1; m.bleed = null; Object.assign(m, blkDeMob());   // 16/9: los bichos tienen SUS cargas, no las del héroe
       m.shellUntil = 0; m.phaseUntil = 0; m.blinkUntil = 0; m.stunUntil = 0;
       m.abAt = 0; m.shellAt = 0; m.stompAt = 0; m.chargeAt = 0; m.flameAt = 0; m.curseAt = 0;
       m.blinkAt = 0; m.breathAt = 0; m.roarAt = 0; m.tailAt = 0; m.nextHit = 0;
@@ -1178,6 +1188,8 @@ class ForestScene extends Phaser.Scene {
        Con throttle, porque esto corre en cada golpe y el portero no está para eso. */
     if (dmg > 0 && nowMs() - (this._hpGuardadaEn || 0) > ZONA_HP_GUARDA_S * 1000) {
       this._hpGuardadaEn = nowMs();
+      /* 16/9: y de paso DÓNDE estás, que viaja en la misma foto y con el mismo throttle */
+      if (typeof zonaGuardarPos === "function" && this.hero) zonaGuardarPos(this.hero.x, this.hero.y);
       if (typeof saveFarm === "function") saveFarm();
     }
     if (G.hp <= 0) {
