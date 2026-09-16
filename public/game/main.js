@@ -29,6 +29,7 @@ function juegoListo() {
     const l = document.getElementById("loading");
     if (l) { l.style.transition = "opacity .35s"; l.style.opacity = "0"; setTimeout(() => { l.style.display = "none"; }, 360); }
     correrAlEntrar();   // ahora sí: cofre diario y demás, con el juego ya a la vista
+    contarElErrorDeAntes();   // si la vez pasada se detuvo, acá se dice por qué
     volverALaZonaSiHabiaViaje();
   }, 120);
 }
@@ -104,6 +105,40 @@ function volverALaZonaSiHabiaViaje() {
    el bucle de verdad se muere. Un error suelto que no mata nada NO interrumpe la partida: se
    anota y ya. El que decide si hay que volver a entrar sigue siendo el pulso. */
 var ERR_RECUERDA = 3;        // cuántos errores se recuerdan para el cartel
+/* 16/9 (tarde) — « se quedó pegado PERO NO PUDE VER EL MENSAJE ». El cartel salía y el juego se
+   recargaba 0,6 s después, así que el motivo duraba menos que un parpadeo. Un diagnóstico que no
+   se puede leer no es un diagnóstico. Así que ahora el error:
+     · se GUARDA en el navegador y sobrevive a la recarga, para contarlo del otro lado;
+     · el cartel se queda ERR_CARTEL_MS en pantalla antes de recargar — tiempo de leerlo o de
+       sacarle una foto, que es como nos llegan los reportes;
+     · y al volver, el registro del juego lo dice con todas las letras, tranquilo, donde se puede
+       copiar. La consola también, por si hace falta pegarlo.
+   El guardado va primero igual: la ley 1 no cede por un cartel. */
+var ERR_CARTEL_MS = 5000;          // lo que el cartel se queda antes de recargar
+var ERR_LLAVE = "gf_ultimo_error";
+function guardarElError(txt, porque) {
+  try { localStorage.setItem(ERR_LLAVE, JSON.stringify({ txt: txt || "", porque: porque || "", t: Date.now() })); } catch (e) {}
+}
+function contarElErrorDeAntes() {
+  let d = null;
+  try { d = JSON.parse(localStorage.getItem(ERR_LLAVE) || "null"); localStorage.removeItem(ERR_LLAVE); } catch (e) {}
+  if (!d || !d.t || Date.now() - d.t > 10 * 60 * 1000) return;   // viejo: ya no cuenta nada útil
+  const det = (d.porque || "se detuvo") + (d.txt ? " · " + d.txt : "");
+  console.warn("Golden Farm se reinició solo. Motivo:", det);
+  try { if (typeof log === "function") log("⚠ La vez anterior el juego se detuvo y volvió a entrar solo. Motivo: " + det, "bad"); } catch (e) {}
+  /* y se ABRE el panel: el registro arranca plegado, así que dejar el motivo ahí adentro sería
+     repetir el error de esta mañana —« no pude ver el mensaje »— con otro disfraz. Se abre en la
+     pestaña Registro, no en Chat, y no se vuelve a cerrar solo: que lo cierre quien lo lea. */
+  try {
+    const panel = document.getElementById("logpanel");
+    if (panel) {
+      panel.classList.remove("collapsed");
+      const tab = panel.querySelector('[data-tab="log"]');
+      if (tab) tab.click();
+    }
+  } catch (e) {}
+  try { if (typeof sesionLog === "function") sesionLog("se reinició solo", det); } catch (e) {}
+}
 function atraparLosErrores() {
   window.__gfErr = [];
   const anota = (txt) => {
@@ -111,6 +146,21 @@ function atraparLosErrores() {
     window.__gfErr.push(txt);
     if (window.__gfErr.length > ERR_RECUERDA) window.__gfErr.shift();
     try { if (typeof sesionLog === "function") sesionLog("error suelto", txt); } catch (e) {}
+    /* se guarda SIEMPRE, no solo cuando el bucle muere: si el juego se queda tonto sin morir del
+       todo, el error igual queda escrito para la próxima carga */
+    guardarElError(txt, "error durante la partida");
+    /* y si ESE error mató el bucle, no hace falta esperar los cuatro segundos del pulso: se
+       comprueba a los dos y se actúa con el nombre del culpable en la mano. Si el juego sigue
+       corriendo —la mayoría de los errores no matan nada— acá no pasa nada. */
+    try {
+      const g = window.GAME; if (!g || !g.loop) return;
+      const f0 = g.loop.frame;
+      setTimeout(() => {
+        if (document.visibilityState !== "visible") return;
+        if (window.GAME && window.GAME.loop && window.GAME.loop.frame === f0 && typeof window.__gfFatal === "function")
+          window.__gfFatal("el juego se detuvo por un error");
+      }, 2000);
+    } catch (e) {}
   };
   window.addEventListener("error", (e) => {
     const d = (e && e.filename ? String(e.filename).split("/").pop() + ":" + e.lineno + " " : "");
@@ -131,7 +181,9 @@ function vigilarElContexto(game) {
   let cayendo = false;
   const volverAEntrar = () => {
     try { if (typeof saveFarm === "function") saveFarm(true); } catch (e) {}   // ley 1: primero se guarda
-    const recargar = () => setTimeout(() => { try { location.reload(); } catch (e) {} }, CTX_RECARGA_MS);
+    const espera = document.getElementById("ctx-perdido") && document.getElementById("ctx-perdido").style.display === "flex"
+      ? ERR_CARTEL_MS : CTX_RECARGA_MS;   // si hay cartel, que dé tiempo a leerlo
+    const recargar = () => setTimeout(() => { try { location.reload(); } catch (e) {} }, espera);
     if (document.visibilityState === "visible") recargar();
     else document.addEventListener("visibilitychange", function alVolver() {
       if (document.visibilityState !== "visible") return;
@@ -157,8 +209,10 @@ function vigilarElContexto(game) {
     const det = document.getElementById("ctx-detalle"), e = (typeof ultimoError === "function") ? ultimoError() : "";
     if (det) det.textContent = e ? "(" + (porque || "se detuvo") + " · " + e + ")" : (porque ? "(" + porque + ")" : "");
     try { if (typeof sesionLog === "function") sesionLog("se volvió a entrar", (porque || "") + " " + e); } catch (x) {}
+    guardarElError(e, porque);   // para poder contarlo del otro lado de la recarga
     volverAEntrar();
   };
+  window.__gfFatal = (porque) => { if (!cayendo) rendirse(porque); };   // lo llama el atrapador de errores
   document.addEventListener("visibilitychange", () => {
     if (document.visibilityState !== "visible" || cayendo) return;
     try {

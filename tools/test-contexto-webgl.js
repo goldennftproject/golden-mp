@@ -79,6 +79,27 @@ console.log("\n4 · Y SI REVIENTA, SE SABE POR QUÉ\n");
     /__gfErr\.length > ERR_RECUERDA/.test(MAIN));
 }
 
+console.log("\n4b · Y EL MENSAJE SE PUEDE LEER   (16/9: « se quedó pegado pero no pude ver el mensaje »)\n");
+{
+  ok("el error se guarda en el navegador y sobrevive a la recarga", /localStorage\.setItem\(ERR_LLAVE/.test(MAIN));
+  ok("y al volver se cuenta en el registro del juego, donde se puede copiar",
+    /function contarElErrorDeAntes/.test(MAIN) && /La vez anterior el juego se detuvo/.test(MAIN));
+  ok("se llama al arrancar, con la granja ya a la vista", /contarElErrorDeAntes\(\);/.test(MAIN));
+  /* el registro arranca PLEGADO (index.html: class="logpanel collapsed"), así que dejar el motivo
+     ahí adentro sería repetir « no pude ver el mensaje » con otro disfraz */
+  ok("(arnés) el panel del registro arranca plegado", /class="logpanel collapsed"/.test(HTML));
+  ok("por eso el aviso lo ABRE, y en la pestaña Registro",
+    /panel\.classList\.remove\("collapsed"\)/.test(MAIN) && /\[data-tab="log"\]/.test(MAIN));
+  ok("un error viejo no se cuenta (sería ruido de otra sesión)", /Date\.now\(\) - d\.t > 10 \* 60 \* 1000/.test(MAIN));
+  const cartel = (MAIN.match(/var ERR_CARTEL_MS = (\d+);/) || [])[1];
+  ok("el cartel se queda en pantalla el tiempo de leerlo o fotografiarlo",
+    cartel && Number(cartel) >= 3000, cartel + " ms");
+  ok("pero el guardado sigue yendo primero (la ley 1 no cede por un cartel)",
+    /saveFarm\(true\);[\s\S]{0,400}?location\.reload/.test(MAIN));
+  ok("y un error que mata el bucle no espera los cuatro segundos del pulso",
+    /window\.__gfFatal\("el juego se detuvo por un error"\)/.test(MAIN) && /window\.__gfFatal = \(porque\)/.test(MAIN));
+}
+
 console.log("\n5 · Y EL JUGADOR SE ENTERA DE QUÉ PASÓ\n");
 ok("hay un cartel para el momento en que se recarga sola", /id="ctx-perdido"/.test(HTML));
 ok("que arranca oculto (no se ve en una partida normal)", /id="ctx-perdido"[^>]*display:none/.test(HTML));
