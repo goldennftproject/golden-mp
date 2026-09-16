@@ -110,6 +110,23 @@ console.log("\n4b · Y EL MENSAJE SE PUEDE LEER   (16/9: « se quedó pegado per
     (HTML.match(/cdn\.jsdelivr\.net[^>]*crossorigin="anonymous"/g) || []).length >= 2);
 }
 
+console.log("\n4c · UN FOTOGRAMA MALO NO MATA LA PARTIDA   (16/9)\n");
+{
+  const escenas = ["farm", "forest", "plaza"];
+  for (const e of escenas) {
+    const src = fs.readFileSync(path.join(RAIZ, "public/game/" + e + ".js"), "utf8");
+    ok(e + ".js: el update va dentro de un try", /update\(time, deltaMs\) \{\s*try \{ this\.updateReal/.test(src));
+    ok(e + ".js: y el cuerpo de verdad se llama updateReal", /updateReal\(time, deltaMs\) \{/.test(src));
+  }
+  const FARM = fs.readFileSync(path.join(RAIZ, "public/game/farm.js"), "utf8");
+  ok("el error se anota, pero no en cada fotograma (inundar la consola no ayuda a nadie)",
+    /_errTotal % 100 === 0/.test(FARM));
+  ok("y si falla un segundo entero seguido, ahí sí se entrega al vigía",
+    /_errSeguidos === 60 && typeof window\.__gfFatal/.test(FARM));
+  ok("el contador se reinicia cuando un fotograma sale bien (un tropiezo no se acumula)",
+    /this\.updateReal\(time, deltaMs\); this\._errSeguidos = 0;/.test(FARM));
+}
+
 console.log("\n5 · Y EL JUGADOR SE ENTERA DE QUÉ PASÓ\n");
 ok("hay un cartel para el momento en que se recarga sola", /id="ctx-perdido"/.test(HTML));
 ok("que arranca oculto (no se ve en una partida normal)", /id="ctx-perdido"[^>]*display:none/.test(HTML));

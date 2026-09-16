@@ -1242,7 +1242,32 @@ class ForestScene extends Phaser.Scene {
     }
   }
 
+  /* ═══ UN ERROR EN UN FOTOGRAMA NO PUEDE MATAR LA PARTIDA   (16/9) ═══════════════════════════
+     Phaser llama a este update sesenta veces por segundo. Si UNA de esas llamadas lanza una
+     excepción, el navegador no vuelve a pedir el siguiente fotograma: la pantalla se queda
+     congelada para siempre mientras los clics y el sonido siguen vivos. Es exactamente la
+     congelada que dirección reportó tres veces, y lo caro no era el error —los errores pasan—
+     sino que un tropiezo de un fotograma se llevara la sesión entera.
+     Con el escudo, el fotograma malo se pierde y el juego sigue. El error se anota (una vez de
+     cada cien, para no inundar la consola) y, si TODOS los fotogramas fallan, entonces sí se
+     entrega al vigía de main.js, que guarda y vuelve a entrar. Un juego que se salta un cuadro
+     es infinitamente mejor que uno que se apaga. */
   update(time, deltaMs) {
+    try { this.updateReal(time, deltaMs); this._errSeguidos = 0; }
+    catch (e) {
+      this._errSeguidos = (this._errSeguidos || 0) + 1;
+      this._errTotal = (this._errTotal || 0) + 1;
+      if (this._errTotal === 1 || this._errTotal % 100 === 0) {
+        console.error("update de la escena (" + this._errTotal + " veces):", e);
+        try { if (typeof sesionLog === "function") sesionLog("error en update", (e && e.message) || String(e)); } catch (x) {}
+        try { if (window.__gfErr) window.__gfErr.push("update: " + ((e && e.message) || String(e))); } catch (x) {}
+      }
+      /* si falla un segundo entero seguido, no es un tropiezo: está roto de verdad */
+      if (this._errSeguidos === 60 && typeof window.__gfFatal === "function") window.__gfFatal("el update de la escena falla en cada fotograma");
+    }
+  }
+
+  updateReal(time, deltaMs) {
     if (this.leaving || !this.hero) return;   // cambiando de escena: no tocar nada más
     const dt = deltaMs / 1000, k = this.keys, hero = this.hero, t = nowMs();
 
