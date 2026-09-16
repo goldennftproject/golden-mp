@@ -96,8 +96,18 @@ console.log("\n4b · Y EL MENSAJE SE PUEDE LEER   (16/9: « se quedó pegado per
     cartel && Number(cartel) >= 3000, cartel + " ms");
   ok("pero el guardado sigue yendo primero (la ley 1 no cede por un cartel)",
     /saveFarm\(true\);[\s\S]{0,400}?location\.reload/.test(MAIN));
-  ok("y un error que mata el bucle no espera los cuatro segundos del pulso",
-    /window\.__gfFatal\("el juego se detuvo por un error"\)/.test(MAIN) && /window\.__gfFatal = \(porque\)/.test(MAIN));
+  /* 16/9 (segunda pasada) — acá había un atajo que recargaba si a los 2 s el bucle no se había
+     movido. Se quitó: un error de una extensión ajena bastaba para recargarle la partida a
+     alguien que no tenía ningún problema, y una recarga de más es peor que un diagnóstico de
+     menos. El que decide es el pulso; el error solo le pone nombre. */
+  ok("un error NO recarga por su cuenta: el que decide es el pulso",
+    !/__gfFatal\("el juego se detuvo por un error"\)/.test(MAIN));
+  ok("los errores de las extensiones del navegador no se cuentan como del juego",
+    /extension:/.test(MAIN) && /esAjeno\(e\.filename\)\) return/.test(MAIN));
+  /* y sin crossorigin, un error dentro de Phaser o Supabase llega como « Script error. » y nada
+     más: el navegador esconde mensaje, archivo y línea. Es lo que nos pasó el 16/9. */
+  ok("las librerías de CDN se cargan con crossorigin (si no, el error llega mudo)",
+    (HTML.match(/cdn\.jsdelivr\.net[^>]*crossorigin="anonymous"/g) || []).length >= 2);
 }
 
 console.log("\n5 · Y EL JUGADOR SE ENTERA DE QUÉ PASÓ\n");

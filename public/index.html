@@ -1772,13 +1772,18 @@
   </div>
 
   <script>window.GOLDEN_SERVER = "";</script>
-  <script src="https://cdn.jsdelivr.net/npm/phaser@3.80.1/dist/phaser.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/phaser@3.80.1/dist/phaser.min.js" crossorigin="anonymous"></script>
   <!-- 24/8 — VERSIÓN CLAVADA. Decía "@2", o sea "la última 2.x que haya hoy en el CDN": el
        juego cambiaba de librería de autenticación sin que nadie tocara una línea, y de un día
        para el otro. Eso es exactamente « algo se ha roto ahí en el inicio » sin culpable. La
        librería que maneja el login y el guardado no puede actualizarse sola: se sube a mano,
        se prueba, y recién ahí se cambia este número. -->
-  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.js"></script>
+  <!-- 16/9: `crossorigin` NO es decoración. Sin él, un error dentro de una librería de otro
+       dominio le llega al juego como « Script error. » y nada más — el navegador esconde el
+       mensaje, el archivo y la línea por seguridad. Con él (jsDelivr manda cabeceras CORS) el
+       atrapador de main.js recibe el error de verdad, que es lo único que hace falta para
+       arreglar una congelada. Es exactamente lo que nos pasó esta tarde. -->
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.js" crossorigin="anonymous"></script>
   <script type="module">
     try { const mod = await import("https://esm.sh/colyseus.js@0.15"); window.Colyseus = mod; window.__colyseusReady = true; window.dispatchEvent(new Event("colyseus-ready")); }
     catch (e) { console.error("colyseus.js no cargó:", e); }
@@ -1832,7 +1837,7 @@
     // 15/8: VERSIÓN DE BUILD — rompe la caché del navegador en cada deploy (sin esto, el
     // jugador seguía corriendo el state.js viejo aunque el servidor tuviera el nuevo).
     // deploy.bat la actualiza sola (busca GF_BUILD y pone la fecha/hora del deploy).
-    const GF_BUILD = "20260916-135827";
+    const GF_BUILD = "20260916-192957";
     const files = ["game/config.js","game/nav.js","game/audio.js","game/state.js","game/save.js","game/ui.js","game/boot.js",
                    "game/farm.js","game/forest.js","game/plaza.js","game/main.js","game/update.js"];
     /* 24/8 — SE BAJAN TODOS A LA VEZ, SE EJECUTAN EN FILA (dirección: « sigue tardando en

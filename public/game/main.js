@@ -149,20 +149,22 @@ function atraparLosErrores() {
     /* se guarda SIEMPRE, no solo cuando el bucle muere: si el juego se queda tonto sin morir del
        todo, el error igual queda escrito para la próxima carga */
     guardarElError(txt, "error durante la partida");
-    /* y si ESE error mató el bucle, no hace falta esperar los cuatro segundos del pulso: se
-       comprueba a los dos y se actúa con el nombre del culpable en la mano. Si el juego sigue
-       corriendo —la mayoría de los errores no matan nada— acá no pasa nada. */
-    try {
-      const g = window.GAME; if (!g || !g.loop) return;
-      const f0 = g.loop.frame;
-      setTimeout(() => {
-        if (document.visibilityState !== "visible") return;
-        if (window.GAME && window.GAME.loop && window.GAME.loop.frame === f0 && typeof window.__gfFatal === "function")
-          window.__gfFatal("el juego se detuvo por un error");
-      }, 2000);
-    } catch (e) {}
+    /* 16/9 (segunda pasada) — acá había un atajo: si a los dos segundos el bucle no se había
+       movido, se recargaba. Se quita. Un error de una extensión ajena, o un error inofensivo
+       llegado justo mientras el bucle está entre dos fotogramas, bastaba para recargarle la
+       partida a alguien que no tenía ningún problema — y una recarga de más es peor que un
+       diagnóstico de menos. El que decide sigue siendo el pulso, con sus cuatro segundos y su
+       intento de despertar; lo único que hace el error es DARLE NOMBRE a lo que el pulso
+       encuentre. */
   };
+  /* lo que NO es del juego no se cuenta: las extensiones del navegador (billeteras, traductores,
+     bloqueadores) inyectan sus propios scripts y tiran sus propios errores dentro de la página.
+     Anotarlos sería llenar el registro de ruido ajeno y, peor, culpar al juego de algo que no
+     hizo — el 16/9 llegó un « Cannot read properties of undefined (reading 'M_ID') » que no
+     existe ni en Phaser ni en Supabase ni en el juego. */
+  const esAjeno = (f) => !!f && /^(chrome|moz|safari-web|webkit)-extension:/.test(String(f));
   window.addEventListener("error", (e) => {
+    if (e && esAjeno(e.filename)) return;
     const d = (e && e.filename ? String(e.filename).split("/").pop() + ":" + e.lineno + " " : "");
     anota(d + ((e && e.message) || "error sin mensaje"));
   });
