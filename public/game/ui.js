@@ -1466,6 +1466,21 @@ function refreshVidaBarra() {
   const pct = Math.max(0, Math.min(1, (G.hp || 0) / max));
   f.style.width = (pct * 100).toFixed(1) + "%";
   f.classList.toggle("bajo", pct > 0 && pct <= 0.25);
+  /* 16/9 (diseñador): « está perfecto pero colocá que dura 1 h en llenarse ». Se enseña CUÁNTO
+     FALTA, no el dato general: « 1 h » es la letra chica del sistema, « te faltan 29 min » es lo
+     que el jugador está preguntando de verdad cuando mira la barra. El total va en el rótulo.
+     Dentro de la Zona no se cura nada, y eso también se dice — es justo donde importa saberlo. */
+  const eta = $("hp-eta"), pill = $("hppill");
+  const enZ = (typeof enZona === "function") && enZona();
+  const porSeg = (typeof granjaCuraPorSeg === "function") ? granjaCuraPorSeg() : 0;
+  const falta = Math.max(0, max - (G.hp || 0));
+  const minRestantes = (porSeg > 0) ? Math.ceil(falta / porSeg / 60) : 0;
+  const totalMin = (typeof GRANJA_CURA_MIN === "number") ? GRANJA_CURA_MIN : 60;
+  if (eta) eta.textContent = !falta ? "" : (enZ ? "· sin cura acá" : "· llena en " + fmtDur(minRestantes * 60000));
+  if (pill) pill.title = !falta
+    ? "Vida al máximo · en la granja se llena sola: la barra entera tarda " + totalMin + " min"
+    : (enZ ? "En la Zona Negra la vida NO se recupera sola: comé para curarte. En la granja la barra entera tarda " + totalMin + " min."
+           : "Se está llenando sola: la barra entera tarda " + totalMin + " min. Comer te ahorra la espera.");
 }
 function refreshCombatBar() {   // doc maestro 2/8: insignia de nivel + relleno dorado + "XP actual / necesaria"
   const el = document.getElementById("c-lvl"); if (!el || typeof combatInfo !== "function") return;

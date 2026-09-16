@@ -45,6 +45,10 @@
   .hpfill{display:block;height:100%;width:100%;background:linear-gradient(180deg,#ff8a7a,#e03a3a 55%,#a01414);transition:width .35s ease}
   /* por debajo de un cuarto late: el aviso tiene que verse sin mirar el número */
   .hpfill.bajo{animation:hplat 1s ease-in-out infinite}
+  /* 16/9 (diseñador): « está perfecto pero colocá que dura 1 h en llenarse ». El cuánto falta va
+     AL LADO del número, no escondido en un tooltip: en el móvil no hay tooltip, y ésta es la
+     cuenta que decide si comés ahora o seguís cosechando. */
+  .hpeta{font-size:11px;white-space:nowrap}
   @keyframes hplat{0%,100%{filter:none}50%{filter:brightness(1.6)}}
   .cfill.stamf{background:linear-gradient(180deg,#a8e6ff,#4aa8d8 55%,#1d6f9c)}   /* estamina: celeste */
   .cfill.lvlf{background:linear-gradient(180deg,#c8e89a,#8fd06a 55%,#4f8f2f)}    /* granja: verde, como las barras de oficio */
@@ -1129,7 +1133,7 @@
       <!-- 15/9 (diseñador): « y la ponemos como barra roja ». El corazón y el relleno se leen de
            un vistazo mientras peleás; el número sigue estando porque saber que te faltan 12 para
            llenarte es lo que decide si comés ahora o después. -->
-      <div class="pill hppill" title="Vida — cuidado en la Zona Negra"><span class="hpcor">❤</span><span class="hpbarw"><span class="hpfill" id="hp-fill"></span></span><b id="s-hp">100/100</b></div>
+      <div class="pill hppill" id="hppill" title="Vida"><span class="hpcor">❤</span><span class="hpbarw"><span class="hpfill" id="hp-fill"></span></span><b id="s-hp">100/100</b><span class="k hpeta" id="hp-eta"></span></div>
       <div class="pill cpill" id="cbar" title="Nivel de Combate — suma la XP de todos los kills, sin importar el arma"><b id="c-lvl">1</b><span class="k">Combate</span><span class="cbarw"><span class="cfill" id="c-fill"></span></span><span class="k" id="c-xp">0/100</span></div>
       <div class="pill"><span class="k">Semana</span><b id="s-week">1</b></div>
       <button class="btnpill" id="menu-btn">☰ Menú</button>
@@ -1837,7 +1841,7 @@
     // 15/8: VERSIÓN DE BUILD — rompe la caché del navegador en cada deploy (sin esto, el
     // jugador seguía corriendo el state.js viejo aunque el servidor tuviera el nuevo).
     // deploy.bat la actualiza sola (busca GF_BUILD y pone la fecha/hora del deploy).
-    const GF_BUILD = "20260916-192957";
+    const GF_BUILD = "20260916-195036";
     const files = ["game/config.js","game/nav.js","game/audio.js","game/state.js","game/save.js","game/ui.js","game/boot.js",
                    "game/farm.js","game/forest.js","game/plaza.js","game/main.js","game/update.js"];
     /* 24/8 — SE BAJAN TODOS A LA VEZ, SE EJECUTAN EN FILA (dirección: « sigue tardando en

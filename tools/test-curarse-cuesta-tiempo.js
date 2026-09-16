@@ -77,6 +77,20 @@ console.log("\n3 · Y COMER PASA A SER LA FORMA RÁPIDA\n");
   ok("y hasta el más barato ahorra minutos", peor / porSeg / 60 >= 2, Math.round(peor / porSeg / 60) + " min");
 }
 
+console.log("\n3b · Y LA BARRA LO DICE   (16/9: « colocá que dura 1 h en llenarse »)\n");
+{
+  const UI = fs.readFileSync(path.join(RAIZ, "public/game/ui.js"), "utf8");
+  const HTML = fs.readFileSync(path.join(RAIZ, "public/index.html"), "utf8");
+  ok("hay un hueco al lado del número para decirlo", /id="hp-eta"/.test(HTML));
+  ok("y se rellena con lo que FALTA, que es lo que el jugador pregunta al mirar la barra",
+    /llena en " \+ fmtDur\(minRestantes/.test(UI));
+  ok("el total sale de la constante, no escrito a mano (si se mueve el número, el rótulo también)",
+    /GRANJA_CURA_MIN === "number"\) \? GRANJA_CURA_MIN : 60/.test(UI));
+  ok("dentro de la Zona dice que ahí no se cura, que es donde importa saberlo", /sin cura acá/.test(UI));
+  ok("con la barra llena no dice nada (un cartel permanente deja de leerse)", /!falta \? "" :/.test(UI));
+  ok("y va como TEXTO, no solo en el tooltip (en el móvil no hay tooltip)", /eta\.textContent =/.test(UI));
+}
+
 console.log("\n4 · EL CANDADO NO SE PUSO EN LA PUERTA DE LA ZONA\n");
 {
   ok("entrar a la Zona sigue sin enfriamiento (es lo único que llena el tiempo muerto)",
