@@ -4220,9 +4220,20 @@ function refreshConfig() {
       st.textContent = "Jugando como: " + (window.NICK || "Granjero") + " · cuenta guardada en " + c.email;
       if (nota) nota.textContent = "Tu granja te sigue a cualquier dispositivo: entrá con ese email.";
       if (bS) { bS.disabled = false; bS.title = "Salir de esta cuenta en este navegador"; }
+    } else if (c.modo === "anonima") {
+      /* con GF.SOLO_EMAIL esto no debería pasar nunca; si pasa, se dice tal cual y no se
+         disfraza de avería de red, que fue el error del 18/9 */
+      st.textContent = "Jugando como: " + (window.NICK || "Granjero") + " · esta cuenta no tiene correo.";
+      if (nota) nota.textContent = "Avisanos: tu granja debería estar atada a un correo.";
+      if (bS) { bS.disabled = true; bS.title = "Sin correo no habría forma de volver a esta granja"; }
     } else {
-      st.textContent = "Sin conexión con la nube.";
-      if (bS) { bS.disabled = true; bS.title = "Sin conexión con la nube"; }
+      /* 18/9 — « no se pudo averiguar » NO es « no hay cuenta ». El texto de antes decía « sin
+         conexión con la nube » y dirección lo vio con el juego funcionando perfecto: si estás
+         jugando y guardando, la nube está ahí. Lo único cierto es que este panel no pudo leer
+         la cuenta en este momento, y eso se arregla solo volviendo a abrirlo. */
+      st.textContent = "No se pudo leer tu cuenta en este momento.";
+      if (nota) nota.textContent = "Tu partida sigue guardándose normal. Cerrá y abrí Configuración para reintentar.";
+      if (bS) { bS.disabled = true; bS.title = "Primero hay que poder leer la cuenta"; }
     }
   });
   /* 18/9 — CERRAR SESIÓN. El texto del aviso dice las dos cosas que el jugador necesita saber

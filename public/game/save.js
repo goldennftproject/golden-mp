@@ -249,7 +249,8 @@ async function initSave() {
        esto, nuestra copia envejece y el día que haga falta ya no sirve para revivir nada. */
     try {
       sb.auth.onAuthStateChange((ev, s) => {
-        if (s && s.user) marcarCuenta(s);
+        if (s && s.user) { marcarCuenta(s); SESION_ACTUAL = s; }   // 18/9: y la sesión se mantiene fresca,
+                                                                   // que es de donde el panel lee el correo
         /* SIGNED_OUT sin que nadie apretara nada es EXACTAMENTE el momento que veníamos
            adivinando: supabase decidió que la sesión no servía. Queda anotado con hora. */
         if (ev === "SIGNED_OUT" || ev === "TOKEN_REFRESHED" || ev === "USER_UPDATED") sesionLog("auth: " + ev);
@@ -1288,13 +1289,36 @@ window.torneoPodioCheck = async function () {
    Requiere el proveedor Email activado en Supabase (docs/CUENTA-EMAIL.md, dos clics).       */
 
 // ¿cómo está la cuenta de este navegador? → { modo: "sin-nube" | "anonima" | "email", email }
+/* 18/9 — REESCRITA, porque decía « sin conexión con la nube » a alguien que estaba jugando.
+   El fallo: preguntaba SIEMPRE por la red (`getUser()`), y CUALQUIER tropiezo de esa llamada
+   caía en el mismo `catch` que « esta cuenta no tiene correo ». Dos cosas muy distintas con la
+   misma respuesta. Mientras existían cuentas anónimas casi no se notaba —el panel decía
+   « anónima », que era verdad la mayoría de las veces—; desde que toda cuenta tiene correo, esa
+   respuesta ya solo puede significar « no pude preguntar », y el panel la mostraba como una
+   avería. Dirección lo vio en su propia partida: el botón de cerrar sesión gris y el cartel de
+   sin conexión, con el juego funcionando perfecto.
+
+   Ahora:
+     · el correo sale de LA SESIÓN QUE YA TENEMOS EN LA MANO. Nació de un enlace de correo, así
+       que el dato está ahí desde el arranque: preguntarlo por red era ir a buscar algo que ya
+       estaba en el bolsillo, y encima con una llamada que puede fallar;
+     · la red queda solo de respaldo, por si la sesión no trae el dato;
+     · y « no se pudo averiguar » ya NO se disfraza de « cuenta sin correo ». */
 async function cuentaEstado() {
   if (!sb || !UID) return { modo: "sin-nube", email: "" };
+  /* 1 · lo que ya sabemos, sin tocar la red */
   try {
-    const { data: { user } } = await sb.auth.getUser();
-    if (user && user.email) return { modo: "email", email: user.email };
+    const u = SESION_ACTUAL && SESION_ACTUAL.user;
+    if (u && u.email) return { modo: "email", email: u.email };
   } catch (e) {}
-  return { modo: "anonima", email: "" };
+  /* 2 · y si no, se pregunta */
+  try {
+    const r = await sb.auth.getUser();
+    const user = r && r.data && r.data.user;
+    if (user && user.email) return { modo: "email", email: user.email };
+    if (user) return { modo: "anonima", email: "" };   // hay usuario y NO tiene correo: eso sí es anónima
+  } catch (e) {}
+  return { modo: "sin-nube", email: "" };              // no se pudo averiguar: no se inventa nada
 }
 
 // ata el email a LA CUENTA ANÓNIMA ACTUAL (la granja de este navegador pasa a ser tuya para

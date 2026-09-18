@@ -66,8 +66,8 @@ console.log("\n4 · EL BOTÓN SOLO SE ENCIENDE CUANDO ES SEGURO\n");
   ok("y nace deshabilitado (nunca encendido por accidente)", /id="cfg-salir" disabled/.test(HTML));
   ok("se enciende con la cuenta atada a un correo, que desde el 18/9 son TODAS",
     /bS\.disabled = false; bS\.title/.test(UI));
-  ok("y sin nube no se ofrece (no habría con qué guardar antes de salir)",
-    /bS\.title = "Sin conexión con la nube"/.test(UI));
+  ok("y si no se pudo leer la cuenta tampoco se ofrece (no habría con qué guardar antes)",
+    /bS\.title = "Primero hay que poder leer la cuenta"/.test(UI));
 }
 
 console.log("\n5 · Y EL JUGADOR SABE QUÉ VA A PASAR ANTES DE APRETAR\n");

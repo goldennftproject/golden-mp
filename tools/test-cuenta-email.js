@@ -46,11 +46,12 @@ function armar(fakeUser, opts) {
     llamadas.guardados++; orden.push("guardar" + (force ? ":force" : "")); return true;
   });
   const sb = opts.sinNube ? null : { auth: {
-    getUser: async () => ({ data: { user: fakeUser } }),
+    getUser: async () => { if (opts.getUserFalla) throw new Error("red caída"); return { data: { user: fakeUser } }; },
     signOut: async () => { llamadas.signOut++; orden.push("cerrar"); return { error: null }; },
     signInWithOtp: async () => ({ error: null }),
   } };
-  vm.runInContext("(function(x, u){ sb = x; UID = u; })", ctx)(sb, opts.sinNube ? null : "uid-test");
+  vm.runInContext("(function(x, u, s){ sb = x; UID = u; SESION_ACTUAL = s; })", ctx)(
+    sb, opts.sinNube ? null : "uid-test", opts.sinSesion ? null : (fakeUser ? { user: fakeUser } : null));
   return { ctx, dom, llamadas, orden, borradas, doc: dom.window.document };
 }
 const espera = () => new Promise(r => setImmediate(r));
@@ -77,8 +78,34 @@ const ok = (n, c, d) => { if (!c) fallos++; console.log((c ? "  ok   " : "  FALL
   {
     const { ctx, doc } = armar(null, { sinNube: true });
     ctx.refreshConfig(); await espera(); await espera();
-    ok("el estado lo dice", /Sin conexión/.test(doc.getElementById("cfg-auth-status").textContent));
+    ok("el estado lo dice sin mentir (no pudo leerse la cuenta)",
+      /No se pudo leer tu cuenta/.test(doc.getElementById("cfg-auth-status").textContent),
+      doc.getElementById("cfg-auth-status").textContent);
     ok("y el botón queda apagado", doc.getElementById("cfg-salir").disabled === true);
+  }
+
+  console.log("\n2b · « NO PUDE LEER LA CUENTA » NO ES « NO TEN\u00c9S CUENTA »   (18/9)\n");
+  {
+    /* el bug que dirección vio en su propia partida: el panel decía « Sin conexión con la nube »
+       y el botón gris, con el juego funcionando y guardando perfecto. La causa era que cualquier
+       tropiezo de getUser() caía en el mismo saco que « cuenta sin correo ». Ahora el correo sale
+       de la sesión que ya tenemos en la mano, sin tocar la red. */
+    const { ctx, doc } = armar({ id: "uid-test", email: "golden@granja.com" }, { getUserFalla: true });
+    ctx.refreshConfig(); await espera(); await espera();
+    ok("con la red caída, el panel SIGUE mostrando el correo (sale de la sesión, no de la red)",
+      /golden@granja\.com/.test(doc.getElementById("cfg-auth-status").textContent),
+      doc.getElementById("cfg-auth-status").textContent);
+    ok("y el botón de salir queda usable", doc.getElementById("cfg-salir").disabled === false);
+  }
+
+  console.log("\n2c · Y SI DE VERDAD NO SE PUEDE AVERIGUAR, SE DICE ESO Y NO OTRA COSA\n");
+  {
+    const { ctx, doc } = armar(null, { getUserFalla: true, sinSesion: true });
+    ctx.refreshConfig(); await espera(); await espera();
+    const txt = doc.getElementById("cfg-auth-status").textContent;
+    ok("no se inventa que la cuenta es anónima", !/anónima/.test(txt), txt);
+    ok("y tampoco se le dice al jugador que no hay nube (su partida se está guardando igual)",
+      !/Sin conexión con la nube/.test(txt), txt);
   }
 
   console.log("\n3 · AL SALIR, EL ORDEN   (guardar → cerrar → borrar las marcas)\n");
