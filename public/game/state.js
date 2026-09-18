@@ -228,6 +228,33 @@ function granjaRegen() {   // solo fuera de la Zona Negra
   if (window.GF && GF.scene === "forest") return;
   G.hp = Math.min(G.hpMax, G.hp + granjaCuraPorSeg());
 }
+/* ═══ LA VIDA SE RECUPERA AUNQUE NO ESTÉS   (18/9, dirección) ═══════════════════════════════
+   « La vida debe recuperarse aun offline ». Tenía razón y era una inconsistencia nuestra: los
+   cultivos crecen mientras no estás —el juego mira cuánto tiempo pasó y lo calcula al volver—,
+   pero la vida solo subía con la pestaña abierta. O sea que el jugador que cerraba el navegador
+   con media barra volvía al día siguiente con media barra, y el que dejaba la pestaña abierta
+   sin jugar volvía curado. Premiaba tener el juego abierto, que es justo lo contrario de lo que
+   queremos.
+
+   Se cura igual que crece un cultivo, y por el mismo motivo: la cura es UNA CUENTA DE TIEMPO,
+   no una simulación. `granjaCuraPorSeg()` ya da los puntos por segundo derivados de la vida
+   máxima, así que curar una ausencia es multiplicar. No hay azar, no hay decisiones, no hay
+   nada que simular: el resultado de estar una hora ausente es exactamente el de estar una hora
+   con la pestaña abierta sin tocar nada.
+
+   Lo único que NO se cura es la ausencia estando dentro de la Zona Negra: ahí no se cura ni con
+   la pestaña abierta (es la regla que hace que la comida importe), y si se curara al volver, el
+   truco sería salir de la Zona cerrando el navegador. */
+function granjaRegenAusente(ms) {
+  if (!GRANJA_REGEN) return 0;
+  const seg = Math.max(0, Math.floor((ms || 0) / 1000));
+  if (!seg || G.hp >= G.hpMax) return 0;
+  /* si quedó un viaje abierto, la ausencia transcurrió DENTRO de la Zona: no se cura */
+  if (G.zonaViaje) return 0;
+  const antes = G.hp;
+  G.hp = Math.min(G.hpMax, G.hp + granjaCuraPorSeg() * seg);
+  return G.hp - antes;
+}
 function buffTick() {   // 1 vez por segundo desde el HUD: regeneración y vida máxima temporal
   const t = Date.now(); let dirty = false;
   // set de Piel completo: +N HP/s (el bono estaba en la tabla pero no lo leía nadie)

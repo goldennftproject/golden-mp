@@ -120,20 +120,16 @@ console.log("\n6 · LAS TRES REJAS DEL 24/8 SIGUEN EN PIE\n");
 
 console.log("\n7 · Y AL QUE YA JUEGA SIN CORREO SE LE AVISA, NO SE LE CIERRA LA PUERTA\n");
 {
-  ok("el aviso existe y dice dónde está el botón", /Configuración → Cuenta/.test(MAIN));
-  ok("es un aviso, no una ventana que tape la pantalla", !/openOv\("ov-cuenta"\)/.test(MAIN));
-  ok("al que ya tiene cuenta atada no se le dice nada", /c\.modo === "email"\) return;/.test(MAIN));
-  /* 18/9 — EL CASO QUE FALTABA. Dirección lo encontró probando: el que juega con partida local
-     y SIN cuenta en la nube no recibía ningún aviso, porque el aviso preguntaba por una cuenta
-     que no tiene. Entra igual (ley 1), pero callado no. */
-  ok("y al que juega sin cuenta en la nube TAMBIÉN se le avisa", /no está en la nube/.test(MAIN));
-  ok("con un texto distinto: a ése, Configuración → Cuenta no le sirve (no tiene sesión)",
-    /SOLO en este navegador/.test(MAIN));
-  ok("y sin prometerle que recargando se arregla (recargar toma el mismo camino)",
-    !/Recargá la página cuando tengas conexión para crear/.test(MAIN));
-  ok("queda anotado en la consola, para enterarnos si le pasa a alguien de verdad",
-    /partida local SIN cuenta en la nube/.test(MAIN));
-  /* lo importante: en ningún lado se le impide entrar */
+  /* 18/9, segunda pasada — acá vivían los avisos para el jugador sin correo: uno para la
+     cuenta anónima y otro para la partida local sin cuenta. Dirección los dio de baja el mismo
+     día: « no va a existir más jugadores sin correo, desde el minuto cero el juego te pide
+     correo ». Con la puerta puesta, ninguna cuenta puede nacer sin correo, así que esos avisos
+     eran ramas que nadie podía alcanzar — y una rama muerta no es inofensiva: se lee como si
+     el caso existiera y se mantiene por las dudas. Se quitaron, y esto custodia que no vuelvan
+     por arrastre. */
+  ok("ya no hay aviso para la cuenta anónima (no puede existir)", !/Atá tu correo/.test(MAIN));
+  ok("ni para la partida local sin cuenta", !/no está en la nube/.test(MAIN));
+  ok("ni el cartel de « tenías una partida sin cuenta » en la puerta", !/__GF_GRANJA_HUERFANA/.test(MAIN));
   ok("en ningún sitio se bloquea la entrada por no tener correo",
     !/modo === "anonima"[\s\S]{0,300}?(pantallaNoSePudo|return false)/.test(MAIN));
 }
@@ -158,8 +154,8 @@ console.log("\n7b · POR QUÉ BORRAR EL ALMACENAMIENTO Y RECARGAR NO LIMPIA NADA
   ok("…pero SOLO con la bandera apagada", /if \(!soloCorreo\) \{/.test(MAIN));
   ok("y la partida local NO se borra al cerrarlo (queda por si hay que rescatarla)",
     /la partida local queda guardada, no se toca/.test(MAIN));
-  ok("y la puerta se lo DICE, en vez de dejarlo creer que perdió la granja",
-    /__GF_GRANJA_HUERFANA/.test(MAIN) && /No se borró/.test(MAIN));
+  /* 18/9, segunda pasada: acá había un cartel en la puerta para ese caso. Se quitó junto con
+     los demás avisos del jugador sin correo — ver la sección 7. */
 }
 
 console.log("\n8 · UN CORREO MAL ESCRITO NO SE MANDA AL VACÍO\n");

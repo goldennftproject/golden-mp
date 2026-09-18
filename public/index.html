@@ -1409,17 +1409,17 @@
     <div class="cfgsec">
       <h4>Cuenta</h4>
       <!-- 22/8: la granja sobrevive al navegador — email con enlace mágico, sin contraseñas.
-           El bloque tiene SIEMPRE la misma estructura (regla de UI: nada cambia de tamaño). -->
+           18/9: el panel se quedó con UN botón. « Guardar mi cuenta » y « Entrar con mi email »
+           eran los dos gestos de cuando una cuenta podía no tener correo: atarle uno, o traerse
+           otra granja desde este navegador. Desde que se entra con correo desde el minuto cero,
+           el primero no tiene a quién atar nada y el segundo lo hace la puerta de entrada. Un
+           botón que nunca se enciende no es una opción: es una duda. -->
       <p id="cfg-auth-status" style="min-height:30px">—</p>
-      <div class="row"><input id="cfg-email" type="email" placeholder="tu@correo.com" style="flex:1;min-width:0;padding:6px 8px;border-radius:8px;border:1px solid #caa96a;background:#fdf6e3;font:inherit"></div>
       <div class="row">
-        <button class="green sm" id="cfg-vincular">Guardar mi cuenta</button>
-        <button class="ghost sm" id="cfg-entrar">Entrar con mi email</button>
-        <!-- 18/9: desconectarse. Arranca DESHABILITADO y solo se enciende con la cuenta atada a
-             un correo: sin correo, cerrar sesión deja la granja inalcanzable para siempre. -->
+        <!-- desconectarse. Arranca DESHABILITADO: se enciende cuando se sabe que hay cuenta. -->
         <button class="red sm" id="cfg-salir" disabled>Cerrar sesión</button>
       </div>
-      <p id="cfg-auth-nota" style="min-height:26px;font-size:11px;opacity:.8">Guardá tu email y tu granja te sigue a cualquier dispositivo.</p>
+      <p id="cfg-auth-nota" style="min-height:26px;font-size:11px;opacity:.8">Tu granja te sigue a cualquier dispositivo: entrá con tu correo.</p>
     </div>
     <div class="cfgsec">
       <h4>Sonido</h4>
@@ -1866,7 +1866,7 @@
     // 15/8: VERSIÓN DE BUILD — rompe la caché del navegador en cada deploy (sin esto, el
     // jugador seguía corriendo el state.js viejo aunque el servidor tuviera el nuevo).
     // deploy.bat la actualiza sola (busca GF_BUILD y pone la fecha/hora del deploy).
-    const GF_BUILD = "20260918-174418";
+    const GF_BUILD = "20260918-180451";
     const files = ["game/config.js","game/nav.js","game/audio.js","game/state.js","game/save.js","game/ui.js","game/boot.js",
                    "game/farm.js","game/forest.js","game/plaza.js","game/main.js","game/update.js"];
     /* 24/8 — SE BAJAN TODOS A LA VEZ, SE EJECUTAN EN FILA (dirección: « sigue tardando en

@@ -283,50 +283,6 @@ function enterGame() {
   // si quedó entrenando de la sesión anterior, la ventana vuelve sola: no se puede jugar
   // mientras el granjero entrena, ni recargando la página (9/8)
   cuandoListo(() => { try { if (typeof dummyEntrenando === "function" && dummyEntrenando()) openOv("ov-entrenando"); } catch (e) {} });
-  /* 18/9 — EL QUE YA JUEGA SIN CORREO. Desde hoy nadie nuevo entra sin correo, pero el que ya
-     tenía granja anónima sigue entrando igual (ley 1: su granja es suya). Lo que sí se le debe
-     es el aviso, porque su granja vive en este navegador y se va con la caché — que es
-     exactamente lo que dirección descubrió probando. Una vez por sesión, sin ventana modal: el
-     que está jugando no quiere que le tapen la pantalla, quiere saber dónde está el botón. */
-  cuandoListo(() => {
-    try {
-      if (typeof GF === "undefined" || !GF.SOLO_EMAIL) return;
-      if (typeof cuentaEstado !== "function") return;
-      cuentaEstado().then((c) => {
-        if (!c) return;
-        if (c.modo === "email") return;                     // ya está atada: nada que decir
-        if (c.modo === "anonima") {
-          /* tiene cuenta en la nube, pero sin correo: el panel de Configuración SÍ le sirve */
-          if (typeof log === "function")
-            log("Tu granja todavía no tiene correo: vive solo en este navegador y se pierde si borrás los datos. Atala en Menú → Configuración → Cuenta.", "warn");
-          if (typeof toast === "function") toast("Atá tu correo: Configuración → Cuenta");
-          return;
-        }
-        /* ---- 18/9 — EL CASO QUE ME FALTABA (dirección lo encontró probando) ----------------
-           "sin-nube" = está jugando con una partida guardada en este navegador y SIN cuenta en
-           la nube. Pasa por el camino del 25/8: si hay partida local y no hubo cuenta, el
-           arranque la carga en vez de mandarlo a la puerta — y eso está bien, su partida es
-           suya y no se la vamos a esconder detrás de un formulario.
-           Lo que NO está bien es que se entere de nada. Antes de hoy el aviso ni le salía,
-           porque preguntaba por una cuenta que él no tiene. Y ojo con el texto: mandarlo a
-           Configuración → Cuenta sería mandarlo a una pared — ese panel necesita una sesión
-           abierta, y él no la tiene. Lo único cierto que se le puede decir es dónde está
-           guardada su partida y qué hacer para que deje de estar solo ahí.
-           Lo que este aviso NO resuelve, y lo digo para que no se confunda con un arreglo: una
-           partida local huérfana no se adopta sola al crear la cuenta. Eso es un trabajo aparte
-           (habría que atar la copia sin dueño al UID nuevo) y no se improvisa en un aviso. Por
-           eso el registro lo anota fuerte: si esto le pasa a alguien de verdad, quiero verlo. */
-        /* y el texto NO le promete que recargando se arregla: recargar toma este mismo camino
-           otra vez. Decirle « recargá y creás tu cuenta » sería mandarlo a dar vueltas. Se le
-           dice lo único comprobable —dónde está su partida y qué la pone en riesgo— y se le
-           pide que avise, que es lo que de verdad hace falta para arreglarlo bien. */
-        if (typeof log === "function")
-          log("Estás jugando sin cuenta: tu partida se guarda SOLO en este navegador, no está en la nube, y se pierde si borrás los datos del sitio. Avisanos para pasarla a una cuenta con correo.", "warn");
-        if (typeof toast === "function") toast("Sin cuenta: tu partida vive solo acá");
-        console.warn("[cuenta] partida local SIN cuenta en la nube — el jugador no pasó por la puerta del correo");
-      }).catch(() => {});
-    } catch (e) {}
-  });
 }
 
 /* LA PANTALLA DE "NO SE PUDO", en un solo lugar (24/8). Comparte cartel con la puerta del
@@ -400,6 +356,16 @@ function pantallaNoSePudo() {
     if (m) { window.CARGA_MOTIVO = m[1]; try { CARGA_FALLO = true; } catch (_) { window.CARGA_FALLO = true; } }
   } finally { clearInterval(reloj); }
   try { if (typeof godHandSembrar === "function") godHandSembrar(G._ausenteMs || 0); } catch (e) { console.warn(e); }   // GOD HAND: siembra lo que quedó vacío
+  /* 18/9 — y la vida también corre mientras no estás. Va acá, junto a la siembra, porque es la
+     misma idea: al volver se mira cuánto tiempo pasó y se pone el mundo al día. */
+  try {
+    if (typeof granjaRegenAusente === "function") {
+      const curado = granjaRegenAusente(G._ausenteMs || 0);
+      if (curado >= 1) cuandoListo(() => {
+        try { if (typeof log === "function") log("Mientras no estabas recuperaste " + Math.floor(curado) + " de vida.", "gold"); } catch (e) {}
+      });
+    }
+  } catch (e) { console.warn(e); }
   /* 25/8 — SI NO HAY NUBE, SE DICE ANTES DE JUGAR, NO DESPUÉS DE PERDER.
      La consola del diseñador mostró el caso: signInAnonymously cortado por la red, sin UID, y
      el juego arrancando igual. Se puede jugar sin nube —a veces es lo único que se puede—, pero
@@ -473,7 +439,6 @@ function pantallaNoSePudo() {
         if (typeof enterGame === "function") return enterGame();
       }
       console.warn("hay partida local sin cuenta, pero SOLO_EMAIL está puesto: se pide el correo (la partida local queda guardada, no se toca)");
-      window.__GF_GRANJA_HUERFANA = true;   // la puerta lo dice, para que nadie crea que se perdió
     }
     if (typeof CUENTA_PREVIA !== "undefined" && CUENTA_PREVIA) {
       console.warn("hay cuenta en este navegador: NO se pide apodo (crearía una granja nueva)");
@@ -543,11 +508,6 @@ function pintarPuerta(modo) {
   }
   const ya = document.getElementById("gate-ya");
   if (ya) ya.addEventListener("click", () => pintarPuerta(MODO_PUERTA === "volver" ? "apodo" : "volver"));
-  /* si este navegador tenía una partida sin cuenta, la puerta lo dice. Ver la puerta con una
-     granja empezada adentro y ningún mensaje es exactamente como se siente perder una partida,
-     aunque no se haya perdido nada. */
-  if (window.__GF_GRANJA_HUERFANA)
-    gateMsg("Tenías una partida guardada en este navegador, sin cuenta. <b>No se borró</b>, pero para seguir jugando hace falta una cuenta con correo. Si era tuya y querés recuperarla, avisanos antes de empezar otra.", "mal");
 }
 
 /* un correo mal escrito no se manda: el jugador se quedaría esperando un enlace que no existe

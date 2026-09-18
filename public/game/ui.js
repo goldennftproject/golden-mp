@@ -4212,46 +4212,19 @@ function refreshConfig() {
      de este navegador atándola a un email, o entrar con un email ya vinculado. Enlace mágico,
      sin contraseñas. La estructura del bloque no cambia con el estado (regla de UI). */
   const st = $("cfg-auth-status"), nota = $("cfg-auth-nota");
-  const inp = $("cfg-email"), bV = $("cfg-vincular"), bE = $("cfg-entrar"), bS = $("cfg-salir");
+  const bS = $("cfg-salir");
   if (st) st.textContent = "Jugando como: " + (window.NICK || "Granjero") + " · consultando cuenta…";
   if (typeof cuentaEstado === "function") cuentaEstado().then(c => {
     if (!st) return;
     if (c.modo === "email") {
       st.textContent = "Jugando como: " + (window.NICK || "Granjero") + " · cuenta guardada en " + c.email;
       if (nota) nota.textContent = "Tu granja te sigue a cualquier dispositivo: entrá con ese email.";
-      if (bV) bV.disabled = true;
       if (bS) { bS.disabled = false; bS.title = "Salir de esta cuenta en este navegador"; }
-    } else if (c.modo === "anonima") {
-      st.textContent = "Jugando como: " + (window.NICK || "Granjero") + " · cuenta anónima (vive solo en este navegador)";
-      if (nota) nota.textContent = "Guardá tu email y tu granja te sigue a cualquier dispositivo.";
-      if (bV) bV.disabled = false;
-      if (bS) bS.disabled = true;
     } else {
       st.textContent = "Sin conexión con la nube.";
-      if (bV) bV.disabled = true; if (bE) bE.disabled = true;
       if (bS) { bS.disabled = true; bS.title = "Sin conexión con la nube"; }
     }
   });
-  const emailOk = (v) => /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(String(v || "").trim());
-  if (bV) bV.onclick = async () => {
-    const v = inp && inp.value;
-    if (!emailOk(v)) { toast("Escribí un email válido"); return; }
-    bV.disabled = true;
-    const r = await (typeof vincularEmail === "function" ? vincularEmail(v) : { error: "no disponible" });
-    bV.disabled = false;
-    if (r && r.ok) { toast("📬 Revisá " + v + " y tocá el enlace para confirmar"); log("Te mandamos un correo a " + v + ": tocá el enlace y tu granja queda guardada en esa cuenta.", "gold"); }
-    else toast("No se pudo: " + ((r && r.error) || "error"));
-  };
-  if (bE) bE.onclick = () => {
-    const v = inp && inp.value;
-    if (!emailOk(v)) { toast("Escribí un email válido"); return; }
-    askConfirm("Te mandamos un enlace a " + v + " para entrar con esa cuenta. La granja anónima de este navegador quedará aparte (no se borra). ¿Seguir?",
-      async () => {
-        const r = await (typeof entrarConEmail === "function" ? entrarConEmail(v) : { error: "no disponible" });
-        if (r && r.ok) { toast("📬 Enlace enviado a " + v + " — tocalo y entrás con tu granja"); }
-        else toast("No se pudo: " + ((r && r.error) || "¿ese email tiene cuenta vinculada?"));
-      }, { title: "Entrar con email", yes: "Mandar enlace", yesClass: "green", no: "Cancelar", noClass: "red" });
-  };
   /* 18/9 — CERRAR SESIÓN. El texto del aviso dice las dos cosas que el jugador necesita saber
      antes de apretar: que se guarda primero (nadie pierde lo jugado por desconectarse) y con
      qué vuelve. Nombrar el correo en el propio aviso es el detalle que convierte « ¿y ahora
