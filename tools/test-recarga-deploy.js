@@ -39,8 +39,11 @@ console.log("\nCON LA PARTIDA EN CURSO, NADIE RECARGA NADA");
 
 console.log("\nCON LA PESTAÑA ESCONDIDA, NI SE MUESTRA");
 {
-  ok("si nadie mira, se guarda para después", /if \(document\.hidden\) \{ pendiente = true; return; \}/.test(UPD));
-  ok("y al volver a la pestaña se le avisa", /if \(pendiente\) \{ pendiente = false; showUpdate\(\); \}/.test(UPD));
+  /* 18/9: las dos líneas anotan además en la bitácora de versión (« no me salió el botón de
+     actualizar », y no había cómo saber por qué). El regex admite el `anotar(...)` en medio. */
+  ok("si nadie mira, se guarda para después", /if \(document\.hidden\) \{ pendiente = true;[^}]*return; \}/.test(UPD));
+  ok("y al volver a la pestaña se le avisa", /if \(pendiente\) \{ pendiente = false;[^}]*showUpdate\(\); \}/.test(UPD));
+  ok("y cada decisión queda anotada donde se puede leer (18/9)", /window\.__gfVersion = /.test(UPD) && /anotar\("cartel: SE MUESTRA/.test(UPD));
   ok("sin gastar la cuenta atrás mientras tanto", UPD.indexOf("pendiente = true") < UPD.indexOf("let n = 5"));
 }
 

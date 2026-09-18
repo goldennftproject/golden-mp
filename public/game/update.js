@@ -16,8 +16,8 @@
           // contador de jugadores en línea del HUD (una ventana abierta = un jugador)
           if (typeof online === "number") { const el = document.getElementById("s-online"); if (el) el.textContent = online; }
           if (!v) return;
-          if (current === null) { current = v; return; }   // versión con la que cargaste
-          if (v !== current) { current = v; showUpdate(); } // ¡deploy nuevo, avisado por el server!
+          if (current === null) { current = v; anotar("canal en vivo: versión inicial " + v.slice(0, 7)); return; }   // versión con la que cargaste
+          if (v !== current) { anotar("canal en vivo: versión NUEVA " + v.slice(0, 7) + " (tenía " + current.slice(0, 7) + ")"); current = v; showUpdate(); } // ¡deploy nuevo, avisado por el server!
         } catch (e) {}
       };
       // si el stream muere, EventSource se reconecta solo (retry: 3s); no hay que hacer nada
@@ -30,8 +30,8 @@
       if (!r.ok) { enterBurst(); return; }
       const { v } = await r.json();
       if (!v) return;
-      if (current === null) { current = v; return; }      // versión con la que cargaste
-      if (v !== current) { current = v; showUpdate(); }    // ¡hay deploy nuevo!
+      if (current === null) { current = v; anotar("sondeo: versión inicial " + v.slice(0, 7)); return; }      // versión con la que cargaste
+      if (v !== current) { anotar("sondeo: versión NUEVA " + v.slice(0, 7) + " (tenía " + current.slice(0, 7) + ")"); current = v; showUpdate(); }    // ¡hay deploy nuevo!
     } catch (e) { enterBurst(); }                          // server caído: probablemente deployando
   }
 
@@ -59,13 +59,28 @@
        · Lo único que se recarga solo es lo que no tiene nada que perder: la pantalla de carga
          o la puerta del apodo, donde el jugador todavía no entró. */
   let pendiente = false;
+  /* ═══ EL CARTEL CUENTA LO QUE HACE   (18/9, dirección: « no me salió el botón de actualizar ») ══
+     Con el juego abierto y un deploy hecho, el cartel no apareció. Y no hubo forma de saber por
+     qué: `current`, `shown` y `pendiente` viven encerradas en esta función y desde fuera no se
+     ven, así que la única respuesta posible era una teoría. Ahora cada versión que llega, por el
+     canal que sea, y cada decisión (mostrar / posponer / ya mostrado) se anota en el Registro con
+     hora, y el estado se puede leer desde la consola con `__gfVersion()`. La próxima vez que no
+     salga, se lee; no se adivina. */
+  const bitacora = [];
+  function anotar(que) {
+    const linea = new Date().toLocaleTimeString() + " · " + que;
+    bitacora.push(linea); if (bitacora.length > 30) bitacora.shift();
+    try { if (typeof log === "function") log("[versión] " + que, "dim"); } catch (e) {}
+  }
+  window.__gfVersion = () => ({ current, shown, pendiente, escondida: document.hidden, bitacora: bitacora.slice() });
   function juegoEnCurso() {
     try { return !!(window.entered || (window.G && window.G.iniciado && window.NICK)); } catch (e) { return true; }
   }
   function showUpdate() {
-    if (shown) return;
-    if (document.hidden) { pendiente = true; return; }   // no está mirando: se lo decimos al volver
+    if (shown) { anotar("cartel: ya estaba mostrado, no se repite"); return; }
+    if (document.hidden) { pendiente = true; anotar("cartel: pestaña escondida, queda PENDIENTE para cuando vuelva"); return; }   // no está mirando: se lo decimos al volver
     shown = true;
+    anotar("cartel: SE MUESTRA" + (juegoEnCurso() ? " (partida en curso: espera al jugador)" : " (sin partida: recarga sola)"));
     const el = document.getElementById("updbanner");
     if (!el) { if (!juegoEnCurso()) doReload(); return; }
     el.style.display = "flex";
@@ -120,7 +135,7 @@
   // al volver a la pestaña o recuperar conexión, chequear al instante
   document.addEventListener("visibilitychange", () => {
     if (document.hidden) return;
-    if (pendiente) { pendiente = false; showUpdate(); }   // volvió: ahora sí se le avisa
+    if (pendiente) { pendiente = false; anotar("volvió a la pestaña: se muestra el cartel pendiente"); showUpdate(); }   // volvió: ahora sí se le avisa
     check();
   });
   window.addEventListener("focus", () => check());
