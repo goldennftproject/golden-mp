@@ -243,6 +243,108 @@ function vigilarElContexto(game) {
   }, LOOP_MIRA_MS);
 }
 
+/* ═══ LA ZONA NEGRA NO SE PARA AL CAMBIAR DE PESTAÑA   (18/9, dirección) ═════════════════════
+   « Haz que todo zona negra también funcione en segundo plano o minimizado », y la aclaración
+   que define el alcance: « no quiero que sea idle o automático, solo quiero que el juego no se
+   pare ».
+
+   Esas dos frases juntas dan un diseño muy concreto, y conviene dejarlo escrito porque la
+   diferencia entre las dos cosas es todo el juego:
+     · lo que SÍ: la pelea que ya estaba en curso sigue. Los golpes que ibas a dar se dan, los
+       que ibas a recibir se reciben, el bicho se muere o te mata. Lo que habría pasado si
+       hubieras seguido mirando, pasa.
+     · lo que NO: al terminar esa pelea el granjero NO busca otro bicho. No hay encadenado, no
+       hay farmeo dormido, no se sube de nivel dejando el juego abierto. Eso sale gratis porque
+       el auto-ataque necesita un OBJETIVO que solo se fija con el clic derecho del jugador: sin
+       jugador no hay objetivo nuevo, y el sistema se detiene solo.
+
+   POR QUÉ HACE FALTA ESTO Y NO ALCANZA CON CONTAR TIEMPO. La cura y los cultivos se pusieron al
+   día con el reloj (18/9) porque son cuentas: una hora ausente = una hora mirando, sin azar. Una
+   pelea no: hay tiradas, esquivas, paradas, posiciones y una muerte posible. No se puede
+   calcular hacia atrás sin inventarse lo que pasó. Así que lo único honesto es EJECUTARLA de
+   verdad, aunque nadie la esté mirando.
+
+   CÓMO. El bucle de Phaser va con requestAnimationFrame, y el navegador simplemente no lo llama
+   en una pestaña escondida — eso no se negocia ni se puede forzar. Lo que sí sigue latiendo es
+   un Web Worker: vive en otro hilo y el navegador no le aplica el estrangulamiento fuerte que le
+   aplica a la pestaña. Así que el worker hace de metrónomo y, mientras la pestaña está
+   escondida, se corre a mano el paso lógico de la escena. NO se dibuja nada — no hay nadie
+   mirando — solo se piensa.
+
+   Y ESTO TOCA EL CÓDIGO MÁS FRÁGIL DEL JUEGO: el mismo paso de update que lleva una semana
+   congelándose. Por eso va con interruptor propio (GF.ZONA_FONDO) y con freno de mano: si el
+   paso revienta unas cuantas veces seguidas, el metrónomo se apaga solo y el juego queda
+   exactamente como estaba antes de esto. Un juego que sigue en segundo plano está bueno; un
+   juego que se rompe por seguir en segundo plano, no. */
+var FONDO_PASO_MS = 100;        // cada cuánto piensa la Zona estando escondida (10 veces por s)
+var FONDO_PASO_MAX = 250;       // el delta más grande que se le pasa de una: sin esto, un latido
+                                // tarde movería todo de golpe y los bichos teletransportarían
+var FONDO_PASOS_MAX = 20;       // cuántos pasos se recuperan como mucho en un latido (2 s)
+var FONDO_ERR_MAX = 10;         // errores seguidos antes de apagar el metrónomo y no molestar más
+var _fondoWorker = null, _fondoUlt = 0, _fondoErr = 0, _fondoPasos = 0;
+
+function laZonaSigueDeFondo() {
+  if (typeof GF === "undefined" || !GF.ZONA_FONDO) return;
+  if (_fondoWorker) return;
+  let url;
+  try {
+    /* el metrónomo, en su propio hilo. Es tan corto a propósito: cuanto menos haga el worker,
+       menos hay que mantener de un archivo que no se puede depurar cómodamente. */
+    const src = "let t=null;onmessage=e=>{if(e.data&&e.data.cada){clearInterval(t);" +
+      "t=setInterval(()=>postMessage(1),e.data.cada);}else{clearInterval(t);t=null;}};";
+    url = URL.createObjectURL(new Blob([src], { type: "application/javascript" }));
+    _fondoWorker = new Worker(url);
+  } catch (e) {
+    /* sin worker no hay segundo plano, y no pasa nada más: el juego sigue como siempre cuando
+       la pestaña se ve. Se anota y se sigue — esto NUNCA puede impedir jugar. */
+    console.warn("sin Web Worker: la Zona no correrá en segundo plano", e && e.message);
+    return;
+  }
+  _fondoWorker.onmessage = () => { try { pasoDeFondo(); } catch (e) { fondoFallo(e); } };
+  _fondoWorker.postMessage({ cada: FONDO_PASO_MS });
+  /* al volver a la pestaña se suelta el mando: manda el bucle normal otra vez */
+  document.addEventListener("visibilitychange", () => {
+    if (document.visibilityState === "visible") _fondoUlt = 0;
+  });
+}
+
+function fondoFallo(e) {
+  _fondoErr++;
+  if (_fondoErr === 1 || _fondoErr === FONDO_ERR_MAX) console.warn("paso de fondo falló:", e && e.message);
+  if (_fondoErr >= FONDO_ERR_MAX && _fondoWorker) {
+    try { _fondoWorker.postMessage({ parar: 1 }); _fondoWorker.terminate(); } catch (x) {}
+    _fondoWorker = null;
+    console.warn("metrónomo de segundo plano apagado tras " + FONDO_ERR_MAX + " fallos seguidos");
+  }
+}
+
+function pasoDeFondo() {
+  /* las cuatro condiciones, en orden de lo más barato a lo más caro de comprobar */
+  if (document.visibilityState === "visible") { _fondoUlt = 0; return; }   // se ve: manda Phaser
+  if (typeof GF === "undefined" || GF.scene !== "forest") { _fondoUlt = 0; return; }   // solo la Zona
+  const game = window.GAME; if (!game || !game.scene) { _fondoUlt = 0; return; }
+  const sc = game.scene.getScene && game.scene.getScene("forest");
+  if (!sc || !sc.scene || !sc.scene.isActive() || typeof sc.updateReal !== "function") { _fondoUlt = 0; return; }
+  /* y la quinta, que es de diseño y no técnica: si el jugador no dejó una pelea empezada, no hay
+     nada que continuar. Sin esto el granjero seguiría "viviendo" en la Zona con la pestaña
+     cerrada, que es justo el idle que dirección no quiere. */
+  if (!sc.autoOn || !sc.target || sc.target.dead) { _fondoUlt = 0; return; }
+
+  const t = Date.now();
+  if (!_fondoUlt) { _fondoUlt = t; return; }          // primer latido: solo fija el punto de partida
+  let falta = t - _fondoUlt; _fondoUlt = t;
+  /* si el navegador estranguló al worker, un latido puede traer varios segundos. Se recuperan en
+     pasos pequeños —el combate está escrito para pasos de fotograma, no para saltos— y con tope,
+     porque recuperar diez minutos de una sería peor que no recuperarlos. */
+  let pasos = 0;
+  while (falta > 0 && pasos < FONDO_PASOS_MAX) {
+    const dt = Math.min(falta, FONDO_PASO_MAX);
+    sc.updateReal(t - falta + dt, dt);
+    falta -= dt; pasos++; _fondoPasos++;
+  }
+  _fondoErr = 0;   // un paso bueno perdona los tropiezos anteriores
+}
+
 function startGame() {
   window.GAME = new Phaser.Game({
     type: Phaser.AUTO,
@@ -263,7 +365,7 @@ function startGame() {
   });
   /* el canvas nace con el juego, así que la vigilancia se engancha en cuanto existe */
   atraparLosErrores();   // antes que nada: si la escena revienta al crearse, queremos el nombre
-  window.GAME.events.once("ready", () => vigilarElContexto(window.GAME));
+  window.GAME.events.once("ready", () => { vigilarElContexto(window.GAME); laZonaSigueDeFondo(); });
   return window.GAME;
 }
 

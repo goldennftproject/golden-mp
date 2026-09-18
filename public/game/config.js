@@ -450,6 +450,22 @@ GF.esOcultoMvp = function (id) { return !!(GF.MVP && GF.MVP_OCULTOS.indexOf(id) 
 // (Authentication → SMTP Settings; Resend o Postmark). Está anotado en TODO.md.
 GF.SOLO_EMAIL = 1;
 
+// ================= LA ZONA NO SE PARA EN SEGUNDO PLANO (18/9, dirección) ===============
+// « Haz que todo zona negra también funcione en segundo plano o minimizado », con el límite que
+// puso dirección en la misma conversación: « no quiero que sea idle o automático, solo quiero
+// que el juego no se pare ».
+//
+// Con GF.ZONA_FONDO = 1, mientras la pestaña está escondida Y hay una pelea empezada, un Web
+// Worker hace de metrónomo y se corre el paso lógico de la Zona a mano (sin dibujar: no hay
+// nadie mirando). Al terminar esa pelea se detiene solo, porque el auto-ataque necesita un
+// objetivo que solo fija el clic derecho del jugador: sin jugador no hay objetivo nuevo.
+//
+// APAGAR ESTO ES LO PRIMERO QUE HAY QUE PROBAR si vuelven las congeladas. Toca el mismo paso de
+// update que lleva una semana dando problemas, y por eso tiene interruptor propio y freno de
+// mano (si el paso revienta 10 veces seguidas, el metrónomo se apaga solo). Con 0, el juego
+// queda exactamente como antes del 18/9.
+GF.ZONA_FONDO = 1;
+
 GF.ZOOM = 1.35;
 GF.editMode = false;   // modo edición de la granja (arrastrar objetos)
 
