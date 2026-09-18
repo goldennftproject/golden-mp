@@ -122,10 +122,44 @@ console.log("\n7 · Y AL QUE YA JUEGA SIN CORREO SE LE AVISA, NO SE LE CIERRA LA
 {
   ok("el aviso existe y dice dónde está el botón", /Configuración → Cuenta/.test(MAIN));
   ok("es un aviso, no una ventana que tape la pantalla", !/openOv\("ov-cuenta"\)/.test(MAIN));
-  ok("y solo le sale al que está anónimo", /c\.modo !== "anonima"\) return;/.test(MAIN));
+  ok("al que ya tiene cuenta atada no se le dice nada", /c\.modo === "email"\) return;/.test(MAIN));
+  /* 18/9 — EL CASO QUE FALTABA. Dirección lo encontró probando: el que juega con partida local
+     y SIN cuenta en la nube no recibía ningún aviso, porque el aviso preguntaba por una cuenta
+     que no tiene. Entra igual (ley 1), pero callado no. */
+  ok("y al que juega sin cuenta en la nube TAMBIÉN se le avisa", /no está en la nube/.test(MAIN));
+  ok("con un texto distinto: a ése, Configuración → Cuenta no le sirve (no tiene sesión)",
+    /SOLO en este navegador/.test(MAIN));
+  ok("y sin prometerle que recargando se arregla (recargar toma el mismo camino)",
+    !/Recargá la página cuando tengas conexión para crear/.test(MAIN));
+  ok("queda anotado en la consola, para enterarnos si le pasa a alguien de verdad",
+    /partida local SIN cuenta en la nube/.test(MAIN));
   /* lo importante: en ningún lado se le impide entrar */
   ok("en ningún sitio se bloquea la entrada por no tener correo",
     !/modo === "anonima"[\s\S]{0,300}?(pantallaNoSePudo|return false)/.test(MAIN));
+}
+
+console.log("\n7b · POR QUÉ BORRAR EL ALMACENAMIENTO Y RECARGAR NO LIMPIA NADA   (18/9)\n");
+{
+  /* Dirección probó `localStorage.clear(); location.reload()` y siguió entrando a su granja.
+     No era la puerta: el juego guarda al SALIR, así que entre el clear y la recarga se vuelve
+     a escribir la copia. Le pasa igual a « Clear site data » + F5 y a cerrar la pestaña.
+     No se cambia —guardar al salir es lo que salva partidas— pero queda escrito acá para que
+     el próximo que lo pruebe no pierda la tarde que perdimos nosotros. Lo que sirve para
+     probar de verdad es una ventana de incógnito. */
+  const SAVE2 = fs.readFileSync(path.join(RAIZ, "public/game/save.js"), "utf8");
+  ok("(hecho) el juego guarda en beforeunload, y por eso reescribe lo que borraste",
+    /beforeunload", \(\) => \{ saveFarm\(\); \}/.test(SAVE2));
+  ok("(hecho) y la copia local vive en localStorage, que es lo que se reescribe",
+    /localStorage\.setItem\(GF_COPIA_KEY/.test(SAVE2));
+  ok("(hecho) el camino de « partida local sin cuenta » sigue existiendo…",
+    /no hay cuenta, pero SÍ hay partida en este navegador/.test(MAIN));
+  /* …pero 18/9, dirección: « yo solo permitiría partidas con login correo y ya ». Era el último
+     sitio por donde entraba una partida sin cuenta, así que la bandera lo cierra. */
+  ok("…pero SOLO con la bandera apagada", /if \(!soloCorreo\) \{/.test(MAIN));
+  ok("y la partida local NO se borra al cerrarlo (queda por si hay que rescatarla)",
+    /la partida local queda guardada, no se toca/.test(MAIN));
+  ok("y la puerta se lo DICE, en vez de dejarlo creer que perdió la granja",
+    /__GF_GRANJA_HUERFANA/.test(MAIN) && /No se borró/.test(MAIN));
 }
 
 console.log("\n8 · UN CORREO MAL ESCRITO NO SE MANDA AL VACÍO\n");

@@ -455,10 +455,25 @@ function pantallaNoSePudo() {
     /* 25/8 — la reja del apodo mira las DOS cosas: si hubo cuenta (no se puede pisar) o si hay
        una partida guardada acá (no se puede ignorar). Antes era una sola bandera para las dos
        preguntas y eso produjo un bloqueo: ver el comentario de hayGranjaLocal en save.js. */
+    /* 18/9 (dirección: « yo solo permitiría partidas con login correo y ya ») — ESTE CAMINO SE
+       CIERRA CON LA BANDERA PUESTA. Existía para que una caída de Supabase no dejara a nadie en
+       la calle: con partida local y sin cuenta, se cargaba la partida en vez de pedir apodo.
+       Lo que dirección decidió es que no haya partidas sin cuenta, y esto era el último sitio
+       por donde entraba una. El precio, dicho sin maquillar: durante una caída de la base, un
+       jugador sin cuenta no entra — y tampoco puede pedir el enlace, porque para eso hace falta
+       la red. No empeora al jugador de verdad (el que YA tiene cuenta hoy también queda fuera
+       en una caída: cae en pantallaNoSePudo tres líneas más abajo); iguala al que no la tenía.
+       Su partida local NO se borra: queda en el navegador, intacta, por si algún día hay que
+       rescatarla a mano. Apagar GF.SOLO_EMAIL devuelve este camino tal como estaba. */
+    const soloCorreo = (typeof GF !== "undefined" && GF.SOLO_EMAIL);
     if (typeof hayGranjaLocal === "function" && hayGranjaLocal() &&
         !(typeof CUENTA_PREVIA !== "undefined" && CUENTA_PREVIA)) {
-      console.warn("no hay cuenta, pero SÍ hay partida en este navegador: se carga en vez de pedir apodo");
-      if (typeof enterGame === "function") return enterGame();
+      if (!soloCorreo) {
+        console.warn("no hay cuenta, pero SÍ hay partida en este navegador: se carga en vez de pedir apodo");
+        if (typeof enterGame === "function") return enterGame();
+      }
+      console.warn("hay partida local sin cuenta, pero SOLO_EMAIL está puesto: se pide el correo (la partida local queda guardada, no se toca)");
+      window.__GF_GRANJA_HUERFANA = true;   // la puerta lo dice, para que nadie crea que se perdió
     }
     if (typeof CUENTA_PREVIA !== "undefined" && CUENTA_PREVIA) {
       console.warn("hay cuenta en este navegador: NO se pide apodo (crearía una granja nueva)");
@@ -528,6 +543,11 @@ function pintarPuerta(modo) {
   }
   const ya = document.getElementById("gate-ya");
   if (ya) ya.addEventListener("click", () => pintarPuerta(MODO_PUERTA === "volver" ? "apodo" : "volver"));
+  /* si este navegador tenía una partida sin cuenta, la puerta lo dice. Ver la puerta con una
+     granja empezada adentro y ningún mensaje es exactamente como se siente perder una partida,
+     aunque no se haya perdido nada. */
+  if (window.__GF_GRANJA_HUERFANA)
+    gateMsg("Tenías una partida guardada en este navegador, sin cuenta. <b>No se borró</b>, pero para seguir jugando hace falta una cuenta con correo. Si era tuya y querés recuperarla, avisanos antes de empezar otra.", "mal");
 }
 
 /* un correo mal escrito no se manda: el jugador se quedaría esperando un enlace que no existe
