@@ -613,6 +613,18 @@
   #gate p{color:#cbbf9f;font-size:14px;margin:0 0 16px}
   #gate input{width:100%;box-sizing:border-box;padding:11px;border-radius:9px;border:1px solid #4a5c3a;background:#1a2413;color:#fff;font-size:15px;text-align:center;margin-bottom:12px}
   #gate .enter{width:100%;padding:12px;border:none;border-radius:10px;font-weight:800;font-size:15px;background:linear-gradient(#f6d878,#e9b93f);color:#3a2e10;cursor:pointer}
+  /* 18/9 — la segunda puerta ("ya tengo cuenta") va en texto, no en botón de oro: el jugador
+     nuevo tiene que ver UN camino principal, no dos que compiten */
+  #gate .gate-alt{margin-top:12px}
+  #gate .gate-alt button{width:100%;background:none;border:none;box-shadow:none;padding:4px;color:#cbbf9f;font-size:13px;text-decoration:underline;cursor:pointer;text-shadow:none}
+  #gate .gate-alt button:hover{color:#f2ead5;filter:none}
+  /* el aviso del correo enviado: verde cuando salió, ámbar cuando algo falló. Sin colores el
+     jugador no sabe si tiene que ir al correo o volver a intentar */
+  #gate .gate-msg{margin-top:13px;font-size:13px;line-height:1.55;padding:10px 12px;border-radius:10px;
+    background:#1a2413;border:1px solid #4a5c3a;color:#cbbf9f;text-align:left}
+  #gate .gate-msg.ok{border-color:#78cd5a;color:#e4f4d8}
+  #gate .gate-msg.mal{border-color:#e2b23a;color:#f6e6bd}
+  #gate .gate-msg b{color:#f2ead5}
 
   /* ---- UI de madera (PixelLab) ---- */
   /* (regla .card vieja eliminada — la definición actual con fondo de madera está arriba) */
@@ -1769,9 +1781,19 @@
   <div id="gate" style="display:none">
     <div class="gcard">
       <h1>GOLDEN FARM</h1>
-      <p>Elegí un apodo para entrar a tu granja.</p>
+      <p id="gate-sub">Elegí un apodo para entrar a tu granja.</p>
       <input id="nick" maxlength="14" placeholder="Tu apodo" autocomplete="off">
+      <!-- 18/9 — el correo entra en la puerta. Antes vivía tres clics adentro (Configuración →
+           Cuenta), o sea que el jugador lo encontraba DESPUÉS de tener una granja vacía
+           delante: justo cuando ya no le servía. Arranca oculto y lo enciende main.js solo
+           cuando hace falta, para que el que ya tiene granja no vea una puerta nueva. -->
+      <input id="gmail" type="email" inputmode="email" autocomplete="email"
+             placeholder="Tu correo" style="display:none">
       <button class="enter" id="enter">Entrar</button>
+      <div id="gate-alt" class="gate-alt" style="display:none">
+        <button type="button" id="gate-ya">Ya tengo cuenta — entrar con mi correo</button>
+      </div>
+      <div id="gate-msg" class="gate-msg" style="display:none"></div>
     </div>
   </div>
 
@@ -1841,7 +1863,7 @@
     // 15/8: VERSIÓN DE BUILD — rompe la caché del navegador en cada deploy (sin esto, el
     // jugador seguía corriendo el state.js viejo aunque el servidor tuviera el nuevo).
     // deploy.bat la actualiza sola (busca GF_BUILD y pone la fecha/hora del deploy).
-    const GF_BUILD = "20260916-200117";
+    const GF_BUILD = "20260918-164032";
     const files = ["game/config.js","game/nav.js","game/audio.js","game/state.js","game/save.js","game/ui.js","game/boot.js",
                    "game/farm.js","game/forest.js","game/plaza.js","game/main.js","game/update.js"];
     /* 24/8 — SE BAJAN TODOS A LA VEZ, SE EJECUTAN EN FILA (dirección: « sigue tardando en

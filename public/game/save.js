@@ -158,6 +158,16 @@ const conTope = (p, ms, que) => Promise.race([
    entera es imperdonable. */
 var CUENTA_PREVIA = false;
 
+/* 18/9 — se enciende cuando initSave sale SIN cuenta a propósito, porque el navegador es
+   virgen y ahora se entra con correo. Es la diferencia entre « no se pudo entrar » (cartel de
+   error, no se toca nada) y « todavía no hay a quién entrar » (puerta del correo). Sin esta
+   distinción, un jugador nuevo vería la pantalla de avería en su primera visita. */
+var PUERTA_EMAIL = false;
+
+/* la sesión con la que se entró, guardada para poder leerle los metadatos (el apodo que viajó
+   dentro del enlace del correo) sin volver a pedirle nada a la red */
+var SESION_ACTUAL = null;
+
 async function initSave() {
   try {
     CUENTA_PREVIA = huboGranja();   // se mira ANTES de tocar nada
@@ -212,6 +222,19 @@ async function initSave() {
       sesionLog("SIN SESIÓN pero con granja previa: no se crea cuenta nueva");
       return false;
     }
+    /* ---- 18/9 — SOLO SE ENTRA CON CORREO -------------------------------------------------
+       Acá abajo nacía la cuenta anónima. Con la bandera puesta ya no nace: este navegador es
+       virgen (las tres comprobaciones de arriba ya descartaron que tenga granja), así que en
+       vez de fabricarle un "Granjero" que se va a evaporar con la caché, se sale y la puerta
+       pide el correo. La cuenta la crea el enlace del correo, no esta línea.
+       Nótese DÓNDE está el corte: después de revivir y después de la reja de CUENTA_PREVIA. Si
+       el navegador ya tenía granja, nunca se llega hasta acá — entra por los caminos de
+       siempre. Esto no le cierra la puerta a nadie que ya esté jugando. */
+    if (!session && typeof GF !== "undefined" && GF.SOLO_EMAIL) {
+      PUERTA_EMAIL = true;
+      sesionLog("navegador virgen y SOLO_EMAIL: no se crea cuenta anónima, se pide el correo");
+      return false;
+    }
     if (!session) {
       const { data, error } = await conTope(sb.auth.signInAnonymously(), 15000, "signInAnonymously");
       if (error) { console.warn("Login anónimo falló (¿está habilitado en Supabase?):", error.message); sesionLog("login anónimo falló", error.message); return false; }
@@ -220,6 +243,7 @@ async function initSave() {
     }
     if (!session || !session.user) return false;
     UID = session.user.id;
+    SESION_ACTUAL = session;
     marcarCuenta(session);   // nuestra copia de la llave, para la próxima vez
     /* y se mantiene fresca: cada vez que la librería renueva el token, guardamos el nuevo. Sin
        esto, nuestra copia envejece y el día que haga falta ya no sirve para revivir nada. */
@@ -1282,6 +1306,43 @@ async function vincularEmail(email) {
     if (error) return { error: error.message };
     return { ok: true };
   } catch (e) { return { error: String(e && e.message || e) }; }
+}
+
+/* CREA LA CUENTA DE UN JUGADOR NUEVO DESDE LA PUERTA (18/9, dirección: « solo con correo »).
+   Es el mismo enlace mágico, con dos diferencias que importan:
+     · shouldCreateUser: true — acá SÍ queremos que nazca la cuenta, es un jugador nuevo. (En
+       entrarConEmail va en false a propósito: allá un correo desconocido tiene que fallar, no
+       fabricar una granja vacía. Son dos gestos distintos y por eso son dos funciones.)
+     · el APODO viaja con el enlace, en los metadatos del usuario. Sin esto habría que pedirlo
+       otra vez al volver del correo, y pedir dos veces lo mismo es la forma más barata de que
+       alguien abandone justo en la puerta.                                                   */
+async function crearCuentaConEmail(email, nick) {
+  if (!sb) return { error: "sin conexión con la nube" };
+  const n = String(nick || "").trim().slice(0, 14) || "Granjero";
+  try {
+    const { error } = await sb.auth.signInWithOtp({
+      email: String(email || "").trim(),
+      options: {
+        emailRedirectTo: (typeof location !== "undefined" ? location.origin + location.pathname : undefined),
+        shouldCreateUser: true,
+        data: { nick: n },
+      },
+    });
+    if (error) return { error: error.message };
+    try { localStorage.setItem("gf_nick_pendiente", n); } catch (e) {}   // por si el correo se abre en este mismo navegador
+    return { ok: true };
+  } catch (e) { return { error: String(e && e.message || e) }; }
+}
+
+/* el apodo que eligió en la puerta, de vuelta del enlace. Primero el que viaja en la cuenta
+   (sirve aunque el correo se abra en otro dispositivo), después la copia local. */
+function apodoElegido(session) {
+  try {
+    const u = (session && session.user) || (typeof SESION_ACTUAL !== "undefined" && SESION_ACTUAL && SESION_ACTUAL.user);
+    const n = u && u.user_metadata && u.user_metadata.nick;
+    if (n) return String(n).slice(0, 14);
+  } catch (e) {}
+  try { return localStorage.getItem("gf_nick_pendiente") || ""; } catch (e) { return ""; }
 }
 
 // entra con un email YA vinculado (desde cualquier dispositivo): manda el enlace mágico.

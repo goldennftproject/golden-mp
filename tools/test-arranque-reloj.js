@@ -63,7 +63,10 @@ console.log("\nY LA PANTALLA NO SE CONTRADICE");
   ok("y ofrece reintentar", /b\.textContent = "Reintentar"/.test(bloque) && /location\.reload\(\)/.test(bloque));
   /* el cartel que se apaga es el que existe: si alguien lo cambia de etiqueta, esto avisa */
   const gate = HTML.slice(HTML.indexOf('id="gate"'), HTML.indexOf('id="gate"') + 400);
-  ok("la puerta del apodo sigue teniendo su <p> (el que se apaga)", /<p>Elegí un apodo/.test(gate));
+  /* 18/9: el <p> lleva id (gate-sub) desde que la puerta pide también el correo y el texto
+     cambia según el camino. Lo que este test custodia no es el texto sino que el <p> EXISTA,
+     porque pantallaNoSePudo lo apaga con querySelector("p") para poner el motivo del fallo. */
+  ok("la puerta del apodo sigue teniendo su <p> (el que se apaga)", /<p[^>]*>Elegí un apodo/.test(gate));
   ok("y su campo se llama nick", /id="nick"/.test(gate));
 }
 

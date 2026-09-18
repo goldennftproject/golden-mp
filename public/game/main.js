@@ -283,6 +283,23 @@ function enterGame() {
   // si quedó entrenando de la sesión anterior, la ventana vuelve sola: no se puede jugar
   // mientras el granjero entrena, ni recargando la página (9/8)
   cuandoListo(() => { try { if (typeof dummyEntrenando === "function" && dummyEntrenando()) openOv("ov-entrenando"); } catch (e) {} });
+  /* 18/9 — EL QUE YA JUEGA SIN CORREO. Desde hoy nadie nuevo entra sin correo, pero el que ya
+     tenía granja anónima sigue entrando igual (ley 1: su granja es suya). Lo que sí se le debe
+     es el aviso, porque su granja vive en este navegador y se va con la caché — que es
+     exactamente lo que dirección descubrió probando. Una vez por sesión, sin ventana modal: el
+     que está jugando no quiere que le tapen la pantalla, quiere saber dónde está el botón. */
+  cuandoListo(() => {
+    try {
+      if (typeof GF === "undefined" || !GF.SOLO_EMAIL) return;
+      if (typeof cuentaEstado !== "function") return;
+      cuentaEstado().then((c) => {
+        if (!c || c.modo !== "anonima") return;
+        if (typeof log === "function")
+          log("Tu granja todavía no tiene correo: vive solo en este navegador y se pierde si borrás los datos. Atala en Menú → Configuración → Cuenta.", "warn");
+        if (typeof toast === "function") toast("Atá tu correo: Configuración → Cuenta");
+      }).catch(() => {});
+    } catch (e) {}
+  });
 }
 
 /* LA PANTALLA DE "NO SE PUDO", en un solo lugar (24/8). Comparte cartel con la puerta del
@@ -361,7 +378,11 @@ function pantallaNoSePudo() {
      el juego arrancando igual. Se puede jugar sin nube —a veces es lo único que se puede—, pero
      el jugador tiene derecho a saberlo ANTES de invertir una tarde. */
   try {
-    if (typeof UID !== "undefined" && !UID && typeof CUENTA_PREVIA !== "undefined" && !CUENTA_PREVIA) {
+    /* 18/9 — PUERTA_EMAIL no es un fallo de red: es « todavía no hay cuenta porque el jugador
+       no dio su correo ». Decirle "sin conexión con el servidor" sería mentirle y mandarlo a
+       revisar su internet por un problema que no tiene. */
+    if (typeof UID !== "undefined" && !UID && typeof CUENTA_PREVIA !== "undefined" && !CUENTA_PREVIA &&
+        !(typeof PUERTA_EMAIL !== "undefined" && PUERTA_EMAIL)) {
       cuandoListo(() => {
         /* 25/8 — el mismo texto que avisarSinNube, y salido de la MISMA función a propósito.
            Dos avisos que dicen lo mismo con palabras distintas son dos avisos que se
@@ -375,6 +396,24 @@ function pantallaNoSePudo() {
       });
     }
   } catch (e) {}
+  /* 18/9 — VUELTA DEL ENLACE DEL CORREO. El jugador ya eligió su apodo en la puerta, tocó el
+     enlace y volvió con la cuenta recién nacida: hay UID pero todavía no hay granja. Si lo
+     mandáramos a la puerta otra vez, le pediríamos el apodo por segunda vez y, peor, le
+     pediríamos el correo a alguien que acaba de dar el correo. Se entra derecho.
+     La reja de siempre sigue valiendo: esto solo corre si NO había granja previa en este
+     navegador, que es exactamente el caso del jugador nuevo. */
+  if (!returning && typeof UID !== "undefined" && UID && !window.NICK &&
+      typeof apodoElegido === "function" &&
+      !(typeof CUENTA_PREVIA !== "undefined" && CUENTA_PREVIA)) {
+    const n = apodoElegido(null);
+    if (n) {
+      window.NICK = n;
+      try { localStorage.removeItem("gf_nick_pendiente"); } catch (e) {}
+      console.warn("vuelta del enlace del correo: se entra con el apodo elegido (" + n + ")");
+      if (typeof saveFarm === "function") { try { await window.SAVE_READY; } catch (e) {} saveFarm(); }
+      return enterGame();
+    }
+  }
   if (returning && window.NICK) enterGame();
   else if (typeof CARGA_FALLO !== "undefined" && CARGA_FALLO) {
     // 18/8: no se pudo LEER la granja. Antes esto caía en la puerta del apodo y el jugador
@@ -402,8 +441,106 @@ function pantallaNoSePudo() {
     }
     hideEl("loading");                                            // jugador nuevo: primero el apodo
     document.getElementById("gate").style.display = "flex";
+    puertaDelCorreo();   // 18/9: y el correo, si la bandera lo pide
   }
 })();
+
+/* ============ LA PUERTA DEL CORREO (18/9, dirección: « solo con correo ») =================
+   Dirección lo encontró jugando: « pero si yo borro caché, ¿por qué no me sale para poner mi
+   correo? ». No salía. El juego creaba una cuenta anónima, pedía un apodo y lo dejaba mirando
+   una granja vacía; el campo del correo estaba en Configuración → Cuenta, tres clics adentro y
+   media hora tarde. El login estaba escrito y bien, pero en el lugar donde nadie lo iba a ver.
+
+   Lo que hay acá es SOLO la puerta. Las dos funciones que hablan con la nube ya existían
+   (crearCuentaConEmail para el que llega nuevo, entrarConEmail para el que vuelve) y no se
+   tocaron: esto decide qué se muestra y a cuál se llama.
+
+   Lo que NO hace, a propósito: no toca ninguna de las tres rejas del 24/8. Ninguno de los dos
+   caminos de acá escribe una granja — los dos terminan en « andá a tu correo ». La cuenta nace
+   cuando el jugador toca el enlace, y para entonces vuelve por el arranque normal, con sus
+   comprobaciones intactas.                                                                   */
+var MODO_PUERTA = "apodo";   // "apodo" (jugador nuevo) | "volver" (ya tiene cuenta)
+
+function gateMsg(txt, clase) {
+  const m = document.getElementById("gate-msg"); if (!m) return;
+  m.style.display = txt ? "block" : "none";
+  m.className = "gate-msg" + (clase ? " " + clase : "");
+  m.innerHTML = txt || "";
+}
+
+function puertaDelCorreo() {
+  const solo = (typeof GF !== "undefined" && GF.SOLO_EMAIL);
+  const alt = document.getElementById("gate-alt");
+  /* el "ya tengo cuenta" se ofrece SIEMPRE, con bandera o sin ella: es la respuesta a « borré
+     la caché y perdí la granja », y esa pregunta no depende de cómo entren los nuevos */
+  if (alt) alt.style.display = "block";
+  if (!solo) return;   // bandera apagada: la puerta de siempre, solo con el atajo de volver
+  pintarPuerta("apodo");
+}
+
+function pintarPuerta(modo) {
+  MODO_PUERTA = modo;
+  const sub = document.getElementById("gate-sub");
+  const nick = document.getElementById("nick");
+  const mail = document.getElementById("gmail");
+  const btn = document.getElementById("enter");
+  const alt = document.getElementById("gate-alt");
+  gateMsg("");
+  if (modo === "volver") {
+    if (sub) sub.textContent = "Entrá con el correo de tu granja. Te mandamos un enlace, sin contraseñas.";
+    if (nick) nick.style.display = "none";
+    if (mail) mail.style.display = "";
+    if (btn) btn.textContent = "Mandame el enlace";
+    if (alt) alt.innerHTML = '<button type="button" id="gate-ya">Soy nuevo — crear mi granja</button>';
+  } else {
+    if (sub) sub.textContent = "Elegí un apodo y dejá tu correo: con eso tu granja te sigue a cualquier dispositivo.";
+    if (nick) nick.style.display = "";
+    if (mail) mail.style.display = (typeof GF !== "undefined" && GF.SOLO_EMAIL) ? "" : "none";
+    if (btn) btn.textContent = "Entrar";
+    if (alt) alt.innerHTML = '<button type="button" id="gate-ya">Ya tengo cuenta — entrar con mi correo</button>';
+  }
+  const ya = document.getElementById("gate-ya");
+  if (ya) ya.addEventListener("click", () => pintarPuerta(MODO_PUERTA === "volver" ? "apodo" : "volver"));
+}
+
+/* un correo mal escrito no se manda: el jugador se quedaría esperando un enlace que no existe
+   y culparía al juego. La comprobación es floja a propósito — validar correos "bien" es un
+   pozo sin fondo y el que decide de verdad es el servidor de correo. */
+function correoPlausible(v) { return /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(String(v || "").trim()); }
+
+async function mandarElEnlace() {
+  const mail = document.getElementById("gmail");
+  const btn = document.getElementById("enter");
+  const v = mail ? String(mail.value || "").trim() : "";
+  if (!correoPlausible(v)) { gateMsg("Ese correo no parece completo. Revisalo y probá de nuevo.", "mal"); return; }
+  if (btn) { btn.disabled = true; btn.textContent = "Mandando…"; }
+  gateMsg("Mandando el enlace…");
+  try { await window.SAVE_READY; } catch (e) {}
+  let r;
+  if (MODO_PUERTA === "volver") {
+    r = (typeof entrarConEmail === "function") ? await entrarConEmail(v) : { error: "no disponible" };
+  } else {
+    const n = (document.getElementById("nick") || {}).value;
+    r = (typeof crearCuentaConEmail === "function") ? await crearCuentaConEmail(v, n) : { error: "no disponible" };
+  }
+  if (btn) { btn.disabled = false; btn.textContent = MODO_PUERTA === "volver" ? "Mandame el enlace" : "Entrar"; }
+  if (r && r.ok) {
+    gateMsg("Listo: te mandamos un enlace a <b>" + v.replace(/[<>&]/g, "") + "</b>.<br>" +
+      "Abrilo y volvés directo a tu granja. Si no aparece en un minuto, mirá el correo no deseado.", "ok");
+    return;
+  }
+  /* el error más probable del camino "volver" es un correo que nunca vinculó ninguna granja, y
+     Supabase lo dice en inglés y en jerga. Se traduce, porque es EL caso en que el jugador
+     necesita entender qué hacer: crear una granja nueva en vez de seguir intentando entrar. */
+  const e = String((r && r.error) || "no se pudo");
+  if (MODO_PUERTA === "volver" && /not found|no user|signups? not allowed|invalid/i.test(e)) {
+    gateMsg("No hay ninguna granja atada a ese correo. Si sos nuevo, volvé y elegí « Soy nuevo — crear mi granja ».", "mal");
+  } else if (/rate|limit|too many|seconds/i.test(e)) {
+    gateMsg("Se mandaron muchos correos seguidos. Esperá un minuto y probá otra vez.", "mal");
+  } else {
+    gateMsg("No se pudo mandar el enlace: " + e.replace(/[<>]/g, ""), "mal");
+  }
+}
 
 // jugador nuevo: elige apodo y entra
 document.getElementById("enter").addEventListener("click", async () => {
@@ -415,6 +552,13 @@ document.getElementById("enter").addEventListener("click", async () => {
     console.warn("Entrar bloqueado: este navegador ya tiene granja y no se pudo abrir la sesión");
     return pantallaNoSePudo();
   }
+  /* 18/9 — el camino del correo va DESPUÉS de la reja, aunque no escriba nada.
+     Lo puse antes en la primera versión y el test del 24/8 (test-no-perder-granja) lo cazó:
+     « la comprobación va ANTES de tocar el apodo o guardar nada ». Tenía razón el test y no
+     yo. Mi camino es inofensivo HOY —manda un correo y termina—, pero el día que alguien le
+     agregue una línea, la reja tiene que haber corrido ya. El orden no se discute con
+     argumentos sobre lo que la función hace ahora. */
+  if (MODO_PUERTA === "volver" || (typeof GF !== "undefined" && GF.SOLO_EMAIL)) return mandarElEnlace();
   window.NICK = document.getElementById("nick").value.trim() || "Granjero";
   try { await window.SAVE_READY; } catch (e) {}
   if (typeof saveFarm === "function") saveFarm();   // persiste el apodo enseguida
@@ -425,3 +569,11 @@ document.getElementById("enter").addEventListener("click", async () => {
 document.getElementById("nick").addEventListener("keydown", (e) => {
   if (e.key === "Enter") document.getElementById("enter").click();
 });
+/* el Enter desde el correo también entra: en el móvil el teclado muestra "ir" y nadie va a
+   buscar el botón */
+{
+  const gm = document.getElementById("gmail");
+  if (gm) gm.addEventListener("keydown", (e) => {
+    if (e.key === "Enter") document.getElementById("enter").click();
+  });
+}

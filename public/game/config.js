@@ -427,6 +427,29 @@ GF.MVP = 1;
 GF.MVP_OCULTOS = ["ov-pass", "ov-misiones", "ov-logros", "ov-album", "ov-clan", "ov-cos", "ov-lb"];
 GF.esOcultoMvp = function (id) { return !!(GF.MVP && GF.MVP_OCULTOS.indexOf(id) >= 0); };
 
+// ================= SOLO SE ENTRA CON CORREO (18/9, dirección) ==========================
+// « Quiero que solo entren jugadores con correo ». El motivo lo encontró dirección jugando:
+// borrás la caché y el juego NO te ofrece poner tu correo — te crea una granja vacía y el
+// panel del email queda tres clics adentro, o sea en el único momento en que ya no sirve.
+//
+// Con GF.SOLO_EMAIL = 1:
+//   · un navegador VIRGEN ya no recibe una cuenta anónima: la puerta pide apodo Y correo, y
+//     manda el enlace mágico. La cuenta nace cuando el jugador toca el enlace, no antes.
+//   · el navegador que YA TIENE GRANJA entra exactamente como siempre. Eso es la ley 1 y no
+//     es negociable: las granjas de hoy (la de dirección y la del diseñador entre ellas) son
+//     anónimas, y dejarlas afuera sería borrarlas con otro nombre. Ven un aviso para atar su
+//     correo, no una puerta cerrada.
+//
+// Apagarla (= 0) devuelve el arranque anónimo de siempre sin tocar ni un dato guardado, y ahí
+// está la gracia de que sea una bandera: si en el playtest la gente abandona en la puerta del
+// correo, eso se ve y se apaga el mismo día.
+//
+// OJO, EL TAPÓN: con el correo obligatorio, el SMTP deja de ser un detalle. El servidor de
+// fábrica de Supabase manda ~30 correos/hora; pasado eso, nadie puede entrar — no "se degrada",
+// se cierra. Antes de que esto lo vea un jugador de verdad hay que enchufar un SMTP propio
+// (Authentication → SMTP Settings; Resend o Postmark). Está anotado en TODO.md.
+GF.SOLO_EMAIL = 1;
+
 GF.ZOOM = 1.35;
 GF.editMode = false;   // modo edición de la granja (arrastrar objetos)
 

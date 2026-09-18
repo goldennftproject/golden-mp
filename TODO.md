@@ -108,10 +108,15 @@ en `docs/LEYES.md`.
   la cuenta anónima actual —mismo `user_id`, la granja no se toca— y « Entrar con mi email » la
   trae a cualquier dispositivo con `shouldCreateUser: false`, así que un email sin cuenta no
   fabrica un Granjero nuevo. *Verificado el 15/9: el proveedor Email ya está ACTIVO en el
-  proyecto nuevo y el portero no tiene nada atado a lo anónimo.* Falta UNA cosa, y es del
-  dashboard: **Authentication → URL Configuration → Site URL = `https://golden-mp.onrender.com`**
-  (la mudanza del 14/9 no cubrió ese campo; si quedó en localhost el enlace del correo abre una
-  página que no existe y parece que el login está roto). Entrar con Google es trabajo aparte
+  proyecto nuevo y el portero no tiene nada atado a lo anónimo.* **18/9: el dashboard quedó
+  completo** — proveedor Email activo, Site URL `https://golden-mp.onrender.com` y el redirect
+  `https://golden-mp.onrender.com/**`. Dirección lo desaplazó (era « para después del playtest »)
+  porque el diseñador no podía probar en incógnito sin perder su granja. **Lo que queda es la
+  prueba, no la configuración:** vincular la granja de dirección desde Configuración → Cuenta y
+  después entrar con ese mismo email desde OTRO navegador y ver que aparece la misma granja —
+  si apareciera una granja vacía, el vínculo no se hizo y hay que mirarlo antes de contárselo a
+  nadie. Y antes del lanzamiento, un SMTP propio: el de fábrica de Supabase son ~30 correos/hora
+  (Authentication → SMTP Settings; Resend o Postmark). Entrar con Google es trabajo aparte
   (proyecto en Google Cloud, consentimiento, client ID) y no cambia lo que se busca, que es que
   la cuenta persista: el enlace mágico a una dirección de Gmail ya lo resuelve.
 - [ ] **5 · Que alguien lo juegue una semana** sin saber cómo está hecho. Ni Golden, ni Suren,
@@ -209,9 +214,10 @@ Están desarrolladas en el GDD §15.0, con sus números medidos. Aquí solo el t
 - [ ] **El backup de Supabase**, apenas haya partidas que valgan algo. Database → Backups, o
   `pg_dump` con la contraseña del paso 1, y guardarlo aparte. **Es lo único que nos faltó la
   semana del incidente**, así que es lo primero que no hay que volver a olvidar.
-- [ ] **Site URL en Supabase** para que el login por email funcione: Authentication → URL
-  Configuration → `https://golden-mp.onrender.com`. Es el único paso que le falta a la cuenta por
-  email, que ya está escrita y en vivo (ver arriba).
+- [x] ~~**Site URL en Supabase**~~ **Hecho el 18/9.** Authentication → URL Configuration → Site URL
+  `https://golden-mp.onrender.com` y, en Redirect URLs, `https://golden-mp.onrender.com/**`.
+  Con eso la cuenta por email queda **configurada de punta a punta**; lo que falta es probarla
+  (ver arriba).
 - [x] ~~**Portero de guardado, PARTE 2**~~ **Hecho el 14/9** en el proyecto nuevo: PARTE 2 aplicada,
   `MODO = "rechazo"`, el botón 🧪 muerto y el cliente volviendo a la granja aceptada ante un 422.
   Queda la limpieza de la bitácora a 30 días (un `delete` mensual, o cuando moleste).

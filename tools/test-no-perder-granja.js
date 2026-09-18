@@ -60,7 +60,11 @@ console.log("\nREJA 2 · EL ARRANQUE NO PIDE APODO SI YA HAY GRANJA");
 
 console.log("\nREJA 3 · EL BOTÓN ENTRAR, QUE ES EL QUE CONSUMA LA PÉRDIDA");
 {
-  const b = MAIN.slice(MAIN.indexOf('getElementById("enter").addEventListener'), MAIN.indexOf('getElementById("enter").addEventListener') + 900);
+  /* 18/9: la ventana pasó de 900 a 2000 caracteres. No es aflojar el test — lo que mide es el
+     ORDEN de dos líneas dentro del manejador, y con 900 el final del manejador se quedaba
+     afuera: indexOf devolvía -1 y la comparación daba rojo con el código bien puesto. Un test
+     que recorta por número de caracteres miente en cuanto alguien escribe un comentario. */
+  const b = MAIN.slice(MAIN.indexOf('getElementById("enter").addEventListener'), MAIN.indexOf('getElementById("enter").addEventListener') + 2000);
   ok("se corta si hay cuenta previa y no hay sesión abierta", /CUENTA_PREVIA && !UID/.test(b));
   ok("antes de tocar el apodo o guardar nada",
     b.indexOf("CUENTA_PREVIA") < b.indexOf("window.NICK ="));
