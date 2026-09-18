@@ -24,6 +24,13 @@ const G = ctx.G, g = (n) => vm.runInContext(n, ctx);
 let fallos = 0;
 const ok = (n, c, d) => { if (!c) fallos++; console.log((c ? "  ok   " : "  FALLA") + "  " + n + (d != null ? "   " + d : "")); };
 const H = (h) => h * 3600 * 1000;
+/* 18/9 — reloj de mentira, igual que en test-curarse-cuesta-tiempo: desde que la cura cuenta
+   tiempo real (para que funcione con la pestaña de fondo), llamar a granjaRegen() en un bucle
+   no avanza nada. Acá hace falta porque este archivo compara los DOS caminos —mirando y
+   ausente— y esa comparación solo vale si los dos miden lo mismo: segundos. */
+let _falso = Date.UTC(2026, 8, 18, 12, 0, 0);
+vm.runInContext("(function(f){ nowMs = f; })", ctx)(() => _falso);
+const avanzar = (seg) => { _falso += seg * 1000; };
 const ponerCombate = (lvl) => {
   G.buffs = []; G.gear = G.gear || {}; G.gear.arma = null;
   G.combatXp = (function () { let t = 0; for (let i = 1; i < lvl; i++) t += g("skillNeed(" + i + ")"); return t; })();
@@ -37,7 +44,7 @@ console.log("\n1 · UNA HORA AUSENTE = UNA HORA CON LA PESTAÑA ABIERTA\n");
      (la vuelta de una ausencia). Si dieran distinto, el jugador tendría un motivo para elegir
      cómo dejar el juego, y ese motivo no debería existir */
   G.hp = 0;
-  for (let s = 0; s < 1800; s++) g("granjaRegen()");
+  for (let s = 0; s < 1800; s++) { avanzar(1); g("granjaRegen()"); }
   const mirando = G.hp;
   G.hp = 0;
   const curado = g("granjaRegenAusente(" + (1800 * 1000) + ")");
@@ -72,7 +79,7 @@ console.log("\n3 · EL AGUJERO: AUSENTARSE DENTRO DE LA ZONA NO CURA\n");
      la pestaña abierta (test-curarse-cuesta-tiempo). Si la ausencia curara, cerrar el navegador
      sería el botón de curarse gratis en el único sitio donde curarse cuesta comida. */
   ok("(arnés) y dentro de la Zona tampoco cura con la pestaña abierta", (() => {
-    ctx.GF.scene = "forest"; G.hp = 5; for (let i = 0; i < 300; i++) g("granjaRegen()");
+    ctx.GF.scene = "forest"; G.hp = 5; for (let i = 0; i < 300; i++) { avanzar(1); g("granjaRegen()"); }
     const q = G.hp; ctx.GF.scene = "farm"; return q === 5;
   })());
 }

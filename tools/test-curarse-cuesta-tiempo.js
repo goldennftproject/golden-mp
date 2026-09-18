@@ -23,6 +23,18 @@ const G = ctx.G, g = (n) => vm.runInContext(n, ctx);
 
 let fallos = 0;
 const ok = (n, c, d) => { if (!c) fallos++; console.log((c ? "  ok   " : "  FALLA") + "  " + n + (d != null ? "   " + d : "")); };
+/* 18/9 — EL RELOJ DE MENTIRA. Hasta hoy este test llamaba a granjaRegen() en un bucle y contaba
+   UNA llamada = UN segundo. Eso dejó de ser cierto el 18/9: la cura pasó a contar tiempo real,
+   porque con la pestaña de fondo el navegador llama una vez por minuto y « un punto por llamada »
+   curaba sesenta veces más lento sin que nada pareciera roto.
+   Así que acá se mueve el reloj a mano. Y esto es mejor prueba que la de antes, no peor: ahora
+   mide lo que el jugador siente (cuánto TIEMPO tarda la barra) y no cuántas veces corrió una
+   función, que es un detalle nuestro que a nadie le importa. */
+let _falso = Date.UTC(2026, 8, 18, 12, 0, 0);
+vm.runInContext("(function(f){ nowMs = f; })", ctx)(() => _falso);
+const avanzar = (seg) => { _falso += seg * 1000; };
+const curarSegundos = (seg) => { for (let i = 0; i < seg; i++) { avanzar(1); g("granjaRegen()"); } };
+
 const ponerCombate = (lvl) => {
   G.buffs = []; G.gear = G.gear || {}; G.gear.arma = null;
   G.combatXp = (function () { let t = 0; for (let i = 1; i < lvl; i++) t += g("skillNeed(" + i + ")"); return t; })();
@@ -38,7 +50,7 @@ console.log("\n1 · LA BARRA ENTERA TARDA LO QUE DICE LA CONSTANTE\n");
   for (const lvl of [1, 10, 50]) {
     ponerCombate(lvl);
     G.hp = 0;
-    let seg = 0; while (G.hp < G.hpMax && seg < 60 * 60 * 6) { g("granjaRegen()"); seg++; }
+    let seg = 0; while (G.hp < G.hpMax && seg < 60 * 60 * 6) { avanzar(1); g("granjaRegen()"); seg++; }
     const min = Math.round(seg / 60);
     ok("a Combate " + lvl + " (" + G.hpMax + " de vida) la barra entera tarda " + min + " min",
       Math.abs(min - MIN) <= 1, "esperado " + MIN);
@@ -51,13 +63,13 @@ console.log("\n1 · LA BARRA ENTERA TARDA LO QUE DICE LA CONSTANTE\n");
 console.log("\n2 · PERO LA GRANJA SIGUE CURANDO, Y LA ZONA NO\n");
 {
   ctx.GF.scene = "farm"; ponerCombate(10); G.hp = 10;
-  const antes = G.hp; g("granjaRegen()");
+  const antes = G.hp; avanzar(1); g("granjaRegen()");
   ok("en la granja la vida sube sola (ley 1: sigue siendo el sitio seguro)", G.hp > antes, antes.toFixed(2) + " → " + G.hp.toFixed(2));
   ctx.GF.scene = "forest";
-  const enZona = G.hp; for (let i = 0; i < 600; i++) g("granjaRegen()");
+  const enZona = G.hp; curarSegundos(600);
   ok("dentro de la Zona no se cura ni un punto en diez minutos", G.hp === enZona, G.hp.toFixed(2));
   ctx.GF.scene = "farm";
-  G.hp = G.hpMax; g("granjaRegen()");
+  G.hp = G.hpMax; avanzar(1); g("granjaRegen()");
   ok("y con la barra llena no se pasa", G.hp === G.hpMax);
 }
 

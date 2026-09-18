@@ -223,10 +223,35 @@ function cleanseStates(tipos) {
 var GRANJA_REGEN = 1;        // interruptor: 0 apaga la cura sola de la granja
 var GRANJA_CURA_MIN = 60;    // lo que tarda la BARRA ENTERA en volver sola (el « timer » del pedido)
 function granjaCuraPorSeg() { return Math.max(0, G.hpMax || 100) / Math.max(1, GRANJA_CURA_MIN * 60); }
+/* ═══ LOS RELOJES CUENTAN TIEMPO, NO LATIDOS   (18/9, dirección) ═════════════════════════════
+   « Todo debe funcionar en segundo plano, o minimizado ».
+
+   Esto sumaba UNA CANTIDAD FIJA POR LLAMADA, y la llamada venía de un setInterval de un segundo.
+   Con la pestaña a la vista eso es lo mismo que contar tiempo; con la pestaña de fondo NO, porque
+   Chrome baja los intervalos de las pestañas escondidas a uno por minuto. Resultado medido en la
+   práctica: de fondo te curabas unas sesenta veces más lento, sin que nada pareciera roto.
+
+   La cura pasa a contar el tiempo REAL transcurrido desde la vez anterior. Con eso da igual cada
+   cuánto se la llame: una vez por segundo, una por minuto o una sola vez al volver — el
+   resultado es el mismo. Es la misma idea que hace crecer los cultivos y que cura las ausencias,
+   y es la forma correcta de que algo « funcione en segundo plano » en un navegador: no se pelea
+   con el estrangulador, se deja de depender de él.
+
+   La estamina y las incursiones ya estaban así (miran la hora contra un objetivo), por eso
+   nunca dieron problema de fondo. Ésta era la que faltaba.                                    */
+var _ultLatido = {};
+function segDesde(quien) {   // segundos reales desde la vez anterior (la primera vale 1 s)
+  const t = (typeof nowMs === "function") ? nowMs() : Date.now();
+  const dt = _ultLatido[quien] ? (t - _ultLatido[quien]) / 1000 : 1;
+  _ultLatido[quien] = t;
+  return Math.max(0, dt);
+}
 function granjaRegen() {   // solo fuera de la Zona Negra
+  const seg = segDesde("cura");   // se consume SIEMPRE, incluso al salir temprano: si no, el rato
+                              // que pasaste en la Zona o con la barra llena se cobraría después
   if (!GRANJA_REGEN || G.hp >= G.hpMax) return;
   if (window.GF && GF.scene === "forest") return;
-  G.hp = Math.min(G.hpMax, G.hp + granjaCuraPorSeg());
+  G.hp = Math.min(G.hpMax, G.hp + granjaCuraPorSeg() * seg);
 }
 /* ═══ LA VIDA SE RECUPERA AUNQUE NO ESTÉS   (18/9, dirección) ═══════════════════════════════
    « La vida debe recuperarse aun offline ». Tenía razón y era una inconsistencia nuestra: los
@@ -256,12 +281,20 @@ function granjaRegenAusente(ms) {
   return G.hp - antes;
 }
 function buffTick() {   // 1 vez por segundo desde el HUD: regeneración y vida máxima temporal
-  const t = Date.now(); let dirty = false;
+  /* 18/9 — la hora sale de nowMs(), como todos los demás relojes del juego. Acá decía Date.now()
+     directo, que es el único sitio del archivo que se saltaba la función: mezclar las dos
+     fuentes hace que los buffs vivan en un reloj distinto del de la cura, y eso son bugs que
+     solo aparecen en los bordes. */
+  const t = nowMs(); let dirty = false;
+  /* por SEGUNDOS REALES, no por llamada, y por el mismo motivo que la cura: de fondo el
+     navegador llama esto una vez por minuto, y « +2 de vida por segundo » pasaba a ser +2 por
+     minuto sin que nadie lo notara. Lo que un buff promete tiene que cumplirse mires o no. */
+  const seg = segDesde("buffs");
   // set de Piel completo: +N HP/s (el bono estaba en la tabla pero no lo leía nadie)
   { const rg = (typeof armorBonoVal === "function") ? armorBonoVal("regen") : 0;
-    if (rg > 0 && G.hp < G.hpMax) { G.hp = Math.min(G.hpMax, G.hp + rg); dirty = true; } }
+    if (rg > 0 && G.hp < G.hpMax) { G.hp = Math.min(G.hpMax, G.hp + rg * seg); dirty = true; } }
   for (const b of G.buffs) {
-    if (b.type === "regen" && b.until > t && G.hp < G.hpMax) { G.hp = Math.min(G.hpMax, G.hp + b.mult); dirty = true; }
+    if (b.type === "regen" && b.until > t && G.hp < G.hpMax) { G.hp = Math.min(G.hpMax, G.hp + b.mult * seg); dirty = true; }
     if (b.type === "hpmax") {
       if (b.until > t && !b.on) { b.on = true; G.hpMax += b.mult; G.hp = Math.min(G.hpMax, G.hp + b.mult); dirty = true; }
       if (b.until <= t && b.on) { b.on = false; G.hpMax -= b.mult; G.hp = Math.min(G.hp, G.hpMax); dirty = true; }
