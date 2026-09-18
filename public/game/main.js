@@ -293,10 +293,37 @@ function enterGame() {
       if (typeof GF === "undefined" || !GF.SOLO_EMAIL) return;
       if (typeof cuentaEstado !== "function") return;
       cuentaEstado().then((c) => {
-        if (!c || c.modo !== "anonima") return;
+        if (!c) return;
+        if (c.modo === "email") return;                     // ya está atada: nada que decir
+        if (c.modo === "anonima") {
+          /* tiene cuenta en la nube, pero sin correo: el panel de Configuración SÍ le sirve */
+          if (typeof log === "function")
+            log("Tu granja todavía no tiene correo: vive solo en este navegador y se pierde si borrás los datos. Atala en Menú → Configuración → Cuenta.", "warn");
+          if (typeof toast === "function") toast("Atá tu correo: Configuración → Cuenta");
+          return;
+        }
+        /* ---- 18/9 — EL CASO QUE ME FALTABA (dirección lo encontró probando) ----------------
+           "sin-nube" = está jugando con una partida guardada en este navegador y SIN cuenta en
+           la nube. Pasa por el camino del 25/8: si hay partida local y no hubo cuenta, el
+           arranque la carga en vez de mandarlo a la puerta — y eso está bien, su partida es
+           suya y no se la vamos a esconder detrás de un formulario.
+           Lo que NO está bien es que se entere de nada. Antes de hoy el aviso ni le salía,
+           porque preguntaba por una cuenta que él no tiene. Y ojo con el texto: mandarlo a
+           Configuración → Cuenta sería mandarlo a una pared — ese panel necesita una sesión
+           abierta, y él no la tiene. Lo único cierto que se le puede decir es dónde está
+           guardada su partida y qué hacer para que deje de estar solo ahí.
+           Lo que este aviso NO resuelve, y lo digo para que no se confunda con un arreglo: una
+           partida local huérfana no se adopta sola al crear la cuenta. Eso es un trabajo aparte
+           (habría que atar la copia sin dueño al UID nuevo) y no se improvisa en un aviso. Por
+           eso el registro lo anota fuerte: si esto le pasa a alguien de verdad, quiero verlo. */
+        /* y el texto NO le promete que recargando se arregla: recargar toma este mismo camino
+           otra vez. Decirle « recargá y creás tu cuenta » sería mandarlo a dar vueltas. Se le
+           dice lo único comprobable —dónde está su partida y qué la pone en riesgo— y se le
+           pide que avise, que es lo que de verdad hace falta para arreglarlo bien. */
         if (typeof log === "function")
-          log("Tu granja todavía no tiene correo: vive solo en este navegador y se pierde si borrás los datos. Atala en Menú → Configuración → Cuenta.", "warn");
-        if (typeof toast === "function") toast("Atá tu correo: Configuración → Cuenta");
+          log("Estás jugando sin cuenta: tu partida se guarda SOLO en este navegador, no está en la nube, y se pierde si borrás los datos del sitio. Avisanos para pasarla a una cuenta con correo.", "warn");
+        if (typeof toast === "function") toast("Sin cuenta: tu partida vive solo acá");
+        console.warn("[cuenta] partida local SIN cuenta en la nube — el jugador no pasó por la puerta del correo");
       }).catch(() => {});
     } catch (e) {}
   });

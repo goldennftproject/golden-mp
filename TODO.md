@@ -115,10 +115,26 @@ en `docs/LEYES.md`.
   prueba, no la configuración:** vincular la granja de dirección desde Configuración → Cuenta y
   después entrar con ese mismo email desde OTRO navegador y ver que aparece la misma granja —
   si apareciera una granja vacía, el vínculo no se hizo y hay que mirarlo antes de contárselo a
-  nadie. Y antes del lanzamiento, un SMTP propio: el de fábrica de Supabase son ~30 correos/hora
-  (Authentication → SMTP Settings; Resend o Postmark). Entrar con Google es trabajo aparte
+  nadie. Entrar con Google es trabajo aparte
   (proyecto en Google Cloud, consentimiento, client ID) y no cambia lo que se busca, que es que
   la cuenta persista: el enlace mágico a una dirección de Gmail ya lo resuelve.
+- [ ] 🚧 **SMTP propio — BLOQUEA EL LANZAMIENTO** (dirección, 18/9: « lo dejamos para el
+  lanzamiento »). No es un pulido: desde el 18/9 **no se entra al juego sin correo**, así que el
+  servidor de correo es la puerta de entrada. El de fábrica de Supabase manda **~30 correos por
+  hora**; pasado ese número no se degrada nada, simplemente **nadie puede entrar** y el juego
+  parece roto sin que haya un solo error en el código. Para tres personas probando sobra; para
+  un lanzamiento no existe.
+  → El obstáculo no es técnico, es **un dominio**: `golden-mp.onrender.com` es de Render, no
+  nuestro, y sin dominio propio no se puede probar la titularidad del remitente. Dos caminos:
+  **(a) hoy mismo, sin dominio** — Resend mandando desde su dirección prestada
+  (`onboarding@resend.dev`), ~3.000 correos/mes, con el costo de que el remitente no dice Golden
+  Farm y más correos caen en no deseado; **(b) el bueno** — dominio propio (10-15 USD/año), tres
+  registros DNS en Resend, correos desde una dirección nuestra, y de paso el juego deja de vivir
+  en una URL de Render.
+  → **De tu mano** (cuenta y clave, como siempre): crear la cuenta en Resend/Postmark y pegar la
+  clave en Authentication → SMTP Settings. El paso a paso lo escribo cuando digas.
+  → **La señal de que llegó el momento:** el primer jugador que diga « no me llega el correo ».
+  Si esperamos a esa señal, ya es tarde — por eso está acá arriba y no en la lista de abajo.
 - [ ] **5 · Que alguien lo juegue una semana** sin saber cómo está hecho. Ni Golden, ni Suren,
   ni yo.
 
