@@ -1345,6 +1345,42 @@ function apodoElegido(session) {
   try { return localStorage.getItem("gf_nick_pendiente") || ""; } catch (e) { return ""; }
 }
 
+/* CERRAR SESIÓN (18/9, dirección: « ¿y cómo deslogueo? hace falta un botón de desconectar »).
+   Tiene razón, y hace falta desde que se entra con correo: antes « desconectarse » no quería
+   decir nada, porque la cuenta anónima no era de nadie.
+
+   Desde el 18/9 TODA cuenta nace de un enlace de correo (GF.SOLO_EMAIL), así que « salir » es
+   siempre seguro: se vuelve con el correo. La comprobación de abajo no es una función para el
+   jugador sin correo —ése ya no existe— sino un seguro de dos líneas por si algún día se apaga
+   la bandera: cerrar sesión en una cuenta sin correo dejaría esa granja inalcanzable para
+   siempre, y eso es ley 1. No se le construye UI ni se le explica nada; simplemente no pasa.
+
+   Lo que sí importa acá es el orden:
+     1. GUARDAR primero, y esperar a que termine. Salir con lo último sin guardar es perder la
+        sesión de juego, que es exactamente lo que no puede pasar por apretar un botón.
+     2. recién entonces cerrar la sesión de supabase;
+     3. y borrar NUESTRAS marcas — la copia de la llave y la copia local de la granja. Sin esto
+        el arranque siguiente REVIVE la sesión con el refresh token que guardamos nosotros (es
+        justo lo que ese mecanismo existe para hacer) y el jugador volvería a entrar solo,
+        convencido de que el botón no funciona. La copia local se borra por lo mismo: si queda,
+        el arranque la ve y muestra el cartel de « tenías una partida sin cuenta », que después
+        de desconectarse a propósito sería una alarma falsa. Ninguna de las dos es la granja:
+        la granja está en la nube, atada al correo, y vuelve entrando con el enlace.          */
+async function cerrarSesion() {
+  if (!sb) return { error: "sin conexión con la nube" };
+  let tieneEmail = false;
+  try { const c = await cuentaEstado(); tieneEmail = !!(c && c.modo === "email"); } catch (e) {}
+  if (!tieneEmail) return { error: "esta granja no tiene correo: si cerrás sesión no hay forma de volver a ella" };
+  try {
+    if (typeof saveFarm === "function") { try { await saveFarm(true); } catch (e) {} }
+    try { await sb.auth.signOut(); } catch (e) {}
+    try { localStorage.removeItem(GF_CUENTA_KEY); } catch (e) {}
+    try { localStorage.removeItem(GF_COPIA_KEY); } catch (e) {}
+    sesionLog("sesión cerrada por el jugador");
+    return { ok: true };
+  } catch (e) { return { error: String(e && e.message || e) }; }
+}
+
 // entra con un email YA vinculado (desde cualquier dispositivo): manda el enlace mágico.
 // OJO: al entrar, la granja anónima de este navegador queda aparte (no se pierde: queda
 // atada a su cuenta anónima, pero deja de ser la que se ve). La UI lo avisa antes.
