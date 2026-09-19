@@ -1129,7 +1129,7 @@
 
   <div class="hudbar">
     <div class="brand" style="display:flex;align-items:center;gap:12px"><h1>GOLDEN FARM</h1>
-      <div class="pill" title="Ventanas del juego conectadas ahora"><span class="k">Jugadores en línea</span><b id="s-online">1</b></div>
+      <div class="pill" data-mvp-hud title="Ventanas del juego conectadas ahora"><span class="k">Jugadores en línea</span><b id="s-online">1</b></div>
       <!-- 14/9: el botón de PRUEBAS y el modo testeo se eliminaron (portero en modo rechazo) -->
     </div>
     <div class="hud">
@@ -1139,7 +1139,7 @@
            siempre, pero había que saber que existía para ir a buscarla. Clic: abre esa ventana,
            que es donde viven las tareas. -->
       <div class="pill cpill" id="lvlpill" style="cursor:pointer"><span class="k">Granja</span><b id="s-level">1</b><span class="k" id="s-level-max">/50</span><span class="cbarw"><span class="cfill lvlf" id="lvl-fill"></span></span><span class="k" id="lvl-txt"></span></div>
-      <div class="pill"><span class="k">Prestigio</span><b id="s-prestige">0</b></div>
+      <div class="pill" data-mvp-hud><span class="k">Prestigio</span><b id="s-prestige">0</b></div>
       <div class="pill" title="Plata — la moneda del juego"><img class="ric" src="assets/farm/coin_plata.png?a=4" onerror="this.outerHTML='<span class=&quot;coin silver&quot;></span>'"><b id="s-plata">0</b></div>
       <div class="pill" title="$Golden — la moneda premium: animales del establo, kit de emergencia y adornos"><img class="ric" src="assets/farm/coin_esencia.png?a=4" onerror="this.outerHTML='✨'"><b id="s-golden">20</b></div>
       <!-- 15/9 (diseñador): « y la ponemos como barra roja ». El corazón y el relleno se leen de
@@ -1147,7 +1147,7 @@
            llenarte es lo que decide si comés ahora o después. -->
       <div class="pill hppill" id="hppill" title="Vida"><span class="hpcor">❤</span><span class="hpbarw"><span class="hpfill" id="hp-fill"></span></span><b id="s-hp">100/100</b><span class="k hpeta" id="hp-eta"></span></div>
       <div class="pill cpill" id="cbar" title="Nivel de Combate — suma la XP de todos los kills, sin importar el arma"><b id="c-lvl">1</b><span class="k">Combate</span><span class="cbarw"><span class="cfill" id="c-fill"></span></span><span class="k" id="c-xp">0/100</span></div>
-      <div class="pill"><span class="k">Semana</span><b id="s-week">1</b></div>
+      <div class="pill" data-mvp-hud><span class="k">Semana</span><b id="s-week">1</b></div>
       <button class="btnpill" id="menu-btn">☰ Menú</button>
     </div>
     <!-- 2/9 (reporte de dirección: « al abrir el paquete del daily se movió la barra de arriba »).
@@ -1866,7 +1866,7 @@
     // 15/8: VERSIÓN DE BUILD — rompe la caché del navegador en cada deploy (sin esto, el
     // jugador seguía corriendo el state.js viejo aunque el servidor tuviera el nuevo).
     // deploy.bat la actualiza sola (busca GF_BUILD y pone la fecha/hora del deploy).
-    const GF_BUILD = "20260919-100539";
+    const GF_BUILD = "20260919-111642";
     const files = ["game/config.js","game/nav.js","game/audio.js","game/state.js","game/save.js","game/ui.js","game/boot.js",
                    "game/farm.js","game/forest.js","game/plaza.js","game/main.js","game/update.js"];
     /* 24/8 — SE BAJAN TODOS A LA VEZ, SE EJECUTAN EN FILA (dirección: « sigue tardando en

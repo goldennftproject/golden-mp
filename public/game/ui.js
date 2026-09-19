@@ -4508,6 +4508,17 @@ function initUI() {
     b.onclick = () => { openOv(b.dataset.panel); if (!menuFijo()) gmenu.classList.add("collapsed"); };
   });
   document.querySelectorAll("[data-close]").forEach(b => b.onclick = () => closeOv(b.dataset.close));
+  /* 19/9 (dirección: « quitemos las cosas que no tienen utilidad en la interfaz ») — TRES PÍLDORAS
+     DEL HUD SE ESCONDEN CON EL MVP. Son las que no le dicen nada a nadie entre nivel 1 y 12:
+       · Jugadores en línea — con dos personas probando dice siempre 1 o 2, y a un jugador nuevo
+         le cuenta que está solo;
+       · Prestigio — solo sube al llegar a granja 25 y reiniciar; en el MVP no se mueve del 0;
+       · Semana — cuenta semanas desde que empezaste y no afecta a nada.
+     Esconder, no borrar, como el Pase y el Clan: el HTML sigue ahí, refreshHud las sigue
+     rellenando, y con GF.MVP = 0 vuelven solas. Se marcan en el HTML con data-mvp-hud para que
+     esta lista viva al lado de la píldora y no acá. */
+  if (typeof GF !== "undefined" && GF.MVP)
+    document.querySelectorAll("[data-mvp-hud]").forEach(el => { el.style.display = "none"; });
   // entrenamiento: el botón y también un clic en cualquier lado de la capa oscura
   { const b = $("entr-fin"); if (b) b.onclick = entrenarFin;
     const ov = $("ov-entrenando"); if (ov) ov.addEventListener("click", ev => { if (ev.target === ov) entrenarFin(); }); }
