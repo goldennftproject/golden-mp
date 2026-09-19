@@ -1117,6 +1117,56 @@
     .hcell{width:36px;height:36px}
     #tuto{top:44px;font-size:11px}
   }
+  /* ============ LEGIBILIDAD (19/9, dirección: « hay fuentes que no se alcanzan a leer bien;
+     revisá cada botón, cada menú, cada detalle ») ==============================================
+     Se mira cada ventana con captura y se corrige por REGLA, no por parche, para que lo nuevo
+     nazca legible. Las reglas:
+       1) PISO DE TAMAÑO: texto corrido nunca por debajo de 12,5 px; un contador o etiqueta
+          pegada a un ícono, 11 px y en negrita. Había 9 y 10 px por todos lados.
+       2) SOBRE MADERA, blanco con contorno oscuro, SIEMPRE y sin opacidad (el « Nivel medio:
+          4.3 » iba en tinta oscura sobre la tabla y no se veía; la nota de Cuenta iba al 80%).
+       3) SOBRE CREMA, tinta oscura y sin sombra: la sombra sobre fondo claro emborrona.
+       4) UN BOTÓN APAGADO SE TIENE QUE PODER LEER: se desatura y se le pone un anillo oscuro,
+          pero el texto sigue blanco. Antes se oscurecía entero (brightness .72 + gris) y quedaba
+          « Cerrar sesión » / « Cultivo nv 2 » en gris sobre marrón: ilegible justo cuando el
+          jugador necesita saber POR QUÉ no puede.
+       5) LAS PESTAÑAS INACTIVAS se atenúan poco (.8), no a la mitad: seguían siendo texto. */
+  :root{--muted:#5f5540}
+  /* 1) el piso de tamaño */
+  .cb-def,.cb-m,.mor-pie,.mor-tit,.vj-cont span.d,.vj-col h4,.vj-aviso,.bz-sobre .de,#bz-pila .rotulo,
+  .bz-leida .fecha,.skrow .xp,.mkt-row .mds,.seedlv,.lbnote,.pd-nota .de,.pd-nota .falta,.pd-nota .toca,
+  .pd-x,.ck-fila,.ck-vacio,.ck-tit,.ck-tit b,.ck-efecto,.ck-nivel,.exd-secc,.info,.secc .fds,.forge-row .fds,
+  .fds,.mds,.hpeta,#buffpill .bff,.pill .k,.avgpill,.mkt-cur,.lbrow,.bz-carta-papel .de,.bz-carta-papel .volver,
+  .bz-leida,.ck-der .nm{font-size:12.5px}
+  .cbq .cbn,.mor-h .mn,.vj-s .n,.hcell .hk,#bz-pila .n,.baul-item .cant,.ck-olla .t,.ck-rec .n,.ck-rec .lv{font-size:11px;font-weight:800}
+  .slot .cnt,.hcell .cnt,.rec .rn{font-size:12px}
+  .card .sub,.cost,#inv-cap,#inv-selseed,#cofre-info,.mkt-row .mnm,.skrow .nm,.forge-row .fnm,.pd-nota .pd-nom,.cfgsec p,#cfg-auth-nota,.lbtab,.shoptab,.curbtn,.ltab{font-size:13px}
+  .cfgsec p,#cfg-auth-nota{line-height:1.5;opacity:1 !important}
+  /* 2) sobre madera: blanco con contorno */
+  .avgpill,.avgpill b,.bz-sobre .de,#bz-pila .rotulo,.vj-col h4,.vj-aviso,.vj-cont span.d,.exd-req,.exd-req .nm,
+  .exd-trae-fila,.exd-secc,.mor-pie,.cb-def,.ck-tit,.ck-tit b,.ck-nivel,.ck-fila,.ck-fila b,.ck-vacio{
+    color:#fff;font-weight:700;
+    text-shadow:-1px 0 #241505,1px 0 #241505,0 -1px #241505,0 1px #241505,-1px -1px #241505,1px -1px #241505,-1px 1px #241505,1px 1px #241505}
+  .cfgsec p,.cfgsec .row+p,#cfg-auth-nota{color:#fff}
+  .exd-req .cant.ok{color:#b6f28f}.exd-req .cant.falta{color:#ffb3a6}.ck-fila.falta b{color:#ffb3a6}
+  /* 3) sobre crema: tinta, sin sombra */
+  .card .sub,.cost,#inv-cap,#inv-selseed,#cofre-info,.invexp .exmax,.mkt-row,.skrow,.lbrow,.forge-row,.info,.info>div,
+  .pd-nota,.pd-canje,.bz-carta-papel,.bz-leida,.dyreward{text-shadow:none}
+  .card .sub,.cost,#inv-cap,#inv-selseed,#cofre-info,.invexp .exmax,.info,.info>div,.mkt-row .mds,.skrow .xp,.forge-row .fds,.fds,.mds,.lbrow .rk{color:#3d3424}
+  /* 4) botón apagado: se lee igual */
+  button:disabled,.card button[disabled],.lonja-esc button:disabled,.lonja-item button:disabled,#exd-btn:disabled,
+  .p4-cana button:disabled,.p4-cebo:disabled,.p4-nasa button:disabled{
+    filter:saturate(.2) !important;opacity:.85 !important;color:#fff !important;
+    box-shadow:inset 0 0 0 2px rgba(0,0,0,.4) !important;cursor:default}
+  .vj-cont,.vj-cont b,.vj-cont span.d{color:#fff;text-shadow:-1px 0 #241505,1px 0 #241505,0 -1px #241505,0 1px #241505,1px 1px #241505,-1px 1px #241505}
+  .vj-cont b{font-size:13px}
+  .vj-cont.no{opacity:.7}   /* apagado, pero legible: antes .42 y no se leía qué era lo que faltaba */
+  .pd-nota.hecha{opacity:.75}
+  /* el menú y las teclas de la hotbar: iban en marrón oscuro sobre la madera (3:1) */
+  .gmi{color:#fff;font-weight:800;text-shadow:-1px 0 #241505,1px 0 #241505,0 -1px #241505,0 1px #241505,1px 1px #241505,-1px 1px #241505}
+  .hcell .hk{color:#f4ecd9;text-shadow:0 0 2px #000,0 1px 0 #000}
+  /* 5) pestañas inactivas */
+  .shoptab,.lbtab,.curbtn{filter:brightness(.8) saturate(.7)}
 </style>
 </head>
 <body>
@@ -1272,10 +1322,10 @@
     <h3 style="cursor:default">📦 Tu paquete del día</h3>
     <div class="sub" id="paq-dia">Día 1 de 7</div>
     <img id="paq-img" src="assets/farm/paquete_dia.png" alt="" style="height:118px;width:auto;image-rendering:pixelated;margin:6px auto 2px;display:block">
-    <div id="paq-racha" style="display:flex;gap:6px;justify-content:center;align-items:flex-end;margin:6px 0 2px"></div>
+    <div id="paq-racha" style="display:flex;flex-wrap:wrap;gap:6px;justify-content:center;align-items:stretch;margin:6px 0 2px"></div>
     <!-- 22/8 (dirección, auditoría del arranque): el gancho del día 7 tiene que VERSE desde el
          día 1. Línea de altura fija (regla de UI: nada cambia de tamaño). -->
-    <div id="paq-siete" style="min-height:17px;font-size:11px;color:#7a5a1a;opacity:.9"></div>
+    <div id="paq-siete" class="sub" style="min-height:17px;margin-top:6px"></div>
     <!-- 20/8 (dirección): "ninguna interfaz debería cambiar de tamaño cuando se interactúa con
          algo de la propia interfaz". La nota reserva DOS líneas (el premio más largo las usa) y
          el botón reserva su fila siempre — se esconde con visibility, nunca con display. -->
@@ -1426,7 +1476,7 @@
         <!-- desconectarse. Arranca DESHABILITADO: se enciende cuando se sabe que hay cuenta. -->
         <button class="red sm" id="cfg-salir" disabled>Cerrar sesión</button>
       </div>
-      <p id="cfg-auth-nota" style="min-height:26px;font-size:11px;opacity:.8">Tu granja te sigue a cualquier dispositivo: entrá con tu correo.</p>
+      <p id="cfg-auth-nota" style="min-height:26px">Tu granja te sigue a cualquier dispositivo: entrá con tu correo.</p>
     </div>
     <div class="cfgsec">
       <h4>Sonido</h4>
@@ -1873,7 +1923,7 @@
     // 15/8: VERSIÓN DE BUILD — rompe la caché del navegador en cada deploy (sin esto, el
     // jugador seguía corriendo el state.js viejo aunque el servidor tuviera el nuevo).
     // deploy.bat la actualiza sola (busca GF_BUILD y pone la fecha/hora del deploy).
-    const GF_BUILD = "20260919-175543";
+    const GF_BUILD = "20260919-182720";
     const files = ["game/config.js","game/nav.js","game/audio.js","game/state.js","game/save.js","game/ui.js","game/boot.js",
                    "game/farm.js","game/forest.js","game/plaza.js","game/main.js","game/update.js"];
     /* 24/8 — SE BAJAN TODOS A LA VEZ, SE EJECUTAN EN FILA (dirección: « sigue tardando en

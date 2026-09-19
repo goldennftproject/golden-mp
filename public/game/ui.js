@@ -3809,14 +3809,16 @@ function refreshPaquete() {
       const hoy = !extra && st && st.claimable && d === st.day;
       const premio = d === 7 ? col.replace(/\s*\(.*$/, "") : PREMIO_CORTO[d - 1];
       html += '<div class="paq-card' + (ok ? " ok" : "") + (hoy ? " hoy" : "") + (d === 7 ? " siete" : "") + '" style="' +
-          'flex:1;min-width:0;border-radius:8px;padding:3px 1px;text-align:center;' +
+          'flex:1 1 56px;min-width:56px;max-width:72px;border-radius:8px;padding:3px 2px;text-align:center;' +
           'border:1px solid ' + (d === 7 ? "#d9a520" : hoy ? "#8fae53" : "#cdb98a") + ';' +
           'background:' + (d === 7 ? "#fdf3d0" : hoy ? "#eef5da" : ok ? "#efe8d6" : "#f8f2e2") + ';' +
           (ok ? "opacity:.62;" : "") + (d === 7 ? "box-shadow:0 0 6px rgba(217,165,32,.45);" : "") + '">' +
-        '<div style="font-size:8px;font-weight:bold;color:#6b5322">Día ' + d + (d === 7 ? " ✨" : "") + '</div>' +
+        /* 19/9 (legibilidad): iba a 8 y 7,5 px — no se leía ni con lupa. Ahora « Día N » a 11 px
+           y el premio a 10,5 px en dos renglones como mucho; el nombre entero va en el title. */
+        '<div style="font-size:11px;font-weight:800;color:#4a3418">Día ' + d + (d === 7 ? " ✨" : "") + '</div>' +
         '<img class="paq-mini' + (ok ? " ok" : "") + (hoy ? " hoy" : "") + '" style="height:20px;width:auto;image-rendering:pixelated;margin:1px 0" ' +
           'src="assets/farm/' + (ok ? "paquete_dia_abierto" : "paquete_dia") + '.png?v=1">' +
-        '<div style="font-size:7.5px;line-height:1.15;height:18px;overflow:hidden;color:#4a3418">' + escapeHtml(premio) + '</div>' +
+        '<div title="' + escapeHtml(premio) + '" style="font-size:10.5px;font-weight:700;line-height:1.15;min-height:25px;color:#4a3418">' + escapeHtml(premio) + '</div>' +
       '</div>';
     }
     strip.innerHTML = html;

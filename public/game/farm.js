@@ -355,7 +355,7 @@ class FarmScene extends Phaser.Scene {
         g.fillStyle(0x140f1c, 1).fillEllipse(0, -16, 30, 38);
         g.setPosition(px, py);
       }
-      this.add.text(px, py + 12, "Zona Negra", { fontFamily: "system-ui", fontSize: "11px", fontStyle: "bold", color: "#ffe08a", stroke: "#20301a", strokeThickness: 3 }).setOrigin(0.5, 0.5).setDepth(py);
+      this.add.text(px, py + 12, "Zona Negra", { fontFamily: "system-ui", fontSize: "12px", fontStyle: "bold", color: "#ffe08a", stroke: "#20301a", strokeThickness: 3 }).setOrigin(0.5, 0.5).setDepth(py);
       this.portal = { type: "portal", cx: px, by: py, sprite: pspr, w: T * 1.4 };
     }
 
@@ -364,7 +364,7 @@ class FarmScene extends Phaser.Scene {
     // timers de enfriamiento flotantes sobre árboles/rocas/nodos
     this.objs.forEach(o => {
       if (o.type === "tree" || o.type === "rock" || o.type === "ore") {
-        o.timer = this.add.text(o.cx, o.by - T * 0.85, "", { fontFamily: "system-ui", fontSize: "11px", fontStyle: "bold", color: "#fff", stroke: "#20301a", strokeThickness: 3 }).setOrigin(0.5, 1).setDepth(o.by + 3).setVisible(false);
+        o.timer = this.add.text(o.cx, o.by - T * 0.85, "", { fontFamily: "system-ui", fontSize: "12px", fontStyle: "bold", color: "#fff", stroke: "#20301a", strokeThickness: 3 }).setOrigin(0.5, 1).setDepth(o.by + 3).setVisible(false);
       }
     });
     // ——— QUÉ HAY ALREDEDOR DE LA GRANJA: bosque (ahora) o mar (el modo viejo) ———
@@ -425,7 +425,7 @@ class FarmScene extends Phaser.Scene {
       const spr = this.add.image(cx, cy + 6, "sprout").setOrigin(0.5, 0.95).setDepth(cy).setVisible(false);
       spr.setScale((T * 0.75) / spr.width);
       const emo = this.add.text(cx, cy + 8, "", { fontSize: Math.round(T * 0.72) + "px" }).setOrigin(0.5, 0.95).setDepth(cy).setVisible(false);
-      const timer = this.add.text(cx, cy - T * 0.55, "", { fontFamily: "system-ui", fontSize: "11px", fontStyle: "bold", color: "#fff", stroke: "#20301a", strokeThickness: 3 }).setOrigin(0.5, 1).setDepth(cy + 1).setVisible(false);
+      const timer = this.add.text(cx, cy - T * 0.55, "", { fontFamily: "system-ui", fontSize: "12px", fontStyle: "bold", color: "#fff", stroke: "#20301a", strokeThickness: 3 }).setOrigin(0.5, 1).setDepth(cy + 1).setVisible(false);
       const obj = { type: "plot", i, cx, by: cy, state: "dry", readyAt: 0, cropKey: null, spr, emo, timer, ground: this.plotGrounds[i] || null };
       const owned = Math.max(2, Math.min(GF.PLOTS.length, G.plotsOwned || 3));   // viernes (2): se nace con 2 parcelas
       if (i >= owned) {   // 16/8: parcela todavía no entregada → NO SE VE (llega como premio al baúl)
@@ -2285,7 +2285,7 @@ class FarmScene extends Phaser.Scene {
     if (this._chapa) { this._chapa.destroy(); this._chapa = null; }
     if (x == null) return;
     this._chapa = this.add.text(x, y, txt, {
-      fontSize: "10px", align: "center", lineSpacing: 2,
+      fontSize: "12px", align: "center", lineSpacing: 2,
       color: puede ? "#e9ffd6" : "#ffd75e", backgroundColor: "rgba(20,25,15,.88)",
       padding: { x: 6, y: 4 }, stroke: "#241505", strokeThickness: 2,
     }).setOrigin(0.5, 1).setDepth(9000);
@@ -2307,7 +2307,7 @@ class FarmScene extends Phaser.Scene {
         : (o.type === "rock" || (o.type === "ore" && o.ore === "piedra")) ? nodoCargas(o, CD.rock) : 1;
     if (!n) { if (this._cargasTxt) this._cargasTxt.setVisible(false); return; }
     if (!this._cargasTxt) this._cargasTxt = this.add.text(0, 0, "", {
-      fontSize: "11px", fontStyle: "bold", color: "#ffe08a", backgroundColor: "rgba(20,25,15,.85)",
+      fontSize: "12px", fontStyle: "bold", color: "#ffe08a", backgroundColor: "rgba(20,25,15,.85)",
       padding: { x: 5, y: 2 }, stroke: "#241505", strokeThickness: 2,
     }).setOrigin(0.5, 1).setDepth(99990);
     this._cargasTxt.setText("⏱ " + n).setPosition(o.cx, this.topY(o, 4)).setVisible(true);
@@ -3997,7 +3997,7 @@ class FarmScene extends Phaser.Scene {
     if (!falta.length) return;
     const partes = falta.map(([r, f, tot, dep]) => (r === "golden" ? "$G" : (RES_LABEL[r] || r)) + " " + dep + "/" + tot);
     o.letrero = this.add.text(o.cx, o.by - (o.sprite.displayHeight || 60) - 6, "🔨 " + partes.join("  ·  "),
-      { fontFamily: "system-ui", fontSize: "11px", fontStyle: "bold", color: "#fff3cf", stroke: "#241505", strokeThickness: 4, align: "center" })
+      { fontFamily: "system-ui", fontSize: "12px", fontStyle: "bold", color: "#fff3cf", stroke: "#241505", strokeThickness: 4, align: "center" })
       .setOrigin(0.5, 1).setDepth(99990).setVisible(false);   // 13/8: aparece solo con el cursor encima (lo maneja update)
   }
 
@@ -4118,7 +4118,7 @@ class FarmScene extends Phaser.Scene {
         .setOrigin(0.5, 0.5).setDepth(D + 1);
       this.expFx.push(t); this.expCartel.push(t); }
     { const t2 = this.add.text(cx, cy + 9, "👆 clic para los detalles",
-        { fontFamily: "system-ui", fontSize: "9px", color: "#cfe0c0" })
+        { fontFamily: "system-ui", fontSize: "11px", fontStyle: "bold", color: "#e9ffd6", stroke: "#20301a", strokeThickness: 3 })
         .setOrigin(0.5, 0.5).setDepth(D + 1);
       this.expFx.push(t2); this.expCartel.push(t2); }
     if (puede) {   // late suave cuando ya lo podés pagar: el cartel pide que lo toques
@@ -5133,7 +5133,7 @@ class FarmScene extends Phaser.Scene {
     if (this.dummyObj) {
       const left = (G.dummyUsedAt || 0) + DUMMY_CD_MS - t;
       if (!this.dummyTimer) this.dummyTimer = this.add.text(this.dummyObj.cx, this.dummyObj.by - T * 1.15, "",
-        { fontFamily: "system-ui", fontSize: "11px", fontStyle: "bold", color: "#fff", stroke: "#20301a", strokeThickness: 3 }).setOrigin(0.5, 1).setDepth(this.dummyObj.by + 3);
+        { fontFamily: "system-ui", fontSize: "12px", fontStyle: "bold", color: "#fff", stroke: "#20301a", strokeThickness: 3 }).setOrigin(0.5, 1).setDepth(this.dummyObj.by + 3);
       this.dummyTimer.setPosition(this.dummyObj.cx, this.topY(this.dummyObj));
       if (this.timerOn(this.dummyObj)) this.dummyTimer.setText(left > 0 ? fmtDur(left) : "Listo").setVisible(true);
       else this.dummyTimer.setVisible(false);

@@ -59,7 +59,7 @@ class ForestScene extends Phaser.Scene {
       g2.fillStyle(0x241505, 1).fillEllipse(26, this.H / 2 - 16, 34, 44);
       g2.fillStyle(ant ? 0x6b4a86 : 0x3fa3cc, 0.9).fillEllipse(26, this.H / 2 - 16, 24, 34); }
     this.add.text(26, this.H / 2 + 16, ant ? ZONA_DEF[ant].label : "Granja",
-      { fontFamily: "system-ui", fontSize: "11px", fontStyle: "bold", color: "#ffe08a", stroke: "#20301a", strokeThickness: 3 }).setOrigin(0.5).setDepth(5);
+      { fontFamily: "system-ui", fontSize: "12px", fontStyle: "bold", color: "#ffe08a", stroke: "#20301a", strokeThickness: 3 }).setOrigin(0.5).setDepth(5);
 
     // TELEPORT DERECHO: al mapa siguiente, si existe y si tenés el nivel de Combate
     const sig = (typeof zonaSig === "function") ? zonaSig(this.zonaKey) : null;
@@ -71,7 +71,7 @@ class ForestScene extends Phaser.Scene {
       g3.fillStyle(0x241505, 1).fillEllipse(gx, this.H / 2 - 16, 36, 46);
       g3.fillStyle(ok ? 0xb45ad8 : 0x555046, 0.9).fillEllipse(gx, this.H / 2 - 16, 26, 36);
       this.add.text(gx, this.H / 2 + 16, ok ? zs.label : zs.label + " · Combate " + zs.lvl,
-        { fontFamily: "system-ui", fontSize: "11px", fontStyle: "bold", color: ok ? "#ffe08a" : "#c9bfa8", stroke: "#20301a", strokeThickness: 3 })
+        { fontFamily: "system-ui", fontSize: "12px", fontStyle: "bold", color: ok ? "#ffe08a" : "#c9bfa8", stroke: "#20301a", strokeThickness: 3 })
         .setOrigin(0.5).setDepth(5);
     }
 
@@ -299,7 +299,7 @@ class ForestScene extends Phaser.Scene {
     const mismo = this.target === m;
     this.target = m;
     if (!mismo) this.nextAuto = 0;   // objetivo NUEVO: golpea ya. El mismo: respeta la cadencia (no se spamea con clic derecho)
-    if (!this.tgTxt) this.tgTxt = this.add.text(0, 0, "", { fontFamily: "system-ui", fontSize: "11px", fontStyle: "bold", color: "#ffe9c8", stroke: "#241408", strokeThickness: 4 }).setOrigin(0.5, 1).setDepth(99991).setVisible(false);
+    if (!this.tgTxt) this.tgTxt = this.add.text(0, 0, "", { fontFamily: "system-ui", fontSize: "12px", fontStyle: "bold", color: "#ffe9c8", stroke: "#241408", strokeThickness: 4 }).setOrigin(0.5, 1).setDepth(99991).setVisible(false);
     this.makeGlow(m);
     this.updateTargetFx();
   }
@@ -1055,7 +1055,7 @@ class ForestScene extends Phaser.Scene {
 
   floatTxt(m, txt, color) {
     const t = this.add.text(m.cx, m.by - (m.spr.displayHeight || m.spr.height) - 6, txt,
-      { fontFamily: "system-ui", fontSize: "11px", fontStyle: "bold", color, stroke: "#20301a", strokeThickness: 3 }).setOrigin(0.5, 1).setDepth(99999);
+      { fontFamily: "system-ui", fontSize: "12px", fontStyle: "bold", color, stroke: "#20301a", strokeThickness: 3 }).setOrigin(0.5, 1).setDepth(99999);
     this.tweens.add({ targets: t, y: t.y - 14, alpha: 0, duration: 800, onComplete: () => t.destroy() });
   }
 
