@@ -1306,7 +1306,13 @@ window.torneoPodioCheck = async function () {
      · la red queda solo de respaldo, por si la sesión no trae el dato;
      · y « no se pudo averiguar » ya NO se disfraza de « cuenta sin correo ». */
 async function cuentaEstado() {
-  if (!sb || !UID) return { modo: "sin-nube", email: "" };
+  /* 19/9 — cada « no se pudo » deja escrito POR QUÉ. Dirección vio el panel diciendo « no se
+     pudo leer tu cuenta » con el juego andando, y ese texto no da ninguna pista de cuál de
+     las tres cosas falló (sin cliente, sin sesión, o Supabase contestando error). Ahora se
+     anota en el registro y en la consola, para leerlo en vez de adivinarlo. */
+  const porque = (m) => { try { console.warn("[cuenta] " + m); if (typeof log === "function") log("[cuenta] " + m, "warn"); } catch (e) {} };
+  if (!sb) { porque("no hay cliente de Supabase (la librería no cargó)"); return { modo: "sin-nube", email: "" }; }
+  if (!UID) { porque("no hay sesión abierta (UID vacío): el juego corre sin cuenta"); return { modo: "sin-nube", email: "" }; }
   /* 19/9 — EL CORREO A MEDIO ATAR. Cuando una cuenta anónima ata un correo, Supabase NO lo da
      por atado hasta que se toca el enlace de confirmación: mientras tanto el correo queda en
      `new_email` y `email` sigue vacío. Si ese enlace nunca se tocó —o se tocó cuando el Site URL
@@ -1329,11 +1335,14 @@ async function cuentaEstado() {
   /* 2 · y si no, se pregunta */
   try {
     const r = await sb.auth.getUser();
+    if (r && r.error) porque("Supabase contestó error al leer el usuario: " + r.error.message);
     const e = leer(r && r.data && r.data.user);
     if (e) return e;
-  } catch (e) {}
+    if (!(r && r.error)) porque("Supabase contestó sin usuario");
+  } catch (e) { porque("excepción al leer el usuario: " + (e && e.message)); }
   /* 3 · la red no contestó: lo que diga la sesión, y si no dice nada, « no se pudo » */
   try { const e = leer(SESION_ACTUAL && SESION_ACTUAL.user); if (e) return e; } catch (e) {}
+  porque("la sesión guardada tampoco trae usuario: SESION_ACTUAL=" + (SESION_ACTUAL ? "sin user" : "null"));
   return { modo: "sin-nube", email: "" };              // no se pudo averiguar: no se inventa nada
 }
 
