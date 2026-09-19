@@ -2940,6 +2940,12 @@ const TUTO_STEPS = [
   // el jugador chocaba con « Te falta plata » sin que nadie se lo hubiera contado.
   { id: "craftarm", n: 1, txt: "Forjá una Espada de Madera en la Herrería (5 de madera + 10 de plata)", target: "store", panel: "ov-forge", ui: "[data-carm='espada_madera']" },
   { id: "equiparm", n: 1, txt: "Equipate la espada en el panel de Equipo (Menú ☰ → Equipo)", panel: "ov-equip", ui: "#eq-arma" },
+  /* 19/9 (dirección: « si falla la barra de objetivos, hacé los cambios para que no falle ») —
+     EL MUÑECO ESTABA EN EL MAPA DESDE EL PRIMER SEGUNDO Y NADIE LO NOMBRABA. Es el único
+     entrenamiento offline del juego y daba XP de espada sin que ningún paso, carta o aviso lo
+     presentara: solo el rótulo del cursor si pasabas por encima. Entra acá, recién equipada la
+     espada, que es exactamente cuando el jugador tiene con qué pegarle. */
+  { id: "dummy",    n: 1, txt: "Probá la espada en el muñeco de entrenamiento (junto al granero)", target: "dummy" },
   // ——— ETAPA 2: los sistemas nuevos (Cocina, Armas, Zona Negra, Pesca, Altar) ———
   { id: "place_cocina", n: 1, txt: "Colocá el plano de la Cocina (Menú ☰ → Cobertizo)", panel: "ov-cobertizo", ui: ".slot.k-plano" },
   { id: "woodc",  res: "madera", dep: "cocina", need: () => BUILD_DEF.cocina.cost.madera || 20,
@@ -2963,6 +2969,11 @@ const TUTO_STEPS = [
   { id: "hunt", res: "carne", need: () => (RECIPE_DEF.estofado && RECIPE_DEF.estofado.res.carne) || 1,
     txt: "Cazá en el Pantano hasta traer # de carne" },
   { id: "estofado", n: 1, txt: "Cociná un Estofado con lo que cazaste", target: "cocina", panel: "ov-cocina", ui: "[data-cook='estofado']", receta: "estofado" },
+  /* 19/9 — LA INCURSIÓN SOLO SE DESCUBRÍA APRETANDO « NO » EN EL DIÁLOGO DEL PORTAL. Es el combate
+     de un clic (tres por día, para el que no quiere jugar la Zona a mano) y el que confirmaba
+     « Preparar el viaje » la primera vez no se enteraba nunca de que existía. Se presenta acá,
+     ya con la Zona conocida, para que el jugador sepa que hay dos formas de ir. */
+  { id: "incursion", n: 1, txt: "Mandá una incursión de un clic desde el portal (tenés 3 por día)", target: "portal" },
   /* ======= EL CAMINO DE CRECIMIENTO, QUE ERA EL ÚNICO QUE NO SE ENSEÑABA (19/8, dirección) =======
      Desde el rediseño, las EXPANSIONES son la única fuente de nodos: no hay otra forma de tener una
      parcela, un árbol o una roca más. Y la cadena tiene tres eslabones que el jugador tenía que
@@ -2999,6 +3010,10 @@ const TUTO_STEPS = [
      ahí para cuando se le acaben. */
   { id: "excavar",  n: 1, txt: "Cavá uno de los montículos de tierra: adentro hay carnada" },
   { id: "fish",     n: 1, txt: "Probá la caña en la laguna (la lombriz es el cebo)", target: "fish" },
+  /* 19/9 — LA LONJA ES UN CARTEL JUNTO A LA LAGUNA CON CUATRO PESTAÑAS ADENTRO (pedido de marea,
+     tienda, venta, títulos) y su propia moneda, y nada la presentaba. El paso pide lo más simple
+     —vender un pez— porque el resto se descubre solo una vez que el panel está abierto. */
+  { id: "lonja",    n: 1, txt: "Vendé un pescado en la Lonja, junto a la laguna", target: "lonja" },
   { id: "pedido",   n: 1, txt: "Entregá un encargo en el tablón de pedidos", target: "tablon_pedidos", panel: "ov-pedidos" },
   // (14/8, reversión del capataz: la cadena TERMINA acá — el tutorial enseña LO BÁSICO de
   //  la granja. Armas, Zona Negra, minería avanzada y Altar se aprenden jugando: sus
@@ -3016,11 +3031,11 @@ const TUTO_CAPS = [
   { id: "cosecha",  label: "Tu primera cosecha", pasos: ["kit", "buyseed", "plant", "harvest", "sell"] },
   { id: "herreria", label: "La Herrería",        pasos: ["place_store", "wood_st", "stone_st", "build_store"] },
   { id: "horno",    label: "El Horno de Piedra", pasos: ["place_horno", "wood", "stone", "build_horno"] },
-  { id: "arma",     label: "Tu primera espada",  pasos: ["craftarm", "equiparm"] },
+  { id: "arma",     label: "Tu primera espada",  pasos: ["craftarm", "equiparm", "dummy"] },
   { id: "cocina",   label: "La Cocina",          pasos: ["place_cocina", "woodc", "stonec", "build_cocina", "cook", "eat"] },
-  { id: "zona",     label: "La Zona Negra",      pasos: ["portal", "hunt", "estofado"] },
+  { id: "zona",     label: "La Zona Negra",      pasos: ["portal", "hunt", "estofado", "incursion"] },
   { id: "crecer",   label: "La granja crece",    pasos: ["expandir", "editar"] },
-  { id: "pueblo",   label: "La laguna y el tablón", pasos: ["excavar", "fish", "pedido"] },
+  { id: "pueblo",   label: "La laguna y el tablón", pasos: ["excavar", "fish", "lonja", "pedido"] },
 ];
 
 function capEstado(cap) {   // "hecho" | "activo" | "pendiente" (por el paso más avanzado de la cadena)
@@ -3145,7 +3160,8 @@ var TUTO_REWARD_PLATA = 100;   // gran recompensa del cierre (editable)
 // después usan el tiempo normal del cultivo. 0 en el panel = sin excepción.
 var FIRST_GROW_MS = 0;   // 14/8: APAGADO — la papa crece en 90 s de base (escalera nueva), sin trato especial
 var FIRST_GROW_N = 3;        // cuántas semillas de arranque tienen ese trato (las 3 papas del inicio)
-var TUTO_VER = 13;   // v13 (15/8): paso 0 nuevo — el kit de bienvenida se retira del BAÚL
+var TUTO_VER = 14;   // v14 (19/9): tres pasos nuevos — muñeco, incursión y Lonja (los sistemas que nadie presentaba)
+                     // v13 (15/8): paso 0 nuevo — el kit de bienvenida se retira del BAÚL
 function tutoActivo() { return G.tuto && !G.tuto.done ? TUTO_STEPS[G.tuto.step] : null; }
 // migración: si el guardado trae una cadena vieja, los pasos ya no significan lo mismo → se recalcula
 /* 18/8 (reporte del diseñador: "compré las 3 papas y el tuto no lo detecta").
@@ -3232,7 +3248,9 @@ function tutoHecho(st) {
     else if (st.id === "mat")       hecho = MAT_ORDER.some(k => (G.res[k] || 0) > 0);
     else if (st.id === "craftpick") hecho = !!(G.picks && G.picks.owned && (G.picks.owned.bronze || G.picks.owned.iron || G.picks.owned.gold));
     else if (st.id === "mineore")   hecho = ["bronce","hierro","oro","diamante","netherita"].some(k => (G.res[k] || 0) > 0);
-    else if (st.id === "dummy")     hecho = !!G.dummyUsedAt;
+    else if (st.id === "dummy")     hecho = !!G.dummyUsedAt || !!(G.dummyTrain && G.dummyTrain.desde);
+    else if (st.id === "incursion") hecho = (typeof statGet === "function" && statGet("incursion") > 0) || !!G.incursion;
+    else if (st.id === "lonja")     hecho = (typeof statGet === "function" && statGet("lonja") > 0);
     else if (st.id === "unlocknode") hecho = ((G.treesOpen || [0]).length + (G.rocksOpen || [0]).length) > 2;
     else if (st.id === "chest")     hecho = (G.chests || []).length > 0;
     else if (st.id === "invexp")    hecho = (G.invExtra || 0) > 0;
@@ -3262,6 +3280,90 @@ function tutoHecho(st) {
 // (14/8, reversión: tutoAdelanto/kits eliminados — el tutorial no regala nada;
 //  el set de arranque de herramientas volvió y el kit de emergencia en $G sigue en la Tienda)
 function tutoAdelanto() {}
+/* ═══ LA BRÚJULA: LA BARRA DE OBJETIVO NO SE APAGA NUNCA   (19/9, dirección) ══════════════════
+   « Que pueda descubrir cosas está bien, no es un problema. Pero si falla la barra de objetivos…
+   hacé los cambios suficientes para que eso no falle ».
+
+   Lo que fallaba, medido en el código antes de tocar nada: la barra guía 29 pasos y después
+   `tutoTerminar()` la apaga PARA SIEMPRE. A partir de ahí el juego no vuelve a poner un objetivo
+   delante del jugador. Los sistemas que se abren por nivel (15 expansiones, planos, cofre,
+   animales, cultivos, minerales) se anuncian en un cartel de 2,6 segundos y nada más; « El
+   camino » —que es literalmente la respuesta a « ¿a qué estoy jugando? »— es un botón del menú
+   que nadie señala. Todo el contenido después del tutorial dependía de que el jugador abriera
+   menús por su cuenta.
+
+   LA BRÚJULA ES LO QUE LA BARRA MUESTRA CUANDO EL TUTORIAL TERMINÓ. Y tiene una regla que la
+   diferencia de un tutorial: NO ES UNA LISTA ESCRITA, SE DERIVA DEL ESTADO. Mira la partida y
+   dice lo más útil que hay para hacer ahora, en este orden:
+     1 · lo que ya está ganado y sin cobrar (un plano en el Cobertizo, el paquete del día, una
+         carta del abuelo) — es lo que más duele dejar tirado;
+     2 · lo que está a medias (una obra sin terminar, con lo que falta);
+     3 · lo que se puede comprar ya (la expansión que el nivel ya abrió);
+     4 · la meta de la semana del tablón, con su progreso;
+     5 · y si no hay nada de eso, el nivel siguiente y lo que trae — para que siempre haya un
+         « para qué » delante, aunque hoy sea solo cosechar.
+   Por ser derivada no puede quedar vieja ni contradecir el juego: si alguien agrega un edificio
+   o mueve una expansión de nivel, la brújula lo sabe sin que nadie la toque.
+
+   Y mantiene la regla del 19/8 que ya costó dos intentos fallidos: UNA línea quieta, sin cuenta
+   atrás, sin rotar. Nombrar los segundos que faltan vuelve la espera protagonista.
+
+   El objeto que devuelve tiene la MISMA forma que un paso del tutorial (txt, target, panel, ui)
+   para que la flecha del mundo y la de los menús funcionen sin cambiar una línea; la marca
+   `brujula: true` es para que nadie lo confunda con un paso y trate de « cumplirlo ». */
+function brujula() {
+  if (!G.tuto || !G.tuto.done) return null;
+  const B = (o) => Object.assign({ id: "brujula", brujula: true, n: 1 }, o);
+  try {
+    /* 1 · ganado y sin cobrar */
+    for (const t in (G.planos || {})) {
+      if (!BUILD_DEF[t] || (G.built && G.built[t]) || (G.obras && G.obras[t])) continue;
+      return B({ txt: "Tenés el plano de " + BUILD_DEF[t].label + " esperando: colocalo (Menú ☰ → Cobertizo)", panel: "ov-cobertizo", ui: ".slot.k-plano" });
+    }
+    if (typeof dailyState === "function" && dailyState().claimable)
+      return B({ txt: "Te llegó el paquete del día: abrí el buzón", target: "buzon" });
+    if (typeof cartaAbueloPendiente === "function" && cartaAbueloPendiente())
+      return B({ txt: "Hay una carta de tu abuelo en el buzón", target: "buzon" });
+    /* 2 · a medias */
+    for (const t in (G.obras || {})) {
+      if (!BUILD_DEF[t] || (G.built && G.built[t])) continue;
+      const falta = (typeof obraFalta === "function") ? obraFalta(t) : [];
+      const partes = falta.slice(0, 2).map(f => f[1] + " de " + ((typeof RES_LABEL !== "undefined" && RES_LABEL[f[0]]) || f[0]).toLowerCase());
+      return B({ txt: "Terminá la obra de " + BUILD_DEF[t].label + (partes.length ? ": faltan " + partes.join(" y ") : ""), target: t });
+    }
+    /* 3 · se puede comprar ya */
+    if (typeof expansionSiguiente === "function") {
+      const e = expansionSiguiente();
+      if (e && (G.level || 1) >= e.nivel) {
+        /* la expansión se paga con MATERIALES (madera y piedra), no con plata — la primera versión
+           de esto decía « juntá plata » y el test lo cazó antes que un jugador */
+        const costo = e.costo || {}, res = G.res || {};
+        const falta = Object.keys(costo).filter(k => (res[k] || 0) < costo[k])
+          .map(k => (costo[k] - (res[k] || 0)) + " de " + ((typeof RES_LABEL !== "undefined" && RES_LABEL[k]) || k).toLowerCase());
+        return B({ txt: falta.length
+          ? "Juntá " + falta.join(" y ") + " para la expansión " + e.n
+          : "Podés comprar la expansión " + e.n + " (Mercado → Adornos)",
+          target: falta.length ? (falta[0].indexOf("madera") >= 0 ? "tree" : "rock") : "market",
+          panel: falta.length ? null : "ov-market" });
+      }
+    }
+    /* 4 · la meta de la semana */
+    if (typeof metaSemana === "function") {
+      const m = metaSemana();
+      if (m && !m.hecho) return B({ txt: "Meta de la semana: " + m.label + " " + m.tengo + "/" + m.pide + " (tablón de pedidos)", target: "tablon_pedidos", panel: "ov-pedidos" });
+    }
+    /* 5 · el nivel siguiente y lo que trae */
+    const sig = (G.level || 1) + 1;
+    if (typeof FARM_NIVEL_MAX !== "undefined" && sig <= FARM_NIVEL_MAX && typeof farmUnlockTxt === "function") {
+      const trae = String(farmUnlockTxt(sig) || "").split(" + ")[0];   // lo primero es lo que importa; el bono va siempre
+      return B({ txt: "Granja " + sig + " trae " + trae + " — cosechá, picá y pescá para subir" });
+    }
+  } catch (e) { console.warn("brújula:", e && e.message); }
+  return null;
+}
+/* lo que la barra muestra: el paso del tutorial mientras dura, la brújula después */
+function guiaActiva() { return tutoActivo() || brujula(); }
+
 /* EL CIERRE DEL TUTORIAL, UNO SOLO PARA TODOS LOS CAMINOS (21/8, dirección vía Discord):
    "¿cómo sé que el tutorial ha terminado?" — "¿ya dejó de ponerte objetivos?" — "creo que sí".
    Eso pasaba porque el tutorial tenía DOS finales: el paso a paso (tutoDone) celebraba con
@@ -3269,7 +3371,9 @@ function tutoAdelanto() {}
    expandiste, editaste, pescaste, tenías vales— ponía done=true Y SE CALLABA. Los objetivos
    desaparecían sin explicación y el jugador se quedaba preguntándose si terminó o se rompió. */
 function tutoTerminar() {
-  log("¡Tutorial completo! Ya sabés lo básico — la granja es toda tuya.", "gold");
+  /* 19/9: y se le dice que la barra sigue — antes se apagaba acá para siempre y el jugador se
+     quedaba sin nadie que le señalara nada. Ahora pasa a ser la brújula (ver brujula()). */
+  log("¡Tutorial completo! Ya sabés lo básico — la granja es toda tuya. La barra de arriba te sigue marcando lo más útil para hacer.", "gold");
   if (window.celebrate) celebrate({ title: "¡GRANJA LISTA!", sub: "Tutorial completo", big: true });
   if (typeof refreshHud === "function") refreshHud();
 }
@@ -3875,6 +3979,8 @@ function incSalir(zona) {
   const ms = z.min * 60000;
   G.incursion = { zona, endAt: nowMs() + ms, total: ms, poder, arma: id };
   cupo.n++;
+  if (typeof statAdd === "function") statAdd("incursion", "_", 1);   // 19/9: deja rastro (el paso del tutorial lo lee)
+  if (typeof tutoEvent === "function") tutoEvent("incursion");
   log("Saliste de incursión a " + z.label + " (" + fmtSecs(z.min * 60) + "). Volvés con el botín.", "gold");
   toast("Incursión: " + z.label);
   refreshHud(); if (typeof refreshIncursion === "function" && isOpen("ov-incursion")) refreshIncursion();
@@ -3958,6 +4064,8 @@ function dummyIniciar() {
   const aid = armaEq();
   if (!aid || ARM_DEF[aid].tipo === "arco") { toast("Equipá un arma cuerpo a cuerpo para entrenar"); return; }
   G.dummyTrain = { desde: nowMs(), arma: aid };
+  G.dummyUsedAt = nowMs();   // 19/9: el campo existía desde el 9/8 y nadie lo escribía — el paso del tutorial lo lee
+  if (typeof tutoEvent === "function") tutoEvent("dummy");
   if (typeof openOv === "function") openOv("ov-entrenando");   // tapa el juego: entrenar no es gratis
   log("Dejaste al granjero entrenando en el dummy. El primer minuto no cuenta; de ahí en más cobrás la XP del tiempo que pase, hasta " + DUMMY_OFF_MAX_H + " h.", "good");
   toast("Entrenando…");
@@ -7952,6 +8060,8 @@ function pezVender(clave, n) {
   const plata = Math.round(u * n * 10) / 10;
   G.fish[clave] -= n; if (G.fish[clave] <= 0) delete G.fish[clave];
   G.plata = (G.plata || 0) + plata;
+  if (typeof statAdd === "function") statAdd("lonja", "_", n);   // 19/9: deja rastro (el paso del tutorial lo lee)
+  if (typeof tutoEvent === "function") tutoEvent("lonja");
   log("🐟 Vendiste " + n + " " + d.label + (pc.kg ? " de " + pc.kg.toFixed(2) + " kg" : "") + " por " + plata + " de plata.", "good");
   toast("+" + plata + " plata");
   if (window.sfx) sfx("coin");

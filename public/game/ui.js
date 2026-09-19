@@ -2848,14 +2848,16 @@ function refreshCookingV2() {
 /* ---- Tutorial guiado (doc maestro 2/8): cartel de objetivo + tilde animado ---- */
 function tutoRefresh() {
   const el = document.getElementById("tuto"); if (!el) return;
-  const st = (typeof tutoActivo === "function") ? tutoActivo() : null;
+  /* 19/9: guiaActiva() = el paso del tutorial mientras dura, la BRÚJULA después. La barra ya no
+     se apaga al terminar el tutorial: se apaga solo si el jugador apagó la guía a propósito. */
+  const st = (typeof guiaActiva === "function") ? guiaActiva() : ((typeof tutoActivo === "function") ? tutoActivo() : null);
   if (!st || (window.guiaOn && !guiaOn())) { el.classList.add("hidden"); if (typeof tutoFlechaUI === "function") tutoFlechaUI(null); return; }
   el.classList.remove("hidden");
   // 14/8 (reversión del capataz): cartel + flechitas, como antes
   const sub = (typeof tutoSub === "function") ? tutoSub() : null;
-  document.getElementById("tuto-txt").textContent = sub ? sub.txt : tutoTxt(st);
-  const need = tutoNeed(st);
-  document.getElementById("tuto-n").textContent = sub ? "" : (st.res ? " " + Math.min(tutoTiene(st), need) + "/" + need
+  document.getElementById("tuto-txt").textContent = sub ? sub.txt : (st.brujula ? st.txt : tutoTxt(st));
+  const need = st.brujula ? 0 : tutoNeed(st);
+  document.getElementById("tuto-n").textContent = (sub || st.brujula) ? "" : (st.res ? " " + Math.min(tutoTiene(st), need) + "/" + need
     : (st.n > 1 ? " " + Math.min(G.tuto.n || 0, st.n) + "/" + st.n : ""));
   /* 19/8 (dirección) — ACÁ HUBO DOS INTENTOS Y LOS DOS SE FUERON, que conviene dejar escrito:
      una segunda línea con sugerencias ("no queda bien") y después UNA línea que rotaba entre el
@@ -2884,7 +2886,7 @@ function tutoFlechaUI(el) {
 function tutoHighlight() {
   document.querySelectorAll(".tutohl").forEach(e => e.classList.remove("tutohl"));   // limpieza del sistema viejo
   if (window.guiaOn && !guiaOn()) { tutoFlechaUI(null); return; }   // 14/8: guía opcional apagada
-  let st = (typeof tutoActivo === "function") ? tutoActivo() : null;
+  let st = (typeof guiaActiva === "function") ? guiaActiva() : ((typeof tutoActivo === "function") ? tutoActivo() : null);
   // 13/8 v3: el SUB-OBJETIVO manda — su guía pisa la del paso (misma cadena de flechas)
   const sub = (st && typeof tutoSub === "function") ? tutoSub() : null;
   if (sub) st = Object.assign({}, st, { hot: null, panel: null, ui: null, target: null }, sub);
@@ -2951,10 +2953,12 @@ function tutoSync(force) {
   if (typeof tutoAutoSkip === "function") { try { tutoAutoSkip(); } catch (e) {} }
   // 14/8: el ADELANTO del paso activo (idempotente — una vez por paso, cubre migraciones y F5)
   if (typeof tutoAdelanto === "function") { try { tutoAdelanto(); } catch (e) {} }
-  const st = (typeof tutoActivo === "function") ? tutoActivo() : null;
+  const st = (typeof guiaActiva === "function") ? guiaActiva() : ((typeof tutoActivo === "function") ? tutoActivo() : null);
   // 13/8 v3: el sub-objetivo entra a la firma — cuando aparece o se resuelve, cartel y flechas se redibujan
-  const sub = (st && typeof tutoSub === "function") ? tutoSub() : null;
-  const sig = G.tuto ? (G.tuto.step + ":" + (st && st.res ? tutoTiene(st) : (G.tuto.n || 0)) + ":" + !!G.tuto.done + ":" + (sub ? sub.txt : "")) : "-";
+  const sub = (st && !st.brujula && typeof tutoSub === "function") ? tutoSub() : null;
+  /* 19/9: y el texto de la brújula también, que es lo que cambia cuando el jugador cobra un plano o
+     compra la expansión — sin esto la barra se quedaría con la sugerencia vieja hasta el próximo F5 */
+  const sig = G.tuto ? (G.tuto.step + ":" + (st && st.res ? tutoTiene(st) : (G.tuto.n || 0)) + ":" + !!G.tuto.done + ":" + (sub ? sub.txt : "") + ":" + (st && st.brujula ? st.txt : "")) : "-";
   if (!force && sig === _tutoSig) { tutoHighlight(); return; }   // 13/8: el resaltado se re-aplica aunque el paso no cambie (los paneles se redibujan y lo pierden)
   _tutoSig = sig;
   tutoRefresh();

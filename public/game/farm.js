@@ -2203,10 +2203,10 @@ class FarmScene extends Phaser.Scene {
   updateTutoArrow() {
     if (this.tutoArrow) { this.tutoArrow.destroy(); this.tutoArrow = null; if (this.tutoTw) { this.tutoTw.stop(); this.tutoTw = null; } }
     if (window.guiaOn && !guiaOn()) return;   // 14/8: guía opcional apagada — sin flecha en el mundo
-    let st = (typeof tutoActivo === "function") ? tutoActivo() : null;
+    let st = (typeof guiaActiva === "function") ? guiaActiva() : ((typeof tutoActivo === "function") ? tutoActivo() : null);
     if (!st) return;
     // 13/8 v3: el SUB-OBJETIVO dinámico (sin hachas, pico roto…) pisa el destino de la flecha
-    const sub = (typeof tutoSub === "function") ? tutoSub() : null;
+    const sub = (!st.brujula && typeof tutoSub === "function") ? tutoSub() : null;
     if (sub) st = Object.assign({}, st, { target: null }, sub);
     let x = null, y = null;
     // 15/8 (playtest: la escolta revoloteaba sobre una veta EN ENFRIAMIENTO): un nodo solo

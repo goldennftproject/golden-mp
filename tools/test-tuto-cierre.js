@@ -40,6 +40,7 @@ console.log("\nEL FINAL POR AUTOSKIP (el caso del diseñador): AHORA CELEBRA");
     tuto: { step: TUTO.findIndex(s => s.id === "expandir"), n: 0, done: false, v: 2 },
     editVisto: true, vales: 3, sflStock: true,
     res: { lombriz: 2 }, skills: { fishing: 40 },
+    stats: { lonja: { _: 1 } },   // 19/9: la cadena tiene un paso más al final (vender en la Lonja); también hecho
     kitReclamado: true, built: { store: true, horno: true, cocina: true } });
   ok("el tutorial quedó terminado al cargar", !!(G.tuto && G.tuto.done));
   ok("y ESTA VEZ lo dijo: « ¡GRANJA LISTA! »", fiestas.includes("¡GRANJA LISTA!"), fiestas.join(" · ") || "(sin fiesta)");
