@@ -89,7 +89,7 @@ class ForestScene extends Phaser.Scene {
         if (r.raid.estado === "vencido") {
           const jefe = this.monsters.find(m => m.def && m.def.boss);
           if (jefe) { jefe.dead = true; jefe.spr.setVisible(false); jefe.bar.clear(); }
-          toast("El Dragón ya está vencido — cobrá tu parte en Clan");
+          toast("El Dragón ya está vencido" + ((typeof GF !== "undefined" && GF.esOcultoMvp && GF.esOcultoMvp("ov-clan")) ? "" : " — cobrá tu parte en Clan"));
         }
       });
     }
@@ -881,8 +881,8 @@ class ForestScene extends Phaser.Scene {
       this._jefeHp = Number(q.hp); this._jefeMax = Number(q.hp_max);
       if (q.estado === "vencido") {
         this.floatTxt(m, "¡VENCIDO!", "#ffd75e");
-        log("¡El clan venció al Dragón! Cobrá tu parte en la ventana de Clan.", "gold");
-        toast("¡Dragón vencido! Cobrá en Clan");
+        log("¡El clan venció al Dragón! Cobrá tu parte" + ((typeof GF !== "undefined" && GF.esOcultoMvp && GF.esOcultoMvp("ov-clan")) ? "." : " en la ventana de Clan."), "gold");
+        toast("¡Dragón vencido!" + ((typeof GF !== "undefined" && GF.esOcultoMvp && GF.esOcultoMvp("ov-clan")) ? "" : " Cobrá en Clan"));
         m.dead = true; m.spr.setVisible(false);
       }
     });

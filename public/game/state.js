@@ -3253,7 +3253,7 @@ function tutoHecho(st) {
     else if (st.id === "lonja")     hecho = (typeof statGet === "function" && statGet("lonja") > 0);
     else if (st.id === "unlocknode") hecho = ((G.treesOpen || [0]).length + (G.rocksOpen || [0]).length) > 2;
     else if (st.id === "chest")     hecho = (G.chests || []).length > 0;
-    else if (st.id === "invexp")    hecho = (G.invExtra || 0) > 0;
+    else if (st.id === "invexp")    hecho = (G.invRows || 0) > 0;   // 19/9: leía G.invExtra, que nadie escribe; la ampliación real escribe invRows
     else if (st.id === "passclaim") hecho = !!(G.pass && (Object.keys(G.pass.claimF || {}).length || Object.keys(G.pass.claimV || {}).length));
     else if (st.id === "socket")    hecho = Object.keys(G.weapons || {}).some(k => Object.keys((G.weapons[k].sockets) || {}).some(sl => G.weapons[k].sockets[sl]));
     return hecho;
@@ -3851,8 +3851,8 @@ function mkPoner(kind, key, n, payload) {
 function mkPendAdd(kind, key, n, payload) {
   G.mkPend = G.mkPend || [];
   G.mkPend.push({ kind, item: key, qty: n, payload: payload || null });
-  toast("Sin lugar — quedó pendiente en el Mercado");
-  log("No entró en la bolsa: " + n + " × " + mkNombre(kind, key) + ". Hacé lugar y reclamalo desde el Mercado.", "bad");
+  toast("Sin lugar — quedó pendiente en el Mercado de jugadores");
+  log("No entró en la bolsa: " + n + " × " + mkNombre(kind, key) + ". Hacé lugar y reclamalo desde el Mercado de jugadores.", "bad");
 }
 function mkPendCount() { return (G.mkPend || []).length; }
 function mkPendCobrar() {
@@ -3860,7 +3860,7 @@ function mkPendCobrar() {
   const quedan = []; let dados = 0;
   for (const p of G.mkPend) { if (mkPoner(p.kind, p.item, p.qty, p.payload)) dados++; else quedan.push(p); }
   G.mkPend = quedan;
-  if (dados) { log("Reclamaste " + dados + " entrega(s) pendiente(s) del Mercado.", "good"); toast("+" + dados + " entrega(s)"); }
+  if (dados) { log("Reclamaste " + dados + " entrega(s) pendiente(s) del Mercado de jugadores.", "good"); toast("+" + dados + " entrega(s)"); }
   else toast("Sigue sin entrar — liberá espacio en la bolsa");
   refreshHud(); if (typeof syncSlots === "function") syncSlots(); if (isOpen("ov-inv")) refreshInv();
   if (typeof refreshP2P === "function" && isOpen("ov-p2p")) refreshP2P();
@@ -10064,7 +10064,7 @@ function passPendientes() {
      · 60-90 palabras, voz del Abuelo: práctico, socarrón, una gota de misterio al final. */
 var CARTAS_ABUELO = [
   { n: 1, nivel: 2, titulo: "Si estás leyendo esto",
-    txt: "Si estás leyendo esto, ya vendiste tus primeras papas y el Capataz decidió que no sos un inútil. Bien. La granja es tuya: la cerca, el baúl, los tres árboles torcidos. No me morí, que conste — me FUI, y hay una diferencia. Construí la herrería primero: acá las herramientas se gastan más rápido de lo que un viejo escribe cartas. Lo demás, a su tiempo. — Tu abuelo" },
+    txt: "Si estás leyendo esto, ya vendiste tus primeras papas y el Capataz decidió que no sos un inútil. Bien. La granja es tuya: la cerca, el baúl, los tres árboles torcidos. No me morí, que conste — me FUI, y hay una diferencia. Construí la Herrería primero: acá las herramientas se gastan más rápido de lo que un viejo escribe cartas. Lo demás, a su tiempo. — Tu abuelo" },
   { n: 2, nivel: 3, titulo: "La cerca",
     txt: "Ya podés comprar tu primer pedazo de terreno. Hacelo. Pero fijate una cosa: la cerca rodea la granja ENTERA, no solo el corral. La levanté yo, tabla por tabla, el año del agua nueva. El pueblo cree que es para que no se escapen las alpacas. Dejá que lo crean. — Tu abuelo" },
   { n: 3, nivel: 5, titulo: "Los animales saben",
@@ -10074,9 +10074,9 @@ var CARTAS_ABUELO = [
   { n: 5, nivel: 9, titulo: "El agua nueva",
     txt: "Te habrás fijado que la laguna tiene peces que no figuran en ningún libro. Es que esa agua no es de acá: bajó del otro lado del valle la noche del cambio, y se quedó. Los comunes son comunes. Pero los raros pelean como si algo adentro no quisiera volver a la orilla. Pescalos igual. Cocinados son otra cosa. — Tu abuelo" },
   { n: 6, nivel: 10, titulo: "No todos son monstruos",
-    txt: "A esta altura ya habrás cruzado el portal y repartido espadazos. Escuchame bien: no todos los que viven en la Zona son monstruos. Muchos eran vecinos — gente y bichos del viejo Bosque Claro, cambiados por la Noche. Un plato caliente les recuerda quiénes eran. Probá con comida antes que con hierro. Te vas a sorprender de quién te sigue a casa. — Tu abuelo" },
+    txt: "A esta altura ya habrás cruzado el portal y repartido espadazos. Escuchame bien: no todos los que viven en la Zona Negra son monstruos. Muchos eran vecinos — gente y bichos del viejo Bosque Claro, cambiados por la Noche. Un plato caliente les recuerda quiénes eran. Probá con comida antes que con hierro. Te vas a sorprender de quién te sigue a casa. — Tu abuelo" },
   { n: 7, nivel: 12, titulo: "Grjj",
-    txt: "Si un goblin de mala cara aparece junto al buzón ofreciendo trueques, no lo espantes: es Grjj. Le salvé el pellejo dos veces del lado oscuro del valle, y un goblin no se olvida de una deuda — le da vergüenza, que para ellos es peor. Por eso viene todos los días. Regatealé igual: si no regateás, se ofende. — Tu abuelo" },
+    txt: "Si un goblin de mala cara aparece junto al buzón ofreciendo trueques, no lo espantes: es Grjj. Le salvé el pellejo dos veces del lado oscuro del valle, y un goblin no se olvida de una deuda — le da vergüenza, que para ellos es peor. Por eso viene todos los días. Regateale igual: si no regateás, se ofende. — Tu abuelo" },
   { n: 8, nivel: 14, titulo: "La Noche",
     txt: "Te debo la historia entera. Una noche, hace años, del otro lado del valle NO amaneció. La oscuridad se quedó quieta, como un animal que se echa. El Bosque Claro quedó adentro, con su gente. Los que salieron ya no eran los mismos; los que no salieron, tampoco. El pueblo decidió olvidar. Yo decidí lo contrario. Todo lo que ves en esta granja lo construí para eso. — Tu abuelo" },
   { n: 9, nivel: 17, titulo: "El portal no es una salida",
@@ -10152,7 +10152,7 @@ function buzonCartas() {
     txt: "Tres cosas que nadie te contó todavía. En el menú está la pestaña de LOGROS 🏆 — las metas pagan plata, cobralas ahí. Al pie del buzón llega tu PAQUETE del día: si venís siete días seguidos, el séptimo es dorado. Y junto al buzón vas a ver a un GOBLIN de mala fama y buen corazón: hace un trueque por día, y siempre le sobra lo que a vos te falta.",
     leer: true, panel: "ov-logros", btn: "Ver los logros" }); } catch (e) {}
   try { const n = passPendientes(); if (!mvp("ov-pass") && n > 0 && !G.buzonLeidas["pase|" + hoy]) cartas.push({
-    id: "pase", de: "El Pase de Cosecha", titulo: n + (n > 1 ? " niveles" : " nivel") + " sin reclamar",
+    id: "pase", de: "El Pase de Batalla", titulo: n + (n > 1 ? " niveles" : " nivel") + " sin reclamar",
     txt: "Tus estrellas ya destrabaron premios en el Pase. Pasá a retirarlos cuando quieras.",
     panel: "ov-pass", btn: "Ver el Pase" }); } catch (e) {}
   try { buzonArchivar(cartas); } catch (e) {}
@@ -11167,7 +11167,9 @@ function caminoGuarida() {
     leida: !!(G.buzonLeidas || {})["abuelo" + c.n],
   }));
   /* y el último escalón, que no es de nivel sino de gente: el asalto pide un clan */
-  const enClan = !!(G.clan && G.clan.codigo);
+  /* 19/9: leía G.clan, que nadie escribe (la pertenencia vive en la caché de ui.js, _clanCache),
+     así que este hito decía « hace falta un clan » aunque ya estuvieras en uno */
+  const enClan = !!(G.clan && G.clan.codigo) || !!(typeof _clanCache !== "undefined" && _clanCache && _clanCache.c);
   hitos.push({
     nivel: null, titulo: "Bajar a la Guarida", clan: true, hecho: false,
     nota: enClan ? "Tu clan puede abrir el asalto" : "Hace falta un clan de " + RAID_MIN_MIEMBROS,

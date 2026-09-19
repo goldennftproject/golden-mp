@@ -648,7 +648,11 @@ function migrarGuardado(d) {
       else if (typeof tryAddRes === "function") tryAddRes(e.k, e.n);
     }
     if (typeof contsSumar === "function") contsSumar("bag", 1);
-    G._avisoContenedor = d.morral.length;   // ui.js lo cuenta una vez y lo borra
+    /* 19/9: decía « ui.js lo cuenta una vez y lo borra » y no era cierto — nadie leía
+       _avisoContenedor, así que el jugador nunca se enteraba de que su morral pasó a la bolsa.
+       Se avisa acá mismo, que es donde se sabe cuántas cosas se mudaron. */
+    const mudadas = d.morral.filter(e => e && e.k && e.n > 0).length;
+    if (mudadas) { try { if (typeof log === "function") log("Tu morral de la Zona pasó a la bolsa de la granja (" + mudadas + (mudadas === 1 ? " cosa" : " cosas") + "). Además te llegó una bolsa nueva para el portal.", "gold"); } catch (e) {} }
   }
   /* y a quien nunca vio el morral pero ya tiene el kit reclamado, también: el kit ya no se le va
      a volver a dar, y sin contenedor la Zona Negra queda cerrada para siempre. */

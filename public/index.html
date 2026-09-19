@@ -1138,7 +1138,7 @@
            único nivel del juego sin barra a la vista: la ventana de la Granja la tiene desde
            siempre, pero había que saber que existía para ir a buscarla. Clic: abre esa ventana,
            que es donde viven las tareas. -->
-      <div class="pill cpill" id="lvlpill" style="cursor:pointer"><span class="k">Granja</span><b id="s-level">1</b><span class="k" id="s-level-max">/50</span><span class="cbarw"><span class="cfill lvlf" id="lvl-fill"></span></span><span class="k" id="lvl-txt"></span></div>
+      <div class="pill cpill" id="lvlpill" style="cursor:pointer"><span class="k">Granja</span><b id="s-level">1</b><span class="k" id="s-level-max">/25</span><span class="cbarw"><span class="cfill lvlf" id="lvl-fill"></span></span><span class="k" id="lvl-txt"></span></div>
       <div class="pill" data-mvp-hud><span class="k">Prestigio</span><b id="s-prestige">0</b></div>
       <div class="pill" title="Plata — la moneda del juego"><img class="ric" src="assets/farm/coin_plata.png?a=4" onerror="this.outerHTML='<span class=&quot;coin silver&quot;></span>'"><b id="s-plata">0</b></div>
       <div class="pill" title="$Golden — la moneda premium: animales del establo, kit de emergencia y adornos"><img class="ric" src="assets/farm/coin_esencia.png?a=4" onerror="this.outerHTML='✨'"><b id="s-golden">20</b></div>
@@ -1187,7 +1187,7 @@
   <div class="ov" id="ov-barn"><div class="card" style="width:min(560px,94%)">
     <button class="close" data-close="ov-barn">×</button>
     <h3>Granja</h3>
-    <div class="sub">Del nivel 1 al 10 subís solo cosechando. Del 11 al 50 hace falta la XP y cumplir las tareas del nivel.</div>
+    <div class="sub">Del nivel 1 al 10 subís solo cosechando. Del 11 al 25 hace falta la XP y cumplir las tareas del nivel.</div>
     <div class="forge-list" id="barn-body" style="max-height:60vh"></div>
   </div></div>
 
@@ -1223,7 +1223,7 @@
 
   <div class="ov" id="ov-market"><div class="card" style="width:min(520px,94%)">
     <button class="close" data-close="ov-market">×</button>
-    <h3>Tienda</h3>
+    <h3>Mercado</h3>
     <div class="shoptabs">
       <button class="shoptab active" data-shop="buy">Comprar</button>
       <button class="shoptab" data-shop="deco">Adornos</button>
@@ -1318,7 +1318,7 @@
   <div class="ov" id="ov-inv"><div class="card" style="width:min(432px,94%)">
     <button class="close" data-close="ov-inv">×</button>
     <h3>Inventario</h3>
-    <div class="sub" id="inv-cap">Bolsa: 0/30 espacios · máx 99 por recurso</div>
+    <div class="sub" id="inv-cap">Bolsa: 0/0 · recursos y semillas apilan hasta 99</div>
     <div class="slots" id="inv-slots"></div>
     <div class="sub" id="inv-selseed"></div>
     <div class="invrow"><div class="invexp" id="inv-expand"></div><div id="inv-trash" title="Arrastrá un objeto acá para tirarlo">Tirar</div></div>
@@ -1346,7 +1346,7 @@
   <div class="ov" id="ov-equip"><div class="card" style="width:min(520px,94%)">
     <button class="close" data-close="ov-equip">×</button>
     <h3>Equipo</h3>
-    <div class="sub">Slots de armadura y armas.</div>
+    <div class="sub">Ranuras de armadura y armas.</div>
     <div class="sub" id="eq-def">Defensa total: 0</div>
     <div class="eqlayout">
       <!-- 31/8 (vídeos de referencia de dirección, el equipo de Tibia): TODO hueco vacío enseña
@@ -1393,11 +1393,11 @@
 
   <div class="ov" id="ov-lb"><div class="card" style="width:min(500px,94%)">
     <button class="close" data-close="ov-lb">×</button>
-    <h3>Leaderboard</h3>
+    <h3>Ranking</h3>
     <div class="lbtabs">
       <button class="lbtab active" data-lb="plata"><img class="ric" src="assets/farm/coin_plata.png?a=4"> Plata</button>
       <button class="lbtab" data-lb="exp">Experiencia</button>
-      <button class="lbtab" data-lb="skill">Top skill</button>
+      <button class="lbtab" data-lb="skill">Mejor skill</button>
     </div>
     <div class="lblist" id="lb-list"></div>
     <div class="lbnote" id="lb-note"></div>
@@ -1710,7 +1710,7 @@
       <button class="gmi" data-panel="ov-clan"><span class="ic"></span> Clan</button>
       <button class="gmi" data-panel="ov-p2p"><span class="ic"></span> Mercado de jugadores</button>
       <button class="gmi" data-panel="ov-cos"><span class="ic"></span> Cosméticos</button>
-      <button class="gmi" data-panel="ov-lb"><span class="ic"></span> Leaderboard <b class="key">L</b></button>
+      <button class="gmi" data-panel="ov-lb"><span class="ic"></span> Ranking <b class="key">L</b></button>
       <button class="gmi" data-panel="ov-config"><span class="ic"></span> Configuración <b class="key">C</b></button>
       <!-- fixs.docx #10 (11/8): el menú puede quedarse desplegado -->
       <button class="gmi" id="gm-fijar"><span class="ic"></span> 📌 Menú fijo: No</button>
@@ -1866,7 +1866,7 @@
     // 15/8: VERSIÓN DE BUILD — rompe la caché del navegador en cada deploy (sin esto, el
     // jugador seguía corriendo el state.js viejo aunque el servidor tuviera el nuevo).
     // deploy.bat la actualiza sola (busca GF_BUILD y pone la fecha/hora del deploy).
-    const GF_BUILD = "20260919-113527";
+    const GF_BUILD = "20260919-122953";
     const files = ["game/config.js","game/nav.js","game/audio.js","game/state.js","game/save.js","game/ui.js","game/boot.js",
                    "game/farm.js","game/forest.js","game/plaza.js","game/main.js","game/update.js"];
     /* 24/8 — SE BAJAN TODOS A LA VEZ, SE EJECUTAN EN FILA (dirección: « sigue tardando en

@@ -2141,7 +2141,7 @@ function dndDrop(src, tz, ti) {
     else { const d = G.slots[si]; if (d) {
       const inf = trashInfo(d);
       if (!inf) toast("Eso no se puede tirar");
-      else if (inf.n > 0) askConfirm("¿Seguro que quieres tirar " + inf.n + " × " + inf.lbl + "? No se puede recuperar.", () => { trashStack(d); if (isOpen("ov-inv")) refreshInv(); else refreshHotbar(); });
+      else if (inf.n > 0) askConfirm("¿Seguro que querés tirar " + inf.n + " × " + inf.lbl + "? No se puede recuperar.", () => { trashStack(d); if (isOpen("ov-inv")) refreshInv(); else refreshHotbar(); });
     } }
   }
   if (isOpen("ov-inv")) refreshInv(); else refreshHotbar();
