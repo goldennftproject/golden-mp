@@ -951,6 +951,23 @@ async function loadFarm() {
        Se lee la copia SOLO si es de una sesión sin nube (uid nulo) o de esta misma cuenta. Una
        copia de OTRO usuario no se toca ni de casualidad: sería darle la granja del vecino. */
     const local = (typeof copiaLeer === "function") ? copiaLeer() : null;
+    /* 19/9 — EL AGUJERO QUE DIRECCIÓN VIO Y YO CERRÉ EN EL LUGAR EQUIVOCADO. « Borro caché y sigue
+       logueando sin correo »: main.js cerró su camino el 18/9, pero ESTA rama corre antes y devolvía
+       `true` con la copia local hidratada y el apodo puesto → `returning && NICK` → enterGame. La
+       bitácora de Golden lo muestra tal cual: « navegador virgen y SOLO_EMAIL: se pide el correo »
+       seguido de « sin nube: se cargó la copia local · nivel 3 » — y jugó dos horas sin cuenta con
+       el aviso de « base caída » cada dos minutos, que encima era mentira (la base estaba bien).
+       Con la puerta del correo puesta, una copia SIN DUEÑO en un navegador SIN CUENTA es una partida
+       que la regla dice que no existe. No se carga y no se borra: se APARCA bajo otra clave, para
+       que al entrar con el correo no compita con la granja de verdad (copiaEsMejor / huérfana la
+       tomarían por un rescate de « sesión con la base caída », y pisarían la nube con ella). */
+    if (typeof PUERTA_EMAIL !== "undefined" && PUERTA_EMAIL) {
+      if (local && local.data && !local.uid && hayGranjaLocal()) {
+        copiaAparcar(local);
+        sesionLog("puerta del correo: copia local SIN DUEÑO aparcada, no se juega sin cuenta", "nivel " + (local.nivel || 1));
+      }
+      return false;   // CARGA_OK queda en false: en la puerta no hay nada que guardar
+    }
     if (local && local.data && hayGranjaLocal()) {
       hydrate(local.data);
       copiaNick(local);            // el apodo es parte de la partida y vuelve con ella
@@ -1053,6 +1070,15 @@ function copiaNick(c) {
   if (c && c.nick && typeof window !== "undefined" && !window.NICK) window.NICK = c.nick;
 }
 function copiaLeer() { try { return JSON.parse(localStorage.getItem(GF_COPIA_KEY) || "null"); } catch (e) { return null; } }
+/* 19/9 — APARCAR, no borrar. Una copia sin dueño que la puerta del correo no deja jugar se mueve
+   a `gf-granja-aparcada-<ref>` (se conserva la última) y se quita de la clave viva. Si algún día
+   hay que rescatarla a mano: JSON.parse(localStorage.getItem("gf-granja-aparcada-…")). */
+const GF_APARCADA_KEY = "gf-granja-aparcada-" + SB_REF;
+function copiaAparcar(c) {
+  try { localStorage.setItem(GF_APARCADA_KEY, JSON.stringify(Object.assign({}, c, { aparcadaAt: Date.now() }))); } catch (e) {}
+  try { localStorage.removeItem(GF_COPIA_KEY); } catch (e) {}
+  try { console.warn("copia local sin dueño aparcada en " + GF_APARCADA_KEY); } catch (e) {}
+}
 /* ¿la copia local tiene MÁS progreso que lo que acabamos de cargar? Se compara por lo que el
    jugador entendería como avanzar: nivel y plata. Sin adivinar: si empatan, manda la nube. */
 function copiaEsMejor(c) {
