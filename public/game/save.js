@@ -368,7 +368,6 @@ function hydrate(d) {
   if (d.seeds) G.seeds = Object.assign({}, G.seeds, d.seeds);
   if (d.selSeed && CROP_DEF[d.selSeed]) G.selSeed = d.selSeed;
   if (d.tools) G.tools = Object.assign({}, G.tools, d.tools);
-  if (d.toolsLost) G.toolsLost = d.toolsLost;   // legado (pre-apilables)
   // edificios construibles (viernes 1): las partidas viejas ya los tienen construidos
   // 10/8: la Herrería dejó de ser gratis (5 madera + 2 piedra). A las partidas que YA venían
   // jugando se les respeta construida: nadie pierde un edificio que ya tenía.
@@ -565,13 +564,11 @@ function hydrate(d) {
   if (typeof d.dummyUsedAt === "number") G.dummyUsedAt = d.dummyUsedAt;
   if (d.armCd && typeof d.armCd === "object") G.armCd = d.armCd;   // el enfriamiento de forja ya no se saltea con F5
   G.mkPend = Array.isArray(d.mkPend) ? d.mkPend : [];               // entregas pendientes del Mercado
-  G.testeoDado = d.testeoDado === true;                             // el regalo del modo testeo se da una sola vez
   if (d.layoutPlots && typeof d.layoutPlots === "object") G.layoutPlots = d.layoutPlots;
   if (Array.isArray(d.ghInv)) G.ghInv = d.ghInv;   // GOD HAND 2.0 (11/8): su inventario de semillas
   if (d.planos && typeof d.planos === "object") G.planos = d.planos;     // blueprints (12/8)
   if (d.obras && typeof d.obras === "object") G.obras = d.obras;
 
-  if (d.capsClaim && typeof d.capsClaim === "object") G.capsClaim = d.capsClaim;   // capítulos reclamados (14/8)
   if (d.emergBuys && typeof d.emergBuys === "object") G.emergBuys = d.emergBuys;   // kit de emergencia (14/8)
   if (d.buzonLeidas && typeof d.buzonLeidas === "object") G.buzonLeidas = d.buzonLeidas;   // cartas leídas del buzón (15/8)
   if (Array.isArray(d.buzonArchivo)) G.buzonArchivo = d.buzonArchivo;   // archivo de cartas (15/8)

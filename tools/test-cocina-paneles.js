@@ -84,10 +84,12 @@ console.log("\nLA VENTANA NO CAMBIA DE TAMAÑO (regla de la casa)");
   ok("el nombre reserva su espacio aunque sea corto", /min-height/.test(nm));
 }
 
-console.log("\nY EL CAMINO VIEJO SIGUE AHÍ POR SI ACASO");
+console.log("\nY EL CAMINO VIEJO YA NO ESTÁ   (19/9: limpieza)");
 {
-  ok("refreshCooking usa la vista nueva si el HTML la tiene", /const grid = \$\("ck-grid"\);\s*\n\s*if \(grid\) return refreshCookingV2\(\);/.test(UI));
-  ok("y cae a la lista vieja si no", /const box = \$\("cook-list"\); if \(!box\) return;/.test(UI));
+  /* la lista `cook-list` no existe en el HTML desde que la ventana pasó a la cuadrícula: la rama
+     de respaldo eran 50 líneas que nunca corrían. Se quitó; refreshCooking delega y punto. */
+  ok("refreshCooking delega en la vista nueva", /function refreshCooking\(\) \{[\s\S]{0,400}?return refreshCookingV2\(\);/.test(UI));
+  ok("y no queda código de la lista vieja (solo la nota de por qué se fue)", !/\$\("cook-list"\)/.test(UI));
   ok("el reloj de las ollas se refresca solo", /_ckTick/.test(v2));
 }
 

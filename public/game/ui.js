@@ -2661,59 +2661,10 @@ function refreshChest() {
 var _ckSel = null;   // la receta señalada en el panel derecho
 function ckElegir(id) { _ckSel = id; refreshCooking(); }
 function refreshCooking() {
-  const grid = $("ck-grid");
-  if (grid) return refreshCookingV2();
-  const box = $("cook-list"); if (!box) return;
-  const lvl = cookLevel(), xp = G.skills.cooking || 0;
-  const nxt = COOK_LVLS[lvl + 1];
-  let head = '<div class="forge-row"><div class="finfo"><div class="fnm">Cocina nivel ' + lvl + (lvl >= 10 ? ' — Cocina maestra' : '') + '</div>' +
-    (nxt != null ? '<div class="durbar"><i style="width:' + Math.round((xp - COOK_LVLS[lvl]) / (nxt - COOK_LVLS[lvl]) * 100) + '%"></i></div><div class="fds">' + fmt(xp) + '/' + fmt(nxt) + ' XP para el nivel ' + (lvl + 1) + '</div>' : '') +
-    /* 9/9 — ESTE CARTEL SE QUEDÓ MINTIENDO. Decía « buffs y precios de venta », y los precios de
-       venta se fueron hoy con la venta de platos. La maestría sigue subiendo el BUFF, que es lo
-       único que le queda y ahora es lo único que promete. */
-    (lvl > 1 ? '<div class="fds">Maestría: los buffs de tus platos rinden +' + Math.round((cookPot(1) - 1) * 100) + '% en las recetas de nivel 1 (2% por nivel sobre la receta, tope +50%)</div>' : '') +
-    '</div></div>';
-  { // ollas en paralelo (3/8: se cocinan varios platos a la vez)
-    const lista = cookList();
-    head += '<div class="fds" style="margin:4px 0">Ollas: ' + lista.length + '/' + cookSlots() + ' en uso' + (edif2("cocina") ? ' · Cocina nivel 2: −' + EDIF2_COCINA + '% de tiempo y +' + EDIF2_COCINA_OLLA + ' sitio en la fila' : '') + '</div>';
-    lista.forEach(c => {
-      const r = RECIPE_DEF[c.id];
-      const left = Math.max(0, c.endAt - nowMs());
-      const pct = Math.round((1 - left / (c.total || 1)) * 100);
-      head += '<div class="forge-row"><div class="fic">' + (r && r.sprite ? '<img src="' + GF.spr(r.sprite) + '" onerror="this.outerHTML=\'' + (r.emoji || "") + '\'">' : (r ? r.emoji : "")) + '</div>' +
-        '<div class="finfo"><div class="fnm">Cocinando ' + (r ? r.label : "") + '…</div><div class="durbar"><i style="width:' + pct + '%"></i></div>' +
-        '<div class="fds">' + fmtSecs(Math.ceil(left / 1000)) + ' restantes</div></div></div>';
-    });
-  }
-  /* 18/8: el recetario se lista POR NIVEL. RECIPE_ORDER trae primero las recetas de huerta y
-     después las de pescado y carne, que vuelven a empezar en el 1 — así la lista saltaba de "nivel
-     10" a "nivel 1" y parecía un error. El orden de la constante no se toca (otras partes cuentan
-     con él); solo se ordena lo que se dibuja. */
-  box.innerHTML = head + RECIPE_ORDER.slice().sort((a, b) => (RECIPE_DEF[a].lvl || 1) - (RECIPE_DEF[b].lvl || 1)).map(id => {
-   try {
-    const r = RECIPE_DEF[id];
-    const locked = r.lvl && lvl < r.lvl;
-    const parts = [];
-    if (r.fish) for (const k in r.fish) parts.push(fishIc(k) + " ×" + r.fish[k]);
-    if (r.res) for (const k in r.res) parts.push(resIc(k) + " ×" + r.res[k]);
-    const fic = r.sprite ? '<img src="' + GF.spr(r.sprite) + '" onerror="this.outerHTML=\'' + r.emoji + '\'">' : r.emoji;
-    const own = Math.floor((G.dishes && G.dishes[id]) || 0);
-    const vPlata = Math.round(dishPrice(r) * cookPot(r.lvl));
-    let btns = '<button class="green sm" ' + ((!locked && canCook(id) && cookFree() > 0) ? "" : "disabled") + ' data-cook="' + id + '">' + (locked ? "Nivel " + r.lvl : "Cocinar") + '</button>';
-    // el tiempo que se muestra tiene que ser el que de verdad va a tardar: la Cocina nivel 2
-    // descuenta un % y el panel prometía el tiempo sin descuento (10/8)
-    /* 9/9 (dirección): los platos no se venden por plata ni por $Golden — se comen o se entregan
-       en el tablón. Los botones se van con la puerta; la puerta la cierra sellDish. */
-    if (typeof DISH_VENTA_LIBRE !== "undefined" && DISH_VENTA_LIBRE) {
-      if (own > 0 && r.plata) btns += '<button class="sm" data-selld="' + id + '">Vender (' + own + ') · ' + vPlata + ' plata</button>';
-      if (own > 0 && r.goldenP && lvl >= 8) btns += '<button class="sm" data-sellg="' + id + '">Vender · ' + r.goldenP + ' $G</button>';
-    }
-    return '<div class="forge-row' + (locked ? ' locked' : '') + '"><div class="fic">' + fic + '</div><div class="finfo"><div class="fnm">' + r.label + (locked ? ' · se desbloquea a nivel ' + r.lvl : '') + '</div><div class="fds">' + dishDesc(r) + ' · cocción ' + fmtSecs(Math.round((r.cookS || 8) * (typeof cocinaFactor === "function" ? cocinaFactor() : 1))) + ' · +' + r.xp + ' XP</div><div class="fds">Ingredientes: ' + parts.join(" · ") + ((typeof DISH_VENTA_LIBRE !== "undefined" && DISH_VENTA_LIBRE && r.plata) ? ' · Venta: ' + vPlata + ' plata' + (r.goldenP ? ' o ' + r.goldenP + ' $Golden (Nv 8)' : '') : ' · se come o se entrega en el tablón') + '</div></div><div class="fbtns">' + btns + '</div></div>';
-   } catch (e) { console.warn("receta con problema:", id, e); return ""; }
-  }).join("");
-  box.querySelectorAll("[data-cook]").forEach(b => b.onclick = () => cook(b.dataset.cook));
-  box.querySelectorAll("[data-selld]").forEach(b => b.onclick = () => sellDish(b.dataset.selld, false));
-  box.querySelectorAll("[data-sellg]").forEach(b => b.onclick = () => sellDish(b.dataset.sellg, true));
+  /* 19/9: la rama vieja de la cocina (la lista `cook-list`) se quitó — ese elemento no existe en
+     el HTML desde que la ventana pasó a la cuadrícula `ck-grid`, así que eran 50 líneas que
+     nunca corrían. Queda el nombre por las cuatro llamadas que lo usan. */
+  return refreshCookingV2();
 }
 
 /* el ícono de una receta: su sprite, y si no hay arte, su emoji (como en toda la casa) */
@@ -4527,8 +4478,6 @@ function initUI() {
   { const b = $("entr-fin"); if (b) b.onclick = entrenarFin;
     const ov = $("ov-entrenando"); if (ov) ov.addEventListener("click", ev => { if (ev.target === ov) entrenarFin(); }); }
   // initOverlayDrag() reemplazado por initUniversalDrag(): ahora toda la ventana es agarrable, no solo el título
-  const lu = $("levelup"); if (lu) lu.onclick = levelUp;
-  const pr = $("prestige"); if (pr) pr.onclick = prestige;
   document.querySelectorAll(".curbtn").forEach(b => b.onclick = () => { marketCur = b.dataset.cur; refreshMarket(); });
   document.querySelectorAll(".lbtab").forEach(b => b.onclick = () => { lbTab = b.dataset.lb; refreshLb(); });
   document.querySelectorAll(".shoptab[data-shop]").forEach(b => b.onclick = () => {
@@ -4627,7 +4576,6 @@ function initUI() {
   // 18/8: desde la barra de edición se abre el Cobertizo, que es donde vive lo colocable
   { const eb2 = $("edit-cobertizo"); if (eb2) eb2.onclick = () => openOv("ov-cobertizo"); }
   const er = $("edit-reset"); if (er) er.onclick = doFarmReset;
-  const dc = $("dy-claim"); if (dc) dc.onclick = () => claimDaily();
   const sw = $("seedwheel"); if (sw) sw.onclick = hideSeedWheel;
   /* 14/9 — EL BOTÓN 🧪 MURIÓ, como decía docs/PORTERO-GUARDADO.md que pasaría el día que el
      portero saliera de sombra. Regalarse recursos es exactamente lo que el portero rechaza, así
@@ -4867,7 +4815,6 @@ async function refreshP2P() {
     const q = $("p2q-" + i), pr = $("p2p-" + i);
     const cant = kind === "arm" ? 1 : Math.max(1, +(q && q.value) || 1);
     // candado anti-exploit (12/8): el P2P tampoco deja sacar recursos que el objetivo activo pide
-    if (kind === "res" && typeof tutoGuardia === "function" && !tutoGuardia(key, cant, "publicar " + (RES_LABEL[key] || key))) return;
     await marketPublicar(kind, key, cant, Math.max(1, +(pr && pr.value) || 1));
     p2pCache = null; refreshP2P();
   });

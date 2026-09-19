@@ -34,7 +34,7 @@ const G = {
   states: [],                    // doc 2/8: estados/debuffs del bestiario sobre el jugador (no se guardan)
   tuto: { step: 0, n: 0, done: false, v: 2 },   // doc 2/8: tutorial guiado de micro-objetivos (v = versión de la cadena)
   firstSeeds: 3,                 // semillas del starter pack que crecen en 45 s (se descuentan al plantarlas)
-  armCd: {}, mkPend: [], testeoDado: false,   // enfriamiento de crafteo por arma · entregas pendientes · (testeoDado quedó del regalo viejo, ya no se usa)   // equipo (armas se equipan en el panel de Equipo — detalles jueves)
+  armCd: {}, mkPend: [],   // enfriamiento de crafteo por arma · entregas pendientes   // equipo (armas se equipan en el panel de Equipo — detalles jueves)
   res: { madera: 0, piedra: 0, bronce: 0, hierro: 0, oro: 0, diamante: 0, netherita: 0, carne: 0, flecha: 0, lombriz: 0, grillo: 0, cebo_vivo: 0, larva_luz: 0,
     tablon: 0, barra_piedra: 0, barra_bronce: 0, barra_hierro: 0, barra_oro: 0,
     papa: 0, ciruela: 0, cereza: 0, remolacha: 0, zanahoria: 0, cebolla: 0, calabacin: 0, repollo: 0, calabaza: 0, brocoli: 0, girasol: 0, trigo: 0, maiz: 0,
@@ -54,7 +54,6 @@ const G = {
      solo mientras estás de viaje. El morral plano de la mañana se jubiló: ver CONT_DEF. */
   conts: {}, cont: null,
   kitReclamado: false,
-  toolsLost: {},                 // herramientas tiradas a la papelera (31/7: el diseñador pidió que se puedan tirar)
   invRows: 0,                    // filas extra de inventario compradas
   slots: [],                     // inventario por casillas: [{kind,key}|null]
   hotbar: [null, null, null, null, null, null, null, null, null, null],  // 10 accesos directos
@@ -667,8 +666,6 @@ function buySeed(k, qty) {
   const cost = fiada ? 0 : cd.seedCost * qty;
   if (G.plata < cost) { toast("Te falta plata"); return; }
   if (fiada) toast("El Mercado te fía tu primera semilla del día 🌱");
-  if (typeof tutoPermite === "function" && !tutoPermite("buyseed")) { tutoAviso(); return; }   // embudo estricto (13/8)
-  if (typeof tutoGuardia === "function" && !tutoGuardia("plata", cost, "comprar " + cd.label, { semilla: k })) return;   // guardia del tutorial (12/8)
   G.plata -= cost; G.seeds[k] = (G.seeds[k] || 0) + qty;
   sb.count += qty;
   // 13/8: la semilla comprada vuelve a la barra rápida si no estaba (la agotada sale sola)
@@ -854,108 +851,17 @@ function tutoDesbloqueado(stepId) {
   return (G.tuto.step || 0) >= tutoIdx(stepId);
 }
 
-/* ============ EMBUDO ESTRICTO (13/8): en el arranque, SOLO lo que el objetivo pide ==
-   Playtest: durante "colocá el plano" se podía plantar, cosechar acelerado, vender,
-   talar y picar — puro grindeo fuera de guion. Lista blanca POR PASO para las acciones
-   del loop económico (plantar, vender, comprar semillas, talar, picar). Reglas fijas:
-   COSECHAR lo ya plantado y trabajar OBRAS se permiten siempre (no generan plata por
-   sí solos). Los pasos que no figuran en la tabla (combate en adelante) van libres:
-   ahí el juego ya es el juego. */
-// TODOS los pasos tienen su lista (13/8, pedido del usuario: estricto total). Cada
-// paso permite SU acción + las estrictamente necesarias para cumplirla (craftear
-// hachas cuando hay que talar porque se gastan; el loop entero cuando hay que juntar
-// plata; cocinar cuando el paso lo pide). Al terminar el tutorial, todo libre.
-var TUTO_PERMISOS = {
-  // 14/8 v2 (playtest: compró 1 semilla, la plantó, cosechó y quedó BLOQUEADO en "cosechá
-  // tus 3"): el cuarteto inicial permite el loop ENTERO — es la fase de enseñanza y las
-  // flechas guían el orden; los permisos no pueden exigir 3 papas y a la vez impedir
-  // producirlas. Además "harvest" pasó a estar SIEMPRE permitido (ver tutoPermite).
-  buyseed:     ["buyseed", "plant", "harvest"],
-  plant:       ["plant", "buyseed", "harvest"],
-  harvest:     ["harvest", "plant", "buyseed"],
-  sell:        ["sell", "harvest", "plant", "buyseed"],
-  place_store: ["obra"],
-  /* 20/8 (la jugada completa encontró la TRAMPA): los cuatro pasos de "juntá material" permitían
-     solo talar/picar/craftear — pero el hacha cuesta 2 DE PLATA y el pico también, y la plata del
-     jugador temprano sale de VENDER papas. Las 35 hachas del kit dan 35 maderas justas y el
-     tutorial pide ~40 entre obras y espada: quien llegaba corto quedaba encerrado (sin hacha, sin
-     plata y sin permiso para vender), con el kit de emergencia en $Golden como única salida.
-     Es EXACTAMENTE el rincón que craftarm arregló el 19/8; se le da la misma red: el bucle
-     completo de la plata (plantar, cosechar, comprar semilla, vender). */
-  wood_st:     ["chop", "crafttool", "cultivar", "plant", "harvest", "buyseed", "sell"],   // 14/8: cultivar más árboles = juntar en paralelo (anti-tedio)
-  stone_st:    ["mine", "crafttool", "plant", "harvest", "buyseed", "sell"],
-  build_store: ["obra"],
-  wood:        ["chop", "crafttool", "cultivar", "plant", "harvest", "buyseed", "sell"],
-  stone:       ["mine", "crafttool", "plant", "harvest", "buyseed", "sell"],
-  place_horno: ["obra"],
-  build_horno: ["obra"],
-  crafttool:   ["crafttool"],
-  woodc:       ["chop", "crafttool", "cultivar", "plant", "harvest", "buyseed", "sell"],
-  stonec:      ["mine", "crafttool", "plant", "harvest", "buyseed", "sell"],
-  place_cocina: ["obra"],
-  build_cocina: ["obra"],
-  cook:        ["cook", "plant", "harvest", "buyseed", "chop", "crafttool"],   // 14/8: red por si malgasta el kit de ingredientes
-  /* 19/8: le faltaba el bucle del cultivo. El razonamiento del 14/8 —"si vendió su único plato,
-     puede recocinar"— solo vale si le QUEDAN ingredientes: quien vendió el plato Y las papas se
-     quedaba sin nada que hacer, con dos gestos permitidos y ninguna forma de conseguir una papa.
-     Es un rincón raro, pero es exactamente el tipo de rincón que se lleva a un jugador nuevo. */
-  eat:         ["eat", "cook", "buyseed", "plant", "harvest", "sell", "chop", "mine", "cultivar"],
-  unlockarm:   ["unlockarm", "chop", "mine", "crafttool", "repair"],   // 14/8: el desbloqueo pide 20 madera + 20 piedra — se juntan acá (la plata llega de adelanto)
-  /* 19/8: estos dos pasos llegan justo después de construir el Horno, y forjar pide 5 de madera que
-     puede que el jugador no tenga. Si el permiso fuera solo "craftarm", quedaría encerrado sin
-     poder talar para conseguirla. Se abren los gestos de juntar y el bucle de la plata. */
-  craftarm:    ["craftarm", "chop", "mine", "crafttool", "cultivar", "plant", "harvest", "buyseed", "sell"],
-  equiparm:    ["equiparm", "craftarm", "chop", "plant", "harvest", "buyseed", "sell"],
-  /* 19/8: el portal es ahora el ÚLTIMO paso del tutorial, así que su permiso no puede ser una
-     jaula. Con ["portal","cook","eat"] el jugador terminaba el tutorial sin poder plantar ni talar
-     hasta entrar a pelear — justo al revés de lo que queremos: entrar tiene que ser una invitación,
-     no un peaje. Se abre el juego entero. */
-  portal:      ["portal", "cook", "eat", "chop", "mine", "cultivar", "plant", "harvest", "buyseed", "sell", "crafttool", "craftarm", "equiparm", "fish", "obra"],
-  /* 19/8: "cazá 3 bichos" es el último paso del tutorial. Si su permiso fuera solo pelear, el
-     jugador que muere o se queda sin estamina no podría ni plantar mientras se repone. */
-  kill:        ["portal", "cook", "eat", "crafttool", "craftarm", "equiparm", "chop", "mine", "cultivar", "plant", "harvest", "buyseed", "sell", "fish", "obra"],
-  /* Los dos pasos que cierran el tutorial dejan el juego entero abierto: cazar depende del azar del
-     botín y de la estamina, así que el jugador tiene que poder seguir con su granja mientras. */
-  hunt:        ["portal", "cook", "eat", "chop", "mine", "cultivar", "plant", "harvest", "buyseed", "sell", "fish", "obra", "crafttool", "craftarm", "equiparm"],
-  estofado:    ["cook", "eat", "portal", "chop", "mine", "cultivar", "plant", "harvest", "buyseed", "sell", "fish", "obra"],
-  /* La expansión pide madera y piedra, así que el paso TIENE que dejar talar y picar; y los dos
-     siguientes son gestos de un clic que no deben cerrar nada. */
-  expandir:    ["expandir", "chop", "mine", "cultivar", "plant", "harvest", "buyseed", "sell", "cook", "eat", "fish", "portal", "obra", "crafttool"],
-  editar:      ["editar", "regalo", "chop", "mine", "cultivar", "plant", "harvest", "buyseed", "sell", "cook", "eat", "fish", "portal", "obra"],
-  kill5:       ["portal", "cook", "eat", "crafttool", "craftarm"],
-  /* 19/8: pescar necesita comprar carnada, así que el paso TIENE que dejar comprar y vender; y el
-     tablón pide entregar algo que quizá haya que cultivar o talar primero. Los dos son los últimos
-     pasos del tutorial: encerrar la granja acá no tendría ningún sentido. */
-  excavar:     ["excavar", "fish", "buyseed", "sell", "plant", "harvest", "chop", "mine", "cultivar", "cook", "eat", "obra", "portal"],
-  fish:        ["fish", "excavar", "crafttool", "eat", "buyseed", "sell", "plant", "harvest", "chop", "mine", "cultivar", "cook", "obra", "portal"],
-  pedido:      ["pedido", "sell", "buyseed", "plant", "harvest", "chop", "mine", "cultivar", "cook", "eat", "fish", "obra", "portal"],
-  // Fixes.docx 14/8 #2: la cadena del Altar cruza media economía (oro → Pico de Oro →
-  // bronce → barras → Horno…), así que sus 4 pasos dejan el loop ENTERO abierto
-  place_altar: ["obra", "chop", "mine", "sell", "plant", "harvest", "buyseed", "crafttool", "craftpick", "mat", "plotunlock"],
-  stone_al:    ["mine", "crafttool", "craftpick", "mat", "sell", "plant", "harvest", "buyseed", "cultivar"],
-  wood_al:     ["chop", "crafttool", "craftpick", "mat", "sell", "plant", "harvest", "buyseed", "cultivar"],
-  build_altar: ["obra", "chop", "mine", "sell", "plant", "harvest", "buyseed", "crafttool", "craftpick", "mat", "plotunlock"],
-  upgrade:     ["altar", "eat"],
-  mat:         ["mat", "chop", "mine", "crafttool"],
-  craftpick:   ["craftpick", "mat", "chop", "mine", "crafttool"],   // el pico pide barras del horno
-  mineore:     ["mine", "craftpick", "crafttool"],
-  dummy:       ["dummy", "eat"],
-  unlocknode:  ["chop", "mine", "cultivar", "crafttool"],
-  chest:       ["chest", "chop", "crafttool"],   // el cofre pide madera
-  invexp:      ["invexp", "sell", "plant", "harvest", "buyseed", "chop", "mine", "crafttool"],   // ampliar pide plata/minerales
-  passclaim:   ["passclaim"],
-  socket:      ["altar", "eat"],
-};
-/* 14/8 (dirección, decisión final): los objetivos son una GUÍA OPCIONAL — no restringen
-   NADA. El jugador los sigue cuando quiere o los ignora y juega como quiera. tutoPermite
-   queda como función (hay ~13 llamadas repartidas) pero siempre dice que sí; la tabla
-   TUTO_PERMISOS se conserva como documentación de qué acción enseña cada paso. */
-function tutoPermite(tag) { return true; }
-function tutoAviso() {
-  const sub = (typeof tutoSub === "function") ? tutoSub() : null;
-  const st = tutoActivo();
-  toast("🎯 Ahora toca: " + (sub ? sub.txt : (st ? tutoTxt(st) : "el objetivo")));
-}
+/* ============ EL EMBUDO DEL TUTORIAL, QUE YA NO EXISTE (13/8 → 14/8 → 19/9) ================
+   El 13/8 hubo un "embudo estricto": una lista blanca por paso (TUTO_PERMISOS) que cerraba
+   todo lo que el objetivo activo no pedía, más un "guardia" que impedía gastar lo que el
+   objetivo iba a necesitar. El 14/8 dirección lo dio de baja — « los objetivos son una GUÍA
+   OPCIONAL, no restringen NADA » — y quedó apagado: cinco funciones que devolvían `true`,
+   una tabla de ochenta líneas "como documentación" y veinte llamadas repartidas por el
+   juego preguntando algo cuya respuesta era siempre sí.
+   El 19/9 se quitó entero. Un sistema apagado con el cableado puesto no es documentación:
+   es una tentación de reenchufarlo sin volver a tomar la decisión, y una lectura más lenta
+   para todo el que pase por acá. Si algún día vuelve a hacer falta un embudo, que sea con la
+   decisión tomada de nuevo mirando el playtest, no rescatando esto de un commit. */
 /* 13/8 v3 (playtest cocina): "juntá 20 de madera" con CERO hachas no llevaba a ningún lado.
    El tutorial ahora detecta si podés cumplir el paso activo y, si no, antepone un
    SUB-OBJETIVO con su propia guía (cartel + flechas + permisos):
@@ -1338,8 +1244,6 @@ function craftMat(id) {
   const md = MAT_DEF[id]; if (!md) { console.warn("[craftMat] material inexistente:", id); return; }
   if (hornoLibres() <= 0) { toast("El horno está lleno (" + hornoSlots() + " al fuego)"); return; }
   if (!canAfford(md.cost)) { toast("Te faltan materiales"); return; }
-  if (typeof tutoPermite === "function" && !tutoPermite("mat")) { tutoAviso(); return; }   // embudo estricto (13/8)
-  if (typeof tutoGuardiaCosto === "function" && !tutoGuardiaCosto(md.cost, 0, "fundir " + md.label)) return;   // guardia del tutorial (12/8)
   payCost(md.cost);
   /* 27/8 (diseñador) — EL HORNO FUNDE DE A UNO, igual que la Cocina desde el 26/8.
      « el horno de piedra craftea simultáneo, debe hacerse como en la cocina: crear el primero y
@@ -2664,7 +2568,6 @@ function regaloColocar(tipo, col, row) {
      aparecer un nodo daba pantalla negra y te reseteaba la cámara. */
   return true;
 }
-function levelUp() { toast("El nivel sube cosechando (XP de Farmeo)"); }
 function prestige() {
   if (G.level < FARM_NIVEL_MAX) { toast("Llegá a nivel " + FARM_NIVEL_MAX); return; }
   G.prestige++; G.level = 1;
@@ -2828,8 +2731,6 @@ function pickCount(id) { return G.picks.owned[id] ? Math.max(0, Math.floor(G.pic
 function craftPick(id) {
   const pd = PICK_DEF[id]; if (!pd) { console.warn("[craftPick] pico inexistente:", id); return; }
   if (pickCount(id) >= 99) { toast("Máximo 99 " + pd.label); return; }
-  if (typeof tutoPermite === "function" && !tutoPermite("craftpick")) { tutoAviso(); return; }   // embudo estricto (13/8)
-  if (typeof tutoGuardiaCosto === "function" && !tutoGuardiaCosto(pd.cost, pd.plata, "craftear " + pd.label)) return;   // guardia del tutorial (12/8)
   if (!canAfford(pd.cost)) { toast("Te faltan materiales"); return; }
   if (pd.plata && G.plata < pd.plata) { toast("Te falta plata"); return; }
   payCost(pd.cost); if (pd.plata) G.plata -= pd.plata;
@@ -3075,59 +2976,6 @@ function tutoTxt(st) {
   return t;
 }
 
-/* ============ GUARDIA DEL TUTORIAL (12/8): que nadie se rompa la cadena =============
-   El jugador puede pasear tranquilo, pero NO fundirse lo que el objetivo ACTIVO
-   necesita (pasó en pruebas: vender las papas y gastarse la plata en otra cosa dejaba
-   la cadena trabada). No bloquea el juego entero: frena SOLO el gasto que haría
-   imposible el objetivo de ahora, con un aviso 🎯 que devuelve al camino.
-   Excepción clave: comprar SEMILLAS nunca se bloquea por plata — son el motor del
-   loop que genera la plata que el objetivo pide. */
-/* 14/8 (misma decisión): sin embudo, el guardia también se retira — reservar recursos era
-   parte del tutor obligatorio. Queda el cuerpo por si dirección quiere reactivarlo. */
-function tutoGuardia(res, n, motivo, extra) { return true; }
-function _tutoGuardiaViejo(res, n, motivo, extra) {
-  const st = (typeof tutoActivo === "function") ? tutoActivo() : null;
-  if (!st || !n) return true;
-  const nombre = r => r === "plata" ? "plata" : (RES_LABEL[r] || r);
-  // 1) paso "juntá X de tal cosa": el gasto no puede bajarte de la meta
-  if (st.res === res && !(res === "plata" && extra && extra.semilla)) {
-    const need = tutoNeed(st);
-    if (tutoTiene(st) - n < need) { toast("🎯 Objetivo: juntar " + need + " de " + nombre(res) + " — " + (motivo || "ese gasto") + " puede esperar"); return false; }
-  }
-  // 2) paso "comprá semillas de papa": esa plata está reservada (comprar papa SÍ vale)
-  if (st.id === "buyseed" && res === "plata" && !(extra && extra.semilla === "papa")) {
-    const precio = (CROP_DEF.papa && CROP_DEF.papa.seedCost) || 1;
-    if (G.plata - n < precio) { toast("🎯 Guardá esa plata para las semillas de papa del objetivo"); return false; }
-  }
-  // 4) COLCHÓN anti-cero-absoluto (14/8): con nada plantado, sin semillas y sin cosecha,
-  //    gastar la última plata te deja sin NINGUNA palanca económica (softlock detectado en
-  //    simulación). La semilla en sí está exenta: comprarla ES la salida.
-  if (res === "plata" && !(extra && extra.semilla)) {
-    const min = (CROP_DEF.papa && CROP_DEF.papa.seedCost) || 1;
-    const tieneAlgo = Object.keys(CROP_DEF).some(k => (G.res[k] || 0) > 0)
-      || Object.keys(G.seeds || {}).some(k => (G.seeds[k] || 0) > 0)
-      || (Array.isArray(G.plots) && G.plots.some(p => p && (p.state === "growing" || p.state === "ready")));
-    if (!tieneAlgo && G.plata - n < min) { toast("🎯 Guardá al menos " + min + " de plata para semillas"); return false; }
-  }
-  // 3) pasos "colocá el plano", "construí X" y también los "juntá" de esa obra (st.dep):
-  //    lo que la obra todavía espera queda reservado — ni reparaciones ni crafteos lo comen
-  if (st.id && (st.id.indexOf("build_") === 0 || st.id.indexOf("place_") === 0 || st.dep)) {
-    const t = st.dep || st.id.slice(6), b = BUILD_DEF[t];
-    if (b && b.cost[res]) {
-      const pend = (typeof obraDe === "function" && obraDe(t) && typeof obraFalta === "function")
-        ? ((obraFalta(t).find(x => x[0] === res) || [0, 0])[1]) : b.cost[res];
-      if (Math.floor(G.res[res] || 0) - n < pend) { toast("🎯 Esa " + nombre(res) + " está reservada para " + b.label + " — terminá esa obra primero"); return false; }
-    }
-  }
-  return true;
-}
-// versión para recetas enteras: chequea cada material + la plata de una
-function tutoGuardiaCosto(cost, plata, motivo) {
-  if (typeof tutoGuardia !== "function") return true;
-  for (const k in (cost || {})) if (!tutoGuardia(k, cost[k], motivo)) return false;
-  if (plata && !tutoGuardia("plata", plata, motivo)) return false;
-  return true;
-}
 
 /* ============ ACELERADOR DEL TUTORIAL (12/8): el objetivo no te hace esperar ========
    Mientras el objetivo ACTIVO necesita un timer, ESE timer corre acelerado — y solo
@@ -3699,7 +3547,7 @@ function passClaim(nv, vipTrack) {
   if (r.dish) { G.dishes = G.dishes || {}; G.dishes[r.dish[0]] = (G.dishes[r.dish[0]] || 0) + r.dish[1]; }
   if (r.pick) { G.picks.owned[r.pick] = true; G.picks.dur[r.pick] = (G.picks.dur[r.pick] || 0) + 1; }
   /* 20/8: G.plotsFicha — la contabilidad de parcelas necesita saber de dónde salió cada una */
-  if (r.ficha) { G.plotsOwned = Math.min(PLOT_MAX, (G.plotsOwned || 2) + 1); G.plotsFicha = (G.plotsFicha || 0) + 1; if (window.farmScene && window.farmScene.refreshPlotLocks)   /* 18/8: la guardia "<= GF.PLOTS.length" era parte del fallo de las parcelas 13+ */ { try { window.farmScene.refreshPlotLocks(); } catch (e) {} } if (typeof syncEditDeco === "function") syncEditDeco(); }
+  if (r.ficha) { G.plotsOwned = Math.min(PLOT_MAX, (G.plotsOwned || 3) + 1); G.plotsFicha = (G.plotsFicha || 0) + 1; if (window.farmScene && window.farmScene.refreshPlotLocks)   /* 18/8: la guardia "<= GF.PLOTS.length" era parte del fallo de las parcelas 13+ */ { try { window.farmScene.refreshPlotLocks(); } catch (e) {} } if (typeof syncEditDeco === "function") syncEditDeco(); }
   if (r.cos) { p.cosmetics.push(r.cos); }
   log("Pase nivel " + nv + (vipTrack ? " (VIP)" : "") + ": recibiste " + passRewardStr(r) + ".", "gold");
   if (typeof tutoEvent === "function") tutoEvent("passclaim");
@@ -4122,7 +3970,6 @@ function comprarDeco(id) {
   if (G.tuto && !G.tuto.done) { toast("🎯 Los adornos se abren al terminar el tutorial — seguí el objetivo de arriba"); return; }   // embudo (13/8)
   if (d.plata && G.plata < d.plata) { toast("Te falta plata (" + fmt(d.plata) + ")"); return; }
   if (d.golden && G.golden < d.golden) { toast("Te falta $Golden (" + d.golden + ")"); return; }
-  if (d.plata && typeof tutoGuardia === "function" && !tutoGuardia("plata", d.plata, "comprar adornos")) return;   // guardia del tutorial (12/8)
   if (d.plata) G.plata -= d.plata;
   if (d.golden) G.golden -= d.golden;
   G.decoBolsa = G.decoBolsa || {};
@@ -4166,7 +4013,7 @@ var GOLDEN_EN_PLATA = 500;
 var PLOT_MAX = 60;
 // fix #17 del diseñador (11/8): la parcela comprada NO se tira sola al suelo — queda
 // "pendiente" (plotsOwned > GF.PLOTS.length) y se coloca con clic desde el modo edición.
-function parcelasPendientes() { return Math.max(0, (G.plotsOwned || 2) - GF.PLOTS.length); }
+function parcelasPendientes() { return Math.max(0, (G.plotsOwned || 3) - GF.PLOTS.length); }
 function parcelaColocar(col, row) {   // la llama la escena con la celda que eligió el jugador
   if (parcelasPendientes() <= 0) return false;
   G.layoutPlots = G.layoutPlots || {};
@@ -4176,16 +4023,15 @@ function parcelaColocar(col, row) {   // la llama la escena con la celda que eli
   return true;   // 18/8: sin telón — la escena la dibuja en vivo (colocarRegaloEnVivo)
 }
 function comprarParcela() {
-  if ((G.plotsOwned || 2) >= PLOT_MAX) { toast("Ya tenés las " + PLOT_MAX + " parcelas"); return; }
+  if ((G.plotsOwned || 3) >= PLOT_MAX) { toast("Ya tenés las " + PLOT_MAX + " parcelas"); return; }
   if (G.tuto && !G.tuto.done) { toast("🎯 Durante el tutorial alcanzan las parcelas que tenés — seguí el objetivo"); return; }   // embudo (13/8)
   {
     const c = plotUnlockCost();
     if (G.plata < c) { toast("Te falta plata (" + fmt(c) + ")"); return; }
-    if (typeof tutoGuardia === "function" && !tutoGuardia("plata", c, "comprar parcelas")) return;   // guardia del tutorial (12/8)
     G.plata -= c;
   }
   G.plotsCompradas = (G.plotsCompradas || 0) + 1;   // el precio de la próxima sube por ESTA compra, no por las expansiones
-  G.plotsOwned = Math.min(PLOT_MAX, (G.plotsOwned || 2) + 1);
+  G.plotsOwned = Math.min(PLOT_MAX, (G.plotsOwned || 3) + 1);
   log("Desbloqueaste una parcela nueva. Ahora tenés " + G.plotsOwned + ".", "gold");
   if (G.plotsOwned > GF.PLOTS.length) {   // la 13 en adelante: se coloca a mano (#17)
     toast("¡Parcela nueva! Está en tu zona de edición: ✏️ ponela donde quieras");
@@ -4256,7 +4102,7 @@ function godHandSembrar(msAusente) {
   if (!tengoGodHand() || !Array.isArray(G.plots)) return 0;
   const inv = godHandInv();
   if (!godHandTotal()) return 0;
-  const owned = Math.max(2, Math.min(GF.PLOTS.length, G.plotsOwned || 2));
+  const owned = Math.max(2, Math.min(GF.PLOTS.length, G.plotsOwned || 3));
   const libres = [];
   for (let i = 0; i < owned; i++) { const p = G.plots[i]; if (!p || p.state === "dry") libres.push(i); }
   if (!libres.length) return 0;
@@ -6065,8 +5911,6 @@ var ARMA_ENTRADA = "espada_madera";
 function craftWeapon(id) {
   const w = ARM_DEF[id]; if (!w) return;
   if (!G.armasUnlocked && id !== ARMA_ENTRADA) { toast("Desbloqueá la sección de Armas primero"); return; }
-  if (typeof tutoPermite === "function" && !tutoPermite("craftarm")) { tutoAviso(); return; }   // embudo estricto (13/8)
-  if (typeof tutoGuardiaCosto === "function" && !tutoGuardiaCosto(w.cost, w.plata, "forjar " + w.label)) return;   // guardia del tutorial (12/8)
   if (G.weapons[id]) { toast("Ya tenés " + w.label); return; }
   /* 9/9 — ACÁ HABÍA PUESTO UNA PUERTA DE NIVEL DE OFICIO, Y LA SAQUÉ DESPUÉS DE MEDIRLA.
      La idea era buena y el hueco es real (ver oficiosSinContenido): Espada, Hacha, Mazo y Arco
@@ -6617,7 +6461,6 @@ function cocinaRecoger() {
 
 function cook(id) {
   const r = RECIPE_DEF[id]; if (!r) { console.warn("[cook] receta inexistente:", id); return; }
-  if (typeof tutoPermite === "function" && !tutoPermite("cook")) { tutoAviso(); return; }   // embudo estricto (13/8)
   if (cookFree() <= 0) { toast("Las " + cookSlots() + " ollas están ocupadas"); return; }
   if (!canCook(id)) { toast("Te faltan ingredientes"); return; }
   if (!roomForDish(id)) { bagFull("cocinar " + r.label); return; }
@@ -6749,7 +6592,6 @@ function sellDish(id, gold) {
   if (!G.dishes || (G.dishes[id] || 0) <= 0) { toast("No te queda ningún " + r.label); return; }
   // 14/8 (playtest: vendió la Papa Asada en pleno "comé un plato" y quedó trabado):
   // vender platos también pasa por el embudo — es una VENTA como cualquier otra
-  if (typeof tutoPermite === "function" && !tutoPermite("sell")) { tutoAviso(); return; }
   if (gold && !(r.goldenP && cookLevel() >= 8)) { toast("La venta en $Golden se desbloquea con Cocina nivel 8"); return; }
   G.dishes[id]--;
   if (gold) {
@@ -7059,8 +6901,6 @@ const TOOL_CRAFT = { axe: { cost:{}, plata:2 } };   // 18/8: el hacha baja a 2 c
 function craftTool(id, lote) {
   lote = Math.max(1, lote || 1);
   const tc = TOOL_CRAFT[id], td = TOOL_DEF[id]; if (!tc || !td) { console.warn("[craftTool] herramienta inexistente:", id); return; }
-  if (typeof tutoPermite === "function" && !tutoPermite("crafttool")) { tutoAviso(); return; }   // embudo estricto (13/8)
-  if (typeof tutoGuardiaCosto === "function" && !tutoGuardiaCosto(tc.cost, tc.plata, "craftear " + td.label)) return;   // guardia del tutorial (12/8)
   if (lote > 1) {   // doc 2/8: crafteo en lote — la fricción es económica, no de clicks
     let hechas = 0;
     while (hechas < lote && toolCount(id) < 99 && canAfford(tc.cost) && G.plata >= tc.plata) { payCost(tc.cost); G.plata -= tc.plata; G.tools[id] = toolCount(id) + 1; hechas++; }
@@ -7096,8 +6936,8 @@ function nextInvCost() {
 function expandInv() {
   const nc = nextInvCost();
   if (!nc) { toast("Bolsa al máximo"); return; }
-  if (nc.type === "res") { if (!canAfford(nc.cost)) { toast("Te faltan minerales"); return; } if (typeof tutoGuardiaCosto === "function" && !tutoGuardiaCosto(nc.cost, 0, "ampliar la bolsa")) return; payCost(nc.cost); }
-  else { if (G.plata < nc.cost) { toast("Te falta plata"); return; } if (typeof tutoGuardia === "function" && !tutoGuardia("plata", nc.cost, "ampliar la bolsa")) return; G.plata -= nc.cost; }
+  if (nc.type === "res") { if (!canAfford(nc.cost)) { toast("Te faltan minerales"); return; } payCost(nc.cost); }
+  else { if (G.plata < nc.cost) { toast("Te falta plata"); return; } G.plata -= nc.cost; }
   G.invRows = (G.invRows || 0) + 1;
   log("Ampliaste la bolsa (+5 espacios).", "good"); toast("+5 espacios");
   if (typeof tutoEvent === "function") tutoEvent("invexp");
@@ -7710,8 +7550,6 @@ function sellItem(res) {
   if (q <= 0) { toast("Poné una cantidad"); return; }
   // candado anti-exploit (12/8): durante un "juntá X" no se puede VENDER ese recurso por
   // debajo de la meta — si no, vender para quedar en 9/10 mantenía el boost vivo infinito
-  if (typeof tutoGuardia === "function" && !tutoGuardia(res, q, "vender " + (RES_LABEL[res] || res))) return;
-  if (typeof tutoPermite === "function" && !tutoPermite("sell")) { tutoAviso(); return; }   // embudo estricto (13/8)
   if (marketCur === "plata") { const t=totalVenta(res,q); G.plata+=t; G.res[res]-=q; log(`Vendiste ${q} ${RES_LABEL[res]} por ${t} de plata.`); toast("+"+t+" plata"); }
   else { const g=Math.floor(totalVenta(res,q)/GOLDEN_EN_PLATA); if (g<1){ toast("Muy poca cantidad para $Golden"); return; } G.res[res]-=q; G.golden+=g; log(`Vendiste ${q} ${RES_LABEL[res]} por ${g} $Golden.`,"gold"); toast("+"+g+" $Golden"); }
   if (window.sfx) sfx("coin");
@@ -11055,7 +10893,6 @@ function dailyState() {
   const dia = (dd.day >= 7 || dd.day < 1) ? 1 : dd.day + 1;
   return { claimable: true, day: dia, lost: false };
 }
-const STREAK_RECOVER_COST = 0;   // legado: ya no hay racha que perder ni que recuperar
 // KIT DE BIENVENIDA (15/8): se entrega al abrir el BAÚL por primera vez
 /* 8/9 (tarde) — LA CAÑA DE JUNCO ENTRA AL KIT. Estaba replicada en tres fallbacks (save.js al
    hidratar, pescaV4Cana() como último recurso y pezPedible con un `||`) y en ninguno de ellos

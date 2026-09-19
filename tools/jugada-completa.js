@@ -287,7 +287,7 @@ invariantes("kit");
         /* ¿es LA TRAMPA (el paso no deja vender) o solo falta farmear otra vuelta? Se mira el
            permiso real del paso, no el bolsillo del momento. */
         const stepId = (TUTO[G.tuto.step] || {}).id;
-        const perms = (!G.tuto.done && vm.runInContext("TUTO_PERMISOS", ctx)[stepId]) || null;
+        const perms = null;   // 19/9: el embudo (TUTO_PERMISOS) ya no existe; no hay paso que prohíba vender
         if (perms && !perms.includes("sell")) {
           if (!trampaAvisada) {
             trampaAvisada = true;
@@ -383,6 +383,12 @@ invariantes("kit");
         if (!(G.weapons || {}).espada_madera) falla("craftWeapon(espada_madera) no forjó ni con plata  avisos: " + avisos.join(" · "));
       }
       else if (st.id === "equiparm") { G.gear.arma = "espada_madera"; ctx.tutoEvent("equiparm"); }   // el gesto del panel de Equipo
+      /* 19/9: los tres pasos nuevos de la cadena (muñeco, incursión, Lonja). El bot hace el gesto
+         real del juego, no dispara el evento a mano: si la función de verdad no lo dispara, que
+         este simulador lo diga. */
+      else if (st.id === "dummy") { avisos.length = 0; ctx.dummyIniciar(); if (G.dummyTrain) { G.dummyTrain = null; ctx.closeOv && ctx.closeOv("ov-entrenando"); } if (!G.dummyUsedAt) falla("el muñeco no dejó rastro  avisos: " + avisos.join(" · ")); }
+      else if (st.id === "incursion") { avisos.length = 0; ctx.incSalir("zn1"); if (!ctx.statGet("incursion")) falla("la incursión no salió  avisos: " + avisos.join(" · ")); else { avanzar(60 * 24); ctx.incTick && ctx.incTick(); } }
+      else if (st.id === "lonja") { avisos.length = 0; if (!Object.keys(G.fish || {}).length) { if (!pescar()) { avanzar(16); pescar(); } } const k = Object.keys(G.fish || {}).find(q => Math.floor(G.fish[q]) >= 1); if (k) ctx.pezVender(k, 1); else { ctx.pezGuardar("mojarra", 0.3); ctx.pezVender(Object.keys(G.fish)[0], 1); anota("(un pez simulado para la Lonja: la pesca de este bot no tenía ninguno entero)"); } if (!ctx.statGet("lonja")) falla("vender en la Lonja no dejó rastro  avisos: " + avisos.join(" · ")); }
       else if (st.id === "cook") { cultivarPapas(2); avisos.length = 0; ctx.cook("papa_asada"); avanzar(30); ctx.checkCooking(); ctx.cocinaRecoger(); /* 27/8: el plato espera en la olla — recoger da XP y paso */ if (!(G.skills.cooking > 0)) { falla("cocinar la Papa Asada no dio XP de cocina  avisos: " + avisos.join(" · "));
           console.log("      [sonda] papa=" + (G.res.papa||0) + " seeds=" + (G.seeds.papa||0) + " plata=" + G.plata + " secas=" + parcelasSecas().length + " listas=" + parcelasListas().length + " estados=" + esc.plots.map(x=>x.state).join(",") + " stacks=" + ctx.canonicalStacks().length + "/" + ctx.invSlots() + " ollas=" + JSON.stringify(ctx.cookList())); } }
       else if (st.id === "eat") { if (!((G.dishes || {}).papa_asada > 0)) { cultivarPapas(2); ctx.cook("papa_asada"); avanzar(30); ctx.checkCooking(); ctx.cocinaRecoger(); } avisos.length = 0; ctx.eatDish("papa_asada"); }

@@ -15,7 +15,7 @@ const SRC = fs.readFileSync("public/game/state.js", "utf8");
 const ctx = { console: { log() {}, warn() {} }, Math, Date, JSON, Object, Array, Number, String, Boolean, Set, Map, isNaN, parseInt, parseFloat };
 ctx.window = ctx; ctx.globalThis = ctx; ctx.setTimeout = () => 0; vm.createContext(ctx);
 vm.runInContext(fs.readFileSync("public/game/config.js", "utf8"), ctx);
-vm.runInContext(SRC + "\n;this.X={TUTO_STEPS,TUTO_CAPS,TUTO_PERMISOS,PLANO_PASO,KIT_INICIAL,BUILD_DEF," +
+vm.runInContext(SRC + "\n;this.X={TUTO_STEPS,TUTO_CAPS,PLANO_PASO,KIT_INICIAL,BUILD_DEF," +
   "ARM_DEF,ARMA_ENTRADA,RECIPE_DEF,EXCAV_POR_DIA,CD,CROP_DEF};", ctx);
 const X = ctx.X, G = ctx.G;
 let fallos = 0;
@@ -52,12 +52,10 @@ console.log("\nNINGÚN PASO ENCIERRA LA GRANJA");
      Lo que hay que vigilar es la FUNCIÓN, no la tabla: si alguien vuelve a enchufar el embudo,
      el juego pasa a bloquear talar mientras crece la papa y ahí sí hay un problema.
      La comprobación fina de cada paso vive ahora en test-tutorial-paralelo.js. */
-  ok("los objetivos siguen siendo una guía y no un embudo",
-    /function tutoPermite\(tag\) \{ return true; \}/.test(SRC),
-    "tutoPermite no bloquea ningún gesto");
-  ok("y la tabla sigue documentando qué enseña cada paso",
-    Object.keys(X.TUTO_PERMISOS).length >= X.TUTO_STEPS.length - 5,
-    Object.keys(X.TUTO_PERMISOS).length + " entradas para " + X.TUTO_STEPS.length + " pasos");
+  /* 19/9: el embudo se quitó entero (función, tabla y las veinte llamadas). Ya no hay nada que
+     « devuelva true »: no hay pregunta. */
+  ok("los objetivos siguen siendo una guía y no un embudo", !/tutoPermite\(/.test(SRC) && !/TUTO_PERMISOS/.test(SRC.replace(/\/\*[\s\S]*?\*\//g, "")),
+    "no queda ninguna pregunta de permiso en el código");
 }
 
 console.log("\nLA CADENA NO SE REPITE NI RETROCEDE");

@@ -14,7 +14,7 @@ ctx.window = ctx; ctx.globalThis = ctx; ctx.setTimeout = () => 0; vm.createConte
 vm.runInContext(fs.readFileSync("public/game/config.js", "utf8"), ctx);
 vm.runInContext(fs.readFileSync("public/game/state.js", "utf8") +
   "\n;this.X={ARM_DEF,ARM_ORDER,ARMA_ENTRADA,ARMAS_UNLOCK_COST,ARMAS_UNLOCK_PLATA,TUTO_STEPS,TUTO_CAPS," +
-  "TUTO_PERMISOS,KIT_INICIAL,CROP_DEF,CD,STAM_BASE,STAM_REGEN_SEG,STAM_COSTO,RECIPE_DEF,COOK_LVLS,EXPANSION_COSTO};", ctx);
+  "KIT_INICIAL,CROP_DEF,CD,STAM_BASE,STAM_REGEN_SEG,STAM_COSTO,RECIPE_DEF,COOK_LVLS,EXPANSION_COSTO};", ctx);
 ["isOpen", "refreshInv", "syncSlots", "toast", "log", "refreshHud", "saveFarm", "celebrate", "sfx",
  "refreshForge", "refreshEquip", "applyCombatHp", "tutoRefresh", "tutoAviso",
  "reiniciarGranjaSuave", "syncCobertizo", "refreshDeco"].forEach(f => { if (typeof ctx[f] !== "function") ctx[f] = () => {}; });
@@ -82,18 +82,15 @@ console.log("\nEL TUTORIAL ENSEÑA LOS DOS GESTOS QUE HABÍA QUE ADIVINAR");
     X.TUTO_CAPS.map(c => c.label).join(" · "));
 }
 
-console.log("\nNINGÚN PASO NUEVO DEJA AL JUGADOR ENCERRADO");
+console.log("\nNINGÚN PASO DEJA AL JUGADOR ENCERRADO   (19/9: el embudo ya no existe)");
 {
-  /* El embudo del tutorial permite SOLO lo que el paso activo necesita. Si "forjá la espada" no
-     dejara talar, quien llegue sin 5 de madera se queda sin salida — y el paso viene justo después
-     de construir el Horno, que se lleva toda la madera. */
-  ["craftarm", "equiparm", "portal", "hunt", "estofado"].forEach(id => {
-    const p = X.TUTO_PERMISOS[id] || [];
-    ok("el paso " + id + " deja seguir jugando", p.includes("chop") || p.includes("plant"),
-      p.length + " gestos permitidos");
-  });
-  ok("el último paso no encierra la granja", (X.TUTO_PERMISOS.portal || []).length >= 8,
-    "entrar a pelear es una invitación, no un peaje");
+  /* este bloque leía TUTO_PERMISOS para ver que cada paso « dejara seguir jugando ». Esa tabla
+     era un embudo apagado desde el 14/8, y el 19/9 se quitó entero: no hay permisos, así que no
+     hay paso que pueda encerrar a nadie. Lo que se custodia ahora es que no vuelva. */
+  const SRC = require("fs").readFileSync("public/game/state.js", "utf8");
+  ok("no existe ninguna tabla de permisos por paso", !/var TUTO_PERMISOS/.test(SRC));
+  ok("ni una función que pregunte permiso antes de un gesto", !/function tutoPermite/.test(SRC) && !/tutoPermite\(/.test(SRC));
+  ok("ni un guardia que reserve recursos para el objetivo", !/function tutoGuardia/.test(SRC) && !/tutoGuardia\w*\(/.test(SRC));
 }
 
 console.log("\nCADA FUENTE DE COMIDA TIENE SU RECETA DE NIVEL 1");
@@ -177,10 +174,6 @@ console.log("\nEL CAMINO DE CRECIMIENTO, QUE ERA EL ÚNICO SIN ENSEÑAR");
     "bloque " + b.c0 + "," + b.r0 + " → " + b.c1 + "," + b.r1);
   ok("el capítulo existe", X.TUTO_CAPS.some(c2 => c2.pasos.includes("expandir")),
     X.TUTO_CAPS.map(c2 => c2.label).join(" · "));
-  ["expandir", "editar"].forEach(id => {
-    const p = X.TUTO_PERMISOS[id] || [];
-    ok("el paso " + id + " deja juntar materiales", p.includes("chop"), p.length + " gestos");
-  });
 }
 
 console.log("\nLOS DOS SISTEMAS QUE EL TUTORIAL DEJABA SIN NOMBRAR");
@@ -201,8 +194,6 @@ console.log("\nLOS DOS SISTEMAS QUE EL TUTORIAL DEJABA SIN NOMBRAR");
     "siempre lombriz, " + ctx.EXCAV_POR_DIA + " montículos por día");
   ok("y el Mercado sigue estando para cuando se acaben", ctx.WORM_PRICE > 0,
     "la lombriz cuesta " + ctx.WORM_PRICE + " de plata");
-  ok("el paso de pesca igual deja comprar", (X.TUTO_PERMISOS.fish || []).includes("buyseed"));
-  ok("y el del tablón deja producir lo que le pidan", (X.TUTO_PERMISOS.pedido || []).includes("chop"));
   ok("los dos tienen su capítulo", X.TUTO_CAPS.some(c2 => c2.pasos.includes("fish") && c2.pasos.includes("pedido")),
     X.TUTO_CAPS.map(c2 => c2.label).join(" · "));
   /* El detector del tablón no puede colgar de los vales: se gastan y vuelven a cero, y entonces el

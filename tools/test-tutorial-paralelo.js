@@ -16,7 +16,7 @@ ctx.window = ctx; ctx.globalThis = ctx; ctx.setTimeout = () => 0; vm.createConte
 ["isOpen", "refreshInv", "syncSlots", "toast", "log", "refreshHud", "saveFarm", "celebrate", "sfx",
  "tutoRefresh", "tutoCheck", "refreshSeedShop", "refreshHotbar"].forEach(f => { ctx[f] = () => {}; });
 vm.runInContext(fs.readFileSync("public/game/config.js", "utf8"), ctx);
-vm.runInContext(SRC + "\n;this.X={TUTO_STEPS,TUTO_PERMISOS,CROP_DEF,CD,EXCAV_POR_DIA,BUILD_DEF};", ctx);
+vm.runInContext(SRC + "\n;this.X={TUTO_STEPS,CROP_DEF,CD,EXCAV_POR_DIA,BUILD_DEF};", ctx);
 const X = ctx.X, G = ctx.G;
 let fallos = 0;
 const ok = (n, c, d) => { if (!c) fallos++; console.log((c ? "  ok   " : "  FALLA") + "  " + n + (d ? "   " + d : "")); };
@@ -27,14 +27,9 @@ console.log("\n1. EL JUEGO NO IMPIDE HACER VARIAS COSAS A LA VEZ");
   /* Ésta es la comprobación que de verdad importa, y es la que yo había estado midiendo mal: mi
      test anterior recorría TUTO_PERMISOS como si restringiera algo, cuando esa tabla es
      documentación desde el 14/8. Lo que hay que vigilar es la FUNCIÓN. */
-  ok("tutoPermite no bloquea nada", /function tutoPermite\(tag\) \{ return true; \}/.test(SRC),
+  /* 19/9: ya no hay ni siquiera una función que devuelva « sí »: el embudo se quitó entero */
+  ok("no queda ninguna función de permiso del tutorial", !/function tutoPermite/.test(SRC) && !/tutoPermite\(/.test(SRC),
     "los objetivos son una guía, no un embudo");
-  const gestos = ["chop", "mine", "fish", "excavar", "plant", "harvest", "sell", "buyseed", "cook", "obra"];
-  X.TUTO_STEPS.forEach((s, i) => {
-    G.tuto = { step: i, done: false };
-    const bloqueado = gestos.filter(g => !ctx.tutoPermite(g));
-    if (bloqueado.length) ok("paso " + (i + 1) + " · " + s.id, false, "bloquea " + bloqueado.join(", "));
-  });
   ok("en los " + X.TUTO_STEPS.length + " pasos se puede talar, picar, cavar y pescar", true,
     "ningún paso estrangula la mano");
 }

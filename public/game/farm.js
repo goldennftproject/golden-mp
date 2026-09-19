@@ -427,7 +427,7 @@ class FarmScene extends Phaser.Scene {
       const emo = this.add.text(cx, cy + 8, "", { fontSize: Math.round(T * 0.72) + "px" }).setOrigin(0.5, 0.95).setDepth(cy).setVisible(false);
       const timer = this.add.text(cx, cy - T * 0.55, "", { fontFamily: "system-ui", fontSize: "11px", fontStyle: "bold", color: "#fff", stroke: "#20301a", strokeThickness: 3 }).setOrigin(0.5, 1).setDepth(cy + 1).setVisible(false);
       const obj = { type: "plot", i, cx, by: cy, state: "dry", readyAt: 0, cropKey: null, spr, emo, timer, ground: this.plotGrounds[i] || null };
-      const owned = Math.max(2, Math.min(GF.PLOTS.length, G.plotsOwned || 2));   // viernes (2): se nace con 2 parcelas
+      const owned = Math.max(2, Math.min(GF.PLOTS.length, G.plotsOwned || 3));   // viernes (2): se nace con 2 parcelas
       if (i >= owned) {   // 16/8: parcela todavía no entregada → NO SE VE (llega como premio al baúl)
         obj.state = "locked";
         /* 18/8 (reporte del diseñador: un cuadrado de tierra clara asomando detrás de una parcela).
@@ -1346,18 +1346,6 @@ class FarmScene extends Phaser.Scene {
   }
 
   interactWith(o) {
-    // EMBUDO ESTRICTO (13/8): en los primeros pasos del tutorial, solo la acción que el
-    // objetivo pide. Cosechar lo plantado y trabajar obras se permiten siempre.
-    if (typeof tutoPermite === "function") {
-      let tag = null;
-      if (o.type === "plot") tag = o.state === "dry" ? "plant" : (o.state === "locked" ? "plotunlock" : null);
-      else if (o.type === "tree") tag = o.locked ? "cultivar" : "chop";
-      else if (o.type === "rock" || o.type === "ore") tag = "mine";
-      else if (o.type === "portal") tag = "portal";
-      else if (o.type === "fish") tag = "fish";
-      else if (o.type === "dummy") tag = "dummy";
-      if (tag && !tutoPermite(tag)) { if (typeof tutoAviso === "function") tutoAviso(); return; }
-    }
     if (o.type === "portal") {
       // 10/8: descanso entre viajes, y se abre el "viaje" para poder resumirlo al volver
       const espera = (typeof zonaCdLeft === "function") ? zonaCdLeft() : 0;
@@ -1511,7 +1499,6 @@ class FarmScene extends Phaser.Scene {
       const cost = treeUnlockCost();
       askConfirm("Cuesta " + cost + " de " + RES_LABEL.madera + ". ¿Cultivar este árbol?", () => {
         if ((G.res.madera || 0) < cost) { toast("Te falta " + RES_LABEL.madera + " (" + cost + ")"); return; }
-        if (typeof tutoGuardia === "function" && !tutoGuardia("madera", cost, "cultivar árboles")) return;   // guardia del tutorial (12/8)
         G.res.madera -= cost;
         G.treesOpen = G.treesOpen || [0]; G.treesOpen.push(o.lockIdx);
         o.locked = false;
@@ -4953,7 +4940,7 @@ class FarmScene extends Phaser.Scene {
       }
       if (GF.PLOTS.length < (G.plotsOwned || 3)) toast("No queda sitio para más parcelas — expandí la granja");
     }
-    const owned = Math.max(2, Math.min(GF.PLOTS.length, G.plotsOwned || 2));
+    const owned = Math.max(2, Math.min(GF.PLOTS.length, G.plotsOwned || 3));
     this.plots.forEach((pl, i) => {
       if (i < owned && pl.state === "locked") {
         /* 18/8: ahora que una parcela bloqueada NO reserva su celda, al llegarte de verdad el
