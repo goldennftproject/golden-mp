@@ -39,7 +39,7 @@ function armar(fakeUser, opts) {
   ["isOpen", "refreshInv", "syncSlots", "refreshHud", "celebrate", "sfx", "tutoRefresh", "tutoCheck",
    "refreshSeedShop", "refreshHotbar", "tutoSync", "syncCobertizo"].forEach(f => { if (!ctx[f]) ctx[f] = () => {}; });
   ctx.askConfirm = (msg, si) => { ctx.avisos.push("CONFIRM: " + msg); si && si(); };   // el confirm siempre acepta
-  const llamadas = { signOut: 0, guardados: 0 };
+  const llamadas = { signOut: 0, guardados: 0, updateUser: null };
   /* el saveFarm de verdad necesita media granja montada; acá interesa CUÁNDO se llama, no qué
      escribe, así que se reemplaza por uno que solo deja constancia */
   vm.runInContext("(function(f){ saveFarm = f; })", ctx)(async (force) => {
@@ -49,6 +49,7 @@ function armar(fakeUser, opts) {
     getUser: async () => { if (opts.getUserFalla) throw new Error("red caída"); return { data: { user: fakeUser } }; },
     signOut: async () => { llamadas.signOut++; orden.push("cerrar"); return { error: null }; },
     signInWithOtp: async () => ({ error: null }),
+    updateUser: async (x) => { llamadas.updateUser = x; return { error: null }; },
   } };
   vm.runInContext("(function(x, u, s){ sb = x; UID = u; SESION_ACTUAL = s; })", ctx)(
     sb, opts.sinNube ? null : "uid-test", opts.sinSesion ? null : (fakeUser ? { user: fakeUser } : null));
@@ -106,6 +107,45 @@ const ok = (n, c, d) => { if (!c) fallos++; console.log((c ? "  ok   " : "  FALL
     ok("no se inventa que la cuenta es anónima", !/anónima/.test(txt), txt);
     ok("y tampoco se le dice al jugador que no hay nube (su partida se está guardando igual)",
       !/Sin conexión con la nube/.test(txt), txt);
+  }
+
+  console.log("\n2d · EL CORREO A MEDIO ATAR   (19/9: « se supone que estoy logueado »)\n");
+  {
+    /* cuando una cuenta anónima ata un correo, Supabase deja `email` vacío y pone el correo en
+       `new_email` hasta que se toca el enlace. Dirección quedó ahí: correo puesto, nunca
+       confirmado, y el panel lo trataba como « cuenta sin correo » sin ofrecer nada. */
+    const { ctx, doc, llamadas } = armar({ id: "uid-test", email: null, new_email: "golden@granja.com" });
+    ctx.refreshConfig(); await espera(); await espera();
+    const txt = doc.getElementById("cfg-auth-status").textContent;
+    ok("el panel dice que el correo está PENDIENTE de confirmar, y cuál es", /PENDIENTE/.test(txt) && /golden@granja\.com/.test(txt), txt);
+    ok("el botón de salir queda apagado (sin correo confirmado no habría vuelta)", doc.getElementById("cfg-salir").disabled === true);
+    ok("y aparece la fila para reenviar el enlace", doc.getElementById("cfg-atar-fila").style.display !== "none");
+    ok("con el correo ya puesto y el botón diciendo « Reenviar »",
+      doc.getElementById("cfg-email").value === "golden@granja.com" && /Reenviar/.test(doc.getElementById("cfg-atar").textContent));
+    doc.getElementById("cfg-atar").onclick(); await espera(); await espera();
+    ok("reenviar vuelve a pedir el vínculo con ese correo (updateUser)", !!llamadas.updateUser && llamadas.updateUser.email === "golden@granja.com", JSON.stringify(llamadas.updateUser));
+    ok("y le dice que revise el correo", ctx.avisos.some(a => /Revisá|tocá el enlace/.test(a)));
+  }
+
+  console.log("\n2e · Y UNA CUENTA DE ANTES DEL 18/9, SIN CORREO, TIENE SALIDA\n");
+  {
+    const { ctx, doc, llamadas } = armar({ id: "uid-test", email: null });
+    ctx.refreshConfig(); await espera(); await espera();
+    ok("el panel dice que no tiene correo (sin disfrazarlo de avería)", /todavía no tiene correo/.test(doc.getElementById("cfg-auth-status").textContent));
+    ok("y ofrece atarlo", doc.getElementById("cfg-atar-fila").style.display !== "none" && /Atar/.test(doc.getElementById("cfg-atar").textContent));
+    doc.getElementById("cfg-email").value = "nuevo@granja.com";
+    doc.getElementById("cfg-atar").onclick(); await espera(); await espera();
+    ok("atar llama a updateUser con el correo escrito", !!llamadas.updateUser && llamadas.updateUser.email === "nuevo@granja.com");
+    doc.getElementById("cfg-email").value = "esto-no-es-un-correo"; llamadas.updateUser = null;
+    doc.getElementById("cfg-atar").onclick(); await espera();
+    ok("un correo inválido no viaja a la red", llamadas.updateUser === null);
+  }
+
+  console.log("\n2f · CON EL CORREO ATADO, LA FILA DE ATAR NO SE VE\n");
+  {
+    const { ctx, doc } = armar({ id: "uid-test", email: "golden@granja.com" });
+    ctx.refreshConfig(); await espera(); await espera();
+    ok("con cuenta atada no se ofrece atar nada", doc.getElementById("cfg-atar-fila").style.display === "none");
   }
 
   console.log("\n3 · AL SALIR, EL ORDEN   (guardar → cerrar → borrar las marcas)\n");

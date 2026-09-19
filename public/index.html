@@ -1415,6 +1415,13 @@
            el primero no tiene a quién atar nada y el segundo lo hace la puerta de entrada. Un
            botón que nunca se enciende no es una opción: es una duda. -->
       <p id="cfg-auth-status" style="min-height:30px">—</p>
+      <!-- 19/9: el campo y el botón de atar el correo VUELVEN, pero solo se muestran cuando la
+           cuenta no tiene correo confirmado (una cuenta de antes del 18/9, o una que se quedó a
+           mitad de la confirmación). Con el correo atado están ocultos: no son una opción. -->
+      <div class="row" id="cfg-atar-fila" style="display:none">
+        <input id="cfg-email" type="email" placeholder="tu@correo.com" style="flex:1;min-width:0;padding:6px 8px;border-radius:8px;border:1px solid #caa96a;background:#fdf6e3;font:inherit">
+        <button class="green sm" id="cfg-atar">Atar mi correo</button>
+      </div>
       <div class="row">
         <!-- desconectarse. Arranca DESHABILITADO: se enciende cuando se sabe que hay cuenta. -->
         <button class="red sm" id="cfg-salir" disabled>Cerrar sesión</button>
@@ -1866,7 +1873,7 @@
     // 15/8: VERSIÓN DE BUILD — rompe la caché del navegador en cada deploy (sin esto, el
     // jugador seguía corriendo el state.js viejo aunque el servidor tuviera el nuevo).
     // deploy.bat la actualiza sola (busca GF_BUILD y pone la fecha/hora del deploy).
-    const GF_BUILD = "20260919-143949";
+    const GF_BUILD = "20260919-163406";
     const files = ["game/config.js","game/nav.js","game/audio.js","game/state.js","game/save.js","game/ui.js","game/boot.js",
                    "game/farm.js","game/forest.js","game/plaza.js","game/main.js","game/update.js"];
     /* 24/8 — SE BAJAN TODOS A LA VEZ, SE EJECUTAN EN FILA (dirección: « sigue tardando en

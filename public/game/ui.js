@@ -4167,19 +4167,33 @@ function refreshConfig() {
      de este navegador atándola a un email, o entrar con un email ya vinculado. Enlace mágico,
      sin contraseñas. La estructura del bloque no cambia con el estado (regla de UI). */
   const st = $("cfg-auth-status"), nota = $("cfg-auth-nota");
-  const bS = $("cfg-salir");
+  const bS = $("cfg-salir"), fila = $("cfg-atar-fila"), inp = $("cfg-email"), bA = $("cfg-atar");
   if (st) st.textContent = "Jugando como: " + (window.NICK || "Granjero") + " · consultando cuenta…";
+  if (fila) fila.style.display = "none";
   if (typeof cuentaEstado === "function") cuentaEstado().then(c => {
     if (!st) return;
     if (c.modo === "email") {
       st.textContent = "Jugando como: " + (window.NICK || "Granjero") + " · cuenta guardada en " + c.email;
       if (nota) nota.textContent = "Tu granja te sigue a cualquier dispositivo: entrá con ese email.";
       if (bS) { bS.disabled = false; bS.title = "Salir de esta cuenta en este navegador"; }
+    } else if (c.modo === "pendiente") {
+      /* 19/9 — el correo está puesto pero NO confirmado: hasta que no se toca el enlace, la
+         cuenta sigue siendo anónima. Es el estado en que quedó dirección. Se dice cuál es el
+         correo y se ofrece reenviar el enlace, que es lo único que destraba esto. */
+      st.textContent = "Jugando como: " + (window.NICK || "Granjero") + " · correo " + c.email + " PENDIENTE de confirmar";
+      if (nota) nota.textContent = "Tocá el enlace que te mandamos a ese correo (mirá también el no deseado). Si no llegó, reenvialo.";
+      if (fila) fila.style.display = "";
+      if (inp) inp.value = c.email;
+      if (bA) bA.textContent = "Reenviar el enlace";
+      if (bS) { bS.disabled = true; bS.title = "Primero confirmá el correo: sin él no podrías volver a esta granja"; }
     } else if (c.modo === "anonima") {
-      /* con GF.SOLO_EMAIL esto no debería pasar nunca; si pasa, se dice tal cual y no se
-         disfraza de avería de red, que fue el error del 18/9 */
-      st.textContent = "Jugando como: " + (window.NICK || "Granjero") + " · esta cuenta no tiene correo.";
-      if (nota) nota.textContent = "Avisanos: tu granja debería estar atada a un correo.";
+      /* una cuenta de antes del 18/9 que nunca ató nada. Desde ese día no nacen más, pero las
+         que existen necesitan una salida: acá se le ata el correo (es lo que hacía « Guardar mi
+         cuenta », que se quitó por creer que ya no tenía a quién servir). */
+      st.textContent = "Jugando como: " + (window.NICK || "Granjero") + " · esta cuenta todavía no tiene correo.";
+      if (nota) nota.textContent = "Atá tu correo y tu granja te sigue a cualquier dispositivo.";
+      if (fila) fila.style.display = "";
+      if (bA) bA.textContent = "Atar mi correo";
       if (bS) { bS.disabled = true; bS.title = "Sin correo no habría forma de volver a esta granja"; }
     } else {
       /* 18/9 — « no se pudo averiguar » NO es « no hay cuenta ». El texto de antes decía « sin
@@ -4191,6 +4205,16 @@ function refreshConfig() {
       if (bS) { bS.disabled = true; bS.title = "Primero hay que poder leer la cuenta"; }
     }
   });
+  /* 19/9 — atar (o reenviar). updateUser con el mismo correo vuelve a mandar el enlace. */
+  if (bA) bA.onclick = async () => {
+    const v = inp && String(inp.value || "").trim();
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(v)) { toast("Escribí un correo válido"); return; }
+    bA.disabled = true;
+    const r = await (typeof vincularEmail === "function" ? vincularEmail(v) : { error: "no disponible" });
+    bA.disabled = false;
+    if (r && r.ok) { toast("📬 Revisá " + v + " y tocá el enlace"); log("Te mandamos un correo a " + v + ": tocá el enlace y tu granja queda atada a esa cuenta. Si no aparece, mirá el no deseado.", "gold"); }
+    else toast("No se pudo: " + ((r && r.error) || "error"));
+  };
   /* 18/9 — CERRAR SESIÓN. El texto del aviso dice las dos cosas que el jugador necesita saber
      antes de apretar: que se guarda primero (nadie pierde lo jugado por desconectarse) y con
      qué vuelve. Nombrar el correo en el propio aviso es el detalle que convierte « ¿y ahora

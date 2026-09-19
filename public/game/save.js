@@ -1307,18 +1307,33 @@ window.torneoPodioCheck = async function () {
      · y « no se pudo averiguar » ya NO se disfraza de « cuenta sin correo ». */
 async function cuentaEstado() {
   if (!sb || !UID) return { modo: "sin-nube", email: "" };
-  /* 1 · lo que ya sabemos, sin tocar la red */
+  /* 19/9 — EL CORREO A MEDIO ATAR. Cuando una cuenta anónima ata un correo, Supabase NO lo da
+     por atado hasta que se toca el enlace de confirmación: mientras tanto el correo queda en
+     `new_email` y `email` sigue vacío. Si ese enlace nunca se tocó —o se tocó cuando el Site URL
+     todavía apuntaba a localhost, que fue hasta el 18/9 a la tarde—, la cuenta sigue siendo
+     anónima con un correo esperando. Dirección lo vio en la suya: « se supone que estoy
+     logueado » y el botón de salir gris. Ahora ese estado tiene nombre (« pendiente ») y el
+     panel ofrece reenviar el correo, en vez de tratarlo como una cuenta sin nada. */
+  const leer = (u) => {
+    if (!u) return null;
+    if (u.email) return { modo: "email", email: u.email };
+    if (u.new_email) return { modo: "pendiente", email: u.new_email };
+    return { modo: "anonima", email: "" };
+  };
+  /* 1 · lo que ya sabemos, sin tocar la red — pero solo si ya dice « email »: para los otros dos
+     estados conviene preguntar, porque la sesión guardada puede ser de ANTES de la confirmación */
   try {
-    const u = SESION_ACTUAL && SESION_ACTUAL.user;
-    if (u && u.email) return { modo: "email", email: u.email };
+    const e = leer(SESION_ACTUAL && SESION_ACTUAL.user);
+    if (e && e.modo === "email") return e;
   } catch (e) {}
   /* 2 · y si no, se pregunta */
   try {
     const r = await sb.auth.getUser();
-    const user = r && r.data && r.data.user;
-    if (user && user.email) return { modo: "email", email: user.email };
-    if (user) return { modo: "anonima", email: "" };   // hay usuario y NO tiene correo: eso sí es anónima
+    const e = leer(r && r.data && r.data.user);
+    if (e) return e;
   } catch (e) {}
+  /* 3 · la red no contestó: lo que diga la sesión, y si no dice nada, « no se pudo » */
+  try { const e = leer(SESION_ACTUAL && SESION_ACTUAL.user); if (e) return e; } catch (e) {}
   return { modo: "sin-nube", email: "" };              // no se pudo averiguar: no se inventa nada
 }
 
