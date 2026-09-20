@@ -134,6 +134,8 @@ class BootScene extends Phaser.Scene {
     ["plata","esencia"].forEach(k => L.push(["coin_" + k, P + "coin_" + k + ".png"]));
     // animales del Establo (10/8: definitivos, de PixelLab; antes eran provisorios por código)
     ["alpaca","conejo","toro","jabali"].forEach(k => L.push(["animal_" + k, P + "animal_" + k + ".png?v=2"]));
+    // estado individual de hambre: pequeño comedero, no ligado a un cultivo concreto
+    L.push(["animal_feed_marker", P + "animal_feed_marker.png?v=1"]);
     L.push(["pet_gallina", P + "pet_gallina.png"]);   // mascota "Pinta" del cofre de login (10/8)
     return L;
   }

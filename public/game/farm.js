@@ -546,10 +546,10 @@ class FarmScene extends Phaser.Scene {
           return;
         }
         const wx = pt.worldX, wy = pt.worldY;
-        // fixs.docx #12 (11/8): clic derecho sobre un animal lo ALIMENTA ahí mismo (la función
-        // existía pero solo dentro de la ventana del Establo y nadie la encontraba)
+        // estado individual (20/9): el gesto alimenta AL animal señalado. El Establo conserva
+        // «Alimentar todo»; acá tiene que coincidir la acción con la marca de hambre que se ve.
         { const an = this.animalEnPunto && this.animalEnPunto(wx, wy);
-          if (an && typeof alimentarAnimal === "function") { alimentarAnimal(an.k); return; } }
+          if (an && typeof alimentarUno === "function") { alimentarUno(an.k, an.idx); return; } }
         /* 28/8 — LOS APAREJOS SE PIDEN, NO SALTAN SOLOS.
            El cebo, las cañas y las nasas se abren con clic DERECHO sobre el agua, igual que la
            rueda de semillas se abre con clic derecho sobre la parcela. El izquierdo es siempre
@@ -633,7 +633,7 @@ class FarmScene extends Phaser.Scene {
       }
       // 16/8: una parcela que todavía no es tuya es CÉSPED — ni se ve ni se puede clickear
       if (!hit) { for (const pl of this.plots) { if (pl.state === "locked") continue; if (Math.abs(wx - pl.cx) < T / 2 && Math.abs(wy - pl.by) < T / 2) { hit = pl; break; } } }
-      if (!hit) { const an = this.animalEnPunto(wx, wy); if (an) hit = { type: "animal", k: an.k, cx: an.spr.x, by: an.spr.y }; }   // animal del corral
+      if (!hit) { const an = this.animalEnPunto(wx, wy); if (an) hit = { type: "animal", k: an.k, idx: an.idx, cx: an.spr.x, by: an.spr.y }; }   // animal del corral
       if (!hit && this.portal && Math.abs(wx - this.portal.cx) < 26 && Math.abs(wy - (this.portal.by - 14)) < 30) hit = this.portal;   // clic en el portal : caminar y teletransportarse
       if (this.action && !GF.NO_WALK) {   // acción en curso: encolar el próximo objetivo (hasta 7) sin esperar la animación
         if (hit && (hit.type === "plot" || hit.type === "tree" || hit.type === "rock" || hit.type === "ore")) {
@@ -1232,13 +1232,35 @@ class FarmScene extends Phaser.Scene {
     return best;
   }
 
+  // Los cuatro estados se derivan del dato individual, no de «alguno de esta especie». Mantener
+  // esto junto evita que el icono, el tooltip y el clic vuelvan a hablar lenguajes distintos.
+  estadoAnimalMundo(o) {
+    const idx = Number.isInteger(o && o.idx) ? o.idx : 0;
+    const a = o && typeof animalLista === "function" ? animalLista(o.k)[idx] : null;
+    const falta = o && typeof animalFaltaDe === "function"
+      ? animalFaltaDe(o.k, idx)
+      : (o && typeof animalFalta === "function" ? animalFalta(o.k) : Infinity);
+    const hambriento = !!a && typeof animalHambriento === "function" && animalHambriento(a);
+    const rinde = o && typeof animalRinde === "function" ? animalRinde(o.k, idx) > 0 : !hambriento;
+    const listo = falta <= 0;
+    return { idx, falta, hambriento, listo, cobrable: listo && !hambriento && rinde };
+  }
+
   promptText(o) {
     const cd = nowMs() < o.readyAt;
     if (o.type === "boar") return "Espantar jabalí";
     if (o.type === "animal") {
       const d = ANIMAL_DEF[o.k];
-      if (typeof animalListo === "function" && animalListo(o.k)) return "Recoger " + RES_LABEL[d.mat] + " de " + d.label;
-      return d.label + " — vuelve en " + fmtCorto(animalFalta(o.k) / 1000) + " (clic: Establo)";
+      if (!d) return "";
+      const st = this.estadoAnimalMundo(o);
+      const nombre = d.label + ((typeof animalCant === "function" && animalCant(o.k) > 1) ? " " + (st.idx + 1) : "");
+      if (st.cobrable) return "Recoger " + RES_LABEL[d.mat] + " de " + nombre;
+      if (st.hambriento) {
+        const comida = (d.come || [])[0];
+        const nomComida = (CROP_DEF[comida] && CROP_DEF[comida].label) || RES_LABEL[comida] || "comida";
+        return nombre + " — tiene hambre: dale " + (d.racion || 1) + " " + nomComida + (st.listo ? " antes de recoger" : "");
+      }
+      return nombre + " — vuelve en " + fmtCorto(st.falta / 1000) + " (clic: Establo)";
     }
     if (o.type === "plot") {
       if (o.state === "locked") return "";   // 16/8: no es tuya todavía — llega al baúl por nivel
@@ -1386,9 +1408,10 @@ class FarmScene extends Phaser.Scene {
       return;
     }
     if (o.type === "animal") {   // clic sobre un animal del corral
-      if (typeof animalListo === "function" && animalListo(o.k)) {
+      const st = this.estadoAnimalMundo(o);
+      if (st.cobrable) {
         const antes = G.res[ANIMAL_DEF[o.k].mat] || 0;
-        recogerAnimal(o.k);
+        recogerUno(o.k, st.idx);
         const gan = (G.res[ANIMAL_DEF[o.k].mat] || 0) - antes;
         if (gan > 0) { this.premioFx(o.cx, o.by, resSprite(ANIMAL_DEF[o.k].mat), "+" + gan); this.estrellasFx(o.cx, o.by - 14); }   // fixs #11: celebración
       } else { if (typeof refreshEstablo === "function") refreshEstablo(); openOv("ov-establo"); }
@@ -2965,7 +2988,7 @@ class FarmScene extends Phaser.Scene {
       const hay = this.animales.filter(a => a.k === k);
       for (let i = hay.length - 1; i >= quiero; i--) {   // sobran: se sacan de la granja
         const v = hay[i];
-        v.spr.destroy(); if (v.marca) v.marca.destroy();
+        v.spr.destroy(); if (v.marca) v.marca.destroy(); if (v.marcaHambre) v.marcaHambre.destroy();
         this.animales.splice(this.animales.indexOf(v), 1);
       }
       for (let n = hay.length; n < quiero; n++) {
@@ -2985,7 +3008,10 @@ class FarmScene extends Phaser.Scene {
         spr.setScale((GF.TILE * 0.78) / spr.width);
         const marca = this.add.image(x, y - 30, resSprite(ANIMAL_DEF[k].mat) || key).setDepth(99991).setVisible(false);
         marca.setDisplaySize(16, 16);
-        this.animales.push({ k, spr, marca, tx: x, ty: y, esperaHasta: 0, bob: Math.random() * 6.28 });
+        const marcaHambre = this.textures.exists("animal_feed_marker")
+          ? this.add.image(x, y - 30, "animal_feed_marker").setDepth(99991).setDisplaySize(20, 20).setVisible(false)
+          : null;
+        this.animales.push({ k, idx: n, spr, marca, marcaHambre, tx: x, ty: y, esperaHasta: 0, bob: Math.random() * 6.28 });
       }
     });
   }
@@ -3045,11 +3071,17 @@ class FarmScene extends Phaser.Scene {
           Math.abs(a.spr.scaleX) * (1 + Math.sin(a.bob) * 0.05));
       }
       a.spr.setDepth(a.spr.y);
-      // listo para cobrar: se le ve el material flotando encima
-      const listo = typeof animalListo === "function" && animalListo(a.k);
+      // La señal pertenece a ESTE animal: hambre siempre gana a material, y el que ya comió pero
+      // espera queda visualmente limpio. Así el corral no contradice al panel del Establo.
+      const st = this.estadoAnimalMundo(a);
+      const marcaY = a.spr.y - a.spr.displayHeight - 8;
       if (a.marca) {
-        a.marca.setVisible(listo);
-        if (listo) a.marca.setPosition(a.spr.x, a.spr.y - a.spr.displayHeight - 8 + Math.sin(t / 350) * 3).setDepth(a.spr.y + 2);
+        a.marca.setVisible(st.cobrable);
+        if (st.cobrable) a.marca.setPosition(a.spr.x, marcaY + Math.sin(t / 350) * 3).setDepth(a.spr.y + 2);
+      }
+      if (a.marcaHambre) {
+        a.marcaHambre.setVisible(st.hambriento);
+        if (st.hambriento) a.marcaHambre.setPosition(a.spr.x, marcaY + Math.sin(t / 430 + a.bob) * 1.5).setDepth(a.spr.y + 2);
       }
     }
   }
@@ -5390,7 +5422,7 @@ class FarmScene extends Phaser.Scene {
       let hit = null, bd = 1e9;
       for (const q of this.objs) { if (this.hitsSprite(q.sprite, wx, wy)) { const d = Math.hypot(q.cx - wx, q.by - wy); if (d < bd) { bd = d; hit = q; } } }
       if (!hit) for (const pl of this.plots) { if (Math.abs(wx - pl.cx) < GF.TILE / 2 && Math.abs(wy - pl.by) < GF.TILE / 2) { hit = pl; break; } }
-      if (!hit) { const an = this.animalEnPunto(wx, wy); if (an) hit = { type: "animal", k: an.k }; }
+      if (!hit) { const an = this.animalEnPunto(wx, wy); if (an) hit = { type: "animal", k: an.k, idx: an.idx }; }
       if (!hit && this.portal && Math.abs(wx - this.portal.cx) < 26 && Math.abs(wy - (this.portal.by - 14)) < 30) hit = this.portal;
       this.previaSiembra(hit);   // 24/8: la parcela señalada muestra QUÉ se va a sembrar
       this.cargasBadge(hit);     // 2/9: y el nodo señalado muestra su ⏱ de cargas ENCIMA
