@@ -56,6 +56,7 @@ G.built = {}; G.obras = {}; G.layout = {}; G.layoutPlots = {}; G.decos = []; G.c
 G.regalos = { tree: 0, rock: 0, plot: 0 }; G.cobertizo = { tree: 0, rock: 0, plot: 0 };
 G.res = { madera: 9999, piedra: 9999 }; G.plata = 999999;
 GF.aplicarTerreno(0); GF.ocupCambio();
+ctx.GF.EXP_OBRA = 0;   /* 20/9: este test mide la ENTREGA de la expansión, no la obra (ver test-expansion-obra.js) */
 ctx.expansionComprar();
 
 console.log("\nEL ORDEN DE LOS HECHOS AL COMPRAR");

@@ -2177,7 +2177,51 @@ function expansionComprar() {
   if (!e) { toast("Ya tenés las " + EXPANSION_MAX + " expansiones"); return false; }
   if ((G.level || 1) < e.nivel) { toast("La expansión " + e.n + " se abre en el nivel " + e.nivel); return false; }
   if (!canAfford(e.costo)) { toast("Te faltan materiales para expandir"); return false; }
+  if (expansionObra()) { toast("Ya hay una expansión en obra: termina en " + expansionObraTxt()); return false; }
   payCost(e.costo);
+  /* 20/9 (dirección, Discord): « que en las expansiones no sea instantánea: que duren 10 minutos
+     y se vaya incrementando… mayor expansión, mayor tiempo ». Se paga ahora y la cerca se abre
+     cuando la OBRA termina: 10 min la primera, 20 la segunda… 160 la última (GF.EXP_OBRA_MIN ×
+     número). El reloj es absoluto (Date.now), así que la obra avanza con el juego cerrado y se
+     entrega al volver, igual que la vida. Con GF.EXP_OBRA en 0 vuelve a ser instantánea. */
+  const min = expansionObraMin(e.n);
+  if (min > 0) {
+    G.expObra = { i: e.i, n: e.n, desde: nowMs(), hasta: nowMs() + min * 60000 };
+    log("🏗️ Obra en marcha: la expansión " + e.n + " estará lista en " + expansionObraTxt() + ".", "gold");
+    toast("Expansión " + e.n + " en obra · " + expansionObraTxt());
+    if (window.sfx) sfx("forge");
+    if (typeof closeOv === "function") { closeOv("ov-market"); closeOv("ov-deco"); closeOv("ov-expandir"); }
+    if (typeof saveFarm === "function") saveFarm(true);
+    return true;
+  }
+  return expansionEntregar(e);
+}
+/* cuánto tarda la obra de la expansión n (minutos); 0 = instantánea */
+function expansionObraMin(n) {
+  if (typeof GF === "undefined" || !GF.EXP_OBRA) return 0;
+  return Math.max(0, Math.round((GF.EXP_OBRA_MIN || 10) * n));
+}
+function expansionObra() { return (G.expObra && G.expObra.hasta) ? G.expObra : null; }
+function expansionObraFaltaMs() { const o = expansionObra(); return o ? Math.max(0, o.hasta - nowMs()) : 0; }
+function expansionObraTxt() {
+  const ms = expansionObraFaltaMs(); if (ms <= 0) return "un momento";
+  const m = Math.ceil(ms / 60000);
+  return m >= 60 ? Math.floor(m / 60) + " h " + (m % 60 ? (m % 60) + " min" : "") : m + " min";
+}
+/* se llama cada segundo desde el HUD y al cargar la granja: si la obra terminó, se entrega */
+function expansionObraTick() {
+  const o = expansionObra(); if (!o) return false;
+  if (nowMs() < o.hasta) return false;
+  const e = expansionSiguiente();
+  delete G.expObra;
+  /* la obra pagada es la expansión e.i; si el guardado trae más expansiones que la obra (no
+     debería pasar), la obra ya no corresponde y se descarta sin romper nada */
+  if (!e || e.i !== o.i) { console.warn("obra de expansión huérfana:", o); return false; }
+  log("🏗️ La obra terminó: ¡la expansión " + e.n + " está lista!", "gold");
+  return expansionEntregar(e);
+}
+/* entrega de la expansión (lo que hasta el 20/9 hacía expansionComprar justo después de pagar) */
+function expansionEntregar(e) {
   G.expansiones = e.i + 1;
   log("¡Expansión " + e.n + " de " + EXPANSION_MAX + "! La granja creció " + (GF.BLOQUE * GF.BLOQUE) + " celdas.", "gold");
   if (window.sfx) sfx("level");
@@ -3179,6 +3223,8 @@ function brujula() {
       const partes = falta.slice(0, 2).map(f => f[1] + " de " + ((typeof RES_LABEL !== "undefined" && RES_LABEL[f[0]]) || f[0]).toLowerCase());
       return B({ txt: "Terminá la obra de " + BUILD_DEF[t].label + (partes.length ? ": faltan " + partes.join(" y ") : ""), target: t });
     }
+    if (typeof expansionObra === "function" && expansionObra())
+      return B({ txt: "La expansión " + expansionObra().n + " está en obra: lista en " + expansionObraTxt(), panel: "ov-expandir" });
     /* 3 · se puede comprar ya */
     if (typeof expansionSiguiente === "function") {
       const e = expansionSiguiente();

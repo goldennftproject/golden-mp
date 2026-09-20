@@ -66,6 +66,7 @@ function partida(exp) {
   G.plata = 9999999;
   GF.aplicarTerreno(0); GF.ocupCambio();
   const e = escena();
+  ctx.GF.EXP_OBRA = 0;   /* 20/9: este test mide la ENTREGA de la expansión, no la obra (ver test-expansion-obra.js) */
   for (let i = 0; i < exp; i++) ctx.expansionComprar();
   GF.aplicarTerreno(G.expansiones); GF.ocupCambio();
   return e;

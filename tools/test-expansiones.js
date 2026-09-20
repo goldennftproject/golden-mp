@@ -20,6 +20,7 @@ const ok = (n, c, d) => { if (!c) fallos++; console.log((c ? "  ok   " : "  FALL
 // --- los frenos ---
 G.expansiones = 0; G.level = 1;
 for (const k in G.res) G.res[k] = 9999;
+ctx.GF.EXP_OBRA = 0;   /* 20/9: este test mide la ENTREGA de la expansión, no la obra (ver test-expansion-obra.js) */
 ok("sin el nivel no deja comprar", X.expansionComprar() === false && G.expansiones === 0);
 G.level = 3;
 for (const k in G.res) G.res[k] = 0;

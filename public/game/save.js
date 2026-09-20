@@ -280,7 +280,7 @@ function snapshot() {
     dishes: G.dishes, cooking: G.cooking, horno: G.horno, chests: G.chests, dummyUsedAt: G.dummyUsedAt,   // 24/8: la cola del Horno
     armCd: G.armCd, mkPend: G.mkPend,
     layoutPlots: G.layoutPlots, layoutPond: G.layoutPond, ghInv: G.ghInv,
-    planos: G.planos, obras: G.obras, obraDep: G.obraDep, emergBuys: G.emergBuys, buzonLeidas: G.buzonLeidas, buzonArchivo: G.buzonArchivo, kitReclamado: G.kitReclamado, excav: G.excav, vales: G.vales, pedidos: G.pedidos, regalos: G.regalos, cobertizo: G.cobertizo, goblin: G.goblin, logros: G.logros, doma: G.doma,   // 22/8: logros cobrados (🏆) + el bicho domado   // 22/8: el Mercader Goblin recuerda su trato del día   // buzón + kit + excavaciones (15/8) · tablón + vales (16/8)   // blueprints (12/8) · capítulos + emergencia (14/8)
+    planos: G.planos, obras: G.obras, obraDep: G.obraDep, expObra: G.expObra,   /* 20/9: la expansión en obra (reloj absoluto) */ emergBuys: G.emergBuys, buzonLeidas: G.buzonLeidas, buzonArchivo: G.buzonArchivo, kitReclamado: G.kitReclamado, excav: G.excav, vales: G.vales, pedidos: G.pedidos, regalos: G.regalos, cobertizo: G.cobertizo, goblin: G.goblin, logros: G.logros, doma: G.doma,   // 22/8: logros cobrados (🏆) + el bicho domado   // 22/8: el Mercader Goblin recuerda su trato del día   // buzón + kit + excavaciones (15/8) · tablón + vales (16/8)   // blueprints (12/8) · capítulos + emergencia (14/8)
     /* 1/9 — LA PESCA v4 ENTERA NO SE GUARDABA, y lo encontró dirección con el Lombricario:
        « no dura las 8 horas y no da las lombrices ». Las bocas, las Escamas, los récords, las
        nasas caladas, el torneo, la marea en curso: TODO moría con un F5. La v4 nació el 27/8
@@ -568,6 +568,7 @@ function hydrate(d) {
   if (Array.isArray(d.ghInv)) G.ghInv = d.ghInv;   // GOD HAND 2.0 (11/8): su inventario de semillas
   if (d.planos && typeof d.planos === "object") G.planos = d.planos;     // blueprints (12/8)
   if (d.obras && typeof d.obras === "object") G.obras = d.obras;
+  G.expObra = (d.expObra && typeof d.expObra === "object" && d.expObra.hasta) ? d.expObra : undefined;   // 20/9: la expansión en obra
 
   if (d.emergBuys && typeof d.emergBuys === "object") G.emergBuys = d.emergBuys;   // kit de emergencia (14/8)
   if (d.buzonLeidas && typeof d.buzonLeidas === "object") G.buzonLeidas = d.buzonLeidas;   // cartas leídas del buzón (15/8)

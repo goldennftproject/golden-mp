@@ -82,6 +82,7 @@ console.log("\nEL RECUADRO: REQUISITOS EN COLOR, NODOS CON LÁMINA, Y EL PORQUÉ
   /* con todo en la mano, el botón invita */
   G.level = 99; const ex = ctx.expansionSiguiente();
   for (const k in ex.costo) G.res[k] = ex.costo[k] + 5;
+  ctx.GF.EXP_OBRA = 0;   /* 20/9: este test mide la ENTREGA de la expansión, no la obra */
   ctx.refreshExpandir();
   ok("con nivel y material, el botón dice Expandir y está vivo",
     btn.disabled === false && btn.textContent === "Expandir");

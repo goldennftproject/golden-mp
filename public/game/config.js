@@ -465,6 +465,11 @@ GF.SOLO_EMAIL = 1;
 // mano (si el paso revienta 10 veces seguidas, el metrónomo se apaga solo). Con 0, el juego
 // queda exactamente como antes del 18/9.
 GF.ZONA_FONDO = 1;
+/* 20/9 (dirección, Discord): « que las expansiones no sean instantáneas: 10 minutos y que vaya
+   subiendo — mayor expansión, mayor tiempo ». Se paga y queda EN OBRA: EXP_OBRA_MIN × número
+   (10, 20, 30… 160 min). El reloj es absoluto: la obra avanza con el juego cerrado. 0 = como antes. */
+GF.EXP_OBRA = 1;
+GF.EXP_OBRA_MIN = 10;
 
 GF.ZOOM = 1.35;
 GF.editMode = false;   // modo edición de la granja (arrastrar objetos)

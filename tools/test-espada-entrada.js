@@ -162,6 +162,7 @@ console.log("\nEL CAMINO DE CRECIMIENTO, QUE ERA EL ÚNICO SIN ENSEÑAR");
   G.regalos = { tree: 0, rock: 0, plot: 0 }; G.cobertizo = {};
   const c = ctx.expansionCostos()[0];
   G.res = {}; Object.keys(c).forEach(k => G.res[k] = c[k] * 2);
+  ctx.GF.EXP_OBRA = 0;   /* 20/9: este test mide la ENTREGA de la expansión, no la obra (ver test-expansion-obra.js) */
   ctx.expansionComprar();
   ok("al comprar, la parcela ya es tuya", (G.plotsOwned || 3) === 4, "plotsOwned " + G.plotsOwned);
   ok("y con su celda anotada dentro del bloque", !!(G.layoutPlots && G.layoutPlots[3]),

@@ -123,6 +123,7 @@ console.log("\nLA FLAG DE DIRECCIÓN: « una vez entregado, no se vuelve a entre
   const ex = ctx.expansionSiguiente();
   Object.keys(ex.costo).forEach(k => { G.res[k] = ex.costo[k] + 5; });
   const flagAntes = G.expParcelasDadas, ownedAntes = G.plotsOwned;
+  ctx.GF.EXP_OBRA = 0;   /* 20/9: este test mide la ENTREGA de la expansión, no la obra (ver test-expansion-obra.js) */
   ctx.expansionComprar();
   ok("expansionComprar entrega y sube la flag", G.expParcelasDadas === flagAntes + 1 && G.plotsOwned === ownedAntes + 1,
     "flag " + flagAntes + " → " + G.expParcelasDadas);

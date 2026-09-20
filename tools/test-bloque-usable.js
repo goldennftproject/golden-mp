@@ -69,6 +69,7 @@ console.log("\nEL CASO EXACTO DE DIRECCIÓN: NIVEL 3, PRIMERA EXPANSIÓN");
   G.skills = { farming: 0, mining: 0 };
   equipar();
   GF.aplicarTerreno(0); GF.ocupCambio();
+  ctx.GF.EXP_OBRA = 0;   /* 20/9: este test mide la ENTREGA de la expansión, no la obra (ver test-expansion-obra.js) */
   ok("la expansión 1 se compra al nivel 3", ctx.expansionComprar() === true);
   GF.aplicarTerreno(1); GF.ocupCambio();
 

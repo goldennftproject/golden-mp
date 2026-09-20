@@ -44,6 +44,7 @@ console.log("\nCOMPRAR AHORA: LA PARCELA APARECE PUESTA, NO EN EL BAÚL");
   G.res = { madera: 999, piedra: 999 }; G.plata = 99999;
   GF.aplicarTerreno(0); GF.ocupCambio();
   const b = GF.EXPANSIONES[0];
+  ctx.GF.EXP_OBRA = 0;   /* 20/9: este test mide la ENTREGA de la expansión, no la obra */
   ctx.expansionComprar();
   ok("la compra suma una parcela", G.plotsOwned === 4, "3 → " + G.plotsOwned);
   ok("y le fija posición dentro del bloque", dentroDe(b, G.layoutPlots[3]),

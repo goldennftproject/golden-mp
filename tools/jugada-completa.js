@@ -407,7 +407,7 @@ invariantes("kit");
       else if (st.id === "expandir") {
         let guarda = 0;
         while (guarda++ < 60) { const ex = ctx.expansionSiguiente(); if (!ex) break;
-          if ((G.level || 1) >= ex.nivel && ctx.canAfford(ex.costo)) { ctx.expansionComprar(); break; }
+          if ((G.level || 1) >= ex.nivel && ctx.canAfford(ex.costo)) { ctx.expansionComprar(); if (ctx.expansionObra && ctx.expansionObra()) { avanzar(Math.ceil(ctx.expansionObraFaltaMs() / 60000) + 1); ctx.expansionObraTick(); } break; }
           cicloCultivo(); juntar("madera", (ex.costo.madera || 0)); juntar("piedra", (ex.costo.piedra || 0)); }
       }
       else if (st.id === "editar") { G.editVisto = true; ctx.tutoAutoSkip(); }   // el gesto del botón de Config
@@ -467,6 +467,15 @@ invariantes("kit");
     if (ex && (G.level || 1) >= ex.nivel && ctx.canAfford(ex.costo)) {
       const antes = G.expansiones || 0, plotsAntes = G.plotsOwned || 0;
       try { ctx.expansionComprar(); } catch (e) { falla("expansionComprar " + ex.n + " reventó: " + e.message); }
+      /* 20/9: la expansión queda EN OBRA (10 min × número). El jugador de verdad espera; el bot
+         también: avanza el reloj hasta que termine y deja que el tick del HUD la entregue. */
+      if (ctx.expansionObra && ctx.expansionObra()) {
+        const min = Math.ceil(ctx.expansionObraFaltaMs() / 60000) + 1;
+        anota("EXPANSIÓN " + ex.n + " en obra: " + min + " min de espera");
+        avanzar(min);
+        if (!ctx.expansionObraTick()) falla("la obra de la expansión " + ex.n + " no se entregó al terminar el tiempo");
+        if (ctx.expansionObra()) falla("la obra de la expansión " + ex.n + " sigue en G.expObra después de entregarse");
+      }
       if ((G.expansiones || 0) === antes + 1) {
         anota("EXPANSIÓN " + ex.n + " comprada (nivel " + G.level + ") → parcelas " + G.plotsOwned + " · terreno " + GF.terreno().mias.size + " celdas");
         if ((G.plotsOwned || 0) !== plotsAntes + 1) falla("la expansión " + ex.n + " NO entregó su parcela (tenía " + plotsAntes + ", tiene " + G.plotsOwned + ")");

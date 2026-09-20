@@ -1222,6 +1222,16 @@ function refreshExpandir() {
   }
   if (tit) tit.textContent = "Expansión " + ex.n + " de " + EXPANSION_MAX;
   if (sub) sub.textContent = "El terreno crece " + (GF.BLOQUE * GF.BLOQUE) + " celdas y destapa lo que hay debajo.";
+  /* 20/9: en obra. Ya se pagó; lo único que falta es tiempo, y el panel lo dice con el reloj */
+  const obra = (typeof expansionObra === "function") ? expansionObra() : null;
+  if (obra) {
+    if (tit) tit.textContent = "Expansión " + obra.n + " en obra";
+    if (sub) sub.textContent = "Ya está pagada. La cerca se abre sola cuando la obra termina — también con el juego cerrado.";
+    reqs.innerHTML = '<div class="exd-req"><span class="nm">🏗️ Lista en</span><span class="cant ok">' + expansionObraTxt() + "</span></div>";
+    if (trae) trae.innerHTML = "";
+    btn.textContent = "En obra · " + expansionObraTxt(); btn.disabled = true; btn.onclick = null;
+    return;
+  }
   const faltaNivel = (G.level || 1) < ex.nivel;
   /* los requisitos: el NIVEL primero (es el que más suele cortar) y los materiales después,
      cada fila con su icono y su tenés/pide en verde o rojo — la gramática de la referencia */
@@ -1251,7 +1261,8 @@ function refreshExpandir() {
   /* la regla 9 en el botón: nunca un « no » sin su porqué */
   const puede = !faltaNivel && (typeof canAfford === "function") && canAfford(ex.costo);
   btn.disabled = !puede;
-  btn.textContent = puede ? "Expandir"
+  const minObra = (typeof expansionObraMin === "function") ? expansionObraMin(ex.n) : 0;
+  btn.textContent = puede ? (minObra ? "Expandir · obra de " + (minObra >= 60 ? Math.floor(minObra / 60) + " h" + (minObra % 60 ? " " + (minObra % 60) + " min" : "") : minObra + " min") : "Expandir")
     : faltaNivel ? "Necesitás granja nivel " + ex.nivel + " (tenés " + (G.level || 1) + ")"
     : "Te falta: " + faltantes.join(" · ");
   btn.onclick = () => {
@@ -4654,7 +4665,7 @@ function initUI() {
   /* 8/9: la tira también se repinta en el latido — los números suben al craftear o al cobrar,
      no solo al gastar, y con la firma no cuesta nada si no cambió nada. */
   setInterval(() => { try { refreshRecientes(); refreshMorral(); refreshCombate(); } catch (e) {} }, 1000);
-  setInterval(() => { if (typeof buffTick === "function") buffTick(); if (typeof stamTick === "function") stamTick(); if (typeof incTick === "function") incTick(); if (typeof granjaRegen === "function") granjaRegen(); tutoSync(); refreshHud(); }, 1000);
+  setInterval(() => { if (typeof buffTick === "function") buffTick(); if (typeof expansionObraTick === "function") { try { if (expansionObraTick()) refreshHud(); } catch (e) { console.warn(e); } } if (typeof stamTick === "function") stamTick(); if (typeof incTick === "function") incTick(); if (typeof granjaRegen === "function") granjaRegen(); tutoSync(); refreshHud(); }, 1000);
   /* 26/8 — el flujo de la bolsa late aparte y MÁS RÁPIDO que el HUD. Un segundo de retraso entre
      el golpe y el « +1 Madera » ya no se siente como respuesta al clic, se siente como otra cosa
      que pasó después. A 180 ms es indistinguible de instantáneo, y comparar dos objetos planos
