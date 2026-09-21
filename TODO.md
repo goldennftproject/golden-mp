@@ -291,7 +291,7 @@ Están desarrolladas en el GDD §15.0, con sus números medidos. Aquí solo el t
 - [x] El **Mercado** quedó chico al lado de los edificios nuevos: escala visual a 2,1 celdas (88,2 px), sin cambiar asset ni sus dos celdas.
 - [ ] **Árboles, piedras y parcelas**: siguen siendo el set viejo con el color calmado.
 - [ ] **Piedra vs hierro** se parecen — piden siluetas distintas.
-- [ ] **Animaciones de ataque propias por arma** (hoy todos usan el espadazo).
+- [x] **Animaciones de ataque propias por arma**: espada y arco conservan las suyas; hacha y mazo suman ocho frames propios cada una.
 
 ## ⚫ Ofrecido y sin pedir
 

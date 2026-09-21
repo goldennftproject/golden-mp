@@ -1304,12 +1304,17 @@ class ForestScene extends Phaser.Scene {
       this.action.t += dt;
       const sign = this.facing === "west" ? -1 : 1;
       hero.setScale(sign * this.actScale, this.actScale);
-      // el golpe usa la ANIMACIÓN del arma equipada: espadazo con estela o disparo de arco (PixelLab 30/7)
+      // el golpe usa el gesto propio del arma equipada: espada, hacha, mazo o arco
       if (!this.action.fx) {
-        // si está caminando al momento del golpe, usa el espadazo CAMINANDO (piernas en marcha, 31/7)
+        // la espada conserva su variante caminando; hacha y mazo priorizan su gesto propio.
         const movingNow = !!(this.moveTarget || k.left.isDown || k.right.isDown || k.up.isDown || k.down.isDown || k.aleft.isDown || k.aright.isDown || k.aup.isDown || k.adown.isDown);
         const swordKey = (movingNow && this.anims.exists("act_sword_walk")) ? "act_sword_walk" : "act_sword";
-        const aid0 = armaEq(); const akey = this.action.kind === "shoot" ? "act_bow" : ((aid0 && ARM_DEF[aid0].tipo !== "arco") ? swordKey : null);   // espada/hacha/mazo usan el espadazo
+        const aid0 = armaEq();
+        const tipoArma = aid0 && ARM_DEF[aid0] && ARM_DEF[aid0].tipo;
+        const meleeKey = tipoArma === "hacha" && this.anims.exists("act_axe") ? "act_axe"
+          : tipoArma === "mazo" && this.anims.exists("act_mace") ? "act_mace"
+          : swordKey;   // si un asset falta, el espadazo previo sigue siendo un respaldo seguro
+        const akey = this.action.kind === "shoot" ? "act_bow" : (tipoArma && tipoArma !== "arco" ? meleeKey : null);
         if (akey && this.anims.exists(akey)) { hero.play(akey); this.action.fx = true; }
         else {
           // respaldo (a puños o sin animación): el arma dibujada a mano como antes

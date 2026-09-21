@@ -18,6 +18,7 @@ const ok = (n, c, d) => { if (!c) fallos++; console.log((c ? "  ok   " : "  FALL
 
 const BOOT = fs.readFileSync(path.join(RAIZ, "public/game/boot.js"), "utf8");
 const ST = fs.readFileSync(path.join(RAIZ, "public/game/state.js"), "utf8");
+const FOREST = fs.readFileSync(path.join(RAIZ, "public/game/forest.js"), "utf8");
 const ATLAS = JSON.parse(fs.readFileSync(path.join(RAIZ, "public/assets/atlas.json"), "utf8")).frames;
 
 /* assetList() de verdad, evaluando el boot con el CROP_ORDER real */
@@ -37,6 +38,21 @@ console.log("\nTODO LO QUE EL JUEGO PIDE VIAJA EN LA PRIMERA PASADA");
   ok("el muelle de la Pesca v4 entró al atlas", !!(ATLAS.lombricario && ATLAS.lonja && ATLAS.boya),
     "lombricario, lonja, boya — los 3 que disparaban la segunda pasada");
   ok("la isla viaja precargada (no cabe en el atlas: 1190x854)", pre.has("isla") && !ATLAS.isla);
+}
+
+console.log("\nHACHA Y MAZO NO HEREDAN EL ESPADAZO");
+{
+  const ataques = ["axe", "mace"].flatMap(tipo => Array.from({ length: 8 }, (_, i) => "hero_" + tipo + "_" + i));
+  const faltan = ataques.filter(k => !ATLAS[k]);
+  ok("los 16 frames nuevos viajan en el atlas", faltan.length === 0, faltan.join(", "));
+  const creadas = [];
+  const bootDePrueba = Object.create(ctx.__B.prototype);
+  bootDePrueba.textures = { exists: () => true };
+  bootDePrueba.anims = { create: spec => creadas.push(spec) };
+  bootDePrueba.buildAnims();
+  const gesto = key => creadas.find(a => a.key === key);
+  ok("Boot crea ambos gestos con sus ocho frames", !!gesto("act_axe") && gesto("act_axe").frames.length === 8 && !!gesto("act_mace") && gesto("act_mace").frames.length === 8);
+  ok("el Bosque elige la animación de hacha y mazo", /tipoArma === "hacha" && this\.anims\.exists\("act_axe"\)/.test(FOREST) && /tipoArma === "mazo" && this\.anims\.exists\("act_mace"\)/.test(FOREST));
 }
 
 console.log("\nEL BESTIARIO TAMBIÉN (la fase «Cargando criaturas…» no pide nada)");

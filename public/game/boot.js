@@ -14,6 +14,8 @@ class BootScene extends Phaser.Scene {
     });
     for (let i = 0; i < 8; i++) L.push(["hero_sword_" + i, P + "hero_sword_" + i + ".png?v=2"]);   // espadazo horizontal con estela
     for (let i = 0; i < 8; i++) L.push(["hero_sword_walk_" + i, P + "hero_sword_walk_" + i + ".png"]);   // espadazo CAMINANDO (31/7): piernas en marcha + tajo
+    for (let i = 0; i < 8; i++) L.push(["hero_axe_" + i, P + "hero_axe_" + i + ".png?v=1"]);       // hachazo pesado propio (21/9)
+    for (let i = 0; i < 8; i++) L.push(["hero_mace_" + i, P + "hero_mace_" + i + ".png?v=1"]);     // mazazo con peso propio (21/9)
     for (let i = 0; i < 8; i++) L.push(["hero_bow_" + i, P + "hero_bow_" + i + ".png?v=2"]);       // disparo de arco (arco ya en mano)
     for (let i = 0; i < 7; i++) L.push(["act_water_" + i, P + "act_water_" + i + ".png"]);     // regar sigue con el arte anterior
     L.push(["boar", P + "boar.png"]);
@@ -143,8 +145,8 @@ class BootScene extends Phaser.Scene {
   preload() {
     // ATLAS: todos los sprites del mundo en 2 archivos (mucho más liviano para el server free).
     // Si el atlas no llega, ensureAll() baja los archivos sueltos como respaldo.
-    this.load.image("__atlas", "assets/atlas.png?v=50");
-    this.load.json("__atlasmap", "assets/atlas.json?v=50");
+    this.load.image("__atlas", "assets/atlas.png?v=51");
+    this.load.json("__atlasmap", "assets/atlas.json?v=51");
     // 2/9: la isla viaja en la PRIMERA pasada (es la única imagen que no cabe en el atlas:
     // 1190x854). Antes quedaba para los reintentos y era ella sola la que disparaba una
     // segunda vuelta de descarga en cada carga del juego.
@@ -261,11 +263,15 @@ class BootScene extends Phaser.Scene {
     // portal: el espiral gira 360° en loop (el arco de piedra queda quieto)
     { const ks = [0,1,2,3,4,5,6,7].map(i => "portal_" + i);
       if (has(ks)) this.anims.create({ key: "portal_spin", frames: ks.map(k => ({ key: k })), frameRate: 9, repeat: -1 }); }
-    // combate: espadazo y arco (una pasada por golpe)
+    // combate: un gesto por tipo de arma (una pasada por golpe)
     { const ks = [0,1,2,3,4,5,6,7].map(i => "hero_sword_" + i);
       if (has(ks)) this.anims.create({ key: "act_sword", frames: ks.map(k => ({ key: k })), frameRate: 18, repeat: 0 }); }
     { const ks = [0,1,2,3,4,5,6,7].map(i => "hero_sword_walk_" + i);
       if (has(ks)) this.anims.create({ key: "act_sword_walk", frames: ks.map(k => ({ key: k })), frameRate: 18, repeat: 0 }); }   // atacar en movimiento
+    { const ks = [0,1,2,3,4,5,6,7].map(i => "hero_axe_" + i);
+      if (has(ks)) this.anims.create({ key: "act_axe", frames: ks.map(k => ({ key: k })), frameRate: 18, repeat: 0 }); }
+    { const ks = [0,1,2,3,4,5,6,7].map(i => "hero_mace_" + i);
+      if (has(ks)) this.anims.create({ key: "act_mace", frames: ks.map(k => ({ key: k })), frameRate: 18, repeat: 0 }); }
     { const ks = [0,1,2,3,4,5,6,7].map(i => "hero_bow_" + i);
       if (has(ks)) this.anims.create({ key: "act_bow", frames: ks.map(k => ({ key: k })), frameRate: 24, repeat: 0 }); }   // 8f/24fps ≈ 0.33s: entra en el disparo de 0.35s
     // jabalí de la granja: caminar en loop, embestida en loop mientras rompe el cultivo
