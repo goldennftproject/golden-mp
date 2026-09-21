@@ -99,6 +99,9 @@ console.log("\n5 · LA CARA: el botón del panel dice cuánto tarda (lectura de 
 {
   const UI = fs.readFileSync(path.join(RAIZ, "public/game/ui.js"), "utf8");
   ok("el botón anuncia la obra antes de pagar", /"Expandir · obra de "/.test(UI));
+  /* 21/9 (dirección): « habría que agregar el tiempo que tarda en este recuadro » */
+  ok("y el recuadro de REQUISITOS tiene su fila « Tiempo de obra »", /Tiempo de obra/.test(UI) && /expansionObraMinTxt\(minObra\)/.test(UI));
+  ok("con el formato de horas cuando pasa de 60", g("expansionObraMinTxt(160)") === "2 h 40 min" && g("expansionObraMinTxt(60)") === "1 h" && g("expansionObraMinTxt(30)") === "30 min");
   ok("y en obra muestra el reloj y queda apagado", /"En obra · " \+ expansionObraTxt\(\)/.test(UI) && /btn\.disabled = true; btn\.onclick = null;/.test(UI));
   ok("el HUD llama al tick cada segundo", /expansionObraTick\(\)/.test(UI.slice(UI.indexOf("setInterval(() => { if (typeof buffTick"))));
 }

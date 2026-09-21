@@ -1238,6 +1238,11 @@ function refreshExpandir() {
   let h = '<div class="exd-req"><img src="' + GF.spr("sk_farming") + '" onerror="this.outerHTML=\'⭐\'">' +
     '<span class="nm">Nivel de granja</span><span class="cant ' + (faltaNivel ? "falta" : "ok") + '">' +
     (G.level || 1) + "/" + ex.nivel + "</span></div>";
+  /* 21/9 (dirección, Discord): « habría que agregar el tiempo que tarda en este recuadro ». La obra
+     es parte del precio, así que va con los requisitos, no escondida en el botón. */
+  const minObra = (typeof expansionObraMin === "function") ? expansionObraMin(ex.n) : 0;
+  if (minObra) h += '<div class="exd-req"><span style="width:20px;text-align:center">⏱️</span>' +
+    '<span class="nm">Tiempo de obra</span><span class="cant">' + expansionObraMinTxt(minObra) + "</span></div>";
   const faltantes = [];
   for (const k in ex.costo) {
     const tengo = Math.floor((G.res && G.res[k]) || 0), pide = ex.costo[k], ok = tengo >= pide;
@@ -1261,8 +1266,7 @@ function refreshExpandir() {
   /* la regla 9 en el botón: nunca un « no » sin su porqué */
   const puede = !faltaNivel && (typeof canAfford === "function") && canAfford(ex.costo);
   btn.disabled = !puede;
-  const minObra = (typeof expansionObraMin === "function") ? expansionObraMin(ex.n) : 0;
-  btn.textContent = puede ? (minObra ? "Expandir · obra de " + (minObra >= 60 ? Math.floor(minObra / 60) + " h" + (minObra % 60 ? " " + (minObra % 60) + " min" : "") : minObra + " min") : "Expandir")
+  btn.textContent = puede ? (minObra ? "Expandir · obra de " + expansionObraMinTxt(minObra) : "Expandir")
     : faltaNivel ? "Necesitás granja nivel " + ex.nivel + " (tenés " + (G.level || 1) + ")"
     : "Te falta: " + faltantes.join(" · ");
   btn.onclick = () => {

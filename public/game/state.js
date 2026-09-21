@@ -2201,6 +2201,11 @@ function expansionObraMin(n) {
   if (typeof GF === "undefined" || !GF.EXP_OBRA) return 0;
   return Math.max(0, Math.round((GF.EXP_OBRA_MIN || 10) * n));
 }
+/* « 1 h 20 min » a partir de minutos — lo usan el botón y la fila de requisitos */
+function expansionObraMinTxt(min) {
+  if (!min) return "al instante";
+  return min >= 60 ? Math.floor(min / 60) + " h" + (min % 60 ? " " + (min % 60) + " min" : "") : min + " min";
+}
 function expansionObra() { return (G.expObra && G.expObra.hasta) ? G.expObra : null; }
 function expansionObraFaltaMs() { const o = expansionObra(); return o ? Math.max(0, o.hasta - nowMs()) : 0; }
 function expansionObraTxt() {
