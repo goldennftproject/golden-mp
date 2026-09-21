@@ -6,8 +6,8 @@
 <title>Golden Farm</title>
 <!-- El atlas es lo más pesado del juego (386 KB con 329 sprites). Se empieza a bajar YA,
      en paralelo con el login y la carga de la partida, en vez de esperar a que Phaser arranque. -->
-<link rel="preload" as="image" href="assets/atlas.png?v=44">
-<link rel="preload" as="fetch" href="assets/atlas.json?v=44" crossorigin>
+<link rel="preload" as="image" href="assets/atlas.png?v=50">
+<link rel="preload" as="fetch" href="assets/atlas.json?v=50" crossorigin>
 <link rel="preconnect" href="https://cdn.jsdelivr.net" crossorigin>
 <link rel="preconnect" href="https://ulspkdaljeuleqqdokfk.supabase.co" crossorigin>
 <style>
@@ -1923,7 +1923,7 @@
     // 15/8: VERSIÓN DE BUILD — rompe la caché del navegador en cada deploy (sin esto, el
     // jugador seguía corriendo el state.js viejo aunque el servidor tuviera el nuevo).
     // deploy.bat la actualiza sola (busca GF_BUILD y pone la fecha/hora del deploy).
-    const GF_BUILD = "20260921-122436";
+    const GF_BUILD = "20260921-123314";
     const files = ["game/config.js","game/nav.js","game/audio.js","game/state.js","game/save.js","game/ui.js","game/boot.js",
                    "game/farm.js","game/forest.js","game/plaza.js","game/main.js","game/update.js"];
     /* 24/8 — SE BAJAN TODOS A LA VEZ, SE EJECUTAN EN FILA (dirección: « sigue tardando en

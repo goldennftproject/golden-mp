@@ -4511,6 +4511,15 @@ function initUI() {
   if (gmFijar) { gmFijarTxt(); gmFijar.onclick = () => { try { localStorage.setItem("gmenuFijo", menuFijo() ? "0" : "1"); } catch (e) {} gmFijarTxt(); toast(menuFijo() ? "El menú queda desplegado" : "El menú se recoge solo"); }; }
   if (menuFijo()) gmenu.classList.remove("collapsed");
   // multiventana: abrir un panel ya no cierra los demás (detalles 29/7)
+  /* 22/9 (dirección, Discord): « cuando le das clic a "Ver el tablón" no te manda al tablón ».
+     El botón llevaba data-panel como los del menú, pero solo los del menú (.gmi) se cableaban:
+     cualquier botón dibujado DENTRO de un panel con data-panel quedaba mudo. Ahora hay una sola
+     puerta para todos, por delegación: no depende de que cada refresh recuerde cablearlo. */
+  document.addEventListener("click", (ev) => {
+    const b = ev.target && ev.target.closest && ev.target.closest("button[data-panel]:not(.gmi)");
+    if (!b || !document.body.contains(b)) return;
+    openOv(b.dataset.panel);
+  });
   document.querySelectorAll(".gmi[data-panel]").forEach(b => {
     /* 10/9 — MVP: lo escondido no aparece en el menú. openOv ya lo rechaza si alguien llega por
        otra puerta; esto es para que ni siquiera se vea el botón — un botón que contesta « no

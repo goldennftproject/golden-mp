@@ -143,8 +143,8 @@ class BootScene extends Phaser.Scene {
   preload() {
     // ATLAS: todos los sprites del mundo en 2 archivos (mucho más liviano para el server free).
     // Si el atlas no llega, ensureAll() baja los archivos sueltos como respaldo.
-    this.load.image("__atlas", "assets/atlas.png?v=49");
-    this.load.json("__atlasmap", "assets/atlas.json?v=49");
+    this.load.image("__atlas", "assets/atlas.png?v=50");
+    this.load.json("__atlasmap", "assets/atlas.json?v=50");
     // 2/9: la isla viaja en la PRIMERA pasada (es la única imagen que no cabe en el atlas:
     // 1190x854). Antes quedaba para los reintentos y era ella sola la que disparaba una
     // segunda vuelta de descarga en cada carga del juego.

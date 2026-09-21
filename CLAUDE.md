@@ -59,3 +59,6 @@ funcionaba. Para que no se repita, antes de tocar un archivo:
 2. traer al contenedor TODO lo que toque ese commit (arte, boot.js, tests, TODO), no solo el
    archivo que voy a editar;
 3. correr sus tests además de los míos; los suyos también custodian su trabajo.
+4. si su commit trae un PNG nuevo, va al atlas: `python3 tools/build-atlas.py` y subir el `?v=`
+   en `boot.js` **y en el `<link rel="preload">` de `index.html`** (el 22/9 estaban en 49 y 44:
+   el preload pedía un atlas viejo). `test-carga-una-pasada.js` avisa si queda un PNG suelto.
