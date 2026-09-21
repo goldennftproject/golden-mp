@@ -63,7 +63,7 @@ class BootScene extends Phaser.Scene {
     // v7: restos correctos sobre su parche de tierra (los v6 venían de una copia vieja)
     ["node_stone_mined","node_bronze_mined","node_gold_mined","node_diamond_mined","node_netherite_mined"]
       .forEach(k => L.push([k, P + k + ".png?v=7"]));
-    L.push(["node_iron_mined", P + "node_iron_mined.png?v=2"]);   // hierro (detalles213): derivado del bronce recoloreado
+    L.push(["node_iron_mined", P + "node_iron_mined.png?v=3"]);   // hierro: veta fría, diferenciada de piedra
     L.push(["dummy", P + "dummy.png"]);   // muñeco de práctica de espada
     L.push(["dummy_broken", P + "dummy_broken.png"]);   // dummy desgastado con cortes: se muestra durante el cooldown
     L.push(["cofre", P + "cofre.png"]);   // cofre depósito
@@ -102,7 +102,7 @@ class BootScene extends Phaser.Scene {
     // v3: nodos plantados en la tierra + estados dañados (intermedio del cooldown)
     ["node_stone","node_bronze","node_gold","node_diamond","node_netherite"]
       .forEach(k => { L.push([k, P + k + ".png?v=3"]); L.push([k + "_half", P + k + "_half.png"]); });
-    L.push(["node_iron", P + "node_iron.png?v=2"]); L.push(["node_iron_half", P + "node_iron_half.png?v=2"]);
+    L.push(["node_iron", P + "node_iron.png?v=3"]); L.push(["node_iron_half", P + "node_iron_half.png?v=3"]);
     // versionados: el arte cambió y el caché de 1 día serviría el viejo
     L.push(["plot", P + "plot.png?v=4"]);   // tierra suelta que combina con los montículos
     L.push(["plot_blocked", P + "plot_blocked.png?v=3"]);   // sin trabajar: ramas, piedras y yuyos
@@ -145,8 +145,8 @@ class BootScene extends Phaser.Scene {
   preload() {
     // ATLAS: todos los sprites del mundo en 2 archivos (mucho más liviano para el server free).
     // Si el atlas no llega, ensureAll() baja los archivos sueltos como respaldo.
-    this.load.image("__atlas", "assets/atlas.png?v=51");
-    this.load.json("__atlasmap", "assets/atlas.json?v=51");
+    this.load.image("__atlas", "assets/atlas.png?v=52");
+    this.load.json("__atlasmap", "assets/atlas.json?v=52");
     // 2/9: la isla viaja en la PRIMERA pasada (es la única imagen que no cabe en el atlas:
     // 1190x854). Antes quedaba para los reintentos y era ella sola la que disparaba una
     // segunda vuelta de descarga en cada carga del juego.
