@@ -8,8 +8,11 @@ function juego(){
   const ctx={console:{log(){},warn(){}},Math,Date,JSON,Object,Array,Number,String,Boolean,Set,Map,isNaN,parseInt,parseFloat};
   ctx.window=ctx;ctx.globalThis=ctx;ctx.setTimeout=()=>0;vm.createContext(ctx);
   vm.runInContext(fs.readFileSync("public/game/config.js","utf8"),ctx);
-  vm.runInContext(fs.readFileSync("public/game/state.js","utf8")+"\n;this.KIT_INICIAL=KIT_INICIAL;",ctx);
+  vm.runInContext(fs.readFileSync("public/game/state.js","utf8")+"\n;this.KIT_INICIAL=KIT_INICIAL;this.TUTO_STEPS=TUTO_STEPS;this.TUTO_VER=TUTO_VER;",ctx);
   ctx.toast=()=>{};ctx.log=()=>{};ctx.refreshHud=()=>{};ctx.saveFarm=()=>{};ctx.refreshHotbar=()=>{};
+  ctx.panelAbierto=null;ctx.cerrados=[];
+  ctx.isOpen=id=>ctx.panelAbierto===id;
+  ctx.closeOv=id=>{ctx.cerrados.push(id);if(ctx.panelAbierto===id)ctx.panelAbierto=null;};
   ctx.sfx=()=>{};ctx.celebrate=()=>{};ctx.syncSlots=ctx.syncSlots||(()=>{});
   return ctx;
 }
@@ -34,7 +37,7 @@ const ok=(n,c,d)=>{if(!c)fallos++;console.log((c?"  ok   ":"  FALLA")+"  "+n+(d?
   const g=juego();
   g.ensureHotbarDefaults();                 // el jugador entra, mira, no hay nada
   const antes=g.G.hotbar.filter(Boolean).length;
-  g.kitReclamar();
+  g.panelAbierto="ov-baul";g.kitReclamar();
   ok("reclamar el kit llena la barra", g.G.hotbar.filter(Boolean).length>antes,
      antes+" → "+g.G.hotbar.filter(Boolean).length);
   /* 8/9: la caña CONSUMIBLE de la v2 se jubiló — las de la v4 se tienen, no se gastan, y por
@@ -61,8 +64,31 @@ const ok=(n,c,d)=>{if(!c)fallos++;console.log((c?"  ok   ":"  FALLA")+"  "+n+(d?
   ok("el pico ya es tuyo", g.G.picks.owned.stone===true && g.pickCount("stone")===g.KIT_INICIAL.pico);
   ok("la bolsa ya no está vacía", g.canonicalStacks().length>0,
      g.canonicalStacks().length+" pilas");
+  ok("al avanzar al Mercado, el baúl se cierra para mostrar el siguiente paso",
+     g.cerrados.includes("ov-baul"),g.cerrados.join(" · ")||"(no se cerró)");
 }
-// 3) NO SE PUEDE RECLAMAR DOS VECES
+// 3) AL TERMINAR LA COMPRA INICIAL: SEMILLA ELEGIDA Y MUNDO VISIBLE
+{
+  const g=juego();
+  const paso=g.TUTO_STEPS.findIndex(s=>s.id==="buyseed");
+  g.G.tuto={step:paso,n:0,done:false,v:g.TUTO_VER};g.G.plata=3;g.G.hotbar=new Array(10).fill(null);
+  g.panelAbierto="ov-market";g.buySeed("papa",3);
+  ok("las tres papas llevan a la siembra",g.tutoActivo().id==="plant",g.tutoActivo().id);
+  ok("la papa queda elegida para el clic siguiente",g.G.selSeed==="papa",g.G.selSeed);
+  ok("el Mercado se cierra al cambiar a una acción del mundo",g.cerrados.includes("ov-market"),g.cerrados.join(" · ")||"(no se cerró)");
+}
+// 4) DURANTE EL CRECIMIENTO: EL OBJETIVO NO PIDE COSECHAR ANTES DE TIEMPO
+{
+  const g=juego(),paso=g.TUTO_STEPS.find(s=>s.id==="harvest");
+  g.G.tuto={step:g.TUTO_STEPS.indexOf(paso),n:0,done:false,v:g.TUTO_VER};
+  g.G.plots=[{state:"growing",cropKey:"papa",readyAt:Date.now()+60000}];
+  const creciendo=g.tutoTxt(paso);
+  g.G.plots[0].state="ready";
+  const lista=g.tutoTxt(paso);
+  ok("mientras crece, el cartel explica que hay que esperar",/creciendo|esperá/i.test(creciendo),creciendo);
+  ok("cuando está lista, recién pide cosechar",/^Cosechá/i.test(lista),lista);
+}
+// 5) NO SE PUEDE RECLAMAR DOS VECES
 {
   const g=juego();
   g.kitReclamar();

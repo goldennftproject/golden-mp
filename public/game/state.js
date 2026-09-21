@@ -645,6 +645,10 @@ function buySeed(k, qty) {
   const cd = CROP_DEF[k]; if (!cd) { console.warn("[buySeed] cultivo inexistente:", k); return; }
   if (!cropUnlocked(k)) { toast("Necesitás Cultivo nivel " + cd.lvl); return; }
   qty = Math.max(1, Math.floor(qty || 1));
+  // Guardamos el paso ANTES de comprar: el tercer evento puede avanzar la guía y cerrar
+  // el Mercado solo corresponde en ese recorrido inicial, no en una compra cualquiera.
+  const pasoAntesDeComprar = (k === "papa" && typeof tutoActivo === "function") ? tutoActivo() : null;
+  const compraInicialPendiente = !!(pasoAntesDeComprar && pasoAntesDeComprar.id === "buyseed");
   const sb = seedBuysToday();
   // 15/8 (dirección, regla final): el CUPO DE SIEMPRE manda para todos los cultivos,
   // tutorial incluido — el kit inicial ya cubre los insumos del recorrido, así que
@@ -677,8 +681,18 @@ function buySeed(k, qty) {
   // POR SEMILLA, no por compra — comprar 1 de 3 deja al capataz diciendo "te faltan 2".
   // Solo cuentan las de PAPA: el paso pide esas.
   if (k === "papa" && typeof tutoEvent === "function") for (let i = 0; i < qty; i++) tutoEvent("buyseed");
+  const pasoTrasComprar = compraInicialPendiente && typeof tutoActivo === "function" ? tutoActivo() : null;
+  const compraInicialCompleta = !!(pasoTrasComprar && pasoTrasComprar.id === "plant");
   log(`Compraste ${qty} semilla(s) de ${cd.label} por ${cost} plata. (cupo: ${sb.count}/${seedDailyMax()})`); toast("+" + qty + " " + cd.label);
   refreshHud(); if (typeof refreshSeedShop === "function") refreshSeedShop(); if (isOpen("ov-inv")) refreshInv();
+  if (compraInicialCompleta) {
+    // El cursor no cambia de modo visible por sí solo: dejamos la papa elegida, refrescamos
+    // la barra y lo nombramos una vez para que el siguiente clic sea evidente.
+    selectSeed("papa");
+    if (typeof refreshHotbar === "function") refreshHotbar(true);
+    tutoCerrarPanelTrasPaso("ov-market", "plant");
+    toast("🌱 Semillas de papa seleccionadas — hacé clic en una parcela vacía para plantarlas.");
+  }
 }
 
 /* ---- KIT DE EMERGENCIA en $Golden (14/8, pedido del diseñador): "por si se quedan
@@ -3004,6 +3018,36 @@ function tutoTiene(st) {
   if (st.dep && G.built && G.built[st.dep]) n = Math.max(n, tutoNeed(st));   // construido = todo depositado
   return n;
 }
+/* El paso de cosecha llega apenas se planta la última papa. Antes decía "Cosechá" durante
+   todo el crecimiento, como si el siguiente gesto ya fuera posible. La parcela ya muestra su
+   reloj en el mundo; acá solo cambiamos la meta entre "están creciendo" y "cosechá". */
+function tutoCosechaEstado(st) {
+  const need = Math.max(1, tutoNeed(st));
+  const ahora = nowMs();
+  let sembradas = 0, listas = 0, soloPapas = true;
+  (Array.isArray(G.plots) ? G.plots : []).forEach(p => {
+    if (!p || (p.state !== "growing" && p.state !== "ready")) return;
+    sembradas++;
+    if (p.cropKey !== "papa") soloPapas = false;
+    if (p.state === "ready" || (p.state === "growing" && p.readyAt > 0 && p.readyAt <= ahora)) listas++;
+  });
+  const yaCosechadas = Math.min(need, Math.max(0, (G.tuto && G.tuto.n) || 0));
+  const faltan = Math.max(1, need - yaCosechadas);
+  const nombre = soloPapas ? "papa" : "cultivo";
+  const etiqueta = n => nombre + (n === 1 ? "" : "s");
+  const sig = [need, yaCosechadas, sembradas, listas, soloPapas ? "p" : "c"].join(":");
+  if (yaCosechadas >= need) return { sig, txt: "Cosechá tus " + need + " " + etiqueta(need) };
+  if (listas > 0) {
+    const n = Math.min(listas, faltan);
+    return { sig, txt: "Cosechá " + n + " " + etiqueta(n) + (listas < faltan ? " — los demás siguen creciendo" : "") };
+  }
+  if (sembradas > 0) {
+    const plural = sembradas !== 1;
+    return { sig, txt: (plural ? "Tus " : "Tu ") + sembradas + " " + etiqueta(sembradas) +
+      (plural ? " están creciendo — esperá a que estén listas para cosechar" : " está creciendo — esperá a que esté lista para cosechar") };
+  }
+  return { sig, txt: "Esperá a que haya " + etiqueta(1) + " lista para cosechar" };
+}
 /* 26/8 — UN PASO QUE PIDE COCINAR TIENE QUE MIRAR LA DESPENSA.
    El paso del Estofado decía « Cociná un Estofado con lo que cazaste » y señalaba la receta con
    una flecha. Pero el Estofado pide carne + PAPA + madera, el paso anterior solo garantiza la
@@ -3014,6 +3058,7 @@ function tutoTiene(st) {
 function tutoTxt(st) {
   if (!st) return "";
   let t = String(st.txt).replace("#", tutoNeed(st));
+  if (st.id === "harvest") t = tutoCosechaEstado(st).txt;
   /* la lista la arma cookFaltaTxt, la MISMA que escribe el botón: dos redacciones del mismo
      hecho se separan al primer cambio, y entonces el objetivo y el botón se contradicen. */
   if (st.receta && typeof cookFaltaTxt === "function") {
@@ -3060,6 +3105,31 @@ var FIRST_GROW_N = 3;        // cuántas semillas de arranque tienen ese trato (
 var TUTO_VER = 14;   // v14 (19/9): tres pasos nuevos — muñeco, incursión y Lonja (los sistemas que nadie presentaba)
                      // v13 (15/8): paso 0 nuevo — el kit de bienvenida se retira del BAÚL
 function tutoActivo() { return G.tuto && !G.tuto.done ? TUTO_STEPS[G.tuto.step] : null; }
+// Los paneles del paso anterior no son el destino del siguiente. Solo se cierran si podemos
+// comprobar que el tutorial avanzó exactamente a ese destino y que el panel sigue abierto.
+function tutoCerrarPanelTrasPaso(panel, siguienteId) {
+  const siguiente = tutoActivo();
+  if (!siguiente || siguiente.id !== siguienteId || typeof isOpen !== "function" || typeof closeOv !== "function") return false;
+  try {
+    if (!isOpen(panel)) return false;
+    closeOv(panel);
+    return true;
+  } catch (e) { return false; }
+}
+// `tutoSync` ya llama a tutoCheckRes cada segundo, pero su firma no incluye el texto dinámico.
+// Esta firma mínima redibuja una sola vez cuando una parcela pasa de creciendo a lista.
+var _tutoCosechaSig = null;
+function tutoSyncEstadoCosecha() {
+  const st = tutoActivo();
+  if (!st || st.id !== "harvest") { _tutoCosechaSig = null; return; }
+  const estado = tutoCosechaEstado(st);
+  if (estado.sig === _tutoCosechaSig) return;
+  _tutoCosechaSig = estado.sig;
+  if (typeof tutoRefresh === "function") tutoRefresh();
+  if (typeof window !== "undefined" && window.farmScene && window.farmScene.updateTutoArrow) {
+    try { window.farmScene.updateTutoArrow(); } catch (e) {}
+  }
+}
 // migración: si el guardado trae una cadena vieja, los pasos ya no significan lo mismo → se recalcula
 /* 18/8 (reporte del diseñador: "compré las 3 papas y el tuto no lo detecta").
    El fallo no estaba en la compra: el tutorial seguía parado en el PASO 0, el del baúl, y
@@ -3286,6 +3356,7 @@ function tutoAutoSkip() {
 }
 // paso de RECURSO: se cumple solo cuando tenés la cantidad que pide la receta siguiente
 function tutoCheckRes() {
+  tutoSyncEstadoCosecha();
   const st = tutoActivo();
   if (!st || !st.res) return;
   if (tutoTiene(st) >= tutoNeed(st)) tutoDone(st);
@@ -11036,6 +11107,7 @@ function kitReclamar() {
   toast("¡Tu kit de bienvenida! 🪓⛏🎣");
   if (window.celebrate) celebrate({ title: "¡KIT DE BIENVENIDA!", sub: "Hachas, picos y cañas para arrancar", big: false, reward: "Ya podés talar, picar y pescar" });
   if (typeof tutoEvent === "function") tutoEvent("kit");
+  tutoCerrarPanelTrasPaso("ov-baul", "buyseed");
   ensureHotbarDefaults();   // 18/8: los accesos aparecen AHORA, con las herramientas ya en la mano
   refreshHud(); if (typeof syncSlots === "function") syncSlots(); if (typeof refreshHotbar === "function") refreshHotbar(true);
   if (typeof saveFarm === "function") saveFarm(true);

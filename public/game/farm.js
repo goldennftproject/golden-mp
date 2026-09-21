@@ -497,6 +497,10 @@ class FarmScene extends Phaser.Scene {
          lienzo, no es del mundo. Se recuerda para que el soltar siga al apretar. */
       if (clicDeInterfaz(pt)) { this.downEnUI = true; return; }
       this.downEnUI = false;
+      // La guía puede mover la cámara una sola vez para mostrar el objetivo, pero el primer
+      // gesto SOBRE el mundo siempre vuelve a ser del jugador. Si arranca a arrastrar mientras
+      // el paneo sigue vivo, no puede sentirse como que la cámara le pelea la mano.
+      this.cancelarCamaraGuia(true);
       this.ultimaAccion = nowMs();   // 14/8: cualquier clic = jugador activo (las mariposas señalan solo al "perdido")
       /* 28/8 — MIENTRAS EL CORCHO ESTÁ EN EL AGUA, EL MUNDO NO RECIBE CLICS: un segundo clic
          no empieza otro lance encima del primero. Moverse sí cancela, la salida de siempre.
@@ -1003,12 +1007,23 @@ class FarmScene extends Phaser.Scene {
       } catch (e) {}
     }
     this.scale.on("resize", this.fitCamera, this);
+    // El alto disponible cambia mucho entre escritorio y móvil (el cartel pasa de arriba a
+    // abajo). Reconsiderar sólo el objetivo actual tras un resize evita que quede detrás de la
+    // hotbar, sin re-centrar a quien ya arrastró la vista a propósito.
+    this._tutoCamResize = () => {
+      this._tutoCamDoneKey = null;
+      const g = this.guiaTarget;
+      if (g) this.programarCamaraGuia(g.x, g.y, g.bottomY);
+    };
+    this.scale.on("resize", this._tutoCamResize, this);
     this.events.once("shutdown", () => {
       this.scale.off("resize", this.fitCamera, this);
+      if (this._tutoCamResize) this.scale.off("resize", this._tutoCamResize, this);
       if (this.brilloEv) { this.brilloEv.remove(); this.brilloEv = null; }   // al irse a la plaza o al bosque, se apaga
     });
     // rueda del mouse: acercar/alejar la cámara de la granja
     this.input.on("wheel", (ptr, over, dx, dy) => {
+      if (GF.CAM_PAN) this.cancelarCamaraGuia(true);   // rueda = decisión explícita de encuadre
       if (GF.CAM_PAN && (ptr.event.ctrlKey || ptr.event.shiftKey)) {   // Ctrl/Shift + rueda = acercar o alejar
         // el mínimo lo calcula fitCamera a partir de lo que mide el mapa y la ventana:
         // así el jugador SIEMPRE puede alejar hasta ver el mapa entero, con cualquier zoom
@@ -2213,13 +2228,13 @@ class FarmScene extends Phaser.Scene {
   // flecha del tutorial: triángulo dorado que rebota sobre el objetivo del paso actual
   updateTutoArrow() {
     if (this.tutoArrow) { this.tutoArrow.destroy(); this.tutoArrow = null; if (this.tutoTw) { this.tutoTw.stop(); this.tutoTw = null; } }
-    if (window.guiaOn && !guiaOn()) return;   // 14/8: guía opcional apagada — sin flecha en el mundo
+    if (window.guiaOn && !guiaOn()) { this.cancelarCamaraGuia(false); return; }   // 14/8: guía opcional apagada — sin flecha en el mundo
     let st = (typeof guiaActiva === "function") ? guiaActiva() : ((typeof tutoActivo === "function") ? tutoActivo() : null);
-    if (!st) return;
+    if (!st) { this.cancelarCamaraGuia(false); return; }
     // 13/8 v3: el SUB-OBJETIVO dinámico (sin hachas, pico roto…) pisa el destino de la flecha
     const sub = (!st.brujula && typeof tutoSub === "function") ? tutoSub() : null;
     if (sub) st = Object.assign({}, st, { target: null }, sub);
-    let x = null, y = null;
+    let x = null, y = null, bottomY = null;
     // 15/8 (playtest: la escolta revoloteaba sobre una veta EN ENFRIAMIENTO): un nodo solo
     // se señala si se puede usar YA — sin cooldown, sin freno de nivel y con pico del tier.
     // Si todo está enfriándose no se señala ninguno: la madurez avisa sola cuando vuelve.
@@ -2228,20 +2243,146 @@ class FarmScene extends Phaser.Scene {
       && !((o.golpes || 0) > 0)   // a medio talar/picar: tampoco (15/8)
       && !(typeof nodoBloqueado === "function" && nodoBloqueado(o))
       && (o.type !== "ore" || (eqPk && PICK_DEF[eqPk].mineTier >= (ORE_DEF[o.ore] ? ORE_DEF[o.ore].tier : 99)));
-    if (st.target === "plot") { const pl = (this.plots || []).find(o => o.state !== "locked"); if (pl) { x = pl.cx; y = pl.by - GF.TILE * 0.9; } }
-    else if (st.target === "ore") { const o = (this.objs || []).find(o => o.type === "ore" && !o.locked && usable(o)); if (o) { x = o.cx; y = o.by - (o.sprite ? o.sprite.displayHeight : 60) - 10; } }
-    else if (st.target === "portal") { const o = this.portal; if (o) { x = o.cx; y = o.by - 70; } }
+    if (st.target === "plot") {
+      /* La parcela que señala tiene que ser la que sirve para ESTE gesto. Mandar a la primera
+         tierra desbloqueada era suficiente para plantar, pero durante la cosecha podía caer en
+         una parcela seca mientras la papa lista estaba al lado. */
+      const plots = (this.plots || []).filter(o => o.state !== "locked");
+      const pl = st.id === "harvest"
+        ? (plots.find(o => o.state === "ready") || plots.find(o => o.state === "growing") || plots[0])
+        : st.id === "plant"
+          ? (plots.find(o => o.state === "dry") || plots[0])
+          : plots[0];
+      if (pl) { x = pl.cx; y = pl.by - GF.TILE * 0.9; bottomY = pl.by + 5; }
+    }
+    else if (st.target === "ore") { const o = (this.objs || []).find(o => o.type === "ore" && !o.locked && usable(o)); if (o) { x = o.cx; y = o.by - (o.sprite ? o.sprite.displayHeight : 60) - 10; bottomY = o.by + 5; } }
+    else if (st.target === "portal") { const o = this.portal; if (o) { x = o.cx; y = o.by - 70; bottomY = o.by + 5; } }
     else if (st.target === "tree" || st.target === "rock") {
       const tipos = st.target === "rock" ? ["rock", "ore"] : ["tree"];
       const o = (this.objs || []).find(o => tipos.includes(o.type) && !o.locked && usable(o));
-      if (o) { x = o.cx; y = o.by - (o.sprite ? o.sprite.displayHeight : 60) - 10; }
+      if (o) { x = o.cx; y = o.by - (o.sprite ? o.sprite.displayHeight : 60) - 10; bottomY = o.by + 5; }
     }
-    else { const o = (this.objs || []).find(o => o.type === st.target && !o.oculto); if (o) { x = o.cx; y = o.by - (o.sprite ? o.sprite.displayHeight : 60) - 10; } }   // sin plano colocado no hay a qué apuntar (12/8)
-    if (x == null) { this.guiaTarget = null; return; }
+    else { const o = (this.objs || []).find(o => o.type === st.target && !o.oculto); if (o) { x = o.cx; y = o.by - (o.sprite ? o.sprite.displayHeight : 60) - 10; bottomY = o.by + 5; } }   // sin plano colocado no hay a qué apuntar (12/8)
+    if (x == null) { this.guiaTarget = null; this.cancelarCamaraGuia(false); return; }
     // 14/8 v2 (dirección): en el MUNDO señala la MARIPOSA GUÍA, no una flecha — la 1ª
     // mariposa revolotea sobre el objetivo (tickMariposas). La flecha DOM sigue en interfaces.
-    this.guiaTarget = { x, y };
+    this.guiaTarget = { x, y, bottomY: bottomY == null ? y + GF.TILE : bottomY };
     this._mariAt = 0;   // re-asignar destinos ya mismo
+    this.programarCamaraGuia(x, y, bottomY);
+  }
+
+  /* ============ CÁMARA DE LA GUÍA (21/9) ===============================================
+     La granja se juega con cámara libre. Una mariposa sobre algo que queda bajo el HUD, fuera
+     de pantalla o detrás de la hotbar no guía: es decoración que el jugador no llega a ver.
+     La regla es deliberadamente acotada: SOLO el objetivo real del tutorial puede pedir un
+     paneo, y sólo una vez por destino. Después el primer clic, rueda o arrastre del jugador
+     cancela ese paneo y bloquea reintentos para ese mismo destino. Así la ayuda muestra el
+     siguiente paso pero jamás pelea con la cámara manual. */
+  programarCamaraGuia(x, y, bottomY) {
+    const st = (typeof tutoActivo === "function") ? tutoActivo() : null;
+    if (!st || !GF.CAM_PAN || x == null || y == null || (window.guiaOn && !guiaOn())) return;
+    const base = Number.isFinite(bottomY) ? bottomY : y + GF.TILE;
+    const key = (st.id || "tuto") + ":" + Math.round(x) + ":" + Math.round(y) + ":" + Math.round(base);
+    if (this._tutoCamManualKey === key || this._tutoCamDoneKey === key ||
+        (this._tutoCamGuiding && this._tutoCamGuiding.key === key)) return;
+    this._tutoCamPending = { x, y, bottomY: base, key, notBefore: nowMs() + 24 };
+  }
+
+  cancelarCamaraGuia(manual) {
+    const pend = this._tutoCamPending;
+    if (manual && pend) this._tutoCamManualKey = pend.key;
+    this._tutoCamPending = null;
+    const run = this._tutoCamGuiding;
+    if (!run) return;
+    if (manual) this._tutoCamManualKey = run.key;
+    this._tutoCamGuiding = null;
+    // `panEffect` es la animación que lanzó esta ayuda. No se toca la posición manual; sólo
+    // se detiene el tween para que el arrastre/rueda que acaba de empezar gane inmediatamente.
+    try {
+      const c = this.cameras && this.cameras.main;
+      if (c && c.panEffect && c.panEffect.isRunning && typeof c.panEffect.stop === "function") c.panEffect.stop();
+    } catch (e) {}
+  }
+
+  // Rectángulo útil del canvas, descontando las franjas HTML que sí tapan al mundo. Se mide
+  // contra el canvas real porque el navegador puede tener zoom y Phaser otra escala interna.
+  zonaSeguraCamaraGuia() {
+    const c = this.cameras && this.cameras.main;
+    const w = (c && c.width) || (this.scale && this.scale.width) || 0;
+    const h = (c && c.height) || (this.scale && this.scale.height) || 0;
+    const ox = (c && c.x) || 0, oy = (c && c.y) || 0;
+    const area = { left: ox + 16, right: ox + Math.max(16, w - 16), top: oy + 16, bottom: oy + Math.max(16, h - 16) };
+    if (typeof document === "undefined" || !w || !h) return area;
+    let cv = null;
+    try { cv = (this.game && this.game.canvas) || document.querySelector("#game canvas"); } catch (e) {}
+    if (!cv || typeof cv.getBoundingClientRect !== "function") return area;
+    let cr;
+    try { cr = cv.getBoundingClientRect(); } catch (e) { return area; }
+    if (!cr || !cr.width || !cr.height) return area;
+    const sx = w / cr.width, sy = h / cr.height, mid = oy + h / 2, gap = 12;
+    const reserva = (sel, soloVisible) => {
+      let el = null;
+      try { el = document.querySelector(sel); } catch (e) {}
+      if (!el || (soloVisible && el.classList && !el.classList.contains(soloVisible)) ||
+          (sel === "#tuto" && el.classList && el.classList.contains("hidden"))) return;
+      let r;
+      try { r = el.getBoundingClientRect(); } catch (e) { return; }
+      if (!r || !r.width || !r.height) return;
+      const top = oy + (r.top - cr.top) * sy, bottom = oy + (r.bottom - cr.top) * sy;
+      // HUD/cartel arriba; hotbar/prompt abajo. Una pieza que cruza el centro deja de ser
+      // una franja útil: el centro de respaldo es mejor que fabricar un rectángulo negativo.
+      if (bottom <= mid) area.top = Math.max(area.top, bottom + gap);
+      else if (top >= mid) area.bottom = Math.min(area.bottom, top - gap);
+    };
+    reserva(".hudbar"); reserva("#hud-flot"); reserva("#tuto"); reserva("#hotwrap");
+    reserva("#prompt", "show"); reserva("#toast", "show");
+    if (area.right - area.left < 80) { area.left = ox + w * 0.16; area.right = ox + w * 0.84; }
+    if (area.bottom - area.top < 90) { area.top = oy + h * 0.22; area.bottom = oy + h * 0.78; }
+    return area;
+  }
+
+  tickCamaraGuia(t) {
+    const p = this._tutoCamPending;
+    if (!p || t < p.notBefore) return;
+    const st = (typeof tutoActivo === "function") ? tutoActivo() : null;
+    if (!st || !GF.CAM_PAN || this._tutoCamManualKey === p.key) { this._tutoCamPending = null; return; }
+    // Un panel, edición o un arrastre ya iniciado tienen prioridad. Al cerrar el panel el
+    // pendiente se resuelve solo, sin necesitar otro cambio de paso del tutorial.
+    if (GF.uiOpen || GF.editMode || this.placing || this.dragObj || this.dragPlot || this.dragDeco || this.dragPond || (this.hold && this.hold.active)) return;
+    const c = this.cameras && this.cameras.main;
+    if (!c || !c.zoom || typeof c.pan !== "function") { this._tutoCamPending = null; return; }
+    if (c.panEffect && c.panEffect.isRunning) return;   // por ejemplo, la celebración de una expansión
+    const z = c.zoom, ox = c.x || 0, oy = c.y || 0;
+    const sx = ox + (p.x - c.scrollX) * z;
+    const top = oy + (p.y - c.scrollY) * z;
+    const bottom = oy + (p.bottomY - c.scrollY) * z;
+    const safe = this.zonaSeguraCamaraGuia();
+    const padX = Math.min(52, Math.max(18, (safe.right - safe.left) * 0.10));
+    const padY = Math.min(42, Math.max(14, (safe.bottom - safe.top) * 0.08));
+    let dx = 0, dy = 0;
+    if (sx < safe.left + padX) dx = sx - (safe.left + padX);
+    else if (sx > safe.right - padX) dx = sx - (safe.right - padX);
+    if (top < safe.top + padY && bottom > safe.bottom - padY) dy = (top + bottom) / 2 - (safe.top + safe.bottom) / 2;
+    else if (top < safe.top + padY) dy = top - (safe.top + padY);
+    else if (bottom > safe.bottom - padY) dy = bottom - (safe.bottom - padY);
+    this._tutoCamPending = null;
+    if (Math.abs(dx) < 2 && Math.abs(dy) < 2) { this._tutoCamDoneKey = p.key; return; }
+    const midX = (c.midPoint && c.midPoint.x != null) ? c.midPoint.x : c.scrollX + c.width / (2 * z);
+    const midY = (c.midPoint && c.midPoint.y != null) ? c.midPoint.y : c.scrollY + c.height / (2 * z);
+    const token = (this._tutoCamToken || 0) + 1;
+    this._tutoCamToken = token;
+    this._tutoCamGuiding = { key: p.key, token };
+    const fin = () => {
+      const run = this._tutoCamGuiding;
+      if (!run || run.token !== token) return;
+      this._tutoCamGuiding = null;
+      this._tutoCamDoneKey = p.key;
+    };
+    try {
+      c.pan(midX + dx / z, midY + dy / z, 520, "Sine.easeOut", true);
+      if (typeof c.once === "function") c.once("camerapancomplete", fin);
+      if (this.time && typeof this.time.delayedCall === "function") this.time.delayedCall(660, fin);
+    } catch (e) { fin(); }
   }
 
   // TINTE DE LA VETA (9/8): el color va sobre la roca ENTERA, no solo sobre las pepitas.
@@ -5095,6 +5236,7 @@ class FarmScene extends Phaser.Scene {
 
     // restaurar objetos que salieron de cooldown
     const t = nowMs();
+    this.tickCamaraGuia(t);   // sólo si el objetivo tutorial quedó fuera del área jugable
     for (const o of this.objs) {
       /* 18/8 (reporte del diseñador: "crecen antes de la hora... tenés que cambiar la manera en la
          que los sprites van rotando, tiene que depender sí o sí del tiempo de enfriamiento").
