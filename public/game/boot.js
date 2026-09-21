@@ -142,14 +142,15 @@ class BootScene extends Phaser.Scene {
     // estado individual de hambre: pequeño comedero, no ligado a un cultivo concreto
     L.push(["animal_feed_marker", P + "animal_feed_marker.png?v=1"]);
     L.push(["pet_gallina", P + "pet_gallina.png"]);   // mascota "Pinta" del cofre de login (10/8)
+    for (let i = 0; i < 8; i++) L.push(["pet_gallina_walk_" + i, P + "pet_gallina_walk_" + i + ".png?v=1"]);
     return L;
   }
 
   preload() {
     // ATLAS: todos los sprites del mundo en 2 archivos (mucho más liviano para el server free).
     // Si el atlas no llega, ensureAll() baja los archivos sueltos como respaldo.
-    this.load.image("__atlas", "assets/atlas.png?v=53");
-    this.load.json("__atlasmap", "assets/atlas.json?v=53");
+    this.load.image("__atlas", "assets/atlas.png?v=54");
+    this.load.json("__atlasmap", "assets/atlas.json?v=54");
     // 2/9: la isla viaja en la PRIMERA pasada (es la única imagen que no cabe en el atlas:
     // 1190x854). Antes quedaba para los reintentos y era ella sola la que disparaba una
     // segunda vuelta de descarga en cada carga del juego.
@@ -289,6 +290,8 @@ class BootScene extends Phaser.Scene {
       const ks = Array.from({ length: 9 }, (_, i) => "animal_" + a + "_walk_" + i);
       if (has(ks)) this.anims.create({ key: "animal_" + a + "_walk", frames: ks.map(k => ({ key: k })), frameRate: 9, repeat: -1 });
     });
+    { const ks = Array.from({ length: 8 }, (_, i) => "pet_gallina_walk_" + i);
+      if (has(ks)) this.anims.create({ key: "pet_gallina_walk", frames: ks.map(k => ({ key: k })), frameRate: 10, repeat: -1 }); }
     // animaciones del orco y del troll (troll con idle de 4 frames)
     const mobs = { orc: [["idle", 3, 5, -1], ["walk", 6, 9, -1], ["atk", 6, 11, 0]],
                    troll: [["idle", 4, 4, -1], ["walk", 6, 8, -1], ["atk", 6, 10, 0]],

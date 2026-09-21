@@ -3034,7 +3034,7 @@ class FarmScene extends Phaser.Scene {
     if (!def || this.mascota) return;
     if (!this.textures.exists(def.sprite)) return;   // todavía no cargó el arte: no pasa nada
     const pt = this.puntoAnimal() || { x: GF.ORIG_X + GF.WORLD_W / 2, y: GF.ORIG_Y + GF.WORLD_H / 2 };
-    const spr = this.add.image(pt.x, pt.y, def.sprite).setOrigin(0.5, 1);
+    const spr = this.add.sprite(pt.x, pt.y, def.sprite).setOrigin(0.5, 1);
     spr.setScale((GF.TILE * 0.52) / spr.width);       // más chica que los animales del Establo
     this.mascota = { k: quiero, spr, tx: pt.x, ty: pt.y, esperaHasta: 0, bob: Math.random() * 6.28 };
   }
@@ -3047,13 +3047,14 @@ class FarmScene extends Phaser.Scene {
     }
     const dx = m.tx - m.spr.x, dy = m.ty - m.spr.y, d = Math.hypot(dx, dy);
     if (d > 3) {
+      if (this.anims.exists("pet_gallina_walk") && (m.spr.anims.currentAnim?.key !== "pet_gallina_walk" || !m.spr.anims.isPlaying)) m.spr.play("pet_gallina_walk");
       const v = Math.min(d, 24 * dt);
       m.spr.x += dx / d * v; m.spr.y += dy / d * v;
       if (Math.abs(dx) > 1) m.spr.setFlipX(dx < 0);
       m.bob += dt * 9;
       const s = Math.abs(m.spr.scaleX);
       m.spr.setScale(m.spr.scaleX, s * (1 + Math.sin(m.bob) * 0.06));
-    }
+    } else if (m.spr.anims.isPlaying) { m.spr.anims.stop(); m.spr.setTexture("pet_gallina"); }
     m.spr.setDepth(m.spr.y);
   }
   tickAnimales(dt, t) {

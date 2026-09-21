@@ -31,7 +31,7 @@ BOOT = os.path.join(RAIZ, "public", "game", "boot.js")
 
 # Los iconos de recursos, cultivos, peces y monedas también van al atlas: el juego los
 # usa para el "premio" que sale volando cuando talás, picás o cosechás.
-EXTRA = ["res_", "crop_", "cropm_", "cropg_", "fish_", "coin_", "animal_", "deco_", "build_", "plano_", "rock_buried", "hero_axe_", "hero_mace_"]   # build_: obras · plano_: blueprints (12/8) · ataques nuevos (21/9)
+EXTRA = ["res_", "crop_", "cropm_", "cropg_", "fish_", "coin_", "animal_", "pet_gallina_walk_", "deco_", "build_", "plano_", "rock_buried", "hero_axe_", "hero_mace_"]   # build_: obras · plano_: blueprints (12/8) · ataques nuevos (21/9)
 # 17/8: cropm_/cropg_ (planta a medias y crecida) SE HABÍAN QUEDADO AFUERA. "crop_" no los
 # atrapa, así que cada cultivo nuevo entraba con su icono al atlas pero sus dos etapas de
 # crecimiento se bajaban sueltas. Con 3 cultivos nuevos eran 6 pedidos extra + la fase de

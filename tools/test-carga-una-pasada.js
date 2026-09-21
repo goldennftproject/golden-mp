@@ -62,6 +62,9 @@ console.log("\nLOS ANIMALES DEL ESTABLO CAMINAN");
   const cuadros = animales.flatMap(a => Array.from({ length: 9 }, (_, i) => "animal_" + a + "_walk_" + i));
   const faltan = cuadros.filter(k => !ATLAS[k]);
   ok("los 36 cuadros de caminata viajan en el atlas", faltan.length === 0, faltan.join(", "));
+  const pinta = Array.from({ length: 8 }, (_, i) => "pet_gallina_walk_" + i);
+  const faltanPinta = pinta.filter(k => !ATLAS[k]);
+  ok("los ocho cuadros de Pinta viajan en el atlas", faltanPinta.length === 0, faltanPinta.join(", "));
   const creadas = [];
   const bootDePrueba = Object.create(ctx.__B.prototype);
   bootDePrueba.textures = { exists: () => true };
@@ -69,9 +72,13 @@ console.log("\nLOS ANIMALES DEL ESTABLO CAMINAN");
   bootDePrueba.buildAnims();
   const anim = a => creadas.find(x => x.key === "animal_" + a + "_walk");
   ok("Boot crea una caminata de nueve cuadros por especie", animales.every(a => anim(a) && anim(a).frames.length === 9));
+  const animaPinta = creadas.find(x => x.key === "pet_gallina_walk");
+  ok("Boot crea la caminata limpia de ocho cuadros de Pinta", !!animaPinta && animaPinta.frames.length === 8);
   ok("la granja usa Sprite y alterna caminar / quieto", /this\.add\.sprite\(x, y, key\)/.test(FARM) &&
     /const aniCaminar = "animal_" \+ a\.k \+ "_walk";/.test(FARM) &&
     /a\.spr\.play\(aniCaminar\)/.test(FARM) && /a\.spr\.setTexture\("animal_" \+ a\.k\)/.test(FARM));
+  ok("Pinta también alterna caminar / quieta", /this\.add\.sprite\(pt\.x, pt\.y, def\.sprite\)/.test(FARM) &&
+    /m\.spr\.play\("pet_gallina_walk"\)/.test(FARM) && /m\.spr\.setTexture\("pet_gallina"\)/.test(FARM));
 }
 
 console.log("\nEL BESTIARIO TAMBIÉN (la fase «Cargando criaturas…» no pide nada)");
