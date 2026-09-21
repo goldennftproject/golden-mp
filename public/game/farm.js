@@ -3009,10 +3009,10 @@ class FarmScene extends Phaser.Scene {
         spr.setScale((GF.TILE * 0.78) / spr.width);
         const marca = this.add.image(x, y - 30, resSprite(ANIMAL_DEF[k].mat) || key).setDepth(99991).setVisible(false);
         marca.setDisplaySize(16, 16);
-        /* 21/9 — la marca de hambre la escribió el chat que ayuda con lo visual (20/9) pidiendo una
-           textura « animal_feed_marker » que no existe en el atlas: sin ella la señal nunca se veía.
-           Se conserva la idea tal cual y, mientras no haya lámina, se usa el ícono de LO QUE COME
-           (la comida que pide) — que además es la respuesta a la pregunta que se hace el jugador. */
+        /* 21/9 — la marca de hambre es del chat que ayuda con lo visual (20/9): el comedero
+           « animal_feed_marker » (assets/farm, lo carga boot.js). Yo lo di por inexistente porque mi
+           copia no tenía ni el PNG ni su línea de boot.js — el error fue mío, no de él. Se deja un
+           RESPALDO por si la lámina no cargara: el ícono de lo que come, y si ni eso, un « ! ». */
         const comeK = (ANIMAL_DEF[k].come || [])[0];
         const comeSpr = comeK && typeof resSprite === "function" ? resSprite(comeK) : null;
         const marcaHambre = this.textures.exists("animal_feed_marker")

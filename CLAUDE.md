@@ -1,5 +1,9 @@
 # Cómo llega el código al juego  (15/9)
 
+> **Esto es la Ley 5**, dictada por dirección el 15/9: *« todo lo que hagas, e incluso lo que
+> hagas en tu sandbox, y que yo lo apruebe como un cambio, lo pondrás para que yo pueda hacerle
+> deploy »*. El texto completo está en `docs/LEYES.md`; acá está el cómo.
+
 **Esto se escribe porque el 15/9 se perdió una tarde entera por no saberlo.** Ocho commits
 —el portero del mercado, el orden del pantano, el combate, el freeze, el muñeco de la Zona,
 la vida por nivel— se quedaron en el contenedor de la nube y el diseñador probó el juego sin
@@ -39,3 +43,19 @@ No alcanza con que el commit diga OK. Se vuelve a leer el archivo del PC y se bu
 dentro (`grep` de una constante que acabo de agregar). Lo mismo con el juego publicado: abrir
 `https://golden-mp.onrender.com` y pedir `/game/state.js` con un `?x=` para saltar la caché.
 **« Antes de decir que falta que deploye, chequeá »** — y también antes de decir que ya está.
+
+## Hay OTRO que escribe en el PC (21/9)
+
+Golden usa además un chat aparte para lo visual. Sus cambios entran directo en el PC y se
+deployan con `deploy.bat`, igual que los míos: aparecen en el `git log` del PC como commits
+« deploy … » que NO se corresponden con ninguna entrega mía. El 20-21/9 fueron dos: los marcadores
+individuales de hambre del corral (`animal_feed_marker.png` + `boot.js` + `farm.js` +
+`test-marcadores-animales.js`) y el Mercado a 2,1 celdas (`farm.js` + `test-celdas-vs-sprites.js`
++ `TODO.md`). Yo tomé su `farm.js` y me faltaron el PNG y `boot.js`, y « arreglé » algo que ya
+funcionaba. Para que no se repita, antes de tocar un archivo:
+
+1. `git log --since=<mi última entrega> --stat` en el PC: cada commit con archivos que yo no
+   entregué es de él;
+2. traer al contenedor TODO lo que toque ese commit (arte, boot.js, tests, TODO), no solo el
+   archivo que voy a editar;
+3. correr sus tests además de los míos; los suyos también custodian su trabajo.
