@@ -116,14 +116,29 @@ var ERR_RECUERDA = 3;        // cuántos errores se recuerdan para el cartel
    El guardado va primero igual: la ley 1 no cede por un cartel. */
 var ERR_CARTEL_MS = 5000;          // lo que el cartel se queda antes de recargar
 var ERR_LLAVE = "gf_ultimo_error";
-function guardarElError(txt, porque) {
-  try { localStorage.setItem(ERR_LLAVE, JSON.stringify({ txt: txt || "", porque: porque || "", t: Date.now() })); } catch (e) {}
+/* 22/9 — `solo` dice si el juego SE REINICIÓ por eso (el vigía lo decidió) o si solo hubo un error
+   anotado y la recarga vino de otro lado (F5, el cartel de actualizar). Antes las dos cosas se
+   contaban igual: « el juego se detuvo y volvió a entrar solo », y Golden lo leyó tras una recarga
+   normal con un error de la billetera de motivo. Era falso dos veces. */
+function guardarElError(txt, porque, solo) {
+  try {
+    /* un error suelto no pisa el aviso de un reinicio de verdad que todavía no se contó */
+    if (!solo) { const d = JSON.parse(localStorage.getItem(ERR_LLAVE) || "null"); if (d && d.solo) return; }
+    localStorage.setItem(ERR_LLAVE, JSON.stringify({ txt: txt || "", porque: porque || "", solo: !!solo, t: Date.now() }));
+  } catch (e) {}
 }
 function contarElErrorDeAntes() {
   let d = null;
   try { d = JSON.parse(localStorage.getItem(ERR_LLAVE) || "null"); localStorage.removeItem(ERR_LLAVE); } catch (e) {}
   if (!d || !d.t || Date.now() - d.t > 10 * 60 * 1000) return;   // viejo: ya no cuenta nada útil
   const det = (d.porque || "se detuvo") + (d.txt ? " · " + d.txt : "");
+  if (!d.solo) {
+    /* hubo un error, pero el juego NO se reinició por él: se deja constancia sin alarma ni panel */
+    console.warn("En la partida anterior hubo un error (el juego no se reinició por eso):", det);
+    try { if (typeof log === "function") log("En la partida anterior hubo un error, sin reinicio: " + det, "warn"); } catch (e) {}
+    try { if (typeof sesionLog === "function") sesionLog("error de la partida anterior", det); } catch (e) {}
+    return;
+  }
   console.warn("Golden Farm se reinició solo. Motivo:", det);
   try { if (typeof log === "function") log("⚠ La vez anterior el juego se detuvo y volvió a entrar solo. Motivo: " + det, "bad"); } catch (e) {}
   /* y se ABRE el panel: el registro arranca plegado, así que dejar el motivo ahí adentro sería
@@ -170,6 +185,12 @@ function atraparLosErrores() {
   });
   window.addEventListener("unhandledrejection", (e) => {
     const r = e && e.reason;
+    /* 22/9 — el filtro de arriba mira e.filename, y una promesa rechazada no trae filename: el
+       « M_ID » de la billetera (contentscript.js, el mismo que llena la consola de Golden con
+       ObjectMultiplex) entraba por acá y terminaba de MOTIVO en el cartel de « el juego se
+       detuvo y volvió a entrar » — como si el juego se hubiera caído por eso. Se mira la pila. */
+    const pila = String((r && r.stack) || "");
+    if (/-extension:\/\//.test(pila) || /contentscript\.js/.test(pila)) return;
     anota("promesa: " + ((r && r.message) || String(r)));
   });
 }
@@ -211,7 +232,7 @@ function vigilarElContexto(game) {
     const det = document.getElementById("ctx-detalle"), e = (typeof ultimoError === "function") ? ultimoError() : "";
     if (det) det.textContent = e ? "(" + (porque || "se detuvo") + " · " + e + ")" : (porque ? "(" + porque + ")" : "");
     try { if (typeof sesionLog === "function") sesionLog("se volvió a entrar", (porque || "") + " " + e); } catch (x) {}
-    guardarElError(e, porque);   // para poder contarlo del otro lado de la recarga
+    guardarElError(e, porque, true);   // para poder contarlo del otro lado de la recarga: ESTE sí es un reinicio
     volverAEntrar();
   };
   window.__gfFatal = (porque) => { if (!cayendo) rendirse(porque); };   // lo llama el atrapador de errores
