@@ -10909,7 +10909,7 @@ function albumFamilias() {
       tiene: (k) => statGet("minar", k) > 0 || vistoRes(k) },
     { id: "animales", ic: "🐄", label: "Animales", orden: ANIMAL_ORDER,
       nom: (k) => (ANIMAL_DEF[k] && ANIMAL_DEF[k].label) || k,
-      spr: () => null, emo: (k) => (ANIMAL_DEF[k] && ANIMAL_DEF[k].emoji) || "🐾",
+      spr: (k) => "animal_" + k, emo: (k) => (ANIMAL_DEF[k] && ANIMAL_DEF[k].emoji) || "🐾",
       tiene: (k) => (typeof animalCant === "function" ? animalCant(k) : 0) > 0 || statGet("alimentar", k) > 0 },
     { id: "bestiario", ic: "⚔️", label: "Bestiario", orden: (typeof MONSTER_ORDER !== "undefined" ? MONSTER_ORDER : Object.keys(MONSTER_DEF)),
       nom: (k) => (MONSTER_DEF[k] && MONSTER_DEF[k].label) || k,

@@ -19,6 +19,7 @@ const ok = (n, c, d) => { if (!c) fallos++; console.log((c ? "  ok   " : "  FALL
 const BOOT = fs.readFileSync(path.join(RAIZ, "public/game/boot.js"), "utf8");
 const ST = fs.readFileSync(path.join(RAIZ, "public/game/state.js"), "utf8");
 const FOREST = fs.readFileSync(path.join(RAIZ, "public/game/forest.js"), "utf8");
+const FARM = fs.readFileSync(path.join(RAIZ, "public/game/farm.js"), "utf8");
 const ATLAS = JSON.parse(fs.readFileSync(path.join(RAIZ, "public/assets/atlas.json"), "utf8")).frames;
 
 /* assetList() de verdad, evaluando el boot con el CROP_ORDER real */
@@ -53,6 +54,24 @@ console.log("\nHACHA Y MAZO NO HEREDAN EL ESPADAZO");
   const gesto = key => creadas.find(a => a.key === key);
   ok("Boot crea ambos gestos con sus ocho frames", !!gesto("act_axe") && gesto("act_axe").frames.length === 8 && !!gesto("act_mace") && gesto("act_mace").frames.length === 8);
   ok("el Bosque elige la animación de hacha y mazo", /tipoArma === "hacha" && this\.anims\.exists\("act_axe"\)/.test(FOREST) && /tipoArma === "mazo" && this\.anims\.exists\("act_mace"\)/.test(FOREST));
+}
+
+console.log("\nLOS ANIMALES DEL ESTABLO CAMINAN");
+{
+  const animales = ["alpaca", "conejo", "toro", "jabali"];
+  const cuadros = animales.flatMap(a => Array.from({ length: 9 }, (_, i) => "animal_" + a + "_walk_" + i));
+  const faltan = cuadros.filter(k => !ATLAS[k]);
+  ok("los 36 cuadros de caminata viajan en el atlas", faltan.length === 0, faltan.join(", "));
+  const creadas = [];
+  const bootDePrueba = Object.create(ctx.__B.prototype);
+  bootDePrueba.textures = { exists: () => true };
+  bootDePrueba.anims = { create: spec => creadas.push(spec) };
+  bootDePrueba.buildAnims();
+  const anim = a => creadas.find(x => x.key === "animal_" + a + "_walk");
+  ok("Boot crea una caminata de nueve cuadros por especie", animales.every(a => anim(a) && anim(a).frames.length === 9));
+  ok("la granja usa Sprite y alterna caminar / quieto", /this\.add\.sprite\(x, y, key\)/.test(FARM) &&
+    /const aniCaminar = "animal_" \+ a\.k \+ "_walk";/.test(FARM) &&
+    /a\.spr\.play\(aniCaminar\)/.test(FARM) && /a\.spr\.setTexture\("animal_" \+ a\.k\)/.test(FARM));
 }
 
 console.log("\nEL BESTIARIO TAMBIÉN (la fase «Cargando criaturas…» no pide nada)");

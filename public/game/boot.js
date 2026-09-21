@@ -134,8 +134,11 @@ class BootScene extends Phaser.Scene {
     if (typeof CROP_ORDER !== "undefined") CROP_ORDER.forEach(k => L.push(["crop_" + k, P + "crop_" + k + ".png"]));
     ["comun","raro","epico","legendario"].forEach(k => L.push(["fish_" + k, P + "fish_" + k + ".png"]));
     ["plata","esencia"].forEach(k => L.push(["coin_" + k, P + "coin_" + k + ".png"]));
-    // animales del Establo (10/8: definitivos, de PixelLab; antes eran provisorios por código)
-    ["alpaca","conejo","toro","jabali"].forEach(k => L.push(["animal_" + k, P + "animal_" + k + ".png?v=2"]));
+    // animales del Establo: pose base más una caminata corta por especie.
+    ["alpaca","conejo","toro","jabali"].forEach(k => {
+      L.push(["animal_" + k, P + "animal_" + k + ".png?v=2"]);
+      for (let i = 0; i < 9; i++) L.push(["animal_" + k + "_walk_" + i, P + "animal_" + k + "_walk_" + i + ".png?v=1"]);
+    });
     // estado individual de hambre: pequeño comedero, no ligado a un cultivo concreto
     L.push(["animal_feed_marker", P + "animal_feed_marker.png?v=1"]);
     L.push(["pet_gallina", P + "pet_gallina.png"]);   // mascota "Pinta" del cofre de login (10/8)
@@ -145,8 +148,8 @@ class BootScene extends Phaser.Scene {
   preload() {
     // ATLAS: todos los sprites del mundo en 2 archivos (mucho más liviano para el server free).
     // Si el atlas no llega, ensureAll() baja los archivos sueltos como respaldo.
-    this.load.image("__atlas", "assets/atlas.png?v=52");
-    this.load.json("__atlasmap", "assets/atlas.json?v=52");
+    this.load.image("__atlas", "assets/atlas.png?v=53");
+    this.load.json("__atlasmap", "assets/atlas.json?v=53");
     // 2/9: la isla viaja en la PRIMERA pasada (es la única imagen que no cabe en el atlas:
     // 1190x854). Antes quedaba para los reintentos y era ella sola la que disparaba una
     // segunda vuelta de descarga en cada carga del juego.
@@ -281,6 +284,11 @@ class BootScene extends Phaser.Scene {
       if (has(ks)) this.anims.create({ key: "boar_walk", frames: ks.map(k => ({ key: k })), frameRate: 10, repeat: -1 }); }
     { const ks = [0,1,2,3,4,5,6,7,8].map(i => "boar_atk_" + i);
       if (has(ks)) this.anims.create({ key: "boar_atk", frames: ks.map(k => ({ key: k })), frameRate: 10, repeat: -1 }); }
+    // animales del Establo: una caminata en loop; al detenerse FarmScene vuelve a la pose base.
+    ["alpaca","conejo","toro","jabali"].forEach(a => {
+      const ks = Array.from({ length: 9 }, (_, i) => "animal_" + a + "_walk_" + i);
+      if (has(ks)) this.anims.create({ key: "animal_" + a + "_walk", frames: ks.map(k => ({ key: k })), frameRate: 9, repeat: -1 });
+    });
     // animaciones del orco y del troll (troll con idle de 4 frames)
     const mobs = { orc: [["idle", 3, 5, -1], ["walk", 6, 9, -1], ["atk", 6, 11, 0]],
                    troll: [["idle", 4, 4, -1], ["walk", 6, 8, -1], ["atk", 6, 10, 0]],

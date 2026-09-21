@@ -3005,7 +3005,7 @@ class FarmScene extends Phaser.Scene {
         if (!pt) pt = this.puntoAnimal();
         if (!pt) pt = { x: (this.corral.x1 + this.corral.x2) / 2, y: (this.corral.y1 + this.corral.y2) / 2 };
         const x = pt.x, y = pt.y;
-        const spr = this.add.image(x, y, key).setOrigin(0.5, 1);
+        const spr = this.add.sprite(x, y, key).setOrigin(0.5, 1);
         spr.setScale((GF.TILE * 0.78) / spr.width);
         const marca = this.add.image(x, y - 30, resSprite(ANIMAL_DEF[k].mat) || key).setDepth(99991).setVisible(false);
         marca.setDisplaySize(16, 16);
@@ -3070,7 +3070,9 @@ class FarmScene extends Phaser.Scene {
       }
       const dx = a.tx - a.spr.x, dy = a.ty - a.spr.y, d = Math.hypot(dx, dy);
       const anda = d > 3;
+      const aniCaminar = "animal_" + a.k + "_walk";
       if (anda) {
+        if (this.anims.exists(aniCaminar) && (a.spr.anims.currentAnim?.key !== aniCaminar || !a.spr.anims.isPlaying)) a.spr.play(aniCaminar);
         const v = Math.min(d, 16 * dt);
         a.spr.x += dx / d * v; a.spr.y += dy / d * v;
         if (Math.abs(dx) > 1) a.spr.setFlipX(dx < 0);           // mira hacia donde camina
@@ -3078,7 +3080,7 @@ class FarmScene extends Phaser.Scene {
         a.spr.y -= 0;                                            // el "trote" es un cabeceo de escala
         a.spr.setScale(a.spr.scaleX < 0 ? -Math.abs(a.spr.scaleX) : Math.abs(a.spr.scaleX),
           Math.abs(a.spr.scaleX) * (1 + Math.sin(a.bob) * 0.05));
-      }
+      } else if (a.spr.anims.isPlaying) { a.spr.anims.stop(); a.spr.setTexture("animal_" + a.k); }
       a.spr.setDepth(a.spr.y);
       // La señal pertenece a ESTE animal: hambre siempre gana a material, y el que ya comió pero
       // espera queda visualmente limpio. Así el corral no contradice al panel del Establo.

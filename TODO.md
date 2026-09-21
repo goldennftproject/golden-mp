@@ -292,6 +292,7 @@ Están desarrolladas en el GDD §15.0, con sus números medidos. Aquí solo el t
 - [ ] **Árboles, piedras y parcelas**: siguen siendo el set viejo con el color calmado.
 - [x] **Piedra vs hierro**: veta de hierro fría, oscura y con estados propios; piedra queda cálida y redondeada.
 - [x] **Animaciones de ataque propias por arma**: espada y arco conservan las suyas; hacha y mazo suman ocho frames propios cada una.
+- [x] **Animales del Establo**: sprites reales en Establo y Álbum; alpaca, conejo, toro y jabalí caminan con nueve cuadros propios.
 
 ## ⚫ Ofrecido y sin pedir
 

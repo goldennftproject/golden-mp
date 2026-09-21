@@ -3421,6 +3421,12 @@ function refreshCurtiduria() {
 }
 
 /* ---- Establo: animales, felicidad y producción ("2das mejoras") ---- */
+// El mismo animal que pasea por la granja aparece en su ficha: el emoji queda sólo como respaldo.
+function establoAnimalIc(k, d) {
+  const emoji = (d && d.emoji) || "🐾", label = (d && d.label) || "Animal";
+  return '<img class="animal-ic" src="' + GF.spr("animal_" + k) + '" alt="' + label +
+    '" draggable="false" onerror="this.outerHTML=\'<span class=&quot;em&quot;>' + emoji + '</span>\'">';
+}
 function refreshEstablo() {
   const box = $("establo-list"); if (!box) return;
   /* 22/8: el cupo total sale del nivel de Ganadería — el establo lo dice en la cara */
@@ -3445,7 +3451,7 @@ function refreshEstablo() {
     const racion = d.racion || 1;
     const come = d.come.map(c => racion + " " + (CROP_DEF[c] ? CROP_DEF[c].label : c)).join(" o ");
     if (!a) {
-      h += '<div class="forge-row"><div class="fic">' + d.emoji + '</div><div class="finfo">' +
+      h += '<div class="forge-row"><div class="fic">' + establoAnimalIc(k, d) + '</div><div class="finfo">' +
         '<div class="fnm">' + d.label + '</div>' +
         '<div class="fds">Come ' + come + ' · produce ' + RES_LABEL[d.mat] + ' (' + animalPorCiclo(k) + ' cada ' + fmtSecs(d.cicloH * 3600) + ')</div>' +
         '<div class="fds">Desbloquea la armadura de ' + d.armadura + '</div>' +
@@ -3476,7 +3482,7 @@ function refreshEstablo() {
       /* 11/9 (dirección): « le da hambre cada 24h; si no come no da nada y sigue el CD ». La fila
          dice las dos cosas que importan y nada más: si comió este ciclo, y qué va a dar. */
       const totalI = Math.floor(rindeI + guardI + 1e-9);
-      h += '<div class="forge-row' + (listoI ? ' eq' : '') + '"><div class="fic">' + d.emoji + '</div><div class="finfo">' +
+      h += '<div class="forge-row' + (listoI ? ' eq' : '') + '"><div class="fic">' + establoAnimalIc(k, d) + '</div><div class="finfo">' +
         '<div class="fnm">' + d.label + (cant > 1 ? ' ' + (i + 1) : '') +
           ' <span class="tag"' + (comio ? '' : ' style="color:#a5621a"') + '>' + (comio ? 'comió ✓' : 'con hambre') + '</span></div>' +
         '<div class="fds">' + (listoI
@@ -3496,7 +3502,7 @@ function refreshEstablo() {
         '</div></div>';
     }
     /* la compra vive en su propia fila al pie de la especie: es del ESTABLO, no de un bicho */
-    h += '<div class="forge-row"><div class="fic">' + d.emoji + '</div><div class="finfo">' +
+    h += '<div class="forge-row"><div class="fic">' + establoAnimalIc(k, d) + '</div><div class="finfo">' +
       '<div class="fds">' + d.label + ' ×' + cant + ' · produce ' + RES_LABEL[d.mat] + ' (' + animalPorCiclo(k) + ' cada ' + fmtSecs(d.cicloH * 3600) + ' por animal)</div></div>' +
       '<div class="fbtns"><button class="green sm" ' + (!tope && !lleno && G.plata >= animalPrecio(k) ? "" : "disabled") + ' data-buyani="' + k + '">' +
         (tope ? 'Tope ' + ANIMAL_MAX : lleno ? 'Establo lleno' : 'Otro · ' + coinIc("plata") + fmt(animalPrecio(k))) + '</button></div></div>';

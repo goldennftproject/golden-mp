@@ -465,6 +465,7 @@
   .forge-row.eq{border-color:var(--gold);box-shadow:0 0 0 1px var(--gold) inset}
   .forge-row .fic{width:46px;height:46px;flex:0 0 auto;background:#efe3c6;border:2px solid #d3c298;border-radius:9px;display:flex;align-items:center;justify-content:center;font-size:22px}
   .forge-row .fic img{width:82%;height:82%;object-fit:contain;image-rendering:auto}
+  .forge-row .fic img.animal-ic{width:100%;height:100%;image-rendering:pixelated;transform:translateY(1px)}
   .forge-row .finfo{flex:1;min-width:0}
   .forge-row .fnm{font-weight:800;font-size:13px}
   .forge-row .fnm .tag{font-size:10px;color:#3f6b2a;border:1px solid #3f6b2a;border-radius:6px;padding:0 5px;margin-left:6px}
@@ -1923,7 +1924,7 @@
     // 15/8: VERSIÓN DE BUILD — rompe la caché del navegador en cada deploy (sin esto, el
     // jugador seguía corriendo el state.js viejo aunque el servidor tuviera el nuevo).
     // deploy.bat la actualiza sola (busca GF_BUILD y pone la fecha/hora del deploy).
-    const GF_BUILD = "20260921-145218";
+    const GF_BUILD = "20260921-153320";
     const files = ["game/config.js","game/nav.js","game/audio.js","game/state.js","game/save.js","game/ui.js","game/boot.js",
                    "game/farm.js","game/forest.js","game/plaza.js","game/main.js","game/update.js"];
     /* 24/8 — SE BAJAN TODOS A LA VEZ, SE EJECUTAN EN FILA (dirección: « sigue tardando en
