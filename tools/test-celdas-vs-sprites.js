@@ -95,6 +95,19 @@ console.log("\nQUÉ SE VE DE VERDAD EN UNA GRANJA RECIÉN EMPEZADA");
   console.log("      " + Object.keys(vistos).sort().map(k => k + "×" + vistos[k]).join(" · "));
 }
 
+console.log("\nEL MERCADO GANA JERARQUÍA SIN GANAR TERRENO");
+{
+  const mercado = (esc.objs || []).find(o => o.type === "market");
+  const caja = mercado && GF.COLLISIONS[mercado.i];
+  const celdasMercado = [...GF.ocupacion().values()].filter(v => v.tipo === "market").length;
+  const esperado = mercado ? mercado.w * 1.05 : 0;
+  ok("el Mercado se dibuja a 2,1 celdas visibles", !!mercado && Math.abs(mercado.rw - esperado) < 0.001,
+    mercado ? mercado.rw.toFixed(3) + " px (esperado " + esperado.toFixed(3) + ")" : "no existe");
+  ok("su colisión acompaña el ancho visible", !!caja && !!mercado && Math.abs(caja.hw - mercado.rw * 0.46) < 0.001,
+    caja ? caja.hw.toFixed(3) + " px de semiancho" : "sin caja");
+  ok("y sigue ocupando sus dos celdas originales", celdasMercado === 2, celdasMercado + " celdas");
+}
+
 /* Lo que se compara es SOLO el terreno que el jugador tiene y ve sombreado: el bucle del
    sombreado (dibujarOcupadas) recorre GF.terreno() y salta la banda de la cerca. Comparar fuera de
    ahí trae los nodos de las 16 expansiones futuras y no dice nada. */

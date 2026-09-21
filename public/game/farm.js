@@ -267,7 +267,8 @@ class FarmScene extends Phaser.Scene {
       if (locked || rocaBloq || sinExpansion || sinComprar) { s.setVisible(false); oculto = true; }
       const rw = (o.type === "ore" || o.type === "rock") ? o.w * (typeof NODO_ESCALA === "number" ? NODO_ESCALA : 0.67)   // 9/8: 0.90 — al 0.67 las pepitas no se leían
         : (o.type === "tree") ? o.w * 0.8                                   // árboles −20%
-        : (o.type === "market" || o.type === "store") ? o.w * 0.8           // tiendas −20%
+        : (o.type === "market") ? o.w * 1.05                                // 2,1 celdas visibles: gana jerarquía sin llegar al Granero
+        : (o.type === "store") ? o.w * 0.8                                  // Herrería −20%
         : (o.type === "dummy" ? o.w * 1.25 : o.w);                          // dummy +25%
       // 15/8: si está mostrando su OBRA (build_*), se escala con la densidad del edificio
       // TERMINADO — el arte de obra es el mismo edificio a medio hacer, dibujado al mismo
