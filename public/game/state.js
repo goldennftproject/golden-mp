@@ -3386,7 +3386,7 @@ const PASS_VIP = [
   { res:["flecha",60] }, { golden:8 }, { cos:"Título Labrador" }, { res:["barra_piedra",5] }, { golden:8, cos:"Estatua de Trigo" },
   { seed:["calabaza",6] }, { cos:"Skin de Caña Reluciente" }, { golden:8 }, { res:["carne",20] }, { cos:"Mascota Pollito Dorado" },
   { res:["bronce",12] }, { golden:8 }, { cos:"Color de nombre Oro" }, { seed:["brocoli",6] }, { golden:8, cos:"Skin de Espada Filo Solar" },
-  { res:["esencia_runica",3] }, { golden:10 }, { cos:"Decoración: Fuente Dorada" }, { ficha:1 }, { golden:0, cos:"Skin LEGENDARIA Monarca Dorado + Aura" },
+  { nft:"cincel_cantera" } /* 21/9: el NFT del Pase (dirección) — era 3 esencias; el $Golden del carril no se toca (candado 18/8) */, { golden:10 }, { cos:"Decoración: Fuente Dorada" }, { ficha:1 }, { golden:0, cos:"Skin LEGENDARIA Monarca Dorado + Aura" },
 ];
 /* ============ 9/9 — LOS PREMIOS DEL PASE, DERIVADOS   (recomendación 6) ====================
    LO QUE HABÍA. Medidos los treinta escalones del carril gratuito en plata sombra:
@@ -3579,6 +3579,7 @@ function passRewardStr(r) {
   if (r.seed) parts.push(r.seed[1] + " semillas de " + (CROP_DEF[r.seed[0]] ? CROP_DEF[r.seed[0]].label : r.seed[0]));
   if (r.dish) parts.push(r.dish[1] + "× " + (RECIPE_DEF[r.dish[0]] ? RECIPE_DEF[r.dish[0]].label : r.dish[0]));
   if (r.pick) parts.push("1 " + PICK_DEF[r.pick].label);
+  if (r.nft) parts.push("NFT " + (NFT_DEF[r.nft] ? NFT_DEF[r.nft].label : r.nft) + " (+0,1 " + (NFT_DEF[r.nft] ? (RES_LABEL[NFT_DEF[r.nft].res] || "") : "") + " por golpe)");
   if (r.ficha) parts.push("Ficha de parcela (parcela GRATIS)");
   if (r.cos) parts.push(r.cos);
   return parts.join(" + ");
@@ -3597,6 +3598,7 @@ function passClaim(nv, vipTrack) {
   if (r.seed) G.seeds[r.seed[0]] = (G.seeds[r.seed[0]] || 0) + r.seed[1];
   if (r.dish) { G.dishes = G.dishes || {}; G.dishes[r.dish[0]] = (G.dishes[r.dish[0]] || 0) + r.dish[1]; }
   if (r.pick) { G.picks.owned[r.pick] = true; G.picks.dur[r.pick] = (G.picks.dur[r.pick] || 0) + 1; }
+  if (r.nft) { if (!tengoNft(r.nft)) darNft(r.nft, "Pase VIP nivel " + nv); }
   /* 20/8: G.plotsFicha — la contabilidad de parcelas necesita saber de dónde salió cada una */
   if (r.ficha) { G.plotsOwned = Math.min(PLOT_MAX, (G.plotsOwned || 3) + 1); G.plotsFicha = (G.plotsFicha || 0) + 1; if (window.farmScene && window.farmScene.refreshPlotLocks)   /* 18/8: la guardia "<= GF.PLOTS.length" era parte del fallo de las parcelas 13+ */ { try { window.farmScene.refreshPlotLocks(); } catch (e) {} } if (typeof syncEditDeco === "function") syncEditDeco(); }
   if (r.cos) { p.cosmetics.push(r.cos); }
@@ -4100,6 +4102,69 @@ function comprarParcela() {
 // las parcelas que quedaron VACÍAS aparecen ya sembradas con la semilla que tenías elegida,
 // gastando esas semillas, y el crecimiento cuenta desde que te fuiste — no desde ahora.
 // No cosecha: cosechar sigue siendo tuyo. Solo te ahorra el paso aburrido.
+/* ============ LOS TRES NFT DE RECOLECCIÓN (21/9, dirección / diseñador) ====================
+   « Crear al menos 3 NFT (ítems) tipo los de SFL que den 0,1 wood, 0,1 stone, 0,1 iron » —
+   « 0,1 al minar, al talar, al cosechar ». Es el Beaver de Sunflower Land: cada golpe que PAGA
+   deja +0,1 de ese material, además de la unidad de siempre.
+
+   LO QUE VALE, DICHO CON EL ANCLA. Una celda rinde 20 plata/hora por definición, así que un
+   nodo de madera da 20/12 maderas por hora y uno de hierro 20/240 hierros: +0,1 por golpe es
+   +10 % de la producción del nodo, sea el material que sea → +2 plata/hora POR NODO. El NFT de
+   la madera vale lo que valen los árboles de la granja (3 de arranque + 1 por expansión = 19); el
+   del hierro, lo que valen las vetas de hierro (1 de arranque + 2 extra = 3). Por eso no llevan
+   el mismo precio: la fórmula se los da, y se vuelve a derivar sola si mañana hay más vetas.
+     precio en $Golden = NFT_MESES × 2 plata/h × nodos máximos × 720 h ÷ GOLDEN_EN_PLATA
+   (NFT_MESES = en cuántos meses se paga con la granja completa; antes de eso rinde menos).
+
+   DÓNDE SE CONSIGUEN: madera y hierro se compran en la pestaña NFTs con $Golden; el de la
+   piedra va en el carril VIP del Pase (nivel 26), que es lo que pidió dirección: « que 1 de los
+   3 se dé en el pase, así se le incrementa el precio ». Uno por jugador, no apilan, y solo
+   actúan en los nodos de la granja (talar, picar, minar): no tocan el mercado ni los pedidos.
+   EL PORTERO (supabase/functions/guardar) no necesita saber de esto: sus techos de madera, piedra
+   y minerales llevan MARGEN ×3 sobre el máximo físico, y el bono es +10 %. Si algún día el bono
+   sube o el margen baja, hay que avisarle — test-nft-recoleccion.js lo vigila. */
+const NFT_DEF = {
+  hacha_abuelo:   { label: "Hacha del Abuelo",     res: "madera", verbo: "talar",  sprite: "axe",        desc: "Cada golpe de hacha que paga deja +0,1 de madera." },
+  cincel_cantera: { label: "Cincel de Cantera",    res: "piedra", verbo: "picar",  sprite: "pick_stone", desc: "Cada golpe de pico que paga en una roca deja +0,1 de piedra." },
+  pico_viejo:     { label: "Pico de Hierro Viejo", res: "hierro", verbo: "minar",  sprite: "pick_iron",  desc: "Cada golpe que paga en una veta de hierro deja +0,1 de hierro." },
+};
+var NFT_BONO = 0.1;
+var NFT_MESES = 2;
+var NFT_DEL_PASE = "cincel_cantera";
+function tengoNft(k) { return !!(G.nfts && G.nfts[k]); }
+function nftDeRes(res) { for (const k in NFT_DEF) if (NFT_DEF[k].res === res) return k; return null; }
+/* lo que cobra un golpe que paga: la unidad de siempre más el bono si tenés el NFT del material */
+function bonoNft(res, n) { const k = nftDeRes(res); return (k && tengoNft(k)) ? n + NFT_BONO : n; }
+function nftNodosMax(res) {
+  if (res === "madera" || res === "piedra") return 3 + EXPANSION_MAX;
+  const extra = GF.EXP_NODOS_EXTRA || {};
+  let n = 0; for (const e in extra) if (extra[e] === res) n++;
+  return n + (GF.WORLD_OBJECTS || []).filter(o => o && o.ore === res).length;
+}
+function nftPrecioGolden(k) {
+  const d = NFT_DEF[k]; if (!d) return 0;
+  const plataHora = NFT_BONO * ANCLA_PLATA_HORA * nftNodosMax(d.res);   // +10 % del ancla por nodo
+  return Math.max(10, Math.round(NFT_MESES * plataHora * 24 * 30 / GOLDEN_EN_PLATA));
+}
+function darNft(k, como) {
+  G.nfts = G.nfts || {}; G.nfts[k] = true;
+  const d = NFT_DEF[k];
+  log("Tenés " + d.label + (como ? " (" + como + ")" : "") + ": " + d.desc, "gold");
+  if (window.celebrate) celebrate({ title: d.label.toUpperCase(), sub: "NFT de recolección", big: true, reward: "+0,1 " + (RES_LABEL[d.res] || d.res) + " por golpe" });
+}
+function comprarNft(k) {
+  const d = NFT_DEF[k]; if (!d) return false;
+  if (tengoNft(k)) { toast("Ya tenés " + d.label); return false; }
+  if (k === NFT_DEL_PASE) { toast(d.label + " solo se consigue en el Pase VIP (nivel 26)"); return false; }
+  if (G.tuto && !G.tuto.done) { toast("🎯 Los NFTs se abren al terminar el tutorial — seguí el objetivo de arriba"); return false; }
+  const precio = nftPrecioGolden(k);
+  if ((G.golden || 0) < precio) { toast("Te falta $Golden (" + precio + ")"); return false; }
+  G.golden -= precio;
+  darNft(k, "comprado por " + precio + " $Golden");
+  refreshHud(); if (typeof refreshNft === "function" && isOpen("ov-market")) refreshNft();
+  if (typeof saveFarm === "function") saveFarm(true);
+  return true;
+}
 var GODHAND_GOLDEN = 500;
 function tengoGodHand() { return !!G.godHand; }
 function comprarGodHand() {

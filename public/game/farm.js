@@ -1960,7 +1960,7 @@ class FarmScene extends Phaser.Scene {
       const cargasArbol = nodoCargas(o, CD.tree);
       if (cargasArbol > 1) {   // corte SUAVE que cobra: paga una carga y el árbol sigue en pie
         const gr = (typeof NODO_POR_CARGA === "number" ? NODO_POR_CARGA : 1);
-        if (tryAddRes("madera", gr)) {
+        if (tryAddRes("madera", bonoNft("madera", gr))) {
           for (let u = 0; u < gr; u++) useTool("axe"); addXp("tala", xpDeNodo("tree")); nodoSumar(o); statAdd("talar", null, 1);
           const quedan = nodoGastarCarga(o, CD.tree); this.syncNodos();
           if (this.textures.exists("tree_cut1")) this.setObjTex(o, "tree_cut1", o.rw || o.w);
@@ -1986,7 +1986,7 @@ class FarmScene extends Phaser.Scene {
       o.golpesAt = 0;
       o.golpes = 0; this.barraGolpes(o);
       const grF = (typeof NODO_POR_CARGA === "number" ? NODO_POR_CARGA : 1);
-      if (tryAddRes("madera", grF)) {   // la ÚLTIMA carga: el árbol cae de verdad
+      if (tryAddRes("madera", bonoNft("madera", grF))) {   // la ÚLTIMA carga: el árbol cae de verdad
         for (let u = 0; u < grF; u++) useTool("axe"); addXp("tala", xpDeNodo("tree"));   /* 18/8: por acción, no por reloj */   /* 18/8: talar es TALA, no Artesanía */ /* 16/8: XP = minutos del reloj (1 h 30 → 90) */ nodoSumar(o);
         o.cdIni = nowMs(); o.readyAt = nowMs() + nodoCd(o, "tree", CD.tree) * 1000 * cdMult() * (typeof tutoBoost === "function" ? tutoBoost("tree") : 1);
         o.halfAt = nowMs() + (o.readyAt - nowMs()) / 2; this.syncNodos();   // a mitad del enfriamiento asoma el árbol a medio crecer (doc 4/8)
@@ -2012,7 +2012,7 @@ class FarmScene extends Phaser.Scene {
       const cargasRoca = nodoCargas(o, CD.rock);
       if (cargasRoca > 1) {   // golpe que COBRA una carga: paga y la roca sigue ahí
         const gr = (typeof NODO_POR_CARGA === "number" ? NODO_POR_CARGA : 1);
-        if (tryAddRes("piedra", gr)) {
+        if (tryAddRes("piedra", bonoNft("piedra", gr))) {
           const pk = picoParaNodo(o);   // 24/8: el pico se elige solo — el más barato que sirva
           if (pk) { G.picks.dur[pk] = Math.max(0, (G.picks.dur[pk] || 0) - 1); if (G.picks.dur[pk] <= 0) { log("Usaste tu último " + PICK_DEF[pk].label + " — crafteá más en la Herrería.", "bad"); toast("Sin picos — crafteá más"); destroyPick(pk); } }
           addXp("mining", xpDeNodo("rock", "piedra")); statAdd("minar", "piedra", 1); nodoSumar(o);
@@ -2037,7 +2037,7 @@ class FarmScene extends Phaser.Scene {
       }
       o.golpes = 0; o.golpesAt = 0; this.barraGolpes(o);
       const grF = (typeof NODO_POR_CARGA === "number" ? NODO_POR_CARGA : 1);
-      if (tryAddRes("piedra", grF)) {   // la ÚLTIMA carga: la roca se rompe de verdad
+      if (tryAddRes("piedra", bonoNft("piedra", grF))) {   // la ÚLTIMA carga: la roca se rompe de verdad
         const pk = picoParaNodo(o);   // picar piedra también gasta el pico (bug reportado) · 24/8: el pico se elige solo
         if (pk) { G.picks.dur[pk] = Math.max(0, (G.picks.dur[pk] || 0) - 1); if (G.picks.dur[pk] <= 0) { log("Usaste tu último " + PICK_DEF[pk].label + " — crafteá más en la Herrería.", "bad"); toast("Sin picos — crafteá más"); destroyPick(pk); } }
         addXp("mining", xpDeNodo("rock", "piedra")); /* 16/8: XP = minutos del reloj (2 h → 120) */ statAdd("minar", "piedra", 1); nodoSumar(o);
@@ -2058,7 +2058,7 @@ class FarmScene extends Phaser.Scene {
       const grVeta = Math.max(1, (odC.yield || 1) * (o.ore === "piedra" ? (typeof NODO_POR_CARGA === "number" ? NODO_POR_CARGA : 1) : 1));
       const cargasVeta = o.ore === "piedra" ? nodoCargas(o, CD.rock) : 1;
       if (cargasVeta > 1) {   // modo cargas (solo la veta de piedra): este clic COBRA una carga
-        if (tryAddRes(o.ore, grVeta)) {
+        if (tryAddRes(o.ore, bonoNft(o.ore, grVeta))) {
           const pk2 = picoParaNodo(o), pd2 = PICK_DEF[pk2] || { label: "pico" };   // 24/8: el pico se elige solo
           if (pk2) G.picks.dur[pk2] = Math.max(0, (G.picks.dur[pk2] || 0) - 1);
           addXp("mining", xpDeNodo("ore", o.ore)); statAdd("minar", o.ore, 1); nodoSumar(o);
@@ -2087,7 +2087,7 @@ class FarmScene extends Phaser.Scene {
          (puedeAccion ya lo filtra en el juego real, pero el arnés de pruebas llama a
          finishAction directo — y una caja registradora nunca debe reventar por eso). */
       const pk = picoParaNodo(o), pd = PICK_DEF[pk] || { label: "pico" }, od = ORE_DEF[o.ore];
-      if (tryAddRes(o.ore, grVeta)) {   // la última carga: la veta se agota y arranca su reloj
+      if (tryAddRes(o.ore, bonoNft(o.ore, grVeta))) {   // la última carga: la veta se agota y arranca su reloj
         if (pk) G.picks.dur[pk] = Math.max(0, (G.picks.dur[pk] || 0) - 1);
         addXp("mining", xpDeNodo("ore", o.ore)); statAdd("minar", o.ore, grVeta);   // 16/8: XP = minutos del reloj (bronce 8 h → 480 … oro 14 h → 840)
         nodoSumar(o);
@@ -3009,9 +3009,17 @@ class FarmScene extends Phaser.Scene {
         spr.setScale((GF.TILE * 0.78) / spr.width);
         const marca = this.add.image(x, y - 30, resSprite(ANIMAL_DEF[k].mat) || key).setDepth(99991).setVisible(false);
         marca.setDisplaySize(16, 16);
+        /* 21/9 — la marca de hambre la escribió el chat que ayuda con lo visual (20/9) pidiendo una
+           textura « animal_feed_marker » que no existe en el atlas: sin ella la señal nunca se veía.
+           Se conserva la idea tal cual y, mientras no haya lámina, se usa el ícono de LO QUE COME
+           (la comida que pide) — que además es la respuesta a la pregunta que se hace el jugador. */
+        const comeK = (ANIMAL_DEF[k].come || [])[0];
+        const comeSpr = comeK && typeof resSprite === "function" ? resSprite(comeK) : null;
         const marcaHambre = this.textures.exists("animal_feed_marker")
           ? this.add.image(x, y - 30, "animal_feed_marker").setDepth(99991).setDisplaySize(20, 20).setVisible(false)
-          : null;
+          : (comeSpr && this.textures.exists(comeSpr))
+            ? this.add.image(x, y - 30, comeSpr).setDepth(99991).setDisplaySize(16, 16).setVisible(false)
+            : this.add.text(x, y - 30, "!", { fontFamily: "system-ui", fontSize: "16px", fontStyle: "bold", color: "#ff6a4a", stroke: "#241505", strokeThickness: 4 }).setOrigin(0.5).setDepth(99991).setVisible(false);
         this.animales.push({ k, idx: n, spr, marca, marcaHambre, tx: x, ty: y, esperaHasta: 0, bob: Math.random() * 6.28 });
       }
     });
