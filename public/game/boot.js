@@ -60,8 +60,10 @@ class BootScene extends Phaser.Scene {
     L.push(["buzon", P + "buzon.png?v=3"]);            // buzón (15/8) — banderita baja
     L.push(["buzon_full", P + "buzon_full.png?v=3"]);  // …con carta y banderita alta
     L.push(["sprout", P + "sprout.png?v=5"]);
+    // v8: piedra agotada baja y cálida; conserva una lectura inequívoca frente al hierro.
+    L.push(["node_stone_mined", P + "node_stone_mined.png?v=8"]);
     // v7: restos correctos sobre su parche de tierra (los v6 venían de una copia vieja)
-    ["node_stone_mined","node_bronze_mined","node_gold_mined","node_diamond_mined","node_netherite_mined"]
+    ["node_bronze_mined","node_gold_mined","node_diamond_mined","node_netherite_mined"]
       .forEach(k => L.push([k, P + k + ".png?v=7"]));
     L.push(["node_iron_mined", P + "node_iron_mined.png?v=3"]);   // hierro: veta fría, diferenciada de piedra
     L.push(["dummy", P + "dummy.png"]);   // muñeco de práctica de espada
@@ -89,18 +91,21 @@ class BootScene extends Phaser.Scene {
     // etapas intermedias (la verdura asomando al 50% del crecimiento)
     if (typeof CROP_ORDER !== "undefined") CROP_ORDER.forEach(k => L.push(["cropm_" + k, P + "cropm_" + k + ".png?v=3"]));
     L.push(["tree", P + "tree.png?v=5"]);   // v3: árbol con efecto de plantado (detalles jueves)
-    // progresión de talado (PixelLab 30/7): corte leve → corte profundo → tocón con tierra y hojas
+    // progresión de talado: corte leve → corte profundo → tocón con hojas/regeneración visibles
     L.push(["tree_cut1", P + "tree_cut1.png?v=3"]);
     L.push(["tree_cut2", P + "tree_cut2.png?v=3"]);
-    L.push(["tree_stump_leaves", P + "tree_stump_leaves.png?v=3"]);
+    L.push(["tree_stump_leaves", P + "tree_stump_leaves.png?v=4"]);
     L.push(["tree_half", P + "tree_half.png?v=3"]);   // mitad del enfriamiento: árbol pelado con pocas ramas (PixelLab 31/7)
     L.push(["pond", P + "pond.png?v=3"]);
     // COSTA de la isla (9/8): imagen grande y aparte, NO va al atlas (mide 1190x854)
     L.push(["isla", P + "isla.png?v=1"]);
     L.push(["portal", P + "portal.png"]);   // portal al Bosque (frame quieto de respaldo)
     for (let i = 0; i < 8; i++) L.push(["portal_" + i, P + "portal_" + i + ".png?v=5"]);   // v5: gira TODA la boca (rotación elíptica), negro completo
+    // v4: piedra cálida y redondeada, distinta de la veta de hierro fría.
+    L.push(["node_stone", P + "node_stone.png?v=4"]);
+    L.push(["node_stone_half", P + "node_stone_half.png?v=4"]);
     // v3: nodos plantados en la tierra + estados dañados (intermedio del cooldown)
-    ["node_stone","node_bronze","node_gold","node_diamond","node_netherite"]
+    ["node_bronze","node_gold","node_diamond","node_netherite"]
       .forEach(k => { L.push([k, P + k + ".png?v=3"]); L.push([k + "_half", P + k + "_half.png"]); });
     L.push(["node_iron", P + "node_iron.png?v=3"]); L.push(["node_iron_half", P + "node_iron_half.png?v=3"]);
     // versionados: el arte cambió y el caché de 1 día serviría el viejo
@@ -149,8 +154,8 @@ class BootScene extends Phaser.Scene {
   preload() {
     // ATLAS: todos los sprites del mundo en 2 archivos (mucho más liviano para el server free).
     // Si el atlas no llega, ensureAll() baja los archivos sueltos como respaldo.
-    this.load.image("__atlas", "assets/atlas.png?v=54");
-    this.load.json("__atlasmap", "assets/atlas.json?v=54");
+    this.load.image("__atlas", "assets/atlas.png?v=55");
+    this.load.json("__atlasmap", "assets/atlas.json?v=55");
     // 2/9: la isla viaja en la PRIMERA pasada (es la única imagen que no cabe en el atlas:
     // 1190x854). Antes quedaba para los reintentos y era ella sola la que disparaba una
     // segunda vuelta de descarga en cada carga del juego.

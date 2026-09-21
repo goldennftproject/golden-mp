@@ -289,7 +289,7 @@ Están desarrolladas en el GDD §15.0, con sus números medidos. Aquí solo el t
 ## ⚪ Visual abierto (decisión del 11/8: queda así salvo pedido nuevo)
 
 - [x] El **Mercado** quedó chico al lado de los edificios nuevos: escala visual a 2,1 celdas (88,2 px), sin cambiar asset ni sus dos celdas.
-- [ ] **Árboles, piedras y parcelas**: siguen siendo el set viejo con el color calmado.
+- [x] **Set ambiental revisado y ajustado**: árbol sano, cortes, mitad, brote y parcelas se conservaron porque ya sostienen el estilo; piedra suma tres estados cálidos y claramente distintos del hierro, y el tocón de regeneración ahora sí muestra hojas y brotes.
 - [x] **Piedra vs hierro**: veta de hierro fría, oscura y con estados propios; piedra queda cálida y redondeada.
 - [x] **Animaciones de ataque propias por arma**: espada y arco conservan las suyas; hacha y mazo suman ocho frames propios cada una.
 - [x] **Animales del Establo**: sprites reales en Establo y Álbum; alpaca, conejo, toro y jabalí caminan con nueve cuadros propios. Pinta queda animada como mascota.

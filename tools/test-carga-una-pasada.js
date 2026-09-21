@@ -81,6 +81,18 @@ console.log("\nLOS ANIMALES DEL ESTABLO CAMINAN");
     /m\.spr\.play\("pet_gallina_walk"\)/.test(FARM) && /m\.spr\.setTexture\("pet_gallina"\)/.test(FARM));
 }
 
+console.log("\nNODOS Y TALADO COMUNICAN SU ESTADO");
+{
+  const piedra = ["node_stone", "node_stone_half", "node_stone_mined"];
+  const faltan = piedra.filter(k => !ATLAS[k]);
+  ok("los tres estados de piedra viajan en el atlas", faltan.length === 0, faltan.join(", "));
+  ok("el tocón con hojas viaja en el atlas", !!ATLAS.tree_stump_leaves);
+  ok("el caché se renovó para piedra y tocón", [
+    "node_stone.png?v=4", "node_stone_half.png?v=4", "node_stone_mined.png?v=8",
+    "tree_stump_leaves.png?v=4"
+  ].every(url => BOOT.includes(url)));
+}
+
 console.log("\nEL BESTIARIO TAMBIÉN (la fase «Cargando criaturas…» no pide nada)");
 {
   const best = JSON.parse(fs.readFileSync(path.join(RAIZ, "public/assets/farm/bestiario.json"), "utf8"));
