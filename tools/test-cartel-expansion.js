@@ -89,17 +89,20 @@ console.log("\nPOR DEBAJO DEL NIVEL: EL LOTE SE MUESTRA IGUAL, Y LA CHAPA SOLO I
     ok("nivel " + lv + ": el lote se dibuja (con hover)", reg.length > 0 && reg.some(o => o.handlers && o.handlers.pointerover),
       reg.length + " objetos");
     const textos = reg.filter(o => o.__tipo === "text").map(o => o.texto || "");
-    ok("  · la chapa invita: EXPANDIR + la manito del clic",
-      textos.some(t => /EXPANDIR/.test(t)) && textos.some(t => /clic/.test(t)),
+    /* 22/9 (dirección, con captura de Sunflower): la marca es un martillo y una palabra; el
+       « clic para los detalles » se fue con la chapa grande — el hitbox del lote lo dice solo */
+    ok("  · la marca invita: el martillo + « Expandir »",
+      textos.some(t => /🔨/.test(t)) && textos.some(t => /Expandir/.test(t)),
       textos.join(" | "));
     ok("  · y NO duplica lo que el recuadro cuenta (ni costos, ni nivel, ni el Trae)",
       !textos.some(t => /Granja nivel|\d+\/\d+|^Trae /.test(t)), textos.join(" | "));
   }
-  /* en reposo sigue limpio: la chapa nace oculta (solo hover) porque sin nivel nunca "se puede pagar" */
+  /* 22/9: como en SFL, la marca se ve SIEMPRE en su lote (revierte el « nace oculta » del 18/8,
+     por pedido de dirección con referencia). Sin nivel, el rótulo lleva la ✖. */
   const { reg } = pintar(1, {});
-  const chapa = reg.find(o => o.__tipo === "text" && /EXPANDIR/.test(o.texto || ""));
-  ok("en reposo el bosque sigue limpio: la chapa nace oculta y la enciende el cursor",
-    !!chapa && chapa.visible === false);
+  const rotulo = reg.find(o => o.__tipo === "text" && /Expandir/.test(o.texto || ""));
+  ok("la marca nace a la vista y sin nivel lleva la ✖",
+    !!rotulo && rotulo.visible !== false && /✖/.test(rotulo.texto));
 }
 
 console.log("\nCON EL NIVEL JUSTO: EL LOTE APARECE");
@@ -108,8 +111,8 @@ console.log("\nCON EL NIVEL JUSTO: EL LOTE APARECE");
   ok("se dibuja el lote", reg.length > 0, reg.length + " objetos");
   const zona = reg.find(o => o.handlers && o.handlers.pointerover);
   ok("y responde al cursor", !!zona);
-  ok("las estacas nacen ocultas (eran la 'línea de puntos' gris)",
-    reg.filter(o => o.__tipo === "rectangle" && o.visible === false).length > 0);
+  ok("las estacas nacen a la vista (22/9, como en Sunflower)",
+    reg.filter(o => o.__tipo === "rectangle" && o.visible === false).length === 0);
   /* En reposo el lote es invisible del todo: relleno 0. Se comprueba disparando el hover. */
   zona.handlers.pointerout();
   ok("en reposo el relleno del lote es 0", zona.alfaRelleno === 0, String(zona.alfaRelleno));

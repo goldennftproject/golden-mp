@@ -158,7 +158,7 @@ console.log("\nC · LA BARRA, LAS FLECHAS Y EL RESALTADO LEEN LA GUÍA, NO SOLO 
   ok("tutoHighlight (la flecha de los menús) también", /function tutoHighlight\(\) \{[\s\S]{0,400}?guiaActiva/.test(UI));
   ok("tutoSync mete el texto de la brújula en la firma (si no, la barra no se redibuja al cobrar algo)",
     /st && st\.brujula \? st\.txt : ""/.test(UI));
-  ok("y la flecha del mundo (farm.js) también", /updateTutoArrow[\s\S]{0,300}?guiaActiva/.test(FARM));
+  ok("y la flecha del mundo (farm.js) también", /updateTutoArrow\(\) \{[\s\S]{0,600}?guiaActiva/.test(FARM));   /* 22/9: la cámara de la guía (ChatGPT) metió líneas entre medio; se busca desde la definición */
   ok("el sub-objetivo no se calcula sobre la brújula (no es un paso, no se « cumple »)",
     /!st\.brujula && typeof tutoSub/.test(UI) && /!st\.brujula && typeof tutoSub/.test(FARM));
   ok("al terminar el tutorial se le dice al jugador que la barra sigue", /La barra de arriba te sigue marcando/.test(STATE));

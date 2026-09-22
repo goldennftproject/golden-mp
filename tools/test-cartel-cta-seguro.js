@@ -41,6 +41,8 @@ console.log("\nCTA FUERA DEL BORDE IZQUIERDO, A ZOOM MÁXIMO");
   const p = ctx.posicion.call(escena, -105, 105, 172, 48);
   const sx = p.x * 2.4, sy = p.y * 2.4;
   const w = 172 * p.escala * 2.4, h = 48 * p.escala * 2.4;
+  ok("anclada, la chapa mide EXP_SENAL_PX en pantalla y no su tamaño de objeto del mundo (22/9)",
+    Math.abs(172 * p.escala * 2.4 - 70) < 1, (172 * p.escala * 2.4).toFixed(1) + " px");
   ok("la señal se ancla al área visible", p.anclado && sx > safe.left && sx < safe.right,
     "x=" + sx.toFixed(1) + " · escala=" + p.escala.toFixed(3));
   ok("la tarjeta entera entra horizontalmente", sx - w / 2 >= safe.left + 7.9 && sx + w / 2 <= safe.right - 7.9,
@@ -72,14 +74,21 @@ console.log("\nEL BORDE DESCUBRE EL CTA PLATEADO SIN MOVER EL LOTE");
     expCartel: objetos,
     posicionCartelExpansionSeguro: () => ({ x: 64, y: 112, escala: 0.8, anclado: true }),
   };
+  /* 22/9 (dirección, con captura): la señal de borde NO se muestra si la expansión todavía no
+     se puede pagar — la misma regla que tenía la chapa en su sitio. Sin poder pagar, el bosque
+     se ve limpio aunque el lote esté fuera de cámara. */
   ctx.actualizar.call(escena);
-  ok("el CTA remoto se vuelve visible", escena._expCtaVisible && objetos.every(o => o.visible));
+  ok("sin poder pagar, el CTA remoto sigue oculto", !escena._expCtaVisible && objetos.every(o => !o.visible));
+  escena._expCta.puede = true;
+  ctx.actualizar.call(escena);
+  ok("cuando ya se puede pagar, el CTA remoto se vuelve visible", escena._expCtaVisible && objetos.every(o => o.visible));
   ok("la posición visual cambia, no el ancla del lote", cercano(escena._expCta.cx, -105) && objetos[0].pos.x === 64,
     "lote=" + escena._expCta.cx + " · cartel=" + objetos[0].pos.x);
   ok("la escala segura se aplica a las tres piezas", objetos.every(o => o.escala === 0.8));
+  escena._expCta.puede = false;
   escena.posicionCartelExpansionSeguro = () => ({ x: -105, y: 105, escala: 1, anclado: false });
   ctx.actualizar.call(escena);
-  ok("al entrar en cámara vuelve a ocultarse si no hay hover ni recursos", !escena._expCtaVisible && objetos.every(o => !o.visible));
+  ok("al entrar en cámara la marca se ve en su lote aunque no haya hover ni recursos (22/9, como en SFL)", escena._expCtaVisible && objetos.every(o => o.visible));
 }
 
 console.log("\n" + (fallos ? "  ✗ " + fallos + " fallas\n" : "  ✓ CTA visible, completo y anclado sin mover la expansión\n"));

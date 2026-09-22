@@ -3,6 +3,7 @@
 function witherMs(ck) { const cd = CROP_DEF[ck]; return cd ? cd.grow * 1000 * 0.5 : 120000; }   // marchitado proporcional: mitad del tiempo de cultivo
 // (los enfriamientos ahora salen de ORE_DEF[x].cd y de nodoCd(), doc 4/8)
 
+var EXP_SENAL_PX = 70;    // 22/9: ancho en pantalla de la chapa « Expandir » cuando queda anclada al borde
 class FarmScene extends Phaser.Scene {
   constructor() { super("farm"); }
 
@@ -2366,7 +2367,16 @@ class FarmScene extends Phaser.Scene {
     const safe = this._expCtaSafe;
     if (!safe || !Number.isFinite(safe.left) || !Number.isFinite(safe.right) ||
         !Number.isFinite(safe.top) || !Number.isFinite(safe.bottom)) return { x: cx, y: cy, escala: 1, anclado: false };
-    const z = c.zoom, ox = c.x || 0, oy = c.y || 0, sx0 = c.scrollX || 0, sy0 = c.scrollY || 0;
+    /* 22/9 — CON ZOOM, scrollX NO ES EL BORDE IZQUIERDO. Phaser hace zoom alrededor del centro
+       de la cámara: el mundo visible arranca en scrollX + (ancho/2)·(1 − 1/zoom). La cuenta de
+       esta mañana (« (cx − scrollX) · zoom ») valía a zoom 1 y a 2,4 se equivocaba por ~400 px:
+       un lote fuera de pantalla salía como « adentro » y la chapa se quedaba en cualquier lado.
+       `worldView` es el rectángulo visible que la cámara ya calcula; se usa ese, y la misma
+       corrección va en tickCamaraGuia. */
+    const z = c.zoom, ox = c.x || 0, oy = c.y || 0;
+    const wv = c.worldView, ancW = c.width || 0, altH = c.height || 0;
+    const sx0 = (wv && Number.isFinite(wv.x)) ? wv.x : (c.scrollX || 0) + ancW / 2 * (1 - 1 / z);
+    const sy0 = (wv && Number.isFinite(wv.y)) ? wv.y : (c.scrollY || 0) + altH / 2 * (1 - 1 / z);
     const sx = ox + (cx - sx0) * z, sy = oy + (cy - sy0) * z;
     const limitar = (v, lo, hi) => lo > hi ? (lo + hi) / 2 : Math.max(lo, Math.min(hi, v));
     /* El subtítulo es más ancho que la placa. En una ventana angosta con zoom muy alto no
@@ -2374,7 +2384,15 @@ class FarmScene extends Phaser.Scene {
        en proporción al espacio útil, para que la invitación siga completa y no se convierta
        otra vez en media palabra en el borde. */
     const utilW = Math.max(1, safe.right - safe.left - 16), utilH = Math.max(1, safe.bottom - safe.top - 16);
-    const escala = Math.min(1, utilW / Math.max(1, ancho * z), utilH / Math.max(1, alto * z));
+    let escala = Math.min(1, utilW / Math.max(1, ancho * z), utilH / Math.max(1, alto * z));
+    /* 22/9 (dirección, con captura: « aparece así ahora ») — sobre el cambio del chat visual de
+       esta mañana. Cuando el lote está FUERA de cámara, la chapa se traía adentro a su tamaño de
+       objeto del mundo (a zoom 2,5 son 430 px) y, como no cabía contra el borde, quedaba clavada
+       en medio de la granja encima del farol: parecía un edificio nuevo. Una señal de borde tiene
+       que ser chica y estar en el borde: acá se le fija un ancho EN PANTALLA (EXP_SENAL_PX) solo
+       cuando queda anclada, para que el recorte de abajo la lleve al canto y no al centro. */
+    const fuera = sx < safe.left || sx > safe.right || sy < safe.top || sy > safe.bottom;
+    if (fuera) escala = Math.min(escala, (typeof EXP_SENAL_PX === "number" ? EXP_SENAL_PX : 70) / Math.max(1, ancho * z));
     // `escala` ya garantiza 8 px de aire. Puede ocupar justo la mitad del rectángulo seguro:
     // limitarla a «mitad menos 6» la corría dos píxeles hacia el borde en pantallas angostas.
     const hx = Math.min(Math.max(0, (safe.right - safe.left) / 2), ancho * escala * z / 2 + 8);
@@ -2392,7 +2410,10 @@ class FarmScene extends Phaser.Scene {
     /* En reposo se conserva el bosque limpio si el lote está dentro de cámara y todavía no se
        puede pagar. Si el lote quedó fuera del encuadre, la chapa plateada pasa a ser una señal
        de borde: descubre la primera expansión sin fingir que el terreno se movió. */
-    const visible = !!(cta.resaltado || cta.puede || p.anclado);
+    /* 22/9: la señal de borde (anclada) solo cuando la expansión YA se puede pagar — la misma
+       regla que tenía la chapa en su sitio. Con el lote fuera de vista y sin poder pagar, el
+       bosque se ve limpio, como antes del 22/9. */
+    const visible = !p.anclado || !!cta.puede;   // 22/9: como en SFL, la marca se ve siempre en su lote
     if (visible !== this._expCtaVisible) {
       this._expCtaVisible = visible;
       (this.expCartel || []).forEach(o => { try { o.setVisible(visible); } catch (e) {} });
@@ -2409,19 +2430,19 @@ class FarmScene extends Phaser.Scene {
         cta.titulo.setScale(p.escala);
         cta.pista.setScale(p.escala);
         if (cta.puede && p.escala >= 0.999 && this.tweens && typeof this.tweens.add === "function") {
-          cta.pulso = this.tweens.add({ targets: cta.chapa, scaleX: 1.04, scaleY: 1.04, duration: 700,
+          cta.pulso = this.tweens.add({ targets: cta.chapa, scaleX: 1.12, scaleY: 1.12, duration: 700,
             yoyo: true, repeat: -1, ease: "Sine.easeInOut" });
         }
       } catch (e) {}
     }
     // Evita invalidar el render si la cámara no se movió. Cuando sí se mueve, las tres piezas
     // viajan juntas y siguen siendo un elemento del mundo, no una segunda interfaz HTML.
-    if (cta.x === p.x && cta.y === p.y) return;
+    if (cta.x === p.x && cta.y === p.y && !cambioEscala) return;
     cta.x = p.x; cta.y = p.y;
     try {
-      cta.chapa.setPosition(p.x, p.y);
-      cta.titulo.setPosition(p.x, p.y - 8);
-      cta.pista.setPosition(p.x, p.y + 9);
+      cta.chapa.setPosition(p.x, p.y - 8 * (p.escala || 1));
+      cta.titulo.setPosition(p.x, p.y - 8 * (p.escala || 1));   // 22/9: las piezas acompañan la escala
+      cta.pista.setPosition(p.x, p.y + 12 * (p.escala || 1));
     } catch (e) {}
   }
 
@@ -2437,9 +2458,13 @@ class FarmScene extends Phaser.Scene {
     if (!c || !c.zoom || typeof c.pan !== "function") { this._tutoCamPending = null; return; }
     if (c.panEffect && c.panEffect.isRunning) return;   // por ejemplo, la celebración de una expansión
     const z = c.zoom, ox = c.x || 0, oy = c.y || 0;
-    const sx = ox + (p.x - c.scrollX) * z;
-    const top = oy + (p.y - c.scrollY) * z;
-    const bottom = oy + (p.bottomY - c.scrollY) * z;
+    // 22/9: mismo arreglo que en posicionCartelExpansionSeguro — con zoom, el borde visible no es scrollX
+    const wv = c.worldView;
+    const vx0 = (wv && Number.isFinite(wv.x)) ? wv.x : c.scrollX + (c.width || 0) / 2 * (1 - 1 / z);
+    const vy0 = (wv && Number.isFinite(wv.y)) ? wv.y : c.scrollY + (c.height || 0) / 2 * (1 - 1 / z);
+    const sx = ox + (p.x - vx0) * z;
+    const top = oy + (p.y - vy0) * z;
+    const bottom = oy + (p.bottomY - vy0) * z;
     const safe = this.zonaSeguraCamaraGuia();
     const padX = Math.min(52, Math.max(18, (safe.right - safe.left) * 0.10));
     const padY = Math.min(42, Math.max(14, (safe.bottom - safe.top) * 0.08));
@@ -4356,7 +4381,7 @@ class FarmScene extends Phaser.Scene {
     const resaltar = (on) => {
       zona.setFillStyle(col, on ? 0.34 : 0);
       zona.setStrokeStyle(on ? 3 : 2, col, on ? 1 : 0);
-      estacas.forEach(o => { try { o.setVisible(on); } catch (e) {} });
+      estacas.forEach(o => { try { o.setAlpha(on ? 1 : 0.85); } catch (e) {} });
       if (this._expCta) this._expCta.resaltado = !!on;
       if (typeof this.actualizarCartelExpansion === "function") this.actualizarCartelExpansion();
     };
@@ -4370,7 +4395,10 @@ class FarmScene extends Phaser.Scene {
     };
     for (let x = x0 + paso / 2; x < x0 + w; x += paso) for (const y of [y0, y0 + h]) estaca(x, y);
     for (let y = y0 + paso / 2; y < y0 + h; y += paso) for (const x of [x0, x0 + w]) estaca(x, y);
-    estacas.forEach(o => { o.setVisible(false); this.expFx.push(o); });
+    /* 22/9 (dirección, con captura de Sunflower: « debería aparecer algo así »): las estacas se
+       ven SIEMPRE, como en SFL — el lote queda marcado en reposo; el cursor encima suma el
+       relleno. (Revierte el « en reposo el lote no se ve » del 18/8, por pedido con referencia.) */
+    estacas.forEach(o => { o.setVisible(true); o.setAlpha(0.85); this.expFx.push(o); });
 
     /* 1/9 (dirección, tras ver el recuadro): « habría que quitar la información que hay al
        pasar el cursor… al cliquear te muestra la interfaz con todo, así que los datos del
@@ -4390,24 +4418,28 @@ class FarmScene extends Phaser.Scene {
     /* El rectángulo de interacción REAL se queda en el lote. El cartel se dibuja aparte para
        poder acercarlo al borde visible si el lote está fuera de cámara: mover esta pieza sería
        convertir la señal en una mentira sobre dónde está el terreno. */
-    const hitCartel = this.add.rectangle(cx, cy, 132, 44, col, 0)
+    const hitCartel = this.add.rectangle(cx, cy, 60, 48, col, 0)
       .setDepth(D).setStrokeStyle(2, col, 0).setInteractive({ useHandCursor: true });
     hitCartel.on("pointerover", () => resaltar(true));
     hitCartel.on("pointerout", () => resaltar(false));
     hitCartel.on("pointerdown", abrirDetalle);
     this.expFx.push(hitCartel);
 
-    // La placa un poco más ancha contiene la segunda línea aun cuando quede pegada a un borde.
-    const CTA_W = 172, CTA_H = 48;
-    const chapa = this.add.rectangle(cx, cy, CTA_W, CTA_H, 0x1d2a14, 0.86)
-      .setStrokeStyle(2, col, 0.9).setDepth(D).setInteractive({ useHandCursor: true });
+    /* 22/9 (dirección, con la captura de Sunflower): « debería aparecer algo así, y cuando pasás
+       el cursor o hacés clic aparece el recuadro que ya tenemos… el cartel no es para nada
+       enorme ni invasivo ». La chapa de 172×48 con dos renglones se va. Queda la marca de SFL:
+       un botón redondo chico con el martillo y, debajo, un rótulo de una palabra. Dorado cuando
+       ya se puede pagar; plata con una ✖ cuando no. Toda la información vive en el recuadro. */
+    const CTA_W = 60, CTA_H = 48;
+    const chapa = this.add.circle(cx, cy - 8, 13, 0x1d2a14, 0.88)
+      .setStrokeStyle(2, col, 0.95).setDepth(D).setInteractive({ useHandCursor: true });
     this.expFx.push(chapa); this.expCartel.push(chapa);
-    { const t = this.add.text(cx, cy - 8, "EXPANDIR",
-        { fontFamily: "system-ui", fontSize: "12px", fontStyle: "bold", color: "#ffe08a" })
-        .setOrigin(0.5, 0.5).setDepth(D + 1);
+    { const t = this.add.text(cx, cy - 8, "🔨", { fontFamily: "system-ui", fontSize: "14px" })
+        .setOrigin(0.5, 0.52).setDepth(D + 1);
       this.expFx.push(t); this.expCartel.push(t); }
-    { const t2 = this.add.text(cx, cy + 9, "👆 clic para los detalles",
-        { fontFamily: "system-ui", fontSize: "11px", fontStyle: "bold", color: "#e9ffd6", stroke: "#20301a", strokeThickness: 3 })
+    { const t2 = this.add.text(cx, cy + 12, (puede ? "" : "✖ ") + "Expandir",
+        { fontFamily: "system-ui", fontSize: "10px", fontStyle: "bold", color: puede ? "#ffe08a" : "#e9e9e9",
+          stroke: "#20301a", strokeThickness: 3 })
         .setOrigin(0.5, 0.5).setDepth(D + 1);
       this.expFx.push(t2); this.expCartel.push(t2); }
     this._expCta = { cx, cy, ancho: CTA_W, alto: CTA_H, chapa,
@@ -4416,8 +4448,8 @@ class FarmScene extends Phaser.Scene {
     // arranca OCULTO: solo se ve con el cursor encima. La ÚNICA excepción es cuando ya lo podés
     // pagar: ahí el cartel dorado se queda a la vista porque es una llamada a la acción, no un
     // aviso gris. Si te falta nivel o material, el bosque se ve limpio.
-    this._expCtaVisible = false;
-    this.expCartel.forEach(o => o.setVisible(false));
+    this._expCtaVisible = true;
+    this.expCartel.forEach(o => o.setVisible(true));
     if (typeof this.actualizarCartelExpansion === "function") this.actualizarCartelExpansion();
     /* 24/8 — EL CARTEL DESAPARECÍA Y HABÍA QUE APRETAR F5. Reporte de dirección: « ves la
        expansión y los recursos que pide y suele desaparecer ». La causa es sutil: la FIRMA
