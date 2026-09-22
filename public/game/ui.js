@@ -2911,6 +2911,31 @@ window.tutoHighlight = tutoHighlight;
 
 // el guardado se hidrata de forma asíncrona: si el paso cambia, se redibujan cartel Y flecha juntos
 let _tutoSig = null;
+// El Registro ocupa parte de la granja justo cuando el primer ciclo necesita más espacio visual.
+// Se pliega una sola vez durante ese tramo; desde el primer gesto manual, el panel queda enteramente
+// en manos de la persona que juega (y la brújula nunca entra en esta condición).
+let _registroInicioPlegado = false, _registroCambioManual = false;
+const REGISTRO_SESION = "gf_registro_manual";
+function registroCambioManual(panel) {
+  _registroCambioManual = true;
+  try { sessionStorage.setItem(REGISTRO_SESION, panel && panel.classList.contains("collapsed") ? "collapsed" : "open"); } catch (e) {}
+}
+function registroRestaurarCambioManual() {
+  let eleccion = null;
+  try { eleccion = sessionStorage.getItem(REGISTRO_SESION); } catch (e) {}
+  if (eleccion !== "open" && eleccion !== "collapsed") return;
+  const panel = $("logpanel"); if (!panel) return;
+  panel.classList.toggle("collapsed", eleccion === "collapsed");
+  _registroCambioManual = true;
+}
+function plegarRegistroPrimerCiclo() {
+  if (_registroInicioPlegado || _registroCambioManual || typeof tutoActivo !== "function") return;
+  const paso = tutoActivo();
+  if (!paso || !["kit", "buyseed", "plant", "harvest"].includes(paso.id)) return;
+  const panel = $("logpanel"); if (!panel) return;
+  panel.classList.add("collapsed");   // el HTML ya nace plegado: esta operación es idempotente
+  _registroInicioPlegado = true;
+}
 function tutoSync(force) {
   if (typeof tutoCheckRes === "function") tutoCheckRes();   // pasos de "juntá X de madera/piedra/plata"
   if (typeof tutoAvisoCubierto === "function") { try { tutoAvisoCubierto(); } catch (e) {} }   // 14/8 v4: "ya cubrís la meta" (una vez por meta)
@@ -2919,6 +2944,7 @@ function tutoSync(force) {
   if (typeof tutoAutoSkip === "function") { try { tutoAutoSkip(); } catch (e) {} }
   // 14/8: el ADELANTO del paso activo (idempotente — una vez por paso, cubre migraciones y F5)
   if (typeof tutoAdelanto === "function") { try { tutoAdelanto(); } catch (e) {} }
+  plegarRegistroPrimerCiclo();
   const st = (typeof guiaActiva === "function") ? guiaActiva() : ((typeof tutoActivo === "function") ? tutoActivo() : null);
   // 13/8 v3: el sub-objetivo entra a la firma — cuando aparece o se resuelve, cartel y flechas se redibujan
   const sub = (st && !st.brujula && typeof tutoSub === "function") ? tutoSub() : null;
@@ -4505,6 +4531,7 @@ function initUniversalDrag() {
 /* ---- init ---- */
 function initUI() {
   GF.uiOpen = false;
+  registroRestaurarCambioManual();
   const gmenu = $("gmenu");
   const toggleMenu = () => gmenu.classList.toggle("collapsed");
   const gt = $("gmtoggle"); if (gt) gt.onclick = toggleMenu;
@@ -4653,10 +4680,12 @@ function initUI() {
      que el botón solo servía para bloquearle el guardado a quien lo tocara. Con el servidor
      diciendo que no, no hay kit posible: lo que haga falta para probar se hace con la cuenta
      de servicio en el dashboard, del lado de la base. */
-  const lm = $("logmin"); if (lm) lm.onclick = () => $("logpanel").classList.toggle("collapsed");
+  const lm = $("logmin"); if (lm) lm.onclick = () => { const panel = $("logpanel"); if (!panel) return; panel.classList.toggle("collapsed"); registroCambioManual(panel); };
   initUniversalDrag();   // mantener clic sobre cualquier interfaz la mueve (detalles 29/7)
   document.querySelectorAll(".ltab").forEach(b => b.onclick = () => {
-    $("logpanel").classList.remove("collapsed");
+    const panel = $("logpanel"); if (!panel) return;
+    panel.classList.remove("collapsed");
+    registroCambioManual(panel);
     document.querySelectorAll(".ltab").forEach(x => x.classList.toggle("active", x === b));
     const tab = b.dataset.tab;
     $("log").style.display = tab === "log" ? "" : "none";
