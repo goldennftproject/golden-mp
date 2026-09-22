@@ -5939,13 +5939,24 @@ const ARM_TIPO_DEF = {
   mazo:   { label: "Mazo",   buff: "stun",   buffLabel: "Aturdir",     skill: "mazo",  sprite: "mazo", primQ: 8, secQ: 4, repQ: 4, plata: [15, 40, 90, 210, 480] },
   arco:   { label: "Arco",   buff: "bleed",  buffLabel: "Sangrado",    skill: "range", sprite: "bow",   primQ: 4, secQ: 2, repQ: 2, plata: [10, 20, 50, 110, 255] },
 };
-const ARM_MINMAX = {   // daño aleatorio min-max por tipo y rareza (tablas 15-18 del compendio)
+/* 22/9 (dirección, Discord: « usé un hacha por primera vez y le quité media vida a la rata con
+   skill de inicio… con hacha de madera no debería »). Medido con 3.000 golpes: el hacha de madera
+   pegaba un 62 % más que la espada de madera (media 6,0 vs 3,7) y su tirada máxima (12) era
+   justo media rata. La causa es de tabla, no de bug: el compendio da al hacha 4-6 y al mazo 4-6
+   contra 3-5 de la espada, y encima el hacha lleva perforación y el mazo aturdir desde madera,
+   mientras la espada solo tiene 3 % de crítico. Sin un enfriamiento por tipo que lo compense
+   (acá depende de la rareza), hacha y mazo le ganan a la espada en TODOS los escalones.
+   Decisión de dirección (opción 1): EL ESCALÓN DE MADERA ES « UN PALO » PARA LOS TRES — misma
+   tirada (3-5) y sin bono de tipo. La identidad de cada arma (crítico · perforación · aturdir)
+   arranca en piedra. El arco no cambia. La opción 2 (enfriamiento por tipo en todos los
+   escalones) queda en el TODO para cuando el diseñador mire las armas. */
+const ARM_MINMAX = {   // daño aleatorio min-max por tipo y rareza (tablas 15-18 del compendio; madera: ver arriba)
   espada: [[3,5],[4,8],[7,11],[10,18],[16,26]],
-  hacha:  [[4,6],[5,9],[8,12],[12,20],[18,30]],
-  mazo:   [[4,6],[6,10],[9,15],[14,22],[20,34]],
+  hacha:  [[3,5],[5,9],[8,12],[12,20],[18,30]],
+  mazo:   [[3,5],[6,10],[9,15],[14,22],[20,34]],
   arco:   [[2,4],[3,5],[5,9],[8,12],[12,20]],
 };
-const ARM_BUFFVAL = { espada: [3,5,8,12,18], hacha: [20,30,40,55,70], mazo: [8,12,16,22,30], arco: [1,2,3,4,6] };
+const ARM_BUFFVAL = { espada: [0,5,8,12,18], hacha: [0,30,40,55,70], mazo: [0,12,16,22,30], arco: [1,2,3,4,6] };
 /* 18/8 — DURABILIDAD RE-DERIVADA con los relojes nuevos. Al acortar el árbol, la madera pasó a
    valer 12 y los minerales se quedaron en sus relojes de 8 a 24 h, así que el bronce pasó de valer
    6 veces una madera a valer 13. Con eso, reparar un arma de mineral se comía todo su margen.

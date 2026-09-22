@@ -286,6 +286,10 @@ Están desarrolladas en el GDD §15.0, con sus números medidos. Aquí solo el t
   la línea base — la semana del 8 al 9/9 encontró **trece** medidores que mentían, todos por un
   supuesto escrito a mano que envejeció en silencio, y ninguno estaba en rojo.
 
+## ⚔️ Armas: contrapeso por tipo (22/9, dirección — opción 2, pendiente)
+
+- [ ] Hacha y mazo pegan más que la espada en todos los escalones (compendio: 4-6 / 4-6 vs 3-5, más perforación y aturdir) y el enfriamiento depende solo de la rareza, así que no hay contrapeso. En madera se igualó todo a « un palo » (3-5, sin bono). Para el resto: darle a hacha y mazo un enfriamiento por tipo un 20-25 % más lento que la espada, como Tibia — para cuando el diseñador mire las armas (ya tienen animación propia).
+
 ## ⚪ Visual abierto (decisión del 11/8: queda así salvo pedido nuevo)
 
 - [x] El **Mercado** quedó chico al lado de los edificios nuevos: escala visual a 2,1 celdas (88,2 px), sin cambiar asset ni sus dos celdas.
