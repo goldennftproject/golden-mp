@@ -1112,10 +1112,13 @@
     .pill{font-size:10px;padding:3px 6px}
     #tuto{font-size:11px;bottom:88px}
   }
-  /* pantallas bajas (portátiles a 125%, móvil apaisado): el alto es lo que falta */
+  /* pantallas bajas: en escritorio se gana aire arriba. En móvil angosto el cartel ya vive
+     abajo, sobre la hotbar; darle también `top` lo estiraba entre ambos bordes. */
   @media(max-height:560px){
     .hudbar{padding:4px 8px}
     .hcell{width:36px;height:36px}
+  }
+  @media(max-height:560px) and (min-width:641px){
     #tuto{top:44px;font-size:11px}
   }
   /* ============ LEGIBILIDAD (19/9, dirección: « hay fuentes que no se alcanzan a leer bien;
@@ -1924,7 +1927,7 @@
     // 15/8: VERSIÓN DE BUILD — rompe la caché del navegador en cada deploy (sin esto, el
     // jugador seguía corriendo el state.js viejo aunque el servidor tuviera el nuevo).
     // deploy.bat la actualiza sola (busca GF_BUILD y pone la fecha/hora del deploy).
-    const GF_BUILD = "20260922-094627";
+    const GF_BUILD = "20260922-160318";
     const files = ["game/config.js","game/nav.js","game/audio.js","game/state.js","game/save.js","game/ui.js","game/boot.js",
                    "game/farm.js","game/forest.js","game/plaza.js","game/main.js","game/update.js"];
     /* 24/8 — SE BAJAN TODOS A LA VEZ, SE EJECUTAN EN FILA (dirección: « sigue tardando en

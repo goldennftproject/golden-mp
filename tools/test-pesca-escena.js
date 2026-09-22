@@ -98,6 +98,68 @@ function partidaLimpia() {
 }
 
 let esc;
+const mismoDestinoGuia = (a, b) => !!a && a.x === b.x && a.y === b.y && a.bottomY === b.bottomY;
+console.log("\nEL TUTORIAL SEÑALA EL AGUA REAL, NO UN OBJETO QUE YA NO EXISTE");
+{
+  /* La pesca se activa sobre la geometría de la laguna; no hay un `fish` dentro de `objs`.
+     El caso reproduce justo eso y mueve la laguna luego, porque el editor permite hacerlo. */
+  const guiaOnAntes = ctx.guiaOn, tutoAntes = G.tuto && Object.assign({}, G.tuto);
+  const pondAntes = JSON.parse(JSON.stringify(g("GF.POND")));
+  const puntoGuia = (p) => {
+    const T = g("GF.TILE");
+    return { x: (p.col + p.cols / 2) * T, y: p.row * T - 26, bottomY: (p.row + p.rows) * T + 6 };
+  };
+  try {
+    const paso = g("TUTO_STEPS.findIndex(s => s.id === 'fish')");
+    G.tuto = { step: paso, done: false, n: 0 }; ctx.guiaOn = () => true;
+    ok("el paso real declara que la pesca apunta a la laguna", ctx.guiaActiva().target === "fish", ctx.guiaActiva().target);
+    esc = nuevaEscena();
+    let paneo = null;
+    esc.programarCamaraGuia = (x, y, bottomY) => { paneo = { x, y, bottomY }; };
+    esc.cancelarCamaraGuia = () => { esc.guiaCancelada = true; };
+    esc.updateTutoArrow();
+    const esperado = puntoGuia(pondAntes);
+    ok("sin objeto fish, la mariposa recibe la laguna", mismoDestinoGuia(esc.guiaTarget, esperado), JSON.stringify(esc.guiaTarget));
+    ok("y la cámara recibe todo el alto de la laguna", mismoDestinoGuia(paneo, esperado), JSON.stringify(paneo));
+
+    const movida = { col: 7, row: 3, cols: 5, rows: 2 };
+    g("GF.POND = " + JSON.stringify(movida) + ";");
+    paneo = null; esc.guiaTarget = null; esc.updateTutoArrow();
+    const esperadoMovido = puntoGuia(movida);
+    ok("si se mueve en edición, la guía sigue la laguna nueva", mismoDestinoGuia(esc.guiaTarget, esperadoMovido), JSON.stringify(esc.guiaTarget));
+    ok("y el paneo no conserva coordenadas viejas", mismoDestinoGuia(paneo, esperadoMovido), JSON.stringify(paneo));
+  } finally {
+    g("GF.POND = " + JSON.stringify(pondAntes) + ";");
+    if (tutoAntes) G.tuto = tutoAntes; else delete G.tuto;
+    ctx.guiaOn = guiaOnAntes;
+  }
+}
+
+console.log("\nLA CARNADA TAMBIÉN TIENE UNA SEÑAL CONCRETA EN EL MUNDO");
+{
+  /* El paso anterior pide un montículo. Éste sí es un objeto de escena, pero si la tabla no
+     declara su target la guía no llega a la rama genérica que lo señala. */
+  const guiaOnAntes = ctx.guiaOn, tutoAntes = G.tuto && Object.assign({}, G.tuto);
+  try {
+    const paso = g("TUTO_STEPS.findIndex(s => s.id === 'excavar')");
+    G.tuto = { step: paso, done: false, n: 0 }; ctx.guiaOn = () => true;
+    ok("el paso real de cavar declara el montículo", ctx.guiaActiva().target === "excav", ctx.guiaActiva().target);
+    esc = nuevaEscena();
+    const monticulo = { type: "excav", cx: 248, by: 342, sprite: { displayHeight: 22 } };
+    esc.objs = [monticulo];
+    let paneo = null;
+    esc.programarCamaraGuia = (x, y, bottomY) => { paneo = { x, y, bottomY }; };
+    esc.cancelarCamaraGuia = () => { esc.guiaCancelada = true; };
+    esc.updateTutoArrow();
+    const esperado = { x: monticulo.cx, y: monticulo.by - monticulo.sprite.displayHeight - 10, bottomY: monticulo.by + 5 };
+    ok("la mariposa recibe ese montículo", mismoDestinoGuia(esc.guiaTarget, esperado), JSON.stringify(esc.guiaTarget));
+    ok("y la cámara no deja el objetivo fuera de cuadro", mismoDestinoGuia(paneo, esperado), JSON.stringify(paneo));
+  } finally {
+    if (tutoAntes) G.tuto = tutoAntes; else delete G.tuto;
+    ctx.guiaOn = guiaOnAntes;
+  }
+}
+
 console.log("\nTOCAR EL AGUA TIRA LA CAÑA, Y YA");
 {
   partidaLimpia();

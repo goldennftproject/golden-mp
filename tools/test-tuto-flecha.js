@@ -77,6 +77,9 @@ window.__validarDestinos = function () {
   G.weapons = {}; G.gear = {}; G.dishes = { papa_asada: 1 }; G.cooking = [];
   TUTO_STEPS.forEach(function (s) {
     if (!s.panel || !s.ui) return;
+    /* El selector del último paso se crea al llegar a él: no es una nota diaria que exista
+       durante toda la cadena. El arnés debe pintar el mismo estado que el jugador verá. */
+    if (s.id === "pedido") { G.tuto = { step: TUTO_STEPS.indexOf(s), done: false, n: 0 }; G.pedidos = null; }
     const cont = document.getElementById(s.panel);
     if (!cont) { out.push({ id: s.id, panel: s.panel, ui: s.ui, estado: "el panel no existe" }); return; }
     try { if (OV_REFRESH[s.panel]) OV_REFRESH[s.panel](); } catch (e) {
@@ -129,6 +132,24 @@ window.__sondeoComerTutorial = function () {
   inv.classList.remove("show"); menu.classList.add("collapsed");
   return JSON.stringify({ txt: st.txt, panel: st.panel || null, ui: st.ui || null,
     hayPlato: !!platoVisible, cerrado: cerrado, abierto: abierto, dentro: dentro });
+};
+/* El cierre no puede depender de un lote aleatorio del tablón. Se pinta la nota efímera con la
+   mochila vacía y se comprueba la flecha real dentro del panel, que es el último tramo de guía. */
+window.__sondeoPedidoTutorial = function () {
+  G.tuto = { step: TUTO_STEPS.findIndex(s => s.id === "pedido"), done: false, n: 0 };
+  G.pedidos = null; G.res = {}; G.fish = {}; G.dishes = {};
+  const ov = document.getElementById("ov-pedidos");
+  ov.classList.add("show"); if (OV_REFRESH["ov-pedidos"]) OV_REFRESH["ov-pedidos"]();
+  const st = tutoActivo(), destino = st.ui ? ov.querySelector(st.ui) : null;
+  if (destino) try { Object.defineProperty(destino, "offsetParent", { configurable: true, value: document.body }); } catch (e) {}
+  const orig = window.tutoFlechaUI;
+  let flecha = null;
+  window.tutoFlechaUI = function (el) { flecha = el ? (el.getAttribute("data-pd-entregar") || el.id || el.className) : null; };
+  tutoHighlight(); window.tutoFlechaUI = orig;
+  const notas = ov.querySelectorAll(".pd-nota");
+  ov.classList.remove("show");
+  return JSON.stringify({ txt: st.txt, panel: st.panel || null, ui: st.ui || null,
+    existe: !!destino, flecha: flecha, soloNota: notas.length === 1 });
 };
 window.__panelesDePasos = function () {
   return JSON.stringify(TUTO_STEPS.filter(s => s.panel).map(function (s) {
@@ -236,6 +257,14 @@ console.log("\nCOMER RECORRE MENÚ → INVENTARIO → PLATO");
   ok("con el menú cerrado señala ☰ Menú", s.cerrado === "menu-btn", s.cerrado);
   ok("al abrirlo baja a Inventario", s.abierto === "ov-inv", s.abierto);
   ok("y dentro apunta al plato que se puede comer", /k-dish/.test(s.dentro || ""), s.dentro);
+}
+
+console.log("\nEL TABLÓN TERMINA EL TUTORIAL SIN PEDIR UN LOTE ENTERO");
+{
+  const s = JSON.parse(w.__sondeoPedidoTutorial());
+  ok("la nota de prueba es el único pedido visible", s.soloNota, JSON.stringify(s));
+  ok("la flecha llega a la nota entregable", s.ui === '[data-pd-entregar="T"]' && s.existe && s.flecha === "T", JSON.stringify(s));
+  ok("el cartel aclara que no consume materiales", /no pide materiales/i.test(s.txt), s.txt);
 }
 
 console.log(fallos ? "\n  ✗ " + fallos + " fallas\n" : "\n  ✓ la flecha va Menú → Cobertizo, el cartel dice lo mismo, y el botón está ahí\n");

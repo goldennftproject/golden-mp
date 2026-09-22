@@ -2839,6 +2839,7 @@ function tutoRefresh() {
   if (!st || (window.guiaOn && !guiaOn())) {
     el.classList.add("hidden");
     if (typeof tutoFlechaUI === "function") tutoFlechaUI(null);
+    placeTuto();
     placeToast();
     return;
   }
@@ -2854,11 +2855,12 @@ function tutoRefresh() {
      objetivo con cuenta atrás y las cosas que se podían hacer ("no es el efecto que quiero").
      El error de fondo era el mismo en los dos: poner la espera en palabras la vuelve el
      protagonista. Nombrar los segundos que faltan hace la espera más pesada, no más liviana, y un
-     texto que cambia solo se lleva el ojo del jugador justo cuando queremos que mire su granja.
+  texto que cambia solo se lleva el ojo del jugador justo cuando queremos que mire su granja.
      Lo que sí queda es que el MUNDO señale: las mariposas ya revolotean sobre lo que está listo
      y desatendido (ver mariposaAccionables en farm.js). El cartel vuelve a ser lo que era: una
-     línea quieta con el objetivo. */
+  línea quieta con el objetivo. */
   tutoHighlight();
+  placeTuto();
   placeToast();
 }
 // 13/8 (audio): la guía DENTRO de las interfaces es una FLECHA dorada (la misma estética
@@ -4043,24 +4045,27 @@ function refreshPedidos() {
   const todos = (typeof pedidosTodos === "function") ? pedidosTodos() : e.lista.map((p, i) => ({ p, i, escalon: "diaria" }));
   cont.innerHTML = todos.map(({ p, i, escalon }, idx) => {
     const stock = pedidoStock(p), ok = !p.hecho && stock >= p.n;
-    const grande = escalon !== "diaria";
+    const tutorial = escalon === "tutorial";
+    const grande = escalon !== "diaria" && !tutorial;
     // 22/8: la misión de EVENTO se ve DISTINTA (pedido de dirección) — violeta y con su cartel
     const colEsc = escalon === "evento" ? "#b565d8" : escalon === "mensual" ? "#c9a227" : "#7fa356";
     const titEsc = escalon === "evento" ? "🎪 MISIÓN DE EVENTO · SOLO EL FINDE" : escalon === "mensual" ? "ENCARGO DEL MES" : "ENCARGO DE LA SEMANA";
-    const cls = "pd-nota" + (p.hecho ? " hecha" : ok ? " lista" : "");
+    const cls = "pd-nota" + (p.hecho ? " hecha" : ok ? " lista" : "") + (tutorial ? " pd-tutorial" : "");
     const estilo = "transform:rotate(" + rots[idx % 3] + "deg)" +
-      (grande ? ";box-shadow:0 0 0 2px " + colEsc + " inset" : "");
+      (grande ? ";box-shadow:0 0 0 2px " + colEsc + " inset" : tutorial ? ";box-shadow:0 0 0 2px #6fafe1 inset" : "");
     return '<div class="' + cls + '" style="' + estilo + '"' + (ok ? ' data-pd-entregar="' + i + '"' : "") + '>' +
-      (grande ? '<div class="de" style="color:' + colEsc + '"><b>' + titEsc + '</b></div>' : "") +
-      (!p.hecho && !grande ? '<span class="pd-x" data-pd-desc="' + i + '" title="Descartar">✕</span>' : "") +
+      (tutorial ? '<div class="de" style="color:#6fafe1"><b>✦ PRIMER ENCARGO</b></div>' : grande ? '<div class="de" style="color:' + colEsc + '"><b>' + titEsc + '</b></div>' : "") +
+      (!p.hecho && !grande && !tutorial ? '<span class="pd-x" data-pd-desc="' + i + '" title="Descartar">✕</span>' : "") +
       '<div class="de">' + p.de + ' <i>— ' + p.nota + '</i></div>' +
       /* 1/9 (dirección, con captura: « es un pez azul pero ¿cómo sabremos qué pez es? sería
          bueno que dijera qué pez »): la nota dice el NOMBRE, no solo la lámina — pedidoLabel
          ya existía para esto y la nota no lo usaba. Vale para todo: peces, cultivos, platos. */
-      '<div class="pide">' + pdIcono(p) + '<b>× ' + p.n + '</b> <span class="pd-nom">' + pedidoLabel(p) + '</span>' +
-      (!p.hecho && !ok ? '<span class="falta">(tenés ' + stock + ')</span>' : "") + '</div>' +
+      (tutorial ? '<div class="pide"><span class="pd-nom"><b>Entrega de prueba</b> · sin materiales</span></div>'
+        : '<div class="pide">' + pdIcono(p) + '<b>× ' + p.n + '</b> <span class="pd-nom">' + pedidoLabel(p) + '</span>' +
+          (!p.hecho && !ok ? '<span class="falta">(tenés ' + stock + ')</span>' : "") + '</div>') +
       (p.hecho ? '<div class="sello">✓ ENTREGADO</div>'
-        : '<div class="paga">🪙 ' + p.plata + ' · 🎟 ' + p.vales + (ok ? '<div class="toca">tocá la nota para entregar</div>' : "") + '</div>') +
+        : tutorial ? '<div class="toca">tocá la nota para entregar</div>'
+          : '<div class="paga">🪙 ' + p.plata + ' · 🎟 ' + p.vales + (ok ? '<div class="toca">tocá la nota para entregar</div>' : "") + '</div>') +
       '</div>';
   }).join("") +
   '<div style="text-align:center;margin-top:6px"><button class="ghost sm" data-pd-vista="canje">🎟 Canjear vales</button></div>';
@@ -4602,9 +4607,29 @@ function placePrompt() {
   const abajo = Math.floor(window.innerHeight - rr.bottom - pr.height - 12);
   if (abajo >= bottom && abajo <= maxBottom) p.style.bottom = abajo + "px";
 }
+/* En móvil el objetivo queda sobre la hotbar por CSS. Si el Registro está abierto, esa franja
+   coincide exactamente con sus últimas líneas; se mide la colisión real y se sube sólo entonces.
+   No se toca escritorio ni un Registro plegado, y al cerrar/restaurar se vuelve al CSS puro. */
+function placeTuto() {
+  const guia = $("tuto"), registro = $("logpanel");
+  if (!guia) return;
+  guia.style.top = ""; guia.style.bottom = "";   // no dejar una posición vieja tras cerrar Registro
+  if (guia.classList.contains("hidden") || !window.matchMedia || !window.matchMedia("(max-width: 640px)").matches) return;
+  if (!registro || registro.classList.contains("collapsed")) return;
+  const gr = guia.getBoundingClientRect(), rr = registro.getBoundingClientRect();
+  if (!gr.width || !gr.height || !rr.width || !rr.height || !rectsSeCruzan(gr, rr, 8)) return;
+
+  // La salida normal es arriba del Registro. Si alguien arrastró el panel casi hasta el borde
+  // superior y ya no entra, no inventamos una tercera ubicación que pueda tapar el HUD.
+  const arriba = Math.round(window.innerHeight - rr.top + 12);
+  const maxBottom = Math.max(4, window.innerHeight - gr.height - 4);
+  if (arriba <= maxBottom) { guia.style.top = "auto"; guia.style.bottom = arriba + "px"; }
+}
 function syncRegistroPrompt() {
   placeRegistro();
   placePrompt();
+  placeTuto();
+  placeToast();
 }
 function initUniversalDrag() {
   document.querySelectorAll(".ov .card").forEach(c => makeHoldDrag(c));          // todas las ventanas

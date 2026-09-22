@@ -5,7 +5,7 @@ const ctx={console,window:{},document:{getElementById:()=>null,addEventListener(
   localStorage:{getItem:()=>null,setItem(){},removeItem(){}},Phaser:{Math:{Clamp:(v,a,b)=>Math.max(a,Math.min(b,v)),Between:(a,b)=>a}},
   setTimeout:()=>0,setInterval:()=>0,requestAnimationFrame:()=>0,fetch:()=>Promise.reject()};
 ctx.window=ctx;ctx.globalThis=ctx;vm.createContext(ctx);
-vm.runInContext(p("config.js")+"\n"+p("state.js"),ctx);
+vm.runInContext(p("config.js")+"\n"+p("state.js")+"\n;this.__TUTO_STEPS=TUTO_STEPS;this.__TUTO_VER=TUTO_VER;",ctx);
 const g=ctx;
 g.toast=m=>{últ=m};let últ="";
 g.log=()=>{};g.refreshHud=()=>{};g.saveFarm=()=>{};g.addXp=()=>{};g.isOpen=()=>false;g.sfx=()=>{};
@@ -32,5 +32,26 @@ g.G.res={};const e2=g.pedidosEstado();e2.lista[0].hecho=false;últ="";
 const r=g.pedidoEntregar(0);
 console.log((!r&&últ?"  OK  ":"  MAL ")+"sin recursos avisa: "+(últ||"(SIN AVISO)"));
 if(!últ)fallos++;
+
+console.log("\nEL PRIMER ENCARGO DEL TUTORIAL NO PIDE GRINDEO");
+{
+  const paso=g.__TUTO_STEPS.findIndex(s=>s.id==="pedido");
+  g.G.tuto={step:paso,n:0,done:false,v:g.__TUTO_VER};
+  g.G.pedidos=null; g.G.res={}; g.G.fish={}; g.G.dishes={}; g.G.stats={};
+  g.G.plata=0; g.G.vales=0; últ="";
+  const todos=g.pedidosTodos(), primero=todos[0], diarios=g.pedidosEstado().lista;
+  const aparece=todos.length===1&&primero&&primero.i==="T"&&primero.escalon==="tutorial"&&
+    primero.p.tipo==="tutorial"&&g.pedidoStock(primero.p)===primero.p.n;
+  console.log((aparece?"  OK  ":"  MAL ")+"la nota guiada aparece sola y se puede entregar sin inventario");
+  if(!aparece)fallos++;
+  const plata0=g.G.plata,vales0=g.G.vales,dobles0=(g.G.pedidos.dobles||0);
+  const entrega=g.pedidoEntregar("T");
+  const sinPremio=g.G.plata===plata0&&g.G.vales===vales0;
+  const diarioConservado=diarios.length===3&&(g.G.pedidos.dobles||0)===dobles0;
+  console.log((entrega&&g.G.tuto.done?"  OK  ":"  MAL ")+"entregarla completa el tutorial");
+  console.log((sinPremio?"  OK  ":"  MAL ")+"la práctica no emite plata ni vales");
+  console.log((diarioConservado?"  OK  ":"  MAL ")+"los tres diarios y su primer ×2 siguen intactos");
+  if(!entrega||!g.G.tuto.done||!sinPremio||!diarioConservado)fallos++;
+}
 console.log(fallos?"\nFALLOS: "+fallos:"\nTodos los encargos se entregan y todo clic contesta.");
 process.exit(fallos?1:0);

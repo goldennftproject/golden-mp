@@ -1312,7 +1312,7 @@ class FarmScene extends Phaser.Scene {
     if (o.type === "buzon") { const n = (typeof buzonCartas === "function") ? buzonCartas().length : 0; return n ? ("Leer el correo (" + n + (n > 1 ? " cartas" : " carta") + ")") : "Buzón — sin cartas"; }
     if (o.type === "excav") return "Cavar el montículo";
     if (o.type === "tablon_pedidos") {
-      if (G.tuto && !G.tuto.done) return "Tablón de pedidos — abre al terminar el tutorial";
+      if (typeof tablonAbierto === "function" && !tablonAbierto()) return "Tablón de pedidos — abre al terminar el tutorial";
       const n = (typeof pedidosCumplibles === "function") ? pedidosCumplibles() : 0;
       return n ? ("Tablón de pedidos — " + n + " para entregar") : "Tablón de pedidos del pueblo";
     }
@@ -2265,6 +2265,17 @@ class FarmScene extends Phaser.Scene {
     }
     else if (st.target === "ore") { const o = (this.objs || []).find(o => o.type === "ore" && !o.locked && usable(o)); if (o) { x = o.cx; y = o.by - (o.sprite ? o.sprite.displayHeight : 60) - 10; bottomY = o.by + 5; } }
     else if (st.target === "portal") { const o = this.portal; if (o) { x = o.cx; y = o.by - 70; bottomY = o.by + 5; } }
+    else if (st.target === "fish") {
+      /* La laguna se toca por su geometría (`pondDist`), no por un objeto `fish` en `objs`.
+         Y como se puede mover en edición, la guía tiene que leer su caja actual: así la
+         mariposa y el paneo señalan agua real incluso después de reacomodar la granja. */
+      const p = GF.POND, T = GF.TILE;
+      if (p && Number.isFinite(p.col) && Number.isFinite(p.row) && p.cols > 0 && p.rows > 0) {
+        x = (p.col + p.cols / 2) * T;
+        y = p.row * T - 26;                         // la mariposa queda apenas sobre el agua
+        bottomY = (p.row + p.rows) * T + 6;         // la cámara reserva la laguna entera
+      }
+    }
     else if (st.target === "tree" || st.target === "rock") {
       const tipos = st.target === "rock" ? ["rock", "ore"] : ["tree"];
       const o = (this.objs || []).find(o => tipos.includes(o.type) && !o.locked && usable(o));
@@ -3724,7 +3735,7 @@ class FarmScene extends Phaser.Scene {
     // TABLÓN (16/8): con pedidos pendientes se ven los papelitos clavados; sin nada, la tabla pelada
     const tb = (this.objs || []).find(x => x.type === "tablon_pedidos");
     if (tb && tb.sprite) {
-      let pend = 0; try { pend = (G.tuto && !G.tuto.done) ? 0 : pedidosEstado().lista.filter(p => !p.hecho).length; } catch (e) {}
+      let pend = 0; try { pend = (typeof tablonAbierto === "function" && tablonAbierto() && typeof pedidosCumplibles === "function") ? pedidosCumplibles() : 0; } catch (e) {}
       const tk = pend > 0 ? "tablon_pedidos_full" : "tablon_pedidos";
       if (this.textures.exists(tk) && tb.sprite.texture.key !== tk) this.setObjTex(tb, tk, tb.rw || tb.w);
     }

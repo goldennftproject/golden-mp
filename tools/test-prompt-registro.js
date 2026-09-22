@@ -51,6 +51,22 @@ function casoRegistro({ plegado, movida, hotbarRect, bottomInicial, autoAntes })
   vm.runInContext("placeRegistro()", ctx);
   return { bottom: registro.style.bottom, registro: registro.getBoundingClientRect(), hotbar: hotbarRect };
 }
+function casoGuia({ plegado, movil, logRect }) {
+  const guia = {
+    style: { top: "", bottom: "" }, classList: { contains: c => c === "hidden" ? false : false },
+    getBoundingClientRect() {
+      const bottom = this.style.bottom ? Number.parseFloat(this.style.bottom) : 96;
+      return rect(191, 500 - bottom - 33, 218, 33);
+    }
+  };
+  const registro = { classList: clases(plegado), getBoundingClientRect: () => logRect };
+  const ctx = { window: { innerHeight: 500, matchMedia: () => ({ matches: !!movil }) },
+    $: id => ({ tuto: guia, logpanel: registro })[id] || null };
+  vm.createContext(ctx);
+  vm.runInContext(UI.slice(desde, hasta), ctx);
+  vm.runInContext("placeTuto()", ctx);
+  return { top: guia.style.top, bottom: guia.style.bottom, guia: guia.getBoundingClientRect(), registro: logRect };
+}
 
 console.log("\n1 · LA POSICIÓN NORMAL SE CONSERVA SIN UN CRUCE\n");
 {
@@ -89,6 +105,19 @@ console.log("\n4 · LOS GANCHOS REACCIONAN A LA TRANSICIÓN, NO CADA CUADRO\n");
   ok("no observa textContent del prompt por MutationObserver", !/prompt\._promptWatch = new MutationObserver/.test(UI));
   ok("la hotbar y Registro recalculan juntos al arrastrarse", /makeHoldDrag\(\$\("hotwrap"\), "gf_hotpos", false, syncRegistroPrompt\)/.test(UI) &&
     /makeHoldDrag\(registro, "gf_logpos", true, syncRegistroPrompt\)/.test(UI));
+}
+
+console.log("\n5 · LA GUÍA MÓVIL NO SE ESCONDE DETRÁS DEL REGISTRO\n");
+{
+  const abierto = casoGuia({ plegado: false, movil: true, logRect: rect(10, 306, 340, 116) });
+  ok("sube encima del Registro abierto", abierto.bottom === "206px", abierto.bottom);
+  ok("deja un margen real entre las dos cajas", !cruzan(abierto.guia, abierto.registro, 8), JSON.stringify(abierto.guia));
+
+  const plegado = casoGuia({ plegado: true, movil: true, logRect: rect(10, 306, 340, 116) });
+  ok("plegado recupera el anclaje CSS de la hotbar", plegado.top === "" && plegado.bottom === "", JSON.stringify(plegado));
+
+  const escritorio = casoGuia({ plegado: false, movil: false, logRect: rect(10, 306, 340, 116) });
+  ok("en escritorio no mueve la guía superior", escritorio.top === "" && escritorio.bottom === "", JSON.stringify(escritorio));
 }
 
 console.log(fallos ? "\n" + fallos + " fallo(s)\n" : "\nTodo en orden: el aviso conserva aire alrededor del Registro.\n");

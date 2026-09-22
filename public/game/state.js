@@ -2986,13 +2986,13 @@ const TUTO_STEPS = [
      metros era enseñarle el camino largo. Los montículos son tres por día, se cavan con un clic sin
      herramienta y siempre dan lombriz — y son otro sistema que nadie le explicaba. El Mercado sigue
      ahí para cuando se le acaben. */
-  { id: "excavar",  n: 1, txt: "Cavá uno de los montículos de tierra: adentro hay carnada" },
+  { id: "excavar",  n: 1, txt: "Cavá uno de los montículos de tierra: adentro hay carnada", target: "excav" },
   { id: "fish",     n: 1, txt: "Probá la caña en la laguna (la lombriz es el cebo)", target: "fish" },
   /* 19/9 — LA LONJA ES UN CARTEL JUNTO A LA LAGUNA CON CUATRO PESTAÑAS ADENTRO (pedido de marea,
      tienda, venta, títulos) y su propia moneda, y nada la presentaba. El paso pide lo más simple
      —vender un pez— porque el resto se descubre solo una vez que el panel está abierto. */
   { id: "lonja",    n: 1, txt: "Vendé un pescado en la Lonja, junto a la laguna", target: "lonja" },
-  { id: "pedido",   n: 1, txt: "Entregá un encargo en el tablón de pedidos", target: "tablon_pedidos", panel: "ov-pedidos" },
+  { id: "pedido",   n: 1, txt: "Entregá la nota de prueba en el tablón (no pide materiales)", target: "tablon_pedidos", panel: "ov-pedidos", ui: '[data-pd-entregar="T"]' },
   // (14/8, reversión del capataz: la cadena TERMINA acá — el tutorial enseña LO BÁSICO de
   //  la granja. Armas, Zona Negra, minería avanzada y Altar se aprenden jugando: sus
   //  planos caen por nivel y cada sistema se presenta solo.)
@@ -3116,7 +3116,8 @@ var TUTO_REWARD_PLATA = 100;   // gran recompensa del cierre (editable)
 // después usan el tiempo normal del cultivo. 0 en el panel = sin excepción.
 var FIRST_GROW_MS = 0;   // 14/8: APAGADO — la papa crece en 90 s de base (escalera nueva), sin trato especial
 var FIRST_GROW_N = 3;        // cuántas semillas de arranque tienen ese trato (las 3 papas del inicio)
-var TUTO_VER = 14;   // v14 (19/9): tres pasos nuevos — muñeco, incursión y Lonja (los sistemas que nadie presentaba)
+var TUTO_VER = 15;   // v15 (22/9): el primer encargo es una entrega de prueba, siempre posible y señalada
+                     // v14 (19/9): tres pasos nuevos — muñeco, incursión y Lonja (los sistemas que nadie presentaba)
                      // v13 (15/8): paso 0 nuevo — el kit de bienvenida se retira del BAÚL
 function tutoActivo() { return G.tuto && !G.tuto.done ? TUTO_STEPS[G.tuto.step] : null; }
 // Los paneles del paso anterior no son el destino del siguiente. Solo se cierran si podemos
@@ -10357,6 +10358,19 @@ function pedidoGenerar(seed) {
   return { tipo: p.tipo, key: p.key, n: n, plata: Math.max(2, Math.round(val)), xp: Math.max(1, Math.round(val * 0.8)),
     vales: valesPremio(val), de: rem[0], nota: rem[1], hecho: false };   // 31/8: la EMISIÓN tiene su propia vara (prima 25 %, ver VALE_EMISION)
 }
+/* El primer contacto con el tablón no puede heredar la economía completa de los pedidos
+   recurrentes. A esta altura de la ruta el jugador puede haber gastado o vendido todo lo que
+   produjo: si la primera nota sale del generador normal, el cierre del tutorial termina siendo
+   una tanda aleatoria de 11 piedras, 14 maderas u 80 papas. Esta nota enseña el gesto de entregar
+   sin regalar plata, XP ni vales, y deja intactos los tres encargos diarios reales. */
+function pedidoTutorialActivo() {
+  return !!(G.tuto && !G.tuto.done && (TUTO_STEPS[G.tuto.step] || {}).id === "pedido");
+}
+function pedidoPrimerTutorial(dia) {
+  return { tipo: "tutorial", key: "primer_encargo", n: 1, plata: 0, xp: 0, vales: 0,
+    de: "El tablón del pueblo", nota: "una entrega de prueba, sin materiales", hecho: false,
+    tipoEncargo: "tutorial", dia: dia };
+}
 /* ============ LA ESCALERA DEL TABLÓN (18/8, dirección) =============================
    "podemos regularlo con las misiones del tablón, que sean misiones diarias, semanales, mensuales".
 
@@ -10448,6 +10462,10 @@ function pedidosEstado() {
       if (p) e.lista.push(p);
     }
   }
+  /* Vive aparte de la lista diaria para que no borre ni rebaje un encargo normal. Si la partida
+     queda abierta hasta el día siguiente antes de tocarla, se recompone sola y sigue siendo una
+     nota posible; al terminar el paso desaparece del tablón. */
+  if (pedidoTutorialActivo() && (!e.pedTutorial || e.pedTutorial.dia !== e.dia)) e.pedTutorial = pedidoPrimerTutorial(e.dia);
   // el encargo de la SEMANA y el del MES viven aparte de la lista diaria: no se descartan ni se
   // rerollean, y aguantan lo que dure su ventana aunque cambie el día.
   if (e.semana !== semanaStamp()) { e.semana = semanaStamp(); e.pedSemanal = pedidoGrande(7777, PED_SEMANAL_DIAS, "semanal"); }
@@ -10460,6 +10478,10 @@ function pedidosEstado() {
 // los tres escalones, en una sola lista, para la interfaz y para entregar
 function pedidosTodos() {
   const e = pedidosEstado();
+  // Mientras se aprende el tablón no mezclamos la nota señalada con tres pedidos reales que aún
+  // pueden ser imposibles. Al entregarla, el paso termina y la siguiente pintura muestra el día
+  // normal completo, incluido su primer pago doble intacto.
+  if (pedidoTutorialActivo() && e.pedTutorial) return [{ p: e.pedTutorial, i: "T", escalon: "tutorial" }];
   const r = e.lista.map((p, i) => ({ p, i, escalon: "diaria" }));
   if (findeVentana() && e.pedEvento) r.unshift({ p: e.pedEvento, i: "E", escalon: "evento" });   // 22/8: ARRIBA de todo — es la novedad del finde
   if (e.pedSemanal) r.push({ p: e.pedSemanal, i: "S", escalon: "semanal" });
@@ -10467,6 +10489,7 @@ function pedidosTodos() {
   return r;
 }
 function pedidoStock(p) {
+  if (p.tipo === "tutorial") return 1;   // es una nota de práctica, no un recurso escondido
   if (p.tipo === "res") return Math.floor(G.res[p.key] || 0);
   if (p.tipo === "fish") return Math.floor((G.fish && G.fish[p.key]) || 0);
   if (p.tipo === "dish") return Math.floor((G.dishes && G.dishes[p.key]) || 0);
@@ -10476,6 +10499,7 @@ function pedidoLabel(p) {
   /* 27/8 — el nombre sale del catálogo v4. Antes iba a FISH_DEF, que solo conocía las cuatro
      rarezas de la v2, así que TODOS los pedidos de pez se llamaban « Pescado ». Un tablón que
      pide « 3 Pescado » no dice nada: el jugador no sabe si tiene que ir de noche ni con qué caña. */
+  if (p.tipo === "tutorial") return "nota de prueba";
   if (p.tipo === "fish") return (typeof PEZ_DEF !== "undefined" && PEZ_DEF[p.key]) ? PEZ_DEF[p.key].label : "Pescado";
   if (p.tipo === "dish") return (RECIPE_DEF[p.key] && RECIPE_DEF[p.key].label) || p.key;
   return (CROP_DEF[p.key] && CROP_DEF[p.key].label) || RES_LABEL[p.key] || p.key;
@@ -10485,7 +10509,7 @@ function pedidoSprite(p) {
   if (p.tipo === "dish") return (RECIPE_DEF[p.key] && RECIPE_DEF[p.key].sprite) || null;
   return resSprite(p.key);
 }
-function pedidosCumplibles() { try { return pedidosEstado().lista.filter(p => !p.hecho && pedidoStock(p) >= p.n).length; } catch (e) { return 0; } }
+function pedidosCumplibles() { try { return pedidosTodos().filter(x => !x.p.hecho && pedidoStock(x.p) >= x.p.n).length; } catch (e) { return 0; } }
 /* 18/8: ¿a qué oficio le toca la XP de un pedido? Al que produjo lo que estás entregando. Es la
    misma regla de siempre: cada acción paga a su oficio. Se deriva del pedido, no se escribe a mano. */
 function skillDeEntrega(p) {
@@ -10511,8 +10535,9 @@ function tablonAbierto() {
 }
 function pedidoEntregar(i) {
   const e = pedidosEstado();
-  // 18/8: "S" y "M" son el encargo de la semana y el del mes; los números, los tres diarios
-  const p = i === "S" ? e.pedSemanal : i === "M" ? e.pedMensual : i === "E" ? e.pedEvento : e.lista[i];
+  // 18/8: "S" y "M" son el encargo de la semana y el del mes; los números, los tres diarios.
+  // "T" sólo existe durante el último paso: la nota segura de presentación del tablón.
+  const p = i === "T" && pedidoTutorialActivo() ? e.pedTutorial : i === "S" ? e.pedSemanal : i === "M" ? e.pedMensual : i === "E" ? e.pedEvento : e.lista[i];
   /* 18/8: NUNCA salir de aquí en silencio. El fallo que reportó el diseñador ("el papelito se
      mueve y no pasa nada") era exactamente esto: la UI mandaba NaN, `p` quedaba undefined y esta
      línea devolvía false sin decir una palabra. Un clic siempre tiene que contestar algo. */
@@ -10520,19 +10545,25 @@ function pedidoEntregar(i) {
   if (p.hecho) { toast("Ese encargo ya está entregado"); return false; }
   if (!tablonAbierto()) { toast("El tablón abre al terminar el tutorial"); return false; }
   if (pedidoStock(p) < p.n) { toast("Te falta " + pedidoLabel(p) + " (" + pedidoStock(p) + "/" + p.n + ")"); return false; }
+  const esTutorial = p.tipoEncargo === "tutorial";
   if (p.tipo === "res") G.res[p.key] -= p.n;
   else if (p.tipo === "fish") G.fish[p.key] -= p.n;
   else if (p.tipo === "dish") G.dishes[p.key] -= p.n;
   // el ×2 del primero del día es solo para los diarios: el semanal y el mensual ya pagan de más
-  const doble = !(e.dobles > 0) && !p.tipoEncargo;
-  const vales = p.vales * (doble ? 2 : 1);
+  const doble = !esTutorial && !(e.dobles > 0) && !p.tipoEncargo;
+  const vales = esTutorial ? 0 : p.vales * (doble ? 2 : 1);
   p.hecho = true; if (!p.tipoEncargo) e.dobles = (e.dobles || 0) + 1;
-  G.plata += p.plata; G.vales = (G.vales || 0) + vales;
+  if (!esTutorial) { G.plata += p.plata; G.vales = (G.vales || 0) + vales; }
   /* 18/8 (dirección): el tablón pagaba XP de Cultivo aunque le llevaras PIEDRA. Ahora paga a la
      skill de lo que entregás — que es lo que el jugador ha trabajado de verdad. */
-  addXp(skillDeEntrega(p), p.xp);
-  log(p.de + " recibió " + p.n + " × " + pedidoLabel(p) + ": +" + p.plata + " plata y +" + vales + (vales > 1 ? " vales" : " vale") + (doble ? " (¡primer pedido del día ×2!)" : "") + ".", "gold");
-  toast("🎟 +" + vales + " · 🪙 +" + p.plata);
+  if (esTutorial) {
+    log("Entregaste la nota de prueba del tablón.", "gold");
+    toast("✓ Primer encargo entregado");
+  } else {
+    addXp(skillDeEntrega(p), p.xp);
+    log(p.de + " recibió " + p.n + " × " + pedidoLabel(p) + ": +" + p.plata + " plata y +" + vales + (vales > 1 ? " vales" : " vale") + (doble ? " (¡primer pedido del día ×2!)" : "") + ".", "gold");
+    toast("🎟 +" + vales + " · 🪙 +" + p.plata);
+  }
   if (typeof statAdd === "function") statAdd("pedido");        // 19/8: contador propio — el detector
   if (typeof tutoEvent === "function") tutoEvent("pedido");   // del tutorial no puede depender de los
                                                               // vales, que se gastan y vuelven a cero

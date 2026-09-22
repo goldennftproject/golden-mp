@@ -414,15 +414,10 @@ invariantes("kit");
       else if (st.id === "excavar") { let ok = false; for (const m of monticulos()) if (tocar(m)) { ok = true; break; } if (!ok) { avanzar(24 * 60); for (const m of monticulos()) if (tocar(m)) break; } }
       else if (st.id === "fish") { if (!pescar()) { avanzar(16); if (!pescar()) anota("La pesca del tutorial no salió: « " + avisos.join(" · ") + " »"); } }
       else if (st.id === "pedido") {
-        const e = ctx.pedidosEstado();
-        if (e && e.lista && e.lista.length) {
-          const pd = e.lista.find(x => !x.hecho) || e.lista[0];
-          if (pd.tipo === "fish") G.fish[pd.key] = Math.max(G.fish[pd.key] || 0, pd.n);
-          else if (pd.tipo === "dish") G.dishes[pd.key] = Math.max((G.dishes || {})[pd.key] || 0, pd.n);
-          else G.res[pd.key] = Math.max(G.res[pd.key] || 0, pd.n);
-          anota("(el encargo pide " + pd.n + " de " + pd.key + " — se juntan y se entregan)");
-          ctx.pedidoEntregar(e.lista.indexOf(pd));
-        }
+        const ps = ctx.pedidosTodos();
+        const inicial = ps.find(x => x.i === "T");
+        if (!inicial) falla("el tutorial no mostró la nota de prueba del tablón");
+        else { anota("(se entrega la nota de prueba del tablón, sin rellenar el inventario)"); ctx.pedidoEntregar("T"); }
       }
       else { anota("tutorial: paso « " + st.id + " » sin gesto en el arnés — se intenta el autoskip"); }
     } catch (e) { falla("el paso « " + st.id + " » del tutorial reventó: " + e.message); break; }

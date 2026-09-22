@@ -3,6 +3,7 @@
      node tools/test-toast-tutorial.js */
 const fs = require("fs"), vm = require("vm");
 const src = fs.readFileSync("public/game/ui.js", "utf8");
+const html = fs.readFileSync("public/index.html", "utf8");
 const ini = src.indexOf("function placeToast() {");
 const fin = src.indexOf("function toast(m)", ini);
 if (ini < 0 || fin < 0) throw new Error("No se encontró placeToast");
@@ -61,8 +62,22 @@ console.log("\nEL CÓDIGO SE CONECTA A LOS EVENTOS REALES");
   const vivo = src.replace(/\/\*[\s\S]*?\*\//g, "").replace(/\/\/[^\n]*/g, "");
   ok("toast se coloca antes de empezar su temporizador", /t\.classList\.add\("show"\); placeToast\(\);[\s\S]*clearTimeout\(toastT\)/.test(vivo));
   ok("al ocultarse recupera la posición CSS", /classList\.remove\("show"\); placeToast\(\)/.test(vivo));
-  ok("tutoRefresh recompone tras cambiar el texto", /tutoHighlight\(\);\s*placeToast\(\);/.test(vivo));
+  ok("tutoRefresh recompone tras cambiar el texto", /tutoHighlight\(\);\s*placeTuto\(\);\s*placeToast\(\);/.test(vivo));
   ok("resize recalcula guía, hotbar y toast", /const syncLayouts = \(\) => \{ syncRegistroPrompt\(\); placeToast\(\); \}/.test(vivo));
+}
+
+console.log("\nEN MÓVIL BAJO, LA GUÍA TIENE UN SOLO BORDE VERTICAL");
+{
+  /* A ≤640 px la guía se ancla abajo para no cruzar el HUD; en una pantalla baja ese `bottom`
+     no puede convivir con el `top` de escritorio, porque CSS estira la caja y falsea la
+     geometría que placeToast y la cámara usan. */
+  ok("móvil angosto conserva top:auto y bottom:96px", /@media\(max-width:640px\)\{[\s\S]{0,700}?#tuto\{top:auto;bottom:96px/.test(html));
+  ok("la subida a top:44px queda sólo para pantallas de escritorio", /@media\(max-height:560px\) and \(min-width:641px\)\{[\s\S]{0,160}?#tuto\{top:44px/.test(html));
+  const reglaBajaGeneral = html.slice(
+    html.indexOf("@media(max-height:560px){"),
+    html.indexOf("@media(max-height:560px) and (min-width:641px){")
+  );
+  ok("la regla baja general ya no agrega top a la guía móvil", !/#tuto\{top:44px/.test(reglaBajaGeneral));
 }
 
 console.log("\n" + (fallos ? "  ✗ " + fallos + " fallas\n" : "  ✓ los avisos ya no cubren la guía\n"));
