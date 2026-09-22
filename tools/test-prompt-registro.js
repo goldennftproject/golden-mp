@@ -1,0 +1,95 @@
+/* EL AVISO DEL MUNDO NO SE PISA CON EL REGISTRO
+   ══════════════════════════════════════════════
+   El prompt de interacción se centra arriba de la hotbar. Al abrir Registro, ese centro puede
+   caer sobre su cabecera; debe subir sólo si hay una colisión real, y volver a la geometría de
+   siempre cuando el panel está plegado o lejos.
+     node tools/test-prompt-registro.js */
+const fs = require("fs"), vm = require("vm");
+const UI = fs.readFileSync("public/game/ui.js", "utf8");
+const desde = UI.indexOf("function rectsSeCruzan");
+const hasta = UI.indexOf("function initUniversalDrag", desde);
+
+let fallos = 0;
+const ok = (nombre, condicion, detalle) => {
+  if (!condicion) fallos++;
+  console.log((condicion ? "  ok   " : "  FALLA") + "  " + nombre + (detalle ? "   " + detalle : ""));
+};
+function clases(plegado, movida) { return { contains: c => (c === "collapsed" && !!plegado) || (c === "movida" && !!movida) }; }
+function rect(left, top, width, height) {
+  return { left, top, width, height, right: left + width, bottom: top + height };
+}
+function caso({ plegado, logRect }) {
+  const prompt = { style: {}, getBoundingClientRect() {
+    const bottom = Number.parseFloat(this.style.bottom || "0") || 0;
+    return rect(285, 576 - bottom - 36, 198, 36);
+  } };
+  const hotbar = { getBoundingClientRect: () => rect(174, 470, 420, 66) };
+  const registro = { classList: clases(plegado), getBoundingClientRect: () => logRect };
+  const ctx = { window: { innerHeight: 576 }, $: id => ({ prompt, hotwrap: hotbar, logpanel: registro })[id] || null };
+  vm.createContext(ctx);
+  vm.runInContext(UI.slice(desde, hasta), ctx);
+  vm.runInContext("placePrompt()", ctx);
+  return { bottom: Number.parseFloat(prompt.style.bottom), prompt: prompt.getBoundingClientRect(), registro: logRect };
+}
+function cruzan(a, b, margen) {
+  const m = margen || 0;
+  return a.left < b.right + m && a.right > b.left - m && a.top < b.bottom + m && a.bottom > b.top - m;
+}
+function casoRegistro({ plegado, movida, hotbarRect, bottomInicial, autoAntes }) {
+  const registro = {
+    style: { bottom: bottomInicial || "" }, classList: clases(plegado, movida),
+    _autoSobreHotbar: !!autoAntes,
+    getBoundingClientRect() {
+      const bottom = this.style.bottom ? Number.parseFloat(this.style.bottom) : 10;
+      return rect(10, 576 - bottom - 114, 340, 114);
+    }
+  };
+  const hotbar = { getBoundingClientRect: () => hotbarRect };
+  const ctx = { window: { innerHeight: 576 }, $: id => ({ logpanel: registro, hotwrap: hotbar })[id] || null };
+  vm.createContext(ctx);
+  vm.runInContext(UI.slice(desde, hasta), ctx);
+  vm.runInContext("placeRegistro()", ctx);
+  return { bottom: registro.style.bottom, registro: registro.getBoundingClientRect(), hotbar: hotbarRect };
+}
+
+console.log("\n1 · LA POSICIÓN NORMAL SE CONSERVA SIN UN CRUCE\n");
+{
+  const plegado = caso({ plegado: true, logRect: rect(10, 421, 340, 114) });
+  ok("Registro plegado mantiene el hueco normal sobre hotbar", plegado.bottom === 140, plegado.bottom + "px");
+  const lejos = caso({ plegado: false, logRect: rect(520, 300, 220, 150) });
+  ok("Registro abierto pero lejos no mueve el aviso", lejos.bottom === 140, lejos.bottom + "px");
+}
+
+console.log("\n2 · UN REGISTRO ABIERTO LIBERA EL TEXTO DEL MUNDO\n");
+{
+  const r = caso({ plegado: false, logRect: rect(10, 421, 340, 114) });
+  ok("sube por encima del Registro", r.bottom === 167, r.bottom + "px");
+  ok("queda separado incluso con el margen visual", !cruzan(r.prompt, r.registro, 8), JSON.stringify(r.prompt));
+}
+
+console.log("\n3 · EL REGISTRO AUTOMÁTICO NO SE ESCONDE DETRÁS DE LA HOTBAR\n");
+{
+  const hotbar = rect(174, 470, 420, 66);
+  const automatico = casoRegistro({ plegado: false, movida: false, hotbarRect: hotbar });
+  ok("Registro automático sube justo por encima de la barra", automatico.bottom === "114px", automatico.bottom);
+  ok("y las dos cajas ya no se cruzan", !cruzan(automatico.registro, automatico.hotbar), JSON.stringify(automatico.registro));
+
+  const plegado = casoRegistro({ plegado: true, movida: false, hotbarRect: hotbar, bottomInicial: "114px", autoAntes: true });
+  ok("al plegarse recupera el bottom del CSS", plegado.bottom === "", plegado.bottom || "(CSS)");
+
+  const manual = casoRegistro({ plegado: false, movida: true, hotbarRect: hotbar, bottomInicial: "205px" });
+  ok("un Registro arrastrado no se mueve solo", manual.bottom === "205px", manual.bottom);
+}
+
+console.log("\n4 · LOS GANCHOS REACCIONAN A LA TRANSICIÓN, NO CADA CUADRO\n");
+{
+  ok("placePrompt compara rectángulos reales", /rectsSeCruzan\(pr, rr, 8\)/.test(UI));
+  ok("Registro se separa de hotbar sólo si se cruza", /function placeRegistro\(\)[\s\S]*?rectsSeCruzan\(rr, hr\)/.test(UI));
+  ok("Registro se observa durante su cambio de alto", /registro\._promptSizeWatch = new ResizeObserver\(syncRegistroPrompt\)/.test(UI));
+  ok("no observa textContent del prompt por MutationObserver", !/prompt\._promptWatch = new MutationObserver/.test(UI));
+  ok("la hotbar y Registro recalculan juntos al arrastrarse", /makeHoldDrag\(\$\("hotwrap"\), "gf_hotpos", false, syncRegistroPrompt\)/.test(UI) &&
+    /makeHoldDrag\(registro, "gf_logpos", true, syncRegistroPrompt\)/.test(UI));
+}
+
+console.log(fallos ? "\n" + fallos + " fallo(s)\n" : "\nTodo en orden: el aviso conserva aire alrededor del Registro.\n");
+process.exit(fallos ? 1 : 0);

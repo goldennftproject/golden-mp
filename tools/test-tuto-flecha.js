@@ -74,7 +74,7 @@ window.__validarDestinos = function () {
   G.planos = { store: 1, horno: 1, cocina: 1 }; G.built = { store: true, horno: true, cocina: true };
   G.obras = {}; G.decos = []; G.chests = []; G.cobertizo = { tree: 0, rock: 0, plot: 0 };
   G.skills = G.skills || {}; G.skills.cooking = 99999; G.skills.crafting = 99999;
-  G.weapons = {}; G.gear = {}; G.dishes = {};
+  G.weapons = {}; G.gear = {}; G.dishes = { papa_asada: 1 }; G.cooking = [];
   TUTO_STEPS.forEach(function (s) {
     if (!s.panel || !s.ui) return;
     const cont = document.getElementById(s.panel);
@@ -85,6 +85,50 @@ window.__validarDestinos = function () {
     out.push({ id: s.id, panel: s.panel, ui: s.ui, estado: cont.querySelector(s.ui) ? "ok" : "el botón no aparece" });
   });
   return JSON.stringify(out);
+};
+/* La Cocina tiene una transición propia: « Cocinar » no completa el paso, porque el plato sigue
+   en la olla. Este sondeo pinta ambas variantes y verifica la flecha real, no sólo la tabla.
+   jsdom no calcula offsetParent; se lo prestamos sólo al destino que estamos inspeccionando
+   para que tutoHighlight llegue a la misma rama que usaría con una ventana visible. */
+window.__sondeoCocinaTutorial = function (lista) {
+  G.tuto = { step: TUTO_STEPS.findIndex(s => s.id === "cook"), done: false, n: 0 };
+  G.res = Object.assign({}, G.res, { papa: 3 }); G.dishes = {};
+  G.cooking = [{ id: "papa_asada", endAt: Date.now() + 180000, total: 180000, listo: !!lista }];
+  const ov = document.getElementById("ov-cocina");
+  ov.classList.add("show"); if (OV_REFRESH["ov-cocina"]) OV_REFRESH["ov-cocina"]();
+  const sub = tutoSub() || {}, destino = sub.ui ? ov.querySelector(sub.ui) : null;
+  if (destino) try { Object.defineProperty(destino, "offsetParent", { configurable: true, value: document.body }); } catch (e) {}
+  const orig = window.tutoFlechaUI;
+  let flecha = null;
+  window.tutoFlechaUI = function (el) { flecha = el ? (el.id || el.className) : null; };
+  tutoHighlight(); window.tutoFlechaUI = orig;
+  ov.classList.remove("show");
+  return JSON.stringify({ txt: sub.txt || "", panel: sub.panel || null, ui: sub.ui || null,
+    existe: !!destino, flecha: flecha });
+};
+/* Después de recoger, «comer» tiene que continuar por las tres paradas visibles: Menú,
+   Inventario y una casilla de plato. La última sí depende de que syncSlots lo haya dibujado. */
+window.__sondeoComerTutorial = function () {
+  G.tuto = { step: TUTO_STEPS.findIndex(s => s.id === "eat"), done: false, n: 0 };
+  G.dishes = { papa_asada: 1 }; G.cooking = []; G.slots = [];
+  if (typeof syncSlots === "function") syncSlots();
+  const inv = document.getElementById("ov-inv"), menu = document.getElementById("gmenu");
+  if (OV_REFRESH["ov-inv"]) OV_REFRESH["ov-inv"]();
+  const st = tutoActivo(), plato = inv.querySelector(".slot.k-dish");
+  if (plato) try { Object.defineProperty(plato, "offsetParent", { configurable: true, value: document.body }); } catch (e) {}
+  const orig = window.tutoFlechaUI;
+  let ultimo = null;
+  window.tutoFlechaUI = function (el) { ultimo = el ? (el.id || el.getAttribute("data-panel") || el.className) : null; };
+  menu.classList.add("collapsed"); tutoHighlight(); const cerrado = ultimo;
+  menu.classList.remove("collapsed"); tutoHighlight(); const abierto = ultimo;
+  inv.classList.add("show"); if (OV_REFRESH["ov-inv"]) OV_REFRESH["ov-inv"]();
+  const platoVisible = inv.querySelector(".slot.k-dish");
+  if (platoVisible) try { Object.defineProperty(platoVisible, "offsetParent", { configurable: true, value: document.body }); } catch (e) {}
+  tutoHighlight(); const dentro = ultimo;
+  window.tutoFlechaUI = orig;
+  inv.classList.remove("show"); menu.classList.add("collapsed");
+  return JSON.stringify({ txt: st.txt, panel: st.panel || null, ui: st.ui || null,
+    hayPlato: !!platoVisible, cerrado: cerrado, abierto: abierto, dentro: dentro });
 };
 window.__panelesDePasos = function () {
   return JSON.stringify(TUTO_STEPS.filter(s => s.panel).map(function (s) {
@@ -165,6 +209,33 @@ console.log("\nY EL BOTÓN AL QUE APUNTA EXISTE DE VERDAD (se pinta el panel y s
   const r = JSON.parse(w.__validarDestinos());
   r.forEach(x => ok("« " + x.id + " » → " + x.panel + " " + x.ui, x.estado === "ok", x.estado));
   ok("los " + r.length + " destinos del tutorial existen", r.every(x => x.estado === "ok"));
+}
+
+console.log("\nLA COCINA CAMBIA LA GUÍA CUANDO EL PLATO YA NO SE COCINA");
+{
+  /* El mismo objetivo tiene dos acciones reales. Mientras la Papa Asada está al fuego, la
+     flecha no puede seguir mandando al botón que la encolaría otra vez; cuando sale, tampoco
+     puede dejar oculto el botón de Recoger que de verdad termina el paso. */
+  const enOlla = JSON.parse(w.__sondeoCocinaTutorial(false));
+  ok("mientras se cocina apunta a la fila", enOlla.panel === "ov-cocina" && enOlla.ui === "#ck-cola" &&
+    enOlla.existe && enOlla.flecha === "ck-cola", JSON.stringify(enOlla));
+  ok("y explica que la Papa Asada está en la olla", /papa asada.*olla|olla.*papa asada/i.test(enOlla.txt), enOlla.txt);
+
+  const lista = JSON.parse(w.__sondeoCocinaTutorial(true));
+  ok("cuando está lista apunta a Recoger", lista.panel === "ov-cocina" && lista.ui === "#ck-recoger" &&
+    lista.existe && lista.flecha === "ck-recoger", JSON.stringify(lista));
+  ok("y el texto nombra el estado y la acción", /está lista/i.test(lista.txt) && /recog/i.test(lista.txt), lista.txt);
+}
+
+console.log("\nCOMER RECORRE MENÚ → INVENTARIO → PLATO");
+{
+  const s = JSON.parse(w.__sondeoComerTutorial());
+  ok("el paso de comer nombra Menú e Inventario", /men[úu]/i.test(s.txt) && /inventario/i.test(s.txt), s.txt);
+  ok("y declara el panel y la casilla de plato", s.panel === "ov-inv" && s.ui === ".slot.k-dish" && s.hayPlato,
+    JSON.stringify(s));
+  ok("con el menú cerrado señala ☰ Menú", s.cerrado === "menu-btn", s.cerrado);
+  ok("al abrirlo baja a Inventario", s.abierto === "ov-inv", s.abierto);
+  ok("y dentro apunta al plato que se puede comer", /k-dish/.test(s.dentro || ""), s.dentro);
 }
 
 console.log(fallos ? "\n  ✗ " + fallos + " fallas\n" : "\n  ✓ la flecha va Menú → Cobertizo, el cartel dice lo mismo, y el botón está ahí\n");

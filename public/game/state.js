@@ -946,6 +946,20 @@ function tutoSubPlata(prefijo, meta) {
    su granja, ve algo revolotear, y va. Ver mariposaAccionables() en farm.js. */
 function tutoSub() {
   const st = tutoActivo(); if (!st) return null;
+  /* Cocinar tiene dos gestos distintos: poner el plato al fuego y, cuando termina, retirarlo.
+     El paso está cumplido recién al recogerlo (ahí entra a la bolsa y dispara `tutoEvent`), así
+     que seguir señalando « Cocinar » durante toda la olla era una orden vieja apuntando a un
+     botón que puede encolar otra papa. No mostramos una cuenta atrás en la barra: sólo cambia
+     el destino al control que corresponde en cada estado real de la Cocina. */
+  if (st.id === "cook") {
+    const olla = (Array.isArray(G.cooking) ? G.cooking : []).find(c => c && c.id === "papa_asada");
+    if (olla) {
+      if (olla.listo) return { txt: "Tu Papa Asada está lista — recogela en la Cocina",
+        target: "cocina", panel: "ov-cocina", ui: "#ck-recoger" };
+      return { txt: "Tu Papa Asada está en la olla — recogela cuando esté lista",
+        target: "cocina", panel: "ov-cocina", ui: "#ck-cola" };
+    }
+  }
   // paso "juntá plata": si no hay NADA cosechado para vender, guiar al eslabón anterior
   // (playtest: "vendé tus papas" apuntando al Mercado con cero papas en la bolsa)
   if (st.res === "plata") {
@@ -2918,7 +2932,7 @@ const TUTO_STEPS = [
     txt: "Juntá # de piedra (para la obra de la Cocina)",                          target: "rock" },
   { id: "build_cocina", n: 1, txt: "Depositá los materiales en la obra de la Cocina (clic encima)", target: "cocina" },
   { id: "cook",     n: 1, txt: "Cociná tu primer plato: Papa Asada",   target: "cocina", panel: "ov-cocina", ui: "[data-cook='papa_asada']", receta: "papa_asada" },
-  { id: "eat",      n: 1, txt: "Comé un plato desde la bolsa (te da un buff)" },
+  { id: "eat",      n: 1, txt: "Abrí Menú ☰ → Inventario y comé tu Papa Asada", panel: "ov-inv", ui: ".slot.k-dish" },
   /* EL ÚLTIMO CAPÍTULO, Y EL MÁS IMPORTANTE PARA EL TIEMPO MUERTO (19/8). Medido: en una sesión de
      12 minutos al empezar hay 42 clics — 36 segundos de acción y el 95% mirando crecer una papa.
      Todo lo que la granja ofrece tiene reloj. La Zona Negra no: es lo único que se puede jugar

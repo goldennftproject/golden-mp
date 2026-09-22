@@ -1000,6 +1000,7 @@ class FarmScene extends Phaser.Scene {
     const _ct = GF._camTras; GF._camTras = null;
     this.zoomUser = (_ct && _ct.zoomUser) || 1;
     this.fitCamera();
+    this.actualizarCartelExpansion();
     if (_ct) {
       try {
         if (_ct.mirar) this.cameras.main.centerOn(_ct.mirar.x, _ct.mirar.y);
@@ -1016,9 +1017,15 @@ class FarmScene extends Phaser.Scene {
       if (g) this.programarCamaraGuia(g.x, g.y, g.bottomY);
     };
     this.scale.on("resize", this._tutoCamResize, this);
+    this._expCtaResize = () => {
+      this._expCtaSafe = null;
+      this.actualizarCartelExpansion();
+    };
+    this.scale.on("resize", this._expCtaResize, this);
     this.events.once("shutdown", () => {
       this.scale.off("resize", this.fitCamera, this);
       if (this._tutoCamResize) this.scale.off("resize", this._tutoCamResize, this);
+      if (this._expCtaResize) this.scale.off("resize", this._expCtaResize, this);
       if (this.brilloEv) { this.brilloEv.remove(); this.brilloEv = null; }   // al irse a la plaza o al bosque, se apaga
     });
     // rueda del mouse: acercar/alejar la cámara de la granja
@@ -2339,6 +2346,83 @@ class FarmScene extends Phaser.Scene {
     if (area.right - area.left < 80) { area.left = ox + w * 0.16; area.right = ox + w * 0.84; }
     if (area.bottom - area.top < 90) { area.top = oy + h * 0.22; area.bottom = oy + h * 0.78; }
     return area;
+  }
+
+  /* La expansión puede quedar más allá de la vista de trabajo (la primera nace a la
+     izquierda del claro). Su LOTE se queda allí: es el mapa real y no se debe mover.
+     Lo único que se acerca al jugador es la chapa que lo nombra. Se calcula en mundo a
+     partir del rectángulo de pantalla seguro, así conserva la profundidad y se adapta a
+     cualquier zoom, arrastre o tamaño de ventana sin pelear con la cámara tutorial. */
+  posicionCartelExpansionSeguro(cx, cy, ancho, alto) {
+    const c = this.cameras && this.cameras.main;
+    if (!c || !Number.isFinite(c.zoom) || c.zoom <= 0) return { x: cx, y: cy, escala: 1, anclado: false };
+    const ahora = (this.time && Number.isFinite(this.time.now)) ? this.time.now : Date.now();
+    // Medir el DOM no pertenece al update de cada fotograma. El área de HUD casi nunca cambia;
+    // se renueva pronto para recoger un tutorial, un buff o un resize sin dejar la chapa vieja.
+    if (!this._expCtaSafe || ahora - (this._expCtaSafeAt || 0) > 220) {
+      this._expCtaSafe = this.zonaSeguraCamaraGuia();
+      this._expCtaSafeAt = ahora;
+    }
+    const safe = this._expCtaSafe;
+    if (!safe || !Number.isFinite(safe.left) || !Number.isFinite(safe.right) ||
+        !Number.isFinite(safe.top) || !Number.isFinite(safe.bottom)) return { x: cx, y: cy, escala: 1, anclado: false };
+    const z = c.zoom, ox = c.x || 0, oy = c.y || 0, sx0 = c.scrollX || 0, sy0 = c.scrollY || 0;
+    const sx = ox + (cx - sx0) * z, sy = oy + (cy - sy0) * z;
+    const limitar = (v, lo, hi) => lo > hi ? (lo + hi) / 2 : Math.max(lo, Math.min(hi, v));
+    /* El subtítulo es más ancho que la placa. En una ventana angosta con zoom muy alto no
+       alcanza con centrarlo: seguiría saliéndose por ambos lados. Se reduce sólo entonces,
+       en proporción al espacio útil, para que la invitación siga completa y no se convierta
+       otra vez en media palabra en el borde. */
+    const utilW = Math.max(1, safe.right - safe.left - 16), utilH = Math.max(1, safe.bottom - safe.top - 16);
+    const escala = Math.min(1, utilW / Math.max(1, ancho * z), utilH / Math.max(1, alto * z));
+    // `escala` ya garantiza 8 px de aire. Puede ocupar justo la mitad del rectángulo seguro:
+    // limitarla a «mitad menos 6» la corría dos píxeles hacia el borde en pantallas angostas.
+    const hx = Math.min(Math.max(0, (safe.right - safe.left) / 2), ancho * escala * z / 2 + 8);
+    const hy = Math.min(Math.max(0, (safe.bottom - safe.top) / 2), alto * escala * z / 2 + 8);
+    const px = limitar(sx, safe.left + hx, safe.right - hx);
+    const py = limitar(sy, safe.top + hy, safe.bottom - hy);
+    return { x: sx0 + (px - ox) / z, y: sy0 + (py - oy) / z, escala,
+      anclado: Math.abs(px - sx) > 0.5 || Math.abs(py - sy) > 0.5 };
+  }
+
+  actualizarCartelExpansion() {
+    const cta = this._expCta;
+    if (!cta || !cta.chapa || !cta.titulo || !cta.pista) return;
+    const p = this.posicionCartelExpansionSeguro(cta.cx, cta.cy, cta.ancho, cta.alto);
+    /* En reposo se conserva el bosque limpio si el lote está dentro de cámara y todavía no se
+       puede pagar. Si el lote quedó fuera del encuadre, la chapa plateada pasa a ser una señal
+       de borde: descubre la primera expansión sin fingir que el terreno se movió. */
+    const visible = !!(cta.resaltado || cta.puede || p.anclado);
+    if (visible !== this._expCtaVisible) {
+      this._expCtaVisible = visible;
+      (this.expCartel || []).forEach(o => { try { o.setVisible(visible); } catch (e) {} });
+    }
+    if (!visible) return;
+    const cambioEscala = cta.escala !== p.escala;
+    if (cambioEscala) {
+      /* El latido normal se conserva a escala natural. Con el cartel reducido se pausa: un
+         tween que volviera a 1 lo agrandaría de nuevo y rompería el encuadre seguro. */
+      try { if (cta.pulso && typeof cta.pulso.stop === "function") cta.pulso.stop(); } catch (e) {}
+      cta.pulso = null; cta.escala = p.escala;
+      try {
+        cta.chapa.setScale(p.escala);
+        cta.titulo.setScale(p.escala);
+        cta.pista.setScale(p.escala);
+        if (cta.puede && p.escala >= 0.999 && this.tweens && typeof this.tweens.add === "function") {
+          cta.pulso = this.tweens.add({ targets: cta.chapa, scaleX: 1.04, scaleY: 1.04, duration: 700,
+            yoyo: true, repeat: -1, ease: "Sine.easeInOut" });
+        }
+      } catch (e) {}
+    }
+    // Evita invalidar el render si la cámara no se movió. Cuando sí se mueve, las tres piezas
+    // viajan juntas y siguen siendo un elemento del mundo, no una segunda interfaz HTML.
+    if (cta.x === p.x && cta.y === p.y) return;
+    cta.x = p.x; cta.y = p.y;
+    try {
+      cta.chapa.setPosition(p.x, p.y);
+      cta.titulo.setPosition(p.x, p.y - 8);
+      cta.pista.setPosition(p.x, p.y + 9);
+    } catch (e) {}
   }
 
   tickCamaraGuia(t) {
@@ -4238,8 +4322,11 @@ class FarmScene extends Phaser.Scene {
       ((G.level || 1) >= ex.nivel && typeof canAfford === "function" && canAfford(ex.costo)) ? 1 : 0].join("/");
     if (this.expFx && this._expFirma === firma) return;
     this._expFirma = firma;
+    try { if (this._expCta && this._expCta.pulso && typeof this._expCta.pulso.stop === "function") this._expCta.pulso.stop(); } catch (e) {}
     if (this.expFx) { this.expFx.forEach(o => { try { o.destroy(); } catch (e) {} }); }
     this.expFx = [];
+    this._expCta = null;
+    this._expCtaSafe = null;
     if (!ex || !ex.bloque) return;
     const T = GF.TILE, b = ex.bloque;
     const x0 = b.c0 * T, y0 = b.r0 * T, w = (b.c1 - b.c0) * T, h = (b.r1 - b.r0) * T;
@@ -4270,7 +4357,8 @@ class FarmScene extends Phaser.Scene {
       zona.setFillStyle(col, on ? 0.34 : 0);
       zona.setStrokeStyle(on ? 3 : 2, col, on ? 1 : 0);
       estacas.forEach(o => { try { o.setVisible(on); } catch (e) {} });
-      if (this.expCartel) this.expCartel.forEach(o => { try { o.setVisible(on || puede); } catch (e) {} });
+      if (this._expCta) this._expCta.resaltado = !!on;
+      if (typeof this.actualizarCartelExpansion === "function") this.actualizarCartelExpansion();
     };
     zona.on("pointerover", () => resaltar(true));
     zona.on("pointerout", () => resaltar(false));
@@ -4295,7 +4383,23 @@ class FarmScene extends Phaser.Scene {
     const cx = x0 + w / 2, cy = y0 + h / 2;
     const D = 99980;
     this.expCartel = [];   // lo que solo se ve con el cursor encima (o siempre, si ya lo podés pagar)
-    const chapa = this.add.rectangle(cx, cy, 132, 44, 0x1d2a14, 0.86)
+    const abrirDetalle = () => {
+      if (typeof refreshExpandir === "function") refreshExpandir();
+      if (typeof openOv === "function") openOv("ov-expandir");
+    };
+    /* El rectángulo de interacción REAL se queda en el lote. El cartel se dibuja aparte para
+       poder acercarlo al borde visible si el lote está fuera de cámara: mover esta pieza sería
+       convertir la señal en una mentira sobre dónde está el terreno. */
+    const hitCartel = this.add.rectangle(cx, cy, 132, 44, col, 0)
+      .setDepth(D).setStrokeStyle(2, col, 0).setInteractive({ useHandCursor: true });
+    hitCartel.on("pointerover", () => resaltar(true));
+    hitCartel.on("pointerout", () => resaltar(false));
+    hitCartel.on("pointerdown", abrirDetalle);
+    this.expFx.push(hitCartel);
+
+    // La placa un poco más ancha contiene la segunda línea aun cuando quede pegada a un borde.
+    const CTA_W = 172, CTA_H = 48;
+    const chapa = this.add.rectangle(cx, cy, CTA_W, CTA_H, 0x1d2a14, 0.86)
       .setStrokeStyle(2, col, 0.9).setDepth(D).setInteractive({ useHandCursor: true });
     this.expFx.push(chapa); this.expCartel.push(chapa);
     { const t = this.add.text(cx, cy - 8, "EXPANDIR",
@@ -4306,14 +4410,15 @@ class FarmScene extends Phaser.Scene {
         { fontFamily: "system-ui", fontSize: "11px", fontStyle: "bold", color: "#e9ffd6", stroke: "#20301a", strokeThickness: 3 })
         .setOrigin(0.5, 0.5).setDepth(D + 1);
       this.expFx.push(t2); this.expCartel.push(t2); }
-    if (puede) {   // late suave cuando ya lo podés pagar: el cartel pide que lo toques
-      this.tweens.add({ targets: chapa, scaleX: 1.04, scaleY: 1.04, duration: 700,
-        yoyo: true, repeat: -1, ease: "Sine.easeInOut" });
-    }
+    this._expCta = { cx, cy, ancho: CTA_W, alto: CTA_H, chapa,
+      titulo: this.expCartel[1], pista: this.expCartel[2], x: null, y: null,
+      escala: null, pulso: null, puede: !!puede, resaltado: false };
     // arranca OCULTO: solo se ve con el cursor encima. La ÚNICA excepción es cuando ya lo podés
     // pagar: ahí el cartel dorado se queda a la vista porque es una llamada a la acción, no un
     // aviso gris. Si te falta nivel o material, el bosque se ve limpio.
-    this.expCartel.forEach(o => o.setVisible(puede));
+    this._expCtaVisible = false;
+    this.expCartel.forEach(o => o.setVisible(false));
+    if (typeof this.actualizarCartelExpansion === "function") this.actualizarCartelExpansion();
     /* 24/8 — EL CARTEL DESAPARECÍA Y HABÍA QUE APRETAR F5. Reporte de dirección: « ves la
        expansión y los recursos que pide y suele desaparecer ». La causa es sutil: la FIRMA
        incluye cuánto material tenés, así que juntar una madera más mientras mirás el lote
@@ -4330,18 +4435,16 @@ class FarmScene extends Phaser.Scene {
         if (wx >= x0 && wx <= x0 + w && wy >= y0 && wy <= y0 + h) resaltar(true);
       }
     } catch (e) {}
-    // que el cartel también cuente como "encima del lote": si no, al mover el cursor del bloque a
-    // la chapa el cartel se escondería justo cuando vas a tocarlo
-    chapa.on("pointerover", () => { zona.emit("pointerover"); });
+    // La chapa puede estar en el borde de pantalla, lejos del lote. Sus eventos conservan el
+    // mismo resaltado y el mismo recuadro que el cartel original, sin mover el hitbox del mundo.
+    chapa.on("pointerover", () => resaltar(true));
+    chapa.on("pointerout", () => resaltar(false));
     /* 1/9 (dirección, con captura de Sunflower): el clic abre EL RECUADRO — « vamos a poner las
        expansiones así, un recuadro, bien especificado ». Se abre SIEMPRE, tenga o no el nivel o
        el material: el recuadro es quien explica qué falta y qué trae, que es su trabajo.
        (Antes acá vivía un askConfirm con el costo en una línea, y sin nivel el clic era solo un
        toast: la información completa no estaba en ninguna parte tocable.) */
-    chapa.on("pointerdown", () => {
-      if (typeof refreshExpandir === "function") refreshExpandir();
-      if (typeof openOv === "function") openOv("ov-expandir");
-    });
+    chapa.on("pointerdown", abrirDetalle);
   }
 
   // pathfinding A* (módulo compartido con el Bosque — nav.js)
@@ -5237,6 +5340,7 @@ class FarmScene extends Phaser.Scene {
     // restaurar objetos que salieron de cooldown
     const t = nowMs();
     this.tickCamaraGuia(t);   // sólo si el objetivo tutorial quedó fuera del área jugable
+    this.actualizarCartelExpansion();   // la señal de expansión acompaña la cámara, no se corta en el borde
     for (const o of this.objs) {
       /* 18/8 (reporte del diseñador: "crecen antes de la hora... tenés que cambiar la manera en la
          que los sprites van rotando, tiene que depender sí o sí del tiempo de enfriamiento").

@@ -4,7 +4,26 @@ function setTxt(id, v) { const e = $(id); if (e) e.textContent = v; }
 
 /* ---- toast / log ---- */
 let toastT = null;
-function toast(m) { const t = $("toast"); if (!t) return; t.textContent = m; t.classList.add("show"); clearTimeout(toastT); toastT = setTimeout(() => t.classList.remove("show"), 1400); }
+/* El aviso breve y la guía comparten el centro superior. Sin esta pequeña composición, una
+   cosecha correcta tapa justo el objetivo que el jugador está siguiendo. Sólo se aparta cuando
+   la guía está arriba: en móvil la guía vive abajo y el toast conserva exactamente su CSS. */
+function placeToast() {
+  const t = $("toast"), guia = $("tuto");
+  if (!t) return;
+  t.style.top = "";   // la base sigue siendo el CSS; nunca dejamos una posición vieja pegada
+  if (!t.classList.contains("show") || !guia || guia.classList.contains("hidden")) return;
+  const gr = guia.getBoundingClientRect();
+  if (!gr.width || !gr.height || gr.top + gr.height / 2 >= window.innerHeight / 2) return;
+  const tr = t.getBoundingClientRect();
+  if (!tr.height) return;
+  const top = Math.max(4, Math.min(window.innerHeight - tr.height - 4, Math.round(gr.bottom + 8)));
+  t.style.top = top + "px";
+}
+function toast(m) {
+  const t = $("toast"); if (!t) return;
+  t.textContent = m; t.classList.add("show"); placeToast();
+  clearTimeout(toastT); toastT = setTimeout(() => { t.classList.remove("show"); placeToast(); }, 1400);
+}
 function log(m, k = "") { const b = $("log"); if (!b) return; const d = document.createElement("div"); d.className = "l" + (k ? " " + k : ""); d.textContent = m; b.appendChild(d); while (b.children.length > 30) b.removeChild(b.firstChild); b.scrollTop = b.scrollHeight; }
 
 /* ---- overlays ---- */
@@ -2817,7 +2836,12 @@ function tutoRefresh() {
   /* 19/9: guiaActiva() = el paso del tutorial mientras dura, la BRÚJULA después. La barra ya no
      se apaga al terminar el tutorial: se apaga solo si el jugador apagó la guía a propósito. */
   const st = (typeof guiaActiva === "function") ? guiaActiva() : ((typeof tutoActivo === "function") ? tutoActivo() : null);
-  if (!st || (window.guiaOn && !guiaOn())) { el.classList.add("hidden"); if (typeof tutoFlechaUI === "function") tutoFlechaUI(null); return; }
+  if (!st || (window.guiaOn && !guiaOn())) {
+    el.classList.add("hidden");
+    if (typeof tutoFlechaUI === "function") tutoFlechaUI(null);
+    placeToast();
+    return;
+  }
   el.classList.remove("hidden");
   // 14/8 (reversión del capataz): cartel + flechitas, como antes
   const sub = (typeof tutoSub === "function") ? tutoSub() : null;
@@ -2835,6 +2859,7 @@ function tutoRefresh() {
      y desatendido (ver mariposaAccionables en farm.js). El cartel vuelve a ser lo que era: una
      línea quieta con el objetivo. */
   tutoHighlight();
+  placeToast();
 }
 // 13/8 (audio): la guía DENTRO de las interfaces es una FLECHA dorada (la misma estética
 // que la del mundo) apuntando al botón/pestaña/entrada del menú — los recuadros brillantes
@@ -2916,19 +2941,33 @@ let _tutoSig = null;
 // en manos de la persona que juega (y la brújula nunca entra en esta condición).
 let _registroInicioPlegado = false, _registroCambioManual = false;
 const REGISTRO_SESION = "gf_registro_manual";
-function registroCambioManual(panel) {
-  _registroCambioManual = true;
-  try { sessionStorage.setItem(REGISTRO_SESION, panel && panel.classList.contains("collapsed") ? "collapsed" : "open"); } catch (e) {}
-}
-function registroRestaurarCambioManual() {
+function registroEleccionGuardada() {
+  /* La sesión del navegador es el lugar más chico para una preferencia visual. Pero algunos
+     webviews la bloquean; el tutorial ya viaja en el guardado de la granja, así que queda como
+     respaldo del mismo dato y un F5 no vuelve a imponer el panel sobre una elección manual. */
   let eleccion = null;
   try { eleccion = sessionStorage.getItem(REGISTRO_SESION); } catch (e) {}
-  if (eleccion !== "open" && eleccion !== "collapsed") return;
+  if (eleccion === "open" || eleccion === "collapsed") return eleccion;
+  const tuto = (typeof G === "object" && G && G.tuto) ? G.tuto : null;
+  return tuto && (tuto.registroManual === "open" || tuto.registroManual === "collapsed")
+    ? tuto.registroManual : null;
+}
+function registroCambioManual(panel) {
+  const eleccion = panel && panel.classList.contains("collapsed") ? "collapsed" : "open";
+  _registroCambioManual = true;
+  if (typeof G === "object" && G && G.tuto) G.tuto.registroManual = eleccion;
+  try { sessionStorage.setItem(REGISTRO_SESION, eleccion); } catch (e) {}
+}
+function registroRestaurarCambioManual() {
+  const eleccion = registroEleccionGuardada();
+  if (!eleccion) return;
   const panel = $("logpanel"); if (!panel) return;
   panel.classList.toggle("collapsed", eleccion === "collapsed");
   _registroCambioManual = true;
 }
 function plegarRegistroPrimerCiclo() {
+  // hydrate() puede llegar después de initUI(): releer acá deja que el respaldo ya cargado gane.
+  if (!_registroCambioManual) registroRestaurarCambioManual();
   if (_registroInicioPlegado || _registroCambioManual || typeof tutoActivo !== "function") return;
   const paso = tutoActivo();
   if (!paso || !["kit", "buyseed", "plant", "harvest"].includes(paso.id)) return;
@@ -4450,7 +4489,7 @@ function initHotbarDrag() {
    vez de mover la ventana. Pero ya no es lo único que separa un clic vivo de uno muerto.
    Lo vigila tools/test-clic-navegador.js, con un Chromium de verdad. */
 const DRAG_EXCLUDE = "button, input, textarea, select, a, [draggable=true], .hcell, .swi, #log, #chatpane, .slots, .forge-list, .mkt-list, .lblist, .curbtn, .shoptab, .lbtab, .ltab, .eqslot";
-function makeHoldDrag(el, saveKey, anchorBottom) {
+function makeHoldDrag(el, saveKey, anchorBottom, onPosition) {
   if (!el || el._holdDrag) return; el._holdDrag = true;
   let drag = null, started = false;
   el.addEventListener("pointerdown", (e) => {
@@ -4478,6 +4517,7 @@ function makeHoldDrag(el, saveKey, anchorBottom) {
     el.style.left = left + "px"; el.style.top = top + "px";
     el.style.right = "auto"; el.style.bottom = "auto"; el.style.transform = "none";
     el.classList.add("movida");
+    if (onPosition) onPosition();
     e.preventDefault();
   });
   const end = () => {
@@ -4493,6 +4533,7 @@ function makeHoldDrag(el, saveKey, anchorBottom) {
       else if (saveKey) { try { localStorage.setItem(saveKey, JSON.stringify({ left: r.left, top: r.top })); } catch (er) {} }
     }
     started = false;
+    if (onPosition) onPosition();
   };
   el.addEventListener("pointerup", end);
   el.addEventListener("pointercancel", end);
@@ -4511,21 +4552,86 @@ function makeHoldDrag(el, saveKey, anchorBottom) {
   }
 }
 // el aviso de interacción va SIEMPRE por encima de la barra de acceso rápido,
-// aunque la barra se haya movido de sitio
+// aunque la barra se haya movido de sitio. Si Registro está abierto y realmente
+// se cruza con él, también lo subimos: el texto del mundo no debe quedar detrás
+// de otra interfaz ni obligar a cerrarla para poder leerlo.
+function rectsSeCruzan(a, b, margen) {
+  const m = margen || 0;
+  return a.left < b.right + m && a.right > b.left - m && a.top < b.bottom + m && a.bottom > b.top - m;
+}
+// El Registro automático se aparta de la barra solo mientras conserva su posición de fábrica.
+// `.movida` significa que alguien eligió su lugar y nunca se altera desde acá.
+function placeRegistro() {
+  const registro = $("logpanel"), hb = $("hotwrap");
+  if (!registro || registro.classList.contains("movida")) return;
+  if (registro._autoSobreHotbar) {
+    registro.style.bottom = "";   // recuperar CSS antes de comprobar si la barra sigue cruzándolo
+    registro._autoSobreHotbar = false;
+  }
+  if (registro.classList.contains("collapsed") || !hb) return;
+  const rr = registro.getBoundingClientRect(), hr = hb.getBoundingClientRect();
+  if (!rr.width || !rr.height || !hr.width || !hr.height || !rectsSeCruzan(rr, hr)) return;
+  registro.style.bottom = Math.round(window.innerHeight - hr.top + 8) + "px";
+  registro._autoSobreHotbar = true;
+}
 function placePrompt() {
   const p = $("prompt"), hb = $("hotwrap");
   if (!p) return;
-  if (!hb) { p.style.bottom = "12px"; return; }
-  const r = hb.getBoundingClientRect();
-  if (!r.height || r.top < window.innerHeight * 0.5) { p.style.bottom = "12px"; return; }   // barra arriba: el aviso abajo
-  p.style.bottom = Math.round(Math.min(window.innerHeight * 0.55, window.innerHeight - r.top + 34)) + "px";   // 31/7: despegado de la barra pero cerquita (64 quedaba muy arriba)
+  let bottom = 12;
+  if (hb) {
+    const r = hb.getBoundingClientRect();
+    // barra arriba: el aviso queda abajo
+    if (r.height && r.top >= window.innerHeight * 0.5)
+      bottom = Math.round(Math.min(window.innerHeight * 0.55, window.innerHeight - r.top + 34));   // despegado de la barra pero cerquita
+  }
+  p.style.bottom = bottom + "px";   // siempre restaurar la posición normal antes de medir el Registro
+
+  const registro = $("logpanel");
+  if (!registro || registro.classList.contains("collapsed")) return;   // plegado conserva exactamente la colocación previa
+  const rr = registro.getBoundingClientRect(), pr = p.getBoundingClientRect();
+  if (!rr.width || !rr.height || !pr.width || !pr.height || !rectsSeCruzan(pr, rr, 8)) return;
+
+  // La salida habitual es justo arriba del Registro. El panel puede ser arrastrado,
+  // así que se calcula desde su rectángulo actual, no desde sus estilos originales.
+  const arriba = Math.round(window.innerHeight - rr.top + 12);
+  const maxBottom = Math.max(4, window.innerHeight - pr.height - 4);
+  if (arriba <= maxBottom) { p.style.bottom = Math.max(bottom, arriba) + "px"; return; }
+
+  // Si alguien llevó Registro casi hasta el borde superior, arriba no entra. Solo
+  // aceptamos el hueco inferior si sigue respetando la separación ya calculada de la hotbar.
+  const abajo = Math.floor(window.innerHeight - rr.bottom - pr.height - 12);
+  if (abajo >= bottom && abajo <= maxBottom) p.style.bottom = abajo + "px";
+}
+function syncRegistroPrompt() {
+  placeRegistro();
+  placePrompt();
 }
 function initUniversalDrag() {
   document.querySelectorAll(".ov .card").forEach(c => makeHoldDrag(c));          // todas las ventanas
-  makeHoldDrag($("hotwrap"), "gf_hotpos");                                       // barra de acceso rápido
-  placePrompt(); window.addEventListener("resize", placePrompt);
-  const hw = $("hotwrap"); if (hw) { hw.addEventListener("pointerup", () => setTimeout(placePrompt, 30)); }
-  makeHoldDrag($("logpanel"), "gf_logpos", true);                                // registro/chat (anclado por abajo: se abre hacia ARRIBA)
+  makeHoldDrag($("hotwrap"), "gf_hotpos", false, syncRegistroPrompt);           // barra de acceso rápido
+  const registro = $("logpanel");
+  makeHoldDrag(registro, "gf_logpos", true, syncRegistroPrompt);                  // registro/chat (anclado por abajo: se abre hacia ARRIBA)
+  const syncLayouts = () => { syncRegistroPrompt(); placeToast(); };
+  syncLayouts(); window.addEventListener("resize", syncLayouts);
+  // Abrir/cerrar puede venir de un clic, del tutorial o de un aviso de error: observar la
+  // clase evita que una de esas rutas deje el prompt con la geometría vieja.
+  if (registro && !registro._promptWatch && typeof MutationObserver === "function") {
+    registro._promptWatch = new MutationObserver(syncRegistroPrompt);
+    registro._promptWatch.observe(registro, { attributes: true, attributeFilter: ["class"] });
+  }
+  // `.logbody` abre/cierra con una transición de altura: esta observación termina de ubicar el
+  // aviso con la caja FINAL del panel, sin revisar nada durante el juego normal.
+  if (registro && !registro._promptSizeWatch && typeof ResizeObserver === "function") {
+    registro._promptSizeWatch = new ResizeObserver(syncRegistroPrompt);
+    registro._promptSizeWatch.observe(registro);
+  }
+  // El ancho del aviso depende del objeto bajo el cursor. ResizeObserver solo despierta si
+  // cambia su caja; observar cada `textContent` sería una medición por cuadro de Phaser.
+  const prompt = $("prompt");
+  if (prompt && !prompt._promptSizeWatch && typeof ResizeObserver === "function") {
+    prompt._promptSizeWatch = new ResizeObserver(placePrompt);
+    prompt._promptSizeWatch.observe(prompt);
+  }
 }
 
 /* ---- init ---- */
@@ -4680,12 +4786,13 @@ function initUI() {
      que el botón solo servía para bloquearle el guardado a quien lo tocara. Con el servidor
      diciendo que no, no hay kit posible: lo que haga falta para probar se hace con la cuenta
      de servicio en el dashboard, del lado de la base. */
-  const lm = $("logmin"); if (lm) lm.onclick = () => { const panel = $("logpanel"); if (!panel) return; panel.classList.toggle("collapsed"); registroCambioManual(panel); };
+  const lm = $("logmin"); if (lm) lm.onclick = () => { const panel = $("logpanel"); if (!panel) return; panel.classList.toggle("collapsed"); registroCambioManual(panel); syncRegistroPrompt(); };
   initUniversalDrag();   // mantener clic sobre cualquier interfaz la mueve (detalles 29/7)
   document.querySelectorAll(".ltab").forEach(b => b.onclick = () => {
     const panel = $("logpanel"); if (!panel) return;
     panel.classList.remove("collapsed");
     registroCambioManual(panel);
+    syncRegistroPrompt();
     document.querySelectorAll(".ltab").forEach(x => x.classList.toggle("active", x === b));
     const tab = b.dataset.tab;
     $("log").style.display = tab === "log" ? "" : "none";

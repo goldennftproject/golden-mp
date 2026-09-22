@@ -2,7 +2,8 @@
    ═════════════════════════════════════════════
    El panel de Registro empieza plegado para dejar ver las parcelas, pero sigue siendo una
    herramienta: en cuanto alguien lo abre/cierra a propósito, esa decisión manda durante la
-   sesión. Este arnés ejecuta la pequeña pieza de UI aislada para vigilar los tres contratos:
+   sesión —también en los webviews sin sessionStorage, donde viaja con el tutorial guardado.
+   Este arnés ejecuta la pequeña pieza de UI aislada para vigilar los tres contratos:
      node tools/test-registro-inicial.js */
 const fs = require("fs"), vm = require("vm");
 const UI = fs.readFileSync("public/game/ui.js", "utf8");
@@ -26,15 +27,16 @@ function panel(plegado) {
     }
   } };
 }
-function cargar(paso, logPanel, memoria, guia) {
+function cargar(paso, logPanel, memoria, guia, estado, sinSesion) {
   const ctx = {
     $: id => id === "logpanel" ? logPanel : null,
     tutoActivo: () => paso,
     guiaActiva: () => guia || null,
-    sessionStorage: {
-      getItem: k => memoria.has(k) ? memoria.get(k) : null,
-      setItem: (k, v) => memoria.set(k, String(v))
-    }
+    G: estado || { tuto: {} }
+  };
+  if (!sinSesion) ctx.sessionStorage = {
+    getItem: k => memoria.has(k) ? memoria.get(k) : null,
+    setItem: (k, v) => memoria.set(k, String(v))
   };
   ctx.window = ctx; ctx.globalThis = ctx;
   vm.createContext(ctx);
@@ -56,10 +58,11 @@ console.log("\n1 · EL PRIMER CICLO SE COMPACTA, Y NADA MÁS\n");
 console.log("\n2 · LA ELECCIÓN MANUAL GANA, INCLUSO DESPUÉS DE F5\n");
 {
   const memoria = new Map(), antes = panel(true);
-  const ctxAntes = cargar({ id: "kit" }, antes, memoria);
+  const estadoAntes = { tuto: {} }, ctxAntes = cargar({ id: "kit" }, antes, memoria, null, estadoAntes);
   antes.classList.remove("collapsed");
   vm.runInContext("registroCambioManual($('logpanel'))", ctxAntes);
   ok("guardar abierto deja una marca de sesión", memoria.get("gf_registro_manual") === "open");
+  ok("y también una marca en el tutorial guardable", estadoAntes.tuto.registroManual === "open");
 
   const despues = panel(true);       // el HTML vuelve a nacer plegado tras recargar
   const ctxDespues = cargar({ id: "harvest" }, despues, memoria);
@@ -68,7 +71,21 @@ console.log("\n2 · LA ELECCIÓN MANUAL GANA, INCLUSO DESPUÉS DE F5\n");
   ok("y el tutorial ya no puede volver a plegarlo", !despues.classList.contains("collapsed"));
 }
 
-console.log("\n3 · NO SE METE EN LA BRÚJULA NI EN PASOS POSTERIORES\n");
+console.log("\n3 · SI EL WEBVIEW BLOQUEA SESSIONSTORAGE, EL RESPALDO SIGUE SIRVIENDO\n");
+{
+  const memoria = new Map(), antes = panel(true), estado = { tuto: {} };
+  const ctxAntes = cargar({ id: "kit" }, antes, memoria, null, estado, true);
+  antes.classList.remove("collapsed");
+  vm.runInContext("registroCambioManual($('logpanel'))", ctxAntes);
+  ok("abrir no rompe sin sessionStorage", estado.tuto.registroManual === "open");
+
+  const despues = panel(true), recarga = { tuto: { registroManual: estado.tuto.registroManual } };
+  const ctxDespues = cargar({ id: "harvest" }, despues, memoria, null, recarga, true);
+  vm.runInContext("plegarRegistroPrimerCiclo()", ctxDespues);
+  ok("la recarga respeta el respaldo guardado", !despues.classList.contains("collapsed"));
+}
+
+console.log("\n4 · NO SE METE EN LA BRÚJULA NI EN PASOS POSTERIORES\n");
 {
   const memoria = new Map(), posterior = panel(false);
   const ctxPosterior = cargar({ id: "sell" }, posterior, memoria);
@@ -81,7 +98,7 @@ console.log("\n3 · NO SE METE EN LA BRÚJULA NI EN PASOS POSTERIORES\n");
   ok("la brújula no se compacta", !brujula.classList.contains("collapsed"));
 }
 
-console.log("\n4 · EL CÓDIGO ESTÁ CONECTADO A LA UI REAL\n");
+console.log("\n5 · EL CÓDIGO ESTÁ CONECTADO A LA UI REAL\n");
 {
   ok("tutoSync aplica la regla", /tutoAdelanto[\s\S]{0,260}plegarRegistroPrimerCiclo\(\)/.test(UI));
   ok("initUI recupera la elección antes de enganchar controles", /function initUI\(\)\s*\{[\s\S]{0,100}registroRestaurarCambioManual\(\)/.test(UI));
