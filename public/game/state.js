@@ -7757,14 +7757,19 @@ function precioVenta(res) {
 }
 function totalVenta(res, q) { return Math.max(1, Math.round(q * precioVenta(res))); }
 function marketUnit(res) { const u = precioVenta(res); return marketCur === "plata" ? u : u / GOLDEN_EN_PLATA; }
+/* $Golden no usa fracciones: esta cuenta la comparten la UI y el cobro para que un botón nunca
+   prometa una venta que el estado vaya a rechazar después. */
+function ventaMinGolden(res) { return Math.max(1, Math.ceil(GOLDEN_EN_PLATA / Math.max(1, precioVenta(res)))); }
 function sellItem(res) {
+  const paso = (typeof tutoActivo === "function") ? tutoActivo() : null;
+  if (paso && paso.id === "sell") marketCur = "plata";   // el arranque enseña la moneda del bucle, no la premium
   const inp = $("mq-"+res); let q = Math.floor(parseFloat(inp && inp.value) || 0);
   q = Math.max(0, Math.min(q, G.res[res]));
   if (q <= 0) { toast("Poné una cantidad"); return; }
   // candado anti-exploit (12/8): durante un "juntá X" no se puede VENDER ese recurso por
   // debajo de la meta — si no, vender para quedar en 9/10 mantenía el boost vivo infinito
   if (marketCur === "plata") { const t=totalVenta(res,q); G.plata+=t; G.res[res]-=q; log(`Vendiste ${q} ${RES_LABEL[res]} por ${t} de plata.`); toast("+"+t+" plata"); }
-  else { const g=Math.floor(totalVenta(res,q)/GOLDEN_EN_PLATA); if (g<1){ toast("Muy poca cantidad para $Golden"); return; } G.res[res]-=q; G.golden+=g; log(`Vendiste ${q} ${RES_LABEL[res]} por ${g} $Golden.`,"gold"); toast("+"+g+" $Golden"); }
+  else { const g=Math.floor(totalVenta(res,q)/GOLDEN_EN_PLATA); if (g<1){ toast("Para 1 $Golden necesitás " + fmt(ventaMinGolden(res)) + " " + RES_LABEL[res]); return; } G.res[res]-=q; G.golden+=g; log(`Vendiste ${q} ${RES_LABEL[res]} por ${g} $Golden.`,"gold"); toast("+"+g+" $Golden"); }
   if (window.sfx) sfx("coin");
   if (CROP_DEF[res] && typeof tutoEvent === "function") for (let i = 0; i < q; i++) tutoEvent("sell");   // 14/8 v4: un evento POR UNIDAD vendida — el capataz verifica cantidades
   /* 24/8 (dirección): « cuando vendes un objeto no se quita de la bolsa; hay que darle clic o

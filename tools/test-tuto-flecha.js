@@ -157,6 +157,23 @@ window.__panelesDePasos = function () {
     return { id: s.id, panel: s.panel, ui: s.ui || null,
       existePanel: !!p, dentro: !!(p && s.ui && p.querySelector(s.ui)) };
   }));
+};
+/* La venta de las tres papas termina el arranque. La UI no puede sugerir $Golden: una unidad
+   necesita un lote mucho mayor. Este sondeo pinta la ventana real con la moneda equivocada. */
+window.__sondeoVentaTutorial = function () {
+  const paso = TUTO_STEPS.findIndex(s => s.id === "sell");
+  G.tuto = { step: paso, done: false, n: 0 };
+  G.res = Object.assign({}, G.res, { papa: 3 });
+  marketCur = "golden"; refreshMarket();
+  const golden = document.querySelector('.curbtn[data-cur="golden"]'), papa = document.getElementById("vb-papa"), nota = document.getElementById("mkt-cur-note");
+  const tutorial = { moneda: marketCur, goldenBloqueado: !!(golden && golden.disabled),
+    nota: nota ? nota.textContent : "", notaVisible: !!(nota && nota.classList.contains("show")),
+    papaHabilitada: !!(papa && !papa.disabled) };
+  G.tuto = { done: true }; marketCur = "golden"; refreshMarket();
+  const goldenNormal = document.querySelector('.curbtn[data-cur="golden"]'), papaNormal = document.getElementById("vb-papa");
+  const normal = { moneda: marketCur, goldenBloqueado: !!(goldenNormal && goldenNormal.disabled),
+    papaBloqueada: !!(papaNormal && papaNormal.disabled), textoPapa: papaNormal ? papaNormal.textContent : "" };
+  return JSON.stringify({ tutorial: tutorial, normal: normal });
 };`);
 
 console.log("\nEL HTML DE VERDAD TIENE LAS DOS PARADAS");
@@ -257,6 +274,16 @@ console.log("\nCOMER RECORRE MENÚ → INVENTARIO → PLATO");
   ok("con el menú cerrado señala ☰ Menú", s.cerrado === "menu-btn", s.cerrado);
   ok("al abrirlo baja a Inventario", s.abierto === "ov-inv", s.abierto);
   ok("y dentro apunta al plato que se puede comer", /k-dish/.test(s.dentro || ""), s.dentro);
+}
+
+console.log("\nLA PRIMERA VENTA NO SE DESVÍA A $GOLDEN");
+{
+  const s = JSON.parse(w.__sondeoVentaTutorial());
+  ok("el paso de vender fuerza Plata aunque antes estuviera $Golden", s.tutorial.moneda === "plata", JSON.stringify(s.tutorial));
+  ok("$Golden se ve bloqueado y explica la ruta", s.tutorial.goldenBloqueado && s.tutorial.notaVisible && /plata/i.test(s.tutorial.nota), JSON.stringify(s.tutorial));
+  ok("las tres papas conservan un botón de venta disponible", s.tutorial.papaHabilitada, JSON.stringify(s.tutorial));
+  ok("al terminar el tutorial $Golden vuelve a estar disponible", s.normal.moneda === "golden" && !s.normal.goldenBloqueado, JSON.stringify(s.normal));
+  ok("y una cantidad menor al mínimo se explica antes de hacer clic", s.normal.papaBloqueada && /mín\.|faltan/i.test(s.normal.textoPapa), JSON.stringify(s.normal));
 }
 
 console.log("\nEL TABLÓN TERMINA EL TUTORIAL SIN PEDIR UN LOTE ENTERO");

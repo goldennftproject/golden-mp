@@ -344,6 +344,10 @@
   .shophead{font-weight:800;font-size:13px;color:var(--ink);margin:12px 0 6px}
   .seedlv{font-size:11px;font-weight:700;color:#5f5540;background:#f3e6bf;border-radius:5px;padding:0 5px;margin-left:4px}
   .mkt-cur{display:flex;align-items:center;gap:8px;font-size:13px;color:var(--muted);margin:4px 0 12px;flex-wrap:wrap}
+  /* El primer encargo termina en el Mercado: el aviso vive junto a la moneda, no como un toast
+     que desaparece antes de que el jugador entienda qué tiene que elegir. */
+  #mkt-cur-note{display:none;flex-basis:100%;color:#ffe08a;font-size:12.5px;font-weight:800}
+  #mkt-cur-note.show{display:block}
   .curbtn{padding:6px 10px;border-radius:8px;border:1px solid var(--line);background:#fff;color:var(--ink);font-size:12px;font-weight:700;display:flex;align-items:center;gap:5px;cursor:pointer}
   .curbtn.active{background:linear-gradient(#f6d878,#e9b93f);border-color:var(--gold-deep)}
   .mkt-list{display:flex;flex-direction:column;gap:8px;max-height:360px;overflow:auto}
@@ -1107,6 +1111,23 @@
     .hcell{width:auto;flex:1 1 0;min-width:0;aspect-ratio:1/1;height:auto}
     #tuto{top:auto;bottom:96px;font-size:12px;max-width:94vw}
   }
+  /* El Mercado tiene cuatro pestañas y filas con cantidad + acción. En 360 px el borde pixelado
+     de cada pestaña consumía más ancho que el panel y la descripción de la semilla se quedaba en
+     0 px. Acá no se achica el texto: se reordena la interfaz en dos filas legibles. */
+  @media(max-width:480px){
+    #ov-market .shoptabs{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:4px;align-items:stretch;margin:2px 0 6px}
+    #ov-market .shoptab{min-width:0;min-height:42px;border-width:9px;padding:2px 4px;display:flex;align-items:center;justify-content:center;line-height:1.08}
+    #ov-market .shoptab.active{padding-bottom:2px}
+    /* El empalme de pestaña supone una única fila; en la grilla taparía la de abajo. */
+    #ov-market .shoptab.active::after{display:none}
+    #ov-market .mkt-row{display:grid;grid-template-columns:54px minmax(0,1fr);gap:6px 8px;align-items:center;padding:8px}
+    #ov-market .mkt-row .mimg{grid-column:1;grid-row:1;width:44px;height:44px}
+    #ov-market .mkt-row .minfo{grid-column:2;grid-row:1;min-width:0}
+    #ov-market .mkt-row>input{grid-column:1;grid-row:2;width:54px;min-width:0;padding:5px 2px}
+    #ov-market .mkt-row>button{grid-column:2;grid-row:2;width:100%;justify-content:center}
+    /* Filas sin selector de cantidad (kits, contenedores) aprovechan todo el renglón de acción. */
+    #ov-market .mkt-row>.minfo+button{grid-column:1/-1}
+  }
   @media(max-width:420px){
     .brand h1{font-size:0}            /* el título cede el sitio: los datos importan más */
     .pill{font-size:10px;padding:3px 6px}
@@ -1298,6 +1319,7 @@
       <div class="mkt-cur">Cobrar en:
         <button class="curbtn active" data-cur="plata"><img class="ric" src="assets/farm/coin_plata.png?a=4"> Plata</button>
         <button class="curbtn" data-cur="golden"><img class="ric" src="assets/farm/coin_esencia.png?a=4"> $Golden</button>
+        <span id="mkt-cur-note" aria-live="polite"></span>
       </div>
       <div class="mkt-list" id="mkt-list"></div>
     </div>
@@ -1927,7 +1949,7 @@
     // 15/8: VERSIÓN DE BUILD — rompe la caché del navegador en cada deploy (sin esto, el
     // jugador seguía corriendo el state.js viejo aunque el servidor tuviera el nuevo).
     // deploy.bat la actualiza sola (busca GF_BUILD y pone la fecha/hora del deploy).
-    const GF_BUILD = "20260922-160318";
+    const GF_BUILD = "20260922-210037";
     const files = ["game/config.js","game/nav.js","game/audio.js","game/state.js","game/save.js","game/ui.js","game/boot.js",
                    "game/farm.js","game/forest.js","game/plaza.js","game/main.js","game/update.js"];
     /* 24/8 — SE BAJAN TODOS A LA VEZ, SE EJECUTAN EN FILA (dirección: « sigue tardando en

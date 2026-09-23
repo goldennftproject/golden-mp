@@ -70,17 +70,19 @@ function casoGuia({ plegado, movil, logRect }) {
 
 console.log("\n1 · LA POSICIÓN NORMAL SE CONSERVA SIN UN CRUCE\n");
 {
-  const plegado = caso({ plegado: true, logRect: rect(10, 421, 340, 114) });
-  ok("Registro plegado mantiene el hueco normal sobre hotbar", plegado.bottom === 140, plegado.bottom + "px");
   const lejos = caso({ plegado: false, logRect: rect(520, 300, 220, 150) });
   ok("Registro abierto pero lejos no mueve el aviso", lejos.bottom === 140, lejos.bottom + "px");
 }
 
-console.log("\n2 · UN REGISTRO ABIERTO LIBERA EL TEXTO DEL MUNDO\n");
+console.log("\n2 · EL REGISTRO LIBERA EL TEXTO DEL MUNDO, TAMBIÉN PLEGADO\n");
 {
   const r = caso({ plegado: false, logRect: rect(10, 421, 340, 114) });
   ok("sube por encima del Registro", r.bottom === 167, r.bottom + "px");
   ok("queda separado incluso con el margen visual", !cruzan(r.prompt, r.registro, 8), JSON.stringify(r.prompt));
+
+  const plegado = caso({ plegado: true, logRect: rect(10, 421, 340, 64) });
+  ok("la pestaña plegada tampoco tapa el aviso", plegado.bottom === 167, plegado.bottom + "px");
+  ok("y conserva aire alrededor de su cabecera", !cruzan(plegado.prompt, plegado.registro, 8), JSON.stringify(plegado.prompt));
 }
 
 console.log("\n3 · EL REGISTRO AUTOMÁTICO NO SE ESCONDE DETRÁS DE LA HOTBAR\n");
@@ -91,7 +93,8 @@ console.log("\n3 · EL REGISTRO AUTOMÁTICO NO SE ESCONDE DETRÁS DE LA HOTBAR\n
   ok("y las dos cajas ya no se cruzan", !cruzan(automatico.registro, automatico.hotbar), JSON.stringify(automatico.registro));
 
   const plegado = casoRegistro({ plegado: true, movida: false, hotbarRect: hotbar, bottomInicial: "114px", autoAntes: true });
-  ok("al plegarse recupera el bottom del CSS", plegado.bottom === "", plegado.bottom || "(CSS)");
+  ok("plegado sigue por encima de la barra: su cabecera queda tocable", plegado.bottom === "114px", plegado.bottom);
+  ok("y tampoco se cruza plegado", !cruzan(plegado.registro, plegado.hotbar), JSON.stringify(plegado.registro));
 
   const manual = casoRegistro({ plegado: false, movida: true, hotbarRect: hotbar, bottomInicial: "205px" });
   ok("un Registro arrastrado no se mueve solo", manual.bottom === "205px", manual.bottom);
@@ -113,8 +116,9 @@ console.log("\n5 · LA GUÍA MÓVIL NO SE ESCONDE DETRÁS DEL REGISTRO\n");
   ok("sube encima del Registro abierto", abierto.bottom === "206px", abierto.bottom);
   ok("deja un margen real entre las dos cajas", !cruzan(abierto.guia, abierto.registro, 8), JSON.stringify(abierto.guia));
 
-  const plegado = casoGuia({ plegado: true, movil: true, logRect: rect(10, 306, 340, 116) });
-  ok("plegado recupera el anclaje CSS de la hotbar", plegado.top === "" && plegado.bottom === "", JSON.stringify(plegado));
+  const plegado = casoGuia({ plegado: true, movil: true, logRect: rect(10, 306, 340, 64) });
+  ok("plegado también libera la guía si llega a cruzarse", plegado.bottom === "206px", JSON.stringify(plegado));
+  ok("y deja margen con la cabecera", !cruzan(plegado.guia, plegado.registro, 8), JSON.stringify(plegado.guia));
 
   const escritorio = casoGuia({ plegado: false, movil: false, logRect: rect(10, 306, 340, 116) });
   ok("en escritorio no mueve la guía superior", escritorio.top === "" && escritorio.bottom === "", JSON.stringify(escritorio));

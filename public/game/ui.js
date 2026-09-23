@@ -3776,10 +3776,44 @@ function refreshNft() {
 }
 
 function refreshMarket() {
+  /* El último gesto del arranque es vender tres papas. $Golden se acredita de a unidades
+     enteras (500 de plata): dejarlo elegible acá daba una venta que parecía válida pero no
+     avanzaba el objetivo. El tutorial guía sin alterar el valor de ninguna moneda. */
+  const paso = (typeof tutoActivo === "function") ? tutoActivo() : null;
+  const ventaTutorial = !!(paso && paso.id === "sell");
+  if (ventaTutorial) marketCur = "plata";
   const cur = marketCur;
-  $("mkt-list").innerHTML = SELLABLE.map(res => { const owned = G.res[res] || 0; const u = marketUnit(res); const uStr = cur === "plata" ? `${fmtDec(u)} de plata c/u` : `${fmtDec(u, 3)} $Golden c/u`;
-    return `<div class="mkt-row"><span class="mimg">${itemIcon({ sprite: resSprite(res), emoji: RES_EMOJI[res] })}</span><div class="minfo"><div class="mnm">${RES_LABEL[res]}</div><div class="mds">Tenés ${fmt(owned)} · ${uStr}</div></div><input id="mq-${res}" type="number" min="0" max="${owned}" value="${owned > 0 ? owned : 0}"><button class="vbtn" id="vb-${res}">Vender</button></div>`; }).join("");
-  SELLABLE.forEach(res => { const btn = $("vb-" + res); if (btn) btn.onclick = () => sellItem(res); });
+  const minGolden = res => (typeof ventaMinGolden === "function") ? ventaMinGolden(res) : Math.max(1, Math.ceil(GOLDEN_EN_PLATA / Math.max(1, precioVenta(res))));
+  const estadoVender = (res, owned, q) => {
+    if (owned <= 0 || q <= 0) return { disabled: true, label: "Sin stock", title: "No tenés " + RES_LABEL[res] + " para vender" };
+    if (cur === "golden" && q < minGolden(res)) {
+      const min = minGolden(res), faltan = Math.max(0, min - owned);
+      return { disabled: true, label: faltan ? "Faltan " + fmt(faltan) : "Mín. " + fmt(min),
+        title: "Para cobrar 1 $Golden necesitás " + fmt(min) + " " + RES_LABEL[res] };
+    }
+    return { disabled: false, label: "Vender", title: "" };
+  };
+  $("mkt-list").innerHTML = SELLABLE.map(res => {
+    const owned = G.res[res] || 0, q = owned > 0 ? owned : 0, u = marketUnit(res);
+    const uStr = cur === "plata" ? `${fmtDec(u)} de plata c/u` : `${fmtDec(u, 3)} $Golden c/u`;
+    const min = cur === "golden" ? minGolden(res) : 0, estado = estadoVender(res, owned, q);
+    const minimo = cur === "golden" ? ` · mínimo ${fmt(min)} para 1 $Golden` : "";
+    return `<div class="mkt-row"><span class="mimg">${itemIcon({ sprite: resSprite(res), emoji: RES_EMOJI[res] })}</span><div class="minfo"><div class="mnm">${RES_LABEL[res]}</div><div class="mds">Tenés ${fmt(owned)} · ${uStr}${minimo}</div></div><input id="mq-${res}" type="number" min="${owned > 0 ? 1 : 0}" max="${owned}" value="${q}" ${owned > 0 ? "" : "disabled"}><button class="vbtn" id="vb-${res}" ${estado.disabled ? "disabled" : ""} title="${estado.title}">${estado.label}</button></div>`;
+  }).join("");
+  SELLABLE.forEach(res => {
+    const btn = $("vb-" + res), inp = $("mq-" + res), owned = G.res[res] || 0;
+    const sync = () => {
+      if (!btn) return;
+      const q = Math.max(0, Math.min(owned, Math.floor(+(inp && inp.value) || 0)));
+      const estado = estadoVender(res, owned, q);
+      btn.disabled = estado.disabled; btn.textContent = estado.label; btn.title = estado.title;
+    };
+    if (inp) { inp.oninput = sync; inp.onchange = sync; }
+    if (btn) btn.onclick = () => sellItem(res);
+  });
+  const golden = document.querySelector('.curbtn[data-cur="golden"]'), nota = $("mkt-cur-note");
+  if (golden) { golden.disabled = ventaTutorial; golden.title = ventaTutorial ? "Completá este encargo cobrando en Plata" : "Cobrá en $Golden a partir de 1 $Golden completo"; }
+  if (nota) { nota.textContent = ventaTutorial ? "Tu primer encargo se cobra en Plata." : ""; nota.classList.toggle("show", ventaTutorial); }
   if (typeof tutoHighlight === "function") tutoHighlight();
   document.querySelectorAll(".curbtn").forEach(b => b.classList.toggle("active", b.dataset.cur === cur));
   refreshSeedShop();
@@ -4565,6 +4599,7 @@ function rectsSeCruzan(a, b, margen) {
   return a.left < b.right + m && a.right > b.left - m && a.top < b.bottom + m && a.bottom > b.top - m;
 }
 // El Registro automático se aparta de la barra solo mientras conserva su posición de fábrica.
+// También se mide plegado: una pestaña escondida detrás de la hotbar no es una pestaña usable.
 // `.movida` significa que alguien eligió su lugar y nunca se altera desde acá.
 function placeRegistro() {
   const registro = $("logpanel"), hb = $("hotwrap");
@@ -4573,7 +4608,7 @@ function placeRegistro() {
     registro.style.bottom = "";   // recuperar CSS antes de comprobar si la barra sigue cruzándolo
     registro._autoSobreHotbar = false;
   }
-  if (registro.classList.contains("collapsed") || !hb) return;
+  if (!hb) return;
   const rr = registro.getBoundingClientRect(), hr = hb.getBoundingClientRect();
   if (!rr.width || !rr.height || !hr.width || !hr.height || !rectsSeCruzan(rr, hr)) return;
   registro.style.bottom = Math.round(window.innerHeight - hr.top + 8) + "px";
@@ -4592,7 +4627,7 @@ function placePrompt() {
   p.style.bottom = bottom + "px";   // siempre restaurar la posición normal antes de medir el Registro
 
   const registro = $("logpanel");
-  if (!registro || registro.classList.contains("collapsed")) return;   // plegado conserva exactamente la colocación previa
+  if (!registro) return;
   const rr = registro.getBoundingClientRect(), pr = p.getBoundingClientRect();
   if (!rr.width || !rr.height || !pr.width || !pr.height || !rectsSeCruzan(pr, rr, 8)) return;
 
@@ -4607,15 +4642,15 @@ function placePrompt() {
   const abajo = Math.floor(window.innerHeight - rr.bottom - pr.height - 12);
   if (abajo >= bottom && abajo <= maxBottom) p.style.bottom = abajo + "px";
 }
-/* En móvil el objetivo queda sobre la hotbar por CSS. Si el Registro está abierto, esa franja
-   coincide exactamente con sus últimas líneas; se mide la colisión real y se sube sólo entonces.
-   No se toca escritorio ni un Registro plegado, y al cerrar/restaurar se vuelve al CSS puro. */
+/* En móvil el objetivo queda sobre la hotbar por CSS. Tanto abierto como plegado, el Registro
+   puede ocupar esa franja; se mide la colisión real y se sube sólo entonces. En escritorio se
+   conserva el anclaje original, y al cerrarlo/restaurarlo se vuelve al CSS puro. */
 function placeTuto() {
   const guia = $("tuto"), registro = $("logpanel");
   if (!guia) return;
   guia.style.top = ""; guia.style.bottom = "";   // no dejar una posición vieja tras cerrar Registro
   if (guia.classList.contains("hidden") || !window.matchMedia || !window.matchMedia("(max-width: 640px)").matches) return;
-  if (!registro || registro.classList.contains("collapsed")) return;
+  if (!registro) return;
   const gr = guia.getBoundingClientRect(), rr = registro.getBoundingClientRect();
   if (!gr.width || !gr.height || !rr.width || !rr.height || !rectsSeCruzan(gr, rr, 8)) return;
 

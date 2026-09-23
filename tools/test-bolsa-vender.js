@@ -54,6 +54,17 @@ console.log("\nVENDER DESCUENTA Y REPINTA LA BOLSA EN EL ACTO");
   ok("y también los slots y la barra rápida", slots >= 1 && hotbar >= 1, "slots " + slots + " · hotbar " + hotbar);
 }
 
+console.log("\nEL ÚLTIMO PASO DEL TUTORIAL SIEMPRE COBRA EN PLATA");
+{
+  const pasoVenta = vm.runInContext('TUTO_STEPS.findIndex(s => s.id === "sell")', ctx);
+  G.tuto = { step: pasoVenta, n: 0, done: false }; G.res.papa = 3; G.plata = 0; G.golden = 20;
+  campos["mq-papa"] = { value: "3" };
+  vm.runInContext("marketCur = 'golden'", ctx);  // DOM viejo o selección previa: no debe cambiar el resultado
+  ctx.sellItem("papa");
+  ok("las tres papas dan plata", G.plata > 0 && G.res.papa === 0, G.plata + " plata");
+  ok("y no convierten el arranque en $Golden", G.golden === 20, G.golden + " $Golden");
+}
+
 console.log("\nLA RED: LA BOLSA ABIERTA SE SINCRONIZA SOLA");
 {
   abierta = true; ctx.refreshInv();   // parte de un estado ya pintado
