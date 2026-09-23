@@ -488,6 +488,9 @@
     image-rendering:pixelated;pointer-events:none}
   .forge-row .fds.vip{color:#8a6413;font-weight:700}   /* Pase de Batalla: carril VIP legible sobre el panel claro */
   .forge-row .fds.free{color:#3f6b2a;font-weight:700}  /* carril gratuito */
+  /* Objetivos: lo prioritario se distingue con tinta, no con crema sobre pergamino. */
+  .forge-row .fds.obj-weekly{font-size:14px;color:#5b420f;font-weight:800;margin:2px 0 6px}
+  .forge-row .fds.obj-next{color:#33591f;font-weight:800}
   .forge-row .fbtns{display:flex;flex-direction:column;gap:5px;flex:0 0 auto}
   .durbar{height:7px;background:#e6dcc2;border-radius:5px;overflow:hidden;border:1px solid var(--line);margin-top:4px;width:160px;max-width:42vw}
   .durbar>i{display:block;height:100%;background:linear-gradient(90deg,#8fc46a,#5a9a3a)}
@@ -1106,15 +1109,24 @@
     .hudbar{padding:6px 8px;gap:6px}
     .brand h1{font-size:14px}
     .pill{font-size:11px;padding:3px 7px;gap:3px}
-    /* la hotbar se lleva TODO el ancho y las celdas se reparten: 10 celdas siempre entran */
+    /* Hasta 480 px se desdobla en dos filas táctiles; acá conserva una sola fila que entra. */
     #hotbar{width:calc(100vw - 16px);justify-content:space-between;gap:3px;padding:3px}
     .hcell{width:auto;flex:1 1 0;min-width:0;aspect-ratio:1/1;height:auto}
-    #tuto{top:auto;bottom:96px;font-size:12px;max-width:94vw}
+    /* Con left:50% una caja fixed auto calcula sólo media pantalla disponible. Darle su ancho
+       móvil evita que una instrucción simple se rompa en cuatro renglones y tape la granja. */
+    #tuto{top:auto;bottom:96px;font-size:12px;width:min(94vw,360px);max-width:none;justify-content:center}
+    #tuto b{min-width:0}
   }
   /* El Mercado tiene cuatro pestañas y filas con cantidad + acción. En 360 px el borde pixelado
      de cada pestaña consumía más ancho que el panel y la descripción de la semilla se quedaba en
      0 px. Acá no se achica el texto: se reordena la interfaz en dos filas legibles. */
   @media(max-width:480px){
+    /* 10 casillas en una sola tira dejaban botones de 27 px en 320 px: no sirven ni para
+       tocar ni para reconocer un icono. Dos filas de cinco mantienen los diez atajos y dejan
+       un blanco táctil real; la tabla compacta queda centrada, no estirada con huecos inútiles. */
+    #hotbar{width:max-content;max-width:calc(100vw - 16px);display:grid;grid-template-columns:repeat(5,minmax(42px,52px));justify-content:center;gap:3px;padding:3px}
+    .hcell{width:52px;height:52px;flex:0 0 auto;min-width:42px;aspect-ratio:1/1}
+    #tuto{bottom:158px}
     #ov-market .shoptabs{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:4px;align-items:stretch;margin:2px 0 6px}
     #ov-market .shoptab{min-width:0;min-height:42px;border-width:9px;padding:2px 4px;display:flex;align-items:center;justify-content:center;line-height:1.08}
     #ov-market .shoptab.active{padding-bottom:2px}
@@ -1131,13 +1143,19 @@
   @media(max-width:420px){
     .brand h1{font-size:0}            /* el título cede el sitio: los datos importan más */
     .pill{font-size:10px;padding:3px 6px}
-    #tuto{font-size:11px;bottom:88px}
+    #tuto{font-size:11px}
   }
   /* pantallas bajas: en escritorio se gana aire arriba. En móvil angosto el cartel ya vive
      abajo, sobre la hotbar; darle también `top` lo estiraba entre ambos bordes. */
   @media(max-height:560px){
     .hudbar{padding:4px 8px}
     .hcell{width:36px;height:36px}
+  }
+  /* En un móvil bajo sigue habiendo dos filas, pero jamás baja de 42 px por casilla. */
+  @media(max-height:560px) and (max-width:480px){
+    #hotbar{grid-template-columns:repeat(5,42px)}
+    #hotbar .hcell{width:42px;height:42px}
+    #tuto{bottom:134px}
   }
   @media(max-height:560px) and (min-width:641px){
     #tuto{top:44px;font-size:11px}
@@ -1216,7 +1234,7 @@
       <div class="pill cpill" id="lvlpill" style="cursor:pointer"><span class="k">Granja</span><b id="s-level">1</b><span class="k" id="s-level-max">/25</span><span class="cbarw"><span class="cfill lvlf" id="lvl-fill"></span></span><span class="k" id="lvl-txt"></span></div>
       <div class="pill" data-mvp-hud><span class="k">Prestigio</span><b id="s-prestige">0</b></div>
       <div class="pill" title="Plata — la moneda del juego"><img class="ric" src="assets/farm/coin_plata.png?a=4" onerror="this.outerHTML='<span class=&quot;coin silver&quot;></span>'"><b id="s-plata">0</b></div>
-      <div class="pill" title="$Golden — la moneda premium: animales del establo, kit de emergencia y adornos"><img class="ric" src="assets/farm/coin_esencia.png?a=4" onerror="this.outerHTML='✨'"><b id="s-golden">20</b></div>
+      <div class="pill" title="$Golden — la moneda premium: mejoras especiales, kit de emergencia y adornos"><img class="ric" src="assets/farm/coin_esencia.png?a=4" onerror="this.outerHTML='✨'"><b id="s-golden">20</b></div>
       <!-- 15/9 (diseñador): « y la ponemos como barra roja ». El corazón y el relleno se leen de
            un vistazo mientras peleás; el número sigue estando porque saber que te faltan 12 para
            llenarte es lo que decide si comés ahora o después. -->
@@ -1729,7 +1747,7 @@
   <div class="ov" id="ov-establo"><div class="card" style="width:min(620px,94%)">
     <button class="close" data-close="ov-establo">×</button>
     <h3>Establo</h3>
-    <div class="sub">Comprá el animal con $Golden, alimentalo con su cultivo preferido y recogé su material. Cuanto más feliz, más produce — y con ese material se craftean las armaduras en la Curtiduría. <b id="establo-cupo"></b></div>
+    <div class="sub">Comprá el animal con Plata, alimentalo con su cultivo preferido y recogé su material. Cuanto más feliz, más produce — y con ese material se craftean las armaduras en la Curtiduría. <b id="establo-cupo"></b></div>
     <!-- 23/8 (QoL): con hasta 20 animales, el clic por especie era un castigo -->
     <div class="row" style="gap:8px;margin:4px 0 6px"><button class="green sm" id="est-alim-todo">🍽 Alimentar todo</button><button class="gold sm" id="est-rec-todo">🧺 Recoger todo</button></div>
     <div class="forge-list" id="establo-list" style="max-height:56vh"></div>
@@ -1949,7 +1967,7 @@
     // 15/8: VERSIÓN DE BUILD — rompe la caché del navegador en cada deploy (sin esto, el
     // jugador seguía corriendo el state.js viejo aunque el servidor tuviera el nuevo).
     // deploy.bat la actualiza sola (busca GF_BUILD y pone la fecha/hora del deploy).
-    const GF_BUILD = "20260922-210037";
+    const GF_BUILD = "20260923-125433";
     const files = ["game/config.js","game/nav.js","game/audio.js","game/state.js","game/save.js","game/ui.js","game/boot.js",
                    "game/farm.js","game/forest.js","game/plaza.js","game/main.js","game/update.js"];
     /* 24/8 — SE BAJAN TODOS A LA VEZ, SE EJECUTAN EN FILA (dirección: « sigue tardando en

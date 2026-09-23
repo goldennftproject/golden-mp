@@ -15,6 +15,8 @@ vm.runInContext(fs.readFileSync("public/game/config.js", "utf8"), ctx);
 vm.runInContext(fs.readFileSync("public/game/state.js", "utf8") +
   "\n;this.X={ANIMAL_ORDER,ANIMAL_DEF,CROP_DEF,CROP_ORDER,FELIZ_MIN_PROD,FELIZ_BAJA_H,ANIMAL_SUBE,ANIMAL_MAX,ANIMAL_BRUTO_H,PRICE};", ctx);
 const X = ctx.X, G = ctx.G, SRC = fs.readFileSync("public/game/state.js", "utf8");
+const HTML = fs.readFileSync("public/index.html", "utf8");
+const UI = fs.readFileSync("public/game/ui.js", "utf8");
 const ANCLA = 20;
 let fallos = 0;
 const ok = (n, c, d) => { if (!c) fallos++; console.log((c ? "  ok   " : "  FALLA") + "  " + n + (d ? "   " + d : "")); };
@@ -28,6 +30,16 @@ console.log("\nSE COMPRAN CON PLATA, NO CON $GOLDEN");
   ok("y no toca el $Golden", !/G\.golden/.test(comprar));
   ok("el precio en $Golden sigue anotado para cuando exista el token",
     X.ANIMAL_ORDER.every(k => X.ANIMAL_DEF[k].golden > 0));
+  /* La economía ya se había pasado a plata, pero el primer texto que lee quien abre el Establo
+     seguía prometiendo $Golden. Una moneda distinta en la explicación de una compra es peor que
+     una decoración vieja: hace que el jugador crea que no puede pagar algo que sí puede. */
+  const ficha = (HTML.match(/<div class="ov" id="ov-establo">([\s\S]*?)<\/div><\/div>/) || ["", ""])[1];
+  ok("la ficha del Establo dice Plata, igual que el cobro real",
+    /Comprá el animal con Plata/.test(ficha) && !/Comprá el animal con \$Golden/.test(ficha));
+  ok("la confirmación repite el precio real en Plata",
+    /askConfirm\("Comprar " \+ d\.label \+ " cuesta " \+ fmt\(animalPrecio\(k\)\) \+ " de plata\./.test(UI));
+  ok("el tooltip de $Golden no promete animales del Establo",
+    !/title="\$Golden[^\"]*animales del establo/.test(HTML));
   X.ANIMAL_ORDER.forEach(k => {
     const p = ctx.animalPrecioBase(k), h = p / ANCLA;
     ok("la " + X.ANIMAL_DEF[k].label + " cuesta " + p + " de plata", p > 0 && h >= 12 && h <= 200,

@@ -16,8 +16,10 @@
    (que es distinto de que las funciones devuelvan bien: se puede tener el dato y no mostrarlo,
    que es exactamente el bug que estamos cerrando).
      node tools/test-el-camino.js                                                                */
-const path = require("path"), vm = require("vm");
+const fs = require("fs"), path = require("path"), vm = require("vm");
 const RAIZ = path.join(__dirname, "..");
+const UI = fs.readFileSync(path.join(RAIZ, "public/game/ui.js"), "utf8");
+const HTML = fs.readFileSync(path.join(RAIZ, "public/index.html"), "utf8");
 const { ctx } = require("./arrancar-el-juego.contexto.js").arrancar(RAIZ);
 const G = ctx.G, g = (n) => vm.runInContext(n, ctx);
 ctx.toast = () => {}; ctx.log = () => {};
@@ -132,11 +134,22 @@ console.log("\nY TODO ESO LLEGA A LA PANTALLA   (tener el dato no es mostrarlo)"
   const ini = html.indexOf("El camino a la Guarida");
   const fin = html.indexOf("shophead", ini);
   const secc = html.slice(ini, fin > 0 ? fin : html.length);
-  const conMarca = (secc.match(/<div class="fds"[^>]*>\s*(✅|▶️|⬜)/g) || []).length;
+  const conMarca = (secc.match(/<div class="fds(?: obj-next)?"[^>]*>\s*(✅|▶️|⬜)/g) || []).length;
   ok("y hay exactamente una fila con marca por hito",
     conMarca === c.hitos.length, conMarca + " filas · " + c.hitos.length + " hitos");
   ok("con una sola marcada como « la que sigue »",
     (secc.match(/▶️/g) || []).length === 1, (secc.match(/▶️/g) || []).length + "");
+  /* En este panel las filas viven sobre pergamino. Antes el dato más importante se forzaba en
+     crema (#f6e7bd), una tinta pensada para la madera: quedaba lavada justo en el lugar que
+     orienta al jugador. Las clases separan la intención de la paleta y hacen que el próximo
+     hito siga resaltado sin volver al color equivocado. */
+  ok("la meta semanal destaca con tinta oscura, no con crema sobre pergamino",
+    /class="fds obj-weekly"/.test(html) && /\.forge-row \.fds\.obj-weekly\{[^}]*color:#5b420f/.test(HTML));
+  ok("el próximo hito conserva un destaque verde legible",
+    (secc.match(/class="fds obj-next"/g) || []).length === 1 &&
+      /\.forge-row \.fds\.obj-next\{[^}]*color:#33591f/.test(HTML));
+  ok("Objetivos ya no fuerza la tinta crema de madera en sus filas",
+    !/obj-weekly[^\n]*#f6e7bd/.test(UI) && !/obj-next[^\n]*#f6e7bd/.test(UI));
 }
 
 console.log("\nEL MENÚ LO ANUNCIA   — un panel que no se anuncia es un panel que nadie abre");

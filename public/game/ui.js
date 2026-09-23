@@ -1749,7 +1749,7 @@ function fishIc(k) { const f = FISH_DEF[k], nm = f ? f.label : "Pez"; return f &
 /* 15/9 (dirección: « esta esencia golden hay que quitarla ») — LA MONEDA SE LLAMA $GOLDEN.
    El sprite se llama coin_esencia y de ahí se coló el nombre « Esencia » en el tooltip de la
    moneda, que además decía que servía PARA PESCAR — y no se usa para pescar en ningún lado: va
-   a los animales del establo, al kit de emergencia, a los adornos y al pase. Dos mentiras en
+   al kit de emergencia, a los adornos y al pase. Dos mentiras en
    siete palabras, en la esquina de la pantalla que el jugador mira todo el tiempo.
    El nombre del archivo del sprite se deja como está: renombrarlo es tocar el arte por un texto. */
 function coinIc(cur) { const nm = cur === "esencia" ? "$Golden" : "Plata"; return `<img class="ric" title="${nm}" src="${GF.spr(cur === "esencia" ? "coin_esencia" : "coin_plata")}" onerror="this.outerHTML='${cur === "esencia" ? "✨" : "🪙"}'">`; }
@@ -3260,7 +3260,7 @@ function refreshObjetivos() {
       const pct = Math.round(m.pct * 100);
       h += '<div class="forge-row' + (m.hecho ? " eq" : "") + '"><div class="finfo">' +
         '<div class="fnm">📅 Esta semana' + (m.hecho ? ' <span class="tag">cumplida</span>' : "") + '</div>' +
-        '<div class="fds" style="font-size:14px;color:#f6e7bd;margin:2px 0 6px">' +
+        '<div class="fds obj-weekly">' +
           (m.hecho ? "Entregaste " + m.pide + " × " + m.label
                    : "Juntar " + m.pide + " × " + m.label) + '</div>' +
         '<div style="height:10px;border-radius:5px;background:#241505;overflow:hidden;margin-bottom:4px">' +
@@ -3281,8 +3281,8 @@ function refreshObjetivos() {
       const filas = c.hitos.map(x => {
         const marca = x.hecho ? "✅" : (x === c.proximo ? "▶️" : "⬜");
         const donde = x.clan ? x.nota : ("granja " + x.nivel);
-        const resalta = (x === c.proximo) ? ' style="color:#f6e7bd"' : "";
-        return '<div class="fds"' + resalta + '>' + marca + " " + donde + " · " + x.titulo + "</div>";
+        const resalta = (x === c.proximo) ? " obj-next" : "";
+        return '<div class="fds' + resalta + '">' + marca + " " + donde + " · " + x.titulo + "</div>";
       }).join("");
       h += '<div class="forge-row"><div class="finfo">' +
         '<div class="fnm">🐉 El camino a la Guarida <span class="tag">' + c.alcanzados + "/" + c.total + '</span></div>' +
@@ -3579,7 +3579,7 @@ function refreshEstablo() {
   box.innerHTML = h;
   box.querySelectorAll("[data-buyani]").forEach(b => b.onclick = () => {
     const k = b.dataset.buyani, d = ANIMAL_DEF[k];
-    askConfirm("Comprar " + d.label + " cuesta " + d.golden + " $Golden. Después hay que alimentarlo para que produzca " + RES_LABEL[d.mat] + ". ¿Comprar?",
+    askConfirm("Comprar " + d.label + " cuesta " + fmt(animalPrecio(k)) + " de plata. Después hay que alimentarlo para que produzca " + RES_LABEL[d.mat] + ". ¿Comprar?",
       () => comprarAnimal(k), { title: "Comprar " + d.label, yes: "Comprar", yesClass: "green", no: "Cancelar", noClass: "red" });
   });
   /* 8/9: los botones son de UN animal — llevan su especie y su índice */

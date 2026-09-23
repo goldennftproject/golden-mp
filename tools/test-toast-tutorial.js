@@ -72,6 +72,9 @@ console.log("\nEN MÓVIL BAJO, LA GUÍA TIENE UN SOLO BORDE VERTICAL");
      no puede convivir con el `top` de escritorio, porque CSS estira la caja y falsea la
      geometría que placeToast y la cámara usan. */
   ok("móvil angosto conserva top:auto y bottom:96px", /@media\(max-width:640px\)\{[\s\S]{0,700}?#tuto\{top:auto;bottom:96px/.test(html));
+  ok("el cartel usa casi todo el ancho móvil, no la media pantalla del left:50%",
+    /#tuto\{top:auto;bottom:96px;font-size:12px;width:min\(94vw,360px\);max-width:none;justify-content:center\}/.test(html) &&
+      /#tuto b\{min-width:0\}/.test(html));
   ok("la subida a top:44px queda sólo para pantallas de escritorio", /@media\(max-height:560px\) and \(min-width:641px\)\{[\s\S]{0,160}?#tuto\{top:44px/.test(html));
   const reglaBajaGeneral = html.slice(
     html.indexOf("@media(max-height:560px){"),

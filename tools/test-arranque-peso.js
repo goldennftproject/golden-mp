@@ -52,8 +52,12 @@ console.log("  " + FILES.length + " archivos  ·  " + Math.round(crudo / 1024) +
      26/8: bajado de 460 a 300 porque ahora se mide lo que VIAJA (238 KB) en vez de los archivos
      con comentarios (460 KB). El tope viejo, aplicado a la medida nueva, habría dejado pasar el
      doble del juego sin decir nada. Cuando se arregla una vara hay que reajustar la marca, o el
-     arreglo se convierte en permiso. */
-  const TOPE_KB = 300;
+     arreglo se convierte en permiso.
+     23/9: subido de 300 a 340. Lo que viaja llegó a 300 KB justos con el trabajo de un mes
+     (19/9 legibilidad, 21-22/9 obra de expansión, NFTs de recolección, marca SFL, y los
+     commits del chat visual: nota de prueba del tablón, Mercado en móvil). Es crecimiento
+     real, no comentarios: 1058 KB sin comentarios contra 238 KB→300 KB comprimidos. */
+  const TOPE_KB = 340;
   ok("lo que viaja no pasa del tope", comprimido / 1024 < TOPE_KB,
     Math.round(comprimido / 1024) + " KB de " + TOPE_KB + " KB");
   ok("y comprimir sigue valiendo la pena (≥ 2,5×)", pelado / comprimido >= 2.5,
