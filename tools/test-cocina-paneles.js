@@ -8,7 +8,8 @@
      · el detalle muestra ingredientes TENÉS/PIDE y marca en rojo lo que falta;
      · elegir otra receta NO cambia el tamaño de la ventana (regla de la casa);
      · la ventana vieja sigue funcionando si el HTML no se actualizó (respaldo);
-     · y no se perdió ninguna acción: cocinar, vender en plata y vender en $Golden.
+     · los platos se presentan por su uso real: comer o entregar al Tablón; no se inventa una
+       venta en la Cocina que el juego tiene cerrada.
      node tools/test-cocina-paneles.js                                                         */
 const fs = require("fs");
 const UI = fs.readFileSync("public/game/ui.js", "utf8");
@@ -50,15 +51,18 @@ console.log("\nEL DETALLE: NÚMEROS EN COLUMNA, Y LO QUE FALTA EN ROJO");
   ok("muestra TENÉS/PIDE de cada ingrediente", /"\/" \+ n/.test(v2));
   ok("y marca en rojo lo que no alcanza", /t < n \? " falta"/.test(v2));
   ok("con el tiempo real de cocción (Cocina nv2 incluida)", /cocinaFactor/.test(v2));
-  ok("la XP, la curación y el precio", /r\.xp/.test(v2) && /r\.heal/.test(v2) && /vPlata/.test(v2));
+  ok("la XP y la curación se ven", /r\.xp/.test(v2) && /r\.heal/.test(v2));
+  ok("la fila aclara el uso real, no una Plata sin etiqueta", /ck-uso/.test(v2) && /Comer o Tablón/.test(v2));
+  ok("no queda la cifra de Plata como si fuera premio o precio", !/if \(r\.plata\) d \+= '<div class="ck-fila"><span>' \+ coinIc\("plata"\)/.test(v2));
   ok("y cuántos tenés ya cocinados", /tenés/.test(v2));
 }
 
-console.log("\nNO SE PERDIÓ NINGUNA ACCIÓN");
+console.log("\nNO APARECE UNA VENTA QUE EL JUEGO NO OFRECE");
 {
   ok("cocinar", /data-ckcook/.test(v2) && /cook\(b\.dataset\.ckcook\)/.test(v2));
-  ok("vender en plata", /data-cksell=/.test(v2) && /sellDish\(b\.dataset\.cksell, false\)/.test(v2));
-  ok("vender en $Golden (desde Cocina 8)", /data-cksellg/.test(v2) && /lvl >= 8/.test(v2));
+  ok("una futura venta sigue detrás del switch explícito", /typeof DISH_VENTA_LIBRE !== "undefined" && DISH_VENTA_LIBRE/.test(v2));
+  const ST = fs.readFileSync("public/game/state.js", "utf8");
+  ok("el estado también rechaza la venta libre", /if \(!DISH_VENTA_LIBRE\)[\s\S]{0,260}Los platos no se venden/.test(ST));
   ok("y el botón dice POR QUÉ no se puede", /Faltan ingredientes/.test(v2) && /Ollas ocupadas/.test(v2) && /Cocina nivel/.test(v2));
 }
 

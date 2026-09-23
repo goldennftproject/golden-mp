@@ -7530,11 +7530,26 @@ function flujoOlvidar() { _flujoFoto = null; }
    Vive en G para que sobreviva al F5: volver y encontrar tus tres herramientas de siempre es
    la mitad de la comodidad que pidió dirección. */
 var RECIENTES_MAX = 3;
-function recientes() { if (!Array.isArray(G.recientes)) G.recientes = []; return G.recientes; }
+function recienteEsObjeto(kind, key) {
+  /* La zona puede exponer plata/golden como recurso y la foto normal como moneda. Ninguna de las
+     dos formas es un objeto usable de la tira lateral: mostrarlas termina en un icono "?" y 0. */
+  return kind !== "moneda" && !(kind === "res" && (key === "plata" || key === "golden"));
+}
+function recientes() {
+  if (!Array.isArray(G.recientes)) G.recientes = [];
+  /* Sanea partidas anteriores que guardaron una moneda en la tira, sin pedir reiniciar la granja. */
+  const limpias = G.recientes.filter(id => {
+    if (typeof id !== "string") return false;
+    const i = id.indexOf(":");
+    return i > 0 && recienteEsObjeto(id.slice(0, i), id.slice(i + 1));
+  });
+  if (limpias.length !== G.recientes.length) G.recientes = limpias;
+  return G.recientes;
+}
 function recientesUsar(kind, key) {
   /* las armas y las cañas no se cuentan: se tienen o no se tienen, y un « 1 » fijo en la tira
      es una casilla gastada en algo que nunca se agota. */
-  if (kind === "arm" || kind === "cana") return;
+  if (kind === "arm" || kind === "cana" || !recienteEsObjeto(kind, key)) return;
   const l = recientes(), id = kind + ":" + key, i = l.indexOf(id);
   if (i >= 0) l.splice(i, 1);
   l.unshift(id);
@@ -7756,6 +7771,13 @@ function precioVenta(res) {
   return c.seedCost + (c.price - c.seedCost) * ventaMult();
 }
 function totalVenta(res, q) { return Math.max(1, Math.round(q * precioVenta(res))); }
+/* $Golden se acredita entero. Esta cuenta compartida evita que el Mercado anuncie una fracción
+   por unidad cuando el cobro real decide por el valor final del lote. El resto no se acumula:
+   se expone para que la interfaz lo diga antes del clic, sin cambiar la economía existente. */
+function ventaGolden(res, q) {
+  const plata = totalVenta(res, q), golden = Math.floor(plata / GOLDEN_EN_PLATA);
+  return { plata, golden, resto: plata - golden * GOLDEN_EN_PLATA };
+}
 function marketUnit(res) { const u = precioVenta(res); return marketCur === "plata" ? u : u / GOLDEN_EN_PLATA; }
 /* $Golden no usa fracciones: esta cuenta la comparten la UI y el cobro para que un botón nunca
    prometa una venta que el estado vaya a rechazar después. */
@@ -7769,7 +7791,7 @@ function sellItem(res) {
   // candado anti-exploit (12/8): durante un "juntá X" no se puede VENDER ese recurso por
   // debajo de la meta — si no, vender para quedar en 9/10 mantenía el boost vivo infinito
   if (marketCur === "plata") { const t=totalVenta(res,q); G.plata+=t; G.res[res]-=q; log(`Vendiste ${q} ${RES_LABEL[res]} por ${t} de plata.`); toast("+"+t+" plata"); }
-  else { const g=Math.floor(totalVenta(res,q)/GOLDEN_EN_PLATA); if (g<1){ toast("Para 1 $Golden necesitás " + fmt(ventaMinGolden(res)) + " " + RES_LABEL[res]); return; } G.res[res]-=q; G.golden+=g; log(`Vendiste ${q} ${RES_LABEL[res]} por ${g} $Golden.`,"gold"); toast("+"+g+" $Golden"); }
+  else { const detalle = ventaGolden(res, q), g = detalle.golden; if (g<1){ toast("Para 1 $Golden necesitás " + fmt(ventaMinGolden(res)) + " " + RES_LABEL[res]); return; } G.res[res]-=q; G.golden+=g; log(`Vendiste ${q} ${RES_LABEL[res]} por ${g} $Golden.`,"gold"); toast("+"+g+" $Golden"); }
   if (window.sfx) sfx("coin");
   if (CROP_DEF[res] && typeof tutoEvent === "function") for (let i = 0; i < q; i++) tutoEvent("sell");   // 14/8 v4: un evento POR UNIDAD vendida — el capataz verifica cantidades
   /* 24/8 (dirección): « cuando vendes un objeto no se quita de la bolsa; hay que darle clic o

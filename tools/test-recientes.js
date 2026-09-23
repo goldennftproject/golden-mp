@@ -34,6 +34,16 @@ console.log("\nLA LISTA GUARDA LOS TRES ÚLTIMOS, SIN REPETIR");
     G.recientes.join(" · "));
   ctx.recientesUsar("arm", "espada_madera"); ctx.recientesUsar("cana", "junco");
   ok("armas y cañas no entran — se tienen, no se gastan", G.recientes.indexOf("arm:espada_madera") < 0 && G.recientes.indexOf("cana:junco") < 0);
+  ctx.recientesUsar("moneda", "plata"); ctx.recientesUsar("moneda", "golden");
+  ctx.recientesUsar("res", "plata"); ctx.recientesUsar("res", "golden");
+  ok("las monedas no ocupan el recordatorio de objetos", !G.recientes.some(x => /^(moneda:|res:(plata|golden)$)/.test(x)), G.recientes.join(" · "));
+}
+
+console.log("\nY LIMPIA LAS MONEDAS QUE QUEDARON EN PARTIDAS ANTERIORES");
+{
+  G.recientes = ["moneda:plata", "res:lombriz", "res:golden", "moneda:golden"];
+  ctx.recientes();
+  ok("no conserva una casilla ? 0 por historial viejo", G.recientes.join(",") === "res:lombriz", G.recientes.join(" · "));
 }
 
 console.log("\nY DICE CUÁNTOS QUEDAN, DE LA FAMILIA QUE SEA");
@@ -57,7 +67,9 @@ console.log("\nLA LISTA SALE DEL USO REAL — no de llamadas puestas a mano");
 {
   const UI = fs.readFileSync(path.join(RAIZ, "public/game/ui.js"), "utf8");
   ok("se alimenta del flujo de la bolsa (lo que BAJÓ, se usó)",
-    /cambios\.forEach\(c => \{ if \(c\.d < 0 && typeof recientesUsar/.test(UI));
+    /cambios\.forEach\(c => \{ if \(c\.d < 0 && c\.kind !== "moneda" && typeof recientesUsar/.test(UI));
+  const ESTADO = fs.readFileSync(path.join(RAIZ, "public/game/state.js"), "utf8");
+  ok("el filtro también vive en el estado, por si llega otro flujo", /function recienteEsObjeto[\s\S]*kind !== "moneda"/.test(ESTADO));
   ok("y el único sitio que la escribe es ese — sin sembrar llamadas por el código",
     (UI.match(/recientesUsar\(/g) || []).length === 1);
   const HTML = fs.readFileSync(path.join(RAIZ, "public/index.html"), "utf8");

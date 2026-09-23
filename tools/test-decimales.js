@@ -34,7 +34,7 @@ console.log("\nEL FORMATEADOR HACE LO QUE DICE");
     ctx.fmtDec(5.1) + " · " + ctx.fmtDec(5.0));
 }
 
-console.log("\nEL PRECIO POR UNIDAD, EN TODOS LOS CULTIVOS Y NIVELES");
+console.log("\nEL PRECIO POR UNIDAD DE PLATA, EN TODOS LOS CULTIVOS Y NIVELES");
 {
   /* El bono de venta crece con el nivel de granja: es justo lo que genera los decimales largos.
      Se barre la curva entera, no un nivel suelto. */
@@ -42,12 +42,10 @@ console.log("\nEL PRECIO POR UNIDAD, EN TODOS LOS CULTIVOS Y NIVELES");
   [1, 5, 10, 20, 40, 80, 150].forEach(lv => {
     G.level = lv;
     X.SELLABLE.forEach(res => {
-      /* OJO: `marketCur` es un `let` de state.js, no una propiedad del objeto global — asignarlo
-         desde fuera del script no cambia nada y las dos monedas devolvían el mismo número. Me hizo
-         "encontrar" cuatro fallos inventados. Se reproduce lo que hace marketUnit, que es una línea:
-         plata → precioVenta; $Golden → lo mismo dividido por el tipo de cambio. */
+      /* OJO: `marketCur` es un `let` de state.js, no una propiedad del objeto global. Para Plata
+         el dato útil sí es el precio unitario; $Golden se decide por el valor FINAL del lote. */
       const enPlata = ctx.precioVenta(res);
-      [["plata", enPlata, 2], ["golden", enPlata / X.GOLDEN_EN_PLATA, 3]].forEach(([cur, u, dec]) => {
+      [["plata", enPlata, 2]].forEach(([cur, u, dec]) => {
         const s = ctx.fmtDec(u, dec);
         if (new RegExp("\\.\\d{" + (dec + 1) + ",}").test(s))
           malos.push("nivel " + lv + " · " + res + " · " + cur + " → " + s);
@@ -55,7 +53,7 @@ console.log("\nEL PRECIO POR UNIDAD, EN TODOS LOS CULTIVOS Y NIVELES");
     });
   });
   ok("ningún precio se enseña con cola de coma flotante", !malos.length,
-    malos.slice(0, 4).join(" · ") || (X.SELLABLE.length * 7 * 2) + " combinaciones limpias");
+    malos.slice(0, 4).join(" · ") || (X.SELLABLE.length * 7) + " combinaciones limpias");
 }
 
 console.log("\nY LA CUENTA SIGUE SIENDO EXACTA POR DENTRO");
@@ -72,6 +70,17 @@ console.log("\nY LA CUENTA SIGUE SIENDO EXACTA POR DENTRO");
   /* Si alguien redondeara el precio por unidad, vender de a 10 pagaría lo mismo que vender de a 1
      diez veces, y el bono se perdería entero hasta el nivel 20. Esto lo vigila. */
   ok("vender de a muchas no pierde el bono", t10 > t1 * 10 - 10, t10 + " vs " + (t1 * 10));
+}
+
+console.log("\n$GOLDEN SE CALCULA POR EL LOTE, NO CON UNA TASA FRACCIONARIA");
+{
+  G.level = 20;
+  const d = ctx.ventaGolden("papa", 328);
+  ok("parte del total que realmente cobraría la venta", d.plata === ctx.totalVenta("papa", 328), JSON.stringify(d));
+  ok("separa acreditado y resto con el mismo tipo de cambio", d.golden === Math.floor(d.plata / X.GOLDEN_EN_PLATA) && d.resto === d.plata % X.GOLDEN_EN_PLATA, JSON.stringify(d));
+  const UI = fs.readFileSync("public/game/ui.js", "utf8");
+  ok("la interfaz ya no promete $Golden por unidad", !/\$Golden c\/u/.test(UI));
+  ok("y el preview llama a la cuenta del lote", /detalleGolden\(res, q\)/.test(UI) && /Cobrar " \+ fmt\(detalle\.golden\)/.test(UI));
 }
 
 console.log("\nY NADIE IMPRIME ESOS NÚMEROS SIN PASARLOS POR EL FORMATEADOR");
@@ -127,9 +136,11 @@ console.log("\nY EL BARRIDO DE VERDAD: SE DIBUJAN LOS PANELES Y SE MIRA EL TEXTO
       BlendModes: { ADD: 1 }, Geom: {}, Display: { Color: {} } };
     const codigo = ["config", "state", "ui"].map(f => fs.readFileSync("public/game/" + f + ".js", "utf8")).join("\n;\n");
     w.eval(codigo + `
-window.__pintar = function (nivel) {
+window.__pintar = function (nivel, moneda) {
   G.level = nivel;
   Object.keys(CROP_DEF).forEach(k => { G.res[k] = 7; G.seeds[k] = 3; });
+  marketCur = moneda || "plata";
+  if (marketCur === "golden") G.res.papa = 328;  // lote con 1 $Golden y resto visible
   G.plata = 5000; G.golden = 20; G.animals = {}; G.decos = []; G.chests = []; G.planos = {};
   const sale = {};
   [["Mercado", refreshMarket], ["Semillas", refreshSeedShop], ["Herrería", refreshForge],
@@ -137,6 +148,10 @@ window.__pintar = function (nivel) {
    ["Inventario", refreshInv], ["Equipo", refreshEquip]].forEach(function (par) {
     try { par[1](); } catch (e) { sale[par[0]] = "(no se pudo pintar: " + e.message + ")"; }
   });
+  if (marketCur === "golden") {
+    const meta = document.getElementById("mv-papa"), boton = document.getElementById("vb-papa");
+    sale.__goldenPreview = { texto: meta ? meta.textContent : "", boton: boton ? boton.textContent : "" };
+  }
   sale.__html = document.body.innerHTML;
   return JSON.stringify(sale);
 };`);
@@ -151,6 +166,9 @@ window.__pintar = function (nivel) {
     });
     ok("ningún panel enseña una cola de coma flotante", !malos.length,
       malos.join(" · ") || "4 niveles × 8 paneles, todo limpio");
+    const golden = JSON.parse(w.__pintar(20, "golden")).__goldenPreview;
+    ok("$Golden muestra el resultado del lote y el resto antes del clic",
+      /Lote:.*cobr[aá]s.*\$Golden.*sin convertir/i.test(golden.texto) && /Cobrar \d+ \$Golden/.test(golden.boton), JSON.stringify(golden));
   }
 }
 

@@ -580,8 +580,6 @@
   /* registro */
   .logpanel{position:fixed;left:10px;bottom:10px;z-index:5;width:min(340px,58%);background:rgba(38,51,31,.92);border:1px solid #3c4d31;border-radius:12px;overflow:hidden}
   .loghead{width:100%;text-align:left;background:#2f3d26;border:none;color:#a9bd94;font-weight:800;font-size:12px;letter-spacing:1px;text-transform:uppercase;padding:8px 12px;cursor:pointer;display:flex;justify-content:space-between;align-items:center;border-radius:0}
-  .logpanel .arrow{transition:transform .2s;font-size:11px}
-  .logpanel.collapsed .arrow{transform:rotate(180deg)}
   .logbody{max-height:150px;overflow:hidden;padding:8px 10px}
   .logpanel.collapsed .logbody{max-height:0;padding:0 10px;overflow:hidden}
   #log{display:flex;flex-direction:column;gap:4px;font-size:12.5px;max-height:134px;overflow:auto}
@@ -594,7 +592,7 @@
   .ltabs{display:flex}
   .ltab{background:none;border:none;color:#a9bd94;font-weight:800;font-size:11px;letter-spacing:1px;text-transform:uppercase;padding:8px 12px;cursor:pointer}
   .ltab.active{color:#ffe08a;background:rgba(255,224,138,.08)}
-  .logmin{background:none;border:none;color:#a9bd94;font-size:12px;padding:6px 12px;cursor:pointer}
+  .logmin{background:none;border:none;color:#a9bd94;font-size:14px;line-height:1;padding:6px 12px;cursor:pointer}
   .logbtns{display:flex;align-items:center}
   #chatpane{display:flex;flex-direction:column;max-height:134px}
   #chat-msgs{flex:1 1 auto;min-height:0;overflow:auto;display:flex;flex-direction:column;gap:3px;font-size:12.5px;margin-bottom:6px}
@@ -703,6 +701,10 @@
     text-shadow:-2px 0 #241505,2px 0 #241505,0 -2px #241505,0 2px #241505,-1px -1px #241505,1px 1px #241505;
     transform:translate(-50%,-100%);animation:tfui .42s ease-in-out infinite alternate}
   @keyframes tfui{from{margin-top:-12px}to{margin-top:-3px}}
+  /* Si el destino está pegado al borde superior, la flecha no puede vivir arriba: se invierte
+     y nace debajo del botón. Así la primera parada del tutorial (☰ Menú) nunca queda cortada. */
+  #tuto-flecha-ui.abajo{transform:translate(-50%,0);animation:tfuiabajo .42s ease-in-out infinite alternate}
+  @keyframes tfuiabajo{from{margin-top:3px}to{margin-top:12px}}
   /* ---- PESCA v4 · LOS APAREJOS ----
      28/8 — ACÁ HABÍA UN MINIJUEGO, Y NO TENÍA QUE ESTAR.
      Vivían aquí las dos barras (progreso y tensión), las tres sombras de HTML y el botón de
@@ -1845,7 +1847,7 @@
         <button class="ltab" data-tab="chat">Chat</button>
       </div>
       <div class="logbtns">
-        <button class="logmin" id="logmin">▾</button>
+        <button class="logmin" id="logmin" aria-label="Desplegar Registro" aria-expanded="false">▾</button>
       </div>
     </div>
     <div class="logbody">
@@ -1967,7 +1969,7 @@
     // 15/8: VERSIÓN DE BUILD — rompe la caché del navegador en cada deploy (sin esto, el
     // jugador seguía corriendo el state.js viejo aunque el servidor tuviera el nuevo).
     // deploy.bat la actualiza sola (busca GF_BUILD y pone la fecha/hora del deploy).
-    const GF_BUILD = "20260923-125433";
+    const GF_BUILD = "20260923-131457";
     const files = ["game/config.js","game/nav.js","game/audio.js","game/state.js","game/save.js","game/ui.js","game/boot.js",
                    "game/farm.js","game/forest.js","game/plaza.js","game/main.js","game/update.js"];
     /* 24/8 — SE BAJAN TODOS A LA VEZ, SE EJECUTAN EN FILA (dirección: « sigue tardando en

@@ -27,9 +27,13 @@ function panel(plegado) {
     }
   } };
 }
-function cargar(paso, logPanel, memoria, guia, estado, sinSesion) {
+function control() {
+  const attrs = {};
+  return { textContent: "", attrs, setAttribute: (k, v) => { attrs[k] = String(v); } };
+}
+function cargar(paso, logPanel, memoria, guia, estado, sinSesion, logmin) {
   const ctx = {
-    $: id => id === "logpanel" ? logPanel : null,
+    $: id => ({ logpanel: logPanel, logmin })[id] || null,
     tutoActivo: () => paso,
     guiaActiva: () => guia || null,
     G: estado || { tuto: {} }
@@ -107,6 +111,21 @@ console.log("\n5 · EL CÓDIGO ESTÁ CONECTADO A LA UI REAL\n");
   const hastaTabs = UI.indexOf("const ci =", desdeTabs);
   ok("las pestañas también registran una elección", desdeTabs >= 0 && hastaTabs > desdeTabs &&
     UI.slice(desdeTabs, hastaTabs).includes("registroCambioManual(panel)"));
+}
+
+console.log("\n6 · EL CARET DICE SI EL REGISTRO ESTÁ PLEGADO U ABIERTO\n");
+{
+  const memoria = new Map(), p = panel(true), b = control();
+  const ctx = cargar({ id: "kit" }, p, memoria, null, { tuto: {} }, false, b);
+  vm.runInContext("actualizarControlRegistro($('logpanel'))", ctx);
+  ok("plegado muestra una flecha para desplegar", b.textContent === "▾" && b.attrs["aria-expanded"] === "false" && /Desplegar/.test(b.attrs["aria-label"] || ""));
+  p.classList.remove("collapsed");
+  vm.runInContext("actualizarControlRegistro($('logpanel'))", ctx);
+  ok("abierto muestra una flecha para plegar", b.textContent === "▴" && b.attrs["aria-expanded"] === "true" && /Plegar/.test(b.attrs["aria-label"] || ""));
+  const HTML = fs.readFileSync("public/index.html", "utf8");
+  ok("el estado inicial del HTML ya comunica que está plegado", /id="logmin"[^>]*aria-label="Desplegar Registro"[^>]*aria-expanded="false"/.test(HTML));
+  const MAIN = fs.readFileSync("public/game/main.js", "utf8");
+  ok("una recuperación que abre el Registro también actualiza el caret", /panel\.classList\.remove\("collapsed"\);[\s\S]{0,260}actualizarControlRegistro\(panel\)/.test(MAIN));
 }
 
 console.log(fallos ? "\n" + fallos + " fallo(s)\n" : "\nTodo en orden: Registro despeja el inicio sin perder control manual.\n");

@@ -158,6 +158,16 @@ window.__panelesDePasos = function () {
       existePanel: !!p, dentro: !!(p && s.ui && p.querySelector(s.ui)) };
   }));
 };
+/* El menú vive pegado al borde superior del HUD. La flecha normal aparece arriba del destino;
+   este sondeo maqueta esa geometría para exigir la variante debajo, visible y apuntando de vuelta. */
+window.__sondeoFlechaBorde = function () {
+  const menu = document.getElementById("menu-btn");
+  menu.getBoundingClientRect = () => ({ left: 12, top: 8, width: 42, height: 32, right: 54, bottom: 40 });
+  tutoFlechaUI(menu);
+  const f = document.getElementById("tuto-flecha-ui");
+  return JSON.stringify({ abajo: !!(f && f.classList.contains("abajo")), simbolo: f && f.textContent,
+    top: f && f.style.top, left: f && f.style.left });
+};
 /* La venta de las tres papas termina el arranque. La UI no puede sugerir $Golden: una unidad
    necesita un lote mucho mayor. Este sondeo pinta la ventana real con la moneda equivocada. */
 window.__sondeoVentaTutorial = function () {
@@ -193,6 +203,14 @@ console.log("\nLA FLECHA RECORRE LA CADENA: MENÚ → COBERTIZO");
     /* Y en cuanto se despliega, baja a la entrada del Cobertizo. */
     ok("   …y al desplegarlo, al Cobertizo", s.conMenuAbierto === "ov-cobertizo", s.conMenuAbierto);
   });
+}
+
+console.log("\nLA FLECHA DEL MENÚ SIGUE SIENDO VISIBLE EN EL BORDE SUPERIOR");
+{
+  const s = JSON.parse(w.__sondeoFlechaBorde());
+  ok("baja debajo de ☰ Menú y apunta hacia arriba", s.abajo && s.simbolo === "▲" && s.top === "40px" && s.left === "33px", JSON.stringify(s));
+  const HTML = fs.readFileSync("public/index.html", "utf8");
+  ok("la variante debajo conserva una animación propia", /#tuto-flecha-ui\.abajo\{[^}]*translate\(-50%,0\)[^}]*tfuiabajo/.test(HTML));
 }
 
 console.log("\nY EL CARTEL DICE LAS DOS PARADAS, NO SOLO EL DESTINO");

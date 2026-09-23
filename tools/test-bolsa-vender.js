@@ -65,6 +65,18 @@ console.log("\nEL ÚLTIMO PASO DEL TUTORIAL SIEMPRE COBRA EN PLATA");
   ok("y no convierten el arranque en $Golden", G.golden === 20, G.golden + " $Golden");
 }
 
+console.log("\n$GOLDEN SIGUE COBRANDO ENTEROS — EL DETALLE NO CAMBIA LA ECONOMÍA");
+{
+  G.tuto = { done: true }; G.level = 1; G.res.papa = 251; G.golden = 20;
+  campos["mq-papa"] = { value: "251" };
+  vm.runInContext("marketCur = 'golden'", ctx);
+  const detalle = ctx.ventaGolden("papa", 251);
+  ctx.sellItem("papa");
+  ok("el detalle parte del total real del lote", detalle.plata === ctx.totalVenta("papa", 251), JSON.stringify(detalle));
+  ok("acredita sólo las unidades completas de siempre", G.golden === 20 + detalle.golden && detalle.golden === Math.floor(detalle.plata / ctx.GOLDEN_EN_PLATA), JSON.stringify(detalle));
+  ok("y el resto queda explícito, sin inventar saldo nuevo", detalle.resto > 0 && detalle.resto === detalle.plata % ctx.GOLDEN_EN_PLATA, JSON.stringify(detalle));
+}
+
 console.log("\nLA RED: LA BOLSA ABIERTA SE SINCRONIZA SOLA");
 {
   abierta = true; ctx.refreshInv();   // parte de un estado ya pintado

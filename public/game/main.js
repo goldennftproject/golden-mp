@@ -148,6 +148,9 @@ function contarElErrorDeAntes() {
     const panel = document.getElementById("logpanel");
     if (panel) {
       panel.classList.remove("collapsed");
+      /* El aviso se abre por una recuperación automática, no por el botón del Registro: mantener
+         el caret y aria-expanded al día evita que diga "desplegar" mientras ya está abierto. */
+      if (typeof actualizarControlRegistro === "function") actualizarControlRegistro(panel);
       const tab = panel.querySelector('[data-tab="log"]');
       if (tab) tab.click();
     }

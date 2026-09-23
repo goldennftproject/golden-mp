@@ -290,7 +290,9 @@ function flujoTick() {
      Derivarlo de acá y no de llamadas en cada acción es lo que hace que un consumo nuevo entre
      solo el día que exista, sin que nadie se acuerde de avisar. */
   let usó = false;
-  cambios.forEach(c => { if (c.d < 0 && typeof recientesUsar === "function") { recientesUsar(c.kind, c.key); usó = true; } });
+  /* La foto de la bolsa también lleva las monedas para los chips de flujo, pero una moneda no es
+     un "último usado": no tiene icono de inventario ni una cantidad restante útil para la tira. */
+  cambios.forEach(c => { if (c.d < 0 && c.kind !== "moneda" && typeof recientesUsar === "function") { recientesUsar(c.kind, c.key); usó = true; } });
   if (usó) refreshRecientes();
 }
 /* la tira lateral: tres casillas al borde derecho, con el ícono y CUÁNTO QUEDA — que es la
@@ -2803,7 +2805,9 @@ function refreshCookingV2() {
   d += '<div class="ck-fila"><span>⏱</span><b>' + fmtSecs(Math.round((r.cookS || 8) * (typeof cocinaFactor === "function" ? cocinaFactor() : 1))) + '</b></div>';
   d += '<div class="ck-fila"><span>✨ XP</span><b>' + r.xp + '</b></div>';
   if (r.heal) d += '<div class="ck-fila"><span>❤️</span><b>' + (r.heal >= 9999 ? "toda" : "+" + r.heal) + '</b></div>';
-  if (r.plata) d += '<div class="ck-fila"><span>' + coinIc("plata") + '</span><b>' + fmt(vPlata) + '</b></div>';
+  /* La cifra de plata sugería un precio o recompensa que no existe: la venta libre de platos
+     está cerrada. Este renglón ocupa el mismo lugar, pero dice qué puede hacer de verdad. */
+  if (!(typeof DISH_VENTA_LIBRE !== "undefined" && DISH_VENTA_LIBRE)) d += '<div class="ck-fila ck-uso" title="Los platos no se venden en la Cocina"><span>🍽 Uso</span><b>Comer o Tablón</b></div>';
   d += '<div class="ck-fila"><span>🎒 tenés</span><b>' + fmt(own) + '</b></div>';
   const efecto = (typeof dishDesc === "function") ? dishDesc(r) : "";
   if (efecto) d += '<div class="ck-efecto">' + efecto + '</div>';
@@ -2872,9 +2876,14 @@ function tutoFlechaUI(el) {
   if (!f) { f = document.createElement("div"); f.id = "tuto-flecha-ui"; f.textContent = "▼"; document.body.appendChild(f); }
   const r = el.getBoundingClientRect();
   if (!r.width && !r.height) { f.style.display = "none"; return; }
+  /* La flecha normal vive arriba y apunta hacia abajo. El botón ☰ del HUD está a 8 px del borde:
+     ahí no hay espacio para ella, así que se coloca debajo y apunta hacia arriba. */
+  const abajo = r.top < 42;
+  f.classList.toggle("abajo", abajo);
+  f.textContent = abajo ? "▲" : "▼";
   f.style.display = "block";
   f.style.left = (r.left + r.width / 2) + "px";
-  f.style.top = r.top + "px";
+  f.style.top = (abajo ? r.bottom : r.top) + "px";
 }
 function tutoHighlight() {
   document.querySelectorAll(".tutohl").forEach(e => e.classList.remove("tutohl"));   // limpieza del sistema viejo
@@ -2943,6 +2952,13 @@ let _tutoSig = null;
 // en manos de la persona que juega (y la brújula nunca entra en esta condición).
 let _registroInicioPlegado = false, _registroCambioManual = false;
 const REGISTRO_SESION = "gf_registro_manual";
+function actualizarControlRegistro(panel) {
+  const lm = $("logmin"); if (!panel || !lm) return;
+  const plegado = panel.classList.contains("collapsed");
+  lm.textContent = plegado ? "▾" : "▴";
+  lm.setAttribute("aria-expanded", String(!plegado));
+  lm.setAttribute("aria-label", plegado ? "Desplegar Registro" : "Plegar Registro");
+}
 function registroEleccionGuardada() {
   /* La sesión del navegador es el lugar más chico para una preferencia visual. Pero algunos
      webviews la bloquean; el tutorial ya viaja en el guardado de la granja, así que queda como
@@ -2957,6 +2973,7 @@ function registroEleccionGuardada() {
 function registroCambioManual(panel) {
   const eleccion = panel && panel.classList.contains("collapsed") ? "collapsed" : "open";
   _registroCambioManual = true;
+  actualizarControlRegistro(panel);
   if (typeof G === "object" && G && G.tuto) G.tuto.registroManual = eleccion;
   try { sessionStorage.setItem(REGISTRO_SESION, eleccion); } catch (e) {}
 }
@@ -2966,6 +2983,7 @@ function registroRestaurarCambioManual() {
   const panel = $("logpanel"); if (!panel) return;
   panel.classList.toggle("collapsed", eleccion === "collapsed");
   _registroCambioManual = true;
+  actualizarControlRegistro(panel);
 }
 function plegarRegistroPrimerCiclo() {
   // hydrate() puede llegar después de initUI(): releer acá deja que el respaldo ya cargado gane.
@@ -2975,6 +2993,7 @@ function plegarRegistroPrimerCiclo() {
   if (!paso || !["kit", "buyseed", "plant", "harvest"].includes(paso.id)) return;
   const panel = $("logpanel"); if (!panel) return;
   panel.classList.add("collapsed");   // el HTML ya nace plegado: esta operación es idempotente
+  actualizarControlRegistro(panel);
   _registroInicioPlegado = true;
 }
 function tutoSync(force) {
@@ -3784,29 +3803,41 @@ function refreshMarket() {
   if (ventaTutorial) marketCur = "plata";
   const cur = marketCur;
   const minGolden = res => (typeof ventaMinGolden === "function") ? ventaMinGolden(res) : Math.max(1, Math.ceil(GOLDEN_EN_PLATA / Math.max(1, precioVenta(res))));
+  const detalleGolden = (res, q) => (typeof ventaGolden === "function")
+    ? ventaGolden(res, q)
+    : (() => { const plata = totalVenta(res, q), golden = Math.floor(plata / GOLDEN_EN_PLATA); return { plata, golden, resto: plata - golden * GOLDEN_EN_PLATA }; })();
+  const textoVenta = (res, owned, q) => {
+    if (cur === "plata") return fmtDec(marketUnit(res)) + " de plata c/u";
+    if (q <= 0) return owned > 0 ? "Elegí una cantidad" : "Sin stock";
+    const d = detalleGolden(res, q);
+    if (d.golden < 1) return "Lote: " + fmt(d.plata) + " de valor · faltan " + fmt(Math.max(0, GOLDEN_EN_PLATA - d.plata)) + " para 1 $Golden";
+    return "Lote: " + fmt(d.plata) + " de valor → cobrás " + fmt(d.golden) + " $Golden" +
+      (d.resto ? " · " + fmt(d.resto) + " sin convertir" : "");
+  };
   const estadoVender = (res, owned, q) => {
     if (owned <= 0 || q <= 0) return { disabled: true, label: "Sin stock", title: "No tenés " + RES_LABEL[res] + " para vender" };
-    if (cur === "golden" && q < minGolden(res)) {
+    const detalle = cur === "golden" ? detalleGolden(res, q) : null;
+    if (cur === "golden" && detalle.golden < 1) {
       const min = minGolden(res), faltan = Math.max(0, min - owned);
       return { disabled: true, label: faltan ? "Faltan " + fmt(faltan) : "Mín. " + fmt(min),
         title: "Para cobrar 1 $Golden necesitás " + fmt(min) + " " + RES_LABEL[res] };
     }
+    if (cur === "golden") return { disabled: false, label: "Cobrar " + fmt(detalle.golden) + " $Golden",
+      title: detalle.resto ? "Quedan " + fmt(detalle.resto) + " de valor sin convertir; no se guardan fracciones." : "" };
     return { disabled: false, label: "Vender", title: "" };
   };
   $("mkt-list").innerHTML = SELLABLE.map(res => {
-    const owned = G.res[res] || 0, q = owned > 0 ? owned : 0, u = marketUnit(res);
-    const uStr = cur === "plata" ? `${fmtDec(u)} de plata c/u` : `${fmtDec(u, 3)} $Golden c/u`;
-    const min = cur === "golden" ? minGolden(res) : 0, estado = estadoVender(res, owned, q);
-    const minimo = cur === "golden" ? ` · mínimo ${fmt(min)} para 1 $Golden` : "";
-    return `<div class="mkt-row"><span class="mimg">${itemIcon({ sprite: resSprite(res), emoji: RES_EMOJI[res] })}</span><div class="minfo"><div class="mnm">${RES_LABEL[res]}</div><div class="mds">Tenés ${fmt(owned)} · ${uStr}${minimo}</div></div><input id="mq-${res}" type="number" min="${owned > 0 ? 1 : 0}" max="${owned}" value="${q}" ${owned > 0 ? "" : "disabled"}><button class="vbtn" id="vb-${res}" ${estado.disabled ? "disabled" : ""} title="${estado.title}">${estado.label}</button></div>`;
+    const owned = G.res[res] || 0, q = owned > 0 ? owned : 0, estado = estadoVender(res, owned, q);
+    return `<div class="mkt-row"><span class="mimg">${itemIcon({ sprite: resSprite(res), emoji: RES_EMOJI[res] })}</span><div class="minfo"><div class="mnm">${RES_LABEL[res]}</div><div class="mds" id="mv-${res}">Tenés ${fmt(owned)} · ${textoVenta(res, owned, q)}</div></div><input id="mq-${res}" type="number" min="${owned > 0 ? 1 : 0}" max="${owned}" value="${q}" ${owned > 0 ? "" : "disabled"}><button class="vbtn" id="vb-${res}" ${estado.disabled ? "disabled" : ""} title="${estado.title}">${estado.label}</button></div>`;
   }).join("");
   SELLABLE.forEach(res => {
-    const btn = $("vb-" + res), inp = $("mq-" + res), owned = G.res[res] || 0;
+    const btn = $("vb-" + res), inp = $("mq-" + res), meta = $("mv-" + res), owned = G.res[res] || 0;
     const sync = () => {
       if (!btn) return;
       const q = Math.max(0, Math.min(owned, Math.floor(+(inp && inp.value) || 0)));
       const estado = estadoVender(res, owned, q);
       btn.disabled = estado.disabled; btn.textContent = estado.label; btn.title = estado.title;
+      if (meta) meta.textContent = "Tenés " + fmt(owned) + " · " + textoVenta(res, owned, q);
     };
     if (inp) { inp.oninput = sync; inp.onchange = sync; }
     if (btn) btn.onclick = () => sellItem(res);
