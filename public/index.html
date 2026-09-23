@@ -842,6 +842,10 @@
   .lom-cult .nm{flex:1;color:#f2ead5;font-weight:700}
   .lom-cult .st{font-size:10px;color:#7d8f6e}
   .lom-cult .da b{color:#ffd76a}
+  /* 23/9: el cultivo que no entra en el cupo del día se ve, pero apagado y con el motivo */
+  .lom-cult.no-entra{opacity:.5;cursor:default;border-style:dashed}
+  .lom-cult.no-entra:hover{border-color:#3c4d31;background:rgba(20,28,16,.55)}
+  .lom-cult.no-entra .st{color:#d9925a}
   .lom-boca{display:flex;align-items:center;gap:9px;padding:8px 10px;border-radius:10px;
     background:rgba(28,22,14,.6);border:1px solid #5a4327;font-size:13px;color:#cbbf9f}
   .lom-boca .em{font-size:19px}
@@ -864,6 +868,11 @@
   .p4-cana .cabre{color:#ffd75e;font-size:10px;font-weight:700}
   .p4-cana .cy{color:#ffd75e;font-weight:800}
   .p4-cana.puesta{border-color:#ffd75e}
+  /* 23/9: usos de la caña y su reparación; el cupo de lances en la cabecera */
+  .p4-cana .cu{color:#cbbf9f;font-weight:600}
+  .p4-cana .cy.rota{color:#ff9a7a}
+  .p4-cab .p4-cupo{display:block;font-size:11px;color:#cbbf9f;font-weight:600}
+  .p4-cab .p4-cupo.extra{color:#ffb27a}
   .p4-cana .cf{color:#7d8f6e;font-size:10px}
   .p4-cana button{padding:3px 9px;border-radius:7px;border:1px solid #7fa356;background:#3d5a24;
     color:#f2ead5;font-size:10px;font-weight:800;cursor:pointer}
@@ -1222,7 +1231,7 @@
   <div id="tuto" class="hidden"><span class="k">Objetivo</span><b id="tuto-txt"></b><span id="tuto-n"></span></div>
 
 
-  <div class="hudbar">
+  <div class="hudbar" id="hudbar">
     <div class="brand" style="display:flex;align-items:center;gap:12px"><h1>GOLDEN FARM</h1>
       <div class="pill" data-mvp-hud title="Ventanas del juego conectadas ahora"><span class="k">Jugadores en línea</span><b id="s-online">1</b></div>
       <!-- 14/9: el botón de PRUEBAS y el modo testeo se eliminaron (portero en modo rechazo) -->
@@ -1969,7 +1978,7 @@
     // 15/8: VERSIÓN DE BUILD — rompe la caché del navegador en cada deploy (sin esto, el
     // jugador seguía corriendo el state.js viejo aunque el servidor tuviera el nuevo).
     // deploy.bat la actualiza sola (busca GF_BUILD y pone la fecha/hora del deploy).
-    const GF_BUILD = "20260923-131457";
+    const GF_BUILD = "20260923-184205";
     const files = ["game/config.js","game/nav.js","game/audio.js","game/state.js","game/save.js","game/ui.js","game/boot.js",
                    "game/farm.js","game/forest.js","game/plaza.js","game/main.js","game/update.js"];
     /* 24/8 — SE BAJAN TODOS A LA VEZ, SE EJECUTAN EN FILA (dirección: « sigue tardando en

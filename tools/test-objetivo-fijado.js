@@ -150,6 +150,31 @@ console.log("\nEL CABLEADO DEL CLIC   (fijado con fuente: los handlers viven den
     /porQueNoAtaca\(\)/.test(src) && /const no = this\.porQueNoAtaca\(\); if \(no\) \{ toast\(no\); return; \}/.test(src));
 }
 
+console.log("\nEL CARTEL DE COMBATE NO PROMETE UNA TECLA QUE NO SIRVE");
+{
+  const esc = escena(), rata = mob(30, 0);
+  esc.monsters = [rata]; ctx.GF.uiOpen = false; ctx.GF.scene = "forest";
+  const prompt = {
+    textContent: "", clases: new Set(),
+    classList: { add(c) { prompt.clases.add(c); }, remove(c) { prompt.clases.delete(c); } }
+  };
+  const getAntes = ctx.document.getElementById;
+  ctx.document.getElementById = id => id === "prompt" ? prompt : getAntes(id);
+
+  const puertaAntes = esc.porQueNoAtaca;
+  esc.porQueNoAtaca = () => "Sin flechas en el contenedor — las que dejaste en la granja no cuentan acá";
+  esc.updatePrompt();
+  ok("si atacar está bloqueado, el cartel muestra el motivo exacto", prompt.textContent === "Sin flechas en el contenedor — las que dejaste en la granja no cuentan acá" && prompt.clases.has("show"), prompt.textContent);
+  ok("y no ofrece [E] para una acción que va a rechazar", !/\[E\]/.test(prompt.textContent), prompt.textContent);
+
+  esc.porQueNoAtaca = () => null;
+  esc.updatePrompt();
+  ok("con un arma útil, el CTA de ataque se conserva", /Atacar Rata \(30 de vida\) · \[E\]/.test(prompt.textContent), prompt.textContent);
+
+  esc.porQueNoAtaca = puertaAntes;
+  ctx.document.getElementById = getAntes;
+}
+
 console.log("");
 console.log(fallos
   ? "  " + fallos + " fallo(s) — el objetivo todavía se pierde por el camino"

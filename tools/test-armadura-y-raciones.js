@@ -154,6 +154,9 @@ console.log("\n4 · LOS PANELES NO MIENTEN (bugs encontrados abriendo el juego)\
      el jugador lo apretaba y le saltaba un aviso de que no le alcanza */
   ok("el botón de alimentar pide la ración entera, no una unidad suelta",
     /const tieneComida = d\.come\.some\(c => \(G\.res\[c\] \|\| 0\) >= racionDe\)/.test(UI));
+  ok("el atajo de alimentar todo también exige una ración completa y se desactiva si no puede alimentar a nadie",
+    /const puedeAlimTodo = typeof establoPuedeAlimentarTodo/.test(UI) && /bAli\.disabled = !puedeAlimTodo/.test(UI));
+  ok("y explica en el propio botón si falta comida o si ya comieron", /No tenés una ración completa para ningún animal con hambre/.test(UI) && /Todos los animales ya comieron este ciclo/.test(UI));
   ok("y la fila del establo dice cuántas unidades come", /const come = d\.come\.map\(c => racion \+ " "/.test(UI));
   ok("y cuántas le faltan cuando no alcanza", /te faltan <b>' \+ faltan/.test(UI));
   /* el panel decía « ACTIVO » del bono con una pieza en cero, mientras armorBono() devolvía null */

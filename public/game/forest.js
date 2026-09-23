@@ -1524,7 +1524,13 @@ class ForestScene extends Phaser.Scene {
     if (GF.uiOpen || this.action) { el.classList.remove("show"); return; }
     const m = this.nearestMonster(60);
     const far = !m && canShoot() ? this.nearestMonster(190) : null;
-    if (m) { el.textContent = "Atacar " + m.def.label + " (" + Math.ceil(m.hp) + " de vida) · [E]"; el.classList.add("show"); }
+    if (m) {
+      // El CTA y el gesto E tienen que decir la misma verdad. Sin arma útil o sin flechas,
+      // tryAttack ya se niega con este diagnóstico: no prometamos un ataque que no va a salir.
+      const bloqueo = this.porQueNoAtaca();
+      el.textContent = bloqueo || ("Atacar " + m.def.label + " (" + Math.ceil(m.hp) + " de vida) · [E]");
+      el.classList.add("show");
+    }
     else if (far) { el.textContent = "Disparar a " + far.def.label + " (" + llevoTengo("res", "flecha") + ") · [E]"; el.classList.add("show"); }
     else if (this.hero.x < 90) { el.textContent = "Volver a la granja"; el.classList.add("show"); }
     else el.classList.remove("show");

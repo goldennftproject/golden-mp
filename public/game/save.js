@@ -280,7 +280,7 @@ function snapshot() {
     dishes: G.dishes, cooking: G.cooking, horno: G.horno, chests: G.chests, dummyUsedAt: G.dummyUsedAt,   // 24/8: la cola del Horno
     armCd: G.armCd, mkPend: G.mkPend,
     layoutPlots: G.layoutPlots, layoutPond: G.layoutPond, ghInv: G.ghInv,
-    planos: G.planos, obras: G.obras, obraDep: G.obraDep, expObra: G.expObra, nfts: G.nfts,   /* 20/9: la expansión en obra (reloj absoluto) */ emergBuys: G.emergBuys, buzonLeidas: G.buzonLeidas, buzonArchivo: G.buzonArchivo, kitReclamado: G.kitReclamado, excav: G.excav, vales: G.vales, pedidos: G.pedidos, regalos: G.regalos, cobertizo: G.cobertizo, goblin: G.goblin, logros: G.logros, doma: G.doma,   // 22/8: logros cobrados (🏆) + el bicho domado   // 22/8: el Mercader Goblin recuerda su trato del día   // buzón + kit + excavaciones (15/8) · tablón + vales (16/8)   // blueprints (12/8) · capítulos + emergencia (14/8)
+    planos: G.planos, obras: G.obras, obraDep: G.obraDep, expObra: G.expObra, nfts: G.nfts, canasDur: G.canasDur, pescaDia: G.pescaDia,   /* 23/9: usos de las cañas y lances del día */   /* 20/9: la expansión en obra (reloj absoluto) */ emergBuys: G.emergBuys, buzonLeidas: G.buzonLeidas, buzonArchivo: G.buzonArchivo, kitReclamado: G.kitReclamado, excav: G.excav, vales: G.vales, pedidos: G.pedidos, regalos: G.regalos, cobertizo: G.cobertizo, goblin: G.goblin, logros: G.logros, doma: G.doma,   // 22/8: logros cobrados (🏆) + el bicho domado   // 22/8: el Mercader Goblin recuerda su trato del día   // buzón + kit + excavaciones (15/8) · tablón + vales (16/8)   // blueprints (12/8) · capítulos + emergencia (14/8)
     /* 1/9 — LA PESCA v4 ENTERA NO SE GUARDABA, y lo encontró dirección con el Lombricario:
        « no dura las 8 horas y no da las lombrices ». Las bocas, las Escamas, los récords, las
        nasas caladas, el torneo, la marea en curso: TODO moría con un F5. La v4 nació el 27/8
@@ -570,6 +570,11 @@ function hydrate(d) {
   if (d.obras && typeof d.obras === "object") G.obras = d.obras;
   G.expObra = (d.expObra && typeof d.expObra === "object" && d.expObra.hasta) ? d.expObra : undefined;   // 20/9: la expansión en obra
   if (d.nfts && typeof d.nfts === "object") G.nfts = d.nfts;   // 21/9: los NFT de recolección
+  /* 23/9: usos de cada caña y lances del día. Sin el campo (guardado viejo) la caña nace ENTERA
+     —canaUsos() lo resuelve— y el cupo del día arranca en cero; nunca se le rompe nada a nadie. */
+  G.canasDur = (d.canasDur && typeof d.canasDur === "object") ? d.canasDur : undefined;
+  G.pescaDia = (d.pescaDia && typeof d.pescaDia === "object" && typeof d.pescaDia.dia === "string")
+    ? { dia: d.pescaDia.dia, n: Math.max(0, Math.floor(d.pescaDia.n) || 0) } : undefined;
 
   if (d.emergBuys && typeof d.emergBuys === "object") G.emergBuys = d.emergBuys;   // kit de emergencia (14/8)
   if (d.buzonLeidas && typeof d.buzonLeidas === "object") G.buzonLeidas = d.buzonLeidas;   // cartas leídas del buzón (15/8)

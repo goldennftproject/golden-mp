@@ -157,5 +157,26 @@ console.log("\nCON LA BOLSA LLENA LA PIEZA ESPERA — NO SE PIERDE");
     Math.floor(G.res.tablon || 0) === 1 && ctx.hornoList().length === 0);
 }
 
+console.log("\nLO QUE ESPERA SU TURNO SE PUEDE CANCELAR (23/9, diseñador)");
+{
+  limpio(); desfase = 0;
+  const MAT_DEF = vm.runInContext("MAT_DEF", ctx);
+  ctx.craftMat("tablon"); ctx.craftMat("barra_piedra"); ctx.craftMat("barra_piedra");
+  const l = ctx.hornoList();
+  ok("tres en la fila: una al fuego y dos esperando", l.length === 3 && !ctx.hornoEsperando(l[0]) && ctx.hornoEsperando(l[1]) && ctx.hornoEsperando(l[2]));
+  const finUltima = l[2].listoAt, duraBloque = l[1].total;
+  avisos.length = 0;
+  ok("la que está al fuego NO se cancela, y lo dice", ctx.hornoCancelar(0) === false && /al fuego/.test(avisos[0]), avisos[0]);
+  const piedra = G.res.piedra;
+  ok("la segunda (esperando) sí se cancela", ctx.hornoCancelar(1) === true && ctx.hornoList().length === 2);
+  ok("y devuelve sus materiales enteros", G.res.piedra === piedra + MAT_DEF.barra_piedra.cost.piedra, piedra + " → " + G.res.piedra);
+  ok("la de atrás adelanta lo que duraba la cancelada (la fila se cierra)", ctx.hornoList()[1].listoAt === finUltima - duraBloque,
+    (finUltima - ctx.hornoList()[1].listoAt) / 1000 + " s antes");
+  ok("cancelar un índice que no existe avisa y no revienta", ctx.hornoCancelar(7) === false);
+  desfase += 10 * 3600e3; ctx.checkHorno();
+  avisos.length = 0;
+  ok("lo que ya está listo tampoco se cancela: se recoge", ctx.hornoCancelar(0) === false && /Recoger/.test(avisos[0]), avisos[0]);
+}
+
 console.log(fallos ? "\n" + fallos + " fallo(s)\n" : "\nTodo en orden: el horno cocina, no castiga.\n");
 process.exit(fallos ? 1 : 0);

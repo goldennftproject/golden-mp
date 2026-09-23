@@ -73,6 +73,8 @@ console.log("\nNO DESPERDICIA: AL LLENO NO SE LE DA DE COMER");
   avisos.length = 0;
   const dos = poblar(100);           // los dos tipos a felicidad tope
   G.res.papa = 10;
+  ok("el atajo se sabe apagar si todos ya comieron", ctx.establoPuedeAlimentarTodo() === false);
+  ok("y distingue que no queda ningún animal con hambre", ctx.establoHayHambrientos() === false);
   const r = ctx.establoAlimentarTodo();
   ok("no alimenta a nadie", (r.animales || 0) === 0);
   ok("y no gasta un solo cultivo", Math.floor(G.res.papa) === 10);
@@ -83,12 +85,15 @@ console.log("\nNO DESPERDICIA: AL LLENO NO SE LE DA DE COMER");
      queda intacta. La regla genérica del 14/8 quedó derogada. */
   G.animals[dos[1]].forEach(a => { a.feliz = 20; a.comidoAt = a.prodAt - H; });   // 11/9: con hambre = no comió desde que produjo
   avisos.length = 0;
+  ok("con hambre pero sin una ración válida, el atajo queda apagado", ctx.establoPuedeAlimentarTodo() === false);
+  ok("aunque sí reconoce que hay animales con hambre", ctx.establoHayHambrientos() === true);
   const rEstricta = ctx.establoAlimentarTodo();
   ok("con hambre y solo papa en la bolsa, NO come (dieta estricta)",
     rEstricta.animales === 0 && Math.floor(G.res.papa) === 10, JSON.stringify(rEstricta));
   /* uno lleno y otro con hambre: alimenta SOLO al que la necesita — con SU comida */
   G.res[ANIMAL_DEF[dos[1]].come[0]] = 5 * (ANIMAL_DEF[dos[1]].racion || 1);   // 14/9: 5 raciones, no 5 unidades
   avisos.length = 0;
+  ok("una ración completa vuelve a habilitar el atajo", ctx.establoPuedeAlimentarTodo() === true);
   const r2 = ctx.establoAlimentarTodo();
   ok("con uno lleno y otro con hambre, come solo el hambriento", r2.animales === 2 && r2.especies === 1,
     JSON.stringify(r2));

@@ -51,21 +51,26 @@ function casoRegistro({ plegado, movida, hotbarRect, bottomInicial, autoAntes })
   vm.runInContext("placeRegistro()", ctx);
   return { bottom: registro.style.bottom, registro: registro.getBoundingClientRect(), hotbar: hotbarRect };
 }
-function casoGuia({ plegado, movil, logRect }) {
+function casoGuia({ plegado, movil, logRect, hudRect, cssTop }) {
   const guia = {
     style: { top: "", bottom: "" }, classList: { contains: c => c === "hidden" ? false : false },
     getBoundingClientRect() {
+      if (!movil) {
+        const top = Number.parseFloat(this.style.top || cssTop || "54") || 54;
+        return rect(191, top, 218, 33);
+      }
       const bottom = this.style.bottom ? Number.parseFloat(this.style.bottom) : 96;
       return rect(191, 500 - bottom - 33, 218, 33);
     }
   };
   const registro = { classList: clases(plegado), getBoundingClientRect: () => logRect };
-  const ctx = { window: { innerHeight: 500, matchMedia: () => ({ matches: !!movil }) },
-    $: id => ({ tuto: guia, logpanel: registro })[id] || null };
+  const hudbar = hudRect ? { getBoundingClientRect: () => hudRect } : null;
+  const ctx = { window: { innerHeight: 500, matchMedia: () => ({ matches: !!movil }), getComputedStyle: () => ({ top: cssTop || "54px" }) },
+    $: id => ({ tuto: guia, logpanel: registro, hudbar })[id] || null };
   vm.createContext(ctx);
   vm.runInContext(UI.slice(desde, hasta), ctx);
   vm.runInContext("placeTuto()", ctx);
-  return { top: guia.style.top, bottom: guia.style.bottom, guia: guia.getBoundingClientRect(), registro: logRect };
+  return { top: guia.style.top, bottom: guia.style.bottom, guia: guia.getBoundingClientRect(), registro: logRect, hud: hudRect || null };
 }
 
 console.log("\n1 · LA POSICIÓN NORMAL SE CONSERVA SIN UN CRUCE\n");
@@ -122,6 +127,19 @@ console.log("\n5 · LA GUÍA MÓVIL NO SE ESCONDE DETRÁS DEL REGISTRO\n");
 
   const escritorio = casoGuia({ plegado: false, movil: false, logRect: rect(10, 306, 340, 116) });
   ok("en escritorio no mueve la guía superior", escritorio.top === "" && escritorio.bottom === "", JSON.stringify(escritorio));
+}
+
+console.log("\n6 · EN ESCRITORIO LA GUÍA LIBERA UN HUD DE DOS FILAS\n");
+{
+  const unaFila = casoGuia({ plegado: false, movil: false, logRect: rect(10, 306, 340, 116), hudRect: rect(0, 0, 1024, 42) });
+  ok("un HUD de una fila conserva el anclaje normal", unaFila.top === "", JSON.stringify(unaFila));
+
+  const dosFilas = casoGuia({ plegado: false, movil: false, logRect: rect(10, 306, 340, 116), hudRect: rect(0, 0, 1024, 76) });
+  ok("un HUD envuelto baja la guía con un margen real", dosFilas.top === "84px" && dosFilas.guia.top >= dosFilas.hud.bottom + 8,
+    JSON.stringify(dosFilas));
+
+  const bajo = casoGuia({ plegado: false, movil: false, logRect: rect(10, 306, 340, 116), hudRect: rect(0, 0, 1024, 36), cssTop: "44px" });
+  ok("en una pantalla baja sigue respetando el top compacto de CSS", bajo.top === "", JSON.stringify(bajo));
 }
 
 console.log(fallos ? "\n" + fallos + " fallo(s)\n" : "\nTodo en orden: el aviso conserva aire alrededor del Registro.\n");

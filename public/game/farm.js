@@ -1270,6 +1270,75 @@ class FarmScene extends Phaser.Scene {
     return { idx, falta, hambriento, listo, cobrable: listo && !hambriento && rinde };
   }
 
+  // La semilla que se usará al plantar. La granja ya resolvía esto AL hacer clic; el
+  // cartel de PC debe consultar la misma elección para no anunciar una papa y plantar otra.
+  semillaParaPlantar() {
+    let ck = G.selSeed;
+    if (!CROP_DEF[ck] || (G.seeds[ck] || 0) <= 0) {
+      const hb = G.hotbar && G.hotbar[G.hotSel];
+      if (hb && hb.kind === "seed" && cropUnlocked(hb.key) && (G.seeds[hb.key] || 0) > 0) ck = hb.key;
+      else {
+        const alt = CROP_ORDER.find(k => cropUnlocked(k) && (G.seeds[k] || 0) > 0);
+        if (alt) ck = alt;
+      }
+    }
+    return ck;
+  }
+
+  // El rótulo de escritorio no ofrece [E] si esa misma tecla va a ser rechazada al
+  // llegar a interactWith(). No cambia ninguna regla: reutiliza la puerta real.
+  bloqueoPrompt(o) {
+    if (!o) return null;
+    const rotulo = (x) => this.promptText(x);
+    if (o.type === "portal") {
+      const espera = (typeof zonaCdLeft === "function") ? zonaCdLeft() : 0;
+      return espera > 0 ? { ok: false, toast: "El granjero está descansando — podés volver en " + fmtDur(espera) } : null;
+    }
+    if (o.type === "tablon_pedidos") {
+      const cerrado = typeof tablonAbierto === "function" ? !tablonAbierto() : (G.tuto && !G.tuto.done);
+      return cerrado ? { ok: false, toast: this.promptText(o) } : null;
+    }
+    if (o.type === "tree") return o.locked ? { ok: false, toast: this.promptText(o) } : puedeAccion("chop", o, rotulo);
+    if (o.type === "rock") {
+      if (typeof nodoBloqueado === "function" && nodoBloqueado(o)) return { ok: false, toast: this.promptText(o) };
+      return puedeAccion("mine", o, rotulo);
+    }
+    if (o.type === "ore") return puedeAccion("mine", o, rotulo);
+    if (o.type === "plot") {
+      if (o.state === "dry") return puedeAccion("plant", { seed: this.semillaParaPlantar() });
+      if (o.state === "ready") return puedeAccion("harvest", o);
+      if (o.state !== "withered") return { ok: false, toast: this.promptText(o) };
+    }
+    if (o.type === "fish") return puedeAccion("fish", o);
+    return null;
+  }
+
+  textoBloqueoPrompt(p, respaldo) {
+    if (!p || p.ok) return respaldo;
+    if (p.bag) return "Bolsa llena — no podés " + p.bag;
+    return p.toast || respaldo;
+  }
+
+  textoPescaPC() {
+    const id = (typeof ceboPuesto === "function") ? ceboPuesto() : "lombriz";
+    const d = (typeof CEBO_V4_DEF !== "undefined") ? CEBO_V4_DEF[id] : null;
+    const bolsa = d && d.bolsa === "fish" ? (G.fish || {}) : G.res;
+    const nombre = (d && d.label) || RES_LABEL[id] || "carnada";
+    const cantidad = d ? (bolsa[d.k] || 0) : (G.res.lombriz || 0);
+    let texto = "Pescar (" + ((d && d.n) || 1) + " " + nombre.toLowerCase() + " · tenés " + fmt(cantidad) + ")";
+    const extra = (typeof lanceExtraPrecio === "function") ? lanceExtraPrecio() : 0;
+    if (extra > 0) texto += " · +" + extra + " plata por cupo";
+    return texto + " · clic derecho: aparejos";
+  }
+
+  textoPromptPC(o) {
+    if (o && o.type === "plot" && o.state === "dry") {
+      const cd = CROP_DEF[this.semillaParaPlantar()];
+      return "Plantar " + (cd ? cd.label : "cultivo");
+    }
+    return this.promptText(o);
+  }
+
   promptText(o) {
     const cd = nowMs() < o.readyAt;
     if (o.type === "boar") return "Espantar jabalí";
@@ -1607,14 +1676,9 @@ class FarmScene extends Phaser.Scene {
            pero dirección lo aclaró: el izquierdo planta directo COMO SIEMPRE (la selección de la
            hotbar/bolsa manda) y la rueda es del clic derecho — que era lo que estaba roto y ya
            tiene su armadura unas líneas más arriba. */
-        let ck = G.selSeed;
-        // si la semilla elegida no tiene stock, detectar sola la de la hotbar o la primera disponible
-        if (!CROP_DEF[ck] || (G.seeds[ck] || 0) <= 0) {
-          const hb = G.hotbar && G.hotbar[G.hotSel];
-          if (hb && hb.kind === "seed" && cropUnlocked(hb.key) && (G.seeds[hb.key] || 0) > 0) ck = hb.key;
-          else { const alt = CROP_ORDER.find(k => cropUnlocked(k) && (G.seeds[k] || 0) > 0); if (alt) ck = alt; }
-          if (ck !== G.selSeed && CROP_DEF[ck]) { G.selSeed = ck; toast("Plantando: " + CROP_DEF[ck].label); if (typeof refreshHotbar === "function") refreshHotbar(); }
-        }
+        const ck = this.semillaParaPlantar();
+        // si la semilla elegida no tiene stock, la misma elección que mostró el cartel toma su lugar.
+        if (ck !== G.selSeed && CROP_DEF[ck]) { G.selSeed = ck; toast("Plantando: " + CROP_DEF[ck].label); if (typeof refreshHotbar === "function") refreshHotbar(); }
         const pP = puedeAccion("plant", { seed: ck });
         if (!pP.ok) { avisoAccion(pP); return; }
         return this.startAction("plant", o);
@@ -5736,10 +5800,15 @@ class FarmScene extends Phaser.Scene {
     }
     const o = this.nearestInteract();
     this.cargasBadge(o);         // 2/9: mismo ⏱ sobre el nodo en el modo caminado
-    const t2 = o ? this.promptText(o) : "";
-    if (t2) { el.textContent = t2 + "  ·  [E]"; el.classList.add("show"); }
-    else if (!o && this.nearPond()) { el.textContent = "Pescar (1 lombriz · tenés " + fmt(G.res.lombriz || 0) + ") · [E]"; el.classList.add("show"); }
-    else el.classList.remove("show");
+    const agua = !o && this.nearPond() ? { type: "fish" } : null;
+    const objetivo = o || agua;
+    const t2 = objetivo ? (agua ? this.textoPescaPC() : this.textoPromptPC(objetivo)) : "";
+    const bloqueo = objetivo ? this.bloqueoPrompt(objetivo) : null;
+    const texto = this.textoBloqueoPrompt(bloqueo, t2);
+    if (texto) {
+      el.textContent = texto + (bloqueo && !bloqueo.ok ? "" : "  ·  [E]");
+      el.classList.add("show");
+    } else el.classList.remove("show");
   }
 }
 

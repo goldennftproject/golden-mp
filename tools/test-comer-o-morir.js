@@ -51,7 +51,12 @@ const DIA3 = { nivel: 5, skill: 14, combate: 5, arma: "espada_piedra", armadura:
 
 console.log("\n1 · EL DÍA 1 SE PUEDE ENTRAR (el techo del pedido)\n");
 {
-  const rata = bichosPorVida(DIA1, "rata", 300), murci = bichosPorVida(DIA1, "murcielago", 300);
+  /* 23/9: 300 tiradas daban 1,1 una de cada tantas corridas contra un umbral de 1,15 — el test
+     titilaba sin que nada cambiara. Medido con 20.000: la media real es 1,17, o sea que desde
+     el 22/9 (« la madera es un palo »: la espada de madera perdió su bono) el día 1 está a UN
+     PELO del suelo. Con 6.000 tiradas la medida es estable (±0,01); si algún día baja de 1,15
+     no es ruido, es la espada de madera. Queda dicho para dirección. */
+  const rata = bichosPorVida(DIA1, "rata", 1500), murci = bichosPorVida(DIA1, "murcielago", 6000);
   console.log("   el jugador del día 1 mata " + rata.toFixed(1) + " ratas o " + murci.toFixed(1) + " murciélagos con la vida llena");
   /* 15/9 (tarde) — el suelo BAJÓ a propósito. Pedía 3,5 ratas, o sea « la primera franja del
      pantano se limpia de un tirón »; esa tarde dirección quitó la parada a las armas de madera
@@ -62,7 +67,7 @@ console.log("\n1 · EL DÍA 1 SE PUEDE ENTRAR (el techo del pedido)\n");
      tienen que entrar DOS bichos de entrada, para que morir sea siempre consecuencia de seguir
      peleando y nunca de haber entrado. */
   ok("con la vida llena entran al menos dos ratas: la pelea no es una moneda al aire", rata >= 2, rata.toFixed(1));
-  ok("y un murciélago no te mata de una sola pelea (entrar no puede ser mortal)", murci > 1.15, murci.toFixed(1));
+  ok("y un murciélago no te mata de una sola pelea (entrar no puede ser mortal)", murci > 1.15, murci.toFixed(2));
 }
 
 console.log("\n2 · Y COMER HACE FALTA (el piso del pedido)\n");

@@ -751,6 +751,13 @@ function pescaV4Abrir() {
     if (ceb !== "lombriz") { toast("Te quedaste sin " + CEBO_V4_DEF[ceb].label + " — volvés a la lombriz"); ceb = "lombriz"; pescaEstado().cebo = "lombriz"; }
     if (!ceboTengo("lombriz")) { toast("Te faltan lombrices — cavá un montículo"); return false; }
   }
+  /* 23/9 — la caña sana y el cupo del día, ANTES de cobrar nada: si no se puede tirar, la
+     lombriz se queda en la bolsa. */
+  const canaHoy = pescaV4Cana();
+  if (!canaHoy) { toast("Tu caña está rota — reparala en Aparejos"); return false; }
+  if (typeof lanceExtraPrecio === "function" && lanceExtraPrecio() > 0 && (G.plata || 0) < lanceExtraPrecio()) {
+    toast("Ya tiraste los " + PESCA_LANCES_DIA + " lances de hoy: el siguiente cuesta " + lanceExtraPrecio() + " de plata"); return false;
+  }
   /* SE COBRA AL TIRAR, y con el carrete de vuelta la lombriz JUEGA: si el pez se escapa, se va
      con ella — dirección, 31/8: « el pez se te escapa, que cueste una lombriz: ¿por qué tiene
      que ser gratis? ». (La primera versión del carrete guardaba el pez escapado como pendiente
@@ -758,13 +765,15 @@ function pescaV4Abrir() {
      El campo `pendiente` puede quedar en guardados de esas horas: nadie lo lee y no molesta —
      borrar campos de una partida ajena por limpieza es como se pierden partidas.) */
   ceboCobrar(ceb);
+  if (typeof lanceCobrarCupo === "function") lanceCobrarCupo();   // 23/9: el 16.º lance del día paga
+  if (typeof canaDesgastar === "function") canaDesgastar(canaHoy);      // 23/9: un lance, un uso de la caña
   /* EL PEZ SE SORTEA AHORA, aunque se pelee y se enseñe al final. No es un detalle: si se
      sorteara al terminar, un jugador podría cerrar la pestaña al ver algo que no le gusta y
      volver a tirar con la misma lombriz. Decidido al pagar, el resultado ya es suyo…
      …si lo saca: el carrete decide si este pez llega a la mano, nunca cuál es. */
-  P4 = { cana: pescaV4Cana(), cebo: ceb, t: 0,
+  P4 = { cana: canaHoy, cebo: ceb, t: 0,
          dur: LANCE_ESPERA[0] + Math.random() * (LANCE_ESPERA[1] - LANCE_ESPERA[0]),
-         r: lanceSacar(pescaV4Cana(), { cebo: ceb }) };
+         r: lanceSacar(canaHoy, { cebo: ceb }) };
   const sc = pescaEscena();
   if (sc && sc.pescaTirar) sc.pescaTirar();
   if (typeof refreshHud === "function") refreshHud();
@@ -784,6 +793,15 @@ function pescaV4Cerrar() {
 /* qué caña usa: la mejor que tenga, que es lo que el jugador espera sin tener que elegirla —
    la misma decisión que ya se tomó con los picos el 24/8. */
 function pescaV4Cana() {
+  const tengo = (G.canas || {});
+  /* 23/9: la mejor que tenga Y QUE NO ESTÉ ROTA. Si todas están rotas devuelve null, y la
+     puerta del agua (puedeAccion) lo dice; el que solo quiera saber cuál es la mejor que TIENE,
+     rota o no, usa pescaV4CanaMejor. */
+  for (let i = CANA_V4_ORDER.length - 1; i >= 0; i--) { const k = CANA_V4_ORDER[i]; if (tengo[k] && !(typeof canaRota === "function" && canaRota(k))) return k; }
+  if (!Object.keys(tengo).some(k => tengo[k])) return "junco";   // sin cañas en el guardado: la de junco del kit
+  return null;
+}
+function pescaV4CanaMejor() {
   const tengo = (G.canas || {});
   for (let i = CANA_V4_ORDER.length - 1; i >= 0; i--) { const k = CANA_V4_ORDER[i]; if (tengo[k]) return k; }
   return "junco";
@@ -873,8 +891,15 @@ function pescaV4Pintar() {
   if (cab) {
     const d = CEBO_V4_DEF[ceboPuesto()] || CEBO_V4_DEF.lombriz;
     const b = d.bolsa === "fish" ? (G.fish || {}) : G.res;
+    const enUso = pescaV4Cana();
+    /* 23/9: el cupo del día va en la cabecera, siempre a la vista — es lo que decide si el
+       próximo lance es gratis o cuesta plata. */
+    const hoy = (typeof lancesHoy === "function") ? lancesHoy() : 0;
+    const extra = (typeof lanceExtraPrecio === "function") ? lanceExtraPrecio() : 0;
     cab.innerHTML = iconRes(d.bolsa === "fish" ? "lombriz" : d.k) + " " + Math.floor(b[d.k] || 0) +
-                    " " + d.label + " · " + (CANA_V4_DEF[pescaV4Cana()] || {}).label;
+                    " " + d.label + " · " + (enUso ? (CANA_V4_DEF[enUso] || {}).label : "<b style=\"color:#ff9a7a\">caña rota</b>") +
+                    (typeof PESCA_LANCES_DIA === "number" ? '<br><span class="p4-cupo' + (extra > 0 ? " extra" : "") + '">Lances de hoy: <b>' + hoy + ' de ' + PESCA_LANCES_DIA + '</b>' +
+                      (extra > 0 ? ' · el próximo cuesta <b>' + extra + '</b> de plata' : ' gratis') + '</span>' : "");
   }
   pescaV4Cebos();
   pescaV4Canas();
@@ -997,7 +1022,8 @@ function pescaV4Canas() {
   const caja = $("p4-canas"); if (!caja || typeof CANA_V4_ORDER === "undefined") return;
   const puesta = pescaV4Cana();
   const firma = puesta + "|" + CANA_V4_ORDER.map(k => (G.canas || {})[k] ? 1 : 0).join("") +
-    "|" + Math.floor(G.plata || 0) + "|" + nivelOficio("fishing");
+    "|" + Math.floor(G.plata || 0) + "|" + nivelOficio("fishing") +
+    "|" + CANA_V4_ORDER.map(k => (typeof canaAguante === "function") ? canaAguante(k) : 0).join(",");   // 23/9: los usos también repintan
   if (caja._firma === firma) return;
   caja._firma = firma;
   const base = CANA_V4_DEF.junco.banda;
@@ -1016,7 +1042,7 @@ function pescaV4Canas() {
       '<span class="cr">rareza ×' + sube + (d.mant ? ' · peaje ' + d.mant : "") +
         (nuevos.length ? '<br><span class="cabre">abre ' + nuevos.join(" · ") + '</span>' : "") +
         (tengo ? "" : '<br><span class="cc">' + canaV4Costo(k) + '</span>') + '</span>' +
-      (tengo ? '<span class="cy">' + (k === puesta ? "en uso" : "tuya") + '</span>'
+      (tengo ? canaUsosHtml(k, puesta)
              : '<button data-p4cana="' + k + '"' + (falta ? " disabled" : "") + '>' +
                (d.presupuesto == null ? "Lonja" : "Armar") + '</button>') +
       (!tengo && falta ? '<span class="cf">' + falta + '</span>' : "") +
@@ -1026,6 +1052,22 @@ function pescaV4Canas() {
   caja.querySelectorAll("[data-p4cana]").forEach(b => b.onclick = () => {
     if (canaV4Comprar(b.dataset.p4cana)) { caja._firma = null; pescaV4Canas(); pescaV4Pintar(); }
   });
+  caja.querySelectorAll("[data-p4repara]").forEach(b => b.onclick = () => {
+    if (canaReparar(b.dataset.p4repara)) { caja._firma = null; pescaV4Canas(); pescaV4Pintar(); }
+  });
+}
+/* 23/9 — LOS USOS DE UNA CAÑA QUE TENÉS, y el botón de repararla cuando le falta algo.
+   Rota se dice ROTA, en rojo y con el precio al lado: el jugador tiene que poder arreglarla
+   desde la misma fila en la que se enteró. */
+function canaUsosHtml(k, puesta) {
+  if (typeof canaAguante !== "function" || !canaSeGasta(k))
+    return '<span class="cy">' + (k === puesta ? "en uso" : "tuya") + '</span>';
+  const u = canaAguante(k), rota = u <= 0, p = canaReparaPlata(k);
+  const estado = rota ? '<span class="cy rota">rota</span>'
+    : '<span class="cy">' + (k === puesta ? "en uso" : "tuya") + ' · <span class="cu">' + u + '/' + CANA_USOS + '</span></span>';
+  const boton = p > 0 ? '<button data-p4repara="' + k + '"' + ((G.plata || 0) < p ? " disabled" : "") +
+    ' title="' + ((G.plata || 0) < p ? "Te faltan " + (p - Math.floor(G.plata || 0)) + " de plata" : "Vuelve a " + CANA_USOS + " lances") + '">Reparar · ' + p + ' 🪙</button>' : "";
+  return estado + boton;
 }
 
 /* ── LA LONJA ────────────────────────────────────────────────────────────────────────────────
@@ -1337,12 +1379,27 @@ function refreshLombricario() {
      la LISTA de cultivos con stock, y cada fila dice EXACTAMENTE cuántas lombrices daría —
      elegir con la cuenta a la vista es la única forma de que la decisión sea de verdad. */
   const b = $("lom-echar"), lista = $("lom-lista");
+  /* 23/9 (diseñador, con captura): « coloco calabazas y para las otras bocas no me deja
+     colocarlo, aparece el letrero de arriba ». No era un fallo: era el CUPO DIARIO del 9/9
+     (15 lombrices) — la calabaza se llevó 12, quedaban 3, y cebolla (11) o calabaza (12) no
+     entran. El fallo real era que el panel no lo decía: la lista ofrecía los cultivos como si
+     entraran y la única respuesta era un toast de dos segundos. Ahora el cupo está a la vista,
+     cada fila dice si entra o no, y el botón explica cuando nada entra. Regla 9. */
+  const cupoLibre = (typeof lombricesCupoLibre === "function") ? lombricesCupoLibre() : Infinity;
+  const cupoTotal = (typeof LOMBRICES_POR_DIA === "number") ? LOMBRICES_POR_DIA : 0;
   if (b) {
     const cults = lombricarioCultivos();
+    const entran = cults.filter(k => lombricarioDa(k) <= cupoLibre);
     const libre = puestas.length < bocas;
     /* la regla 9 en el propio boton: NUNCA dice solo « Echar ». Si no se puede, dice por que. */
     if (!libre)            { b.textContent = listas ? "Recogé para liberar la fila" : "La fila está llena (" + bocas + " tanda" + (bocas > 1 ? "s" : "") + " encargada" + (bocas > 1 ? "s" : "") + ")"; b.disabled = true; if (lista) lista.style.display = "none"; }
     else if (!cults.length) { b.textContent = "No tenes cultivos que echar (piden " + LOMBRICARIO_PIDE + " de uno)"; b.disabled = true; if (lista) lista.style.display = "none"; }
+    else if (cupoLibre <= 0) { b.textContent = "Cupo de hoy agotado (" + cupoTotal + " lombrices) · vuelve a las 00:00 UTC"; b.disabled = true; if (lista) lista.style.display = "none"; }
+    else if (!entran.length) {
+      const baratos = CROP_ORDER.filter(k => lombricarioDa(k) <= cupoLibre).map(k => CROP_DEF[k].label || k);
+      b.textContent = "Quedan " + cupoLibre + " del cupo de hoy: con lo que tenés no entra nada" + (baratos.length ? " (sí " + baratos.slice(0, 3).join(", ") + ")" : "");
+      b.disabled = true; if (lista) lista.style.display = "none";
+    }
     else {
       b.textContent = (lista && lista.style.display !== "none") ? "Cerrar la lista" : "Echar cultivos… (elegí cuál)";
       b.disabled = false;
@@ -1352,12 +1409,12 @@ function refreshLombricario() {
       lista.style.display = lista.style.display === "none" ? "" : "none";
       refreshLombricario();
     };
-    if (lista && lista.style.display !== "none" && libre && cults.length) {
+    if (lista && lista.style.display !== "none" && libre && entran.length) {
       lista.innerHTML = cults.map(k => {
-        const da = lombricarioDa(k), stock = Math.floor(G.res[k] || 0);
-        return '<button class="lom-cult" data-lom-cult="' + k + '">' +
+        const da = lombricarioDa(k), stock = Math.floor(G.res[k] || 0), entra = da <= cupoLibre;
+        return '<button class="lom-cult' + (entra ? "" : " no-entra") + '" data-lom-cult="' + k + '"' + (entra ? "" : ' disabled title="No entra en el cupo de hoy"') + '>' +
           '<span class="nm">' + (CROP_DEF[k].emoji || "🌱") + ' ' + (CROP_DEF[k].label || k) + '</span>' +
-          '<span class="st">tenés ' + stock + '</span>' +
+          '<span class="st">' + (entra ? "tenés " + stock : "no entra hoy · quedan " + cupoLibre) + '</span>' +
           '<span class="da">' + LOMBRICARIO_PIDE + ' → <b>' + da + ' 🪱</b></span></button>';
       }).join("");
       lista.querySelectorAll("[data-lom-cult]").forEach(el => el.onclick = (e) => {
@@ -1379,11 +1436,17 @@ function refreshLombricario() {
        dice con esas palabras para que nadie compre bocas esperando el doble de lombrices. */
     const porReloj = Math.floor(24 / LOMBRICARIO_HORAS);
     const tandas = Math.min(bocas, porReloj);
-    d.innerHTML = "Por día: <b>" + porMont + " lombrices</b> de los montículos" +
-      (lombricarioAbierto() ? " y hasta <b>" + Math.floor(total - porMont) + "</b> de este Lombricario (" +
-        tandas + " tanda" + (tandas > 1 ? "s" : "") + " de " + LOMBRICARIO_HORAS + " h, una detrás de otra, según qué quemes)" : "") +
+    /* 23/9: el cupo del día VA ACÁ, fijo, no solo en un toast. Y « 3 tandas de 8 h » ya no
+       se promete como rinde: con el cupo de 15, tres tandas solo entran si son de cultivos
+       baratos — el techo es el cupo, y las bocas son autonomía. */
+    const usadas = cupoTotal - cupoLibre;
+    d.innerHTML = (lombricarioAbierto() && cupoTotal ? "Cupo de hoy: <b>" + usadas + " de " + cupoTotal + "</b> lombrices" +
+        (cupoLibre > 0 ? " · quedan <b>" + cupoLibre + "</b>" : " · <b>agotado</b>, vuelve a las 00:00 UTC") + "<br>" : "") +
+      "Por día: <b>" + porMont + " lombrices</b> de los montículos" +
+      (lombricarioAbierto() ? " y hasta <b>" + (cupoTotal ? Math.min(cupoTotal, Math.floor(total - porMont)) : Math.floor(total - porMont)) + "</b> de este Lombricario (el cupo; tandas de " +
+        LOMBRICARIO_HORAS + " h, una detrás de otra, según qué quemes)" : "") +
       ".<br>Alcanzan para <b>" + ent + " lances</b> o <b>" + Math.floor(total / PESCA_V4_NASA_CEBO) + " nasas</b>." +
-      (lombricarioAbierto() && bocas > 1 ? "<br><span class=\"sub\">Las " + bocas + " bocas son la FILA: dejás " + bocas + " tandas encargadas y el Lombricario trabaja " + (bocas * LOMBRICARIO_HORAS) + " h sin vos.</span>" : "");
+      (lombricarioAbierto() && bocas > 1 ? "<br><span class=\"sub\">Las " + bocas + " bocas son la FILA: dejás hasta " + bocas + " tandas encargadas (mientras entren en el cupo) y el Lombricario trabaja " + (bocas * LOMBRICARIO_HORAS) + " h sin vos.</span>" : "");
   }
 }
 
@@ -1446,7 +1509,7 @@ function refreshHud() {
   /* 14/9 — el techo lo escribe el código, no el HTML. Estaba « /50 » a mano en index.html y
      siguió diciendo 50 cuando dirección bajó el techo a 25: el HUD le mentía al jugador sobre
      cuánto le falta. Ningún test lo vio porque vive en el DOM. */
-  setTxt("s-level-max", "/" + (typeof FARM_NIVEL_MAX !== "undefined" ? FARM_NIVEL_MAX : "")); setTxt("s-prestige", G.prestige); setNum("s-plata", G.plata, fmtPlata); setNum("s-golden", G.golden); setTxt("s-week", (typeof semanaActual === "function") ? semanaActual() : G.week); setTxt("s-hp", Math.ceil(G.hp) + "/" + G.hpMax); refreshVidaBarra(); refreshCombatBar(); refreshFarmBar(); bindFarmPill(); refreshBuffsPill(); if (typeof checkCooking === "function") checkCooking(); if (typeof checkHorno === "function") checkHorno(); if (typeof refreshHotbar === "function") refreshHotbar(); }
+  setTxt("s-level-max", "/" + (typeof FARM_NIVEL_MAX !== "undefined" ? FARM_NIVEL_MAX : "")); setTxt("s-prestige", G.prestige); setNum("s-plata", G.plata, fmtPlata); setNum("s-golden", G.golden); setTxt("s-week", (typeof semanaActual === "function") ? semanaActual() : G.week); setTxt("s-hp", Math.ceil(G.hp) + "/" + G.hpMax); refreshVidaBarra(); refreshCombatBar(); refreshFarmBar(); bindFarmPill(); refreshBuffsPill(); if (typeof checkCooking === "function") checkCooking(); if (typeof checkHorno === "function") checkHorno(); if (typeof refreshHotbar === "function") refreshHotbar(); if (typeof placeTuto === "function") placeTuto(); }
 // clic en la barra de estamina: ofrece la recarga premium (con su tope diario)
 function bindStamPill() {
   const pill = document.getElementById("stampill"); if (!pill || pill._bound) return;
@@ -2589,6 +2652,23 @@ function refreshHorno() {
     elCola = box.querySelector(".hn-cola"); elLista = box.querySelector(".hn-lista");
   }
   const cola = (typeof hornoList === "function") ? hornoList() : [];
+  /* 23/9 (diseñador: « que se puedan cancelar los 2 que están en cola »). La fila ahora TIENE
+     botones, así que ya no puede rehacerse cada segundo (ver arriba: rehacer el HTML bajo el
+     cursor mata el clic). Se le pone firma —qué piezas, en qué estado— y mientras la firma no
+     cambie solo se actualizan los relojes y las barras, en su sitio. */
+  const ordenada = cola.slice().sort((a, b) => a.listoAt - b.listoAt);
+  const firmaCola = ordenada.map(p => cola.indexOf(p) + ":" + p.id + ":" + (p.listo ? "L" : (typeof hornoEsperando === "function" && hornoEsperando(p)) ? "E" : "F")).join("|");
+  if (elCola._firma === firmaCola && cola.length) {
+    ordenada.forEach((p, i) => {
+      const fila = elCola.querySelectorAll(".forge-row")[i]; if (!fila) return;
+      const falta = hornoFalta(p), tot = p.total || matCdMs(p.id) || 1;
+      const esperando = (typeof hornoEsperando === "function") && hornoEsperando(p);
+      const fds = fila.querySelector(".fds"), bar = fila.querySelector(".durbar i");
+      if (fds) fds.textContent = p.listo ? "¡listo! tocá « Recoger »" : esperando ? "espera su turno · empieza en " + fmtDur(hornoEmpieza(p) - nowMs()) : "al fuego · listo en " + fmtDur(falta);
+      if (bar) bar.style.width = (esperando ? 0 : Math.max(0, Math.min(100, Math.round((1 - falta / tot) * 100)))) + "%";
+    });
+  } else {
+  elCola._firma = firmaCola;
   let html = "";
   if (cola.length) {
     /* « Al fuego » era verdad cuando las tres se fundían a la vez. Con la fila, solo UNA está al
@@ -2597,7 +2677,7 @@ function refreshHorno() {
     const alFuego = cola.filter(p => !p.listo && !(typeof hornoEsperando === "function" && hornoEsperando(p))).length;
     html += '<div class="secc">🔥 En el horno (' + cola.length + '/' + hornoSlots() + ')' +
       (alFuego ? ' · 1 al fuego' : '') + '</div>';
-    html += cola.slice().sort((a, b) => a.listoAt - b.listoAt).map(p => {
+    html += ordenada.map(p => {
       const md = MAT_DEF[p.id] || { label: p.id, sprite: "res_tablon" }, falta = hornoFalta(p);
       const tot = p.total || matCdMs(p.id) || 1;
       const pct = Math.max(0, Math.min(100, Math.round((1 - falta / tot) * 100)));
@@ -2613,7 +2693,7 @@ function refreshHorno() {
         '<div class="fnm">' + md.label + '</div>' +
         '<div class="durbar"><i style="width:' + (esperando ? 0 : pct) + '%"></i></div>' +
         '<div class="fds">' + txt + '</div>' +
-        '</div><div class="fbtns"></div></div>';
+        '</div><div class="fbtns">' + (esperando ? '<button class="ghost sm" data-hn-cancelar="' + cola.indexOf(p) + '" title="Sacarla de la fila: vuelven los materiales">✕ Cancelar</button>' : "") + '</div></div>';
     }).join("");
     /* el botón de recoger, con el número: « Recoger » a secas obliga a contar las filas. */
     const listasH = cola.filter(p => p.listo).length;
@@ -2624,6 +2704,8 @@ function refreshHorno() {
   elCola.innerHTML = html;
   const bRec = $("hn-recoger");
   if (bRec) bRec.onclick = () => { hornoRecoger(); refreshHorno(); if (isOpen("ov-inv")) refreshInv(); };
+  elCola.querySelectorAll("[data-hn-cancelar]").forEach(b => b.onclick = () => { hornoCancelar(+b.dataset.hnCancelar); });
+  }
 
   /* --- lo que se puede fundir. El botón del LOTE dice cuántos van a entrar de verdad --- */
   /* 24/8 (diseñador: « dice craft 5 y craftea 3; o craftea de 5 en 5 o dice craftear 3 »).
@@ -3520,7 +3602,16 @@ function refreshEstablo() {
   const lleno = animalesTotal() >= establoCupo();
   // 23/8 (QoL): los botones "todo" — se atan acá (la ventana puede redibujarse mil veces, el onclick pisa al anterior)
   const bAli = $("est-alim-todo"), bRec = $("est-rec-todo");
-  if (bAli) { bAli.onclick = () => { if (typeof establoAlimentarTodo === "function") establoAlimentarTodo(); }; bAli.disabled = !animalesTotal(); }
+  if (bAli) {
+    const puedeAlimTodo = typeof establoPuedeAlimentarTodo === "function" && establoPuedeAlimentarTodo();
+    const hayHambrientos = typeof establoHayHambrientos === "function" && establoHayHambrientos();
+    bAli.onclick = () => { if (typeof establoAlimentarTodo === "function") establoAlimentarTodo(); };
+    bAli.disabled = !puedeAlimTodo;
+    bAli.title = !animalesTotal() ? "No tenés animales"
+      : puedeAlimTodo ? "Alimenta a los animales con hambre mientras haya raciones completas"
+      : hayHambrientos ? "No tenés una ración completa para ningún animal con hambre"
+      : "Todos los animales ya comieron este ciclo";
+  }
   if (bRec) {
     if (typeof establoRecogerTodo === "function") bRec.onclick = () => establoRecogerTodo();
     const hayListo = ANIMAL_ORDER.some(k => animalListos(k) > 0);
@@ -4675,12 +4766,23 @@ function placePrompt() {
 }
 /* En móvil el objetivo queda sobre la hotbar por CSS. Tanto abierto como plegado, el Registro
    puede ocupar esa franja; se mide la colisión real y se sube sólo entonces. En escritorio se
-   conserva el anclaje original, y al cerrarlo/restaurarlo se vuelve al CSS puro. */
+   conserva su anclaje CSS, salvo cuando el HUD real envolvió una segunda fila: ahí baja justo
+   debajo de esa caja para no escribir una instrucción encima de las píldoras. */
 function placeTuto() {
   const guia = $("tuto"), registro = $("logpanel");
   if (!guia) return;
   guia.style.top = ""; guia.style.bottom = "";   // no dejar una posición vieja tras cerrar Registro
-  if (guia.classList.contains("hidden") || !window.matchMedia || !window.matchMedia("(max-width: 640px)").matches) return;
+  if (guia.classList.contains("hidden")) return;
+  const movil = !!(window.matchMedia && window.matchMedia("(max-width: 640px)").matches);
+  if (!movil) {
+    const hud = $("hudbar");
+    if (!hud) return;
+    const hr = hud.getBoundingClientRect();
+    const cssTop = parseFloat(window.getComputedStyle ? window.getComputedStyle(guia).top : "") || 54;
+    // Una sola fila respeta exactamente el top que dicta CSS; sólo la segunda fila crea el hueco.
+    if (hr.width && hr.height && hr.bottom + 8 > cssTop) guia.style.top = Math.ceil(hr.bottom + 8) + "px";
+    return;
+  }
   if (!registro) return;
   const gr = guia.getBoundingClientRect(), rr = registro.getBoundingClientRect();
   if (!gr.width || !gr.height || !rr.width || !rr.height || !rectsSeCruzan(gr, rr, 8)) return;
@@ -5013,17 +5115,22 @@ function refreshIncursion() {
   INC_ORDER.forEach(k => {
     const z = INCURSIONES[k];
     const listo = poder >= z.poderRec, flojo = poder < z.poderRec * 0.5;
+    /* 23/9: el nivel del cuarto manda, como a pie. Sin nivel la fila lo dice y el botón no sale. */
+    const nivelOk = (typeof incPuedeNivel === "function") ? incPuedeNivel(k) : true;
+    const nivelReq = (typeof incNivelReq === "function") ? incNivelReq(k) : 1;
     const est = z.mobs.map(m => (MONSTER_DEF[m] ? MONSTER_DEF[m].label : m)).join(", ");
-    h += '<div class="forge-row' + (flojo ? ' locked' : '') + '"><div class="finfo">' +
-      '<div class="fnm">' + z.label + ' <span class="tag">' + fmtSecs(z.min * 60) + '</span></div>' +
+    h += '<div class="forge-row' + (flojo || !nivelOk ? ' locked' : '') + '"><div class="finfo">' +
+      '<div class="fnm">' + z.label + ' <span class="tag">' + fmtSecs(z.min * 60) + '</span>' +
+        (nivelReq > 1 ? ' <span class="tag">Combate ' + nivelReq + '</span>' : '') + '</div>' +
       '<div class="fds">' + est + '</div>' +
-      '<div class="fds">Poder recomendado: ' + z.poderRec +
+      '<div class="fds">' + (!nivelOk ? '<b style="color:#b03a2e">Pide Combate ' + nivelReq + '</b> (tenés ' + ((typeof combatInfo === "function") ? combatInfo().lvl : 1) + ') — el mismo nivel que entrar a pie · ' : '') +
+        'Poder recomendado: ' + z.poderRec +
         (listo ? ' — <b style="color:#3f6b2a">estás listo</b>'
                : (flojo ? ' — <b style="color:#b03a2e">te van a superar</b>'
                         : ' — vas justo: volverías herido y con menos botín')) + '</div></div>' +
       // el cupo diario también bloquea el botón: antes salía verde y incSalir rebotaba con un
       // toast, aunque la misma ventana mostraba "incursiones de hoy: n/N" (10/8)
-      '<div class="fbtns"><button class="green sm" ' + (inc || !poder || sinCupo ? "disabled" : "") + ' data-inc="' + k + '">Salir</button></div></div>';
+      '<div class="fbtns"><button class="green sm" ' + (inc || !poder || sinCupo || !nivelOk ? "disabled" : "") + ' data-inc="' + k + '">' + (nivelOk ? "Salir" : "Nivel " + nivelReq) + '</button></div></div>';
   });
   h += '<div class="info">Al Dragón de las Cavernas hay que ir a pelearlo en persona: no se puede por incursión.</div>';
   box.innerHTML = h;

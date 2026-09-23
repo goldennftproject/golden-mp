@@ -1295,6 +1295,35 @@ function craftMat(id) {
   if (typeof saveFarm === "function") saveFarm(true);
 }
 
+/* 23/9 (diseñador, con captura de la fila: « agregar que se puedan cancelar los 2 que están en
+   cola »). Solo lo que ESPERA SU TURNO se cancela: la pieza al fuego ya está gastando su reloj
+   y la lista ya es del jugador. Cancelar devuelve los materiales enteros —no se cobró nada por
+   una pieza que no empezó— y la fila se CIERRA: las que venían detrás adelantan lo que duraba
+   la que se fue, porque sus horas de fin estaban encadenadas a ella. Sin ese corrimiento la
+   fila tendría un hueco de 8 minutos en el que el horno no funde nada. */
+function hornoCancelar(idx) {
+  const l = hornoList(), p = l[idx];
+  if (!p) { toast("Esa pieza ya no está en la fila"); return false; }
+  if (p.listo) { toast("Ya está lista — tocá « Recoger »"); return false; }
+  if (!hornoEsperando(p)) { toast("Ya está al fuego: no se puede cancelar"); return false; }
+  const md = MAT_DEF[p.id]; if (!md) { l.splice(idx, 1); return false; }
+  /* los materiales vuelven a la bolsa: si no entran, no se cancela — dejarlos caer al vacío
+     sería peor que dejar la pieza en la fila */
+  const sinLugar = Object.keys(md.cost).find(k => !roomForRes(k, md.cost[k]));
+  if (sinLugar) { toast("Bolsa llena — hacé lugar para recuperar " + md.cost[sinLugar] + " " + (RES_LABEL[sinLugar] || sinLugar)); return false; }
+  const dura = p.total || matCdMs(p.id);
+  l.splice(idx, 1);
+  for (const q of l) if ((q.listoAt || 0) > (p.listoAt || 0)) q.listoAt -= dura;   // las de atrás adelantan
+  for (const k in md.cost) G.res[k] = (G.res[k] || 0) + md.cost[k];
+  log("Sacaste 1 " + md.label + " de la fila del Horno: volvieron " +
+      Object.keys(md.cost).map(k => md.cost[k] + " " + (RES_LABEL[k] || k)).join(" y ") + ".", "info");
+  toast("Cancelado · materiales de vuelta");
+  if (typeof refreshHorno === "function" && isOpen("ov-horno")) refreshHorno();
+  if (isOpen("ov-inv")) refreshInv(); refreshHud();
+  if (typeof saveFarm === "function") saveFarm(true);
+  return true;
+}
+
 // --- lombrices: carnada de pesca. WORM_PRICE es su precio SOMBRA (tasa el compost y las
 // cuentas de la pesca) — desde el 1/9 la lombriz NO SE COMPRA en ninguna parte: dirección,
 // « solo quisiera que se obtengan por los montículos que salen en la granja y quemando
@@ -3932,13 +3961,22 @@ async function marketCobrar(fila) {
 // Gasta durabilidad del arma y estamina. Rinde menos que pelear a mano: el que juega, gana más.
 var INC_RENDIMIENTO = 0.7;    // 70% de lo que rendiría esa misma media hora peleando
 var INC_CUPO_DIA = 3;         // incursiones por día (0 = sin tope)
+/* 23/9 (diseñador, con captura): « pasar al 2.º cuarto de Zona Negra pide nivel 10; no tiene
+   sentido que por tener una espada de hierro pueda ir a la zona 2 siendo nivel 6. Ponle que en
+   la incursión de un clic deba tener nivel 10, lo mismo para las otras: que se respete el nivel ».
+   Cada incursión es un cuarto de la Zona (campo `zona`), y pide el MISMO nivel de Combate que
+   pide entrar a pie a ese cuarto (ZONA_DEF[...].lvl, zonaPuedeEntrar): una sola tabla de niveles,
+   no dos que envejecen distinto. Sin esto el poder del arma era la única puerta, y el poder se
+   compra en la Herrería; el nivel se gana peleando. */
 const INCURSIONES = {
-  zn1: { label:"Zona Negra I",   min:10, mobs:["rata","murcielago","larva","baba","arana"],           poderRec:8 },
-  zn2: { label:"Zona Negra II",  min:20, mobs:["goblin","orco","esqueleto","lancero","golem"],        poderRec:20 },
-  zn3: { label:"Zona Negra III", min:30, mobs:["hombre_lobo","guerrero","troll","ogro","espectro"],   poderRec:35 },
-  guarida: { label:"Guarida",    min:45, mobs:["demonio"],                                             poderRec:55 },
+  zn1: { label:"Zona Negra I",   min:10, mobs:["rata","murcielago","larva","baba","arana"],           poderRec:8,  zona:"pantano" },
+  zn2: { label:"Zona Negra II",  min:20, mobs:["goblin","orco","esqueleto","lancero","golem"],        poderRec:20, zona:"piedra" },
+  zn3: { label:"Zona Negra III", min:30, mobs:["hombre_lobo","guerrero","troll","ogro","espectro"],   poderRec:35, zona:"fuego" },
+  guarida: { label:"Guarida",    min:45, mobs:["demonio"],                                             poderRec:55, zona:"guarida" },
 };
 const INC_ORDER = ["zn1", "zn2", "zn3", "guarida"];
+function incNivelReq(k) { const z = INCURSIONES[k]; const zd = z && ZONA_DEF[z.zona]; return zd ? (zd.lvl || 1) : 1; }
+function incPuedeNivel(k) { const z = INCURSIONES[k]; return !!(z && z.zona) && zonaPuedeEntrar(z.zona); }
 function incPoder() {   // poder de combate del jugador con lo que tiene equipado
   const id = armaEq(); if (!id) return 0;
   let p = playerMaxDamage(id) / 2;                     // 11/9: la media de la tirada de Tibia
@@ -3958,6 +3996,7 @@ function incSalir(zona) {
   if (incActiva()) { toast("Ya hay una incursión en curso"); return; }
   const cupo = incCupoHoy();
   if (INC_CUPO_DIA && cupo.n >= INC_CUPO_DIA) { toast("Ya hiciste las " + INC_CUPO_DIA + " incursiones de hoy"); return; }
+  if (!incPuedeNivel(zona)) { toast(z.label + " pide Combate " + incNivelReq(zona) + " — igual que entrar a pie"); return; }   // 23/9
   const id = armaEq();
   if (!id) { toast("Necesitás un arma equipada"); return; }
   if ((G.weapons[id].dur || 0) <= 5) { toast("El arma está muy gastada — reparala en la Herrería"); return; }
@@ -5604,6 +5643,16 @@ function animalFaltaDe(k, i) {
    produzca ». Escrito en docs/LEYES.md como ley 4. Lo custodia tools/test-establo-hambre.js. */
 function animalComioEsteCiclo(a) { return !!a && (a.comidoAt || 0) >= (a.prodAt || 0) && (a.comidoAt || 0) > 0; }
 function animalHambriento(a) { return !animalComioEsteCiclo(a); }
+// La UI no debe ofrecer "alimentar todo" si no puede completar ni UNA ración válida.
+// Se apoya en la misma regla estricta que alimentarUno: hambre real + ración entera de su dieta.
+function animalPuedeComer(k) {
+  const d = ANIMAL_DEF[k];
+  if (!d || !animalLista(k).some(animalHambriento)) return false;
+  const racion = d.racion || 1;
+  return d.come.some(c => (G.res[c] || 0) >= racion);
+}
+function establoPuedeAlimentarTodo() { return ANIMAL_ORDER.some(animalPuedeComer); }
+function establoHayHambrientos() { return ANIMAL_ORDER.some(k => animalLista(k).some(animalHambriento)); }
 function animalRinde(k, i) {   // lo que da ESE animal: su unidad si comió este ciclo, nada si no
   const a = animalLista(k)[i]; if (!a) return 0;
   return animalComioEsteCiclo(a) ? animalPorCiclo(k) : 0;
@@ -7242,6 +7291,15 @@ function puedeAccion(tipo, o, rotulo) {
     const ceb = (typeof ceboPuesto === "function") ? ceboPuesto() : "lombriz";
     if (typeof ceboTengo === "function" && !ceboTengo(ceb) && !ceboTengo("lombriz"))
       return { ok: false, toast: "Necesitás carnada — cavá un montículo o echá cultivos al Lombricario" };
+    /* 23/9 — la caña se gasta (CANA_USOS) y el día tiene cupo (PESCA_LANCES_DIA). Las dos
+       puertas nuevas se preguntan ACÁ, en la única puerta del agua, y no en el botón. */
+    if (typeof pescaV4Cana === "function" && !pescaV4Cana())
+      return { ok: false, toast: "Tu caña está rota — reparala en Aparejos", log: "Todas tus cañas están rotas. Se reparan en Aparejos (junto a la laguna) con plata.", logTipo: "bad" };
+    if (typeof lanceExtraPrecio === "function") {
+      const extra = lanceExtraPrecio();
+      if (extra > 0 && (G.plata || 0) < extra)
+        return { ok: false, toast: "Ya tiraste los " + PESCA_LANCES_DIA + " lances de hoy: el siguiente cuesta " + extra + " de plata y tenés " + Math.floor(G.plata || 0) };
+    }
     if (!roomForFish()) return { ok: false, bag: "pescar" };
     return OK;
   }
@@ -8392,6 +8450,123 @@ function canaV4Comprar(id) {
   log("Armaste la " + d.label + " (" + canaV4Costo(id) + "). Es tuya para siempre — lo que cuesta usarla es el peaje de cada lance.", "gold");
   return true;
 }
+/* ═══ LA CAÑA SE GASTA Y SE REPARA   (23/9, diseñador, Discord 05:08) ═══════════════════════
+   « vamos a agregar durabilidad a la caña: 50 usos, y para reparar el 50 % de lo que cuesta,
+     que es literalmente nada… pero no puede ser eterna ».
+
+   Arriba dice « las de la v4 no se gastan: el peaje ya es su coste de uso ». Eso se escribió el
+   27/8 y hoy dirección lo cambia: la caña tiene que romperse, como la armadura (14/9). Lo que
+   NO cambia es el ancla: cada lance deja 9-12 de plata netos (BALANCE-PESCA.md, y el test del
+   bolsillo lo mide en la bolsa). Ahí el « 50 % de lo que cuesta » no era « nada »: era nada
+   PARA LA DE JUNCO (0,3 por lance) y una ruina para las de arriba — reparar la de Hierro al
+   50 % cada 50 lances son 12 de plata por lance contra 10,35 de neto; la de Oro, 13,6 contra
+   10,56. Pescarían a pérdida. Se le mostró la cuenta a dirección (23/9) y eligió « 50 usos y
+   reparar al 10 % »: junco 0,06 · bambú 0,56 · hierro 2,4 · oro 2,7 por lance.
+   (Con el 10 % Hierro y Oro quedan en 7,9 netos: por debajo del piso de 9 de la banda, pero
+   lejos de la pérdida. Si dirección quiere la banda intacta, CANA_REPARA_PCT = 0.05 la deja
+   en 9,15 y 9,2. Es UNA constante, y queda dicho.)
+
+   CÓMO:
+     · cada caña comprada nace con CANA_USOS; cada lance gasta uno (al TIRAR, donde se cobra la
+       lombriz — el pez que se escapa también gastó la caña);
+     · a cero está ROTA: no se tira con ella. El juego elige sola la mejor caña SANA (como los
+       picos); si todas están rotas, la puerta del agua lo dice;
+     · reparar cuesta PLATA: CANA_REPARA_PCT del valor de la caña (materiales a precio de venta
+       + cola de plata), proporcional a lo que le falta — como la armadura. Plata y no
+       materiales porque los de las cañas altas son indivisibles: « el 10 % de un cuero » es un
+       cuero entero (742), y con eso volvía la ruina por la ventana;
+     · la del Abuelo no se compra (se gana en la Lonja): no se gasta. No tiene valor del que
+       sacar un 10 %, y un premio que se rompe no es un premio;
+     · los guardados viejos no tienen G.canasDur: la caña nace ENTERA, no rota. Nunca se le
+       rompe algo a un jugador por una migración. */
+var CANA_USOS = 50;
+var CANA_REPARA_PCT = 0.10;
+function canaSeGasta(id) { const d = CANA_V4_DEF[id]; return !!(d && d.cost); }
+function canaAguante(id) {
+  if (!canaSeGasta(id)) return Infinity;
+  const u = (G.canasDur || {})[id];
+  return (typeof u === "number" && isFinite(u)) ? Math.max(0, Math.floor(u)) : CANA_USOS;
+}
+function canaRota(id) { return canaSeGasta(id) && canaAguante(id) <= 0; }
+function canaDesgastar(id, n) {
+  if (!canaSeGasta(id)) return;
+  G.canasDur = G.canasDur || {};
+  G.canasDur[id] = Math.max(0, canaAguante(id) - (n || 1));
+  if (G.canasDur[id] === 0) {
+    const d = CANA_V4_DEF[id];
+    log("🎣 Se rompió la " + d.label + " después de " + CANA_USOS + " lances. Se repara en Aparejos por " + canaReparaPlata(id) + " de plata.", "bad");
+    toast("Se rompió la " + d.label + " — reparala en Aparejos");
+  }
+}
+/* lo que vale la caña, en plata: sus materiales a precio de venta más la cola. Es la base del
+   10 % de la reparación. */
+function canaValorPlata(id) {
+  const d = CANA_V4_DEF[id]; if (!d || !d.cost) return 0;
+  let v = d.colaPlata || 0;
+  for (const k in d.cost) v += d.cost[k] * ((typeof precioVenta === "function") ? precioVenta(k) : 0);
+  return v;
+}
+function canaReparaPlata(id) {
+  if (!canaSeGasta(id)) return 0;
+  const falta = 1 - canaAguante(id) / CANA_USOS;
+  if (falta <= 0) return 0;
+  return Math.max(1, Math.ceil(canaValorPlata(id) * CANA_REPARA_PCT * falta));
+}
+function canaReparar(id) {
+  const d = CANA_V4_DEF[id];
+  if (!d || !(G.canas || {})[id]) { toast("No tenés esa caña"); return false; }
+  if (!canaSeGasta(id)) { toast("La " + d.label + " no se gasta"); return false; }
+  const p = canaReparaPlata(id);
+  if (p <= 0) { toast("La " + d.label + " está entera"); return false; }
+  if ((G.plata || 0) < p) { toast("Reparar la " + d.label + " cuesta " + p + " de plata — te faltan " + (p - Math.floor(G.plata || 0))); return false; }
+  G.plata -= p;
+  G.canasDur = G.canasDur || {}; G.canasDur[id] = CANA_USOS;
+  log("🎣 Reparaste la " + d.label + " por " + p + " de plata: otra vez " + CANA_USOS + " lances.", "good");
+  toast("Caña reparada · −" + p + " plata");
+  if (typeof refreshHud === "function") refreshHud();
+  if (typeof saveFarm === "function") saveFarm();
+  return true;
+}
+
+/* ═══ EL CUPO DE LANCES   (23/9, diseñador, Discord 10:32) ═══════════════════════════════════
+   « en la pesca vamos a colocar 15 intentos diarios y si quieren más intentos que cada intento
+     cueste: 1 × 5 plata, 2 × 10 de plata, y subiendo… la pesca es una imprenta, hay que
+     controlar eso ».
+   Es el mismo gesto que el cupo de lombrices del 9/9 (15 al día), del otro lado del agua: la
+   lombriz limita cuánta carnada se fabrica, esto limita cuánto se tira. Los primeros 15 lances
+   del día son gratis (aparte de la lombriz y el peaje); a partir del 16.º cada lance cuesta
+   PESCA_LANCE_EXTRA_PLATA × (lances extra hasta ahora + 1): 5, 10, 15, 20… No es un candado:
+   es un precio que sube hasta que deja de valer la pena, que es lo que « y subiendo » pide.
+   Se cobra AL TIRAR, junto con la lombriz, y el día es el UTC del resto del juego. */
+var PESCA_LANCES_DIA = 15;
+var PESCA_LANCE_EXTRA_PLATA = 5;
+function lancesHoy() {
+  const hoy = hoyClave();
+  if (!G.pescaDia || G.pescaDia.dia !== hoy) G.pescaDia = { dia: hoy, n: 0 };
+  return G.pescaDia.n;
+}
+function lancesLibresHoy() { return Math.max(0, PESCA_LANCES_DIA - lancesHoy()); }
+/* lo que cuesta el PRÓXIMO lance por encima del cupo (0 mientras quede cupo) */
+function lanceExtraPrecio() {
+  const extra = lancesHoy() - PESCA_LANCES_DIA + 1;
+  return extra <= 0 ? 0 : extra * PESCA_LANCE_EXTRA_PLATA;
+}
+function lanceCobrarCupo() {
+  const p = lanceExtraPrecio();
+  if (p > 0) {
+    if ((G.plata || 0) < p) return false;
+    G.plata -= p;
+    log("🎣 Lance extra (ya tiraste los " + PESCA_LANCES_DIA + " de hoy): −" + p + " de plata. El siguiente cuesta " + (p + PESCA_LANCE_EXTRA_PLATA) + ".", "info");
+    toast("Lance extra · −" + p + " plata");
+  }
+  lancesHoy(); G.pescaDia.n += 1;
+  return true;
+}
+function lanceExtraTxt() {
+  const p = lanceExtraPrecio();
+  return p > 0 ? "Ya tiraste los " + PESCA_LANCES_DIA + " lances de hoy: el siguiente cuesta " + p + " de plata" : "";
+}
+
 function lanceNeto(cana, opciones) {   // lo que queda después del peaje de la caña
   const c = CANA_V4_DEF[cana]; if (!c) return 0;
   return Math.round((lanceValorEsperado(cana, opciones) - (c.mant || 0)) * 100) / 100;
