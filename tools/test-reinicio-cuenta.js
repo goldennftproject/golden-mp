@@ -88,6 +88,8 @@ function fin() {
   const html = fs.readFileSync(path.join(RAIZ, "public/index.html"), "utf8");
   const ui = fs.readFileSync(path.join(RAIZ, "public/game/ui.js"), "utf8");
   ok("está en Configuración → Cuenta, en rojo y con la advertencia", /id="cfg-reiniciar"/.test(html) && /class="red sm" id="cfg-reiniciar"/.test(html) && /No se puede deshacer/.test(html));
+  const cssDanger = html.slice(html.indexOf("/* Reiniciar una granja no es otro ajuste."), html.indexOf("/* ---- UI de madera", html.indexOf("/* Reiniciar una granja no es otro ajuste.")));
+  ok("en PC se distingue como una zona irreversible, sin afectar móvil", /@media\(min-width:641px\)[\s\S]*#ov-config \.cfg-danger/.test(html) && /#ov-config \.cfg-danger::before\{content:"ACCIÓN IRREVERSIBLE"/.test(cssDanger) && /#ov-config \.cfg-danger #cfg-reiniciar\{width:100%\}/.test(cssDanger));
   const bloque = ui.slice(ui.indexOf('$("cfg-reiniciar")'), ui.indexOf('$("cfg-reiniciar")') + 1500);
   ok("dos askConfirm encadenados antes de resetearCuenta()", (bloque.match(/askConfirm\(/g) || []).length >= 2 && /await resetearCuenta\(\)/.test(bloque));
   ok("con el OK recarga la página; con el no, dice por qué", /location\.reload\(\)/.test(bloque) && /No se pudo reiniciar/.test(bloque));

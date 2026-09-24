@@ -3615,7 +3615,11 @@ function refreshEstablo() {
   if (bRec) {
     if (typeof establoRecogerTodo === "function") bRec.onclick = () => establoRecogerTodo();
     const hayListo = ANIMAL_ORDER.some(k => animalListos(k) > 0);
-    bRec.disabled = !hayListo;
+    const puedeRecogerAlgo = typeof establoPuedeRecogerAlgo === "function" && establoPuedeRecogerAlgo();
+    bRec.disabled = !puedeRecogerAlgo;
+    bRec.title = !hayListo ? "Nada listo para recoger todavía"
+      : puedeRecogerAlgo ? "Recoge todo lo que esté listo y entre en la bolsa"
+      : "Bolsa llena — liberá un espacio para recoger la producción";
   }
   if (cupoEl) cupoEl.textContent = "Lugares: " + animalesTotal() + "/" + establoCupo() + " (cada nivel de Ganadería suma uno, hasta " + ESTABLO_CUPO_MAX + ").";
   let h = "";
@@ -3656,6 +3660,7 @@ function refreshEstablo() {
       const bicho = animalLista(k)[i];
       const fi = animalFelizDe(bicho), faltaI = animalFaltaDe(k, i), listoI = faltaI <= 0;
       const rindeI = animalRinde(k, i), guardI = animalGuardado(k, i), comio = animalComioEsteCiclo(bicho);
+      const puedeRecogerI = listoI && (typeof animalPuedeRecoger !== "function" || animalPuedeRecoger(k, i));
       /* 11/9 (dirección): « le da hambre cada 24h; si no come no da nada y sigue el CD ». La fila
          dice las dos cosas que importan y nada más: si comió este ciclo, y qué va a dar. */
       const totalI = Math.floor(rindeI + guardI + 1e-9);
@@ -3675,7 +3680,9 @@ function refreshEstablo() {
             : ' — te faltan <b>' + faltan + '</b> ' + (CROP_DEF[masCerca] ? CROP_DEF[masCerca].label : masCerca))) + '</div></div>' +
         '<div class="fbtns">' +
           '<button class="green sm" ' + (tieneComida && !comio ? "" : "disabled") + ' data-feed1="' + k + '" data-idx="' + i + '">' + (comio ? 'Ya comió' : 'Alimentar') + '</button>' +
-          '<button class="green sm" ' + (listoI ? "" : "disabled") + ' data-take1="' + k + '" data-idx="' + i + '">Recoger</button>' +
+          '<button class="green sm" ' + (puedeRecogerI ? "" : "disabled") + ' data-take1="' + k + '" data-idx="' + i + '" title="' +
+            (!listoI ? 'Todavía no produjo' : !puedeRecogerI ? 'Bolsa llena — liberá un espacio para recoger' : 'Recoger producción') + '">' +
+            (!listoI ? 'Aún no listo' : !puedeRecogerI ? 'Bolsa llena' : 'Recoger') + '</button>' +
         '</div></div>';
     }
     /* la compra vive en su propia fila al pie de la especie: es del ESTABLO, no de un bicho */

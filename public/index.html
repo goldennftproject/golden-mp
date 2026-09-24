@@ -631,6 +631,39 @@
   #gate .gate-msg.ok{border-color:#78cd5a;color:#e4f4d8}
   #gate .gate-msg.mal{border-color:#e2b23a;color:#f6e6bd}
   #gate .gate-msg b{color:#f2ead5}
+  /* La puerta es la primera imagen de la granja. En PC no podía quedar como una tarjeta plana
+     verde cuando todas las ventanas de juego ya hablan madera, pergamino y borde pixelado.
+     Se encierra en escritorio: el diseño compacto del teléfono queda exactamente como estaba. */
+  @media(min-width:641px){
+    #gate{overflow:hidden;background:
+      radial-gradient(ellipse 52% 46% at 50% 43%,rgba(190,222,117,.20),rgba(190,222,117,0) 70%),
+      linear-gradient(180deg,#16240f 0%,#29441f 50%,#13200d 100%)}
+    #gate::before{content:"";position:absolute;inset:0;pointer-events:none;opacity:.34;background:
+      repeating-linear-gradient(0deg,transparent 0 27px,rgba(8,20,7,.34) 28px 30px),
+      linear-gradient(135deg,rgba(255,235,169,.07),rgba(255,235,169,0) 42%)}
+    #gate .gcard{position:relative;z-index:1;box-sizing:border-box;width:min(440px,calc(100vw - 72px));
+      padding:20px 26px 22px;background:#a8622e url("assets/ui/wood_bg.png?a=5") repeat;background-size:220px auto;
+      background-clip:border-box;border:18px solid transparent;border-image:url("assets/ui/panel_wood.png?a=4") 30 round;
+      border-radius:0;box-shadow:0 28px 62px rgba(0,0,0,.52),0 0 0 1px rgba(255,233,172,.15);image-rendering:pixelated}
+    #gate h1{font-size:26px;color:#ffe9ac;text-shadow:-2px 0 #241505,2px 0 #241505,0 -2px #241505,0 2px #241505,0 3px 0 rgba(40,22,6,.38)}
+    #gate p{max-width:340px;margin-left:auto;margin-right:auto;color:#fff0ca;text-shadow:0 1px 0 #241505}
+    #gate input{background:#faf3e2;border-color:#d9c290;color:#3d3424;text-align:left;box-shadow:inset 0 1px 3px rgba(76,45,17,.18)}
+    #gate input::placeholder{color:#756a52}
+    #gate .gate-msg{background:rgba(35,22,10,.78);border-color:#80633b;color:#f2e2bd}
+    #gate .gate-alt button{color:#ffe9ac;text-shadow:0 1px 0 #241505}
+  }
+  @media(min-width:641px){
+    /* Reiniciar una granja no es otro ajuste. Las dos confirmaciones siguen siendo la protección
+       real; este recuadro hace visible el riesgo ANTES del primer clic, sin cambiar el móvil. */
+    #ov-config .cfg-danger{margin-top:12px;padding:10px 12px 12px;border:1px solid rgba(238,122,94,.72);
+      border-radius:10px;background:linear-gradient(135deg,rgba(97,33,22,.70),rgba(53,22,15,.62));box-shadow:inset 0 0 0 1px rgba(55,13,8,.34)}
+    #ov-config .cfg-danger::before{content:"ACCIÓN IRREVERSIBLE";display:block;color:#ffd0c4;font-size:11px;font-weight:900;
+      letter-spacing:.85px;text-shadow:0 1px 0 #241505}
+    #ov-config .cfg-danger .row{margin-top:7px}
+    #ov-config .cfg-danger #cfg-reiniciar{width:100%}
+    #ov-config .cfg-danger .sub{margin:8px 0 0;padding:0;background:none;border:none;border-radius:0;color:#ffe5dd;
+      text-align:left;text-shadow:0 1px 0 #241505}
+  }
 
   /* ---- UI de madera (PixelLab) ---- */
   /* (regla .card vieja eliminada — la definición actual con fondo de madera está arriba) */
@@ -1533,8 +1566,10 @@
       </div>
       <p id="cfg-auth-nota" style="min-height:26px">Tu granja te sigue a cualquier dispositivo: entrá con tu correo.</p>
       <!-- 24/9 (dirección): reiniciar la cuenta — la granja vuelve a cero, el correo se queda -->
-      <div class="row"><button class="red sm" id="cfg-reiniciar">Reiniciar mi cuenta</button></div>
-      <p class="sub">Borra TODA tu granja (nivel, plata, terreno, objetos) y empezás como un jugador nuevo. Tu correo se mantiene. No se puede deshacer.</p>
+      <div class="cfg-danger">
+        <div class="row"><button class="red sm" id="cfg-reiniciar">Reiniciar mi cuenta</button></div>
+        <p class="sub">Borra TODA tu granja (nivel, plata, terreno, objetos) y empezás como un jugador nuevo. Tu correo se mantiene. No se puede deshacer.</p>
+      </div>
     </div>
     <div class="cfgsec">
       <h4>Sonido</h4>
@@ -1981,7 +2016,7 @@
     // 15/8: VERSIÓN DE BUILD — rompe la caché del navegador en cada deploy (sin esto, el
     // jugador seguía corriendo el state.js viejo aunque el servidor tuviera el nuevo).
     // deploy.bat la actualiza sola (busca GF_BUILD y pone la fecha/hora del deploy).
-    const GF_BUILD = "20260924-133035";
+    const GF_BUILD = "20260924-134533";
     const files = ["game/config.js","game/nav.js","game/audio.js","game/state.js","game/save.js","game/ui.js","game/boot.js",
                    "game/farm.js","game/forest.js","game/plaza.js","game/main.js","game/update.js"];
     /* 24/8 — SE BAJAN TODOS A LA VEZ, SE EJECUTAN EN FILA (dirección: « sigue tardando en

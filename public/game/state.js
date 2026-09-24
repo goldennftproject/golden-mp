@@ -5674,6 +5674,18 @@ function animalGuardado(k, i) {   // la fracción que el animal lleva a cuestas 
   const a = animalLista(k)[i];
   return a ? Math.round((a.pend || 0) * 100) / 100 : 0;
 }
+// Antes de ofrecer «Recoger», el mundo y el Establo miran si la unidad realmente entra.
+// Un animal que no comió sigue siendo cobrable aunque dé 0: ese clic arranca su próximo ciclo.
+function animalPuedeRecoger(k, i) {
+  const d = ANIMAL_DEF[k], a = animalLista(k)[i];
+  if (!d || !a || animalFaltaDe(k, i) > 0) return false;
+  const acum = Math.round((animalGuardado(k, i) + animalRinde(k, i)) * 100) / 100;
+  const entero = Math.floor(acum + 1e-9);
+  return entero <= 0 || roomForRes(d.mat, entero);
+}
+function establoPuedeRecogerAlgo() {
+  return ANIMAL_ORDER.some(k => animalLista(k).some((a, i) => animalPuedeRecoger(k, i)));
+}
 /* ═══ EL ESTABLO SE REPINTA DESPUÉS DEL CLIC, NUNCA DURANTE ═══════════ (10/9, Suren)
    « si tienes 2, ejemplo Alpaca y conejo, y ambos tienen material y le das click para recoger,
    no recoge los 2, solo recoge 1: el otro no se guarda en el inventario. »
