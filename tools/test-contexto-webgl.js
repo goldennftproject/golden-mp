@@ -132,6 +132,10 @@ ok("hay un cartel para el momento en que se recarga sola", /id="ctx-perdido"/.te
 ok("que arranca oculto (no se ve en una partida normal)", /id="ctx-perdido"[^>]*display:none/.test(HTML));
 ok("y main.js lo enciende cuando pasa", /getElementById\("ctx-perdido"\)/.test(MAIN));
 ok("el cartel dice que la partida quedó guardada, que es la duda de cualquiera", /ya quedó guardada/.test(HTML));
+const zCtx = Number((HTML.match(/id="ctx-perdido"[^>]*z-index:(\d+)/) || [])[1]);
+const zFlechaPC = Number((HTML.match(/RECUPERACION PC[\s\S]*?#tuto-flecha-ui\{z-index:(\d+)/) || [])[1]);
+ok("en PC la flecha de guía queda sobre las ventanas normales pero debajo del telón de recuperación",
+  zFlechaPC >= 80 && zFlechaPC < zCtx, zFlechaPC + " < " + zCtx);
 
 console.log("\n" + (fallos ? fallos + " fallo(s)" : "TODO EN VERDE") + "\n");
 process.exit(fallos ? 1 : 0);
