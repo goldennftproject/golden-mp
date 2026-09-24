@@ -12,7 +12,8 @@ const fs = require("fs");
 let JSDOM;
 try { ({ JSDOM } = require("jsdom")); }
 catch (e) { console.log("\n  (saltado: falta jsdom)\n"); process.exit(0); }
-const dom = new JSDOM(fs.readFileSync("public/index.html", "utf8"),
+const html = fs.readFileSync("public/index.html", "utf8");
+const dom = new JSDOM(html,
   { runScripts: "outside-only", pretendToBeVisual: true, url: "https://golden.test/" });
 const w = dom.window;
 w.Phaser = { Scene: class {}, Math: { Clamp: (v, a, b) => Math.max(a, Math.min(b, v)), Between: a => a, Distance: { Between: () => 0 } },
@@ -34,7 +35,9 @@ window.__caso = function (res, lombDiaN) {
   const filas = Array.from(lista.querySelectorAll(".lom-cult")).map(el => ({ k: el.dataset.lomCult, off: el.disabled, st: el.querySelector(".st").textContent }));
   return JSON.stringify({ bocas: lombricarioBocas(), libre: lombricesCupoLibre(), boton: document.getElementById("lom-echar").textContent,
     off: document.getElementById("lom-echar").disabled, pie: document.getElementById("lom-dia").textContent, filas });
-};`);
+};
+window.__cultivosLombricario = function () { return JSON.stringify(CROP_ORDER); };
+`);
 
 console.log("\nLA CAPTURA DEL DISEÑADOR: calabaza puesta (12 de 15), cebolla y calabaza en el granero\n");
 {
@@ -60,6 +63,16 @@ console.log("\nCUPO AGOTADO\n");
   const s = JSON.parse(w.__caso({ ciruela: 6 }, 15));
   ok("el botón dice que el cupo se agotó y cuándo vuelve", /agotado/.test(s.boton) && /00:00/.test(s.boton) && s.off, s.boton);
   ok("y el pie también", /agotado/.test(s.pie));
+}
+
+console.log("\nCON EL GRANERO LLENO, LA ELECCIÓN SIGUE DENTRO DEL MARCO\n");
+{
+  const todos = JSON.parse(w.__cultivosLombricario()).reduce((r, k) => { r[k] = 2; return r; }, {});
+  const s = JSON.parse(w.__caso(todos, 0));
+  ok("la lista conserva los 13 cultivos que el jugador puede elegir", s.filas.length === 13, s.filas.length + " cultivos");
+  const cssPanel = html.slice(html.indexOf("/* Lombricario PC:"), html.indexOf("/* ---- UI de madera", html.indexOf("/* Lombricario PC:")));
+  ok("en PC el panel se limita al viewport y desplaza su contenido dentro del marco", /#ov-lombricario \.card\{max-height:calc\(100vh - 32px\);overflow-y:auto;overscroll-behavior:contain\}/.test(cssPanel));
+  ok("la X queda dentro del panel que ahora puede desplazarse", /#ov-lombricario \.close\{top:7px;right:7px\}/.test(cssPanel));
 }
 
 console.log(fallos ? "\n✗ " + fallos + " fallo(s)\n" : "\n✓ el Lombricario dice el cupo antes de que el jugador choque con él\n");
