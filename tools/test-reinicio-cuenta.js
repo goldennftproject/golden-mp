@@ -103,6 +103,9 @@ function fin() {
   const bloque = ui.slice(ui.indexOf('$("cfg-reiniciar")'), ui.indexOf('$("cfg-reiniciar")') + 1500);
   ok("dos askConfirm encadenados antes de resetearCuenta()", (bloque.match(/askConfirm\(/g) || []).length >= 2 && /await resetearCuenta\(\)/.test(bloque));
   ok("con el OK recarga la página; con el no, dice por qué", /location\.reload\(\)/.test(bloque) && /No se pudo reiniciar/.test(bloque));
+  const cssConfig = html.slice(html.indexOf("/* Configuración PC:"), html.indexOf("/* ---- UI de madera", html.indexOf("/* Configuración PC:")));
+  ok("en PC Configuración cabe en una pantalla baja y desplaza su contenido dentro del marco", /#ov-config \.card\{max-height:calc\(100vh - 32px\);overflow-y:auto;overscroll-behavior:contain\}/.test(cssConfig));
+  ok("la X queda dentro del panel que ahora puede desplazarse", /#ov-config \.close\{top:7px;right:7px\}/.test(cssConfig));
   const main = fs.readFileSync(path.join(RAIZ, "public/game/main.js"), "utf8");
   ok("al volver, main.js ve la bandera ANTES de la reja de CUENTA_PREVIA y pide el apodo", main.indexOf("reinicioPendiente()") < main.indexOf("hay cuenta en este navegador: NO se pide apodo") && /pintarPuerta\("reinicio"\)/.test(main));
   ok("la puerta de reinicio no manda el enlace del correo: entra con el apodo", /MODO_PUERTA !== "reinicio" && \(MODO_PUERTA === "volver"/.test(main));

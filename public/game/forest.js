@@ -7,6 +7,18 @@ class ForestScene extends Phaser.Scene {
     const T = GF.TILE;
     this.W = 32 * T; this.H = (GF.ROWS_BASE || 15) * T;   // 18/8: alto PROPIO. Antes tomaba GF.WORLD_H, que ahora crece con las expansiones: comprar césped en la granja agrandaba el mapa de combate un 67% y dispersaba a los bichos.   // bosque más ancho que la granja
     GF.uiOpen = false;
+    /* El panel del cadáver, el pulso de Combate y el cartel contextual son HTML fijo, no parte
+       de Phaser. Al cambiar de mapa la escena se apaga pero podrían quedar visibles: el primero
+       con un botón atado al bosque anterior, el segundo fingiendo que seguís peleando y el último
+       ofreciendo una acción de esta Zona. Limpiarlos en este límite cubre muerte, portal entre
+       zonas y vuelta a la granja de una vez. */
+    this.events.once("shutdown", () => {
+      this.cerrarCuerpo();
+      const cbar = document.getElementById("cbar");
+      if (cbar) cbar.classList.remove("fight");
+      const prompt = document.getElementById("prompt");
+      if (prompt) prompt.classList.remove("show");
+    });
 
     // 10/8: la Zona Negra dejó de ser un solo bosque. El mapa que se arma sale de ZONA_DEF:
     // piso, densidad de árboles y qué bichos viven acá. Ver state.js.

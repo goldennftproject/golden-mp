@@ -17,7 +17,7 @@
    bolsa → cuerpo vacío avisa en la interfaz y los brillos mueren. Más la bolsa llena (lo que no
    cabe SE QUEDA en el cuerpo) y la vuelta de escena (los cuerpos con botín sobreviven).
      node tools/test-cuerpos.js                                                                  */
-const path = require("path"), vm = require("vm");
+const path = require("path"), fs = require("fs"), vm = require("vm");
 const RAIZ = path.join(__dirname, "..");
 const { ctx, elementos } = require("./arrancar-el-juego.contexto.js").arrancar(RAIZ);
 const G = ctx.G, g = (n) => vm.runInContext(n, ctx);
@@ -164,6 +164,25 @@ console.log("\nY LOS CUERPOS SOBREVIVEN AL IR Y VOLVER DE ESCENA");
   ok("el revisado CON botín vuelve (quedó como depósito)", quedan.some(c => c.label === "A"));
   ok("el no revisado vuelve, aunque esté vacío: su sorpresa sigue pendiente", quedan.some(c => c.label === "B"));
   ok("el revisado y vacío no vuelve: ya se estaba yendo", !quedan.some(c => c.label === "C"));
+}
+
+console.log("\nAL CAMBIAR DE ESCENA, LA VENTANITA NO PUEDE QUEDAR FLOTANDO");
+{
+  /* El cadáver pertenece al mapa, pero su panel es HTML global. No alcanza con cerrarlo en
+     recoger: se puede caminar a una salida mientras sigue abierto. El ciclo de vida de Phaser
+     es el único límite que cubre muerte, portal y regreso a la granja sin tres parches sueltos. */
+  const FOREST = fs.readFileSync(path.join(RAIZ, "public", "game", "forest.js"), "utf8");
+  const inicio = FOREST.indexOf("create() {");
+  const trozo = FOREST.slice(inicio, inicio + 1200);
+  ok("al apagarse el Bosque se cierra el panel fijo del cadáver",
+    /events\.once\(["']shutdown["'],\s*\(\)\s*=>\s*\{[\s\S]*?this\.cerrarCuerpo\(\)/.test(trozo));
+  ok("y se apaga el pulso de Combate que pertenece a la Zona",
+    /getElementById\(["']cbar["']\)[\s\S]*?classList\.remove\(["']fight["']\)/.test(trozo));
+  ok("y se borra el cartel de acción que sólo tenía sentido en esa Zona",
+    /getElementById\(["']prompt["']\)[\s\S]*?classList\.remove\(["']show["']\)/.test(trozo));
+  panel.classList.add("show");
+  esc.cerrarCuerpo();
+  ok("cerrarlo quita la ventana de la interfaz", !panel._clases.has("show"));
 }
 
 console.log("");
