@@ -21,6 +21,9 @@ ok("la tarjeta usa el marco y la veta de madera existentes", /#gate \.gcard\{[\s
 ok("la tarjeta no puede escaparse en un escritorio angosto", /box-sizing:border-box;width:min\(440px,calc\(100vw - 72px\)\)/.test(css));
 ok("los campos pasan a pergamino de alto contraste", /#gate input\{background:#faf3e2;border-color:#d9c290;color:#3d3424/.test(css));
 ok("el brillo ambiental no intercepta clics", /#gate::before\{content:"";position:absolute;inset:0;pointer-events:none/.test(css));
+ok("el aviso que evita crear una granja nueva conserva alto contraste sobre la madera", /#gate \.gf-motivo\{[\s\S]*background:rgba\(37,21,7,\.84\)[\s\S]*color:#fff6dc !important/.test(css));
+ok("carga y recuperación desktop reciben el mismo fondo profundo, sin tocar móvil", /@media\(min-width:641px\)\{[\s\S]*#loading,#ctx-perdido\{[\s\S]*repeating-linear-gradient[\s\S]*!important/.test(css));
+ok("la explicación de recuperación descansa sobre una base de alto contraste", /#ctx-perdido>div:nth-child\(2\)\{[\s\S]*background:rgba\(37,21,7,\.82\)[\s\S]*color:#fff0ca !important/.test(css));
 
 console.log("\n" + (fallos ? "  ✗ " + fallos + " fallas\n" : "  ✓ la entrada de PC ya pertenece visualmente a Golden Farm\n"));
 process.exit(fallos ? 1 : 0);

@@ -302,4 +302,6 @@ Están desarrolladas en el GDD §15.0, con sus números medidos. Aquí solo el t
 
 - [ ] Suelo nuevo y costa en la plaza y la Zona Negra.
 - [ ] Kick por AFK en la plaza.
-- [ ] Pulido tipo Sunflower Land: cursor de mano, resaltado al pasar.
+- [x] **Pulido tipo Sunflower Land (escritorio)**: cursor de mano sobre objetos y agua utilizables,
+  brillo al pasar y una segunda señal suave para lo que el granjero ya puede usar; se apagan al
+  abrir una interfaz, cambiar de escena o entrar al viewport móvil.

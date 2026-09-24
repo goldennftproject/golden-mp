@@ -651,6 +651,12 @@
     #gate input::placeholder{color:#756a52}
     #gate .gate-msg{background:rgba(35,22,10,.78);border-color:#80633b;color:#f2e2bd}
     #gate .gate-alt button{color:#ffe9ac;text-shadow:0 1px 0 #241505}
+    /* Si la carga falla, este texto impide que el jugador cree una granja nueva por error.
+        La veta clara de la madera apagaba su color original: se le da su propio fondo para que
+        se lea de un vistazo, sin cambiar el flujo ni la puerta compacta de móvil. */
+    #gate .gf-motivo{box-sizing:border-box;width:min(340px,100%);padding:9px 11px;border:1px solid rgba(255,231,172,.38);
+      border-radius:9px;background:rgba(37,21,7,.84);color:#fff6dc !important;
+      box-shadow:inset 0 1px 0 rgba(255,241,196,.12);text-shadow:0 1px 0 #241505}
   }
   @media(min-width:641px){
     /* Reiniciar una granja no es otro ajuste. Las dos confirmaciones siguen siendo la protección
@@ -663,6 +669,29 @@
     #ov-config .cfg-danger #cfg-reiniciar{width:100%}
     #ov-config .cfg-danger .sub{margin:8px 0 0;padding:0;background:none;border:none;border-radius:0;color:#ffe5dd;
       text-align:left;text-shadow:0 1px 0 #241505}
+  }
+
+  @media(min-width:641px){
+    /* Carga y recuperación son el umbral del juego, no una pantalla técnica verde plana.
+       Usan el mismo campo nocturno de la puerta, con texto siempre sobre una base legible. */
+    #loading,#ctx-perdido{overflow:hidden;isolation:isolate;background:
+      radial-gradient(ellipse 52% 46% at 50% 43%,rgba(190,222,117,.20),rgba(190,222,117,0) 70%),
+      repeating-linear-gradient(0deg,transparent 0 27px,rgba(8,20,7,.34) 28px 30px),
+      linear-gradient(180deg,#16240f 0%,#29441f 50%,#13200d 100%) !important}
+    #loading::before,#ctx-perdido::before{content:"";position:absolute;inset:0;z-index:0;pointer-events:none;
+      background:linear-gradient(135deg,rgba(255,235,169,.08),rgba(255,235,169,0) 42%)}
+    #loading>*,#ctx-perdido>*{position:relative;z-index:1}
+    #loading>div:first-child,#ctx-perdido>div:first-child{color:#ffe9ac !important;
+      text-shadow:-1px 0 #241505,1px 0 #241505,0 -1px #241505,0 2px 0 rgba(40,22,6,.45)}
+    #loading>div:nth-child(2){width:min(300px,66vw) !important;border-color:#9bc873 !important;
+      background:#1d3115 !important;box-shadow:0 5px 16px rgba(0,0,0,.32),inset 0 1px 0 rgba(232,255,190,.12)}
+    #loading #ldfill{background:linear-gradient(90deg,#78b95b,#b8df75) !important;box-shadow:0 0 8px rgba(190,235,115,.42)}
+    #loading #ldmsg{color:#fff0ca !important;text-shadow:0 1px 0 #241505}
+    #ctx-perdido>div:nth-child(2){box-sizing:border-box;max-width:min(440px,calc(100vw - 72px)) !important;
+      margin:0;padding:10px 13px;border:1px solid rgba(255,231,172,.38);border-radius:9px;
+      background:rgba(37,21,7,.82);color:#fff0ca !important;box-shadow:inset 0 1px 0 rgba(255,241,196,.12);
+      text-shadow:0 1px 0 #241505}
+    #ctx-perdido #ctx-detalle{color:#d6c9a8 !important;text-shadow:0 1px 0 #241505}
   }
 
   /* ---- UI de madera (PixelLab) ---- */
@@ -2016,7 +2045,7 @@
     // 15/8: VERSIÓN DE BUILD — rompe la caché del navegador en cada deploy (sin esto, el
     // jugador seguía corriendo el state.js viejo aunque el servidor tuviera el nuevo).
     // deploy.bat la actualiza sola (busca GF_BUILD y pone la fecha/hora del deploy).
-    const GF_BUILD = "20260924-134925";
+    const GF_BUILD = "20260924-135702";
     const files = ["game/config.js","game/nav.js","game/audio.js","game/state.js","game/save.js","game/ui.js","game/boot.js",
                    "game/farm.js","game/forest.js","game/plaza.js","game/main.js","game/update.js"];
     /* 24/8 — SE BAJAN TODOS A LA VEZ, SE EJECUTAN EN FILA (dirección: « sigue tardando en
