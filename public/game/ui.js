@@ -4963,6 +4963,17 @@ function initUI() {
   const sndLabel = () => { if (sndBtn) sndBtn.textContent = (window.sfxIsOn && sfxIsOn()) ? "Sonidos: Sí" : "Sonidos: No"; };
   if (sndBtn) { sndLabel(); sndBtn.onclick = () => { if (window.sfxOn) sfxOn(!(window.sfxIsOn && sfxIsOn())); sndLabel(); if (window.sfx) sfx("click"); }; }
   const cr = $("cfg-reset"); if (cr) cr.onclick = doFarmReset;
+  /* 24/9 (dirección): reiniciar la cuenta entera. Dos confirmaciones, porque no hay vuelta. */
+  const rc = $("cfg-reiniciar"); if (rc) rc.onclick = () => {
+    askConfirm("Vas a BORRAR toda tu granja: nivel, plata, $Golden, terreno, edificios, objetos y NFTs de recolección. Tu correo se mantiene y volvés a empezar como un jugador nuevo. No se puede deshacer. ¿Seguir?",
+      () => askConfirm("Última vez: ¿reiniciar tu cuenta de cero?", async () => {
+        rc.disabled = true; rc.textContent = "Reiniciando…";
+        const r = await resetearCuenta();
+        if (r && r.ok) { toast("Cuenta reiniciada — arrancás de cero"); setTimeout(() => location.reload(), 900); }
+        else { rc.disabled = false; rc.textContent = "Reiniciar mi cuenta"; toast("No se pudo reiniciar: " + ((r && r.error) || "sin respuesta")); }
+      }, { title: "Reiniciar cuenta", yes: "Sí, borrar todo", yesClass: "red", no: "Cancelar", noClass: "ghost" }),
+      { title: "Reiniciar cuenta", yes: "Seguir", yesClass: "red", no: "Cancelar", noClass: "ghost" });
+  };
   const ed = $("edit-done"); if (ed) ed.onclick = () => setEditMode(false);
   // 13/8: botón Cancelar del modo colocar — visible solo mientras hay algo "en la mano"
   window.syncPlacingUI = (on) => { const b = $("edit-cancelar"); if (b) b.style.display = on ? "" : "none"; };

@@ -265,7 +265,7 @@ function snapshot() {
   /* 25/8 Pesca v3: pescaDesde (el reloj de cargas), senales (las que te esperan), escamas,
      vistos y estrellaMax (el álbum con estrellas) y pescaTiene (el señuelo, que no se gasta).
      OJO con los comentarios AL FINAL de una línea de este objeto: se comen lo que sigue. */
-  return { plata: G.plata, golden: G.golden, level: G.level, prestige: G.prestige, iniciado: G.iniciado,
+  return { plata: G.plata, golden: G.golden, level: G.level, prestige: G.prestige, iniciado: G.iniciado, reinicio: G.reinicio,   /* 24/9: cuándo se reinició la cuenta (el portero lo lee) */
     res: G.res, picks: G.picks, skills: G.skills, triesV: G.triesV, establoV: G.establoV, fish: G.fish, plots: G.plots, nodos: G.nodos, expansiones: G.expansiones, pescaHasta: G.pescaHasta, pescaDesde: G.pescaDesde, senales: G.senales, escamas: G.escamas, vistos: G.vistos, estrellaMax: G.estrellaMax, pescaTiene: G.pescaTiene, canas: G.canas, presion: G.presion, amarres: G.amarres, trampas: G.trampas, marea: G.marea, runaOro: G.runaOro, buffs: G.buffs, seeds: G.seeds, selSeed: G.selSeed,
     tools: G.tools, sflStock: true, invRows: G.invRows, slots: G.slots, hotbar: G.hotbar, hotSel: G.hotSel, hbInit: G.hbInit, layout: G.layout,
     daily: G.daily, plotsOwned: G.plotsOwned, plotsCompradas: G.plotsCompradas, plotsFicha: G.plotsFicha, expParcelasDadas: G.expParcelasDadas, seedBuys: G.seedBuys, built: G.built,
@@ -313,6 +313,7 @@ function hydrate(d) {
   if (d.skills) G.skills = Object.assign({}, G.skills, d.skills);
   if (d.fish) G.fish = Object.assign({}, G.fish, d.fish);
   if (typeof d.iniciado === "number") G.iniciado = d.iniciado;
+  if (typeof d.reinicio === "number") G.reinicio = d.reinicio;   // 24/9: reinicio de cuenta
   else if (!G.iniciado) G.iniciado = Date.now() - ((d.week || 1) - 1) * 7 * 86400000;   // migración de G.week
   if (Array.isArray(d.plots)) G.plots = d.plots;
   // 18/8: enfriamientos de árboles, rocas y vetas. Antes no se guardaban y cualquier recarga —o
@@ -1461,6 +1462,48 @@ async function cerrarSesion() {
     sesionLog("sesión cerrada por el jugador");
     return { ok: true };
   } catch (e) { return { error: String(e && e.message || e) }; }
+}
+
+/* ============ REINICIAR LA CUENTA (24/9, dirección) ========================================
+   « botón reset cuenta en configuración para resetear toda tu cuenta y empezar como nuevo ».
+   La cuenta (el correo, la sesión) se queda; la GRANJA vuelve al cero de un jugador nuevo.
+   El orden importa, y es el de la regla de la casa (la nube manda):
+     1. se saca una foto de lo que hay, por si la nube dice que no;
+     2. el estado vuelve a cero (estadoDeCero) y se marca G.reinicio con la hora;
+     3. se manda ESE guardado al portero. El portero tiene una regla para esto: un guardado
+        marcado como reinicio y que de verdad está en cero pasa aunque bajen las expansiones
+        (que normalmente « no pueden bajar »). Si el portero lo rechaza o la nube no contesta,
+        se vuelve a la foto y no pasó nada: reiniciar a medias —local en cero, nube con la
+        granja vieja— sería fabricar el bug de la copia resucitada;
+     4. recién con el OK de la nube se pisa la copia local y se recarga la página, que es la
+        forma limpia de que escena, tutorial y baúl arranquen como el primer día.
+   Sin nube (SOLO_LOCAL) se reinicia la copia local y listo. */
+async function resetearCuenta() {
+  if (typeof estadoDeCero !== "function") return { error: "esta versión no puede reiniciar" };
+  const respaldo = snapshot();
+  const nombre = (typeof nombreLucido === "function" ? nombreLucido() : (window.NICK || "Granjero"));
+  estadoDeCero();
+  G.reinicio = Date.now(); G.iniciado = Date.now();
+  if (!SOLO_LOCAL && sb && UID) {
+    try {
+      const { data: r, error: fe } = await sb.functions.invoke("guardar", { body: { name: nombre, data: snapshot() } });
+      if (fe || !r || !r.ok) {
+        let det = null; try { det = fe && fe.context && await fe.context.json(); } catch (e) {}
+        const porque = (det && Array.isArray(det.sospechas) && det.sospechas.join(" · ")) || (det && det.error) || (fe && fe.message) || "la nube no contestó";
+        estadoDeCero(); hydrate(respaldo);
+        sesionLog("reinicio de cuenta RECHAZADO", porque);
+        return { error: porque };
+      }
+    } catch (e) {
+      estadoDeCero(); hydrate(respaldo);
+      return { error: String(e && e.message || e) };
+    }
+  }
+  try { localStorage.removeItem(GF_APARCADA_KEY); } catch (e) {}
+  copiaGuardar(snapshot());
+  lastSavedKey = snapKey();
+  sesionLog("cuenta reiniciada de cero por el jugador");
+  return { ok: true };
 }
 
 // entra con un email YA vinculado (desde cualquier dispositivo): manda el enlace mágico.

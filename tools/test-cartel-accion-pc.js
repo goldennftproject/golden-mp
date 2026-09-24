@@ -67,6 +67,17 @@ console.log("\nLOS ESTADOS INFORMATIVOS NO PARECEN BOTONES");
   ok("pero sin [E] que solo diría 'Todavía está creciendo'", !/\[E\]/.test(txt), txt);
 }
 
+console.log("\nLA PRODUCCIÓN ANIMAL TAMPOCO PROMETE UNA BOLSA LLENA");
+{
+  const esc = escena();
+  esc.objetivo = { type: "animal", k: "alpaca", idx: 0, texto: "Recoger Fibra de Alpaca" };
+  esc.estadoAnimalMundo = () => ({ cobrable: true, idx: 0 });
+  vm.runInContext("animalPuedeRecoger = () => false;", ctx);
+  const txt = pinta(esc);
+  ok("si la producción no entra, dice el motivo", txt === "Bolsa llena — no podés recoger Fibra", txt);
+  ok("y no añade [E] a un cobro que rechazaría", !/\[E\]/.test(txt), txt);
+}
+
 console.log("\nLA PESCA DICE EL CEBO REAL Y RESPETA SU PUERTA");
 {
   const esc = escena();

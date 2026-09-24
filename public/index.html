@@ -1532,6 +1532,9 @@
         <button class="red sm" id="cfg-salir" disabled>Cerrar sesión</button>
       </div>
       <p id="cfg-auth-nota" style="min-height:26px">Tu granja te sigue a cualquier dispositivo: entrá con tu correo.</p>
+      <!-- 24/9 (dirección): reiniciar la cuenta — la granja vuelve a cero, el correo se queda -->
+      <div class="row"><button class="red sm" id="cfg-reiniciar">Reiniciar mi cuenta</button></div>
+      <p class="sub">Borra TODA tu granja (nivel, plata, terreno, objetos) y empezás como un jugador nuevo. Tu correo se mantiene. No se puede deshacer.</p>
     </div>
     <div class="cfgsec">
       <h4>Sonido</h4>
@@ -1978,7 +1981,7 @@
     // 15/8: VERSIÓN DE BUILD — rompe la caché del navegador en cada deploy (sin esto, el
     // jugador seguía corriendo el state.js viejo aunque el servidor tuviera el nuevo).
     // deploy.bat la actualiza sola (busca GF_BUILD y pone la fecha/hora del deploy).
-    const GF_BUILD = "20260924-123804";
+    const GF_BUILD = "20260924-133035";
     const files = ["game/config.js","game/nav.js","game/audio.js","game/state.js","game/save.js","game/ui.js","game/boot.js",
                    "game/farm.js","game/forest.js","game/plaza.js","game/main.js","game/update.js"];
     /* 24/8 — SE BAJAN TODOS A LA VEZ, SE EJECUTAN EN FILA (dirección: « sigue tardando en

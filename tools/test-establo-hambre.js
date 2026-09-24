@@ -63,6 +63,21 @@ g("alimentarUno('alpaca', 0, true)"); reloj += CICLO; g("recogerUno('alpaca', 0,
 ok("no queda nada « guardado » en el animal", g("animalGuardado('alpaca', 0)") === 0);
 ok("FELIZ_MIN_PROD ya no entra en el rinde", !/FELIZ_MIN_PROD[^\n]*\n[^\n]*\n[^\n]*function animalRinde|function animalRinde[\s\S]{0,300}FELIZ_MIN_PROD/.test(fs.readFileSync(path.join(RAIZ, "public/game/state.js"), "utf8")));
 
+console.log("\n4b · EL COBRO SOLO SE OFRECE CUANDO ENTRA\n");
+{
+  alpacaNueva();
+  g("alimentarUno('alpaca', 0, true)"); reloj += CICLO;   // lista y con +1 de fibra
+  ctx.__roomAntes = g("roomForRes");
+  vm.runInContext("roomForRes = () => false;", ctx);      // bolsa llena, sin fabricar 35 pilas en el arnés
+  ok("si la fibra no entra, el animal listo no ofrece recoger", !g("animalPuedeRecoger('alpaca', 0)"));
+  ok("y el atajo del Establo también se apaga", !g("establoPuedeRecogerAlgo()"));
+  G.animals.alpaca[0].comidoAt = 0;                        // listo, pero sin producción: su ciclo sí se puede cerrar
+  ok("sin producción el cobro sigue disponible para reiniciar el ciclo", g("animalPuedeRecoger('alpaca', 0)"));
+  G.animals.alpaca[0].prodAt = reloj;                       // vuelve a faltar un ciclo entero
+  ok("antes de estar listo, tampoco se ofrece", !g("animalPuedeRecoger('alpaca', 0)"));
+  vm.runInContext("roomForRes = window.__roomAntes;", ctx);
+}
+
 console.log("\n5 · LA MIGRACIÓN (ley 1): la fracción vieja se redondea a favor del jugador, una vez\n");
 {
   const save = fs.readFileSync(path.join(RAIZ, "public/game/save.js"), "utf8");
@@ -79,6 +94,7 @@ console.log("\n6 · EL PANEL LO DICE\n");
   ok("« comió ✓ » o « con hambre » en la fila del animal", /'comió ✓' : 'con hambre'/.test(ui));
   ok("y avisa « si no come, no dará nada »", /si no come, no dará nada/.test(ui));
   ok("el botón dice « Ya comió » cuando ya comió", /'Ya comió' : 'Alimentar'/.test(ui));
+  ok("la fila y el atajo consultan si la producción cabe antes de habilitarse", /animalPuedeRecoger\(k, i\)/.test(ui) && /establoPuedeRecogerAlgo/.test(ui));
   ok("ya no hay « guardado de 1 » ni « rendirá 0,5 »", !/guardado de 1|rendirá/.test(ui));
   ok("la ley está escrita en docs/LEYES.md con la cita", /Ley 4 — El animal que no come no da[\s\S]*Le da hambre cada 24h/.test(fs.readFileSync(path.join(RAIZ, "docs/LEYES.md"), "utf8")));
 }

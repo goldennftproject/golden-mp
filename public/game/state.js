@@ -89,6 +89,19 @@ const G = {
   skills: { fishing: 0, farming: 0, tala: 0, ganaderia: 0, cooking: 0, range: 0, sword: 0, hacha: 0, mazo: 0, mining: 0, crafting: 0 },   // doc 2/8: cada arma es su propia skill (espada=sword, arco=range)
 };
 window.G = G;
+/* 24/9 (dirección): « botón reset cuenta en configuración para resetear toda tu cuenta y
+   empezar como nuevo ». La foto del estado recién nacido se saca ACÁ, antes de que nadie lo
+   toque: es la única forma de que « empezar de cero » sea exactamente el mismo cero que ve un
+   jugador nuevo — kit en el baúl, 3 de plata, tutorial en el paso 0. estadoDeCero() vacía el
+   objeto y lo vuelve a llenar con esa foto: el objeto es el mismo (todo el juego lo tiene por
+   referencia), lo que cambia es lo que hay adentro. */
+const G_INICIAL_JSON = JSON.stringify(G);
+function estadoDeCero() {
+  const fresco = JSON.parse(G_INICIAL_JSON);
+  for (const k of Object.keys(G)) delete G[k];
+  Object.assign(G, fresco);
+  return G;
+}
 
 // --- utilidades ---
 function fmt(n) { n = Math.floor(n); return n >= 1000 ? (n / 1000).toFixed(n % 1000 < 100 ? 0 : 1).replace(".0", "") + "k" : "" + n; }

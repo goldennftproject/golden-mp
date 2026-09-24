@@ -18,7 +18,7 @@ import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
    la bitácora (que ningún jugador honesto dispare sospechas). Los techos salen del
    ancla del juego (20 plata/celda-hora) con margen ×3 y colchones: generosos a
    propósito — acá un falso positivo es peor que un tramposo sin cazar. */
-const VERSION = 2;        // v2 (15/9): el portero aprendió qué es el mercado
+const VERSION = 3;        // v3 (24/9): reinicio de cuenta · v2 (15/9): el portero aprendió qué es el mercado
 const MODO = "rechazo";   // 14/9: fuera de sombra en el proyecto nuevo (P2P abierto → el portero rechaza)
 
 const ANCLA = 20;          // plata por celda-hora
@@ -120,6 +120,14 @@ function evaluarGuardado(prev, next, elapsedSeg, permiso) {
   /* sin guardado anterior no hay contra qué medir: primera vez, pasa limpio */
   if (!p) return { delta, sospechas };
 
+  /* REINICIO DE CUENTA (24/9, dirección: « botón reset cuenta para empezar como nuevo »).
+     Un guardado marcado como reinicio (next.reinicio más nuevo que el anterior) y que de
+     verdad está EN CERO pasa sin medir deltas: perderlo todo no es una trampa, y la única
+     regla que lo frenaba —« las expansiones no pueden bajar »— existe contra el que sube y
+     baja para cobrar, no contra el que se va a cero. Si el « reinicio » trae plata o terreno
+     no es un reinicio, y se mide como cualquier otro. */
+  if (num(next.reinicio) > num(p.reinicio) && esDeCero(next)) return { delta, sospechas: [] };
+
   if (elapsedSeg < 0) sospechas.push("el reloj fue hacia atrás (" + Math.round(elapsedSeg) + " s)");
   const horas = Math.max(30, elapsedSeg) / 3600;   // piso de 30 s: dos guardados pegados no dividen por cero
 
@@ -149,6 +157,12 @@ function evaluarGuardado(prev, next, elapsedSeg, permiso) {
 }
 
 function fmtHoras(h) { return h < 1 ? Math.round(h * 60) + " min" : (Math.round(h * 10) / 10) + " h"; }
+/* lo que un jugador nuevo tiene: 3 de plata, 20 $Golden, nivel 1, sin terreno, sin nada */
+function esDeCero(n) {
+  if (num(n.plata) > 3 || num(n.golden) > 20 || num(n.level) > 1 || num(n.expansiones) > 0 || num(n.prestige) > 0) return false;
+  for (const k in (n.res || {})) if (num(n.res[k]) > 0) return false;
+  return true;
+}
 /* === FIN REGLAS === */
 
 const CORS = {

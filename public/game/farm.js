@@ -1298,6 +1298,13 @@ class FarmScene extends Phaser.Scene {
       const cerrado = typeof tablonAbierto === "function" ? !tablonAbierto() : (G.tuto && !G.tuto.done);
       return cerrado ? { ok: false, toast: this.promptText(o) } : null;
     }
+    if (o.type === "animal") {
+      const d = ANIMAL_DEF[o.k], st = this.estadoAnimalMundo(o);
+      if (d && st.cobrable && typeof animalPuedeRecoger === "function" && !animalPuedeRecoger(o.k, st.idx)) {
+        return { ok: false, bag: "recoger " + RES_LABEL[d.mat] };
+      }
+      return null;
+    }
     if (o.type === "tree") return o.locked ? { ok: false, toast: this.promptText(o) } : puedeAccion("chop", o, rotulo);
     if (o.type === "rock") {
       if (typeof nodoBloqueado === "function" && nodoBloqueado(o)) return { ok: false, toast: this.promptText(o) };
