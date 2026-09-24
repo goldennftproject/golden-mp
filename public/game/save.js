@@ -1465,43 +1465,59 @@ async function cerrarSesion() {
 }
 
 /* ============ REINICIAR LA CUENTA (24/9, dirección) ========================================
-   « botón reset cuenta en configuración para resetear toda tu cuenta y empezar como nuevo ».
-   La cuenta (el correo, la sesión) se queda; la GRANJA vuelve al cero de un jugador nuevo.
-   El orden importa, y es el de la regla de la casa (la nube manda):
-     1. se saca una foto de lo que hay, por si la nube dice que no;
-     2. el estado vuelve a cero (estadoDeCero) y se marca G.reinicio con la hora;
-     3. se manda ESE guardado al portero. El portero tiene una regla para esto: un guardado
-        marcado como reinicio y que de verdad está en cero pasa aunque bajen las expansiones
-        (que normalmente « no pueden bajar »). Si el portero lo rechaza o la nube no contesta,
-        se vuelve a la foto y no pasó nada: reiniciar a medias —local en cero, nube con la
-        granja vieja— sería fabricar el bug de la copia resucitada;
-     4. recién con el OK de la nube se pisa la copia local y se recarga la página, que es la
-        forma limpia de que escena, tutorial y baúl arranquen como el primer día.
-   Sin nube (SOLO_LOCAL) se reinicia la copia local y listo. */
+   « botón reset cuenta en configuración para resetear toda tu cuenta y empezar como nuevo »,
+   y después: « debe literal borrar la cuenta y crearla como si fuera nuevo jugador ».
+   La cuenta de Auth (el correo, la sesión) se queda; la GRANJA se BORRA de la nube y el juego
+   vuelve a pedir el apodo, como el primer día. El orden es el de la regla de la casa (la nube
+   manda), y ninguna copia local sobrevive al reinicio:
+     1. se apaga el guardado (CARGA_OK = false): entre el borrado y la recarga NINGÚN autosave
+        —ni el de beforeunload— puede volver a subir la granja vieja;
+     2. se le pide al portero { borrar: true }: borra la fila. Si el portero es viejo y no lo
+        entiende (400), se manda un guardado EN CERO con la marca `reinicio`, que el portero v3
+        acepta aunque bajen las expansiones;
+     3. con el OK, se borran la copia local y la aparcada, se deja la bandera de reinicio y se
+        recarga: main.js la ve y muestra la puerta del apodo (sin pedir el correo: la cuenta
+        existe). El primer guardado de la granja nueva es « primera vez »: pasa limpio;
+     4. si la nube dice que no, o no contesta, se vuelve a la foto y no pasó nada. Reiniciar a
+        medias sería fabricar el bug de la copia resucitada.
+   Sin nube (SOLO_LOCAL): se borra la copia local y se recarga. */
+const GF_REINICIO_KEY = "gf-reinicio-" + SB_REF;
+function reinicioPendiente() {
+  try { const v = localStorage.getItem(GF_REINICIO_KEY); if (v) { localStorage.removeItem(GF_REINICIO_KEY); return true; } } catch (e) {}
+  return false;
+}
 async function resetearCuenta() {
   if (typeof estadoDeCero !== "function") return { error: "esta versión no puede reiniciar" };
-  const respaldo = snapshot();
+  const respaldo = snapshot(), cargaAntes = CARGA_OK;
   const nombre = (typeof nombreLucido === "function" ? nombreLucido() : (window.NICK || "Granjero"));
-  estadoDeCero();
-  G.reinicio = Date.now(); G.iniciado = Date.now();
+  const volver = () => { estadoDeCero(); hydrate(respaldo); CARGA_OK = cargaAntes; };
+  CARGA_OK = false;                       // 1. nadie guarda hasta que esto termine
+  estadoDeCero(); G.reinicio = Date.now(); G.iniciado = Date.now();
   if (!SOLO_LOCAL && sb && UID) {
     try {
-      const { data: r, error: fe } = await sb.functions.invoke("guardar", { body: { name: nombre, data: snapshot() } });
-      if (fe || !r || !r.ok) {
-        let det = null; try { det = fe && fe.context && await fe.context.json(); } catch (e) {}
-        const porque = (det && Array.isArray(det.sospechas) && det.sospechas.join(" · ")) || (det && det.error) || (fe && fe.message) || "la nube no contestó";
-        estadoDeCero(); hydrate(respaldo);
-        sesionLog("reinicio de cuenta RECHAZADO", porque);
-        return { error: porque };
+      // 2a. el camino literal: borrar la fila
+      let r = await sb.functions.invoke("guardar", { body: { borrar: true } });
+      let borrado = !r.error && r.data && r.data.ok && r.data.borrado;
+      if (!borrado) {
+        const st = r.error && r.error.context && r.error.context.status;
+        if (st !== 400) {   // 400 = portero viejo que no conoce `borrar`; cualquier otra cosa es un NO de verdad
+          let det = null; try { det = await r.error.context.json(); } catch (e) {}
+          const porque = (det && det.error) || (r.error && r.error.message) || "la nube no contestó";
+          volver(); sesionLog("reinicio de cuenta RECHAZADO", porque); return { error: porque };
+        }
+        // 2b. portero viejo: guardado en cero con la marca
+        r = await sb.functions.invoke("guardar", { body: { name: nombre, data: snapshot() } });
+        if (r.error || !r.data || !r.data.ok) {
+          let det = null; try { det = r.error && r.error.context && await r.error.context.json(); } catch (e) {}
+          const porque = (det && Array.isArray(det.sospechas) && det.sospechas.join(" · ")) || (det && det.error) || (r.error && r.error.message) || "la nube no contestó";
+          volver(); sesionLog("reinicio de cuenta RECHAZADO", porque); return { error: porque };
+        }
       }
-    } catch (e) {
-      estadoDeCero(); hydrate(respaldo);
-      return { error: String(e && e.message || e) };
-    }
+    } catch (e) { volver(); return { error: String(e && e.message || e) }; }
   }
-  try { localStorage.removeItem(GF_APARCADA_KEY); } catch (e) {}
-  copiaGuardar(snapshot());
-  lastSavedKey = snapKey();
+  // 3. ninguna copia local sobrevive; la bandera le dice a la próxima carga que pida el apodo
+  try { localStorage.removeItem(GF_COPIA_KEY); localStorage.removeItem(GF_APARCADA_KEY); localStorage.removeItem("gf_nick_pendiente"); } catch (e) {}
+  try { localStorage.setItem(GF_REINICIO_KEY, String(Date.now())); } catch (e) {}
   sesionLog("cuenta reiniciada de cero por el jugador");
   return { ok: true };
 }

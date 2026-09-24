@@ -533,6 +533,17 @@ function pantallaNoSePudo() {
       return enterGame();
     }
   }
+  /* 24/9 — VUELTA DEL REINICIO DE CUENTA. La granja se borró (o quedó en cero) y la bandera
+     dice que este jugador eligió empezar de nuevo: se le pide el apodo como el primer día, sin
+     el correo (la cuenta existe y está abierta). Va ANTES de la reja de CUENTA_PREVIA, que si
+     no mandaría a pantallaNoSePudo a alguien que acaba de pedir exactamente esto. */
+  if (typeof reinicioPendiente === "function" && reinicioPendiente() && typeof UID !== "undefined" && UID) {
+    window.NICK = "";
+    hideEl("loading");
+    document.getElementById("gate").style.display = "flex";
+    pintarPuerta("reinicio");
+    return;
+  }
   if (returning && window.NICK) enterGame();
   else if (typeof CARGA_FALLO !== "undefined" && CARGA_FALLO) {
     // 18/8: no se pudo LEER la granja. Antes esto caía en la puerta del apodo y el jugador
@@ -619,6 +630,14 @@ function pintarPuerta(modo) {
   const btn = document.getElementById("enter");
   const alt = document.getElementById("gate-alt");
   gateMsg("");
+  if (modo === "reinicio") {   // 24/9: la cuenta se reinició — solo el apodo, el correo ya está
+    if (sub) sub.textContent = "Tu granja se reinició. Elegí tu apodo y empezá de nuevo.";
+    if (nick) { nick.style.display = ""; nick.value = ""; }
+    if (mail) mail.style.display = "none";
+    if (btn) btn.textContent = "Empezar de nuevo";
+    if (alt) alt.style.display = "none";
+    return;
+  }
   if (modo === "volver") {
     if (sub) sub.textContent = "Entrá con el correo de tu granja. Te mandamos un enlace, sin contraseñas.";
     if (nick) nick.style.display = "none";
@@ -691,8 +710,9 @@ document.getElementById("enter").addEventListener("click", async () => {
      yo. Mi camino es inofensivo HOY —manda un correo y termina—, pero el día que alguien le
      agregue una línea, la reja tiene que haber corrido ya. El orden no se discute con
      argumentos sobre lo que la función hace ahora. */
-  if (MODO_PUERTA === "volver" || (typeof GF !== "undefined" && GF.SOLO_EMAIL)) return mandarElEnlace();
+  if (MODO_PUERTA !== "reinicio" && (MODO_PUERTA === "volver" || (typeof GF !== "undefined" && GF.SOLO_EMAIL))) return mandarElEnlace();
   window.NICK = document.getElementById("nick").value.trim() || "Granjero";
+  if (MODO_PUERTA === "reinicio") { try { CARGA_OK = true; } catch (_) { window.CARGA_OK = true; } }   // 24/9: la granja nueva ya se puede guardar
   try { await window.SAVE_READY; } catch (e) {}
   if (typeof saveFarm === "function") saveFarm();   // persiste el apodo enseguida
   const l = document.getElementById("loading");

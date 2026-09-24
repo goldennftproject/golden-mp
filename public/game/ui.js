@@ -4976,7 +4976,7 @@ function initUI() {
       () => askConfirm("Última vez: ¿reiniciar tu cuenta de cero?", async () => {
         rc.disabled = true; rc.textContent = "Reiniciando…";
         const r = await resetearCuenta();
-        if (r && r.ok) { toast("Cuenta reiniciada — arrancás de cero"); setTimeout(() => location.reload(), 900); }
+        if (r && r.ok) { toast("Cuenta reiniciada — elegí tu apodo nuevo"); setTimeout(() => location.reload(), 700); }
         else { rc.disabled = false; rc.textContent = "Reiniciar mi cuenta"; toast("No se pudo reiniciar: " + ((r && r.error) || "sin respuesta")); }
       }, { title: "Reiniciar cuenta", yes: "Sí, borrar todo", yesClass: "red", no: "Cancelar", noClass: "ghost" }),
       { title: "Reiniciar cuenta", yes: "Seguir", yesClass: "red", no: "Cancelar", noClass: "ghost" });

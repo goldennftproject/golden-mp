@@ -59,26 +59,36 @@ console.log("\n2 · EL PORTERO ENTIENDE EL REINICIO\n");
   ok("después del reinicio el jugador juega normal: su segundo guardado se mide contra el cero", ctx.evaluarGuardado(cero, Object.assign({}, cero, { plata: 50 }), 600).sospechas.length === 0);
 }
 
-console.log("\n3 · resetearCuenta() PREGUNTA A LA NUBE ANTES DE PISAR NADA\n");
+console.log("\n3 · resetearCuenta() BORRA EN LA NUBE ANTES DE PISAR NADA\n");
 {
   const { ctx, store } = arnes(), G = ctx.G;
-  G.plata = 12345; G.level = 9; G.expansiones = 3; G.res.madera = 77;
+  const partida = () => { G.plata = 12345; G.level = 9; G.expansiones = 3; G.res.madera = 77; store[vm.runInContext("GF_COPIA_KEY", ctx)] = "{}"; store[vm.runInContext("GF_APARCADA_KEY", ctx)] = "{}"; };
+  partida();
   vm.runInContext("CARGA_OK = true; SOLO_LOCAL = false; UID = 'u1'; sb = { functions: { invoke: async (f, o) => window.__nube(f, o) } };", ctx);
-  let enviado = null;
-  ctx.__nube = async (f, o) => { enviado = o.body.data; return { data: null, error: { message: "guardado rechazado", context: { status: 422, json: async () => ({ sospechas: ["algo raro"] }) } } }; };
-  const r1 = vm.runInContext("resetearCuenta()", ctx);
-  return r1.then(r => {
-    ok("mandó al portero un guardado en cero con la marca", enviado && enviado.plata === 3 && enviado.expansiones === 0 && typeof enviado.reinicio === "number");
-    ok("el portero dijo que no → devuelve el motivo", r && /algo raro/.test(r.error), JSON.stringify(r));
-    ok("y la granja quedó COMO ESTABA", G.plata === 12345 && G.level === 9 && G.expansiones === 3 && G.res.madera === 77, JSON.stringify([G.plata, G.level, G.expansiones, G.res.madera]));
-    ctx.__nube = async () => ({ data: { ok: true }, error: null });
+  const llamadas = [];
+  const rechazo = (status, det) => ({ data: null, error: { message: "no", context: { status, json: async () => det } } });
+  /* a) el portero dice que NO al borrado */
+  ctx.__nube = async (f, o) => { llamadas.push(o.body); return rechazo(500, { error: "base caída" }); };
+  vm.runInContext("resetearCuenta()", ctx).then(r => {
+    ok("lo primero que pide es BORRAR la fila", llamadas[0] && llamadas[0].borrar === true);
+    ok("el portero dijo que no → devuelve el motivo", r && /base caída/.test(r.error), JSON.stringify(r));
+    ok("y la granja quedó COMO ESTABA, con el guardado encendido", G.plata === 12345 && G.expansiones === 3 && ctx.CARGA_OK === true, JSON.stringify([G.plata, G.expansiones, ctx.CARGA_OK]));
+    /* b) portero VIEJO (no conoce `borrar`: 400) → guardado en cero con la marca */
+    llamadas.length = 0; partida();
+    ctx.__nube = async (f, o) => { llamadas.push(o.body); return o.body.borrar ? rechazo(400, { error: "snapshot inválido" }) : { data: { ok: true }, error: null }; };
     return vm.runInContext("resetearCuenta()", ctx);
   }).then(r => {
-    ok("con el OK de la nube, reinicia", r && r.ok === true, JSON.stringify(r));
-    ok("la granja está en cero", G.plata === 3 && G.level === 1 && G.expansiones === 0 && G.res.madera === 0);
-    const copia = Object.keys(store).find(k => /gf-granja-copia/.test(k));
-    const guardada = copia && JSON.parse(store[copia]);
-    ok("y la copia local también (para que la próxima carga no resucite la vieja)", guardada && (guardada.data || guardada).plata === 3, copia);
+    ok("con el portero viejo cae al guardado en cero, marcado", r && r.ok && llamadas.length === 2 && llamadas[1].data && llamadas[1].data.plata === 3 && typeof llamadas[1].data.reinicio === "number", JSON.stringify(r));
+    /* c) portero nuevo: borra */
+    llamadas.length = 0; partida();
+    ctx.__nube = async (f, o) => { llamadas.push(o.body); return { data: { ok: true, borrado: true }, error: null }; };
+    return vm.runInContext("resetearCuenta()", ctx);
+  }).then(r => {
+    ok("con el portero nuevo alcanza con el borrado", r && r.ok && llamadas.length === 1, JSON.stringify(r));
+    ok("la granja en memoria está en cero y el guardado APAGADO hasta la recarga (ningún autosave puede resubir la vieja)", G.plata === 3 && G.expansiones === 0 && ctx.CARGA_OK === false);
+    ok("(el arnés puso copia y aparcada de verdad antes)", llamadas.length === 1 && typeof vm.runInContext("GF_COPIA_KEY", ctx) === "string");
+    ok("no queda copia local ni aparcada", !Object.keys(store).some(k => /gf-granja-(copia|aparcada)/.test(k)), Object.keys(store).join());
+    ok("y queda la bandera para que la próxima carga pida el apodo", Object.keys(store).some(k => /gf-reinicio/.test(k)) && ctx.reinicioPendiente() === true && ctx.reinicioPendiente() === false);
     return fin();
   });
 }
@@ -93,6 +103,11 @@ function fin() {
   const bloque = ui.slice(ui.indexOf('$("cfg-reiniciar")'), ui.indexOf('$("cfg-reiniciar")') + 1500);
   ok("dos askConfirm encadenados antes de resetearCuenta()", (bloque.match(/askConfirm\(/g) || []).length >= 2 && /await resetearCuenta\(\)/.test(bloque));
   ok("con el OK recarga la página; con el no, dice por qué", /location\.reload\(\)/.test(bloque) && /No se pudo reiniciar/.test(bloque));
+  const main = fs.readFileSync(path.join(RAIZ, "public/game/main.js"), "utf8");
+  ok("al volver, main.js ve la bandera ANTES de la reja de CUENTA_PREVIA y pide el apodo", main.indexOf("reinicioPendiente()") < main.indexOf("hay cuenta en este navegador: NO se pide apodo") && /pintarPuerta\("reinicio"\)/.test(main));
+  ok("la puerta de reinicio no manda el enlace del correo: entra con el apodo", /MODO_PUERTA !== "reinicio" && \(MODO_PUERTA === "volver"/.test(main));
+  const fn = fs.readFileSync(path.join(RAIZ, "supabase/functions/guardar/index.ts"), "utf8");
+  ok("el portero borra la fila con { borrar: true } y lo anota en la bitácora", /body\?\.borrar === true/.test(fn) && /from\("farms"\)\.delete\(\)\.eq\("user_id", uid\)/.test(fn) && /delta: \{ borrar: true \}/.test(fn));
   console.log(fallos ? "\n✗ " + fallos + " fallo(s)\n" : "\n✓ reiniciar la cuenta deja al jugador como nuevo, y solo con el OK de la nube\n");
   process.exit(fallos ? 1 : 0);
 }

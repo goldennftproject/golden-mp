@@ -183,8 +183,21 @@ Deno.serve(async (req) => {
     if (uerr || !u?.user) return json({ error: "sesión inválida" }, 401);
     const uid = u.user.id;
 
-    /* el paquete: el mismo { name, data } que antes iba directo a la tabla */
     const body = await req.json().catch(() => null);
+
+    /* REINICIAR LA CUENTA (24/9, dirección: « debe literal borrar la cuenta y crearla como si
+       fuera nuevo jugador »). Con { borrar: true } se BORRA la fila de la granja: el próximo
+       guardado de este jugador es « primera vez », sin guardado anterior contra el que medir.
+       La cuenta de Auth (el correo) no se toca: es el mismo jugador, con una granja nueva.
+       Queda en la bitácora, como todo lo que pasa por acá. */
+    if (body?.borrar === true) {
+      await admin.from("farm_saves_log").insert({ user_id: uid, reglas_v: VERSION, elapsed_s: 0, delta: { borrar: true }, sospechas: [] });
+      const { error: derr } = await admin.from("farms").delete().eq("user_id", uid);
+      if (derr) return json({ error: derr.message }, 500);
+      return json({ ok: true, borrado: true });
+    }
+
+    /* el paquete: el mismo { name, data } que antes iba directo a la tabla */
     const data = body?.data, name = String(body?.name || "Granjero").slice(0, 60);
     if (!data || typeof data !== "object") return json({ error: "snapshot inválido" }, 400);
     if (JSON.stringify(data).length > 700_000) return json({ error: "snapshot demasiado grande" }, 400);
