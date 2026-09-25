@@ -59,6 +59,13 @@ console.log("\nEL CAMINO AVANZA CON LA GRANJA, NO CON EL RELOJ");
   ok("y el panel sabe cuáles ya leyó, para poder distinguirlas", ctx.caminoGuarida().hitos[0].leida === true);
 }
 
+console.log("\nLOS HITOS SE ENTIENDEN SIN TENER QUE ABRIR LA CARTA");
+{
+  const grjj = CARTAS.find(c => c.n === 7);
+  ok("el hito de Grjj nombra que es el mercader goblin", grjj && /mercader goblin/i.test(grjj.titulo),
+    grjj && grjj.titulo);
+}
+
 console.log("\nEL FINAL NO SE ALCANZA SOLO   — hace falta un clan, y el panel lo dice");
 {
   granja(20);

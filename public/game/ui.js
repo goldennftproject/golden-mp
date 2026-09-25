@@ -757,6 +757,15 @@ function refreshRecientes() {
       itemIcon(v) + '<span class="rn">' + fmt(n) + '</span></div>';
   }).join("");
 }
+/* La tira de últimos usados es un recordatorio, no un control. Cuando el menú de escritorio
+   ocupa ese borde, se mueve a su izquierda para que no quede medio tapada detrás de las esquinas
+   redondeadas. La clase, y no `style.right`, deja que el CSS móvil conserve su composición. */
+function syncRecientesMenuPc() {
+  const caja = $("recientes"), menu = $("gmenu");
+  if (!caja || !menu) return;
+  const escritorio = typeof window !== "undefined" && window.innerWidth > 640;
+  caja.classList.toggle("menu-abierto", escritorio && !menu.classList.contains("collapsed"));
+}
 /* ═══════════════════════════════════════════════════════════════════════════════════════════
    PESCA v4 · LA PULSEADA PASA EN EL AGUA, NO EN UNA VENTANA                            (28/8)
    ═══════════════════════════════════════════════════════════════════════════════════════════
@@ -4879,7 +4888,7 @@ function initUniversalDrag() {
   makeHoldDrag($("hotwrap"), "gf_hotpos", false, syncRegistroPrompt);           // barra de acceso rápido
   const registro = $("logpanel");
   makeHoldDrag(registro, "gf_logpos", true, syncRegistroPrompt);                  // registro/chat (anclado por abajo: se abre hacia ARRIBA)
-  const syncLayouts = () => { syncRegistroPrompt(); placeToast(); };
+  const syncLayouts = () => { syncRegistroPrompt(); placeToast(); syncRecientesMenuPc(); };
   syncLayouts(); window.addEventListener("resize", syncLayouts);
   // Abrir/cerrar puede venir de un clic, del tutorial o de un aviso de error: observar la
   // clase evita que una de esas rutas deje el prompt con la geometría vieja.
@@ -4911,7 +4920,7 @@ function initUI() {
      latido hacía que, durante hasta un segundo, siguiera señalando una ruta que acababa de dejar
      de ser la visible. Esta puerta cubre el clic y el atajo M en el mismo gesto. */
   const sincronizarGuiaMenu = () => { if (typeof tutoHighlight === "function") tutoHighlight(); };
-  const toggleMenu = () => { gmenu.classList.toggle("collapsed"); sincronizarGuiaMenu(); };
+  const toggleMenu = () => { gmenu.classList.toggle("collapsed"); syncRecientesMenuPc(); sincronizarGuiaMenu(); };
   const gt = $("gmtoggle"); if (gt) gt.onclick = toggleMenu;
   const mb = $("menu-btn"); if (mb) mb.onclick = toggleMenu;
   // fixs.docx #10 (11/8): opción de menú FIJO — queda desplegado y no se cierra al elegir
@@ -4921,6 +4930,7 @@ function initUI() {
   const gmFijarTxt = () => { if (gmFijar) gmFijar.innerHTML = '<span class="ic"></span> ' + (menuFijo() ? "📌 Menú fijo: Sí" : "📌 Menú fijo: No"); };
   if (gmFijar) { gmFijarTxt(); gmFijar.onclick = () => { try { localStorage.setItem("gmenuFijo", menuFijo() ? "0" : "1"); } catch (e) {} gmFijarTxt(); toast(menuFijo() ? "El menú queda desplegado" : "El menú se recoge solo"); }; }
   if (menuFijo()) gmenu.classList.remove("collapsed");
+  syncRecientesMenuPc();
   // multiventana: abrir un panel ya no cierra los demás (detalles 29/7)
   /* 22/9 (dirección, Discord): « cuando le das clic a "Ver el tablón" no te manda al tablón ».
      El botón llevaba data-panel como los del menú, pero solo los del menú (.gmi) se cableaban:
@@ -4938,7 +4948,7 @@ function initUI() {
     if (typeof GF !== "undefined" && GF.esOcultoMvp && GF.esOcultoMvp(b.dataset.panel)) { b.style.display = "none"; return; }
     b.onclick = () => {
       openOv(b.dataset.panel);
-      if (!menuFijo()) { gmenu.classList.add("collapsed"); sincronizarGuiaMenu(); }
+      if (!menuFijo()) { gmenu.classList.add("collapsed"); syncRecientesMenuPc(); sincronizarGuiaMenu(); }
     };
   });
   document.querySelectorAll("[data-close]").forEach(b => b.onclick = () => closeOv(b.dataset.close));
@@ -4982,7 +4992,7 @@ function initUI() {
     // el menú se pliega solo al clickear fuera de él (volver a jugar) — salvo con menú fijo (#10)
     const gm = $("gmenu");
     if (gm && !gm.classList.contains("collapsed") && !e.target.closest("#gmenu, #menu-btn") && !(window.menuFijo && menuFijo())) {
-      gm.classList.add("collapsed"); sincronizarGuiaMenu();
+      gm.classList.add("collapsed"); syncRecientesMenuPc(); sincronizarGuiaMenu();
     }
     if (!anyOvOpen()) return;
     if (e.target.closest(".card, #gmenu, #hotwrap, .hudbar, #logpanel, #editbar, #seedwheel")) return;
@@ -5300,6 +5310,9 @@ async function refreshP2P() {
         '<div class="fbtns"><button class="sm" data-cancel="' + r.id + '">Retirar</button></div></div>';
     });
   } else {
+    /* En escritorio, la regla compartida de .forge-list lleva este estado a la misma placa
+       crema que una publicación real. Conservamos la clase base para no rediseñar móvil antes
+       de su pasada específica. */
     if (!filas.length) h += '<div class="fds">No hay publicaciones ahora mismo. Volvé en un rato o publicá algo vos.</div>';
     filas.forEach(r => {
       const mio = r.seller === (typeof UID === "string" ? UID : "");

@@ -26,7 +26,7 @@ function escena() {
   Object.assign(esc, {
     action: null, placing: null, editHl: null,
     objetivo: null, agua: false,
-    cargasBadge() {},
+    cargasBadge(o) { this.ultimaChapa = o; },
     nearestInteract() { return this.objetivo; },
     nearPond() { return this.agua; },
     promptText(o) { return o && o.texto || "Acción"; },
@@ -86,6 +86,27 @@ console.log("\nLOS ESTADOS INFORMATIVOS NO PARECEN BOTONES");
   const txt = pinta(esc);
   ok("un cultivo creciendo conserva su estado", txt === "Creciendo…", txt);
   ok("pero sin [E] que solo diría 'Todavía está creciendo'", !/\[E\]/.test(txt), txt);
+}
+
+console.log("\nUNA VENTANA ABIERTA LIMPIA LAS PISTAS DEL MUNDO");
+{
+  const esc = escena();
+  esc.objetivo = { type: "tree", readyAt: 0, texto: "Talar madera" };
+  const ancho = ctx.innerWidth;
+  ctx.innerWidth = 1280;
+  ctx.GF.uiOpen = false;
+  vm.runInContext("anyOvOpen = () => true;", ctx);
+  const txt = pinta(esc);
+  ok("la ventana tapa el cartel del cursor, aunque el juego siga sin bloquearse", txt === "", txt);
+  ok("y también esconde la chapita de cargas que quedaría detrás del HUD", esc.ultimaChapa === null, String(esc.ultimaChapa));
+  const movil = escena();
+  movil.objetivo = { type: "tree", readyAt: 0, texto: "Talar madera" };
+  ctx.innerWidth = 640;
+  const txtMovil = pinta(movil);
+  ok("en móvil conserva la pista existente hasta su pasada específica", txtMovil === "Talar madera  ·  [E]" && movil.ultimaChapa === movil.objetivo,
+    txtMovil + " · " + String(movil.ultimaChapa === movil.objetivo));
+  ctx.innerWidth = ancho;
+  vm.runInContext("anyOvOpen = () => false;", ctx);
 }
 
 console.log("\nLA PRODUCCIÓN ANIMAL TAMPOCO PROMETE UNA BOLSA LLENA");

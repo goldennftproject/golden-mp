@@ -10353,7 +10353,7 @@ var CARTAS_ABUELO = [
     txt: "Te habrás fijado que la laguna tiene peces que no figuran en ningún libro. Es que esa agua no es de acá: bajó del otro lado del valle la noche del cambio, y se quedó. Los comunes son comunes. Pero los raros pelean como si algo adentro no quisiera volver a la orilla. Pescalos igual. Cocinados son otra cosa. — Tu abuelo" },
   { n: 6, nivel: 10, titulo: "No todos son monstruos",
     txt: "A esta altura ya habrás cruzado el portal y repartido espadazos. Escuchame bien: no todos los que viven en la Zona Negra son monstruos. Muchos eran vecinos — gente y bichos del viejo Bosque Claro, cambiados por la Noche. Un plato caliente les recuerda quiénes eran. Probá con comida antes que con hierro. Te vas a sorprender de quién te sigue a casa. — Tu abuelo" },
-  { n: 7, nivel: 12, titulo: "Grjj",
+  { n: 7, nivel: 12, titulo: "Grjj, el mercader goblin",
     txt: "Si un goblin de mala cara aparece junto al buzón ofreciendo trueques, no lo espantes: es Grjj. Le salvé el pellejo dos veces del lado oscuro del valle, y un goblin no se olvida de una deuda — le da vergüenza, que para ellos es peor. Por eso viene todos los días. Regateale igual: si no regateás, se ofende. — Tu abuelo" },
   { n: 8, nivel: 14, titulo: "La Noche",
     txt: "Te debo la historia entera. Una noche, hace años, del otro lado del valle NO amaneció. La oscuridad se quedó quieta, como un animal que se echa. El Bosque Claro quedó adentro, con su gente. Los que salieron ya no eran los mismos; los que no salieron, tampoco. El pueblo decidió olvidar. Yo decidí lo contrario. Todo lo que ves en esta granja lo construí para eso. — Tu abuelo" },

@@ -21,7 +21,9 @@ console.log("\nLA CHAPITA EN EL MUNDO");
      línea de al lado cambió de forma; lo que se custodia es que la chapita se pinte con el nodo
      más cercano, no cómo se llame la variable de la línea siguiente. */
   ok("y el modo caminado (el nodo más cercano)", /const o = this\.nearestInteract\(\);\s*\n\s*this\.cargasBadge\(o\);/.test(SIN));
-  ok("se apaga con la interfaz abierta, en acción o en edición", /el\.classList\.remove\("show"\); this\.cargasBadge\(null\); return;/.test(SIN));
+  ok("se apaga con la interfaz abierta, incluso si la ventana no bloquea el mundo",
+    FARM.includes("hayVentana") && FARM.includes("anyOvOpen") &&
+    /el\.classList\.remove\("show"\); this\.cargasBadge\(null\); return;/.test(SIN));
   ok("y colocando un objeto", /this\.cargasBadge\(null\);\s*\n\s*const pt = this\.input\.activePointer;/.test(SIN));
   ok("el nodo agotado o bloqueado no muestra chapita (n = 0 la esconde)", /o\.readyAt && o\.readyAt > nowMs\(\)/.test(SIN) && /if \(!n\) \{ if \(this\._cargasTxt\) this\._cargasTxt\.setVisible\(false\); return; \}/.test(SIN));
 }

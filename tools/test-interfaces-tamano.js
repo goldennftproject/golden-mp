@@ -120,6 +120,18 @@ console.log("\nEL COFRE GRANDE NO EMPUJA LA BOLSA FUERA DE UNA PANTALLA PC");
   }
 }
 
+console.log("\nLOS ESTADOS VACÍOS DE LAS LISTAS SE LEEN EN PC");
+{
+  /* Mercado P2P y varias pantallas de edificios usan .forge-list. Si no hay filas, una .fds
+     directa antes quedaba en tinta oscura sobre el fondo de madera; la regla compartida la lleva
+     a una placa crema sin cambiar el flujo móvil. */
+  const ui = fs.readFileSync("public/game/ui.js", "utf8");
+  ok("el Mercado conserva su estado vacío dentro de la lista compartida",
+    /<div class="fds">No hay publicaciones ahora mismo/.test(ui));
+  ok("en escritorio una frase suelta recibe la misma placa legible que una fila",
+    /@media\(min-width:641px\)\{\.forge-list > \.fds\{[^}]*background:#f2e5c4[^}]*border:2px solid #d9c290[^}]*color:#3d3424[^}]*text-shadow:none/.test(html));
+}
+
 console.log("\nEL ÚLTIMO OVERLAY ABIERTO QUEDA AL FRENTE EN PC");
 {
   /* Se abren en orden DOM inverso. Sin foco dinámico, Zona Negra queda detrás de «¿Cuántas?»

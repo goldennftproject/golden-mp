@@ -58,15 +58,16 @@ window.__sondeo = function (idPaso) {
 window.__sondeoGestoMenu = function (idPaso) {
   G.tuto = { step: TUTO_STEPS.findIndex(s => s.id === idPaso), done: false, n: 0 };
   G.planos = { store: 1, horno: 1, cocina: 1 }; G.built = {}; G.obras = {};
-  const menu = document.getElementById("gmenu"), boton = document.getElementById("menu-btn");
-  menu.classList.add("collapsed");
+  const menu = document.getElementById("gmenu"), boton = document.getElementById("menu-btn"), recientes = document.getElementById("recientes");
+  menu.classList.add("collapsed"); syncRecientesMenuPc();
   const orig = window.tutoFlechaUI;
   let ultimo = null;
   window.tutoFlechaUI = function (el) { ultimo = el ? (el.id || el.getAttribute("data-panel") || el.className) : null; };
-  boton.onclick(); const alAbrir = ultimo;
-  boton.onclick(); const alCerrar = ultimo;
+  boton.onclick(); const alAbrir = ultimo, recientesAlAbrir = recientes.classList.contains("menu-abierto");
+  boton.onclick(); const alCerrar = ultimo, recientesAlCerrar = recientes.classList.contains("menu-abierto");
   window.tutoFlechaUI = orig;
-  return JSON.stringify({ alAbrir: alAbrir, alCerrar: alCerrar, cerrado: menu.classList.contains("collapsed") });
+  return JSON.stringify({ alAbrir: alAbrir, alCerrar: alCerrar, cerrado: menu.classList.contains("collapsed"),
+    recientesAlAbrir: recientesAlAbrir, recientesAlCerrar: recientesAlCerrar });
 };
 /* La lista también se saca desde dentro: los \`const\` del juego no salen de este ámbito. */
 window.__pasosDePanel = function () {
@@ -226,6 +227,10 @@ console.log("\nLA FLECHA CAMBIA EN EL MISMO GESTO DEL MENÚ");
   const s = JSON.parse(w.__sondeoGestoMenu("place_store"));
   ok("al abrir ☰ salta enseguida a Cobertizo", s.alAbrir === "ov-cobertizo", JSON.stringify(s));
   ok("al cerrarlo vuelve enseguida a ☰ Menú", s.alCerrar === "menu-btn" && s.cerrado, JSON.stringify(s));
+  ok("la tira de últimos usados se corre del borde ocupado por el menú en PC", s.recientesAlAbrir && !s.recientesAlCerrar,
+    JSON.stringify(s));
+  const HTML = fs.readFileSync("public/index.html", "utf8");
+  ok("la separación de la tira conserva un hueco de 8 px junto al menú", /@media\(min-width:641px\)\{#recientes\.menu-abierto\{right:208px\}\}/.test(HTML));
 }
 
 console.log("\nLA FLECHA DEL MENÚ SIGUE SIENDO VISIBLE EN EL BORDE SUPERIOR");

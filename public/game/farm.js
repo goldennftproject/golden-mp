@@ -5809,7 +5809,14 @@ class FarmScene extends Phaser.Scene {
       el.classList.add("show");
       return;
     }
-    if (GF.uiOpen || this.action || GF.editMode) { el.classList.remove("show"); this.cargasBadge(null); return; }
+    /* Las ventanas de PC dejan que el mundo siga vivo a propósito: no las convertimos en un
+       bloqueo de juego. Pero la pista que quedó bajo el cursor no tiene que asomarse detrás del
+       HUD o de una tarjeta abierta (por ejemplo, el ⏱ de cargas sobre un árbol). Ocultamos solo
+       esas ayudas mientras haya un overlay; al cerrar, el siguiente frame las devuelve sin tocar
+       el clic ni el movimiento del mundo. */
+    const hayVentana = typeof window !== "undefined" && window.innerWidth > 640 &&
+      typeof anyOvOpen === "function" && anyOvOpen();
+    if (GF.uiOpen || hayVentana || this.action || GF.editMode) { el.classList.remove("show"); this.cargasBadge(null); return; }
     if (GF.NO_WALK) {   // granja de un clic: el cartel describe lo que hay BAJO EL CURSOR
       const pt = this.input.activePointer, wx = pt.worldX, wy = pt.worldY;
       let hit = null, bd = 1e9;
