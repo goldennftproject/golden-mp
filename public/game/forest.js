@@ -161,7 +161,13 @@ class ForestScene extends Phaser.Scene {
       for (const m of this.monsters) { if (m.dead) continue; const b = m.spr.getBounds(); if (Phaser.Geom.Rectangle.Contains(b, wx, wy)) { const d = Math.hypot(m.cx - wx, m.by - wy); if (d < bd) { bd = d; hit = m; } } }
       /* clic DERECHO: fijar y AUTO-atacar (detalles viernes). Y 31/8: derecho al VACÍO suelta el
          objetivo — antes no había ninguna forma de desmarcar sin marcar otra cosa. */
-      if (pt.rightButtonDown()) {
+      /* Igual que la rueda de semillas en la granja: durante ESTE pointerdown Phaser puede
+         conservar `buttons` del fotograma anterior y decir que el derecho no está abajo.
+         El evento nativo sí nombra el botón que disparó el gesto. Sin ese respaldo, el autoataque
+         se degradaba a caminar o a un golpe suelto justo en el clic que debía fijar al monstruo. */
+      const clicDerecho = pt.rightButtonDown() || (pt.event &&
+        (pt.event.button === 2 || ((pt.event.buttons || 0) & 2) === 2));
+      if (clicDerecho) {
         if (hit) { const no = this.porQueNoAtaca(); if (no) { toast(no); return; } this.setTarget(hit); this.autoOn = true; }
         else if (this.target) this.clearTarget();   // la respuesta es visible: el recuadro se va
         return;

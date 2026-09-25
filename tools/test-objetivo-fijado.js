@@ -136,7 +136,10 @@ console.log("\nEL CABLEADO DEL CLIC   (fijado con fuente: los handlers viven den
     !/clearTarget\(\);\s*this\.goTo\(/.test(codigo),
     "el clic de acercarte al bicho marcado te lo desmarcaba");
   ok("el clic derecho sobre un bicho fija y enciende el auto-ataque",
-    /rightButtonDown\(\)[\s\S]{0,220}setTarget\(hit\);\s*this\.autoOn = true/.test(codigo));
+    /if \(clicDerecho\)[\s\S]{0,220}setTarget\(hit\);\s*this\.autoOn = true/.test(codigo));
+  ok("el derecho sigue llegando aunque Phaser tenga buttons atrasado",
+    /const clicDerecho = pt\.rightButtonDown\(\) \|\| \(pt\.event &&[\s\S]{0,100}pt\.event\.button === 2/.test(codigo),
+    "el evento nativo respalda rightButtonDown() en pointerdown");
   ok("y el derecho al VACÍO es la forma de soltar",
     /else if \(this\.target\) this\.clearTarget\(\)/.test(codigo),
     "antes no había ninguna: solo se podía cambiar de objetivo, nunca quedarse sin él");

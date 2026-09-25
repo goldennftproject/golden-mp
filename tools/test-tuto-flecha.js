@@ -52,6 +52,22 @@ window.__sondeo = function (idPaso) {
   out.hayItemCobertizo = !!document.querySelector('.gmi[data-panel="ov-cobertizo"]');
   return JSON.stringify(out);
 };
+/* El test anterior llamaba a tutoHighlight() a mano después de cambiar la clase: eso comprueba la
+   decisión de la flecha, pero no que el GESTO real la refresque. Este sondeo toca el handler ya
+   cableado en #menu-btn y lee qué pidió en ese mismo stack, antes del latido de un segundo. */
+window.__sondeoGestoMenu = function (idPaso) {
+  G.tuto = { step: TUTO_STEPS.findIndex(s => s.id === idPaso), done: false, n: 0 };
+  G.planos = { store: 1, horno: 1, cocina: 1 }; G.built = {}; G.obras = {};
+  const menu = document.getElementById("gmenu"), boton = document.getElementById("menu-btn");
+  menu.classList.add("collapsed");
+  const orig = window.tutoFlechaUI;
+  let ultimo = null;
+  window.tutoFlechaUI = function (el) { ultimo = el ? (el.id || el.getAttribute("data-panel") || el.className) : null; };
+  boton.onclick(); const alAbrir = ultimo;
+  boton.onclick(); const alCerrar = ultimo;
+  window.tutoFlechaUI = orig;
+  return JSON.stringify({ alAbrir: alAbrir, alCerrar: alCerrar, cerrado: menu.classList.contains("collapsed") });
+};
 /* La lista también se saca desde dentro: los \`const\` del juego no salen de este ámbito. */
 window.__pasosDePanel = function () {
   return JSON.stringify(TUTO_STEPS.filter(s => s.panel && !s.target).map(s => s.id));
@@ -203,6 +219,13 @@ console.log("\nLA FLECHA RECORRE LA CADENA: MENÚ → COBERTIZO");
     /* Y en cuanto se despliega, baja a la entrada del Cobertizo. */
     ok("   …y al desplegarlo, al Cobertizo", s.conMenuAbierto === "ov-cobertizo", s.conMenuAbierto);
   });
+}
+
+console.log("\nLA FLECHA CAMBIA EN EL MISMO GESTO DEL MENÚ");
+{
+  const s = JSON.parse(w.__sondeoGestoMenu("place_store"));
+  ok("al abrir ☰ salta enseguida a Cobertizo", s.alAbrir === "ov-cobertizo", JSON.stringify(s));
+  ok("al cerrarlo vuelve enseguida a ☰ Menú", s.alCerrar === "menu-btn" && s.cerrado, JSON.stringify(s));
 }
 
 console.log("\nLA FLECHA DEL MENÚ SIGUE SIENDO VISIBLE EN EL BORDE SUPERIOR");

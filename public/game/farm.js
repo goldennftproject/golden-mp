@@ -5819,10 +5819,17 @@ class FarmScene extends Phaser.Scene {
       if (!hit && this.portal && Math.abs(wx - this.portal.cx) < 26 && Math.abs(wy - (this.portal.by - 14)) < 30) hit = this.portal;
       this.previaSiembra(hit);   // 24/8: la parcela señalada muestra QUÉ se va a sembrar
       this.cargasBadge(hit);     // 2/9: y el nodo señalado muestra su ⏱ de cargas ENCIMA
-      // y por si algo más devolviera texto vacío alguna vez: sin texto, no hay cartel
-      const txt = hit ? this.promptText(hit) : "";
-      if (txt) { el.textContent = txt; el.classList.add("show"); }
-      else if (!hit && this.pondDist(wx, wy) < 1.05) { el.textContent = "Pescar (1 lombriz · tenés " + fmt(G.res.lombriz || 0) + ")"; el.classList.add("show"); }
+      /* El clic directo no usa [E], pero sí necesita prometer la MISMA acción que el clic
+         ejecutaría. Antes esta rama conservaba el texto viejo: la laguna decía siempre
+         «lombriz» aunque el aparejo tuviera otra carnada, y un bloqueo recién se veía al
+         hacer clic. Reutilizamos la puerta y el rótulo de PC sin añadir una tecla que este
+         modo no usa. */
+      const agua = !hit && this.pondDist(wx, wy) < 1.05 ? { type: "fish" } : null;
+      const objetivo = hit || agua;
+      const base = objetivo ? (agua ? this.textoPescaPC() : this.textoPromptPC(objetivo)) : "";
+      const bloqueo = objetivo ? this.bloqueoPrompt(objetivo) : null;
+      const texto = this.textoBloqueoPrompt(bloqueo, base);
+      if (texto) { el.textContent = texto; el.classList.add("show"); }
       else el.classList.remove("show");
       return;
     }

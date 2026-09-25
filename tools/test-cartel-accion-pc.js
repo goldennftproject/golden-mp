@@ -1,8 +1,9 @@
-/* EL CARTEL DE PC SOLO PROMETE [E] CUANDO SIRVE
-   =================================================
-   El modo con granjero que camina anuncia la tecla de acción junto al objeto cercano. Este
-   arnés corre updatePrompt() de verdad con un DOM mínimo y prueba que comparte las mismas
-   puertas que interactWith(): una negativa se explica, pero no se anuncia como acción.
+/* EL CARTEL DE PC PROMETE LA ACCIÓN QUE REALMENTE PASA
+   ======================================================
+   El modo con granjero que camina anuncia [E]; la granja real funciona con un clic bajo el
+   cursor. Este arnés corre updatePrompt() de verdad con un DOM mínimo y prueba que ambos
+   recorridos comparten las mismas puertas que interactWith(): una negativa se explica y la
+   pesca nombra su carnada real antes del clic.
      node tools/test-cartel-accion-pc.js */
 const fs = require("fs"), path = require("path"), vm = require("vm");
 const RAIZ = path.join(__dirname, "..");
@@ -38,6 +39,26 @@ function pinta(esc) {
   return prompt.textContent;
 }
 function puerta(fn) { vm.runInContext("puedeAccion = " + fn.toString(), ctx); }
+
+// La configuración publicada juega sin granjero: el objeto está bajo el cursor, no al lado
+// del héroe. Este doble conserva el mismo camino de detección de updatePrompt().
+function escenaClick(objeto, agua) {
+  const esc = escena(), pt = { worldX: 100, worldY: 100 };
+  if (objeto) Object.assign(objeto, { cx: 100, by: 100, sprite: objeto.sprite || {} });
+  Object.assign(esc, {
+    input: { activePointer: pt }, objs: objeto ? [objeto] : [], plots: [], portal: null,
+    hitsSprite(s) { return !!objeto && s === objeto.sprite; },
+    animalEnPunto() { return null; },
+    pondDist() { return agua ? 0 : 99; },
+    previaSiembra() {},
+  });
+  return esc;
+}
+function pintaClick(esc) {
+  const anterior = ctx.GF.NO_WALK;
+  ctx.GF.NO_WALK = true;
+  try { return pinta(esc); } finally { ctx.GF.NO_WALK = anterior; }
+}
 
 console.log("\nLA TECLA SOLO APARECE CUANDO LA PUERTA DA OK");
 {
@@ -92,6 +113,27 @@ console.log("\nLA PESCA DICE EL CEBO REAL Y RESPETA SU PUERTA");
   const txt = pinta(esc);
   ok("una caña rota se explica antes de pulsar", txt === "Tu caña está rota — reparala en Aparejos", txt);
   ok("sin ofrecer [E] a una pesca rechazada", !/\[E\]/.test(txt), txt);
+}
+
+console.log("\nEL MODO REAL DE CLIC COMPARTE ESA INFORMACIÓN");
+{
+  vm.runInContext('ceboPuesto = () => "larva_luz"; lanceExtraPrecio = () => 5;', ctx);
+  G.res.larva_luz = 2;
+  const esc = escenaClick(null, true);
+  puerta(() => ({ ok: true }));
+  let txt = pintaClick(esc);
+  ok("la laguna bajo el cursor nombra la larva seleccionada", /1 larva de luz · tenés 2/.test(txt), txt);
+  ok("y anticipa el recargo del lance", /\+5 plata por cupo/.test(txt), txt);
+  ok("no inventa [E] en una granja de clic directo", !/\[E\]/.test(txt), txt);
+
+  puerta(() => ({ ok: false, toast: "Tu caña está rota — reparala en Aparejos" }));
+  txt = pintaClick(esc);
+  ok("una caña rota se explica antes del clic", txt === "Tu caña está rota — reparala en Aparejos", txt);
+
+  const arbol = escenaClick({ type: "tree", readyAt: 0, texto: "Talar madera" }, false);
+  puerta(() => ({ ok: false, bag: "talar" }));
+  txt = pintaClick(arbol);
+  ok("un árbol con bolsa llena explica el bloqueo bajo el cursor", txt === "Bolsa llena — no podés talar", txt);
 }
 
 console.log("\nLA SIEMBRA DE PC NOMBRA LO QUE REALMENTE VA A PLANTAR");

@@ -89,6 +89,80 @@ console.log("\nEL TABLÓN: PEDIDOS Y CANJE MIDEN LO MISMO");
   ok("y el contenedor nunca sale del layout", enLayout(lista));
 }
 
+console.log("\nEL COFRE GRANDE NO EMPUJA LA BOLSA FUERA DE UNA PANTALLA PC");
+{
+  /* La capacidad se gana también en los cuatro niveles que antes quedaban mudos: el último
+     cofre tiene 10 huecos base + todos esos premios, no la rejilla corta del arranque. */
+  const cupo = vm.runInContext("CHEST_SLOTS + Object.values(FARM_COFRE).reduce((n, v) => n + v, 0)", ctx);
+  const cofresAntes = G.chests, abiertoAntes = ctx.chestOpen;
+  try {
+    /* El bonus de materiales lo da el cofre ya colocado, no el que sigue guardado en la bolsa.
+       El panel toma el mismo cálculo que la mecánica, así no puede prometer un porcentaje falso. */
+    G.chests = [
+      { col: 0, row: 0, items: Array(cupo).fill(null) },
+      { col: null, row: null, items: Array(10).fill(null) }
+    ]; ctx.chestOpen = 0;
+    ctx.refreshChest();
+    const slots = doc.getElementById("cofre-slots");
+    ok("el cofre de nivel máximo puede mostrar 65 casillas", cupo === 65 && slots.children.length === cupo,
+      cupo + " dibujadas: no se corta ni se inventa una capacidad menor");
+    ok("la grilla grande se desplaza dentro de su propio espacio en PC",
+      /#ov-cofre #cofre-slots\{max-height:min\(300px,30vh\) !important;overflow-y:auto;overscroll-behavior:contain\}/.test(html));
+    ok("y la tarjeta tiene una segunda red para una pantalla baja",
+      /#ov-cofre \.card\{max-height:calc\(100vh - 32px\);overflow-y:auto;overscroll-behavior:contain\}/.test(html));
+    const info = doc.getElementById("cofre-info").textContent;
+    ok("un cofre sin colocar no infla el bonus que anuncia el panel", /\+1%/.test(info) && !/\+2%/.test(info),
+      info);
+  } finally {
+    G.chests = cofresAntes;
+    if (abiertoAntes === undefined) delete ctx.chestOpen;
+    else ctx.chestOpen = abiertoAntes;
+  }
+}
+
+console.log("\nEL ÚLTIMO OVERLAY ABIERTO QUEDA AL FRENTE EN PC");
+{
+  /* Se abren en orden DOM inverso. Sin foco dinámico, Zona Negra queda detrás de «¿Cuántas?»
+     solo porque aparece antes en el HTML, aunque sea la ventana que el jugador pidió después. */
+  const anterior = doc.getElementById("ov-cuanto"), ultimo = doc.getElementById("ov-zonares");
+  const movil = doc.getElementById("ov-confirm"), anchoAntes = ctx.innerWidth;
+  const limpiar = el => { el.classList.remove("show"); el.style.removeProperty("--ov-frente"); };
+  /* JSDOM conserva `var(--ov-frente,10)` como texto en zIndex; la variable sí es el valor que
+     escribe el juego. La regla CSS de abajo comprueba que esa variable es la que pinta la capa. */
+  const capa = el => Number(el.style.getPropertyValue("--ov-frente") || 10);
+  ctx.innerWidth = 1280;
+  try {
+    [anterior, ultimo, movil].forEach(limpiar);
+    ctx.openOv("ov-cuanto");
+    const zAnterior = capa(anterior);
+    ctx.openOv("ov-zonares");
+    const zUltimo = capa(ultimo);
+    ok("los dos overlays siguen abiertos", ctx.isOpen("ov-cuanto") && ctx.isOpen("ov-zonares"));
+    ok("el último overlay abierto queda por delante del anterior", zUltimo > zAnterior,
+      zAnterior + " → " + zUltimo);
+    ctx.enfocarOvPc(anterior);
+    const zReenfocado = capa(anterior), zQueQuedoDetras = capa(ultimo);
+    ok("tocar una ventana visible la vuelve a traer al frente", zReenfocado > zQueQuedoDetras,
+      zQueQuedoDetras + " → " + zReenfocado);
+    /* Cantidad y confirmar no entran por openOv(): si no llaman al mismo foco, justamente los
+       cuadros que piden una decisión delicada pueden quedar bajo la pantalla que los originó. */
+    [anterior, ultimo, movil].forEach(limpiar);
+    ctx.openOv("ov-zonares"); const zBase = capa(ultimo);
+    ctx.pedirCuanto(2, "¿Cuántas?", "prueba", () => {}); const zCantidad = capa(anterior);
+    ctx.askConfirm("¿Confirmás?", () => {}); const zConfirmar = capa(movil);
+    ok("cantidad y confirmar también llegan al frente", zCantidad > zBase && zConfirmar > zCantidad,
+      zBase + " → " + zCantidad + " → " + zConfirmar);
+    [anterior, ultimo, movil].forEach(limpiar);
+    ctx.innerWidth = 640;
+    movil.classList.add("show"); ctx.enfocarOvPc(movil);
+    ok("móvil no recibe una capa dinámica de escritorio", !movil.style.getPropertyValue("--ov-frente"));
+    ok("el CSS conserva su capa base en móvil", /@media\(max-width:640px\)\{\.ov\{z-index:10\}\}/.test(html));
+  } finally {
+    [anterior, ultimo, movil].forEach(limpiar);
+    ctx.innerWidth = anchoAntes;
+  }
+}
+
 console.log("\nY LA REGLA DE FONDO, EN LAS CUATRO PANTALLAS DEL RINCÓN");
 {
   /* ningún refresh del rincón esconde con display algo que ocupa fila: la lección del paquete */

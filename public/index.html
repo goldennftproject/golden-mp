@@ -97,6 +97,10 @@
   #combate{position:fixed;right:8px;top:236px;z-index:6;width:126px;
     background:rgba(20,14,8,.9);border:2px solid #6b5327;border-radius:10px;padding:6px 7px;
     box-shadow:0 4px 14px rgba(0,0,0,.45)}
+  /* En PC la Mochila puede tener cinco filas: el muelle se ancla justo debajo del morral que
+     esté dibujado, no a una altura que solo servía para la Bolsa de ocho huecos. Si la ventana
+     es baja, el propio muelle se desplaza por dentro en vez de tapar el contenedor. */
+  @media(min-width:641px){#combate{top:var(--muelle-zona-top,236px);max-height:calc(100vh - var(--muelle-zona-top,236px) - 8px);overflow-y:auto;overscroll-behavior:contain}}
   .cb-eq{display:grid;grid-template-columns:repeat(3,1fr);gap:4px;cursor:pointer}
   /* 15/9: el muñeco completo — tres columnas que no tienen la misma cantidad de huecos (el set
      son cinco piezas y los otros dos lados tres), así que van como columnas y no como rejilla:
@@ -207,7 +211,10 @@
   #prompt{position:fixed;left:50%;bottom:156px;transform:translateX(-50%);z-index:7;background:rgba(20,25,15,.82);color:#ffe9a8;padding:1px 10px;border-radius:9px;font-size:13px;font-weight:700;opacity:0;transition:opacity .15s;pointer-events:none;border:1px solid #6a5a2a}
   #prompt.show{opacity:1}
 
-  .ov{position:fixed;inset:0;z-index:10;display:none;pointer-events:none}
+  .ov{position:fixed;inset:0;z-index:var(--ov-frente,10);display:none;pointer-events:none}
+  /* El foco dinámico es una mejora de escritorio. En móvil se conserva el apilado compacto
+     existente aunque el usuario vuelva a estrechar una ventana que había abierto en PC. */
+  @media(max-width:640px){.ov{z-index:10}}
   /* Ventana que BLOQUEA el juego (9/8). Las .ov normales dejan pasar el clic al mundo a
      propósito; esta no, porque mientras el granjero entrena no se puede hacer otra cosa. */
   .ov.bloquea{pointer-events:auto;background:rgba(12,7,2,.55)}
@@ -677,6 +684,12 @@
        se desplaza dentro del marco, sin perder el cierre ni el resumen de la producción. */
     #ov-lombricario .card{max-height:calc(100vh - 32px);overflow-y:auto;overscroll-behavior:contain}
     #ov-lombricario .close{top:7px;right:7px}
+    /* Un cofre de fin de juego llega a 65 casillas. La grilla de arriba se desplaza por dentro
+       para no empujar fuera de pantalla la bolsa ni el botón de recoger; el marco completo queda
+       protegido también si otro contenido creciera. La regla vive solo en escritorio. */
+    #ov-cofre .card{max-height:calc(100vh - 32px);overflow-y:auto;overscroll-behavior:contain}
+    #ov-cofre .close{top:7px;right:7px}
+    #ov-cofre #cofre-slots{max-height:min(300px,30vh) !important;overflow-y:auto;overscroll-behavior:contain}
   }
 
   @media(min-width:641px){
@@ -2057,7 +2070,7 @@
     // 15/8: VERSIÓN DE BUILD — rompe la caché del navegador en cada deploy (sin esto, el
     // jugador seguía corriendo el state.js viejo aunque el servidor tuviera el nuevo).
     // deploy.bat la actualiza sola (busca GF_BUILD y pone la fecha/hora del deploy).
-    const GF_BUILD = "20260924-203703";
+    const GF_BUILD = "20260925-002956";
     const files = ["game/config.js","game/nav.js","game/audio.js","game/state.js","game/save.js","game/ui.js","game/boot.js",
                    "game/farm.js","game/forest.js","game/plaza.js","game/main.js","game/update.js"];
     /* 24/8 — SE BAJAN TODOS A LA VEZ, SE EJECUTAN EN FILA (dirección: « sigue tardando en

@@ -47,6 +47,38 @@ const OV_REFRESH = { "ov-entrenando": () => entrenarSync(), "ov-clan": () => ref
 // los overlays NO bloquean el juego: podés seguir moviéndote/interactuando con la ventana abierta
 // sonido propio de cada edificio al abrir su ventana (pedido del diseñador)
 const OV_SFX = { "ov-pedidos": "shop", "ov-market": "shop", "ov-forge": "forge", "ov-barn": "door", "ov-cocina": "door", "ov-cofre": "door", "ov-paquete": "coin", "ov-altar": "forge", "ov-establo": "door", "ov-curtiduria": "forge" };
+/* Las ventanas pueden convivir; por eso la última que se abre (o se toca) tiene que ser la que
+   queda arriba. Se normaliza la pila en vez de sumar un contador sin fin: 39 sigue debajo de la
+   celebración (40) y de las capas de recuperación/tutorial. En teléfono no se toca la pila. */
+const OV_FRENTE_BASE = 10, OV_FRENTE_MAX = 39;
+function escribirCapaOv(el, capa) {
+  const estilo = el && el.style; if (!estilo) return;
+  if (capa === null) {
+    if (typeof estilo.removeProperty === "function") estilo.removeProperty("--ov-frente");
+    else estilo["--ov-frente"] = "";
+    return;
+  }
+  if (typeof estilo.setProperty === "function") estilo.setProperty("--ov-frente", String(capa));
+  else estilo["--ov-frente"] = String(capa);
+}
+function leerCapaOv(el) {
+  const estilo = el && el.style;
+  const valor = estilo && typeof estilo.getPropertyValue === "function" ? estilo.getPropertyValue("--ov-frente") : "";
+  const capa = Number(valor);
+  return Number.isFinite(capa) ? capa : OV_FRENTE_BASE;
+}
+function enfocarOvPc(el) {
+  if (!el || typeof window === "undefined" || window.innerWidth <= 640) return;
+  const abiertas = Array.from(document.querySelectorAll(".ov.show"));
+  if (abiertas.indexOf(el) < 0) abiertas.push(el);
+  const orden = abiertas.filter(ov => ov !== el).sort((a, b) => leerCapaOv(a) - leerCapaOv(b));
+  orden.push(el);
+  /* Hay cuarenta overlays posibles, pero la pila visual conserva solo los 29 más recientes.
+     Los más viejos vuelven a la base hasta que el jugador los toca otra vez: el foco actual
+     siempre llega a 39 sin adelantar a una celebración o una pantalla bloqueante. */
+  abiertas.forEach(ov => escribirCapaOv(ov, null));
+  orden.slice(-(OV_FRENTE_MAX - OV_FRENTE_BASE)).forEach((ov, i) => escribirCapaOv(ov, OV_FRENTE_BASE + 1 + i));
+}
 function openOv(id) {
   /* 10/9 — LA PUERTA ÚNICA DEL MVP. Todo panel entra por acá: el menú, los atajos de teclado,
      las cartas del buzón, los botones « Ver el Pase ». Cerrando acá se cierra en todos a la vez,
@@ -58,7 +90,11 @@ function openOv(id) {
     if (typeof toast === "function") toast("Eso no está en esta versión de prueba");
     return;
   }
-  const e = $(id); if (!e) return; e.classList.add("show"); if (window.sfx) sfx(OV_SFX[id] || "click"); if (OV_REFRESH[id]) OV_REFRESH[id](); if (typeof tutoHighlight === "function") tutoHighlight();   // 13/8: al abrir un panel, el botón del objetivo se resalta al instante
+  const e = $(id); if (!e) return;
+  e.classList.add("show"); enfocarOvPc(e);
+  if (window.sfx) sfx(OV_SFX[id] || "click");
+  if (OV_REFRESH[id]) OV_REFRESH[id]();
+  if (typeof tutoHighlight === "function") tutoHighlight();   // 13/8: al abrir un panel, el botón del objetivo se resalta al instante
 }
 
 // FUNDIDO A NEGRO al cambiar de escena (granja <-> Zona Negra <-> plaza). Antes era un corte seco.
@@ -335,9 +371,23 @@ function durArmaHtml(id) {
     '<span class="cb-durBar"><i style="width:' + (pct * 100).toFixed(0) + '%"></i></span>' +
     '<b>' + dur + '</b></div>';
 }
+/* El muelle y el morral viven a la derecha dentro de la Zona. Con la Bolsa (dos filas), una
+   coordenada fija alcanzaba; con la Mochila (cinco) el muelle caía encima de sus últimos huecos.
+   La posición se deriva de la caja ya renderizada: el contenido del contenedor puede crecer, pero
+   nunca vuelve a esconderse detrás de un panel. Solo corre en escritorio; móvil conserva su
+   disposición propia. */
+function ubicarMuelleCombatePC() {
+  const muelle = $("combate"), morral = $("morral");
+  if (!muelle) return;
+  const limpiar = () => muelle.style.removeProperty("--muelle-zona-top");
+  if (!morral || !window.GF || GF.scene !== "forest" || window.innerWidth <= 640) { limpiar(); return; }
+  const r = morral.getBoundingClientRect();
+  if (!r.height) { limpiar(); return; }
+  muelle.style.setProperty("--muelle-zona-top", Math.ceil(r.bottom + 8) + "px");
+}
 function refreshCombate() {
   const caja = $("combate"); if (!caja) return;
-  if (!(window.GF && GF.scene === "forest")) { caja.style.display = "none"; caja._firma = ""; return; }
+  if (!(window.GF && GF.scene === "forest")) { caja.style.display = "none"; caja._firma = ""; ubicarMuelleCombatePC(); return; }
   const gr = G.gear || {};
   const modo = (typeof modoPelea === "function") ? modoPelea() : "perseguir";
   /* 8/9 (Suren) — este muelle solo se ve DENTRO de la Zona, así que las flechas que cuenta tienen
@@ -358,7 +408,7 @@ function refreshCombate() {
      el muelle enseñaría el número del momento en que entraste a la Zona */
   const durArma = (gr.arma && G.weapons && G.weapons[gr.arma]) ? G.weapons[gr.arma].dur : "-";
   const firma = [gr.casco, gr.armadura, gr.botas, gr.escudo, gr.arma, gr.municion ? fl : 0, modo, setFirma, aManoFirma, durArma].join("|");
-  if (caja._firma === firma) return;
+  if (caja._firma === firma) { ubicarMuelleCombatePC(); return; }
   caja._firma = firma;
   caja.style.display = "";
 
@@ -448,23 +498,29 @@ function refreshCombate() {
     e.stopPropagation();
     if (typeof modoPeleaSet === "function") modoPeleaSet(b.dataset.modo);
   });
+  ubicarMuelleCombatePC();
 }
 function refreshMorral() {
   const caja = $("morral"); if (!caja) return;
   const enZona = !!(window.GF && GF.scene === "forest");
-  if (!enZona) { caja.style.display = "none"; caja._firma = ""; return; }
+  if (!enZona) { caja.style.display = "none"; caja._firma = ""; ubicarMuelleCombatePC(); return; }
   /* 8/9 (tarde): el panel dejó de ser « el morral » y es EL CONTENEDOR que llevás puesto — el
      objeto de verdad, con su nombre y su cupo. Sigue siendo de solo lectura y sigue viviendo en
      el costado: es el recordatorio de cuánto te queda por llenar antes de tener que volver, que
      es la decisión que esta mecánica propone cada dos minutos. */
   const raiz = (typeof contLlevado === "function") ? contLlevado() : null;
   const l = raiz ? contAplanar(raiz) : [];
-  const cupo = raiz ? CONT_DEF[raiz.c].huecos : 0;
-  const firma = (raiz ? raiz.c : "-") + l.map(e => e.kind + ":" + e.k + "=" + e.n).join("|") + "/" + l.length;
-  if (caja._firma === firma) return;
+  /* La capacidad útil no es siempre la del contenedor raíz: una Bolsa dentro de la Mochila
+     ocupa un hueco pero suma ocho. El mismo contLibres() que decide si entra botín da la cuenta
+     honesta para el encabezado: pilas visibles + huecos libres. Sin esto podía terminar diciendo
+     «27/20», justo cuando el jugador necesita saber cuánto riesgo le queda asumir. */
+  const libres = raiz ? contLibres(raiz) : 0;
+  const cupo = raiz ? l.length + libres : 0;
+  const firma = (raiz ? raiz.c : "-") + ":" + cupo + ":" + l.map(e => e.kind + ":" + e.k + "=" + e.n).join("|") + "/" + l.length;
+  if (caja._firma === firma) { ubicarMuelleCombatePC(); return; }
   caja._firma = firma;
   caja.style.display = "";
-  const lleno = raiz ? !contLibres(raiz) : true;
+  const lleno = raiz ? libres <= 0 : true;
   let h = '<div class="mor-tit' + (lleno ? " lleno" : "") + '">' +
     (raiz ? CONT_DEF[raiz.c].emoji + ' ' + CONT_DEF[raiz.c].label + ' ' + l.length + '/' + cupo + (lleno ? ' · LLENO' : '')
           : '👝 Sin contenedor') + '</div><div class="mor-huecos">';
@@ -481,6 +537,7 @@ function refreshMorral() {
   }
   h += '</div><div class="mor-pie">' + (raiz ? 'Se vacía solo al volver — y se pierde entero si te matan' : 'Volvé a la granja') + '</div>';
   caja.innerHTML = h;
+  ubicarMuelleCombatePC();
 }
 /* ═══ LA PUERTA DE LA ZONA NEGRA ═══════════════════════════ (8/9, dirección: « esa bag es la
    que vamos a llenar para ir a zona negra: comidas, runas, flechas, espadas, lo que el usuario
@@ -593,7 +650,7 @@ function pedirCuanto(max, titulo, sub, onOk) {
   ov.querySelectorAll("[data-cu]").forEach(b => b.onclick = () => {
     set(cuantoAtajo(b.dataset.cu, max));
   });
-  ov.classList.add("show");
+  ov.classList.add("show"); enfocarOvPc(ov);
   const cerrar = () => { ov.classList.remove("show"); };
   $("cu-ok").onclick = () => { cerrar(); onOk(Math.max(1, Math.min(max, +num.value || 1))); };
   $("cu-no").onclick = cerrar;
@@ -2252,7 +2309,7 @@ function askConfirm(msg, onYes, opts) {
   const ov = $("ov-confirm"); if (!ov) { onYes(); return; }
   const tt = $("cf-title"); if (tt) tt.textContent = opts.title || "Tirar a la papelera";
   const m = $("cf-msg"); if (m) m.textContent = msg;
-  ov.classList.add("show");
+  ov.classList.add("show"); enfocarOvPc(ov);
   const yes = $("cf-yes"), no = $("cf-no");
   if (yes) { yes.textContent = opts.yes || "Tirar"; yes.className = opts.yesClass || "red"; yes.onclick = () => { ov.classList.remove("show"); onYes(); }; }
   if (no) { no.textContent = opts.no || "Cancelar"; no.className = (opts.noClass || "ghost") + " sm"; no.onclick = () => { ov.classList.remove("show"); if (typeof opts.onNo === "function") opts.onNo(); }; }
@@ -2744,7 +2801,8 @@ function refreshChest() {
   const ch = (G.chests || [])[ci];
   const box = $("cofre-slots"), inv = $("cofre-inv"), info = $("cofre-info");
   if (!ch || !box) return;
-  if (info) info.textContent = "Cofre " + (ci + 1) + " de " + G.chests.length + " · bonus total de materiales: +" + G.chests.length + "% · hasta 99 por espacio";
+  const bono = Math.round(((typeof chestBonus === "function" ? chestBonus() : 1) - 1) * 100);
+  if (info) info.textContent = "Cofre " + (ci + 1) + " de " + G.chests.length + " · bonus total de materiales: +" + bono + "% · hasta 99 por espacio";
   box.innerHTML = ch.items.map((s, i) => {
     if (!s) return '<div class="slot"></div>';
     const v = itemView({ kind: s.kind, key: s.key });
@@ -4808,6 +4866,16 @@ function syncRegistroPrompt() {
 }
 function initUniversalDrag() {
   document.querySelectorAll(".ov .card").forEach(c => makeHoldDrag(c));          // todas las ventanas
+  /* Una tarjeta que todavía se alcanza por un borde puede seguir usándose: tocarla es elegirla,
+     no obligar a cerrarla y abrirla de nuevo. El listener no cancela el gesto, así que botones,
+     arrastre y clic derecho conservan exactamente su comportamiento. */
+  if (!document._ovFocusBound) {
+    document._ovFocusBound = true;
+    document.addEventListener("pointerdown", (ev) => {
+      const ov = ev.target && ev.target.closest ? ev.target.closest(".ov.show") : null;
+      if (ov) enfocarOvPc(ov);
+    }, true);
+  }
   makeHoldDrag($("hotwrap"), "gf_hotpos", false, syncRegistroPrompt);           // barra de acceso rápido
   const registro = $("logpanel");
   makeHoldDrag(registro, "gf_logpos", true, syncRegistroPrompt);                  // registro/chat (anclado por abajo: se abre hacia ARRIBA)
@@ -4839,7 +4907,11 @@ function initUI() {
   GF.uiOpen = false;
   registroRestaurarCambioManual();
   const gmenu = $("gmenu");
-  const toggleMenu = () => gmenu.classList.toggle("collapsed");
+  /* La flecha distingue el ☰ de la entrada que apareció dentro del menú. Recalcular sólo en el
+     latido hacía que, durante hasta un segundo, siguiera señalando una ruta que acababa de dejar
+     de ser la visible. Esta puerta cubre el clic y el atajo M en el mismo gesto. */
+  const sincronizarGuiaMenu = () => { if (typeof tutoHighlight === "function") tutoHighlight(); };
+  const toggleMenu = () => { gmenu.classList.toggle("collapsed"); sincronizarGuiaMenu(); };
   const gt = $("gmtoggle"); if (gt) gt.onclick = toggleMenu;
   const mb = $("menu-btn"); if (mb) mb.onclick = toggleMenu;
   // fixs.docx #10 (11/8): opción de menú FIJO — queda desplegado y no se cierra al elegir
@@ -4864,7 +4936,10 @@ function initUI() {
        otra puerta; esto es para que ni siquiera se vea el botón — un botón que contesta « no
        está » es mejor que uno mudo, pero uno que no existe es mejor que los dos. */
     if (typeof GF !== "undefined" && GF.esOcultoMvp && GF.esOcultoMvp(b.dataset.panel)) { b.style.display = "none"; return; }
-    b.onclick = () => { openOv(b.dataset.panel); if (!menuFijo()) gmenu.classList.add("collapsed"); };
+    b.onclick = () => {
+      openOv(b.dataset.panel);
+      if (!menuFijo()) { gmenu.classList.add("collapsed"); sincronizarGuiaMenu(); }
+    };
   });
   document.querySelectorAll("[data-close]").forEach(b => b.onclick = () => closeOv(b.dataset.close));
   /* 19/9 (dirección: « quitemos las cosas que no tienen utilidad en la interfaz ») — TRES PÍLDORAS
@@ -4906,7 +4981,9 @@ function initUI() {
   document.addEventListener("pointerdown", (e) => {
     // el menú se pliega solo al clickear fuera de él (volver a jugar) — salvo con menú fijo (#10)
     const gm = $("gmenu");
-    if (gm && !gm.classList.contains("collapsed") && !e.target.closest("#gmenu, #menu-btn") && !(window.menuFijo && menuFijo())) gm.classList.add("collapsed");
+    if (gm && !gm.classList.contains("collapsed") && !e.target.closest("#gmenu, #menu-btn") && !(window.menuFijo && menuFijo())) {
+      gm.classList.add("collapsed"); sincronizarGuiaMenu();
+    }
     if (!anyOvOpen()) return;
     if (e.target.closest(".card, #gmenu, #hotwrap, .hudbar, #logpanel, #editbar, #seedwheel")) return;
     document.querySelectorAll(".ov.show:not(.bloquea)").forEach(o => { if (o.id !== "ov-inv") o.classList.remove("show"); });
