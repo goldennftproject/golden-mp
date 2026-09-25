@@ -128,7 +128,7 @@ console.log("\nLA PESCA DICE EL CEBO REAL Y RESPETA SU PUERTA");
   G.res.larva_luz = 2;
   const pesca = esc.textoPescaPC();
   ok("anuncia la carnada seleccionada, no siempre una lombriz", /1 larva de luz · tenés 2/.test(pesca), pesca);
-  ok("y hace visible el recargo cuando ya se acabó el cupo", /\+5 plata por cupo/.test(pesca), pesca);
+  ok("y hace visible el recargo cuando ya se acabó el cupo", /el próximo cuesta 5 plata/.test(pesca), pesca);
 
   puerta(() => ({ ok: false, toast: "Tu caña está rota — reparala en Aparejos" }));
   const txt = pinta(esc);
@@ -144,7 +144,7 @@ console.log("\nEL MODO REAL DE CLIC COMPARTE ESA INFORMACIÓN");
   puerta(() => ({ ok: true }));
   let txt = pintaClick(esc);
   ok("la laguna bajo el cursor nombra la larva seleccionada", /1 larva de luz · tenés 2/.test(txt), txt);
-  ok("y anticipa el recargo del lance", /\+5 plata por cupo/.test(txt), txt);
+  ok("y anticipa el recargo del lance", /el próximo cuesta 5 plata/.test(txt), txt);
   ok("no inventa [E] en una granja de clic directo", !/\[E\]/.test(txt), txt);
 
   puerta(() => ({ ok: false, toast: "Tu caña está rota — reparala en Aparejos" }));

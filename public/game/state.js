@@ -5586,7 +5586,13 @@ function alimentarUno(k, i, silencio) {
     toast("Ojo: 1 " + (CROP_DEF[cultivo].label || cultivo) + " vale " + valeComida + " y el ciclo rinde " + valeRinde + " — le estás dando de comer a pérdida");
   G.res[cultivo] -= racion;
   a.feliz = Math.min(100, animalFelizDe(a) + felizDeComida(k, cultivo, true));
-  a.comidoAt = nowMs();
+  /* 25/9 (diseñador, Discord 13:58): « las 24 horas del animal empiezan a correr justo
+     después de alimentarlo. Le acabo de dar comida y dice que en 6 h me da el material — no
+     puede ser así ». Hasta hoy el reloj corría desde la última RECOGIDA y comer solo marcaba el
+     ciclo; alimentar a la hora 18 daba el material a la hora 24. Ahora comer ARRANCA el ciclo:
+     el material llega 24 h después de la comida, siempre. Un animal sin comer no tiene reloj:
+     espera (ver animalCicloActivo). */
+  a.comidoAt = nowMs(); a.prodAt = a.comidoAt;
   statAdd("alimentar", k);
   if (!silencio) {
     log("Alimentaste " + d.label + " " + (i + 1) + " con " + racion + " " + (CROP_DEF[cultivo].label || cultivo) +
@@ -5621,17 +5627,18 @@ function animalListo(k) {   // ¿hay AL MENOS uno listo de este tipo?
 // cuánto falta para el PRÓXIMO que va a estar listo
 function animalFalta(k) {
   const d = ANIMAL_DEF[k], l = animalLista(k); if (!d || !l.length) return 0;
-  return Math.min.apply(null, l.map(a => Math.max(0, d.cicloH * 3600000 - (nowMs() - (a.prodAt || 0)))));
+  return Math.min.apply(null, l.map(a => animalCicloActivo(a) ? Math.max(0, d.cicloH * 3600000 - (nowMs() - (a.prodAt || 0))) : d.cicloH * 3600000));
 }
-function animalListos(k) {   // cuántos hay listos para cobrar
+function animalListos(k) {   // cuántos hay listos para cobrar (25/9: solo los que comieron — sin comida no hay ciclo)
   const d = ANIMAL_DEF[k]; if (!d) return 0;
-  return animalLista(k).filter(a => nowMs() - (a.prodAt || 0) >= d.cicloH * 3600000).length;
+  return animalLista(k).filter(a => animalCicloActivo(a) && nowMs() - (a.prodAt || 0) >= d.cicloH * 3600000).length;
 }
 /* 8/9: el reloj de UNO. « el tiempo de la fibra es por separado » — cada animal tiene su
    prodAt desde el 10/8, así que esto solo lo estaba escondiendo la interfaz. */
 function animalFaltaDe(k, i) {
   const d = ANIMAL_DEF[k], a = animalLista(k)[i];
   if (!d || !a) return 0;
+  if (!animalCicloActivo(a)) return d.cicloH * 3600000;   // 25/9: sin comer, el ciclo entero por delante
   return Math.max(0, d.cicloH * 3600000 - (nowMs() - (a.prodAt || 0)));
 }
 /* ═══ EL RINDE CON DECIMALES ═══════════════════ (8/9, dirección: « podemos agregar decimales,
@@ -5656,6 +5663,9 @@ function animalFaltaDe(k, i) {
    produzca ». Escrito en docs/LEYES.md como ley 4. Lo custodia tools/test-establo-hambre.js. */
 function animalComioEsteCiclo(a) { return !!a && (a.comidoAt || 0) >= (a.prodAt || 0) && (a.comidoAt || 0) > 0; }
 function animalHambriento(a) { return !animalComioEsteCiclo(a); }
+/* 25/9: el ciclo solo CORRE si el animal comió. Sin comer no hay cuenta atrás: ni « listo »
+   ni « produce en » — está esperando la comida, y eso es lo que el panel dice. */
+function animalCicloActivo(a) { return animalComioEsteCiclo(a); }
 // La UI no debe ofrecer "alimentar todo" si no puede completar ni UNA ración válida.
 // Se apoya en la misma regla estricta que alimentarUno: hambre real + ración entera de su dieta.
 function animalPuedeComer(k) {
@@ -5725,6 +5735,8 @@ function recogerUno(k, i, silencio) {
   if (entero > 0 && !roomForRes(d.mat, entero)) { if (!silencio) bagFull("recoger " + RES_LABEL[d.mat]); return 0; }
   a.pend = Math.round((acum - entero) * 100) / 100;
   if (entero > 0) G.res[d.mat] = (G.res[d.mat] || 0) + entero;
+  /* 25/9: recoger CIERRA el ciclo (comidoAt queda atrás de prodAt → con hambre); el próximo
+     arranca cuando vuelva a comer, no ahora. */
   a.prodAt = nowMs();
   addXp("ganaderia", XP_ANIMAL);   // 18/8: los animales son Ganadería, no Cultivo
   if (!silencio) {
@@ -8585,6 +8597,11 @@ function lanceCobrarCupo() {
     toast("Lance extra · −" + p + " plata");
   }
   lancesHoy(); G.pescaDia.n += 1;
+  /* 25/9: al gastar el último gratis se avisa, para que el 16.º no sorprenda con un cobro */
+  if (G.pescaDia.n === PESCA_LANCES_DIA) {
+    toast("Fueron los " + PESCA_LANCES_DIA + " lances gratis de hoy · el próximo cuesta " + PESCA_LANCE_EXTRA_PLATA + " plata");
+    log("🎣 Tiraste los " + PESCA_LANCES_DIA + " lances gratis de hoy. Podés seguir: cada lance extra cuesta " + PESCA_LANCE_EXTRA_PLATA + " de plata más que el anterior (5, 10, 15…). El cupo vuelve a las 00:00 UTC.", "info");
+  }
   return true;
 }
 function lanceExtraTxt() {

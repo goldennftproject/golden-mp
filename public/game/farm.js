@@ -17,8 +17,7 @@ class FarmScene extends Phaser.Scene {
     window.FARM = this;   // para restaurar la granja desde la config
     // Phaser REUTILIZA la instancia al reiniciar la escena: hay que soltar todo lo cacheado,
     // porque apunta a objetos ya destruidos (y usarlos rompía el juego al volver del Bosque).
-    this.hoverFx = null; this.nearFx = null; this._cursorMundo = null;
-    this.cursorMundo(false);   // una escena anterior no puede dejar la manito pegada al lienzo
+    this.hoverFx = null; this.nearFx = null;
     this.destMk = null; this.destTw = null;
     this.dummyObj = null; this.dummyTimer = null; this.fishBar = null; this.adornos = null;   // si no se suelta, al volver del bosque la barra de pesca no vuelve a aparecer (10/8)
     this.editHl = null; this._nav = null; this.storeObj = null; this.forgeGlow = null;
@@ -1025,7 +1024,6 @@ class FarmScene extends Phaser.Scene {
     };
     this.scale.on("resize", this._expCtaResize, this);
     this.events.once("shutdown", () => {
-      this.cursorMundo(false);
       this.scale.off("resize", this.fitCamera, this);
       if (this._tutoCamResize) this.scale.off("resize", this._tutoCamResize, this);
       if (this._expCtaResize) this.scale.off("resize", this._expCtaResize, this);
@@ -1335,8 +1333,12 @@ class FarmScene extends Phaser.Scene {
     const nombre = (d && d.label) || RES_LABEL[id] || "carnada";
     const cantidad = d ? (bolsa[d.k] || 0) : (G.res.lombriz || 0);
     let texto = "Pescar (" + ((d && d.n) || 1) + " " + nombre.toLowerCase() + " · tenés " + fmt(cantidad) + ")";
+    /* 25/9 (diseñador: « ¿dónde dice que solo se puede pescar 15 veces? ¿dónde pone el
+       contador? ») — el contador vivía solo en Aparejos. Va acá, en el cartel del agua, que es
+       lo que se mira antes de tirar. */
     const extra = (typeof lanceExtraPrecio === "function") ? lanceExtraPrecio() : 0;
-    if (extra > 0) texto += " · +" + extra + " plata por cupo";
+    if (typeof lancesHoy === "function" && typeof PESCA_LANCES_DIA === "number")
+      texto += " · lances " + lancesHoy() + "/" + PESCA_LANCES_DIA + (extra > 0 ? " — el próximo cuesta " + extra + " plata" : " gratis hoy");
     return texto + " · clic derecho: aparejos";
   }
 
@@ -4284,20 +4286,6 @@ class FarmScene extends Phaser.Scene {
     if (typeof saveFarm === "function") saveFarm(true);
   }
 
-  /* El canvas no recibe el cursor de los botones HTML. Sin esta pequeña señal, el brillo dice
-     « quizá » pero el puntero sigue siendo una flecha sobre algo que se puede usar. Se escribe
-     directamente en el lienzo y solo en escritorio: en móvil no hay hover que comunicar. */
-  cursorMundo(mano) {
-    let cv = null;
-    try { cv = (this.game && this.game.canvas) || document.querySelector("#game canvas"); } catch (e) {}
-    if (!cv || !cv.style) return;
-    const escritorio = typeof window === "undefined" || !window.innerWidth || window.innerWidth > 640;
-    const proximo = escritorio && mano ? "pointer" : "";
-    if (this._cursorMundo === proximo && cv.style.cursor === proximo) return;
-    this._cursorMundo = proximo;
-    cv.style.cursor = proximo;   // vacío = vuelve al cursor normal que define el CSS
-  }
-
   // brillo de interacción: hover del cursor + cercanía del granjero (capa aditiva sobre el sprite)
   updateHoverFx() {
     if (!this.hoverFx) {
@@ -4311,7 +4299,7 @@ class FarmScene extends Phaser.Scene {
       fx.setFlipX(!!s.flipX); fx.setAngle(0); fx.setDepth(s.depth + 0.5); fx.setVisible(true);
       if (fx.isCropped) fx.setCrop();   // el árbol se dibuja recortado (copa/tronco), pero el brillo va entero
     };
-    if (GF.editMode || GF.uiOpen) { this.hoverFx.setVisible(false); this.nearFx.setVisible(false); this.cursorMundo(false); return; }
+    if (GF.editMode || GF.uiOpen) { this.hoverFx.setVisible(false); this.nearFx.setVisible(false); return; }
     const T = GF.TILE, p = this.input.activePointer;
     let hov = null;
     for (const o of this.objs) {
@@ -4322,11 +4310,6 @@ class FarmScene extends Phaser.Scene {
       if (pl.ground && Math.abs(p.worldX - pl.cx) < T / 2 && Math.abs(p.worldY - pl.by) < T / 2) { hov = pl.ground; break; }
     }
     apply(this.hoverFx, hov);
-    /* El agua también es un gesto inmediato cuando el granjero ya está en la orilla. Le damos la
-       misma manito que a un objeto; lejos de la laguna sigue siendo movimiento, no una promesa de
-       pesca. */
-    const aguaLista = !hov && this.nearPond() && this.pondDist(p.worldX, p.worldY) < 1.05;
-    this.cursorMundo(!!hov || aguaLista);
     // cercanía: lo que el granjero puede interactuar ya mismo (mismo brillo, más suave)
     if (GF.NO_WALK) { this.nearFx.setVisible(false); return; }   // el granjero queda estacionado donde trabajó: su "cercanía" no vale
     const near = this.nearestInteract();

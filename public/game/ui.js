@@ -371,6 +371,21 @@ function durArmaHtml(id) {
     '<span class="cb-durBar"><i style="width:' + (pct * 100).toFixed(0) + '%"></i></span>' +
     '<b>' + dur + '</b></div>';
 }
+/* El HUD se puede envolver en varias filas en un escritorio angosto. El morral no puede quedarse
+   en su antiguo top fijo, porque terminaría debajo de moneda/vida; se ancla justo bajo la última
+   fila visible (o bajo la repisa de buffs), sin tocar la composición móvil. */
+function ubicarMorralPc() {
+  const morral = $("morral");
+  if (!morral) return;
+  const limpiar = () => { const st = morral.style; if (!st) return; if (typeof st.removeProperty === "function") st.removeProperty("--morral-zona-top"); else st["--morral-zona-top"] = ""; };   // 25/9: con guarda (DOM de cartón de los tests)
+  if (!window.GF || GF.scene !== "forest" || window.innerWidth <= 640) { limpiar(); return; }
+  const hud = $("hudbar"), flot = $("hud-flot");
+  const hr = hud && hud.getBoundingClientRect(), fr = flot && flot.getBoundingClientRect();
+  let top = 96;
+  if (hr && hr.width && hr.height) top = Math.max(top, hr.bottom + 8);
+  if (fr && fr.width && fr.height) top = Math.max(top, fr.bottom + 8);
+  { const st = morral.style; if (st && typeof st.setProperty === "function") st.setProperty("--morral-zona-top", Math.ceil(top) + "px"); else if (st) st["--morral-zona-top"] = Math.ceil(top) + "px"; }
+}
 /* El muelle y el morral viven a la derecha dentro de la Zona. Con la Bolsa (dos filas), una
    coordenada fija alcanzaba; con la Mochila (cinco) el muelle caía encima de sus últimos huecos.
    La posición se deriva de la caja ya renderizada: el contenido del contenedor puede crecer, pero
@@ -378,12 +393,15 @@ function durArmaHtml(id) {
    disposición propia. */
 function ubicarMuelleCombatePC() {
   const muelle = $("combate"), morral = $("morral");
+  if (typeof ubicarMorralPc === "function") ubicarMorralPc();
   if (!muelle) return;
-  const limpiar = () => muelle.style.removeProperty("--muelle-zona-top");
+  /* 25/9: con la misma guarda que escribirCapaOv — el DOM de cartón de los tests no tiene
+     removeProperty, y test-cuerpos / test-tumba-una-sola reventaban en refreshMorral. */
+  const limpiar = () => { const st = muelle.style; if (!st) return; if (typeof st.removeProperty === "function") st.removeProperty("--muelle-zona-top"); else st["--muelle-zona-top"] = ""; };   // 25/9: con guarda (DOM de cartón de los tests)
   if (!morral || !window.GF || GF.scene !== "forest" || window.innerWidth <= 640) { limpiar(); return; }
   const r = morral.getBoundingClientRect();
   if (!r.height) { limpiar(); return; }
-  muelle.style.setProperty("--muelle-zona-top", Math.ceil(r.bottom + 8) + "px");
+  { const st = muelle.style; if (st && typeof st.setProperty === "function") st.setProperty("--muelle-zona-top", Math.ceil(r.bottom + 8) + "px"); else if (st) st["--muelle-zona-top"] = Math.ceil(r.bottom + 8) + "px"; }
 }
 function refreshCombate() {
   const caja = $("combate"); if (!caja) return;
@@ -3738,9 +3756,9 @@ function refreshEstablo() {
           ? (totalI > 0
               ? '<b style="color:#3f6b2a">¡Listo! · +' + totalI + ' ' + RES_LABEL[d.mat] + '</b>'
               : '<b style="color:#a5621a">¡Listo! · no comió: no da nada</b>')
-          : 'Produce en ' + fmtDur(faltaI) + ' · ' + (totalI > 0
-              ? 'dará <b>+' + totalI + '</b> ' + RES_LABEL[d.mat]
-              : '<span style="color:#a5621a">si no come, no dará nada</span>')) + '</div>' +
+          : comio
+            ? 'Produce en ' + fmtDur(faltaI) + ' · dará <b>+' + totalI + '</b> ' + RES_LABEL[d.mat]
+            : '<span style="color:#a5621a">Sin comer no hay reloj: sus ' + d.cicloH + ' h arrancan cuando coma</span>') + '</div>' +
         '<div class="fds">Come ' + come + ' una vez por ciclo' +
           (comio ? '' : (tieneComida
             ? ' — <b>dale de comer ahora</b>'
@@ -4838,6 +4856,19 @@ function placePrompt() {
   const abajo = Math.floor(window.innerHeight - rr.bottom - pr.height - 12);
   if (abajo >= bottom && abajo <= maxBottom) p.style.bottom = abajo + "px";
 }
+/* El botín de un cadáver y la hotbar viven centrados abajo. En PC, el panel no puede quedar
+   encima de los atajos de comida/arma: toma la caja real de la hotbar, que además puede haber
+   sido arrastrada. En móvil conserva la composición original compacta. */
+function placeCuerpoPanelPc() {
+  const panel = $("cuerpo-panel"), hb = $("hotwrap");
+  if (!panel) return;
+  const limpiar = () => { const st = panel.style; if (!st) return; if (typeof st.removeProperty === "function") st.removeProperty("--cuerpo-panel-bottom"); else st["--cuerpo-panel-bottom"] = ""; };   // 25/9: con guarda (DOM de cartón de los tests)
+  if (typeof window === "undefined" || window.innerWidth <= 640 || !panel.classList.contains("show") || !hb) { limpiar(); return; }
+  const r = hb.getBoundingClientRect();
+  if (!r.width || !r.height) { limpiar(); return; }
+  const bottom = Math.max(16, Math.ceil(window.innerHeight - r.top + 8));
+  { const st = panel.style; if (st && typeof st.setProperty === "function") st.setProperty("--cuerpo-panel-bottom", bottom + "px"); else if (st) st["--cuerpo-panel-bottom"] = bottom + "px"; }
+}
 /* En móvil el objetivo queda sobre la hotbar por CSS. Tanto abierto como plegado, el Registro
    puede ocupar esa franja; se mide la colisión real y se sube sólo entonces. En escritorio se
    conserva su anclaje CSS, salvo cuando el HUD real envolvió una segunda fila: ahí baja justo
@@ -4852,9 +4883,14 @@ function placeTuto() {
     const hud = $("hudbar");
     if (!hud) return;
     const hr = hud.getBoundingClientRect();
+    /* La repisa de estamina/buffs es absoluta: no agranda hudbar aunque sea parte visible
+       del HUD. Si la guía se calcula sólo con la barra base, una pantalla de escritorio
+       angosta puede dejar el objetivo justo encima de ese dato de combate. */
+    const flot = $("hud-flot"), fr = flot && flot.getBoundingClientRect();
+    const fondoHud = fr && fr.width && fr.height ? Math.max(hr.bottom, fr.bottom) : hr.bottom;
     const cssTop = parseFloat(window.getComputedStyle ? window.getComputedStyle(guia).top : "") || 54;
-    // Una sola fila respeta exactamente el top que dicta CSS; sólo la segunda fila crea el hueco.
-    if (hr.width && hr.height && hr.bottom + 8 > cssTop) guia.style.top = Math.ceil(hr.bottom + 8) + "px";
+    // Una sola fila sin repisa respeta el CSS; sólo una segunda fila o una repisa visible crea el hueco.
+    if (hr.width && hr.height && fondoHud + 8 > cssTop) guia.style.top = Math.ceil(fondoHud + 8) + "px";
     return;
   }
   if (!registro) return;
@@ -4871,6 +4907,8 @@ function syncRegistroPrompt() {
   placeRegistro();
   placePrompt();
   placeTuto();
+  placeCuerpoPanelPc();
+  if (typeof ubicarMuelleCombatePC === "function") ubicarMuelleCombatePC();
   placeToast();
 }
 function initUniversalDrag() {

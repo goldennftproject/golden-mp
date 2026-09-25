@@ -511,6 +511,7 @@ class ForestScene extends Phaser.Scene {
         '<span>' + d.n + " × " + nom + '</span></div>';
     }).join("");
     el.classList.add("show");
+    if (typeof placeCuerpoPanelPc === "function") placeCuerpoPanelPc();
     const btn = document.getElementById("cuerpo-recoger");
     if (btn) btn.onclick = () => this.recogerCuerpo(c);
     const x = document.getElementById("cuerpo-cerrar");
@@ -519,6 +520,7 @@ class ForestScene extends Phaser.Scene {
   cerrarCuerpo() {
     const el = document.getElementById("cuerpo-panel");
     if (el) el.classList.remove("show");
+    if (typeof placeCuerpoPanelPc === "function") placeCuerpoPanelPc();
     this._cuerpoAbierto = null;
   }
   recogerCuerpo(c) {

@@ -26,11 +26,13 @@ console.log("\nESTADOS INDIVIDUALES\n");
 ok("1: hambre mientras el ciclo corre", e0.hambriento && !e0.listo && !e0.cobrable);
 ok("2: comió y espera sin recompensa", !e1.hambriento && !e1.listo && !e1.cobrable);
 ok("3: comió y terminó: sí da material", !e2.hambriento && e2.listo && e2.cobrable);
-ok("4: terminó con hambre: no da material", e3.hambriento && e3.listo && !e3.cobrable);
+/* 25/9 (diseñador): el reloj arranca al COMER, así que « terminó con hambre » ya no existe —
+   un animal sin comer no tiene reloj y espera la comida. */
+ok("4: con hambre y sin reloj: espera la comida, no está listo ni cobrable", e3.hambriento && !e3.listo && !e3.cobrable);
 ok("el tooltip de hambre pide comida", /tiene hambre: dale/.test(promptMundo(0)));
 ok("el tooltip de espera conserva el tiempo", /vuelve en/.test(promptMundo(1)));
 ok("el tooltip listo invita a recoger", /Recoger Fibra/.test(promptMundo(2)));
-ok("el tooltip tardío aclara alimentar antes de recoger", /antes de recoger/.test(promptMundo(3)));
+ok("y su tooltip pide comida sin hablar de recoger", /tiene hambre: dale/.test(promptMundo(3)) && !/antes de recoger/.test(promptMundo(3)));
 
 console.log("\nCABLEADO DEL MUNDO\n");
 const farm = fs.readFileSync(path.join(RAIZ, "public/game/farm.js"), "utf8");

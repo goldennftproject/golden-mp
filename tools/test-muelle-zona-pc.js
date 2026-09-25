@@ -17,10 +17,40 @@ const capacidad = vm.runInContext("CONT_DEF.backpack.huecos", ctx);
 console.log("\nLA MOCHILA ES MÁS ALTA QUE LA POSICIÓN VIEJA DEL MUELLE\n");
 {
   ok("la Mochila tiene 20 huecos (cinco filas de cuatro)", capacidad === 20, String(capacidad));
-  const cssMorral = HTML.match(/#morral\{([\s\S]*?)\}/);
-  const cssMuelle = HTML.match(/#combate\{([\s\S]*?)\}/);
+  /* 25/9: se busca el bloque que POSICIONA (el que lleva right:), no el primero que aparezca —
+     ahora hay reglas de #morral/#combate dentro de media queries antes del bloque base. */
+  const cssMorral = HTML.match(/#morral\{([^}]*right:[^}]*)\}/);
+  const cssMuelle = HTML.match(/#combate\{([^}]*right:[^}]*)\}/);
   ok("los dos paneles siguen en el mismo borde derecho", !!(cssMorral && cssMuelle && /right:8px/.test(cssMorral[1]) && /right:8px/.test(cssMuelle[1])));
   ok("el muelle ya no depende solo de top:236px", /--muelle-zona-top/.test(HTML));
+}
+
+console.log("\nEL MORRAL LIBERA EL HUD ENVUELTO EN PC\n");
+{
+  const fn = (UI.match(/function ubicarMorralPc\(\)[\s\S]*?\n\}/) || [""])[0];
+  ok("existe el posicionador del morral", !!fn);
+  ok("mide HUD y repisa en vez de asumir 96 px", /hud\.getBoundingClientRect\(\)/.test(fn) && /flot\.getBoundingClientRect\(\)/.test(fn));
+  ok("el CSS usa la variable sólo en escritorio", /@media\(min-width:641px\)\{[\s\S]{0,100}#morral\{top:var\(--morral-zona-top,96px\)\}/.test(HTML));
+
+  const getAntes = ctx.document.getElementById, escenaAntes = ctx.GF.scene, anchoAntes = ctx.innerWidth;
+  const estilo = { setProperty(k, v) { this[k] = v; }, removeProperty(k) { delete this[k]; } };
+  const morral = { style: estilo };
+  const hud = { getBoundingClientRect: () => ({ width: 760, height: 131, bottom: 131 }) };
+  const flot = { getBoundingClientRect: () => ({ width: 0, height: 0, bottom: 0 }) };
+  ctx.document.getElementById = id => id === "morral" ? morral : (id === "hudbar" ? hud : (id === "hud-flot" ? flot : getAntes(id)));
+  ctx.GF.scene = "forest"; ctx.innerWidth = 760;
+  try {
+    vm.runInContext("ubicarMorralPc()", ctx);
+    ok("un HUD de tres filas deja ocho píxeles antes del morral", estilo["--morral-zona-top"] === "139px", estilo["--morral-zona-top"]);
+    flot.getBoundingClientRect = () => ({ width: 144, height: 38, bottom: 177 });
+    vm.runInContext("ubicarMorralPc()", ctx);
+    ok("una repisa de buffs visible también queda libre", estilo["--morral-zona-top"] === "185px", estilo["--morral-zona-top"]);
+    ctx.innerWidth = 640;
+    vm.runInContext("ubicarMorralPc()", ctx);
+    ok("al cruzar a móvil se limpia la variable", !("--morral-zona-top" in estilo));
+  } finally {
+    ctx.document.getElementById = getAntes; ctx.GF.scene = escenaAntes; ctx.innerWidth = anchoAntes;
+  }
 }
 
 console.log("\nEN ESCRITORIO, EL MUELLE NACE DEBAJO DEL MORRAL REAL\n");
@@ -41,7 +71,8 @@ console.log("\nEL CÁLCULO MIDE LA CAJA REAL, NO UNA ALTURA INVENTADA\n");
     removeProperty(k) { delete this[k]; },
   };
   const muelle = { style: estilo };
-  const morral = { getBoundingClientRect: () => ({ height: 216, bottom: 312 }) };
+  const estiloMorral = { setProperty(k, v) { this[k] = v; }, removeProperty(k) { delete this[k]; } };
+  const morral = { style: estiloMorral, getBoundingClientRect: () => ({ height: 216, bottom: 312 }) };
   ctx.document.getElementById = id => id === "combate" ? muelle : (id === "morral" ? morral : getAntes(id));
   ctx.GF.scene = "forest"; ctx.innerWidth = 1280;
   try {
@@ -64,8 +95,9 @@ console.log("\nEL ENCABEZADO CUENTA LOS HUECOS QUE REALMENTE QUEDAN\n");
     removeProperty(k) { delete this[k]; },
   };
   const muelle = { style: estiloMuelle };
+  const estiloMorral = { display: "", setProperty(k, v) { this[k] = v; }, removeProperty(k) { delete this[k]; } };
   const morral = {
-    _firma: "", innerHTML: "", style: { display: "" },
+    _firma: "", innerHTML: "", style: estiloMorral,
     getBoundingClientRect: () => ({ height: 216, bottom: 312 }),
   };
   ctx.document.getElementById = id => id === "combate" ? muelle : (id === "morral" ? morral : getAntes(id));
@@ -91,6 +123,7 @@ console.log("\nEL REACOMODO NO DEPENDE DE QUE CAMBIE EL CONTENIDO\n");
   ok("el morral recoloca incluso con la misma firma", /if \(caja\._firma === firma\) \{ ubicarMuelleCombatePC\(\); return; \}/.test(morral));
   ok("y lo hace después de dibujar sus filas", /caja\.innerHTML = h;\s*ubicarMuelleCombatePC\(\);/.test(morral));
   ok("el muelle también se corrige cuando se redibuja solo", /ubicarMuelleCombatePC\(\);/.test(combate));
+  ok("el muelle recalcula antes el morral", /function ubicarMuelleCombatePC\(\)[\s\S]{0,260}ubicarMorralPc\(\)/.test(UI));
 }
 
 console.log(fallos ? "\n" + fallos + " fallo(s)\n" : "\nTodo en orden: cada contenedor conserva sus huecos visibles en PC.\n");

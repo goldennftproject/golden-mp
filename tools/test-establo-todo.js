@@ -135,9 +135,12 @@ console.log("\nCADA ANIMAL ES UNO   (8/9, dirección: « se alimentan por separa
   })());
   ok("y gasta un solo cultivo", Math.floor(G.res[d.come[0]]) === 9);
 
-  /* el reloj: cobrarle a uno reinicia SU ciclo y deja el del otro donde estaba */
+  /* el reloj: cobrarle a uno cierra SU ciclo y deja el del otro donde estaba.
+     25/9: el reloj arranca al COMER, así que para tenerlos listos los dos tienen que haber
+     comido hace un ciclo entero (el arnés los pone así a mano). */
+  G.animals[k].forEach(a => { a.comidoAt = FakeDate.now() - 2 * d.cicloH * 3600000; a.prodAt = a.comidoAt; });
   const listo0 = ctx.animalFaltaDe(k, 0) <= 0, listo1 = ctx.animalFaltaDe(k, 1) <= 0;
-  ok("los dos arrancan listos (producción vencida)", listo0 && listo1);
+  ok("los dos arrancan listos (comieron hace un ciclo)", listo0 && listo1);
   const dio = ctx.recogerUno(k, 0);
   ok("recoger a UNO paga lo suyo", dio > 0, "+" + dio);
   ok("y su reloj vuelve a empezar", ctx.animalFaltaDe(k, 0) > 0);
@@ -184,6 +187,7 @@ console.log("\nY LOS BOTONES POR ESPECIE SIGUEN INTACTOS");
   const dados = ctx.alimentarAnimal(dos[0]);
   ok("alimentarAnimal(k) sigue alimentando su especie", dados === 2, String(dados));
   ok("y sigue avisando por su cuenta", avisos.length >= 1);
+  desfase += (ANIMAL_DEF[dos[0]].cicloH + 1) * H;   // 25/9: el ciclo arranca al comer — se deja pasar entero
   const n = ctx.recogerAnimal(dos[0]);
   ok("recogerAnimal(k) sigue cobrando su especie", n > 0, String(n));
 }

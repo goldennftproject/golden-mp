@@ -100,7 +100,10 @@
   /* En PC la Mochila puede tener cinco filas: el muelle se ancla justo debajo del morral que
      esté dibujado, no a una altura que solo servía para la Bolsa de ocho huecos. Si la ventana
      es baja, el propio muelle se desplaza por dentro en vez de tapar el contenedor. */
-  @media(min-width:641px){#combate{top:var(--muelle-zona-top,236px);max-height:calc(100vh - var(--muelle-zona-top,236px) - 8px);overflow-y:auto;overscroll-behavior:contain}}
+  @media(min-width:641px){
+    #morral{top:var(--morral-zona-top,96px)}
+    #combate{top:var(--muelle-zona-top,236px);max-height:calc(100vh - var(--muelle-zona-top,236px) - 8px);overflow-y:auto;overscroll-behavior:contain}
+  }
   .cb-eq{display:grid;grid-template-columns:repeat(3,1fr);gap:4px;cursor:pointer}
   /* 15/9: el muñeco completo — tres columnas que no tienen la misma cantidad de huecos (el set
      son cinco piezas y los otros dos lados tres), así que van como columnas y no como rejilla:
@@ -822,6 +825,9 @@
     width:min(280px,90vw);display:none;flex-direction:column;gap:7px;padding:10px 12px 12px;
     border-radius:12px;background:rgba(28,22,14,.95);border:2px solid #4a3a24;
     box-shadow:0 8px 26px rgba(0,0,0,.45)}
+  /* En PC la hotbar puede haberse arrastrado o tener otro alto por el marco. El botín nace
+     encima de su rectángulo real, no en la misma franja inferior. En móvil queda en 16 px. */
+  @media(min-width:641px){#cuerpo-panel{bottom:var(--cuerpo-panel-bottom,16px)}}
   #cuerpo-panel.show{display:flex}
   .cp-cab{display:flex;justify-content:space-between;align-items:center;font-size:13px;color:#f2ead5}
   .cp-item{display:flex;align-items:center;gap:8px;font-size:12px;color:#e8dfc6;
@@ -2078,7 +2084,7 @@
     // 15/8: VERSIÓN DE BUILD — rompe la caché del navegador en cada deploy (sin esto, el
     // jugador seguía corriendo el state.js viejo aunque el servidor tuviera el nuevo).
     // deploy.bat la actualiza sola (busca GF_BUILD y pone la fecha/hora del deploy).
-    const GF_BUILD = "20260925-090456";
+    const GF_BUILD = "20260925-143527";
     const files = ["game/config.js","game/nav.js","game/audio.js","game/state.js","game/save.js","game/ui.js","game/boot.js",
                    "game/farm.js","game/forest.js","game/plaza.js","game/main.js","game/update.js"];
     /* 24/8 — SE BAJAN TODOS A LA VEZ, SE EJECUTAN EN FILA (dirección: « sigue tardando en

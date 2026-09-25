@@ -51,7 +51,7 @@ function casoRegistro({ plegado, movida, hotbarRect, bottomInicial, autoAntes })
   vm.runInContext("placeRegistro()", ctx);
   return { bottom: registro.style.bottom, registro: registro.getBoundingClientRect(), hotbar: hotbarRect };
 }
-function casoGuia({ plegado, movil, logRect, hudRect, cssTop }) {
+function casoGuia({ plegado, movil, logRect, hudRect, flotRect, cssTop }) {
   const guia = {
     style: { top: "", bottom: "" }, classList: { contains: c => c === "hidden" ? false : false },
     getBoundingClientRect() {
@@ -65,8 +65,9 @@ function casoGuia({ plegado, movil, logRect, hudRect, cssTop }) {
   };
   const registro = { classList: clases(plegado), getBoundingClientRect: () => logRect };
   const hudbar = hudRect ? { getBoundingClientRect: () => hudRect } : null;
+  const hudFlot = flotRect ? { getBoundingClientRect: () => flotRect } : null;
   const ctx = { window: { innerHeight: 500, matchMedia: () => ({ matches: !!movil }), getComputedStyle: () => ({ top: cssTop || "54px" }) },
-    $: id => ({ tuto: guia, logpanel: registro, hudbar })[id] || null };
+    $: id => ({ tuto: guia, logpanel: registro, hudbar, "hud-flot": hudFlot })[id] || null };
   vm.createContext(ctx);
   vm.runInContext(UI.slice(desde, hasta), ctx);
   vm.runInContext("placeTuto()", ctx);
@@ -140,6 +141,13 @@ console.log("\n6 · EN ESCRITORIO LA GUÍA LIBERA UN HUD DE DOS FILAS\n");
 
   const bajo = casoGuia({ plegado: false, movil: false, logRect: rect(10, 306, 340, 116), hudRect: rect(0, 0, 1024, 36), cssTop: "44px" });
   ok("en una pantalla baja sigue respetando el top compacto de CSS", bajo.top === "", JSON.stringify(bajo));
+
+  const repisa = casoGuia({ plegado: false, movil: false, logRect: rect(10, 306, 340, 116), hudRect: rect(0, 0, 760, 42), flotRect: rect(426, 45, 322, 38) });
+  ok("la guía deja aire bajo la repisa de estamina/buffs", repisa.top === "91px" && repisa.guia.top >= 91,
+    JSON.stringify(repisa));
+
+  const repisaOculta = casoGuia({ plegado: false, movil: false, logRect: rect(10, 306, 340, 116), hudRect: rect(0, 0, 760, 42), flotRect: rect(748, 45, 0, 0) });
+  ok("una repisa vacía no baja la guía", repisaOculta.top === "", JSON.stringify(repisaOculta));
 }
 
 console.log(fallos ? "\n" + fallos + " fallo(s)\n" : "\nTodo en orden: el aviso conserva aire alrededor del Registro.\n");

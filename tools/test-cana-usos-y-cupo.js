@@ -83,6 +83,9 @@ console.log("\n4 · " + DIA + " LANCES GRATIS AL DÍA; DESPUÉS " + EXTRA + ", "
   ok("arranca en cero y el próximo es gratis", ctx.lancesHoy() === 0 && ctx.lanceExtraPrecio() === 0);
   for (let i = 0; i < DIA; i++) tirar();
   ok("los " + DIA + " primeros no cobran cupo", ctx.lancesHoy() === DIA && ctx.lanceExtraPrecio() === EXTRA, "lances " + ctx.lancesHoy() + " · próximo " + ctx.lanceExtraPrecio());
+  ok("y al gastar el último gratis avisa lo que cuesta el siguiente (25/9)", toasts.some(t => new RegExp(DIA + " lances gratis").test(t) && /cuesta/.test(t)), toasts.filter(t => /gratis/.test(t))[0]);
+  const farm = require("fs").readFileSync(RAIZ + "/public/game/farm.js", "utf8");
+  ok("el cartel del agua muestra el contador « lances N/15 » (25/9, diseñador: « ¿dónde lo pone? »)", /lances " \+ lancesHoy\(\) \+ "\/" \+ PESCA_LANCES_DIA/.test(farm));
   G.peajeCana = 0; const plata = G.plata;
   tirar();
   ok("el " + (DIA + 1) + ".º cobra " + EXTRA + " de plata (más el peaje de la caña)", plata - G.plata === EXTRA + Math.floor(g("CANA_V4_DEF.oro.mant")), plata - G.plata);

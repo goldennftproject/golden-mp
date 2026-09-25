@@ -46,15 +46,21 @@ ok("la segunda comida del mismo ciclo se rechaza y no gasta trigo", g("alimentar
 reloj += CICLO; g("recogerUno('alpaca', 0, true)");
 ok("después de producir vuelve a aceptar comida", g("alimentarUno('alpaca', 0, true)") === 1 && G.res.trigo === 8);
 
-console.log("\n3 · EL RELOJ NO SE DETIENE NI SE REINICIA POR NO COMER\n");
+console.log("\n3 · EL RELOJ ARRANCA AL COMER (25/9, diseñador)\n");
+/* 11/9 decía « sigue el CD aunque no coma ». El 25/9 el diseñador lo cambió con el establo
+   delante: « las 24 horas empiezan a correr justo después de alimentarlo; le acabo de dar
+   comida y dice que en 6 h me da el material — no puede ser así ». Sin comer no hay reloj. */
 alpacaNueva();
 reloj += CICLO / 2;
-ok("a las 12 h sin comer, faltan 12 h — el reloj corre igual", Math.abs(g("animalFaltaDe('alpaca', 0)") - CICLO / 2) < 1000);
+ok("a las 12 h sin comer, el ciclo entero sigue por delante — sin comida no hay reloj", g("animalFaltaDe('alpaca', 0)") === CICLO);
 reloj += CICLO / 2;
-ok("a las 24 h está listo aunque no haya comido (y da nada)", g("animalFaltaDe('alpaca', 0)") === 0 && g("animalRinde('alpaca', 0)") === 0);
+ok("a las 24 h sin comer NO está listo (no hay nada que cobrar)", g("animalFaltaDe('alpaca', 0)") === CICLO && g("animalListos('alpaca')") === 0);
 g("alimentarUno('alpaca', 0, true)");
-ok("comer ahora NO adelanta ni reinicia el reloj: sigue listo", g("animalFaltaDe('alpaca', 0)") === 0);
-ok("y como comió antes de recoger, esta vuelta SÍ da", g("recogerUno('alpaca', 0, true)") === D.porCiclo);
+ok("comer ARRANCA el reloj: faltan 24 h justas", g("animalFaltaDe('alpaca', 0)") === CICLO);
+reloj += CICLO - 60000;
+ok("a un minuto del final todavía no", g("recogerUno('alpaca', 0, true)") === 0);
+reloj += 60000;
+ok("y 24 h después de la comida, da", g("recogerUno('alpaca', 0, true)") === D.porCiclo);
 
 console.log("\n4 · SIN DECIMALES\n");
 alpacaNueva();
@@ -71,8 +77,8 @@ console.log("\n4b · EL COBRO SOLO SE OFRECE CUANDO ENTRA\n");
   vm.runInContext("roomForRes = () => false;", ctx);      // bolsa llena, sin fabricar 35 pilas en el arnés
   ok("si la fibra no entra, el animal listo no ofrece recoger", !g("animalPuedeRecoger('alpaca', 0)"));
   ok("y el atajo del Establo también se apaga", !g("establoPuedeRecogerAlgo()"));
-  G.animals.alpaca[0].comidoAt = 0;                        // listo, pero sin producción: su ciclo sí se puede cerrar
-  ok("sin producción el cobro sigue disponible para reiniciar el ciclo", g("animalPuedeRecoger('alpaca', 0)"));
+  G.animals.alpaca[0].comidoAt = 0;                        // 25/9: sin comer no hay ciclo que cerrar
+  ok("sin comer no hay nada que recoger: el ciclo arranca con la comida", !g("animalPuedeRecoger('alpaca', 0)"));
   G.animals.alpaca[0].prodAt = reloj;                       // vuelve a faltar un ciclo entero
   ok("antes de estar listo, tampoco se ofrece", !g("animalPuedeRecoger('alpaca', 0)"));
   vm.runInContext("roomForRes = window.__roomAntes;", ctx);
@@ -92,7 +98,7 @@ console.log("\n6 · EL PANEL LO DICE\n");
 {
   const ui = fs.readFileSync(path.join(RAIZ, "public/game/ui.js"), "utf8");
   ok("« comió ✓ » o « con hambre » en la fila del animal", /'comió ✓' : 'con hambre'/.test(ui));
-  ok("y avisa « si no come, no dará nada »", /si no come, no dará nada/.test(ui));
+  ok("y sin comer dice que el reloj arranca con la comida (25/9)", /arrancan cuando coma/.test(ui));
   ok("el botón dice « Ya comió » cuando ya comió", /'Ya comió' : 'Alimentar'/.test(ui));
   ok("la fila y el atajo consultan si la producción cabe antes de habilitarse", /animalPuedeRecoger\(k, i\)/.test(ui) && /establoPuedeRecogerAlgo/.test(ui));
   ok("ya no hay « guardado de 1 » ni « rendirá 0,5 »", !/guardado de 1|rendirá/.test(ui));

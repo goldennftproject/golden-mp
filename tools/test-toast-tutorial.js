@@ -63,7 +63,7 @@ console.log("\nEL CÓDIGO SE CONECTA A LOS EVENTOS REALES");
   ok("toast se coloca antes de empezar su temporizador", /t\.classList\.add\("show"\); placeToast\(\);[\s\S]*clearTimeout\(toastT\)/.test(vivo));
   ok("al ocultarse recupera la posición CSS", /classList\.remove\("show"\); placeToast\(\)/.test(vivo));
   ok("tutoRefresh recompone tras cambiar el texto", /tutoHighlight\(\);\s*placeTuto\(\);\s*placeToast\(\);/.test(vivo));
-  ok("resize recalcula guía, hotbar y toast", /const syncLayouts = \(\) => \{ syncRegistroPrompt\(\); placeToast\(\); \}/.test(vivo));
+  ok("resize recalcula guía, hotbar y toast", /const syncLayouts = \(\) => \{ syncRegistroPrompt\(\); placeToast\(\);(?: syncRecientesMenuPc\(\);)? \}/.test(vivo));
 }
 
 console.log("\nEN MÓVIL BAJO, LA GUÍA TIENE UN SOLO BORDE VERTICAL");
