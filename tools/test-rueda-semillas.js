@@ -157,5 +157,49 @@ console.log("\nEL NAVEGADOR TRAICIONERO: rightButtonDown() MIENTE y el evento na
   ok("el pointerup del derecho no planta un clickHit viejo", pl.state === "dry", pl.state);
 }
 
+console.log("\nEN ESCRITORIO LA RUEDA NO SALE DETRÁS DEL HUD NI DE LA HOTBAR");
+{
+  const swc = rueda.querySelector(".swc"), hud = doc.getElementById("hudbar"), flot = doc.getElementById("hud-flot"), hot = doc.getElementById("hotwrap");
+  const anchoAntes = ctx.innerWidth, altoAntes = ctx.innerHeight;
+  const hudAntes = hud.getBoundingClientRect, flotAntes = flot.getBoundingClientRect, hotAntes = hot.getBoundingClientRect;
+  ctx.innerWidth = 760; ctx.innerHeight = 720;
+  hud.getBoundingClientRect = () => ({ width: 760, height: 131, bottom: 131 });
+  flot.getBoundingClientRect = () => ({ width: 0, height: 0, bottom: 0 });
+  hot.getBoundingClientRect = () => ({ width: 540, height: 78, top: 632 });
+  try {
+    ctx.showSeedWheel(10, 10, { cx: 0, by: 0, state: "dry" });
+    ok("arriba a la izquierda deja enteras todas las semillas", swc.style.left === "94px" && swc.style.top === "225px", swc.style.left + ", " + swc.style.top);
+    ctx.showSeedWheel(755, 710, { cx: 0, by: 0, state: "dry" });
+    ok("abajo a la derecha evita la hotbar y el borde", swc.style.left === "666px" && swc.style.top === "538px", swc.style.left + ", " + swc.style.top);
+    ctx.innerWidth = 640;
+    ctx.showSeedWheel(10, 10, { cx: 0, by: 0, state: "dry" });
+    ok("móvil conserva el centro exacto del toque", swc.style.left === "10px" && swc.style.top === "10px", swc.style.left + ", " + swc.style.top);
+  } finally {
+    ctx.hideSeedWheel(); ctx.innerWidth = anchoAntes; ctx.innerHeight = altoAntes;
+    hud.getBoundingClientRect = hudAntes; flot.getBoundingClientRect = flotAntes; hot.getBoundingClientRect = hotAntes;
+  }
+}
+
+console.log("\nEN PC UN ATAJO NO DEJA LA RUEDA INVISIBLE ENCIMA DEL PANEL");
+{
+  const inv = doc.getElementById("ov-inv"), anchoAntes = ctx.innerWidth;
+  try {
+    ctx.innerWidth = 760;
+    inv.classList.remove("show");
+    ctx.showSeedWheel(380, 360, { cx: 0, by: 0, state: "dry" });
+    ctx.openOv("ov-inv");
+    ok("abrir Inventario cierra la rueda que capturaba los clics", !rueda.classList.contains("show") && inv.classList.contains("show"));
+    ctx.closeOv("ov-inv");
+
+    /* La regla es deliberadamente de escritorio: no modifica la interacción táctil pendiente. */
+    ctx.innerWidth = 640;
+    ctx.showSeedWheel(10, 10, { cx: 0, by: 0, state: "dry" });
+    ctx.openOv("ov-inv");
+    ok("móvil conserva la rueda al abrir un panel", rueda.classList.contains("show"));
+  } finally {
+    ctx.hideSeedWheel(); ctx.closeOv("ov-inv"); ctx.innerWidth = anchoAntes;
+  }
+}
+
 console.log(fallos ? "\n" + fallos + " fallo(s)\n" : "\nTodo en orden: izquierdo planta, derecho pregunta — y ningún navegador lo confunde.\n");
 process.exit(fallos ? 1 : 0);

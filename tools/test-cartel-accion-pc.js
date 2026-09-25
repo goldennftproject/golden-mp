@@ -17,8 +17,12 @@ const prompt = {
   textContent: "", clases: new Set(),
   classList: { add(c) { prompt.clases.add(c); }, remove(c) { prompt.clases.delete(c); } },
 };
+const seedwheel = {
+  clases: new Set(),
+  classList: { add(c) { seedwheel.clases.add(c); }, remove(c) { seedwheel.clases.delete(c); }, contains(c) { return seedwheel.clases.has(c); } },
+};
 const getAntes = ctx.document.getElementById;
-ctx.document.getElementById = id => id === "prompt" ? prompt : getAntes(id);
+ctx.document.getElementById = id => id === "prompt" ? prompt : id === "seedwheel" ? seedwheel : getAntes(id);
 Object.assign(ctx.GF, { uiOpen: false, editMode: false, NO_WALK: false });
 
 function escena() {
@@ -107,6 +111,29 @@ console.log("\nUNA VENTANA ABIERTA LIMPIA LAS PISTAS DEL MUNDO");
     txtMovil + " · " + String(movil.ultimaChapa === movil.objetivo));
   ctx.innerWidth = ancho;
   vm.runInContext("anyOvOpen = () => false;", ctx);
+}
+
+console.log("\nLA RUEDA DE ELECCIÓN OCULTA LA PISTA REDUNDANTE EN PC");
+{
+  const rueda = seedwheel, ancho = ctx.innerWidth;
+  const esc = escena();
+  esc.objetivo = { type: "tree", readyAt: 0, texto: "Talar madera" };
+  puerta(() => ({ ok: true }));
+  try {
+    rueda.classList.add("show");
+    ctx.innerWidth = 1280;
+    const txt = pinta(esc);
+    ok("la rueda tapa el cartel de la acción anterior", txt === "" && !prompt.clases.has("show"), txt);
+    ok("también esconde la chapita del mundo que quedaría detrás", esc.ultimaChapa === null, String(esc.ultimaChapa));
+
+    const movil = escena();
+    movil.objetivo = { type: "tree", readyAt: 0, texto: "Talar madera" };
+    ctx.innerWidth = 640;
+    const txtMovil = pinta(movil);
+    ok("móvil conserva su comportamiento hasta su pasada específica", txtMovil === "Talar madera  ·  [E]", txtMovil);
+  } finally {
+    rueda.classList.remove("show"); ctx.innerWidth = ancho;
+  }
 }
 
 console.log("\nLA PRODUCCIÓN ANIMAL TAMPOCO PROMETE UNA BOLSA LLENA");

@@ -252,6 +252,18 @@ class ForestScene extends Phaser.Scene {
   }
   hideDest() { if (this.destMk) this.destMk.setVisible(false); }
 
+  /* un punto de spawn que no esté dentro de un tronco (ni pegado a él): al azar en la franja,
+     hasta 40 intentos; si el mapa está tan lleno que no sale, el último al azar (nunca se
+     cuelga) y pasoMob lo saca caminando. */
+  puntoLibre(x0, x1) {
+    let x = 0, y = 0;
+    for (let i = 0; i < 40; i++) {
+      x = this.W * (x0 + Math.random() * (x1 - x0));
+      y = 70 + Math.random() * (this.H - 120);
+      if (!this.blockedAt(x, y, 12)) return { x, y, libre: true };
+    }
+    return { x, y, libre: false };
+  }
   blockedAt(x, y, pad) {
     pad = pad || 0;
     if (x < 12 || y < 12 || x > this.W - 12 || y > this.H - 12) return true;
@@ -263,8 +275,14 @@ class ForestScene extends Phaser.Scene {
 
   spawnMonster(key, x0, x1) {
     const def = MONSTER_DEF[key];
-    const cx = this.W * (x0 + Math.random() * (x1 - x0));
-    const by = 70 + Math.random() * (this.H - 120);
+    /* 25/9 (diseñador, con captura: « en ese árbol sale un mob y se queda pegado, no puedo
+       recoger lo que da y no hace daño porque no me pega »). El bicho nacía en un punto al azar
+       SIN mirar los troncos: si caía dentro de la caja de un árbol, cada paso suyo (1-2 px)
+       seguía dentro de la caja y blockedAt lo frenaba para siempre — pegado, sin poder acercarse
+       a pegar, con el cuerpo tapado por la copa. Ahora nace en un punto libre (hasta 40 intentos
+       con margen), y pasoMob deja salir al que igual quede adentro. */
+    const pos = this.puntoLibre(x0, x1);
+    const cx = pos.x, by = pos.y;
     let spr, baseScale = 1;
     if (def.sprite && this.textures.exists(def.sprite + "_idle_0")) {   // sprite real con animaciones
       spr = this.add.sprite(cx, by, def.sprite + "_idle_0").setOrigin(0.5, 1).setDepth(by);
@@ -1462,7 +1480,10 @@ class ForestScene extends Phaser.Scene {
         if (!e.vx && !e.vy) return false;
         const paso = Math.min(sp, e.resta);
         let nx = m.cx + e.vx * paso, ny = m.by + e.vy * paso;
-        if (!this.blockedAt(nx, ny, 6)) { m.cx = nx; m.by = ny; return true; }
+        /* 25/9: si YA está dentro de un tronco (spawn viejo, empujón), cualquier paso es salir —
+           frenarlo ahí es dejarlo pegado para siempre */
+        const atascado = this.blockedAt(m.cx, m.by, 6);
+        if (atascado || !this.blockedAt(nx, ny, 6)) { m.cx = nx; m.by = ny; return true; }
         /* bloqueado en su eje: prueba el otro para bordear (sigue siendo 4-dir: un eje por cuadro) */
         const ax = e.vx ? 0 : Math.sign(dx), ay = e.vx ? Math.sign(dy) : 0;
         if (ax || ay) {

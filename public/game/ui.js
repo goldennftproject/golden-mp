@@ -91,6 +91,15 @@ function openOv(id) {
     return;
   }
   const e = $(id); if (!e) return;
+  /* La rueda ocupa toda la pantalla para poder cancelarse al tocar afuera. Si un atajo abre un
+     panel por encima, en PC hay que retirarla primero: de otro modo queda transparente sobre el
+     panel y el primer clic parece perdido. Móvil conserva su flujo táctil tal como está. */
+  if (window.innerWidth > 640 && typeof hideSeedWheel === "function") hideSeedWheel();
+  /* Aparejos es una gestión breve sobre la granja, no un overlay. Su capa alta sirve para que
+     no caiga detrás de la hotbar, pero no puede quedar por encima de Inventario/Equipo si éstos
+     se abren con un atajo. La puerta única cubre teclado, menú y clics de mundo; móvil mantiene
+     su composición hasta la pasada específica. */
+  if (window.innerWidth > 640 && typeof pescaAparejosAbierto === "function" && pescaAparejosAbierto() && typeof pescaAparejosCerrar === "function") pescaAparejosCerrar();
   e.classList.add("show"); enfocarOvPc(e);
   if (window.sfx) sfx(OV_SFX[id] || "click");
   if (OV_REFRESH[id]) OV_REFRESH[id]();
@@ -394,14 +403,16 @@ function ubicarMorralPc() {
 function ubicarMuelleCombatePC() {
   const muelle = $("combate"), morral = $("morral");
   if (typeof ubicarMorralPc === "function") ubicarMorralPc();
-  if (!muelle) return;
+  const reubicarAviso = () => { if (typeof placeSaveIndPc === "function") placeSaveIndPc(); };
+  if (!muelle) { reubicarAviso(); return; }
   /* 25/9: con la misma guarda que escribirCapaOv — el DOM de cartón de los tests no tiene
      removeProperty, y test-cuerpos / test-tumba-una-sola reventaban en refreshMorral. */
   const limpiar = () => { const st = muelle.style; if (!st) return; if (typeof st.removeProperty === "function") st.removeProperty("--muelle-zona-top"); else st["--muelle-zona-top"] = ""; };   // 25/9: con guarda (DOM de cartón de los tests)
-  if (!morral || !window.GF || GF.scene !== "forest" || window.innerWidth <= 640) { limpiar(); return; }
+  if (!morral || !window.GF || GF.scene !== "forest" || window.innerWidth <= 640) { limpiar(); reubicarAviso(); return; }
   const r = morral.getBoundingClientRect();
-  if (!r.height) { limpiar(); return; }
+  if (!r.height) { limpiar(); reubicarAviso(); return; }
   { const st = muelle.style; if (st && typeof st.setProperty === "function") st.setProperty("--muelle-zona-top", Math.ceil(r.bottom + 8) + "px"); else if (st) st["--muelle-zona-top"] = Math.ceil(r.bottom + 8) + "px"; }
+  reubicarAviso();
 }
 function refreshCombate() {
   const caja = $("combate"); if (!caja) return;
@@ -784,6 +795,30 @@ function syncRecientesMenuPc() {
   const escritorio = typeof window !== "undefined" && window.innerWidth > 640;
   caja.classList.toggle("menu-abierto", escritorio && !menu.classList.contains("collapsed"));
 }
+/* El menú vive bajo el HUD. En un escritorio angosto la barra se puede envolver, y la repisa de
+   estamina/buffs es absoluta: ninguna de las dos agranda el viejo top fijo de 52 px. Medimos
+   ambas cajas visibles y dejamos que la lista haga scroll dentro del alto que queda. */
+function placeMenuPc() {
+  const menu = $("gmenu");
+  if (!menu) return;
+  const limpiar = () => {
+    const st = menu.style; if (!st) return;
+    ["--gmenu-top", "--gmenu-max-height"].forEach(k => {
+      if (typeof st.removeProperty === "function") st.removeProperty(k); else st[k] = "";
+    });
+  };
+  if (typeof window === "undefined" || window.innerWidth <= 640) { limpiar(); return; }
+  const hud = $("hudbar"), flot = $("hud-flot");
+  const hr = hud && typeof hud.getBoundingClientRect === "function" ? hud.getBoundingClientRect() : null;
+  const fr = flot && typeof flot.getBoundingClientRect === "function" ? flot.getBoundingClientRect() : null;
+  let top = 52;
+  if (hr && hr.width && hr.height) top = Math.max(top, Math.ceil(hr.bottom + 8));
+  if (fr && fr.width && fr.height) top = Math.max(top, Math.ceil(fr.bottom + 8));
+  const alto = Math.max(0, Math.floor(window.innerHeight - top - 10));
+  const st = menu.style;
+  if (st && typeof st.setProperty === "function") { st.setProperty("--gmenu-top", top + "px"); st.setProperty("--gmenu-max-height", alto + "px"); }
+  else if (st) { st["--gmenu-top"] = top + "px"; st["--gmenu-max-height"] = alto + "px"; }
+}
 /* ═══════════════════════════════════════════════════════════════════════════════════════════
    PESCA v4 · LA PULSEADA PASA EN EL AGUA, NO EN UNA VENTANA                            (28/8)
    ═══════════════════════════════════════════════════════════════════════════════════════════
@@ -993,11 +1028,13 @@ function pescaAparejosAbrir() {
   const el = $("pesca4"); if (!el) return;
   pescaV4Pintar();
   el.classList.add("show");
+  if (typeof placePescaAparejosPc === "function") placePescaAparejosPc();
   if (typeof GF !== "undefined") GF.uiOpen = true;
   const x = $("p4-cerrar"); if (x) x.onclick = pescaAparejosCerrar;
 }
 function pescaAparejosCerrar() {
   const el = $("pesca4"); if (el) el.classList.remove("show");
+  if (typeof placePescaAparejosPc === "function") placePescaAparejosPc();
   if (typeof GF !== "undefined") GF.uiOpen = false;
 }
 function pescaAparejosAbierto() {
@@ -1593,7 +1630,7 @@ function refreshHud() {
   /* 14/9 — el techo lo escribe el código, no el HTML. Estaba « /50 » a mano en index.html y
      siguió diciendo 50 cuando dirección bajó el techo a 25: el HUD le mentía al jugador sobre
      cuánto le falta. Ningún test lo vio porque vive en el DOM. */
-  setTxt("s-level-max", "/" + (typeof FARM_NIVEL_MAX !== "undefined" ? FARM_NIVEL_MAX : "")); setTxt("s-prestige", G.prestige); setNum("s-plata", G.plata, fmtPlata); setNum("s-golden", G.golden); setTxt("s-week", (typeof semanaActual === "function") ? semanaActual() : G.week); setTxt("s-hp", Math.ceil(G.hp) + "/" + G.hpMax); refreshVidaBarra(); refreshCombatBar(); refreshFarmBar(); bindFarmPill(); refreshBuffsPill(); if (typeof checkCooking === "function") checkCooking(); if (typeof checkHorno === "function") checkHorno(); if (typeof refreshHotbar === "function") refreshHotbar(); if (typeof placeTuto === "function") placeTuto(); }
+  setTxt("s-level-max", "/" + (typeof FARM_NIVEL_MAX !== "undefined" ? FARM_NIVEL_MAX : "")); setTxt("s-prestige", G.prestige); setNum("s-plata", G.plata, fmtPlata); setNum("s-golden", G.golden); setTxt("s-week", (typeof semanaActual === "function") ? semanaActual() : G.week); setTxt("s-hp", Math.ceil(G.hp) + "/" + G.hpMax); refreshVidaBarra(); refreshCombatBar(); refreshFarmBar(); bindFarmPill(); refreshBuffsPill(); if (typeof checkCooking === "function") checkCooking(); if (typeof checkHorno === "function") checkHorno(); if (typeof refreshHotbar === "function") refreshHotbar(); if (typeof placeTuto === "function") placeTuto(); if (typeof placeMenuPc === "function") placeMenuPc(); }
 // clic en la barra de estamina: ofrece la recarga premium (con su tope diario)
 function bindStamPill() {
   const pill = document.getElementById("stampill"); if (!pill || pill._bound) return;
@@ -2528,6 +2565,34 @@ function refreshEquip() {
 function refreshDaily() { /* la recompensa diaria se muestra en la pantalla del paquete */ }
 
 /* ---- sembrado rápido: rueda de semillas (clic derecho en parcela seca) ---- */
+/* La rueda mide 62 px de radio y cada ficha sobresale otros 24. Cerca de un borde, dejar su
+   centro exactamente bajo el cursor corta una semilla; abajo además la deja debajo de la hotbar.
+   En PC se conserva el gesto mientras entra y sólo se corre al rectángulo seguro. Móvil no cambia. */
+function seedWheelCenterPc(px, py) {
+  if (typeof window === "undefined" || !Number.isFinite(window.innerWidth) || !Number.isFinite(window.innerHeight) || window.innerWidth <= 640) return { x: px, y: py };
+  const FUERA = 94;   // 62 de radio + 24 de ficha + 8 de aire
+  const limitar = (v, min, max) => Math.max(min, Math.min(max, v));
+  const ancho = window.innerWidth, alto = window.innerHeight;
+  let minY = FUERA, maxY = alto - FUERA;
+  const reservaArriba = (el) => {
+    if (!el || typeof el.getBoundingClientRect !== "function") return;
+    const r = el.getBoundingClientRect();
+    if (r.width && r.height) minY = Math.max(minY, Math.ceil(r.bottom + FUERA));
+  };
+  reservaArriba($("hudbar")); reservaArriba($("hud-flot"));
+  const hotbar = $("hotwrap");
+  if (hotbar && typeof hotbar.getBoundingClientRect === "function") {
+    const r = hotbar.getBoundingClientRect();
+    if (r.width && r.height) maxY = Math.min(maxY, Math.floor(r.top - FUERA));
+  }
+  const minX = FUERA, maxX = ancho - FUERA;
+  const x = limitar(px, minX, maxX);
+  /* Una barra arrastrada al medio puede dejar un hueco más chico que la rueda. En ese caso se
+     privilegia que siga completa dentro del viewport; no existe una posición que libere ambos. */
+  const y = minY <= maxY ? limitar(py, minY, maxY)
+    : limitar(py, Math.min(FUERA, Math.floor(alto / 2)), Math.max(Math.min(FUERA, Math.floor(alto / 2)), alto - Math.min(FUERA, Math.floor(alto / 2))));
+  return { x: Math.round(x), y: Math.round(y) };
+}
 function showSeedWheel(px, py, plot) {
   const w = $("seedwheel"); if (!w) return;
   /* 21/8: las semillas EN BOLSA pero con el cultivo aun bloqueado (llegan por el pase o cofres)
@@ -2536,7 +2601,8 @@ function showSeedWheel(px, py, plot) {
   const opts = CROP_ORDER.filter(k => (G.seeds[k] || 0) > 0);
   if (!opts.length) { toast("No tenés semillas — comprá en la Tienda"); return; }
   const c = w.querySelector(".swc");
-  c.style.left = px + "px"; c.style.top = py + "px";
+  const centro = seedWheelCenterPc(px, py);
+  c.style.left = centro.x + "px"; c.style.top = centro.y + "px";
   const R = 62;
   c.innerHTML = opts.map((k, i) => {
     const a = -Math.PI / 2 + i * 2 * Math.PI / opts.length;
@@ -4659,9 +4725,88 @@ function renderLb() {
 }
 
 /* ---- indicador de guardado ---- */
-function showSaving() { const el = $("saveind"); if (!el) return; el.className = "show saving"; el.querySelector(".sdot").textContent = "⟳"; el.querySelector(".stxt").textContent = "Guardando…"; clearTimeout(el._t); }
-function showSaveError() { const el = $("saveind"); if (!el) return; el.className = "show"; el.querySelector(".sdot").textContent = "🚫"; el.querySelector(".stxt").textContent = "Rechazado"; clearTimeout(el._t); el._t = setTimeout(() => el.classList.remove("show"), 4000); }   // 14/9: el portero dijo que no
-function showSaved() { const el = $("saveind"); if (!el) return; el.className = "show"; el.querySelector(".sdot").textContent = ""; el.querySelector(".stxt").textContent = "Guardado"; clearTimeout(el._t); el._t = setTimeout(() => el.classList.remove("show"), 1600); }
+/* El guardado no es un control: si la ventana baja deja el muelle o la hotbar en su misma
+   esquina, el aviso efímero se corre sin robar clics ni cambiar la composición móvil. */
+function placeSaveIndPc() {
+  const aviso = $("saveind");
+  if (!aviso) return;
+  const limpiar = () => {
+    const st = aviso.style;
+    if (!st) return;
+    if (typeof st.removeProperty === "function") {
+      st.removeProperty("--saveind-right"); st.removeProperty("--saveind-bottom");
+    } else { st["--saveind-right"] = ""; st["--saveind-bottom"] = ""; }
+  };
+  const visible = !!(aviso.classList && typeof aviso.classList.contains === "function" && aviso.classList.contains("show"));
+  if (typeof window === "undefined" || window.innerWidth <= 640 || !visible) { limpiar(); return; }
+  /* Se mide desde el CSS base antes de calcular un nuevo desplazamiento: así un aviso posterior
+     no hereda una posición vieja de otra escena ni de una hotbar que ya volvió a su sitio. */
+  limpiar();
+  if (typeof aviso.getBoundingClientRect !== "function") return;
+  const base = aviso.getBoundingClientRect();
+  if (!base.width || !base.height) return;
+  const ancho = window.innerWidth, alto = window.innerHeight, margen = 8;
+  const caja = el => {
+    if (!el || typeof el.getBoundingClientRect !== "function") return null;
+    const r = el.getBoundingClientRect();
+    return r && r.width && r.height ? r : null;
+  };
+  const cruza = (a, b, m) => a.left < b.right + m && a.right > b.left - m && a.top < b.bottom + m && a.bottom > b.top - m;
+  let right = 12, bottom = 12;
+  const avisoEn = () => {
+    const dx = right - 12, dy = bottom - 12;
+    return { left: base.left - dx, right: base.right - dx, top: base.top - dy, bottom: base.bottom - dy };
+  };
+  let actual = avisoEn();
+  const subirSobre = r => {
+    const destino = Math.ceil(alto - r.top + margen);
+    const maximo = Math.max(12, Math.floor(alto - base.height - 4));
+    if (destino > maximo) return false;
+    bottom = Math.max(bottom, destino); actual = avisoEn();
+    return true;
+  };
+
+  const muelle = caja($("combate"));
+  if (muelle && cruza(actual, muelle, 4)) {
+    /* Primero deja el aviso al costado: conserva la lectura periférica y evita subirlo hacia
+       un HUD alto. Si no hay ancho seguro, se coloca arriba del muelle. */
+    if (muelle.left - margen >= base.width + 4) {
+      right = Math.ceil(ancho - muelle.left + margen); actual = avisoEn();
+    }
+    if (cruza(actual, muelle, 4)) subirSobre(muelle);
+  }
+  const hotbar = caja($("hotwrap"));
+  if (hotbar && cruza(actual, hotbar, 4)) subirSobre(hotbar);
+  const promptEl = $("prompt");
+  const prompt = promptEl && promptEl.classList && typeof promptEl.classList.contains === "function" && promptEl.classList.contains("show") ? caja(promptEl) : null;
+  if (prompt && cruza(actual, prompt, 4)) subirSobre(prompt);
+
+  const st = aviso.style;
+  if (!st) return;
+  if (right !== 12) {
+    if (typeof st.setProperty === "function") st.setProperty("--saveind-right", right + "px"); else st["--saveind-right"] = right + "px";
+  }
+  if (bottom !== 12) {
+    if (typeof st.setProperty === "function") st.setProperty("--saveind-bottom", bottom + "px"); else st["--saveind-bottom"] = bottom + "px";
+  }
+}
+function showSaving() {
+  const el = $("saveind"); if (!el) return;
+  el.className = "show saving"; el.querySelector(".sdot").textContent = "⟳"; el.querySelector(".stxt").textContent = "Guardando…"; clearTimeout(el._t);
+  if (typeof placeSaveIndPc === "function") placeSaveIndPc();
+}
+function showSaveError() {
+  const el = $("saveind"); if (!el) return;
+  el.className = "show"; el.querySelector(".sdot").textContent = "🚫"; el.querySelector(".stxt").textContent = "Rechazado"; clearTimeout(el._t);
+  if (typeof placeSaveIndPc === "function") placeSaveIndPc();
+  el._t = setTimeout(() => { el.classList.remove("show"); if (typeof placeSaveIndPc === "function") placeSaveIndPc(); }, 4000);
+}   // 14/9: el portero dijo que no
+function showSaved() {
+  const el = $("saveind"); if (!el) return;
+  el.className = "show"; el.querySelector(".sdot").textContent = ""; el.querySelector(".stxt").textContent = "Guardado"; clearTimeout(el._t);
+  if (typeof placeSaveIndPc === "function") placeSaveIndPc();
+  el._t = setTimeout(() => { el.classList.remove("show"); if (typeof placeSaveIndPc === "function") placeSaveIndPc(); }, 1600);
+}
 
 /* ---- chat ---- */
 function escapeHtml(s) { return String(s).replace(/[&<>"]/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c])); }
@@ -4840,21 +4985,39 @@ function placePrompt() {
   }
   p.style.bottom = bottom + "px";   // siempre restaurar la posición normal antes de medir el Registro
 
+  /* Al colocar, el cartel se actualiza cada cuadro y la barra de edición queda centrada justo
+     en su franja. En PC se usa el hueco inmediato de arriba; si no existe, no se fuerza una
+     posición que pueda volver a cruzar la hotbar o el Registro. */
+  const libreEditbarPc = () => {
+    if (typeof window === "undefined" || window.innerWidth <= 640) return;
+    const editbar = $("editbar");
+    if (!editbar || !editbar.classList.contains("show")) return;
+    const pr = p.getBoundingClientRect(), er = editbar.getBoundingClientRect();
+    if (!pr.width || !pr.height || !er.width || !er.height || !rectsSeCruzan(pr, er, 8)) return;
+    const actual = Math.max(bottom, Number.parseFloat(p.style.bottom) || bottom);
+    const arriba = Math.round(window.innerHeight - er.top + 12);
+    const maxBottom = Math.max(4, window.innerHeight - pr.height - 4);
+    if (arriba <= maxBottom) { p.style.bottom = Math.max(actual, arriba) + "px"; return; }
+    const abajo = Math.floor(window.innerHeight - er.bottom - pr.height - 12);
+    if (abajo >= actual && abajo <= maxBottom) p.style.bottom = abajo + "px";
+  };
+
   const registro = $("logpanel");
-  if (!registro) return;
+  if (!registro) { libreEditbarPc(); return; }
   const rr = registro.getBoundingClientRect(), pr = p.getBoundingClientRect();
-  if (!rr.width || !rr.height || !pr.width || !pr.height || !rectsSeCruzan(pr, rr, 8)) return;
+  if (!rr.width || !rr.height || !pr.width || !pr.height || !rectsSeCruzan(pr, rr, 8)) { libreEditbarPc(); return; }
 
   // La salida habitual es justo arriba del Registro. El panel puede ser arrastrado,
   // así que se calcula desde su rectángulo actual, no desde sus estilos originales.
   const arriba = Math.round(window.innerHeight - rr.top + 12);
   const maxBottom = Math.max(4, window.innerHeight - pr.height - 4);
-  if (arriba <= maxBottom) { p.style.bottom = Math.max(bottom, arriba) + "px"; return; }
+  if (arriba <= maxBottom) { p.style.bottom = Math.max(bottom, arriba) + "px"; libreEditbarPc(); return; }
 
   // Si alguien llevó Registro casi hasta el borde superior, arriba no entra. Solo
   // aceptamos el hueco inferior si sigue respetando la separación ya calculada de la hotbar.
   const abajo = Math.floor(window.innerHeight - rr.bottom - pr.height - 12);
   if (abajo >= bottom && abajo <= maxBottom) p.style.bottom = abajo + "px";
+  libreEditbarPc();
 }
 /* El botín de un cadáver y la hotbar viven centrados abajo. En PC, el panel no puede quedar
    encima de los atajos de comida/arma: toma la caja real de la hotbar, que además puede haber
@@ -4868,6 +5031,34 @@ function placeCuerpoPanelPc() {
   if (!r.width || !r.height) { limpiar(); return; }
   const bottom = Math.max(16, Math.ceil(window.innerHeight - r.top + 8));
   { const st = panel.style; if (st && typeof st.setProperty === "function") st.setProperty("--cuerpo-panel-bottom", bottom + "px"); else if (st) st["--cuerpo-panel-bottom"] = bottom + "px"; }
+}
+/* Los aparejos también son una ventana breve de gestión, pero se abren durante la granja: no
+   deben cubrir los atajos de comida/herramienta. Se mide la hotbar real porque puede haberse
+   arrastrado; móvil conserva su anclaje compacto inferior. */
+function placePescaAparejosPc() {
+  const panel = $("pesca4"), hb = $("hotwrap");
+  if (!panel) return;
+  const limpiar = () => { const st = panel.style; if (!st) return; if (typeof st.removeProperty === "function") st.removeProperty("--pesca4-bottom"); else st["--pesca4-bottom"] = ""; };
+  if (typeof window === "undefined" || window.innerWidth <= 640 || !panel.classList.contains("show") || !hb) { limpiar(); return; }
+  const r = hb.getBoundingClientRect();
+  if (!r.width || !r.height) { limpiar(); return; }
+  const bottom = Math.max(16, Math.ceil(window.innerHeight - r.top + 8));
+  { const st = panel.style; if (st && typeof st.setProperty === "function") st.setProperty("--pesca4-bottom", bottom + "px"); else if (st) st["--pesca4-bottom"] = bottom + "px"; }
+}
+/* La barra de edición ya tiene una posición cómoda sobre la hotbar de fábrica. Sólo si el
+   jugador arrastra la hotbar hasta cruzarla se la apoya ocho píxeles arriba, sin imponer un
+   cambio visual permanente ni alterar móvil. */
+function placeEditbarPc() {
+  const barra = $("editbar"), hotbar = $("hotwrap");
+  if (!barra) return;
+  const limpiar = () => { const st = barra.style; if (!st) return; if (typeof st.removeProperty === "function") st.removeProperty("--editbar-bottom"); else st["--editbar-bottom"] = ""; };
+  if (typeof window === "undefined" || window.innerWidth <= 640 || !barra.classList.contains("show") || !hotbar) { limpiar(); return; }
+  /* Si venía elevada por una posición anterior, primero se mide desde su ubicación base. */
+  limpiar();
+  const r = barra.getBoundingClientRect(), h = hotbar.getBoundingClientRect();
+  if (!r.width || !r.height || !h.width || !h.height || r.right <= h.left || r.left >= h.right || r.bottom <= h.top || r.top >= h.bottom) return;
+  const bottom = Math.max(122, Math.ceil(window.innerHeight - h.top + 8));
+  { const st = barra.style; if (st && typeof st.setProperty === "function") st.setProperty("--editbar-bottom", bottom + "px"); else if (st) st["--editbar-bottom"] = bottom + "px"; }
 }
 /* En móvil el objetivo queda sobre la hotbar por CSS. Tanto abierto como plegado, el Registro
    puede ocupar esa franja; se mide la colisión real y se sube sólo entonces. En escritorio se
@@ -4905,9 +5096,11 @@ function placeTuto() {
 }
 function syncRegistroPrompt() {
   placeRegistro();
+  placeEditbarPc();
   placePrompt();
   placeTuto();
   placeCuerpoPanelPc();
+  placePescaAparejosPc();
   if (typeof ubicarMuelleCombatePC === "function") ubicarMuelleCombatePC();
   placeToast();
 }
@@ -4926,7 +5119,7 @@ function initUniversalDrag() {
   makeHoldDrag($("hotwrap"), "gf_hotpos", false, syncRegistroPrompt);           // barra de acceso rápido
   const registro = $("logpanel");
   makeHoldDrag(registro, "gf_logpos", true, syncRegistroPrompt);                  // registro/chat (anclado por abajo: se abre hacia ARRIBA)
-  const syncLayouts = () => { syncRegistroPrompt(); placeToast(); syncRecientesMenuPc(); };
+  const syncLayouts = () => { syncRegistroPrompt(); placeToast(); placeMenuPc(); syncRecientesMenuPc(); };
   syncLayouts(); window.addEventListener("resize", syncLayouts);
   // Abrir/cerrar puede venir de un clic, del tutorial o de un aviso de error: observar la
   // clase evita que una de esas rutas deje el prompt con la geometría vieja.
@@ -4947,6 +5140,12 @@ function initUniversalDrag() {
     prompt._promptSizeWatch = new ResizeObserver(placePrompt);
     prompt._promptSizeWatch.observe(prompt);
   }
+  /* El prompt no cambia de tamaño al aparecer: sólo alterna .show. Si hay un guardado efímero
+     en ese instante, éste debe reservar el cartel recién visible sin consultar cada cuadro. */
+  if (prompt && !prompt._saveIndWatch && typeof MutationObserver === "function") {
+    prompt._saveIndWatch = new MutationObserver(() => { if (typeof placeSaveIndPc === "function") placeSaveIndPc(); });
+    prompt._saveIndWatch.observe(prompt, { attributes: true, attributeFilter: ["class"] });
+  }
 }
 
 /* ---- init ---- */
@@ -4958,7 +5157,7 @@ function initUI() {
      latido hacía que, durante hasta un segundo, siguiera señalando una ruta que acababa de dejar
      de ser la visible. Esta puerta cubre el clic y el atajo M en el mismo gesto. */
   const sincronizarGuiaMenu = () => { if (typeof tutoHighlight === "function") tutoHighlight(); };
-  const toggleMenu = () => { gmenu.classList.toggle("collapsed"); syncRecientesMenuPc(); sincronizarGuiaMenu(); };
+  const toggleMenu = () => { gmenu.classList.toggle("collapsed"); placeMenuPc(); syncRecientesMenuPc(); sincronizarGuiaMenu(); };
   const gt = $("gmtoggle"); if (gt) gt.onclick = toggleMenu;
   const mb = $("menu-btn"); if (mb) mb.onclick = toggleMenu;
   // fixs.docx #10 (11/8): opción de menú FIJO — queda desplegado y no se cierra al elegir
@@ -4968,7 +5167,7 @@ function initUI() {
   const gmFijarTxt = () => { if (gmFijar) gmFijar.innerHTML = '<span class="ic"></span> ' + (menuFijo() ? "📌 Menú fijo: Sí" : "📌 Menú fijo: No"); };
   if (gmFijar) { gmFijarTxt(); gmFijar.onclick = () => { try { localStorage.setItem("gmenuFijo", menuFijo() ? "0" : "1"); } catch (e) {} gmFijarTxt(); toast(menuFijo() ? "El menú queda desplegado" : "El menú se recoge solo"); }; }
   if (menuFijo()) gmenu.classList.remove("collapsed");
-  syncRecientesMenuPc();
+  placeMenuPc(); syncRecientesMenuPc();
   // multiventana: abrir un panel ya no cierra los demás (detalles 29/7)
   /* 22/9 (dirección, Discord): « cuando le das clic a "Ver el tablón" no te manda al tablón ».
      El botón llevaba data-panel como los del menú, pero solo los del menú (.gmi) se cableaban:
@@ -5065,6 +5264,8 @@ function initUI() {
     GF.editMode = on;
     const ce2 = $("cfg-edit"); if (ce2) ce2.textContent = on ? "Terminar edición" : "Modo edición";
     const eb = $("editbar"); if (eb) eb.classList.toggle("show", on);
+    if (typeof placeEditbarPc === "function") placeEditbarPc();
+    if (typeof syncRegistroPrompt === "function") syncRegistroPrompt();
     if (window.FARM && FARM.gridG) FARM.gridG.setVisible(on);   // el cuadriculado solo se ve editando
     if (on) {
       closeAllOv(); syncEditDeco(); toast("Arrastrá los objetos a otra celda");
@@ -5108,7 +5309,10 @@ function initUI() {
   };
   const ed = $("edit-done"); if (ed) ed.onclick = () => setEditMode(false);
   // 13/8: botón Cancelar del modo colocar — visible solo mientras hay algo "en la mano"
-  window.syncPlacingUI = (on) => { const b = $("edit-cancelar"); if (b) b.style.display = on ? "" : "none"; };
+  window.syncPlacingUI = (on) => {
+    const b = $("edit-cancelar"); if (b) b.style.display = on ? "" : "none";
+    if (typeof syncRegistroPrompt === "function") syncRegistroPrompt();
+  };
   { const ec = $("edit-cancelar"); if (ec) ec.onclick = () => { const sc = window.farmScene; if (sc && sc.cancelarColocar) sc.cancelarColocar(); }; }
   // --- adornos: el selector y el botón de la barra de edición (10/8) ---
   { const bp = $("edit-poner"); if (bp) bp.onclick = () => ponerAdornoElegido(); }

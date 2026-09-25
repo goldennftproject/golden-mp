@@ -5776,6 +5776,13 @@ class FarmScene extends Phaser.Scene {
       if (this.ocupG) this.ocupG.setVisible(false);
     }
     const el = $("prompt"); if (!el) return;
+    /* La rueda reutilizable ocupa el gesto de elegir. En PC el cartel que describía la acción
+       anterior queda debajo, redundante y a veces cruza una ficha; se apaga hasta que la rueda
+       cierre. Móvil conserva su lectura táctil actual para su pasada específica. */
+    const rueda = $("seedwheel");
+    if (typeof window !== "undefined" && window.innerWidth > 640 && rueda && rueda.classList.contains("show")) {
+      el.classList.remove("show"); this.cargasBadge(null); return;
+    }
     /* 18/8 (reporte: "no pude ponerlo una celda más arriba porque me marca rojo, creo que aún
        quedan celdas bloqueadas fantasma"). No eran fantasma —era la franja que la cerca se reserva
        arriba— pero el jugador NO TENÍA CÓMO SABERLO: en modo edición el cartel se apagaba entero,

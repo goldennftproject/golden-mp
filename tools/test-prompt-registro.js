@@ -18,14 +18,16 @@ function clases(plegado, movida) { return { contains: c => (c === "collapsed" &&
 function rect(left, top, width, height) {
   return { left, top, width, height, right: left + width, bottom: top + height };
 }
-function caso({ plegado, logRect }) {
+function caso({ plegado, logRect, editRect, ancho }) {
   const prompt = { style: {}, getBoundingClientRect() {
     const bottom = Number.parseFloat(this.style.bottom || "0") || 0;
     return rect(285, 576 - bottom - 36, 198, 36);
   } };
   const hotbar = { getBoundingClientRect: () => rect(174, 470, 420, 66) };
   const registro = { classList: clases(plegado), getBoundingClientRect: () => logRect };
-  const ctx = { window: { innerHeight: 576 }, $: id => ({ prompt, hotwrap: hotbar, logpanel: registro })[id] || null };
+  const editbar = editRect && { classList: { contains: c => c === "show" }, getBoundingClientRect: () => editRect };
+  const ctx = { window: { innerWidth: ancho == null ? 1280 : ancho, innerHeight: 576 },
+    $: id => ({ prompt, hotwrap: hotbar, logpanel: registro, editbar })[id] || null };
   vm.createContext(ctx);
   vm.runInContext(UI.slice(desde, hasta), ctx);
   vm.runInContext("placePrompt()", ctx);
@@ -91,6 +93,16 @@ console.log("\n2 · EL REGISTRO LIBERA EL TEXTO DEL MUNDO, TAMBIÉN PLEGADO\n");
   ok("y conserva aire alrededor de su cabecera", !cruzan(plegado.prompt, plegado.registro, 8), JSON.stringify(plegado.prompt));
 }
 
+console.log("\n2B · EN PC EL CARTEL DE COLOCAR LIBERA LA BARRA DE EDICIÓN\n");
+{
+  const barra = caso({ plegado: false, logRect: rect(520, 300, 220, 150), editRect: rect(200, 390, 600, 36) });
+  ok("sube por encima de la barra de edición", barra.bottom === 198, barra.bottom + "px");
+  ok("deja aire también alrededor de sus botones", !cruzan(barra.prompt, rect(200, 390, 600, 36), 8), JSON.stringify(barra.prompt));
+
+  const movil = caso({ plegado: false, logRect: rect(520, 300, 220, 150), editRect: rect(200, 390, 600, 36), ancho: 640 });
+  ok("móvil no modifica todavía su composición", movil.bottom === 140, movil.bottom + "px");
+}
+
 console.log("\n3 · EL REGISTRO AUTOMÁTICO NO SE ESCONDE DETRÁS DE LA HOTBAR\n");
 {
   const hotbar = rect(174, 470, 420, 66);
@@ -114,6 +126,8 @@ console.log("\n4 · LOS GANCHOS REACCIONAN A LA TRANSICIÓN, NO CADA CUADRO\n");
   ok("no observa textContent del prompt por MutationObserver", !/prompt\._promptWatch = new MutationObserver/.test(UI));
   ok("la hotbar y Registro recalculan juntos al arrastrarse", /makeHoldDrag\(\$\("hotwrap"\), "gf_hotpos", false, syncRegistroPrompt\)/.test(UI) &&
     /makeHoldDrag\(registro, "gf_logpos", true, syncRegistroPrompt\)/.test(UI));
+  ok("edición y botón Cancelar recomponen el cartel", /eb\.classList\.toggle\("show", on\);[\s\S]*?syncRegistroPrompt\(\);/.test(UI) &&
+    /window\.syncPlacingUI = \(on\) => \{[\s\S]*?syncRegistroPrompt\(\);/.test(UI));
 }
 
 console.log("\n5 · LA GUÍA MÓVIL NO SE ESCONDE DETRÁS DEL REGISTRO\n");

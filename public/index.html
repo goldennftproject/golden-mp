@@ -514,6 +514,9 @@
      chicas y había que alejar el zoom. Se recorta el alto (padding 8→4), no el ancho.
      Red de seguridad: si aun así no entra, la lista scrollea en vez de cortarse. */
   .gmitems{display:flex;flex-direction:column;gap:0;transition:opacity .15s,transform .15s;transform-origin:top right;max-height:calc(100vh - 70px);overflow-y:auto}   /* 13/8: botones del menú pegados, sin separación */
+  /* En escritorio el HUD puede envolver o mostrar la repisa de buffs. El menú nace debajo de
+     su caja visible y conserva sólo el alto de ventana que realmente queda; móvil no cambia. */
+  @media(min-width:641px){.gmenu{top:var(--gmenu-top,52px)}.gmenu .gmitems{max-height:var(--gmenu-max-height,calc(100vh - 70px))}}
   .gmenu.collapsed .gmitems{opacity:0;transform:scale(.9);pointer-events:none;height:0;overflow:hidden}
   .gmi{display:flex;align-items:center;gap:8px;width:190px;text-align:left;background:rgba(38,51,31,.94);border:1px solid #3c4d31;color:#f2ead5;font-weight:700;font-size:12.5px;border-radius:8px;padding:4px 10px;cursor:pointer}
   .gmi:hover{filter:brightness(1.15)}
@@ -618,6 +621,9 @@
   /* indicador de guardado */
   #saveind{position:fixed;right:12px;bottom:12px;z-index:8;display:none;align-items:center;gap:7px;background:rgba(20,28,15,.92);border:1px solid #3c4d31;color:#cfe6b6;padding:6px 12px;border-radius:999px;font-size:12px;font-weight:700}
   #saveind.show{display:flex}
+  /* En escritorio el aviso se puede apartar del muelle de combate o de una hotbar arrastrada.
+     No recibe clics: sólo confirma una acción que ya se hizo. */
+  @media(min-width:641px){#saveind{right:var(--saveind-right,12px);bottom:var(--saveind-bottom,12px);pointer-events:none}}
   #saveind .sdot{font-size:14px;line-height:1;display:inline-block;color:#8fd06a}
   #saveind.saving .sdot{color:#e0c76a;animation:spin .7s linear infinite}
   @keyframes spin{to{transform:rotate(360deg)}}
@@ -813,6 +819,9 @@
   #pesca4{position:fixed;left:50%;bottom:16px;transform:translateX(-50%);z-index:70;width:min(430px,94vw);
     display:none;flex-direction:column;gap:7px;padding:11px 13px 13px;border-radius:13px;
     background:rgba(20,28,16,.94);border:2px solid #3c4d31;box-shadow:0 8px 26px rgba(0,0,0,.45)}
+  /* En PC los aparejos se apoyan arriba de la hotbar real, incluso si se arrastró. En móvil
+     sigue abajo, compacto, donde ya funciona bien con el pulgar. */
+  @media(min-width:641px){#pesca4{bottom:var(--pesca4-bottom,16px)}}
   #pesca4.show{display:flex}
   .p4-cab{display:flex;justify-content:space-between;align-items:center;gap:8px;font-size:13px;color:#f2ead5}
   .p4-cab #p4-cebo{font-size:12px;color:#cbbf9f;flex:1;text-align:right}
@@ -1117,6 +1126,9 @@
 
   /* barra flotante del modo edición */
   #editbar{position:fixed;left:50%;bottom:122px;transform:translateX(-50%);z-index:7;display:none;gap:8px}
+  /* La edición conserva su posición habitual hasta que una hotbar arrastrada llega a su franja.
+     Esta corrección es de escritorio: en móvil no se toca el flujo de pulgar. */
+  @media(min-width:641px){#editbar{bottom:var(--editbar-bottom,122px)}}
   #editbar.show{display:flex}
 
   /* 31/7: tipografia estandar del juego = blanco con contorno oscuro (como los contadores del mundo).
@@ -2084,7 +2096,7 @@
     // 15/8: VERSIÓN DE BUILD — rompe la caché del navegador en cada deploy (sin esto, el
     // jugador seguía corriendo el state.js viejo aunque el servidor tuviera el nuevo).
     // deploy.bat la actualiza sola (busca GF_BUILD y pone la fecha/hora del deploy).
-    const GF_BUILD = "20260925-143527";
+    const GF_BUILD = "20260925-155951";
     const files = ["game/config.js","game/nav.js","game/audio.js","game/state.js","game/save.js","game/ui.js","game/boot.js",
                    "game/farm.js","game/forest.js","game/plaza.js","game/main.js","game/update.js"];
     /* 24/8 — SE BAJAN TODOS A LA VEZ, SE EJECUTAN EN FILA (dirección: « sigue tardando en
