@@ -1008,6 +1008,9 @@
      que es como se lee un registro: lo último, más cerca. */
   #flujo{position:fixed;left:10px;top:50%;transform:translateY(-50%);z-index:60;pointer-events:none;
     display:flex;flex-direction:column-reverse;align-items:flex-start;gap:4px;max-height:52vh;overflow:hidden}
+  /* En escritorio las ventanas pueden convivir con el mundo. El flujo sigue sobre el campo,
+     pero no se imprime sobre la tarjeta que el jugador está leyendo; móvil conserva su capa. */
+  @media(min-width:641px){#flujo{z-index:6}}
   .flch{display:flex;align-items:center;gap:6px;padding:3px 9px 3px 4px;border-radius:14px;
     background:rgba(20,14,5,.82);border:1px solid rgba(255,215,94,.28);
     font-size:13px;font-weight:800;color:#f2ead5;white-space:nowrap;
@@ -2096,7 +2099,7 @@
     // 15/8: VERSIÓN DE BUILD — rompe la caché del navegador en cada deploy (sin esto, el
     // jugador seguía corriendo el state.js viejo aunque el servidor tuviera el nuevo).
     // deploy.bat la actualiza sola (busca GF_BUILD y pone la fecha/hora del deploy).
-    const GF_BUILD = "20260925-155951";
+    const GF_BUILD = "20260925-161810";
     const files = ["game/config.js","game/nav.js","game/audio.js","game/state.js","game/save.js","game/ui.js","game/boot.js",
                    "game/farm.js","game/forest.js","game/plaza.js","game/main.js","game/update.js"];
     /* 24/8 — SE BAJAN TODOS A LA VEZ, SE EJECUTAN EN FILA (dirección: « sigue tardando en

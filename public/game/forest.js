@@ -528,6 +528,13 @@ class ForestScene extends Phaser.Scene {
       return '<div class="cp-item">' + (sk ? '<img src="' + GF.spr(sk) + '" onerror="this.remove()">' : "") +
         '<span>' + d.n + " × " + nom + '</span></div>';
     }).join("");
+    /* La UI puede abrir Inventario/Equipo por atajo mientras el cuerpo está visible. Se expone
+       una única salida temporal para que esa ruta lo cierre igual que el botón ✕ y no quede la
+       referencia de este cadáver viva detrás de otro panel. */
+    if (typeof window !== "undefined") {
+      this._cerrarCuerpoUi = () => this.cerrarCuerpo();
+      window.cerrarCuerpoPanel = this._cerrarCuerpoUi;
+    }
     el.classList.add("show");
     if (typeof placeCuerpoPanelPc === "function") placeCuerpoPanelPc();
     const btn = document.getElementById("cuerpo-recoger");
@@ -539,6 +546,8 @@ class ForestScene extends Phaser.Scene {
     const el = document.getElementById("cuerpo-panel");
     if (el) el.classList.remove("show");
     if (typeof placeCuerpoPanelPc === "function") placeCuerpoPanelPc();
+    if (typeof window !== "undefined" && this._cerrarCuerpoUi && window.cerrarCuerpoPanel === this._cerrarCuerpoUi) delete window.cerrarCuerpoPanel;
+    this._cerrarCuerpoUi = null;
     this._cuerpoAbierto = null;
   }
   recogerCuerpo(c) {

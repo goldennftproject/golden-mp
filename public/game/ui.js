@@ -100,10 +100,26 @@ function openOv(id) {
      se abren con un atajo. La puerta única cubre teclado, menú y clics de mundo; móvil mantiene
      su composición hasta la pasada específica. */
   if (window.innerWidth > 640 && typeof pescaAparejosAbierto === "function" && pescaAparejosAbierto() && typeof pescaAparejosCerrar === "function") pescaAparejosCerrar();
+  /* El cuerpo usa la misma capa alta para no tapar la hotbar de la Zona. Una ventana normal no
+     puede abrirse debajo: cerrarlo por esta puerta también limpia la referencia del cadáver. */
+  if (window.innerWidth > 640 && typeof cerrarCuerpoPanelPc === "function") cerrarCuerpoPanelPc();
   e.classList.add("show"); enfocarOvPc(e);
   if (window.sfx) sfx(OV_SFX[id] || "click");
   if (OV_REFRESH[id]) OV_REFRESH[id]();
   if (typeof tutoHighlight === "function") tutoHighlight();   // 13/8: al abrir un panel, el botón del objetivo se resalta al instante
+}
+function cerrarCuerpoPanelPc() {
+  const panel = $("cuerpo-panel");
+  if (!panel || !panel.classList.contains("show")) return false;
+  /* ForestScene publica sólo esta salida mientras el cuerpo está abierto. Así no duplicamos la
+     lógica de su botón ✕ ni dejamos `_cuerpoAbierto` apuntando a un cadáver ya escondido. */
+  if (typeof window !== "undefined" && typeof window.cerrarCuerpoPanel === "function") {
+    window.cerrarCuerpoPanel(); return true;
+  }
+  /* Red de seguridad para una transición de escena que ya retiró su callback. */
+  panel.classList.remove("show");
+  if (typeof placeCuerpoPanelPc === "function") placeCuerpoPanelPc();
+  return true;
 }
 
 // FUNDIDO A NEGRO al cambiar de escena (granja <-> Zona Negra <-> plaza). Antes era un corte seco.
