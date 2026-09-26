@@ -5,7 +5,8 @@
    Una sola tabla: cada incursión apunta a un cuarto (INCURSIONES[k].zona) y pide el nivel de
    Combate que ZONA_DEF le pide al que entra caminando.
      node tools/test-incursion-nivel.js                                                       */
-const fs = require("fs"), vm = require("vm");
+const fs = require("fs"), vm = require("vm"), path = require("path");
+const RAIZ = path.join(__dirname, "..");
 const ctx = { console: { log() {}, warn() {}, error() {}, info() {} }, Math, Date, JSON, Object, Array, Number, String, Boolean, Set, Map,
   isNaN, isFinite, parseInt, parseFloat, performance: { now: () => 0 }, setTimeout: () => 0, setInterval: () => 0, clearInterval() {} };
 ctx.window = ctx; ctx.globalThis = ctx;
@@ -23,8 +24,8 @@ const ok = (n, c, d) => { if (!c) fallos++; console.log((c ? "  ok   " : "  FALL
 const INC = g("INCURSIONES"), ZONA = g("ZONA_DEF"), ORDER = g("INC_ORDER");
 function nivelCombate(l) { let acc = 0; for (let k = 2; k <= l; k++) acc += ctx.skillNeed(k); G.combatXp = acc; return ctx.combatInfo().lvl; }
 function conEspadaDeHierro() {
-  G.weapons = { espada_hierro: { dur: 100 } }; G.armaEq = "espada_hierro";
-  if (typeof ctx.equipArma === "function") try { ctx.equipArma("espada_hierro"); } catch (e) {}
+  G.weapons = { espada_bronce: { dur: 100 } }; G.gear = Object.assign(G.gear || {}, { arma: "espada_bronce" });
+  if (typeof ctx.equipArma === "function") try { ctx.equipArma("espada_bronce"); } catch (e) {}
   G.incursion = null; G.incDia = null; G.tuto = { done: true }; avisos.length = 0;
 }
 
@@ -54,6 +55,22 @@ console.log("\nCON NIVEL 10, ZONA II SE ABRE (LO DEMÁS SIGUE IGUAL)\n");
   ok("Zona II ya se puede por nivel", ctx.incPuedeNivel("zn2") === true);
   ok("Zona III todavía no (pide " + ctx.incNivelReq("zn3") + ")", ctx.incPuedeNivel("zn3") === false);
   ok("la Guarida tampoco (pide " + ctx.incNivelReq("guarida") + ")", ctx.incPuedeNivel("guarida") === false);
+}
+
+console.log("\nCON UNA INCURSIÓN EN CURSO, EL PORTAL ESTÁ CERRADO (26/9, diseñador)\n");
+{
+  conEspadaDeHierro(); nivelCombate(10);
+  G.zonaCdHasta = 0; G.tumba = null;
+  ok("sin incursión ni descanso, la puerta está abierta", ctx.zonaPuertaCerrada() === null);
+  ctx.incSalir("zn1");
+  ok("(salió de incursión)", !!G.incursion);
+  const txt = ctx.zonaPuertaCerrada();
+  ok("con la incursión en curso, el portal dice por qué y cuánto falta", /de incursión en Zona Negra I/.test(txt || "") && /vuelve en/.test(txt || ""), txt);
+  const farm = require("fs").readFileSync(RAIZ + "/public/game/farm.js", "utf8");
+  ok("las tres puertas del portal (rótulo, clic, viajeEntrar) usan la misma", (farm.match(/zonaPuertaCerrada\(\)/g) || []).length >= 3);
+  G.incursion = null; G.zonaCdHasta = Date.now() + 60000;
+  ok("y el descanso sigue cerrándola como antes", /descansando/.test(ctx.zonaPuertaCerrada() || ""));
+  ok("los tiempos son 10 · 20 · 30 · 60 min", ORDER.map(k => INC[k].min).join() === "10,20,30,60", ORDER.map(k => INC[k].min).join());
 }
 
 console.log(fallos ? "\n✗ " + fallos + " fallo(s)\n" : "\n✓ la incursión pide el mismo nivel que la puerta del cuarto\n");

@@ -3985,7 +3985,7 @@ const INCURSIONES = {
   zn1: { label:"Zona Negra I",   min:10, mobs:["rata","murcielago","larva","baba","arana"],           poderRec:8,  zona:"pantano" },
   zn2: { label:"Zona Negra II",  min:20, mobs:["goblin","orco","esqueleto","lancero","golem"],        poderRec:20, zona:"piedra" },
   zn3: { label:"Zona Negra III", min:30, mobs:["hombre_lobo","guerrero","troll","ogro","espectro"],   poderRec:35, zona:"fuego" },
-  guarida: { label:"Guarida",    min:45, mobs:["demonio"],                                             poderRec:55, zona:"guarida" },
+  guarida: { label:"Guarida",    min:60, mobs:["demonio"],                                             poderRec:55, zona:"guarida" },   // 26/9 (diseñador): 10 · 20 · 30 · 1 h
 };
 const INC_ORDER = ["zn1", "zn2", "zn3", "guarida"];
 function incNivelReq(k) { const z = INCURSIONES[k]; const zd = z && ZONA_DEF[z.zona]; return zd ? (zd.lvl || 1) : 1; }
@@ -4007,6 +4007,8 @@ function incFalta() { const i = incActiva(); return i ? Math.max(0, i.endAt - no
 function incSalir(zona) {
   const z = INCURSIONES[zona]; if (!z) return;
   if (incActiva()) { toast("Ya hay una incursión en curso"); return; }
+  /* 26/9: si el granjero está EN la Zona a pie, tampoco sale de incursión (la puerta al revés) */
+  if (typeof GF !== "undefined" && GF.scene === "forest") { toast("Estás en la Zona: volvé a la granja para mandar la incursión"); return; }
   const cupo = incCupoHoy();
   if (INC_CUPO_DIA && cupo.n >= INC_CUPO_DIA) { toast("Ya hiciste las " + INC_CUPO_DIA + " incursiones de hoy"); return; }
   if (!incPuedeNivel(zona)) { toast(z.label + " pide Combate " + incNivelReq(zona) + " — igual que entrar a pie"); return; }   // 23/9
@@ -4528,6 +4530,20 @@ var ZONA_HP_GUARDA_S = 10;
 function zonaCdLeft() {
   if (typeof tumbaViva === "function" && tumbaViva()) return 0;
   return Math.max(0, (G.zonaCdHasta || 0) - nowMs());
+}
+/* 26/9 (diseñador): « si hay una incursión en curso no se puede ir a la Zona Negra ». El
+   granjero está allá adentro de un clic; no puede estar en dos sitios. UNA puerta con el motivo
+   (regla 9), que usan el rótulo del portal, el clic y viajeEntrar — antes cada uno preguntaba
+   por su cuenta solo el descanso. Devuelve el texto del bloqueo o null. */
+function zonaPuertaCerrada() {
+  const inc = (typeof incActiva === "function") ? incActiva() : null;
+  if (inc) {
+    const z = (typeof INCURSIONES !== "undefined" && INCURSIONES[inc.zona]) || { label: "la Zona" };
+    return "El granjero está de incursión en " + z.label + " — vuelve en " + fmtDur(incFalta());
+  }
+  const espera = zonaCdLeft();
+  if (espera > 0) return "El granjero está descansando — podés volver en " + fmtDur(espera);
+  return null;
 }
 function zonaMatados() {
   const m = (G.stats && G.stats.matar) || {};

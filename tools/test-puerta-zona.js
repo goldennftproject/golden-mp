@@ -135,7 +135,7 @@ console.log("\nEL PORTAL ABRE LA PUERTA, Y NO DEJA ENTRAR DE CUALQUIER FORMA");
     /!contsTengo\("bag"\) && !contsTengo\("backpack"\)[\s\S]{0,180}se compran en la Tienda/.test(FARM));
   ok("entrar de verdad vuelve a comprobar el arma", /function viajeEntrar[\s\S]{0,700}armaEq\(\)\) \{ toast/.test(FARM));
   ok("y el enfriamiento, que pudo vencerse con el panel abierto",
-    /function viajeEntrar[\s\S]{0,400}zonaCdLeft/.test(FARM));
+    /function viajeEntrar[\s\S]{0,400}zonaPuertaCerrada/.test(FARM));
   ok("salir con el contenedor vacío se permite, pero se avisa",
     /!contPilas\(raiz\)\) log\([\s\S]{0,90}curarte/.test(FARM));
 }

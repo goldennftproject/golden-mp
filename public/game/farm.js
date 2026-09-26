@@ -631,10 +631,21 @@ class FarmScene extends Phaser.Scene {
              el edificio. Durante el gesto se esconde; al soltar, reposicionarAviso() lo devuelve
              exactamente sobre la pieza, ya en su celda definitiva. */
           if (hit._aviso) hit._aviso.setVisible(false);
+          // La brasa de la Herrería no forma parte de su sprite. Mientras se arrastra la
+          // escondemos para que no parezca una segunda fragua abandonada; updateForge() la
+          // devuelve (en la posición nueva o en la original si el lugar no era válido).
+          if ((hit === this.storeObj || hit.type === "store") && this.forgeGlow) {
+            this.forgeGlow.forEach(g => { if (g && g.setVisible) g.setVisible(false); });
+          }
           return;
         }
         for (const pl of this.plots) { if (pl.state === "locked") continue; if (Math.abs(wx - pl.cx) < T / 2 && Math.abs(wy - pl.by) < T / 2) { this.dragPlot = pl; return; } }
-        if (this.pondImg && this.pondDist(wx, wy) < 1) { this.dragPond = true; return; }
+        if (this.pondImg && this.pondDist(wx, wy) < 1) {
+          // El lance dibuja corcho, hilo y barra sobre ESTA agua. Reubicar la laguna en ese
+          // instante los dejaría en el pasto viejo; el jugador termina el lance y puede moverla.
+          if (this.action && this.action.kind === "fish") { toast("Terminá el lance antes de mover la laguna"); return; }
+          this.dragPond = true; return;
+        }
         this.hold = { sx: pt.x, sy: pt.y, px: pt.x, py: pt.y, active: false };   // 13/8: nada agarrado → el arrastre panea también en edición
         return;
       }
@@ -738,6 +749,7 @@ class FarmScene extends Phaser.Scene {
       if (this.dragDeco) {
         const a = this.dragDeco;
         a.g.setPosition(pt.worldX, pt.worldY).setDepth(99999);
+        this.moverHaloFarol(a, pt.worldX, pt.worldY);
         const col = Phaser.Math.Clamp(Math.floor(pt.worldX / T), GF.C0, GF.C1 - 1);
         const row = Phaser.Math.Clamp(Math.floor(pt.worldY / T), GF.R0, GF.R1 - 1);
         this.editHl.setPosition(col * T, (row + 1) * T).setSize(T, T)
@@ -745,7 +757,7 @@ class FarmScene extends Phaser.Scene {
       } else if (this.dragObj) {
         const o = this.dragObj;
         o.sprite.setPosition(pt.worldX, pt.worldY).setDepth(99999);
-        if (o.shadow) o.shadow.setPosition(pt.worldX, pt.worldY - 3);
+        this.posicionarSombra(o, pt.worldX, pt.worldY);
         const wCells = Math.max(1, Math.round(o.w / T));
         const leftCol = Phaser.Math.Clamp(Math.round((pt.worldX - wCells * T / 2) / T), GF.C0, GF.C1 - wCells);
         const baseRow = Phaser.Math.Clamp(Math.round(pt.worldY / T), GF.R0 + 1, GF.R1);
@@ -848,6 +860,7 @@ class FarmScene extends Phaser.Scene {
         const row = Phaser.Math.Clamp(Math.floor(pt.worldY / T), GF.R0, GF.R1 - 1);
         if (!this.celdaLibreAdorno(col, row, a.i)) {
           a.g.setPosition(a.cx, a.by).setDepth(a.by);
+          this.moverHaloFarol(a, a.cx, a.by);
           toast(this.porQueNoEntra(col, row, -1) || "Ahí ya hay algo — elegí otra celda"); return;
         }
         const d = (G.decos || [])[a.i];
@@ -866,6 +879,7 @@ class FarmScene extends Phaser.Scene {
           toast("Ahí ya hay algo — elegí otra celda"); return;
         }
         this.moverParcela(pl, col, row);
+        this.updateTutoArrow();   // la guía apunta a la tierra que acabás de reubicar
         if (typeof saveFarm === "function") saveFarm(true);
         return;
       }
@@ -882,12 +896,13 @@ class FarmScene extends Phaser.Scene {
         }
         p2.col = col; p2.row = row;
         this.pondImg.setPosition((col + p2.cols / 2) * T, (row + p2.rows / 2) * T);
-        this.pondFish.forEach(f => { const np = this.pondPoint(); f.s.setPosition(np.x, np.y); f.tgt = this.pondPoint(); });
+        this.reposicionarAmbienteLaguna();
         G.layoutPond = { col, row };
         // la grilla del pathfinding está cacheada hasta un invalidate() explícito: sin esto el
         // A* seguía creyendo que el agua estaba en el lugar viejo y armaba rutas que cruzaban
         // la laguna nueva y rodeaban un charco que ya no existe (10/8)
         this.rebuildCollisions();
+        this.updateTutoArrow();   // la guía de pesca lee la caja actual de la laguna
         if (typeof saveFarm === "function") saveFarm(true);
         return;
       }
@@ -897,21 +912,29 @@ class FarmScene extends Phaser.Scene {
       const baseRow = Phaser.Math.Clamp(Math.round(pt.worldY / T), GF.R0 + 1, GF.R1);
       if (this.placeBlocked(o, leftCol, baseRow, wCells)) {   // ocupado: devolver a su lugar
         o.sprite.setPosition(o.origCx, o.origBy).setDepth(o.origBy);
-        if (o.shadow) o.shadow.setPosition(o.origCx, o.origBy - 3).setDepth(o.origBy - 0.5);
+        this.posicionarSombra(o, o.origCx, o.origBy);
         if (o.timer) o.timer.setPosition(o.origCx, o.origBy - T * 0.85);
         this.reposicionarAviso(o);
         if (o._aviso) o._aviso.setVisible(!o.oculto);
+        if (o === this.storeObj || o.type === "store") this.updateForge();
         toast("Ahí ya hay algo — elegí otra celda");
         this.dragObj = null; return;
       }
       o.cx = leftCol * T + wCells * T / 2; o.by = baseRow * T;
       o.sprite.setPosition(o.cx, o.by).setDepth(o.by);
-      if (o.shadow) o.shadow.setPosition(o.cx, o.by - 1).setDepth(o.by - 0.5);   // 12/8: la sombra pegada al borde inferior
+      this.posicionarSombra(o, o.cx, o.by);
       if (o.timer) o.timer.setPosition(o.cx, o.by - T * 0.85);
+      // La barra de golpes es un Graphics dibujado en coordenadas absolutas, no un hijo del
+      // sprite. Si el nodo se movió mientras tenía golpes acumulados, se pinta de inmediato en
+      // su base nueva en vez de dejar una barra vacía en la celda anterior.
+      if (o.barra || o.golpes) this.barraGolpes(o);
       this.reposicionarAviso(o);
       if (o._aviso) o._aviso.setVisible(!o.oculto);
       if (o.type === "cofre") { const c = G.chests && G.chests[o.chestIdx]; if (c) { c.col = leftCol; c.row = baseRow - 1; } }
       else { if (!G.layout) G.layout = {}; G.layout[o.i] = { cx: o.cx, by: o.by }; }
+      this.soltarMariposasDe(o);   // una percha vieja no puede seguir señalando la celda anterior
+      this.reanclarAcompanantes(o.type);   // paquete, goblin y mascota no quedan atrás de su casa
+      if (o === this.storeObj || o.type === "store") this.updateForge();
       GF.ocupCambio();   // 18/8: el mapa de ocupación tiene que enterarse
       this.rebuildCollisions();
       if (typeof saveFarm === "function") saveFarm(true);
@@ -1303,8 +1326,8 @@ class FarmScene extends Phaser.Scene {
     if (!o) return null;
     const rotulo = (x) => this.promptText(x);
     if (o.type === "portal") {
-      const espera = (typeof zonaCdLeft === "function") ? zonaCdLeft() : 0;
-      return espera > 0 ? { ok: false, toast: "El granjero está descansando — podés volver en " + fmtDur(espera) } : null;
+      const cerrada = (typeof zonaPuertaCerrada === "function") ? zonaPuertaCerrada() : null;   // 26/9: descanso O incursión en curso
+      return cerrada ? { ok: false, toast: cerrada } : null;
     }
     if (o.type === "tablon_pedidos") {
       const cerrado = typeof tablonAbierto === "function" ? !tablonAbierto() : (G.tuto && !G.tuto.done);
@@ -1486,8 +1509,8 @@ class FarmScene extends Phaser.Scene {
   interactWith(o) {
     if (o.type === "portal") {
       // 10/8: descanso entre viajes, y se abre el "viaje" para poder resumirlo al volver
-      const espera = (typeof zonaCdLeft === "function") ? zonaCdLeft() : 0;
-      if (espera > 0) { toast("El granjero está descansando — podés volver en " + fmtDur(espera)); return; }
+      const cerrada = (typeof zonaPuertaCerrada === "function") ? zonaPuertaCerrada() : null;   // 26/9: descanso O incursión en curso
+      if (cerrada) { toast(cerrada); return; }
       /* 8/9 (dirección) — EL PORTAL YA NO ES UN BOTÓN, ES UN UMBRAL. Antes confirmabas y estabas
          adentro con todo tu patrimonio encima sin haberlo decidido. Ahora se abre la puerta
          (refreshViaje) y ahí elegís contenedor y carga; entrar de verdad es viajeEntrar(), que
@@ -2692,6 +2715,21 @@ class FarmScene extends Phaser.Scene {
     const a = Math.random() * Math.PI * 2, r = Math.random() * 0.62;
     return { x: ex + Math.cos(a) * r * (p.cols * T / 2), y: ey + Math.sin(a) * r * (p.rows * T / 2) };
   }
+
+  reposicionarAmbienteLaguna() {
+    // Las ondas y destellos ya consultan GF.POND al reiniciar sus tweens, pero una que está a
+    // mitad de ciclo conserva su x/y anterior. Se muda ahora mismo junto al agua; el pulso no se
+    // reinicia porque sus tweens solo animan escala y alfa.
+    (this.pondWaves || []).forEach(w => {
+      if (!w || !w.setPosition) return;
+      const p = this.pondPoint(); w.setPosition(p.x, p.y);
+    });
+    (this.pondFish || []).forEach(f => {
+      if (!f || !f.s) return;
+      const p = this.pondPoint(); f.s.setPosition(p.x, p.y); f.tgt = this.pondPoint();
+    });
+  }
+
   tryFish(clickX, clickY) {
     /* 19/8 (dirección, SEGUNDO reporte del mismo fallo) — ÉSTA era la puerta que faltaba.
        La primera corrección la puse en el clic sobre el OBJETO pesquero, pero al agua se le hace
@@ -2760,7 +2798,8 @@ class FarmScene extends Phaser.Scene {
     const total = o.type === "tree" ? GOLPES_TALAR : GOLPES_MINAR;
     const n = o.golpes || 0;
     if (n <= 0 || n >= total) { if (o.barra) { o.barra.destroy(); o.barra = null; } return; }
-    if (!o.barra) o.barra = this.add.graphics().setDepth(o.by + 3);
+    if (!o.barra) o.barra = this.add.graphics();
+    o.barra.setDepth(o.by + 3);
     this.dibujarBarra(o.barra, o.cx, o.by + 5, 28, 6, n / total);   // mismo estilo que la de crecimiento
   }
 
@@ -3208,7 +3247,7 @@ class FarmScene extends Phaser.Scene {
       o.sprite.setPosition(o.cx, o.by).setDepth(o.by);
       if (o.shadow) o.shadow.setPosition(o.cx, o.by - 1).setDepth(o.by - 0.5);
       if (o.timer) o.timer.setPosition(o.cx, o.by - T * 0.85);
-      if (o.barra) o.barra.setPosition(o.cx, o.by + 4);
+      if (o.barra || o.golpes) this.barraGolpes(o);
     }
     this.refreshNodeLocks();      // lo destapa con su saltito y sus chispas
     if (this.rebuildCollisions) this.rebuildCollisions();
@@ -3323,6 +3362,48 @@ class FarmScene extends Phaser.Scene {
       if (!DECO_DEF[d.id]) return;
       const x = (d.col + 0.5) * T, y = (d.row + 1) * T;
       this.adornos.push({ i, id: d.id, col: d.col, row: d.row, cx: x, by: y, g: this.dibujarAdorno(d.id, x, y) });
+    });
+    // Los faroles se dibujan aparte para que su luz use mezcla aditiva. Al reconstruir el
+    // adorno por una mudanza también se reconstruye su halo: no queda encendido en la celda vieja.
+    this.refrescarFaroles();
+  }
+
+  limpiarFaroles() {
+    if (!Array.isArray(this.faroles)) return;
+    this.faroles.forEach(g => {
+      if (!g) return;
+      if (this.tweens && this.tweens.killTweensOf) this.tweens.killTweensOf(g);
+      if (g.destroy) g.destroy();
+    });
+    this.faroles = [];
+  }
+
+  crearFaroles() {
+    if (!Array.isArray(this.faroles) || this.faroles.length || !this.add) return;
+    (this.adornos || []).forEach(a => {
+      if (a.id !== "farol" && a.id !== "farolito") return;
+      const g = this.add.circle(a.cx, a.by - 24, 20, 0xffd27a, 0.22).setDepth(90001);
+      g._farolI = a.i;   // el índice vive durante todo el gesto de arrastre
+      this.tweens.add({ targets: g, alpha: 0.32, scaleX: 1.12, scaleY: 1.12,
+        duration: 900 + Math.random() * 500, yoyo: true, repeat: -1, ease: "Sine.easeInOut" });
+      this.faroles.push(g);
+    });
+  }
+
+  refrescarFaroles() {
+    // Antes del primer tick de ambiente todavía no existe la colección. Tampoco se crean luces
+    // en medio de un reinicio de escena: el cielo nuevo es quien inaugura su propia colección.
+    if (!this.cielo || this.cielo.active === false || !Array.isArray(this.faroles)) return;
+    this.limpiarFaroles();
+    const noche = typeof esDeNoche === "function" ? esDeNoche() : !!this._nocheAnt;
+    if (noche) this.crearFaroles();
+  }
+
+  moverHaloFarol(a, x, y) {
+    if (!a || (a.id !== "farol" && a.id !== "farolito")) return;
+    (this.faroles || []).forEach(g => {
+      if (!g || g._farolI !== a.i) return;
+      g.setPosition(x, y - 24).setDepth(90001).setVisible(true);
     });
   }
 
@@ -3759,6 +3840,20 @@ class FarmScene extends Phaser.Scene {
     }
   }
 
+  // La mariposa guarda una percha concreta para poder aterrizar suave. Si su recurso se muda en
+  // edición, esa coordenada deja de tener sentido: se suelta y el próximo tick la vuelve a
+  // repartir usando la posición nueva del recurso, sin teletransportarla ni dejarla sobre pasto.
+  soltarMariposasDe(o) {
+    if (!o || !this.maripos) return;
+    let hubo = false;
+    this.maripos.forEach(m => {
+      if (!m || !m.ancla || m.ancla.o !== o) return;
+      m.ancla = null; m.anclaK = null; m.percha = null; m.posadaHasta = 0; m.firmaPosada = null;
+      hubo = true;
+    });
+    if (hubo) this._mariAt = 0;
+  }
+
   // EXCAVACIONES DIARIAS (15/8): 3 montículos en celdas libres, fijos durante el día
   crearExcavaciones() {
     (this.excavObjs || []).forEach(o => { if (o.sprite) o.sprite.destroy(); const ix = this.objs.indexOf(o); if (ix >= 0) this.objs.splice(ix, 1); });
@@ -3783,6 +3878,36 @@ class FarmScene extends Phaser.Scene {
       spr.setScale(w / spr.width);
       const o = { i: "excav" + i, type: "excav", idx: i, cx: px, by: py, w, rw: w, baseKey: "monticulo", sprite: spr, readyAt: 0, nace: this.time.now };   // 2/9: nace = su edad real para el imán de mariposas (readyAt 0 lo hacía "eterno")
       this.objs.push(o); this.excavObjs.push(o);
+    }
+  }
+
+  // Todos los objetos arrastrables que llevan una sombra pasan por acá. Los acompañantes usan
+  // otro anclaje (van apoyados delante de su casa) y el dummy conserva el suyo por defecto.
+  posicionarSombra(o, x, by) {
+    if (!o || !o.shadow) return;
+    const dy = Number.isFinite(o.shadowDy) ? o.shadowDy : -1;
+    const dz = Number.isFinite(o.shadowDepthDy) ? o.shadowDepthDy : -0.5;
+    o.shadow.setPosition(x, by + dy).setDepth(by + dz);
+  }
+
+  posicionarAcompanante(o, x, by) {
+    if (!o) return;
+    o.cx = x; o.by = by;
+    if (o.sprite) o.sprite.setPosition(x, by).setDepth(by);
+    this.posicionarSombra(o, x, by);
+  }
+
+  reanclarAcompanantes(tipo) {
+    if (tipo === "buzon") {
+      const buzon = (this.objs || []).find(o => o.type === "buzon");
+      if (!buzon) return;
+      this.posicionarAcompanante(this.paqueteObj, buzon.cx + 10, buzon.by + 12);
+      this.posicionarAcompanante(this.goblinObj, buzon.cx - 30, buzon.by + 8);
+      return;
+    }
+    if (tipo === "establo" || tipo === "barn") {
+      const casa = (this.objs || []).find(o => o.type === "establo") || (this.objs || []).find(o => o.type === "barn");
+      if (casa) this.posicionarAcompanante(this.domaObj, casa.cx + 46, casa.by + 6);
     }
   }
 
@@ -3854,13 +3979,13 @@ class FarmScene extends Phaser.Scene {
       const spr = this.add.sprite(gx, gy, "goblin_idle_0").setOrigin(0.5, 1).setDepth(gy);
       spr.setScale(gw / spr.width); spr.setFlipX(true);   // mirando hacia la granja
       try { if (this.anims.exists("goblin_idle")) spr.play("goblin_idle"); } catch (e) {}
-      const sombra = this.add.ellipse(gx, gy + 2, gw * 0.7, 5, 0x000000, 0.22).setDepth(gy - 1);
-      this.goblinObj = { i: "goblinmerc", type: "goblinmerc", cx: gx, by: gy, w: gw, rw: gw, baseKey: "goblin_idle_0", sprite: spr, sombra, readyAt: 0 };
+      const shadow = this.add.ellipse(gx, gy + 2, gw * 0.7, 5, 0x000000, 0.22).setDepth(gy - 1);
+      this.goblinObj = { i: "goblinmerc", type: "goblinmerc", cx: gx, by: gy, w: gw, rw: gw, baseKey: "goblin_idle_0", sprite: spr, shadow, shadowDy: 2, shadowDepthDy: -1, readyAt: 0 };
       this.objs.push(this.goblinObj);
     } else if (!hayGoblin && this.goblinObj) {
       const go = this.goblinObj; this.goblinObj = null;
       this.puffFx(go.cx, go.by - 10, 0x9aa06a, 8);   // se va con su puff de mercader
-      if (go.sprite) go.sprite.destroy(); if (go.sombra) go.sombra.destroy();
+      if (go.sprite) go.sprite.destroy(); if (go.shadow) go.shadow.destroy();
       const ix = this.objs.indexOf(go); if (ix >= 0) this.objs.splice(ix, 1);
     }
 
@@ -3874,12 +3999,12 @@ class FarmScene extends Phaser.Scene {
       spr.setScale(dw / spr.width);
       try { if (this.anims.exists(G.doma.bicho + "_idle")) spr.play(G.doma.bicho + "_idle"); } catch (e) {}
       this.tweens.add({ targets: spr, scaleY: spr.scaleY * 0.96, duration: 900, yoyo: true, repeat: -1, ease: "Sine.easeInOut" });   // respira aunque no tenga anim
-      const sombra = this.add.ellipse(dx, dy + 2, dw * 0.7, 5, 0x000000, 0.22).setDepth(dy - 1);
-      this.domaObj = { i: "domabicho", type: "domabicho", cx: dx, by: dy, w: dw, rw: dw, baseKey: G.doma.bicho + "_idle_0", sprite: spr, sombra, readyAt: 0 };
+      const shadow = this.add.ellipse(dx, dy + 2, dw * 0.7, 5, 0x000000, 0.22).setDepth(dy - 1);
+      this.domaObj = { i: "domabicho", type: "domabicho", cx: dx, by: dy, w: dw, rw: dw, baseKey: G.doma.bicho + "_idle_0", sprite: spr, shadow, shadowDy: 2, shadowDepthDy: -1, readyAt: 0 };
       this.objs.push(this.domaObj);
     } else if (!hayBicho && this.domaObj) {
       const bo = this.domaObj; this.domaObj = null;
-      if (bo.sprite) bo.sprite.destroy(); if (bo.sombra) bo.sombra.destroy();
+      if (bo.sprite) bo.sprite.destroy(); if (bo.shadow) bo.shadow.destroy();
       const ix2 = this.objs.indexOf(bo); if (ix2 >= 0) this.objs.splice(ix2, 1);
     }
     if (this.domaObj && this.domaObj.sprite) {   // con hambre se pone gris — se ve desde lejos
@@ -3976,14 +4101,8 @@ class FarmScene extends Phaser.Scene {
         this._nocheAnt = noche;
         this.tweens.add({ targets: this, nocheMezcla: noche ? 1 : 0, duration: 6000, ease: "Sine.easeInOut" });
       }
-      if (noche && !this.faroles.length) {
-        (this.adornos || []).forEach(a => {
-          if (a.id !== "farol" && a.id !== "farolito") return;
-          const g = this.add.circle(a.cx, a.by - 24, 20, 0xffd27a, 0.22).setDepth(90001);
-          this.tweens.add({ targets: g, alpha: 0.32, scaleX: 1.12, scaleY: 1.12, duration: 900 + Math.random() * 500, yoyo: true, repeat: -1, ease: "Sine.easeInOut" });
-          this.faroles.push(g);
-        });
-      } else if (!noche && this.faroles.length) { this.faroles.forEach(g => g.destroy()); this.faroles = []; }
+      if (noche) this.crearFaroles();
+      else this.limpiarFaroles();
     }
   }
 
@@ -4243,6 +4362,12 @@ class FarmScene extends Phaser.Scene {
         this.tweens.add({ targets: core, alpha: { from: 0.55, to: 0.3 }, scaleX: { from: 1, to: 0.86 }, scaleY: { from: 1, to: 0.86 }, yoyo: true, repeat: -1, duration: 460, ease: "Sine.easeInOut" }) });
       this.tweens.add({ targets: halo, alpha: 0.3, duration: 900, onComplete: () =>
         this.tweens.add({ targets: halo, alpha: { from: 0.3, to: 0.14 }, scaleX: { from: 1, to: 1.12 }, scaleY: { from: 1, to: 1.12 }, yoyo: true, repeat: -1, duration: 780, ease: "Sine.easeInOut" }) });
+    } else if (lit && this.forgeGlow) {
+      // Al mover la Herrería, el fuego no se recrea (así no reinicia su pulso): solo vuelve a
+      // calcularse su ancla con el alto real del arte nuevo.
+      const core = this.forgeGlow[0], halo = this.forgeGlow[1];
+      if (core) core.setPosition(fx, fy).setDepth(o.by + 1).setVisible(true);
+      if (halo) halo.setPosition(fx, fy - 2 * k).setDepth(o.by + 0.9).setVisible(true);
     } else if (!lit && this.forgeGlow) {
       this.forgeGlow.forEach(g => { this.tweens.killTweensOf(g); g.destroy(); });
       this.forgeGlow = null;
@@ -5357,6 +5482,16 @@ class FarmScene extends Phaser.Scene {
 
   /* 18/8: mover una parcela a otra celda, en UN solo sitio. Lo usan el arrastre en modo edición
      y el desbloqueo, que ahora puede necesitar reubicarla. */
+  reposicionarBrilloParcela(pl) {
+    const T = GF.TILE;
+    if (pl.glowAura) pl.glowAura.setPosition(pl.cx, pl.by - 4).setDepth(pl.by - 1);
+    const puntos = [[-0.38, -0.6], [0.36, -0.35], [0, -0.85]];
+    if (pl.glowSp) pl.glowSp.forEach((s, i) => {
+      const p = puntos[i];
+      if (s && p) s.setPosition(pl.cx + p[0] * T, pl.by + p[1] * T).setDepth(pl.by + 2);
+    });
+  }
+
   moverParcela(pl, col, row) {
     const T = GF.TILE;
     GF.PLOTS[pl.i].col = col; GF.PLOTS[pl.i].row = row;
@@ -5366,6 +5501,13 @@ class FarmScene extends Phaser.Scene {
     if (pl.emo) pl.emo.setPosition(pl.cx, pl.by + 8).setDepth(pl.by);
     if (pl.timer) pl.timer.setPosition(pl.cx, pl.by - T * 0.55).setDepth(pl.by + 1);
     if (pl.glowTxt) pl.glowTxt.setPosition(pl.cx + T * 0.3, pl.by - T * 0.55);
+    this.reposicionarBrilloParcela(pl);
+    // La barra es un Graphics con coordenadas absolutas. Al mudar la tierra se invalida su
+    // porcentaje cacheado para forzar un dibujo en la celda nueva, aun si el reloj no avanzó.
+    if (pl.barraG) pl.barraG.setDepth(pl.by + 2);
+    pl.barraPct = null;
+    this.barraCultivo(pl, nowMs());
+    this.soltarMariposasDe(pl);
     if (!G.layoutPlots) G.layoutPlots = {};
     G.layoutPlots[pl.i] = { col, row };
     GF.ocupCambio();
@@ -5830,7 +5972,7 @@ class FarmScene extends Phaser.Scene {
        así que veías rojo y ninguna explicación. Mientras llevás algo en la mano, el cartel dice si
        cabe o POR QUÉ no. Un rectángulo rojo mudo es un bug de información. */
     if (this.placing) {
-      this.cargasBadge(null);   // 2/9: colocando algo, la chapita del nodo no pinta nada
+      this.cargasBadge(null); this.previaSiembra(null);   // colocando algo, las ayudas de sembrar no pintan nada
       const pt = this.input.activePointer;
       const col = Math.floor(pt.worldX / GF.TILE), row = Math.floor(pt.worldY / GF.TILE);
       const hu = this.huellaColocar(col, row);
@@ -5847,7 +5989,10 @@ class FarmScene extends Phaser.Scene {
        el clic ni el movimiento del mundo. */
     const hayVentana = typeof window !== "undefined" && window.innerWidth > 640 &&
       typeof anyOvOpen === "function" && anyOvOpen();
-    if (GF.uiOpen || hayVentana || this.action || GF.editMode) { el.classList.remove("show"); this.cargasBadge(null); return; }
+    if (GF.uiOpen || hayVentana || this.action || GF.editMode) {
+      el.classList.remove("show"); this.cargasBadge(null); this.previaSiembra(null);
+      return;
+    }
     if (GF.NO_WALK) {   // granja de un clic: el cartel describe lo que hay BAJO EL CURSOR
       const pt = this.input.activePointer, wx = pt.worldX, wy = pt.worldY;
       let hit = null, bd = 1e9;
@@ -5894,8 +6039,8 @@ class FarmScene extends Phaser.Scene {
 function viajeEntrar() {
   const sc = window.farmScene;
   if (!sc) { toast("Volvé a la granja para entrar a la Zona"); return false; }
-  const espera = (typeof zonaCdLeft === "function") ? zonaCdLeft() : 0;
-  if (espera > 0) { toast("El granjero está descansando — podés volver en " + fmtDur(espera)); return false; }
+  const cerrada = (typeof zonaPuertaCerrada === "function") ? zonaPuertaCerrada() : null;   // 26/9: descanso O incursión en curso
+  if (cerrada) { toast(cerrada); return false; }
   if (typeof armaEq === "function" && !armaEq()) { toast("Equipate un arma antes de entrar"); return false; }
   const raiz = (typeof contLlevado === "function") ? contLlevado() : null;
   if (!raiz) { toast("Elegí con qué contenedor salís"); return false; }

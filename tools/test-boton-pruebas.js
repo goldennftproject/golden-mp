@@ -26,7 +26,7 @@ ok("un 422 del portero no cae al camino viejo: llama a porteroRechazo y sale", /
 ok("porteroRechazo recarga la granja aceptada y pisa la copia local con ella",
   /async function porteroRechazo[\s\S]*?from\("farms"\)\.select\("data,name"\)[\s\S]*?hydrate\(data\.data\);[\s\S]{0,200}copiaGuardar\(snapshot\(\)\);[\s\S]{0,200}lastSavedKey = snapKey\(\);/.test(SAVE));
 ok("y se lo dice al jugador con las sospechas por su nombre", /El servidor rechazó el guardado[\s\S]*?Se volvió a la última granja aceptada/.test(SAVE));
-ok("el indicador de guardado tiene su estado « Rechazado »", /function showSaveError\(\)[^\n]*Rechazado/.test(UI));
+ok("el indicador de guardado tiene su estado « Rechazado »", /function showSaveError\(\)[\s\S]{0,400}?Rechazado/.test(UI));
 
 console.log("\nLO VERSIONADO DICE LO QUE CORRE");
 ok('index.ts: MODO = "rechazo"', /const MODO = "rechazo";/.test(FN));

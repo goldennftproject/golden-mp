@@ -24,7 +24,7 @@ console.log("\nLA CHAPITA EN EL MUNDO");
   ok("se apaga con la interfaz abierta, incluso si la ventana no bloquea el mundo",
     FARM.includes("hayVentana") && FARM.includes("anyOvOpen") &&
     /el\.classList\.remove\("show"\); this\.cargasBadge\(null\); return;/.test(SIN));
-  ok("y colocando un objeto", /this\.cargasBadge\(null\);\s*\n\s*const pt = this\.input\.activePointer;/.test(SIN));
+  ok("y colocando un objeto", /if \(this\.placing\) \{\s*this\.cargasBadge\(null\);/.test(SIN));   // 26/9: el chat visual sumó previaSiembra(null) en la misma línea
   ok("el nodo agotado o bloqueado no muestra chapita (n = 0 la esconde)", /o\.readyAt && o\.readyAt > nowMs\(\)/.test(SIN) && /if \(!n\) \{ if \(this\._cargasTxt\) this\._cargasTxt\.setVisible\(false\); return; \}/.test(SIN));
 }
 
