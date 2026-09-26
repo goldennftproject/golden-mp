@@ -1280,6 +1280,14 @@
     #hotbar .hcell{width:42px;height:42px}
     #tuto{bottom:134px}
   }
+  /* En una ventana de escritorio baja, una tarjeta centrada que mide más que el viewport se
+     pierde tanto arriba como abajo: el Inventario, por ejemplo, llegaba a 507 px en 480 px de
+     alto y la × quedaba a medias. Se limita el MARCO, no sus listas: el contenido conserva su
+     tamaño y se desplaza dentro. A 561 px o en móvil no interviene. */
+  @media(min-width:641px) and (max-height:560px){
+    .ov .card{max-height:calc(100vh - 32px);overflow-y:auto;overscroll-behavior:contain}
+    .ov .close{top:7px;right:7px}
+  }
   @media(max-height:560px) and (min-width:641px){
     #tuto{top:44px;font-size:11px}
   }
@@ -2099,7 +2107,7 @@
     // 15/8: VERSIÓN DE BUILD — rompe la caché del navegador en cada deploy (sin esto, el
     // jugador seguía corriendo el state.js viejo aunque el servidor tuviera el nuevo).
     // deploy.bat la actualiza sola (busca GF_BUILD y pone la fecha/hora del deploy).
-    const GF_BUILD = "20260925-161810";
+    const GF_BUILD = "20260925-233300";
     const files = ["game/config.js","game/nav.js","game/audio.js","game/state.js","game/save.js","game/ui.js","game/boot.js",
                    "game/farm.js","game/forest.js","game/plaza.js","game/main.js","game/update.js"];
     /* 24/8 — SE BAJAN TODOS A LA VEZ, SE EJECUTAN EN FILA (dirección: « sigue tardando en

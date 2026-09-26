@@ -107,6 +107,55 @@ console.log("\nEL BESTIARIO TAMBIÉN (la fase «Cargando criaturas…» no pide 
     faltan.slice(0, 5).join(", "));
 }
 
+console.log("\nEL ARTE OPCIONAL NO SE SALTA SI LA RED VA LENTA");
+{
+  /* El atlas evita esta descarga en condiciones normales. Pero si falla y el manifiesto sí
+     respondió, empezar a los 1,8 s mientras todavía entran los frames deja ForestScene sin
+     animaciones: la criatura cae al emoji o queda quieta. Se simula el loader en sus dos
+     pasadas reales (manifiesto → imágenes), sin esperar tiempo de verdad. */
+  function opcional(mobs) {
+    const demoras = [], oyentes = { complete: [] }, imagenes = [];
+    let arranques = 0, animaciones = 0, starts = 0;
+    const load = {
+      on() {}, json() {}, image(k) { imagenes.push(k); },
+      once(ev, fn) { (oyentes[ev] || (oyentes[ev] = [])).push(fn); },
+      start() { starts++; },
+      complete() { const ahora = (oyentes.complete || []).splice(0); ahora.forEach(fn => fn()); },
+    };
+    const escena = Object.create(ctx.__B.prototype);
+    escena.load = load;
+    escena.time = { delayedCall(ms, fn) { demoras.push({ ms, fn }); } };
+    escena.cache = { json: { get: () => ({ mobs }) } };
+    escena.textures = { exists: () => false };
+    escena.msg = { setText() {} };
+    escena.buildAnims = () => { animaciones++; };
+    escena.scene = { start() { arranques++; } };
+    escena.loadOptional();
+    return {
+      load, demoras, imagenes,
+      get arranques() { return arranques; }, get animaciones() { return animaciones; }, get starts() { return starts; },
+    };
+  }
+  const lenta = opcional(["murcielago"]);
+  lenta.load.complete();                       // contestó el manifiesto; ahora entran 16 frames
+  const corta = lenta.demoras.find(d => d.ms === 1800);
+  ok("el límite corto existe para un manifiesto que no responde", !!corta);
+  corta.fn();                                  // 1,8 s mientras sigue la descarga de imágenes
+  ok("no arranca con el manifiesto ya resuelto y frames a medio bajar", lenta.arranques === 0 && lenta.animaciones === 0,
+    lenta.arranques + " arranques · " + lenta.animaciones + " animaciones");
+  ok("la pasada opcional pidió los 16 frames de la criatura", lenta.imagenes.length === 16, lenta.imagenes.length + " imágenes");
+  lenta.load.complete();                       // terminan las imágenes
+  ok("al terminar, crea las animaciones antes de entrar a la granja", lenta.arranques === 1 && lenta.animaciones === 1,
+    lenta.arranques + " arranque · " + lenta.animaciones + " animaciones");
+  lenta.demoras.filter(d => d.ms === 6000).forEach(d => d.fn());
+  ok("el tope largo no vuelve a iniciar una escena que ya está lista", lenta.arranques === 1);
+
+  const caido = opcional(["murcielago"]);     // el manifiesto nunca llama complete()
+  caido.demoras.find(d => d.ms === 1800).fn();
+  ok("si el manifiesto ni responde, conserva el arranque rápido", caido.arranques === 1 && caido.animaciones === 1,
+    caido.arranques + " arranque · " + caido.animaciones + " animaciones");
+}
+
 console.log("\nY LA BARRA ES MONOTÓNICA: RECUERDA SU MÁXIMO");
 {
   ok("paso() guarda el máximo visto", /this\._maxV = Math\.max\(this\._maxV \|\| 0/.test(BOOT));

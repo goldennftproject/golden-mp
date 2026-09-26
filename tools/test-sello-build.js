@@ -30,7 +30,9 @@ console.log("\nEL SERVIDOR CALCULA EL SELLO DESDE LOS ARCHIVOS");
   ok("lo inyecta al servir el html", /const GF_BUILD = "' \+ SELLO \+ '";/.test(SRV));
   ok("el html se sirve SIN caché (es el que trae el sello nuevo)",
     /app\.get\(\["\/", "\/index\.html"\][\s\S]{0,200}no-cache/.test(SRV));
-  ok("y se rearma solo si cambió el código (no en cada visita)", /if \(INDEX_HTML && s === SELLO\) return INDEX_HTML;/.test(SRV));
+  ok("el HTML preparado tiene su propia firma", /const firmaIndice = \(\) => \{[\s\S]{0,180}st\.size[\s\S]{0,80}st\.mtimeMs/.test(SRV));
+  ok("se rearma si cambia código o markup, no en cada visita",
+    /if \(INDEX_HTML && s === SELLO && firma === INDICE_FIRMA\) return INDEX_HTML;/.test(SRV));
 }
 
 console.log("\nY EL CÁLCULO HACE LO QUE DICE (se corre de verdad)");

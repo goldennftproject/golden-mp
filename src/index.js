@@ -32,6 +32,7 @@ catch (e) { console.warn("compression no está instalado: se sirve sin comprimir
    olvidárselo, porque nadie lo escribe.
    (El literal del html se deja como está: es el respaldo para abrir el juego sin servidor.) */
 const JUEGO_DIR = path.join(__dirname, "..", "public", "game");
+const INDICE_PATH = path.join(__dirname, "..", "public", "index.html");
 function selloDelCodigo() {
   const h = require("crypto").createHash("sha1");
   for (const f of fs.readdirSync(JUEGO_DIR).sort()) {
@@ -41,12 +42,21 @@ function selloDelCodigo() {
   }
   return h.digest("hex").slice(0, 12);
 }
-let SELLO = "dev", INDEX_HTML = null;
+/* El sello sólo representa JavaScript (es la versión de las URLs ?b=). El HTML también se
+   guarda preparado para no releerlo por cada visita, pero su propia fecha/tamaño decide cuándo
+   hay que volver a tomarlo: si no, una corrección de CSS quedaba invisible en localhost hasta
+   que alguien tocara además un archivo de juego. */
+const firmaIndice = () => {
+  const st = fs.statSync(INDICE_PATH);
+  return st.size + ":" + Math.floor(st.mtimeMs);
+};
+let SELLO = "dev", INDICE_FIRMA = "", INDEX_HTML = null;
 function indexConSello() {
-  const s = selloDelCodigo();
-  if (INDEX_HTML && s === SELLO) return INDEX_HTML;   // se rearma solo si cambió el código
+  const s = selloDelCodigo(), firma = firmaIndice();
+  if (INDEX_HTML && s === SELLO && firma === INDICE_FIRMA) return INDEX_HTML;
   SELLO = s;
-  const crudo = fs.readFileSync(path.join(__dirname, "..", "public", "index.html"), "utf8");
+  INDICE_FIRMA = firma;
+  const crudo = fs.readFileSync(INDICE_PATH, "utf8");
   INDEX_HTML = crudo.replace(/const GF_BUILD = "[^"]*";/, 'const GF_BUILD = "' + SELLO + '";');
   console.log("Sello del código: " + SELLO);
   return INDEX_HTML;

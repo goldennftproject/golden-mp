@@ -227,9 +227,18 @@ class BootScene extends Phaser.Scene {
     if (this._optStarted) return;
     this._optStarted = true;
     const start = () => { if (this._started) return; this._started = true; this.buildAnims(); this.scene.start("farm"); };
+    /* El límite corto protege sólo la consulta del manifiesto. Antes era incondicional: si el
+       manifiesto respondía rápido pero los 176 frames todavía estaban entrando (por ejemplo,
+       con el atlas caído y una red lenta), se abría la granja a los 1,8 s. `start()` construía
+       las animaciones sin esos frames y los monstruos quedaban como emoji o quietos aunque el
+       arte terminara de llegar después. Una vez que el manifiesto contestó, manda el tope de
+       6 s que ya tiene la descarga opcional; si ni siquiera contesta, se conserva el arranque
+       rápido de siempre. */
+    let manifiestoResuelto = false;
     this.load.on("loaderror", () => {});   // lo que no exista se ignora en silencio
     this.load.json("__bestiario", "assets/farm/bestiario.json?v=2");
     this.load.once("complete", () => {
+      manifiestoResuelto = true;
       const lista = this.cache.json.get("__bestiario");
       const mobs = Array.isArray(lista) ? lista : (lista && Array.isArray(lista.mobs) ? lista.mobs : null);
       if (!mobs || !mobs.length) return start();
@@ -247,7 +256,8 @@ class BootScene extends Phaser.Scene {
       this.time.delayedCall(6000, start);   // tope de espera: nunca se traba
       this.load.start();
     });
-    this.time.delayedCall(1800, start);     // si el manifiesto no responde, arranca igual (antes esperaba 4 s de más)
+    this.time.delayedCall(1800, () => { if (!manifiestoResuelto) start(); });
+    // Si el manifiesto no responde, arranca igual (antes esperaba 4 s de más).
     this.load.start();
   }
 

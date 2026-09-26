@@ -624,7 +624,15 @@ class FarmScene extends Phaser.Scene {
         // Un árbol crecido está partido en copa y tronco para que lo meza el viento. Mientras se
         // lo arrastra vuelve a ser UN solo dibujo: entero, quieto y sin viento, que es como uno
         // quiere ver algo que está colocando. Al soltarlo, el viento lo vuelve a partir.
-        if (hit) { hit.origCx = hit.cx; hit.origBy = hit.by; this.dragObj = hit; this.copaSacar(hit); if (hit.sprite) hit.sprite.setAngle(0); return; }
+        if (hit) {
+          hit.origCx = hit.cx; hit.origBy = hit.by; this.dragObj = hit; this.copaSacar(hit);
+          if (hit.sprite) hit.sprite.setAngle(0);
+          /* Un aviso pendiente no puede quedarse flotando en el lugar del que acabamos de sacar
+             el edificio. Durante el gesto se esconde; al soltar, reposicionarAviso() lo devuelve
+             exactamente sobre la pieza, ya en su celda definitiva. */
+          if (hit._aviso) hit._aviso.setVisible(false);
+          return;
+        }
         for (const pl of this.plots) { if (pl.state === "locked") continue; if (Math.abs(wx - pl.cx) < T / 2 && Math.abs(wy - pl.by) < T / 2) { this.dragPlot = pl; return; } }
         if (this.pondImg && this.pondDist(wx, wy) < 1) { this.dragPond = true; return; }
         this.hold = { sx: pt.x, sy: pt.y, px: pt.x, py: pt.y, active: false };   // 13/8: nada agarrado → el arrastre panea también en edición
@@ -891,6 +899,8 @@ class FarmScene extends Phaser.Scene {
         o.sprite.setPosition(o.origCx, o.origBy).setDepth(o.origBy);
         if (o.shadow) o.shadow.setPosition(o.origCx, o.origBy - 3).setDepth(o.origBy - 0.5);
         if (o.timer) o.timer.setPosition(o.origCx, o.origBy - T * 0.85);
+        this.reposicionarAviso(o);
+        if (o._aviso) o._aviso.setVisible(!o.oculto);
         toast("Ahí ya hay algo — elegí otra celda");
         this.dragObj = null; return;
       }
@@ -898,6 +908,8 @@ class FarmScene extends Phaser.Scene {
       o.sprite.setPosition(o.cx, o.by).setDepth(o.by);
       if (o.shadow) o.shadow.setPosition(o.cx, o.by - 1).setDepth(o.by - 0.5);   // 12/8: la sombra pegada al borde inferior
       if (o.timer) o.timer.setPosition(o.cx, o.by - T * 0.85);
+      this.reposicionarAviso(o);
+      if (o._aviso) o._aviso.setVisible(!o.oculto);
       if (o.type === "cofre") { const c = G.chests && G.chests[o.chestIdx]; if (c) { c.col = leftCol; c.row = baseRow - 1; } }
       else { if (!G.layout) G.layout = {}; G.layout[o.i] = { cx: o.cx, by: o.by }; }
       GF.ocupCambio();   // 18/8: el mapa de ocupación tiene que enterarse
@@ -4392,27 +4404,56 @@ class FarmScene extends Phaser.Scene {
      hay nada, y a partir de ese día el jugador deja de creerle. Un aviso en el que no se confía
      es peor que ninguno.
 
-     Y se pinta con FIRMA, como todo lo demás: solo se rehace si cambió el número. */
+     Y se pinta con FIRMA, como todo lo demás: solo se rehace si cambia el número O el sitio que
+     lo ancla. El segundo caso importa en edición: un aviso que se queda en la celda vieja es peor
+     que no avisar, porque manda al jugador a abrir el edificio equivocado. */
+  reposicionarAviso(o) {
+    const a = o && o._aviso;
+    if (!a) return;
+    const s = o.sprite;
+    const x = (s && Number.isFinite(s.x) ? s.x : o.cx) + 2;
+    const by = s && Number.isFinite(s.y) ? s.y : o.by;
+    const y = by - ((s && s.displayHeight) || 60) - 10;
+    /* El rebote guarda su y de origen al nacer. Mover solo el texto haría que el tween viejo lo
+       devolviera al techo anterior en el siguiente cuadro; se reinicia únicamente si cambió el
+       ancla, no cada vez que cambia el número de pendientes de otro edificio. */
+    if (o._avisoBaseX === x && o._avisoBaseY === y && o._avisoTween) return;
+    if (o._avisoTween && typeof o._avisoTween.stop === "function") o._avisoTween.stop();
+    a.setPosition(x, y);
+    o._avisoBaseX = x; o._avisoBaseY = y;
+    o._avisoTween = this.tweens.add({ targets: a, y: y - 6, duration: 520,
+      yoyo: true, repeat: -1, ease: "Sine.easeInOut" });
+  }
   avisosDibujar() {
     if (typeof pendienteDe !== "function") return;
-    const firma = this.objs.map(o => (o && o.type) ? pendienteDe(o.type) : 0).join(",");
+    const firma = this.objs.map(o => {
+      if (!o || !o.type) return "0";
+      const s = o.sprite;
+      const x = s && Number.isFinite(s.x) ? s.x : o.cx;
+      const y = s && Number.isFinite(s.y) ? s.y : o.by;
+      const alto = (s && s.displayHeight) || 60;
+      return [pendienteDe(o.type), o.oculto ? 1 : 0, x, y, alto].join("/");
+    }).join(",");
     if (this._avisoFirma === firma) return;
     this._avisoFirma = firma;
     for (const o of this.objs) {
       const n = (o && o.type) ? pendienteDe(o.type) : 0;
-      if (!n) { if (o._aviso) { o._aviso.destroy(); o._aviso = null; } continue; }
+      if (!n) {
+        if (o._avisoTween && typeof o._avisoTween.stop === "function") o._avisoTween.stop();
+        o._avisoTween = null; o._avisoBaseX = o._avisoBaseY = null;
+        if (o._aviso) { o._aviso.destroy(); o._aviso = null; }
+        continue;
+      }
       if (!o._aviso) {
-        const alto = (o.sprite && o.sprite.displayHeight) || 60;
-        o._aviso = this.add.text(o.cx + 2, o.by - alto - 10, "!",
+        o._aviso = this.add.text(0, 0, "!",
           { fontFamily: "system-ui", fontSize: "26px", fontStyle: "bold",
             color: "#ffd75e", stroke: "#3a2408", strokeThickness: 5 })
           .setOrigin(0.5, 1).setDepth(99991);
-        /* el rebote: un signo quieto se confunde con parte del edificio. Que se mueva es lo que
-           lo hace un AVISO y no una decoración. */
-        this.tweens.add({ targets: o._aviso, y: o._aviso.y - 6, duration: 520,
-                          yoyo: true, repeat: -1, ease: "Sine.easeInOut" });
       }
-      o._aviso.setVisible(!o.oculto);
+      this.reposicionarAviso(o);
+      /* Si el reloj de un edificio termina justo mientras lo llevás en la mano, el repaso de
+         cada segundo no puede volver a prender su ! en la celda transitoria. */
+      o._aviso.setVisible(!o.oculto && this.dragObj !== o);
     }
   }
 
