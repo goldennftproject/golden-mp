@@ -359,10 +359,20 @@ class ForestScene extends Phaser.Scene {
   updateTargetFx() {
     const m = this.target;
     if (!m || m.dead) { if (this.tgGlow || this.tgTxt) this.clearTarget(); return; }
-    const s = m.spr, b = s.getBounds();
+    const s = m.spr;
+    /* El Parpadeo Sombrío oculta al dragón durante un segundo. Si el marco rojo, el nombre o la
+       vida siguieran dibujados en su última posición, el « desapareció » sería un truco roto:
+       revelan exactamente dónde está. No soltamos el objetivo —al volver debe seguir fijado—;
+       sólo escondemos sus acompañantes hasta que el sprite reaparece. */
+    if (!s || s.visible === false) {
+      if (this.tgGlow) this.tgGlow.setVisible(false);
+      if (this.tgTxt) this.tgTxt.setVisible(false);
+      return;
+    }
+    const b = s.getBounds();
     if (this.tgGlow) {
       // el recuadro rojo acompaña al mob (posición y tamaño del sprite animado)
-      this.tgGlow.setPosition(b.centerX, b.centerY).setSize(b.width + 6, b.height + 6);
+      this.tgGlow.setVisible(true).setPosition(b.centerX, b.centerY).setSize(b.width + 6, b.height + 6);
     }
     if (this.tgTxt) this.tgTxt.setPosition(m.cx, b.top - 7).setText(m.def.label + "  " + Math.max(0, Math.ceil(m.hp)) + "/" + m.def.hp).setVisible(true);
   }
@@ -754,11 +764,16 @@ class ForestScene extends Phaser.Scene {
     if (typeof addTries === "function") addTries("range", 1);   // 11/9: cada disparo es un intento de Arco, acierte o no
     if (aid) { useWeapon(aid); if (G.weapons[aid].dur <= 0) { log("¡" + ARM_DEF[aid].label + " roto! Reparalo en la Herrería.", "bad"); toast("¡Arco roto!"); } }
     if (typeof syncSlots === "function") syncSlots(); if (isOpen("ov-inv")) refreshInv();
-    const a = this.add.text(this.hero.x, this.hero.y - 22, "", { fontSize: "16px", color: "#e8d3a8" }).setOrigin(0.5).setDepth(99999);
-    a.setScale(m.cx < this.hero.x ? -1 : 1, 1);
-    const d = Math.hypot(m.cx - this.hero.x, m.by - this.hero.y);
+    /* El impacto ya tenía sangre y partículas, pero el vuelo era un texto vacío: el arco
+       parecía pegar a distancia por magia. La flecha que el jugador fabrica ya viaja acá,
+       chica y orientada hacia el blanco (el PNG original apunta 45° arriba a la derecha). */
+    const sx = this.hero.x, sy = this.hero.y - 22;
+    const tx = m.cx, ty = m.by - (m.spr.displayHeight || m.spr.height) * 0.5;
+    const a = this.add.image(sx, sy, "res_flecha").setDisplaySize(20, 20).setOrigin(0.5).setDepth(99999);
+    a.setRotation(Math.atan2(ty - sy, tx - sx) + Math.PI / 4);
+    const d = Math.hypot(tx - sx, ty - sy);
     this.tweens.add({
-      targets: a, x: m.cx, y: m.by - (m.spr.displayHeight || m.spr.height) * 0.5, duration: Math.max(120, d * 1.6),
+      targets: a, x: tx, y: ty, duration: Math.max(120, d * 1.6),
       onComplete: () => { a.destroy(); if (!m.dead) this.hitMonster(m); },
     });
   }
@@ -823,7 +838,9 @@ class ForestScene extends Phaser.Scene {
     // EL DRAGÓN NO ES UN MOB CUALQUIERA (10/8): su vida es del CLAN y vive en Supabase.
     // Lo que le pegás acá se manda allá y se descuenta de la barra compartida; el sprite
     // local nunca muere solo. Si no hay clan o no hay asalto abierto, no le entra nada.
-    if (m.def.boss) { this.pegarleAlJefe(m, dmg); return; }
+    /* El Dragón usa vida compartida, pero el golpe ocurre en esta escena. Sin el impacto propio
+       del arma, una flecha o un mazazo llegaban a la barra del clan como si fueran magia. */
+    if (m.def.boss) { this.weaponFx(m, tipoFx, crit); this.pegarleAlJefe(m, dmg); return; }
     m.hp -= dmg;
     if (vamp > 0 && G.hp < G.hpMax) { G.hp = Math.min(G.hpMax, G.hp + Math.max(1, Math.round(dmg * vamp / 100))); refreshHud(); }   // Runa Vampírica
     // efecto de golpe: cada TIPO de arma pega distinto (10/8). Sin arma/skills: la chispa de siempre.
@@ -930,7 +947,8 @@ class ForestScene extends Phaser.Scene {
         this.floatTxt(m, "¡VENCIDO!", "#ffd75e");
         log("¡El clan venció al Dragón! Cobrá tu parte" + ((typeof GF !== "undefined" && GF.esOcultoMvp && GF.esOcultoMvp("ov-clan")) ? "." : " en la ventana de Clan."), "gold");
         toast("¡Dragón vencido!" + ((typeof GF !== "undefined" && GF.esOcultoMvp && GF.esOcultoMvp("ov-clan")) ? "" : " Cobrá en Clan"));
-        m.dead = true; m.spr.setVisible(false);
+        m.dead = true; m.spr.setVisible(false); if (m.bar) m.bar.clear();
+        if (this.target === m) this.clearTarget();
       }
     });
   }
@@ -1073,11 +1091,11 @@ class ForestScene extends Phaser.Scene {
         if (d < 320 && t > (m.blinkAt || 0)) {   // Parpadeo Sombrío: desaparece 1 s y cae en área
           m.blinkAt = t + 14000 * cdm;
           const zx = hero.x, zy = hero.y;
-          m.blinkUntil = t + 1000; m.spr.setVisible(false); m.bar.clear();
+          m.blinkUntil = t + 1000; m.spr.setVisible(false); m.bar.clear(); this.updateTargetFx();
           this.telegraph(zx, zy, 75, 1000, 0xb44aff);
           this.time.delayedCall(1000, () => {
             if (m.dead || this.leaving) return;
-            m.cx = zx; m.by = zy; m.spr.setPosition(zx, zy).setVisible(true).setDepth(zy);
+            m.cx = zx; m.by = zy; m.spr.setPosition(zx, zy).setVisible(true).setDepth(zy); this.updateTargetFx();
             if (Math.hypot(this.hero.x - zx, this.hero.y - zy) < 75) this.hurtHero(45);
             this.floatTxt(m, "Parpadeo Sombrío", "#b44aff"); this.drawBar(m);
           });
@@ -1475,6 +1493,10 @@ class ForestScene extends Phaser.Scene {
     const hero = this.hero;
     for (const m of this.monsters) {
       if (m.dead) continue;
+      /* Mientras el dragón está ausente no camina, no sangra ni vuelve a pintar una barra vacía.
+         La caída a la posición marcada la resuelve el callback del Parpadeo; este bucle sólo debe
+         volver a tocarlo cuando el sprite ya regresó. */
+      if (m.blinkUntil && t < m.blinkUntil) { if (m.bar) m.bar.clear(); continue; }
       const px0 = m.cx;   // para saber hacia dónde se movió este frame
       const dHero = Math.hypot(hero.x - m.cx, hero.y - m.by);
       const aggro = m.hp < m.def.hp || dHero < 110;   // te vio o lo golpeaste
@@ -1534,6 +1556,9 @@ class ForestScene extends Phaser.Scene {
       else {
         this.mobAbility(m, dHero, t, hero);
         if (this.leaving) return;
+        // La habilidad pudo iniciar Parpadeo este mismo cuadro: no dejar que el final del bucle
+        // lo mueva o rehaga su barra antes de que llegue el callback de la caída.
+        if (m.blinkUntil && t < m.blinkUntil) { if (m.bar) m.bar.clear(); continue; }
         const atkRange = (m.def.range || 40);
         if (dHero < atkRange && t > m.nextHit && !(m.blinkUntil && t < m.blinkUntil)) {
           m.nextHit = t + 2000; m.face = hero.x < m.cx ? -1 : 1;   // detalles viernes (1): los mobs atacan cada 2 segundos

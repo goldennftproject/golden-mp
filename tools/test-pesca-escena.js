@@ -217,6 +217,13 @@ console.log("\nEL PIQUE ABRE EL CARRETE, Y GANARLO CIERRA EL LANCE   (31/8)");
   ok("con su salto en arco hasta el granjero",
     esc.dibujados.some(o => o.tipo === "image" && String(o.textura || "").indexOf("fish") === 0),
     "catchFx");
+  const dibujadosAntes = esc.dibujados.length, bobberAntes = esc.bobber;
+  esc.textures = { exists: () => false }; esc.bobber = objBase({ tipo: "bobber", x: 128, y: 488 });
+  esc.catchFx();
+  ok("si falta el sprite, la captura conserva un pez visible de respaldo",
+    esc.dibujados.slice(dibujadosAntes).some(o => o.tipo === "text" && o.texto === "🐟"),
+    "un pez cobrado no puede saltar invisible");
+  esc.bobber = bobberAntes;
   /* y la acción del mundo se cierra con un respiro, no en el mismo cuadro */
   ok("la escena programa el cierre con un respiro", esc.demoras.length > 0,
     esc.demoras.map(d => d.ms + " ms").join(" · "));
@@ -225,6 +232,27 @@ console.log("\nEL PIQUE ABRE EL CARRETE, Y GANARLO CIERRA EL LANCE   (31/8)");
   console.log("       → si se limpiara en el mismo cuadro en que el lance termina, el corcho");
   console.log("         desaparecería antes de que el pez empezara a saltar: se vería el aviso");
   console.log("         del pez y ningún pez.");
+}
+
+console.log("\nEL CARRETE NO COMPARTE SU LATERAL CON UN RECORDATORIO");
+{
+  /* Los recientes son útiles al trabajar, pero comparten exactamente la columna derecha del
+     carrete. Se ocultan sólo durante la pelea y reaparecen al cerrarla; la regla CSS queda
+     encerrada en escritorio para no cambiar la composición táctil. */
+  const clases = () => {
+    const set = new Set();
+    return { set, classList: { toggle: (k, on) => { if (on) set.add(k); else set.delete(k); return !!on; } } };
+  };
+  const mini = clases(), recientes = clases(), getAntes = ctx.document.getElementById;
+  ctx.document.getElementById = id => id === "pesca-mini" ? mini : (id === "recientes" ? recientes : getAntes(id));
+  try {
+    esc.pescaPanel(true);
+    ok("al abrir el carrete, la tira de recientes cede su columna", mini.set.has("show") && recientes.set.has("pesca-activa"));
+    esc.pescaPanel(false);
+    ok("al cerrar el carrete, los recientes vuelven a estar disponibles", !mini.set.has("show") && !recientes.set.has("pesca-activa"));
+    const html = fs.readFileSync(path.join(RAIZ, "public/index.html"), "utf8");
+    ok("la cesión visual sólo rige en escritorio", html.includes("#recientes.pesca-activa{display:none !important}"));
+  } finally { ctx.document.getElementById = getAntes; }
 }
 
 console.log("\nUN CLIC ES UN LANCE   (y no se pueden encadenar dos por accidente)");
@@ -242,6 +270,23 @@ console.log("\nUN CLIC ES UN LANCE   (y no se pueden encadenar dos por accidente
     /if \(typeof P4 !== "undefined" && P4\) \{\s*if \(P4\.carrete\) this\.lanceHold = true;\s*(else toast\([^)]*\);\s*)?return;/.test(fuente),
     "si no, dos clics pagarían dos lombrices y enseñarían un solo pez");
   ok("y la lombriz no se cobró dos veces", G.res.lombriz === lomb);
+}
+
+console.log("\nSI LA PUERTA RECHAZA EL LANCE, EL MUNDO QUEDA LIBRE");
+{
+  /* La escena marca la acción antes de pedirle a ui.js que abra el lance. La puerta normalmente
+     ya se validó al hacer clic, pero puede rechazarlo si el estado cambia en ese mismo gesto.
+     En ese caso no puede quedar una acción v4 viva: bloquearía el mapa sin corcho ni carrete. */
+  partidaLimpia(); esc = nuevaEscena();
+  const abrirAntes = ctx.pescaV4Abrir;
+  try {
+    vm.runInContext("P4 = null; pescaV4Abrir = () => false;", ctx);
+    esc.startAction("fish", { type: "fish", cx: 128, by: 488 });
+    ok("un lance rechazado no deja al granjero en una acción fantasma", esc.action === null);
+  } finally {
+    ctx.pescaV4Abrir = abrirAntes;
+    vm.runInContext("pescaV4Abrir = window.pescaV4Abrir;", ctx);
+  }
 }
 
 console.log("\nY LA PULSEADA NO VOLVIÓ CON EL CARRETE");

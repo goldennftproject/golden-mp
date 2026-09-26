@@ -330,14 +330,15 @@ function flujoChip(kind, key, d) {
     for (const k in _flujoChips) if (_flujoChips[k].el === viejo) flujoQuitar(k, true);
     if (caja.firstChild === viejo) caja.removeChild(viejo);   // por si acaso: nunca se acumula
   }
+  if (typeof placeFlujoPc === "function") placeFlujoPc();
 }
 function flujoQuitar(id, yaMismo) {
   const c = _flujoChips[id]; if (!c) return;
   delete _flujoChips[id];
   clearTimeout(c.t);
-  if (yaMismo) { if (c.el.parentNode) c.el.parentNode.removeChild(c.el); return; }
+  if (yaMismo) { if (c.el.parentNode) c.el.parentNode.removeChild(c.el); if (typeof placeFlujoPc === "function") placeFlujoPc(); return; }
   c.el.classList.add("va");
-  setTimeout(() => { if (c.el.parentNode) c.el.parentNode.removeChild(c.el); }, 500);
+  setTimeout(() => { if (c.el.parentNode) c.el.parentNode.removeChild(c.el); if (typeof placeFlujoPc === "function") placeFlujoPc(); }, 500);
 }
 /* el latido: mira si la bolsa cambió y pinta la diferencia. Barato — una foto es un objeto
    plano de unas pocas decenas de números. */
@@ -830,7 +831,21 @@ function placeMenuPc() {
   let top = 52;
   if (hr && hr.width && hr.height) top = Math.max(top, Math.ceil(hr.bottom + 8));
   if (fr && fr.width && fr.height) top = Math.max(top, Math.ceil(fr.bottom + 8));
-  const alto = Math.max(0, Math.floor(window.innerHeight - top - 10));
+  let alto = Math.max(0, Math.floor(window.innerHeight - top - 10));
+  /* En escritorio angosto la hotbar alcanza el borde derecho y el menú largo la cubría: los
+     últimos atajos quedaban debajo de una lista que además se lleva los clics. La lista ya sabe
+     scrollear; le damos el hueco REAL que queda sobre cualquier control inferior que cruce su
+     columna. No se reserva el centro entero en pantallas anchas, donde ambos viven separados. */
+  const mr = typeof menu.getBoundingClientRect === "function" ? menu.getBoundingClientRect() : null;
+  const liberarControlInferior = (id) => {
+    const control = $(id);
+    if (!mr || !mr.width || !control || typeof control.getBoundingClientRect !== "function") return;
+    const r = control.getBoundingClientRect();
+    if (!r.width || !r.height || r.right <= mr.left || r.left >= mr.right || r.top <= top + 8) return;
+    alto = Math.min(alto, Math.max(0, Math.floor(r.top - top - 8)));
+  };
+  liberarControlInferior("hotwrap");
+  liberarControlInferior("editbar");
   const st = menu.style;
   if (st && typeof st.setProperty === "function") { st.setProperty("--gmenu-top", top + "px"); st.setProperty("--gmenu-max-height", alto + "px"); }
   else if (st) { st["--gmenu-top"] = top + "px"; st["--gmenu-max-height"] = alto + "px"; }
@@ -5035,6 +5050,36 @@ function placePrompt() {
   if (abajo >= bottom && abajo <= maxBottom) p.style.bottom = abajo + "px";
   libreEditbarPc();
 }
+/* Los chips del flujo viven sobre el mundo, no dentro del Registro. En una pantalla PC baja,
+   siete avisos juntos pueden alcanzar esa esquina y escribirse sobre el historial. Conservamos
+   ambos: si se cruzan de verdad, el bloque de chips se apoya entero antes o después del Registro
+   sin pasar por debajo del HUD. En móvil no se cambia la lectura táctil ya aprobada. */
+function placeFlujoPc() {
+  const flujo = $("flujo");
+  if (!flujo) return;
+  const limpiar = () => { const st = flujo.style; if (!st) return; if (typeof st.removeProperty === "function") st.removeProperty("--flujo-top"); else st["--flujo-top"] = ""; };
+  if (typeof window === "undefined" || window.innerWidth <= 640) { limpiar(); return; }
+  limpiar();   // primero se mide desde el centro normal, no desde un acomodo anterior
+  const registro = $("logpanel");
+  if (!registro || typeof flujo.getBoundingClientRect !== "function" || typeof registro.getBoundingClientRect !== "function") return;
+  const fr = flujo.getBoundingClientRect(), rr = registro.getBoundingClientRect();
+  if (!fr.width || !fr.height || !rr.width || !rr.height || !rectsSeCruzan(fr, rr, 8)) return;
+  const medio = fr.height / 2, centroOriginal = fr.top + medio;
+  let minCentro = medio + 8, maxCentro = window.innerHeight - medio - 8;
+  const reservarArriba = (id) => {
+    const el = $(id); if (!el || typeof el.getBoundingClientRect !== "function") return;
+    const r = el.getBoundingClientRect();
+    if (r.width && r.height) minCentro = Math.max(minCentro, r.bottom + medio + 8);
+  };
+  reservarArriba("hudbar"); reservarArriba("hud-flot");
+  const arriba = rr.top - medio - 8, abajo = rr.bottom + medio + 8;
+  const candidatos = [];
+  if (arriba >= minCentro) candidatos.push(arriba);
+  if (abajo <= maxCentro) candidatos.push(abajo);
+  if (!candidatos.length) return;   // una colocación manual puede no dejar una franja completa
+  const centro = candidatos.reduce((mejor, n) => Math.abs(n - centroOriginal) < Math.abs(mejor - centroOriginal) ? n : mejor);
+  { const st = flujo.style; if (st && typeof st.setProperty === "function") st.setProperty("--flujo-top", Math.round(centro) + "px"); else if (st) st["--flujo-top"] = Math.round(centro) + "px"; }
+}
 /* El botín de un cadáver y la hotbar viven centrados abajo. En PC, el panel no puede quedar
    encima de los atajos de comida/arma: toma la caja real de la hotbar, que además puede haber
    sido arrastrada. En móvil conserva la composición original compacta. */
@@ -5119,6 +5164,10 @@ function syncRegistroPrompt() {
   placePescaAparejosPc();
   if (typeof ubicarMuelleCombatePC === "function") ubicarMuelleCombatePC();
   placeToast();
+  if (typeof placeFlujoPc === "function") placeFlujoPc();
+  /* La barra de edición puede aparecer o ensancharse dentro de este mismo sincronizado. Si el
+     menú quedó fijado, necesita ver esa caja ya final para no volver a cubrir sus controles. */
+  if (typeof placeMenuPc === "function") placeMenuPc();
 }
 function initUniversalDrag() {
   document.querySelectorAll(".ov .card").forEach(c => makeHoldDrag(c));          // todas las ventanas

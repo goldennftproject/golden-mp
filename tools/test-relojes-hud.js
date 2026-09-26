@@ -14,8 +14,9 @@
    Este archivo corre refreshBuffsPill() y refreshStam() de verdad contra elementos que anotan,
    y comprueba los estados de cada una.
      node tools/test-relojes-hud.js                                                              */
-const path = require("path"), vm = require("vm");
+const fs = require("fs"), path = require("path"), vm = require("vm");
 const RAIZ = path.join(__dirname, "..");
+const HTML = fs.readFileSync(path.join(RAIZ, "public/index.html"), "utf8");
 const { ctx, elementos } = require("./arrancar-el-juego.contexto.js").arrancar(RAIZ);
 const G = ctx.G, g = (n) => vm.runInContext(n, ctx);
 ctx.toast = () => {}; ctx.log = () => {}; ctx.celebrate = () => {};
@@ -89,6 +90,16 @@ console.log("\nLOS EFECTOS DE LA COMIDA   (« Food 00:00 »)");
   G.buffs = [{ type: "speed", label: "+5% velocidad", mult: 5, until: Date.now() - 1000 }];
   ctx.refreshBuffsPill();
   ok("vencido el plato, el chip se va solo", pill.style.display === "none");
+
+  /* Los efectos distintos no se sacrifican cuando son muchos: la repisa los conserva y el CSS
+     de escritorio es el que los distribuye en filas, para que no se vaya del viewport. */
+  G.buffs = ["daño", "defensa", "velocidad", "farmeo", "suerte", "vida"].map((label, i) =>
+    ({ type: "prueba" + i, label: "+" + (i + 1) + "% " + label, mult: i + 1, until: Date.now() + 600000 }));
+  ctx.refreshBuffsPill();
+  ok("seis efectos distintos siguen teniendo seis chips y sus relojes",
+    (pill.innerHTML.match(/data-bff=/g) || []).length === 6, pill.innerHTML);
+  ok("en escritorio la repisa limita ancho y reparte los chips entre filas",
+    /@media\(min-width:641px\)\{\s*#hud-flot\{max-width:calc\(100vw - 24px\)\}\s*#buffpill\{max-width:min\(520px,calc\(100vw - 24px\)\);flex-wrap:wrap;row-gap:2px;white-space:normal\}\s*#buffpill \.bff\{white-space:nowrap\}\s*\}/.test(HTML));
 }
 
 console.log("\nLA ESTAMINA   (« Stamina 42:00 » — y visible desde la granja)");

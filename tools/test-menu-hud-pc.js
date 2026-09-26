@@ -18,12 +18,15 @@ function estilo(previo) {
   if (previo) Object.assign(s, previo);
   return s;
 }
-function caso({ ancho, alto, hud, flot, previo }) {
-  const style = estilo(previo), menu = { style };
+function caso({ ancho, alto, hud, flot, hotbar, editbar, menuRect, previo }) {
+  const style = estilo(previo), menu = { style,
+    getBoundingClientRect: () => menuRect || { left: 1080, right: 1270, width: 190, height: 36 } };
   const barra = hud && { getBoundingClientRect: () => hud };
   const repisa = flot && { getBoundingClientRect: () => flot };
+  const atajos = hotbar && { getBoundingClientRect: () => hotbar };
+  const edicion = editbar && { getBoundingClientRect: () => editbar };
   const ctx = { window: { innerWidth: ancho, innerHeight: alto }, Math,
-    $: id => ({ gmenu: menu, hudbar: barra, "hud-flot": repisa })[id] || null };
+    $: id => ({ gmenu: menu, hudbar: barra, "hud-flot": repisa, hotwrap: atajos, editbar: edicion })[id] || null };
   vm.createContext(ctx);
   vm.runInContext(UI.slice(ini, fin), ctx);
   vm.runInContext("placeMenuPc()", ctx);
@@ -51,6 +54,24 @@ console.log("\nMÓVIL LIMPIA LAS VARIABLES DE ESCRITORIO\n");
   ok("móvil conserva su CSS original", !("--gmenu-top" in movil) && !("--gmenu-max-height" in movil), JSON.stringify(movil));
 }
 
+console.log("\nLOS CONTROLES INFERIORES QUEDAN FUERA DEL MENÚ EN PC COMPACTO\n");
+{
+  const compacto = caso({ ancho: 760, alto: 600,
+    hud: { width: 760, height: 42, bottom: 42 }, flot: { width: 0, height: 0, bottom: 0 },
+    menuRect: { left: 560, right: 750, width: 190, height: 36 },
+    hotbar: { left: 84, right: 676, top: 542, bottom: 590, width: 592, height: 48 } });
+  ok("la lista termina ocho píxeles antes de la hotbar que alcanza su columna",
+    compacto["--gmenu-max-height"] === "482px", compacto["--gmenu-max-height"]);
+
+  const edicion = caso({ ancho: 760, alto: 600,
+    hud: { width: 760, height: 42, bottom: 42 }, flot: { width: 0, height: 0, bottom: 0 },
+    menuRect: { left: 560, right: 750, width: 190, height: 36 },
+    hotbar: { left: 84, right: 676, top: 542, bottom: 590, width: 592, height: 48 },
+    editbar: { left: 510, right: 730, top: 446, bottom: 482, width: 220, height: 36 } });
+  ok("si edición está más arriba, reserva su hueco en vez de cubrir sus botones",
+    edicion["--gmenu-max-height"] === "386px", edicion["--gmenu-max-height"]);
+}
+
 console.log("\nEL CÁLCULO SE REEJECUTA CUANDO CAMBIA EL HUD\n");
 {
   ok("CSS aplica las variables sólo en escritorio",
@@ -60,6 +81,10 @@ console.log("\nEL CÁLCULO SE REEJECUTA CUANDO CAMBIA EL HUD\n");
   ok("resize y abrir el menú también lo recalculan",
     /const syncLayouts = \(\) => \{[\s\S]*?placeMenuPc\(\);/.test(UI) &&
     /const toggleMenu = \(\) => \{[\s\S]*?placeMenuPc\(\);/.test(UI));
+  ok("la lista mide los controles inferiores reales, no una altura fija",
+    /liberarControlInferior\("hotwrap"\);[\s\S]*?liberarControlInferior\("editbar"\);/.test(UI));
+  const sync = (UI.match(/function syncRegistroPrompt\(\)[\s\S]*?\n\}/) || [""])[0];
+  ok("mostrar o redimensionar edición vuelve a medir el menú fijado", /placeMenuPc\(\);/.test(sync));
 }
 
 console.log(fallos ? "\n" + fallos + " fallo(s)\n" : "\nTodo en orden: el menú deja el HUD usable en PC.\n");

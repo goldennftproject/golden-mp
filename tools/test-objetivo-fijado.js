@@ -29,13 +29,14 @@ const ok = (n, c, d) => { if (!c) fallos++; console.log((c ? "  ok   " : "  FALL
 function escena() {
   const esc = Object.create(g("ForestScene").prototype);
   const rect = { setStrokeStyle() { return this; }, setFillStyle() { return this; }, setDepth() { return this; },
-    setPosition() { return this; }, setSize() { return this; }, destroy() { this.muerto = true; } };
+    setPosition() { return this; }, setSize() { return this; }, setVisible(v) { this.visible = v; return this; }, destroy() { this.muerto = true; } };
+  const texto = { setOrigin() { return this; }, setDepth() { return this; }, setVisible(v) { this.visible = v; return this; },
+    setPosition() { return this; }, setText() { return this; } };
   Object.assign(esc, {
     hero: { x: 0, y: 0 },
     facing: "east", action: null, target: null, autoOn: false, nextAuto: 0,
     monsters: [],
-    add: { rectangle: () => Object.create(rect), text: () => ({ setOrigin() { return this; }, setDepth() { return this; },
-      setVisible() { return this; }, setPosition() { return this; }, setText() { return this; } }) },
+    add: { rectangle: () => Object.create(rect), text: () => Object.create(texto) },
     tweens: { add: () => ({ stop() {} }) },
   });
   return esc;
@@ -43,7 +44,7 @@ function escena() {
 function mob(x, y) {
   return { cx: x, by: y, dead: false, hp: 30, pagado: true,
     def: { label: "Rata", hp: 30 },
-    spr: { getBounds: () => ({ centerX: x, centerY: y, width: 20, height: 20, top: y - 20 }) } };
+    spr: { visible: true, displayHeight: 20, getBounds: () => ({ centerX: x, centerY: y, width: 20, height: 20, top: y - 20 }) } };
 }
 /* espada equipada: swordDmg > 0. Se apoya en el estado real. */
 G.weapons = { espada_madera: { dur: 50 } }; G.gear = G.gear || {}; G.gear.arma = "espada_madera";
@@ -83,6 +84,22 @@ console.log("\nEL CICLO DEL OBJETIVO   (con los métodos reales de la escena)");
   esc.action = null; m.dead = true;
   esc.updateTargetFx();
   ok("muerto el bicho, la marca y el auto-ataque se apagan", !esc.target && !esc.autoOn);
+}
+
+console.log("\nEL PARPADEO OCULTA EL OBJETIVO ENTERO\n");
+{
+  const esc = escena(), m = mob(42, 60);
+  esc.setTarget(m); esc.autoOn = true; esc.updateTargetFx();
+  ok("con el mob visible, marco y nombre se muestran", esc.tgGlow.visible === true && esc.tgTxt.visible === true);
+
+  m.spr.visible = false;
+  esc.updateTargetFx();
+  ok("si el sprite desaparece, no filtra su posición con marco, nombre ni vida", esc.tgGlow.visible === false && esc.tgTxt.visible === false);
+  ok("la selección se conserva durante la ausencia", esc.target === m && esc.autoOn);
+
+  m.spr.visible = true;
+  esc.updateTargetFx();
+  ok("cuando reaparece, el objetivo vuelve a dibujarse", esc.tgGlow.visible === true && esc.tgTxt.visible === true);
 }
 
 console.log("\nLA PERSECUCIÓN   (Chase Opponent: el granjero camina solo hasta su distancia de arma)");
@@ -144,6 +161,20 @@ console.log("\nEL CABLEADO DEL CLIC   (fijado con fuente: los handlers viven den
     /else if \(this\.target\) this\.clearTarget\(\)/.test(codigo),
     "antes no había ninguna: solo se podía cambiar de objetivo, nunca quedarse sin él");
   ok("el recuadro del objetivo es ROJO", /0xe23a2a/.test(src), "0xe23a2a, pulsando");
+  ok("un sprite invisible oculta el marco y nombre sin soltar el objetivo",
+    /if \(!s \|\| s\.visible === false\) \{[\s\S]{0,180}tgGlow\.setVisible\(false\)[\s\S]{0,180}tgTxt\.setVisible\(false\)/.test(src));
+  ok("el Parpadeo no vuelve a mover ni a dibujar al dragón ausente",
+    (src.match(/if \(m\.blinkUntil && t < m\.blinkUntil\) \{ if \(m\.bar\) m\.bar\.clear\(\); continue; \}/g) || []).length >= 2);
+  ok("el arco muestra una flecha real durante el vuelo, no un texto vacío",
+    /this\.add\.image\(sx, sy, "res_flecha"\)\.setDisplaySize\(20, 20\)\.setOrigin\(0\.5\)\.setDepth\(99999\)/.test(src) &&
+    !/this\.add\.text\(this\.hero\.x, this\.hero\.y - 22, ""/.test(src));
+  ok("la flecha se orienta hacia el blanco en vez de viajar de costado",
+    /a\.setRotation\(Math\.atan2\(ty - sy, tx - sx\) \+ Math\.PI \/ 4\)/.test(src));
+  ok("al vencer al Dragón se retira también su barra y objetivo flotantes",
+    /m\.dead = true; m\.spr\.setVisible\(false\); if \(m\.bar\) m\.bar\.clear\(\);\s*if \(this\.target === m\) this\.clearTarget\(\);/.test(src));
+  ok("el Dragón también recibe el impacto visual del arma que lo golpeó",
+    /if \(m\.def\.boss\) \{ this\.weaponFx\(m, tipoFx, crit\); this\.pegarleAlJefe\(m, dmg\); return; \}/.test(src),
+    "la vida compartida no convierte el golpe local en magia");
   /* 8/9 (Suren, en vivo) — el cartel « Necesitás un arma equipada » MENTÍA cuando llevabas el
      arco puesto y las flechas en la granja, así que se partió en dos preguntas: hasWeapon dice si
      llevás arma y porQueNoAtaca contesta por qué no podés atacar AHORA, con el remedio. Lo que

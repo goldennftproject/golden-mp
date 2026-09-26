@@ -12,7 +12,7 @@ console.log("\nEL FLUJO QUEDA DETRÁS DE LOS OVERLAYS SÓLO EN ESCRITORIO\n");
 {
   const base = HTML.match(/#flujo\{([^}]*)\}/);
   ok("la capa móvil/base conserva el efecto sobre el juego", !!base && /z-index:60/.test(base[1]));
-  ok("PC lo baja a la capa del HUD, debajo de una tarjeta", /@media\(min-width:641px\)\{#flujo\{z-index:6\}\}/.test(HTML));
+  ok("PC lo baja a la capa del HUD y conserva un ancla que puede liberar el Registro", /@media\(min-width:641px\)\{#flujo\{z-index:6;top:var\(--flujo-top,50%\)\}\}/.test(HTML));
   ok("los overlays siguen por delante del HUD", /\.ov\{[\s\S]{0,110}z-index:var\(--ov-frente,10\)/.test(HTML));
 }
 

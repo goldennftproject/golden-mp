@@ -133,6 +133,12 @@ ok("goblin y mascota usan la sombra arrastrable estándar", /type: "goblinmerc"[
   /type: "domabicho"[\s\S]{0,220}shadow, shadowDy: 2/.test(FARM));
 
 console.log("\nEL AGUA ENTERA VIAJA CON LA LAGUNA");
+const desdePeces = FARM.indexOf("// pececitos nadando en la laguna");
+const hastaPeces = FARM.indexOf("this.dibujarGrilla()", desdePeces);
+const pecesLaguna = FARM.slice(desdePeces, hastaPeces);
+ok("si falla el arte de la laguna, los peces decorativos siguen siendo visibles",
+  /fi === 1 \? "🐟" : "🐠"/.test(pecesLaguna),
+  "el respaldo no puede volver a ser un Text vacío");
 let punto = 0;
 esc.pondPoint = () => ({ x: 500 + ++punto, y: 600 + punto });
 const ondaA = nodo(), ondaB = nodo(), pez = nodo();

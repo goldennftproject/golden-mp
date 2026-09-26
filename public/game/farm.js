@@ -162,7 +162,7 @@ class FarmScene extends Phaser.Scene {
       const p0 = this.pondPoint(), sz = FISH_SIZES[fi];
       const s = this.textures.exists(fk)
         ? this.add.image(p0.x, p0.y, fk).setDisplaySize(sz[0], sz[1]).setOrigin(0.5).setDepth(-990).setAlpha(0.9)
-        : this.add.text(p0.x, p0.y, fi === 1 ? "" : "", { fontSize: "13px" }).setOrigin(0.5).setDepth(-990).setAlpha(0.85);
+        : this.add.text(p0.x, p0.y, fi === 1 ? "🐟" : "🐠", { fontSize: "13px" }).setOrigin(0.5).setDepth(-990).setAlpha(0.85);
       this.pondFish.push({ s, tgt: this.pondPoint(), sp: 10 + Math.random() * 12 });
     });
     this.dibujarGrilla();
@@ -1809,7 +1809,10 @@ class FarmScene extends Phaser.Scene {
     if (kind === "fish" && typeof pescaV4Abrir === "function" && this.add) {
       this.action = { kind, o, t: 0, dur: 1e9, v4: true };
       this.clearBobber();
-      pescaV4Abrir();
+      /* La puerta visual de la laguna vuelve `false` si algo cambió entre el clic y el
+         lanzamiento (por ejemplo, se acabó el cebo). No dejamos una acción v4 huérfana:
+         bloquearía el mundo aunque el lance nunca hubiera empezado. */
+      if (pescaV4Abrir() === false) this.action = null;
       return;
     }
     if (kind === "fish") this.castBobber(o.bx != null ? o.bx : o.cx, o.by2 != null ? o.by2 : (GF.POND.row + GF.POND.rows / 2) * GF.TILE);
@@ -1914,8 +1917,11 @@ class FarmScene extends Phaser.Scene {
     const bx = this.bobber.x, by = this.bobber.y;
     this.splashAt(bx, by);
     const key = this.textures.exists("fish_comun") ? "fish_comun" : null;
-    if (!key) return;
-    const f = this.add.image(bx, by, key).setDepth(99996).setScale(1.1);
+    // Si la descarga del arte quedó incompleta, la captura todavía necesita su arco visual:
+    // el emoji es un respaldo de una sola vez, mejor que cobrar un pez invisible.
+    const f = key
+      ? this.add.image(bx, by, key).setDepth(99996).setScale(1.1)
+      : this.add.text(bx, by, "🐟", { fontSize: "16px" }).setOrigin(0.5).setDepth(99996).setScale(1.1);
     const hx = this.hero.x, hy = this.hero.y - 30;
     // arco parabólico: sube y cae en la mano del granjero, girando
     this.tweens.add({ targets: f, x: hx, duration: 480, ease: "Sine.easeOut" });
@@ -2048,6 +2054,10 @@ class FarmScene extends Phaser.Scene {
     if (window.sfx) sfx("splash");
   }
   pescaPanel(mostrar) {
+    /* El carrete vive en el mismo lateral que la tira pasiva de últimos usados. En escritorio
+       ésta se aparta por completo durante la pelea; el CSS móvil no interpreta la clase. */
+    const recientes = document.getElementById("recientes");
+    if (recientes) recientes.classList.toggle("pesca-activa", !!mostrar);
     const el = document.getElementById("pesca-mini"); if (!el) return;
     el.classList.toggle("show", !!mostrar);
     if (mostrar && typeof P4 !== "undefined" && P4 && P4.r) {
