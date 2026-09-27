@@ -81,7 +81,7 @@ console.log("\n3 · EL DAÑO MÁXIMO DEL JUGADOR (§3.1)\n");
   G.skills.sword = g('triesTotal(30, "sword")');
   ok("subir el skill se nota: a skill 30 la misma espada pega máximo 24 (8,5 · 2,667 · 1,03)", g('playerMaxDamage("espada_madera")') === 24);
   ok("el factor es 1,0 (Golden no tiene modos: siempre ofensivo)", g("TIBIA_FACTOR_ATK") === 1);
-  ok("atk del arma = min + max de la tabla del compendio", g("ARM_ATK.espada").join() === "8,12,18,28,42" && g("ARM_ATK.arco").join() === "6,8,14,20,32");
+  ok("atk del arma = min + max de la tabla del compendio", g("ARM_ATK.espada").join() === "8,12,18,28,42" && g("ARM_ATK.arco").join() === "8,8,12,20,32");   // 26/9: madera 3-5 (palo) · piedra 3-5 · bronce 4-8
   /* 15/9 (dirección): « si la de madera no debería tener parada xD ». El primer escalón de cada
      tipo dejó de parar, así que su defensa de arma es 0 a propósito. La fórmula 0,8 · atk sigue
      rigiendo para todo lo que SÍ para — que es lo que este renglón custodia. */

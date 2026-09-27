@@ -53,13 +53,16 @@ function casoRegistro({ plegado, movida, hotbarRect, bottomInicial, autoAntes })
   vm.runInContext("placeRegistro()", ctx);
   return { bottom: registro.style.bottom, registro: registro.getBoundingClientRect(), hotbar: hotbarRect };
 }
-function casoGuia({ plegado, movil, logRect, hudRect, flotRect, cssTop }) {
+function casoGuia({ plegado, movil, logRect, hudRect, flotRect, cssTop, menuRect, menuAbierto, guiaRect }) {
+  const baseGuia = guiaRect || rect(191, 54, 218, 33);
   const guia = {
-    style: { top: "", bottom: "" }, classList: { contains: c => c === "hidden" ? false : false },
+    style: { top: "", bottom: "", left: "", maxWidth: "" }, classList: { contains: c => c === "hidden" ? false : false },
     getBoundingClientRect() {
       if (!movil) {
         const top = Number.parseFloat(this.style.top || cssTop || "54") || 54;
-        return rect(191, top, 218, 33);
+        const width = Number.parseFloat(this.style.maxWidth || "") || baseGuia.width;
+        const left = this.style.left ? Number.parseFloat(this.style.left) - width / 2 : baseGuia.left;
+        return rect(left, top, width, baseGuia.height);
       }
       const bottom = this.style.bottom ? Number.parseFloat(this.style.bottom) : 96;
       return rect(191, 500 - bottom - 33, 218, 33);
@@ -68,12 +71,13 @@ function casoGuia({ plegado, movil, logRect, hudRect, flotRect, cssTop }) {
   const registro = { classList: clases(plegado), getBoundingClientRect: () => logRect };
   const hudbar = hudRect ? { getBoundingClientRect: () => hudRect } : null;
   const hudFlot = flotRect ? { getBoundingClientRect: () => flotRect } : null;
-  const ctx = { window: { innerHeight: 500, matchMedia: () => ({ matches: !!movil }), getComputedStyle: () => ({ top: cssTop || "54px" }) },
-    $: id => ({ tuto: guia, logpanel: registro, hudbar, "hud-flot": hudFlot })[id] || null };
+  const menu = menuRect && { classList: { contains: c => c === "collapsed" && !menuAbierto }, getBoundingClientRect: () => menuRect };
+  const ctx = { window: { innerWidth: movil ? 640 : 1280, innerHeight: 500, matchMedia: () => ({ matches: !!movil }), getComputedStyle: () => ({ top: cssTop || "54px" }) },
+    $: id => ({ tuto: guia, logpanel: registro, hudbar, "hud-flot": hudFlot, gmenu: menu })[id] || null };
   vm.createContext(ctx);
   vm.runInContext(UI.slice(desde, hasta), ctx);
   vm.runInContext("placeTuto()", ctx);
-  return { top: guia.style.top, bottom: guia.style.bottom, guia: guia.getBoundingClientRect(), registro: logRect, hud: hudRect || null };
+  return { top: guia.style.top, bottom: guia.style.bottom, left: guia.style.left, maxWidth: guia.style.maxWidth, guia: guia.getBoundingClientRect(), registro: logRect, hud: hudRect || null, menu: menuRect || null };
 }
 
 console.log("\n1 · LA POSICIÓN NORMAL SE CONSERVA SIN UN CRUCE\n");
@@ -162,6 +166,18 @@ console.log("\n6 · EN ESCRITORIO LA GUÍA LIBERA UN HUD DE DOS FILAS\n");
 
   const repisaOculta = casoGuia({ plegado: false, movil: false, logRect: rect(10, 306, 340, 116), hudRect: rect(0, 0, 760, 42), flotRect: rect(748, 45, 0, 0) });
   ok("una repisa vacía no baja la guía", repisaOculta.top === "", JSON.stringify(repisaOculta));
+}
+
+console.log("\n7 · EN PC ANGOSTO LA GUÍA LIBERA EL MENÚ ABIERTO\n");
+{
+  const menu = rect(441, 54, 190, 390);
+  const guia = rect(40.5, 54, 560, 33);
+  const abierto = casoGuia({ plegado: false, movil: false, logRect: rect(10, 306, 340, 116), hudRect: rect(0, 0, 641, 42), menuRect: menu, menuAbierto: true, guiaRect: guia });
+  ok("la guía larga se angosta al carril libre a la izquierda", abierto.maxWidth === "425px", JSON.stringify(abierto));
+  ok("y deja ocho píxeles reales antes del menú", !cruzan(abierto.guia, menu, 8), JSON.stringify(abierto.guia));
+
+  const plegado = casoGuia({ plegado: false, movil: false, logRect: rect(10, 306, 340, 116), hudRect: rect(0, 0, 641, 42), menuRect: menu, menuAbierto: false, guiaRect: guia });
+  ok("con el menú plegado recupera el centro y ancho de CSS", plegado.left === "" && plegado.maxWidth === "", JSON.stringify(plegado));
 }
 
 console.log(fallos ? "\n" + fallos + " fallo(s)\n" : "\nTodo en orden: el aviso conserva aire alrededor del Registro.\n");

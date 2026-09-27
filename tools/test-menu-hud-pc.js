@@ -87,5 +87,34 @@ console.log("\nEL CÁLCULO SE REEJECUTA CUANDO CAMBIA EL HUD\n");
   ok("mostrar o redimensionar edición vuelve a medir el menú fijado", /placeMenuPc\(\);/.test(sync));
 }
 
+console.log("\nLA COLUMNA DE ZONA TAMBIÉN DEJA EL MENÚ LEGIBLE\n");
+{
+  const iniSync = UI.indexOf("function syncRecientesMenuPc() {");
+  const finSync = UI.indexOf("/* El menú vive", iniSync);
+  const sync = iniSync >= 0 && finSync > iniSync ? UI.slice(iniSync, finSync) : "";
+  ok("el sincronizado incluye recientes, Zona y carrete", /\["recientes", "morral", "combate", "pesca-mini"\]/.test(sync));
+  ok("sólo corre el desplazamiento en escritorio con el menú abierto",
+    /window\.innerWidth > 640/.test(sync) && /!menu\.classList\.contains\("collapsed"\)/.test(sync));
+  ok("morral, muelle y carrete dejan el mismo pasillo de 8 px que los recientes",
+    /#recientes\.menu-abierto\{right:208px\}/.test(HTML) &&
+    /#morral\.menu-abierto,#combate\.menu-abierto\{right:208px\}/.test(HTML) &&
+    /#pesca-mini\.menu-abierto\{right:208px\}/.test(HTML));
+  ok("el aviso efímero se vuelve a medir cuando el muelle cambia de columna", /placeSaveIndPc\(\)/.test(sync));
+
+  const clase = (inicial) => {
+    const datos = new Set(inicial || []);
+    return { contains: c => datos.has(c), toggle: (c, on) => { if (on) datos.add(c); else datos.delete(c); } };
+  };
+  const columna = ({ ancho, plegado }) => {
+    const menu = { classList: clase(plegado ? ["collapsed"] : []) };
+    const nodos = { gmenu: menu, recientes: { classList: clase() }, morral: { classList: clase() }, combate: { classList: clase() }, "pesca-mini": { classList: clase() } };
+    const ctx = { window: { innerWidth: ancho }, $: id => nodos[id] || null };
+    vm.createContext(ctx); vm.runInContext(sync, ctx); vm.runInContext("syncRecientesMenuPc()", ctx);
+    return ["recientes", "morral", "combate", "pesca-mini"].map(id => nodos[id].classList.contains("menu-abierto"));
+  };
+  ok("al abrirlo en PC mueve todos los módulos de la columna", columna({ ancho: 1280, plegado: false }).every(Boolean));
+  ok("plegado o móvil recuperan la columna normal", columna({ ancho: 1280, plegado: true }).every(v => !v) && columna({ ancho: 640, plegado: false }).every(v => !v));
+}
+
 console.log(fallos ? "\n" + fallos + " fallo(s)\n" : "\nTodo en orden: el menú deja el HUD usable en PC.\n");
 process.exit(fallos ? 1 : 0);

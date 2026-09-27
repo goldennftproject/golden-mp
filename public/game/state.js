@@ -6051,15 +6051,25 @@ const ARM_TIPO_DEF = {
    (acá depende de la rareza), hacha y mazo le ganan a la espada en TODOS los escalones.
    Decisión de dirección (opción 1): EL ESCALÓN DE MADERA ES « UN PALO » PARA LOS TRES — misma
    tirada (3-5) y sin bono de tipo. La identidad de cada arma (crítico · perforación · aturdir)
-   arranca en piedra. El arco no cambia. La opción 2 (enfriamiento por tipo en todos los
-   escalones) queda en el TODO para cuando el diseñador mire las armas. */
+   arranca en piedra. La opción 2 (enfriamiento por tipo en todos los escalones) queda en el
+   TODO para cuando el diseñador mire las armas.
+   26/9 (diseñador): « habría que revisar el daño del arco a ver si tiene mucho » · « con bajarle
+   el daño al arco sería lo que falta ». El 22/9 el arco « no cambiaba », y eso lo dejó como la
+   ÚNICA arma de madera con su identidad puesta: el sangrado (1/s durante 3 s) no pasa por la
+   armadura ni por la parada, y la flecha no la esquiva nadie (el Vuelo evasivo del murciélago es
+   solo cuerpo a cuerpo). Medido con tools/medir-arco.js: el arco de madera le pegaba a la rata
+   un 27 % más que la espada y al murciélago un 76 % más; el de piedra y el de bronce igualaban
+   a la espada en la rata y le ganaban por un 35 % en el murciélago. Y todo eso A DISTANCIA.
+   Ahora: madera es un palo también para el arco (3-5, sin sangrado), y desde piedra el arco
+   queda ~20 % por debajo de la espada golpe a golpe —igual que ya estaban oro y diamante—,
+   porque su ventaja es pelear de lejos y no fallar, no pegar más. Sangrado 1 · 2 · 4 · 6. */
 const ARM_MINMAX = {   // daño aleatorio min-max por tipo y rareza (tablas 15-18 del compendio; madera: ver arriba)
   espada: [[3,5],[4,8],[7,11],[10,18],[16,26]],
   hacha:  [[3,5],[5,9],[8,12],[12,20],[18,30]],
   mazo:   [[3,5],[6,10],[9,15],[14,22],[20,34]],
-  arco:   [[2,4],[3,5],[5,9],[8,12],[12,20]],
+  arco:   [[3,5],[3,5],[4,8],[8,12],[12,20]],
 };
-const ARM_BUFFVAL = { espada: [0,5,8,12,18], hacha: [0,30,40,55,70], mazo: [0,12,16,22,30], arco: [1,2,3,4,6] };
+const ARM_BUFFVAL = { espada: [0,5,8,12,18], hacha: [0,30,40,55,70], mazo: [0,12,16,22,30], arco: [0,1,2,4,6] };
 /* 18/8 — DURABILIDAD RE-DERIVADA con los relojes nuevos. Al acortar el árbol, la madera pasó a
    valer 12 y los minerales se quedaron en sus relojes de 8 a 24 h, así que el bronce pasó de valer
    6 veces una madera a valer 13. Con eso, reparar un arma de mineral se comía todo su margen.

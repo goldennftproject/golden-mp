@@ -803,14 +803,23 @@ function refreshRecientes() {
       itemIcon(v) + '<span class="rn">' + fmt(n) + '</span></div>';
   }).join("");
 }
-/* La tira de últimos usados es un recordatorio, no un control. Cuando el menú de escritorio
-   ocupa ese borde, se mueve a su izquierda para que no quede medio tapada detrás de las esquinas
-   redondeadas. La clase, y no `style.right`, deja que el CSS móvil conserve su composición. */
+/* La columna derecha reúne recordatorios, controles de la Zona y el carrete. Cuando el menú de
+   escritorio ocupa ese borde, ningún dato puede quedar por detrás de sus botones: los módulos se
+   corren juntos a su izquierda, conservando un pasillo de ocho píxeles. La clase, y no
+   `style.right`, deja que móvil conserve su composición. El nombre de la función queda porque
+   ya es la puerta que sincroniza esa columna al abrir, cerrar o fijar el menú. */
 function syncRecientesMenuPc() {
-  const caja = $("recientes"), menu = $("gmenu");
-  if (!caja || !menu) return;
+  const menu = $("gmenu");
+  if (!menu) return;
   const escritorio = typeof window !== "undefined" && window.innerWidth > 640;
-  caja.classList.toggle("menu-abierto", escritorio && !menu.classList.contains("collapsed"));
+  const abierto = escritorio && !menu.classList.contains("collapsed");
+  ["recientes", "morral", "combate", "pesca-mini"].forEach(id => {
+    const caja = $(id);
+    if (caja && caja.classList) caja.classList.toggle("menu-abierto", abierto);
+  });
+  // Si el aviso de guardado está vivo, el muelle acaba de cambiar de columna: se vuelve a medir
+  // en el mismo gesto y nunca queda una fracción de segundo encima de sus controles.
+  if (typeof placeSaveIndPc === "function") placeSaveIndPc();
 }
 /* El menú vive bajo el HUD. En un escritorio angosto la barra se puede envolver, y la repisa de
    estamina/buffs es absoluta: ninguna de las dos agranda el viejo top fijo de 52 px. Medimos
@@ -2405,17 +2414,40 @@ function dndDrop(src, tz, ti) {
   }
   if (isOpen("ov-inv")) refreshInv(); else refreshHotbar();
 }
+// Cierra sólo la pregunta superpuesta. No usa `onNo`: en algunas preguntas esa función es una
+// segunda elección real (por ejemplo, entrar a una incursión), no una cancelación inocua.
+function cerrarConfirmacionLocal() {
+  const ov = $("ov-confirm");
+  if (!ov || !ov.classList.contains("show")) return false;
+  ov.classList.remove("show");
+  return true;
+}
+// En PC la tarjeta pequeña puede estar sobre Inventario, Mercado, etc. El fondo debe ser una
+// barrera real: así un hueco visible del panel de atrás nunca recibe el clic de confirmación.
+// Se enlaza también si abrió angosta, para que al ensanchar con la pregunta visible ya responda.
+function enlazarFondoConfirmacionPc() {
+  if (typeof window === "undefined") return;
+  const ov = $("ov-confirm");
+  if (!ov || ov._confirmBackdropBound) return;
+  ov._confirmBackdropBound = true;
+  ov.addEventListener("pointerdown", ev => {
+    if (ev.target !== ov) return;
+    ev.stopPropagation();
+    cerrarConfirmacionLocal();
+  });
+}
 // cartel de confirmación (papelera, desbloqueo de parcelas, etc.)
 // opts: { title, yes, no, yesClass, noClass } — por defecto el estilo de la papelera
 function askConfirm(msg, onYes, opts) {
   opts = opts || {};
   const ov = $("ov-confirm"); if (!ov) { onYes(); return; }
+  enlazarFondoConfirmacionPc();
   const tt = $("cf-title"); if (tt) tt.textContent = opts.title || "Tirar a la papelera";
   const m = $("cf-msg"); if (m) m.textContent = msg;
   ov.classList.add("show"); enfocarOvPc(ov);
   const yes = $("cf-yes"), no = $("cf-no");
-  if (yes) { yes.textContent = opts.yes || "Tirar"; yes.className = opts.yesClass || "red"; yes.onclick = () => { ov.classList.remove("show"); onYes(); }; }
-  if (no) { no.textContent = opts.no || "Cancelar"; no.className = (opts.noClass || "ghost") + " sm"; no.onclick = () => { ov.classList.remove("show"); if (typeof opts.onNo === "function") opts.onNo(); }; }
+  if (yes) { yes.textContent = opts.yes || "Tirar"; yes.className = opts.yesClass || "red"; yes.onclick = () => { cerrarConfirmacionLocal(); onYes(); }; }
+  if (no) { no.textContent = opts.no || "Cancelar"; no.className = (opts.noClass || "ghost") + " sm"; no.onclick = () => { cerrarConfirmacionLocal(); if (typeof opts.onNo === "function") opts.onNo(); }; }
 }
 // qué se tiraría de una pila (cantidad + nombre) — null si no se puede tirar
 function trashInfo(d) {
@@ -4974,8 +5006,11 @@ function makeHoldDrag(el, saveKey, anchorBottom, onPosition) {
   };
   el.addEventListener("pointerup", end);
   el.addEventListener("pointercancel", end);
-  // restaurar posición guardada (por dispositivo) y re-encajar si cambia el tamaño de la ventana
+  // Reencajar al cambiar el tamaño de la ventana. Las tarjetas de los overlays no persisten
+  // posición, pero sí pueden estar movidas durante esta sesión: sin este listener un Mercado
+  // arrastrado al borde de un monitor ancho quedaba por completo fuera al achicar la ventana.
   const clamp = () => { if (!el.style.top || el.style.top === "auto") return; const w = el.offsetWidth, h = el.offsetHeight; el.style.left = Math.max(4, Math.min(parseFloat(el.style.left) || 0, window.innerWidth - w - 4)) + "px"; el.style.top = Math.max(4, Math.min(parseFloat(el.style.top) || 0, window.innerHeight - h - 4)) + "px"; };
+  window.addEventListener("resize", clamp);
   if (saveKey) {
     try { const s = JSON.parse(localStorage.getItem(saveKey) || "null");
       if (s && typeof s.left === "number") {
@@ -4985,7 +5020,6 @@ function makeHoldDrag(el, saveKey, anchorBottom, onPosition) {
         else if (anchorBottom && typeof s.top === "number") { el.style.bottom = Math.max(4, window.innerHeight - s.top - el.offsetHeight) + "px"; el.style.top = "auto"; }   // migra posiciones viejas guardadas por arriba
         else { el.style.top = s.top + "px"; el.style.bottom = "auto"; clamp(); }
       } } catch (e) {}
-    window.addEventListener("resize", clamp);
   }
 }
 // el aviso de interacción va SIEMPRE por encima de la barra de acceso rápido,
@@ -5136,7 +5170,7 @@ function placeEditbarPc() {
 function placeTuto() {
   const guia = $("tuto"), registro = $("logpanel");
   if (!guia) return;
-  guia.style.top = ""; guia.style.bottom = "";   // no dejar una posición vieja tras cerrar Registro
+  guia.style.top = ""; guia.style.bottom = ""; guia.style.left = ""; guia.style.maxWidth = "";   // no dejar una posición vieja tras cerrar Registro o menú
   if (guia.classList.contains("hidden")) return;
   const movil = !!(window.matchMedia && window.matchMedia("(max-width: 640px)").matches);
   if (!movil) {
@@ -5151,6 +5185,21 @@ function placeTuto() {
     const cssTop = parseFloat(window.getComputedStyle ? window.getComputedStyle(guia).top : "") || 54;
     // Una sola fila sin repisa respeta el CSS; sólo una segunda fila o una repisa visible crea el hueco.
     if (hr.width && hr.height && fondoHud + 8 > cssTop) guia.style.top = Math.ceil(fondoHud + 8) + "px";
+    /* En PC angosto la guía y el menú pueden nacer exactamente bajo el mismo HUD. Comparten
+       capa, así que el menú tapaba el extremo del objetivo largo. La guía conserva su centro
+       habitual mientras cabe; sólo si se cruzan se acomoda en el carril izquierdo y, si hace
+       falta, se angosta para envolver antes de invadir los controles del menú. */
+    const menu = $("gmenu");
+    const mr = menu && menu.classList && !menu.classList.contains("collapsed") && typeof menu.getBoundingClientRect === "function"
+      ? menu.getBoundingClientRect() : null;
+    const gr = guia.getBoundingClientRect();
+    if (mr && mr.width && mr.height && gr.width && gr.height && rectsSeCruzan(gr, mr, 8)) {
+      const margen = 8, carril = Math.floor(mr.left - margen * 2);
+      if (carril >= 180) {
+        if (gr.width > carril) guia.style.maxWidth = carril + "px";
+        guia.style.left = Math.floor(margen + carril / 2) + "px";
+      }
+    }
     return;
   }
   if (!registro) return;
@@ -5229,7 +5278,7 @@ function initUI() {
   /* La flecha distingue el ☰ de la entrada que apareció dentro del menú. Recalcular sólo en el
      latido hacía que, durante hasta un segundo, siguiera señalando una ruta que acababa de dejar
      de ser la visible. Esta puerta cubre el clic y el atajo M en el mismo gesto. */
-  const sincronizarGuiaMenu = () => { if (typeof tutoHighlight === "function") tutoHighlight(); };
+  const sincronizarGuiaMenu = () => { if (typeof tutoHighlight === "function") tutoHighlight(); if (typeof placeTuto === "function") placeTuto(); };
   const toggleMenu = () => { gmenu.classList.toggle("collapsed"); placeMenuPc(); syncRecientesMenuPc(); sincronizarGuiaMenu(); };
   const gt = $("gmtoggle"); if (gt) gt.onclick = toggleMenu;
   const mb = $("menu-btn"); if (mb) mb.onclick = toggleMenu;
@@ -5435,6 +5484,12 @@ function initUI() {
     if (key === "escape") {
       if (typeof P4 !== "undefined" && P4) { pescaV4Cerrar(); return; }
       if (typeof pescaAparejosAbierto === "function" && pescaAparejosAbierto()) { pescaAparejosCerrar(); return; }
+      // El botín es una tarjeta de escena, no un `.ov`: en PC Escape tiene que cerrarlo por su
+      // propia salida para liberar también la referencia al cadáver. Móvil conserva su flujo.
+      if (window.innerWidth > 640 && typeof cerrarCuerpoPanelPc === "function" && cerrarCuerpoPanelPc()) return;
+      // Si una pregunta está encima de otra ventana, Escape cierra sólo la pregunta y conserva
+      // el contexto del jugador (inventario, mercado, parcela) para que pueda seguir decidiendo.
+      if (window.innerWidth > 640 && cerrarConfirmacionLocal()) return;
       closeAllOv(); if (typeof hideSeedWheel === "function") hideSeedWheel(); return;
     }
     if (key === "m") { toggleMenu(); e.preventDefault(); return; }   // M: desplegar/plegar el menú (detalles 29/7)

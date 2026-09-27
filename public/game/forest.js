@@ -309,6 +309,10 @@ class ForestScene extends Phaser.Scene {
   }
 
   drawBar(m) {
+    /* La vida del Dragón no vive en `m.hp`: llega del asalto compartido. Si cae por la barra
+       genérica, `m.hp` sigue lleno y la limpia al final del frame, después de haberla dibujado.
+       Lo resolvemos en esta misma puerta para que también acompañe al jefe cuando se mueve. */
+    if (m && m.def && m.def.boss && this._jefeMax) { this.dibujarBarraJefe(m); return; }
     // Solo se redibuja si CAMBIÓ. Antes update() llamaba a drawBar de los 25 mobs en cada
     // frame y cada uno hacía clear() + 2 fillRect aunque no hubiera pasado nada (10/8).
     /* 24/8 — LA BARRA SE QUEDABA ATRÁS. Reporte de dirección: « cuando atacas un mob en zona
@@ -327,6 +331,16 @@ class ForestScene extends Phaser.Scene {
     const w = 30, x = m.cx - w / 2, y = m.by - (m.spr.displayHeight || m.spr.height) - 8;
     m.bar.fillStyle(0x000000, 0.55).fillRect(x - 1, y - 1, w + 2, 5);
     m.bar.fillStyle(m.hp / m.def.hp > 0.4 ? 0x7ec95a : 0xd9534f, 1).fillRect(x, y, w * (m.hp / m.def.hp), 3);
+  }
+
+  // El Dragón conserva una vida local para su sprite, pero la que juega el clan llega del asalto.
+  // Toda lectura que se muestre al jugador pasa por acá para no enseñar dos números incompatibles.
+  vidaMostrada(m) {
+    const compartida = !!(m && m.def && m.def.boss && Number.isFinite(this._jefeHp) &&
+      Number.isFinite(this._jefeMax) && this._jefeMax > 0);
+    return compartida
+      ? { hp: Math.max(0, this._jefeHp), max: this._jefeMax, compartida: true }
+      : { hp: m.hp, max: m.def.hp, compartida: false };
   }
 
   /* ---- objetivo fijado: el monstruo se ACLARA (igual que los recursos de la granja)
@@ -374,7 +388,11 @@ class ForestScene extends Phaser.Scene {
       // el recuadro rojo acompaña al mob (posición y tamaño del sprite animado)
       this.tgGlow.setVisible(true).setPosition(b.centerX, b.centerY).setSize(b.width + 6, b.height + 6);
     }
-    if (this.tgTxt) this.tgTxt.setPosition(m.cx, b.top - 7).setText(m.def.label + "  " + Math.max(0, Math.ceil(m.hp)) + "/" + m.def.hp).setVisible(true);
+    if (this.tgTxt) {
+      const vida = this.vidaMostrada(m);
+      this.tgTxt.setPosition(m.cx, b.top - 7)
+        .setText(m.def.label + "  " + fmt(Math.ceil(vida.hp)) + "/" + fmt(Math.ceil(vida.max))).setVisible(true);
+    }
   }
 
   /* ---- loot en el piso: se recoge pisándolo o con un clic (detalles 338) ---- */
@@ -1085,8 +1103,11 @@ class ForestScene extends Phaser.Scene {
         break;
       }
       case "dragon": {   // JEFE: kit por fases (doc)
+        // El jefe no pierde `m.hp` local al recibir golpes: su fase final tiene que seguir la
+        // misma vida compartida que ve el jugador en la barra y en el objetivo fijado.
+        const vidaJefe = this.vidaMostrada(m);
+        if (!m.enraged && vidaJefe.hp < vidaJefe.max * 0.25) { m.enraged = true; m.dmgMult = 1.25; if (m.spr.setTint) m.spr.setTint(0xff9a7a); this.floatTxt(m, "¡ENFURECIDO!", "#ff5544"); }
         const cdm = m.enraged ? 0.7 : 1;
-        if (!m.enraged && m.hp < m.def.hp * 0.25) { m.enraged = true; m.dmgMult = 1.25; if (m.spr.setTint) m.spr.setTint(0xff9a7a); this.floatTxt(m, "¡ENFURECIDO!", "#ff5544"); }
         if (m.blinkUntil && t < m.blinkUntil) return;   // ausente
         if (d < 320 && t > (m.blinkAt || 0)) {   // Parpadeo Sombrío: desaparece 1 s y cae en área
           m.blinkAt = t + 14000 * cdm;
@@ -1347,10 +1368,6 @@ class ForestScene extends Phaser.Scene {
     // tinte de daño
     if (this.hurtFx > 0) { this.hurtFx -= dt; hero.setTint(0xff6b5a); } else hero.clearTint();
     this.drawHeroBar();   // la barra de vida sigue al granjero
-    if (this.zonaKey === "guarida" && this._jefeMax) {
-      const jefe = this.monsters.find(m => m.def && m.def.boss && !m.dead);
-      if (jefe) this.dibujarBarraJefe(jefe);
-    }
     this.seguirAura();
     this.tickViento();    // mismo viento que en la granja
 
@@ -1596,14 +1613,26 @@ class ForestScene extends Phaser.Scene {
 
   updatePrompt() {
     const el = $("prompt"); if (!el) return;
-    if (GF.uiOpen || this.action) { el.classList.remove("show"); return; }
+    /* En PC las ventanas normales no pausan la Zona, pero tampoco deben dejar un CTA de ataque
+       asomándose por detrás de una tarjeta. La granja ya aplica esta regla; acá faltaba la misma
+       puerta y el texto podía leerse como si se pudiera atacar a través del panel. */
+    const hayVentana = typeof window !== "undefined" && window.innerWidth > 640 &&
+      typeof anyOvOpen === "function" && anyOvOpen();
+    /* El botín de un cadáver no es un `.ov`: se sostiene sobre la hotbar para poder recoger sin
+       perder la pelea. En escritorio ocupa justo la franja del CTA, así que éste se apaga mientras
+       la tarjeta está abierta sin volver el mundo un estado bloqueado. */
+    const cuerpo = typeof window !== "undefined" && window.innerWidth > 640 && document.getElementById("cuerpo-panel");
+    const cuerpoAbierto = !!(cuerpo && cuerpo.classList.contains("show"));
+    if (GF.uiOpen || hayVentana || cuerpoAbierto || this.action) { el.classList.remove("show"); return; }
     const m = this.nearestMonster(60);
     const far = !m && canShoot() ? this.nearestMonster(190) : null;
     if (m) {
       // El CTA y el gesto E tienen que decir la misma verdad. Sin arma útil o sin flechas,
       // tryAttack ya se niega con este diagnóstico: no prometamos un ataque que no va a salir.
       const bloqueo = this.porQueNoAtaca();
-      el.textContent = bloqueo || ("Atacar " + m.def.label + " (" + Math.ceil(m.hp) + " de vida) · [E]");
+      const vida = this.vidaMostrada(m);
+      const detalleVida = fmt(Math.ceil(vida.hp)) + (vida.compartida ? " de vida del asalto" : " de vida");
+      el.textContent = bloqueo || ("Atacar " + m.def.label + " (" + detalleVida + ") · [E]");
       el.classList.add("show");
     }
     else if (far) { el.textContent = "Disparar a " + far.def.label + " (" + llevoTengo("res", "flecha") + ") · [E]"; el.classList.add("show"); }

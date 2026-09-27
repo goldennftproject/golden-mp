@@ -31,7 +31,7 @@ function escena() {
   const rect = { setStrokeStyle() { return this; }, setFillStyle() { return this; }, setDepth() { return this; },
     setPosition() { return this; }, setSize() { return this; }, setVisible(v) { this.visible = v; return this; }, destroy() { this.muerto = true; } };
   const texto = { setOrigin() { return this; }, setDepth() { return this; }, setVisible(v) { this.visible = v; return this; },
-    setPosition() { return this; }, setText() { return this; } };
+    setPosition() { return this; }, setText(v) { this.texto = v; return this; } };
   Object.assign(esc, {
     hero: { x: 0, y: 0 },
     facing: "east", action: null, target: null, autoOn: false, nextAuto: 0,
@@ -100,6 +100,43 @@ console.log("\nEL PARPADEO OCULTA EL OBJETIVO ENTERO\n");
   m.spr.visible = true;
   esc.updateTargetFx();
   ok("cuando reaparece, el objetivo vuelve a dibujarse", esc.tgGlow.visible === true && esc.tgTxt.visible === true);
+}
+
+console.log("\nLA BARRA DEL DRAGÓN ES LA DEL ASALTO Y SIGUE AL JEFE\n");
+{
+  /* El HP local del Dragón se conserva lleno: su barra sale del asalto compartido. Si se deja
+     pasar por drawBar() normal, ésta la limpia por verlo «sano» justo antes de renderizar. */
+  const esc = escena(), trazos = [];
+  const jefe = {
+    cx: 180, by: 220, hp: 999, def: { label: "Dragón de las Cavernas", boss: true, hp: 999, hab: "dragon" },
+    spr: { displayHeight: 52, height: 52 },
+    bar: {
+      clear() { trazos.push(["clear"]); return this; },
+      fillStyle(color, alpha) { trazos.push(["style", color, alpha]); return this; },
+      fillRect(x, y, w, h) { trazos.push(["rect", x, y, w, h]); return this; },
+    },
+  };
+  esc._jefeHp = 60; esc._jefeMax = 100;
+  esc.drawBar(jefe);
+  ok("la barra compartida no se limpia por la vida local llena", trazos.some(t => t[0] === "style" && t[1] === 0xb44aff));
+  const primerRelleno = trazos.filter(t => t[0] === "rect").at(-1);
+  ok("la vida mostrada usa el porcentaje del asalto", !!primerRelleno && primerRelleno[3] === 36, JSON.stringify(primerRelleno));
+  trazos.length = 0; jefe.by += 40; esc.drawBar(jefe);
+  const rellenoMovido = trazos.filter(t => t[0] === "rect").at(-1);
+  ok("al moverse el Dragón, la barra se redibuja en su nueva altura", !!rellenoMovido && rellenoMovido[2] > primerRelleno[2], JSON.stringify(rellenoMovido));
+
+  /* La placa del objetivo es otra lectura de esa misma vida. Si dejara usar jefe.hp (900),
+     el recuadro diría «900/900» mientras la barra violeta estuviera a 60/100. */
+  jefe.spr.visible = true;
+  jefe.spr.getBounds = () => ({ centerX: jefe.cx, centerY: jefe.by, width: 40, height: 52, top: jefe.by - 52 });
+  jefe.dead = false;
+  esc.setTarget(jefe); esc.updateTargetFx();
+  ok("el objetivo del Dragón muestra la vida compartida, no su vida local llena", /60\/100/.test(esc.tgTxt.texto || ""), esc.tgTxt.texto || "");
+
+  jefe.enraged = false; jefe.dmgMult = 1; esc._jefeHp = 20;
+  esc.floatTxt = () => {};
+  esc.mobAbility(jefe, 500, 1000, esc.hero);
+  ok("la fase visual de furia usa el 25% del asalto aunque la vida local siga llena", jefe.enraged && jefe.dmgMult === 1.25);
 }
 
 console.log("\nLA PERSECUCIÓN   (Chase Opponent: el granjero camina solo hasta su distancia de arma)");
@@ -192,8 +229,9 @@ console.log("\nEL CARTEL DE COMBATE NO PROMETE UNA TECLA QUE NO SIRVE");
     textContent: "", clases: new Set(),
     classList: { add(c) { prompt.clases.add(c); }, remove(c) { prompt.clases.delete(c); } }
   };
+  const cuerpo = { abierto: false, classList: { contains: c => c === "show" && cuerpo.abierto } };
   const getAntes = ctx.document.getElementById;
-  ctx.document.getElementById = id => id === "prompt" ? prompt : getAntes(id);
+  ctx.document.getElementById = id => id === "prompt" ? prompt : (id === "cuerpo-panel" ? cuerpo : getAntes(id));
 
   const puertaAntes = esc.porQueNoAtaca;
   esc.porQueNoAtaca = () => "Sin flechas en el contenedor — las que dejaste en la granja no cuentan acá";
@@ -204,6 +242,25 @@ console.log("\nEL CARTEL DE COMBATE NO PROMETE UNA TECLA QUE NO SIRVE");
   esc.porQueNoAtaca = () => null;
   esc.updatePrompt();
   ok("con un arma útil, el CTA de ataque se conserva", /Atacar Rata \(30 de vida\) · \[E\]/.test(prompt.textContent), prompt.textContent);
+
+  const jefe = mob(30, 0);
+  jefe.hp = 900; jefe.def = { label: "Dragón de las Cavernas", hp: 900, boss: true };
+  esc.monsters = [jefe]; esc._jefeHp = 60; esc._jefeMax = 100;
+  esc.updatePrompt();
+  ok("el CTA del Dragón aclara que su vida visible es la del asalto", /Atacar Dragón de las Cavernas \(60 de vida del asalto\) · \[E\]/.test(prompt.textContent), prompt.textContent);
+
+  /* Las ventanas normales de escritorio dejan el mundo vivo, pero el aviso contextual no debe
+     quedar escrito debajo de ellas. En la granja esta puerta ya existía; la Zona necesitaba la
+     misma regla para que el CTA no parezca una acción disponible a través de un panel. */
+  const queryAntes = ctx.document.querySelector;
+  ctx.document.querySelector = sel => sel === ".ov.show" ? {} : queryAntes(sel);
+  esc.updatePrompt();
+  ok("una ventana normal de PC oculta el CTA de combate que quedaría detrás", !prompt.clases.has("show"));
+  ctx.document.querySelector = queryAntes;
+
+  cuerpo.abierto = true;
+  esc.updatePrompt();
+  ok("el panel de cadáver del PC también oculta el CTA de la misma franja", !prompt.clases.has("show"));
 
   esc.porQueNoAtaca = puertaAntes;
   ctx.document.getElementById = getAntes;

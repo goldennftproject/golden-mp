@@ -2,8 +2,9 @@
    Discord: « usé un hacha por primera vez y le quité media vida a la rata con skill de inicio…
    con hacha de madera no debería ». Medido: el hacha de madera pegaba 62 % más que la espada.
    Contratos: espada, hacha y mazo de madera tiran lo mismo (3-5) y no llevan bono de tipo;
-   desde piedra cada una recupera su identidad; el arco no cambia; y contra la rata del día 1
-   ninguna de las tres pega media vida ni en su mejor tirada.
+   desde piedra cada una recupera su identidad; y contra la rata del día 1 ninguna de las tres
+   pega media vida ni en su mejor tirada. (El 22/9 el arco « no cambiaba »; el 26/9 el diseñador
+   pidió bajarle el daño y la madera pasó a ser un palo también para él — ver test-arco-daño.js.)
      node tools/test-arma-de-madera.js                                                          */
 const path = require("path"), vm = require("vm");
 const RAIZ = path.join(__dirname, "..");
@@ -17,7 +18,7 @@ const MM = g("ARM_MINMAX"), BV = g("ARM_BUFFVAL");
 ok("espada, hacha y mazo de madera tiran 3-5", ["espada", "hacha", "mazo"].every(t => MM[t][0][0] === 3 && MM[t][0][1] === 5));
 ok("y sin bono de tipo en madera", ["espada", "hacha", "mazo"].every(t => BV[t][0] === 0));
 ok("desde piedra, cada una tiene lo suyo", MM.hacha[1][1] > MM.espada[1][1] && BV.hacha[1] > 0 && BV.mazo[1] > 0 && BV.espada[1] > 0);
-ok("el arco no cambió", MM.arco[0][0] === 2 && MM.arco[0][1] === 4 && BV.arco[0] === 1);
+ok("el arco de madera también es un palo (26/9)", MM.arco[0][0] === 3 && MM.arco[0][1] === 5 && BV.arco[0] === 0);
 
 console.log("\nCONTRA LA RATA DEL DÍA 1 (nivel 1, skill 1, 3.000 golpes por arma)\n");
 G.weapons = { hacha_madera: { dur: 50 }, espada_madera: { dur: 50 }, mazo_madera: { dur: 50 } }; G.gear = G.gear || {}; G.combatXp = 0; G.skills = G.skills || {}; G.buffs = [];

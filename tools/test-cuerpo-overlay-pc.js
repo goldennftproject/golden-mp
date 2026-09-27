@@ -59,5 +59,13 @@ console.log("\nLA JERARQUÍA VISUAL EXIGE ESE CIERRE\n");
   ok("la puerta central sólo cierra el cuerpo en PC", /window\.innerWidth > 640[\s\S]{0,180}cerrarCuerpoPanelPc\(\)/.test(UI.slice(ini, fin)));
 }
 
+console.log("\nESCAPE CIERRA EL BOTÍN DE ESCRITORIO\n");
+{
+  const desde = UI.indexOf('if (key === "escape")');
+  const hasta = UI.indexOf('if (key === "m")', desde);
+  const escape = desde >= 0 && hasta >= 0 ? UI.slice(desde, hasta) : "";
+  ok("usa la salida real del cadáver antes de cerrar overlays", /window\.innerWidth > 640 && typeof cerrarCuerpoPanelPc === "function" && cerrarCuerpoPanelPc\(\)\) return;/.test(escape));
+}
+
 console.log(fallos ? "\n" + fallos + " fallo(s)\n" : "\nTodo en orden: el botín no captura una ventana nueva en PC.\n");
 process.exit(fallos ? 1 : 0);

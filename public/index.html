@@ -105,7 +105,7 @@
      tira de recientes): el equipo abre su panel y los modos se tocan. */
   #combate{position:fixed;right:8px;top:236px;z-index:6;width:126px;
     background:rgba(20,14,8,.9);border:2px solid #6b5327;border-radius:10px;padding:6px 7px;
-    box-shadow:0 4px 14px rgba(0,0,0,.45)}
+    box-shadow:0 4px 14px rgba(0,0,0,.45);transition:right .15s ease}
   /* En PC la Mochila puede tener cinco filas: el muelle se ancla justo debajo del morral que
      esté dibujado, no a una altura que solo servía para la Bolsa de ocho huecos. Si la ventana
      es baja, el propio muelle se desplaza por dentro en vez de tapar el contenedor. */
@@ -157,7 +157,7 @@
      dentro de la Zona Negra: en la granja se vacía solo y una mochila vacía sería ruido. */
   #morral{position:fixed;right:8px;top:96px;z-index:6;width:126px;pointer-events:none;
     background:rgba(20,14,8,.9);border:2px solid #6b5327;border-radius:10px;padding:6px 7px;
-    box-shadow:0 4px 14px rgba(0,0,0,.45)}
+    box-shadow:0 4px 14px rgba(0,0,0,.45);transition:right .15s ease}
   .mor-tit{font-size:11px;font-weight:800;color:#f2ead5;margin-bottom:5px;text-align:center}
   .mor-tit.lleno{color:#ffb4ab}
   .mor-huecos{display:grid;grid-template-columns:repeat(4,1fr);gap:4px}
@@ -210,6 +210,9 @@
      la columna de decisiones. En móvil sigue exactamente en su posición compacta. */
   @media(min-width:641px){
     #recientes.menu-abierto{right:208px}
+    /* El menú ocupa 190 px desde el borde derecho de 10 px. Morral y combate tienen la misma
+       columna: a 208 px queda el hueco visual de 8 px y no pierden clics detrás del menú. */
+    #morral.menu-abierto,#combate.menu-abierto{right:208px}
     /* El carrete ocupa esta misma columna derecha. Los recientes son un recordatorio pasivo:
        mientras se pesca ceden el sitio completo al minijuego y vuelven al terminar. */
     #recientes.pesca-activa{display:none !important}
@@ -245,6 +248,9 @@
   .gmi.destacada.listo{animation:misPulso 1.6s ease-in-out infinite}
   @keyframes misPulso{0%,100%{box-shadow:0 0 0 0 rgba(255,215,106,.0)}50%{box-shadow:0 0 0 3px rgba(255,215,106,.45)}}
   .ov.show{display:block}
+  /* La confirmación es modal sólo en PC: captura el fondo para no activar controles del panel
+     que queda debajo, pero móvil conserva su interacción compacta existente. */
+  @media(min-width:641px){#ov-confirm.show{pointer-events:auto;background:rgba(12,7,2,.26)}}
   .card{background:#a8622e url("assets/ui/wood_bg.png?a=5") repeat;background-size:220px auto;background-clip:border-box;border-radius:14px;color:#f6ecce;padding:14px 16px;width:min(440px,92%);box-shadow:0 20px 50px rgba(0,0,0,.45);position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);pointer-events:auto;
     border:18px solid transparent;border-image:url("assets/ui/panel_wood.png?a=4") 30 round;image-rendering:pixelated}
   .card h3,.card .sub,.cost{text-shadow:0 1px 0 rgba(40,22,6,.45)}
@@ -538,8 +544,11 @@
   .gmi b.key{margin-left:auto;font-size:11px;background:#161f12;border:1px solid #4a5a3a;color:#cbbf9f;border-radius:6px;padding:1px 6px}
   /* 31/8: EL CARRETE, de vuelta (today.docx) — la barra de la Pesca v2. Medidas FIJAS (regla:
      ninguna interfaz cambia de tamaño al interactuar); solo se mueven la zona, el pez y el relleno. */
-  #pesca-mini{position:fixed;right:16px;top:50%;transform:translateY(-50%);z-index:6;display:none;flex-direction:column;align-items:center;gap:6px;pointer-events:none}
+  #pesca-mini{position:fixed;right:16px;top:50%;transform:translateY(-50%);z-index:6;display:none;flex-direction:column;align-items:center;gap:6px;pointer-events:none;transition:right .15s ease}
   #pesca-mini.show{display:flex}
+  /* Si el menú se abre durante el carrete, éste conserva su carril y sigue legible: no puede
+     quedar debajo de una lista de botones justo mientras el jugador está corrigiendo tensión. */
+  @media(min-width:641px){#pesca-mini.menu-abierto{right:208px}}
   #pesca-mini .pm-cabeza{background:rgba(38,51,31,.94);border:1px solid #3c4d31;color:#f2ead5;font-weight:700;font-size:12px;border-radius:8px;padding:4px 10px;width:170px;text-align:center}
   #pesca-mini .pm-cuerpo{display:flex;gap:8px;align-items:stretch}
   #pesca-mini .pm-pista{position:relative;width:38px;height:190px;background:rgba(20,34,48,.88);border:2px solid #3c4d31;border-radius:10px;overflow:hidden}
@@ -2125,7 +2134,7 @@
     // 15/8: VERSIÓN DE BUILD — rompe la caché del navegador en cada deploy (sin esto, el
     // jugador seguía corriendo el state.js viejo aunque el servidor tuviera el nuevo).
     // deploy.bat la actualiza sola (busca GF_BUILD y pone la fecha/hora del deploy).
-    const GF_BUILD = "20260926-225258";
+    const GF_BUILD = "20260927-003454";
     const files = ["game/config.js","game/nav.js","game/audio.js","game/state.js","game/save.js","game/ui.js","game/boot.js",
                    "game/farm.js","game/forest.js","game/plaza.js","game/main.js","game/update.js"];
     /* 24/8 — SE BAJAN TODOS A LA VEZ, SE EJECUTAN EN FILA (dirección: « sigue tardando en
