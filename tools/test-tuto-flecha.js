@@ -230,7 +230,11 @@ console.log("\nLA FLECHA CAMBIA EN EL MISMO GESTO DEL MENÚ");
   ok("la tira de últimos usados se corre del borde ocupado por el menú en PC", s.recientesAlAbrir && !s.recientesAlCerrar,
     JSON.stringify(s));
   const HTML = fs.readFileSync("public/index.html", "utf8");
-  ok("la separación de la tira conserva un hueco de 8 px junto al menú", /@media\(min-width:641px\)\{#recientes\.menu-abierto\{right:208px\}\}/.test(HTML));
+  /* 26/9: la regla vive ahora dentro del bloque @media(min-width:641px) de escritorio (varias
+     reglas por bloque), no en una línea propia; se comprueba la regla y que esté bajo ese bloque. */
+  const iRegla = HTML.indexOf("#recientes.menu-abierto{right:208px}");
+  const iBloque = HTML.lastIndexOf("@media(min-width:641px)", iRegla);
+  ok("la separación de la tira conserva un hueco de 8 px junto al menú", iRegla > 0 && iBloque > 0 && HTML.slice(iBloque, iRegla).indexOf("@media(max-width") < 0);
 }
 
 console.log("\nLA FLECHA DEL MENÚ SIGUE SIENDO VISIBLE EN EL BORDE SUPERIOR");

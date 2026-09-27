@@ -2173,6 +2173,8 @@ function invCellClick(i) {
     else { G.gear.arma = d.key; toast(((ARM_DEF[d.key] || {}).label || "Arma") + " equipada"); if (typeof tutoEvent === "function") tutoEvent("equiparm"); }
     if (typeof applyCombatHp === "function") applyCombatHp();
     refreshHud();
+    if (typeof syncSlots === "function") syncSlots();
+    refreshInv();   // 26/9: la marca « en uso » cambia de casilla sin cerrar la bolsa
     if (isOpen("ov-equip")) refreshEquip(); if (isOpen("ov-forge")) refreshForge();
     if (typeof saveFarm === "function") saveFarm();
   }
@@ -2185,7 +2187,7 @@ function invCellClick(i) {
     if (!(G.res.flecha > 0)) { toast("No te quedan flechas"); return; }
     G.gear.municion = !G.gear.municion;
     toast(G.gear.municion ? "Flechas equipadas — el arco ya puede disparar" : "Flechas guardadas");
-    refreshHud(); if (isOpen("ov-equip")) refreshEquip();
+    refreshHud(); refreshInv(); if (isOpen("ov-equip")) refreshEquip();
     if (typeof refreshCombate === "function") refreshCombate();
     if (typeof saveFarm === "function") saveFarm();
   }
@@ -2236,7 +2238,13 @@ function hotItemExists(d) {
 // 16/8: el anillo azul de "pico equipado" solo cuando hay 2+ picos — con uno solo
 // no distingue nada y parecía un borde fuera de lugar (captura del director)
 function pickEqCls(d) {
-  if (!d || d.kind !== "pick" || G.picks.eq !== d.key) return "";
+  if (!d) return "";
+  /* 26/9 (dirección, con vídeo): « permitir que el arma se cambie automático sin necesidad de
+     cerrar y abrir la bolsa ». La bolsa marcaba el pico equipado pero NUNCA el arma: tocabas el
+     arco, salía el toast y la grilla seguía igual — parecía que no había pasado nada. Ahora el
+     arma en uso lleva la misma marca que el pico, y el clic repinta la bolsa en el acto. */
+  if (d.kind === "arm") return (G.gear && G.gear.arma === d.key) ? " eq" : "";
+  if (d.kind !== "pick" || G.picks.eq !== d.key) return "";
   const varios = Object.keys(G.picks.owned || {}).filter(k => G.picks.owned[k]).length > 1;
   return varios ? " eq" : "";
 }
