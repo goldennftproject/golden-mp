@@ -186,6 +186,7 @@ console.log("\nLA PESCA DICE EL CEBO REAL Y RESPETA SU PUERTA");
   const pesca = esc.textoPescaPC();
   ok("anuncia la carnada seleccionada, no siempre una lombriz", /1 larva de luz · tenés 2/.test(pesca), pesca);
   ok("y hace visible el recargo cuando ya se acabó el cupo", /el próximo cuesta 5 plata/.test(pesca), pesca);
+  ok("también nombra la entrada de Aparejos de escritorio", /\[R\].*aparejos/.test(pesca), pesca);
 
   puerta(() => ({ ok: false, toast: "Tu caña está rota — reparala en Aparejos" }));
   const txt = pinta(esc);
@@ -226,6 +227,43 @@ console.log("\nLA SIEMBRA DE PC NOMBRA LO QUE REALMENTE VA A PLANTAR");
   ok("el cartel dice Papa en vez de una selección agotada", txt === "Plantar Papa", txt);
   ok("mirar el cartel no cambia todavía la semilla elegida", G.selSeed === "sin_semilla", G.selSeed);
   G.selSeed = anterior.sel; G.seeds = anterior.seeds; G.hotbar = anterior.hotbar; G.hotSel = anterior.hotSel;
+}
+
+console.log("\nR ABRE APAREJOS SÓLO EN EL CONTEXTO REAL DE PESCA");
+{
+  const ancho = ctx.innerWidth, previo = { uiOpen: ctx.GF.uiOpen, editMode: ctx.GF.editMode, noWalk: ctx.GF.NO_WALK };
+  let aperturas = 0;
+  const esc = Object.create(g("FarmScene").prototype);
+  Object.assign(esc, {
+    action: null, input: { activePointer: { worldX: 100, worldY: 100 } },
+    nearPond: () => true, pondDist: () => 99
+  });
+  try {
+    ctx.innerWidth = 1280;
+    Object.assign(ctx.GF, { uiOpen: false, editMode: false, NO_WALK: false });
+    Object.assign(ctx, { __ventanaAparejos: false, __controlAparejos: false, __ruedaAparejos: false });
+    ctx.pescaAparejosAbrir = () => { aperturas++; };
+    vm.runInContext("anyOvOpen = () => !!__ventanaAparejos; controlDeTecladoActivo = () => !!__controlAparejos; selectorContextualPcAbierto = () => !!__ruedaAparejos;", ctx);
+    esc.abrirAparejosConTeclado();
+    ok("junto a la laguna abre la misma gestión de aparejos", aperturas === 1);
+
+    ctx.__ventanaAparejos = true; esc.abrirAparejosConTeclado();
+    ctx.__controlAparejos = true; ctx.__ventanaAparejos = false; esc.abrirAparejosConTeclado();
+    ctx.__ruedaAparejos = true; ctx.__controlAparejos = false; esc.abrirAparejosConTeclado();
+    esc.action = { kind: "fish" }; ctx.__ruedaAparejos = false; esc.abrirAparejosConTeclado();
+    ok("una ventana, un campo, una decisión o una acción no reciben R por detrás", aperturas === 1);
+
+    esc.action = null; ctx.GF.NO_WALK = true; esc.nearPond = () => false; esc.pondDist = () => 0;
+    esc.abrirAparejosConTeclado();
+    ok("en clic directo R usa el agua bajo el cursor", aperturas === 2);
+
+    ctx.innerWidth = 640; esc.abrirAparejosConTeclado();
+    ok("móvil no adquiere un atajo nuevo", aperturas === 2);
+  } finally {
+    ctx.innerWidth = ancho;
+    Object.assign(ctx.GF, { uiOpen: previo.uiOpen, editMode: previo.editMode, NO_WALK: previo.noWalk });
+    vm.runInContext("anyOvOpen = () => false; controlDeTecladoActivo = () => false; selectorContextualPcAbierto = () => false;", ctx);
+  }
 }
 
 ctx.document.getElementById = getAntes;

@@ -1087,11 +1087,12 @@ class FarmScene extends Phaser.Scene {
     this.keys = this.input.keyboard.addKeys({
       up:"W", down:"S", left:"A", right:"D",
       aup:"UP", adown:"DOWN", aleft:"LEFT", aright:"RIGHT",
-      act:"E", act2:"SPACE",
+      act:"E", act2:"SPACE", gear:"R",
     }, false);   // enableCapture=false: no bloquea el tipeo en el chat
     // (la M ya no teletransporta a la plaza — ahora abre/cierra el menú, detalles 29/7)
     this.keys.act.on("down", () => this.doInteract());
     this.keys.act2.on("down", () => this.doInteract());
+    this.keys.gear.on("down", () => this.abrirAparejosConTeclado());
 
     // La granja YA está dibujada: recién ahora se saca la pantalla de carga y se abren las
     // ventanas que esperaban (cofre diario). Todo aparece junto, no una cosa antes que la otra.
@@ -1375,7 +1376,7 @@ class FarmScene extends Phaser.Scene {
     const extra = (typeof lanceExtraPrecio === "function") ? lanceExtraPrecio() : 0;
     if (typeof lancesHoy === "function" && typeof PESCA_LANCES_DIA === "number")
       texto += " · lances " + lancesHoy() + "/" + PESCA_LANCES_DIA + (extra > 0 ? " — el próximo cuesta " + extra + " plata" : " gratis hoy");
-    return texto + " · clic derecho: aparejos";
+    return texto + " · [R] / clic derecho: aparejos";
   }
 
   textoPromptPC(o) {
@@ -1510,6 +1511,21 @@ class FarmScene extends Phaser.Scene {
       return;
     }
     const o = this.nearestInteract(); if (o) this.interactWith(o); else if (this.nearPond()) this.tryFish();
+  }
+
+  /* Aparejos no es otra acción del agua: es la gestión de cebo, caña y nasas. R da una entrada
+     equivalente al clic derecho, pero sólo cuando el contexto de pesca está realmente bajo el
+     jugador (o bajo el cursor en la modalidad de clic directo) y ninguna interfaz posee la tecla. */
+  abrirAparejosConTeclado() {
+    if (typeof window === "undefined" || window.innerWidth <= 640 || GF.uiOpen || this.action || GF.editMode ||
+        (typeof controlDeTecladoActivo === "function" && controlDeTecladoActivo()) ||
+        (typeof selectorContextualPcAbierto === "function" && selectorContextualPcAbierto()) ||
+        (typeof anyOvOpen === "function" && anyOvOpen())) return;
+    const pt = this.input && this.input.activePointer;
+    const juntoAlAgua = GF.NO_WALK
+      ? !!(pt && typeof this.pondDist === "function" && this.pondDist(pt.worldX, pt.worldY) < 1.05)
+      : !!(typeof this.nearPond === "function" && this.nearPond());
+    if (juntoAlAgua && typeof pescaAparejosAbrir === "function") pescaAparejosAbrir(true);
   }
 
   interactWith(o) {
@@ -2359,6 +2375,26 @@ class FarmScene extends Phaser.Scene {
       }
     }
   }
+  /* La guía no debe confundir un nodo agotado con uno a medio cortar: en el primer caso puede
+     sugerir otra tarea de granja; en el segundo el jugador tiene que terminar el gesto. Estas dos
+     preguntas se comparten con state.js para que el cartel y la mariposa lean la misma realidad. */
+  nodoGuiaUsable(o, ahora, eqPk) {
+    return !(o.readyAt && o.readyAt > ahora)
+      && !((o.golpes || 0) > 0)
+      && !(typeof nodoBloqueado === "function" && nodoBloqueado(o))
+      && (o.type !== "ore" || (eqPk && PICK_DEF[eqPk].mineTier >= (ORE_DEF[o.ore] ? ORE_DEF[o.ore].tier : 99)));
+  }
+  nodoGuiaEnEspera(target) {
+    if (target !== "tree" && target !== "rock") return false;
+    const tipos = target === "rock" ? ["rock", "ore"] : ["tree"];
+    const ahora = nowMs(), eqPk = (typeof equippedPick === "function") ? equippedPick() : null;
+    const candidatos = (this.objs || []).filter(o => tipos.includes(o.type) && !o.locked && !o.oculto &&
+      !(typeof nodoBloqueado === "function" && nodoBloqueado(o)) &&
+      (o.type !== "ore" || (eqPk && PICK_DEF[eqPk].mineTier >= (ORE_DEF[o.ore] ? ORE_DEF[o.ore].tier : 99))));
+    /* Sólo el enfriamiento activa el desvío. Un nodo parcialmente golpeado sigue pidiendo su
+       segundo/tercer clic, y un nodo bloqueado no se vende como algo que "vuelve solo". */
+    return candidatos.length > 0 && candidatos.every(o => o.readyAt && o.readyAt > ahora);
+  }
   // flecha del tutorial: triángulo dorado que rebota sobre el objetivo del paso actual
   updateTutoArrow() {
     if (this.tutoArrow) { this.tutoArrow.destroy(); this.tutoArrow = null; if (this.tutoTw) { this.tutoTw.stop(); this.tutoTw = null; } }
@@ -2373,20 +2409,19 @@ class FarmScene extends Phaser.Scene {
     // se señala si se puede usar YA — sin cooldown, sin freno de nivel y con pico del tier.
     // Si todo está enfriándose no se señala ninguno: la madurez avisa sola cuando vuelve.
     const ahora = nowMs(), eqPk = (typeof equippedPick === "function") ? equippedPick() : null;
-    const usable = (o) => !(o.readyAt && o.readyAt > ahora)
-      && !((o.golpes || 0) > 0)   // a medio talar/picar: tampoco (15/8)
-      && !(typeof nodoBloqueado === "function" && nodoBloqueado(o))
-      && (o.type !== "ore" || (eqPk && PICK_DEF[eqPk].mineTier >= (ORE_DEF[o.ore] ? ORE_DEF[o.ore].tier : 99)));
+    const usable = (o) => this.nodoGuiaUsable(o, ahora, eqPk);
     if (st.target === "plot") {
       /* La parcela que señala tiene que ser la que sirve para ESTE gesto. Mandar a la primera
          tierra desbloqueada era suficiente para plantar, pero durante la cosecha podía caer en
          una parcela seca mientras la papa lista estaba al lado. */
       const plots = (this.plots || []).filter(o => o.state !== "locked");
-      const pl = st.id === "harvest"
+      const pl = st.guiaPlot === "ready" || st.id === "harvest"
         ? (plots.find(o => o.state === "ready") || plots.find(o => o.state === "growing") || plots[0])
-        : st.id === "plant"
+        : st.guiaPlot === "dry" || st.id === "plant"
           ? (plots.find(o => o.state === "dry") || plots[0])
-          : plots[0];
+          : st.guiaPlot === "growing"
+            ? (plots.find(o => o.state === "growing") || plots[0])
+            : plots[0];
       if (pl) { x = pl.cx; y = pl.by - GF.TILE * 0.9; bottomY = pl.by + 5; }
     }
     else if (st.target === "ore") { const o = (this.objs || []).find(o => o.type === "ore" && !o.locked && usable(o)); if (o) { x = o.cx; y = o.by - (o.sprite ? o.sprite.displayHeight : 60) - 10; bottomY = o.by + 5; } }

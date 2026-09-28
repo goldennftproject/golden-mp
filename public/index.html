@@ -577,6 +577,8 @@
   #pesca-mini .pm-prog{position:relative;width:10px;height:190px;background:rgba(38,51,31,.88);border:2px solid #3c4d31;border-radius:6px;overflow:hidden}
   #pesca-mini .pm-prog i{position:absolute;left:0;right:0;bottom:0;height:40%;background:linear-gradient(180deg,#ffd76a,#c79a2b)}
   #pesca-mini .pm-pie{background:rgba(38,51,31,.85);border-radius:6px;color:#cbbf9f;font-size:10px;padding:2px 8px;width:170px;text-align:center}
+  #pesca-mini .pm-pie-pc{display:none}
+  @media(min-width:641px){#pesca-mini .pm-pie-touch{display:none}#pesca-mini .pm-pie-pc{display:inline}}
   /* 24/8: LA COCINA EN DOS PANELES (referencia del diseñador: Sunflower Land).
      Menos letra, más íconos. Medidas FIJAS: elegir otra receta no mueve nada de sitio —
      el panel derecho tiene alto mínimo y la grilla no cambia de tamaño (regla de la casa). */
@@ -1801,7 +1803,7 @@
       <div class="pm-pista"><div class="pm-zona" id="pm-zona"></div><img class="pm-pez" id="pm-pez" src="assets/farm/fish_comun.png?a=7" draggable="false" alt=""></div>
       <div class="pm-prog"><i id="pm-fill"></i></div>
     </div>
-    <div class="pm-pie">mantené apretado: la zona sube · soltá: baja</div>
+    <div class="pm-pie"><span class="pm-pie-touch">mantené apretado: la zona sube · soltá: baja</span><span class="pm-pie-pc">mantené clic o Espacio: la zona sube · soltá: baja</span></div>
   </div>
 
   <div class="ov" id="ov-logros"><div class="card" style="width:min(560px,94%)">
@@ -2159,7 +2161,7 @@
     // 15/8: VERSIÓN DE BUILD — rompe la caché del navegador en cada deploy (sin esto, el
     // jugador seguía corriendo el state.js viejo aunque el servidor tuviera el nuevo).
     // deploy.bat la actualiza sola (busca GF_BUILD y pone la fecha/hora del deploy).
-    const GF_BUILD = "20260927-225958";
+    const GF_BUILD = "20260928-163402";
     const files = ["game/config.js","game/nav.js","game/audio.js","game/state.js","game/save.js","game/ui.js","game/boot.js",
                    "game/farm.js","game/forest.js","game/plaza.js","game/main.js","game/update.js"];
     /* 24/8 — SE BAJAN TODOS A LA VEZ, SE EJECUTAN EN FILA (dirección: « sigue tardando en

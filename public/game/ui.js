@@ -1119,7 +1119,7 @@ function pescaV4Abrir() {
      sorteara al terminar, un jugador podría cerrar la pestaña al ver algo que no le gusta y
      volver a tirar con la misma lombriz. Decidido al pagar, el resultado ya es suyo…
      …si lo saca: el carrete decide si este pez llega a la mano, nunca cuál es. */
-  P4 = { cana: canaHoy, cebo: ceb, t: 0,
+  P4 = { cana: canaHoy, cebo: ceb, t: 0, holdTeclado: false,
          dur: LANCE_ESPERA[0] + Math.random() * (LANCE_ESPERA[1] - LANCE_ESPERA[0]),
          r: lanceSacar(canaHoy, { cebo: ceb }) };
   const sc = pescaEscena();
@@ -1175,11 +1175,54 @@ function pescaV4Paso(dt, hold) {
     }
     return;
   }
-  const rez = carreteTick(P4.carrete, dt, !!hold);
+  /* El mouse mantiene `hold` en la escena; Espacio aporta la misma presión desde escritorio.
+     Son dos fuentes independientes: soltar Espacio no puede cortar un clic que el jugador aún
+     sostiene. Si se abre una ventana mientras una tecla queda baja, se limpia esa fuente para
+     que no se reanude sola al volver al agua. */
+  if (P4.holdTeclado && !pescaV4CarreteTecladoDisponible()) P4.holdTeclado = false;
+  const rez = carreteTick(P4.carrete, dt, !!hold || !!P4.holdTeclado);
   const sc = pescaEscena();
   if (sc && sc.pescaPanelSync) sc.pescaPanelSync();
   if (rez === "gana") pescaV4Resolver();
   else if (rez === "perdido") pescaV4Escapar();
+}
+
+/* La pulseada vive fuera de los paneles. Las tarjetas normales fueron diseñadas para convivir
+   con el mundo, pero una decisión contextual o modal sí posee Espacio: el carrete no puede
+   atravesarla ni robar la activación nativa de un control enfocado. */
+function pescaV4CarreteTecladoDisponible(ev) {
+  if (typeof window === "undefined" || window.innerWidth <= 640 || !P4 || !P4.carrete) return false;
+  if (typeof selectorContextualPcAbierto === "function" && selectorContextualPcAbierto()) return false;
+  if (typeof isOpen === "function" && (isOpen("ov-confirm") || isOpen("ov-cuanto"))) return false;
+  if (typeof document !== "undefined" && document.querySelector && document.querySelector(".ov.bloquea.show")) return false;
+  if (typeof pescaAparejosAbierto === "function" && pescaAparejosAbierto()) return false;
+  if (typeof controlDeTecladoActivo === "function" && controlDeTecladoActivo(ev && ev.target)) return false;
+  const accionUi = ev && ev.target && ev.target.closest && ev.target.closest("button, a, [role=button]");
+  return !accionUi;
+}
+function pescaV4CarreteTecladoEnEvento(ev) {
+  const tecla = String((ev && ev.key) || "").toLowerCase();
+  if (tecla !== " " && tecla !== "spacebar") return false;
+  if (!pescaV4CarreteTecladoDisponible(ev)) return false;
+  P4.holdTeclado = true;
+  if (ev && typeof ev.preventDefault === "function") ev.preventDefault();
+  if (ev && typeof ev.stopPropagation === "function") ev.stopPropagation();
+  return true;
+}
+function pescaV4CarreteSoltarTecladoEnEvento(ev) {
+  const tecla = String((ev && ev.key) || "").toLowerCase();
+  if (tecla !== " " && tecla !== "spacebar") return false;
+  if (!P4 || !P4.holdTeclado) return false;
+  P4.holdTeclado = false;
+  if (ev && typeof ev.preventDefault === "function") ev.preventDefault();
+  return true;
+}
+function pescaV4CarreteSoltarTeclado() {
+  if (P4) P4.holdTeclado = false;
+}
+function pescaV4CarreteSoltarAlPerderFoco() {
+  pescaV4CarreteSoltarTeclado();
+  const sc = pescaEscena(); if (sc) sc.lanceHold = false;
 }
 
 /* el pez ganó la pelea: se fue, y la lombriz con él (dirección, 31/8). No se anota nada —
@@ -1253,7 +1296,15 @@ function pescaV4Pintar() {
   pescaV4Canas();
   pescaV4Nasas();
 }
-function pescaAparejosAbrir() {
+function enfocarAparejosPc(el) {
+  if (!el || (typeof window !== "undefined" && window.innerWidth <= 640) || typeof el.querySelectorAll !== "function") return;
+  const cebos = Array.from(el.querySelectorAll("[data-p4cebo]"));
+  const boton = cebos.find(b => b.classList && b.classList.contains("puesto") && !b.disabled) ||
+    cebos.find(b => !b.disabled) || el.querySelector("#p4-cerrar");
+  if (!boton || typeof boton.focus !== "function") return;
+  try { boton.focus({ preventScroll: true }); } catch (e) { boton.focus(); }
+}
+function pescaAparejosAbrir(desdeTeclado) {
   if (hayOvPcAbierto()) { toast("Cerrá la ventana antes de abrir los aparejos"); return; }
   const el = $("pesca4"); if (!el) return;
   pescaV4Pintar();
@@ -1261,6 +1312,7 @@ function pescaAparejosAbrir() {
   if (typeof placePescaAparejosPc === "function") placePescaAparejosPc();
   if (typeof GF !== "undefined") GF.uiOpen = true;
   const x = $("p4-cerrar"); if (x) x.onclick = pescaAparejosCerrar;
+  if (desdeTeclado) enfocarAparejosPc(el);
 }
 function pescaAparejosCerrar() {
   const el = $("pesca4"); if (el) el.classList.remove("show");
@@ -1426,8 +1478,32 @@ function canaUsosHtml(k, puesta) {
    lo que caduca va primero, lo que espera va detrás. Poner la tienda de Escamas de entrada
    haría que el jugador de las tres visitas se perdiera la marea por mirar escaparates. */
 var LONJA_TAB = "pedido";   // 31/8: la pestaña se fue al tablón del pueblo y VOLVIÓ el mismo día — dirección: «en el tablón de pesca quedan mejores»
+var LONJA_FOCO_PC = null;
+/* Venta, pedido y tienda rehacen el cuerpo de la Lonja después de actuar. Si la acción nació
+   con Enter/Espacio, el botón viejo desaparece y Tab cae al documento: guardamos sólo esa ruta
+   de teclado y la reponemos sobre su reemplazo (o sobre la pestaña si ya no queda nada). */
+function lonjaAccionDesdeTeclado(ev) {
+  return !!(ev && (ev.type === "keydown" || ev.detail === 0));
+}
+function lonjaGuardarFocoPc(ev, tipo, valor) {
+  LONJA_FOCO_PC = lonjaAccionDesdeTeclado(ev) && typeof window !== "undefined" && window.innerWidth > 640
+    ? { tab: LONJA_TAB, tipo: tipo, valor: String(valor) } : null;
+}
+function lonjaReponerFocoPc(caja, tipo, dato) {
+  const foco = LONJA_FOCO_PC;
+  if (!foco || foco.tab !== LONJA_TAB || foco.tipo !== tipo) return;
+  LONJA_FOCO_PC = null;
+  if (!caja || (typeof window !== "undefined" && window.innerWidth <= 640) || typeof caja.querySelectorAll !== "function") return;
+  const botones = Array.from(caja.querySelectorAll("[data-" + dato + "]"));
+  const boton = botones.find(b => String(b.dataset[dato]) === foco.valor && !b.disabled) ||
+    botones.find(b => !b.disabled) ||
+    (typeof document !== "undefined" && document.querySelector("#ov-lonja [data-ltab='" + LONJA_TAB + "']"));
+  if (!boton || typeof boton.focus !== "function") return;
+  try { boton.focus({ preventScroll: true }); } catch (e) { boton.focus(); }
+}
 function refreshLonja() {
   const caja = $("lonja-cuerpo"); if (!caja) return;
+  if (LONJA_FOCO_PC && LONJA_FOCO_PC.tab !== LONJA_TAB) LONJA_FOCO_PC = null;
   const esc = $("lonja-escamas");
   if (esc) esc.innerHTML = '<b>' + escamasLonja() + '</b> Escamas';
   const tit = $("lonja-titulo-vig");
@@ -1440,7 +1516,7 @@ function refreshLonja() {
      panel que se repinta tres veces por minuto eso se acumula. */
   document.querySelectorAll("#ov-lonja [data-ltab]").forEach(b => {
     b.classList.toggle("on", b.dataset.ltab === LONJA_TAB);
-    if (!b._lst) { b._lst = 1; b.onclick = () => { LONJA_TAB = b.dataset.ltab; refreshLonja(); }; }
+    if (!b._lst) { b._lst = 1; b.onclick = () => { LONJA_FOCO_PC = null; LONJA_TAB = b.dataset.ltab; refreshLonja(); }; }
   });
   if (LONJA_TAB === "pedido")  return lonjaPintaPedido(caja);
   if (LONJA_TAB === "tienda")  return lonjaPintaTienda(caja);
@@ -1453,7 +1529,10 @@ function refreshLonja() {
    se despachan de a uno, lo grande se piensa dos veces.) */
 function lonjaPintaVender(caja) {
   const claves = pecesDeLaBolsa().filter(k => (typeof PEZ_DEF !== "undefined") && PEZ_DEF[pezDeClave(k).id]);
-  if (!claves.length) { caja.innerHTML = '<div class="sub">No tenés peces en la bolsa — la laguna te espera.</div>'; return; }
+  if (!claves.length) {
+    caja.innerHTML = '<div class="sub">No tenés peces en la bolsa — la laguna te espera.</div>';
+    lonjaReponerFocoPc(caja, "vender", "pvend"); return;
+  }
   caja.innerHTML = '<div class="sub" style="margin-bottom:6px">Cada pieza vale según su peso.</div>' + claves.map(k => {
     const pc = pezDeClave(k), d = PEZ_DEF[pc.id], n = Math.floor(G.fish[k] || 0);
     const u = pezPrecio(pc.id, pc.kg == null ? undefined : pc.kg);
@@ -1462,7 +1541,10 @@ function lonjaPintaVender(caja) {
       '<div class="mds">Tenés ' + n + " · " + u + ' de plata c/u</div></div>' +
       '<button class="vbtn" data-pvend="' + k + '">Vender 1</button></div>';
   }).join("");
-  caja.querySelectorAll("[data-pvend]").forEach(b => b.onclick = () => { pezVender(b.dataset.pvend, 1); refreshLonja(); });
+  caja.querySelectorAll("[data-pvend]").forEach(b => b.onclick = (ev) => {
+    lonjaGuardarFocoPc(ev, "vender", b.dataset.pvend); pezVender(b.dataset.pvend, 1); refreshLonja();
+  });
+  lonjaReponerFocoPc(caja, "vender", "pvend");
 }
 /* 31/8, la ida y la vuelta en el mismo día — y vale la pena dejar el porqué de las dos:
    · IDA: Suren dijo « las escamas se obtienen en el tablero » y esto se mudó al tablón del
@@ -1476,15 +1558,17 @@ function lonjaPintaPedido(caja) {
   if (!act.length) {
     caja.innerHTML = '<div class="lonja-vacio">La Lonja no tiene nada para vos ahora mismo.<br>' +
       'Conseguí una caña que llegue a más bandas y volvé en la próxima marea.</div>';
+    lonjaReponerFocoPc(caja, "pedido", "lent");
     return;
   }
   /* los cuatro escalones, ordenados por lo que caduca antes. El de marea vence en horas y el de
      la captura del mes en semanas: mostrarlos al revés haría que el jugador de tres visitas se
      perdiera la marea por leer primero lo que puede esperar. */
   caja.innerHTML = act.map(lonjaFilaEscalon).join("");
-  caja.querySelectorAll("[data-lent]").forEach(b => b.onclick = () => {
-    if (lonjaEntregarEscalon(b.dataset.lent)) refreshLonja();
+  caja.querySelectorAll("[data-lent]").forEach(b => b.onclick = (ev) => {
+    if (lonjaEntregarEscalon(b.dataset.lent)) { lonjaGuardarFocoPc(ev, "pedido", b.dataset.lent); refreshLonja(); }
   });
+  lonjaReponerFocoPc(caja, "pedido", "lent");
 }
 /* una fila por escalón. Todas dicen lo mismo en el mismo orden —qué pide, cuánto te queda, qué
    vale suelto y qué paga la Lonja— porque la lección económica del sistema solo se aprende si
@@ -1574,9 +1658,10 @@ function lonjaPintaTienda(caja) {
       '</div>';
   }
   caja.innerHTML = h;
-  caja.querySelectorAll("[data-lcomp]").forEach(b => b.onclick = () => {
-    if (lonjaComprar(b.dataset.lcomp)) refreshLonja();
+  caja.querySelectorAll("[data-lcomp]").forEach(b => b.onclick = (ev) => {
+    if (lonjaComprar(b.dataset.lcomp)) { lonjaGuardarFocoPc(ev, "tienda", b.dataset.lcomp); refreshLonja(); }
   });
+  lonjaReponerFocoPc(caja, "tienda", "lcomp");
 }
 function tituloLonjaEnFoco(caja) {
   if (!caja || typeof document === "undefined" || (typeof window !== "undefined" && window.innerWidth <= 640)) return null;
@@ -2990,6 +3075,40 @@ function showSeedWheel(px, py, plot) {
 function hideSeedWheel() { const w = $("seedwheel"); if (w) w.classList.remove("show"); }
 
 /* ---- herrería: pestaña Craftear (picos sin tener + armas + flechas) y pestaña Reparar (todo lo tuyo) ---- */
+var FORGE_FOCO_PC = null, FORGE_FOCO_EN_ACCION = false;
+/* La Herrería recompone sus listas al craftear, reparar o equipar. La acción nativa de Enter
+   destruye por eso el botón que tenía foco. Se demora la reposición hasta que termina toda la
+   operación (incluidos los lotes ×5), para no devolverlo a una fila intermedia que se va a borrar
+   de nuevo. El mouse y móvil conservan su recorrido normal. */
+function forgeGuardarFocoPc(ev, selectores) {
+  FORGE_FOCO_PC = !!(ev && (ev.type === "keydown" || ev.detail === 0)) &&
+    typeof window !== "undefined" && window.innerWidth > 640
+    ? { selectores: Array.isArray(selectores) ? selectores.slice() : [] } : null;
+}
+function forgeReponerFocoPc(card) {
+  const foco = FORGE_FOCO_PC;
+  if (!foco || FORGE_FOCO_EN_ACCION) return;
+  FORGE_FOCO_PC = null;
+  if (!card || (typeof window !== "undefined" && window.innerWidth <= 640)) return;
+  let boton = null;
+  foco.selectores.some(sel => {
+    try { const el = card.querySelector(sel); if (el && !el.disabled) { boton = el; return true; } } catch (e) {}
+    return false;
+  });
+  const tab = card.querySelector(".forgetab.active:not(:disabled)");
+  const pane = tab && tab.dataset ? card.querySelector("#forge-pane-" + tab.dataset.forge) : null;
+  if (!boton && pane) boton = Array.from(pane.querySelectorAll("button")).find(b => !b.disabled) || null;
+  if (!boton) boton = tab || card.querySelector(".close:not(:disabled)");
+  if (!boton || typeof boton.focus !== "function") return;
+  try { boton.focus({ preventScroll: true }); } catch (e) { boton.focus(); }
+}
+function forgeAccionConFocoPc(ev, selectores, accion) {
+  forgeGuardarFocoPc(ev, selectores);
+  if (!FORGE_FOCO_PC) { accion(); return; }
+  FORGE_FOCO_EN_ACCION = true;
+  try { accion(); }
+  finally { FORGE_FOCO_EN_ACCION = false; forgeReponerFocoPc($("ov-forge")); }
+}
 function refreshForge() {
   const eq = G.picks.eq;
   let craft = "", repair = "";
@@ -3096,7 +3215,8 @@ function refreshForge() {
     const uok = canAfford(ARMAS_UNLOCK_COST) && G.plata >= ARMAS_UNLOCK_PLATA;
     armas += '<div class="forge-row"><div class="fic"><img src="' + GF.spr("sword") + '" onerror="this.outerHTML=\'⚔️\'"></div><div class="finfo"><div class="fnm">Sección de Armas cerrada</div><div class="fds">Habilitá la forja de armas pagando una única vez.</div><div class="fds">Costo: ' + ustr + '</div></div><div class="fbtns"><button class="green sm" ' + (uok ? "" : "disabled") + ' id="forge-unlock-armas">Desbloquear</button></div></div>';
     $("forge-armas").innerHTML = armas;
-    const fu = $("forge-unlock-armas"); if (fu) fu.onclick = () => unlockArmas();
+    const fu = $("forge-unlock-armas"); if (fu) fu.onclick = (ev) => forgeAccionConFocoPc(ev,
+      ["[data-carm='espada_madera']", "#forge-unlock-armas"], () => unlockArmas());
   }
   if (G.armasUnlocked) {   // doc maestro 2/8: 4 tipos × 5 rarezas con daño aleatorio y buff
     const BUFF_DESC = { espada: "de crítico (daño ×2)", hacha: "de la defensa ignorada", mazo: "de aturdir (pierde su golpe)", arco: "de daño/s por sangrado (3 s)" };
@@ -3133,26 +3253,72 @@ function refreshForge() {
   if (G.armasUnlocked) $("forge-armas").innerHTML = armas || '<div class="sub">Ya tenés todas las armas. Las flechas se siguen crafteando acá.</div>';
   $("forge-repair").innerHTML = repair;
   const card = $("ov-forge");
-  card.querySelectorAll("[data-craft]").forEach(b => b.onclick = () => craftPick(b.dataset.craft));
-  card.querySelectorAll("[data-craft5]").forEach(b => b.onclick = () => craftLote(craftPick, b.dataset.craft5, 5));
-  card.querySelectorAll("[data-equip]").forEach(b => b.onclick = () => equipPick(b.dataset.equip));
-  card.querySelectorAll("[data-mat]").forEach(b => b.onclick = () => craftMat(b.dataset.mat));
-  card.querySelectorAll("[data-repair]").forEach(b => b.onclick = () => repairPick(b.dataset.repair));
-  card.querySelectorAll("[data-rtool]").forEach(b => b.onclick = () => repairTool(b.dataset.rtool));
-  card.querySelectorAll("[data-ctool]").forEach(b => b.onclick = () => craftTool(b.dataset.ctool));
-  card.querySelectorAll("[data-ccana]").forEach(b => b.onclick = () => { if (canaV4Comprar(b.dataset.ccana)) refreshForge(); });
-  card.querySelectorAll("[data-ctool5]").forEach(b => b.onclick = () => craftTool(b.dataset.ctool5, 5));
-  card.querySelectorAll("[data-carm]").forEach(b => b.onclick = () => craftWeapon(b.dataset.carm));
-  card.querySelectorAll("[data-rarm]").forEach(b => b.onclick = () => repairWeapon(b.dataset.rarm));
-  card.querySelectorAll("[data-eqarm]").forEach(b => b.onclick = () => { G.gear.arma = b.dataset.eqarm; toast(ARM_DEF[b.dataset.eqarm].label + " equipada"); if (typeof tutoEvent === "function") tutoEvent("equiparm"); if (typeof applyCombatHp === "function") applyCombatHp(); refreshHud(); refreshForge(); if (typeof syncSlots === "function") syncSlots(); if (typeof saveFarm === "function") saveFarm(); });
-  const fa = $("forge-arrows"); if (fa) fa.onclick = () => craftArrows();
-  const fa5 = $("forge-arrows5"); if (fa5) fa5.onclick = () => craftLote(craftArrows, null, 5);
-  const fc = $("forge-chest"); if (fc) fc.onclick = () => craftChest();
+  card.querySelectorAll("[data-craft]").forEach(b => b.onclick = (ev) => forgeAccionConFocoPc(ev,
+    ["[data-craft='" + b.dataset.craft + "']"], () => craftPick(b.dataset.craft)));
+  card.querySelectorAll("[data-craft5]").forEach(b => b.onclick = (ev) => forgeAccionConFocoPc(ev,
+    ["[data-craft5='" + b.dataset.craft5 + "']", "[data-craft='" + b.dataset.craft5 + "']"], () => craftLote(craftPick, b.dataset.craft5, 5)));
+  card.querySelectorAll("[data-equip]").forEach(b => b.onclick = (ev) => forgeAccionConFocoPc(ev,
+    ["[data-equip='" + b.dataset.equip + "']", "[data-craft='" + b.dataset.equip + "']"], () => equipPick(b.dataset.equip)));
+  card.querySelectorAll("[data-mat]").forEach(b => b.onclick = (ev) => forgeAccionConFocoPc(ev,
+    ["[data-mat='" + b.dataset.mat + "']"], () => craftMat(b.dataset.mat)));
+  card.querySelectorAll("[data-repair]").forEach(b => b.onclick = (ev) => forgeAccionConFocoPc(ev,
+    ["[data-repair='" + b.dataset.repair + "']"], () => repairPick(b.dataset.repair)));
+  card.querySelectorAll("[data-rtool]").forEach(b => b.onclick = (ev) => forgeAccionConFocoPc(ev,
+    ["[data-rtool='" + b.dataset.rtool + "']"], () => repairTool(b.dataset.rtool)));
+  card.querySelectorAll("[data-ctool]").forEach(b => b.onclick = (ev) => forgeAccionConFocoPc(ev,
+    ["[data-ctool='" + b.dataset.ctool + "']"], () => craftTool(b.dataset.ctool)));
+  card.querySelectorAll("[data-ccana]").forEach(b => b.onclick = (ev) => forgeAccionConFocoPc(ev,
+    ["[data-ccana='" + b.dataset.ccana + "']"], () => { if (canaV4Comprar(b.dataset.ccana)) refreshForge(); }));
+  card.querySelectorAll("[data-ctool5]").forEach(b => b.onclick = (ev) => forgeAccionConFocoPc(ev,
+    ["[data-ctool5='" + b.dataset.ctool5 + "']", "[data-ctool='" + b.dataset.ctool5 + "']"], () => craftTool(b.dataset.ctool5, 5)));
+  card.querySelectorAll("[data-carm]").forEach(b => b.onclick = (ev) => forgeAccionConFocoPc(ev,
+    ["[data-eqarm='" + b.dataset.carm + "']", "[data-carm='" + b.dataset.carm + "']"], () => craftWeapon(b.dataset.carm)));
+  card.querySelectorAll("[data-rarm]").forEach(b => b.onclick = (ev) => forgeAccionConFocoPc(ev,
+    ["[data-rarm='" + b.dataset.rarm + "']"], () => repairWeapon(b.dataset.rarm)));
+  card.querySelectorAll("[data-eqarm]").forEach(b => b.onclick = (ev) => forgeAccionConFocoPc(ev, [], () => {
+    G.gear.arma = b.dataset.eqarm; toast(ARM_DEF[b.dataset.eqarm].label + " equipada"); if (typeof tutoEvent === "function") tutoEvent("equiparm"); if (typeof applyCombatHp === "function") applyCombatHp(); refreshHud(); refreshForge(); if (typeof syncSlots === "function") syncSlots(); if (typeof saveFarm === "function") saveFarm();
+  }));
+  const fa = $("forge-arrows"); if (fa) fa.onclick = (ev) => forgeAccionConFocoPc(ev, ["#forge-arrows"], () => craftArrows());
+  const fa5 = $("forge-arrows5"); if (fa5) fa5.onclick = (ev) => forgeAccionConFocoPc(ev, ["#forge-arrows5", "#forge-arrows"], () => craftLote(craftArrows, null, 5));
+  const fc = $("forge-chest"); if (fc) fc.onclick = (ev) => forgeAccionConFocoPc(ev, ["#forge-chest"], () => craftChest());
   if (typeof tutoHighlight === "function") tutoHighlight();
+  forgeReponerFocoPc(card);
 }
 function refreshTools() { refreshForge(); }   // compatibilidad con llamadas viejas
 
 /* ---- Horno de Piedra (detalles viernes 1): acá se funden TODOS los lingotes/barras ---- */
+var HORNO_FOCO_PC = null, HORNO_FOCO_EN_ACCION = false;
+/* Fundir llena una cola y vuelve a pintar sus dos zonas; recoger o cancelar también reordena las
+   filas. Igual que en la Herrería, un lote puede pintar varias veces, así que el foco de teclado
+   se repone sólo cuando termina la operación completa. */
+function hornoGuardarFocoPc(ev, selectores) {
+  HORNO_FOCO_PC = !!(ev && (ev.type === "keydown" || ev.detail === 0)) &&
+    typeof window !== "undefined" && window.innerWidth > 640
+    ? { selectores: Array.isArray(selectores) ? selectores.slice() : [] } : null;
+}
+function hornoReponerFocoPc(caja) {
+  const foco = HORNO_FOCO_PC;
+  if (!foco || HORNO_FOCO_EN_ACCION) return;
+  HORNO_FOCO_PC = null;
+  if (!caja || (typeof window !== "undefined" && window.innerWidth <= 640)) return;
+  const tarjeta = $("ov-horno") || caja;
+  let boton = null;
+  foco.selectores.some(sel => {
+    try { const el = tarjeta.querySelector(sel); if (el && !el.disabled) { boton = el; return true; } } catch (e) {}
+    return false;
+  });
+  if (!boton) boton = Array.from(caja.querySelectorAll("#hn-recoger, [data-hn-cancelar], [data-mat], [data-mat5]")).find(b => !b.disabled) || null;
+  if (!boton) boton = tarjeta.querySelector(".close:not(:disabled)");
+  if (!boton || typeof boton.focus !== "function") return;
+  try { boton.focus({ preventScroll: true }); } catch (e) { boton.focus(); }
+}
+function hornoAccionConFocoPc(ev, selectores, accion) {
+  hornoGuardarFocoPc(ev, selectores);
+  if (!HORNO_FOCO_PC) { accion(); return; }
+  HORNO_FOCO_EN_ACCION = true;
+  try { accion(); }
+  finally { HORNO_FOCO_EN_ACCION = false; hornoReponerFocoPc($("horno-mats")); }
+}
 function refreshHorno() {
   const box = $("horno-mats"); if (!box) return;
   /* 24/8: el Horno pasó a ser una COLA (como las ollas). Primero lo que está al fuego con su
@@ -3221,8 +3387,11 @@ function refreshHorno() {
   }
   elCola.innerHTML = html;
   const bRec = $("hn-recoger");
-  if (bRec) bRec.onclick = () => { hornoRecoger(); refreshHorno(); if (isOpen("ov-inv")) refreshInv(); };
-  elCola.querySelectorAll("[data-hn-cancelar]").forEach(b => b.onclick = () => { hornoCancelar(+b.dataset.hnCancelar); });
+  if (bRec) bRec.onclick = (ev) => hornoAccionConFocoPc(ev, ["#hn-recoger"], () => {
+    hornoRecoger(); refreshHorno(); if (isOpen("ov-inv")) refreshInv();
+  });
+  elCola.querySelectorAll("[data-hn-cancelar]").forEach(b => b.onclick = (ev) => hornoAccionConFocoPc(ev,
+    ["[data-hn-cancelar='" + b.dataset.hnCancelar + "']"], () => { hornoCancelar(+b.dataset.hnCancelar); }));
   }
 
   /* --- lo que se puede fundir. El botón del LOTE dice cuántos van a entrar de verdad --- */
@@ -3251,9 +3420,12 @@ function refreshHorno() {
   if (elLista._firma !== lista) {   // solo se rehace si cambió: así ningún tick se come un clic
     elLista._firma = lista;
     elLista.innerHTML = lista;
-    elLista.querySelectorAll("[data-mat]").forEach(b => b.onclick = () => craftMat(b.dataset.mat));
-    elLista.querySelectorAll("[data-mat5]").forEach(b => b.onclick = () => craftLote(craftMat, b.dataset.mat5, +b.dataset.lote || 5));
+    elLista.querySelectorAll("[data-mat]").forEach(b => b.onclick = (ev) => hornoAccionConFocoPc(ev,
+      ["[data-mat='" + b.dataset.mat + "']"], () => craftMat(b.dataset.mat)));
+    elLista.querySelectorAll("[data-mat5]").forEach(b => b.onclick = (ev) => hornoAccionConFocoPc(ev,
+      ["[data-mat5='" + b.dataset.mat5 + "']", "[data-mat='" + b.dataset.mat5 + "']"], () => craftLote(craftMat, b.dataset.mat5, +b.dataset.lote || 5)));
   }
+  hornoReponerFocoPc(box);
 }
 
 /* ---- cofre depósito: guardar/sacar pilas (detalles 29/7) ---- */
@@ -3504,7 +3676,10 @@ function tutoRefresh() {
   const sub = (typeof tutoSub === "function") ? tutoSub() : null;
   document.getElementById("tuto-txt").textContent = sub ? sub.txt : (st.brujula ? st.txt : tutoTxt(st));
   const need = st.brujula ? 0 : tutoNeed(st);
-  document.getElementById("tuto-n").textContent = (sub || st.brujula) ? "" : (st.res ? " " + Math.min(tutoTiene(st), need) + "/" + need
+  /* El desvío por nodos agotados no reemplaza el objetivo: conserva el contador para que se vea
+     cuánto falta mientras la guía señala una tarea útil y vuelve sola al recurso al regenerarse. */
+  const conservaConteo = !!(sub && sub.esperaNodo && st.res);
+  document.getElementById("tuto-n").textContent = (sub && !conservaConteo || st.brujula) ? "" : (st.res ? " " + Math.min(tutoTiene(st), need) + "/" + need
     : (st.n > 1 ? " " + Math.min(G.tuto.n || 0, st.n) + "/" + st.n : ""));
   /* 19/8 (dirección) — ACÁ HUBO DOS INTENTOS Y LOS DOS SE FUERON, que conviene dejar escrito:
      una segunda línea con sugerencias ("no queda bien") y después UNA línea que rotaba entre el
@@ -4462,6 +4637,25 @@ function refreshNft() {
   const ga = $("gh-admin"); if (ga) ga.onclick = () => { if (typeof refreshGodHand === "function") refreshGodHand(); openOv("ov-godhand"); };   // GOD HAND 2.0
 }
 
+var MARKET_VENTA_FOCO_PC = null;
+/* La venta refresca toda la lista desde state.js. Si nació con Enter/Espacio, el botón que tenía
+   foco se destruye junto con la fila: se conserva sólo ese caso y se vuelve a la misma venta,
+   otra disponible o la moneda activa. */
+function marketGuardarVentaFocoPc(ev, res) {
+  MARKET_VENTA_FOCO_PC = !!(ev && (ev.type === "keydown" || ev.detail === 0)) &&
+    typeof window !== "undefined" && window.innerWidth > 640 ? String(res) : null;
+}
+function marketReponerVentaFocoPc(lista) {
+  const res = MARKET_VENTA_FOCO_PC; if (!res) return;
+  MARKET_VENTA_FOCO_PC = null;
+  if (!lista || (typeof window !== "undefined" && window.innerWidth <= 640)) return;
+  const mismo = $("vb-" + res);
+  const boton = (mismo && !mismo.disabled ? mismo : null) ||
+    (lista.querySelector && Array.from(lista.querySelectorAll(".vbtn")).find(b => !b.disabled)) ||
+    (typeof document !== "undefined" && document.querySelector(".curbtn.active:not(:disabled), .curbtn:not(:disabled)"));
+  if (!boton || typeof boton.focus !== "function") return;
+  try { boton.focus({ preventScroll: true }); } catch (e) { boton.focus(); }
+}
 function refreshMarket() {
   /* El último gesto del arranque es vender tres papas. $Golden se acredita de a unidades
      enteras (500 de plata): dejarlo elegible acá daba una venta que parecía válida pero no
@@ -4508,13 +4702,14 @@ function refreshMarket() {
       if (meta) meta.textContent = "Tenés " + fmt(owned) + " · " + textoVenta(res, owned, q);
     };
     if (inp) { inp.oninput = sync; inp.onchange = sync; }
-    if (btn) btn.onclick = () => sellItem(res);
+    if (btn) btn.onclick = (ev) => { marketGuardarVentaFocoPc(ev, res); sellItem(res); };
   });
   const golden = document.querySelector('.curbtn[data-cur="golden"]'), nota = $("mkt-cur-note");
   if (golden) { golden.disabled = ventaTutorial; golden.title = ventaTutorial ? "Completá este encargo cobrando en Plata" : "Cobrá en $Golden a partir de 1 $Golden completo"; }
   if (nota) { nota.textContent = ventaTutorial ? "Tu primer encargo se cobra en Plata." : ""; nota.classList.toggle("show", ventaTutorial); }
   if (typeof tutoHighlight === "function") tutoHighlight();
   document.querySelectorAll(".curbtn").forEach(b => b.classList.toggle("active", b.dataset.cur === cur));
+  marketReponerVentaFocoPc($("mkt-list"));
   refreshSeedShop();
   /* 20/8 — Y LA PESTAÑA DE ADORNOS TAMBIÉN, aunque esté oculta.
      Lo encontró el validador nuevo de destinos del tutorial: el paso « Comprá tu primera expansión »
@@ -4890,16 +5085,10 @@ document.addEventListener("pointerdown", (e) => {
   const vol = e.target.closest("[data-bz-volver]");
   if (!acc && !led && !del && !vol) return;
   e.preventDefault(); e.stopPropagation();
-  const marcarLeida = () => {
-    const c = _bzCartaAbierta; if (!c) return null;
-    _bzVista = "sobres"; _bzCartaAbierta = null;   // primero la vista (buzonLeer redibuja)
-    buzonLeer(c.leer ? c.id : (c.id + "|" + dayStamp(0)));
-    return c;
-  };
-  if (acc) { const c = marcarLeida(); closeOv("ov-buzon"); if (c && c.panel) openOv(c.panel); return; }
-  if (led) { marcarLeida(); refreshBuzon(); return; }
-  if (del) { const [id, dia] = del.dataset.bzDel.split("|"); if (typeof buzonBorrar === "function") buzonBorrar(id, dia); return; }
-  if (vol) { _bzVista = "sobres"; refreshBuzon(); return; }
+  if (acc) { abrirAccionCartaBuzon(); return; }
+  if (led) { marcarCartaBuzonLeida(false); return; }
+  if (del) { borrarCartaBuzon(del, false); return; }
+  if (vol) { volverASobresBuzon(false); return; }
 }, true);
 var _bzCartaAbierta = null;
 /* Los sobres se dibujan de nuevo al abrirse. Si el jugador llegó con teclado, el foco no puede
@@ -4910,6 +5099,78 @@ function enfocarAccionCartaBuzonPc(carta) {
   const boton = carta.querySelector("[data-bz-acc], [data-bz-leida]");
   if (!boton || typeof boton.focus !== "function") return;
   try { boton.focus({ preventScroll: true }); } catch (e) { boton.focus(); }
+}
+/* La pila, el buzón vacío y la papelera son dibujos que se comportan como botones. Mantenerles
+   el mismo contrato evita que el cursor y Tab cuenten historias distintas sobre la interfaz. */
+function esAccionTecladoBuzon(ev) {
+  return !!(ev && (ev.type === "keydown" || ev.key === "Enter" || ev.key === " " || ev.key === "Spacebar"));
+}
+function activarEntradaBuzon(el, etiqueta, accion) {
+  if (!el) return;
+  el.setAttribute("role", "button"); el.setAttribute("tabindex", "0");
+  el.setAttribute("aria-label", etiqueta); el.setAttribute("aria-controls", "bz-carta");
+  el.setAttribute("aria-expanded", "false"); el.title = etiqueta;
+  el.style.cursor = "pointer"; el.onpointerdown = accion; el.onclick = accion;
+  activarAccionConTeclado(el, accion);
+}
+function desactivarEntradaBuzon(el) {
+  if (!el) return;
+  el.removeAttribute("role"); el.removeAttribute("tabindex"); el.removeAttribute("aria-label");
+  el.removeAttribute("aria-controls"); el.removeAttribute("aria-expanded");
+  el.title = ""; el.style.cursor = ""; el.onpointerdown = null; el.onclick = null;
+  desactivarAccionConTeclado(el);
+}
+function enfocarEntradaBuzonPc() {
+  if (typeof window !== "undefined" && window.innerWidth <= 640) return;
+  const sobres = $("bz-sobres"), pila = $("bz-pila"), img = $("bz-img");
+  const boton = (sobres && sobres.querySelector && sobres.querySelector("[data-bz-idx]")) ||
+    (pila && pila.getAttribute("role") === "button" && pila) ||
+    (img && img.getAttribute("role") === "button" && img);
+  if (!boton || typeof boton.focus !== "function") return;
+  try { boton.focus({ preventScroll: true }); } catch (e) { boton.focus(); }
+}
+function enfocarPilaBuzonPc(carta) {
+  if (!carta || (typeof window !== "undefined" && window.innerWidth <= 640) || typeof carta.focus !== "function") return;
+  try { carta.focus({ preventScroll: true }); } catch (e) { carta.focus(); }
+}
+function enfocarBorradoBuzonPc(indice) {
+  if (typeof window !== "undefined" && window.innerWidth <= 640) return;
+  const carta = $("bz-carta"); if (!carta || typeof carta.querySelectorAll !== "function") return;
+  const botones = Array.from(carta.querySelectorAll("[data-bz-del]"));
+  const boton = botones[Math.min(Math.max(0, indice || 0), Math.max(0, botones.length - 1))] ||
+    carta.querySelector("[data-bz-volver]");
+  if (!boton || typeof boton.focus !== "function") return;
+  try { boton.focus({ preventScroll: true }); } catch (e) { boton.focus(); }
+}
+function abrirPilaBuzon(desdeTeclado) {
+  _bzVista = "pila"; refreshBuzon();
+  if (desdeTeclado) enfocarPilaBuzonPc($("bz-carta"));
+}
+function marcarCartaBuzonLeida(desdeTeclado) {
+  const c = _bzCartaAbierta; if (!c) return null;
+  _bzVista = "sobres"; _bzCartaAbierta = null;   // primero la vista (buzonLeer redibuja)
+  buzonLeer(c.leer ? c.id : (c.id + "|" + dayStamp(0)));
+  if (typeof refreshBuzon === "function") refreshBuzon();
+  if (desdeTeclado) enfocarEntradaBuzonPc();
+  return c;
+}
+function abrirAccionCartaBuzon() {
+  const c = marcarCartaBuzonLeida(false);
+  closeOv("ov-buzon"); if (c && c.panel) openOv(c.panel);
+}
+function volverASobresBuzon(desdeTeclado) {
+  _bzVista = "sobres"; refreshBuzon();
+  if (desdeTeclado) enfocarEntradaBuzonPc();
+}
+function borrarCartaBuzon(el, desdeTeclado) {
+  if (!el || !el.dataset || !el.dataset.bzDel) return;
+  const carta = $("bz-carta");
+  const controles = carta && typeof carta.querySelectorAll === "function"
+    ? Array.from(carta.querySelectorAll("[data-bz-del]")) : [];
+  const indice = Math.max(0, controles.indexOf(el));
+  const [id, dia] = el.dataset.bzDel.split("|");
+  if (typeof buzonBorrar === "function") buzonBorrar(id, dia);
+  if (desdeTeclado) enfocarBorradoBuzonPc(indice);
 }
 function refreshBuzon() {
   const img = $("bz-img"), sobres = $("bz-sobres"), carta = $("bz-carta"), pila = $("bz-pila"), estado = $("bz-estado");
@@ -4927,15 +5188,16 @@ function refreshBuzon() {
       const rot = [-6, 4, -2];
       pila.style.display = "";
       pila.innerHTML = leidas.slice(0, 3).map((a, i) =>
-        '<img src="assets/farm/papel_carta.png?v=1" draggable="false" style="transform:rotate(' + rot[i % 3] + 'deg) translateY(' + (-i * 3) + 'px)">'
+        '<img src="assets/farm/papel_carta.png?v=1" alt="" draggable="false" style="transform:rotate(' + rot[i % 3] + 'deg) translateY(' + (-i * 3) + 'px)">' 
       ).join("") + '<span class="n">' + leidas.length + '</span><div class="rotulo">leídas</div>';
-      const abrirPila = (ev) => { if (ev && ev.preventDefault) ev.preventDefault(); _bzVista = "pila"; refreshBuzon(); };
-      pila.onpointerdown = abrirPila; pila.onclick = abrirPila;   // como el paquete: dispara siempre
-    } else { pila.style.display = "none"; pila.onclick = null; pila.onpointerdown = null; }
+      const abrirPila = (ev) => { if (ev && ev.preventDefault) ev.preventDefault(); abrirPilaBuzon(esAccionTecladoBuzon(ev)); };
+      activarEntradaBuzon(pila, "Abrir " + leidas.length + " carta" + (leidas.length === 1 ? " leída" : "s leídas"), abrirPila);
+    } else { pila.style.display = "none"; desactivarEntradaBuzon(pila); }
   }
 
   // VISTA: leyendo una carta (papel desplegado)
   if (_bzVista === "carta" && _bzCartaAbierta) {
+    carta.removeAttribute("role"); carta.removeAttribute("tabindex"); carta.removeAttribute("aria-label");
     const c = _bzCartaAbierta;
     sobres.innerHTML = ""; sobres.style.display = "none";
     carta.style.display = "";
@@ -4944,6 +5206,8 @@ function refreshBuzon() {
       (c.panel ? '<button class="green sm" data-bz-acc="1">' + (c.btn || "Ver") + '</button>' : "") +
       '<button class="ghost sm" data-bz-leida="1">✓ Leída</button>' +
       '</div></div>';
+    carta.querySelectorAll("[data-bz-acc]").forEach(el => activarAccionConTeclado(el, abrirAccionCartaBuzon));
+    carta.querySelectorAll("[data-bz-leida]").forEach(el => activarAccionConTeclado(el, () => marcarCartaBuzonLeida(true)));
     return;
   }
 
@@ -4951,27 +5215,32 @@ function refreshBuzon() {
   if (_bzVista === "pila") {
     sobres.style.display = "none"; carta.style.display = "";
     if (!leidas.length) { _bzVista = "sobres"; refreshBuzon(); return; }
+    desactivarEntradaBuzon(img);
+    carta.setAttribute("role", "region"); carta.setAttribute("tabindex", "-1"); carta.setAttribute("aria-label", "Cartas leídas");
     carta.innerHTML = leidas.map(a => {
       const f = a.dia ? a.dia.slice(8, 10) + "/" + a.dia.slice(5, 7) : "";
       return '<div class="bz-leida"><span class="fecha">' + f + ' · De: ' + a.de + '</span><br><b>' + a.titulo + '</b><br>' + a.txt +
-        '<span class="tacho" data-bz-del="' + a.id + '|' + a.dia + '" title="Borrar">🗑</span></div>';
+        '<span class="tacho" data-bz-del="' + a.id + '|' + a.dia + '" role="button" tabindex="0" aria-label="' +
+        escapeHtml("Borrar carta de " + a.de + ": " + a.titulo) + '" title="Borrar carta">🗑</span></div>';
     }).join("") + '<div style="text-align:center;margin-top:8px"><button class="ghost sm" data-bz-volver="1">↩ Volver</button></div>';
+    carta.querySelectorAll("[data-bz-del]").forEach(el => activarAccionConTeclado(el, () => borrarCartaBuzon(el, true)));
+    carta.querySelectorAll("[data-bz-volver]").forEach(el => activarAccionConTeclado(el, () => volverASobresBuzon(true)));
     return;
   }
 
   // VISTA: los sobres asomando del buzón
   carta.style.display = "none"; sobres.style.display = "";
+  carta.removeAttribute("role"); carta.removeAttribute("tabindex"); carta.removeAttribute("aria-label");
   if (!cartas.length) {
     sobres.innerHTML = "";
     estado.textContent = leidas.length ? "Sin correo nuevo — tus cartas leídas están en la pila." : "Sin correo por hoy.";
     if (leidas.length) {   // el buzón grande también abre la pila
-      img.style.cursor = "pointer";
-      const irPila = (ev) => { if (ev && ev.preventDefault) ev.preventDefault(); _bzVista = "pila"; refreshBuzon(); };
-      img.onpointerdown = irPila; img.onclick = irPila;
-    } else { img.style.cursor = ""; img.onpointerdown = null; img.onclick = null; }
+      const irPila = (ev) => { if (ev && ev.preventDefault) ev.preventDefault(); abrirPilaBuzon(esAccionTecladoBuzon(ev)); };
+      activarEntradaBuzon(img, "Abrir cartas leídas", irPila);
+    } else { desactivarEntradaBuzon(img); }
     return;
   }
-  img.style.cursor = ""; img.onpointerdown = null; img.onclick = null;
+  desactivarEntradaBuzon(img);
   const rots = [-7, 3, -3, 6];
   sobres.innerHTML = cartas.map((c, i) =>
     '<div class="bz-sobre' + (i === 0 ? " late" : "") + '" data-bz-idx="' + i + '" role="button" tabindex="0" aria-label="' +
@@ -4999,6 +5268,28 @@ function refreshBuzon() {
   });
 }
 
+var SEED_SHOP_FOCO_PC = null;
+/* Comprar semillas vuelve a pintar toda la pestaña. Desde un mouse eso no importa, pero con
+   Enter/Espacio el botón que llevaba el foco desaparecía y el recorrido volvía al documento.
+   Se recuerda sólo el gesto de teclado y se prioriza la misma compra, otra disponible o la
+   pestaña Comprar, sin imponer foco en móvil. */
+function seedShopGuardarFocoPc(ev, atributo, valor) {
+  SEED_SHOP_FOCO_PC = !!(ev && (ev.type === "keydown" || ev.detail === 0)) &&
+    typeof window !== "undefined" && window.innerWidth > 640
+    ? { atributo: String(atributo), valor: String(valor) } : null;
+}
+function seedShopReponerFocoPc(caja) {
+  const foco = SEED_SHOP_FOCO_PC;
+  SEED_SHOP_FOCO_PC = null;
+  if (!foco || !caja || (typeof window !== "undefined" && window.innerWidth <= 640)) return;
+  const mismo = caja.querySelector('[data-' + foco.atributo + '="' + foco.valor + '"]');
+  const acciones = Array.from(caja.querySelectorAll("[data-buy], [data-emerg], [data-cont]"));
+  const boton = (mismo && !mismo.disabled ? mismo : null) ||
+    acciones.find(b => !b.disabled) ||
+    (typeof document !== "undefined" && document.querySelector(".shoptab[data-shop='buy']:not(:disabled)"));
+  if (!boton || typeof boton.focus !== "function") return;
+  try { boton.focus({ preventScroll: true }); } catch (e) { boton.focus(); }
+}
 function refreshSeedShop() {
   const box = $("seed-shop"); if (!box) return;
   const sb = seedBuysToday();
@@ -5047,10 +5338,21 @@ function refreshSeedShop() {
           `<button class="green sm" data-cont="${c}" ${aff ? "" : "disabled"}>Comprar · ${coinIc("plata")}${d.plata}</button></div>`;
       }).join("");
   })();
-  box.querySelectorAll("[data-buy]").forEach(b => b.onclick = () => { const inp = $("sq-" + b.dataset.buy); buySeed(b.dataset.buy, inp ? +inp.value : 1); });
-  box.querySelectorAll("[data-emerg]").forEach(b => b.onclick = () => { comprarEmergencia(b.dataset.emerg); refreshSeedShop(); });
-  box.querySelectorAll("[data-cont]").forEach(b => b.onclick = () => { comprarCont(b.dataset.cont); refreshSeedShop(); refreshHud(); });
+  box.querySelectorAll("[data-buy]").forEach(b => b.onclick = (ev) => {
+    seedShopGuardarFocoPc(ev, "buy", b.dataset.buy);
+    const inp = $("sq-" + b.dataset.buy); buySeed(b.dataset.buy, inp ? +inp.value : 1);
+    /* buySeed sólo repinta si la compra llegó a hacerse. Si la rechazó, no dejamos una intención
+       vieja que pudiera reaparecer en el siguiente refresco ajeno. */
+    SEED_SHOP_FOCO_PC = null;
+  });
+  box.querySelectorAll("[data-emerg]").forEach(b => b.onclick = (ev) => {
+    seedShopGuardarFocoPc(ev, "emerg", b.dataset.emerg); comprarEmergencia(b.dataset.emerg); refreshSeedShop();
+  });
+  box.querySelectorAll("[data-cont]").forEach(b => b.onclick = (ev) => {
+    seedShopGuardarFocoPc(ev, "cont", b.dataset.cont); comprarCont(b.dataset.cont); refreshSeedShop(); refreshHud();
+  });
   if (typeof tutoHighlight === "function") tutoHighlight();
+  seedShopReponerFocoPc(box);
   /* (el botón de comprar lombrices vivía acá — 31/8: la tienda ya no las vende) */
 }
 
@@ -5984,11 +6286,17 @@ function initUI() {
       if (!activar) e.preventDefault();
       return;
     }
+    /* La pulseada de pesca comparte la física de mantener el clic: en PC Espacio es la segunda
+       entrada, pero recién después de que selector, confirmación y cantidad resolvieron la suya. */
+    if (pescaV4CarreteTecladoEnEvento(e)) return;
     if (key === "m") { toggleMenu(); e.preventDefault(); return; }   // M: desplegar/plegar el menú (detalles 29/7)
     if (key >= "1" && key <= "9") { hotSelect(+key - 1); e.preventDefault(); return; }
     if (key === "0") { hotSelect(9); e.preventDefault(); return; }
     if (KEYS[key]) { const id = KEYS[key]; if (isOpen(id)) closeOv(id); else openOv(id); e.preventDefault(); }
   });
+  window.addEventListener("keyup", (e) => { pescaV4CarreteSoltarTecladoEnEvento(e); });
+  window.addEventListener("blur", () => { pescaV4CarreteSoltarAlPerderFoco(); });
+  document.addEventListener("visibilitychange", () => { if (document.hidden) pescaV4CarreteSoltarAlPerderFoco(); });
 
   refreshHud();
   tutoSync(true);   // cartel + flecha del tutorial guiado
@@ -6001,8 +6309,7 @@ function initUI() {
      que pasó después. A 180 ms es indistinguible de instantáneo, y comparar dos objetos planos
      cinco veces por segundo no le cuesta nada a nadie. */
   setInterval(() => { try { flujoTick(); } catch (e) {} }, 180);
-  /* (aquí se enganchaban las teclas de la pulseada: aguantar con la barra espaciadora y soltar.
-     Se fueron el 28/8 con el minijuego — no hay nada que aguantar.) */
+  /* Espacio se engancha arriba, junto a los atajos que ya conocen el foco y las ventanas. */
 }
 initUI();
 

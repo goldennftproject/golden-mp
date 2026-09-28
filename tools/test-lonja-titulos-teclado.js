@@ -62,7 +62,7 @@ console.log("\nENTER Y ESPACIO EQUIPAN EL TÍTULO SIN PERDER EL RECORRIDO\n");
 
   Object.defineProperty(dom.window, "innerWidth", { configurable: true, value: 640 });
   let focosMovil = 0;
-  ctx.enfocarTituloLonjaPc({ querySelectorAll() { return [{ dataset: { ltit: "capitan" }, focus() { focosMovil++; }]; } }, "capitan");
+  ctx.enfocarTituloLonjaPc({ querySelectorAll() { return [{ dataset: { ltit: "capitan" }, focus() { focosMovil++; } }]; } }, "capitan");
   ok("móvil no recibe foco programático tras equipar", focosMovil === 0);
 }
 

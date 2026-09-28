@@ -25,7 +25,7 @@ function entorno({ cantidad = false, ruedaAbierta = false } = {}) {
     cerrarConfirmacionLocal: () => false,
     cerrarCantidadLocal: () => { cantidadCerrada++; return cantidad; },
     pescaAparejosAbierto: () => false, cerrarCuerpoPanelPc: () => false,
-    pescaV4Cerrar() {}, pescaAparejosCerrar() {}, closeAllOv() {}, hideSeedWheel() {},
+    pescaV4Cerrar() {}, pescaV4CarreteTecladoEnEvento: () => false, pescaV4CarreteSoltarTecladoEnEvento() {}, pescaV4CarreteSoltarTeclado() {}, pescaAparejosCerrar() {}, closeAllOv() {}, hideSeedWheel() {},
     toggleMenu: () => { menu++; }, hotSelect() {}, closeOv() {}, openOv() {},
   };
   vm.createContext(ctx);

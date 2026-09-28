@@ -956,7 +956,42 @@ function tutoSubPlata(prefijo, meta) {
    dos se descartaron por lo mismo: poner la espera en palabras la vuelve el protagonista.
    La respuesta estaba ya en el juego y es del mundo, no de la interfaz: las MARIPOSAS. Cualquier
    recurso disponible y desatendido atrae una, y lo del objetivo actual va primero. El jugador mira
-   su granja, ve algo revolotear, y va. Ver mariposaAccionables() en farm.js. */
+   su granja, ve algo revolotear, y va. El único texto excepcional es cuando NO queda ningún nodo
+   disponible para señalar; entonces hace falta nombrar una salida real, no simular una flecha.
+   Ver mariposaAccionables() en farm.js. */
+/* Pero hay un caso distinto de «esperar una cosecha»: tras vaciar todos los árboles o rocas del
+   arranque, el objetivo sigue siendo válido y no queda NINGÚN nodo posible para que la mariposa
+   señale. No se muestran segundos ni se altera el reloj; sólo se transforma ese silencio en una
+   acción agrícola real, y al volver un nodo la guía retoma sola la madera/piedra. La escena sabe
+   distinguir enfriamiento de un golpe a medio hacer, por eso esta pregunta vive en FarmScene. */
+function tutoSubNodoEnEspera(st) {
+  if (!st || (st.target !== "tree" && st.target !== "rock")) return null;
+  const escena = (typeof window !== "undefined") ? window.farmScene : null;
+  if (!escena || typeof escena.nodoGuiaEnEspera !== "function" || !escena.nodoGuiaEnEspera(st.target)) return null;
+  const recurso = st.res === "piedra" ? "Piedra" : "Madera";
+  const nodos = st.target === "tree" ? "árboles" : "rocas";
+  const plots = Array.isArray(G.plots) ? G.plots : [];
+  const listos = plots.filter(p => p && p.state === "ready").length;
+  if (listos) return { esperaNodo: true, guiaPlot: "ready",
+    txt: recurso + ": cosechá " + listos + " cultivo" + (listos > 1 ? "s" : "") + " mientras vuelven los " + nodos,
+    target: "plot", permite: ["plant", "harvest", "sell", "buyseed", "chop", "mine"] };
+  const semillas = Object.keys(G.seeds || {}).reduce((n, k) => n + Math.floor(G.seeds[k] || 0), 0);
+  const seca = plots.some(p => p && p.state === "dry");
+  if (semillas && seca) return { esperaNodo: true, guiaPlot: "dry",
+    txt: recurso + ": plantá " + semillas + " semilla" + (semillas > 1 ? "s" : "") + " mientras vuelven los " + nodos,
+    target: "plot", permite: ["plant", "harvest", "sell", "buyseed", "chop", "mine"] };
+  const conStock = Object.keys(CROP_DEF || {}).filter(k => (G.res[k] || 0) > 0)
+    .sort((a, b) => (CROP_DEF[b].price || 0) - (CROP_DEF[a].price || 0))[0];
+  if (conStock) return { esperaNodo: true,
+    txt: recurso + ": vendé tus " + Math.floor(G.res[conStock]) + " " + (CROP_DEF[conStock].label || conStock).toLowerCase() + " mientras vuelven los " + nodos,
+    target: "market", panel: "ov-market", ui: "#vb-" + conStock, permite: ["plant", "harvest", "sell", "buyseed", "chop", "mine"] };
+  if (plots.some(p => p && p.state === "growing")) return { esperaNodo: true, guiaPlot: "growing",
+    txt: recurso + ": tus cultivos crecen; la mariposa vuelve a los " + nodos + " al estar listos",
+    target: "plot", permite: ["plant", "harvest", "sell", "buyseed", "chop", "mine"] };
+  return { esperaNodo: true,
+    txt: recurso + ": los " + nodos + " vuelven solos; la mariposa los señalará al estar listos",
+    permite: ["plant", "harvest", "sell", "buyseed", "chop", "mine"] };
+}
 function tutoSub() {
   const st = tutoActivo(); if (!st) return null;
   /* Cocinar tiene dos gestos distintos: poner el plato al fuego y, cuando termina, retirarlo.
@@ -983,7 +1018,7 @@ function tutoSub() {
   // calculan las hachas que faltan para TODA la meta (1 tala = 1 uso) y se junta la plata
   // COMPLETA de una tanda, en vez de rebotar de a 10 en 10 (talar → rota → papa → craftear)
   if (st.res === "madera" && typeof toolCount === "function") {
-    if (!(G.built && G.built.store)) return null;   // fase pre-Herrería: con las hachas de arranque alcanza
+    if (!(G.built && G.built.store)) return tutoSubNodoEnEspera(st);   // fase pre-Herrería: con las hachas de arranque alcanza
     const falta = Math.max(0, tutoNeed(st) - tutoTiene(st));
     const hachas = Math.max(0, falta - toolCount("axe"));
     if (hachas > 0) {
@@ -993,7 +1028,7 @@ function tutoSub() {
         target: "store", panel: "ov-forge", ui: hachas >= 5 ? "[data-ctool5='axe']" : "[data-ctool='axe']", permite: ["crafttool"] };
       return tutoSubPlata("Te faltan " + hachas + " hachas (" + plataNec + " de plata): ", plataNec);
     }
-    return null;   // hachas alcanzan para toda la meta: a talar
+    return tutoSubNodoEnEspera(st);   // hachas alcanzan para toda la meta: a talar, salvo que todos los árboles estén en descanso
   }
   // 14/8 v2: planificador de PIEDRA como red de seguridad (el kit del adelanto ya entrega
   // los usos de pico al entrar al paso — esto solo salta si se drenaron, p.ej. picando
@@ -1001,12 +1036,12 @@ function tutoSub() {
   // Pico de Piedra nuevo sale 3 madera + 10 plata por UN uso. La cadena: craftear picos →
   // sin plata, su plan → sin madera libre (la de la obra no se toca), talar.
   if (st.res === "piedra") {
-    if (!(G.built && G.built.store)) return null;   // fase pre-Herrería: el pico de arranque alcanza
+    if (!(G.built && G.built.store)) return tutoSubNodoEnEspera(st);   // fase pre-Herrería: el pico de arranque alcanza
     const falta = Math.max(0, tutoNeed(st) - tutoTiene(st));
     const eq = (G.picks && G.picks.eq) || null;
     const usos = eq ? Math.floor((G.picks.dur && G.picks.dur[eq]) || 0) : 0;
     const picos = Math.max(0, falta - usos);   // picos de piedra a craftear (1 uso cada uno)
-    if (picos <= 0) return null;               // el pico aguanta toda la meta: a picar
+    if (picos <= 0) return tutoSubNodoEnEspera(st); // el pico aguanta toda la meta: a picar, salvo roca en enfriamiento
     const pd = (typeof PICK_DEF !== "undefined" && PICK_DEF.stone) || { cost: { madera: 3 }, plata: 10 };
     const plataNec = picos * (pd.plata || 10);
     const madNecT = picos * ((pd.cost && pd.cost.madera) || 3);
@@ -1046,7 +1081,7 @@ function tutoSub() {
     return { txt: "Te quedaste sin hachas: crafteá una en la Herrería (" + plata + " de plata)",
       target: "store", panel: "ov-forge", ui: "[data-ctool='axe']", permite: ["crafttool"] };
   }
-  return null;
+  return tutoSubNodoEnEspera(st);
 }
 function obraDe(t) { return G.obras && G.obras[t]; }
 function obraColocar(t, col, row, vivo) {   // la llama la escena con la celda elegida
