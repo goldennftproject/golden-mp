@@ -530,6 +530,13 @@ class ForestScene extends Phaser.Scene {
     return mejor;
   }
   revisarCuerpo(c) {
+    /* Una tarjeta normal de PC no pausa la Zona, pero revisar abre otra tarjeta contextual en
+       capa alta. Si se permitiera, el primer clic sobre la ventana inferior sólo la cerraría y
+       parecería perdido. La comprobación va ANTES de marcar el cuerpo como revisado: intentar
+       mirarlo con Inventario abierto no puede apagar su brillo ni cambiar su estado. */
+    if (typeof hayOvPcAbierto === "function" && hayOvPcAbierto()) {
+      toast("Cerrá la ventana antes de revisar el cuerpo"); return;
+    }
     if (!this.cuerpoAlAlcance(c)) { toast("Estás demasiado lejos"); return; }   // la regla de Tibia, con sus palabras
     if (!c.revisado) { c.revisado = true; this.apagarBrillos(c); }
     if (!c.drops.length) {
@@ -543,6 +550,12 @@ class ForestScene extends Phaser.Scene {
   /* la ventanita del cuerpo: qué tiene y el botón de recogerlo. HTML y no escena, porque es
      GESTIÓN (mirar y decidir), no acción — la misma línea que separó los aparejos de la pesca. */
   abrirCuerpo(c) {
+    /* Red de seguridad para futuros llamadores directos: revisarCuerpo ya hace esta puerta
+       antes de mutar el estado, pero abrir el panel también debe ser incapaz de colarse sobre
+       un overlay normal de escritorio. */
+    if (typeof hayOvPcAbierto === "function" && hayOvPcAbierto()) {
+      toast("Cerrá la ventana antes de revisar el cuerpo"); return;
+    }
     const el = document.getElementById("cuerpo-panel"); if (!el) return;
     this._cuerpoAbierto = c;
     const tit = document.getElementById("cuerpo-tit");
@@ -702,6 +715,12 @@ class ForestScene extends Phaser.Scene {
     return null;
   }
   tryAttack() {
+    /* E/Espacio llegan desde Phaser aunque el foco esté en un control HTML. Chat/aparejos ya
+       declaran GF.uiOpen; los demás campos (por ejemplo, correo de Configuración) se cubren por
+       el foco real. El panel de cuerpo queda deliberadamente fuera: permite seguir peleando
+       mientras decidís recoger, que es su contrato de Zona. */
+    if (GF.uiOpen || (typeof controlDeTecladoActivo === "function" && controlDeTecladoActivo()) ||
+        (typeof selectorContextualPcAbierto === "function" && selectorContextualPcAbierto())) return;
     const no = this.porQueNoAtaca();
     if (no) { toast(no); return; }
     const near = this.nearestMonster(MELEE_RANGE) || (canShoot() ? this.nearestMonster(BOW_RANGE) : null);
@@ -731,8 +750,10 @@ class ForestScene extends Phaser.Scene {
     const m = this.target;
     if (!m || m.dead) return;
     const k = this.keys;
-    const manual = k.left.isDown || k.right.isDown || k.up.isDown || k.down.isDown ||
-                   k.aleft.isDown || k.aright.isDown || k.aup.isDown || k.adown.isDown ||
+    const tecladoMundoOcupado = (typeof controlDeTecladoActivo === "function" && controlDeTecladoActivo()) ||
+      (typeof selectorContextualPcAbierto === "function" && selectorContextualPcAbierto());
+    const manual = (!tecladoMundoOcupado && (k.left.isDown || k.right.isDown || k.up.isDown || k.down.isDown ||
+                   k.aleft.isDown || k.aright.isDown || k.aup.isDown || k.adown.isDown)) ||
                    (this.hold && this.hold.active);
     if (manual) { this._chaseTo = null; return; }
     /* la distancia a la que este arma pelea. El margen (0,8) evita el borde exacto del rango,
@@ -1356,6 +1377,11 @@ class ForestScene extends Phaser.Scene {
   updateReal(time, deltaMs) {
     if (this.leaving || !this.hero) return;   // cambiando de escena: no tocar nada más
     const dt = deltaMs / 1000, k = this.keys, hero = this.hero, t = nowMs();
+    /* Igual que en la granja: un control HTML activo es dueño de W/A/S/D, flechas y Espacio.
+       El mundo y una persecución ya iniciada continúan, pero el texto no se traduce en un gesto
+       manual ni cambia la animación del héroe. */
+    const tecladoMundoOcupado = (typeof controlDeTecladoActivo === "function" && controlDeTecladoActivo()) ||
+      (typeof selectorContextualPcAbierto === "function" && selectorContextualPcAbierto());
 
     // detalles viernes (1): la vida SOLO se regenera con comida (sin regeneración pasiva)
     // 11/9 (doc « Defensa de los mobs », §2.1): las cargas de bloqueo vuelven 1 por segundo, hasta 2 — las del héroe y las de cada bicho
@@ -1389,7 +1415,7 @@ class ForestScene extends Phaser.Scene {
       // el golpe usa el gesto propio del arma equipada: espada, hacha, mazo o arco
       if (!this.action.fx) {
         // la espada conserva su variante caminando; hacha y mazo priorizan su gesto propio.
-        const movingNow = !!(this.moveTarget || k.left.isDown || k.right.isDown || k.up.isDown || k.down.isDown || k.aleft.isDown || k.aright.isDown || k.aup.isDown || k.adown.isDown);
+        const movingNow = !!(this.moveTarget || (!tecladoMundoOcupado && (k.left.isDown || k.right.isDown || k.up.isDown || k.down.isDown || k.aleft.isDown || k.aright.isDown || k.aup.isDown || k.adown.isDown)));
         const swordKey = (movingNow && this.anims.exists("act_sword_walk")) ? "act_sword_walk" : "act_sword";
         const aid0 = armaEq();
         const tipoArma = aid0 && ARM_DEF[aid0] && ARM_DEF[aid0].tipo;
@@ -1421,8 +1447,10 @@ class ForestScene extends Phaser.Scene {
     // movimiento
     let vx = 0, vy = 0;
     if (!GF.uiOpen) {
-      if (k.left.isDown || k.aleft.isDown) vx = -1; else if (k.right.isDown || k.aright.isDown) vx = 1;
-      if (k.up.isDown || k.aup.isDown) vy = -1; else if (k.down.isDown || k.adown.isDown) vy = 1;
+      if (!tecladoMundoOcupado) {
+        if (k.left.isDown || k.aleft.isDown) vx = -1; else if (k.right.isDown || k.aright.isDown) vx = 1;
+        if (k.up.isDown || k.aup.isDown) vy = -1; else if (k.down.isDown || k.adown.isDown) vy = 1;
+      }
       /* 31/8 — SIN DIAGONALES (misma regla que la granja; el porqué vive en config.js) */
       ({ vx, vy } = sinDiagonal(this, vx, vy));
       if (vx || vy) { this.moveTarget = null; this.path = null; this._eje4 = null; }

@@ -113,6 +113,36 @@ console.log("\nUNA VENTANA ABIERTA LIMPIA LAS PISTAS DEL MUNDO");
   vm.runInContext("anyOvOpen = () => false;", ctx);
 }
 
+console.log("\nLA COLOCACIÓN NO REENCIENDE SU CARTEL DETRÁS DE UNA VENTANA");
+{
+  const ancho = ctx.innerWidth;
+  const esc = escena();
+  const colocando = { tipo: "cofre" };
+  Object.assign(esc, {
+    placing: colocando,
+    input: { activePointer: { worldX: 100, worldY: 100 } },
+    huellaColocar() { return { libre: true, ancho: 1 }; },
+    previaSiembra(o) { this.ultimaPrevia = o; },
+  });
+  try {
+    ctx.innerWidth = 1280;
+    ctx.GF.uiOpen = false; ctx.GF.editMode = false;
+    vm.runInContext("anyOvOpen = () => true;", ctx);
+    const txt = pinta(esc);
+    ok("en PC una tarjeta tapa el texto de colocar", txt === "" && !prompt.clases.has("show"), txt);
+    ok("pero conserva la colocación preparada", esc.placing === colocando);
+    ok("y no deja una previa o una chapita vieja", esc.ultimaPrevia === null && esc.ultimaChapa === null,
+      String(esc.ultimaPrevia) + " · " + String(esc.ultimaChapa));
+
+    ctx.innerWidth = 640;
+    const txtMovil = pinta(esc);
+    ok("móvil conserva su guía de colocación actual", txtMovil === "Clic para colocar acá", txtMovil);
+  } finally {
+    ctx.innerWidth = ancho;
+    vm.runInContext("anyOvOpen = () => false;", ctx);
+  }
+}
+
 console.log("\nLA RUEDA DE ELECCIÓN OCULTA LA PISTA REDUNDANTE EN PC");
 {
   const rueda = seedwheel, ancho = ctx.innerWidth;

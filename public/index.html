@@ -19,6 +19,12 @@
   body *{cursor:inherit}
   button,.gmi,.slot[draggable=true],.hcell,.swi,.curbtn,.shoptab,.lbtab,.ltab,.close,a{cursor:pointer}
   input,textarea{user-select:text;-webkit-user-select:text;cursor:text}
+  /* El mouse ya dice dónde está con hover; Tab no. Sobre madera, el anillo nativo cambia según
+     el navegador y puede perderse, así que los controles enfocados reciben una marca común.
+     `:focus-visible` la reserva para teclado: al hacer clic la interfaz conserva su aspecto. */
+  button:focus-visible,a:focus-visible,input:focus-visible,textarea:focus-visible,select:focus-visible,[role=button]:focus-visible{
+    outline:2px solid #2b1909;outline-offset:2px;box-shadow:0 0 0 4px rgba(255,227,138,.9)
+  }
   #game{position:fixed;inset:0}
   #game canvas{display:block}
 
@@ -125,6 +131,13 @@
   .cbq.seca{border-color:#b4553f;background:rgba(120,40,28,.35)}
   .cbq.seca img{filter:grayscale(.7) brightness(.7)}
   .cb-def{font-size:9px;color:#a3936f;text-align:center;margin-top:5px}
+  /* En PC el acceso al panel es un botón visible separado de las casillas rápidas: el muñeco ya
+     no finge que toda su superficie hace una sola cosa. Móvil conserva su toque compacto. */
+  .cb-eq-open{width:100%;border:1px solid #4a3a1e;border-radius:6px;background:rgba(0,0,0,.35);color:#cbbf9f;
+    padding:3px 4px;line-height:1.2}
+  .cb-eq-open:hover{border-color:#8a6f34;color:#f2ead5;background:rgba(201,162,39,.16)}
+  @media(min-width:641px){.cb-doll{cursor:default}.cb-eq-open{display:block}}
+  @media(max-width:640px){.cb-eq-open{display:none}}
   /* 15/9: la durabilidad del arma, debajo del muñeco. El aviso es el MISMO cuarto que pone roja
      la vida y marca una pieza gastada — tres umbrales distintos para decir « ojo » enseñan a no
      mirar ninguno. */
@@ -242,6 +255,9 @@
   /* Ventana que BLOQUEA el juego (9/8). Las .ov normales dejan pasar el clic al mundo a
      propósito; esta no, porque mientras el granjero entrena no se puede hacer otra cosa. */
   .ov.bloquea{pointer-events:auto;background:rgba(12,7,2,.55)}
+  /* En PC una pantalla que detiene el juego también pasa delante de la flecha de guía (80):
+     mientras el granjero entrena no hay otro destino accionable que señalar. */
+  @media(min-width:641px){.ov.bloquea.show{z-index:81}}
   /* Las misiones diarias salieron del Pase y tienen su propia casilla, más llamativa (10/8) */
   .gmi.destacada{background:linear-gradient(180deg,#7a5606,#5d3f04);border-color:#c79a2b}
   .gmi.destacada .key{background:#ffd76a;color:#3a2a04}
@@ -250,7 +266,10 @@
   .ov.show{display:block}
   /* La confirmación es modal sólo en PC: captura el fondo para no activar controles del panel
      que queda debajo, pero móvil conserva su interacción compacta existente. */
-  @media(min-width:641px){#ov-confirm.show{pointer-events:auto;background:rgba(12,7,2,.26)}}
+  @media(min-width:641px){#ov-confirm.show{z-index:81;pointer-events:auto;background:rgba(12,7,2,.26)}}
+  /* Elegir una cantidad es una decisión breve sobre la puerta de la Zona. En escritorio capta
+     el fondo como la confirmación: los huecos de la tarjeta inferior no cambian otra pila. */
+  @media(min-width:641px){#ov-cuanto.show{z-index:81;pointer-events:auto;background:rgba(12,7,2,.26)}}
   .card{background:#a8622e url("assets/ui/wood_bg.png?a=5") repeat;background-size:220px auto;background-clip:border-box;border-radius:14px;color:#f6ecce;padding:14px 16px;width:min(440px,92%);box-shadow:0 20px 50px rgba(0,0,0,.45);position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);pointer-events:auto;
     border:18px solid transparent;border-image:url("assets/ui/panel_wood.png?a=4") 30 round;image-rendering:pixelated}
   .card h3,.card .sub,.cost{text-shadow:0 1px 0 rgba(40,22,6,.45)}
@@ -1142,7 +1161,13 @@
   .eqslot .eqsil{width:62%;height:62%;object-fit:contain;image-rendering:pixelated;opacity:.85}
   .eqslot .eqimg{width:70%;height:70%;object-fit:contain;image-rendering:pixelated}
   .eqslot .eqcnt{position:absolute;right:5px;bottom:4px;font-size:10px;font-weight:800;color:#ffe9a8;background:rgba(30,22,12,.75);border-radius:5px;padding:0 4px}
+  /* Sólo arma y munición son decisiones en esta silueta: en PC el brillo y el cursor explican
+     que se pueden cambiar, sin fingir que casco/escudo informativos también son botones. */
+  @media(min-width:641px){#eq-arma,#eq-municion{cursor:pointer}#eq-arma:hover,#eq-municion:hover{box-shadow:0 0 0 2px rgba(232,193,86,.58),0 3px 8px rgba(0,0,0,.28)}}
   .eqh{margin:10px 0 6px;color:#7a4d1f;font-size:14px}
+  /* El Cobertizo guarda sólo cosas que se pueden colocar: en PC cada una responde al pasar el
+     mouse, igual que responde con Tab, sin convertir los huecos de Inventario en botones. */
+  @media(min-width:641px){#cob-slots [data-cob]{cursor:pointer}#cob-slots [data-cob]:hover{box-shadow:0 0 0 2px rgba(232,193,86,.58),0 3px 8px rgba(0,0,0,.28)}}
 
   /* rueda de sembrado rápido */
   #seedwheel{position:fixed;inset:0;z-index:60;display:none}
@@ -1393,7 +1418,7 @@
            único nivel del juego sin barra a la vista: la ventana de la Granja la tiene desde
            siempre, pero había que saber que existía para ir a buscarla. Clic: abre esa ventana,
            que es donde viven las tareas. -->
-      <div class="pill cpill" id="lvlpill" style="cursor:pointer"><span class="k">Granja</span><b id="s-level">1</b><span class="k" id="s-level-max">/25</span><span class="cbarw"><span class="cfill lvlf" id="lvl-fill"></span></span><span class="k" id="lvl-txt"></span></div>
+      <div class="pill cpill" id="lvlpill" role="button" tabindex="0" aria-label="Abrir Granja y tareas" aria-controls="ov-barn" style="cursor:pointer"><span class="k">Granja</span><b id="s-level">1</b><span class="k" id="s-level-max">/25</span><span class="cbarw"><span class="cfill lvlf" id="lvl-fill"></span></span><span class="k" id="lvl-txt"></span></div>
       <div class="pill" data-mvp-hud><span class="k">Prestigio</span><b id="s-prestige">0</b></div>
       <div class="pill" title="Plata — la moneda del juego"><img class="ric" src="assets/farm/coin_plata.png?a=4" onerror="this.outerHTML='<span class=&quot;coin silver&quot;></span>'"><b id="s-plata">0</b></div>
       <div class="pill" title="$Golden — la moneda premium: mejoras especiales, kit de emergencia y adornos"><img class="ric" src="assets/farm/coin_esencia.png?a=4" onerror="this.outerHTML='✨'"><b id="s-golden">20</b></div>
@@ -1412,7 +1437,7 @@
          los menúes. Estas dos píldoras viven ahora en una REPISA flotante pegada bajo la barra,
          fuera de su flujo — vengan o se vayan, la barra no se entera. -->
     <div id="hud-flot">
-      <div class="pill cpill" id="stampill" style="display:none" title="Estamina de combate — solo se gasta en la Zona Negra. Se recupera sola, comiendo guisos o con una recarga."><span class="k">Estamina</span><span class="cbarw"><span class="cfill stamf" id="stam-fill"></span></span><span class="k" id="s-stam">100/100</span></div>
+      <div class="pill cpill" id="stampill" role="button" tabindex="0" aria-label="Recargar estamina" aria-haspopup="dialog" aria-controls="ov-confirm" style="display:none" title="Estamina de combate — solo se gasta en la Zona Negra. Se recupera sola, comiendo guisos o con una recarga."><span class="k">Estamina</span><span class="cbarw"><span class="cfill stamf" id="stam-fill"></span></span><span class="k" id="s-stam">100/100</span></div>
       <!-- 31/8 (de los vídeos de referencia: « Food 00:00 » — la comida es un RELOJ). Los platos
            llevaban buffs con vencimiento desde el doc maestro del 2/8 y no se enseñaban en ningún
            sitio: comías un guiso de +10 % de daño y el juego no decía ni que estaba activo ni
@@ -1587,7 +1612,7 @@
   <div class="ov" id="ov-cobertizo"><div class="card" style="width:min(432px,94%)">
     <button class="close" data-close="ov-cobertizo">×</button>
     <h3>🏚 Cobertizo</h3>
-    <div class="sub" id="cob-sub">Lo que todavía no colocaste en la granja. Tocá una pieza para elegir dónde va.</div>
+    <div class="sub" id="cob-sub">Lo que todavía no colocaste en la granja. Elegí una pieza para decidir dónde va.</div>
     <div class="slots" id="cob-slots"></div>
     <div class="sub" id="cob-pie"></div>
   </div></div>
@@ -1622,9 +1647,9 @@
         <div class="eqslot ghost" id="eq-botas" title="Botas"></div>
       </div>
       <div class="eqcol">
-        <div class="eqslot ghost" id="eq-arma" title="Arma"></div>
+        <div class="eqslot ghost" id="eq-arma" role="button" tabindex="0" aria-label="Cambiar arma" title="Arma"></div>
         <div class="eqslot ghost" id="eq-escudo" title="Escudo"></div>
-        <div class="eqslot ghost" id="eq-municion" title="Munición"></div>
+        <div class="eqslot ghost" id="eq-municion" role="button" tabindex="0" aria-label="Equipar munición" aria-pressed="false" title="Munición"></div>
       </div>
     </div>
     <h4 class="eqh">Herramientas</h4>
@@ -2023,7 +2048,7 @@
       </div>
     </div>
   </div>
-  <div id="hotwrap"><div id="hotbar"></div></div>
+  <div id="hotwrap"><div id="hotbar" role="group" aria-label="Accesos rápidos"></div></div>
   <div id="saveind"><span class="sdot"></span><span class="stxt"></span></div>
 
   <!-- pantalla de carga ÚNICA: se queda hasta que la granja está lista de verdad.
@@ -2134,7 +2159,7 @@
     // 15/8: VERSIÓN DE BUILD — rompe la caché del navegador en cada deploy (sin esto, el
     // jugador seguía corriendo el state.js viejo aunque el servidor tuviera el nuevo).
     // deploy.bat la actualiza sola (busca GF_BUILD y pone la fecha/hora del deploy).
-    const GF_BUILD = "20260927-003454";
+    const GF_BUILD = "20260927-225958";
     const files = ["game/config.js","game/nav.js","game/audio.js","game/state.js","game/save.js","game/ui.js","game/boot.js",
                    "game/farm.js","game/forest.js","game/plaza.js","game/main.js","game/update.js"];
     /* 24/8 — SE BAJAN TODOS A LA VEZ, SE EJECUTAN EN FILA (dirección: « sigue tardando en

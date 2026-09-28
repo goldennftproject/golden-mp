@@ -111,6 +111,12 @@ console.log("\nY LA VENTANA QUE LA BARRA ANUNCIA SIGUE COMPLETA");
   ok("y la recompensa que viene", /Recompensa del nivel/.test(html));
 }
 
+console.log("\nLA PÍLDORA SIGUE DICIENDO QUE LLEVA A LAS TAREAS");
+{
+  const HTML = require("fs").readFileSync(path.join(RAIZ, "public/index.html"), "utf8");
+  ok("el HUD conserva la acción explícita hacia Granja", /id="lvlpill"[^>]*role="button"[^>]*aria-label="Abrir Granja y tareas"/.test(HTML));
+}
+
 console.log("");
 console.log(fallos
   ? "  " + fallos + " fallo(s) — el nivel de granja sigue siendo un número mudo"

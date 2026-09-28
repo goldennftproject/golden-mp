@@ -18,6 +18,7 @@ class FarmScene extends Phaser.Scene {
     // Phaser REUTILIZA la instancia al reiniciar la escena: hay que soltar todo lo cacheado,
     // porque apunta a objetos ya destruidos (y usarlos rompía el juego al volver del Bosque).
     this.hoverFx = null; this.nearFx = null;
+    this._ayudasMundoMarco = null; this._ayudasMundoOcultas = false;
     this.destMk = null; this.destTw = null;
     this.dummyObj = null; this.dummyTimer = null; this.fishBar = null; this.adornos = null;   // si no se suelta, al volver del bosque la barra de pesca no vuelve a aparecer (10/8)
     this.editHl = null; this._nav = null; this.storeObj = null; this.forgeGlow = null;
@@ -542,11 +543,11 @@ class FarmScene extends Phaser.Scene {
           else toast("Ahí no hay ningún adorno para levantar");
           return;
         }
-        /* 25/8 — el otro camino mudo del mismo clic, y el más probable en el caso reportado: el
-           jugador abre la bolsa para mirar qué semillas tiene y desde ahí le da clic derecho a la
-           parcela. Con una ventana abierta esto salía por un `return` pelado. Y ojo: un clic que
-           NACE dentro de un panel ya lo filtró clicDeInterfaz más arriba, así que si llegó hasta
-           acá es que fue sobre el mundo — o sea, intencional. Merece respuesta. */
+        /* 25/8 — GF.uiOpen es el candado de una interfaz que YA toma el control del juego
+           (pesca, chat), no el de las tarjetas normales. Éstas dejan que el mundo siga vivo a
+           propósito: por eso no se cierran ni se bloquean acá. Las dos decisiones que abrirían
+           OTRA interfaz sobre ellas —semillas y aparejos— se frenan en sus propias puertas de
+           UI, más abajo, sin convertir un gesto normal del mundo en un callejón sin salida. */
         if (GF.uiOpen) {
           if (!GF.typing) toast("Cerrá la ventana para sembrar en la parcela");
           return;
@@ -1488,7 +1489,12 @@ class FarmScene extends Phaser.Scene {
   }
 
   doInteract() {
-    if (GF.uiOpen || this.action || GF.editMode) return;
+    /* E/Espacio se suscriben desde Phaser y no traen el target DOM. Si un input/select tiene el
+       foco, escribir o elegir no puede cosechar/usar la granja por detrás. La rueda de semillas
+       también ocupa ese gesto en PC: hasta elegir o cancelarla, el mundo no recibe esta acción. */
+    if (GF.uiOpen || this.action || GF.editMode ||
+        (typeof controlDeTecladoActivo === "function" && controlDeTecladoActivo()) ||
+        (typeof selectorContextualPcAbierto === "function" && selectorContextualPcAbierto())) return;
     if (GF.NO_WALK) {   // sin granjero: la tecla E actúa sobre lo que esté bajo el cursor
       const pt = this.input.activePointer, wx = pt.worldX, wy = pt.worldY;
       let hit = null, bd = 1e9;
@@ -4433,6 +4439,19 @@ class FarmScene extends Phaser.Scene {
     if (typeof saveFarm === "function") saveFarm(true);
   }
 
+  /* Las ventanas normales de PC no frenan el mundo, pero sí tapan ayudas pasajeras: no debe
+     encenderse un árbol bajo una carta ni aparecer un reloj sobre algo que no se puede tocar
+     desde ella. Esta consulta se comparte entre relojes, brillos y cartel, y se cachea por
+     cuadro porque timerOn() se llama una vez por cada objeto de la granja. */
+  ayudasMundoOcultas() {
+    const marco = this._frameT;
+    if (marco !== undefined && this._ayudasMundoMarco === marco) return !!this._ayudasMundoOcultas;
+    const ocultas = typeof window !== "undefined" && window.innerWidth > 640 &&
+      typeof anyOvOpen === "function" && anyOvOpen();
+    if (marco !== undefined) { this._ayudasMundoMarco = marco; this._ayudasMundoOcultas = ocultas; }
+    return ocultas;
+  }
+
   // brillo de interacción: hover del cursor + cercanía del granjero (capa aditiva sobre el sprite)
   updateHoverFx() {
     if (!this.hoverFx) {
@@ -4446,7 +4465,9 @@ class FarmScene extends Phaser.Scene {
       fx.setFlipX(!!s.flipX); fx.setAngle(0); fx.setDepth(s.depth + 0.5); fx.setVisible(true);
       if (fx.isCropped) fx.setCrop();   // el árbol se dibuja recortado (copa/tronco), pero el brillo va entero
     };
-    if (GF.editMode || GF.uiOpen) { this.hoverFx.setVisible(false); this.nearFx.setVisible(false); return; }
+    if (GF.editMode || GF.uiOpen || this.ayudasMundoOcultas()) {
+      this.hoverFx.setVisible(false); this.nearFx.setVisible(false); return;
+    }
     const T = GF.TILE, p = this.input.activePointer;
     let hov = null;
     for (const o of this.objs) {
@@ -4780,7 +4801,7 @@ class FarmScene extends Phaser.Scene {
 
   // ESTÁNDAR de los contadores: se ven con el cursor encima o con el granjero cerca (nunca fijos)
   timerOn(o) {
-    if (GF.editMode || GF.uiOpen) return false;
+    if (GF.editMode || GF.uiOpen || this.ayudasMundoOcultas()) return false;
     const p = this.input.activePointer;
     if (o.sprite && this.hitsSprite(o.sprite, p.worldX, p.worldY)) return true;
     if (o.ground && Math.abs(p.worldX - o.cx) < GF.TILE / 2 && Math.abs(p.worldY - o.by) < GF.TILE / 2) return true;
@@ -5644,6 +5665,12 @@ class FarmScene extends Phaser.Scene {
     if (this.leaving || !this.hero) return;   // cambiando de escena: no tocar nada más
     this._frameT = time;   // marca del frame: la usa la caché de hitsSprite (10/8)
     const dt = deltaMs / 1000, k = this.keys, hero = this.hero;
+    /* Las teclas de Phaser siguen bajadas mientras se escribe en un campo HTML. No se apaga el
+       mundo ni una ruta que ya estuviera andando: sólo se evita que W/A/S/D o las flechas del
+       jugador se conviertan en movimiento por detrás del control. La rueda de PC también ocupa
+       temporalmente esas teclas hasta resolver su decisión. */
+    const tecladoMundoOcupado = (typeof controlDeTecladoActivo === "function" && controlDeTecladoActivo()) ||
+      (typeof selectorContextualPcAbierto === "function" && selectorContextualPcAbierto());
     this.drawOlas(dt);   // olas de la isla
     this.seguirAura();
     this.seguirSkins();
@@ -5796,7 +5823,7 @@ class FarmScene extends Phaser.Scene {
     // acción en curso: bloquea movimiento
     if (this.action) {
       // la pesca se interrumpe si el jugador intenta moverse (teclas)
-      if (this.action.kind === "fish" && !GF.NO_WALK && (k.left.isDown || k.right.isDown || k.up.isDown || k.down.isDown || k.aleft.isDown || k.aright.isDown || k.aup.isDown || k.adown.isDown)) {
+      if (this.action.kind === "fish" && !GF.NO_WALK && !tecladoMundoOcupado && (k.left.isDown || k.right.isDown || k.up.isDown || k.down.isDown || k.aleft.isDown || k.aright.isDown || k.aup.isDown || k.adown.isDown)) {
         this.cancelFishing();
       }
       if (!this.action) { hero.setDepth(hero.y); this.updatePrompt(); return; }
@@ -5876,7 +5903,7 @@ class FarmScene extends Phaser.Scene {
     let vx = 0, vy = 0;
     if (GF.NO_WALK || GF.uiOpen || GF.editMode) { this.moveTarget = null; this.path = null; this.pendingObj = null; if (!GF.NO_WALK) this.clearQueue(); }
     else {
-      if (!GF.NO_WALK) {   // sin granjero en la granja, WASD/flechas no mueven nada
+      if (!GF.NO_WALK && !tecladoMundoOcupado) {   // sin granjero en la granja, WASD/flechas no mueven nada
         if (k.left.isDown || k.aleft.isDown) vx = -1; else if (k.right.isDown || k.aright.isDown) vx = 1;
         if (k.up.isDown || k.aup.isDown) vy = -1; else if (k.down.isDown || k.adown.isDown) vy = 1;
         /* 31/8 — SIN DIAGONALES (dirección, con los vídeos): con dos ejes apretados gana el que
@@ -5976,6 +6003,15 @@ class FarmScene extends Phaser.Scene {
     if (typeof window !== "undefined" && window.innerWidth > 640 && rueda && rueda.classList.contains("show")) {
       el.classList.remove("show"); this.cargasBadge(null); return;
     }
+    /* Las ventanas de PC dejan que el mundo siga vivo a propósito. La colocación tiene su
+       propia rama antes del resto de las ayudas: si la puerta quedara después, esa rama volvería
+       a encender «Clic para colocar» detrás de una tarjeta. Se esconde la pista, no el estado de
+       colocación; al cerrar la ventana queda exactamente donde el jugador la dejó. */
+    const hayVentana = this.ayudasMundoOcultas();
+    if (hayVentana) {
+      el.classList.remove("show"); this.cargasBadge(null); this.previaSiembra(null);
+      return;
+    }
     /* 18/8 (reporte: "no pude ponerlo una celda más arriba porque me marca rojo, creo que aún
        quedan celdas bloqueadas fantasma"). No eran fantasma —era la franja que la cerca se reserva
        arriba— pero el jugador NO TENÍA CÓMO SABERLO: en modo edición el cartel se apagaba entero,
@@ -5992,14 +6028,9 @@ class FarmScene extends Phaser.Scene {
       el.classList.add("show");
       return;
     }
-    /* Las ventanas de PC dejan que el mundo siga vivo a propósito: no las convertimos en un
-       bloqueo de juego. Pero la pista que quedó bajo el cursor no tiene que asomarse detrás del
-       HUD o de una tarjeta abierta (por ejemplo, el ⏱ de cargas sobre un árbol). Ocultamos solo
-       esas ayudas mientras haya un overlay; al cerrar, el siguiente frame las devuelve sin tocar
-       el clic ni el movimiento del mundo. */
-    const hayVentana = typeof window !== "undefined" && window.innerWidth > 640 &&
-      typeof anyOvOpen === "function" && anyOvOpen();
-    if (GF.uiOpen || hayVentana || this.action || GF.editMode) {
+    /* La misma regla cubre las ayudas comunes: ni un CTA ni una chapita de cargas tienen que
+       asomarse detrás del HUD o de una tarjeta abierta. */
+    if (GF.uiOpen || this.action || GF.editMode) {
       el.classList.remove("show"); this.cargasBadge(null); this.previaSiembra(null);
       return;
     }

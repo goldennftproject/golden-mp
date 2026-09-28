@@ -29,6 +29,42 @@ function log(m, k = "") { const b = $("log"); if (!b) return; const d = document
 /* ---- overlays ---- */
 function isOpen(id) { const e = $(id); return !!(e && e.classList.contains("show")); }
 function anyOvOpen() { return !!document.querySelector(".ov.show"); }
+/* El teclado pertenece al control que tiene el foco, no al granjero de atrás. Se acepta un
+   elemento explícito para el listener de teclado y, sin él, se consulta el foco actual: las
+   escenas de Phaser sólo reciben la tecla, no su target DOM. OPTION cubre un select desplegado
+   y el ancestro contenteditable deja la misma regla lista para un editor futuro. */
+function controlDeTecladoActivo(elemento) {
+  const activo = elemento || (typeof document !== "undefined" ? document.activeElement : null);
+  if (!activo) return false;
+  const tag = activo.tagName;
+  return tag === "INPUT" || tag === "TEXTAREA" || tag === "SELECT" || tag === "OPTION" ||
+    !!activo.isContentEditable || !!(activo.closest && activo.closest("select, [contenteditable]"));
+}
+/* Al esconder una tarjeta, su input puede conservar el foco del DOM aunque ya no se vea. Eso
+   deja al teclado creyendo que todavía escribe y, correctamente, las escenas dejan de leer
+   WASD/E/Espacio. Soltar el foco antes de ocultar la tarjeta devuelve el control al mundo sin
+   depender de la corrección particular de cada navegador. */
+function desenfocarAlCerrar(contenedor) {
+  const activo = typeof document !== "undefined" ? document.activeElement : null;
+  if (!contenedor || !activo || typeof contenedor.contains !== "function" || !contenedor.contains(activo) || typeof activo.blur !== "function") return;
+  try { activo.blur(); } catch (e) {}
+}
+/* Las tarjetas comunes de PC dejan que el mundo siga vivo, pero un selector contextual no puede
+   nacer por ENCIMA de una de ellas: su primera pulsación se volvería un cierre invisible de la
+   rueda o del panel. Esta puerta no vuelve bloqueantes las tarjetas ni existe en móvil; sólo
+   evita sumar una segunda interfaz de decisión sobre una que ya está abierta. */
+function hayOvPcAbierto() {
+  return typeof window !== "undefined" && window.innerWidth > 640 &&
+    typeof anyOvOpen === "function" && anyOvOpen();
+}
+/* La rueda ocupa el gesto de elegir, no el de actuar. En PC se le da prioridad también a E y
+   Espacio para que no planten o usen un objeto bajo el cursor mientras sus fichas siguen arriba.
+   El teléfono conserva su lectura táctil hasta su pasada específica. */
+function selectorContextualPcAbierto() {
+  const rueda = $("seedwheel");
+  return typeof window !== "undefined" && window.innerWidth > 640 && !!rueda &&
+    rueda.classList.contains("show");
+}
 const OV_REFRESH = { "ov-entrenando": () => entrenarSync(), "ov-clan": () => refreshClan(), "ov-misiones": () => refreshMisiones(), "ov-mapa": () => refreshMapa(), "ov-objetivos": () => refreshObjetivos(), "ov-logros": () => refreshLogros(), "ov-album": () => refreshAlbum(), "ov-inv": () => refreshInv(), "ov-cobertizo": () => refreshCobertizo(), "ov-skills": () => refreshSkills(), "ov-equip": () => refreshEquip(), "ov-godhand": () => refreshGodHand(),
   "ov-forge": () => refreshForge(), "ov-market": () => refreshMarket(), "ov-barn": () => refreshBarn(), "ov-buzon": () => { _bzVista = "sobres"; _bzCartaAbierta = null; refreshBuzon(); }, "ov-paquete": () => refreshPaquete(), "ov-baul": () => refreshBaul(), "ov-pedidos": () => { _pdVista = "pedidos"; refreshPedidos(); }, "ov-expandir": () => refreshExpandir(),
   "ov-cocina": () => refreshCooking(),
@@ -104,6 +140,14 @@ function openOv(id) {
      puede abrirse debajo: cerrarlo por esta puerta también limpia la referencia del cadáver. */
   if (window.innerWidth > 640 && typeof cerrarCuerpoPanelPc === "function") cerrarCuerpoPanelPc();
   e.classList.add("show"); enfocarOvPc(e);
+  // Entrenamiento es el único estado que detiene el juego entero. Su único botón recibe el
+  // foco al abrir para que también se pueda terminar con Tab/Enter, sin depender del ratón.
+  if (id === "ov-entrenando") {
+    const terminar = $("entr-fin");
+    if (terminar && typeof terminar.focus === "function") {
+      try { terminar.focus({ preventScroll: true }); } catch (err) { terminar.focus(); }
+    }
+  }
   if (window.sfx) sfx(OV_SFX[id] || "click");
   if (OV_REFRESH[id]) OV_REFRESH[id]();
   if (typeof tutoHighlight === "function") tutoHighlight();   // 13/8: al abrir un panel, el botón del objetivo se resalta al instante
@@ -144,6 +188,13 @@ function noNo(el) {
   el.classList.remove("nono"); void el.offsetWidth; el.classList.add("nono");
   setTimeout(() => el.classList.remove("nono"), 320);
 }
+/* La flecha vive en un nodo fijo: quitar una tarjeta no le dispara por sí solo resize, scroll ni
+   mutación observable. Sin este toque quedaba hasta un segundo señalando un botón que acababa de
+   desaparecer. Es sólo de escritorio, donde las ventanas y la flecha conviven por capas. */
+function refrescarGuiaTrasCerrarOv(cerro) {
+  if (!cerro || typeof window === "undefined" || window.innerWidth <= 640 || typeof tutoHighlight !== "function") return;
+  tutoHighlight();
+}
 function closeOv(id) {
   /* 8/9: cerrar la puerta de la Zona por la × devuelve todo a la granja, igual que « Volver ».
      Dejar el contenedor cargado sería más « fiel » (en Tibia preparás la mochila y te vas cuando
@@ -154,7 +205,10 @@ function closeOv(id) {
     if (typeof syncSlots === "function") syncSlots();
     if (typeof refreshHud === "function") refreshHud();
   }
-  const e = $(id); if (e) e.classList.remove("show");
+  const e = $(id);
+  const cerro = !!(e && e.classList.contains("show"));
+  if (e) { desenfocarAlCerrar(e); e.classList.remove("show"); }
+  refrescarGuiaTrasCerrarOv(cerro);
 }
 
 /* ---- RESUMEN DEL VIAJE A LA ZONA NEGRA (10/8) --------------------------------
@@ -213,7 +267,11 @@ function entrenarFin() {
 // Las ventanas .bloquea (hoy: el entrenamiento) NO se cierran con Escape, ni con un clic
 // afuera, ni al entrar en modo edición: si se cerraran, el jugador volvería al juego con el
 // entrenamiento corriendo, que es justo el exploit que la ventana viene a tapar (10/8).
-function closeAllOv() { document.querySelectorAll(".ov.show:not(.bloquea)").forEach(e => e.classList.remove("show")); }
+function closeAllOv() {
+  let cerro = false;
+  document.querySelectorAll(".ov.show:not(.bloquea)").forEach(e => { desenfocarAlCerrar(e); e.classList.remove("show"); cerro = true; });
+  refrescarGuiaTrasCerrarOv(cerro);
+}
 
 /* ---- HUD ---- */
 /* --- celebración de subida de nivel (doc maestro 2/8): cartel + glow + partículas, con COLA --- */
@@ -431,6 +489,15 @@ function ubicarMuelleCombatePC() {
   { const st = muelle.style; if (st && typeof st.setProperty === "function") st.setProperty("--muelle-zona-top", Math.ceil(r.bottom + 8) + "px"); else if (st) st["--muelle-zona-top"] = Math.ceil(r.bottom + 8) + "px"; }
   reubicarAviso();
 }
+/* Cambiar una pieza o el modo rehace el muelle entero. En PC, devolver el foco al control
+   equivalente evita que Tab caiga al documento después de una decisión rápida en plena Zona.
+   El botón Equipo es el respaldo si esa casilla ya no puede actuar. */
+function enfocarControlCombate(caja, selector) {
+  if (!caja || (typeof window !== "undefined" && window.innerWidth <= 640) || typeof caja.querySelector !== "function") return;
+  const control = caja.querySelector(selector) || caja.querySelector("#cb-eq-open") || caja.querySelector("[data-modo]");
+  if (!control || typeof control.focus !== "function") return;
+  try { control.focus({ preventScroll: true }); } catch (e) { control.focus(); }
+}
 function refreshCombate() {
   const caja = $("combate"); if (!caja) return;
   if (!(window.GF && GF.scene === "forest")) { caja.style.display = "none"; caja._firma = ""; ubicarMuelleCombatePC(); return; }
@@ -465,10 +532,14 @@ function refreshCombate() {
   const pieza = (slot, sil) => {
     const g = gr[slot], gd = g && typeof GEAR_DEF !== "undefined" && GEAR_DEF[g];
     const aMano = (typeof gearAMano === "function") ? gearAMano(slot) : [];
+    const movible = !!(gd || aMano.length);
     const tip = gd ? gd.label + " · defensa +" + gd.def + " · clic para guardarla en el contenedor"
                    : (aMano.length ? "Vacío · clic para ponerte " + GEAR_DEF[aMano[0]].label : slot);
-    return '<div class="cbq' + (gd ? "" : " vacio") + (gd || aMano.length ? " cbq-mov" : "") +
-      '" data-gslot="' + slot + '" title="' + tip + '">' +
+    const etiqueta = gd ? "Guardar " + gd.label + " en el contenedor"
+      : (aMano.length ? "Equipar " + GEAR_DEF[aMano[0]].label : "");
+    return '<div class="cbq' + (gd ? "" : " vacio") + (movible ? " cbq-mov" : "") +
+      '" data-gslot="' + slot + '"' + (movible ? ' role="button" tabindex="0" aria-label="' + escapeHtml(etiqueta) + '"' : "") +
+      ' title="' + escapeHtml(tip) + '">' +
       (gd ? '<img src="' + GF.spr(gd.sprite) + '" onerror="this.remove()">'
           : '<img class="sil" src="' + GF.spr(sil) + '" onerror="this.remove()">') + '</div>';
   };
@@ -509,40 +580,53 @@ function refreshCombate() {
   };
   const SLOTS = (typeof ARMOR_SLOTS !== "undefined") ? ARMOR_SLOTS : [];
   caja.innerHTML =
-    '<div class="cb-doll" id="cb-eq" title="Tocá para abrir el Equipo">' +
+    '<div class="cb-doll" id="cb-eq">' +
       '<div class="cb-col">' + pieza("casco", "sil_casco") + pieza("armadura", "sil_armadura") + pieza("botas", "sil_botas") + '</div>' +
       '<div class="cb-col cb-set">' + SLOTS.map(piezaSet).join("") + '</div>' +
       '<div class="cb-col">' + armaHtml + pieza("escudo", "sil_escudo") + munHtml + '</div>' +
     '</div>' +
     durArmaHtml(gr.arma) +
-    '<div class="cb-def">Defensa ' + (typeof gearDefTotal === "function" ? gearDefTotal() : 0) + '</div>' +
+    '<button class="cb-def cb-eq-open" id="cb-eq-open" title="Abrir el panel de Equipo">Equipo · Defensa ' + (typeof gearDefTotal === "function" ? gearDefTotal() : 0) + '</button>' +
     '<div class="cb-modos">' +
       '<button class="cb-m' + (modo === "perseguir" ? " on" : "") + '" data-modo="perseguir" title="Vas hacia el objetivo hasta la distancia de tu arma">👣 Perseguir</button>' +
       '<button class="cb-m' + (modo === "parado" ? " on" : "") + '" data-modo="parado" title="Atacás sin moverte — para pelear con arco">🛑 Parado</button>' +
     '</div>';
-  const eq = $("cb-eq");
-  if (eq) eq.onclick = () => { if (typeof openOv === "function") openOv("ov-equip"); };
-  /* los huecos de loot mueven la pieza; el resto del muñeco sigue abriendo el panel de Equipo */
-  caja.querySelectorAll("[data-gslot]").forEach(b => b.onclick = (e) => {
-    e.stopPropagation();
-    const slot = b.dataset.gslot, puesta = (G.gear || {})[slot];
-    if (puesta) {
-      if (typeof gearGuardar !== "function" || !gearGuardar(slot)) { toast("El contenedor está lleno — no hay dónde guardarla"); return; }
-      toast(GEAR_DEF[puesta].label + " al contenedor");
-    } else {
-      const aMano = (typeof gearAMano === "function") ? gearAMano(slot) : [];
-      if (!aMano.length) { toast("No llevás nada para ese hueco"); return; }
-      if (typeof gearPonerse !== "function" || !gearPonerse(aMano[0])) { toast("No se pudo equipar"); return; }
-      toast(GEAR_DEF[aMano[0]].label + " equipada");
-    }
-    refreshCombate(); if (typeof refreshMorral === "function") refreshMorral();
-    if (typeof refreshHud === "function") refreshHud();
-    if (typeof isOpen === "function" && isOpen("ov-equip") && typeof refreshEquip === "function") refreshEquip();
-    if (typeof saveFarm === "function") saveFarm();
+  const abrirEquipo = () => { if (typeof openOv === "function") openOv("ov-equip"); };
+  const eq = $("cb-eq"), abrir = $("cb-eq-open");
+  if (abrir) abrir.onclick = abrirEquipo;
+  /* Móvil conserva el toque sobre el muñeco entero; en PC el botón explícito evita anidar ese
+     acceso dentro de las casillas rápidas, que sí son acciones independientes. */
+  if (typeof window !== "undefined" && window.innerWidth <= 640 && eq) eq.onclick = abrirEquipo;
+  caja.querySelectorAll("[data-gslot]").forEach(b => {
+    const moverPieza = (e) => {
+      if (e && typeof e.stopPropagation === "function") e.stopPropagation();
+      const slot = b.dataset.gslot, puesta = (G.gear || {})[slot];
+      if (puesta) {
+        if (typeof gearGuardar !== "function" || !gearGuardar(slot)) { toast("El contenedor está lleno — no hay dónde guardarla"); return; }
+        toast(GEAR_DEF[puesta].label + " al contenedor");
+      } else {
+        const aMano = (typeof gearAMano === "function") ? gearAMano(slot) : [];
+        if (!aMano.length) { toast("No llevás nada para ese hueco"); return; }
+        if (typeof gearPonerse !== "function" || !gearPonerse(aMano[0])) { toast("No se pudo equipar"); return; }
+        toast(GEAR_DEF[aMano[0]].label + " equipada");
+      }
+      refreshCombate(); if (typeof refreshMorral === "function") refreshMorral();
+      if (typeof refreshHud === "function") refreshHud();
+      if (typeof isOpen === "function" && isOpen("ov-equip") && typeof refreshEquip === "function") refreshEquip();
+      if (typeof saveFarm === "function") saveFarm();
+      enfocarControlCombate(caja, '[data-gslot="' + slot + '"][role="button"]');
+    };
+    b.onclick = moverPieza;
+    if (b.getAttribute("role") === "button") activarAccionConTeclado(b, moverPieza);
   });
-  caja.querySelectorAll("[data-modo]").forEach(b => b.onclick = (e) => {
-    e.stopPropagation();
-    if (typeof modoPeleaSet === "function") modoPeleaSet(b.dataset.modo);
+  caja.querySelectorAll("[data-modo]").forEach(b => {
+    const cambiarModo = (e) => {
+      if (e && typeof e.stopPropagation === "function") e.stopPropagation();
+      const elegido = b.dataset.modo;
+      if (typeof modoPeleaSet === "function") modoPeleaSet(elegido);
+      enfocarControlCombate(caja, '[data-modo="' + elegido + '"]');
+    };
+    b.onclick = cambiarModo;
   });
   ubicarMuelleCombatePC();
 }
@@ -598,6 +682,12 @@ function refreshMorral() {
    Un detalle de mecánica que vive acá y no en state: se llevan DE A UNO por clic y de a diez con
    shift. Un botón de « pasar todo » sería cómodo dos segundos y catastrófico el día que alguien
    lo apriete con la bolsa entera. */
+/* Las casillas son `div` para conservar la grilla compacta de objetos, pero en PC siguen siendo
+   acciones. Este atributo les devuelve la semántica de botón y un nombre que no depende de que
+   el lector de pantalla pueda interpretar el sprite. */
+function viajeAccionAttr(dato, valor, etiqueta) {
+  return ' data-' + dato + '="' + escapeHtml(valor) + '" role="button" tabindex="0" aria-label="' + escapeHtml(etiqueta) + '"';
+}
 function refreshViaje() {
   const caja = $("viaje-cuerpo"); if (!caja) return;
   const raiz = (typeof contLlevado === "function") ? contLlevado() : null;
@@ -608,7 +698,7 @@ function refreshViaje() {
   CONT_ORDER.forEach(c => {
     const d = CONT_DEF[c], tengo = contsTengo(c), puesto = raiz && raiz.c === c;
     const hay = tengo > 0 || puesto;
-    h += '<div class="vj-cont' + (puesto ? " on" : "") + (hay ? "" : " no") + '"' + (hay ? ' data-vcont="' + c + '"' : "") + '>' +
+    h += '<div class="vj-cont' + (puesto ? " on" : "") + (hay ? "" : " no") + '"' + (hay ? viajeAccionAttr("vcont", c, "Elegir " + d.label) : "") + '>' +
       '<span class="em">' + d.emoji + '</span><div><b>' + d.label + (puesto ? " · puesta" : "") + '</b>' +
       '<span class="d">' + d.huecos + ' huecos · ' + (hay ? "tenés " + (tengo + (puesto ? 1 : 0)) : "no tenés — se compra en la Tienda") + '</span></div></div>';
   });
@@ -629,18 +719,23 @@ function refreshViaje() {
   if (!bolsa.length) h += '<div class="vj-s vacia"></div>';
   bolsa.forEach(x => {
     const v = itemView({ kind: x.kind, key: x.key }); if (!v) return;
-    h += '<div class="vj-s" draggable="true" data-vsube="' + x.kind + "|" + x.key + '" title="' + viajeNombre(v, x.key) + ' — clic o arrastrá a la derecha">' +
+    const nombre = viajeNombre(v, x.key);
+    h += '<div class="vj-s" draggable="true"' + viajeAccionAttr("vsube", x.kind + "|" + x.key, "Pasar " + nombre + " al contenedor") +
+      ' title="' + escapeHtml(nombre + " — clic o arrastrá a la derecha") + '">' +
       itemIcon(v) + '<span class="n">' + fmt(x.n) + '</span></div>';
   });
   h += '</div></div><div class="vj-col" data-vzona="cont"><h4>' + CONT_DEF[raiz.c].label + ' — te lo llevás (' + libres + ' libres)</h4><div class="vj-lista">';
   raiz.items.forEach((e, i) => {
     if (esCont(e)) {
-      h += '<div class="vj-s bolsa" data-vbolsa="' + i + '" title="Bolsa · ' + contPilas(e) + ' cosa(s) dentro — clic para sacarla">' +
+      h += '<div class="vj-s bolsa"' + viajeAccionAttr("vbolsa", i, "Sacar bolsa del contenedor") +
+        ' title="' + escapeHtml("Bolsa · " + contPilas(e) + " cosa(s) dentro — clic para sacarla") + '">' +
         '<span class="em">' + CONT_DEF[e.c].emoji + '</span><span class="n">' + contPilas(e) + '/' + CONT_DEF[e.c].huecos + '</span></div>';
       return;
     }
     const v = vistaDeCarga(e);
-    h += '<div class="vj-s" draggable="true" data-vbaja="' + e.kind + "|" + e.k + '" title="' + viajeNombre(v, e.k) + ' — clic o arrastrá a la izquierda">' +
+    const nombre = viajeNombre(v, e.k);
+    h += '<div class="vj-s" draggable="true"' + viajeAccionAttr("vbaja", e.kind + "|" + e.k, "Dejar " + nombre + " en la granja") +
+      ' title="' + escapeHtml(nombre + " — clic o arrastrá a la izquierda") + '">' +
       (v ? itemIcon(v) : '<span class="em">📦</span>') + '<span class="n">' + fmt(e.n) + '</span></div>';
   });
   /* lo que hay dentro de las bolsas anidadas, sangrado detrás de su bolsa */
@@ -648,7 +743,9 @@ function refreshViaje() {
     if (!esCont(b)) return;
     b.items.forEach(e => {
       const v = vistaDeCarga(e);
-      h += '<div class="vj-s" draggable="true" data-vbaja="' + e.kind + "|" + e.k + '" title="Dentro de la bolsa · ' + viajeNombre(v, e.k) + ' — clic o arrastrá a la izquierda">' +
+      const nombre = viajeNombre(v, e.k);
+      h += '<div class="vj-s" draggable="true"' + viajeAccionAttr("vbaja", e.kind + "|" + e.k, "Dejar " + nombre + " en la granja") +
+        ' title="' + escapeHtml("Dentro de la bolsa · " + nombre + " — clic o arrastrá a la izquierda") + '">' +
         (v ? itemIcon(v) : '<span class="em">📦</span>') + '<span class="n">' + fmt(e.n) + '</span></div>';
     });
   });
@@ -681,6 +778,26 @@ function viajeNombre(v, k) { return String((v && v.label) || k).split(" · ")[0]
    decisión —« 1 / la mitad / todo » cubre casi todos los casos sin tocar la barra— y una decisión
    enterrada en un manejador de eventos no se puede medir sin un navegador. */
 function cuantoAtajo(q, max) { return q === "todo" ? max : q === "mitad" ? Math.ceil(max / 2) : 1; }
+function cerrarCantidadLocal() {
+  const ov = $("ov-cuanto");
+  if (!ov || !ov.classList.contains("show")) return false;
+  desenfocarAlCerrar(ov);
+  ov.classList.remove("show");
+  return true;
+}
+/* En PC el selector nace sobre la puerta de la Zona: los huecos visibles de la tarjeta de abajo
+   no pueden elegir otra pila ni mandar al granjero a caminar mientras se decide una cantidad.
+   Tocar el fondo equivale a Cancelar, pero el gesto se queda acá; móvil conserva su cierre
+   compacto de siempre. */
+function enlazarFondoCantidadPc() {
+  const ov = $("ov-cuanto");
+  if (!ov || ov._fondoCantidadPc) return;
+  ov._fondoCantidadPc = true;
+  ov.addEventListener("pointerdown", (e) => {
+    if (typeof window === "undefined" || window.innerWidth <= 640 || e.target !== ov) return;
+    e.stopPropagation(); cerrarCantidadLocal();
+  });
+}
 function pedirCuanto(max, titulo, sub, onOk) {
   max = Math.max(1, Math.floor(max || 1));
   if (max === 1) { onOk(1); return; }
@@ -696,8 +813,15 @@ function pedirCuanto(max, titulo, sub, onOk) {
   ov.querySelectorAll("[data-cu]").forEach(b => b.onclick = () => {
     set(cuantoAtajo(b.dataset.cu, max));
   });
+  enlazarFondoCantidadPc();
   ov.classList.add("show"); enfocarOvPc(ov);
-  const cerrar = () => { ov.classList.remove("show"); };
+  /* Al abrir por teclado o al soltar un arrastre, el cursor puede seguir en la casilla de abajo.
+     El campo recibe el foco para que escribir «12» empiece a editar la cantidad, no el mundo. */
+  if (window.innerWidth > 640 && num && typeof num.focus === "function") {
+    try { num.focus({ preventScroll: true }); } catch (e) { num.focus(); }
+    if (typeof num.select === "function") num.select();
+  }
+  const cerrar = () => { cerrarCantidadLocal(); };
   $("cu-ok").onclick = () => { cerrar(); onOk(Math.max(1, Math.min(max, +num.value || 1))); };
   $("cu-no").onclick = cerrar;
 }
@@ -719,9 +843,63 @@ function vistaDeCarga(e) {
     return { sprite: PICK_DEF[e.k].sprite, emoji: "⛏️", label: PICK_DEF[e.k].label, dur: null };
   return null;
 }
+/* Enter y Espacio replican el clic de una tarjeta que usa role=button, sin permitir que Space se
+   filtre al mundo de Phaser como una interacción. El documento también lo protege como red de
+   seguridad, pero cada acción lo resuelve acá para que el gesto quede junto a lo que dispara. */
+function activarAccionConTeclado(el, accion) {
+  if (!el || typeof el.addEventListener !== "function") return;
+  /* Algunos controles persistentes (por ejemplo, Equipo) actualizan su estado sin reemplazar
+     el nodo. Conservar un único oyente y cambiar la acción vigente evita que cada refresh sume
+     una pulsación extra de Enter/Espacio. Las tarjetas que se repintan siguen recibiendo su
+     propio oyente porque son nodos nuevos. */
+  if (el._accionTecladoVinculada) { el._accionTeclado = accion; return; }
+  el._accionTecladoVinculada = true;
+  el._accionTeclado = accion;
+  el.addEventListener("keydown", (e) => {
+    const tecla = String(e.key || "").toLowerCase();
+    if (tecla !== "enter" && tecla !== " " && tecla !== "spacebar") return;
+    /* Mantener una tecla no repite la decisión, pero tampoco debe colarse al mundo ni hacer
+       scroll: una casilla enfocada sigue siendo contexto de interfaz durante todo el gesto. */
+    if (e.repeat) {
+      if (typeof e.preventDefault === "function") e.preventDefault();
+      if (typeof e.stopPropagation === "function") e.stopPropagation();
+      return;
+    }
+    if (typeof e.preventDefault === "function") e.preventDefault();
+    if (typeof e.stopPropagation === "function") e.stopPropagation();
+    if (typeof el._accionTeclado === "function") el._accionTeclado(e);
+  });
+}
+function desactivarAccionConTeclado(el) {
+  if (el) el._accionTeclado = null;
+}
+/* `refreshViaje` repinta todas las casillas. Si una de ellas tenía el foco de Tab, el navegador
+   no puede conservar un nodo que ya no existe: volvemos a la misma pila si sigue visible, a su
+   contraparte si se movió toda, y finalmente a Entrar/Volver. Sólo se hace en PC; móvil no gana
+   nada con un foco programático. */
+function enfocarAccionViaje(caja, preferencias) {
+  if (!caja || (typeof window !== "undefined" && window.innerWidth <= 640)) return;
+  let foco = null;
+  (Array.isArray(preferencias) ? preferencias : []).some(pref => {
+    if (!Array.isArray(pref) || !pref[0] || typeof caja.querySelectorAll !== "function") return false;
+    const dato = String(pref[0]), valor = String(pref[1]);
+    foco = Array.from(caja.querySelectorAll("[data-" + dato + "]") || [])
+      .find(el => el && el.dataset && String(el.dataset[dato]) === valor) || null;
+    return !!foco;
+  });
+  if (!foco && typeof caja.querySelector === "function") foco = caja.querySelector("#vj-entrar") || caja.querySelector("#vj-cerrar");
+  if (!foco || typeof foco.focus !== "function") return;
+  try { foco.focus({ preventScroll: true }); } catch (e) { foco.focus(); }
+}
 function engancharViaje(caja) {
-  const rep = () => { refreshViaje(); if (typeof refreshHud === "function") refreshHud(); if (typeof syncSlots === "function") syncSlots(); };
-  caja.querySelectorAll("[data-vcont]").forEach(b => b.onclick = () => { if (viajeElegir(b.dataset.vcont)) rep(); });
+  const rep = (preferencias) => {
+    refreshViaje(); if (typeof refreshHud === "function") refreshHud(); if (typeof syncSlots === "function") syncSlots();
+    enfocarAccionViaje(caja, preferencias);
+  };
+  caja.querySelectorAll("[data-vcont]").forEach(b => {
+    const elegir = () => { const c = b.dataset.vcont; if (viajeElegir(c)) rep([["vcont", c]]); };
+    b.onclick = elegir; activarAccionConTeclado(b, elegir);
+  });
 
   /* 8/9 (Suren) — SUBIR Y BAJAR SON LA MISMA OPERACIÓN con distinto sentido, así que una sola
      función las hace. `todo` es el shift: pasa la pila entera sin preguntar, que es el atajo del
@@ -729,17 +907,25 @@ function engancharViaje(caja) {
   const mover = (dir, kind, key, todo) => {
     const hay = dir === "sube" ? viajeTengo(kind, key) : contContar(contLlevado(), kind, key);
     if (hay <= 0) return;
-    const hacer = (n) => { if (dir === "sube" ? viajeCargar(kind, key, n) : viajeBajar(kind, key, n)) rep(); };
+    const dato = dir === "sube" ? "vsube" : "vbaja", contraparte = dir === "sube" ? "vbaja" : "vsube";
+    const preferencias = [[dato, kind + "|" + key], [contraparte, kind + "|" + key]];
+    const hacer = (n) => { if (dir === "sube" ? viajeCargar(kind, key, n) : viajeBajar(kind, key, n)) rep(preferencias); };
     if (todo) { hacer(hay); return; }
     const v = itemView({ kind: kind, key: key });
     pedirCuanto(hay, dir === "sube" ? "¿Cuántas te llevás?" : "¿Cuántas dejás en la granja?",
       viajeNombre(v, key) + " · tenés " + hay, hacer);
   };
-  caja.querySelectorAll("[data-vsube]").forEach(b => b.onclick = (ev) => {
-    const [kind, key] = b.dataset.vsube.split("|"); mover("sube", kind, key, ev.shiftKey);
+  caja.querySelectorAll("[data-vsube]").forEach(b => {
+    const subir = (ev) => {
+      const [kind, key] = b.dataset.vsube.split("|"); mover("sube", kind, key, !!(ev && ev.shiftKey));
+    };
+    b.onclick = subir; activarAccionConTeclado(b, subir);
   });
-  caja.querySelectorAll("[data-vbaja]").forEach(b => b.onclick = (ev) => {
-    const [kind, key] = b.dataset.vbaja.split("|"); mover("baja", kind, key, ev.shiftKey);
+  caja.querySelectorAll("[data-vbaja]").forEach(b => {
+    const bajar = (ev) => {
+      const [kind, key] = b.dataset.vbaja.split("|"); mover("baja", kind, key, !!(ev && ev.shiftKey));
+    };
+    b.onclick = bajar; activarAccionConTeclado(b, bajar);
   });
 
   /* EL ARRASTRE. Nada de librerías: el drag nativo del navegador ya sabe hacer esto y lo hace
@@ -769,7 +955,10 @@ function engancharViaje(caja) {
       mover(origen, kind, key, e.shiftKey);
     });
   });
-  caja.querySelectorAll("[data-vbolsa]").forEach(b => b.onclick = () => { if (viajeBajarBolsa(+b.dataset.vbolsa)) rep(); });
+  caja.querySelectorAll("[data-vbolsa]").forEach(b => {
+    const bajarBolsa = () => { if (viajeBajarBolsa(+b.dataset.vbolsa)) rep(); };
+    b.onclick = bajarBolsa; activarAccionConTeclado(b, bajarBolsa);
+  });
   const cerrar = $("vj-cerrar");
   /* « Volver » devuelve TODO, contenedor incluido: cancelar no puede costar nada */
   if (cerrar) cerrar.onclick = () => { if (typeof viajeSoltar === "function") viajeSoltar(); closeOv("ov-viaje"); if (typeof syncSlots === "function") syncSlots(); if (typeof refreshHud === "function") refreshHud(); };
@@ -777,7 +966,7 @@ function engancharViaje(caja) {
   /* OJO: no se cierra con closeOv, que devolvería la carga a la granja (ver el comentario de
      closeOv). Acá el contenedor tiene que salir cargado — es todo el punto de la ventana. */
   if (ent) ent.onclick = () => {
-    const el = $("ov-viaje"); if (el) el.classList.remove("show");
+    const el = $("ov-viaje"); if (el) { desenfocarAlCerrar(el); el.classList.remove("show"); }
     if (typeof viajeEntrar === "function") viajeEntrar();
   };
 }
@@ -1065,6 +1254,7 @@ function pescaV4Pintar() {
   pescaV4Nasas();
 }
 function pescaAparejosAbrir() {
+  if (hayOvPcAbierto()) { toast("Cerrá la ventana antes de abrir los aparejos"); return; }
   const el = $("pesca4"); if (!el) return;
   pescaV4Pintar();
   el.classList.add("show");
@@ -1388,23 +1578,44 @@ function lonjaPintaTienda(caja) {
     if (lonjaComprar(b.dataset.lcomp)) refreshLonja();
   });
 }
+function tituloLonjaEnFoco(caja) {
+  if (!caja || typeof document === "undefined" || (typeof window !== "undefined" && window.innerWidth <= 640)) return null;
+  let activo = document.activeElement;
+  if (!activo || typeof caja.contains !== "function" || !caja.contains(activo)) return null;
+  if (typeof activo.closest === "function") activo = activo.closest("[data-ltit]");
+  return activo && activo.dataset && activo.dataset.ltit && caja.contains(activo) ? activo.dataset.ltit : null;
+}
+function enfocarTituloLonjaPc(caja, titulo) {
+  if (!caja || !titulo || (typeof window !== "undefined" && window.innerWidth <= 640) || typeof caja.querySelectorAll !== "function") return;
+  const boton = Array.from(caja.querySelectorAll("[data-ltit]")).find(el => el.dataset.ltit === titulo);
+  if (!boton || typeof boton.focus !== "function") return;
+  try { boton.focus({ preventScroll: true }); } catch (e) { boton.focus(); }
+}
 function lonjaPintaTitulos(caja) {
+  const focoTitulo = tituloLonjaEnFoco(caja);
   const vig = tituloPescaVigente();
   let h = '<div class="lonja-vacio" style="text-align:left;margin-bottom:8px">Los títulos no dan ' +
     'plata: dan una etiqueta que los demás ven. Tocá uno ganado para llevarlo.</div>';
   for (const k of TITULO_PESCA_ORDER) {
     const d = TITULO_PESCA_DEF[k], g = tituloPescaGanado(k);
+    const etiqueta = "Usar título de pesca " + d.label + (k === vig ? " (en uso)" : "");
     h += '<div class="lonja-tit' + (g ? " ganado" : "") + (k === vig ? " vig" : "") + '"' +
-      (g ? ' data-ltit="' + k + '"' : "") + '>' +
+      (g ? ' data-ltit="' + k + '" role="button" tabindex="0" aria-label="' + escapeHtml(etiqueta) +
+        '" aria-pressed="' + (k === vig ? "true" : "false") + '" title="' + escapeHtml(etiqueta) + '"' : "") + '>' +
       '<div class="lt-nm">' + d.label + (k === vig ? " · en uso" : "") + '</div>' +
       '<div class="lt-pide">' + tituloPescaPideTxt(k) + '</div>' +
       '<div class="lt-mide">' + d.mide + '</div></div>';
   }
   caja.innerHTML = h;
-  caja.querySelectorAll("[data-ltit]").forEach(b => b.onclick = () => {
+  caja.querySelectorAll("[data-ltit]").forEach(b => {
+    const elegir = () => {
     G.tituloPesca = b.dataset.ltit; refreshLonja();
     toast("Ahora llevás el título de " + TITULO_PESCA_DEF[b.dataset.ltit].label);
+    };
+    b.onclick = elegir;
+    activarAccionConTeclado(b, elegir);
   });
+  enfocarTituloLonjaPc(caja, focoTitulo);
 }
 /* qué le falta a un título, en castellano y CON EL PROGRESO. « Pesca 16 · 3 gigantes » no dice
    si llevás cero o dos; « Pesca 16 · 3 gigantes (1/3) » convierte un requisito en una meta. */
@@ -1675,7 +1886,7 @@ function refreshHud() {
 function bindStamPill() {
   const pill = document.getElementById("stampill"); if (!pill || pill._bound) return;
   pill._bound = true; pill.style.cursor = "pointer";
-  pill.onclick = () => {
+  const recargar = () => {
     if (typeof stamRecargar !== "function") return;
     const r = stamRecargasHoy();
     if (G.stam >= stamMax()) { toast("La estamina ya está llena"); return; }
@@ -1683,6 +1894,8 @@ function bindStamPill() {
       (STAM_RECARGAS_DIA - r.n) + " recargas hoy. ¿Recargar?", () => stamRecargar(),
       { title: "Recargar estamina", yes: "Recargar", yesClass: "green", no: "Cancelar", noClass: "red" });
   };
+  pill.onclick = recargar;
+  activarAccionConTeclado(pill, recargar);
 }
 function refreshStam() {
   bindStamPill();
@@ -1810,7 +2023,9 @@ function refreshFarmBar() {
 function bindFarmPill() {
   const pill = document.getElementById("lvlpill"); if (!pill || pill._bound) return;
   pill._bound = true;
-  pill.onclick = () => { if (typeof openOv === "function") openOv("ov-barn"); };
+  const abrir = () => { if (typeof openOv === "function") openOv("ov-barn"); };
+  pill.onclick = abrir;
+  activarAccionConTeclado(pill, abrir);
 }
 /* LOS EFECTOS DE LA COMIDA, CON SU RELOJ   (31/8, de los vídeos de referencia: « Food 00:00 »)
    Los platos dan buffs con vencimiento desde el doc maestro del 2/8, y hasta hoy no se enseñaban
@@ -1989,6 +2204,14 @@ function invCellHtml(d, i, rem, zone) {
   const v = itemView(d);
   const sel = (d.kind === "seed" && G.selSeed === d.key) ? " sel" : "";
   const eq = pickEqCls(d);
+  /* Una casilla de semilla sí tiene una decisión frecuente y clara: elegir qué se planta.
+     El resto de la bolsa conserva su interacción actual (arrastrar, usar o información), sin
+     convertir recursos y huecos en decenas de paradas falsas de Tab. */
+  const semillaElegible = d.kind === "seed" && (typeof cropUnlocked !== "function" || cropUnlocked(d.key));
+  const semillaAttrs = semillaElegible
+    ? ' data-inv-seed="1" role="button" tabindex="0" aria-label="' + escapeHtml("Seleccionar semilla de " + v.label) +
+      '" aria-pressed="' + (G.selSeed === d.key ? "true" : "false") + '"'
+    : "";
   // 10/8: cada familia lleva su color de borde (k-res, k-seed, k-fish, k-dish, k-tool…), para
   // reconocer de qué es una casilla sin tener que leer el tooltip.
   /* 2/9 (dirección, con la captura de Tibia: « cuando un ítem tiene una rareza en particular,
@@ -1998,7 +2221,7 @@ function invCellHtml(d, i, rem, zone) {
      escalera cambia sola. Lo común no se pinta: si todo brilla, no brilla nada. */
   const rar = (typeof rarezaDe === "function") ? rarezaDe(d.kind, d.key) : null;
   const rc = (rar && rar !== "comun") ? " r-" + rar : "";
-  return `<div class="slot filled k-${d.kind}${rc}${sel}${eq}" draggable="true" data-slot="${i}" data-zone="${zone}" title="${v.label}${d.kind === "dish" || d.kind === "res" || d.kind === "seed" || d.kind === "fish" ? " — clic derecho (o dedo apretado) lo manda a la barra" : ""}">${itemIcon(v)}${cnt}${durBar(v)}</div>`;
+  return `<div class="slot filled k-${d.kind}${rc}${sel}${eq}" draggable="true" data-slot="${i}" data-zone="${zone}"${semillaAttrs} title="${v.label}${semillaElegible ? " — seleccionar para plantar" : ""}${d.kind === "dish" || d.kind === "res" || d.kind === "seed" || d.kind === "fish" ? " — clic derecho (o dedo apretado) lo manda a la barra" : ""}">${itemIcon(v)}${cnt}${durBar(v)}</div>`;
 }
 function bindTrash() {
   const tr = $("inv-trash"); if (!tr || tr._bound) return; tr._bound = true;
@@ -2095,11 +2318,28 @@ function refreshInvZona() {
     toast("Acá solo podés comer y cambiar de arma — el resto se hace en la granja");
   }));
 }
+/* selectSeed repinta la Bolsa para actualizar el borde dorado. La casilla anterior deja de
+   existir, así que el foco se guarda por índice y vuelve sólo en escritorio a esa misma semilla. */
+function semillaEnFocoBolsa(caja) {
+  if (!caja || typeof document === "undefined" || (typeof window !== "undefined" && window.innerWidth <= 640)) return null;
+  let activo = document.activeElement;
+  if (!activo || typeof caja.contains !== "function" || !caja.contains(activo)) return null;
+  if (typeof activo.closest === "function") activo = activo.closest("[data-inv-seed][data-slot]");
+  return activo && activo.dataset && activo.dataset.slot != null && caja.contains(activo) ? activo.dataset.slot : null;
+}
+function enfocarSemillaBolsaPc(caja, slot) {
+  if (!caja || slot == null || (typeof window !== "undefined" && window.innerWidth <= 640) || typeof caja.querySelector !== "function") return;
+  const celda = caja.querySelector('[data-inv-seed][data-slot="' + slot + '"]');
+  if (!celda || typeof celda.focus !== "function") return;
+  try { celda.focus({ preventScroll: true }); } catch (e) { celda.focus(); }
+}
 function refreshInv() {
   window._bolsaFirma = (typeof bolsaFirma === "function") ? bolsaFirma() : null;   // 24/8: al repintar, la firma queda al día
   if (typeof enZona === "function" && enZona()) { refreshInvZona(); refreshHotbar(); return; }
   syncSlots();
   bindTrash();
+  const grilla = $("inv-slots");
+  const focoSemilla = semillaEnFocoBolsa(grilla);
   const cap = invSlots(), rem = {};
   ITEM_RES_ORDER.forEach(r => rem["res:" + r] = Math.floor(G.res[r] || 0));
   CROP_ORDER.forEach(s => rem["seed:" + s] = Math.floor(G.seeds[s] || 0));
@@ -2111,15 +2351,19 @@ function refreshInv() {
   PICK_ORDER.forEach(id => rem["pick:" + id] = pickCount(id));
   let html = "";
   for (let i = 0; i < cap; i++) html += invCellHtml(G.slots[i], i, rem, "inv");
-  $("inv-slots").innerHTML = html;
+  grilla.innerHTML = html;
   const used = canonicalStacks().length, cap2 = $("inv-cap"); if (cap2) cap2.textContent = `Bolsa: ${used}/${cap} · recursos y semillas apilan hasta 99`;
   const ss = $("inv-selseed"); if (ss && CROP_DEF[G.selSeed]) ss.innerHTML = `Plantando: <img class="ric" src="${GF.spr("seed_" + G.selSeed)}" onerror="this.outerHTML='${CROP_DEF[G.selSeed].emoji}'"> ` + CROP_DEF[G.selSeed].label + " · clic una semilla para cambiar";
   renderInvExpand();
-  bindZoneDnD($("inv-slots"), "inv");
-  $("inv-slots").querySelectorAll("[data-slot]").forEach(c => {
+  bindZoneDnD(grilla, "inv");
+  grilla.querySelectorAll("[data-slot]").forEach(c => {
     c.addEventListener("click", () => invCellClick(+c.dataset.slot));
     bindALaBarra(c, () => G.slots[+c.dataset.slot]);   // clic derecho o dedo apretado → a la barra
   });
+  grilla.querySelectorAll("[data-inv-seed]").forEach(c => {
+    activarAccionConTeclado(c, () => invCellClick(+c.dataset.slot));
+  });
+  enfocarSemillaBolsaPc(grilla, focoSemilla);
   refreshHotbar();
 }
 /* ============ EL COBERTIZO (18/8) =================================================
@@ -2135,11 +2379,16 @@ function refreshCobertizo() {
   } else {
     cont.innerHTML = items.map((d, i) => {
       const v = itemView(d);
-      return '<div class="slot filled k-' + d.kind + '" data-cob="' + i + '" title="' + v.label + '">' +
+      const etiqueta = "Colocar " + v.label + " en la granja";
+      return '<div class="slot filled k-' + d.kind + '" data-cob="' + i + '" role="button" tabindex="0" aria-label="' +
+             escapeHtml(etiqueta) + '" title="' + escapeHtml(v.label + " — elegir dónde colocarlo") + '">' +
              itemIcon(v) + '</div>';
     }).join("");
-    cont.querySelectorAll("[data-cob]").forEach(c =>
-      c.addEventListener("click", () => cobertizoClick(items[+c.dataset.cob])));
+    cont.querySelectorAll("[data-cob]").forEach(c => {
+      const colocar = () => cobertizoClick(items[+c.dataset.cob]);
+      c.addEventListener("click", colocar);
+      activarAccionConTeclado(c, colocar);
+    });
   }
   const pie = $("cob-pie");
   if (pie) pie.textContent = items.length
@@ -2257,10 +2506,20 @@ function pickEqCls(d) {
   const varios = Object.keys(G.picks.owned || {}).filter(k => G.picks.owned[k]).length > 1;
   return varios ? " eq" : "";
 }
+/* La hotbar siempre tuvo los números 1–0, pero una persona que llega con Tab sólo veía pasar
+   de largo diez divs. Cada hueco declara su atajo y su contenido sin cambiar la tira táctil. */
+function hotCellAttrs(d, i, v) {
+  const n = i === 9 ? 0 : i + 1;
+  const nombre = d && v ? v.label : "Hueco vacío";
+  const elegida = G.hotSel === i;
+  const etiqueta = "Atajo " + n + ": " + nombre + (elegida ? " (seleccionado)" : "");
+  return ' role="button" tabindex="0" aria-label="' + escapeHtml(etiqueta) +
+    '" aria-pressed="' + (elegida ? "true" : "false") + '" aria-keyshortcuts="' + n + '"';
+}
 function hotCellHtml(d, i) {
   const num = `<span class="hk">${i === 9 ? 0 : i + 1}</span>`;
   const on = (G.hotSel === i) ? " on" : "";
-  if (!d) return `<div class="hcell${on}" data-slot="${i}" data-zone="hot">${num}</div>`;
+  if (!d) return `<div class="hcell${on}" data-slot="${i}" data-zone="hot"${hotCellAttrs(null, i, null)}>${num}</div>`;
   const v = itemView(d);
   /* 8/9 (Suren: « especialmente la comida a la barra rápida para usarla con números ») — dentro
      de la Zona la barra tiene que contar lo que llevás en el contenedor, no lo que dejaste en la
@@ -2271,12 +2530,28 @@ function hotCellHtml(d, i) {
   const sel = (d.kind === "seed" && G.selSeed === d.key) ? " sel" : "";
   const eq = pickEqCls(d);
   const ghost = hotItemExists(d) ? "" : " ghost";
-  return `<div class="hcell filled k-${d.kind}${on}${sel}${eq}${ghost}" draggable="true" data-slot="${i}" data-zone="hot" title="${v.label}">${num}${itemIcon(v)}${cnt}${durBar(v)}</div>`;
+  return `<div class="hcell filled k-${d.kind}${on}${sel}${eq}${ghost}" draggable="true" data-slot="${i}" data-zone="hot"${hotCellAttrs(d, i, v)} title="${v.label}">${num}${itemIcon(v)}${cnt}${durBar(v)}</div>`;
 }
 let _hotFirma = null;
+/* refreshHotbar sustituye los diez nodos; al activar uno con teclado el foco no debe acabar en
+   el body. Sólo se repone en PC: el toque móvil no necesita ni debe recibir foco programático. */
+function hotbarSlotEnFoco(box) {
+  if (!box || typeof document === "undefined" || (typeof window !== "undefined" && window.innerWidth <= 640)) return null;
+  let activo = document.activeElement;
+  if (!activo || typeof box.contains !== "function" || !box.contains(activo)) return null;
+  if (typeof activo.closest === "function") activo = activo.closest("[data-slot]");
+  return activo && activo.dataset && activo.dataset.slot != null && box.contains(activo) ? activo.dataset.slot : null;
+}
+function enfocarHotbarPc(box, slot) {
+  if (!box || slot == null || (typeof window !== "undefined" && window.innerWidth <= 640) || typeof box.querySelector !== "function") return;
+  const celda = box.querySelector('[data-slot="' + slot + '"]');
+  if (!celda || typeof celda.focus !== "function") return;
+  try { celda.focus({ preventScroll: true }); } catch (e) { celda.focus(); }
+}
 function refreshHotbar(forzar) {
   if (dndActive) return;
   const box = $("hotbar"); if (!box) return;
+  const focoPrevio = hotbarSlotEnFoco(box);
   ensureHotbarDefaults();
   syncSlots();
   if (!Array.isArray(G.hotbar)) G.hotbar = [];
@@ -2297,10 +2572,13 @@ function refreshHotbar(forzar) {
   box.innerHTML = html;
   bindZoneDnD(box, "hot");
   box.querySelectorAll("[data-slot]").forEach(c => {
-    c.addEventListener("click", () => hotSelect(+c.dataset.slot));
+    const seleccionar = () => hotSelect(+c.dataset.slot);
+    c.addEventListener("click", seleccionar);
+    activarAccionConTeclado(c, seleccionar);
     // clic derecho: quitar el objeto de la barra (detalless.docx)
     c.addEventListener("contextmenu", (e) => { e.preventDefault(); const i = +c.dataset.slot; if (G.hotbar[i]) { G.hotbar[i] = null; toast("Quitado de la barra"); refreshHotbar(); } });
   });
+  enfocarHotbarPc(box, focoPrevio);
 }
 // seleccionar hueco de la hotbar (= herramienta "en mano"); equipa pico / elige semilla si corresponde
 function hotSelect(i) {
@@ -2419,6 +2697,7 @@ function dndDrop(src, tz, ti) {
 function cerrarConfirmacionLocal() {
   const ov = $("ov-confirm");
   if (!ov || !ov.classList.contains("show")) return false;
+  desenfocarAlCerrar(ov);
   ov.classList.remove("show");
   return true;
 }
@@ -2448,6 +2727,11 @@ function askConfirm(msg, onYes, opts) {
   const yes = $("cf-yes"), no = $("cf-no");
   if (yes) { yes.textContent = opts.yes || "Tirar"; yes.className = opts.yesClass || "red"; yes.onclick = () => { cerrarConfirmacionLocal(); onYes(); }; }
   if (no) { no.textContent = opts.no || "Cancelar"; no.className = (opts.noClass || "ghost") + " sm"; no.onclick = () => { cerrarConfirmacionLocal(); if (typeof opts.onNo === "function") opts.onNo(); }; }
+  // La pregunta empieza en la salida segura. Además evita que un botón o input del panel de
+  // abajo conserve el foco y reciba Enter/Espacio mientras la confirmación tapa la interfaz.
+  if (window.innerWidth > 640 && no && typeof no.focus === "function") {
+    try { no.focus({ preventScroll: true }); } catch (e) { no.focus(); }
+  }
 }
 // qué se tiraría de una pila (cantidad + nombre) — null si no se puede tirar
 function trashInfo(d) {
@@ -2539,7 +2823,9 @@ function refreshEquip() {
   fill("eq-arma", !!armaDef, armaDef ? spIc(armaDef.sprite || ARM_TIPO_DEF[armaDef.tipo].sprite, "") : "",
     armaDef ? armaDef.label + " equipada · clic para cambiar" : "Arma · clic para equipar");
   const armaEl = $("eq-arma");
-  if (armaEl) armaEl.onclick = () => {
+  if (armaEl) {
+    armaEl.setAttribute("aria-label", armaDef ? armaDef.label + " equipada. Cambiar arma" : "Equipar arma");
+    const cambiarArma = () => {
     /* 8/9 — LA LISTA SALE DE DONDE ESTÉS. Acá se recorría G.weapons siempre, o sea el arsenal de
        la GRANJA: dentro de la Zona te dejaba equiparte la espada que dejaste en casa, y no te
        dejaba equiparte la que sí habías cargado. armasAMano() responde según enZona(). */
@@ -2557,7 +2843,10 @@ function refreshEquip() {
        ésta no, y el paso se quedaba colgado justo cuando el jugador hacía lo que se le pedía. */
     if (G.gear.arma && typeof tutoEvent === "function") tutoEvent("equiparm");
     refreshEquip(); if (typeof syncSlots === "function") syncSlots(); if (typeof saveFarm === "function") saveFarm();
-  };
+    };
+    armaEl.onclick = cambiarArma;
+    activarAccionConTeclado(armaEl, cambiarArma);
+  }
   // munición: las flechas se equipan a mano con clic (ya no se autoequipan al craftear)
   /* 8/9 — LAS FLECHAS SE CUENTAN DONDE ESTÁS. Esto leía G.res.flecha —la bolsa de la granja—,
      así que dentro de la Zona, con 200 flechas en el contenedor y 0 en casa, el panel decía « No
@@ -2573,12 +2862,19 @@ function refreshEquip() {
     munOn ? fl + " flechas listas · siguen en tu bolsa (se gastan al disparar) · clic para guardarlas"
           : (fl > 0 ? "Munición · clic para usar tus " + fl + " flechas (no salen de la bolsa)" : "Munición (crafteá flechas en la Herrería)"));
   const munEl = $("eq-municion");
-  if (munEl) munEl.onclick = () => {
+  if (munEl) {
+    munEl.setAttribute("aria-label", munOn ? fl + " flechas equipadas. Quitar munición" :
+      (fl > 0 ? "Equipar munición: " + fl + " flechas" : "Munición. No hay flechas disponibles"));
+    munEl.setAttribute("aria-pressed", munOn ? "true" : "false");
+    const cambiarMunicion = () => {
     if (fl <= 0) { toast("No tenés flechas — crafteálas en la Herrería"); return; }
     G.gear.municion = !G.gear.municion;
     toast(G.gear.municion ? "Flechas equipadas" : "Flechas desequipadas");
     refreshEquip(); if (typeof saveFarm === "function") saveFarm();
-  };
+    };
+    munEl.onclick = cambiarMunicion;
+    activarAccionConTeclado(munEl, cambiarMunicion);
+  }
   const ed = $("eq-def"); if (ed) ed.textContent = "Defensa total: " + gearDefTotal();
   // 11/8 (2ª ronda del diseñador): las piezas EQUIPADAS de la Curtiduría llenan los CASILLEROS
   // del área de equipo — antes solo salían en la lista de abajo y los casilleros quedaban vacíos.
@@ -2665,6 +2961,7 @@ function seedWheelCenterPc(px, py) {
   return { x: Math.round(x), y: Math.round(y) };
 }
 function showSeedWheel(px, py, plot) {
+  if (hayOvPcAbierto()) { toast("Cerrá la ventana antes de elegir semillas"); return; }
   const w = $("seedwheel"); if (!w) return;
   /* 21/8: las semillas EN BOLSA pero con el cultivo aun bloqueado (llegan por el pase o cofres)
      ya no se esconden: se enseñan apagadas con su "Cultivo nivel X". Esconderlas hacia creer que
@@ -2960,19 +3257,50 @@ function refreshHorno() {
 }
 
 /* ---- cofre depósito: guardar/sacar pilas (detalles 29/7) ---- */
+/* El Cofre recompone ambas columnas al mover una pila. Recordamos el objeto, no su índice de
+   grilla: al retirar debe seguirse en la bolsa y al guardar, en el cofre, aunque una pila previa
+   haya desaparecido o cambie el orden. Sólo PC recibe el foco programático. */
+function focoCofrePc(box, inv) {
+  if (!box || !inv || typeof document === "undefined" || (typeof window !== "undefined" && window.innerWidth <= 640)) return null;
+  const activo = document.activeElement;
+  const lado = activo && typeof box.contains === "function" && box.contains(activo) ? "cofre"
+    : (activo && typeof inv.contains === "function" && inv.contains(activo) ? "bolsa" : null);
+  if (!lado) return null;
+  const raiz = lado === "cofre" ? box : inv;
+  const celda = activo && typeof activo.closest === "function" ? activo.closest("[data-ckind][data-ckey]") : activo;
+  if (!celda || !raiz.contains(celda) || !celda.dataset || celda.dataset.ckind == null || celda.dataset.ckey == null) return null;
+  return { lado: lado, kind: celda.dataset.ckind, key: celda.dataset.ckey,
+    indice: lado === "cofre" ? celda.dataset.wd : celda.dataset.dp };
+}
+function enfocarCofrePc(box, inv, foco) {
+  if (!box || !inv || !foco || (typeof window !== "undefined" && window.innerWidth <= 640)) return;
+  const origen = foco.lado === "cofre" ? box : inv, destino = foco.lado === "cofre" ? inv : box;
+  const iguales = raiz => Array.from(raiz.querySelectorAll("[data-ckind][data-ckey]") || [])
+    .find(el => el.dataset.ckind === foco.kind && el.dataset.ckey === foco.key);
+  const mismoIndice = Array.from(origen.querySelectorAll("[data-wd], [data-dp]") || [])
+    .find(el => (foco.lado === "cofre" ? el.dataset.wd : el.dataset.dp) === foco.indice);
+  const celda = iguales(destino) || mismoIndice || destino.querySelector("[role=button]") || origen.querySelector("[role=button]");
+  if (!celda || typeof celda.focus !== "function") return;
+  try { celda.focus({ preventScroll: true }); } catch (e) { celda.focus(); }
+}
 function refreshChest() {
   const ci = (typeof window.chestOpen === "number") ? window.chestOpen : 0;
   const ch = (G.chests || [])[ci];
   const box = $("cofre-slots"), inv = $("cofre-inv"), info = $("cofre-info");
   if (!ch || !box) return;
+  const focoPrevio = focoCofrePc(box, inv);
   const bono = Math.round(((typeof chestBonus === "function" ? chestBonus() : 1) - 1) * 100);
   if (info) info.textContent = "Cofre " + (ci + 1) + " de " + G.chests.length + " · bonus total de materiales: +" + bono + "% · hasta 99 por espacio";
   box.innerHTML = ch.items.map((s, i) => {
     if (!s) return '<div class="slot"></div>';
     const v = itemView({ kind: s.kind, key: s.key });
-    return `<div class="slot filled" data-wd="${i}" title="${v.label} — clic para sacar">${itemIcon(v)}<span class="cnt">${s.n}</span></div>`;
+    return `<div class="slot filled" data-wd="${i}" data-ckind="${escapeHtml(s.kind)}" data-ckey="${escapeHtml(s.key)}" role="button" tabindex="0" aria-label="${escapeHtml("Sacar " + v.label + " del cofre")}" title="${v.label} — clic para sacar">${itemIcon(v)}<span class="cnt">${s.n}</span></div>`;
   }).join("");
-  box.querySelectorAll("[data-wd]").forEach(el => el.onclick = () => chestWithdraw(ci, +el.dataset.wd));
+  box.querySelectorAll("[data-wd]").forEach(el => {
+    const retirar = () => chestWithdraw(ci, +el.dataset.wd);
+    el.onclick = retirar;
+    activarAccionConTeclado(el, retirar);
+  });
   const stacks = [];
   ITEM_RES_ORDER.forEach(k => { const n = Math.floor(G.res[k] || 0); if (n > 0) stacks.push({ kind: "res", key: k, n }); });
   CROP_ORDER.forEach(k => { const n = Math.floor(G.seeds[k] || 0); if (n > 0) stacks.push({ kind: "seed", key: k, n }); });
@@ -2980,9 +3308,14 @@ function refreshChest() {
   RECIPE_ORDER.forEach(k => { const n = Math.floor((G.dishes && G.dishes[k]) || 0); if (n > 0) stacks.push({ kind: "dish", key: k, n }); });
   inv.innerHTML = stacks.map((s, i) => {
     const v = itemView({ kind: s.kind, key: s.key });
-    return `<div class="slot filled" data-dp="${i}" title="${v.label} — clic para guardar">${itemIcon(v)}<span class="cnt">${fmt(s.n)}</span></div>`;
+    return `<div class="slot filled" data-dp="${i}" data-ckind="${escapeHtml(s.kind)}" data-ckey="${escapeHtml(s.key)}" role="button" tabindex="0" aria-label="${escapeHtml("Guardar " + v.label + " en el cofre")}" title="${v.label} — clic para guardar">${itemIcon(v)}<span class="cnt">${fmt(s.n)}</span></div>`;
   }).join("") || '<div class="sub">No tenés nada para guardar.</div>';
-  inv.querySelectorAll("[data-dp]").forEach(el => el.onclick = () => { const s = stacks[+el.dataset.dp]; chestDeposit(ci, s.kind, s.key); });
+  inv.querySelectorAll("[data-dp]").forEach(el => {
+    const guardar = () => { const s = stacks[+el.dataset.dp]; if (s) chestDeposit(ci, s.kind, s.key); };
+    el.onclick = guardar;
+    activarAccionConTeclado(el, guardar);
+  });
+  enfocarCofrePc(box, inv, focoPrevio);
   // recoger el cofre y guardarlo en la bolsa (detalles jueves) — solo si está vacío
   const pu = $("cofre-pickup");
   if (pu) { const empty = ch.items.every(s => !s); pu.disabled = !empty; pu.title = empty ? "" : "Vaciá el cofre para poder recogerlo"; pu.onclick = () => { if (window.FARM && FARM.pickupChest) FARM.pickupChest(ci); }; }
@@ -2999,6 +3332,15 @@ function refreshChest() {
    La ventana NO cambia de tamaño al elegir otra receta (regla de la casa): el panel derecho
    tiene alto mínimo y la grilla scrollea por dentro. */
 var _ckSel = null;   // la receta señalada en el panel derecho
+/* Elegir una receta vuelve a dibujar la grilla. En PC, quien llegó con Tab no puede perderse al
+   reemplazar su nodo: se recupera la misma receta recién creada, sin desplazar la vista. */
+function enfocarRecetaCocina(grid, id) {
+  if (!grid || (typeof window !== "undefined" && window.innerWidth <= 640) || typeof grid.querySelectorAll !== "function") return;
+  const receta = Array.from(grid.querySelectorAll("[data-ckrec]") || [])
+    .find(el => el && el.dataset && el.dataset.ckrec === String(id));
+  if (!receta || typeof receta.focus !== "function") return;
+  try { receta.focus({ preventScroll: true }); } catch (e) { receta.focus(); }
+}
 function ckElegir(id) { _ckSel = id; refreshCooking(); }
 function refreshCooking() {
   /* 19/9: la rama vieja de la cocina (la lista `cook-list`) se quitó — ese elemento no existe en
@@ -3082,12 +3424,18 @@ function refreshCookingV2() {
          La marca ahora viaja con el paso siguiente: mientras la receta no está elegida, vive en
          su ícono ("tocá esta"); cuando ya lo está, en el botón Cocinar ("dale"). Un solo
          selector, dos momentos, y la cadena de flechas del tutorial sigue funcionando. */
-      return '<div class="ck-rec' + (locked ? " locked" : "") + (id === _ckSel ? " sel" : "") + '" data-ckrec="' + id + '"' +
-        (id === _ckSel ? "" : ' data-cook="' + id + '"') + ' title="' + r.label + '">' +
+      const etiqueta = "Seleccionar receta: " + r.label + (locked ? " · requiere nivel " + r.lvl : "");
+      return '<div class="ck-rec' + (locked ? " locked" : "") + (id === _ckSel ? " sel" : "") + '" data-ckrec="' + id + '" role="button" tabindex="0"' +
+        ' aria-label="' + escapeHtml(etiqueta) + '" aria-pressed="' + (id === _ckSel ? "true" : "false") + '"' +
+        (id === _ckSel ? "" : ' data-cook="' + id + '"') + ' title="' + escapeHtml(r.label) + '">' +
         ckIcono(r) + (locked ? '<span class="lv">' + r.lvl + '</span>' : "") +
         (own > 0 ? '<span class="n">' + fmt(own) + '</span>' : "") + '</div>';
     }).join("");
-    grid.querySelectorAll("[data-ckrec]").forEach(el => el.onclick = () => ckElegir(el.dataset.ckrec));
+    grid.querySelectorAll("[data-ckrec]").forEach(el => {
+      const id = el.dataset.ckrec, elegir = () => ckElegir(id);
+      el.onclick = elegir;
+      activarAccionConTeclado(el, () => { elegir(); enfocarRecetaCocina(grid, id); });
+    });
   }
 
   /* --- el detalle: solo el plato señalado, en columnas de número --- */
@@ -4202,9 +4550,39 @@ function baulRegalosHtml() {
     { k: "plot", spr: "plot", em: "🟫", nom: "Parcela" },
   ];
   return F.filter(f => (q[f.k] || 0) > 0).map(f =>
-    '<div class="baul-item" data-regalo="' + f.k + '" title="' + f.nom + ' a tu bolsa — después elegís dónde va">' +
-    '<img src="' + GF.spr(f.spr) + '" draggable="false" onerror="this.outerHTML=\'<span class=&quot;em&quot;>' + f.em + '</span>\'">' +
+    '<div class="baul-item" data-regalo="' + f.k + '" role="button" tabindex="0" aria-label="' +
+    escapeHtml("Reclamar " + f.nom + ": va al Cobertizo para elegir dónde colocarlo") + '" title="' +
+    escapeHtml(f.nom + " al Cobertizo — después elegís dónde colocarlo") + '">' +
+    '<img src="' + GF.spr(f.spr) + '" alt="" draggable="false" onerror="this.outerHTML=\'<span class=&quot;em&quot;>' + f.em + '</span>\'">' +
     '<span class="cant">×' + q[f.k] + '</span></div>').join("");
+}
+/* Cada premio reemplaza su propia ficha al salir del Baúl. En PC el siguiente foco es el premio
+   que queda —y, al terminar, el botón de cerrar— para que no se pierda en una ficha ya volada. */
+function enfocarSiguienteRegaloBaulPc(items) {
+  if (!items || (typeof window !== "undefined" && window.innerWidth <= 640) || typeof items.querySelector !== "function") return;
+  const cont = (typeof items.closest === "function" && items.closest("#ov-baul")) || (typeof document !== "undefined" && document.getElementById("ov-baul"));
+  const boton = items.querySelector("[data-regalo]") || (cont && cont.querySelector("[data-close]"));
+  if (!boton || typeof boton.focus !== "function") return;
+  try { boton.focus({ preventScroll: true }); } catch (e) { boton.focus(); }
+}
+function reclamarRegaloBaul(el, desdeTeclado) {
+  if (!el || el._puesto) return;
+  el._puesto = true;
+  el.classList.add("paq-shake");
+  setTimeout(() => {
+    try { if (typeof regaloReclamar === "function") regaloReclamar(el.getAttribute("data-regalo")); } catch (err) { console.error("[baul]", err); }
+    el.classList.add("vuela");
+    setTimeout(() => {
+      refreshBaul();
+      if (desdeTeclado) enfocarSiguienteRegaloBaulPc($("baul-items"));
+    }, 420);
+  }, 380);
+}
+function desactivarAccionBaul(img) {
+  if (!img) return;
+  img.removeAttribute("role"); img.removeAttribute("tabindex"); img.removeAttribute("aria-label"); img.removeAttribute("title");
+  img.onpointerdown = null; img.onclick = null; img.style.cursor = "";
+  desactivarAccionConTeclado(img);
 }
 // un solo oyente delegado (la lección del buzón): sobrevive a los redibujados
 document.addEventListener("pointerdown", (e) => {
@@ -4212,13 +4590,7 @@ document.addEventListener("pointerdown", (e) => {
   if (!cont || !cont.classList.contains("show") || !e.target || !e.target.closest) return;
   const el = e.target.closest("[data-regalo]"); if (!el) return;
   e.preventDefault(); e.stopPropagation();
-  if (el._puesto) return; el._puesto = true;
-  el.classList.add("paq-shake");
-  setTimeout(() => {
-    try { if (typeof regaloReclamar === "function") regaloReclamar(el.getAttribute("data-regalo")); } catch (err) { console.error("[baul]", err); }
-    el.classList.add("vuela");
-    setTimeout(refreshBaul, 420);
-  }, 380);
+  reclamarRegaloBaul(el, false);
 }, true);
 
 function refreshBaul() {
@@ -4230,16 +4602,19 @@ function refreshBaul() {
   if (G.kitReclamado && regalos > 0) {
     img.src = "assets/farm/baul_premios_lleno.png?v=1";
     img.classList.add("paq-latido"); img.style.cursor = "";
-    img.onpointerdown = null; img.onclick = null;
+    desactivarAccionBaul(img);
     sub.textContent = regalos > 1 ? "Te llegaron " + regalos + " premios" : "Te llegó un premio";
     items.innerHTML = baulRegalosHtml();
-    nota.textContent = "Tocá cada uno para colocarlo en la granja.";
+    items.querySelectorAll("[data-regalo]").forEach(el => {
+      activarAccionConTeclado(el, () => reclamarRegaloBaul(el, true));
+    });
+    nota.textContent = "Elegí cada premio para mandarlo al Cobertizo; desde ahí decidís dónde colocarlo.";
     return;
   }
   if (G.kitReclamado) {   // nada esperando: baúl cerrado, en paz
     img.src = "assets/farm/baul_premios.png?v=1";
     img.classList.remove("paq-latido", "paq-shake");
-    img.onpointerdown = null; img.onclick = null; img.style.cursor = "";
+    desactivarAccionBaul(img);
     items.innerHTML = "";
     sub.textContent = "";
     nota.textContent = "Nada esperando por hoy.";
@@ -4249,6 +4624,9 @@ function refreshBaul() {
   img.src = "assets/farm/baul_premios_lleno.png?v=1";
   img.classList.add("paq-latido");
   img.style.cursor = "pointer";
+  img.setAttribute("role", "button"); img.setAttribute("tabindex", "0");
+  img.setAttribute("aria-label", "Abrir y reclamar el kit de bienvenida");
+  img.title = "Abrir y reclamar el kit de bienvenida";
   sub.textContent = "Tu kit de bienvenida";
   nota.textContent = "Tocá el baúl y es todo tuyo.";
   const K = (typeof KIT_INICIAL !== "undefined") ? KIT_INICIAL : { axe: 35, pico: 20 };
@@ -4266,6 +4644,7 @@ function refreshBaul() {
       items.querySelectorAll(".baul-item").forEach((el, i) => setTimeout(() => el.classList.add("vuela"), i * 120));   // vuelan a la bolsa, en fila
       setTimeout(() => {
         img.src = "assets/farm/baul_premios.png?v=1";
+        desactivarAccionBaul(img);
         items.innerHTML = "";
         sub.textContent = "";
         nota.textContent = "Todo tuyo. ¡A trabajar la granja!";
@@ -4273,10 +4652,21 @@ function refreshBaul() {
     }, 800);
   };
   img.onpointerdown = alTocar; img.onclick = alTocar;
+  activarAccionConTeclado(img, alTocar);
 }
 
 /* ---- EL PAQUETE DEL DÍA (15/8): pantalla propia, gráfica — el paquete grande, la
    notita y el botón. Plantilla de las interfaces custom del rincón del correo. ---- */
+function desactivarPaqueteDiario(img) {
+  if (!img) return;
+  img.removeAttribute("role"); img.removeAttribute("tabindex"); img.removeAttribute("aria-label");
+  img.removeAttribute("title");
+  desactivarAccionConTeclado(img);
+}
+function enfocarBotonPaquetePc(btn) {
+  if (!btn || (typeof window !== "undefined" && window.innerWidth <= 640) || typeof btn.focus !== "function") return;
+  try { btn.focus({ preventScroll: true }); } catch (e) { btn.focus(); }
+}
 function refreshPaquete() {
   const img = $("paq-img"), nota = $("paq-nota"), btn = $("paq-abrir"), dia = $("paq-dia");
   if (!img || !btn) return;
@@ -4318,6 +4708,7 @@ function refreshPaquete() {
     dia.textContent = cobrados >= 7 ? "¡Semana completa!" : "Volvé mañana";
     img.src = "assets/farm/paquete_dia_abierto.png?v=1";
     img.classList.remove("paq-latido"); img.classList.remove("paq-shake"); img.onclick = null; img.onpointerdown = null; img.style.transform = "";
+    desactivarPaqueteDiario(img);
     nota.textContent = "Ya abriste el de hoy.";
     btn.style.visibility = "hidden";   // 20/8: sigue ocupando su fila — la tarjeta no cambia de tamaño
     return;
@@ -4328,7 +4719,10 @@ function refreshPaquete() {
   img.classList.remove("paq-shake");
   img.classList.add("paq-latido");   // late despacito: dan ganas de abrirlo
   img.style.transform = "";
-  nota.textContent = "¿Qué habrá hoy? Tocá el paquete…";
+  img.setAttribute("role", "button"); img.setAttribute("tabindex", "0");
+  img.setAttribute("aria-label", "Abrir y reclamar el paquete del día");
+  img.title = "Abrir y reclamar el paquete del día";
+  nota.textContent = "¿Qué habrá hoy? Elegí el paquete para abrirlo…";
   btn.style.visibility = "hidden";   // 15/8: sin botón de abrir — se abre TOCANDO el paquete
   // (20/8: se esconde con visibility, no con display — el botón reserva su fila y la tarjeta
   //  mide lo mismo antes y después de abrir; era el salto de tamaño que reportó dirección)
@@ -4336,6 +4730,7 @@ function refreshPaquete() {
   const alTocar = (ev) => {
     if (ev && ev.preventDefault) ev.preventDefault();
     if (abriendo) return; abriendo = true;
+    const desdeTeclado = !!(ev && (ev.type === "keydown" || ev.key === "Enter" || ev.key === " " || ev.key === "Spacebar"));
     // 15/8 (dirección): SHAKE in crescendo — tiembla de menor a mayor y recién ahí se abre
     img.classList.remove("paq-latido");
     img.classList.add("paq-shake");
@@ -4349,6 +4744,7 @@ function refreshPaquete() {
       img.classList.remove("paq-shake");
       img.src = "assets/farm/paquete_dia_abierto.png?v=1";
       img.style.transform = "scale(1.06)";
+      img.onclick = null; img.onpointerdown = null; desactivarPaqueteDiario(img);
       btn.textContent = "¡A la bolsa!";
       btn.style.visibility = "visible";
       btn.onclick = () => {
@@ -4357,10 +4753,12 @@ function refreshPaquete() {
         const fs = window.farmScene;
         if (fs && fs.paqueteObj && fs.estrellasFx) fs.estrellasFx(fs.paqueteObj.cx, fs.paqueteObj.by - 10);
       };
+      if (desdeTeclado) enfocarBotonPaquetePc(btn);
     }, 800);   // dura lo que dura el temblor
   };
   img.onpointerdown = alTocar;   // pointerdown dispara SIEMPRE (el click se perdía si el mouse se movía 2px)
   img.onclick = alTocar;         // respaldo
+  activarAccionConTeclado(img, alTocar);
 }
 
 /* ---- TABLÓN DE PEDIDOS (16/8): notas clavadas + canje de vales. Misma gramática del
@@ -4405,8 +4803,20 @@ function pdIcono(p) {
   const em = p.tipo === "fish" ? "🐟" : ((CROP_DEF[p.key] && CROP_DEF[p.key].emoji) || RES_EMOJI[p.key] || "📦");
   return s ? '<img src="' + GF.spr(s) + '" draggable="false" onerror="this.outerHTML=\'' + em + '\'">' : em;
 }
+/* Canjear redibuja las tarjetas porque pueden dejar de alcanzarte los vales. Si se llegó por
+   teclado, la tarjeta anterior desaparece y hay que continuar en el mismo premio —o en el
+   siguiente paso real—, no dejar el foco perdido en el documento. */
+function enfocarCanjeTablonPc(caja, id) {
+  if (!caja || !id || (typeof window !== "undefined" && window.innerWidth <= 640) || typeof caja.querySelectorAll !== "function") return;
+  const opciones = Array.from(caja.querySelectorAll("[data-pd-canje]"));
+  const boton = opciones.find(el => el.dataset.pdCanje === id) || opciones[0] || caja.querySelector('[data-pd-vista="pedidos"]');
+  if (!boton || typeof boton.focus !== "function") return;
+  try { boton.focus({ preventScroll: true }); } catch (e) { boton.focus(); }
+}
 function refreshPedidos() {
   const cont = $("pd-lista"); if (!cont) return;
+  const activo = (typeof document !== "undefined") ? document.activeElement : null;
+  const canjeEnFoco = activo && cont.contains(activo) && activo.dataset ? (activo.dataset.pdCanje || "") : "";
   const e = pedidosEstado();
   const chip = $("pd-vales"); if (chip) chip.textContent = "🎟 × " + (G.vales || 0);
   const sub = $("pd-sub");
@@ -4417,8 +4827,14 @@ function refreshPedidos() {
       const cuesta = (typeof valeCosto === "function") ? valeCosto(it.id) : it.vales;
       const puede = (G.vales || 0) >= cuesta;
       const ic = it.sprite ? '<img src="' + GF.spr(it.sprite) + '" draggable="false" onerror="this.outerHTML=\'' + it.emoji + '\'">' : it.emoji;
-      return '<div class="pd-canje' + (puede ? " ok" : "") + '"' + (puede ? ' data-pd-canje="' + it.id + '"' : "") + '><span class="ic">' + ic + '</span><span class="nm">' + ((typeof valeLabel === "function") ? valeLabel(it.id) : it.id) + '</span><span class="precio">🎟 ' + cuesta + '</span></div>';
+      const nombre = (typeof valeLabel === "function") ? valeLabel(it.id) : it.id;
+      const etiqueta = "Canjear " + nombre + " por " + cuesta + (cuesta === 1 ? " vale" : " vales");
+      return '<div class="pd-canje' + (puede ? " ok" : "") + '"' + (puede ? ' data-pd-canje="' + it.id + '" role="button" tabindex="0" aria-label="' + escapeHtml(etiqueta) + '" title="' + escapeHtml(etiqueta) + '"' : "") + '><span class="ic">' + ic + '</span><span class="nm">' + nombre + '</span><span class="precio">🎟 ' + cuesta + '</span></div>';
     }).join("") + '<div style="text-align:center;margin-top:8px"><button class="ghost sm" data-pd-vista="pedidos">↩ Volver al tablón</button></div>';
+    cont.querySelectorAll("[data-pd-canje]").forEach(el => {
+      activarAccionConTeclado(el, () => valesCanjear(el.dataset.pdCanje));
+    });
+    if (canjeEnFoco) enfocarCanjeTablonPc(cont, canjeEnFoco);
     return;
   }
   // VISTA: las notas del día
@@ -4486,6 +4902,15 @@ document.addEventListener("pointerdown", (e) => {
   if (vol) { _bzVista = "sobres"; refreshBuzon(); return; }
 }, true);
 var _bzCartaAbierta = null;
+/* Los sobres se dibujan de nuevo al abrirse. Si el jugador llegó con teclado, el foco no puede
+   quedarse en el papel que acaba de desaparecer: continúa en la primera decisión de la carta.
+   En teléfono el toque ya deja la vista clara y no conviene forzar el foco virtual. */
+function enfocarAccionCartaBuzonPc(carta) {
+  if (!carta || (typeof window !== "undefined" && window.innerWidth <= 640) || typeof carta.querySelector !== "function") return;
+  const boton = carta.querySelector("[data-bz-acc], [data-bz-leida]");
+  if (!boton || typeof boton.focus !== "function") return;
+  try { boton.focus({ preventScroll: true }); } catch (e) { boton.focus(); }
+}
 function refreshBuzon() {
   const img = $("bz-img"), sobres = $("bz-sobres"), carta = $("bz-carta"), pila = $("bz-pila"), estado = $("bz-estado");
   if (!img || !sobres) return;
@@ -4549,19 +4974,28 @@ function refreshBuzon() {
   img.style.cursor = ""; img.onpointerdown = null; img.onclick = null;
   const rots = [-7, 3, -3, 6];
   sobres.innerHTML = cartas.map((c, i) =>
-    '<div class="bz-sobre' + (i === 0 ? " late" : "") + '" data-bz-idx="' + i + '" style="transform:rotate(' + rots[i % 4] + 'deg)">' +
-    '<img src="assets/farm/sobre_carta.png?v=1" draggable="false" onerror="this.src=\'\';this.outerHTML=\'✉️\'">' +
+    '<div class="bz-sobre' + (i === 0 ? " late" : "") + '" data-bz-idx="' + i + '" role="button" tabindex="0" aria-label="' +
+    escapeHtml("Abrir carta de " + c.de) + '" title="' + escapeHtml("Abrir carta de " + c.de) + '" style="transform:rotate(' + rots[i % 4] + 'deg)">' +
+    '<img src="assets/farm/sobre_carta.png?v=1" alt="" draggable="false" onerror="this.src=\'\';this.outerHTML=\'✉️\'">' +
     '<div class="de">' + c.de + '</div></div>'
   ).join("");
   sobres.querySelectorAll("[data-bz-idx]").forEach(el => {
+    let abriendo = false;
     const abrir = (ev) => {
       if (ev && ev.preventDefault) ev.preventDefault();
+      if (abriendo) return;
       const c = cartas[parseInt(el.dataset.bzIdx, 10)]; if (!c) return;
+      abriendo = true;
+      const desdeTeclado = !!(ev && (ev.type === "keydown" || ev.key === "Enter" || ev.key === " " || ev.key === "Spacebar"));
       el.classList.remove("late");
       el.classList.add("paq-shake");   // el mismo temblor del paquete, cortito
-      setTimeout(() => { _bzVista = "carta"; _bzCartaAbierta = c; refreshBuzon(); }, 450);
+      setTimeout(() => {
+        _bzVista = "carta"; _bzCartaAbierta = c; refreshBuzon();
+        if (desdeTeclado) enfocarAccionCartaBuzonPc(carta);
+      }, 450);
     };
     el.onpointerdown = abrir; el.onclick = abrir;
+    activarAccionConTeclado(el, abrir);
   });
 }
 
@@ -5355,7 +5789,11 @@ function initUI() {
     }
     if (!anyOvOpen()) return;
     if (e.target.closest(".card, #gmenu, #hotwrap, .hudbar, #logpanel, #editbar, #seedwheel")) return;
-    document.querySelectorAll(".ov.show:not(.bloquea)").forEach(o => { if (o.id !== "ov-inv") o.classList.remove("show"); });
+    let cerro = false;
+    document.querySelectorAll(".ov.show:not(.bloquea)").forEach(o => {
+      if (o.id !== "ov-inv") { desenfocarAlCerrar(o); o.classList.remove("show"); cerro = true; }
+    });
+    refrescarGuiaTrasCerrarOv(cerro);
   });
   // clic derecho en el juego sin menú del navegador (siembra rápida, detalles 29/7)
   // clic derecho: NUNCA el menú del navegador, en ninguna parte del juego (solo se permite en campos de texto)
@@ -5473,24 +5911,78 @@ function initUI() {
   // Los EDIFICIOS salieron del menú y de los atajos (Tienda O, Herrería K, Granero B): se
   // entra clickeándolos en la granja, que es lo que les da sentido a estar construidos.
   const KEYS = { i: "ov-inv", x: "ov-skills", p: "ov-equip", l: "ov-lb", c: "ov-config", g: "ov-paquete", n: "ov-mapa", j: "ov-misiones" };
-  window.addEventListener("keydown", (e) => {
-    if (e.target && (e.target.tagName === "INPUT" || e.target.tagName === "TEXTAREA")) return;
+  /* Espacio activa un botón enfocado, pero también es la tecla de interacción de Phaser. La
+     activación nativa tiene que llegar al botón (por eso NO se hace preventDefault); detenerla
+     al terminar de burbujear por document evita que alcance los oyentes del mundo en window.
+     Enter se trata igual para que un control HTML conserve por completo su gesto de teclado. */
+  document.addEventListener("keydown", (e) => {
     const key = e.key.toLowerCase();
+    if (key !== "enter" && key !== " " && key !== "spacebar") return;
+    const boton = e.target && e.target.closest && e.target.closest("button, a, [role=button]");
+    if (boton) e.stopPropagation();
+  });
+  window.addEventListener("keydown", (e) => {
+    const key = e.key.toLowerCase();
+    // `.bloquea` declara que el granjero no puede hacer otra cosa (hoy, entrenamiento). La
+    // capa ya cubría el ratón, pero los atajos podían abrir ventanas debajo: teclado y ratón
+    // tienen que obedecer la misma regla. Sólo dejamos la navegación/activación de su botón.
+    const bloquea = document.querySelector(".ov.bloquea.show");
+    if (bloquea) {
+      const dentro = e.target && e.target.closest && e.target.closest(".ov.bloquea.show");
+      const activar = dentro && (key === "tab" || key === "enter" || key === " " || key === "spacebar");
+      if (!activar) e.preventDefault();
+      return;
+    }
+    /* Un control nativo ya está usando el teclado. Los campos se protegían, pero un SELECT
+       podía recibir «M» o Escape y el juego abría el menú/cerraba la tarjeta mientras el jugador
+       elegía una opción. OPTION cubre el desplegable abierto; contenteditable deja la misma
+       puerta lista para un editor futuro. La única excepción es Escape en la cantidad modal de
+       PC: ahí tiene que cancelar esa elección, no quedarse atrapado en el número. */
+    const controlActivo = controlDeTecladoActivo(e.target);
+    if (controlActivo && !(key === "escape" && window.innerWidth > 640 && isOpen("ov-cuanto"))) return;
+    /* La rueda contextual no tiene atajo de teclado propio. E/Espacio son del mundo, pero en
+       este momento significarían "actuar por detrás" y saltar la decisión visible. El
+       preventDefault llega a Phaser antes de que procese sus teclas de acción; doInteract tiene
+       la misma puerta como respaldo para quien lo llame de otro modo. */
+    if (selectorContextualPcAbierto() && (key === "e" || key === " " || key === "spacebar")) {
+      e.preventDefault(); return;
+    }
     /* 28/8 — ESCAPE TAMBIÉN SACA DE LA LAGUNA. El panel de la pesca no era una `.ov`, así que
        closeAllOv() no lo veía y no había NINGUNA manera de cerrarlo: se abría al tocar el agua y
        se quedaba puesto encima del juego para siempre. Es lo que el director reportó como « le
        das click y sale un cuadro ». Ahora la pesca se deja con Escape, moviéndose, o sacando el
        pez — tres salidas, que para una ventana sin salida es el arreglo honesto. */
     if (key === "escape") {
+      // La pregunta de PC está delante de cualquier contexto efímero (carrete, aparejos o
+      // cadáver). Escape resuelve primero lo que el jugador está viendo; no puede cancelar una
+      // pesca por detrás y dejar una confirmación flotando sin haberla tocado.
+      if (window.innerWidth > 640 && cerrarConfirmacionLocal()) return;
+      // El selector numérico es igual de local: Escape cancela sólo esa cantidad y deja la
+      // puerta de la Zona abierta para poder elegir otra pila.
+      if (window.innerWidth > 640 && cerrarCantidadLocal()) return;
       if (typeof P4 !== "undefined" && P4) { pescaV4Cerrar(); return; }
       if (typeof pescaAparejosAbierto === "function" && pescaAparejosAbierto()) { pescaAparejosCerrar(); return; }
       // El botín es una tarjeta de escena, no un `.ov`: en PC Escape tiene que cerrarlo por su
       // propia salida para liberar también la referencia al cadáver. Móvil conserva su flujo.
       if (window.innerWidth > 640 && typeof cerrarCuerpoPanelPc === "function" && cerrarCuerpoPanelPc()) return;
-      // Si una pregunta está encima de otra ventana, Escape cierra sólo la pregunta y conserva
-      // el contexto del jugador (inventario, mercado, parcela) para que pueda seguir decidiendo.
-      if (window.innerWidth > 640 && cerrarConfirmacionLocal()) return;
       closeAllOv(); if (typeof hideSeedWheel === "function") hideSeedWheel(); return;
+    }
+    // Una confirmación de escritorio ya es modal para el ratón; los atajos no pueden seguir
+    // cambiando selección, menú o ventanas detrás. Tab/Enter/Espacio quedan sólo para sus dos
+    // botones, cuyo foco nace en Cancelar para no aceptar una acción destructiva por accidente.
+    if (window.innerWidth > 640 && isOpen("ov-confirm")) {
+      const dentro = e.target && e.target.closest && e.target.closest("#ov-confirm");
+      const activar = dentro && (key === "tab" || key === "enter" || key === " " || key === "spacebar");
+      if (!activar) e.preventDefault();
+      return;
+    }
+    // Elegir cuánto mover es una decisión modal de escritorio: con el foco ya en el número,
+    // ningún atajo puede cambiar la barra rápida, abrir el menú ni tocar otra pila detrás.
+    if (window.innerWidth > 640 && isOpen("ov-cuanto")) {
+      const dentro = e.target && e.target.closest && e.target.closest("#ov-cuanto");
+      const activar = dentro && (key === "tab" || key === "enter" || key === " " || key === "spacebar");
+      if (!activar) e.preventDefault();
+      return;
     }
     if (key === "m") { toggleMenu(); e.preventDefault(); return; }   // M: desplegar/plegar el menú (detalles 29/7)
     if (key >= "1" && key <= "9") { hotSelect(+key - 1); e.preventDefault(); return; }
@@ -5808,7 +6300,14 @@ function refreshCosmeticos() {
    nada », que es verdad para el montículo y mentira para cualquier otra cosa que use esta rueda
    — y la tanda 3 la usa para elegir trampa. Un aviso compartido que dice algo que no pasó es
    peor que no avisar: enseña al jugador a no leer los avisos. */
+function enfocarOpcionEleccionPc(caja) {
+  if (!caja || (typeof window !== "undefined" && window.innerWidth <= 640) || typeof caja.querySelector !== "function") return;
+  const opcion = caja.querySelector("[data-elec]");
+  if (!opcion || typeof opcion.focus !== "function") return;
+  try { opcion.focus({ preventScroll: true }); } catch (e) { opcion.focus(); }
+}
 function mostrarEleccion(titulo, opciones, alElegir, alCancelar, avisoCancelar) {
+  if (hayOvPcAbierto()) { toast("Cerrá la ventana antes de elegir"); return; }
   const w = $("seedwheel"); if (!w) { if (alElegir) alElegir(opciones[0].k); return; }
   const c = w.querySelector(".swc"); if (!c) return;
   const px = window.innerWidth / 2, py = window.innerHeight / 2;
@@ -5820,16 +6319,21 @@ function mostrarEleccion(titulo, opciones, alElegir, alCancelar, avisoCancelar) 
     /* en semicírculo: con dos opciones quedan una a cada lado, que es lo que se lee más rápido */
     const ang = Math.PI * (0.5 + (i + 0.5) / n);
     const x = Math.cos(ang) * R, y = Math.sin(ang) * R * 0.75 + 26;
-    h += '<div class="swi" data-elec="' + o.k + '" style="left:' + x + 'px;top:' + y + 'px" title="' + (o.sub || "") + '">' +
+    const etiqueta = "Elegir " + o.txt + (o.sub ? " — " + o.sub : "");
+    h += '<div class="swi" data-elec="' + o.k + '" role="button" tabindex="0" aria-label="' + escapeHtml(etiqueta) +
+      '" style="left:' + x + 'px;top:' + y + 'px" title="' + escapeHtml(o.sub || "") + '">' +
       '<span style="font-size:20px;line-height:1">' + (o.txt.split(" ")[0] || "") + '</span>' +
       '<span style="font-size:8px;color:#e8dcc0;line-height:1.1">' + o.txt.split(" ").slice(1).join(" ") + '</span></div>';
   });
   c.innerHTML = h;
   w.classList.add("show");
   const cerrar = () => { w.classList.remove("show"); c.innerHTML = ""; document.removeEventListener("pointerdown", fuera, true); };
-  c.querySelectorAll("[data-elec]").forEach(el => el.onclick = (ev) => {
-    ev.stopPropagation(); const k = el.dataset.elec; cerrar(); if (alElegir) alElegir(k);
+  const elegir = (el) => { const k = el.dataset.elec; cerrar(); if (alElegir) alElegir(k); };
+  c.querySelectorAll("[data-elec]").forEach(el => {
+    el.onclick = (ev) => { ev.stopPropagation(); elegir(el); };
+    activarAccionConTeclado(el, () => elegir(el));
   });
+  enfocarOpcionEleccionPc(c);
   const fuera = (ev) => { if (c.contains(ev.target)) return; cerrar(); toast(avisoCancelar || "No cavaste nada"); if (alCancelar) alCancelar(); };
   setTimeout(() => document.addEventListener("pointerdown", fuera, true), 0);
 }

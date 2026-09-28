@@ -42,6 +42,7 @@ console.log("\nEL RECETARIO ES UNA GRILLA DE ÍCONOS");
   ok("y el nivel que pide si está cerrada", /class="lv"/.test(v2) && /locked/.test(v2));
   ok("la seleccionada se marca", /" sel"/.test(v2));
   ok("clic en un ícono cambia el detalle", /data-ckrec/.test(v2) && /ckElegir/.test(v2));
+  ok("las recetas también entran por Tab con rol de botón", /role="button" tabindex="0"/.test(v2) && /aria-pressed/.test(v2));
   const css = HTML.slice(HTML.indexOf(".ck-grid{"), HTML.indexOf(".ck-grid{") + 200);
   ok("y la grilla scrollea por dentro (la ventana no crece)", /overflow-y:auto/.test(css) && /max-height/.test(css));
 }

@@ -104,6 +104,7 @@ console.log("\nLOS EFECTOS DE LA COMIDA   (« Food 00:00 »)");
 
 console.log("\nLA ESTAMINA   (« Stamina 42:00 » — y visible desde la granja)");
 {
+  ok("la píldora de recarga también se alcanza como botón", /id="stampill"[^>]*role="button"[^>]*aria-label="Recargar estamina"/.test(HTML));
   ctx.GF = ctx.GF || {}; vm.runInContext("GF.scene = 'farm';", ctx);
   let acc = 0; for (let k = 2; k <= 12; k++) acc += ctx.skillNeed(k, "cooking");
   G.combatXp = 0;
