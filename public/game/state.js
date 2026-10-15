@@ -7,7 +7,8 @@ const G = {
   plata: 3, golden: 20, level: 1, prestige: 0, week: 1, iniciado: 0,   // 18/8: cuándo empezó la partida — de ahí sale la semana del HUD   // 14/8: nacés con 3 de plata (el 1er objetivo es COMPRAR tus semillas)
   hp: 100, hpMax: 100, swordOwned: false, bowOwned: false, swordWoodOwned: false, firstCropDone: false,   // combate (Fase D)
   armasUnlocked: false,          // viernes (2): la pestana Armas de la Herreria se paga (20 madera + 20 piedra + 1000 plata)
-  treesOpen: [0, 1, 2], rocksOpen: [0, 1, 2],  // 18/8: TRES de cada uno al arrancar. Con 2 el tutorial pedía 33 madera a 1 cada 30 min: 8 h de reloj para 3 min de juego.
+  treesOpen: [0], rocksOpen: [0],  // economía gradual: los otros nodos se eligen, no nacen todos activos
+  produccion: { v: 1, base: 5, nodos: {}, pausas: {}, vale: 0 },
   gear: { casco: null, armadura: null, botas: null, escudo: null, arma: null, municion: false },
   weapons: {},                   // doc 2/8: armas nuevas — id ("espada_madera") -> { dur }
   stam: null, stamAcc: 0, stamFullAt: 0, stamRec: null,   // estamina de la Zona Negra ("2das mejoras") · stamFullAt: cuándo se llena entera (24/8)
@@ -2264,6 +2265,7 @@ function expNodoExtra(n) { return (GF.EXP_NODOS_EXTRA || {})[n] || null; }
    Ahora el cartel se deriva de la misma lista que pone las vetas en el mundo y que las cobra en
    el precio: si mañana la 18 lleva veta, el cartel lo dice sin que nadie lo escriba. */
 function expansionTrae(n) {
+  if (G.produccion && G.produccion.v === 1) return [{ k: "capacidad", txt: "cupo productivo" }].concat(n === 1 ? [{ k: "parcela", txt: "nodo básico a elección" }] : []);
   const out = [{ k: "parcela", txt: "parcela" }, { k: "arbol", txt: "árbol" }, { k: "roca", txt: "roca" }];
   if (expVetas(n)) { out.push({ k: "bronce", txt: "veta de bronce" }); out.push({ k: "oro", txt: "veta de oro" }); }
   const ex = expNodoExtra(n);
@@ -2276,7 +2278,8 @@ function expansionSiguiente() {
   const hechas = G.expansiones || 0;
   if (hechas >= EXPANSION_MAX) return null;
   return { i: hechas, n: hechas + 1, nivel: FARM_EXPANSION[hechas], costo: expansionCostos()[hechas],
-    bloque: (GF.EXPANSIONES || [])[hechas] || null };
+    bloque: (GF.EXPANSIONES || [])[hechas] || null,
+    ...(G.produccion && G.produccion.v === 1 ? { costo: { plata: Math.round(20 * Math.pow(1.65, hechas)), ...(hechas === 0 ? { madera: 2, piedra: 2 } : {}) } } : {}) };
 }
 function expansionComprar() {
   const e = expansionSiguiente();
@@ -2334,6 +2337,10 @@ function expansionObraTick() {
 /* entrega de la expansión (lo que hasta el 20/9 hacía expansionComprar justo después de pagar) */
 function expansionEntregar(e) {
   G.expansiones = e.i + 1;
+  if (G.produccion && G.produccion.v === 1) {
+    G.expParcelasDadas = G.expansiones;
+    if (e.n === 1) G.produccion.vale++;
+  }
   log("¡Expansión " + e.n + " de " + EXPANSION_MAX + "! La granja creció " + (GF.BLOQUE * GF.BLOQUE) + " celdas.", "gold");
   if (window.sfx) sfx("level");
   /* 20/8 (dirección): "lo que daría al momento de expandir es la transición y el movimiento de
@@ -2362,7 +2369,7 @@ function expansionEntregar(e) {
   /* 20/8 (dirección): "una vez que se entrega, una FLAG que diga que ya se entregó, y no vuelve
      a entregarse por más F5 que hagas". La bandera es expParcelasDadas: la entrega es secuencial
      (bloque 1, 2, 3…), así que con contar hasta dónde se llegó alcanza. */
-  if (e.bloque && e.bloque.parcela && (G.expParcelasDadas || 0) <= e.i) {
+  if (!G.produccion && e.bloque && e.bloque.parcela && (G.expParcelasDadas || 0) <= e.i) {
     const tope = typeof PLOT_MAX !== "undefined" ? PLOT_MAX : 60;
     if ((G.plotsOwned || 3) < tope) {
       const idx = G.plotsOwned || 3;
@@ -2598,10 +2605,114 @@ function recalcFarmLevelInterno() {
    tu granja entera — y por eso crece solo a medida que la granja crece.
    Se mide sobre las celdas que el jugador TIENE (9 de arranque + 3 por expansión comprada), no
    sobre las que podría tener: el cartel promete lo que va a cobrar, no lo que cobraría otro. */
-function celdasProductivas() { return 9 + 3 * (G.expansiones || 0); }
+function produccionClave(o) { return o && Number.isInteger(o.i) ? (o.type === "plot" ? "p:" : "n:") + o.i : ""; }
+function produccionPausada(o) { return !!(G.produccion && G.produccion.pausas && G.produccion.pausas[produccionClave(o)]); }
+function produccionNodoPoseido(i) {
+  if (!G.produccion) return null; // respaldo del mundo anterior durante la migración
+  const o = GF.WORLD_OBJECTS[i], c = GF.COLLISIONS[i];
+  if (!o || !["tree", "rock", "ore"].includes(o.type)) return null;
+  if (G.produccion.nodos[i]) return true;
+  if (o.exp != null || o.type === "ore") return false;
+  return ((o.type === "tree" ? G.treesOpen : G.rocksOpen) || []).includes(c && c.lock);
+}
+function produccionItems() {
+  const items = [];
+  for (let i = 0; i < (G.plotsOwned || 3); i++) items.push({ type: "plot", i, label: "Parcela " + (i + 1) });
+  GF.WORLD_OBJECTS.forEach((o, i) => {
+    if (!["tree", "rock", "ore"].includes(o.type)) return;
+    const mio = G.produccion ? produccionNodoPoseido(i) : GF.objetoPresente(GF.COLLISIONS[i]);
+    if (mio) items.push({ type: o.type, i, label: (o.type === "tree" ? "Árbol" : o.type === "rock" ? "Roca" : "Veta de " + o.ore) + " #" + (i + 1) });
+  });
+  return items;
+}
+function produccionCapacidad() { return G.produccion ? G.produccion.base + (G.expansiones || 0) : Infinity; }
+function produccionUsados() { return produccionItems().filter(o => !produccionPausada(o)).length; }
+function produccionHayCupo() { return !G.produccion || produccionUsados() < produccionCapacidad(); }
+function produccionMigrar() {
+  if (G.produccion) return;
+  const nodos = {};
+  GF.WORLD_OBJECTS.forEach((o, i) => { if (["tree", "rock", "ore"].includes(o.type) && GF.objetoPresente(GF.COLLISIONS[i])) nodos[i] = true; });
+  const usados = (G.plotsOwned || 3) + Object.keys(nodos).length;
+  G.produccion = { v: 1, base: Math.max(5, usados - (G.expansiones || 0)), nodos, pausas: {}, vale: 0 };
+  // La capacidad adquirida antes del cambio es permanente; una recarga no vuelve a concederla.
+}
+function produccionNodoKey(i) { const o = GF.WORLD_OBJECTS[i]; return o ? o.type + ":" + o.leftCol + "," + o.baseRow : ""; }
+function produccionAlternar(clave) {
+  if (!G.produccion || !/^[np]:\d+$/.test(clave)) return false;
+  const item = produccionItems().find(o => produccionClave(o) === clave); if (!item) return false;
+  const sc = window.farmScene;
+  if (sc && sc.action) { toast("Terminá o cancelá la acción antes de cambiar la producción."); return false; }
+  const fuente = item.type === "plot" ? (sc && sc.plots && sc.plots[item.i]) || G.plots[item.i] || {state:"dry"}
+    : (sc && sc.objs && sc.objs.find(o => o.i === item.i)) || (G.nodos || {})[produccionNodoKey(item.i)] || {};
+  const pausa = G.produccion.pausas[clave], t = nowMs();
+  if (pausa) {
+    if (!produccionHayCupo()) { toast("Capacidad completa: pausá otra producción o expandí."); return false; }
+    const copia = {...pausa.estado}, delta = Math.max(0, t - pausa.at);
+    for (const k of ["readyAt", "halfAt", "cdIni", "witherAt"]) if (copia[k]) copia[k] += delta;
+    Object.assign(fuente, copia);
+    if (item.type === "plot") G.plots[item.i] = {...copia};
+    else { G.nodos = G.nodos || {}; G.nodos[produccionNodoKey(item.i)] = {...copia}; }
+    delete G.produccion.pausas[clave];
+    if (item.type === "plot" && sc && sc.applyPlotVisual) sc.applyPlotVisual(fuente);
+  } else {
+    const estado = {};
+    for (const k of ["readyAt", "halfAt", "cdIni", "witherAt", "state", "cropKey", "growTotal"]) if (fuente[k] !== undefined) estado[k] = fuente[k];
+    G.produccion.pausas[clave] = { at: t, estado };
+  }
+  if (sc && sc.syncNodos) sc.syncNodos();
+  if (sc && sc.syncPlots) sc.syncPlots();
+  if (fuente.spr && fuente.spr.setAlpha) fuente.spr.setAlpha(pausa ? 1 : 0.5);
+  if (fuente.sprite && fuente.sprite.setAlpha) fuente.sprite.setAlpha(pausa ? 1 : 0.5);
+  if (typeof refreshCobertizo === "function") refreshCobertizo();
+  if (typeof refreshHud === "function") refreshHud();
+  if (typeof saveFarm === "function") saveFarm(true);
+  return true;
+}
+function produccionComprar(tipo) {
+  if (!G.produccion || !produccionHayCupo()) { toast("No queda capacidad. Pausá otra producción o expandí."); return false; }
+  if (tipo === "plot") {
+    if ((G.plotsOwned || 3) >= PLOT_MAX) return false;
+    const gratis = G.produccion.vale > 0, costo = 20;
+    if (!gratis && G.plata < costo) { toast("Te faltan " + costo + " de plata."); return false; }
+    if (gratis) G.produccion.vale--; else G.plata -= costo;
+    G.plotsOwned++; G.plotsCompradas = (G.plotsCompradas || 0) + (gratis ? 0 : 1);
+    if (window.farmScene && farmScene.refreshPlotLocks) farmScene.refreshPlotLocks();
+  } else {
+    const def = { tree: { precio: 30, nivel: 1 }, rock: { precio: 30, nivel: 1 }, bronce: { precio: 180, nivel: 3 }, hierro: { precio: 300, nivel: 6 }, oro: { precio: 500, nivel: 9 }, diamante: { precio: 900, nivel: 13 }, netherita: { precio: 1400, nivel: 17 } }[tipo];
+    if (!def || G.level < def.nivel) { toast("Ese nodo todavía no está disponible."); return false; }
+    const i = GF.WORLD_OBJECTS.findIndex((o, idx) => (tipo === "tree" || tipo === "rock" ? o.type === tipo : o.type === "ore" && o.ore === tipo) && (o.exp == null || o.exp < (G.expansiones || 0)) && !produccionNodoPoseido(idx));
+    if (i < 0) { toast("No quedan emplazamientos de este tipo en tu terreno. Expandí para abrir más."); return false; }
+    const base = GF.WORLD_OBJECTS[i], lp = G.layout && G.layout[i];
+    const col = lp ? Math.floor(lp.cx / GF.TILE - (base.wCells || 1) / 2) : base.leftCol;
+    const row = lp ? Math.round(lp.by / GF.TILE) - 1 : base.baseRow;
+    for (let c = col; c < col + (base.wCells || 1); c++) if (GF.celdaOcupada && GF.celdaOcupada(c, row)) { toast("El emplazamiento está ocupado. Mové ese objeto en modo edición antes de comprar."); return false; }
+    const gratis = G.produccion.vale > 0 && (tipo === "tree" || tipo === "rock");
+    if (!gratis && G.plata < def.precio) { toast("Te falta plata para ese nodo."); return false; }
+    if (gratis) G.produccion.vale--; else G.plata -= def.precio;
+    G.produccion.nodos[i] = true;
+    const colision = GF.COLLISIONS[i];
+    if (base.exp == null && (tipo === "tree" || tipo === "rock")) {
+      const abiertos = tipo === "tree" ? G.treesOpen : G.rocksOpen;
+      if (!abiertos.includes(colision.lock)) abiertos.push(colision.lock);
+    }
+    const cd = (tipo === "tree" ? CD.tree : tipo === "rock" ? CD.rock : ORE_DEF[tipo].cd) * 1000;
+    const reloj = { cdIni: nowMs(), readyAt: nowMs() + cd, halfAt: nowMs() + cd / 2 };
+    G.nodos = G.nodos || {}; G.nodos[produccionNodoKey(i)] = reloj;
+    const sc = window.farmScene, vivo = sc && sc.objs && sc.objs.find(o => o.i === i);
+    if (vivo) Object.assign(vivo, reloj);
+    if (sc && sc.refreshNodeLocks) sc.refreshNodeLocks();
+  }
+  if (GF.ocupCambio) GF.ocupCambio();
+  if (window.farmScene && farmScene.rebuildCollisions) farmScene.rebuildCollisions();
+  refreshCobertizo(); refreshHud();
+  if (typeof saveFarm === "function") saveFarm(true);
+  return true;
+}
+function celdasProductivas() { return G.produccion ? produccionUsados() : 9 + 3 * (G.expansiones || 0); }
 function bonoPlataH() { return Math.round(celdasProductivas() * 20 * 0.015); }
 
 function nodosQueTocan(lvl) {
+  if (G.produccion && G.produccion.v === 1) return { tree: 1, rock: 1, plot: 3 };
   /* 18/8: tres de cada al arrancar, y una parcela más por cada expansión comprada. Los árboles y
      las rocas de expansión NO pasan por acá: son objetos físicos dentro de su bloque y aparecen
      al comprarlo (GF.objetoPresente). La parcela sí, porque el jugador elige dónde la pone. */
@@ -2682,6 +2793,7 @@ function nodoIndicePorLock(tipo, lockIdx) {
 function regaloColocar(tipo, col, row) {
   const q = cobertizoBolsa();   // 18/8: se coloca lo que está EN EL COBERTIZO, no lo que sigue en el baúl
   if (!q[tipo]) { toast("No te queda " + REGALO_NADA(tipo)); return false; }
+  if (!produccionHayCupo()) { toast("Capacidad completa: pausá otro nodo en el Cobertizo o expandí."); return false; }
   const T = GF.TILE;
   if (tipo === "plot") {
     const tope = typeof PLOT_MAX !== "undefined" ? PLOT_MAX : 60;
@@ -2876,8 +2988,9 @@ function picoQueHaceFalta(o) {
   const tierNecesario = (o && o.type === "ore" && ORE_DEF[o.ore]) ? ORE_DEF[o.ore].tier : 0;
   return PICK_ORDER.find(id => PICK_DEF[id] && PICK_DEF[id].mineTier === tierNecesario) || null;
 }
-function canAfford(c) { for (const k in c) if ((G.res[k]||0) < c[k]) return false; return true; }
-function payCost(c) { for (const k in c) G.res[k]-=c[k]; }
+function costoTengo(k) { return k === "plata" ? G.plata : (G.res[k] || 0); }
+function canAfford(c) { for (const k in c) if (costoTengo(k) < c[k]) return false; return true; }
+function payCost(c) { for (const k in c) { if (k === "plata") G.plata -= c[k]; else G.res[k] -= c[k]; } }
 // la fragua se enciende un rato cada vez que trabajás en la Herrería (detalles jueves)
 const FORGE_LIT_MS = 8000;
 function forgeWork() { G.forgeLitUntil = nowMs() + FORGE_LIT_MS; if (window.FARM && FARM.updateForge) FARM.updateForge(); if (window.sfx) sfx("mine"); }
@@ -3764,7 +3877,13 @@ function passClaim(nv, vipTrack) {
   if (r.pick) { G.picks.owned[r.pick] = true; G.picks.dur[r.pick] = (G.picks.dur[r.pick] || 0) + 1; }
   if (r.nft) { if (!tengoNft(r.nft)) darNft(r.nft, "Pase VIP nivel " + nv); }
   /* 20/8: G.plotsFicha — la contabilidad de parcelas necesita saber de dónde salió cada una */
-  if (r.ficha) { G.plotsOwned = Math.min(PLOT_MAX, (G.plotsOwned || 3) + 1); G.plotsFicha = (G.plotsFicha || 0) + 1; if (window.farmScene && window.farmScene.refreshPlotLocks)   /* 18/8: la guardia "<= GF.PLOTS.length" era parte del fallo de las parcelas 13+ */ { try { window.farmScene.refreshPlotLocks(); } catch (e) {} } if (typeof syncEditDeco === "function") syncEditDeco(); }
+  if (r.ficha) {
+    const indice = G.plotsOwned || 3, pausar = G.produccion && !produccionHayCupo();
+    G.plotsOwned = Math.min(PLOT_MAX, indice + 1); G.plotsFicha = (G.plotsFicha || 0) + 1;
+    if (pausar && G.plotsOwned > indice) G.produccion.pausas["p:" + indice] = { at: nowMs(), estado: { state: "dry", readyAt: 0, cropKey: null } };
+    if (window.farmScene && window.farmScene.refreshPlotLocks) { try { window.farmScene.refreshPlotLocks(); } catch (e) {} }
+    if (typeof syncEditDeco === "function") syncEditDeco();
+  }
   if (r.cos) { p.cosmetics.push(r.cos); }
   log("Pase nivel " + nv + (vipTrack ? " (VIP)" : "") + ": recibiste " + passRewardStr(r) + ".", "gold");
   if (typeof tutoEvent === "function") tutoEvent("passclaim");
@@ -4252,6 +4371,8 @@ function parcelaColocar(col, row) {   // la llama la escena con la celda que eli
   return true;   // 18/8: sin telón — la escena la dibuja en vivo (colocarRegaloEnVivo)
 }
 function comprarParcela() {
+  if (G.produccion) { produccionComprar("plot"); return; }
+  if (!produccionHayCupo()) { toast("Capacidad completa: pausá otro nodo en el Cobertizo o expandí."); return; }
   if ((G.plotsOwned || 3) >= PLOT_MAX) { toast("Ya tenés las " + PLOT_MAX + " parcelas"); return; }
   if (G.tuto && !G.tuto.done) { toast("🎯 Durante el tutorial alcanzan las parcelas que tenés — seguí el objetivo"); return; }   // embudo (13/8)
   {
@@ -4396,7 +4517,7 @@ function godHandSembrar(msAusente) {
   if (!godHandTotal()) return 0;
   const owned = Math.max(2, Math.min(GF.PLOTS.length, G.plotsOwned || 3));
   const libres = [];
-  for (let i = 0; i < owned; i++) { const p = G.plots[i]; if (!p || p.state === "dry") libres.push(i); }
+  for (let i = 0; i < owned; i++) { if (produccionPausada({type:"plot",i})) continue; const p = G.plots[i]; if (!p || p.state === "dry") libres.push(i); }
   if (!libres.length) return 0;
   const horasFuera = Math.min(GODHAND_MAX_H, Math.max(0, msAusente || 0) / 3600000);
   if (horasFuera < 0.02) return 0;
@@ -7354,6 +7475,7 @@ function bagFull(what) { toast("Bolsa llena — no podés " + what); log("No ten
 function sinKitTxt(m) { return !G.kitReclamado ? "Tu kit de bienvenida está en el baúl, junto al granero" : m; }
 function puedeAccion(tipo, o, rotulo) {
   o = o || {};
+  if (["chop", "mine", "plant", "harvest"].includes(tipo) && produccionPausada(o)) return { ok: false, toast: "Producción pausada. Reactivala en el Cobertizo." };
   const OK = { ok: true };
 
   /* El enfriamiento del nodo, común a árbol, roca y veta. Se mira PRIMERO: es la razón más
@@ -7890,8 +8012,10 @@ ORE_DEF.piedra.price = PRICE.piedra;
 // 1/8: los CULTIVOS venden según CROP_DEF.price — PRICE quedó solo para lo demás.
 //      Antes el mercado usaba una copia vieja acá y los cambios del panel no se veían (bug reportado por el diseñador).
 function priceOf(res) { return CROP_DEF[res] ? CROP_DEF[res].price : (PRICE[res] || 0); }
-// detalles viernes (1): los minerales, madera y flechas NO se venden — solo cultivos y lo farmeado en la Zona Negra (carne)
-const SELLABLE = ["papa","ciruela","cereza","remolacha","zanahoria","cebolla","calabacin","repollo","calabaza","brocoli","girasol","trigo","maiz"];   // 16/8: los tres cultivos nuevos también se venden   // viernes (2): la carne no se vende
+// Economía por especialidades: también se venden recursos de tala/minería y sus procesados.
+// Carne, cebos y otros objetos de combate conservan sus restricciones.
+const SELLABLE = ["papa","ciruela","cereza","remolacha","zanahoria","cebolla","calabacin","repollo","calabaza","brocoli","girasol","trigo","maiz",
+  "madera","piedra","bronce","hierro","oro","diamante","netherita","tablon","barra_piedra","barra_bronce","barra_hierro","barra_oro"];
 let marketCur = "plata";
 // 16/8 (caza de exploits): vender en $Golden usaba precio/10, o sea 10 plata de cultivo por
 // 1 $Golden — mientras comprar parcelas valora el $Golden en GOLDEN_EN_PLATA (500). Eso era
@@ -9503,6 +9627,7 @@ function platoDuracionMult(estrella) {
 var PLOT_UNLOCK_BASE = 200;
 var PLOT_UNLOCK_SUBA = 1.10;
 function plotUnlockCost() {
+  if (G.produccion) return 20;
   return Math.round(PLOT_UNLOCK_BASE * Math.pow(PLOT_UNLOCK_SUBA, Math.max(0, G.plotsCompradas || 0)));
 }
 
@@ -11278,7 +11403,8 @@ function domaTrabajar(visto, ahora) {
   /* --- LA LARVA: abona — cada cultivo en crecimiento recorta el 15% de lo que le falta --- */
   if (rol === "larva") {
     let abonados = 0;
-    (G.plots || []).forEach(pl => {
+    (G.plots || []).forEach((pl, i) => {
+      if (produccionPausada({type:"plot",i})) return;
       if (!pl || pl.state !== "growing" || !(pl.readyAt > ahora)) return;
       pl.readyAt -= Math.round((pl.readyAt - ahora) * DOMA_LARVA_PCT);
       abonados++;
@@ -11292,6 +11418,7 @@ function domaTrabajar(visto, ahora) {
   const parte = { madera: 0, piedra: 0, fee: 0 };
   const nodos = G.nodos || {};
   for (const key in nodos) {
+    if (G.produccion && Object.keys(G.produccion.pausas).some(k => k.startsWith("n:") && produccionNodoKey(+k.slice(2)) === key)) continue;
     const rec = nodos[key];
     const tipo = key.split(":")[0];
     if (tipo !== "tree" && tipo !== "rock") continue;   // minerales afuera (21/8)

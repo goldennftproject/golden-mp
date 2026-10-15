@@ -261,7 +261,8 @@ class FarmScene extends Phaser.Scene {
       // 18/8: los nodos que trae una expansión no existen hasta que esa expansión se compró. No
       // pasan por el baúl ni por la escalera de niveles: vienen CON el terreno, que es lo que hace
       // que la compra se sienta. Su freno es haber comprado el bloque, y nada más.
-      const sinExpansion = o.exp != null && (G.expansiones || 0) <= o.exp;
+      const sinExpansion = (o.exp != null && (G.expansiones || 0) <= o.exp) ||
+        (["tree", "rock", "ore"].includes(o.type) && typeof produccionNodoPoseido === "function" && produccionNodoPoseido(i) === false);
       /* LA BOYA DE TROFEOS no está hasta que se compra en la Lonja por 30 Escamas. Se declara
          en el mundo como todo lo demás —así vive en el mismo sitio y no en un caso especial del
          renderizador— y sencillamente no se dibuja hasta entonces. */
@@ -1388,6 +1389,7 @@ class FarmScene extends Phaser.Scene {
   }
 
   promptText(o) {
+    if (typeof produccionPausada === "function" && produccionPausada(o)) return "⏸ Producción pausada · reactivar en Cobertizo";
     const cd = nowMs() < o.readyAt;
     if (o.type === "boar") return "Espantar jabalí";
     if (o.type === "animal") {
@@ -1786,6 +1788,7 @@ class FarmScene extends Phaser.Scene {
   }
 
   startAction(kind, o) {
+    if (["chop", "mine", "plant", "harvest"].includes(kind) && produccionPausada(o)) { toast("Producción pausada. Reactivala en el Cobertizo."); return; }
     this.moveTarget = null;
     if (GF.NO_WALK && o && o.cx != null) {   // granja de un clic: el granjero (invisible) trabaja donde clickeaste
       this.hero.setPosition(o.cx + (kind === "fish" ? 0 : 22), (o.by != null ? o.by : o.by2) + 4);
@@ -2112,6 +2115,7 @@ class FarmScene extends Phaser.Scene {
 
   finishAction() {
     const a = this.action, o = a.o;
+    if (["chop", "mine", "plant", "harvest"].includes(a.kind) && produccionPausada(o)) { this.action = null; return; }
     if (window.sfx) sfx({ chop: "chop", mine: "mine", plant: "plant", harvest: "harvest", fish: "splash", water: "splash" }[a.kind] || "click");
     // (la sacudida y las astillas ya salieron en el momento del impacto, no acá al final)
     if (a.kind === "chop") {
@@ -5004,7 +5008,10 @@ class FarmScene extends Phaser.Scene {
   }
 
   // vuelca el estado de las parcelas a G.plots para que el autoguardado lo persista
-  syncPlots() { if (this.plots) G.plots = this.plots.map(pl => ({ state: pl.state, readyAt: pl.readyAt, cropKey: pl.cropKey, witherAt: pl.witherAt || 0, growTotal: pl.growTotal || 0 })); }   // growTotal: sin él, tras un F5 la barrita de crecimiento arrancaba desde donde no era
+  syncPlots() { if (this.plots) G.plots = this.plots.map(pl => {
+    const pausa = G.produccion && G.produccion.pausas[produccionClave(pl)];
+    return pausa ? {...pausa.estado} : { state: pl.state, readyAt: pl.readyAt, cropKey: pl.cropKey, witherAt: pl.witherAt || 0, growTotal: pl.growTotal || 0 };
+  }); }
   /* 18/8: el equivalente de syncPlots para los NODOS. Solo se anotan los que están enfriándose,
      así el guardado no engorda con treinta entradas en cero. Se guarda por índice de objeto, que
      es estable porque WORLD_OBJECTS solo crece por el final. */
@@ -5065,6 +5072,8 @@ class FarmScene extends Phaser.Scene {
       const base = GF.WORLD_OBJECTS[o.i];
       if (!base) return;
       n[base.type + ":" + base.leftCol + "," + base.baseRow] = { readyAt: o.readyAt, halfAt: o.halfAt || 0, cdIni: o.cdIni || 0 };
+      const pausa = G.produccion && G.produccion.pausas[produccionClave(o)];
+      if (pausa) n[base.type + ":" + base.leftCol + "," + base.baseRow] = {...pausa.estado};
     });
     G.nodos = n;
   }
@@ -5262,6 +5271,7 @@ class FarmScene extends Phaser.Scene {
       // los nodos que venían con el terreno aparecen (ya estaban en la escena, ocultos)
       (this.objs || []).forEach(o => {
         if (o.exp == null || (G.expansiones || 0) <= o.exp || !o.oculto) return;
+        if (G.produccion && produccionNodoPoseido(o.i) === false) return;
         o.oculto = false; o.locked = false;
         if (o.sprite) { o.sprite.setVisible(true).setAlpha(1).clearTint(); this.popFx(o.sprite, 1); }
       });
@@ -5512,8 +5522,8 @@ class FarmScene extends Phaser.Scene {
   refreshNodeLocks() {
     if (!this.objs) return;
     for (const o of this.objs) {
-      if (o.type !== "tree" && o.type !== "rock") continue;
-      const abierto = o.type === "tree"
+      if (!["tree", "rock", "ore"].includes(o.type)) continue;
+      const abierto = G.produccion ? produccionNodoPoseido(o.i) : o.type === "tree"
         ? (G.treesOpen || [0]).includes(o.lockIdx)
         : !(typeof nodoBloqueado === "function" && nodoBloqueado(o));
       if (abierto && o.oculto) {                       // recién colocado: aparece con un saltito
@@ -5715,6 +5725,11 @@ class FarmScene extends Phaser.Scene {
     this.tickCamaraGuia(t);   // sólo si el objetivo tutorial quedó fuera del área jugable
     this.actualizarCartelExpansion();   // la señal de expansión acompaña la cámara, no se corta en el borde
     for (const o of this.objs) {
+      if (produccionPausada(o)) {
+        if (o.sprite) o.sprite.setAlpha(0.5);
+        if (o.timer) o.timer.setText("⏸ Pausado").setVisible(this.timerOn(o));
+        continue;
+      }
       /* 18/8 (reporte del diseñador: "crecen antes de la hora... tenés que cambiar la manera en la
          que los sprites van rotando, tiene que depender sí o sí del tiempo de enfriamiento").
          Tenía toda la razón. Antes el sprite cambiaba POR EVENTO: al cruzar la mitad del
@@ -5813,6 +5828,12 @@ class FarmScene extends Phaser.Scene {
 
     // lotes: pasar de "creciendo" a "listo"
     for (const pl of this.plots) {
+      if (produccionPausada(pl)) {
+        if (pl.spr) pl.spr.setAlpha(0.5);
+        if (pl.timer) pl.timer.setText("⏸ Pausada").setVisible(true);
+        if (pl.barraG) pl.barraG.clear();
+        continue;
+      }
       // 2/8: MARCHITADO DESACTIVADO (pedido del diseñador) — el cultivo listo ya no se pudre
       if (pl.state === "ready" && pl.witherAt) { pl.witherAt = 0; this.syncPlots(); }
       this.barraCultivo(pl, t);   // barrita + tiempo restante, SIEMPRE visible mientras crece (como SFL)

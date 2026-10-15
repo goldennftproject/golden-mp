@@ -267,6 +267,7 @@ function snapshot() {
      OJO con los comentarios AL FINAL de una línea de este objeto: se comen lo que sigue. */
   return { plata: G.plata, golden: G.golden, level: G.level, prestige: G.prestige, iniciado: G.iniciado, reinicio: G.reinicio,   /* 24/9: cuándo se reinició la cuenta (el portero lo lee) */
     mercadoVentas: G.mercadoVentas,
+    produccion: G.produccion,
     res: G.res, picks: G.picks, skills: G.skills, triesV: G.triesV, establoV: G.establoV, fish: G.fish, plots: G.plots, nodos: G.nodos, expansiones: G.expansiones, pescaHasta: G.pescaHasta, pescaDesde: G.pescaDesde, senales: G.senales, escamas: G.escamas, vistos: G.vistos, estrellaMax: G.estrellaMax, pescaTiene: G.pescaTiene, canas: G.canas, presion: G.presion, amarres: G.amarres, trampas: G.trampas, marea: G.marea, runaOro: G.runaOro, buffs: G.buffs, seeds: G.seeds, selSeed: G.selSeed,
     tools: G.tools, sflStock: true, invRows: G.invRows, slots: G.slots, hotbar: G.hotbar, hotSel: G.hotSel, hbInit: G.hbInit, layout: G.layout,
     daily: G.daily, plotsOwned: G.plotsOwned, plotsCompradas: G.plotsCompradas, plotsFicha: G.plotsFicha, expParcelasDadas: G.expParcelasDadas, seedBuys: G.seedBuys, built: G.built,
@@ -308,6 +309,23 @@ function snapKey() { return JSON.stringify({ n: (typeof nombreLucido === "functi
    Regla: si algo LEE otra parte del estado, no va en la fase 1.                                 */
 function hydrate(d) {
   if (!d) return;
+  G.produccion = null;
+  if (d.produccion && d.produccion.v === 1 && Number.isSafeInteger(d.produccion.base) && d.produccion.base >= 5 && d.produccion.base <= 200) {
+    const p = d.produccion;
+    G.produccion = { v: 1, base: p.base, nodos: {}, pausas: {}, vale: Number.isSafeInteger(p.vale) ? Math.max(0, Math.min(1, p.vale)) : 0 };
+    for (const i of Object.keys(p.nodos || {})) if (/^\d+$/.test(i) && GF.WORLD_OBJECTS[+i] && p.nodos[i] === true) G.produccion.nodos[i] = true;
+    for (const k of Object.keys(p.pausas || {})) {
+      const r = p.pausas[k];
+      if (!/^[np]:\d+$/.test(k) || !r || !Number.isFinite(r.at) || r.at < 0 || !r.estado || typeof r.estado !== "object") continue;
+      const idx = Number(k.slice(2));
+      if (k[0] === "n" ? !GF.WORLD_OBJECTS[idx] || !["tree", "rock", "ore"].includes(GF.WORLD_OBJECTS[idx].type) : idx >= PLOT_MAX) continue;
+      const estado = {};
+      for (const f of ["readyAt", "halfAt", "cdIni", "witherAt", "growTotal"]) if (Number.isFinite(r.estado[f]) && r.estado[f] >= 0) estado[f] = r.estado[f];
+      if (["dry", "growing", "ready", "withered"].includes(r.estado.state)) estado.state = r.estado.state;
+      if (r.estado.cropKey === null || CROP_DEF[r.estado.cropKey]) estado.cropKey = r.estado.cropKey;
+      G.produccion.pausas[k] = { at: r.at, estado };
+    }
+  }
   G.mercadoVentas = {};
   if (d.mercadoVentas && typeof d.mercadoVentas === "object") {
     for (const res of SELLABLE) {
@@ -605,6 +623,7 @@ function hydrate(d) {
   /* ---- Y las tres fases siguientes, en ORDEN Y SIN EXCEPCIONES ---- */
   migrarGuardado(d);     // arregla lo que traen las partidas viejas
   derivarEstado(d);      // calcula lo que se deduce del estado ya completo
+  produccionMigrar();   // capacidad heredada, una sola vez y sin retirar nodos comprados
   /* LA DOMA (22/8): el turno del bicho corre acá, con el estado ENTERO delante (necesita
      G.nodos, la bolsa y d.visto). Solo recoge lo madurado en tu ausencia. */
   try { if (typeof domaTrabajar === "function" && typeof d.visto === "number") domaTrabajar(d.visto); } catch (e) {}

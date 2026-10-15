@@ -31,7 +31,7 @@ ctx.window.celebrate = () => {};
 function listoParaComprar() {
   const e = g("expansionSiguiente()");
   G.level = Math.max(G.level || 1, e.nivel);
-  G.res = G.res || {}; for (const k in e.costo) G.res[k] = e.costo[k] + 3;
+  G.res = G.res || {}; for (const k in e.costo) { if (k === "plata") G.plata = e.costo[k] + 3; else G.res[k] = e.costo[k] + 3; }
   return e;
 }
 
@@ -65,7 +65,7 @@ console.log("\n2 · MIENTRAS DURA, NI SE ENTREGA NI SE PAGA OTRA\n");
   ok("por la puerta de siempre (expandirEnVivo con el bloque)", entregas === 1);
   ok("y la obra desaparece", !G.expObra);
   ok("un segundo tick no entrega dos veces", g("expansionObraTick()") === false && G.expansiones === 1);
-  ok("y la parcela llegó, como siempre", (G.expParcelasDadas || 0) === 1);
+  ok("entrega un cupo y una elección, no una parcela automática", (G.expParcelasDadas || 0) === 1 && G.plotsOwned === 3 && g("produccionCapacidad()") === 6 && G.produccion.vale === 1);
 }
 
 console.log("\n3 · LA OBRA VIAJA EN EL GUARDADO Y TERMINA CON EL JUEGO CERRADO\n");

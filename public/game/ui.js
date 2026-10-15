@@ -1765,9 +1765,9 @@ function refreshExpandir() {
     '<span class="nm">Tiempo de obra</span><span class="cant">' + expansionObraMinTxt(minObra) + "</span></div>";
   const faltantes = [];
   for (const k in ex.costo) {
-    const tengo = Math.floor((G.res && G.res[k]) || 0), pide = ex.costo[k], ok = tengo >= pide;
+    const tengo = Math.floor(costoTengo(k)), pide = ex.costo[k], ok = tengo >= pide;
     if (!ok) faltantes.push((pide - tengo) + " " + (RES_LABEL[k] || k));
-    h += '<div class="exd-req">' + iconRes(k, 20) +
+    h += '<div class="exd-req">' + (k === "plata" ? coinIc("plata") : iconRes(k, 20)) +
       '<span class="nm">' + (RES_LABEL[k] || k) + '</span>' +
       '<span class="cant ' + (ok ? "ok" : "falta") + '">' + fmt(tengo) + "/" + fmt(pide) + "</span></div>";
   }
@@ -2455,6 +2455,7 @@ function refreshInv() {
    Rejilla propia con lo que se COLOCA. Un clic elige dónde va — el mismo camino que ya usaban
    los planos (iniciarColocar), así que no hay una segunda forma de colocar cosas que mantener. */
 function refreshCobertizo() {
+  refreshProduccionGranja();
   const cont = $("cob-slots"); if (!cont) return;
   const items = (typeof cobertizoItems === "function") ? cobertizoItems() : [];
   if (!items.length) {
@@ -2481,6 +2482,36 @@ function refreshCobertizo() {
       " · los adornos puestos van " + (typeof decoPuestos === "function" ? decoPuestos() : 0) + "/" + (typeof DECO_MAX !== "undefined" ? DECO_MAX : 0)
     : "";
   const key = $("gm-cob"); if (key) key.textContent = items.length ? String(items.length) : "";
+}
+function refreshProduccionGranja() {
+  const cont = $("prod-granja"); if (!cont || !G.produccion) return;
+  const abiertos = Array.from(cont.querySelectorAll("details")).map(d => d.open);
+  const foco = typeof document !== "undefined" && document.activeElement;
+  const clave = foco && foco.getAttribute && (foco.getAttribute("data-prod-pause") || foco.getAttribute("data-prod-buy"));
+  const libres = produccionHayCupo();
+  let h = '<h3>Capacidad productiva · ' + produccionUsados() + '/' + produccionCapacidad() + '</h3>' +
+    '<p class="sub">Cada parcela, árbol o veta activa ocupa un cupo. Cada expansión suma uno. Pausar libera el cupo y conserva cargas y cultivos; no genera producción durante la pausa. Los objetos quedan en su lugar.</p>';
+  if (G.produccion.vale) h += '<p class="verde">Tu primera expansión incluye un nodo básico a elección.</p>';
+  h += '<details><summary>Comprar producción · elegir especialidad</summary><div class="fbtns">';
+  const tipos = { plot: ["Parcela", 20, 1], tree: ["Árbol", 30, 1], rock: ["Roca", 30, 1], bronce: ["Bronce", 180, 3], hierro: ["Hierro", 300, 6], oro: ["Oro", 500, 9], diamante: ["Diamante", 900, 13], netherita: ["Netherita", 1400, 17] };
+  for (const k in tipos) {
+    const d = tipos[k], gratis = G.produccion.vale && ["plot", "tree", "rock"].includes(k);
+    h += '<button class="green sm" data-prod-buy="' + k + '" ' + (!libres || G.level < d[2] || (!gratis && G.plata < d[1]) ? 'disabled' : '') + '>' + d[0] + ' · ' + (gratis ? 'incluido' : d[1] + ' plata') + ' · niv. ' + d[2] + '</button>';
+  }
+  h += '</div><p class="sub">Los nuevos nodos empiezan recuperando su primera carga. Necesitan un emplazamiento disponible del tipo elegido dentro de tu terreno; después podés moverlos en edición.</p></details><details><summary>Gestionar producción activa y pausada</summary><div style="max-height:260px;overflow:auto;padding:4px">';
+  for (const o of produccionItems()) {
+    const pausa = produccionPausada(o);
+    h += '<div class="row" style="justify-content:space-between;margin:6px 0"><span>' + escapeHtml(o.label) + (pausa ? ' · pausada' : ' · activa') + '</span><button class="ghost sm" data-prod-pause="' + produccionClave(o) + '" ' + (pausa && !libres ? 'disabled' : '') + '>' + (pausa ? 'Reactivar' : 'Pausar') + '</button></div>';
+  }
+  cont.innerHTML = h + '</div></details><hr>';
+  Array.from(cont.querySelectorAll("details")).forEach((d, i) => d.open = !!abiertos[i]);
+  cont.querySelectorAll("[data-prod-buy]").forEach(b => b.onclick = () => produccionComprar(b.dataset.prodBuy));
+  cont.querySelectorAll("[data-prod-pause]").forEach(b => b.onclick = () => produccionAlternar(b.dataset.prodPause));
+  if (clave) {
+    const b = Array.from(cont.querySelectorAll("[data-prod-pause], [data-prod-buy]")).find(b => !b.disabled && (b.dataset.prodPause === clave || b.dataset.prodBuy === clave));
+    if (b) { const d = b.closest("details"); if (d) d.open = true; b.focus({ preventScroll: true }); }
+    else { const s = cont.querySelector("summary"); if (s) s.focus({ preventScroll: true }); }
+  }
 }
 // el contadorcito del menú, sin abrir el panel (lo llaman el baúl, el nivel y la expansión)
 function syncCobertizo() {
@@ -4551,8 +4582,8 @@ function refreshDeco() {
       const faltaNivel = (G.level || 1) < ex.nivel;
       const puede = !faltaNivel && canAfford(ex.costo);
       const lista = Object.keys(ex.costo).map(k =>
-        '<span class="' + ((G.res[k] || 0) >= ex.costo[k] ? "verde" : "rojo") + '">' +
-        resIc(k) + ' ' + fmt(Math.floor(G.res[k] || 0)) + '/' + ex.costo[k] + '</span>').join(' · ');
+        '<span class="' + (costoTengo(k) >= ex.costo[k] ? "verde" : "rojo") + '">' +
+        (k === "plata" ? coinIc("plata") : resIc(k)) + ' ' + fmt(Math.floor(costoTengo(k))) + '/' + ex.costo[k] + '</span>').join(' · ');
       const donde = ex.bloque ? (ex.bloque.esquina ? "una esquina" : "un lateral") : "un bloque";
       h += '<div class="forge-row"><div class="finfo"><div class="fnm">Expansión ' + ex.n +
         ' <span class="tag">' + hechas + '/' + EXPANSION_MAX + '</span></div>' +
@@ -4706,7 +4737,7 @@ function refreshMarket() {
   });
   const golden = document.querySelector('.curbtn[data-cur="golden"]'), nota = $("mkt-cur-note");
   if (golden) { golden.disabled = ventaTutorial; golden.title = ventaTutorial ? "Completá este encargo cobrando en Plata" : "Cobrá en $Golden a partir de 1 $Golden completo"; }
-  if (nota) { nota.textContent = ventaTutorial ? "Tu primer encargo se cobra en Plata." : "Precio dinámico de tu granja: vender mucho del mismo cultivo reduce su margen; se recupera gradualmente. El lote incluye el redondeo pendiente. No es demanda global ni canje por USDT."; nota.classList.add("show"); }
+  if (nota) { nota.textContent = ventaTutorial ? "Tu primer encargo se cobra en Plata." : "Precio dinámico de tu granja: vender mucho del mismo recurso reduce su cotización; se recupera gradualmente. El lote incluye el redondeo pendiente. No es demanda global ni canje por USDT."; nota.classList.add("show"); }
   if (typeof tutoHighlight === "function") tutoHighlight();
   document.querySelectorAll(".curbtn").forEach(b => b.classList.toggle("active", b.dataset.cur === cur));
   marketReponerVentaFocoPc($("mkt-list"));

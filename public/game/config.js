@@ -732,6 +732,10 @@ GF.rehacerColisiones = function () {
    Ante la duda, presente — así un fallo acá deja una celda de más, nunca un objeto atravesable. */
 GF.objetoPresente = function (c) {
   if (typeof G === "undefined" || !G) return true;
+  if (typeof produccionNodoPoseido === "function" && G.produccion) {
+    const propio = produccionNodoPoseido(c.i);
+    if (propio !== null) return propio;
+  }
   if (c.exp != null) return (G.expansiones || 0) > c.exp;              // el bloque todavía no se compró
   if (typeof BUILD_DEF !== "undefined" && BUILD_DEF[c.tipo])           // edificio: existe al colocar su plano
     /* 18/8 — EL FANTASMA DE LOS EDIFICIOS. Acá se contaba `G.layout[c.i]` como prueba de que el
