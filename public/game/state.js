@@ -1801,7 +1801,7 @@ var FARM_XP_TECHO = 95000;       // lo que cuesta el nivel 50 en total — el me
 function derivarColaDeXp() {
   if (typeof FARM_EXPANSION === "undefined" || !FARM_EXPANSION.length)
     throw new Error("derivarColaDeXp() corrió antes que FARM_EXPANSION — la cola de niveles quedaría sin derivar");
-  const celdas = (lvl) => 9 + 3 * FARM_EXPANSION.filter(n => n <= lvl).length;   // == celdasProductivas()
+  const celdas = (lvl) => 5 + FARM_EXPANSION.filter(n => n <= lvl).length;
   const desde = FARM_XP_LVLS.length - 1;                                          // el 10, escrito a mano
   const resto = FARM_XP_TECHO - FARM_XP_LVLS[desde];
   let suma = 0;
@@ -2279,8 +2279,9 @@ function expansionSiguiente() {
   if (hechas >= EXPANSION_MAX) return null;
   return { i: hechas, n: hechas + 1, nivel: FARM_EXPANSION[hechas], costo: expansionCostos()[hechas],
     bloque: (GF.EXPANSIONES || [])[hechas] || null,
-    ...(G.produccion && G.produccion.v === 1 ? { costo: { plata: Math.round(20 * Math.pow(1.65, hechas)), ...(hechas === 0 ? { madera: 2, piedra: 2 } : {}) } } : {}) };
+    ...(G.produccion && G.produccion.v === 1 ? { costo: { plata: expansionPrecioCupo(hechas), ...(hechas === 0 ? { madera: 2, piedra: 2 } : {}) } } : {}) };
 }
+function expansionPrecioCupo(i) { return 20 + 10*i + 5*i*i; }
 function expansionComprar() {
   const e = expansionSiguiente();
   if (!e) { toast("Ya tenés las " + EXPANSION_MAX + " expansiones"); return false; }
@@ -2545,10 +2546,20 @@ function farmTalaCumple(nv) {
 function farmPuedeSubir() {   // ¿se puede pasar al nivel siguiente ahora mismo?
   const nv = G.level + 1;
   if (nv > FARM_NIVEL_MAX) return false;
-  if ((G.skills.farming || 0) < (FARM_XP_LVLS[nv] || Infinity)) return false;
-  if (!farmTalaCumple(nv)) return false;   // 15/9: la Tala, del tramo final en adelante
-  return tareasCumplidas(nv);   // del 11 en adelante hay tareas; del 1 al 10 la lista está vacía
+  if (farmXpProductiva() < (FARM_XP_LVLS[nv] || Infinity)) return false;
+  // La especialización no obliga a mantener parcelas y tala para poder expandir una mina.
+  if (farmEspecialidadCumple(nv)) return true;
+  if (!farmTalaCumple(nv)) return false;
+  return tareasCumplidas(nv);
 }
+function farmXpProductiva() { return Math.max(0,(G.skills.farming || 0) + 15*(G.skills.tala || 0) + 20*(G.skills.mining || 0) - (G.farmXpBase || 0)); }
+function farmEspecialidadCumple(nv) {
+  const mina = 20*(G.skills.mining || 0), tala = 15*(G.skills.tala || 0), cultivo = G.skills.farming || 0;
+  const req = farmEspecialidadReq(nv);
+  return mina>cultivo && mina>=tala && nivelOficio('mining')>=req
+    || tala>cultivo && tala>mina && nivelOficio('tala')>=req;
+}
+function farmEspecialidadReq(nv) { return 1+Math.ceil(10*Math.max(0,Math.min(1,(nv-1)/(FARM_NIVEL_MAX-1)))); }
 var _recalcFarm = false;
 function recalcFarmLevel() {
   if (_recalcFarm) return;   // candado: subir de nivel refresca el HUD, y el HUD vuelve a llamar acá
@@ -2607,6 +2618,7 @@ function recalcFarmLevelInterno() {
    sobre las que podría tener: el cartel promete lo que va a cobrar, no lo que cobraría otro. */
 function produccionClave(o) { return o && Number.isInteger(o.i) ? (o.type === "plot" ? "p:" : "n:") + o.i : ""; }
 var PRODUCCION_VIP_PRECIO = 100, PRODUCCION_VIP_DIAS = 30, PRODUCCION_VIP_CUPOS = 2, PRODUCCION_HIDRATANDO = false;
+function produccionVipCupos() { return Math.max(PRODUCCION_VIP_CUPOS,Math.ceil(((G.produccion && G.produccion.base || 5)+(G.expansiones||0))*.25)); }
 function produccionVipActivo() { return !!(G.produccion && G.produccion.vipHasta > nowMs()); }
 function produccionOrden(clave) { const p = G.produccion; p.orden = (p.orden || []).filter(k => k !== clave); p.orden.push(clave); }
 function produccionPausarEn(item, t, sinEscena) {
@@ -2642,7 +2654,7 @@ function produccionVipComprar() {
   G.produccion.vipHasta = nowMs() + PRODUCCION_VIP_DIAS * 86400000;
   G.produccion.vipAplicado = true;
   if (G.pass) G.pass.vip = true;
-  log("VIP activado por 30 días: +2 cupos de producción y beneficios VIP del pase, con una sola compra.","gold");
+  log("VIP activado por 30 días: +25% de capacidad (mínimo 2 cupos) y beneficios VIP del pase, con una sola compra.","gold");
   refreshCobertizo(); refreshHud(); if (typeof saveFarm === "function") saveFarm(true);
   return true;
 }
@@ -2665,7 +2677,7 @@ function produccionItems() {
   });
   return items;
 }
-function produccionCapacidad() { return G.produccion ? G.produccion.base + (G.expansiones || 0) + (produccionVipActivo() ? PRODUCCION_VIP_CUPOS : 0) : Infinity; }
+function produccionCapacidad() { return G.produccion ? G.produccion.base + (G.expansiones || 0) + (produccionVipActivo() ? produccionVipCupos() : 0) : Infinity; }
 function produccionUsados() { produccionVipTick(); return produccionItems().filter(o => !produccionPausada(o)).length; }
 function produccionHayCupo() { return !G.produccion || produccionUsados() < produccionCapacidad(); }
 function produccionMigrar() {
@@ -2883,6 +2895,7 @@ function prestige() {
   if (G.level < FARM_NIVEL_MAX) { toast("Llegá a nivel " + FARM_NIVEL_MAX); return; }
   G.prestige++; G.level = 1;
   G.skills.farming = 0;            // si no se resetea, el próximo addXp volvía a nivel 10 de golpe
+  G.farmXpBase = 15*(G.skills.tala || 0) + 20*(G.skills.mining || 0); // no se pierden oficios ni se reutiliza XP de la vuelta anterior
   G.stats = {}; G.statsBase = {};  // las tareas de nivel arrancan de cero otra vez
   for (const k in G.res) G.res[k] = 0;
   log(`Reinicio. Prestigio ${G.prestige}.`, "gold"); toast("Prestigio " + G.prestige + "!");
@@ -3748,7 +3761,7 @@ var PASE_NIVELES = 30;
 /* el reloj de la partida, derivado de la propia curva: cuánto TIEMPO cuesta cada nivel de granja
    (su XP dividida por las celdas que la producen), normalizado a la temporada entera. */
 function paseNivelDeGranja(n) {
-  const celdas = (l) => 9 + 3 * FARM_EXPANSION.filter(x => x <= l).length;
+  const celdas = (l) => 5 + FARM_EXPANSION.filter(x => x <= l).length;
   const reloj = [0, 0];
   for (let l = 2; l <= FARM_NIVEL_MAX; l++) reloj[l] = reloj[l - 1] + (FARM_XP_LVLS[l] - FARM_XP_LVLS[l - 1]) / celdas(l);
   const meta = reloj[FARM_NIVEL_MAX] * n / PASE_NIVELES;
@@ -3756,7 +3769,7 @@ function paseNivelDeGranja(n) {
   for (let l = 2; l <= FARM_NIVEL_MAX; l++) if (reloj[l] <= meta) lvl = l;
   return lvl;
 }
-function paseCeldas(n) { return 9 + 3 * FARM_EXPANSION.filter(x => x <= paseNivelDeGranja(n)).length; }
+function paseCeldas(n) { return 5 + FARM_EXPANSION.filter(x => x <= paseNivelDeGranja(n)).length; }
 function paseValorDelEscalon(n) { return Math.round(ANCLA_PLATA_HORA * paseCeldas(n) * PASE_HORAS); }
 /* Se llama al final del archivo: necesita PRICE, CROP_DEF, RECIPE_DEF y dishPrice, que viven
    miles de líneas más abajo. Misma disciplina que derivarTareasDeMinado(), y por el mismo susto. */
@@ -8107,11 +8120,12 @@ function cotizarVenta(res, q, t) {
   const at = Math.max(t, Number.isFinite(prev.at) ? prev.at : t);
   const volumen = Math.max(0, Number(prev.volumen) || 0) * Math.exp(-Math.max(0, at - (prev.at || at)) / 21600000);
   const resto = Math.max(0, Math.min(0.999999999, Number(prev.resto) || 0));
-  const base = precioVentaBase(res), c = CROP_DEF[res];
-  const piso = c ? c.seedCost + Math.max(0, base - c.seedCost) * 0.2 : base * 0.5;
-  const demanda = global ? global.demanda : 100, libres = Math.min(q, Math.max(0, Math.ceil(3 - volumen))), pendientes = q - libres;
+  const factor = global ? global.factor || 1 : 1, unidades = q * factor;
+  const base = precioVentaBase(res) / factor, c = CROP_DEF[res];
+  const piso = c ? c.seedCost + Math.max(0, base - c.seedCost) * 0.2 : base * (global ? global.piso || 0.5 : 0.5);
+  const demanda = global ? global.demanda : 100, libres = Math.min(unidades, Math.max(0, Math.ceil(3 - volumen))), pendientes = unidades - libres;
   const prima = libres + (pendientes ? Math.exp(-Math.max(0, volumen + libres - 3) / demanda) * (-Math.expm1(-pendientes / demanda)) / (-Math.expm1(-1 / demanda)) : 0);
-  const exacto = q * piso + (base - piso) * prima + resto;
+  const exacto = unidades * piso + (base - piso) * prima + resto;
   const total = q ? Math.max(0, Math.floor(exacto + 1e-9)) : 0;
   return { total, resto: q ? Math.max(0, exacto - total) : resto, volumen, at };
 }

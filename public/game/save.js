@@ -29,7 +29,7 @@ function mercadoGlobalLimite(res, q) {
   if (!r) return "Consultando comprador; reabrí el mercado si no hay conexión";
   if (q > 10000) return "Máximo 10.000 por lote";
   if (q > r.disponible) return "Demanda restante hoy: " + r.disponible;
-  if (totalVenta(res, q) > MERCADO_CACHE.presupuesto) return "Presupuesto restante hoy: " + MERCADO_CACHE.presupuesto + " plata";
+  if (marketCur === "golden" && totalVenta(res, q) > MERCADO_CACHE.presupuestoGolden) return "Cupo personal de Golden restante: " + MERCADO_CACHE.presupuestoGolden + " de valor";
   return "";
 }
 async function mercadoGlobalRefrescar(force) {
@@ -380,7 +380,7 @@ function snapshot() {
      vistos y estrellaMax (el álbum con estrellas) y pescaTiene (el señuelo, que no se gasta).
      OJO con los comentarios AL FINAL de una línea de este objeto: se comen lo que sigue. */
   return { plata: G.plata, golden: G.golden, level: G.level, prestige: G.prestige, iniciado: G.iniciado, reinicio: G.reinicio,   /* 24/9: cuándo se reinició la cuenta (el portero lo lee) */
-    mercadoVentas: G.mercadoVentas,
+    mercadoVentas: G.mercadoVentas, farmXpBase: G.farmXpBase || 0,
     produccion: G.produccion,
     res: G.res, picks: G.picks, skills: G.skills, triesV: G.triesV, establoV: G.establoV, fish: G.fish, plots: G.plots, nodos: G.nodos, expansiones: G.expansiones, pescaHasta: G.pescaHasta, pescaDesde: G.pescaDesde, senales: G.senales, escamas: G.escamas, vistos: G.vistos, estrellaMax: G.estrellaMax, pescaTiene: G.pescaTiene, canas: G.canas, presion: G.presion, amarres: G.amarres, trampas: G.trampas, marea: G.marea, runaOro: G.runaOro, buffs: G.buffs, seeds: G.seeds, selSeed: G.selSeed,
     tools: G.tools, sflStock: true, invRows: G.invRows, slots: G.slots, hotbar: G.hotbar, hotSel: G.hotSel, hbInit: G.hbInit, layout: G.layout,
@@ -423,6 +423,7 @@ function snapKey() { return JSON.stringify({ n: (typeof nombreLucido === "functi
    Regla: si algo LEE otra parte del estado, no va en la fase 1.                                 */
 function hydrate(d) {
   if (!d) return;
+  G.farmXpBase = Number.isFinite(d.farmXpBase) ? Math.max(0,d.farmXpBase) : 0;
   PRODUCCION_HIDRATANDO = true;
   try {
   const vipAnterior = !!(d.pass && d.pass.vip && (!d.produccion || d.produccion.vipUnico !== 1));
@@ -1384,13 +1385,14 @@ async function saveFarmReal(force) {
              dice por qué, y el guardado deja de intentar hasta que algo cambie de verdad. */
           const st = fe.context && fe.context.status;
           if (st === 409) {
+            let detalle; try { detalle = await fe.context.json(); } catch (e) {}
             SAVE_CONFLICTOS.add(saveUid);
             try { mercadoMarcarPendiente(saveUid, { tipo: "conflicto-guardado" }); } catch (e) {}
             if (UID === saveUid) {
               copiaGuardar(snapshot());
               if (typeof showSaveError === "function") showSaveError();
-              log("Otra sesión guardó una versión diferente. No se sobrescribió ninguna granja. Tu progreso actual queda en el respaldo local; cerrá la otra sesión antes de volver a cargar.", "warn");
-              toast("Conflicto de guardado: progreso conservado en este navegador");
+              log(detalle && detalle.economia ? "El servidor bloqueó una operación económica: " + (detalle.sospechas || []).join(" · ") + ". No se borró tu progreso local. Recargá para sincronizar; el respaldo se conserva aparte." : "Otra sesión guardó una versión diferente. No se sobrescribió ninguna granja. Tu progreso actual queda en el respaldo local; cerrá la otra sesión antes de volver a cargar.", "warn");
+              toast(detalle && detalle.economia ? "Operación económica bloqueada; respaldo local conservado" : "Conflicto de guardado: progreso conservado en este navegador");
             }
             return;
           }

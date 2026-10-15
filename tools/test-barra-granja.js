@@ -56,7 +56,7 @@ console.log("\nESTADO 1 · SUBIENDO CON LA COSECHA   (niveles 1-10: solo XP)");
   ok("y el texto dice cuánta XP va de cuánta",
     txt.textContent === ctx.fmt((XPL[5] - XPL[4]) / 2) + "/" + ctx.fmt(XPL[5] - XPL[4]), txt.textContent);
   ok("el tooltip repite la cuenta y dice a dónde ir",
-    /XP de cosecha/.test(pill.title) && /clic para ver la Granja/.test(pill.title), pill.title);
+    /XP productiva/.test(pill.title) && /clic para ver la Granja/.test(pill.title), pill.title);
 }
 
 console.log("\nESTADO 2 · LA XP ESTÁ, FALTAN LAS TAREAS   (niveles 11+: el caso que engañaba)");

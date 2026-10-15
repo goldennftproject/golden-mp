@@ -34,6 +34,7 @@ const inicial={user_id:"qa",name:"QA",updated_at:base,data:{plata:10,golden:20,l
   for(const k of Object.keys(catalogo)) assert.equal(real.ctx.priceOf(k),catalogo[k],k);
   assert.ok(real.ctx.totalVenta("tablon",1)>0,"procesado no se vende por cero");
   s=servidor(inicial);r=await s.call({base:"otra-version",data:inicial.data});assert.equal(r.status,409);assert.equal(s.writes(),0);
+  s=servidor(inicial);r=await s.call({base,data:{...inicial.data,golden:1000020}});assert.equal(r.status,409);assert.equal((await r.json()).economia,true);assert.equal(s.writes(),0,"el handler real no persiste emisión arbitraria");
   s=servidor(inicial);
   const rs=await Promise.all([s.call({base,data:{...inicial.data,plata:11}}),s.call({base,data:{...inicial.data,plata:12}})]);
   assert.deepEqual(rs.map(r=>r.status).sort(),[200,409]);assert.equal(s.writes(),1,"dos sesiones no se pisan");
@@ -41,7 +42,7 @@ const inicial={user_id:"qa",name:"QA",updated_at:base,data:{plata:10,golden:20,l
   const pedido={base,op:"qa-una-operacion",data:{...inicial.data,plata:11}};
   assert.equal((await s.call(pedido)).status,200);r=await s.call(pedido);
   assert.equal(r.status,200);assert.equal((await r.json()).repetido,true);assert.equal(s.writes(),1,"reintentar tras perder la respuesta no duplica ni genera un conflicto falso");
-  s=servidor(null);const nuevos=await Promise.all([s.call({base:null,data:{plata:3,golden:20,res:{}}}),s.call({base:null,data:{plata:3,golden:20,res:{}}})]);
+  s=servidor(null);const inicialNuevo={plata:3,golden:20,res:{},produccion:{v:1,vipUnico:1,base:5,nodos:{},vipHasta:0}};const nuevos=await Promise.all([s.call({base:null,data:inicialNuevo}),s.call({base:null,data:inicialNuevo})]);
   assert.deepEqual(nuevos.map(r=>r.status).sort(),[200,409]);assert.equal(s.writes(),1);
   for(const opciones of [{readError:true},{marketError:true}]) {s=servidor(inicial,opciones);r=await s.call({base,data:inicial.data});assert.equal(r.status,503);assert.equal(s.writes(),0);}
   s=servidor(inicial,{sinAck:true});r=await s.call({base,data:inicial.data});assert.equal(r.status,200);assert.equal(s.writes(),1);

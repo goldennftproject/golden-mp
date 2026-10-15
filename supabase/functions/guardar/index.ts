@@ -18,7 +18,7 @@ import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
    la bitácora (que ningún jugador honesto dispare sospechas). Los techos salen del
    ancla del juego (20 plata/celda-hora) con margen ×3 y colchones: generosos a
    propósito — acá un falso positivo es peor que un tramposo sin cazar. */
-const VERSION = 4;        // ventas del stock al sistema y escrituras condicionales, sin pisar otra sesión
+const VERSION = 5;        // Golden conservado, VIP pagado y capacidad heredada inmutable
 const MODO = "rechazo";   // 14/9: fuera de sombra en el proyecto nuevo (P2P abierto → el portero rechaza)
 
 const ANCLA = 20;          // plata por celda-hora
@@ -28,6 +28,105 @@ const TASA_NODO = 2;       // recursos/hora de un nodo; las cargas no suben la t
 const MARGEN = 3;          // multiplicador de gracia sobre el máximo físico
 
 const num = (v) => (typeof v === "number" && isFinite(v)) ? v : 0;
+const VIP_PRECIO = 100, VIP_MS = 30 * 86400000;
+const VIP_REINTEGROS = {3:5,7:5,12:8,15:8,18:8,22:8,25:8,27:10};
+const FARM_XP_CONTRATO = [0,0,25,90,225,550,1250,2750,5500,9000,14000,18200,22400,26900,31400,36200,41300,46400,51900,57400,63200,69300,75400,81800,88200,95000];
+// Contrato posicional del mundo; test contrastado con config.js para no inventar nodos.
+const NODOS_CONTRATO = [[0,'tree',0],[1,'tree',1],[2,'tree',2],[3,'rock',0],[4,'rock',1],[5,'piedra'],[6,'bronce'],[7,'oro'],[8,'diamante'],[9,'netherita'],[13,'tree',3],[14,'tree',4],[15,'rock',2],[16,'rock',3],[19,'hierro'],[24,'tree',5],[25,'rock',4],[26,'rock',5],
+ [34,'tree',null,0],[35,'rock',null,0],[36,'tree',null,1],[37,'rock',null,1],[38,'tree',null,2],[39,'rock',null,2],[40,'bronce',null,2],[41,'oro',null,2],[42,'tree',null,3],[43,'rock',null,3],[44,'tree',null,4],[45,'rock',null,4],[46,'tree',null,5],[47,'rock',null,5],[48,'bronce',null,5],[49,'oro',null,5],[50,'tree',null,6],[51,'rock',null,6],[52,'tree',null,7],[53,'rock',null,7],[54,'bronce',null,7],[55,'oro',null,7],[56,'tree',null,8],[57,'rock',null,8],[58,'tree',null,9],[59,'rock',null,9],[60,'bronce',null,9],[61,'oro',null,9],[62,'tree',null,10],[63,'rock',null,10],[64,'bronce',null,10],[65,'tree',null,11],[66,'rock',null,11],[67,'bronce',null,11],[68,'oro',null,11],[69,'hierro',null,11],[70,'tree',null,12],[71,'rock',null,12],[72,'oro',null,12],[73,'tree',null,13],[74,'rock',null,13],[75,'bronce',null,13],[76,'oro',null,13],[77,'bronce',null,13],[78,'tree',null,14],[79,'rock',null,14],[80,'hierro',null,14],[81,'tree',null,15],[82,'rock',null,15],[83,'bronce',null,15],[84,'oro',null,15],[85,'oro',null,15]];
+const NODO_COMPRA = {tree:[30,1],rock:[30,1],piedra:[0,1],bronce:[180,3],hierro:[300,6],oro:[500,9],diamante:[900,13],netherita:[1400,17]};
+function nodosPoseidos(d) { return NODOS_CONTRATO.filter(([i,t,lock,exp]) => !!(d.produccion && d.produccion.nodos && d.produccion.nodos[i]) || (exp == null && lock != null && (t==='tree'||t==='rock') && (d[t==='tree'?'treesOpen':'rocksOpen']||[]).includes(lock))); }
+function goldenCustodia(d) {
+  let n = num(d && d.golden);
+  if (!Number.isSafeInteger(n) || n<0) return NaN;
+  const sumar = (v, profundidad) => {
+    if (!v || typeof v !== "object" || profundidad > 12) return;
+    if (v.k === "golden") { if (!Number.isSafeInteger(v.n)||v.n<0) n=NaN; else n+=v.n; }
+    if (Array.isArray(v)) v.forEach(x => sumar(x, profundidad + 1));
+    else for (const k of ["items", "raiz"]) sumar(v[k], profundidad + 1);
+  };
+  sumar(d && d.cont,0); sumar(d && d.tumba,0);
+  return n;
+}
+/* Invariantes deterministas: no dependen de los techos heurísticos por hora. */
+function protegerEconomia(prev, next, ahora) {
+  const errores = [], antes = prev || {}, p = antes.produccion, n = next.produccion;
+  let gastoVip = 0, reembolso = 0;
+  if (!Number.isSafeInteger(goldenCustodia(next))) errores.push("Golden inválido en saldo o contenedor");
+  if (!prev && goldenCustodia(next) > 20) errores.push("Golden inicial no autorizado");
+  if (!prev && (num(next.plata)>3 || Object.values(next.res||{}).some(v=>num(v)>0))) errores.push("Saldo o inventario inicial no autorizado");
+  if (!prev && (!n || num(next.expansiones)!==0 || num(next.plotsOwned)>3 || Object.keys(n.nodos||{}).length || (next.treesOpen||[]).some(i=>i!==0) || (next.rocksOpen||[]).some(i=>i!==0))) errores.push("Capacidad inicial no autorizada");
+  if (p && !n) errores.push("No se puede eliminar la capacidad registrada");
+  if (n) {
+    if (n.v!==1 || n.vipUnico!==1) errores.push("Versión de capacidad no autorizada");
+    if (!prev && num(n.vipHasta) > 0) errores.push("La primera granja no puede crear un VIP gratuito");
+    const legados = NODOS_CONTRATO.filter(([i,t,lock,exp])=>exp!=null ? exp<num(antes.expansiones) : t==='tree'||t==='rock' ? (antes[t==='tree'?'treesOpen':'rocksOpen']||[0]).includes(lock) : true).length;
+    const base = p ? p.base : prev ? Math.max(5,(num(antes.plotsOwned)||3)+legados-num(antes.expansiones)) : 5;
+    // La vieja migración puede entregar parcelas de expansiones pendientes, nunca miles de cupos.
+    if (!Number.isSafeInteger(n.base) || (p || !prev ? n.base!==base : n.base<5 || n.base>base+num(antes.expansiones))) errores.push("Capacidad base no autorizada");
+    const finAnterior = num(p && p.vipHasta), fin = num(n.vipHasta);
+    if (fin !== finAnterior) {
+      const migracion = !p && antes.pass && antes.pass.vip;
+      if ((!migracion && finAnterior > ahora) || Math.abs(fin - (ahora + VIP_MS)) > 300000) errores.push("Vencimiento VIP no autorizado");
+      else if (!migracion) gastoVip = VIP_PRECIO;
+    }
+    if (n.vipAplicado && fin <= ahora) errores.push("VIP vencido no puede seguir aplicado");
+    if (p) {
+      const exp = num(antes.expansiones), expN = num(next.expansiones), obra = antes.expObra, obraN = next.expObra;
+      let gasto = 0;
+      if (!Number.isInteger(expN) || expN<exp || expN>16 || expN>exp+1 || (expN>exp && (!obra || obra.n!==expN || obra.hasta>ahora+1000))) errores.push("Expansión sin obra terminada");
+      if (obraN && (!obra || obra.n!==obraN.n)) {
+        if (obraN.n!==expN+1 || Math.abs(num(obraN.desde)-ahora)>300000 || num(obraN.hasta)-num(obraN.desde)<600000*obraN.n-1000) errores.push("Obra no autorizada");
+        gasto += 20+10*expN+5*expN*expN;
+        if (!expN && (num(antes.res && antes.res.madera)-num(next.res && next.res.madera)<2 || num(antes.res && antes.res.piedra)-num(next.res && next.res.piedra)<2)) errores.push("Faltan materiales de la primera expansión");
+      } else if (obra && obraN && obraN.hasta!==obra.hasta) errores.push("No se puede adelantar una obra");
+      const poseidos = nodosPoseidos(next), viejos = new Set(nodosPoseidos(antes).map(o=>o[0]));
+      if (Object.keys(n.nodos||{}).some(k=>!NODOS_CONTRATO.some(o=>o[0]===+k))) errores.push("Nodo inexistente");
+      let gratis = num(p.vale)+(expN>exp && expN===1?1:0)-num(n.vale);
+      if (!Number.isInteger(gratis)||gratis<0||gratis>1) errores.push("Vale de nodo no autorizado");
+      const nuevos = poseidos.filter(o=>!viejos.has(o[0]));
+      const plotNuevos = num(next.plotsOwned)-num(antes.plotsOwned);
+      const fichas = Math.max(0,num(next.plotsFicha)-num(antes.plotsFicha));
+      const fichasMax = [15,25,30].filter(k=>next.pass?.claimF?.[k]&&!antes.pass?.claimF?.[k]).length+(next.pass?.claimV?.[29]&&!antes.pass?.claimV?.[29]?1:0);
+      if (fichas>fichasMax) errores.push("Ficha de parcela no autorizada");
+      gasto += Math.max(0,plotNuevos-fichas)*20;
+      for (const [i,t,lock,expNodo] of nuevos) {
+        if (t==='piedra') errores.push("Ese emplazamiento heredado no se compra como nodo nuevo");
+        if ((expNodo!=null && expNodo>=expN) || num(next.level)<NODO_COMPRA[t][1]) errores.push("Nodo sin desbloquear");
+        gasto += NODO_COMPRA[t][0];
+      }
+      if (gratis) {
+        if (plotNuevos-fichas>0) gasto-=20;
+        else if (nuevos.some(o=>o[1]==='tree'||o[1]==='rock')) gasto-=30;
+        else errores.push("Vale consumido sin nodo básico");
+      }
+      const activos = poseidos.filter(o=>!n.pausas?.['n:'+o[0]]).length+Array.from({length:Math.min(1000,num(next.plotsOwned))},(_,i)=>i).filter(i=>!n.pausas?.['p:'+i]).length;
+      if (activos>n.base+expN+(fin>ahora?Math.max(2,Math.ceil((n.base+expN)*.25)):0)) errores.push("Producción activa supera la capacidad");
+      // Emisión simultánea legítima (pedidos, cosecha) puede financiar compras: el techo horario
+      // sigue evaluándose aparte. No se usa gasto como prueba criptográfica de cada compra.
+      if (gasto>num(antes.plata)-num(next.plata)+Math.max(0,ventaStockPermiso(antes,next))+2200) errores.push("Compras productivas sin fondos suficientes");
+    }
+  }
+  for (const track of ["claimF","claimV"]) {
+    const a = antes.pass && antes.pass[track] || {}, b = next.pass && next.pass[track] || {};
+    for (const k of Object.keys(a)) if (a[k] && !b[k]) errores.push("No se pueden volver a reclamar premios del pase");
+    for (const k of Object.keys(b)) if (b[k] && !a[k] && (!Number.isInteger(+k)||+k<1||+k>30||+k>Math.min(30,Math.floor(num(next.pass.stars)/40)))) errores.push("Nivel del pase sin desbloquear");
+    if (track === "claimV") for (const k of Object.keys(b)) if (b[k] && !a[k]) {
+      const vip = n ? num(n.vipHasta) > ahora : p ? num(p.vipHasta) > ahora : !!(antes.pass && antes.pass.vip);
+      if (!vip || !Number.isInteger(+k) || +k < 1 || +k > 30 || +k > Math.min(30,Math.floor(num(next.pass.stars)/40))) errores.push("Premio VIP no autorizado");
+      else reembolso += VIP_REINTEGROS[k] || 0;
+    }
+  }
+  const dia = new Date(ahora).toISOString().slice(0,10), control = antes._economiaControl || {};
+  const estrellas = Math.max(0,num(next.pass && next.pass.stars)-num(antes.pass && antes.pass.stars));
+  const compradas = Math.max(0,Math.floor((goldenCustodia(antes)-goldenCustodia(next)-gastoVip)/15))*40;
+  const emitidas = (control.dia===dia?num(control.estrellas):0)+Math.max(0,estrellas-compradas);
+  if (emitidas>138) errores.push("Estrellas del pase superiores al máximo diario y semanal combinado");
+  next._economiaControl = {dia,estrellas:emitidas}; // nunca se cree el contador recibido del cliente
+  if (prev && goldenCustodia(next) > goldenCustodia(prev) + reembolso - gastoVip + 1e-7) errores.push("Emisión Golden sin venta o recompensa autorizada");
+  if (num(next.farmXpBase)<num(antes.farmXpBase)) errores.push("No se puede reutilizar XP anterior al prestigio");
+  return errores;
+}
 // Catálogo del comprador del sistema. El test lo contrasta con priceOf del juego real.
 const VENTA_SISTEMA = { papa:2,ciruela:4,cereza:5,remolacha:7,zanahoria:8,cebolla:16,calabacin:25,repollo:50,calabaza:100,brocoli:210,girasol:380,trigo:680,maiz:1200,
   madera:12,piedra:15,bronce:160,hierro:240,oro:280,diamante:360,netherita:480,tablon:36,barra_piedra:45,barra_bronce:480,barra_hierro:720,barra_oro:840 };
@@ -165,7 +264,9 @@ function evaluarGuardado(prev, next, elapsedSeg, permiso) {
     if (d > max) sospechas.push(k + " imposible: +" + Math.round(d) + " en " + fmtHoras(horas));
   }
 
-  if ((delta.level || 0) > Math.ceil(horas * 8) + 4) sospechas.push("subida de nivel imposible: +" + delta.level + " en " + fmtHoras(horas));
+  const xpYaAceptada = num(p.skills && p.skills.farming) + 15*num(p.skills && p.skills.tala) + 20*num(p.skills && p.skills.mining) - num(p.farmXpBase);
+  const nivelPorXpAceptada = Math.max(1,FARM_XP_CONTRATO.reduce((nv,xp,i)=>i<=25&&xp<=xpYaAceptada?i:nv,1));
+  if ((delta.level || 0) > Math.ceil(horas * 8) + 4 && num(next.level)>nivelPorXpAceptada) sospechas.push("subida de nivel imposible: +" + delta.level + " en " + fmtHoras(horas));
   if ((delta.expansiones || 0) < 0) sospechas.push("las expansiones no pueden bajar (" + delta.expansiones + ")");
   if ((delta.expansiones || 0) > 4 && horas < 1) sospechas.push("+" + delta.expansiones + " expansiones en " + fmtHoras(horas));
 
@@ -234,6 +335,11 @@ Deno.serve(async (req) => {
       .or("seller.eq." + uid + ",sold_to.eq." + uid).limit(2000);
     if (marketError) return json({ error: "No se pudo validar el mercado. No se escribió nada." }, 503);
     const mercado = mercadoPermiso(uid, filas ?? [], prevRow?.mercado_ack ?? null, prevRow?.data ?? null, data);
+    const protegidos = protegerEconomia(prevRow?.data ?? null, data, ahora.getTime());
+    if (protegidos.length) {
+      await admin.from("farm_saves_log").insert({user_id:uid,reglas_v:VERSION,elapsed_s:Math.round(elapsedSeg),delta:{economia_rechazada:true},sospechas:protegidos});
+      return json({ error: "Guardado económico bloqueado; conservá el respaldo local y recargá para sincronizar.", economia:true, sospechas: protegidos }, 409);
+    }
 
     /* las reglas miran, la bitácora recuerda */
     const { delta, sospechas } = evaluarGuardado(prevRow?.data ?? null, data, elapsedSeg, mercado.permiso);

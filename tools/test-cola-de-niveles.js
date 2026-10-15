@@ -36,7 +36,7 @@ const ok = (n, c, d) => { if (!c) fallos++; console.log((c ? "  ok   " : "  FALL
 
 const XP = g("FARM_XP_LVLS"), FE = g("FARM_EXPANSION"), MAX = g("FARM_NIVEL_MAX");
 const OBJETIVO = g("FARM_XP_TECHO");
-const celdas = (l) => 9 + 3 * FE.filter(n => n <= l).length;
+const celdas = (l) => 5 + FE.filter(n => n <= l).length;
 const paso = (l) => XP[l] - XP[l - 1];
 
 console.log("\nLA TABLA EXISTE ENTERA — la derivación corrió, y corrió a tiempo");
@@ -65,7 +65,7 @@ console.log("\nCADA NIVEL DE LA COLA CUESTA LO MISMO EN HORAS DE GRANJA");
   for (let l = 11; l <= MAX; l++) ritmo.push(paso(l) / celdas(l));
   const min = Math.min(...ritmo), max = Math.max(...ritmo);
   console.log("\n    nivel   celdas   escalón   XP por celda");
-  for (const l of [11, 20, 30, 40, MAX]) console.log("   " + String(l).padStart(6) + String(celdas(l)).padStart(9) +
+  for (const l of [...new Set([11, 20, MAX])].filter(l=>l<=MAX)) console.log("   " + String(l).padStart(6) + String(celdas(l)).padStart(9) +
     String(paso(l)).padStart(10) + (paso(l) / celdas(l)).toFixed(1).padStart(15));
   console.log("");
   /* ésta es LA propiedad. Antes iba de 33 (nivel 11) a 84 (nivel 50): dos niveles y medio de
@@ -95,8 +95,7 @@ console.log("\nEL TECHO CEDE ANTE EL MES, NO AL REVÉS");
     XP[MAX].toLocaleString("es") + " contra el objetivo de " + OBJETIVO.toLocaleString("es"));
   console.log("       → el resto del redondeo se lo lleva el techo a propósito. Un mes no se mide");
   console.log("         con cuatro cifras significativas; un nivel con un pico del 13 %, sí se ve.");
-  console.log("       → medido con el simulador (3 sesiones/día, hasta el 50): 29,7 días.");
-  console.log("         Si esta tabla cambia de forma, se vuelve a medir ESO — no se conserva el número.");
+  console.log("       → Esta prueba valida la forma, no certifica días de progreso. El modelo viejo de nueve nodos no sirve para el nuevo balance.");
 }
 
 console.log(fallos ? "\n" + fallos + " fallo(s)\n" : "\nTodo en orden: la cola se deriva de las celdas y cada nivel cuesta lo mismo en tiempo.\n");

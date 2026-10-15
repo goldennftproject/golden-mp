@@ -105,6 +105,8 @@ permisivo, nunca menos — pero el mercado se queda sin esa llave.
 
 ## Actualización 15/10: guardado v4 y comprador interno
 
+Actualización posterior de balance: reglas v5 en `guardar`, cuotas personales y familias según `docs/ECONOMIA-PRODUCCION.md`. El apartado v4 que sigue describe el punto de partida; el presupuesto compartido de plata ya no se usa en v2 del comprador. La prueba vigente de base de datos es `supabase/tests/balance-personal.sql`.
+
 La columna `mercado_ack` y los permisos de `sql/mercado-portero.sql` están aplicados en el proyecto del juego. El modo ya es `rechazo`, no sombra. `guardar` compara `base` con `updated_at` y escribe condicionalmente sobre esa misma versión: dos sesiones no pueden sobreescribirse silenciosamente. Devuelve 409 si perdió la carrera, 503 si no pudo leer la granja o el mercado, y la versión confirmada si guardó. La operación `op` permite reconocer un reintento del último guardado aceptado sin escribir otra vez. El navegador serializa guardados, congela el paquete enviado y conserva su respaldo ante un conflicto.
 
 El permiso para ventas antiguas al sistema se limita al valor de inventario que ya estaba aceptado; no se cree un total declarado por el cliente. No es un registro autoritativo de toda la producción ni garantiza impedir trampas.

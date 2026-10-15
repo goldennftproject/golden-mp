@@ -2069,13 +2069,14 @@ function refreshFarmBar() {
     return;
   }
   const desde = FARM_XP_LVLS[G.level] || 0, hasta = FARM_XP_LVLS[sig] || (desde + 1);
-  const xp = Math.floor(G.skills.farming || 0);
+  const xp = Math.floor(farmXpProductiva());
   const pctXp = Math.max(0, Math.min(100, (xp - desde) / Math.max(1, hasta - desde) * 100));
-  const tareas = (typeof tareasDelNivel === "function") ? tareasDelNivel(sig) : [];
+  const especialidad = farmEspecialidadCumple(sig);
+  const tareas = especialidad ? [] : (typeof tareasDelNivel === "function") ? tareasDelNivel(sig) : [];
   const hechas = tareas.filter(x => tareaProgreso(x) >= x[2]).length;
   const soloTareas = pctXp >= 100 && hechas < tareas.length;
   /* 15/9 — el caso « todo listo menos la Tala »: la barra lo dice en vez de quedarse llena y muda */
-  const faltaTala = typeof farmTalaCumple === "function" && !farmTalaCumple(sig);
+  const faltaTala = !especialidad && typeof farmTalaCumple === "function" && !farmTalaCumple(sig);
   const soloTala = pctXp >= 100 && hechas >= tareas.length && faltaTala;
   f.style.width = pctXp.toFixed(1) + "%";
   f.classList.toggle("tareas", soloTareas || soloTala);
@@ -2086,7 +2087,7 @@ function refreshFarmBar() {
     /* el tooltip dice TODO lo que falta, porque es lo que uno viene a preguntarle a la barra.
        La XP se TOPA a la necesaria: con la XP de sobra y tareas pendientes, « 8k / 7.5k » se lee
        como un error de cuenta cuando en realidad es « esta parte ya está ». */
-    let tip = "Nivel " + sig + ": " + fmt(Math.min(hasta - desde, Math.max(0, xp - desde))) + " / " + fmt(hasta - desde) + " XP de cosecha";
+    let tip = "Nivel " + sig + ": " + fmt(Math.min(hasta - desde, Math.max(0, xp - desde))) + " / " + fmt(hasta - desde) + " XP productiva (cultivo, tala y minería)";
     if (tareas.length) {
       tip += " · tareas " + hechas + "/" + tareas.length;
       const pend = tareas.filter(x => tareaProgreso(x) < x[2]).slice(0, 2)
@@ -2097,7 +2098,7 @@ function refreshFarmBar() {
        pide Tala (ver farmTalaReq en state.js). Un requisito que frena sin explicarse es un muro
        mudo: el jugador ve la barra llena, las tareas hechas, y no sube — y no tiene forma de
        adivinar que le falta ir al bosque. */
-    if (typeof farmTalaReq === "function" && farmTalaReq(sig)) {
+    if (!especialidad && typeof farmTalaReq === "function" && farmTalaReq(sig)) {
       const req = farmTalaReq(sig), tengo = skillInfo(G.skills.tala || 0, "tala").lvl;
       tip += " · Tala " + tengo + "/" + req + (tengo < req ? " — te falta talar" : " ✓");
     }
@@ -2492,7 +2493,7 @@ function refreshProduccionGranja() {
   let h = '<h3>Capacidad productiva · ' + produccionUsados() + '/' + produccionCapacidad() + '</h3>' +
     '<p class="sub">Cada parcela, árbol o veta activa ocupa un cupo. Cada expansión suma uno. Pausar libera el cupo y conserva cargas y cultivos; no genera producción durante la pausa. Los objetos quedan en su lugar.</p>';
   const vipGranja = produccionVipActivo();
-  h += '<div class="row"><span>' + (vipGranja ? 'VIP · +2 cupos · hasta ' + new Date(G.produccion.vipHasta).toLocaleString('es-UY') : 'Free · VIP: +2 cupos durante 30 días') + '</span>' +
+  h += '<div class="row"><span>' + (vipGranja ? 'VIP · +' + produccionVipCupos() + ' cupos · hasta ' + new Date(G.produccion.vipHasta).toLocaleString('es-UY') : 'Free · VIP: +25% de capacidad (mínimo 2 cupos) durante 30 días') + '</span>' +
     '<button class="green sm" id="prod-vip-comprar" ' + (vipGranja || G.golden < PRODUCCION_VIP_PRECIO ? 'disabled' : '') + '>' + (vipGranja ? 'VIP activo' : 'Comprar · ' + PRODUCCION_VIP_PRECIO + ' $Golden') + '</button></div>' +
     '<p class="sub">Un solo VIP: incluye los beneficios VIP del pase. Al vencer se pausan las últimas producciones activadas que excedan la capacidad Free, sin borrar nada. Sin cobro externo ni canje por USDT.</p>';
   if (G.produccion.vale) h += '<p class="verde">Tu primera expansión incluye un nodo básico a elección.</p>';
@@ -2520,7 +2521,7 @@ function refreshProduccionGranja() {
   }
 }
 function confirmarCompraVip() {
-  askConfirm('¿Gastar ' + PRODUCCION_VIP_PRECIO + ' $Golden para activar el VIP por 30 días, con dos cupos productivos extra y beneficios VIP del pase?', () => passBuyVip(), {title:'VIP · 30 días',yes:'Comprar VIP',yesClass:'green',no:'Cancelar'});
+  askConfirm('¿Gastar ' + PRODUCCION_VIP_PRECIO + ' $Golden para activar el VIP por 30 días, con +25% de capacidad (mínimo dos cupos) y beneficios VIP del pase? Los nodos adicionales se compran por separado.', () => passBuyVip(), {title:'VIP · 30 días',yes:'Comprar VIP',yesClass:'green',no:'Cancelar'});
 }
 // el contadorcito del menú, sin abrir el panel (lo llaman el baúl, el nivel y la expansión)
 function syncCobertizo() {
@@ -4718,6 +4719,8 @@ function refreshMarket() {
       (d.resto ? " · " + fmt(d.resto) + " sin convertir" : "");
   };
   const estadoVender = (res, owned, q) => {
+    const cupoActual = typeof mercadoGlobalActivo === "function" && mercadoGlobalActivo() ? mercadoGlobalRecurso(res) : null;
+    if (owned>0 && cupoActual && cupoActual.disponible<=0) return { disabled:true,label:"Cupo agotado",title:"Tu cupo de esta familia se renueva al cambiar el día UTC" };
     if (owned <= 0 || q <= 0) return { disabled: true, label: "Sin stock", title: "No tenés " + RES_LABEL[res] + " para vender" };
     const limite = typeof mercadoGlobalActivo === "function" && mercadoGlobalActivo() ? mercadoGlobalLimite(res, q) : "";
     if (limite) return { disabled: true, label: "No disponible", title: limite };
@@ -4734,28 +4737,31 @@ function refreshMarket() {
   const disponibilidad = res => {
     if (!(typeof mercadoGlobalActivo === "function" && mercadoGlobalActivo())) return "";
     const r = mercadoGlobalRecurso(res);
-    return r ? " · demanda restante hoy: " + fmt(r.disponible) : " · pendiente de cotización en línea";
+    return r ? " · tu cupo restante hoy: " + fmt(r.disponible) + (r.factor > 1 ? " (comparte familia con " + (RES_LABEL[r.familia] || r.familia) + ")" : "") : " · pendiente de cotización en línea";
   };
   $("mkt-list").innerHTML = SELLABLE.map(res => {
-    const owned = G.res[res] || 0, q = Math.min(10000, Math.max(0, owned)), estado = estadoVender(res, owned, q);
+    const cupo = typeof mercadoGlobalActivo === "function" && mercadoGlobalActivo() ? mercadoGlobalRecurso(res) : null;
+    const owned = G.res[res] || 0, q = Math.min(10000, cupo ? cupo.disponible : 10000, Math.max(0, owned)), estado = estadoVender(res, owned, q);
     return `<div class="mkt-row"><span class="mimg">${itemIcon({ sprite: resSprite(res), emoji: RES_EMOJI[res] })}</span><div class="minfo"><div class="mnm">${RES_LABEL[res]}</div><div class="mds" id="mv-${res}">Tenés ${fmt(owned)} · ${textoVenta(res, owned, q)}</div></div><input id="mq-${res}" type="number" min="${owned > 0 ? 1 : 0}" max="${owned}" value="${q}" ${owned > 0 ? "" : "disabled"}><button class="vbtn" id="vb-${res}" ${estado.disabled ? "disabled" : ""} title="${estado.title}">${estado.label}</button></div>`;
   }).join("");
   SELLABLE.forEach(res => {
     const btn = $("vb-" + res), inp = $("mq-" + res), meta = $("mv-" + res), owned = G.res[res] || 0;
+    const cupo = typeof mercadoGlobalActivo === "function" && mercadoGlobalActivo() ? mercadoGlobalRecurso(res) : null;
+    const maximo = Math.min(10000,owned,cupo ? cupo.disponible : 10000);
     const sync = () => {
       if (!btn) return;
-      const q = Math.max(0, Math.min(10000, owned, Math.floor(+(inp && inp.value) || 0)));
+      const q = Math.max(0, Math.min(maximo, Math.floor(+(inp && inp.value) || 0)));
       const estado = estadoVender(res, owned, q);
       btn.disabled = estado.disabled; btn.textContent = estado.label; btn.title = estado.title;
       if (meta) meta.textContent = "Tenés " + fmt(owned) + " · " + textoVenta(res, owned, q) + disponibilidad(res);
     };
-    if (inp) { inp.max = Math.min(10000, owned); inp.oninput = sync; inp.onchange = () => { inp.value = Math.max(0, Math.min(10000, owned, Math.floor(+inp.value || 0))); sync(); }; }
+    if (inp) { inp.max = maximo; inp.min = maximo>0?1:0; inp.disabled = maximo<=0; inp.oninput = sync; inp.onchange = () => { inp.value = Math.max(0, Math.min(maximo, Math.floor(+inp.value || 0))); sync(); }; }
     if (btn) btn.onclick = (ev) => { marketGuardarVentaFocoPc(ev, res); sellItem(res); };
     sync();
   });
   const golden = document.querySelector('.curbtn[data-cur="golden"]'), nota = $("mkt-cur-note");
   if (golden) { golden.disabled = ventaTutorial; golden.title = ventaTutorial ? "Completá este encargo cobrando en Plata" : "Cobrá en $Golden a partir de 1 $Golden completo"; }
-  if (nota) { nota.textContent = ventaTutorial ? "Tu primer encargo se cobra en Plata." : (typeof mercadoGlobalActivo === "function" && mercadoGlobalActivo() ? "Comprador compartido: las ventas de todos reducen el precio de ese recurso; se recupera gradualmente. Demanda y presupuesto diarios limitados. Sólo moneda del juego, sin retiros ni canje por USDT." : "Precio dinámico de tu granja; se recupera gradualmente. Sin canje por USDT."); nota.classList.add("show"); }
+  if (nota) { nota.textContent = ventaTutorial ? "Tu primer encargo se cobra en Plata; otras cuentas no consumen tu cupo." : (typeof mercadoGlobalActivo === "function" && mercadoGlobalActivo() ? "Precios de la comunidad, cupos personales por familia: otros jugadores no agotan tus ventas. La plata financia el juego; Golden tiene un límite personal separado. Sin retiros ni canje por USDT." : "Precio dinámico de tu granja; se recupera gradualmente. Sin canje por USDT."); nota.classList.add("show"); }
   if (typeof tutoHighlight === "function") tutoHighlight();
   document.querySelectorAll(".curbtn").forEach(b => b.classList.toggle("active", b.dataset.cur === cur));
   marketReponerVentaFocoPc($("mkt-list"));
@@ -5409,7 +5415,7 @@ function refreshSeedShop() {
 function refreshBarn() {
   const box = $("barn-body") || $("barn-list") || document.querySelector("#ov-barn .card");
   const nv = G.level, sig = nv + 1;
-  const xp = Math.floor(G.skills.farming || 0);
+  const xp = Math.floor(farmXpProductiva());
   const need = FARM_XP_LVLS[sig];
   let h = '<div class="secc">Granja nivel ' + nv + ' / ' + FARM_NIVEL_MAX + '</div>';
   if (sig > FARM_NIVEL_MAX) h += '<div class="info">¡Máximo alcanzado! Leyenda de la Granja Dorada.</div>';
@@ -5418,8 +5424,8 @@ function refreshBarn() {
     const pct = Math.max(0, Math.min(100, Math.round((xp - desde) / Math.max(1, need - desde) * 100)));
     h += '<div class="durbar" style="margin:6px 0"><i style="width:' + pct + '%"></i></div>@INFO@';
     // los datos sueltos van en un recuadro claro, no escritos sobre la madera
-    let info = '<div><b>XP de cosecha:</b> ' + fmt(xp) + ' / ' + fmt(need) + '</div>';
-    const tareas = tareasDelNivel(sig);
+    let info = '<div><b>XP productiva:</b> ' + fmt(xp) + ' / ' + fmt(need) + '</div><div>Cultivar, talar y minar contribuyen al nivel de granja.</div><div>Ruta alternativa: Minería o Tala como oficio principal, nivel ' + farmEspecialidadReq(sig) + ' (tenés Minería ' + nivelOficio('mining') + ' / Tala ' + nivelOficio('tala') + '), permite avanzar sin tareas mixtas.</div>';
+    const tareas = farmEspecialidadCumple(sig) ? [] : tareasDelNivel(sig);
     if (tareas.length) {
       h += '<div class="secc">Tareas para el nivel ' + sig + '</div>';
       tareas.forEach(t => {
@@ -5428,7 +5434,7 @@ function refreshBarn() {
           '<div class="durbar"><i style="width:' + Math.round(p0 / t[2] * 100) + '%"></i></div>' +
           '<div class="fds">' + p0 + '/' + t[2] + '</div></div></div>';
       });
-    } else info += '<div>Nivel rápido: sube solo con la XP de cosecha.</div>';
+    } else info += '<div>Sube con XP productiva; requisitos de oficio cumplidos.</div>';
     { const gtxt = (typeof farmUnlockTxt === "function") ? farmUnlockTxt(sig) : (FARM_UNLOCK[sig] || "");
       if (gtxt) info += '<div class="verde">Recompensa del nivel ' + sig + ': ' + gtxt + '</div>'; }
     h = h.replace("@INFO@", '<div class="info">' + info + '</div>');
