@@ -1788,6 +1788,7 @@ class FarmScene extends Phaser.Scene {
   }
 
   startAction(kind, o) {
+    produccionVipTick();
     if (["chop", "mine", "plant", "harvest"].includes(kind) && produccionPausada(o)) { toast("Producción pausada. Reactivala en el Cobertizo."); return; }
     this.moveTarget = null;
     if (GF.NO_WALK && o && o.cx != null) {   // granja de un clic: el granjero (invisible) trabaja donde clickeaste
@@ -2115,6 +2116,7 @@ class FarmScene extends Phaser.Scene {
 
   finishAction() {
     const a = this.action, o = a.o;
+    produccionVipTick();
     if (["chop", "mine", "plant", "harvest"].includes(a.kind) && produccionPausada(o)) { this.action = null; return; }
     if (window.sfx) sfx({ chop: "chop", mine: "mine", plant: "plant", harvest: "harvest", fish: "splash", water: "splash" }[a.kind] || "click");
     // (la sacudida y las astillas ya salieron en el momento del impacto, no acá al final)
@@ -5723,6 +5725,7 @@ class FarmScene extends Phaser.Scene {
     // restaurar objetos que salieron de cooldown
     const t = nowMs();
     this.tickCamaraGuia(t);   // sólo si el objetivo tutorial quedó fuera del área jugable
+    produccionVipTick();
     this.actualizarCartelExpansion();   // la señal de expansión acompaña la cámara, no se corta en el borde
     for (const o of this.objs) {
       if (produccionPausada(o)) {

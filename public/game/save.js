@@ -309,10 +309,17 @@ function snapKey() { return JSON.stringify({ n: (typeof nombreLucido === "functi
    Regla: si algo LEE otra parte del estado, no va en la fase 1.                                 */
 function hydrate(d) {
   if (!d) return;
+  PRODUCCION_HIDRATANDO = true;
+  try {
+  const vipAnterior = !!(d.pass && d.pass.vip && (!d.produccion || d.produccion.vipUnico !== 1));
   G.produccion = null;
   if (d.produccion && d.produccion.v === 1 && Number.isSafeInteger(d.produccion.base) && d.produccion.base >= 5 && d.produccion.base <= 200) {
     const p = d.produccion;
     G.produccion = { v: 1, base: p.base, nodos: {}, pausas: {}, vale: Number.isSafeInteger(p.vale) ? Math.max(0, Math.min(1, p.vale)) : 0 };
+    G.produccion.vipHasta = Number.isSafeInteger(p.vipHasta) && p.vipHasta >= 0 ? p.vipHasta : 0;
+    G.produccion.vipAplicado = p.vipAplicado === true && G.produccion.vipHasta > 0;
+    G.produccion.vipUnico = 1;
+    G.produccion.orden = Array.isArray(p.orden) ? [...new Set(p.orden.filter(k => typeof k === "string" && /^[np]:\d+$/.test(k)))].slice(-300) : [];
     for (const i of Object.keys(p.nodos || {})) if (/^\d+$/.test(i) && GF.WORLD_OBJECTS[+i] && p.nodos[i] === true) G.produccion.nodos[i] = true;
     for (const k of Object.keys(p.pausas || {})) {
       const r = p.pausas[k];
@@ -624,6 +631,12 @@ function hydrate(d) {
   migrarGuardado(d);     // arregla lo que traen las partidas viejas
   derivarEstado(d);      // calcula lo que se deduce del estado ya completo
   produccionMigrar();   // capacidad heredada, una sola vez y sin retirar nodos comprados
+  if (vipAnterior && !produccionVipActivo()) {
+    G.produccion.vipHasta = nowMs() + PRODUCCION_VIP_DIAS * 86400000;
+    G.produccion.vipAplicado = true;
+  }
+  if (G.pass) G.pass.vip = produccionVipActivo();
+  produccionVipTick(true);  // sin leer la escena anterior durante un cambio de cuenta
   /* LA DOMA (22/8): el turno del bicho corre acá, con el estado ENTERO delante (necesita
      G.nodos, la bolsa y d.visto). Solo recoge lo madurado en tu ausencia. */
   try { if (typeof domaTrabajar === "function" && typeof d.visto === "number") domaTrabajar(d.visto); } catch (e) {}
@@ -641,6 +654,7 @@ function hydrate(d) {
      chips por cosas que hizo ayer — o peor, por cosas que hizo el bicho domado mientras dormía.
      Lo que pasó durante la ausencia ya lo cuenta el parte de arriba, que para eso está. */
   try { if (typeof flujoOlvidar === "function") flujoOlvidar(); } catch (e) {}
+  } finally { PRODUCCION_HIDRATANDO = false; }
 }
 
 /* ============ FASE 2 · MIGRAR (20/8) ================================================

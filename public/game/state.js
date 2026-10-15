@@ -8,7 +8,7 @@ const G = {
   hp: 100, hpMax: 100, swordOwned: false, bowOwned: false, swordWoodOwned: false, firstCropDone: false,   // combate (Fase D)
   armasUnlocked: false,          // viernes (2): la pestana Armas de la Herreria se paga (20 madera + 20 piedra + 1000 plata)
   treesOpen: [0], rocksOpen: [0],  // economía gradual: los otros nodos se eligen, no nacen todos activos
-  produccion: { v: 1, base: 5, nodos: {}, pausas: {}, vale: 0 },
+  produccion: { v: 1, base: 5, nodos: {}, pausas: {}, vale: 0, vipHasta: 0, vipAplicado: false, vipUnico: 1, orden: [] },
   gear: { casco: null, armadura: null, botas: null, escudo: null, arma: null, municion: false },
   weapons: {},                   // doc 2/8: armas nuevas — id ("espada_madera") -> { dur }
   stam: null, stamAcc: 0, stamFullAt: 0, stamRec: null,   // estamina de la Zona Negra ("2das mejoras") · stamFullAt: cuándo se llena entera (24/8)
@@ -2606,6 +2606,46 @@ function recalcFarmLevelInterno() {
    Se mide sobre las celdas que el jugador TIENE (9 de arranque + 3 por expansión comprada), no
    sobre las que podría tener: el cartel promete lo que va a cobrar, no lo que cobraría otro. */
 function produccionClave(o) { return o && Number.isInteger(o.i) ? (o.type === "plot" ? "p:" : "n:") + o.i : ""; }
+var PRODUCCION_VIP_PRECIO = 100, PRODUCCION_VIP_DIAS = 30, PRODUCCION_VIP_CUPOS = 2, PRODUCCION_HIDRATANDO = false;
+function produccionVipActivo() { return !!(G.produccion && G.produccion.vipHasta > nowMs()); }
+function produccionOrden(clave) { const p = G.produccion; p.orden = (p.orden || []).filter(k => k !== clave); p.orden.push(clave); }
+function produccionPausarEn(item, t, sinEscena) {
+  const sc = sinEscena ? null : window.farmScene;
+  const fuente = item.type === "plot" ? (sc && sc.plots && sc.plots[item.i]) || G.plots[item.i] || {state:"dry"}
+    : (sc && sc.objs && sc.objs.find(o => o.i === item.i)) || (G.nodos || {})[produccionNodoKey(item.i)] || {};
+  const estado = {};
+  for (const k of ["readyAt", "halfAt", "cdIni", "witherAt", "state", "cropKey", "growTotal"]) if (fuente[k] !== undefined) estado[k] = fuente[k];
+  G.produccion.pausas[produccionClave(item)] = { at: t, estado };
+}
+function produccionVipTick(sinEscena) {
+  sinEscena = sinEscena || PRODUCCION_HIDRATANDO;
+  const p = G.produccion;
+  if (!p || !p.vipAplicado || p.vipHasta > nowMs()) return false;
+  p.vipAplicado = false; // antes de refrescar: evita reentradas
+  if (G.pass) G.pass.vip = false;
+  const activos = produccionItems().filter(o => !produccionPausada(o));
+  const sobran = Math.max(0, activos.length - (p.base + (G.expansiones || 0)));
+  const orden = p.orden || [];
+  activos.sort((a,b) => orden.lastIndexOf(produccionClave(b)) - orden.lastIndexOf(produccionClave(a)) || b.i-a.i);
+  for (const o of activos.slice(0,sobran)) produccionPausarEn(o, p.vipHasta, sinEscena);
+  const sc = sinEscena ? null : window.farmScene;
+  if (sc && sc.syncNodos) sc.syncNodos(); if (sc && sc.syncPlots) sc.syncPlots();
+  log("Venció el VIP. " + sobran + " producción(es) pausada(s), sin perder nodos ni cultivos.","info");
+  if (!sinEscena && typeof refreshProduccionGranja === "function" && typeof isOpen === "function" && isOpen("ov-cobertizo")) refreshProduccionGranja();
+  return true;
+}
+function produccionVipComprar() {
+  produccionVipTick();
+  if (!G.produccion || produccionVipActivo()) { toast("El VIP ya está activo."); return false; }
+  if (!Number.isFinite(G.golden) || G.golden < PRODUCCION_VIP_PRECIO) { toast("Necesitás " + PRODUCCION_VIP_PRECIO + " $Golden."); return false; }
+  G.golden -= PRODUCCION_VIP_PRECIO;
+  G.produccion.vipHasta = nowMs() + PRODUCCION_VIP_DIAS * 86400000;
+  G.produccion.vipAplicado = true;
+  if (G.pass) G.pass.vip = true;
+  log("VIP activado por 30 días: +2 cupos de producción y beneficios VIP del pase, con una sola compra.","gold");
+  refreshCobertizo(); refreshHud(); if (typeof saveFarm === "function") saveFarm(true);
+  return true;
+}
 function produccionPausada(o) { return !!(G.produccion && G.produccion.pausas && G.produccion.pausas[produccionClave(o)]); }
 function produccionNodoPoseido(i) {
   if (!G.produccion) return null; // respaldo del mundo anterior durante la migración
@@ -2625,19 +2665,20 @@ function produccionItems() {
   });
   return items;
 }
-function produccionCapacidad() { return G.produccion ? G.produccion.base + (G.expansiones || 0) : Infinity; }
-function produccionUsados() { return produccionItems().filter(o => !produccionPausada(o)).length; }
+function produccionCapacidad() { return G.produccion ? G.produccion.base + (G.expansiones || 0) + (produccionVipActivo() ? PRODUCCION_VIP_CUPOS : 0) : Infinity; }
+function produccionUsados() { produccionVipTick(); return produccionItems().filter(o => !produccionPausada(o)).length; }
 function produccionHayCupo() { return !G.produccion || produccionUsados() < produccionCapacidad(); }
 function produccionMigrar() {
   if (G.produccion) return;
   const nodos = {};
   GF.WORLD_OBJECTS.forEach((o, i) => { if (["tree", "rock", "ore"].includes(o.type) && GF.objetoPresente(GF.COLLISIONS[i])) nodos[i] = true; });
   const usados = (G.plotsOwned || 3) + Object.keys(nodos).length;
-  G.produccion = { v: 1, base: Math.max(5, usados - (G.expansiones || 0)), nodos, pausas: {}, vale: 0 };
+  G.produccion = { v: 1, base: Math.max(5, usados - (G.expansiones || 0)), nodos, pausas: {}, vale: 0, vipHasta: 0, vipAplicado: false, vipUnico: 1, orden: [] };
   // La capacidad adquirida antes del cambio es permanente; una recarga no vuelve a concederla.
 }
 function produccionNodoKey(i) { const o = GF.WORLD_OBJECTS[i]; return o ? o.type + ":" + o.leftCol + "," + o.baseRow : ""; }
 function produccionAlternar(clave) {
+  produccionVipTick();
   if (!G.produccion || !/^[np]:\d+$/.test(clave)) return false;
   const item = produccionItems().find(o => produccionClave(o) === clave); if (!item) return false;
   const sc = window.farmScene;
@@ -2653,11 +2694,10 @@ function produccionAlternar(clave) {
     if (item.type === "plot") G.plots[item.i] = {...copia};
     else { G.nodos = G.nodos || {}; G.nodos[produccionNodoKey(item.i)] = {...copia}; }
     delete G.produccion.pausas[clave];
+    produccionOrden(clave);
     if (item.type === "plot" && sc && sc.applyPlotVisual) sc.applyPlotVisual(fuente);
   } else {
-    const estado = {};
-    for (const k of ["readyAt", "halfAt", "cdIni", "witherAt", "state", "cropKey", "growTotal"]) if (fuente[k] !== undefined) estado[k] = fuente[k];
-    G.produccion.pausas[clave] = { at: t, estado };
+    produccionPausarEn(item, t);
   }
   if (sc && sc.syncNodos) sc.syncNodos();
   if (sc && sc.syncPlots) sc.syncPlots();
@@ -2670,11 +2710,13 @@ function produccionAlternar(clave) {
 }
 function produccionComprar(tipo) {
   if (!G.produccion || !produccionHayCupo()) { toast("No queda capacidad. Pausá otra producción o expandí."); return false; }
+  let nuevaClave;
   if (tipo === "plot") {
     if ((G.plotsOwned || 3) >= PLOT_MAX) return false;
     const gratis = G.produccion.vale > 0, costo = 20;
     if (!gratis && G.plata < costo) { toast("Te faltan " + costo + " de plata."); return false; }
     if (gratis) G.produccion.vale--; else G.plata -= costo;
+    nuevaClave = "p:" + G.plotsOwned;
     G.plotsOwned++; G.plotsCompradas = (G.plotsCompradas || 0) + (gratis ? 0 : 1);
     if (window.farmScene && farmScene.refreshPlotLocks) farmScene.refreshPlotLocks();
   } else {
@@ -2690,6 +2732,7 @@ function produccionComprar(tipo) {
     if (!gratis && G.plata < def.precio) { toast("Te falta plata para ese nodo."); return false; }
     if (gratis) G.produccion.vale--; else G.plata -= def.precio;
     G.produccion.nodos[i] = true;
+    nuevaClave = "n:" + i;
     const colision = GF.COLLISIONS[i];
     if (base.exp == null && (tipo === "tree" || tipo === "rock")) {
       const abiertos = tipo === "tree" ? G.treesOpen : G.rocksOpen;
@@ -2702,6 +2745,7 @@ function produccionComprar(tipo) {
     if (vivo) Object.assign(vivo, reloj);
     if (sc && sc.refreshNodeLocks) sc.refreshNodeLocks();
   }
+  produccionOrden(nuevaClave);
   if (GF.ocupCambio) GF.ocupCambio();
   if (window.farmScene && farmScene.rebuildCollisions) farmScene.rebuildCollisions();
   refreshCobertizo(); refreshHud();
@@ -3606,7 +3650,7 @@ function tutoDone(st) {
 
 // ================= PASE DE BATALLA (doc maestro 2/8): 30 niveles Free/VIP, estrellas por misiones =================
 var PASS_STARS_LVL = 40;      // estrellas por nivel (diarias completas ≈ 35/día → 30 niveles en ~5 semanas)
-var PASS_VIP_PRICE = 250;     // $Golden (doc: ~250 o 4,99 USD)
+var PASS_VIP_PRICE = PRODUCCION_VIP_PRECIO; // alias histórico: el VIP es único
 var PASS_LVL_GOLD = 15;       // comprar 1 nivel suelto con $Golden (para quien va tarde)
 var PASS_STAR_DAILY = 10, PASS_STAR_BONUS = 5, PASS_STAR_WEEKLY = 40;
 var PASS_VIP_BOOST = 1.2;     // perk VIP: +20% de estrellas (conveniencia, no poder)
@@ -3800,7 +3844,7 @@ const PASS_PILAR = { farming:"cosechar", mining:"minar", fishing:"minar", cookin
 function passInit() {
   G.pass = G.pass || {};
   const p = G.pass;
-  p.stars = p.stars || 0; p.vip = !!p.vip; p.claimF = p.claimF || {}; p.claimV = p.claimV || {}; p.cosmetics = p.cosmetics || [];
+  p.stars = p.stars || 0; p.vip = produccionVipActivo(); p.claimF = p.claimF || {}; p.claimV = p.claimV || {}; p.cosmetics = p.cosmetics || [];
   const hoy = dayStamp(0);   // 22/8 (dirección): día UTC — el reset a las 21 h de Argentina es el estándar web3, a propósito
   if (!p.daily || p.daily.date !== hoy) {   // 3 misiones diarias, una por pilar (rotan con la fecha)
     const pilares = Object.keys(PASS_MISIONES);
@@ -3864,7 +3908,7 @@ function passRewardStr(r) {
 function passClaim(nv, vipTrack) {
   const p = passInit();
   if (nv > passLvl()) { toast("Todavía no llegaste al nivel " + nv); return; }
-  if (vipTrack && !p.vip) { toast("Ese carril es del Pase VIP"); return; }
+  if (vipTrack && !p.vip) { toast("Ese carril requiere VIP activo"); return; }
   const store = vipTrack ? p.claimV : p.claimF;
   if (store[nv]) { toast("Ya reclamaste ese nivel"); return; }
   const r = (vipTrack ? PASS_VIP : PASS_FREE)[nv - 1]; if (!r) return;
@@ -3893,14 +3937,9 @@ function passClaim(nv, vipTrack) {
   if (typeof saveFarm === "function") saveFarm(true);
 }
 function passBuyVip() {
-  const p = passInit();
-  if (p.vip) { toast("Ya tenés el Pase VIP"); return; }
-  if (G.golden < PASS_VIP_PRICE) { toast("Te falta $Golden (" + PASS_VIP_PRICE + ")"); return; }
-  G.golden -= PASS_VIP_PRICE; p.vip = true;
-  log("¡Pase VIP activado! Carril dorado desbloqueado + " + Math.round((PASS_VIP_BOOST - 1) * 100) + "% de estrellas.", "gold");
-  if (window.celebrate) celebrate({ title: "¡PASE VIP!", sub: "Pase de Batalla", big: true, reward: "Carril dorado + " + Math.round((PASS_VIP_BOOST - 1) * 100) + "% de estrellas" });
-  refreshHud(); if (typeof refreshPass === "function" && isOpen("ov-pass")) refreshPass();
-  if (typeof saveFarm === "function") saveFarm(true);
+  const comprado = produccionVipComprar();
+  if (comprado && typeof refreshPass === "function" && isOpen("ov-pass")) refreshPass();
+  return comprado;
 }
 function passBuyLevel() {
   const p = passInit();
@@ -7475,6 +7514,7 @@ function bagFull(what) { toast("Bolsa llena — no podés " + what); log("No ten
 function sinKitTxt(m) { return !G.kitReclamado ? "Tu kit de bienvenida está en el baúl, junto al granero" : m; }
 function puedeAccion(tipo, o, rotulo) {
   o = o || {};
+  produccionVipTick();
   if (["chop", "mine", "plant", "harvest"].includes(tipo) && produccionPausada(o)) return { ok: false, toast: "Producción pausada. Reactivala en el Cobertizo." };
   const OK = { ok: true };
 

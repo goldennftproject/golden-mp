@@ -2491,6 +2491,10 @@ function refreshProduccionGranja() {
   const libres = produccionHayCupo();
   let h = '<h3>Capacidad productiva · ' + produccionUsados() + '/' + produccionCapacidad() + '</h3>' +
     '<p class="sub">Cada parcela, árbol o veta activa ocupa un cupo. Cada expansión suma uno. Pausar libera el cupo y conserva cargas y cultivos; no genera producción durante la pausa. Los objetos quedan en su lugar.</p>';
+  const vipGranja = produccionVipActivo();
+  h += '<div class="row"><span>' + (vipGranja ? 'VIP · +2 cupos · hasta ' + new Date(G.produccion.vipHasta).toLocaleString('es-UY') : 'Free · VIP: +2 cupos durante 30 días') + '</span>' +
+    '<button class="green sm" id="prod-vip-comprar" ' + (vipGranja || G.golden < PRODUCCION_VIP_PRECIO ? 'disabled' : '') + '>' + (vipGranja ? 'VIP activo' : 'Comprar · ' + PRODUCCION_VIP_PRECIO + ' $Golden') + '</button></div>' +
+    '<p class="sub">Un solo VIP: incluye los beneficios VIP del pase. Al vencer se pausan las últimas producciones activadas que excedan la capacidad Free, sin borrar nada. Sin cobro externo ni canje por USDT.</p>';
   if (G.produccion.vale) h += '<p class="verde">Tu primera expansión incluye un nodo básico a elección.</p>';
   h += '<details><summary>Comprar producción · elegir especialidad</summary><div class="fbtns">';
   const tipos = { plot: ["Parcela", 20, 1], tree: ["Árbol", 30, 1], rock: ["Roca", 30, 1], bronce: ["Bronce", 180, 3], hierro: ["Hierro", 300, 6], oro: ["Oro", 500, 9], diamante: ["Diamante", 900, 13], netherita: ["Netherita", 1400, 17] };
@@ -2507,11 +2511,16 @@ function refreshProduccionGranja() {
   Array.from(cont.querySelectorAll("details")).forEach((d, i) => d.open = !!abiertos[i]);
   cont.querySelectorAll("[data-prod-buy]").forEach(b => b.onclick = () => produccionComprar(b.dataset.prodBuy));
   cont.querySelectorAll("[data-prod-pause]").forEach(b => b.onclick = () => produccionAlternar(b.dataset.prodPause));
+  const comprarVip = $("prod-vip-comprar");
+  if (comprarVip) comprarVip.onclick = confirmarCompraVip;
   if (clave) {
     const b = Array.from(cont.querySelectorAll("[data-prod-pause], [data-prod-buy]")).find(b => !b.disabled && (b.dataset.prodPause === clave || b.dataset.prodBuy === clave));
     if (b) { const d = b.closest("details"); if (d) d.open = true; b.focus({ preventScroll: true }); }
     else { const s = cont.querySelector("summary"); if (s) s.focus({ preventScroll: true }); }
   }
+}
+function confirmarCompraVip() {
+  askConfirm('¿Gastar ' + PRODUCCION_VIP_PRECIO + ' $Golden para activar el VIP por 30 días, con dos cupos productivos extra y beneficios VIP del pase?', () => passBuyVip(), {title:'VIP · 30 días',yes:'Comprar VIP',yesClass:'green',no:'Cancelar'});
 }
 // el contadorcito del menú, sin abrir el panel (lo llaman el baúl, el nivel y la expansión)
 function syncCobertizo() {
@@ -4245,7 +4254,7 @@ function refreshPass() {
     '<div class="fnm">Nivel ' + lvl + ' / 30 · ' + fmt(p.stars) + ' estrellas' + (p.vip ? ' · <b style="color:#7a5606">VIP activo</b> (+' + Math.round((PASS_VIP_BOOST - 1) * 100) + '% estrellas)' : '') + '</div>' +
     (lvl < 30 ? '<div class="durbar"><i style="width:' + Math.round(into / need * 100) + '%"></i></div><div class="fds">' + into + '/' + need + ' estrellas para el nivel ' + (lvl + 1) + '</div>' : '<div class="fds">¡Pase completo!</div>') +
     '<div class="fds">Se sube JUGANDO: misiones diarias y semanales dan estrellas. La temporada dura 4-6 semanas.</div></div>' +
-    '<div class="fbtns">' + (p.vip ? '' : '<button class="green sm" id="pass-vip">Pase VIP · ' + PASS_VIP_PRICE + ' $G</button>') +
+    '<div class="fbtns">' + (p.vip ? '' : '<button class="green sm" id="pass-vip">VIP · 30 días · ' + PRODUCCION_VIP_PRECIO + ' $G</button>') +
     (lvl < 30 ? '<button class="sm" id="pass-buylvl">+1 nivel · ' + PASS_LVL_GOLD + ' $G</button>' : '') + '</div></div>';
   // Las misiones se mudaron a su propia ventana (10/8): acá solo queda el atajo, para que el
   // Pase sea lo que tiene que ser — la lista de recompensas.
@@ -4271,12 +4280,12 @@ function refreshPass() {
     h += '<div class="forge-row' + (alc ? '' : ' locked') + '"><div class="finfo">' +
       '<div class="fnm">Nivel ' + nv + (hito ? ' <span style="color:#7a5606">' + hito + '</span>' : '') + '</div>' +
       '<div class="fds free">FREE: ' + passRewardStr(rf) + '</div>' +
-      '<div class="fds vip">VIP: ' + passRewardStr(rv) + (p.vip ? '' : ' (requiere Pase VIP)') + '</div>' +
+      '<div class="fds vip">VIP: ' + passRewardStr(rv) + (p.vip ? '' : ' (requiere VIP activo)') + '</div>' +
       '</div><div class="fbtns">' + bf + bv + '</div></div>';
   }
   box.innerHTML = h;
   const im = $("pass-ir-mis"); if (im) im.onclick = () => { closeOv("ov-pass"); openOv("ov-misiones"); };
-  const pv = $("pass-vip"); if (pv) pv.onclick = () => passBuyVip();
+  const pv = $("pass-vip"); if (pv) pv.onclick = confirmarCompraVip;
   const pl = $("pass-buylvl"); if (pl) pl.onclick = () => passBuyLevel();
   box.querySelectorAll("[data-pfree]").forEach(b => b.onclick = () => passClaim(Number(b.dataset.pfree), false));
   box.querySelectorAll("[data-pvip]").forEach(b => b.onclick = () => passClaim(Number(b.dataset.pvip), true));
