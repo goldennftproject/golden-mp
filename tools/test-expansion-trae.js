@@ -31,7 +31,15 @@ const GF = ctx.GF, MAX = g("EXPANSION_MAX");
 let fallos = 0;
 const ok = (n, c, d) => { if (!c) fallos++; console.log((c ? "  ok   " : "  FALLA") + "  " + n + (d ? "   " + d : "")); };
 
-console.log("\nEL CARTEL NOMBRA TODO LO QUE LA EXPANSIÓN TRAE");
+console.log('CONTRATO MODERNO: CAPACIDAD, NO PRODUCCIÓN GRATUITA');
+for(let n=1;n<=MAX;n++){
+ const trae=ctx.expansionTrae(n);
+ ok('expansión '+n+': un cupo y sólo la primera una elección',trae[0].k==='capacidad'&&trae.length===(n===1?2:1)&&!trae.some(x=>/veta|árbol|roca/.test(x.txt)));
+}
+// La lista física y sus carteles históricos se conservan para la compatibilidad del mundo anterior.
+const contratoProductivo=G.produccion;delete G.produccion;
+
+console.log("\nCOMPATIBILIDAD: EL CARTEL ANTERIOR A V1 NOMBRA SU CONTENIDO");
 {
   const sinVeta = ctx.expansionTraeTxt(1), conVeta = ctx.expansionTraeTxt(3);
   ok("una expansión normal nombra sus tres cosas",
@@ -123,6 +131,7 @@ console.log("\nSI MAÑANA UNA EXPANSIÓN NUEVA LLEVA VETA, EL CARTEL LO DIRÁ SO
   ok("y al quitarla, vuelve a su sitio", !/bronce/.test(ctx.expansionTraeTxt(5)));
 }
 
+G.produccion=contratoProductivo;
 console.log("");
 console.log(fallos
   ? "  " + fallos + " fallo(s) — el cartel todavía no dice lo que el jugador paga"

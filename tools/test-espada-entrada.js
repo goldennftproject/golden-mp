@@ -160,18 +160,16 @@ console.log("\nEL CAMINO DE CRECIMIENTO, QUE ERA EL ÚNICO SIN ENSEÑAR");
   /* La prueba de fuego: comprar y que la parcela EXISTA, sin pasar por ninguna bolsa. */
   G.level = 50; G.expansiones = 0; G.plotsOwned = 3; G.layoutPlots = {};
   G.regalos = { tree: 0, rock: 0, plot: 0 }; G.cobertizo = {};
-  const c = ctx.expansionCostos()[0];
+  const c = ctx.expansionSiguiente().costo;
   G.res = {}; Object.keys(c).forEach(k => G.res[k] = c[k] * 2);
+  G.plata=c.plata;
   ctx.GF.EXP_OBRA = 0;   /* 20/9: este test mide la ENTREGA de la expansión, no la obra (ver test-expansion-obra.js) */
   ctx.expansionComprar();
-  ok("al comprar, la parcela ya es tuya", (G.plotsOwned || 3) === 4, "plotsOwned " + G.plotsOwned);
-  ok("y con su celda anotada dentro del bloque", !!(G.layoutPlots && G.layoutPlots[3]),
-    JSON.stringify(G.layoutPlots[3]));
+  ok("al expandir, recibís un cupo y una elección", G.plotsOwned===3 && ctx.produccionCapacidad()===6 && G.produccion.vale===1);
   ok("sin dejar nada esperando en el baúl", ((G.regalos || {}).plot || 0) === 0);
   const b = ctx.GF.EXPANSIONES[0];
-  const dentro = G.layoutPlots[3].col >= b.c0 && G.layoutPlots[3].col < b.c1 &&
-                 G.layoutPlots[3].row >= b.r0 && G.layoutPlots[3].row < b.r1;
-  ok("la celda cae DENTRO del terreno que acabás de comprar", dentro,
+  const dentro = ctx.GF.terreno(G.expansiones).mias.has(b.parcela.col+','+b.parcela.row);
+  ok("la celda reservada queda DENTRO del terreno comprado", dentro,
     "bloque " + b.c0 + "," + b.r0 + " → " + b.c1 + "," + b.r1);
   ok("el capítulo existe", X.TUTO_CAPS.some(c2 => c2.pasos.includes("expandir")),
     X.TUTO_CAPS.map(c2 => c2.label).join(" · "));

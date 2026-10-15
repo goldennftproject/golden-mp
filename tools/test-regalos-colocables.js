@@ -42,10 +42,11 @@ const ok=(n,c,d)=>{if(!c)fallos++;console.log((c?"  ok   ":"  FALLA")+"  "+n+(d?
      bloque de la expansión. Por el Cobertizo pasan solo las PARCELAS. Las ramas de árbol y roca
      de regaloColocar se quedan por los guardados viejos que tuvieran uno pendiente. */
   const g=juego(); g.G.cobertizo={tree:0,rock:0,plot:1};
+  g.produccionAlternar('p:0'); // Liberar capacidad sin modificar el límite.
   const GF=g.GF;
   const arbAntes=g.G.treesOpen.length;
   ok("un árbol ya no se puede reclamar como regalo", g.regaloColocar("tree",6,6)===false);
-  ok("...porque la granja de arranque ya tiene sus 3", g.G.treesOpen.length===arbAntes, arbAntes+" árboles");
+  ok("...porque no hay un regalo de árbol en el cobertizo", g.G.treesOpen.length===arbAntes, arbAntes+" árboles");
   const par=g.G.plotsOwned;
   ok("colocar la parcela la suma", g.regaloColocar("plot",7,7)===true && g.G.plotsOwned===par+1);
   /* 18/8 — el índice importa. La celda tiene que quedar anotada para LA PARCELA QUE SE
@@ -89,6 +90,8 @@ const ok=(n,c,d)=>{if(!c)fallos++;console.log((c?"  ok   ":"  FALLA")+"  "+n+(d?
   // 18/8: las parcelas llegan por EXPANSIÓN. Sin expansiones no hay nada que regalar.
   g.G.level=50; g.G.expansiones=5; g.G.plotsOwned=3; g.G.regalos={tree:0,rock:0,plot:0}; g.G.cobertizo={tree:0,rock:0,plot:0};
   g.regalosSync();
+  ok("el modelo productivo no regala parcelas por subir o expandir",g.G.regalos.plot===0);
+  g.G.regalos.plot=2; // Simula dos regalos pendientes de una cuenta anterior, no premios nuevos.
   const primera=g.G.regalos.plot;
   g.regalosSync(); g.regalosSync();          // volver a sincronizar no puede regalar de nuevo
   ok("regalosSync es idempotente", g.G.regalos.plot===primera, "x3 → "+g.G.regalos.plot);
@@ -103,6 +106,7 @@ const ok=(n,c,d)=>{if(!c)fallos++;console.log((c?"  ok   ":"  FALLA")+"  "+n+(d?
 {
   const g=juego(); g.reinicios=0;
   g.G.cobertizo={tree:0,rock:0,plot:1};
+  g.produccionAlternar('p:0');
   g.regaloColocar("plot",8,8);
   ok("colocar la parcela no dispara ningún reinicio con telón", (g.reinicios||0)===0, "reinicios="+(g.reinicios||0));
   const GF=g.GF,T=GF.TILE;

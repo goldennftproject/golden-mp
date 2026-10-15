@@ -41,6 +41,9 @@ vm.runInContext("this.FarmScene = FarmScene;", ctx);
  "tutoRefresh", "tutoCheck", "refreshSeedShop", "refreshHotbar", "tutoSync", "syncCobertizo",
  "closeOv", "refreshDeco"].forEach(f => { ctx[f] = () => {}; });
 const GF = ctx.GF, G = ctx.G, T = GF.TILE;
+// Los casos históricos de abajo prueban la geometría previa a migración, no regalos nuevos.
+// El contrato moderno se comprueba al final; test-expansiones cubre sus 16 compras reales.
+const contratoProductivo = G.produccion; delete G.produccion;
 let fallos = 0;
 const ok = (n, c, d) => { if (!c) fallos++; console.log((c ? "  ok   " : "  FALLA") + "  " + n + (d ? "   " + d : "")); };
 
@@ -61,7 +64,7 @@ function equipar() {
    tener sitio para lo que saques son dos cosas distintas y no pueden estorbarse. */
 function bolsaLibre() { G.res = { lombriz: 9 }; }
 
-console.log("\nEL CASO EXACTO DE DIRECCIÓN: NIVEL 3, PRIMERA EXPANSIÓN");
+console.log("\nCOMPATIBILIDAD DEL MUNDO LEGADO: NIVEL 3, PRIMERA EXPANSIÓN");
 {
   G.level = 3; G.expansiones = 0; G.plotsOwned = 3; G.treesOpen = [0]; G.rocksOpen = [0];
   G.built = {}; G.obras = {}; G.layout = {}; G.layoutPlots = {}; G.decos = []; G.chests = []; G.planos = {};
@@ -146,5 +149,8 @@ console.log("\nY LA MISMA REGLA EN LAS DIECISÉIS, CON LA ESCENA ARRANCADA");
     abiertas.length + " abiertas de " + escalera.length + " (rocksOpen = [0])");
 }
 
-console.log(fallos ? "\n  ✗ " + fallos + " fallas\n" : "\n  ✓ lo que viene dentro del terreno que pagaste no tiene más peaje\n");
+G.produccion=contratoProductivo;
+ok("en el modelo moderno el terreno no regala los nodos históricos",GF.WORLD_OBJECTS.every((o,i)=>o.exp==null||!ctx.produccionNodoPoseido(i)));
+ok("la granja moderna conserva sólo sus cinco producciones iniciales",ctx.produccionUsados()===5);
+console.log(fallos ? "\n  ✗ " + fallos + " fallas\n" : "\n  ✓ geometría heredada utilizable; contrato moderno sin nodos gratuitos\n");
 process.exit(fallos ? 1 : 0);

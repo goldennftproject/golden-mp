@@ -25,6 +25,7 @@ vm.createContext(ctx);
 ["toast", "log", "isOpen", "refreshInv", "syncSlots", "refreshHud", "celebrate", "sfx", "tutoRefresh",
  "tutoCheck", "refreshSeedShop", "refreshHotbar", "tutoSync", "syncCobertizo", "refreshMarket", "syncEditDeco"].forEach(f => { if (!ctx[f]) ctx[f] = () => {}; });
 ctx.saveFarm = () => {};
+ctx.refreshCobertizo = () => {};
 const G = ctx.G, GF = ctx.GF;
 const B = GF.EXPANSIONES;
 
@@ -78,6 +79,7 @@ console.log("\nLAS COMPRADAS Y LAS FICHAS CUENTAN EN EL LIBRO MAYOR");
     layoutPlots: { 3: { col: B[0].parcela.col, row: B[0].parcela.row } }, sflStock: true };
   d = f5(d);
   /* compra una en tienda: plotsOwned y plotsCompradas suben JUNTAS */
+  ctx.produccionAlternar('p:0'); // Liberar un cupo: la expansión ya está ocupada por la parcela heredada.
   G.plata = 500; ctx.comprarParcela();
   ok("compra: 4 → 5 y compradas = 1", G.plotsOwned === 5 && G.plotsCompradas === 1);
   d = JSON.parse(JSON.stringify(ctx.snapshot()));
@@ -122,14 +124,15 @@ console.log("\nLA FLAG DE DIRECCIÓN: « una vez entregado, no se vuelve a entre
   G.plata = 0; G.res = Object.assign({}, G.res); G.level = 99;
   const ex = ctx.expansionSiguiente();
   Object.keys(ex.costo).forEach(k => { G.res[k] = ex.costo[k] + 5; });
+  G.plata=ex.costo.plata||0;
   const flagAntes = G.expParcelasDadas, ownedAntes = G.plotsOwned;
   ctx.GF.EXP_OBRA = 0;   /* 20/9: este test mide la ENTREGA de la expansión, no la obra (ver test-expansion-obra.js) */
   ctx.expansionComprar();
-  ok("expansionComprar entrega y sube la flag", G.expParcelasDadas === flagAntes + 1 && G.plotsOwned === ownedAntes + 1,
+  ok("expansionComprar sube la flag sin regalar parcelas nuevas", G.expParcelasDadas === flagAntes + 1 && G.plotsOwned === ownedAntes,
     "flag " + flagAntes + " → " + G.expParcelasDadas);
   d = JSON.parse(JSON.stringify(ctx.snapshot()));
   d = f5(d);
-  ok("y tras guardar y volver, sigue todo en su sitio", G.expParcelasDadas === flagAntes + 1 && G.plotsOwned === ownedAntes + 1);
+  ok("y tras guardar y volver, sigue todo en su sitio", G.expParcelasDadas === flagAntes + 1 && G.plotsOwned === ownedAntes);
 }
 
 console.log(fallos ? "\n" + fallos + " fallo(s)\n" : "\nTodo en orden: la posición ya no es el libro mayor.\n");

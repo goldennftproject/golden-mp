@@ -51,7 +51,7 @@ console.log("\nEL CÁLCULO ESTÁ CONECTADO AL FLUJO REAL\n");
     /@media\(min-width:641px\)\{#pesca4\{bottom:var\(--pesca4-bottom,16px\)\}\}/.test(HTML));
   const sync = (UI.match(/function syncRegistroPrompt\(\)[\s\S]*?\n\}/) || [""])[0];
   ok("al mover la hotbar se recalcula con el resto del layout", /placePescaAparejosPc\(\);/.test(sync));
-  const flujo = UI.slice(UI.indexOf("function pescaAparejosAbrir()"), UI.indexOf("function pescaAparejosAbierto()"));
+  const flujo = UI.slice(UI.indexOf("function pescaAparejosAbrir("), UI.indexOf("function pescaAparejosAbierto()"));
   ok("abrir y cerrar los aparejos actualizan su posición",
     /el\.classList\.add\("show"\);\s*if \(typeof placePescaAparejosPc/.test(flujo) &&
     /el\.classList\.remove\("show"\);\s*if \(typeof placePescaAparejosPc/.test(flujo));

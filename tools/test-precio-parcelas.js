@@ -1,4 +1,7 @@
-/* LA PARCELA SE COMPRA CON PLATA, CADA UNA UN 10% MÁS CARA (20/8, dirección + diseñador)
+/* MODELO ACTUAL: PARCELA DE 20 PLATA, LIMITADA POR CAPACIDAD (15/10).
+   No restaura la curva histórica de 200 +10%: comprueba el contrato productivo y conserva
+   debajo las pruebas de migración de contadores antiguos y la ausencia de cobro en Golden.
+   Antecedente histórico (20/8, dirección + diseñador):
    "Las parcelas se den con las expansiones, y sumado a eso que se consigan con plata, y que cada
     parcela cueste un poco más que la anterior. Lo de $Golden lo dejamos para cuando tenga sentido
     venderlo así."
@@ -26,28 +29,28 @@ vm.createContext(ctx);
 ["config", "nav", "state"].forEach(f => vm.runInContext(fs.readFileSync("public/game/" + f + ".js", "utf8"), ctx));
 const avisos = [];
 ctx.toast = t => avisos.push(String(t)); ctx.log = t => avisos.push(String(t));
-["refreshHud", "saveFarm", "refreshMarket", "isOpen", "syncEditDeco", "refreshInv", "syncSlots"].forEach(f => { ctx[f] = () => {}; });
+["refreshHud", "saveFarm", "refreshMarket", "refreshCobertizo", "isOpen", "syncEditDeco", "refreshInv", "syncSlots"].forEach(f => { ctx[f] = () => {}; });
 const G = ctx.G;
 
 let fallos = 0;
 const ok = (n, c, d) => { if (!c) fallos++; console.log((c ? "  ok   " : "  FALLA") + "  " + n + (d ? "   " + d : "")); };
 
-console.log("\nLA CURVA: 200 DE BASE, +10% POR PARCELA COMPRADA");
+console.log("\nEL PRECIO ACTUAL NO ESCALA POR COMPRAS ANTIGUAS");
 {
   G.plotsOwned = 3; G.plotsCompradas = 0;
-  ok("la primera compra sale 200", ctx.plotUnlockCost() === 200, ctx.plotUnlockCost() + " plata = 10 h del ancla");
+  ok("la primera compra sale 20", ctx.plotUnlockCost() === 20);
   G.plotsCompradas = 1;
-  ok("la segunda sale 220 (+10%)", ctx.plotUnlockCost() === 220, ctx.plotUnlockCost() + "");
+  ok("la segunda mantiene 20: limita la capacidad, no el coste exponencial", ctx.plotUnlockCost() === 20);
   let previo = 0;
   let monotona = true, suave = true;
   for (let k = 0; k < 57; k++) {
     G.plotsCompradas = k;
     const c = ctx.plotUnlockCost();
-    if (c <= previo) monotona = false;
+    if (c !== 20) monotona = false;
     if (previo && c / previo > 1.11) suave = false;   // nunca salta más del 10% (+ redondeo)
     previo = c;
   }
-  ok("las 57 compras posibles suben SIEMPRE", monotona);
+  ok("los contadores heredados no encarecen una parcela nueva", monotona);
   ok("y ninguna salta más del 10%", suave, "sin escalones sorpresa");
   G.plotsCompradas = 40;   // el peor caso real: 60 − 3 de nacimiento − 16 de expansión − 1
   ok("la última compra posible queda alcanzable", ctx.plotUnlockCost() < 15000, ctx.plotUnlockCost() + " plata: cara, no imposible");
@@ -70,14 +73,19 @@ console.log("\nCOMPRAR DE VERDAD: PAGA, SUMA Y AVISA");
   G.plotsOwned = 3; G.plotsCompradas = 0; G.tuto = { done: true }; G.plata = 1000; G.golden = 0;
   avisos.length = 0;
   ctx.comprarParcela();
-  ok("descuenta el precio exacto", G.plata === 800, "1000 − 200 = " + G.plata);
+  ok("sin capacidad no cobra ni crea parcela",G.plata===1000&&G.plotsOwned===3&&G.plotsCompradas===0);
+  ctx.produccionAlternar('p:0');
+  avisos.length=0;
+  ctx.comprarParcela();
+  ok("descuenta el precio exacto", G.plata === 980, "1000 − 20 = " + G.plata);
   ok("y suma la parcela Y el contador de compradas", G.plotsOwned === 4 && G.plotsCompradas === 1);
   ok("y avisa", avisos.some(a => /[Pp]arcela/.test(a)), avisos.join(" · "));
   /* sin plata: rechaza ANTES de cobrar */
+  ctx.produccionAlternar('p:1');
   G.plata = 10; avisos.length = 0;
   ctx.comprarParcela();
   ok("sin plata no cobra ni suma", G.plata === 10 && G.plotsOwned === 4 && G.plotsCompradas === 1);
-  ok("y dice qué falta", avisos.some(a => /falta plata/i.test(a)), avisos.join(" · "));
+  ok("y dice qué falta", avisos.some(a => /faltan 20 de plata/i.test(a)), avisos.join(" · "));
   /* comprarParcela ya no acepta pagar con $Golden: aunque alguien llame con el argumento viejo,
      cobra plata igual — no hay camino que descuente G.golden. */
   G.plata = 1000; G.golden = 99; avisos.length = 0;

@@ -41,6 +41,8 @@ function pescador(nv, exp, canas) {
   let acc = 0; for (let k = 2; k <= nv; k++) acc += ctx.skillNeed(k, "fishing");
   G.skills = { fishing: acc, farming: acc };
   G.level = Math.max(nv, 5); G.expansiones = exp || 0;
+  // Expansión habilita capacidad, no produce sola: representar una granja que la compró y usa.
+  G.plotsOwned = 3 + (exp || 0);
   G.canas = canas || { junco: 1 };
   G.fish = {}; G.res = { lombriz: 20, tablon: 40, barra_piedra: 20 };
   G.plata = 500; G.escamasLonja = 0; G.lonja = null; G.nasaPlanos = {}; G.built = {};

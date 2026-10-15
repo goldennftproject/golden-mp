@@ -39,6 +39,8 @@ vm.runInContext("this.FarmScene = FarmScene;", ctx);
  "tutoRefresh", "tutoCheck", "refreshSeedShop", "refreshHotbar", "tutoSync", "syncCobertizo",
  "closeOv", "refreshDeco"].forEach(f => { ctx[f] = () => {}; });
 const GF = ctx.GF, G = ctx.G, T = GF.TILE;
+// Se conserva la prueba de colisiones del mundo heredado. Abajo se contrasta el modelo nuevo.
+const contratoProductivo = G.produccion; delete G.produccion;
 let fallos = 0;
 const ok = (n, c, d) => { if (!c) fallos++; console.log((c ? "  ok   " : "  FALLA") + "  " + n + (d ? "   " + d : "")); };
 
@@ -72,7 +74,7 @@ function partida(exp) {
   return e;
 }
 
-console.log("\nEL BLOQUE RECIÉN COMPRADO: LAS DOS VÍAS DICEN LO MISMO");
+console.log("\nCOLISIONES DEL MUNDO LEGADO: LAS DOS VÍAS DICEN LO MISMO");
 {
   const esc = partida(1);
   const b = GF.EXPANSIONES[0];
@@ -143,5 +145,13 @@ console.log("\nY EN LAS DIECISÉIS, LA MISMA REGLA");
     mal.slice(0, 5).join(" · ") || "el terreno comprado se usa entero");
 }
 
-console.log(fallos ? "\n  ✗ " + fallos + " fallas\n" : "\n  ✓ si el mapa dice que está libre, se puede poner — por las dos vías\n");
+G.produccion=contratoProductivo;
+{
+  const esc=partida(1);
+  const bloque=(esc.objs||[]).filter(o=>o.exp===0);
+  ok("expandir en el modelo moderno no muestra nodos sin comprar",bloque.length>=2&&bloque.every(o=>o.oculto||o.sprite&&o.sprite.visible===false));
+  const roca=GF.WORLD_OBJECTS.find(o=>o.type==='rock'&&o.exp===0);
+  ok("un emplazamiento moderno vacío no ocupa la celda",!GF.celdaOcupada(roca.leftCol,roca.baseRow));
+}
+console.log(fallos ? "\n  ✗ " + fallos + " fallas\n" : "\n  ✓ colisiones heredadas y emplazamientos modernos sin nodos gratuitos\n");
 process.exit(fallos ? 1 : 0);

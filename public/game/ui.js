@@ -1741,7 +1741,8 @@ function refreshExpandir() {
     return;
   }
   if (tit) tit.textContent = "Expansión " + ex.n + " de " + EXPANSION_MAX;
-  if (sub) sub.textContent = "El terreno crece " + (GF.BLOQUE * GF.BLOQUE) + " celdas y destapa lo que hay debajo.";
+  if (sub) sub.textContent = "El terreno crece " + (GF.BLOQUE * GF.BLOQUE) + " celdas" +
+    (G.produccion && G.produccion.v === 1 ? " y suma un cupo productivo. Los nodos se compran aparte en el Cobertizo." : " y destapa lo que hay debajo.");
   /* 20/9: en obra. Ya se pagó; lo único que falta es tiempo, y el panel lo dice con el reloj */
   const obra = (typeof expansionObra === "function") ? expansionObra() : null;
   if (obra) {
@@ -1774,7 +1775,7 @@ function refreshExpandir() {
   reqs.innerHTML = h;
   /* lo que trae, con su lámina: las vetas en dorado — son el dato que decide */
   if (trae) {
-    const SPR = { parcela: "plot", arbol: "tree", roca: "node_stone",
+    const SPR = { capacidad: "sk_farming", parcela: "plot", arbol: "tree", roca: "node_stone",
                   bronce: "node_bronze", hierro: "node_iron", oro: "node_gold" };
     trae.innerHTML = expansionTrae(ex.n).map(x => {
       const veta = x.txt.indexOf("veta") >= 0;

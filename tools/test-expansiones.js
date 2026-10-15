@@ -32,12 +32,12 @@ let previo = GF.terreno(0).mias.size, creceSiempre = true, pagaSiempre = true;
 for (let i = 0; i < 16; i++) {
   const e = X.expansionSiguiente();
   G.level = e.nivel;
-  for (const k in e.costo) G.res[k] = e.costo[k];        // JUSTO lo que cuesta, ni uno más
+  for (const k in e.costo) { if(k==='plata') G.plata=e.costo[k]; else G.res[k] = e.costo[k]; }
   const antes = GF.terreno(G.expansiones).mias.size;
   const comprado = X.expansionComprar();
   const ahora = GF.terreno(G.expansiones).mias.size;
   if (!comprado || ahora !== antes + GF.BLOQUE * GF.BLOQUE) creceSiempre = false;
-  for (const k in e.costo) if (Math.round(G.res[k]) !== 0) pagaSiempre = false;   // pagó exacto
+  for (const k in e.costo) if (Math.round(k==='plata'?G.plata:G.res[k]) !== 0) pagaSiempre = false;
   if (i % 5 === 0 || i === 15)
     console.log("  " + String(e.n).padStart(2) + String(e.nivel).padStart(7) + "   " +
       String(antes).padStart(6) + " -> " + String(ahora).padStart(6) + "   +" + (ahora - antes));
@@ -47,6 +47,7 @@ console.log("");
 ok("cada compra suma un bloque de 5x5", creceSiempre);
 ok("cada compra descuenta el material exacto", pagaSiempre);
 ok("al final son las 16", G.expansiones === 16);
+ok("16 expansiones dan 21 cupos sin regalar producción", ctx.produccionCapacidad()===21 && ctx.produccionUsados()===5 && G.plotsOwned===3);
 ok("la granja terminó en 625 celdas", GF.terreno(16).mias.size === 625, GF.terreno(16).mias.size + " celdas");
 ok("no se puede pasar del tope", X.expansionSiguiente() === null && X.expansionComprar() === false);
 

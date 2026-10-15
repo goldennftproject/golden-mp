@@ -32,11 +32,13 @@ console.log("\nLA MISMA PUERTA CUBRE TODAS LAS AYUDAS PASAJERAS");
   ctx.GF.editMode = false; ctx.GF.uiOpen = false; ctx.GF.NO_WALK = false;
   ctx.anyOvOpen = () => { consultas++; return true; };
   const esc = escena(71);
+  esc.game = {canvas:{style:{cursor:'pointer'}}};
   const hover = efecto(), cerca = efecto();
   esc.hoverFx = hover; esc.nearFx = cerca;
 
   ok("una tarjeta normal de PC se reconoce como ayuda tapada", esc.ayudasMundoOcultas() === true);
   esc.updateHoverFx();
+  ok("la tarjeta apaga también la mano que venía del mundo", esc.game.canvas.style.cursor === '');
   ok("apaga el brillo del cursor y el de cercanía", hover.visible === false && cerca.visible === false);
   ok("un reloj o letrero tampoco se considera visible", esc.timerOn({}) === false);
   ok("la comprobación del overlay se reutiliza en el mismo cuadro", consultas === 1, String(consultas));

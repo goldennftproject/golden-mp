@@ -48,6 +48,7 @@ const dijo = (re) => avisos.some(a => re.test(a));
 /* el navegador del jugador: sobrevive entre "recargas" porque el almacén es el mismo objeto */
 const navegador = {};
 
+(async()=>{
 console.log("\nEL SERVIDOR SE CAE Y EL JUGADOR SIGUE JUGANDO");
 let ctx = nuevoCtx(navegador);
 {
@@ -56,7 +57,7 @@ let ctx = nuevoCtx(navegador);
   vm.runInContext("sb = null; UID = null; CUENTA_PREVIA = false; CARGA_OK = true;", ctx);
   avisos = [];
   G.plata = 1234; G.level = 7;
-  ctx.saveFarm(true);
+  await ctx.saveFarm(true);
   ok("con el servidor caído, saveFarm NO se queda de brazos cruzados",
     !!navegador[vm.runInContext("GF_COPIA_KEY", ctx)], "hay copia local");
   const c = ctx.copiaLeer();
@@ -110,7 +111,7 @@ console.log("\nEL JUGADOR RECARGA — Y SU GRANJA SIGUE AHÍ");
   vm.runInContext("sb = null; UID = null; CUENTA_PREVIA = false;", ctx);
   avisos = [];
   let volvio = null;
-  ctx.loadFarm().then(r => { volvio = r; });
+  volvio = await ctx.loadFarm();
   /* loadFarm sale por el camino sin nube de forma síncrona hasta el primer await; se comprueba
      el efecto, que es lo que importa */
   ok("loadFarm carga la copia local en vez de empezar de cero",
@@ -149,13 +150,13 @@ console.log("\nEL APODO VUELVE CON LA GRANJA — si no, el arranque pide apodo y
   let cc = nuevoCtx(nb);
   vm.runInContext("sb = null; UID = null; CUENTA_PREVIA = false; CARGA_OK = true;", cc);
   cc.NICK = "Suren"; cc.G.plata = 3000; cc.G.level = 9;
-  cc.saveFarm(true);
+  await cc.saveFarm(true);
   ok("la copia se lleva el apodo", (cc.copiaLeer() || {}).nick === "Suren", (cc.copiaLeer() || {}).nick);
 
   cc = nuevoCtx(nb);
   vm.runInContext("sb = null; UID = null; CUENTA_PREVIA = false;", cc);
   ok("y al recargar el juego NO sabe todavía cómo te llamás", !cc.NICK);
-  cc.loadFarm();
+  await cc.loadFarm();
   ok("tras cargar la copia, el apodo volvió", cc.NICK === "Suren", cc.NICK || "(vacío)");
   ok("y la granja también", (cc.G.level || 1) === 9);
   /* LA CONDICIÓN EXACTA DEL ARRANQUE: main.js hace `if (returning && window.NICK) enterGame()`.
@@ -178,7 +179,7 @@ console.log("\nEL QUE JUGÓ SIN CUENTA NO PIERDE LAS HORAS CUANDO VUELVE LA BASE
   let cc = nuevoCtx(solo);
   vm.runInContext("sb = null; UID = null; CUENTA_PREVIA = false; CARGA_OK = true;", cc);
   cc.G.plata = 5000; cc.G.level = 11;
-  cc.saveFarm(true);
+  await cc.saveFarm(true);
   cc = nuevoCtx(solo);
   /* 25/8 (revisión): esta comprobación estaba escrita CON la confusión que después produjo el
      bloqueo — le preguntaba a huboGranja() (« ¿tuvo cuenta en la nube? ») algo que le toca a
@@ -205,7 +206,7 @@ console.log("\nCON CUENTA Y LA BASE CAÍDA: SE JUEGA, PERO NO SE PISA LA NUBE");
   cc = nuevoCtx(suyo);
   vm.runInContext("sb = null; UID = null; CUENTA_PREVIA = true;", cc);
   avisos = [];
-  cc.loadFarm();
+  await cc.loadFarm();
   ok("se puede jugar: se hidrató la copia de este navegador",
     (cc.G.level || 1) === 15, "nivel " + cc.G.level);
   ok("y NO queda en la pantalla de « no se pudo cargar »",
@@ -216,7 +217,7 @@ console.log("\nCON CUENTA Y LA BASE CAÍDA: SE JUEGA, PERO NO SE PISA LA NUBE");
     dijo(/este navegador/i) && dijo(/no se toca|NO se toca/i), avisos.join(" | ").slice(0, 100));
   /* y guardar SÍ escribe local… */
   cc.G.plata = 9999;
-  cc.saveFarm(true);
+  await cc.saveFarm(true);
   ok("guardar en modo solo local sí escribe la copia", (cc.copiaLeer() || {}).plata === 9999);
   /* …aunque la conexión vuelva a mitad de partida, NO sube: subir sin haber leído es lo que
      borró una granja el 24/8 */
@@ -225,7 +226,7 @@ console.log("\nCON CUENTA Y LA BASE CAÍDA: SE JUEGA, PERO NO SE PISA LA NUBE");
   cc.sb = { from: () => { subio = true; return { upsert: () => ({ error: null }) }; }, functions: { invoke: () => { subio = true; return { data: { ok: true } }; } } };
   vm.runInContext("SOLO_LOCAL", cc);
   cc.G.plata = 12345;
-  cc.saveFarm(true);
+  await cc.saveFarm(true);
   ok("y si la conexión vuelve a mitad de partida, sigue SIN subir", subio === false,
     "se sube en la próxima carga, cuando se pueda LEER primero");
 
@@ -233,7 +234,7 @@ console.log("\nCON CUENTA Y LA BASE CAÍDA: SE JUEGA, PERO NO SE PISA LA NUBE");
   const vacio = {};
   const c3 = nuevoCtx(vacio);
   vm.runInContext("sb = null; UID = null; CUENTA_PREVIA = true;", c3);
-  c3.loadFarm();
+  await c3.loadFarm();
   ok("sin copia local, con cuenta y sin entrar, SIGUE bloqueando (mejor eso que una granja en blanco)",
     vm.runInContext("CARGA_FALLO", c3) === true);
 }
@@ -255,7 +256,7 @@ console.log("\nEL BLOQUEO CIRCULAR: jugó sin cuenta, vuelve la base, y el juego
   let cc = nuevoCtx(nb);
   vm.runInContext("sb = null; UID = null; CUENTA_PREVIA = false; CARGA_OK = true;", cc);
   cc.NICK = "Suren"; cc.G.plata = 3000; cc.G.level = 9;
-  cc.saveFarm(true);
+  await cc.saveFarm(true);
 
   cc = nuevoCtx(nb);
   ok("la copia sin dueño NO cuenta como « tuvo cuenta en la nube »",
@@ -283,7 +284,7 @@ console.log("\nLO QUE NO SE PUEDE ROMPER AL ARREGLAR ESTO");
   const c2 = nuevoCtx(otro);
   vm.runInContext("sb = null; UID = null; CARGA_OK = false;", c2);
   c2.G.plata = 777;
-  c2.saveFarm(true);
+  await c2.saveFarm(true);
   ok("si la granja NUNCA se cargó, no se guarda ni siquiera en local",
     !otro[vm.runInContext("GF_COPIA_KEY", c2)], "la guarda del 18/8 sigue en pie");
 
@@ -305,3 +306,4 @@ console.log(fallos
   ? "  " + fallos + " fallo(s) — sin servidor todavía se pierde la granja"
   : "  Todo en orden: sin servidor se juega, se guarda y al volver se sube.");
 process.exit(fallos ? 1 : 0);
+})().catch(e=>{console.error(e);process.exitCode=1;});

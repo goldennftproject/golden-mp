@@ -47,6 +47,7 @@ console.log("\nLOS ATAJOS NO ATRAVIESAN LA CAPA BLOQUEANTE\n");
     controlDeTecladoActivo() { return false; }, selectorContextualPcAbierto() { return false; },
     toggleMenu() { menu++; }, closeAllOv() { cierres++; }, hideSeedWheel() {}, isOpen() { return false; },
     pescaAparejosAbierto() { return false; }, cerrarCuerpoPanelPc() { return false; },
+    pescaV4CarreteTecladoEnEvento() { return false; },
   };
   vm.createContext(ctx);
   vm.runInContext(UI.slice(iniKeys, finKeys), ctx);

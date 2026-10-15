@@ -4,10 +4,10 @@
      node tools/test-cursor-mundo.js */
 const fs = require("fs"), vm = require("vm");
 const src = fs.readFileSync("public/game/farm.js", "utf8");
-const ini = src.indexOf("  cursorMundo(mano) {");
-const fin = src.indexOf("\n  // brillo de interacción:", ini);
-if (ini < 0 || fin < 0) throw new Error("No se encontró cursorMundo");
-const cuerpo = src.slice(ini, fin).replace("  cursorMundo", "function cursorMundo");
+const {ctx: juego} = require('./arrancar-el-juego.contexto').arrancar(require('path').resolve(__dirname,'..'));
+const metodo = vm.runInContext('FarmScene.prototype.cursorMundo',juego);
+if (typeof metodo !== 'function') throw new Error('No se encontró cursorMundo');
+const cuerpo = metodo.toString().replace(/^cursorMundo/, 'function cursorMundo');
 
 const ctx = { window: { innerWidth: 1280 }, document: { querySelector: () => null } };
 vm.createContext(ctx);
@@ -37,7 +37,7 @@ ok("sin un lienzo disponible no rompe la escena", seguro);
 
 console.log("\nCABLEADO DEL HOVER Y DEL CAMBIO DE ESCENA");
 ok("el hover activa la mano para objeto o agua alcanzable", /const aguaLista = !hov && this\.nearPond\(\) && this\.pondDist\(p\.worldX, p\.worldY\) < 1\.05;[\s\S]*this\.cursorMundo\(!!hov \|\| aguaLista\)/.test(src));
-ok("una interfaz abierta apaga la mano", /GF\.editMode \|\| GF\.uiOpen\)[\s\S]{0,180}this\.cursorMundo\(false\)/.test(src));
+ok("una interfaz abierta apaga la mano", /GF\.editMode \|\| GF\.uiOpen \|\| this\.ayudasMundoOcultas\(\)\)[\s\S]{0,180}this\.cursorMundo\(false\)/.test(src));
 ok("el shutdown restaura el lienzo", /events\.once\("shutdown", \(\) => \{\s*this\.cursorMundo\(false\)/.test(src));
 
 console.log("\n" + (fallos ? "  ✗ " + fallos + " fallas\n" : "  ✓ el cursor acompaña el mundo sin prometer clics imposibles\n"));

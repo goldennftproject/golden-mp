@@ -40,20 +40,20 @@ const ok = (n, c, d) => { if (!c) fallos++; console.log((c ? "  ok   " : "  FALL
   const rocExp = GF.WORLD_OBJECTS.filter(o => o.exp != null && o.type === "rock").length;
   const par = 3 + exps, arb = 3 + arbExp, roc = 3 + rocExp;
   const tot = par + arb + roc;
-  ok("la granja terminada sigue teniendo 57 celdas", tot === 57,
+  ok("el mapa conserva 57 posiciones básicas, no 57 producciones gratuitas", tot === 57,
      par + " parcelas + " + arb + " árboles + " + roc + " rocas = " + tot);
-  ok("cada expansión trae exactamente 3 celdas", (arbExp + rocExp + exps) / exps === 3);
+  ok("cada bloque reserva tres posiciones básicas de colocación", (arbExp + rocExp + exps) / exps === 3);
   ok("y el reparto es parejo: un tercio de cada", par === arb && arb === roc, par + "/" + arb + "/" + roc);
   ok("las parcelas caben en el tope del juego", par <= X.PLOT_MAX, par + "/" + X.PLOT_MAX);
 }
 /* 3) LA CURVA LA MARCA LA EXPANSIÓN, NO EL NIVEL. El Granero ya no reparte celdas: da el bono de
    venta y el permiso de expandir, y nada más. */
 {
-  const celdasCon = e => 9 + 3 * e;
-  ok("el arranque son 9 celdas (3+3+3)", celdasCon(0) === 9);
+  const celdasCon = e => {X.G.expansiones=e;return ctx.produccionCapacidad();};
+  ok("el arranque tiene cinco cupos", celdasCon(0) === 5);
   ok("la curva solo sube con cada expansión",
      X.FARM_EXPANSION.every((n, i) => celdasCon(i + 1) > celdasCon(i)));
-  ok("y llega a 57 con la última", celdasCon(X.FARM_EXPANSION.length) === 57);
+  ok("y llega a 21 cupos Free con la última", celdasCon(X.FARM_EXPANSION.length) === 21);
   const src = fs.readFileSync("public/game/state.js", "utf8");
   ok("el nivel de granja YA NO reparte parcelas", /const FARM_PARCELA = \{\};/.test(src));
   ok("ni árboles ni rocas", /var NIVEL_ARBOLES = \[1, 1, 1\];/.test(src) && /var NIVEL_ROCAS = \[1, 1, 1\]/.test(src));
@@ -65,7 +65,8 @@ const ok = (n, c, d) => { if (!c) fallos++; console.log((c ? "  ok   " : "  FALL
   const sinExp = X.nodosQueTocan(10).plot;
   g.expansiones = 5;
   const conExp = X.nodosQueTocan(10).plot;
-  ok("5 expansiones = 5 parcelas más", conExp - sinExp === 5, sinExp + " → " + conExp);
+  ok("5 expansiones no regalan parcelas", conExp === sinExp, sinExp + " → " + conExp);
+  ok("y habilitan cinco cupos más",ctx.produccionCapacidad()===10);
   g.expansiones = 0;
 }
 

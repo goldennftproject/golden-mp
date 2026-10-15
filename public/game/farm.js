@@ -1061,6 +1061,7 @@ class FarmScene extends Phaser.Scene {
     };
     this.scale.on("resize", this._expCtaResize, this);
     this.events.once("shutdown", () => {
+      this.cursorMundo(false);
       this.scale.off("resize", this.fitCamera, this);
       if (this._tutoCamResize) this.scale.off("resize", this._tutoCamResize, this);
       if (this._expCtaResize) this.scale.off("resize", this._expCtaResize, this);
@@ -4480,6 +4481,14 @@ class FarmScene extends Phaser.Scene {
     if (typeof saveFarm === "function") saveFarm(true);
   }
 
+  cursorMundo(mano) {
+    const canvas = this.game && this.game.canvas;
+    if (!canvas || !canvas.style) return;
+    const cursor = mano && window.innerWidth > 640 ? "pointer" : "";
+    if (canvas.style.cursor !== cursor) canvas.style.cursor = cursor;
+    this._cursorMundo = cursor;
+  }
+
   /* Las ventanas normales de PC no frenan el mundo, pero sí tapan ayudas pasajeras: no debe
      encenderse un árbol bajo una carta ni aparecer un reloj sobre algo que no se puede tocar
      desde ella. Esta consulta se comparte entre relojes, brillos y cartel, y se cachea por
@@ -4507,6 +4516,7 @@ class FarmScene extends Phaser.Scene {
       if (fx.isCropped) fx.setCrop();   // el árbol se dibuja recortado (copa/tronco), pero el brillo va entero
     };
     if (GF.editMode || GF.uiOpen || this.ayudasMundoOcultas()) {
+      this.cursorMundo(false);
       this.hoverFx.setVisible(false); this.nearFx.setVisible(false); return;
     }
     const T = GF.TILE, p = this.input.activePointer;
@@ -4518,6 +4528,8 @@ class FarmScene extends Phaser.Scene {
       if (pl.state === "locked") continue;   // los plots bloqueados no se iluminan
       if (pl.ground && Math.abs(p.worldX - pl.cx) < T / 2 && Math.abs(p.worldY - pl.by) < T / 2) { hov = pl.ground; break; }
     }
+    const aguaLista = !hov && this.nearPond() && this.pondDist(p.worldX, p.worldY) < 1.05;
+    this.cursorMundo(!!hov || aguaLista);
     apply(this.hoverFx, hov);
     // cercanía: lo que el granjero puede interactuar ya mismo (mismo brillo, más suave)
     if (GF.NO_WALK) { this.nearFx.setVisible(false); return; }   // el granjero queda estacionado donde trabajó: su "cercanía" no vale

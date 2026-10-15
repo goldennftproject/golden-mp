@@ -2722,12 +2722,13 @@ function produccionAlternar(clave) {
 }
 function produccionComprar(tipo) {
   if (!G.produccion || !produccionHayCupo()) { toast("No queda capacidad. Pausá otra producción o expandí."); return false; }
-  let nuevaClave;
+  let nuevaClave, confirmacion;
   if (tipo === "plot") {
-    if ((G.plotsOwned || 3) >= PLOT_MAX) return false;
+    if ((G.plotsOwned || 3) >= PLOT_MAX) { toast("Ya alcanzaste el máximo de parcelas."); return false; }
     const gratis = G.produccion.vale > 0, costo = 20;
     if (!gratis && G.plata < costo) { toast("Te faltan " + costo + " de plata."); return false; }
     if (gratis) G.produccion.vale--; else G.plata -= costo;
+    confirmacion = "Parcela " + (gratis ? "canjeada" : "comprada por " + costo + " de plata");
     nuevaClave = "p:" + G.plotsOwned;
     G.plotsOwned++; G.plotsCompradas = (G.plotsCompradas || 0) + (gratis ? 0 : 1);
     if (window.farmScene && farmScene.refreshPlotLocks) farmScene.refreshPlotLocks();
@@ -2743,6 +2744,8 @@ function produccionComprar(tipo) {
     const gratis = G.produccion.vale > 0 && (tipo === "tree" || tipo === "rock");
     if (!gratis && G.plata < def.precio) { toast("Te falta plata para ese nodo."); return false; }
     if (gratis) G.produccion.vale--; else G.plata -= def.precio;
+    const nombre = tipo === "tree" ? "Árbol" : tipo === "rock" ? "Roca" : "Veta de " + tipo;
+    confirmacion = (gratis ? "Canje: " : "Compra: ") + nombre + (gratis ? "" : " · " + def.precio + " de plata") + ". Primer ciclo iniciado";
     G.produccion.nodos[i] = true;
     nuevaClave = "n:" + i;
     const colision = GF.COLLISIONS[i];
@@ -2761,6 +2764,8 @@ function produccionComprar(tipo) {
   if (GF.ocupCambio) GF.ocupCambio();
   if (window.farmScene && farmScene.rebuildCollisions) farmScene.rebuildCollisions();
   refreshCobertizo(); refreshHud();
+  toast(confirmacion + " · capacidad " + produccionUsados() + "/" + produccionCapacidad());
+  log(confirmacion + ".", "good");
   if (typeof saveFarm === "function") saveFarm(true);
   return true;
 }

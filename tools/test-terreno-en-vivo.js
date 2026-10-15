@@ -145,6 +145,7 @@ ok("el buscador de caminos se invalida (tenía el mapa viejo)", esc._nav === nul
     const owned = ctx.G.plotsOwned || 3;
     const antes = ctx.GF.PLOTS[owned] ? { c: ctx.GF.PLOTS[owned].col, r: ctx.GF.PLOTS[owned].row } : null;
     ctx.G.cobertizo = { tree: 0, rock: 0, plot: 1 };
+    ctx.produccionAlternar('p:0'); // La colocación necesita un cupo libre en el modelo actual.
     const DEST = { col: 8, row: 9 };
     ctx.regaloColocar("plot", DEST.col, DEST.row);
     esc2.colocarRegaloEnVivo("plot");

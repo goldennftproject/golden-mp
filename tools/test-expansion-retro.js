@@ -24,6 +24,9 @@ vm.runInContext(fs.readFileSync("public/game/config.js", "utf8"), ctx);
 vm.runInContext(fs.readFileSync("public/game/state.js", "utf8"), ctx);
 vm.runInContext(fs.readFileSync("public/game/save.js", "utf8") + "\n;this.hydrate = hydrate;", ctx);
 const GF = ctx.GF, G = ctx.G;
+// La geometría de entrega antigua se prueba explícitamente sin contrato productivo.
+// hydrate() sí ejecuta la migración real a v1 en los casos de guardados históricos.
+delete G.produccion;
 let fallos = 0;
 const ok = (n, c, d) => { if (!c) fallos++; console.log((c ? "  ok   " : "  FALLA") + "  " + n + (d ? "   " + d : "")); };
 const dentroDe = (b, p) => p && p.col >= b.c0 && p.col < b.c1 && p.row >= b.r0 && p.row < b.r1;
@@ -36,7 +39,7 @@ console.log("\nEL BLOQUE RESERVA UNA CELDA PARA LA PARCELA");
   ok("y la celda cae dentro de su propio bloque", !fuera.length, fuera.length + " fuera");
 }
 
-console.log("\nCOMPRAR AHORA: LA PARCELA APARECE PUESTA, NO EN EL BAÚL");
+console.log("\nCOMPATIBILIDAD: ENTREGA DEL MUNDO ANTERIOR A V1");
 {
   G.level = 5; G.expansiones = 0; G.plotsOwned = 3; G.treesOpen = [0]; G.rocksOpen = [0];
   G.built = {}; G.obras = {}; G.layout = {}; G.layoutPlots = {}; G.decos = []; G.chests = [];
@@ -98,8 +101,9 @@ console.log("\nY SI LA CELDA RESERVADA ESTÁ OCUPADA, BUSCA OTRA DEL MISMO BLOQU
     "la celda reservada estaba tomada");
 }
 
-console.log("\nLAS DIECISÉIS, UNA POR UNA: ¿CADA BLOQUE ENTREGA LO SUYO?");
+console.log("\nLEGADO SIN MIGRAR: GEOMETRÍA DE LAS DIECISÉIS ENTREGAS");
 {
+  delete G.produccion; // Entrega histórica; compras modernas cubiertas por test-expansiones.js.
   /* 20/8, dirección: "hay que asegurarse de que las expansiones realmente estén dando los nodos y
      las parcelas en CADA UNA de las expansiones."
      Comprobar la 1 y la 2 no dice nada de la 16. Se compran las dieciséis en orden, y después de

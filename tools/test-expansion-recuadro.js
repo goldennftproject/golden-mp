@@ -58,10 +58,8 @@ console.log("\nEL NODO EXTRA SE PAGA: una celda productiva más en la escalera d
   const plataDe = (c) => Object.keys(c).reduce((s, k) => s + (PRICE[k] || 1) * c[k], 0);
   ok("la 12 cuesta más que la 11, la 14 más que la 13 — la escalera sigue subiendo",
     plataDe(costos[11]) > plataDe(costos[10]) && plataDe(costos[13]) > plataDe(costos[12]));
-  ok("y el cartel del mundo anuncia el nodo extra",
-    ctx.expansionTrae(12).some(x => x.txt === "veta de hierro") &&
-    ctx.expansionTrae(15).some(x => x.txt === "veta de hierro") &&
-    ctx.expansionTrae(13).some(x => x.txt === "veta de oro"),
+  ok("el cartel moderno anuncia capacidad y no minerales gratuitos",
+    [12,15,13].every(n=>ctx.expansionTrae(n).length===1 && ctx.expansionTrae(n)[0].k==='capacidad'),
     ctx.expansionTraeTxt(12));
 }
 
@@ -75,13 +73,14 @@ console.log("\nEL RECUADRO: REQUISITOS EN COLOR, NODOS CON LÁMINA, Y EL PORQUÉ
   ok("el nivel es el primer requisito", reqs.indexOf("Nivel de granja") >= 0);
   ok("cada material lleva su tenés/pide", /\d+\/\d+/.test(reqs));
   ok("lo que falta va marcado", reqs.indexOf("falta") >= 0);
-  ok("los nodos de la expansión se listan con su lámina",
-    trae.indexOf("+1 Veta de hierro") >= 0 && trae.indexOf("node_iron") >= 0, "la 12 trae hierro");
+  ok("el cupo se lista con su icono, sin prometer una veta gratis",
+    trae.includes("+1 Cupo productivo") && trae.includes("sk_farming") && !trae.includes("Veta de hierro"));
+  ok("el subtítulo explica dónde adquirir la producción",ctx.document.getElementById('exd-sub').textContent.includes('se compran aparte'));
   ok("el botón apagado dice POR QUÉ (regla 9)",
     btn.disabled === true && /nivel/i.test(btn.textContent), btn.textContent);
   /* con todo en la mano, el botón invita */
   G.level = 99; const ex = ctx.expansionSiguiente();
-  for (const k in ex.costo) G.res[k] = ex.costo[k] + 5;
+  for (const k in ex.costo) {if(k==='plata')G.plata=ex.costo[k]+5;else G.res[k]=ex.costo[k]+5;}
   ctx.GF.EXP_OBRA = 0;   /* 20/9: este test mide la ENTREGA de la expansión, no la obra */
   ctx.refreshExpandir();
   ok("con nivel y material, el botón dice Expandir y está vivo",

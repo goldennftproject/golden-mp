@@ -18,7 +18,7 @@ const desde = (texto, inicio) => {
 };
 const iniPuerta = desde("function anyOvOpen()");
 const finPuerta = desde("const OV_REFRESH", iniPuerta);
-const iniPesca = desde("function pescaAparejosAbrir()");
+const iniPesca = desde("function pescaAparejosAbrir(");
 const finPesca = desde("function pescaAparejosCerrar()", iniPesca);
 const iniRueda = desde("function showSeedWheel(");
 const finRueda = desde("function hideSeedWheel()", iniRueda);
@@ -113,7 +113,7 @@ console.log("\nLA PUERTA ESTÁ EN LOS PUNTOS REALES DE APERTURA");
 {
   const revisar = FOREST.slice(FOREST.indexOf("  revisarCuerpo(c) {"), FOREST.indexOf("  /* la ventanita del cuerpo", FOREST.indexOf("  revisarCuerpo(c) {")));
   const abrir = FOREST.slice(FOREST.indexOf("  abrirCuerpo(c) {"), FOREST.indexOf("  cerrarCuerpo()", FOREST.indexOf("  abrirCuerpo(c) {")));
-  ok("semillas y aparejos se protegen desde sus puertas de UI", /function showSeedWheel\([\s\S]{0,140}hayOvPcAbierto\(\)/.test(UI) && /function pescaAparejosAbrir\(\)[\s\S]{0,140}hayOvPcAbierto\(\)/.test(UI) && /showSeedWheel\(pt\.event\.clientX/.test(FARM));
+  ok("semillas y aparejos se protegen desde sus puertas de UI", /function showSeedWheel\([\s\S]{0,140}hayOvPcAbierto\(\)/.test(UI) && /function pescaAparejosAbrir\([^)]*\)[\s\S]{0,140}hayOvPcAbierto\(\)/.test(UI) && /showSeedWheel\(pt\.event\.clientX/.test(FARM));
   ok("la comprobación del cuerpo sucede antes de mutar revisado", revisar.indexOf("hayOvPcAbierto") >= 0 && revisar.indexOf("hayOvPcAbierto") < revisar.indexOf("if (!c.revisado)") && /abrirCuerpo\(c\) \{[\s\S]{0,330}hayOvPcAbierto/.test(abrir));
 }
 

@@ -24,7 +24,7 @@ ok("y el obituario está escrito donde estaba el botón", /EL BOTÓN 🧪 MURIÓ
 console.log("\nEL CLIENTE ENTIENDE QUE EL PORTERO DIJO QUE NO");
 ok("un 422 del portero no cae al camino viejo: llama a porteroRechazo y sale", /if \(st === 422\) \{[\s\S]*?await porteroRechazo\(det\);\s*return;/.test(SAVE));
 ok("porteroRechazo recarga la granja aceptada y pisa la copia local con ella",
-  /async function porteroRechazo[\s\S]*?from\("farms"\)\.select\("data,name"\)[\s\S]*?hydrate\(data\.data\);[\s\S]{0,200}copiaGuardar\(snapshot\(\)\);[\s\S]{0,200}lastSavedKey = snapKey\(\);/.test(SAVE));
+  /async function porteroRechazo[\s\S]*?from\("farms"\)\.select\("data,name,updated_at"\)[\s\S]*?hydrate\(data\.data\);[\s\S]{0,200}copiaGuardar\(snapshot\(\)\);[\s\S]{0,200}lastSavedKey = snapKey\(\);/.test(SAVE));
 ok("y se lo dice al jugador con las sospechas por su nombre", /El servidor rechazó el guardado[\s\S]*?Se volvió a la última granja aceptada/.test(SAVE));
 ok("el indicador de guardado tiene su estado « Rechazado »", /function showSaveError\(\)[\s\S]{0,400}?Rechazado/.test(UI));
 
