@@ -4669,7 +4669,7 @@ function refreshMarket() {
     ? ventaGolden(res, q)
     : (() => { const plata = totalVenta(res, q), golden = Math.floor(plata / GOLDEN_EN_PLATA); return { plata, golden, resto: plata - golden * GOLDEN_EN_PLATA }; })();
   const textoVenta = (res, owned, q) => {
-    if (cur === "plata") return fmtDec(marketUnit(res)) + " de plata c/u";
+    if (cur === "plata") return "Lote: " + fmt(totalVenta(res, q)) + " plata · siguiente unidad ≈ " + fmtDec(marketUnit(res));
     if (q <= 0) return owned > 0 ? "Elegí una cantidad" : "Sin stock";
     const d = detalleGolden(res, q);
     if (d.golden < 1) return "Lote: " + fmt(d.plata) + " de valor · faltan " + fmt(Math.max(0, GOLDEN_EN_PLATA - d.plata)) + " para 1 $Golden";
@@ -4706,7 +4706,7 @@ function refreshMarket() {
   });
   const golden = document.querySelector('.curbtn[data-cur="golden"]'), nota = $("mkt-cur-note");
   if (golden) { golden.disabled = ventaTutorial; golden.title = ventaTutorial ? "Completá este encargo cobrando en Plata" : "Cobrá en $Golden a partir de 1 $Golden completo"; }
-  if (nota) { nota.textContent = ventaTutorial ? "Tu primer encargo se cobra en Plata." : ""; nota.classList.toggle("show", ventaTutorial); }
+  if (nota) { nota.textContent = ventaTutorial ? "Tu primer encargo se cobra en Plata." : "Precio dinámico de tu granja: vender mucho del mismo cultivo reduce su margen; se recupera gradualmente. El lote incluye el redondeo pendiente. No es demanda global ni canje por USDT."; nota.classList.add("show"); }
   if (typeof tutoHighlight === "function") tutoHighlight();
   document.querySelectorAll(".curbtn").forEach(b => b.classList.toggle("active", b.dataset.cur === cur));
   marketReponerVentaFocoPc($("mkt-list"));

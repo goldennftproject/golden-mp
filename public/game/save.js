@@ -266,6 +266,7 @@ function snapshot() {
      vistos y estrellaMax (el álbum con estrellas) y pescaTiene (el señuelo, que no se gasta).
      OJO con los comentarios AL FINAL de una línea de este objeto: se comen lo que sigue. */
   return { plata: G.plata, golden: G.golden, level: G.level, prestige: G.prestige, iniciado: G.iniciado, reinicio: G.reinicio,   /* 24/9: cuándo se reinició la cuenta (el portero lo lee) */
+    mercadoVentas: G.mercadoVentas,
     res: G.res, picks: G.picks, skills: G.skills, triesV: G.triesV, establoV: G.establoV, fish: G.fish, plots: G.plots, nodos: G.nodos, expansiones: G.expansiones, pescaHasta: G.pescaHasta, pescaDesde: G.pescaDesde, senales: G.senales, escamas: G.escamas, vistos: G.vistos, estrellaMax: G.estrellaMax, pescaTiene: G.pescaTiene, canas: G.canas, presion: G.presion, amarres: G.amarres, trampas: G.trampas, marea: G.marea, runaOro: G.runaOro, buffs: G.buffs, seeds: G.seeds, selSeed: G.selSeed,
     tools: G.tools, sflStock: true, invRows: G.invRows, slots: G.slots, hotbar: G.hotbar, hotSel: G.hotSel, hbInit: G.hbInit, layout: G.layout,
     daily: G.daily, plotsOwned: G.plotsOwned, plotsCompradas: G.plotsCompradas, plotsFicha: G.plotsFicha, expParcelasDadas: G.expParcelasDadas, seedBuys: G.seedBuys, built: G.built,
@@ -307,6 +308,14 @@ function snapKey() { return JSON.stringify({ n: (typeof nombreLucido === "functi
    Regla: si algo LEE otra parte del estado, no va en la fase 1.                                 */
 function hydrate(d) {
   if (!d) return;
+  G.mercadoVentas = {};
+  if (d.mercadoVentas && typeof d.mercadoVentas === "object") {
+    for (const res of SELLABLE) {
+      const v = d.mercadoVentas[res];
+      if (v && [v.at, v.volumen, v.resto].every(x => Number.isFinite(x) && x >= 0) && v.resto < 1)
+        G.mercadoVentas[res] = { at: v.at, volumen: Math.min(1000000000, v.volumen), resto: v.resto };
+    }
+  }
   /* ---- FASE 1 · APLICAR ---- */
   ["plata", "golden", "level", "prestige", "week"].forEach(k => { if (typeof d[k] === "number") G[k] = d[k]; });
   if (d.res) G.res = Object.assign({}, G.res, d.res);

@@ -79,6 +79,7 @@ const G = {
   decos: [], decoBolsa: {}, godHand: false, zonasVistas: ["pantano"],   // adornos puestos · adornos sin colocar · NFT de siembra automática (10/8)
   daily: { day: 0, last: "" },   // cofre diario: día de racha reclamado (1..7) y fecha del último reclamo
   seedBuys: { date: "", count: 0 },   // cupo diario de semillas (compras + cofre)
+  mercadoVentas: {},             // presión y fracciones del comprador local, por recurso
   dishes: {},      // platos cocinados (van a la bolsa; clic para comer)
   cooking: [],   // { id, endAt, total } — barra de enfriamiento al cocinar
   chests: [],      // cofres depósito: [{col,row,items:[{kind,key,n}|null × 10]}] — +1% materiales c/u
@@ -7920,13 +7921,42 @@ let marketCur = "plata";
    ser una LISTA, porque un cero implícito es un cero que mañana alguien rellena sin querer. */
 var NO_VENDIBLE = { cebo_vivo: "El cebo vivo no se vende: solo sirve para cebar el palangre" };
 function esVendible(res) { return !NO_VENDIBLE[res]; }
-function precioVenta(res) {
+function precioVentaBase(res) {
   if (!esVendible(res)) return 0;
   const c = CROP_DEF[res];
   if (!c) return priceOf(res) * ventaMult();
   return c.seedCost + (c.price - c.seedCost) * ventaMult();
 }
-function totalVenta(res, q) { return Math.max(1, Math.round(q * precioVenta(res))); }
+/* Mercado del juego real. Presión individual persistida (no demanda global): al vender mucho
+   del mismo cultivo cae su margen, no el de los otros. Recuperación gradual en seis horas.
+   La semilla queda cubierta y se conserva al menos un 20% del margen. Las primeras tres
+   unidades conservan el precio base para no alterar la venta guiada del tutorial.
+   Cotizar no escribe estado. El resto fraccional se guarda al vender: dividir lotes no fabrica
+   plata mediante redondeo. La curva marginal se suma sin iterar por cada unidad. */
+function cotizarVenta(res, q, t) {
+  if (!Number.isSafeInteger(q) || q < 0 || q > 1000000000 || !esVendible(res)) return { total: 0, resto: 0, volumen: 0, at: 0 };
+  t = Number.isFinite(t) ? t : nowMs();
+  const prev = (G.mercadoVentas || {})[res] || {};
+  const at = Math.max(t, Number.isFinite(prev.at) ? prev.at : t);
+  const volumen = Math.max(0, Number(prev.volumen) || 0) * Math.exp(-Math.max(0, at - (prev.at || at)) / 21600000);
+  const resto = Math.max(0, Math.min(0.999999999, Number(prev.resto) || 0));
+  const base = precioVentaBase(res), c = CROP_DEF[res];
+  const piso = c ? c.seedCost + Math.max(0, base - c.seedCost) * 0.2 : base * 0.5;
+  const demanda = 100, libres = Math.min(q, Math.max(0, Math.ceil(3 - volumen))), pendientes = q - libres;
+  const prima = libres + (pendientes ? Math.exp(-Math.max(0, volumen + libres - 3) / demanda) * (-Math.expm1(-pendientes / demanda)) / (-Math.expm1(-1 / demanda)) : 0);
+  const exacto = q * piso + (base - piso) * prima + resto;
+  const total = q ? Math.max(0, Math.floor(exacto + 1e-9)) : 0;
+  return { total, resto: q ? Math.max(0, exacto - total) : resto, volumen, at };
+}
+function registrarVenta(res, q, detalle) {
+  G.mercadoVentas = G.mercadoVentas || {};
+  G.mercadoVentas[res] = { at: detalle.at, volumen: detalle.volumen + q, resto: detalle.resto };
+}
+function precioVenta(res) {
+  const d = cotizarVenta(res, 1);
+  return d.total + d.resto - (((G.mercadoVentas || {})[res] || {}).resto || 0);
+}
+function totalVenta(res, q) { return cotizarVenta(res, q).total; }
 /* $Golden se acredita entero. Esta cuenta compartida evita que el Mercado anuncie una fracción
    por unidad cuando el cobro real decide por el valor final del lote. El resto no se acumula:
    se expone para que la interfaz lo diga antes del clic, sin cambiar la economía existente. */
@@ -7937,17 +7967,25 @@ function ventaGolden(res, q) {
 function marketUnit(res) { const u = precioVenta(res); return marketCur === "plata" ? u : u / GOLDEN_EN_PLATA; }
 /* $Golden no usa fracciones: esta cuenta la comparten la UI y el cobro para que un botón nunca
    prometa una venta que el estado vaya a rechazar después. */
-function ventaMinGolden(res) { return Math.max(1, Math.ceil(GOLDEN_EN_PLATA / Math.max(1, precioVenta(res)))); }
+function ventaMinGolden(res) {
+  if (!esVendible(res) || precioVentaBase(res) <= 0) return Infinity;
+  let lo = 1, hi = 1000000000;
+  while (lo < hi) { const mid = Math.floor((lo + hi) / 2); if (totalVenta(res, mid) >= GOLDEN_EN_PLATA) hi = mid; else lo = mid + 1; }
+  return lo;
+}
 function sellItem(res) {
   const paso = (typeof tutoActivo === "function") ? tutoActivo() : null;
   if (paso && paso.id === "sell") marketCur = "plata";   // el arranque enseña la moneda del bucle, no la premium
   const inp = $("mq-"+res); let q = Math.floor(parseFloat(inp && inp.value) || 0);
   q = Math.max(0, Math.min(q, G.res[res]));
+  if (!SELLABLE.includes(res) || !Number.isSafeInteger(q)) { toast("Ese recurso no se vende en este mercado"); return; }
   if (q <= 0) { toast("Poné una cantidad"); return; }
   // candado anti-exploit (12/8): durante un "juntá X" no se puede VENDER ese recurso por
   // debajo de la meta — si no, vender para quedar en 9/10 mantenía el boost vivo infinito
-  if (marketCur === "plata") { const t=totalVenta(res,q); G.plata+=t; G.res[res]-=q; log(`Vendiste ${q} ${RES_LABEL[res]} por ${t} de plata.`); toast("+"+t+" plata"); }
-  else { const detalle = ventaGolden(res, q), g = detalle.golden; if (g<1){ toast("Para 1 $Golden necesitás " + fmt(ventaMinGolden(res)) + " " + RES_LABEL[res]); return; } G.res[res]-=q; G.golden+=g; log(`Vendiste ${q} ${RES_LABEL[res]} por ${g} $Golden.`,"gold"); toast("+"+g+" $Golden"); }
+  const cotizacion = cotizarVenta(res, q);
+  if (marketCur === "plata") { const t=cotizacion.total; G.plata+=t; G.res[res]-=q; log(`Vendiste ${q} ${RES_LABEL[res]} por ${t} de plata.`); toast("+"+t+" plata"); }
+  else { const g = Math.floor(cotizacion.total / GOLDEN_EN_PLATA); if (g<1){ toast("Para 1 $Golden necesitás " + fmt(ventaMinGolden(res)) + " " + RES_LABEL[res]); return; } G.res[res]-=q; G.golden+=g; log(`Vendiste ${q} ${RES_LABEL[res]} por ${g} $Golden.`,"gold"); toast("+"+g+" $Golden"); }
+  registrarVenta(res, q, cotizacion);
   if (window.sfx) sfx("coin");
   if (CROP_DEF[res] && typeof tutoEvent === "function") for (let i = 0; i < q; i++) tutoEvent("sell");   // 14/8 v4: un evento POR UNIDAD vendida — el capataz verifica cantidades
   /* 24/8 (dirección): « cuando vendes un objeto no se quita de la bolsa; hay que darle clic o
@@ -7958,6 +7996,7 @@ function sellItem(res) {
   if (isOpen("ov-inv")) refreshInv();
   if (typeof refreshHotbar === "function") refreshHotbar();
   refreshMarket(); refreshHud();
+  if (typeof saveFarm === "function") saveFarm(true);
 }
 
 // --- pesca ---
