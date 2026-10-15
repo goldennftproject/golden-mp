@@ -18,7 +18,7 @@ import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
    la bitácora (que ningún jugador honesto dispare sospechas). Los techos salen del
    ancla del juego (20 plata/celda-hora) con margen ×3 y colchones: generosos a
    propósito — acá un falso positivo es peor que un tramposo sin cazar. */
-const VERSION = 3;        // v3 (24/9): reinicio de cuenta · v2 (15/9): el portero aprendió qué es el mercado
+const VERSION = 4;        // ventas del stock al sistema y escrituras condicionales, sin pisar otra sesión
 const MODO = "rechazo";   // 14/9: fuera de sombra en el proyecto nuevo (P2P abierto → el portero rechaza)
 
 const ANCLA = 20;          // plata por celda-hora
@@ -28,6 +28,22 @@ const TASA_NODO = 2;       // recursos/hora de un nodo; las cargas no suben la t
 const MARGEN = 3;          // multiplicador de gracia sobre el máximo físico
 
 const num = (v) => (typeof v === "number" && isFinite(v)) ? v : 0;
+// Catálogo del comprador del sistema. El test lo contrasta con priceOf del juego real.
+const VENTA_SISTEMA = { papa:2,ciruela:4,cereza:5,remolacha:7,zanahoria:8,cebolla:16,calabacin:25,repollo:50,calabaza:100,brocoli:210,girasol:380,trigo:680,maiz:1200,
+  madera:12,piedra:15,bronce:160,hierro:240,oro:280,diamante:360,netherita:480,tablon:36,barra_piedra:45,barra_bronce:480,barra_hierro:720,barra_oro:840 };
+function ventaStockPermiso(prev, next) {
+  if (!prev || !next) return 0;
+  let buff = 1;
+  for (const b of (Array.isArray(prev.buffs) ? prev.buffs : [])) if (b && b.type === "yield") buff = Math.max(buff, Math.min(3, num(b.mult)));
+  const mult = Math.min(10, (1 + .015 * Math.max(0, Math.min(25, num(prev.level)) - 1) + .015 * Math.max(0, Math.min(100, num(prev.prestige)))) * buff);
+  let total = 0;
+  for (const k of Object.keys(VENTA_SISTEMA)) {
+    const antes = num(prev.res && prev.res[k]), despues = num(next.res && next.res[k]);
+    // Sólo inventario que ya estaba aceptado: nunca se cree un "total vendido" del cliente.
+    if (Number.isSafeInteger(antes) && Number.isSafeInteger(despues) && antes > despues && despues >= 0) total += (antes - despues) * VENTA_SISTEMA[k] * mult;
+  }
+  return Math.ceil(total);
+}
 
 /* ── EL MERCADO ENTRE JUGADORES ───────────────────────────────────────────────────────
    (15/9) El portero no sabía que existe el mercado, y el mercado mueve BULTOS: un maíz
@@ -132,7 +148,7 @@ function evaluarGuardado(prev, next, elapsedSeg, permiso) {
   const horas = Math.max(30, elapsedSeg) / 3600;   // piso de 30 s: dos guardados pegados no dividen por cero
 
   /* plata: ni con TODA la granja expandida vendiendo sin parar se junta más que esto */
-  const plataMax = CELDAS_MAX * ANCLA * horas * MARGEN + 2000 + num(per.plata);
+  const plataMax = CELDAS_MAX * ANCLA * horas * MARGEN + 2000 + num(per.plata) + ventaStockPermiso(p, next);
   if ((delta.plata || 0) > plataMax) sospechas.push("plata imposible: +" + Math.round(delta.plata) + " en " + fmtHoras(horas) + " (techo " + Math.round(plataMax) + ")");
 
   /* madera y piedra: nodos × su tasa. Las cargas GUARDAN producción, no la multiplican */
@@ -203,14 +219,20 @@ Deno.serve(async (req) => {
     if (JSON.stringify(data).length > 700_000) return json({ error: "snapshot demasiado grande" }, 400);
 
     /* el guardado anterior y cuánto tiempo pasó — según EL SERVIDOR */
-    const { data: prevRow } = await admin.from("farms").select("*").eq("user_id", uid).maybeSingle();
-    const ahora = new Date();
+    const { data: prevRow, error: readError } = await admin.from("farms").select("*").eq("user_id", uid).maybeSingle();
+    if (readError) return json({ error: "No se pudo leer la granja anterior. No se escribió nada." }, 503);
+    const op = body?.op;
+    if (op != null && (typeof op !== "string" || !/^[a-zA-Z0-9._-]{8,100}$/.test(op))) return json({ error: "Identificador de operación inválido" }, 400);
+    if (op && prevRow?.data?._saveOp === op) return json({ ok: true, repetido: true, updated_at: prevRow.updated_at });
+    if (Object.prototype.hasOwnProperty.call(body, "base") && body.base !== (prevRow?.updated_at ?? null)) return json({ error: "Otra sesión guardó una versión diferente", conflicto: true }, 409);
+    const ahora = new Date(Math.max(Date.now(), prevRow?.updated_at ? new Date(prevRow.updated_at).getTime() + 1 : 0));
     const elapsedSeg = prevRow?.updated_at ? (ahora.getTime() - new Date(prevRow.updated_at).getTime()) / 1000 : 0;
 
     /* lo que el MERCADO dice que hizo este jugador (no lo que dice su navegador) */
-    const { data: filas } = await admin.from("market")
+    const { data: filas, error: marketError } = await admin.from("market")
       .select("seller,sold_to,kind,item,qty,price,paid")
       .or("seller.eq." + uid + ",sold_to.eq." + uid).limit(2000);
+    if (marketError) return json({ error: "No se pudo validar el mercado. No se escribió nada." }, 503);
     const mercado = mercadoPermiso(uid, filas ?? [], prevRow?.mercado_ack ?? null, prevRow?.data ?? null, data);
 
     /* las reglas miran, la bitácora recuerda */
@@ -229,14 +251,17 @@ Deno.serve(async (req) => {
        sql/mercado-portero.sql), se guarda igual sin ella — nunca al revés: que el jugador
        pierda la partida por una migración pendiente sería el mismo error de siempre. */
     const fila = { user_id: uid, name, data, updated_at: ahora.toISOString() };
-    let { error: werr } = await admin.from("farms").upsert(
-      { ...fila, mercado_ack: mercado.ack }, { onConflict: "user_id" },
-    );
-    if (werr && /mercado_ack/.test(werr.message || "")) {
-      ({ error: werr } = await admin.from("farms").upsert(fila, { onConflict: "user_id" }));
-    }
-    if (werr) return json({ error: werr.message }, 500);
-    return json({ ok: true, sospechas: sospechas.length });
+    if (op) data._saveOp = op; else delete data._saveOp;
+    const escribir = async (conAck: boolean) => {
+      const valor = conAck ? { ...fila, mercado_ack: mercado.ack } : fila;
+      if (prevRow) return await admin.from("farms").update(valor).eq("user_id", uid).eq("updated_at", prevRow.updated_at).select("updated_at").maybeSingle();
+      return await admin.from("farms").insert(valor).select("updated_at").maybeSingle();
+    };
+    let escrito = await escribir(true);
+    if (escrito.error && /mercado_ack/.test(escrito.error.message || "")) escrito = await escribir(false);
+    if (escrito.error?.code === "23505" || (!escrito.error && !escrito.data)) return json({ error: "Otra sesión guardó antes. No se sobrescribió su granja.", conflicto: true }, 409);
+    if (escrito.error) return json({ error: escrito.error.message }, 500);
+    return json({ ok: true, sospechas: sospechas.length, updated_at: escrito.data.updated_at });
   } catch (e) {
     return json({ error: String((e as Error)?.message || e) }, 500);
   }

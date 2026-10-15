@@ -102,3 +102,13 @@ permisivo, nunca menos — pero el mercado se queda sin esa llave.
 - **Escalón 3 (antes del token):** todo lo que toque valor real ($Golden, retiros,
   mercado) se calcula y valida SIEMPRE del lado del servidor. La granja puede seguir
   laxa; el puente granja→token, jamás.
+
+## Actualización 15/10: guardado v4 y comprador interno
+
+La columna `mercado_ack` y los permisos de `sql/mercado-portero.sql` están aplicados en el proyecto del juego. El modo ya es `rechazo`, no sombra. `guardar` compara `base` con `updated_at` y escribe condicionalmente sobre esa misma versión: dos sesiones no pueden sobreescribirse silenciosamente. Devuelve 409 si perdió la carrera, 503 si no pudo leer la granja o el mercado, y la versión confirmada si guardó. La operación `op` permite reconocer un reintento del último guardado aceptado sin escribir otra vez. El navegador serializa guardados, congela el paquete enviado y conserva su respaldo ante un conflicto.
+
+El permiso para ventas antiguas al sistema se limita al valor de inventario que ya estaba aceptado; no se cree un total declarado por el cliente. No es un registro autoritativo de toda la producción ni garantiza impedir trampas.
+
+El nuevo comprador compartido usa `supabase/functions/mercado/index.ts` y la migración `20261015213503_economia_mercado_interno.sql`. El inventario y el saldo se liquidan en SQL dentro de la misma transacción que la presión, demanda, presupuesto y recibo. Las funciones son SECURITY INVOKER, sólo ejecutables por service_role; la Edge verifica la identidad con Auth y no acepta un UID proporcionado por el navegador. Las tablas privadas tienen RLS sin políticas de cliente deliberadamente: el aviso informativo del asesor sobre ausencia de políticas no debe resolverse abriendo acceso público.
+
+Pruebas: `node tools/test-guardado-atomico.js`, `node tools/test-mercado-compartido.js` y pruebas SQL en `supabase/tests/`, siempre con ROLLBACK. Las SQL se ejecutaron contra el proyecto real sin dejar cambios en partidas. Retiros y canje por USDT desactivados por decisión del usuario. Producción, VIP, otras recompensas y P2P aún requieren una revisión autoritativa adicional antes de cualquier valor real.

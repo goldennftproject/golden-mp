@@ -8,6 +8,120 @@ const SB_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJ
 const SB_REF = (SB_URL.match(/https:\/\/([^.]+)\./) || [])[1] || "sb";
 
 let sb = null, UID = null, saveTimer = null, lastSavedKey = null;
+const SAVE_BASES = new Map(), SAVE_CONFLICTOS = new Set();
+const SAVE_CONFIRMACIONES = new Map();
+let SAVE_EN_CURSO = null, SAVE_OTRA = false;
+let MERCADO_GLOBAL = false, MERCADO_CACHE = null, MERCADO_REFRESCANDO = null, MERCADO_INTENTO = 0, MERCADO_EN_CURSO = null;
+function mercadoPendiente(uid) { try { return !!localStorage.getItem("gf-venta-pendiente-" + SB_REF + "-" + uid); } catch (e) { return true; } }
+function mercadoMarcarPendiente(uid, body) { localStorage.setItem("gf-venta-pendiente-" + SB_REF + "-" + uid, JSON.stringify(body)); }
+function mercadoLimpiarPendiente(uid) { try { localStorage.removeItem("gf-venta-pendiente-" + SB_REF + "-" + uid); } catch (e) {} }
+function mercadoGlobalActivo() { return MERCADO_GLOBAL; }
+function mercadoGlobalRecurso(res) {
+  const c = MERCADO_CACHE;
+  if (!c || c.uid !== UID || Date.now() - c.recibido > 60000) return null;
+  const r = c.recursos[res];
+  return r ? { ...r, at: Date.now(), volumen: r.volumen * Math.exp(-Math.max(0, Date.now() - c.recibido) / 21600000) } : null;
+}
+function mercadoGlobalLimite(res, q) {
+  if (MERCADO_EN_CURSO) return "Confirmando venta…";
+  if (!CARGA_OK || SOLO_LOCAL || !UID || SAVE_CONFLICTOS.has(UID)) return "Requiere conexión y guardado sincronizado";
+  const r = mercadoGlobalRecurso(res);
+  if (!r) return "Consultando comprador; reabrí el mercado si no hay conexión";
+  if (q > 10000) return "Máximo 10.000 por lote";
+  if (q > r.disponible) return "Demanda restante hoy: " + r.disponible;
+  if (totalVenta(res, q) > MERCADO_CACHE.presupuesto) return "Presupuesto restante hoy: " + MERCADO_CACHE.presupuesto + " plata";
+  return "";
+}
+async function mercadoGlobalRefrescar(force) {
+  if (!MERCADO_GLOBAL || !sb || !UID || !CARGA_OK || SOLO_LOCAL || MERCADO_EN_CURSO) return;
+  if (MERCADO_REFRESCANDO) return MERCADO_REFRESCANDO;
+  if (!force && Date.now() - MERCADO_INTENTO < (MERCADO_CACHE ? 30000 : 5000)) return;
+  MERCADO_INTENTO = Date.now(); const uid = UID;
+  MERCADO_REFRESCANDO = (async () => {
+    try {
+      const { data, error } = await sb.functions.invoke("mercado", { body: { accion: "cotizar" } });
+      if (!error && data && data.ok && data.recursos && UID === uid) {
+        MERCADO_CACHE = { ...data, uid, recibido: Date.now() };
+        if (typeof isOpen === "function" && isOpen("ov-market")) refreshMarket();
+      }
+    } catch (e) { console.warn("Comprador no disponible"); }
+  })().finally(() => { MERCADO_REFRESCANDO = null; });
+  return MERCADO_REFRESCANDO;
+}
+/* No se puede gastar ni subir otro snapshot mientras el servidor confirma el lote. */
+function mercadoBloquearPantalla() {
+  const prev = Array.from(document.body.children).map(el => [el, el.inert]);
+  prev.forEach(([el]) => { el.inert = true; });
+  const el = document.createElement("div"); el.setAttribute("role", "status"); el.setAttribute("aria-live", "polite");
+  el.textContent = "Confirmando venta con el comprador…";
+  el.style.cssText = "position:fixed;inset:0;z-index:2147483647;display:grid;place-items:center;background:#161b25dd;color:#fff;font:18px sans-serif;cursor:wait";
+  document.body.appendChild(el);
+  const bloquearTecla = e => { e.preventDefault(); e.stopImmediatePropagation(); };
+  window.addEventListener("keydown", bloquearTecla, true);
+  return () => { window.removeEventListener("keydown", bloquearTecla, true); el.remove(); prev.forEach(([e, inert]) => { e.inert = inert; }); };
+}
+function mercadoSistemaVender(item, cantidad, moneda) {
+  if (MERCADO_EN_CURSO) return MERCADO_EN_CURSO;
+  const limite = mercadoGlobalLimite(item, cantidad);
+  if (limite) { toast(limite); mercadoGlobalRefrescar(true); return Promise.resolve(); }
+  const uid = UID, minimo = totalVenta(item, cantidad), desbloquear = mercadoBloquearPantalla();
+  let confirmado = false;
+  // Inicia el flush ANTES de bloquear la cola de guardados.
+  const confirmaciones = SAVE_CONFIRMACIONES.get(uid) || 0;
+  const flush = saveFarm(true);
+  MERCADO_EN_CURSO = (async () => {
+    await flush;
+    if (UID !== uid || SAVE_CONFLICTOS.has(uid) || !SAVE_BASES.get(uid) || (SAVE_CONFIRMACIONES.get(uid) || 0) <= confirmaciones || (G.res[item] || 0) < cantidad) {
+      toast("No se pudo sincronizar la granja. No se envió la venta."); return;
+    }
+    const body = { accion: "vender", item, cantidad, moneda, minimo, base: SAVE_BASES.get(uid), op: window.crypto.randomUUID() };
+    // Si se cierra la pestaña después del cobro, la copia previa no puede resucitar stock.
+    mercadoMarcarPendiente(uid, body);
+    let data, error, incierto = true;
+    for (let n = 0; n < 2; n++) {
+      try { ({ data, error } = await sb.functions.invoke("mercado", { body })); }
+      catch (e) { error = e; }
+      if (!error && data && data.ok) { incierto = false; break; }
+      const status = error && error.context && error.context.status;
+      if (status >= 400 && status < 500) {
+        incierto = false;
+        try { data = await error.context.json(); } catch (e) {}
+        if (status === 409) SAVE_CONFLICTOS.add(uid);
+        else mercadoLimpiarPendiente(uid);
+        break;
+      }
+    }
+    if (incierto) {
+      // Puede haberse cobrado y perdido la respuesta. Nunca subir encima a ciegas.
+      SAVE_CONFLICTOS.add(uid);
+      if (UID === uid) toast("No se pudo confirmar la venta. Guardado protegido: recargá con conexión para consultar el resultado.");
+      return;
+    }
+    if (UID !== uid) return;
+    if (error || !data || !data.ok) { toast(data && data.error || "La venta no se realizó. Revisá la cotización."); MERCADO_CACHE = null; return; }
+    G.res[item] -= cantidad; G[moneda] = (G[moneda] || 0) + data.cobro;
+    SAVE_BASES.set(uid, data.updated_at);
+    // Una respuesta propia puede ser más nueva que el resto del catálogo: recotizar todo.
+    MERCADO_CACHE = null;
+    G.mercadoVentas = G.mercadoVentas || {};
+    G.mercadoVentas[item] = { at: data.at, volumen: data.volumen, resto: data.resto };
+    copiaGuardar(snapshot()); mercadoLimpiarPendiente(uid); confirmado = true;
+    log("Vendiste " + cantidad + " " + RES_LABEL[item] + " por " + data.cobro + (moneda === "plata" ? " de plata." : " $Golden."));
+    toast("+" + data.cobro + (moneda === "plata" ? " plata" : " $Golden"));
+    if (window.sfx) sfx("coin");
+    if (CROP_DEF[item] && typeof tutoEvent === "function") for (let i = 0; i < cantidad; i++) tutoEvent("sell");
+  })().catch(e => { if (mercadoPendiente(uid)) SAVE_CONFLICTOS.add(uid); console.error("mercado", e); toast("No se pudo completar la venta"); }).finally(() => {
+    MERCADO_EN_CURSO = null; desbloquear();
+    if (UID === uid) {
+      if (typeof syncSlots === "function") syncSlots();
+      if (isOpen("ov-inv")) refreshInv();
+      if (typeof refreshHotbar === "function") refreshHotbar();
+      refreshMarket(); refreshHud(); mercadoGlobalRefrescar(true);
+      if (confirmado) saveFarm(true);
+    }
+  });
+  return MERCADO_EN_CURSO;
+}
 
 /* ================= EL LOGIN SE COLGABA (24/8, dirección) =========================
    El cartel del arranque, ya con nombre: « se colgó en LOGIN y no contestó en 45 s ».
@@ -960,6 +1074,7 @@ var CARGA_OK = false;      // ¿se llegó a leer y aplicar el guardado de la nub
 var SOLO_LOCAL = false;
 var CARGA_FALLO = false;   // ¿falló la lectura? (distinto de "no hay fila")
 async function loadFarm() {
+  MERCADO_GLOBAL = true;
   /* 24/8 — ACÁ ESTABA LA PUERTA POR LA QUE SE PERDÍA LA GRANJA. "Sin nube no hay nada que
      pisar" vale cuando el navegador es virgen. Pero si HAY una sesión guardada y aun así no
      tenemos UID, es exactamente lo contrario: hay una granja y no la pudimos alcanzar. Dar
@@ -1033,8 +1148,9 @@ async function loadFarm() {
   // hasta 3 intentos con espera creciente: la red del jugador puede parpadear justo al entrar
   for (let intento = 0; intento < 3; intento++) {
     try {
-      const { data, error } = await sb.from("farms").select("data,name").eq("user_id", UID).maybeSingle();
+      const { data, error } = await sb.from("farms").select("data,name,updated_at").eq("user_id", UID).maybeSingle();
       if (error) { console.warn("loadFarm:", error.message); await sleepMs(1200 * (intento + 1)); continue; }
+      SAVE_BASES.set(UID, data && data.updated_at || null); SAVE_CONFLICTOS.delete(UID);
       if (data) {
         if (data.data) hydrate(data.data);
         /* 25/8 — LA RED, ACÁ. Si la nube trajo una granja con MENOS progreso que la copia que
@@ -1042,13 +1158,16 @@ async function loadFarm() {
            lado y escribir encima sería consumar la pérdida. Se restaura la copia y se avisa: es
            la diferencia entre « perdí tres horas » y « el juego las tenía guardadas ». */
         const c = copiaLeer();
-        if (copiaEsMejor(c)) {
+        const pendiente = mercadoPendiente(UID);
+        if (pendiente && c && c.uid === UID) copiaAparcar(c);
+        if (!pendiente && copiaEsMejor(c)) {
           sesionLog("la nube traía MENOS que la copia local: se restaura", "nube nv" + (G.level || 1) + " · copia nv" + c.nivel);
           hydrate(c.data); copiaNick(c);
           if (typeof log === "function") log("💾 La nube tenía una versión más vieja de tu granja. Se recuperó la que este navegador tenía guardada (nivel " + c.nivel + ").", "gold");
           if (typeof toast === "function") toast("Granja recuperada del respaldo local");
         }
         CARGA_OK = true;   // recién ACÁ, con el hydrate terminado, se puede volver a escribir
+        if (pendiente) { copiaGuardar(snapshot()); mercadoLimpiarPendiente(UID); }
         // El guardado trae el nombre CON el título ("[Veterano] Juan"). Si lo metíamos tal cual
         // en NICK, el guardado siguiente escribía "[Veterano] [Veterano] Juan" y crecía un
         // prefijo por sesión en el ranking, el chat y el mercado (10/8).
@@ -1198,7 +1317,24 @@ function avisarSinNube() {
   if (typeof toast === "function") toast(m.corto);
 }
 
-async function saveFarm(force) {
+function saveFarm(force) {
+  if (MERCADO_EN_CURSO) {
+    if (CARGA_OK || SOLO_LOCAL) copiaGuardar(snapshot());
+    return MERCADO_EN_CURSO.then(() => saveFarm(force));
+  }
+  if (SAVE_CONFLICTOS.has(UID)) { if (CARGA_OK || SOLO_LOCAL) copiaGuardar(snapshot()); return Promise.resolve(); }
+  if (SAVE_EN_CURSO) {
+    SAVE_OTRA = true;
+    if (CARGA_OK || SOLO_LOCAL) copiaGuardar(snapshot());
+    return SAVE_EN_CURSO;
+  }
+  SAVE_EN_CURSO = Promise.resolve().then(async () => {
+    do { SAVE_OTRA = false; await saveFarmReal(force); force = true; }
+    while (SAVE_OTRA && !SAVE_CONFLICTOS.has(UID));
+  }).finally(() => { SAVE_EN_CURSO = null; });
+  return SAVE_EN_CURSO;
+}
+async function saveFarmReal(force) {
   /* 25/8 — EL ORDEN DE ESTAS TRES LÍNEAS ERA EL BUG, Y ERA DE LOS CAROS.
      Antes, la primera línea de esta función era `if (!sb || !UID) { avisarSinNube(); return; }`.
      O sea: cuando NO había nube, se salía inmediatamente… sin pasar por copiaGuardar, que está
@@ -1224,6 +1360,9 @@ async function saveFarm(force) {
      el 24/8. Se subirá en la próxima carga, cuando se pueda LEER primero. */
   if (SOLO_LOCAL) return;
   if (!sb || !UID) { avisarSinNube(); return; }
+  const saveUid = UID;
+  const op = window.crypto && window.crypto.randomUUID ? window.crypto.randomUUID() : Date.now().toString(36) + "-" + Math.random().toString(36).slice(2);
+  const cuerpo = { name: (typeof nombreLucido === "function" ? nombreLucido() : (window.NICK || "Granjero")), data: JSON.parse(JSON.stringify(snapshot())), op, ...(SAVE_BASES.has(saveUid) ? { base: SAVE_BASES.get(saveUid) } : {}) };
   if (typeof showSaving === "function") showSaving();
   // hasta 2 intentos inmediatos; si fallan, lastSavedKey no se actualiza y el autosave reintenta al próximo ciclo
   for (let intento = 0; intento < 2; intento++) {
@@ -1233,11 +1372,10 @@ async function saveFarm(force) {
          deployada, cae al camino viejo (upsert directo) para que nadie se quede sin guardar
          durante la transición; cuando sql/portero-guardado.sql PARTE 2 cierre ese camino, el
          único que queda es el portero. */
-      const cuerpo = { name: (typeof nombreLucido === "function" ? nombreLucido() : (window.NICK || "Granjero")), data: snapshot() };
       let paso = false;
       try {
         const { data: r, error: fe } = await sb.functions.invoke("guardar", { body: cuerpo });
-        if (!fe && r && r.ok) paso = true;
+        if (!fe && r && r.ok) { paso = true; if (r.updated_at) { SAVE_BASES.set(saveUid, r.updated_at); SAVE_CONFIRMACIONES.set(saveUid, (SAVE_CONFIRMACIONES.get(saveUid) || 0) + 1); } }
         else if (fe) {
           /* 14/9 — EL PORTERO EN MODO RECHAZO. Un 422 no es « portero caído »: es el portero
              diciendo que NO. Hasta hoy caía al camino viejo (que la PARTE 2 ya cerró: 403) y el
@@ -1245,6 +1383,17 @@ async function saveFarm(force) {
              lejos de la aceptada. Ahora: se vuelve a la última granja que el portero aceptó, se
              dice por qué, y el guardado deja de intentar hasta que algo cambie de verdad. */
           const st = fe.context && fe.context.status;
+          if (st === 409) {
+            SAVE_CONFLICTOS.add(saveUid);
+            try { mercadoMarcarPendiente(saveUid, { tipo: "conflicto-guardado" }); } catch (e) {}
+            if (UID === saveUid) {
+              copiaGuardar(snapshot());
+              if (typeof showSaveError === "function") showSaveError();
+              log("Otra sesión guardó una versión diferente. No se sobrescribió ninguna granja. Tu progreso actual queda en el respaldo local; cerrá la otra sesión antes de volver a cargar.", "warn");
+              toast("Conflicto de guardado: progreso conservado en este navegador");
+            }
+            return;
+          }
           if (st === 422) {
             let det = null; try { det = await fe.context.json(); } catch (e) {}
             await porteroRechazo(det);
@@ -1254,9 +1403,10 @@ async function saveFarm(force) {
         }
       } catch (e) { console.warn("portero no disponible aún (va por el camino viejo):", e && e.message); }
       if (!paso) {
-        const { error } = await sb.from("farms").upsert({ user_id: UID, name: cuerpo.name, data: cuerpo.data, updated_at: new Date().toISOString() }, { onConflict: "user_id" });
+        const { error } = await sb.from("farms").upsert({ user_id: saveUid, name: cuerpo.name, data: cuerpo.data, updated_at: new Date().toISOString() }, { onConflict: "user_id" });
         if (error) throw error;
       }
+      if (UID !== saveUid) return;
       lastSavedKey = key;   // recién ahora quedó persistido
       if (typeof showSaved === "function") showSaved();
       return;
@@ -1276,8 +1426,9 @@ async function porteroRechazo(det) {
   console.warn("portero: guardado RECHAZADO", sosp);
   sesionLog("guardado rechazado por el portero", lista || "(sin detalle)");
   try {
-    const { data } = await sb.from("farms").select("data,name").eq("user_id", UID).maybeSingle();
+    const { data } = await sb.from("farms").select("data,name,updated_at").eq("user_id", UID).maybeSingle();
     if (data && data.data) {
+      SAVE_BASES.set(UID, data.updated_at || null);
       hydrate(data.data);
       copiaGuardar(snapshot());                 // la copia local también vuelve a la aceptada
       lastSavedKey = snapKey();                 // nada pendiente: lo de más ya no está
@@ -1540,6 +1691,7 @@ async function resetearCuenta() {
       // 2a. el camino literal: borrar la fila
       let r = await sb.functions.invoke("guardar", { body: { borrar: true } });
       let borrado = !r.error && r.data && r.data.ok && r.data.borrado;
+      if (borrado) { SAVE_BASES.set(UID, null); SAVE_CONFLICTOS.delete(UID); }
       if (!borrado) {
         const st = r.error && r.error.context && r.error.context.status;
         if (st !== 400) {   // 400 = portero viejo que no conoce `borrar`; cualquier otra cosa es un NO de verdad

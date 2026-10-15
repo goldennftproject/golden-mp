@@ -7513,6 +7513,7 @@ function bagFull(what) { toast("Bolsa llena — no podés " + what); log("No ten
      · log  — mensaje largo para el registro, opcional, cuando el toast se queda corto.           */
 function sinKitTxt(m) { return !G.kitReclamado ? "Tu kit de bienvenida está en el baúl, junto al granero" : m; }
 function puedeAccion(tipo, o, rotulo) {
+  if (typeof MERCADO_EN_CURSO !== "undefined" && MERCADO_EN_CURSO) return { ok: false, toast: "Esperá la confirmación de la venta" };
   o = o || {};
   produccionVipTick();
   if (["chop", "mine", "plant", "harvest"].includes(tipo) && produccionPausada(o)) return { ok: false, toast: "Producción pausada. Reactivala en el Cobertizo." };
@@ -8051,7 +8052,7 @@ ORE_DEF.piedra.price = PRICE.piedra;
 
 // 1/8: los CULTIVOS venden según CROP_DEF.price — PRICE quedó solo para lo demás.
 //      Antes el mercado usaba una copia vieja acá y los cambios del panel no se veían (bug reportado por el diseñador).
-function priceOf(res) { return CROP_DEF[res] ? CROP_DEF[res].price : (PRICE[res] || 0); }
+function priceOf(res) { return CROP_DEF[res] ? CROP_DEF[res].price : (PRICE[res] != null ? PRICE[res] : matValor(res)); }
 // Economía por especialidades: también se venden recursos de tala/minería y sus procesados.
 // Carne, cebos y otros objetos de combate conservan sus restricciones.
 const SELLABLE = ["papa","ciruela","cereza","remolacha","zanahoria","cebolla","calabacin","repollo","calabaza","brocoli","girasol","trigo","maiz",
@@ -8091,7 +8092,8 @@ function precioVentaBase(res) {
   if (!c) return priceOf(res) * ventaMult();
   return c.seedCost + (c.price - c.seedCost) * ventaMult();
 }
-/* Mercado del juego real. Presión individual persistida (no demanda global): al vender mucho
+/* Mercado del juego real. Con cuenta conectada usa presión compartida del servidor;
+   el cálculo local se conserva para pruebas y partidas antiguas sin comprador conectado. Al vender mucho
    del mismo cultivo cae su margen, no el de los otros. Recuperación gradual en seis horas.
    La semilla queda cubierta y se conserva al menos un 20% del margen. Las primeras tres
    unidades conservan el precio base para no alterar la venta guiada del tutorial.
@@ -8100,13 +8102,14 @@ function precioVentaBase(res) {
 function cotizarVenta(res, q, t) {
   if (!Number.isSafeInteger(q) || q < 0 || q > 1000000000 || !esVendible(res)) return { total: 0, resto: 0, volumen: 0, at: 0 };
   t = Number.isFinite(t) ? t : nowMs();
-  const prev = (G.mercadoVentas || {})[res] || {};
+  const global = typeof mercadoGlobalRecurso === "function" ? mercadoGlobalRecurso(res) : null;
+  const prev = global || (G.mercadoVentas || {})[res] || {};
   const at = Math.max(t, Number.isFinite(prev.at) ? prev.at : t);
   const volumen = Math.max(0, Number(prev.volumen) || 0) * Math.exp(-Math.max(0, at - (prev.at || at)) / 21600000);
   const resto = Math.max(0, Math.min(0.999999999, Number(prev.resto) || 0));
   const base = precioVentaBase(res), c = CROP_DEF[res];
   const piso = c ? c.seedCost + Math.max(0, base - c.seedCost) * 0.2 : base * 0.5;
-  const demanda = 100, libres = Math.min(q, Math.max(0, Math.ceil(3 - volumen))), pendientes = q - libres;
+  const demanda = global ? global.demanda : 100, libres = Math.min(q, Math.max(0, Math.ceil(3 - volumen))), pendientes = q - libres;
   const prima = libres + (pendientes ? Math.exp(-Math.max(0, volumen + libres - 3) / demanda) * (-Math.expm1(-pendientes / demanda)) / (-Math.expm1(-1 / demanda)) : 0);
   const exacto = q * piso + (base - piso) * prima + resto;
   const total = q ? Math.max(0, Math.floor(exacto + 1e-9)) : 0;
@@ -8118,7 +8121,8 @@ function registrarVenta(res, q, detalle) {
 }
 function precioVenta(res) {
   const d = cotizarVenta(res, 1);
-  return d.total + d.resto - (((G.mercadoVentas || {})[res] || {}).resto || 0);
+  const global = typeof mercadoGlobalRecurso === "function" ? mercadoGlobalRecurso(res) : null;
+  return d.total + d.resto - ((global || (G.mercadoVentas || {})[res] || {}).resto || 0);
 }
 function totalVenta(res, q) { return cotizarVenta(res, q).total; }
 /* $Golden se acredita entero. Esta cuenta compartida evita que el Mercado anuncie una fracción
@@ -8144,9 +8148,11 @@ function sellItem(res) {
   q = Math.max(0, Math.min(q, G.res[res]));
   if (!SELLABLE.includes(res) || !Number.isSafeInteger(q)) { toast("Ese recurso no se vende en este mercado"); return; }
   if (q <= 0) { toast("Poné una cantidad"); return; }
+  if (typeof mercadoGlobalActivo === "function" && mercadoGlobalActivo()) return mercadoSistemaVender(res, q, marketCur);
   // candado anti-exploit (12/8): durante un "juntá X" no se puede VENDER ese recurso por
   // debajo de la meta — si no, vender para quedar en 9/10 mantenía el boost vivo infinito
   const cotizacion = cotizarVenta(res, q);
+  if (cotizacion.total <= 0) { toast("Este lote no tiene una cotización válida. No se descontó ningún recurso."); return; }
   if (marketCur === "plata") { const t=cotizacion.total; G.plata+=t; G.res[res]-=q; log(`Vendiste ${q} ${RES_LABEL[res]} por ${t} de plata.`); toast("+"+t+" plata"); }
   else { const g = Math.floor(cotizacion.total / GOLDEN_EN_PLATA); if (g<1){ toast("Para 1 $Golden necesitás " + fmt(ventaMinGolden(res)) + " " + RES_LABEL[res]); return; } G.res[res]-=q; G.golden+=g; log(`Vendiste ${q} ${RES_LABEL[res]} por ${g} $Golden.`,"gold"); toast("+"+g+" $Golden"); }
   registrarVenta(res, q, cotizacion);

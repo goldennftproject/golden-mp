@@ -4697,6 +4697,7 @@ function marketReponerVentaFocoPc(lista) {
   try { boton.focus({ preventScroll: true }); } catch (e) { boton.focus(); }
 }
 function refreshMarket() {
+  if (typeof mercadoGlobalRefrescar === "function") mercadoGlobalRefrescar();
   /* El último gesto del arranque es vender tres papas. $Golden se acredita de a unidades
      enteras (500 de plata): dejarlo elegible acá daba una venta que parecía válida pero no
      avanzaba el objetivo. El tutorial guía sin alterar el valor de ninguna moneda. */
@@ -4718,6 +4719,8 @@ function refreshMarket() {
   };
   const estadoVender = (res, owned, q) => {
     if (owned <= 0 || q <= 0) return { disabled: true, label: "Sin stock", title: "No tenés " + RES_LABEL[res] + " para vender" };
+    const limite = typeof mercadoGlobalActivo === "function" && mercadoGlobalActivo() ? mercadoGlobalLimite(res, q) : "";
+    if (limite) return { disabled: true, label: "No disponible", title: limite };
     const detalle = cur === "golden" ? detalleGolden(res, q) : null;
     if (cur === "golden" && detalle.golden < 1) {
       const min = minGolden(res), faltan = Math.max(0, min - owned);
@@ -4728,25 +4731,31 @@ function refreshMarket() {
       title: detalle.resto ? "Quedan " + fmt(detalle.resto) + " de valor sin convertir; no se guardan fracciones." : "" };
     return { disabled: false, label: "Vender", title: "" };
   };
+  const disponibilidad = res => {
+    if (!(typeof mercadoGlobalActivo === "function" && mercadoGlobalActivo())) return "";
+    const r = mercadoGlobalRecurso(res);
+    return r ? " · demanda restante hoy: " + fmt(r.disponible) : " · pendiente de cotización en línea";
+  };
   $("mkt-list").innerHTML = SELLABLE.map(res => {
-    const owned = G.res[res] || 0, q = owned > 0 ? owned : 0, estado = estadoVender(res, owned, q);
+    const owned = G.res[res] || 0, q = Math.min(10000, Math.max(0, owned)), estado = estadoVender(res, owned, q);
     return `<div class="mkt-row"><span class="mimg">${itemIcon({ sprite: resSprite(res), emoji: RES_EMOJI[res] })}</span><div class="minfo"><div class="mnm">${RES_LABEL[res]}</div><div class="mds" id="mv-${res}">Tenés ${fmt(owned)} · ${textoVenta(res, owned, q)}</div></div><input id="mq-${res}" type="number" min="${owned > 0 ? 1 : 0}" max="${owned}" value="${q}" ${owned > 0 ? "" : "disabled"}><button class="vbtn" id="vb-${res}" ${estado.disabled ? "disabled" : ""} title="${estado.title}">${estado.label}</button></div>`;
   }).join("");
   SELLABLE.forEach(res => {
     const btn = $("vb-" + res), inp = $("mq-" + res), meta = $("mv-" + res), owned = G.res[res] || 0;
     const sync = () => {
       if (!btn) return;
-      const q = Math.max(0, Math.min(owned, Math.floor(+(inp && inp.value) || 0)));
+      const q = Math.max(0, Math.min(10000, owned, Math.floor(+(inp && inp.value) || 0)));
       const estado = estadoVender(res, owned, q);
       btn.disabled = estado.disabled; btn.textContent = estado.label; btn.title = estado.title;
-      if (meta) meta.textContent = "Tenés " + fmt(owned) + " · " + textoVenta(res, owned, q);
+      if (meta) meta.textContent = "Tenés " + fmt(owned) + " · " + textoVenta(res, owned, q) + disponibilidad(res);
     };
-    if (inp) { inp.oninput = sync; inp.onchange = sync; }
+    if (inp) { inp.max = Math.min(10000, owned); inp.oninput = sync; inp.onchange = () => { inp.value = Math.max(0, Math.min(10000, owned, Math.floor(+inp.value || 0))); sync(); }; }
     if (btn) btn.onclick = (ev) => { marketGuardarVentaFocoPc(ev, res); sellItem(res); };
+    sync();
   });
   const golden = document.querySelector('.curbtn[data-cur="golden"]'), nota = $("mkt-cur-note");
   if (golden) { golden.disabled = ventaTutorial; golden.title = ventaTutorial ? "Completá este encargo cobrando en Plata" : "Cobrá en $Golden a partir de 1 $Golden completo"; }
-  if (nota) { nota.textContent = ventaTutorial ? "Tu primer encargo se cobra en Plata." : "Precio dinámico de tu granja: vender mucho del mismo recurso reduce su cotización; se recupera gradualmente. El lote incluye el redondeo pendiente. No es demanda global ni canje por USDT."; nota.classList.add("show"); }
+  if (nota) { nota.textContent = ventaTutorial ? "Tu primer encargo se cobra en Plata." : (typeof mercadoGlobalActivo === "function" && mercadoGlobalActivo() ? "Comprador compartido: las ventas de todos reducen el precio de ese recurso; se recupera gradualmente. Demanda y presupuesto diarios limitados. Sólo moneda del juego, sin retiros ni canje por USDT." : "Precio dinámico de tu granja; se recupera gradualmente. Sin canje por USDT."); nota.classList.add("show"); }
   if (typeof tutoHighlight === "function") tutoHighlight();
   document.querySelectorAll(".curbtn").forEach(b => b.classList.toggle("active", b.dataset.cur === cur));
   marketReponerVentaFocoPc($("mkt-list"));
