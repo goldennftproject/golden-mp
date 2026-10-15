@@ -39,7 +39,7 @@ async function mercadoGlobalRefrescar(force) {
   MERCADO_INTENTO = Date.now(); const uid = UID;
   MERCADO_REFRESCANDO = (async () => {
     try {
-      const { data, error } = await sb.functions.invoke("mercado", { body: { accion: "cotizar" } });
+      const { data, error } = await conTope(sb.functions.invoke("mercado", { body: { accion: "cotizar" } }), 10000, "cotización");
       if (!error && data && data.ok && data.recursos && UID === uid) {
         MERCADO_CACHE = { ...data, uid, recibido: Date.now() };
         if (typeof isOpen === "function" && isOpen("ov-market")) refreshMarket();
@@ -70,7 +70,7 @@ function mercadoSistemaVender(item, cantidad, moneda) {
   const confirmaciones = SAVE_CONFIRMACIONES.get(uid) || 0;
   const flush = saveFarm(true);
   MERCADO_EN_CURSO = (async () => {
-    await flush;
+    await conTope(flush, 15000, "guardado previo a venta");
     if (UID !== uid || SAVE_CONFLICTOS.has(uid) || !SAVE_BASES.get(uid) || (SAVE_CONFIRMACIONES.get(uid) || 0) <= confirmaciones || (G.res[item] || 0) < cantidad) {
       toast("No se pudo sincronizar la granja. No se envió la venta."); return;
     }
@@ -79,7 +79,7 @@ function mercadoSistemaVender(item, cantidad, moneda) {
     mercadoMarcarPendiente(uid, body);
     let data, error, incierto = true;
     for (let n = 0; n < 2; n++) {
-      try { ({ data, error } = await sb.functions.invoke("mercado", { body })); }
+      try { ({ data, error } = await conTope(sb.functions.invoke("mercado", { body }), 15000, "confirmación de venta")); }
       catch (e) { error = e; }
       if (!error && data && data.ok) { incierto = false; break; }
       const status = error && error.context && error.context.status;
