@@ -1698,7 +1698,7 @@ function addXp(sk, amt) {
     if (window.celebrate) celebrate({ title: "¡NIVEL " + after + "!" + (after - before > 1 ? " (+" + (after - before) + ")" : ""), sub: SKILL_NAME[sk] });
     else { toast("" + SKILL_NAME[sk] + " nivel " + after); if (window.sfx) sfx("level"); }
   }
-  if (sk === "farming" || sk === "mining" || sk === "fishing") recalcFarmLevel();   // la XP de granja y las tareas pueden habilitar el nivel
+  if (sk === "farming" || sk === "tala" || sk === "mining" || sk === "fishing") recalcFarmLevel();   // XP productiva y tareas: incluye tala en el mismo evento
   if (after > before && typeof oficiosSync === "function") oficiosSync(false);   // 19/8: el oficio abre planos y mejoras
   if (typeof passEvent === "function") passEvent(sk);   // misiones del Pase de Batalla
   if (isOpen("ov-skills")) refreshSkills();
@@ -1711,9 +1711,9 @@ function addCookXp(amt) {
   if (typeof passEvent === "function") passEvent("cooking");   // misión "cociná" del Pase
   if (after > before) {
     const rec = RECIPE_ORDER.filter(id => RECIPE_DEF[id].lvl === after && !RECIPE_DEF[id].desc).map(id => RECIPE_DEF[id].label);
-    log("Cocina subió a nivel " + after + (rec.length ? ". Nueva receta: " + rec.join(" · ") : "") + (after === 8 ? ". ¡Ya podés vender platos por $Golden!" : "") + ".", "good");
+    log("Cocina subió a nivel " + after + (rec.length ? ". Nueva receta: " + rec.join(" · ") : "") + (after === 8 && DISH_VENTA_LIBRE ? ". ¡Ya podés vender platos por $Golden!" : "") + ".", "good");
     if (window.celebrate) celebrate({ title: "¡NIVEL " + after + "!", sub: "Cocina" + (after >= 10 ? " maestra" : ""), big: after >= 10,
-      reward: (rec.length ? "Nueva receta: " + rec.join(" · ") : "") + (after === 8 ? (rec.length ? " · " : "") + "Venta en $Golden" : "") });
+      reward: (rec.length ? "Nueva receta: " + rec.join(" · ") : "") + (after === 8 && DISH_VENTA_LIBRE ? (rec.length ? " · " : "") + "Venta en $Golden" : "") });
     else { toast("Cocina nivel " + after); if (window.sfx) sfx("level"); }
     if (window.onCookLevelUp) window.onCookLevelUp(after);   // celebración (Fase 5)
     if (typeof oficiosSync === "function") oficiosSync(false);   // 19/8: la Cocina abre su nivel 2
@@ -3567,16 +3567,17 @@ function brujula() {
     if (typeof expansionSiguiente === "function") {
       const e = expansionSiguiente();
       if (e && (G.level || 1) >= e.nivel) {
-        /* la expansión se paga con MATERIALES (madera y piedra), no con plata — la primera versión
-           de esto decía « juntá plata » y el test lo cazó antes que un jugador */
+        // El contrato productivo cobra plata de la cartera y materiales de la bolsa.
         const costo = e.costo || {}, res = G.res || {};
-        const falta = Object.keys(costo).filter(k => (res[k] || 0) < costo[k])
-          .map(k => (costo[k] - (res[k] || 0)) + " de " + ((typeof RES_LABEL !== "undefined" && RES_LABEL[k]) || k).toLowerCase());
+        const tengo = k => k === "plata" ? (G.plata || 0) : (res[k] || 0);
+        const faltantes = Object.keys(costo).filter(k => tengo(k) < costo[k]);
+        const falta = faltantes.map(k => (costo[k] - tengo(k)) + " de " + ((typeof RES_LABEL !== "undefined" && RES_LABEL[k]) || k).toLowerCase());
+        const objetivo = faltantes.includes("madera") ? "tree" : faltantes.includes("piedra") ? "rock" : "market";
         return B({ txt: falta.length
           ? "Juntá " + falta.join(" y ") + " para la expansión " + e.n
           : "Podés comprar la expansión " + e.n + " (Mercado → Adornos)",
-          target: falta.length ? (falta[0].indexOf("madera") >= 0 ? "tree" : "rock") : "market",
-          panel: falta.length ? null : "ov-market" });
+          target: objetivo,
+          panel: objetivo === "market" ? "ov-market" : null });
       }
     }
     /* 4 · la meta de la semana */
@@ -3588,7 +3589,7 @@ function brujula() {
     const sig = (G.level || 1) + 1;
     if (typeof FARM_NIVEL_MAX !== "undefined" && sig <= FARM_NIVEL_MAX && typeof farmUnlockTxt === "function") {
       const trae = String(farmUnlockTxt(sig) || "").split(" + ")[0];   // lo primero es lo que importa; el bono va siempre
-      return B({ txt: "Granja " + sig + " trae " + trae + " — cosechá, picá y pescá para subir" });
+      return B({ txt: "Granja " + sig + " trae " + trae + " — cosechá, talá y picá para subir" });
     }
   } catch (e) { console.warn("brújula:", e && e.message); }
   return null;
@@ -3689,7 +3690,7 @@ const PASS_FREE = [   // índice = nivel-1 (tabla del doc, plata→insumos 14/8)
   { res:["barra_piedra",3] }, { res:["madera",30] }, { seed:["repollo",5] }, { dish:["guiso_campestre",5] }, { ficha:1 },
   { res:["piedra",30] }, { seed:["calabacin",5] }, { res:["flecha",40] }, { dish:["estofado",1] }, { pick:"gold" },
   { res:["carne",10] }, { res:["madera",40] }, { seed:["brocoli",5] }, { res:["bronce",8] }, { ficha:1 },
-  { res:["piedra",40] }, { seed:["maiz",5] }, { res:["esencia_runica",2] }, { dish:["banquete",1] }, { ficha:1, cos:"Título de Cosecha" },
+  { res:["piedra",40] }, { seed:["trigo",5] }, { res:["esencia_runica",2] }, { dish:["banquete",1] }, { ficha:1, cos:"Título de Cosecha" },
 ];
 // 14/8 (web3): el VIP paga COSMÉTICO + conveniencia (insumos ricos y algo de $Golden —
 // devolución parcial de lo quemado al comprarlo), jamás plata ni poder: con economía
@@ -8819,12 +8820,12 @@ function canaDesgastar(id, n) {
     toast("Se rompió la " + d.label + " — reparala en Aparejos");
   }
 }
-/* lo que vale la caña, en plata: sus materiales a precio de venta más la cola. Es la base del
-   10 % de la reparación. */
+/* Coste material base, no cotización de reventa: reparar no debe encarecerse al subir
+   de nivel o comer un buff, ni abaratarse al saturar el mercado de madera. */
 function canaValorPlata(id) {
   const d = CANA_V4_DEF[id]; if (!d || !d.cost) return 0;
   let v = d.colaPlata || 0;
-  for (const k in d.cost) v += d.cost[k] * ((typeof precioVenta === "function") ? precioVenta(k) : 0);
+  for (const k in d.cost) v += d.cost[k] * matValor(k);
   return v;
 }
 function canaReparaPlata(id) {

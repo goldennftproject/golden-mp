@@ -59,6 +59,16 @@ El arnés ejecuta código real con DOM/Phaser simulados; no sustituye la prueba 
 
 ## Pendiente, no activado
 
+### Segunda pasada de auditoría (15/10/2026)
+
+La revisión amplia ejecutó 239 pruebas de PC: 214 pasaron inicialmente y 25 quedaron señaladas (incluye pruebas antiguas del modelo de nodos gratuitos y cortes del ejecutor a los 20 segundos; no equivale a 25 errores del juego). No se ocultan ni eliminan esos resultados. La prueba de login tiene esperas deliberadas y debe ejecutarse con un límite mayor.
+
+Correcciones reproducidas: Tala ahora recalcula el nivel de granja al otorgar XP; la brújula consulta `G.plata` para los costes monetarios y dirige al material faltante o al mercado; las instrucciones usan los oficios realmente productivos. La reparación de cañas usa el valor material base y no la cotización dinámica, el nivel, prestigio o buffs del vendedor. Se conserva el 10% y el desgaste proporcional. Se eliminan anuncios de venta de platos deshabilitada y el aura muestra el nivel escalado real.
+
+Pase gratuito, escalón 27: se cambia la semilla de maíz (720 frente a un objetivo de 400) por trigo (360). Las cantidades siguen derivándose; no se retiran premios reclamados ni se cambian los 60 Golden totales del carril VIP. La prueba del pase contrasta ahora la proporción de capacidad real, no la expansión antigua de tres nodos.
+
+Nuevas pruebas: `tools/test-progreso-productivo-guia.js` comprueba 48 transiciones de especialización hasta nivel 25 y sus recargas, además de guía y anuncios de Cocina; `tools/test-reparacion-cana-estable.js` comprueba cuatro cañas, proporcionalidad y ausencia de multiplicadores de venta. Son pruebas de elegibilidad con estado preparado, no simulación temporal completa ni prueba visual. La apertura automatizada del navegador falló antes de poder observar el juego: queda pendiente la partida visual autenticada. Continúan pendientes la conciliación de la batería histórica, la simulación temporal integral y llevar las operaciones de cliente al servidor.
+
 Decisión del usuario: terminar economía interna; retiros desactivados. No hay cobro externo, token, promesa de rendimiento o retiro real en esta entrega. No se usan saldos Golden existentes como obligación pagadera en USDT. El comprador compartido no representa una reserva de dinero real.
 
 Esto no convierte todo el juego en una economía autoritativa: producción, VIP y otras recompensas todavía parten de snapshots del cliente y controles heurísticos del portero; el mercado P2P conserva su flujo previo. No debe habilitarse dinero real sobre estas garantías. Supabase presenta avisos preexistentes sobre vistas de ranking con permisos del propietario, cuentas anónimas heredadas y protección de contraseñas filtradas desactivada; no se alteraron los rankings ni se expulsaron cuentas para resolverlos a ciegas. Referencias: [vistas y RLS](https://supabase.com/docs/guides/database/database-linter?lint=0010_security_definer_view), [protección de contraseñas](https://supabase.com/docs/guides/auth/password-security#password-strength-and-leaked-password-protection).

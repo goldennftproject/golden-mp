@@ -125,10 +125,11 @@ console.log("\nB4 · DESPUÉS, LO QUE EL NIVEL YA ABRIÓ\n");
   const e = g("expansionSiguiente()");
   G.level = e.nivel; G.res = { madera: 0, piedra: 0 };
   let b = g("brujula()");
-  ok("expansión abierta por nivel y sin materiales: dice cuánto falta (madera y piedra, no plata)",
-    /Juntá \d+ de madera y \d+ de piedra para la expansión 1/.test(b.txt), b.txt);
+  ok("expansión abierta por nivel: informa plata y ambos materiales",
+    /de plata.*de madera.*de piedra para la expansión 1/.test(b.txt), b.txt);
   ok("y manda a talar (lo primero que falta)", b.target === "tree");
   G.res = { madera: e.costo.madera, piedra: e.costo.piedra };
+  G.plata = e.costo.plata;
   b = g("brujula()");
   ok("con la plata, dice que se puede comprar", /Podés comprar la expansión 1/.test(b.txt), b.txt);
   ok("y apunta al Mercado", b.target === "market" && b.panel === "ov-market");
@@ -145,7 +146,7 @@ console.log("\nB5 · Y SI NO HAY NADA PENDIENTE, EL NIVEL SIGUIENTE Y LO QUE TRA
   ok("nombra el nivel siguiente", /Granja 2 trae/.test(b.txt), b.txt);
   ok("y lo que trae sale de farmUnlockTxt, no está escrito a mano",
     b.txt.indexOf(String(g("farmUnlockTxt(2)")).split(" + ")[0]) >= 0);
-  ok("y dice cómo subir (cosechar, picar, pescar)", /cosechá, picá y pescá/.test(b.txt));
+  ok("y dice los tres oficios productivos", /cosechá, talá y picá/.test(b.txt));
   G.level = g("FARM_NIVEL_MAX");
   ok("en el techo de granja no promete un nivel que no existe", !/Granja \d+ trae/.test((g("brujula()") || {}).txt || ""));
   vm.runInContext("metaSemana = _metaReal;", ctx);
@@ -154,7 +155,7 @@ console.log("\nB5 · Y SI NO HAY NADA PENDIENTE, EL NIVEL SIGUIENTE Y LO QUE TRA
 console.log("\nC · LA BARRA, LAS FLECHAS Y EL RESALTADO LEEN LA GUÍA, NO SOLO EL TUTORIAL\n");
 {
   ok("tutoRefresh usa guiaActiva()", /function tutoRefresh\(\) \{[\s\S]{0,600}?guiaActiva/.test(UI));
-  ok("y con brújula no intenta pintar el contador X/N", /\(sub \|\| st\.brujula\) \? ""/.test(UI));
+  ok("y con brújula no intenta pintar el contador X/N", /\(sub && !conservaConteo \|\| st\.brujula\) \? ""/.test(UI));
   ok("tutoHighlight (la flecha de los menús) también", /function tutoHighlight\(\) \{[\s\S]{0,400}?guiaActiva/.test(UI));
   ok("tutoSync mete el texto de la brújula en la firma (si no, la barra no se redibuja al cobrar algo)",
     /st && st\.brujula \? st\.txt : ""/.test(UI));

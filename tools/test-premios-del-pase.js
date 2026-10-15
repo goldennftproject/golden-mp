@@ -54,7 +54,8 @@ console.log("\nLA ESCALERA SUBE: CADA ESCALÓN VALE MÁS QUE EL ANTERIOR");
   /* 14/9 — con el techo en 25 la vara sube ×2.7 en vez de ×3,4: el pase reparte los mismos 30
      escalones sobre la mitad de niveles de granja, así que el primero arranca más arriba. Sigue
      siendo una escalera que sube casi el triple de punta a punta. */
-  ok("y sube de verdad de punta a punta", metas[NIV - 1] / metas[0] > 2.5,
+  const proporcionCupos = ctx.paseCeldas(NIV) / ctx.paseCeldas(1);
+  ok("y sube en proporción a la capacidad productiva", Math.abs(metas[NIV - 1] / metas[0] - proporcionCupos) < 0.01,
     "×" + (metas[NIV - 1] / metas[0]).toFixed(1) + " del primero al último");
 }
 
@@ -66,7 +67,7 @@ console.log("\nEL RELOJ QUE USA ES EL DEL JUEGO, NO UNO INVENTADO");
      Con techo 50 eran 29 % y 51 %: bajar el techo corrió los niveles altos hacia el final del mes. */
   const frac = (l) => {
     const XP = g("FARM_XP_LVLS"), FE = g("FARM_EXPANSION"), MAX = g("FARM_NIVEL_MAX");
-    const celdas = (x) => 9 + 3 * FE.filter(y => y <= x).length;
+    const celdas = (x) => 5 + FE.filter(y => y <= x).length;
     let t = 0, hasta = 0;
     for (let x = 2; x <= MAX; x++) { t += (XP[x] - XP[x - 1]) / celdas(x); if (x === l) hasta = t; }
     return hasta / t;
@@ -97,7 +98,7 @@ console.log("\nEL $GOLDEN NO SE DERIVA — el candado del 18/8 sigue puesto");
 {
   const suma = VIP.reduce((s, r) => s + (r.golden || 0), 0);
   ok("el carril VIP sigue devolviendo exactamente 60 $Golden", suma === 60, suma + " $G");
-  console.log("       → cuesta 250 y devuelve 60 (24 %). En su día devolvía 245 sobre 250 y");
+  console.log("       → cuesta " + g("PASS_VIP_PRICE") + " y devuelve " + suma + ". En su día devolvía 245 sobre 250 y");
   console.log("         comprar niveles sueltos daba ganancia: una imprenta de moneda premium.");
   ok("y ningún nivel suelto devuelve más de lo que cuesta comprarlo",
     VIP.every(r => (r.golden || 0) <= g("PASS_LVL_GOLD")), "tope " + g("PASS_LVL_GOLD") + " $G");

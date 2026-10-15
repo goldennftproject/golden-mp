@@ -6588,7 +6588,7 @@ function refreshCosmeticos() {
   h += '<div class="secc">Aura del granjero</div><div class="forge-row"><div class="finfo"><div class="fds">' +
     (cosAuraDisponible()
       ? '<button class="sm ' + (c.aura ? "green" : "ghost") + '" data-cost="aura:1">Encendida</button> <button class="sm ' + (!c.aura ? "green" : "ghost") + '" data-cost="aura:0">Apagada</button> <span class="fds">Se ve en la Zona Negra y en la plaza.</span>'
-      : 'Se desbloquea con los títulos de granja nivel 30 en adelante.') + '</div></div></div>';
+      : 'Se desbloquea en granja nivel ' + nivelEscalado(30) + ' o con un cosmético de aura.') + '</div></div></div>';
   // MASCOTA (10/8): pasea por la granja. No produce nada, es para lucirla.
   const masc = cosMascotasDisponibles();
   h += '<div class="secc">Mascota</div><div class="forge-row">' +
