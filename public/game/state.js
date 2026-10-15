@@ -2646,6 +2646,9 @@ function produccionVipTick(sinEscena) {
   if (!sinEscena && typeof refreshProduccionGranja === "function" && typeof isOpen === "function" && isOpen("ov-cobertizo")) refreshProduccionGranja();
   return true;
 }
+function produccionVipPaseTexto() {
+  return GF.esOcultoMvp("ov-pass") ? "El pase está deshabilitado en esta versión; no otorga premios del pase." : "Incluye los beneficios VIP del pase, con una sola compra.";
+}
 function produccionVipComprar() {
   produccionVipTick();
   if (!G.produccion || produccionVipActivo()) { toast("El VIP ya está activo."); return false; }
@@ -2654,7 +2657,7 @@ function produccionVipComprar() {
   G.produccion.vipHasta = nowMs() + PRODUCCION_VIP_DIAS * 86400000;
   G.produccion.vipAplicado = true;
   if (G.pass) G.pass.vip = true;
-  log("VIP activado por 30 días: +25% de capacidad (mínimo 2 cupos) y beneficios VIP del pase, con una sola compra.","gold");
+  log("VIP activado por 30 días: +25% de capacidad (mínimo 2 cupos). " + produccionVipPaseTexto(),"gold");
   refreshCobertizo(); refreshHud(); if (typeof saveFarm === "function") saveFarm(true);
   return true;
 }

@@ -2496,7 +2496,7 @@ function refreshProduccionGranja() {
   const vipGranja = produccionVipActivo();
   h += '<div class="row"><span>' + (vipGranja ? 'VIP · +' + produccionVipCupos() + ' cupos · hasta ' + new Date(G.produccion.vipHasta).toLocaleString('es-UY') : 'Free · VIP: +25% de capacidad (mínimo 2 cupos) durante 30 días') + '</span>' +
     '<button class="green sm" id="prod-vip-comprar" ' + (vipGranja || G.golden < PRODUCCION_VIP_PRECIO ? 'disabled' : '') + '>' + (vipGranja ? 'VIP activo' : 'Comprar · ' + PRODUCCION_VIP_PRECIO + ' $Golden') + '</button></div>' +
-    '<p class="sub">Un solo VIP: incluye los beneficios VIP del pase. Al vencer se pausan las últimas producciones activadas que excedan la capacidad Free, sin borrar nada. Sin cobro externo ni canje por USDT.</p>';
+    '<p class="sub">Un solo VIP. ' + produccionVipPaseTexto() + ' Al vencer se pausan las últimas producciones activadas que excedan la capacidad Free, sin borrar nada. Sin cobro externo ni canje por USDT.</p>';
   if (G.produccion.vale) h += '<p class="verde">Tu primera expansión incluye un nodo básico a elección.</p>';
   h += '<details><summary>Comprar producción · elegir especialidad</summary><div class="fbtns">';
   const tipos = { plot: ["Parcela", 20, 1], tree: ["Árbol", 30, 1], rock: ["Roca", 30, 1], bronce: ["Bronce", 180, 3], hierro: ["Hierro", 300, 6], oro: ["Oro", 500, 9], diamante: ["Diamante", 900, 13], netherita: ["Netherita", 1400, 17] };
@@ -2522,7 +2522,7 @@ function refreshProduccionGranja() {
   }
 }
 function confirmarCompraVip() {
-  askConfirm('¿Gastar ' + PRODUCCION_VIP_PRECIO + ' $Golden para activar el VIP por 30 días, con +25% de capacidad (mínimo dos cupos) y beneficios VIP del pase? Los nodos adicionales se compran por separado.', () => passBuyVip(), {title:'VIP · 30 días',yes:'Comprar VIP',yesClass:'green',no:'Cancelar'});
+  askConfirm('¿Gastar ' + PRODUCCION_VIP_PRECIO + ' $Golden para activar el VIP por 30 días, con +25% de capacidad (mínimo dos cupos)? ' + produccionVipPaseTexto() + ' Los nodos adicionales se compran por separado.', () => passBuyVip(), {title:'VIP · 30 días',yes:'Comprar VIP',yesClass:'green',no:'Cancelar'});
 }
 // el contadorcito del menú, sin abrir el panel (lo llaman el baúl, el nivel y la expansión)
 function syncCobertizo() {

@@ -1,0 +1,18 @@
+const assert = require('node:assert/strict');
+const path = require('node:path');
+const { ctx } = require('./arrancar-el-juego.contexto').arrancar(path.resolve(__dirname, '..'));
+ctx.estadoDeCero();
+assert.equal(ctx.GF.esOcultoMvp('ov-pass'), true);
+assert.match(ctx.produccionVipPaseTexto(), /deshabilitado.*no otorga premios/);
+let mensaje;
+ctx.askConfirm = text => { mensaje = text; };
+ctx.confirmarCompraVip();
+assert.match(mensaje, /100 \$Golden/);
+assert.match(mensaje, /30 días/);
+assert.match(mensaje, /deshabilitado/);
+ctx.GF.MVP = 0;
+assert.match(ctx.produccionVipPaseTexto(), /Incluye los beneficios VIP/);
+ctx.confirmarCompraVip();
+assert.match(mensaje, /Incluye los beneficios VIP/);
+assert.doesNotMatch(mensaje, /deshabilitado/);
+console.log('OK: compra VIP describe únicamente los beneficios disponibles, con y sin pase.');

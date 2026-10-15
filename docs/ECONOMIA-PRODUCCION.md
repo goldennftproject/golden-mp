@@ -71,6 +71,18 @@ Nuevas pruebas: `tools/test-progreso-productivo-guia.js` comprueba 48 transicion
 
 ### Tercera pasada: batería conciliada (15/10/2026)
 
+### Simulación económica conjunta (15/10/2026)
+
+Se ejecutaron 36 escenarios locales de 45 días: seis perfiles, tres semillas y dos presiones de venta (1× y 5×; no equivalen a cantidades de jugadores). Se reutilizan funciones reales de cosecha, nodos, cocina, ganadería, pedidos, pesca, herramientas y progreso. Las ventas reconstruyen el contrato SQL con cotización real, no ejecutan transacciones remotas. El registro de movimientos cuadra con los saldos en todos los puntos de control y no supera capacidad activa. No se cuentan materiales animales como efectivo.
+
+El combate sigue siendo una aproximación contra ratas, sin IA espacial ni pérdida de botín; ahora cobra tiempo por golpe, repara armas y aplica curación pasiva. Los edificios no validan colocación espacial. El perfil minero no optimiza emplazamientos ni todas las vetas; no representa un máximo de rentabilidad. No se simula todavía ahorro para VIP, renovación ni una población heterogénea compartiendo mercado. VIP empieza con 100 Golden adicionales y los paga: no es una comparación con igual capital.
+
+Hallazgo: el pase está oculto en el MVP y no genera estrellas; su devolución no puede contabilizarse como beneficio disponible. Se aclaran panel, confirmación y registro de compra del VIP, sin cambiar precio, duración, capacidad ni habilitar el pase. Nueva prueba: `tools/test-vip-beneficios-disponibles.js` verifica ambos modos.
+
+El suelo de precios y las ventas NPC siguen emitiendo plata aun bajo presión. No basta el precio dinámico para controlar una futura moneda canjeable: deberá tener presupuesto independiente. Retiros siguen desactivados. Resultados y supuestos conservados en el workspace: `outputs/economia-conjunta-2026-10-15/conjunta-v2/resultados.json` e `informe.html`; simulador reproducible en `work/simular-economia-conjunta.cjs`.
+
+### Detalle de la tercera pasada
+
 Se cerró la conciliación señalada arriba: 241/241 pruebas automatizadas aprobadas en una ejecución completa con hash de fuentes idéntico antes y después. Se conservaron los informes originales; los 25 resultados iniciales no se borraron ni se interpretaron como 25 bugs confirmados. El arranque de 12 scripts y 14 paneles también pasó en el arnés, sin avisos.
 
 Corrección real de interfaz: se restauró la mano del cursor sobre objetos y agua interactiva, con limpieza al abrir overlays o salir de la escena. La expansión aclara que suma un cupo y que los nodos se compran aparte; su icono ya no representa una parcela gratuita. Comprar/canjear producción confirma resultado y capacidad usada; los nodos anuncian su primer ciclo. No se modifican precios, tiempos de recolección, capacidad ni saldos de partidas existentes en esta tanda.
