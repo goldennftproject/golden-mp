@@ -1,0 +1,31 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>Golden Farm · Prueba de economía</title>
+  <link rel="stylesheet" href="economia.css">
+  <script defer src="game/economy-lab-core.js"></script>
+  <script defer src="game/economy-lab-ui.js"></script>
+</head>
+<body>
+  <header><div><span class="eyebrow">GOLDEN FARM · LABORATORIO</span><h1>Tu granja, tu especialidad</h1></div><a href="/">Volver al juego habitual</a></header>
+  <div class="notice"><strong>Partida de prueba independiente.</strong> Producción y precios locales. El VIP se simula sin cobrar. Los puntos y créditos no tienen valor real ni se pueden retirar. Tu granja habitual no se modifica.</div>
+  <main>
+    <section class="stats" aria-label="Estado de la granja"><div>Plata <strong id="silver">3</strong></div><div>Capacidad <strong id="capacity">4 / 4</strong></div><div>Granja <strong id="level">Nivel 1</strong></div><div>Cuenta <strong id="vip">Free</strong></div></section>
+    <p id="goal" class="goal"></p>
+    <div class="layout">
+      <section class="farm-panel"><div class="section-head"><h2>Producción activa</h2><span id="clock"></span></div><div id="farm" class="farm-grid"></div><h2>Cobertizo</h2><div id="stored" class="stored"></div><p class="sub">Guardar libera capacidad. El nodo y sus cargas se conservan; su producción queda pausada hasta activarlo.</p></section>
+      <section class="control-panel">
+        <nav aria-label="Gestión económica"><button data-tab="develop" aria-pressed="true">Desarrollar</button><button data-tab="market" aria-pressed="false">Mercado</button><button data-tab="export" aria-pressed="false">Exportación</button><button data-tab="test" aria-pressed="false">Pruebas y VIP</button></nav>
+        <div id="panel-develop" class="tab-panel"><h2>Una expansión, una elección</h2><p id="expansion-note"></p><button data-action="expand" id="expand">Iniciar expansión</button><p id="voucher"></p><div id="node-shop" class="rows"></div><h2>Semillas</h2><label>Cultivo para sembrar <select id="crop"></select></label><div id="seed-shop" class="rows"></div><h2>Herrería</h2><p id="tools"></p><div class="actions"><button data-action="tool" data-key="axe">+1 hacha · 2 plata</button><button data-action="tool" data-key="pick">+1 pico · 2 plata</button><button data-action="tool" data-key="bronzePick">+1 pico de bronce · 80 plata</button></div><button data-action="build" id="build">Construir · 2 madera + 1 piedra + 10 plata</button><div class="actions"><button data-action="craft" data-key="tablon">Encolar tablón · 3 madera</button><button data-action="craft" data-key="bloque">Encolar bloque · 3 piedra</button></div><div id="jobs"></div></div>
+        <div id="panel-market" class="tab-panel" hidden><h2>Comprador del sistema</h2><p>La siguiente unidad paga menos cuando vendés mucho del mismo recurso. La demanda se recupera gradualmente. Cotización local de esta partida.</p><p id="market-budget"></p><div id="market-list" class="rows"></div><p class="sub">La compra de insumos permite especializarte sin producir todo en casa. El precio de compra es mayor que la mejor venta: no hay arbitraje inmediato.</p></div>
+        <div id="panel-export" class="tab-panel" hidden><h2>Órdenes de exportación de prueba</h2><p id="export-quota"></p><p>Cada papa, madera o piedra consume 1 unidad de cupo; tablón y bloque consumen 3. Cada unidad de cupo entrega 10 puntos de prueba.</p><div id="export-list" class="rows"></div><h2>Liquidación ficticia</h2><p id="settlement"></p><p>Fondo diario simulado: 40.000 créditos ficticios. Otros jugadores simulados: 10.000 puntos. Tu participación se calcula al liquidar, una vez por día. Este fondo no existe en USDT.</p><button data-action="settle">Liquidar puntos de prueba</button><p class="sub">Esta pantalla sirve para comparar decisiones. No hay depósitos, cartera ni retiros.</p></div>
+        <div id="panel-test" class="tab-panel" hidden><h2>Comparar Free y VIP</h2><p>El VIP de prueba dura 30 días: +2 cupos productivos y cupo diario de exportación de 30 en lugar de 10. Se activa una vez por partida, sin coste.</p><div class="actions"><button data-action="vipTrial" id="vip-trial">Simular VIP de 30 días</button><button data-action="expireVip" id="vip-expire">Simular vencimiento del VIP</button></div><p>Al vencer, los últimos nodos colocados en cupos extra pasan al cobertizo conservando cargas y cultivos. Podés reorganizar qué nodos quedan activos.</p><h2>Reloj de prueba</h2><p>Podés jugar en tiempo real o avanzar el reloj para comparar visitas. No cambia la duración de los ciclos: árbol 30 min, roca 40 min, papa 3 min.</p><div class="actions"><button data-action="advance" data-ms="180000">+3 min</button><button data-action="advance" data-ms="1800000">+30 min</button><button data-action="advance" data-ms="28800000">+8 h</button><button data-action="advance" data-ms="86400000">+1 día</button><button data-action="advance" data-ms="2592000000">+30 días</button></div><h2>Partida local</h2><p id="save-status"></p><div class="actions"><button id="download">Descargar copia de prueba</button><button id="reset" class="danger">Empezar otra prueba</button></div></div>
+      </section>
+    </div>
+    <section class="inventory"><h2>Bolsa de esta prueba</h2><div id="inventory" class="inventory-grid"></div></section>
+    <details><summary>Registro de decisiones</summary><ol id="events"></ol></details>
+  </main>
+  <div id="message" role="status" aria-live="polite"></div>
+</body>
+</html>
