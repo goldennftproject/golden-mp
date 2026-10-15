@@ -119,7 +119,7 @@ function protegerEconomia(prev, next, ahora) {
   }
   const dia = new Date(ahora).toISOString().slice(0,10), control = antes._economiaControl || {};
   const estrellas = Math.max(0,num(next.pass && next.pass.stars)-num(antes.pass && antes.pass.stars));
-  const compradas = Math.max(0,Math.floor((goldenCustodia(antes)-goldenCustodia(next)-gastoVip)/15))*40;
+  const compradas = Math.max(0,Math.floor((goldenCustodia(antes)+reembolso-goldenCustodia(next)-gastoVip)/15))*40;
   const emitidas = (control.dia===dia?num(control.estrellas):0)+Math.max(0,estrellas-compradas);
   if (emitidas>138) errores.push("Estrellas del pase superiores al máximo diario y semanal combinado");
   next._economiaControl = {dia,estrellas:emitidas}; // nunca se cree el contador recibido del cliente

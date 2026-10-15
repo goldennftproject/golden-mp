@@ -16,6 +16,9 @@ const migradoVip=structuredClone(vipViejo);migradoVip.produccion.vipUnico=1;migr
 assert.equal(check(vipViejo,migradoVip).length,0,'VIP previo a la unificación se conserva una vez sin recobrar');
 let vip=structuredClone(next);vip.pass.stars=120;vip.pass.claimV={};
 next=structuredClone(vip);next.pass.claimV[3]=true;next.golden+=5;assert.equal(check(vip,next).length,0);
+const vipComprador=structuredClone(vip);vipComprador.golden=1000;vipComprador.pass.stars=0;
+const compraCompleta=structuredClone(vipComprador);compraCompleta.golden=610;compraCompleta.pass.stars=1200;compraCompleta.pass.claimV=Object.fromEntries([3,7,12,15,18,22,25,27].map(k=>[k,true]));
+assert.equal(check(vipComprador,compraCompleta).length,0,'comprar niveles y recibir reintegros en el mismo guardado no se rechaza');
 let cobrado=structuredClone(next);next=structuredClone(cobrado);next.pass.claimV={};assert.ok(check(cobrado,next).length);
 next=structuredClone(cobrado);next.golden+=5;assert.ok(check(cobrado,next).length,'mismo premio no paga dos veces');
 next=structuredClone(initial);next.pass.stars=1000000;assert.ok(check(initial,next).some(x=>x.includes('Estrellas')));
