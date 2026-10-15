@@ -66,7 +66,7 @@ function protegerEconomia(prev, next, ahora) {
     if (!Number.isSafeInteger(n.base) || (p || !prev ? n.base!==base : n.base<5 || n.base>base+num(antes.expansiones))) errores.push("Capacidad base no autorizada");
     const finAnterior = num(p && p.vipHasta), fin = num(n.vipHasta);
     if (fin !== finAnterior) {
-      const migracion = !p && antes.pass && antes.pass.vip;
+      const migracion = (!p || p.vipUnico!==1) && antes.pass && antes.pass.vip;
       if ((!migracion && finAnterior > ahora) || Math.abs(fin - (ahora + VIP_MS)) > 300000) errores.push("Vencimiento VIP no autorizado");
       else if (!migracion) gastoVip = VIP_PRECIO;
     }

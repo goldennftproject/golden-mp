@@ -11,6 +11,9 @@ next=structuredClone(initial);next.produccion.base=9999;assert.ok(check(initial,
 next=structuredClone(initial);next.produccion.vipHasta=now+30*86400000;next.produccion.vipAplicado=true;
 assert.ok(check(initial,next).some(x=>x.includes('Golden')),'VIP sin pagar rechazado');
 next.golden-=100;assert.equal(check(initial,next).length,0,'VIP único pagado admitido');
+const vipViejo=structuredClone(initial);delete vipViejo.produccion.vipUnico;vipViejo.pass.vip=true;
+const migradoVip=structuredClone(vipViejo);migradoVip.produccion.vipUnico=1;migradoVip.produccion.vipHasta=now+30*86400000;migradoVip.produccion.vipAplicado=true;
+assert.equal(check(vipViejo,migradoVip).length,0,'VIP previo a la unificación se conserva una vez sin recobrar');
 let vip=structuredClone(next);vip.pass.stars=120;vip.pass.claimV={};
 next=structuredClone(vip);next.pass.claimV[3]=true;next.golden+=5;assert.equal(check(vip,next).length,0);
 let cobrado=structuredClone(next);next=structuredClone(cobrado);next.pass.claimV={};assert.ok(check(cobrado,next).length);
