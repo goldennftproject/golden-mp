@@ -7,6 +7,7 @@ function cargar(parcelas){
   const ctx={console,Math,Date,JSON,Object,Array,Number,String,Boolean,Set,Map,isNaN,parseInt,parseFloat};
   ctx.G={plotsOwned:parcelas};ctx.window=ctx;ctx.globalThis=ctx;vm.createContext(ctx);
   vm.runInContext(fs.readFileSync("public/game/config.js","utf8"),ctx);
+  ctx.GF.configurarEspacio(2); // Fixture legado sin contrato productivo; v3 se cubre en test-espacio-fisico.
   return ctx.GF;
 }
 let fallos=0;

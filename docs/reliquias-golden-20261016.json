@@ -1,0 +1,14 @@
+{
+  "fecha": "2026-10-16",
+  "instruccion": "Claro, corregilo y movelo a otro lugar.",
+  "moneda": "$Golden premium; no plata común, dólares ni USDT",
+  "ubicacion": "Menú > Reliquias; fuera del Cobertizo",
+  "costes": {"cobre":10,"plata":25,"jade":50,"oro":100,"rubi":250,"corona":500},
+  "produccion": "coste / 90 Golden por día; precisión 0.000001 con residuo conservado",
+  "limites": {"vidaDias":180,"acumulacionHoras":24,"energiaPorCobro":1,"activosPorModelo":1},
+  "economia": "Recuperación nominal del coste a 90 días cobrando todo; máximo nominal de dos veces el coste a 180 días. No garantiza rentabilidad financiera ni habilita retiros. Los informes anteriores de objetos que emitían plata quedan históricos y no describen esta versión.",
+  "compatibilidad": "No convierte producción histórica ni residuos de plata en Golden. Los objetos antiguos sólo computan tiempo posterior al corte 2026-10-16T22:50:00Z. No se borran cuentas ni partidas.",
+  "seguridad": "Servidor calcula producción y saldo, valida cuenta, energía, recibo idempotente y CAS. Los guardados normales no pueden modificar el libro ni emitir Golden. JWT permanece habilitado; sin nuevas tablas, privilegios o conexiones.",
+  "pruebas": ["180 días por seis turnos por seis modelos", "recuperación nominal a 90 días", "precisión y resto", "saldo plata inalterado", "reintentos y CAS", "guardado fraccionario legítimo y rechazo de emisión arbitraria", "catálogo cliente-servidor coincidente", "sección independiente"],
+  "granja9": "Nuevas granjas espacioV3: 9×9, interior 7×7. 16 expansiones: laterales 3×4 o 4×3, esquinas 4×4, final 17×17. EspacioV1/V2 preservado para evitar recortes de partidas existentes. Capacidad productiva separada, relojes 30/40 minutos sin cambios."
+}

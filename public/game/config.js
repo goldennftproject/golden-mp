@@ -777,7 +777,7 @@ GF.generarNodosExpansion = function () {
              !t.mias.has(c + "," + (r + 1)) || !t.mias.has(c + "," + (r - 1)) ||
              (GF.espacioV === 1 && !t.mias.has(c + "," + (r - 2)));
     };
-    const cx = e.c0 + (B - 1) / 2, cy = e.r0 + (B - 1) / 2;
+    const cx = (e.c0 + e.c1 - 1) / 2, cy = (e.r0 + e.r1 - 1) / 2;
     const libres = [];
     for (let c = e.c0; c < e.c1; c++) for (let r = e.r0; r < e.r1; r++)
       if (!esCerca(c, r)) libres.push({ c, r, d: Math.abs(c - cx) + Math.abs(r - cy) });
@@ -838,28 +838,35 @@ GF.generarNodosExpansion = function () {
        test-expansion-retro, que es exactamente para lo que existe. */
     const par = libres.find(p => ocupadas.indexOf(p) < 0 &&
       !(p.c === (arb ? arb.c + 1 : -99) && p.r === (arb ? arb.r : -99)));
-    e.parcela = par ? { col: par.c, row: par.r } : null;
+    const reserva = par || (GF.espacioV === 3 ? libres[0] : null);
+    e.parcela = reserva ? { col: reserva.c, row: reserva.r } : null;
   });
   GF.rehacerColisiones();   // los nodos recién añadidos también son sólidos
 };
 GF.generarNodosExpansion();
 
 // Las granjas anteriores que ya editaron/construyeron conservan su superficie:
-// reducirla por debajo de objetos guardados perdería contenido. Las nuevas usan v2.
+// reducirla por debajo de objetos guardados perdería contenido. Las nuevas usan v3 (9×9).
 GF.OBJETOS_ESPACIO_V1 = GF.WORLD_OBJECTS.slice(0, 34).map(o => ({ ...o }));
 GF.configurarEspacio = function (version) {
-  const v = version === 1 ? 1 : 2;
+  const v = version === 1 ? 1 : version === 2 ? 2 : 3;
   if (GF.espacioV === v) return;
   GF.espacioV = v;
   GF.BLOQUE = v === 1 ? 5 : 4;
-  GF.COLS_BASE = GF.ROWS_BASE = GF.BLOQUE * 3;
+  GF.COLS_BASE = GF.ROWS_BASE = v === 3 ? 9 : GF.BLOQUE * 3;
   GF._terrenoCache = {};
   GF.EXPANSIONES.forEach(e => {
     e.c0 = e.bc * GF.BLOQUE; e.r0 = e.br * GF.BLOQUE;
     e.c1 = e.c0 + GF.BLOQUE; e.r1 = e.r0 + GF.BLOQUE;
+    if (v === 3) {
+      const inicio = b => b < 0 ? -4 : b === 3 ? 9 : b * 3;
+      const largo = b => b < 0 || b === 3 ? 4 : 3;
+      e.c0 = inicio(e.bc); e.r0 = inicio(e.br);
+      e.c1 = e.c0 + largo(e.bc); e.r1 = e.r0 + largo(e.br);
+    }
   });
   GF.WORLD_OBJECTS.splice(0, 34, ...GF.OBJETOS_ESPACIO_V1.map(o => ({ ...o })));
-  if (v === 2) {
+  if (v >= 2) {
     // [columna izquierda, línea base]. No se escala ningún sprite.
     const posiciones = {
       0:[9,2],1:[9,4],2:[9,6],3:[9,7],4:[10,7],
@@ -871,20 +878,27 @@ GF.configurarEspacio = function (version) {
       30:[5,4],31:[5,10],32:[6,10],33:[5,11]
     };
     GF.WORLD_OBJECTS.slice(0,34).forEach((o,i) => {
-      const [col,br] = posiciones[i];
+      const compactas = {
+        0:[6,4],3:[7,5],10:[3,2],11:[4,4],18:[4,5],
+        20:[6,2],21:[7,2],22:[2,2],31:[5,7],32:[6,7],33:[5,8]
+      };
+      const [col,br] = v === 3
+        ? (compactas[i] || [Math.min(posiciones[i][0],8-o.wCells),Math.min(posiciones[i][1],8)])
+        : posiciones[i];
       Object.assign(o,{leftCol:col,baseRow:br,cx:(col+o.wCells/2)*T,by:br*T});
     });
   }
   GF.PLOTS_BASE = Array.from({length:12},(_,i)=>({col:1+i%3,row:(v===1?2:3)+Math.floor(i/3)}));
+  if (v === 3) GF.PLOTS_BASE = [[1,3],[2,3],[3,3],[1,4],[2,4],[3,4],[1,2],[6,4],[7,4],[5,5],[6,5],[5,6]].map(([col,row])=>({col,row}));
   GF.PLOTS = GF.PLOTS_BASE.map(p=>({...p}));
-  GF.POND_BASE = {col:1,row:v===1?10:8};
+  GF.POND_BASE = {col:1,row:v===1?10:v===2?8:5};
   Object.assign(GF.POND,GF.POND_BASE);
-  GF.FISH = {col:5,row:v===1?12:10};
+  GF.FISH = {col:5,row:v===1?12:v===2?10:7};
   GF.generarNodosExpansion();
   GF.aplicarTerreno(0);
   if (GF.ocupCambio) GF.ocupCambio();
 };
-GF.configurarEspacio(2);
+GF.configurarEspacio(3);
 
 /* ============ OCUPACIÓN POR CELDA ≠ COLISIÓN POR PÍXELES (18/8) =====================
    blockedAt mide con CAJAS y está pensado para CAMINAR: la del árbol es solo el tronco

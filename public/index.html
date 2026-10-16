@@ -1445,7 +1445,7 @@
          los menúes. Estas dos píldoras viven ahora en una REPISA flotante pegada bajo la barra,
          fuera de su flujo — vengan o se vayan, la barra no se entera. -->
     <div id="hud-flot">
-      <button class="pill cpill" id="energia-granja-pill" onclick="openOv('ov-cobertizo')" title="Energía de granja: recuperación continua, 4 horas de vacía a llena. Clic para ver costes y objetos productores."><span class="k">⚡ Granja</span><span class="k" id="s-energia-granja">100/100</span></button>
+      <button class="pill cpill" id="energia-granja-pill" onclick="openOv('ov-cobertizo')" title="Energía de granja: recuperación continua, 4 horas de vacía a llena. Clic para ver costes de energía y capacidad productiva."><span class="k">⚡ Granja</span><span class="k" id="s-energia-granja">100/100</span></button>
       <div class="pill cpill" id="stampill" role="button" tabindex="0" aria-label="Recargar estamina" aria-haspopup="dialog" aria-controls="ov-confirm" style="display:none" title="Estamina de combate — solo se gasta en la Zona Negra. Se recupera sola, comiendo guisos o con una recarga."><span class="k">Estamina</span><span class="cbarw"><span class="cfill stamf" id="stam-fill"></span></span><span class="k" id="s-stam">100/100</span></div>
       <!-- 31/8 (de los vídeos de referencia: « Food 00:00 » — la comida es un RELOJ). Los platos
            llevaban buffs con vencimiento desde el doc maestro del 2/8 y no se enseñaban en ningún
@@ -1623,11 +1623,16 @@
     <h3>🏚 Cobertizo</h3>
     <div class="sub" id="cob-sub">Lo que todavía no colocaste en la granja. Elegí una pieza para decidir dónde va.</div>
     <div id="prod-granja"></div>
-    <div id="objetos-productores"></div>
+    <p class="sub">⚡ Energía: 100 puntos; se recupera completamente en 4 horas. Plantar, cosechar, cocinar y compostar: 1. Talar, picar, pescar, recoger productos animales, fabricar equipo y calar nasas: 2. Sin coste al vender, ordenar o construir. La estamina de combate es independiente.</p>
     <div class="slots" id="cob-slots"></div>
     <div class="sub" id="cob-pie"></div>
   </div></div>
 
+  <div class="ov" id="ov-reliquias"><div class="card" style="width:min(680px,94vw);max-height:calc(100dvh - 32px);overflow-y:auto">
+    <button class="close" data-close="ov-reliquias" style="position:sticky;top:0;float:right;z-index:2">×</button>
+    <h3>💎 Reliquias · producción de $Golden</h3>
+    <div id="objetos-productores"></div>
+  </div></div>
   <div class="ov" id="ov-skills"><div class="card" style="width:min(500px,94%)">
     <button class="close" data-close="ov-skills">×</button>
     <h3>Skills</h3>
@@ -2007,6 +2012,7 @@
       <button class="gmi" data-panel="ov-album"><span class="ic">📖</span> Álbum <b class="key" id="gm-alb"></b></button>
       <button class="gmi" data-panel="ov-inv"><span class="ic"></span> Inventario <b class="key">I</b></button>
       <button class="gmi" data-panel="ov-cobertizo"><span class="ic">🏚</span> Cobertizo <b class="key" id="gm-cob"></b></button>
+      <button class="gmi" data-panel="ov-reliquias"><span class="ic">💎</span> Reliquias · $Golden</button>
       <button class="gmi" data-panel="ov-skills"><span class="ic"></span> Skills <b class="key">X</b></button>
       <button class="gmi" data-panel="ov-equip"><span class="ic"></span> Equipo <b class="key">P</b></button>
       <button class="gmi" data-panel="ov-paquete"><span class="ic"></span> Paquete del día <b class="key">G</b></button>

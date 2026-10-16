@@ -67,6 +67,7 @@ function selectorContextualPcAbierto() {
 }
 const OV_REFRESH = { "ov-entrenando": () => entrenarSync(), "ov-clan": () => refreshClan(), "ov-misiones": () => refreshMisiones(), "ov-mapa": () => refreshMapa(), "ov-objetivos": () => refreshObjetivos(), "ov-logros": () => refreshLogros(), "ov-album": () => refreshAlbum(), "ov-inv": () => refreshInv(), "ov-cobertizo": () => refreshCobertizo(), "ov-skills": () => refreshSkills(), "ov-equip": () => refreshEquip(), "ov-godhand": () => refreshGodHand(),
   "ov-forge": () => refreshForge(), "ov-market": () => refreshMarket(), "ov-barn": () => refreshBarn(), "ov-buzon": () => { _bzVista = "sobres"; _bzCartaAbierta = null; refreshBuzon(); }, "ov-paquete": () => refreshPaquete(), "ov-baul": () => refreshBaul(), "ov-pedidos": () => { _pdVista = "pedidos"; refreshPedidos(); }, "ov-expandir": () => refreshExpandir(),
+  "ov-reliquias": () => refreshArtefactos(),
   "ov-cocina": () => refreshCooking(),
   "ov-horno": () => refreshHorno(),
   "ov-altar": () => refreshAltar(),
@@ -1751,7 +1752,7 @@ function refreshExpandir() {
     return;
   }
   if (tit) tit.textContent = "Expansión " + ex.n + " de " + EXPANSION_MAX;
-  if (sub) sub.textContent = "El terreno crece " + (GF.BLOQUE * GF.BLOQUE) + " celdas" +
+  if (sub) sub.textContent = "El terreno crece " + ((ex.bloque.c1-ex.bloque.c0)*(ex.bloque.r1-ex.bloque.r0)) + " celdas" +
     (G.produccion && G.produccion.v === 1 ? " y permite 1 productor activo más (parcela, árbol, roca o veta). Necesitás comprarlo y encontrarle espacio; los nodos se compran aparte en el Cobertizo." : " y destapa lo que hay debajo.");
   /* 20/9: en obra. Ya se pagó; lo único que falta es tiempo, y el panel lo dice con el reloj */
   const obra = (typeof expansionObra === "function") ? expansionObra() : null;
@@ -1962,7 +1963,7 @@ function pescaV4Nasas() {
 function refreshHud() {
   const energia=energiaGranjaTick();setTxt('s-energia-granja',Math.floor(energia)+'/100');
   const ep=$('energia-granja-pill');if(ep)ep.style.display=GF.scene==='farm'?'':'none';
-  document.querySelectorAll('[data-artefacto-pendiente]').forEach(el=>{el.textContent=fmtPlata(artefactoPendiente(el.dataset.artefactoPendiente))+' plata';});
+  document.querySelectorAll('[data-artefacto-pendiente]').forEach(el=>{el.textContent=fmtGolden(artefactoPendiente(el.dataset.artefactoPendiente))+' $Golden';});
   document.querySelectorAll('[data-artefacto-cobrar]').forEach(b=>{b.disabled=!(typeof sb!=='undefined' && sb && UID && CARGA_OK && !SOLO_LOCAL && !SAVE_CONFLICTOS.has(UID) && !MERCADO_EN_CURSO && artefactoPendiente(b.dataset.artefactoCobrar)>0 && energia>=1);});
   try { syncMisionesBadge(); } catch (e) {}   // contador de misiones del menú (10/8)
   try { syncLogrosBadge(); } catch (e) {}     // 22/8: cuántos logros hay para cobrar
@@ -1981,7 +1982,7 @@ function refreshHud() {
   /* 14/9 — el techo lo escribe el código, no el HTML. Estaba « /50 » a mano en index.html y
      siguió diciendo 50 cuando dirección bajó el techo a 25: el HUD le mentía al jugador sobre
      cuánto le falta. Ningún test lo vio porque vive en el DOM. */
-  setTxt("s-level-max", "/" + (typeof FARM_NIVEL_MAX !== "undefined" ? FARM_NIVEL_MAX : "")); setTxt("s-prestige", G.prestige); setNum("s-plata", G.plata, fmtPlata); setNum("s-golden", G.golden); setTxt("s-week", (typeof semanaActual === "function") ? semanaActual() : G.week); setTxt("s-hp", Math.ceil(G.hp) + "/" + G.hpMax); refreshVidaBarra(); refreshCombatBar(); refreshFarmBar(); bindFarmPill(); refreshBuffsPill(); if (typeof checkCooking === "function") checkCooking(); if (typeof checkHorno === "function") checkHorno(); if (typeof refreshHotbar === "function") refreshHotbar(); if (typeof placeTuto === "function") placeTuto(); if (typeof placeMenuPc === "function") placeMenuPc(); }
+  setTxt("s-level-max", "/" + (typeof FARM_NIVEL_MAX !== "undefined" ? FARM_NIVEL_MAX : "")); setTxt("s-prestige", G.prestige); setNum("s-plata", G.plata, fmtPlata); setNum("s-golden", G.golden, fmtGolden); setTxt("s-week", (typeof semanaActual === "function") ? semanaActual() : G.week); setTxt("s-hp", Math.ceil(G.hp) + "/" + G.hpMax); refreshVidaBarra(); refreshCombatBar(); refreshFarmBar(); bindFarmPill(); refreshBuffsPill(); if (typeof checkCooking === "function") checkCooking(); if (typeof checkHorno === "function") checkHorno(); if (typeof refreshHotbar === "function") refreshHotbar(); if (typeof placeTuto === "function") placeTuto(); if (typeof placeMenuPc === "function") placeMenuPc(); }
 // clic en la barra de estamina: ofrece la recarga premium (con su tope diario)
 function bindStamPill() {
   const pill = document.getElementById("stampill"); if (!pill || pill._bound) return;
@@ -2503,7 +2504,7 @@ function refreshCobertizo() {
   const key = $("gm-cob"); if (key) key.textContent = items.length ? String(items.length) : "";
 }
 function refreshProduccionGranja() {
-  refreshArtefactos();
+  // Reliquias se gestiona en su propio panel, no en el Cobertizo.
   const cont = $("prod-granja"); if (!cont || !G.produccion) return;
   const abiertos = Array.from(cont.querySelectorAll("details")).map(d => d.open);
   const foco = typeof document !== "undefined" && document.activeElement;
@@ -2541,25 +2542,23 @@ function refreshProduccionGranja() {
 }
 function refreshArtefactos() {
   const box=$('objetos-productores');if(!box)return;
-  const abierto=box.querySelector('details')?.open;
   const t=nowMs(), online=!!(typeof sb!=='undefined' && sb && UID && CARGA_OK && !SOLO_LOCAL && !SAVE_CONFLICTOS.has(UID));
-  let h='<details><summary>⚡ Energía de granja y objetos productores</summary><p class="sub">100 de energía. Se recupera continuamente: de vacía a llena tarda 4 horas, también sin conexión. Plantar y cosechar: 1 por acción; madera, minería, pesca y animales: 2. Cocinar: 1; fabricar equipo o calar nasa: 2. No se gasta al vender, ordenar, construir ni abrir menús. La estamina de combate es otra barra.</p>'+
-    '<p class="sub">Objetos de colección: no ocupan terreno ni cupos productivos. Uno activo de cada modelo por cuenta. Compras sólo con $Golden; producen plata interna, no dinero. Acumulan hasta 24 horas; cada cobro cuesta 1 de energía. Duran 180 días y luego se pueden volver a comprar.</p>'+
-    '<p class="sub">Producción de referencia: precio × 500 plata / 90 días. Es una equivalencia de balance, no un canje ni un retorno garantizado. No hay retiros, pagos reales ni conversión a USDT.</p>';
+  let h='<p class="sub">Colección productora de $Golden, la moneda premium del juego. No producen plata común ni ocupan terreno o capacidad productiva. Un ejemplar activo de cada modelo por cuenta.</p>'+
+    '<p class="sub">Producción diaria = coste en $Golden / 90. Duran 180 días y acumulan como máximo 24 horas: cobrá regularmente. Cada cobro cuesta 1 de energía de granja. Los decimales se conservan hasta una millonésima de $Golden.</p>'+
+    '<p class="sub">Los 90 días son una referencia interna cobrando toda la producción, no una rentabilidad financiera garantizada. Sin pagos reales, retiros ni canje por USDT.</p>';
   if(!online)h+='<p class="sub">Compras y cobros requieren conexión y guardado sincronizado.</p>';
   for(const [id,d] of Object.entries(ARTEFACTO_DEF)){
     const a=G.artefactos && G.artefactos.items && G.artefactos.items[id], activo=a && t<a.desde+ARTEFACTO_DIAS*86400000;
     const pendiente=artefactoPendiente(id), diaria=artefactoDiario(id).toFixed(2).replace('.',',');
-    h+='<div class="row" style="justify-content:space-between;flex-wrap:wrap;border-top:1px solid #ffffff22;padding:10px 0"><div>'+d.icon+' '+d.label+'<br><small>'+diaria+' plata/día · '+d.golden+' $Golden</small>'+
+    h+='<div class="row" style="justify-content:space-between;flex-wrap:wrap;border-top:1px solid #ffffff22;padding:10px 0"><div>'+d.icon+' '+d.label+'<br><small>'+diaria+' $Golden/día · Coste: '+d.golden+' $Golden</small>'+
       (a?'<br><small>'+(activo?'Activo hasta '+new Date(a.desde+ARTEFACTO_DIAS*86400000).toLocaleDateString('es-UY'):'Vida útil terminada')+'</small>':'')+'</div><div>'+
-      (a?'<span data-artefacto-pendiente="'+id+'">'+fmtPlata(pendiente)+' plata</span> <button class="green sm" data-artefacto-cobrar="'+id+'" '+(!online||pendiente<=0||!energiaGranjaPuede('harvest')?'disabled':'')+'>Cobrar · 1 ⚡</button> ':'')+
+      (a?'<span data-artefacto-pendiente="'+id+'">'+fmtGolden(pendiente)+' $Golden</span> <button class="green sm" data-artefacto-cobrar="'+id+'" '+(!online||pendiente<=0||!energiaGranjaPuede('harvest')?'disabled':'')+'>Cobrar · 1 ⚡</button> ':'')+
       '<button class="ghost sm" data-artefacto-comprar="'+id+'" '+(!online||activo||pendiente>0||G.golden<d.golden?'disabled':'')+'>'+(activo?'Ya lo tenés':'Comprar · '+d.golden+' $Golden')+'</button></div></div>';
   }
-  box.innerHTML=h+'</details>';
-  if(abierto)box.querySelector('details').open=true;
+  box.innerHTML=h;
   box.querySelectorAll('[data-artefacto-comprar]').forEach(b=>b.onclick=()=>{
     const id=b.dataset.artefactoComprar,d=ARTEFACTO_DEF[id];
-    askConfirm('¿Gastar '+d.golden+' $Golden en '+d.label+'? Produce '+artefactoDiario(id).toFixed(2)+' plata interna al día durante 180 días; acumula hasta 24 horas. No es dinero ni tiene canje por USDT.',()=>artefactoSolicitar('comprar',id),{title:'Comprar objeto productor',yes:'Comprar',yesClass:'green',no:'Cancelar'});
+    askConfirm('¿Gastar '+d.golden+' $Golden en '+d.label+'? Produce '+artefactoDiario(id).toFixed(6)+' $Golden al día durante 180 días; acumula hasta 24 horas. No tiene canje por USDT.',()=>artefactoSolicitar('comprar',id),{title:'Comprar reliquia',yes:'Comprar',yesClass:'green',no:'Cancelar'});
   });
   box.querySelectorAll('[data-artefacto-cobrar]').forEach(b=>b.onclick=()=>artefactoSolicitar('cobrar',b.dataset.artefactoCobrar));
 }
@@ -4654,7 +4653,7 @@ function refreshDeco() {
       const donde = ex.bloque ? (ex.bloque.esquina ? "una esquina" : "un lateral") : "un bloque";
       h += '<div class="forge-row"><div class="finfo"><div class="fnm">Expansión ' + ex.n +
         ' <span class="tag">' + hechas + '/' + EXPANSION_MAX + '</span></div>' +
-        '<div class="fds">' + (GF.BLOQUE * GF.BLOQUE) + ' celdas nuevas de terreno en ' + donde +
+        '<div class="fds">' + ((ex.bloque.c1-ex.bloque.c0)*(ex.bloque.r1-ex.bloque.r0)) + ' celdas nuevas de terreno en ' + donde +
         ', pegadas a tu granja. La cerca y el bosque se corren solos.' +
         (faltaNivel ? ' <b>Se abre en el nivel ' + ex.nivel + '</b> (vas por el ' + (G.level || 1) + ').' : '') +
         '<div style="margin-top:4px">' + lista + '</div></div></div>' +

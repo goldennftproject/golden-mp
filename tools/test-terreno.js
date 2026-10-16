@@ -34,8 +34,8 @@ for (let c = 0; c < G.COLS_BASE; c++) for (let r = 0; r < G.ROWS_BASE; r++) if (
 const cs = interior.map(p => p[0]), rs = interior.map(p => p[1]);
 /* 13 x 13: el interior es cuadrado, como la grilla. Antes era 13 x 12 porque arriba faltaba una
    fila entera — trece celdas que eran tuyas y no podías usar. */
-chequeo("el interior útil es 10 x 10, simétrico",
-  (Math.max(...cs) - Math.min(...cs) + 1) === 10 && (Math.max(...rs) - Math.min(...rs) + 1) === 10,
+chequeo("el interior útil es 7 x 7, simétrico",
+  (Math.max(...cs) - Math.min(...cs) + 1) === 7 && (Math.max(...rs) - Math.min(...rs) + 1) === 7,
   "cols " + Math.min(...cs) + "-" + Math.max(...cs) + " · filas " + Math.min(...rs) + "-" + Math.max(...rs));
 
 // 3) ningún objeto ni parcela ni la laguna pisa la cerca
@@ -73,7 +73,7 @@ for (let n = 0; n <= 16; n++) {
 console.log("");
 chequeo("el terreno crece en cada etapa", creceOk);
 chequeo("la cerca es siempre el borde real, en las 17 etapas", cercaOk);
-chequeo("al final son 400 celdas (20x20)", G.terreno(16).mias.size === 400);
+chequeo("al final son 289 celdas (17x17)", G.terreno(16).mias.size === 289);
 chequeo("el aire de bosque sobrevive: hay césped más allá de la cerca",
   G.terreno(16).desp.size > G.terreno(16).mias.size,
   G.terreno(16).desp.size - G.terreno(16).mias.size + " celdas de anillo");

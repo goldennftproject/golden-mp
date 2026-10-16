@@ -24,6 +24,7 @@ ctx.Phaser={Scene:class{},Math:{Clamp:(v,a,b)=>Math.max(a,Math.min(b,v)),Between
 vm.createContext(ctx);
 ["config","nav","state","farm"].forEach(f=>vm.runInContext(fs.readFileSync("public/game/"+f+".js","utf8"),ctx));
 vm.runInContext("this.FarmScene=FarmScene;",ctx);
+ctx.GF.configurarEspacio(2); // Fixture histórico de tres árboles abiertos, no el inicio moderno de uno.
 function escena(){
   const e=new ctx.FarmScene();
   e.add=new Proxy({},{get:(t,k)=>(...a)=>enc(k)});

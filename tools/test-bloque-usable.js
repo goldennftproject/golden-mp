@@ -44,6 +44,7 @@ const GF = ctx.GF, G = ctx.G, T = GF.TILE;
 // Los casos históricos de abajo prueban la geometría previa a migración, no regalos nuevos.
 // El contrato moderno se comprueba al final; test-expansiones cubre sus 16 compras reales.
 const contratoProductivo = G.produccion; delete G.produccion;
+G.espacioV=1;GF.configurarEspacio(1); // El contrato histórico usa su geometría original.
 let fallos = 0;
 const ok = (n, c, d) => { if (!c) fallos++; console.log((c ? "  ok   " : "  FALLA") + "  " + n + (d ? "   " + d : "")); };
 

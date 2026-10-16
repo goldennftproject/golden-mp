@@ -39,9 +39,9 @@ async function artefactoSolicitar(accion,id) {
       }
       if(error || !data || !data.ok || UID!==uid){SAVE_CONFLICTOS.add(uid);toast('Resultado sin confirmar. Recargá con conexión para consultar el servidor.');return;}
       hydrate(data.data);SAVE_BASES.set(uid,data.updated_at);copiaGuardar(snapshot());mercadoLimpiarPendiente(uid);
-      toast(accion==='comprar' ? 'Objeto comprado con $Golden' : '+'+fmtPlata(data.cobro)+' de plata');
+      toast(accion==='comprar' ? 'Reliquia comprada con $Golden' : '+'+fmtGolden(data.cobro)+' $Golden');
     }catch(e){toast('No se pudo completar la operación; comprobá la conexión');}
-  })().finally(()=>{MERCADO_EN_CURSO=null;desbloquear();refreshHud();if(isOpen('ov-cobertizo'))refreshCobertizo();});
+  })().finally(()=>{MERCADO_EN_CURSO=null;desbloquear();refreshHud();if(isOpen('ov-reliquias'))refreshArtefactos();});
   return MERCADO_EN_CURSO;
 }
 function mercadoGlobalRecurso(res) {
@@ -506,7 +506,7 @@ function hydrate(d) {
   G.energiaGranja = d.energiaGranja && Number.isFinite(d.energiaGranja.actual) && Number.isFinite(d.energiaGranja.at)
     ? {v:1,actual:Math.max(0,Math.min(100,d.energiaGranja.actual)),at:d.energiaGranja.at} : {v:1,actual:100,at:nowMs()};
   G.artefactos = d.artefactos ? JSON.parse(JSON.stringify(d.artefactos)) : null;
-  G.espacioV = d.espacioV === 1 || d.espacioV === 2 ? d.espacioV :
+  G.espacioV = [1,2,3].includes(d.espacioV) ? d.espacioV :
     ((d.expansiones || 0) > 0 || (d.plotsOwned || 3) > 3 || Object.keys(d.layout || {}).length ||
      Object.keys(d.layoutPlots || {}).length || d.layoutPond || Object.keys(d.obras || {}).length ||
      Object.values(d.built || {}).some(Boolean) || (d.decos || []).length || (d.chests || []).length ||

@@ -37,6 +37,21 @@ y excepcional del usuario, no permiso para resetear cuentas en despliegues habit
 
 ## Ley 2 — El ritmo de los nodos
 
+### Precisiones de dirección — 16/10/2026
+
+> « Y el diseñador quiere que la granja mida 9 por 9. Así que hazlo y a ver qué tal. »
+
+El inicio nuevo usa 9×9 celdas totales; el borde deja 7×7 interiores. Las dieciséis
+expansiones se ajustan para encajar. Las partidas existentes conservan su geometría guardada
+para no recortar objetos ni perder progreso.
+
+> « Cuando digo genera plata, me refiero a que generan el signo de pesos, bueno, de dólar, golden, la moneda premium sería. »
+> « Claro, corregilo y movelo a otro lugar. »
+
+Las reliquias producen $Golden premium, no plata común. Se gestionan desde Menú → Reliquias,
+sin terreno ni cupos. Coste/90 por día, 180 días de vida, tope de 24 horas acumuladas y un
+punto de energía por cobro. No convertir plata histórica en Golden ni habilitar USDT/retiros.
+
 > *« Los árboles tienen que tener cuatro cargas a las dos horas, cada treinta minutos una carga,
 > y la piedra cada cuarenta minutos, cuatro cargas, como estaba antes. A partir de ahí hacé el
 > ancla para lo que se te antoje, pero eso es una ley. »*

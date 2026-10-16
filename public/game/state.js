@@ -4,7 +4,7 @@ GF.spr = (k) => "assets/farm/" + k + ".png?a=7";   // ?a=N rompe el caché de lo
 
 // --- estado principal (con algunos recursos de arranque para probar los menús) ---
 const G = {
-  espacioV: 2,                  // superficie física; la capacidad productiva es independiente
+  espacioV: 3,                  // 9×9; capacidad productiva independiente, mapas previos conservados
   energiaGranja: { v: 1, actual: 100, at: 0 },
   artefactos: null,
   plata: 3, golden: 20, level: 1, prestige: 0, week: 1, iniciado: 0,   // 18/8: cuándo empezó la partida — de ahí sale la semana del HUD   // 14/8: nacés con 3 de plata (el 1er objetivo es COMPRAR tus semillas)
@@ -137,12 +137,15 @@ const ARTEFACTO_DEF = {
   corona:{label:'Corona ancestral',golden:500,icon:'👑'}
 };
 const ARTEFACTO_DIAS = 180, ARTEFACTO_RECUPERACION = 90, ARTEFACTO_TOPE_MS = 86400000;
-function artefactoDiario(id){return ARTEFACTO_DEF[id] ? ARTEFACTO_DEF[id].golden*500/ARTEFACTO_RECUPERACION : 0;}
+const RELIQUIAS_GOLDEN_DESDE = 1792191000000; // 16/10/2026 22:50 UTC: no convertir plata histórica en Golden
+function fmtGolden(n){return Number(n||0).toFixed(6).replace(/\.?0+$/,'') || '0';}
+function artefactoDiario(id){return ARTEFACTO_DEF[id] ? ARTEFACTO_DEF[id].golden/ARTEFACTO_RECUPERACION : 0;}
 function artefactoPendiente(id,t=nowMs()){
   const a=G.artefactos && G.artefactos.items && G.artefactos.items[id];
   if(!a)return 0;
   const fin=Math.min(t,a.desde+ARTEFACTO_DIAS*86400000);
-  return Math.floor((Math.max(0,Math.min(ARTEFACTO_TOPE_MS,fin-a.cobrado))*artefactoDiario(id)/86400000+(a.resto||0)+1e-9)*10)/10;
+  const desde=a.moneda==='golden' ? a.cobrado : Math.max(a.cobrado,RELIQUIAS_GOLDEN_DESDE);
+  return Math.floor((Math.max(0,Math.min(ARTEFACTO_TOPE_MS,fin-desde))*artefactoDiario(id)/86400000+(a.moneda==='golden' ? a.resto||0 : 0)+1e-12)*1e6)/1e6;
 }
 function fmt(n) { n = Math.floor(n); return n >= 1000 ? (n / 1000).toFixed(n % 1000 < 100 ? 0 : 1).replace(".0", "") + "k" : "" + n; }
 /* ═══ LA PLATA SE ENSEÑA CON SUS CÉNTIMOS ═══ (8/9, Suren: « necesitamos agregar decimales a la
@@ -2383,7 +2386,8 @@ function expansionEntregar(e) {
     G.expParcelasDadas = G.expansiones;
     if (e.n === 1) G.produccion.vale++;
   }
-  log("¡Expansión " + e.n + " de " + EXPANSION_MAX + "! La granja creció " + (GF.BLOQUE * GF.BLOQUE) + " celdas.", "gold");
+  const superficie = (e.bloque.c1-e.bloque.c0)*(e.bloque.r1-e.bloque.r0);
+  log("¡Expansión " + e.n + " de " + EXPANSION_MAX + "! La granja creció " + superficie + " celdas.", "gold");
   if (window.sfx) sfx("level");
   /* 20/8 (dirección): "lo que daría al momento de expandir es la transición y el movimiento de
      cámara". El viaje YA existía —expandirEnVivo hace un pan de 760 ms hasta el bloque— pero era
@@ -2400,7 +2404,7 @@ function expansionEntregar(e) {
   const festejar = () => {
     toast("¡La granja creció!");
     if (window.celebrate) celebrate({ title: "¡GRANJA MÁS GRANDE!", sub: "Expansión " + e.n + " de " + EXPANSION_MAX,
-      big: true, reward: (GF.BLOQUE * GF.BLOQUE) + " celdas nuevas" });
+      big: true, reward: superficie + " celdas nuevas" });
   };
   /* 19/8 (dirección): LA PARCELA APARECE DENTRO DEL BLOQUE, no en el baúl. Las tres celdas que
      trae una expansión —árbol, roca y parcela— ahora llegan igual: puestas y a la vista. Antes la
@@ -2779,11 +2783,18 @@ function produccionComprar(tipo) {
   } else {
     const def = { tree: { precio: 30, nivel: 1 }, rock: { precio: 30, nivel: 1 }, bronce: { precio: 180, nivel: 3 }, hierro: { precio: 300, nivel: 6 }, oro: { precio: 500, nivel: 9 }, diamante: { precio: 900, nivel: 13 }, netherita: { precio: 1400, nivel: 17 } }[tipo];
     if (!def || G.level < def.nivel) { toast("Ese nodo todavía no está disponible."); return false; }
-    const i = GF.WORLD_OBJECTS.findIndex((o, idx) => (tipo === "tree" || tipo === "rock" ? o.type === tipo : o.type === "ore" && o.ore === tipo) && (o.exp == null || o.exp < (G.expansiones || 0)) && !produccionNodoPoseido(idx));
+    const i = GF.WORLD_OBJECTS.findIndex((o, idx) => {
+      if (!(tipo === "tree" || tipo === "rock" ? o.type === tipo : o.type === "ore" && o.ore === tipo) || !(o.exp == null || o.exp < (G.expansiones || 0)) || produccionNodoPoseido(idx)) return false;
+      const lp = G.layout && G.layout[idx];
+      const col = lp ? Math.floor(lp.cx / GF.TILE - (o.wCells || 1) / 2) : o.leftCol;
+      const row = (lp ? Math.round(lp.by / GF.TILE) : o.baseRow) - 1;
+      for (let c=col;c<col+(o.wCells||1);c++) if (!GF.tuyo(c,row) || GF.celdaOcupada(c,row)) return false;
+      return true;
+    });
     if (i < 0) { toast("No quedan emplazamientos de este tipo en tu terreno. Expandí para abrir más."); return false; }
     const base = GF.WORLD_OBJECTS[i], lp = G.layout && G.layout[i];
     const col = lp ? Math.floor(lp.cx / GF.TILE - (base.wCells || 1) / 2) : base.leftCol;
-    const row = lp ? Math.round(lp.by / GF.TILE) - 1 : base.baseRow;
+    const row = (lp ? Math.round(lp.by / GF.TILE) : base.baseRow) - 1;
     for (let c = col; c < col + (base.wCells || 1); c++) if (GF.celdaOcupada && GF.celdaOcupada(c, row)) { toast("El emplazamiento está ocupado. Mové ese objeto en modo edición antes de comprar."); return false; }
     const gratis = G.produccion.vale > 0 && (tipo === "tree" || tipo === "rock");
     if (!gratis && G.plata < def.precio) { toast("Te falta plata para ese nodo."); return false; }

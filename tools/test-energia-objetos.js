@@ -26,15 +26,16 @@ assert.ok(operar(d,'comprar','constructor',base,'invalido').error);
 const clone=JSON.stringify(d);operar(d,'cobrar','cobre',base+14400000,'sin-mutacion');assert.equal(JSON.stringify(d),clone,'la propuesta no muta la fila antes del CAS');
 let pasos=0;for(let dia=1;dia<=180;dia++){
  for(let ciclo=1;ciclo<=6;ciclo++)for(const id of Object.keys(prices)){
-  const at=base+((dia-1)*6+ciclo)*14400000,op='claim-'+(++pasos),r=operar(d,'cobrar',id,at,op);assert.equal(r.error,undefined);assert.ok(Math.abs(r.cobro*10-Math.round(r.cobro*10))<1e-6,'cobra décimas visibles');d=r.data;
+  const at=base+((dia-1)*6+ciclo)*14400000,op='claim-'+(++pasos),r=operar(d,'cobrar',id,at,op);assert.equal(r.error,undefined);assert.ok(Math.abs(r.cobro*1e6-Math.round(r.cobro*1e6))<1e-6,'cobra millonésimas visibles');d=r.data;
   const repeat=operar(d,'cobrar',id,at,op);assert.equal(JSON.stringify(repeat.data),JSON.stringify(d));assert.equal(repeat.repetido,true);
  }
- if(dia===90)assert.ok(Math.abs(d.plata-935*500)<0.61,'equivalencia nominal de 90 días; restos <0,1 por objeto');
+ if(dia===90)assert.ok(Math.abs(d.golden-10000)<0.000007,'recupera 935 Golden a 90 días, conservando fracciones');
 }
-assert.ok(Math.abs(d.plata-935*1000)<0.61,'emisión total acotada a 180 días; restos <0,1 por objeto');
+assert.ok(Math.abs(d.golden-10935)<0.000007,'emisión total acotada a dos veces el coste');
+assert.equal(d.plata,0,'las reliquias nunca emiten plata común');
 assert.ok(operar(d,'cobrar','cobre',base+181*86400000,'despues').error,'no sigue emitiendo al vencer');
 let a=operar({golden:10,plata:0},'comprar','cobre',base,'nuevo').data;
-const cap=operar(a,'cobrar','cobre',base+10*86400000,'tope');assert.ok(cap.cobro<=10*500/90,'acumulación de 24 horas');
+const cap=operar(a,'cobrar','cobre',base+10*86400000,'tope');assert.ok(cap.cobro<=10/90,'acumulación de 24 horas');
 a={...a,energiaGranja:{v:1,actual:0,at:base+86400000}};assert.ok(operar(a,'cobrar','cobre',base+86400000,'vacio').error);
 const prev=JSON.parse(JSON.stringify(d)),next=JSON.parse(JSON.stringify(d));next.artefactos.items.cobre.desde=0;
 function reordenar(v){return Array.isArray(v)?v.map(reordenar):v&&typeof v==='object'?Object.fromEntries(Object.keys(v).reverse().map(k=>[k,reordenar(v[k])])):v;}

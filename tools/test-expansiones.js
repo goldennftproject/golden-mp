@@ -36,7 +36,8 @@ for (let i = 0; i < 16; i++) {
   const antes = GF.terreno(G.expansiones).mias.size;
   const comprado = X.expansionComprar();
   const ahora = GF.terreno(G.expansiones).mias.size;
-  if (!comprado || ahora !== antes + GF.BLOQUE * GF.BLOQUE) creceSiempre = false;
+  const bloque = GF.EXPANSIONES[G.expansiones-1];
+  if (!comprado || ahora !== antes + (bloque.c1-bloque.c0)*(bloque.r1-bloque.r0)) creceSiempre = false;
   for (const k in e.costo) if (Math.round(k==='plata'?G.plata:G.res[k]) !== 0) pagaSiempre = false;
   if (i % 5 === 0 || i === 15)
     console.log("  " + String(e.n).padStart(2) + String(e.nivel).padStart(7) + "   " +
@@ -44,11 +45,11 @@ for (let i = 0; i < 16; i++) {
   previo = ahora;
 }
 console.log("");
-ok("cada compra suma un bloque de 4x4", creceSiempre);
+ok("cada compra suma exactamente su rectángulo sin solapes", creceSiempre);
 ok("cada compra descuenta el material exacto", pagaSiempre);
 ok("al final son las 16", G.expansiones === 16);
 ok("16 expansiones dan 21 cupos sin regalar producción", ctx.produccionCapacidad()===21 && ctx.produccionUsados()===5 && G.plotsOwned===3);
-ok("la granja terminó en 400 celdas", GF.terreno(16).mias.size === 400, GF.terreno(16).mias.size + " celdas");
+ok("la granja terminó en 289 celdas", GF.terreno(16).mias.size === 289, GF.terreno(16).mias.size + " celdas");
 ok("no se puede pasar del tope", X.expansionSiguiente() === null && X.expansionComprar() === false);
 
 // --- el terreno resultante sigue siendo coherente ---
@@ -56,7 +57,7 @@ GF.aplicarTerreno(16);
 let pisan = 0;
 GF.WORLD_OBJECTS.filter(o => o.exp == null).forEach(o => { for (let c = o.leftCol; c < o.leftCol + Math.ceil(o.wCells); c++) if (GF.enCerca(c, o.baseRow)) pisan++; });
 ok("con las 16, nada del contenido pisa la cerca", pisan === 0);
-ok("el mundo final mide 20x20", GF.COLS === 20 && GF.ROWS === 20, GF.COLS + "x" + GF.ROWS);
+ok("el mundo final mide 17x17", GF.COLS === 17 && GF.ROWS === 17, GF.COLS + "x" + GF.ROWS);
 ok("el origen se corrió a negativo", GF.ORIG_X < 0 && GF.ORIG_Y < 0, "(" + GF.ORIG_X + "," + GF.ORIG_Y + ")");
 
 console.log("\n" + (fallos ? "FALLOS: " + fallos : "todo en verde"));

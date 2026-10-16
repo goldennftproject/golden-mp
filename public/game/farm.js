@@ -1240,7 +1240,7 @@ class FarmScene extends Phaser.Scene {
     if (GF.CAM_PAN) {
       // vista tipo SFL: se ve TODA la granja con su bosque alrededor, y queda margen para arrastrar.
       const m = Math.round(this.margenBosque("y") * 0.6);
-      const z = GF.espacioV === 2
+      const z = GF.espacioV >= 2
         ? Math.min(cw / (GF.WORLD_W + GF.TILE * 4), Math.max(160, ch - 160) / (GF.WORLD_H + GF.TILE * 2))
         : Math.max(cw / (GF.WORLD_W + m), ch / (GF.WORLD_H + m));
       // TOPE DE ALEJADO (17/8, dirección: "los 4 lados del bosque deben ser visibles porque lo

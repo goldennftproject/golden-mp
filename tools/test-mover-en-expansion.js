@@ -41,6 +41,7 @@ vm.runInContext("this.FarmScene = FarmScene;", ctx);
 const GF = ctx.GF, G = ctx.G, T = GF.TILE;
 // Se conserva la prueba de colisiones del mundo heredado. Abajo se contrasta el modelo nuevo.
 const contratoProductivo = G.produccion; delete G.produccion;
+G.espacioV=2;GF.configurarEspacio(2); // La escena conserva el mapa del fixture legado.
 let fallos = 0;
 const ok = (n, c, d) => { if (!c) fallos++; console.log((c ? "  ok   " : "  FALLA") + "  " + n + (d ? "   " + d : "")); };
 

@@ -30,6 +30,7 @@ const MARGEN = 3;          // multiplicador de gracia sobre el máximo físico
 const num = (v) => (typeof v === "number" && isFinite(v)) ? v : 0;
 const ARTEFACTOS_PRECIOS = {cobre:10,plata:25,jade:50,oro:100,rubi:250,corona:500};
 const ARTEFACTOS_DIAS = 180, ARTEFACTOS_REFERENCIA = 90, ENERGIA_GRANJA_MS = 14400000;
+const RELIQUIAS_GOLDEN_DESDE = 1792191000000;
 function mismoJSON(a,b) {
   if(a===b)return true;
   if(!a||!b||typeof a!=='object'||typeof b!=='object'||Array.isArray(a)!==Array.isArray(b))return false;
@@ -44,8 +45,9 @@ function energiaServidor(d,ahora) {
 function artefactoCalcular(a,id,ahora) {
   if(!a || !Object.prototype.hasOwnProperty.call(ARTEFACTOS_PRECIOS,id))return {cobro:0,resto:0,fin:ahora};
   const fin=Math.min(ahora,a.desde+ARTEFACTOS_DIAS*86400000);
-  const bruto=Math.max(0,Math.min(86400000,fin-a.cobrado))*ARTEFACTOS_PRECIOS[id]*500/ARTEFACTOS_REFERENCIA/86400000+(a.resto||0);
-  const cobro=Math.floor((bruto+1e-9)*10)/10; // la unidad de plata del juego es 0,1
+  const desde=a.moneda==='golden' ? a.cobrado : Math.max(a.cobrado,RELIQUIAS_GOLDEN_DESDE);
+  const bruto=Math.max(0,Math.min(86400000,fin-desde))*ARTEFACTOS_PRECIOS[id]/ARTEFACTOS_REFERENCIA/86400000+(a.moneda==='golden' ? a.resto||0 : 0);
+  const cobro=Math.floor((bruto+1e-12)*1e6)/1e6;
   return {cobro,resto:Math.max(0,bruto-cobro),fin};
 }
 function artefactoOperacion(prev,accion,id,ahora,op) {
@@ -59,14 +61,14 @@ function artefactoOperacion(prev,accion,id,ahora,op) {
     if(a && ahora<a.desde+ARTEFACTOS_DIAS*86400000)return {error:'Ya tenés este objeto activo'};
     if(a && t.cobro>0)return {error:'Cobrá primero la producción pendiente del objeto vencido'};
     if(!Number.isFinite(data.golden)||data.golden<ARTEFACTOS_PRECIOS[id])return {error:'No alcanza el $Golden'};
-    data.golden-=ARTEFACTOS_PRECIOS[id];libro.items[id]={desde:ahora,cobrado:ahora,resto:0};
+    data.golden=Math.round((data.golden-ARTEFACTOS_PRECIOS[id])*1e6)/1e6;libro.items[id]={desde:ahora,cobrado:ahora,resto:0,moneda:'golden'};
   }else{
-    if(!a || t.cobro<=0)return {error:'Todavía no hay plata para cobrar'};
+    if(!a || t.cobro<=0)return {error:'Todavía no hay $Golden para cobrar'};
     const energia=energiaServidor(data,ahora);
     if(energia<1)return {error:'Necesitás 1 punto de energía de granja para cobrar'};
     data.energiaGranja={v:1,actual:energia-1,at:ahora};
-    cobro=t.cobro;data.plata=Math.round((num(data.plata)+cobro)*100)/100;
-    libro.items[id]={...a,cobrado:t.fin,resto:t.resto};
+    cobro=t.cobro;data.golden=Math.round((num(data.golden)+cobro)*1e6)/1e6;
+    libro.items[id]={...a,cobrado:t.fin,resto:t.resto,moneda:'golden'};
   }
   libro.ops=[...(libro.ops||[]),{op,id,accion,cobro}].slice(-20);data.artefactos=libro;
   return {data,cobro};
@@ -81,7 +83,7 @@ const NODO_COMPRA = {tree:[30,1],rock:[30,1],piedra:[0,1],bronce:[180,3],hierro:
 function nodosPoseidos(d) { return NODOS_CONTRATO.filter(([i,t,lock,exp]) => !!(d.produccion && d.produccion.nodos && d.produccion.nodos[i]) || (exp == null && lock != null && (t==='tree'||t==='rock') && (d[t==='tree'?'treesOpen':'rocksOpen']||[]).includes(lock))); }
 function goldenCustodia(d) {
   let n = num(d && d.golden);
-  if (!Number.isSafeInteger(n) || n<0) return NaN;
+  if (!Number.isFinite(n) || n<0 || n>Number.MAX_SAFE_INTEGER/1e6 || Math.abs(n*1e6-Math.round(n*1e6))>0.001) return NaN;
   const sumar = (v, profundidad) => {
     if (!v || typeof v !== "object" || profundidad > 12) return;
     if (v.k === "golden") { if (!Number.isSafeInteger(v.n)||v.n<0) n=NaN; else n+=v.n; }
@@ -99,7 +101,7 @@ function protegerEconomia(prev, next, ahora) {
   if(energia && (!Number.isFinite(energia.actual)||energia.actual<0||energia.actual>100||!Number.isFinite(energia.at)))errores.push('Energía de granja inválida');
   next.energiaGranja={v:1,actual:Math.min(energia ? Math.max(0,num(energia.actual)) : energiaServidor(antes,ahora),energiaServidor(antes,ahora)),at:ahora};
   let gastoVip = 0, reembolso = 0;
-  if (!Number.isSafeInteger(goldenCustodia(next))) errores.push("Golden inválido en saldo o contenedor");
+  if (!Number.isFinite(goldenCustodia(next))) errores.push("Golden inválido en saldo o contenedor");
   if (!prev && goldenCustodia(next) > 20) errores.push("Golden inicial no autorizado");
   if (!prev && (num(next.plata)>3 || Object.values(next.res||{}).some(v=>num(v)>0))) errores.push("Saldo o inventario inicial no autorizado");
   if (!prev && (!n || num(next.expansiones)!==0 || num(next.plotsOwned)>3 || Object.keys(n.nodos||{}).length || (next.treesOpen||[]).some(i=>i!==0) || (next.rocksOpen||[]).some(i=>i!==0))) errores.push("Capacidad inicial no autorizada");
