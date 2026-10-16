@@ -1269,6 +1269,8 @@ function copiaEsMejor(c) {
      encima con cara de que el juego funcionaba bien.
      De OTRO usuario no se toca nunca: eso sería darle la granja del vecino. */
   if (c.uid && c.uid !== UID) return false;
+  // Un reinicio confirmado por el servidor invalida los respaldos anteriores.
+  if ((Number(c.data.reinicio) || 0) < (Number(G.reinicio) || 0)) return false;
   return (c.nivel || 1) > (G.level || 1) || (c.plata || 0) > Math.floor(G.plata || 0) + 50;
 }
 

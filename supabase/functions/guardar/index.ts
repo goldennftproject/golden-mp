@@ -322,6 +322,8 @@ Deno.serve(async (req) => {
     /* el guardado anterior y cuánto tiempo pasó — según EL SERVIDOR */
     const { data: prevRow, error: readError } = await admin.from("farms").select("*").eq("user_id", uid).maybeSingle();
     if (readError) return json({ error: "No se pudo leer la granja anterior. No se escribió nada." }, 503);
+    // Una pestaña anterior al reinicio global no puede resucitar su progreso.
+    if (Number(prevRow?.data?.reinicio || 0) > Number(data.reinicio || 0)) return json({ error: "La cuenta se reinició. Recargá para comenzar de cero.", conflicto: true }, 409);
     const op = body?.op;
     if (op != null && (typeof op !== "string" || !/^[a-zA-Z0-9._-]{8,100}$/.test(op))) return json({ error: "Identificador de operación inválido" }, 400);
     if (op && prevRow?.data?._saveOp === op) return json({ ok: true, repetido: true, updated_at: prevRow.updated_at });
