@@ -4464,7 +4464,7 @@ function refreshEstablo() {
       : "Bolsa llena — liberá un espacio para recoger la producción";
   }
   if (cupoEl) cupoEl.textContent = "Lugares: " + animalesTotal() + "/" + establoCupo() + " (cada nivel de Ganadería suma uno, hasta " + ESTABLO_CUPO_MAX + ").";
-  let h = "";
+  let h = '<div class="info">La ganadería produce materiales para fabricar, no plata automática. Sus materiales no se venden al comprador del sistema. Producí según lo que necesites y reservá plata para semillas y expansiones.</div>';
   ANIMAL_ORDER.forEach(k => {
     const d = ANIMAL_DEF[k], a = animalDe(k), abierto = animalUnlocked(k);
     /* 14/9 — LA RACIÓN SE DICE EN LA FILA. Con « Come Zanahoria » alcanzaba mientras todos
@@ -4538,7 +4538,8 @@ function refreshEstablo() {
   box.innerHTML = h;
   box.querySelectorAll("[data-buyani]").forEach(b => b.onclick = () => {
     const k = b.dataset.buyani, d = ANIMAL_DEF[k];
-    askConfirm("Comprar " + d.label + " cuesta " + fmt(animalPrecio(k)) + " de plata. Después hay que alimentarlo para que produzca " + RES_LABEL[d.mat] + ". ¿Comprar?",
+    const costeSemillas = Math.min(...d.come.map(c => (CROP_DEF[c].seedCost || 0) * (d.racion || 1)));
+    askConfirm("Comprar " + d.label + " cuesta " + fmt(animalPrecio(k)) + " de plata. Cada ciclo requiere " + (d.racion || 1) + " unidad(es) de " + d.come.map(c => CROP_DEF[c].label).join(" o ") + ". Cultivar esa ración cuesta desde " + fmt(costeSemillas) + " de plata en semillas, además de energía y parcelas. Produce " + RES_LABEL[d.mat] + ", no plata automática; ese material no se vende al comprador del sistema. ¿Comprar?",
       () => comprarAnimal(k), { title: "Comprar " + d.label, yes: "Comprar", yesClass: "green", no: "Cancelar", noClass: "red" });
   });
   /* 8/9: los botones son de UN animal — llevan su especie y su índice */

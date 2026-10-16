@@ -1,0 +1,15 @@
+{
+  "fecha":"2026-10-16",
+  "validacion":{"regresiones":250,"aprobadas":250,"fuentes_estables":true,"UI":"Confirmación revisada visualmente en PC; cancelación sin compra; fixture local sin escrituras remotas","simulaciones":"Nueve escenarios de 90 días más repetición de los tres Free sin objetos con el simulador final"},
+  "diagnostico":"El perfil casual financiaba alimento de forma continua y acumulaba materiales de ganadería sin salida de plata al comprador del sistema. Era un problema de liquidez y política de gasto, no una demostración de expansión imposible.",
+  "cambios_juego":["Aviso visible: ganadería produce materiales de fabricación, no plata automática; reservar fondos para semillas y expansiones.","Confirmación de compra desglosa ración y coste mínimo de semillas por ciclo, además de energía y parcelas.","Eliminada promesa antigua de mayor producción por felicidad."],
+  "sin_cambios":["Precios y reglas de alimentación","Relojes de recolección","Capacidad","VIP","Jugadores y progreso","Mercado y backend"],
+  "simulador":{"correcciones":["Cuenta cosechas y siembras completadas; registra bloqueos por separado.","No compra semillas para intentar sembrar sin energía.","Snapshots incluyen semillas y energía."],"alternativa":"--perfil-casual --gestion-materiales limita la producción de cada material animal a una reserva de tres; sólo una política de prueba, NO modifica ni automatiza decisiones de jugadores.","control":"--perfil-casual conserva la alimentación continua para no ocultar el resultado desfavorable."},
+  "comparacion_90_dias":{"semillas_aleatorias":[11,29,47],"con_objeto_inicial":true,"alimentacion_continua":{"expansiones":[12,11,11],"plata_final":[393.9,180.9,179.2],"fibra_final":[50,50,51]},"gestion_materiales":{"expansiones":[16,16,16],"plata_final":[10806.9,10882.8,10637.4],"fibra_final":[3,3,3]},"fuentes_estables":true},
+  "reproducir_gestion":"node docs/balance/simular-economia-conjunta.cjs RUTA_REPO RUTA_SALIDA --extendido --objetos --perfil-casual --gestion-materiales",
+  "reproducir_control":"Mismo comando sin --gestion-materiales",
+  "control_sin_objetos":{"perfil":"casual, gestión de materiales, sin VIP ni compra de objetos","plata_final":[6387.2,5871.7,5507.3],"Golden_final":[20,20,20],"expansiones":[16,16,16]},
+  "interpretacion":"La alerta de expansión imposible no se reproduce al gestionar gastos, tampoco sin VIP u objetos. No toda estrategia debe terminar con igual saldo y no se garantiza rentabilidad ni que el aviso cambie la conducta humana.",
+  "pendientes_reales":["Comprensión del coste y ritmo en partidas PC de jugadores","Compras/cobros autenticados, dos sesiones y cortes de red reales","Retención y comparación Free/VIP durante varios días"],
+  "excluidos":"Mobile, plaza multijugador, pagos y retiros USDT"
+}

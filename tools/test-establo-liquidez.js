@@ -1,0 +1,17 @@
+'use strict';
+const assert=require('node:assert/strict'),vm=require('node:vm'),fs=require('node:fs'),path=require('node:path');
+const {JSDOM}=require('jsdom'),root=path.resolve(__dirname,'..');
+const ctx=require('./arrancar-el-juego.contexto').arrancar(root).ctx,run=s=>vm.runInContext(s,ctx);
+const dom=new JSDOM(fs.readFileSync(path.join(root,'public/index.html'),'utf8'),{url:'http://localhost/'});ctx.document=dom.window.document;
+run('estadoDeCero();G.plata=9999;refreshEstablo();');
+const box=dom.window.document.getElementById('establo-list');
+assert.match(box.textContent,/no plata automática/);assert.match(box.textContent,/no se venden al comprador del sistema/);
+assert.ok(!dom.window.document.getElementById('ov-establo').textContent.includes('Cuanto más feliz, más produce'),'sin promesa antigua de producción por felicidad');
+let confirmation='';ctx.askConfirm=s=>{confirmation=s;};
+const economicState='JSON.stringify({plata:G.plata,golden:G.golden,animals:G.animals,res:G.res,seeds:G.seeds,energia:G.energiaGranja})';
+const before=run(economicState);
+box.querySelector('[data-buyani="alpaca"]').click();
+assert.match(confirmation,/360 de plata en semillas/);assert.match(confirmation,/energía y parcelas/);assert.match(confirmation,/no plata automática/);
+assert.equal(run(economicState),before,'leer confirmación no cobra ni compra');
+assert.equal(run('ANIMAL_DEF.alpaca.cicloH'),24);assert.equal(run('ANIMAL_DEF.alpaca.racion'),1);
+dom.window.close();console.log('OK: coste recurrente visible, sin promesa de renta ni compra al leer');

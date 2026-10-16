@@ -5,6 +5,7 @@ if(!repo||!out)throw Error('Uso: node simular-economia-conjunta.cjs REPO SALIDA 
 const smoke=process.argv.includes('--smoke'),visiblePass=process.argv.includes('--pase-visible');
 const habitualOnly=process.argv.includes('--perfil-habitual');
 const conObjetos=process.argv.includes('--objetos');
+const casualOnly=process.argv.includes('--perfil-casual'),gestion=process.argv.includes('--gestion-materiales');
 let objetoServidor;
 if(conObjetos){
  const source=fs.readFileSync(path.join(repo,'supabase/functions/guardar/index.ts'),'utf8');
@@ -93,21 +94,22 @@ function* simulate(profile,seed,stress,sharedMarket){
  function needStock(){
   const reserve={madera:profile.mode==='mixed'?12:8,piedra:6};
   const t=project();if(t)for(const [k,n]of Object.entries(X.BUILD_DEF[t].cost)){reserve[k]=Math.max(reserve[k]||0,n-(((G.obraDep||{})[t]||{})[k]||0));if(X.MAT_DEF[k])for(const [raw,qty]of Object.entries(X.MAT_DEF[k].cost))reserve[raw]=Math.max(reserve[raw]||0,qty*reserve[k]);}
-  if(profile.mode==='mixed')for(const k of X.ANIMAL_ORDER)if(ctx.animalCant(k)>0){const a=X.ANIMAL_DEF[k],food=a.come.slice().sort((a,b)=>X.CROP_DEF[a].price-X.CROP_DEF[b].price)[0];reserve[food]=Math.max(reserve[food]||0,a.racion*ctx.animalCant(k));}
+  if(profile.mode==='mixed')for(const k of X.ANIMAL_ORDER)if(ctx.animalCant(k)>0){const a=X.ANIMAL_DEF[k];if(gestion&&(G.res[a.mat]||0)>=3)continue;const food=a.come.slice().sort((a,b)=>X.CROP_DEF[a].price-X.CROP_DEF[b].price)[0];reserve[food]=Math.max(reserve[food]||0,a.racion*ctx.animalCant(k));}
   if(G.built.cocina)reserve.papa=Math.max(reserve.papa||0,5);
   const ps=ctx.pedidosTodos().filter(x=>!x.p.hecho&&x.p.tipo==='res'&&x.p.n<=150);
   for(const {p}of ps)if((G.res[p.key]||0)>=p.n*.5)reserve[p.key]=Math.max(reserve[p.key]||0,p.n);
   return reserve;
  }
  function farming(){
-  for(const o of scene.plots){if(ctx.produccionPausada(o))continue;if(o.state==='growing'&&clock>=o.readyAt)o.state='ready';if(o.state==='ready')perform('cosecha',3,()=>{finish('harvest',o);metric('harvests');});}
+  for(const o of scene.plots){if(ctx.produccionPausada(o))continue;if(o.state==='growing'&&clock>=o.readyAt)o.state='ready';if(o.state==='ready')perform('cosecha',3,()=>{finish('harvest',o);if(o.state==='dry')metric('harvests');else metric('harvestBlocked');});}
   const reserve=needStock(),interval=1440/profile.visits,within=((clock-EPOCH)/60000)%1440,left=12-(within%interval),gap=left>3?3:interval-(within%interval);
   for(const o of scene.plots){if(o.state!=='dry'||ctx.produccionPausada(o))continue;
    const food=Object.keys(reserve).find(k=>X.CROP_DEF[k]&&ctx.cropUnlocked(k)&&(G.res[k]||0)<reserve[k]&&(!scene.plots.some(p=>p.state==='growing'&&p.cropKey===k)));
    const affordable=Object.keys(X.CROP_DEF).filter(k=>ctx.cropUnlocked(k)&&((G.seeds[k]||0)>0||X.CROP_DEF[k].seedCost<=G.plata));
    let crop=food||affordable.filter(k=>X.CROP_DEF[k].grow/60<=gap).sort((a,b)=>X.CROP_DEF[b].grow-X.CROP_DEF[a].grow)[0]||affordable[0]||'papa';
+   if(!ctx.energiaGranjaPuede('plant'))continue;
    if((G.seeds[crop]||0)<=0)perform('semillas',2,()=>ctx.buySeed(crop,1));
-   if((G.seeds[crop]||0)>0&&ctx.puedeAccion('plant',{...o,seed:crop}).ok)perform('siembra',3,()=>{G.selSeed=crop;finish('plant',o,crop);metric('planted');});
+   if((G.seeds[crop]||0)>0&&ctx.puedeAccion('plant',{...o,seed:crop}).ok)perform('siembra',3,()=>{G.selSeed=crop;finish('plant',o,crop);if(o.state==='growing')metric('planted');else metric('plantBlocked');});
   }
  }
  function gather(){
@@ -130,7 +132,7 @@ function* simulate(profile,seed,stress,sharedMarket){
   if(G.built.horno){perform('horno_cobro',2,()=>{ctx.checkHorno();ctx.hornoRecoger();});const r=needStock();for(const [k,n]of Object.entries(r))if(X.MAT_DEF[k]&&(G.res[k]||0)+ctx.hornoList().filter(x=>x.id===k).length<n&&ctx.canAfford(X.MAT_DEF[k].cost)&&ctx.hornoLibres()>0)perform('fundicion',3,()=>ctx.craftMat(k));}
  }
  function sideContent(){if(profile.mode!=='mixed')return;
-  for(const k of X.ANIMAL_ORDER){for(let i=0;i<ctx.animalCant(k);i++){if(ctx.animalFaltaDe(k,i)<=0)perform('ganaderia_cobro',3,()=>metric('animalUnits',ctx.recogerUno(k,i,true)));if(ctx.animalHambriento(ctx.animalLista(k)[i])&&ctx.animalPuedeComer(k))perform('comida_animal',3,()=>ctx.alimentarUno(k,i,true));}
+  for(const k of X.ANIMAL_ORDER){for(let i=0;i<ctx.animalCant(k);i++){if(ctx.animalFaltaDe(k,i)<=0)perform('ganaderia_cobro',3,()=>metric('animalUnits',ctx.recogerUno(k,i,true)));if((!gestion||(G.res[X.ANIMAL_DEF[k].mat]||0)<3)&&ctx.animalHambriento(ctx.animalLista(k)[i])&&ctx.animalPuedeComer(k))perform('comida_animal',3,()=>ctx.alimentarUno(k,i,true));}
    if(G.built.establo&&ctx.animalesTotal()<2&&ctx.animalUnlocked(k)&&ctx.animalCant(k)===0&&G.plata>ctx.animalPrecio(k)+500&&X.ANIMAL_DEF[k].come.some(c=>ctx.cropUnlocked(c)))perform('compra_animal',5,()=>ctx.comprarAnimal(k));
   }
   if(G.built.cocina){perform('cocina_cobro',2,()=>{ctx.checkCooking();metric('cooked',ctx.cocinaRecoger());});if(ctx.cookFree()>0&&((G.dishes.papa_asada||0)<5)&&ctx.canCook('papa_asada'))perform('cocina_insumos',3,()=>ctx.cook('papa_asada'));}
@@ -176,7 +178,7 @@ function* simulate(profile,seed,stress,sharedMarket){
   }
   if([1,7,14,30,31,45,60,61,90,duration].includes((minute+1)/1440)){
    const total=k=>Object.values(ledger).reduce((s,l)=>s+l[k],opening[k]);assert.ok(Math.abs(total('plata')-G.plata)<1e-6,'cuadra ledger plata');assert.ok(Math.abs(total('golden')-G.golden)<1e-6,'cuadra ledger Golden');
-   snapshots.push({day:(minute+1)/1440,plata:+G.plata.toFixed(2),golden:G.golden,level:G.level,expansions:G.expansiones,used:ctx.produccionUsados(),capacity:ctx.produccionCapacidad(),vip:ctx.produccionVipActivo(),skills:{...G.skills},buildings:Object.keys(G.built).filter(k=>G.built[k]),animals:ctx.animalesTotal(),stocks:{...G.res},dishes:{...G.dishes},passStars:(G.pass||{}).stars||0,counts:{...counts}});
+   snapshots.push({day:(minute+1)/1440,plata:+G.plata.toFixed(2),golden:G.golden,level:G.level,expansions:G.expansiones,used:ctx.produccionUsados(),capacity:ctx.produccionCapacidad(),vip:ctx.produccionVipActivo(),skills:{...G.skills},buildings:Object.keys(G.built).filter(k=>G.built[k]),animals:ctx.animalesTotal(),stocks:{...G.res},seeds:{...G.seeds},energia:ctx.energiaGranjaTick(),dishes:{...G.dishes},passStars:(G.pass||{}).stars||0,counts:{...counts}});
   }
   yield;
  }
@@ -184,11 +186,11 @@ function* simulate(profile,seed,stress,sharedMarket){
 }
 function record(s){results.push(s);const last=s.snapshots.at(-1);console.log(JSON.stringify({profile:s.profile.name,stress:s.stress,seed:s.seed,plata:last.plata,golden:last.golden,level:last.level,vipPurchases:s.counts.vipPurchases||0}));}
 if(shared){for(const seed of seeds){const pool={},members=(smoke?profiles.filter(p=>['habitual','Ahorro VIP'].includes(p.name)):profiles).map(p=>simulate(p,seed,1,pool));for(let minute=0;minute<duration*1440;minute++){const start=Math.floor(minute/1440)%members.length;for(let i=0;i<members.length;i++)assert.equal(members[(i+start)%members.length].next().done,false);}for(const member of members){const end=member.next();assert.ok(end.done);record(end.value);}}}
-else for(const profile of smoke||habitualOnly?[profiles[1]]:profiles)for(const stress of smoke?[1]:[1,5])for(const seed of seeds){const iterator=simulate(profile,seed,stress);let step;do{step=iterator.next();}while(!step.done);record(step.value);}
+else for(const profile of casualOnly?[profiles[0]]:smoke||habitualOnly?[profiles[1]]:profiles)for(const stress of smoke||casualOnly?[1]:[1,5])for(const seed of seeds){const iterator=simulate(profile,seed,stress);let step;do{step=iterator.next();}while(!step.done);record(step.value);}
 fs.mkdirSync(out,{recursive:true});const files=['public/game/config.js','public/game/state.js','public/game/farm.js','public/game/ui.js','supabase/migrations/20261015220610_balance_personal_familias.sql'];
 const hashesAfter=Object.fromEntries(sourceFiles.map(f=>[f,hash(path.join(repo,f))]));assert.deepEqual(hashesAfter,hashesBefore,'fuentes sin cambios durante simulación');
-fs.writeFileSync(path.join(out,'proveniencia.json'),JSON.stringify({simulatorHash,hashesBefore,hashesAfter,shared,extended,participants:shared?(smoke?2:profiles.length):1,rotation:'orden rotado cada día',policy:'ahorro VIP vende excedentes por Golden con saldo plata >1000 y Golden < precio VIP vigente; reserva real de insumos; renueva al expirar',notes:'Mercado compartido local: nueve perfiles heterogéneos en cada una de tres ejecuciones independientes. No es un test remoto ni representa toda población posible.'},null,2));
+fs.writeFileSync(path.join(out,'proveniencia.json'),JSON.stringify({simulatorHash,hashesBefore,hashesAfter,shared,extended,participants:shared?(smoke?2:profiles.length):1,rotation:'orden rotado cada día',policy:'ahorro VIP vende excedentes por Golden con saldo plata >1000 y Golden < precio VIP vigente; reserva real de insumos; renueva al expirar',notes:shared?'Mercado compartido local; participantes y semillas según opciones. No es un test remoto ni representa toda población posible.':'Mercado local de un participante por ejecución; perfiles, semillas y política según opciones. No es un test remoto ni un test de población.'},null,2));
 fs.writeFileSync(path.join(out,'resultados.json'),JSON.stringify({date:new Date().toISOString(),duration,visiblePass,results,hashes:Object.fromEntries(files.map(f=>[f,crypto.createHash('sha256').update(fs.readFileSync(path.join(repo,f))).digest('hex')])),limitations:['Pasos de un minuto; 12 minutos por visita; acción normal 3 s, pesca 20 s, panel 2–6 s (supuestos de conducta, no tiempos del motor).','Mercado local usa cotizarVenta real y cuotas/familias reconstruidas del contrato SQL; stress multiplica flujo de ventas, no es una población heterogénea real ni transacción remota.','Tutorial marcado terminado y starter acelerado apagado; kit real, cartera 3 plata/20 Golden. VIP empieza con el precio VIP vigente de saldo previo adicional y lo paga, no es un pago externo.','Combate aproximado: sólo ratas, defensa y daño reales, un contraataque cada dos golpes, sin movimiento/AI. Retirada con vida baja; sin rutas de bosses ni P2P.','No se liquida inventario animal/platos por precios sombra. Faltan transporte/depósitos/armadura avanzada y microgestión óptima. No se promete nivel 25 en un plazo ni rentabilidad real.']},null,2));
-fs.writeFileSync(path.join(out,'opciones.json'),JSON.stringify({conObjetos,habitualOnly,smoke,extended,shared,nota:'Con objetos compra amuleto de cobre con 10 Golden iniciales y cobra en las visitas usando la lógica real del servidor; sin RPC remoto.'},null,2));
+fs.writeFileSync(path.join(out,'opciones.json'),JSON.stringify({conObjetos,gestion,casualOnly,habitualOnly,smoke,extended,shared,nota:'Con objetos compra amuleto de cobre con 10 Golden iniciales y cobra en las visitas usando la lógica real del servidor; sin RPC remoto.'},null,2));
 console.log('Guardado '+out+' · '+results.length+' escenarios');
 
