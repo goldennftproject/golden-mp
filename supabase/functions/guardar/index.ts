@@ -71,7 +71,7 @@ function artefactoOperacion(prev,accion,id,ahora,op) {
   libro.ops=[...(libro.ops||[]),{op,id,accion,cobro}].slice(-20);data.artefactos=libro;
   return {data,cobro};
 }
-const VIP_PRECIO = 100, VIP_MS = 30 * 86400000;
+const VIP_PRECIO = 10, VIP_MS = 30 * 86400000;
 const VIP_REINTEGROS = {3:5,7:5,12:8,15:8,18:8,22:8,25:8,27:10};
 const FARM_XP_CONTRATO = [0,0,25,90,225,550,1250,2750,5500,9000,14000,18200,22400,26900,31400,36200,41300,46400,51900,57400,63200,69300,75400,81800,88200,95000];
 // Contrato posicional del mundo; test contrastado con config.js para no inventar nodos.
@@ -124,7 +124,7 @@ function protegerEconomia(prev, next, ahora) {
       if (!Number.isInteger(expN) || expN<exp || expN>16 || expN>exp+1 || (expN>exp && (!obra || obra.n!==expN || obra.hasta>ahora+1000))) errores.push("Expansión sin obra terminada");
       if (obraN && (!obra || obra.n!==obraN.n)) {
         if (obraN.n!==expN+1 || Math.abs(num(obraN.desde)-ahora)>300000 || num(obraN.hasta)-num(obraN.desde)<600000*obraN.n-1000) errores.push("Obra no autorizada");
-        gasto += 20+10*expN+5*expN*expN;
+        gasto += 20+10*expN+5*expN*expN+Math.round(.5*Math.pow(Math.max(0,expN-2),3));
         if (!expN && (num(antes.res && antes.res.madera)-num(next.res && next.res.madera)<2 || num(antes.res && antes.res.piedra)-num(next.res && next.res.piedra)<2)) errores.push("Faltan materiales de la primera expansión");
       } else if (obra && obraN && obraN.hasta!==obra.hasta) errores.push("No se puede adelantar una obra");
       const poseidos = nodosPoseidos(next), viejos = new Set(nodosPoseidos(antes).map(o=>o[0]));

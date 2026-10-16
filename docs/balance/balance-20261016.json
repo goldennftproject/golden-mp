@@ -1,0 +1,14 @@
+{
+  "fecha":"2026-10-16",
+  "cambios":{
+    "VIP":{"precio_anterior":100,"precio_actual":10,"moneda":"Golden interno","dias":30,"beneficios_sin_cambios":true,"aplica":"compras futuras; sin recálculo de VIP activo"},
+    "expansiones":{"precios":[20,35,60,96,144,209,292,398,528,687,876,1100,1360,1661,2004,2394],"total_anterior":7720,"total_actual":11864,"primeras_tres_intactas":true,"compradas_y_obras_pagadas_conservadas":true}
+  },
+  "validacion":{"tests":249,"aprobados":249,"fuentes_estables":true,"hash":"85ab64a8bce9b491d574e9629ad307421b83e7fbd778f6e699c05b9f3a0c8012","simulacion":"27 escenarios: nueve perfiles en mercado compartido local, tres semillas, 90 días, amuleto inicial","resultado":"Sin saldos negativos, exceso de energía/capacidad ni descuadre del ledger"},
+  "resultados":{"habitual":"14–15 expansiones día 30; 16 al día 45 en las tres semillas","ahorro_y_renovacion_VIP":"Tres compras en 90 días en las tres semillas; el perfil de ahorro puede pagar la primera con el saldo inicial restante","casual":"11 expansiones del día 30 al 90: alerta de política de gasto y ritmo, no resuelta por esta curva"},
+  "experimento_descartado":"Coeficiente cúbico 2: coste total 24282 y avance habitual demasiado lento; se eligió 0.5 redondeado. Los informes intermedios con fuentes cambiantes o valores esperados antiguos no son evidencia de aceptación.",
+  "limites":["No es un playtest humano ni un mercado remoto.","Los perfiles de especialización no tienen las mismas inversiones y gastos; no se redujeron precios por comparar sólo saldos finales.","El servidor mantiene sus márgenes heurísticos: esto no convierte toda la economía en autoritativa ni prueba resistencia total a fraude.","Mantener bajo observación la progresión casual y la utilidad económica del VIP; no se promete rentabilidad ni renovación automática."],
+  "reproducir":"node docs/balance/simular-economia-conjunta.cjs RUTA_REPO RUTA_SALIDA --extendido --objetos --compartido",
+  "preservado":["Jugadores, Auth, guardados y conexión de Goldenfarm","Relojes de árboles 30 min y piedra 40 min","Capacidad y geometría física","Producción y precio de objetos existentes","Mercado dinámico y cuotas"],
+  "retiros_USDT":false
+}

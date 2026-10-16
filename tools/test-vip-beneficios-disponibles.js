@@ -7,7 +7,7 @@ assert.match(ctx.produccionVipPaseTexto(), /deshabilitado.*no otorga premios/);
 let mensaje;
 ctx.askConfirm = text => { mensaje = text; };
 ctx.confirmarCompraVip();
-assert.match(mensaje, /100 \$Golden/);
+assert.match(mensaje, /10 \$Golden/);
 assert.match(mensaje, /30 días/);
 assert.match(mensaje, /deshabilitado/);
 ctx.GF.MVP = 0;

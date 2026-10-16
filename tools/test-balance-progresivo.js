@@ -1,0 +1,30 @@
+"use strict";
+const assert=require('node:assert/strict'),vm=require('node:vm'),fs=require('node:fs'),path=require('node:path');
+const root=path.resolve(__dirname,'..'),ctx=require('./arrancar-el-juego.contexto').arrancar(root).ctx;
+const run=s=>vm.runInContext(s,ctx);
+assert.equal(run('PRODUCCION_VIP_PRECIO'),10);
+assert.equal(run('PRODUCCION_VIP_DIAS'),30);
+assert.equal(run('CD.tree'),1800);assert.equal(run('CD.rock'),2400);
+const prices=Array.from({length:16},(_,i)=>run(`expansionPrecioCupo(${i})`));
+assert.deepEqual(prices.slice(0,3),[20,35,60]);
+for(let i=1;i<16;i++){assert.ok(prices[i]>prices[i-1]);if(i>1)assert.ok(prices[i]-prices[i-1]>=prices[i-1]-prices[i-2]);}
+assert.equal(prices[15],2394);
+run('estadoDeCero();G.expansiones=8;G.golden=7;G.plata=1234;var balanceSnap=JSON.parse(JSON.stringify(snapshot()));hydrate(balanceSnap);');
+assert.equal(run('G.expansiones'),8);assert.equal(run('G.golden'),7);assert.equal(run('G.plata'),1234);
+const source=fs.readFileSync(path.join(root,'supabase/functions/guardar/index.ts'),'utf8');
+assert.match(source,/const VIP_PRECIO = 10,/);
+assert.ok(source.includes('20+10*expN+5*expN*expN+Math.round(.5*Math.pow(Math.max(0,expN-2),3))'));
+const server=vm.createContext({Math,Number,Array,Object,Set,Date,isFinite,JSON});
+vm.runInContext(source.slice(source.indexOf('const VERSION ='),source.indexOf('/* === FIN REGLAS === */')),server);
+const now=1800000000000;
+run('estadoDeCero();G.expansiones=15;G.level=25;G.plata=10000;');
+const prev=JSON.parse(run('JSON.stringify(snapshot())'));
+const next=structuredClone(prev);next.plata-=prices[15];next.expObra={n:16,desde:now,hasta:now+16*600000};
+function check(a,b){server.a=structuredClone(a);server.b=structuredClone(b);return vm.runInContext('protegerEconomia(a,b,1800000000000)',server);}
+assert.equal(check(prev,next).length,0,'compra al nuevo precio aceptada');
+const cheap=structuredClone(next);cheap.plata=prev.plata;
+assert.ok(check(prev,cheap).some(s=>s.includes('fondos')),'obra avanzada sin gasto supera incluso el margen heurístico');
+const paid=structuredClone(prev);paid.expObra={n:16,desde:now-16*600000-1,hasta:now-1};
+const done=structuredClone(paid);done.expansiones=16;done.expObra=null;
+assert.equal(check(paid,done).length,0,'obra anterior ya pagada termina sin recobro');
+console.log('OK: precios convexos, arranque intacto, VIP 10/30 días, servidor alineado y progreso conservado');

@@ -10,7 +10,7 @@ let next=structuredClone(initial);next.golden+=1e6;assert.ok(check(initial,next)
 next=structuredClone(initial);next.produccion.base=9999;assert.ok(check(initial,next).some(x=>x.includes('Capacidad')));
 next=structuredClone(initial);next.produccion.vipHasta=now+30*86400000;next.produccion.vipAplicado=true;
 assert.ok(check(initial,next).some(x=>x.includes('Golden')),'VIP sin pagar rechazado');
-next.golden-=100;assert.equal(check(initial,next).length,0,'VIP único pagado admitido');
+next.golden-=10;assert.equal(check(initial,next).length,0,'VIP único pagado admitido');
 const vipViejo=structuredClone(initial);delete vipViejo.produccion.vipUnico;vipViejo.pass.vip=true;
 const migradoVip=structuredClone(vipViejo);migradoVip.produccion.vipUnico=1;migradoVip.produccion.vipHasta=now+30*86400000;migradoVip.produccion.vipAplicado=true;
 assert.equal(check(vipViejo,migradoVip).length,0,'VIP previo a la unificación se conserva una vez sin recobrar');
@@ -37,7 +37,7 @@ for(const exp of [0,1,3,8,16]){
  assert.equal(check(legacy,migrated).length,0,'conserva legado con '+exp+' expansiones');
  assert.equal(check(migrated,structuredClone(migrated)).length,0,'legado migrado sigue guardando '+exp);
 }
-assert.equal(read('Array.from({length:16},(_,i)=>expansionPrecioCupo(i)).reduce((s,x)=>s+x,0)'),7720);
+assert.equal(read('Array.from({length:16},(_,i)=>expansionPrecioCupo(i)).reduce((s,x)=>s+x,0)'),11864);
 read('G.produccion.base=5;G.expansiones=16;');assert.equal(read('produccionVipCupos()'),6,'VIP escala con la granja, no se diluye al final');
 read("G.skills.farming=0;G.skills.mining=5000;G.skills.tala=0;G.farmXpBase=0;G.level=24;");
 assert.equal(read('farmPuedeSubir()'),true,'minero puede completar progreso sin cultivos ni tala');

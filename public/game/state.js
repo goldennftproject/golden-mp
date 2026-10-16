@@ -2320,7 +2320,9 @@ function expansionSiguiente() {
     bloque: (GF.EXPANSIONES || [])[hechas] || null,
     ...(G.produccion && G.produccion.v === 1 ? { costo: { plata: expansionPrecioCupo(hechas), ...(hechas === 0 ? { madera: 2, piedra: 2 } : {}) } } : {}) };
 }
-function expansionPrecioCupo(i) { return 20 + 10*i + 5*i*i; }
+// Balance 16/10: arranque intacto; el terreno avanzado requiere reinversión creciente.
+// Sólo afecta compras futuras: ni las expansiones adquiridas ni las obras pagadas se recalculan.
+function expansionPrecioCupo(i) { return 20 + 10*i + 5*i*i + Math.round(.5*Math.pow(Math.max(0,i-2),3)); }
 function expansionComprar() {
   const e = expansionSiguiente();
   if (!e) { toast("Ya tenés las " + EXPANSION_MAX + " expansiones"); return false; }
@@ -2656,7 +2658,7 @@ function recalcFarmLevelInterno() {
    Se mide sobre las celdas que el jugador TIENE (9 de arranque + 3 por expansión comprada), no
    sobre las que podría tener: el cartel promete lo que va a cobrar, no lo que cobraría otro. */
 function produccionClave(o) { return o && Number.isInteger(o.i) ? (o.type === "plot" ? "p:" : "n:") + o.i : ""; }
-var PRODUCCION_VIP_PRECIO = 100, PRODUCCION_VIP_DIAS = 30, PRODUCCION_VIP_CUPOS = 2, PRODUCCION_HIDRATANDO = false;
+var PRODUCCION_VIP_PRECIO = 10, PRODUCCION_VIP_DIAS = 30, PRODUCCION_VIP_CUPOS = 2, PRODUCCION_HIDRATANDO = false;
 function produccionVipCupos() { return Math.max(PRODUCCION_VIP_CUPOS,Math.ceil(((G.produccion && G.produccion.base || 5)+(G.expansiones||0))*.25)); }
 function produccionVipActivo() { return !!(G.produccion && G.produccion.vipHasta > nowMs()); }
 function produccionOrden(clave) { const p = G.produccion; p.orden = (p.orden || []).filter(k => k !== clave); p.orden.push(clave); }
