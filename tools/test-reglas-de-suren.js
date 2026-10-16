@@ -128,6 +128,7 @@ console.log("\n« SI CAZA ALGO SE ROMPE · SI NO CAZA NADA OBTENDRÁ BASURA »")
     pescador(); forzar(false);
     const rangos = { piedra: [99, 0], madera: [99, 0] };
     for (let i = 0; i < 300; i++) {
+      G.energiaGranja={v:1,actual:100,at:T}; // aislar el sorteo; el reloj/agotamiento tiene su propia prueba
       G.nasas = []; G.res.lombriz = 50; G.res.madera = 500; G.res.piedra = 500; G.plata = 100000;
       ctx.nasaCalar("mimbre");
       const p0 = G.res.piedra, m0 = G.res.madera;

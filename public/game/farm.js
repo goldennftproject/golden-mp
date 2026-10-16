@@ -2124,6 +2124,9 @@ class FarmScene extends Phaser.Scene {
     if (["chop", "mine", "plant", "harvest"].includes(a.kind) && produccionPausada(o)) { this.action = null; return; }
     if (window.sfx) sfx({ chop: "chop", mine: "mine", plant: "plant", harvest: "harvest", fish: "splash", water: "splash" }[a.kind] || "click");
     // (la sacudida y las astillas ya salieron en el momento del impacto, no acá al final)
+    if (['chop','mine','plant','harvest'].includes(a.kind) && !energiaGranjaPuede(a.kind)) {
+      energiaGranjaPagar(a.kind); this.action=null; return;
+    }
     if (a.kind === "chop") {
       /* 22/8 (cargas, ritmo FINAL de dirección, dictado clic a clic): los CORTES SUAVES pagan una
          carga cada uno (+1 madera, −1 hacha); el CORTE PROFUNDO no da ni consume nada; el TOCÓN
@@ -2135,7 +2138,7 @@ class FarmScene extends Phaser.Scene {
       const cargasArbol = nodoCargas(o, CD.tree);
       if (cargasArbol > 1) {   // corte SUAVE que cobra: paga una carga y el árbol sigue en pie
         const gr = (typeof NODO_POR_CARGA === "number" ? NODO_POR_CARGA : 1);
-        if (tryAddRes("madera", bonoNft("madera", gr))) {
+        if (energiaGranjaAgregar("madera", bonoNft("madera", gr), 'chop')) {
           for (let u = 0; u < gr; u++) useTool("axe"); addXp("tala", xpDeNodo("tree")); nodoSumar(o); statAdd("talar", null, 1);
           const quedan = nodoGastarCarga(o, CD.tree); this.syncNodos();
           if (this.textures.exists("tree_cut1")) this.setObjTex(o, "tree_cut1", o.rw || o.w);
@@ -2161,7 +2164,7 @@ class FarmScene extends Phaser.Scene {
       o.golpesAt = 0;
       o.golpes = 0; this.barraGolpes(o);
       const grF = (typeof NODO_POR_CARGA === "number" ? NODO_POR_CARGA : 1);
-      if (tryAddRes("madera", bonoNft("madera", grF))) {   // la ÚLTIMA carga: el árbol cae de verdad
+      if (energiaGranjaAgregar("madera", bonoNft("madera", grF), 'chop')) {   // la ÚLTIMA carga: el árbol cae de verdad
         for (let u = 0; u < grF; u++) useTool("axe"); addXp("tala", xpDeNodo("tree"));   /* 18/8: por acción, no por reloj */   /* 18/8: talar es TALA, no Artesanía */ /* 16/8: XP = minutos del reloj (1 h 30 → 90) */ nodoSumar(o);
         o.cdIni = nowMs(); o.readyAt = nowMs() + nodoCd(o, "tree", CD.tree) * 1000 * cdMult() * (typeof tutoBoost === "function" ? tutoBoost("tree") : 1);
         o.halfAt = nowMs() + (o.readyAt - nowMs()) / 2; this.syncNodos();   // a mitad del enfriamiento asoma el árbol a medio crecer (doc 4/8)
@@ -2187,7 +2190,7 @@ class FarmScene extends Phaser.Scene {
       const cargasRoca = nodoCargas(o, CD.rock);
       if (cargasRoca > 1) {   // golpe que COBRA una carga: paga y la roca sigue ahí
         const gr = (typeof NODO_POR_CARGA === "number" ? NODO_POR_CARGA : 1);
-        if (tryAddRes("piedra", bonoNft("piedra", gr))) {
+        if (energiaGranjaAgregar("piedra", bonoNft("piedra", gr), 'mine')) {
           const pk = picoParaNodo(o);   // 24/8: el pico se elige solo — el más barato que sirva
           if (pk) { G.picks.dur[pk] = Math.max(0, (G.picks.dur[pk] || 0) - 1); if (G.picks.dur[pk] <= 0) { log("Usaste tu último " + PICK_DEF[pk].label + " — crafteá más en la Herrería.", "bad"); toast("Sin picos — crafteá más"); destroyPick(pk); } }
           addXp("mining", xpDeNodo("rock", "piedra")); statAdd("minar", "piedra", 1); nodoSumar(o);
@@ -2212,7 +2215,7 @@ class FarmScene extends Phaser.Scene {
       }
       o.golpes = 0; o.golpesAt = 0; this.barraGolpes(o);
       const grF = (typeof NODO_POR_CARGA === "number" ? NODO_POR_CARGA : 1);
-      if (tryAddRes("piedra", bonoNft("piedra", grF))) {   // la ÚLTIMA carga: la roca se rompe de verdad
+      if (energiaGranjaAgregar("piedra", bonoNft("piedra", grF), 'mine')) {   // la ÚLTIMA carga: la roca se rompe de verdad
         const pk = picoParaNodo(o);   // picar piedra también gasta el pico (bug reportado) · 24/8: el pico se elige solo
         if (pk) { G.picks.dur[pk] = Math.max(0, (G.picks.dur[pk] || 0) - 1); if (G.picks.dur[pk] <= 0) { log("Usaste tu último " + PICK_DEF[pk].label + " — crafteá más en la Herrería.", "bad"); toast("Sin picos — crafteá más"); destroyPick(pk); } }
         addXp("mining", xpDeNodo("rock", "piedra")); /* 16/8: XP = minutos del reloj (2 h → 120) */ statAdd("minar", "piedra", 1); nodoSumar(o);
@@ -2233,7 +2236,7 @@ class FarmScene extends Phaser.Scene {
       const grVeta = Math.max(1, (odC.yield || 1) * (o.ore === "piedra" ? (typeof NODO_POR_CARGA === "number" ? NODO_POR_CARGA : 1) : 1));
       const cargasVeta = o.ore === "piedra" ? nodoCargas(o, CD.rock) : 1;
       if (cargasVeta > 1) {   // modo cargas (solo la veta de piedra): este clic COBRA una carga
-        if (tryAddRes(o.ore, bonoNft(o.ore, grVeta))) {
+        if (energiaGranjaAgregar(o.ore, bonoNft(o.ore, grVeta), 'mine')) {
           const pk2 = picoParaNodo(o), pd2 = PICK_DEF[pk2] || { label: "pico" };   // 24/8: el pico se elige solo
           if (pk2) G.picks.dur[pk2] = Math.max(0, (G.picks.dur[pk2] || 0) - 1);
           addXp("mining", xpDeNodo("ore", o.ore)); statAdd("minar", o.ore, 1); nodoSumar(o);
@@ -2262,7 +2265,7 @@ class FarmScene extends Phaser.Scene {
          (puedeAccion ya lo filtra en el juego real, pero el arnés de pruebas llama a
          finishAction directo — y una caja registradora nunca debe reventar por eso). */
       const pk = picoParaNodo(o), pd = PICK_DEF[pk] || { label: "pico" }, od = ORE_DEF[o.ore];
-      if (tryAddRes(o.ore, bonoNft(o.ore, grVeta))) {   // la última carga: la veta se agota y arranca su reloj
+      if (energiaGranjaAgregar(o.ore, bonoNft(o.ore, grVeta), 'mine')) {   // la última carga: la veta se agota y arranca su reloj
         if (pk) G.picks.dur[pk] = Math.max(0, (G.picks.dur[pk] || 0) - 1);
         addXp("mining", xpDeNodo("ore", o.ore)); statAdd("minar", o.ore, grVeta);   // 16/8: XP = minutos del reloj (bronce 8 h → 480 … oro 14 h → 840)
         nodoSumar(o);
@@ -2277,6 +2280,7 @@ class FarmScene extends Phaser.Scene {
     } else if (a.kind === "plant") {
       const ck = a.seed || G.selSeed, cd = CROP_DEF[ck];   // la semilla que se validó al hacer clic (cambiarla a mitad de la animación no la cuela)
       if (cd && (G.seeds[ck] || 0) > 0) {
+        if (!energiaGranjaPagar('plant')) { this.action=null; return; }
         G.seeds[ck]--; o.cropKey = ck; o.state = "growing"; o.witherAt = 0;
         // acelerador del tutorial (12/8): la papa crece rápido SOLO mientras el objetivo activo la pide
         // 14/8: el boost del tutorial aplica a CUALQUIER cultivo (antes solo papa) — el
@@ -2296,7 +2300,8 @@ class FarmScene extends Phaser.Scene {
     } else if (a.kind === "harvest") {
       const ck = o.cropKey || "papa", cd = CROP_DEF[ck] || CROP_DEF.papa;
       const gr = Math.max(1, cd.yield || 1);   // 18/8: el bono del Granero se cobra al VENDER, no al cosechar
-      if (tryAddRes(ck, gr)) { o.state = "dry"; o.cropKey = null; o.readyAt = 0; o.witherAt = 0; this.setPlotGlow(o, "off"); this.coinBurst(o.cx, o.by); o.spr.setVisible(false); o.emo.setVisible(false); o.timer.setVisible(false); this.syncPlots(); addXp("farming", (cd && cd.xp) || 2); if (typeof statAdd === "function") statAdd("cosechar", ck, 1); if (!G.firstCropDone) G.firstCropDone = true; if (typeof tutoEvent === "function") tutoEvent("harvest"); this.premioFx(o.cx, o.by, resSprite(ck), "+" + gr); log(`${cd.emoji} +${gr} ${cd.label}.`, "good"); refreshHud(); }
+      if (!roomForRes(ck,gr)) { toast('Bolsa llena — no podés cosechar'); this.action=null; return; }
+      if (energiaGranjaAgregar(ck, gr, 'harvest')) { o.state = "dry"; o.cropKey = null; o.readyAt = 0; o.witherAt = 0; this.setPlotGlow(o, "off"); this.coinBurst(o.cx, o.by); o.spr.setVisible(false); o.emo.setVisible(false); o.timer.setVisible(false); this.syncPlots(); addXp("farming", (cd && cd.xp) || 2); if (typeof statAdd === "function") statAdd("cosechar", ck, 1); if (!G.firstCropDone) G.firstCropDone = true; if (typeof tutoEvent === "function") tutoEvent("harvest"); this.premioFx(o.cx, o.by, resSprite(ck), "+" + gr); log(`${cd.emoji} +${gr} ${cd.label}.`, "good"); refreshHud(); }
       else { toast("Bolsa llena — no podés cosechar"); log("Bolsa llena: liberá espacio para cosechar.", "bad"); }
     } else if (a.kind === "fish") {
       /* el corcho se recoge y ya está: la captura la resuelve la pulseada de la v4, no esto.

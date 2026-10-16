@@ -57,7 +57,8 @@ console.log("  " + FILES.length + " archivos  ·  " + Math.round(crudo / 1024) +
      (19/9 legibilidad, 21-22/9 obra de expansión, NFTs de recolección, marca SFL, y los
      commits del chat visual: nota de prueba del tablón, Mercado en móvil). Es crecimiento
      real, no comentarios: 1058 KB sin comentarios contra 238 KB→300 KB comprimidos. */
-  const TOPE_KB = 340;
+  // 16/10: energía + tienda de productores añaden ~6 KB gzip de funcionalidad real.
+  const TOPE_KB = 350;
   ok("lo que viaja no pasa del tope", comprimido / 1024 < TOPE_KB,
     Math.round(comprimido / 1024) + " KB de " + TOPE_KB + " KB");
   ok("y comprimir sigue valiendo la pena (≥ 2,5×)", pelado / comprimido >= 2.5,

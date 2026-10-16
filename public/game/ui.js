@@ -1113,6 +1113,7 @@ function pescaV4Abrir() {
      y el retiro salía gratis, regla heredada de la v2; la dirección la tumbó el mismo día.
      El campo `pendiente` puede quedar en guardados de esas horas: nadie lo lee y no molesta —
      borrar campos de una partida ajena por limpieza es como se pierden partidas.) */
+  if (!energiaGranjaPagar('fish')) return false;
   ceboCobrar(ceb);
   if (typeof lanceCobrarCupo === "function") lanceCobrarCupo();   // 23/9: el 16.º lance del día paga
   if (typeof canaDesgastar === "function") canaDesgastar(canaHoy);      // 23/9: un lance, un uso de la caña
@@ -1959,6 +1960,10 @@ function pescaV4Nasas() {
 
 
 function refreshHud() {
+  const energia=energiaGranjaTick();setTxt('s-energia-granja',Math.floor(energia)+'/100');
+  const ep=$('energia-granja-pill');if(ep)ep.style.display=GF.scene==='farm'?'':'none';
+  document.querySelectorAll('[data-artefacto-pendiente]').forEach(el=>{el.textContent=fmtPlata(artefactoPendiente(el.dataset.artefactoPendiente))+' plata';});
+  document.querySelectorAll('[data-artefacto-cobrar]').forEach(b=>{b.disabled=!(typeof sb!=='undefined' && sb && UID && CARGA_OK && !SOLO_LOCAL && !SAVE_CONFLICTOS.has(UID) && !MERCADO_EN_CURSO && artefactoPendiente(b.dataset.artefactoCobrar)>0 && energia>=1);});
   try { syncMisionesBadge(); } catch (e) {}   // contador de misiones del menú (10/8)
   try { syncLogrosBadge(); } catch (e) {}     // 22/8: cuántos logros hay para cobrar
   try { syncCaminoBadge(); } catch (e) {}     // 25/8: cuánto le falta a la meta de la semana
@@ -2498,6 +2503,7 @@ function refreshCobertizo() {
   const key = $("gm-cob"); if (key) key.textContent = items.length ? String(items.length) : "";
 }
 function refreshProduccionGranja() {
+  refreshArtefactos();
   const cont = $("prod-granja"); if (!cont || !G.produccion) return;
   const abiertos = Array.from(cont.querySelectorAll("details")).map(d => d.open);
   const foco = typeof document !== "undefined" && document.activeElement;
@@ -2532,6 +2538,30 @@ function refreshProduccionGranja() {
     if (b) { const d = b.closest("details"); if (d) d.open = true; b.focus({ preventScroll: true }); }
     else { const s = cont.querySelector("summary"); if (s) s.focus({ preventScroll: true }); }
   }
+}
+function refreshArtefactos() {
+  const box=$('objetos-productores');if(!box)return;
+  const abierto=box.querySelector('details')?.open;
+  const t=nowMs(), online=!!(typeof sb!=='undefined' && sb && UID && CARGA_OK && !SOLO_LOCAL && !SAVE_CONFLICTOS.has(UID));
+  let h='<details><summary>⚡ Energía de granja y objetos productores</summary><p class="sub">100 de energía. Se recupera continuamente: de vacía a llena tarda 4 horas, también sin conexión. Plantar y cosechar: 1 por acción; madera, minería, pesca y animales: 2. Cocinar: 1; fabricar equipo o calar nasa: 2. No se gasta al vender, ordenar, construir ni abrir menús. La estamina de combate es otra barra.</p>'+
+    '<p class="sub">Objetos de colección: no ocupan terreno ni cupos productivos. Uno activo de cada modelo por cuenta. Compras sólo con $Golden; producen plata interna, no dinero. Acumulan hasta 24 horas; cada cobro cuesta 1 de energía. Duran 180 días y luego se pueden volver a comprar.</p>'+
+    '<p class="sub">Producción de referencia: precio × 500 plata / 90 días. Es una equivalencia de balance, no un canje ni un retorno garantizado. No hay retiros, pagos reales ni conversión a USDT.</p>';
+  if(!online)h+='<p class="sub">Compras y cobros requieren conexión y guardado sincronizado.</p>';
+  for(const [id,d] of Object.entries(ARTEFACTO_DEF)){
+    const a=G.artefactos && G.artefactos.items && G.artefactos.items[id], activo=a && t<a.desde+ARTEFACTO_DIAS*86400000;
+    const pendiente=artefactoPendiente(id), diaria=artefactoDiario(id).toFixed(2).replace('.',',');
+    h+='<div class="row" style="justify-content:space-between;flex-wrap:wrap;border-top:1px solid #ffffff22;padding:10px 0"><div>'+d.icon+' '+d.label+'<br><small>'+diaria+' plata/día · '+d.golden+' $Golden</small>'+
+      (a?'<br><small>'+(activo?'Activo hasta '+new Date(a.desde+ARTEFACTO_DIAS*86400000).toLocaleDateString('es-UY'):'Vida útil terminada')+'</small>':'')+'</div><div>'+
+      (a?'<span data-artefacto-pendiente="'+id+'">'+fmtPlata(pendiente)+' plata</span> <button class="green sm" data-artefacto-cobrar="'+id+'" '+(!online||pendiente<=0||!energiaGranjaPuede('harvest')?'disabled':'')+'>Cobrar · 1 ⚡</button> ':'')+
+      '<button class="ghost sm" data-artefacto-comprar="'+id+'" '+(!online||activo||pendiente>0||G.golden<d.golden?'disabled':'')+'>'+(activo?'Ya lo tenés':'Comprar · '+d.golden+' $Golden')+'</button></div></div>';
+  }
+  box.innerHTML=h+'</details>';
+  if(abierto)box.querySelector('details').open=true;
+  box.querySelectorAll('[data-artefacto-comprar]').forEach(b=>b.onclick=()=>{
+    const id=b.dataset.artefactoComprar,d=ARTEFACTO_DEF[id];
+    askConfirm('¿Gastar '+d.golden+' $Golden en '+d.label+'? Produce '+artefactoDiario(id).toFixed(2)+' plata interna al día durante 180 días; acumula hasta 24 horas. No es dinero ni tiene canje por USDT.',()=>artefactoSolicitar('comprar',id),{title:'Comprar objeto productor',yes:'Comprar',yesClass:'green',no:'Cancelar'});
+  });
+  box.querySelectorAll('[data-artefacto-cobrar]').forEach(b=>b.onclick=()=>artefactoSolicitar('cobrar',b.dataset.artefactoCobrar));
 }
 function confirmarCompraVip() {
   askConfirm('¿Gastar ' + PRODUCCION_VIP_PRECIO + ' $Golden para activar el VIP por 30 días, con +25% de capacidad (mínimo dos cupos)? ' + produccionVipPaseTexto() + ' Los nodos adicionales se compran por separado.', () => passBuyVip(), {title:'VIP · 30 días',yes:'Comprar VIP',yesClass:'green',no:'Cancelar'});

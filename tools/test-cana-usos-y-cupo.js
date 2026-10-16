@@ -25,7 +25,8 @@ function partida(canas) {
   ctx.pescaEstado().cebo = "lombriz";
   toasts = [];
 }
-const tirar = () => { const r = ctx.pescaV4Abrir(); ctx.pescaV4Cerrar(); return r; };
+// Esta prueba aísla usos y cupo; la energía y su agotamiento se prueban por separado.
+const tirar = () => { G.energiaGranja.actual=100; const r = ctx.pescaV4Abrir(); ctx.pescaV4Cerrar(); return r; };
 const USOS = g("CANA_USOS"), DIA = g("PESCA_LANCES_DIA"), EXTRA = g("PESCA_LANCE_EXTRA_PLATA");
 
 console.log("\n1 · CADA LANCE GASTA UN USO; A CERO LA CAÑA ESTÁ ROTA\n");

@@ -5,6 +5,8 @@ GF.spr = (k) => "assets/farm/" + k + ".png?a=7";   // ?a=N rompe el caché de lo
 // --- estado principal (con algunos recursos de arranque para probar los menús) ---
 const G = {
   espacioV: 2,                  // superficie física; la capacidad productiva es independiente
+  energiaGranja: { v: 1, actual: 100, at: 0 },
+  artefactos: null,
   plata: 3, golden: 20, level: 1, prestige: 0, week: 1, iniciado: 0,   // 18/8: cuándo empezó la partida — de ahí sale la semana del HUD   // 14/8: nacés con 3 de plata (el 1er objetivo es COMPRAR tus semillas)
   hp: 100, hpMax: 100, swordOwned: false, bowOwned: false, swordWoodOwned: false, firstCropDone: false,   // combate (Fase D)
   armasUnlocked: false,          // viernes (2): la pestana Armas de la Herreria se paga (20 madera + 20 piedra + 1000 plata)
@@ -107,6 +109,41 @@ function estadoDeCero() {
 }
 
 // --- utilidades ---
+const ENERGIA_GRANJA_MAX = 100, ENERGIA_GRANJA_MS = 4 * 3600000;
+const ENERGIA_GRANJA_COSTO = {plant:1,harvest:1,chop:2,mine:2,fish:2,animal:2,craft:2,cook:1,nasa:2,auto:2};
+function energiaGranjaTick() {
+  const t=nowMs(); let e=G.energiaGranja;
+  if(!e || !Number.isFinite(e.actual) || !Number.isFinite(e.at)) e=G.energiaGranja={v:1,actual:100,at:t};
+  e.actual=Math.max(0,Math.min(100,e.actual+Math.max(0,t-(e.at||t))*100/ENERGIA_GRANJA_MS));
+  e.at=Math.max(t,e.at||t); return e.actual;
+}
+function energiaGranjaPuede(tipo,n=1) { return energiaGranjaTick()+1e-9 >= (ENERGIA_GRANJA_COSTO[tipo]||0)*n; }
+function energiaGranjaPagar(tipo,n=1,silencio=false) {
+  if(!Number.isSafeInteger(n)||n<1) return false;
+  if(!energiaGranjaPuede(tipo,n)){if(!silencio)toast('Sin energía de granja — se recupera sola; de vacía a llena tarda 4 h');return false;}
+  G.energiaGranja.actual=Math.max(0,G.energiaGranja.actual-(ENERGIA_GRANJA_COSTO[tipo]||0)*n);return true;
+}
+function energiaGranjaAgregar(key,n,tipo) {
+  if(!energiaGranjaPuede(tipo))return false;
+  if(!tryAddRes(key,n))return false;
+  energiaGranjaPagar(tipo);return true;
+}
+const ARTEFACTO_DEF = {
+  cobre:{label:'Amuleto de cobre',golden:10,icon:'🟤'},
+  plata:{label:'Sello de plata',golden:25,icon:'⚪'},
+  jade:{label:'Talismán de jade',golden:50,icon:'🟢'},
+  oro:{label:'Reloj dorado',golden:100,icon:'🟡'},
+  rubi:{label:'Cáliz de rubí',golden:250,icon:'🔴'},
+  corona:{label:'Corona ancestral',golden:500,icon:'👑'}
+};
+const ARTEFACTO_DIAS = 180, ARTEFACTO_RECUPERACION = 90, ARTEFACTO_TOPE_MS = 86400000;
+function artefactoDiario(id){return ARTEFACTO_DEF[id] ? ARTEFACTO_DEF[id].golden*500/ARTEFACTO_RECUPERACION : 0;}
+function artefactoPendiente(id,t=nowMs()){
+  const a=G.artefactos && G.artefactos.items && G.artefactos.items[id];
+  if(!a)return 0;
+  const fin=Math.min(t,a.desde+ARTEFACTO_DIAS*86400000);
+  return Math.floor((Math.max(0,Math.min(ARTEFACTO_TOPE_MS,fin-a.cobrado))*artefactoDiario(id)/86400000+(a.resto||0)+1e-9)*10)/10;
+}
 function fmt(n) { n = Math.floor(n); return n >= 1000 ? (n / 1000).toFixed(n % 1000 < 100 ? 0 : 1).replace(".0", "") + "k" : "" + n; }
 /* ═══ LA PLATA SE ENSEÑA CON SUS CÉNTIMOS ═══ (8/9, Suren: « necesitamos agregar decimales a la
    plata, porque algunos peces se venden en 0.6-0.5 y cuando la suma suma +1, y no es castigo
@@ -1323,6 +1360,7 @@ function craftMat(id) {
   const md = MAT_DEF[id]; if (!md) { console.warn("[craftMat] material inexistente:", id); return; }
   if (hornoLibres() <= 0) { toast("El horno está lleno (" + hornoSlots() + " al fuego)"); return; }
   if (!canAfford(md.cost)) { toast("Te faltan materiales"); return; }
+  if (!energiaGranjaPagar('craft')) return;
   payCost(md.cost);
   /* 27/8 (diseñador) — EL HORNO FUNDE DE A UNO, igual que la Cocina desde el 26/8.
      « el horno de piedra craftea simultáneo, debe hacerse como en la cocina: crear el primero y
@@ -3067,6 +3105,7 @@ function craftPick(id) {
   if (pickCount(id) >= 99) { toast("Máximo 99 " + pd.label); return; }
   if (!canAfford(pd.cost)) { toast("Te faltan materiales"); return; }
   if (pd.plata && G.plata < pd.plata) { toast("Te falta plata"); return; }
+  if (!energiaGranjaPagar('craft')) return;
   payCost(pd.cost); if (pd.plata) G.plata -= pd.plata;
   const first = !G.picks.owned[id];
   // 17/8: un crafteo rinde pd.dur PICADAS, no una. El campo `dur` existía en PICK_DEF desde
@@ -4610,11 +4649,13 @@ function godHandSembrar(msAusente) {
       if (!slot) break;
       const ghoras = (CROP_DEF[slot.key].grow * (typeof cdMult === "function" ? cdMult() : 1)) / 3600;
       if (ghoras <= t) {   // le da el tiempo: cosecha completa y sigue
+        if(!energiaGranjaPagar('auto',1,true))break;
         t -= ghoras; slot.n--; usado[slot.key] = (usado[slot.key] || 0) + 1; ciclos++;
         const n = Math.max(1, CROP_DEF[slot.key].yield || 1);   // 18/8: la cantidad ya no se multiplica
         prod[slot.key] = (prod[slot.key] || 0) + n;
         horasTrabajadas = Math.max(horasTrabajadas, horasFuera - t);
       } else {   // no llega a otra cosecha: deja la parcela SEMBRADA creciendo desde ese momento
+        if(!energiaGranjaPagar('plant',1,true))break;
         slot.n--; usado[slot.key] = (usado[slot.key] || 0) + 1;
         const dur = CROP_DEF[slot.key].grow * 1000 * (typeof cdMult === "function" ? cdMult() : 1);
         const t0 = desde + (horasFuera - t) * 3600000;
@@ -5598,6 +5639,7 @@ function craftArmor(set, pieza) {
   if (p.hierro && (G.res.hierro || 0) < p.hierro) falta.push(p.hierro + " Hierro");
   if (G.plata < p.plata) falta.push(p.plata + " de plata");
   if (falta.length) { toast("Te falta: " + falta.join(" · ")); return; }
+  if (!energiaGranjaPagar('craft')) return;
   G.res[sd.mat] -= p.mat;
   if (p.hierro) G.res.hierro -= p.hierro;
   G.plata -= p.plata;
@@ -6031,6 +6073,7 @@ function recogerUno(k, i, silencio) {
   const acum = Math.round((traia + gana) * 100) / 100;
   const entero = Math.floor(acum + 1e-9);
   if (entero > 0 && !roomForRes(d.mat, entero)) { if (!silencio) bagFull("recoger " + RES_LABEL[d.mat]); return 0; }
+  if (gana > 0 && !energiaGranjaPagar('animal',1,silencio)) return 0;
   a.pend = Math.round((acum - entero) * 100) / 100;
   if (entero > 0) G.res[d.mat] = (G.res[d.mat] || 0) + entero;
   /* 25/9: recoger CIERRA el ciclo (comidoAt queda atrás de prodAt → con hambre); el próximo
@@ -6272,6 +6315,7 @@ function craftAltarItem(id) {
   if (!canAfford(c.cost)) { toast("Te faltan materiales"); return; }
   if (c.plata && G.plata < c.plata) { toast("Te falta plata (" + c.plata + ")"); return; }
   if (c.golden && G.golden < c.golden) { toast("Te falta $Golden (" + c.golden + ")"); return; }
+  if (!energiaGranjaPagar('craft')) return;
   payCost(c.cost); if (c.plata) G.plata -= c.plata; if (c.golden) G.golden -= c.golden;
   G.res[id] = (G.res[id] || 0) + 1;
   addXp("crafting", 6); log("Crafteaste 1 " + RES_LABEL[id] + ".", "good"); toast("+1 " + RES_LABEL[id]);
@@ -6281,6 +6325,7 @@ function craftRunaI(tipo) {
   if (!RUNA_TIPOS[tipo]) return;
   if (!canAfford(RUNA_CRAFT.cost)) { toast("Te faltan materiales"); return; }
   if (G.plata < RUNA_CRAFT.plata) { toast("Te falta plata (" + RUNA_CRAFT.plata + ")"); return; }
+  if (!energiaGranjaPagar('craft')) return;
   payCost(RUNA_CRAFT.cost); G.plata -= RUNA_CRAFT.plata;
   const k = runaKey(tipo, 1); G.res[k] = (G.res[k] || 0) + 1;
   addXp("crafting", 8); log("Crafteaste 1 " + runaLabel(tipo, 1) + ".", "good"); toast("+1 " + runaLabel(tipo, 1));
@@ -6559,6 +6604,7 @@ function craftWeapon(id) {
   if (armCdLeft(id) > 0) { toast("La forja se enfría — " + fmtSecs(Math.ceil(armCdLeft(id) / 1000))); return; }
   if (!canAfford(w.cost)) { toast("Te faltan materiales"); return; }
   if (G.plata < w.plata) { toast("Te falta plata"); return; }
+  if (!energiaGranjaPagar('craft')) return;
   payCost(w.cost); G.plata -= w.plata;
   G.weapons[id] = { dur: w.dur };
   G.armCd = G.armCd || {}; G.armCd[id] = nowMs() + w.cd * 1000;
@@ -6737,6 +6783,7 @@ const BOW_COST = { madera: 12, bronce: 2 };
 const ARROW_COST = { madera: 2, piedra: 1 };   // craftea 10 flechas
 function craftArrows() {
   if (!canAfford(ARROW_COST)) { toast("Te faltan materiales"); return; }
+  if (!energiaGranjaPagar('craft')) return;
   payCost(ARROW_COST); G.res.flecha = (G.res.flecha || 0) + 10;   // van a la bolsa, NO se autoequipan (detalles jueves)
   addXp("crafting", 3);
   log("Crafteaste 10 flechas — están en tu bolsa; equipalas en el panel de Equipo.", "good"); toast("+10 flechas en la bolsa"); forgeWork();
@@ -7073,6 +7120,7 @@ function cook(id) {
   if (cookFree() <= 0) { toast("Las " + cookSlots() + " ollas están ocupadas"); return; }
   if (!canCook(id)) { toast("Te faltan ingredientes"); return; }
   if (!roomForDish(id)) { bagFull("cocinar " + r.label); return; }
+  if (!energiaGranjaPagar('cook')) return;
   const fishBefore = { ...(G.fish || {}) };
   if (r.res) for (const k in r.res) G.res[k] -= r.res[k];
   if (r.fish) for (const k in r.fish) pezSacar(k, r.fish[k]);   // 2/9: se cocinan los más livianos primero
@@ -7249,6 +7297,7 @@ function craftChest() {
   if (G.chests.length >= CHEST_MAX) { toast("Máximo de cofres (" + CHEST_MAX + ")"); return; }
   if (!canAfford(CHEST_COST)) { toast("Te faltan materiales"); return; }
   if (G.plata < CHEST_PLATA) { toast("Te falta plata (" + CHEST_PLATA + ")"); return; }
+  if (!energiaGranjaPagar('craft')) return;
   payCost(CHEST_COST); G.plata -= CHEST_PLATA;
   G.chests.push({ col: null, row: null, items: Array(CHEST_SLOTS + (G.chestCap || 0)).fill(null) });   // capacidad base + la ganada por niveles de granja
   addXp("crafting", 8);
@@ -7532,7 +7581,7 @@ function craftTool(id, lote) {
   const tc = TOOL_CRAFT[id], td = TOOL_DEF[id]; if (!tc || !td) { console.warn("[craftTool] herramienta inexistente:", id); return; }
   if (lote > 1) {   // doc 2/8: crafteo en lote — la fricción es económica, no de clicks
     let hechas = 0;
-    while (hechas < lote && toolCount(id) < 99 && canAfford(tc.cost) && G.plata >= tc.plata) { payCost(tc.cost); G.plata -= tc.plata; G.tools[id] = toolCount(id) + 1; hechas++; }
+    while (hechas < lote && toolCount(id) < 99 && canAfford(tc.cost) && G.plata >= tc.plata && energiaGranjaPuede('craft')) { energiaGranjaPagar('craft'); payCost(tc.cost); G.plata -= tc.plata; G.tools[id] = toolCount(id) + 1; hechas++; }
     if (!hechas) { toast("Te faltan materiales o plata"); return; }
     addXp("crafting", 5 * hechas); log("Crafteaste " + hechas + " × " + td.label + " (tenés " + G.tools[id] + ").", "good"); toast("+" + hechas + " " + td.label);
   if (typeof tutoEvent === "function") tutoEvent("crafttool");
@@ -7542,6 +7591,7 @@ function craftTool(id, lote) {
   if (toolCount(id) >= 99) { toast("Máximo 99 " + td.label); return; }
   if (!canAfford(tc.cost)) { toast("Te faltan materiales"); return; }
   if (G.plata < tc.plata) { toast("Te falta plata"); return; }
+  if (!energiaGranjaPagar('craft')) return;
   payCost(tc.cost); G.plata -= tc.plata;
   G.tools[id] = toolCount(id) + 1;
   addXp("crafting", 5); log("Crafteaste " + td.label + " (tenés " + G.tools[id] + ").", "good"); toast("+1 " + td.label);
@@ -8861,6 +8911,7 @@ function canaV4Comprar(id) {
   const d = CANA_V4_DEF[id]; if (!d) return false;
   const falta = canaV4Falta(id);
   if (falta) { toast(d.label + ": " + falta); return false; }
+  if (!energiaGranjaPagar('craft')) return false;
   if (d.cost) payCost(d.cost);
   if (d.colaPlata) G.plata -= d.colaPlata;
   G.canas = G.canas || {}; G.canas[id] = 1;
@@ -9152,6 +9203,7 @@ function nasaCalar(id) {
   if ((G.res.lombriz || 0) < PESCA_V4_NASA_CEBO) { toast("Una nasa pide " + PESCA_V4_NASA_CEBO + " lombrices (tenés " + Math.floor(G.res.lombriz || 0) + ")"); return false; }
   const d = NASA_DEF[id];
   if (!canAfford(d.cost)) { toast("Te falta material para la " + d.label); return false; }
+  if (!energiaGranjaPagar('nasa')) return false;
   payCost(d.cost);
   G.res.lombriz -= PESCA_V4_NASA_CEBO;
   nasas().push({ tipo: id, cala: nowMs(), listaEn: nowMs() + NASA_HORAS * 3600e3 });
@@ -9906,8 +9958,10 @@ function excavCavar(i, carnada) {   // devuelve el botín si se pudo cavar
      moría mudo — el mismo patrón que el intento de doma que reportó el diseñador. */
   if (e.hechos.includes(i)) { toast("Ese montículo ya lo cavaste — mañana hay " + excavPorDia() + " nuevos"); return null; }
   const b = excavBotin(i, carnada);
+  if(!energiaGranjaPuede('mine')){energiaGranjaPagar('mine');return null;}
   if (b.res) { if (!tryAddRes(b.res, b.n)) { toast("Bolsa llena — hacé lugar y volvé"); return null; } }
   else if (b.seed) G.seeds[b.seed] = (G.seeds[b.seed] || 0) + b.n;
+  energiaGranjaPagar('mine');
   e.hechos.push(i);
   log("Excavaste un montículo: " + b.txt + ".", "good");
   if (typeof tutoEvent === "function") tutoEvent("excavar");   // 19/8: es un paso del tutorial
@@ -10027,6 +10081,7 @@ function lombricarioEchar(k) {
         LOMBRICES_POR_DIA + ". Echá un cultivo más barato o esperá al reset de las 00:00 UTC.", "bad");
     return false;
   }
+  if(!energiaGranjaPagar('cook'))return false;
   lombricesSumarHoy(da);
   G.res[k] -= LOMBRICARIO_PIDE;
   /* 2/9 (dirección, con la captura de las tres bocas contando a la vez): « esto no debe correr
@@ -11598,7 +11653,7 @@ function domaTrabajar(visto, ahora) {
     for (let k = 0; k < recoger; k++) {
       d.cont = (d.cont || 0) + 1;
       if ((d.cont % 10) > 10 - 1 - Math.round(DOMA_COMISION * 10)) { parte.fee++; juntadas++; continue; }   // su comisión, determinística (las 3 de cada 10 ÚLTIMAS: el jugador cobra primero)
-      if (typeof tryAddRes === "function" ? tryAddRes(recurso, 1) : (G.res[recurso] = (G.res[recurso] || 0) + 1, true)) { parte[recurso]++; juntadas++; }
+      if (energiaGranjaAgregar(recurso, 1, 'mine')) { parte[recurso]++; juntadas++; }
       else { break; }   // bolsa llena: se para acá y el nodo conserva el resto
     }
     if (juntadas > 0) {   // drenar el almacén igual que nodoGastarCarga: el reloj sigue corriendo

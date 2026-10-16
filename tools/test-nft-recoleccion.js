@@ -38,9 +38,9 @@ console.log("\n1 · EL BONO: +0,1 solo con el NFT del material\n");
 
 console.log("\n2 · LOS SEIS GOLPES QUE PAGAN PASAN POR EL BONO\n");
 {
-  const sitios = (FARM.match(/tryAddRes\("madera", bonoNft\("madera", gr[F]?\)\)/g) || []).length
-    + (FARM.match(/tryAddRes\("piedra", bonoNft\("piedra", gr[F]?\)\)/g) || []).length
-    + (FARM.match(/tryAddRes\(o\.ore, bonoNft\(o\.ore, grVeta\)\)/g) || []).length;
+  const sitios = (FARM.match(/energiaGranjaAgregar\("madera", bonoNft\("madera", gr[F]?\), 'chop'\)/g) || []).length
+    + (FARM.match(/energiaGranjaAgregar\("piedra", bonoNft\("piedra", gr[F]?\), 'mine'\)/g) || []).length
+    + (FARM.match(/energiaGranjaAgregar\(o\.ore, bonoNft\(o\.ore, grVeta\), 'mine'\)/g) || []).length;
   ok("madera ×2, piedra ×2, veta ×2", sitios === 6, sitios + " de 6");
   ok("y no quedó ninguno sin bono", !/tryAddRes\("(madera|piedra)", gr[F]?\)/.test(FARM) && !/tryAddRes\(o\.ore, grVeta\)/.test(FARM));
 }

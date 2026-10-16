@@ -28,6 +28,49 @@ const TASA_NODO = 2;       // recursos/hora de un nodo; las cargas no suben la t
 const MARGEN = 3;          // multiplicador de gracia sobre el máximo físico
 
 const num = (v) => (typeof v === "number" && isFinite(v)) ? v : 0;
+const ARTEFACTOS_PRECIOS = {cobre:10,plata:25,jade:50,oro:100,rubi:250,corona:500};
+const ARTEFACTOS_DIAS = 180, ARTEFACTOS_REFERENCIA = 90, ENERGIA_GRANJA_MS = 14400000;
+function mismoJSON(a,b) {
+  if(a===b)return true;
+  if(!a||!b||typeof a!=='object'||typeof b!=='object'||Array.isArray(a)!==Array.isArray(b))return false;
+  const keys=Object.keys(a);
+  return keys.length===Object.keys(b).length && keys.every(k=>Object.prototype.hasOwnProperty.call(b,k)&&mismoJSON(a[k],b[k]));
+}
+function energiaServidor(d,ahora) {
+  const e=d && d.energiaGranja;
+  if(!e || !Number.isFinite(e.actual) || !Number.isFinite(e.at))return 100;
+  return Math.max(0,Math.min(100,e.actual+Math.max(0,ahora-e.at)*100/ENERGIA_GRANJA_MS));
+}
+function artefactoCalcular(a,id,ahora) {
+  if(!a || !Object.prototype.hasOwnProperty.call(ARTEFACTOS_PRECIOS,id))return {cobro:0,resto:0,fin:ahora};
+  const fin=Math.min(ahora,a.desde+ARTEFACTOS_DIAS*86400000);
+  const bruto=Math.max(0,Math.min(86400000,fin-a.cobrado))*ARTEFACTOS_PRECIOS[id]*500/ARTEFACTOS_REFERENCIA/86400000+(a.resto||0);
+  const cobro=Math.floor((bruto+1e-9)*10)/10; // la unidad de plata del juego es 0,1
+  return {cobro,resto:Math.max(0,bruto-cobro),fin};
+}
+function artefactoOperacion(prev,accion,id,ahora,op) {
+  if(typeof id!=='string' || !Object.prototype.hasOwnProperty.call(ARTEFACTOS_PRECIOS,id) || !['comprar','cobrar'].includes(accion))return {error:'Objeto u operación inválidos'};
+  const data=JSON.parse(JSON.stringify(prev)), libro=data.artefactos || {v:1,items:{},ops:[]};
+  const repetida=(libro.ops||[]).find(o=>o.op===op);
+  if(repetida)return repetida.id===id && repetida.accion===accion ? {data,cobro:repetida.cobro,repetido:true} : {error:'Identificador reutilizado para otra operación'};
+  const a=libro.items[id], t=artefactoCalcular(a,id,ahora);
+  let cobro=0;
+  if(accion==='comprar'){
+    if(a && ahora<a.desde+ARTEFACTOS_DIAS*86400000)return {error:'Ya tenés este objeto activo'};
+    if(a && t.cobro>0)return {error:'Cobrá primero la producción pendiente del objeto vencido'};
+    if(!Number.isFinite(data.golden)||data.golden<ARTEFACTOS_PRECIOS[id])return {error:'No alcanza el $Golden'};
+    data.golden-=ARTEFACTOS_PRECIOS[id];libro.items[id]={desde:ahora,cobrado:ahora,resto:0};
+  }else{
+    if(!a || t.cobro<=0)return {error:'Todavía no hay plata para cobrar'};
+    const energia=energiaServidor(data,ahora);
+    if(energia<1)return {error:'Necesitás 1 punto de energía de granja para cobrar'};
+    data.energiaGranja={v:1,actual:energia-1,at:ahora};
+    cobro=t.cobro;data.plata=Math.round((num(data.plata)+cobro)*100)/100;
+    libro.items[id]={...a,cobrado:t.fin,resto:t.resto};
+  }
+  libro.ops=[...(libro.ops||[]),{op,id,accion,cobro}].slice(-20);data.artefactos=libro;
+  return {data,cobro};
+}
 const VIP_PRECIO = 100, VIP_MS = 30 * 86400000;
 const VIP_REINTEGROS = {3:5,7:5,12:8,15:8,18:8,22:8,25:8,27:10};
 const FARM_XP_CONTRATO = [0,0,25,90,225,550,1250,2750,5500,9000,14000,18200,22400,26900,31400,36200,41300,46400,51900,57400,63200,69300,75400,81800,88200,95000];
@@ -51,6 +94,10 @@ function goldenCustodia(d) {
 /* Invariantes deterministas: no dependen de los techos heurísticos por hora. */
 function protegerEconomia(prev, next, ahora) {
   const errores = [], antes = prev || {}, p = antes.produccion, n = next.produccion;
+  if(!mismoJSON(antes.artefactos||null,next.artefactos||null))errores.push('Los objetos productores sólo se modifican en el servidor');
+  const energia=next.energiaGranja;
+  if(energia && (!Number.isFinite(energia.actual)||energia.actual<0||energia.actual>100||!Number.isFinite(energia.at)))errores.push('Energía de granja inválida');
+  next.energiaGranja={v:1,actual:Math.min(energia ? Math.max(0,num(energia.actual)) : energiaServidor(antes,ahora),energiaServidor(antes,ahora)),at:ahora};
   let gastoVip = 0, reembolso = 0;
   if (!Number.isSafeInteger(goldenCustodia(next))) errores.push("Golden inválido en saldo o contenedor");
   if (!prev && goldenCustodia(next) > 20) errores.push("Golden inicial no autorizado");
@@ -291,6 +338,7 @@ const json = (obj: unknown, status = 200) =>
 
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return new Response("ok", { headers: CORS });
+  if (req.method !== 'POST') return json({error:'Método no permitido'},405);
   try {
     /* ¿quién sos? — el JWT de la sesión anónima del juego, verificado contra Auth */
     const jwt = (req.headers.get("Authorization") || "").replace(/^Bearer\s+/i, "");
@@ -301,6 +349,26 @@ Deno.serve(async (req) => {
     const uid = u.user.id;
 
     const body = await req.json().catch(() => null);
+
+    // Compra/cobro autoritativos con recibo y compare-and-swap: nunca creer el reloj/saldo del cliente.
+    if(body?.artefacto){
+      const a=body.artefacto;
+      if(body.cuenta!==uid)return json({error:'La sesión cambió de cuenta; recargá antes de operar'},409);
+      if(typeof body.op!=='string'||!/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(body.op)||typeof body.base!=='string')return json({error:'Pedido inválido'},400);
+      const {data:row,error:err}=await admin.from('farms').select('*').eq('user_id',uid).maybeSingle();
+      if(err)return json({error:'No se pudo leer la granja'},503);
+      if(!row)return json({error:'Primero sincronizá tu granja'},409);
+      const ahora=Math.max(Date.now(),new Date(row.updated_at).getTime()+1);
+      const r=artefactoOperacion(row.data,a.accion,a.id,ahora,body.op);
+      if(r.repetido)return json({ok:true,data:row.data,updated_at:row.updated_at,cobro:r.cobro,repetido:true});
+      if(body.base!==row.updated_at)return json({error:'Otra sesión guardó; recargá antes de operar',conflicto:true},409);
+      if(r.error)return json({error:r.error},400);
+      const fecha=new Date(ahora).toISOString();
+      const {data:hecho,error:fallo}=await admin.from('farms').update({data:r.data,updated_at:fecha}).eq('user_id',uid).eq('updated_at',row.updated_at).select('updated_at').maybeSingle();
+      if(fallo)return json({error:'No se pudo confirmar la operación'},503);
+      if(!hecho)return json({error:'Otra sesión guardó primero',conflicto:true},409);
+      return json({ok:true,data:r.data,updated_at:fecha,cobro:r.cobro});
+    }
 
     /* REINICIAR LA CUENTA (24/9, dirección: « debe literal borrar la cuenta y crearla como si
        fuera nuevo jugador »). Con { borrar: true } se BORRA la fila de la granja: el próximo

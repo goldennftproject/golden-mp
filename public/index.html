@@ -1112,6 +1112,10 @@
   .mkt-cur{color:#fff;font-weight:700}
   /* inventario −20% (detalles jueves) */
   #ov-inv .card,#ov-cobertizo .card{font-size:12px}
+  @media (min-width:761px){
+    #ov-cobertizo .card{width:min(680px,94vw)!important;max-height:calc(100dvh - 32px);overflow-y:auto;overscroll-behavior:contain}
+    #ov-cobertizo .close{position:sticky;top:0;float:right;z-index:2;background:#6b3619;color:#fff;border:2px solid #d9ad68;border-radius:6px;min-width:32px;min-height:32px}
+  }
   #ov-inv .slots,#ov-cobertizo .slots{gap:5px;max-height:272px}
   /* registro/chat, toasts y prompt con la misma madera */
   .logpanel{border:10px solid transparent;border-image:url("assets/ui/panel_wood.png?a=4") 23 round;background:#a8622e url("assets/ui/wood_bg.png?a=5") repeat;background-size:220px auto;background-clip:border-box;border-radius:10px;image-rendering:pixelated}
@@ -1441,6 +1445,7 @@
          los menúes. Estas dos píldoras viven ahora en una REPISA flotante pegada bajo la barra,
          fuera de su flujo — vengan o se vayan, la barra no se entera. -->
     <div id="hud-flot">
+      <button class="pill cpill" id="energia-granja-pill" onclick="openOv('ov-cobertizo')" title="Energía de granja: recuperación continua, 4 horas de vacía a llena. Clic para ver costes y objetos productores."><span class="k">⚡ Granja</span><span class="k" id="s-energia-granja">100/100</span></button>
       <div class="pill cpill" id="stampill" role="button" tabindex="0" aria-label="Recargar estamina" aria-haspopup="dialog" aria-controls="ov-confirm" style="display:none" title="Estamina de combate — solo se gasta en la Zona Negra. Se recupera sola, comiendo guisos o con una recarga."><span class="k">Estamina</span><span class="cbarw"><span class="cfill stamf" id="stam-fill"></span></span><span class="k" id="s-stam">100/100</span></div>
       <!-- 31/8 (de los vídeos de referencia: « Food 00:00 » — la comida es un RELOJ). Los platos
            llevaban buffs con vencimiento desde el doc maestro del 2/8 y no se enseñaban en ningún
@@ -1618,6 +1623,7 @@
     <h3>🏚 Cobertizo</h3>
     <div class="sub" id="cob-sub">Lo que todavía no colocaste en la granja. Elegí una pieza para decidir dónde va.</div>
     <div id="prod-granja"></div>
+    <div id="objetos-productores"></div>
     <div class="slots" id="cob-slots"></div>
     <div class="sub" id="cob-pie"></div>
   </div></div>

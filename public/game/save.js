@@ -16,6 +16,34 @@ function mercadoPendiente(uid) { try { return !!localStorage.getItem("gf-venta-p
 function mercadoMarcarPendiente(uid, body) { localStorage.setItem("gf-venta-pendiente-" + SB_REF + "-" + uid, JSON.stringify(body)); }
 function mercadoLimpiarPendiente(uid) { try { localStorage.removeItem("gf-venta-pendiente-" + SB_REF + "-" + uid); } catch (e) {} }
 function mercadoGlobalActivo() { return MERCADO_GLOBAL; }
+async function artefactoSolicitar(accion,id) {
+  if(MERCADO_EN_CURSO || !sb || !UID || !CARGA_OK || SOLO_LOCAL || SAVE_CONFLICTOS.has(UID)){toast('Necesitás conexión y guardado sincronizado');return;}
+  const uid=UID, desbloquear=mercadoBloquearPantalla('Confirmando la operación del objeto…');
+  const confirmadas=SAVE_CONFIRMACIONES.get(uid)||0, flush=saveFarm(true);
+  MERCADO_EN_CURSO=(async()=>{
+    try{
+      await conTope(flush,15000,'guardado previo al objeto');
+      if(UID!==uid || SAVE_CONFLICTOS.has(uid) || (SAVE_CONFIRMACIONES.get(uid)||0)<=confirmadas || !SAVE_BASES.get(uid)){toast('No se pudo sincronizar; no se operó');return;}
+      const body={cuenta:uid,artefacto:{accion,id},base:SAVE_BASES.get(uid),op:window.crypto.randomUUID()};
+      mercadoMarcarPendiente(uid,body);
+      let data,error;
+      for(let n=0;n<2;n++){
+        try{({data,error}=await conTope(sb.functions.invoke('guardar',{body}),15000,'operación del objeto'));}catch(e){error=e;}
+        if(!error && data && data.ok)break;
+        const status=error && error.context && error.context.status;
+        if(status>=400 && status<500){
+          let d;try{d=await error.context.json();}catch(e){}
+          if(status===409)SAVE_CONFLICTOS.add(uid);else mercadoLimpiarPendiente(uid);
+          toast(d && d.error || 'La operación no se realizó');return;
+        }
+      }
+      if(error || !data || !data.ok || UID!==uid){SAVE_CONFLICTOS.add(uid);toast('Resultado sin confirmar. Recargá con conexión para consultar el servidor.');return;}
+      hydrate(data.data);SAVE_BASES.set(uid,data.updated_at);copiaGuardar(snapshot());mercadoLimpiarPendiente(uid);
+      toast(accion==='comprar' ? 'Objeto comprado con $Golden' : '+'+fmtPlata(data.cobro)+' de plata');
+    }catch(e){toast('No se pudo completar la operación; comprobá la conexión');}
+  })().finally(()=>{MERCADO_EN_CURSO=null;desbloquear();refreshHud();if(isOpen('ov-cobertizo'))refreshCobertizo();});
+  return MERCADO_EN_CURSO;
+}
 function mercadoGlobalRecurso(res) {
   const c = MERCADO_CACHE;
   if (!c || c.uid !== UID || Date.now() - c.recibido > 60000) return null;
@@ -49,11 +77,11 @@ async function mercadoGlobalRefrescar(force) {
   return MERCADO_REFRESCANDO;
 }
 /* No se puede gastar ni subir otro snapshot mientras el servidor confirma el lote. */
-function mercadoBloquearPantalla() {
+function mercadoBloquearPantalla(mensaje) {
   const prev = Array.from(document.body.children).map(el => [el, el.inert]);
   prev.forEach(([el]) => { el.inert = true; });
   const el = document.createElement("div"); el.setAttribute("role", "status"); el.setAttribute("aria-live", "polite");
-  el.textContent = "Confirmando venta con el comprador…";
+  el.textContent = mensaje || "Confirmando venta con el comprador…";
   el.style.cssText = "position:fixed;inset:0;z-index:2147483647;display:grid;place-items:center;background:#161b25dd;color:#fff;font:18px sans-serif;cursor:wait";
   document.body.appendChild(el);
   const bloquearTecla = e => { e.preventDefault(); e.stopImmediatePropagation(); };
@@ -380,6 +408,7 @@ function snapshot() {
      vistos y estrellaMax (el álbum con estrellas) y pescaTiene (el señuelo, que no se gasta).
      OJO con los comentarios AL FINAL de una línea de este objeto: se comen lo que sigue. */
   return { plata: G.plata, golden: G.golden, level: G.level, prestige: G.prestige, iniciado: G.iniciado, reinicio: G.reinicio,   /* 24/9: cuándo se reinició la cuenta (el portero lo lee) */
+    energiaGranja: G.energiaGranja, artefactos: G.artefactos,
     espacioV: G.espacioV, mercadoVentas: G.mercadoVentas, farmXpBase: G.farmXpBase || 0,
     produccion: G.produccion,
     res: G.res, picks: G.picks, skills: G.skills, triesV: G.triesV, establoV: G.establoV, fish: G.fish, plots: G.plots, nodos: G.nodos, expansiones: G.expansiones, pescaHasta: G.pescaHasta, pescaDesde: G.pescaDesde, senales: G.senales, escamas: G.escamas, vistos: G.vistos, estrellaMax: G.estrellaMax, pescaTiene: G.pescaTiene, canas: G.canas, presion: G.presion, amarres: G.amarres, trampas: G.trampas, marea: G.marea, runaOro: G.runaOro, buffs: G.buffs, seeds: G.seeds, selSeed: G.selSeed,
@@ -458,6 +487,9 @@ function hydrate(d) {
     }
   }
   /* ---- FASE 1 · APLICAR ---- */
+  G.energiaGranja = d.energiaGranja && Number.isFinite(d.energiaGranja.actual) && Number.isFinite(d.energiaGranja.at)
+    ? {v:1,actual:Math.max(0,Math.min(100,d.energiaGranja.actual)),at:d.energiaGranja.at} : {v:1,actual:100,at:nowMs()};
+  G.artefactos = d.artefactos ? JSON.parse(JSON.stringify(d.artefactos)) : null;
   G.espacioV = d.espacioV === 1 || d.espacioV === 2 ? d.espacioV :
     ((d.expansiones || 0) > 0 || (d.plotsOwned || 3) > 3 || Object.keys(d.layout || {}).length ||
      Object.keys(d.layoutPlots || {}).length || d.layoutPond || Object.keys(d.obras || {}).length ||

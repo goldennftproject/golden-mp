@@ -20,12 +20,26 @@ function servidor(inicial, opciones={}) {
   }};
   const ctx={Response,Request,Date,Math,JSON,Number,Object,Array,Set,String,isFinite,createClient:()=>admin,Deno:{env:{get:()=>"unused"},serve:f=>{handle=f;}}};
   vm.createContext(ctx);vm.runInContext(js,ctx);
-  return{call:(body,auth=true)=>handle(new Request("https://qa.invalid/guardar",{method:"POST",headers:auth?{Authorization:"Bearer qa"}:{},body:JSON.stringify(body)})),row:()=>fila,writes:()=>writes,ctx};
+  return{call:(body,auth=true)=>handle(new Request("https://qa.invalid/guardar",{method:"POST",headers:auth?{Authorization:"Bearer qa"}:{},body:JSON.stringify({...body,...(body.artefacto && !body.cuenta ? {cuenta:'qa'}:{})})})),row:()=>fila,writes:()=>writes,ctx};
 }
 const base="2026-10-15T12:00:00.000Z";
 const inicial={user_id:"qa",name:"QA",updated_at:base,data:{plata:10,golden:20,level:1,res:{maiz:10}}};
 (async()=>{
   let s=servidor(inicial);
+  const op='11111111-1111-4111-8111-111111111111';
+  let objetos=servidor({...inicial,data:{...inicial.data,golden:100}});
+  let compra=await objetos.call({base,op,artefacto:{accion:'comprar',id:'cobre'}});
+  assert.equal(compra.status,200);assert.equal(objetos.row().data.golden,90);
+  assert.equal((await objetos.call({cuenta:'otra',base,op,artefacto:{accion:'comprar',id:'plata'}})).status,409,'cambio de cuenta bloqueado');
+  compra=await objetos.call({base,op,artefacto:{accion:'comprar',id:'cobre'}});
+  assert.equal(compra.status,200);assert.equal((await compra.json()).repetido,true);assert.equal(objetos.writes(),1,'reintento no cobra dos veces');
+  let carrera=servidor({...inicial,data:{...inicial.data,golden:100}});
+  const concurrentes=await Promise.all([carrera.call({base,op,artefacto:{accion:'comprar',id:'cobre'}}),carrera.call({base,op:'22222222-2222-4222-8222-222222222222',artefacto:{accion:'comprar',id:'plata'}})]);
+  assert.deepEqual(concurrentes.map(r=>r.status).sort(),[200,409]);assert.equal(carrera.writes(),1,'CAS evita compras simultáneas sobre un mismo saldo');
+  objetos=servidor({...inicial,data:{...inicial.data,artefactos:{v:1,items:{cobre:{desde:Date.now()-21600000,cobrado:Date.now()-21600000,resto:0}},ops:[]},energiaGranja:{v:1,actual:100,at:Date.now()}}});
+  const cobro=await objetos.call({base,op,artefacto:{accion:'cobrar',id:'cobre'}});
+  assert.equal(cobro.status,200);assert.ok(objetos.row().data.plata>23);assert.ok(objetos.row().data.energiaGranja.actual<=99);
+  assert.equal((await objetos.call({base,op,artefacto:{accion:'cobrar',id:'cobre'}})).status,200);assert.equal(objetos.writes(),1,'recibo impide cobro doble');
   let r=await s.call({base,data:{plata:12010,golden:20,level:1,res:{maiz:0}}});
   assert.equal(r.status,200,"venta grande de stock aceptado no se rechaza");
   // El catálogo se verifica contra el mismo juego que cobra las ventas.
