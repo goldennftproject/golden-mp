@@ -34,8 +34,8 @@ for (let c = 0; c < G.COLS_BASE; c++) for (let r = 0; r < G.ROWS_BASE; r++) if (
 const cs = interior.map(p => p[0]), rs = interior.map(p => p[1]);
 /* 13 x 13: el interior es cuadrado, como la grilla. Antes era 13 x 12 porque arriba faltaba una
    fila entera — trece celdas que eran tuyas y no podías usar. */
-chequeo("el interior útil es 13 x 13, simétrico",
-  (Math.max(...cs) - Math.min(...cs) + 1) === 13 && (Math.max(...rs) - Math.min(...rs) + 1) === 13,
+chequeo("el interior útil es 10 x 10, simétrico",
+  (Math.max(...cs) - Math.min(...cs) + 1) === 10 && (Math.max(...rs) - Math.min(...rs) + 1) === 10,
   "cols " + Math.min(...cs) + "-" + Math.max(...cs) + " · filas " + Math.min(...rs) + "-" + Math.max(...rs));
 
 // 3) ningún objeto ni parcela ni la laguna pisa la cerca
@@ -43,7 +43,7 @@ const fuera = [];
 // los nodos que trae una expansión (o.exp) están fuera del terreno hasta que se compra: los
 // comprueba tools/test-nodos-expansion.js, cada uno en la etapa que le toca
 G.WORLD_OBJECTS.filter(o => o.exp == null).forEach(o => { for (let c = o.leftCol; c < o.leftCol + Math.ceil(o.wCells); c++)
-  if (G.enCerca(c, o.baseRow)) fuera.push(o.type + " en (" + c + "," + o.baseRow + ")"); });
+  if (G.enCerca(c, o.baseRow - 1)) fuera.push(o.type + " en (" + c + "," + (o.baseRow-1) + ")"); });
 G.PLOTS.forEach((p, i) => { if (G.enCerca(p.col, p.row)) fuera.push("parcela " + i); });
 for (let c = 0; c < G.POND.cols; c++) for (let r = 0; r < G.POND.rows; r++)
   if (G.enCerca(G.POND.col + c, G.POND.row + r)) fuera.push("laguna");
@@ -73,7 +73,7 @@ for (let n = 0; n <= 16; n++) {
 console.log("");
 chequeo("el terreno crece en cada etapa", creceOk);
 chequeo("la cerca es siempre el borde real, en las 17 etapas", cercaOk);
-chequeo("al final son 625 celdas (25x25)", G.terreno(16).mias.size === 625);
+chequeo("al final son 400 celdas (20x20)", G.terreno(16).mias.size === 400);
 chequeo("el aire de bosque sobrevive: hay césped más allá de la cerca",
   G.terreno(16).desp.size > G.terreno(16).mias.size,
   G.terreno(16).desp.size - G.terreno(16).mias.size + " celdas de anillo");

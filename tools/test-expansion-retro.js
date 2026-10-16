@@ -24,6 +24,7 @@ vm.runInContext(fs.readFileSync("public/game/config.js", "utf8"), ctx);
 vm.runInContext(fs.readFileSync("public/game/state.js", "utf8"), ctx);
 vm.runInContext(fs.readFileSync("public/game/save.js", "utf8") + "\n;this.hydrate = hydrate;", ctx);
 const GF = ctx.GF, G = ctx.G;
+GF.configurarEspacio(1); G.espacioV=1; // contrato geométrico de las entregas LEGADAS de 5x5
 // La geometría de entrega antigua se prueba explícitamente sin contrato productivo.
 // hydrate() sí ejecuta la migración real a v1 en los casos de guardados históricos.
 delete G.produccion;

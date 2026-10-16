@@ -74,7 +74,7 @@ console.log("\nEL RECUADRO: REQUISITOS EN COLOR, NODOS CON LÁMINA, Y EL PORQUÉ
   ok("cada material lleva su tenés/pide", /\d+\/\d+/.test(reqs));
   ok("lo que falta va marcado", reqs.indexOf("falta") >= 0);
   ok("el cupo se lista con su icono, sin prometer una veta gratis",
-    trae.includes("+1 Cupo productivo") && trae.includes("sk_farming") && !trae.includes("Veta de hierro"));
+    trae.includes("+1 Capacidad de producción") && trae.includes("sk_farming") && !trae.includes("Veta de hierro"));
   ok("el subtítulo explica dónde adquirir la producción",ctx.document.getElementById('exd-sub').textContent.includes('se compran aparte'));
   ok("el botón apagado dice POR QUÉ (regla 9)",
     btn.disabled === true && /nivel/i.test(btn.textContent), btn.textContent);

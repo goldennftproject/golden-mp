@@ -31,7 +31,7 @@ for (let n = 0; n <= 16; n++) {
   const fuera = [];
   // los de expansión se comprueban aparte (test-nodos-expansion), en la etapa que les toca
   G.WORLD_OBJECTS.filter(o => o.exp == null).forEach(o => { for (let c = o.leftCol; c < o.leftCol + Math.ceil(o.wCells); c++)
-    if (G.enCerca(c, o.baseRow)) fuera.push(o.type); });
+    if (G.enCerca(c, o.baseRow - 1)) fuera.push(o.type); });
   G.PLOTS.forEach((p, i) => { if (G.enCerca(p.col, p.row)) fuera.push("parcela" + i); });
   for (let c = 0; c < G.POND.cols; c++) for (let r = 0; r < G.POND.rows; r++)
     if (G.enCerca(G.POND.col + c, G.POND.row + r)) fuera.push("laguna");

@@ -44,11 +44,11 @@ for (let i = 0; i < 16; i++) {
   previo = ahora;
 }
 console.log("");
-ok("cada compra suma un bloque de 5x5", creceSiempre);
+ok("cada compra suma un bloque de 4x4", creceSiempre);
 ok("cada compra descuenta el material exacto", pagaSiempre);
 ok("al final son las 16", G.expansiones === 16);
 ok("16 expansiones dan 21 cupos sin regalar producción", ctx.produccionCapacidad()===21 && ctx.produccionUsados()===5 && G.plotsOwned===3);
-ok("la granja terminó en 625 celdas", GF.terreno(16).mias.size === 625, GF.terreno(16).mias.size + " celdas");
+ok("la granja terminó en 400 celdas", GF.terreno(16).mias.size === 400, GF.terreno(16).mias.size + " celdas");
 ok("no se puede pasar del tope", X.expansionSiguiente() === null && X.expansionComprar() === false);
 
 // --- el terreno resultante sigue siendo coherente ---
@@ -56,7 +56,7 @@ GF.aplicarTerreno(16);
 let pisan = 0;
 GF.WORLD_OBJECTS.filter(o => o.exp == null).forEach(o => { for (let c = o.leftCol; c < o.leftCol + Math.ceil(o.wCells); c++) if (GF.enCerca(c, o.baseRow)) pisan++; });
 ok("con las 16, nada del contenido pisa la cerca", pisan === 0);
-ok("el mundo final mide 25x25", GF.COLS === 25 && GF.ROWS === 25, GF.COLS + "x" + GF.ROWS);
+ok("el mundo final mide 20x20", GF.COLS === 20 && GF.ROWS === 20, GF.COLS + "x" + GF.ROWS);
 ok("el origen se corrió a negativo", GF.ORIG_X < 0 && GF.ORIG_Y < 0, "(" + GF.ORIG_X + "," + GF.ORIG_Y + ")");
 
 console.log("\n" + (fallos ? "FALLOS: " + fallos : "todo en verde"));

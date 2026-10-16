@@ -12,6 +12,7 @@ class FarmScene extends Phaser.Scene {
        Todo lo que viene después (césped, bosque, cerca, adornos, cámara, límites) cuelga de acá,
        así que tiene que resolverse antes de dibujar el primer píxel. `G.expansiones` es cuántos
        bloques compró el jugador; como el orden es fijo, con el número alcanza. */
+    GF.configurarEspacio(G.espacioV);
     GF.aplicarTerreno((typeof G !== "undefined" && G.expansiones) || 0);
     const W = GF.WORLD_W, H = GF.WORLD_H, T = GF.TILE;
     window.FARM = this;   // para restaurar la granja desde la config
@@ -1239,7 +1240,9 @@ class FarmScene extends Phaser.Scene {
     if (GF.CAM_PAN) {
       // vista tipo SFL: se ve TODA la granja con su bosque alrededor, y queda margen para arrastrar.
       const m = Math.round(this.margenBosque("y") * 0.6);
-      const z = Math.max(cw / (GF.WORLD_W + m), ch / (GF.WORLD_H + m));   // vista de trabajo, cerca de la granja
+      const z = GF.espacioV === 2
+        ? Math.min(cw / (GF.WORLD_W + GF.TILE * 4), Math.max(160, ch - 160) / (GF.WORLD_H + GF.TILE * 2))
+        : Math.max(cw / (GF.WORLD_W + m), ch / (GF.WORLD_H + m));
       // TOPE DE ALEJADO (17/8, dirección: "los 4 lados del bosque deben ser visibles porque lo
       // que interesa es que la granja se pueda expandir").
       // Antes se calculaba para que NUNCA se viera el borde del dibujo, y el efecto secundario

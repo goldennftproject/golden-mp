@@ -36,7 +36,7 @@ GF.EXP_CON_VETA = [3, 6, 8, 10, 12, 14, 16];
    —que hasta hoy no se regalaba en ninguna expansión— entra al mapa. Vive acá por la misma
    razón que EXP_CON_VETA: config coloca, state cobra, y una sola lista ata las dos cosas. */
 GF.EXP_NODOS_EXTRA = { 11: "bronce", 12: "hierro", 13: "oro", 14: "bronce", 15: "hierro", 16: "oro" };
-GF.COLS_BASE = 15; GF.ROWS_BASE = 15;       // el claro con el que arranca la partida
+GF.COLS_BASE = 12; GF.ROWS_BASE = 12;       // terreno físico, independiente de los cupos
 GF.COLS = GF.COLS_BASE; GF.ROWS = GF.ROWS_BASE;   // mundo en celdas enteras (crece con las expansiones)
 GF.WORLD_W = GF.COLS * GF.TILE;             // 630
 GF.ORIG_X = 0; GF.ORIG_Y = 0;               // esquina del mundo: se vuelve NEGATIVA al expandir
@@ -86,7 +86,7 @@ GF.SPEED_NIVEL_MAX = 0.10;   // cuánto devuelve el techo de granja (0,10 = el 1
    pasa a tener columnas y filas NEGATIVAS. Las coordenadas guardadas de los objetos NO
    se tocan (siguen contando desde la esquina del corral original), así que ningún layout
    guardado se rompe: lo que se mueve es el BORDE, no el contenido. */
-GF.BLOQUE = 5;              // lado del bloque de expansión, en celdas
+GF.BLOQUE = 4;              // 16 expansiones físicas de 4x4: 12x12 → 20x20
 // Los 16 bloques, en coordenadas de BLOQUE respecto del corral: el corral es (0,0)-(2,2).
 /* EL ORDEN ES UN RECORRIDO DEL PERÍMETRO (18/8, dirección): "cada expansión va a ir de forma
    consecutiva una tras la otra. La expansión uno sería, desde el lado izquierdo, la que está más
@@ -766,14 +766,16 @@ GF.rehacerColisiones();
 
    Van al FINAL de WORLD_OBJECTS, como manda el aviso de arriba, y llevan `exp` para que la escena
    sepa que no existen hasta que se compre esa expansión. */
-(function () {
+GF.generarNodosExpansion = function () {
+  GF.WORLD_OBJECTS.splice(34); // preservar los índices del contrato de nodos
   const B = GF.BLOQUE, T = GF.TILE;
   GF.EXPANSIONES.forEach((e, i) => {
     const t = GF.terreno(i + 1);                 // el terreno JUSTO después de comprar este bloque
     const esCerca = (c, r) => {
       if (!t.mias.has(c + "," + r)) return true;
       return !t.mias.has((c - 1) + "," + r) || !t.mias.has((c + 1) + "," + r) ||
-             !t.mias.has(c + "," + (r + 1)) || !t.mias.has(c + "," + (r - 1)) || !t.mias.has(c + "," + (r - 2));
+             !t.mias.has(c + "," + (r + 1)) || !t.mias.has(c + "," + (r - 1)) ||
+             (GF.espacioV === 1 && !t.mias.has(c + "," + (r - 2)));
     };
     const cx = e.c0 + (B - 1) / 2, cy = e.r0 + (B - 1) / 2;
     const libres = [];
@@ -838,8 +840,51 @@ GF.rehacerColisiones();
       !(p.c === (arb ? arb.c + 1 : -99) && p.r === (arb ? arb.r : -99)));
     e.parcela = par ? { col: par.c, row: par.r } : null;
   });
-  GF.rehacerColisiones();   // 18/8: los nodos recién añadidos también son sólidos
-})();
+  GF.rehacerColisiones();   // los nodos recién añadidos también son sólidos
+};
+GF.generarNodosExpansion();
+
+// Las granjas anteriores que ya editaron/construyeron conservan su superficie:
+// reducirla por debajo de objetos guardados perdería contenido. Las nuevas usan v2.
+GF.OBJETOS_ESPACIO_V1 = GF.WORLD_OBJECTS.slice(0, 34).map(o => ({ ...o }));
+GF.configurarEspacio = function (version) {
+  const v = version === 1 ? 1 : 2;
+  if (GF.espacioV === v) return;
+  GF.espacioV = v;
+  GF.BLOQUE = v === 1 ? 5 : 4;
+  GF.COLS_BASE = GF.ROWS_BASE = GF.BLOQUE * 3;
+  GF._terrenoCache = {};
+  GF.EXPANSIONES.forEach(e => {
+    e.c0 = e.bc * GF.BLOQUE; e.r0 = e.br * GF.BLOQUE;
+    e.c1 = e.c0 + GF.BLOQUE; e.r1 = e.r0 + GF.BLOQUE;
+  });
+  GF.WORLD_OBJECTS.splice(0, 34, ...GF.OBJETOS_ESPACIO_V1.map(o => ({ ...o })));
+  if (v === 2) {
+    // [columna izquierda, línea base]. No se escala ningún sprite.
+    const posiciones = {
+      0:[9,2],1:[9,4],2:[9,6],3:[9,7],4:[10,7],
+      5:[9,8],6:[10,8],7:[10,9],8:[9,10],9:[10,10],
+      10:[4,2],11:[4,6],12:[4,8],13:[9,4],14:[9,6],
+      15:[9,9],16:[10,9],17:[4,6],18:[4,4],19:[9,10],
+      20:[7,2],21:[8,2],22:[3,2],23:[7,6],24:[9,8],
+      25:[9,10],26:[10,10],27:[7,8],28:[1,8],29:[7,8],
+      30:[5,4],31:[5,10],32:[6,10],33:[5,11]
+    };
+    GF.WORLD_OBJECTS.slice(0,34).forEach((o,i) => {
+      const [col,br] = posiciones[i];
+      Object.assign(o,{leftCol:col,baseRow:br,cx:(col+o.wCells/2)*T,by:br*T});
+    });
+  }
+  GF.PLOTS_BASE = Array.from({length:12},(_,i)=>({col:1+i%3,row:(v===1?2:3)+Math.floor(i/3)}));
+  GF.PLOTS = GF.PLOTS_BASE.map(p=>({...p}));
+  GF.POND_BASE = {col:1,row:v===1?10:8};
+  Object.assign(GF.POND,GF.POND_BASE);
+  GF.FISH = {col:5,row:v===1?12:10};
+  GF.generarNodosExpansion();
+  GF.aplicarTerreno(0);
+  if (GF.ocupCambio) GF.ocupCambio();
+};
+GF.configurarEspacio(2);
 
 /* ============ OCUPACIÓN POR CELDA ≠ COLISIÓN POR PÍXELES (18/8) =====================
    blockedAt mide con CAJAS y está pensado para CAMINAR: la del árbol es solo el tronco

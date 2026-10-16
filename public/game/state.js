@@ -4,6 +4,7 @@ GF.spr = (k) => "assets/farm/" + k + ".png?a=7";   // ?a=N rompe el caché de lo
 
 // --- estado principal (con algunos recursos de arranque para probar los menús) ---
 const G = {
+  espacioV: 2,                  // superficie física; la capacidad productiva es independiente
   plata: 3, golden: 20, level: 1, prestige: 0, week: 1, iniciado: 0,   // 18/8: cuándo empezó la partida — de ahí sale la semana del HUD   // 14/8: nacés con 3 de plata (el 1er objetivo es COMPRAR tus semillas)
   hp: 100, hpMax: 100, swordOwned: false, bowOwned: false, swordWoodOwned: false, firstCropDone: false,   // combate (Fase D)
   armasUnlocked: false,          // viernes (2): la pestana Armas de la Herreria se paga (20 madera + 20 piedra + 1000 plata)
@@ -2265,7 +2266,7 @@ function expNodoExtra(n) { return (GF.EXP_NODOS_EXTRA || {})[n] || null; }
    Ahora el cartel se deriva de la misma lista que pone las vetas en el mundo y que las cobra en
    el precio: si mañana la 18 lleva veta, el cartel lo dice sin que nadie lo escriba. */
 function expansionTrae(n) {
-  if (G.produccion && G.produccion.v === 1) return [{ k: "capacidad", txt: "cupo productivo" }].concat(n === 1 ? [{ k: "parcela", txt: "nodo básico a elección" }] : []);
+  if (G.produccion && G.produccion.v === 1) return [{ k: "capacidad", txt: "capacidad de producción" }].concat(n === 1 ? [{ k: "parcela", txt: "nodo básico a elección" }] : []);
   const out = [{ k: "parcela", txt: "parcela" }, { k: "arbol", txt: "árbol" }, { k: "roca", txt: "roca" }];
   if (expVetas(n)) { out.push({ k: "bronce", txt: "veta de bronce" }); out.push({ k: "oro", txt: "veta de oro" }); }
   const ex = expNodoExtra(n);

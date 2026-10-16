@@ -154,9 +154,9 @@ console.log("\nEL CAMINO DE CRECIMIENTO, QUE ERA EL ÚNICO SIN ENSEÑAR");
   ok("el tutorial enseña a expandir", ids.includes("expandir"), "paso " + (ids.indexOf("expandir") + 1));
   ok("y enseña que existe el modo edición", ids.includes("editar"), "paso " + (ids.indexOf("editar") + 1));
   ok("ya no manda al Cobertizo a buscar la parcela", !ids.includes("reclamar") && !ids.includes("colocar"));
-  ok("cada bloque reserva la celda de su parcela",
-    ctx.GF.EXPANSIONES.every(e => e.parcela && e.parcela.col != null),
-    ctx.GF.EXPANSIONES.length + " bloques");
+  ok("el primer bloque deja sitio para la elección inicial",
+    !!ctx.GF.EXPANSIONES[0].parcela,
+    "los bloques modernos dan capacidad, no una parcela automática");
   /* La prueba de fuego: comprar y que la parcela EXISTA, sin pasar por ninguna bolsa. */
   G.level = 50; G.expansiones = 0; G.plotsOwned = 3; G.layoutPlots = {};
   G.regalos = { tree: 0, rock: 0, plot: 0 }; G.cobertizo = {};

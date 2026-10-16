@@ -102,7 +102,7 @@ ok("todos los objetos son sólidos (los nodos de expansión también)",
   detalle.push("0:"+prev);
   for(let n=1;n<=GF.EXPANSIONES.length;n++){ const u=usables(n); if(u<=prev) sube=false; detalle.push(n+":"+u); prev=u; }
   ok("cada una de las 16 expansiones suma celdas usables", sube, detalle.join(" "));
-  ok("la granja de arranque tiene margen de sobra", usables(0)>=100, usables(0)+" celdas libres");
+  ok("la granja compacta deja margen inicial pero no 100 celdas sobrantes", usables(0)>=30 && usables(0)<100, usables(0)+" celdas libres");
 }
 
 console.log("\n"+(fallos?"FALLOS: "+fallos:"todas las celdas del corral, en las 17 etapas, están sanas"));

@@ -380,7 +380,7 @@ function snapshot() {
      vistos y estrellaMax (el álbum con estrellas) y pescaTiene (el señuelo, que no se gasta).
      OJO con los comentarios AL FINAL de una línea de este objeto: se comen lo que sigue. */
   return { plata: G.plata, golden: G.golden, level: G.level, prestige: G.prestige, iniciado: G.iniciado, reinicio: G.reinicio,   /* 24/9: cuándo se reinició la cuenta (el portero lo lee) */
-    mercadoVentas: G.mercadoVentas, farmXpBase: G.farmXpBase || 0,
+    espacioV: G.espacioV, mercadoVentas: G.mercadoVentas, farmXpBase: G.farmXpBase || 0,
     produccion: G.produccion,
     res: G.res, picks: G.picks, skills: G.skills, triesV: G.triesV, establoV: G.establoV, fish: G.fish, plots: G.plots, nodos: G.nodos, expansiones: G.expansiones, pescaHasta: G.pescaHasta, pescaDesde: G.pescaDesde, senales: G.senales, escamas: G.escamas, vistos: G.vistos, estrellaMax: G.estrellaMax, pescaTiene: G.pescaTiene, canas: G.canas, presion: G.presion, amarres: G.amarres, trampas: G.trampas, marea: G.marea, runaOro: G.runaOro, buffs: G.buffs, seeds: G.seeds, selSeed: G.selSeed,
     tools: G.tools, sflStock: true, invRows: G.invRows, slots: G.slots, hotbar: G.hotbar, hotSel: G.hotSel, hbInit: G.hbInit, layout: G.layout,
@@ -458,6 +458,13 @@ function hydrate(d) {
     }
   }
   /* ---- FASE 1 · APLICAR ---- */
+  G.espacioV = d.espacioV === 1 || d.espacioV === 2 ? d.espacioV :
+    ((d.expansiones || 0) > 0 || (d.plotsOwned || 3) > 3 || Object.keys(d.layout || {}).length ||
+     Object.keys(d.layoutPlots || {}).length || d.layoutPond || Object.keys(d.obras || {}).length ||
+     Object.values(d.built || {}).some(Boolean) || (d.decos || []).length || (d.chests || []).length ||
+     Object.keys((d.produccion || {}).nodos || {}).length || (d.treesOpen || []).length > 1 ||
+     (d.rocksOpen || []).length > 1 ? 1 : 2);
+  GF.configurarEspacio(G.espacioV);
   ["plata", "golden", "level", "prestige", "week"].forEach(k => { if (typeof d[k] === "number") G[k] = d[k]; });
   if (d.res) G.res = Object.assign({}, G.res, d.res);
   if (d.skills) G.skills = Object.assign({}, G.skills, d.skills);
@@ -468,7 +475,9 @@ function hydrate(d) {
   if (Array.isArray(d.plots)) G.plots = d.plots;
   // 18/8: enfriamientos de árboles, rocas y vetas. Antes no se guardaban y cualquier recarga —o
   // un viaje a la Zona Negra— los dejaba todos listos otra vez, que era barra libre de material.
-  if (d.nodos && typeof d.nodos === "object") G.nodos = d.nodos;
+  if (d.nodos && typeof d.nodos === "object") {
+    G.nodos = { ...d.nodos };
+  }
   if (typeof d.pescaHasta === "number") G.pescaHasta = d.pescaHasta;
   /* 25/8 Pesca v3 — el reloj de cargas y lo que el agua te guardó. La migración es sola: quien
      no tenga pescaDesde arranca su reloj AHORA, sin cargas, que es lo honesto (no se regalan
@@ -791,6 +800,16 @@ function hydrate(d) {
    Con las migraciones en su propia función, llamada al final, ese error no se puede repetir: para
    cometerlo habría que mover la llamada, no una línea suelta en medio de doscientas.           */
 function migrarGuardado(d) {
+  // El mapa compacto mueve el nodo inicial, pero nunca reinicia su reloj.
+  if (d.espacioV == null && G.espacioV === 2 && GF.OBJETOS_ESPACIO_V1 && d.nodos) {
+    GF.configurarEspacio(2);
+    for (const i of [0,3]) {
+      const antes = GF.OBJETOS_ESPACIO_V1[i], ahora = GF.WORLD_OBJECTS[i];
+      const a = antes.type + ":" + antes.leftCol + "," + antes.baseRow;
+      const b = ahora.type + ":" + ahora.leftCol + "," + ahora.baseRow;
+      if (Object.prototype.hasOwnProperty.call(d.nodos,a)) { delete G.nodos[a]; G.nodos[b] = d.nodos[a]; }
+    }
+  }
   /* 11/9 — LAS ARMAS PASAN DE XP A INTENTOS (doc del diseñador, fórmula de Tibia). Un guardado sin
      triesV trae XP de Espada/Hacha/Mazo/Arco: se convierte UNA vez al nivel equivalente (el viejo
      nivel 1 es el nuevo 10) con sus intentos exactos, y se marca. Nadie baja de nivel. */

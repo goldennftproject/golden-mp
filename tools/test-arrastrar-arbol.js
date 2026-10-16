@@ -132,7 +132,7 @@ ok("y la copa se guardó: el árbol está entero", !arbol.copa && arbol.sprite.i
   "un árbol que estás colocando no se mece");
 
 console.log("\nMIENTRAS LO ARRASTRÁS, NO SE PARTE OTRA VEZ");
-const destino = { cx: x0 + T * 2, by: y0 };
+const destino = { cx: x0 - T * 2, by: y0 + T * 2 }; // sitio libre dentro del mapa compacto, no fuera de la cerca
 disparar("pointermove", puntero(destino.cx, destino.by));
 esc.tickViento();                  // el viento sigue soplando: no puede volver a partirlo
 ok("el sprite sigue al cursor", arbol.sprite.x === destino.cx && arbol.sprite.y === destino.by,

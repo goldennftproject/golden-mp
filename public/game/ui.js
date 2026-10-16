@@ -1751,7 +1751,7 @@ function refreshExpandir() {
   }
   if (tit) tit.textContent = "Expansión " + ex.n + " de " + EXPANSION_MAX;
   if (sub) sub.textContent = "El terreno crece " + (GF.BLOQUE * GF.BLOQUE) + " celdas" +
-    (G.produccion && G.produccion.v === 1 ? " y suma un cupo productivo. Los nodos se compran aparte en el Cobertizo." : " y destapa lo que hay debajo.");
+    (G.produccion && G.produccion.v === 1 ? " y permite 1 productor activo más (parcela, árbol, roca o veta). Necesitás comprarlo y encontrarle espacio; los nodos se compran aparte en el Cobertizo." : " y destapa lo que hay debajo.");
   /* 20/9: en obra. Ya se pagó; lo único que falta es tiempo, y el panel lo dice con el reloj */
   const obra = (typeof expansionObra === "function") ? expansionObra() : null;
   if (obra) {

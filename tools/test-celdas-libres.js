@@ -57,6 +57,7 @@ ok("ninguna celda rechaza sin un motivo que se vea", fantasmas.length===0,
    apuntando a la derecha del tercero. Esa celda es el sitio DE FÁBRICA del 4º árbol, que todavía
    no es tuyo — antes su caja de colisión la bloqueaba estando invisible. */
 {
+  GF.configurarEspacio(1); // este caso reproduce las coordenadas del reporte histórico
   Object.assign(G,{level:2,expansiones:0,plotsOwned:4,treesOpen:[0,1,2],rocksOpen:[0,1,2],
     built:{},obras:{},layout:{},decos:[],chests:[],regalos:{tree:1,rock:0,plot:0}});
   GF.aplicarTerreno(0);
