@@ -89,9 +89,9 @@ async function arranqueSinCuenta(puerta) {
     G.level = 1; G.plata = 0;
     vm.runInContext('UID = ""; CUENTA_PREVIA = true; PUERTA_EMAIL = false; CARGA_OK = false; SOLO_LOCAL = false; CARGA_FALLO = false;', ctx);
     const r = await ctx.loadFarm();
-    ok("entra en modo SOLO LOCAL como el 25/8", r === true && ctx.SOLO_LOCAL === true);
-    ok("con la granja de nivel 7", G.level === 7);
-    ok("y no se aparcó nada", !store[APARCADA]);
+    ok("sin servidor no activa juego local", r === false && ctx.SOLO_LOCAL === false);
+    ok("no hidrató la granja local de nivel 7", G.level === 1);
+    ok("conservó la copia fuera de la carga automática", !!store[APARCADA]);
     ok("la puerta del correo no se abre para el que ya tiene cuenta (PUERTA_EMAIL sigue false)", ctx.PUERTA_EMAIL === false);
   }
 
@@ -100,8 +100,8 @@ async function arranqueSinCuenta(puerta) {
     delete store[COPIA]; delete store[APARCADA];
     copiaSinDueno(4);
     const r = await arranqueSinCuenta(false);
-    ok("sin puerta del correo, la copia sin dueño se carga como antes", r === true && G.level === 4, "nivel " + G.level);
-    ok("y no se aparca", !store[APARCADA]);
+    ok("sin puerta tampoco se restaura la copia", r === false && G.level === 1, "nivel " + G.level);
+    ok("y se conserva aparcada", !!store[APARCADA]);
   }
 
   console.log(fallos ? "\n✗ " + fallos + " fallo(s)\n" : "\n✓ la copia sin dueño no entra por la puerta del correo, y no se pierde\n");

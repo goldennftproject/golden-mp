@@ -1,0 +1,11 @@
+{
+  "fecha":"2026-10-16",
+  "peticion":"Invalidar cargas locales; lo que se muestra al entrar debe proceder del servidor.",
+  "reglas":["Antes de leer farms se valida que la cuenta existe mediante auth.getUser.","Una copia local nunca reemplaza al guardado remoto, aunque tenga más nivel o dinero.","Una cuenta remota válida sin fila inicia desde cero y requiere confirmación del primer guardado.","Sin red o sin lectura confirmada se bloquea la entrada; no se juega desde la copia local.","Una cuenta eliminada vuelve a la puerta de acceso sin restaurar su granja.","La época 2026-10-16-reset-total-cuentas aparca el respaldo y limpia una sola vez las credenciales locales anteriores de este proyecto. No borra otros sitios ni partidas remotas nuevas."],
+  "copias":"Se siguen guardando respaldos como protección, sin restauración automática. Las aparcadas no se cargan.",
+  "alcance":"Arranque y carga de partida. No convierte cada acción de juego en una transacción autoritativa ni garantiza disponibilidad de red.",
+  "pruebas":"test-carga-servidor.js cubre nube menos avanzada, copia huérfana, cuenta eliminada, red caída, Auth 503, lectura fallida, cuenta distinta, primer guardado fallido, limpieza por proyecto e idempotencia.",
+  "metodo_validado":"El arnés general desactiva setTimeout. Para probar reintentos hay que resolver explícitamente los timers de espera; un proceso Node puede salir con código 0 dejando una promesa sin resolver. La prueba nueva usa watchdog real, éxito final explícito y bootstrap aislado. No contar las ejecuciones incompletas como aprobadas.",
+  "operacion":"Publicar y recargar las pestañas para usar el cargador nuevo. No es posible sustituir el JavaScript de una pestaña antigua que permanezca abierta y no actualice.",
+  "infraestructura":"Sin migraciones, sin nueva eliminación de cuentas y sin cambio de proyecto Supabase. Se conserva Goldenfarm separado."
+}

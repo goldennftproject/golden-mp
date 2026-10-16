@@ -168,7 +168,7 @@ const ok = (n, c, d) => { if (!c) fallos++; console.log((c ? "  ok   " : "  FALL
     ok("borró nuestra copia de la llave (si no, el arranque revive la sesión)",
       borradas.some(k => /^gf-cuenta-/.test(k)), borradas.join(" · "));
     ok("y la copia local de la granja", borradas.some(k => /^gf-granja-copia-/.test(k)));
-    ok("y las borró DESPUÉS de cerrar, no antes", orden.indexOf("cerrar") < orden.findIndex(x => /^borrar:/.test(x)));
+    ok("y las borró DESPUÉS de cerrar, no antes", orden.indexOf("cerrar") < orden.lastIndexOf(orden.filter(x => /^borrar:/.test(x)).at(-1)));
     ok("y recién al final recarga", orden[orden.length - 1] === "reload", orden.join(" → "));
   }
 

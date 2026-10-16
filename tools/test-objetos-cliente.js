@@ -1,6 +1,7 @@
 'use strict';
 const assert=require('node:assert/strict'),path=require('node:path'),vm=require('node:vm'),fs=require('node:fs');
-const repo=path.resolve(__dirname,'..'),{ctx}=require('./arrancar-el-juego.contexto').arrancar(repo),run=s=>vm.runInContext(s,ctx);
+const repo=path.resolve(__dirname,'..'),save=fs.readFileSync(path.join(repo,'public/game/save.js'),'utf8');
+const {ctx}=require('./arrancar-el-juego.contexto').arrancar(repo,{'game/main.js':'','game/save.js':save.replace('window.SAVE_READY = initSave();','window.SAVE_READY = Promise.resolve();')}),run=s=>vm.runInContext(s,ctx);
 const source=fs.readFileSync(path.join(repo,'supabase/functions/guardar/index.ts'),'utf8');
 const block=source.split('/* === REGLAS ===')[1].split('/* === FIN REGLAS === */')[0];
 const edge={console,Date,Math,JSON,Number,Object,Array,Set,String,isFinite};vm.createContext(edge);vm.runInContext(block.slice(block.indexOf('const VERSION')),edge);
@@ -19,7 +20,7 @@ ctx.qaSb={functions:{invoke:async(name,{body})=>{
 }}};
 run("estadoDeCero();sb=qaSb;UID='qa';CARGA_OK=true;SOLO_LOCAL=false;SAVE_BASES.set(UID,'2026-10-16T16:00:00.000Z');mercadoBloquearPantalla=()=>()=>{};copiaGuardar=()=>{};");
 (async()=>{
- await ctx.SAVE_READY;await Promise.resolve();
+ await ctx.SAVE_READY;await new Promise(setImmediate);
  run("sb=qaSb;UID='qa';CARGA_OK=true;SOLO_LOCAL=false;SAVE_CONFLICTOS.clear();");
  await ctx.artefactoSolicitar('comprar','cobre');
  assert.equal(attempts,2,JSON.stringify({avisos,at,cloud:!!cloud,ready:run('CARGA_OK'),confirm:run("SAVE_CONFIRMACIONES.get('qa')")}));assert.equal(commits,1);assert.equal(ctx.G.golden,10);assert.ok(ctx.G.artefactos.items.cobre);

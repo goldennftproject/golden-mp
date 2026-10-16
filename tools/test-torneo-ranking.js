@@ -88,7 +88,7 @@ console.log("\nEL LADO DEL CLIENTE, POR SU LETRA");
     /G\.torneoPodioCobrado === t\.sem\) return/.test(sv) && /G\.torneoPodioCobrado = t\.sem/.test(sv));
   ok("y el bono de plata sigue la escalera de las Escamas (esc / torneoPremio(1))",
     /diaDeGranja\(\) \* 2 \* esc \/ torneoPremio\(1\)/.test(sv));
-  ok("la carga de la granja agenda la liquidación", /torneoPodioCheck\(\); \}, 4000\)/.test(sv));
+  ok("la carga de la granja agenda la liquidación", /torneoPodioCheck\(\);\s*\},\s*4000\)/.test(sv));
   const ui = fs.readFileSync(path.join(RAIZ, "public/game/ui.js"), "utf8");
   ok("la Lonja pinta el top 10 y tu puesto", /torneo-top/.test(ui) && /Vas ' \+ c\.puesto/.test(ui));
   /* la escalera del bono, con números: 1º cobra entero, 10º su proporción */

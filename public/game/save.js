@@ -310,8 +310,24 @@ var PUERTA_EMAIL = false;
    dentro del enlace del correo) sin volver a pedirle nada a la red */
 var SESION_ACTUAL = null;
 
+// Reseteo global autorizado: invalida una sola vez el acceso local anterior de ESTE proyecto.
+// La copia queda aparcada para diagnóstico, pero jamás se restaura automáticamente.
+const GF_SERVIDOR_EPOCA = "2026-10-16-reset-total-cuentas";
+function prepararEpocaServidor() {
+  const key = "gf-servidor-epoca-" + SB_REF;
+  try {
+    if (localStorage.getItem(key) === GF_SERVIDOR_EPOCA) return;
+    const copia = copiaLeer(); if (copia) copiaAparcar(copia);
+    localStorage.removeItem(GF_CUENTA_KEY);
+    localStorage.removeItem("sb-" + SB_REF + "-auth-token");
+    localStorage.removeItem("gf_nick_pendiente");
+    localStorage.setItem(key,GF_SERVIDOR_EPOCA);
+  } catch (e) { sesionLog("no se pudo actualizar la época local; el servidor seguirá validando la cuenta"); }
+}
+
 async function initSave() {
   try {
+    prepararEpocaServidor();
     CUENTA_PREVIA = huboGranja();   // se mira ANTES de tocar nada
     sesionLog("arranque", CUENTA_PREVIA ? "este navegador YA tenía granja" : "navegador virgen");
     if (!window.supabase || !window.supabase.createClient) return false;
@@ -1136,134 +1152,69 @@ var SOLO_LOCAL = false;
 var CARGA_FALLO = false;   // ¿falló la lectura? (distinto de "no hay fila")
 async function loadFarm() {
   MERCADO_GLOBAL = true;
-  /* 24/8 — ACÁ ESTABA LA PUERTA POR LA QUE SE PERDÍA LA GRANJA. "Sin nube no hay nada que
-     pisar" vale cuando el navegador es virgen. Pero si HAY una sesión guardada y aun así no
-     tenemos UID, es exactamente lo contrario: hay una granja y no la pudimos alcanzar. Dar
-     CARGA_OK ahí es autorizar a escribir encima de algo que ni siquiera leímos. */
+  CARGA_OK = false; CARGA_FALLO = false; SOLO_LOCAL = false;
   if (!sb || !UID) {
-    if (CUENTA_PREVIA) {
-      /* 25/8 — ESTO ERA UN CALLEJÓN SIN SALIDA, y le tocaba justo al que más juega.
-         El que TIENE cuenta y no puede entrar veía « No se pudo cargar tu granja » y se quedaba
-         ahí: no podía jugar. La razón original es buena y no se toca —no escribir en la nube algo
-         que no leímos— pero se estaba usando para prohibir TAMBIÉN lo que no tiene ningún riesgo:
-         jugar contra la copia de este mismo navegador.
-         Ahora, si hay copia local con progreso, se juega en MODO SOLO LOCAL: se hidrata, se sigue
-         guardando acá, y la nube queda BLOQUEADA toda la sesión (CARGA_OK sigue en false, que es
-         lo que le prohíbe a saveFarm subir nada). El día que la base vuelva, la carga de verdad
-         decidirá con copiaEsMejor quién manda. Sin copia, el callejón sigue siendo lo correcto:
-         mejor una pantalla honesta que una granja en blanco. */
-      /* 25/8 (revisión): esta rama es para el que SÍ tuvo cuenta y no puede alcanzarla. Quien
-         nunca tuvo cuenta ya no llega acá —CUENTA_PREVIA vuelve a exigir prueba de cuenta— y sale
-         por el camino de abajo, que carga la copia y NO bloquea la nube. */
-      const local = (typeof copiaLeer === "function") ? copiaLeer() : null;
-      if (local && local.data && (!local.uid || local.uid === UID || !UID)) {
-        SOLO_LOCAL = true;
-        hydrate(local.data);
-        copiaNick(local);          // sin esto, el arranque pide apodo y parece un reseteo
-        sesionLog("solo local: hay cuenta pero no se pudo entrar", "nivel " + (local.nivel || 1));
-        const mot = (typeof motivoSinNube === "function") ? motivoSinNube() : null;
-        if (typeof log === "function") log("💾 No se pudo entrar a tu cuenta, así que se cargó la copia de ESTE navegador (nivel " + (local.nivel || 1) + "). Podés jugar: se guarda acá y NO se toca tu granja de la nube hasta que se pueda leer bien. " + (mot ? mot.largo : ""), "gold");
-        if (typeof toast === "function") toast("💾 Jugando con la copia de este navegador");
-        return true;
-      }
-      CARGA_FALLO = true;
-      console.warn("loadFarm: este navegador tiene cuenta, no se pudo entrar y no hay copia local. Guardado BLOQUEADO.");
-      return false;
-    }
-    /* 25/8 — Y ACÁ LA OTRA MITAD DEL MISMO AGUJERO. « Navegador virgen: no hay nada que pisar »
-       era cierto el día que se escribió, cuando sin nube no se guardaba nada en ningún lado. Con
-       la copia local funcionando ya no lo es: este navegador puede tener una granja entera de una
-       sesión sin conexión, y salir de acá sin mirarla es empezar de cero encima de ella.
-       Se lee la copia SOLO si es de una sesión sin nube (uid nulo) o de esta misma cuenta. Una
-       copia de OTRO usuario no se toca ni de casualidad: sería darle la granja del vecino. */
-    const local = (typeof copiaLeer === "function") ? copiaLeer() : null;
-    /* 19/9 — EL AGUJERO QUE DIRECCIÓN VIO Y YO CERRÉ EN EL LUGAR EQUIVOCADO. « Borro caché y sigue
-       logueando sin correo »: main.js cerró su camino el 18/9, pero ESTA rama corre antes y devolvía
-       `true` con la copia local hidratada y el apodo puesto → `returning && NICK` → enterGame. La
-       bitácora de Golden lo muestra tal cual: « navegador virgen y SOLO_EMAIL: se pide el correo »
-       seguido de « sin nube: se cargó la copia local · nivel 3 » — y jugó dos horas sin cuenta con
-       el aviso de « base caída » cada dos minutos, que encima era mentira (la base estaba bien).
-       Con la puerta del correo puesta, una copia SIN DUEÑO en un navegador SIN CUENTA es una partida
-       que la regla dice que no existe. No se carga y no se borra: se APARCA bajo otra clave, para
-       que al entrar con el correo no compita con la granja de verdad (copiaEsMejor / huérfana la
-       tomarían por un rescate de « sesión con la base caída », y pisarían la nube con ella). */
-    if (typeof PUERTA_EMAIL !== "undefined" && PUERTA_EMAIL) {
-      if (local && local.data && !local.uid && hayGranjaLocal()) {
-        copiaAparcar(local);
-        sesionLog("puerta del correo: copia local SIN DUEÑO aparcada, no se juega sin cuenta", "nivel " + (local.nivel || 1));
-      }
-      return false;   // CARGA_OK queda en false: en la puerta no hay nada que guardar
-    }
-    if (local && local.data && hayGranjaLocal()) {
-      hydrate(local.data);
-      copiaNick(local);            // el apodo es parte de la partida y vuelve con ella
-      sesionLog("sin nube: se cargó la copia local", "nivel " + (local.nivel || 1));
-      /* y acá también se nombra la causa, no solo el efecto: es el PRIMER mensaje que el jugador
-         ve al entrar, y « sin conexión » a secas lo deja sin saber si tiene que hacer algo. */
-      const mot = (typeof motivoSinNube === "function") ? motivoSinNube() : null;
-      if (typeof log === "function") log("💾 Se cargó la granja que este navegador tenía guardada (nivel " + (local.nivel || 1) + ") y se sigue guardando acá. " + (mot ? mot.largo : "Sin conexión con el servidor."), "gold");
-      CARGA_OK = true; return true;   // SÍ hay granja: el juego no tiene que pedir apodo otra vez
-    }
-    CARGA_OK = true; return false;   // navegador virgen de verdad: no hay nada que pisar
+    const local = copiaLeer();
+    if (local) { copiaAparcar(local); sesionLog("copia local aparcada: sin servidor no se restaura"); }
+    if (PUERTA_EMAIL) return false;
+    if (CUENTA_PREVIA) sesionLog("cuenta previa sin validar; no se carga la copia");
+    CARGA_FALLO = true;
+    return false;
   }
-  // hasta 3 intentos con espera creciente: la red del jugador puede parpadear justo al entrar
+  const uid = UID;
+  try {
+    // getSession sólo lee el navegador; getUser comprueba que la cuenta aún existe.
+    const verificada = await conTope(sb.auth.getUser(), 10000, "validar cuenta");
+    if (verificada.error) {
+      const e = verificada.error;
+      if ([401,403,404].includes(e.status) || ["user_not_found","session_not_found","refresh_token_not_found"].includes(e.code)) {
+        try { await conTope(sb.auth.signOut({scope:"local"}), 3000, "cerrar acceso inválido"); } catch (_) {}
+        try { localStorage.removeItem(GF_CUENTA_KEY); } catch (_) {}
+        UID = null; SESION_ACTUAL = null; CUENTA_PREVIA = false; PUERTA_EMAIL = true;
+        window.NICK = null;
+        estadoDeCero();
+        sesionLog("cuenta no válida en servidor: se pide acceso, sin restaurar copia local");
+        return false;
+      }
+      throw e;
+    }
+    if (!verificada.data || !verificada.data.user || verificada.data.user.id !== uid || UID !== uid)
+      throw new Error("No se pudo confirmar la cuenta actual");
+  } catch (e) {
+    CARGA_FALLO = true;
+    sesionLog("no se pudo validar la cuenta; carga y guardado bloqueados");
+    return false;
+  }
   for (let intento = 0; intento < 3; intento++) {
     try {
-      const { data, error } = await sb.from("farms").select("data,name,updated_at").eq("user_id", UID).maybeSingle();
-      if (error) { console.warn("loadFarm:", error.message); await sleepMs(1200 * (intento + 1)); continue; }
-      SAVE_BASES.set(UID, data && data.updated_at || null); SAVE_CONFLICTOS.delete(UID);
+      const {data,error} = await sb.from("farms").select("data,name,updated_at").eq("user_id",uid).maybeSingle();
+      if (UID !== uid) { CARGA_FALLO = true; return false; }
+      if (error) { await sleepMs(1200 * (intento + 1)); continue; }
+      SAVE_BASES.set(uid,data && data.updated_at || null); SAVE_CONFLICTOS.delete(uid);
       if (data) {
-        if (data.data) hydrate(data.data);
-        /* 25/8 — LA RED, ACÁ. Si la nube trajo una granja con MENOS progreso que la copia que
-           este navegador guardó (nivel más bajo, o mucha menos plata), algo salió mal en algún
-           lado y escribir encima sería consumar la pérdida. Se restaura la copia y se avisa: es
-           la diferencia entre « perdí tres horas » y « el juego las tenía guardadas ». */
-        const c = copiaLeer();
-        const pendiente = mercadoPendiente(UID);
-        if (pendiente && c && c.uid === UID) copiaAparcar(c);
-        if (!pendiente && copiaEsMejor(c)) {
-          sesionLog("la nube traía MENOS que la copia local: se restaura", "nube nv" + (G.level || 1) + " · copia nv" + c.nivel);
-          hydrate(c.data); copiaNick(c);
-          if (typeof log === "function") log("💾 La nube tenía una versión más vieja de tu granja. Se recuperó la que este navegador tenía guardada (nivel " + c.nivel + ").", "gold");
-          if (typeof toast === "function") toast("Granja recuperada del respaldo local");
-        }
-        CARGA_OK = true;   // recién ACÁ, con el hydrate terminado, se puede volver a escribir
-        if (pendiente) { copiaGuardar(snapshot()); mercadoLimpiarPendiente(UID); }
-        // El guardado trae el nombre CON el título ("[Veterano] Juan"). Si lo metíamos tal cual
-        // en NICK, el guardado siguiente escribía "[Veterano] [Veterano] Juan" y crecía un
-        // prefijo por sesión en el ranking, el chat y el mercado (10/8).
-        if (data.name && !window.NICK) window.NICK = String(data.name).replace(/^\s*(\[[^\]]*\]\s*)+/, "") || data.name;
-        lastSavedKey = snapKey();   // referencia: lo que acabás de cargar ya está guardado
-        /* 1/9: con la granja cargada, se liquida el podio del torneo de la semana pasada si
-           quedó pendiente — con un respiro, para no competir con el arranque */
-        setTimeout(() => { if (typeof torneoPodioCheck === "function") torneoPodioCheck(); }, 4000);
-        return true;
-      }
-      /* 25/8 — « PRIMERA VEZ DE VERDAD » NO SIEMPRE ES VERDAD. Si este navegador jugó con la base
-         de datos caída, tiene una copia local con progreso y una cuenta recién creada cuya fila
-         está vacía. Crear la fila y seguir sería tirar esas horas justo cuando volvió el servicio
-         — el peor momento, y encima con cara de que todo funciona. Si hay copia con progreso, se
-         hidrata ANTES de crear la fila, así lo primero que sube es la granja de verdad. */
-      const huerfana = copiaLeer();
-      if (huerfana && huerfana.data && (huerfana.nivel > 1 || (huerfana.plata || 0) > 0)
-          && (!huerfana.uid || huerfana.uid === UID)) {
-        hydrate(huerfana.data); copiaNick(huerfana);
-        sesionLog("cuenta sin fila + copia local con progreso: se sube la copia", "nivel " + huerfana.nivel);
-        if (typeof log === "function") log("💾 Se recuperó la granja que jugaste mientras el servidor estaba caído (nivel " + huerfana.nivel + ") y se subió a tu cuenta.", "gold");
-        if (typeof toast === "function") toast("Granja recuperada y subida");
+        if (!data.data || typeof data.data !== "object") throw new Error("Granja remota inválida");
+        const respaldo = copiaLeer();
+        if (mercadoPendiente(uid) && respaldo && respaldo.uid === uid) copiaAparcar(respaldo);
+        hydrate(data.data);
+        window.NICK = data.name ? String(data.name).replace(/^\s*(\[[^\]]*\]\s*)+/,"") || data.name : null;
         CARGA_OK = true;
-        await saveFarm(true);
+        copiaGuardar(snapshot()); mercadoLimpiarPendiente(uid);
+        lastSavedKey = snapKey();
+        setTimeout(() => { if (typeof torneoPodioCheck === "function") torneoPodioCheck(); },4000);
         return true;
       }
-      // primera vez de verdad: no hay fila. Es seguro crearla.
+      // Cuenta verificada sin granja: inicio limpio. Nunca se sube una copia huérfana.
+      estadoDeCero(); window.NICK = null; CUENTA_PREVIA = false;
       CARGA_OK = true;
-      await saveFarm();
+      const confirmaciones = SAVE_CONFIRMACIONES.get(uid) || 0;
+      await saveFarm(true);
+      if (UID !== uid || (SAVE_CONFIRMACIONES.get(uid) || 0) <= confirmaciones) {
+        CARGA_OK = false; CARGA_FALLO = true;
+      }
       return false;
-    } catch (e) { console.warn("loadFarm error:", e); await sleepMs(1200 * (intento + 1)); }
+    } catch (e) { console.warn("loadFarm:", e.message); await sleepMs(1200 * (intento + 1)); }
   }
-  // se agotaron los tres intentos: NO es un jugador nuevo, es que no se pudo leer.
-  CARGA_FALLO = true;
-  console.warn("loadFarm: no se pudo leer la granja. Guardado BLOQUEADO para no pisarla.");
+  CARGA_FALLO = true; CARGA_OK = false;
   return false;
 }
 

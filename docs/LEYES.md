@@ -24,6 +24,17 @@ Consecuencias prácticas, todas aprendidas rompiéndolas:
 - Y al revés: una constante que cambia no basta si esa constante ya dejó **estado escrito**.
   Fue exactamente el caso del enfriamiento de la Zona (`zonaCdHasta`).
 
+### Aclaración de dirección — servidor autoritativo al cargar (16/10/2026)
+
+> « Claro, hay que invalidar las cargas locales. O sea, tiene que sí o sí funcionar a través de lo que se muestra en el servidor. »
+
+Esta instrucción sustituye la recuperación automática local anterior. Al abrir se valida la cuenta
+contra Auth y se carga exclusivamente su fila remota. Si falta la fila, se confirma un inicio
+limpio en el servidor; una copia local con más progreso no la reemplaza. Sin conexión se bloquea
+la entrada, sin inventar una partida ni borrar la remota. Los respaldos quedan para diagnóstico,
+no para restauración automática. El reseteo total de cuentas del 16/10 fue una operación explícita
+y excepcional del usuario, no permiso para resetear cuentas en despliegues habituales.
+
 ## Ley 2 — El ritmo de los nodos
 
 > *« Los árboles tienen que tener cuatro cargas a las dos horas, cada treinta minutos una carga,

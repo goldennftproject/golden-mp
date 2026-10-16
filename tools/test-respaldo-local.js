@@ -86,11 +86,11 @@ console.log("\nLA COPIA DE UNA CUENTA NO SE MEZCLA CON OTRA");
 
 console.log("\nLA RESTAURACIÓN AVISA (no se hace a escondidas)");
 {
-  const bloque = SAVE.slice(SAVE.indexOf("const c = copiaLeer();"), SAVE.indexOf("CARGA_OK = true;   // recién ACÁ"));
-  ok("se restaura dentro de loadFarm salvo conflicto o venta pendiente", /if \(!pendiente && copiaEsMejor\(c\)\) \{/.test(bloque));
-  ok("y se lo dice al jugador en el registro", /Se recuperó la que este navegador tenía guardada/.test(bloque));
-  ok("con un aviso a la vista", /toast\("Granja recuperada del respaldo local"\)/.test(bloque));
-  ok("y queda anotado en la bitácora", /sesionLog\("la nube traía MENOS que la copia local/.test(bloque));
+  const bloque = SAVE.slice(SAVE.indexOf("async function loadFarm()"), SAVE.indexOf("// force=true"));
+  ok("la carga valida la cuenta en el servidor", /sb\.auth\.getUser\(\)/.test(bloque));
+  ok("hidrata sólo el guardado remoto", /hydrate\(data\.data\)/.test(bloque) && !/hydrate\((local|c|huerfana)\.data\)/.test(bloque));
+  ok("no compara progreso local para elegir la carga", !/copiaEsMejor\(/.test(bloque));
+  ok("no tener fila inicia limpio y no restaura una huérfana", /estadoDeCero\(\)/.test(bloque) && !/hydrate\(huerfana/.test(bloque));
 }
 
 console.log("\nLA COPIA TAMBIÉN ES PRUEBA DE QUE HUBO GRANJA (25/8 v2)");

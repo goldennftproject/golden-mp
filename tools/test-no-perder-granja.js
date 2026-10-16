@@ -32,10 +32,8 @@ console.log("\nREJA 1 · loadFarm NO AUTORIZA A ESCRIBIR SI HAY CUENTA Y NO SE P
      copia local, porque un navegador con granja guardada y sin servidor NO es un navegador
      virgen. Lo que este medidor tiene que exigir sigue siendo lo mismo: que el `return false`
      (« no hay granja, pedí apodo ») quede SOLO para el que de verdad no tiene nada. */
-  ok("el visto bueno de « no hay nada » queda solo para el navegador virgen de verdad",
-    /CARGA_OK = true; return false;\s*\/\/ navegador virgen de verdad/.test(f));
-  ok("y antes de rendirse mira si hay copia local — sin servidor no es lo mismo que sin granja",
-    /copiaLeer/.test(f) && /return true;/.test(f));
+  ok("sin validación remota nunca autoriza escribir", !/CARGA_OK = true/.test(f));
+  ok("no juega desde la copia local si no se pudo validar la cuenta", !/hydrate\(local\.data\)/.test(f));
   /* 25/8 — LA REGLA SE PARTIÓ EN DOS PERMISOS, Y ESTÁ BIEN QUE ASÍ SEA. « Sin CARGA_OK no se
      escribe » mezclaba dos cosas distintas: escribir en la NUBE (que sin haber leído es lo que
      borró una granja el 24/8) y escribir en ESTE navegador (que no puede pisar nada de nadie).
@@ -45,8 +43,7 @@ console.log("\nREJA 1 · loadFarm NO AUTORIZA A ESCRIBIR SI HAY CUENTA Y NO SE P
   ok("guardar sigue bloqueado si nunca hubo hydrate", /if \(!CARGA_OK && !SOLO_LOCAL\) \{ console\.warn\("saveFarm bloqueado/.test(SAVE));
   ok("y en modo solo local NO se sube a la nube, ni aunque vuelva la conexión",
     /if \(SOLO_LOCAL\) return;/.test(SAVE));
-  ok("SOLO_LOCAL solo se enciende habiendo hidratado una copia de verdad",
-    /SOLO_LOCAL = true;\s*\n\s*hydrate\(local\.data\);/.test(SAVE));
+  ok("el cargador no activa juego local", /SOLO_LOCAL = false/.test(f) && !/SOLO_LOCAL = true/.test(f));
 }
 
 console.log("\nREJA 2 · EL ARRANQUE NO PIDE APODO SI YA HAY GRANJA");

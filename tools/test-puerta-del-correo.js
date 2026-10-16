@@ -68,7 +68,7 @@ console.log("\n3 · « NO HAY CUENTA TODAVÍA » NO ES « SE ROMPIÓ »\n");
     /PUERTA_EMAIL !== "undefined" && PUERTA_EMAIL\)/.test(MAIN));
   /* CARGA_FALLO es lo que bloquea el guardado y saca la pantalla de avería. Un jugador nuevo
      no puede caer ahí: no falló nada, todavía no dio su correo */
-  ok("y el camino nuevo NO enciende CARGA_FALLO", !/PUERTA_EMAIL[\s\S]{0,200}?CARGA_FALLO = true/.test(SAVE));
+  ok("la puerta del correo sale antes de marcar fallo de red", /if \(PUERTA_EMAIL\) return false;/.test(SAVE));
 }
 
 console.log("\n4 · LA PUERTA SE VE, Y ES LA PRIMERA PANTALLA\n");

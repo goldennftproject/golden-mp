@@ -56,7 +56,7 @@ async function cliente(){
   ({ctx,run,cotizar}=await cliente());
   const nube=JSON.parse(run("JSON.stringify(snapshot())"));nube.plata=80;nube.res.papa=27;
   ctx.qaCloud={data:nube,name:"QA",updated_at:"v4"};ctx.qaLocal={uid:"qa",nivel:1,plata:10000,data:{...nube,plata:10000,res:{...nube.res,papa:30}}};
-  run("copiaLeer=()=>qaLocal;mercadoMarcarPendiente(UID,{op:'respuesta-perdida'});sb={from:()=>({select:()=>({eq:()=>({maybeSingle:async()=>({data:qaCloud,error:null})})})})};");
+  run("copiaLeer=()=>qaLocal;mercadoMarcarPendiente(UID,{op:'respuesta-perdida'});sb={auth:{getUser:async()=>({data:{user:{id:'qa'}},error:null})},from:()=>({select:()=>({eq:()=>({maybeSingle:async()=>({data:qaCloud,error:null})})})})};");
   assert.equal(await ctx.loadFarm(),true);assert.equal(ctx.G.plata,80);assert.equal(ctx.G.res.papa,27,"recargar no resucita el stock de la copia previa");
   assert.equal(ctx.mercadoPendiente("qa"),false);assert.ok(run("localStorage.getItem(GF_APARCADA_KEY)"),"respaldo previo conservado aparte");
   console.log("OK: JWT verificado, parámetros, errores, flush previo, doble clic, autosave serializado, cobro confirmado, fallos sin débito y reintentos idempotentes.");
