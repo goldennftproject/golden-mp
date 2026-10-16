@@ -5609,16 +5609,19 @@ class FarmScene extends Phaser.Scene {
        expansión), acá se crean de verdad. Antes esto se recortaba en silencio y la parcela nº13 en
        adelante se cobraba sin aparecer nunca. */
     if ((G.plotsOwned || 3) > GF.PLOTS.length && this._crecerPlots) {
-      const antes = GF.PLOTS.length;
       this._crecerPlots();
-      for (let i = antes; i < GF.PLOTS.length; i++) {
-        const nueva = this.crearParcela(i, {});
+    }
+    // El terreno puede haber añadido posiciones antes de este refresco: crear todas las
+    // parcelas ausentes, no sólo las posiciones que creció esta llamada.
+    if (this.crearParcela) {
+      for (let i = this.plots.length; i < GF.PLOTS.length; i++) {
+        const nueva = this.crearParcela(i, G.plots || []);
         this.plots.push(nueva);
         this.pintarSueloParcela(nueva, false);
         this.plotUnlockFx(nueva);
       }
-      if (GF.PLOTS.length < (G.plotsOwned || 3)) toast("No queda sitio para más parcelas — expandí la granja");
     }
+    if (GF.PLOTS.length < (G.plotsOwned || 3)) toast("No queda sitio para más parcelas — expandí la granja");
     const owned = Math.max(2, Math.min(GF.PLOTS.length, G.plotsOwned || 3));
     this.plots.forEach((pl, i) => {
       if (i < owned && pl.state === "locked") {

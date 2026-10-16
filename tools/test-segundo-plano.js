@@ -79,7 +79,7 @@ console.log("\n3 · Y LOS QUE YA ESTABAN BIEN SIGUEN ESTÁNDO   (no se rompió n
      alguien las « moderniza » a base de sumar por llamada, salte */
   const STATE = require("fs").readFileSync(path.join(RAIZ, "public/game/state.js"), "utf8");
   ok("la estamina se recarga mirando la hora, no sumando por llamada",
-    /nowMs\(\) >= G\.stamFullAt/.test(STATE));
+    /G\.stamLastAt/.test(STATE) && /t - last/.test(STATE));
   ok("la incursión termina mirando la hora", /nowMs\(\) >= G\.incursion\.endAt/.test(STATE));
   /* y el entrenamiento del muñeco ya cobraba por tiempo transcurrido desde el 9/8 */
   ok("el entrenamiento del muñeco cuenta tiempo, no latidos", /function dummyMsUtiles/.test(STATE));

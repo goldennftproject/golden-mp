@@ -222,13 +222,14 @@ function mostrarResumenZona(r) {
   Object.keys(r.res).forEach(k => filas.push((RES_LABEL[k] || k) + ": <b>+" + fmt(r.res[k]) + "</b>"));
   if (r.plata) filas.push("Plata: <b>+" + fmt(r.plata) + "</b>");
   if (r.golden) filas.push("$Golden: <b>+" + fmt(r.golden) + "</b>");
-  if (tit) tit.textContent = r.derrotado ? "Te trajeron de vuelta" : "De vuelta en la granja";
-  if (sub) sub.textContent = (r.derrotado ? "Te derrotaron, pero conservás lo que ya habías recogido. " : "") +
-    "Estuviste " + fmtSecs(Math.round(r.min * 60)) + " en la Zona Negra.";
+  if (tit) tit.textContent = r.titulo || (r.derrotado ? "Te trajeron de vuelta" : "De vuelta en la granja");
+  if (sub) sub.textContent = (r.derrotado ? "Te derrotaron: revisá la tumba y las pérdidas de equipo. " : "") +
+    "Duración: " + fmtSecs(Math.round(r.min * 60)) + "." + (r.aviso ? " " + r.aviso : "");
   body.innerHTML = "<div><b>" + r.matados + "</b> " + (r.matados === 1 ? "monstruo" : "monstruos") +
     " · <b>+" + fmt(r.xp) + "</b> XP de Combate</div>" +
     (filas.length ? "<div style=\"margin-top:6px\">" + filas.join(" · ") + "</div>"
-                  : "<div style=\"margin-top:6px\">No trajiste materiales.</div>");
+                  : "<div style=\"margin-top:6px\">No trajiste materiales.</div>") +
+    '<div style="margin-top:8px">Durabilidad gastada: ' + ((r.desgaste || []).length ? r.desgaste.map(p => escapeHtml(p.label) + ': −' + p.gasto + (p.perdido ? ' (perdido)' : '')).join(' · ') : 'arma 0 · armadura 0') + '</div>';
   /* 9/9: sin enfriamiento no hay nada que anunciar. Dejar « el granjero descansa 0 min » sería
      el cartel más tonto del juego, así que la línea desaparece cuando el CD es cero. */
   if (cd) cd.textContent = ZONA_CD_MIN > 0
@@ -511,7 +512,7 @@ function refreshCombate() {
   /* 15/9: la firma también lleva el set y la durabilidad de cada pieza — si no, el muñeco nuevo
      se dibujaría una vez y se quedaría mintiendo mientras la armadura se gasta a golpes. */
   const setFirma = (typeof G.armorEq === "string" && typeof ARMOR_SLOTS !== "undefined")
-    ? G.armorEq + ":" + ARMOR_SLOTS.map(pz => (typeof armorDur === "function" ? armorDur(G.armorEq, pz) : 0)).join(",")
+    ? G.armorEq + ":" + ARMOR_SLOTS.map(pz => (typeof armorDur === "function" ? armorDur(G.armorEq, pz) : 0) + ':' + armorActiva(G.armorEq, pz)).join(",")
     : "-";
   /* …y lo que llevás PARA cada hueco: si no, al lootear un casco el hueco vacío seguiría
      diciendo « no llevás nada » hasta que cambiara otra cosa */
@@ -563,7 +564,7 @@ function refreshCombate() {
   const setEq = (typeof G.armorEq === "string") ? G.armorEq : null;
   const setDef = setEq && typeof ARMOR_SETS !== "undefined" ? ARMOR_SETS[setEq] : null;
   const piezaSet = (pz) => {
-    const tiene = setDef && typeof armorTiene === "function" && armorTiene(setEq, pz);
+    const tiene = setDef && typeof armorTiene === "function" && armorActiva(setEq, pz);
     const dur = tiene && typeof armorDur === "function" ? armorDur(setEq, pz) : 0;
     const max = (typeof ARMOR_DUR_MAX === "number") ? ARMOR_DUR_MAX : 100;
     const lbl = (typeof ARMOR_SLOT_LABEL !== "undefined" && ARMOR_SLOT_LABEL[pz]) || pz;
@@ -1142,6 +1143,7 @@ function pescaV4Cerrar() {
    la misma decisión que ya se tomó con los picos el 24/8. */
 function pescaV4Cana() {
   const tengo = (G.canas || {});
+  if (G.canaElegida && tengo[G.canaElegida] && CANA_V4_DEF[G.canaElegida]) return canaRota(G.canaElegida) ? null : G.canaElegida;
   /* 23/9: la mejor que tenga Y QUE NO ESTÉ ROTA. Si todas están rotas devuelve null, y la
      puerta del agua (puedeAccion) lo dice; el que solo quiera saber cuál es la mejor que TIENE,
      rota o no, usa pescaV4CanaMejor. */
@@ -1503,6 +1505,13 @@ function lonjaReponerFocoPc(caja, tipo, dato) {
 }
 function refreshLonja() {
   const caja = $("lonja-cuerpo"); if (!caja) return;
+  const elegir = $("lonja-cana");
+  if (elegir) {
+    const opciones = '<option value="">Automática · mejor sana</option>' + CANA_V4_ORDER.filter(k => (G.canas || {})[k]).map(k => '<option value="' + k + '">' + CANA_V4_DEF[k].label + (canaRota(k) ? ' · rota' : '') + '</option>').join('');
+    if (elegir._opciones !== opciones) { elegir.innerHTML = opciones; elegir._opciones = opciones; }
+    elegir.value = G.canaElegida || "";
+    elegir.onchange = () => { if (G.canaElegida = elegir.value) toast("Caña elegida: " + CANA_V4_DEF[G.canaElegida].label); if (typeof saveFarm === "function") saveFarm(true); pescaV4Canas(); };
+  }
   if (LONJA_FOCO_PC && LONJA_FOCO_PC.tab !== LONJA_TAB) LONJA_FOCO_PC = null;
   const esc = $("lonja-escamas");
   if (esc) esc.innerHTML = '<b>' + escamasLonja() + '</b> Escamas';
@@ -2011,8 +2020,7 @@ function refreshStam() {
        primera estamina y, cuatro horas después, la barra vuelve entera de una sola vez — no gotea.
        El cartel ahora cuenta las dos cosas: cuánto falta y cuál es la regla. */
     pill.title = falta > 0
-      ? "Vuelve entera (" + mx + ") en " + fmtDur(falta) + " · recarga completa cada " +
-        (typeof STAM_FULL_H !== "undefined" ? STAM_FULL_H : 4) + " h, contadas desde la primera que gastaste"
+      ? "Regeneración continua, también desconectado · de 0 a " + mx + " en " + STAM_FULL_H + " h · al máximo en " + fmtDur(falta)
       : "Estamina al máximo";
   }
 }
@@ -2158,6 +2166,10 @@ let dndActive = false;   // no re-renderizar mientras se arrastra
 function durColor(pct) { return pct > 50 ? "#8fd06a" : pct > 20 ? "#e0c76a" : "#e0705a"; }
 function itemView(d) {
   if (!d) return null;
+  if (d.kind === "armor") {
+    const p = armorPieza(d.key); if (!p || !armorTiene(p.set, p.pieza)) return null;
+    return { sprite: 'armor_' + p.set + '_' + p.pieza, emoji: '🛡️', label: mkNombre('armor', d.key) + ' · durabilidad ' + armorDur(p.set, p.pieza) + '/' + ARMOR_DUR_MAX + ' · clic para equipar', dur: armorDur(p.set, p.pieza) / ARMOR_DUR_MAX * 100 };
+  }
   if (d.kind === "tool") {
     if (d.key === "axe") return { sprite: "axe", emoji: "🔧", label: "Hacha · 1 uso cada una · tenés " + toolCount("axe"), dur: null };
     if (d.key === "rod") return { sprite: "fishing_rod", emoji: "🔧", label: "Caña · 1 uso cada una · tenés " + toolCount("rod"), dur: null };
@@ -2551,6 +2563,7 @@ function cobertizoClick(d) {
 
 function invCellClick(i) {
   const d = G.slots[i]; if (!d) return;
+  if (d.kind === "armor") { armorAlternarPieza(d.key); return; }
   if (d.kind === "seed") { if (!cropUnlocked(d.key)) { toast("Necesitás Cultivo nivel " + CROP_DEF[d.key].lvl); return; } selectSeed(d.key); toast("Plantando: " + CROP_DEF[d.key].label); }
   else if (d.kind === "arm") {   // clic = EQUIPAR (para tirarla, la papelera). Antes se borraba de una: bug reportado
     if (!(G.weapons && G.weapons[d.key])) return;
@@ -3013,11 +3026,13 @@ function refreshEquip() {
       const [pz, slotViejo] = MAPA[id], el = $(id); if (!el) continue;
       const viejo = slotViejo && G.gear && G.gear[slotViejo] && GEAR_DEF[G.gear[slotViejo]];
       if (viejo) continue;   // ese casillero ya lo dibujó gearSlot con el gear de loot
-      if (setEq && armorTiene(setEq, pz)) {
+      if (setEq && armorActiva(setEq, pz)) {
         const sd = ARMOR_SETS[setEq];
         el.classList.remove("ghost");
         el.title = ARMOR_SLOT_LABEL[pz] + " · " + sd.label + " · defensa +" + sd.piezas[pz].def;
         el.innerHTML = spIc("armor_" + setEq + "_" + pz, "🛡️");
+        el.onclick = () => armorAlternarPieza(armorKey(setEq, pz));
+        activarAccionConTeclado(el, el.onclick);
       } else if (!slotViejo) {
         /* 31/8 — guantes/pantalones vacíos: SU silueta, no un span vacío. El span venía de
            cuando lo llenaba un emoji; el emoji se fue en una limpieza y el hueco quedó mudo —
@@ -3044,7 +3059,7 @@ function refreshEquip() {
         '<div class="fbtns">' + (eq ? '' : '<button class="green sm" data-armeq="' + set + '">Equipar</button>') + '</div></div>';
     });
     box.innerHTML = h;
-    box.querySelectorAll("[data-armeq]").forEach(b => b.onclick = () => { G.armorEq = b.dataset.armeq; toast(ARMOR_SETS[b.dataset.armeq].label + " equipada"); if (typeof saveFarm === "function") saveFarm(); refreshEquip(); refreshHud(); });
+    box.querySelectorAll("[data-armeq]").forEach(b => b.onclick = () => { equiparSet(b.dataset.armeq); refreshEquip(); });
   }
 }
 
@@ -3604,15 +3619,25 @@ function refreshCookingV2() {
     h += '<div class="ck-olla llena' + (espera ? " enfila" : "") + (c.listo ? " listo" : "") + '" title="' + (r.label || "") +
       (c.listo ? " · listo, tocá Recoger" : espera ? " · en la fila, empieza cuando termine el anterior" : " · al fuego") + '">' + ckIcono(r, "t") +
       (espera ? '<span class="turno">' + i + '</span>' : "") +
-      '<span class="t">' + (c.listo ? "¡listo!" : fmtCorto(Math.ceil(left / 1000))) + '</span>' +
-      '<span class="b"><i style="width:' + (c.listo ? 100 : pct) + '%"></i></span></div>';
+      '<span class="t" data-ck-reloj="' + i + '">' + (c.listo ? "¡listo!" : fmtCorto(Math.ceil(left / 1000))) + '</span>' +
+      '<span class="b"><i data-ck-barra="' + i + '" style="width:' + (c.listo ? 100 : pct) + '%"></i></span>' +
+      (espera ? '<button type="button" class="ghost sm" data-ckcancel="' + cookList().indexOf(c) + '">Cancelar</button>' : '') + '</div>';
   }
   /* el botón de recoger, igual que el del Horno y con el mismo texto: dos edificios que hacen lo
      mismo tienen que decirlo con las mismas palabras, o el jugador aprende dos veces. */
   const listasC = cookList().filter(c => c.listo).length;
   if (listasC) h += '<button class="gold" id="ck-recoger" style="flex:1 0 100%;margin-top:6px">' +
     "Recoger " + listasC + (listasC > 1 ? " platos" : " plato") + '</button>';
-  cola.innerHTML = h;
+  const firmaCola = JSON.stringify(lista.map(c => [c.id, c.endAt, c.total, !!c.listo, cookEsperando(c)])) + '|' + cookSlots();
+  // Mantener los botones vivos entre ticks: un mouseup debe caer en el mismo nodo del mousedown.
+  if (cola._firmaCola !== firmaCola) { cola.innerHTML = h; cola._firmaCola = firmaCola; }
+  lista.forEach((c, i) => {
+    const reloj = cola.querySelector('[data-ck-reloj="' + i + '"]'), barra = cola.querySelector('[data-ck-barra="' + i + '"]');
+    const left = Math.max(0, c.endAt - nowMs());
+    if (reloj) reloj.textContent = c.listo ? '¡listo!' : fmtCorto(Math.ceil(left / 1000));
+    if (barra) barra.style.width = (c.listo ? 100 : cookEsperando(c) ? 0 : Math.max(0, Math.min(100, (1 - left / (c.total || 1)) * 100))) + '%';
+  });
+  cola.querySelectorAll('[data-ckcancel]').forEach(b => b.onclick = () => cocinaCancelar(Number(b.dataset.ckcancel)));
   const bRecC = $("ck-recoger");
   if (bRecC) bRecC.onclick = () => { cocinaRecoger(); refreshCooking(); if (isOpen("ov-inv")) refreshInv(); };
 
@@ -6463,7 +6488,9 @@ function refreshIncursion() {
       '<div class="fbtns"><button class="green sm" ' + (inc || !poder || sinCupo || !nivelOk ? "disabled" : "") + ' data-inc="' + k + '">' + (nivelOk ? "Salir" : "Nivel " + nivelReq) + '</button></div></div>';
   });
   h += '<div class="info">Al Dragón de las Cavernas hay que ir a pelearlo en persona: no se puede por incursión.</div>';
+  if (G.incResumen) h += '<button class="ghost sm" id="inc-ultimo-resumen">Ver última excursión</button>';
   box.innerHTML = h;
+  const ultimo = $("inc-ultimo-resumen"); if (ultimo) ultimo.onclick = () => mostrarResumenZona(G.incResumen);
   box.querySelectorAll("[data-inc]").forEach(b => b.onclick = () => {
     const k = b.dataset.inc, z = INCURSIONES[k];
     askConfirm("Mandar al granjero a " + z.label + " por " + fmtSecs(z.min * 60) + ". Gasta durabilidad del arma y estamina. ¿Salir?",
@@ -6507,13 +6534,14 @@ async function refreshP2P() {
     RECIPE_ORDER.forEach(k => { if (((G.dishes || {})[k] || 0) > 0) ops.push(["dish", k, G.dishes[k]]); });
     FISH_ORDER.forEach(k => { if (((G.fish || {})[k] || 0) > 0) ops.push(["fish", k, G.fish[k]]); });
     Object.keys(G.weapons || {}).forEach(k => ops.push(["arm", k, 1]));
+    Object.keys(G.armor || {}).forEach(k => { if (G.armor[k] && armorPieza(k)) ops.push(["armor", k, 1]); });
     if (!ops.length) h += '<div class="fds">No tenés nada para publicar todavía.</div>';
     ops.forEach(([kind, key, max], i) => {
       const sug = Math.max(1, Math.round((typeof priceOf === "function" ? priceOf(key) : 10) || 10));
       h += '<div class="forge-row"><div class="finfo"><div class="fnm">' + mkNombre(kind, key) + ' <span class="tag">' + MARKET_KINDS[kind] + '</span></div>' +
-        '<div class="fds">Tenés ' + fmt(max) + (kind === "arm" ? " · se publica con su durabilidad y sus runas" : "") + '</div></div>' +
+        '<div class="fds">Tenés ' + fmt(max) + (kind === "arm" ? " · se publica con su durabilidad y sus runas" : kind === "armor" ? " · durabilidad " + armorDur(armorPieza(key).set, armorPieza(key).pieza) + "/" + ARMOR_DUR_MAX + " (se conserva al vender)" : "") + '</div></div>' +
         '<div class="fbtns">' +
-          (kind === "arm" ? '' : '<input id="p2q-' + i + '" type="number" min="1" max="' + max + '" value="1" style="width:56px">') +
+          (kind === "arm" || kind === "armor" ? '' : '<input id="p2q-' + i + '" type="number" min="1" max="' + max + '" value="1" style="width:56px">') +
           '<input id="p2p-' + i + '" type="number" min="1" value="' + sug + '" style="width:70px" title="Precio en plata">' +
           '<button class="green sm" data-pub="' + kind + ':' + key + ':' + i + '">Publicar</button>' +
         '</div></div>';
@@ -6542,7 +6570,8 @@ async function refreshP2P() {
     filas.forEach(r => {
       const mio = r.seller === (typeof UID === "string" ? UID : "");
       h += '<div class="forge-row"><div class="finfo"><div class="fnm">' + escapeHtml(r.name || r.item) + ' ×' + r.qty + ' <span class="tag">' + (MARKET_KINDS[r.kind] || r.kind) + '</span></div>' +
-        '<div class="fds">Vende: ' + escapeHtml(r.seller_name || "granjero") + (mio ? " (vos)" : "") + '</div></div>' +
+        '<div class="fds">Vende: ' + escapeHtml(r.seller_name || "granjero") + (mio ? " (vos)" : "") +
+        (r.kind === "armor" ? ' · Durabilidad: ' + (r.payload && Number.isFinite(r.payload.dur) ? r.payload.dur + '/' + ARMOR_DUR_MAX : 'sin dato válido') : '') + '</div></div>' +
         '<div class="fbtns"><button class="green sm" ' + (mio || G.plata < r.price ? "disabled" : "") + ' data-buy="' + r.id + '">Comprar · ' + fmt(r.price) + '</button></div></div>';
     });
   }
@@ -6551,7 +6580,7 @@ async function refreshP2P() {
   box.querySelectorAll("[data-pub]").forEach(b => b.onclick = async () => {
     const [kind, key, i] = b.dataset.pub.split(":");
     const q = $("p2q-" + i), pr = $("p2p-" + i);
-    const cant = kind === "arm" ? 1 : Math.max(1, +(q && q.value) || 1);
+    const cant = kind === "arm" || kind === "armor" ? 1 : Math.max(1, +(q && q.value) || 1);
     // candado anti-exploit (12/8): el P2P tampoco deja sacar recursos que el objetivo activo pide
     await marketPublicar(kind, key, cant, Math.max(1, +(pr && pr.value) || 1));
     p2pCache = null; refreshP2P();

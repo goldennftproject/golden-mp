@@ -57,6 +57,7 @@ console.log("\n2 · LA ARMADURA SE GASTA Y SE REPARA\n");
   G.built = { curtiduria: true }; G.armor = {}; G.armorDur = {}; G.armorEq = null;
   G.res = { pelaje: 999, hierro: 999 }; G.plata = 99999;
   SLOTS.forEach(pz => g('craftArmor("piel", "' + pz + '")'));
+  g('equiparSet("piel")'); // las piezas nuevas llegan a la bolsa, ya no se equipan solas
   ok("las cinco piezas nacen enteras", SLOTS.every(pz => g('armorDur("piel", "' + pz + '")') === MAX));
   const defLlena = g("armorDefensa()");
   ok("y el set completo da su defensa y su bono", defLlena > 0 && !!g("armorBono()"), defLlena + " de defensa");
@@ -94,6 +95,7 @@ console.log("\n2 · LA ARMADURA SE GASTA Y SE REPARA\n");
   SLOTS.forEach(pz => g('craftArmor("piel", "' + pz + '")'));
 
   /* una pieza en cero: sin defensa, sin bono de set, pero SIGUE SIENDO TUYA (ley 1) */
+  g('equiparSet("piel")');
   G.armorDur[g('armorKey("piel", "pecho")')] = 0;
   ok("la pieza gastada deja de dar defensa", g("armorDefensa()") < defLlena, g("armorDefensa()") + " < " + defLlena);
   ok("y el bono del set se apaga", !g("armorBono()"));

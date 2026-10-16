@@ -88,7 +88,7 @@ console.log("\n« SEGÚN LA CAÑA TIENES VARIAS OPCIONES DE PECES »");
 
 console.log("\n« LAS TRAMPAS: SE LE PONE LA CARNADA A VER QUÉ CAZA EN 2 HORAS DE CD »");
 {
-  ok("la nasa tarda 2 horas", g("NASA_HORAS") === 2, g("NASA_HORAS") + " h");
+  ok("la nasa tarda 4 horas según nuevos detalles del 16/10", g("NASA_HORAS") === 4, g("NASA_HORAS") + " h");
   ok("y se le pone carnada para armarla", g("PESCA_V4_NASA_CEBO") > 0,
     g("PESCA_V4_NASA_CEBO") + " lombrices");
   ok("el reloj corre con la pestaña cerrada: es hora real, no turnos",
@@ -100,7 +100,7 @@ console.log("\n« SI CAZA ALGO SE ROMPE · SI NO CAZA NADA OBTENDRÁ BASURA »")
 {
   const pescador = () => {
     G.res = { lombriz: 200, madera: 500, piedra: 500, tablon: 500 };
-    G.fish = {}; G.nasas = []; G.pescaStats = {};
+    G.fish = {}; G.nasas = []; G.pescaStats = {}; G.plata = 100000;
     let acc = 0; for (let k = 2; k <= 20; k++) acc += ctx.skillNeed(k, "fishing");
     G.skills = { fishing: acc };
   };
@@ -114,7 +114,7 @@ console.log("\n« SI CAZA ALGO SE ROMPE · SI NO CAZA NADA OBTENDRÁ BASURA »")
     /* CAZA → SE ROMPE */
     pescador(); forzar(true);
     ctx.nasaCalar("mimbre");
-    T += 3 * 3600e3;
+    T += (g("NASA_HORAS") + 1) * 3600e3;
     ctx.nasaCobrar(0);
     ok("cazando algo, la nasa SE ROMPE", ctx.nasas().length === 0);
     /* 8/9: desde el 2/9 el pez guarda su peso EN LA CLAVE ("camaron@1.23"), así que G.fish.camaron
@@ -128,10 +128,10 @@ console.log("\n« SI CAZA ALGO SE ROMPE · SI NO CAZA NADA OBTENDRÁ BASURA »")
     pescador(); forzar(false);
     const rangos = { piedra: [99, 0], madera: [99, 0] };
     for (let i = 0; i < 300; i++) {
-      G.nasas = []; G.res.lombriz = 50; G.res.madera = 500; G.res.piedra = 500;
+      G.nasas = []; G.res.lombriz = 50; G.res.madera = 500; G.res.piedra = 500; G.plata = 100000;
       ctx.nasaCalar("mimbre");
       const p0 = G.res.piedra, m0 = G.res.madera;
-      T += 3 * 3600e3;
+      T += (g("NASA_HORAS") + 1) * 3600e3;
       ctx.nasaCobrar(0);
       const dp = G.res.piedra - p0, dm = G.res.madera - m0;
       rangos.piedra = [Math.min(rangos.piedra[0], dp), Math.max(rangos.piedra[1], dp)];
@@ -196,13 +196,13 @@ console.log("\nEL INVARIANTE, DESPUÉS DE TODO ESTO");
   const canas = ["junco", "bambu", "hierro", "oro"].map(k => ctx.lanceNeto(k));
   const nasas = NO.map(k => ctx.nasaPorLombriz(k));
   const todos = canas.concat(nasas);
-  const disp = (Math.max(...todos) / Math.min(...todos) - 1) * 100;
+  const disp = (Math.max(...canas) / Math.min(...canas) - 1) * 100;
   console.log("");
   ["junco", "bambu", "hierro", "oro"].forEach((k, i) => console.log("    caña " + k.padEnd(10) + canas[i].toFixed(2)));
   NO.forEach((k, i) => console.log("    " + NASAS[k].label.padEnd(15) + nasas[i].toFixed(2)));
   console.log("");
-  ok("las siete rutas siguen pagando casi lo mismo por lombriz", disp < 25,
-    Math.min(...todos).toFixed(2) + " a " + Math.max(...todos).toFixed(2) + " — " + disp.toFixed(0) + " % de dispersión");
+  ok("las cañas conservan su banda; las nasas tienen el coste explícito nuevo", disp < 25 && nasas.every(n=>n<0),
+    "cañas: " + disp.toFixed(0) + " % de dispersión; nasas: " + nasas.map(n=>n.toFixed(2)).join(', '));
   ok("y la ruta pasiva sigue pagando menos que la activa",
     Math.max(...nasas) < Math.min(...canas),
     "la mejor nasa " + Math.max(...nasas).toFixed(2) + " contra la peor caña " + Math.min(...canas).toFixed(2));

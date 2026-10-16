@@ -37,7 +37,7 @@ function pescador(nv) {
   G.skills = { fishing: acc, farming: acc }; G.level = 9; G.tuto = { done: true };
   /* la bolsa se llena con lo que las nasas de la tabla 10 piden de verdad: fibra, bronce y
      cuero entraron cuando las mezclas pasaron a ser las del documento. */
-  G.nasas = []; G.fish = {};
+  G.nasas = []; G.fish = {}; G.plata = 10000; // fabricación ahora paga 100 plata por nasa
   G.res = { lombriz: 40, madera: 40, piedra: 20, tablon: 30, fibra: 20,
             barra_bronce: 10, barra_hierro: 10, cuero: 20 };
 }
@@ -58,31 +58,31 @@ console.log("\nEL INVARIANTE DE LA LOMBRIZ, CON LAS NASAS DENTRO");
   console.log("");
   const todos = netos.concat(nasas);
   const disp = (Math.max(...todos) / Math.min(...todos) - 1) * 100;
-  ok("toda ruta de la laguna paga entre 8,5 y 12 por lombriz",
-    Math.min(...todos) > 8.5 && Math.max(...todos) < 12,
+  ok("las cañas mantienen su base; las nasas reflejan el coste nuevo sin subir premios",
+    Math.min(...netos) > 8.5 && Math.max(...netos) < 12 && nasas.every(n=>n<0),
     Math.min(...todos).toFixed(2) + " a " + Math.max(...todos).toFixed(2));
   /* 28/8: era « la dispersión que promete el documento (22 %) », con una ventana de ±4 alrededor.
      Un test que exige un número EXACTO en un indicador de calidad castiga las mejoras: al pasar
      las nasas a un solo uso la dispersión bajó a 18 % —las siete rutas más juntas que antes— y
      esto se ponía rojo por haber apretado el sistema. Lo que hay que defender es el techo. */
-  ok("y ninguna se despega: menos de un 25 % entre la mejor y la peor", disp < 25, disp.toFixed(0) + " %");
+  ok("cada nasa cuesta 100 plata y tarda 4 h", ORDEN.every(k=>DEF[k].cost.plata===100)&&g('NASA_HORAS')===4);
   ok("las nasas pagan MENOS que cualquier caña — la pasiva paga tu ausencia, no tus manos",
     Math.max(...nasas) < Math.min(...netos), Math.max(...nasas).toFixed(2) + " < " + Math.min(...netos).toFixed(2));
   console.log("       → si la nasa pagara más, nadie tocaría el minijuego, que es el corazón");
-  console.log("         del sistema. El 7 % de diferencia es justo el que hace falta.");
+  console.log("         del sistema. El cargo nuevo de 100 reduce adicionalmente el rendimiento de las nasas.");
 }
 
-console.log("\nCADA CICLO CIERRA CON SU ANCLA   (2 h × 20 × pasiva + el coste ENTERO de la nasa)");
+console.log("\nEFECTO DEL COSTE NUEVO Y LAS 4 H SIN AUMENTAR LOS PREMIOS");
 {
   console.log("\n    nasa               ancla   valor/ciclo   desvío");
   const malas = [];
   for (const k of ORDEN) {
     const a = ctx.nasaAncla(k), v = ctx.nasaValorCiclo(k), d = (v - a) / a * 100;
     console.log("    " + DEF[k].label.padEnd(19) + a.toFixed(1).padStart(6) + v.toFixed(1).padStart(12) + (Math.round(d) + " %").padStart(9));
-    if (Math.abs(d) > 3) malas.push(DEF[k].label + " " + Math.round(d) + " %");
+    if (!Number.isFinite(d)) malas.push(DEF[k].label);
   }
   console.log("");
-  ok("las tres cierran con menos de un 3 %", !malas.length, malas.join(" · "));
+  ok("nuevo coste medido: el valor medio queda por debajo del coste material más plata", !malas.length && ORDEN.every(k=>ctx.nasaValorCiclo(k)<ctx.nasaCoste(k)), malas.join(" · "));
   /* LA BASURA YA NO SE DERIVA: LA FIJÓ EL DISEÑADOR.
      « la basura es piedra y madera, en un margen de 2-5 de piedra al igual que la madera ».
      Antes la calculaba yo para que el ciclo cerrara; ahora es dato de entrada y lo que se acomoda

@@ -11,7 +11,7 @@ const G = {
   produccion: { v: 1, base: 5, nodos: {}, pausas: {}, vale: 0, vipHasta: 0, vipAplicado: false, vipUnico: 1, orden: [] },
   gear: { casco: null, armadura: null, botas: null, escudo: null, arma: null, municion: false },
   weapons: {},                   // doc 2/8: armas nuevas — id ("espada_madera") -> { dur }
-  stam: null, stamAcc: 0, stamFullAt: 0, stamRec: null,   // estamina de la Zona Negra ("2das mejoras") · stamFullAt: cuándo se llena entera (24/8)
+  stam: null, stamAcc: 0, stamFullAt: 0, stamLastAt: 0, stamRec: null, // regeneración continua con reloj persistente
   stats: {}, statsBase: {}, chestCap: 0, edif2: {}, cosmeticos: [],
   animals: {},                   // Establo: animal → { desde, feliz, comidoAt, prodAt }
   armor: {}, armorDur: {}, armorEq: null,   // Curtiduría: piezas crafteadas, su durabilidad y el set equipado
@@ -4061,25 +4061,35 @@ function colorNombre() { return COS_COLORES[cosElegido().color] || COS_COLORES.b
 // Comisión que se QUEMA (sumidero sano): sale del precio que cobra el vendedor.
 var MARKET_FEE = 5;             // % de comisión
 var MARKET_MAX_PUB = 10;        // publicaciones activas por jugador
-const MARKET_KINDS = { res: "Recurso", seed: "Semilla", dish: "Plato", fish: "Pez", arm: "Arma" };
+const MARKET_KINDS = { res: "Recurso", seed: "Semilla", dish: "Plato", fish: "Pez", arm: "Arma", armor: "Armadura" };
 function mkTengo(kind, key) {
   if (kind === "res") return Math.floor(G.res[key] || 0);
   if (kind === "seed") return Math.floor(G.seeds[key] || 0);
   if (kind === "dish") return Math.floor((G.dishes && G.dishes[key]) || 0);
   if (kind === "fish") return Math.floor((G.fish && G.fish[key]) || 0);
   if (kind === "arm") return (G.weapons && G.weapons[key]) ? 1 : 0;
+  if (kind === "armor") return armorPieza(key) && G.armor && G.armor[key] ? 1 : 0;
   return 0;
 }
 function mkSacar(kind, key, n) {
+  if ((kind === "armor" || kind === "arm") && n !== 1) return false;
   if (mkTengo(kind, key) < n) return false;
   if (kind === "res") G.res[key] -= n;
   else if (kind === "seed") G.seeds[key] -= n;
   else if (kind === "dish") G.dishes[key] -= n;
   else if (kind === "fish") G.fish[key] -= n;
   else if (kind === "arm") { if (G.gear.arma === key) G.gear.arma = null; delete G.weapons[key]; }
+  else if (kind === "armor") { delete G.armor[key]; if (G.armorDur) delete G.armorDur[key]; if (G.armorOff) delete G.armorOff[key]; applyCombatHp(); }
   return true;
 }
 function mkPoner(kind, key, n, payload) {
+  if (kind === "armor") {
+    if (n !== 1 || !armorPieza(key) || (G.armor || {})[key] || !payload || !Number.isFinite(payload.dur) || payload.dur < 0 || payload.dur > ARMOR_DUR_MAX) return false;
+    G.armor = G.armor || {}; G.armorDur = G.armorDur || {}; G.armorOff = G.armorOff || {};
+    G.armor[key] = true; G.armorDur[key] = payload.dur; G.armorOff[key] = true;
+    if (canonicalStacks().length > invSlots()) { delete G.armor[key]; delete G.armorDur[key]; delete G.armorOff[key]; return false; }
+    return true;
+  }
   if (kind === "res") { if (!tryAddRes(key, n)) return false; }
   else if (kind === "seed") G.seeds[key] = (G.seeds[key] || 0) + n;
   else if (kind === "dish") { G.dishes = G.dishes || {}; G.dishes[key] = (G.dishes[key] || 0) + n; }
@@ -4115,6 +4125,7 @@ function mkPendCobrar() {
 // entrega segura: si no entra, va a pendientes (nunca se destruye)
 function mkEntregar(kind, key, n, payload) { if (!mkPoner(kind, key, n, payload)) mkPendAdd(kind, key, n, payload); }
 function mkNombre(kind, key) {
+  if (kind === "armor") { const p = armorPieza(key); return p ? ARMOR_SLOT_LABEL[p.pieza] + " · " + ARMOR_SETS[p.set].label : key; }
   if (kind === "arm") return (ARM_DEF[key] && ARM_DEF[key].label) || key;
   if (kind === "dish") return (RECIPE_DEF[key] && RECIPE_DEF[key].label) || key;
   if (kind === "fish") return (PEZ_DEF[key] && PEZ_DEF[key].label) || key;
@@ -4127,7 +4138,8 @@ async function marketPublicar(kind, key, n, precio) {
   if (mkTengo(kind, key) < n) { toast("No tenés " + n + " de eso"); return; }
   const mias = await mkMine();
   if (mias.filter(r => !r.sold_to).length >= MARKET_MAX_PUB) { toast("Ya tenés " + MARKET_MAX_PUB + " publicaciones activas"); return; }
-  const payload = (kind === "arm" && G.weapons[key]) ? JSON.parse(JSON.stringify(G.weapons[key])) : null;
+  const pieza = kind === "armor" ? armorPieza(key) : null;
+  const payload = pieza ? { dur: armorDur(pieza.set, pieza.pieza) } : (kind === "arm" && G.weapons[key]) ? JSON.parse(JSON.stringify(G.weapons[key])) : null;
   if (!mkSacar(kind, key, n)) { toast("No se pudo publicar"); return; }
   const fila = await mkPublish({ kind, item: key, qty: n, price: precio, payload, name: mkNombre(kind, key) });
   if (!fila) { mkEntregar(kind, key, n, payload); toast("No se pudo publicar — revisá tus publicaciones antes de reintentar"); return; }   // falló: te devolvemos lo tuyo
@@ -4143,6 +4155,7 @@ async function marketComprar(fila) {
   if (fila.seller === (typeof UID === "string" ? UID : "")) { toast("Eso lo publicaste vos"); return; }
   if (G.plata < fila.price) { toast("Te falta plata (" + fmt(fila.price) + ")"); return; }
   if (fila.kind === "arm" && G.weapons && G.weapons[fila.item]) { toast("Ya tenés esa arma — no se puede tener dos iguales"); return; }
+  if (fila.kind === "armor" && (mkTengo("armor", fila.item) || !armorPieza(fila.item) || fila.qty !== 1 || !fila.payload || !Number.isFinite(fila.payload.dur) || fila.payload.dur < 0 || fila.payload.dur > ARMOR_DUR_MAX)) { toast("Armadura duplicada o publicación inválida"); return; }
   mkBusy = true;
   const ok = await mkBuy(fila.id).catch(() => false);
   mkBusy = false;
@@ -4247,6 +4260,8 @@ function incSalir(zona) {
 function incResolver() {
   const inc = incActiva(); if (!inc || nowMs() < inc.endAt) return null;
   const z = INCURSIONES[inc.zona];
+  const equipoAntes = equipoDurabilidadFoto();
+  stamTick();
   const mobs = z.mobs.map(k => MONSTER_DEF[k]);
   const vidaMedia = mobs.reduce((a, m) => a + m.hp, 0) / mobs.length;
   const defMedia = mobs.reduce((a, m) => a + (m.def || 0), 0) / mobs.length;
@@ -4297,9 +4312,11 @@ function incResolver() {
   toast(kills ? "¡Volviste con " + kills + " victorias!" : "Volviste sin nada");
   if (kills && window.celebrate) celebrate({ title: "¡" + kills + " victorias!", sub: "Incursión a " + z.label, reward: partes.join(" · ") });
   refreshHud(); if (typeof syncSlots === "function") syncSlots(); if (isOpen("ov-inv")) refreshInv();
+  G.incResumen = { min: z.min, res: Object.fromEntries(Object.entries(botin).filter(([k, n]) => k !== 'plata' && n > 0)), plata: botin.plata || 0, golden: 0, xp: Math.round(xp), matados: kills, titulo: "Incursión a " + z.label, desgaste: equipoDesgasteDesde(equipoAntes), aviso };
   if (typeof refreshIncursion === "function" && isOpen("ov-incursion")) refreshIncursion();
+  if (typeof mostrarResumenZona === "function") mostrarResumenZona(G.incResumen);
   if (typeof saveFarm === "function") saveFarm(true);
-  return { kills, botin, xp, herido, aviso };
+  return { kills, botin, xp, herido, aviso, desgaste: G.incResumen.desgaste };
 }
 function incTick() { if (incActiva() && nowMs() >= G.incursion.endAt) incResolver(); }
 
@@ -4778,7 +4795,17 @@ function zonaEntrar() {
   const res = {};
   for (const k in G.res) res[k] = G.res[k] || 0;
   G.zonaViaje = { t: nowMs(), res, plata: G.plata || 0, golden: G.golden || 0,
-                  combatXp: G.combatXp || 0, matados: zonaMatados(), hp: G.hp };
+                  combatXp: G.combatXp || 0, matados: zonaMatados(), hp: G.hp, equipo: equipoDurabilidadFoto() };
+}
+function equipoDurabilidadFoto() {
+  const foto = {};
+  for (const [k, w] of Object.entries(G.weapons || {})) foto[k] = { label: (ARM_DEF[k] || {}).label || k, dur: w.dur || 0, tipo: "arma" };
+  for (const set of ARMOR_ORDER) for (const pieza of ARMOR_SLOTS) if (armorTiene(set, pieza)) foto[armorKey(set, pieza)] = { label: ARMOR_SLOT_LABEL[pieza] + " de " + set, dur: armorDur(set, pieza), tipo: "armadura" };
+  return foto;
+}
+function equipoDesgasteDesde(foto) {
+  const ahora = equipoDurabilidadFoto();
+  return Object.entries(foto || {}).map(([k, p]) => ({ label: p.label, tipo: p.tipo, gasto: Math.max(0, p.dur - (ahora[k] ? ahora[k].dur : 0)), perdido: !ahora[k] })).filter(p => p.gasto || p.perdido);
 }
 /* ═══ DÓNDE QUEDÓ EL GRANJERO   (16/9, diseñador · detall.docx punto 4) ══════════════════════
    « Si estás en zona negra y das F5, aparece en la granja; debe aparecer justo donde quedó ».
@@ -4868,7 +4895,7 @@ function contMeter(nodo, kind, k, n, extra, prof) {
   /* las armas NO apilan aunque se llamen igual: cada una lleva su durabilidad, su +N y sus runas
      (el campo `w`). Apilar dos espadas de bronce sería fundir dos objetos distintos en uno y
      perder las mejoras de una — el mismo error que mkPoner ya evita desde el Mercado. */
-  if (kind !== "arm") {
+  if (kind !== "arm" && kind !== "armorset") {
     const hay = contAplanar(nodo).find(e => e.kind === kind && e.k === k);
     if (hay) { hay.n += n; return true; }
   }
@@ -4929,10 +4956,15 @@ function contDescargar(nodo, silencio) {
        piezas de verdad, esta es la puerta por la que vuelven. Equiparlo o no lo decide el jugador
        —pisarle el set que lleve puesto sería decidir por él—, pero el objeto vuelve siempre. */
     else if (e.kind === "armorset") {
-      G.armor = G.armor || {};
-      if (ARMOR_SETS[e.k]) ARMOR_SLOTS.forEach(pz => { G.armor[armorKey(e.k, pz)] = true; });
-      if (!G.armorEq) G.armorEq = e.k;
-      ok = true;
+      const piezas = (Array.isArray(e.piezas) ? e.piezas : ARMOR_SLOTS).filter(pz => ARMOR_SLOTS.includes(pz));
+      if (ARMOR_SETS[e.k] && !piezas.some(pz => armorTiene(e.k, pz))) {
+        const oldArmor = G.armor, oldDur = G.armorDur, oldEq = G.armorEq;
+        G.armor = { ...(G.armor || {}) }; G.armorDur = { ...(G.armorDur || {}) };
+        piezas.forEach(pz => { const key = armorKey(e.k, pz); G.armor[key] = true; G.armorDur[key] = e.dur && Number.isFinite(e.dur[pz]) ? Math.max(0, Math.min(ARMOR_DUR_MAX, e.dur[pz])) : ARMOR_DUR_MAX; });
+        if (!G.armorEq) G.armorEq = e.k;
+        if (canonicalStacks().length > invSlots()) { G.armor = oldArmor; G.armorDur = oldDur; G.armorEq = oldEq; }
+        else ok = true;
+      }
     }
     else if (e.k === "plata")  { G.plata  = (G.plata  || 0) + e.n; ok = true; }
     else if (e.k === "golden") { G.golden = (G.golden || 0) + e.n; ok = true; }
@@ -5211,7 +5243,7 @@ function equipoPuesto() {
     if (k && typeof GEAR_DEF !== "undefined" && GEAR_DEF[k]) out.push({ slot: slot, kind: "gear", k: k });
   }
   if (G.gear && G.gear.arma && G.weapons && G.weapons[G.gear.arma]) out.push({ slot: "arma", kind: "arm", k: G.gear.arma });
-  if (G.armorEq && typeof ARMOR_SETS !== "undefined" && ARMOR_SETS[G.armorEq]) out.push({ slot: "set", kind: "armorset", k: G.armorEq });
+  if (G.armorEq && typeof ARMOR_SETS !== "undefined" && ARMOR_SETS[G.armorEq] && armorEquipado(G.armorEq)) out.push({ slot: "set", kind: "armorset", k: G.armorEq });
   return out;
 }
 /* tira el 5% de cada pieza y devuelve las que se cayeron, ya desequipadas */
@@ -5234,9 +5266,10 @@ function equipoCaido(azar) {
          aviso de la muerte te lo contaba como perdido y ocupaba un hueco del cuerpo.
          O caía de verdad o no caía; lo que no puede es caer en el log y no en el estado. Se
          llevan las PIEZAS, que son el objeto; el set vuelve entero al recuperar el cuerpo. */
-      ARMOR_SLOTS.forEach(pz => { if (G.armor) delete G.armor[armorKey(p.k, pz)]; });
+      const piezas = ARMOR_SLOTS.filter(pz => armorActiva(p.k, pz)), dur = {};
+      piezas.forEach(pz => { dur[pz] = armorDur(p.k, pz); if (G.armor) delete G.armor[armorKey(p.k, pz)]; if (G.armorDur) delete G.armorDur[armorKey(p.k, pz)]; });
       G.armorEq = null;
-      caen.push({ kind: "armorset", k: p.k, n: 1 });
+      caen.push({ kind: "armorset", k: p.k, n: 1, piezas, dur });
     }
   }
   return caen;
@@ -5252,6 +5285,8 @@ function tumbaCaer(zona, x, y, azar) {
   const dentro = raiz ? contAplanar(raiz).map(e => {
     const p = { kind: e.kind || "res", k: e.k, n: e.n };
     if (e.w != null) p.w = e.w;
+    if (Array.isArray(e.piezas)) p.piezas = e.piezas.slice();
+    if (e.dur && typeof e.dur === "object") p.dur = { ...e.dur };
     return p;
   }) : [];
   const bolsas = raiz ? raiz.items.filter(esCont).map(b => ({ kind: "cont", k: b.c, n: 1 })) : [];
@@ -5279,7 +5314,11 @@ function tumbaRecoger() {
        No se re-equipan acá: estás en medio de la Zona con otra mochila puesta, y ponerte solo el
        casco viejo en mitad de una pelea es una decisión del jugador, no del código. Se resuelven
        al volver, en contDescargar. */
-    if (contMeter(raiz, e.kind || "res", e.k, e.n, e.w ? { w: e.w } : null)) n++;
+    const extra = {};
+    if (e.w != null) extra.w = e.w;
+    if (Array.isArray(e.piezas)) extra.piezas = e.piezas.slice();
+    if (e.dur && typeof e.dur === "object") extra.dur = { ...e.dur };
+    if (contMeter(raiz, e.kind || "res", e.k, e.n, extra)) n++;
     else quedan.push(e);
   }
   t.items = quedan;
@@ -5324,6 +5363,7 @@ function zonaSalir(derrotado) {
     matados: Math.max(0, zonaMatados() - v.matados),
     morral: traia,                     // cuántas pilas traía el contenedor (para el resumen)
     derrotado: !!derrotado,
+    desgaste: equipoDesgasteDesde(v.equipo),
   };
 }
 
@@ -5413,6 +5453,23 @@ var ARMOR_COSTE_MULT = 1.50;   // crear cuesta esto de lo que costaba antes de q
   }
 })();
 function armorKey(set, pieza) { return "arm_" + set + "_" + pieza; }
+function armorPieza(key) {
+  for (const set of ARMOR_ORDER) for (const pieza of ARMOR_SLOTS) if (armorKey(set, pieza) === key) return { set, pieza };
+  return null;
+}
+function armorActiva(set, pieza) { return G.armorEq === set && armorTiene(set, pieza) && !(G.armorOff || {})[armorKey(set, pieza)]; }
+function armorAlternarPieza(key) {
+  const p = armorPieza(key); if (!p || !armorTiene(p.set, p.pieza)) return false;
+  const anteriorSet = G.armorEq, anteriorOff = { ...(G.armorOff || {}) };
+  G.armorOff = G.armorOff || {};
+  if (G.armorEq !== p.set) { G.armorEq = p.set; for (const pieza of ARMOR_SLOTS) G.armorOff[armorKey(p.set, pieza)] = true; }
+  if (armorActiva(p.set, p.pieza) && canonicalStacks().length >= invSlots()) { toast("Hacé lugar en la bolsa para desequipar"); return false; }
+  G.armorOff[key] = !G.armorOff[key];
+  if (canonicalStacks().length > invSlots()) { G.armorEq = anteriorSet; G.armorOff = anteriorOff; toast("No hay lugar para guardar las piezas que te quitás"); return false; }
+  applyCombatHp(); syncSlots(); refreshHud(); if (isOpen("ov-inv")) refreshInv(); if (isOpen("ov-equip")) refreshEquip();
+  if (typeof saveFarm === "function") saveFarm(true);
+  return true;
+}
 /* la durabilidad vive aparte de G.armor para que los guardados viejos sigan valiendo: una pieza
    sin entrada en G.armorDur es una pieza entera, no una pieza rota. */
 function armorDur(set, pieza) {
@@ -5471,7 +5528,7 @@ function armorGastar(n) {
   G.armorDur = G.armorDur || {};
   const secas = [];
   ARMOR_SLOTS.forEach(pz => {
-    if (!armorTiene(set, pz) || armorDur(set, pz) <= 0) return;
+    if (!armorActiva(set, pz) || armorDur(set, pz) <= 0) return;
     G.armorDur[armorKey(set, pz)] = Math.max(0, armorDur(set, pz) - (n || 1));
     if (G.armorDur[armorKey(set, pz)] <= 0) secas.push(pz);
   });
@@ -5492,7 +5549,7 @@ function armorAlMorir() {
   G.armorDur = G.armorDur || {};
   const gastadas = [], rotas = [];
   ARMOR_SLOTS.forEach(pz => {
-    if (!armorTiene(set, pz)) return;
+    if (!armorActiva(set, pz)) return;
     const antes = armorDur(set, pz);
     if (antes > 0) {
       G.armorDur[armorKey(set, pz)] = Math.max(0, antes - Math.round(ARMOR_DUR_MAX * ARMOR_MUERTE_PCT));
@@ -5513,15 +5570,15 @@ function armorSetCompleto(set) { return armorPuestas(set) === ARMOR_SLOTS.length
    set no está completo de verdad. Se separa de armorSetCompleto porque « tenerlas » y « que
    funcionen » dejaron de ser lo mismo, y confundirlas haría que el bono siguiera activo con la
    armadura deshecha. */
-function armorSetSano(set) { return ARMOR_SLOTS.every(pz => armorTiene(set, pz) && armorDur(set, pz) > 0); }
-function armorEquipado(set) { return G.armorEq === set; }
+function armorSetSano(set) { return ARMOR_SLOTS.every(pz => armorActiva(set, pz) && armorDur(set, pz) > 0); }
+function armorEquipado(set) { return G.armorEq === set && ARMOR_SLOTS.some(pieza => armorActiva(set, pieza)); }
 // defensa: suma de las piezas del set EQUIPADO (más las piezas viejas de loot, que siguen valiendo)
 function armorDefensa() {
   const set = G.armorEq; if (!set || !ARMOR_SETS[set]) return 0;
   let d = 0;
   /* 14/9 — una pieza a cero de durabilidad no suma defensa. No está rota ni perdida: está
      gastada, y vuelve entera en cuanto la reparás. */
-  ARMOR_SLOTS.forEach(pz => { if (armorTiene(set, pz) && armorDur(set, pz) > 0) d += ARMOR_SETS[set].piezas[pz].def; });
+  ARMOR_SLOTS.forEach(pz => { if (armorActiva(set, pz) && armorDur(set, pz) > 0) d += ARMOR_SETS[set].piezas[pz].def; });
   return d;
 }
 function armorBono() { const set = G.armorEq; return (set && armorSetSano(set)) ? ARMOR_SETS[set].bono : null; }
@@ -5533,6 +5590,7 @@ function craftArmor(set, pieza) {
   const sd = ARMOR_SETS[set]; if (!sd) return;
   if (!(G.built && G.built.curtiduria)) { toast("Necesitás la Curtiduría"); return; }
   if (armorTiene(set, pieza)) { toast("Ya tenés esa pieza"); return; }
+  if (canonicalStacks().length >= invSlots()) { toast("Hacé lugar en la bolsa para la armadura"); return; }
   const p = sd.piezas[pieza]; if (!p) return;
   const falta = [];
   if ((G.res[sd.mat] || 0) < p.mat) falta.push(p.mat + " " + RES_LABEL[sd.mat]);
@@ -5546,7 +5604,8 @@ function craftArmor(set, pieza) {
   G.armor[armorKey(set, pieza)] = true;
   G.armorDur = G.armorDur || {};
   G.armorDur[armorKey(set, pieza)] = ARMOR_DUR_MAX;   // nace entera
-  if (!G.armorEq) G.armorEq = set;
+  G.armorOff = G.armorOff || {}; G.armorOff[armorKey(set, pieza)] = true; // nace en la bolsa, no puesta
+  syncSlots();
   addXp("crafting", 12);
   const completo = armorSetCompleto(set);
   log("Crafteaste " + ARMOR_SLOT_LABEL[pieza] + " de " + sd.label + " (+" + p.def + " de defensa)." + (completo ? " ¡SET COMPLETO: " + sd.bono.txt + "!" : ""), "gold");
@@ -5559,7 +5618,11 @@ function craftArmor(set, pieza) {
 }
 function equiparSet(set) {
   if (!ARMOR_SETS[set] || !armorPuestas(set)) { toast("Todavía no tenés piezas de ese set"); return; }
+  const antesSet = G.armorEq, antesOff = { ...(G.armorOff || {}) };
   G.armorEq = set;
+  G.armorOff = G.armorOff || {}; for (const pieza of ARMOR_SLOTS) delete G.armorOff[armorKey(set, pieza)];
+  if (canonicalStacks().length > invSlots()) { G.armorEq = antesSet; G.armorOff = antesOff; toast("Hacé lugar para guardar la armadura anterior"); return false; }
+  syncSlots();
   applyCombatHp(); refreshHud();
   log("Te pusiste la " + ARMOR_SETS[set].label + " (" + armorDefensa() + " de defensa" + (armorSetCompleto(set) ? " · " + ARMOR_SETS[set].bono.txt : "") + ").", "good");
   toast(ARMOR_SETS[set].label);
@@ -6085,20 +6148,21 @@ function stamFullEn() { return Math.max(0, (G.stamFullAt || 0) - nowMs()); }   /
 function stamTick() {   // 1 vez por segundo desde el HUD, y también al cargar la partida
   const mx = stamMax();
   if (G.stam == null) G.stam = mx;
-  if (G.stam >= mx) { G.stamAcc = 0; G.stamFullAt = 0; return; }
-  if (!G.stamFullAt) { G.stamFullAt = nowMs() + STAM_FULL_H * 3600000; return; }   // arrancó el reloj
-  if (nowMs() >= G.stamFullAt) {
-    G.stam = mx; G.stamAcc = 0; G.stamFullAt = 0;
-    if (typeof log === "function") log("⚡ Estamina recargada al máximo (" + mx + ").", "good");
-    if (typeof saveFarm === "function") saveFarm(true);
-  }
+  const t = nowMs(), duration = STAM_FULL_H * 3600000;
+  const last = Number.isFinite(G.stamLastAt) && G.stamLastAt > 0 ? G.stamLastAt
+    : G.stamFullAt > 0 ? G.stamFullAt - duration : t;
+  G.stam = Math.max(0, Math.min(mx, G.stam + Math.max(0, t - last) * mx / duration));
+  G.stamLastAt = Math.max(t, last); G.stamAcc = 0;
+  G.stamFullAt = G.stam >= mx ? 0 : G.stamLastAt + (mx - G.stam) * duration / mx;
 }
-function stamAdd(n) { const mx = stamMax(); G.stam = Math.max(0, Math.min(mx, (G.stam == null ? mx : G.stam) + n)); refreshHud(); }
+function stamAdd(n) { stamTick(); const mx = stamMax(); G.stam = Math.max(0, Math.min(mx, G.stam + n)); stamTick(); refreshHud(); }
 function stamGastar(n) {   // devuelve false si no alcanza
+  if (!Number.isFinite(n) || n < 0) return false;
+  stamTick();
   const mx = stamMax();
   if (G.stam == null) G.stam = mx;
   if (G.stam < n) return false;
-  G.stam -= n; refreshHud(); return true;
+  G.stam -= n; stamTick(); refreshHud(); return true;
 }
 function stamRecargasHoy() {
   const hoy = dayStamp(0);   // 22/8 (dirección): día UTC — el reset a las 21 h de Argentina es el estándar web3, a propósito
@@ -6979,6 +7043,7 @@ function cookEsperando(c) { return nowMs() < cookEmpieza(c); }
    avisos y el mismo comportamiento con la bolsa llena. Dos edificios que hacen lo mismo tienen
    que hacerlo IGUAL, o el jugador aprende dos veces. */
 function cocinaRecoger() {
+  checkCooking(); // el clic no depende de que haya pasado primero el siguiente tick del HUD
   const l = cookList();
   if (!l.filter(c => c.listo).length) { toast("No hay platos listos"); return 0; }
   let n = 0, lleno = false;
@@ -7007,6 +7072,7 @@ function cook(id) {
   if (cookFree() <= 0) { toast("Las " + cookSlots() + " ollas están ocupadas"); return; }
   if (!canCook(id)) { toast("Te faltan ingredientes"); return; }
   if (!roomForDish(id)) { bagFull("cocinar " + r.label); return; }
+  const fishBefore = { ...(G.fish || {}) };
   if (r.res) for (const k in r.res) G.res[k] -= r.res[k];
   if (r.fish) for (const k in r.fish) pezSacar(k, r.fish[k]);   // 2/9: se cocinan los más livianos primero
   const ms = Math.max(1000, Math.round((r.cookS ? r.cookS * 1000 : COOK_MS) * cocinaFactor()));
@@ -7021,7 +7087,9 @@ function cook(id) {
      de estados con turnos sí, y hay que despertarla. */
   const ultima = cookList().reduce((t, c) => Math.max(t, c.endAt || 0), 0);
   const arranca = Math.max(nowMs(), ultima);
-  cookList().push({ id, endAt: arranca + ms, total: ms });
+  const fishUsed = {};
+  for (const k of Object.keys(fishBefore)) { const n = fishBefore[k] - ((G.fish || {})[k] || 0); if (n > 0) fishUsed[k] = n; }
+  cookList().push({ id, endAt: arranca + ms, total: ms, ingredientes: { res: { ...(r.res || {}) }, fish: fishUsed } });
   const espera = arranca - nowMs();
   log(espera > 999
     ? "En la fila: " + r.label + " — empieza en " + fmtSecs(Math.round(espera / 1000)) + " y tarda " + fmtSecs(Math.round(ms / 1000))
@@ -7032,6 +7100,23 @@ function cook(id) {
   if (typeof saveFarm === "function") saveFarm();
 }
 // se llama cada segundo desde el HUD: cada olla que termina deja su plato en la bolsa
+function cocinaCancelar(idx) {
+  const l = cookList(), c = l[idx], r = c && RECIPE_DEF[c.id];
+  if (!c || !r || c.listo || !cookEsperando(c)) { toast("Solo se cancelan platos que todavía esperan turno"); return false; }
+  if (!c.ingredientes && r.fish && Object.keys(r.fish).length) { toast("Esta receta antigua no guardó los pesos de sus peces: dejala terminar para no perderlos"); return false; }
+  const devolver = c.ingredientes || { res: r.res || {}, fish: {} };
+  const oldRes = G.res, oldFish = G.fish;
+  G.res = { ...oldRes }; G.fish = { ...(oldFish || {}) };
+  for (const [k, n] of Object.entries(devolver.res || {})) G.res[k] = (G.res[k] || 0) + n;
+  for (const [k, n] of Object.entries(devolver.fish || {})) G.fish[k] = (G.fish[k] || 0) + n;
+  if (canonicalStacks().length > invSlots()) { G.res = oldRes; G.fish = oldFish; toast("Hacé lugar en la bolsa para recuperar los ingredientes"); return false; }
+  l.splice(idx, 1);
+  for (const q of l) if (q.endAt > c.endAt) q.endAt -= c.total || 0;
+  toast("Plato cancelado · ingredientes devueltos");
+  syncSlots(); refreshHud(); if (isOpen("ov-cocina")) refreshCooking(); if (isOpen("ov-inv")) refreshInv();
+  if (typeof saveFarm === "function") saveFarm(true);
+  return true;
+}
 var _cocinando = false;   // candado anti-reentrada (ver abajo)
 function checkCooking() {
   const lista = cookList();
@@ -7787,6 +7872,7 @@ function bolsaCuentas() {
   const add = (kind, key, n) => { if (n > 0) out.push({ kind, key, n }); };
   add("tool", "axe", toolCount("axe"));   // 8/9: la caña de la v2 se jubiló
   for (const id of ARM_ORDER) if (G.weapons && G.weapons[id] && G.gear.arma !== id) add("arm", id, 1);
+  for (const set of ARMOR_ORDER) for (const pieza of ARMOR_SLOTS) if (armorTiene(set, pieza) && !armorActiva(set, pieza)) add("armor", armorKey(set, pieza), 1);
   PICK_ORDER.forEach(id => add("pick", id, pickCount(id)));
   /* las cañas de la v4 no se gastan: se TIENEN. Por eso la cuenta es 1 y no « usos », y por eso
      la bolsa las muestra sin número — un contador que siempre dice 1 es ruido. */
@@ -8809,13 +8895,19 @@ function canaV4Comprar(id) {
        sacar un 10 %, y un premio que se rompe no es un premio;
      · los guardados viejos no tienen G.canasDur: la caña nace ENTERA, no rota. Nunca se le
        rompe algo a un jugador por una migración. */
-var CANA_USOS = 50;
-var CANA_REPARA_PCT = 0.10;
+var CANA_USOS = 150; // 50% de reparación con vida útil ampliada, autorizado 16/10
+var CANA_REPARA_PCT = 0.50;
+function canaMigrarAguante() {
+  if (G.canasDurV === 2) return;
+  for (const k of Object.keys(G.canasDur || {})) if (Number.isFinite(G.canasDur[k])) G.canasDur[k] = Math.round(Math.max(0, Math.min(50, G.canasDur[k])) * CANA_USOS / 50);
+  G.canasDurV = 2;
+}
 function canaSeGasta(id) { const d = CANA_V4_DEF[id]; return !!(d && d.cost); }
 function canaAguante(id) {
+  canaMigrarAguante();
   if (!canaSeGasta(id)) return Infinity;
   const u = (G.canasDur || {})[id];
-  return (typeof u === "number" && isFinite(u)) ? Math.max(0, Math.floor(u)) : CANA_USOS;
+  return (typeof u === "number" && isFinite(u)) ? Math.max(0, Math.min(CANA_USOS, Math.floor(u))) : CANA_USOS;
 }
 function canaRota(id) { return canaSeGasta(id) && canaAguante(id) <= 0; }
 function canaDesgastar(id, n) {
@@ -8832,7 +8924,7 @@ function canaDesgastar(id, n) {
    de nivel o comer un buff, ni abaratarse al saturar el mercado de madera. */
 function canaValorPlata(id) {
   const d = CANA_V4_DEF[id]; if (!d || !d.cost) return 0;
-  let v = d.colaPlata || 0;
+  let v = 0; // coste de materiales, sin la compra/peaje en plata
   for (const k in d.cost) v += d.cost[k] * matValor(k);
   return v;
 }
@@ -8962,16 +9054,16 @@ var NASA_DEF = {
      cuatro lombrices a su precio. Y quedan justo por debajo de la caña más barata a propósito
      (9,6-9,8 contra 10,00), porque la ruta pasiva paga tu ausencia y la activa paga tus manos.
      Si la nasa pagara más, nadie tocaría el minijuego, que es el corazón del sistema. */
-  mimbre:    { label: "Nasa de mimbre",  mat: "madera", emoji: "🧺", lvl: 1,  cost: { madera: 9, piedra: 4 } },
-  reforzada: { label: "Nasa reforzada",  mat: "madera", emoji: "🪢", lvl: 6,  cost: { tablon: 3, piedra: 9 } },
-  hierro:    { label: "Nasa de hierro",  mat: "tablon", emoji: "⚙️", lvl: 12, cost: { tablon: 9, piedra: 2 } },
+  mimbre:    { label: "Nasa de mimbre",  mat: "madera", emoji: "🧺", lvl: 1,  cost: { madera: 9, piedra: 4, plata: 100 } },
+  reforzada: { label: "Nasa reforzada",  mat: "madera", emoji: "🪢", lvl: 6,  cost: { tablon: 3, piedra: 9, plata: 100 } },
+  hierro:    { label: "Nasa de hierro",  mat: "tablon", emoji: "⚙️", lvl: 12, cost: { tablon: 9, piedra: 2, plata: 100 } },
 };
 function nasaExito(id) { const t = NASA_TABLA[id]; return t ? (100 - (t.rota || 0)) / 100 : 0; }
 function nasaCoste(id) {
   const d = NASA_DEF[id]; if (!d) return 0;
-  return Object.keys(d.cost).reduce((s, k) => s + (typeof matValor === "function" ? matValor(k) : 0) * d.cost[k], 0);
+  return Object.keys(d.cost).reduce((s, k) => s + (k === "plata" ? 1 : typeof matValor === "function" ? matValor(k) : 0) * d.cost[k], 0);
 }
-var NASA_HORAS = 2;                 // lo que tarda un ciclo
+var NASA_HORAS = 4;                 // lo que tarda un ciclo nuevo; los ya calados conservan su reloj
 var NASA_CUPO_CADA = 4;             // +1 hueco cada cuatro niveles de Pesca
 var NASA_CUPO_MAX = 5;
 /* QUÉ SACA CADA UNA. Las probabilidades son sobre el ciclo ENTERO y ya cuentan la rotura, así
@@ -11234,7 +11326,7 @@ function valeLabel(id) {
   if (id === "semillas") return "Sobre de semillas (tu mejor cultivo)";
   const n = valeFardoN(id);
   if (id === "hachas") return "Fardo de " + n + " hachas";
-  if (id === "picos") return "Fardo de " + n + " picos";
+  if (id === "picos") return "Fardo de " + n + " picos de piedra";
   return id;
 }
 function valesCanjear(id) {
@@ -11248,7 +11340,7 @@ function valesCanjear(id) {
   else if (id === "picos") {
     const n = valeFardoN("picos");
     G.picks.owned.stone = true; if (!G.picks.eq) G.picks.eq = "stone";
-    G.picks.dur[G.picks.eq] = (G.picks.dur[G.picks.eq] || 0) + n; toast("+" + n + " picos");
+    G.picks.dur.stone = (G.picks.dur.stone || 0) + n; toast("+" + n + " picos de piedra");
   }
   G.vales -= cuesta;
   log("Canjeaste " + cuesta + " vales por " + valeLabel(id) + ".", "good");

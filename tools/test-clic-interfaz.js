@@ -61,7 +61,7 @@ console.log("\nEL BOSQUE TIENE LA MISMA PUERTA");
 
 console.log("\nLA GRILLA DE LA COCINA NO SE REHACE DEBAJO DEL CURSOR");
 {
-  const v2 = UI.slice(UI.indexOf("function refreshCookingV2"), UI.indexOf("function refreshCookingV2") + 6500);
+  const v2 = UI.slice(UI.indexOf("function refreshCookingV2"), UI.indexOf("function refreshCookingV2") + 11000);
   ok("tiene firma", /const firma = /.test(v2));
   ok("y solo repinta si cambió", /if \(grid\._firma !== firma\)/.test(v2));
   ok("la firma incluye el nivel, la selección y el stock de cada plato",

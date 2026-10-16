@@ -385,7 +385,8 @@ function snapshot() {
     res: G.res, picks: G.picks, skills: G.skills, triesV: G.triesV, establoV: G.establoV, fish: G.fish, plots: G.plots, nodos: G.nodos, expansiones: G.expansiones, pescaHasta: G.pescaHasta, pescaDesde: G.pescaDesde, senales: G.senales, escamas: G.escamas, vistos: G.vistos, estrellaMax: G.estrellaMax, pescaTiene: G.pescaTiene, canas: G.canas, presion: G.presion, amarres: G.amarres, trampas: G.trampas, marea: G.marea, runaOro: G.runaOro, buffs: G.buffs, seeds: G.seeds, selSeed: G.selSeed,
     tools: G.tools, sflStock: true, invRows: G.invRows, slots: G.slots, hotbar: G.hotbar, hotSel: G.hotSel, hbInit: G.hbInit, layout: G.layout,
     daily: G.daily, plotsOwned: G.plotsOwned, plotsCompradas: G.plotsCompradas, plotsFicha: G.plotsFicha, expParcelasDadas: G.expParcelasDadas, seedBuys: G.seedBuys, built: G.built,
-    hp: G.hp, hpMax: G.hpMax, combatXp: G.combatXp, stam: G.stam, stamAcc: G.stamAcc, stamFullAt: G.stamFullAt, stamRec: G.stamRec, pass: G.pass, tuto: G.tuto, firstSeeds: G.firstSeeds,   // 24/8: stamFullAt — la recarga de 4 h es de reloj real
+    hp: G.hp, hpMax: G.hpMax, combatXp: G.combatXp, stam: G.stam, stamAcc: G.stamAcc, stamFullAt: G.stamFullAt, stamLastAt: G.stamLastAt, stamRec: G.stamRec, pass: G.pass, tuto: G.tuto, firstSeeds: G.firstSeeds,
+    canaElegida: G.canaElegida, canasDurV: G.canasDurV, armorOff: G.armorOff, incResumen: G.incResumen,
     recientes: G.recientes,   /* 8/9: los tres últimos usados sobreviven al F5 */
     conts: G.conts,           /* 8/9 t: los contenedores que tenés guardados en la granja */
     cont: G.cont,             /* 8/9 t: el árbol que llevás puesto — se pierde al morir, no al recargar */
@@ -612,6 +613,8 @@ function hydrate(d) {
         const pila = { kind: e.kind || "res", k: e.k, n: e.n };
         if (e.w && typeof e.w === "object") pila.w = JSON.parse(JSON.stringify(e.w));
         else if (typeof e.w === "number" && isFinite(e.w)) pila.w = e.w;   // los peces llevan kg
+        if (e.kind === "armorset" && Array.isArray(e.piezas)) pila.piezas = e.piezas.filter(pz => ARMOR_SLOTS.includes(pz));
+        if (e.kind === "armorset" && e.dur && typeof e.dur === "object") pila.dur = { ...e.dur };
         out.items.push(pila);
       }
     }
@@ -631,6 +634,9 @@ function hydrate(d) {
      gastado al entrar. Ley 1: nadie pierde nada por una mecánica nueva. */
   G.armorDur = (d.armorDur && typeof d.armorDur === "object") ? d.armorDur : {};
   G.armorEq = d.armorEq || null;
+  G.armorOff = d.armorOff && typeof d.armorOff === "object" ? d.armorOff : {};
+  G.canaElegida = typeof d.canaElegida === "string" ? d.canaElegida : "";
+  G.incResumen = d.incResumen && typeof d.incResumen === "object" ? d.incResumen : null;
   G.ofrendaPts = Number(d.ofrendaPts) || 0;
   G.ofrendaLog = Number(d.ofrendaLog) || 0;
   G.nodoUsos = (d.nodoUsos && typeof d.nodoUsos === "object") ? d.nodoUsos : {};
@@ -641,6 +647,7 @@ function hydrate(d) {
   G.stam = (typeof d.stam === "number") ? d.stam : null;   // null = arranca llena
   G.stamAcc = (typeof d.stamAcc === "number") ? d.stamAcc : 0;
   G.stamFullAt = (typeof d.stamFullAt === "number") ? d.stamFullAt : 0;   // 24/8: cuándo se llena entera
+  G.stamLastAt = Number.isFinite(d.stamLastAt) && d.stamLastAt > 0 ? d.stamLastAt : G.stamFullAt > 0 ? G.stamFullAt - 4 * 3600000 : nowMs();
   G.stamRec = (d.stamRec && typeof d.stamRec === "object") ? d.stamRec : null;
   G.pass = (d.pass && typeof d.pass === "object") ? d.pass : null;
   if (d.tuto && typeof d.tuto === "object") G.tuto = d.tuto;
@@ -722,7 +729,9 @@ function hydrate(d) {
   if (d.nfts && typeof d.nfts === "object") G.nfts = d.nfts;   // 21/9: los NFT de recolección
   /* 23/9: usos de cada caña y lances del día. Sin el campo (guardado viejo) la caña nace ENTERA
      —canaUsos() lo resuelve— y el cupo del día arranca en cero; nunca se le rompe nada a nadie. */
-  G.canasDur = (d.canasDur && typeof d.canasDur === "object") ? d.canasDur : undefined;
+  G.canasDur = (d.canasDur && typeof d.canasDur === "object") ? { ...d.canasDur } : undefined;
+  G.canasDurV = d.canasDurV === 2 ? 2 : 0;
+  if (typeof canaMigrarAguante === "function") canaMigrarAguante();
   G.pescaDia = (d.pescaDia && typeof d.pescaDia === "object" && typeof d.pescaDia.dia === "string")
     ? { dia: d.pescaDia.dia, n: Math.max(0, Math.floor(d.pescaDia.n) || 0) } : undefined;
 

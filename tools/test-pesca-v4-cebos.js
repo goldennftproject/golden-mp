@@ -167,10 +167,10 @@ console.log("\nEL INVARIANTE DE LA LOMBRIZ SIGUE INTACTO   (los cebos no lo toca
   const netos = ["junco", "bambu", "hierro", "oro"].map(k => ctx.lanceNeto(k));
   const nasas = g("NASA_ORDER").map(k => ctx.nasaPorLombriz(k));
   const todos = netos.concat(nasas);
-  const disp = (Math.max(...todos) / Math.min(...todos) - 1) * 100;
-  ok("las siete rutas siguen entre 8,5 y 12", Math.min(...todos) > 8.5 && Math.max(...todos) < 12,
+  const disp = (Math.max(...netos) / Math.min(...netos) - 1) * 100;
+  ok("las cañas conservan la base; las nasas incluyen el cargo nuevo de 100", Math.min(...netos) > 8.5 && Math.max(...netos) < 12 && nasas.every(n=>n<0),
     Math.min(...todos).toFixed(2) + " a " + Math.max(...todos).toFixed(2));
-  ok("y ninguna se despega: menos de un 25 % entre la mejor y la peor", disp < 25, disp.toFixed(0) + " %");
+  ok("las cañas mantienen menos de un 25 % entre la mejor y la peor antes de reparación", disp < 25, disp.toFixed(0) + " %");
   console.log("       → los cebos son decisiones DENTRO del lance; el ancla la sigue fijando");
   console.log("         la lombriz, y por eso sigue siendo la única palanca que hay que tocar.");
 }

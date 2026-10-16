@@ -602,6 +602,8 @@
   /* 26/8 · la fila: la que está AL FUEGO se ve viva; las que esperan turno, apagadas y con un
      número de orden. La diferencia tiene que leerse de un vistazo, sin contar barras. */
   .ck-olla.enfila{border-color:#5a6b45;border-style:dashed;background:rgba(20,28,16,.5)}
+  .ck-olla.enfila{height:84px;justify-content:flex-start;padding-top:5px;box-sizing:border-box}
+  .ck-olla [data-ckcancel]{position:absolute;left:2px;right:2px;bottom:8px;padding:3px 0;margin:0;min-height:22px;font-size:9px;line-height:1.2;z-index:1}
   .ck-olla.enfila img{opacity:.5;filter:grayscale(.55)}
   .ck-olla.enfila .b i{background:#5a6b45}
   .ck-olla .turno{position:absolute;top:-5px;right:-5px;min-width:15px;height:15px;border-radius:8px;
@@ -1902,6 +1904,7 @@
       <button data-ltab="vender">Vender</button>
       <button data-ltab="titulos">Títulos</button>
     </div>
+    <label>Caña para pescar <select id="lonja-cana" aria-label="Caña para pescar"></select></label>
     <div class="lonja-cuerpo" id="lonja-cuerpo"></div>
   </div></div>
 

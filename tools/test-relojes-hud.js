@@ -124,7 +124,7 @@ console.log("\nLA ESTAMINA   (« Stamina 42:00 » — y visible desde la granja)
   ok("y el reloj está EN el texto, no solo en el tooltip",
     /⏱/.test(stamTxt.textContent) && /3 h/.test(stamTxt.textContent), stamTxt.textContent);
   ok("el tooltip sigue explicando la regla de las 4 h",
-    /recarga completa cada 4 h/.test(stamPill.title), stamPill.title);
+    /Regeneración continua.*4 h/.test(stamPill.title), stamPill.title);
 
   /* y en la Zona Negra se ve siempre, llena o no: ahí es donde se gasta */
   vm.runInContext("GF.scene = 'forest';", ctx);
