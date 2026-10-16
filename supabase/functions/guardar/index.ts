@@ -28,9 +28,12 @@ const TASA_NODO = 2;       // recursos/hora de un nodo; las cargas no suben la t
 const MARGEN = 3;          // multiplicador de gracia sobre el máximo físico
 
 const num = (v) => (typeof v === "number" && isFinite(v)) ? v : 0;
-const ARTEFACTOS_PRECIOS = {cobre:10,plata:25,jade:50,oro:100,rubi:250,corona:500};
-const ARTEFACTOS_DIAS = 180, ARTEFACTOS_REFERENCIA = 90, ENERGIA_GRANJA_MS = 14400000;
-const RELIQUIAS_GOLDEN_DESDE = 1792191000000;
+const ARTEFACTOS_PRECIOS = {cobre:10,plata:25,jade:50,oro:100,granero:150,rubi:250,corona:500};
+const ARTEFACTOS_DIAS = 180, ARTEFACTOS_REFERENCIA = 105, ENERGIA_GRANJA_MS = 14400000;
+const OBJETOS_PLATA_DESDE = 1792193400000;
+function objetoPlataDiaria(id){return id==='granero' ? 13000 : (ARTEFACTOS_PRECIOS[id]||0)*10000/ARTEFACTOS_REFERENCIA;}
+function objetoInicioCobro(a){return a.moneda==='plata-v2' ? a.cobrado : Math.max(a.cobrado,OBJETOS_PLATA_DESDE);}
+function objetoCobroListo(a,ahora){return !!a && (Math.min(ahora,a.desde+ARTEFACTOS_DIAS*86400000)-objetoInicioCobro(a)>=86400000 || ahora>=a.desde+ARTEFACTOS_DIAS*86400000);}
 function mismoJSON(a,b) {
   if(a===b)return true;
   if(!a||!b||typeof a!=='object'||typeof b!=='object'||Array.isArray(a)!==Array.isArray(b))return false;
@@ -45,9 +48,9 @@ function energiaServidor(d,ahora) {
 function artefactoCalcular(a,id,ahora) {
   if(!a || !Object.prototype.hasOwnProperty.call(ARTEFACTOS_PRECIOS,id))return {cobro:0,resto:0,fin:ahora};
   const fin=Math.min(ahora,a.desde+ARTEFACTOS_DIAS*86400000);
-  const desde=a.moneda==='golden' ? a.cobrado : Math.max(a.cobrado,RELIQUIAS_GOLDEN_DESDE);
-  const bruto=Math.max(0,Math.min(86400000,fin-desde))*ARTEFACTOS_PRECIOS[id]/ARTEFACTOS_REFERENCIA/86400000+(a.moneda==='golden' ? a.resto||0 : 0);
-  const cobro=Math.floor((bruto+1e-12)*1e6)/1e6;
+  const desde=objetoInicioCobro(a);
+  const bruto=Math.max(0,Math.min(86400000,fin-desde))*objetoPlataDiaria(id)/86400000+(a.moneda==='plata-v2' ? a.resto||0 : 0);
+  const cobro=Math.floor((bruto+1e-9)*10)/10;
   return {cobro,resto:Math.max(0,bruto-cobro),fin};
 }
 function artefactoOperacion(prev,accion,id,ahora,op) {
@@ -61,17 +64,31 @@ function artefactoOperacion(prev,accion,id,ahora,op) {
     if(a && ahora<a.desde+ARTEFACTOS_DIAS*86400000)return {error:'Ya tenés este objeto activo'};
     if(a && t.cobro>0)return {error:'Cobrá primero la producción pendiente del objeto vencido'};
     if(!Number.isFinite(data.golden)||data.golden<ARTEFACTOS_PRECIOS[id])return {error:'No alcanza el $Golden'};
-    data.golden=Math.round((data.golden-ARTEFACTOS_PRECIOS[id])*1e6)/1e6;libro.items[id]={desde:ahora,cobrado:ahora,resto:0,moneda:'golden'};
+    data.golden=Math.round((data.golden-ARTEFACTOS_PRECIOS[id])*1e6)/1e6;libro.items[id]={desde:ahora,cobrado:ahora,resto:0,moneda:'plata-v2'};
   }else{
-    if(!a || t.cobro<=0)return {error:'Todavía no hay $Golden para cobrar'};
+    if(!a || t.cobro<=0 || !objetoCobroListo(a,ahora))return {error:'La Plata se reclama cada 24 horas'};
     const energia=energiaServidor(data,ahora);
     if(energia<1)return {error:'Necesitás 1 punto de energía de granja para cobrar'};
     data.energiaGranja={v:1,actual:energia-1,at:ahora};
-    cobro=t.cobro;data.golden=Math.round((num(data.golden)+cobro)*1e6)/1e6;
-    libro.items[id]={...a,cobrado:t.fin,resto:t.resto,moneda:'golden'};
+    cobro=t.cobro;data.plata=Math.round((num(data.plata)+cobro)*10)/10;
+    libro.items[id]={...a,cobrado:t.fin,resto:t.resto,moneda:'plata-v2'};
   }
   libro.ops=[...(libro.ops||[]),{op,id,accion,cobro}].slice(-20);data.artefactos=libro;
   return {data,cobro};
+}
+function bancoOperacion(prev,p,op,tasa){
+  const data=JSON.parse(JSON.stringify(prev)),libro=data.banco || {v:1,ops:[]};
+  if(!p || p.accion!=='canjear' || !Number.isSafeInteger(p.golden) || p.golden<1 || p.golden>1000000)return {error:'Cantidad de Golden inválida'};
+  const recibo=(libro.ops||[]).find(r=>r.op===op);
+  if(recibo)return recibo.golden===p.golden && recibo.revision===p.revision ? {data,cobro:recibo.golden,repetido:true} : {error:'Recibo reutilizado para otro canje'};
+  if(!Number.isSafeInteger(tasa)||tasa<1||tasa>1e9)return {error:'Banco temporalmente no disponible'};
+  if(p.revision!=='plata-golden:'+tasa)return {error:'La tasa cambió. Actualizá la cotización y confirmá de nuevo.',tasaCambio:true};
+  const plata=tasa*p.golden;
+  if(!Number.isFinite(data.plata)||data.plata<plata)return {error:'No alcanza la Plata para este canje'};
+  data.plata=Math.round((data.plata-plata)*10)/10;
+  data.golden=Math.round((num(data.golden)+p.golden)*1e6)/1e6;
+  libro.ops=[...(libro.ops||[]),{op,golden:p.golden,plata,tasa,revision:p.revision}].slice(-20);data.banco=libro;
+  return {data,cobro:p.golden};
 }
 const VIP_PRECIO = 10, VIP_MS = 30 * 86400000;
 const VIP_REINTEGROS = {3:5,7:5,12:8,15:8,18:8,22:8,25:8,27:10};
@@ -97,6 +114,7 @@ function goldenCustodia(d) {
 function protegerEconomia(prev, next, ahora) {
   const errores = [], antes = prev || {}, p = antes.produccion, n = next.produccion;
   if(!mismoJSON(antes.artefactos||null,next.artefactos||null))errores.push('Los objetos productores sólo se modifican en el servidor');
+  if(!mismoJSON(antes.banco||null,next.banco||null))errores.push('El Banco sólo se modifica en el servidor');
   const energia=next.energiaGranja;
   if(energia && (!Number.isFinite(energia.actual)||energia.actual<0||energia.actual>100||!Number.isFinite(energia.at)))errores.push('Energía de granja inválida');
   next.energiaGranja={v:1,actual:Math.min(energia ? Math.max(0,num(energia.actual)) : energiaServidor(antes,ahora),energiaServidor(antes,ahora)),at:ahora};
@@ -352,8 +370,15 @@ Deno.serve(async (req) => {
 
     const body = await req.json().catch(() => null);
 
-    // Compra/cobro autoritativos con recibo y compare-and-swap: nunca creer el reloj/saldo del cliente.
-    if(body?.artefacto){
+    if(body?.banco && body.cuenta!==uid)return json({error:'La sesión cambió de cuenta'},409);
+    let tasaBanco=10000;
+    if(body?.banco){
+      tasaBanco=Number(Deno.env.get('BANCO_PLATA_POR_GOLDEN') ?? 10000);
+      if(!Number.isSafeInteger(tasaBanco)||tasaBanco<1||tasaBanco>1e9)return json({error:'Banco temporalmente no disponible'},503);
+      if(body.banco.accion==='cotizar')return json({ok:true,tasa:tasaBanco,revision:'plata-golden:'+tasaBanco,usdt:false});
+    }
+    // Cobros y canjes autoritativos: saldo, reloj, recibo y compare-and-swap en el servidor.
+    if(body?.artefacto || body?.banco){
       const a=body.artefacto;
       if(body.cuenta!==uid)return json({error:'La sesión cambió de cuenta; recargá antes de operar'},409);
       if(typeof body.op!=='string'||!/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(body.op)||typeof body.base!=='string')return json({error:'Pedido inválido'},400);
@@ -361,9 +386,10 @@ Deno.serve(async (req) => {
       if(err)return json({error:'No se pudo leer la granja'},503);
       if(!row)return json({error:'Primero sincronizá tu granja'},409);
       const ahora=Math.max(Date.now(),new Date(row.updated_at).getTime()+1);
-      const r=artefactoOperacion(row.data,a.accion,a.id,ahora,body.op);
+      const r=body.banco ? bancoOperacion(row.data,body.banco,body.op,tasaBanco) : artefactoOperacion(row.data,a.accion,a.id,ahora,body.op);
       if(r.repetido)return json({ok:true,data:row.data,updated_at:row.updated_at,cobro:r.cobro,repetido:true});
       if(body.base!==row.updated_at)return json({error:'Otra sesión guardó; recargá antes de operar',conflicto:true},409);
+      if(r.tasaCambio)return json({error:r.error,tasaCambio:true},412);
       if(r.error)return json({error:r.error},400);
       const fecha=new Date(ahora).toISOString();
       const {data:hecho,error:fallo}=await admin.from('farms').update({data:r.data,updated_at:fecha}).eq('user_id',uid).eq('updated_at',row.updated_at).select('updated_at').maybeSingle();

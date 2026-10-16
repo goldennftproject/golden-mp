@@ -1532,7 +1532,7 @@
     <div class="shoppane" id="shop-sell" style="display:none">
       <div class="mkt-cur">Cobrar en:
         <button class="curbtn active" data-cur="plata"><img class="ric" src="assets/farm/coin_plata.png?a=4"> Plata</button>
-        <button class="curbtn" data-cur="golden"><img class="ric" src="assets/farm/coin_esencia.png?a=4"> $Golden</button>
+        <button class="ghost sm" data-panel="ov-banco">🏦 Canjear Plata en el Banco</button>
         <span id="mkt-cur-note" aria-live="polite"></span>
       </div>
       <div class="mkt-list" id="mkt-list"></div>
@@ -1630,8 +1630,20 @@
 
   <div class="ov" id="ov-reliquias"><div class="card" style="width:min(680px,94vw);max-height:calc(100dvh - 32px);overflow-y:auto">
     <button class="close" data-close="ov-reliquias" style="position:sticky;top:0;float:right;z-index:2">×</button>
-    <h3>💎 Reliquias · producción de $Golden</h3>
+    <h3>🌾 Objetos de Granja · producción de Plata</h3>
     <div id="objetos-productores"></div>
+  </div></div>
+  <div class="ov" id="ov-banco"><div class="card" style="width:min(580px,94vw);max-height:calc(100dvh - 32px);overflow-y:auto;overflow-x:hidden">
+    <button class="close" data-close="ov-banco">×</button>
+    <h3>🏦 Banco · cambio interno</h3>
+    <p class="sub">Canjeá Plata por Golden a la tasa vigente del servidor. La tasa es ajustable y puede cambiar; no es una paridad garantizada con dólares.</p>
+    <div id="banco-info" aria-live="polite"></div>
+    <label for="banco-cantidad">Golden que querés recibir (unidades enteras)</label>
+    <input id="banco-cantidad" type="number" min="1" max="1000000" step="1" value="1">
+    <p id="banco-previa" class="sub" aria-live="polite"></p>
+    <div class="row"><button id="banco-canjear" class="green" disabled>Canjear</button><button id="banco-actualizar" class="ghost">Actualizar tasa</button></div>
+    <p class="sub">Sólo moneda interna de prueba. Ningún saldo implica un derecho de cobro en USDT.</p>
+    <div class="row"><button disabled>Depósitos USDT · desactivados</button><button disabled>Retiros USDT · desactivados</button></div>
   </div></div>
   <div class="ov" id="ov-skills"><div class="card" style="width:min(500px,94%)">
     <button class="close" data-close="ov-skills">×</button>
@@ -2012,7 +2024,8 @@
       <button class="gmi" data-panel="ov-album"><span class="ic">📖</span> Álbum <b class="key" id="gm-alb"></b></button>
       <button class="gmi" data-panel="ov-inv"><span class="ic"></span> Inventario <b class="key">I</b></button>
       <button class="gmi" data-panel="ov-cobertizo"><span class="ic">🏚</span> Cobertizo <b class="key" id="gm-cob"></b></button>
-      <button class="gmi" data-panel="ov-reliquias"><span class="ic">💎</span> Reliquias · $Golden</button>
+      <button class="gmi" data-panel="ov-reliquias"><span class="ic">🌾</span> Objetos de Granja</button>
+      <button class="gmi" data-panel="ov-banco"><span class="ic">🏦</span> Banco</button>
       <button class="gmi" data-panel="ov-skills"><span class="ic"></span> Skills <b class="key">X</b></button>
       <button class="gmi" data-panel="ov-equip"><span class="ic"></span> Equipo <b class="key">P</b></button>
       <button class="gmi" data-panel="ov-paquete"><span class="ic"></span> Paquete del día <b class="key">G</b></button>

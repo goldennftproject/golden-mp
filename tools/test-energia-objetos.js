@@ -16,26 +16,33 @@ const source=fs.readFileSync(path.join(repo,'supabase/functions/guardar/index.ts
 const rules=block.slice(block.indexOf('const VERSION'));
 const server={console,Date,Math,JSON,Number,Object,Array,Set,String,isFinite};vm.createContext(server);vm.runInContext(rules,server);
 const prices=vm.runInContext('ARTEFACTOS_PRECIOS',server),defs=run('ARTEFACTO_DEF');
-for(const id of Object.keys(prices))assert.equal(prices[id],defs[id].golden);
+for(const id of Object.keys(prices)){
+ assert.equal(prices[id],defs[id].golden);
+ assert.equal(ctx.artefactoDiario(id),server.objetoPlataDiaria(id),'producción cliente/servidor '+id);
+ const dias=prices[id]*10000/server.objetoPlataDiaria(id);
+ assert.ok(dias>=90&&dias<=120,'balance orientativo inicial '+id);
+}
 assert.equal(run('GOLDEN_EN_PLATA'),500,'ancla de referencia real');
 const operar=server.artefactoOperacion,base=clock;
 let d={golden:10000,plata:0,energiaGranja:{v:1,actual:100,at:base}};
 for(const id of Object.keys(prices)){const r=operar(d,'comprar',id,base,'buy-'+id);assert.equal(r.error,undefined);d=r.data;}
-assert.equal(d.golden,9065);assert.ok(operar(d,'comprar','cobre',base,'duplicado').error);
+const totalCoste=Object.values(prices).reduce((a,b)=>a+b,0);
+assert.equal(d.golden,10000-totalCoste);assert.ok(operar(d,'comprar','cobre',base,'duplicado').error);
 assert.ok(operar(d,'comprar','constructor',base,'invalido').error);
 const clone=JSON.stringify(d);operar(d,'cobrar','cobre',base+14400000,'sin-mutacion');assert.equal(JSON.stringify(d),clone,'la propuesta no muta la fila antes del CAS');
 let pasos=0;for(let dia=1;dia<=180;dia++){
- for(let ciclo=1;ciclo<=6;ciclo++)for(const id of Object.keys(prices)){
-  const at=base+((dia-1)*6+ciclo)*14400000,op='claim-'+(++pasos),r=operar(d,'cobrar',id,at,op);assert.equal(r.error,undefined);assert.ok(Math.abs(r.cobro*1e6-Math.round(r.cobro*1e6))<1e-6,'cobra millonésimas visibles');d=r.data;
+ for(const id of Object.keys(prices)){
+  const at=base+dia*86400000,op='claim-'+(++pasos),r=operar(d,'cobrar',id,at,op);assert.equal(r.error,undefined);assert.ok(Math.abs(r.cobro*10-Math.round(r.cobro*10))<1e-6,'cobra décimas de Plata');d=r.data;
   const repeat=operar(d,'cobrar',id,at,op);assert.equal(JSON.stringify(repeat.data),JSON.stringify(d));assert.equal(repeat.repetido,true);
  }
- if(dia===90)assert.ok(Math.abs(d.golden-10000)<0.000007,'recupera 935 Golden a 90 días, conservando fracciones');
+ if(dia===105)assert.ok(Math.abs(d.plata-((totalCoste-150)*10000+13000*105))<0.71,'balance nominal de 105 días, granero 13000/día');
 }
-assert.ok(Math.abs(d.golden-10935)<0.000007,'emisión total acotada a dos veces el coste');
-assert.equal(d.plata,0,'las reliquias nunca emiten plata común');
+const diaria=Object.keys(prices).reduce((n,id)=>n+server.objetoPlataDiaria(id),0);
+assert.ok(Math.abs(d.plata-diaria*180)<0.71,'emisión acotada por vida útil y residuo');
+assert.equal(d.golden,10000-totalCoste,'los objetos no emiten Golden directo');
 assert.ok(operar(d,'cobrar','cobre',base+181*86400000,'despues').error,'no sigue emitiendo al vencer');
 let a=operar({golden:10,plata:0},'comprar','cobre',base,'nuevo').data;
-const cap=operar(a,'cobrar','cobre',base+10*86400000,'tope');assert.ok(cap.cobro<=10/90,'acumulación de 24 horas');
+const cap=operar(a,'cobrar','cobre',base+10*86400000,'tope');assert.ok(cap.cobro<=server.objetoPlataDiaria('cobre'),'acumulación de 24 horas');
 a={...a,energiaGranja:{v:1,actual:0,at:base+86400000}};assert.ok(operar(a,'cobrar','cobre',base+86400000,'vacio').error);
 const prev=JSON.parse(JSON.stringify(d)),next=JSON.parse(JSON.stringify(d));next.artefactos.items.cobre.desde=0;
 function reordenar(v){return Array.isArray(v)?v.map(reordenar):v&&typeof v==='object'?Object.fromEntries(Object.keys(v).reverse().map(k=>[k,reordenar(v[k])])):v;}
@@ -44,4 +51,4 @@ assert.ok(!server.protegerEconomia(reordenar(d),JSON.parse(JSON.stringify(d)),ba
 const errs=server.protegerEconomia(prev,next,base+180*86400000);assert.ok(errs.some(e=>e.includes('objetos productores')),'guardado normal no puede falsificar propiedad');
 const eprev={energiaGranja:{v:1,actual:0,at:base}},enext={energiaGranja:{v:1,actual:100,at:base+999999999}};
 server.protegerEconomia(eprev,enext,base+3600000);assert.equal(enext.energiaGranja.actual,25,'servidor limita reloj manipulado');
-console.log('OK: energía 4 h persistente, fallos sin coste, catálogo coincidente, 180 días × 6 turnos × 6 objetos, 90 días nominales, límites de emisión, vencimiento, reintentos y propiedad protegida.');
+console.log('OK: energía persistente, siete objetos, 180 cobros diarios, balance inicial de 105–116 días, emisión en Plata, tope 24 h, vencimiento y recibos.');

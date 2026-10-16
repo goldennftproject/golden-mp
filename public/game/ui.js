@@ -68,6 +68,7 @@ function selectorContextualPcAbierto() {
 const OV_REFRESH = { "ov-entrenando": () => entrenarSync(), "ov-clan": () => refreshClan(), "ov-misiones": () => refreshMisiones(), "ov-mapa": () => refreshMapa(), "ov-objetivos": () => refreshObjetivos(), "ov-logros": () => refreshLogros(), "ov-album": () => refreshAlbum(), "ov-inv": () => refreshInv(), "ov-cobertizo": () => refreshCobertizo(), "ov-skills": () => refreshSkills(), "ov-equip": () => refreshEquip(), "ov-godhand": () => refreshGodHand(),
   "ov-forge": () => refreshForge(), "ov-market": () => refreshMarket(), "ov-barn": () => refreshBarn(), "ov-buzon": () => { _bzVista = "sobres"; _bzCartaAbierta = null; refreshBuzon(); }, "ov-paquete": () => refreshPaquete(), "ov-baul": () => refreshBaul(), "ov-pedidos": () => { _pdVista = "pedidos"; refreshPedidos(); }, "ov-expandir": () => refreshExpandir(),
   "ov-reliquias": () => refreshArtefactos(),
+  "ov-banco": () => refreshBanco(),
   "ov-cocina": () => refreshCooking(),
   "ov-horno": () => refreshHorno(),
   "ov-altar": () => refreshAltar(),
@@ -1963,8 +1964,10 @@ function pescaV4Nasas() {
 function refreshHud() {
   const energia=energiaGranjaTick();setTxt('s-energia-granja',Math.floor(energia)+'/100');
   const ep=$('energia-granja-pill');if(ep)ep.style.display=GF.scene==='farm'?'':'none';
-  document.querySelectorAll('[data-artefacto-pendiente]').forEach(el=>{el.textContent=fmtGolden(artefactoPendiente(el.dataset.artefactoPendiente))+' $Golden';});
-  document.querySelectorAll('[data-artefacto-cobrar]').forEach(b=>{b.disabled=!(typeof sb!=='undefined' && sb && UID && CARGA_OK && !SOLO_LOCAL && !SAVE_CONFLICTOS.has(UID) && !MERCADO_EN_CURSO && artefactoPendiente(b.dataset.artefactoCobrar)>0 && energia>=1);});
+  document.querySelectorAll('[data-artefacto-pendiente]').forEach(el=>{el.textContent=fmtPlata(artefactoPendiente(el.dataset.artefactoPendiente))+' Plata';});
+  document.querySelectorAll('[data-artefacto-cobrar]').forEach(b=>{b.disabled=!(typeof sb!=='undefined' && sb && UID && CARGA_OK && !SOLO_LOCAL && !SAVE_CONFLICTOS.has(UID) && !MERCADO_EN_CURSO && artefactoPuedeCobrar(b.dataset.artefactoCobrar) && energia>=1);});
+  document.querySelectorAll('[data-artefacto-cobrar]').forEach(b=>{b.textContent=artefactoPuedeCobrar(b.dataset.artefactoCobrar)?'Cobrar · 1 ⚡':'Disponible cada 24 h';});
+  if(isOpen('ov-banco'))bancoActualizarPrevia();
   try { syncMisionesBadge(); } catch (e) {}   // contador de misiones del menú (10/8)
   try { syncLogrosBadge(); } catch (e) {}     // 22/8: cuántos logros hay para cobrar
   try { syncCaminoBadge(); } catch (e) {}     // 25/8: cuánto le falta a la meta de la semana
@@ -2543,24 +2546,45 @@ function refreshProduccionGranja() {
 function refreshArtefactos() {
   const box=$('objetos-productores');if(!box)return;
   const t=nowMs(), online=!!(typeof sb!=='undefined' && sb && UID && CARGA_OK && !SOLO_LOCAL && !SAVE_CONFLICTOS.has(UID));
-  let h='<p class="sub">Colección productora de $Golden, la moneda premium del juego. No producen plata común ni ocupan terreno o capacidad productiva. Un ejemplar activo de cada modelo por cuenta.</p>'+
-    '<p class="sub">Producción diaria = coste en $Golden / 90. Duran 180 días y acumulan como máximo 24 horas: cobrá regularmente. Cada cobro cuesta 1 de energía de granja. Los decimales se conservan hasta una millonésima de $Golden.</p>'+
-    '<p class="sub">Los 90 días son una referencia interna cobrando toda la producción, no una rentabilidad financiera garantizada. Sin pagos reales, retiros ni canje por USDT.</p>';
+  let h='<p class="sub">Objetos de colección que producen Plata, no Golden directo. No son edificios colocables ni ocupan terreno o cupos. Un ejemplar activo de cada modelo por cuenta.</p>'+
+    '<p class="sub">Comprá con Golden y reclamá Plata cada 24 horas por 1 de energía. Acumulación máxima: un día; vida útil: 180 días. La producción se conserva en décimas de Plata.</p>'+
+    '<p class="sub">Balance inicial: recuperación nominal de 90–120 días cobrando diariamente a la tasa inicial del Banco. La tasa puede cambiar: no es un retorno garantizado. Depósitos y retiros USDT desactivados.</p><button class="ghost sm" data-panel="ov-banco">🏦 Ver Banco y tasa vigente</button>';
   if(!online)h+='<p class="sub">Compras y cobros requieren conexión y guardado sincronizado.</p>';
   for(const [id,d] of Object.entries(ARTEFACTO_DEF)){
     const a=G.artefactos && G.artefactos.items && G.artefactos.items[id], activo=a && t<a.desde+ARTEFACTO_DIAS*86400000;
     const pendiente=artefactoPendiente(id), diaria=artefactoDiario(id).toFixed(2).replace('.',',');
-    h+='<div class="row" style="justify-content:space-between;flex-wrap:wrap;border-top:1px solid #ffffff22;padding:10px 0"><div>'+d.icon+' '+d.label+'<br><small>'+diaria+' $Golden/día · Coste: '+d.golden+' $Golden</small>'+
+    h+='<div class="row" style="justify-content:space-between;flex-wrap:wrap;border-top:1px solid #ffffff22;padding:10px 0"><div>'+d.icon+' '+d.label+'<br><small>'+diaria+' Plata/día · Coste: '+d.golden+' Golden</small>'+
       (a?'<br><small>'+(activo?'Activo hasta '+new Date(a.desde+ARTEFACTO_DIAS*86400000).toLocaleDateString('es-UY'):'Vida útil terminada')+'</small>':'')+'</div><div>'+
-      (a?'<span data-artefacto-pendiente="'+id+'">'+fmtGolden(pendiente)+' $Golden</span> <button class="green sm" data-artefacto-cobrar="'+id+'" '+(!online||pendiente<=0||!energiaGranjaPuede('harvest')?'disabled':'')+'>Cobrar · 1 ⚡</button> ':'')+
+      (a?'<span data-artefacto-pendiente="'+id+'">'+fmtPlata(pendiente)+' Plata</span> <button class="green sm" data-artefacto-cobrar="'+id+'" '+(!online||!artefactoPuedeCobrar(id)||!energiaGranjaPuede('harvest')?'disabled':'')+'>'+(artefactoPuedeCobrar(id)?'Cobrar · 1 ⚡':'Disponible cada 24 h')+'</button> ':'')+
       '<button class="ghost sm" data-artefacto-comprar="'+id+'" '+(!online||activo||pendiente>0||G.golden<d.golden?'disabled':'')+'>'+(activo?'Ya lo tenés':'Comprar · '+d.golden+' $Golden')+'</button></div></div>';
   }
   box.innerHTML=h;
   box.querySelectorAll('[data-artefacto-comprar]').forEach(b=>b.onclick=()=>{
     const id=b.dataset.artefactoComprar,d=ARTEFACTO_DEF[id];
-    askConfirm('¿Gastar '+d.golden+' $Golden en '+d.label+'? Produce '+artefactoDiario(id).toFixed(6)+' $Golden al día durante 180 días; acumula hasta 24 horas. No tiene canje por USDT.',()=>artefactoSolicitar('comprar',id),{title:'Comprar reliquia',yes:'Comprar',yesClass:'green',no:'Cancelar'});
+    askConfirm('¿Gastar '+d.golden+' Golden en '+d.label+'? Produce '+artefactoDiario(id).toFixed(2)+' Plata al día durante 180 días. Se reclama cada 24 horas y guarda como máximo un día. El cambio del Banco es variable. No hay depósitos ni retiros USDT.',()=>artefactoSolicitar('comprar',id),{title:'Comprar Objeto de Granja',yes:'Comprar',yesClass:'green',no:'Cancelar'});
   });
   box.querySelectorAll('[data-artefacto-cobrar]').forEach(b=>b.onclick=()=>artefactoSolicitar('cobrar',b.dataset.artefactoCobrar));
+}
+function bancoActualizarPrevia(){
+  const input=$('banco-cantidad'),preview=$('banco-previa'),boton=$('banco-canjear');if(!input||!preview||!boton)return;
+  const n=Number(input.value),valida=bancoCotizacionValida(),tasa=valida?BANCO_COTIZACION.tasa:0;
+  const cantidad=Number.isSafeInteger(n)&&n>=1&&n<=1000000;
+  preview.textContent=valida&&cantidad ? 'Entregás '+(n*tasa).toLocaleString('es-UY')+' Plata → recibís '+n.toLocaleString('es-UY')+' Golden. Saldo: '+fmtPlata(G.plata)+' Plata.' : 'Necesitás una cotización vigente y una cantidad entera positiva.';
+  boton.disabled=!(valida&&cantidad&&G.plata>=n*tasa&&CARGA_OK&&!SOLO_LOCAL&&!SAVE_CONFLICTOS.has(UID)&&!MERCADO_EN_CURSO);
+}
+function refreshBanco(cotizar=true){
+  const info=$('banco-info');if(!info)return;
+  info.textContent=bancoCotizacionValida() ? 'Tasa vigente: '+BANCO_COTIZACION.tasa.toLocaleString('es-UY')+' Plata = 1 Golden. Cotización válida durante 60 segundos.' : 'Sin cotización vigente. Se requiere conexión con el servidor.';
+  const input=$('banco-cantidad'),actualizar=$('banco-actualizar'),boton=$('banco-canjear');
+  if(input)input.oninput=bancoActualizarPrevia;
+  if(actualizar)actualizar.onclick=()=>bancoCotizar();
+  if(boton)boton.onclick=()=>{
+    if(!bancoCotizacionValida()){bancoCotizar();return;}
+    const n=Number(input.value),c=BANCO_COTIZACION;
+    if(!Number.isSafeInteger(n)||n<1||n>1000000)return;
+    askConfirm('¿Canjear '+(n*c.tasa).toLocaleString('es-UY')+' Plata por '+n+' Golden? Si la tasa cambia antes de confirmar, se rechazará el canje. No es un retiro de USDT.',()=>bancoSolicitar(n,c.revision),{title:'Confirmar canje interno',yes:'Canjear',yesClass:'green',no:'Cancelar'});
+  };
+  bancoActualizarPrevia();if(cotizar)bancoCotizar();
 }
 function confirmarCompraVip() {
   askConfirm('¿Gastar ' + PRODUCCION_VIP_PRECIO + ' $Golden para activar el VIP por 30 días, con +25% de capacidad (mínimo dos cupos)? ' + produccionVipPaseTexto() + ' Los nodos adicionales se compran por separado.', () => passBuyVip(), {title:'VIP · 30 días',yes:'Comprar VIP',yesClass:'green',no:'Cancelar'});
@@ -4760,7 +4784,7 @@ function refreshMarket() {
      avanzaba el objetivo. El tutorial guía sin alterar el valor de ninguna moneda. */
   const paso = (typeof tutoActivo === "function") ? tutoActivo() : null;
   const ventaTutorial = !!(paso && paso.id === "sell");
-  if (ventaTutorial) marketCur = "plata";
+  marketCur = "plata"; // Toda venta del sistema paga Plata; el único cambio a Golden es el Banco.
   const cur = marketCur;
   const minGolden = res => (typeof ventaMinGolden === "function") ? ventaMinGolden(res) : Math.max(1, Math.ceil(GOLDEN_EN_PLATA / Math.max(1, precioVenta(res))));
   const detalleGolden = (res, q) => (typeof ventaGolden === "function")

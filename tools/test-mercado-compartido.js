@@ -12,6 +12,7 @@ async function edge() {
   await call({accion:"cotizar",uid:"otro"});assert.equal(calls[0].p.p_uid,"verificado");
   const venta={accion:"vender",item:"papa",cantidad:1,moneda:"plata",minimo:2,base:new Date().toISOString(),op:crypto.randomUUID(),uid:"otro"};
   assert.equal((await call(venta)).status,200);assert.equal(calls[1].p.p_uid,"verificado");
+  assert.equal((await call({...venta,moneda:'golden'})).status,400,'la conversión vieja no evita el Banco');assert.equal(calls.length,2,'no llama al RPC legado');
   for(const mal of [{cantidad:0},{cantidad:10001},{cantidad:1.5},{minimo:-1},{moneda:"usdt"},{op:"duplicado"},{base:"sin fecha"}])assert.equal((await call({...venta,...mal})).status,400);
   rpcError={code:"P0001",message:"conflicto: otra sesión"};assert.equal((await call(venta)).status,409);
   rpcError={code:"P0001",message:"presupuesto: agotado"};assert.equal((await call(venta)).status,400);

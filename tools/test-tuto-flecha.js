@@ -193,12 +193,12 @@ window.__sondeoVentaTutorial = function () {
   G.res = Object.assign({}, G.res, { papa: 3 });
   marketCur = "golden"; refreshMarket();
   const golden = document.querySelector('.curbtn[data-cur="golden"]'), papa = document.getElementById("vb-papa"), nota = document.getElementById("mkt-cur-note");
-  const tutorial = { moneda: marketCur, goldenBloqueado: !!(golden && golden.disabled),
+  const tutorial = { moneda: marketCur, goldenAusente: !golden,
     nota: nota ? nota.textContent : "", notaVisible: !!(nota && nota.classList.contains("show")),
     papaHabilitada: !!(papa && !papa.disabled) };
   G.tuto = { done: true }; marketCur = "golden"; refreshMarket();
   const goldenNormal = document.querySelector('.curbtn[data-cur="golden"]'), papaNormal = document.getElementById("vb-papa");
-  const normal = { moneda: marketCur, goldenBloqueado: !!(goldenNormal && goldenNormal.disabled),
+  const normal = { moneda: marketCur, goldenAusente: !goldenNormal, banco: !!document.querySelector('#ov-market [data-panel="ov-banco"]'),
     papaBloqueada: !!(papaNormal && papaNormal.disabled), textoPapa: papaNormal ? papaNormal.textContent : "" };
   return JSON.stringify({ tutorial: tutorial, normal: normal });
 };`);
@@ -330,10 +330,10 @@ console.log("\nLA PRIMERA VENTA NO SE DESVÍA A $GOLDEN");
 {
   const s = JSON.parse(w.__sondeoVentaTutorial());
   ok("el paso de vender fuerza Plata aunque antes estuviera $Golden", s.tutorial.moneda === "plata", JSON.stringify(s.tutorial));
-  ok("$Golden se ve bloqueado y explica la ruta", s.tutorial.goldenBloqueado && s.tutorial.notaVisible && /plata/i.test(s.tutorial.nota), JSON.stringify(s.tutorial));
+  ok("la venta directa de Golden no aparece y se explica Plata", s.tutorial.goldenAusente && s.tutorial.notaVisible && /plata/i.test(s.tutorial.nota), JSON.stringify(s.tutorial));
   ok("las tres papas conservan un botón de venta disponible", s.tutorial.papaHabilitada, JSON.stringify(s.tutorial));
-  ok("al terminar el tutorial $Golden vuelve a estar disponible", s.normal.moneda === "golden" && !s.normal.goldenBloqueado, JSON.stringify(s.normal));
-  ok("y una cantidad menor al mínimo se explica antes de hacer clic", s.normal.papaBloqueada && /mín\.|faltan/i.test(s.normal.textoPapa), JSON.stringify(s.normal));
+  ok("después del tutorial la conversión se ofrece en el Banco", s.normal.moneda === "plata" && s.normal.goldenAusente && s.normal.banco, JSON.stringify(s.normal));
+  ok("vender tres papas por Plata no exige el mínimo antiguo de Golden", !s.normal.papaBloqueada && /Vender/.test(s.normal.textoPapa), JSON.stringify(s.normal));
 }
 
 console.log("\nEL TABLÓN TERMINA EL TUTORIAL SIN PEDIR UN LOTE ENTERO");

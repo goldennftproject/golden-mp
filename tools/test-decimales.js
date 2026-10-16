@@ -167,8 +167,8 @@ window.__pintar = function (nivel, moneda) {
     ok("ningún panel enseña una cola de coma flotante", !malos.length,
       malos.join(" · ") || "4 niveles × 8 paneles, todo limpio");
     const golden = JSON.parse(w.__pintar(20, "golden")).__goldenPreview;
-    ok("$Golden muestra el resultado del lote y el resto antes del clic",
-      /Lote:.*cobr[aá]s.*\$Golden.*sin convertir/i.test(golden.texto) && /Cobrar \d+ \$Golden/.test(golden.boton), JSON.stringify(golden));
+    ok("la venta moderna no ofrece conversión Golden con la tasa histórica de 500",
+      golden === undefined, 'El cambio se cotiza y confirma en el Banco; test-banco-cliente cubre su vista previa.');
   }
 }
 

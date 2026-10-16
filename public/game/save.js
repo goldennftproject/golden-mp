@@ -16,7 +16,21 @@ function mercadoPendiente(uid) { try { return !!localStorage.getItem("gf-venta-p
 function mercadoMarcarPendiente(uid, body) { localStorage.setItem("gf-venta-pendiente-" + SB_REF + "-" + uid, JSON.stringify(body)); }
 function mercadoLimpiarPendiente(uid) { try { localStorage.removeItem("gf-venta-pendiente-" + SB_REF + "-" + uid); } catch (e) {} }
 function mercadoGlobalActivo() { return MERCADO_GLOBAL; }
-async function artefactoSolicitar(accion,id) {
+let BANCO_COTIZACION=null;
+async function bancoCotizar(){
+  const uid=UID;if(!sb||!uid||!CARGA_OK||SOLO_LOCAL)return;
+  try{
+    const {data,error}=await conTope(sb.functions.invoke('guardar',{body:{cuenta:uid,banco:{accion:'cotizar'}}}),10000,'cotización del Banco');
+    if(UID!==uid)return;
+    if(error||!data?.ok||!Number.isSafeInteger(data.tasa)||data.tasa<1)throw Error('Sin cotización');
+    BANCO_COTIZACION={...data,uid,recibido:Date.now()};
+  }catch{if(UID===uid)BANCO_COTIZACION=null;}
+  if(UID===uid && isOpen('ov-banco'))refreshBanco(false);
+}
+function bancoCotizacionValida(){return !!(BANCO_COTIZACION && BANCO_COTIZACION.uid===UID && Date.now()-BANCO_COTIZACION.recibido<60000);}
+function artefactoSolicitar(accion,id){return economiaSolicitar({artefacto:{accion,id}});}
+function bancoSolicitar(golden,revision){return economiaSolicitar({banco:{accion:'canjear',golden,revision}});}
+async function economiaSolicitar(detalle) {
   if(MERCADO_EN_CURSO || !sb || !UID || !CARGA_OK || SOLO_LOCAL || SAVE_CONFLICTOS.has(UID)){toast('Necesitás conexión y guardado sincronizado');return;}
   const uid=UID, desbloquear=mercadoBloquearPantalla('Confirmando la operación del objeto…');
   const confirmadas=SAVE_CONFIRMACIONES.get(uid)||0, flush=saveFarm(true);
@@ -24,7 +38,7 @@ async function artefactoSolicitar(accion,id) {
     try{
       await conTope(flush,15000,'guardado previo al objeto');
       if(UID!==uid || SAVE_CONFLICTOS.has(uid) || (SAVE_CONFIRMACIONES.get(uid)||0)<=confirmadas || !SAVE_BASES.get(uid)){toast('No se pudo sincronizar; no se operó');return;}
-      const body={cuenta:uid,artefacto:{accion,id},base:SAVE_BASES.get(uid),op:window.crypto.randomUUID()};
+      const body={cuenta:uid,...detalle,base:SAVE_BASES.get(uid),op:window.crypto.randomUUID()};
       mercadoMarcarPendiente(uid,body);
       let data,error;
       for(let n=0;n<2;n++){
@@ -39,9 +53,9 @@ async function artefactoSolicitar(accion,id) {
       }
       if(error || !data || !data.ok || UID!==uid){SAVE_CONFLICTOS.add(uid);toast('Resultado sin confirmar. Recargá con conexión para consultar el servidor.');return;}
       hydrate(data.data);SAVE_BASES.set(uid,data.updated_at);copiaGuardar(snapshot());mercadoLimpiarPendiente(uid);
-      toast(accion==='comprar' ? 'Reliquia comprada con $Golden' : '+'+fmtGolden(data.cobro)+' $Golden');
+      toast(detalle.banco ? 'Canje confirmado: +'+fmtGolden(data.cobro)+' Golden' : detalle.artefacto.accion==='comprar' ? 'Objeto comprado con Golden' : '+'+fmtPlata(data.cobro)+' Plata');
     }catch(e){toast('No se pudo completar la operación; comprobá la conexión');}
-  })().finally(()=>{MERCADO_EN_CURSO=null;desbloquear();refreshHud();if(isOpen('ov-reliquias'))refreshArtefactos();});
+  })().finally(()=>{MERCADO_EN_CURSO=null;desbloquear();refreshHud();if(isOpen('ov-reliquias'))refreshArtefactos();if(isOpen('ov-banco'))refreshBanco();});
   return MERCADO_EN_CURSO;
 }
 function mercadoGlobalRecurso(res) {
@@ -89,6 +103,7 @@ function mercadoBloquearPantalla(mensaje) {
   return () => { window.removeEventListener("keydown", bloquearTecla, true); el.remove(); prev.forEach(([e, inert]) => { e.inert = inert; }); };
 }
 function mercadoSistemaVender(item, cantidad, moneda) {
+  if(moneda!=='plata'){toast('Vendé por Plata y canjeá Golden en el Banco.');return Promise.resolve();}
   if (MERCADO_EN_CURSO) return MERCADO_EN_CURSO;
   const limite = mercadoGlobalLimite(item, cantidad);
   if (limite) { toast(limite); mercadoGlobalRefrescar(true); return Promise.resolve(); }
@@ -424,7 +439,7 @@ function snapshot() {
      vistos y estrellaMax (el álbum con estrellas) y pescaTiene (el señuelo, que no se gasta).
      OJO con los comentarios AL FINAL de una línea de este objeto: se comen lo que sigue. */
   return { plata: G.plata, golden: G.golden, level: G.level, prestige: G.prestige, iniciado: G.iniciado, reinicio: G.reinicio,   /* 24/9: cuándo se reinició la cuenta (el portero lo lee) */
-    energiaGranja: G.energiaGranja, artefactos: G.artefactos,
+    energiaGranja: G.energiaGranja, artefactos: G.artefactos, banco: G.banco,
     espacioV: G.espacioV, mercadoVentas: G.mercadoVentas, farmXpBase: G.farmXpBase || 0,
     produccion: G.produccion,
     res: G.res, picks: G.picks, skills: G.skills, triesV: G.triesV, establoV: G.establoV, fish: G.fish, plots: G.plots, nodos: G.nodos, expansiones: G.expansiones, pescaHasta: G.pescaHasta, pescaDesde: G.pescaDesde, senales: G.senales, escamas: G.escamas, vistos: G.vistos, estrellaMax: G.estrellaMax, pescaTiene: G.pescaTiene, canas: G.canas, presion: G.presion, amarres: G.amarres, trampas: G.trampas, marea: G.marea, runaOro: G.runaOro, buffs: G.buffs, seeds: G.seeds, selSeed: G.selSeed,
@@ -506,6 +521,7 @@ function hydrate(d) {
   G.energiaGranja = d.energiaGranja && Number.isFinite(d.energiaGranja.actual) && Number.isFinite(d.energiaGranja.at)
     ? {v:1,actual:Math.max(0,Math.min(100,d.energiaGranja.actual)),at:d.energiaGranja.at} : {v:1,actual:100,at:nowMs()};
   G.artefactos = d.artefactos ? JSON.parse(JSON.stringify(d.artefactos)) : null;
+  G.banco = d.banco ? JSON.parse(JSON.stringify(d.banco)) : null;
   G.espacioV = [1,2,3].includes(d.espacioV) ? d.espacioV :
     ((d.expansiones || 0) > 0 || (d.plotsOwned || 3) > 3 || Object.keys(d.layout || {}).length ||
      Object.keys(d.layoutPlots || {}).length || d.layoutPond || Object.keys(d.obras || {}).length ||

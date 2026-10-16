@@ -7,6 +7,7 @@ const G = {
   espacioV: 3,                  // 9×9; capacidad productiva independiente, mapas previos conservados
   energiaGranja: { v: 1, actual: 100, at: 0 },
   artefactos: null,
+  banco: null,
   plata: 3, golden: 20, level: 1, prestige: 0, week: 1, iniciado: 0,   // 18/8: cuándo empezó la partida — de ahí sale la semana del HUD   // 14/8: nacés con 3 de plata (el 1er objetivo es COMPRAR tus semillas)
   hp: 100, hpMax: 100, swordOwned: false, bowOwned: false, swordWoodOwned: false, firstCropDone: false,   // combate (Fase D)
   armasUnlocked: false,          // viernes (2): la pestana Armas de la Herreria se paga (20 madera + 20 piedra + 1000 plata)
@@ -129,23 +130,29 @@ function energiaGranjaAgregar(key,n,tipo) {
   energiaGranjaPagar(tipo);return true;
 }
 const ARTEFACTO_DEF = {
-  cobre:{label:'Amuleto de cobre',golden:10,icon:'🟤'},
-  plata:{label:'Sello de plata',golden:25,icon:'⚪'},
-  jade:{label:'Talismán de jade',golden:50,icon:'🟢'},
-  oro:{label:'Reloj dorado',golden:100,icon:'🟡'},
-  rubi:{label:'Cáliz de rubí',golden:250,icon:'🔴'},
-  corona:{label:'Corona ancestral',golden:500,icon:'👑'}
+  cobre:{label:'Gallinero',golden:10,icon:'🐔'},
+  plata:{label:'Huerto',golden:25,icon:'🥕'},
+  jade:{label:'Establo productor',golden:50,icon:'🐄'},
+  oro:{label:'Tractor',golden:100,icon:'🚜'},
+  granero:{label:'Granero Mediano',golden:150,icon:'🏚'},
+  rubi:{label:'Molino',golden:250,icon:'🌾'},
+  corona:{label:'Invernadero',golden:500,icon:'🌱'}
 };
-const ARTEFACTO_DIAS = 180, ARTEFACTO_RECUPERACION = 90, ARTEFACTO_TOPE_MS = 86400000;
-const RELIQUIAS_GOLDEN_DESDE = 1792191000000; // 16/10/2026 22:50 UTC: no convertir plata histórica en Golden
+const ARTEFACTO_DIAS = 180, ARTEFACTO_RECUPERACION = 105, ARTEFACTO_TOPE_MS = 86400000;
+const OBJETOS_PLATA_DESDE = 1792193400000;
 function fmtGolden(n){return Number(n||0).toFixed(6).replace(/\.?0+$/,'') || '0';}
-function artefactoDiario(id){return ARTEFACTO_DEF[id] ? ARTEFACTO_DEF[id].golden/ARTEFACTO_RECUPERACION : 0;}
+function artefactoDiario(id){return id==='granero' ? 13000 : ARTEFACTO_DEF[id] ? ARTEFACTO_DEF[id].golden*10000/ARTEFACTO_RECUPERACION : 0;}
+function objetoInicioCobro(a){return a.moneda==='plata-v2' ? a.cobrado : Math.max(a.cobrado,OBJETOS_PLATA_DESDE);}
+function artefactoPuedeCobrar(id,t=nowMs()){
+  const a=G.artefactos && G.artefactos.items && G.artefactos.items[id];
+  return !!a && artefactoPendiente(id,t)>0 && (Math.min(t,a.desde+ARTEFACTO_DIAS*86400000)-objetoInicioCobro(a)>=86400000 || t>=a.desde+ARTEFACTO_DIAS*86400000);
+}
 function artefactoPendiente(id,t=nowMs()){
   const a=G.artefactos && G.artefactos.items && G.artefactos.items[id];
   if(!a)return 0;
   const fin=Math.min(t,a.desde+ARTEFACTO_DIAS*86400000);
-  const desde=a.moneda==='golden' ? a.cobrado : Math.max(a.cobrado,RELIQUIAS_GOLDEN_DESDE);
-  return Math.floor((Math.max(0,Math.min(ARTEFACTO_TOPE_MS,fin-desde))*artefactoDiario(id)/86400000+(a.moneda==='golden' ? a.resto||0 : 0)+1e-12)*1e6)/1e6;
+  const desde=objetoInicioCobro(a);
+  return Math.floor((Math.max(0,Math.min(ARTEFACTO_TOPE_MS,fin-desde))*artefactoDiario(id)/86400000+(a.moneda==='plata-v2' ? a.resto||0 : 0)+1e-9)*10)/10;
 }
 function fmt(n) { n = Math.floor(n); return n >= 1000 ? (n / 1000).toFixed(n % 1000 < 100 ? 0 : 1).replace(".0", "") + "k" : "" + n; }
 /* ═══ LA PLATA SE ENSEÑA CON SUS CÉNTIMOS ═══ (8/9, Suren: « necesitamos agregar decimales a la
@@ -8317,6 +8324,7 @@ function ventaMinGolden(res) {
 function sellItem(res) {
   const paso = (typeof tutoActivo === "function") ? tutoActivo() : null;
   if (paso && paso.id === "sell") marketCur = "plata";   // el arranque enseña la moneda del bucle, no la premium
+  if(marketCur!=='plata'){toast('La venta paga Plata. Usá el Banco para cambiar por Golden.');return;}
   const inp = $("mq-"+res); let q = Math.floor(parseFloat(inp && inp.value) || 0);
   q = Math.max(0, Math.min(q, G.res[res]));
   if (!SELLABLE.includes(res) || !Number.isSafeInteger(q)) { toast("Ese recurso no se vende en este mercado"); return; }

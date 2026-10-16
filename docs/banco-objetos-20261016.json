@@ -1,0 +1,21 @@
+{
+  "fecha": "2026-10-16",
+  "estado": "Implementación interna; sin depósitos, retiros ni obligación en USDT",
+  "sustituye": "La producción directa de Golden en docs/reliquias-golden-20261016.json queda histórica.",
+  "objetos": [
+    {"id":"cobre","nombre":"Gallinero","golden":10,"plataDia":952.380952},
+    {"id":"plata","nombre":"Huerto","golden":25,"plataDia":2380.952381},
+    {"id":"jade","nombre":"Establo productor","golden":50,"plataDia":4761.904762},
+    {"id":"oro","nombre":"Tractor","golden":100,"plataDia":9523.809524},
+    {"id":"granero","nombre":"Granero Mediano","golden":150,"plataDia":13000},
+    {"id":"rubi","nombre":"Molino","golden":250,"plataDia":23809.523810},
+    {"id":"corona","nombre":"Invernadero","golden":500,"plataDia":47619.047619}
+  ],
+  "balance": "Coste×10000/105 Plata por día, excepto Granero que usa 13000. A tasa inicial: 105 días nominales, Granero 115.384615. La producción no se reajusta automáticamente si cambia la tasa. A tasa 15000 las mismas producciones implican 157.5 y 173.076923 días. No garantiza recuperación en 90–120 días después de un cambio ni mide rentabilidad real.",
+  "cobro": "Cada 24 horas, tope acumulado un día, vida 180 días, décimas con residuo conservado, 1 energía. Al expirar se permite liquidar el último ciclo parcial. Uno activo por modelo. Son objetos de colección, no edificios colocables ni cupos de nodos.",
+  "banco": "Menú > Banco. Sólo Plata→Golden, unidades enteras de Golden. Tasa inicial 10000. Cotización previa y confirmación; rechaza tasa modificada con HTTP412, sin ejecutar a otra tasa. JWT, identidad, recibos de últimos20, CAS y guardado previo. El coste se calcula en servidor; no se acepta un precio enviado por cliente.",
+  "ajusteTasa": "En Supabase Goldenfarm, variable de Edge Functions BANCO_PLATA_POR_GOLDEN. Entero1..1000000000; ausente usa10000; inválida bloquea el Banco. Un cambio modifica la revisión de cotización. No es una clave secreta ni se expone ninguna credencial. Documentación oficial: https://supabase.com/docs/guides/functions/secrets",
+  "compatibilidad": "Identificadores antiguos retenidos para preservar compras. Producción antigua de Golden no se convierte retroactivamente en Plata; corte 2026-10-16T23:30:00Z. Golden ya cobrado no se quita. Conexión, cuentas, terreno, relojes de nodos y progreso intactos.",
+  "víasAntiguas": "Venta de recursos del sistema sólo por Plata; frontend y Edge mercado rechazan la conversión antigua de valor500 a Golden. El RPC legado permanece accesible únicamente al servicio, no se borra. GOLDEN_EN_PLATA500 queda como referencia histórica de costes de otras mejoras, no tasa de canje.",
+  "alcance": "Todo saldo sigue siendo de prueba interna, incluido Golden inicial gratuito. No constituye saldo respaldado o retirable. No se conectó wallet, red, depósito, contrato ni proveedor de pagos."
+}

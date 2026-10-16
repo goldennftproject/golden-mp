@@ -48,9 +48,15 @@ para no recortar objetos ni perder progreso.
 > « Cuando digo genera plata, me refiero a que generan el signo de pesos, bueno, de dólar, golden, la moneda premium sería. »
 > « Claro, corregilo y movelo a otro lugar. »
 
-Las reliquias producen $Golden premium, no plata común. Se gestionan desde Menú → Reliquias,
-sin terreno ni cupos. Coste/90 por día, 180 días de vida, tope de 24 horas acumuladas y un
-punto de energía por cobro. No convertir plata histórica en Golden ni habilitar USDT/retiros.
+Esta interpretación fue sustituida por la instrucción posterior del mismo día:
+
+> « Sí, hazlo así entonces. Cambia los objetos para que produzcan plata y agrega el banco con esa tasa inicial ajustable. Los depósitos y retiros de USDT los dejamos desactivados por ahora. »
+
+Los Objetos de Granja producen Plata y se gestionan en su sección independiente. Reclamo cada
+24 horas, acumulación máxima de un día, vida útil de 180 días y un punto de energía por cobro.
+Banco interno: tasa inicial de 10.000 Plata por Golden, ajustable en el servidor. No es una
+paridad garantizada con USD. No habilitar depósitos ni retiros USDT, ni convertir retroactivamente
+la producción anterior de Golden. Los saldos y las cuentas existentes se conservan.
 
 > *« Los árboles tienen que tener cuatro cargas a las dos horas, cada treinta minutos una carga,
 > y la piedra cada cuarenta minutos, cuatro cargas, como estaba antes. A partir de ahí hacé el
