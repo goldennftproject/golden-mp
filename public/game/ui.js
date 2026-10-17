@@ -4777,6 +4777,12 @@ function marketReponerVentaFocoPc(lista) {
   if (!boton || typeof boton.focus !== "function") return;
   try { boton.focus({ preventScroll: true }); } catch (e) { boton.focus(); }
 }
+var MARKET_VENTAS_SYNC = [];
+function marketVentasTick() {
+  if (typeof isOpen !== "function" || !isOpen("ov-market")) return;
+  if (typeof mercadoGlobalRefrescar === "function") mercadoGlobalRefrescar();
+  MARKET_VENTAS_SYNC.forEach(sync => sync());
+}
 function refreshMarket() {
   if (typeof mercadoGlobalRefrescar === "function") mercadoGlobalRefrescar();
   /* El último gesto del arranque es vender tres papas. $Golden se acredita de a unidades
@@ -4803,7 +4809,7 @@ function refreshMarket() {
     if (owned>0 && cupoActual && cupoActual.disponible<=0) return { disabled:true,label:"Cupo agotado",title:"Tu cupo de esta familia se renueva al cambiar el día UTC" };
     if (owned <= 0 || q <= 0) return { disabled: true, label: "Sin stock", title: "No tenés " + RES_LABEL[res] + " para vender" };
     const limite = typeof mercadoGlobalActivo === "function" && mercadoGlobalActivo() ? mercadoGlobalLimite(res, q) : "";
-    if (limite) return { disabled: true, label: "No disponible", title: limite };
+    if (limite) return { disabled: true, label: /Confirmando/.test(limite) ? "Confirmando…" : /sincronizado/.test(limite) ? "Sin sincronizar" : /Consultando/.test(limite) ? "Cotizando…" : "Venta bloqueada", title: limite.replace("reabrí el mercado si no hay conexión", "reintentando automáticamente mientras el mercado esté abierto") };
     const detalle = cur === "golden" ? detalleGolden(res, q) : null;
     if (cur === "golden" && detalle.golden < 1) {
       const min = minGolden(res), faltan = Math.max(0, min - owned);
@@ -4819,9 +4825,12 @@ function refreshMarket() {
     const r = mercadoGlobalRecurso(res);
     return r ? " · tu cupo restante hoy: " + fmt(r.disponible) + (r.factor > 1 ? " (comparte familia con " + (RES_LABEL[r.familia] || r.familia) + ")" : "") : " · pendiente de cotización en línea";
   };
+  const focoCantidad = document.activeElement && /^mq-/.test(document.activeElement.id) ? document.activeElement.id : null;
+  const cantidades = Object.fromEntries(SELLABLE.map(res => [res, $("mq-" + res) && $("mq-" + res).value]));
+  MARKET_VENTAS_SYNC = [];
   $("mkt-list").innerHTML = SELLABLE.map(res => {
     const cupo = typeof mercadoGlobalActivo === "function" && mercadoGlobalActivo() ? mercadoGlobalRecurso(res) : null;
-    const owned = G.res[res] || 0, q = Math.min(10000, cupo ? cupo.disponible : 10000, Math.max(0, owned)), estado = estadoVender(res, owned, q);
+    const owned = G.res[res] || 0, q = Math.min(10000, cupo ? cupo.disponible : 10000, Math.max(0, owned), +cantidades[res] > 0 ? Math.floor(+cantidades[res]) : Infinity), estado = estadoVender(res, owned, q);
     return `<div class="mkt-row"><span class="mimg">${itemIcon({ sprite: resSprite(res), emoji: RES_EMOJI[res] })}</span><div class="minfo"><div class="mnm">${RES_LABEL[res]}</div><div class="mds" id="mv-${res}">Tenés ${fmt(owned)} · ${textoVenta(res, owned, q)}</div></div><input id="mq-${res}" type="number" min="${owned > 0 ? 1 : 0}" max="${owned}" value="${q}" ${owned > 0 ? "" : "disabled"}><button class="vbtn" id="vb-${res}" ${estado.disabled ? "disabled" : ""} title="${estado.title}">${estado.label}</button></div>`;
   }).join("");
   SELLABLE.forEach(res => {
@@ -4833,10 +4842,11 @@ function refreshMarket() {
       const q = Math.max(0, Math.min(maximo, Math.floor(+(inp && inp.value) || 0)));
       const estado = estadoVender(res, owned, q);
       btn.disabled = estado.disabled; btn.textContent = estado.label; btn.title = estado.title;
-      if (meta) meta.textContent = "Tenés " + fmt(owned) + " · " + textoVenta(res, owned, q) + disponibilidad(res);
+      if (meta) meta.textContent = "Tenés " + fmt(owned) + " · " + textoVenta(res, owned, q) + disponibilidad(res) + (estado.disabled && estado.title ? " · " + estado.title : "");
     };
     if (inp) { inp.max = maximo; inp.min = maximo>0?1:0; inp.disabled = maximo<=0; inp.oninput = sync; inp.onchange = () => { inp.value = Math.max(0, Math.min(maximo, Math.floor(+inp.value || 0))); sync(); }; }
     if (btn) btn.onclick = (ev) => { marketGuardarVentaFocoPc(ev, res); sellItem(res); };
+    MARKET_VENTAS_SYNC.push(sync);
     sync();
   });
   const golden = document.querySelector('.curbtn[data-cur="golden"]'), nota = $("mkt-cur-note");
@@ -4845,6 +4855,7 @@ function refreshMarket() {
   if (typeof tutoHighlight === "function") tutoHighlight();
   document.querySelectorAll(".curbtn").forEach(b => b.classList.toggle("active", b.dataset.cur === cur));
   marketReponerVentaFocoPc($("mkt-list"));
+  if (focoCantidad && $(focoCantidad) && !$(focoCantidad).disabled) $(focoCantidad).focus({ preventScroll: true });
   refreshSeedShop();
   /* 20/8 — Y LA PESTAÑA DE ADORNOS TAMBIÉN, aunque esté oculta.
      Lo encontró el validador nuevo de destinos del tutorial: el paso « Comprá tu primera expansión »
@@ -6437,7 +6448,7 @@ function initUI() {
   tutoSync(true);   // cartel + flecha del tutorial guiado
   /* 8/9: la tira también se repinta en el latido — los números suben al craftear o al cobrar,
      no solo al gastar, y con la firma no cuesta nada si no cambió nada. */
-  setInterval(() => { try { refreshRecientes(); refreshMorral(); refreshCombate(); } catch (e) {} }, 1000);
+  setInterval(() => { try { refreshRecientes(); refreshMorral(); refreshCombate(); marketVentasTick(); } catch (e) {} }, 1000);
   setInterval(() => { if (typeof buffTick === "function") buffTick(); if (typeof expansionObraTick === "function") { try { if (expansionObraTick()) refreshHud(); } catch (e) { console.warn(e); } } if (typeof stamTick === "function") stamTick(); if (typeof incTick === "function") incTick(); if (typeof granjaRegen === "function") granjaRegen(); tutoSync(); refreshHud(); }, 1000);
   /* 26/8 — el flujo de la bolsa late aparte y MÁS RÁPIDO que el HUD. Un segundo de retraso entre
      el golpe y el « +1 Madera » ya no se siente como respuesta al clic, se siente como otra cosa
