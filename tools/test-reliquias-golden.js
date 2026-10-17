@@ -11,7 +11,7 @@ const bought=op(before,'comprar','cobre',now,'buy').data;
 assert.equal(bought.golden,10);assert.equal(before.golden,20);
 assert.ok(op(bought,'cobrar','cobre',now+day/6,'early').error,'no permite cobro antes de 24 horas');
 const claimed=op(bought,'cobrar','cobre',now+day,'claim');
-assert.equal(claimed.cobro,952.3);assert.equal(claimed.data.golden,10);assert.equal(claimed.data.plata,955.3);
+assert.equal(claimed.cobro,870);assert.equal(claimed.data.golden,10);assert.equal(claimed.data.plata,873);
 ctx.G.artefactos=JSON.parse(JSON.stringify(bought.artefactos));
 assert.equal(ctx.artefactoPendiente('cobre',now+day),claimed.cobro,'cliente y servidor coinciden');
 assert.equal(ctx.artefactoPuedeCobrar('cobre',now+day/6),false);assert.equal(ctx.artefactoPuedeCobrar('cobre',now+day),true);

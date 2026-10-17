@@ -58,6 +58,16 @@ Banco interno: tasa inicial de 10.000 Plata por Golden, ajustable en el servidor
 paridad garantizada con USD. No habilitar depósitos ni retiros USDT, ni convertir retroactivamente
 la producción anterior de Golden. Los saldos y las cuentas existentes se conservan.
 
+### Producción inicial unificada — 17/10/2026
+
+> « deben tener el mismo porcentaje que seria 0.87diario segun mis cuenta ya eso lo modificamos mas adelante!!! pero ese deria el inicial de todos! »
+
+Los siete objetos producen el 0,87 % diario del coste sobre la referencia inicial de
+10.000 Plata/Golden: coste en Golden × 87 Plata/día, sin excepción para el Granero.
+Equivale a unos 115 cobros diarios de recuperación nominal a esa referencia, no garantizada.
+La producción no sigue automáticamente los cambios de tasa del Banco. Se conservan precios,
+propiedad, saldos, fechas y condiciones de cobro. Sustituye el balance anterior de 105 días.
+
 > *« Los árboles tienen que tener cuatro cargas a las dos horas, cada treinta minutos una carga,
 > y la piedra cada cuarenta minutos, cuatro cargas, como estaba antes. A partir de ahí hacé el
 > ancla para lo que se te antoje, pero eso es una ley. »*

@@ -3,15 +3,15 @@
   "estado": "Implementación interna; sin depósitos, retiros ni obligación en USDT",
   "sustituye": "La producción directa de Golden en docs/reliquias-golden-20261016.json queda histórica.",
   "objetos": [
-    {"id":"cobre","nombre":"Gallinero","golden":10,"plataDia":952.380952},
-    {"id":"plata","nombre":"Huerto","golden":25,"plataDia":2380.952381},
-    {"id":"jade","nombre":"Establo productor","golden":50,"plataDia":4761.904762},
-    {"id":"oro","nombre":"Tractor","golden":100,"plataDia":9523.809524},
-    {"id":"granero","nombre":"Granero Mediano","golden":150,"plataDia":13000},
-    {"id":"rubi","nombre":"Molino","golden":250,"plataDia":23809.523810},
-    {"id":"corona","nombre":"Invernadero","golden":500,"plataDia":47619.047619}
+    {"id":"cobre","nombre":"Gallinero","golden":10,"plataDia":870},
+    {"id":"plata","nombre":"Huerto","golden":25,"plataDia":2175},
+    {"id":"jade","nombre":"Establo productor","golden":50,"plataDia":4350},
+    {"id":"oro","nombre":"Tractor","golden":100,"plataDia":8700},
+    {"id":"granero","nombre":"Granero Mediano","golden":150,"plataDia":13050},
+    {"id":"rubi","nombre":"Molino","golden":250,"plataDia":21750},
+    {"id":"corona","nombre":"Invernadero","golden":500,"plataDia":43500}
   ],
-  "balance": "Coste×10000/105 Plata por día, excepto Granero que usa 13000. A tasa inicial: 105 días nominales, Granero 115.384615. La producción no se reajusta automáticamente si cambia la tasa. A tasa 15000 las mismas producciones implican 157.5 y 173.076923 días. No garantiza recuperación en 90–120 días después de un cambio ni mide rentabilidad real.",
+  "balance": "Actualizado 17/10/2026 por dirección: todos los objetos producen coste×87 Plata/día (0,87 % diario sobre referencia inicial 10000 Plata/Golden), sin excepción para Granero. Recuperación nominal: 114,942529 días, 115 cobros diarios. La producción no se reajusta automáticamente si cambia la tasa del Banco. A tasa 15000 implica 172,413793 días nominales. No garantiza recuperación ni mide rentabilidad real. Sustituye coste×10000/105 y Granero 13000.",
   "cobro": "Cada 24 horas, tope acumulado un día, vida 180 días, décimas con residuo conservado, 1 energía. Al expirar se permite liquidar el último ciclo parcial. Uno activo por modelo. Son objetos de colección, no edificios colocables ni cupos de nodos.",
   "banco": "Menú > Banco. Sólo Plata→Golden, unidades enteras de Golden. Tasa inicial 10000. Cotización previa y confirmación; rechaza tasa modificada con HTTP412, sin ejecutar a otra tasa. JWT, identidad, recibos de últimos20, CAS y guardado previo. El coste se calcula en servidor; no se acepta un precio enviado por cliente.",
   "ajusteTasa": "En Supabase Goldenfarm, variable de Edge Functions BANCO_PLATA_POR_GOLDEN. Entero1..1000000000; ausente usa10000; inválida bloquea el Banco. Un cambio modifica la revisión de cotización. No es una clave secreta ni se expone ninguna credencial. Documentación oficial: https://supabase.com/docs/guides/functions/secrets",

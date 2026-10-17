@@ -138,10 +138,11 @@ const ARTEFACTO_DEF = {
   rubi:{label:'Molino',golden:250,icon:'🌾'},
   corona:{label:'Invernadero',golden:500,icon:'🌱'}
 };
-const ARTEFACTO_DIAS = 180, ARTEFACTO_RECUPERACION = 105, ARTEFACTO_TOPE_MS = 86400000;
+const ARTEFACTO_DIAS = 180, ARTEFACTO_PLATA_POR_GOLDEN_DIA = 87, ARTEFACTO_TOPE_MS = 86400000;
 const OBJETOS_PLATA_DESDE = 1792193400000;
 function fmtGolden(n){return Number(n||0).toFixed(6).replace(/\.?0+$/,'') || '0';}
-function artefactoDiario(id){return id==='granero' ? 13000 : ARTEFACTO_DEF[id] ? ARTEFACTO_DEF[id].golden*10000/ARTEFACTO_RECUPERACION : 0;}
+// 0,87 % diario sobre la referencia inicial de 10.000 Plata/Golden; no sigue la tasa variable del Banco.
+function artefactoDiario(id){return ARTEFACTO_DEF[id] ? ARTEFACTO_DEF[id].golden*ARTEFACTO_PLATA_POR_GOLDEN_DIA : 0;}
 function objetoInicioCobro(a){return a.moneda==='plata-v2' ? a.cobrado : Math.max(a.cobrado,OBJETOS_PLATA_DESDE);}
 function artefactoPuedeCobrar(id,t=nowMs()){
   const a=G.artefactos && G.artefactos.items && G.artefactos.items[id];

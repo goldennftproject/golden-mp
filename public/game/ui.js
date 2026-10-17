@@ -2548,7 +2548,7 @@ function refreshArtefactos() {
   const t=nowMs(), online=!!(typeof sb!=='undefined' && sb && UID && CARGA_OK && !SOLO_LOCAL && !SAVE_CONFLICTOS.has(UID));
   let h='<p class="sub">Objetos de colección que producen Plata, no Golden directo. No son edificios colocables ni ocupan terreno o cupos. Un ejemplar activo de cada modelo por cuenta.</p>'+
     '<p class="sub">Comprá con Golden y reclamá Plata cada 24 horas por 1 de energía. Acumulación máxima: un día; vida útil: 180 días. La producción se conserva en décimas de Plata.</p>'+
-    '<p class="sub">Balance inicial: recuperación nominal de 90–120 días cobrando diariamente a la tasa inicial del Banco. La tasa puede cambiar: no es un retorno garantizado. Depósitos y retiros USDT desactivados.</p><button class="ghost sm" data-panel="ov-banco">🏦 Ver Banco y tasa vigente</button>';
+    '<p class="sub">Producción inicial: 0,87 % diario del coste, calculado a 10.000 Plata por Golden. Recuperación nominal: unos 115 días cobrando diariamente a esa tasa. La tasa del Banco puede cambiar: no es un retorno garantizado. Depósitos y retiros USDT desactivados.</p><button class="ghost sm" data-panel="ov-banco">🏦 Ver Banco y tasa vigente</button>';
   if(!online)h+='<p class="sub">Compras y cobros requieren conexión y guardado sincronizado.</p>';
   for(const [id,d] of Object.entries(ARTEFACTO_DEF)){
     const a=G.artefactos && G.artefactos.items && G.artefactos.items[id], activo=a && t<a.desde+ARTEFACTO_DIAS*86400000;

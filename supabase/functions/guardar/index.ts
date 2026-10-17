@@ -29,9 +29,10 @@ const MARGEN = 3;          // multiplicador de gracia sobre el máximo físico
 
 const num = (v) => (typeof v === "number" && isFinite(v)) ? v : 0;
 const ARTEFACTOS_PRECIOS = {cobre:10,plata:25,jade:50,oro:100,granero:150,rubi:250,corona:500};
-const ARTEFACTOS_DIAS = 180, ARTEFACTOS_REFERENCIA = 105, ENERGIA_GRANJA_MS = 14400000;
+const ARTEFACTOS_DIAS = 180, ARTEFACTOS_PLATA_POR_GOLDEN_DIA = 87, ENERGIA_GRANJA_MS = 14400000;
 const OBJETOS_PLATA_DESDE = 1792193400000;
-function objetoPlataDiaria(id){return id==='granero' ? 13000 : (ARTEFACTOS_PRECIOS[id]||0)*10000/ARTEFACTOS_REFERENCIA;}
+// 0,87 % diario sobre 10.000 Plata/Golden, independiente de la tasa vigente del Banco.
+function objetoPlataDiaria(id){return (ARTEFACTOS_PRECIOS[id]||0)*ARTEFACTOS_PLATA_POR_GOLDEN_DIA;}
 function objetoInicioCobro(a){return a.moneda==='plata-v2' ? a.cobrado : Math.max(a.cobrado,OBJETOS_PLATA_DESDE);}
 function objetoCobroListo(a,ahora){return !!a && (Math.min(ahora,a.desde+ARTEFACTOS_DIAS*86400000)-objetoInicioCobro(a)>=86400000 || ahora>=a.desde+ARTEFACTOS_DIAS*86400000);}
 function mismoJSON(a,b) {

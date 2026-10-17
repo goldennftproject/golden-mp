@@ -38,7 +38,7 @@ const inicial={user_id:"qa",name:"QA",updated_at:base,data:{plata:10,golden:20,l
   assert.deepEqual(concurrentes.map(r=>r.status).sort(),[200,409]);assert.equal(carrera.writes(),1,'CAS evita compras simultáneas sobre un mismo saldo');
   objetos=servidor({...inicial,data:{...inicial.data,artefactos:{v:1,items:{cobre:{desde:Date.now()-86400000,cobrado:Date.now()-86400000,resto:0,moneda:'plata-v2'}},ops:[]},energiaGranja:{v:1,actual:100,at:Date.now()}}});
   const cobro=await objetos.call({base,op,artefacto:{accion:'cobrar',id:'cobre'}});
-  assert.equal(cobro.status,200);assert.equal(objetos.row().data.golden,20);assert.ok(objetos.row().data.plata>962);assert.ok(objetos.row().data.energiaGranja.actual<=99);
+  assert.equal(cobro.status,200);assert.equal(objetos.row().data.golden,20);assert.equal(objetos.row().data.plata,880);assert.ok(objetos.row().data.energiaGranja.actual<=99);
   assert.equal((await objetos.call({base,op,artefacto:{accion:'cobrar',id:'cobre'}})).status,200);assert.equal(objetos.writes(),1,'recibo impide cobro doble');
   let r=await s.call({base,data:{plata:12010,golden:20,level:1,res:{maiz:0}}});
   assert.equal(r.status,200,"venta grande de stock aceptado no se rechaza");
