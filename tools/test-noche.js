@@ -38,6 +38,7 @@ const avisos = [];
 ctx.toast = (t) => avisos.push(String(t)); ctx.log = () => {};
 ["isOpen", "refreshInv", "refreshHud", "saveFarm", "syncSlots", "bagFull"].forEach(f => { if (!ctx[f]) ctx[f] = () => {}; });
 const G = ctx.G, g = (n) => vm.runInContext(n, ctx);
+require("./fixture-pesca-legado").activar(ctx);
 
 let fallos = 0;
 const ok = (n, c, d) => { if (!c) fallos++; console.log((c ? "  ok   " : "  FALLA") + "  " + n + (d ? "   " + d : "")); };

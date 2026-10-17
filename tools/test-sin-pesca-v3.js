@@ -21,6 +21,7 @@
 const fs = require("fs"), path = require("path"), vm = require("vm");
 const RAIZ = path.join(__dirname, "..");
 const { ctx } = require("./arrancar-el-juego.contexto.js").arrancar(RAIZ);
+require("./fixture-pesca-legado").activar(ctx);
 const g = (n) => { try { return vm.runInContext("typeof " + n + " !== 'undefined'", ctx); } catch (e) { return false; } };
 
 let fallos = 0;

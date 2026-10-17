@@ -21,6 +21,7 @@ const path = require("path"), vm = require("vm");
 const RAIZ = path.join(__dirname, "..");
 const { ctx } = require("./arrancar-el-juego.contexto.js").arrancar(RAIZ);
 const G = ctx.G, g = (n) => vm.runInContext(n, ctx);
+require("./fixture-pesca-legado").activar(ctx);
 ctx.toast = () => {}; ctx.log = () => {}; ctx.celebrate = () => {};
 vm.runInContext("celebrate = window.celebrate;", ctx);
 const DEF = g("NASA_DEF"), ORDEN = g("NASA_ORDER"), TABLA = g("NASA_TABLA"), CEBO = g("PESCA_V4_NASA_CEBO");

@@ -8,6 +8,7 @@ const fs = require("fs"), vm = require("vm");
 const ctx = { console: { log(){}, warn(){} }, Math, Date, JSON }; ctx.window = ctx;
 vm.runInNewContext(fs.readFileSync("public/game/config.js", "utf8"), ctx, { filename: "config.js" });
 const G = ctx.GF;
+require("./fixture-pesca-legado").activar(ctx);
 let fallos = 0;
 const ok = (n, c, d) => { if (!c) fallos++; console.log((c ? "  ok   " : "  FALLA") + "  " + n + (d ? "   " + d : "")); };
 

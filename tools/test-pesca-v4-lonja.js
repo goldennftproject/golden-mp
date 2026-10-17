@@ -25,6 +25,7 @@ const { ctx } = require("./arrancar-el-juego.contexto.js").arrancar(RAIZ);
    (escondidos, no borrados). Se prueba con la bandera apagada para custodiar la Lonja completa. */
 vm.runInContext("GF.MVP = 0;", ctx);
 const G = ctx.G, g = (n) => vm.runInContext(n, ctx);
+require("./fixture-pesca-legado").activar(ctx);
 ctx.toast = () => {}; ctx.log = () => {}; ctx.celebrate = () => {};
 vm.runInContext("celebrate = window.celebrate; toast = window.toast; log = window.log;", ctx);
 const PEZ = g("PEZ_DEF"), MAREAS = g("LONJA_MAREAS"), TIENDA = g("LONJA_TIENDA");

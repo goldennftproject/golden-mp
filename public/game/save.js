@@ -522,7 +522,7 @@ function hydrate(d) {
     ? {v:1,actual:Math.max(0,Math.min(100,d.energiaGranja.actual)),at:d.energiaGranja.at} : {v:1,actual:100,at:nowMs()};
   G.artefactos = d.artefactos ? JSON.parse(JSON.stringify(d.artefactos)) : null;
   G.banco = d.banco ? JSON.parse(JSON.stringify(d.banco)) : null;
-  G.espacioV = [1,2,3].includes(d.espacioV) ? d.espacioV :
+  G.espacioV = [1,2,3,4].includes(d.espacioV) ? d.espacioV :
     ((d.expansiones || 0) > 0 || (d.plotsOwned || 3) > 3 || Object.keys(d.layout || {}).length ||
      Object.keys(d.layoutPlots || {}).length || d.layoutPond || Object.keys(d.obras || {}).length ||
      Object.values(d.built || {}).some(Boolean) || (d.decos || []).length || (d.chests || []).length ||
@@ -587,6 +587,7 @@ function hydrate(d) {
   if (d.marea && typeof d.marea === "object") G.marea = d.marea;
   if (d.runaOro && typeof d.runaOro === "object") G.runaOro = d.runaOro;
   if (typeof d.expansiones === "number") G.expansiones = Math.max(0, Math.min(16, d.expansiones));
+  GF.aplicarTerreno(G.expansiones || 0);
   // los buffs traen su propio vencimiento: se descartan los que ya caducaron mientras no estabas
   if (Array.isArray(d.buffs)) G.buffs = d.buffs.filter(b => b && b.until > Date.now());
   if (d.seeds) G.seeds = Object.assign({}, G.seeds, d.seeds);

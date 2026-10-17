@@ -23,6 +23,7 @@ ctx.window = ctx; ctx.globalThis = ctx; ctx.setTimeout = () => 0; vm.createConte
  "tutoRefresh", "tutoCheck", "refreshSeedShop", "refreshHotbar", "refreshForge", "refreshEquip",
  "applyCombatHp", "tutoAviso", "syncCobertizo", "ensureHotbarDefaults"].forEach(f => { ctx[f] = () => {}; });
 vm.runInContext(fs.readFileSync("public/game/config.js", "utf8"), ctx);
+require("./fixture-pesca-legado").activar(ctx);
 vm.runInContext(SRC + "\n;this.X={TOOL_DEF,TOOL_CRAFT,PICK_DEF,KIT_INICIAL,TUTO_STEPS,ARM_DEF,ARMA_ENTRADA," +
   "CROP_DEF,EXCAV_POR_DIA};", ctx);
 const X = ctx.X, G = ctx.G;

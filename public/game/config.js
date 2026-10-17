@@ -424,6 +424,9 @@ var FX_PART_MAX = 40;      // tope de partículas vivas a la vez (cuida el rendi
 //   MVP (P2P sí/no) y va aparte, porque si va abierto el portero de guardado tiene que subir
 //   antes. Apagar la bandera devuelve todo tal cual estaba: no se toca ni un dato guardado.
 GF.MVP = 1;
+// Pausa reversible de la pesca: conservar catálogos, assets, inventarios y progreso.
+GF.PESCA_ACTIVA = false;
+GF.esPescaOculta = id => !GF.PESCA_ACTIVA && ["ov-lonja","ov-lombricario"].includes(id);
 GF.MVP_OCULTOS = ["ov-pass", "ov-misiones", "ov-logros", "ov-album", "ov-clan", "ov-cos", "ov-lb"];
 GF.esOcultoMvp = function (id) { return !!(GF.MVP && GF.MVP_OCULTOS.indexOf(id) >= 0); };
 
@@ -623,7 +626,7 @@ GF.checkLayout = function () {
   const T2 = GF.TILE, W2 = GF.WORLD_W, H2 = GF.WORLD_H, M = T2 * 0.9, R = [];
   GF.WORLD_OBJECTS.forEach(o => { const w = o.w, h = w * 0.9; R.push({ n: o.type, x1: o.cx - w / 2, x2: o.cx + w / 2, y1: o.by - h, y2: o.by }); });
   GF.PLOTS.forEach(p => R.push({ n: "parcela", x1: p.col * T2, x2: (p.col + 1) * T2, y1: p.row * T2, y2: (p.row + 1) * T2 }));
-  R.push({ n: "laguna", x1: GF.POND.col * T2, x2: (GF.POND.col + GF.POND.cols) * T2, y1: GF.POND.row * T2, y2: (GF.POND.row + GF.POND.rows) * T2 });
+  if (GF.PESCA_ACTIVA) R.push({ n: "laguna", x1: GF.POND.col * T2, x2: (GF.POND.col + GF.POND.cols) * T2, y1: GF.POND.row * T2, y2: (GF.POND.row + GF.POND.rows) * T2 });
   const cruza = (a, b) => a.x1 < b.x2 && b.x1 < a.x2 && a.y1 < b.y2 && b.y1 < a.y2;
   const avisos = [];
   GF.WORLD_OBJECTS.forEach(o => {
@@ -731,6 +734,7 @@ GF.rehacerColisiones = function () {
    Es la MISMA regla que ya vale para las parcelas: se ocupa la celda cuando la cosa es tuya.
    Ante la duda, presente — así un fallo acá deja una celda de más, nunca un objeto atravesable. */
 GF.objetoPresente = function (c) {
+  if (!GF.PESCA_ACTIVA && ["lombricario","lonja","boya","fish"].includes(c.tipo)) return false;
   if (typeof G === "undefined" || !G) return true;
   if (typeof produccionNodoPoseido === "function" && G.produccion) {
     const propio = produccionNodoPoseido(c.i);
@@ -781,6 +785,11 @@ GF.generarNodosExpansion = function () {
     const libres = [];
     for (let c = e.c0; c < e.c1; c++) for (let r = e.r0; r < e.r1; r++)
       if (!esCerca(c, r)) libres.push({ c, r, d: Math.abs(c - cx) + Math.abs(r - cy) });
+    // En v4 los nodos son opciones de compra, no regalos colocados. Mantener todos los
+    // índices del contrato aunque una franja estrecha todavía no admita cada opción.
+    if (GF.espacioV === 4 && !libres.length) for (const k of t.mias) {
+      const [c,r]=k.split(',').map(Number);if(!esCerca(c,r))libres.push({c,r,d:Math.abs(c-cx)+Math.abs(r-cy)});
+    }
     libres.sort((a, b) => a.d - b.d || a.c - b.c || a.r - b.r);
     /* 18/8 (dirección): cada expansión sigue trayendo DOS celdas productivas —el total no se
        mueve— pero el reparto cambia: 1 PARCELA + 1 nodo, y el nodo alterna árbol y roca. Antes
@@ -804,7 +813,7 @@ GF.generarNodosExpansion = function () {
     const ocupadas = [arb, roc];   // 24/8: lo que ya está puesto en el bloque — la parcela lo mira
     if (GF.EXP_CON_VETA.indexOf(i + 1) >= 0) {
       const libre = () => libres.find(p => ocupadas.indexOf(p) < 0 &&
-        !(arb && p.c === arb.c + 1 && p.r === arb.r));   // la segunda celda del árbol no cuenta
+        !(arb && p.c === arb.c + 1 && p.r === arb.r)) || (GF.espacioV === 4 ? libres[0] : null);   // la segunda celda del árbol no cuenta
       const vb = libre(); if (vb) ocupadas.push(vb);
       const vo = libre(); if (vo) ocupadas.push(vo);
       if (vb) GF.WORLD_OBJECTS.push(Object.assign(
@@ -819,7 +828,7 @@ GF.generarNodosExpansion = function () {
     if (extra) {
       const SPRITE = { bronce: "node_bronze", hierro: "node_iron", oro: "node_gold" };
       const ve = libres.find(p => ocupadas.indexOf(p) < 0 &&
-        !(arb && p.c === arb.c + 1 && p.r === arb.r));
+        !(arb && p.c === arb.c + 1 && p.r === arb.r)) || (GF.espacioV === 4 ? libres[0] : null);
       if (ve) {
         ocupadas.push(ve);
         GF.WORLD_OBJECTS.push(Object.assign(
@@ -846,21 +855,22 @@ GF.generarNodosExpansion = function () {
 GF.generarNodosExpansion();
 
 // Las granjas anteriores que ya editaron/construyeron conservan su superficie:
-// reducirla por debajo de objetos guardados perdería contenido. Las nuevas usan v3 (9×9).
+// reducirla por debajo de objetos guardados perdería contenido. Las nuevas usan v4 (6×6).
 GF.OBJETOS_ESPACIO_V1 = GF.WORLD_OBJECTS.slice(0, 34).map(o => ({ ...o }));
 GF.configurarEspacio = function (version) {
-  const v = version === 1 ? 1 : version === 2 ? 2 : 3;
+  const v = [1,2,3,4].includes(version) ? version : 3;
   if (GF.espacioV === v) return;
   GF.espacioV = v;
   GF.BLOQUE = v === 1 ? 5 : 4;
-  GF.COLS_BASE = GF.ROWS_BASE = v === 3 ? 9 : GF.BLOQUE * 3;
+  GF.COLS_BASE = GF.ROWS_BASE = v === 4 ? 6 : v === 3 ? 9 : GF.BLOQUE * 3;
   GF._terrenoCache = {};
   GF.EXPANSIONES.forEach(e => {
     e.c0 = e.bc * GF.BLOQUE; e.r0 = e.br * GF.BLOQUE;
     e.c1 = e.c0 + GF.BLOQUE; e.r1 = e.r0 + GF.BLOQUE;
-    if (v === 3) {
-      const inicio = b => b < 0 ? -4 : b === 3 ? 9 : b * 3;
-      const largo = b => b < 0 || b === 3 ? 4 : 3;
+    if (v >= 3) {
+      const cortes = v === 4 ? [0,3,5,6] : [0,3,6,9], base = cortes[3];
+      const inicio = b => b < 0 ? -4 : b === 3 ? base : cortes[b];
+      const largo = b => b < 0 || b === 3 ? 4 : cortes[b+1]-cortes[b];
       e.c0 = inicio(e.bc); e.r0 = inicio(e.br);
       e.c1 = e.c0 + largo(e.bc); e.r1 = e.r0 + largo(e.br);
     }
@@ -882,7 +892,8 @@ GF.configurarEspacio = function (version) {
         0:[6,4],3:[7,5],10:[3,2],11:[4,4],18:[4,5],
         20:[6,2],21:[7,2],22:[2,2],31:[5,7],32:[6,7],33:[5,8]
       };
-      const [col,br] = v === 3
+      const seis = {0:[1,3],1:[-3,2],2:[-1,2],3:[3,3],4:[-3,2],5:[-3,2],6:[-2,2],7:[0,2],8:[-3,3],9:[-2,3],10:[1,2],11:[1,4],13:[-3,4],14:[-1,4],18:[3,4],19:[-1,2],20:[4,3],21:[4,2],22:[4,4],24:[-3,6]};
+      const [col,br] = v === 4 ? (seis[i] || [1,2]) : v === 3
         ? (compactas[i] || [Math.min(posiciones[i][0],8-o.wCells),Math.min(posiciones[i][1],8)])
         : posiciones[i];
       Object.assign(o,{leftCol:col,baseRow:br,cx:(col+o.wCells/2)*T,by:br*T});
@@ -890,6 +901,7 @@ GF.configurarEspacio = function (version) {
   }
   GF.PLOTS_BASE = Array.from({length:12},(_,i)=>({col:1+i%3,row:(v===1?2:3)+Math.floor(i/3)}));
   if (v === 3) GF.PLOTS_BASE = [[1,3],[2,3],[3,3],[1,4],[2,4],[3,4],[1,2],[6,4],[7,4],[5,5],[6,5],[5,6]].map(([col,row])=>({col,row}));
+  if (v === 4) GF.PLOTS_BASE = [[1,4],[2,4],[3,4],[-2,1],[-1,1],[-2,2],[-1,2],[-2,3],[-1,3],[-2,4],[-1,4],[-2,5]].map(([col,row])=>({col,row}));
   GF.PLOTS = GF.PLOTS_BASE.map(p=>({...p}));
   GF.POND_BASE = {col:1,row:v===1?10:v===2?8:5};
   Object.assign(GF.POND,GF.POND_BASE);
@@ -989,6 +1001,7 @@ GF.ocupacion = function () {
   if (GF._ocupMapa && GF._ocupFirma === f) return GF._ocupMapa;
   const T2 = GF.TILE, m = new Map();
   const poner = (c, r, que) => { const k = c + "," + r; if (!m.has(k)) m.set(k, que); };
+  if (GF.espacioV === 4) poner(4,4,{tipo:"portal",ancho:1,leftCol:4,fila:4});
   /* 1) OBJETOS DEL MUNDO — Y LA REGLA SE INVIERTE (20/8, dirección, CUARTO aviso)
      "Son celdas oscuras que arriba de ellas no tienen ningún objeto."
      Llevo tres arreglos y sigue pasando, así que el problema no es cuál de las causas encontré:
@@ -1047,7 +1060,7 @@ GF.ocupacion = function () {
      fantasma del guardado: está viendo una laguna cuadrada que nadie dibujó nunca.
      Una celda es agua si su CENTRO está dentro de la misma elipse que usa blockedAt. Un solo
      criterio para las dos preguntas, que es de lo que se trataba el mapa de ocupación. */
-  { const p = GF.POND;
+  if (GF.PESCA_ACTIVA) { const p = GF.POND;
     const ex = (p.col + p.cols / 2) * T2, ey = (p.row + p.rows / 2) * T2;
     const rx = p.cols * T2 / 2, ry = p.rows * T2 / 2;
     for (let c = p.col; c < p.col + p.cols; c++) for (let r = p.row; r < p.row + p.rows; r++) {
@@ -1080,7 +1093,7 @@ GF.blockedAt = function(x, y, pad){
   const p = GF.POND, px = p.col*T, py = p.row*T, pw = p.cols*T, ph = p.rows*T;
   const ex = px + pw/2, ey = py + ph/2;
   const dxp = (x-ex)/(pw/2 + pad), dyp = (y-ey)/(ph/2 + pad);
-  if (dxp*dxp + dyp*dyp < 1) return true;
+  if (GF.PESCA_ACTIVA && dxp*dxp + dyp*dyp < 1) return true;
   // rectángulos (no elipses): el borde es predecible y no se cuela por las esquinas
   for (const c of GF.COLLISIONS){
     if (x > c.cx - c.hw - pad && x < c.cx + c.hw + pad &&

@@ -14,6 +14,7 @@ vm.runInNewContext(fs.readFileSync("public/game/state.js", "utf8") +
   "\n;window.__X={G,expansionSiguiente,expansionComprar,EXPANSION_MAX,FARM_EXPANSION};",
   ctx, { filename: "state.js" });
 const X = ctx.__X, G = X.G, GF = ctx.GF;
+require("./fixture-pesca-legado").activar(ctx);
 let fallos = 0;
 const ok = (n, c, d) => { if (!c) fallos++; console.log((c ? "  ok   " : "  FALLA") + "  " + n + (d ? "   " + d : "")); };
 

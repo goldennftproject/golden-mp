@@ -71,6 +71,7 @@ ctx.Phaser.Geom.Rectangle.Contains = (b, x, y) => x >= b.x && x <= b.x + b.width
 vm.createContext(ctx);
 ["config", "nav", "state", "farm"].forEach(f => vm.runInContext(fs.readFileSync("public/game/" + f + ".js", "utf8"), ctx));
 vm.runInContext("this.FarmScene = FarmScene;", ctx);
+require("./fixture-pesca-legado").activar(ctx);
 ["isOpen", "refreshInv", "syncSlots", "toast", "log", "refreshHud", "saveFarm", "celebrate", "sfx",
  "tutoRefresh", "tutoCheck", "refreshSeedShop", "refreshHotbar", "tutoSync", "syncCobertizo",
  "alimentarAnimal", "showSeedWheel"].forEach(f => { ctx[f] = () => {}; });

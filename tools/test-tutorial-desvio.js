@@ -18,6 +18,7 @@ vm.runInContext(fs.readFileSync("public/game/config.js", "utf8"), ctx);
 vm.runInContext(fs.readFileSync("public/game/state.js", "utf8") +
   "\n;this.X={TUTO_STEPS,TUTO_CAPS,EXCAV_POR_DIA,BUILD_DEF,XP_PEZ,CROP_DEF};", ctx);
 const X = ctx.X, G = ctx.G;
+require("./fixture-pesca-legado").activar(ctx);
 let fallos = 0;
 const ok = (n, c, d) => { if (!c) fallos++; console.log((c ? "  ok   " : "  FALLA") + "  " + n + (d ? "   " + d : "")); };
 

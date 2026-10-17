@@ -2,6 +2,7 @@
 const assert=require('node:assert/strict'),path=require('node:path'),vm=require('node:vm'),fs=require('node:fs');
 const {JSDOM}=require('jsdom');
 const repo=path.resolve(__dirname,'..'),{ctx}=require('./arrancar-el-juego.contexto').arrancar(repo),run=s=>vm.runInContext(s,ctx);
+require("./fixture-pesca-legado").activar(ctx);
 let clock=1800000000000;ctx.nowMs=()=>clock;ctx.saveFarm=()=>{};ctx.toast=()=>{};ctx.log=()=>{};ctx.celebrate=()=>{};ctx.refreshHud=()=>{};ctx.isOpen=()=>false;ctx.reiniciarGranjaSuave=()=>{};
 const clone=x=>JSON.parse(JSON.stringify(x));
 function reset(){ctx.estadoDeCero();ctx.GF.scene='farm';ctx.GF.aplicarTerreno(0);ctx.farmScene=null;}

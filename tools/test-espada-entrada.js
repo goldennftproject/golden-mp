@@ -22,6 +22,7 @@ vm.runInContext(fs.readFileSync("public/game/state.js", "utf8") +
    pantalla: se le presta un document mínimo para poder medir la LÓGICA de la compra. */
 ctx.document = { getElementById: () => null, querySelector: () => null, querySelectorAll: () => [] };
 const X = ctx.X, G = ctx.G, UI = fs.readFileSync("public/game/ui.js", "utf8");
+require("./fixture-pesca-legado").activar(ctx);
 let fallos = 0;
 const ok = (n, c, d) => { if (!c) fallos++; console.log((c ? "  ok   " : "  FALLA") + "  " + n + (d ? "   " + d : "")); };
 

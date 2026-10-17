@@ -45,6 +45,14 @@ El inicio nuevo usa 9×9 celdas totales; el borde deja 7×7 interiores. Las diec
 expansiones se ajustan para encajar. Las partidas existentes conservan su geometría guardada
 para no recortar objetos ni perder progreso.
 
+### Actualización de dirección — 17/10/2026
+
+> « Sí, haz la granja de 6x6 y desactiva la pesca por ahora, pero conserva todo para recuperarla más adelante. Revisa bien que entre todo y que las expansiones encajen. »
+
+El inicio nuevo sustituye 9×9 por 6×6 totales, con 4×4 interiores (espacioV:4).
+Las partidas existentes conservan su versión. La pesca queda pausada mediante bandera,
+sin borrar catálogos, arte, equipo, peces ni progreso. Las dieciséis expansiones se conservan.
+
 > « Cuando digo genera plata, me refiero a que generan el signo de pesos, bueno, de dólar, golden, la moneda premium sería. »
 > « Claro, corregilo y movelo a otro lugar. »
 

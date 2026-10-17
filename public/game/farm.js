@@ -82,6 +82,7 @@ class FarmScene extends Phaser.Scene {
     this.dibujarCesped();      // 18/8: extraído a método para poder rehacerlo al expandir
     this.dibujarDecosCesped();
     const p = GF.POND, pcx = (p.col + p.cols / 2) * T, pcy = (p.row + p.rows / 2) * T, pw = p.cols * T, ph = p.rows * T;
+    if (GF.PESCA_ACTIVA) {
     if (this.textures.exists("pond")) {
       // 17/8 (dirección: "el corte en la laguna"). Estaba estirada a la caja de celdas sin mirar
       // su proporción: el sprite es 107x93 (1,15) y la caja 178x136 (1,31), o sea un 14% de
@@ -124,6 +125,7 @@ class FarmScene extends Phaser.Scene {
       g.fillStyle(0x2f5f8c, 1).fillEllipse(pcx, pcy, pw, ph);
       g.fillStyle(0x66a9dc, 1).fillEllipse(pcx, pcy - 6, pw - 26, ph - 26);
     }
+    }
     this.plotGrounds = [];
     if (this.textures.exists("plot")) {   // sprite de parcela de PixelLab; si falta, cae al dibujo
       GF.PLOTS.forEach(pl => this.plotGrounds.push(this.add.image((pl.col + 0.5) * T, (pl.row + 0.5) * T, "plot").setDisplaySize(T, T).setDepth(-998)));
@@ -133,7 +135,7 @@ class FarmScene extends Phaser.Scene {
 
     // viernes (2): movimiento del agua — ondas elípticas que se expanden y destellos que titilan
     this.pondWaves = [];
-    {
+    if (GF.PESCA_ACTIVA) {
       const pd = GF.POND;
       const rx = () => (pd.col + 0.55 + Math.random() * (pd.cols - 1.1)) * T;
       const ry = () => (pd.row + 0.55 + Math.random() * (pd.rows - 1.1)) * T;
@@ -160,7 +162,7 @@ class FarmScene extends Phaser.Scene {
     // pececitos nadando en la laguna (sprites cozy; si faltan, emoji)
     this.pondFish = [];
     const FISH_SIZES = [[15, 11], [20, 15], [12, 9]];   // cada pez de un tamaño distinto
-    ["fish_comun", "fish_raro", "fish_comun"].forEach((fk, fi) => {
+    (GF.PESCA_ACTIVA ? ["fish_comun", "fish_raro", "fish_comun"] : []).forEach((fk, fi) => {
       const p0 = this.pondPoint(), sz = FISH_SIZES[fi];
       const s = this.textures.exists(fk)
         ? this.add.image(p0.x, p0.y, fk).setDisplaySize(sz[0], sz[1]).setOrigin(0.5).setDepth(-990).setAlpha(0.9)
@@ -267,7 +269,7 @@ class FarmScene extends Phaser.Scene {
       /* LA BOYA DE TROFEOS no está hasta que se compra en la Lonja por 30 Escamas. Se declara
          en el mundo como todo lo demás —así vive en el mismo sitio y no en un caso especial del
          renderizador— y sencillamente no se dibuja hasta entonces. */
-      const sinComprar = o.type === "boya" && !(G.built && G.built.boya_trofeos);
+      const sinComprar = (o.type === "boya" && !(G.built && G.built.boya_trofeos)) || (!GF.PESCA_ACTIVA && ["lombricario","lonja","boya","fish"].includes(o.type));
       if (locked || rocaBloq || sinExpansion || sinComprar) { s.setVisible(false); oculto = true; }
       const rw = (o.type === "ore" || o.type === "rock") ? o.w * (typeof NODO_ESCALA === "number" ? NODO_ESCALA : 0.67)   // 9/8: 0.90 — al 0.67 las pepitas no se leían
         : (o.type === "tree") ? o.w * 0.8                                   // árboles −20%
@@ -346,12 +348,12 @@ class FarmScene extends Phaser.Scene {
       for (let r = GF.R1 - 1; r >= GF.R0; r--)
         for (let c = GF.C1 - 1; c >= GF.C0; c--)
           if (GF.tuyo(c, r, 0)) { pc = c; pr = r; break fuera; }
-      const px = (pc + 1) * T - 90, py = (pr + 1) * T - 52;
+      const px = GF.espacioV === 4 ? 4.5*T : (pc + 1) * T - 90, py = GF.espacioV === 4 ? 5*T : (pr + 1) * T - 52;
       let pspr = null;
       if (this.textures.exists("portal")) {
         // sprite (no imagen) para que el espiral gire 360° en loop; el latido sutil se mantiene
         pspr = this.add.sprite(px, py, "portal").setOrigin(0.5, 1).setDepth(py);
-        pspr.setScale((T * 1.4) / pspr.width);
+        pspr.setScale((T * (GF.espacioV === 4 ? 1 : 1.4)) / pspr.width);
         if (this.anims.exists("portal_spin")) pspr.play("portal_spin");
         this.tweens.add({ targets: pspr, scaleY: pspr.scaleY * 1.02, duration: 1400, yoyo: true, repeat: -1, ease: "Sine.easeInOut" });   // latido sutil del vórtice
       } else {   // respaldo si falta el arte del portal: un arco oscuro dibujado (era un Text vacío)
@@ -2705,6 +2707,7 @@ class FarmScene extends Phaser.Scene {
 
   // distancia normalizada a la laguna (0 centro, 1 borde, >1 afuera)
   pondDist(x, y) {
+    if (!GF.PESCA_ACTIVA) return Infinity;
     const p = GF.POND, T = GF.TILE;
     const ex = (p.col + p.cols / 2) * T, ey = (p.row + p.rows / 2) * T, rx = p.cols * T / 2, ry = p.rows * T / 2;
     const dx = (x - ex) / rx, dy = (y - ey) / ry;

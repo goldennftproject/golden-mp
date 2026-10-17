@@ -47,7 +47,7 @@ function entorno(ancho, abierta) {
     $: id => ({ seedwheel: rueda, pesca4: aparejos })[id] || null,
     toast: t => avisos.push(String(t)),
     pescaV4Pintar: () => { pintados++; }, placePescaAparejosPc: () => { colocados++; },
-    GF: { spr: () => "" }, G: { seeds: { papa: 2 } },
+    GF: { PESCA_ACTIVA:true, spr: () => "" }, G: { seeds: { papa: 2 } },
     CROP_ORDER: ["papa"], CROP_DEF: { papa: { label: "Papa", emoji: "🥔", grow: 10, lvl: 1 } },
     cropUnlocked: () => true, fmtSecs: n => String(n), seedWheelCenterPc: (x, y) => ({ x, y }),
     setTimeout: () => 0,

@@ -26,7 +26,7 @@ console.log("\nEL FOCO NO QUEDA EN EL AGUA CUANDO SE ABRE CON R\n");
   Object.defineProperty(dom.window, "innerWidth", { configurable: true, value: 1280 });
   const ctx = {
     window: dom.window, document: dom.window.document, Array, Object, String, console,
-    GF: {}, $: id => dom.window.document.getElementById(id), hayOvPcAbierto: () => false, toast() {}, placePescaAparejosPc() {}
+    GF: { PESCA_ACTIVA:true }, $: id => dom.window.document.getElementById(id), hayOvPcAbierto: () => false, toast() {}, placePescaAparejosPc() {}
   };
   vm.createContext(ctx);
   vm.runInContext(UI.slice(ini, fin), ctx);

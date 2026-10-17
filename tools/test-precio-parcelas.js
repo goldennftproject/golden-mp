@@ -31,6 +31,7 @@ const avisos = [];
 ctx.toast = t => avisos.push(String(t)); ctx.log = t => avisos.push(String(t));
 ["refreshHud", "saveFarm", "refreshMarket", "refreshCobertizo", "isOpen", "syncEditDeco", "refreshInv", "syncSlots"].forEach(f => { ctx[f] = () => {}; });
 const G = ctx.G;
+require("./fixture-pesca-legado").activar(ctx);
 
 let fallos = 0;
 const ok = (n, c, d) => { if (!c) fallos++; console.log((c ? "  ok   " : "  FALLA") + "  " + n + (d ? "   " + d : "")); };

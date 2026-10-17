@@ -118,6 +118,7 @@ function enfocarOvPc(el) {
   orden.slice(-(OV_FRENTE_MAX - OV_FRENTE_BASE)).forEach((ov, i) => escribirCapaOv(ov, OV_FRENTE_BASE + 1 + i));
 }
 function openOv(id) {
+  if (GF.esPescaOculta && GF.esPescaOculta(id)) { toast("La pesca está pausada para una próxima actualización. Tu progreso se conserva."); return; }
   /* 10/9 — LA PUERTA ÚNICA DEL MVP. Todo panel entra por acá: el menú, los atajos de teclado,
      las cartas del buzón, los botones « Ver el Pase ». Cerrando acá se cierra en todos a la vez,
      que es la única forma de que un panel escondido no se cuele por una puerta que nadie
@@ -1095,6 +1096,7 @@ function pescaEscena() {
 var LANCE_ESPERA = [1.4, 3.0];
 
 function pescaV4Abrir() {
+  if (!GF.PESCA_ACTIVA) { toast("La pesca está pausada; tu equipo y progreso se conservan."); return false; }
   /* el cebo puesto, sea el que sea. Si se acabó se vuelve a la lombriz sin drama y se avisa:
      quedarse sin larvas no puede dejar la laguna inservible. */
   let ceb = ceboPuesto();
@@ -1310,6 +1312,7 @@ function enfocarAparejosPc(el) {
   try { boton.focus({ preventScroll: true }); } catch (e) { boton.focus(); }
 }
 function pescaAparejosAbrir(desdeTeclado) {
+  if (!GF.PESCA_ACTIVA) { toast("La pesca está pausada; tu equipo y progreso se conservan."); return; }
   if (hayOvPcAbierto()) { toast("Cerrá la ventana antes de abrir los aparejos"); return; }
   const el = $("pesca4"); if (!el) return;
   pescaV4Pintar();
@@ -3259,7 +3262,7 @@ function refreshForge() {
      separado y ninguna sabía de la otra.
      Cada fila dice lo que MEJORA y lo que PEAJEA, no cuántos usos trae: las de la v4 no se
      gastan, y « 25 usos » no ayudaba a elegir nada. */
-  if (typeof CANA_V4_ORDER !== "undefined") {
+  if (GF.PESCA_ACTIVA && typeof CANA_V4_ORDER !== "undefined") {
     craft += '<div class="shophead">Cañas de pescar</div>';
     const nvP = (typeof nivelOficio === "function") ? nivelOficio("fishing") : 1;
     const base = CANA_V4_DEF.junco.banda;
@@ -6186,7 +6189,7 @@ function initUI() {
     /* 10/9 — MVP: lo escondido no aparece en el menú. openOv ya lo rechaza si alguien llega por
        otra puerta; esto es para que ni siquiera se vea el botón — un botón que contesta « no
        está » es mejor que uno mudo, pero uno que no existe es mejor que los dos. */
-    if (typeof GF !== "undefined" && GF.esOcultoMvp && GF.esOcultoMvp(b.dataset.panel)) { b.style.display = "none"; return; }
+    if (typeof GF !== "undefined" && ((GF.esOcultoMvp && GF.esOcultoMvp(b.dataset.panel)) || (GF.esPescaOculta && GF.esPescaOculta(b.dataset.panel)))) { b.style.display = "none"; return; }
     b.onclick = () => {
       openOv(b.dataset.panel);
       if (!menuFijo()) { gmenu.classList.add("collapsed"); syncRecientesMenuPc(); sincronizarGuiaMenu(); }

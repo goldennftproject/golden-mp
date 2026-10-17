@@ -32,6 +32,7 @@ const path = require("path"), vm = require("vm");
 const RAIZ = path.join(__dirname, "..");
 const { ctx } = require("./arrancar-el-juego.contexto.js").arrancar(RAIZ);
 const G = ctx.G, g = (n) => vm.runInContext(n, ctx);
+require("./fixture-pesca-legado").activar(ctx);
 ctx.toast = () => {}; ctx.log = () => {}; ctx.celebrate = () => {};
 vm.runInContext("celebrate = window.celebrate; toast = window.toast; log = window.log;", ctx);
 const PEZ = g("PEZ_DEF"), CANAS = g("CANA_V4_DEF"), CO = g("CANA_V4_ORDER");

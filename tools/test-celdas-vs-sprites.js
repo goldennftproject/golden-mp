@@ -51,6 +51,7 @@ ctx.Phaser = { Scene: class {}, Math: { Clamp: (v, a, b) => Math.max(a, Math.min
 vm.createContext(ctx);
 ["config", "nav", "state", "farm"].forEach(f => vm.runInContext(fs.readFileSync("public/game/" + f + ".js", "utf8"), ctx));
 vm.runInContext("this.FarmScene = FarmScene;", ctx);
+require("./fixture-pesca-legado").activar(ctx);
 ["isOpen", "refreshInv", "syncSlots", "toast", "log", "refreshHud", "saveFarm", "celebrate", "sfx",
  "tutoRefresh", "tutoCheck", "refreshSeedShop", "refreshHotbar", "tutoSync", "syncCobertizo"].forEach(f => { ctx[f] = () => {}; });
 const GF = ctx.GF, G = ctx.G, T = GF.TILE;

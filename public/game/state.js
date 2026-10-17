@@ -4,7 +4,7 @@ GF.spr = (k) => "assets/farm/" + k + ".png?a=7";   // ?a=N rompe el caché de lo
 
 // --- estado principal (con algunos recursos de arranque para probar los menús) ---
 const G = {
-  espacioV: 3,                  // 9×9; capacidad productiva independiente, mapas previos conservados
+  espacioV: 4,                  // 6×6; capacidad productiva independiente, mapas previos conservados
   energiaGranja: { v: 1, actual: 100, at: 0 },
   artefactos: null,
   banco: null,
@@ -2390,6 +2390,7 @@ function expansionObraTick() {
 /* entrega de la expansión (lo que hasta el 20/9 hacía expansionComprar justo después de pagar) */
 function expansionEntregar(e) {
   G.expansiones = e.i + 1;
+  GF.aplicarTerreno(G.expansiones);
   if (G.produccion && G.produccion.v === 1) {
     G.expParcelasDadas = G.expansiones;
     if (e.n === 1) G.produccion.vale++;
@@ -2796,7 +2797,7 @@ function produccionComprar(tipo) {
       const lp = G.layout && G.layout[idx];
       const col = lp ? Math.floor(lp.cx / GF.TILE - (o.wCells || 1) / 2) : o.leftCol;
       const row = (lp ? Math.round(lp.by / GF.TILE) : o.baseRow) - 1;
-      for (let c=col;c<col+(o.wCells||1);c++) if (!GF.tuyo(c,row) || GF.celdaOcupada(c,row)) return false;
+      for (let c=col;c<col+(o.wCells||1);c++) if (!GF.tuyo(c,row) || GF.enCerca(c,row) || GF.celdaOcupada(c,row)) return false;
       return true;
     });
     if (i < 0) { toast("No quedan emplazamientos de este tipo en tu terreno. Expandí para abrir más."); return false; }
@@ -3436,7 +3437,22 @@ var FIRST_GROW_N = 3;        // cuántas semillas de arranque tienen ese trato (
 var TUTO_VER = 15;   // v15 (22/9): el primer encargo es una entrega de prueba, siempre posible y señalada
                      // v14 (19/9): tres pasos nuevos — muñeco, incursión y Lonja (los sistemas que nadie presentaba)
                      // v13 (15/8): paso 0 nuevo — el kit de bienvenida se retira del BAÚL
-function tutoActivo() { return G.tuto && !G.tuto.done ? TUTO_STEPS[G.tuto.step] : null; }
+function tutoActivo() {
+  const st = G.tuto && !G.tuto.done ? TUTO_STEPS[G.tuto.step] : null;
+  // Paso contextual sin insertar índices: los tutoriales guardados mantienen su posición.
+  if (st && st.id.startsWith("place_") && G.espacioV === 4 && !tutoCabePlano(st.id.slice(6))) {
+    const e=expansionSiguiente();
+    if(e) return {id:"espacio_inicial",n:1,txt:"Necesitás espacio para el plano: cultivá y reuní los materiales de la expansión " + e.n + " (nivel " + e.nivel + "). Comprala en Mercado → Adornos y esperá a que termine la obra.",target:"market",panel:"ov-market",ui:"#exp-comprar"};
+  }
+  return st;
+}
+function tutoCabePlano(tipo) {
+  if ((G.built && G.built[tipo]) || (G.obras && G.obras[tipo])) return true;
+  const o=GF.WORLD_OBJECTS.find(o=>o.type===tipo);if(!o)return true;
+  const t=GF.terreno(G.expansiones||0);
+  for(const k of t.mias){const [c,r]=k.split(',').map(Number);if(Array.from({length:o.wCells},(_,i)=>!GF.enCerca(c+i,r)&&!GF.celdaOcupada(c+i,r)).every(Boolean))return true;}
+  return false;
+}
 // Los paneles del paso anterior no son el destino del siguiente. Solo se cierran si podemos
 // comprobar que el tutorial avanzó exactamente a ese destino y que el panel sigue abierto.
 function tutoCerrarPanelTrasPaso(panel, siguienteId) {
@@ -3509,6 +3525,7 @@ function tutoMigrar() {
 // se miraba al migrar, así que si construías la Cocina ANTES de que el tutorial la pidiera,
 // después te la pedía igual y no había manera de cumplirla.
 function tutoHecho(st) {
+  if (!GF.PESCA_ACTIVA && ["excavar","fish","lonja"].includes(st.id)) return true;
   {
     let hecho = false;
     if (st.res) hecho = tutoTiene(st) >= tutoNeed(st);
@@ -7692,6 +7709,7 @@ function bagFull(what) { toast("Bolsa llena — no podés " + what); log("No ten
      · log  — mensaje largo para el registro, opcional, cuando el toast se queda corto.           */
 function sinKitTxt(m) { return !G.kitReclamado ? "Tu kit de bienvenida está en el baúl, junto al granero" : m; }
 function puedeAccion(tipo, o, rotulo) {
+  if (tipo === "fish" && !GF.PESCA_ACTIVA) return {ok:false,toast:"La pesca está pausada; tu equipo y progreso se conservan."};
   if (typeof MERCADO_EN_CURSO !== "undefined" && MERCADO_EN_CURSO) return { ok: false, toast: "Esperá la confirmación de la venta" };
   o = o || {};
   produccionVipTick();
@@ -8676,6 +8694,7 @@ function pezSacar(cual, n) {
    Paga pezPrecio(id, kg) SIN ventaMult: el invariante de la lombriz se midió contra ese
    precio pelado, y un multiplicador de nivel acá sería un grifo nuevo sin auditar. */
 function pezVender(clave, n) {
+  if (!GF.PESCA_ACTIVA) return false;
   const t = Math.floor((G.fish || {})[clave] || 0);
   if (t <= 0) { toast("No tenés ese pez"); return 0; }
   n = Math.max(1, Math.min(n || 1, t));
@@ -8930,6 +8949,7 @@ function canaV4Falta(id) {
   return faltan.length ? "te falta " + faltan.join(" y ") : null;
 }
 function canaV4Comprar(id) {
+  if (!GF.PESCA_ACTIVA) { toast("La pesca está pausada; no se compró ninguna caña."); return false; }
   const d = CANA_V4_DEF[id]; if (!d) return false;
   const falta = canaV4Falta(id);
   if (falta) { toast(d.label + ": " + falta); return false; }
@@ -9009,6 +9029,7 @@ function canaReparaPlata(id) {
   return Math.max(1, Math.ceil(canaValorPlata(id) * CANA_REPARA_PCT * falta));
 }
 function canaReparar(id) {
+  if (!GF.PESCA_ACTIVA) return false;
   const d = CANA_V4_DEF[id];
   if (!d || !(G.canas || {})[id]) { toast("No tenés esa caña"); return false; }
   if (!canaSeGasta(id)) { toast("La " + d.label + " no se gasta"); return false; }
@@ -9220,6 +9241,7 @@ function nasaBasura() {
 }
 
 function nasaCalar(id) {
+  if (!GF.PESCA_ACTIVA) return false;
   if (!nasaAbierta(id)) { toast("La " + (NASA_DEF[id] || {}).label + " se abre en Pesca " + (NASA_DEF[id] || {}).lvl); return false; }
   if (nasaLibres() <= 0) { toast("Ya tenés " + nasaCupo() + " nasas caladas — cobrá alguna"); return false; }
   if ((G.res.lombriz || 0) < PESCA_V4_NASA_CEBO) { toast("Una nasa pide " + PESCA_V4_NASA_CEBO + " lombrices (tenés " + Math.floor(G.res.lombriz || 0) + ")"); return false; }
@@ -9239,6 +9261,7 @@ function nasaLista(n) { return nowMs() >= n.listaEn; }
 /* COBRAR. El sorteo se hace ACÁ, al levantarla, y no al calarla: si se decidiera al calar, un
    jugador podría mirar el guardado y saber qué le va a tocar. */
 function nasaCobrar(i) {
+  if (!GF.PESCA_ACTIVA) return false;
   const n = nasas()[i]; if (!n) return null;
   if (!nasaLista(n)) { toast("Todavía no — le faltan " + fmtDur(n.listaEn - nowMs())); return null; }
   const t = NASA_TABLA[n.tipo], d = NASA_DEF[n.tipo];
@@ -9492,6 +9515,7 @@ function hoyClave() { const d = new Date(); return d.getUTCFullYear() + "-" + (d
    las pulseadas a propósito, « lo que se mide es la economía, no la habilidad »—. La pelea nunca
    estuvo en la cuenta. Lo único que sí estaba y se va es la racha, que ya se medía aparte. */
 function lanceSacar(cana, opciones) {
+  if (!GF.PESCA_ACTIVA) return null;
   const o = opciones || {}, e = pescaEstado();
   const banda = o.banda || bandaSortear(cana, o);
   /* LAS ESPECIES QUE ESTA CAÑA ABRE, y no todas las de la banda: es lo único que hace que
@@ -9543,6 +9567,7 @@ function lanceSacar(cana, opciones) {
    Todo lo que un título, un récord, el torneo o una marea de peso puedan preguntar se anota
    acá, y solo acá. (La nasa anota por su lado: su captura es pasiva y no pasa por el carrete.) */
 function capturaAnotar(r) {
+  if (!GF.PESCA_ACTIVA) return false;
   if (!r || !r.id) return;
   const e = pescaEstado();
   if (r.record) { e.records = e.records || {}; e.records[r.id] = Math.max(e.records[r.id] || 0, r.kg); }
@@ -10542,6 +10567,7 @@ function lonjaFalta(escalon) {
   return null;
 }
 function lonjaEntregarEscalon(escalon) {
+  if (!GF.PESCA_ACTIVA) return false;
   const d = LONJA_ESCALON[escalon];
   if (!d) return false;
   const falta = lonjaFalta(escalon);

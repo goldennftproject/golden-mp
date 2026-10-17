@@ -46,6 +46,7 @@ ctx.Phaser = { Scene: class {}, Math: { Clamp: (v, a, b) => Math.max(a, Math.min
 vm.createContext(ctx);
 ["config", "nav", "state", "farm"].forEach(f => vm.runInContext(fs.readFileSync("public/game/" + f + ".js", "utf8"), ctx));
 vm.runInContext("this.FarmScene = FarmScene;", ctx);
+require("./fixture-pesca-legado").activar(ctx);
 /* Se capturan los avisos que ve el jugador: es lo que este test mide. */
 ctx.toast = (t) => avisos.push(String(t));
 ctx.log = (t) => avisos.push("[registro] " + String(t));
