@@ -855,7 +855,7 @@ GF.generarNodosExpansion = function () {
 GF.generarNodosExpansion();
 
 // Las granjas anteriores que ya editaron/construyeron conservan su superficie:
-// reducirla por debajo de objetos guardados perdería contenido. Las nuevas usan v4 (6×6).
+// reducirla por debajo de objetos guardados perdería contenido. Las nuevas vuelven a v3 (9×9).
 GF.OBJETOS_ESPACIO_V1 = GF.WORLD_OBJECTS.slice(0, 34).map(o => ({ ...o }));
 GF.configurarEspacio = function (version) {
   const v = [1,2,3,4].includes(version) ? version : 3;

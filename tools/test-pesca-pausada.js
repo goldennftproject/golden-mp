@@ -1,7 +1,7 @@
 'use strict';
 const assert=require('node:assert/strict'),path=require('node:path'),vm=require('node:vm'),fs=require('node:fs');
 const {ctx}=require('./arrancar-el-juego.contexto').arrancar(path.resolve(__dirname,'..')),run=s=>vm.runInContext(s,ctx),{GF,G}=ctx;
-ctx.estadoDeCero();GF.configurarEspacio(4);GF.aplicarTerreno(0);ctx.toast=()=>{};
+ctx.estadoDeCero();G.espacioV=4;GF.configurarEspacio(4);GF.aplicarTerreno(0);ctx.toast=()=>{}; // conservar también partidas 6×6
 assert.equal(GF.PESCA_ACTIVA,false);assert.equal(GF.esPescaOculta('ov-lonja'),true);
 G.fish={'carpa@1.00':2};G.escamas=7;G.skills.fishing=123;
 G.nasas=[{id:'junco',listaEn:0}];

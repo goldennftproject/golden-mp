@@ -2,7 +2,7 @@
 const assert=require('node:assert/strict'),vm=require('node:vm'),path=require('node:path');
 const {ctx}=require('./arrancar-el-juego.contexto').arrancar(path.resolve(__dirname,'..'));
 const {GF,G}=ctx;
-ctx.estadoDeCero(); assert.equal(G.espacioV,4); GF.configurarEspacio(4); GF.aplicarTerreno(0);
+ctx.estadoDeCero(); assert.equal(G.espacioV,3); G.espacioV=4; GF.configurarEspacio(4); GF.aplicarTerreno(0); // compatibilidad de partidas 6×6 ya guardadas
 assert.equal(GF.COLS_BASE,6);assert.equal(GF.ROWS_BASE,6);
 assert.equal(GF.terreno(0).mias.size,36); assert.equal(GF.terreno(16).mias.size,196);
 assert.equal(ctx.produccionCapacidad(),5); assert.equal(ctx.produccionUsados(),5);

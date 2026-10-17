@@ -53,6 +53,15 @@ El inicio nuevo sustituye 9×9 por 6×6 totales, con 4×4 interiores (espacioV:4
 Las partidas existentes conservan su versión. La pesca queda pausada mediante bandera,
 sin borrar catálogos, arte, equipo, peces ni progreso. Las dieciséis expansiones se conservan.
 
+### Vuelta a las dimensiones anteriores — 17/10/2026
+
+> « vuelve a las dimensiones anterior »
+> Confirmado « si » a « volver al inicio de 9×9, manteniendo la pesca desactivada ».
+
+Se restaura espacioV:3 (9×9) para partidas nuevas, con sus expansiones originales.
+La pesca permanece pausada. Se mantiene compatibilidad con partidas 6×6 ya guardadas,
+sin recolocar objetos, cambiar sus expansiones adquiridas ni resetear progreso.
+
 > « Cuando digo genera plata, me refiero a que generan el signo de pesos, bueno, de dólar, golden, la moneda premium sería. »
 > « Claro, corregilo y movelo a otro lugar. »
 

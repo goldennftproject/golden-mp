@@ -1,0 +1,16 @@
+'use strict';
+const assert=require('node:assert/strict'),path=require('node:path');
+const {ctx}=require('./arrancar-el-juego.contexto').arrancar(path.resolve(__dirname,'..')),{G,GF}=ctx;
+ctx.estadoDeCero();assert.equal(G.espacioV,3);GF.configurarEspacio(G.espacioV);GF.aplicarTerreno(0);
+assert.equal(GF.COLS_BASE,9);assert.equal(GF.ROWS_BASE,9);assert.equal(GF.terreno(0).mias.size,81);
+assert.equal(GF.terreno(16).mias.size,289);assert.equal(GF.PESCA_ACTIVA,false);
+const ocupadas=new Set();const add=(c,r)=>{assert.equal(GF.enCerca(c,r),false);assert.equal(ocupadas.has(c+','+r),false);ocupadas.add(c+','+r);};
+GF.WORLD_OBJECTS.forEach((o,i)=>{if(GF.objetoPresente(GF.COLLISIONS[i]))for(let k=0;k<o.wCells;k++)add(o.leftCol+k,o.baseRow-1);});
+GF.PLOTS.slice(0,3).forEach(p=>add(p.col,p.row));
+assert.equal(ctx.tutoCabePlano('store'),true,'9×9 no fuerza la expansión temprana del inicio compacto');
+const snap=JSON.parse(JSON.stringify(ctx.snapshot()));ctx.hydrate(snap);assert.equal(G.espacioV,3);
+G.espacioV=4;GF.configurarEspacio(4);G.expansiones=3;G.plata=432;G.layout={0:{cx:63,by:126}};
+const seis=JSON.parse(JSON.stringify(ctx.snapshot()));ctx.hydrate(seis);
+assert.equal(G.espacioV,4);assert.equal(GF.COLS_BASE,6);assert.equal(G.expansiones,3);assert.equal(G.plata,432);assert.equal(G.layout[0].cx,63);
+ctx.estadoDeCero();assert.equal(G.espacioV,3,'el siguiente inicio limpio vuelve a 9×9');
+console.log('OK: inicio 9×9 restaurado, 16 expansiones hasta 17×17, elementos sin solapamiento, pesca pausada y partidas 6×6 preservadas.');

@@ -4,7 +4,7 @@ GF.spr = (k) => "assets/farm/" + k + ".png?a=7";   // ?a=N rompe el caché de lo
 
 // --- estado principal (con algunos recursos de arranque para probar los menús) ---
 const G = {
-  espacioV: 4,                  // 6×6; capacidad productiva independiente, mapas previos conservados
+  espacioV: 3,                  // Inicio 9×9 restaurado; partidas de otras versiones conservadas
   energiaGranja: { v: 1, actual: 100, at: 0 },
   artefactos: null,
   banco: null,

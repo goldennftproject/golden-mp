@@ -1,5 +1,6 @@
 {
   "fecha":"2026-10-17",
+  "vigencia":"El usuario pidió volver al inicio 9x9 el mismo día. La geometría 6x6 descrita aquí queda sólo como compatibilidad de partidas ya guardadas. La pesca sigue pausada.",
   "inicio":"espacioV:4; 6x6 totales, 4x4 interiores. Tres parcelas delanteras, árbol, roca, servicios iniciales, muñeco y portal caben sin solapamiento de celdas. Portal ocupa la última celda interior.",
   "expansiones":"Se conservan las 16 y su orden. Los cortes interiores [0,3,5,6] reparten franjas de 3,2,1 celdas, con extensión exterior de 4. Las esquinas son 4x4; el terreno final es 14x14 (196 celdas). Cada etapa suma tierra conectada sin solapar otra expansión ni perder celdas. No usar tres franjas de 2: la primera quedaba sin interior suficiente por la cerca.",
   "capacidad":"Independiente del terreno: inicio 5 productores y +1 por expansión. Los nodos no se regalan físicamente. Los 86 índices del contrato del servidor permanecen estables: no borrar nodos aunque una franja no admita todas las opciones a la vez. La compra exige terreno propio, sin cerca ni ocupación.",
