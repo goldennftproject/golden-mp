@@ -69,6 +69,7 @@ const OV_REFRESH = { "ov-entrenando": () => entrenarSync(), "ov-clan": () => ref
   "ov-forge": () => refreshForge(), "ov-market": () => refreshMarket(), "ov-barn": () => refreshBarn(), "ov-buzon": () => { _bzVista = "sobres"; _bzCartaAbierta = null; refreshBuzon(); }, "ov-paquete": () => refreshPaquete(), "ov-baul": () => refreshBaul(), "ov-pedidos": () => { _pdVista = "pedidos"; refreshPedidos(); }, "ov-expandir": () => refreshExpandir(),
   "ov-reliquias": () => refreshArtefactos(),
   "ov-visitas": () => refreshVisitas(),
+  "ov-vip": () => refreshVip(),
   "ov-banco": () => refreshBanco(),
   "ov-cocina": () => refreshCooking(),
   "ov-horno": () => refreshHorno(),
@@ -2606,8 +2607,30 @@ function refreshBanco(cotizar=true){
   };
   bancoActualizarPrevia();if(cotizar)bancoCotizar();
 }
+function refreshVip() {
+  const box=$('vip-info');if(!box)return;
+  const activo=vipVigente(),precio=PRODUCCION_VIP_PRECIO;
+  const filas=[
+    ['Energía de granja','50','100'],
+    ['Cocina, nodos y expansiones','Tiempo normal','10% menos de tiempo'],
+    ['Capacidad productiva','Capacidad base + expansiones','25% extra (mínimo 2 cupos)'],
+    ['Fabricación','De a uno','En lotes'],
+    ['Publicaciones P2P','Una por día UTC','Sin límite diario'],
+    ['Comisión P2P nueva','10%','7%'],
+    ['Objetos de Granja','Un objeto activo','Sin límite; admite duplicados'],
+    ['Visitas y semillas','No incluidas','Resumen de granjas; hasta 3 semillas/día']
+  ];
+  box.innerHTML='<p class="sub">Una sola membresía para todos los beneficios. No hay VIP separados por actividad.</p>'+
+    '<p class="sub">'+(activo?'VIP activo hasta '+escapeHtml(new Date(G.produccion.vipHasta).toLocaleString('es-UY')):'Estado: Free · VIP por '+precio+' Golden durante 30 días')+'</p>'+
+    '<p>Tu saldo: '+fmtGolden(G.golden)+' Golden</p><button class="green" id="vip-comprar" '+(activo||G.golden<precio?'disabled':'')+'>'+(activo?'VIP activo':'Comprar VIP · '+precio+' Golden · 30 días')+'</button>'+
+    (!activo&&G.golden<precio?'<p class="sub">Necesitás '+precio+' Golden para activar la membresía.</p>':'')+
+    '<div style="overflow-x:auto;margin-top:12px"><table style="width:100%;border-collapse:collapse;text-align:left"><thead><tr><th scope="col">Beneficio</th><th scope="col">Free</th><th scope="col">VIP</th></tr></thead><tbody>'+filas.map(f=>'<tr>'+f.map(c=>'<td style="padding:8px 5px;border-top:1px solid #ffffff33">'+escapeHtml(c)+'</td>').join('')+'</tr>').join('')+'</tbody></table></div>'+
+    '<p class="sub">La energía se recupera en 4 horas. El combate no cambia. Los nodos adicionales se compran aparte. Al vencer, conservás los Objetos de Granja comprados y sus cobros; la producción que exceda la capacidad Free se pausa, sin borrar nada.</p>'+
+    '<p class="sub">El pase está desactivado. Depósitos y retiros USDT desactivados: esta compra utiliza únicamente tu Golden del juego.</p>';
+  $('vip-comprar').onclick=confirmarCompraVip;
+}
 function confirmarCompraVip() {
-  askConfirm('¿Gastar ' + PRODUCCION_VIP_PRECIO + ' $Golden para activar el VIP por 30 días, con +25% de capacidad (mínimo dos cupos)? ' + produccionVipPaseTexto() + ' Los nodos adicionales se compran por separado.', () => passBuyVip(), {title:'VIP · 30 días',yes:'Comprar VIP',yesClass:'green',no:'Cancelar'});
+  askConfirm('¿Gastar ' + PRODUCCION_VIP_PRECIO + ' $Golden para activar el VIP por 30 días, con +25% de capacidad (mínimo dos cupos)? ' + produccionVipPaseTexto() + ' Los nodos adicionales se compran por separado.', () => {const r=passBuyVip();if(isOpen('ov-vip'))refreshVip();return r;}, {title:'VIP · 30 días',yes:'Comprar VIP',yesClass:'green',no:'Cancelar'});
 }
 // el contadorcito del menú, sin abrir el panel (lo llaman el baúl, el nivel y la expansión)
 function syncCobertizo() {
