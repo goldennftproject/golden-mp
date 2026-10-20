@@ -1759,7 +1759,7 @@ function refreshExpandir() {
   }
   if (tit) tit.textContent = "Expansión " + ex.n + " de " + EXPANSION_MAX;
   if (sub) sub.textContent = "El terreno crece " + ((ex.bloque.c1-ex.bloque.c0)*(ex.bloque.r1-ex.bloque.r0)) + " celdas" +
-    (G.produccion && G.produccion.v === 1 ? " y permite 1 productor activo más (parcela, árbol, roca o veta). Necesitás comprarlo y encontrarle espacio; los nodos se compran aparte en el Cobertizo." : " y destapa lo que hay debajo.");
+    (G.produccion && G.produccion.v === 1 ? " y suma 1 cupo productivo + 1 nodo básico gratuito a elección: árbol, roca o parcela. Elegilo en el Cobertizo al terminar la obra. Necesita espacio físico; las vetas avanzadas se compran aparte." : " y destapa lo que hay debajo.");
   /* 20/9: en obra. Ya se pagó; lo único que falta es tiempo, y el panel lo dice con el reloj */
   const obra = (typeof expansionObra === "function") ? expansionObra() : null;
   if (obra) {
@@ -2524,8 +2524,8 @@ function refreshProduccionGranja() {
   h += '<div class="row"><span>' + (vipGranja ? 'VIP · +' + produccionVipCupos() + ' cupos · hasta ' + new Date(G.produccion.vipHasta).toLocaleString('es-UY') : 'Free · VIP: +25% de capacidad (mínimo 2 cupos) durante 30 días') + '</span>' +
     '<button class="green sm" id="prod-vip-comprar" ' + (vipGranja || G.golden < PRODUCCION_VIP_PRECIO ? 'disabled' : '') + '>' + (vipGranja ? 'VIP activo' : 'Comprar · ' + PRODUCCION_VIP_PRECIO + ' $Golden') + '</button></div>' +
     '<p class="sub">Un solo VIP. ' + produccionVipPaseTexto() + ' Al vencer se pausan las últimas producciones activadas que excedan la capacidad Free, sin borrar nada. Sin cobro externo ni canje por USDT.</p>';
-  if (G.produccion.vale) h += '<p class="verde">Tu primera expansión incluye un nodo básico a elección.</p>';
-  h += '<details><summary>Comprar producción · elegir especialidad</summary><div class="fbtns">';
+  if (G.produccion.vale) h += '<p class="verde">Tenés '+G.produccion.vale+' vale(s) de expansión: cada uno permite elegir gratis un árbol, una roca o una parcela. Elegir una opción consume un vale; las otras no se entregan automáticamente.</p>';
+  h += '<details><summary>'+(G.produccion.vale?'Elegir nodo gratuito · árbol, roca o parcela':'Comprar producción · elegir especialidad')+'</summary><div class="fbtns">';
   const tipos = { plot: ["Parcela", 20, 1], tree: ["Árbol", 30, 1], rock: ["Roca", 30, 1], bronce: ["Bronce", 180, 3], hierro: ["Hierro", 300, 6], oro: ["Oro", 500, 9], diamante: ["Diamante", 900, 13], netherita: ["Netherita", 1400, 17] };
   for (const k in tipos) {
     const d = tipos[k], gratis = G.produccion.vale && ["plot", "tree", "rock"].includes(k);
@@ -2537,7 +2537,7 @@ function refreshProduccionGranja() {
     h += '<div class="row" style="justify-content:space-between;margin:6px 0"><span>' + escapeHtml(o.label) + (pausa ? ' · pausada' : ' · activa') + '</span><button class="ghost sm" data-prod-pause="' + produccionClave(o) + '" ' + (pausa && !libres ? 'disabled' : '') + '>' + (pausa ? 'Reactivar' : 'Pausar') + '</button></div>';
   }
   cont.innerHTML = h + '</div></details><hr>';
-  Array.from(cont.querySelectorAll("details")).forEach((d, i) => d.open = !!abiertos[i]);
+  Array.from(cont.querySelectorAll("details")).forEach((d, i) => d.open = !!abiertos[i] || (i===0 && G.produccion.vale>0));
   cont.querySelectorAll("[data-prod-buy]").forEach(b => b.onclick = () => produccionComprar(b.dataset.prodBuy));
   cont.querySelectorAll("[data-prod-pause]").forEach(b => b.onclick = () => produccionAlternar(b.dataset.prodPause));
   const comprarVip = $("prod-vip-comprar");

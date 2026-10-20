@@ -59,7 +59,7 @@ console.log("\nEL NODO EXTRA SE PAGA: una celda productiva más en la escalera d
   ok("la 12 cuesta más que la 11, la 14 más que la 13 — la escalera sigue subiendo",
     plataDe(costos[11]) > plataDe(costos[10]) && plataDe(costos[13]) > plataDe(costos[12]));
   ok("el cartel moderno anuncia capacidad y no minerales gratuitos",
-    [12,15,13].every(n=>ctx.expansionTrae(n).length===1 && ctx.expansionTrae(n)[0].k==='capacidad'),
+    [12,15,13].every(n=>ctx.expansionTrae(n).length===2 && ctx.expansionTrae(n)[0].k==='capacidad' && /gratuito a elección/.test(ctx.expansionTrae(n)[1].txt)),
     ctx.expansionTraeTxt(12));
 }
 

@@ -1,5 +1,13 @@
 # Las leyes de Golden Farm
 
+## Nodo a elección en cada expansión — 20/10/2026
+
+Dirección aprobó «cada expansión dará terreno + un cupo productivo + un nodo básico gratuito a elección entre árbol, roca o parcela»: «Claro que permite elegir qué obtener» y «Bien, perfecto, así me gusta. Hazlo así a ver si le gusta al diseñador».
+
+Cada obra terminada entrega un vale acumulable, no un nodo asignado automáticamente. Se elige en el Cobertizo y consume un vale; el nodo requiere cupo y emplazamiento disponible. Las vetas avanzadas no se incluyen. No cambia el tamaño, precio ni duración de la expansión.
+
+Las partidas con capacidad productiva del sistema anterior reciben una sola vez los vales omitidos desde la segunda expansión (expansiones previas menos una), conservando el saldo no usado de la primera. La marca `produccion.valesV:2` hace la compensación idempotente y el servidor impide regresarla. Las partidas del sistema histórico que ya entregaba nodos automáticamente conservan esos nodos sin duplicar regalos.
+
 ## Actualización autorizada — VIP / Free (20/10/2026)
 
 Dirección, tras entregar `vip y free.docx`: «Tú avanza con todo y luego ya vemos qué modificar. […] la estamina […] se refiere a la energía de la granja, no […] del combate».

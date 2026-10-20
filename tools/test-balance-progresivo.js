@@ -25,6 +25,6 @@ assert.equal(check(prev,next).length,0,'compra al nuevo precio aceptada');
 const cheap=structuredClone(next);cheap.plata=prev.plata;
 assert.ok(check(prev,cheap).some(s=>s.includes('fondos')),'obra avanzada sin gasto supera incluso el margen heurístico');
 const paid=structuredClone(prev);paid.expObra={n:16,desde:now-16*600000-1,hasta:now-1};
-const done=structuredClone(paid);done.expansiones=16;done.expObra=null;
+const done=structuredClone(paid);done.expansiones=16;done.expObra=null;done.produccion.vale++;
 assert.equal(check(paid,done).length,0,'obra anterior ya pagada termina sin recobro');
 console.log('OK: precios convexos, arranque intacto, VIP 10/30 días, servidor alineado y progreso conservado');

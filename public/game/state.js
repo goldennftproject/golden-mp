@@ -12,7 +12,7 @@ const G = {
   hp: 100, hpMax: 100, swordOwned: false, bowOwned: false, swordWoodOwned: false, firstCropDone: false,   // combate (Fase D)
   armasUnlocked: false,          // viernes (2): la pestana Armas de la Herreria se paga (20 madera + 20 piedra + 1000 plata)
   treesOpen: [0], rocksOpen: [0],  // economía gradual: los otros nodos se eligen, no nacen todos activos
-  produccion: { v: 1, base: 5, nodos: {}, pausas: {}, vale: 0, vipHasta: 0, vipAplicado: false, vipUnico: 1, orden: [] },
+  produccion: { v: 1, base: 5, nodos: {}, pausas: {}, vale: 0, valesV: 2, vipHasta: 0, vipAplicado: false, vipUnico: 1, orden: [] },
   gear: { casco: null, armadura: null, botas: null, escudo: null, arma: null, municion: false },
   weapons: {},                   // doc 2/8: armas nuevas — id ("espada_madera") -> { dur }
   stam: null, stamAcc: 0, stamFullAt: 0, stamLastAt: 0, stamRec: null, // regeneración continua con reloj persistente
@@ -2328,7 +2328,7 @@ function expNodoExtra(n) { return (GF.EXP_NODOS_EXTRA || {})[n] || null; }
    Ahora el cartel se deriva de la misma lista que pone las vetas en el mundo y que las cobra en
    el precio: si mañana la 18 lleva veta, el cartel lo dice sin que nadie lo escriba. */
 function expansionTrae(n) {
-  if (G.produccion && G.produccion.v === 1) return [{ k: "capacidad", txt: "capacidad de producción" }].concat(n === 1 ? [{ k: "parcela", txt: "nodo básico a elección" }] : []);
+  if (G.produccion && G.produccion.v === 1) return [{ k: "capacidad", txt: "capacidad de producción" }, { k: "parcela", txt: "nodo básico gratuito a elección" }];
   const out = [{ k: "parcela", txt: "parcela" }, { k: "arbol", txt: "árbol" }, { k: "roca", txt: "roca" }];
   if (expVetas(n)) { out.push({ k: "bronce", txt: "veta de bronce" }); out.push({ k: "oro", txt: "veta de oro" }); }
   const ex = expNodoExtra(n);
@@ -2402,11 +2402,13 @@ function expansionObraTick() {
 }
 /* entrega de la expansión (lo que hasta el 20/9 hacía expansionComprar justo después de pagar) */
 function expansionEntregar(e) {
+  if (!e || e.i !== (G.expansiones || 0)) return false;
+  if (G.produccion) produccionMigrar();
   G.expansiones = e.i + 1;
   GF.aplicarTerreno(G.expansiones);
   if (G.produccion && G.produccion.v === 1) {
     G.expParcelasDadas = G.expansiones;
-    if (e.n === 1) G.produccion.vale++;
+    G.produccion.vale++;
   }
   const superficie = (e.bloque.c1-e.bloque.c0)*(e.bloque.r1-e.bloque.r0);
   log("¡Expansión " + e.n + " de " + EXPANSION_MAX + "! La granja creció " + superficie + " celdas.", "gold");
@@ -2424,9 +2426,9 @@ function expansionEntregar(e) {
      rematarla. */
   if (typeof closeOv === "function") { closeOv("ov-market"); closeOv("ov-deco"); }
   const festejar = () => {
-    toast("¡La granja creció!");
+    toast(G.produccion ? "¡La granja creció! Elegí tu nodo gratuito en el Cobertizo." : "¡La granja creció!");
     if (window.celebrate) celebrate({ title: "¡GRANJA MÁS GRANDE!", sub: "Expansión " + e.n + " de " + EXPANSION_MAX,
-      big: true, reward: superficie + " celdas nuevas" });
+      big: true, reward: superficie + " celdas nuevas" + (G.produccion ? " · +1 cupo · +1 nodo a elección en el Cobertizo" : "") });
   };
   /* 19/8 (dirección): LA PARCELA APARECE DENTRO DEL BLOQUE, no en el baúl. Las tres celdas que
      trae una expansión —árbol, roca y parcela— ahora llegan igual: puestas y a la vista. Antes la
@@ -2752,11 +2754,17 @@ function produccionCapacidad() { return G.produccion ? G.produccion.base + (G.ex
 function produccionUsados() { produccionVipTick(); return produccionItems().filter(o => !produccionPausada(o)).length; }
 function produccionHayCupo() { return !G.produccion || produccionUsados() < produccionCapacidad(); }
 function produccionMigrar() {
-  if (G.produccion) return;
+  if (G.produccion) {
+    if (G.produccion.valesV !== 2) {
+      G.produccion.vale = Math.min(16,Math.max(0,G.produccion.vale||0)+Math.max(0,(G.expansiones||0)-1));
+      G.produccion.valesV = 2;
+    }
+    return;
+  }
   const nodos = {};
   GF.WORLD_OBJECTS.forEach((o, i) => { if (["tree", "rock", "ore"].includes(o.type) && GF.objetoPresente(GF.COLLISIONS[i])) nodos[i] = true; });
   const usados = (G.plotsOwned || 3) + Object.keys(nodos).length;
-  G.produccion = { v: 1, base: Math.max(5, usados - (G.expansiones || 0)), nodos, pausas: {}, vale: 0, vipHasta: 0, vipAplicado: false, vipUnico: 1, orden: [] };
+  G.produccion = { v: 1, base: Math.max(5, usados - (G.expansiones || 0)), nodos, pausas: {}, vale: 0, valesV: 2, vipHasta: 0, vipAplicado: false, vipUnico: 1, orden: [] };
   // La capacidad adquirida antes del cambio es permanente; una recarga no vuelve a concederla.
 }
 function produccionNodoKey(i) { const o = GF.WORLD_OBJECTS[i]; return o ? o.type + ":" + o.leftCol + "," + o.baseRow : ""; }

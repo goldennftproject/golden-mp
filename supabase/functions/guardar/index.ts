@@ -168,6 +168,8 @@ function protegerEconomia(prev, next, ahora) {
   if (p && !n) errores.push("No se puede eliminar la capacidad registrada");
   if (n) {
     if (n.v!==1 || n.vipUnico!==1) errores.push("Versión de capacidad no autorizada");
+    if(n.vale===undefined)n.vale=0; // Guardados mínimos anteriores: saldo ausente equivale a cero.
+    if(!Number.isSafeInteger(n.vale)||n.vale<0||n.vale>16||(!p&&n.vale!==0)||(n.valesV!==undefined&&n.valesV!==2)||(p?.valesV===2&&n.valesV!==2))errores.push('Versión o saldo de vales no autorizado; recargá el juego');
     if (!prev && num(n.vipHasta) > 0) errores.push("La primera granja no puede crear un VIP gratuito");
     const legados = NODOS_CONTRATO.filter(([i,t,lock,exp])=>exp!=null ? exp<num(antes.expansiones) : t==='tree'||t==='rock' ? (antes[t==='tree'?'treesOpen':'rocksOpen']||[0]).includes(lock) : true).length;
     const base = p ? p.base : prev ? Math.max(5,(num(antes.plotsOwned)||3)+legados-num(antes.expansiones)) : 5;
@@ -191,8 +193,10 @@ function protegerEconomia(prev, next, ahora) {
       } else if (obra && obraN && obraN.hasta!==obra.hasta) errores.push("No se puede adelantar una obra");
       const poseidos = nodosPoseidos(next), viejos = new Set(nodosPoseidos(antes).map(o=>o[0]));
       if (Object.keys(n.nodos||{}).some(k=>!NODOS_CONTRATO.some(o=>o[0]===+k))) errores.push("Nodo inexistente");
-      let gratis = num(p.vale)+(expN>exp && expN===1?1:0)-num(n.vale);
-      if (!Number.isInteger(gratis)||gratis<0||gratis>1) errores.push("Vale de nodo no autorizado");
+      const retro=n.valesV===2&&p.valesV!==2?Math.max(0,exp-1):0;
+      const premio=expN>exp&&(n.valesV===2||expN===1)?1:0;
+      const gratis = num(p.vale)+retro+premio-num(n.vale);
+      if (!Number.isInteger(gratis)||gratis<0||gratis>16) errores.push("Vale de nodo no autorizado");
       const nuevos = poseidos.filter(o=>!viejos.has(o[0]));
       const plotNuevos = num(next.plotsOwned)-num(antes.plotsOwned);
       const fichas = Math.max(0,num(next.plotsFicha)-num(antes.plotsFicha));
@@ -205,9 +209,10 @@ function protegerEconomia(prev, next, ahora) {
         gasto += NODO_COMPRA[t][0];
       }
       if (gratis) {
-        if (plotNuevos-fichas>0) gasto-=20;
-        else if (nuevos.some(o=>o[1]==='tree'||o[1]==='rock')) gasto-=30;
-        else errores.push("Vale consumido sin nodo básico");
+        const parcelas=Math.max(0,plotNuevos-fichas),basicos=nuevos.filter(o=>o[1]==='tree'||o[1]==='rock').length;
+        if(gratis>parcelas+basicos)errores.push("Vale consumido sin nodo básico");
+        const gratisParcelas=Math.min(gratis,parcelas);
+        gasto-=gratisParcelas*20+Math.min(Math.max(0,gratis-gratisParcelas),basicos)*30;
       }
       const activos = poseidos.filter(o=>!n.pausas?.['n:'+o[0]]).length+Array.from({length:Math.min(1000,num(next.plotsOwned))},(_,i)=>i).filter(i=>!n.pausas?.['p:'+i]).length;
       if (activos>n.base+expN+(fin>ahora?Math.max(2,Math.ceil((n.base+expN)*.25)):0)) errores.push("Producción activa supera la capacidad");

@@ -31,10 +31,10 @@ const GF = ctx.GF, MAX = g("EXPANSION_MAX");
 let fallos = 0;
 const ok = (n, c, d) => { if (!c) fallos++; console.log((c ? "  ok   " : "  FALLA") + "  " + n + (d ? "   " + d : "")); };
 
-console.log('CONTRATO MODERNO: CAPACIDAD, NO PRODUCCIÓN GRATUITA');
+console.log('CONTRATO MODERNO: CAPACIDAD Y UN NODO GRATUITO A ELECCIÓN');
 for(let n=1;n<=MAX;n++){
  const trae=ctx.expansionTrae(n);
- ok('expansión '+n+': un cupo y sólo la primera una elección',trae[0].k==='capacidad'&&trae.length===(n===1?2:1)&&!trae.some(x=>/veta|árbol|roca/.test(x.txt)));
+ ok('expansión '+n+': un cupo y un nodo gratuito a elección',trae[0].k==='capacidad'&&trae.length===2&&/gratuito a elección/.test(trae[1].txt));
 }
 // La lista física y sus carteles históricos se conservan para la compatibilidad del mundo anterior.
 const contratoProductivo=G.produccion;delete G.produccion;

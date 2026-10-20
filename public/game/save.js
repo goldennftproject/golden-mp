@@ -500,7 +500,7 @@ function hydrate(d) {
   G.produccion = null;
   if (d.produccion && d.produccion.v === 1 && Number.isSafeInteger(d.produccion.base) && d.produccion.base >= 5 && d.produccion.base <= 200) {
     const p = d.produccion;
-    G.produccion = { v: 1, base: p.base, nodos: {}, pausas: {}, vale: Number.isSafeInteger(p.vale) ? Math.max(0, Math.min(1, p.vale)) : 0 };
+    G.produccion = { v: 1, base: p.base, nodos: {}, pausas: {}, vale: Number.isSafeInteger(p.vale) ? Math.max(0, Math.min(16, p.vale)) : 0, valesV:p.valesV===2?2:0 };
     G.produccion.vipHasta = Number.isSafeInteger(p.vipHasta) && p.vipHasta >= 0 ? p.vipHasta : 0;
     G.produccion.vipAplicado = p.vipAplicado === true && G.produccion.vipHasta > 0;
     G.produccion.vipUnico = 1;
