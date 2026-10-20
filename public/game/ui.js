@@ -3278,7 +3278,7 @@ function refreshForge() {
     const costStr = Object.keys(pd.cost).map(k => resIc(k) + " " + pd.cost[k]).join(" · ") + (pd.plata ? " · " + coinIc("plata") + " " + pd.plata : "");
     const afford = canAfford(pd.cost) && (!pd.plata || G.plata >= pd.plata);
     let btns = '<button class="green sm" ' + (afford ? "" : "disabled") + ' data-craft="' + id + '">Craftear</button>'
-      + '<button class="green sm" ' + (afford ? "" : "disabled") + ' data-craft5="' + id + '" title="Craftear 5 de una">×5</button>';
+      + '<button class="green sm" ' + (afford && vipVigente() ? "" : "disabled") + ' data-craft5="' + id + '" title="Fabricar cinco requiere VIP">×5 · VIP</button>';
     if (n > 0 && !isEq) btns += '<button class="ghost sm" data-equip="' + id + '">Equipar</button>';
     craft += '<div class="forge-row ' + (isEq ? "eq" : "") + '"><div class="fic">' + img + '</div><div class="finfo"><div class="fnm">' + pd.label + (isEq ? ' <span class="tag">equipado</span>' : "") + '</div><div class="fds">Mina: ' + mineEmo + ' · 1 uso c/u · tenés ' + n + '</div><div class="fds">Costo: ' + costStr + '</div></div><div class="fbtns">' + btns + "</div></div>";
   });
@@ -3394,7 +3394,7 @@ function refreshForge() {
     });
   }
   const astr = G.armasUnlocked ? Object.keys(ARROW_COST).map(k => resIc(k) + " " + ARROW_COST[k]).join(" · ") : "";
-  if (G.armasUnlocked) armas += '<div class="forge-row"><div class="fic"><img src="' + GF.spr("res_flecha") + '" onerror="this.outerHTML=\'➳\'"></div><div class="finfo"><div class="fnm">Flechas ×10</div><div class="fds">Tenés ' + fmt(G.res.flecha || 0) + ' · Costo: ' + astr + '</div></div><div class="fbtns"><button class="green sm" ' + (canAfford(ARROW_COST) ? "" : "disabled") + ' id="forge-arrows">Craftear</button><button class="green sm" ' + (canAfford(ARROW_COST) ? "" : "disabled") + ' id="forge-arrows5" title="Craftear 50 flechas">×5</button></div></div>';
+  if (G.armasUnlocked) armas += '<div class="forge-row"><div class="fic"><img src="' + GF.spr("res_flecha") + '" onerror="this.outerHTML=\'➳\'"></div><div class="finfo"><div class="fnm">Flechas ×10</div><div class="fds">Tenés ' + fmt(G.res.flecha || 0) + ' · Costo: ' + astr + '</div></div><div class="fbtns"><button class="green sm" ' + (canAfford(ARROW_COST) ? "" : "disabled") + ' id="forge-arrows">Craftear</button><button class="green sm" ' + (canAfford(ARROW_COST) && vipVigente() ? "" : "disabled") + ' id="forge-arrows5" title="Fabricar 50 flechas requiere VIP">×5 · VIP</button></div></div>';
   // cofre depósito: 10 espacios + 1% de materiales por cofre
   G.chests = G.chests || [];
   const chn = G.chests.length, chFull = chn >= CHEST_MAX;
@@ -3561,8 +3561,8 @@ function refreshHorno() {
     const lote = Math.max(0, Math.min(libres, alcanza));
     const puede = lote >= 1;
     let btn = '<button class="green sm" ' + (puede ? "" : "disabled") + ' data-mat="' + id + '">Fundir</button>';
-    if (lote >= 2 && vipVigente()) btn += '<button class="green sm" data-mat5="' + id + '" data-lote="' + lote +
-      '" title="Llenar el horno: ' + lote + ' al fuego de una">×' + lote + '</button>';
+    if (lote >= 2) btn += '<button class="green sm" '+(vipVigente()?'':'disabled')+' data-mat5="' + id + '" data-lote="' + lote +
+      '" title="Llenar el horno: ' + lote + ' al fuego de una; requiere VIP">×' + lote + ' · VIP</button>';
     const porqueNo = libres <= 0 ? " · el horno está lleno" : (alcanza < 1 ? " · te faltan materiales" : "");
     html = '<div class="forge-row"><div class="fic"><img src="' + GF.spr(md.sprite) + '"></div><div class="finfo"><div class="fnm">' + md.label + '</div>' +
       '<div class="fds">Tenés ' + fmt(G.res[id] || 0) + ' · Costo: ' + cs + ' · tarda ' + Math.round(matCdMs(id) / 60000) + ' min' + porqueNo + '</div>' +
@@ -4658,14 +4658,14 @@ function refreshAltar() {
     const c = ALTAR_CRAFT[id];
     const costo = Object.keys(c.cost).map(k => c.cost[k] + " " + (RES_LABEL[k] || k)).join(" + ") + (c.plata ? " + " + c.plata + " plata" : "") + (c.golden ? " + " + c.golden + " $Golden" : "");
     const okC = canAfford(c.cost) && (!c.plata || G.plata >= c.plata) && (!c.golden || G.golden >= c.golden);
-    h += '<div class="forge-row' + (okC ? '' : ' locked') + '"><div class="finfo"><div class="fnm">' + RES_LABEL[id] + ' <span class="fds">(tenés ' + (G.res[id] || 0) + ')</span></div><div class="fds">' + costo + '</div></div><div class="fbtns"><button class="green sm" ' + (okC ? "" : "disabled") + ' data-caltar="' + id + '">Craftear</button><button class="green sm" ' + (okC ? "" : "disabled") + ' data-caltar5="' + id + '" title="Craftear 5">×5</button></div></div>';
+    h += '<div class="forge-row' + (okC ? '' : ' locked') + '"><div class="finfo"><div class="fnm">' + RES_LABEL[id] + ' <span class="fds">(tenés ' + (G.res[id] || 0) + ')</span></div><div class="fds">' + costo + '</div></div><div class="fbtns"><button class="green sm" ' + (okC ? "" : "disabled") + ' data-caltar="' + id + '">Craftear</button><button class="green sm" ' + (okC && vipVigente() ? "" : "disabled") + ' data-caltar5="' + id + '" title="Fabricar cinco requiere VIP">×5 · VIP</button></div></div>';
   }
   // runas de atributo I
   h += '<div class="secc">Craftear runas de atributo (rareza I)</div>';
   h += '<div class="info">Cuestan ' + Object.keys(RUNA_CRAFT.cost).map(k => RUNA_CRAFT.cost[k] + " " + (RES_LABEL[k] || k)).join(" + ") + ' + ' + RUNA_CRAFT.plata + ' plata.</div>';
   const okR = canAfford(RUNA_CRAFT.cost) && G.plata >= RUNA_CRAFT.plata;
   RUNA_ORDER.forEach(t => {
-    h += '<div class="forge-row' + (okR ? '' : ' locked') + '"><div class="finfo"><div class="fnm">' + RUNA_TIPOS[t].label + ' I <span class="fds">(tenés ' + (G.res[runaKey(t, 1)] || 0) + ')</span></div><div class="fds">' + RUNA_TIPOS[t].buff + ': +' + RUNA_TIPOS[t].vals[0] + RUNA_TIPOS[t].uni + ' → +' + RUNA_TIPOS[t].vals[4] + RUNA_TIPOS[t].uni + ' en rareza V</div></div><div class="fbtns"><button class="green sm" ' + (okR ? "" : "disabled") + ' data-cruna="' + t + '">Craftear I</button><button class="green sm" ' + (okR ? "" : "disabled") + ' data-cruna5="' + t + '" title="Craftear 5">×5</button></div></div>';
+    h += '<div class="forge-row' + (okR ? '' : ' locked') + '"><div class="finfo"><div class="fnm">' + RUNA_TIPOS[t].label + ' I <span class="fds">(tenés ' + (G.res[runaKey(t, 1)] || 0) + ')</span></div><div class="fds">' + RUNA_TIPOS[t].buff + ': +' + RUNA_TIPOS[t].vals[0] + RUNA_TIPOS[t].uni + ' → +' + RUNA_TIPOS[t].vals[4] + RUNA_TIPOS[t].uni + ' en rareza V</div></div><div class="fbtns"><button class="green sm" ' + (okR ? "" : "disabled") + ' data-cruna="' + t + '">Craftear I</button><button class="green sm" ' + (okR && vipVigente() ? "" : "disabled") + ' data-cruna5="' + t + '" title="Fabricar cinco requiere VIP">×5 · VIP</button></div></div>';
   });
   // ---- Fusión ----
   let fus = "";
