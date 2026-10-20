@@ -33,6 +33,10 @@ vm.createContext(ctx);
 ["isOpen", "refreshInv", "syncSlots", "toast", "log", "refreshHud", "saveFarm", "celebrate", "sfx",
  "tutoRefresh", "tutoCheck", "refreshSeedShop", "refreshHotbar", "tutoSync", "syncCobertizo", "closeOv"].forEach(f => { if (!ctx[f]) ctx[f] = () => {}; });
 const G = ctx.G, doc = dom.window.document;
+ctx.console.error=console.error;
+ctx.toast=()=>{};
+ctx.diarioSolicitar=async()=>{G.daily={day:1,last:ctx.dayStamp(0)};return {ok:true,cobro:1};};
+(async()=>{
 
 let fallos = 0;
 const ok = (n, c, d) => { if (!c) fallos++; console.log((c ? "  ok   " : "  FALLA") + "  " + n + (d ? "   " + d : "")); };
@@ -58,7 +62,7 @@ console.log("\nSE TOCA EL PAQUETE: EL TEMBLOR, Y AL ABRIR…");
 {
   img.onpointerdown({ preventDefault() {} });
   ok("el toque programó la apertura", timers.length > 0, timers.length + " timer(s)");
-  timers.forEach(fn => fn());   // pasa el temblor: el paquete se abre de verdad (claimDaily corre)
+  for(const fn of timers)await fn(); // El premio sólo se presenta tras confirmación del servidor.
   ok("el premio se cobró", (G.daily.day || 0) >= 1, "día " + G.daily.day);
   ok("el botón APARECE sin entrar al layout: solo cambia visibility",
     btn.style.visibility === "visible" && enLayout(btn) && btn.style.display !== "none",
@@ -86,3 +90,4 @@ console.log("\nY EN NINGÚN ESTADO SE TOCÓ display DEL BOTÓN");
 
 console.log(fallos ? "\n" + fallos + " fallo(s)\n" : "\nTodo en orden: la tarjeta mide lo mismo cerrada, temblando y abierta.\n");
 process.exit(fallos ? 1 : 0);
+})().catch(e=>{console.error(e);process.exit(1);});

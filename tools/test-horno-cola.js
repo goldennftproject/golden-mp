@@ -105,6 +105,7 @@ console.log("\nFUNDIR COBRA Y NO ENTREGA: LA PIEZA VA AL FUEGO");
 console.log("\nEL ×5 ENCOLA DE VERDAD (el bug del botón que no hacía nada)");
 {
   limpio();
+  G.produccion.vipHasta=Date.now()+86400000;
   ctx.craftLote(ctx.craftMat, "tablon", 5);
   ok("puso " + HORNO_SLOTS + " al fuego (los lugares del horno)", ctx.hornoList().length === HORNO_SLOTS,
     ctx.hornoList().length + " piezas");

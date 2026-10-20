@@ -1,5 +1,19 @@
 # Las leyes de Golden Farm
 
+## Actualización autorizada — VIP / Free (20/10/2026)
+
+Dirección, tras entregar `vip y free.docx`: «Tú avanza con todo y luego ya vemos qué modificar. […] la estamina […] se refiere a la energía de la granja, no […] del combate».
+
+Esta autorización incorpora la excepción VIP a los relojes de nodos: Free conserva 30/40 minutos; VIP usa un 90% del tiempo (27/36), también en cocina y obras de expansión. No se reescriben trabajos ya iniciados. La energía de granja es 50 Free / 100 VIP y se regenera en cuatro horas; la de combate no cambia.
+
+Un solo VIP de 30 días, comprado por 10 Golden: fabricación en lotes, publicaciones P2P sin cupo diario, comisión 7% frente a 10% Free y Objetos de Granja repetibles. Free puede publicar una vez por día UTC y comprar un objeto activo. Las compras anteriores conservan producción y cobro al vencer VIP; el límite se aplica a nuevas compras. La comisión se captura al publicar; las publicaciones históricas conservan su 5%.
+
+El pase queda desactivado sin borrar su historial. Recompensas diarias, ciclo de siete días y confirmación del servidor: cultivos 15% más rápidos por una hora; cinco semillas de papa; tres picos de madera; dos papas asadas; dos picos de piedra; cinco semillas de zanahoria; 50 Plata. El descuento de cultivo se fija al sembrar, no altera cultivos en curso.
+
+Decisiones iniciales ajustables: UTC para cupos y premios; cancelar P2P no devuelve el cupo; visitas VIP como resumen de lectura, una semilla de papa por granja y máximo tres al día, sin sustraer recursos al dueño. No se cargan partidas ajenas como propias ni se exponen saldos.
+
+Depósitos y retiros USDT continúan desactivados. La frecuencia futura solicitada es Free una vez por mes / VIP sin límite de frecuencia, nunca sin saldo ni reservas. Esta entrega no habilita pagos reales ni garantiza retorno monetario.
+
 Dictadas por dirección. **No son preferencias ni recomendaciones: son leyes.** No se discuten,
 no se optimizan y no se "mejoran" con buen criterio propio. Si una tarea choca con una de éstas,
 la que cede es la tarea.

@@ -32,7 +32,8 @@ const ARTEFACTOS_PRECIOS = {cobre:10,plata:25,jade:50,oro:100,granero:150,rubi:2
 const ARTEFACTOS_DIAS = 180, ARTEFACTOS_PLATA_POR_GOLDEN_DIA = 87, ENERGIA_GRANJA_MS = 14400000;
 const OBJETOS_PLATA_DESDE = 1792193400000;
 // 0,87 % diario sobre 10.000 Plata/Golden, independiente de la tasa vigente del Banco.
-function objetoPlataDiaria(id){return (ARTEFACTOS_PRECIOS[id]||0)*ARTEFACTOS_PLATA_POR_GOLDEN_DIA;}
+function objetoModelo(id){return String(id).split(':')[0];}
+function objetoPlataDiaria(id){return (ARTEFACTOS_PRECIOS[objetoModelo(id)]||0)*ARTEFACTOS_PLATA_POR_GOLDEN_DIA;}
 function objetoInicioCobro(a){return a.moneda==='plata-v2' ? a.cobrado : Math.max(a.cobrado,OBJETOS_PLATA_DESDE);}
 function objetoCobroListo(a,ahora){return !!a && (Math.min(ahora,a.desde+ARTEFACTOS_DIAS*86400000)-objetoInicioCobro(a)>=86400000 || ahora>=a.desde+ARTEFACTOS_DIAS*86400000);}
 function mismoJSON(a,b) {
@@ -42,12 +43,15 @@ function mismoJSON(a,b) {
   return keys.length===Object.keys(b).length && keys.every(k=>Object.prototype.hasOwnProperty.call(b,k)&&mismoJSON(a[k],b[k]));
 }
 function energiaServidor(d,ahora) {
-  const e=d && d.energiaGranja;
-  if(!e || !Number.isFinite(e.actual) || !Number.isFinite(e.at))return 100;
-  return Math.max(0,Math.min(100,e.actual+Math.max(0,ahora-e.at)*100/ENERGIA_GRANJA_MS));
+  const e=d && d.energiaGranja,fin=num(d && d.produccion && d.produccion.vipHasta);
+  if(!e || !Number.isFinite(e.actual) || !Number.isFinite(e.at))return fin>ahora?100:50;
+  const at=e.at||ahora;let v=Math.max(0,e.actual);
+  if(at<fin)v=Math.min(100,v+Math.max(0,Math.min(ahora,fin)-at)*100/ENERGIA_GRANJA_MS);
+  if(ahora>=fin)v=Math.min(50,v+Math.max(0,ahora-Math.max(at,fin))*50/ENERGIA_GRANJA_MS);
+  return Math.max(0,Math.min(fin>ahora?100:50,v));
 }
 function artefactoCalcular(a,id,ahora) {
-  if(!a || !Object.prototype.hasOwnProperty.call(ARTEFACTOS_PRECIOS,id))return {cobro:0,resto:0,fin:ahora};
+  if(!a || !Object.prototype.hasOwnProperty.call(ARTEFACTOS_PRECIOS,objetoModelo(id)))return {cobro:0,resto:0,fin:ahora};
   const fin=Math.min(ahora,a.desde+ARTEFACTOS_DIAS*86400000);
   const desde=objetoInicioCobro(a);
   const bruto=Math.max(0,Math.min(86400000,fin-desde))*objetoPlataDiaria(id)/86400000+(a.moneda==='plata-v2' ? a.resto||0 : 0);
@@ -55,17 +59,21 @@ function artefactoCalcular(a,id,ahora) {
   return {cobro,resto:Math.max(0,bruto-cobro),fin};
 }
 function artefactoOperacion(prev,accion,id,ahora,op) {
-  if(typeof id!=='string' || !Object.prototype.hasOwnProperty.call(ARTEFACTOS_PRECIOS,id) || !['comprar','cobrar'].includes(accion))return {error:'Objeto u operación inválidos'};
+  if(typeof id!=='string' || !/^[a-z]+(?::[a-zA-Z0-9._-]{1,100})?$/.test(id) || !Object.prototype.hasOwnProperty.call(ARTEFACTOS_PRECIOS,objetoModelo(id)) || !['comprar','cobrar'].includes(accion) || (accion==='comprar' && id.includes(':')))return {error:'Objeto u operación inválidos'};
   const data=JSON.parse(JSON.stringify(prev)), libro=data.artefactos || {v:1,items:{},ops:[]};
   const repetida=(libro.ops||[]).find(o=>o.op===op);
   if(repetida)return repetida.id===id && repetida.accion===accion ? {data,cobro:repetida.cobro,repetido:true} : {error:'Identificador reutilizado para otra operación'};
   const a=libro.items[id], t=artefactoCalcular(a,id,ahora);
   let cobro=0;
   if(accion==='comprar'){
-    if(a && ahora<a.desde+ARTEFACTOS_DIAS*86400000)return {error:'Ya tenés este objeto activo'};
-    if(a && t.cobro>0)return {error:'Cobrá primero la producción pendiente del objeto vencido'};
+    const vip=num(data.produccion && data.produccion.vipHasta)>ahora;
+    const activos=Object.values(libro.items).filter(a=>ahora<a.desde+ARTEFACTOS_DIAS*86400000).length;
+    if(!vip && activos>=1)return {error:'Free admite un Objeto de Granja activo. VIP permite más ejemplares.'};
+    if(!vip && a && t.cobro>0)return {error:'Cobrá primero la producción pendiente del objeto vencido'};
     if(!Number.isFinite(data.golden)||data.golden<ARTEFACTOS_PRECIOS[id])return {error:'No alcanza el $Golden'};
-    data.golden=Math.round((data.golden-ARTEFACTOS_PRECIOS[id])*1e6)/1e6;libro.items[id]={desde:ahora,cobrado:ahora,resto:0,moneda:'plata-v2'};
+    const destino=a && (ahora<a.desde+ARTEFACTOS_DIAS*86400000 || t.cobro>0) ? id+':'+op : id;
+    if(destino!==id && libro.items[destino])return {error:'Este ejemplar ya fue comprado con ese recibo'};
+    data.golden=Math.round((data.golden-ARTEFACTOS_PRECIOS[id])*1e6)/1e6;libro.items[destino]={desde:ahora,cobrado:ahora,resto:0,moneda:'plata-v2'};
   }else{
     if(!a || t.cobro<=0 || !objetoCobroListo(a,ahora))return {error:'La Plata se reclama cada 24 horas'};
     const energia=energiaServidor(data,ahora);
@@ -90,6 +98,37 @@ function bancoOperacion(prev,p,op,tasa){
   data.golden=Math.round((num(data.golden)+p.golden)*1e6)/1e6;
   libro.ops=[...(libro.ops||[]),{op,golden:p.golden,plata,tasa,revision:p.revision}].slice(-20);data.banco=libro;
   return {data,cobro:p.golden};
+}
+function diarioOperacion(prev,ahora,op){
+  const data=JSON.parse(JSON.stringify(prev)),d=data.daily||{day:0,last:'',ops:[]};
+  const recibo=(d.ops||[]).find(r=>r.op===op);if(recibo)return {data,cobro:recibo.day,repetido:true};
+  const hoy=new Date(ahora).toISOString().slice(0,10);
+  if(d.last===hoy)return {error:'Ya reclamaste la recompensa de hoy (UTC)'};
+  const dia=d.day>=7||d.day<1?1:d.day+1;
+  if(dia===1)data.buffCultivoHasta=ahora+3600000;
+  if(dia===2||dia===6){data.seeds={...(data.seeds||{})};const k=dia===2?'papa':'zanahoria';data.seeds[k]=num(data.seeds[k])+5;}
+  if(dia===3||dia===5){const k=dia===3?'wood':'stone';data.picks=data.picks||{};data.picks.owned={...(data.picks.owned||{}),[k]:true};data.picks.dur={...(data.picks.dur||{}),[k]:num(data.picks.dur&&data.picks.dur[k])+(dia===3?3:2)};if(!data.picks.eq)data.picks.eq=k;}
+  if(dia===4)data.dishes={...(data.dishes||{}),papa_asada:num(data.dishes&&data.dishes.papa_asada)+2};
+  if(dia===7)data.plata=num(data.plata)+50;
+  data.daily={day:dia,last:hoy,ops:[...(d.ops||[]),{op,day:dia}].slice(-20)};
+  return {data,cobro:dia};
+}
+function visitaVista(row){
+  const d=row.data||{};
+  return {id:row.user_id,nombre:String(row.name||'Granjero').slice(0,40),nivel:num(d.level),expansiones:num(d.expansiones),
+    parcelas:(Array.isArray(d.plots)?d.plots:[]).slice(0,256).map(p=>({estado:['empty','growing','ready','withered'].includes(p?.state)?p.state:'empty',cultivo:String(p?.cropKey||'').slice(0,32)}))};
+}
+function visitaOperacion(prev,destino,uid,ahora,op){
+  const data=JSON.parse(JSON.stringify(prev)),book=data.visitas||{};
+  const recibo=(book.ops||[]).find(r=>r.op===op);if(recibo)return {data,cobro:1,repetido:true};
+  if(num(data.produccion?.vipHasta)<=ahora)return {error:'Las visitas con semillas requieren VIP activo'};
+  if(destino===uid)return {error:'Elegí otra granja'};
+  const dia=new Date(ahora).toISOString().slice(0,10),ids=book.dia===dia?(book.ids||[]):[];
+  if(ids.includes(destino))return {error:'Ya recogiste una semilla en esta granja hoy'};
+  if(ids.length>=3)return {error:'Máximo tres semillas de visita por día UTC'};
+  data.seeds={...(data.seeds||{}),papa:num(data.seeds?.papa)+1};
+  data.visitas={dia,ids:[...ids,destino],ops:[...(book.ops||[]),{op}].slice(-20)};
+  return {data,cobro:1};
 }
 const VIP_PRECIO = 10, VIP_MS = 30 * 86400000;
 const VIP_REINTEGROS = {3:5,7:5,12:8,15:8,18:8,22:8,25:8,27:10};
@@ -116,6 +155,8 @@ function protegerEconomia(prev, next, ahora) {
   const errores = [], antes = prev || {}, p = antes.produccion, n = next.produccion;
   if(!mismoJSON(antes.artefactos||null,next.artefactos||null))errores.push('Los objetos productores sólo se modifican en el servidor');
   if(!mismoJSON(antes.banco||null,next.banco||null))errores.push('El Banco sólo se modifica en el servidor');
+  if(!mismoJSON(antes.daily||{day:0,last:''},next.daily||{day:0,last:''}) || num(antes.buffCultivoHasta)!==num(next.buffCultivoHasta))errores.push('Las recompensas diarias sólo se reclaman en el servidor');
+  if(!mismoJSON(antes.visitas||{},next.visitas||{}))errores.push('Las semillas de visitas sólo se reclaman en el servidor');
   const energia=next.energiaGranja;
   if(energia && (!Number.isFinite(energia.actual)||energia.actual<0||energia.actual>100||!Number.isFinite(energia.at)))errores.push('Energía de granja inválida');
   next.energiaGranja={v:1,actual:Math.min(energia ? Math.max(0,num(energia.actual)) : energiaServidor(antes,ahora),energiaServidor(antes,ahora)),at:ahora};
@@ -247,7 +288,7 @@ function mercadoPermiso(uid, filas, ack, prev, next) {
   for (const f of (Array.isArray(filas) ? filas : [])) {
     if (!f) continue;
     const mia = f.seller === uid, qty = num(f.qty), esRes = f.kind === "res" && f.item;
-    if (mia && f.paid) nuevo.ventas += num(f.price);
+    if (mia && f.paid) nuevo.ventas += f.fee_pct==null ? num(f.price) : Math.max(1,Math.round(num(f.price)*(1-num(f.fee_pct)/100)));
     if (f.sold_to === uid && !mia && esRes) nuevo.compras[f.item] = num(nuevo.compras[f.item]) + qty;
     if (mia && !f.sold_to && esRes) nuevo.abiertas[f.item] = num(nuevo.abiertas[f.item]) + qty;
   }
@@ -378,8 +419,24 @@ Deno.serve(async (req) => {
       if(!Number.isSafeInteger(tasaBanco)||tasaBanco<1||tasaBanco>1e9)return json({error:'Banco temporalmente no disponible'},503);
       if(body.banco.accion==='cotizar')return json({ok:true,tasa:tasaBanco,revision:'plata-golden:'+tasaBanco,usdt:false});
     }
+    if(body?.visita){
+      if(body.cuenta!==uid)return json({error:'La sesión cambió de cuenta'},409);
+      const {data:propia,error:ep}=await admin.from('farms').select('data').eq('user_id',uid).maybeSingle();
+      if(ep)return json({error:'No se pudo comprobar el VIP'},503);
+      if(num(propia?.data?.produccion?.vipHasta)<=Date.now())return json({error:'Las visitas requieren VIP activo'},403);
+      if(body.visita.accion==='listar'){
+        const {data:lista,error}=await admin.from('farms').select('user_id,name').neq('user_id',uid).order('user_id').limit(30);
+        return error?json({error:'No se pudieron consultar las granjas'},503):json({ok:true,granjas:(lista||[]).map(r=>({id:r.user_id,nombre:String(r.name||'Granjero').slice(0,40)}))});
+      }
+      if(typeof body.visita.destino!=='string'||!/^[0-9a-f-]{36}$/i.test(body.visita.destino)||body.visita.destino===uid)return json({error:'Granja de destino inválida'},400);
+      const {data:destino,error}=await admin.from('farms').select('user_id,name,data').eq('user_id',body.visita.destino).maybeSingle();
+      if(error)return json({error:'No se pudo leer la visita'},503);
+      if(!destino)return json({error:'La granja ya no está disponible'},404);
+      if(body.visita.accion==='ver')return json({ok:true,granja:visitaVista(destino)});
+      if(body.visita.accion!=='semillas')return json({error:'Acción de visita inválida'},400);
+    }
     // Cobros y canjes autoritativos: saldo, reloj, recibo y compare-and-swap en el servidor.
-    if(body?.artefacto || body?.banco){
+    if(body?.artefacto || body?.banco || body?.diario || body?.visita){
       const a=body.artefacto;
       if(body.cuenta!==uid)return json({error:'La sesión cambió de cuenta; recargá antes de operar'},409);
       if(typeof body.op!=='string'||!/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(body.op)||typeof body.base!=='string')return json({error:'Pedido inválido'},400);
@@ -387,7 +444,7 @@ Deno.serve(async (req) => {
       if(err)return json({error:'No se pudo leer la granja'},503);
       if(!row)return json({error:'Primero sincronizá tu granja'},409);
       const ahora=Math.max(Date.now(),new Date(row.updated_at).getTime()+1);
-      const r=body.banco ? bancoOperacion(row.data,body.banco,body.op,tasaBanco) : artefactoOperacion(row.data,a.accion,a.id,ahora,body.op);
+      const r=body.visita ? visitaOperacion(row.data,body.visita.destino,uid,ahora,body.op) : body.diario ? (body.diario.accion==='reclamar'?diarioOperacion(row.data,ahora,body.op):{error:'Operación diaria inválida'}) : body.banco ? bancoOperacion(row.data,body.banco,body.op,tasaBanco) : artefactoOperacion(row.data,a.accion,a.id,ahora,body.op);
       if(r.repetido)return json({ok:true,data:row.data,updated_at:row.updated_at,cobro:r.cobro,repetido:true});
       if(body.base!==row.updated_at)return json({error:'Otra sesión guardó; recargá antes de operar',conflicto:true},409);
       if(r.tasaCambio)return json({error:r.error,tasaCambio:true},412);
@@ -430,7 +487,7 @@ Deno.serve(async (req) => {
 
     /* lo que el MERCADO dice que hizo este jugador (no lo que dice su navegador) */
     const { data: filas, error: marketError } = await admin.from("market")
-      .select("seller,sold_to,kind,item,qty,price,paid")
+      .select("seller,sold_to,kind,item,qty,price,paid,fee_pct")
       .or("seller.eq." + uid + ",sold_to.eq." + uid).limit(2000);
     if (marketError) return json({ error: "No se pudo validar el mercado. No se escribió nada." }, 503);
     const mercado = mercadoPermiso(uid, filas ?? [], prevRow?.mercado_ack ?? null, prevRow?.data ?? null, data);

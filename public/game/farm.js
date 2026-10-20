@@ -2288,7 +2288,7 @@ class FarmScene extends Phaser.Scene {
         // 14/8: el boost del tutorial aplica a CUALQUIER cultivo (antes solo papa) — el
         // sub-objetivo puede mandar a cebolla/zanahoria y tienen que crecer acelerados igual
         const boost = (typeof tutoBoost === "function") ? tutoBoost("papa") : 1;
-        const real = cd.grow * 1000 * cdMult() * boost;
+        const real = cd.grow * 1000 * cdMult() * boost * cultivoTiempoMult();
         // (14/8: la aceleración del plan se eliminó — física única; el aviso de meta cubierta vive en tutoAvisoCubierto)
         const starter = (G.firstSeeds || 0) > 0 && FIRST_GROW_MS > 0;   // solo las semillas del starter pack
         if (starter) G.firstSeeds--;

@@ -10,6 +10,7 @@ const iniPaquete = UI.indexOf("function desactivarPaqueteDiario");
 const finPaquete = UI.indexOf("/* ---- TABLÓN", iniPaquete);
 if (iniAccion < 0 || finAccion < 0 || iniPaquete < 0 || finPaquete < 0) throw new Error("No encontré el Paquete o la puerta de teclado");
 
+(async()=>{
 let fallos = 0;
 const ok = (n, c, d) => { if (!c) fallos++; console.log((c ? "  ok   " : "  FALLA") + "  " + n + (d ? "   " + d : "")); };
 
@@ -32,7 +33,7 @@ console.log("\nENTER Y ESPACIO RECLAMAN UNA VEZ Y DEJAN UN SIGUIENTE PASO CLARO\
     window: dom.window, document: dom.window.document, String, Math, Array, Object, console,
     G: { daily: { day: 0, last: "" } }, DAILY_REWARDS: [{ label: "Decoración" }],
     $: id => dom.window.document.getElementById(id), dailyState: () => ({ claimable: cobros === 0, day: 1 }),
-    claimDaily: () => { cobros++; }, coleccionableDeLaSemana: () => "Farol exclusivo", escapeHtml: s => String(s), closeOv() {},
+    claimDaily: async () => { cobros++; return true; }, coleccionableDeLaSemana: () => "Farol exclusivo", escapeHtml: s => String(s), closeOv() {},
     setTimeout: fn => { timers.push(fn); return timers.length; },
   };
   vm.createContext(ctx);
@@ -49,7 +50,7 @@ console.log("\nENTER Y ESPACIO RECLAMAN UNA VEZ Y DEJAN UN SIGUIENTE PASO CLARO\
   const repetida = new dom.window.KeyboardEvent("keydown", { key: "Enter", bubbles: true, cancelable: true, repeat: true });
   img.dispatchEvent(repetida);
   ok("Enter programa un solo reclamo y no llega al mundo", enter.defaultPrevented && repetida.defaultPrevented && mundo.length === 0 && timers.length === 1 && cobros === 0);
-  timers.shift()();
+  await timers.shift()();
   ok("al terminar, reclama, inactiva la imagen y enfoca el siguiente botón", cobros === 1 && img.getAttribute("role") === null && img.getAttribute("tabindex") === null && btn.style.visibility === "visible" && dom.window.document.activeElement === btn);
 
   cobros = 0; ctx.refreshPaquete();
@@ -57,7 +58,7 @@ console.log("\nENTER Y ESPACIO RECLAMAN UNA VEZ Y DEJAN UN SIGUIENTE PASO CLARO\
   const espacio = new dom.window.KeyboardEvent("keydown", { key: " ", bubbles: true, cancelable: true });
   img.dispatchEvent(espacio);
   ok("tras refrescar, Espacio sigue usando una sola acción vigente", espacio.defaultPrevented && mundo.length === 0 && timers.length === 1 && cobros === 0);
-  timers.shift()();
+  await timers.shift()();
   ok("Espacio también termina en el botón visible", cobros === 1 && dom.window.document.activeElement === btn);
 
   Object.defineProperty(dom.window, "innerWidth", { configurable: true, value: 640 });
@@ -68,3 +69,4 @@ console.log("\nENTER Y ESPACIO RECLAMAN UNA VEZ Y DEJAN UN SIGUIENTE PASO CLARO\
 
 console.log(fallos ? "\n" + fallos + " fallo(s)\n" : "\nTodo en orden: el Paquete diario se reclama con mouse o teclado y deja claro el siguiente paso.\n");
 process.exit(fallos ? 1 : 0);
+})().catch(e=>{console.error(e);process.exit(1);});

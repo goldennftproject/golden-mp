@@ -1,0 +1,45 @@
+'use strict';
+const assert=require('node:assert/strict'),fs=require('node:fs'),vm=require('node:vm'),path=require('node:path');
+const repo=path.resolve(__dirname,'..'),{ctx}=require('./arrancar-el-juego.contexto').arrancar(repo);
+const src=fs.readFileSync(path.join(repo,'supabase/functions/guardar/index.ts'),'utf8');
+const rules=src.split('/* === REGLAS ===')[1].split('/* === FIN REGLAS === */')[0];
+const server={console,Date,Math,JSON,Number,Object,Array,Set,String,isFinite};vm.createContext(server);vm.runInContext(rules.slice(rules.indexOf('const VERSION')),server);
+let clock=Date.parse('2026-10-20T12:00:00Z');ctx.nowMs=()=>clock;ctx.estadoDeCero();ctx.toast=()=>{};ctx.log=()=>{};ctx.refreshHud=()=>{};
+const combat=ctx.G.stam;
+assert.equal(ctx.energiaGranjaMax(),50);assert.equal(ctx.energiaGranjaTick(),50);
+ctx.G.energiaGranja={v:1,actual:0,at:clock};ctx.G.produccion.vipHasta=clock+2*3600000;
+assert.equal(ctx.energiaGranjaMax(),100);assert.equal(server.energiaServidor(ctx.G,clock+3600000),25);
+const expiration=server.energiaServidor(ctx.G,clock+3*3600000);assert.equal(expiration,50);
+clock+=3600000;assert.equal(ctx.energiaGranjaTick(),25);assert.equal(ctx.G.stam,combat);
+assert.equal(ctx.nodoCd({},'tree',1800000),1620000);
+ctx.G.produccion.vipHasta=0;assert.equal(ctx.nodoCd({},'tree',1800000),1800000);
+let calls=0;ctx.craftLote(()=>calls++,'x',5);assert.equal(calls,0);
+ctx.G.produccion.vipHasta=clock+3600000;ctx.craftLote(()=>{calls++;ctx.G.plata++;},'x',5);assert.equal(calls,5);
+assert.equal(ctx.marketFee(),7);assert.equal(ctx.marketFee({fee_pct:null}),5);assert.equal(ctx.marketFee({fee_pct:10}),10);
+ctx.G.produccion.vipHasta=0;assert.equal(ctx.marketFee(),10);
+const beforeStars=ctx.G.pass?.stars||0;ctx.passAddStars(999);assert.equal(ctx.G.pass?.stars||0,beforeStars);assert.equal(ctx.GF.PASE_ACTIVO,false);
+let d={plata:0,seeds:{},picks:{owned:{},dur:{}},dishes:{}};
+for(let day=1;day<=7;day++){
+ const now=Date.parse('2026-10-20T12:00:00Z')+(day-1)*86400000,prev=JSON.stringify(d),r=server.diarioOperacion(d,now,'daily-'+day);
+ assert.equal(r.error,undefined);assert.equal(JSON.stringify(d),prev);d=r.data;assert.equal(d.daily.day,day);
+ assert.equal(server.diarioOperacion(d,now,'daily-'+day).repetido,true);
+ assert.ok(server.diarioOperacion(d,now,'another-'+day).error);
+}
+assert.equal(d.seeds.papa,5);assert.equal(d.seeds.zanahoria,5);assert.equal(d.picks.dur.wood,3);assert.equal(d.picks.dur.stone,2);assert.equal(d.dishes.papa_asada,2);assert.equal(d.plata,50);
+assert.equal(server.diarioOperacion(d,Date.parse('2026-10-27T12:00:00Z'),'cycle').data.daily.day,1);
+const forged=JSON.parse(JSON.stringify(d));forged.daily.day=1;assert.ok(server.protegerEconomia(d,forged,clock).some(e=>e.includes('recompensas diarias')));
+let farm={golden:1000,produccion:{vipHasta:clock+86400000}};
+farm=server.artefactoOperacion(farm,'comprar','cobre',clock,'first').data;
+const second=server.artefactoOperacion(farm,'comprar','cobre',clock,'second');assert.ok(second.data.artefactos.items['cobre:second']);
+const free=JSON.parse(JSON.stringify(farm));free.produccion.vipHasta=0;assert.ok(server.artefactoOperacion(free,'comprar','plata',clock,'blocked').error);
+assert.equal(server.artefactoOperacion(free,'cobrar','cobre',clock+86400000,'still-owned').cobro,870);
+let visitor={produccion:{vipHasta:clock+86400000},seeds:{}};
+assert.ok(server.visitaOperacion({},'other','me',clock,'no-vip').error);
+assert.ok(server.visitaOperacion(visitor,'me','me',clock,'self').error);
+for(let n=0;n<3;n++){const r=server.visitaOperacion(visitor,'farm'+n,'me',clock,'visit'+n);assert.equal(r.error,undefined);visitor=r.data;}
+assert.equal(visitor.seeds.papa,3);assert.ok(server.visitaOperacion(visitor,'fourth','me',clock,'fourth').error);
+assert.ok(server.visitaOperacion(visitor,'farm0','me',clock,'repeat-farm').error);
+assert.equal(server.visitaOperacion(visitor,'farm0','me',clock,'visit0').repetido,true);
+const view=server.visitaVista({user_id:'public',name:'Name',data:{golden:999,plata:888,banco:{secret:1},plots:[{state:'growing',cropKey:'papa'}]}});
+assert.equal(view.golden,undefined);assert.equal(view.banco,undefined);assert.equal(view.parcelas[0].cultivo,'papa');
+console.log('OK: energía Free/VIP sin tocar combate, relojes, lotes, comisiones históricas, pase apagado, siete premios idempotentes, copias VIP y visitas acotadas sin datos financieros.');

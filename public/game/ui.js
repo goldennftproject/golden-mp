@@ -68,6 +68,7 @@ function selectorContextualPcAbierto() {
 const OV_REFRESH = { "ov-entrenando": () => entrenarSync(), "ov-clan": () => refreshClan(), "ov-misiones": () => refreshMisiones(), "ov-mapa": () => refreshMapa(), "ov-objetivos": () => refreshObjetivos(), "ov-logros": () => refreshLogros(), "ov-album": () => refreshAlbum(), "ov-inv": () => refreshInv(), "ov-cobertizo": () => refreshCobertizo(), "ov-skills": () => refreshSkills(), "ov-equip": () => refreshEquip(), "ov-godhand": () => refreshGodHand(),
   "ov-forge": () => refreshForge(), "ov-market": () => refreshMarket(), "ov-barn": () => refreshBarn(), "ov-buzon": () => { _bzVista = "sobres"; _bzCartaAbierta = null; refreshBuzon(); }, "ov-paquete": () => refreshPaquete(), "ov-baul": () => refreshBaul(), "ov-pedidos": () => { _pdVista = "pedidos"; refreshPedidos(); }, "ov-expandir": () => refreshExpandir(),
   "ov-reliquias": () => refreshArtefactos(),
+  "ov-visitas": () => refreshVisitas(),
   "ov-banco": () => refreshBanco(),
   "ov-cocina": () => refreshCooking(),
   "ov-horno": () => refreshHorno(),
@@ -1965,7 +1966,7 @@ function pescaV4Nasas() {
 
 
 function refreshHud() {
-  const energia=energiaGranjaTick();setTxt('s-energia-granja',Math.floor(energia)+'/100');
+  const energia=energiaGranjaTick();setTxt('s-energia-granja',Math.floor(energia)+'/'+energiaGranjaMax());
   const ep=$('energia-granja-pill');if(ep)ep.style.display=GF.scene==='farm'?'':'none';
   document.querySelectorAll('[data-artefacto-pendiente]').forEach(el=>{el.textContent=fmtPlata(artefactoPendiente(el.dataset.artefactoPendiente))+' Plata';});
   document.querySelectorAll('[data-artefacto-cobrar]').forEach(b=>{b.disabled=!(typeof sb!=='undefined' && sb && UID && CARGA_OK && !SOLO_LOCAL && !SAVE_CONFLICTOS.has(UID) && !MERCADO_EN_CURSO && artefactoPuedeCobrar(b.dataset.artefactoCobrar) && energia>=1);});
@@ -2546,20 +2547,36 @@ function refreshProduccionGranja() {
     else { const s = cont.querySelector("summary"); if (s) s.focus({ preventScroll: true }); }
   }
 }
+async function refreshVisitas(){
+  const lista=$('visitas-lista'),vista=$('visitas-vista');if(!lista||!vista)return;
+  vista.innerHTML='';if(!vipVigente()){lista.textContent='Necesitás el VIP de 30 días para visitar y recoger semillas.';return;}
+  lista.textContent='Consultando granjas…';const r=await visitaConsultar('listar');
+  if(!isOpen('ov-visitas'))return;
+  if(!r){lista.textContent='Sin conexión. Podés cerrar y volver a intentar.';return;}
+  lista.innerHTML=r.granjas.length?r.granjas.map(g=>'<button class="ghost sm" data-visitar="'+escapeHtml(g.id)+'">'+escapeHtml(g.nombre)+'</button>').join(' '):'Todavía no hay otras granjas para visitar.';
+  lista.querySelectorAll('[data-visitar]').forEach(b=>b.onclick=async()=>{
+    vista.textContent='Cargando resumen de la granja…';const id=b.dataset.visitar,r=await visitaConsultar('ver',id);
+    if(!isOpen('ov-visitas')||!r)return;const g=r.granja;
+    vista.innerHTML='<h3>'+escapeHtml(g.nombre)+'</h3><p>Nivel '+g.nivel+' · '+g.expansiones+' expansiones</p><p class="sub">Resumen de parcelas (no es el mapa de colocación):</p><div style="display:flex;flex-wrap:wrap;gap:5px">'+g.parcelas.map(p=>'<span class="tag" title="'+escapeHtml(p.cultivo||'Parcela vacía')+'">'+({empty:'🟫',growing:'🌱',ready:'🌾',withered:'🍂'}[p.estado]||'🟫')+' '+escapeHtml(p.cultivo)+'</span>').join('')+'</div><button class="green sm" id="visita-semilla">Recoger semilla de visita</button>';
+    const btn=$('visita-semilla');btn.onclick=async()=>{btn.disabled=true;await economiaSolicitar({visita:{accion:'semillas',destino:id}});if(btn.isConnected)btn.disabled=false;};
+  });
+}
 function refreshArtefactos() {
   const box=$('objetos-productores');if(!box)return;
   const t=nowMs(), online=!!(typeof sb!=='undefined' && sb && UID && CARGA_OK && !SOLO_LOCAL && !SAVE_CONFLICTOS.has(UID));
-  let h='<p class="sub">Objetos de colección que producen Plata, no Golden directo. No son edificios colocables ni ocupan terreno o cupos. Un ejemplar activo de cada modelo por cuenta.</p>'+
+  const vip=vipVigente(t),activos=Object.values(G.artefactos && G.artefactos.items || {}).filter(a=>t<a.desde+ARTEFACTO_DIAS*86400000).length;
+  let h='<p class="sub">Objetos de colección que producen Plata, no Golden directo. No ocupan terreno ni cupos productivos. Free: un objeto activo. VIP: sin límite de ejemplares, incluidos duplicados. Al vencer el VIP conservás tus compras y sus cobros; no podés ampliar la colección mientras haya uno activo.</p>'+
     '<p class="sub">Comprá con Golden y reclamá Plata cada 24 horas por 1 de energía. Acumulación máxima: un día; vida útil: 180 días. La producción se conserva en décimas de Plata.</p>'+
     '<p class="sub">Producción inicial: 0,87 % diario del coste, calculado a 10.000 Plata por Golden. Recuperación nominal: unos 115 días cobrando diariamente a esa tasa. La tasa del Banco puede cambiar: no es un retorno garantizado. Depósitos y retiros USDT desactivados.</p><button class="ghost sm" data-panel="ov-banco">🏦 Ver Banco y tasa vigente</button>';
   if(!online)h+='<p class="sub">Compras y cobros requieren conexión y guardado sincronizado.</p>';
-  for(const [id,d] of Object.entries(ARTEFACTO_DEF)){
+  const copias=Object.keys(G.artefactos && G.artefactos.items || {}).filter(id=>id.includes(':') && ARTEFACTO_DEF[artefactoModelo(id)]);
+  for(const [id,d] of [...Object.entries(ARTEFACTO_DEF),...copias.map(id=>[id,ARTEFACTO_DEF[artefactoModelo(id)]])]){
     const a=G.artefactos && G.artefactos.items && G.artefactos.items[id], activo=a && t<a.desde+ARTEFACTO_DIAS*86400000;
     const pendiente=artefactoPendiente(id), diaria=artefactoDiario(id).toFixed(2).replace('.',',');
-    h+='<div class="row" style="justify-content:space-between;flex-wrap:wrap;border-top:1px solid #ffffff22;padding:10px 0"><div>'+d.icon+' '+d.label+'<br><small>'+diaria+' Plata/día · Coste: '+d.golden+' Golden</small>'+
+    h+='<div class="row" style="justify-content:space-between;flex-wrap:wrap;border-top:1px solid #ffffff22;padding:10px 0"><div>'+d.icon+' '+d.label+(id.includes(':')?' · ejemplar adicional':'')+'<br><small>'+diaria+' Plata/día · Coste: '+d.golden+' Golden</small>'+
       (a?'<br><small>'+(activo?'Activo hasta '+new Date(a.desde+ARTEFACTO_DIAS*86400000).toLocaleDateString('es-UY'):'Vida útil terminada')+'</small>':'')+'</div><div>'+
       (a?'<span data-artefacto-pendiente="'+id+'">'+fmtPlata(pendiente)+' Plata</span> <button class="green sm" data-artefacto-cobrar="'+id+'" '+(!online||!artefactoPuedeCobrar(id)||!energiaGranjaPuede('harvest')?'disabled':'')+'>'+(artefactoPuedeCobrar(id)?'Cobrar · 1 ⚡':'Disponible cada 24 h')+'</button> ':'')+
-      '<button class="ghost sm" data-artefacto-comprar="'+id+'" '+(!online||activo||pendiente>0||G.golden<d.golden?'disabled':'')+'>'+(activo?'Ya lo tenés':'Comprar · '+d.golden+' $Golden')+'</button></div></div>';
+      (id.includes(':')?'':'<button class="ghost sm" data-artefacto-comprar="'+id+'" '+(!online||(!vip&&(activos>=1||pendiente>0))||G.golden<d.golden?'disabled':'')+'>'+(activo&&vip?'Otro ejemplar · '+d.golden+' $Golden':activo?'Ya lo tenés':'Comprar · '+d.golden+' $Golden')+'</button>')+'</div></div>';
   }
   box.innerHTML=h;
   box.querySelectorAll('[data-artefacto-comprar]').forEach(b=>b.onclick=()=>{
@@ -3250,7 +3267,7 @@ function refreshForge() {
     const cs = Object.keys(tc.cost).map(k => resIc(k) + " " + tc.cost[k]).join(" · ") + (tc.plata ? (Object.keys(tc.cost).length ? " · " : "") + coinIc("plata") + " " + tc.plata : "");
     const ok = canAfford(tc.cost) && G.plata >= tc.plata;
     const btn = '<button class="green sm" ' + (ok ? "" : "disabled") + ' data-ctool="' + id + '">Craftear</button>'
-      + '<button class="green sm" ' + (ok ? "" : "disabled") + ' data-ctool5="' + id + '" title="Craftear 5 de una (doc 2/8: crafteo en lote)">×5</button>';
+      + '<button class="green sm" ' + (ok && vipVigente() ? "" : "disabled") + ' data-ctool5="' + id + '" title="Fabricar cinco requiere VIP">×5 · VIP</button>';
     craft += '<div class="forge-row"><div class="fic"><img src="' + GF.spr(td.sprite) + '"></div><div class="finfo"><div class="fnm">' + td.label + '</div><div class="fds">1 uso c/u · tenés ' + n + '</div><div class="fds">Costo: ' + cs + '</div></div><div class="fbtns">' + btn + '</div></div>';
   });
   /* LAS CAÑAS DE LA v4 SE ARMAN AQUÍ, y esto arregla el fallo más caro que encontré en toda la
@@ -3521,7 +3538,7 @@ function refreshHorno() {
     const lote = Math.max(0, Math.min(libres, alcanza));
     const puede = lote >= 1;
     let btn = '<button class="green sm" ' + (puede ? "" : "disabled") + ' data-mat="' + id + '">Fundir</button>';
-    if (lote >= 2) btn += '<button class="green sm" data-mat5="' + id + '" data-lote="' + lote +
+    if (lote >= 2 && vipVigente()) btn += '<button class="green sm" data-mat5="' + id + '" data-lote="' + lote +
       '" title="Llenar el horno: ' + lote + ' al fuego de una">×' + lote + '</button>';
     const porqueNo = libres <= 0 ? " · el horno está lleno" : (alcanza < 1 ? " · te faltan materiales" : "");
     html = '<div class="forge-row"><div class="fic"><img src="' + GF.spr(md.sprite) + '"></div><div class="finfo"><div class="fnm">' + md.label + '</div>' +
@@ -5021,7 +5038,7 @@ function refreshPaquete() {
      VISTA PREVIA de cada uno, dentro de la propia interfaz: un cuadrito por día". La tira son
      ahora 7 tarjetitas SIEMPRE visibles: Día N + su paquetito + el premio escrito adentro. El
      día 7 va en dorado con su coleccionable exclusivo. Estructura y altura fijas (regla de UI). */
-  const PREMIO_CORTO = ["Decoración", "+5% farmeo 1 h", "2 platos", "Emote o marco", "Carnada ×5", "Sorpresa", ""];
+  const PREMIO_CORTO = ["−15% cultivos 1 h", "5 semillas de papa", "3 picos de madera", "2 papas asadas", "2 picos de piedra", "5 semillas de zanahoria", "50 Plata"];
   const pintarRacha = (extra) => {
     const strip = $("paq-racha"); if (!strip) return;
     const col = (typeof coleccionableDeLaSemana === "function") ? coleccionableDeLaSemana() : "Exclusivo";
@@ -5029,7 +5046,7 @@ function refreshPaquete() {
     for (let d = 1; d <= 7; d++) {
       const ok = d <= cobrados + (extra || 0);
       const hoy = !extra && st && st.claimable && d === st.day;
-      const premio = d === 7 ? col.replace(/\s*\(.*$/, "") : PREMIO_CORTO[d - 1];
+      const premio = PREMIO_CORTO[d - 1];
       html += '<div class="paq-card' + (ok ? " ok" : "") + (hoy ? " hoy" : "") + (d === 7 ? " siete" : "") + '" style="' +
           'flex:1 1 56px;min-width:56px;max-width:72px;border-radius:8px;padding:3px 2px;text-align:center;' +
           'border:1px solid ' + (d === 7 ? "#d9a520" : hoy ? "#8fae53" : "#cdb98a") + ';' +
@@ -5045,7 +5062,7 @@ function refreshPaquete() {
     }
     strip.innerHTML = html;
     const siete = $("paq-siete");
-    if (siete) siete.textContent = "🎁 Día 7: " + col + " — solo esta semana";
+    if (siete) siete.textContent = "🎁 Día 7: 50 Plata. El ciclo vuelve al día 1.";
   };
   pintarRacha(0);
   if (!st || !st.claimable) {   // ya abrió el de hoy: paquete abierto y a esperar
@@ -5078,13 +5095,13 @@ function refreshPaquete() {
     // 15/8 (dirección): SHAKE in crescendo — tiembla de menor a mayor y recién ahí se abre
     img.classList.remove("paq-latido");
     img.classList.add("paq-shake");
-    setTimeout(() => {
+    setTimeout(async () => {
       try {
         const r = (typeof DAILY_REWARDS !== "undefined") ? DAILY_REWARDS[st.day - 1] : null;
-        claimDaily();
+        if (!await claimDaily()) { refreshPaquete(); return; }
         pintarRacha(1);   // el de hoy pasa a abierto en la tira
         nota.textContent = "🎁 " + ((r && r.label) || "¡Tu premio del día!");
-      } catch (e) { console.error("[paquete]", e); nota.textContent = "🎁 ¡Tu premio del día!"; }
+      } catch (e) { console.error("[paquete]", e); refreshPaquete(); return; }
       img.classList.remove("paq-shake");
       img.src = "assets/farm/paquete_dia_abierto.png?v=1";
       img.style.transform = "scale(1.06)";
@@ -6618,12 +6635,12 @@ async function refreshP2P() {
     const activas = filas.filter(r => !r.sold_to), vendidas = filas.filter(r => r.sold_to && !r.paid);
     if (vendidas.length) h += '<div class="fnm">Ventas por cobrar</div>';
     vendidas.forEach(r => {
-      const neto = Math.max(1, Math.round(r.price * (1 - MARKET_FEE / 100)));
+      const neto = Math.max(1, Math.round(r.price * (1 - marketFee(r) / 100)));
       h += '<div class="forge-row eq"><div class="finfo"><div class="fnm">' + escapeHtml(r.name || r.item) + ' ×' + r.qty + ' — VENDIDO</div>' +
-        '<div class="fds">Te quedan ' + fmt(neto) + ' de plata (precio ' + fmt(r.price) + ' − ' + MARKET_FEE + '% de comisión)</div></div>' +
+        '<div class="fds">Te quedan ' + fmt(neto) + ' de plata (precio ' + fmt(r.price) + ' − ' + marketFee(r) + '% de comisión)</div></div>' +
         '<div class="fbtns"><button class="green sm" data-cobrar="' + r.id + '">Cobrar</button></div></div>';
     });
-    h += '<div class="secc">Publicaciones activas (' + activas.length + '/' + MARKET_MAX_PUB + ')</div>';
+    h += '<div class="secc">Publicaciones activas: ' + activas.length + (vipVigente() ? ' · VIP sin límite diario' : ' · Free: una publicación por día UTC') + '</div>';
     if (!activas.length) h += '<div class="fds">No tenés nada publicado.</div>';
     activas.forEach(r => {
       h += '<div class="forge-row"><div class="finfo"><div class="fnm">' + escapeHtml(r.name || r.item) + ' ×' + r.qty + '</div>' +

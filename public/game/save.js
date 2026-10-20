@@ -30,6 +30,14 @@ async function bancoCotizar(){
 function bancoCotizacionValida(){return !!(BANCO_COTIZACION && BANCO_COTIZACION.uid===UID && Date.now()-BANCO_COTIZACION.recibido<60000);}
 function artefactoSolicitar(accion,id){return economiaSolicitar({artefacto:{accion,id}});}
 function bancoSolicitar(golden,revision){return economiaSolicitar({banco:{accion:'canjear',golden,revision}});}
+function diarioSolicitar(){return economiaSolicitar({diario:{accion:'reclamar'}});}
+async function visitaConsultar(accion,destino){
+  if(!sb||!UID||!CARGA_OK||SOLO_LOCAL)return null;
+  const uid=UID;
+  try{const {data,error}=await conTope(sb.functions.invoke('guardar',{body:{cuenta:uid,visita:{accion,destino}}}),10000,'visita');
+    if(UID!==uid)return null;if(error||!data?.ok){toast('No se pudo abrir la visita; comprobá tu VIP y conexión');return null;}return data;
+  }catch{toast('No se pudo consultar la visita');return null;}
+}
 async function economiaSolicitar(detalle) {
   if(MERCADO_EN_CURSO || !sb || !UID || !CARGA_OK || SOLO_LOCAL || SAVE_CONFLICTOS.has(UID)){toast('Necesitás conexión y guardado sincronizado');return;}
   const uid=UID, desbloquear=mercadoBloquearPantalla('Confirmando la operación del objeto…');
@@ -53,7 +61,8 @@ async function economiaSolicitar(detalle) {
       }
       if(error || !data || !data.ok || UID!==uid){SAVE_CONFLICTOS.add(uid);toast('Resultado sin confirmar. Recargá con conexión para consultar el servidor.');return;}
       hydrate(data.data);SAVE_BASES.set(uid,data.updated_at);copiaGuardar(snapshot());mercadoLimpiarPendiente(uid);
-      toast(detalle.banco ? 'Canje confirmado: +'+fmtGolden(data.cobro)+' Golden' : detalle.artefacto.accion==='comprar' ? 'Objeto comprado con Golden' : '+'+fmtPlata(data.cobro)+' Plata');
+      toast(detalle.visita ? '+1 semilla de papa por la visita' : detalle.diario ? 'Recompensa diaria confirmada: día '+data.cobro+'/7' : detalle.banco ? 'Canje confirmado: +'+fmtGolden(data.cobro)+' Golden' : detalle.artefacto.accion==='comprar' ? 'Objeto comprado con Golden' : '+'+fmtPlata(data.cobro)+' Plata');
+      return data;
     }catch(e){toast('No se pudo completar la operación; comprobá la conexión');}
   })().finally(()=>{MERCADO_EN_CURSO=null;desbloquear();refreshHud();if(isOpen('ov-reliquias'))refreshArtefactos();if(isOpen('ov-banco'))refreshBanco();});
   return MERCADO_EN_CURSO;
@@ -444,7 +453,7 @@ function snapshot() {
     produccion: G.produccion,
     res: G.res, picks: G.picks, skills: G.skills, triesV: G.triesV, establoV: G.establoV, fish: G.fish, plots: G.plots, nodos: G.nodos, expansiones: G.expansiones, pescaHasta: G.pescaHasta, pescaDesde: G.pescaDesde, senales: G.senales, escamas: G.escamas, vistos: G.vistos, estrellaMax: G.estrellaMax, pescaTiene: G.pescaTiene, canas: G.canas, presion: G.presion, amarres: G.amarres, trampas: G.trampas, marea: G.marea, runaOro: G.runaOro, buffs: G.buffs, seeds: G.seeds, selSeed: G.selSeed,
     tools: G.tools, sflStock: true, invRows: G.invRows, slots: G.slots, hotbar: G.hotbar, hotSel: G.hotSel, hbInit: G.hbInit, layout: G.layout,
-    daily: G.daily, plotsOwned: G.plotsOwned, plotsCompradas: G.plotsCompradas, plotsFicha: G.plotsFicha, expParcelasDadas: G.expParcelasDadas, seedBuys: G.seedBuys, built: G.built,
+    daily: G.daily, visitas:G.visitas||{}, buffCultivoHasta:G.buffCultivoHasta||0, plotsOwned: G.plotsOwned, plotsCompradas: G.plotsCompradas, plotsFicha: G.plotsFicha, expParcelasDadas: G.expParcelasDadas, seedBuys: G.seedBuys, built: G.built,
     hp: G.hp, hpMax: G.hpMax, combatXp: G.combatXp, stam: G.stam, stamAcc: G.stamAcc, stamFullAt: G.stamFullAt, stamLastAt: G.stamLastAt, stamRec: G.stamRec, pass: G.pass, tuto: G.tuto, firstSeeds: G.firstSeeds,
     canaElegida: G.canaElegida, canasDurV: G.canasDurV, armorOff: G.armorOff, incResumen: G.incResumen,
     recientes: G.recientes,   /* 8/9: los tres últimos usados sobreviven al F5 */
@@ -605,7 +614,9 @@ function hydrate(d) {
   if (typeof d.hotSel === "number") G.hotSel = Math.max(0, Math.min(9, d.hotSel));
   if (typeof d.hbInit === "boolean") G.hbInit = d.hbInit;
   if (d.layout && typeof d.layout === "object") G.layout = d.layout;
-  if (d.daily && typeof d.daily === "object") G.daily = { day: d.daily.day || 0, last: d.daily.last || "" };
+  if (d.daily && typeof d.daily === "object") G.daily = JSON.parse(JSON.stringify(d.daily));
+  G.buffCultivoHasta=Number.isFinite(d.buffCultivoHasta)?d.buffCultivoHasta:0;
+  G.visitas=d.visitas&&typeof d.visitas==='object'?JSON.parse(JSON.stringify(d.visitas)):{};
   if (typeof d.plotsOwned === "number") G.plotsOwned = Math.max(2, Math.min(typeof PLOT_MAX !== "undefined" ? PLOT_MAX : 60, d.plotsOwned));   // fix #18 (11/8): el tope acá seguía en 12 y el F5 te "devolvía" las parcelas compradas
   if (typeof d.plotsCompradas === "number") G.plotsCompradas = Math.max(0, d.plotsCompradas);   // 20/8: el precio de tienda sube solo con éstas
   G.plotsFicha = Math.max(0, d.plotsFicha || 0);   // 20/8: las de Ficha de parcela (pase) — parte del libro mayor
@@ -1898,7 +1909,7 @@ async function mkPublish(row) {
   if (!sb || !UID) { toast("Necesitás conexión para publicar"); return null; }
   try {
     const { data, error } = await sb.from("market").insert(Object.assign({ seller: UID, seller_name: (typeof nombreLucido === "function" ? nombreLucido() : (window.NICK || "Granjero")) }, row)).select().single();
-    if (error) { console.warn("market publish:", error.message); toast("No se pudo publicar"); return null; }
+    if (error) { console.warn("market publish:", error.message); toast(error.message || "No se pudo publicar"); return null; }
     return data;
   } catch (e) { toast("No se pudo publicar"); return null; }
 }

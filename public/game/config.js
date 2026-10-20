@@ -424,6 +424,7 @@ var FX_PART_MAX = 40;      // tope de partículas vivas a la vez (cuida el rendi
 //   MVP (P2P sí/no) y va aparte, porque si va abierto el portero de guardado tiene que subir
 //   antes. Apagar la bandera devuelve todo tal cual estaba: no se toca ni un dato guardado.
 GF.MVP = 1;
+GF.PASE_ACTIVO = false;
 // Pausa reversible de la pesca: conservar catálogos, assets, inventarios y progreso.
 GF.PESCA_ACTIVA = false;
 GF.esPescaOculta = id => !GF.PESCA_ACTIVA && ["ov-lonja","ov-lombricario"].includes(id);

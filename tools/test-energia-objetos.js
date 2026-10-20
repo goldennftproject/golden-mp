@@ -3,9 +3,9 @@ const assert=require('node:assert/strict'),fs=require('node:fs'),path=require('n
 const repo=path.resolve(__dirname,'..'),{ctx}=require('./arrancar-el-juego.contexto').arrancar(repo),run=s=>vm.runInContext(s,ctx);
 let clock=1800000000000;ctx.nowMs=()=>clock;ctx.toast=()=>{};ctx.log=()=>{};ctx.saveFarm=()=>{};ctx.refreshHud=()=>{};ctx.isOpen=()=>false;
 ctx.estadoDeCero();ctx.G.energiaGranja={v:1,actual:0,at:clock};
-assert.equal(ctx.energiaGranjaPagar('plant'),false);clock+=3600000;assert.equal(ctx.energiaGranjaTick(),25);
-const snap=JSON.parse(JSON.stringify(ctx.snapshot()));clock+=3600000;ctx.hydrate(snap);assert.equal(ctx.energiaGranjaTick(),50);
-clock+=2*3600000;assert.equal(ctx.energiaGranjaTick(),100);clock-=3600000;assert.equal(ctx.energiaGranjaTick(),100,'retrasar reloj no resta ni regala');clock+=3600000;
+assert.equal(ctx.energiaGranjaPagar('plant'),false);clock+=3600000;assert.equal(ctx.energiaGranjaTick(),12.5);
+const snap=JSON.parse(JSON.stringify(ctx.snapshot()));clock+=3600000;ctx.hydrate(snap);assert.equal(ctx.energiaGranjaTick(),25);
+clock+=2*3600000;assert.equal(ctx.energiaGranjaTick(),50);clock-=3600000;assert.equal(ctx.energiaGranjaTick(),50,'retrasar reloj no resta ni regala');clock+=3600000;
 ctx.G.energiaGranja={v:1,actual:0,at:clock};ctx.G.res.madera=0;assert.equal(ctx.energiaGranjaAgregar('madera',1,'chop'),false);assert.equal(ctx.G.res.madera,0);
 ctx.G.energiaGranja.actual=50;const add=ctx.tryAddRes;ctx.tryAddRes=()=>false;assert.equal(ctx.energiaGranjaAgregar('madera',1,'chop'),false);assert.equal(ctx.G.energiaGranja.actual,50,'bolsa llena no cobra');ctx.tryAddRes=add;
 ctx.G.built.cocina=true;ctx.G.res.papa=0;ctx.cook('papa_asada');assert.equal(ctx.G.energiaGranja.actual,50,'receta inválida no cobra');
@@ -25,10 +25,10 @@ for(const id of Object.keys(prices)){
 }
 assert.equal(run('GOLDEN_EN_PLATA'),500,'ancla de referencia real');
 const operar=server.artefactoOperacion,base=clock;
-let d={golden:10000,plata:0,energiaGranja:{v:1,actual:100,at:base}};
+let d={golden:10000,plata:0,produccion:{vipHasta:base+181*86400000},energiaGranja:{v:1,actual:100,at:base}};
 for(const id of Object.keys(prices)){const r=operar(d,'comprar',id,base,'buy-'+id);assert.equal(r.error,undefined);d=r.data;}
 const totalCoste=Object.values(prices).reduce((a,b)=>a+b,0);
-assert.equal(d.golden,10000-totalCoste);assert.ok(operar(d,'comprar','cobre',base,'duplicado').error);
+assert.equal(d.golden,10000-totalCoste);assert.ok(operar(d,'comprar','cobre',base,'duplicado').data.artefactos.items['cobre:duplicado']);
 assert.ok(operar(d,'comprar','constructor',base,'invalido').error);
 const clone=JSON.stringify(d);operar(d,'cobrar','cobre',base+14400000,'sin-mutacion');assert.equal(JSON.stringify(d),clone,'la propuesta no muta la fila antes del CAS');
 let pasos=0;for(let dia=1;dia<=180;dia++){
@@ -51,5 +51,5 @@ assert.equal(server.mismoJSON(d.artefactos,reordenar(d.artefactos)),true,'JSONB 
 assert.ok(!server.protegerEconomia(reordenar(d),JSON.parse(JSON.stringify(d)),base+180*86400000).some(e=>e.includes('objetos productores')),'guardar tras cobrar no se bloquea por orden de claves');
 const errs=server.protegerEconomia(prev,next,base+180*86400000);assert.ok(errs.some(e=>e.includes('objetos productores')),'guardado normal no puede falsificar propiedad');
 const eprev={energiaGranja:{v:1,actual:0,at:base}},enext={energiaGranja:{v:1,actual:100,at:base+999999999}};
-server.protegerEconomia(eprev,enext,base+3600000);assert.equal(enext.energiaGranja.actual,25,'servidor limita reloj manipulado');
+server.protegerEconomia(eprev,enext,base+3600000);assert.equal(enext.energiaGranja.actual,12.5,'servidor limita reloj manipulado Free');
 console.log('OK: energía persistente, siete objetos al 0,87 % diario, 180 cobros diarios, recuperación inicial en 115 cobros, emisión en Plata, tope 24 h, vencimiento y recibos.');

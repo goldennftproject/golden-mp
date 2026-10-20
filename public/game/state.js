@@ -5,7 +5,7 @@ GF.spr = (k) => "assets/farm/" + k + ".png?a=7";   // ?a=N rompe el caché de lo
 // --- estado principal (con algunos recursos de arranque para probar los menús) ---
 const G = {
   espacioV: 3,                  // Inicio 9×9 restaurado; partidas de otras versiones conservadas
-  energiaGranja: { v: 1, actual: 100, at: 0 },
+  energiaGranja: { v: 1, actual: 50, at: 0 },
   artefactos: null,
   banco: null,
   plata: 3, golden: 20, level: 1, prestige: 0, week: 1, iniciado: 0,   // 18/8: cuándo empezó la partida — de ahí sale la semana del HUD   // 14/8: nacés con 3 de plata (el 1er objetivo es COMPRAR tus semillas)
@@ -111,11 +111,22 @@ function estadoDeCero() {
 
 // --- utilidades ---
 const ENERGIA_GRANJA_MAX = 100, ENERGIA_GRANJA_MS = 4 * 3600000;
+function vipVigente(t=nowMs()){return !!(G.produccion && G.produccion.vipHasta>t);}
+function vipTiempoMult(){return vipVigente()?0.9:1;}
+function energiaGranjaMax(t=nowMs()){return vipVigente(t)?100:50;}
+function energiaModelo(d,t){
+  const e=d.energiaGranja,fin=Number(d.produccion && d.produccion.vipHasta)||0;
+  if(!e||!Number.isFinite(e.actual)||!Number.isFinite(e.at))return fin>t?100:50;
+  const at=e.at||t;let v=Math.max(0,e.actual);
+  if(at<fin)v=Math.min(100,v+Math.max(0,Math.min(t,fin)-at)*100/14400000);
+  if(t>=fin)v=Math.min(50,v+Math.max(0,t-Math.max(at,fin))*50/14400000);
+  return Math.max(0,Math.min(fin>t?100:50,v));
+}
 const ENERGIA_GRANJA_COSTO = {plant:1,harvest:1,chop:2,mine:2,fish:2,animal:2,craft:2,cook:1,nasa:2,auto:2};
 function energiaGranjaTick() {
   const t=nowMs(); let e=G.energiaGranja;
-  if(!e || !Number.isFinite(e.actual) || !Number.isFinite(e.at)) e=G.energiaGranja={v:1,actual:100,at:t};
-  e.actual=Math.max(0,Math.min(100,e.actual+Math.max(0,t-(e.at||t))*100/ENERGIA_GRANJA_MS));
+  if(!e || !Number.isFinite(e.actual) || !Number.isFinite(e.at)) e=G.energiaGranja={v:1,actual:energiaGranjaMax(t),at:t};
+  e.actual=energiaModelo(G,t);
   e.at=Math.max(t,e.at||t); return e.actual;
 }
 function energiaGranjaPuede(tipo,n=1) { return energiaGranjaTick()+1e-9 >= (ENERGIA_GRANJA_COSTO[tipo]||0)*n; }
@@ -142,7 +153,8 @@ const ARTEFACTO_DIAS = 180, ARTEFACTO_PLATA_POR_GOLDEN_DIA = 87, ARTEFACTO_TOPE_
 const OBJETOS_PLATA_DESDE = 1792193400000;
 function fmtGolden(n){return Number(n||0).toFixed(6).replace(/\.?0+$/,'') || '0';}
 // 0,87 % diario sobre la referencia inicial de 10.000 Plata/Golden; no sigue la tasa variable del Banco.
-function artefactoDiario(id){return ARTEFACTO_DEF[id] ? ARTEFACTO_DEF[id].golden*ARTEFACTO_PLATA_POR_GOLDEN_DIA : 0;}
+function artefactoModelo(id){return String(id).split(':')[0];}
+function artefactoDiario(id){const d=ARTEFACTO_DEF[artefactoModelo(id)];return d ? d.golden*ARTEFACTO_PLATA_POR_GOLDEN_DIA : 0;}
 function objetoInicioCobro(a){return a.moneda==='plata-v2' ? a.cobrado : Math.max(a.cobrado,OBJETOS_PLATA_DESDE);}
 function artefactoPuedeCobrar(id,t=nowMs()){
   const a=G.artefactos && G.artefactos.items && G.artefactos.items[id];
@@ -699,7 +711,7 @@ function tutoAvisoCubierto() {
     log("Con lo que está creciendo y lo que tenés en la bolsa ya llegás a los " + meta + " de plata del objetivo.", "good");
   }
 }
-function nodoCd(o, clave, cdLargo) { return cdLargo; }   // 15/8 (dirección): un solo timer, sin etapas — largos del diseñador desde el comienzo
+function nodoCd(o, clave, cdLargo) { return cdLargo*vipTiempoMult(); } // Free 30/40 min; VIP excepción autorizada 20/10
 function seedBuysToday() {
   const sb = G.seedBuys || (G.seedBuys = { date: "", count: 0 });
   if (sb.date !== dayStamp(0)) { sb.date = dayStamp(0); sb.count = 0; sb.caridad = 0; }   // 15/8: también la semilla fiada del día
@@ -1272,12 +1284,13 @@ var EDIF2_COCINA_OLLA = 1;   // un sitio más en la fila de la Cocina (no un fue
 var EDIF2_ALTAR = 5;     // puntos de éxito extra en cada intento del Altar
 function edif2(k) { return !!(G.edif2 && G.edif2[k]); }
 function hornoCdMs() { return MAT_CD_MS * (edif2("horno") ? 1 - EDIF2_HORNO / 100 : 1); }
-function cocinaFactor() { return edif2("cocina") ? 1 - EDIF2_COCINA / 100 : 1; }
+function cocinaFactor() { return (edif2("cocina") ? 1 - EDIF2_COCINA / 100 : 1)*vipTiempoMult(); }
 function altarBonoExito() { return edif2("altar") ? EDIF2_ALTAR : 0; }
 function matCdLeft(id) { G.matCd = G.matCd || {}; return Math.max(0, (G.matCd[id] || 0) - nowMs()); }
 // crafteo en LOTE genérico: repite la acción hasta N veces y corta si ya no se puede (doc 2/8)
 function craftLote(fn, id, n) {
   n = Math.max(1, n || 1);
+  if(n>1&&!vipVigente()){toast("La fabricación en lotes requiere VIP. Podés fabricar de a uno.");return;}
   for (let i = 0; i < n; i++) {
     /* 24/8: la huella incluye la COLA DEL HORNO. Antes solo miraba bolsa y monedas, y como
        encolar no cambia ninguna de las dos, el ×5 se daba por muerto en la primera vuelta.
@@ -2361,7 +2374,7 @@ function expansionComprar() {
 /* cuánto tarda la obra de la expansión n (minutos); 0 = instantánea */
 function expansionObraMin(n) {
   if (typeof GF === "undefined" || !GF.EXP_OBRA) return 0;
-  return Math.max(0, Math.round((GF.EXP_OBRA_MIN || 10) * n));
+  return Math.max(0, Math.round((GF.EXP_OBRA_MIN || 10) * n*vipTiempoMult()));
 }
 /* « 1 h 20 min » a partir de minutos — lo usan el botón y la fila de requisitos */
 function expansionObraMinTxt(min) {
@@ -2701,7 +2714,7 @@ function produccionVipTick(sinEscena) {
   return true;
 }
 function produccionVipPaseTexto() {
-  return GF.esOcultoMvp("ov-pass") ? "El pase está deshabilitado en esta versión; no otorga premios del pase." : "Incluye los beneficios VIP del pase, con una sola compra.";
+  return "50 de energía Free / 100 VIP, recarga completa en 4 h. VIP: cocina, expansiones y nodos un 10% más rápidos; fabricación en lotes; P2P sin límite diario y comisión del 7% (Free: una publicación diaria, 10%); Objetos de Granja sin límite (Free: uno). Pase desactivado. Retiros desactivados; futura política: Free uno/mes, VIP sin límite de frecuencia, sujetos a saldo y reservas.";
 }
 function produccionVipComprar() {
   produccionVipTick();
@@ -2817,7 +2830,7 @@ function produccionComprar(tipo) {
       const abiertos = tipo === "tree" ? G.treesOpen : G.rocksOpen;
       if (!abiertos.includes(colision.lock)) abiertos.push(colision.lock);
     }
-    const cd = (tipo === "tree" ? CD.tree : tipo === "rock" ? CD.rock : ORE_DEF[tipo].cd) * 1000;
+    const cd = (tipo === "tree" ? CD.tree : tipo === "rock" ? CD.rock : ORE_DEF[tipo].cd) * 1000*vipTiempoMult();
     const reloj = { cdIni: nowMs(), readyAt: nowMs() + cd, halfAt: nowMs() + cd / 2 };
     G.nodos = G.nodos || {}; G.nodos[produccionNodoKey(i)] = reloj;
     const sc = window.farmScene, vivo = sc && sc.objs && sc.objs.find(o => o.i === i);
@@ -3008,8 +3021,9 @@ const ORE_DEF = {   // 15/8 EN PRUEBA: enfriamientos largos del doc 4/8 del dise
   diamante: { tier:4, label:"Diamante",  emoji:"💎", sprite:"node_diamond",   cd:32400, yield:1, price:80 },   // 9 h (era 18 con +2)
   netherita:{ tier:5, label:"Netherita", emoji:"🔶", sprite:"node_netherite", cd:43200, yield:1, price:200 },  // 12 h (era 24 con +2) — el ancla diaria de la minería
 };
-const PICK_ORDER = ["stone","bronze","iron","gold","diamond","netherite"];
+const PICK_ORDER = ["wood","stone","bronze","iron","gold","diamond","netherite"];
 const PICK_DEF = {
+  wood: {tier:0,label:"Pico de Madera",mineTier:0,dur:1,cost:{madera:1},plata:1,sprite:"pick_stone"},
   // modelo SFL puro (31/7): 1 uso por pico, costos baratos (material del tier anterior + madera + monedas)
   // costos "detalles viernes (2)"; el Pico de Bronce no figura en el doc y se interpola
   // 16/8 (auditoría G): el pico base ya no pide madera. Con 2 maderas encima, cada piedra
@@ -3112,7 +3126,7 @@ function picoParaNodo(o) {
 /* el que MOSTRAMOS cuando falta: EL SUYO, con nombre — el aviso dice exactamente cuál craftear */
 function picoQueHaceFalta(o) {
   const tierNecesario = (o && o.type === "ore" && ORE_DEF[o.ore]) ? ORE_DEF[o.ore].tier : 0;
-  return PICK_ORDER.find(id => PICK_DEF[id] && PICK_DEF[id].mineTier === tierNecesario) || null;
+  return tierNecesario===0 ? 'stone' : PICK_ORDER.find(id => PICK_DEF[id] && PICK_DEF[id].mineTier === tierNecesario) || null;
 }
 function costoTengo(k) { return k === "plata" ? G.plata : (G.res[k] || 0); }
 function canAfford(c) { for (const k in c) if (costoTengo(k) < c[k]) return false; return true; }
@@ -3961,6 +3975,7 @@ function passInit() {
 }
 function passLvl() { return Math.min(30, Math.floor(((G.pass && G.pass.stars) || 0) / PASS_STARS_LVL)); }
 function passAddStars(n) {
+  if(!GF.PASE_ACTIVO)return;
   const p = passInit();
   const antes = passLvl();
   p.stars += Math.round(n * (p.vip ? PASS_VIP_BOOST : 1));
@@ -3972,6 +3987,7 @@ function passAddStars(n) {
   if (typeof refreshPass === "function" && isOpen("ov-pass")) refreshPass();
 }
 function passEvent(sk) {   // se dispara con cada acción que da XP: alimenta las misiones
+  if(!GF.PASE_ACTIVO)return;
   /* 10/9 — MVP: con el Pase escondido, sus misiones no se cuentan ni gritan « misión cumplida:
      +10 estrellas » en la cara de un jugador que no tiene dónde gastarlas. Se corta en la
      entrada, no en el toast: si contáramos y calláramos, las estrellas se acumularían en
@@ -4006,6 +4022,7 @@ function passRewardStr(r) {
   return parts.join(" + ");
 }
 function passClaim(nv, vipTrack) {
+  if(!GF.PASE_ACTIVO){toast("El pase de batalla está desactivado");return;}
   const p = passInit();
   if (nv > passLvl()) { toast("Todavía no llegaste al nivel " + nv); return; }
   if (vipTrack && !p.vip) { toast("Ese carril requiere VIP activo"); return; }
@@ -4042,6 +4059,7 @@ function passBuyVip() {
   return comprado;
 }
 function passBuyLevel() {
+  if (!GF.PASE_ACTIVO) { toast("El pase está desactivado"); return false; }
   const p = passInit();
   if (passLvl() >= 30) { toast("El Pase ya está al máximo"); return; }
   if (G.golden < PASS_LVL_GOLD) { toast("Te falta $Golden (" + PASS_LVL_GOLD + ")"); return; }
@@ -4137,7 +4155,8 @@ function colorNombre() { return COS_COLORES[cosElegido().color] || COS_COLORES.b
 // ================= MERCADO ENTRE JUGADORES (P2P) =================
 // Publicás algo tuyo con un precio; otro jugador lo compra y vos cobrás cuando volvés al mercado.
 // Comisión que se QUEMA (sumidero sano): sale del precio que cobra el vendedor.
-var MARKET_FEE = 5;             // % de comisión
+var MARKET_FEE = 10;            // Publicaciones nuevas Free; el servidor captura 7% para VIP.
+function marketFee(fila) { return fila ? (fila.fee_pct == null ? 5 : fila.fee_pct) : vipVigente() ? 7 : 10; }
 var MARKET_MAX_PUB = 10;        // publicaciones activas por jugador
 const MARKET_KINDS = { res: "Recurso", seed: "Semilla", dish: "Plato", fish: "Pez", arm: "Arma", armor: "Armadura" };
 function mkTengo(kind, key) {
@@ -4215,7 +4234,7 @@ async function marketPublicar(kind, key, n, precio) {
   if (!MARKET_KINDS[kind]) return;
   if (mkTengo(kind, key) < n) { toast("No tenés " + n + " de eso"); return; }
   const mias = await mkMine();
-  if (mias.filter(r => !r.sold_to).length >= MARKET_MAX_PUB) { toast("Ya tenés " + MARKET_MAX_PUB + " publicaciones activas"); return; }
+  if (!vipVigente() && mias.some(r => String(r.created_at).slice(0,10) === dayStamp(0))) { toast("Free: una publicación P2P por día UTC"); return; }
   const pieza = kind === "armor" ? armorPieza(key) : null;
   const payload = pieza ? { dur: armorDur(pieza.set, pieza.pieza) } : (kind === "arm" && G.weapons[key]) ? JSON.parse(JSON.stringify(G.weapons[key])) : null;
   if (!mkSacar(kind, key, n)) { toast("No se pudo publicar"); return; }
@@ -4267,9 +4286,9 @@ async function marketCobrar(fila) {
   const ok = await mkCollect(fila.id).catch(() => false);
   mkBusy = false;
   if (!ok) { toast("No se pudo cobrar"); if (typeof refreshP2P === "function") refreshP2P(); return; }
-  const neto = Math.max(1, Math.round(fila.price * (1 - MARKET_FEE / 100)));
+  const neto = Math.max(1, Math.round(fila.price * (1 - marketFee(fila) / 100)));
   G.plata += neto;
-  log("Cobraste " + fmt(neto) + " de plata por " + (fila.name || fila.item) + " (comisión " + MARKET_FEE + "%).", "gold");
+  log("Cobraste " + fmt(neto) + " de plata por " + (fila.name || fila.item) + " (comisión " + marketFee(fila) + "%).", "gold");
   toast("+" + fmt(neto) + " de plata");
   refreshHud();
   if (typeof refreshP2P === "function") refreshP2P();
@@ -4685,7 +4704,7 @@ function godHandSembrar(msAusente) {
     while (true) {
       const slot = inv.find(s => s && s.n > 0 && CROP_DEF[s.key]);
       if (!slot) break;
-      const ghoras = (CROP_DEF[slot.key].grow * (typeof cdMult === "function" ? cdMult() : 1)) / 3600;
+      const ghoras = (CROP_DEF[slot.key].grow * (typeof cdMult === "function" ? cdMult() : 1) * cultivoTiempoMult(desde + (horasFuera-t)*3600000)) / 3600;
       if (ghoras <= t) {   // le da el tiempo: cosecha completa y sigue
         if(!energiaGranjaPagar('auto',1,true))break;
         t -= ghoras; slot.n--; usado[slot.key] = (usado[slot.key] || 0) + 1; ciclos++;
@@ -4695,8 +4714,8 @@ function godHandSembrar(msAusente) {
       } else {   // no llega a otra cosecha: deja la parcela SEMBRADA creciendo desde ese momento
         if(!energiaGranjaPagar('plant',1,true))break;
         slot.n--; usado[slot.key] = (usado[slot.key] || 0) + 1;
-        const dur = CROP_DEF[slot.key].grow * 1000 * (typeof cdMult === "function" ? cdMult() : 1);
         const t0 = desde + (horasFuera - t) * 3600000;
+        const dur = CROP_DEF[slot.key].grow * 1000 * (typeof cdMult === "function" ? cdMult() : 1) * cultivoTiempoMult(t0);
         G.plots[i] = { state: "growing", cropKey: slot.key, readyAt: t0 + dur, growTotal: dur, witherAt: 0 };
         horasTrabajadas = horasFuera;
         break;
@@ -7616,6 +7635,7 @@ function useTool(id) {
 const TOOL_CRAFT = { axe: { cost:{}, plata:2 } };   // 18/8: el hacha baja a 2 con el árbol de 30 min (sigue siendo el 17% de lo que saca)
 function craftTool(id, lote) {
   lote = Math.max(1, lote || 1);
+  if(lote>1&&!vipVigente()){toast("La fabricación en lotes requiere VIP");return;}
   const tc = TOOL_CRAFT[id], td = TOOL_DEF[id]; if (!tc || !td) { console.warn("[craftTool] herramienta inexistente:", id); return; }
   if (lote > 1) {   // doc 2/8: crafteo en lote — la fricción es económica, no de clicks
     let hechas = 0;
@@ -9892,17 +9912,15 @@ function plotUnlockCost() {
   return Math.round(PLOT_UNLOCK_BASE * Math.pow(PLOT_UNLOCK_SUBA, Math.max(0, G.plotsCompradas || 0)));
 }
 
-// --- cofre diario de login (racha de 7 días · anti-inflación: 80% insumos / 20% plata) ---
-// "2das mejoras" (4/8): el cofre reparte SOLO cosas laterales — cosméticos soulbound y consumibles
-// de un uso. NUNCA plata, minerales, herramientas, semillas, XP, fichas, runas, $Golden ni estrellas del pase.
+// Cofre diario: ciclo autorizado por dirección el 20/10/2026; premios confirmados por guardar.
 const DAILY_REWARDS = [
-  { cos: "Decoración chica de granja",             label: "Decoración chica para la granja" },
-  { buffFarm: 5, buffMin: 60,                       label: "Bendición del Granjero: +5% velocidad de farmeo por 1 hora" },
-  { dish: 2,                                        label: "2 platos ya cocinados" },
-  { cos: "Emote o marco de perfil",                 label: "Emote o marco de perfil" },
-  { carnada: 5,                                     label: "Carnada de pesca ×5" },
-  { cos: "Cosmético sorpresa (de un set)",          label: "Cosmético sorpresa" },
-  { coleccionable: true,                            label: "Coleccionable de la semana (rotativo)" },
+  { label: "Cultivos un 15% más rápidos durante 1 hora" },
+  { label: "5 semillas de papa" },
+  { label: "3 picos de madera" },
+  { label: "2 papas asadas" },
+  { label: "2 picos de piedra" },
+  { label: "5 semillas de zanahoria" },
+  { label: "50 Plata" },
 ];
 // el día 7 entrega un cosmético EXCLUSIVO que rota cada semana (el gancho, sin tocar el balance)
 const COLECCIONABLES = [
@@ -11905,23 +11923,20 @@ function kitReclamar() {
   if (typeof saveFarm === "function") saveFarm(true);
   return true;
 }
-function claimDaily() {
+function cultivoTiempoMult(t = nowMs()) { return (G.buffCultivoHasta || 0) > t ? 0.85 : 1; }
+async function claimDaily() {
   const st = dailyState();
-  if (!st.claimable) { toast("Ya reclamaste hoy — volvé mañana"); return; }
+  if (!st.claimable) { toast("Ya reclamaste hoy — volvé mañana"); return false; }
   const r = DAILY_REWARDS[st.day - 1];
-  let detalle = r.label;
-  if (r.cos) darCosmetico(r.cos);
-  if (r.coleccionable) { const c = coleccionableDeLaSemana(); darCosmetico(c); detalle = "Coleccionable de la semana: " + c; }
-  if (r.buffFarm) addBuff("farm", "+" + r.buffFarm + "% vel. de farmeo", r.buffFarm, (r.buffMin || 60) * 60);
-  if (r.dish) { G.dishes = G.dishes || {}; G.dishes.papa_asada = (G.dishes.papa_asada || 0) + r.dish; }
-  if (r.carnada) G.res.lombriz = (G.res.lombriz || 0) + r.carnada;
-  G.daily = { day: st.day, last: dayStamp(0) };
+  const confirmado = await diarioSolicitar();
+  if (!confirmado || !confirmado.ok) return false;
+  const detalle = r.label;
   log("Cofre diario " + st.day + "/7: " + detalle, "gold");
   toast("¡Reclamado! Día " + st.day + "/7");
   if (st.day === 7 && window.celebrate) celebrate({ title: "¡DÍA 7!", sub: "Cofre de recompensas", big: true, reward: detalle });
   refreshHud(); if (typeof syncSlots === "function") syncSlots(); if (isOpen("ov-inv")) refreshInv();
   if (typeof refreshDaily === "function") refreshDaily();
-  if (typeof saveFarm === "function") saveFarm(true);
+  return true;
 }
 
 

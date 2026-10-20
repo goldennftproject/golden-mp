@@ -76,7 +76,7 @@ console.log("\n5 · EL PASE VIP LO ENTREGA EN EL NIVEL 26\n");
   ok("y el texto del premio lo nombra con su bono", /Cincel de Cantera/.test(g("passRewardStr")(r)) && /\+0,1/.test(g("passRewardStr")(r)), g("passRewardStr")(r));
   G.nfts = {}; G.pass = null; G.produccion.vipHasta = ctx.nowMs() + 30*86400000;
   const p = g("passInit()"); p.stars = 26 * g("PASS_STARS_LVL");
-  g("passClaim(26, true)");
+  g("GF.PASE_ACTIVO=true; passClaim(26, true); GF.PASE_ACTIVO=false"); // Contrato del pase archivado; producción lo mantiene apagado.
   ok("reclamarlo lo da", g('tengoNft("cincel_cantera")'));
   ok("y desde entonces la piedra paga 1,1", Math.abs(g('bonoNft("piedra", 1)') - 1.1) < 1e-9);
   ok("y el $Golden del carril VIP no se tocó (candado del 18/8: 60 $G exactos)", g("PASS_VIP").reduce((t, r) => t + (r.golden || 0), 0) === 60);
