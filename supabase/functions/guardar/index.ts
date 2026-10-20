@@ -185,7 +185,7 @@ function protegerEconomia(prev, next, ahora) {
       let gasto = 0;
       if (!Number.isInteger(expN) || expN<exp || expN>16 || expN>exp+1 || (expN>exp && (!obra || obra.n!==expN || obra.hasta>ahora+1000))) errores.push("Expansión sin obra terminada");
       if (obraN && (!obra || obra.n!==obraN.n)) {
-        if (obraN.n!==expN+1 || Math.abs(num(obraN.desde)-ahora)>300000 || num(obraN.hasta)-num(obraN.desde)<600000*obraN.n-1000) errores.push("Obra no autorizada");
+        if (obraN.n!==expN+1 || Math.abs(num(obraN.desde)-ahora)>300000 || num(obraN.hasta)-num(obraN.desde)<600000*obraN.n*(fin>ahora?0.9:1)-1000) errores.push("Obra no autorizada");
         gasto += 20+10*expN+5*expN*expN+Math.round(.5*Math.pow(Math.max(0,expN-2),3));
         if (!expN && (num(antes.res && antes.res.madera)-num(next.res && next.res.madera)<2 || num(antes.res && antes.res.piedra)-num(next.res && next.res.piedra)<2)) errores.push("Faltan materiales de la primera expansión");
       } else if (obra && obraN && obraN.hasta!==obra.hasta) errores.push("No se puede adelantar una obra");
@@ -218,6 +218,7 @@ function protegerEconomia(prev, next, ahora) {
   }
   for (const track of ["claimF","claimV"]) {
     const a = antes.pass && antes.pass[track] || {}, b = next.pass && next.pass[track] || {};
+    if(Object.keys(b).some(k=>b[k]&&!a[k]))errores.push('El pase está desactivado; no admite nuevos premios');
     for (const k of Object.keys(a)) if (a[k] && !b[k]) errores.push("No se pueden volver a reclamar premios del pase");
     for (const k of Object.keys(b)) if (b[k] && !a[k] && (!Number.isInteger(+k)||+k<1||+k>30||+k>Math.min(30,Math.floor(num(next.pass.stars)/40)))) errores.push("Nivel del pase sin desbloquear");
     if (track === "claimV") for (const k of Object.keys(b)) if (b[k] && !a[k]) {
@@ -228,6 +229,7 @@ function protegerEconomia(prev, next, ahora) {
   }
   const dia = new Date(ahora).toISOString().slice(0,10), control = antes._economiaControl || {};
   const estrellas = Math.max(0,num(next.pass && next.pass.stars)-num(antes.pass && antes.pass.stars));
+  if(estrellas>0)errores.push('El pase está desactivado; no admite nuevas estrellas');
   const compradas = Math.max(0,Math.floor((goldenCustodia(antes)+reembolso-goldenCustodia(next)-gastoVip)/15))*40;
   const emitidas = (control.dia===dia?num(control.estrellas):0)+Math.max(0,estrellas-compradas);
   if (emitidas>138) errores.push("Estrellas del pase superiores al máximo diario y semanal combinado");

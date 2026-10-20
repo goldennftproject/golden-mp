@@ -44,4 +44,10 @@ assert.ok(server.visitaOperacion(visitor,'farm0','me',clock,'repeat-farm').error
 assert.equal(server.visitaOperacion(visitor,'farm0','me',clock,'visit0').repetido,true);
 const view=server.visitaVista({user_id:'public',name:'Name',data:{golden:999,plata:888,banco:{secret:1},plots:[{state:'growing',cropKey:'papa'}]}});
 assert.equal(view.golden,undefined);assert.equal(view.banco,undefined);assert.equal(view.parcelas[0].cultivo,'papa');
+ctx.estadoDeCero();ctx.G.plata=100;ctx.G.res.madera=10;ctx.G.res.piedra=10;ctx.G.produccion.vipHasta=clock+86400000;ctx.G.produccion.vipAplicado=true;
+const pre=JSON.parse(JSON.stringify(ctx.snapshot())),post=JSON.parse(JSON.stringify(pre));post.plata-=20;post.res.madera-=2;post.res.piedra-=2;post.expObra={n:1,desde:clock,hasta:clock+540000};
+assert.equal(server.protegerEconomia(pre,post,clock).length,0,'el servidor acepta la obra VIP de nueve minutos');
+post.expObra.hasta=clock+530000;assert.ok(server.protegerEconomia(pre,post,clock).some(e=>e.includes('Obra')));
+pre.produccion.vipHasta=0;post.produccion.vipHasta=0;pre.produccion.vipAplicado=false;post.produccion.vipAplicado=false;post.expObra.hasta=clock+540000;
+assert.ok(server.protegerEconomia(pre,post,clock).some(e=>e.includes('Obra')),'Free no recibe descuento VIP');
 console.log('OK: energía Free/VIP sin tocar combate, relojes, lotes, comisiones históricas, pase apagado, siete premios idempotentes, copias VIP y visitas acotadas sin datos financieros.');
