@@ -2720,6 +2720,7 @@ function produccionVipComprar() {
   produccionVipTick();
   if (!G.produccion || produccionVipActivo()) { toast("El VIP ya está activo."); return false; }
   if (!Number.isFinite(G.golden) || G.golden < PRODUCCION_VIP_PRECIO) { toast("Necesitás " + PRODUCCION_VIP_PRECIO + " $Golden."); return false; }
+  energiaGranjaTick(); // Cerrar el tramo Free antes del VIP: no regenerar horas anteriores a la tarifa VIP.
   G.golden -= PRODUCCION_VIP_PRECIO;
   G.produccion.vipHasta = nowMs() + PRODUCCION_VIP_DIAS * 86400000;
   G.produccion.vipAplicado = true;

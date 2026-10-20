@@ -17,6 +17,8 @@ let calls=0;ctx.craftLote(()=>calls++,'x',5);assert.equal(calls,0);
 ctx.G.produccion.vipHasta=clock+3600000;ctx.craftLote(()=>{calls++;ctx.G.plata++;},'x',5);assert.equal(calls,5);
 assert.equal(ctx.marketFee(),7);assert.equal(ctx.marketFee({fee_pct:null}),5);assert.equal(ctx.marketFee({fee_pct:10}),10);
 ctx.G.produccion.vipHasta=0;assert.equal(ctx.marketFee(),10);
+ctx.G.golden=100;ctx.G.energiaGranja={v:1,actual:0,at:clock-3600000};ctx.saveFarm=()=>{};ctx.refreshProduccionGranja=()=>{};
+assert.equal(ctx.produccionVipComprar(),true);assert.equal(ctx.energiaGranjaTick(),12.5,'activar VIP no acelera retroactivamente la recarga Free');
 const beforeStars=ctx.G.pass?.stars||0;ctx.passAddStars(999);assert.equal(ctx.G.pass?.stars||0,beforeStars);assert.equal(ctx.GF.PASE_ACTIVO,false);
 let d={plata:0,seeds:{},picks:{owned:{},dur:{}},dishes:{}};
 for(let day=1;day<=7;day++){
