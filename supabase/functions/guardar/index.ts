@@ -94,13 +94,53 @@ function actividadActualizar(prev,next,ahora){
   const a=actividadLibro(prev),pruebas=prev?actividadEvidencias(prev,next,ahora):{},pedidos=next.actividadAcciones||{};
   const e=prev?.energiaGranja,at=Math.min(ahora,num(e?.at)||ahora),fin=num(prev?.produccion?.vipHasta);
   const regen=(Math.max(0,Math.min(ahora,fin)-at)*100+Math.max(0,ahora-Math.max(at,fin))*50)/ENERGIA_GRANJA_MS;
-  let presupuesto=e&&Number.isFinite(e.actual)?Math.max(0,e.actual+regen-num(next.energiaGranja?.actual)):0,credito=0;
+  let presupuesto=e&&Number.isFinite(e.actual)?Math.max(0,e.actual+regen-num(next.energiaGranja?.actual)):0,credito=0;const acciones={};
   for(const k of Object.keys(ACTIVIDAD_COSTOS)){
     const anterior=Math.max(0,num(a.registro[k])),pedido=Number.isSafeInteger(pedidos[k])&&pedidos[k]>=0&&pedidos[k]<=1e9?Math.max(anterior,pedidos[k]):anterior;
     const n=Math.min(pedido-anterior,Math.max(0,Math.floor(num(pruebas[k]))),Math.floor((presupuesto+1e-6)/ACTIVIDAD_COSTOS[k]));
-    credito+=n*ACTIVIDAD_COSTOS[k];presupuesto-=n*ACTIVIDAD_COSTOS[k];a.registro[k]=pedido;
+    credito+=n*ACTIVIDAD_COSTOS[k];presupuesto-=n*ACTIVIDAD_COSTOS[k];a.registro[k]=pedido;acciones[k]=n;
   }
-  next.actividadGranja=a;next.actividadAcciones={...a.registro};return actividadAcreditar(next,credito,ahora);
+  next.actividadGranja=a;next.actividadAcciones={...a.registro};logrosActualizar(prev,next,acciones);return actividadAcreditar(next,credito,ahora);
+}
+// Documento logros.docx aprobado el 21/10. Metas acumulativas, premios únicos.
+const LOGROS_TABLA={papa:[[100,100],[300,400],[1000,2000]],ciruela:[[100,110],[250,330],[1200,2200]],zanahoria:[[100,100],[250,300],[1200,2200]],cebolla:[[100,150],[250,300],[1200,2400]],calabacin:[[100,200],[250,350],[1300,2600]],madera:[[100,100],[200,200],[500,500]],piedra:[[100,100],[250,250],[1000,800]],visitas:[[10,10],[50,50],[100,150],[500,500]]};
+function logrosLibro(d){
+  if(d?.logrosV2?.v===1)return JSON.parse(JSON.stringify(d.logrosV2));
+  const progreso={}; // Sólo siembras históricas verificables; no inventar unidades de madera/piedra ni visitas.
+  for(const k of ['papa','ciruela','zanahoria','cebolla','calabacin'])progreso[k]=Math.min(LOGROS_TABLA[k].at(-1)[0],Math.max(0,Math.floor(num(d?.stats?.plantar?.[k]))));
+  return {v:1,progreso,cobrados:{},registro:{},visitas:{dia:'',ids:[]},ops:[]};
+}
+function logrosActualizar(prev,next,acciones){
+  const b=logrosLibro(prev),sumar=(k,n)=>b.progreso[k]=Math.min(LOGROS_TABLA[k].at(-1)[0],Math.round((num(b.progreso[k])+Math.max(0,n))*10)/10);
+  let plantas=num(acciones.plant);
+  for(const k of ['papa','ciruela','zanahoria','cebolla','calabacin']){
+    const delta=Math.max(0,num(next.stats?.plantar?.[k])-num(prev?.stats?.plantar?.[k]));
+    const semillas=Math.max(0,num(prev?.seeds?.[k])-num(next.seeds?.[k]));
+    const parcelas=(Array.isArray(next.plots)?next.plots:[]).filter((p,i)=>p?.cropKey===k&&p.state==='growing'&&(prev?.plots?.[i]?.cropKey!==k||num(p.readyAt)>num(prev?.plots?.[i]?.readyAt))).length;
+    const n=Math.min(plantas,delta,Math.max(semillas,parcelas));sumar(k,n);plantas-=n;
+  }
+  for(const k of ['madera','piedra']){
+    const antes=num(b.registro[k]),pedido=Number.isFinite(next.logrosAcciones?.[k])&&next.logrosAcciones[k]>=0&&next.logrosAcciones[k]<=1e9?Math.max(antes,Math.round(next.logrosAcciones[k]*10)/10):antes;
+    const actos=k==='madera'?num(acciones.chop):Math.min(num(acciones.mine),Math.max(0,num(next.stats?.minar?.piedra)-num(prev?.stats?.minar?.piedra)));
+    const bono=prev?.nfts?.[k==='madera'?'hacha_abuelo':'cincel_cantera']?0.1:0;
+    sumar(k,Math.min(pedido-antes,actos*(1+bono)));b.registro[k]=pedido;
+  }
+  next.logrosV2=b;next.logrosAcciones={...b.registro};next.logros={...(prev?.logros||{})};
+}
+function logroOperacion(prev,key,op){
+  const data=JSON.parse(JSON.stringify(prev)),b=logrosLibro(prev),m=/^([a-z]+):([0-3])$/.exec(String(key));
+  const premio=m&&LOGROS_TABLA[m[1]]?.[Number(m[2])];if(!premio)return {error:'Logro inexistente'};
+  if(b.cobrados[key])return {data,cobro:premio[1],repetido:true};
+  if(num(b.progreso[m[1]])<premio[0])return {error:'La meta aún no está confirmada'};
+  b.cobrados[key]=true;b.ops=[...(b.ops||[]),{op,key}].slice(-20);data.logrosV2=b;data.plata=num(data.plata)+premio[1];return {data,cobro:premio[1]};
+}
+function logroVisita(prev,destino,uid,ahora,op){
+  const data=JSON.parse(JSON.stringify(prev)),b=logrosLibro(prev),dia=new Date(ahora).toISOString().slice(0,10);
+  if((b.ops||[]).some(r=>r.op===op))return {data,cobro:0,repetido:true};
+  if(num(data.produccion?.vipHasta)<=ahora||destino===uid)return {error:'Visita no autorizada'};
+  if(b.visitas.dia!==dia)b.visitas={dia,ids:[]};
+  if(num(b.progreso.visitas)<500&&!b.visitas.ids.includes(destino)){b.visitas.ids.push(destino);b.progreso.visitas=num(b.progreso.visitas)+1;}
+  b.ops=[...(b.ops||[]),{op}].slice(-20);data.logrosV2=b;return {data,cobro:0};
 }
 function artefactoCalcular(a,id,ahora) {
   if(!a || !Object.prototype.hasOwnProperty.call(ARTEFACTOS_PRECIOS,objetoModelo(id)))return {cobro:0,resto:0,fin:ahora};
@@ -479,6 +519,7 @@ Deno.serve(async (req) => {
       if(!Number.isSafeInteger(tasaBanco)||tasaBanco<1||tasaBanco>1e9)return json({error:'Banco temporalmente no disponible'},503);
       if(body.banco.accion==='cotizar')return json({ok:true,tasa:tasaBanco,revision:'plata-golden:'+tasaBanco,usdt:false});
     }
+    let granjaVisitada;
     if(body?.visita){
       if(body.cuenta!==uid)return json({error:'La sesión cambió de cuenta'},409);
       const {data:propia,error:ep}=await admin.from('farms').select('data').eq('user_id',uid).maybeSingle();
@@ -492,11 +533,11 @@ Deno.serve(async (req) => {
       const {data:destino,error}=await admin.from('farms').select('user_id,name,data').eq('user_id',body.visita.destino).maybeSingle();
       if(error)return json({error:'No se pudo leer la visita'},503);
       if(!destino)return json({error:'La granja ya no está disponible'},404);
-      if(body.visita.accion==='ver')return json({ok:true,granja:visitaVista(destino)});
-      if(body.visita.accion!=='semillas')return json({error:'Acción de visita inválida'},400);
+      granjaVisitada=visitaVista(destino);
+      if(!['ver','semillas'].includes(body.visita.accion))return json({error:'Acción de visita inválida'},400);
     }
     // Cobros y canjes autoritativos: saldo, reloj, recibo y compare-and-swap en el servidor.
-    if(body?.artefacto || body?.banco || body?.diario || body?.visita){
+    if(body?.artefacto || body?.banco || body?.diario || body?.visita || body?.logro){
       const a=body.artefacto;
       if(body.cuenta!==uid)return json({error:'La sesión cambió de cuenta; recargá antes de operar'},409);
       if(typeof body.op!=='string'||!/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(body.op)||typeof body.base!=='string')return json({error:'Pedido inválido'},400);
@@ -504,8 +545,8 @@ Deno.serve(async (req) => {
       if(err)return json({error:'No se pudo leer la granja'},503);
       if(!row)return json({error:'Primero sincronizá tu granja'},409);
       const ahora=Math.max(Date.now(),new Date(row.updated_at).getTime()+1);
-      const r=body.visita ? visitaOperacion(row.data,body.visita.destino,uid,ahora,body.op) : body.diario ? (body.diario.accion==='reclamar'?diarioOperacion(row.data,ahora,body.op):{error:'Operación diaria inválida'}) : body.banco ? bancoOperacion(row.data,body.banco,body.op,tasaBanco) : artefactoOperacion(row.data,a.accion,a.id,ahora,body.op);
-      if(r.repetido)return json({ok:true,data:row.data,updated_at:row.updated_at,cobro:r.cobro,repetido:true});
+      const r=body.logro ? logroOperacion(row.data,body.logro.key,body.op) : body.visita ? (body.visita.accion==='ver'?logroVisita(row.data,body.visita.destino,uid,ahora,body.op):visitaOperacion(row.data,body.visita.destino,uid,ahora,body.op)) : body.diario ? (body.diario.accion==='reclamar'?diarioOperacion(row.data,ahora,body.op):{error:'Operación diaria inválida'}) : body.banco ? bancoOperacion(row.data,body.banco,body.op,tasaBanco) : artefactoOperacion(row.data,a.accion,a.id,ahora,body.op);
+      if(r.repetido)return json({ok:true,data:row.data,updated_at:row.updated_at,cobro:r.cobro,repetido:true,granja:granjaVisitada});
       if(body.base!==row.updated_at)return json({error:'Otra sesión guardó; recargá antes de operar',conflicto:true},409);
       if(r.tasaCambio)return json({error:r.error,tasaCambio:true},412);
       if(r.error)return json({error:r.error},400);
@@ -513,7 +554,7 @@ Deno.serve(async (req) => {
       const {data:hecho,error:fallo}=await admin.from('farms').update({data:r.data,updated_at:fecha}).eq('user_id',uid).eq('updated_at',row.updated_at).select('updated_at').maybeSingle();
       if(fallo)return json({error:'No se pudo confirmar la operación'},503);
       if(!hecho)return json({error:'Otra sesión guardó primero',conflicto:true},409);
-      return json({ok:true,data:r.data,updated_at:fecha,cobro:r.cobro});
+      return json({ok:true,data:r.data,updated_at:fecha,cobro:r.cobro,granja:granjaVisitada});
     }
 
     /* REINICIAR LA CUENTA (24/9, dirección: « debe literal borrar la cuenta y crearla como si
@@ -540,7 +581,7 @@ Deno.serve(async (req) => {
     if (Number(prevRow?.data?.reinicio || 0) > Number(data.reinicio || 0)) return json({ error: "La cuenta se reinició. Recargá para comenzar de cero.", conflicto: true }, 409);
     const op = body?.op;
     if (op != null && (typeof op !== "string" || !/^[a-zA-Z0-9._-]{8,100}$/.test(op))) return json({ error: "Identificador de operación inválido" }, 400);
-    if (op && prevRow?.data?._saveOp === op) return json({ ok: true, repetido: true, updated_at: prevRow.updated_at, actividadGranja:prevRow.data.actividadGranja });
+    if (op && prevRow?.data?._saveOp === op) return json({ ok: true, repetido: true, updated_at: prevRow.updated_at, actividadGranja:prevRow.data.actividadGranja,logrosV2:prevRow.data.logrosV2 });
     if (Object.prototype.hasOwnProperty.call(body, "base") && body.base !== (prevRow?.updated_at ?? null)) return json({ error: "Otra sesión guardó una versión diferente", conflicto: true }, 409);
     const ahora = new Date(Math.max(Date.now(), prevRow?.updated_at ? new Date(prevRow.updated_at).getTime() + 1 : 0));
     const elapsedSeg = prevRow?.updated_at ? (ahora.getTime() - new Date(prevRow.updated_at).getTime()) / 1000 : 0;
@@ -584,7 +625,7 @@ Deno.serve(async (req) => {
     if (escrito.error && /mercado_ack/.test(escrito.error.message || "")) escrito = await escribir(false);
     if (escrito.error?.code === "23505" || (!escrito.error && !escrito.data)) return json({ error: "Otra sesión guardó antes. No se sobrescribió su granja.", conflicto: true }, 409);
     if (escrito.error) return json({ error: escrito.error.message }, 500);
-    return json({ ok: true, sospechas: sospechas.length, updated_at: escrito.data.updated_at, actividadGranja:data.actividadGranja });
+    return json({ ok: true, sospechas: sospechas.length, updated_at: escrito.data.updated_at, actividadGranja:data.actividadGranja,logrosV2:data.logrosV2 });
   } catch (e) {
     return json({ error: String((e as Error)?.message || e) }, 500);
   }

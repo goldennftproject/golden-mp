@@ -4068,7 +4068,7 @@ function refreshLogros() {
   const filas = logroLista();
   const pend = logroPendientes();
   let h = '<div class="info">' + (pend ? 'Tenés <b>' + pend + '</b> premio' + (pend === 1 ? '' : 's') + ' para cobrar.' :
-    'Todo cobrado por ahora — las metas siguen contando solas.') + '</div>';
+    'Sin premios pendientes: seguí avanzando hacia las metas.') + '</div><p class="sub">25 metas acumulativas · 16.400 Plata en total · cada premio se cobra una sola vez en el servidor. Plantar no es cosechar; madera y piedra cuentan unidades recolectadas. Visitas VIP: una por granja y día UTC, independientemente del cupo de semillas.</p><p class="sub">Progreso confirmado al guardar. Se conservan las siembras históricas registradas; la recolección por unidades y las visitas cuentan desde esta actualización. Cobros del sistema anterior conservados: '+Object.values(G.logros||{}).filter(Boolean).length+'.</p>';
   filas.forEach(f => {
     // el tier que se muestra: el primero sin cobrar (o el último, si está todo cobrado)
     const t = f.tiers.find(x => !x.cobrado) || f.tiers[f.tiers.length - 1];
@@ -4079,14 +4079,15 @@ function refreshLogros() {
         (hecho ? ' <span style="color:#3f6b2a">✓ completo</span>' : '') + '</div>' +
       (f.unico ? '' : '<div class="durbar"><i style="width:' + pct + '%"></i></div>') +
       '<div class="fds">' + (f.unico ? (f.n ? 'Hecho.' : 'Pendiente.') : Math.min(f.n, t.meta) + '/' + t.meta) +
-        ' · premio: ' + t.premio + ' de plata</div></div>' +
+        ' · premio: ' + t.premio + ' de plata</div><div class="fds">Metas: '+f.tiers.map(x=>x.meta+' → '+x.premio+' Plata'+(x.cobrado?' ✓':'')).join(' · ')+'</div></div>' +
       '<div class="fbtns">' + (t.cobrable ? '<button class="gold sm" data-logro="' + t.key + '">Cobrar</button>' :
         (hecho ? '' : '<span class="fds">' + (t.cobrado ? '' : 'en camino…') + '</span>')) + '</div></div>';
   });
   box.innerHTML = h;
-  box.querySelectorAll("[data-logro]").forEach(b => b.onclick = () => {
-    if (typeof logroCobrar === "function") logroCobrar(b.getAttribute("data-logro"));
-    refreshLogros();
+  box.querySelectorAll("[data-logro]").forEach(b => b.onclick = async () => {
+    b.disabled=true;
+    try{if (typeof logroCobrar === "function") await logroCobrar(b.getAttribute("data-logro"));}
+    finally{if(isOpen('ov-logros'))refreshLogros();}
   });
 }
 /* ---- EL ÁLBUM (23/8): la colección de primeras veces ----------------------------

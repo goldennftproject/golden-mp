@@ -1,5 +1,15 @@
 # Las leyes de Golden Farm
 
+## Logros del diseñador — 21/10/2026
+
+Tras recibir `logros.docx` y la propuesta de incorporación, dirección aprobó «aplica esto» con la captura que confirma: contar plantar (no cosechar), unidades recolectadas de madera/piedra, metas acumulativas, cobro único validado por el servidor y una visita por granja y día.
+
+Se muestran 25 metas en ocho categorías; premios totales 16.400 Plata, no repetibles. Papa 100/300/1000 → 100/400/2000; ciruela 100/250/1200 → 110/330/2200; zanahoria 100/250/1200 → 100/300/2200; cebolla 100/250/1200 → 150/300/2400; calabacín 100/250/1300 → 200/350/2600; madera 100/200/500 → 100/200/500; piedra 100/250/1000 → 100/250/800; visitas 10/50/100/500 → 10/50/150/500. Alcanzar una meta no consume el contador ni reinicia la siguiente.
+
+Se mantienen los cobros antiguos como historial, sin volver a ofrecerlos. Las siembras históricas proceden sólo de estadísticas previamente guardadas en servidor; no se inventa recolección histórica en unidades ni visitas. La recolección nueva conserva décimas NFT. Los contadores se corroboran con las evidencias y energía del guardado aceptado: no constituyen una simulación autoritativa completa ni garantizan protección contra bots. El navegador no fija totales ni confirma premios. Cobros y visitas usan autenticación, recibos y CAS.
+
+Las visitas requieren el VIP único; ver la granja registra el progreso, no hace falta recoger semillas. El límite de tres semillas diarias no limita el logro. Un destino cuenta una vez por día UTC; al cambiar el día puede contar otra vez. No hay auto-visitas. USDT sigue desactivado.
+
 ## Nodo a elección en cada expansión — 20/10/2026
 
 Dirección aprobó «cada expansión dará terreno + un cupo productivo + un nodo básico gratuito a elección entre árbol, roca o parcela»: «Claro que permite elegir qué obtener» y «Bien, perfecto, así me gusta. Hazlo así a ver si le gusta al diseñador».

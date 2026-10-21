@@ -428,7 +428,7 @@ GF.PASE_ACTIVO = false;
 // Pausa reversible de la pesca: conservar catálogos, assets, inventarios y progreso.
 GF.PESCA_ACTIVA = false;
 GF.esPescaOculta = id => !GF.PESCA_ACTIVA && ["ov-lonja","ov-lombricario"].includes(id);
-GF.MVP_OCULTOS = ["ov-pass", "ov-misiones", "ov-logros", "ov-album", "ov-clan", "ov-cos", "ov-lb"];
+GF.MVP_OCULTOS = ["ov-pass", "ov-misiones", "ov-album", "ov-clan", "ov-cos", "ov-lb"];
 GF.esOcultoMvp = function (id) { return !!(GF.MVP && GF.MVP_OCULTOS.indexOf(id) >= 0); };
 
 // ================= SOLO SE ENTRA CON CORREO (18/9, dirección) ==========================

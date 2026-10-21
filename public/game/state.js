@@ -16,7 +16,7 @@ const G = {
   gear: { casco: null, armadura: null, botas: null, escudo: null, arma: null, municion: false },
   weapons: {},                   // doc 2/8: armas nuevas — id ("espada_madera") -> { dur }
   stam: null, stamAcc: 0, stamFullAt: 0, stamLastAt: 0, stamRec: null, // regeneración continua con reloj persistente
-  stats: {}, statsBase: {}, actividadGranja: null, actividadAcciones: {}, chestCap: 0, edif2: {}, cosmeticos: [],
+  stats: {}, statsBase: {}, actividadGranja: null, actividadAcciones: {}, logrosV2:null, logrosAcciones:{}, chestCap: 0, edif2: {}, cosmeticos: [],
   animals: {},                   // Establo: animal → { desde, feliz, comidoAt, prodAt }
   armor: {}, armorDur: {}, armorEq: null,   // Curtiduría: piezas crafteadas, su durabilidad y el set equipado
   ofrendaPts: 0, ofrendaLog: 0,  // Altar de Ofrendas: puntos acumulados y recursos quemados
@@ -146,7 +146,9 @@ function actividadGranjaEstado(){const energia=Math.min(2000,Math.max(0,G.activi
 function energiaGranjaAgregar(key,n,tipo) {
   if(!energiaGranjaPuede(tipo))return false;
   if(!tryAddRes(key,n))return false;
-  energiaGranjaPagar(tipo);return true;
+  energiaGranjaPagar(tipo);
+  if((tipo==='chop'||tipo==='mine')&&(key==='madera'||key==='piedra')){G.logrosAcciones=G.logrosAcciones||{};G.logrosAcciones[key]=Math.min(1e9,Math.round(((G.logrosAcciones[key]||0)+n)*10)/10);}
+  return true;
 }
 const ARTEFACTO_DEF = {
   cobre:{label:'Gallinero',golden:10,icon:'🐔'},
@@ -11866,7 +11868,7 @@ const LOGRO_UNICOS = [   // pagan como un bronce (LOGRO_PREMIO[0])
 ];
 function logroCobrados() { const l = G.logros || (G.logros = {}); return l; }
 /* la lista que pinta la pestaña: una fila por logro, con progreso y qué tier está para cobrar */
-function logroLista() {
+function logroListaLegada() {
   const cob = logroCobrados();
   const filas = LOGRO_DEF.map(d => {
     const n = d.n();
@@ -11885,19 +11887,19 @@ function logroLista() {
 function logroPendientes() {   // para el contador del menú
   let n = 0; logroLista().forEach(f => f.tiers.forEach(t => { if (t.cobrable) n++; })); return n;
 }
-function logroCobrar(key) {
-  const fila = logroLista().find(f => f.tiers.some(t => t.key === key));
-  const t = fila && fila.tiers.find(t => t.key === key);
-  if (!t) return { error: "no existe" };
-  if (t.cobrado) return { error: "ya cobrado" };
-  if (!t.cobrable) return { error: "todavía no" };
-  logroCobrados()[key] = true;
-  G.plata += t.premio;
-  log("🏆 Logro: " + fila.label + (t.nombre ? " (" + t.nombre + ")" : "") + " — +" + t.premio + " de plata.", "gold");
-  toast("🏆 +" + t.premio + " de plata");
-  if (typeof refreshHud === "function") refreshHud();
-  if (typeof saveFarm === "function") saveFarm(true);
-  return { ok: true, premio: t.premio };
+const LOGROS_TABLA={papa:[[100,100],[300,400],[1000,2000]],ciruela:[[100,110],[250,330],[1200,2200]],zanahoria:[[100,100],[250,300],[1200,2200]],cebolla:[[100,150],[250,300],[1200,2400]],calabacin:[[100,200],[250,350],[1300,2600]],madera:[[100,100],[200,200],[500,500]],piedra:[[100,100],[250,250],[1000,800]],visitas:[[10,10],[50,50],[100,150],[500,500]]};
+function logrosRecibir(b){
+  if(!b||b.v!==1)return;G.logrosV2=JSON.parse(JSON.stringify(b));G.logrosAcciones=G.logrosAcciones||{};
+  for(const k of ['madera','piedra'])if(Number.isFinite(b.registro&&b.registro[k]))G.logrosAcciones[k]=Math.max(G.logrosAcciones[k]||0,b.registro[k]);
+}
+function logroLista(){
+  const b=G.logrosV2||{},p=b.progreso||{},c=b.cobrados||{};
+  return Object.entries(LOGROS_TABLA).map(([id,metas])=>({id,ic:id==='visitas'?'🏡':id==='madera'?'🪵':id==='piedra'?'🪨':'🌱',label:id==='visitas'?'Visitar otras granjas · requiere VIP':id==='madera'?'Recolectar madera':id==='piedra'?'Recolectar piedra':'Plantar '+((CROP_DEF[id]&&CROP_DEF[id].label)||id),n:p[id]||0,tiers:metas.map(([meta,premio],i)=>({key:id+':'+i,nombre:LOGRO_TIERS[i]||'Maestría',meta,premio,cobrado:!!c[id+':'+i],cobrable:!c[id+':'+i]&&(p[id]||0)>=meta})),unico:false}));
+}
+function logroCobrar(key){
+  const t=logroLista().flatMap(f=>f.tiers).find(t=>t.key===key);
+  if(!t||!t.cobrable)return {error:'Meta no confirmada o ya cobrada'};
+  return economiaSolicitar({logro:{key}});
 }
 
 function dailyState() {

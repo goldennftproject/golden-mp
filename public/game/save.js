@@ -32,6 +32,7 @@ function artefactoSolicitar(accion,id){return economiaSolicitar({artefacto:{acci
 function bancoSolicitar(golden,revision){return economiaSolicitar({banco:{accion:'canjear',golden,revision}});}
 function diarioSolicitar(){return economiaSolicitar({diario:{accion:'reclamar'}});}
 async function visitaConsultar(accion,destino){
+  if(accion==='ver')return economiaSolicitar({visita:{accion,destino}});
   if(!sb||!UID||!CARGA_OK||SOLO_LOCAL)return null;
   const uid=UID;
   try{const {data,error}=await conTope(sb.functions.invoke('guardar',{body:{cuenta:uid,visita:{accion,destino}}}),10000,'visita');
@@ -61,10 +62,10 @@ async function economiaSolicitar(detalle) {
       }
       if(error || !data || !data.ok || UID!==uid){SAVE_CONFLICTOS.add(uid);toast('Resultado sin confirmar. Recargá con conexión para consultar el servidor.');return;}
       hydrate(data.data);SAVE_BASES.set(uid,data.updated_at);copiaGuardar(snapshot());mercadoLimpiarPendiente(uid);
-      toast(detalle.visita ? '+1 semilla de papa por la visita' : detalle.diario ? 'Recompensa diaria confirmada: día '+data.cobro+'/7' : detalle.banco ? 'Canje confirmado: +'+fmtGolden(data.cobro)+' Golden' : detalle.artefacto.accion==='comprar' ? 'Objeto comprado con Golden' : '+'+fmtPlata(data.cobro)+' Plata');
+      toast(detalle.logro ? 'Logro confirmado: +'+fmtPlata(data.cobro)+' Plata' : detalle.visita ? (detalle.visita.accion==='ver'?'Visita confirmada · una por granja y día UTC para logros':'+1 semilla de papa por la visita') : detalle.diario ? 'Recompensa diaria confirmada: día '+data.cobro+'/7' : detalle.banco ? 'Canje confirmado: +'+fmtGolden(data.cobro)+' Golden' : detalle.artefacto.accion==='comprar' ? 'Objeto comprado con Golden' : '+'+fmtPlata(data.cobro)+' Plata');
       return data;
     }catch(e){toast('No se pudo completar la operación; comprobá la conexión');}
-  })().finally(()=>{MERCADO_EN_CURSO=null;desbloquear();refreshHud();if(isOpen('ov-reliquias'))refreshArtefactos();if(isOpen('ov-banco'))refreshBanco();});
+  })().finally(()=>{MERCADO_EN_CURSO=null;desbloquear();refreshHud();if(isOpen('ov-reliquias'))refreshArtefactos();if(isOpen('ov-banco'))refreshBanco();if(isOpen('ov-logros'))refreshLogros();});
   return MERCADO_EN_CURSO;
 }
 function mercadoGlobalRecurso(res) {
@@ -448,7 +449,7 @@ function snapshot() {
      vistos y estrellaMax (el álbum con estrellas) y pescaTiene (el señuelo, que no se gasta).
      OJO con los comentarios AL FINAL de una línea de este objeto: se comen lo que sigue. */
   return { plata: G.plata, golden: G.golden, level: G.level, prestige: G.prestige, iniciado: G.iniciado, reinicio: G.reinicio,   /* 24/9: cuándo se reinició la cuenta (el portero lo lee) */
-    energiaGranja: G.energiaGranja, artefactos: G.artefactos, banco: G.banco,
+    energiaGranja: G.energiaGranja, artefactos: G.artefactos, banco: G.banco, logrosV2:G.logrosV2, logrosAcciones:G.logrosAcciones,
     espacioV: G.espacioV, mercadoVentas: G.mercadoVentas, farmXpBase: G.farmXpBase || 0,
     produccion: G.produccion,
     res: G.res, picks: G.picks, skills: G.skills, triesV: G.triesV, establoV: G.establoV, fish: G.fish, plots: G.plots, nodos: G.nodos, expansiones: G.expansiones, pescaHasta: G.pescaHasta, pescaDesde: G.pescaDesde, senales: G.senales, escamas: G.escamas, vistos: G.vistos, estrellaMax: G.estrellaMax, pescaTiene: G.pescaTiene, canas: G.canas, presion: G.presion, amarres: G.amarres, trampas: G.trampas, marea: G.marea, runaOro: G.runaOro, buffs: G.buffs, seeds: G.seeds, selSeed: G.selSeed,
@@ -494,6 +495,7 @@ function snapKey() { return JSON.stringify({ n: (typeof nombreLucido === "functi
 function hydrate(d) {
   G.actividadGranja=null;G.actividadAcciones={};
   actividadGranjaRecibir(d&&d.actividadGranja);
+  G.logrosV2=null;G.logrosAcciones={};logrosRecibir(d&&d.logrosV2);
   if (!d) return;
   G.farmXpBase = Number.isFinite(d.farmXpBase) ? Math.max(0,d.farmXpBase) : 0;
   PRODUCCION_HIDRATANDO = true;
@@ -1419,7 +1421,7 @@ async function saveFarmReal(force) {
       let paso = false;
       try {
         const { data: r, error: fe } = await sb.functions.invoke("guardar", { body: cuerpo });
-        if (!fe && r && r.ok) { paso = true; if (UID===saveUid) { actividadGranjaRecibir(r.actividadGranja); if(typeof actividadGranjaRefrescar==='function')actividadGranjaRefrescar(); } if (r.updated_at) { SAVE_BASES.set(saveUid, r.updated_at); SAVE_CONFIRMACIONES.set(saveUid, (SAVE_CONFIRMACIONES.get(saveUid) || 0) + 1); } }
+        if (!fe && r && r.ok) { paso = true; if (UID===saveUid) { actividadGranjaRecibir(r.actividadGranja); logrosRecibir(r.logrosV2); if(typeof actividadGranjaRefrescar==='function')actividadGranjaRefrescar(); if(isOpen('ov-logros'))refreshLogros(); } if (r.updated_at) { SAVE_BASES.set(saveUid, r.updated_at); SAVE_CONFIRMACIONES.set(saveUid, (SAVE_CONFIRMACIONES.get(saveUid) || 0) + 1); } }
         else if (fe) {
           /* 14/9 — EL PORTERO EN MODO RECHAZO. Un 422 no es « portero caído »: es el portero
              diciendo que NO. Hasta hoy caía al camino viejo (que la PARTE 2 ya cerró: 403) y el
