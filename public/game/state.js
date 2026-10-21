@@ -16,7 +16,7 @@ const G = {
   gear: { casco: null, armadura: null, botas: null, escudo: null, arma: null, municion: false },
   weapons: {},                   // doc 2/8: armas nuevas — id ("espada_madera") -> { dur }
   stam: null, stamAcc: 0, stamFullAt: 0, stamLastAt: 0, stamRec: null, // regeneración continua con reloj persistente
-  stats: {}, statsBase: {}, chestCap: 0, edif2: {}, cosmeticos: [],
+  stats: {}, statsBase: {}, actividadGranja: null, actividadAcciones: {}, chestCap: 0, edif2: {}, cosmeticos: [],
   animals: {},                   // Establo: animal → { desde, feliz, comidoAt, prodAt }
   armor: {}, armorDur: {}, armorEq: null,   // Curtiduría: piezas crafteadas, su durabilidad y el set equipado
   ofrendaPts: 0, ofrendaLog: 0,  // Altar de Ofrendas: puntos acumulados y recursos quemados
@@ -133,8 +133,16 @@ function energiaGranjaPuede(tipo,n=1) { return energiaGranjaTick()+1e-9 >= (ENER
 function energiaGranjaPagar(tipo,n=1,silencio=false) {
   if(!Number.isSafeInteger(n)||n<1) return false;
   if(!energiaGranjaPuede(tipo,n)){if(!silencio)toast('Sin energía de granja — se recupera sola; de vacía a llena tarda 4 h');return false;}
-  G.energiaGranja.actual=Math.max(0,G.energiaGranja.actual-(ENERGIA_GRANJA_COSTO[tipo]||0)*n);return true;
+  G.energiaGranja.actual=Math.max(0,G.energiaGranja.actual-(ENERGIA_GRANJA_COSTO[tipo]||0)*n);
+  if(ENERGIA_GRANJA_COSTO[tipo]){G.actividadAcciones=G.actividadAcciones||{};G.actividadAcciones[tipo]=Math.min(1e9,(G.actividadAcciones[tipo]||0)+n);}
+  return true;
 }
+function actividadGranjaRecibir(a){
+  if(!a||a.v!==1||!Number.isSafeInteger(a.energia)||a.energia<0||a.energia>2000)return;
+  G.actividadGranja=JSON.parse(JSON.stringify(a));G.actividadAcciones=G.actividadAcciones||{};
+  for(const k of Object.keys(ENERGIA_GRANJA_COSTO)){const n=a.registro&&a.registro[k];if(Number.isSafeInteger(n)&&n>=0)G.actividadAcciones[k]=Math.max(G.actividadAcciones[k]||0,n);}
+}
+function actividadGranjaEstado(){const energia=Math.min(2000,Math.max(0,G.actividadGranja&&G.actividadGranja.energia||0));return {energia,objetivo:2000,cumplida:energia>=2000,vip:vipVigente(),usdt:false};}
 function energiaGranjaAgregar(key,n,tipo) {
   if(!energiaGranjaPuede(tipo))return false;
   if(!tryAddRes(key,n))return false;

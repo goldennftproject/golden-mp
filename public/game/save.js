@@ -461,7 +461,7 @@ function snapshot() {
     cont: G.cont,             /* 8/9 t: el árbol que llevás puesto — se pierde al morir, no al recargar */
     tumba: G.tumba,           /* 8/9: tu cuerpo en la zona — sus 10 min son de reloj real */
     modoPelea: G.modoPelea,   /* 8/9: perseguir o parado — es preferencia, no estado del viaje */
-    stats: G.stats, statsBase: G.statsBase, chestCap: G.chestCap, edif2: G.edif2, cosmeticos: G.cosmeticos, animals: G.animals, armor: G.armor, armorDur: G.armorDur, armorEq: G.armorEq, ofrendaPts: G.ofrendaPts, ofrendaLog: G.ofrendaLog, nodoUsos: G.nodoUsos, cosEq: G.cosEq, incursion: G.incursion, incDia: G.incDia, zonaCdHasta: G.zonaCdHasta, zonaViaje: G.zonaViaje, lombDia: G.lombDia, decos: G.decos, decoBolsa: G.decoBolsa, godHand: G.godHand, zonasVistas: G.zonasVistas, visto: nowMs(), dummyTrain: G.dummyTrain, swordOwned: G.swordOwned, bowOwned: G.bowOwned, swordWoodOwned: G.swordWoodOwned, gear: G.gear,
+    stats: G.stats, statsBase: G.statsBase, actividadGranja:G.actividadGranja, actividadAcciones:G.actividadAcciones, chestCap: G.chestCap, edif2: G.edif2, cosmeticos: G.cosmeticos, animals: G.animals, armor: G.armor, armorDur: G.armorDur, armorEq: G.armorEq, ofrendaPts: G.ofrendaPts, ofrendaLog: G.ofrendaLog, nodoUsos: G.nodoUsos, cosEq: G.cosEq, incursion: G.incursion, incDia: G.incDia, zonaCdHasta: G.zonaCdHasta, zonaViaje: G.zonaViaje, lombDia: G.lombDia, decos: G.decos, decoBolsa: G.decoBolsa, godHand: G.godHand, zonasVistas: G.zonasVistas, visto: nowMs(), dummyTrain: G.dummyTrain, swordOwned: G.swordOwned, bowOwned: G.bowOwned, swordWoodOwned: G.swordWoodOwned, gear: G.gear,
     armasUnlocked: G.armasUnlocked, editVisto: G.editVisto, treesOpen: G.treesOpen, rocksOpen: G.rocksOpen, firstCropDone: G.firstCropDone, weapons: G.weapons,
     dishes: G.dishes, cooking: G.cooking, horno: G.horno, chests: G.chests, dummyUsedAt: G.dummyUsedAt,   // 24/8: la cola del Horno
     armCd: G.armCd, mkPend: G.mkPend,
@@ -492,6 +492,8 @@ function snapKey() { return JSON.stringify({ n: (typeof nombreLucido === "functi
      3. DERIVAR  — calcular lo que no se guarda (vida máxima, paso del tutorial, regalos).
    Regla: si algo LEE otra parte del estado, no va en la fase 1.                                 */
 function hydrate(d) {
+  G.actividadGranja=null;G.actividadAcciones={};
+  actividadGranjaRecibir(d&&d.actividadGranja);
   if (!d) return;
   G.farmXpBase = Number.isFinite(d.farmXpBase) ? Math.max(0,d.farmXpBase) : 0;
   PRODUCCION_HIDRATANDO = true;
@@ -1417,7 +1419,7 @@ async function saveFarmReal(force) {
       let paso = false;
       try {
         const { data: r, error: fe } = await sb.functions.invoke("guardar", { body: cuerpo });
-        if (!fe && r && r.ok) { paso = true; if (r.updated_at) { SAVE_BASES.set(saveUid, r.updated_at); SAVE_CONFIRMACIONES.set(saveUid, (SAVE_CONFIRMACIONES.get(saveUid) || 0) + 1); } }
+        if (!fe && r && r.ok) { paso = true; if (UID===saveUid) { actividadGranjaRecibir(r.actividadGranja); if(typeof actividadGranjaRefrescar==='function')actividadGranjaRefrescar(); } if (r.updated_at) { SAVE_BASES.set(saveUid, r.updated_at); SAVE_CONFIRMACIONES.set(saveUid, (SAVE_CONFIRMACIONES.get(saveUid) || 0) + 1); } }
         else if (fe) {
           /* 14/9 — EL PORTERO EN MODO RECHAZO. Un 422 no es « portero caído »: es el portero
              diciendo que NO. Hasta hoy caía al camino viejo (que la PARTE 2 ya cerró: 403) y el

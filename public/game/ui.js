@@ -2593,7 +2593,13 @@ function bancoActualizarPrevia(){
   preview.textContent=valida&&cantidad ? 'Entregás '+(n*tasa).toLocaleString('es-UY')+' Plata → recibís '+n.toLocaleString('es-UY')+' Golden. Saldo: '+fmtPlata(G.plata)+' Plata.' : 'Necesitás una cotización vigente y una cantidad entera positiva.';
   boton.disabled=!(valida&&cantidad&&G.plata>=n*tasa&&CARGA_OK&&!SOLO_LOCAL&&!SAVE_CONFLICTOS.has(UID)&&!MERCADO_EN_CURSO);
 }
+function actividadGranjaHtml(){
+  const a=actividadGranjaEstado();
+  return '<section class="sub"><h4>Actividad de granja · requisito para futuros retiros</h4><p>'+a.energia.toLocaleString('es-UY')+' / 2.000 de energía confirmada por el servidor</p><progress max="2000" value="'+a.energia+'" aria-label="Energía de granja confirmada"></progress><p>'+(a.cumplida?'Actividad cumplida permanentemente.':'Gastá energía realizando acciones de granja; el combate no cuenta.')+' '+(a.vip?'VIP activo.':'También se requerirá VIP activo al solicitar un retiro.')+'</p><p>Se alcanza una sola vez, no por retiro. No acredita actividad anterior a este registro. Los retiros USDT siguen desactivados; cumplir estos requisitos no habilita pagos ni garantiza retornos. El canje interno del Banco no exige este progreso.</p></section>';
+}
+function actividadGranjaRefrescar(){for(const id of ['banco-actividad','vip-actividad']){const el=$(id);if(el)el.innerHTML=actividadGranjaHtml();}}
 function refreshBanco(cotizar=true){
+  actividadGranjaRefrescar();
   const info=$('banco-info');if(!info)return;
   info.textContent=bancoCotizacionValida() ? 'Tasa vigente: '+BANCO_COTIZACION.tasa.toLocaleString('es-UY')+' Plata = 1 Golden. Cotización válida durante 60 segundos.' : 'Sin cotización vigente. Se requiere conexión con el servidor.';
   const input=$('banco-cantidad'),actualizar=$('banco-actualizar'),boton=$('banco-canjear');
@@ -2626,7 +2632,8 @@ function refreshVip() {
     (!activo&&G.golden<precio?'<p class="sub">Necesitás '+precio+' Golden para activar la membresía.</p>':'')+
     '<div style="overflow-x:auto;margin-top:12px"><table style="width:100%;border-collapse:collapse;text-align:left"><thead><tr><th scope="col">Beneficio</th><th scope="col">Free</th><th scope="col">VIP</th></tr></thead><tbody>'+filas.map(f=>'<tr>'+f.map(c=>'<td style="padding:8px 5px;border-top:1px solid #ffffff33">'+escapeHtml(c)+'</td>').join('')+'</tr>').join('')+'</tbody></table></div>'+
     '<p class="sub">La energía se recupera en 4 horas. El combate no cambia. Los nodos adicionales se compran aparte. Al vencer, conservás los Objetos de Granja comprados y sus cobros; la producción que exceda la capacidad Free se pausa, sin borrar nada.</p>'+
-    '<p class="sub">El pase está desactivado. Depósitos y retiros USDT desactivados: esta compra utiliza únicamente tu Golden del juego.</p>';
+    '<p class="sub">El pase está desactivado. Depósitos y retiros USDT desactivados: esta compra utiliza únicamente tu Golden del juego.</p><div id="vip-actividad" aria-live="polite"></div>';
+  actividadGranjaRefrescar();
   $('vip-comprar').onclick=confirmarCompraVip;
 }
 function confirmarCompraVip() {

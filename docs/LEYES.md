@@ -262,6 +262,11 @@ Consecuencias que ya se siguen de esto, para no tener que rediscutirlas:
 
 ## Cómo se usa este archivo
 
+### Actividad para futuros retiros · 21/10/2026
+
+El diseñador propuso «una condición de retiro podría ser haber gastado 2000 de estamina […] aparte de tener el vip». El usuario aprobó avanzar: «Claro, lo que dijo es que avancemos con las sugerencias que acabas de dar».
+Se refiere exclusivamente a energía de granja: 2.000 puntos confirmados, alcanzados una sola vez y conservados aunque venza el VIP. VIP activo es un requisito independiente para una futura solicitud; no se descuenta progreso por retiro. No se acredita historial previo sin evidencia. El servidor conserva el contador y corrobora cambios de acciones y presupuesto energético al aceptar cada guardado. Son comprobaciones sobre snapshots, no un sistema antifraude completo ni una garantía frente a bots. Acciones no corroborables no suman. El canje interno no se bloquea. Depósitos y retiros USDT siguen desactivados.
+
 Antes de tocar un reloj, una curva, una recompensa o una puerta: leerlo. Antes de proponerle algo
 al diseñador: leerlo. Si una ley nueva se dicta en Discord o por voz, **se escribe acá el mismo
 día**, con la cita textual — no parafraseada, porque la mitad del valor de una ley está en cómo
