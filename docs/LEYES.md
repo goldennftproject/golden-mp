@@ -1,5 +1,15 @@
 # Las leyes de Golden Farm
 
+## Ajustes añadir y pico básico único — 23/10/2026
+
+Dirección aprobó «si» a aplicar `añadir.docx` y unificar madera/piedra. Zona Negra manual disponible para Free y VIP, manteniendo requisitos normales de equipo, nivel y descanso. Sólo las nuevas excursiones de un clic requieren VIP; una iniciada conserva su resolución aunque venza la membresía. Cliente y guardado validan la restricción.
+
+Desde la tercera expansión, cada coste actual de Plata/materiales se multiplica por 1,30, redondeando hacia arriba, sin acumulación entre expansiones. Las dos primeras y las obras ya pagadas no cambian. El modelo productivo actual sólo cobra Plata desde la tercera; no se añaden materiales que no existían. La tabla heredada de materiales recibe el mismo factor. No cambian tiempos, geometría ni recompensas.
+
+El bono diario reduce un 15% el tiempo de lo sembrado durante una hora desde el reclamo confirmado. La siembra real se verificó en 180 → 153 segundos. El tope especial inicial está desactivado en esta versión; por compatibilidad, si se habilitara, también recibe la reducción después de aplicar el tope. No se confirmó una falla general del cálculo anterior ni se atribuye el reporte a esa rama inactiva. No acelera retroactivamente parcelas en curso. El paquete muestra el estado y tiempo restante, que antes no indicaba.
+
+Sólo se ofrece el Pico de Piedra como básico. Los picos de madera existentes pasan uno por uno a piedra, incluido equipo, accesos rápidos y contenedores/tumba; la conversión no se repite al recargar. Los premios diarios de tres picos pasan a piedra. Los picos superiores, saldos y progreso no se borran.
+
 ## Logros del diseñador — 21/10/2026
 
 Tras recibir `logros.docx` y la propuesta de incorporación, dirección aprobó «aplica esto» con la captura que confirma: contar plantar (no cosechar), unidades recolectadas de madera/piedra, metas acumulativas, cobro único validado por el servidor y una visita por granja y día.

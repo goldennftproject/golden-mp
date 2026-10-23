@@ -33,7 +33,7 @@ console.log("\nEL JUGADOR DEL DÍA 1 VE LA SEMANA ENTERA — VISTA PREVIA EN CUA
   ok("hay 7 cuadritos, uno por día", cards.length === 7, cards.length + "");
   const numerados = cards.filter((c, i) => c.textContent.includes("Día " + (i + 1)));
   ok("cada uno dice su día ADENTRO (nada de tooltips)", numerados.length === 7, numerados.length + " de 7");
-  const CORTOS = ["cultivos", "semillas de papa", "picos de madera", "papas asadas", "picos de piedra", "semillas de zanahoria"];
+  const CORTOS = ["cultivos", "semillas de papa", "picos de piedra", "papas asadas", "picos de piedra", "semillas de zanahoria"];
   const conPremio = cards.filter((c, i) => i < 6 && c.textContent.includes(CORTOS[i]));
   ok("los días 1-6 muestran su premio a la vista", conPremio.length === 6, conPremio.length + " de 6");
   const col = "50 Plata";

@@ -51,6 +51,20 @@ function energiaServidor(d,ahora) {
   return Math.max(0,Math.min(fin>ahora?100:50,v));
 }
 const ACTIVIDAD_OBJETIVO=2000;
+function picosUnificarEstado(d){
+  if(!d||typeof d!=='object')return;
+  const p=d.picks;if(p&&p.owned&&p.dur){
+    const n=Math.max(0,Math.floor(Number(p.dur.wood)||0));
+    if(n){p.dur.stone=Math.max(0,Number(p.dur.stone)||0)+n;p.owned.stone=true;}
+    delete p.dur.wood;delete p.owned.wood;if(p.eq==='wood')p.eq='stone';
+  }
+  const visitar=(o,prof)=>{
+    if(!o||typeof o!=='object'||prof>16)return;
+    if(o.kind==='pick'){if(o.k==='wood')o.k='stone';if(o.key==='wood')o.key='stone';}
+    for(const v of Object.values(o))if(v&&typeof v==='object')visitar(v,prof+1);
+  };
+  for(const k of ['cont','tumba','hotbar'])visitar(d[k],0);
+}
 const ACTIVIDAD_COSTOS={plant:1,harvest:1,chop:2,mine:2,animal:2,craft:2,cook:1,auto:2};
 function actividadLibro(d){
   const a=d?.actividadGranja;
@@ -200,7 +214,7 @@ function diarioOperacion(prev,ahora,op){
   const dia=d.day>=7||d.day<1?1:d.day+1;
   if(dia===1)data.buffCultivoHasta=ahora+3600000;
   if(dia===2||dia===6){data.seeds={...(data.seeds||{})};const k=dia===2?'papa':'zanahoria';data.seeds[k]=num(data.seeds[k])+5;}
-  if(dia===3||dia===5){const k=dia===3?'wood':'stone';data.picks=data.picks||{};data.picks.owned={...(data.picks.owned||{}),[k]:true};data.picks.dur={...(data.picks.dur||{}),[k]:num(data.picks.dur&&data.picks.dur[k])+(dia===3?3:2)};if(!data.picks.eq)data.picks.eq=k;}
+  if(dia===3||dia===5){const k='stone';data.picks=data.picks||{};data.picks.owned={...(data.picks.owned||{}),[k]:true};data.picks.dur={...(data.picks.dur||{}),[k]:num(data.picks.dur&&data.picks.dur[k])+(dia===3?3:2)};if(!data.picks.eq)data.picks.eq=k;}
   if(dia===4)data.dishes={...(data.dishes||{}),papa_asada:num(data.dishes&&data.dishes.papa_asada)+2};
   if(dia===7)data.plata=num(data.plata)+50;
   data.daily={day:dia,last:hoy,ops:[...(d.ops||[]),{op,day:dia}].slice(-20)};
@@ -245,7 +259,9 @@ function goldenCustodia(d) {
 }
 /* Invariantes deterministas: no dependen de los techos heurísticos por hora. */
 function protegerEconomia(prev, next, ahora) {
+  picosUnificarEstado(next);
   const errores = [], antes = prev || {}, p = antes.produccion, n = next.produccion;
+  if(next.incursion&&!mismoJSON(antes.incursion,next.incursion)&&num(antes.produccion?.vipHasta)<=ahora)errores.push('Las excursiones nuevas requieren VIP activo');
   if(!mismoJSON(antes.artefactos||null,next.artefactos||null))errores.push('Los objetos productores sólo se modifican en el servidor');
   if(!mismoJSON(antes.banco||null,next.banco||null))errores.push('El Banco sólo se modifica en el servidor');
   if(!mismoJSON(antes.daily||{day:0,last:''},next.daily||{day:0,last:''}) || num(antes.buffCultivoHasta)!==num(next.buffCultivoHasta))errores.push('Las recompensas diarias sólo se reclaman en el servidor');
@@ -281,7 +297,7 @@ function protegerEconomia(prev, next, ahora) {
       if (!Number.isInteger(expN) || expN<exp || expN>16 || expN>exp+1 || (expN>exp && (!obra || obra.n!==expN || obra.hasta>ahora+1000))) errores.push("Expansión sin obra terminada");
       if (obraN && (!obra || obra.n!==obraN.n)) {
         if (obraN.n!==expN+1 || Math.abs(num(obraN.desde)-ahora)>300000 || num(obraN.hasta)-num(obraN.desde)<600000*obraN.n*(fin>ahora?0.9:1)-1000) errores.push("Obra no autorizada");
-        gasto += 20+10*expN+5*expN*expN+Math.round(.5*Math.pow(Math.max(0,expN-2),3));
+        const precio=20+10*expN+5*expN*expN+Math.round(.5*Math.pow(Math.max(0,expN-2),3));gasto += expN>=2?Math.ceil(precio*1.3):precio;
         if (!expN && (num(antes.res && antes.res.madera)-num(next.res && next.res.madera)<2 || num(antes.res && antes.res.piedra)-num(next.res && next.res.piedra)<2)) errores.push("Faltan materiales de la primera expansión");
       } else if (obra && obraN && obraN.hasta!==obra.hasta) errores.push("No se puede adelantar una obra");
       const poseidos = nodosPoseidos(next), viejos = new Set(nodosPoseidos(antes).map(o=>o[0]));
@@ -550,6 +566,7 @@ Deno.serve(async (req) => {
       if(body.base!==row.updated_at)return json({error:'Otra sesión guardó; recargá antes de operar',conflicto:true},409);
       if(r.tasaCambio)return json({error:r.error,tasaCambio:true},412);
       if(r.error)return json({error:r.error},400);
+      picosUnificarEstado(r.data);
       const fecha=new Date(ahora).toISOString();
       const {data:hecho,error:fallo}=await admin.from('farms').update({data:r.data,updated_at:fecha}).eq('user_id',uid).eq('updated_at',row.updated_at).select('updated_at').maybeSingle();
       if(fallo)return json({error:'No se pudo confirmar la operación'},503);

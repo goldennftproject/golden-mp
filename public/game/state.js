@@ -2286,6 +2286,7 @@ function expansionCostos() {
       .concat(mins.map(m => [m, 0.40 / mins.length]));
     const c = {};
     partes.forEach(([k, f]) => { const pr = PRICE[k] || 1; c[k] = Math.max(1, Math.round(plata * f / pr)); });
+    if(i>=2)for(const k of Object.keys(c))c[k]=Math.ceil(c[k]*1.3);
     EXPANSION_COSTO.push(c);
     celdas += CELDAS_POR_EXP + (expVetas(i + 1) ? 2 : 0)    // 24/8: las que traen vetas suman 2 celdas más
             + (expNodoExtra(i + 1) ? 1 : 0);                // 1/9: el nodo extra de las últimas 6 también se paga
@@ -2356,7 +2357,7 @@ function expansionSiguiente() {
 }
 // Balance 16/10: arranque intacto; el terreno avanzado requiere reinversión creciente.
 // Sólo afecta compras futuras: ni las expansiones adquiridas ni las obras pagadas se recalculan.
-function expansionPrecioCupo(i) { return 20 + 10*i + 5*i*i + Math.round(.5*Math.pow(Math.max(0,i-2),3)); }
+function expansionPrecioCupo(i) { const base=20 + 10*i + 5*i*i + Math.round(.5*Math.pow(Math.max(0,i-2),3));return i>=2?Math.ceil(base*1.3):base; }
 function expansionComprar() {
   const e = expansionSiguiente();
   if (!e) { toast("Ya tenés las " + EXPANSION_MAX + " expansiones"); return false; }
@@ -3040,7 +3041,21 @@ const ORE_DEF = {   // 15/8 EN PRUEBA: enfriamientos largos del doc 4/8 del dise
   diamante: { tier:4, label:"Diamante",  emoji:"💎", sprite:"node_diamond",   cd:32400, yield:1, price:80 },   // 9 h (era 18 con +2)
   netherita:{ tier:5, label:"Netherita", emoji:"🔶", sprite:"node_netherite", cd:43200, yield:1, price:200 },  // 12 h (era 24 con +2) — el ancla diaria de la minería
 };
-const PICK_ORDER = ["wood","stone","bronze","iron","gold","diamond","netherite"];
+const PICK_ORDER = ["stone","bronze","iron","gold","diamond","netherite"];
+function picosUnificarEstado(d){
+  if(!d||typeof d!=='object')return;
+  const p=d.picks;if(p&&p.owned&&p.dur){
+    const n=Math.max(0,Math.floor(Number(p.dur.wood)||0));
+    if(n){p.dur.stone=Math.max(0,Number(p.dur.stone)||0)+n;p.owned.stone=true;}
+    delete p.dur.wood;delete p.owned.wood;if(p.eq==='wood')p.eq='stone';
+  }
+  const visitar=(o,prof)=>{
+    if(!o||typeof o!=='object'||prof>16)return;
+    if(o.kind==='pick'){if(o.k==='wood')o.k='stone';if(o.key==='wood')o.key='stone';}
+    for(const v of Object.values(o))if(v&&typeof v==='object')visitar(v,prof+1);
+  };
+  for(const k of ['cont','tumba','hotbar'])visitar(d[k],0);
+}
 const PICK_DEF = {
   wood: {tier:0,label:"Pico de Madera",mineTier:0,dur:1,cost:{madera:1},plata:1,sprite:"pick_stone"},
   // modelo SFL puro (31/7): 1 uso por pico, costos baratos (material del tier anterior + madera + monedas)
@@ -3115,7 +3130,7 @@ const PICK_DEF = {
   diamond:  { tier:4, label:"Pico de Diamante",  mineTier:4, dur:1, cost:{madera:5,piedra:6},   plata:30, sprite:"pick_diamond" },  // 180 (mitad de 360)
   netherite:{ tier:5, label:"Pico de Netherita", mineTier:5, dur:1, cost:{madera:5,piedra:10},  plata:30, sprite:"pick_netherite" },// 240 (mitad de 480)
 };
-function equippedPick() { return (G.picks.eq && G.picks.owned[G.picks.eq]) ? G.picks.eq : null; }
+function equippedPick() { picosUnificarEstado(G);return (G.picks.eq && G.picks.owned[G.picks.eq]) ? G.picks.eq : null; }
 /* ============ EL PICO SE ELIGE SOLO (24/8, dirección) ============================
    « Que las herramientas sean únicas: piedra para piedra, oro para oro, que no haya que
    señalar el pico a usar, sino que se ajuste con clic en el recurso. Si quiero minar piedra
@@ -3134,6 +3149,7 @@ function equippedPick() { return (G.picks.eq && G.picks.owned[G.picks.eq]) ? G.p
    lectura literal del pedido original del 24/8 (« piedra para piedra, oro para oro ») que yo
    había suavizado a « el más barato que sirva » creyendo que ayudaba. */
 function picoParaNodo(o) {
+  picosUnificarEstado(G);
   if (!G.picks || !G.picks.owned) return null;
   const tierNecesario = (o && o.type === "ore" && ORE_DEF[o.ore]) ? ORE_DEF[o.ore].tier : 0;
   for (const id of PICK_ORDER) {
@@ -3156,6 +3172,7 @@ function forgeWork() { G.forgeLitUntil = nowMs() + FORGE_LIT_MS; if (window.FARM
 // picos APILABLES: G.picks.dur[id] es la CANTIDAD (1 uso cada uno); craftear suma al stock
 function pickCount(id) { return G.picks.owned[id] ? Math.max(0, Math.floor(G.picks.dur[id] || 0)) : 0; }
 function craftPick(id) {
+  picosUnificarEstado(G);if(id==='wood')id='stone';
   const pd = PICK_DEF[id]; if (!pd) { console.warn("[craftPick] pico inexistente:", id); return; }
   if (pickCount(id) >= 99) { toast("Máximo 99 " + pd.label); return; }
   if (!canAfford(pd.cost)) { toast("Te faltan materiales"); return; }
@@ -4350,6 +4367,7 @@ function incCupoHoy() {
 function incActiva() { return G.incursion || null; }
 function incFalta() { const i = incActiva(); return i ? Math.max(0, i.endAt - nowMs()) : 0; }
 function incSalir(zona) {
+  if(!vipVigente()){toast('La excursión de un clic requiere VIP. Podés entrar a la Zona Negra a pie.');return;}
   const z = INCURSIONES[zona]; if (!z) return;
   if (incActiva()) { toast("Ya hay una incursión en curso"); return; }
   /* 26/9: si el granjero está EN la Zona a pie, tampoco sale de incursión (la puerta al revés) */
@@ -9935,7 +9953,7 @@ function plotUnlockCost() {
 const DAILY_REWARDS = [
   { label: "Cultivos un 15% más rápidos durante 1 hora" },
   { label: "5 semillas de papa" },
-  { label: "3 picos de madera" },
+  { label: "3 picos de piedra" },
   { label: "2 papas asadas" },
   { label: "2 picos de piedra" },
   { label: "5 semillas de zanahoria" },
@@ -11847,43 +11865,7 @@ function albumProgreso() {   // {hechas, total, pct} de TODO el álbum — para 
      · Nada de duplicados: "tu primer trato con el goblin" ES el bronce del goblin, y "tu
        primera expansión" ES el bronce de expandir. Los únicos cubren lo que no tiene contador. */
 const LOGRO_TIERS = ["Bronce", "Plata", "Oro"];
-const LOGRO_PREMIO = [5, 20, 80];   // 15 min · 1 h · 4 h del ancla (20 plata/hora)
-function statSum(tipo) { const t = (G.stats && G.stats[tipo]) || {}; let n = 0; for (const k in t) n += t[k] || 0; return Math.floor(n); }
-const LOGRO_DEF = [
-  { id: "cosechar",  ic: "🌾", label: "Cosechar cultivos",            n: () => statSum("cosechar"),  tiers: [10, 100, 500] },
-  { id: "talar",     ic: "🪓", label: "Talar árboles",                n: () => statSum("talar"),     tiers: [10, 100, 500] },
-  { id: "minar",     ic: "⛏️", label: "Picar piedra y mineral",       n: () => statSum("minar"),     tiers: [10, 100, 500] },
-  { id: "pescar",    ic: "🎣", label: "Pescar en la laguna",          n: () => statSum("pescar"),    tiers: [5, 50, 250] },
-  { id: "cocinar",   ic: "🍲", label: "Cocinar platos",               n: () => statSum("cocinar"),   tiers: [5, 25, 100] },
-  { id: "alimentar", ic: "🐄", label: "Alimentar animales",           n: () => statSum("alimentar"), tiers: [10, 100, 500] },
-  { id: "matar",     ic: "⚔️", label: "Vencer monstruos",             n: () => statSum("matar"),     tiers: [10, 100, 500] },
-  { id: "goblin",    ic: "🤝", label: "Tratos con el Mercader Goblin", n: () => statSum("goblin"),   tiers: [1, 7, 30] },
-  { id: "expandir",  ic: "🗺️", label: "Abrir expansiones",            n: () => Math.floor(G.expansiones || 0), tiers: [1, 6, 16] },
-];
-const LOGRO_UNICOS = [   // pagan como un bronce (LOGRO_PREMIO[0])
-  { id: "u_tuto",    ic: "🎓", label: "Terminar el tutorial",  ok: () => !!(G.tuto && G.tuto.done) },
-  { id: "u_cosecha", ic: "🥔", label: "Tu primera cosecha",    ok: () => !!G.firstCropDone },
-  { id: "u_plato",   ic: "🥘", label: "Tu primer plato",       ok: () => statSum("cocinar") >= 1 },
-  { id: "u_animal",  ic: "🐰", label: "Tu primer animal",      ok: () => (typeof animalesTotal === "function" ? animalesTotal() : 0) >= 1 },
-];
-function logroCobrados() { const l = G.logros || (G.logros = {}); return l; }
-/* la lista que pinta la pestaña: una fila por logro, con progreso y qué tier está para cobrar */
-function logroListaLegada() {
-  const cob = logroCobrados();
-  const filas = LOGRO_DEF.map(d => {
-    const n = d.n();
-    const tiers = d.tiers.map((meta, i) => {
-      const key = d.id + ":" + i;
-      return { key, nombre: LOGRO_TIERS[i], meta, premio: LOGRO_PREMIO[i], cobrado: !!cob[key], cobrable: !cob[key] && n >= meta };
-    });
-    return { id: d.id, ic: d.ic, label: d.label, n, tiers, unico: false };
-  });
-  const unicos = LOGRO_UNICOS.map(d => ({
-    id: d.id, ic: d.ic, label: d.label, n: d.ok() ? 1 : 0, unico: true,
-    tiers: [{ key: d.id, nombre: "", meta: 1, premio: LOGRO_PREMIO[0], cobrado: !!cob[d.id], cobrable: !cob[d.id] && d.ok() }],
-  }));
-  return unicos.concat(filas);
-}
+// El historial antiguo permanece en G.logros; sólo el catálogo autorizado actual genera metas.
 function logroPendientes() {   // para el contador del menú
   let n = 0; logroLista().forEach(f => f.tiers.forEach(t => { if (t.cobrable) n++; })); return n;
 }
@@ -11943,6 +11925,11 @@ function kitReclamar() {
   return true;
 }
 function cultivoTiempoMult(t = nowMs()) { return (G.buffCultivoHasta || 0) > t ? 0.85 : 1; }
+function cultivoBonoTexto(){const ms=Math.max(0,(G.buffCultivoHasta||0)-nowMs());return ms?' Bono activo: −15% al sembrar · quedan '+fmtDur(ms)+'. No cambia cultivos ya plantados.':'';}
+function cultivoDuracion(ck,boost=1,starter=false,t=nowMs()){
+  const base=CROP_DEF[ck].grow*1000*cdMult()*boost;
+  return (starter&&FIRST_GROW_MS>0?Math.min(FIRST_GROW_MS,base):base)*cultivoTiempoMult(t);
+}
 async function claimDaily() {
   const st = dailyState();
   if (!st.claimable) { toast("Ya reclamaste hoy — volvé mañana"); return false; }

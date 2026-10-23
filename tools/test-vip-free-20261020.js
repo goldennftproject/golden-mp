@@ -27,7 +27,7 @@ for(let day=1;day<=7;day++){
  assert.equal(server.diarioOperacion(d,now,'daily-'+day).repetido,true);
  assert.ok(server.diarioOperacion(d,now,'another-'+day).error);
 }
-assert.equal(d.seeds.papa,5);assert.equal(d.seeds.zanahoria,5);assert.equal(d.picks.dur.wood,3);assert.equal(d.picks.dur.stone,2);assert.equal(d.dishes.papa_asada,2);assert.equal(d.plata,50);
+assert.equal(d.seeds.papa,5);assert.equal(d.seeds.zanahoria,5);assert.equal(d.picks.dur.wood,undefined);assert.equal(d.picks.dur.stone,5);assert.equal(d.dishes.papa_asada,2);assert.equal(d.plata,50);
 assert.equal(server.diarioOperacion(d,Date.parse('2026-10-27T12:00:00Z'),'cycle').data.daily.day,1);
 const forged=JSON.parse(JSON.stringify(d));forged.daily.day=1;assert.ok(server.protegerEconomia(d,forged,clock).some(e=>e.includes('recompensas diarias')));
 let farm={golden:1000,produccion:{vipHasta:clock+86400000}};

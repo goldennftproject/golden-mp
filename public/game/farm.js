@@ -2288,11 +2288,11 @@ class FarmScene extends Phaser.Scene {
         // 14/8: el boost del tutorial aplica a CUALQUIER cultivo (antes solo papa) — el
         // sub-objetivo puede mandar a cebolla/zanahoria y tienen que crecer acelerados igual
         const boost = (typeof tutoBoost === "function") ? tutoBoost("papa") : 1;
-        const real = cd.grow * 1000 * cdMult() * boost * cultivoTiempoMult();
+        const real = cd.grow * 1000 * cdMult() * boost;
         // (14/8: la aceleración del plan se eliminó — física única; el aviso de meta cubierta vive en tutoAvisoCubierto)
         const starter = (G.firstSeeds || 0) > 0 && FIRST_GROW_MS > 0;   // solo las semillas del starter pack
         if (starter) G.firstSeeds--;
-        o.readyAt = nowMs() + (starter ? Math.min(FIRST_GROW_MS, real) : real);   // nunca más lento que el tiempo real del cultivo
+        o.readyAt = nowMs() + cultivoDuracion(ck,boost,starter);
         o.growTotal = o.readyAt - nowMs();
         this.showGrowing(o, true);   // recién plantado: el brote asoma con un saltito
         this.syncPlots(); addXp("farming", (typeof XP_PLANTAR === "number" ? XP_PLANTAR : 5)); statAdd("plantar", ck); log(`Plantaste ${cd.label}.`, "good"); toast("" + cd.label);

@@ -33,7 +33,7 @@ console.log("\nENTER Y ESPACIO RECLAMAN UNA VEZ Y DEJAN UN SIGUIENTE PASO CLARO\
     window: dom.window, document: dom.window.document, String, Math, Array, Object, console,
     G: { daily: { day: 0, last: "" } }, DAILY_REWARDS: [{ label: "Decoración" }],
     $: id => dom.window.document.getElementById(id), dailyState: () => ({ claimable: cobros === 0, day: 1 }),
-    claimDaily: async () => { cobros++; return true; }, coleccionableDeLaSemana: () => "Farol exclusivo", escapeHtml: s => String(s), closeOv() {},
+    claimDaily: async () => { cobros++; return true; }, cultivoBonoTexto:()=>'', coleccionableDeLaSemana: () => "Farol exclusivo", escapeHtml: s => String(s), closeOv() {},
     setTimeout: fn => { timers.push(fn); return timers.length; },
   };
   vm.createContext(ctx);

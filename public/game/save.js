@@ -842,6 +842,7 @@ function hydrate(d) {
 
   /* ---- Y las tres fases siguientes, en ORDEN Y SIN EXCEPCIONES ---- */
   migrarGuardado(d);     // arregla lo que traen las partidas viejas
+  picosUnificarEstado(G);
   derivarEstado(d);      // calcula lo que se deduce del estado ya completo
   produccionMigrar();   // capacidad heredada, una sola vez y sin retirar nodos comprados
   if (vipAnterior && !produccionVipActivo()) {

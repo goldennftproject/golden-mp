@@ -5069,7 +5069,7 @@ function refreshPaquete() {
      VISTA PREVIA de cada uno, dentro de la propia interfaz: un cuadrito por día". La tira son
      ahora 7 tarjetitas SIEMPRE visibles: Día N + su paquetito + el premio escrito adentro. El
      día 7 va en dorado con su coleccionable exclusivo. Estructura y altura fijas (regla de UI). */
-  const PREMIO_CORTO = ["−15% cultivos 1 h", "5 semillas de papa", "3 picos de madera", "2 papas asadas", "2 picos de piedra", "5 semillas de zanahoria", "50 Plata"];
+  const PREMIO_CORTO = ["−15% cultivos 1 h", "5 semillas de papa", "3 picos de piedra", "2 papas asadas", "2 picos de piedra", "5 semillas de zanahoria", "50 Plata"];
   const pintarRacha = (extra) => {
     const strip = $("paq-racha"); if (!strip) return;
     const col = (typeof coleccionableDeLaSemana === "function") ? coleccionableDeLaSemana() : "Exclusivo";
@@ -5101,7 +5101,7 @@ function refreshPaquete() {
     img.src = "assets/farm/paquete_dia_abierto.png?v=1";
     img.classList.remove("paq-latido"); img.classList.remove("paq-shake"); img.onclick = null; img.onpointerdown = null; img.style.transform = "";
     desactivarPaqueteDiario(img);
-    nota.textContent = "Ya abriste el de hoy.";
+    nota.textContent = "Ya abriste el de hoy."+cultivoBonoTexto();
     btn.style.visibility = "hidden";   // 20/8: sigue ocupando su fila — la tarjeta no cambia de tamaño
     return;
   }
@@ -5131,7 +5131,7 @@ function refreshPaquete() {
         const r = (typeof DAILY_REWARDS !== "undefined") ? DAILY_REWARDS[st.day - 1] : null;
         if (!await claimDaily()) { refreshPaquete(); return; }
         pintarRacha(1);   // el de hoy pasa a abierto en la tira
-        nota.textContent = "🎁 " + ((r && r.label) || "¡Tu premio del día!");
+        nota.textContent = "🎁 " + ((r && r.label) || "¡Tu premio del día!")+cultivoBonoTexto();
       } catch (e) { console.error("[paquete]", e); refreshPaquete(); return; }
       img.classList.remove("paq-shake");
       img.src = "assets/farm/paquete_dia_abierto.png?v=1";
@@ -6573,9 +6573,10 @@ function refreshOfrendas() {
 /* ---- Incursiones: combate de un clic ---- */
 function refreshIncursion() {
   const box = $("inc-list"); if (!box) return;
+  const vip=vipVigente();
   const inc = incActiva(), cupo = incCupoHoy(), poder = incPoder();
   const sinCupo = !!(INC_CUPO_DIA && cupo.n >= INC_CUPO_DIA);   // el cupo también bloquea el botón (10/8)
-  let h = '<div class="info">Tu poder de combate: <b>' + poder + '</b>' + (poder ? '' : ' — necesitás un arma equipada') +
+  let h = '<p class="sub">Zona Negra a pie: Free y VIP. Excursiones de un clic: sólo VIP. Una excursión iniciada se conserva aunque venza el VIP.</p><div class="info">Tu poder de combate: <b>' + poder + '</b>' + (poder ? '' : ' — necesitás un arma equipada') +
     ' · incursiones de hoy: ' + cupo.n + '/' + (INC_CUPO_DIA || "sin tope") + '</div>';
   if (inc) {
     const z = INCURSIONES[inc.zona], left = incFalta(), pct = Math.round((1 - left / (inc.total || 1)) * 100);
@@ -6601,7 +6602,7 @@ function refreshIncursion() {
                         : ' — vas justo: volverías herido y con menos botín')) + '</div></div>' +
       // el cupo diario también bloquea el botón: antes salía verde y incSalir rebotaba con un
       // toast, aunque la misma ventana mostraba "incursiones de hoy: n/N" (10/8)
-      '<div class="fbtns"><button class="green sm" ' + (inc || !poder || sinCupo || !nivelOk ? "disabled" : "") + ' data-inc="' + k + '">' + (nivelOk ? "Salir" : "Nivel " + nivelReq) + '</button></div></div>';
+      '<div class="fbtns"><button class="green sm" ' + (!vip || inc || !poder || sinCupo || !nivelOk ? "disabled" : "") + ' data-inc="' + k + '">' + (!vip ? 'Sólo VIP' : nivelOk ? "Salir" : "Nivel " + nivelReq) + '</button></div></div>';
   });
   h += '<div class="info">Al Dragón de las Cavernas hay que ir a pelearlo en persona: no se puede por incursión.</div>';
   if (G.incResumen) h += '<button class="ghost sm" id="inc-ultimo-resumen">Ver última excursión</button>';

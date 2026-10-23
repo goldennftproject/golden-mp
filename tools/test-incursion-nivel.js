@@ -26,7 +26,7 @@ function nivelCombate(l) { let acc = 0; for (let k = 2; k <= l; k++) acc += ctx.
 function conEspadaDeHierro() {
   G.weapons = { espada_bronce: { dur: 100 } }; G.gear = Object.assign(G.gear || {}, { arma: "espada_bronce" });
   if (typeof ctx.equipArma === "function") try { ctx.equipArma("espada_bronce"); } catch (e) {}
-  G.incursion = null; G.incDia = null; G.tuto = { done: true }; avisos.length = 0;
+  G.produccion.vipHasta=Date.now()+86400000;G.incursion = null; G.incDia = null; G.tuto = { done: true }; avisos.length = 0;
 }
 
 console.log("\nUNA SOLA TABLA DE NIVELES\n");

@@ -37,7 +37,7 @@ for(const exp of [0,1,3,8,16]){
  assert.equal(check(legacy,migrated).length,0,'conserva legado con '+exp+' expansiones');
  assert.equal(check(migrated,structuredClone(migrated)).length,0,'legado migrado sigue guardando '+exp);
 }
-assert.equal(read('Array.from({length:16},(_,i)=>expansionPrecioCupo(i)).reduce((s,x)=>s+x,0)'),11864);
+assert.equal(read('Array.from({length:16},(_,i)=>expansionPrecioCupo(i)).reduce((s,x)=>s+x,0)'),15413);
 read('G.produccion.base=5;G.expansiones=16;');assert.equal(read('produccionVipCupos()'),6,'VIP escala con la granja, no se diluye al final');
 read("G.skills.farming=0;G.skills.mining=5000;G.skills.tala=0;G.farmXpBase=0;G.level=24;");
 assert.equal(read('farmPuedeSubir()'),true,'minero puede completar progreso sin cultivos ni tala');

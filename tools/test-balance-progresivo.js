@@ -6,9 +6,9 @@ assert.equal(run('PRODUCCION_VIP_PRECIO'),10);
 assert.equal(run('PRODUCCION_VIP_DIAS'),30);
 assert.equal(run('CD.tree'),1800);assert.equal(run('CD.rock'),2400);
 const prices=Array.from({length:16},(_,i)=>run(`expansionPrecioCupo(${i})`));
-assert.deepEqual(prices.slice(0,3),[20,35,60]);
+assert.deepEqual(prices.slice(0,3),[20,35,78]);
 for(let i=1;i<16;i++){assert.ok(prices[i]>prices[i-1]);if(i>1)assert.ok(prices[i]-prices[i-1]>=prices[i-1]-prices[i-2]);}
-assert.equal(prices[15],2394);
+assert.equal(prices[15],3113);
 run('estadoDeCero();G.expansiones=8;G.golden=7;G.plata=1234;var balanceSnap=JSON.parse(JSON.stringify(snapshot()));hydrate(balanceSnap);');
 assert.equal(run('G.expansiones'),8);assert.equal(run('G.golden'),7);assert.equal(run('G.plata'),1234);
 const source=fs.readFileSync(path.join(root,'supabase/functions/guardar/index.ts'),'utf8');
