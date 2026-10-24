@@ -2353,7 +2353,7 @@ function expansionSiguiente() {
   if (hechas >= EXPANSION_MAX) return null;
   return { i: hechas, n: hechas + 1, nivel: FARM_EXPANSION[hechas], costo: expansionCostos()[hechas],
     bloque: (GF.EXPANSIONES || [])[hechas] || null,
-    ...(G.produccion && G.produccion.v === 1 ? { costo: { plata: expansionPrecioCupo(hechas), ...(hechas === 0 ? { madera: 2, piedra: 2 } : {}) } } : {}) };
+    ...(G.produccion && G.produccion.v === 1 ? { costo: { plata: expansionPrecioCupo(hechas), ...(hechas === 0 ? { madera: 2, piedra: 2 } : expansionCostos()[hechas]) } } : {}) };
 }
 // Balance 16/10: arranque intacto; el terreno avanzado requiere reinversión creciente.
 // Sólo afecta compras futuras: ni las expansiones adquiridas ni las obras pagadas se recalculan.

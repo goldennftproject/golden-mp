@@ -104,7 +104,7 @@ function actividadEvidencias(a,b,ahora){
     cook:insumos>0?colas(a.cooking,b.cooking,'endAt')+colas(a.lombricario,b.lombricario,'listaEn'):0,
     auto:Math.min(Math.max(0,suma((a.godHand?.inv||[]).map(s=>s?.n))-suma((b.godHand?.inv||[]).map(s=>s?.n))),sube(a.res,b.res))};
 }
-function actividadActualizar(prev,next,ahora){
+function actividadActualizar(prev,next,ahora,recibo){
   const a=actividadLibro(prev),pruebas=prev?actividadEvidencias(prev,next,ahora):{},pedidos=next.actividadAcciones||{};
   const e=prev?.energiaGranja,at=Math.min(ahora,num(e?.at)||ahora),fin=num(prev?.produccion?.vipHasta);
   const regen=(Math.max(0,Math.min(ahora,fin)-at)*100+Math.max(0,ahora-Math.max(at,fin))*50)/ENERGIA_GRANJA_MS;
@@ -114,6 +114,7 @@ function actividadActualizar(prev,next,ahora){
     const n=Math.min(pedido-anterior,Math.max(0,Math.floor(num(pruebas[k]))),Math.floor((presupuesto+1e-6)/ACTIVIDAD_COSTOS[k]));
     credito+=n*ACTIVIDAD_COSTOS[k];presupuesto-=n*ACTIVIDAD_COSTOS[k];a.registro[k]=pedido;acciones[k]=n;
   }
+  if(recibo)Object.assign(recibo,acciones);
   next.actividadGranja=a;next.actividadAcciones={...a.registro};logrosActualizar(prev,next,acciones);return actividadAcreditar(next,credito,ahora);
 }
 // Documento logros.docx aprobado el 21/10. Metas acumulativas, premios únicos.
@@ -238,6 +239,8 @@ function visitaOperacion(prev,destino,uid,ahora,op){
   return {data,cobro:1};
 }
 const VIP_PRECIO = 10, VIP_MS = 30 * 86400000;
+// Recetas históricas recuperadas; tercera en adelante ya incluye +30%, no volver a multiplicar.
+const EXPANSION_MATERIALES=[{madera:2,piedra:2},{madera:15,piedra:10},{madera:38,piedra:25},{madera:38,piedra:32,bronce:4},{madera:49,piedra:39,bronce:6},{madera:59,piedra:47,bronce:7},{madera:76,piedra:62,bronce:4,hierro:3},{madera:89,piedra:72,bronce:4,hierro:3},{madera:108,piedra:88,bronce:6,hierro:4},{madera:124,piedra:99,hierro:4,oro:4},{madera:146,piedra:117,hierro:6,oro:4},{madera:167,piedra:134,hierro:6,oro:6},{madera:195,piedra:156,oro:6,diamante:4},{madera:219,piedra:176,oro:7,diamante:6},{madera:251,piedra:201,diamante:6,netherita:4},{madera:277,piedra:221,diamante:7,netherita:6}];
 const VIP_REINTEGROS = {3:5,7:5,12:8,15:8,18:8,22:8,25:8,27:10};
 const FARM_XP_CONTRATO = [0,0,25,90,225,550,1250,2750,5500,9000,14000,18200,22400,26900,31400,36200,41300,46400,51900,57400,63200,69300,75400,81800,88200,95000];
 // Contrato posicional del mundo; test contrastado con config.js para no inventar nodos.
@@ -298,7 +301,17 @@ function protegerEconomia(prev, next, ahora) {
       if (obraN && (!obra || obra.n!==obraN.n)) {
         if (obraN.n!==expN+1 || Math.abs(num(obraN.desde)-ahora)>300000 || num(obraN.hasta)-num(obraN.desde)<600000*obraN.n*(fin>ahora?0.9:1)-1000) errores.push("Obra no autorizada");
         const precio=20+10*expN+5*expN*expN+Math.round(.5*Math.pow(Math.max(0,expN-2),3));gasto += expN>=2?Math.ceil(precio*1.3):precio;
-        if (!expN && (num(antes.res && antes.res.madera)-num(next.res && next.res.madera)<2 || num(antes.res && antes.res.piedra)-num(next.res && next.res.piedra)<2)) errores.push("Faltan materiales de la primera expansión");
+        const receta=EXPANSION_MATERIALES[expN],recibo={};
+        actividadActualizar(antes,JSON.parse(JSON.stringify(next)),ahora,recibo);
+        let minas=num(recibo.mine);
+        if(!receta)errores.push('Receta de expansión inexistente');
+        for(const [k,q] of Object.entries(receta||{})){
+          let ingreso=0;
+          if(k==='madera')ingreso=Math.min(Math.max(0,num(next.logrosAcciones?.madera)-num(antes.logrosV2?.registro?.madera)),num(recibo.chop)*(antes.nfts?.hacha_abuelo?1.1:1));
+          else {const actos=Math.min(minas,Math.max(0,num(next.stats?.minar?.[k])-num(antes.stats?.minar?.[k])));minas-=actos;
+            ingreso=k==='piedra'?Math.min(Math.max(0,num(next.logrosAcciones?.piedra)-num(antes.logrosV2?.registro?.piedra)),actos*(antes.nfts?.cincel_cantera?1.1:1)):actos*2;}
+          if(num(antes.res?.[k])+ingreso-num(next.res?.[k])+1e-7<q)errores.push('Faltan materiales de la expansión: '+k);
+        }
       } else if (obra && obraN && obraN.hasta!==obra.hasta) errores.push("No se puede adelantar una obra");
       const poseidos = nodosPoseidos(next), viejos = new Set(nodosPoseidos(antes).map(o=>o[0]));
       if (Object.keys(n.nodos||{}).some(k=>!NODOS_CONTRATO.some(o=>o[0]===+k))) errores.push("Nodo inexistente");
@@ -357,6 +370,7 @@ const VENTA_SISTEMA = { papa:2,ciruela:4,cereza:5,remolacha:7,zanahoria:8,ceboll
   madera:12,piedra:15,bronce:160,hierro:240,oro:280,diamante:360,netherita:480,tablon:36,barra_piedra:45,barra_bronce:480,barra_hierro:720,barra_oro:840 };
 function ventaStockPermiso(prev, next) {
   if (!prev || !next) return 0;
+  const obra=next.expObra,materiales=obra&&(!prev.expObra||obra.n!==prev.expObra.n)?EXPANSION_MATERIALES[num(next.expansiones)]||{}:{};
   let buff = 1;
   for (const b of (Array.isArray(prev.buffs) ? prev.buffs : [])) if (b && b.type === "yield") buff = Math.max(buff, Math.min(3, num(b.mult)));
   const mult = Math.min(10, (1 + .015 * Math.max(0, Math.min(25, num(prev.level)) - 1) + .015 * Math.max(0, Math.min(100, num(prev.prestige)))) * buff);
@@ -364,7 +378,7 @@ function ventaStockPermiso(prev, next) {
   for (const k of Object.keys(VENTA_SISTEMA)) {
     const antes = num(prev.res && prev.res[k]), despues = num(next.res && next.res[k]);
     // Sólo inventario que ya estaba aceptado: nunca se cree un "total vendido" del cliente.
-    if (Number.isSafeInteger(antes) && Number.isSafeInteger(despues) && antes > despues && despues >= 0) total += (antes - despues) * VENTA_SISTEMA[k] * mult;
+    if (Number.isSafeInteger(antes) && Number.isSafeInteger(despues) && antes > despues && despues >= 0) total += Math.max(0,antes - despues-num(materiales[k])) * VENTA_SISTEMA[k] * mult;
   }
   return Math.ceil(total);
 }

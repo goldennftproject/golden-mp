@@ -1,5 +1,11 @@
 # Las leyes de Golden Farm
 
+## Restaurar materiales de expansión — 24/10/2026
+
+El diseñador señaló «ahora las expansiones solo cobran plata y era plata y materiales». Dirección aprobó «si» a recuperar la receta histórica y conservar el +30% desde la tercera, sin recobrar obras ni expansiones existentes.
+
+El reemplazo se introdujo en `5274341` al integrar capacidad productiva; la tabla histórica de materiales quedó disponible pero fuera del coste mostrado/cobrado. Se restaura desde la segunda expansión, manteniendo la primera en 20 Plata + 2 madera + 2 piedra. Se conserva la curva actual de Plata. Los materiales usan la tabla histórica, que ya incluye el aumento único del 30% desde la tercera: no se aplica dos veces. Ejemplos: segunda 35 Plata + 15 madera + 10 piedra; tercera 78 Plata + 38 madera + 25 piedra. Cliente y servidor contrastan las dieciséis recetas. Sólo se cobran al iniciar una obra nueva; entregas, obras iniciadas y progreso guardado se conservan. Esta decisión sustituye la aclaración del 23/10 de no reincorporar materiales al modelo productivo.
+
 ## Ajustes añadir y pico básico único — 23/10/2026
 
 Dirección aprobó «si» a aplicar `añadir.docx` y unificar madera/piedra. Zona Negra manual disponible para Free y VIP, manteniendo requisitos normales de equipo, nivel y descanso. Sólo las nuevas excursiones de un clic requieren VIP; una iniciada conserva su resolución aunque venza la membresía. Cliente y guardado validan la restricción.

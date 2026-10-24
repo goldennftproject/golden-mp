@@ -19,7 +19,9 @@ vm.runInContext(source.slice(source.indexOf('const VERSION ='),source.indexOf('/
 const now=1800000000000;
 run('estadoDeCero();G.expansiones=15;G.level=25;G.plata=10000;');
 const prev=JSON.parse(run('JSON.stringify(snapshot())'));
-const next=structuredClone(prev);next.plata-=prices[15];next.expObra={n:16,desde:now,hasta:now+16*600000};
+const materiales=JSON.parse(run('JSON.stringify(expansionSiguiente().costo)'));delete materiales.plata;
+for(const [k,n] of Object.entries(materiales))prev.res[k]=n;
+const next=structuredClone(prev);for(const [k,n] of Object.entries(materiales))next.res[k]-=n;next.plata-=prices[15];next.expObra={n:16,desde:now,hasta:now+16*600000};
 function check(a,b){server.a=structuredClone(a);server.b=structuredClone(b);return vm.runInContext('protegerEconomia(a,b,1800000000000)',server);}
 assert.equal(check(prev,next).length,0,'compra al nuevo precio aceptada');
 const cheap=structuredClone(next);cheap.plata=prev.plata;
