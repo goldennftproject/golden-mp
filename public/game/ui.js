@@ -6204,10 +6204,29 @@ function initUniversalDrag() {
 }
 
 /* ---- init ---- */
+let guardadoManualEnCurso=false;
+async function guardarAhora(){
+  if(guardadoManualEnCurso)return;
+  const uid=UID,btn=$('gm-guardar'),estado=$('gm-guardado');
+  const disponible=()=>UID===uid&&uid&&CARGA_OK&&!SOLO_LOCAL&&!SAVE_CONFLICTOS.has(uid);
+  if(!disponible()){if(estado)estado.textContent='Necesitás conexión y una granja sincronizada para guardar.';return;}
+  guardadoManualEnCurso=true;if(btn){btn.disabled=true;btn.textContent='Guardando…';}if(estado)estado.textContent='Esperando confirmación del servidor…';
+  try{
+    if(MERCADO_EN_CURSO)await MERCADO_EN_CURSO;
+    if(SAVE_EN_CURSO)await SAVE_EN_CURSO;
+    if(!disponible())throw Error();
+    const antes=SAVE_CONFIRMACIONES.get(uid)||0;
+    await saveFarm(true);
+    if(UID!==uid)return;
+    if(estado)estado.textContent=disponible()&&(SAVE_CONFIRMACIONES.get(uid)||0)>antes?'Guardado confirmado · '+new Date(SAVE_BASES.get(uid)).toLocaleTimeString():'No se pudo confirmar. Comprobá la conexión y volvé a intentar.';
+  }catch{if(UID===uid&&estado)estado.textContent='No se pudo confirmar el guardado. Volvé a intentar.';}
+  finally{guardadoManualEnCurso=false;if(btn){btn.disabled=false;btn.textContent='💾 Guardar ahora';}if(UID!==uid&&estado)estado.textContent='';}
+}
 function initUI() {
   GF.uiOpen = false;
   registroRestaurarCambioManual();
   const gmenu = $("gmenu");
+  const guardar=$('gm-guardar');if(guardar)guardar.onclick=guardarAhora;
   /* La flecha distingue el ☰ de la entrada que apareció dentro del menú. Recalcular sólo en el
      latido hacía que, durante hasta un segundo, siguiera señalando una ruta que acababa de dejar
      de ser la visible. Esta puerta cubre el clic y el atajo M en el mismo gesto. */
