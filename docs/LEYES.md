@@ -2,6 +2,8 @@
 
 ## Botón de guardado manual — 24/10/2026
 
+Dirección solicita después colocar Guardar ahora fuera del menú, visible durante el juego. Se mueve al HUD junto a la energía, con su confirmación visible, conservando la misma cola de guardado, autoguardado y F5.
+
 Dirección: «Solo añade el botón guardar para hacerlo manualmente cuando uno quiera» y «Sí, hazlo, por favor». Se añade Guardar ahora al menú, usando la cola existente y confirmación remota. Se bloquean clics repetidos mientras espera y no se anuncia éxito ante fallos, conflictos o cambios de cuenta. El autoguardado de 20 segundos y los eventos de F5/salida quedan intactos por instrucción expresa del usuario.
 
 ## Restaurar materiales de expansión — 24/10/2026

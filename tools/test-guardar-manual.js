@@ -4,6 +4,7 @@ const root=path.resolve(__dirname,'..'),save=fs.readFileSync(path.join(root,'pub
 c.document=new JSDOM(fs.readFileSync(path.join(root,'public/index.html'),'utf8')).window.document;const run=s=>vm.runInContext(s,c),b=()=>c.document.getElementById('gm-guardar'),txt=()=>c.document.getElementById('gm-guardado').textContent;
 function setup(){run("UID='qa';CARGA_OK=true;SOLO_LOCAL=false;MERCADO_EN_CURSO=null;SAVE_EN_CURSO=null;SAVE_CONFLICTOS.clear();SAVE_CONFIRMACIONES.clear();SAVE_BASES.set('qa','2026-10-24T12:00:00.000Z');");}
 (async()=>{
+ assert.equal(b().closest('#gmenu'),null);assert.ok(b().closest('#hud-flot'));assert.equal(c.document.querySelectorAll('#gm-guardar').length,1);assert.ok(c.document.getElementById('gm-guardado').closest('#hud-flot'));
  setup();let calls=0,release;c.saveFarm=async force=>{assert.equal(force,true);calls++;await new Promise(r=>release=r);run("SAVE_CONFIRMACIONES.set('qa',1)");};
  let p=c.guardarAhora();assert.ok(b().disabled);assert.match(b().textContent,/Guardando/);await c.guardarAhora();assert.equal(calls,1);assert.ok(!txt().includes('Guardado confirmado'));release();await p;assert.match(txt(),/Guardado confirmado/);assert.equal(b().disabled,false);
  setup();c.saveFarm=async()=>{};await c.guardarAhora();assert.match(txt(),/No se pudo confirmar/);assert.ok(!txt().includes('Guardado confirmado'));

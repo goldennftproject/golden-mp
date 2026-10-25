@@ -31,6 +31,8 @@
   /* HUD superior */
   .hudbar{position:fixed;left:0;top:0;right:0;z-index:6;display:flex;align-items:center;justify-content:space-between;gap:10px;padding:8px 12px;pointer-events:none}
   .hudbar>*{pointer-events:auto}
+  #gm-guardado:empty{display:none}
+  #gm-guardado{max-width:280px;white-space:normal}
   .brand h1{margin:0;font-size:20px;letter-spacing:2px;color:var(--gold);font-weight:800}
   .hud{display:flex;gap:7px;flex-wrap:wrap;align-items:center}
   /* 2/9: la repisa de las píldoras que van y vienen (estamina, buffs de comida). Es ABSOLUTA
@@ -1445,6 +1447,8 @@
          los menúes. Estas dos píldoras viven ahora en una REPISA flotante pegada bajo la barra,
          fuera de su flujo — vengan o se vayan, la barra no se entera. -->
     <div id="hud-flot">
+      <button class="pill cpill" id="gm-guardar" type="button" title="Guardar la granja y esperar confirmación del servidor">💾 Guardar ahora</button>
+      <div class="pill" id="gm-guardado" role="status" aria-live="polite"></div>
       <button class="pill cpill" id="energia-granja-pill" onclick="openOv('ov-cobertizo')" title="Energía de granja: 50 Free / 100 VIP; recuperación continua, 4 horas de vacía a llena. Clic para ver costes y capacidad."><span class="k">⚡ Granja</span><span class="k" id="s-energia-granja">50/50</span></button>
       <div class="pill cpill" id="stampill" role="button" tabindex="0" aria-label="Recargar estamina" aria-haspopup="dialog" aria-controls="ov-confirm" style="display:none" title="Estamina de combate — solo se gasta en la Zona Negra. Se recupera sola, comiendo guisos o con una recarga."><span class="k">Estamina</span><span class="cbarw"><span class="cfill stamf" id="stam-fill"></span></span><span class="k" id="s-stam">100/100</span></div>
       <!-- 31/8 (de los vídeos de referencia: « Food 00:00 » — la comida es un RELOJ). Los platos
@@ -2051,8 +2055,6 @@
       <button class="gmi" data-panel="ov-cos"><span class="ic"></span> Cosméticos</button>
       <button class="gmi" data-panel="ov-lb"><span class="ic"></span> Ranking <b class="key">L</b></button>
       <button class="gmi" data-panel="ov-config"><span class="ic"></span> Configuración <b class="key">C</b></button>
-      <button class="gmi" id="gm-guardar" type="button">💾 Guardar ahora</button>
-      <div class="sub" id="gm-guardado" role="status" aria-live="polite"></div>
       <!-- fixs.docx #10 (11/8): el menú puede quedarse desplegado -->
       <button class="gmi" id="gm-fijar"><span class="ic"></span> 📌 Menú fijo: No</button>
     </div>
