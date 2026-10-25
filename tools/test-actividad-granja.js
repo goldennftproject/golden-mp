@@ -17,4 +17,5 @@ r('G.energiaGranja={v:1,actual:50,at:nowMs()};G.actividadAcciones={};energiaGran
 r('G.energiaGranja.actual=0;energiaGranjaPagar("plant",1,true)');assert.equal(r('G.actividadAcciones.plant'),1,'acción fallida no suma');
 r('G.actividadAcciones.plant=3;actividadGranjaRecibir({v:1,energia:1,registro:{plant:1}})');assert.equal(r('G.actividadAcciones.plant'),3,'ACK conserva acciones en vuelo');
 assert.match(fs.readFileSync(path.join(root,'public/game/ui.js'),'utf8'),/El canje interno del Banco no exige este progreso/);
+run("var cprev={energiaGranja:{actual:50,at:t},plata:100,tools:{axe:0},actividadGranja:{v:1,energia:75,registro:{craft:2}}};var cnext=JSON.parse(JSON.stringify(cprev));cnext.plata=90;cnext.tools.axe=5;cnext.actividadAcciones={craft:7};cnext.energiaGranja.actual=40;actividadActualizar(cprev,cnext,t);");assert.equal(run('cnext.actividadGranja.energia'),75,'fabricación nueva no suma energía gastada');assert.equal(run('cnext.actividadGranja.registro.craft'),2,'historial anterior conservado');
 console.log('OK actividad: evidencia, presupuesto, historial, deduplicación, permanencia y cliente');

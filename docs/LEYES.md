@@ -1,5 +1,9 @@
 # Las leyes de Golden Farm
 
+## Fabricación sin energía — 25/10/2026
+
+Dirección: «Quita también el consumo de energía al fabricar, incluido de cinco en cinco». Fabricar herramientas, picos, materiales, armas, armaduras, cofres y objetos del altar cuesta cero energía. Se mantienen materiales, monedas, niveles, colas y VIP para lotes. Cocina y recolección no cambian. El servidor deja de acreditar fabricación nueva como energía gastada; conserva la actividad histórica validada. Esta instrucción sustituye la conservación del coste de fabricación indicada más abajo.
+
 ## Compras sin energía — 25/10/2026
 
 Dirección aprueba «hazlo» a comprar en la tienda sin consumir energía, manteniendo el coste al fabricar. La revisión encontró que las compras ya estaban exentas: se comprueban con energía cero y se aclara en la pestaña Comprar. Fabricar, incluido el lote VIP de cinco, conserva su coste; no se reembolsa ni altera energía o progreso existente.

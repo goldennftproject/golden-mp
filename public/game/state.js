@@ -122,7 +122,7 @@ function energiaModelo(d,t){
   if(t>=fin)v=Math.min(50,v+Math.max(0,t-Math.max(at,fin))*50/14400000);
   return Math.max(0,Math.min(fin>t?100:50,v));
 }
-const ENERGIA_GRANJA_COSTO = {plant:1,harvest:1,chop:2,mine:2,fish:2,animal:2,craft:2,cook:1,nasa:2,auto:2};
+const ENERGIA_GRANJA_COSTO = {plant:1,harvest:1,chop:2,mine:2,fish:2,animal:2,craft:0,cook:1,nasa:2,auto:2};
 function energiaGranjaTick() {
   const t=nowMs(); let e=G.energiaGranja;
   if(!e || !Number.isFinite(e.actual) || !Number.isFinite(e.at)) e=G.energiaGranja={v:1,actual:energiaGranjaMax(t),at:t};

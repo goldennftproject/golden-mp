@@ -65,7 +65,7 @@ function picosUnificarEstado(d){
   };
   for(const k of ['cont','tumba','hotbar'])visitar(d[k],0);
 }
-const ACTIVIDAD_COSTOS={plant:1,harvest:1,chop:2,mine:2,animal:2,craft:2,cook:1,auto:2};
+const ACTIVIDAD_COSTOS={plant:1,harvest:1,chop:2,mine:2,animal:2,cook:1,auto:2};
 function actividadLibro(d){
   const a=d?.actividadGranja;
   return {v:1,energia:Math.min(ACTIVIDAD_OBJETIVO,Math.max(0,Math.floor(num(a?.energia)))),registro:{...(a?.registro||{})},desde:num(a?.desde),cumplidaAt:num(a?.cumplidaAt)};
