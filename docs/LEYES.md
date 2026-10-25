@@ -2,6 +2,8 @@
 
 ## Botón de guardado manual — 24/10/2026
 
+Dirección aprueba «hazllo» a animación durante el guardado manual, ✓ verde sólo con confirmación del servidor y señal roja ante fallos. El botón conserva su icono, tooltip y posición. La animación respeta reducir movimiento.
+
 Dirección precisa después: «aparece como un disket [...] abajo a la derecha». Se muestra sólo un icono de disquete en un botón circular en la esquina inferior derecha, con nombre accesible y tooltip Guardar ahora. La confirmación aparece encima; conserva la misma cola, autoguardado y F5. Sustituye la ubicación provisional junto a la energía.
 
 Dirección: «Solo añade el botón guardar para hacerlo manualmente cuando uno quiera» y «Sí, hazlo, por favor». Se añade Guardar ahora al menú, usando la cola existente y confirmación remota. Se bloquean clics repetidos mientras espera y no se anuncia éxito ante fallos, conflictos o cambios de cuenta. El autoguardado de 20 segundos y los eventos de F5/salida quedan intactos por instrucción expresa del usuario.

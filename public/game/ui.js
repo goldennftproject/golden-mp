@@ -6207,12 +6207,18 @@ function initUniversalDrag() {
 
 /* ---- init ---- */
 let guardadoManualEnCurso=false;
+function estadoGuardar(tipo,texto=''){
+  const b=$('gm-guardar'),e=$('gm-guardado');
+  if(b){b.dataset.estado=tipo;b.disabled=tipo==='saving';b.setAttribute('aria-busy',String(b.disabled));}
+  if(e)e.textContent=texto;
+}
 async function guardarAhora(){
   if(guardadoManualEnCurso)return;
-  const uid=UID,btn=$('gm-guardar'),estado=$('gm-guardado');
+  const uid=UID;
   const disponible=()=>UID===uid&&uid&&CARGA_OK&&!SOLO_LOCAL&&!SAVE_CONFLICTOS.has(uid);
-  if(!disponible()){if(estado)estado.textContent='Necesitás conexión y una granja sincronizada para guardar.';return;}
-  guardadoManualEnCurso=true;if(btn){btn.disabled=true;btn.setAttribute('aria-busy','true');}if(estado)estado.textContent='Esperando confirmación del servidor…';
+  const fallo=()=>estadoGuardar('error','No se pudo confirmar. Revisá la conexión y volvé a intentar.');
+  if(!disponible()){fallo();return;}
+  guardadoManualEnCurso=true;estadoGuardar('saving','Esperando confirmación del servidor…');
   try{
     if(MERCADO_EN_CURSO)await MERCADO_EN_CURSO;
     if(SAVE_EN_CURSO)await SAVE_EN_CURSO;
@@ -6220,9 +6226,9 @@ async function guardarAhora(){
     const antes=SAVE_CONFIRMACIONES.get(uid)||0;
     await saveFarm(true);
     if(UID!==uid)return;
-    if(estado)estado.textContent=disponible()&&(SAVE_CONFIRMACIONES.get(uid)||0)>antes?'Guardado confirmado · '+new Date(SAVE_BASES.get(uid)).toLocaleTimeString():'No se pudo confirmar. Comprobá la conexión y volvé a intentar.';
-  }catch{if(UID===uid&&estado)estado.textContent='No se pudo confirmar el guardado. Volvé a intentar.';}
-  finally{guardadoManualEnCurso=false;if(btn){btn.disabled=false;btn.setAttribute('aria-busy','false');}if(UID!==uid&&estado)estado.textContent='';}
+    if(disponible()&&(SAVE_CONFIRMACIONES.get(uid)||0)>antes)estadoGuardar('ok','Guardado confirmado');else fallo();
+  }catch{if(UID===uid)fallo();}
+  finally{guardadoManualEnCurso=false;if(UID!==uid)estadoGuardar('');}
 }
 function initUI() {
   GF.uiOpen = false;
