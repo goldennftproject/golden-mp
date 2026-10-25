@@ -1,5 +1,9 @@
 # Las leyes de Golden Farm
 
+## Compras sin energía — 25/10/2026
+
+Dirección aprueba «hazlo» a comprar en la tienda sin consumir energía, manteniendo el coste al fabricar. La revisión encontró que las compras ya estaban exentas: se comprueban con energía cero y se aclara en la pestaña Comprar. Fabricar, incluido el lote VIP de cinco, conserva su coste; no se reembolsa ni altera energía o progreso existente.
+
 ## Botón de guardado manual — 24/10/2026
 
 Dirección aprueba «hazllo» a animación durante el guardado manual, ✓ verde sólo con confirmación del servidor y señal roja ante fallos. El botón conserva su icono, tooltip y posición. La animación respeta reducir movimiento.
