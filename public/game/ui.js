@@ -5509,12 +5509,11 @@ function refreshPacks(){
  $('pack-recoger').onclick=()=>{mkPendCobrar();refreshPacks();};
 }
 function refreshSeedShop() {
-  refreshPacks();
   const box = $("seed-shop"); if (!box) return;
   const sb = seedBuysToday();
   // 15/8 (dirección): el cupo de siempre manda también durante el tutorial (el kit cubre los insumos)
   const cupoTxt = 'Cupo diario: ' + sb.count + '/' + seedDailyMax() + ' semillas (sube con el nivel de granja) · las semillas se abren con la skill de Cultivo';
-  box.innerHTML = '<div class="shophead">' + cupoTxt + '</div>' + CROP_ORDER.map(k => {
+  box.innerHTML = '<div id="packs-shop"></div><div class="shophead">' + cupoTxt + '</div>' + CROP_ORDER.map(k => {
     const cd = CROP_DEF[k], unlocked = cropUnlocked(k), aff = G.plata >= cd.seedCost;
     const controls = unlocked
       ? `<input id="sq-${k}" aria-label="Cantidad de semillas de ${cd.label}" title="Cantidad a comprar" type="number" min="1" value="1"><button class="green sm" data-buy="${k}" ${aff ? "" : "disabled"}>Comprar · ${coinIc("plata")}${cd.seedCost} c/u</button>`
@@ -5557,6 +5556,7 @@ function refreshSeedShop() {
           `<button class="green sm" data-cont="${c}" ${aff ? "" : "disabled"}>Comprar · ${coinIc("plata")}${d.plata}</button></div>`;
       }).join("");
   })();
+  refreshPacks();
   box.querySelectorAll('[id^="sq-"]').forEach(inp=>{
  const k=inp.id.slice(3),out=$('st-'+k);
  const previa=()=>{const left=Math.max(0,seedDailyMax()-seedBuysToday().count),n=Math.min(left,Math.max(1,Math.floor(+inp.value||1)));if(out)out.textContent=left?'Total: '+fmt(n*CROP_DEF[k].seedCost)+' Plata'+(n<+inp.value?' · cupo: '+n+' semillas':''):'Cupo diario agotado';};

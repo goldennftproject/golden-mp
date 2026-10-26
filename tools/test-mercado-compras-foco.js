@@ -27,6 +27,7 @@ console.log("\nUNA COMPRA SIGUE EN SU BOTÓN O EN COMPRAR\n");
   const ctx = {
     window: dom.window, document: dom.window.document, String, Math, Array, Object, console,
     G: { plata: 4, golden: 0, res: { lombriz: 0 }, seeds: { papa: 0, zanahoria: 0 } },
+    PACKS_DEF:{},mkPendCount:()=>0,
     CROP_ORDER: ["papa", "zanahoria"],
     CROP_DEF: {
       papa: { label: "Papa", lvl: 1, seedCost: 2, grow: 60, emoji: "🥔" },
