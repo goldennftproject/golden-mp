@@ -1,5 +1,9 @@
 # Las leyes de Golden Farm
 
+## Menús más intuitivos — 26/10/2026
+
+Dirección solicita menos texto y mayor claridad sin alterar funciones. Se agrupan destinos por uso, con iconos y ayudas al pasar el cursor; Progreso, Habilidades y Premio diario mantienen sus paneles y atajos. Banco prioriza Plata → Golden y el canje; sus explicaciones quedan desplegables. Objetos de Granja prioriza tres cifras de cobro/energía/duración, conservando condiciones completas. Se corrige la explicación vieja de fabricar con energía, sin tocar reglas, permisos ni economía.
+
 ## Autoguardado por inactividad — 26/10/2026
 
 Dirección precisa: «Cinco minutos sin interacción no [...] cinco, diez segundos sin interacción, que guarde». Se eligen cinco segundos desde la última interacción, con comprobación cada segundo y sólo con cambios pendientes. El tiempo de visita no cuenta como cambio. Un guardado confirmado separa los siguientes ciclos inactivos otros cinco segundos; un fallo se reintenta con un mínimo de cinco segundos entre intentos, sin fingir confirmación. Se preservan cola, conflictos, botón manual y eventos de ocultar pestaña/F5. Sustituye la frecuencia periódica de 20 segundos indicada en las decisiones anteriores.

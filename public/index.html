@@ -573,6 +573,14 @@
   @media(min-width:641px){.gmenu{top:var(--gmenu-top,52px)}.gmenu .gmitems{max-height:var(--gmenu-max-height,calc(100vh - 70px))}}
   .gmenu.collapsed .gmitems{opacity:0;transform:scale(.9);pointer-events:none;height:0;overflow:hidden}
   .gmi{display:flex;align-items:center;gap:8px;width:190px;text-align:left;background:rgba(38,51,31,.94);border:1px solid #3c4d31;color:#f2ead5;font-weight:700;font-size:12.5px;border-radius:8px;padding:4px 10px;cursor:pointer}
+  .menu-seccion{padding:7px 10px 3px;font-size:10px;letter-spacing:.06em;text-transform:uppercase;color:#ffe0a1;background:#49301f;border-bottom:1px solid #b58c51}
+  .gmi:focus-visible{outline:3px solid #ffe08a;outline-offset:-3px}
+  .ayuda-menu{margin:8px 0;padding:7px 9px;background:rgba(45,28,13,.12);border:1px solid rgba(93,58,25,.25);border-radius:6px}
+  .ayuda-menu>summary{cursor:pointer;font-weight:700;font-size:12px}
+  .resumen-menu{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:6px;margin:10px 0}
+  .resumen-menu>span{padding:9px 5px;text-align:center;background:#f1e5c4;color:#49301f;border:1px solid #b58c51;border-radius:6px;font-size:11px}
+  .resumen-menu b{display:block;font-size:16px;margin-bottom:3px}
+  .flujo-menu{display:flex;align-items:center;justify-content:center;gap:16px;padding:10px;margin-bottom:8px;background:#f1e5c4;color:#49301f;border-radius:6px;font-weight:700}
   .gmi:hover{filter:brightness(1.15)}
   .gmi span.ic{font-size:15px;width:20px;text-align:center}
   .gmi b.key{margin-left:auto;font-size:11px;background:#161f12;border:1px solid #4a5a3a;color:#cbbf9f;border-radius:6px;padding:1px 6px}
@@ -1639,7 +1647,7 @@
     <h3>🏚 Cobertizo</h3>
     <div class="sub" id="cob-sub">Lo que todavía no colocaste en la granja. Elegí una pieza para decidir dónde va.</div>
     <div id="prod-granja"></div>
-    <p class="sub">⚡ Energía de granja: 50 Free / 100 VIP; de vacía a llena en 4 horas. Plantar, cosechar, cocinar y compostar: 1. Talar, picar, recoger productos animales y fabricar equipo: 2. Sin coste al vender, ordenar o construir. La estamina de combate es independiente. Pesca pausada.</p>
+    <details class="ayuda-menu"><summary>⚡ Costes de energía</summary><p class="sub">50 Free / 100 VIP · recarga completa en 4 h.</p><p class="sub">1 ⚡: plantar, cosechar, cocinar y compostar.<br>2 ⚡: talar, picar y recoger productos animales.<br>Sin energía: comprar, fabricar, vender, ordenar y construir.</p><p class="sub">La estamina de combate es independiente. Pesca pausada.</p></details>
     <div class="slots" id="cob-slots"></div>
     <div class="sub" id="cob-pie"></div>
   </div></div>
@@ -1664,19 +1672,19 @@
   <div class="ov" id="ov-banco"><div class="card" style="width:min(580px,94vw);max-height:calc(100dvh - 32px);overflow-y:auto;overflow-x:hidden">
     <button class="close" data-close="ov-banco">×</button>
     <h3>🏦 Banco · cambio interno</h3>
-    <p class="sub">Canjeá Plata por Golden a la tasa vigente del servidor. La tasa es ajustable y puede cambiar; no es una paridad garantizada con dólares.</p>
+    <div class="flujo-menu"><span>🪙 Plata</span><b aria-hidden="true">→</b><span>Golden</span></div><details class="ayuda-menu"><summary>Cómo funciona el cambio</summary><p class="sub">Canjeá Plata por Golden a la tasa vigente del servidor. La tasa es ajustable y puede cambiar; no es una paridad garantizada con dólares.</p></details>
     <div id="banco-info" aria-live="polite"></div>
-    <div id="banco-actividad" aria-live="polite"></div>
+
     <label for="banco-cantidad">Golden que querés recibir (unidades enteras)</label>
     <input id="banco-cantidad" type="number" min="1" max="1000000" step="1" value="1">
     <p id="banco-previa" class="sub" aria-live="polite"></p>
     <div class="row"><button id="banco-canjear" class="green" disabled>Canjear</button><button id="banco-actualizar" class="ghost">Actualizar tasa</button></div>
     <p class="sub">Sólo moneda interna de prueba. Ningún saldo implica un derecho de cobro en USDT.</p>
-    <div class="row"><button disabled>Depósitos USDT · desactivados</button><button disabled>Retiros USDT · desactivados</button></div>
+    <div class="row"><button disabled>Depósitos USDT · desactivados</button><button disabled>Retiros USDT · desactivados</button></div><details class="ayuda-menu"><summary>Actividad para futuros retiros</summary><div id="banco-actividad" aria-live="polite"></div></details>
   </div></div>
   <div class="ov" id="ov-skills"><div class="card" style="width:min(500px,94%)">
     <button class="close" data-close="ov-skills">×</button>
-    <h3>Skills</h3>
+    <h3>📊 Habilidades</h3>
     <div class="avgpill" id="sk-avg">Nivel medio: <b>1</b></div>
     <div class="skgrid" id="sk-grid"></div>
   </div></div>
@@ -2046,28 +2054,32 @@
 
   <!-- menú -->
   <div class="gmenu collapsed" id="gmenu">
-    <div class="gmitems">
-      <button class="gmi" data-panel="ov-mapa"><span class="ic"></span> Mapa <b class="key">N</b></button>
-      <button class="gmi" data-panel="ov-objetivos"><span class="ic">🎯</span> El camino <b class="key" id="gm-cam"></b></button>
-      <button class="gmi" data-panel="ov-logros"><span class="ic">🏆</span> Logros <b class="key" id="gm-log"></b></button>
-      <button class="gmi" data-panel="ov-album"><span class="ic">📖</span> Álbum <b class="key" id="gm-alb"></b></button>
-      <button class="gmi" data-panel="ov-inv"><span class="ic"></span> Inventario <b class="key">I</b></button>
-      <button class="gmi" data-panel="ov-cobertizo"><span class="ic">🏚</span> Cobertizo <b class="key" id="gm-cob"></b></button>
-      <button class="gmi" data-panel="ov-reliquias"><span class="ic">🌾</span> Objetos de Granja</button>
-      <button class="gmi" data-panel="ov-vip"><span class="ic">👑</span> VIP</button>
-      <button class="gmi" data-panel="ov-visitas"><span class="ic">🌱</span> Visitas VIP</button>
-      <button class="gmi" data-panel="ov-banco"><span class="ic">🏦</span> Banco</button>
-      <button class="gmi" data-panel="ov-skills"><span class="ic"></span> Skills <b class="key">X</b></button>
-      <button class="gmi" data-panel="ov-equip"><span class="ic"></span> Equipo <b class="key">P</b></button>
-      <button class="gmi" data-panel="ov-paquete"><span class="ic"></span> Paquete del día <b class="key">G</b></button>
-      <button class="gmi destacada" data-panel="ov-misiones"><span class="ic"></span> Misiones de hoy <b class="key" id="gm-mis">0/3</b></button>
-      <button class="gmi" data-panel="ov-pass"><span class="ic"></span> Pase de Batalla</button>
-      <button class="gmi" data-panel="ov-clan"><span class="ic"></span> Clan</button>
-      <button class="gmi" data-panel="ov-p2p"><span class="ic"></span> Mercado de jugadores</button>
-      <button class="gmi" data-panel="ov-cos"><span class="ic"></span> Cosméticos</button>
-      <button class="gmi" data-panel="ov-lb"><span class="ic"></span> Ranking <b class="key">L</b></button>
-      <button class="gmi" data-panel="ov-config"><span class="ic"></span> Configuración <b class="key">C</b></button>
-      <!-- fixs.docx #10 (11/8): el menú puede quedarse desplegado -->
+    <div class="gmitems" role="navigation" aria-label="Menús del juego">
+      <div class="menu-seccion">Mi granja</div>
+      <button class="gmi" title="Objetos, semillas y materiales que llevás." data-panel="ov-inv"><span class="ic" aria-hidden="true">🎒</span> Inventario <b class="key">I</b></button>
+      <button class="gmi" title="Capacidad, nodos y objetos por colocar en tu granja." data-panel="ov-cobertizo"><span class="ic" aria-hidden="true">🏚</span> Cobertizo <b class="key" id="gm-cob"></b></button>
+      <button class="gmi" title="Elegir armas, armaduras y herramientas." data-panel="ov-equip"><span class="ic" aria-hidden="true">⚔️</span> Equipo <b class="key">P</b></button>
+      <button class="gmi" title="Niveles de cultivo, tala, minería y combate." data-panel="ov-skills"><span class="ic" aria-hidden="true">📊</span> Habilidades <b class="key">X</b></button>
+      <button class="gmi" title="Elegir a qué zona viajar." data-panel="ov-mapa"><span class="ic" aria-hidden="true">🗺️</span> Mapa <b class="key">N</b></button>
+      <div class="menu-seccion">Objetivos y premios</div>
+      <button class="gmi" title="Ver qué te falta para avanzar." data-panel="ov-objetivos"><span class="ic" aria-hidden="true">🎯</span> Progreso <b class="key" id="gm-cam"></b></button>
+      <button class="gmi" title="Ver y reclamar la recompensa diaria." data-panel="ov-paquete"><span class="ic" aria-hidden="true">🎁</span> Premio diario <b class="key">G</b></button>
+      <button class="gmi" title="Seguir metas y reclamar sus premios." data-panel="ov-logros"><span class="ic" aria-hidden="true">🏆</span> Logros <b class="key" id="gm-log"></b></button>
+      <button class="gmi destacada" title="Consultar las tareas de hoy." data-panel="ov-misiones"><span class="ic" aria-hidden="true">📜</span> Misiones de hoy <b class="key" id="gm-mis">0/3</b></button>
+      <button class="gmi" title="Consultar la colección de peces." data-panel="ov-album"><span class="ic" aria-hidden="true">📖</span> Álbum <b class="key" id="gm-alb"></b></button>
+      <button class="gmi" title="Consultar el pase de batalla." data-panel="ov-pass"><span class="ic" aria-hidden="true">⭐</span> Pase de Batalla</button>
+      <div class="menu-seccion">Economía</div>
+      <button class="gmi" title="Comprar objetos que producen Plata y cobrar su producción." data-panel="ov-reliquias"><span class="ic" aria-hidden="true">🌾</span> Objetos de Granja</button>
+      <button class="gmi" title="Canjear Plata por Golden." data-panel="ov-banco"><span class="ic" aria-hidden="true">🏦</span> Banco</button>
+      <button class="gmi" title="Comprar y vender con otros jugadores." data-panel="ov-p2p"><span class="ic" aria-hidden="true">🤝</span> Mercado de jugadores</button>
+      <button class="gmi" title="Ver ventajas y comprar o renovar VIP." data-panel="ov-vip"><span class="ic" aria-hidden="true">👑</span> VIP</button>
+      <div class="menu-seccion">Comunidad</div>
+      <button class="gmi" title="Visitar granjas con VIP activo." data-panel="ov-visitas"><span class="ic" aria-hidden="true">🌱</span> Visitas VIP</button>
+      <button class="gmi" title="Consultar la clasificación de jugadores." data-panel="ov-lb"><span class="ic" aria-hidden="true">🏅</span> Ranking <b class="key">L</b></button>
+      <button class="gmi" title="Gestionar el clan y sus asaltos." data-panel="ov-clan"><span class="ic" aria-hidden="true">🛡️</span> Clan</button>
+      <button class="gmi" title="Elegir apariencias y adornos." data-panel="ov-cos"><span class="ic" aria-hidden="true">🎨</span> Cosméticos</button>
+      <div class="menu-seccion">Opciones</div>
+      <button class="gmi" title="Ajustar sonido, controles y opciones." data-panel="ov-config"><span class="ic" aria-hidden="true">⚙️</span> Configuración <b class="key">C</b></button>
       <button class="gmi" id="gm-fijar"><span class="ic"></span> 📌 Menú fijo: No</button>
     </div>
   </div>
