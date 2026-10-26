@@ -580,6 +580,9 @@
   .resumen-menu{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:6px;margin:10px 0}
   .resumen-menu>span{padding:9px 5px;text-align:center;background:#f1e5c4;color:#49301f;border:1px solid #b58c51;border-radius:6px;font-size:11px}
   .resumen-menu b{display:block;font-size:16px;margin-bottom:3px}
+  .falta-receta{margin-top:5px;padding:4px 6px;border-left:3px solid #a34b26;background:#f3ddbb;color:#703215;font-size:12px;font-weight:700}
+ .compra-total{font-weight:800;color:#392510}.comparativa-vip th{background:#64411f;color:#ffebc0;padding:8px}.comparativa-vip td:nth-child(3){background:rgba(234,193,89,.15);font-weight:700}
+ .guia-destino{outline:3px solid #ffe178!important;outline-offset:2px;box-shadow:0 0 0 5px rgba(107,63,20,.7)!important}
   .flujo-menu{display:flex;align-items:center;justify-content:center;gap:16px;padding:10px;margin-bottom:8px;background:#f1e5c4;color:#49301f;border-radius:6px;font-weight:700}
   .gmi:hover{filter:brightness(1.15)}
   .gmi span.ic{font-size:15px;width:20px;text-align:center}
@@ -1557,7 +1560,7 @@
       <div class="mkt-cur">Cobrar en:
         <button class="curbtn active" data-cur="plata"><img class="ric" src="assets/farm/coin_plata.png?a=4"> Plata</button>
         <button class="ghost sm" data-panel="ov-banco">🏦 Canjear Plata en el Banco</button>
-        <span id="mkt-cur-note" aria-live="polite"></span>
+        <details class="ayuda-menu"><summary>Precios y límites de venta</summary><span id="mkt-cur-note" aria-live="polite"></span></details>
       </div>
       <div class="mkt-list" id="mkt-list"></div>
     </div>
@@ -1616,7 +1619,7 @@
       <button class="shoptab forgetab" data-forge="repair">Reparar</button>
     </div>
     <div id="forge-pane-craft">
-      <div class="sub">Picos, materiales y cofres por craftear. Cada pico mina hasta su nivel.</div>
+      <div class="sub">Elegí qué fabricar · costes por unidad · ×5 requiere VIP. Sin gasto de energía.</div>
       <div class="forge-list" id="forge-craft"></div>
     </div>
     <div id="forge-pane-armas" style="display:none">
@@ -1648,7 +1651,7 @@
     <div class="sub" id="cob-sub">Lo que todavía no colocaste en la granja. Elegí una pieza para decidir dónde va.</div>
     <div id="prod-granja"></div>
     <details class="ayuda-menu"><summary>⚡ Costes de energía</summary><p class="sub">50 Free / 100 VIP · recarga completa en 4 h.</p><p class="sub">1 ⚡: plantar, cosechar, cocinar y compostar.<br>2 ⚡: talar, picar y recoger productos animales.<br>Sin energía: comprar, fabricar, vender, ordenar y construir.</p><p class="sub">La estamina de combate es independiente. Pesca pausada.</p></details>
-    <div class="slots" id="cob-slots"></div>
+    <h4>📦 Objetos por colocar</h4><div class="slots" id="cob-slots"></div>
     <div class="sub" id="cob-pie"></div>
   </div></div>
 

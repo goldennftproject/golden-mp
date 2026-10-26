@@ -1888,12 +1888,12 @@ function sendChat(text) {
 
 function startAutosave() {
   if (saveTimer) return;
-  let actividad=Date.now(),guardado=0,intento=0;
-  for(const tipo of ['pointerdown','pointermove','keydown','input','wheel'])document.addEventListener(tipo,()=>{actividad=Date.now();},{passive:true});
+  let actividad=Date.now(),guardado=false,intento=0,ciclo=0;
+  for(const tipo of ['pointerdown','pointermove','keydown','input','wheel'])document.addEventListener(tipo,()=>{actividad=Date.now();guardado=false;ciclo++;},{passive:true});
   saveTimer = setInterval(async () => {
-    if(Date.now()-Math.max(actividad,guardado)<5000||Date.now()-intento<5000||!UID||!CARGA_OK||SOLO_LOCAL||SAVE_CONFLICTOS.has(UID)||SAVE_EN_CURSO||MERCADO_EN_CURSO||snapKey()===lastSavedKey)return;
-    intento=Date.now();const uid=UID,antes=SAVE_CONFIRMACIONES.get(uid)||0;
-    try{await saveFarm();if(UID===uid&&(SAVE_CONFIRMACIONES.get(uid)||0)>antes)guardado=Date.now();}catch{}
+    if(guardado||Date.now()-actividad<5000||Date.now()-intento<5000||!UID||!CARGA_OK||SOLO_LOCAL||SAVE_CONFLICTOS.has(UID)||SAVE_EN_CURSO||MERCADO_EN_CURSO||snapKey()===lastSavedKey)return;
+    intento=Date.now();const uid=UID,vuelta=ciclo,antes=SAVE_CONFIRMACIONES.get(uid)||0;
+    try{await saveFarm();if(UID===uid&&ciclo===vuelta&&(SAVE_CONFIRMACIONES.get(uid)||0)>antes)guardado=true;}catch{}
   },1000);
   document.addEventListener("visibilitychange", () => { if (document.visibilityState === "hidden") saveFarm(); });
   window.addEventListener("beforeunload", () => { saveFarm(); });

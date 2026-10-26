@@ -2514,16 +2514,16 @@ function refreshCobertizo() {
 function refreshProduccionGranja() {
   // Reliquias se gestiona en su propio panel, no en el Cobertizo.
   const cont = $("prod-granja"); if (!cont || !G.produccion) return;
-  const abiertos = Array.from(cont.querySelectorAll("details")).map(d => d.open);
+  const abiertos = Array.from(cont.querySelectorAll("details:not(.ayuda-menu)")).map(d => d.open);
   const foco = typeof document !== "undefined" && document.activeElement;
   const clave = foco && foco.getAttribute && (foco.getAttribute("data-prod-pause") || foco.getAttribute("data-prod-buy"));
   const libres = produccionHayCupo();
-  let h = '<h3>Capacidad productiva · ' + produccionUsados() + '/' + produccionCapacidad() + '</h3>' +
-    '<p class="sub">Cada parcela, árbol o veta activa ocupa un cupo. Cada expansión suma uno. Pausar libera el cupo y conserva cargas y cultivos; no genera producción durante la pausa. Los objetos quedan en su lugar.</p>';
+  let h = '<div class="resumen-menu"><span><b>'+produccionUsados()+'/'+produccionCapacidad()+'</b>cupos usados</span><span><b>'+Math.max(0,produccionCapacidad()-produccionUsados())+'</b>cupos libres</span><span><b>'+(G.produccion.vale||0)+'</b>vales de nodo</span></div><h3>Capacidad productiva · ' + produccionUsados() + '/' + produccionCapacidad() + '</h3>' +
+    '<p class="sub">1 nodo activo = 1 cupo · cada expansión suma 1.</p>';
   const vipGranja = produccionVipActivo();
   h += '<div class="row"><span>' + (vipGranja ? 'VIP · +' + produccionVipCupos() + ' cupos · hasta ' + new Date(G.produccion.vipHasta).toLocaleString('es-UY') : 'Free · VIP: +25% de capacidad (mínimo 2 cupos) durante 30 días') + '</span>' +
     '<button class="green sm" id="prod-vip-comprar" ' + (vipGranja || G.golden < PRODUCCION_VIP_PRECIO ? 'disabled' : '') + '>' + (vipGranja ? 'VIP activo' : 'Comprar · ' + PRODUCCION_VIP_PRECIO + ' $Golden') + '</button></div>' +
-    '<p class="sub">Un solo VIP. ' + produccionVipPaseTexto() + ' Al vencer se pausan las últimas producciones activadas que excedan la capacidad Free, sin borrar nada. Sin cobro externo ni canje por USDT.</p>';
+    '<details class="ayuda-menu"><summary>Cómo funcionan los cupos y el VIP</summary><p class="sub">Cada parcela, árbol o veta activa ocupa un cupo. Cada expansión suma uno. Pausar libera el cupo y conserva cargas y cultivos; no genera producción durante la pausa. Los objetos quedan en su lugar.</p><p class="sub">Un solo VIP. ' + produccionVipPaseTexto() + ' Al vencer se pausan las últimas producciones activadas que excedan la capacidad Free, sin borrar nada. Sin cobro externo ni canje por USDT.</p></details>';
   if (G.produccion.vale) h += '<p class="verde">Tenés '+G.produccion.vale+' vale(s) de expansión: cada uno permite elegir gratis un árbol, una roca o una parcela. Elegir una opción consume un vale; las otras no se entregan automáticamente.</p>';
   h += '<details><summary>'+(G.produccion.vale?'Elegir nodo gratuito · árbol, roca o parcela':'Comprar producción · elegir especialidad')+'</summary><div class="fbtns">';
   const tipos = { plot: ["Parcela", 20, 1], tree: ["Árbol", 30, 1], rock: ["Roca", 30, 1], bronce: ["Bronce", 180, 3], hierro: ["Hierro", 300, 6], oro: ["Oro", 500, 9], diamante: ["Diamante", 900, 13], netherita: ["Netherita", 1400, 17] };
@@ -2537,7 +2537,7 @@ function refreshProduccionGranja() {
     h += '<div class="row" style="justify-content:space-between;margin:6px 0"><span>' + escapeHtml(o.label) + (pausa ? ' · pausada' : ' · activa') + '</span><button class="ghost sm" data-prod-pause="' + produccionClave(o) + '" ' + (pausa && !libres ? 'disabled' : '') + '>' + (pausa ? 'Reactivar' : 'Pausar') + '</button></div>';
   }
   cont.innerHTML = h + '</div></details><hr>';
-  Array.from(cont.querySelectorAll("details")).forEach((d, i) => d.open = !!abiertos[i] || (i===0 && G.produccion.vale>0));
+  Array.from(cont.querySelectorAll("details:not(.ayuda-menu)")).forEach((d, i) => d.open = !!abiertos[i] || (i===0 && G.produccion.vale>0));
   cont.querySelectorAll("[data-prod-buy]").forEach(b => b.onclick = () => produccionComprar(b.dataset.prodBuy));
   cont.querySelectorAll("[data-prod-pause]").forEach(b => b.onclick = () => produccionAlternar(b.dataset.prodPause));
   const comprarVip = $("prod-vip-comprar");
@@ -2626,13 +2626,13 @@ function refreshVip() {
     ['Objetos de Granja','Un objeto activo','Sin límite; admite duplicados'],
     ['Visitas y semillas','No incluidas','Resumen de granjas; hasta 3 semillas/día']
   ];
-  box.innerHTML='<p class="sub">Una sola membresía para todos los beneficios. No hay VIP separados por actividad.</p>'+
+  box.innerHTML='<div class="resumen-menu"><span><b>30 días</b>una membresía</span><span><b>50 → 100 ⚡</b>Free / VIP</span><span><b>+25 %</b>cupos, mínimo 2</span></div><p class="sub">Una sola membresía para todos los beneficios. No hay VIP separados por actividad.</p>'+
     '<p class="sub">'+(activo?'VIP activo hasta '+escapeHtml(new Date(G.produccion.vipHasta).toLocaleString('es-UY')):'Estado: Free · VIP por '+precio+' Golden durante 30 días')+'</p>'+
     '<p>Tu saldo: '+fmtGolden(G.golden)+' Golden</p><button class="green" id="vip-comprar" '+(activo||G.golden<precio?'disabled':'')+'>'+(activo?'VIP activo':'Comprar VIP · '+precio+' Golden · 30 días')+'</button>'+
     (!activo&&G.golden<precio?'<p class="sub">Necesitás '+precio+' Golden para activar la membresía.</p>':'')+
-    '<div style="overflow-x:auto;margin-top:12px"><table style="width:100%;border-collapse:collapse;text-align:left"><thead><tr><th scope="col">Beneficio</th><th scope="col">Free</th><th scope="col">VIP</th></tr></thead><tbody>'+filas.map(f=>'<tr>'+f.map(c=>'<td style="padding:8px 5px;border-top:1px solid #ffffff33">'+escapeHtml(c)+'</td>').join('')+'</tr>').join('')+'</tbody></table></div>'+
-    '<p class="sub">La energía se recupera en 4 horas. El combate no cambia. Los nodos adicionales se compran aparte. Al vencer, conservás los Objetos de Granja comprados y sus cobros; la producción que exceda la capacidad Free se pausa, sin borrar nada.</p>'+
-    '<p class="sub">El pase está desactivado. Depósitos y retiros USDT desactivados: esta compra utiliza únicamente tu Golden del juego.</p><div id="vip-actividad" aria-live="polite"></div>';
+    '<details class="ayuda-menu"><summary>Comparar todas las ventajas · Free / VIP</summary><div style="overflow-x:auto;margin-top:12px"><table class="comparativa-vip" style="width:100%;border-collapse:collapse;text-align:left"><thead><tr><th scope="col">Beneficio</th><th scope="col">Free</th><th scope="col">VIP</th></tr></thead><tbody>'+filas.map(f=>'<tr>'+f.map(c=>'<td style="padding:8px 5px;border-top:1px solid #ffffff33">'+escapeHtml(c)+'</td>').join('')+'</tr>').join('')+'</tbody></table></div></details>'+
+    '<details class="ayuda-menu"><summary>Duración y condiciones</summary><p class="sub">La energía se recupera en 4 horas. El combate no cambia. Los nodos adicionales se compran aparte. Al vencer, conservás los Objetos de Granja comprados y sus cobros; la producción que exceda la capacidad Free se pausa, sin borrar nada.</p></details>'+
+    '<p class="sub">El pase está desactivado. Depósitos y retiros USDT desactivados: esta compra utiliza únicamente tu Golden del juego.</p><details class="ayuda-menu"><summary>Actividad para futuros retiros</summary><div id="vip-actividad" aria-live="polite"></div></details>';
   actividadGranjaRefrescar();
   $('vip-comprar').onclick=confirmarCompraVip;
 }
@@ -3269,6 +3269,11 @@ function forgeAccionConFocoPc(ev, selectores, accion) {
   try { accion(); }
   finally { FORGE_FOCO_EN_ACCION = false; forgeReponerFocoPc($("ov-forge")); }
 }
+function faltaReceta(cost,plata){
+ const f=Object.keys(cost||{}).filter(k=>(G.res[k]||0)<cost[k]).map(k=>fmtDec(cost[k]-(G.res[k]||0))+' '+(RES_LABEL[k]||k));
+ if(G.plata<(plata||0))f.push(fmtDec(plata-G.plata)+' Plata');
+ return f.length?'<div class="falta-receta">Falta: '+f.join(' · ')+'</div>':'';
+}
 function refreshForge() {
   const eq = G.picks.eq;
   let craft = "", repair = "";
@@ -3282,12 +3287,12 @@ function refreshForge() {
       oreUnlocked(o) ? resIc(o)
         : '<span style="opacity:.4" title="Minería nivel ' + oreNivelReq(o) + '">' + resIc(o) + '</span>').join("");
     const img = '<img src="' + GF.spr(pd.sprite) + '">';
-    const costStr = Object.keys(pd.cost).map(k => resIc(k) + " " + pd.cost[k]).join(" · ") + (pd.plata ? " · " + coinIc("plata") + " " + pd.plata : "");
+    const costStr = Object.keys(pd.cost).map(k => resIc(k) + " " + pd.cost[k]).join(" · ") + (pd.plata ? (Object.keys(pd.cost).length ? " · " : "") + coinIc("plata") + " " + pd.plata : "");
     const afford = canAfford(pd.cost) && (!pd.plata || G.plata >= pd.plata);
     let btns = '<button class="green sm" ' + (afford ? "" : "disabled") + ' data-craft="' + id + '">Craftear</button>'
       + '<button class="green sm" ' + (afford && vipVigente() ? "" : "disabled") + ' data-craft5="' + id + '" title="Fabricar cinco requiere VIP">×5 · VIP</button>';
     if (n > 0 && !isEq) btns += '<button class="ghost sm" data-equip="' + id + '">Equipar</button>';
-    craft += '<div class="forge-row ' + (isEq ? "eq" : "") + '"><div class="fic">' + img + '</div><div class="finfo"><div class="fnm">' + pd.label + (isEq ? ' <span class="tag">equipado</span>' : "") + '</div><div class="fds">Mina: ' + mineEmo + ' · 1 uso c/u · tenés ' + n + '</div><div class="fds">Costo: ' + costStr + '</div></div><div class="fbtns">' + btns + "</div></div>";
+    craft += '<div class="forge-row ' + (isEq ? "eq" : "") + '"><div class="fic">' + img + '</div><div class="finfo"><div class="fnm">' + pd.label + (isEq ? ' <span class="tag">equipado</span>' : "") + '</div><div class="fds">Mina: ' + mineEmo + ' · 1 uso c/u · tenés ' + n + '</div><div class="fds">Costo por unidad: <b>' + costStr + '</b></div>'+faltaReceta(pd.cost,pd.plata)+'</div><div class="fbtns">' + btns + "</div></div>";
   });
   // herramientas consumibles (modelo SFL 31/7): el hacha se craftea barata y se rompe (sin reparación)
   // 8/9 (dirección): la caña salió de acá — era el fósil de la Pesca v2 y no la usaba nadie
@@ -3298,7 +3303,7 @@ function refreshForge() {
     const ok = canAfford(tc.cost) && G.plata >= tc.plata;
     const btn = '<button class="green sm" ' + (ok ? "" : "disabled") + ' data-ctool="' + id + '">Craftear</button>'
       + '<button class="green sm" ' + (ok && vipVigente() ? "" : "disabled") + ' data-ctool5="' + id + '" title="Fabricar cinco requiere VIP">×5 · VIP</button>';
-    craft += '<div class="forge-row"><div class="fic"><img src="' + GF.spr(td.sprite) + '"></div><div class="finfo"><div class="fnm">' + td.label + '</div><div class="fds">1 uso c/u · tenés ' + n + '</div><div class="fds">Costo: ' + cs + '</div></div><div class="fbtns">' + btn + '</div></div>';
+    craft += '<div class="forge-row"><div class="fic"><img src="' + GF.spr(td.sprite) + '"></div><div class="finfo"><div class="fnm">' + td.label + '</div><div class="fds">1 uso c/u · tenés ' + n + '</div><div class="fds">Costo por unidad: <b>' + cs + '</b></div>'+faltaReceta(tc.cost,tc.plata)+'</div><div class="fbtns">' + btn + '</div></div>';
   });
   /* LAS CAÑAS DE LA v4 SE ARMAN AQUÍ, y esto arregla el fallo más caro que encontré en toda la
      limpieza: la Herrería vendía las cañas de la v3, que escriben en el MISMO G.canas que las de
@@ -3407,7 +3412,7 @@ function refreshForge() {
   const chn = G.chests.length, chFull = chn >= CHEST_MAX;
   const chstr = Object.keys(CHEST_COST).map(k => resIc(k) + " " + CHEST_COST[k]).join(" · ") + " · " + coinIc("plata") + " " + CHEST_PLATA;
   const chOk = !chFull && canAfford(CHEST_COST) && G.plata >= CHEST_PLATA;
-  craft += '<div class="forge-row"><div class="fic"><img src="' + GF.spr("cofre") + '" onerror="this.outerHTML=\'📦\'"></div><div class="finfo"><div class="fnm">Cofre depósito (' + chn + "/" + CHEST_MAX + ')</div><div class="fds">10 espacios de guardado en tu granja · +1% de materiales por cofre (tenés +' + chn + '%)</div><div class="fds">Costo: ' + chstr + '</div></div><div class="fbtns"><button class="green sm" ' + (chOk ? "" : "disabled") + ' id="forge-chest">' + (chFull ? "Máximo" : "Craftear") + "</button></div></div>";
+  craft += '<div class="forge-row"><div class="fic"><img src="' + GF.spr("cofre") + '" onerror="this.outerHTML=\'📦\'"></div><div class="finfo"><div class="fnm">Cofre depósito (' + chn + "/" + CHEST_MAX + ')</div><div class="fds">10 espacios de guardado en tu granja · +1% de materiales por cofre (tenés +' + chn + '%)</div><div class="fds">Costo por unidad: <b>' + chstr + '</b></div>'+(!chFull?faltaReceta(CHEST_COST,CHEST_PLATA):'')+'</div><div class="fbtns"><button class="green sm" ' + (chOk ? "" : "disabled") + ' id="forge-chest">' + (chFull ? "Máximo" : "Craftear") + "</button></div></div>";
 
   $("forge-craft").innerHTML = craft || '<div class="sub">Nada por craftear — ya tenés todo. </div>';
   if (G.armasUnlocked) $("forge-armas").innerHTML = armas || '<div class="sub">Ya tenés todas las armas. Las flechas se siguen crafteando acá.</div>';
@@ -3844,7 +3849,8 @@ function tutoRefresh() {
   el.classList.remove("hidden");
   // 14/8 (reversión del capataz): cartel + flechitas, como antes
   const sub = (typeof tutoSub === "function") ? tutoSub() : null;
-  document.getElementById("tuto-txt").textContent = sub ? sub.txt : (st.brujula ? st.txt : tutoTxt(st));
+  const texto=sub?sub.txt:(st.brujula?st.txt:tutoTxt(st)),breve={kit:'Abrí el baúl de bienvenida',buyseed:'Mercado → Comprá 3 semillas de papa',craftarm:'Herrería → Forjá una Espada de Madera'};
+ const cartel=document.getElementById('tuto-txt');cartel.title=texto;cartel.textContent=!sub&&!st.brujula&&breve[st.id]?breve[st.id]:texto;
   const need = st.brujula ? 0 : tutoNeed(st);
   /* El desvío por nodos agotados no reemplaza el objetivo: conserva el contador para que se vea
      cuánto falta mientras la guía señala una tarea útil y vuelve sola al recurso al regenerarse. */
@@ -3868,6 +3874,7 @@ function tutoRefresh() {
 // que la del mundo) apuntando al botón/pestaña/entrada del menú — los recuadros brillantes
 // no se leían sobre la madera. Una sola flecha por vez: menú → panel → pestaña → botón.
 function tutoFlechaUI(el) {
+ const previo=document.querySelector('.guia-destino');if(previo&&previo!==el)previo.classList.remove('guia-destino');if(el)el.classList.add('guia-destino');
   let f = document.getElementById("tuto-flecha-ui");
   if (!el) { if (f) f.style.display = "none"; return; }
   if (!f) { f = document.createElement("div"); f.id = "tuto-flecha-ui"; f.textContent = "▼"; document.body.appendChild(f); }
@@ -4882,7 +4889,7 @@ function refreshMarket() {
   $("mkt-list").innerHTML = SELLABLE.map(res => {
     const cupo = typeof mercadoGlobalActivo === "function" && mercadoGlobalActivo() ? mercadoGlobalRecurso(res) : null;
     const owned = G.res[res] || 0, q = Math.min(10000, cupo ? cupo.disponible : 10000, Math.max(0, owned), +cantidades[res] > 0 ? Math.floor(+cantidades[res]) : Infinity), estado = estadoVender(res, owned, q);
-    return `<div class="mkt-row"><span class="mimg">${itemIcon({ sprite: resSprite(res), emoji: RES_EMOJI[res] })}</span><div class="minfo"><div class="mnm">${RES_LABEL[res]}</div><div class="mds" id="mv-${res}">Tenés ${fmt(owned)} · ${textoVenta(res, owned, q)}</div></div><input id="mq-${res}" type="number" min="${owned > 0 ? 1 : 0}" max="${owned}" value="${q}" ${owned > 0 ? "" : "disabled"}><button class="vbtn" id="vb-${res}" ${estado.disabled ? "disabled" : ""} title="${estado.title}">${estado.label}</button></div>`;
+    return `<div class="mkt-row"><span class="mimg">${itemIcon({ sprite: resSprite(res), emoji: RES_EMOJI[res] })}</span><div class="minfo"><div class="mnm">${RES_LABEL[res]}</div><div class="mds" id="mv-${res}">Tenés ${fmt(owned)} · ${textoVenta(res, owned, q)}</div></div><input id="mq-${res}" aria-label="Cantidad de ${RES_LABEL[res]} para vender" title="Cantidad a vender" type="number" min="${owned > 0 ? 1 : 0}" max="${owned}" value="${q}" ${owned > 0 ? "" : "disabled"}><button class="vbtn" id="vb-${res}" ${estado.disabled ? "disabled" : ""} title="${estado.title}">${estado.label}</button></div>`;
   }).join("");
   SELLABLE.forEach(res => {
     const btn = $("vb-" + res), inp = $("mq-" + res), meta = $("mv-" + res), owned = G.res[res] || 0;
@@ -4892,7 +4899,7 @@ function refreshMarket() {
       if (!btn) return;
       const q = Math.max(0, Math.min(maximo, Math.floor(+(inp && inp.value) || 0)));
       const estado = estadoVender(res, owned, q);
-      btn.disabled = estado.disabled; btn.textContent = estado.label; btn.title = estado.title;
+      btn.disabled = estado.disabled; btn.textContent = !estado.disabled && cur === "plata" ? "Vender · "+fmt(totalVenta(res,q))+" Plata" : estado.label; btn.title = estado.title;
       if (meta) meta.textContent = "Tenés " + fmt(owned) + " · " + textoVenta(res, owned, q) + disponibilidad(res) + (estado.disabled && estado.title ? " · " + estado.title : "");
     };
     if (inp) { inp.max = maximo; inp.min = maximo>0?1:0; inp.disabled = maximo<=0; inp.oninput = sync; inp.onchange = () => { inp.value = Math.max(0, Math.min(maximo, Math.floor(+inp.value || 0))); sync(); }; }
@@ -5495,9 +5502,9 @@ function refreshSeedShop() {
   box.innerHTML = '<div class="shophead">' + cupoTxt + '</div>' + CROP_ORDER.map(k => {
     const cd = CROP_DEF[k], unlocked = cropUnlocked(k), aff = G.plata >= cd.seedCost;
     const controls = unlocked
-      ? `<input id="sq-${k}" type="number" min="1" value="1"><button class="green sm" data-buy="${k}" ${aff ? "" : "disabled"}>Comprar · ${coinIc("plata")}${cd.seedCost} c/u</button>`
+      ? `<input id="sq-${k}" aria-label="Cantidad de semillas de ${cd.label}" title="Cantidad a comprar" type="number" min="1" value="1"><button class="green sm" data-buy="${k}" ${aff ? "" : "disabled"}>Comprar · ${coinIc("plata")}${cd.seedCost} c/u</button>`
       : `<button class="ghost sm" disabled title="Se abre con la skill de Cultivo">Cultivo nv ${cd.lvl}</button>`;
-    return `<div class="mkt-row"><span class="mimg">${itemIcon({ sprite: "seed_" + k, emoji: cd.emoji })}</span><div class="minfo"><div class="mnm">${cd.label} <span class="seedlv">nv ${cd.lvl}</span></div><div class="mds">Semilla · crece en ${fmtSecs(cd.grow)} · tenés ${fmt(G.seeds[k] || 0)}</div></div>${controls}</div>`;
+    return `<div class="mkt-row"><span class="mimg">${itemIcon({ sprite: "seed_" + k, emoji: cd.emoji })}</span><div class="minfo"><div class="mnm">${cd.label} <span class="seedlv">nv ${cd.lvl}</span></div><div class="mds">Semilla · crece en ${fmtSecs(cd.grow)} · tenés ${fmt(G.seeds[k] || 0)}</div><div class="mds compra-total" id="st-${k}" aria-live="polite">Total: ${cd.seedCost} Plata</div></div>${controls}</div>`;
   }).join("")
   /* 31/8 (today.docx: « quitar que la tienda venda lombrices — solo se obtienen en el mapa o en
      el lombricero ») — la fila de venta se fue. Si volviera, la lombriz dejaría de ser el reloj
@@ -5535,6 +5542,11 @@ function refreshSeedShop() {
           `<button class="green sm" data-cont="${c}" ${aff ? "" : "disabled"}>Comprar · ${coinIc("plata")}${d.plata}</button></div>`;
       }).join("");
   })();
+  box.querySelectorAll('[id^="sq-"]').forEach(inp=>{
+ const k=inp.id.slice(3),out=$('st-'+k);
+ const previa=()=>{const left=Math.max(0,seedDailyMax()-seedBuysToday().count),n=Math.min(left,Math.max(1,Math.floor(+inp.value||1)));if(out)out.textContent=left?'Total: '+fmt(n*CROP_DEF[k].seedCost)+' Plata'+(n<+inp.value?' · cupo: '+n+' semillas':''):'Cupo diario agotado';};
+ inp.addEventListener('input',previa);previa();
+ });
   box.querySelectorAll("[data-buy]").forEach(b => b.onclick = (ev) => {
     seedShopGuardarFocoPc(ev, "buy", b.dataset.buy);
     const inp = $("sq-" + b.dataset.buy); buySeed(b.dataset.buy, inp ? +inp.value : 1);

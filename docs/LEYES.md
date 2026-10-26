@@ -1,5 +1,13 @@
 # Las leyes de Golden Farm
 
+## Un guardado por periodo inactivo — 26/10/2026
+
+Dirección precisa que tras el autoguardado de cinco segundos no se vuelva a guardar mientras continúe la inactividad. Una bandera se activa sólo tras confirmación del servidor y se libera al interactuar de nuevo. Los fallos pueden reintentarse; una interacción durante la petición no queda bloqueada por su respuesta posterior. Los relojes absolutos de nodos, cultivos y trabajos siguen avanzando sin escrituras periódicas. Sustituye la repetición cada cinco segundos durante una misma inactividad.
+
+## Segunda pasada de presentación — 26/10/2026
+
+Dirección aprueba todas las mejoras propuestas: Cobertizo distingue cupos/vales/objetos; Herrería destaca coste por unidad y faltantes; Mercado muestra totales junto a cantidad y acción; VIP resume ventajas y conserva comparación/condiciones desplegables; tutorial mantiene objetivos, rutas y contadores, con carteles breves y destino delineado. Sólo presentación: mismos precios, requisitos, callbacks, cupos y estados de guardado.
+
 ## Menús más intuitivos — 26/10/2026
 
 Dirección solicita menos texto y mayor claridad sin alterar funciones. Se agrupan destinos por uso, con iconos y ayudas al pasar el cursor; Progreso, Habilidades y Premio diario mantienen sus paneles y atajos. Banco prioriza Plata → Golden y el canje; sus explicaciones quedan desplegables. Objetos de Granja prioriza tres cifras de cobro/energía/duración, conservando condiciones completas. Se corrige la explicación vieja de fabricar con energía, sin tocar reglas, permisos ni economía.

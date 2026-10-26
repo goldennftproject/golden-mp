@@ -1,0 +1,13 @@
+'use strict';
+const assert=require('node:assert/strict'),fs=require('fs'),path=require('path'),vm=require('vm'),{JSDOM}=require('jsdom');
+const root=path.resolve(__dirname,'..'),doc=new JSDOM(fs.readFileSync(path.join(root,'public/index.html'),'utf8')).window.document;
+const {ctx:c}=require('./arrancar-el-juego.contexto').arrancar(root,{'game/main.js':''});c.document=doc;c.isOpen=()=>false;c.tutoHighlight=()=>{};c.G.plata=100;c.G.tuto={done:true};c.G.res.madera=0;c.G.res.piedra=0;
+for(const k of ['refreshHud','log','toast','saveFarm','celebrate'])c[k]=()=>{};
+c.refreshForge();assert.ok(doc.querySelector('#forge-craft .falta-receta'));assert.ok(doc.querySelector('#forge-craft').textContent.includes('Costo por unidad'));assert.ok(doc.querySelector('[data-craft5]'));assert.equal(doc.querySelector('[data-craft5]').disabled,true);
+c.refreshCobertizo();assert.equal(doc.querySelectorAll('#prod-granja .resumen-menu>span').length,3);assert.ok(doc.querySelector('[data-prod-buy="tree"]'));assert.ok(doc.querySelector('#cob-slots'));
+c.refreshVip();assert.ok(doc.getElementById('vip-comprar'));assert.equal(doc.getElementById('vip-comprar').closest('details'),null);assert.equal(doc.querySelectorAll('.comparativa-vip tbody tr').length,8);assert.ok(doc.querySelector('.comparativa-vip').closest('details'));assert.ok(doc.getElementById('vip-actividad'));
+c.refreshSeedShop();let inp=doc.getElementById('sq-papa');inp.value=3;inp.dispatchEvent(new doc.defaultView.Event('input'));assert.equal(doc.getElementById('st-papa').textContent,'Total: '+3*vm.runInContext('CROP_DEF.papa.seedCost',c)+' Plata');
+c.seedBuysToday().count=c.seedDailyMax()-2;c.refreshSeedShop();inp=doc.getElementById('sq-papa');inp.value=5;inp.dispatchEvent(new doc.defaultView.Event('input'));assert.ok(doc.getElementById('st-papa').textContent.includes('cupo: 2 semillas'));
+const source=fs.readFileSync(path.join(root,'public/game/ui.js'),'utf8'),fn=source.slice(source.indexOf('function tutoFlechaUI(el) {'),source.indexOf('function tutoHighlight()'));
+vm.runInContext(fn,c);const a=doc.querySelector('[data-panel="ov-cobertizo"]'),b=doc.querySelector('[data-panel="ov-banco"]');c.tutoFlechaUI(a);assert.ok(a.classList.contains('guia-destino'));c.tutoFlechaUI(b);assert.ok(!a.classList.contains('guia-destino'));assert.ok(b.classList.contains('guia-destino'));c.tutoFlechaUI(null);assert.equal(doc.querySelectorAll('.guia-destino').length,0);
+console.log('OK: faltantes, lotes VIP, cupos, comparación, totales/cupo y señal única de tutorial; callbacks conservados.');

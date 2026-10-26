@@ -29,6 +29,6 @@ const downgraded=snap();delete downgraded.produccion.valesV;assert.ok(check(migr
 const lost=snap();lost.produccion.vale--;assert.ok(check(migrated,lost).some(e=>e.includes('sin nodo')),'no desaparece un vale sin recibir nodo');
 const initial=ctx.estadoDeCero();const fresh=snap();fresh.produccion.vale=1;assert.ok(check(null,fresh).some(e=>e.includes('vales')),'granja nueva no crea vales iniciales');
 ctx.document=new JSDOM(fs.readFileSync(path.join(repo,'public/index.html'),'utf8')).window.document;ctx.G.expansiones=1;ctx.G.produccion.vale=1;ctx.refreshCobertizo();
-const area=ctx.document.getElementById('prod-granja');assert.equal(area.querySelector('details').open,true);
+const area=ctx.document.getElementById('prod-granja');assert.equal(area.querySelector('[data-prod-buy="tree"]').closest('details').open,true,'la elección gratuita se abre, no la ayuda');
 for(const k of ['tree','rock','plot'])assert.match(area.querySelector('[data-prod-buy="'+k+'"]').textContent,/incluido/);
 assert.match(area.textContent,/consume un vale/);console.log('OK: 16 expansiones entregan vales elegibles, acumulación/F5, tres tipos sin cobro, cupo físico, compensación idempotente y rechazo de duplicación en servidor.');

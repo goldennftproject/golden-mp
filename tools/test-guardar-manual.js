@@ -15,7 +15,7 @@ function setup(){run("UID='qa';CARGA_OK=true;SOLO_LOCAL=false;MERCADO_EN_CURSO=n
  setup();let finish;const pending=new Promise(r=>finish=r);c.qaPending=pending;run('SAVE_EN_CURSO=qaPending');calls=0;c.saveFarm=async()=>{calls++;run("SAVE_CONFIRMACIONES.set('qa',2)");};p=c.guardarAhora();assert.equal(calls,0);run("SAVE_CONFIRMACIONES.set('qa',1);SAVE_EN_CURSO=null");finish();await p;assert.equal(calls,1);assert.match(txt(),/Guardado confirmado/,'esperar autosave no sustituye el guardado solicitado');
  assert.equal(b().dataset.estado,'ok');
  setup();run('SOLO_LOCAL=true');calls=0;await c.guardarAhora();assert.equal(calls,0);assert.equal(b().dataset.estado,'error');
- assert.ok(save.includes('Math.max(actividad,guardado)<5000'));assert.ok(save.includes('window.addEventListener("beforeunload", () => { saveFarm(); })'));
+ assert.ok(save.includes('guardado||Date.now()-actividad<5000'));assert.ok(save.includes('window.addEventListener("beforeunload", () => { saveFarm(); })'));
  const ui=fs.readFileSync(path.join(root,'public/game/ui.js'),'utf8');assert.ok(ui.includes('guardar.onclick=guardarAhora'));
  console.log('OK: botón manual, ACK remoto, clic único, fallos, conflictos, cambio de cuenta y cola; autoguardado y F5 sin cambios.');
 })().catch(e=>{console.error(e);process.exitCode=1});
