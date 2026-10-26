@@ -5,7 +5,7 @@ class ForestScene extends Phaser.Scene {
 
   create() {
     const T = GF.TILE;
-    this.W = 32 * T; this.H = (GF.ROWS_BASE || 15) * T;   // 18/8: alto PROPIO. Antes tomaba GF.WORLD_H, que ahora crece con las expansiones: comprar césped en la granja agrandaba el mapa de combate un 67% y dispersaba a los bichos.   // bosque más ancho que la granja
+    this.W = 32 * T; this.H = 15 * T;   // 18/8: alto PROPIO. Antes tomaba GF.WORLD_H, que ahora crece con las expansiones: comprar césped en la granja agrandaba el mapa de combate un 67% y dispersaba a los bichos.   // bosque más ancho que la granja
     GF.uiOpen = false;
     /* El panel del cadáver, el pulso de Combate y el cartel contextual son HTML fijo, no parte
        de Phaser. Al cambiar de mapa la escena se apaga pero podrían quedar visibles: el primero

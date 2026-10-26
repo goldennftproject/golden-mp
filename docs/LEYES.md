@@ -1,5 +1,9 @@
 # Las leyes de Golden Farm
 
+## Corrección del tamaño de la Zona Negra — 25/10/2026
+
+El diseñador reporta que la zona se redujo. El bosque heredaba GF.ROWS_BASE de la granja compacta: 9 filas en lugar de las 15 históricas. Se restaura 32×15 celdas (1344×630 px a TILE=42), independiente de la granja y sus expansiones. No cambia la granja, cantidades de enemigos, recompensas ni progreso.
+
 ## Fabricación sin energía — 25/10/2026
 
 Dirección: «Quita también el consumo de energía al fabricar, incluido de cinco en cinco». Fabricar herramientas, picos, materiales, armas, armaduras, cofres y objetos del altar cuesta cero energía. Se mantienen materiales, monedas, niveles, colas y VIP para lotes. Cocina y recolección no cambian. El servidor deja de acreditar fabricación nueva como energía gastada; conserva la actividad histórica validada. Esta instrucción sustituye la conservación del coste de fabricación indicada más abajo.
