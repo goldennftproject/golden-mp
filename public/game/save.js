@@ -845,6 +845,13 @@ function hydrate(d) {
   picosUnificarEstado(G);
   derivarEstado(d);      // calcula lo que se deduce del estado ya completo
   produccionMigrar();   // capacidad heredada, una sola vez y sin retirar nodos comprados
+  // Los emplazamientos compactos pueden compartir celda original. Separar relojes heredados.
+  const anteriores=G.nodos,relojes={...anteriores};
+  GF.WORLD_OBJECTS.forEach((o,i)=>{
+    if(!['tree','rock','ore'].includes(o.type)||produccionNodoPoseido(i)===false)return;
+    const k=produccionNodoKey(i),a=o.type+':'+o.leftCol+','+o.baseRow,v=anteriores[k]||anteriores[a];
+    if(v){relojes[k]={...v};if(k!==a)delete relojes[a];}
+  });G.nodos=relojes;
   if (vipAnterior && !produccionVipActivo()) {
     G.produccion.vipHasta = nowMs() + PRODUCCION_VIP_DIAS * 86400000;
     G.produccion.vipAplicado = true;

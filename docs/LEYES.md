@@ -1,5 +1,9 @@
 # Las leyes de Golden Farm
 
+## Persistencia de nodos compactos — 26/10/2026
+
+El guardado real permitió reproducir una colisión de claves: tres árboles comparten tree:6,4 y seis vetas ore:7,8. Al sincronizar, los nodos ocultos sobrescribían los relojes recién usados. Se distinguen las claves que comparten celda por el índice estable del contrato y se migran sólo los nodos poseídos, conservando relojes y pausas. No se modifican filas de jugadores ni los tiempos de producción.
+
 ## Corrección del tamaño de la Zona Negra — 25/10/2026
 
 El diseñador reporta que la zona se redujo. El bosque heredaba GF.ROWS_BASE de la granja compacta: 9 filas en lugar de las 15 históricas. Se restaura 32×15 celdas (1344×630 px a TILE=42), independiente de la granja y sus expansiones. No cambia la granja, cantidades de enemigos, recompensas ni progreso.

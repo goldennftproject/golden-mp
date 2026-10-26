@@ -307,7 +307,7 @@ class FarmScene extends Phaser.Scene {
          enfriamiento de un árbol caía sobre una roca. Y lo siguiente en la lista es justamente
          agregar los nodos de cada expansión. Ahora la clave es la CELDA ORIGINAL del objeto, que
          no cambia aunque el array se reordene. */
-      const svn = (G.nodos || {})[o.type + ":" + o.leftCol + "," + o.baseRow];
+      const svn = (G.nodos || {})[produccionNodoKey(i)];
       /* 20/8 — `exp` TIENE QUE VIAJAR AL OBJETO DE LA ESCENA. No estaba, y eso rompía dos cosas
          que solo se notan cuando la expansión se dibuja en caliente (o sea, desde hoy, que es
          cuando expandirEnVivo empezó a ejecutarse de verdad):
@@ -5093,12 +5093,12 @@ class FarmScene extends Phaser.Scene {
          cuánto se le drenó. Descartarlo hacía que cualquier F5 o viaje de zona recreara el nodo
          SIN reloj — y sin reloj es VIRGEN, o sea lleno de nuevo: madera infinita a fuerza de
          recargar. Ahora se recuerda todo reloj que exista, pasado o futuro. */
-      if (!o.readyAt) return;                                    // virgen de verdad: nada que recordar
+      if (!o.readyAt || produccionNodoPoseido(o.i) === false) return; // sólo relojes de nodos propios
       const base = GF.WORLD_OBJECTS[o.i];
       if (!base) return;
-      n[base.type + ":" + base.leftCol + "," + base.baseRow] = { readyAt: o.readyAt, halfAt: o.halfAt || 0, cdIni: o.cdIni || 0 };
+      n[produccionNodoKey(o.i)] = { readyAt: o.readyAt, halfAt: o.halfAt || 0, cdIni: o.cdIni || 0 };
       const pausa = G.produccion && G.produccion.pausas[produccionClave(o)];
-      if (pausa) n[base.type + ":" + base.leftCol + "," + base.baseRow] = {...pausa.estado};
+      if (pausa) n[produccionNodoKey(o.i)] = {...pausa.estado};
     });
     G.nodos = n;
   }

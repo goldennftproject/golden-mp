@@ -58,7 +58,8 @@ console.log("  " + FILES.length + " archivos  ·  " + Math.round(crudo / 1024) +
      commits del chat visual: nota de prueba del tablón, Mercado en móvil). Es crecimiento
      real, no comentarios: 1058 KB sin comentarios contra 238 KB→300 KB comprimidos. */
   // 16/10: energía + tienda de productores añaden ~6 KB gzip de funcionalidad real.
-  const TOPE_KB = 350;
+  // 26/10: +1 KB explícito para separar relojes de nodos compactos y migrar sin perder progreso.
+  const TOPE_KB = 351;
   ok("lo que viaja no pasa del tope", comprimido / 1024 < TOPE_KB,
     Math.round(comprimido / 1024) + " KB de " + TOPE_KB + " KB");
   ok("y comprimir sigue valiendo la pena (≥ 2,5×)", pelado / comprimido >= 2.5,

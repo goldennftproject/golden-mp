@@ -2778,7 +2778,11 @@ function produccionMigrar() {
   G.produccion = { v: 1, base: Math.max(5, usados - (G.expansiones || 0)), nodos, pausas: {}, vale: 0, valesV: 2, vipHasta: 0, vipAplicado: false, vipUnico: 1, orden: [] };
   // La capacidad adquirida antes del cambio es permanente; una recarga no vuelve a concederla.
 }
-function produccionNodoKey(i) { const o = GF.WORLD_OBJECTS[i]; return o ? o.type + ":" + o.leftCol + "," + o.baseRow : ""; }
+function produccionNodoKey(i) {
+  const o=GF.WORLD_OBJECTS[i];if(!o)return '';
+  const k=o.type+':'+o.leftCol+','+o.baseRow;
+  return GF.WORLD_OBJECTS.some((b,j)=>j!==i&&b.type===o.type&&b.leftCol===o.leftCol&&b.baseRow===o.baseRow)?k+'#'+i:k;
+}
 function produccionAlternar(clave) {
   produccionVipTick();
   if (!G.produccion || !/^[np]:\d+$/.test(clave)) return false;
