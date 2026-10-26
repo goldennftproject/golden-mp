@@ -7,8 +7,8 @@ const G = {
   espacioV: 3,                  // Inicio 9×9 restaurado; partidas de otras versiones conservadas
   energiaGranja: { v: 1, actual: 50, at: 0 },
   artefactos: null,
-  banco: null,
-  plata: 3, golden: 20, level: 1, prestige: 0, week: 1, iniciado: 0,   // 18/8: cuándo empezó la partida — de ahí sale la semana del HUD   // 14/8: nacés con 3 de plata (el 1er objetivo es COMPRAR tus semillas)
+  banco: null, packs: null,
+  plata: 3, golden: 0, level: 1, prestige: 0, week: 1, iniciado: 0,   // 18/8: cuándo empezó la partida — de ahí sale la semana del HUD   // 14/8: nacés con 3 de plata (el 1er objetivo es COMPRAR tus semillas)
   hp: 100, hpMax: 100, swordOwned: false, bowOwned: false, swordWoodOwned: false, firstCropDone: false,   // combate (Fase D)
   armasUnlocked: false,          // viernes (2): la pestana Armas de la Herreria se paga (20 madera + 20 piedra + 1000 plata)
   treesOpen: [0], rocksOpen: [0],  // economía gradual: los otros nodos se eligen, no nacen todos activos
@@ -122,7 +122,7 @@ function energiaModelo(d,t){
   if(t>=fin)v=Math.min(50,v+Math.max(0,t-Math.max(at,fin))*50/14400000);
   return Math.max(0,Math.min(fin>t?100:50,v));
 }
-const ENERGIA_GRANJA_COSTO = {plant:1,harvest:1,chop:2,mine:2,fish:2,animal:2,craft:0,cook:1,nasa:2,auto:2};
+const ENERGIA_GRANJA_COSTO = {plant:1,harvest:1,chop:1,mine:1,fish:2,animal:2,craft:0,cook:1,nasa:2,auto:2};
 function energiaGranjaTick() {
   const t=nowMs(); let e=G.energiaGranja;
   if(!e || !Number.isFinite(e.actual) || !Number.isFinite(e.at)) e=G.energiaGranja={v:1,actual:energiaGranjaMax(t),at:t};
@@ -163,6 +163,9 @@ const ARTEFACTO_DIAS = 180, ARTEFACTO_PLATA_POR_GOLDEN_DIA = 87, ARTEFACTO_TOPE_
 const OBJETOS_PLATA_DESDE = 1792193400000;
 function fmtGolden(n){return Number(n||0).toFixed(6).replace(/\.?0+$/,'') || '0';}
 // 0,87 % diario sobre la referencia inicial de 10.000 Plata/Golden; no sigue la tasa variable del Banco.
+const PACKS_DEF={diario:{label:'Pack diario',golden:1,res:{madera:20,piedra:20,bronce:2}},semanal:{label:'Pack semanal',golden:10,res:{madera:150,piedra:150,bronce:15,hierro:5}}};
+function packPeriodo(id,t=nowMs()){return id==='semanal'?Math.floor((t+3*86400000)/604800000):Math.floor(t/86400000);}
+function packComprado(id,t=nowMs()){return G.packs?.compras?.[id]===packPeriodo(id,t);}
 function artefactoModelo(id){return String(id).split(':')[0];}
 function artefactoDiario(id){const d=ARTEFACTO_DEF[artefactoModelo(id)];return d ? d.golden*ARTEFACTO_PLATA_POR_GOLDEN_DIA : 0;}
 function objetoInicioCobro(a){return a.moneda==='plata-v2' ? a.cobrado : Math.max(a.cobrado,OBJETOS_PLATA_DESDE);}
@@ -2727,7 +2730,7 @@ function produccionVipTick(sinEscena) {
   return true;
 }
 function produccionVipPaseTexto() {
-  return "50 de energía Free / 100 VIP, recarga completa en 4 h. VIP: cocina, expansiones y nodos un 10% más rápidos; fabricación en lotes; P2P sin límite diario y comisión del 7% (Free: una publicación diaria, 10%); Objetos de Granja sin límite (Free: uno). Pase desactivado. Retiros desactivados; futura política: Free uno/mes, VIP sin límite de frecuencia, sujetos a saldo y reservas.";
+  return "50 de energía Free / 100 VIP, recarga completa en 4 h. VIP: cocina, expansiones y nodos un 10% más rápidos; fabricación en lotes; P2P hasta 10 publicaciones diarias y comisión del 7% (Free: una publicación diaria, 10%); Objetos de Granja sin límite (Free: uno). Pase desactivado. Retiros desactivados; futura política: Free uno/mes, VIP sin límite de frecuencia, sujetos a saldo y reservas.";
 }
 function produccionVipComprar() {
   produccionVipTick();
@@ -4274,7 +4277,7 @@ async function marketPublicar(kind, key, n, precio) {
   if (!MARKET_KINDS[kind]) return;
   if (mkTengo(kind, key) < n) { toast("No tenés " + n + " de eso"); return; }
   const mias = await mkMine();
-  if (!vipVigente() && mias.some(r => String(r.created_at).slice(0,10) === dayStamp(0))) { toast("Free: una publicación P2P por día UTC"); return; }
+  if (mias.filter(r => String(r.created_at).slice(0,10) === dayStamp(0)).length >= (vipVigente()?10:1)) { toast(vipVigente()?"VIP: diez publicaciones P2P por día UTC":"Free: una publicación P2P por día UTC"); return; }
   const pieza = kind === "armor" ? armorPieza(key) : null;
   const payload = pieza ? { dur: armorDur(pieza.set, pieza.pieza) } : (kind === "arm" && G.weapons[key]) ? JSON.parse(JSON.stringify(G.weapons[key])) : null;
   if (!mkSacar(kind, key, n)) { toast("No se pudo publicar"); return; }
@@ -8312,10 +8315,9 @@ ORE_DEF.piedra.price = PRICE.piedra;
 // 1/8: los CULTIVOS venden según CROP_DEF.price — PRICE quedó solo para lo demás.
 //      Antes el mercado usaba una copia vieja acá y los cambios del panel no se veían (bug reportado por el diseñador).
 function priceOf(res) { return CROP_DEF[res] ? CROP_DEF[res].price : (PRICE[res] != null ? PRICE[res] : matValor(res)); }
-// Economía por especialidades: también se venden recursos de tala/minería y sus procesados.
+// El comprador del sistema compra cultivos; materiales se intercambian entre jugadores.
 // Carne, cebos y otros objetos de combate conservan sus restricciones.
-const SELLABLE = ["papa","ciruela","cereza","remolacha","zanahoria","cebolla","calabacin","repollo","calabaza","brocoli","girasol","trigo","maiz",
-  "madera","piedra","bronce","hierro","oro","diamante","netherita","tablon","barra_piedra","barra_bronce","barra_hierro","barra_oro"];
+const SELLABLE = ["papa","ciruela","cereza","remolacha","zanahoria","cebolla","calabacin","repollo","calabaza","brocoli","girasol","trigo","maiz"];
 let marketCur = "plata";
 // 16/8 (caza de exploits): vender en $Golden usaba precio/10, o sea 10 plata de cultivo por
 // 1 $Golden — mientras comprar parcelas valora el $Golden en GOLDEN_EN_PLATA (500). Eso era
@@ -8344,7 +8346,7 @@ let marketCur = "plata";
    Y la imposibilidad de venderlo deja de ser un efecto lateral de « no tiene precio » y pasa a
    ser una LISTA, porque un cero implícito es un cero que mañana alguien rellena sin querer. */
 var NO_VENDIBLE = { cebo_vivo: "El cebo vivo no se vende: solo sirve para cebar el palangre" };
-function esVendible(res) { return !NO_VENDIBLE[res]; }
+function esVendible(res) { return !NO_VENDIBLE[res] && !["madera","piedra","bronce","hierro","oro","diamante","netherita","tablon","barra_piedra","barra_bronce","barra_hierro","barra_oro"].includes(res); }
 function precioVentaBase(res) {
   if (!esVendible(res)) return 0;
   const c = CROP_DEF[res];

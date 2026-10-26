@@ -36,7 +36,7 @@ console.log("\n1 · estadoDeCero() ES EL JUGADOR NUEVO\n");
   ctx.estadoDeCero();
   ok("vuelve exactamente a la foto inicial (campos agregados incluidos)", JSON.stringify(G) === fresco);
   ok("y sigue siendo EL MISMO objeto (todo el juego lo tiene por referencia)", ctx.G === G && ctx.window.G === G);
-  ok("3 de plata, 20 $Golden, nivel 1, sin terreno, tutorial en el paso 0", G.plata === 3 && G.golden === 20 && G.level === 1 && G.expansiones === 0 && G.tuto.step === 0 && !G.tuto.done);
+  ok("3 de plata, 0 $Golden, nivel 1, sin terreno, tutorial en el paso 0", G.plata === 3 && G.golden === 0 && G.level === 1 && G.expansiones === 0 && G.tuto.step === 0 && !G.tuto.done);
 }
 
 console.log("\n2 · EL PORTERO ENTIENDE EL REINICIO\n");

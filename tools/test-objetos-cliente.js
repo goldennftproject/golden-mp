@@ -18,7 +18,7 @@ ctx.qaSb={functions:{invoke:async(name,{body})=>{
  assert.equal(body.op,lastOp,'reintento conserva el identificador');
  return {data:{ok:true,data:cloud,updated_at:at,cobro:0,repetido:true},error:null};
 }}};
-run("estadoDeCero();sb=qaSb;UID='qa';CARGA_OK=true;SOLO_LOCAL=false;SAVE_BASES.set(UID,'2026-10-16T16:00:00.000Z');mercadoBloquearPantalla=()=>()=>{};copiaGuardar=()=>{};");
+run("estadoDeCero();G.golden=20;sb=qaSb;UID='qa';CARGA_OK=true;SOLO_LOCAL=false;SAVE_BASES.set(UID,'2026-10-16T16:00:00.000Z');mercadoBloquearPantalla=()=>()=>{};copiaGuardar=()=>{};");
 (async()=>{
  await ctx.SAVE_READY;await new Promise(setImmediate);
  run("sb=qaSb;UID='qa';CARGA_OK=true;SOLO_LOCAL=false;SAVE_CONFLICTOS.clear();");

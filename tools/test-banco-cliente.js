@@ -20,7 +20,7 @@ const watchdog=setTimeout(()=>{console.error('Prueba incompleta');process.exit(1
  await ctx.SAVE_READY;await ctx.bancoCotizar();assert.equal(ctx.bancoCotizacionValida(),true);
  ctx.refreshBanco(false);elementos['banco-cantidad'].value='1';ctx.bancoActualizarPrevia();assert.equal(elementos['banco-canjear'].disabled,false);
  elementos['banco-cantidad'].value='3';ctx.bancoActualizarPrevia();assert.equal(elementos['banco-canjear'].disabled,true);
- await ctx.bancoSolicitar(1,'plata-golden:10000');assert.equal(attempts,2);assert.equal(commits,1);assert.equal(ctx.G.plata,15000);assert.equal(ctx.G.golden,21);assert.equal(ctx.mercadoPendiente('qa'),false);
+ await ctx.bancoSolicitar(1,'plata-golden:10000');assert.equal(attempts,2);assert.equal(commits,1);assert.equal(ctx.G.plata,15000);assert.equal(ctx.G.golden,1);assert.equal(ctx.mercadoPendiente('qa'),false);
  const snap=JSON.parse(JSON.stringify(ctx.snapshot()));ctx.hydrate(snap);assert.equal(ctx.G.banco.ops.length,1,'F5 conserva libro protegido');
  run('BANCO_COTIZACION.recibido=Date.now()-60001');ctx.bancoActualizarPrevia();assert.equal(elementos['banco-canjear'].disabled,true,'no ofrece una tasa vencida');
  assert.equal(run("typeof OV_REFRESH['ov-banco']"),'function');

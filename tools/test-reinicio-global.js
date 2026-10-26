@@ -20,7 +20,7 @@ for (const data of [{}, {reinicio:100}, {reinicio:200}]) {
   assert.equal(result?.status, data.reinicio===200 ? undefined : 409);
 }
 ctx.estadoDeCero();
-assert.equal(ctx.G.level,1); assert.equal(ctx.G.plata,3); assert.equal(ctx.G.golden,20);
+assert.equal(ctx.G.level,1); assert.equal(ctx.G.plata,3); assert.equal(ctx.G.golden,0);
 assert.equal(ctx.G.produccion.vipHasta,0); assert.equal(ctx.G.expansiones,0);
 assert.ok(Object.values(ctx.G.res).every(n=>n===0));
 assert.equal(ctx.G.tuto.step,0); assert.equal(ctx.G.kitReclamado,false);

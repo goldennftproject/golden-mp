@@ -1650,9 +1650,11 @@ class FarmScene extends Phaser.Scene {
     if (o.type === "barn") return openOv("ov-barn");
     if (o.type === "market") return openOv("ov-market");
     // OBRA de blueprint (12/8): cada clic DEPOSITA los materiales que tengas; al
-    // completar, estrellitas y el edificio queda construido. Sin ventanas de confirmación.
+    // completar, estrellitas y el edificio queda construido. Confirmación antes de gastar.
     if (typeof BUILD_DEF !== "undefined" && BUILD_DEF[o.type] && !(G.built && G.built[o.type])) {
       if (o.oculto) return;
+      const faltantes=obraFalta(o.type),aporte=faltantes.map(([r,n])=>[r,Math.min(n,r==='golden'?G.golden:Math.floor(G.res[r]||0))]).filter(([,n])=>n>0);
+      const confirmar=()=>{
       const completo = (typeof obraDepositar === "function") && obraDepositar(o.type);
       this.letreroObra(o);   // el cartel refleja lo depositado
       if (completo) {
@@ -1666,6 +1668,10 @@ class FarmScene extends Phaser.Scene {
         this.tintarNodo(o);
         this.rebuildCollisions();
       }
+      };
+      if(!aporte.length){confirmar();return;}
+      const detalle=aporte.map(([r,n])=>n+' '+(r==='golden'?'Golden':RES_LABEL[r]||r)).join(' · ');
+      askConfirm('Vas a aportar '+detalle+' a '+BUILD_DEF[o.type].label+'. ¿Confirmás?',confirmar,{title:'Aportar materiales',yes:'Aportar',no:'Cancelar'});
       return;
     }
     // VETAS/PIEDRAS (12/8 noche): freno por NIVEL, sin compra — el aviso salta al intentar

@@ -1455,7 +1455,7 @@
       <div class="pill cpill" id="lvlpill" role="button" tabindex="0" aria-label="Abrir Granja y tareas" aria-controls="ov-barn" style="cursor:pointer"><span class="k">Granja</span><b id="s-level">1</b><span class="k" id="s-level-max">/25</span><span class="cbarw"><span class="cfill lvlf" id="lvl-fill"></span></span><span class="k" id="lvl-txt"></span></div>
       <div class="pill" data-mvp-hud><span class="k">Prestigio</span><b id="s-prestige">0</b></div>
       <div class="pill" title="Plata — la moneda del juego"><img class="ric" src="assets/farm/coin_plata.png?a=4" onerror="this.outerHTML='<span class=&quot;coin silver&quot;></span>'"><b id="s-plata">0</b></div>
-      <div class="pill" title="$Golden — la moneda premium: mejoras especiales, kit de emergencia y adornos"><img class="ric" src="assets/farm/coin_esencia.png?a=4" onerror="this.outerHTML='✨'"><b id="s-golden">20</b></div>
+      <div class="pill" title="$Golden — la moneda premium: mejoras especiales, kit de emergencia y adornos"><img class="ric" src="assets/farm/coin_esencia.png?a=4" onerror="this.outerHTML='✨'"><b id="s-golden">0</b></div>
       <!-- 15/9 (diseñador): « y la ponemos como barra roja ». El corazón y el relleno se leen de
            un vistazo mientras peleás; el número sigue estando porque saber que te faltan 12 para
            llenarte es lo que decide si comés ahora o después. -->
@@ -1542,12 +1542,12 @@
     <div class="shoptabs">
       <button class="shoptab active" data-shop="buy">Comprar</button>
       <button class="shoptab" data-shop="deco">Adornos</button>
-      <button class="shoptab" data-shop="nft">NFTs</button>
+      <button class="shoptab" data-shop="nft">Mejoras</button>
       <button class="shoptab" data-shop="sell">Vender</button>
     </div>
     <div class="shoppane" id="shop-buy">
       <div class="info">Comprar y fabricar no consumen energía de granja, tampoco en lotes de cinco.</div>
-      <div class="mkt-list" id="seed-shop"></div>
+      <div id="packs-shop"></div><div class="mkt-list" id="seed-shop"></div>
     </div>
     <div class="shoppane" id="shop-deco" style="display:none">
       <div class="forge-list" id="deco-shop" style="max-height:56vh"></div>

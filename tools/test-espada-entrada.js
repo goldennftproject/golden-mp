@@ -190,6 +190,7 @@ console.log("\nLOS DOS SISTEMAS QUE EL TUTORIAL DEJABA SIN NOMBRAR");
   ok("antes de pescar, el tutorial enseña los montículos", ids.includes("excavar"),
     "paso " + (ids.indexOf("excavar") + 1) + ", justo antes de la caña");
   ok("y van en ese orden", ids.indexOf("excavar") < ids.indexOf("fish"));
+  G.plata=1; // caso no atascado; sin moneda ni cultivos corresponde semilla de rescate
   ok("el botín del montículo ES la carnada", ctx.excavBotin(0).res === "lombriz",
     "siempre lombriz, " + ctx.EXCAV_POR_DIA + " montículos por día");
   ok("y el Mercado sigue estando para cuando se acaben", ctx.WORM_PRICE > 0,

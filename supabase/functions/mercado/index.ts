@@ -18,6 +18,7 @@ Deno.serve(async req=>{
     }
     if(body?.accion!=="vender"||!Number.isSafeInteger(body.cantidad)||body.cantidad<1||body.cantidad>10000||typeof body.item!=="string"||body.item.length>30||!["plata","golden"].includes(body.moneda)||!Number.isSafeInteger(body.minimo)||body.minimo<0||typeof body.base!=="string"||!Number.isFinite(Date.parse(body.base))||typeof body.op!=="string"||!/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(body.op))return json({error:"Parámetros de venta inválidos"},400);
     if(body.moneda==='golden')return json({error:'Vendé tus recursos por Plata y usá el Banco para canjear por Golden a la tasa vigente.'},400);
+    if(!['papa','ciruela','cereza','remolacha','zanahoria','cebolla','calabacin','repollo','calabaza','brocoli','girasol','trigo','maiz'].includes(body.item))return json({error:'El comprador compra cultivos. Los materiales se comercian entre jugadores.'},400);
     const {data,error}=await admin.rpc("gf_mercado_vender",{p_uid:u.user.id,p_item:body.item,p_cantidad:body.cantidad,p_moneda:body.moneda,p_minimo:body.minimo,p_base:body.base,p_op:body.op});
     if(error){const conflicto=(error.message||"").startsWith("conflicto:");return json({error:error.code==="P0001"?error.message:"No se pudo confirmar la venta",conflicto},conflicto?409:error.code==="P0001"?400:503);}
     return json(data);

@@ -1,0 +1,50 @@
+REVISIÓN COMPLETA DE REUNIÓN — GOLDEN — 26/10/2026
+Fuente: vídeo 2026-10-26 18-16-10.mp4, 65:30. Transcripción local automática en español; voces no diarizadas. Los tiempos del TXT se expresan en minutos decimales.
+
+CAMBIOS CONCRETOS
+00:50 / 33:40 — Las cuentas nuevas deben comenzar con cero Golden; conservar los saldos ya adquiridos, sin borrados masivos.
+01:40–03:30 — Menos explicación técnica dentro del juego; trasladar cálculos de economía a documentación. Conservar costes, producción y condiciones esenciales.
+04:55 — Cuenta regresiva real hasta el próximo cobro de Objetos de Granja.
+10:00 / 56:55 — Investigar guardado rechazado y recuperación sin F5; nunca anunciar confirmación ficticia ni sobrescribir progreso remoto.
+11:10 — Autoguardado tras 5 segundos de inactividad y una sola vez por periodo (ya implementado antes de esta revisión).
+19:15 — Mostrar qué aporta cada habilidad sin inventar beneficios inexistentes.
+22:00 — Sustituir «peaje 1» por «Coste: 1 Plata por intento».
+35:10 / 63:55 — Confirmación antes de aportar recursos a construcción, con detalle de materiales; cancelar no consume nada.
+37:00 — Revisar la rentabilidad Free; objetivo orientativo 2.000–5.000 Plata/día, no una recompensa gratuita ni garantía de dinero real. Requiere simulación de producción, gasto y límites.
+38:15 / 47:20 — Packs de materiales comprados con Golden: diario 1 Golden, semanal 10 Golden, límites de compra verificables por servidor.
+51:10–54:30 / 63:30 — Una energía por recolección efectiva de nodo; ningún coste por animaciones sin entrega. Agotarse no elimina cargas restantes. Revisar XP por energía entre actividades.
+56:40 — Publicaciones VIP con tope 10 por día; Free 1. No retirar publicaciones existentes.
+59:20 — No llamar NFT a mejoras internas no tokenizadas; aclarar pasivas y herramientas.
+60:40–62:00 — Madera y minerales dejan de venderse al sistema por Plata; se conservan como materiales y comercio entre jugadores. Cultivos siguen generando Plata; pesca sigue pausada. Mantener precios de referencia internos donde sean necesarios para balance.
+
+PROPUESTAS DE FUTURO O SIN TÉRMINOS CERRADOS
+27:20–30:00 / 39:30–41:30 — Evento de prueba por nivel y XP, aproximadamente 9 días, bolsa orientativa 50 USDT (15+10+5+5+5+5+5). Preparar reglas sin anunciar fecha ni prometer/pagar premios automáticamente.
+30:35–32:00 — Reconocer depósitos reales al lanzamiento y renovar beneficios: no hay depósitos activos. No ejecutar reset ni acreditar dinero a partir de una conversación.
+32:35 — Comisión futura de retiro fija + porcentual; ejemplos Free 10%, VIP 7% o 5%, sin valor fijo acordado. Retiros siguen desactivados.
+42:25–45:10 — Colaboraciones y drops con tokens externos: sin contactos, compras ni integraciones automáticas.
+45:15 — Cajas aleatorias/gacha: faltan tabla, probabilidades y alcance; se menciona abandonar la idea y luego retomarla. No activar apuestas o premios monetarios ambiguos.
+55:40 — Edificios con apariencia por nivel: se describe explícitamente como futuro y poco importante.
+56:45–59:40 — Tienda +1 publicación y mejoras de pasivas por Plata: ejemplos orientativos, conservar compras anteriores y diseñar balance antes de habilitar.
+61:30 — Tipos de madera adicionales, futuro.
+62:40 — Ajustar misiones según demanda observada; no inventar datos de jugadores.
+
+Validación pendiente: comparar cada punto con código vigente, pruebas de regresión, simulación económica y verificación pública tras despliegue. Este documento no declara implementado lo que sólo se ha propuesto.
+
+ESTADO IMPLEMENTADO Y VALIDADO LOCALMENTE
+- Cero Golden inicial, protegido también en guardar; saldos previos conservados.
+- Energía chop/mine 1 en cliente y servidor. Regresión de golpes gratuitos y conservación de cargas.
+- Confirmación con materiales antes de aportar a obra.
+- Cuenta atrás de los objetos; cifras técnicas retiradas de su explicación dentro del juego.
+- P2P Free 1 / VIP 10; prueba SQL de 10/11 y cancelación con rollback aprobada. Límite aplicado al servidor sin borrar filas.
+- Comprador del sistema sólo cultivos; bloqueo en Edge y cliente; RPC subyacente no está concedido a anon/authenticated.
+- Packs: diario 1 Golden (20 madera, 20 piedra, 2 bronce); semanal 10 (150 madera, 150 piedra, 15 bronce, 5 hierro). Uno por periodo UTC, semana empieza lunes. Entrega en pendientes, sin pérdida por bolsa llena, sin energía; operaciones con recibo y CAS.
+- Pestaña Mejoras aclara que son objetos internos sin tokenización; Tala explica que aporta al nivel de granja.
+- Autoguardado de cinco segundos ya estaba implementado. La consulta de sospechas en las últimas 24 horas devolvió cero; el fallo del vídeo no se considera reproducido en la versión actual.
+
+HALLAZGO DE BALANCE AÚN ABIERTO
+La medición actual de XP de granja por energía confirma 150 para madera, 200 para piedra y 7,5 para papa (15 por ciclo de dos energías). Reducirlo exige una migración que conserve XP/niveles aceptados, sincronice prestigio y servidor y compruebe el tutorial. No se cambia a ciegas ni se declara equilibrado.
+El objetivo Free mencionado alterna entre 2.000 y 5.000 Plata/día; todavía requiere simulación de progresión y gasto, no elevar indiscriminadamente la venta de cultivos.
+
+PREPARACIÓN DE EVENTO (NO PUBLICADO NI ACTIVADO)
+Propuesta: viernes a domingo de la semana siguiente, fechas pendientes; ranking por nivel y luego XP absoluta (no porcentaje aislado). Presupuesto orientativo total 50 USDT: 15,10,5,5,5,5,5. Revisión de trampas antes de adjudicar. Reportes críticos pueden considerarse por separado; no se promete recompensa automática. Hace falta confirmar fechas, presupuesto real y reglas antes de anunciar.
+Los depósitos y retiros siguen desactivados. Una futura política de reconocimiento de depósitos deberá basarse en recibos reales; no autoriza un reset actual. Las comisiones de retiro mencionadas son ejemplos, no tarifas activas. Las cajas aleatorias, colaboraciones con tokens externos, skins por nivel y mejoras evolutivas quedan como propuestas futuras sin términos cerrados.

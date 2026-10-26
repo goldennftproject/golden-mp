@@ -1,7 +1,7 @@
 const assert=require('node:assert/strict'),fs=require('node:fs'),path=require('node:path'),{JSDOM}=require('jsdom');
 const {ctx}=require('./arrancar-el-juego.contexto').arrancar(path.resolve(__dirname,'..'));
 ctx.estadoDeCero();ctx.document=new JSDOM(fs.readFileSync(path.resolve(__dirname,'../public/index.html'),'utf8')).window.document;
-ctx.isOpen=()=>false;ctx.G.plata=100000;ctx.G.armasUnlocked=true;ctx.canAfford=()=>true;
+ctx.isOpen=()=>false;ctx.G.plata=100000;ctx.G.golden=20;ctx.G.armasUnlocked=true;ctx.canAfford=()=>true;
 const doc=ctx.document,selectors='[data-craft5],[data-ctool5],#forge-arrows5';
 ctx.G.produccion.vipHasta=0;ctx.refreshForge();
 let buttons=[...doc.querySelectorAll(selectors)];assert.ok(buttons.length>=4);

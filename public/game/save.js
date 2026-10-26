@@ -62,10 +62,10 @@ async function economiaSolicitar(detalle) {
       }
       if(error || !data || !data.ok || UID!==uid){SAVE_CONFLICTOS.add(uid);toast('Resultado sin confirmar. Recargá con conexión para consultar el servidor.');return;}
       hydrate(data.data);SAVE_BASES.set(uid,data.updated_at);copiaGuardar(snapshot());mercadoLimpiarPendiente(uid);
-      toast(detalle.logro ? 'Logro confirmado: +'+fmtPlata(data.cobro)+' Plata' : detalle.visita ? (detalle.visita.accion==='ver'?'Visita confirmada · una por granja y día UTC para logros':'+1 semilla de papa por la visita') : detalle.diario ? 'Recompensa diaria confirmada: día '+data.cobro+'/7' : detalle.banco ? 'Canje confirmado: +'+fmtGolden(data.cobro)+' Golden' : detalle.artefacto.accion==='comprar' ? 'Objeto comprado con Golden' : '+'+fmtPlata(data.cobro)+' Plata');
+      toast(detalle.pack ? 'Pack confirmado; recogé los materiales en Entregas pendientes' : detalle.logro ? 'Logro confirmado: +'+fmtPlata(data.cobro)+' Plata' : detalle.visita ? (detalle.visita.accion==='ver'?'Visita confirmada · una por granja y día UTC para logros':'+1 semilla de papa por la visita') : detalle.diario ? 'Recompensa diaria confirmada: día '+data.cobro+'/7' : detalle.banco ? 'Canje confirmado: +'+fmtGolden(data.cobro)+' Golden' : detalle.artefacto.accion==='comprar' ? 'Objeto comprado con Golden' : '+'+fmtPlata(data.cobro)+' Plata');
       return data;
     }catch(e){toast('No se pudo completar la operación; comprobá la conexión');}
-  })().finally(()=>{MERCADO_EN_CURSO=null;desbloquear();refreshHud();if(isOpen('ov-reliquias'))refreshArtefactos();if(isOpen('ov-banco'))refreshBanco();if(isOpen('ov-logros'))refreshLogros();});
+  })().finally(()=>{MERCADO_EN_CURSO=null;desbloquear();refreshHud();if(isOpen('ov-market'))refreshSeedShop();if(isOpen('ov-reliquias'))refreshArtefactos();if(isOpen('ov-banco'))refreshBanco();if(isOpen('ov-logros'))refreshLogros();});
   return MERCADO_EN_CURSO;
 }
 function mercadoGlobalRecurso(res) {
@@ -449,7 +449,7 @@ function snapshot() {
      vistos y estrellaMax (el álbum con estrellas) y pescaTiene (el señuelo, que no se gasta).
      OJO con los comentarios AL FINAL de una línea de este objeto: se comen lo que sigue. */
   return { plata: G.plata, golden: G.golden, level: G.level, prestige: G.prestige, iniciado: G.iniciado, reinicio: G.reinicio,   /* 24/9: cuándo se reinició la cuenta (el portero lo lee) */
-    energiaGranja: G.energiaGranja, artefactos: G.artefactos, banco: G.banco, logrosV2:G.logrosV2, logrosAcciones:G.logrosAcciones,
+    energiaGranja: G.energiaGranja, artefactos: G.artefactos, banco: G.banco, packs:G.packs, logrosV2:G.logrosV2, logrosAcciones:G.logrosAcciones,
     espacioV: G.espacioV, mercadoVentas: G.mercadoVentas, farmXpBase: G.farmXpBase || 0,
     produccion: G.produccion,
     res: G.res, picks: G.picks, skills: G.skills, triesV: G.triesV, establoV: G.establoV, fish: G.fish, plots: G.plots, nodos: G.nodos, expansiones: G.expansiones, pescaHasta: G.pescaHasta, pescaDesde: G.pescaDesde, senales: G.senales, escamas: G.escamas, vistos: G.vistos, estrellaMax: G.estrellaMax, pescaTiene: G.pescaTiene, canas: G.canas, presion: G.presion, amarres: G.amarres, trampas: G.trampas, marea: G.marea, runaOro: G.runaOro, buffs: G.buffs, seeds: G.seeds, selSeed: G.selSeed,
@@ -534,6 +534,7 @@ function hydrate(d) {
   G.energiaGranja = d.energiaGranja && Number.isFinite(d.energiaGranja.actual) && Number.isFinite(d.energiaGranja.at)
     ? {v:1,actual:Math.max(0,Math.min(100,d.energiaGranja.actual)),at:d.energiaGranja.at} : {v:1,actual:100,at:nowMs()};
   G.artefactos = d.artefactos ? JSON.parse(JSON.stringify(d.artefactos)) : null;
+  G.packs=d.packs?JSON.parse(JSON.stringify(d.packs)):null;
   G.banco = d.banco ? JSON.parse(JSON.stringify(d.banco)) : null;
   G.espacioV = [1,2,3,4].includes(d.espacioV) ? d.espacioV :
     ((d.expansiones || 0) > 0 || (d.plotsOwned || 3) > 3 || Object.keys(d.layout || {}).length ||

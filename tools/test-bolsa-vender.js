@@ -43,12 +43,12 @@ const ok = (n, c, d) => { if (!c) fallos++; console.log((c ? "  ok   " : "  FALL
 
 console.log("\nVENDER DESCUENTA Y REPINTA LA BOLSA EN EL ACTO");
 {
-  G.tuto = { done: true }; G.res.madera = 10; G.plata = 0;
-  campos["mq-madera"] = { value: "4" };
+  G.tuto = { done: true }; G.res.papa = 10; G.plata = 0;
+  campos["mq-papa"] = { value: "4" };
   vm.runInContext("marketCur = 'plata'", ctx);
   pintadas = 0; slots = 0; hotbar = 0;
-  ctx.sellItem("madera");
-  ok("la madera bajó de 10 a 6", Math.floor(G.res.madera) === 6, String(G.res.madera));
+  ctx.sellItem("papa");
+  ok("la papa bajó de 10 a 6", Math.floor(G.res.papa) === 6, String(G.res.papa));
   ok("y cobró la plata", G.plata > 0, G.plata + " de plata");
   ok("repintó la bolsa (el objeto vendido se va YA)", pintadas >= 1, pintadas + " repintados");
   ok("y también los slots y la barra rápida", slots >= 1 && hotbar >= 1, "slots " + slots + " · hotbar " + hotbar);

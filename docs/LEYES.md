@@ -1,5 +1,11 @@
 # Las leyes de Golden Farm
 
+## Reunión completa de Sachi — 26/10/2026
+
+Dirección autoriza revisar el audio completo y aplicar las sugerencias. Las cuentas nuevas empiezan con cero Golden; los saldos previos se conservan. Talar y minar cuestan una energía por recolección efectiva, nunca por golpe sin recompensa, y agotarse conserva las cargas restantes. Se confirma el detalle de materiales antes de aportarlos a una obra. Los objetos muestran cuenta atrás hasta el cobro. El comprador del sistema sólo compra cultivos; madera, minerales y procesados conservan el comercio entre jugadores. P2P: Free una publicación/día UTC y VIP diez, cancelar no restituye cupo. Las mejoras internas no se presentan como NFT tokenizado.
+
+La discusión de premios, depósitos, comisiones de retiro, reinicio al lanzamiento y colaboraciones es preparación; no activa USDT ni autoriza borrar progreso actual. Las alternativas sin cifras cerradas se registran para balance y decisión posterior. El autoguardado de cinco segundos y una vez por periodo inactivo se conserva.
+
 ## Un guardado por periodo inactivo — 26/10/2026
 
 Dirección precisa que tras el autoguardado de cinco segundos no se vuelva a guardar mientras continúe la inactividad. Una bandera se activa sólo tras confirmación del servidor y se libera al interactuar de nuevo. Los fallos pueden reintentarse; una interacción durante la petición no queda bloqueada por su respuesta posterior. Los relojes absolutos de nodos, cultivos y trabajos siguen avanzando sin escrituras periódicas. Sustituye la repetición cada cinco segundos durante una misma inactividad.

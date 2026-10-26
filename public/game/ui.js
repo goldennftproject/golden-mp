@@ -1971,7 +1971,7 @@ function refreshHud() {
   const ep=$('energia-granja-pill');if(ep)ep.style.display=GF.scene==='farm'?'':'none';
   document.querySelectorAll('[data-artefacto-pendiente]').forEach(el=>{el.textContent=fmtPlata(artefactoPendiente(el.dataset.artefactoPendiente))+' Plata';});
   document.querySelectorAll('[data-artefacto-cobrar]').forEach(b=>{b.disabled=!(typeof sb!=='undefined' && sb && UID && CARGA_OK && !SOLO_LOCAL && !SAVE_CONFLICTOS.has(UID) && !MERCADO_EN_CURSO && artefactoPuedeCobrar(b.dataset.artefactoCobrar) && energia>=1);});
-  document.querySelectorAll('[data-artefacto-cobrar]').forEach(b=>{b.textContent=artefactoPuedeCobrar(b.dataset.artefactoCobrar)?'Cobrar · 1 ⚡':'Disponible cada 24 h';});
+  document.querySelectorAll('[data-artefacto-cobrar]').forEach(b=>{b.textContent=artefactoTextoCobro(b.dataset.artefactoCobrar);});
   if(isOpen('ov-banco'))bancoActualizarPrevia();
   try { syncMisionesBadge(); } catch (e) {}   // contador de misiones del menú (10/8)
   try { syncLogrosBadge(); } catch (e) {}     // 22/8: cuántos logros hay para cobrar
@@ -2562,13 +2562,21 @@ async function refreshVisitas(){
     const btn=$('visita-semilla');btn.onclick=async()=>{btn.disabled=true;await economiaSolicitar({visita:{accion:'semillas',destino:id}});if(btn.isConnected)btn.disabled=false;};
   });
 }
+function artefactoTextoCobro(id,t=nowMs()) {
+  if(artefactoPuedeCobrar(id,t))return 'Cobrar · 1 ⚡';
+  const a=G.artefactos && G.artefactos.items && G.artefactos.items[id];
+  if(!a)return 'Sin objeto';
+  const fin=a.desde+ARTEFACTO_DIAS*86400000;
+  if(t>=fin)return 'Producción terminada';
+  return 'Disponible en '+fmtDur(Math.max(0,Math.min(fin,objetoInicioCobro(a)+86400000)-t));
+}
 function refreshArtefactos() {
   const box=$('objetos-productores');if(!box)return;
   const t=nowMs(), online=!!(typeof sb!=='undefined' && sb && UID && CARGA_OK && !SOLO_LOCAL && !SAVE_CONFLICTOS.has(UID));
   const vip=vipVigente(t),activos=Object.values(G.artefactos && G.artefactos.items || {}).filter(a=>t<a.desde+ARTEFACTO_DIAS*86400000).length;
-  let h='<div class="resumen-menu"><span><b>24 h</b>entre cobros</span><span><b>1 ⚡</b>por cobro</span><span><b>180 días</b>de producción</span></div><p class="sub">Pagás Golden · recibís Plata. Free: 1 objeto activo. VIP: sin límite.</p><p class="sub">Depósitos y retiros USDT desactivados.</p><details class="ayuda-menu"><summary>Condiciones de producción y balance</summary><p class="sub">Objetos de colección que producen Plata, no Golden directo. No ocupan terreno ni cupos productivos. Free: un objeto activo. VIP: sin límite de ejemplares, incluidos duplicados. Al vencer el VIP conservás tus compras y sus cobros; no podés ampliar la colección mientras haya uno activo.</p>'+
-    '<p class="sub">Comprá con Golden y reclamá Plata cada 24 horas por 1 de energía. Acumulación máxima: un día; vida útil: 180 días. La producción se conserva en décimas de Plata.</p>'+
-    '<p class="sub">Producción inicial: 0,87 % diario del coste, calculado a 10.000 Plata por Golden. Recuperación nominal: unos 115 días cobrando diariamente a esa tasa. La tasa del Banco puede cambiar: no es un retorno garantizado. Depósitos y retiros USDT desactivados.</p></details><button class="ghost sm" data-panel="ov-banco">🏦 Ver Banco y tasa vigente</button>';
+  let h='<div class="resumen-menu"><span><b>24 h</b>entre cobros</span><span><b>1 ⚡</b>por cobro</span><span><b>180 días</b>de producción</span></div><p class="sub">Pagás Golden · recibís Plata. Free: 1 objeto activo. VIP: sin límite.</p><p class="sub">Depósitos y retiros USDT desactivados.</p><details class="ayuda-menu"><summary>Condiciones de producción</summary><p class="sub">Objetos de colección que producen Plata, no Golden directo. No ocupan terreno ni cupos productivos. Free: un objeto activo. VIP: sin límite de ejemplares, incluidos duplicados. Al vencer el VIP conservás tus compras y sus cobros; no podés ampliar la colección mientras haya uno activo.</p>'+
+    '<p class="sub">Comprá con Golden y reclamá Plata cada 24 horas por 1 de energía. Acumulación máxima: un día; vida útil: 180 días. </p>'+
+    '<p class="sub">El cambio de Plata a Golden se consulta en el Banco y puede variar.</p></details><button class="ghost sm" data-panel="ov-banco">🏦 Ver Banco y tasa vigente</button>';
   if(!online)h+='<p class="sub">Compras y cobros requieren conexión y guardado sincronizado.</p>';
   const copias=Object.keys(G.artefactos && G.artefactos.items || {}).filter(id=>id.includes(':') && ARTEFACTO_DEF[artefactoModelo(id)]);
   for(const [id,d] of [...Object.entries(ARTEFACTO_DEF),...copias.map(id=>[id,ARTEFACTO_DEF[artefactoModelo(id)]])]){
@@ -2576,7 +2584,7 @@ function refreshArtefactos() {
     const pendiente=artefactoPendiente(id), diaria=artefactoDiario(id).toFixed(2).replace('.',',');
     h+='<div class="row" style="justify-content:space-between;flex-wrap:wrap;border-top:1px solid #ffffff22;padding:10px 0"><div>'+d.icon+' '+d.label+(id.includes(':')?' · ejemplar adicional':'')+'<br><small>'+diaria+' Plata/día · Coste: '+d.golden+' Golden</small>'+
       (a?'<br><small>'+(activo?'Activo hasta '+new Date(a.desde+ARTEFACTO_DIAS*86400000).toLocaleDateString('es-UY'):'Vida útil terminada')+'</small>':'')+'</div><div>'+
-      (a?'<span data-artefacto-pendiente="'+id+'">'+fmtPlata(pendiente)+' Plata</span> <button class="green sm" data-artefacto-cobrar="'+id+'" '+(!online||!artefactoPuedeCobrar(id)||!energiaGranjaPuede('harvest')?'disabled':'')+'>'+(artefactoPuedeCobrar(id)?'Cobrar · 1 ⚡':'Disponible cada 24 h')+'</button> ':'')+
+      (a?'<span data-artefacto-pendiente="'+id+'">'+fmtPlata(pendiente)+' Plata</span> <button class="green sm" data-artefacto-cobrar="'+id+'" '+(!online||!artefactoPuedeCobrar(id)||!energiaGranjaPuede('harvest')?'disabled':'')+'>'+artefactoTextoCobro(id)+'</button> ':'')+
       (id.includes(':')?'':'<button class="ghost sm" data-artefacto-comprar="'+id+'" '+(!online||(!vip&&(activos>=1||pendiente>0))||G.golden<d.golden?'disabled':'')+'>'+(activo&&vip?'Otro ejemplar · '+d.golden+' $Golden':activo?'Ya lo tenés':'Comprar · '+d.golden+' $Golden')+'</button>')+'</div></div>';
   }
   box.innerHTML=h;
@@ -2621,7 +2629,7 @@ function refreshVip() {
     ['Cocina, nodos y expansiones','Tiempo normal','10% menos de tiempo'],
     ['Capacidad productiva','Capacidad base + expansiones','25% extra (mínimo 2 cupos)'],
     ['Fabricación','De a uno','En lotes'],
-    ['Publicaciones P2P','Una por día UTC','Sin límite diario'],
+    ['Publicaciones P2P','Una por día UTC','Diez por día UTC'],
     ['Comisión P2P nueva','10%','7%'],
     ['Objetos de Granja','Un objeto activo','Sin límite; admite duplicados'],
     ['Visitas y semillas','No incluidas','Resumen de granjas; hasta 3 semillas/día']
@@ -3042,7 +3050,7 @@ function refreshSkills() {
     const prox = (typeof oficioProximo === "function") ? oficioProximo(k) : "";
     const meta = alTope ? `<div class="xp">Nivel máximo por ahora — la XP se sigue guardando para cuando el oficio crezca</div>`
       : prox ? `<div class="xp verde">🔓 ${prox}</div>`
-      : (k === "tala" ? `<div class="xp">Mide tu práctica · la madera no tiene escalones</div>`
+      : (k === "tala" ? `<div class="xp">Aporta XP al nivel de granja · la madera no tiene escalones</div>`
       : inf.tries ? `<div class="xp">Sube pegando: cada golpe cuenta, acierte o no · matar no entrena</div>` : "");
     return `<div class="skrow"><span class="ic"><img class="skic" src="${GF.spr("sk_" + k)}" onerror="this.outerHTML='${ic}'"></span><div class="body"><div class="nm"><span>${nm}</span><span class="lv">Nv. ${inf.lvl}${alTope ? " (MAX)" : ""}</span></div><div class="skbar"><i style="width:${pct}%"></i></div><div class="xp">${alTope ? "Techo del contenido: nivel " + techo : fmt(inf.into) + "/" + fmt(inf.need) + (inf.tries ? " golpes" : " XP")}${soon}</div>${meta}</div></div>`; }).join("");
 }
@@ -3332,7 +3340,7 @@ function refreshForge() {
       craft += '<div class="forge-row' + (abierta ? "" : " locked") + '"><div class="fic">' +
         '<img src="' + GF.spr("res_lombriz") + '" style="opacity:0" alt=""><span style="position:absolute;font-size:20px">🎣</span></div>' +
         '<div class="finfo"><div class="fnm">' + d.label + ' <span style="color:#ffd75e">rareza ×' + sube + '</span></div>' +
-        '<div class="fds">' + (d.mant ? "peaje de " + d.mant + " por lance" : "sin peaje — la única") + '</div>' +
+        '<div class="fds">' + (d.mant ? "Coste: " + d.mant + " Plata por intento" : "sin peaje — la única") + '</div>' +
         '<div class="fds">' + (d.presupuesto == null ? "Se gana en la Lonja"
           : "Costo: " + ((typeof canaV4Costo === "function") ? canaV4Costo(id) : "—")) + '</div>' +
         /* la regla 9: si el botón está apagado, la fila dice por qué */
@@ -4788,10 +4796,10 @@ function refreshDeco() {
 // de los adornos, que son cosmética pura. Así el que compra sabe QUÉ clase de cosa compra.
 function refreshNft() {
   const box = $("nft-shop"); if (!box) return;
-  let h = '<div class="info">Los NFTs son objetos únicos con utilidad real. También podés comerciarlos con otros jugadores en el <b>Mercado de jugadores</b>.</div>';
+  let h = '<div class="info">Mejoras internas del juego, sin tokenización. Las pasivas de recolección se suman a tus herramientas normales.</div>';
   h += '<div class="secc">GOD HAND</div>';
   h += '<div class="forge-row' + (tengoGodHand() ? ' eq' : '') + '"><div class="fic"><img src="' + GF.spr("godhand") + '" onerror="this.remove()"></div><div class="finfo"><div class="fnm">GOD HAND' + (tengoGodHand() ? ' <span class="tag">tuya</span>' : '') + '</div>' +
-    '<div class="fds">El cropper NFT completo: cargale hasta 300 semillas (6 espacios) y mientras no estás hace TODO el ciclo en tus parcelas vacías — siembra, cosecha y resiembra — y te entrega lo producido al volver.</div>' +
+    '<div class="fds">Automatización de cultivos: cargale hasta 300 semillas (6 espacios) y mientras no estás hace TODO el ciclo en tus parcelas vacías — siembra, cosecha y resiembra — y te entrega lo producido al volver.</div>' +
     '<div class="fds">Cobra en plata por hora trabajada (100 la primera, +10% cada una, hasta 24 h). Se compra una vez y queda para siempre.</div>' +
     (tengoGodHand() ? '<div class="fds"><b>Semillas cargadas: ' + godHandTotal() + '/300.</b> Trabaja sola la próxima vez que vuelvas con parcelas vacías.</div>' : '') + '</div>' +
     '<div class="fbtns">' + (tengoGodHand() ? '<button class="gold sm" id="gh-admin">✋ Cargar semillas</button>' :
@@ -5494,7 +5502,14 @@ function seedShopReponerFocoPc(caja) {
   if (!boton || typeof boton.focus !== "function") return;
   try { boton.focus({ preventScroll: true }); } catch (e) { boton.focus(); }
 }
+function refreshPacks(){
+ const box=$('packs-shop');if(!box)return;
+ box.innerHTML='<details class="ayuda-menu"><summary>📦 Packs de materiales · Golden</summary>'+Object.entries(PACKS_DEF).map(([id,d])=>'<div class="mkt-row"><div class="minfo"><b>'+d.label+'</b><div class="mds">'+Object.entries(d.res).map(([k,n])=>n+' '+RES_LABEL[k]).join(' · ')+'</div><div class="mds">Uno por '+(id==='diario'?'día':'semana')+' UTC · se entrega en pendientes</div></div><button class="green sm" data-pack="'+id+'" '+(packComprado(id)||G.golden<d.golden?'disabled':'')+'>'+(packComprado(id)?'Comprado':d.golden+' Golden')+'</button></div>').join('')+'<button class="ghost sm" id="pack-recoger">Entregas pendientes ('+mkPendCount()+')</button></details>';
+ box.querySelectorAll('[data-pack]').forEach(b=>b.onclick=()=>{const id=b.dataset.pack,d=PACKS_DEF[id];askConfirm('Comprar '+d.label+' por '+d.golden+' Golden. Los materiales quedan en Entregas pendientes hasta que tengas espacio.',()=>economiaSolicitar({pack:{id}}),{title:'Comprar materiales',yes:'Comprar',no:'Cancelar'});});
+ $('pack-recoger').onclick=()=>{mkPendCobrar();refreshPacks();};
+}
 function refreshSeedShop() {
+  refreshPacks();
   const box = $("seed-shop"); if (!box) return;
   const sb = seedBuysToday();
   // 15/8 (dirección): el cupo de siempre manda también durante el tutorial (el kit cubre los insumos)
@@ -6711,7 +6726,7 @@ async function refreshP2P() {
         '<div class="fds">Te quedan ' + fmt(neto) + ' de plata (precio ' + fmt(r.price) + ' − ' + marketFee(r) + '% de comisión)</div></div>' +
         '<div class="fbtns"><button class="green sm" data-cobrar="' + r.id + '">Cobrar</button></div></div>';
     });
-    h += '<div class="secc">Publicaciones activas: ' + activas.length + (vipVigente() ? ' · VIP sin límite diario' : ' · Free: una publicación por día UTC') + '</div>';
+    h += '<div class="secc">Publicaciones activas: ' + activas.length + (vipVigente() ? ' · VIP: diez publicaciones por día UTC' : ' · Free: una publicación por día UTC') + '</div>';
     if (!activas.length) h += '<div class="fds">No tenés nada publicado.</div>';
     activas.forEach(r => {
       h += '<div class="forge-row"><div class="finfo"><div class="fnm">' + escapeHtml(r.name || r.item) + ' ×' + r.qty + '</div>' +

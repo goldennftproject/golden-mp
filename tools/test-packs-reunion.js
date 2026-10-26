@@ -1,0 +1,18 @@
+const assert=require('node:assert/strict'),fs=require('fs'),vm=require('vm'),path=require('path');
+const root=path.resolve(__dirname,'..'),{ctx}=require('./arrancar-el-juego.contexto').arrancar(root);
+const text=fs.readFileSync(path.join(root,'supabase/functions/guardar/index.ts'),'utf8'),block=text.split('/* === REGLAS ===')[1].split('/* === FIN REGLAS === */')[0];
+const server={};vm.createContext(server);vm.runInContext(block.slice(block.indexOf('const VERSION')),server);
+const t=Date.UTC(2026,9,26,12),old={golden:20,res:{},mkPend:[]};
+const first=server.packOperacion(old,'diario',t,'a');assert.equal(first.data.golden,19);assert.equal(old.golden,20);assert.equal(first.data.mkPend.length,3);
+const retry=server.packOperacion(first.data,'diario',t,'a');assert.ok(retry.repetido);assert.equal(retry.data.golden,19);assert.equal(retry.data.mkPend.length,3);
+assert.ok(server.packOperacion(first.data,'semanal',t,'a').error,'recibo no se reutiliza');
+assert.ok(server.packOperacion(first.data,'diario',t,'b').error,'tope diario');
+assert.equal(server.packOperacion(first.data,'diario',t+86400000,'c').data.golden,18);
+const weekly=server.packOperacion(first.data,'semanal',t,'w');assert.equal(weekly.data.golden,9);assert.equal(weekly.data.mkPend.length,7);
+assert.ok(server.packOperacion(weekly.data,'semanal',t+86400000,'x').error);assert.ok(server.packOperacion(weekly.data,'semanal',t+7*86400000,'y').error,'saldo insuficiente');
+assert.ok(server.packOperacion({golden:0},'diario',t,'z').error);assert.ok(server.packOperacion(old,'__proto__',t,'z').error);
+for(const id of ['diario','semanal'])for(const dt of [0,86400000,7*86400000])assert.equal(ctx.packPeriodo(id,t+dt),id==='diario'?Math.floor((t+dt)/86400000):Math.floor((t+dt+3*86400000)/604800000));
+const copy=JSON.parse(JSON.stringify(first.data));ctx.hydrate(copy);assert.equal(ctx.packComprado('diario',t),true);const snap=ctx.snapshot();assert.equal(snap.packs.compras.diario,copy.packs.compras.diario);
+const claims=JSON.parse(JSON.stringify(first.data));claims.mkPend=[];claims.res={madera:20,piedra:20,bronce:2};const per=server.mercadoPermiso('qa',[],{ventas:0,compras:{},abiertas:{}},first.data,claims).permiso;assert.equal(per.res.madera,20);assert.equal(per.res.bronce,2);
+assert.ok(server.protegerEconomia(first.data,{...JSON.parse(JSON.stringify(first.data)),packs:null},t).some(x=>/packs/.test(x)));
+console.log('OK: packs autoritativos, recibos, topes UTC, saldo, pendientes sin pérdida, snapshot y permiso de recogida.');
