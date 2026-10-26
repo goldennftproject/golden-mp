@@ -1,5 +1,9 @@
 # Las leyes de Golden Farm
 
+## Autoguardado por inactividad — 26/10/2026
+
+Dirección precisa: «Cinco minutos sin interacción no [...] cinco, diez segundos sin interacción, que guarde». Se eligen cinco segundos desde la última interacción, con comprobación cada segundo y sólo con cambios pendientes. El tiempo de visita no cuenta como cambio. Un guardado confirmado separa los siguientes ciclos inactivos otros cinco segundos; un fallo se reintenta con un mínimo de cinco segundos entre intentos, sin fingir confirmación. Se preservan cola, conflictos, botón manual y eventos de ocultar pestaña/F5. Sustituye la frecuencia periódica de 20 segundos indicada en las decisiones anteriores.
+
 ## Persistencia de nodos compactos — 26/10/2026
 
 El guardado real permitió reproducir una colisión de claves: tres árboles comparten tree:6,4 y seis vetas ore:7,8. Al sincronizar, los nodos ocultos sobrescribían los relojes recién usados. Se distinguen las claves que comparten celda por el índice estable del contrato y se migran sólo los nodos poseídos, conservando relojes y pausas. No se modifican filas de jugadores ni los tiempos de producción.

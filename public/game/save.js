@@ -479,7 +479,7 @@ function snapshot() {
     torneoPodioCobrado: G.torneoPodioCobrado, tituloPesca: G.tituloPesca, lombricario: G.lombricario };
 }
 // "huella" del estado guardable (incluye el apodo); si no cambia, no hay nada que guardar
-function snapKey() { return JSON.stringify({ n: (typeof nombreLucido === "function" ? nombreLucido() : (window.NICK || "Granjero")), d: snapshot() }); }
+function snapKey() { return JSON.stringify({ n: (typeof nombreLucido === "function" ? nombreLucido() : (window.NICK || "Granjero")), d: {...snapshot(),visto:0,energiaGranja:{...G.energiaGranja,at:0}} }); }
 
 /* ============ CARGAR UNA PARTIDA, EN TRES FASES (20/8) ==============================
    Dirección: "cada cosa que tocamos rompe otras".
@@ -1888,7 +1888,13 @@ function sendChat(text) {
 
 function startAutosave() {
   if (saveTimer) return;
-  saveTimer = setInterval(() => { saveFarm(); }, 20000);
+  let actividad=Date.now(),guardado=0,intento=0;
+  for(const tipo of ['pointerdown','pointermove','keydown','input','wheel'])document.addEventListener(tipo,()=>{actividad=Date.now();},{passive:true});
+  saveTimer = setInterval(async () => {
+    if(Date.now()-Math.max(actividad,guardado)<5000||Date.now()-intento<5000||!UID||!CARGA_OK||SOLO_LOCAL||SAVE_CONFLICTOS.has(UID)||SAVE_EN_CURSO||MERCADO_EN_CURSO||snapKey()===lastSavedKey)return;
+    intento=Date.now();const uid=UID,antes=SAVE_CONFIRMACIONES.get(uid)||0;
+    try{await saveFarm();if(UID===uid&&(SAVE_CONFIRMACIONES.get(uid)||0)>antes)guardado=Date.now();}catch{}
+  },1000);
   document.addEventListener("visibilitychange", () => { if (document.visibilityState === "hidden") saveFarm(); });
   window.addEventListener("beforeunload", () => { saveFarm(); });
 }
