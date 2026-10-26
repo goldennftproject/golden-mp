@@ -1,0 +1,53 @@
+{
+  "alcance": "Producción estable durante 14 días, cultivo desbloqueado y capital de siembra disponibles; Free, sin bono de nivel, objetos, misiones ni logros. Presión personal modelada con demanda del catálogo actual; no modela la presión global variable, arranque ni pruebas de jugadores. No equivale a dinero retirable.",
+  "resultados": [
+    {
+      "perfil": "Inicial",
+      "cultivo": "papa",
+      "parcelas": 3,
+      "sesiones": 3,
+      "plataNetaDia": 9,
+      "energiaDia": 18
+    },
+    {
+      "perfil": "Inicial activo",
+      "cultivo": "papa",
+      "parcelas": 3,
+      "sesiones": 6,
+      "plataNetaDia": 18,
+      "energiaDia": 36
+    },
+    {
+      "perfil": "Intermedia",
+      "cultivo": "calabaza",
+      "parcelas": 6,
+      "sesiones": 6,
+      "plataNetaDia": 1812,
+      "energiaDia": 72
+    },
+    {
+      "perfil": "Desarrollada",
+      "cultivo": "brocoli",
+      "parcelas": 10,
+      "sesiones": 3,
+      "plataNetaDia": 3171,
+      "energiaDia": 60
+    },
+    {
+      "perfil": "Ampliada",
+      "cultivo": "brocoli",
+      "parcelas": 15,
+      "sesiones": 3,
+      "plataNetaDia": 4293,
+      "energiaDia": 90
+    },
+    {
+      "perfil": "Completa diaria",
+      "cultivo": "maiz",
+      "parcelas": 21,
+      "sesiones": 1,
+      "plataNetaDia": 7756,
+      "energiaDia": 42
+    }
+  ]
+}

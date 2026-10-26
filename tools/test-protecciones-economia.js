@@ -39,7 +39,7 @@ for(const exp of [0,1,3,8,16]){
 }
 assert.equal(read('Array.from({length:16},(_,i)=>expansionPrecioCupo(i)).reduce((s,x)=>s+x,0)'),15413);
 read('G.produccion.base=5;G.expansiones=16;');assert.equal(read('produccionVipCupos()'),6,'VIP escala con la granja, no se diluye al final');
-read("G.skills.farming=0;G.skills.mining=5000;G.skills.tala=0;G.farmXpBase=0;G.level=24;");
+read("G.skills.farming=0;G.skills.mining=50000;G.skills.tala=0;G.farmXpBase=0;G.level=24;");
 assert.equal(read('farmPuedeSubir()'),true,'minero puede completar progreso sin cultivos ni tala');
 read('G.level=25;prestige();');assert.equal(read('farmXpProductiva()'),0,'prestigio no reutiliza XP vieja');
 const saved=read('JSON.stringify(snapshot())');real.qaGuardado=JSON.parse(saved);read('G.farmXpBase=0;hydrate(qaGuardado);');assert.equal(read('farmXpProductiva()'),0,'offset conserva el prestigio al recargar');

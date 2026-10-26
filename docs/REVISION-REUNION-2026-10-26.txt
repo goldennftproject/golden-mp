@@ -41,10 +41,23 @@ ESTADO IMPLEMENTADO Y VALIDADO LOCALMENTE
 - Pestaña Mejoras aclara que son objetos internos sin tokenización; Tala explica que aporta al nivel de granja.
 - Autoguardado de cinco segundos ya estaba implementado. La consulta de sospechas en las últimas 24 horas devolvió cero; el fallo del vídeo no se considera reproducido en la versión actual.
 
-HALLAZGO DE BALANCE AÚN ABIERTO
-La medición actual de XP de granja por energía confirma 150 para madera, 200 para piedra y 7,5 para papa (15 por ciclo de dos energías). Reducirlo exige una migración que conserve XP/niveles aceptados, sincronice prestigio y servidor y compruebe el tutorial. No se cambia a ciegas ni se declara equilibrado.
+BALANCE DE XP AJUSTADO; RENTABILIDAD AÚN EN MEDICIÓN
+La medición actual de XP de granja por energía confirma 150 para madera, 200 para piedra y 7,5 para papa (15 por ciclo de dos energías). Se ha preparado una reducción futura a 15/20 XP por recurso básico, con corte histórico por oficio protegido por servidor. Las partidas existentes conservan XP y niveles; oficio y relojes intactos. Se comprueban migración única, F5, prestigio y progresión; no se afirma un plazo de juego.
 El objetivo Free mencionado alterna entre 2.000 y 5.000 Plata/día; todavía requiere simulación de progresión y gasto, no elevar indiscriminadamente la venta de cultivos.
 
 PREPARACIÓN DE EVENTO (NO PUBLICADO NI ACTIVADO)
 Propuesta: viernes a domingo de la semana siguiente, fechas pendientes; ranking por nivel y luego XP absoluta (no porcentaje aislado). Presupuesto orientativo total 50 USDT: 15,10,5,5,5,5,5. Revisión de trampas antes de adjudicar. Reportes críticos pueden considerarse por separado; no se promete recompensa automática. Hace falta confirmar fechas, presupuesto real y reglas antes de anunciar.
 Los depósitos y retiros siguen desactivados. Una futura política de reconocimiento de depósitos deberá basarse en recibos reales; no autoriza un reset actual. Las comisiones de retiro mencionadas son ejemplos, no tarifas activas. Las cajas aleatorias, colaboraciones con tokens externos, skins por nivel y mejoras evolutivas quedan como propuestas futuras sin términos cerrados.
+
+VALIDACIÓN FINAL DEL AJUSTE DE XP
+274/274 pruebas de regresión; misma huella de fuentes antes y después de la suite. Regresión de XP: historia conservada, factores nuevos sólo sobre incrementos posteriores, ancla protegida, equivalencia cliente/servidor y prestigio sin reutilizar XP antigua.
+
+SIMULACIÓN FREE DE PRODUCCIÓN ESTABLE
+Muestra de 14 días, sin bono de nivel, objetos, logros ni misiones; semilla y cultivo ya disponibles. No modela la subida desde cero ni presión comunitaria cambiante. Se conservan los restos fraccionarios de venta. Datos orientativos netos de semillas:
+- Tres parcelas de papa, tres visitas/día: ~9 Plata/día.
+- Seis parcelas de calabaza, seis visitas/día: ~1.812 Plata/día.
+- Diez parcelas de brócoli, tres visitas/día: ~3.171 Plata/día.
+- Quince parcelas de brócoli, tres visitas/día: ~4.293 Plata/día.
+- Veintiuna parcelas de maíz, una visita/día: ~7.756 Plata/día.
+El rango orientativo de 2.000–5.000 es alcanzable en desarrollo bajo estas hipótesis; no se multiplica todo el precio ni se promete esa producción al empezar. Falta medir retención y comportamiento real antes de decidir un incremento general de emisión.
+Las pasivas de madera/hierro tienen diferente precio porque la fórmula contempla el número máximo de nodos, no sólo el precio unitario del recurso; el precio invertido por unidad no demuestra por sí solo un error. Sus efectos y compras anteriores se conservan.

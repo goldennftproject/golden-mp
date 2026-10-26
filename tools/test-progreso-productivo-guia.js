@@ -5,7 +5,7 @@ const {ctx} = require('./arrancar-el-juego.contexto').arrancar(path.resolve(__di
 const run = code => vm.runInContext(code,ctx);
 ctx.toast = () => {}; ctx.log = () => {}; ctx.celebrate = () => {}; ctx.refreshHud = () => {};
 run('estadoDeCero(); G.skills.farming=0; G.skills.tala=0; G.skills.mining=0; G.level=1;');
-run("addXp('tala',10)");
+run("addXp('tala',20)");
 assert.ok(ctx.G.level > 1,'talar actualiza el nivel de granja en el mismo evento, sin esperar otra acción');
 run('estadoDeCero(); G.tuto={done:true}; G.planos={}; G.obras={}; G.level=3; G.plata=20; G.res.madera=2; G.res.piedra=2;');
 ctx.dailyState=()=>({claimable:false}); ctx.cartaAbueloPendiente=()=>false;
@@ -32,7 +32,7 @@ for (const oficio of ['tala','mining']) {
   for(let level=2;level<=25;level++) {
     run('estadoDeCero();');
     ctx.G.level=level-1;
-    const weight=oficio==='tala'?15:20;
+    const weight=oficio==='tala'?1.5:2;
     const required=Math.ceil(run(`FARM_XP_LVLS[${level}]`)/weight);
     const reqSkill=run(`farmEspecialidadReq(${level})`);
     let skillXp=required;

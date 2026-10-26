@@ -1,0 +1,14 @@
+const assert=require('node:assert/strict'),path=require('path'),fs=require('fs'),vm=require('vm');
+const root=path.resolve(__dirname,'..'),{ctx:c}=require('./arrancar-el-juego.contexto').arrancar(root),run=s=>vm.runInContext(s,c);
+c.toast=()=>{};c.log=()=>{};c.refreshHud=()=>{};c.saveFarm=()=>{};c.isOpen=()=>false;
+run('estadoDeCero();G.skills.farming=0;G.skills.tala=10;G.skills.mining=0;');assert.equal(c.farmXpProductiva(),15);
+c.G.skills.mining=10;assert.equal(c.farmXpProductiva(),35);
+const old=JSON.parse(JSON.stringify(c.snapshot()));delete old.farmXpRitmo;old.skills={farming:100,tala:200,mining:300};old.farmXpBase=50;
+c.hydrate(old);assert.equal(c.farmXpProductiva(),9050,'conserva toda XP histórica');
+const migrated=JSON.parse(JSON.stringify(c.snapshot()));c.hydrate(migrated);assert.equal(c.farmXpProductiva(),9050,'migración idempotente');
+c.G.skills.tala+=10;assert.equal(c.farmXpProductiva(),9065);c.G.skills.mining+=10;assert.equal(c.farmXpProductiva(),9085,'sólo ganancias nuevas usan ritmo nuevo');
+const source=fs.readFileSync(path.join(root,'supabase/functions/guardar/index.ts'),'utf8'),block=source.split('/* === REGLAS ===')[1].split('/* === FIN REGLAS === */')[0],s={};vm.createContext(s);vm.runInContext(block.slice(block.indexOf('const VERSION')),s);
+assert.equal(s.xpGranjaOficios(c.G),c.xpGranjaOficios(c.G));assert.ok(!s.protegerEconomia(old,migrated,Date.now()).some(x=>/ancla de XP/.test(x)));
+const forged=JSON.parse(JSON.stringify(migrated));forged.farmXpRitmo.tala++;assert.ok(s.protegerEconomia(migrated,forged,Date.now()).some(x=>/ancla de XP/.test(x)));
+c.G.level=25;c.prestige();assert.equal(c.farmXpProductiva(),0);const snap=JSON.parse(JSON.stringify(c.snapshot()));c.hydrate(snap);assert.equal(c.farmXpProductiva(),0);c.G.skills.tala+=10;assert.equal(c.farmXpProductiva(),15,'prestigio no reutiliza XP antigua');
+console.log('OK: XP futura 15/20 por recurso básico, historia intacta, migración única, paridad servidor, ancla protegida y prestigio/F5.');

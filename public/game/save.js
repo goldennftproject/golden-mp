@@ -450,7 +450,7 @@ function snapshot() {
      OJO con los comentarios AL FINAL de una línea de este objeto: se comen lo que sigue. */
   return { plata: G.plata, golden: G.golden, level: G.level, prestige: G.prestige, iniciado: G.iniciado, reinicio: G.reinicio,   /* 24/9: cuándo se reinició la cuenta (el portero lo lee) */
     energiaGranja: G.energiaGranja, artefactos: G.artefactos, banco: G.banco, packs:G.packs, logrosV2:G.logrosV2, logrosAcciones:G.logrosAcciones,
-    espacioV: G.espacioV, mercadoVentas: G.mercadoVentas, farmXpBase: G.farmXpBase || 0,
+    espacioV: G.espacioV, mercadoVentas: G.mercadoVentas, farmXpBase: G.farmXpBase || 0, farmXpRitmo:G.farmXpRitmo,
     produccion: G.produccion,
     res: G.res, picks: G.picks, skills: G.skills, triesV: G.triesV, establoV: G.establoV, fish: G.fish, plots: G.plots, nodos: G.nodos, expansiones: G.expansiones, pescaHasta: G.pescaHasta, pescaDesde: G.pescaDesde, senales: G.senales, escamas: G.escamas, vistos: G.vistos, estrellaMax: G.estrellaMax, pescaTiene: G.pescaTiene, canas: G.canas, presion: G.presion, amarres: G.amarres, trampas: G.trampas, marea: G.marea, runaOro: G.runaOro, buffs: G.buffs, seeds: G.seeds, selSeed: G.selSeed,
     tools: G.tools, sflStock: true, invRows: G.invRows, slots: G.slots, hotbar: G.hotbar, hotSel: G.hotSel, hbInit: G.hbInit, layout: G.layout,
@@ -497,6 +497,7 @@ function hydrate(d) {
   actividadGranjaRecibir(d&&d.actividadGranja);
   G.logrosV2=null;G.logrosAcciones={};logrosRecibir(d&&d.logrosV2);
   if (!d) return;
+  G.farmXpRitmo=d.farmXpRitmo?JSON.parse(JSON.stringify(d.farmXpRitmo)):{v:1,tala:Math.max(0,Number(d.skills?.tala)||0),mining:Math.max(0,Number(d.skills?.mining)||0)};
   G.farmXpBase = Number.isFinite(d.farmXpBase) ? Math.max(0,d.farmXpBase) : 0;
   PRODUCCION_HIDRATANDO = true;
   try {

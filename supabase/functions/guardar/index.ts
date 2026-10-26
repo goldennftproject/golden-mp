@@ -275,9 +275,17 @@ function goldenCustodia(d) {
   return n;
 }
 /* Invariantes deterministas: no dependen de los techos heurísticos por hora. */
+function xpGranjaOficios(d){
+ const s=d.skills||{},a=d.farmXpRitmo;
+ const parte=(k,antes,despues)=>{const xp=Math.max(0,Number(s[k])||0);if(!a)return xp*antes;const corte=Math.max(0,Number(a[k])||0);return Math.min(xp,corte)*antes+Math.max(0,xp-corte)*despues;};
+ return parte('tala',15,1.5)+parte('mining',20,2);
+}
 function protegerEconomia(prev, next, ahora) {
   picosUnificarEstado(next);
   const errores = [], antes = prev || {}, p = antes.produccion, n = next.produccion;
+  const ritmo=next.farmXpRitmo,ancla=antes.farmXpRitmo||{v:1,tala:Math.max(0,num(antes.skills?.tala)),mining:Math.max(0,num(antes.skills?.mining))};
+  if((ritmo||antes.farmXpRitmo)&&(!ritmo||!mismoJSON(ritmo,ancla)))errores.push('No se puede modificar el ancla de XP aceptada');
+
   if(next.incursion&&!mismoJSON(antes.incursion,next.incursion)&&num(antes.produccion?.vipHasta)<=ahora)errores.push('Las excursiones nuevas requieren VIP activo');
   if(!mismoJSON(antes.artefactos||null,next.artefactos||null))errores.push('Los objetos productores sólo se modifican en el servidor');
   if(!mismoJSON(antes.packs||null,next.packs||null))errores.push('Los packs sólo se compran en el servidor');
@@ -518,7 +526,7 @@ function evaluarGuardado(prev, next, elapsedSeg, permiso) {
     if (d > max) sospechas.push(k + " imposible: +" + Math.round(d) + " en " + fmtHoras(horas));
   }
 
-  const xpYaAceptada = num(p.skills && p.skills.farming) + 15*num(p.skills && p.skills.tala) + 20*num(p.skills && p.skills.mining) - num(p.farmXpBase);
+  const xpYaAceptada = num(p.skills && p.skills.farming) + xpGranjaOficios(p) - num(p.farmXpBase);
   const nivelPorXpAceptada = Math.max(1,FARM_XP_CONTRATO.reduce((nv,xp,i)=>i<=25&&xp<=xpYaAceptada?i:nv,1));
   if ((delta.level || 0) > Math.ceil(horas * 8) + 4 && num(next.level)>nivelPorXpAceptada) sospechas.push("subida de nivel imposible: +" + delta.level + " en " + fmtHoras(horas));
   if ((delta.expansiones || 0) < 0) sospechas.push("las expansiones no pueden bajar (" + delta.expansiones + ")");

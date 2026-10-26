@@ -1,5 +1,9 @@
 # Las leyes de Golden Farm
 
+## XP futura por energía — revisión de Sachi, 26/10/2026
+
+Para las nuevas recolecciones, la contribución de Tala y Minería al nivel de granja usa factores 1,5 y 2 (15/20 XP por recurso básico), frente a los anteriores 15/20 (150/200 XP por recurso). La XP de los oficios no cambia. Cada partida conserva los factores históricos hasta los valores de oficio ya guardados; el corte se fija al migrar y queda protegido por el servidor. No se quita XP ni nivel, no se repite la migración y el prestigio descuenta el total ponderado correspondiente. El tiempo real de progresión requiere medición; no se promete duración ni dinero diario.
+
 ## Reunión completa de Sachi — 26/10/2026
 
 Dirección autoriza revisar el audio completo y aplicar las sugerencias. Las cuentas nuevas empiezan con cero Golden; los saldos previos se conservan. Talar y minar cuestan una energía por recolección efectiva, nunca por golpe sin recompensa, y agotarse conserva las cargas restantes. Se confirma el detalle de materiales antes de aportarlos a una obra. Los objetos muestran cuenta atrás hasta el cobro. El comprador del sistema sólo compra cultivos; madera, minerales y procesados conservan el comercio entre jugadores. P2P: Free una publicación/día UTC y VIP diez, cancelar no restituye cupo. Las mejoras internas no se presentan como NFT tokenizado.

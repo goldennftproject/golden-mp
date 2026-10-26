@@ -7,7 +7,7 @@ const G = {
   espacioV: 3,                  // Inicio 9×9 restaurado; partidas de otras versiones conservadas
   energiaGranja: { v: 1, actual: 50, at: 0 },
   artefactos: null,
-  banco: null, packs: null,
+  banco: null, packs: null, farmXpRitmo:{v:1,tala:0,mining:0},
   plata: 3, golden: 0, level: 1, prestige: 0, week: 1, iniciado: 0,   // 18/8: cuándo empezó la partida — de ahí sale la semana del HUD   // 14/8: nacés con 3 de plata (el 1er objetivo es COMPRAR tus semillas)
   hp: 100, hpMax: 100, swordOwned: false, bowOwned: false, swordWoodOwned: false, firstCropDone: false,   // combate (Fase D)
   armasUnlocked: false,          // viernes (2): la pestana Armas de la Herreria se paga (20 madera + 20 piedra + 1000 plata)
@@ -2635,7 +2635,12 @@ function farmPuedeSubir() {   // ¿se puede pasar al nivel siguiente ahora mismo
   if (!farmTalaCumple(nv)) return false;
   return tareasCumplidas(nv);
 }
-function farmXpProductiva() { return Math.max(0,(G.skills.farming || 0) + 15*(G.skills.tala || 0) + 20*(G.skills.mining || 0) - (G.farmXpBase || 0)); }
+function xpGranjaOficios(d){
+ const s=d.skills||{},a=d.farmXpRitmo;
+ const parte=(k,antes,despues)=>{const xp=Math.max(0,Number(s[k])||0);if(!a)return xp*antes;const corte=Math.max(0,Number(a[k])||0);return Math.min(xp,corte)*antes+Math.max(0,xp-corte)*despues;};
+ return parte('tala',15,1.5)+parte('mining',20,2);
+}
+function farmXpProductiva() { return Math.max(0,(G.skills.farming || 0) + xpGranjaOficios(G) - (G.farmXpBase || 0)); }
 function farmEspecialidadCumple(nv) {
   const mina = 20*(G.skills.mining || 0), tala = 15*(G.skills.tala || 0), cultivo = G.skills.farming || 0;
   const req = farmEspecialidadReq(nv);
@@ -3004,7 +3009,7 @@ function prestige() {
   if (G.level < FARM_NIVEL_MAX) { toast("Llegá a nivel " + FARM_NIVEL_MAX); return; }
   G.prestige++; G.level = 1;
   G.skills.farming = 0;            // si no se resetea, el próximo addXp volvía a nivel 10 de golpe
-  G.farmXpBase = 15*(G.skills.tala || 0) + 20*(G.skills.mining || 0); // no se pierden oficios ni se reutiliza XP de la vuelta anterior
+  G.farmXpBase = xpGranjaOficios(G); // no se pierden oficios ni se reutiliza XP de la vuelta anterior
   G.stats = {}; G.statsBase = {};  // las tareas de nivel arrancan de cero otra vez
   for (const k in G.res) G.res[k] = 0;
   log(`Reinicio. Prestigio ${G.prestige}.`, "gold"); toast("Prestigio " + G.prestige + "!");
