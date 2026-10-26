@@ -5502,10 +5502,16 @@ function seedShopReponerFocoPc(caja) {
   if (!boton || typeof boton.focus !== "function") return;
   try { boton.focus({ preventScroll: true }); } catch (e) { boton.focus(); }
 }
+function cajaSuministrosHtml(){
+ if(typeof CAJA_SUMINISTROS==='undefined')return '';
+ const n=cajasUsadas(),bloqueada=n>=CAJA_SUMINISTROS.max||G.golden<CAJA_SUMINISTROS.golden;
+ return '<div class="mkt-row"><div class="minfo"><b>🎁 Caja de suministros</b><div class="mds">Un premio aleatorio · '+n+'/3 compradas hoy UTC · sin energía</div><details class="ayuda-menu"><summary>Premios y probabilidades</summary>'+CAJA_SUMINISTROS.premios.map(p=>'<div class="mds">'+(p.peso/100)+'% · '+p.qty+' '+RES_LABEL[p.item]+'</div>').join('')+'</details></div><button class="green sm" id="caja-comprar" '+(bloqueada?'disabled':'')+'>'+(n>=3?'Límite de hoy':'Comprar · 1 Golden')+'</button></div>';
+}
 function refreshPacks(){
  const box=$('packs-shop');if(!box)return;
- box.innerHTML='<details class="ayuda-menu"><summary>📦 Packs de materiales · Golden</summary>'+Object.entries(PACKS_DEF).map(([id,d])=>'<div class="mkt-row"><div class="minfo"><b>'+d.label+'</b><div class="mds">'+Object.entries(d.res).map(([k,n])=>n+' '+RES_LABEL[k]).join(' · ')+'</div><div class="mds">Uno por '+(id==='diario'?'día':'semana')+' UTC · se entrega en pendientes</div></div><button class="green sm" data-pack="'+id+'" '+(packComprado(id)||G.golden<d.golden?'disabled':'')+'>'+(packComprado(id)?'Comprado':d.golden+' Golden')+'</button></div>').join('')+'<button class="ghost sm" id="pack-recoger">Entregas pendientes ('+mkPendCount()+')</button></details>';
+ box.innerHTML='<details class="ayuda-menu"><summary>📦 Packs de materiales · Golden</summary>'+Object.entries(PACKS_DEF).map(([id,d])=>'<div class="mkt-row"><div class="minfo"><b>'+d.label+'</b><div class="mds">'+Object.entries(d.res).map(([k,n])=>n+' '+RES_LABEL[k]).join(' · ')+'</div><div class="mds">Uno por '+(id==='diario'?'día':'semana')+' UTC · se entrega en pendientes</div></div><button class="green sm" data-pack="'+id+'" '+(packComprado(id)||G.golden<d.golden?'disabled':'')+'>'+(packComprado(id)?'Comprado':d.golden+' Golden')+'</button></div>').join('')+cajaSuministrosHtml()+'<button class="ghost sm" id="pack-recoger">Entregas pendientes ('+mkPendCount()+')</button></details>';
  box.querySelectorAll('[data-pack]').forEach(b=>b.onclick=()=>{const id=b.dataset.pack,d=PACKS_DEF[id];askConfirm('Comprar '+d.label+' por '+d.golden+' Golden. Los materiales quedan en Entregas pendientes hasta que tengas espacio.',()=>economiaSolicitar({pack:{id}}),{title:'Comprar materiales',yes:'Comprar',no:'Cancelar'});});
+ const caja=$('caja-comprar');if(caja)caja.onclick=()=>askConfirm('Vas a gastar 1 Golden en un premio al azar: '+CAJA_SUMINISTROS.premios.map(p=>(p.peso/100)+'%: '+p.qty+' '+RES_LABEL[p.item]).join(' · ')+'. Máximo tres cajas al día UTC. El premio queda en Entregas pendientes.',()=>economiaSolicitar({pack:{id:'caja'}}),{title:'Comprar caja de suministros',yes:'Comprar · 1 Golden',no:'Cancelar'});
  $('pack-recoger').onclick=()=>{mkPendCobrar();refreshPacks();};
 }
 function refreshSeedShop() {

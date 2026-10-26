@@ -163,6 +163,8 @@ const ARTEFACTO_DIAS = 180, ARTEFACTO_PLATA_POR_GOLDEN_DIA = 87, ARTEFACTO_TOPE_
 const OBJETOS_PLATA_DESDE = 1792193400000;
 function fmtGolden(n){return Number(n||0).toFixed(6).replace(/\.?0+$/,'') || '0';}
 // 0,87 % diario sobre la referencia inicial de 10.000 Plata/Golden; no sigue la tasa variable del Banco.
+const CAJA_SUMINISTROS={golden:1,max:3,premios:[{peso:4000,item:'madera',qty:40},{peso:3500,item:'piedra',qty:40},{peso:1500,item:'bronce',qty:3},{peso:800,item:'bronce',qty:6},{peso:200,item:'hierro',qty:3}]};
+function cajasUsadas(t=nowMs()){const c=G.packs?.cajas;return c?.dia===Math.floor(t/86400000)?c.count:0;}
 const PACKS_DEF={diario:{label:'Pack diario',golden:1,res:{madera:20,piedra:20,bronce:2}},semanal:{label:'Pack semanal',golden:10,res:{madera:150,piedra:150,bronce:15,hierro:5}}};
 function packPeriodo(id,t=nowMs()){return id==='semanal'?Math.floor((t+3*86400000)/604800000):Math.floor(t/86400000);}
 function packComprado(id,t=nowMs()){return G.packs?.compras?.[id]===packPeriodo(id,t);}

@@ -165,8 +165,31 @@ function artefactoCalcular(a,id,ahora) {
   const cobro=Math.floor((bruto+1e-9)*10)/10;
   return {cobro,resto:Math.max(0,bruto-cobro),fin};
 }
+const CAJA_SUMINISTROS={golden:1,max:3,premios:[{peso:4000,item:'madera',qty:40},{peso:3500,item:'piedra',qty:40},{peso:1500,item:'bronce',qty:3},{peso:800,item:'bronce',qty:6},{peso:200,item:'hierro',qty:3}]};
+function cajaAzar(){
+ const a=new Uint32Array(1),limite=Math.floor(4294967296/10000)*10000;
+ do{crypto.getRandomValues(a);}while(a[0]>=limite);
+ return a[0]%10000;
+}
+function cajaOperacion(old,ahora,op,azar){
+ const data=JSON.parse(JSON.stringify(old)),libro=data.packs||{compras:{},ops:[]};
+ const recibo=(libro.ops||[]).find(r=>r.op===op);
+ if(recibo)return recibo.id==='caja'?{data,repetido:true,cobro:0,premio:recibo.premio}:{error:'Recibo reutilizado'};
+ const dia=Math.floor(ahora/86400000),count=libro.cajas?.dia===dia?libro.cajas.count:0;
+ if(count>=CAJA_SUMINISTROS.max)return {error:'Ya compraste las tres cajas de hoy (UTC)'};
+ if(num(data.golden)<CAJA_SUMINISTROS.golden)return {error:'No alcanza el Golden'};
+ if((data.mkPend||[]).length>100)return {error:'Recogé tus entregas pendientes antes de comprar'};
+ let n=azar();if(!Number.isInteger(n)||n<0||n>=10000)return {error:'Sorteo no disponible; no se cobró'};
+ let elegido;for(const p of CAJA_SUMINISTROS.premios){n-=p.peso;if(n<0){elegido=p;break;}}
+ const premio={item:elegido.item,qty:elegido.qty};
+ data.golden=Math.round((data.golden-CAJA_SUMINISTROS.golden)*1e6)/1e6;
+ data.mkPend=[...(data.mkPend||[]),{kind:'res',...premio,payload:null}];
+ libro.cajas={dia,count:count+1};libro.ops=[...(libro.ops||[]),{op,id:'caja',premio}].slice(-20);data.packs=libro;
+ return {data,cobro:0,premio};
+}
 const PACKS_DEF={diario:{golden:1,res:{madera:20,piedra:20,bronce:2}},semanal:{golden:10,res:{madera:150,piedra:150,bronce:15,hierro:5}}};
-function packOperacion(old,id,ahora,op){
+function packOperacion(old,id,ahora,op,azar=cajaAzar){
+ if(id==='caja')return cajaOperacion(old,ahora,op,azar);
  const d=Object.prototype.hasOwnProperty.call(PACKS_DEF,id)?PACKS_DEF[id]:null;if(!d)return {error:'Pack inválido'};
  const data=JSON.parse(JSON.stringify(old)),libro=data.packs||{compras:{},ops:[]};
  const recibo=(libro.ops||[]).find(r=>r.op===op);if(recibo)return recibo.id===id?{data,repetido:true,cobro:0}:{error:'Recibo reutilizado'};
@@ -599,7 +622,7 @@ Deno.serve(async (req) => {
       if(!row)return json({error:'Primero sincronizá tu granja'},409);
       const ahora=Math.max(Date.now(),new Date(row.updated_at).getTime()+1);
       const r=body.pack ? packOperacion(row.data,body.pack.id,ahora,body.op) : body.logro ? logroOperacion(row.data,body.logro.key,body.op) : body.visita ? (body.visita.accion==='ver'?logroVisita(row.data,body.visita.destino,uid,ahora,body.op):visitaOperacion(row.data,body.visita.destino,uid,ahora,body.op)) : body.diario ? (body.diario.accion==='reclamar'?diarioOperacion(row.data,ahora,body.op):{error:'Operación diaria inválida'}) : body.banco ? bancoOperacion(row.data,body.banco,body.op,tasaBanco) : artefactoOperacion(row.data,a.accion,a.id,ahora,body.op);
-      if(r.repetido)return json({ok:true,data:row.data,updated_at:row.updated_at,cobro:r.cobro,repetido:true,granja:granjaVisitada});
+      if(r.repetido)return json({ok:true,data:row.data,updated_at:row.updated_at,cobro:r.cobro,premio:r.premio,repetido:true,granja:granjaVisitada});
       if(body.base!==row.updated_at)return json({error:'Otra sesión guardó; recargá antes de operar',conflicto:true},409);
       if(r.tasaCambio)return json({error:r.error,tasaCambio:true},412);
       if(r.error)return json({error:r.error},400);
@@ -608,7 +631,7 @@ Deno.serve(async (req) => {
       const {data:hecho,error:fallo}=await admin.from('farms').update({data:r.data,updated_at:fecha}).eq('user_id',uid).eq('updated_at',row.updated_at).select('updated_at').maybeSingle();
       if(fallo)return json({error:'No se pudo confirmar la operación'},503);
       if(!hecho)return json({error:'Otra sesión guardó primero',conflicto:true},409);
-      return json({ok:true,data:r.data,updated_at:fecha,cobro:r.cobro,granja:granjaVisitada});
+      return json({ok:true,data:r.data,updated_at:fecha,cobro:r.cobro,premio:r.premio,granja:granjaVisitada});
     }
 
     /* REINICIAR LA CUENTA (24/9, dirección: « debe literal borrar la cuenta y crearla como si

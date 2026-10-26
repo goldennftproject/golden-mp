@@ -1,5 +1,9 @@
 # Las leyes de Golden Farm
 
+## Cajas de suministros por Golden — 26/10/2026
+
+Dirección aprueba «hazlo» a cajas de 1 Golden con máximo tres por día UTC para Free y VIP, sin energía. Premio único: 40% 40 madera, 35% 40 piedra, 15% 3 bronce, 8% 6 bronce, 2% 3 hierro. Las cantidades se ajustan al precio premium aprobado. Tabla visible y confirmación antes de cobrar. Sorteo criptográfico del servidor, saldo/cupo/recibo/entrega confirmados por CAS; reintentar conserva el premio. Materiales van a pendientes para no perderse por bolsa llena. No se cambian packs fijos ni se habilitan movimientos USDT.
+
 ## XP futura por energía — revisión de Sachi, 26/10/2026
 
 Para las nuevas recolecciones, la contribución de Tala y Minería al nivel de granja usa factores 1,5 y 2 (15/20 XP por recurso básico), frente a los anteriores 15/20 (150/200 XP por recurso). La XP de los oficios no cambia. Cada partida conserva los factores históricos hasta los valores de oficio ya guardados; el corte se fija al migrar y queda protegido por el servidor. No se quita XP ni nivel, no se repite la migración y el prestigio descuenta el total ponderado correspondiente. El tiempo real de progresión requiere medición; no se promete duración ni dinero diario.
