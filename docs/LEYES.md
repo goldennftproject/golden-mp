@@ -1,5 +1,9 @@
 # Las leyes de Golden Farm
 
+## Silueta evolutiva del granero — 26/10/2026
+
+Dirección rechaza la misma forma con adornos: pide pasar de una construcción pequeña y cutre a otra mayor y elaborada. Cuatro sprites nuevos según mejora de granja 0/1/2/3: cobertizo bajo, granero a dos aguas, granero con anexo lateral y granero con dos alas y cúpula de ventilación. Se conserva barn.png original. Lienzos transparentes 128×128, misma ancla inferior central, ancho/alto visible creciente; misma rw y contrato de ocupación/celdas/colisiones. Se sustituyen los adornos del granero por cambios de textura; el mercado conserva sus acabados. No hay cambios de precios, requisitos, capacidad ni XP. Carga inicial en atlas con cache v56 y respaldo por archivos sueltos.
+
 ## God Hand, mercado y cierre de pendientes — 26/10/2026
 
 Dirección autoriza resolver los pendientes, excluye nuevas maderas de esta versión y mantiene USDT desactivado. Parámetros iniciales ajustables: God Hand recibe una mejora única de eficiencia por 50.000 Plata, requiere poseerla y reduce un 10% el total de su tarifa de trabajo, redondeado una vez. No reduce prestaciones anteriores, capacidad, producción ni energía. Mercado: mejora única por 50.000 Plata, 100 madera, 100 piedra y 5 hierro; reduce dos puntos la comisión de nuevas publicaciones (Free 8%, VIP 5%). Las filas anteriores conservan fee_pct y los cupos no cambian. Ambas compras usan libro protegido, recibo y CAS. La restricción de tasas admite 5/7/8/10; el trigger sigue fijando la tasa.

@@ -1,0 +1,22 @@
+GRANERO — EVOLUCIÓN DE SILUETA, 26/10/2026
+Herramienta: image_gen integrada, sin CLI/API externo. Referencia de estilo: public/assets/farm/barn.png, conservada intacta.
+Activos finales: public/assets/farm/barn_evo_0.png a barn_evo_3.png.
+Fuentes de alta resolución seleccionadas y comparación: outputs/graneros-fuentes y outputs/graneros-evolucion-v2.png en el espacio de trabajo de Codex.
+
+PROMPT COMÚN
+Create ONE game sprite, transparent background, no text no labels no ground tile no scenery no people. Reference image is STYLE ONLY: match its warm brown timber palette, dark 1-pixel outlines, crisp hand-pixelled cozy farming-game appearance and front-facing slightly elevated view (symmetric front facade, visible roof, no isometric side view). Do NOT copy its silhouette. Sprite should look good reduced to roughly 96 pixels wide. Use clean deliberate pixel clusters, not realistic textures, no blur, no smooth illustration shading. One complete building centered with generous transparent margins. Bottom-center ground contact anchor. This is a structural evolution series with genuinely different silhouettes, not a reskin.
+
+ETAPA 0
+STAGE ZERO: a very small poor makeshift farm storage shack. A narrow single low room with a simple LOW ONE-SLOPE SHED ROOF made of roughly patched planks and a little weathered straw, crooked timber supports, a simple small open doorway, one crate. Roofline low and modest, NOT the reference's tall gambrel roof. Visibly humble starter shack, not a miniaturized grand barn.
+ETAPA 1
+STAGE ONE: a modest single-storey rectangular wooden barn. Simple triangular GABLE roof of wood shingles, two small barn doors with diagonal braces, one small side window and a few hay bales. Distinct triangular roof outline, NOT a gambrel roof. Wider and sturdier than a poor starter shack, still simple.
+ETAPA 2
+STAGE TWO: a developed broad working barn with a tall GAMBREL roof, a small hayloft opening above the main door, reinforced timber beams and short stone foundation. One attached low lean-to storage wing on the RIGHT gives a clearly ASYMMETRIC wider silhouette. Modest functional details, not luxurious.
+ETAPA 3
+STAGE THREE: an impressive mature farm barn, much more elaborate than a starter. Broad two-storey central hall with tall gambrel roof, a prominent small CUPOLA on the roof ridge and a hayloft hatch, one low storage annex on EACH SIDE, stone foundation, strong timber framing, a pair of discreet green cloth banners. Clearly tallest and widest silhouette in the series; central barn plus two lower side wings, cohesive and functional, not a castle or mansion.
+
+LIMPIEZA SOLICITADA PARA ETAPAS 1 Y 3
+Preserve the exact building design, silhouette, warm brown pixel-art colors and all details. Remove the entire brown atmospheric glow/halo behind and around it. Background must be fully transparent right up to a clean hard pixel edge around the building. No ground, no shadow, no glow, no dark backdrop. Do not redesign the building.
+
+EXPORTACIÓN TÉCNICA
+Recorte al alfa, alfa binaria para pixel art, reducción por vecino más cercano sin deformar proporciones, colocación centrada abajo en 128×128. Anchuras visibles 50/70/94/124 px; alturas 36/52/65/75 px. Ancla de suelo y=128. El render conserva rw=105 px (2,5 celdas) en las cuatro etapas; el crecimiento visible ocurre dentro de esa misma reserva. No se cambian posiciones del mundo, colisiones ni expansiones.

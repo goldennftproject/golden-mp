@@ -112,6 +112,7 @@ class BootScene extends Phaser.Scene {
     L.push(["plot", P + "plot.png?v=4"]);   // tierra suelta que combina con los montículos
     L.push(["plot_blocked", P + "plot_blocked.png?v=3"]);   // sin trabajar: ramas, piedras y yuyos
     L.push(["barn", P + "barn.png?v=4"]);
+    for(let i=0;i<4;i++)L.push(["barn_evo_"+i,P+"barn_evo_"+i+".png"]);
     L.push(["market", P + "market.png?v=4"]);
     L.push(["store", P + "store.png?v=6"]);          // v4: fragua a medio fuego (estado por defecto)
     L.push(["store_lit", P + "store_lit.png?v=3"]);      // fragua encendida (mientras crafteás/reparás)
@@ -154,8 +155,8 @@ class BootScene extends Phaser.Scene {
   preload() {
     // ATLAS: todos los sprites del mundo en 2 archivos (mucho más liviano para el server free).
     // Si el atlas no llega, ensureAll() baja los archivos sueltos como respaldo.
-    this.load.image("__atlas", "assets/atlas.png?v=55");
-    this.load.json("__atlasmap", "assets/atlas.json?v=55");
+    this.load.image("__atlas", "assets/atlas.png?v=56");
+    this.load.json("__atlasmap", "assets/atlas.json?v=56");
     // 2/9: la isla viaja en la PRIMERA pasada (es la única imagen que no cabe en el atlas:
     // 1190x854). Antes quedaba para los reintentos y era ella sola la que disparaba una
     // segunda vuelta de descarga en cada carga del juego.

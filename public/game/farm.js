@@ -2698,7 +2698,14 @@ class FarmScene extends Phaser.Scene {
     for(const o of this.objs||[]){
       if(o.type!=='barn'&&o.type!=='market')continue;
       const s=o.sprite;if(!s)continue;
-      const n=o.type==='barn'?(G.infraestructura?.granja||0):(G.infraestructura?.tienda?1:0)+(G.infraestructura?.mercado?2:0);
+      if(o.type==='barn'){
+        if(o.acabado)o.acabado.setVisible(false);
+        if(o.oculto||s.visible===false||(BUILD_DEF.barn&&!G.built?.barn))continue;
+        const etapa=Math.min(3,Math.max(0,Math.floor(G.infraestructura?.granja||0))),key='barn_evo_'+etapa;
+        if(this.textures.exists(key)&&s.texture?.key!==key){s.setTexture(key);s.setScale(o.rw/s.width);}
+        continue;
+      }
+      const n=(G.infraestructura?.tienda?1:0)+(G.infraestructura?.mercado?2:0);
       const visible=n>0&&!o.oculto&&s.visible!==false&&(!BUILD_DEF[o.type]||!!G.built?.[o.type]);
       if(!visible){if(o.acabado)o.acabado.setVisible(false);continue;}
       const w=s.displayWidth||o.rw,h=s.displayHeight||w,g=o.acabado||(o.acabado=this.add.graphics()),firma=n+':'+w+':'+h;
