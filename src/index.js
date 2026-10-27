@@ -9,6 +9,12 @@ const { WorldRoom } = require("./rooms/WorldRoom");
 const PORT = Number(process.env.PORT) || 2567;
 
 const app = express();
+const {crearMetricasAlfa}=require('./alpha-metricas');
+const alfa=crearMetricasAlfa({version:process.env.RENDER_GIT_COMMIT||'dev'});
+app.use(alfa.middleware);
+const alfaIntervalo=setInterval(()=>alfa.emitir(),300000);alfaIntervalo.unref();
+process.once('exit',()=>{clearInterval(alfaIntervalo);alfa.emitir();});
+app.get('/healthz',(req,res)=>{res.set('Cache-Control','no-store');res.json({ok:true,version:process.env.RENDER_GIT_COMMIT||'dev'});});
 
 /* ===================== EL ARRANQUE PESA UN MEGA (24/8, dirección) =====================
    « Sigue tardando en entrar a la granja, algo se ha roto ahí en el inicio. »
@@ -83,7 +89,7 @@ app.get("/version", (req, res) => { res.set("Cache-Control", "no-store"); res.js
 // Canal de avisos en vivo (SSE): cada ventana del juego queda suscripta.
 // Al deployar, el server viejo muere → el navegador se reconecta solo al nuevo →
 // recibe la versión nueva AL INSTANTE y la ventana se actualiza. Push exacto, sin sondeos.
-const sseClients = new Set();   // una entrada por ventana abierta del juego = jugadores en línea
+const sseClients = new Set();   // una entrada por ventana abierta; no representa personas únicas
 function sseBroadcast() {
   const msg = `data: ${JSON.stringify({ v: VERSION, online: sseClients.size })}\n\n`;
   for (const r of sseClients) { try { r.write(msg); } catch (e) {} }
@@ -92,10 +98,10 @@ app.get("/events", (req, res) => {
   res.set({ "Content-Type": "text/event-stream", "Cache-Control": "no-store", "Connection": "keep-alive", "X-Accel-Buffering": "no" });
   res.flushHeaders();
   res.write("retry: 3000\n\n");                              // si se corta, reintentar a los 3s
-  sseClients.add(res);
+  sseClients.add(res);alfa.conexiones(sseClients.size);
   sseBroadcast();                                            // versión + conteo en vivo para TODAS las ventanas
   const ka = setInterval(() => { try { res.write(":ka\n\n"); } catch (e) {} }, 25000);   // latido anti-timeout
-  req.on("close", () => { clearInterval(ka); sseClients.delete(res); sseBroadcast(); });
+  req.on("close", () => { clearInterval(ka); sseClients.delete(res); alfa.conexiones(sseClients.size); sseBroadcast(); });
 });
 
 /* ═══════════════════════════════════════════════════════════════════════════════════════════
@@ -172,7 +178,7 @@ const gameServer = new Server({ server: httpServer });
 // Registra la sala de la zona compartida
 gameServer.define("world", WorldRoom);
 
-gameServer.listen(PORT).then(() => {
+gameServer.listen(PORT,process.env.HOST||undefined).then(() => {
   console.log("========================================");
   console.log(" Golden Farm · Zona compartida (POC)");
   console.log(" Cliente:  http://localhost:" + PORT);

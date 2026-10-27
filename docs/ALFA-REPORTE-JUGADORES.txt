@@ -1,0 +1,15 @@
+GOLDEN — CÓMO REPORTAR UN FALLO EN LA ALFA
+
+1. Qué estabas intentando hacer.
+2. Qué pasos seguiste antes del problema.
+3. Qué esperabas y qué ocurrió realmente.
+4. Hora aproximada y si se repite.
+5. Si tenías otra pestaña o sesión del juego abierta.
+6. Captura o vídeo si ayuda a verlo.
+7. Configuración → Copiar informe técnico y pegalo junto al reporte.
+
+No compartas contraseñas, enlaces de acceso al correo ni archivos de respaldo de la cuenta. El informe técnico del juego no incluye esas claves. Revisá también tus capturas antes de enviarlas.
+
+Si el guardado falla, no reinicies tu cuenta ni borres los datos del navegador. Indicá si el disquete confirmó el guardado y si apareció un conflicto. La recuperación carga la versión del servidor y conserva un respaldo local; no fusiona cambios pendientes.
+
+La alfa es una prueba del juego. Depósitos y retiros de USDT están desactivados. No hay premios ni fecha de evento anunciados mediante esta guía.

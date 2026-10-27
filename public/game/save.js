@@ -12,6 +12,13 @@ const SAVE_BASES = new Map(), SAVE_CONFLICTOS = new Set();
 const SAVE_CONFIRMACIONES = new Map();
 let SAVE_EN_CURSO = null, SAVE_OTRA = false;
 let MERCADO_GLOBAL = false, MERCADO_CACHE = null, MERCADO_REFRESCANDO = null, MERCADO_INTENTO = 0, MERCADO_EN_CURSO = null;
+const ALFA_GUARDADOS={intentos:0,confirmados:0,conflictos:0,fallos:0,ultimo:null,ms:[]};
+async function alfaInvocarGuardado(body){
+ const t=Date.now();let status=0;
+ try{const r=await sb.functions.invoke('guardar',{body});status=r.error?.context?.status||(r.data?.ok?200:0);return r;}
+ finally{ALFA_GUARDADOS.intentos++;if(status===200)ALFA_GUARDADOS.confirmados++;else{ALFA_GUARDADOS.fallos++;if(status===409)ALFA_GUARDADOS.conflictos++;}ALFA_GUARDADOS.ultimo=status;ALFA_GUARDADOS.ms.push(Math.max(0,Date.now()-t));if(ALFA_GUARDADOS.ms.length>50)ALFA_GUARDADOS.ms.shift();}
+}
+function alfaResumenGuardados(){const a=[...ALFA_GUARDADOS.ms].sort((a,b)=>a-b);return {intentos:ALFA_GUARDADOS.intentos,confirmados:ALFA_GUARDADOS.confirmados,conflictos:ALFA_GUARDADOS.conflictos,fallos:ALFA_GUARDADOS.fallos,ultimo:ALFA_GUARDADOS.ultimo,p50_ms:a.length?a[Math.ceil(a.length*.5)-1]:null,p95_ms:a.length?a[Math.ceil(a.length*.95)-1]:null,muestra:a.length};}
 function mercadoPendiente(uid) { try { return !!localStorage.getItem("gf-venta-pendiente-" + SB_REF + "-" + uid); } catch (e) { return true; } }
 function mercadoMarcarPendiente(uid, body) { localStorage.setItem("gf-venta-pendiente-" + SB_REF + "-" + uid, JSON.stringify(body)); }
 function mercadoLimpiarPendiente(uid) { try { localStorage.removeItem("gf-venta-pendiente-" + SB_REF + "-" + uid); } catch (e) {} }
@@ -1452,7 +1459,7 @@ async function saveFarmReal(force) {
          único que queda es el portero. */
       let paso = false;
       try {
-        const { data: r, error: fe } = await sb.functions.invoke("guardar", { body: cuerpo });
+        const { data: r, error: fe } = await alfaInvocarGuardado(cuerpo);
         if (!fe && r && r.ok) { paso = true; if (UID===saveUid) { actividadGranjaRecibir(r.actividadGranja); logrosRecibir(r.logrosV2); if(typeof actividadGranjaRefrescar==='function')actividadGranjaRefrescar(); if(isOpen('ov-logros'))refreshLogros(); } if (r.updated_at) { SAVE_BASES.set(saveUid, r.updated_at); SAVE_CONFIRMACIONES.set(saveUid, (SAVE_CONFIRMACIONES.get(saveUid) || 0) + 1); } }
         else if (fe) {
           /* 14/9 — EL PORTERO EN MODO RECHAZO. Un 422 no es « portero caído »: es el portero

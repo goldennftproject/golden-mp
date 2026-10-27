@@ -13,9 +13,10 @@
       es.onmessage = (ev) => {
         try {
           const { v, online } = JSON.parse(ev.data);
-          // contador de jugadores en línea del HUD (una ventana abierta = un jugador)
+          // contador de ventanas conectadas del HUD (no equivale a personas únicas)
           if (typeof online === "number") { const el = document.getElementById("s-online"); if (el) el.textContent = online; }
           if (!v) return;
+          window.__gfServerVersion=v;
           if (current === null) { current = v; anotar("canal en vivo: versión inicial " + v.slice(0, 7)); return; }   // versión con la que cargaste
           if (v !== current) { anotar("canal en vivo: versión NUEVA " + v.slice(0, 7) + " (tenía " + current.slice(0, 7) + ")"); current = v; showUpdate(); } // ¡deploy nuevo, avisado por el server!
         } catch (e) {}
@@ -30,6 +31,7 @@
       if (!r.ok) { enterBurst(); return; }
       const { v } = await r.json();
       if (!v) return;
+      window.__gfServerVersion=v;
       if (current === null) { current = v; anotar("sondeo: versión inicial " + v.slice(0, 7)); return; }      // versión con la que cargaste
       if (v !== current) { anotar("sondeo: versión NUEVA " + v.slice(0, 7) + " (tenía " + current.slice(0, 7) + ")"); current = v; showUpdate(); }    // ¡hay deploy nuevo!
     } catch (e) { enterBurst(); }                          // server caído: probablemente deployando

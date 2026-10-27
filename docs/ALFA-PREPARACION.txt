@@ -1,0 +1,69 @@
+GOLDEN FARM — PREPARACIÓN DE LA ALFA ABIERTA
+26 de octubre de 2026
+
+ESTADO
+Preparación técnica implementada. Suite local: 289/289 pruebas aprobadas; carga local de 10/25/50 ventanas sin fallos. La verificación pública se realiza al entregar cada despliegue. No se ha anunciado ni abierto un evento. No hay reinicio de jugadores, reparto de Golden, depósitos, retiros ni premios USDT. Las nuevas maderas quedan fuera. Se conservan las dos cuentas y su progreso.
+
+ACCESO ANTES DE INVITAR
+- El registro está habilitado en Supabase; el cliente actual requiere correo (GF.SOLO_EMAIL=1).
+- Dirección confirma que se usa el SMTP integrado. No sirve como entrada general a una alfa abierta: sólo envía a correos del equipo autorizado y tiene un límite de dos mensajes por hora, según la documentación oficial.
+- Decisión pendiente: SMTP de plan gratuito, invitados ligados al navegador o prueba limitada al equipo actual. No se cambia automáticamente el método de acceso ni se debilita la confirmación de correo.
+- Antes de cualquier convocatoria: probar, con autorización, un correo externo al equipo; confirmar llegada, enlace, redirección al juego, segundo acceso y retorno a la misma granja. Esa prueba NO se ha enviado.
+- Si se elige invitado, definir claramente pérdida de acceso al borrar datos o cambiar de navegador; conservar el acceso de las cuentas existentes. No prometer recuperación por correo sin un envío operativo.
+
+ALCANCE DE ESTA VERSIÓN
+PC primero. Granja, tutorial, cultivos, nodos, construcción, inventario, guardado, Banco interno, mejoras y mercado. Pesca, móvil y plaza se mantienen diferidos. El acceso no necesita comprar VIP. La alfa de infraestructura puede hacerse sin competición ni premios.
+
+INSTRUMENTOS PREPARADOS
+- /healthz: comprueba HTTP de Render y versión; no consulta la base y no demuestra salud de Auth o guardado.
+- Métricas agregadas de Render en sus logs cada cinco minutos cuando hay tráfico o ventanas SSE: peticiones por grupo, 4xx/5xx, memoria, CPU y latencias por intervalos. Sin correo, IP, UUID, inventario ni rutas completas; memoria acotada y reinicio de contadores al reiniciar el proceso.
+- El conteo SSE se llama ventanas conectadas. No equivale a personas ni jugadores únicos y no mide actividad de juego.
+- Configuración → Copiar informe técnico: versión, conexión, estado de carga y conflicto, contadores y latencia de los últimos 50 intentos de guardado. Sólo se copia localmente cuando el jugador lo pide. No se envía automáticamente.
+- No se añaden tablas, escrituras de telemetría ni sondeos periódicos a Supabase. Se conserva el autoguardado a cinco segundos y una vez por periodo inactivo.
+- Protección adicional: el servidor exige el coste en Golden de God Hand y las pasivas cuando acepta una nueva propiedad; las compras ya existentes se conservan.
+
+PRUEBAS AUTOMÁTICAS Y LÍMITES
+Carga local: node tools/alpha-carga-local.js resultado.json
+Sólo crea un servidor propio en 127.0.0.1. Prueba 10, 25 y 50 conexiones SSE con cuatro peticiones por conexión, incluyendo código y atlas. No crea cuentas ni toca Supabase/Render. El resultado local no se convierte en un máximo de jugadores del Free real.
+Salud pública: node tools/alpha-comprobar-publico.js resultado.json
+Hace tres lecturas acotadas de salud, versión y ajustes públicos de Auth; no envía correos ni realiza compras.
+Las pruebas de guardado, pagos internos, reintentos, CAS, falsificación de propiedad y reportes forman parte de tools/test-*.js. Una suite aprobada no demuestra ausencia de trampas o fallos de navegador.
+
+RECORRIDO MANUAL POR JUGADOR
+1. Entrar por la ruta de acceso elegida y completar el tutorial sin ayuda.
+2. Plantar, cosechar, vender y comprar semillas; anotar dudas y faltantes.
+3. Talar y minar: comprobar una energía por entrega, cargas y temporizadores.
+4. Esperar cinco segundos sin interacción, verificar guardado y recargar: saldos, inventario y relojes deben conservarse.
+5. Usar el disquete, cerrar la pestaña y volver a la misma cuenta.
+6. Hacer una construcción con aporte parcial; cancelar una confirmación y comprobar que no consume.
+7. Expandir cuando corresponda; revisar encaje físico y cupos por separado.
+8. Publicar, retirar, comprar y cobrar entre cuentas distintas. Intentar repetir la compra o el cobro; nunca debe duplicarse.
+9. Probar dos pestañas de una misma cuenta: comprobar aviso de conflicto y recuperación, sin mezclar granjas.
+10. Cortar y recuperar la conexión. Un error no debe mostrar una confirmación verde falsa.
+11. Las rutas VIP y objetos caros se prueban con cuentas o entornos controlados. No se acreditan saldos de prueba en producción sin una decisión específica.
+
+MEDICIÓN DURANTE LA ALFA
+Inicio con participación abierta y difusión gradual en tandas observables. Revisar 5, 10, 25 y después 50 ventanas simultáneas como escalones de medición, no como cupos ni capacidad garantizada. No aplicar códigos de acceso para esta prueba.
+En cada tanda registrar hora, ventanas SSE, cuentas con actividad de guardado, p50/p95, HTTP 4xx/5xx, conflictos, errores de Auth, tamaños de base y cuota/egreso del mes desde los paneles. Distinguir cuentas, pestañas y sesiones activas. No sumar fuentes con distinta definición como si fueran jugadores únicos.
+Observar al menos 20 minutos por tanda, incluyendo un arranque después de inactividad. Render Free puede dormirse; no se instala un ping para impedirlo. En Supabase verificar cuotas reales en el panel: el tamaño de Postgres completo no es necesariamente la métrica facturada.
+
+CRITERIOS DE PAUSA Y CORRECCIÓN
+- Pérdida de progreso confirmado, cobro duplicado o acceso a otra cuenta: detener nuevas invitaciones e investigar antes de continuar. No resetear como arreglo.
+- Orientación inicial: investigar 5xx sostenidos superiores al 1% o p95 HTTP superior a 1 s durante diez minutos. No confundir respuestas 409 de dos pestañas con corrupción de datos.
+- Aproximarse al 80% de una cuota gratuita requiere revisar consumo y planificar; no autoriza contratar ni cambiar de plan.
+- Un problema de correo o de cuota se informa expresamente; no se oculta como fallo genérico del juego.
+
+OPERACIÓN DIARIA
+Antes de invitar: acceso externo validado, versión pública comprobada, guardado y mercado comprobados y responsable de revisar reportes asignado.
+Durante la prueba: revisar logs y consumo en horarios concretos; agrupar errores por versión y reproducción. Ajustar misiones por demanda observada, no por datos inventados.
+Al corregir: conservar una referencia del commit previo y ejecutar las regresiones pertinentes. No revertir una función de base ignorando las partidas creadas con el contrato nuevo; evaluar compatibilidad primero.
+No hay monitor automático programado ni mensajes externos enviados.
+
+PENDIENTES QUE REQUIEREN DECISIÓN O PRUEBA HUMANA
+Método de acceso; prueba real de entrada externa; fecha de convocatoria y responsables; medición de capacidad real y diversión; términos de cualquier evento. El documento EVENTO-ALPHA-REGLAS.txt sigue siendo preparación sin activar premios.
+
+REFERENCIAS OFICIALES CONSULTADAS
+https://supabase.com/docs/guides/auth/auth-smtp
+https://supabase.com/docs/guides/auth/testing-auth-flows
+https://render.com/docs/free
+https://render.com/docs/compute-plans

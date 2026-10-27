@@ -1,5 +1,9 @@
 # Las leyes de Golden Farm
 
+## Preparación técnica de alfa — 26/10/2026
+
+Dirección pide preparar la alfa abierta para medir infraestructura Free, conservando progreso y USDT desactivado. Se preparan salud HTTP, agregados acotados en logs de Render y copia local de diagnóstico solicitada por el jugador. Sin datos personales ni telemetría periódica en Supabase. SSE cuenta ventanas, no personas. Se valida el coste Golden al adquirir God Hand/pasivas, conservando compras previas. Pruebas de carga sólo contra un proceso local aislado; no equivalen a capacidad de producción. Acceso externo pendiente: dirección confirma SMTP integrado; se solicita elegir una alternativa o limitar la prueba al equipo. No se cambia Auth, no se envían correos, no se anuncian eventos, no se reparten fondos y no se resetean cuentas.
+
 ## Silueta evolutiva del granero — 26/10/2026
 
 Dirección rechaza la misma forma con adornos: pide pasar de una construcción pequeña y cutre a otra mayor y elaborada. Cuatro sprites nuevos según mejora de granja 0/1/2/3: cobertizo bajo, granero a dos aguas, granero con anexo lateral y granero con dos alas y cúpula de ventilación. Se conserva barn.png original. Lienzos transparentes 128×128, misma ancla inferior central, ancho/alto visible creciente; misma rw y contrato de ocupación/celdas/colisiones. Se sustituyen los adornos del granero por cambios de textura; el mercado conserva sus acabados. No hay cambios de precios, requisitos, capacidad ni XP. Carga inicial en atlas con cache v56 y respaldo por archivos sueltos.

@@ -1443,7 +1443,7 @@
 
   <div class="hudbar" id="hudbar">
     <div class="brand" style="display:flex;align-items:center;gap:12px"><h1>GOLDEN FARM</h1>
-      <div class="pill" data-mvp-hud title="Ventanas del juego conectadas ahora"><span class="k">Jugadores en línea</span><b id="s-online">1</b></div>
+      <div class="pill" data-mvp-hud title="Ventanas del juego conectadas ahora"><span class="k">Ventanas conectadas</span><b id="s-online">1</b></div>
       <!-- 14/9: el botón de PRUEBAS y el modo testeo se eliminaron (portero en modo rechazo) -->
     </div>
     <div class="hud">
@@ -1755,6 +1755,12 @@
   <div class="ov" id="ov-config"><div class="card" style="width:min(480px,94%)">
     <button class="close" data-close="ov-config">×</button>
     <h3>Configuración</h3>
+    <div class="cfgsec">
+      <h4>Alfa de pruebas</h4>
+      <p>Sin depósitos ni retiros de USDT. Si encontrás un fallo, copiá el informe y contanos cómo ocurrió.</p>
+      <button class="ghost sm" id="cfg-alfa-copiar">Copiar informe técnico</button>
+      <textarea id="cfg-alfa-informe" hidden readonly aria-label="Informe técnico de la alfa" style="width:100%;box-sizing:border-box;min-height:160px;margin-top:8px;font:12px monospace"></textarea>
+    </div>
     <div class="cfgsec">
       <h4>Cuenta</h4>
       <!-- 22/8: la granja sobrevive al navegador — email con enlace mágico, sin contraseñas.

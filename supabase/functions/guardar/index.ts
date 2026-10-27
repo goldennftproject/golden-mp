@@ -452,14 +452,24 @@ function protegerEconomia(prev, next, ahora) {
       else reembolso += VIP_REINTEGROS[k] || 0;
     }
   }
+  // Compras premium del cliente histórico: exigir el coste al aceptar la propiedad.
+  const preciosPasivas={hacha_abuelo:109,pico_viejo:29};let gastoPremium=0;
+  if(antes.godHand&&!next.godHand)errores.push('No se puede borrar God Hand adquirida');
+  if(!antes.godHand&&next.godHand)gastoPremium+=500;
+  for(const k of new Set([...Object.keys(antes.nfts||{}),...Object.keys(next.nfts||{})])){
+    const era=!!antes.nfts?.[k],es=!!next.nfts?.[k];if(era===es)continue;
+    if(era){errores.push('No se puede borrar una pasiva adquirida');continue;}
+    if(Object.prototype.hasOwnProperty.call(preciosPasivas,k))gastoPremium+=preciosPasivas[k];
+    else if(k!=='cincel_cantera'||num(antes.pass?.stars)<26*40||antes.pass?.claimV?.[26]||!next.pass?.claimV?.[26]||num(next.produccion?.vipHasta)<=ahora)errores.push('Pasiva sin compra o premio del Pase validado');
+  }
   const dia = new Date(ahora).toISOString().slice(0,10), control = antes._economiaControl || {};
   const estrellas = Math.max(0,num(next.pass && next.pass.stars)-num(antes.pass && antes.pass.stars));
   if(estrellas>0)errores.push('El pase está desactivado; no admite nuevas estrellas');
-  const compradas = Math.max(0,Math.floor((goldenCustodia(antes)+reembolso-goldenCustodia(next)-gastoVip)/15))*40;
+  const compradas = Math.max(0,Math.floor((goldenCustodia(antes)+reembolso-goldenCustodia(next)-gastoVip-gastoPremium)/15))*40;
   const emitidas = (control.dia===dia?num(control.estrellas):0)+Math.max(0,estrellas-compradas);
   if (emitidas>138) errores.push("Estrellas del pase superiores al máximo diario y semanal combinado");
   next._economiaControl = {dia,estrellas:emitidas}; // nunca se cree el contador recibido del cliente
-  if (prev && goldenCustodia(next) > goldenCustodia(prev) + reembolso - gastoVip + 1e-7) errores.push("Emisión Golden sin venta o recompensa autorizada");
+  if (prev && goldenCustodia(next) > goldenCustodia(prev) + reembolso - gastoVip - gastoPremium + 1e-7) errores.push("Emisión Golden sin venta o recompensa autorizada");
   if (num(next.farmXpBase)<num(antes.farmXpBase)) errores.push("No se puede reutilizar XP anterior al prestigio");
   return errores;
 }

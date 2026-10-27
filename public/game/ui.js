@@ -5657,8 +5657,18 @@ function refreshBarn() {
 }
 
 
+function informeAlfa(){
+ const conectado=typeof UID!=='undefined'&&!!UID,guardado=typeof alfaResumenGuardados==='function'?alfaResumenGuardados():{};
+ return ['GOLDEN ALFA - INFORME TÉCNICO',new Date().toISOString(),'Build cliente: '+(typeof GF_BUILD!=='undefined'?GF_BUILD:'sin dato'),'Versión servidor: '+String(window.__gfServerVersion||'sin dato').slice(0,40),'Internet: '+(typeof navigator==='undefined'||navigator.onLine!==false),'Cuenta conectada: '+conectado,'Carga validada: '+(typeof CARGA_OK!=='undefined'&&CARGA_OK),'Modo local: '+(typeof SOLO_LOCAL!=='undefined'&&SOLO_LOCAL),'Conflicto de guardado: '+(conectado&&SAVE_CONFLICTOS.has(UID)),'Errores recientes detectados: '+(Array.isArray(window.__gfErr)?window.__gfErr.length:0),'Guardados de esta sesión: '+JSON.stringify(guardado),'','Añadí qué estabas haciendo, qué esperabas y qué ocurrió.','Este informe no incluye correo, claves, identificador de cuenta ni inventario.'].join('\n');
+}
+async function copiarInformeAlfa(){
+ const texto=informeAlfa(),campo=$('cfg-alfa-informe');if(campo){campo.value=texto;campo.hidden=false;}
+ try{await navigator.clipboard.writeText(texto);toast('Informe técnico copiado; podés pegarlo con tu reporte');}
+ catch(e){if(campo){campo.focus();campo.select();}toast('Seleccioná y copiá el informe mostrado');}
+}
 /* ---- configuración ---- */
 function refreshConfig() {
+  const informe=$('cfg-alfa-copiar');if(informe)informe.onclick=copiarInformeAlfa;
   /* 22/8 — LA CUENTA: estado real (anónima / vinculada) y los dos gestos: guardar la granja
      de este navegador atándola a un email, o entrar con un email ya vinculado. Enlace mágico,
      sin contraseñas. La estructura del bloque no cambia con el estado (regla de UI). */
