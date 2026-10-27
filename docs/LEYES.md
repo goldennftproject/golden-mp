@@ -1,5 +1,9 @@
 # Las leyes de Golden Farm
 
+## Protección del periodo de lanzamiento — 27/10/2026
+
+La fecha y fase de un lanzamiento ya iniciado no se pueden cambiar mediante la configuración normal, ni se puede borrar su fila. Esto evita extender el VIP o capturar restauraciones como compras de alfa. La restauración con derechos y sin fila de granja falla expresamente; recuperar esa fila permite reintentar sin perder derechos. Los contenedores de objetos guardados como null se interpretan como vacíos. Probado en transacciones revertidas, sin activar release ni modificar el progreso actual.
+
 ## Compras de alfa y VIP del lanzamiento — 27/10/2026
 
 Dirección autoriza preparar toda la alfa y conservar las compras permanentes tras el reinicio futuro. Comprar VIP en alfa habilita un único periodo de 30 días desde el lanzamiento, sin acumular renovaciones. Un registro privado separado de farms captura las propiedades aceptadas en la misma transacción. Se conservan God Hand, infraestructura, pasivas mejoradas, Objetos de Granja y adornos comprados con Golden; no saldos ni consumibles. La consulta pertenece a la identidad autenticada y la restauración es idempotente, previa a cargar la granja en release. Alfa sigue activa y sin fecha de lanzamiento; no se ejecuta ningún reset ni se habilita USDT. El procedimiento futuro conserva Auth, registros y filas de granja. Ver docs/ALFA-COMPRAS-Y-LANZAMIENTO.txt.

@@ -25,9 +25,10 @@ OPERACIÓN FUTURA — NO EJECUTADA
 6. Antes de admitir jugadores, comprobar con una cuenta controlada: VIP hasta launch_at + 30 días, mejoras, objetos y adornos; segunda entrada idéntica sin duplicación, extensión de VIP ni una nueva escritura si no cambió nada.
 7. Publicar la fecha y confirmar la versión pública. El reloj del VIP empieza en el lanzamiento, no en el primer acceso individual.
 
-El cambio de fase no está expuesto al navegador. El cliente de lanzamiento solicita restauración antes de cargar la granja; el servidor devuelve una versión actualizada para evitar conflictos de guardado. El merge conserva el progreso actual si se reintenta, pero no sustituye el reinicio aprobado.
+El cambio de fase no está expuesto al navegador. Una vez iniciado el lanzamiento, la base bloquea mover su fecha, volver a alfa o borrar esta configuración: así no se extiende el VIP ni se vuelven a capturar derechos restaurados como compras nuevas por un error operativo. Antes del inicio todavía puede corregirse una programación futura.
+El cliente de lanzamiento solicita restauración antes de cargar la granja; el servidor devuelve una versión actualizada para evitar conflictos de guardado. Si hay compras y falta la fila de la granja, falla expresamente; nunca informa éxito sin restituirlas. Corregir la fila faltante y reintentar conserva los derechos. El merge conserva el progreso actual si se reintenta, pero no sustituye el reinicio aprobado.
 
 PRUEBAS Y OPERACIÓN DE ALFA
-Las restauraciones, duplicaciones y permisos se prueban con transacciones que terminan en ROLLBACK; no se reinician partidas reales. Las pruebas SQL están en sql/test-alfa-compras-release.sql y sql/test-alfa-mercado.sql. No ejecutar pruebas de escritura sin su transacción envolvente.
+Las restauraciones, duplicaciones y permisos se prueban con transacciones que terminan en ROLLBACK; no se reinician partidas reales. Las pruebas SQL están en sql/test-alfa-compras-release.sql, sql/test-alfa-protecciones-lanzamiento.sql y sql/test-alfa-mercado.sql. Ejecutar cada una en su transacción independiente. No ejecutar pruebas de escritura sin su transacción envolvente.
 Durante la alfa medir cuotas, errores y latencia reales. Las pruebas locales de 50 ventanas no garantizan 50 jugadores en infraestructura gratuita. No hay contratación ni cambio de plan autorizado.
 Ante pérdida de progreso confirmado o cobro duplicado, suspender difusión e investigar con la versión y el informe técnico; no usar el reset como arreglo. Mantener el guardado disponible mientras se aísla la función afectada.
