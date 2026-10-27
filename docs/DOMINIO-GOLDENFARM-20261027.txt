@@ -1,0 +1,32 @@
+GOLDEN FARM — DIRECCIÓN PRINCIPAL
+
+Dirección principal: https://goldenfarm.onrender.com
+Servicio Render Free: srv-dbgcju8u01pc73aomdog
+Repositorio: goldennftproject/golden-mp · rama main
+Build: npm ci · inicio: npm start · región Frankfurt
+
+La dirección antigua https://golden-mp.onrender.com sigue disponible en el
+servicio Free srv-d9k9ldmgekts73ckopeg. No eliminar ni suspender como parte
+de esta entrega: se conserva durante la transición.
+Los dos servicios consumen las cuotas compartidas del workspace Free.
+No se ha contratado ningún plan ni dominio de pago.
+
+Ambos usan la misma configuración cliente y el mismo Supabase Goldenfarm:
+ulspkdaljeuleqqdokfk. No se ha copiado, recreado, migrado ni reiniciado la BD.
+Comprobación de lectura: 5 cuentas, 5 granjas y 5 progresos guardados.
+
+Supabase Auth, tras autorización del propietario:
+Site URL: https://goldenfarm.onrender.com
+Redirect URLs conservadas:
+  https://golden-mp.onrender.com/**
+  https://goldenfarm.onrender.com/**
+Configuración releída tras recargar el panel.
+
+El almacenamiento de sesión del navegador pertenece a cada dominio:
+se debe iniciar sesión con el MISMO correo en la nueva dirección para acceder
+a la misma granja del servidor. No crear una cuenta con otro correo.
+No se han enviado correos de prueba ni modificado progresos de jugadores.
+
+Verificación: /healthz HTTP 200 y versión a3f7aaa en ambas direcciones;
+save.js coincide exactamente, apunta al mismo proyecto Supabase;
+la nueva dirección carga Golden Farm y su pantalla de acceso en Chrome.
