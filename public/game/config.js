@@ -1,5 +1,6 @@
 /* Golden Farm · configuración compartida (layout en TILES, alineado a la grilla) */
 window.GF = window.GF || {};
+GF.FASE_JUEGO = 'alpha'; // Cambiar sólo en el lanzamiento aprobado, junto al estado del servidor.
 
 /* ¿ESTE CLIC ES DE LA INTERFAZ O DEL MUNDO? (24/8)
    Phaser engancha el pointerdown en la VENTANA además del canvas, para no perder los clics que

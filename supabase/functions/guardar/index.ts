@@ -454,6 +454,11 @@ function protegerEconomia(prev, next, ahora) {
   }
   // Compras premium del cliente histórico: exigir el coste al aceptar la propiedad.
   const preciosPasivas={hacha_abuelo:109,pico_viejo:29};let gastoPremium=0;
+  for(const [id,precio] of Object.entries({estatua:60,arbolito:90})){
+    const total=d=>num(d?.decoBolsa?.[id])+(Array.isArray(d?.decos)?d.decos.filter(x=>x.id===id).length:0),a=total(antes),b=total(next);
+    if(!Number.isSafeInteger(b)||b<0||b>1000000||(next.decoBolsa?.[id]!==undefined&&(!Number.isSafeInteger(next.decoBolsa[id])||next.decoBolsa[id]<0)))errores.push('Cantidad de adornos inválida');
+    gastoPremium+=Math.max(0,b-a)*precio;
+  }
   if(antes.godHand&&!next.godHand)errores.push('No se puede borrar God Hand adquirida');
   if(!antes.godHand&&next.godHand)gastoPremium+=500;
   for(const k of new Set([...Object.keys(antes.nfts||{}),...Object.keys(next.nfts||{})])){
@@ -649,6 +654,12 @@ Deno.serve(async (req) => {
     const uid = u.user.id;
 
     const body = await req.json().catch(() => null);
+
+    if(body?.alfa){
+      if(!['estado','restaurar'].includes(body.alfa.accion))return json({error:'Acción de alfa inválida'},400);
+      const {data,error}=await admin.rpc('alfa_compras',{p_uid:uid,p_restaurar:body.alfa.accion==='restaurar'});
+      return error||!data?.ok ? json({error:'No se pudo comprobar el registro de compras'},503) : json(data);
+    }
 
     if(body?.banco && body.cuenta!==uid)return json({error:'La sesión cambió de cuenta'},409);
     let tasaBanco=10000;

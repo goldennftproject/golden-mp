@@ -1757,6 +1757,9 @@
     <h3>Configuración</h3>
     <div class="cfgsec">
       <h4>Alfa de pruebas</h4>
+      <p>Al terminar la alfa se reinicia el progreso. Las compras permanentes se conservan; comprar VIP en alfa dará 30 días desde el lanzamiento, sin acumular renovaciones.</p>
+      <button class="ghost sm" id="cfg-alfa-compras">Ver mis compras conservadas</button>
+      <div id="cfg-alfa-compras-lista" aria-live="polite"></div>
       <p>Sin depósitos ni retiros de USDT. Si encontrás un fallo, copiá el informe y contanos cómo ocurrió.</p>
       <button class="ghost sm" id="cfg-alfa-copiar">Copiar informe técnico</button>
       <textarea id="cfg-alfa-informe" hidden readonly aria-label="Informe técnico de la alfa" style="width:100%;box-sizing:border-box;min-height:160px;margin-top:8px;font:12px monospace"></textarea>
@@ -2165,6 +2168,7 @@
     <div class="gcard">
       <h1>GOLDEN FARM</h1>
       <p id="gate-sub">Elegí un apodo para entrar a tu granja.</p>
+      <p class="sub">Alfa de pruebas: el progreso se reiniciará al finalizar. Conservaremos las compras permanentes y 30 días de VIP desde el lanzamiento para quienes lo compren en alfa. Sin depósitos ni retiros USDT.</p>
       <input id="nick" maxlength="14" placeholder="Tu apodo" autocomplete="off">
       <!-- 18/9 — el correo entra en la puerta. Antes vivía tres clics adentro (Configuración →
            Cuenta), o sea que el jugador lo encontraba DESPUÉS de tener una granja vacía

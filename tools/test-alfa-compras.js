@@ -1,0 +1,27 @@
+'use strict';
+const assert=require('node:assert/strict'),fs=require('fs'),path=require('path'),vm=require('vm');
+const root=path.resolve(__dirname,'..'),{stripTypeScriptTypes}=require('node:module');
+const js=stripTypeScriptTypes(fs.readFileSync(path.join(root,'supabase/functions/guardar/index.ts'),'utf8')).replace(/^import .*createClient.*;\s*$/m,'');
+let handle,calls=[],fail=false;
+const admin={auth:{getUser:async()=>({data:{user:{id:'qa-verificado'}}})},rpc:async(name,args)=>{calls.push({name,args});return fail?{error:{message:'offline'}}:{data:{ok:true,phase:'alpha',vip_release_dias:30,compras:[],usdt:false}};}};
+vm.runInNewContext(js,{Response,Request,Date,Math,JSON,Number,Object,Array,Set,String,isFinite,createClient:()=>admin,Deno:{env:{get:()=>''},serve:f=>handle=f}});
+const call=(accion,auth=true)=>handle(new Request('https://qa.invalid/guardar',{method:'POST',headers:auth?{Authorization:'Bearer qa'}:{},body:JSON.stringify({alfa:{accion},cuenta:'otro',p_uid:'otro'})}));
+(async()=>{
+ assert.equal((await call('estado',false)).status,401);assert.equal(calls.length,0);
+ let r=await call('estado');assert.equal(r.status,200);assert.equal((await r.json()).vip_release_dias,30);
+ assert.deepEqual(JSON.parse(JSON.stringify(calls[0])),{name:'alfa_compras',args:{p_uid:'qa-verificado',p_restaurar:false}});
+ assert.equal((await call('restaurar')).status,200);assert.equal(calls[1].args.p_restaurar,true);assert.equal(calls[1].args.p_uid,'qa-verificado');
+ assert.equal((await call('activar_release')).status,400);assert.equal(calls.length,2,'el cliente no activa release');
+ fail=true;assert.equal((await call('estado')).status,503);
+ const {ctx:c}=require('./arrancar-el-juego.contexto').arrancar(root,{'game/main.js':''});
+ await c.SAVE_READY;
+ c.qaSb={functions:{invoke:async(name,{body})=>{assert.equal(name,'guardar');assert.equal(body.alfa.accion,'estado');return {data:{ok:true,phase:'alpha',compras:[]}};}}};
+ vm.runInContext("sb=qaSb;UID='qa';",c);assert.equal((await c.alfaCompras()).phase,'alpha');
+ c.qaSb.functions.invoke=async()=>{vm.runInContext("UID='otra'",c);return {data:{ok:true}};};
+ await assert.rejects(c.alfaCompras(),/No se pudo/);
+ assert.equal(c.GF.FASE_JUEGO,'alpha');
+ const order=[];c.GF.FASE_JUEGO='release';
+ c.qaSb={auth:{getUser:async()=>({data:{user:{id:'qa'}}})},functions:{invoke:async(name,{body})=>{order.push(body.alfa.accion);return {data:{ok:true,phase:'release'}};}},from:()=>({select:()=>({eq:()=>({maybeSingle:async()=>{order.push('leer');return {data:{data:c.snapshot(),name:'QA',updated_at:'2030-01-01T00:00:00+00:00'}};}})})})};
+ vm.runInContext("sb=qaSb;UID='qa';",c);assert.equal(await c.loadFarm(),true);assert.deepEqual(order,['restaurar','leer'],'los derechos se restauran antes de leer/aplicar la granja');
+ console.log('OK: identidad verificada, RPC sólo servidor, fase no activable por cliente, errores seguros, consulta sin escrituras y cambio de cuenta.');
+})().catch(e=>{console.error(e);process.exitCode=1;});

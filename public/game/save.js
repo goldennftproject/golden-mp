@@ -1206,6 +1206,12 @@ function derivarEstado(d) {
 }
 
 const sleepMs = (ms) => new Promise(r => setTimeout(r, ms));
+async function alfaCompras(accion='estado'){
+ if(!sb||!UID)throw Error('Entrá con tu cuenta para consultar las compras');
+ const uid=UID,{data,error}=await conTope(sb.functions.invoke('guardar',{body:{alfa:{accion}}}),15000,'registro de compras');
+ if(UID!==uid||error||!data?.ok)throw Error('No se pudo consultar el registro de compras');
+ return data;
+}
 
 /* 18/8 — EL FALLO MÁS GRAVE DE TODA LA AUDITORÍA, y era anterior a las expansiones.
    loadFarm devolvía `false` en DOS casos que no son lo mismo: "este jugador es nuevo" y "no pude
@@ -1258,6 +1264,11 @@ async function loadFarm() {
   }
   for (let intento = 0; intento < 3; intento++) {
     try {
+      // En alfa no añade consultas al arranque. En release, restaurar ANTES de leer la granja.
+      if(GF.FASE_JUEGO==='release'){
+        const estado=await alfaCompras('restaurar');
+        if(estado.phase!=='release')throw Error('Lanzamiento todavía no activo en el servidor');
+      }
       const {data,error} = await sb.from("farms").select("data,name,updated_at").eq("user_id",uid).maybeSingle();
       if (UID !== uid) { CARGA_FALLO = true; return false; }
       if (error) { await sleepMs(1200 * (intento + 1)); continue; }

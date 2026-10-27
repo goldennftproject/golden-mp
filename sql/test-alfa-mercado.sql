@@ -1,0 +1,47 @@
+-- QA real de RLS y transiciones; revierte todas las operaciones.
+begin;
+do $$
+declare seller_id uuid; buyer_id uuid; n integer; blocked boolean; fee integer;
+begin
+ select id into strict seller_id from auth.users where email='surenfxs+guardadoqa20261027@gmail.com';
+ select id into strict buyer_id from auth.users where email='surenfxs+goldenqa20261027@gmail.com';
+ if exists(select 1 from public.market where id in(-90271001,-90271002,-90271003)) then raise exception 'Colisión de prueba'; end if;
+ update public.farms set data=jsonb_set(jsonb_set(data,'{produccion,vipHasta}','0'),'{infraestructura}','{"tienda":false,"mercado":false}') where user_id=seller_id;
+ delete from golden_internal.p2p_quota where user_id=seller_id and day=(statement_timestamp() at time zone 'UTC')::date;
+ perform set_config('request.jwt.claim.sub',seller_id::text,true);
+ perform set_config('request.jwt.claims',jsonb_build_object('sub',seller_id,'role','authenticated')::text,true);
+ set local role authenticated;
+ insert into public.market(id,seller,seller_name,kind,item,name,qty,price,fee_pct) overriding system value values(-90271001,seller_id,'QA','res','madera','QA rollback',1,10,5);
+ select fee_pct into fee from public.market where id=-90271001;
+ if fee<>10 then raise exception 'Comisión Free manipulable'; end if;
+ blocked:=false;
+ begin update public.market set price=1 where id=-90271001; exception when others then blocked:=true; end;
+ if not blocked then raise exception 'Precio mutable'; end if;
+ delete from public.market where id=-90271001;
+ get diagnostics n=row_count;if n<>1 then raise exception 'Retiro falló'; end if;
+ delete from public.market where id=-90271001;
+ get diagnostics n=row_count;if n<>0 then raise exception 'Retiro duplicado'; end if;
+ blocked:=false;
+ begin insert into public.market(id,seller,seller_name,kind,item,name,qty,price) overriding system value values(-90271002,seller_id,'QA','res','madera','QA rollback',1,10); exception when others then blocked:=true; end;
+ if not blocked then raise exception 'Cancelar devolvió cupo'; end if;
+ reset role;
+ delete from golden_internal.p2p_quota where user_id=seller_id and day=(statement_timestamp() at time zone 'UTC')::date;
+ set local role authenticated;
+ insert into public.market(id,seller,seller_name,kind,item,name,qty,price) overriding system value values(-90271003,seller_id,'QA','res','madera','QA rollback',1,10);
+ perform set_config('request.jwt.claim.sub',buyer_id::text,true);
+ perform set_config('request.jwt.claims',jsonb_build_object('sub',buyer_id,'role','authenticated')::text,true);
+ update public.market set sold_to=buyer_id where id=-90271003 and sold_to is null;
+ get diagnostics n=row_count;if n<>1 then raise exception 'Compra RLS falló'; end if;
+ update public.market set sold_to=buyer_id where id=-90271003 and sold_to is null;
+ get diagnostics n=row_count;if n<>0 then raise exception 'Compra duplicada'; end if;
+ delete from public.market where id=-90271003;
+ get diagnostics n=row_count;if n<>0 then raise exception 'Comprador retiró venta ajena'; end if;
+ perform set_config('request.jwt.claim.sub',seller_id::text,true);
+ perform set_config('request.jwt.claims',jsonb_build_object('sub',seller_id,'role','authenticated')::text,true);
+ update public.market set paid=true where id=-90271003 and not paid and sold_to is not null;
+ get diagnostics n=row_count;if n<>1 then raise exception 'Cobro falló'; end if;
+ update public.market set paid=true where id=-90271003 and not paid and sold_to is not null;
+ get diagnostics n=row_count;if n<>0 then raise exception 'Cobro duplicado'; end if;
+ reset role;
+end $$;
+rollback;

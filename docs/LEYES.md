@@ -1,5 +1,9 @@
 # Las leyes de Golden Farm
 
+## Compras de alfa y VIP del lanzamiento — 27/10/2026
+
+Dirección autoriza preparar toda la alfa y conservar las compras permanentes tras el reinicio futuro. Comprar VIP en alfa habilita un único periodo de 30 días desde el lanzamiento, sin acumular renovaciones. Un registro privado separado de farms captura las propiedades aceptadas en la misma transacción. Se conservan God Hand, infraestructura, pasivas mejoradas, Objetos de Granja y adornos comprados con Golden; no saldos ni consumibles. La consulta pertenece a la identidad autenticada y la restauración es idempotente, previa a cargar la granja en release. Alfa sigue activa y sin fecha de lanzamiento; no se ejecuta ningún reset ni se habilita USDT. El procedimiento futuro conserva Auth, registros y filas de granja. Ver docs/ALFA-COMPRAS-Y-LANZAMIENTO.txt.
+
 ## Conflicto falso tras operaciones económicas — 27/10/2026
 
 Dirección pide encontrar y corregir el bloqueo de guardado. Se reproduce en producción: reclamar el premio diario entrega el bono pero el guardado siguiente responde 409 con una sola pestaña. La operación devolvía updated_at reconstruido como ISO terminado en Z; PostgreSQL lo devuelve con +00:00. La comparación exacta de versiones lo confundía con otra sesión. Se devuelve ahora el updated_at leído del resultado de la escritura, igual que el guardado normal, conservando CAS, recibos, autenticación, saldos y progreso. La prueba imita la representación de timestamptz de PostgreSQL y verifica guardado posterior y rechazo de una versión realmente antigua. No se normalizan ni relajan versiones desde el cliente y no se cambian F5 ni autoguardado. No se afirma que esta causa explique todos los fallos históricos de conexión o guardado.

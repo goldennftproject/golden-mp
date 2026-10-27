@@ -92,16 +92,16 @@ app.get("/version", (req, res) => { res.set("Cache-Control", "no-store"); res.js
 const sseClients = new Set();   // una entrada por ventana abierta; no representa personas únicas
 function sseBroadcast() {
   const msg = `data: ${JSON.stringify({ v: VERSION, online: sseClients.size })}\n\n`;
-  for (const r of sseClients) { try { r.write(msg); } catch (e) {} }
+  for (const r of sseClients) { try { r.write(msg); if(r.flush)r.flush(); } catch (e) {} }
 }
 app.get("/events", (req, res) => {
-  res.set({ "Content-Type": "text/event-stream", "Cache-Control": "no-store", "Connection": "keep-alive", "X-Accel-Buffering": "no" });
+  res.set({ "Content-Type": "text/event-stream", "Cache-Control": "no-store, no-transform", "Connection": "keep-alive", "X-Accel-Buffering": "no" });
   res.flushHeaders();
   res.write("retry: 3000\n\n");                              // si se corta, reintentar a los 3s
   sseClients.add(res);alfa.conexiones(sseClients.size);
   sseBroadcast();                                            // versión + conteo en vivo para TODAS las ventanas
-  const ka = setInterval(() => { try { res.write(":ka\n\n"); } catch (e) {} }, 25000);   // latido anti-timeout
-  req.on("close", () => { clearInterval(ka); sseClients.delete(res); alfa.conexiones(sseClients.size); sseBroadcast(); });
+  const ka = setInterval(() => { try { res.write(":ka\n\n"); if(res.flush)res.flush(); } catch (e) {} }, 25000);   // latido anti-timeout
+  res.on("close", () => { clearInterval(ka); sseClients.delete(res); alfa.conexiones(sseClients.size); sseBroadcast(); });
 });
 
 /* ═══════════════════════════════════════════════════════════════════════════════════════════

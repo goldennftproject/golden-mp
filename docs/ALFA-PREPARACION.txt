@@ -1,15 +1,14 @@
 GOLDEN FARM — PREPARACIÓN DE LA ALFA ABIERTA
-26 de octubre de 2026
+Actualizado el 27 de octubre de 2026
 
 ESTADO
-Preparación técnica implementada. Suite local: 289/289 pruebas aprobadas; carga local de 10/25/50 ventanas sin fallos. La verificación pública se realiza al entregar cada despliegue. No se ha anunciado ni abierto un evento. No hay reinicio de jugadores, reparto de Golden, depósitos, retiros ni premios USDT. Las nuevas maderas quedan fuera. Se conservan las dos cuentas y su progreso.
+Preparación técnica implementada. Suite local: 291 pruebas aprobadas; una requirió repetir con Python disponible en PATH. Carga local de 10/25/50 ventanas sin fallos, incluyendo clientes que aceptan gzip. Se corrigió el buffering de SSE por compresión. La verificación pública se realiza al entregar cada despliegue. No se ha anunciado ni abierto un evento. No hay reinicio de jugadores, reparto de Golden, depósitos, retiros ni premios USDT. Las nuevas maderas quedan fuera. Se conservan las cuentas y su progreso actual. Compras de alfa y procedimiento de lanzamiento: ALFA-COMPRAS-Y-LANZAMIENTO.txt.
 
 ACCESO ANTES DE INVITAR
 - El registro está habilitado en Supabase; el cliente actual requiere correo (GF.SOLO_EMAIL=1).
-- Dirección confirma que se usa el SMTP integrado. No sirve como entrada general a una alfa abierta: sólo envía a correos del equipo autorizado y tiene un límite de dos mensajes por hora, según la documentación oficial.
-- Dirección elige conservar acceso por correo y enlace, como en las pruebas actuales. No se habilita invitado, no se cambia Auth y no se contrata un proveedor. Con el SMTP integrado, la entrada general de jugadores externos sigue pendiente de resolver; no se presenta como una alfa pública ya preparada para cualquier correo.
-- Antes de cualquier convocatoria: probar, con autorización, un correo externo al equipo; confirmar llegada, enlace, redirección al juego, segundo acceso y retorno a la misma granja. Esa prueba NO se ha enviado.
-- Si se elige invitado, definir claramente pérdida de acceso al borrar datos o cambiar de navegador; conservar el acceso de las cuentas existentes. No prometer recuperación por correo sin un envío operativo.
+- Supabase usa ahora Brevo SMTP gratuito, configurado y probado con autorización. Se conserva correo y enlace; no se habilita invitado como alternativa en la interfaz.
+- Se verificó llegada a Gmail, enlace y retorno a las cuentas QA. Una primera entrega a spam fue marcada como legítima por dirección; la entrega en cada proveedor externo requiere observar la alfa. No se garantiza bandeja principal para todos.
+- Brevo Free tiene un límite de 300 correos al día; revisar también los límites efectivos de Auth. No confundir correos enviados con jugadores simultáneos. La cuota gratuita y la reputación del remitente limitan la difusión; no hay contratación autorizada.
 
 ALCANCE DE ESTA VERSIÓN
 PC primero. Granja, tutorial, cultivos, nodos, construcción, inventario, guardado, Banco interno, mejoras y mercado. Pesca, móvil y plaza se mantienen diferidos. El acceso no necesita comprar VIP. La alfa de infraestructura puede hacerse sin competición ni premios.
@@ -19,7 +18,7 @@ INSTRUMENTOS PREPARADOS
 - Métricas agregadas de Render en sus logs cada cinco minutos cuando hay tráfico o ventanas SSE: peticiones por grupo, 4xx/5xx, memoria, CPU y latencias por intervalos. Sin correo, IP, UUID, inventario ni rutas completas; memoria acotada y reinicio de contadores al reiniciar el proceso.
 - El conteo SSE se llama ventanas conectadas. No equivale a personas ni jugadores únicos y no mide actividad de juego.
 - Configuración → Copiar informe técnico: versión, conexión, estado de carga y conflicto, contadores y latencia de los últimos 50 intentos de guardado. Sólo se copia localmente cuando el jugador lo pide. No se envía automáticamente.
-- No se añaden tablas, escrituras de telemetría ni sondeos periódicos a Supabase. Se conserva el autoguardado a cinco segundos y una vez por periodo inactivo.
+- No se añaden escrituras de telemetría ni sondeos periódicos a Supabase. El registro privado de compras sólo escribe al aceptar nuevas propiedades; la consulta es manual. Se conserva el autoguardado a cinco segundos y una vez por periodo inactivo.
 - Protección adicional: el servidor exige el coste en Golden de God Hand y las pasivas cuando acepta una nueva propiedad; las compras ya existentes se conservan.
 
 PRUEBAS AUTOMÁTICAS Y LÍMITES
@@ -60,7 +59,7 @@ Al corregir: conservar una referencia del commit previo y ejecutar las regresion
 No hay monitor automático programado ni mensajes externos enviados.
 
 PENDIENTES QUE REQUIEREN DECISIÓN O PRUEBA HUMANA
-Envío a correos externos manteniendo el acceso por correo elegido; prueba real de entrada externa; fecha de convocatoria y responsables; medición de capacidad real y diversión; términos de cualquier evento. El documento EVENTO-ALPHA-REGLAS.txt sigue siendo preparación sin activar premios.
+Fecha de convocatoria y responsables; entrega de correo en otros proveedores; medición de capacidad real y diversión; términos de cualquier evento; autorización para la copia local cifrada antes del futuro reinicio. El documento EVENTO-ALPHA-REGLAS.txt sigue siendo preparación sin activar premios. El futuro reset y la activación de release no se ejecutan durante esta preparación.
 
 REFERENCIAS OFICIALES CONSULTADAS
 https://supabase.com/docs/guides/auth/auth-smtp

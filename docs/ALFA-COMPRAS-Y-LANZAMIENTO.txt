@@ -1,0 +1,33 @@
+GOLDEN FARM — COMPRAS DE ALFA Y PREPARACIÓN DEL LANZAMIENTO
+27 de octubre de 2026
+
+ESTADO ACTUAL
+La fase del servidor y del cliente sigue siendo alfa. No se ha reiniciado ninguna cuenta ni fijado fecha de lanzamiento. USDT continúa desactivado. El registro de compras es privado y sólo lo escribe el servidor junto con el guardado aceptado. Si falla el registro, la escritura se revierte; no se confirma una compra sin conservar su derecho.
+
+QUÉ SE CONSERVA
+- Comprar VIP durante la alfa da un único periodo de 30 días completos desde la fecha de lanzamiento. Haberlo utilizado o tenerlo vencido en alfa no elimina ese derecho. Renovar en alfa no acumula periodos de lanzamiento.
+- God Hand y las mejoras permanentes de infraestructura: Tiendita, granja, eficiencia de God Hand y mercado. Se conserva el nivel máximo comprado.
+- Pasivas compradas y su mejora permanente. Una pasiva mejorada conserva también la propiedad necesaria para usarla.
+- Los ejemplares de Objetos de Granja adquiridos. Su vida productiva vuelve a comenzar en el lanzamiento; no se acredita producción anterior al lanzamiento.
+- Los adornos comprados con Golden (estatua y arbolito). Se restituyen en la bolsa, contando los que ya existan; no ocupan terreno automáticamente.
+
+No se trasladan saldos, recursos, semillas, consumibles, niveles, logros, expansiones ni progreso del mapa como compras permanentes. Los cosméticos ganados como premios no se presentan como compras. El historial previo al registro sólo permite recuperar lo que seguía constando en la partida aceptada; no reconstruye compras antiguas que ya hubieran desaparecido.
+
+CONSULTA DEL JUGADOR
+Configuración → Ver mis compras conservadas consulta únicamente la cuenta autenticada. Si falla la conexión se muestra un error, no una lista vacía engañosa. No hay consulta periódica ni una nueva llamada al arrancar durante la alfa.
+
+OPERACIÓN FUTURA — NO EJECUTADA
+1. Acordar fecha UTC y ventana de mantenimiento. Detener escrituras y comprobar ausencia de operaciones pendientes. No hacer un reset mientras haya jugadores escribiendo.
+2. Obtener y verificar un respaldo del estado, el registro y la correspondencia de cuentas. La copia local cifrada está pendiente de autorización específica. Una copia lógica de juego no sustituye una copia completa de Auth y configuración.
+3. Conservar Auth, los identificadores de usuario, golden_internal.alpha_entitlements y alpha_release. NO borrar usuarios: el registro tiene una referencia restrictiva que protege esa identidad.
+4. Reiniciar el contenido de las filas existentes de farms a la plantilla inicial vigente, conservando user_id y nombre; NO eliminar las filas. Las compras se restauran sobre esas mismas cuentas. Definir y revisar aparte la limpieza de mercado, cuotas e historial de progreso. Preparar y revisar ese script para la fecha concreta; este documento no ejecuta un reset.
+5. Fijar una única launch_at UTC y phase=release en el servidor; publicar GF.FASE_JUEGO='release' de forma coordinada. Nunca activar sólo uno de los dos lados. La fecha debe conservarse: cambiarla después desplazaría el periodo VIP.
+6. Antes de admitir jugadores, comprobar con una cuenta controlada: VIP hasta launch_at + 30 días, mejoras, objetos y adornos; segunda entrada idéntica sin duplicación, extensión de VIP ni una nueva escritura si no cambió nada.
+7. Publicar la fecha y confirmar la versión pública. El reloj del VIP empieza en el lanzamiento, no en el primer acceso individual.
+
+El cambio de fase no está expuesto al navegador. El cliente de lanzamiento solicita restauración antes de cargar la granja; el servidor devuelve una versión actualizada para evitar conflictos de guardado. El merge conserva el progreso actual si se reintenta, pero no sustituye el reinicio aprobado.
+
+PRUEBAS Y OPERACIÓN DE ALFA
+Las restauraciones, duplicaciones y permisos se prueban con transacciones que terminan en ROLLBACK; no se reinician partidas reales. Las pruebas SQL están en sql/test-alfa-compras-release.sql y sql/test-alfa-mercado.sql. No ejecutar pruebas de escritura sin su transacción envolvente.
+Durante la alfa medir cuotas, errores y latencia reales. Las pruebas locales de 50 ventanas no garantizan 50 jugadores en infraestructura gratuita. No hay contratación ni cambio de plan autorizado.
+Ante pérdida de progreso confirmado o cobro duplicado, suspender difusión e investigar con la versión y el informe técnico; no usar el reset como arreglo. Mantener el guardado disponible mientras se aísla la función afectada.
