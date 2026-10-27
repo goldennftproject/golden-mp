@@ -18,15 +18,16 @@ function estilo(previo) {
   if (previo) Object.assign(s, previo);
   return s;
 }
-function caso({ ancho, alto, hud, flot, hotbar, editbar, menuRect, previo }) {
+function caso({ ancho, alto, hud, flot, hotbar, editbar, guardar, menuRect, previo }) {
   const style = estilo(previo), menu = { style,
     getBoundingClientRect: () => menuRect || { left: 1080, right: 1270, width: 190, height: 36 } };
   const barra = hud && { getBoundingClientRect: () => hud };
   const repisa = flot && { getBoundingClientRect: () => flot };
   const atajos = hotbar && { getBoundingClientRect: () => hotbar };
   const edicion = editbar && { getBoundingClientRect: () => editbar };
+  const guardado = guardar && { getBoundingClientRect: () => guardar };
   const ctx = { window: { innerWidth: ancho, innerHeight: alto }, Math,
-    $: id => ({ gmenu: menu, hudbar: barra, "hud-flot": repisa, hotwrap: atajos, editbar: edicion })[id] || null };
+    $: id => ({ gmenu: menu, hudbar: barra, "hud-flot": repisa, hotwrap: atajos, editbar: edicion, "guardado-manual": guardado })[id] || null };
   vm.createContext(ctx);
   vm.runInContext(UI.slice(ini, fin), ctx);
   vm.runInContext("placeMenuPc()", ctx);
@@ -72,6 +73,10 @@ console.log("\nLOS CONTROLES INFERIORES QUEDAN FUERA DEL MENÚ EN PC COMPACTO\n"
     edicion["--gmenu-max-height"] === "386px", edicion["--gmenu-max-height"]);
 }
 
+{
+  const guardado = caso({ancho:1280,alto:720,hud:{width:1280,height:42,bottom:42},menuRect:{left:1080,right:1270,width:190,height:36},guardar:{left:1210,right:1260,top:650,bottom:700,width:50,height:50}});
+  ok("el menú deja ocho píxeles libres sobre el disquete",guardado["--gmenu-max-height"]==="590px",guardado["--gmenu-max-height"]);
+}
 console.log("\nEL CÁLCULO SE REEJECUTA CUANDO CAMBIA EL HUD\n");
 {
   ok("CSS aplica las variables sólo en escritorio",

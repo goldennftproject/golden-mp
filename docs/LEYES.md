@@ -1,5 +1,9 @@
 # Las leyes de Golden Farm
 
+## Revisión visual general de PC — 27/10/2026
+
+Dirección pide revisar el conjunto de la interfaz. Las ventanas respetan el alto disponible, mantienen el cierre visible al desplazar y separan visualmente el fondo. El Cobertizo presenta primero las piezas, con nombre visible, y la capacidad en su propia columna. Los logros conservan reglas y registro en un desplegable; el catálogo de productores usa tarjetas legibles con precio, producción y acción. Se retira de PC el título obsoleto de herramientas en Equipo y el menú reserva el espacio del disquete. En combate, el muelle mide también los controles inferiores: el equipo se desplaza por dentro mientras los modos y el botón Equipo permanecen visibles. Se preservan identificadores, controladores, costes, progreso, arte y guardado. Ver AUDITORIA-VISUAL-PC-20261027.txt.
+
 ## Mostrar objetivos concretos y lectura del HUD — 27/10/2026
 
 Dirección pide señalar lo que se toca, no una caja aproximada. Mostrar marca las celdas secas para plantar, las listas para cosechar y la silueta del edificio o recurso correspondiente. Se excluyen bloqueos, pausas, esperas y minerales distintos; la señal se retira al cambiar de objetivo o usar la parcela, y vence a los ocho segundos. Las copias visuales no modifican el sprite real ni reciben clics. Se conserva la cámara cancelable y el foco sobre controles de menú. El HUD distingue Energía con barra propia, Vida y Granja · Nv.; el máximo de nivel deja de parecer un recurso disponible. No cambian costes, acciones, progresión ni guardado.

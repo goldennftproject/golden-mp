@@ -1,0 +1,27 @@
+GOLDEN FARM — REVISIÓN VISUAL DE PC
+27/10/2026
+
+CAMBIOS APLICADOS
+- Ventanas limitadas al alto disponible, también en escritorios de altura intermedia.
+- Cierre de 32 px, contrastado y visible durante el desplazamiento.
+- Fondo atenuado al abrir ventanas, sin bloquear controles ni alterar las acciones.
+- Entradas numéricas y desplegables con apariencia coherente.
+- Cobertizo: objetos por colocar visibles al principio, con nombre bajo el icono; capacidad y gestión separadas en otra columna en PC ancho.
+- Logros: metas y premios antes que las explicaciones extensas; reglas y registro siguen disponibles en un desplegable.
+- Objetos de Granja: tarjetas crema con nombre, producción, coste, acción y motivo de bloqueo legibles.
+- Equipo: se oculta el antiguo título de Herramientas que precedía a una lista de armaduras.
+- Combate: la columna de equipo reserva el espacio inferior del disquete y la hotbar. Se desplazan las casillas de armadura; Equipo, Perseguir y Parado permanecen visibles.
+- Menú: reserva el espacio real del disquete de guardado para no taparlo.
+
+VALIDACIÓN
+15 paneles a 1024x600, 1280x720 y 1920x1080: Herrería, Cocina, Horno, Establo, Curtiduría, Granja, Mercado, Objetos, Banco, VIP, Logros, Equipo, Cobertizo, Configuración y Mapa.
+En los 45 casos, las cajas y los cierres quedaron dentro del viewport y no hubo desbordamiento horizontal del contenido de la tarjeta.
+Prueba visual de preparación del viaje y entrada al Pantano con una partida ficticia equipada. En un viewport de 1360x536, el muelle termina en y=475 y el disquete comienza en y=483; los tres botones quedan dentro del muelle.
+Comprobación visual adicional del Inventario, Habilidades, Progreso, compra/venta de cultivos, navegación principal, señal del tutorial y aspecto de la granja inicial.
+37 pruebas relacionadas con menús, HUD, banco, objetos, logros, equipo, cocina, orientación y combate: correctas.
+Auditor de botones: sin referencias usadas a ciegas a controles inexistentes; dos referencias antiguas protegidas no son fallos activos.
+Pruebas de ocupación frente a sprites y carga del atlas: correctas.
+
+ALCANCE
+Pruebas en cliente real con datos ficticios y persistencia local aislada; sin cambios en cuentas ni bases de datos de jugadores. Estas comprobaciones geométricas y visuales no equivalen a probar todas las combinaciones de inventario, idiomas, zoom o partidas de jugadores.
+Se mantienen dibujos, precios, producción, costes de energía, mecánicas y guardado. No se activa pesca ni USDT. Móvil y plaza quedan fuera de esta pasada.

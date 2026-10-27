@@ -86,6 +86,15 @@ console.log("\nEL CÁLCULO MIDE LA CAJA REAL, NO UNA ALTURA INVENTADA\n");
   }
 }
 
+{
+  const antes=ctx.document.getElementById,ancho=ctx.innerWidth,alto=ctx.innerHeight,scene=ctx.GF.scene,values={};
+  const style={setProperty(k,v){values[k]=v},removeProperty(k){delete values[k]}};
+  ctx.document.getElementById=id=>id==='combate'?{style,getBoundingClientRect:()=>({left:1146,right:1272,width:126})}:id==='morral'?{style:{},getBoundingClientRect:()=>({height:216,bottom:312})}:id==='guardado-manual'?{getBoundingClientRect:()=>({left:1210,right:1260,top:650,bottom:700,width:50,height:50})}:null;
+  ctx.GF.scene='forest';ctx.innerWidth=1280;ctx.innerHeight=720;
+  try{vm.runInContext('ubicarMuelleCombatePC()',ctx);ok('el muelle termina ocho píxeles antes del disquete',values['--muelle-zona-reserva']==='78px',values['--muelle-zona-reserva']);}
+  finally{ctx.document.getElementById=antes;ctx.innerWidth=ancho;ctx.innerHeight=alto;ctx.GF.scene=scene;}
+}
+
 console.log("\nEL ENCABEZADO CUENTA LOS HUECOS QUE REALMENTE QUEDAN\n");
 {
   const getAntes = ctx.document.getElementById, contAntes = ctx.G.cont,

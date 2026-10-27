@@ -132,7 +132,7 @@
      es baja, el propio muelle se desplaza por dentro en vez de tapar el contenedor. */
   @media(min-width:641px){
     #morral{top:var(--morral-zona-top,96px)}
-    #combate{top:var(--muelle-zona-top,236px);max-height:calc(100vh - var(--muelle-zona-top,236px) - 8px);overflow-y:auto;overscroll-behavior:contain}
+    #combate{top:var(--muelle-zona-top,236px);max-height:calc(100vh - var(--muelle-zona-top,236px) - var(--muelle-zona-reserva,8px));overflow-y:auto;overscroll-behavior:contain}
   }
   .cb-eq{display:grid;grid-template-columns:repeat(3,1fr);gap:4px;cursor:pointer}
   /* 15/9: el muñeco completo — tres columnas que no tienen la misma cantidad de huecos (el set
@@ -1447,6 +1447,46 @@
      «Cargando…») quedaba en tinta oscura sobre esa madera; en PC recibe la misma placa crema
      que una fila para que el estado vacío se lea como contenido, no como una mancha de fondo. */
   @media(min-width:641px){.forge-list > .fds{background:#f2e5c4;border:2px solid #d9c290;border-radius:10px;padding:8px 10px;color:#3d3424;text-shadow:none;font-size:13px;line-height:1.4}}
+
+  .cob-nombre{display:none}
+  /* Auditoría visual PC: marcos completos, controles reconocibles y acciones primero. */
+  @media(min-width:641px){
+    body:has(.ov.show)::after{content:"";position:fixed;inset:0;background:rgba(14,23,10,.32);z-index:8;pointer-events:none}
+    .ov>.card{max-height:calc(100dvh - 32px);overflow-y:auto;overscroll-behavior:contain;scrollbar-gutter:stable}
+    .ov>.card>h3{padding-right:30px;min-height:30px;line-height:1.4;margin-bottom:10px}
+    .ov>.card>.close{position:sticky;top:0;float:right;z-index:4;width:32px;height:32px;min-width:32px;min-height:32px;padding:0;margin:-2px -2px 0 6px;line-height:26px;background:#633b22;color:#fff5d7;border:2px solid #d9ad68;border-radius:6px;text-shadow:0 1px #241505}
+    #ov-banco>.card{overflow:hidden}#ov-banco>.card>.close{position:absolute;top:7px;right:7px;margin:0}
+    .ov>.card>.close:hover{background:#86512b;filter:brightness(1.12)}
+    .ov .card input[type=number]{background:#fff8e6;color:#332617;border:1px solid #ba9d6a;border-radius:6px;font-size:14px;font-variant-numeric:tabular-nums;min-height:34px}
+    .ov .card input[type=number]:focus-visible{outline:2px solid #805b26;outline-offset:2px}
+    .ov .card input[type=number]:disabled{background:#e8ddc4;color:#706148}
+    .card .forge-list,.card .slots{scrollbar-gutter:stable;scrollbar-width:thin;scrollbar-color:#bc975e #684329}
+    .card .finfo,.card .minfo{line-height:1.4}
+    .ayuda-menu>summary{padding:4px 0;font-size:13px;line-height:1.35}
+    .ayuda-menu[open]{border-color:#d5ad70;background:rgba(56,31,12,.23)}
+    #ov-equip [data-equipo-herramientas]{display:none}
+    #combate{display:flex;flex-direction:column;overflow:hidden}
+    #combate .cb-doll{flex:1 1 auto;min-height:0;overflow-y:auto;scrollbar-width:thin;padding-right:2px}
+    #combate .cb-dur,#combate .cb-eq-open,#combate .cb-modos{flex-shrink:0}
+    .cob-contenido{display:grid;grid-template-columns:minmax(180px,.8fr) minmax(0,1.2fr);gap:18px;align-items:start}
+    .cob-contenido section{min-width:0}.cob-piezas h4{margin:6px 0 10px}
+    #cob-slots{grid-template-columns:repeat(3,minmax(0,1fr));max-height:250px}
+    #cob-slots .slot{aspect-ratio:auto;min-height:106px;flex-direction:column;gap:5px;padding:7px 4px}
+    #cob-slots .slot img{width:48px;height:48px}
+    #cob-slots .cob-nombre{display:block;font-size:12px;font-weight:700;color:#443320;text-shadow:none;text-align:center;overflow-wrap:anywhere}
+    #cob-pie{margin-top:10px}.cob-gestion{border-left:1px solid #d5ad7070;padding-left:16px}
+    #prod-granja .resumen-menu{margin-top:0}#prod-granja h3{font-size:15px;margin:10px 0}
+    #prod-granja .row{background:#f1e5c4;color:#49301f;padding:9px;border-radius:7px;font-size:13px;line-height:1.4}
+    #prod-granja .row>span{text-shadow:none;color:#49301f}
+    #prod-granja .resumen-menu>span{padding:8px 3px;font-size:11px}
+    #objetos-productores .objeto-card{background:#f2e5c4;border:2px solid #d9c290!important;border-radius:9px;padding:12px!important;color:#332617;text-shadow:none;gap:10px;margin-top:9px;align-items:center}
+    .objeto-card>.objeto-datos{flex:1 1 220px}.objeto-card .objeto-nombre{font-size:15px;font-weight:800;margin-bottom:5px}
+    .objeto-card .objeto-nombre span{display:inline-flex;align-items:center;justify-content:center;width:30px;height:30px;margin-right:6px;background:#e5d4ac;border:1px solid #c4a66f;border-radius:7px;font-size:20px;vertical-align:middle}
+    .objeto-card>.objeto-acciones{flex:0 1 220px;text-align:right}.objeto-card small{font-size:13px;line-height:1.5;color:#51422e}
+    .objeto-card .motivo-accion{color:#765329;text-shadow:none;text-align:right;margin-left:auto}
+    #logros-list>.ayuda-menu{margin:8px 0 12px}#logros-list .forge-row .durbar{width:100%;max-width:none;margin:7px 0}
+  }
+  @media(min-width:641px) and (max-width:1000px){.cob-contenido{grid-template-columns:1fr}.cob-gestion{border-left:0;border-top:1px solid #d5ad7070;padding:12px 0 0}#cob-slots{grid-template-columns:repeat(5,minmax(0,1fr));max-height:180px}}
 </style>
 </head>
 <body>
@@ -1468,7 +1508,7 @@
            único nivel del juego sin barra a la vista: la ventana de la Granja la tiene desde
            siempre, pero había que saber que existía para ir a buscarla. Clic: abre esa ventana,
            que es donde viven las tareas. -->
-      <div class="pill cpill" id="lvlpill" role="button" tabindex="0" aria-label="Abrir Granja y tareas" aria-controls="ov-barn" style="cursor:pointer"><span class="k">Granja · Nv.</span><b id="s-level">1</b><span class="k" id="s-level-max" style="display:none">/25</span><span class="cbarw"><span class="cfill lvlf" id="lvl-fill"></span></span><span class="k" id="lvl-txt"></span></div>
+      <div class="pill cpill" id="lvlpill" role="button" tabindex="0" aria-label="Abrir Granja y tareas" aria-controls="ov-barn" style="cursor:pointer"><span class="k">Granja · Nv.</span><b id="s-level">1</b><span class="k" id="s-level-max" hidden>/25</span><span class="cbarw"><span class="cfill lvlf" id="lvl-fill"></span></span><span class="k" id="lvl-txt"></span></div>
       <div class="pill" data-mvp-hud><span class="k">Prestigio</span><b id="s-prestige">0</b></div>
       <button class="pill divisa-hud" data-panel="ov-banco" title="Plata: semillas, fabricación y obras. Clic para ver el Banco." aria-label="Plata: saldo y usos en el Banco"><img class="ric" src="assets/farm/coin_plata.png?a=4" alt=""><span class="k">Plata</span><b id="s-plata">0</b></button>
       <button class="pill divisa-hud" data-panel="ov-banco" title="Golden: VIP, Objetos de Granja y mejoras. Clic para ver el Banco." aria-label="Golden: saldo y usos en el Banco"><img class="ric" src="assets/farm/coin_esencia.png?a=4" alt=""><span class="k">Golden</span><b id="s-golden">0</b></button>
@@ -1516,7 +1556,7 @@
 
   <!-- overlays -->
   <div class="ov" id="ov-barn"><div class="card" style="width:min(560px,94%)">
-    <button class="close" data-close="ov-barn">×</button>
+    <button class="close" data-close="ov-barn" aria-label="Cerrar ventana">×</button>
     <h3>Granja</h3>
     <div class="sub">Del nivel 1 al 10 subís solo cosechando. Del 11 al 25 hace falta la XP y cumplir las tareas del nivel.</div>
     <div class="forge-list" id="barn-body" style="max-height:60vh"></div>
@@ -1524,7 +1564,7 @@
 
   <!-- Cofre depósito: 10 espacios de guardado (detalles 29/7) -->
   <div class="ov" id="ov-cofre"><div class="card" style="width:min(500px,94%)">
-    <button class="close" data-close="ov-cofre">×</button>
+    <button class="close" data-close="ov-cofre" aria-label="Cerrar ventana">×</button>
     <h3>Cofre depósito</h3>
     <div class="sub" id="cofre-info"></div>
     <div class="shophead">En el cofre — clic para sacar</div>
@@ -1539,7 +1579,7 @@
        Izquierda: lo que está al fuego, las ollas y el recetario en grilla de íconos.
        Derecha: el plato elegido, con sus números en columna y el botón de la acción. -->
   <div class="ov" id="ov-cocina"><div class="card" style="width:min(620px,96%)">
-    <button class="close" data-close="ov-cocina">×</button>
+    <button class="close" data-close="ov-cocina" aria-label="Cerrar ventana">×</button>
     <h3>🍳 Cocina <span class="ck-nivel" id="ck-nivel"></span></h3>
     <div class="ck-wrap">
       <div class="ck-izq">
@@ -1553,7 +1593,7 @@
   </div></div>
 
   <div class="ov" id="ov-market"><div class="card" style="width:min(520px,94%)">
-    <button class="close" data-close="ov-market">×</button>
+    <button class="close" data-close="ov-market" aria-label="Cerrar ventana">×</button>
     <h3>Mercado</h3>
     <div class="shoptabs">
       <button class="shoptab active" data-shop="buy">Comprar</button>
@@ -1583,7 +1623,7 @@
   </div></div>
 
   <div class="ov" id="ov-baul"><div class="card" style="width:min(340px,90%);text-align:center;min-height:300px">
-    <button class="close" data-close="ov-baul">×</button>
+    <button class="close" data-close="ov-baul" aria-label="Cerrar ventana">×</button>
     <h3 style="cursor:default">🧰 Baúl</h3>
     <div class="sub" id="baul-sub" style="min-height:15px"></div>
     <div id="baul-items"></div>
@@ -1593,7 +1633,7 @@
 
   <!-- TABLÓN DE PEDIDOS (16/8): los encargos diarios del pueblo + canje de vales -->
   <div class="ov" id="ov-pedidos"><div class="card" style="width:min(400px,92%);text-align:center;min-height:330px;position:relative">
-    <button class="close" data-close="ov-pedidos">×</button>
+    <button class="close" data-close="ov-pedidos" aria-label="Cerrar ventana">×</button>
     <h3 style="cursor:default">📌 Tablón del pueblo</h3>
     <span id="pd-vales"></span>
     <div class="sub" id="pd-sub"></div>
@@ -1601,7 +1641,7 @@
   </div></div>
 
   <div class="ov" id="ov-paquete"><div class="card" style="width:min(340px,90%);text-align:center;min-height:330px">
-    <button class="close" data-close="ov-paquete">×</button>
+    <button class="close" data-close="ov-paquete" aria-label="Cerrar ventana">×</button>
     <h3 style="cursor:default">📦 Tu paquete del día</h3>
     <div class="sub" id="paq-dia">Día 1 de 7</div>
     <img id="paq-img" src="assets/farm/paquete_dia.png" alt="" style="height:118px;width:auto;image-rendering:pixelated;margin:6px auto 2px;display:block">
@@ -1617,7 +1657,7 @@
   </div></div>
 
   <div class="ov" id="ov-buzon"><div class="card" style="width:min(400px,92%);text-align:center;min-height:330px">
-    <button class="close" data-close="ov-buzon">×</button>
+    <button class="close" data-close="ov-buzon" aria-label="Cerrar ventana">×</button>
     <h3 style="cursor:default">📬 Buzón</h3>
     <div class="sub" id="bz-estado" style="min-height:15px"></div>
     <img id="bz-img" src="assets/farm/buzon.png" alt="" style="height:96px;width:auto;image-rendering:pixelated;margin:0 auto;display:block">
@@ -1627,7 +1667,7 @@
   </div></div>
 
   <div class="ov" id="ov-forge"><div class="card" style="width:min(580px,94%)">
-    <button class="close" data-close="ov-forge">×</button>
+    <button class="close" data-close="ov-forge" aria-label="Cerrar ventana">×</button>
     <h3>Herrería</h3>
     <div class="shoptabs">
       <button class="shoptab forgetab active" data-forge="craft">Craftear</button>
@@ -1649,7 +1689,7 @@
   </div></div>
 
   <div class="ov" id="ov-inv"><div class="card" style="width:min(432px,94%)">
-    <button class="close" data-close="ov-inv">×</button>
+    <button class="close" data-close="ov-inv" aria-label="Cerrar ventana">×</button>
     <h3>Inventario</h3>
     <div class="sub" id="inv-cap">Bolsa: 0/0 · recursos y semillas apilan hasta 99</div>
     <div class="slots" id="inv-slots"></div>
@@ -1662,13 +1702,16 @@
        adornos, cofres y planos— y nada más. La bolsa queda para lo que se gasta: recursos,
        semillas, comida y herramientas. -->
   <div class="ov" id="ov-cobertizo"><div class="card" style="width:min(432px,94%)">
-    <button class="close" data-close="ov-cobertizo">×</button>
+    <button class="close" data-close="ov-cobertizo" aria-label="Cerrar ventana">×</button>
     <h3>🏚 Cobertizo</h3>
     <div class="sub" id="cob-sub">Lo que todavía no colocaste en la granja. Elegí una pieza para decidir dónde va.</div>
-    <div id="prod-granja"></div>
-    <details class="ayuda-menu"><summary>⚡ Costes de energía</summary><p class="sub">50 Free / 100 VIP · recarga completa en 4 h.</p><p class="sub">1 ⚡: plantar, cosechar, cocinar y compostar.<br>2 ⚡: talar, picar y recoger productos animales.<br>Sin energía: comprar, fabricar, vender, ordenar y construir.</p><p class="sub">La estamina de combate es independiente. Pesca pausada.</p></details>
+    <div class="cob-contenido"><section class="cob-piezas">
     <h4>📦 Objetos por colocar</h4><div class="slots" id="cob-slots"></div>
     <div class="sub" id="cob-pie"></div>
+    </section><section class="cob-gestion">
+    <div id="prod-granja"></div>
+    <details class="ayuda-menu"><summary>⚡ Costes de energía</summary><p class="sub">50 Free / 100 VIP · recarga completa en 4 h.</p><p class="sub">1 ⚡: plantar, cosechar, cocinar y compostar.<br>2 ⚡: talar, picar y recoger productos animales.<br>Sin energía: comprar, fabricar, vender, ordenar y construir.</p><p class="sub">La estamina de combate es independiente. Pesca pausada.</p></details>
+    </section></div>
   </div></div>
 
   <div class="ov" id="ov-vip"><div class="card" style="width:min(640px,94vw);max-height:calc(100dvh - 32px);overflow-y:auto">
@@ -1677,19 +1720,19 @@
     <div id="vip-info" aria-live="polite"></div>
   </div></div>
   <div class="ov" id="ov-visitas"><div class="card" style="width:min(640px,94vw);max-height:calc(100dvh - 32px);overflow-y:auto">
-    <button class="close" data-close="ov-visitas">×</button>
+    <button class="close" data-close="ov-visitas" aria-label="Cerrar ventana">×</button>
     <h3>🌱 Visitas VIP</h3>
     <p class="sub">Vista de lectura: nunca modifica la granja del dueño. Recogé una semilla de papa por granja, hasta tres por día UTC; no se descuentan del dueño. VIP activo requerido.</p>
     <div id="visitas-lista" aria-live="polite"></div>
     <div id="visitas-vista" aria-live="polite"></div>
   </div></div>
   <div class="ov" id="ov-reliquias"><div class="card" style="width:min(680px,94vw);max-height:calc(100dvh - 32px);overflow-y:auto">
-    <button class="close" data-close="ov-reliquias" style="position:sticky;top:0;float:right;z-index:2">×</button>
+    <button class="close" data-close="ov-reliquias" style="position:sticky;top:0;float:right;z-index:2" aria-label="Cerrar ventana">×</button>
     <h3>🌾 Objetos de Granja · producción de Plata</h3>
     <div id="objetos-productores"></div>
   </div></div>
   <div class="ov" id="ov-banco"><div class="card" style="width:min(580px,94vw);max-height:calc(100dvh - 32px);overflow:hidden">
-    <button class="close" data-close="ov-banco">×</button>
+    <button class="close" data-close="ov-banco" aria-label="Cerrar ventana">×</button>
     <h3>🏦 Banco · cambio interno</h3>
     <div class="banco-cuerpo">
     <div class="divisas-usos">
@@ -1708,14 +1751,14 @@
     <div class="row banco-acciones"><button id="banco-canjear" class="green" disabled>Canjear</button><button id="banco-actualizar" class="ghost">Actualizar tasa</button></div>
   </div></div>
   <div class="ov" id="ov-skills"><div class="card" style="width:min(500px,94%)">
-    <button class="close" data-close="ov-skills">×</button>
+    <button class="close" data-close="ov-skills" aria-label="Cerrar ventana">×</button>
     <h3>📊 Habilidades</h3>
     <div class="avgpill" id="sk-avg">Nivel medio: <b>1</b></div>
     <div class="skgrid" id="sk-grid"></div>
   </div></div>
 
   <div class="ov" id="ov-equip"><div class="card" style="width:min(520px,94%)">
-    <button class="close" data-close="ov-equip">×</button>
+    <button class="close" data-close="ov-equip" aria-label="Cerrar ventana">×</button>
     <h3>Equipo</h3>
     <div class="sub">Ranuras de armadura y armas.</div>
     <div class="sub" id="eq-def">Defensa total: 0</div>
@@ -1742,12 +1785,12 @@
         <div class="eqslot ghost" id="eq-municion" role="button" tabindex="0" aria-label="Equipar munición" aria-pressed="false" title="Munición"></div>
       </div>
     </div>
-    <h4 class="eqh">Herramientas</h4>
+    <h4 class="eqh" data-equipo-herramientas>Herramientas</h4>
     <div class="eqtoolrow" id="eq-grid"></div>
   </div></div>
 
   <div class="ov" id="ov-zonares"><div class="card" style="width:min(460px,94%)">
-    <button class="close" data-close="ov-zonares">×</button>
+    <button class="close" data-close="ov-zonares" aria-label="Cerrar ventana">×</button>
     <h3 id="zr-tit">De vuelta en la granja</h3>
     <div class="sub" id="zr-sub"></div>
     <div class="info" id="zr-body"></div>
@@ -1763,7 +1806,7 @@
   </div></div>
 
   <div class="ov" id="ov-lb"><div class="card" style="width:min(500px,94%)">
-    <button class="close" data-close="ov-lb">×</button>
+    <button class="close" data-close="ov-lb" aria-label="Cerrar ventana">×</button>
     <h3>Ranking</h3>
     <div class="lbtabs">
       <button class="lbtab active" data-lb="plata"><img class="ric" src="assets/farm/coin_plata.png?a=4"> Plata</button>
@@ -1775,7 +1818,7 @@
   </div></div>
 
   <div class="ov" id="ov-config"><div class="card" style="width:min(480px,94%)">
-    <button class="close" data-close="ov-config">×</button>
+    <button class="close" data-close="ov-config" aria-label="Cerrar ventana">×</button>
     <h3>Configuración</h3>
     <div class="cfgsec">
       <h4>Alfa de pruebas</h4>
@@ -1828,21 +1871,21 @@
 
   <!-- Horno de Piedra (detalles viernes 1): fundición de lingotes/barras -->
   <div class="ov" id="ov-misiones"><div class="card" style="width:min(560px,94%)">
-    <button class="close" data-close="ov-misiones">×</button>
+    <button class="close" data-close="ov-misiones" aria-label="Cerrar ventana">×</button>
     <h3>Misiones de hoy</h3>
     <div class="sub">Tres por día, una por pilar del juego. Cumplirlas da estrellas, y las estrellas suben el Pase de Batalla.</div>
     <div class="forge-list" id="mis-list" style="max-height:60vh"></div>
   </div></div>
 
   <div class="ov" id="ov-clan"><div class="card" style="width:min(560px,94%)">
-    <button class="close" data-close="ov-clan">×</button>
+    <button class="close" data-close="ov-clan" aria-label="Cerrar ventana">×</button>
     <h3>Clan</h3>
     <div class="sub">El Dragón de la Guarida no se hace solo. El clan abre un asalto y entre todos le bajan la vida — no hace falta estar conectados a la vez.</div>
     <div class="forge-list" id="clan-list" style="max-height:58vh"></div>
   </div></div>
 
   <div class="ov" id="ov-mapa"><div class="card" style="width:min(520px,94%)">
-    <button class="close" data-close="ov-mapa">×</button>
+    <button class="close" data-close="ov-mapa" aria-label="Cerrar ventana">×</button>
     <h3>Mapa</h3>
     <div class="sub">Dónde estás y a dónde podés ir.</div>
     <div class="forge-list" id="mapa-list" style="max-height:58vh"></div>
@@ -1850,7 +1893,7 @@
 
   <!-- 14/8: los objetivos como CAPÍTULOS reclamables — guía opcional estilo diario de misiones -->
   <div class="ov" id="ov-objetivos"><div class="card" style="width:min(560px,94%)">
-    <button class="close" data-close="ov-objetivos">×</button>
+    <button class="close" data-close="ov-objetivos" aria-label="Cerrar ventana">×</button>
     <h3>🎯 Objetivos</h3>
     <div class="sub">Qué estás haciendo esta semana, a dónde va todo esto, y la guía de lo básico.</div>
     <div class="forge-list" id="objetivos-list" style="max-height:58vh"></div>
@@ -1887,7 +1930,7 @@
 
   <!-- 23/8: EL ÁLBUM — la colección de primeras veces (variedad, donde los logros premian volumen) -->
   <div class="ov" id="ov-album"><div class="card" style="width:min(600px,94%)">
-    <button class="close" data-close="ov-album">×</button>
+    <button class="close" data-close="ov-album" aria-label="Cerrar ventana">×</button>
     <h3>📖 Álbum de la granja</h3>
     <div class="sub">Cada cosa que conseguís por primera vez revela su lámina. <b id="alb-prog"></b></div>
     <div class="forge-list" id="album-list" style="max-height:58vh"></div>
@@ -1904,27 +1947,27 @@
   </div>
 
   <div class="ov" id="ov-logros"><div class="card" style="width:min(560px,94%)">
-    <button class="close" data-close="ov-logros">×</button>
+    <button class="close" data-close="ov-logros" aria-label="Cerrar ventana">×</button>
     <h3>🏆 Logros</h3>
       <div class="sub">Metas acumulativas de siembra, recolección y visitas. Progreso confirmado y premios únicos en Plata.</div>
     <div class="forge-list" id="logros-list" style="max-height:58vh"></div>
   </div></div>
 
   <div class="ov" id="ov-pass"><div class="card" style="width:min(680px,94%)">
-    <button class="close" data-close="ov-pass">×</button>
+    <button class="close" data-close="ov-pass" aria-label="Cerrar ventana">×</button>
     <h3>Pase de Batalla — Temporada 1</h3>
     <div class="forge-list" id="pass-list" style="max-height:64vh"></div>
   </div></div>
 
   <div class="ov" id="ov-cos"><div class="card" style="width:min(560px,94%)">
-    <button class="close" data-close="ov-cos">×</button>
+    <button class="close" data-close="ov-cos" aria-label="Cerrar ventana">×</button>
     <h3>Cosméticos</h3>
     <div class="sub">Lo que ganaste jugando: títulos, color de nombre, marcos y el aura. Elegí qué lucir — los demás jugadores lo ven en el ranking, el chat y la plaza.</div>
     <div class="forge-list" id="cos-list" style="max-height:58vh"></div>
   </div></div>
 
   <div class="ov" id="ov-p2p"><div class="card" style="width:min(680px,94%)">
-    <button class="close" data-close="ov-p2p">×</button>
+    <button class="close" data-close="ov-p2p" aria-label="Cerrar ventana">×</button>
     <h3>Mercado de jugadores</h3>
     <div class="sub">Comprá y vendé con otros jugadores. Revisá la comisión al publicar; el cobro te espera en Mis publicaciones.</div>
     <div class="shoptabs">
@@ -1940,28 +1983,28 @@
        la izquierda la granja, a la derecha lo que te llevás. Lo de la derecha es lo único que va
        a existir allá adentro — y lo único que podés perder. -->
   <div class="ov" id="ov-viaje"><div class="card" style="width:min(720px,96%)">
-    <button class="close" data-close="ov-viaje">×</button>
+    <button class="close" data-close="ov-viaje" aria-label="Cerrar ventana">×</button>
     <h3>Preparar el viaje</h3>
     <div class="sub">Lo que metas en el contenedor es <b>todo lo que vas a tener</b> en la Zona Negra: allá no se ve ni se toca la bolsa de la granja. Y si te matan, se pierde entero.</div>
     <div id="viaje-cuerpo"></div>
   </div></div>
 
   <div class="ov" id="ov-incursion"><div class="card" style="width:min(600px,94%)">
-    <button class="close" data-close="ov-incursion">×</button>
+    <button class="close" data-close="ov-incursion" aria-label="Cerrar ventana">×</button>
     <h3>Incursión</h3>
     <div class="sub">Mandá al granjero a pelear solo: tarda tiempo real y vuelve con botín y XP. Rinde menos que pelear a mano, gasta durabilidad y estamina, y si vas flojo de poder volvés herido. Al jefe hay que ir en persona.</div>
     <div class="forge-list" id="inc-list" style="max-height:60vh"></div>
   </div></div>
 
   <div class="ov" id="ov-ofrendas"><div class="card" style="width:min(620px,94%)">
-    <button class="close" data-close="ov-ofrendas">×</button>
+    <button class="close" data-close="ov-ofrendas" aria-label="Cerrar ventana">×</button>
     <h3>Altar de Ofrendas</h3>
     <div class="sub">Entregá recursos y se queman para siempre a cambio de Puntos de Ofrenda. El pozo del airdrop es FIJO y se reparte proporcionalmente entre todos: entregar más no crea más token, solo cambia tu porción.</div>
     <div class="forge-list" id="ofr-list" style="max-height:60vh"></div>
   </div></div>
 
   <div class="ov" id="ov-curtiduria"><div class="card" style="width:min(660px,94%)">
-    <button class="close" data-close="ov-curtiduria">×</button>
+    <button class="close" data-close="ov-curtiduria" aria-label="Cerrar ventana">×</button>
     <h3>Curtiduría</h3>
     <div class="sub">La contraparte defensiva de la Herrería. Cada set son 5 piezas: podés usar sueltas (defensa parcial) y completar las 5 activa el bono del set. El material sale de los animales del Establo.</div>
     <div class="forge-list" id="curti-list" style="max-height:62vh"></div>
@@ -1969,7 +2012,7 @@
 
   <!-- GOD HAND 2.0 (fixs.docx #19, 11/8): el inventario del cropper NFT -->
   <div class="ov" id="ov-godhand"><div class="card" style="width:min(620px,94%)">
-    <button class="close" data-close="ov-godhand">×</button>
+    <button class="close" data-close="ov-godhand" aria-label="Cerrar ventana">×</button>
     <h3>✋ GOD HAND</h3>
     <div class="sub">Cargale semillas (6 espacios · 50 c/u · 300 en total) y mientras no estás hace el ciclo entero: siembra, cosecha y resiembra tus parcelas vacías. Al volver te entrega todo junto. Cobra 100 de plata la primera hora y cada hora sale 10% más — trabaja hasta 24 h por ausencia.</div>
     <div class="forge-list" id="godhand-list" style="max-height:62vh"></div>
@@ -1981,7 +2024,7 @@
   <!-- LA LONJA (27/8). Tres pestañas, y « Pedido » manda porque es la unica con reloj: lo que
        caduca va primero, lo que espera va detras. -->
   <div class="ov" id="ov-lonja"><div class="card" style="width:min(600px,94%)">
-    <button class="close" data-close="ov-lonja">×</button>
+    <button class="close" data-close="ov-lonja" aria-label="Cerrar ventana">×</button>
     <h3>La Lonja</h3>
     <div class="lonja-cab">
       <span id="lonja-escamas"></span>
@@ -2003,7 +2046,7 @@
   </div></div>
 
   <div class="ov" id="ov-boya"><div class="card" style="width:min(560px,94%)">
-    <button class="close" data-close="ov-boya">×</button>
+    <button class="close" data-close="ov-boya" aria-label="Cerrar ventana">×</button>
     <h3>Boya de trofeos</h3>
     <div class="sub" id="boya-cab"></div>
     <div class="boya-cuerpo" id="boya-cuerpo"></div>
@@ -2013,7 +2056,7 @@
        recuadro, bien especificado». El lote del mundo abre ESTE recuadro: requisitos con
        tenés/pide, los nodos que trae, y el botón que dice por qué no, cuando no. -->
   <div class="ov" id="ov-expandir"><div class="card" style="width:min(420px,94%)">
-    <button class="close" data-close="ov-expandir">×</button>
+    <button class="close" data-close="ov-expandir" aria-label="Cerrar ventana">×</button>
     <h3 id="exd-titulo">Expandir la granja</h3>
     <div class="sub" id="exd-sub"></div>
     <div class="exd-secc">Requisitos</div>
@@ -2024,7 +2067,7 @@
   </div></div>
 
   <div class="ov" id="ov-lombricario"><div class="card" style="width:min(560px,94%)">
-    <button class="close" data-close="ov-lombricario">×</button>
+    <button class="close" data-close="ov-lombricario" aria-label="Cerrar ventana">×</button>
     <h3>Lombricario</h3>
     <div class="sub">Echale restos de cultivo y en <b id="lom-horas"></b> te devuelve lombrices. Es la carnada de la laguna: cada lance pide 1 y cada nasa, 4.</div>
     <div class="lom-bocas" id="lom-bocas"></div>
@@ -2037,7 +2080,7 @@
   </div></div>
 
   <div class="ov" id="ov-establo"><div class="card" style="width:min(620px,94%)">
-    <button class="close" data-close="ov-establo">×</button>
+    <button class="close" data-close="ov-establo" aria-label="Cerrar ventana">×</button>
     <h3>Establo</h3>
     <div class="sub">Comprá el animal con Plata y dale una ración completa por ciclo para que produzca su material. Sin comida no produce. Los materiales se usan para fabricar en la Curtiduría. <b id="establo-cupo"></b></div>
     <!-- 23/8 (QoL): con hasta 20 animales, el clic por especie era un castigo -->
@@ -2046,14 +2089,14 @@
   </div></div>
 
   <div class="ov" id="ov-altar"><div class="card" style="width:min(640px,94%)">
-    <button class="close" data-close="ov-altar">×</button>
+    <button class="close" data-close="ov-altar" aria-label="Cerrar ventana">×</button>
     <h3>Altar de Runas</h3>
     <div class="sub">Mejorá tus armas de +1 a +15 (con su % de éxito a la vista) y socketeá runas de atributo. La esencia rúnica la sueltan los mobs fuertes de la Zona Negra.</div>
     <div class="forge-list" id="altar-list" style="max-height:60vh"></div>
   </div></div>
 
   <div class="ov" id="ov-horno"><div class="card" style="width:min(460px,94%)">
-    <button class="close" data-close="ov-horno">×</button>
+    <button class="close" data-close="ov-horno" aria-label="Cerrar ventana">×</button>
     <h3>Horno de Piedra</h3>
     <div class="sub">Acá se funden todos los lingotes y barras. Cada fundición tiene un enfriamiento.</div>
     <div class="forge-list" id="horno-mats"></div>

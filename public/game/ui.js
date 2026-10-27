@@ -488,11 +488,18 @@ function ubicarMuelleCombatePC() {
   if (!muelle) { reubicarAviso(); return; }
   /* 25/9: con la misma guarda que escribirCapaOv — el DOM de cartón de los tests no tiene
      removeProperty, y test-cuerpos / test-tumba-una-sola reventaban en refreshMorral. */
-  const limpiar = () => { const st = muelle.style; if (!st) return; if (typeof st.removeProperty === "function") st.removeProperty("--muelle-zona-top"); else st["--muelle-zona-top"] = ""; };   // 25/9: con guarda (DOM de cartón de los tests)
+  const limpiar = () => { const st = muelle.style; if (!st) return; if (typeof st.removeProperty === "function") st.removeProperty("--muelle-zona-top"); else st["--muelle-zona-top"] = ""; if(typeof st.removeProperty==="function")st.removeProperty("--muelle-zona-reserva");else st["--muelle-zona-reserva"]=""; };   // 25/9: con guarda (DOM de cartón de los tests)
   if (!morral || !window.GF || GF.scene !== "forest" || window.innerWidth <= 640) { limpiar(); reubicarAviso(); return; }
   const r = morral.getBoundingClientRect();
   if (!r.height) { limpiar(); reubicarAviso(); return; }
   { const st = muelle.style; if (st && typeof st.setProperty === "function") st.setProperty("--muelle-zona-top", Math.ceil(r.bottom + 8) + "px"); else if (st) st["--muelle-zona-top"] = Math.ceil(r.bottom + 8) + "px"; }
+  const mr=typeof muelle.getBoundingClientRect==='function'?muelle.getBoundingClientRect():null;
+  let reserva=8;
+  for(const id of ['guardado-manual','hotwrap','editbar']){
+    const el=$(id),b=el&&typeof el.getBoundingClientRect==='function'?el.getBoundingClientRect():null;
+    if(mr&&b&&b.width&&b.height&&b.right>mr.left&&b.left<mr.right&&b.top>r.bottom+8)reserva=Math.max(reserva,Math.ceil(window.innerHeight-b.top+8));
+  }
+  const st=muelle.style;if(st&&typeof st.setProperty==='function')st.setProperty('--muelle-zona-reserva',reserva+'px');else if(st)st['--muelle-zona-reserva']=reserva+'px';
   reubicarAviso();
 }
 /* Cambiar una pieza o el modo rehace el muelle entero. En PC, devolver el foco al control
@@ -1050,6 +1057,7 @@ function placeMenuPc() {
   };
   liberarControlInferior("hotwrap");
   liberarControlInferior("editbar");
+  liberarControlInferior("guardado-manual");
   const st = menu.style;
   if (st && typeof st.setProperty === "function") { st.setProperty("--gmenu-top", top + "px"); st.setProperty("--gmenu-max-height", alto + "px"); }
   else if (st) { st["--gmenu-top"] = top + "px"; st["--gmenu-max-height"] = alto + "px"; }
@@ -2497,7 +2505,7 @@ function refreshCobertizo() {
       const etiqueta = "Colocar " + v.label + " en la granja";
       return '<div class="slot filled k-' + d.kind + '" data-cob="' + i + '" role="button" tabindex="0" aria-label="' +
              escapeHtml(etiqueta) + '" title="' + escapeHtml(v.label + " — elegir dónde colocarlo") + '"'+(d.kind==='plano'?' data-plano="'+escapeHtml(d.key)+'"':'')+'>' +
-             itemIcon(v) + '</div>';
+             itemIcon(v) + '<span class="cob-nombre">'+escapeHtml(v.label.split(' ·')[0])+'</span></div>';
     }).join("");
     cont.querySelectorAll("[data-cob]").forEach(c => {
       const colocar = () => cobertizoClick(items[+c.dataset.cob]);
@@ -2585,8 +2593,8 @@ function refreshArtefactos() {
     const a=G.artefactos && G.artefactos.items && G.artefactos.items[id], activo=a && t<a.desde+ARTEFACTO_DIAS*86400000;
     const pendiente=artefactoPendiente(id), diaria=artefactoDiario(id).toFixed(2).replace('.',',');
     const motivoCompra=!online?'Conectá y sincronizá el guardado':!vip&&activos>=1?'Free: ya tenés un objeto activo':!vip&&pendiente>0?'Cobrá primero la producción pendiente':G.golden<d.golden?'Faltan '+fmtGolden(d.golden-G.golden)+' Golden':'';
-    h+='<div class="row" style="justify-content:space-between;flex-wrap:wrap;border-top:1px solid #ffffff22;padding:10px 0"><div>'+d.icon+' '+d.label+(id.includes(':')?' · ejemplar adicional':'')+'<br><small>'+diaria+' Plata/día · Coste: '+d.golden+' Golden</small>'+
-      (a?'<br><small>'+(activo?'Activo hasta '+new Date(a.desde+ARTEFACTO_DIAS*86400000).toLocaleDateString('es-UY'):'Vida útil terminada')+'</small>':'')+'</div><div>'+
+    h+='<div class="row objeto-card" style="justify-content:space-between;flex-wrap:wrap;border-top:1px solid #ffffff22;padding:10px 0"><div class="objeto-datos"><strong class="objeto-nombre"><span aria-hidden="true">'+d.icon+'</span>'+d.label+(id.includes(':')?' · ejemplar adicional':'')+'</strong><br><small>'+diaria+' Plata/día · Coste: '+d.golden+' Golden</small>'+
+      (a?'<br><small>'+(activo?'Activo hasta '+new Date(a.desde+ARTEFACTO_DIAS*86400000).toLocaleDateString('es-UY'):'Vida útil terminada')+'</small>':'')+'</div><div class="objeto-acciones">'+
       (a?'<span data-artefacto-pendiente="'+id+'">'+fmtPlata(pendiente)+' Plata</span> <button class="green sm" data-artefacto-cobrar="'+id+'" '+(!online||!artefactoPuedeCobrar(id)||!energiaGranjaPuede('harvest')?'disabled':'')+'>'+artefactoTextoCobro(id)+'</button> ':'')+
       (id.includes(':')?'':'<button class="ghost sm" data-artefacto-comprar="'+id+'" title="'+escapeHtml(motivoCompra||'Comprar '+d.label)+'" '+(motivoCompra?'disabled':'')+'>'+(activo&&vip?'Otro ejemplar · '+d.golden+' Golden':activo?'Ya lo tenés':'Comprar · '+d.golden+' Golden')+'</button>'+(motivoCompra?'<small class="motivo-accion">'+escapeHtml(motivoCompra)+'</small>':''))+'</div></div>';
   }
@@ -4136,7 +4144,7 @@ function refreshLogros() {
   const filas = logroLista();
   const pend = logroPendientes();
   let h = '<div class="info">' + (pend ? 'Tenés <b>' + pend + '</b> premio' + (pend === 1 ? '' : 's') + ' para cobrar.' :
-    'Sin premios pendientes: seguí avanzando hacia las metas.') + '</div><p class="sub">25 metas acumulativas · 16.400 Plata en total · cada premio se cobra una sola vez en el servidor. Plantar no es cosechar; madera y piedra cuentan unidades recolectadas. Visitas VIP: una por granja y día UTC, independientemente del cupo de semillas.</p><p class="sub">Progreso confirmado al guardar. Se conservan las siembras históricas registradas; la recolección por unidades y las visitas cuentan desde esta actualización. Cobros del sistema anterior conservados: '+Object.values(G.logros||{}).filter(Boolean).length+'.</p>';
+    'Sin premios pendientes: seguí avanzando hacia las metas.') + '</div><details class="ayuda-menu"><summary>Reglas y registro de los logros</summary><p class="sub">25 metas acumulativas · 16.400 Plata en total · cada premio se cobra una sola vez en el servidor. Plantar no es cosechar; madera y piedra cuentan unidades recolectadas. Visitas VIP: una por granja y día UTC, independientemente del cupo de semillas.</p><p class="sub">Progreso confirmado al guardar. Se conservan las siembras históricas registradas; la recolección por unidades y las visitas cuentan desde esta actualización. Cobros del sistema anterior conservados: '+Object.values(G.logros||{}).filter(Boolean).length+'.</p></details>';
   filas.forEach(f => {
     // el tier que se muestra: el primero sin cobrar (o el último, si está todo cobrado)
     const t = f.tiers.find(x => !x.cobrado) || f.tiers[f.tiers.length - 1];
