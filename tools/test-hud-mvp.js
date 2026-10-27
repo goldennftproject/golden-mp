@@ -21,7 +21,8 @@ const CONF = fs.readFileSync(path.join(RAIZ, "public/game/config.js"), "utf8");
 
 let fallos = 0;
 const ok = (n, c, d) => { if (!c) fallos++; console.log((c ? "  ok   " : "  FALLA") + "  " + n + (d != null ? "   " + d : "")); };
-const pill = (id) => (HTML.match(new RegExp('<div class="pill[^>]*>(?:(?!</div>).)*id="' + id + '"', "s")) || [])[0] || "";
+const DOC = new (require('jsdom').JSDOM)(HTML).window.document;
+const pill = (id) => DOC.getElementById(id)?.closest('.pill')?.outerHTML || "";
 
 console.log("\n1 · LAS TRES QUE SE VAN ESTÁN MARCADAS, NO BORRADAS\n");
 {

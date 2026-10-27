@@ -584,6 +584,16 @@
  .compra-total{font-weight:800;color:#392510}.comparativa-vip th{background:#64411f;color:#ffebc0;padding:8px}.comparativa-vip td:nth-child(3){background:rgba(234,193,89,.15);font-weight:700}
  .guia-destino{outline:3px solid #ffe178!important;outline-offset:2px;box-shadow:0 0 0 5px rgba(107,63,20,.7)!important}
   .flujo-menu{display:flex;align-items:center;justify-content:center;gap:16px;padding:10px;margin-bottom:8px;background:#f1e5c4;color:#49301f;border-radius:6px;font-weight:700}
+  .divisa-hud{cursor:pointer;font:inherit;color:inherit;gap:5px}.divisa-hud .k{font-size:11px}
+  .divisa-hud:focus-visible{outline:2px solid #ffe29b;outline-offset:2px}
+  .divisas-usos{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin:10px 0}
+  .divisa-uso{background:#f1e5c4;color:#49301f;border:1px solid #b58c51;border-radius:7px;padding:10px}
+  .divisa-uso strong{display:flex;align-items:center;gap:6px;font-size:16px}.divisa-uso img,.cambio-numero img{width:22px;height:22px;object-fit:contain;image-rendering:pixelated}
+  .divisa-uso small{display:block;margin:7px 0;line-height:1.45}.divisa-uso .row{gap:5px;flex-wrap:wrap}
+  .cambio-tasa{display:flex;align-items:center;justify-content:center;gap:12px;padding:14px 8px;background:#f1e5c4;color:#49301f;border:1px solid #b58c51;border-radius:7px;margin:10px 0}
+  .cambio-numero{display:flex;align-items:center;justify-content:center;gap:6px;flex-wrap:wrap}.cambio-numero b{font-size:22px}.cambio-numero small{flex-basis:100%;text-align:center}
+  .cambio-previa{padding:9px;background:rgba(241,229,196,.9);color:#49301f;border-radius:6px;line-height:1.5}
+  .banco-elegir{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-top:10px}.banco-elegir>div{display:flex;align-items:center;gap:7px}.banco-elegir input{width:110px;padding:8px;font:inherit;text-align:right}
   .gmi:hover{filter:brightness(1.15)}
   .gmi span.ic{font-size:15px;width:20px;text-align:center}
   .gmi b.key{margin-left:auto;font-size:11px;background:#161f12;border:1px solid #4a5a3a;color:#cbbf9f;border-radius:6px;padding:1px 6px}
@@ -1454,8 +1464,8 @@
            que es donde viven las tareas. -->
       <div class="pill cpill" id="lvlpill" role="button" tabindex="0" aria-label="Abrir Granja y tareas" aria-controls="ov-barn" style="cursor:pointer"><span class="k">Granja</span><b id="s-level">1</b><span class="k" id="s-level-max">/25</span><span class="cbarw"><span class="cfill lvlf" id="lvl-fill"></span></span><span class="k" id="lvl-txt"></span></div>
       <div class="pill" data-mvp-hud><span class="k">Prestigio</span><b id="s-prestige">0</b></div>
-      <div class="pill" title="Plata — la moneda del juego"><img class="ric" src="assets/farm/coin_plata.png?a=4" onerror="this.outerHTML='<span class=&quot;coin silver&quot;></span>'"><b id="s-plata">0</b></div>
-      <div class="pill" title="$Golden — la moneda premium: mejoras especiales, kit de emergencia y adornos"><img class="ric" src="assets/farm/coin_esencia.png?a=4" onerror="this.outerHTML='✨'"><b id="s-golden">0</b></div>
+      <button class="pill divisa-hud" data-panel="ov-banco" title="Plata: semillas, fabricación y obras. Clic para ver el Banco." aria-label="Plata: saldo y usos en el Banco"><img class="ric" src="assets/farm/coin_plata.png?a=4" alt=""><span class="k">Plata</span><b id="s-plata">0</b></button>
+      <button class="pill divisa-hud" data-panel="ov-banco" title="Golden: VIP, Objetos de Granja y mejoras. Clic para ver el Banco." aria-label="Golden: saldo y usos en el Banco"><img class="ric" src="assets/farm/coin_esencia.png?a=4" alt=""><span class="k">Golden</span><b id="s-golden">0</b></button>
       <!-- 15/9 (diseñador): « y la ponemos como barra roja ». El corazón y el relleno se leen de
            un vistazo mientras peleás; el número sigue estando porque saber que te faltan 12 para
            llenarte es lo que decide si comés ahora o después. -->
@@ -1675,15 +1685,19 @@
   <div class="ov" id="ov-banco"><div class="card" style="width:min(580px,94vw);max-height:calc(100dvh - 32px);overflow-y:auto;overflow-x:hidden">
     <button class="close" data-close="ov-banco">×</button>
     <h3>🏦 Banco · cambio interno</h3>
-    <div class="flujo-menu"><span>🪙 Plata</span><b aria-hidden="true">→</b><span>Golden</span></div><details class="ayuda-menu"><summary>Cómo funciona el cambio</summary><p class="sub">Canjeá Plata por Golden a la tasa vigente del servidor. La tasa es ajustable y puede cambiar; no es una paridad garantizada con dólares.</p></details>
+    <div class="divisas-usos">
+      <section class="divisa-uso"><strong><img src="assets/farm/coin_plata.png?a=4" alt="">Plata</strong><small>Semillas · fabricación · obras</small><div class="row"><button class="ghost sm" data-panel="ov-market">Mercado</button><button class="ghost sm" data-panel="ov-forge">Herrería</button></div></section>
+      <section class="divisa-uso"><strong><img src="assets/farm/coin_esencia.png?a=4" alt="">Golden</strong><small>VIP · objetos · mejoras</small><div class="row"><button class="ghost sm" data-panel="ov-vip">VIP</button><button class="ghost sm" data-panel="ov-reliquias">Objetos</button></div></section>
+    </div>
+    <h4>Cambiar Plata por Golden</h4>
+    <div class="cambio-tasa" aria-label="Tasa de cambio"><span class="cambio-numero"><img src="assets/farm/coin_plata.png?a=4" alt=""><b id="banco-tasa">—</b><small>Plata</small></span><b aria-hidden="true">→</b><span class="cambio-numero"><img src="assets/farm/coin_esencia.png?a=4" alt=""><b>1</b><small>Golden</small></span></div>
     <div id="banco-info" aria-live="polite"></div>
 
-    <label for="banco-cantidad">Golden que querés recibir (unidades enteras)</label>
-    <input id="banco-cantidad" type="number" min="1" max="1000000" step="1" value="1">
-    <p id="banco-previa" class="sub" aria-live="polite"></p>
+    <div class="banco-elegir"><label for="banco-cantidad">Quiero recibir</label><div><input id="banco-cantidad" type="number" min="1" max="1000000" step="1" value="1"><span>Golden</span></div></div>
+    <p id="banco-previa" class="cambio-previa" aria-live="polite"></p>
     <div class="row"><button id="banco-canjear" class="green" disabled>Canjear</button><button id="banco-actualizar" class="ghost">Actualizar tasa</button></div>
-    <p class="sub">Sólo moneda interna de prueba. Ningún saldo implica un derecho de cobro en USDT.</p>
-    <div class="row"><button disabled>Depósitos USDT · desactivados</button><button disabled>Retiros USDT · desactivados</button></div><details class="ayuda-menu"><summary>Actividad para futuros retiros</summary><div id="banco-actividad" aria-live="polite"></div></details>
+    <p class="sub">USDT · depósitos y retiros desactivados</p>
+    <details class="ayuda-menu"><summary>Tasa y condiciones</summary><p class="sub">Sólo Plata → Golden, en unidades enteras. La cotización dura 60 segundos y puede cambiar. Son monedas internas de prueba: no hay paridad garantizada con dólares ni derecho de cobro en USDT.</p></details><details class="ayuda-menu"><summary>Actividad para futuros retiros</summary><div id="banco-actividad" aria-live="polite"></div></details>
   </div></div>
   <div class="ov" id="ov-skills"><div class="card" style="width:min(500px,94%)">
     <button class="close" data-close="ov-skills">×</button>

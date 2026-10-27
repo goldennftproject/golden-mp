@@ -24,6 +24,6 @@ const watchdog=setTimeout(()=>{console.error('Prueba incompleta');process.exit(1
  const snap=JSON.parse(JSON.stringify(ctx.snapshot()));ctx.hydrate(snap);assert.equal(ctx.G.banco.ops.length,1,'F5 conserva libro protegido');
  run('BANCO_COTIZACION.recibido=Date.now()-60001');ctx.bancoActualizarPrevia();assert.equal(elementos['banco-canjear'].disabled,true,'no ofrece una tasa vencida');
  assert.equal(run("typeof OV_REFRESH['ov-banco']"),'function');
- const html=fs.readFileSync(path.join(repo,'public/index.html'),'utf8');assert.ok(html.includes('data-panel="ov-banco"'));assert.ok(html.includes('Depósitos USDT · desactivados'));assert.ok(!html.includes('data-cur="golden"'));
+ const html=fs.readFileSync(path.join(repo,'public/index.html'),'utf8');assert.ok(html.includes('data-panel="ov-banco"'));assert.ok(html.includes('USDT · depósitos y retiros desactivados'));assert.ok(!html.includes('data-cur="golden"'));
  console.log('OK: Banco cliente cotiza, muestra coste y saldo, bloquea insuficiente/vencido, guarda antes del canje y recupera respuesta perdida sin duplicar.');
 })().catch(e=>{console.error(e);process.exitCode=1;}).finally(()=>clearTimeout(watchdog));

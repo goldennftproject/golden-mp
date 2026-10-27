@@ -1,5 +1,11 @@
 # Las leyes de Golden Farm
 
+## Escala del granero y lectura de divisas — 27/10/2026
+
+Dirección pide un granero inicial comparable al resto de edificios y una interfaz que no dependa de explicaciones largas. Se encuadra sólo el dibujo opaco de cada sprite, conservando originales y atlas, con anchos visibles progresivos de 0,82/0,88/0,97/1,16 veces rw. Todas las etapas caben en las tres celdas reservadas; no cambia ancla, colisión, nivel de mejora ni progreso. La evolución visual sigue vinculada a la mejora de granja existente.
+
+Plata y Golden llevan nombre e icono en el HUD y abren el Banco. Dos tarjetas muestran sus usos y destinos; la tasa aparece como ecuación visual y el formulario detalla entrega, recepción, saldo restante o faltante sin abreviar importes. Se conservan cotización autoritativa, caducidad de 60 segundos, confirmación y bloqueos. Los objetos muestran Golden → objeto → Plata, y la ruta alternativa de oficio queda desplegable. Se retira del texto del Mercado la referencia obsoleta a cobrar Golden directamente. No cambian precios, tasa, producción, requisitos, guardado ni USDT.
+
 ## Protección del periodo de lanzamiento — 27/10/2026
 
 La fecha y fase de un lanzamiento ya iniciado no se pueden cambiar mediante la configuración normal, ni se puede borrar su fila. Esto evita extender el VIP o capturar restauraciones como compras de alfa. La restauración con derechos y sin fila de granja falla expresamente; recuperar esa fila permite reintentar sin perder derechos. Los contenedores de objetos guardados como null se interpretan como vacíos. Probado en transacciones revertidas, sin activar release ni modificar el progreso actual.

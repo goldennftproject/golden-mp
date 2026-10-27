@@ -2574,9 +2574,9 @@ function refreshArtefactos() {
   const box=$('objetos-productores');if(!box)return;
   const t=nowMs(), online=!!(typeof sb!=='undefined' && sb && UID && CARGA_OK && !SOLO_LOCAL && !SAVE_CONFLICTOS.has(UID));
   const vip=vipVigente(t),activos=Object.values(G.artefactos && G.artefactos.items || {}).filter(a=>t<a.desde+ARTEFACTO_DIAS*86400000).length;
-  let h='<div class="resumen-menu"><span><b>24 h</b>entre cobros</span><span><b>1 ⚡</b>por cobro</span><span><b>180 días</b>de producción</span></div><p class="sub">Pagás Golden · recibís Plata. Free: 1 objeto activo. VIP: sin límite.</p><p class="sub">Depósitos y retiros USDT desactivados.</p><details class="ayuda-menu"><summary>Condiciones de producción</summary><p class="sub">Objetos de colección que producen Plata, no Golden directo. No ocupan terreno ni cupos productivos. Free: un objeto activo. VIP: sin límite de ejemplares, incluidos duplicados. Al vencer el VIP conservás tus compras y sus cobros; no podés ampliar la colección mientras haya uno activo.</p>'+
+  let h='<div class="flujo-menu"><span><img class="ric" src="assets/farm/coin_esencia.png?a=4" alt=""> Golden<br><small>Comprar objeto</small></span><b aria-hidden="true">→</b><span>🌾</span><b aria-hidden="true">→</b><span><img class="ric" src="assets/farm/coin_plata.png?a=4" alt=""> Plata<br><small>Cobrar producción</small></span></div><div class="resumen-menu"><span><b>24 h</b>entre cobros</span><span><b>1 ⚡</b>por cobro</span><span><b>180 días</b>de producción</span></div><p class="sub">Free: 1 objeto activo · VIP: sin límite</p><details class="ayuda-menu"><summary>Condiciones de producción</summary><p class="sub">Objetos de colección que producen Plata, no Golden directo. No ocupan terreno ni cupos productivos. Free: un objeto activo. VIP: sin límite de ejemplares, incluidos duplicados. Al vencer el VIP conservás tus compras y sus cobros; no podés ampliar la colección mientras haya uno activo.</p>'+
     '<p class="sub">Comprá con Golden y reclamá Plata cada 24 horas por 1 de energía. Acumulación máxima: un día; vida útil: 180 días. </p>'+
-    '<p class="sub">El cambio de Plata a Golden se consulta en el Banco y puede variar.</p></details><button class="ghost sm" data-panel="ov-banco">🏦 Ver Banco y tasa vigente</button>';
+    '<p class="sub">El cambio de Plata a Golden se consulta en el Banco y puede variar. Depósitos y retiros USDT desactivados.</p></details><button class="ghost sm" data-panel="ov-banco">🏦 Cambiar Plata por Golden</button>';
   if(!online)h+='<p class="sub">Compras y cobros requieren conexión y guardado sincronizado.</p>';
   const copias=Object.keys(G.artefactos && G.artefactos.items || {}).filter(id=>id.includes(':') && ARTEFACTO_DEF[artefactoModelo(id)]);
   for(const [id,d] of [...Object.entries(ARTEFACTO_DEF),...copias.map(id=>[id,ARTEFACTO_DEF[artefactoModelo(id)]])]){
@@ -2585,7 +2585,7 @@ function refreshArtefactos() {
     h+='<div class="row" style="justify-content:space-between;flex-wrap:wrap;border-top:1px solid #ffffff22;padding:10px 0"><div>'+d.icon+' '+d.label+(id.includes(':')?' · ejemplar adicional':'')+'<br><small>'+diaria+' Plata/día · Coste: '+d.golden+' Golden</small>'+
       (a?'<br><small>'+(activo?'Activo hasta '+new Date(a.desde+ARTEFACTO_DIAS*86400000).toLocaleDateString('es-UY'):'Vida útil terminada')+'</small>':'')+'</div><div>'+
       (a?'<span data-artefacto-pendiente="'+id+'">'+fmtPlata(pendiente)+' Plata</span> <button class="green sm" data-artefacto-cobrar="'+id+'" '+(!online||!artefactoPuedeCobrar(id)||!energiaGranjaPuede('harvest')?'disabled':'')+'>'+artefactoTextoCobro(id)+'</button> ':'')+
-      (id.includes(':')?'':'<button class="ghost sm" data-artefacto-comprar="'+id+'" '+(!online||(!vip&&(activos>=1||pendiente>0))||G.golden<d.golden?'disabled':'')+'>'+(activo&&vip?'Otro ejemplar · '+d.golden+' $Golden':activo?'Ya lo tenés':'Comprar · '+d.golden+' $Golden')+'</button>')+'</div></div>';
+      (id.includes(':')?'':'<button class="ghost sm" data-artefacto-comprar="'+id+'" '+(!online||(!vip&&(activos>=1||pendiente>0))||G.golden<d.golden?'disabled':'')+'>'+(activo&&vip?'Otro ejemplar · '+d.golden+' Golden':activo?'Ya lo tenés':'Comprar · '+d.golden+' Golden')+'</button>')+'</div></div>';
   }
   box.innerHTML=h;
   box.querySelectorAll('[data-artefacto-comprar]').forEach(b=>b.onclick=()=>{
@@ -2598,7 +2598,9 @@ function bancoActualizarPrevia(){
   const input=$('banco-cantidad'),preview=$('banco-previa'),boton=$('banco-canjear');if(!input||!preview||!boton)return;
   const n=Number(input.value),valida=bancoCotizacionValida(),tasa=valida?BANCO_COTIZACION.tasa:0;
   const cantidad=Number.isSafeInteger(n)&&n>=1&&n<=1000000;
-  preview.textContent=valida&&cantidad ? 'Entregás '+(n*tasa).toLocaleString('es-UY')+' Plata → recibís '+n.toLocaleString('es-UY')+' Golden. Saldo: '+fmtPlata(G.plata)+' Plata.' : 'Necesitás una cotización vigente y una cantidad entera positiva.';
+  preview.textContent=valida&&cantidad ? 'Entregás '+(n*tasa).toLocaleString('es-UY')+' Plata → recibís '+n.toLocaleString('es-UY')+' Golden.'+(G.plata<n*tasa?' Te faltan '+(n*tasa-G.plata).toLocaleString('es-UY',{maximumFractionDigits:2})+' Plata.':' Saldo después: '+(G.plata-n*tasa).toLocaleString('es-UY',{maximumFractionDigits:2})+' Plata.') : valida?'Elegí una cantidad entera, de 1 a 1.000.000 Golden.':'Actualizá la tasa para calcular el cambio.';
+  boton.textContent=valida&&cantidad?'Canjear por '+n.toLocaleString('es-UY')+' Golden':'Canjear';
+  const tasaVista=$('banco-tasa');if(tasaVista)tasaVista.textContent=valida?tasa.toLocaleString('es-UY'):'—';
   boton.disabled=!(valida&&cantidad&&G.plata>=n*tasa&&CARGA_OK&&!SOLO_LOCAL&&!SAVE_CONFLICTOS.has(UID)&&!MERCADO_EN_CURSO);
 }
 function actividadGranjaHtml(){
@@ -2609,7 +2611,8 @@ function actividadGranjaRefrescar(){for(const id of ['banco-actividad','vip-acti
 function refreshBanco(cotizar=true){
   actividadGranjaRefrescar();
   const info=$('banco-info');if(!info)return;
-  info.textContent=bancoCotizacionValida() ? 'Tasa vigente: '+BANCO_COTIZACION.tasa.toLocaleString('es-UY')+' Plata = 1 Golden. Cotización válida durante 60 segundos.' : 'Sin cotización vigente. Se requiere conexión con el servidor.';
+  info.textContent=bancoCotizacionValida() ? 'Tasa vigente · válida durante 60 s' : 'Sin tasa vigente · conectate y actualizá';
+  info._cotizacionVigente=bancoCotizacionValida();
   const input=$('banco-cantidad'),actualizar=$('banco-actualizar'),boton=$('banco-canjear');
   if(input)input.oninput=bancoActualizarPrevia;
   if(actualizar)actualizar.onclick=()=>bancoCotizar();
@@ -2620,6 +2623,10 @@ function refreshBanco(cotizar=true){
     askConfirm('¿Canjear '+(n*c.tasa).toLocaleString('es-UY')+' Plata por '+n+' Golden? Si la tasa cambia antes de confirmar, se rechazará el canje. No es un retiro de USDT.',()=>bancoSolicitar(n,c.revision),{title:'Confirmar canje interno',yes:'Canjear',yesClass:'green',no:'Cancelar'});
   };
   bancoActualizarPrevia();if(cotizar)bancoCotizar();
+}
+function bancoTick(){
+  const info=$('banco-info');
+  if(isOpen('ov-banco')&&info&&info._cotizacionVigente!==bancoCotizacionValida())refreshBanco(false);
 }
 function refreshVip() {
   const box=$('vip-info');if(!box)return;
@@ -4953,7 +4960,7 @@ function refreshMarket() {
   });
   const golden = document.querySelector('.curbtn[data-cur="golden"]'), nota = $("mkt-cur-note");
   if (golden) { golden.disabled = ventaTutorial; golden.title = ventaTutorial ? "Completá este encargo cobrando en Plata" : "Cobrá en $Golden a partir de 1 $Golden completo"; }
-  if (nota) { nota.textContent = ventaTutorial ? "Tu primer encargo se cobra en Plata; otras cuentas no consumen tu cupo." : (typeof mercadoGlobalActivo === "function" && mercadoGlobalActivo() ? "Precios de la comunidad, cupos personales por familia: otros jugadores no agotan tus ventas. La plata financia el juego; Golden tiene un límite personal separado. Sin retiros ni canje por USDT." : "Precio dinámico de tu granja; se recupera gradualmente. Sin canje por USDT."); nota.classList.add("show"); }
+  if (nota) { nota.textContent = ventaTutorial ? "Tu primer encargo se cobra en Plata; otras cuentas no consumen tu cupo." : (typeof mercadoGlobalActivo === "function" && mercadoGlobalActivo() ? "Vendés cultivos por Plata. Precios variables y cupos personales por familia; otros jugadores no consumen tu cupo. Para obtener Golden, usá el Banco." : "Vendés por Plata. El precio se recupera gradualmente; el cambio a Golden se hace en el Banco."); nota.classList.add("show"); }
   if (typeof tutoHighlight === "function") tutoHighlight();
   document.querySelectorAll(".curbtn").forEach(b => b.classList.toggle("active", b.dataset.cur === cur));
   marketReponerVentaFocoPc($("mkt-list"));
@@ -5635,7 +5642,7 @@ function refreshBarn() {
     const pct = Math.max(0, Math.min(100, Math.round((xp - desde) / Math.max(1, need - desde) * 100)));
     h += '<div class="durbar" style="margin:6px 0"><i style="width:' + pct + '%"></i></div>@INFO@';
     // los datos sueltos van en un recuadro claro, no escritos sobre la madera
-    let info = '<div><b>XP productiva:</b> ' + fmt(xp) + ' / ' + fmt(need) + '</div><div>Cultivar, talar y minar contribuyen al nivel de granja.</div><div>Ruta alternativa: Minería o Tala como oficio principal, nivel ' + farmEspecialidadReq(sig) + ' (tenés Minería ' + nivelOficio('mining') + ' / Tala ' + nivelOficio('tala') + '), permite avanzar sin tareas mixtas.</div>';
+    let info = '<div><b>XP productiva:</b> ' + fmt(xp) + ' / ' + fmt(need) + '</div><div>🌱 Cultivar · 🪓 Talar · ⛏ Minar</div><details class="ayuda-menu"><summary>Ruta alternativa por oficio</summary><div>Minería o Tala como oficio principal, nivel ' + farmEspecialidadReq(sig) + ' (tenés Minería ' + nivelOficio('mining') + ' / Tala ' + nivelOficio('tala') + '), permite avanzar sin tareas mixtas.</div></details>';
     const tareas = farmEspecialidadCumple(sig) ? [] : tareasDelNivel(sig);
     if (tareas.length) {
       h += '<div class="secc">Tareas para el nivel ' + sig + '</div>';
@@ -6618,7 +6625,7 @@ function initUI() {
   tutoSync(true);   // cartel + flecha del tutorial guiado
   /* 8/9: la tira también se repinta en el latido — los números suben al craftear o al cobrar,
      no solo al gastar, y con la firma no cuesta nada si no cambió nada. */
-  setInterval(() => { try { refreshRecientes(); refreshMorral(); refreshCombate(); marketVentasTick(); } catch (e) {} }, 1000);
+  setInterval(() => { try { refreshRecientes(); refreshMorral(); refreshCombate(); marketVentasTick(); bancoTick(); } catch (e) {} }, 1000);
   setInterval(() => { if (typeof buffTick === "function") buffTick(); if (typeof expansionObraTick === "function") { try { if (expansionObraTick()) refreshHud(); } catch (e) { console.warn(e); } } if (typeof stamTick === "function") stamTick(); if (typeof incTick === "function") incTick(); if (typeof granjaRegen === "function") granjaRegen(); tutoSync(); refreshHud(); }, 1000);
   /* 26/8 — el flujo de la bolsa late aparte y MÁS RÁPIDO que el HUD. Un segundo de retraso entre
      el golpe y el « +1 Madera » ya no se siente como respuesta al clic, se siente como otra cosa
