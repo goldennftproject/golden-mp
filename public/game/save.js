@@ -1848,6 +1848,15 @@ async function entrarConEmail(email) {
 }
 
 // ---- ranking real (lee la vista pública "leaderboard") ----
+async function fetchRankingGranja(){
+  if(!sb||!UID||!CARGA_OK||SOLO_LOCAL)return null;
+  const uid=UID;
+  try{
+    const {data,error}=await conTope(sb.functions.invoke('guardar',{body:{cuenta:uid,ranking:{accion:'granja'}}}),10000,'clasificación de granja');
+    if(UID!==uid||error||!data?.ok||!Array.isArray(data.top))return null;
+    return {...data,uid};
+  }catch{return null;}
+}
 async function fetchLeaderboard() {
   if (!sb) return null;
   try {

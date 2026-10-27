@@ -5873,8 +5873,46 @@ function refreshConfig() {
 }
 
 /* ---- leaderboard (datos reales desde Supabase) ---- */
-let lbTab = "plata";
+let lbTab = "granja";
 let lbData = null, lbFetchedAt = 0, lbLoading = false;
+let lbFarmData=null,lbFarmFetchedAt=0,lbFarmLoading=null;
+function lbFarmRow(r,personal=false){
+  const me=String(r.user_id)===UID,nivel=Number(r.nivel)||1,xp=Number(r.xp)||0;
+  const desde=FARM_XP_LVLS[nivel]||0,hasta=FARM_XP_LVLS[nivel+1];
+  const pct=hasta?Math.max(0,Math.min(100,(xp-desde)/(hasta-desde)*100)):100;
+  const xpTexto=xp.toLocaleString('es',{maximumFractionDigits:6});
+  const visita=!me?'<button class="sm" data-rank-visita="'+escapeHtml(r.user_id)+'" '+(!vipVigente()?'disabled title="Visitas requieren VIP activo"':'')+'>'+(!vipVigente()?'Visitar · VIP':'Visitar')+'</button>':'';
+  return '<div class="lbrow lb-farm-row '+(me?'me ':'')+(personal?'lb-personal ':'')+'"><span class="rk">'+Number(r.posicion)+'</span><div class="lb-farm-name"><b>'+escapeHtml(r.nombre||'Granjero')+(me?' <span class="tag">Tú</span>':'')+'</b><span class="lb-farm-progress" title="'+xpTexto+' XP de granja"><i style="width:'+pct+'%"></i></span></div><div class="lb-farm-score"><b>Nv. '+nivel+'</b><small>'+xpTexto+' XP</small></div>'+visita+'</div>';
+}
+function renderRankingGranja(){
+  const box=$('lb-list'),note=$('lb-note'),mine=$('lb-personal');if(!box||!note||!mine)return;
+  const d=lbFarmData;if(!d||d.uid!==UID)return;
+  box.innerHTML=d.top.length?d.top.map(r=>lbFarmRow(r)).join(''):'Todavía no hay granjas clasificadas.';
+  mine.hidden=false;mine.innerHTML=d.yo?'<div class="secc">Tu posición guardada</div>'+lbFarmRow(d.yo,true):'<p class="sub">Tu granja aparecerá después de su primer guardado confirmado.</p>';
+  note.textContent='Alfa · '+d.total+' granjas · datos guardados · '+new Date(d.actualizado).toLocaleTimeString('es',{hour:'2-digit',minute:'2-digit'})+'. Se actualiza al consultar, como máximo una vez cada 3 minutos.';
+  for(const b of [...box.querySelectorAll('[data-rank-visita]'),...mine.querySelectorAll('[data-rank-visita]')])b.onclick=async()=>{
+    if(!vipVigente())return;const uid=UID;b.disabled=true;
+    const r=await visitaConsultar('ver',b.dataset.rankVisita);
+    if(UID===uid&&isOpen('ov-lb')&&r?.granja){closeOv('ov-lb');visitaAbrir(r.granja);}
+    if(b.isConnected)b.disabled=!vipVigente();
+  };
+}
+async function refreshRankingGranja(){
+  const uid=UID,box=$('lb-list'),note=$('lb-note'),mine=$('lb-personal');if(!box||!note||!mine)return;
+  if(lbFarmData?.uid!==uid){lbFarmData=null;lbFarmFetchedAt=0;}
+  if(!lbFarmData){box.textContent='';mine.hidden=true;note.textContent='Consultando clasificación…';}
+  if(!lbFarmData||Date.now()-lbFarmFetchedAt>=180000){
+    if(!lbFarmLoading||lbFarmLoading.uid!==uid){
+      const pending={uid,promise:Promise.resolve(fetchRankingGranja())};lbFarmLoading=pending;
+      pending.promise=pending.promise.finally(()=>{if(lbFarmLoading===pending)lbFarmLoading=null;});
+    }
+    const data=await lbFarmLoading.promise;
+    if(UID!==uid)return;
+    if(data?.uid===uid){lbFarmData=data;lbFarmFetchedAt=Date.now();}
+    else if(!lbFarmData){if(lbTab==='granja')note.textContent='No se pudo cargar. Necesitas conexión y una sesión activa.';return;}
+  }
+  if(lbTab==='granja'&&isOpen('ov-lb'))renderRankingGranja();
+}
 
 function lbRowHtml(r, i, col) {
   const rank = i + 1; const cls = (r.me ? "me " : "") + (rank <= 3 ? "top" + rank : "");
@@ -5895,6 +5933,9 @@ function avgSkillFromObj(sk) {
 
 async function refreshLb() {
   document.querySelectorAll(".lbtab").forEach(b => b.classList.toggle("active", b.dataset.lb === lbTab));
+  const mine=$('lb-personal'),rules=$('lb-alfa-reglas');
+  if(mine)mine.hidden=lbTab!=='granja';if(rules)rules.hidden=lbTab!=='granja';
+  if(lbTab==='granja')return refreshRankingGranja();
   const note = $("lb-note");
   const stale = !lbData || (Date.now() - lbFetchedAt > 15000);
   if (stale && !lbLoading && typeof fetchLeaderboard === "function") {
@@ -5905,7 +5946,7 @@ async function refreshLb() {
     if (d) { lbData = d; lbFetchedAt = Date.now(); }
     else if (!lbData) { if (note) note.textContent = "No se pudo cargar el ranking online."; $("lb-list").innerHTML = ""; return; }
   }
-  renderLb();
+  if(lbTab!=='granja'&&isOpen('ov-lb'))renderLb();
 }
 
 // "detallitos (1)" punto 1: la skill MÁS ALTA de cada jugador para el ranking

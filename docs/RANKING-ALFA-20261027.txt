@@ -1,0 +1,42 @@
+CLASIFICACIÓN DE GRANJA PARA LA ALFA
+
+Acceso: Menú > Ranking (atajo L), pestaña Granja por defecto.
+Orden: nivel guardado descendente; a igualdad de nivel, XP productiva de
+granja descendente. No usa Plata, Golden ni datos locales no guardados.
+La XP usa los cortes históricos de tala/minería, edificios y base de prestigio
+ya existentes. Redondea a seis decimales para evitar falsos desempates flotantes.
+Empates exactos comparten posición: 1, 1, 3. El UUID sólo estabiliza la
+presentación entre empatados, no decide ganadores.
+
+Muestra 50 filas y, aparte, la posición propia incluso fuera de esas 50.
+Si el empate cruza la fila 50, la lista sigue limitada a 50 filas; no es una
+lista definitiva de ganadores. Una cuenta sin granja guardada no tiene puesto.
+Las pestañas secundarias históricas se conservan, sin usarse para esta clasificación.
+Visitar usa las visitas VIP existentes; no concede acceso de edición.
+
+Consulta sólo lectura mediante guardar (JWT validado), con UID autenticado.
+RPC ranking_granja_alfa: SECURITY INVOKER y EXECUTE sólo para service_role.
+Devuelve nombre, identificador público de granja, nivel, XP y posición;
+no entrega inventario, correo, saldos ni contenido completo del guardado.
+Cliente guarda la consulta durante 180 segundos por cuenta. No hay sondeo
+con la ventana cerrada ni escrituras nuevas de progreso.
+
+Comprobaciones:
+- SQL con 53 filas sintéticas en CTE, sin insertarlas: top 50, empates 1/1/3,
+  puesto 53 propio y XP con ancla histórica correctos.
+- Consulta instalada: 5 granjas; permisos anon/authenticated false,
+  service_role true. Ningún jugador ni progreso modificado.
+- tools/test-ranking-alfa.js: auth, cuenta, acción inválida, RPC sin aceptar
+  UID/nivel del cliente, errores, escape de nombres, posición propia,
+  caché, respuesta tardía tras cambiar cuenta y botones VIP.
+- Guardado atómico, visitas visuales y arranque completo pasan.
+- Revisión visual en navegador, con datos sintéticos y resolución PC.
+- guardar versión 41, verify_jwt true.
+
+ANTES DE ANUNCIAR PREMIOS
+Definir fecha/hora UTC de cierre, premios, empates, elegibilidad de cuentas
+de pruebas/equipo y revisión de actividad sospechosa. Capturar una clasificación
+final al cierre antes de resetear. No hay reparto automático ni premio prometido.
+Este ranking lee guardados aceptados; no convierte todo el juego en una
+simulación autoritativa ni garantiza por sí solo ausencia de trampas.
+No se activa USDT ni se ejecuta un reinicio.

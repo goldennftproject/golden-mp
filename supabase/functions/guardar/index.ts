@@ -677,6 +677,13 @@ Deno.serve(async (req) => {
 
     const body = await req.json().catch(() => null);
 
+    if(body?.ranking){
+      if(body.cuenta!==uid)return json({error:'La sesión cambió de cuenta'},409);
+      if(body.ranking.accion!=='granja')return json({error:'Clasificación inválida'},400);
+      const {data,error}=await admin.rpc('ranking_granja_alfa',{p_uid:uid});
+      return error?json({error:'No se pudo consultar la clasificación'},503):json(data);
+    }
+
     if(body?.alfa){
       if(!['estado','restaurar'].includes(body.alfa.accion))return json({error:'Acción de alfa inválida'},400);
       const {data,error}=await admin.rpc('alfa_compras',{p_uid:uid,p_restaurar:body.alfa.accion==='restaurar'});

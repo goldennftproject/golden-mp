@@ -1,5 +1,9 @@
 # Las leyes de Golden Farm
 
+## Clasificación de granja para la alfa — 27/10/2026
+
+Dirección pide ranking para posibles premios futuros de alfa. Granja pasa a ser la pestaña principal: nivel guardado y después XP productiva guardada, con cortes históricos y prestigio existentes; empates comparten puesto. Top 50 y posición propia fuera del top. Consulta autenticada de sólo lectura, RPC invoker accesible sólo al servicio y caché cliente de tres minutos por identidad. Se mantienen las comparaciones antiguas y las visitas VIP sin edición. No se activan premios, USDT ni reset; fecha de cierre, elegibilidad y reparto quedan por decidir. Ver RANKING-ALFA-20261027.txt.
+
 ## HUD de PC en una fila y logo Alpha — 27/10/2026
 
 Dirección pide reunir la energía con los demás datos superiores. En PC se mantienen nivel de granja, energía, Plata, Golden, vida, combate y menú en una fila; la estamina visible se integra también, con su cuenta atrás en el tooltip. Los efectos temporales conservan una repisa separada que sigue siendo medible por el menú y las guías. Se reutilizan los mismos controles y callbacks, restaurando la ubicación previa fuera de PC. Los anchos compactos reducen barras accesorias, conservan nombres y valores y permiten desplazamiento horizontal si la ventana es muy estrecha. No cambian mecánicas ni guardado.
