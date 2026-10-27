@@ -61,3 +61,9 @@ Muestra de 14 días, sin bono de nivel, objetos, logros ni misiones; semilla y c
 - Veintiuna parcelas de maíz, una visita/día: ~7.756 Plata/día.
 El rango orientativo de 2.000–5.000 es alcanzable en desarrollo bajo estas hipótesis; no se multiplica todo el precio ni se promete esa producción al empezar. Falta medir retención y comportamiento real antes de decidir un incremento general de emisión.
 Las pasivas de madera/hierro tienen diferente precio porque la fórmula contempla el número máximo de nodos, no sólo el precio unitario del recurso; el precio invertido por unidad no demuestra por sí solo un error. Sus efectos y compras anteriores se conservan.
+
+ACTUALIZACIÓN DE CONTINUIDAD
+- XP futura reducida ya publicada y verificada, no sólo preparada.
+- Cajas aprobadas después del vídeo: 1 Golden, máximo 3/día UTC; tabla visible y sorteo servidor, publicadas. Sustituye su estado anterior de propuesta.
+- Pasivas: mejora única 50.000 Plata por modelo, +0,10 a +0,15 unidades por recolección; implementación en validación.
+- Siguen pendientes de definición la compra de +1 publicación/día, bonos de edificios y evento. No se han activado retiros, depósitos ni premios USDT.

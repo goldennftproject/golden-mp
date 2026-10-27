@@ -62,10 +62,10 @@ async function economiaSolicitar(detalle) {
       }
       if(error || !data || !data.ok || UID!==uid){SAVE_CONFLICTOS.add(uid);toast('Resultado sin confirmar. Recargá con conexión para consultar el servidor.');return;}
       hydrate(data.data);SAVE_BASES.set(uid,data.updated_at);copiaGuardar(snapshot());mercadoLimpiarPendiente(uid);
-      toast(detalle.pack?.id==='caja' ? ('Caja confirmada: '+data.premio.qty+' '+RES_LABEL[data.premio.item]+' · Entregas pendientes') : detalle.pack ? 'Pack confirmado; recogé los materiales en Entregas pendientes' : detalle.logro ? 'Logro confirmado: +'+fmtPlata(data.cobro)+' Plata' : detalle.visita ? (detalle.visita.accion==='ver'?'Visita confirmada · una por granja y día UTC para logros':'+1 semilla de papa por la visita') : detalle.diario ? 'Recompensa diaria confirmada: día '+data.cobro+'/7' : detalle.banco ? 'Canje confirmado: +'+fmtGolden(data.cobro)+' Golden' : detalle.artefacto.accion==='comprar' ? 'Objeto comprado con Golden' : '+'+fmtPlata(data.cobro)+' Plata');
+      toast(detalle.pack?.id==='caja' ? ('Caja confirmada: '+data.premio.qty+' '+RES_LABEL[data.premio.item]+' · Entregas pendientes') : detalle.pack ? 'Pack confirmado; recogé los materiales en Entregas pendientes' : detalle.mejora ? 'Mejora confirmada: +0,15 por recolección' : detalle.logro ? 'Logro confirmado: +'+fmtPlata(data.cobro)+' Plata' : detalle.visita ? (detalle.visita.accion==='ver'?'Visita confirmada · una por granja y día UTC para logros':'+1 semilla de papa por la visita') : detalle.diario ? 'Recompensa diaria confirmada: día '+data.cobro+'/7' : detalle.banco ? 'Canje confirmado: +'+fmtGolden(data.cobro)+' Golden' : detalle.artefacto.accion==='comprar' ? 'Objeto comprado con Golden' : '+'+fmtPlata(data.cobro)+' Plata');
       return data;
     }catch(e){toast('No se pudo completar la operación; comprobá la conexión');}
-  })().finally(()=>{MERCADO_EN_CURSO=null;desbloquear();refreshHud();if(isOpen('ov-market'))refreshSeedShop();if(isOpen('ov-reliquias'))refreshArtefactos();if(isOpen('ov-banco'))refreshBanco();if(isOpen('ov-logros'))refreshLogros();});
+  })().finally(()=>{MERCADO_EN_CURSO=null;desbloquear();refreshHud();if(isOpen('ov-market')){if(detalle.mejora)refreshNft();else refreshSeedShop();}if(isOpen('ov-reliquias'))refreshArtefactos();if(isOpen('ov-banco'))refreshBanco();if(isOpen('ov-logros'))refreshLogros();});
   return MERCADO_EN_CURSO;
 }
 function mercadoGlobalRecurso(res) {
@@ -467,7 +467,7 @@ function snapshot() {
     dishes: G.dishes, cooking: G.cooking, horno: G.horno, chests: G.chests, dummyUsedAt: G.dummyUsedAt,   // 24/8: la cola del Horno
     armCd: G.armCd, mkPend: G.mkPend,
     layoutPlots: G.layoutPlots, layoutPond: G.layoutPond, ghInv: G.ghInv,
-    planos: G.planos, obras: G.obras, obraDep: G.obraDep, expObra: G.expObra, nfts: G.nfts, canasDur: G.canasDur, pescaDia: G.pescaDia,   /* 23/9: usos de las cañas y lances del día */   /* 20/9: la expansión en obra (reloj absoluto) */ emergBuys: G.emergBuys, buzonLeidas: G.buzonLeidas, buzonArchivo: G.buzonArchivo, kitReclamado: G.kitReclamado, excav: G.excav, vales: G.vales, pedidos: G.pedidos, regalos: G.regalos, cobertizo: G.cobertizo, goblin: G.goblin, logros: G.logros, doma: G.doma,   // 22/8: logros cobrados (🏆) + el bicho domado   // 22/8: el Mercader Goblin recuerda su trato del día   // buzón + kit + excavaciones (15/8) · tablón + vales (16/8)   // blueprints (12/8) · capítulos + emergencia (14/8)
+    planos: G.planos, obras: G.obras, obraDep: G.obraDep, expObra: G.expObra, nfts: G.nfts, mejorasPasivas: G.mejorasPasivas || null, canasDur: G.canasDur, pescaDia: G.pescaDia,   /* 23/9: usos de las cañas y lances del día */   /* 20/9: la expansión en obra (reloj absoluto) */ emergBuys: G.emergBuys, buzonLeidas: G.buzonLeidas, buzonArchivo: G.buzonArchivo, kitReclamado: G.kitReclamado, excav: G.excav, vales: G.vales, pedidos: G.pedidos, regalos: G.regalos, cobertizo: G.cobertizo, goblin: G.goblin, logros: G.logros, doma: G.doma,   // 22/8: logros cobrados (🏆) + el bicho domado   // 22/8: el Mercader Goblin recuerda su trato del día   // buzón + kit + excavaciones (15/8) · tablón + vales (16/8)   // blueprints (12/8) · capítulos + emergencia (14/8)
     /* 1/9 — LA PESCA v4 ENTERA NO SE GUARDABA, y lo encontró dirección con el Lombricario:
        « no dura las 8 horas y no da las lombrices ». Las bocas, las Escamas, los récords, las
        nasas caladas, el torneo, la marea en curso: TODO moría con un F5. La v4 nació el 27/8
@@ -817,6 +817,7 @@ function hydrate(d) {
   if (d.planos && typeof d.planos === "object") G.planos = d.planos;     // blueprints (12/8)
   if (d.obras && typeof d.obras === "object") G.obras = d.obras;
   G.expObra = (d.expObra && typeof d.expObra === "object" && d.expObra.hasta) ? d.expObra : undefined;   // 20/9: la expansión en obra
+  G.mejorasPasivas = d.mejorasPasivas ? JSON.parse(JSON.stringify(d.mejorasPasivas)) : null;
   if (d.nfts && typeof d.nfts === "object") G.nfts = d.nfts;   // 21/9: los NFT de recolección
   /* 23/9: usos de cada caña y lances del día. Sin el campo (guardado viejo) la caña nace ENTERA
      —canaUsos() lo resuelve— y el cupo del día arranca en cero; nunca se le rompe nada a nadie. */

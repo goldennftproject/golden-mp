@@ -147,7 +147,7 @@ function energiaGranjaAgregar(key,n,tipo) {
   if(!energiaGranjaPuede(tipo))return false;
   if(!tryAddRes(key,n))return false;
   energiaGranjaPagar(tipo);
-  if((tipo==='chop'||tipo==='mine')&&(key==='madera'||key==='piedra')){G.logrosAcciones=G.logrosAcciones||{};G.logrosAcciones[key]=Math.min(1e9,Math.round(((G.logrosAcciones[key]||0)+n)*10)/10);}
+  if((tipo==='chop'||tipo==='mine')&&(key==='madera'||key==='piedra')){G.logrosAcciones=G.logrosAcciones||{};G.logrosAcciones[key]=Math.min(1e9,Math.round(((G.logrosAcciones[key]||0)+n)*100)/100);}
   return true;
 }
 const ARTEFACTO_DEF = {
@@ -4657,7 +4657,15 @@ var NFT_DEL_PASE = "cincel_cantera";
 function tengoNft(k) { return !!(G.nfts && G.nfts[k]); }
 function nftDeRes(res) { for (const k in NFT_DEF) if (NFT_DEF[k].res === res) return k; return null; }
 /* lo que cobra un golpe que paga: la unidad de siempre más el bono si tenés el NFT del material */
-function bonoNft(res, n) { const k = nftDeRes(res); return (k && tengoNft(k)) ? n + NFT_BONO : n; }
+var PASIVA_MEJORA_PLATA = 50000;
+function pasivaMejorada(k) { return G.mejorasPasivas?.niveles?.[k] === 2; }
+function pasivaBono(k) { return tengoNft(k) ? (pasivaMejorada(k) ? 0.15 : NFT_BONO) : 0; }
+function mejorarPasiva(k) {
+  if (!Object.prototype.hasOwnProperty.call(NFT_DEF,k) || !tengoNft(k) || pasivaMejorada(k)) return;
+  if ((G.plata || 0) < PASIVA_MEJORA_PLATA) { toast('Necesitás 50.000 Plata'); return; }
+  return economiaSolicitar({mejora:{id:k}});
+}
+function bonoNft(res, n) { const k = nftDeRes(res); return n + (k ? pasivaBono(k) : 0); }
 function nftNodosMax(res) {
   if (res === "madera" || res === "piedra") return 3 + EXPANSION_MAX;
   const extra = GF.EXP_NODOS_EXTRA || {};

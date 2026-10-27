@@ -4806,19 +4806,20 @@ function refreshNft() {
       '<button class="green sm" ' + (G.golden >= GODHAND_GOLDEN ? "" : "disabled") + ' id="buy-godhand">' + GODHAND_GOLDEN + ' $G</button>') + '</div></div>';
   /* 21/9 (dirección): los tres NFT de recolección — +0,1 por golpe que paga. El de la piedra no se
      vende: es el del Pase VIP (nivel 26), y acá se dice dónde está en vez de esconderlo. */
-  h += '<div class="secc">RECOLECCIÓN · +0,1 POR GOLPE</div>';
+  h += '<div class="secc">PASIVAS DE RECOLECCIÓN</div>';
   for (const k in NFT_DEF) {
     const d = NFT_DEF[k], tengo = tengoNft(k), delPase = (k === NFT_DEL_PASE), precio = nftPrecioGolden(k);
     h += '<div class="forge-row' + (tengo ? ' eq' : '') + '"><div class="fic"><img src="' + GF.spr(d.sprite) + '" onerror="this.remove()"></div>' +
       '<div class="finfo"><div class="fnm">' + d.label + (tengo ? ' ✓' : '') + '</div>' +
-      '<div class="fds">' + d.desc + ' Actúa al ' + d.verbo + ' en tu granja: +10 % de lo que rinde cada nodo de ' + (RES_LABEL[d.res] || d.res).toLowerCase() + ' (hasta ' + nftNodosMax(d.res) + ' nodos).</div>' +
+      '<div class="fds">+' + (tengo ? pasivaBono(k) : NFT_BONO).toFixed(2).replace(".",",") + ' de ' + (RES_LABEL[d.res] || d.res).toLowerCase() + ' por recolección efectiva. Requiere la herramienta normal.</div>' +
       (delPase && !tengo ? '<div class="fds vip">Se consigue en el Pase VIP, nivel 26.</div>' : '') + '</div>' +
-      '<div class="fbtns">' + (tengo ? '<button class="ghost sm" disabled>Activo</button>' :
+      '<div class="fbtns">' + (tengo ? (pasivaMejorada(k) ? '<button class="ghost sm" disabled>Mejorada · +0,15</button>' : '<button class="gold sm" data-pasiva="'+k+'" '+((G.plata||0)>=PASIVA_MEJORA_PLATA?'':'disabled')+'>Mejorar · 50.000 Plata</button><span class="fds">+0,10 → +0,15 · una vez</span>') :
         delPase ? '<button class="gold sm" data-nft-pase="1">Ver el Pase</button>' :
         '<button class="green sm" data-nft="' + k + '" ' + ((G.golden || 0) >= precio ? "" : "disabled") + '>' + precio + ' $G</button>') + '</div></div>';
   }
   box.innerHTML = h;
   box.querySelectorAll("[data-nft]").forEach(b => { b.onclick = () => { if (typeof comprarNft === "function") comprarNft(b.dataset.nft); refreshNft(); }; });
+  box.querySelectorAll('[data-pasiva]').forEach(b => { b.onclick=()=>askConfirm('Mejorar '+NFT_DEF[b.dataset.pasiva].label+' por 50.000 Plata: el bono pasa de +0,10 a +0,15 unidades por recolección efectiva. Compra única, sin energía.',()=>mejorarPasiva(b.dataset.pasiva),{title:'Mejorar pasiva',yes:'Mejorar',yesClass:'gold',no:'Cancelar'}); });
   box.querySelectorAll("[data-nft-pase]").forEach(b => { b.onclick = () => openOv("ov-pass"); });
   const gh = $("buy-godhand"); if (gh) gh.onclick = () => { comprarGodHand(); refreshNft(); };
   const ga = $("gh-admin"); if (ga) ga.onclick = () => { if (typeof refreshGodHand === "function") refreshGodHand(); openOv("ov-godhand"); };   // GOD HAND 2.0

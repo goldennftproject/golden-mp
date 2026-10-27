@@ -1,5 +1,9 @@
 # Las leyes de Golden Farm
 
+## Mejora de pasivas por Plata — 26/10/2026
+
+Continuación aprobada de la reunión de Sachi: cada pasiva de madera, piedra e hierro admite una mejora única de 50.000 Plata. El bono aditivo pasa de +0,10 a +0,15 unidades por recolección efectiva; no multiplica toda la producción. Conserva propiedad, herramientas, precios de adquisición y ruta del Pase. Compra validada por servidor con recibo, CAS y libro protegido; cantidades y logros conservan centésimas. No consume energía adicional ni modifica USDT.
+
 ## Cajas de suministros por Golden — 26/10/2026
 
 Dirección aprueba «hazlo» a cajas de 1 Golden con máximo tres por día UTC para Free y VIP, sin energía. Premio único: 40% 40 madera, 35% 40 piedra, 15% 3 bronce, 8% 6 bronce, 2% 3 hierro. Las cantidades se ajustan al precio premium aprobado. Tabla visible y confirmación antes de cobrar. Sorteo criptográfico del servidor, saldo/cupo/recibo/entrega confirmados por CAS; reintentar conserva el premio. Materiales van a pendientes para no perderse por bolsa llena. No se cambian packs fijos ni se habilitan movimientos USDT.

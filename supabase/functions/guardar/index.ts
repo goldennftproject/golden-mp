@@ -125,8 +125,19 @@ function logrosLibro(d){
   for(const k of ['papa','ciruela','zanahoria','cebolla','calabacin'])progreso[k]=Math.min(LOGROS_TABLA[k].at(-1)[0],Math.max(0,Math.floor(num(d?.stats?.plantar?.[k]))));
   return {v:1,progreso,cobrados:{},registro:{},visitas:{dia:'',ids:[]},ops:[]};
 }
+function pasivaBonoServidor(d,id){return d?.nfts?.[id] ? (d?.mejorasPasivas?.niveles?.[id]===2?0.15:0.1) : 0;}
+function mejoraOperacion(prev,id,op){
+  const data=JSON.parse(JSON.stringify(prev)),b=data.mejorasPasivas||{v:1,niveles:{},ops:[]};
+  if(b.ops.some(x=>x.op===op))return {data,repetido:true};
+  if(!['hacha_abuelo','cincel_cantera','pico_viejo'].includes(id))return {error:'Pasiva inválida'};
+  if(!prev.nfts?.[id])return {error:'Primero necesitás tener esta pasiva'};
+  if(b.niveles[id]===2)return {error:'Esta pasiva ya está mejorada'};
+  if(!Number.isFinite(data.plata)||data.plata<50000)return {error:'Necesitás 50.000 Plata'};
+  data.plata-=50000;b.niveles[id]=2;b.ops.push({op,id});data.mejorasPasivas=b;
+  return {data};
+}
 function logrosActualizar(prev,next,acciones){
-  const b=logrosLibro(prev),sumar=(k,n)=>b.progreso[k]=Math.min(LOGROS_TABLA[k].at(-1)[0],Math.round((num(b.progreso[k])+Math.max(0,n))*10)/10);
+  const b=logrosLibro(prev),sumar=(k,n)=>b.progreso[k]=Math.min(LOGROS_TABLA[k].at(-1)[0],Math.round((num(b.progreso[k])+Math.max(0,n))*100)/100);
   let plantas=num(acciones.plant);
   for(const k of ['papa','ciruela','zanahoria','cebolla','calabacin']){
     const delta=Math.max(0,num(next.stats?.plantar?.[k])-num(prev?.stats?.plantar?.[k]));
@@ -135,9 +146,9 @@ function logrosActualizar(prev,next,acciones){
     const n=Math.min(plantas,delta,Math.max(semillas,parcelas));sumar(k,n);plantas-=n;
   }
   for(const k of ['madera','piedra']){
-    const antes=num(b.registro[k]),pedido=Number.isFinite(next.logrosAcciones?.[k])&&next.logrosAcciones[k]>=0&&next.logrosAcciones[k]<=1e9?Math.max(antes,Math.round(next.logrosAcciones[k]*10)/10):antes;
+    const antes=num(b.registro[k]),pedido=Number.isFinite(next.logrosAcciones?.[k])&&next.logrosAcciones[k]>=0&&next.logrosAcciones[k]<=1e9?Math.max(antes,Math.round(next.logrosAcciones[k]*100)/100):antes;
     const actos=k==='madera'?num(acciones.chop):Math.min(num(acciones.mine),Math.max(0,num(next.stats?.minar?.piedra)-num(prev?.stats?.minar?.piedra)));
-    const bono=prev?.nfts?.[k==='madera'?'hacha_abuelo':'cincel_cantera']?0.1:0;
+    const bono=pasivaBonoServidor(prev,k==='madera'?'hacha_abuelo':'cincel_cantera');
     sumar(k,Math.min(pedido-antes,actos*(1+bono)));b.registro[k]=pedido;
   }
   next.logrosV2=b;next.logrosAcciones={...b.registro};next.logros={...(prev?.logros||{})};
@@ -311,6 +322,7 @@ function protegerEconomia(prev, next, ahora) {
 
   if(next.incursion&&!mismoJSON(antes.incursion,next.incursion)&&num(antes.produccion?.vipHasta)<=ahora)errores.push('Las excursiones nuevas requieren VIP activo');
   if(!mismoJSON(antes.artefactos||null,next.artefactos||null))errores.push('Los objetos productores sólo se modifican en el servidor');
+  if(!mismoJSON(antes.mejorasPasivas||null,next.mejorasPasivas||null))errores.push('Las mejoras de pasivas sólo se compran en el servidor');
   if(!mismoJSON(antes.packs||null,next.packs||null))errores.push('Los packs sólo se compran en el servidor');
   if(!mismoJSON(antes.banco||null,next.banco||null))errores.push('El Banco sólo se modifica en el servidor');
   if(!mismoJSON(antes.daily||{day:0,last:''},next.daily||{day:0,last:''}) || num(antes.buffCultivoHasta)!==num(next.buffCultivoHasta))errores.push('Las recompensas diarias sólo se reclaman en el servidor');
@@ -353,9 +365,9 @@ function protegerEconomia(prev, next, ahora) {
         if(!receta)errores.push('Receta de expansión inexistente');
         for(const [k,q] of Object.entries(receta||{})){
           let ingreso=0;
-          if(k==='madera')ingreso=Math.min(Math.max(0,num(next.logrosAcciones?.madera)-num(antes.logrosV2?.registro?.madera)),num(recibo.chop)*(antes.nfts?.hacha_abuelo?1.1:1));
+          if(k==='madera')ingreso=Math.min(Math.max(0,num(next.logrosAcciones?.madera)-num(antes.logrosV2?.registro?.madera)),num(recibo.chop)*(1+pasivaBonoServidor(antes,'hacha_abuelo')));
           else {const actos=Math.min(minas,Math.max(0,num(next.stats?.minar?.[k])-num(antes.stats?.minar?.[k])));minas-=actos;
-            ingreso=k==='piedra'?Math.min(Math.max(0,num(next.logrosAcciones?.piedra)-num(antes.logrosV2?.registro?.piedra)),actos*(antes.nfts?.cincel_cantera?1.1:1)):actos*2;}
+            ingreso=k==='piedra'?Math.min(Math.max(0,num(next.logrosAcciones?.piedra)-num(antes.logrosV2?.registro?.piedra)),actos*(1+pasivaBonoServidor(antes,'cincel_cantera'))):actos*2;}
           if(num(antes.res?.[k])+ingreso-num(next.res?.[k])+1e-7<q)errores.push('Faltan materiales de la expansión: '+k);
         }
       } else if (obra && obraN && obraN.hasta!==obra.hasta) errores.push("No se puede adelantar una obra");
@@ -613,7 +625,7 @@ Deno.serve(async (req) => {
       if(!['ver','semillas'].includes(body.visita.accion))return json({error:'Acción de visita inválida'},400);
     }
     // Cobros y canjes autoritativos: saldo, reloj, recibo y compare-and-swap en el servidor.
-    if(body?.pack || body?.artefacto || body?.banco || body?.diario || body?.visita || body?.logro){
+    if(body?.mejora || body?.pack || body?.artefacto || body?.banco || body?.diario || body?.visita || body?.logro){
       const a=body.artefacto;
       if(body.cuenta!==uid)return json({error:'La sesión cambió de cuenta; recargá antes de operar'},409);
       if(typeof body.op!=='string'||!/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(body.op)||typeof body.base!=='string')return json({error:'Pedido inválido'},400);
@@ -621,7 +633,7 @@ Deno.serve(async (req) => {
       if(err)return json({error:'No se pudo leer la granja'},503);
       if(!row)return json({error:'Primero sincronizá tu granja'},409);
       const ahora=Math.max(Date.now(),new Date(row.updated_at).getTime()+1);
-      const r=body.pack ? packOperacion(row.data,body.pack.id,ahora,body.op) : body.logro ? logroOperacion(row.data,body.logro.key,body.op) : body.visita ? (body.visita.accion==='ver'?logroVisita(row.data,body.visita.destino,uid,ahora,body.op):visitaOperacion(row.data,body.visita.destino,uid,ahora,body.op)) : body.diario ? (body.diario.accion==='reclamar'?diarioOperacion(row.data,ahora,body.op):{error:'Operación diaria inválida'}) : body.banco ? bancoOperacion(row.data,body.banco,body.op,tasaBanco) : artefactoOperacion(row.data,a.accion,a.id,ahora,body.op);
+      const r=body.mejora ? mejoraOperacion(row.data,body.mejora.id,body.op) : body.pack ? packOperacion(row.data,body.pack.id,ahora,body.op) : body.logro ? logroOperacion(row.data,body.logro.key,body.op) : body.visita ? (body.visita.accion==='ver'?logroVisita(row.data,body.visita.destino,uid,ahora,body.op):visitaOperacion(row.data,body.visita.destino,uid,ahora,body.op)) : body.diario ? (body.diario.accion==='reclamar'?diarioOperacion(row.data,ahora,body.op):{error:'Operación diaria inválida'}) : body.banco ? bancoOperacion(row.data,body.banco,body.op,tasaBanco) : artefactoOperacion(row.data,a.accion,a.id,ahora,body.op);
       if(r.repetido)return json({ok:true,data:row.data,updated_at:row.updated_at,cobro:r.cobro,premio:r.premio,repetido:true,granja:granjaVisitada});
       if(body.base!==row.updated_at)return json({error:'Otra sesión guardó; recargá antes de operar',conflicto:true},409);
       if(r.tasaCambio)return json({error:r.error,tasaCambio:true},412);
