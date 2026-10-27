@@ -1,0 +1,29 @@
+GOLDEN FARM — TIENDA VISUAL Y GUARDADO
+27/10/2026
+
+GUARDADO
+El disquete gira mientras espera, muestra una marca al confirmar y una cruz si falla. El tooltip describe el estado y la acción. No se dibuja una leyenda flotante junto al botón.
+Los resultados se muestran localmente en Registro y Chat. No se publican en la red ni al resto de jugadores. Las confirmaciones consecutivas idénticas se agrupan; los errores conservan su explicación. La región accesible del estado permanece disponible para lectores de pantalla.
+El guardado real sigue confirmándose con el mismo ACK del servidor, la misma cola y las mismas protecciones de identidad y conflictos. No cambia el autoguardado de cinco segundos ni F5.
+
+COMPRAS
+Accesos fijos de PC: Tienda, VIP, Objetos, Mejoras y Packs. Se compactan horizontalmente en combate. No hay anuncios emergentes automáticos ni animación publicitaria.
+El catálogo muestra una ilustración, un beneficio corto, el precio de entrada y un botón al detalle. Semillas, adornos, bolsas y animales siguen disponibles por sus rutas. Animales exige el Establo construido.
+VIP: una membresía de 30 días, precio tomado de la configuración, energía de granja de 50 a 100, +25% de cupos (mínimo dos) y fabricación en lotes. El resto de ventajas y condiciones siguen en desplegables. Se conservan confirmación y validación de saldo; el VIP ya activo no se compra otra vez desde el botón.
+Los objetos producen Plata; no se anuncia rendimiento en dólares ni depósitos/retiros USDT. Los precios, probabilidades, producciones y límites existentes no cambian.
+
+ARTE
+Cuatro ilustraciones nuevas, generadas con la herramienta integrada image_gen y exportadas a WebP transparente de 256x234. Peso conjunto: 122262 bytes (aprox. 119 KiB). Los originales se conservan en el espacio local de trabajo.
+public/assets/ui/shop-vip-v1.webp
+public/assets/ui/shop-objetos-v1.webp
+public/assets/ui/shop-mejoras-v1.webp
+public/assets/ui/shop-suministros-v1.webp
+Los textos, precios y botones son HTML accesible; no están incrustados en las imágenes.
+
+VALIDACIÓN
+Pruebas de rutas sin cobro al navegar; VIP sin saldo/activo; packs y bolsas en el detalle correcto; requisito de Establo; activos gráficos presentes e iconos de moneda distintos.
+Pruebas de ACK, doble clic, fallos, conflicto, cambio de cuenta y guardado en cola. Mensajes locales y agrupación de confirmaciones consecutivas.
+Tienda y VIP revisados a 1024x600, 1280x720 y 1920x1080: marco, cierre y ancho correctos.
+Validación visual en cliente real con persistencia local aislada; no se modifican cuentas reales ni se realizan compras durante la prueba.
+
+Suite completa de PC: 302/302 pruebas correctas, con hash de fuentes estable antes/después. Evidencia local: outputs/tienda-guardado-regresiones-20261027-final.json, en el espacio de trabajo de Codex.

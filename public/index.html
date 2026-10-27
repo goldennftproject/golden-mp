@@ -42,7 +42,7 @@
   #gm-guardar[data-estado="error"]{background:#833a2d;border-color:#ffb29b}
   #gm-guardar[data-estado="ok"]::after,#gm-guardar[data-estado="error"]::after{position:absolute;right:-3px;bottom:-3px;display:grid;place-items:center;width:19px;height:19px;border:2px solid #f4e7c0;border-radius:50%;font-size:14px;line-height:1;color:white;text-shadow:none}
   #gm-guardar[data-estado="ok"]::after{content:'✓';background:#357c2a}
-  #gm-guardar[data-estado="error"]::after{content:'!';background:#b52f28}
+  #gm-guardar[data-estado="error"]::after{content:'×';background:#b52f28}
   @media(prefers-reduced-motion:reduce){#gm-guardar[aria-busy="true"] svg{animation:none}}
   #gm-guardado:empty{display:none}
   #gm-guardado{position:absolute;right:0;bottom:54px;width:260px;max-width:calc(100vw - 32px);box-sizing:border-box;padding:8px 12px;border:1px solid #c9b88c;border-radius:8px;background:#302b20;color:#fff4ce;font-size:12px;pointer-events:none}
@@ -1487,6 +1487,33 @@
     #logros-list>.ayuda-menu{margin:8px 0 12px}#logros-list .forge-row .durbar{width:100%;max-width:none;margin:7px 0}
   }
   @media(min-width:641px) and (max-width:1000px){.cob-contenido{grid-template-columns:1fr}.cob-gestion{border-left:0;border-top:1px solid #d5ad7070;padding:12px 0 0}#cob-slots{grid-template-columns:repeat(5,minmax(0,1fr));max-height:180px}}
+  /* El disquete comunica el estado; la explicación va al panel de mensajes y al tooltip. */
+  #gm-guardado{position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip:rect(0,0,0,0);clip-path:inset(50%);white-space:nowrap;border:0}
+  #saveind,#saveind.show{display:none!important}
+  #log .guardado-sistema,#chat-msgs .guardado-sistema{color:#c7e8ac;font-size:12px;line-height:1.4}
+  #log .guardado-sistema.warn,#chat-msgs .guardado-sistema.warn{color:#ffd0ae}
+
+  #compras-accesos{display:none}
+  .tienda-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px;margin:12px 0}
+  .tienda-producto{background:#f2e5c4;border:2px solid #d6bb83;border-radius:10px;overflow:hidden;color:#392a19;display:flex;flex-direction:column;text-shadow:none}
+  .tienda-arte{height:140px;background:radial-gradient(ellipse at center,#fff4c8,#d9bd7b);display:grid;place-items:center;border-bottom:1px solid #b99c65}
+  .tienda-arte img{width:146px;height:138px;object-fit:contain;image-rendering:pixelated;filter:drop-shadow(0 4px 2px #6e482b44)}
+  .tienda-copy{padding:12px;display:flex;flex-direction:column;flex:1}.tienda-copy h4{margin:0 0 6px;font-size:17px;color:#352514;text-shadow:none}.tienda-copy>strong{font-size:14px}.tienda-copy p{margin:5px 0 12px;font-size:13px;color:#5b4931;line-height:1.4}
+  .tienda-producto-pie{display:flex;align-items:center;justify-content:space-between;gap:8px;margin-top:auto;flex-wrap:wrap}.tienda-producto-pie>b{font-size:13px;color:#795510}
+  .tienda-destacado{border-color:#c29a35}.tienda-saldos,.tienda-otras{display:flex;gap:8px;align-items:center;flex-wrap:wrap}.tienda-saldos{background:#f2e5c4;border-radius:7px;padding:8px 10px;color:#49301f;font-size:13px;text-shadow:none}.tienda-saldos>span{display:flex;gap:4px;align-items:center;margin-right:7px}.tienda-saldos button{margin-left:auto}.tienda-otras{margin:12px 0}
+  .vip-presentacion{display:grid;grid-template-columns:180px minmax(0,1fr);gap:15px;align-items:center;padding:14px;margin:8px 0 12px;background:linear-gradient(135deg,#fff2c9,#ebd69b);border:2px solid #bf9949;border-radius:12px;color:#3b2b15;text-shadow:none}
+  .vip-ilustracion{display:grid;place-items:center}.vip-ilustracion img{width:180px;height:200px;object-fit:contain;image-rendering:pixelated;filter:drop-shadow(0 5px 3px #5b371c44)}
+  .vip-etiqueta{font-size:10px;font-weight:800;letter-spacing:1px;color:#745017}.vip-propuesta h4{font-size:20px;line-height:1.15;margin:6px 0 12px;color:#342410;text-shadow:none}
+  .vip-beneficios{padding:0;margin:8px 0;list-style:none;font-size:13px;line-height:1.5}.vip-beneficios li{padding:3px 0}.vip-beneficios small{color:#6c5535;font-size:11px;margin-left:4px}
+  .vip-precio{display:flex;align-items:baseline;gap:8px;margin:10px 0}.vip-precio b{font-size:23px;color:#79520b}.vip-precio small{font-size:12px;color:#6c5535}.vip-propuesta #vip-comprar{width:100%}.vip-saldo{margin:8px 0 0;font-size:12px;color:#59452a;line-height:1.4}
+  @media(min-width:641px){
+    #compras-accesos{display:block;position:fixed;left:12px;top:92px;width:156px;z-index:6;pointer-events:auto}
+    #compras-accesos.compras-combate{width:280px}.compras-combate .compras-iconos{grid-template-columns:repeat(4,minmax(0,1fr))}
+    .tienda-abrir{display:block;width:100%;padding:3px 8px!important;font-size:11px!important;letter-spacing:.8px;text-transform:uppercase;margin-bottom:4px}
+    .compras-iconos{display:grid;grid-template-columns:1fr 1fr;gap:5px}
+    .compras-iconos button{min-height:64px;padding:3px!important;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:1px;background:#674626!important;border:1px solid #bd9656!important;border-image:none!important;border-radius:7px!important;box-shadow:0 2px 0 #352716!important;transition:background .15s}
+    .compras-iconos button:hover{background:#855e30!important}.compras-iconos img{width:40px;height:40px;object-fit:contain;image-rendering:pixelated}.compras-iconos span{font-size:11px;color:#fff0cc;text-shadow:0 1px #25190f;font-weight:800}.compras-iconos .tienda-vip-activo{border-color:#aed783!important;background:#355329!important}
+  }
 </style>
 </head>
 <body>
@@ -1553,6 +1580,18 @@
   <!-- fundido a negro al cambiar de escena (granja <-> Zona Negra <-> plaza) -->
   <div id="fadeblk"></div>
   <div id="updbanner"><span class="updt">Nueva versión disponible · actualizando en</span> <b class="updc">5</b> <button id="updnow">Actualizar ahora</button></div>
+
+
+  <nav id="compras-accesos" aria-label="Tienda y compras de la granja">
+    <button class="tienda-abrir" data-tienda="inicio" title="Ver la tienda y para qué sirve cada compra">Tienda</button>
+    <div class="compras-iconos">
+      <button data-tienda="vip" title="VIP: más energía y capacidad"><img src="assets/ui/shop-vip-v1.webp" alt="" width="48" height="48"><span id="tienda-vip-estado">VIP</span></button>
+      <button data-tienda="objetos" title="Objetos de Granja: producen Plata cada 24 horas"><img src="assets/ui/shop-objetos-v1.webp" alt="" width="48" height="48"><span>Objetos</span></button>
+      <button data-tienda="mejoras" title="Mejoras: edificios, God Hand y pasivas de recolección"><img src="assets/ui/shop-mejoras-v1.webp" alt="" width="48" height="48"><span>Mejoras</span></button>
+      <button data-tienda="suministros" title="Packs: materiales para construir y fabricar"><img src="assets/ui/shop-suministros-v1.webp" alt="" width="48" height="48"><span>Packs</span></button>
+    </div>
+  </nav>
+  <div class="ov" id="ov-tienda"><div class="card" style="width:min(760px,94vw)"><button class="close" data-close="ov-tienda" aria-label="Cerrar tienda">×</button><h3>Tienda de la granja</h3><div id="tienda-catalogo"></div></div></div>
 
   <!-- overlays -->
   <div class="ov" id="ov-barn"><div class="card" style="width:min(560px,94%)">

@@ -1,5 +1,12 @@
 # Las leyes de Golden Farm
 
+## Compras visuales y disquete sin leyendas flotantes — 27/10/2026
+
+Dirección pide accesos visibles y discretos al VIP y a las compras, con ilustraciones y beneficios breves. En PC se añade un acceso fijo a Tienda/VIP/Objetos/Mejoras/Packs; la tienda organiza las compras sin ejecutarlas al navegar. Las rutas abren las pestañas existentes, y Animales conserva el requisito de Establo. El VIP mantiene precio, duración, beneficios, confirmación y servicio autoritativo; no hay otra membresía ni nuevos cobros. Se usan cuatro ilustraciones WebP de 256 px con transparencia, sin cambiar el atlas del mundo. En combate los accesos se compactan en una fila.
+
+El disquete conserva giro, confirmación y error; su explicación está en el tooltip y los resultados aparecen como mensajes locales del Registro y Chat. Se retiran los avisos flotantes, se agrupan confirmaciones consecutivas iguales y no se envía nada al chat de otros jugadores. Se preservan ACK, conflictos, cola, identidad, autoguardado y F5. USDT sigue desactivado. Ver TIENDA-VISUAL-Y-GUARDADO-20261027.txt y ARTE-TIENDA-20261027.txt.
+
+
 ## Revisión visual general de PC — 27/10/2026
 
 Dirección pide revisar el conjunto de la interfaz. Las ventanas respetan el alto disponible, mantienen el cierre visible al desplazar y separan visualmente el fondo. El Cobertizo presenta primero las piezas, con nombre visible, y la capacidad en su propia columna. Los logros conservan reglas y registro en un desplegable; el catálogo de productores usa tarjetas legibles con precio, producción y acción. Se retira de PC el título obsoleto de herramientas en Equipo y el menú reserva el espacio del disquete. En combate, el muelle mide también los controles inferiores: el equipo se desplaza por dentro mientras los modos y el botón Equipo permanecen visibles. Se preservan identificadores, controladores, costes, progreso, arte y guardado. Ver AUDITORIA-VISUAL-PC-20261027.txt.

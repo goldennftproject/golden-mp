@@ -1,0 +1,24 @@
+'use strict';
+const assert=require('node:assert/strict'),fs=require('node:fs'),path=require('node:path'),vm=require('node:vm'),{JSDOM}=require('jsdom');
+const root=path.resolve(__dirname,'..'),doc=new JSDOM(fs.readFileSync(root+'/public/index.html','utf8')).window.document;
+const {ctx:c}=require('./arrancar-el-juego.contexto').arrancar(root,{'game/main.js':''});
+(async()=>{
+ await c.SAVE_READY;c.document=doc;c.estadoDeCero();c.innerWidth=1360;
+ doc.defaultView.HTMLElement.prototype.scrollIntoView=function(){};
+ c.G.golden=0;c.refreshVip();assert.equal(doc.getElementById('vip-comprar').disabled,true);assert.match(doc.getElementById('vip-info').textContent,/100 de energía/);assert.match(doc.getElementById('vip-info').textContent,/25% de cupos/);assert.match(doc.getElementById('vip-info').textContent,/10 Golden/);
+ c.G.golden=20;c.refreshVip();assert.equal(doc.getElementById('vip-comprar').disabled,false);
+ c.G.produccion.vipHasta=Date.now()+86400000;c.refreshVip();assert.equal(doc.getElementById('vip-comprar').disabled,true);assert.equal(doc.getElementById('vip-comprar').textContent,'VIP activo');c.G.produccion.vipHasta=0;
+ c.refreshTienda();assert.ok(doc.querySelector('.tienda-saldos img[src*=coin_esencia]'),'Golden conserva su icono propio');assert.equal(doc.querySelectorAll('.tienda-producto').length,4);assert.equal(doc.querySelector('[data-tienda="animales"]').disabled,true);
+ for(const img of doc.querySelectorAll('#tienda-catalogo img[src^="assets/ui/shop-"]'))assert.ok(fs.existsSync(root+'/public/'+img.getAttribute('src')),'ilustración presente');
+ let opened=null,tab=null,compras=0;c.closeAllOv=()=>{};c.openOv=id=>{opened=id};c.economiaSolicitar=()=>compras++;c.passBuyVip=()=>compras++;c.artefactoSolicitar=()=>compras++;
+ doc.querySelectorAll('#ov-market [data-shop]').forEach(b=>b.onclick=()=>{tab=b.dataset.shop;if(tab==='buy')c.refreshSeedShop()});
+ c.abrirCompra('vip');assert.equal(opened,'ov-vip');c.abrirCompra('objetos');assert.equal(opened,'ov-reliquias');
+ c.abrirCompra('mejoras');assert.equal(opened,'ov-market');assert.equal(tab,'nft');
+ c.abrirCompra('suministros');assert.equal(tab,'buy');assert.equal(doc.querySelector('#packs-shop>details').open,true);
+ c.abrirCompra('bolsas');assert.equal(doc.getElementById('semillas-bolsas').open,true);
+ const anterior=opened;c.abrirCompra('animales');assert.equal(opened,anterior,'no salta el requisito de Establo');
+ c.G.built.establo=true;c.abrirCompra('animales');assert.equal(opened,'ov-establo');assert.equal(compras,0,'navegar nunca compra, cobra o activa VIP');
+ c.GF.scene='forest';c.ubicarComprasPc();assert.equal(doc.getElementById('compras-accesos').classList.contains('compras-combate'),true,'en combate los accesos se compactan en una fila');c.GF.scene='farm';c.ubicarComprasPc();assert.equal(doc.getElementById('compras-accesos').classList.contains('compras-combate'),false);
+ assert.equal(doc.querySelectorAll('#compras-accesos [data-tienda]').length,5);
+ console.log('OK: accesos, imágenes, VIP sin saldo/activo, destinos y pestañas exactas; animales con Establo y ninguna compra al navegar.');
+})().catch(e=>{console.error(e);process.exitCode=1});

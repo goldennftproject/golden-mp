@@ -1,0 +1,29 @@
+GOLDEN FARM — ARTE DE LA TIENDA
+27/10/2026
+Método: herramienta integrada image_gen. No se usa API/CLI alternativa.
+Destino publicado: public/assets/ui/shop-{vip,objetos,mejoras,suministros}-v1.webp
+Exportación: WebP con alfa, lado máximo 256, calidad 88. Sólo ajuste de tamaño/formato para la interfaz; no se redibuja el contenido.
+Originales conservados: C:/Users/pauli/Documents/Codex/2026-09-17/en-mi-escritorio-de-la-pc/outputs/tienda-arte-20261027/
+
+PROMPT VIP
+Use case: ads-marketing. Asset type: transparent game shop illustration for Golden Farm PC. Create one polished premium farm membership emblem illustration, no lettering or numbers. A handsome golden crown resting on a rustic farm crest of ripe wheat, a bright energy lightning jewel, and two little fertile crop plots with seedlings. All elements form one compact cohesive collectible composition, large readable silhouette suitable for a shop card and 40px thumbnail. Detailed crisp 2D pixel art, hand shaded 1990s fantasy farming game quality, clean dark brown outlines, rich warm gold, honey wood and leaf green, subtle ivory highlights. Three quarter view, flat orthographic game asset lighting, not photorealistic or plastic 3D. Centered with generous transparent margins, isolated on true transparent background. No UI frames, no text, no currency symbols, no price, no characters, no watermarks. Must look inviting, substantial and premium, coherent with an existing cozy farm game with pixel art wooden buildings and wooden menus.
+
+PROMPTS DE OBJETOS, MEJORAS Y SUMINISTROS
+Cada prompt concatena el prefijo, el asunto y el sufijo siguiente. Fondo transparente solicitado en la herramienta.
+
+Prefijo:
+Use case: product-mockup. Asset type: transparent shop illustration for Golden Farm PC.
+
+Asunto objetos:
+A compact collectible farm production diorama: a charming detailed timber barn with golden wheat roof, a little windmill, a healthy chicken, tilled vegetable bed, and several clearly SILVER coins collected in a small wooden tray. Convey owning farm production objects. No gold coins, no people.
+
+Asunto mejoras:
+A compact charming farm upgrade diorama: a sturdy handsome timber barn with extended stone foundations, polished reinforced tools, a carpenters mallet and rolled blueprint paper, fresh timber beams stacked beside an improved crop plot fence. Convey upgrading and building a better farm. No coins, no people.
+
+Asunto suministros:
+A generous compact farming supplies product bundle: one sturdy open wooden shipping crate filled with cut wood logs, gray stone chunks, a little tied burlap seed bag, two bright fresh carrots with leaves and a small iron farming hand tool. Clearly readable silhouette of useful supply materials. No coins, no people.
+
+Sufijo:
+One centered cohesive isolated product composition, no interface or typography. Polished crisp 2D pixel art with clean dark brown outlines, rich warm wood, natural greens, amber sunlight and ivory highlights, carefully hand-shaded fantasy farming game aesthetic. Three-quarter orthographic view, playful yet substantial premium shop artwork, not flat emoji, not smooth vector, not photorealism, not plastic 3D. True transparent background and generous clear margins. No lettering, labels, price, numbers, logos, currency marks or watermarks. Designed to read at 96px on cream cards and at 40px as an access icon in a wooden pixel-art farm game. Match a golden wheat and crown farm membership crest in richness of shading and outline style.
+
+Revisión: siluetas y materiales coherentes entre las cuatro piezas; monedas de Plata sólo en objetos productores. No hay textos generados ni cantidades incrustadas. Los beneficios y precios se muestran desde la lógica existente del juego.

@@ -70,6 +70,7 @@ const OV_REFRESH = { "ov-entrenando": () => entrenarSync(), "ov-clan": () => ref
   "ov-reliquias": () => refreshArtefactos(),
   "ov-visitas": () => refreshVisitas(),
   "ov-vip": () => refreshVip(),
+  "ov-tienda": () => refreshTienda(),
   "ov-banco": () => refreshBanco(),
   "ov-cocina": () => refreshCooking(),
   "ov-horno": () => refreshHorno(),
@@ -1975,6 +1976,7 @@ function pescaV4Nasas() {
 
 
 function refreshHud() {
+  if(typeof ubicarComprasPc==='function')ubicarComprasPc();
   const energia=energiaGranjaTick();setTxt('s-energia-granja',Math.floor(energia)+'/'+energiaGranjaMax());
   const ef=$('energia-granja-fill');if(ef)ef.style.width=Math.max(0,Math.min(100,energia/energiaGranjaMax()*100))+'%';
   const ep=$('energia-granja-pill');if(ep)ep.style.display=GF.scene==='farm'?'':'none';
@@ -2639,6 +2641,36 @@ function bancoTick(){
   const info=$('banco-info');
   if(isOpen('ov-banco')&&info&&info._cotizacionVigente!==bancoCotizacionValida())refreshBanco(false);
 }
+function abrirCompra(destino){
+  const directos={inicio:'ov-tienda',vip:'ov-vip',objetos:'ov-reliquias'};
+  if(directos[destino]){closeAllOv();openOv(directos[destino]);return;}
+  if(destino==='animales'){if(!G.built?.establo){toast('Construí el Establo para comprar animales.');return;}closeAllOv();openOv('ov-establo');return;}
+  const tabs={mejoras:'nft',suministros:'buy',semillas:'buy',adornos:'deco',bolsas:'buy'};
+  if(!tabs[destino])return;
+  closeAllOv();openOv('ov-market');
+  document.querySelector('#ov-market [data-shop="'+tabs[destino]+'"]').click();
+  const objetivo=destino==='suministros'?document.querySelector('#packs-shop>details'):destino==='bolsas'?document.querySelector('#semillas-bolsas'):null;
+  if(objetivo){objetivo.open=true;objetivo.scrollIntoView({block:'start',behavior:'auto'});objetivo.querySelector('summary')?.focus({preventScroll:true});}
+}
+function refreshTienda(){
+  const box=$('tienda-catalogo');if(!box)return;
+  const activo=vipVigente(),cards=[
+    ['vip','VIP · 30 días','Más energía y capacidad','100 de energía · +25% de cupos',activo?'VIP activo':PRODUCCION_VIP_PRECIO+' Golden','Ver VIP'],
+    ['objetos','Objetos de Granja','Tu colección produce Plata','Cobrá producción cada 24 h','Desde '+Math.min(...Object.values(ARTEFACTO_DEF).map(d=>d.golden))+' Golden','Ver objetos'],
+    ['mejoras','Mejoras permanentes','Desarrollá tu granja','God Hand · edificios · recolección','Precios por mejora','Ver mejoras'],
+    ['suministros','Packs de materiales','Construí y fabricá','Madera, piedra y minerales','Desde '+Math.min(...Object.values(PACKS_DEF).map(d=>d.golden))+' Golden','Ver packs']
+  ];
+  box.innerHTML='<div class="tienda-saldos"><span>'+coinIc('plata')+' '+fmtPlata(G.plata)+' Plata</span><span>'+coinIc('esencia')+' '+fmtGolden(G.golden)+' Golden</span><button class="ghost sm" data-panel="ov-banco">Banco</button></div><div class="tienda-grid">'+cards.map(([id,nombre,beneficio,detalle,precio,accion])=>'<article class="tienda-producto '+(id==='vip'?'tienda-destacado':'')+'"><div class="tienda-arte"><img src="assets/ui/shop-'+id+'-v1.webp" alt="" width="256" height="256"></div><div class="tienda-copy"><h4>'+nombre+'</h4><strong>'+beneficio+'</strong><p>'+detalle+'</p><div class="tienda-producto-pie"><b>'+precio+'</b><button class="green sm" data-tienda="'+id+'">'+accion+'</button></div></div></article>').join('')+'</div><div class="tienda-otras"><button class="ghost sm" data-tienda="semillas">🌱 Semillas · Plata</button><button class="ghost sm" data-tienda="adornos">🌼 Adornos</button><button class="ghost sm" data-tienda="bolsas">🎒 Bolsas</button><button class="ghost sm" data-tienda="animales" '+(!G.built?.establo?'disabled title="Construí el Establo para comprar animales"':'')+'>🐾 Animales</button></div><p class="sub">Compras con monedas del juego. Depósitos y retiros USDT desactivados.</p>';
+}
+function ubicarComprasPc(){
+  const nav=$('compras-accesos');if(!nav||window.innerWidth<=640)return;
+  const hr=$('hudbar')?.getBoundingClientRect(),fr=$('hud-flot')?.getBoundingClientRect();
+  const top=Math.ceil(Math.max(48,hr?.height?hr.bottom+8:0,fr?.height?fr.bottom+8:0));
+  nav.style.top=top+'px';nav.classList.toggle('compras-combate',GF.scene==='forest');
+  const activo=vipVigente(),label=$('tienda-vip-estado');
+  if(label)label.textContent=activo?'VIP activo':'VIP';
+  const b=nav.querySelector('[data-tienda="vip"]');if(b){b.classList.toggle('tienda-vip-activo',activo);b.title=activo?'VIP activo hasta '+new Date(G.produccion.vipHasta).toLocaleDateString('es-UY'):'VIP · 30 días · '+PRODUCCION_VIP_PRECIO+' Golden · 100 de energía y más capacidad';}
+}
 function refreshVip() {
   const box=$('vip-info');if(!box)return;
   const activo=vipVigente(),precio=PRODUCCION_VIP_PRECIO;
@@ -2652,10 +2684,7 @@ function refreshVip() {
     ['Objetos de Granja','Un objeto activo','Sin límite; admite duplicados'],
     ['Visitas y semillas','No incluidas','Resumen de granjas; hasta 3 semillas/día']
   ];
-  box.innerHTML='<div class="resumen-menu"><span><b>30 días</b>una membresía</span><span><b>50 → 100 ⚡</b>Free / VIP</span><span><b>+25 %</b>cupos, mínimo 2</span></div><p class="sub">Una sola membresía para todos los beneficios. No hay VIP separados por actividad.</p>'+
-    '<p class="sub">'+(activo?'VIP activo hasta '+escapeHtml(new Date(G.produccion.vipHasta).toLocaleString('es-UY')):'Estado: Free · VIP por '+precio+' Golden durante 30 días')+'</p>'+
-    '<p>Tu saldo: '+fmtGolden(G.golden)+' Golden</p><button class="green" id="vip-comprar" '+(activo||G.golden<precio?'disabled':'')+'>'+(activo?'VIP activo':'Comprar VIP · '+precio+' Golden · 30 días')+'</button>'+
-    (!activo&&G.golden<precio?'<p class="sub">Te faltan '+fmtGolden(precio-G.golden)+' Golden para activar la membresía.</p>':'')+
+  box.innerHTML='<div class="vip-presentacion"><div class="vip-ilustracion"><img src="assets/ui/shop-vip-v1.webp" alt="Corona con trigo y parcelas" width="256" height="256"></div><div class="vip-propuesta"><span class="vip-etiqueta">UNA MEMBRESÍA · 30 DÍAS</span><h4>Más posibilidades para tu granja</h4><ul class="vip-beneficios"><li>⚡ <b>100 de energía</b> <small>Free: 50</small></li><li>▦ <b>+25% de cupos</b> <small>mínimo 2 extra</small></li><li>×5 <b>Fabricación en lotes</b></li></ul><div class="vip-precio"><b>'+precio+' Golden</b><small>por 30 días</small></div><button class="green" id="vip-comprar" '+(activo||G.golden<precio?'disabled':'')+'>'+(activo?'VIP activo':'Activar VIP')+'</button><p class="vip-saldo">Tu saldo: '+fmtGolden(G.golden)+' Golden'+(!activo&&G.golden<precio?' · Te faltan '+fmtGolden(precio-G.golden)+' Golden':'')+'</p></div></div><p class="sub">'+(activo?'VIP activo hasta '+escapeHtml(new Date(G.produccion.vipHasta).toLocaleString('es-UY')):'Una sola membresía para todos los beneficios. Los nodos extra se compran aparte.')+'</p>'+
     '<details class="ayuda-menu"><summary>Comparar todas las ventajas · Free / VIP</summary><div style="overflow-x:auto;margin-top:12px"><table class="comparativa-vip" style="width:100%;border-collapse:collapse;text-align:left"><thead><tr><th scope="col">Beneficio</th><th scope="col">Free</th><th scope="col">VIP</th></tr></thead><tbody>'+filas.map(f=>'<tr>'+f.map(c=>'<td style="padding:8px 5px;border-top:1px solid #ffffff33">'+escapeHtml(c)+'</td>').join('')+'</tr>').join('')+'</tbody></table></div></details>'+
     '<details class="ayuda-menu"><summary>Duración y condiciones</summary><p class="sub">La energía se recupera en 4 horas. El combate no cambia. Los nodos adicionales se compran aparte. Al vencer, conservás los Objetos de Granja comprados y sus cobros; la producción que exceda la capacidad Free se pausa, sin borrar nada.</p></details>'+
     '<p class="sub">El pase está desactivado. Depósitos y retiros USDT desactivados: esta compra utiliza únicamente tu Golden del juego.</p><details class="ayuda-menu"><summary>Actividad para futuros retiros</summary><div id="vip-actividad" aria-live="polite"></div></details>';
@@ -5640,7 +5669,7 @@ function refreshSeedShop() {
      hora-parcela): la bolsa vale una hora, la mochila diez. */
   + (function () {
     if (typeof CONT_ORDER === "undefined") return "";
-    return '<details class="ayuda-menu"><summary>🎒 Bolsas y mochilas · explorar la Zona Negra</summary>'
+    return '<details class="ayuda-menu" id="semillas-bolsas"><summary>🎒 Bolsas y mochilas · explorar la Zona Negra</summary>'
       + CONT_ORDER.map(c => {
         const d = CONT_DEF[c], tengo = contsTengo(c), aff = (G.plata || 0) >= d.plata;
         return `<div class="mkt-row"><span class="mimg"><span class="em">${d.emoji}</span></span>` +
@@ -5936,17 +5965,20 @@ function placeSaveIndPc() {
   }
 }
 function showSaving() {
+  if(!guardadoManualEnCurso)estadoGuardar('saving','Guardando…');
   const el = $("saveind"); if (!el) return;
   el.className = "show saving"; el.querySelector(".sdot").textContent = "⟳"; el.querySelector(".stxt").textContent = "Guardando…"; clearTimeout(el._t);
   if (typeof placeSaveIndPc === "function") placeSaveIndPc();
 }
 function showSaveError(motivo) {
+  if(!guardadoManualEnCurso)estadoGuardar('error',typeof motivo==='string'?'Guardado '+motivo.toLowerCase()+'. Revisá la conexión.':'Guardado rechazado. Revisá el registro.');
   const el = $("saveind"); if (!el) return;
   el.className = "show"; el.querySelector(".sdot").textContent = "🚫"; el.querySelector(".stxt").textContent = typeof motivo==='string'?motivo:"Rechazado"; clearTimeout(el._t);
   if (typeof placeSaveIndPc === "function") placeSaveIndPc();
   el._t = setTimeout(() => { el.classList.remove("show"); if (typeof placeSaveIndPc === "function") placeSaveIndPc(); }, 4000);
 }   // 14/9: el portero dijo que no
 function showSaved() {
+  if(!guardadoManualEnCurso)estadoGuardar('ok','Guardado confirmado');
   const el = $("saveind"); if (!el) return;
   el.className = "show"; el.querySelector(".sdot").textContent = ""; el.querySelector(".stxt").textContent = "Guardado"; clearTimeout(el._t);
   if (typeof placeSaveIndPc === "function") placeSaveIndPc();
@@ -6346,10 +6378,21 @@ function initUniversalDrag() {
 
 /* ---- init ---- */
 let guardadoManualEnCurso=false;
+function avisoGuardadoPanel(tipo,texto){
+  // Sólo mensajes locales: nunca pasan por sendChat ni por la red.
+  for(const [id,clase,max] of [['log','l',30],['chat-msgs','cm',60]]){
+    const box=$(id);if(!box)continue;
+    let d=box.lastElementChild;const mensaje='💾 '+texto;
+    if(!d||d.dataset.guardado!==tipo||d.textContent!==mensaje){d=document.createElement('div');d.dataset.guardado=tipo;box.appendChild(d);}
+    d.className=clase+' guardado-sistema '+(tipo==='error'?'warn':'');d.textContent=mensaje;d.title=new Date().toLocaleTimeString('es-UY');
+    while(box.children.length>max)box.removeChild(box.firstChild);box.scrollTop=box.scrollHeight;
+  }
+}
 function estadoGuardar(tipo,texto=''){
   const b=$('gm-guardar'),e=$('gm-guardado');
-  if(b){b.dataset.estado=tipo;b.disabled=tipo==='saving';b.setAttribute('aria-busy',String(b.disabled));}
+  if(b){b.dataset.estado=tipo;b.disabled=tipo==='saving';b.setAttribute('aria-busy',String(b.disabled));b.title=texto?texto+(tipo==='saving'?'':' · Clic para guardar'):'Guardar ahora';}
   if(e)e.textContent=texto;
+  if(texto&&(tipo==='ok'||tipo==='error'))avisoGuardadoPanel(tipo,texto);
 }
 async function guardarAhora(){
   if(guardadoManualEnCurso)return;
@@ -6380,6 +6423,7 @@ function initUI() {
   registroRestaurarCambioManual();
   const gmenu = $("gmenu");
   const guardar=$('gm-guardar');if(guardar)guardar.onclick=guardarAhora;
+  document.addEventListener('click',ev=>{const b=ev.target.closest('[data-tienda]');if(b&&!b.disabled){ev.preventDefault();abrirCompra(b.dataset.tienda);}});
   /* La flecha distingue el ☰ de la entrada que apareció dentro del menú. Recalcular sólo en el
      latido hacía que, durante hasta un segundo, siguiera señalando una ruta que acababa de dejar
      de ser la visible. Esta puerta cubre el clic y el atajo M en el mismo gesto. */
@@ -6460,7 +6504,7 @@ function initUI() {
       gm.classList.add("collapsed"); syncRecientesMenuPc(); sincronizarGuiaMenu();
     }
     if (!anyOvOpen()) return;
-    if (e.target.closest(".card, #gmenu, #hotwrap, .hudbar, #logpanel, #editbar, #seedwheel, #guardado-manual")) return;
+    if (e.target.closest(".card, #gmenu, #hotwrap, .hudbar, #logpanel, #editbar, #seedwheel, #guardado-manual, #compras-accesos")) return;
     let cerro = false;
     document.querySelectorAll(".ov.show:not(.bloquea)").forEach(o => {
       if (o.id !== "ov-inv") { desenfocarAlCerrar(o); o.classList.remove("show"); cerro = true; }
