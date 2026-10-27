@@ -5931,9 +5931,9 @@ function showSaving() {
   el.className = "show saving"; el.querySelector(".sdot").textContent = "⟳"; el.querySelector(".stxt").textContent = "Guardando…"; clearTimeout(el._t);
   if (typeof placeSaveIndPc === "function") placeSaveIndPc();
 }
-function showSaveError() {
+function showSaveError(motivo) {
   const el = $("saveind"); if (!el) return;
-  el.className = "show"; el.querySelector(".sdot").textContent = "🚫"; el.querySelector(".stxt").textContent = "Rechazado"; clearTimeout(el._t);
+  el.className = "show"; el.querySelector(".sdot").textContent = "🚫"; el.querySelector(".stxt").textContent = typeof motivo==='string'?motivo:"Rechazado"; clearTimeout(el._t);
   if (typeof placeSaveIndPc === "function") placeSaveIndPc();
   el._t = setTimeout(() => { el.classList.remove("show"); if (typeof placeSaveIndPc === "function") placeSaveIndPc(); }, 4000);
 }   // 14/9: el portero dijo que no

@@ -1026,8 +1026,13 @@ function tutoSubPlata(prefijo, meta) {
     return { plata: true, meta: meta || 0, txt: prefijo + accion + (deUna ? " — una tanda y alcanza" : ""),
       target: "market", panel: "ov-market", ui: "[data-buy='" + mejor + "']", permite: ["plant", "harvest", "sell", "buyseed", "plotunlock"] };
   }
-  return { plata: true, meta: meta || 0, txt: prefijo + "vendé lo que tengas suelto en el Mercado (el guardia protege lo del objetivo)",
-    target: "market", panel: "ov-market", ui: "#shop-sell", permite: ["plant", "harvest", "sell", "buyseed", "plotunlock", "chop", "mine"] };
+  const premio=typeof logroLista==='function'&&logroLista().flatMap(f=>f.tiers).find(t=>t.cobrable);
+  if(premio)return {plata:true,meta:meta||0,txt:prefijo+'cobrá tu recompensa de Plata en Logros',panel:'ov-logros',ui:'[data-logro="'+premio.key+'"]'};
+  const diario=typeof dailyState==='function'?dailyState():null;
+  if(diario?.claimable&&[2,7].includes(diario.day))return {plata:true,meta:meta||0,txt:prefijo+'reclamá '+(diario.day===7?'Plata':'semillas')+' en Premio diario',panel:'ov-paquete'};
+  const materiales=Object.keys(G.res||{}).some(k=>!CROP_DEF[k]&&(G.res[k]||0)>=1);
+  return { plata: true, meta: meta || 0, txt: prefijo + (materiales?'ofrecé materiales en el Mercado de jugadores; la venta depende de otro jugador':'sin semillas ni Plata: revisá las metas con recompensa en Logros'),
+    panel: materiales?'ov-p2p':'ov-logros', permite: ["plant", "harvest", "sell", "buyseed", "plotunlock", "chop", "mine"] };
 }
 /* ============ QUÉ HACER MIENTRAS SE ESPERA (19/8, dirección) =======================
    Hubo dos intentos por CARTEL —una segunda línea, y una línea que rotaba con cuenta atrás— y los
@@ -4290,6 +4295,7 @@ function mkNombre(kind, key) {
   return (CROP_DEF[key] && CROP_DEF[key].label) || RES_LABEL[key] || key;
 }
 async function marketPublicar(kind, key, n, precio) {
+  if(typeof sb!=='undefined'&&sb&&typeof mercadoP2POperar==='function')return mercadoP2POperar({accion:'publicar',kind,item:key,qty:Math.max(1,Math.floor(n||1)),price:Math.max(1,Math.floor(precio||1)),name:mkNombre(kind,key)});
   n = Math.max(1, Math.floor(n || 1)); precio = Math.max(1, Math.floor(precio || 1));
   if (!MARKET_KINDS[kind]) return;
   if (mkTengo(kind, key) < n) { toast("No tenés " + n + " de eso"); return; }
@@ -4308,6 +4314,7 @@ async function marketPublicar(kind, key, n, precio) {
 }
 let mkBusy = false;   // un solo movimiento de mercado a la vez (el doble clic duplicaba/dejaba la plata en negativo)
 async function marketComprar(fila) {
+  if(fila&&typeof sb!=='undefined'&&sb&&typeof mercadoP2POperar==='function')return mercadoP2POperar({accion:'comprar',id:fila.id,price:fila.price});
   if (!fila || mkBusy) return;
   if (fila.seller === (typeof UID === "string" ? UID : "")) { toast("Eso lo publicaste vos"); return; }
   if (G.plata < fila.price) { toast("Te falta plata (" + fmt(fila.price) + ")"); return; }
@@ -4326,6 +4333,7 @@ async function marketComprar(fila) {
   if (typeof saveFarm === "function") saveFarm(true);
 }
 async function marketCancelar(fila) {
+  if(fila&&typeof sb!=='undefined'&&sb&&typeof mercadoP2POperar==='function')return mercadoP2POperar({accion:'retirar',id:fila.id});
   if (!fila || mkBusy) return;
   if (fila.seller !== (typeof UID === "string" ? UID : "")) { toast("Esa publicación no es tuya"); return; }
   mkBusy = true;
@@ -4339,6 +4347,7 @@ async function marketCancelar(fila) {
   if (typeof saveFarm === "function") saveFarm(true);
 }
 async function marketCobrar(fila) {
+  if(fila&&typeof sb!=='undefined'&&sb&&typeof mercadoP2POperar==='function')return mercadoP2POperar({accion:'cobrar',id:fila.id});
   if (!fila || mkBusy) return;
   if (fila.seller !== (typeof UID === "string" ? UID : "")) { toast("Esa venta no es tuya"); return; }
   if (fila.paid) { toast("Esa venta ya la cobraste"); return; }

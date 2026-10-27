@@ -350,6 +350,12 @@ function xpGranjaOficios(d){
 function protegerEconomia(prev, next, ahora) {
   picosUnificarEstado(next);
   const errores = [], antes = prev || {}, p = antes.produccion, n = next.produccion;
+  // Las entregas nacen en compras/transacciones autoritativas. Un snapshot sólo puede
+  // conservarlas o reclamarlas, nunca fabricar otra ni alterar su cantidad o ficha.
+  const pendientes=Array.isArray(antes.mkPend)?antes.mkPend:[],usados=new Set();
+  if(next.mkPend===undefined)next.mkPend=JSON.parse(JSON.stringify(pendientes));
+  if(!Array.isArray(next.mkPend))errores.push('Entregas pendientes inválidas');
+  else for(const entrega of next.mkPend){const i=pendientes.findIndex((p,i)=>!usados.has(i)&&mismoJSON(p,entrega));if(i<0){errores.push('Las entregas pendientes sólo se crean en el servidor');break;}usados.add(i);}
   const ritmo=next.farmXpRitmo,ancla=antes.farmXpRitmo||{v:1,tala:Math.max(0,num(antes.skills?.tala)),mining:Math.max(0,num(antes.skills?.mining))};
   if((ritmo||antes.farmXpRitmo)&&(!ritmo||!mismoJSON(ritmo,ancla)))errores.push('No se puede modificar el ancla de XP aceptada');
 
@@ -685,6 +691,14 @@ Deno.serve(async (req) => {
       granjaVisitada=visitaVista(destino);
       if(!['ver','semillas'].includes(body.visita.accion))return json({error:'Acción de visita inválida'},400);
     }
+    // P2P: publicación, pago, entrega y recibo se confirman juntos en PostgreSQL.
+    if(body?.p2p){
+      if(body.cuenta!==uid)return json({error:'La sesión cambió de cuenta; recargá antes de operar'},409);
+      if(typeof body.op!=='string'||!/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(body.op)||typeof body.base!=='string'||!body.p2p||typeof body.p2p!=='object')return json({error:'Pedido P2P inválido'},400);
+      const {data,error}=await admin.rpc('p2p_operar',{p_uid:uid,p_base:body.base,p_op:body.op,p_detalle:body.p2p});
+      if(error){const conflicto=/conflicto:/i.test(error.message||'');return json({error:conflicto?'Otra sesión guardó; recuperá la versión del servidor':error.code==='P0001'?error.message:'No se pudo confirmar el movimiento del mercado',conflicto},conflicto?409:error.code==='P0001'||/^22/.test(error.code||'')?400:503);}
+      return json(data);
+    }
     // Cobros y canjes autoritativos: saldo, reloj, recibo y compare-and-swap en el servidor.
     if(body?.infra || body?.mejora || body?.pack || body?.artefacto || body?.banco || body?.diario || body?.visita || body?.logro){
       const a=body.artefacto;
@@ -742,12 +756,12 @@ Deno.serve(async (req) => {
       .select("seller,sold_to,kind,item,qty,price,paid,fee_pct")
       .or("seller.eq." + uid + ",sold_to.eq." + uid).limit(2000);
     if (marketError) return json({ error: "No se pudo validar el mercado. No se escribió nada." }, 503);
-    const mercado = mercadoPermiso(uid, filas ?? [], prevRow?.mercado_ack ?? null, prevRow?.data ?? null, data);
     const protegidos = protegerEconomia(prevRow?.data ?? null, data, ahora.getTime());
     if (protegidos.length) {
       await admin.from("farm_saves_log").insert({user_id:uid,reglas_v:VERSION,elapsed_s:Math.round(elapsedSeg),delta:{economia_rechazada:true},sospechas:protegidos});
       return json({ error: "Guardado económico bloqueado; conservá el respaldo local y recargá para sincronizar.", economia:true, sospechas: protegidos }, 409);
     }
+    const mercado = mercadoPermiso(uid, filas ?? [], prevRow?.mercado_ack ?? null, prevRow?.data ?? null, data);
 
     /* las reglas miran, la bitácora recuerda */
     const { delta, sospechas } = evaluarGuardado(prevRow?.data ?? null, data, elapsedSeg, mercado.permiso);

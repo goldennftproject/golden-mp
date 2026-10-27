@@ -1,18 +1,17 @@
 /* EL PORTERO, DEL LADO DEL JUEGO: saveFarm ENTRA POR LA PUERTA NUEVA (21/8)
    Se carga el save.js real con un Supabase de mentira que anota cada llamada, y se
-   verifica el contrato de la transición:
+   verifica el contrato actual (transición terminada; RLS cierra la escritura directa):
      1. con la Edge Function viva, el guardado va por ella y NO toca la tabla directo;
-     2. si la función no está (aún sin deployar), cae al camino viejo y nadie pierde
-        su guardado;
-     3. si las dos puertas fallan, lastSavedKey no avanza (el autosave reintenta).
+     2. si falla la función, conserva el progreso pendiente y no intenta otra puerta;
+     3. sólo un ACK con versión confirma el guardado.
      node tools/test-portero-cliente.js                                                         */
 const fs = require("fs"), vm = require("vm");
 
 function armarContexto() {
   const ctx = { console: { log() {}, warn() {}, error() {}, info() {} }, Math, Date, JSON, Object, Array,
     Number, String, Boolean, Set, Map, Promise, isNaN, isFinite, parseInt, parseFloat,
-    performance: { now: () => 0 }, setTimeout: (f) => { try { f(); } catch (e) {} return 0; },
-    setInterval: () => 0, clearInterval() {}, clearTimeout() {} };
+    performance: { now: () => 0 }, setTimeout: (f,ms) => ms===1500?setTimeout(f,0):setTimeout(f,ms),
+    setInterval: () => 0, clearInterval() {}, clearTimeout };
   ctx.window = ctx; ctx.globalThis = ctx;
   ctx.localStorage = { getItem: () => null, setItem() {}, removeItem() {} };
   ctx.document = { getElementById: () => null, addEventListener() {}, querySelectorAll: () => [], querySelector: () => null, createElement: () => ({}) };
@@ -32,7 +31,7 @@ function armarSb(ctx, { funcionViva, tablaViva }) {
     functions: {
       invoke: async (nombre, opts) => {
         llamadas.invoke++; llamadas.invokeNombre = nombre; llamadas.cuerpo = opts && opts.body;
-        return funcionViva ? { data: { ok: true, sospechas: 0 }, error: null }
+        return funcionViva ? { data: { ok: true, sospechas: 0, updated_at:'2026-10-27T12:00:00+00:00' }, error: null }
                            : { data: null, error: { message: "Function not found" } };
       }
     },
@@ -60,14 +59,14 @@ const ok = (n, c, d) => { if (!c) fallos++; console.log((c ? "  ok   " : "  FALL
     ok("el guardado quedó marcado como persistido", clave === true);
   }
 
-  console.log("\nSIN LA FUNCIÓN DEPLOYADA: CAE AL CAMINO VIEJO (nadie pierde su guardado)");
+  console.log("\nSIN LA FUNCIÓN DISPONIBLE: NO INVENTA UNA CONFIRMACIÓN");
   {
     const ctx = armarContexto();
     const ll = armarSb(ctx, { funcionViva: false, tablaViva: true });
     await ctx.saveFarm(true);
     ok("intentó primero por el portero", ll.invoke >= 1);
-    ok("y al no estar, guardó por la tabla como siempre", ll.upsert === 1, ll.upsert + " upserts");
-    ok("y quedó persistido igual", vm.runInContext("lastSavedKey !== null", ctx) === true);
+    ok("no intenta escribir directo a la tabla", ll.upsert === 0, ll.upsert + " upserts");
+    ok("queda pendiente hasta una confirmación real", vm.runInContext("lastSavedKey === null", ctx) === true);
   }
 
   console.log("\nSI LAS DOS PUERTAS SE CAEN: EL AUTOSAVE SE QUEDA CON GANAS DE REINTENTAR");

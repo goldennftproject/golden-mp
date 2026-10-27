@@ -6,6 +6,7 @@ for(const k of Object.keys(ctx))if(/^refresh/.test(k)&&typeof ctx[k]==='function
 ctx.saveFarm=()=>{};ctx.toast=()=>{};ctx.log=()=>{};ctx.isOpen=()=>false;ctx.celebrate=()=>{};ctx.reiniciarGranjaSuave=()=>{};
 function reset(){ctx.estadoDeCero();ctx.GF.scene='farm';}
 (async()=>{
+ await ctx.SAVE_READY;run('sb=null'); // esta prueba unitaria usa mk* simulados; P2P real: test-p2p-atomico.js + SQL.
  reset();const legacy={...clone(ctx.snapshot()),canasDur:{junco:25},canasDurV:undefined};ctx.hydrate(legacy);assert.equal(ctx.canaAguante('junco'),75);assert.equal(legacy.canasDur.junco,25);ctx.hydrate(legacy);assert.equal(ctx.canaAguante('junco'),75);
  reset();ctx.G.picks.eq='iron';ctx.G.picks.owned.iron=true;ctx.G.picks.dur.iron=7;ctx.G.picks.dur.stone=0;ctx.G.vales=100;const bundle=ctx.valeFardoN('picos');ctx.valesCanjear('picos');assert.equal(ctx.G.picks.dur.iron,7);assert.equal(ctx.G.picks.dur.stone,bundle,'canje no regala hierro por tenerlo equipado');
  reset();ctx.G.built.cocina=true;ctx.G.skills.cooking=1e9;ctx.G.res.papa=100;

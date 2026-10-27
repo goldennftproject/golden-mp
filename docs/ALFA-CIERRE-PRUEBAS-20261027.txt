@@ -1,0 +1,27 @@
+GOLDEN — CIERRE DE PRUEBAS ANTES DE LA ALFA
+27/10/2026
+
+CORRECCIONES
+- Una petición de guardado colgada ya no bloquea la cola indefinidamente. El transporte y el cuerpo se cancelan al superar el límite, sin acumular conexiones colgadas.
+- Los reintentos conservan el recibo. Un OK sin versión no muestra una confirmación de guardado.
+- Respuestas tardías y cambios de cuenta no sustituyen otra granja. La recuperación por rechazo conserva respaldo y no finge éxito si falla la lectura o no puede guardar ese respaldo.
+- El mercado P2P confirma publicación, pago, entrega y recibo en la misma transacción. Una respuesta perdida se puede reintentar sin duplicar. Si se pierde toda respuesta, la entrega queda en el servidor y se recupera al volver.
+- Las entregas pendientes sólo se crean en el servidor. No pueden inventarse ni cambiarse desde un snapshot.
+- La guía para quedarse sin semillas ni Plata señala recompensas útiles o comercio entre jugadores; no promete vender materiales al comprador de cultivos.
+
+PRUEBAS REALIZADAS
+- Red colgada, reconexión, respuesta perdida o tardía, ACK incompleto, conflicto entre versiones y cambio de cuenta durante la petición o recuperación.
+- Cuenta nueva con tres edificios, aportes parciales, espada, siete días de cultivo, expansión terminada offline y nodo elegido: 170 guardados aceptados por el handler real en almacenamiento de prueba, con recargas y conservación de relojes. Se adelanta el reloj para las esperas; no es una medida de duración humana.
+- SQL real de mercado y conservación de compras, con cuentas QA y ROLLBACK. P2P: reintentos, precio/stock, cuota/comisión, compra ya realizada, retiro, ficha de arma y fallo provocado después de modificar market. No quedan esas operaciones en las partidas.
+- Chrome: pérdida de respuesta, reconexión, recuperación sin F5 y nuevo Guardado confirmado. Revisión visual de controles y Banco a 1024x600, 1280x720 y 1920x1080 usando viewports aislados.
+- Carga HTTP/SSE contra un proceso local con 10, 25 y 50 ventanas y 340 peticiones en total: sin fallos. No representa 50 jugadores reales en el Free de Supabase.
+
+ALCANCE Y LÍMITES
+Se conserva el progreso de las cuentas actuales. No se cambian precios, cuotas ni comisiones. No se activa release ni USDT. La cancelación de peticiones no cambia los eventos de F5/salida ni el autoguardado de cinco segundos y una vez por inactividad confirmada.
+La revisión del navegador es una muestra de interfaz y recuperación; no certifica ausencia de fugas de memoria ni sustituye una sesión prolongada con jugadores. No se ha generado carga masiva sobre Supabase o Render.
+La comprensión espontánea, diversión, ritmo y capacidad real del alojamiento se medirán en la alfa, con difusión gradual y los criterios de pausa de ALFA-PREPARACION.txt.
+
+OPERACIÓN
+P2P necesita guardar actualizado, public.p2p_operar y golden_internal.p2p_receipts. Sólo el servidor puede ejecutar la operación. Tras verificar el cliente se cierra la escritura directa de market; una pestaña con cliente antiguo debe recargar para comerciar.
+Las pruebas actuales de DB son sql/test-p2p-atomico.sql y sql/test-p2p-cierre.sql, siempre en transacción terminada en ROLLBACK. sql/test-alfa-mercado.sql conserva la prueba histórica del protocolo anterior.
+Incluir la nueva tabla privada p2p_receipts en futuros respaldos. Los recibos tienen cuenta, operación y parámetros, no una copia completa de la granja. No borrar recibos como solución a fallos de reintento.

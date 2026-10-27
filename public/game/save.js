@@ -15,7 +15,7 @@ let MERCADO_GLOBAL = false, MERCADO_CACHE = null, MERCADO_REFRESCANDO = null, ME
 const ALFA_GUARDADOS={intentos:0,confirmados:0,conflictos:0,fallos:0,ultimo:null,ms:[]};
 async function alfaInvocarGuardado(body){
  const t=Date.now();let status=0;
- try{const r=await sb.functions.invoke('guardar',{body});status=r.error?.context?.status||(r.data?.ok?200:0);return r;}
+ try{const r=await conTope(sb.functions.invoke('guardar',{body}),15000,'confirmar guardado');status=r.error?.context?.status||(r.data?.ok&&r.data.updated_at?200:0);return r;}
  finally{ALFA_GUARDADOS.intentos++;if(status===200)ALFA_GUARDADOS.confirmados++;else{ALFA_GUARDADOS.fallos++;if(status===409)ALFA_GUARDADOS.conflictos++;}ALFA_GUARDADOS.ultimo=status;ALFA_GUARDADOS.ms.push(Math.max(0,Date.now()-t));if(ALFA_GUARDADOS.ms.length>50)ALFA_GUARDADOS.ms.shift();}
 }
 function alfaResumenGuardados(){const a=[...ALFA_GUARDADOS.ms].sort((a,b)=>a-b);return {intentos:ALFA_GUARDADOS.intentos,confirmados:ALFA_GUARDADOS.confirmados,conflictos:ALFA_GUARDADOS.conflictos,fallos:ALFA_GUARDADOS.fallos,ultimo:ALFA_GUARDADOS.ultimo,p50_ms:a.length?a[Math.ceil(a.length*.5)-1]:null,p95_ms:a.length?a[Math.ceil(a.length*.95)-1]:null,muestra:a.length};}
@@ -87,12 +87,18 @@ async function economiaSolicitar(detalle) {
         }
       }
       if(error || !data || !data.ok || UID!==uid){SAVE_CONFLICTOS.add(uid);toast('Resultado sin confirmar. Recargá con conexión para consultar el servidor.');return;}
+      if(!data.data||typeof data.updated_at!=='string')throw Error('Operación sin guardado confirmado');
       hydrate(data.data);SAVE_BASES.set(uid,data.updated_at);copiaGuardar(snapshot());mercadoLimpiarPendiente(uid);
-      toast(detalle.pack?.id==='caja' ? ('Caja confirmada: '+data.premio.qty+' '+RES_LABEL[data.premio.item]+' · Entregas pendientes') : detalle.pack ? 'Pack confirmado; recogé los materiales en Entregas pendientes' : detalle.infra ? 'Mejora de infraestructura confirmada' : detalle.mejora ? 'Mejora confirmada: +0,15 por recolección' : detalle.logro ? 'Logro confirmado: +'+fmtPlata(data.cobro)+' Plata' : detalle.visita ? (detalle.visita.accion==='ver'?'Visita confirmada · una por granja y día UTC para logros':'+1 semilla de papa por la visita') : detalle.diario ? 'Recompensa diaria confirmada: día '+data.cobro+'/7' : detalle.banco ? 'Canje confirmado: +'+fmtGolden(data.cobro)+' Golden' : detalle.artefacto.accion==='comprar' ? 'Objeto comprado con Golden' : '+'+fmtPlata(data.cobro)+' Plata');
+      toast(detalle.p2p ? ({publicar:'Publicación confirmada',comprar:'Compra confirmada',retirar:'Retiro confirmado',cobrar:'Cobro confirmado'}[detalle.p2p.accion]||'Mercado confirmado') : detalle.pack?.id==='caja' ? ('Caja confirmada: '+data.premio.qty+' '+RES_LABEL[data.premio.item]+' · Entregas pendientes') : detalle.pack ? 'Pack confirmado; recogé los materiales en Entregas pendientes' : detalle.infra ? 'Mejora de infraestructura confirmada' : detalle.mejora ? 'Mejora confirmada: +0,15 por recolección' : detalle.logro ? 'Logro confirmado: +'+fmtPlata(data.cobro)+' Plata' : detalle.visita ? (detalle.visita.accion==='ver'?'Visita confirmada · una por granja y día UTC para logros':'+1 semilla de papa por la visita') : detalle.diario ? 'Recompensa diaria confirmada: día '+data.cobro+'/7' : detalle.banco ? 'Canje confirmado: +'+fmtGolden(data.cobro)+' Golden' : detalle.artefacto.accion==='comprar' ? 'Objeto comprado con Golden' : '+'+fmtPlata(data.cobro)+' Plata');
       return data;
-    }catch(e){toast('No se pudo completar la operación; comprobá la conexión');}
+    }catch(e){if(mercadoPendiente(uid))SAVE_CONFLICTOS.add(uid);if(UID===uid)toast('No se pudo completar la operación; comprobá la conexión');}
   })().finally(()=>{MERCADO_EN_CURSO=null;desbloquear();refreshHud();if(isOpen('ov-market')){if(detalle.mejora||detalle.infra)refreshNft();else refreshSeedShop();}if(isOpen('ov-reliquias'))refreshArtefactos();if(isOpen('ov-banco'))refreshBanco();if(isOpen('ov-logros'))refreshLogros();if(isOpen('ov-barn'))refreshBarn();if(detalle.infra&&isOpen('ov-p2p'))refreshP2P();if(detalle.infra&&isOpen('ov-godhand'))refreshGodHand();});
   return MERCADO_EN_CURSO;
+}
+async function mercadoP2POperar(detalle){
+  const resultado=await economiaSolicitar({p2p:detalle});
+  if(resultado&&['comprar','retirar'].includes(detalle.accion)&&mkPendCount())mkPendCobrar();
+  return resultado;
 }
 function mercadoGlobalRecurso(res) {
   const c = MERCADO_CACHE;
@@ -332,10 +338,21 @@ function hayGranjaLocal() {
     return !!(c && c.data && ((c.nivel || 1) > 1 || (c.plata || 0) > 0));
   } catch (e) { return false; }
 }
-const conTope = (p, ms, que) => Promise.race([
-  Promise.resolve(p),
-  new Promise((_, rej) => setTimeout(() => rej(new Error("tardó demasiado: " + que)), ms)),
-]);
+const conTope = (p, ms, que) => {
+  let timer;
+  return Promise.race([Promise.resolve(p),new Promise((_,rej)=>{timer=setTimeout(()=>rej(new Error("tardó demasiado: "+que)),ms);})]).finally(()=>clearTimeout(timer));
+};
+// La librería fijada en el cliente admite fetch propio. Cancelar también el transporte
+// evita que respuestas perdidas ocupen todos los sockets del navegador al reintentar.
+async function fetchSupabase(url,opciones={}){
+  const controlador=new AbortController(),externa=opciones.signal,abortar=()=>controlador.abort();
+  if(externa){if(externa.aborted)abortar();else externa.addEventListener('abort',abortar,{once:true});}
+  const timer=setTimeout(abortar,14000);
+  try{
+    const r=await fetch(url,{...opciones,signal:controlador.signal}),datos=await r.arrayBuffer();
+    return new Response([204,205,304].includes(r.status)||opciones.method==='HEAD'?null:datos,{status:r.status,statusText:r.statusText,headers:r.headers});
+  }finally{clearTimeout(timer);externa?.removeEventListener('abort',abortar);}
+}
 
 /* ¿ESTE NAVEGADOR YA TIENE GRANJA? (24/8 — el fallo más caro de la sesión)
    « Ahora me reinicia el avance… empecé de cero y ahora me manda de cero 3 h después. »
@@ -382,7 +399,7 @@ async function initSave() {
     CUENTA_PREVIA = huboGranja();   // se mira ANTES de tocar nada
     sesionLog("arranque", CUENTA_PREVIA ? "este navegador YA tenía granja" : "navegador virgen");
     if (!window.supabase || !window.supabase.createClient) return false;
-    sb = window.supabase.createClient(SB_URL, SB_KEY, { auth: { lock: candadoDeEstaPagina } });
+    sb = window.supabase.createClient(SB_URL, SB_KEY, { auth: { lock: candadoDeEstaPagina },global:{fetch:fetchSupabase} });
     let session = null;
     try {
       const r = await conTope(sb.auth.getSession(), 8000, "getSession");
@@ -1269,7 +1286,7 @@ async function loadFarm() {
         const estado=await alfaCompras('restaurar');
         if(estado.phase!=='release')throw Error('Lanzamiento todavía no activo en el servidor');
       }
-      const {data,error} = await sb.from("farms").select("data,name,updated_at").eq("user_id",uid).maybeSingle();
+      const {data,error} = await conTope(sb.from("farms").select("data,name,updated_at").eq("user_id",uid).maybeSingle(),15000,"leer granja");
       if (UID !== uid) { CARGA_FALLO = true; return false; }
       if (error) { await sleepMs(1200 * (intento + 1)); continue; }
       SAVE_BASES.set(uid,data && data.updated_at || null); SAVE_CONFLICTOS.delete(uid);
@@ -1463,15 +1480,12 @@ async function saveFarmReal(force) {
   // hasta 2 intentos inmediatos; si fallan, lastSavedKey no se actualiza y el autosave reintenta al próximo ciclo
   for (let intento = 0; intento < 2; intento++) {
     try {
-      /* 21/8 — EL PORTERO: el guardado entra por la Edge Function "guardar" (la única puerta,
-         con bitácora de deltas — ver supabase/functions/guardar/). Mientras la función no esté
-         deployada, cae al camino viejo (upsert directo) para que nadie se quede sin guardar
-         durante la transición; cuando sql/portero-guardado.sql PARTE 2 cierre ese camino, el
-         único que queda es el portero. */
-      let paso = false;
-      try {
+      if(UID!==saveUid)return;
+      // El portero es la única escritura autorizada. La transición de agosto terminó:
+      // RLS ya impide el upsert directo. Un ACK necesita la versión real del servidor.
         const { data: r, error: fe } = await alfaInvocarGuardado(cuerpo);
-        if (!fe && r && r.ok) { paso = true; if (UID===saveUid) { actividadGranjaRecibir(r.actividadGranja); logrosRecibir(r.logrosV2); if(typeof actividadGranjaRefrescar==='function')actividadGranjaRefrescar(); if(isOpen('ov-logros'))refreshLogros(); } if (r.updated_at) { SAVE_BASES.set(saveUid, r.updated_at); SAVE_CONFIRMACIONES.set(saveUid, (SAVE_CONFIRMACIONES.get(saveUid) || 0) + 1); } }
+        if(UID!==saveUid)return;
+        if (!fe && r && r.ok && typeof r.updated_at==='string' && r.updated_at) { actividadGranjaRecibir(r.actividadGranja); logrosRecibir(r.logrosV2); if(typeof actividadGranjaRefrescar==='function')actividadGranjaRefrescar(); if(isOpen('ov-logros'))refreshLogros(); SAVE_BASES.set(saveUid, r.updated_at); SAVE_CONFIRMACIONES.set(saveUid, (SAVE_CONFIRMACIONES.get(saveUid) || 0) + 1); }
         else if (fe) {
           /* 14/9 — EL PORTERO EN MODO RECHAZO. Un 422 no es « portero caído »: es el portero
              diciendo que NO. Hasta hoy caía al camino viejo (que la PARTE 2 ya cerró: 403) y el
@@ -1497,17 +1511,14 @@ async function saveFarmReal(force) {
             return;
           }
           console.warn("portero:", (fe && fe.message) || fe);
+          throw fe;
         }
-      } catch (e) { console.warn("portero no disponible aún (va por el camino viejo):", e && e.message); }
-      if (!paso) {
-        const { error } = await sb.from("farms").upsert({ user_id: saveUid, name: cuerpo.name, data: cuerpo.data, updated_at: new Date().toISOString() }, { onConflict: "user_id" });
-        if (error) throw error;
-      }
+        else throw Error('Guardado sin versión confirmada');
       if (UID !== saveUid) return;
       lastSavedKey = key;   // recién ahora quedó persistido
       if (typeof showSaved === "function") showSaved();
       return;
-    } catch (e) { if (intento === 0) await sleepMs(1500); else console.warn("saveFarm sin conexión (reintenta solo):", e && e.message); }
+    } catch (e) { if(UID!==saveUid)return;if (intento === 0) await sleepMs(1500); else {console.warn("saveFarm sin conexión (reintenta solo):", e && e.message);if(typeof showSaveError==='function')showSaveError('Sin confirmar');} }
   }
 }
 
@@ -1518,25 +1529,33 @@ async function saveFarmReal(force) {
    al jugador qué vio el portero — con nombres, no con un « error » mudo. Lo que se pierde es lo
    jugado desde el último guardado aceptado: un minuto, por el autosave. */
 async function porteroRechazo(det) {
+  const uid=UID;if(!uid)return;
+  let recuperado=false;
   const sosp = (det && Array.isArray(det.sospechas)) ? det.sospechas : [];
   const lista = sosp.map(x => (x && x.que) || (x && x.recurso) || (typeof x === "string" ? x : JSON.stringify(x))).join(" · ");
   console.warn("portero: guardado RECHAZADO", sosp);
   sesionLog("guardado rechazado por el portero", lista || "(sin detalle)");
   try {
-    const { data } = await sb.from("farms").select("data,name,updated_at").eq("user_id", UID).maybeSingle();
+    const { data,error } = await conTope(sb.from("farms").select("data,name,updated_at").eq("user_id", uid).maybeSingle(),15000,'recuperar rechazo');
+    if(UID!==uid)return;
+    if(error)throw error;
     if (data && data.data) {
-      SAVE_BASES.set(UID, data.updated_at || null);
+      localStorage.setItem('gf-rechazo-respaldo-'+SB_REF+'-'+uid+'-'+Date.now(),JSON.stringify({cuenta:uid,data:snapshot()}));
+      SAVE_BASES.set(uid, data.updated_at || null);
       hydrate(data.data);
       copiaGuardar(snapshot());                 // la copia local también vuelve a la aceptada
       lastSavedKey = snapKey();                 // nada pendiente: lo de más ya no está
       if (typeof refreshHud === "function") refreshHud();
       if (typeof syncSlots === "function") syncSlots();
       if (typeof isOpen === "function" && isOpen("ov-inv") && typeof refreshInv === "function") refreshInv();
+      recuperado=true;
     }
   } catch (e) { console.warn("porteroRechazo: no se pudo recargar la granja aceptada", e && e.message); }
+  if(UID!==uid)return;
+  if(!recuperado){SAVE_CONFLICTOS.add(uid);try{mercadoMarcarPendiente(uid,{tipo:'rechazo-sin-recuperar'});}catch{}}
   if (typeof showSaveError === "function") showSaveError();
-  if (typeof log === "function") log("🚫 El servidor rechazó el guardado" + (lista ? " (" + lista + ")" : "") + ". Se volvió a la última granja aceptada.", "bad");
-  if (typeof toast === "function") toast("Guardado rechazado — se volvió a la última granja aceptada");
+  if (typeof log === "function") log("🚫 El servidor rechazó el guardado" + (lista ? " (" + lista + ")" : "") + (recuperado?". Se volvió a la última granja aceptada; respaldo local conservado.":". No se pudo recuperar: se conserva el progreso local y el guardado queda protegido."), "bad");
+  if (typeof toast === "function") toast(recuperado?"Guardado rechazado — se volvió a la última granja aceptada":"No se pudo recuperar el guardado; progreso local conservado");
 }
 
 /* ============ EL RANKING DEL TORNEO · el puente con la Edge Function (1/9) ==================

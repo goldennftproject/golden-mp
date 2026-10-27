@@ -2,7 +2,7 @@ GOLDEN FARM — PREPARACIÓN DE LA ALFA ABIERTA
 Actualizado el 27 de octubre de 2026
 
 ESTADO
-Preparación técnica implementada. Suite local: 291 pruebas aprobadas; una requirió repetir con Python disponible en PATH. Carga local de 10/25/50 ventanas sin fallos, incluyendo clientes que aceptan gzip. Se corrigió el buffering de SSE por compresión. La verificación pública se realiza al entregar cada despliegue. No se ha anunciado ni abierto un evento. No hay reinicio de jugadores, reparto de Golden, depósitos, retiros ni premios USDT. Las nuevas maderas quedan fuera. Se conservan las cuentas y su progreso actual. Compras de alfa y procedimiento de lanzamiento: ALFA-COMPRAS-Y-LANZAMIENTO.txt.
+Preparación técnica implementada. Suite local: 301 pruebas aprobadas y comprobaciones específicas posteriores de guardado/entregas. Carga local de 10/25/50 ventanas sin fallos, incluyendo clientes que aceptan gzip. Se corrigió el buffering de SSE por compresión. La verificación pública se realiza al entregar cada despliegue. No se ha anunciado ni abierto un evento. No hay reinicio de jugadores, reparto de Golden, depósitos, retiros ni premios USDT. Las nuevas maderas quedan fuera. Se conservan las cuentas y su progreso actual. Compras de alfa y procedimiento de lanzamiento: ALFA-COMPRAS-Y-LANZAMIENTO.txt. Cierre de pruebas, límites y protocolo P2P actual: ALFA-CIERRE-PRUEBAS-20261027.txt.
 
 ACCESO ANTES DE INVITAR
 - El registro está habilitado en Supabase; el cliente actual requiere correo (GF.SOLO_EMAIL=1).

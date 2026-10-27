@@ -1,4 +1,6 @@
 -- QA real de RLS y transiciones; revierte todas las operaciones.
+-- HISTÓRICO: protocolo directo anterior al cierre P2P del 27/10. Para el protocolo
+-- actual usar test-p2p-atomico.sql y test-p2p-cierre.sql, siempre con BEGIN/ROLLBACK.
 begin;
 do $$
 declare seller_id uuid; buyer_id uuid; n integer; blocked boolean; fee integer;

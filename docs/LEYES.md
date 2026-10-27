@@ -405,3 +405,15 @@ El usuario autorizó completar los cinco puntos de revisión de jugabilidad: «B
 - Después del tutorial, la brújula recuerda planos, nodos de expansión pendientes y la siguiente mejora, con destino concreto. Elegir la especialidad sigue siendo decisión del jugador.
 - Los bloqueos de producción, mejoras y compras muestran su causa real. El emplazamiento se comprueba con la misma función que utiliza la compra.
 - Esta revisión no cambia costes, recompensas, energía, tiempos ni formato de guardado. Pesca, móvil, nuevas maderas y USDT conservan sus condiciones previas.
+
+## Guardado interrumpido y mercado atómico — 27/10/2026
+
+Dirección autoriza: «haz todas esas pruebas y corrige lo que encuentres, empezando por el guardado y el progreso. Avanza hasta dejarlo listo para la alfa».
+
+- El guardado tiene espera acotada, cancela la conexión y el cuerpo de una respuesta colgada, conserva el mismo recibo al reintentar y sólo confirma un ACK con versión del servidor. La escritura directa histórica de farms ya estaba cerrada por RLS y se retira ese fallback del cliente.
+- Una respuesta de la cuenta anterior no puede hidratar la actual ni reintentar con su sesión. La recuperación por rechazo protege el cambio de cuenta, guarda un respaldo antes de sustituir y no anuncia recuperación si falla lectura o almacenamiento.
+- P2P confirma movimiento de market, saldo/inventario de farms y recibo en una transacción. No hay débito optimista. La entrega se conserva primero en pendientes del servidor y se recoge automáticamente si cabe; si se corta la conexión, puede reclamarse al volver. Las fichas viajan completas.
+- Se conservan precios, comisiones y cuotas Free/VIP/tiendita. El servidor valida cuenta, base, stock y propiedad; la operación repetida no duplica. Se cierra la escritura directa de market después de publicar el nuevo cliente y comprobar guardar.
+- Un snapshot ordinario sólo conserva o reclama entregas aceptadas. No puede crearlas, duplicarlas ni alterar cantidades o fichas; omitir el campo conserva las pendientes anteriores.
+- Quedarse sin semillas ni Plata no debe dirigir a vender materiales al comprador de cultivos: se señalan logros cobrables, premios diarios útiles o comercio entre jugadores, cuya compra depende de terceros.
+- Las pruebas de SQL sobre cuentas QA terminan en ROLLBACK. No se reinicia ninguna cuenta, no se activa release y USDT permanece desactivado.
