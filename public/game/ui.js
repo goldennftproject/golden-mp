@@ -6803,7 +6803,7 @@ async function refreshP2P() {
   // entregas pendientes (compras/retiros que no entraron en la bolsa): nunca se pierden
   if (typeof mkPendCount === "function" && mkPendCount() > 0) {
     h += '<div class="forge-row eq"><div class="finfo"><div class="fnm">Entregas pendientes (' + mkPendCount() + ')</div>' +
-      '<div class="fds">No entraron en la bolsa. Hacé lugar y reclamalas.</div></div>' +
+      '<div class="fds">Compras o retiros por recoger. Liberá espacio si hace falta y reclamalos.</div></div>' +
       '<div class="fbtns"><button class="green sm" id="p2p-pend">Reclamar</button></div></div>';
   }
   if (p2pTab === "vender") {
