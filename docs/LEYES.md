@@ -1,5 +1,9 @@
 # Las leyes de Golden Farm
 
+## Mostrar objetivos concretos y lectura del HUD — 27/10/2026
+
+Dirección pide señalar lo que se toca, no una caja aproximada. Mostrar marca las celdas secas para plantar, las listas para cosechar y la silueta del edificio o recurso correspondiente. Se excluyen bloqueos, pausas, esperas y minerales distintos; la señal se retira al cambiar de objetivo o usar la parcela, y vence a los ocho segundos. Las copias visuales no modifican el sprite real ni reciben clics. Se conserva la cámara cancelable y el foco sobre controles de menú. El HUD distingue Energía con barra propia, Vida y Granja · Nv.; el máximo de nivel deja de parecer un recurso disponible. No cambian costes, acciones, progresión ni guardado.
+
 ## Escala del granero y lectura de divisas — 27/10/2026
 
 Dirección pide un granero inicial comparable al resto de edificios y una interfaz que no dependa de explicaciones largas. Se encuadra sólo el dibujo opaco de cada sprite, conservando originales y atlas, con anchos visibles progresivos de 0,82/0,88/0,97/1,16 veces rw. Todas las etapas caben en las tres celdas reservadas; no cambia ancla, colisión, nivel de mejora ni progreso. La evolución visual sigue vinculada a la mejora de granja existente.

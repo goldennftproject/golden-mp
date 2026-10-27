@@ -2695,15 +2695,63 @@ class FarmScene extends Phaser.Scene {
   // Es lo único que se lee a 38 px. Convive con el gris de "bloqueado / sin construir",
   // que siempre gana. Hay que llamarlo cada vez que algo hace clearTint() sobre el nodo.
   mostrarDestinoGuia() {
-    this.updateTutoArrow();const g=this.guiaTarget;if(!g)return false;
+    const st=typeof guiaActiva==='function'?guiaActiva():null;
+    const paso=typeof guiaDestinoActual==='function'?guiaDestinoActual():st;
+    const primero=this.objetivosDestinoGuia(paso)[0];
+    this.updateTutoArrow();
+    const g=primero?{x:primero.cx,y:primero.by-(primero.sprite?.displayHeight||GF.TILE),bottomY:primero.by+GF.TILE/2}:this.guiaTarget;
+    if(!g)return false;
     this.cancelarCamaraGuia(true);
     this._tutoCamManualKey=null;this._tutoCamDoneKey=null;
-    const st=typeof guiaActiva==='function'?guiaActiva():null;
     this._tutoCamPending={...g,key:(st?.id||'tuto')+':'+Math.round(g.x)+':'+Math.round(g.y)+':'+Math.round(g.bottomY),manual:true,notBefore:nowMs()};
-    if(this._guiaMarca)this._guiaMarca.destroy();
-    const alto=Math.max(GF.TILE,g.bottomY-g.y),marca=this.add.rectangle(g.x,g.y+alto/2,GF.TILE*2,alto,0,0).setStrokeStyle(3,0xffdf7e).setDepth(99980);
-    this._guiaMarca=marca;this.tweens.add({targets:marca,alpha:.25,duration:380,yoyo:true,repeat:2,onComplete:()=>{marca.destroy();if(this._guiaMarca===marca)this._guiaMarca=null;}});
+    this.limpiarDestinoGuia();
+    this._guiaHasta=nowMs()+8000;
+    this._guiaPaso=paso;
+    this.tickDestinoGuia();
     return true;
+  }
+
+  objetivosDestinoGuia(st) {
+    if(!st)return [];
+    const activa=o=>!o.locked&&!o.oculto&&!(typeof produccionPausada==='function'&&produccionPausada(o));
+    if(st.target==='plot'){
+      const estado=st.guiaPlot==='ready'||st.id==='harvest'?'ready':st.guiaPlot==='growing'?'growing':'dry';
+      return (this.plots||[]).filter(o=>activa(o)&&o.state===estado);
+    }
+    if(st.target==='portal')return this.portal?[this.portal]:[];
+    return (this.objs||[]).filter(o=>{
+      if(!activa(o))return false;
+      const recurso=st.target==='tree'||st.target==='rock'||st.target==='ore';
+      const coincide=st.target==='rock'?(o.type==='rock'||o.type==='ore'&&o.ore==='piedra'):o.type===st.target;
+      if(!coincide||st.target==='ore'&&st.res&&o.ore!==st.res)return false;
+      if(!recurso)return true;
+      return !(o.readyAt>nowMs())&&!(typeof nodoBloqueado==='function'&&nodoBloqueado(o))&&
+        (o.type!=='ore'||this.nodoGuiaUsable({...o,golpes:0},nowMs(),equippedPick()));
+    });
+  }
+
+  limpiarDestinoGuia() {
+    for(const m of this._guiaMarcas||[])for(const f of m.fx)f.destroy();
+    this._guiaMarcas=[];this._guiaHasta=0;
+  }
+
+  tickDestinoGuia() {
+    if(!this._guiaHasta)return;
+    const actual=typeof guiaDestinoActual==='function'?guiaDestinoActual():this._guiaPaso;
+    if(nowMs()>this._guiaHasta||GF.editMode||!actual||actual.id!==this._guiaPaso?.id||actual.target!==this._guiaPaso?.target){this.limpiarDestinoGuia();return;}
+    const objetivos=this.objetivosDestinoGuia(this._guiaPaso),prev=this._guiaMarcas||[];
+    for(const m of prev)if(!objetivos.includes(m.o))for(const f of m.fx)f.destroy();
+    this._guiaMarcas=objetivos.map(o=>{
+      let m=prev.find(m=>m.o===o);if(m)return m;
+      const fx=[],sp=o.sprite;
+      if(this._guiaPaso.target==='plot'){
+        fx.push(this.add.rectangle(o.cx,o.by,GF.TILE-6,GF.TILE-6,0x8de694,.22).setStrokeStyle(3,0xafffb0).setDepth(99979));
+      }else if(sp?.texture){
+        // Copias de la silueta: nunca se cambia el tinte, tamaño ni interacción del objeto real.
+        for(const [dx,dy] of [[-3,0],[3,0],[0,-3],[0,3]])fx.push(this.add.image(sp.x+dx,sp.y+dy,sp.texture.key,sp.frame.name).setOrigin(sp.originX,sp.originY).setScale(sp.scaleX,sp.scaleY).setFlipX(sp.flipX).setFlipY(sp.flipY).setTintFill(0xafffb0).setAlpha(.6).setDepth(sp.depth-.01));
+      }
+      return {o,fx};
+    });
   }
 
   rotulosEdificios() {
@@ -5804,6 +5852,7 @@ class FarmScene extends Phaser.Scene {
     if (this.leaving || !this.hero) return;   // cambiando de escena: no tocar nada más
     this.acabadosEdificios();
     this.rotulosEdificios();
+    this.tickDestinoGuia();
     this._frameT = time;   // marca del frame: la usa la caché de hitsSprite (10/8)
     const dt = deltaMs / 1000, k = this.keys, hero = this.hero;
     /* Las teclas de Phaser siguen bajadas mientras se escribe en un campo HTML. No se apaga el

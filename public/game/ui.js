@@ -1968,6 +1968,7 @@ function pescaV4Nasas() {
 
 function refreshHud() {
   const energia=energiaGranjaTick();setTxt('s-energia-granja',Math.floor(energia)+'/'+energiaGranjaMax());
+  const ef=$('energia-granja-fill');if(ef)ef.style.width=Math.max(0,Math.min(100,energia/energiaGranjaMax()*100))+'%';
   const ep=$('energia-granja-pill');if(ep)ep.style.display=GF.scene==='farm'?'':'none';
   document.querySelectorAll('[data-artefacto-pendiente]').forEach(el=>{el.textContent=fmtPlata(artefactoPendiente(el.dataset.artefactoPendiente))+' Plata';});
   document.querySelectorAll('[data-artefacto-cobrar]').forEach(b=>{b.disabled=!(typeof sb!=='undefined' && sb && UID && CARGA_OK && !SOLO_LOCAL && !SAVE_CONFLICTOS.has(UID) && !MERCADO_EN_CURSO && artefactoPuedeCobrar(b.dataset.artefactoCobrar) && energia>=1);});

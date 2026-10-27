@@ -2,13 +2,25 @@
 const assert=require('node:assert/strict'),path=require('path'),vm=require('vm');
 const {ctx:c}=require('./arrancar-el-juego.contexto').arrancar(path.resolve(__dirname,'..'),{'game/main.js':''});
 (async()=>{
- await c.SAVE_READY;c.innerWidth=1360;c.GF.uiOpen=false;c.GF.editMode=false;c.GF.CAM_PAN=true;c.guiaActiva=()=>({id:'brujula',brujula:true});c.tutoActivo=()=>null;
+ await c.SAVE_READY;c.innerWidth=1360;c.GF.uiOpen=false;c.GF.editMode=false;c.GF.CAM_PAN=true;c.guiaActiva=()=>({id:'brujula',brujula:true,target:'plot',guiaPlot:'dry'});c.guiaDestinoActual=c.guiaActiva;c.tutoActivo=()=>null;
  const proto=vm.runInContext('FarmScene.prototype',c),marks=[];let pans=0,stops=0;
  const mark={setStrokeStyle(){return this;},setDepth(){return this;},destroy(){}};
  const scene={updateTutoArrow(){this.guiaTarget={x:1100,y:300,bottomY:380};},cancelarCamaraGuia(){},add:{rectangle(...a){marks.push(a);return mark;}},tweens:{add(){}},time:{delayedCall(){}},zonaSeguraCamaraGuia:()=>({left:0,right:800,top:70,bottom:530}),cameras:{main:{width:800,height:600,zoom:1,scrollX:0,scrollY:0,worldView:{x:0,y:0},midPoint:{x:400,y:300},pan(){pans++;},panEffect:{isRunning:true,stop(){stops++;}}}}};
- assert.equal(proto.mostrarDestinoGuia.call(scene),true);assert.equal(scene._tutoCamPending.manual,true);assert.equal(marks.length,1);
+ Object.assign(scene,{plots:[{cx:1100,by:380,state:'dry'},{cx:1150,by:380,state:'dry'},{cx:1200,by:380,state:'ready'},{cx:1250,by:380,state:'locked'}],limpiarDestinoGuia:proto.limpiarDestinoGuia,tickDestinoGuia:proto.tickDestinoGuia,objetivosDestinoGuia:proto.objetivosDestinoGuia});
+ assert.equal(proto.mostrarDestinoGuia.call(scene),true);assert.equal(scene._tutoCamPending.manual,true);assert.equal(marks.length,2,'sólo las dos celdas secas elegibles');
+ scene.plots[0].state='growing';proto.tickDestinoGuia.call(scene);assert.equal(scene._guiaMarcas.length,1,'deja de señalar al plantar');
+ scene._guiaHasta=1;proto.tickDestinoGuia.call(scene);assert.equal(scene._guiaMarcas.length,0,'limpia las marcas al vencer');
  scene.cameras.main.panEffect.isRunning=false;proto.tickCamaraGuia.call(scene,Date.now()+10000);assert.equal(pans,1,'la brújula sólo mueve cámara por petición explícita');
  scene.cameras.main.panEffect.isRunning=true;proto.cancelarCamaraGuia.call(scene,true);assert.equal(stops,1,'el gesto del jugador interrumpe la ayuda');
+ c.nodoBloqueado=o=>!!o.bloqueado;c.produccionPausada=o=>!!o.pausado;
+ const targets={objs:[{type:'rock'},{type:'ore',ore:'piedra'},{type:'ore',ore:'bronce'},{type:'tree',golpes:2},{type:'tree',readyAt:Date.now()+999999},{type:'tree',pausado:true},{type:'tree',bloqueado:true}],nodoGuiaUsable:()=>true};
+ assert.equal(proto.objetivosDestinoGuia.call(targets,{target:'rock'}).length,2,'piedra no señala bronce');
+ assert.equal(proto.objetivosDestinoGuia.call(targets,{target:'tree'}).length,1,'permite terminar la tala, excluye espera, pausa y bloqueo');
+ assert.equal(proto.objetivosDestinoGuia.call(targets,{target:'ore',res:'bronce'}).length,1,'mineral exacto');
+ const original={x:10,y:20,texture:{key:'cofre'},frame:{name:'__BASE'},originX:.5,originY:1,scaleX:2,scaleY:2,depth:20,flipX:false,flipY:false};
+ const before=JSON.stringify(original),outlines=[];c.guiaDestinoActual=()=>({id:'kit',target:'cofre_diario'});
+ const silhouette={_guiaHasta:Date.now()+8000,_guiaPaso:c.guiaDestinoActual(),objs:[{type:'cofre_diario',sprite:original}],objetivosDestinoGuia:proto.objetivosDestinoGuia,limpiarDestinoGuia:proto.limpiarDestinoGuia,add:{image(...args){outlines.push(args);return {setOrigin(){return this},setScale(){return this},setFlipX(){return this},setFlipY(){return this},setTintFill(){return this},setAlpha(){return this},setDepth(){return this},destroy(){}};}}};
+ proto.tickDestinoGuia.call(silhouette);proto.tickDestinoGuia.call(silhouette);assert.equal(outlines.length,4,'reutiliza cuatro copias de la silueta');assert.equal(JSON.stringify(original),before,'el sprite real no se modifica');
  const texts=[];const text=()=>({visible:true,setOrigin(){return this;},setDepth(){return this;},setText(s){this.text=s;return this;},setPosition(x,y){this.x=x;this.y=y;return this;},setVisible(v){this.visible=v;return this;}});
  const barn={type:'barn',sprite:{x:200,y:180,visible:true}},market={type:'market',sprite:{x:300,y:280,visible:true}},hidden={type:'store',oculto:true,sprite:{x:600,y:280,visible:false}};
  const sc={objs:[barn,market,hidden],add:{text(){const t=text();texts.push(t);return t;}}};c.G.built.barn=true;proto.rotulosEdificios.call(sc);assert.equal(texts.length,2);
